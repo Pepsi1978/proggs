@@ -169,8 +169,10 @@ button{font-family:inherit;cursor:pointer}
 }
 .nav-label{transition:opacity .3s}
 
-.rail-foot{margin-top:auto;padding:14px 10px 2px;display:flex;align-items:center;gap:8px;
+.rail-foot{margin-top:auto;padding:14px 10px 2px;display:flex;flex-direction:column;align-items:flex-start;gap:5px;
   font-family:'JetBrains Mono';font-size:11px;color:var(--text-faint);letter-spacing:.04em}
+.rail-host{display:flex;align-items:center;gap:8px;white-space:nowrap}
+.rail-version{padding-left:14px;opacity:.75;line-height:1.35;letter-spacing:.02em}
 .rail-foot .dot{width:6px;height:6px;border-radius:50%;background:var(--good);box-shadow:0 0 8px var(--good)}
 
 /* ── Hauptbereich ──────────────────────────────────────────────────────── */
@@ -764,9 +766,8 @@ button{font-family:inherit;cursor:pointer}
     </nav>
 
     <div class="rail-foot">
-      <span class="dot" id="rail-dot"></span>
-      <span>10.8.0.1 · privat</span>
-      <span id="dashVer" style="margin-left:auto;opacity:.75"></span>
+      <div class="rail-host"><span class="dot" id="rail-dot"></span><span>10.8.0.1 · privat</span></div>
+      <div class="rail-version" id="dashVer"></div>
     </div>
   </aside>
 
@@ -1305,7 +1306,7 @@ button{font-family:inherit;cursor:pointer}
 
     document.getElementById("metaPoints").textContent = d.brain?.points ?? total;
     document.getElementById("metaEmbed").textContent = d.brain?.embed_model || "–";
-    const dv = document.getElementById("dashVer"); if(dv) dv.textContent = d.dash_version ? "v"+d.dash_version : "";
+    const dv = document.getElementById("dashVer"); if(dv) dv.textContent = d.dash_version ? "v"+String(d.dash_version).replace(/(\d{1,2})\.(\d{2}) Uhr\)/, "$1:$2 Uhr)") : "";
 
     /* Stapelbalken — nach oberster Kategorie-Ebene aggregiert (tiefere zählen mit hinein) */
     const bar = document.getElementById("bar");
