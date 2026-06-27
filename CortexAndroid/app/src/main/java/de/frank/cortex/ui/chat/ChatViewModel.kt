@@ -3,12 +3,19 @@ package de.frank.cortex.ui.chat
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import de.frank.cortex.audio.MicRecorder
+import de.frank.cortex.audio.PcmPlayer
 import de.frank.cortex.data.model.*
+import de.frank.cortex.data.SettingsStore
 import de.frank.cortex.network.ApiClient
 import de.frank.cortex.observability.CortexLog
 import de.frank.cortex.vpn.TunnelState
 import de.frank.cortex.vpn.WireGuardManager
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.async
+import kotlinx.coroutines.coroutineScope
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -37,7 +44,8 @@ data class ChatUiState(
     val ttsEnabled: Boolean = true,
     val sessionId: String = "android-${UUID.randomUUID()}",
     val isRecording: Boolean = false,
-    val isTranscribing: Boolean = false
+    val isTranscribing: Boolean = false,
+    val isSpeaking: Boolean = false
 )
 
 class ChatViewModel : ViewModel() {
@@ -46,6 +54,8 @@ class ChatViewModel : ViewModel() {
     val uiState: StateFlow<ChatUiState> = _uiState.asStateFlow()
 
     private val micRecorder = MicRecorder()
+    private val pcmPlayer = PcmPlayer()
+    private var speakJob: Job? = null
 
     init {
         // Kategorien vom Server laden, SOBALD das VPN verbunden ist. Vorher (beim App-Start) ist
@@ -217,6 +227,11 @@ class ChatViewModel : ViewModel() {
                     ctx = mapOf("stored" to response.stored, "action" to response.action)
                 )
 
+                // Auto-TTS: Antwort vorlesen falls aktiviert
+                if (_uiState.value.ttsEnabled && response.reply.isNotBlank()) {
+                    speakResponse(response.reply)
+                }
+
             } catch (e: Exception) {
                 CortexLog.error("ChatVM", "sendMessage", "Fehler: ${e.message}")
                 _uiState.update {
@@ -246,10 +261,87 @@ class ChatViewModel : ViewModel() {
     }
 
     fun toggleTts() {
-        _uiState.update { it.copy(ttsEnabled = !it.ttsEnabled) }
+        // Einmal auf den Lautsprecher tippen = laufendes Vorlesen SOFORT abbrechen + an/aus schalten.
+        val nowEnabled = !_uiState.value.ttsEnabled
+        stopSpeaking()
+        _uiState.update { it.copy(ttsEnabled = nowEnabled) }
+        SettingsStore.ttsEnabled = nowEnabled
+    }
+
+    /** Bricht laufendes Vorlesen sofort ab (Lautsprecher-Knopf). */
+    fun stopSpeaking() {
+        speakJob?.cancel()
+        speakJob = null
+        pcmPlayer.stop()
+        _uiState.update { it.copy(isSpeaking = false) }
+    }
+
+    override fun onCleared() {
+        super.onCleared()
+        speakJob?.cancel()
+        pcmPlayer.stop()
     }
 
     fun clearError() {
         _uiState.update { it.copy(error = null) }
+    }
+
+    private fun speakResponse(text: String) {
+        speakJob?.cancel()
+        speakJob = viewModelScope.launch {
+            _uiState.update { it.copy(isSpeaking = true) }
+            try {
+                val voice = SettingsStore.ttsVoice
+                val chunks = chunkText(text, 220)
+                if (chunks.isEmpty()) return@launch
+
+                // Pipeline: das NAECHSTE Haeppchen schon erzeugen, waehrend das aktuelle KOMPLETT
+                // abgespielt wird. playAndAwait wartet bis zum echten Ende -> kein Abschneiden, kein
+                // Hin- und Herspringen mehr (das war der Bug). Naht-Luecken bleiben minimal.
+                coroutineScope {
+                    var nextPcm = async(Dispatchers.IO) { ApiClient.geminiTts(chunks[0], voice) }
+                    for (i in chunks.indices) {
+                        val pcm = nextPcm.await()
+                        if (i + 1 < chunks.size) {
+                            nextPcm = async(Dispatchers.IO) { ApiClient.geminiTts(chunks[i + 1], voice) }
+                        }
+                        CortexLog.info("ChatVM", "speakResponse", "Haeppchen abspielen",
+                            mapOf("i" to i, "von" to chunks.size, "len" to chunks[i].length))
+                        pcmPlayer.playAndAwait(pcm)
+                    }
+                }
+                CortexLog.info("ChatVM", "speakResponse", "TTS abgeschlossen")
+            } catch (e: CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                CortexLog.error("ChatVM", "speakResponse", "TTS fehlgeschlagen: ${e.message}")
+            } finally {
+                pcmPlayer.stop()
+                _uiState.update { it.copy(isSpeaking = false) }
+            }
+        }
+    }
+
+    private fun chunkText(text: String, maxLen: Int): List<String> {
+        val chunks = mutableListOf<String>()
+        var remaining = text.trim()
+        while (remaining.isNotEmpty()) {
+            if (remaining.length <= maxLen) {
+                chunks.add(remaining)
+                break
+            }
+            // Suche Satzgrenze (., !, ?) innerhalb der ersten maxLen Zeichen
+            val searchEnd = minOf(maxLen, remaining.length) - 1
+            val lastSentence = remaining.take(maxLen).indexOfLast { it in ".!?" }
+            val splitAt = if (lastSentence > maxLen / 2) lastSentence + 1 else searchEnd
+            // Falls kein Satzzeichen, suche Leerzeichen
+            val finalSplit = if (splitAt > maxLen / 2) splitAt
+            else remaining.take(maxLen).indexOfLast { it == ' ' }.let {
+                if (it > 0) it + 1 else maxLen
+            }
+            chunks.add(remaining.take(finalSplit).trim())
+            remaining = remaining.drop(finalSplit).trim()
+        }
+        return chunks
     }
 }
