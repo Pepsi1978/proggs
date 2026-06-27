@@ -7,9 +7,8 @@ Wenn ja: diese Infos KOMPLETT durchlesen, BEVOR du Code aenderst, baust oder dep
 ganz normal weiterarbeiten (nichts erzwingen).
 
 ## Ablauf (jedes Mal, kurz)
-1. **Projekt erkennen** — woran arbeite ich gerade? Aus dem Arbeitsverzeichnis / Ordnernamen und dem
-   Marken-/Projektnamen (z.B. `second-brain-server`/„Cortex", „Entropie Reductor", „BestJournal",
-   „PromptBoard", „TVO/CVO"). Im Zweifel den Ordnernamen unter `~/proggs/<projekt>/` nehmen.
+1. **Projekt erkennen** — woran arbeite ich gerade? Aus dem Ordnernamen unter `~/proggs/<projekt>/`
+   bzw. dem Marken-/Projektnamen (z.B. `second-brain-server`/„Cortex", „Entropie Reductor").
 2. **Im Gehirn nachsehen** — gibt es zu diesem Projekt einen Eintrag in der Kategorie **Projekte**?
    - Sicherster Weg: `second-brain_recall` mit dem Projektnamen als Suchtext (semantisch, findet auch
      ohne exakte Kategorie-Schreibweise). Bei klarem Titel: `second-brain_get_by_title`.
