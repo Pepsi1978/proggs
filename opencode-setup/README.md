@@ -14,6 +14,7 @@
 | 1. Globale Regeln | `~/.config/opencode/AGENTS.md` | nein (lokal) | **`AGENTS-global.md`** |
 | 2. Globale Config | `~/.config/opencode/opencode.jsonc` | nein (lokal) | **`opencode.jsonc`** |
 | 2b. Globale Agents | `~/.config/opencode/agents/*.md` | nein (lokal) | **`agents/`** (z.B. `researcher.md` — Web-Recherche ueber die API-Pipeline) |
+| 2c. Globale Plugins | `~/.config/opencode/plugins/*.js` | nein (lokal) | **`plugins/`** (z.B. `tool-first-guard.js` — Anti-Halluzinations-Durchsetzung) |
 | 3. Projekt-Regeln | `~/proggs/AGENTS.md` | **ja** | (liegt schon im Repo) |
 | 4. Projekt-CLAUDE.md | `~/proggs/CLAUDE.md` | **ja** | (liegt schon im Repo) |
 
@@ -31,10 +32,11 @@ zentral auf dem Server — auf jedem Rechner identisch, ohne dass man sie kopier
 
 2. **Globale Dateien an ihren Platz kopieren:**
    ```sh
-   mkdir -p ~/.config/opencode/agents
+   mkdir -p ~/.config/opencode/agents ~/.config/opencode/plugins
    cp ~/proggs/opencode-setup/opencode.jsonc   ~/.config/opencode/opencode.jsonc
    cp ~/proggs/opencode-setup/AGENTS-global.md ~/.config/opencode/AGENTS.md
    cp ~/proggs/opencode-setup/agents/*.md      ~/.config/opencode/agents/
+   cp ~/proggs/opencode-setup/plugins/*.js     ~/.config/opencode/plugins/
    ```
 
 3. **Die EINE plattformspezifische Zeile anpassen** — in `~/.config/opencode/opencode.jsonc`:
@@ -52,8 +54,15 @@ zentral auf dem Server — auf jedem Rechner identisch, ohne dass man sie kopier
      geladen). WireGuard auf dem neuen Rechner einrichten (Almanach `bugs/server/wireguard.md`).
    - **`OPENROUTER_API_KEY`** als User-Umgebungsvariable (fuer den Owl/OpenRouter-Provider; aus auth.json).
 
-5. **Plugins** (`@mohak34/opencode-notifier`, `@plannotator/opencode`) installiert OpenCode beim ersten
-   Start automatisch aus der `plugin`-Liste — nichts manuell zu tun.
+5. **Plugins:**
+   - **npm-Plugins** (`@mohak34/opencode-notifier`, `@plannotator/opencode`) installiert OpenCode beim
+     ersten Start automatisch aus der `plugin`-Liste — nichts manuell zu tun.
+   - **Lokale Plugins** (`plugins/*.js`) werden in Schritt 2 mitkopiert und beim Start automatisch
+     geladen (kein Eintrag in `opencode.jsonc` noetig). Aktuell: **`tool-first-guard.js`** — setzt die
+     Anti-Halluzinations-Regel "Tool-first, nicht Memory-first" im Code durch: warnt (Log), wenn eine
+     bestehende Datei mit `edit`/`patch` geaendert wird, ohne sie vorher mit `read` gelesen zu haben.
+     Mit `OPENCODE_TOOL_FIRST_ENFORCE=1` blockt es hart statt nur zu warnen ("Laws"-Ebene). Hintergrund:
+     `best-practices/agents/anti-halluzination-regeln.md` §1+§7.
 
 6. **Start & Selbst-Check:** OpenCode oeffnen, in `~/proggs` arbeiten. Beim ersten Prompt MUSS OpenCode
    melden: **"N Regeln aus dem zweiten Gehirn eingelesen."** — dann ist die Umgebung komplett.
