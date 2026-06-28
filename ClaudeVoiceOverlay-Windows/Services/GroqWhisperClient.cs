@@ -195,13 +195,17 @@ namespace ClaudeVoiceOverlay.Services
             catch (JsonException)
             {
                 // Unerwartetes Format -> NICHT verlieren: top-level "text" als Fallback ziehen.
-                return ExtractFallbackText(json);
+                // Schicht 4 trotzdem anwenden (auch hier kann eine reine Floskel stehen).
+                return BlockIfFloskel(ExtractFallbackText(json), voiced);
             }
 
             if (parsed?.Segments == null || parsed.Segments.Count == 0)
             {
-                // Keine Segment-Metadaten -> nicht filterbar. Funktionserhalt: top-level Text durchlassen.
-                return (parsed?.Text ?? string.Empty).Trim();
+                // Keine Segment-Metadaten -> nicht filterbar (ultrakurze Clips beim schnellen Druecken
+                // liefern oft NUR top-level Text, KEINE Segmente — Almanach §2.3). Funktionserhalt:
+                // top-level Text durchlassen, aber ZUERST durch die Floskel-Blocklist (Schicht 4) — sonst
+                // umgeht "Vielen Dank" bei Kurzclips den ganzen Stille-Schutz.
+                return BlockIfFloskel((parsed?.Text ?? string.Empty).Trim(), voiced);
             }
 
             // Schicht 2: Confidence-Gate. Halluzinationen mit hoher "keine Sprache"-Wahrscheinlichkeit raus.
@@ -252,15 +256,24 @@ namespace ClaudeVoiceOverlay.Services
             if (droppedConfidence > 0 || droppedAudio > 0)
                 Console.WriteLine($"Groq: {droppedConfidence} Confidence- + {droppedAudio} Audio-Segment(e) verworfen, {finalSegs.Count} behalten (Stille-Schutz).");
 
-            var result = sb.ToString().Trim();
-            // Schicht 4: Floskel-Blocklist (letzter Filter). Faengt "Vielen Dank" bei kurzem Knopfdruck,
-            // das Schicht 2+3 ueberlebt. Funktionserhaltend: nur bei kurz + exaktem Match + Stille-Kontext.
-            if (IsBlocklistedFloskel(result, voiced))
+            // Schicht 4: Floskel-Blocklist (letzter Filter, an ALLEN Ausgaengen — siehe oben). Faengt
+            // "Vielen Dank", das Schicht 2+3 ueberlebt. Funktionserhaltend (kurz + exakt + Stille-Kontext).
+            return BlockIfFloskel(sb.ToString().Trim(), voiced);
+        }
+
+        /// <summary>
+        /// Schicht 4 zentral: gibt den Text zurueck — oder leer, wenn er eine Stille-Floskel ist
+        /// (<see cref="IsBlocklistedFloskel"/>). An JEDEM Rueckgabepfad von FilterTranscription aufgerufen,
+        /// damit auch der "keine Segmente"-Kurzclip-Pfad (Almanach §2.3) gefiltert wird.
+        /// </summary>
+        private static string BlockIfFloskel(string text, bool[]? voiced)
+        {
+            if (IsBlocklistedFloskel(text, voiced))
             {
-                Console.WriteLine($"Groq: Floskel-Blocklist (Schicht 4) verwarf \"{result}\" (kurz + exakter Match + Stille-Kontext).");
+                Console.WriteLine($"Groq: Floskel-Blocklist (Schicht 4) verwarf \"{text}\" (kurz + exakter Match + Stille-Kontext).");
                 return string.Empty;
             }
-            return result;
+            return text;
         }
 
         /// <summary>

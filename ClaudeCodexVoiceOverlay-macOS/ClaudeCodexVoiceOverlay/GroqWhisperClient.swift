@@ -152,10 +152,14 @@ final class GroqWhisperClient {
     private static func filterTranscription(_ json: String, _ voiced: [Bool]?) -> String {
         guard let data = json.data(using: .utf8) else { return "" }
         guard let parsed = try? JSONDecoder().decode(VerboseResponse.self, from: data) else {
-            return extractFallbackText(data)
+            // Schicht 4 trotzdem anwenden (auch hier kann eine reine Floskel stehen).
+            return blockIfFloskel(extractFallbackText(data), voiced)
         }
         guard let segments = parsed.segments, !segments.isEmpty else {
-            return (parsed.text ?? "").trimmingCharacters(in: .whitespacesAndNewlines)
+            // Ultrakurze Clips beim schnellen Druecken liefern oft NUR top-level Text, KEINE Segmente
+            // (Almanach §2.3). Funktionserhalt: durchlassen, aber ZUERST durch die Floskel-Blocklist —
+            // sonst umgeht "Vielen Dank" bei Kurzclips den ganzen Stille-Schutz.
+            return blockIfFloskel((parsed.text ?? "").trimmingCharacters(in: .whitespacesAndNewlines), voiced)
         }
         // Schicht 2: Confidence-Gate. Halluzinationen mit hoher "keine Sprache"-Wahrscheinlichkeit raus.
         var afterConfidence: [Segment] = []
@@ -192,14 +196,20 @@ final class GroqWhisperClient {
         if droppedConfidence > 0 || droppedAudio > 0 {
             NSLog("Groq: %d Confidence- + %d Audio-Segment(e) verworfen (Stille-Schutz).", droppedConfidence, droppedAudio)
         }
-        let result = parts.joined(separator: " ").trimmingCharacters(in: .whitespacesAndNewlines)
-        // Schicht 4: Floskel-Blocklist (letzter Filter). Faengt "Vielen Dank" bei kurzem Knopfdruck,
-        // das Schicht 2+3 ueberlebt. Funktionserhaltend: nur bei kurz + exaktem Match + Stille-Kontext.
-        if isBlocklistedFloskel(result, voiced) {
-            NSLog("Groq: Floskel-Blocklist (Schicht 4) verwarf \"%@\" (kurz + exakter Match + Stille-Kontext).", result)
+        // Schicht 4: Floskel-Blocklist (letzter Filter, an ALLEN Ausgaengen — siehe oben). Faengt
+        // "Vielen Dank", das Schicht 2+3 ueberlebt. Funktionserhaltend (kurz + exakt + Stille-Kontext).
+        return blockIfFloskel(parts.joined(separator: " ").trimmingCharacters(in: .whitespacesAndNewlines), voiced)
+    }
+
+    /// Schicht 4 zentral: gibt den Text zurueck — oder leer, wenn er eine Stille-Floskel ist. An JEDEM
+    /// Rueckgabepfad von filterTranscription aufgerufen, damit auch der "keine Segmente"-Kurzclip-Pfad
+    /// (Almanach §2.3) gefiltert wird.
+    private static func blockIfFloskel(_ text: String, _ voiced: [Bool]?) -> String {
+        if isBlocklistedFloskel(text, voiced) {
+            NSLog("Groq: Floskel-Blocklist (Schicht 4) verwarf \"%@\" (kurz + exakter Match + Stille-Kontext).", text)
             return ""
         }
-        return result
+        return text
     }
 
     /// Schicht 4 (Almanach §2.4): true, wenn der Gesamttext eine Whisper-Outro-Floskel ist. Verwirft NUR bei

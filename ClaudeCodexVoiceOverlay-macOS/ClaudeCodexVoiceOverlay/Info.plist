@@ -7,9 +7,9 @@
     <key>CFBundleIdentifier</key>
     <string>com.frank.ClaudeCodexVoiceOverlay</string>
     <key>CFBundleVersion</key>
-    <string>1.17</string>
-    <key>CFBundleShortVersionString</key>
     <string>1.18</string>
+    <key>CFBundleShortVersionString</key>
+    <string>1.19</string>
     <key>CFBundlePackageType</key>
     <string>APPL</string>
     <key>CFBundleExecutable</key>
