@@ -40,7 +40,7 @@ if (Get-Command opencode -ErrorAction SilentlyContinue) {
 }
 
 # --- 1) Zielverzeichnisse + Backup ---
-New-Item -ItemType Directory -Force -Path $Dst, (Join-Path $Dst 'agents'), (Join-Path $Dst 'plugins'), (Join-Path $Dst 'sounds') | Out-Null
+New-Item -ItemType Directory -Force -Path $Dst, (Join-Path $Dst 'agents'), (Join-Path $Dst 'plugins'), (Join-Path $Dst 'sounds'), (Join-Path $Dst 'skill') | Out-Null
 $stamp = Get-Date -Format 'yyyyMMdd-HHmmss'
 function Backup([string]$Path) {
   if (Test-Path $Path) {
@@ -65,6 +65,9 @@ if ($agents) { $agents | Copy-Item -Destination (Join-Path $Dst 'agents') -Force
 
 $plugins = Get-ChildItem (Join-Path $Src 'plugins') -Filter *.js -ErrorAction SilentlyContinue
 if ($plugins) { $plugins | Copy-Item -Destination (Join-Path $Dst 'plugins') -Force; Ok 'plugins/ (inkl. tool-first-guard)' } else { Warn 'keine plugins/*.js' }
+
+$skills = Get-ChildItem (Join-Path $Src 'skill') -Directory -ErrorAction SilentlyContinue
+if ($skills) { $skills | Copy-Item -Destination (Join-Path $Dst 'skill') -Recurse -Force; Ok 'skill/ (OpenCode-Skills, z.B. session-opencode)' } else { Warn 'keine skill/*' }
 
 # --- 4) Notifier-Sounds + Config (Windows-Pfade lokal erzeugen, BOM-frei) ---
 $wavs = Get-ChildItem (Join-Path $Src 'sounds') -Filter *.wav -ErrorAction SilentlyContinue

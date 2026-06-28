@@ -18,6 +18,7 @@
 | 2. Globale Config | `~/.config/opencode/opencode.jsonc` | nein (lokal) | **`opencode.jsonc`** | ja (shell angepasst) |
 | 2b. Globale Agents | `~/.config/opencode/agents/*.md` | nein (lokal) | **`agents/`** (z.B. `researcher.md`) | ja |
 | 2c. Globale Plugins | `~/.config/opencode/plugins/*.js` | nein (lokal) | **`plugins/`** (z.B. `tool-first-guard.js`) | ja |
+| 2c2. Globale Skills | `~/.config/opencode/skill/<name>/SKILL.md` | nein (lokal) | **`skill/`** (z.B. `session-opencode`) | ja |
 | 2d. Notifier-Sounds | `~/.config/opencode/sounds/*.wav` | nein (lokal) | **`sounds/`** (complete/error/permission) | ja |
 | 2e. Notifier-Config | `~/.config/opencode/opencode-notifier.json` | nein (lokal) | — (Installer **generiert** sie mit lokalen Pfaden) | ja (erzeugt) |
 | 3. Projekt-Regeln | `~/proggs/AGENTS.md` | **ja** | (liegt schon im Repo) | — |
@@ -110,7 +111,7 @@ installiert OpenCode beim Start selbst aus der `plugin`-Liste.
 1. Prueft, ob `opencode` im PATH ist (nur Hinweis, kein Abbruch).
 2. Legt `~/.config/opencode/{agents,plugins,sounds}` an und sichert vorhandene Dateien nach `.backup-<zeit>/`.
 3. Kopiert `opencode.jsonc` — auf **macOS/Linux** wird `"shell": "pwsh"` → `"bash"` ersetzt; auf **Windows** bleibt `pwsh`.
-4. Kopiert `AGENTS-global.md` → `AGENTS.md`, alle `agents/*.md`, alle `plugins/*.js`, alle `sounds/*.wav`.
+4. Kopiert `AGENTS-global.md` → `AGENTS.md`, alle `agents/*.md`, alle `plugins/*.js`, alle `sounds/*.wav`, alle `skill/<name>/SKILL.md` (OpenCode-Skills wie `session-opencode`).
 5. **Erzeugt** `opencode-notifier.json` neu mit den korrekten lokalen Sound-Pfaden (Windows BOM-frei) —
    die Repo-Variante haette feste Windows-Pfade, die auf macOS brechen.
 6. Voraussetzungs-Check (SK-Keys, `OPENROUTER_API_KEY`, WireGuard `10.8.0.1`) + TODO-Liste.

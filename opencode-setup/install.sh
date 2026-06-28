@@ -35,7 +35,7 @@ else
 fi
 
 # --- 1) Zielverzeichnisse + Backup ---
-mkdir -p "$DST/agents" "$DST/plugins" "$DST/sounds"
+mkdir -p "$DST/agents" "$DST/plugins" "$DST/sounds" "$DST/skill"
 backup() {  # $1 = Zielpfad: sichern, falls vorhanden
   if [ -e "$1" ]; then
     local bdir
@@ -57,6 +57,7 @@ green "OK  AGENTS.md (globale Regeln)"
 
 if cp "$SRC/agents/"*.md "$DST/agents/" 2>/dev/null; then green "OK  agents/"; else yellow "--  keine agents/*.md"; fi
 if cp "$SRC/plugins/"*.js "$DST/plugins/" 2>/dev/null; then green "OK  plugins/ (inkl. tool-first-guard)"; else yellow "--  keine plugins/*.js"; fi
+if cp -R "$SRC/skill/"* "$DST/skill/" 2>/dev/null; then green "OK  skill/ (OpenCode-Skills, z.B. session-opencode)"; else yellow "--  keine skill/*"; fi
 
 # --- 4) Notifier-Sounds + Config (Pfade lokal erzeugen, NICHT die Windows-Pfade kopieren) ---
 if cp "$SRC/sounds/"*.wav "$DST/sounds/" 2>/dev/null; then green "OK  sounds/"; else yellow "--  keine sounds/*.wav"; fi
