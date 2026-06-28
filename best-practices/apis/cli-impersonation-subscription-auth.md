@@ -19,6 +19,7 @@
 | 6 | Mehrere Credentials gesetzt | Praezedenz beachten — sonst stiller 401 | §6 |
 | 7 | 401/403 behandeln | 401 = Refresh; 403-Client-Block = umstellen | §7 |
 | 8 | Abo-Limits respektieren | Cachen statt hammern; API-Key-Fallback einbauen | §8 |
+| 9 | Hermes→Codex konkret nachbauen | Voller Code-Weg: Client-ID `app_EMoam…`, Endpoint `chatgpt.com/backend-api/codex`, Header `originator: codex_cli_rs` + `ChatGPT-Account-ID` aus JWT | §9 |
 
 ## 1. Rechtlicher Rahmen ZUERST klaeren (defensiv)
 - Offizielle CLI mit eigenem Abo-OAuth ist erlaubt. Abo-OAuth-Tokens (Free/Pro/Max) in Drittsoftware sind bei Anthropic ein ToS-Verstoss und werden server-seitig geblockt — fuer eigene Apps/Agents stattdessen API-Key oder die offizielle CLI nutzen. Quelle: https://platform.claude.com/docs/en/manage-claude/authentication · offiziell
@@ -59,6 +60,116 @@
 - CLIs aendern Client-ID/Originator/Endpunkte/Runtime regelmaessig — wer eine Signatur nachbaut, hat dauerhaften Wartungsaufwand und ploetzliche Totalausfaelle. Robuster: API-Key-Pfad als Fallback fest einbauen. Quelle: https://hermesagents.net/blog/hermes-proxy-claude-pro-aider-cline-codex · community
 - Auffaellige Nutzungsmuster loesen Ban-Heuristik + Refresh-Token-Revocation aus — defensives, abo-konformes Volumen einhalten und Account-Risiko ehrlich gegen den Nutzen abwaegen. Quelle: bugs/apis/cli-impersonation-subscription-auth.md (E2) · belegt
 
+## 9. Fallstudie: Der komplette Weg, wie Hermes sich als Codex ausgibt (aus dem Quellcode)
+
+> **Quelle:** lokal heruntergeladenes Repo `NousResearch/hermes-agent` (`~/hermes-agent`, Stand
+> Repo-Dateien 2026-06-07; analysiert 2026-06-28). Hermes Agent 2026.5, Codex CLI ab 0.130.0.
+> Belegende Dateien: `hermes_cli/auth.py`, `agent/auxiliary_client.py`, `agent/account_usage.py`,
+> `agent/codex_runtime.py`, `website/docs/user-guide/features/codex-app-server-runtime.md`.
+> **Ehrlich:** Dies ist die technische Mechanik, wie eine Drittsoftware das ChatGPT-Abo statt eines
+> API-Keys nutzt, indem sie sich als die offizielle Codex-CLI ausgibt. ToS-Grauzone bis -Verstoss
+> (siehe §1 + Almanach B1/E2) — hier als nachschlagbares Wissen dokumentiert, nicht als Empfehlung.
+
+### 9.0 Zwei Betriebsmodi (Hermes kann beides)
+| Modus | Was passiert | Wann |
+|-------|--------------|------|
+| **`codex_responses`** (die eigentliche Impersonation) | Hermes spricht mit dem Subscription-Token **direkt** gegen das ChatGPT-Codex-Backend und setzt die Codex-Client-Header selbst. Hermes besitzt die Agent-Schleife. | Default-Weg, um das Abo als LLM-Backend zu nutzen |
+| **`codex_app_server`** (Codex wrappen) | Hermes startet die **echte** `codex`-CLI als Subprozess (JSON-RPC über stdio), nutzt deren `~/.codex/auth.json`, und reicht Tools per MCP-Callback rein. Codex besitzt die Tool-Schleife. | opt-in: `/codex-runtime codex_app_server` |
+
+Der "vorgaukeln, Codex zu sein"-Kern steckt in **`codex_responses`** (§9.1–9.6). `codex_app_server`
+gibt sich gar nicht selbst aus — es benutzt das echte Binary (§9.8b).
+
+### 9.1 Die feste Codex-Identität (exakte Konstanten, `hermes_cli/auth.py`)
+```
+CODEX_OAUTH_CLIENT_ID = "app_EMoamEEZ73f0CkXaXp7hrann"   # die PUBLIC Client-ID der echten Codex-CLI
+CODEX_OAUTH_TOKEN_URL = "https://auth.openai.com/oauth/token"
+DEFAULT_CODEX_BASE_URL = "https://chatgpt.com/backend-api/codex"   # ChatGPT-Backend, NICHT api.openai.com
+CODEX_ACCESS_TOKEN_REFRESH_SKEW_SECONDS = 120            # 2 Min vor Ablauf erneuern
+```
+Der entscheidende Trick steckt in der **Base-URL**: Anfragen gehen an `chatgpt.com/backend-api/codex`
+(zählt gegen das **Abo**), nicht an `api.openai.com` (zählt gegen **API-Billing**). Die Client-ID ist
+die öffentliche der echten Codex-CLI — sie ist kein Geheimnis, sondern die Identität, als die man auftritt.
+
+### 9.2 Token-Beschaffung — aus `~/.codex/auth.json` importieren (nicht neu erfinden)
+Hermes baut **keinen** eigenen Browser-OAuth nach, sondern liest die Tokens, die `codex login` bereits
+erzeugt hat (`_import_codex_cli_tokens`):
+- Liest `${CODEX_HOME:-~/.codex}/auth.json` → `tokens.access_token` + `tokens.refresh_token`.
+- **Schreibt NIE in `~/.codex/auth.json` zurück** (würde die echte Codex-CLI stören). Hermes legt seine
+  Arbeitskopie getrennt in `~/.hermes/auth.json` ab.
+- Lehnt bereits abgelaufene Tokens beim Import ab (sonst „Login successful" ohne nutzbares Credential).
+- **Warum getrennt halten (KRITISCH):** Der Refresh-Token ist **One-Time-Use** (OpenAI rotiert ihn).
+  Würden Hermes UND die echte Codex-CLI denselben Token refreshen, „verbraucht" der eine den Token des
+  anderen → Fehler `refresh_token_reused`. Deshalb zwei getrennte Stores.
+
+### 9.3 Token-Refresh (`refresh_codex_oauth_pure`)
+```
+POST https://auth.openai.com/oauth/token
+Content-Type: application/x-www-form-urlencoded
+grant_type=refresh_token & refresh_token=<…> & client_id=app_EMoamEEZ73f0CkXaXp7hrann
+```
+- **Public Client:** KEIN `client_secret` (PKCE-Stil). Nur Client-ID + Refresh-Token.
+- Antwort liefert neuen `access_token` (Refresh-Token bleibt i.d.R. gleich) → **gemerged** speichern,
+  nie das ganze File überschreiben (sonst refresh_token-Verlust, siehe §3).
+- Fehler-Klassifikation (wichtig fürs Handling): `429` = Abo-Quota erschöpft, Credentials noch gültig →
+  „später retry", **nicht** relogin. `401/403` bzw. `invalid_grant`/`invalid_token` → relogin nötig.
+  `refresh_token_reused` → echte Codex-CLI hat den Token konsumiert → `codex` neu ausführen.
+
+### 9.4 Die Wire-Header — DAS Herzstück der Impersonation (`agent/auxiliary_client.py`, `_codex_cloudflare_headers`)
+Jede Inferenz-Anfrage an `chatgpt.com/backend-api/codex` trägt:
+```
+Authorization:    Bearer <access_token>
+originator:       codex_cli_rs                          # gibt sich als upstream codex-rs CLI aus
+User-Agent:       codex_cli_rs/0.0.0 (Hermes Agent)     # codex-förmig (schlägt SDK-Fingerprinting)
+ChatGPT-Account-ID: <chatgpt_account_id aus dem JWT>    # siehe unten
+```
+Der `ChatGPT-Account-ID`-Wert wird **aus dem Access-Token selbst** geholt: Das Token ist ein JWT; Hermes
+base64-dekodiert den Payload (Teil 2) und liest den Claim `["https://api.openai.com/auth"]["chatgpt_account_id"]`.
+Fehlt/kaputt → Header wird weggelassen (führt zu sauberem 401 statt Crash). `agent/account_usage.py` setzt
+denselben Header (dort Schreibweise `ChatGPT-Account-Id`) für die Usage-Abfrage.
+
+### 9.5 Die Cloudflare-Hürde — warum `originator` zwingend ist
+Vor `chatgpt.com/backend-api/codex` sitzt ein Cloudflare-Layer, der **nur first-party Originatoren**
+durchlässt: `codex_cli_rs`, `codex_vscode`, `codex_sdk_ts`, alles mit Prefix `Codex`. Anfragen von
+**Nicht-Residential-IPs** (VPS, server-gehostete Agents) ohne erlaubten `originator` bekommen **403 mit
+`cf-mitigated: challenge`** — **unabhängig davon, ob die Auth korrekt ist**. Deshalb pinnt Hermes
+`originator: codex_cli_rs` + den codex-förmigen User-Agent. Ohne diese beiden Header: 403, selbst mit
+gültigem Token.
+
+### 9.6 Modell-Allow-List driftet (kein hardcoded Default)
+Hermes pinnt bewusst **kein** Standard-Modell für diesen Endpoint. Die auf dem ChatGPT-Account-Endpoint
+akzeptierten Modelle sind eine **undokumentierte, wandernde Allow-List** (Kommentar im Code: in 6 Wochen
+Anfang 2026 `gpt-5.3-codex` → `gpt-5.2-codex` → `gpt-5.4`). Der Aufrufer MUSS das Modell explizit übergeben.
+Lektion: ein fest verdrahtetes Modell bricht still, sobald OpenAI die Liste verschiebt.
+
+### 9.7 Relevante Env-Variablen
+| Variable | Wirkung |
+|----------|---------|
+| `CODEX_HOME` | Codex-State-Verzeichnis (Default `~/.codex`); für Profil-Isolation pro Profil setzen |
+| `HERMES_CODEX_BASE_URL` | überschreibt die Backend-Base-URL |
+| `HERMES_CODEX_REFRESH_TIMEOUT_SECONDS` | Timeout des Refresh-Calls (Default 20 s) |
+
+### 9.8 Der komplette Weg als Rezept (zum Nachschlagen)
+**a) Direkt-Impersonation (`codex_responses`-Stil) — Minimal-Nachbau:**
+1. `codex login` ausführen (echte CLI) → erzeugt `~/.codex/auth.json` mit `tokens.{access_token,refresh_token,account_id}`.
+2. Access-Token lesen; ist es <2 Min vor Ablauf, per §9.3 refreshen (`grant_type=refresh_token`, Client-ID `app_EMoam…`, kein Secret) und **gemerged** zurückschreiben (eigener Store, nicht `~/.codex/`).
+3. `chatgpt_account_id` aus dem JWT-Payload des Access-Tokens ziehen.
+4. Request an `POST https://chatgpt.com/backend-api/codex/...` mit den 4 Headern aus §9.4 + explizitem Modell (§9.6).
+5. Fehler nach §9.3 klassifizieren (429 = warten, 401/403/invalid_grant = relogin, refresh_token_reused = `codex` neu).
+
+**b) Codex wrappen (`codex_app_server`) — kein Selbst-Ausgeben nötig:**
+1. `npm i -g @openai/codex`, `codex login`.
+2. Hermes startet `codex app-server` als Subprozess (JSON-RPC über stdio: `thread/start`, `turn/start`, `item/*`-Notifications).
+3. Eigene Tools per MCP-Server in `~/.codex/config.toml` registrieren (`[mcp_servers.<name>]`), damit Codex zurück-callt. Hermes umrahmt nur (Sessions, Slash-Commands, Memory), die LLM-/Tool-Arbeit macht das echte Codex-Binary mit dessen `~/.codex/auth.json`.
+4. Vorteil: kein Cloudflare-/originator-Problem (es IST die echte CLI). Nachteil: an die jeweils installierte Codex-Version gekoppelt.
+
+### 9.9 Bruchstellen & ehrliche Risiken (zusammengefasst)
+- Jede Änderung von OpenAI an Client-ID, `originator`-Whitelist, Endpoint, JWT-Claim-Pfad oder
+  App-Server-Protokoll bricht den Nachbau sofort (vgl. Anthropic 09.01.2026, Almanach C1).
+- One-Time-Use-Refresh-Token: parallele Nutzung durch echte Codex-CLI ↔ Nachbau invalidiert Tokens.
+- Abo-Quota (429) ist kein Auth-Fehler; nicht in Relogin-Schleifen laufen.
+- ToS: Drittsoftware, die sich als offizieller Client maskiert, ist Grauzone bis Verstoss; Ban-/Revocation-Risiko real.
+  Stabiler, legaler Weg bleibt: API-Key ODER die echte CLI nutzen (auch per SSH/`--device-auth`).
+
 ## 🔗 Bezug zum Bug-Almanach
 | Best-Practice | Bug-Abschnitt (`bugs/apis/cli-impersonation-subscription-auth.md`) |
 |---|---|
@@ -70,3 +181,4 @@
 | 6 Endpunkt-Eigenheiten & Effort | A1, B1, D1, E1 |
 | 7 Fehler-Handling 401/403/Expiry | C1, E1, E2 |
 | 8 Rate-Limit-Fairness & Versions-Drift | B1, B2, E1, E2 |
+| 9 Fallstudie Hermes→Codex (Code-Weg) | B1 (Hermes-Trick), A1 (Codex-OAuth), E1/E2 (Bruchstellen/Risiken) |

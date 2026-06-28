@@ -55,6 +55,13 @@
 - **Risiko/ToS (ehrlich):** Grauzone bis Verstoss — Drittsoftware maskiert sich als offizieller Codex-Client. Ban-Risiko analog Anthropic.
 - **FIX/Workaround:** Proxy an die jeweils aktuelle Codex-Version koppeln (dauerhafter Wartungsaufwand).
 - **Quelle:** https://hermesagents.net/blog/hermes-proxy-claude-pro-aider-cline-codex · https://hermes-agent.nousresearch.com/docs/user-guide/features/codex-app-server-runtime
+- **Code-belegte Details (Repo `NousResearch/hermes-agent`, analysiert 2026-06-28 — vollständiger Weg in `best-practices/apis/cli-impersonation-subscription-auth.md` §9):**
+  - **Cloudflare-403 ohne `originator` ⭐:** Vor `https://chatgpt.com/backend-api/codex` sitzt ein Cloudflare-Layer, der NUR first-party Originatoren (`codex_cli_rs`, `codex_vscode`, `codex_sdk_ts`, Prefix `Codex`) durchlässt. Von Nicht-Residential-IP (VPS/Server) ohne erlaubten `originator` → **403 mit `cf-mitigated: challenge`, egal ob die Auth korrekt ist**. Hermes pinnt daher `originator: codex_cli_rs` + codex-förmigen `User-Agent`. Symptom „403 trotz gültigem Token" → originator/User-Agent prüfen.
+  - **`refresh_token_reused` (One-Time-Use-Rotation):** OpenAI rotiert den Refresh-Token bei jedem Refresh. Refreshen Nachbau UND echte Codex-CLI/VS-Code denselben Token, invalidiert der eine den anderen → Fehler `refresh_token_reused` → `codex` neu ausführen. FIX: getrennte Token-Stores (Hermes `~/.hermes/auth.json` ≠ `~/.codex/auth.json`), nie zurückschreiben.
+  - **`ChatGPT-Account-ID` muss aus dem JWT:** Der Header-Wert kommt aus dem Access-Token selbst (JWT-Payload-Claim `["https://api.openai.com/auth"]["chatgpt_account_id"]`), nicht aus separater Config. Fehlt er → 401.
+  - **Endpoint ist das ChatGPT-Backend, nicht die API:** `https://chatgpt.com/backend-api/codex` (zählt gegen Abo), NICHT `api.openai.com` (API-Billing). Client-ID `app_EMoamEEZ73f0CkXaXp7hrann`, Token-URL `https://auth.openai.com/oauth/token`, public Client (kein `client_secret`).
+  - **Modell-Allow-List driftet:** kein hartes Default-Modell pinnen — die akzeptierten Modelle am ChatGPT-Endpoint sind eine undokumentierte, wandernde Liste (in 6 Wochen `gpt-5.3-codex`→`gpt-5.2-codex`→`gpt-5.4`). Modell explizit übergeben, sonst stiller Bruch.
+  - **429 ≠ Auth-Fehler:** 429 vom Token-/Inferenz-Endpoint = Abo-Quota erschöpft, Credentials noch gültig → „retry later", nicht relogin-Schleife.
 
 ### B2. OpenCode-Plugins — ChatGPT-Abo-OAuth als Plugin
 - **Was:** `numman-ali/opencode-openai-codex-auth`, `tumf/opencode-openai-device-auth` bringen den Codex-OAuth-Flow in OpenCode/headless — „same method as OpenAI's official Codex CLI".
