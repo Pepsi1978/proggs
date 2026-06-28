@@ -24,6 +24,36 @@ final class GroqWhisperClient {
     // Segment gegen die echte Audio-Lautstaerke pruefen — stilles Zeitfenster = Halluzination.
     private static let frameMs = 20
     private static let segVoicedRatio = 0.10
+    // Schicht 4 (Floskel-Blocklist, letzter Filter, Almanach §2.4): bei kurzem Knopfdruck ("nichts gesagt")
+    // halluziniert Whisper "Vielen Dank" MIT hoher Confidence (Schicht 2 greift nicht), der Klick liegt oft
+    // IM Segment-Fenster oder die Drift-Sicherung haelt das Segment (Schicht 3 greift nicht). GOLDENE REGEL:
+    // Floskel NIE allein wegen des Wortlauts verwerfen — nur bei (1) kurz UND (2) exaktem normalisierten
+    // Match UND (3) Stille-Kontext (Clip sprach-arm). Bewusst gesprochenes "Vielen Dank" bleibt erhalten.
+    private static let floskelMaxWords = 6
+    private static let floskelMaxChars = 64
+    private static let silenceContextMaxVoicedMs = 600.0
+    private static let floskelBlocklist: Set<String> = [
+        "vielen dank",
+        "vielen dank fürs zuschauen",
+        "vielen dank fuers zuschauen",
+        "vielen dank für eure aufmerksamkeit",
+        "vielen dank für ihre aufmerksamkeit",
+        "vielen dank für die aufmerksamkeit",
+        "bis zum nächsten mal",
+        "bis zum nächsten video",
+        "untertitel",
+        "untertitel des zdf",
+        "untertitelung des zdf für funk",
+        "untertitel im auftrag des zdf für funk",
+        "untertitel von stephanie geiges",
+        "untertitel der amara org community",
+        "der text ist nicht auf deutsch",
+        "thank you",
+        "thank you for watching",
+        "thanks for watching",
+        "please subscribe",
+        "subtitles by the amara org community",
+    ]
 
     init(apiKey: String) {
         self.apiKey = apiKey
@@ -162,7 +192,41 @@ final class GroqWhisperClient {
         if droppedConfidence > 0 || droppedAudio > 0 {
             NSLog("Groq: %d Confidence- + %d Audio-Segment(e) verworfen (Stille-Schutz).", droppedConfidence, droppedAudio)
         }
-        return parts.joined(separator: " ").trimmingCharacters(in: .whitespacesAndNewlines)
+        let result = parts.joined(separator: " ").trimmingCharacters(in: .whitespacesAndNewlines)
+        // Schicht 4: Floskel-Blocklist (letzter Filter). Faengt "Vielen Dank" bei kurzem Knopfdruck,
+        // das Schicht 2+3 ueberlebt. Funktionserhaltend: nur bei kurz + exaktem Match + Stille-Kontext.
+        if isBlocklistedFloskel(result, voiced) {
+            NSLog("Groq: Floskel-Blocklist (Schicht 4) verwarf \"%@\" (kurz + exakter Match + Stille-Kontext).", result)
+            return ""
+        }
+        return result
+    }
+
+    /// Schicht 4 (Almanach §2.4): true, wenn der Gesamttext eine Whisper-Outro-Floskel ist. Verwirft NUR bei
+    /// drei gleichzeitigen Signalen — (1) kurz, (2) normalisierter EXAKTER Blocklist-Match, (3) Stille-Kontext
+    /// (gesamte laute Zeit im Clip < Schwelle). Ohne Voiced-Timeline (voiced==nil) wird NICHT verworfen.
+    private static func isBlocklistedFloskel(_ text: String, _ voiced: [Bool]?) -> Bool {
+        if text.isEmpty || text.count > floskelMaxChars { return false }
+        guard let voiced = voiced else { return false }  // Stille-Kontext nicht messbar -> echte Sprache nie verlieren
+        let norm = normalizeFloskel(text)
+        if norm.isEmpty { return false }
+        if norm.split(separator: " ").count > floskelMaxWords { return false }
+        if !floskelBlocklist.contains(norm) { return false }   // (2) exakter Match (== nicht contains)
+        // (3) Stille-Kontext: war der ganze Clip sprach-arm? Bewusst gesprochene Floskel hat mehr laute Zeit.
+        let voicedMs = Double(voiced.filter { $0 }.count) * Double(frameMs)
+        return voicedMs < silenceContextMaxVoicedMs
+    }
+
+    /// lowercase, Satzzeichen/Ziffern entfernt (Umlaute bleiben), Whitespace kollabiert.
+    private static func normalizeFloskel(_ s: String) -> String {
+        let lowered = s.lowercased()
+        var chars = ""
+        for c in lowered {
+            if c.isLetter { chars.append(c) }
+            else if c.isWhitespace { chars.append(" ") }
+            // Satzzeichen, Ziffern, Symbole weglassen
+        }
+        return chars.split(separator: " ").joined(separator: " ")
     }
 
     /// Schicht 3: Voiced-Timeline aus den WAV-Bytes (16-bit mono PCM) — pro 20-ms-Frame true, wenn der

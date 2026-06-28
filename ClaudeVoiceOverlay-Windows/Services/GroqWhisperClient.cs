@@ -62,6 +62,44 @@ namespace ClaudeVoiceOverlay.Services
         private const int    FrameMs        = 20;    // RMS-Fenster (gleich wie HasSpeechContent)
         private const double SegVoicedRatio = 0.10;  // < 10% laute Frames im Segment-Fenster = still
 
+        // ----- Floskel-Blocklist (Schicht 4, letzter Filter, Almanach §2.4) -----
+        // Bei kurzem Knopfdruck ("nichts gesagt", nur Klick/Atem) halluziniert Whisper "Vielen Dank"
+        // MIT hoher Confidence (Schicht 2 greift nicht) und der Klick liegt oft IM Segment-Zeitfenster
+        // oder die Drift-Sicherung haelt das eine Segment (Schicht 3 greift nicht). GOLDENE REGEL:
+        // eine Floskel NIE allein wegen des Wortlauts verwerfen — nur wenn ALLE drei Signale zugleich
+        // zutreffen: (1) Ausgabe kurz, (2) normalisierter EXAKTER Match gegen die Liste, (3) Stille-
+        // Kontext (der ganze Clip war sprach-arm). So bleibt ein bewusst gesprochenes "Vielen Dank"
+        // (laute Zeit > Schwelle) erhalten.
+        private const int    FloskelMaxWords          = 6;
+        private const int    FloskelMaxChars          = 64;
+        private const double SilenceContextMaxVoicedMs = 600;  // Clip mit weniger lauter Zeit = Stille-Kontext
+
+        // Normalisierte (lowercase, ohne Satzzeichen/Ziffern, Umlaute behalten) Whisper-Outro-Floskeln.
+        // DE-Kern + EN-Kern aus dem HF-Dataset "whisper-hallucinations" (Almanach §2.4).
+        private static readonly HashSet<string> FloskelBlocklist = new(StringComparer.Ordinal)
+        {
+            "vielen dank",
+            "vielen dank fürs zuschauen",
+            "vielen dank fuers zuschauen",
+            "vielen dank für eure aufmerksamkeit",
+            "vielen dank für ihre aufmerksamkeit",
+            "vielen dank für die aufmerksamkeit",
+            "bis zum nächsten mal",
+            "bis zum nächsten video",
+            "untertitel",
+            "untertitel des zdf",
+            "untertitelung des zdf für funk",
+            "untertitel im auftrag des zdf für funk",
+            "untertitel von stephanie geiges",
+            "untertitel der amara org community",
+            "der text ist nicht auf deutsch",
+            "thank you",
+            "thank you for watching",
+            "thanks for watching",
+            "please subscribe",
+            "subtitles by the amara org community",
+        };
+
         public GroqWhisperClient(string apiKey, string model, string language, string url)
         {
             _apiKey = apiKey;
@@ -213,7 +251,52 @@ namespace ClaudeVoiceOverlay.Services
 
             if (droppedConfidence > 0 || droppedAudio > 0)
                 Console.WriteLine($"Groq: {droppedConfidence} Confidence- + {droppedAudio} Audio-Segment(e) verworfen, {finalSegs.Count} behalten (Stille-Schutz).");
-            return sb.ToString().Trim();
+
+            var result = sb.ToString().Trim();
+            // Schicht 4: Floskel-Blocklist (letzter Filter). Faengt "Vielen Dank" bei kurzem Knopfdruck,
+            // das Schicht 2+3 ueberlebt. Funktionserhaltend: nur bei kurz + exaktem Match + Stille-Kontext.
+            if (IsBlocklistedFloskel(result, voiced))
+            {
+                Console.WriteLine($"Groq: Floskel-Blocklist (Schicht 4) verwarf \"{result}\" (kurz + exakter Match + Stille-Kontext).");
+                return string.Empty;
+            }
+            return result;
+        }
+
+        /// <summary>
+        /// Schicht 4 (Almanach §2.4): true, wenn der Gesamttext eine Whisper-Outro-Floskel ist. Verwirft
+        /// NUR bei drei gleichzeitigen Signalen — (1) kurz, (2) normalisierter EXAKTER Blocklist-Match,
+        /// (3) Stille-Kontext (gesamte laute Zeit im Clip &lt; Schwelle). Ohne Voiced-Timeline (voiced==null)
+        /// wird NICHT verworfen (Stille-Kontext nicht messbar -> funktionserhaltend durchlassen).
+        /// </summary>
+        private static bool IsBlocklistedFloskel(string text, bool[]? voiced)
+        {
+            if (string.IsNullOrEmpty(text) || text.Length > FloskelMaxChars) return false;
+            if (voiced == null) return false;  // Stille-Kontext nicht messbar -> echte Sprache nie verlieren
+
+            string norm = NormalizeFloskel(text);
+            if (norm.Length == 0) return false;
+            int words = norm.Split(' ', StringSplitOptions.RemoveEmptyEntries).Length;
+            if (words > FloskelMaxWords) return false;
+            if (!FloskelBlocklist.Contains(norm)) return false;   // (2) exakter Match (== nicht contains)
+
+            // (3) Stille-Kontext: war der ganze Clip sprach-arm? Bewusst gesprochene Floskel hat mehr laute Zeit.
+            double voicedMs = 0;
+            foreach (bool v in voiced) if (v) voicedMs += FrameMs;
+            return voicedMs < SilenceContextMaxVoicedMs;
+        }
+
+        /// <summary>lowercase, Satzzeichen/Ziffern entfernt (Umlaute bleiben), Whitespace kollabiert.</summary>
+        private static string NormalizeFloskel(string s)
+        {
+            var sb = new StringBuilder(s.Length);
+            foreach (char c in s.ToLowerInvariant())
+            {
+                if (char.IsLetter(c)) sb.Append(c);
+                else if (char.IsWhiteSpace(c)) sb.Append(' ');
+                // Satzzeichen, Ziffern, Symbole weglassen
+            }
+            return string.Join(' ', sb.ToString().Split(' ', StringSplitOptions.RemoveEmptyEntries));
         }
 
         /// <summary>
