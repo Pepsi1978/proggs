@@ -34,6 +34,10 @@
         "DEBUGBASE_API_KEY": "<NEEDS-API-KEY-FROM-debugbase.io>"
       },
       "disabled": true
+    },
+    "second-brain": {
+      "type": "http",
+      "url": "http://10.8.0.1:8001/mcp"
     }
   }
 }
