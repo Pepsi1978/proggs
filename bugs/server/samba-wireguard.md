@@ -36,6 +36,7 @@
 | 12 | `.ps1` startet nicht / Parse-Fehler "schliessende } fehlt", nur via geplanter Aufgabe | **Windows PowerShell 5.1** liest `.ps1` OHNE BOM als **cp1252** → ein Em-Dash (—) in einem String wird zu `â€"` und zerschiesst Quotes/Klammern. FIX: `.ps1` als **UTF-8 mit BOM** speichern UND keine typografischen Zeichen (Em-Dash/Smart-Quotes) im Code. | §9 |
 | 7 | "Brauche ich `ip_forward`/NAT fuer SMB ueber WireGuard?" | **NEIN** — der Dienst laeuft AUF dem VPS, an `wg0` gebunden → lokale Zustellung, kein Forwarding noetig (siehe `wireguard.md` §1). | §1 |
 | 8 | ⭐ Samba 4.19.x ungepatcht? (Upstream EOL) | Upstream-4.19-Zweig ist **EOL** (letzter Upstream-Fix 4.19.1). Auf Ubuntu 24.04 kommen Security-Fixes NUR per **`apt`/USN** ins `2:4.19.5+dfsg-…ubuntuX.Y`-Paket → **`unattended-upgrades` aktivieren** bzw. regelmaessig `apt upgrade`. NICHT auf den Upstream-Versionsstring schauen. | §8 |
+| 14 | ⭐⭐ macOS: Laufwerke weg; Tunnel pingt mit Verlust, aber Internet + public VPS-IP 0 % & Server gesund | Client-IP/NAT hat gewechselt (dynamische Leitung) → WireGuard-Endpoint veraltet → Mounts fallen ab. ERST Endpoint-Wechsel pruefen (`tail /var/log/wg-endpoint-monitor.log`), NICHT Mac/Server verdaechtigen. FIX: Stale-Mount-Erkennung (perl-alarm) + `/etc/nsmb.conf` soft + Endpoint-Monitor + Keepalive 15. | §13 |
 
 ---
 
@@ -349,6 +350,38 @@ im Finder einbinden — das macOS-Pendant zum Windows-`net use`/`wg-drive-mount.
   für den Mount. Setup: `second-brain-server/macos/` (`wg-drive-mount.sh`, `wireguard-up.sh`,
   `setup-macos.sh`, zwei `.plist`). **Anker:** macOS 15+, `wireguard-tools` (Homebrew), SMB 3.1.1.
 **Quelle:** Eigener Vorfall + Live-Einrichtung 2026-06-29.
+
+---
+
+## 13. ⭐⭐ macOS: Laufwerke verschwinden nach Client-IP-Wechsel (Endpoint-Flapping, live 2026-06-29)
+**Symptom:** Die Gehirn-Laufwerke (gedanken/daten) sind ploetzlich aus dem Finder weg. `ping 10.8.0.1`
+zeigt teils **hohen Paketverlust** (60 %), Port 445 mal offen, mal zu — aber `ping 1.1.1.1` und der Ping
+zur **public VPS-IP** sind 0 % Verlust. Auf dem VPS ist NICHTS auffaellig.
+**Root Cause (live diagnostiziert):** Der Paketverlust entsteht NICHT auf dem Server (per `sar` belegt:
+CPU idle 98 %, `eth0` 0 Fehler/Drops, kein OOM, kein Lastspike) und NICHT auf dem lokalen Internet —
+sondern auf der Strecke Mac↔VPS, weil die **oeffentliche Client-IP/das NAT gewechselt hat** (dynamische
+Leitung, z. B. Telekom). Der Endpoint-Monitor belegte einen Wechsel `109.41.115.177:4740` →
+`62.23.250.218:59175` in ~40 Min. Nach so einem Wechsel kennt der Server kurz nur den **alten** Endpoint
+→ Server→Client-Pakete verloren, bis das Client-Keepalive den neuen Endpoint etabliert. In dieser Zeit
+wirft macOS die SMB-Mounts ab; das alte Mount-Skript meldete dann blind „bereits gemountet — ok" und
+wartete bis zu 5 Min.
+**Diagnose-Reihenfolge (NICHT den Mac/Server verdaechtigen):** (1) `ping -c 10 10.8.0.1` Verlust? (2)
+`ping 1.1.1.1` + Ping zur public VPS-IP — beide 0 %? → Problem nur im Tunnel. (3) `wg show` Server:
+`latest handshake` frisch + `transfer` laeuft, aber Verlust → Endpoint/Strecke. (4) `sar -u/-q/-n EDEV`
+auf dem VPS → Server gesund? → Ursache ist der Client-Endpoint-Wechsel.
+**FIX (funktionserhaltend, Fehlerklasse statt Symptom — Direktive #3):**
+- **Stale-Mount-Erkennung** in `wg-drive-mount.sh`: aktive Leseprobe mit hartem Timeout (perl-alarm 4 s,
+  da macOS kein `timeout` hat) auf jeden gemounteten Share; toter Mount → `diskutil unmount force` +
+  sofort neu mounten, statt „bereits gemountet" zu glauben.
+- **SMB soft mounts** via **`/etc/nsmb.conf`** (`soft=yes`, `notify_off=yes`, `max_resp_timeout=30`):
+  Finder friert bei Aussetzer nicht ein; toter Mount haengt nicht ewig. WICHTIG: die user-
+  `~/Library/Preferences/nsmb.conf` greift NICHT fuer automountd-Mounts (laufen als root) → `/etc/nsmb.conf`.
+- **VPS-Endpoint-Monitor** (`wg-endpoint-monitor.{sh,service,timer}`, systemd-Timer 30 s): loggt jeden
+  Endpoint-Wechsel nach `/var/log/wg-endpoint-monitor.log` → naechster Vorfall ist beweisbar.
+- **`PersistentKeepalive = 25 → 15`** (Client-conf): schnellere NAT-Heilung nach IP-Wechsel.
+- `mount_smbfs` als Mount-Weg scheidet aus (braucht sudo fuer `/Volumes`-mkdir + nicht im Finder) — der
+  `osascript mount volume`-Weg aus §12 bleibt; die Haertung kommt aus nsmb.conf, nicht aus dem Mount-Befehl.
+**Quelle:** Eigener Vorfall + Live-Diagnose 2026-06-29 (commit #47317).
 
 ---
 
