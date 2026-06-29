@@ -32,8 +32,13 @@ einfuegen — dann landet die kompakte Fassung unter demselben Titel + Kategorie
 | version-bump-visible-always.md | Versionszähler immer hochzählen — und SICHTBAR |
 | anti-halluzination.md | Anti-Halluzination: erst pruefen, dann behaupten — nichts erfinden |
 | projekt-wissen-aus-gehirn.md | Projekt-Wissen aus dem Gehirn zuerst lesen (Kategorie Projekte) |
+| commit-push-jede-aufgabe-vor-build.md | Commit & Push nach JEDER Aufgabe — immer VOR Build/Install/Deploy |
 
-Kategorie fuer alle 16: `Programmierung/Rules`.
+Kategorie fuer alle 17: `Programmierung/Rules`.
+
+> Hinweis: `commit-push-jede-aufgabe-vor-build.md` ist eine OpenCode-spezifische Regel (kein
+> `~/.claude/rules/`-Original). Sie schaerft `commit-before-build.md` fuer OpenCode: gilt fuer JEDES
+> Modell und verlangt Commit+Push nach JEDER einzelnen Aufgabe (auch bei Multi-Task-Prompts).
 
 ## Grundsatz der Verkleinerung
 Verkleinert heisst: alle Handlungsregeln, MUSS-/NIEMALS-Punkte und konkreten Befehle/Formate
