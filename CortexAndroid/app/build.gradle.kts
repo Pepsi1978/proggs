@@ -13,9 +13,9 @@ android {
         applicationId = "de.frank.cortex"
         minSdk = 26
         targetSdk = 35
-        versionCode = 23
-        versionName = "0.1.22"
-        buildConfigField("String", "VERSION_BUMPED_AT", "\"28.06.2026, 14:36 Uhr\"")
+        versionCode = 24
+        versionName = "0.1.23"
+        buildConfigField("String", "VERSION_BUMPED_AT", "\"29.06.2026, 06:19 Uhr\"")
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
@@ -92,6 +92,7 @@ dependencies {
     // Security
     implementation(libs.security.crypto)
     implementation(libs.biometric)
+    implementation(libs.fragment)
 
     // WireGuard
     implementation(libs.wireguard.tunnel)
