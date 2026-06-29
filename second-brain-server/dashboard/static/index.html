@@ -901,14 +901,44 @@ button{font-family:inherit;cursor:pointer}
             <div class="field">
               <label for="modelHaupt">Hauptagent · Gespräch &amp; Steuerung</label>
               <select class="select" id="modelHaupt"></select>
+              <div class="field" id="reasonHauptBox" style="margin-top:8px;display:none">
+                <label for="reasonHaupt">Thinking / Reasoning</label>
+                <select class="select" id="reasonHaupt"></select>
+              </div>
             </div>
             <div class="field">
               <label for="modelSpeicher">Speicheragent · ablegen</label>
               <select class="select" id="modelSpeicher"></select>
+              <div class="field" id="reasonSpeicherBox" style="margin-top:8px;display:none">
+                <label for="reasonSpeicher">Thinking / Reasoning</label>
+                <select class="select" id="reasonSpeicher"></select>
+              </div>
             </div>
             <div class="field">
               <label for="modelAbfrage">Abfrageagent · suchen</label>
               <select class="select" id="modelAbfrage"></select>
+              <div class="field" id="reasonAbfrageBox" style="margin-top:8px;display:none">
+                <label for="reasonAbfrage">Thinking / Reasoning</label>
+                <select class="select" id="reasonAbfrage"></select>
+              </div>
+            </div>
+            <div class="field">
+              <label>OpenAI Codex / ChatGPT</label>
+              <div class="muted-note" id="codexState">Status wird geladen…</div>
+              <div class="muted-note" id="codexCode" style="margin-top:6px;font-size:18px;font-weight:800;letter-spacing:2px"></div>
+              <div class="row-end" style="margin-top:8px;flex-wrap:wrap">
+                <div class="vl-box" style="margin-right:auto;min-width:min(100%,360px)">
+                  <span class="vl-box-label">Websearch-Modell Tavily</span>
+                  <label class="vl-toggle" title="Wenn aus, ruft der Server Tavily bei Internetfragen nicht auf. Synchron mit der Android-App.">
+                    <span class="vl-state" id="tavilyState">An</span>
+                    <input type="checkbox" id="tavilyEnabled" checked />
+                    <span class="vl-track"></span>
+                  </label>
+                </div>
+                <button class="btn" id="codexConnectBtn">Mit Codex verbinden</button>
+                <button class="btn" id="codexDisconnectBtn">Trennen</button>
+              </div>
+              <div class="muted-note" style="margin-top:7px">Tavily ist synchron mit der Android-App. Für GPT-5.5 kannst du es ausschalten, wenn das Modell eigene Websuche nutzen soll.</div>
             </div>
             <div class="row-end">
               <span class="muted-note" id="modelStatus" style="margin-right:auto"></span>
@@ -1895,11 +1925,23 @@ button{font-family:inherit;cursor:pointer}
     try{
       const c = await api("/api/config");
       const avail = (c.available && c.available.length) ? c.available : ["gemini-3.1-flash-lite","gemini-2.5-flash","minimax/minimax-m3"];
+      const ravail = (c.reasoning_available && c.reasoning_available.length) ? c.reasoning_available : ["none","minimal","low","medium","high","xhigh"];
       const m = c.models || {};
+      const r = c.reasoning || {};
       const fill = (id, cur)=>{ const sel=document.getElementById(id); if(!sel) return;
         sel.innerHTML = avail.map(v=>`<option${v===cur?" selected":""}>${v}</option>`).join("");
+        sel.addEventListener("change", updateReasoningBoxes);
         enhanceSelect(sel); };   // schönes Dropdown (klappt nach unten)
+      const fillR = (id, cur)=>{ const sel=document.getElementById(id); if(!sel) return;
+        sel.innerHTML = ravail.map(v=>`<option${v===(cur||"medium")?" selected":""}>${v}</option>`).join("");
+        enhanceSelect(sel); };
       fill("modelHaupt", m.haupt); fill("modelSpeicher", m.speicher); fill("modelAbfrage", m.abfrage);
+      fillR("reasonHaupt", r.haupt); fillR("reasonSpeicher", r.speicher); fillR("reasonAbfrage", r.abfrage);
+      const tav = document.getElementById("tavilyEnabled");
+      if(tav) tav.checked = c.tavily_enabled !== false;
+      syncTavilyState();
+      document.getElementById("codexState").textContent = c.codex?.connected ? "Verbunden — Codex-Modelle sind auswählbar." : "Nicht verbunden — verbinde dich per Gerätecode.";
+      updateReasoningBoxes();
     }catch(e){ /* Agent nicht erreichbar — Dropdowns bleiben leer */ }
     /* System-Prompt der aktuell gewählten Rolle (haupt/speicher/abfrage) laden */
     await loadPrompt(promptRole);
@@ -1907,6 +1949,19 @@ button{font-family:inherit;cursor:pointer}
     loadLogbook();   // Logbuch-Protokolle (von der Samba-Platte) — nach Jahr/Monat
     loadTrash();     // Papierkorb — gelöschte Einträge nach Lösch-Monat
     loadBackup();    // Google-Drive-Backup-Status (Kachel neben Bibliothekar-Agent)
+  }
+
+  function isCodexModel(v){ v=(v||"").toLowerCase(); return v.startsWith("gpt-") || v.startsWith("codex/") || v.startsWith("openai-codex/"); }
+  function updateReasoningBoxes(){
+    [["modelHaupt","reasonHauptBox"],["modelSpeicher","reasonSpeicherBox"],["modelAbfrage","reasonAbfrageBox"]].forEach(([mid,bid])=>{
+      const m=document.getElementById(mid), b=document.getElementById(bid); if(!m||!b) return;
+      b.style.display = isCodexModel(m.value) ? "block" : "none";
+    });
+  }
+
+  function syncTavilyState(){
+    const cb=document.getElementById("tavilyEnabled"), st=document.getElementById("tavilyState");
+    if(st) st.textContent = (!cb || cb.checked) ? "An" : "Aus";
   }
 
   /* ── Kategorie-Verwaltung: umbenennen / zusammenführen / löschen / leere anlegen ──
@@ -2470,9 +2525,44 @@ button{font-family:inherit;cursor:pointer}
     const btn = document.getElementById("saveModelBtn");
     const val = id => { const s = document.getElementById(id); return s ? s.value : ""; };
     btn.disabled = true;
-    try{ await apiSend("/api/config","PUT",{haupt_model:val("modelHaupt"), speicher_model:val("modelSpeicher"), abfrage_model:val("modelAbfrage")}); flash("modelStatus","Modelle gespeichert"); }
+    try{ await apiSend("/api/config","PUT",{
+      haupt_model:val("modelHaupt"), speicher_model:val("modelSpeicher"), abfrage_model:val("modelAbfrage"),
+      haupt_reasoning:val("reasonHaupt"), speicher_reasoning:val("reasonSpeicher"), abfrage_reasoning:val("reasonAbfrage"),
+      tavily_enabled: !!(document.getElementById("tavilyEnabled")?.checked)
+    }); flash("modelStatus","Modelle gespeichert"); }
     catch(e){ flash("modelStatus","Speichern fehlgeschlagen",false); }
     finally{ btn.disabled = false; }
+  }
+
+  let codexPollTimer = null;
+  async function startCodexAuth(){
+    const state=document.getElementById("codexState"), code=document.getElementById("codexCode"), btn=document.getElementById("codexConnectBtn");
+    if(btn) btn.disabled=true;
+    try{
+      const r = await apiSend("/api/codex/auth/start", "POST", {});
+      state.textContent = "Öffne " + r.verification_uri + " und gib diesen Code ein:";
+      code.textContent = r.user_code || "";
+      clearInterval(codexPollTimer);
+      codexPollTimer = setInterval(async ()=>{
+        try{
+          const p = await apiSend("/api/codex/auth/poll", "POST", {auth_id:r.auth_id});
+          if(p.status === "connected"){
+            clearInterval(codexPollTimer); codexPollTimer=null;
+            state.textContent = "Verbunden — Codex-Modelle sind auswählbar."; code.textContent="";
+            if(btn) btn.disabled=false;
+            settingsLoaded=false; loadSettings();
+          }else if(p.status === "expired"){
+            clearInterval(codexPollTimer); codexPollTimer=null;
+            state.textContent = "Code abgelaufen — bitte neu verbinden."; code.textContent="";
+            if(btn) btn.disabled=false;
+          }
+        }catch(e){ clearInterval(codexPollTimer); codexPollTimer=null; state.textContent="Codex-Verbindung fehlgeschlagen."; if(btn) btn.disabled=false; }
+      }, Math.max(3, r.interval || 5) * 1000);
+    }catch(e){ state.textContent="Codex-Verbindung konnte nicht gestartet werden."; code.textContent=""; if(btn) btn.disabled=false; }
+  }
+  async function disconnectCodex(){
+    try{ await apiSend("/api/codex/auth/disconnect", "POST", {}); document.getElementById("codexState").textContent="Nicht verbunden — verbinde dich per Gerätecode."; document.getElementById("codexCode").textContent=""; settingsLoaded=false; loadSettings(); }
+    catch(e){ flash("modelStatus","Codex-Trennen fehlgeschlagen",false); }
   }
   /* Prompt EINER Rolle laden + Button-Markierung/Hinweise aktualisieren */
   const ROLE_LABELS = {haupt:"Hauptagent", speicher:"Speicheragent", abfrage:"Abfrageagent"};
@@ -2515,6 +2605,9 @@ button{font-family:inherit;cursor:pointer}
     flash("promptStatus","Auf Original zurückgesetzt — zum Übernehmen Speichern");
   }
   document.getElementById("saveModelBtn") && document.getElementById("saveModelBtn").addEventListener("click", saveModel);
+  document.getElementById("tavilyEnabled") && document.getElementById("tavilyEnabled").addEventListener("change", syncTavilyState);
+  document.getElementById("codexConnectBtn") && document.getElementById("codexConnectBtn").addEventListener("click", startCodexAuth);
+  document.getElementById("codexDisconnectBtn") && document.getElementById("codexDisconnectBtn").addEventListener("click", disconnectCodex);
   document.getElementById("savePromptBtn") && document.getElementById("savePromptBtn").addEventListener("click", savePrompt);
   document.getElementById("resetPromptBtn") && document.getElementById("resetPromptBtn").addEventListener("click", resetPrompt);
   /* Umschalt-Buttons: Prompt der gewählten Rolle laden */

@@ -84,6 +84,7 @@ fun SettingsScreen(
     var hauptReasoning by remember { mutableStateOf("medium") }
     var speicherReasoning by remember { mutableStateOf("medium") }
     var abfrageReasoning by remember { mutableStateOf("medium") }
+    var tavilyEnabled by remember { mutableStateOf(true) }
     var agentModelsLoading by remember { mutableStateOf(false) }
     var agentModelsSaving by remember { mutableStateOf(false) }
     var agentModelStatus by remember { mutableStateOf("") }
@@ -122,6 +123,7 @@ fun SettingsScreen(
             hauptReasoning = reasoning["haupt"] ?: "medium"
             speicherReasoning = reasoning["speicher"] ?: "medium"
             abfrageReasoning = reasoning["abfrage"] ?: "medium"
+            tavilyEnabled = config.tavily_enabled
             codexConnected = config.codex?.connected == true
             codexStatus = if (codexConnected) "Server verbunden — GPT/Codex-Modelle sind auswählbar" else "Server nicht verbunden"
             agentModelStatus = "Aktueller Server-Stand geladen"
@@ -682,6 +684,32 @@ fun SettingsScreen(
                 }
 
                 Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clip(RoundedCornerShape(14.dp))
+                        .border(1.dp, MaterialTheme.colorScheme.outline, RoundedCornerShape(14.dp))
+                        .padding(horizontal = 12.dp, vertical = 10.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(12.dp)
+                ) {
+                    Icon(Icons.Default.TravelExplore, null, tint = Orange, modifier = Modifier.size(20.dp))
+                    Column(modifier = Modifier.weight(1f)) {
+                        Text("Websearch-Modell Tavily", fontSize = 13.sp, fontWeight = FontWeight.SemiBold)
+                        Text(
+                            if (tavilyEnabled) "Tavily wird für Internetfragen genutzt" else "Tavily ist aus; GPT-5.5 kann eigene Websuche nutzen",
+                            fontSize = 11.sp,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
+                    Text(if (tavilyEnabled) "An" else "Aus", fontSize = 12.sp, fontWeight = FontWeight.Bold, color = if (tavilyEnabled) Orange else MaterialTheme.colorScheme.onSurfaceVariant)
+                    Switch(
+                        checked = tavilyEnabled,
+                        onCheckedChange = { tavilyEnabled = it },
+                        colors = SwitchDefaults.colors(checkedThumbColor = Color.White, checkedTrackColor = Orange)
+                    )
+                }
+
+                Row(
                     modifier = Modifier.fillMaxWidth(),
                     verticalAlignment = Alignment.CenterVertically,
                     horizontalArrangement = Arrangement.spacedBy(10.dp)
@@ -704,7 +732,8 @@ fun SettingsScreen(
                                             abfrage_model = abfrageModel,
                                             haupt_reasoning = hauptReasoning,
                                             speicher_reasoning = speicherReasoning,
-                                            abfrage_reasoning = abfrageReasoning
+                                            abfrage_reasoning = abfrageReasoning,
+                                            tavily_enabled = tavilyEnabled
                                         )
                                     )
                                     agentModelStatus = "Modelle gespeichert"

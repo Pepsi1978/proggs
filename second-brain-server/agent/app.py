@@ -24,6 +24,7 @@ Observability-First: JSON-Log (stdout + Datei), Fehler-Faenger, Logik-Sonden + I
 from __future__ import annotations
 
 import asyncio
+import base64
 import json
 import logging
 import os
@@ -46,6 +47,7 @@ from pydantic import BaseModel, Field
 VERSION = "0.31.0"  # 0.31.0: Speicher-Cap-Klasse endgueltig beseitigt (Frank-Bug 2026-06-25) — ChatReq.text max_length 100000 -> 500000 (konsistenter, GROSSZUEGIGER Backstop ~25x Franks groesste Datei; lehnt nur als allerletzte OOM-Schranke laut via 422 ab). Der eigentliche stille Slice sass im dashboard /api/chat (jetzt laute Ablehnung statt text[:N]); brain-api StoreReq hat keinen Cap und chunkt selbst -> auf dem gesamten Speicher-Pfad gibt es jetzt KEINE stille Kuerzung mehr. 0.30.0: AUSGABE-Haertung fuer grosse Eintraege (Frank-Wunsch 2026-06-25) — beim Nachschlagen bekam der Leseagent (Filter) den VOLLTEXT aller Treffer (5x18k -> Kontext-Ueberlauf-Risiko), obwohl er nur Nummern waehlt; jetzt nur ein Relevanz-Schnipsel pro Treffer (LESE_SNIPPET_CHARS, bevorzugt der gematchte Chunk). Der Hauptagent (Antwort) bekommt den Inhalt jetzt pro Treffer (ANSWER_HIT_CHARS) UND gesamt (ANSWER_TOTAL_CHARS) gedeckelt mit 'gekuerzt'-Hinweis + Verweis auf den Drawer-Volltext. So koennen Lese-/Hauptagent an beliebig grossen Eintraegen nicht mehr ueberlaufen. 0.29.0: FIX 2. Cap-Schicht (Frank-Bug 2026-06-25) — ChatReq.text war auf max_length=8000 begrenzt (Pydantic lehnte laengere Texte ab -> 422 -> 'nicht erreichbar'); jetzt 100000 (brain-api chunkt selbst). Alle Kategorie-Namen-Caps 60->120 (tiefe Pfade A/B/C/...). 0.28.0: FIX Speichern grosser Texte + Titel-Uebernahme (Frank-Bug 2026-06-25). Root Cause: bei intent=save musste der Router den Text WORTWOERTLICH in quote+reply echoen -> grosse Pastes sprengten max_tokens=2048 -> abgeschnittenes JSON -> Fallback 'nicht verstanden', danach KI-Titel statt Frank-Titel, am Ende NICHTS gespeichert (Confirm kam nie sauber). Fix: Sind Titel ODER Kategorie aus dem Dashboard gesetzt (klares Speicher-Signal) und kein offenes pending -> Router UEBERSPRINGEN, direkt intent=save (voller user_text wird 1:1 zum quote). Rueckfrage zeigt langen Text gekuerzt (gespeichert wird der VOLLE Text) -> klare 'Soll ich ... ablegen?'-Frage mit Ja/Nein. Dashboard leert das Titel-Feld nur noch, wenn der Server den Save erkannt hat (sonst bleibt der Titel fuer den Retry). 0.27.0: Beliebig tiefe Kategorie-Hierarchie (Frank-Wunsch 2026-06-25) — _cat_key normalisiert Pfade jetzt OHNE Tiefen-Limit (A/B/C/...), Speicheragent-Prompts (DEFAULT_SPEICHER + geschuetztes SPEICHER_SCHEMA) erlauben/erklaeren beliebig tiefe Pfade statt nur 2 Ebenen. Dashboard baut die Baeume rekursiv. 0.26.0: Speicheragent kennt 2-Ebenen-Hierarchie (Phase 6, Frank-Wunsch 2026-06-25) — beim Ablegen waehlt er eine passende bestehende Unterkategorie 'Haupt/Unter' zeichengenau ODER schlaegt eine neue 'Haupt/Unter' vor und fragt per Eskalation/Rueckfrage nach (Frank wird vor dem Anlegen gefragt). Kernregel im GESCHUETZTEN SPEICHER_SCHEMA (gilt auch bei custom Prompt) + Erklaerung & Beispiele E/F im DEFAULT_SPEICHER. Max 2 Ebenen, kein Schraegstrich wo flach genuegt; zusammen mit _cat_key-Normalisierung (0.23.2) keine Schreibvarianten-Dubletten. 0.25.0: Eval-Set um 10 TITEL-Saetze erweitert (Frank-Wunsch 2026-06-25, id 91-100) — pruefen das Titel-Feature aus allen Blickwinkeln: store_title (Frank gibt Titel+Kategorie vor -> Eintrag landet unter GENAU dem Titel, per by-title verifiziert, KEIN KI-Titel), query 95-97 (Eintrag ueber Titel+Inhalt auffindbar -> beweist Titel im Embedding), save_confirm_title (Bestaetigungs-Rueckfrage LIEST den Titel woertlich vor, speichert nichts). Zwei neue _eval_one-Zweige (store_title/save_confirm_title), isoliert unter EVAL_USER, nach dem Lauf gepurgt. 0.24.0: TITEL-Override beim Senden (Frank-Wunsch 2026-06-25) — ChatReq.title reicht einen im Dashboard-Sendefeld eingetippten Titel durch (analog zur Kategorie-Wahl); _process_turn merkt ihn im pending und LIEST ihn in der Bestaetigungs-Rueckfrage VOR ('Soll ich das als T unter K ablegen: ...?'); _do_store nimmt den Frank-Titel mit Vorrang (Frank-Titel > KI-Titel > Text-Anfang) und ueberspringt bei Titel+Kategorie den unnoetigen Speicheragent-LLM-Call. So bekommen ganz neue Eintraege ihren Titel von Frank statt KI-geraten -> der dann (brain-api 1.10.0) den Vektor mitpraegt. 0.23.2: Kategorie-Hierarchie-Normalisierung (Phase 5 Fundament, Frank-Wunsch 2026-06-25) — _cat_key normalisiert jetzt Schraegstriche auf genau 2 Ebenen 'Haupt/Unter' (' / ' -> '/', max 2 Ebenen, leere Teile weg), damit Unterkategorien aus dem Dashboard/Speicheragent keine Schreibvarianten-Dubletten erzeugen. 0.23.1: Eval-Set an die Internet-Suche angepasst (Etappe 3) — #52 (Wetter München) + #53 (Dortmund-Ergebnis) von kind 'smalltalk' auf 'internet' umgestellt (echte Live-Fragen gehoeren jetzt ans Internet-Werkzeug, nicht mehr smalltalk); neuer 'internet'-kind im Eval-Flow prueft NUR das Routing (intent==internet, keine echte Tavily-Suche -> spart Credits) + eigene Bereichs-Zeile im Log. 0.23.0: Internet-Suche als 3. Werkzeug (Frank-Wunsch 2026-06-25, Etappe 2). Neuer intent='internet' im Router fuer aktuelle/aeussere Fragen (Wetter, Sport, News, Kurse) -> Tavily-Suche (tavily_search, fuer KI-Agenten gebaut; Key NUR im VPS-.env TAVILY_API_KEY, nie im Repo) -> der HAUPTAGENT formuliert die Antwort aus den Suchergebnissen (hauptagent_answer_internet + HAUPTAGENT_INTERNET_AUFTRAG, mit kurzer Quellenangabe). Router-Persona + ROUTER_SCHEMA + intent-Validierung um 'internet' erweitert; Faustregel internet=aktuell/aeusserlich vs. smalltalk=zeitloses Allgemeinwissen. Tool-Fehler gefangen (ai-agent §3.2), Timeout 20s; fehlt der Key -> ehrliche Fehlanzeige statt Crash. 0.22.0: Agenten-Prompt-Umbau + Leseagent-Architektur (Frank-Wunsch 2026-06-25, nach den Recherche-Prompts). (1) Alle 3 editierbaren Prompts (Hauptagent/Speicheragent/Leseagent) in klarer Struktur ROLLE/AUFGABE/KONTEXT/KATEGORIEN/EINGABEFORMAT/REGELN/AUSGABEFORMAT/BEISPIELE neu geschrieben — die Arbeitsweise steht jetzt fast komplett im EDITIERBAREN Prompt, nur das nackte JSON-Schema bleibt geschuetzt angehaengt. Dynamische {kategorien} bleiben (KEINE feste Liste, respektiert Franks Kategorie-Verwaltung). (2) ARCHITEKTUR-Wechsel: Der Leseagent FORMULIERT die Antwort nicht mehr — er FILTERT nur die Gehirn-Treffer und gibt per JSON deren NUMMERN zurueck (ABFRAGE_SCHEMA, leseagent_select). Der HAUPTAGENT formuliert danach die Antwort aus den ORIGINAL-Treffern (hauptagent_answer + build_hauptagent_answer_prompt + HAUPTAGENT_ANSWER_AUFTRAG) — so kann der Leseagent keinen Text verfaelschen (Wortwoertlichkeit garantiert). 3-Schritt-Kette Router->Filter->Formulierung; query-Flow + Eval-Flow umgestellt; Rolle 'abfrage' im Dashboard jetzt 'Leseagent'. 0.21.0: Eval-Set auf 90 Saetze (Frank-Wunsch 2026-06-25) — +10 komplett sinnlose Plauder-Saetze ('Mann Mann Mann war das ein Tag', 'Im Fruehtau zu Berge', 'Pass mal auf'), die der Hauptagent als 'smalltalk' erkennen muss (nicht speichern/suchen). 0.20.0: Eval-Set auf 80 Saetze erweitert (Frank-Wunsch 2026-06-25) — +30 reine Smalltalk-/Wissens-Saetze (Wetter, Sport, 'erklaer mir Pythagoras', Plauderei, Aussagen ohne Speicher-Signal). Pruefen: Router routet als 'smalltalk' (NICHT speichern, NICHT im Gedaechtnis suchen) -> der Hauptagent funktioniert auch als normaler Sprachassistent. Hinweis: kein Internet-Tool, statische Wissensfragen aus Modell-Wissen, Live-Fragen ehrlich verneint. 0.19.0: POST /categories/move-entry (Frank-Wunsch 2026-06-25) — verschiebt EINEN Eintrag (doc_id) in eine andere Kategorie fuers Kategorie-Dropdown im Drawer: stellt die Ziel-Kategorie kanonisch sicher (neue -> Registry, sofort in Einstellungen+Gespraech-Dropdown synchron), setzt sie via brain set_payload (Vektor bleibt, kein Re-Embed); befuellte Registry-Kategorie wandert aus der Registry. brain_set_entry_category-Helfer. 0.18.0: Eval-Check (Frank-Wunsch 2026-06-25) — Selbsttest aller 3 Agenten gegen 50 feste Saetze (24 Speichern versch. Kategorien -> 18 Abfragen mit erwartetem Inhalt -> Smalltalk -> 3 Injektion). Laeuft unter ISOLIERTEM Test-Nutzer 'eval-test' (nie Franks Gehirn), raeumt danach HART auf (brain /purge — kein Papierkorb). Detail-Log (Markdown) auf Z /eval-logs, 14 Tage Retention. POST /eval-run (via to_thread), GET /eval-logs, GET /eval-log. brain_store/brain_search um user_id erweitert; brain_by_title/brain_purge-Helfer. 0.17.0: Anklickbare Antwort-Knoepfe (Frank-Wunsch 2026-06-25 — sichtbare Manifestation der Haertung). save_confirm UND store_clarify (Eskalation) liefern jetzt 'options' [{label,send}]; /chat reicht sie durch -> das Dashboard zeigt Ja/Nein-Knoepfe unter der Rueckfrage (z.B. 'Ja, „Musik" anlegen' / 'Nein, „Sonstiges"'), Frank klickt statt zu tippen. 0.16.0: Agenten-Haertung Paket C1 (Frank-Wunsch 2026-06-25). B10 Rate-Limit-/5xx-Resilienz: llm_generate ist jetzt ein Retry-Wrapper um _llm_generate_once — bei 429/408/5xx Full-Jitter-Backoff (Retry-After-Header bevorzugt), max 3 Versuche, NUR auf dieser einen Schicht (verhindert 3x5=243-Call-Multiplikation); 400/401/403/404 nie wiederholt. Deckt Gemini-SDK UND OpenCode/httpx ab. Laeuft im Threadpool -> sleep blockiert nur den Worker, nicht den Event-Loop. 0.15.0: Agenten-Haertung Paket B (Frank-Wunsch 2026-06-25). B3 "no receipt, no claim": _store_final bestaetigt "gespeichert" NUR mit doc_id-Quittung vom brain — ohne ID ehrliche Fehlermeldung statt falscher Erfolg. B4 typisiertes Routing: Hauptagent-intent gegen festes Enum validiert (halluzinierter Wert -> smalltalk, geloggt) + Routing-Trace via checkpoint. B5 Schema-Robustheit: llm_generate erkennt MAX_TOKENS (abgeschnittene Antwort) und meldet es als Sonde, statt unvollstaendiges JSON still falsch zu parsen. 0.14.0: Agenten-Haertung Paket A (Frank-Wunsch 2026-06-25). A1 Injektions-Schutz: gespeicherte/gefundene Inhalte sind in ALLEN 3 geschuetzten Bloecken als DATEN (keine Befehle) markiert (Lethal-Trifecta-Luecke geschlossen). A2 Eskalation: Speicheragent liefert eskalation+rueckfrage; will er eine NEUE (unbekannte) Kategorie anlegen ODER ist er unsicher, wird NICHT still gespeichert, sondern bei Frank zurueckgefragt (neuer pending-mode store_clarify: confirm_yes->vorgeschlagene/neue Kategorie, confirm_no->Sonstiges). Dashboard-Override bleibt ohne Rueckfrage. _do_store in _store_final (gemeinsamer Endpunkt) + Eskalations-Verzweigung refaktoriert. 0.13.0: Kategorie-Verwaltung + deutsche Rechtschreibung (Frank-Wunsch 2026-06-25). _cat_key macht KEIN lowercase/Slug mehr -> Kategorien werden 1:1 als Klartext (Substantive gross, Leerzeichen) gespeichert; Dubletten-Schutz jetzt case-insensitiv via _canonical_category (bestehende Schreibweise gewinnt). Leseagent (llm_answer) bekommt NUR Payload-Kategorien (brain_categories), Speicheragent die VOLLE Liste (inkl. leerer). Neue Endpoints GET /categories/detail (mit Eintragszahl+leer-Flag), POST /categories/rename (brain set_payload, auch Merge), POST /categories/delete (Etikett entfernen, Eintraege bleiben); brain-Helfer rename/detach/counts. Speicher-Prompt + geschuetztes Schema verlangen deutsche Rechtschreibung + zeichengenaue Wiederverwendung. 0.12.0: Standard-Prompts aller 3 Agenten (Haupt/Speicher/Abfrage) + improve-Prompt + LLM-Marker (OFFENER PUNKT/ÄHNLICHE EINTRÄGE/Beispiele) selbst auf echte deutsche Umlaute umgestellt — vorher predigten sie Umlaute, waren aber in ae/oe/ue geschrieben (Frank-Wunsch). 0.11.0: Deutsche Umlaute global (Frank-Wunsch) — _cat_key erhaelt ä/ö/ü/ß (kein ae/oe/ue mehr), CONV_CATEGORY 'gespräche', Logbuch-Header/Titel 'Gespräch'/'Gespräche', Speicheragent-Prompt erlaubt Umlaut-Kategorien; path-Helper erkennt alte+neue Praefixe. 0.10.0: DELETE /logbook (Frank-Wunsch) — loescht eine Logbuch-.txt von Platte Z (agent als uid 1000 mit Schreibrecht; Dashboard hat /logbook nur read-only). Pfad streng validiert (kein Traversal, nur .txt in LOGBOOK_DIR); Vektor-Kopie bleibt. 0.9.0: Kategorie-Override beim Senden (Frank-Wunsch 2026-06-24) — waehlt Frank im Dashboard-Dropdown eine Kategorie, wird der bestaetigte Text GENAU dort abgelegt (keine Auto-Kategorie, kein Dubletten-Ersatz); die Rueckfrage nennt die Kategorie. /chat + ChatReq um 'category'; _process_turn reicht sie durch, merkt sie im pending bis zur Bestaetigung; _do_store(override_category). Keine Wahl -> Speicheragent entscheidet wie bisher. 0.8.0: Kategorie-Registry (Frank-Wunsch 2026-06-24) — Kategorien koennen VORAB angelegt werden (auch ohne Eintrag) und ueberleben in categories.json (agent-data). all_categories() = Vereinigung(Gehirn-Kategorien + Registry); der Speicheragent kennt manuell angelegte Kategorien sofort. Neue Endpoints GET/POST /categories. 0.7.0: Drei editierbare System-Prompts (Frank-Wunsch 2026-06-24) — Hauptagent, Speicheragent UND Abfrageagent haben je einen EIGENEN, im Dashboard umschalt-/speicherbaren Prompt (vorher teilten Haupt+Abfrage einen, der Speicheragent war fest). Pro Rolle eigene Datei (haupt-prompt.txt/speicher-prompt.txt/abfrage-prompt.txt); das CODE-kritische JSON-Schema (Router bzw. Speicher) bleibt geschuetzt angehaengt; Anti-Halluzinations-Constraints des Abfrageagenten bleiben geschuetzt. Migration: alter gemeinsamer prompt.txt -> Haupt-Prompt. /prompt + /api/prompt um role-Parameter (Abwaertskompat: ohne role = haupt). 0.6.0: Modell-pro-Rolle (Frank-Wunsch) — Hauptagent, Speicheragent und Abfrageagent koennen je ein EIGENES Modell nutzen (3 Dropdowns im Dashboard); config.json speichert haupt_model/speicher_model/abfrage_model (Migration vom alten Einzel-'model'); /config + /health geben 'models' zurueck (Abwaertskompat: 'model' = Hauptagent). 0.5.0: Agenten-Dreiteilung (Frank-Wunsch) — Frank redet nur mit dem HAUPTAGENTEN. Dieser routet: erkennt Speicher-Absicht und fragt IMMER ZUERST mit WORTWOERTLICHEM Zitat zurueck ("Soll ich ablegen: ...?"), speichert erst nach Zustimmung 1:1 ueber den SPEICHERAGENTEN (Kategorie/Titel/Dublette); Wissensfragen ueber den ABFRAGEAGENTEN (Vektorsuche + Antwort NUR aus Treffern, mit Hinweis "nachgeschaut"). Confirm-vor-Speichern im CODE erzwungen (Zustandsautomat), nicht nur im Prompt. /chat-Schwerlast via asyncio.to_thread (Event-Loop frei, fastapi §1 / ai-agent §3.1). DEFAULT_INSTRUCTIONS=Hauptagent-Persona, SCHEMA_BLOCK->ROUTER_SCHEMA, neuer SPEICHER_SYSTEM. 0.4.0: Multi-Provider — OpenCode Zen Go (minimax-m3 ueber Anthropic /messages-Schema) als zweiter Provider neben Gemini; Modell-Liste aufgeraeumt (3.1-pro/3.1-flash raus, minimax/minimax-m3 rein); neuer /improve-Endpoint (eingesprochenen Text grammatikalisch verbessern OHNE Inhaltsaenderung). 0.3.0: Phase 4b Abruf-Seite — vierter Modus 'recall': Wissensfrage -> read-only Vektorsuche im Gehirn (brain-api /search) -> ZWEITER LLM-Aufruf llm_answer, antwortet NUR aus den Treffern (nichts erfinden), nutzt denselben editierbaren Prompt OHNE Schema. Ein Eingang, zwei Koepfe. SCHEMA_BLOCK um action 'recall' + Feld 'query' erweitert; DEFAULT_INSTRUCTIONS: Wissensfragen -> recall + Antwort-Ton-Abschnitt. maxOutputTokens hoch + finishReason-Pruefung (Gemini-Almanach B4/D10). 0.2.1: Prompt-Haertung (echte Umlaute + Anweisung, Injection-Schutz, Ehrlichkeitsschutz bei Wissensfragen, expliziter Feld-Kontrakt + ausgefuellte Few-shot-Beispiele, Kategorie-Schluessel-Format). 0.2.0: System-Prompt-Instruktionen + Modell editierbar/speicherbar (GET/PUT /prompt + /config, Datei-Persistenz unter /app/data); JSON-Schema bleibt code-seitig geschuetzt. 0.1.3: Zeitstempel JE Nachricht wieder RAUS (verwaessern die semantische Suche im Gehirn) - nur Kopf-Datum/Uhrzeit bleibt. Aktueller-Zeitpunkt-im-Prompt (korrekte Titel) bleibt. 0.1.2: Zeitpunkt+Zeitstempel. 0.1.1: /end+Kategorie. 0.1.0: Phase 4a.
 
 VERSION = "0.31.1"  # Wirksamer Counter-Bump: gespeicherte Gespraech-Eintraege erhalten sekundengenauen Zeitstempel.
+VERSION = "0.33.0"  # 0.33.0: Tavily/Websearch ist jetzt per persistenter Agent-Konfiguration an-/abschaltbar; /config liefert tavily_enabled und der Internet-Pfad nutzt Tavily nur bei aktivem Schalter. 0.32.1: Codex-Responses-Request an ChatGPT-Backendvertrag angepasst (input items, store=false, kein max_output_tokens) und Provider-400 als 502 statt FastAPI-500 gemeldet. 0.32.0: experimenteller OpenAI-Codex-Provider per ChatGPT-Device-Code, Codex-Modelle + Reasoning je Agent.
 
 # ---------------------------------------------------------------------------
 # Konfiguration (alles aus Umgebungsvariablen — Secrets nie im Code)
@@ -83,6 +85,7 @@ ANSWER_TOTAL_CHARS = int(os.getenv("AGENT_ANSWER_TOTAL_CHARS", "24000"))  # Haup
 TAVILY_API_KEY = os.getenv("TAVILY_API_KEY", "")
 TAVILY_URL = os.getenv("TAVILY_URL", "https://api.tavily.com/search")
 TAVILY_MAX_RESULTS = int(os.getenv("AGENT_TAVILY_MAX_RESULTS", "5"))
+TAVILY_ENABLED = True
 LOG_PATH = os.getenv("AGENT_LOG_PATH", "/app/logs/agent.jsonl")
 LOG_LEVEL = os.getenv("AGENT_LOG_LEVEL", "INFO").upper()
 
@@ -93,11 +96,20 @@ ROLES = ("haupt", "speicher", "abfrage")
 PROMPT_FILES = {r: Path(AGENT_DATA_DIR) / f"{r}-prompt.txt" for r in ROLES}
 LEGACY_PROMPT_FILE = Path(AGENT_DATA_DIR) / "prompt.txt"  # alter GEMEINSAMER Prompt -> wird zum Haupt-Prompt migriert
 CONFIG_FILE = Path(AGENT_DATA_DIR) / "config.json"     # {"model": "..."}
+CODEX_AUTH_FILE = Path(AGENT_DATA_DIR) / "codex-auth.json"  # ChatGPT/Codex OAuth-Tokens, NIE ins Repo
 CATEGORIES_FILE = Path(AGENT_DATA_DIR) / "categories.json"  # manuell angelegte Kategorien (auch LEERE, ohne Eintrag)
 # Auswahl fuers Dashboard-Dropdown. gemini-3.1-pro + gemini-3.1-flash bewusst entfernt (Frank, #NNN);
 # es bleiben gemini-3.1-flash-lite + gemini-2.5-flash. minimax/minimax-m3 laeuft ueber OpenCode Zen Go
 # (Anthropic /messages-Schema, siehe opencode_generate). "provider/modell"-Schreibweise = Routing-Hinweis.
 AVAILABLE_MODELS = ["gemini-3.1-flash-lite", "gemini-2.5-flash", "minimax/minimax-m3"]
+CODEX_MODELS_FALLBACK = ["gpt-5.5", "gpt-5.4", "gpt-5.4-mini", "gpt-5.3-codex", "gpt-5.3-codex-spark"]
+CODEX_OAUTH_CLIENT_ID = os.getenv("CODEX_OAUTH_CLIENT_ID", "app_EMoamEEZ73f0CkXaXp7hrann")
+CODEX_AUTH_ISSUER = os.getenv("CODEX_AUTH_ISSUER", "https://auth.openai.com").rstrip("/")
+CODEX_TOKEN_URL = os.getenv("CODEX_TOKEN_URL", "https://auth.openai.com/oauth/token")
+CODEX_BASE_URL = os.getenv("CODEX_BASE_URL", "https://chatgpt.com/backend-api/codex").rstrip("/")
+VALID_REASONING_EFFORTS = {"none", "minimal", "low", "medium", "high", "xhigh"}
+ROLE_REASONING = {"haupt": "medium", "speicher": "medium", "abfrage": "medium"}
+_codex_pending: dict[str, dict] = {}
 
 try:
     TZ = ZoneInfo(TZNAME)
@@ -193,6 +205,215 @@ def _opencode_slug(model: str) -> str:
     return model.split("/")[-1].strip()
 
 
+def _is_codex(model: str) -> bool:
+    m = (model or "").strip().lower()
+    return m.startswith("gpt-") or m.startswith("openai-codex/") or m.startswith("codex/")
+
+
+def _codex_slug(model: str) -> str:
+    m = (model or "").strip()
+    return m.split("/", 1)[1] if "/" in m and (m.startswith("openai-codex/") or m.startswith("codex/")) else m
+
+
+def _jwt_exp(access_token: str) -> float:
+    try:
+        part = access_token.split(".")[1]
+        part += "=" * (-len(part) % 4)
+        payload = json.loads(base64.urlsafe_b64decode(part.encode("utf-8")))
+        return float(payload.get("exp") or 0)
+    except Exception:
+        return 0.0
+
+
+def _codex_account_id(access_token: str) -> str:
+    try:
+        part = access_token.split(".")[1]
+        part += "=" * (-len(part) % 4)
+        payload = json.loads(base64.urlsafe_b64decode(part.encode("utf-8")))
+        auth = payload.get("https://api.openai.com/auth") or {}
+        return auth.get("chatgpt_account_id") or ""
+    except Exception:
+        return ""
+
+
+def _load_codex_auth() -> dict:
+    try:
+        if CODEX_AUTH_FILE.exists():
+            data = json.loads(CODEX_AUTH_FILE.read_text(encoding="utf-8"))
+            return data if isinstance(data, dict) else {}
+    except Exception as e:
+        _log(logging.WARNING, "Codex-Auth-Datei nicht lesbar", err=str(e))
+    return {}
+
+
+def _save_codex_auth(data: dict) -> None:
+    Path(AGENT_DATA_DIR).mkdir(parents=True, exist_ok=True)
+    tmp = CODEX_AUTH_FILE.with_suffix(".tmp")
+    tmp.write_text(json.dumps(data, ensure_ascii=False, indent=2), encoding="utf-8", newline="\n")
+    os.replace(tmp, CODEX_AUTH_FILE)
+    try:
+        os.chmod(CODEX_AUTH_FILE, 0o600)
+    except Exception:
+        pass
+
+
+def _refresh_codex_tokens(tokens: dict) -> dict:
+    refresh_token = (tokens.get("refresh_token") or "").strip()
+    if not refresh_token:
+        raise RuntimeError("Codex refresh_token fehlt — neu verbinden")
+    r = httpx.post(
+        CODEX_TOKEN_URL,
+        data={"grant_type": "refresh_token", "refresh_token": refresh_token, "client_id": CODEX_OAUTH_CLIENT_ID},
+        headers={"Content-Type": "application/x-www-form-urlencoded", "Accept": "application/json"},
+        timeout=20.0,
+    )
+    r.raise_for_status()
+    payload = r.json()
+    access = payload.get("access_token")
+    if not access:
+        raise RuntimeError("Codex refresh lieferte kein access_token")
+    updated = dict(tokens)
+    updated["access_token"] = access
+    if payload.get("refresh_token"):
+        updated["refresh_token"] = payload["refresh_token"]
+    auth = _load_codex_auth()
+    auth["tokens"] = updated
+    auth["last_refresh"] = _now_local().isoformat()
+    _save_codex_auth(auth)
+    return updated
+
+
+def _codex_tokens(refresh_if_needed: bool = True) -> dict:
+    auth = _load_codex_auth()
+    tokens = auth.get("tokens") if isinstance(auth.get("tokens"), dict) else {}
+    access = (tokens.get("access_token") or "").strip()
+    if not access:
+        raise RuntimeError("Codex ist nicht verbunden")
+    if refresh_if_needed and _jwt_exp(access) and _jwt_exp(access) - time.time() < 120:
+        tokens = _refresh_codex_tokens(tokens)
+    return tokens
+
+
+def _codex_headers(access_token: str) -> dict:
+    headers = {
+        "Authorization": f"Bearer {access_token}",
+        "Content-Type": "application/json",
+        "Accept": "application/json",
+        "User-Agent": "codex_cli_rs/0.0.0 (Cortex)",
+        "originator": "codex_cli_rs",
+    }
+    account_id = _codex_account_id(access_token)
+    if account_id:
+        headers["ChatGPT-Account-ID"] = account_id
+    return headers
+
+
+def codex_models() -> list[str]:
+    try:
+        access = _codex_tokens(refresh_if_needed=True).get("access_token", "")
+        r = httpx.get(f"{CODEX_BASE_URL}/models?client_version=1.0.0", headers=_codex_headers(access), timeout=12.0)
+        if r.status_code == 200:
+            data = r.json()
+            rows = data.get("models") if isinstance(data, dict) else []
+            out = []
+            for item in rows or []:
+                slug = item.get("slug") if isinstance(item, dict) else None
+                visibility = (item.get("visibility") or "") if isinstance(item, dict) else ""
+                if isinstance(slug, str) and slug.strip() and str(visibility).lower() not in {"hide", "hidden"}:
+                    out.append(slug.strip())
+            if out:
+                for fallback in CODEX_MODELS_FALLBACK:
+                    if fallback not in out:
+                        out.append(fallback)
+                return out
+    except Exception as e:
+        _log(logging.INFO, "Codex-Modellliste nicht live abrufbar", err=str(e))
+    return CODEX_MODELS_FALLBACK if codex_connected() else []
+
+
+def codex_connected() -> bool:
+    try:
+        _codex_tokens(refresh_if_needed=False)
+        return True
+    except Exception:
+        return False
+
+
+def _extract_response_text(data: dict) -> str:
+    txt = data.get("output_text")
+    if isinstance(txt, str) and txt.strip():
+        return txt.strip()
+    parts: list[str] = []
+    for item in data.get("output") or []:
+        if not isinstance(item, dict):
+            continue
+        for c in item.get("content") or []:
+            if isinstance(c, dict):
+                t = c.get("text") or c.get("output_text")
+                if isinstance(t, str):
+                    parts.append(t)
+    return "".join(parts).strip()
+
+
+def codex_generate(system: str, user: str, model: str, max_tokens: int, temperature: float, reasoning_effort: str = "medium") -> str:
+    access = _codex_tokens(refresh_if_needed=True).get("access_token", "")
+    body: dict[str, Any] = {
+        "model": _codex_slug(model),
+        "instructions": system,
+        "input": [{"role": "user", "content": user}],
+        "store": False,
+        "stream": True,
+    }
+    effort = (reasoning_effort or "medium").strip().lower()
+    if effort and effort != "none":
+        body["reasoning"] = {"effort": effort if effort in VALID_REASONING_EFFORTS else "medium", "summary": "auto"}
+        body["include"] = ["reasoning.encrypted_content"]
+    text_parts: list[str] = []
+    completed_response: dict | None = None
+    with httpx.stream("POST", f"{CODEX_BASE_URL}/responses", json=body, headers=_codex_headers(access), timeout=120.0) as r:
+        if r.status_code >= 400:
+            detail = r.read().decode("utf-8", errors="replace")[:800] or r.reason_phrase
+            _log(logging.WARNING, "Codex-Backend lehnte Request ab", status=r.status_code, detail=detail)
+            raise HTTPException(status_code=502, detail=f"Codex-Backend HTTP {r.status_code}: {detail}")
+        for line in r.iter_lines():
+            if not line:
+                continue
+            raw = line.strip()
+            if raw.startswith("data:"):
+                raw = raw[5:].strip()
+            elif raw.startswith("event:"):
+                continue
+            if not raw or raw == "[DONE]":
+                continue
+            try:
+                event = json.loads(raw)
+            except Exception:
+                continue
+            event_type = str(event.get("type") or "")
+            if event_type == "error":
+                detail = json.dumps(event, ensure_ascii=False)[:800]
+                raise HTTPException(status_code=502, detail=f"Codex-Stream-Fehler: {detail}")
+            if "output_text.delta" in event_type:
+                delta = event.get("delta")
+                if isinstance(delta, str):
+                    text_parts.append(delta)
+                continue
+            if event_type == "response.completed":
+                resp = event.get("response")
+                if isinstance(resp, dict):
+                    completed_response = resp
+                break
+            if event_type == "response.failed":
+                detail = json.dumps(event.get("response") or event, ensure_ascii=False)[:800]
+                raise HTTPException(status_code=502, detail=f"Codex-Stream fehlgeschlagen: {detail}")
+    text = "".join(text_parts).strip()
+    if not text and completed_response:
+        text = _extract_response_text(completed_response)
+    if not text:
+        raise RuntimeError("Codex lieferte leeren Text")
+    return text
+
+
 def opencode_generate(system: str, user: str, model: str, max_tokens: int, temperature: float) -> str:
     """OpenCode Zen Go (Anthropic /messages-Schema) fuer MiniMax/Qwen.
     PFLICHT-Header laut Almanach (opencode-cli.md §14.6/§14.8): x-api-key (NICHT Bearer),
@@ -232,6 +453,9 @@ def _llm_generate_once(system: str, user: str, *, model: str, json_mode: bool, m
     """EIN einzelner LLM-Aufruf (Gemini ODER OpenCode-Go, Modell-pro-Rolle). Der Retry-Wrapper
     llm_generate() umschliesst ihn. Bei json_mode nutzt Gemini response_mime_type=application/json;
     OpenCode/minimax erzwingt das JSON ueber das Schema im System-Prompt (Aufrufer parst per _extract_json)."""
+    if _is_codex(model):
+        role = next((r for r, m in ROLE_MODELS.items() if m == model), "haupt")
+        return codex_generate(system, user, model=model, max_tokens=max_tokens, temperature=temperature, reasoning_effort=ROLE_REASONING.get(role, "medium"))
     if _is_opencode(model):
         return opencode_generate(system, user, model=model, max_tokens=max_tokens, temperature=temperature)
     if gclient is None:
@@ -525,6 +749,7 @@ Du bist der Hauptagent von Cortex, Franks zweitem Gehirn — sein direkter Gespr
 Schreibe IMMER mit echten Umlauten (ä, ö, ü, ß), niemals ae/oe/ue/ss. Das gilt besonders für 'reply' und 'quote'.
 
 # ROUTEN — WELCHE ABSICHT?
+- KONTEXTMODUS: Wenn in der Nachricht ein Abschnitt 'AKTIVER KONTEXTMODUS' steht, ist das Franks bewusst gewaehlter Arbeitsmodus. Befolge ihn vorrangig innerhalb dieses Schemas: Smalltalk-Modus -> smalltalk, Speichermodus -> save, Suchmodus -> query. Auto/kein Modus -> entscheide wie gewohnt.
 - SPEICHERN ('merk dir', 'speicher das ab', 'notier', oder Frank nennt einfach einen Fakt/eine Info über sich, seinen Alltag, seine Pläne) -> intent='save'. Du speicherst NICHT sofort (siehe unten).
 - BESTÄTIGUNG: Steht unten ein 'OFFENER PUNKT' (du hast gerade eine Speicher-Rückfrage gestellt), ist Franks Nachricht die Antwort darauf. Zustimmung ('ja', 'genau', 'mach', 'passt', 'jep') -> intent='confirm_yes'. Ablehnung ('nein', 'lass', 'doch nicht', 'abbrechen') -> intent='confirm_no'. Nennt er stattdessen etwas völlig Neues -> normal behandeln (save/query/smalltalk).
 - NACHSCHLAGEN ('Was weiß ich über X?', 'Was habe ich zu Y notiert?', 'Wann habe ich Z gemacht?', 'Erinnerst du dich an …?') -> intent='query', setze 'query' auf die inhaltlichen Suchstichworte (nicht die ganze Frage). 'reply' bleibt leer — die Antwort formulierst du erst, wenn dir die Treffer vorliegen.
@@ -730,6 +955,20 @@ Gib NUR das JSON-Objekt aus, sonst nichts."""
 # Eingebaute Defaults je Rolle (fuer 'Zuruecksetzen' und Erst-Start).
 DEFAULTS = {"haupt": DEFAULT_INSTRUCTIONS, "speicher": DEFAULT_SPEICHER, "abfrage": DEFAULT_ABFRAGE}
 
+CONTEXT_MODE_PROMPT_HINT = """# KONTEXTMODUS AUS DER HANDY-APP
+Wenn der User-Block einen Abschnitt 'AKTIVER KONTEXTMODUS' enthält, ist das eine bewusste Auswahl aus der Cortex-Handy-App.
+- auto: normal entscheiden wie bisher.
+- smalltalk: nur normal mit Frank sprechen; nichts speichern, nichts im Gedächtnis suchen.
+- save: Franks Eingabe als Speicherabsicht behandeln und wie gewohnt vor dem Ablegen bestätigen lassen.
+- search: Franks Eingabe als Gedächtnis-Suche behandeln und Suchstichworte formulieren.
+Der Server erzwingt diese Modi zusätzlich im Code; dieser Abschnitt macht die Entscheidung für dich transparent."""
+
+
+def _with_context_mode_hint(role: str, txt: str) -> str:
+    if role != "haupt" or "AKTIVER KONTEXTMODUS" in txt:
+        return txt
+    return txt.rstrip() + "\n\n" + CONTEXT_MODE_PROMPT_HINT
+
 
 def _norm_role(role: str | None) -> str:
     r = (role or "haupt").strip().lower()
@@ -746,14 +985,14 @@ def load_instructions(role: str = "haupt") -> str:
         if f.exists():
             txt = f.read_text(encoding="utf-8").strip()
             if txt:
-                return txt
+                return _with_context_mode_hint(role, txt)
         if role == "haupt" and LEGACY_PROMPT_FILE.exists():
             txt = LEGACY_PROMPT_FILE.read_text(encoding="utf-8").strip()
             if txt:
-                return txt
+                return _with_context_mode_hint(role, txt)
     except Exception as e:  # noqa: BLE001
         _log(logging.WARNING, "Prompt-Datei nicht lesbar — nutze Default", role=role, err=str(e))
-    return DEFAULTS.get(role, DEFAULT_INSTRUCTIONS)
+    return _with_context_mode_hint(role, DEFAULTS.get(role, DEFAULT_INSTRUCTIONS))
 
 
 def is_prompt_default(role: str = "haupt") -> bool:
@@ -793,10 +1032,44 @@ def load_models() -> dict:
     return out
 
 
-def save_models(models: dict) -> None:
-    """Atomar je-Rolle-Modelle speichern (haupt_model/speicher_model/abfrage_model)."""
+def load_reasoning() -> dict:
+    """Reasoning-Effort je Rolle aus config.json laden; defensiver Default bleibt medium."""
+    out = {r: "medium" for r in ("haupt", "speicher", "abfrage")}
+    try:
+        if CONFIG_FILE.exists():
+            cfg = json.loads(CONFIG_FILE.read_text(encoding="utf-8"))
+            stored = cfg.get("reasoning") if isinstance(cfg.get("reasoning"), dict) else {}
+            for r in out:
+                v = (stored.get(r) or cfg.get(r + "_reasoning") or "").strip().lower()
+                if v in VALID_REASONING_EFFORTS:
+                    out[r] = v
+    except Exception as e:  # noqa: BLE001
+        _log(logging.WARNING, "Reasoning-Konfiguration nicht lesbar — nutze medium", err=str(e))
+    return out
+
+
+def load_tavily_enabled() -> bool:
+    """Tavily-Schalter aus config.json laden; Default bleibt an fuer bestehendes Verhalten."""
+    try:
+        if CONFIG_FILE.exists():
+            cfg = json.loads(CONFIG_FILE.read_text(encoding="utf-8"))
+            return bool(cfg.get("tavily_enabled", True))
+    except Exception as e:  # noqa: BLE001
+        _log(logging.WARNING, "Tavily-Konfiguration nicht lesbar — nutze an", err=str(e))
+    return True
+
+
+def save_models(models: dict, reasoning: dict | None = None, tavily_enabled: bool | None = None) -> None:
+    """Atomar je-Rolle-Modelle, Reasoning und optionale Tool-Schalter speichern."""
     Path(AGENT_DATA_DIR).mkdir(parents=True, exist_ok=True)
+    current_tavily = load_tavily_enabled()
     data = {f"{r}_model": (models.get(r) or AGENT_MODEL_DEFAULT) for r in ("haupt", "speicher", "abfrage")}
+    if reasoning is not None:
+        data["reasoning"] = {
+            r: ((reasoning.get(r) or "medium") if (reasoning.get(r) or "medium") in VALID_REASONING_EFFORTS else "medium")
+            for r in ("haupt", "speicher", "abfrage")
+        }
+    data["tavily_enabled"] = current_tavily if tavily_enabled is None else bool(tavily_enabled)
     tmp = CONFIG_FILE.with_suffix(".tmp")
     tmp.write_text(json.dumps(data, ensure_ascii=False, indent=2), encoding="utf-8", newline="\n")
     os.replace(tmp, CONFIG_FILE)
@@ -853,7 +1126,12 @@ def _history_text(session: dict) -> str:
     return "\n".join(("Frank" if m["role"] == "frank" else "Agent") + ": " + m["text"] for m in msgs)
 
 
-def hauptagent_route(session: dict, user_text: str, pending: dict | None) -> dict:
+def _norm_context_mode(mode: str | None) -> str:
+    m = (mode or "auto").strip().lower()
+    return m if m in {"auto", "smalltalk", "save", "search"} else "auto"
+
+
+def hauptagent_route(session: dict, user_text: str, pending: dict | None, context_mode: str = "auto", context_prompt: str = "") -> dict:
     """HAUPTAGENT: klassifiziert Franks Nachricht (intent) und formuliert die Antwort/Rueckfrage.
     Speichert/sucht NICHTS selbst — das uebernimmt das /chat-Flow ueber Speicher-/Abfrageagent.
     Gibt {intent, quote, query, reply}. Veraendert NIE den 1:1-Inhalt."""
@@ -871,8 +1149,14 @@ def hauptagent_route(session: dict, user_text: str, pending: dict | None) -> dic
     _wd = ["Montag", "Dienstag", "Mittwoch", "Donnerstag", "Freitag", "Samstag", "Sonntag"][now.weekday()]
     now_line = (f"AKTUELLER ZEITPUNKT: {_wd}, {now.strftime('%d.%m.%Y')}, {now.strftime('%H:%M')} Uhr "
                 "(Zeitzone Europe/Berlin).")
+    mode = _norm_context_mode(context_mode)
+    prompt = (context_prompt or "").strip()[:4000]
+    mode_txt = "(Auto — kein spezieller Modus)"
+    if mode != "auto":
+        mode_txt = f"Modus: {mode}\nZusatzauftrag von Frank:\n{prompt or '(kein Zusatzprompt hinterlegt)'}"
     user_block = (
         f"{now_line}\n\n"
+        f"AKTIVER KONTEXTMODUS:\n{mode_txt}\n\n"
         f"BISHERIGES GESPRÄCH:\n{_history_text(session)}\n\n"
         f"OFFENER PUNKT (Rückfrage):\n{pending_txt}\n\n"
         f"AKTUELLE NACHRICHT VON FRANK:\n{user_text}"
@@ -896,6 +1180,20 @@ def hauptagent_route(session: dict, user_text: str, pending: dict | None) -> dic
     if (data.get("intent") or "").strip() not in {"save", "confirm_yes", "confirm_no", "query", "internet", "smalltalk"}:
         _log(logging.WARNING, "Hauptagent: ungueltiger intent -> smalltalk", got=str(data.get("intent"))[:40])
         data["intent"] = "smalltalk"
+    # Kontextmodus ist eine bewusste UI-Entscheidung und wird defensiv erzwungen, damit der Agent
+    # nicht versehentlich speichert oder sucht, obwohl Frank den Modus festgesetzt hat.
+    if mode == "smalltalk":
+        data["intent"] = "smalltalk"
+        data["quote"] = ""
+        data["query"] = ""
+    elif not pending and mode == "save":
+        data["intent"] = "save"
+        data["quote"] = (data.get("quote") or "").strip() or user_text.strip()
+        data["query"] = ""
+    elif not pending and mode == "search":
+        data["intent"] = "query"
+        data["query"] = (data.get("query") or "").strip() or user_text.strip()
+        data["quote"] = ""
     checkpoint("route", "Hauptagent-Routing klassifiziert Franks Nachricht", ok=True, route=data["intent"])
     return data
 
@@ -1089,6 +1387,8 @@ def tavily_search(query: str) -> dict:
     """Internet-Suche ueber Tavily (fuer KI-Agenten gebaut). Gibt {ok, answer, results:[{title,url,content}]}
     oder {ok:False, reason}. Tool-Fehler werden GEFANGEN (ai-agent §3.2/§3.3): nie crashen, Timeout gesetzt.
     Fehlt der Key -> ok:False, reason='kein_key' (der Handler sagt es Frank ehrlich)."""
+    if not TAVILY_ENABLED:
+        return {"ok": False, "reason": "deaktiviert"}
     if not TAVILY_API_KEY:
         return {"ok": False, "reason": "kein_key"}
     try:
@@ -1128,6 +1428,9 @@ def hauptagent_answer_internet(session: dict, question: str, search: dict) -> st
     """HAUPTAGENT formuliert Franks Antwort aus den Tavily-Suchergebnissen (Freitext). Kein Key / Fehler
     -> ehrliche Fehlanzeige (nie crashen)."""
     if not search.get("ok"):
+        if search.get("reason") == "deaktiviert":
+            return ("Die Tavily-Internet-Suche ist gerade ausgeschaltet. "
+                    "Wenn dein gewähltes Modell eigene Websuche kann, nutze diese Modellfunktion; sonst schalte Tavily in den Einstellungen wieder ein.")
         if search.get("reason") == "kein_key":
             return ("Die Internet-Suche ist noch nicht eingerichtet — dafür fehlt mir gerade der Zugang. "
                     "Sobald der eingetragen ist, kann ich aktuelle Dinge wie Wetter, Sport oder News für dich nachschlagen.")
@@ -1229,12 +1532,15 @@ def require_auth(authorization: str = Header(default="")) -> None:
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    global ROLE_MODELS
+    global ROLE_MODELS, ROLE_REASONING, TAVILY_ENABLED
     ROLE_MODELS = load_models()   # gespeicherte Modell-Wahl JE ROLLE uebernehmen (sonst Env-Default)
+    ROLE_REASONING = load_reasoning()
+    TAVILY_ENABLED = load_tavily_enabled()
     # Diagnose: nutzt EINE Rolle ein OpenCode-Modell (minimax), muss der OpenCode-Key da sein.
     if any(_is_opencode(m) for m in ROLE_MODELS.values()):
         probe(bool(OPENCODE_API_KEY), "OPENCODE_API_KEY fehlt, aber OpenCode-Modell aktiv", models=ROLE_MODELS)
-    _log(logging.INFO, "sb-agent gestartet", version=VERSION, models=ROLE_MODELS,
+    _log(logging.INFO, "sb-agent gestartet", version=VERSION, models=ROLE_MODELS, reasoning=ROLE_REASONING,
+         tavily_enabled=TAVILY_ENABLED,
          prompts=[r for r in ROLES if not is_prompt_default(r)] or ["alle default"], data_dir=AGENT_DATA_DIR)
     task = asyncio.create_task(_flush_loop())
     _log(logging.INFO, "Flush-Loop gestartet")
@@ -1260,6 +1566,8 @@ class ChatReq(BaseModel):
     category: str | None = Field(default=None, max_length=120, description="Im Dashboard gewaehlte Kategorie (Override, tiefe Pfade A/B/C/...); leer = Agent entscheidet")
     title: str | None = Field(default=None, max_length=200, description="Im Dashboard eingetippter Titel (Override); leer = Speicheragent vergibt den Titel")
     store_timestamp: bool = Field(default=False, description="Cortex-Gespraech: beim finalen Speichern Datum+Uhrzeit bis Sekunden in den Text schreiben")
+    context_mode: str | None = Field(default="auto", max_length=20, description="UI-Kontextmodus: auto | smalltalk | save | search")
+    context_prompt: str | None = Field(default=None, max_length=4000, description="Zusatzprompt des gewaehlten Kontextmodus aus der Handy-App")
 
 
 class EndReq(BaseModel):
@@ -1278,6 +1586,14 @@ class ConfigReq(BaseModel):
     speicher_model: str | None = Field(default=None, description="Modell des Speicheragenten (ablegen)")
     abfrage_model: str | None = Field(default=None, description="Modell des Abfrageagenten (suchen)")
     model: str | None = Field(default=None, description="Abwaertskompat: setzt alle drei Rollen")
+    haupt_reasoning: str | None = Field(default=None, description="Reasoning Effort Hauptagent: none|minimal|low|medium|high|xhigh")
+    speicher_reasoning: str | None = Field(default=None, description="Reasoning Effort Speicheragent")
+    abfrage_reasoning: str | None = Field(default=None, description="Reasoning Effort Abfrageagent")
+    tavily_enabled: bool | None = Field(default=None, description="Tavily-Websearch fuer intent=internet an/aus")
+
+
+class CodexAuthPollReq(BaseModel):
+    auth_id: str = Field(..., min_length=8, max_length=80)
 
 
 class ImproveReq(BaseModel):
@@ -1322,8 +1638,10 @@ def health() -> dict:
         brain = r.json().get("status", "?") if r.status_code == 200 else f"http {r.status_code}"
     except Exception as e:  # noqa: BLE001
         brain = f"{type(e).__name__}"
-    return {"status": "ok" if (gclient is not None and init_error is None) else "degraded",
-            "version": VERSION, "model": ROLE_MODELS["haupt"], "models": ROLE_MODELS, "init_error": init_error,
+    ok_provider = (gclient is not None and init_error is None) or any(_is_opencode(m) or _is_codex(m) for m in ROLE_MODELS.values())
+    return {"status": "ok" if ok_provider else "degraded",
+            "version": VERSION, "model": ROLE_MODELS["haupt"], "models": ROLE_MODELS, "reasoning": ROLE_REASONING,
+            "codex": {"connected": codex_connected()}, "init_error": init_error,
             "brain": brain, "aktive_sitzungen": len(_sessions), "session_timeout_s": SESSION_TIMEOUT_S}
 
 
@@ -1363,13 +1681,17 @@ def put_prompt(req: PromptReq) -> dict:
 
 @app.get("/config", dependencies=[Depends(require_auth)])
 def get_config() -> dict:
+    available = AVAILABLE_MODELS + [m for m in codex_models() if m not in AVAILABLE_MODELS]
     return {"models": ROLE_MODELS, "model": ROLE_MODELS["haupt"],
-            "default": AGENT_MODEL_DEFAULT, "available": AVAILABLE_MODELS}
+            "reasoning": ROLE_REASONING, "reasoning_available": ["none", "minimal", "low", "medium", "high", "xhigh"],
+            "tavily_enabled": TAVILY_ENABLED,
+            "codex": {"connected": codex_connected()},
+            "default": AGENT_MODEL_DEFAULT, "available": available}
 
 
 @app.put("/config", dependencies=[Depends(require_auth)])
 def put_config(req: ConfigReq) -> dict:
-    global ROLE_MODELS
+    global ROLE_MODELS, ROLE_REASONING, TAVILY_ENABLED
     new = dict(ROLE_MODELS)
     if req.model and req.model.strip():          # Abwaertskompat: EIN Modell -> alle drei Rollen
         m = req.model.strip()
@@ -1377,10 +1699,102 @@ def put_config(req: ConfigReq) -> dict:
     for role, val in (("haupt", req.haupt_model), ("speicher", req.speicher_model), ("abfrage", req.abfrage_model)):
         if val and val.strip():
             new[role] = val.strip()
+    new_reasoning = dict(ROLE_REASONING)
+    for role, val in (("haupt", req.haupt_reasoning), ("speicher", req.speicher_reasoning), ("abfrage", req.abfrage_reasoning)):
+        v = (val or "").strip().lower()
+        if v in VALID_REASONING_EFFORTS:
+            new_reasoning[role] = v
     ROLE_MODELS = new
-    save_models(ROLE_MODELS)                      # sofort aktiv, kein Neustart noetig
-    _log(logging.INFO, "Agent-Modelle gewechselt", models=ROLE_MODELS)
-    return {"status": "ok", "models": ROLE_MODELS}
+    ROLE_REASONING = new_reasoning
+    if req.tavily_enabled is not None:
+        TAVILY_ENABLED = bool(req.tavily_enabled)
+    save_models(ROLE_MODELS, ROLE_REASONING, TAVILY_ENABLED)      # sofort aktiv, kein Neustart noetig
+    _log(logging.INFO, "Agent-Konfiguration gewechselt", models=ROLE_MODELS, reasoning=ROLE_REASONING,
+         tavily_enabled=TAVILY_ENABLED)
+    return {"status": "ok", "models": ROLE_MODELS, "reasoning": ROLE_REASONING, "tavily_enabled": TAVILY_ENABLED}
+
+
+@app.post("/codex/auth/start", dependencies=[Depends(require_auth)])
+def codex_auth_start() -> dict:
+    try:
+        r = httpx.post(
+            f"{CODEX_AUTH_ISSUER}/api/accounts/deviceauth/usercode",
+            json={"client_id": CODEX_OAUTH_CLIENT_ID},
+            headers={"Content-Type": "application/json"},
+            timeout=15.0,
+        )
+        if r.status_code != 200:
+            raise HTTPException(status_code=502, detail=f"Codex Device-Code-Start fehlgeschlagen: HTTP {r.status_code}")
+        data = r.json()
+    except HTTPException:
+        raise
+    except Exception as e:  # noqa: BLE001
+        _log(logging.ERROR, "Codex Device-Code-Start fehlgeschlagen", exc_info=True)
+        raise HTTPException(status_code=502, detail=f"Codex Device-Code-Start fehlgeschlagen: {type(e).__name__}") from e
+    user_code = (data.get("user_code") or "").strip()
+    device_auth_id = (data.get("device_auth_id") or "").strip()
+    if not user_code or not device_auth_id:
+        raise HTTPException(status_code=502, detail="Codex Device-Code unvollstaendig")
+    auth_id = f"codex-{int(time.time())}-{random.randint(100000, 999999)}"
+    _codex_pending[auth_id] = {
+        "device_auth_id": device_auth_id,
+        "user_code": user_code,
+        "expires_at": time.time() + 900,
+        "interval": max(3, int(data.get("interval") or 5)),
+    }
+    return {"ok": True, "auth_id": auth_id, "user_code": user_code,
+            "verification_uri": f"{CODEX_AUTH_ISSUER}/codex/device",
+            "expires_in": 900, "interval": _codex_pending[auth_id]["interval"]}
+
+
+@app.post("/codex/auth/poll", dependencies=[Depends(require_auth)])
+def codex_auth_poll(req: CodexAuthPollReq) -> dict:
+    pending = _codex_pending.get(req.auth_id)
+    if not pending:
+        return {"ok": False, "status": "expired", "connected": codex_connected()}
+    if time.time() > pending["expires_at"]:
+        _codex_pending.pop(req.auth_id, None)
+        return {"ok": False, "status": "expired", "connected": codex_connected()}
+    poll = httpx.post(
+        f"{CODEX_AUTH_ISSUER}/api/accounts/deviceauth/token",
+        json={"device_auth_id": pending["device_auth_id"], "user_code": pending["user_code"]},
+        headers={"Content-Type": "application/json"},
+        timeout=15.0,
+    )
+    if poll.status_code in {403, 404}:
+        return {"ok": True, "status": "pending", "connected": False}
+    poll.raise_for_status()
+    code_data = poll.json()
+    authorization_code = code_data.get("authorization_code") or ""
+    code_verifier = code_data.get("code_verifier") or ""
+    if not authorization_code or not code_verifier:
+        raise HTTPException(status_code=502, detail="Codex Authorization-Code unvollstaendig")
+    token = httpx.post(
+        CODEX_TOKEN_URL,
+        data={"grant_type": "authorization_code", "code": authorization_code,
+              "redirect_uri": f"{CODEX_AUTH_ISSUER}/deviceauth/callback",
+              "client_id": CODEX_OAUTH_CLIENT_ID, "code_verifier": code_verifier},
+        headers={"Content-Type": "application/x-www-form-urlencoded", "Accept": "application/json"},
+        timeout=15.0,
+    )
+    token.raise_for_status()
+    tokens = token.json()
+    if not tokens.get("access_token"):
+        raise HTTPException(status_code=502, detail="Codex Token-Antwort ohne access_token")
+    _save_codex_auth({"tokens": {"access_token": tokens.get("access_token"), "refresh_token": tokens.get("refresh_token")},
+                      "base_url": CODEX_BASE_URL, "last_refresh": _now_local().isoformat(), "auth_mode": "chatgpt"})
+    _codex_pending.pop(req.auth_id, None)
+    return {"ok": True, "status": "connected", "connected": True, "models": codex_models()}
+
+
+@app.post("/codex/auth/disconnect", dependencies=[Depends(require_auth)])
+def codex_auth_disconnect() -> dict:
+    try:
+        if CODEX_AUTH_FILE.exists():
+            CODEX_AUTH_FILE.unlink()
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Codex-Abmeldung fehlgeschlagen: {e}") from e
+    return {"ok": True, "connected": False}
 
 
 # --- Kategorien: volle Liste (mit Eintraegen + manuell angelegte/leere) + neue anlegen ----------
@@ -1847,7 +2261,7 @@ def improve(req: ImproveReq) -> dict:
     return {"ok": True, "text": better}
 
 
-def _process_turn(session: dict, user_text: str, pending: dict | None, category: str = "", title: str = "", store_timestamp: bool = False) -> dict:
+def _process_turn(session: dict, user_text: str, pending: dict | None, category: str = "", title: str = "", store_timestamp: bool = False, context_mode: str = "auto", context_prompt: str = "") -> dict:
     """Ein Gespraechszug — laeuft komplett synchron (LLM + brain) und wird vom async-Handler per
     asyncio.to_thread aufgerufen, damit der Event-Loop NICHT blockiert (fastapi §1 / ai-agent §3.1).
     Liest nur session['messages'] (Verlauf), MUTIERT die Session nicht — gibt 'pending' zum Setzen zurueck.
@@ -1864,7 +2278,7 @@ def _process_turn(session: dict, user_text: str, pending: dict | None, category:
         route = {"intent": "save", "quote": "", "query": "", "reply": ""}
         checkpoint("route", "Explizite Speicher-Felder (Titel/Kategorie) -> direkt save, Router uebersprungen", ok=True, route="save")
     else:
-        route = hauptagent_route(session, user_text, pending)
+        route = hauptagent_route(session, user_text, pending, context_mode, context_prompt)
     intent = (route.get("intent") or "smalltalk").strip()
 
     # 1) Antwort auf eine offene Speicher-Rueckfrage?
@@ -1955,7 +2369,7 @@ async def chat(req: ChatReq) -> dict:
     """Ein Eingang — Frank redet NUR mit dem Hauptagenten. Drei Koepfe dahinter: Hauptagent (Routing/
     Gespraech) -> Speicheragent (legt 1:1 ab, NUR nach Bestaetigung) bzw. Abfrageagent (Vektorsuche +
     Antwort). Die schwere synchrone Arbeit laeuft in asyncio.to_thread -> Event-Loop bleibt frei (fastapi §1)."""
-    if gclient is None and not any(_is_opencode(m) for m in ROLE_MODELS.values()):
+    if gclient is None and not any(_is_opencode(m) or _is_codex(m) for m in ROLE_MODELS.values()):
         raise HTTPException(status_code=503, detail=f"Agent nicht bereit: {init_error}")
     sid = (req.session_id or req.user_id).strip()
     t0 = time.time()
@@ -1968,7 +2382,17 @@ async def chat(req: ChatReq) -> dict:
         session["messages"].append({"role": "frank", "text": req.text})
         pending = session.get("pending")
 
-    outcome = await asyncio.to_thread(_process_turn, session, req.text, pending, (req.category or "").strip(), (req.title or "").strip(), req.store_timestamp)
+    outcome = await asyncio.to_thread(
+        _process_turn,
+        session,
+        req.text,
+        pending,
+        (req.category or "").strip(),
+        (req.title or "").strip(),
+        req.store_timestamp,
+        _norm_context_mode(req.context_mode),
+        (req.context_prompt or "").strip(),
+    )
 
     async with _lock:
         session["pending"] = outcome.get("pending")
@@ -1976,7 +2400,7 @@ async def chat(req: ChatReq) -> dict:
         session["last_activity"] = time.monotonic()
 
     checkpoint("chat", "Hauptagent routet: speichern (nach Bestaetigung), nachschlagen oder reden",
-               ok=(outcome.get("action") in ("save_confirm", "store", "cancel", "recall", "smalltalk")),
+               ok=(outcome.get("action") in ("save_confirm", "store", "cancel", "recall", "internet", "smalltalk")),
                action=outcome.get("action"), category=outcome.get("category"),
                stored=outcome.get("stored", False), replaced=outcome.get("replaced", False),
                recall_hits=outcome.get("recall_hits"), ms=int((time.time() - t0) * 1000))

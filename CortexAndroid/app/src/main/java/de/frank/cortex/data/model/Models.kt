@@ -132,6 +132,7 @@ data class AgentConfigResponse(
     val reasoning: Map<String, String> = emptyMap(),
     val reasoning_available: List<String> = emptyList(),
     val codex: CodexState? = null,
+    val tavily_enabled: Boolean = true,
     val model: String? = null,
     val default: String? = null,
     val available: List<String> = emptyList()
@@ -149,14 +150,16 @@ data class AgentConfigRequest(
     val abfrage_model: String,
     val haupt_reasoning: String? = null,
     val speicher_reasoning: String? = null,
-    val abfrage_reasoning: String? = null
+    val abfrage_reasoning: String? = null,
+    val tavily_enabled: Boolean? = null
 )
 
 @JsonClass(generateAdapter = true)
 data class AgentConfigUpdateResponse(
     val status: String,
     val models: Map<String, String> = emptyMap(),
-    val reasoning: Map<String, String> = emptyMap()
+    val reasoning: Map<String, String> = emptyMap(),
+    val tavily_enabled: Boolean = true
 )
 
 @JsonClass(generateAdapter = true)
