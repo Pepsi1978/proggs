@@ -34,16 +34,48 @@ sudo bash ~/proggs/second-brain-server/macos/setup-macos.sh --daemon
 ## Bestandteile
 | Datei | Zweck | Ebene |
 |-------|-------|-------|
-| `wg-drive-mount.sh` | mountet gedanken/daten, sobald SMB-445 erreichbar ist (Gate auf 445, Almanach §5) | User |
+| `wg-drive-mount.sh` | mountet gedanken/daten, sobald SMB-445 erreichbar ist (Gate auf 445, Almanach §5); **erkennt tote Mounts und baut sie sofort neu auf** (Stale-Erkennung, siehe unten) | User |
 | `de.frank.secondbrain.drivemount.plist` | LaunchAgent: ruft das Mount-Skript bei Login + alle 5 Min | User |
 | `wireguard-up.sh` | fährt den WireGuard-Tunnel idempotent hoch | root |
 | `de.frank.secondbrain.wireguard.plist` | LaunchDaemon: Tunnel beim Boot | System |
+| `nsmb.conf.vorlage` | Vorlage für `/etc/nsmb.conf` (soft mounts → Finder friert bei Aussetzer nicht ein) | System |
 | `setup-macos.sh` | Installer für beide Teile | — |
+| `../wg-endpoint-monitor.{sh,service,timer}` | VPS-seitig: protokolliert jeden Endpoint-/IP-Wechsel der Peers (Beweis für Client-IP-Wechsel) | VPS (root) |
+
+## Resilienz gegen IP-Wechsel / Tunnel-Aussetzer (Direktive #3, 2026-06-29)
+
+**Vorfall:** Die Laufwerke verschwanden, weil der WireGuard-Tunnel kurz flappte. Diagnose: Der VPS war
+nachweislich kerngesund (`sar`: CPU idle 98 %, eth0 0 Fehler, kein OOM) — die Ursache war ein **Wechsel
+der öffentlichen Client-IP** (dynamische Telekom-Leitung; der Endpoint-Monitor belegte einen Wechsel von
+`109.41.115.177` auf `62.23.250.218` innerhalb von ~40 Min). Bei so einem Wechsel veraltet der Endpoint
+auf dem Server kurz → Paketverlust → macOS wirft die SMB-Mounts ab.
+
+Die externe Ursache (IP-Wechsel) ist nicht abstellbar — also wurde die **Fehlerklasse** unschädlich gemacht:
+
+1. **Stale-Mount-Erkennung** (`wg-drive-mount.sh`): Ein gemounteter Share wird per Leseprobe mit hartem
+   Timeout (perl-alarm, 4 s) geprüft. Toter/hängender Mount → `diskutil unmount force` + sofort neu mounten,
+   statt blind „bereits gemountet" zu melden. Greift bei jedem LaunchAgent-Lauf.
+2. **SMB soft mounts** (`/etc/nsmb.conf`, aus `nsmb.conf.vorlage`): Bei Aussetzer friert der Finder nicht ein;
+   ein Zugriff gibt nach `max_resp_timeout` (30 s) auf, statt ewig zu hängen. **Muss als root** angelegt sein —
+   die user-`~/Library/Preferences/nsmb.conf` greift NICHT für die automountd-Mounts.
+3. **Endpoint-Monitor** (VPS, `wg-endpoint-monitor.*`): loggt alle 30 s jeden Endpoint-Wechsel nach
+   `/var/log/wg-endpoint-monitor.log` → der nächste Vorfall ist sofort beweisbar.
+4. **`PersistentKeepalive = 15`** (statt 25) in der Client-Konfig → schnellere NAT-Heilung nach IP-Wechsel.
+
+`/etc/nsmb.conf` einrichten (einmalig, root):
+```bash
+sudo cp ~/proggs/second-brain-server/macos/nsmb.conf.vorlage /etc/nsmb.conf
+```
 
 ## Troubleshooting
-- **Laufwerke fehlen:** `mount | grep 10.8.0.1` (gemountet?) · `nc -z 10.8.0.1 445` (Tunnel oben?) ·
-  `ifconfig | grep 10.8.0.2` (WireGuard aktiv?).
-- **Logs:** `~/Library/Logs/wg-drive-mount.log` (Mount) · `~/Library/Logs/wg-tunnel.log` (Tunnel).
+- **Laufwerke fehlen:** ZUERST prüfen, ob der **Tunnel** flappt (häufigste Ursache, nicht der Mac):
+  `ping -c 10 10.8.0.1` (Paketverlust?) · `nc -z 10.8.0.1 445` (Port offen?) · `ifconfig | grep 10.8.0.2`
+  (WireGuard aktiv?). Internet-Baseline `ping -c 10 1.1.1.1` + `ping` zur public VPS-IP zeigt, ob die
+  Strecke oder nur der Tunnel betroffen ist. Verlust NUR im Tunnel + Server gesund = Client-IP-Wechsel.
+- **IP-Wechsel beweisen:** auf dem VPS `tail /var/log/wg-endpoint-monitor.log` — zeigt jeden Endpoint-Wechsel
+  mit Zeitstempel. Stimmt ein Wechsel zeitlich mit dem „Laufwerke weg" überein → bestätigte Ursache.
+- **Logs:** `~/Library/Logs/wg-drive-mount.log` (Mount, inkl. öffentlicher IP bei Aussetzer) ·
+  `~/Library/Logs/wg-tunnel.log` (Tunnel).
 - **Tunnel manuell:** `sudo wg-quick up ~/SK/second-brain/wireguard/second-brain.conf` /
   `sudo wg-quick down …`.
 - **Mount erzwingen:** `bash ~/proggs/second-brain-server/macos/wg-drive-mount.sh`.

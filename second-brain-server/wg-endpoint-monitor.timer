@@ -1,0 +1,11 @@
+[Unit]
+Description=WireGuard Endpoint-Monitor alle 30s (Beweis fuer Client-IP-Wechsel)
+
+[Timer]
+OnBootSec=60
+OnUnitActiveSec=30
+AccuracySec=5s
+Unit=wg-endpoint-monitor.service
+
+[Install]
+WantedBy=timers.target
