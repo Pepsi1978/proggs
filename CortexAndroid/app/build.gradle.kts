@@ -20,6 +20,20 @@ android {
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
 
+    signingConfigs {
+        getByName("debug") {
+            // Gemeinsamer Debug-Keystore (cross-platform: liegt in ~/SK und auf Laufwerk Y).
+            // Faellt auf den lokalen Standard-Keystore zurueck, falls die Datei fehlt.
+            val sharedDebugKeystore = file("${System.getProperty("user.home")}/SK/CortexAndroid/debug-shared.keystore")
+            if (sharedDebugKeystore.exists()) {
+                storeFile = sharedDebugKeystore
+                storePassword = "android"
+                keyAlias = "androiddebugkey"
+                keyPassword = "android"
+            }
+        }
+    }
+
     buildTypes {
         release {
             isMinifyEnabled = false
@@ -30,6 +44,7 @@ android {
         }
         debug {
             isMinifyEnabled = false
+            signingConfig = signingConfigs.getByName("debug")
         }
     }
 

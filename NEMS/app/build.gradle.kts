@@ -24,6 +24,20 @@ android {
         ksp { arg("room.schemaLocation", "$projectDir/schemas") }
     }
 
+    signingConfigs {
+        getByName("debug") {
+            // Gemeinsamer Debug-Keystore (cross-platform: liegt in ~/SK und auf Laufwerk Y).
+            // Faellt auf den lokalen Standard-Keystore zurueck, falls die Datei fehlt.
+            val sharedDebugKeystore = file("${System.getProperty("user.home")}/SK/NEMS/debug-shared.keystore")
+            if (sharedDebugKeystore.exists()) {
+                storeFile = sharedDebugKeystore
+                storePassword = "android"
+                keyAlias = "androiddebugkey"
+                keyPassword = "android"
+            }
+        }
+    }
+
     buildTypes {
         release {
             isMinifyEnabled = true
@@ -36,6 +50,7 @@ android {
         debug {
             isMinifyEnabled = false
             applicationIdSuffix = ".debug"
+            signingConfig = signingConfigs.getByName("debug")
         }
     }
 
