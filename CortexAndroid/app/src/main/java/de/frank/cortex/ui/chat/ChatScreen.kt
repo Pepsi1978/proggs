@@ -37,22 +37,35 @@ import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
+import de.frank.cortex.data.ChatSessionSummary
 import de.frank.cortex.data.SettingsStore
 import de.frank.cortex.data.model.ChatOption
 import de.frank.cortex.observability.CortexLog
 import de.frank.cortex.ui.theme.*
 import de.frank.cortex.vpn.TunnelState
 import de.frank.cortex.vpn.WireGuardManager
+import java.text.SimpleDateFormat
+import java.util.Date
+import java.util.Locale
 
 @Composable
 fun ChatScreen(vm: ChatViewModel = viewModel()) {
-    val uiState by vm.uiState.collectAsState()
-    val vpnState by WireGuardManager.state.collectAsState()
+    val uiState by vm.uiState.collectAsStateWithLifecycle()
+    val vpnState by WireGuardManager.state.collectAsStateWithLifecycle()
     var inputText by rememberSaveable { mutableStateOf("") }
     val listState = rememberLazyListState()
+    val drawerState = rememberDrawerState(
+        initialValue = DrawerValue.Closed,
+        confirmStateChange = { value ->
+            if (value == DrawerValue.Closed) vm.closeSessionsPanel()
+            true
+        }
+    )
     val context = LocalContext.current
     val toneVolume = SettingsStore.recordingToneVolume
     val recordingTone = remember(toneVolume) { ToneGenerator(AudioManager.STREAM_MUSIC, (toneVolume * 100).toInt()) }
@@ -112,6 +125,20 @@ fun ChatScreen(vm: ChatViewModel = viewModel()) {
         }
     }
 
+    LaunchedEffect(Unit) {
+        ChatCommands.openSessions.collect {
+            vm.openSessionsPanel()
+        }
+    }
+
+    LaunchedEffect(uiState.isSessionsPanelOpen) {
+        if (uiState.isSessionsPanelOpen && drawerState.isClosed) {
+            drawerState.open()
+        } else if (!uiState.isSessionsPanelOpen && drawerState.isOpen) {
+            drawerState.close()
+        }
+    }
+
     LaunchedEffect(uiState.error) {
         uiState.error?.let { message ->
             Toast.makeText(context, message, Toast.LENGTH_LONG).show()
@@ -125,12 +152,31 @@ fun ChatScreen(vm: ChatViewModel = viewModel()) {
         }
     }
 
-    Box(
-        modifier = Modifier
-            .fillMaxSize()
-            .background(MaterialTheme.colorScheme.background)
+    ModalNavigationDrawer(
+        drawerState = drawerState,
+        gesturesEnabled = uiState.isSessionsPanelOpen,
+        drawerContent = {
+            SessionDrawer(
+                sessions = uiState.sessions,
+                currentSessionId = uiState.sessionId,
+                onSessionClick = { session ->
+                    inputText = ""
+                    vm.selectSession(session.id)
+                },
+                onNewChat = {
+                    inputText = ""
+                    vm.startNewChat()
+                },
+                onClose = vm::closeSessionsPanel
+            )
+        }
     ) {
-        Column(Modifier.fillMaxSize()) {
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .background(MaterialTheme.colorScheme.background)
+        ) {
+            Column(Modifier.fillMaxSize()) {
             // Messages OR Empty State
             if (uiState.messages.isEmpty()) {
             // Empty State with breathing brain
@@ -254,8 +300,134 @@ fun ChatScreen(vm: ChatViewModel = viewModel()) {
         if (uiState.isRecording) {
             RecordingOverlay(onStop = { vm.toggleRecording() })
         }
+        }
     }
 }
+
+@Composable
+private fun SessionDrawer(
+    sessions: List<ChatSessionSummary>,
+    currentSessionId: String,
+    onSessionClick: (ChatSessionSummary) -> Unit,
+    onNewChat: () -> Unit,
+    onClose: () -> Unit
+) {
+    ModalDrawerSheet(
+        modifier = Modifier
+            .fillMaxHeight()
+            .width(322.dp),
+        drawerContainerColor = MaterialTheme.colorScheme.surface,
+        drawerContentColor = MaterialTheme.colorScheme.onSurface
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(horizontal = 16.dp, vertical = 18.dp),
+            verticalArrangement = Arrangement.spacedBy(14.dp)
+        ) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Column(modifier = Modifier.weight(1f)) {
+                    Text(
+                        text = "Sessions",
+                        fontFamily = SpaceGrotesk,
+                        fontWeight = FontWeight.SemiBold,
+                        fontSize = 22.sp
+                    )
+                    Text(
+                        text = "Aktuelle Unterhaltung steht oben",
+                        fontFamily = JetBrainsMono,
+                        fontSize = 10.5.sp,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+                IconButton(onClick = onClose) {
+                    Icon(Icons.Default.Close, contentDescription = "Sessions schließen")
+                }
+            }
+
+            Button(
+                onClick = onNewChat,
+                modifier = Modifier.fillMaxWidth(),
+                shape = RoundedCornerShape(14.dp),
+                colors = ButtonDefaults.buttonColors(containerColor = Iris)
+            ) {
+                Icon(Icons.Default.AddComment, contentDescription = null, modifier = Modifier.size(18.dp))
+                Spacer(Modifier.width(8.dp))
+                Text("Neuer Chat")
+            }
+
+            if (sessions.isEmpty()) {
+                Surface(
+                    shape = RoundedCornerShape(18.dp),
+                    color = MaterialTheme.colorScheme.background,
+                    border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline),
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Text(
+                        text = "Noch keine gespeicherten Sessions. Sobald du eine Nachricht sendest, erscheint die Unterhaltung hier.",
+                        modifier = Modifier.padding(16.dp),
+                        fontSize = 13.sp,
+                        lineHeight = 19.sp,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+            } else {
+                LazyColumn(
+                    modifier = Modifier.fillMaxSize(),
+                    verticalArrangement = Arrangement.spacedBy(10.dp),
+                    contentPadding = PaddingValues(bottom = 12.dp)
+                ) {
+                    items(sessions, key = { it.id }) { session ->
+                        val active = session.id == currentSessionId
+                        SessionRow(session = session, active = active, onClick = { onSessionClick(session) })
+                    }
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun SessionRow(session: ChatSessionSummary, active: Boolean, onClick: () -> Unit) {
+    val borderColor = if (active) Iris.copy(alpha = 0.7f) else MaterialTheme.colorScheme.outline
+    val background = if (active) Iris.copy(alpha = 0.13f) else MaterialTheme.colorScheme.background
+    Surface(
+        shape = RoundedCornerShape(16.dp),
+        color = background,
+        border = BorderStroke(1.dp, borderColor),
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickable(onClick = onClick)
+    ) {
+        Column(
+            modifier = Modifier.padding(horizontal = 14.dp, vertical = 12.dp),
+            verticalArrangement = Arrangement.spacedBy(5.dp)
+        ) {
+            Text(
+                text = session.title,
+                fontWeight = FontWeight.SemiBold,
+                fontSize = 14.sp,
+                maxLines = 2,
+                overflow = TextOverflow.Ellipsis,
+                color = MaterialTheme.colorScheme.onSurface
+            )
+            Text(
+                text = "${formatSessionTimestamp(session.updatedAt)} · ${session.messageCount} Nachrichten",
+                fontFamily = JetBrainsMono,
+                fontSize = 10.5.sp,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis
+            )
+        }
+    }
+}
+
+private fun formatSessionTimestamp(timestamp: Long): String =
+    SimpleDateFormat("dd.MM.yyyy, HH:mm 'Uhr'", Locale.GERMANY).format(Date(timestamp))
 
 @Composable
 private fun ChatBubble(message: ChatMessage, onOptionClick: (ChatOption) -> Unit) {

@@ -172,7 +172,8 @@ class MainActivity : FragmentActivity() {
                                 else lifecycleScope.launch { WireGuardManager.disconnect() }
                             },
                             showNewChat = currentRoute == Screen.Chat.route,
-                            onNewChat = { ChatCommands.requestNewChat() }
+                            onNewChat = { ChatCommands.requestNewChat() },
+                            onOpenSessions = { ChatCommands.requestOpenSessions() }
                         )
                     },
                     bottomBar = {

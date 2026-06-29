@@ -4,8 +4,11 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import de.frank.cortex.audio.MicRecorder
 import de.frank.cortex.audio.PcmPlayer
+import de.frank.cortex.data.ChatSessionStore
+import de.frank.cortex.data.ChatSessionSummary
 import de.frank.cortex.data.model.*
 import de.frank.cortex.data.SettingsStore
+import de.frank.cortex.data.StoredChatMessage
 import de.frank.cortex.network.ApiClient
 import de.frank.cortex.observability.CortexLog
 import de.frank.cortex.vpn.TunnelState
@@ -43,6 +46,8 @@ data class ChatUiState(
     val titleOverride: String = "",
     val ttsEnabled: Boolean = true,
     val sessionId: String = "android-${UUID.randomUUID()}",
+    val sessions: List<ChatSessionSummary> = emptyList(),
+    val isSessionsPanelOpen: Boolean = false,
     val isRecording: Boolean = false,
     val isTranscribing: Boolean = false,
     val isSpeaking: Boolean = false,
@@ -55,8 +60,15 @@ object ChatCommands {
     private val _newChat = MutableSharedFlow<Unit>(extraBufferCapacity = 1)
     val newChat: SharedFlow<Unit> = _newChat
 
+    private val _openSessions = MutableSharedFlow<Unit>(extraBufferCapacity = 1)
+    val openSessions: SharedFlow<Unit> = _openSessions
+
     fun requestNewChat() {
         _newChat.tryEmit(Unit)
+    }
+
+    fun requestOpenSessions() {
+        _openSessions.tryEmit(Unit)
     }
 }
 
@@ -73,6 +85,7 @@ class ChatViewModel : ViewModel() {
         // Vorlese-Schalter aus den Einstellungen uebernehmen, damit Chat-Icon + Auto-Vorlesen
         // denselben Stand zeigen wie der "Antwort vorlesen"-Schalter in den Einstellungen.
         _uiState.update { it.copy(ttsEnabled = SettingsStore.ttsEnabled) }
+        refreshSessions()
 
         // Kategorien vom Server laden, SOBALD das VPN verbunden ist. Vorher (beim App-Start) ist
         // der Tunnel noch aus, der Aufruf liefe ins Leere — deshalb blieb das Dropdown leer.
@@ -188,12 +201,14 @@ class ChatViewModel : ViewModel() {
         }
 
         val state = _uiState.value
+        val sessionId = state.sessionId
 
         // User-Nachricht hinzufügen
         val userMsg = ChatMessage(text = text, isUser = true)
         _uiState.update { it.copy(messages = it.messages + userMsg, isLoading = true, error = null) }
 
         viewModelScope.launch {
+            updateSessionsAfterPersist(sessionId, userMsg)
             try {
                 if (WireGuardManager.state.value != TunnelState.CONNECTED) {
                     _uiState.update { it.copy(isLoading = false, error = "VPN nicht aktiv") }
@@ -202,7 +217,7 @@ class ChatViewModel : ViewModel() {
 
                 val request = ChatRequest(
                     text = text,
-                    session_id = state.sessionId,
+                    session_id = sessionId,
                     category = state.selectedCategory,
                     title = state.titleOverride.ifBlank { null },
                     context_mode = state.contextMode,
@@ -239,6 +254,7 @@ class ChatViewModel : ViewModel() {
                         titleOverride = if (response.action == "store") "" else it.titleOverride
                     )
                 }
+                updateSessionsAfterPersist(sessionId, agentMsg)
 
                 CortexLog.checkpoint(
                     step = "chat_send",
@@ -291,6 +307,7 @@ class ChatViewModel : ViewModel() {
                 error = null,
                 titleOverride = "",
                 sessionId = "android-${UUID.randomUUID()}",
+                isSessionsPanelOpen = false,
                 isRecording = false,
                 isTranscribing = false,
                 isImproving = false,
@@ -298,6 +315,74 @@ class ChatViewModel : ViewModel() {
             )
         }
         CortexLog.info("ChatVM", "startNewChat", "Neuer Chat gestartet")
+        refreshSessions()
+    }
+
+    fun openSessionsPanel() {
+        _uiState.update { it.copy(isSessionsPanelOpen = true) }
+        refreshSessions()
+    }
+
+    fun closeSessionsPanel() {
+        _uiState.update { it.copy(isSessionsPanelOpen = false) }
+    }
+
+    fun selectSession(sessionId: String) {
+        stopSpeaking()
+        viewModelScope.launch {
+            try {
+                val messages = withContext(Dispatchers.IO) {
+                    ChatSessionStore.loadMessages(sessionId).map { it.toChatMessage() }
+                }
+                val sessions = withContext(Dispatchers.IO) { ChatSessionStore.listSessions() }
+                _uiState.update {
+                    it.copy(
+                        sessionId = sessionId,
+                        messages = messages,
+                        sessions = sessions,
+                        isSessionsPanelOpen = false,
+                        isLoading = false,
+                        error = null,
+                        titleOverride = "",
+                        isRecording = false,
+                        isTranscribing = false,
+                        isImproving = false,
+                        isGeneratingTitle = false
+                    )
+                }
+                CortexLog.info("ChatVM", "selectSession", "Session geöffnet", mapOf("session_id" to sessionId, "messages" to messages.size))
+            } catch (e: Exception) {
+                CortexLog.error("ChatVM", "selectSession", "Session konnte nicht geladen werden: ${e.message}")
+                _uiState.update { it.copy(error = "Session konnte nicht geladen werden: ${e.message}") }
+            }
+        }
+    }
+
+    private fun refreshSessions() {
+        viewModelScope.launch {
+            val sessions = withContext(Dispatchers.IO) {
+                try {
+                    ChatSessionStore.listSessions()
+                } catch (e: Exception) {
+                    CortexLog.error("ChatVM", "refreshSessions", "Session-Liste konnte nicht geladen werden: ${e.message}")
+                    emptyList()
+                }
+            }
+            _uiState.update { it.copy(sessions = sessions) }
+        }
+    }
+
+    private suspend fun updateSessionsAfterPersist(sessionId: String, message: ChatMessage) {
+        val sessions = withContext(Dispatchers.IO) {
+            try {
+                ChatSessionStore.saveMessage(sessionId, message.toStoredMessage())
+                ChatSessionStore.listSessions()
+            } catch (e: Exception) {
+                CortexLog.error("ChatVM", "persistSession", "Nachricht konnte nicht gespeichert werden: ${e.message}")
+                emptyList()
+            }
+        }
+        _uiState.update { it.copy(sessions = sessions) }
     }
 
     fun improveText(text: String) {
@@ -472,3 +557,28 @@ class ChatViewModel : ViewModel() {
         return chunks
     }
 }
+
+private fun ChatMessage.toStoredMessage(): StoredChatMessage = StoredChatMessage(
+    id = id,
+    text = text,
+    isUser = isUser,
+    action = action,
+    category = category,
+    title = title,
+    recallHits = recallHits,
+    stored = stored,
+    timestamp = timestamp
+)
+
+private fun StoredChatMessage.toChatMessage(): ChatMessage = ChatMessage(
+    id = id,
+    text = text,
+    isUser = isUser,
+    action = action,
+    category = category,
+    title = title,
+    recallHits = recallHits,
+    options = null,
+    stored = stored,
+    timestamp = timestamp
+)

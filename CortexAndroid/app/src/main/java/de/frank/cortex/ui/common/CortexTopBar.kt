@@ -36,7 +36,8 @@ fun CortexTopBar(
     vpnState: TunnelState,
     onVpnToggle: (Boolean) -> Unit,
     showNewChat: Boolean = false,
-    onNewChat: () -> Unit = {}
+    onNewChat: () -> Unit = {},
+    onOpenSessions: () -> Unit = {}
 ) {
     val colors = if (isDark) Triple(DarkSurface, DarkBorder, DarkMuted)
     else Triple(LightSurface, LightBorder, LightMuted)
@@ -62,12 +63,13 @@ fun CortexTopBar(
                         )
                     )
                 )
-                .border(1.dp, DarkUserBorder, RoundedCornerShape(12.dp)),
+                .border(1.dp, DarkUserBorder, RoundedCornerShape(12.dp))
+                .clickable(onClick = onOpenSessions),
             contentAlignment = Alignment.Center
         ) {
             Icon(
                 imageVector = Icons.Default.Storage,
-                contentDescription = "Cortex Speicher",
+                contentDescription = "Sessions öffnen",
                 tint = Iris,
                 modifier = Modifier.size(22.dp)
             )
