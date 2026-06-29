@@ -70,6 +70,10 @@ nur das **proggs-Spezifische** (unten).
 
 ## Commit Format
 
+**Commit AND push automatically after EVERY finished task — immediately, of your own accord, WITHOUT
+waiting for an instruction from Frank. This is the default, not optional.** Even a single small change
+triggers commit+push. For app tasks: commit+push BEFORE build/install/deploy. Full rule: global
+AGENTS.md §3 + brain `Programmierung/Rules`.
 `#NNN - Description` (English). Number auto-incremented from last commit.
 
 ## Quality Requirements

@@ -68,11 +68,19 @@ nummeriert anzeigen → jede EINZELN & gruendlich erledigen und nach JEDER Teila
 committen+pushen (nie Sammel-Commit) → Build/Install nur bei Apps EINMAL ganz am Ende → zum Schluss
 pruefen, dass WIRKLICH jede Aufgabe erledigt ist (auch die in der Mitte). Voller Ablauf im Gehirn.
 
-### 3. Git-Disziplin (parallele Sessions am selben Repo — KRITISCH)
-Frank arbeitet oft mit mehreren CLIs/Sessions am selben Repo. Darum: nur EIGENE Dateien namentlich
-stagen (NIEMALS `git add -A` / `git add .`). Vor JEDEM Push `git fetch origin && git rebase
-origin/main`. NIE force-pushen, NIE `git reset --hard` ohne Freigabe. Fremde unstaged Dateien
-anderer Sessions in Ruhe lassen — nicht mitcommitten, nicht aufraeumen.
+### 3. Commit & Push nach JEDER Aufgabe — automatisch, OHNE Aufforderung (KRITISCH)
+**Standard, kein Sonderfall: nach JEDER abgeschlossenen Aufgabe SOFORT von SELBST committen UND
+pushen — automatisch, OHNE auf eine Anweisung/Freigabe von Frank zu warten.** Niemals fertige Arbeit
+(Code, Doku, Config, Regel, Fix) uncommittet liegen lassen und auf einen "jetzt committen"-Befehl
+warten — das ist der Default, keine Option. Auch eine einzelne kleine Aenderung loest sofort
+Commit+Push aus. Bei App-Aufgaben: Commit+Push VOR Build/Install/Deploy (sonst geht Arbeit bei
+Build-Absturz/Parallel-Push verloren).
+**Mechanik (parallele Sessions am selben Repo):** nur EIGENE Dateien namentlich stagen (NIEMALS
+`git add -A` / `git add .`) → `git commit -m "#NNN - Beschreibung"` → `git fetch origin && git rebase
+origin/main` → `git push`. NIE force-pushen, NIE `git reset --hard` ohne Freigabe. Fremde unstaged
+Dateien anderer Sessions in Ruhe lassen — nicht mitcommitten, nicht aufraeumen. Diese Pflicht gilt
+IMMER — auch ohne Gehirn-Abruf und nach Komprimierung. (Voller Ablauf + Rettungspunkte im Gehirn,
+`Programmierung/Rules`.)
 
 ### 4. Secrets: NIEMALS ins Repo
 Keine API-Keys, Tokens, Passwoerter ins Repo — auch nicht in Code-Kommentaren, Doku oder Tests.
