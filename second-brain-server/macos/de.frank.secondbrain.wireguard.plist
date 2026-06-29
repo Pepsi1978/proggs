@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<!-- LaunchDaemon (System-Ebene, braucht sudo zum Installieren): faehrt den WireGuard-Tunnel beim Boot hoch. -->
+<plist version="1.0">
+<dict>
+    <key>Label</key>
+    <string>de.frank.secondbrain.wireguard</string>
+    <key>ProgramArguments</key>
+    <array>
+        <string>/bin/bash</string>
+        <string>/Users/frank/proggs/second-brain-server/macos/wireguard-up.sh</string>
+    </array>
+    <key>RunAtLoad</key>
+    <true/>
+    <key>StandardErrorPath</key>
+    <string>/Users/frank/Library/Logs/wg-tunnel.launchd.log</string>
+    <key>StandardOutPath</key>
+    <string>/Users/frank/Library/Logs/wg-tunnel.launchd.log</string>
+</dict>
+</plist>

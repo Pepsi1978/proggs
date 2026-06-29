@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<!-- LaunchAgent (Benutzer-Ebene, KEIN sudo): bindet gedanken/daten bei Login und alle 5 Min ein. -->
+<plist version="1.0">
+<dict>
+    <key>Label</key>
+    <string>de.frank.secondbrain.drivemount</string>
+    <key>ProgramArguments</key>
+    <array>
+        <string>/bin/bash</string>
+        <string>/Users/frank/proggs/second-brain-server/macos/wg-drive-mount.sh</string>
+    </array>
+    <key>RunAtLoad</key>
+    <true/>
+    <key>StartInterval</key>
+    <integer>300</integer>
+    <key>StandardErrorPath</key>
+    <string>/Users/frank/Library/Logs/wg-drive-mount.launchd.log</string>
+    <key>StandardOutPath</key>
+    <string>/Users/frank/Library/Logs/wg-drive-mount.launchd.log</string>
+</dict>
+</plist>
