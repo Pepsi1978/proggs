@@ -319,6 +319,37 @@ HKCU-Eintrag an -> fuer die DAUERHAFTE Loesung das Skript laufen lassen (raeumt 
 zusammen ergeben den robusten Reconnect (`second-brain-server/windows/wg-drive-reconnect.ps1`).
 **Quelle:** Eigener Vorfall + Live-Diagnose 2026-06-25 (Skript-Log bewies "reconnect OK" trotz rotem X -> Token-getrennte Sicht; Fix #47187).
 
+## 12. ⭐ macOS-Client: Freigaben einbinden (live verifiziert 2026-06-29)
+**Kontext:** Den Gehirn-Server (`10.8.0.1`, Shares `gedanken`=Z, `daten`=Y) auf einem Mac dauerhaft
+im Finder einbinden — das macOS-Pendant zum Windows-`net use`/`wg-drive-mount.ps1`.
+**Erkenntnisse (live 2026-06-29):**
+- **WireGuard-Tunnel:** `wg-quick` via Homebrew, conf in `~/SK/second-brain/wireguard/…conf`. Start
+  braucht `sudo` (`wg-quick up <conf>`). Split-Tunnel (`AllowedIPs = 10.8.0.0/24`) → andere VPNs
+  (utun0–3) bleiben unberührt; der Gehirn-Tunnel kommt als eigenes `utun` mit `inet 10.8.0.2`.
+- **Mount ohne sudo (der Trick):** `/Volumes` ist auf macOS `drwxr-xr-x root` → `mkdir /Volumes/x`
+  und `mount_smbfs //…/x /Volumes/x` brauchen **root**. Stattdessen über **automountd**:
+  `osascript -e 'mount volume "smb://user:pass@10.8.0.1/gedanken"'` (oder `open smb://…`) — legt
+  `/Volumes/gedanken` selbst an, **kein sudo**, erscheint im Finder unter „Speicherorte". `open` ist
+  async + im Skript-Kontext unzuverlaessig (legt manchmal nur ein leeres `/Volumes/x` an) →
+  `osascript mount volume` ist der scriptbare Weg.
+- **Passwort nicht auslesbar → eigener Mac-User statt Reset:** Das Samba-Passwort steht nur gehasht
+  in `passdb.tdb`, ist NICHT wiederherstellbar und in keinem Skript. Das `frank`-Passwort neu zu
+  setzen wuerde den **Windows-Mount brechen**. FIX (funktionserhaltend, Direktive #3): **separaten
+  Samba-User pro Plattform** anlegen — `useradd -M -N -g frank -s /usr/sbin/nologin frankmac` (primäre
+  Gruppe `frank` → Schreibrechte via `0775`/`0664`), `smbpasswd -s -a frankmac`, `smbpasswd -e`, in
+  BEIDEN Shares `valid users = frank` → `frank frankmac`, `systemctl reload smbd`. Windows (`frank`)
+  bleibt unberührt.
+- **SSH-Henne-Ei (neuer Client):** Ein frisch erzeugter Mac-SSH-Key ist am Server noch nicht in
+  `/root/.ssh/authorized_keys` → `Permission denied (publickey)`, auch über den Tunnel
+  (`Match`-unabhängig). PasswordAuth ist aus. Lösung ohne den schon-autorisierten Rechner:
+  **Hostinger-Browser-Konsole** (root) → Pubkey in `/root/.ssh/authorized_keys` eintragen.
+- **Gate auf Port 445** (wie Windows §5): Auto-Mount-Skript erst mounten, wenn `nc -z 10.8.0.1 445`
+  klappt — nie gegen einen Dienst-Port (brain-api 8000) prüfen.
+- **Persistenz:** LaunchDaemon (root, Boot) für den Tunnel + LaunchAgent (user, Login + `StartInterval 300`)
+  für den Mount. Setup: `second-brain-server/macos/` (`wg-drive-mount.sh`, `wireguard-up.sh`,
+  `setup-macos.sh`, zwei `.plist`). **Anker:** macOS 15+, `wireguard-tools` (Homebrew), SMB 3.1.1.
+**Quelle:** Eigener Vorfall + Live-Einrichtung 2026-06-29.
+
 ---
 
 ## Pflicht-Checkliste vor Samba-ueber-WireGuard
