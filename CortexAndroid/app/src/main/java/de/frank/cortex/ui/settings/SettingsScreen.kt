@@ -1,9 +1,12 @@
 package de.frank.cortex.ui.settings
 
+import android.content.Intent
 import android.net.Uri
 import android.widget.Toast
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.biometric.BiometricManager
+import androidx.biometric.BiometricPrompt
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -19,6 +22,7 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.VolumeOff
 import androidx.compose.material.icons.automirrored.filled.VolumeUp
+import androidx.compose.material.icons.automirrored.filled.Login
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -34,6 +38,8 @@ import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.core.content.ContextCompat
+import androidx.fragment.app.FragmentActivity
 import de.frank.cortex.BuildConfig
 import de.frank.cortex.audio.PcmPlayer
 import de.frank.cortex.data.SettingsStore
@@ -41,7 +47,9 @@ import de.frank.cortex.network.ApiClient
 import de.frank.cortex.observability.CortexLog
 import de.frank.cortex.ui.theme.*
 import de.frank.cortex.vpn.WireGuardManager
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
+import retrofit2.HttpException
 
 @Composable
 fun SettingsScreen(
@@ -61,7 +69,32 @@ fun SettingsScreen(
     var geminiApiKey by remember { mutableStateOf(SettingsStore.geminiApiKey) }
     var ttsEnabled by remember { mutableStateOf(SettingsStore.ttsEnabled) }
     var ttsVoice by remember { mutableStateOf(SettingsStore.ttsVoice.removePrefix("de-DE-Chirp3-HD-")) }
+    var recordingToneEnabled by remember { mutableStateOf(SettingsStore.recordingToneEnabled) }
+    var recordingToneVolume by remember { mutableStateOf(SettingsStore.recordingToneVolume) }
+    var biometricLockEnabled by remember { mutableStateOf(SettingsStore.biometricLockEnabled) }
     var wgConfig by remember { mutableStateOf(SettingsStore.wgConfig) }
+    val screenScope = rememberCoroutineScope()
+    var agentModelOptions by remember {
+        mutableStateOf(listOf("gemini-3.1-flash-lite", "gemini-2.5-flash", "minimax/minimax-m3"))
+    }
+    var hauptModel by remember { mutableStateOf(agentModelOptions.first()) }
+    var speicherModel by remember { mutableStateOf(agentModelOptions.first()) }
+    var abfrageModel by remember { mutableStateOf(agentModelOptions.first()) }
+    var reasoningOptions by remember { mutableStateOf(listOf("none", "minimal", "low", "medium", "high", "xhigh")) }
+    var hauptReasoning by remember { mutableStateOf("medium") }
+    var speicherReasoning by remember { mutableStateOf("medium") }
+    var abfrageReasoning by remember { mutableStateOf("medium") }
+    var agentModelsLoading by remember { mutableStateOf(false) }
+    var agentModelsSaving by remember { mutableStateOf(false) }
+    var agentModelStatus by remember { mutableStateOf("") }
+    var codexConnected by remember { mutableStateOf(false) }
+    var codexStatus by remember { mutableStateOf("Server-Codex-Status wird geladen") }
+    var codexUserCode by remember { mutableStateOf("") }
+    var codexAuthId by remember { mutableStateOf("") }
+    var codexConnecting by remember { mutableStateOf(false) }
+    var selectedContextPromptMode by remember { mutableStateOf(SettingsStore.CONTEXT_MODE_SMALLTALK) }
+    var contextPromptDraft by remember { mutableStateOf(SettingsStore.contextPrompt(selectedContextPromptMode)) }
+    var contextPromptEditing by remember { mutableStateOf(false) }
 
     val filePicker = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.GetContent()
@@ -73,6 +106,68 @@ fun SettingsScreen(
                 wgConfig = text
             }
         }
+    }
+
+    LaunchedEffect(Unit) {
+        agentModelsLoading = true
+        try {
+            val config = ApiClient.agentApi().getConfig()
+            if (config.available.isNotEmpty()) agentModelOptions = config.available
+            if (config.reasoning_available.isNotEmpty()) reasoningOptions = config.reasoning_available
+            val models = config.models
+            val reasoning = config.reasoning
+            hauptModel = models["haupt"] ?: config.model ?: agentModelOptions.first()
+            speicherModel = models["speicher"] ?: config.model ?: hauptModel
+            abfrageModel = models["abfrage"] ?: config.model ?: hauptModel
+            hauptReasoning = reasoning["haupt"] ?: "medium"
+            speicherReasoning = reasoning["speicher"] ?: "medium"
+            abfrageReasoning = reasoning["abfrage"] ?: "medium"
+            codexConnected = config.codex?.connected == true
+            codexStatus = if (codexConnected) "Server verbunden — GPT/Codex-Modelle sind auswählbar" else "Server nicht verbunden"
+            agentModelStatus = "Aktueller Server-Stand geladen"
+        } catch (e: Exception) {
+            CortexLog.warn("Settings", "loadAgentModels", "Agent-Modelle nicht geladen: ${e.message}")
+            agentModelStatus = "Server-Stand nicht erreichbar"
+        } finally {
+            agentModelsLoading = false
+        }
+    }
+
+    fun requestSecretReveal(onUnlocked: () -> Unit) {
+        if (!SettingsStore.biometricLockEnabled) {
+            onUnlocked()
+            return
+        }
+        val activity = context as? FragmentActivity
+        if (activity == null) {
+            Toast.makeText(context, "Biometrie nicht verfügbar", Toast.LENGTH_SHORT).show()
+            return
+        }
+        val available = BiometricManager.from(context).canAuthenticate(
+            BiometricManager.Authenticators.BIOMETRIC_STRONG or BiometricManager.Authenticators.DEVICE_CREDENTIAL
+        )
+        if (available != BiometricManager.BIOMETRIC_SUCCESS) {
+            Toast.makeText(context, "Biometrie nicht verfügbar", Toast.LENGTH_SHORT).show()
+            return
+        }
+
+        val prompt = BiometricPrompt(
+            activity,
+            ContextCompat.getMainExecutor(context),
+            object : BiometricPrompt.AuthenticationCallback() {
+                override fun onAuthenticationSucceeded(result: BiometricPrompt.AuthenticationResult) {
+                    onUnlocked()
+                }
+            }
+        )
+        val info = BiometricPrompt.PromptInfo.Builder()
+            .setTitle("Schlüssel anzeigen")
+            .setSubtitle("API-Schlüssel separat entsperren")
+            .setAllowedAuthenticators(
+                BiometricManager.Authenticators.BIOMETRIC_STRONG or BiometricManager.Authenticators.DEVICE_CREDENTIAL
+            )
+            .build()
+        prompt.authenticate(info)
     }
 
     Column(
@@ -196,13 +291,111 @@ fun SettingsScreen(
             Column {
                 SecretRow("Server-Schlüssel (SB_API_KEY)", sbApiKey,
                     { sbApiKey = it; SettingsStore.sbApiKey = it }, isDark,
-                    divider = true)
+                    divider = true,
+                    onRevealRequest = ::requestSecretReveal)
                 SecretRow("Groq-Schlüssel (Spracheingabe)", groqApiKey,
                     { groqApiKey = it; SettingsStore.groqApiKey = it }, isDark,
-                    divider = true)
+                    divider = true,
+                    onRevealRequest = ::requestSecretReveal)
                 SecretRow("Gemini-Schlüssel (Vorlesen + Verbessern)", geminiApiKey,
                     { geminiApiKey = it; SettingsStore.geminiApiKey = it }, isDark,
-                    divider = false)
+                    divider = true,
+                    onRevealRequest = ::requestSecretReveal)
+                Column(
+                    modifier = Modifier.padding(14.dp),
+                    verticalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                        Icon(Icons.AutoMirrored.Filled.Login, null, tint = Orange, modifier = Modifier.size(22.dp))
+                        Column(modifier = Modifier.weight(1f)) {
+                            Text("OpenAI Codex / ChatGPT", fontSize = 14.sp, fontWeight = FontWeight.SemiBold)
+                            Text(codexStatus, fontSize = 11.5.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                        }
+                        if (codexConnecting) CircularProgressIndicator(modifier = Modifier.size(20.dp), strokeWidth = 2.dp, color = Orange)
+                    }
+                    if (codexUserCode.isNotBlank()) {
+                        Text(
+                            codexUserCode,
+                            fontFamily = JetBrainsMono,
+                            fontSize = 22.sp,
+                            fontWeight = FontWeight.Bold,
+                            letterSpacing = 2.sp,
+                            color = Orange
+                        )
+                        Text("Diesen Code auf der geöffneten OpenAI-Seite eingeben. Die Tokens werden auf dem Server gespeichert.", fontSize = 11.5.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    }
+                    if (codexConnected) {
+                        Text(
+                            "Jetzt unten im Abschnitt KI bei Hauptagent/Speicheragent/Abfrageagent ein GPT/Codex-Modell wählen und speichern.",
+                            fontSize = 11.5.sp,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
+                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.fillMaxWidth()) {
+                        Button(
+                            onClick = {
+                                screenScope.launch {
+                                    codexConnecting = true
+                                    try {
+                                        val start = ApiClient.agentApi().startCodexAuth()
+                                        codexAuthId = start.auth_id
+                                        codexUserCode = start.user_code
+                                        codexStatus = "Browser öffnen und Code eingeben"
+                                        context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(start.verification_uri)))
+                                        repeat((start.expires_in / start.interval).coerceAtMost(180)) {
+                                            delay((start.interval.coerceAtLeast(3) * 1000).toLong())
+                                            val poll = ApiClient.agentApi().pollCodexAuth(de.frank.cortex.data.model.CodexAuthPollRequest(codexAuthId))
+                                            if (poll.status == "connected") {
+                                                codexConnected = true
+                                                codexUserCode = ""
+                                                codexStatus = "Server verbunden — GPT/Codex-Modelle sind auswählbar"
+                                                val config = ApiClient.agentApi().getConfig()
+                                                if (config.available.isNotEmpty()) agentModelOptions = config.available
+                                                codexConnecting = false
+                                                return@launch
+                                            }
+                                            if (poll.status == "expired") {
+                                                codexUserCode = ""
+                                                codexStatus = "Code abgelaufen"
+                                                codexConnecting = false
+                                                return@launch
+                                            }
+                                        }
+                                        codexStatus = "Code abgelaufen"
+                                    } catch (e: Exception) {
+                                        val message = codexAuthErrorMessage(e)
+                                        CortexLog.error("Settings", "codexAuth", "Codex-Verbindung fehlgeschlagen: $message")
+                                        codexStatus = message
+                                    } finally {
+                                        codexConnecting = false
+                                    }
+                                }
+                            },
+                            enabled = !codexConnecting,
+                            shape = RoundedCornerShape(12.dp),
+                            colors = ButtonDefaults.buttonColors(containerColor = Orange),
+                            modifier = Modifier.weight(1f)
+                        ) { Text("Verbinden", fontSize = 13.sp, fontWeight = FontWeight.SemiBold) }
+                        Button(
+                            onClick = {
+                                screenScope.launch {
+                                    try {
+                                        ApiClient.agentApi().disconnectCodex()
+                                        codexConnected = false
+                                        codexUserCode = ""
+                                        codexStatus = "Server nicht verbunden"
+                                        val config = ApiClient.agentApi().getConfig()
+                                        if (config.available.isNotEmpty()) agentModelOptions = config.available
+                                    } catch (_: Exception) {
+                                        Toast.makeText(context, "Trennen fehlgeschlagen", Toast.LENGTH_SHORT).show()
+                                    }
+                                }
+                            },
+                            shape = RoundedCornerShape(12.dp),
+                            modifier = Modifier.weight(1f)
+                        ) { Text("Trennen", fontSize = 13.sp, fontWeight = FontWeight.SemiBold) }
+                    }
+                }
             }
         }
 
@@ -335,6 +528,292 @@ fun SettingsScreen(
             }
         }
 
+        // === TÖNE ===
+        SectionHeader("TÖNE")
+        Surface(
+            shape = RoundedCornerShape(16.dp),
+            color = MaterialTheme.colorScheme.surface,
+            border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline)
+        ) {
+            Column {
+                Row(
+                    modifier = Modifier.padding(14.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(12.dp)
+                ) {
+                    Icon(Icons.Default.GraphicEq, null, tint = Orange, modifier = Modifier.size(21.dp))
+                    Column(modifier = Modifier.weight(1f)) {
+                        Text("Aufnahmeton", fontSize = 14.sp, fontWeight = FontWeight.SemiBold)
+                        Text("Signal beim Start der Aufnahme", fontSize = 11.5.sp,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    }
+                    Surface(
+                        shape = RoundedCornerShape(999.dp),
+                        color = if (recordingToneEnabled) Orange else if (isDark) DarkFieldBorder else LightFieldBorder,
+                        modifier = Modifier
+                            .width(46.dp)
+                            .height(27.dp)
+                            .clickable {
+                                recordingToneEnabled = !recordingToneEnabled
+                                SettingsStore.recordingToneEnabled = recordingToneEnabled
+                            }
+                    ) {
+                        Box(
+                            modifier = Modifier.fillMaxSize().padding(3.dp),
+                            contentAlignment = if (recordingToneEnabled) Alignment.CenterEnd else Alignment.CenterStart
+                        ) {
+                            Box(
+                                modifier = Modifier
+                                    .size(21.dp)
+                                    .clip(RoundedCornerShape(999.dp))
+                                    .background(MaterialTheme.colorScheme.background)
+                            )
+                        }
+                    }
+                }
+                HorizontalDivider(color = MaterialTheme.colorScheme.outline, modifier = Modifier.padding(horizontal = 14.dp))
+                Column(modifier = Modifier.padding(14.dp)) {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Text("Lautstärke", fontSize = 14.sp, modifier = Modifier.weight(1f))
+                        Text(
+                            "${(recordingToneVolume * 100).toInt()}%",
+                            fontFamily = JetBrainsMono,
+                            fontSize = 12.sp,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
+                    Slider(
+                        value = recordingToneVolume,
+                        onValueChange = { recordingToneVolume = it },
+                        onValueChangeFinished = { SettingsStore.recordingToneVolume = recordingToneVolume },
+                        valueRange = 0f..1f,
+                        steps = 19,
+                        enabled = recordingToneEnabled,
+                        colors = SliderDefaults.colors(thumbColor = Orange, activeTrackColor = Orange)
+                    )
+                }
+            }
+        }
+
+        // === SICHERHEIT ===
+        SectionHeader("SICHERHEIT")
+        Surface(
+            shape = RoundedCornerShape(16.dp),
+            color = MaterialTheme.colorScheme.surface,
+            border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline)
+        ) {
+            Row(
+                modifier = Modifier.padding(14.dp),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(12.dp)
+            ) {
+                Icon(Icons.Default.Fingerprint, null, tint = Iris, modifier = Modifier.size(22.dp))
+                Column(modifier = Modifier.weight(1f)) {
+                    Text("Fingerabdruck-Schutz", fontSize = 14.sp, fontWeight = FontWeight.SemiBold)
+                    Text("Beim Öffnen der App entsperren", fontSize = 11.5.sp,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant)
+                }
+                Surface(
+                    shape = RoundedCornerShape(999.dp),
+                    color = if (biometricLockEnabled) Iris else if (isDark) DarkFieldBorder else LightFieldBorder,
+                    modifier = Modifier
+                        .width(46.dp)
+                        .height(27.dp)
+                        .clickable {
+                            biometricLockEnabled = !biometricLockEnabled
+                            SettingsStore.biometricLockEnabled = biometricLockEnabled
+                        }
+                ) {
+                    Box(
+                        modifier = Modifier.fillMaxSize().padding(3.dp),
+                        contentAlignment = if (biometricLockEnabled) Alignment.CenterEnd else Alignment.CenterStart
+                    ) {
+                        Box(
+                            modifier = Modifier
+                                .size(21.dp)
+                                .clip(RoundedCornerShape(999.dp))
+                                .background(MaterialTheme.colorScheme.background)
+                        )
+                    }
+                }
+            }
+        }
+
+        // === KI ===
+        SectionHeader("KI")
+        Surface(
+            shape = RoundedCornerShape(16.dp),
+            color = MaterialTheme.colorScheme.surface,
+            border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline)
+        ) {
+            Column(
+                modifier = Modifier.padding(14.dp),
+                verticalArrangement = Arrangement.spacedBy(10.dp)
+            ) {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(12.dp)
+                ) {
+                    Icon(Icons.Default.Psychology, null, tint = Orange, modifier = Modifier.size(22.dp))
+                    Column(modifier = Modifier.weight(1f)) {
+                        Text("Agent-Modelle", fontSize = 14.sp, fontWeight = FontWeight.SemiBold)
+                        Text("Synchron mit Bibliothekar-Agent im Dashboard", fontSize = 11.5.sp,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    }
+                    if (agentModelsLoading) {
+                        CircularProgressIndicator(modifier = Modifier.size(20.dp), strokeWidth = 2.dp, color = Orange)
+                    }
+                }
+
+                AgentModelDropdown("Hauptagent", hauptModel, agentModelOptions, isDark) { hauptModel = it }
+                if (isCodexModel(hauptModel)) {
+                    AgentModelDropdown("Thinking", hauptReasoning, reasoningOptions, isDark) { hauptReasoning = it }
+                }
+                AgentModelDropdown("Speicheragent", speicherModel, agentModelOptions, isDark) { speicherModel = it }
+                if (isCodexModel(speicherModel)) {
+                    AgentModelDropdown("Thinking", speicherReasoning, reasoningOptions, isDark) { speicherReasoning = it }
+                }
+                AgentModelDropdown("Abfrageagent", abfrageModel, agentModelOptions, isDark) { abfrageModel = it }
+                if (isCodexModel(abfrageModel)) {
+                    AgentModelDropdown("Thinking", abfrageReasoning, reasoningOptions, isDark) { abfrageReasoning = it }
+                }
+
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(10.dp)
+                ) {
+                    Text(
+                        agentModelStatus,
+                        fontSize = 11.5.sp,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        modifier = Modifier.weight(1f)
+                    )
+                    Button(
+                        onClick = {
+                            screenScope.launch {
+                                agentModelsSaving = true
+                                try {
+                                    ApiClient.agentApi().updateConfig(
+                                        de.frank.cortex.data.model.AgentConfigRequest(
+                                            haupt_model = hauptModel,
+                                            speicher_model = speicherModel,
+                                            abfrage_model = abfrageModel,
+                                            haupt_reasoning = hauptReasoning,
+                                            speicher_reasoning = speicherReasoning,
+                                            abfrage_reasoning = abfrageReasoning
+                                        )
+                                    )
+                                    agentModelStatus = "Modelle gespeichert"
+                                } catch (e: Exception) {
+                                    CortexLog.error("Settings", "saveAgentModels", "Speichern fehlgeschlagen: ${e.message}")
+                                    agentModelStatus = "Speichern fehlgeschlagen"
+                                    Toast.makeText(context, "Modelle konnten nicht gespeichert werden", Toast.LENGTH_SHORT).show()
+                                } finally {
+                                    agentModelsSaving = false
+                                }
+                            }
+                        },
+                        enabled = !agentModelsSaving,
+                        shape = RoundedCornerShape(12.dp),
+                        colors = ButtonDefaults.buttonColors(containerColor = Orange)
+                    ) {
+                        if (agentModelsSaving) {
+                            CircularProgressIndicator(modifier = Modifier.size(16.dp), strokeWidth = 2.dp, color = Color.White)
+                        } else {
+                            Text("Speichern", fontSize = 13.sp, fontWeight = FontWeight.SemiBold)
+                        }
+                    }
+                }
+            }
+        }
+
+        // === KONTEXT ===
+        SectionHeader("KONTEXT")
+        Surface(
+            shape = RoundedCornerShape(16.dp),
+            color = MaterialTheme.colorScheme.surface,
+            border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline)
+        ) {
+            Column(
+                modifier = Modifier.padding(14.dp),
+                verticalArrangement = Arrangement.spacedBy(10.dp)
+            ) {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(12.dp)
+                ) {
+                    Icon(Icons.Default.Tune, null, tint = Orange, modifier = Modifier.size(22.dp))
+                    Column(modifier = Modifier.weight(1f)) {
+                        Text("Modus-Prompts", fontSize = 14.sp, fontWeight = FontWeight.SemiBold)
+                        Text("Zusatzauftrag für Smalltalk, Speichern und Suchen", fontSize = 11.5.sp,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    }
+                }
+
+                ContextPromptModeButtons(
+                    selectedMode = selectedContextPromptMode,
+                    isDark = isDark,
+                    onSelect = { mode ->
+                        selectedContextPromptMode = mode
+                        contextPromptDraft = SettingsStore.contextPrompt(mode)
+                        contextPromptEditing = false
+                    }
+                )
+
+                Surface(
+                    shape = RoundedCornerShape(12.dp),
+                    color = if (isDark) DarkField else LightField,
+                    border = BorderStroke(1.dp, if (contextPromptEditing) Orange.copy(alpha = 0.55f) else if (isDark) DarkFieldBorder else LightFieldBorder),
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    BasicTextField(
+                        value = contextPromptDraft,
+                        onValueChange = { if (contextPromptEditing) contextPromptDraft = it.take(4000) },
+                        readOnly = !contextPromptEditing,
+                        modifier = Modifier.fillMaxWidth().heightIn(min = 120.dp).padding(12.dp),
+                        textStyle = LocalTextStyle.current.copy(
+                            fontSize = 12.5.sp,
+                            lineHeight = 18.sp,
+                            color = MaterialTheme.colorScheme.onSurface
+                        )
+                    )
+                }
+
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.End,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    if (contextPromptEditing) {
+                        TextButton(onClick = {
+                            contextPromptDraft = SettingsStore.contextPrompt(selectedContextPromptMode)
+                            contextPromptEditing = false
+                        }) { Text("Abbrechen") }
+                        Spacer(Modifier.width(8.dp))
+                        Button(
+                            onClick = {
+                                SettingsStore.setContextPrompt(selectedContextPromptMode, contextPromptDraft)
+                                contextPromptEditing = false
+                                Toast.makeText(context, "Kontext-Prompt gespeichert", Toast.LENGTH_SHORT).show()
+                            },
+                            shape = RoundedCornerShape(12.dp),
+                            colors = ButtonDefaults.buttonColors(containerColor = Orange)
+                        ) { Text("Speichern", fontSize = 13.sp, fontWeight = FontWeight.SemiBold) }
+                    } else {
+                        Button(
+                            onClick = { contextPromptEditing = true },
+                            shape = RoundedCornerShape(12.dp),
+                            colors = ButtonDefaults.buttonColors(containerColor = Orange)
+                        ) { Text("Bearbeiten", fontSize = 13.sp, fontWeight = FontWeight.SemiBold) }
+                    }
+                }
+            }
+        }
+
         // === DARSTELLUNG ===
         SectionHeader("DARSTELLUNG")
         Surface(
@@ -404,27 +883,19 @@ fun SettingsScreen(
                         .background(Iris.copy(alpha = 0.18f)),
                     contentAlignment = Alignment.Center
                 ) {
-                    Text("\uD83E\uDDE0", fontSize = 21.sp)
+                    Icon(
+                        Icons.Default.Storage,
+                        contentDescription = "Cortex Speicher",
+                        tint = Iris,
+                        modifier = Modifier.size(22.dp)
+                    )
                 }
                 Column(modifier = Modifier.weight(1f)) {
                     Text("Cortex", fontFamily = SpaceGrotesk, fontWeight = FontWeight.SemiBold,
                         fontSize = 15.sp)
-                    Text("Version ${BuildConfig.VERSION_NAME} \u00B7 privat",
+                    Text("Version ${BuildConfig.VERSION_NAME} (${BuildConfig.VERSION_BUMPED_AT})",
                         fontFamily = JetBrainsMono, fontSize = 11.sp,
                         color = MaterialTheme.colorScheme.onSurfaceVariant)
-                }
-                Surface(
-                    shape = RoundedCornerShape(7.dp),
-                    color = Mint.copy(alpha = 0.16f)
-                ) {
-                    Row(
-                        modifier = Modifier.padding(horizontal = 9.dp, vertical = 3.dp),
-                        horizontalArrangement = Arrangement.spacedBy(5.dp),
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Icon(Icons.Default.Lock, null, modifier = Modifier.size(14.dp), tint = Mint)
-                        Text("lokal", fontSize = 11.sp, fontWeight = FontWeight.SemiBold, color = Mint)
-                    }
                 }
             }
         }
@@ -440,6 +911,116 @@ fun SettingsScreen(
         }
 
         Spacer(Modifier.height(24.dp))
+    }
+}
+
+@Composable
+private fun ContextPromptModeButtons(
+    selectedMode: String,
+    isDark: Boolean,
+    onSelect: (String) -> Unit
+) {
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.spacedBy(8.dp)
+    ) {
+        val items = listOf(
+            Triple(SettingsStore.CONTEXT_MODE_SMALLTALK, Icons.Default.Forum, "Smalltalk"),
+            Triple(SettingsStore.CONTEXT_MODE_SAVE, Icons.Default.Save, "Speichern"),
+            Triple(SettingsStore.CONTEXT_MODE_SEARCH, Icons.Default.Search, "Suchen")
+        )
+        items.forEach { (mode, icon, label) ->
+            val active = selectedMode == mode
+            Surface(
+                shape = RoundedCornerShape(12.dp),
+                color = if (active) Orange.copy(alpha = 0.18f) else if (isDark) DarkField else LightField,
+                border = BorderStroke(1.dp, if (active) Orange.copy(alpha = 0.55f) else if (isDark) DarkFieldBorder else LightFieldBorder),
+                modifier = Modifier.weight(1f).clickable { onSelect(mode) }
+            ) {
+                Column(
+                    modifier = Modifier.fillMaxWidth().padding(vertical = 10.dp),
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    verticalArrangement = Arrangement.spacedBy(5.dp)
+                ) {
+                    Icon(icon, null, tint = if (active) Orange else MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.size(20.dp))
+                    Text(label, fontSize = 11.5.sp, fontWeight = FontWeight.SemiBold)
+                }
+            }
+        }
+    }
+}
+
+private fun isCodexModel(model: String): Boolean {
+    val m = model.lowercase()
+    return m.startsWith("gpt-") || m.startsWith("codex/") || m.startsWith("openai-codex/")
+}
+
+private fun codexAuthErrorMessage(e: Exception): String {
+    val http = e as? HttpException
+    if (http != null) {
+        val raw = http.response()?.errorBody()?.string().orEmpty()
+        val detail = Regex("\"detail\"\\s*:\\s*\"([^\"]+)\"").find(raw)?.groupValues?.getOrNull(1)
+        val suffix = detail?.replace("\\n", " ")?.takeIf { it.isNotBlank() } ?: "Serverfehler"
+        return "Verbindung fehlgeschlagen (HTTP ${http.code()}): $suffix"
+    }
+    return "Verbindung fehlgeschlagen: ${e.message ?: e::class.java.simpleName}"
+}
+
+@Composable
+private fun AgentModelDropdown(
+    label: String,
+    value: String,
+    options: List<String>,
+    isDark: Boolean,
+    onSelect: (String) -> Unit
+) {
+    var open by remember { mutableStateOf(false) }
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(10.dp)
+    ) {
+        Text(label, fontSize = 13.5.sp, color = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.width(96.dp))
+        Box(modifier = Modifier.weight(1f)) {
+            Surface(
+                shape = RoundedCornerShape(10.dp),
+                color = if (isDark) DarkField else LightField,
+                border = BorderStroke(1.dp, if (isDark) DarkFieldBorder else LightFieldBorder),
+                modifier = Modifier.fillMaxWidth().clickable { open = true }
+            ) {
+                Row(
+                    modifier = Modifier.fillMaxWidth().padding(horizontal = 10.dp, vertical = 9.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    Text(
+                        value,
+                        fontFamily = JetBrainsMono,
+                        fontSize = 12.sp,
+                        color = MaterialTheme.colorScheme.onSurface,
+                        modifier = Modifier.weight(1f)
+                    )
+                    Icon(Icons.Default.ExpandMore, null, tint = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.size(18.dp))
+                }
+            }
+            DropdownMenu(
+                expanded = open,
+                onDismissRequest = { open = false },
+                shape = RoundedCornerShape(14.dp),
+                containerColor = if (isDark) DarkSurface else Color.White,
+                border = BorderStroke(1.dp, if (isDark) DarkBorder else LightBorder)
+            ) {
+                options.forEach { option ->
+                    DropdownMenuItem(
+                        text = { Text(option, fontFamily = JetBrainsMono, fontSize = 12.5.sp) },
+                        onClick = {
+                            onSelect(option)
+                            open = false
+                        }
+                    )
+                }
+            }
+        }
     }
 }
 
@@ -497,7 +1078,8 @@ private fun SecretRow(
     value: String,
     onValueChange: (String) -> Unit,
     isDark: Boolean,
-    divider: Boolean
+    divider: Boolean,
+    onRevealRequest: ((() -> Unit) -> Unit)
 ) {
     var visible by remember { mutableStateOf(false) }
 
@@ -512,6 +1094,7 @@ private fun SecretRow(
                 BasicTextField(
                     value = if (visible) value else "\u2022\u2022\u2022\u2022\u2022\u2022\u2022\u2022\u2022\u2022\u2022\u2022\u2022\u2022\u2022\u2022\u2022\u2022\u2022\u2022",
                     onValueChange = onValueChange,
+                    readOnly = !visible,
                     modifier = Modifier.fillMaxWidth(),
                     textStyle = LocalTextStyle.current.copy(
                         fontFamily = JetBrainsMono,
@@ -527,7 +1110,13 @@ private fun SecretRow(
                     .clip(RoundedCornerShape(9.dp))
                     .background(if (isDark) DarkField else LightField)
                     .border(1.dp, if (isDark) DarkFieldBorder else LightFieldBorder, RoundedCornerShape(9.dp))
-                    .clickable { visible = !visible },
+                    .clickable {
+                        if (visible) {
+                            visible = false
+                        } else {
+                            onRevealRequest { visible = true }
+                        }
+                    },
                 contentAlignment = Alignment.Center
             ) {
                 Icon(

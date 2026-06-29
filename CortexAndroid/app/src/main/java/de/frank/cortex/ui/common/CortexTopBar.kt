@@ -11,6 +11,8 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.DarkMode
 import androidx.compose.material.icons.filled.LightMode
 import androidx.compose.material.icons.filled.BrightnessAuto
+import androidx.compose.material.icons.filled.AddComment
+import androidx.compose.material.icons.filled.Storage
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -32,7 +34,9 @@ fun CortexTopBar(
     themeMode: String,
     onSetThemeMode: (String) -> Unit,
     vpnState: TunnelState,
-    onVpnToggle: (Boolean) -> Unit
+    onVpnToggle: (Boolean) -> Unit,
+    showNewChat: Boolean = false,
+    onNewChat: () -> Unit = {}
 ) {
     val colors = if (isDark) Triple(DarkSurface, DarkBorder, DarkMuted)
     else Triple(LightSurface, LightBorder, LightMuted)
@@ -45,7 +49,7 @@ fun CortexTopBar(
             .padding(horizontal = 14.dp, vertical = 8.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
-        // Brain Icon Container (38x38, radius 12, gradient + glow)
+        // Speicher-Icon Container (38x38, radius 12, gradient + glow)
         Box(
             modifier = Modifier
                 .size(38.dp)
@@ -61,7 +65,39 @@ fun CortexTopBar(
                 .border(1.dp, DarkUserBorder, RoundedCornerShape(12.dp)),
             contentAlignment = Alignment.Center
         ) {
-            Text("\uD83E\uDDE0", fontSize = 20.sp)
+            Icon(
+                imageVector = Icons.Default.Storage,
+                contentDescription = "Cortex Speicher",
+                tint = Iris,
+                modifier = Modifier.size(22.dp)
+            )
+        }
+
+        if (showNewChat) {
+            Spacer(Modifier.width(8.dp))
+            Box(
+                modifier = Modifier
+                    .size(38.dp)
+                    .clip(RoundedCornerShape(12.dp))
+                    .background(
+                        Brush.linearGradient(
+                            colors = listOf(
+                                Iris.copy(alpha = 0.30f),
+                                Iris.copy(alpha = 0.12f)
+                            )
+                        )
+                    )
+                    .border(1.dp, DarkUserBorder, RoundedCornerShape(12.dp))
+                    .clickable(onClick = onNewChat),
+                contentAlignment = Alignment.Center
+            ) {
+                Icon(
+                    imageVector = Icons.Default.AddComment,
+                    contentDescription = "Neuer Chat",
+                    tint = Iris,
+                    modifier = Modifier.size(22.dp)
+                )
+            }
         }
 
         Spacer(Modifier.width(10.dp))

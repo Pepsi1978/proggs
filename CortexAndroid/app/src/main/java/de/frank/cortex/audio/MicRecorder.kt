@@ -15,6 +15,7 @@ class MicRecorder {
     private var recordingJob: Job? = null
     private val buffer = ByteArrayOutputStream()
     private var isRecording = false
+    private var startedAtMs = 0L
 
     companion object {
         const val SAMPLE_RATE = 16000
@@ -46,6 +47,7 @@ class MicRecorder {
         buffer.reset()
         recorder?.startRecording()
         isRecording = true
+        startedAtMs = System.currentTimeMillis()
 
         recordingJob = scope.launch(Dispatchers.IO) {
             val readBuffer = ByteArray(bufferSize)
@@ -61,19 +63,34 @@ class MicRecorder {
         return true
     }
 
-    fun stop(): ByteArray? {
+    suspend fun stop(): ByteArray? {
         if (!isRecording) return null
 
         isRecording = false
-        recordingJob?.cancel()
-        recorder?.stop()
-        recorder?.release()
-        recorder = null
+        recordingJob?.cancelAndJoin()
+        recordingJob = null
+
+        val activeRecorder = recorder
+        try {
+            activeRecorder?.stop()
+        } catch (e: IllegalStateException) {
+            // AudioRecord wirft auf manchen Geräten "stop failed: 0", wenn sehr kurz oder bereits gestoppt.
+            // Die bis dahin gelesenen PCM-Daten bleiben trotzdem verwertbar.
+            CortexLog.warn("MicRecorder", "stop", "AudioRecord.stop ignoriert: ${e.message}")
+        } finally {
+            try { activeRecorder?.release() } catch (e: Exception) {
+                CortexLog.warn("MicRecorder", "stop", "AudioRecord.release fehlgeschlagen: ${e.message}")
+            }
+            recorder = null
+        }
 
         val pcmData = buffer.toByteArray()
         buffer.reset()
 
-        CortexLog.info("MicRecorder", "stop", "Aufnahme gestoppt", mapOf("pcm_bytes" to pcmData.size))
+        CortexLog.info("MicRecorder", "stop", "Aufnahme gestoppt", mapOf(
+            "pcm_bytes" to pcmData.size,
+            "duration_ms" to (System.currentTimeMillis() - startedAtMs)
+        ))
         return if (pcmData.isNotEmpty()) pcmDataToWav(pcmData) else null
     }
 

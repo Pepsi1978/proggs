@@ -46,8 +46,19 @@ data class ChatUiState(
     val isRecording: Boolean = false,
     val isTranscribing: Boolean = false,
     val isSpeaking: Boolean = false,
-    val isImproving: Boolean = false
+    val isImproving: Boolean = false,
+    val isGeneratingTitle: Boolean = false,
+    val contextMode: String = SettingsStore.CONTEXT_MODE_AUTO
 )
+
+object ChatCommands {
+    private val _newChat = MutableSharedFlow<Unit>(extraBufferCapacity = 1)
+    val newChat: SharedFlow<Unit> = _newChat
+
+    fun requestNewChat() {
+        _newChat.tryEmit(Unit)
+    }
+}
 
 class ChatViewModel : ViewModel() {
 
@@ -193,7 +204,10 @@ class ChatViewModel : ViewModel() {
                     text = text,
                     session_id = state.sessionId,
                     category = state.selectedCategory,
-                    title = state.titleOverride.ifBlank { null }
+                    title = state.titleOverride.ifBlank { null },
+                    context_mode = state.contextMode,
+                    context_prompt = if (state.contextMode == SettingsStore.CONTEXT_MODE_AUTO) null
+                    else SettingsStore.contextPrompt(state.contextMode)
                 )
 
                 CortexLog.checkpoint(
@@ -257,6 +271,35 @@ class ChatViewModel : ViewModel() {
         sendMessage(option.send)
     }
 
+    fun startNewChat() {
+        stopSpeaking()
+        if (micRecorder.isRecording()) {
+            viewModelScope.launch {
+                try {
+                    withContext(Dispatchers.IO) { micRecorder.stop() }
+                } catch (e: CancellationException) {
+                    throw e
+                } catch (e: Exception) {
+                    CortexLog.warn("ChatVM", "startNewChat", "Aufnahme-Stopp fehlgeschlagen: ${e.message}")
+                }
+            }
+        }
+        _uiState.update {
+            it.copy(
+                messages = emptyList(),
+                isLoading = false,
+                error = null,
+                titleOverride = "",
+                sessionId = "android-${UUID.randomUUID()}",
+                isRecording = false,
+                isTranscribing = false,
+                isImproving = false,
+                isGeneratingTitle = false
+            )
+        }
+        CortexLog.info("ChatVM", "startNewChat", "Neuer Chat gestartet")
+    }
+
     fun improveText(text: String) {
         val original = text.trim()
         if (original.isBlank()) {
@@ -310,8 +353,34 @@ class ChatViewModel : ViewModel() {
         _uiState.update { it.copy(titleOverride = title) }
     }
 
+    fun generateTitleFromText(text: String) {
+        val source = text.trim()
+        if (source.isBlank()) {
+            _uiState.update { it.copy(error = "Kein Text für einen Titel") }
+            return
+        }
+        viewModelScope.launch {
+            _uiState.update { it.copy(isGeneratingTitle = true, error = null) }
+            try {
+                val title = withContext(Dispatchers.IO) { ApiClient.geminiTitle(source) }
+                _uiState.update { it.copy(titleOverride = title.take(200), isGeneratingTitle = false) }
+            } catch (e: CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                CortexLog.error("ChatVM", "generateTitleFromText", "Titelgenerierung fehlgeschlagen: ${e.message}")
+                _uiState.update {
+                    it.copy(isGeneratingTitle = false, error = "Gemini konnte keinen Titel erzeugen: ${e.message}")
+                }
+            }
+        }
+    }
+
     fun updateSelectedCategory(category: String?) {
         _uiState.update { it.copy(selectedCategory = category) }
+    }
+
+    fun updateContextMode(mode: String) {
+        _uiState.update { it.copy(contextMode = mode) }
     }
 
     fun toggleTts() {
@@ -346,14 +415,29 @@ class ChatViewModel : ViewModel() {
             _uiState.update { it.copy(isSpeaking = true) }
             try {
                 val voice = SettingsStore.ttsVoice
-                // Die GANZE Agenten-Antwort in EINEM Gemini-TTS-Aufruf erzeugen -> EINE durchgehende
-                // Stimme, kein Stueckeln, kein Stimmenwechsel, kein Hin-und-Herspringen.
-                // (Frueher in 220-Zeichen-Haeppchen je eigenem Aufruf zerlegt -> klang je Haeppchen anders.)
-                CortexLog.info("ChatVM", "speakResponse", "TTS ganze Antwort (1 Stueck)",
-                    mapOf("len" to text.length, "voice" to voice))
-                val pcm = withContext(Dispatchers.IO) { ApiClient.geminiTts(text, voice) }
-                pcmPlayer.playAndAwait(pcm, SettingsStore.ttsRate)
-                CortexLog.info("ChatVM", "speakResponse", "TTS abgeschlossen")
+                val chunks = chunkText(text, 360)
+                val ttsStartedAt = System.currentTimeMillis()
+                CortexLog.info("ChatVM", "speakResponse", "TTS Pipeline startet",
+                    mapOf("len" to text.length, "chunks" to chunks.size, "voice" to voice))
+
+                coroutineScope {
+                    var nextAudio = async(Dispatchers.IO) { ApiClient.geminiTts(chunks.first(), voice) }
+                    chunks.forEachIndexed { index, chunk ->
+                        val pcm = nextAudio.await()
+                        if (index == 0) {
+                            CortexLog.info("ChatVM", "speakResponse", "TTS erster Ton bereit",
+                                mapOf("elapsed_ms" to (System.currentTimeMillis() - ttsStartedAt), "chunk_len" to chunk.length))
+                        }
+                        nextAudio = if (index < chunks.lastIndex) {
+                            async(Dispatchers.IO) { ApiClient.geminiTts(chunks[index + 1], voice) }
+                        } else {
+                            async(Dispatchers.IO) { ByteArray(0) }
+                        }
+                        pcmPlayer.playAndAwait(pcm, SettingsStore.ttsRate)
+                    }
+                }
+                CortexLog.info("ChatVM", "speakResponse", "TTS abgeschlossen",
+                    mapOf("elapsed_ms" to (System.currentTimeMillis() - ttsStartedAt), "chunks" to chunks.size))
             } catch (e: CancellationException) {
                 throw e
             } catch (e: Exception) {

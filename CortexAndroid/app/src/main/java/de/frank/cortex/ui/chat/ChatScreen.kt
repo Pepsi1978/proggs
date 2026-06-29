@@ -40,6 +40,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
+import de.frank.cortex.data.SettingsStore
 import de.frank.cortex.data.model.ChatOption
 import de.frank.cortex.observability.CortexLog
 import de.frank.cortex.ui.theme.*
@@ -53,9 +54,31 @@ fun ChatScreen(vm: ChatViewModel = viewModel()) {
     var inputText by rememberSaveable { mutableStateOf("") }
     val listState = rememberLazyListState()
     val context = LocalContext.current
-    val recordingTone = remember { ToneGenerator(AudioManager.STREAM_NOTIFICATION, 80) }
+    val toneVolume = SettingsStore.recordingToneVolume
+    val recordingTone = remember(toneVolume) { ToneGenerator(AudioManager.STREAM_MUSIC, (toneVolume * 100).toInt()) }
+    val emptyTitle = when (uiState.contextMode) {
+        SettingsStore.CONTEXT_MODE_SMALLTALK -> "Smalltalk-Modus ist aktiv."
+        SettingsStore.CONTEXT_MODE_SAVE -> "Speichermodus ist aktiv."
+        SettingsStore.CONTEXT_MODE_SEARCH -> "Suchmodus ist aktiv."
+        else -> "Dein Speicher hört zu."
+    }
+    val emptySubtitle = when (uiState.contextMode) {
+        SettingsStore.CONTEXT_MODE_SMALLTALK -> "Sag oder tippe etwas — ich plaudere nur mit dir und speichere oder suche nichts."
+        SettingsStore.CONTEXT_MODE_SAVE -> "Sag oder tippe etwas — ich behandle es als Information zum Ablegen."
+        SettingsStore.CONTEXT_MODE_SEARCH -> "Frag oder tippe ein Thema — ich suche gezielt in deinem Gedächtnis."
+        else -> "Sag oder tippe etwas — ich lege es ab oder schlage es nach."
+    }
 
-    DisposableEffect(Unit) {
+    fun playRecordingTone() {
+        if (!SettingsStore.recordingToneEnabled) return
+        try {
+            recordingTone.startTone(ToneGenerator.TONE_PROP_ACK, 180)
+        } catch (e: Exception) {
+            CortexLog.warn("ChatScreen", "recordingTone", "Aufnahmeton fehlgeschlagen: ${e.message}")
+        }
+    }
+
+    DisposableEffect(recordingTone) {
         onDispose { recordingTone.release() }
     }
 
@@ -64,7 +87,7 @@ fun ChatScreen(vm: ChatViewModel = viewModel()) {
         contract = ActivityResultContracts.RequestPermission()
     ) { granted ->
         if (granted) {
-            recordingTone.startTone(ToneGenerator.TONE_PROP_BEEP, 120)
+            playRecordingTone()
             vm.toggleRecording()
         }
     }
@@ -82,6 +105,13 @@ fun ChatScreen(vm: ChatViewModel = viewModel()) {
         }
     }
 
+    LaunchedEffect(Unit) {
+        ChatCommands.newChat.collect {
+            inputText = ""
+            vm.startNewChat()
+        }
+    }
+
     LaunchedEffect(uiState.error) {
         uiState.error?.let { message ->
             Toast.makeText(context, message, Toast.LENGTH_LONG).show()
@@ -95,41 +125,14 @@ fun ChatScreen(vm: ChatViewModel = viewModel()) {
         }
     }
 
-    Column(
+    Box(
         modifier = Modifier
             .fillMaxSize()
             .background(MaterialTheme.colorScheme.background)
     ) {
-        // Chat Header: "Heute" + "Neu"
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(horizontal = 18.dp, vertical = 4.dp),
-            horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            Text(
-                text = "Heute",
-                fontFamily = JetBrainsMono,
-                fontSize = 10.sp,
-                letterSpacing = 1.5.sp,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
-            )
-            Row(
-                modifier = Modifier.clickable { /* reset chat */ },
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(5.dp)
-            ) {
-                Icon(Icons.Default.AddComment, contentDescription = null,
-                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                    modifier = Modifier.size(15.dp))
-                Text("Neu", fontSize = 11.5.sp, fontWeight = FontWeight.SemiBold,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant)
-            }
-        }
-
-        // Messages OR Empty State
-        if (uiState.messages.isEmpty()) {
+        Column(Modifier.fillMaxSize()) {
+            // Messages OR Empty State
+            if (uiState.messages.isEmpty()) {
             // Empty State with breathing brain
             Box(
                 modifier = Modifier.weight(1f).fillMaxWidth(),
@@ -148,13 +151,28 @@ fun ChatScreen(vm: ChatViewModel = viewModel()) {
                     verticalArrangement = Arrangement.spacedBy(16.dp),
                     modifier = Modifier.padding(horizontal = 40.dp)
                 ) {
+                    Box(
+                        modifier = Modifier
+                            .size(74.dp)
+                            .scale(alpha)
+                            .clip(RoundedCornerShape(22.dp))
+                            .background(
+                                Brush.linearGradient(
+                                    listOf(Iris.copy(alpha = 0.28f), Mint.copy(alpha = 0.16f))
+                                )
+                            )
+                            .border(1.dp, Iris.copy(alpha = 0.34f), RoundedCornerShape(22.dp)),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Icon(
+                            Icons.Default.Storage,
+                            contentDescription = "Cortex Speicher",
+                            tint = Iris,
+                            modifier = Modifier.size(38.dp)
+                        )
+                    }
                     Text(
-                        text = "\uD83E\uDDE0",
-                        fontSize = 54.sp,
-                        modifier = Modifier.scale(alpha)
-                    )
-                    Text(
-                        text = "Dein Gehirn hört zu.",
+                        text = emptyTitle,
                         fontFamily = SpaceGrotesk,
                         fontWeight = FontWeight.SemiBold,
                         fontSize = 21.sp,
@@ -162,14 +180,14 @@ fun ChatScreen(vm: ChatViewModel = viewModel()) {
                         color = MaterialTheme.colorScheme.onSurface
                     )
                     Text(
-                        text = "Sag oder tippe etwas — ich lege es ab oder schlage es nach.",
+                        text = emptySubtitle,
                         fontSize = 14.sp,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                         lineHeight = 21.sp
                     )
                 }
             }
-        } else {
+            } else {
             LazyColumn(
                 state = listState,
                 modifier = Modifier.weight(1f).fillMaxWidth().padding(horizontal = 16.dp),
@@ -185,45 +203,57 @@ fun ChatScreen(vm: ChatViewModel = viewModel()) {
                     item { TypingIndicator() }
                 }
             }
+            }
+
+            // Input Block
+            ChatInputBlock(
+                text = inputText,
+                onTextChange = { inputText = it },
+                categories = uiState.categories,
+                selectedCategory = uiState.selectedCategory,
+                onCategoryChange = vm::updateSelectedCategory,
+                onCreateCategory = vm::createCategory,
+                onOpenCategories = vm::loadCategories,
+                contextMode = uiState.contextMode,
+                onContextModeChange = vm::updateContextMode,
+                titleOverride = uiState.titleOverride,
+                onTitleChange = vm::updateTitleOverride,
+                isGeneratingTitle = uiState.isGeneratingTitle,
+                onGenerateTitle = { vm.generateTitleFromText(inputText) },
+                ttsEnabled = uiState.ttsEnabled,
+                onToggleTts = vm::toggleTts,
+                isRecording = uiState.isRecording,
+                isTranscribing = uiState.isTranscribing,
+                isImproving = uiState.isImproving,
+                onMicToggle = {
+                    CortexLog.info("ChatScreen", "micClick", "Mikrofon angeklickt")
+                    val hasPermission = context.checkSelfPermission(Manifest.permission.RECORD_AUDIO) ==
+                            PackageManager.PERMISSION_GRANTED
+                    CortexLog.info("ChatScreen", "micClick", "Permission: $hasPermission")
+                    if (hasPermission) {
+                        if (!uiState.isRecording && !uiState.isTranscribing) {
+                            playRecordingTone()
+                        }
+                        vm.toggleRecording()
+                    } else {
+                        micPermissionLauncher.launch(Manifest.permission.RECORD_AUDIO)
+                    }
+                },
+                onSend = {
+                    vm.sendMessage(inputText)
+                    inputText = ""
+                },
+                onClear = {
+                    inputText = ""
+                    vm.updateTitleOverride("")
+                },
+                onImprove = { vm.improveText(inputText) }
+            )
         }
 
-        // Input Block
-        ChatInputBlock(
-            text = inputText,
-            onTextChange = { inputText = it },
-            categories = uiState.categories,
-            selectedCategory = uiState.selectedCategory,
-            onCategoryChange = vm::updateSelectedCategory,
-            onCreateCategory = vm::createCategory,
-            onOpenCategories = vm::loadCategories,
-            titleOverride = uiState.titleOverride,
-            onTitleChange = vm::updateTitleOverride,
-            ttsEnabled = uiState.ttsEnabled,
-            onToggleTts = vm::toggleTts,
-            isRecording = uiState.isRecording,
-            isTranscribing = uiState.isTranscribing,
-            isImproving = uiState.isImproving,
-            onMicToggle = {
-                CortexLog.info("ChatScreen", "micClick", "Mikrofon angeklickt")
-                val hasPermission = context.checkSelfPermission(Manifest.permission.RECORD_AUDIO) ==
-                        PackageManager.PERMISSION_GRANTED
-                CortexLog.info("ChatScreen", "micClick", "Permission: $hasPermission")
-                if (hasPermission) {
-                    if (!uiState.isRecording && !uiState.isTranscribing) {
-                        recordingTone.startTone(ToneGenerator.TONE_PROP_BEEP, 120)
-                    }
-                    vm.toggleRecording()
-                } else {
-                    micPermissionLauncher.launch(Manifest.permission.RECORD_AUDIO)
-                }
-            },
-            onSend = {
-                vm.sendMessage(inputText)
-                inputText = ""
-            },
-            onClear = { inputText = "" },
-            onImprove = { vm.improveText(inputText) }
-        )
+        if (uiState.isRecording) {
+            RecordingOverlay(onStop = { vm.toggleRecording() })
+        }
     }
 }
 
@@ -251,45 +281,18 @@ private fun ChatBubble(message: ChatMessage, onOptionClick: (ChatOption) -> Unit
                 )
             }
         } else {
-            // Bot bubble: surface bg, glow when speaking
-            val speaking = false // TODO: TTS state
-            val borderColor = if (speaking) Orange.copy(alpha = 0.45f)
-            else MaterialTheme.colorScheme.outline
-
             Surface(
                 shape = RoundedCornerShape(18.dp, 18.dp, 18.dp, 5.dp),
                 color = MaterialTheme.colorScheme.surface,
-                border = BorderStroke(1.dp, borderColor),
-                shadowElevation = if (speaking) 8.dp else 0.dp
+                border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline)
             ) {
-                Box {
-                    Text(
-                        text = message.text,
-                        modifier = Modifier.padding(horizontal = 14.dp, vertical = 12.dp),
-                        fontSize = 14.5.sp,
-                        lineHeight = 22.5.sp,
-                        color = MaterialTheme.colorScheme.onSurface
-                    )
-
-                    // Speaker icon (bottom-right, 26x26 circle)
-                    Box(
-                        modifier = Modifier
-                            .align(Alignment.BottomEnd)
-                            .offset(x = 6.dp, y = 9.dp)
-                            .size(26.dp)
-                            .clip(CircleShape)
-                            .background(MaterialTheme.colorScheme.surfaceVariant)
-                            .border(1.dp, MaterialTheme.colorScheme.outline, CircleShape),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        Icon(
-                            Icons.AutoMirrored.Filled.VolumeUp,
-                            contentDescription = "Vorlesen",
-                            tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                            modifier = Modifier.size(15.dp)
-                        )
-                    }
-                }
+                Text(
+                    text = message.text,
+                    modifier = Modifier.padding(horizontal = 14.dp, vertical = 12.dp),
+                    fontSize = 14.5.sp,
+                    lineHeight = 22.5.sp,
+                    color = MaterialTheme.colorScheme.onSurface
+                )
             }
         }
 
@@ -386,6 +389,110 @@ private fun TypingIndicator() {
     }
 }
 
+@Composable
+private fun RecordingOverlay(onStop: () -> Unit) {
+    Box(
+        modifier = Modifier
+            .fillMaxSize()
+            .background(Color.Black.copy(alpha = 0.48f))
+            .clickable(onClick = onStop),
+        contentAlignment = Alignment.BottomCenter
+    ) {
+        Surface(
+            shape = RoundedCornerShape(24.dp),
+            color = MaterialTheme.colorScheme.surface,
+            border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline),
+            shadowElevation = 18.dp,
+            modifier = Modifier
+                .widthIn(max = 340.dp)
+                .fillMaxWidth()
+                .padding(horizontal = 22.dp, vertical = 36.dp)
+        ) {
+            Column(
+                modifier = Modifier.padding(horizontal = 24.dp, vertical = 26.dp),
+                horizontalAlignment = Alignment.CenterHorizontally,
+                verticalArrangement = Arrangement.spacedBy(18.dp)
+            ) {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(7.dp)
+                ) {
+                    Box(
+                        Modifier
+                            .size(9.dp)
+                            .clip(CircleShape)
+                            .background(Orange)
+                    )
+                    Text(
+                        "AUFNAHME",
+                        fontFamily = JetBrainsMono,
+                        fontSize = 11.sp,
+                        letterSpacing = 1.5.sp,
+                        color = Orange
+                    )
+                }
+
+                Row(
+                    modifier = Modifier.height(54.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(4.dp)
+                ) {
+                    repeat(13) { index ->
+                        val infinite = rememberInfiniteTransition(label = "rec_bar_$index")
+                        val scale by infinite.animateFloat(
+                            initialValue = 0.28f,
+                            targetValue = 1f,
+                            animationSpec = infiniteRepeatable(
+                                animation = tween(
+                                    durationMillis = 650 + (index % 4) * 90,
+                                    delayMillis = index * 45,
+                                    easing = EaseInOut
+                                ),
+                                repeatMode = RepeatMode.Reverse
+                            ),
+                            label = "rec_bar_scale_$index"
+                        )
+                        Box(
+                            modifier = Modifier
+                                .width(4.dp)
+                                .height((46 * scale).dp.coerceAtLeast(10.dp))
+                                .clip(RoundedCornerShape(3.dp))
+                                .background(
+                                    Brush.verticalGradient(
+                                        listOf(Orange, Orange.copy(alpha = 0.45f))
+                                    )
+                                )
+                        )
+                    }
+                }
+
+                Text(
+                    "Ich höre zu… ▍",
+                    minLines = 2,
+                    fontSize = 14.5.sp,
+                    lineHeight = 21.sp,
+                    color = MaterialTheme.colorScheme.onSurface,
+                    modifier = Modifier.fillMaxWidth(),
+                    textAlign = androidx.compose.ui.text.style.TextAlign.Center
+                )
+
+                Box(
+                    modifier = Modifier
+                        .size(64.dp)
+                        .clip(CircleShape)
+                        .background(Orange)
+                        .clickable(onClick = onStop),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Icon(Icons.Default.Stop, contentDescription = "Aufnahme stoppen", tint = Color.White, modifier = Modifier.size(30.dp))
+                }
+
+                Text("Tippen zum Stoppen", fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            }
+        }
+    }
+}
+
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun ChatInputBlock(
@@ -396,8 +503,12 @@ private fun ChatInputBlock(
     onCategoryChange: (String?) -> Unit,
     onCreateCategory: (String) -> Unit,
     onOpenCategories: () -> Unit,
+    contextMode: String,
+    onContextModeChange: (String) -> Unit,
     titleOverride: String,
     onTitleChange: (String) -> Unit,
+    isGeneratingTitle: Boolean,
+    onGenerateTitle: () -> Unit,
     ttsEnabled: Boolean,
     onToggleTts: () -> Unit,
     isRecording: Boolean,
@@ -414,28 +525,56 @@ private fun ChatInputBlock(
     val recordingRed = Color(0xFFFF3B30)
 
     Surface(
+        modifier = Modifier.imePadding(),
         color = MaterialTheme.colorScheme.surface,
         border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline)
     ) {
         Column(modifier = Modifier.padding(14.dp)) {
+            ContextModeBar(
+                selectedMode = contextMode,
+                onModeChange = onContextModeChange,
+                isDark = isDark
+            )
+
+            Spacer(Modifier.height(8.dp))
+
             // Title + Category row
             Row(
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.spacedBy(8.dp),
                 modifier = Modifier.fillMaxWidth()
             ) {
-                Icon(Icons.Default.Title, contentDescription = null,
-                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                    modifier = Modifier.size(18.dp))
+                Box(
+                    modifier = Modifier
+                        .size(38.dp)
+                        .clip(RoundedCornerShape(11.dp))
+                        .background(Mint.copy(alpha = 0.13f))
+                        .border(1.dp, Mint.copy(alpha = 0.30f), RoundedCornerShape(11.dp))
+                        .clickable(enabled = text.isNotBlank() && !isGeneratingTitle, onClick = onGenerateTitle),
+                    contentAlignment = Alignment.Center
+                ) {
+                    if (isGeneratingTitle) {
+                        CircularProgressIndicator(
+                            modifier = Modifier.size(18.dp),
+                            strokeWidth = 2.dp,
+                            color = Mint
+                        )
+                    } else {
+                        Text("T", fontFamily = SpaceGrotesk, fontWeight = FontWeight.Bold,
+                            fontSize = 16.sp, color = Mint)
+                    }
+                }
                 BasicTextField(
                     value = titleOverride,
                     onValueChange = { if (it.length <= 200) onTitleChange(it) },
                     modifier = Modifier.weight(1f),
                     textStyle = LocalTextStyle.current.copy(
                         fontSize = 12.5.sp,
+                        lineHeight = 17.sp,
                         color = MaterialTheme.colorScheme.onSurface
                     ),
-                    singleLine = true,
+                    minLines = 1,
+                    maxLines = 2,
                     decorationBox = { inner ->
                         if (titleOverride.isEmpty()) {
                             Text("Titel (optional)", fontSize = 12.5.sp,
@@ -471,13 +610,14 @@ private fun ChatInputBlock(
                     onValueChange = onTextChange,
                     modifier = Modifier
                         .fillMaxWidth()
-                        .defaultMinSize(minHeight = 44.dp)
+                        .defaultMinSize(minHeight = 92.dp)
                         .padding(12.dp),
                     textStyle = LocalTextStyle.current.copy(
                         fontSize = 14.5.sp,
                         lineHeight = 21.7.sp,
                         color = MaterialTheme.colorScheme.onSurface
                     ),
+                    minLines = 3,
                     maxLines = 5,
                     decorationBox = { inner ->
                         if (text.isEmpty()) {
@@ -578,6 +718,50 @@ private fun ChatInputBlock(
                         tint = Color.White,
                         modifier = Modifier.size(22.dp)
                     )
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun ContextModeBar(
+    selectedMode: String,
+    onModeChange: (String) -> Unit,
+    isDark: Boolean
+) {
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.End,
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        val items = listOf(
+            Triple(SettingsStore.CONTEXT_MODE_SEARCH, Icons.Default.Search, "Suchen"),
+            Triple(SettingsStore.CONTEXT_MODE_SAVE, Icons.Default.Save, "Speichern"),
+            Triple(SettingsStore.CONTEXT_MODE_SMALLTALK, Icons.Default.Forum, "Smalltalk"),
+            Triple(SettingsStore.CONTEXT_MODE_AUTO, Icons.Default.AutoAwesome, "Automatisch")
+        )
+        Row(
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            items.forEach { (mode, icon, label) ->
+                val active = selectedMode == mode
+                val tint = if (active) Orange else MaterialTheme.colorScheme.onSurfaceVariant
+                Box(
+                    modifier = Modifier
+                        .size(38.dp)
+                        .clip(RoundedCornerShape(11.dp))
+                        .background(if (active) Orange.copy(alpha = 0.22f) else if (isDark) DarkField else LightField)
+                        .border(
+                            1.dp,
+                            if (active) Orange.copy(alpha = 0.52f) else if (isDark) DarkFieldBorder else LightFieldBorder,
+                            RoundedCornerShape(11.dp)
+                        )
+                        .clickable { onModeChange(mode) },
+                    contentAlignment = Alignment.Center
+                ) {
+                    Icon(icon, contentDescription = label, tint = tint, modifier = Modifier.size(20.dp))
                 }
             }
         }

@@ -22,16 +22,22 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import de.frank.cortex.data.model.BrainEntry
+import de.frank.cortex.data.model.CategoryInfo
+import de.frank.cortex.ui.chat.CategoryPickerPill
 import de.frank.cortex.ui.common.VpnSleepOverlay
 import de.frank.cortex.ui.theme.*
 import de.frank.cortex.vpn.TunnelState
 import de.frank.cortex.vpn.WireGuardManager
+import java.time.OffsetDateTime
+import java.time.format.DateTimeFormatter
+import java.util.Locale
 
 @Composable
 fun DashboardScreen(vm: DashboardViewModel = viewModel()) {
@@ -50,9 +56,15 @@ fun DashboardScreen(vm: DashboardViewModel = viewModel()) {
             isEditing = uiState.isEditing,
             editText = uiState.editText,
             editTitle = uiState.editTitle,
+            editCategory = uiState.editCategory,
+            categories = uiState.categories,
             onEditTextChange = vm::updateEditText,
             onEditTitleChange = vm::updateEditTitle,
+            onEditCategoryChange = vm::updateEditCategory,
+            onCreateCategory = vm::createCategory,
+            onSaveCategory = vm::saveEntryCategory,
             onToggleEdit = vm::toggleEditing,
+            onCancelEdit = vm::cancelEditing,
             onSave = vm::saveEntry,
             onDelete = vm::deleteEntry,
             onBack = vm::clearSelection
@@ -63,7 +75,8 @@ fun DashboardScreen(vm: DashboardViewModel = viewModel()) {
     LazyColumn(
         modifier = Modifier
             .fillMaxSize()
-            .background(MaterialTheme.colorScheme.background),
+            .background(MaterialTheme.colorScheme.background)
+            .imePadding(),
         contentPadding = PaddingValues(horizontal = 16.dp, vertical = 6.dp),
         verticalArrangement = Arrangement.spacedBy(14.dp)
     ) {
@@ -591,74 +604,149 @@ private fun EntryCard(entry: BrainEntry, onClick: () -> Unit) {
 
 @Composable
 private fun EntryDetailScreen(
-    entry: BrainEntry, isEditing: Boolean, editText: String, editTitle: String,
-    onEditTextChange: (String) -> Unit, onEditTitleChange: (String) -> Unit,
-    onToggleEdit: () -> Unit, onSave: () -> Unit, onDelete: () -> Unit, onBack: () -> Unit
+    entry: BrainEntry,
+    isEditing: Boolean,
+    editText: String,
+    editTitle: String,
+    editCategory: String?,
+    categories: List<CategoryInfo>,
+    onEditTextChange: (String) -> Unit,
+    onEditTitleChange: (String) -> Unit,
+    onEditCategoryChange: (String?) -> Unit,
+    onCreateCategory: (String) -> Unit,
+    onSaveCategory: () -> Unit,
+    onToggleEdit: () -> Unit,
+    onCancelEdit: () -> Unit,
+    onSave: () -> Unit,
+    onDelete: () -> Unit,
+    onBack: () -> Unit
 ) {
     var showDeleteConfirm by remember { mutableStateOf(false) }
     val isDark = MaterialTheme.colorScheme.background == DarkBg
 
-    Column(
+    LazyColumn(
         modifier = Modifier
             .fillMaxSize()
-            .background(MaterialTheme.colorScheme.background)
+            .background(MaterialTheme.colorScheme.background),
+        contentPadding = PaddingValues(20.dp),
+        verticalArrangement = Arrangement.spacedBy(13.dp)
     ) {
-        // Top bar
-        Row(
-            modifier = Modifier.fillMaxWidth().padding(8.dp),
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            IconButton(onClick = onBack) {
-                Icon(Icons.AutoMirrored.Filled.ArrowBack, "Zurück")
-            }
-            Text(entry.title ?: "", fontFamily = SpaceGrotesk,
-                fontWeight = FontWeight.SemiBold, fontSize = 19.sp,
-                modifier = Modifier.weight(1f))
-        }
-        HorizontalDivider(color = MaterialTheme.colorScheme.outline)
-
-        Column(modifier = Modifier.padding(20.dp)) {
-            // Tag + Date
+        item {
             Row(verticalAlignment = Alignment.CenterVertically) {
-                entry.category?.let {
-                    Surface(shape = RoundedCornerShape(8.dp), color = categoryColor(it).copy(alpha = 0.14f)) {
-                        Row(Modifier.padding(horizontal = 10.dp, vertical = 3.dp),
-                            horizontalArrangement = Arrangement.spacedBy(6.dp),
-                            verticalAlignment = Alignment.CenterVertically) {
-                            Box(Modifier.size(7.dp).clip(CircleShape).background(categoryColor(it)))
-                            Text(it, fontSize = 11.5.sp, fontWeight = FontWeight.SemiBold,
-                                color = categoryColor(it))
+                CategoryChip(entry.category ?: "Ohne Kategorie")
+                Spacer(Modifier.weight(1f))
+                IconButton(onClick = onBack) {
+                    Icon(Icons.Default.Close, contentDescription = "Schließen",
+                        tint = MaterialTheme.colorScheme.onSurfaceVariant)
+                }
+            }
+        }
+
+        item {
+            if (isEditing) {
+                Surface(
+                    shape = RoundedCornerShape(14.dp),
+                    color = if (isDark) DarkField else LightField,
+                    border = BorderStroke(1.dp, Iris)
+                ) {
+                    BasicTextField(
+                        value = editTitle,
+                        onValueChange = onEditTitleChange,
+                        modifier = Modifier.fillMaxWidth().padding(13.dp),
+                        textStyle = LocalTextStyle.current.copy(
+                            fontFamily = SpaceGrotesk,
+                            fontWeight = FontWeight.SemiBold,
+                            fontSize = 21.sp,
+                            lineHeight = 26.sp,
+                            color = MaterialTheme.colorScheme.onSurface
+                        ),
+                        decorationBox = { inner ->
+                            if (editTitle.isBlank()) Text("Titel", color = MaterialTheme.colorScheme.onSurfaceVariant)
+                            inner()
                         }
+                    )
+                }
+            } else {
+                Text(
+                    text = entry.title ?: "Ohne Titel",
+                    fontFamily = SpaceGrotesk,
+                    fontWeight = FontWeight.SemiBold,
+                    fontSize = 23.sp,
+                    lineHeight = 28.sp,
+                    color = MaterialTheme.colorScheme.onSurface
+                )
+            }
+        }
+
+        item {
+            Text(
+                text = formatEntryTimestamp(entry.updated_at ?: entry.created_at),
+                fontFamily = JetBrainsMono,
+                fontSize = 11.5.sp,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+        }
+
+        item {
+            Column(verticalArrangement = Arrangement.spacedBy(9.dp)) {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(9.dp)
+                ) {
+                    CategoryPickerPill(
+                        categories = categories,
+                        selectedCategory = editCategory ?: entry.category,
+                        onCategoryChange = onEditCategoryChange,
+                        onCreateCategory = onCreateCategory,
+                        isDark = isDark
+                    )
+                    DetailButton(
+                        text = "Kategorie speichern",
+                        icon = Icons.Default.Save,
+                        color = Mint,
+                        modifier = Modifier.weight(1f),
+                        onClick = onSaveCategory
+                    )
+                }
+                Row(horizontalArrangement = Arrangement.spacedBy(9.dp)) {
+                    DetailButton(
+                        text = "Löschen",
+                        icon = Icons.Default.Delete,
+                        color = Rose,
+                        modifier = Modifier.weight(1f),
+                        onClick = { showDeleteConfirm = true }
+                    )
+                    DetailButton(
+                        text = "Bearbeiten",
+                        icon = Icons.Default.Edit,
+                        color = Iris,
+                        modifier = Modifier.weight(1f),
+                        onClick = onToggleEdit
+                    )
+                }
+                if (isEditing) {
+                    Row(horizontalArrangement = Arrangement.spacedBy(9.dp)) {
+                        DetailButton(
+                            text = "Abbrechen",
+                            icon = Icons.Default.Close,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            modifier = Modifier.weight(1f),
+                            onClick = onCancelEdit
+                        )
+                        DetailButton(
+                            text = "Speichern",
+                            icon = Icons.Default.Check,
+                            color = Mint,
+                            modifier = Modifier.weight(1f),
+                            onClick = onSave
+                        )
                     }
                 }
-                Spacer(Modifier.weight(1f))
-                entry.created_at?.let {
-                    Text(it, fontFamily = JetBrainsMono, fontSize = 11.sp,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant)
-                }
-                IconButton(onClick = onBack) {
-                    Icon(Icons.Default.Close, null,
-                        tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                        modifier = Modifier.size(18.dp))
-                }
             }
+        }
 
-            Spacer(Modifier.height(12.dp))
-
-            // Title
-            Text(
-                text = entry.title ?: "",
-                fontFamily = SpaceGrotesk,
-                fontWeight = FontWeight.SemiBold,
-                fontSize = 22.sp,
-                lineHeight = 27.5.sp,
-                color = MaterialTheme.colorScheme.onSurface
-            )
-
-            Spacer(Modifier.height(14.dp))
-
+        item {
             if (isEditing) {
-                // Edit mode: textarea with iris border
                 Surface(
                     shape = RoundedCornerShape(14.dp),
                     color = if (isDark) DarkField else LightField,
@@ -667,7 +755,7 @@ private fun EntryDetailScreen(
                     BasicTextField(
                         value = editText,
                         onValueChange = onEditTextChange,
-                        modifier = Modifier.fillMaxWidth().padding(14.dp),
+                        modifier = Modifier.fillMaxWidth().defaultMinSize(minHeight = 220.dp).padding(14.dp),
                         textStyle = LocalTextStyle.current.copy(
                             fontFamily = JetBrainsMono,
                             fontSize = 13.sp,
@@ -677,7 +765,6 @@ private fun EntryDetailScreen(
                     )
                 }
             } else {
-                // Read mode: field box
                 Surface(
                     shape = RoundedCornerShape(14.dp),
                     color = if (isDark) DarkField else LightField,
@@ -693,10 +780,10 @@ private fun EntryDetailScreen(
                     )
                 }
             }
+        }
 
-            // Delete confirm
-            if (showDeleteConfirm) {
-                Spacer(Modifier.height(14.dp))
+        if (showDeleteConfirm) {
+            item {
                 Surface(
                     shape = RoundedCornerShape(14.dp),
                     color = Rose.copy(alpha = 0.12f),
@@ -711,12 +798,11 @@ private fun EntryDetailScreen(
                                 onClick = { showDeleteConfirm = false },
                                 modifier = Modifier.weight(1f).height(40.dp),
                                 shape = RoundedCornerShape(11.dp),
-                                colors = ButtonDefaults.buttonColors(
-                                    containerColor = if (isDark) DarkChip else LightChip),
+                                colors = ButtonDefaults.buttonColors(containerColor = if (isDark) DarkChip else LightChip),
                                 border = BorderStroke(1.dp, if (isDark) DarkChipBorder else LightChipBorder)
                             ) { Text("Abbrechen", fontWeight = FontWeight.SemiBold, fontSize = 13.5.sp) }
                             Button(
-                                onClick = { onDelete() },
+                                onClick = onDelete,
                                 modifier = Modifier.weight(1f).height(40.dp),
                                 shape = RoundedCornerShape(11.dp),
                                 colors = ButtonDefaults.buttonColors(containerColor = Rose)
@@ -726,53 +812,65 @@ private fun EntryDetailScreen(
                 }
             }
         }
+    }
+}
 
-        Spacer(Modifier.weight(1f))
-
-        // Action bar (bottom)
-        if (!showDeleteConfirm) {
-            HorizontalDivider(color = MaterialTheme.colorScheme.outline)
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = 20.dp, vertical = 12.dp),
-                horizontalArrangement = Arrangement.spacedBy(9.dp)
-            ) {
-                // Edit button (flex:1)
-                Surface(
-                    shape = RoundedCornerShape(13.dp),
-                    color = if (isDark) DarkChip else LightChip,
-                    border = BorderStroke(1.dp, if (isDark) DarkChipBorder else LightChipBorder),
-                    modifier = Modifier.weight(1f).clickable(onClick = onToggleEdit)
-                ) {
-                    Row(
-                        modifier = Modifier.height(46.dp),
-                        horizontalArrangement = Arrangement.Center,
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Icon(
-                            if (isEditing) Icons.Default.Check else Icons.Default.Edit,
-                            null, modifier = Modifier.size(18.dp)
-                        )
-                        Spacer(Modifier.width(6.dp))
-                        Text(if (isEditing) "Fertig" else "Bearbeiten",
-                            fontWeight = FontWeight.SemiBold, fontSize = 13.5.sp)
-                    }
-                }
-                // Delete (46x46, danger)
-                Box(
-                    modifier = Modifier
-                        .size(46.dp)
-                        .clip(RoundedCornerShape(13.dp))
-                        .background(Rose.copy(alpha = 0.13f))
-                        .border(1.dp, Rose.copy(alpha = 0.28f), RoundedCornerShape(13.dp))
-                        .clickable { showDeleteConfirm = true },
-                    contentAlignment = Alignment.Center
-                ) {
-                    Icon(Icons.Default.Delete, null, tint = Rose, modifier = Modifier.size(20.dp))
-                }
-            }
+@Composable
+private fun CategoryChip(category: String) {
+    val color = categoryColor(category)
+    Surface(shape = RoundedCornerShape(8.dp), color = color.copy(alpha = 0.14f)) {
+        Row(
+            Modifier.padding(horizontal = 10.dp, vertical = 4.dp),
+            horizontalArrangement = Arrangement.spacedBy(6.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Box(Modifier.size(7.dp).clip(CircleShape).background(color))
+            Text(
+                category.substringAfterLast("/"),
+                fontSize = 11.5.sp,
+                fontWeight = FontWeight.SemiBold,
+                color = color
+            )
         }
+    }
+}
+
+@Composable
+private fun DetailButton(
+    text: String,
+    icon: ImageVector,
+    color: Color,
+    modifier: Modifier = Modifier,
+    onClick: () -> Unit
+) {
+    Surface(
+        shape = RoundedCornerShape(13.dp),
+        color = color.copy(alpha = 0.13f),
+        border = BorderStroke(1.dp, color.copy(alpha = 0.30f)),
+        modifier = modifier.height(44.dp).clickable(onClick = onClick)
+    ) {
+        Row(
+            modifier = Modifier.fillMaxSize().padding(horizontal = 10.dp),
+            horizontalArrangement = Arrangement.Center,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Icon(icon, contentDescription = null, tint = color, modifier = Modifier.size(18.dp))
+            Spacer(Modifier.width(6.dp))
+            Text(text, fontWeight = FontWeight.SemiBold, fontSize = 12.5.sp, color = color, maxLines = 1)
+        }
+    }
+}
+
+private fun formatEntryTimestamp(raw: String?): String {
+    if (raw.isNullOrBlank()) return "Datum unbekannt"
+    return try {
+        val normalized = if (raw.endsWith("Z") || raw.contains("+")) raw else raw + "Z"
+        val dt = OffsetDateTime.parse(normalized)
+        val date = DateTimeFormatter.ofPattern("d. MMMM yyyy", Locale.GERMANY).format(dt)
+        val time = DateTimeFormatter.ofPattern("HH:mm 'Uhr'", Locale.GERMANY).format(dt)
+        "$date, $time"
+    } catch (_: Exception) {
+        raw.replace('T', ' ').substringBeforeLast('.')
     }
 }
 

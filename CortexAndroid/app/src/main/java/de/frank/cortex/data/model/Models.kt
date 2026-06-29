@@ -11,7 +11,9 @@ data class ChatRequest(
     val user_id: String = "frank",
     val category: String? = null,
     val title: String? = null,
-    val store_timestamp: Boolean = true
+    val store_timestamp: Boolean = true,
+    val context_mode: String? = null,
+    val context_prompt: String? = null
 )
 
 @JsonClass(generateAdapter = true)
@@ -122,6 +124,62 @@ data class ChangeCategoryRequest(
 data class SimpleResponse(
     val ok: Boolean,
     val message: String? = null
+)
+
+@JsonClass(generateAdapter = true)
+data class AgentConfigResponse(
+    val models: Map<String, String> = emptyMap(),
+    val reasoning: Map<String, String> = emptyMap(),
+    val reasoning_available: List<String> = emptyList(),
+    val codex: CodexState? = null,
+    val model: String? = null,
+    val default: String? = null,
+    val available: List<String> = emptyList()
+)
+
+@JsonClass(generateAdapter = true)
+data class CodexState(
+    val connected: Boolean = false
+)
+
+@JsonClass(generateAdapter = true)
+data class AgentConfigRequest(
+    val haupt_model: String,
+    val speicher_model: String,
+    val abfrage_model: String,
+    val haupt_reasoning: String? = null,
+    val speicher_reasoning: String? = null,
+    val abfrage_reasoning: String? = null
+)
+
+@JsonClass(generateAdapter = true)
+data class AgentConfigUpdateResponse(
+    val status: String,
+    val models: Map<String, String> = emptyMap(),
+    val reasoning: Map<String, String> = emptyMap()
+)
+
+@JsonClass(generateAdapter = true)
+data class CodexAuthStartResponse(
+    val ok: Boolean,
+    val auth_id: String,
+    val user_code: String,
+    val verification_uri: String,
+    val expires_in: Int,
+    val interval: Int
+)
+
+@JsonClass(generateAdapter = true)
+data class CodexAuthPollRequest(
+    val auth_id: String
+)
+
+@JsonClass(generateAdapter = true)
+data class CodexAuthPollResponse(
+    val ok: Boolean,
+    val status: String,
+    val connected: Boolean = false,
+    val models: List<String> = emptyList()
 )
 
 // --- Dashboard API ---

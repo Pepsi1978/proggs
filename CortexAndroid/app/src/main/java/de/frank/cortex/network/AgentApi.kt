@@ -16,4 +16,19 @@ interface AgentApi {
 
     @GET("/health")
     suspend fun health(): SimpleResponse
+
+    @GET("/config")
+    suspend fun getConfig(): AgentConfigResponse
+
+    @PUT("/config")
+    suspend fun updateConfig(@Body request: AgentConfigRequest): AgentConfigUpdateResponse
+
+    @POST("/codex/auth/start")
+    suspend fun startCodexAuth(): CodexAuthStartResponse
+
+    @POST("/codex/auth/poll")
+    suspend fun pollCodexAuth(@Body request: CodexAuthPollRequest): CodexAuthPollResponse
+
+    @POST("/codex/auth/disconnect")
+    suspend fun disconnectCodex(): SimpleResponse
 }

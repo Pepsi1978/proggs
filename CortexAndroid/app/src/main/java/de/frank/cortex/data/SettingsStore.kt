@@ -14,6 +14,30 @@ object SettingsStore {
     private lateinit var encrypted: SharedPreferences
     private lateinit var plain: SharedPreferences
 
+    const val CONTEXT_MODE_AUTO = "auto"
+    const val CONTEXT_MODE_SMALLTALK = "smalltalk"
+    const val CONTEXT_MODE_SAVE = "save"
+    const val CONTEXT_MODE_SEARCH = "search"
+
+    fun defaultContextPrompt(mode: String): String = when (mode) {
+        CONTEXT_MODE_SMALLTALK -> """
+            Du bist jetzt im Smalltalk-Modus. Führe ein normales Gespräch mit Frank.
+            Speichere nichts, suche nichts im Gedächtnis und starte keine Internet- oder Speicher-Aktion.
+            Gehe freundlich, intelligent und direkt auf Franks Fragen, Gedanken und Wünsche ein.
+        """.trimIndent()
+        CONTEXT_MODE_SAVE -> """
+            Du bist jetzt im Speichermodus. Frank möchte dir Informationen geben, die ins Gedächtnis sollen.
+            Interpretiere seine Eingabe als zu speichernde Information, reagiere intelligent im Speicherkontext
+            und frage wie gewohnt vor dem endgültigen Ablegen kurz nach.
+        """.trimIndent()
+        CONTEXT_MODE_SEARCH -> """
+            Du bist jetzt im Suchmodus. Frank möchte etwas aus seinem Gedächtnis wissen.
+            Interpretiere seine Eingabe als Such- oder Erinnerungsfrage, formuliere klare Suchstichworte
+            und antworte anschließend nur aus echten Gedächtnis-Treffern.
+        """.trimIndent()
+        else -> ""
+    }
+
     fun init(context: Context) {
         try {
             val masterKey = MasterKey.Builder(context)
@@ -63,6 +87,14 @@ object SettingsStore {
         get() = encrypted.getString("wg_config", "") ?: ""
         set(value) = encrypted.edit().putString("wg_config", value).apply()
 
+    var codexAccessToken: String
+        get() = encrypted.getString("codex_access_token", "") ?: ""
+        set(value) = encrypted.edit().putString("codex_access_token", value).apply()
+
+    var codexRefreshToken: String
+        get() = encrypted.getString("codex_refresh_token", "") ?: ""
+        set(value) = encrypted.edit().putString("codex_refresh_token", value).apply()
+
     // --- Verbindung ---
 
     var serverHost: String
@@ -99,6 +131,48 @@ object SettingsStore {
     var ttsRate: Float
         get() = plain.getFloat("tts_rate", 1.0f)
         set(value) = plain.edit().putFloat("tts_rate", value).apply()
+
+    var recordingToneEnabled: Boolean
+        get() = plain.getBoolean("recording_tone_enabled", true)
+        set(value) = plain.edit().putBoolean("recording_tone_enabled", value).apply()
+
+    var recordingToneVolume: Float
+        get() = plain.getFloat("recording_tone_volume", 0.45f)
+        set(value) = plain.edit().putFloat("recording_tone_volume", value.coerceIn(0f, 1f)).apply()
+
+    var biometricLockEnabled: Boolean
+        get() = plain.getBoolean("biometric_lock_enabled", false)
+        set(value) = plain.edit().putBoolean("biometric_lock_enabled", value).apply()
+
+    var codexLocalEnabled: Boolean
+        get() = plain.getBoolean("codex_local_enabled", false)
+        set(value) = plain.edit().putBoolean("codex_local_enabled", value).apply()
+
+    var codexModel: String
+        get() = plain.getString("codex_model", "gpt-5.5") ?: "gpt-5.5"
+        set(value) = plain.edit().putString("codex_model", value).apply()
+
+    var codexReasoning: String
+        get() = plain.getString("codex_reasoning", "medium") ?: "medium"
+        set(value) = plain.edit().putString("codex_reasoning", value).apply()
+
+    val codexConnected: Boolean
+        get() = codexAccessToken.isNotBlank()
+
+    fun clearCodexAuth() {
+        encrypted.edit()
+            .remove("codex_access_token")
+            .remove("codex_refresh_token")
+            .apply()
+        codexLocalEnabled = false
+    }
+
+    fun contextPrompt(mode: String): String = plain.getString("context_prompt_$mode", null)
+        ?: defaultContextPrompt(mode)
+
+    fun setContextPrompt(mode: String, prompt: String) {
+        plain.edit().putString("context_prompt_$mode", prompt).apply()
+    }
 
     // --- Hilfsmethoden ---
 

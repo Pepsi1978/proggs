@@ -16,6 +16,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.rotate
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -140,14 +141,25 @@ fun CategoryPickerPill(
         DropdownMenu(
             expanded = open,
             onDismissRequest = { open = false },
-            modifier = Modifier.heightIn(max = 460.dp)
+            shape = RoundedCornerShape(18.dp),
+            containerColor = if (isDark) DarkSurface else Color.White,
+            tonalElevation = 0.dp,
+            shadowElevation = 12.dp,
+            border = BorderStroke(1.dp, if (isDark) DarkBorder else LightBorder),
+            modifier = Modifier
+                .widthIn(min = 320.dp, max = 380.dp)
+                .heightIn(max = 460.dp)
         ) {
             // Spezial: Auto-Kategorie
             DropdownMenuItem(
+                modifier = Modifier.heightIn(min = 36.dp),
+                contentPadding = PaddingValues(horizontal = 12.dp, vertical = 2.dp),
                 text = {
                     Text(
                         "Auto-Kategorie",
-                        color = if (selectedCategory == null) Iris else MaterialTheme.colorScheme.onSurface
+                        color = if (selectedCategory == null) Iris else MaterialTheme.colorScheme.onSurface,
+                        fontSize = 14.sp,
+                        fontWeight = FontWeight.SemiBold
                     )
                 },
                 onClick = { onCategoryChange(null); open = false }
@@ -157,11 +169,13 @@ fun CategoryPickerPill(
             rows.forEach { row ->
                 when (row) {
                     is CatRow.Node -> DropdownMenuItem(
+                        modifier = Modifier.heightIn(min = 36.dp),
+                        contentPadding = PaddingValues(horizontal = 12.dp, vertical = 2.dp),
                         text = {
                             Row(
                                 verticalAlignment = Alignment.CenterVertically,
-                                horizontalArrangement = Arrangement.spacedBy(8.dp),
-                                modifier = Modifier.padding(start = (row.depth * 14).dp)
+                                horizontalArrangement = Arrangement.spacedBy(6.dp),
+                                modifier = Modifier.padding(start = (row.depth * 10).dp)
                             ) {
                                 if (row.hasKids) {
                                     Icon(
@@ -177,6 +191,7 @@ fun CategoryPickerPill(
                                     cap(row.node.seg),
                                     modifier = Modifier.weight(1f),
                                     fontWeight = if (selectedCategory == row.node.path) FontWeight.Bold else FontWeight.Medium,
+                                    fontSize = 14.sp,
                                     color = MaterialTheme.colorScheme.onSurface
                                 )
                                 if (row.hasKids) {
@@ -199,26 +214,30 @@ fun CategoryPickerPill(
                     )
 
                     is CatRow.Use -> DropdownMenuItem(
+                        modifier = Modifier.heightIn(min = 34.dp),
+                        contentPadding = PaddingValues(horizontal = 12.dp, vertical = 2.dp),
                         text = {
                             Text(
                                 cap(row.node.seg) + " waehlen",
-                                modifier = Modifier.padding(start = (row.depth * 14).dp),
+                                modifier = Modifier.padding(start = (row.depth * 10).dp),
                                 color = Iris,
                                 fontWeight = FontWeight.SemiBold,
-                                fontSize = 13.sp
+                                fontSize = 14.sp
                             )
                         },
                         onClick = { onCategoryChange(row.node.path); open = false }
                     )
 
                     is CatRow.AddSub -> DropdownMenuItem(
+                        modifier = Modifier.heightIn(min = 34.dp),
+                        contentPadding = PaddingValues(horizontal = 12.dp, vertical = 2.dp),
                         text = {
                             Text(
                                 "+ Unterkategorie...",
-                                modifier = Modifier.padding(start = (row.depth * 14).dp),
+                                modifier = Modifier.padding(start = (row.depth * 10).dp),
                                 color = Mint,
                                 fontWeight = FontWeight.SemiBold,
-                                fontSize = 13.sp
+                                fontSize = 14.sp
                             )
                         },
                         onClick = {
@@ -232,7 +251,9 @@ fun CategoryPickerPill(
 
             // Spezial: neue Hauptkategorie
             DropdownMenuItem(
-                text = { Text("+ Neue Kategorie...", color = Iris, fontWeight = FontWeight.SemiBold) },
+                modifier = Modifier.heightIn(min = 36.dp),
+                contentPadding = PaddingValues(horizontal = 12.dp, vertical = 2.dp),
+                text = { Text("+ Neue Kategorie...", color = Iris, fontWeight = FontWeight.SemiBold, fontSize = 14.sp) },
                 onClick = {
                     dialogParent = ""
                     newName = ""

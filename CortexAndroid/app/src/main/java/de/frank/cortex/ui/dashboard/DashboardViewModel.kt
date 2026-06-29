@@ -28,6 +28,8 @@ data class DashboardUiState(
     val isEditing: Boolean = false,
     val editText: String = "",
     val editTitle: String = "",
+    val editCategory: String? = null,
+    val categories: List<CategoryInfo> = emptyList(),
     // Drilldown
     val categoryPath: List<String> = emptyList(),
     val subcategories: Map<String, Int> = emptyMap()
@@ -89,7 +91,20 @@ class DashboardViewModel : ViewModel() {
                 val main = name.substringBefore("/")
                 mainCounts[main] = (mainCounts[main] ?: 0) + count
             }
-            _uiState.update { it.copy(totalEntries = counts.total_distinct, categoryCounts = mainCounts) }
+            val categories = counts.counts.entries
+                .sortedBy { it.key.lowercase() }
+                .map { CategoryInfo(name = it.key, count = it.value, empty = it.value == 0) }
+            _uiState.update {
+                it.copy(
+                    totalEntries = counts.total_distinct,
+                    categoryCounts = mainCounts,
+                    categories = categories
+                )
+            }
+            CortexLog.info("DashboardVM", "loadCategoryCounts", "Gesamtzahl aus Brain-API übernommen", mapOf(
+                "total_distinct" to counts.total_distinct,
+                "categories" to counts.counts.size
+            ))
         } catch (e: Exception) {
             CortexLog.error("DashboardVM", "loadCategoryCounts", "Fehler: ${e.message}")
         }
@@ -199,10 +214,31 @@ class DashboardViewModel : ViewModel() {
     private fun browseCategory(category: String) {
         viewModelScope.launch {
             try {
-                val response = ApiClient.brainApi().byCategory(category)
-                _uiState.update { it.copy(browseResults = response.items) }
+                val exactItems = try {
+                    ApiClient.brainApi().byCategory(category).items
+                } catch (e: Exception) {
+                    CortexLog.warn("DashboardVM", "browseCategory", "byCategory fehlgeschlagen: ${e.message}")
+                    emptyList()
+                }
+                val childItems = try {
+                    ApiClient.brainApi().byParent(category).items
+                } catch (e: Exception) {
+                    CortexLog.warn("DashboardVM", "browseCategory", "byParent fehlgeschlagen: ${e.message}")
+                    emptyList()
+                }
+                val merged = (exactItems + childItems)
+                    .distinctBy { it.doc_id }
+                    .sortedByDescending { it.updated_at ?: it.created_at ?: "" }
+                _uiState.update { it.copy(browseResults = merged) }
+                CortexLog.info("DashboardVM", "browseCategory", "Kategorie-Unterbaum geladen", mapOf(
+                    "category" to category,
+                    "exact" to exactItems.size,
+                    "children" to childItems.size,
+                    "merged" to merged.size
+                ))
             } catch (e: Exception) {
                 CortexLog.error("DashboardVM", "browseCategory", "Fehler: ${e.message}")
+                _uiState.update { it.copy(browseResults = emptyList()) }
             }
         }
     }
@@ -213,6 +249,7 @@ class DashboardViewModel : ViewModel() {
                 selectedEntry = entry,
                 editText = entry.text ?: "",
                 editTitle = entry.title ?: "",
+                editCategory = entry.category,
                 isEditing = false
             )
         }
@@ -226,12 +263,61 @@ class DashboardViewModel : ViewModel() {
         _uiState.update { it.copy(isEditing = !it.isEditing) }
     }
 
+    fun cancelEditing() {
+        val entry = _uiState.value.selectedEntry ?: return
+        _uiState.update {
+            it.copy(
+                isEditing = false,
+                editTitle = entry.title ?: "",
+                editText = entry.text ?: "",
+                editCategory = entry.category
+            )
+        }
+    }
+
     fun updateEditText(text: String) {
         _uiState.update { it.copy(editText = text) }
     }
 
     fun updateEditTitle(title: String) {
         _uiState.update { it.copy(editTitle = title) }
+    }
+
+    fun updateEditCategory(category: String?) {
+        _uiState.update { it.copy(editCategory = category) }
+    }
+
+    fun createCategory(name: String) {
+        viewModelScope.launch {
+            try {
+                ApiClient.agentApi().createCategory(CreateCategoryRequest(name))
+                val current = _uiState.value.categories.toMutableList()
+                if (current.none { it.name == name }) current.add(CategoryInfo(name, 0, true))
+                _uiState.update { it.copy(categories = current.sortedBy { cat -> cat.name.lowercase() }, editCategory = name) }
+                loadCategoryCounts()
+            } catch (e: Exception) {
+                CortexLog.error("DashboardVM", "createCategory", "Fehler: ${e.message}")
+                _uiState.update { it.copy(error = "Kategorie konnte nicht erstellt werden: ${e.message}") }
+            }
+        }
+    }
+
+    fun saveEntryCategory() {
+        val entry = _uiState.value.selectedEntry ?: return
+        val category = _uiState.value.editCategory ?: return
+        viewModelScope.launch {
+            try {
+                ApiClient.brainApi().changeCategory(ChangeCategoryRequest(entry.doc_id, category))
+                val updatedEntry = entry.copy(category = category)
+                _uiState.update { it.copy(selectedEntry = updatedEntry) }
+                CortexLog.info("DashboardVM", "saveEntryCategory", "Kategorie gespeichert", mapOf("doc_id" to entry.doc_id, "category" to category))
+                loadCategoryCounts()
+                if (_uiState.value.selectedCategory != null) browseCategory(_uiState.value.selectedCategory!!)
+            } catch (e: Exception) {
+                CortexLog.error("DashboardVM", "saveEntryCategory", "Fehler: ${e.message}")
+                _uiState.update { it.copy(error = "Kategorie speichern fehlgeschlagen: ${e.message}") }
+            }
+        }
     }
 
     fun saveEntry() {
@@ -245,7 +331,11 @@ class DashboardViewModel : ViewModel() {
                         title = _uiState.value.editTitle.ifBlank { null }
                     )
                 )
-                _uiState.update { it.copy(isEditing = false) }
+                val updatedEntry = entry.copy(
+                    title = _uiState.value.editTitle.ifBlank { entry.title },
+                    text = _uiState.value.editText
+                )
+                _uiState.update { it.copy(isEditing = false, selectedEntry = updatedEntry) }
                 CortexLog.info("DashboardVM", "saveEntry", "Eintrag gespeichert: ${entry.doc_id}")
                 // Refresh
                 if (_uiState.value.selectedCategory != null) browseCategory(_uiState.value.selectedCategory!!)
