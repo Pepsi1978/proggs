@@ -67,6 +67,7 @@ fun SettingsScreen(
     var sbApiKey by remember { mutableStateOf(SettingsStore.sbApiKey) }
     var groqApiKey by remember { mutableStateOf(SettingsStore.groqApiKey) }
     var geminiApiKey by remember { mutableStateOf(SettingsStore.geminiApiKey) }
+    var googleTtsApiKey by remember { mutableStateOf(SettingsStore.googleTtsApiKey) }
     var ttsEnabled by remember { mutableStateOf(SettingsStore.ttsEnabled) }
     var ttsVoice by remember { mutableStateOf(SettingsStore.ttsVoice.removePrefix("de-DE-Chirp3-HD-")) }
     var recordingToneEnabled by remember { mutableStateOf(SettingsStore.recordingToneEnabled) }
@@ -313,8 +314,12 @@ fun SettingsScreen(
                     { groqApiKey = it; SettingsStore.groqApiKey = it }, isDark,
                     divider = true,
                     onRevealRequest = ::requestSecretReveal)
-                SecretRow("Gemini-Schlüssel (Vorlesen + Verbessern)", geminiApiKey,
+                SecretRow("Gemini-Schlüssel (Verbessern + TTS-Fallback)", geminiApiKey,
                     { geminiApiKey = it; SettingsStore.geminiApiKey = it }, isDark,
+                    divider = true,
+                    onRevealRequest = ::requestSecretReveal)
+                SecretRow("Google TTS-Schlüssel (Chirp 3: HD Vorlesen)", googleTtsApiKey,
+                    { googleTtsApiKey = it; SettingsStore.googleTtsApiKey = it }, isDark,
                     divider = true,
                     onRevealRequest = ::requestSecretReveal)
                 Column(
@@ -1266,7 +1271,7 @@ private fun VoicePickerDialog(
         },
         text = {
             Column {
-                Text("Chirp 3D · Gemini TTS",
+                Text("Chirp 3: HD · Google Cloud TTS",
                     fontFamily = JetBrainsMono, fontSize = 11.sp,
                     color = MaterialTheme.colorScheme.onSurfaceVariant)
                 Spacer(Modifier.height(12.dp))

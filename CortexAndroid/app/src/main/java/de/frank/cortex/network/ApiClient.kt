@@ -424,8 +424,9 @@ object ApiClient {
     private const val CHIRP3_VOICE_PREFIX = "de-DE-Chirp3-HD-"
 
     suspend fun geminiTts(text: String, voice: String = SettingsStore.ttsVoice): ByteArray {
-        val key = SettingsStore.geminiApiKey
-        if (key.isBlank()) throw IllegalStateException("Gemini-Schlüssel fehlt")
+        // Dedizierter Google-TTS-Schluessel falls gesetzt, sonst Fallback auf den Gemini-Schluessel.
+        val key = SettingsStore.ttsApiKey
+        if (key.isBlank()) throw IllegalStateException("TTS-Schlüssel fehlt (Google-TTS- oder Gemini-Schlüssel setzen)")
         val startedAt = System.currentTimeMillis()
 
         // Cortex speichert die Stimme als blossen Namen (z.B. "Autonoe"); Cloud TTS braucht den

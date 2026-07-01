@@ -105,6 +105,17 @@ object SettingsStore {
         get() = encrypted.getString("gemini_api_key", "") ?: ""
         set(value) = encrypted.edit().putString("gemini_api_key", value).apply()
 
+    // Dedizierter Schluessel fuer die Google Cloud Text-to-Speech API (Chirp 3: HD).
+    // Leer -> es wird der Gemini-Schluessel benutzt. Gefuellt -> dieser Schluessel wird fuer TTS
+    // genutzt (wie in BestJournalFrank, dessen TTS-Schluessel-Projekt die Cloud-TTS-API aktiv hat).
+    var googleTtsApiKey: String
+        get() = encrypted.getString("google_tts_api_key", "") ?: ""
+        set(value) = encrypted.edit().putString("google_tts_api_key", value).apply()
+
+    /** Der fuer TTS zu verwendende Schluessel: dedizierter TTS-Key falls gesetzt, sonst Gemini-Key. */
+    val ttsApiKey: String
+        get() = googleTtsApiKey.ifBlank { geminiApiKey }
+
     var wgConfig: String
         get() = encrypted.getString("wg_config", "") ?: ""
         set(value) = encrypted.edit().putString("wg_config", value).apply()
