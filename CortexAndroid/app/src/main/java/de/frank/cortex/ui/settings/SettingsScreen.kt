@@ -78,7 +78,7 @@ fun SettingsScreen(
     var wgConfig by remember { mutableStateOf(SettingsStore.wgConfig) }
     val screenScope = rememberCoroutineScope()
     var agentModelOptions by remember {
-        mutableStateOf(listOf("gemini-3.1-flash-lite", "gemini-2.5-flash", "minimax/minimax-m3"))
+        mutableStateOf(listOf("gemini-3.1-flash-lite", "gemini-3.5-flash", "gemini-3-flash-preview", "gemini-2.5-flash", "minimax/minimax-m3"))
     }
     var hauptModel by remember { mutableStateOf(agentModelOptions.first()) }
     var speicherModel by remember { mutableStateOf(agentModelOptions.first()) }
@@ -88,6 +88,7 @@ fun SettingsScreen(
     var speicherReasoning by remember { mutableStateOf("medium") }
     var abfrageReasoning by remember { mutableStateOf("medium") }
     var tavilyEnabled by remember { mutableStateOf(true) }
+    var modelPriceLabels by remember { mutableStateOf<Map<String, String>>(emptyMap()) }
     var agentModelsLoading by remember { mutableStateOf(false) }
     var agentModelsSaving by remember { mutableStateOf(false) }
     var agentModelStatus by remember { mutableStateOf("") }
@@ -132,6 +133,11 @@ fun SettingsScreen(
             val config = ApiClient.agentApi().getConfig()
             if (config.available.isNotEmpty()) agentModelOptions = config.available
             if (config.reasoning_available.isNotEmpty()) reasoningOptions = config.reasoning_available
+            modelPriceLabels = config.model_prices.mapValues { (_, p) ->
+                if (p.input != null && p.output != null)
+                    "\$${p.input} Input · \$${p.output} Output — pro 1 Mio Token"
+                else "über Abo (nicht pro Token)"
+            }
             val models = config.models
             val reasoning = config.reasoning
             hauptModel = models["haupt"] ?: config.model ?: agentModelOptions.first()
@@ -761,15 +767,18 @@ fun SettingsScreen(
                 }
 
                 AgentModelDropdown("Hauptagent", hauptModel, agentModelOptions, isDark) { hauptModel = it }
-                if (isCodexModel(hauptModel)) {
+                ModelPriceHint(hauptModel, modelPriceLabels)
+                if (modelSupportsReasoning(hauptModel)) {
                     AgentModelDropdown("Thinking", hauptReasoning, reasoningOptions, isDark) { hauptReasoning = it }
                 }
                 AgentModelDropdown("Speicheragent", speicherModel, agentModelOptions, isDark) { speicherModel = it }
-                if (isCodexModel(speicherModel)) {
+                ModelPriceHint(speicherModel, modelPriceLabels)
+                if (modelSupportsReasoning(speicherModel)) {
                     AgentModelDropdown("Thinking", speicherReasoning, reasoningOptions, isDark) { speicherReasoning = it }
                 }
                 AgentModelDropdown("Abfrageagent", abfrageModel, agentModelOptions, isDark) { abfrageModel = it }
-                if (isCodexModel(abfrageModel)) {
+                ModelPriceHint(abfrageModel, modelPriceLabels)
+                if (modelSupportsReasoning(abfrageModel)) {
                     AgentModelDropdown("Thinking", abfrageReasoning, reasoningOptions, isDark) { abfrageReasoning = it }
                 }
 
@@ -1098,6 +1107,23 @@ private fun PromptButtonRow(
 private fun isCodexModel(model: String): Boolean {
     val m = model.lowercase()
     return m.startsWith("gpt-") || m.startsWith("codex/") || m.startsWith("openai-codex/")
+}
+
+private fun isGeminiModel(model: String): Boolean = model.lowercase().startsWith("gemini")
+
+// Thinking/Reasoning-Stufen einstellbar: Codex/GPT UND Gemini (thinking_budget aus derselben Stufe).
+// minimax/OpenCode denkt nativ -> keine Auswahl.
+private fun modelSupportsReasoning(model: String): Boolean = isCodexModel(model) || isGeminiModel(model)
+
+@Composable
+private fun ModelPriceHint(model: String, priceLabels: Map<String, String>) {
+    val label = priceLabels[model] ?: "über Abo (nicht pro Token)"
+    Text(
+        "Preis: $label",
+        fontSize = 11.sp,
+        color = MaterialTheme.colorScheme.onSurfaceVariant,
+        modifier = Modifier.fillMaxWidth().padding(start = 106.dp, top = 1.dp, bottom = 3.dp)
+    )
 }
 
 private fun codexAuthErrorMessage(e: Exception): String {

@@ -127,6 +127,12 @@ data class SimpleResponse(
 )
 
 @JsonClass(generateAdapter = true)
+data class ModelPrice(
+    val input: Double? = null,
+    val output: Double? = null
+)
+
+@JsonClass(generateAdapter = true)
 data class AgentConfigResponse(
     val models: Map<String, String> = emptyMap(),
     val reasoning: Map<String, String> = emptyMap(),
@@ -135,7 +141,8 @@ data class AgentConfigResponse(
     val tavily_enabled: Boolean = true,
     val model: String? = null,
     val default: String? = null,
-    val available: List<String> = emptyList()
+    val available: List<String> = emptyList(),
+    val model_prices: Map<String, ModelPrice> = emptyMap()
 )
 
 @JsonClass(generateAdapter = true)
