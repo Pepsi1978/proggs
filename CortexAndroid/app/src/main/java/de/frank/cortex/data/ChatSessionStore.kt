@@ -90,6 +90,18 @@ object ChatSessionStore {
         }
     }
 
+    fun deleteSession(sessionId: String) {
+        val db = helper.writableDatabase
+        db.beginTransaction()
+        try {
+            db.delete("messages", "session_id = ?", arrayOf(sessionId))
+            db.delete("sessions", "id = ?", arrayOf(sessionId))
+            db.setTransactionSuccessful()
+        } finally {
+            db.endTransaction()
+        }
+    }
+
     fun saveMessage(sessionId: String, message: StoredChatMessage) {
         val db = helper.writableDatabase
         db.beginTransaction()

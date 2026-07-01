@@ -384,6 +384,40 @@ class ChatViewModel : ViewModel() {
         }
     }
 
+    fun deleteSession(sessionId: String) {
+        stopSpeaking()
+        viewModelScope.launch {
+            try {
+                val sessions = withContext(Dispatchers.IO) {
+                    ChatSessionStore.deleteSession(sessionId)
+                    ChatSessionStore.listSessions()
+                }
+                _uiState.update { state ->
+                    if (state.sessionId == sessionId) {
+                        state.copy(
+                            sessionId = "android-${UUID.randomUUID()}",
+                            messages = emptyList(),
+                            sessions = sessions,
+                            isLoading = false,
+                            error = null,
+                            titleOverride = "",
+                            isRecording = false,
+                            isTranscribing = false,
+                            isImproving = false,
+                            isGeneratingTitle = false
+                        )
+                    } else {
+                        state.copy(sessions = sessions, error = null)
+                    }
+                }
+                CortexLog.info("ChatVM", "deleteSession", "Session gelöscht", mapOf("session_id" to sessionId))
+            } catch (e: Exception) {
+                CortexLog.error("ChatVM", "deleteSession", "Session konnte nicht gelöscht werden: ${e.message}")
+                _uiState.update { it.copy(error = "Session konnte nicht gelöscht werden: ${e.message}") }
+            }
+        }
+    }
+
     private fun refreshSessions() {
         viewModelScope.launch {
             val sessions = withContext(Dispatchers.IO) {

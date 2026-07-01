@@ -12,10 +12,11 @@ import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.combinedClickable
+import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.foundation.text.selection.SelectionContainer
-import androidx.compose.ui.draw.scale
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
@@ -164,6 +165,7 @@ fun ChatScreen(vm: ChatViewModel = viewModel()) {
                     inputText = ""
                     vm.selectSession(session.id)
                 },
+                onSessionDelete = { session -> vm.deleteSession(session.id) },
                 onNewChat = {
                     inputText = ""
                     vm.startNewChat()
@@ -318,9 +320,37 @@ private fun SessionDrawer(
     sessions: List<ChatSessionSummary>,
     currentSessionId: String,
     onSessionClick: (ChatSessionSummary) -> Unit,
+    onSessionDelete: (ChatSessionSummary) -> Unit,
     onNewChat: () -> Unit,
     onClose: () -> Unit
 ) {
+    var deleteCandidate by remember { mutableStateOf<ChatSessionSummary?>(null) }
+
+    deleteCandidate?.let { session ->
+        AlertDialog(
+            onDismissRequest = { deleteCandidate = null },
+            title = { Text("Session löschen?") },
+            text = {
+                Text("„${session.title}“ und alle Nachrichten darin werden dauerhaft aus dieser App gelöscht.")
+            },
+            confirmButton = {
+                TextButton(
+                    onClick = {
+                        deleteCandidate = null
+                        onSessionDelete(session)
+                    }
+                ) {
+                    Text("Löschen")
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { deleteCandidate = null }) {
+                    Text("Abbrechen")
+                }
+            }
+        )
+    }
+
     ModalDrawerSheet(
         modifier = Modifier
             .fillMaxHeight()
@@ -391,7 +421,12 @@ private fun SessionDrawer(
                 ) {
                     items(sessions, key = { it.id }) { session ->
                         val active = session.id == currentSessionId
-                        SessionRow(session = session, active = active, onClick = { onSessionClick(session) })
+                        SessionRow(
+                            session = session,
+                            active = active,
+                            onClick = { onSessionClick(session) },
+                            onLongClick = { deleteCandidate = session }
+                        )
                     }
                 }
             }
@@ -400,7 +435,13 @@ private fun SessionDrawer(
 }
 
 @Composable
-private fun SessionRow(session: ChatSessionSummary, active: Boolean, onClick: () -> Unit) {
+@OptIn(ExperimentalFoundationApi::class)
+private fun SessionRow(
+    session: ChatSessionSummary,
+    active: Boolean,
+    onClick: () -> Unit,
+    onLongClick: () -> Unit
+) {
     val borderColor = if (active) Iris.copy(alpha = 0.7f) else MaterialTheme.colorScheme.outline
     val background = if (active) Iris.copy(alpha = 0.13f) else MaterialTheme.colorScheme.background
     Surface(
@@ -409,7 +450,10 @@ private fun SessionRow(session: ChatSessionSummary, active: Boolean, onClick: ()
         border = BorderStroke(1.dp, borderColor),
         modifier = Modifier
             .fillMaxWidth()
-            .clickable(onClick = onClick)
+            .combinedClickable(
+                onClick = onClick,
+                onLongClick = onLongClick
+            )
     ) {
         Column(
             modifier = Modifier.padding(horizontal = 14.dp, vertical = 12.dp),
