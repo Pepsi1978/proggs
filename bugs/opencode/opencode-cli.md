@@ -24,6 +24,7 @@
 | 1 | ⭐ Windows nativ: npm-Wrapper, kaputte Umlaute, Paste tot, Bun-Segfault | Offiziell **WSL nutzen** (`opencode.ai/docs/windows-wsl`). Nativ ist Fallback. | §1, §2, §12 |
 | 2 | ⭐ Kontext/Token läuft voll, viele MCP-Server aktiv | Jeder MCP lädt sein Tool-Schema in JEDEN Prompt (GitHub-MCP ~15–20k Tok; Extrem 147k). **KEIN natives Lazy-Loading** (Stand 1.17.11, anders als Claude Code) → manuelle Per-Agent-Auslagerung ist der EINZIGE Hebel: global `"tools":{"servername*":false}`, im Agent `true`. | §8 (#56) |
 | 3 | ⭐ Agent ändert/committet ungefragt | Defaults sind permissiv (`edit`/`bash` = allow). `permission: {edit:"ask", bash:"ask"}`. Permission-Keys **nur lowercase** — PascalCase (`"Bash"`) wird STILL ignoriert! | §6 |
+| 3a | ⭐ Modell VERWEIGERT Commit/Push mit erfundener „nur auf Anweisung"-Begründung | Text-Regel reicht nicht (trainiertes Vorsichtsverhalten) → zusätzlich Plugin `git-dirty-watchdog.js` (warnt hörbar bei `session.idle` + dirty Repo) | §6 (#48a) |
 | 4 | ⭐ OpenCode startet nicht: `ConfigInvalidError unrecognized keys` | Top-Level-Config ist **strict** → nur dokumentierte Keys. Anweisungen via `instructions`/`AGENTS.md`, nicht erfundene Keys. `opencode debug config`. | §3 |
 | 5 | „Model not found" erst beim ersten Request | ID-Format ist `provider/model`; OpenRouter **doppelt**: `openrouter/<author>/<model>`. `opencode models` listet gültige IDs. | §10 |
 | 6 | Globale + Projekt-`AGENTS.md` — globale Regeln „fehlen" | Werden NICHT sauber gemergt; globale wird teils still ignoriert. In Projekt-`AGENTS.md` `@~/.config/opencode/AGENTS.md` referenzieren. | §4 |
@@ -393,6 +394,31 @@
 **Versionen:** offen (#14923).
 **FIX:** `git` + Subkommandos explizit per Pattern (`"git push *":"ask"`/`"deny"`); Matching testen.
 **Quelle:** https://github.com/anomalyco/opencode/issues/14923
+
+### 48a. ⭐ Umgekehrter Fall: Modell VERWEIGERT Commit/Push mit erfundener Begründung
+**Symptom:** Agent schließt eine Aufgabe erfolgreich ab (Build+Install ok), committet/pusht aber
+NICHT und begründet das mit „Commit/Push habe ich nicht gemacht, weil das hier nur auf
+ausdrückliche Anweisung erlaubt ist" — obwohl KEINE Regel/Config das je vorgeschrieben hat.
+Franks `AGENTS.md` + `rules-opencode/commit-push-jede-aufgabe-vor-build.md` verlangen im
+Gegenteil IMMER Commit+Push nach jeder Aufgabe, ohne Rückfrage.
+**Ursache:** Vermutlich trainiertes Vorsichtsverhalten des Modells gegenüber „sichtbaren"/geteilten
+Aktionen (`git push` ändert gemeinsamen Remote-Zustand) — ähnliche Vorsicht wie bei anderen
+LLM-Anbietern für „actions visible to others". Reine Text-Regeln (AGENTS.md) setzen sich gegen ein
+so trainiertes Verhalten nicht zuverlässig durch (vgl. `claude-config.md` §1.1: „Rules in prompts
+are requests, hooks in code are laws"). Ein früherer Fix-Versuch (nur zusätzlicher AGENTS.md-Text,
+Commit #47319) hat das Problem NICHT gelöst — es trat mit GPT-5.5 danach erneut auf.
+**Versionen:** beobachtet mit GPT-5.5 (Medium+High-Thinking) via OpenCode, 2026-07-01. Nicht
+modellspezifisch ausgeschlossen — kann bei jedem vorsichtig trainierten Modell auftreten.
+**FIX (Poka-Yoke Stufe 2, Code statt nur Text):** Lokales Plugin `git-dirty-watchdog.js`
+(`~/.config/opencode/plugins/`) prüft bei `session.idle` per `git status --porcelain`, ob das
+Repo „dirty" ist, und macht das per Ton (`error.wav`) + Log-Eintrag SOFORT unübersehbar — committet
+aber bewusst NICHT automatisch (ein Plugin kann nicht sicher unterscheiden, welche Datei zu welcher
+parallelen Session gehört, siehe `parallel-sessions-git.md`). Zusätzlich `commit-push-jede-aufgabe-
+vor-build.md` um einen Satz ergänzt, der genau diese Ausrede vorwegnimmt: „Es gibt KEINE Ausnahme
+für 'ausdrückliche Anweisung'".
+**Status:** Fix deployed 2026-07-01, Live-Verifikation (echter dirty-Session-idle-Trigger in
+OpenCode) steht noch aus.
+**Quelle:** eigener Vorfall (Frank, CortexAndroid-TTS-Aufgabe, 2026-07-01); verwandt: #14923 (§48).
 
 ---
 

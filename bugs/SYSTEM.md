@@ -314,6 +314,7 @@ durchlaufen. Zu viel immer-geladener Ballast senkt zudem die Genauigkeit (Contex
 | **A** | vor jeder echten Arbeit im Bereich | NUR den Kurzcheck (`Read` mit `limit=80`) — erst Almanach, dann Best Practices | Guard: read-Marker (jedes Read setzt ihn) |
 | **B** | ab dem ERSTEN Fehler im Bereich | VOLLTEXT des Almanachs (`Read` ohne `limit`) | `bug-case-auto-writer` haengt an jeden Tool-Fehler den Stufe-B-Hinweis |
 | **C** | Hochrisiko-Bereiche: `r8`, `firebase-billing`, `claude-hooks`, `claude-config` | VOLLTEXT schon VORAB | Guard: full-Marker — der Read-Zweig setzt ihn nur bei `Read` ohne `limit` (oder `limit>=500`); Bash-`cat`/`bat`/`less` zaehlt als Volltext |
+| **D** | Bug ist WIEDERKEHREND (schon einmal gefixt, tritt erneut auf) | Kurzcheck ÜBERSPRINGEN, sofort VOLLTEXT von Almanach UND Best Practices; ohne Loesung dort → Grundproblem recherchieren (`research`-Skill) | Keine Hook-Erzwingung — Erkennung liegt beim Modell/Frank; verankert in `known-bugs-before-coding.md` |
 
 **Format der Kurzcheck-Sektion (verbindlich, auch fuer neue Almanache):**
 

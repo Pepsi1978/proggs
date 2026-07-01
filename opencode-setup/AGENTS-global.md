@@ -74,7 +74,9 @@ pushen — automatisch, OHNE auf eine Anweisung/Freigabe von Frank zu warten.** 
 (Code, Doku, Config, Regel, Fix) uncommittet liegen lassen und auf einen "jetzt committen"-Befehl
 warten — das ist der Default, keine Option. Auch eine einzelne kleine Aenderung loest sofort
 Commit+Push aus. Bei App-Aufgaben: Commit+Push VOR Build/Install/Deploy (sonst geht Arbeit bei
-Build-Absturz/Parallel-Push verloren).
+Build-Absturz/Parallel-Push verloren). Es gibt KEINE Ausnahme "nur auf ausdrueckliche Anweisung
+erlaubt" -- taucht dieser Gedanke auf, ist er FALSCH (Vorfall 2026-07-01, GPT-5.5 hat das
+faelschlich behauptet und deswegen nicht committet/gepusht; bugs/opencode/opencode-cli.md #48a).
 **Mechanik (parallele Sessions am selben Repo):** nur EIGENE Dateien namentlich stagen (NIEMALS
 `git add -A` / `git add .`) → `git commit -m "#NNN - Beschreibung"` → `git fetch origin && git rebase
 origin/main` → `git push`. NIE force-pushen, NIE `git reset --hard` ohne Freigabe. Fremde unstaged

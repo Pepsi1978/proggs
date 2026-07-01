@@ -42,6 +42,7 @@ innerhalb der ersten 80 Zeilen). Wie viel gelesen werden muss, haengt von der St
 | **A — Kurzcheck vorab** | vor JEDER echten Arbeit im Bereich | NUR den Kurzcheck: `Read` mit `limit=80` auf den Almanach, danach ebenso auf die Best-Practices-Datei | `bug-almanac-guard` (read-Marker) |
 | **B — Volltext bei Fehler** | ab dem ERSTEN Fehler im Bereich | SOFORT den VOLLTEXT des Almanachs (`Read` ohne `limit`) — der Kurzcheck reicht ab jetzt nicht mehr | `bug-case-auto-writer` (Stufe-B-Hinweis bei jedem Tool-Fehler) + Entropie-Reduktions-Regel |
 | **C — Volltext bei Hochrisiko** | vor Arbeit in einem Hochrisiko-Bereich | den VOLLTEXT des Almanachs schon VORAB (`Read` ohne `limit`) | `bug-almanac-guard` (full-Marker; ein Read ohne `limit` bzw. mit `limit>=500` setzt ihn) |
+| **D — Wiederkehrender Bug** | der Fehler ist SCHON EINMAL aufgetreten/gefixt worden (eigene oder frühere Session) UND tritt jetzt ERNEUT auf | Kurzcheck komplett ÜBERSPRINGEN — SOFORT den VOLLTEXT von Almanach UND Best-Practices-Datei lesen (beide, nicht nur den Almanach). Zeigt der Volltext KEINE passende Lösung: siehe „Recherche bei wiederkehrendem Bug" unten | diese Regel (keine Hook-Erzwingung — Erkennung ist Sache des Modells/Franks) |
 
 **Hochrisiko-Bereiche (Stufe C):** `r8`, `firebase-billing`, `claude-hooks`, `claude-config` —
 tickende/teure Fehlerklassen (Release-Crashes, Geld/Abos, Harness-Totalausfall). Die Liste lebt
@@ -53,6 +54,26 @@ beide synchron halten.
 erhaelt die Erkennungsfaehigkeit fuer stille Fehler — und die Erkennung ist das Entscheidende.
 Verlustfrei nach dem Lossless-Prinzip: Der Volltext bleibt per Pfad jederzeit erreichbar und
 wird bei Fehlern (Stufe B) und Hochrisiko (Stufe C) weiterhin erzwungen.
+
+**Warum Stufe D noetig ist (Vorfall 2026-07-01):** Bei einem Bug, der bereits einmal (in dieser
+oder einer frueheren Session) diagnostiziert und "gefixt" wurde und jetzt TROTZDEM wieder auftritt,
+ist der Kurzcheck per Definition NICHT ausreichend — er hat die Ursache offenbar schon beim letzten
+Mal nicht vollstaendig erfasst (sonst waere der Fix stabil gewesen). Direktive #3 (Resilient
+Bugfixing) verlangt fuer wiederkehrende Fehler eine TIEFERE Analyse, nicht die gleiche
+Kurzcheck-Ebene erneut. Konkreter Vorfall: Ein Almanach-Fix zu "OpenCode committet/pusht nicht
+automatisch" wurde bereits einmal versucht (#47319); der Kurzcheck wurde daraufhin erneut nur als
+Kurzcheck gelesen statt den Volltext zu pruefen — der wiederkehrende Bug traf trotzdem erneut auf,
+weil die tiefere Root-Cause-Analyse fehlte.
+
+### Recherche bei wiederkehrendem Bug ohne Loesung im Volltext (Stufe D, Fortsetzung)
+
+Zeigt der VOLLTEXT von Almanach + Best Practices KEINE passende Loesung fuer den wiederkehrenden
+Fehler: das ist ein starkes Signal, dass die Ursache noch nicht dokumentiert ist. In diesem Fall
+NICHT einfach weiter im eigenen Wissen raten, sondern das Grundproblem gezielt recherchieren
+(ob es dafuer bereits allgemein bekannte Loesungen/Best-Practices gibt) — ueber den `research`-Skill
+nach dem Recherche-Protokoll (`research-strategy.md`: Empfehlung + Frage 1 A/B/C/D). Ergebnis danach
+sowohl in den Almanach (Bug+Fix) als auch — falls zutreffend — in die Best-Practices-Datei einarbeiten
+(`research-persistence.md`), damit der Bug beim naechsten Mal WIRKLICH nicht wiederkehrt.
 
 ---
 
@@ -100,6 +121,10 @@ wird bei Fehlern (Stufe B) und Hochrisiko (Stufe C) weiterhin erzwungen.
    lesen** (`Read` ohne `limit`) — ab dem ersten Fehler reicht der Kurzcheck nicht mehr.
    ZUERST pruefen, ob es ein bekannter Bug aus dem Almanach ist → dokumentierte Loesung
    sofort anwenden (schnellster Pfad).
+   **Ist der Fehler ERKENNBAR eine WIEDERHOLUNG** (schon einmal in dieser oder einer frueheren
+   Session gefixt, tritt jetzt trotzdem wieder auf) → **sofort Stufe D**: Kurzcheck NICHT
+   erneut lesen, direkt Volltext von Almanach UND Best-Practices-Datei. Zeigt der Volltext keine
+   Loesung → Recherche zum Grundproblem anstossen (siehe Stufe D oben), nicht weiter raten.
    Der `bug-case-auto-writer`-Hook erinnert bei einem neuen Fehler aktiv daran (Schicht 2b,
    "ALMANACH-BRUECKE"-Hinweis). Ist der Fehler **hartnaeckig** (taucht >=2x auf) UND existiert
    fuer den Bereich noch KEIN Almanach: das ist ein starkes Signal fuer eine Recherche —
@@ -188,6 +213,8 @@ oder der Nutzer nennt Erweiterung/Extension/Overlay-Plugin.
 - ❌ An einem Bereich arbeiten, fuer den ein Almanach existiert, ohne vorher mindestens dessen Kurzcheck zu lesen (Stufe A)
 - ❌ Nach einem Fehler im Bereich einfach weiterarbeiten, ohne den VOLLTEXT des Almanachs gelesen zu haben (Stufe B)
 - ❌ In einem Hochrisiko-Bereich (r8, firebase-billing, claude-hooks, claude-config) nur den Kurzcheck lesen — Stufe C verlangt den Volltext
+- ❌ Bei einem WIEDERKEHRENDEN Bug (schon einmal gefixt, tritt erneut auf) nur den Kurzcheck (erneut) lesen statt sofort den Volltext von Almanach UND Best Practices (Stufe D)
+- ❌ Bei einem wiederkehrenden Bug ohne Loesung im Volltext einfach weiterraten, statt das Grundproblem gezielt zu recherchieren (ueber den `research`-Skill nach Protokoll)
 - ❌ Beim Ergaenzen eines Almanachs die Kurzcheck-Sektion vergessen — ein neuer Top-Bug gehoert auch in den Kurzcheck, wenn er zu den wichtigsten zaehlt
 - ❌ Den Kurzcheck-Almanach lesen, aber die zugehoerige Best-Practices-Datei (Kurzcheck) ueberspringen — beide gehoeren VOR die Arbeit (erst Almanach, dann Best Practices)
 - ❌ Einen erlebten Bug fixen, ohne ihn anschliessend im passenden Almanach zu ergaenzen

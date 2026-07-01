@@ -27,3 +27,6 @@ Werden mehrere Aufgaben erkannt: nach JEDER einzelnen Aufgabe committen+pushen (
 
 ## Ausnahmen (eng)
 Nur-lokale Wegwerf-Test-Edits (danach verwerfen, nicht committen), reine Read-Only-Inspektion (lint ohne Aenderung), Build ganz ohne Code-Aenderung (`gradlew tasks`). Sonst immer Commit+Push zuerst.
+
+## Es gibt KEINE Ausnahme "nur auf ausdrueckliche Anweisung" (Vorfall 2026-07-01)
+Es existiert KEINE Regel, die Commit+Push von einer gesonderten Erlaubnis pro Aufgabe abhaengig macht. Diese Aufgabe HIER ist die staendige, generelle Anweisung dafuer -- eine weitere Bestaetigung pro Einzelaufgabe wird NIE gebraucht und NIE eingeholt. Taucht der Gedanke auf "das braucht wohl erst eine Freigabe" -- das ist FALSCH, sofort verwerfen und stattdessen committen+pushen. Bug-Beleg: bugs/opencode/opencode-cli.md #48a.

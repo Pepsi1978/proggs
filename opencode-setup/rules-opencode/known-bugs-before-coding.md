@@ -4,7 +4,7 @@ Vor echter Arbeit an einem technischen Bereich IMMER zuerst im zweiten Gehirn (M
 nachschlagen, ob ein Bug-Almanach (bekannte Fehler+Fix) und Best Practices (wie man's richtig macht)
 existieren — damit bekannte Fehler gar nicht erst passieren. Kategorie-Baum: siehe Tabelle unten.
 
-## Digest-Modell — 3 Stufen (ueber second-brain-Tools, NIE eine ganze Kategorie als Block laden)
+## Digest-Modell — 4 Stufen (ueber second-brain-Tools, NIE eine ganze Kategorie als Block laden)
 - **A (vor JEDER echten Arbeit):** `recall(query="<Bereich>", category="Programmierung/Almanache/Kurzchecks")`
   lesen, DANACH dieselbe Suche mit `category="Programmierung/Best Practices/Kurzchecks"`. Reihenfolge:
   erst Almanach-Kurzcheck, dann Best-Practices-Kurzcheck, dann erst coden.
@@ -13,6 +13,9 @@ existieren — damit bekannte Fehler gar nicht erst passieren. Kategorie-Baum: s
   "X Kurzcheck (Best Practices Kurzcheck)" -> "X (Best Practices)". Kurzcheck reicht ab jetzt nicht mehr.
   Zuerst pruefen ob bekannter Bug -> dokumentierten Fix anwenden.
 - **C (Hochrisiko: Claude-Hooks/-Config, R8, Firebase-Billing):** gleich vorab den Volltext lesen.
+- **D (WIEDERKEHRENDER Bug — schon einmal gefixt, tritt erneut auf):** Kurzcheck UEBERSPRINGEN, sofort
+  Volltext von Almanach UND Best Practices per `get_by_title`. Keine Loesung dort -> Grundproblem ueber
+  den `researcher`-Subagenten recherchieren, dann Almanach+Best-Practices im Gehirn nachziehen.
 
 ## Kein Eintrag im Gehirn fuer den Bereich
 - Trivialer Kleinkram (String, Doku, Kommentar, Versions-Bump): normal weiterarbeiten.
