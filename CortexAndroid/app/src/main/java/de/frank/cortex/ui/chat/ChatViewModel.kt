@@ -493,8 +493,10 @@ class ChatViewModel : ViewModel() {
     fun toggleMessageSpeech(messageId: String) {
         val message = _uiState.value.messages.firstOrNull { it.id == messageId && !it.isUser } ?: return
         if (_uiState.value.isSpeaking && _uiState.value.speakingMessageId == messageId) {
+            CortexLog.info("ChatVM", "toggleMessageSpeech", "Blasen-TTS stoppt", mapOf("message_id" to messageId))
             stopSpeaking()
         } else {
+            CortexLog.info("ChatVM", "toggleMessageSpeech", "Blasen-TTS startet", mapOf("message_id" to messageId, "message_len" to message.text.length))
             speakResponse(message.text, message.id)
         }
     }
@@ -593,23 +595,7 @@ class ChatViewModel : ViewModel() {
 
     private fun buildContextPrompt(contextMode: String, responseSize: String): String? {
         val modePrompt = if (contextMode == SettingsStore.CONTEXT_MODE_AUTO) "" else SettingsStore.contextPrompt(contextMode)
-        val sizePrompt = when (responseSize) {
-            SettingsStore.RESPONSE_SIZE_SHORT -> """
-                Antwortlänge S ist aktiv: Antworte exakt auf den Punkt, kurz und eindeutig.
-                Suche nur nach der wirklich passenden Antwort. Wenn ein perfekter Treffer gefunden ist, nutze ihn sofort
-                und ziehe keine zusätzlichen Gedächtnis- oder Webtreffer künstlich hinzu.
-            """.trimIndent()
-            SettingsStore.RESPONSE_SIZE_XL -> """
-                Antwortlänge XL ist aktiv: Antworte maximal ausführlich, stark strukturiert und mit vielen Details.
-                Bei Websuche: recherchiere breit und gründlich. Bei Gedächtnissuche: beziehe mehrere relevante Einträge ein,
-                vergleiche sie, konsolidiere Widersprüche und erkläre den Gesamtzusammenhang global statt nur den besten Treffer zu nennen.
-                Es gibt kein künstliches Kürzelimit; nutze die verfügbare Antwortlänge sinnvoll aus.
-            """.trimIndent()
-            else -> """
-                Antwortlänge M ist aktiv: Antworte ausgewogen, gut erklärt und anschaulich.
-                Suche bei Bedarf mehrere relevante Gedächtnis- oder Webtreffer, konsolidiere sie, aber bleibe weder zu kurz noch unnötig lang.
-            """.trimIndent()
-        }
+        val sizePrompt = SettingsStore.responseSizePrompt(responseSize)
         return listOf(modePrompt, sizePrompt).filter { it.isNotBlank() }.joinToString("\n\n").ifBlank { null }
     }
 

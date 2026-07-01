@@ -94,7 +94,21 @@ fun SettingsScreen(
     var codexAuthId by remember { mutableStateOf("") }
     var codexConnecting by remember { mutableStateOf(false) }
     var selectedContextPromptMode by remember { mutableStateOf(SettingsStore.CONTEXT_MODE_SMALLTALK) }
-    var contextPromptDraft by remember { mutableStateOf(SettingsStore.contextPrompt(selectedContextPromptMode)) }
+    fun loadEditablePrompt(key: String): String = when (key) {
+        SettingsStore.RESPONSE_SIZE_SHORT,
+        SettingsStore.RESPONSE_SIZE_MEDIUM,
+        SettingsStore.RESPONSE_SIZE_XL -> SettingsStore.responseSizePrompt(key)
+        else -> SettingsStore.contextPrompt(key)
+    }
+    fun saveEditablePrompt(key: String, prompt: String) {
+        when (key) {
+            SettingsStore.RESPONSE_SIZE_SHORT,
+            SettingsStore.RESPONSE_SIZE_MEDIUM,
+            SettingsStore.RESPONSE_SIZE_XL -> SettingsStore.setResponseSizePrompt(key, prompt)
+            else -> SettingsStore.setContextPrompt(key, prompt)
+        }
+    }
+    var contextPromptDraft by remember { mutableStateOf(loadEditablePrompt(selectedContextPromptMode)) }
     var contextPromptEditing by remember { mutableStateOf(false) }
 
     val filePicker = rememberLauncherForActivityResult(
@@ -778,7 +792,7 @@ fun SettingsScreen(
                     Icon(Icons.Default.Tune, null, tint = Orange, modifier = Modifier.size(22.dp))
                     Column(modifier = Modifier.weight(1f)) {
                         Text("Modus-Prompts", fontSize = 14.sp, fontWeight = FontWeight.SemiBold)
-                        Text("Zusatzauftrag für Smalltalk, Speichern und Suchen", fontSize = 11.5.sp,
+                        Text("Zusatzauftrag für Modi und Antwortlängen S/M/XL", fontSize = 11.5.sp,
                             color = MaterialTheme.colorScheme.onSurfaceVariant)
                     }
                 }
@@ -788,7 +802,7 @@ fun SettingsScreen(
                     isDark = isDark,
                     onSelect = { mode ->
                         selectedContextPromptMode = mode
-                        contextPromptDraft = SettingsStore.contextPrompt(mode)
+                        contextPromptDraft = loadEditablePrompt(mode)
                         contextPromptEditing = false
                     }
                 )
@@ -819,15 +833,15 @@ fun SettingsScreen(
                 ) {
                     if (contextPromptEditing) {
                         TextButton(onClick = {
-                            contextPromptDraft = SettingsStore.contextPrompt(selectedContextPromptMode)
+                            contextPromptDraft = loadEditablePrompt(selectedContextPromptMode)
                             contextPromptEditing = false
                         }) { Text("Abbrechen") }
                         Spacer(Modifier.width(8.dp))
                         Button(
                             onClick = {
-                                SettingsStore.setContextPrompt(selectedContextPromptMode, contextPromptDraft)
+                                saveEditablePrompt(selectedContextPromptMode, contextPromptDraft)
                                 contextPromptEditing = false
-                                Toast.makeText(context, "Kontext-Prompt gespeichert", Toast.LENGTH_SHORT).show()
+                                Toast.makeText(context, "Prompt gespeichert", Toast.LENGTH_SHORT).show()
                             },
                             shape = RoundedCornerShape(12.dp),
                             colors = ButtonDefaults.buttonColors(containerColor = Orange)
@@ -949,30 +963,56 @@ private fun ContextPromptModeButtons(
     isDark: Boolean,
     onSelect: (String) -> Unit
 ) {
+    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+        val modeItems = listOf(
+            PromptButtonItem(SettingsStore.CONTEXT_MODE_SMALLTALK, "Smalltalk", { Icon(Icons.Default.Forum, null, modifier = Modifier.size(20.dp)) }),
+            PromptButtonItem(SettingsStore.CONTEXT_MODE_SAVE, "Speichern", { Icon(Icons.Default.Save, null, modifier = Modifier.size(20.dp)) }),
+            PromptButtonItem(SettingsStore.CONTEXT_MODE_SEARCH, "Suchen", { Icon(Icons.Default.Search, null, modifier = Modifier.size(20.dp)) })
+        )
+        val sizeItems = listOf(
+            PromptButtonItem(SettingsStore.RESPONSE_SIZE_SHORT, "S", { Text("S", fontSize = 14.sp, fontWeight = FontWeight.Bold) }),
+            PromptButtonItem(SettingsStore.RESPONSE_SIZE_MEDIUM, "M", { Text("M", fontSize = 14.sp, fontWeight = FontWeight.Bold) }),
+            PromptButtonItem(SettingsStore.RESPONSE_SIZE_XL, "XL", { Text("XL", fontSize = 14.sp, fontWeight = FontWeight.Bold) })
+        )
+        PromptButtonRow(modeItems, selectedMode, isDark, onSelect)
+        PromptButtonRow(sizeItems, selectedMode, isDark, onSelect)
+    }
+}
+
+private data class PromptButtonItem(
+    val key: String,
+    val label: String,
+    val icon: @Composable () -> Unit
+)
+
+@Composable
+private fun PromptButtonRow(
+    items: List<PromptButtonItem>,
+    selectedMode: String,
+    isDark: Boolean,
+    onSelect: (String) -> Unit
+) {
     Row(
         modifier = Modifier.fillMaxWidth(),
         horizontalArrangement = Arrangement.spacedBy(8.dp)
     ) {
-        val items = listOf(
-            Triple(SettingsStore.CONTEXT_MODE_SMALLTALK, Icons.Default.Forum, "Smalltalk"),
-            Triple(SettingsStore.CONTEXT_MODE_SAVE, Icons.Default.Save, "Speichern"),
-            Triple(SettingsStore.CONTEXT_MODE_SEARCH, Icons.Default.Search, "Suchen")
-        )
-        items.forEach { (mode, icon, label) ->
-            val active = selectedMode == mode
+        items.forEach { item ->
+            val active = selectedMode == item.key
             Surface(
                 shape = RoundedCornerShape(12.dp),
                 color = if (active) Orange.copy(alpha = 0.18f) else if (isDark) DarkField else LightField,
                 border = BorderStroke(1.dp, if (active) Orange.copy(alpha = 0.55f) else if (isDark) DarkFieldBorder else LightFieldBorder),
-                modifier = Modifier.weight(1f).clickable { onSelect(mode) }
+                modifier = Modifier.weight(1f).clickable { onSelect(item.key) }
             ) {
                 Column(
                     modifier = Modifier.fillMaxWidth().padding(vertical = 10.dp),
                     horizontalAlignment = Alignment.CenterHorizontally,
                     verticalArrangement = Arrangement.spacedBy(5.dp)
                 ) {
-                    Icon(icon, null, tint = if (active) Orange else MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.size(20.dp))
-                    Text(label, fontSize = 11.5.sp, fontWeight = FontWeight.SemiBold)
+                    CompositionLocalProvider(LocalContentColor provides if (active) Orange else MaterialTheme.colorScheme.onSurfaceVariant) {
+                        item.icon()
+                    }
+                    Text(item.label, fontSize = 11.5.sp, fontWeight = FontWeight.SemiBold)
                 }
             }
         }

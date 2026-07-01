@@ -487,9 +487,9 @@ private fun ChatBubble(
                         MessageBubbleActionIcon(
                             icon = {
                                 Icon(
-                                    if (isSpeaking) Icons.AutoMirrored.Filled.VolumeOff else Icons.AutoMirrored.Filled.VolumeUp,
+                                    if (isSpeaking) Icons.Default.Stop else Icons.AutoMirrored.Filled.VolumeUp,
                                     contentDescription = if (isSpeaking) "Vorlesen stoppen" else "Nachricht vorlesen",
-                                    modifier = Modifier.size(20.dp)
+                                    modifier = Modifier.size(if (isSpeaking) 18.dp else 21.dp)
                                 )
                             },
                             onClick = onSpeakClick
@@ -567,12 +567,9 @@ private fun ChatBubble(
 
 @Composable
 private fun MessageBubbleActionIcon(icon: @Composable () -> Unit, onClick: () -> Unit) {
-    Box(
-        modifier = Modifier
-            .size(30.dp)
-            .clip(CircleShape)
-            .clickable(onClick = onClick),
-        contentAlignment = Alignment.Center
+    IconButton(
+        onClick = onClick,
+        modifier = Modifier.size(38.dp)
     ) {
         CompositionLocalProvider(LocalContentColor provides Orange) {
             icon()

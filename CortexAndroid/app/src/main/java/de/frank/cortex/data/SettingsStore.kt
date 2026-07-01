@@ -42,6 +42,24 @@ object SettingsStore {
         else -> ""
     }
 
+    fun defaultResponseSizePrompt(size: String): String = when (size) {
+        RESPONSE_SIZE_SHORT -> """
+            Antwortlänge S ist aktiv: Antworte exakt auf den Punkt, kurz und eindeutig.
+            Suche nur nach der wirklich passenden Antwort. Wenn ein perfekter Treffer gefunden ist, nutze ihn sofort
+            und ziehe keine zusätzlichen Gedächtnis- oder Webtreffer künstlich hinzu.
+        """.trimIndent()
+        RESPONSE_SIZE_XL -> """
+            Antwortlänge XL ist aktiv: Antworte maximal ausführlich, stark strukturiert und mit vielen Details.
+            Bei Websuche: recherchiere breit und gründlich. Bei Gedächtnissuche: beziehe mehrere relevante Einträge ein,
+            vergleiche sie, konsolidiere Widersprüche und erkläre den Gesamtzusammenhang global statt nur den besten Treffer zu nennen.
+            Es gibt kein künstliches Kürzelimit; nutze die verfügbare Antwortlänge sinnvoll aus.
+        """.trimIndent()
+        else -> """
+            Antwortlänge M ist aktiv: Antworte ausgewogen, gut erklärt und anschaulich.
+            Suche bei Bedarf mehrere relevante Gedächtnis- oder Webtreffer, konsolidiere sie, aber bleibe weder zu kurz noch unnötig lang.
+        """.trimIndent()
+    }
+
     fun init(context: Context) {
         try {
             val masterKey = MasterKey.Builder(context)
@@ -186,6 +204,13 @@ object SettingsStore {
 
     fun setContextPrompt(mode: String, prompt: String) {
         plain.edit().putString("context_prompt_$mode", prompt).apply()
+    }
+
+    fun responseSizePrompt(size: String): String = plain.getString("response_size_prompt_$size", null)
+        ?: defaultResponseSizePrompt(size)
+
+    fun setResponseSizePrompt(size: String, prompt: String) {
+        plain.edit().putString("response_size_prompt_$size", prompt).apply()
     }
 
     // --- Hilfsmethoden ---
