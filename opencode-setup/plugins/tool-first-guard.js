@@ -52,15 +52,13 @@ export const ToolFirstGuard = async ({ client }) => {
 	};
 
 	const log = async (level, message) => {
+		// NUR strukturiert loggen (client.app.log) — NIEMALS console.* : Plugins laufen IM
+		// TUI-Prozess, direktes stderr/stdout zerstoert das TUI-Rendering
+		// (best-practices/opencode/plugins-mcp-skills.md: client.app.log statt console.*).
 		try {
 			await client.app.log({
 				body: { service: "tool-first-guard", level, message },
 			});
-		} catch {}
-		try {
-			(level === "warn" ? console.warn : console.error)(
-				`[tool-first-guard] ${message}`,
-			);
 		} catch {}
 	};
 

@@ -24,21 +24,21 @@ export const GitDirtyWatchdog = async ({ client, $, directory }) => {
 	const SOUND_PATH = "C:\\Users\\barwa\\.config\\opencode\\sounds\\error.wav";
 
 	const log = async (level, message) => {
+		// NUR strukturiert in die OpenCode-Log-Datei schreiben — NIEMALS console.* / stdout / stderr.
+		// Plugins laufen IM TUI-Prozess: jeder direkte Terminal-Schreibvorgang zerstoert das
+		// TUI-Rendering (Vorfall 2026-07-01: die [git-dirty-watchdog]-Zeile blutete sichtbar in die
+		// TUI). best-practices/opencode/plugins-mcp-skills.md: client.app.log statt console.*.
 		try {
 			await client.app.log({
 				body: { service: "git-dirty-watchdog", level, message },
 			});
 		} catch {}
-		try {
-			(level === "error" ? console.error : console.warn)(
-				`[git-dirty-watchdog] ${message}`,
-			);
-		} catch {}
 	};
 
 	const playAlertSound = async () => {
 		try {
-			await $`powershell -NoProfile -Command "(New-Object Media.SoundPlayer '${SOUND_PATH}').PlaySync()"`;
+			// .quiet() unterdrueckt das Bun-Shell-Echo — sonst blutet PowerShell-Output ins TTY/TUI.
+			await $`powershell -NoProfile -Command "(New-Object Media.SoundPlayer '${SOUND_PATH}').PlaySync()"`.quiet();
 		} catch {
 			// Sound ist nur Komfort — nie deswegen crashen oder die Warnung unterdruecken.
 		}
@@ -51,7 +51,10 @@ export const GitDirtyWatchdog = async ({ client, $, directory }) => {
 			let dirty = "";
 			try {
 				const dir = directory || process.cwd();
-				const result = await $`cd "${dir}" && git status --porcelain`;
+				// .quiet() captured stdout OHNE es ans TTY zu echoen. OHNE .quiet echoed Bun's
+				// Shell die git-porcelain-Zeilen (?? / M ...) direkt in die TUI -> Layout kaputt
+				// (Vorfall 2026-07-01: linke Spalte + untracked-Zeilen bluteten sichtbar rein).
+				const result = await $`cd "${dir}" && git status --porcelain`.quiet();
 				dirty = String((result && result.stdout) || "").trim();
 			} catch {
 				// Kein Git-Repo / git nicht verfuegbar -> nichts zu warnen, sauber beenden.

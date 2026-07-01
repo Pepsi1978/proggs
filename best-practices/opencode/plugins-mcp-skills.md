@@ -177,8 +177,18 @@ export const CompactionPlugin: Plugin = async () => ({
     output.context.push(`## Custom Context\n- Current task status\n- Important decisions\n- Files in progress`)
   } })
 ```
-Strukturiertes Logging statt `console.log`: `await client.app.log({ body: { service, level, message, extra } })`
-(Level: debug/info/warn/error).
+**Plugins dürfen NIE direkt aufs Terminal schreiben (KRITISCH — sonst TUI-Corruption).** Ein Plugin
+läuft IM TUI-Prozess; jeder direkte TTY-Schreibvorgang zerstört das TUI-Rendering (Vorfall 2026-07-01:
+`git-dirty-watchdog.js` machte die ganze TUI unbrauchbar — linke Spalte + untracked-Zeilen voller
+`??`/`M`, dazu `[plugin] …`-Zeilen). Zwei Fallen:
+- **`console.*` (log/warn/error)** schreibt auf stdout/stderr → statt dessen IMMER strukturiert
+  `await client.app.log({ body: { service, level, message, extra } })` (Level debug/info/warn/error;
+  schreibt in die Log-Datei, nicht ans TTY).
+- **Bun-Shell `$` ECHOED per Default** den stdout des Kindprozesses ans TTY. Jeder `$`-Aufruf, dessen
+  Ausgabe man NICHT sichtbar haben will (z.B. `git status --porcelain`, `powershell …`), MUSS
+  `.quiet()` bekommen: `await $\`git status --porcelain\`.quiet()` — `result.stdout` bleibt erhalten,
+  nur das Echo entfällt. (Auch im offiziellen `NotificationPlugin`-Beispiel oben fehlt `.quiet()`;
+  dort harmlos, weil `osascript` nichts auf stdout gibt — als Prinzip trotzdem `.quiet()` setzen.)
 
 ---
 

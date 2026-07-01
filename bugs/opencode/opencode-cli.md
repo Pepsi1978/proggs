@@ -38,6 +38,7 @@
 | 14 | ⭐ OpenCode-Go-Modell einrichten / Thinking aktivieren | Go ist **eingebaut** → `/connect`, KEIN Custom-`@ai-sdk/anthropic`-Block (Key-Verlust #21737); nur MERGE-Block für Optionen. Thinking-Keys in `docs/models` (nicht config): Anthropic `options.thinking.budgetTokens`, OpenAI `reasoningEffort`. MiniMax denkt nativ. | §14.4–14.5 |
 | 15 | ⭐ Direkter Python-Call an Go-Gateway/OpenRouter → Cloudflare 403/„1010" | urllib-Default-UA wird geblockt → `User-Agent: curl/8.5.0` setzen (so `mm/or-research _post()`). Erinnerung: `/messages`=`x-api-key`, Thinking `{type:enabled,budget_tokens:N}` (NICHT `adaptive` — das nur bei `/chat/completions`) | §14.6–14.8 |
 | 16 | ⭐ Plugin deinstallieren / Plugin kommt nach Neustart wieder („loading plugins") | Es gibt **KEIN** `plugin remove`. Eintrag steht in MEHREREN Config-Dateien (auch `tui.json`, nicht nur `opencode.jsonc`) → **alle** entfernen; OpenCode **schließen** (sonst regeneriert es Cache+Config sofort); Cache `~/.cache/opencode/packages/<scope>` + plugin-eigene Config (z.B. `dcp.jsonc`) löschen; ggf. `~/.config/opencode/package.json` zurücksetzen (append-only). | §7 (#55d) |
+| 17 | ⭐ TUI sieht komplett kaputt aus (linke Spalte voller `??`/`M`, `[plugin] …`-Zeilen bluten rein) | Ein Plugin schreibt direkt aufs Terminal — Plugins laufen IM TUI-Prozess. Ursache: `$`-Shell-Aufruf **ohne `.quiet()`** (Bun echoed stdout ans TTY, z.B. `git status --porcelain`) und/oder `console.*` (schreibt auf stderr). **FIX:** an JEDEN `$`-Aufruf `.quiet()`; NIE `console.*`, nur `client.app.log`. | §6 (#48a) |
 
 ---
 
@@ -445,8 +446,24 @@ passt nicht zu Franks Multi-Session-Setup (würde fremde Dateien anderer Session
 Dateien, die es selbst per `tool.execute.after` in DIESER Session editiert gesehen hat, analog zum
 Tracking-Muster in `tool-first-guard.js`) ist recherchiert, aber (Stand 2026-07-01) nicht
 umgesetzt — offene Ausbaustufe, siehe `best-practices/opencode/agent-verhalten-commit-disziplin.md`.
-**Status:** Fix deployed 2026-07-01, Live-Verifikation (echter dirty-Session-idle-Trigger in
-OpenCode) steht noch aus.
+**⚠️ FOLGE-BUG bei der Live-Verifikation (2026-07-01, sofort behoben) — TUI-Corruption durch
+Plugin-Terminal-Ausgabe:** Beim ersten echten `session.idle`-Trigger zerstoerte das Plugin die
+gesamte OpenCode-TUI (linke Spalte + untracked-Zeilen voller `??`/`M`, dazu die sichtbare
+`[git-dirty-watchdog] …`-Zeile). **Root Cause (zwei Terminal-Schreibquellen im TUI-Prozess):**
+(1) `await $\`… git status --porcelain\`` **ohne `.quiet()`** — Bun's Shell `$` ECHOED per Default
+stdout ans TTY; die git-porcelain-Zeilen bluteten direkt in die TUI. (2) `console.error`/`console.warn`
+schreiben auf stderr — dasselbe TTY, auf dem OpenCodes TUI im Alternate-Screen rendert.
+**FIX (funktionserhaltend, Poka-Yoke Stufe 3):** an JEDEN Plugin-`$`-Aufruf `.quiet()` anhaengen
+(captured stdout weiterhin in `result.stdout`, unterdrueckt nur das TTY-Echo) UND **jedes `console.*`
+entfernen** — Plugins loggen ausschliesslich via `await client.app.log({body:{service,level,message}})`
+(schreibt in die Log-Datei, nicht ans TTY). Watchdog-Ton + Log-Warnung bleiben voll erhalten.
+Gilt fuer JEDES OpenCode-Plugin: **ein Plugin laeuft IM TUI-Prozess und darf NIE direkt aufs
+Terminal schreiben** (siehe `best-practices/opencode/plugins-mcp-skills.md`). Auch `tool-first-guard.js`
+mitgehaertet (console.* entfernt). Betroffen: `~/.config/opencode/plugins/*.js` + Repo-Spiegel
+`opencode-setup/plugins/*.js`.
+**Status:** git-dirty-watchdog-Grundfunktion deployed 2026-07-01; TUI-Corruption-Folgebug am selben
+Tag behoben (`.quiet()` + console.* entfernt). Erneute Live-Verifikation (OpenCode-Neustart, TUI
+sauber + Ton bei dirty-idle) durch Frank ausstehend.
 **Quelle:** eigener Vorfall (Frank, CortexAndroid-TTS-Aufgabe, 2026-07-01); verwandt: #14923 (OPEN,
 §48), #3099/#11534/#11732 (alle CLOSED/COMPLETED — kein aktives Risiko mehr). Recherche 2026-07-01
 (5-Researcher-Schwarm, Sonnet-5): anthropic.com/engineering/claude-code-auto-mode ·
