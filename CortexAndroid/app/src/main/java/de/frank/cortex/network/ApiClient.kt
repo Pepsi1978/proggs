@@ -32,6 +32,13 @@ import kotlinx.coroutines.suspendCancellableCoroutine
  */
 class GeminiRateLimitException(message: String, val retryAfterMs: Long?) : Exception(message)
 
+/**
+ * 403/401 von Cloud-TTS (z.B. API nicht freigeschaltet, Key ohne Zugriff). Eigener Typ, damit der
+ * Aufrufer das NICHT wie einen voruebergehenden Fehler behandelt (kein sinnloses Retry) und dem
+ * Nutzer eine klare, umsetzbare Meldung zeigt, statt still nichts vorzulesen.
+ */
+class GeminiTtsAccessException(message: String) : Exception(message)
+
 object ApiClient {
 
     private val jsonMediaType = "application/json; charset=utf-8".toMediaType()
@@ -458,6 +465,14 @@ object ApiClient {
             }
 
             val responseBody = response.body?.string() ?: throw Exception("Leere Cloud-TTS-Antwort")
+
+            if (response.code == 403 || response.code == 401) {
+                // Typischer Fall: "Cloud Text-to-Speech API has not been used ... or it is disabled"
+                // (SERVICE_DISABLED) oder Key ohne Zugriff. Kein Retry - klar melden.
+                CortexLog.error("CloudTts", "tts", "Zugriff verweigert (${response.code})",
+                    mapOf("text_len" to text.length, "body" to responseBody.take(300)))
+                throw GeminiTtsAccessException("Cloud-TTS-Zugriff verweigert (${response.code}): $responseBody")
+            }
 
             if (!response.isSuccessful) {
                 throw Exception("Cloud-TTS-Fehler ${response.code}: $responseBody")

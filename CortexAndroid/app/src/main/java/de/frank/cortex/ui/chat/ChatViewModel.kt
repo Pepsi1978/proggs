@@ -11,6 +11,7 @@ import de.frank.cortex.data.SettingsStore
 import de.frank.cortex.data.StoredChatMessage
 import de.frank.cortex.network.ApiClient
 import de.frank.cortex.network.GeminiRateLimitException
+import de.frank.cortex.network.GeminiTtsAccessException
 import de.frank.cortex.observability.CortexLog
 import de.frank.cortex.vpn.TunnelState
 import de.frank.cortex.vpn.WireGuardManager
@@ -130,6 +131,10 @@ class ChatViewModel : ViewModel() {
     // wahrscheinlich aufgebraucht). speakResponse liest das, um die Session sauber abzubrechen und
     // dem Nutzer eine klare Meldung zu zeigen, statt still weiter zu warten.
     @Volatile private var ttsRateLimitExhausted = false
+
+    // Wird gesetzt, wenn Cloud-TTS Zugriff verweigert (403/401 - z.B. API nicht freigeschaltet).
+    // Dann keine sinnlosen Retries, sondern klare Meldung an den Nutzer.
+    @Volatile private var ttsAccessDenied = false
 
     // Begrenzt die GLEICHZEITIGEN Gemini-TTS-Anfragen (siehe TTS_MAX_CONCURRENT_SYNTH).
     private val ttsSemaphore = Semaphore(TTS_MAX_CONCURRENT_SYNTH)
@@ -637,6 +642,7 @@ class ChatViewModel : ViewModel() {
             // vorige (erschoepfte) Session diese sofort faelschlich bremsen/abbrechen.
             ttsRateLimitedUntil = 0L
             ttsRateLimitExhausted = false
+            ttsAccessDenied = false
             try {
                 val voice = SettingsStore.ttsVoice
                 val rate = SettingsStore.ttsRate
@@ -669,6 +675,13 @@ class ChatViewModel : ViewModel() {
                         if (speechGeneration != generation) return@coroutineScope
 
                         if (pcm == null || pcm.isEmpty()) {
+                            if (ttsAccessDenied) {
+                                // Cloud-TTS-API nicht freigeschaltet o.ae. -> klar melden statt still.
+                                CortexLog.warn("ChatVM", "speakResponse", "TTS wegen Zugriffsfehler gestoppt",
+                                    mapOf("index" to index))
+                                _uiState.update { it.copy(error = "Vorlesen nicht möglich: Cloud Text-to-Speech API ist für deinen Schlüssel nicht freigeschaltet. Bitte im Google-Cloud-Projekt die \"Cloud Text-to-Speech API\" aktivieren.") }
+                                return@coroutineScope
+                            }
                             if (ttsRateLimitExhausted) {
                                 // Rate-Limit erschoepft: NICHT still weiter-warten, sondern die ganze
                                 // Session sauber beenden und dem Nutzer klar sagen, was los ist.
@@ -734,6 +747,13 @@ class ChatViewModel : ViewModel() {
                 return ttsSemaphore.withPermit { ApiClient.geminiTts(chunk, voice) }
             } catch (e: CancellationException) {
                 throw e
+            } catch (e: GeminiTtsAccessException) {
+                // Zugriff verweigert (API nicht freigeschaltet / Key ohne Rechte): Retry waere
+                // zwecklos. Flag setzen, damit speakResponse eine klare Meldung zeigt + abbricht.
+                CortexLog.error("ChatVM", "synthesizeTtsChunk", "Cloud-TTS-Zugriff verweigert: ${e.message}",
+                    mapOf("index" to index, "chunk_len" to chunk.length))
+                ttsAccessDenied = true
+                return null
             } catch (e: GeminiRateLimitException) {
                 // Ein 429 ist zunaechst VORUEBERGEHEND: den Chunk NICHT sofort verwerfen (sonst
                 // fehlen ganze Absaetze - Bug vom 2026-07-01), sondern mit wachsendem Backoff
