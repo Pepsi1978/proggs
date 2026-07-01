@@ -1,7 +1,7 @@
 ---
 name: mirror-import
 description: Reads the Universal Mirror Ledger and automatically applies all pending cross-platform/cross-CLI changes for the current platform. Run at session start to sync with changes from other platforms.
-model: opus
+model: opus[1m]
 effort: high
 maxTurns: 50
 tools:

@@ -1,7 +1,7 @@
 ---
 name: batch-reviewer
 description: Fast parallel code reviewer for large changesets. Spawns sub-agents per file or module for maximum review speed. Optimized for throughput — use for bulk reviews, migration validation, and pre-commit sweeps.
-model: opus
+model: opus[1m]
 effort: high
 maxTurns: 40
 tools:

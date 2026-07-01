@@ -1,7 +1,7 @@
 ---
 name: challenger
 description: Devil's advocate that challenges plans, architectures, and assumptions. Spawned after every architecture decision to find blind spots.
-model: opus
+model: opus[1m]
 effort: high
 maxTurns: 30
 tools:

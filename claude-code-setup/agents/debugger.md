@@ -1,7 +1,7 @@
 ---
 name: debugger
 description: Systematically diagnoses and fixes bugs. Use when something doesn't work and you don't know why.
-model: opus
+model: opus[1m]
 effort: high
 maxTurns: 40
 tools:

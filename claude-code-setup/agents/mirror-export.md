@@ -1,7 +1,7 @@
 ---
 name: mirror-export
 description: Scans ALL changes from the current session and writes them as self-contained, richly documented entries to the Universal Mirror Ledger (mirror-ledger.md). Run at the end of a session to enable cross-platform and cross-CLI sync.
-model: opus
+model: opus[1m]
 effort: high
 maxTurns: 40
 tools:

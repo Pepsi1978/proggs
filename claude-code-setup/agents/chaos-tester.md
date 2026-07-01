@@ -1,7 +1,7 @@
 ---
 name: chaos-tester
 description: Nutze diesen Agenten um die Self-Healing-Faehigkeiten der Programmierumgebung zu testen. Simuliert absichtlich fehlerhafte Zustaende (leere Configs, fehlende Dateien, kaputtes JSON) und prueft ob das System sich selbst erholt. Inspiriert von Netflix Chaos Monkey.
-model: opus
+model: opus[1m]
 effort: high
 maxTurns: 25
 tools:

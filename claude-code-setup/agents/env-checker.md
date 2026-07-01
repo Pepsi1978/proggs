@@ -1,7 +1,7 @@
 ---
 name: env-checker
 description: Comprehensive environment health checker. Audits ALL installed tools, versions, settings, hooks, plugins, language readiness, mobile dev readiness, security patches, backup drift, and disk space. Returns a detailed structured report. Use this agent for Phase 1 of self-improve or standalone environment checks.
-model: opus
+model: opus[1m]
 effort: high
 maxTurns: 30
 tools:

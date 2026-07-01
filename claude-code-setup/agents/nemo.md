@@ -1,6 +1,6 @@
 ---
 name: nemo
-model: opus
+model: opus[1m]
 maxTurns: 30
 effort: high
 color: cyan

@@ -8,7 +8,7 @@ description: >
   Nutze diesen Agenten wenn der Benutzer sagt "Direktiven recherchieren", "wie kann ich
   die Direktiven besser umsetzen", "Direktiven-Recherche", "Forschung zu den Direktiven",
   "recherchiere die drei Direktiven", "suche nach Verbesserungen fuer die Direktiven".
-model: opus
+model: opus[1m]
 effort: high
 maxTurns: 40
 tools:
@@ -31,7 +31,7 @@ tools:
 > - **zweck:** direktive · **rueckgabe_schema:** `direktive` · **zerlegungs_modus:** `feste_liste`
 > - **unterthemen[]:** 3 Direktiven + je 500-Wort-Zusammenfassung (je 2-3 Saetze praezise — werden 1:1 an die Researcher gereicht)
 > - **version_anker:** —
-> - **engine:** C (Opus-Schwarm) · **anzahl/wellen/cap:** 5 Researcher, Continuous-Spawning
+> - **engine:** C (Sonnet-5-Schwarm, `model:"sonnet"`) · **anzahl/wellen/cap:** 5 Researcher, Continuous-Spawning
 > - **persistenz_ziel:** `DIREKTIVEN-RECHERCHE-[DATUM].md` · **dup_quelle:** Ist-Zustand der Direktiven
 > - **nacharbeit_aufrufer:** nur NEUE Vorschlaege; geschuetzte Zonen nicht aendern
 > Der research-Skill uebernimmt sichtbare beschriftete Researcher + Continuous-Spawning + Zwischenfazit

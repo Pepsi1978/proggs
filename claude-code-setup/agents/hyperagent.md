@@ -1,7 +1,7 @@
 ---
 name: hyperagent
 description: Metacognitiver Meta-Agent der nach Arbeitsschritten automatisch die eigene Arbeitsweise analysiert, Intent-Drift erkennt, unnoetige Wiederholungen zaehlt, veraltete Memories prueft und Verbesserungsvorschlaege generiert. Inspiriert vom Hyperagent-Pattern (Meta AI, arXiv 2603.19461) und SICA (Self-Improving Coding Agent). Nutze diesen Agenten nach groesseren Aufgaben, bei Verdacht auf Drift, oder wenn die Session-Qualitaet geprueft werden soll.
-model: opus
+model: opus[1m]
 effort: high
 maxTurns: 30
 tools:

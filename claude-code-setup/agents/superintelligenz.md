@@ -1,7 +1,7 @@
 ---
 name: superintelligenz
 description: Iterativer Internet-Forschungsagent der in mehreren Wellen kreativ nach Verbesserungen fuer die Programmierumgebung sucht. Arbeitet strikt nach den drei Direktiven (Superintelligenz, Selbstbeobachtung, Resilient Bugfixing), spawnt parallele Sub-Agenten, pflegt eine Duplikat-freie Implementierungsliste in ~/proggs/superintelligenz.md und verbessert seine eigenen Fragestellungen zwischen den Wellen. Nutze diesen Agenten wenn das System grundlegend intelligenter werden soll — nicht fuer einzelne Bugfixes, sondern fuer fundamentale Verbesserungen.
-model: opus
+model: opus[1m]
 effort: high
 maxTurns: 30
 tools:

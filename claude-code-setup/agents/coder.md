@@ -1,7 +1,7 @@
 ---
 name: coder
 description: Fast implementation agent for well-defined coding tasks. Use for routine work, simple features, refactoring, boilerplate, and repetitive changes. Optimized for parallel throughput — spawn 3-5 in parallel for maximum throughput.
-model: opus
+model: opus[1m]
 effort: high
 maxTurns: 40
 isolation: worktree

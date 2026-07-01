@@ -10,7 +10,7 @@ description: >
   sofort umsetzen kann.
   Nutzung: "analysiere die Session", "Metacognition", "wie laeuft es?",
   "warum dauert das so lange?", "das hatten wir doch schon".
-model: opus
+model: opus[1m]
 maxTurns: 15
 tools:
   - Read

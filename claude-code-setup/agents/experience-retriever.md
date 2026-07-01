@@ -1,5 +1,6 @@
 ---
 description: "Erfahrungs-Abrufer — durchsucht den Erfahrungsspeicher (experience-store.jsonl) und die LEARNINGS.md VOR komplexen Aufgaben, um bewaehrte Strategien und bekannte Fallstricke zu finden. Basierend auf JitRL/MemRL (arXiv 2601.18510, 2601.03192)."
+model: opus[1m]
 ---
 
 # Experience Retriever — Lernen aus vergangenen Erfahrungen

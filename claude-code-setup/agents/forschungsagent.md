@@ -1,7 +1,7 @@
 ---
 name: forschungsagent
 description: Spezialisierter Forschungsagent der die Forschung.md im Repository analysiert, das Intelligenz-Potenzial neuer Paper fuer Claude Code bewertet und konkrete Integrations-Plaene (neue Regeln, Skills, Agenten-Upgrades) erstellt. Nutze diesen Agenten wenn neue Forschungsergebnisse ausgewertet oder in die Programmierumgebung integriert werden sollen.
-model: opus
+model: opus[1m]
 effort: high
 maxTurns: 18
 tools:

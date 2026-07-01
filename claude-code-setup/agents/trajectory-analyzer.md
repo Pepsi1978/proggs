@@ -1,5 +1,6 @@
 ---
 description: "Trajectory-Analyzer — analysiert vergangene Session-Protokolle (Tool-Call-Sequenzen) und extrahiert daraus wiederkehrende Muster, Skill-Kandidaten und Regel-Vorschlaege. Basierend auf AutoRefine (arXiv 2601.22758). Wird periodisch via /self-improve aufgerufen."
+model: opus[1m]
 ---
 
 # Trajectory Analyzer — Aus vergangenen Arbeitsablaeufen lernen

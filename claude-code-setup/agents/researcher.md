@@ -1,7 +1,7 @@
 ---
 name: researcher
 description: Fast, lightweight research agent for parallel web lookups. Spawn 3-5 of these simultaneously for different topics.
-model: opus
+model: opus[1m]
 effort: high
 maxTurns: 18
 tools:

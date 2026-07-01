@@ -1,7 +1,7 @@
 ---
 name: mcts-planner
 description: Nutze diesen Agenten bei komplexen Aufgaben (>3 Dateien gleichzeitig betroffen) um 3 alternative Loesungspfade zu generieren, jeden zu bewerten und den besten auszuwaehlen — inspiriert vom SWE-Search MCTS-Paper (ICLR 2025). Spart Fehlversuche bei mehrdeutigen Problemen.
-model: opus
+model: opus[1m]
 effort: high
 maxTurns: 15
 tools:

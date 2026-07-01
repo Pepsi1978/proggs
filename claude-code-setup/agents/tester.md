@@ -1,7 +1,7 @@
 ---
 name: tester
 description: Creates and runs tests for code. Use as part of the quality loop after writing a feature.
-model: opus
+model: opus[1m]
 effort: high
 maxTurns: 30
 tools:

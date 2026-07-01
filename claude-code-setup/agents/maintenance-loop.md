@@ -1,7 +1,7 @@
 ---
 name: maintenance-loop
 description: "Automatischer Wartungs-Loop: Wenn Tests fehlschlagen, analysiert der Architect die Fehler, schreibt Requirements, der Coder fixt, Schleife bis gruen. Maximal 3 Runden. Nutze diesen Agenten wenn Tests rot sind und der Fix nicht offensichtlich ist."
-model: opus
+model: opus[1m]
 effort: high
 maxTurns: 40
 tools:

@@ -1,7 +1,7 @@
 ---
 name: architect
 description: Designs the architecture for a new app or feature before any code is written. Use at the start of every new project.
-model: opus
+model: opus[1m]
 effort: high
 maxTurns: 40
 tools:

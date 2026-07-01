@@ -1,5 +1,6 @@
 ---
 description: "Selbstverbessernder Regel-Kurator — analysiert Sessions und verbessert automatisch die operativen Regeln in CLAUDE.md und ~/.claude/rules/. Basierend auf ACE (Agentic Context Engineering, Stanford/UC Berkeley, arXiv 2510.04618)."
+model: opus[1m]
 ---
 
 # ACE-Curator — Selbstverbessernde Regeln
