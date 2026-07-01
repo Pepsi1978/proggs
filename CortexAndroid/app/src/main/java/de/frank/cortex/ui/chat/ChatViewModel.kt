@@ -14,6 +14,7 @@ import de.frank.cortex.observability.CortexLog
 import de.frank.cortex.vpn.TunnelState
 import de.frank.cortex.vpn.WireGuardManager
 import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.Deferred
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.async
@@ -73,6 +74,14 @@ object ChatCommands {
 }
 
 class ChatViewModel : ViewModel() {
+
+    private companion object {
+        const val TTS_FAST_FIRST_CHARS = 220
+        const val TTS_TARGET_CHARS = 720
+        const val TTS_MAX_CHARS = 950
+        const val TTS_PREFETCH_AHEAD = 2
+        const val TTS_RETRY_ATTEMPTS = 2
+    }
 
     private val _uiState = MutableStateFlow(ChatUiState())
     val uiState: StateFlow<ChatUiState> = _uiState.asStateFlow()
@@ -500,23 +509,38 @@ class ChatViewModel : ViewModel() {
             _uiState.update { it.copy(isSpeaking = true) }
             try {
                 val voice = SettingsStore.ttsVoice
-                val chunks = chunkText(text, 360)
+                val chunks = chunkText(text)
+                if (chunks.isEmpty()) return@launch
                 val ttsStartedAt = System.currentTimeMillis()
                 CortexLog.info("ChatVM", "speakResponse", "TTS Pipeline startet",
                     mapOf("len" to text.length, "chunks" to chunks.size, "voice" to voice))
 
                 coroutineScope {
-                    var nextAudio = async(Dispatchers.IO) { ApiClient.geminiTts(chunks.first(), voice) }
+                    val pending = mutableMapOf<Int, Deferred<ByteArray?>>()
+
+                    fun enqueue(index: Int) {
+                        if (index in chunks.indices && pending[index] == null) {
+                            pending[index] = async(Dispatchers.IO) { synthesizeTtsChunk(chunks[index], voice, index) }
+                        }
+                    }
+
+                    repeat(minOf(TTS_PREFETCH_AHEAD + 1, chunks.size)) { enqueue(it) }
+                    var firstAudioLogged = false
+
                     chunks.forEachIndexed { index, chunk ->
-                        val pcm = nextAudio.await()
-                        if (index == 0) {
+                        val pcm = pending.remove(index)?.await()
+                        enqueue(index + TTS_PREFETCH_AHEAD + 1)
+
+                        if (pcm == null || pcm.isEmpty()) {
+                            CortexLog.warn("ChatVM", "speakResponse", "TTS-Chunk übersprungen",
+                                mapOf("index" to index, "chunk_len" to chunk.length))
+                            return@forEachIndexed
+                        }
+
+                        if (!firstAudioLogged) {
                             CortexLog.info("ChatVM", "speakResponse", "TTS erster Ton bereit",
                                 mapOf("elapsed_ms" to (System.currentTimeMillis() - ttsStartedAt), "chunk_len" to chunk.length))
-                        }
-                        nextAudio = if (index < chunks.lastIndex) {
-                            async(Dispatchers.IO) { ApiClient.geminiTts(chunks[index + 1], voice) }
-                        } else {
-                            async(Dispatchers.IO) { ByteArray(0) }
+                            firstAudioLogged = true
                         }
                         pcmPlayer.playAndAwait(pcm, SettingsStore.ttsRate)
                     }
@@ -534,27 +558,98 @@ class ChatViewModel : ViewModel() {
         }
     }
 
-    private fun chunkText(text: String, maxLen: Int): List<String> {
-        val chunks = mutableListOf<String>()
-        var remaining = text.trim()
-        while (remaining.isNotEmpty()) {
-            if (remaining.length <= maxLen) {
-                chunks.add(remaining)
-                break
+    private suspend fun synthesizeTtsChunk(chunk: String, voice: String, index: Int): ByteArray? {
+        repeat(TTS_RETRY_ATTEMPTS) { attempt ->
+            try {
+                return ApiClient.geminiTts(chunk, voice)
+            } catch (e: CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                CortexLog.warn("ChatVM", "synthesizeTtsChunk", "TTS-Chunk fehlgeschlagen: ${e.message}",
+                    mapOf("index" to index, "attempt" to (attempt + 1), "chunk_len" to chunk.length))
+                if (attempt < TTS_RETRY_ATTEMPTS - 1) delay(300L * (attempt + 1))
             }
-            // Suche Satzgrenze (., !, ?) innerhalb der ersten maxLen Zeichen
-            val searchEnd = minOf(maxLen, remaining.length) - 1
-            val lastSentence = remaining.take(maxLen).indexOfLast { it in ".!?" }
-            val splitAt = if (lastSentence > maxLen / 2) lastSentence + 1 else searchEnd
-            // Falls kein Satzzeichen, suche Leerzeichen
-            val finalSplit = if (splitAt > maxLen / 2) splitAt
-            else remaining.take(maxLen).indexOfLast { it == ' ' }.let {
-                if (it > 0) it + 1 else maxLen
-            }
-            chunks.add(remaining.take(finalSplit).trim())
-            remaining = remaining.drop(finalSplit).trim()
         }
+        return null
+    }
+
+    private fun chunkText(text: String): List<String> {
+        val normalized = text
+            .replace("\r\n", "\n")
+            .replace("\r", "\n")
+            .replace(Regex("[ \t]+"), " ")
+            .trim()
+        if (normalized.isBlank()) return emptyList()
+
+        val units = normalized
+            .split(Regex("\n{2,}|\n"))
+            .map { it.trim() }
+            .filter { it.isNotBlank() }
+            .flatMap { splitParagraphForTts(it) }
+
+        val chunks = mutableListOf<String>()
+        var current = ""
+
+        fun flush() {
+            if (current.isNotBlank()) {
+                chunks.add(current.trim())
+                current = ""
+            }
+        }
+
+        units.forEach { unit ->
+            val target = if (chunks.isEmpty()) TTS_FAST_FIRST_CHARS else TTS_TARGET_CHARS
+            val candidate = if (current.isBlank()) unit else "$current\n\n$unit"
+            if (candidate.length <= target || (current.length < target / 2 && candidate.length <= TTS_MAX_CHARS)) {
+                current = candidate
+            } else {
+                flush()
+                current = unit
+            }
+        }
+        flush()
         return chunks
+    }
+
+    private fun splitParagraphForTts(paragraph: String): List<String> {
+        if (paragraph.length <= TTS_MAX_CHARS) return listOf(paragraph)
+        val sentences = paragraph.split(Regex("(?<=[.!?])\\s+")).filter { it.isNotBlank() }
+        val result = mutableListOf<String>()
+        var current = ""
+
+        fun flush() {
+            if (current.isNotBlank()) {
+                result.add(current.trim())
+                current = ""
+            }
+        }
+
+        sentences.forEach { sentence ->
+            if (sentence.length > TTS_MAX_CHARS) {
+                flush()
+                result += splitLongTextAtWords(sentence, TTS_MAX_CHARS)
+            } else {
+                val candidate = if (current.isBlank()) sentence else "$current $sentence"
+                if (candidate.length <= TTS_MAX_CHARS) current = candidate else {
+                    flush()
+                    current = sentence
+                }
+            }
+        }
+        flush()
+        return result
+    }
+
+    private fun splitLongTextAtWords(text: String, maxLen: Int): List<String> {
+        val result = mutableListOf<String>()
+        var remaining = text.trim()
+        while (remaining.length > maxLen) {
+            val splitAt = remaining.take(maxLen).indexOfLast { it == ' ' }.let { if (it > maxLen / 2) it else maxLen }
+            result.add(remaining.take(splitAt).trim())
+            remaining = remaining.drop(splitAt).trim()
+        }
+        if (remaining.isNotBlank()) result.add(remaining)
+        return result
     }
 }
 
