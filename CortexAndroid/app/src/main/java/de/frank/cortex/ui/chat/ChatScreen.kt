@@ -14,6 +14,7 @@ import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.text.BasicTextField
+import androidx.compose.foundation.text.selection.SelectionContainer
 import androidx.compose.ui.draw.scale
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -244,7 +245,7 @@ fun ChatScreen(vm: ChatViewModel = viewModel()) {
                     ChatBubble(
                         message = message,
                         isSpeaking = uiState.speakingMessageId == message.id,
-                        onSpeakClick = { vm.toggleMessageSpeech(message.id) },
+                        onSpeakClick = { vm.toggleMessageSpeech(message.id, message.text) },
                         onShareClick = { vm.prepareMessageShare(message.id) },
                         onOptionClick = vm::sendOption
                     )
@@ -458,13 +459,15 @@ private fun ChatBubble(
                 color = if (isDark) DarkUserBubble else LightUserBubble,
                 border = BorderStroke(1.dp, if (isDark) DarkUserBorder else LightUserBorder)
             ) {
-                Text(
-                    text = message.text,
-                    modifier = Modifier.padding(horizontal = 14.dp, vertical = 11.dp),
-                    fontSize = 14.5.sp,
-                    lineHeight = 21.7.sp,
-                    color = MaterialTheme.colorScheme.onSurface
-                )
+                SelectionContainer {
+                    Text(
+                        text = message.text,
+                        modifier = Modifier.padding(horizontal = 14.dp, vertical = 11.dp),
+                        fontSize = 14.5.sp,
+                        lineHeight = 21.7.sp,
+                        color = MaterialTheme.colorScheme.onSurface
+                    )
+                }
             }
         } else {
             Surface(
@@ -473,12 +476,14 @@ private fun ChatBubble(
                 border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline)
             ) {
                 Column(modifier = Modifier.padding(horizontal = 14.dp, vertical = 12.dp)) {
-                    Text(
-                        text = message.text,
-                        fontSize = 14.5.sp,
-                        lineHeight = 22.5.sp,
-                        color = MaterialTheme.colorScheme.onSurface
-                    )
+                    SelectionContainer {
+                        Text(
+                            text = message.text,
+                            fontSize = 14.5.sp,
+                            lineHeight = 22.5.sp,
+                            color = MaterialTheme.colorScheme.onSurface
+                        )
+                    }
                     Row(
                         modifier = Modifier.padding(top = 8.dp),
                         horizontalArrangement = Arrangement.spacedBy(12.dp),
