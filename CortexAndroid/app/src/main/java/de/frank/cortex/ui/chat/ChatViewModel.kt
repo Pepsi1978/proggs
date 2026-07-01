@@ -239,6 +239,7 @@ class ChatViewModel : ViewModel() {
         _uiState.update { it.copy(messages = it.messages + userMsg, isLoading = true, error = null) }
 
         viewModelScope.launch {
+            val sendStartedAt = System.currentTimeMillis()
             updateSessionsAfterPersist(sessionId, userMsg)
             try {
                 if (WireGuardManager.state.value != TunnelState.CONNECTED) {
@@ -264,7 +265,9 @@ class ChatViewModel : ViewModel() {
                     ctx = mapOf("text_length" to text.length)
                 )
 
+                val agentCallStartedAt = System.currentTimeMillis()
                 val response = ApiClient.agentApi().chat(request)
+                val agentElapsedMs = System.currentTimeMillis() - agentCallStartedAt
 
                 val agentMsg = ChatMessage(
                     text = response.reply,
@@ -293,6 +296,18 @@ class ChatViewModel : ViewModel() {
                     actual = "action=${response.action}",
                     ok = true,
                     ctx = mapOf("stored" to response.stored, "action" to response.action)
+                )
+                CortexLog.info(
+                    "ChatVM",
+                    "sendMessage",
+                    "Agent-Antwort erhalten",
+                    mapOf(
+                        "agent_elapsed_ms" to agentElapsedMs,
+                        "total_elapsed_ms" to (System.currentTimeMillis() - sendStartedAt),
+                        "request_chars" to text.length,
+                        "reply_chars" to response.reply.length,
+                        "recall_hits" to response.recall_hits
+                    )
                 )
 
                 // Auto-Vorlesen ist global; die Bubble-ID bleibt der manuellen Replay-Funktion vorbehalten.

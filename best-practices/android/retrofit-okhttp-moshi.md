@@ -46,6 +46,7 @@
 | 31 | SSE/Streaming | `readTimeout(0)` + Ping/Heartbeat; KEIN callTimeout | §6.3 |
 | 32 | Logging-Secrets | Debug→BODY/Release→NONE + `redactHeader("Authorization"/"Cookie")` | §6.4 |
 | 33 | Cert-Pinning | nur bewusst; IMMER Backup-Pin; `**.domain`; oder network_security_config | §6.5 |
+| 34 | Chat-/LLM-Hot-Path | Kein BODY-Logging im normalen Prompt-Pfad; Timing/Status/Größen statt Body | §4.4 |
 
 ---
 
@@ -221,6 +222,7 @@
 ### 4.4 `HttpLoggingInterceptor` als LETZTER Application-Interceptor, Level build-abhängig
 `offiziell`
 - Als letzter Application-Interceptor sieht das Logging den finalen Request (inkl. Auth-Header aus §4.2). Level `if (BuildConfig.DEBUG) BODY else NONE` + `redactHeader("Authorization")`/`redactHeader("Cookie")`. „interceptors are called in order."
+- Performance-Regel für Chat-/LLM-/große JSON-Hot-Paths: `BODY` nur temporär zur Diagnose. In der normalen Nutzung stattdessen `BASIC`/`NONE` plus schlanker Timing-Interceptor (`method`, `path`, `status`, `elapsed_ms`, Größen). So bleibt Observability erhalten, ohne Prompt-/Antwortinhalt synchron zu serialisieren und in Logcat/Datei zu schreiben.
 - **Quelle:** https://square.github.io/okhttp/4.x/logging-interceptor/okhttp3.logging/-http-logging-interceptor/
 
 ### 4.5 Interceptor-Reihenfolge ist semantisch

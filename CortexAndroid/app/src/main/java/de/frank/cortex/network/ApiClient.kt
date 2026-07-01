@@ -9,6 +9,7 @@ import kotlinx.coroutines.withContext
 import android.util.Base64
 import okhttp3.MediaType.Companion.toMediaType
 import okhttp3.MultipartBody
+import okhttp3.Interceptor
 import okhttp3.OkHttpClient
 import okhttp3.Request
 import okhttp3.Response
@@ -45,13 +46,38 @@ object ApiClient {
 
     private val moshiFactory = MoshiConverterFactory.create(moshi)
 
-    // --- Logging Interceptor (Best Practice §4.4: als LETZTER, Secrets redacted) ---
+    // --- Debug-Logging: keine Bodies auf dem Chat-Hot-Path loggen. ---
     private val loggingInterceptor = HttpLoggingInterceptor { message ->
         CortexLog.info("HTTP", "log", message)
     }.apply {
-        level = HttpLoggingInterceptor.Level.BODY
+        level = HttpLoggingInterceptor.Level.BASIC
         redactHeader("Authorization")
         redactHeader("x-goog-api-key")
+    }
+
+    private val timingInterceptor = Interceptor { chain ->
+        val request = chain.request()
+        val startedAt = System.nanoTime()
+        try {
+            val response = chain.proceed(request)
+            val elapsedMs = (System.nanoTime() - startedAt) / 1_000_000
+            CortexLog.info(
+                "HTTP",
+                "timing",
+                "${request.method} ${request.url.encodedPath} -> ${response.code}",
+                mapOf("elapsed_ms" to elapsedMs, "request_bytes" to (request.body?.contentLength() ?: 0L))
+            )
+            response
+        } catch (e: Exception) {
+            val elapsedMs = (System.nanoTime() - startedAt) / 1_000_000
+            CortexLog.warn(
+                "HTTP",
+                "timing",
+                "${request.method} ${request.url.encodedPath} fehlgeschlagen: ${e.message}",
+                mapOf("elapsed_ms" to elapsedMs)
+            )
+            throw e
+        }
     }
 
     // --- EIN OkHttpClient pro Backend (Best Practice §1.1) ---
@@ -65,6 +91,7 @@ object ApiClient {
                     .build()
                 chain.proceed(req)
             }
+            .addInterceptor(timingInterceptor)
             .addInterceptor(loggingInterceptor) // LETZTER Interceptor
             .callTimeout(120, TimeUnit.SECONDS)
             .connectTimeout(30, TimeUnit.SECONDS)
@@ -77,6 +104,7 @@ object ApiClient {
     // Dashboard: kein Auth
     private val dashboardClient: OkHttpClient by lazy {
         OkHttpClient.Builder()
+            .addInterceptor(timingInterceptor)
             .addInterceptor(loggingInterceptor)
             .callTimeout(30, TimeUnit.SECONDS)
             .connectTimeout(15, TimeUnit.SECONDS)
@@ -87,6 +115,7 @@ object ApiClient {
     // Externer Client für Groq/Gemini (ohne Auth-Interceptor, eigene Keys pro Request)
     private val externalClient: OkHttpClient by lazy {
         OkHttpClient.Builder()
+            .addInterceptor(timingInterceptor)
             .addInterceptor(loggingInterceptor)
             .callTimeout(120, TimeUnit.SECONDS)
             .connectTimeout(30, TimeUnit.SECONDS)
@@ -143,10 +172,14 @@ object ApiClient {
             .build()
     }
 
-    // --- Service-Interfaces (billig via Proxy) ---
-    fun agentApi(): AgentApi = agentRetrofit.create(AgentApi::class.java)
-    fun brainApi(): BrainApi = brainRetrofit.create(BrainApi::class.java)
-    fun dashboardApi(): DashboardApi = dashboardRetrofit.create(DashboardApi::class.java)
+    private val agentApi: AgentApi by lazy { agentRetrofit.create(AgentApi::class.java) }
+    private val brainApi: BrainApi by lazy { brainRetrofit.create(BrainApi::class.java) }
+    private val dashboardApi: DashboardApi by lazy { dashboardRetrofit.create(DashboardApi::class.java) }
+
+    // --- Service-Interfaces ---
+    fun agentApi(): AgentApi = agentApi
+    fun brainApi(): BrainApi = brainApi
+    fun dashboardApi(): DashboardApi = dashboardApi
 
     suspend fun codexStartDeviceAuth(): CodexAuthStartResponse {
         val body = """{"client_id":${JSONObject.quote(CODEX_CLIENT_ID)}}"""

@@ -57,6 +57,7 @@
 | 32 | `baseUrl must end in /` / Endpoint-404 | baseUrl mit `/` enden, Endpoints OHNE führenden `/` | A9 |
 | 33 | Tokens/PII in Logcat (Release) | `Level.NONE` in Release + `redactHeader("Authorization"/"Cookie")` | SEC1 |
 | 34 | App offline nach Server-Cert-Wechsel | Backup-Pin setzen (oder Intermediate pinnen) | SEC3 |
+| 35 | Chat/API-Antwort wirkt langsam trotz schnellem Server | `HttpLoggingInterceptor.Level.BODY` vom Hot Path nehmen; nur Timing/Status/Größen loggen | SEC4 |
 
 ---
 
@@ -587,7 +588,14 @@
 - **FIX:** IMMER ≥ 1 Backup-Pin (Reserve-Schlüssel oder Intermediate-CA). Eine Übereinstimmung in der Chain genügt. Alternative: Intermediate pinnen (rotiert seltener) oder `network_security_config.xml` mit `<pin-set>`.
 - **Quelle:** https://square.github.io/okhttp/5.x/okhttp/okhttp3/-certificate-pinner/index.html · https://developer.android.com/privacy-and-security/security-config
 
-### SEC4. Pin-Ablauf / Subdomain-Pattern (`*` vs `**`) / Leaf vs Intermediate / Cleartext
+### SEC4. `HttpLoggingInterceptor.Level.BODY` auf Chat-/LLM-Hot-Path → Antwort wird spät sichtbar
+- **Symptom:** Ein Prompt an einen Agenten/LLM fühlt sich in der App langsamer an, obwohl der Server antwortet; lange Prompts oder lange Antworten verschärfen es.
+- **Ursache:** `Level.BODY` serialisiert und loggt Request- und Response-Bodies synchron im OkHttp-Interceptor. Wenn der Logger zusätzlich nach Logcat und in eine Datei schreibt, entsteht genau vor/nach dem Netzcall String-/Allocation-/File-IO-Druck auf dem Antwortpfad.
+- **Versionen:** by-design bei OkHttp logging-interceptor 4.x/5.x; besonders sichtbar bei Mobile-Debug-Builds mit großen JSON-Bodies.
+- **FIX:** BODY-Logging nicht auf heißen Chat-/Streaming-/LLM-Pfaden verwenden. Stattdessen `BASIC`/`NONE` plus eigenen schlanken Timing-Interceptor loggen (`method`, `path`, `status`, `elapsed_ms`, Größen), keine Prompt-/Antwortinhalte. Falls Body-Debugging nötig ist: temporär, manuell, eng begrenzt und nie für normale Nutzung.
+- **Quelle:** CortexAndroid 2026-07-01: `ApiClient.authClient` loggte Agent-Chat mit `Level.BODY`; Fix: Level `BASIC` + Timing-Interceptor + gecachte Retrofit-Service-Proxies.
+
+### SEC5. Pin-Ablauf / Subdomain-Pattern (`*` vs `**`) / Leaf vs Intermediate / Cleartext
 - **Symptom:** `<pin-set expiration>` abgelaufen → Pinning still deaktiviert; `*.example.com` matcht NUR genau ein Präfix-Label (nicht `example.com`, nicht `a.b.example.com`); Leaf-Pin bricht bei jeder Cert-Erneuerung; `http://`-Downgrade umgeht Pinning ganz.
 - **Ursache:** Pattern-/Lebenszeit-/Layer-Fallen; Pinning schützt nur TLS.
 - **Versionen:** network_security_config ab API 24; Cleartext-Default-aus ab API 28.
