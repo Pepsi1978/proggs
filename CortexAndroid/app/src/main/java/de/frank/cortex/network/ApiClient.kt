@@ -407,31 +407,42 @@ object ApiClient {
         return GroqTranscriptionResponse(text = text, segments = segments)
     }
 
-    // --- Gemini TTS ---
+    // --- Google Cloud Text-to-Speech (Chirp 3: HD) ---
+    // Nutzt bewusst die DEDIZIERTE Cloud-TTS-API (texttospeech.googleapis.com), NICHT das
+    // Gemini-2.5-Flash-Preview-TTS-Modell. Grund (Frank 2026-07-01): Das Preview-Modell hat ein
+    // hartes Free-Tier-Tageslimit (~100 Anfragen/Tag -> staendige 429). Cloud Chirp 3: HD erlaubt
+    // 200 Anfragen PRO MINUTE pro Projekt (1 Mio Zeichen/Monat frei, danach ~30$/Mio). Gleiche
+    // Stimmen (Autonoe, Kore, ...), nur ueber den richtigen Endpunkt - wie in BestJournalFrank.
+    // Voraussetzung: "Cloud Text-to-Speech API" im Projekt des API-Keys aktiviert.
+    private const val CHIRP3_VOICE_PREFIX = "de-DE-Chirp3-HD-"
 
     suspend fun geminiTts(text: String, voice: String = SettingsStore.ttsVoice): ByteArray {
         val key = SettingsStore.geminiApiKey
         if (key.isBlank()) throw IllegalStateException("Gemini-Schlüssel fehlt")
         val startedAt = System.currentTimeMillis()
-        val body = """
-        {
-            "contents": [{"parts": [{"text": ${JSONObject.quote(text)}}]}],
-            "generationConfig": {
-                "responseModalities": ["AUDIO"],
-                "speechConfig": {
-                    "voiceConfig": {
-                        "prebuiltVoiceConfig": {
-                            "voiceName": ${JSONObject.quote(voice)}
-                        }
-                    }
-                }
-            }
-        }
-        """.trimIndent()
+
+        // Cortex speichert die Stimme als blossen Namen (z.B. "Autonoe"); Cloud TTS braucht den
+        // vollen Chirp3-HD-Namen "de-DE-Chirp3-HD-Autonoe" (Almanach tts-provider G9).
+        val fullVoiceName = if (voice.startsWith(CHIRP3_VOICE_PREFIX)) voice else "$CHIRP3_VOICE_PREFIX$voice"
+
+        // LINEAR16 @ 24 kHz -> WAV-Container (44-Byte-Header) + rohes PCM16 mono, exakt das
+        // Format, das der bestehende PcmPlayer erwartet. So bleibt die ganze Chunk-/Player-
+        // Pipeline unveraendert. Kein speaking_rate hier - das Tempo setzt PcmPlayer beim Abspielen.
+        val body = JSONObject().apply {
+            put("input", JSONObject().put("text", text))
+            put("voice", JSONObject().apply {
+                put("languageCode", "de-DE")
+                put("name", fullVoiceName)
+            })
+            put("audioConfig", JSONObject().apply {
+                put("audioEncoding", "LINEAR16")
+                put("sampleRateHertz", 24000)
+            })
+        }.toString()
 
         val request = Request.Builder()
-            .url("https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-tts:generateContent")
-            .header("x-goog-api-key", key)
+            .url("https://texttospeech.googleapis.com/v1/text:synthesize")
+            .header("x-goog-api-key", key) // sicherer als ?key= im Query (Almanach GA1)
             .post(body.toRequestBody(jsonMediaType))
             .build()
 
@@ -439,43 +450,30 @@ object ApiClient {
             if (response.code == 429) {
                 // Retry-After ist laut RFC entweder Sekunden oder ein HTTP-Datum — hier reicht Sekunden-Fall.
                 val retryAfterMs = response.header("Retry-After")?.toLongOrNull()?.times(1000)
-                val body = response.body?.string().orEmpty()
-                CortexLog.warn("Gemini", "tts", "429 Rate-Limit", mapOf(
+                val errBody = response.body?.string().orEmpty()
+                CortexLog.warn("CloudTts", "tts", "429 Rate-Limit", mapOf(
                     "text_len" to text.length, "retry_after_ms" to (retryAfterMs ?: -1L)
                 ))
-                throw GeminiRateLimitException("Gemini-TTS-Rate-Limit (429): $body", retryAfterMs)
+                throw GeminiRateLimitException("Cloud-TTS-Rate-Limit (429): $errBody", retryAfterMs)
             }
 
-            val responseBody = response.body?.string() ?: throw Exception("Leere Gemini-TTS-Antwort")
+            val responseBody = response.body?.string() ?: throw Exception("Leere Cloud-TTS-Antwort")
 
             if (!response.isSuccessful) {
-                throw Exception("Gemini-TTS-Fehler ${response.code}: $responseBody")
+                throw Exception("Cloud-TTS-Fehler ${response.code}: $responseBody")
             }
 
             val json = JSONObject(responseBody)
+            val audioContent = json.optString("audioContent", "")
+            if (audioContent.isBlank()) throw Exception("Keine Audio-Daten in Cloud-TTS-Antwort")
 
-            val candidate = json.optJSONArray("candidates")?.optJSONObject(0)
-            val finishReason = candidate?.optString("finishReason")
-            val blockReason = json.optJSONObject("promptFeedback")?.optString("blockReason").orEmpty()
-            if (blockReason.isNotBlank()) throw Exception("Gemini blockiert: $blockReason")
-            if (finishReason != "STOP" && finishReason != null) {
-                CortexLog.warn("Gemini", "tts", "Unerwarteter finishReason: $finishReason")
-            }
+            val raw = android.util.Base64.decode(audioContent, android.util.Base64.DEFAULT)
+            // LINEAR16-Antwort ist ein WAV mit 44-Byte-RIFF-Header -> abstreifen ergibt rohes PCM.
+            val pcm = if (raw.size > 44) raw.copyOfRange(44, raw.size) else raw
 
-            val audioInline = candidate
-                ?.getJSONObject("content")
-                ?.getJSONArray("parts")
-                ?.getJSONObject(0)
-                ?.getJSONObject("inlineData")
-                ?: throw Exception("Keine Audio-Daten in Gemini-TTS-Antwort")
-
-            val mimeType = audioInline.optString("mimeType", "")
-            val raw = android.util.Base64.decode(audioInline.getString("data"), android.util.Base64.DEFAULT)
-            val pcm = if (mimeType == "audio/wav" && raw.size > 44) raw.copyOfRange(44, raw.size) else raw
-
-            CortexLog.info("Gemini", "tts", "TTS-Audio erhalten", mapOf(
+            CortexLog.info("CloudTts", "tts", "TTS-Audio erhalten", mapOf(
                 "text_len" to text.length,
-                "mime" to mimeType,
+                "voice" to fullVoiceName,
                 "raw_bytes" to raw.size,
                 "pcm_bytes" to pcm.size,
                 "elapsed_ms" to (System.currentTimeMillis() - startedAt)
