@@ -10,6 +10,7 @@ import de.frank.cortex.data.model.*
 import de.frank.cortex.data.SettingsStore
 import de.frank.cortex.data.StoredChatMessage
 import de.frank.cortex.network.ApiClient
+import de.frank.cortex.network.GeminiRateLimitException
 import de.frank.cortex.observability.CortexLog
 import de.frank.cortex.vpn.TunnelState
 import de.frank.cortex.vpn.WireGuardManager
@@ -78,13 +79,18 @@ object ChatCommands {
 class ChatViewModel : ViewModel() {
 
     private companion object {
-        const val TTS_FIRST_TARGET_CHARS = 520
-        const val TTS_FIRST_MAX_UNITS = 2
-        const val TTS_TARGET_CHARS = 680
-        const val TTS_MAX_CHARS = 920
+        // 2026-07-01: TTS_FIRST_TARGET_CHARS war bei 220 (Bugfix #47325) bestaetigt "super" schnell.
+        // Ein spaeterer Umbau erhoehte ihn auf 520 - das machte den Start wieder spuerbar langsamer.
+        // Zurueckgesetzt auf den bewaehrten Wert samt der dazugehoerigen (grosszuegigeren) Merge-Regel.
+        const val TTS_FIRST_TARGET_CHARS = 220
+        const val TTS_TARGET_CHARS = 720
+        const val TTS_MAX_CHARS = 950
         const val TTS_PREFETCH_AHEAD = 2
         const val TTS_RETRY_ATTEMPTS = 2
         const val TTS_RETRY_SPLIT_MIN_CHARS = 260
+        // Default-Backoff wenn Gemini 429 ohne Retry-After-Header meldet.
+        const val TTS_RATE_LIMIT_DEFAULT_BACKOFF_MS = 2000L
+        const val TTS_RATE_LIMIT_MAX_BACKOFF_MS = 8000L
     }
 
     private val _uiState = MutableStateFlow(ChatUiState())
@@ -94,6 +100,14 @@ class ChatViewModel : ViewModel() {
     private val pcmPlayer = PcmPlayer()
     private var speakJob: Job? = null
     private var speechGeneration = 0
+
+    // Geteilter Rate-Limit-Zaun: sobald EIN Chunk ein 429 von Gemini-TTS bekommt, warten ALLE
+    // gerade laufenden/naechsten Chunk-Synthesen bis zu diesem Zeitpunkt - statt weiter parallel
+    // gegen die Bremse zu rennen. Root Cause fuer "Lautsprecher tut bei grossen/neuen Nachrichten
+    // teilweise nichts": viele parallele Chunks trafen die Rate-Limit-Wand gleichzeitig, und die
+    // (spaeter hinzugefuegte) Retry-Logik hat durch rekursives Aufsplitten sogar noch mehr
+    // Anfragen erzeugt statt zu bremsen.
+    @Volatile private var ttsRateLimitedUntil: Long = 0L
 
     init {
         // Vorlese-Schalter aus den Einstellungen uebernehmen, damit Chat-Icon + Auto-Vorlesen
@@ -557,6 +571,11 @@ class ChatViewModel : ViewModel() {
                 coroutineScope {
                     val pending = mutableMapOf<Int, Deferred<ByteArray?>>()
 
+                    // AudioTrack-Aufbau laeuft PARALLEL zur ersten TTS-Netzwerkanfrage statt
+                    // erst danach - die paar ms AudioTrack-Setup sind so "kostenlos", weil sie
+                    // sich mit dem viel laengeren Netzwerk-Roundtrip ueberlappen.
+                    val playerReady = async(Dispatchers.IO) { pcmPlayer.start(rate) }
+
                     fun enqueue(index: Int) {
                         if (index in chunks.indices && pending[index] == null) {
                             pending[index] = async(Dispatchers.IO) { synthesizeTtsChunk(chunks[index], voice, index) }
@@ -577,12 +596,13 @@ class ChatViewModel : ViewModel() {
                             return@forEachIndexed
                         }
 
+                        playerReady.await() // no-op sobald der Track laengst steht
                         if (!firstAudioLogged) {
                             CortexLog.info("ChatVM", "speakResponse", "TTS erster Ton bereit",
                                 mapOf("elapsed_ms" to (System.currentTimeMillis() - ttsStartedAt), "chunk_len" to chunk.length))
                             firstAudioLogged = true
                         }
-                        pcmPlayer.playAndAwait(pcm, rate)
+                        pcmPlayer.writeAndAwait(pcm)
                     }
                 }
                 CortexLog.info("ChatVM", "speakResponse", "TTS abgeschlossen",
@@ -608,11 +628,25 @@ class ChatViewModel : ViewModel() {
 
     private suspend fun synthesizeTtsChunk(chunk: String, voice: String, index: Int): ByteArray? {
         var lastError: String? = null
+        var wasRateLimited = false
         repeat(TTS_RETRY_ATTEMPTS) { attempt ->
+            // Geteilter Rate-Limit-Zaun: falls GERADE ein anderer Chunk ein 429 ausgeloest hat,
+            // erst abwarten statt sofort erneut gegen dieselbe Bremse zu laufen.
+            val waitMs = ttsRateLimitedUntil - System.currentTimeMillis()
+            if (waitMs > 0) delay(waitMs)
             try {
                 return ApiClient.geminiTts(chunk, voice)
             } catch (e: CancellationException) {
                 throw e
+            } catch (e: GeminiRateLimitException) {
+                wasRateLimited = true
+                lastError = e.message
+                val backoff = (e.retryAfterMs ?: TTS_RATE_LIMIT_DEFAULT_BACKOFF_MS)
+                    .coerceAtMost(TTS_RATE_LIMIT_MAX_BACKOFF_MS)
+                ttsRateLimitedUntil = maxOf(ttsRateLimitedUntil, System.currentTimeMillis() + backoff)
+                CortexLog.warn("ChatVM", "synthesizeTtsChunk", "TTS-Chunk rate-limited, warte ${backoff}ms",
+                    mapOf("index" to index, "attempt" to (attempt + 1), "chunk_len" to chunk.length))
+                delay(backoff)
             } catch (e: Exception) {
                 lastError = e.message
                 CortexLog.warn("ChatVM", "synthesizeTtsChunk", "TTS-Chunk fehlgeschlagen: ${e.message}",
@@ -621,7 +655,11 @@ class ChatViewModel : ViewModel() {
             }
         }
 
-        if (chunk.length > TTS_RETRY_SPLIT_MIN_CHARS) {
+        // Rate-Limit-Fehler NICHT rekursiv aufsplitten - das wuerde die Anfragenzahl genau dann
+        // erhoehen, wenn Gemini schon ueberlastet ist (Root Cause des alten "Lautsprecher tut bei
+        // grossen Nachrichten nichts"-Bugs). Nur bei echten Inhalts-/Format-Fehlern hilft ein
+        // kleineres Haeppchen.
+        if (!wasRateLimited && chunk.length > TTS_RETRY_SPLIT_MIN_CHARS) {
             val retryMax = maxOf(TTS_RETRY_SPLIT_MIN_CHARS, chunk.length / 2)
             val pieces = splitLongTextAtWords(chunk, retryMax)
             if (pieces.size > 1) {
@@ -654,29 +692,25 @@ class ChatViewModel : ViewModel() {
 
         val chunks = mutableListOf<String>()
         var current = ""
-        var currentUnitCount = 0
 
         fun flush() {
             if (current.isNotBlank()) {
                 chunks.add(current.trim())
                 current = ""
-                currentUnitCount = 0
             }
         }
 
+        // Bewaehrte, grosszuegige Merge-Regel aus Bugfix #47325: ein Absatz darf ueber "target"
+        // hinauswachsen, SOLANGE der bisherige Chunk noch klein ist (< target/2) - das haelt
+        // natuerliche Absaetze zusammen statt sie stur bei "target" Zeichen zu kappen.
         units.forEach { unit ->
-            val isFirstChunk = chunks.isEmpty()
-            val target = if (isFirstChunk) TTS_FIRST_TARGET_CHARS else TTS_TARGET_CHARS
-            val maxUnits = if (isFirstChunk) TTS_FIRST_MAX_UNITS else Int.MAX_VALUE
+            val target = if (chunks.isEmpty()) TTS_FIRST_TARGET_CHARS else TTS_TARGET_CHARS
             val candidate = if (current.isBlank()) unit else "$current\n\n$unit"
-            val candidateUnitCount = currentUnitCount + 1
-            if (candidate.length <= target && candidateUnitCount <= maxUnits) {
+            if (candidate.length <= target || (current.length < target / 2 && candidate.length <= TTS_MAX_CHARS)) {
                 current = candidate
-                currentUnitCount = candidateUnitCount
             } else {
                 flush()
                 current = unit
-                currentUnitCount = 1
             }
         }
         flush()

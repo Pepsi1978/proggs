@@ -24,6 +24,13 @@ import kotlin.coroutines.resume
 import kotlin.coroutines.resumeWithException
 import kotlinx.coroutines.suspendCancellableCoroutine
 
+/**
+ * 429 von Gemini-TTS. Eigener Typ statt generischer Exception, damit der Aufrufer
+ * (ChatViewModel) gezielt drosseln statt sofort blind weiter-haemmern kann.
+ * [retryAfterMs] kommt aus dem `Retry-After`-Header, falls Gemini ihn mitsendet.
+ */
+class GeminiRateLimitException(message: String, val retryAfterMs: Long?) : Exception(message)
+
 object ApiClient {
 
     private val jsonMediaType = "application/json; charset=utf-8".toMediaType()
@@ -396,6 +403,16 @@ object ApiClient {
             .build()
 
         executeCancellable(ttsClient, request).use { response ->
+            if (response.code == 429) {
+                // Retry-After ist laut RFC entweder Sekunden oder ein HTTP-Datum — hier reicht Sekunden-Fall.
+                val retryAfterMs = response.header("Retry-After")?.toLongOrNull()?.times(1000)
+                val body = response.body?.string().orEmpty()
+                CortexLog.warn("Gemini", "tts", "429 Rate-Limit", mapOf(
+                    "text_len" to text.length, "retry_after_ms" to (retryAfterMs ?: -1L)
+                ))
+                throw GeminiRateLimitException("Gemini-TTS-Rate-Limit (429): $body", retryAfterMs)
+            }
+
             val responseBody = response.body?.string() ?: throw Exception("Leere Gemini-TTS-Antwort")
 
             if (!response.isSuccessful) {
