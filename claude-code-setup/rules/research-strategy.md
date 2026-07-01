@@ -1,4 +1,4 @@
-# Recherche-Strategie: Token-sparend recherchieren (Firecrawl+MiniMax vs. Opus) — KRITISCH
+# Recherche-Strategie: Token-sparend recherchieren (Firecrawl+MiniMax vs. Sonnet-Schwarm) — KRITISCH
 
 > Dauerhafte Regel vom Benutzer gesetzt am 2026-06-20. Gilt AUTOMATISCH in JEDER Session, fuer
 > JEDE Web-Recherche und fuer ALLE Researcher/Skills, die im Web suchen (`research`-Skill,
@@ -7,9 +7,17 @@
 > `~/proggs/claude-code-setup/rules/research-strategy.md` (harness-mirror-Pflicht).
 >
 > Entstanden aus dem 3-Wege-Token-Test 2026-06-20: Firecrawl+MiniMax-M3-Pipeline verbraucht
-> **~100x weniger teure Claude/Opus-Token** als ein Opus-Researcher (~2.400 statt ~249.000), bei
-> gleicher oder besserer (ehrlicherer) Qualitaet. Ergaenzt [[research-persistence]] (Einarbeiten der
-> Ergebnisse) und nutzt die Pipeline `~/proggs/mm-research.py`.
+> **~100x weniger teure Claude-Token** als ein Opus-Researcher (~2.400 statt ~249.000, damaliger
+> Test), bei gleicher oder besserer (ehrlicherer) Qualitaet. Ergaenzt [[research-persistence]]
+> (Einarbeiten der Ergebnisse) und nutzt die Pipeline `~/proggs/mm-research.py`.
+>
+> **⚡ Update 2026-07-01 (Frank):** Am selben Tag ist **Sonnet 5** erschienen — mit **nativem
+> 1M-Kontext** (genau die Eigenschaft, die vorher nur Opus 4.8[1m] fuer den Eskalations-Schwarm
+> bot). Die dritte Eskalationsstufe (bisher "Opus-Schwarm") heisst ab sofort **Sonnet-5-Schwarm**:
+> Web-Researcher der Eskalationsstufe C laufen auf `model: "sonnet"` (loest aktuell zu Sonnet 5
+> auf) statt auf Opus, mit **Effort "high"** (Standard-Session-Effort, siehe §4a). Betrifft NUR
+> diese eine Eskalationsstufe — alle anderen Subagents (coder, tester, debugger, architect etc.)
+> bleiben unveraendert auf Opus[1m], siehe `~/.claude/rules/highest-model-everywhere.md`.
 
 ---
 
@@ -26,13 +34,13 @@ werden, WIE recherchiert wird** — niemals automatisch losrecherchieren.
 > Rechercheauftrag …). Die drei Schritte sind **Pflicht UND sichtbar**, in dieser Reihenfolge:
 > 1. **Empfehlung** (welcher Weg, 1 Satz Begründung).
 > 2. Die **4-Fragen-`AskUserQuestion`** — anklickbar: **A** Firecrawl+MiniMax · **B** Eskalation
->    OpenRouter `:online` · **C** Opus-Schwarm · **D** Freitext. **Diese 4 Fragen kommen IMMER, jedes Mal.**
+>    OpenRouter `:online` · **C** Sonnet-5-Schwarm · **D** Freitext. **Diese 4 Fragen kommen IMMER, jedes Mal.**
 > 3. Der **`research`-Skill** wird gestartet — mit beschrifteten, mitlesbaren Researchern
 >    (Continuous-Spawning, Live-Zwischenfazit). **Egal welcher Skill die Recherche braucht — der
 >    `research`-Skill wird IMMER mitgestartet, nie umgangen.**
 > 4. **Frage 2 (Eskalation) kommt NACH JEDER abgeschlossenen Firecrawl-Recherche (Engine A) — IMMER,
 >    automatisch.** Anklickbar fragen, ob noch ein Eskalations-Lauf gewuenscht ist (B = OpenRouter
->    `:online`, C = Opus-Schwarm, „nein, fertig", Freitext). **Diese Eskalations-Frage NIE weglassen.**
+>    `:online`, C = Sonnet-5-Schwarm, „nein, fertig", Freitext). **Diese Eskalations-Frage NIE weglassen.**
 >    (Frank, 2026-06-22, **2. Vorfall**: nach der Bug-Almanach-Firecrawl-Recherche fehlte Frage 2 —
 >    Frank haette gerne einen Eskalationslauf gehabt. Darf nie wieder fehlen.)
 >
@@ -63,7 +71,7 @@ empfohlene Option dann in der `AskUserQuestion` als **erste** Option mit `(Empfo
 | Grosser Wissensschatz / viele Unterthemen / breite Abdeckung | **A → dann B** (Firecrawl-Tiefe + parallele Breit-Eskalation) — oder direkt **B**, wenn Firecrawl-Credits knapp |
 | Aktualitaet ueber viele Quellen, Snippets reichen, kein Monatslimit-Risiko | **B** (or-research, pay-per-use) |
 | Firecrawl-Credits fast leer (Monatslimit nahe) | **B** statt A |
-| Hoechste Korrektheit / subtile Logik / Geld egal | **C** (Opus-Schwarm) — ggf. zusaetzlich zu A/B als Zweitmeinung |
+| Hoechste Korrektheit / subtile Logik / Geld egal | **C** (Sonnet-5-Schwarm) — ggf. zusaetzlich zu A/B als Zweitmeinung |
 | Unklar / erst besprechen | **D** (Freitext) |
 
 Die Empfehlung ist ein Vorschlag — Frank entscheidet final ueber die `AskUserQuestion`.
@@ -74,15 +82,17 @@ Die Empfehlung ist ein Vorschlag — Frank entscheidet final ueber die `AskUserQ
 |--------|-----|----------|--------|
 | **A** | **Firecrawl + MiniMax M3 (max Thinking)** — Standard, volle Seiten | `mm-research.py` | Firecrawl-Free-Credits (1000/Mon) |
 | **B** | **Eskalation: MiniMax M3 `:online` (max Thinking)** — OpenRouter-Websuche (web-Plugin) | `or-research.py … :online` | pay-per-use (~Cent), kein Monatslimit |
-| **C** | **Opus-Schwarm** — teuer, nur bewusst | bestehende Researcher | teure Claude-Token |
+| **C** | **Sonnet-5-Schwarm** — teuer, nur bewusst | bestehende Researcher, `model:"sonnet"` + Effort "high" | Claude-Sonnet-5-Token |
 | **D** | **[automatisches Freitext-Feld]** — etwas anderes / erst besprechen | — | — |
 
 - **A UND B laufen IMMER mit max Thinking** (Pflicht) — der Schalter ist aber ENDPUNKT-abhaengig:
   **A** (`mm-research.py`, Anthropic-`/messages`) → `thinking:{type:"enabled","budget_tokens":<hoch>}`
   (live-getestet; M3 denkt adaptiv bis zum Budget, `max_tokens` > Budget). **B** (`or-research.py`, OpenRouter)
   → `reasoning:{effort:high}`. `{type:"adaptive"}` gilt NUR fuer den OpenAI-`/chat/completions`-Pfad, NICHT fuer `/messages`.
-- **Option C (Opus-Schwarm) wird NUR genommen, wenn Frank sie ausdruecklich waehlt** — nie als Default,
-  nie „weil es gruendlicher ist". Sie ist eine gleichwertige 3. Option, aber bewusst teuer.
+- **Option C (Sonnet-5-Schwarm) wird NUR genommen, wenn Frank sie ausdruecklich waehlt** — nie als
+  Default, nie „weil es gruendlicher ist". Sie ist eine gleichwertige 3. Option, aber bewusst teuer.
+  Seit 2026-07-01 laeuft sie auf **Sonnet 5** (`model:"sonnet"`, natives 1M-Kontext) statt Opus —
+  siehe §4a fuer die genaue Modell-Mechanik.
 - Technik: `AskUserQuestion` liefert A/B/C als Buttons; die automatische „Other"/Freitext-Wahl deckt
   **D** ab (Freitext → etwas anderes machen oder erst besprechen).
 
@@ -95,7 +105,7 @@ Eskalations-Research?":
 |--------|-----------|
 | **A** | Ja — MiniMax M3 `:online` (max Thinking) als zusaetzliche Eskalation (`or-research.py … :online`) |
 | **B** | Nein, fertig |
-| **C** | Ja, mit Opus (teuer, nur bewusst) |
+| **C** | Ja, mit Sonnet-5-Schwarm (teuer, nur bewusst) |
 | **D** | [Freitext] |
 
 Frage 2 entfaellt, wenn schon Stufe B (Option B) oder C gewaehlt wurde — sie haengt spezifisch an der
@@ -120,17 +130,17 @@ Frank waehlt "Firecrawl + MiniMax":
   Stufe 2 — AUSWERTEN:  MiniMax M3 (max Thinking) filtert + bewertet quellentreu   ← mm-research.py
                             │ kompakte, quellentreue Antwort (~2k Token)
                             ▼
-  Stufe 3 — EINARBEITEN: Opus (Hauptagent) synthetisiert + arbeitet in Almanach/Best-Practices ein
+  Stufe 3 — EINARBEITEN: Der Hauptagent synthetisiert + arbeitet in Almanach/Best-Practices ein
                                                                         (Direktive [[research-persistence]])
 ```
 
 **Kerngedanke:** MiniMax macht die **token-schwere** Quellenarbeit (Rohdaten laufen NIE durch den teuren
-Opus-Kontext); Opus zahlt nur fuer die ~2k-Token-Synthese. Werkzeug: `python3 ~/proggs/mm-research.py
+Hauptagent-Kontext); der Hauptagent zahlt nur fuer die ~2k-Token-Synthese. Werkzeug: `python3 ~/proggs/mm-research.py
 "<frage>" [n]` (Firecrawl-Suche → MiniMax-M3-Auswertung; Rohdaten + Thinking landen in `~/.mm-research/`,
 nicht im Claude-Kontext). Mechanik/Fallen: `best-practices/opencode/go-recherche-modelle.md` §5,
 `bugs/opencode/opencode-cli.md` §14.
 
-**ZWEI Werkzeuge — beide lagern die Quellenarbeit aus dem Opus-Kontext aus:**
+**ZWEI Werkzeuge — beide lagern die Quellenarbeit aus dem teuren Hauptagent-Kontext aus:**
 
 | Werkzeug | Suche | Inhalt | Kosten | Parallelitaet | Wann |
 |----------|-------|--------|--------|---------------|------|
@@ -166,7 +176,7 @@ Endpunkt:** `/messages` (mm-research) = `{type:"enabled","budget_tokens":N}` (li
 Firecrawl Free erlaubt nur **2 gleichzeitige Requests** (+ 5 Suchen/Minute, 1.000 Credits/Monat —
 verifiziert 2026-06-20, docs.firecrawl.dev/rate-limits). Das aendert das Schwarm-Muster:
 
-| | Opus-Researcher-Schwarm (bisher) | Firecrawl + MiniMax (neu) |
+| | Sonnet-5-Researcher-Schwarm (Eskalation C) | Firecrawl + MiniMax (neu) |
 |---|----------------------------------|---------------------------|
 | Parallelitaet | bis **7** gleichzeitig (Continuous-Spawning) | **max 2** gleichzeitig |
 | Nachschub | sofort den naechsten starten | erst wenn 2 fertig → naechste 2 (Continuous-Spawning mit **2**) |
@@ -186,9 +196,9 @@ Das gilt fuer JEDE Engine, nicht nur Firecrawl:
 |--------|----------------------|-----------------|
 | A — Firecrawl (mm) | **2** (hartes Free-Limit) | einer fertig → sofort der naechste (nie auf beide warten) |
 | B — OpenRouter (or), `:online` | **7** (`:online` verteilt selbst auf mehrere Modell-Provider → last-stabil; A/B-Test 2026-06-21: 10 echt-parallel sauber. Das alte `web_search`-Tool zerlegte bei 7 → darum `:online`. Retry faengt Leak §42) | einer fertig → sofort der naechste |
-| C — Opus-Schwarm | **7** | einer fertig → sofort der 7. neu (nie auf alle 7 warten) |
+| C — Sonnet-5-Schwarm | **7** | einer fertig → sofort der 7. neu (nie auf alle 7 warten) |
 
-Beispiel Opus: laufen 7 und einer kommt zurueck → es sind nur noch 6 → sofort einen neuen starten,
+Beispiel Engine C: laufen 7 und einer kommt zurueck → es sind nur noch 6 → sofort einen neuen starten,
 damit wieder 7 laufen. Genauso bei OpenRouter `:online` (**7**) und Firecrawl (**2**). Diese Regel ist tief
 im Gesamtsystem verankert (auch `agent-and-researcher-rules.md`), nicht nur im `research`-Skill.
 
@@ -196,8 +206,8 @@ im Gesamtsystem verankert (auch `agent-and-researcher-rules.md`), nicht nur im `
 ueber `~/proggs/research-swarm.py`, das per `ThreadPoolExecutor(max_workers=N)` KONSTANT N parallel haelt und
 bei jedem fertigen Researcher SOFORT den naechsten aus der Queue zieht (Continuous-Spawning im CODE erzwungen,
 deterministisch; Limits hart: **A=2, B=7**, Ueberanforderung wird gedeckelt+gewarnt). So ist „nie in Wellen"
-nicht von Claudes Disziplin abhaengig. Nur Engine C (Opus, Agent-Tool) orchestriert der Hauptagent von Hand
-(Pattern im `research`-Skill: erst 7, bei jeder Completion sofort den naechsten).
+nicht von Claudes Disziplin abhaengig. Nur Engine C (Sonnet-5-Schwarm, Agent-Tool) orchestriert der
+Hauptagent von Hand (Pattern im `research`-Skill: erst 7, bei jeder Completion sofort den naechsten).
 
 ---
 
@@ -211,7 +221,7 @@ Stufe A:  MiniMax M3 (max Thinking) auf Firecrawl-Quellen          ← Standard 
    ↓ reicht nicht
 Stufe B:  MiniMax M3 :online (OpenRouter Go, web-Plugin)          ← or-research.py … :online; pay-per-use, bis 7 parallel
    ↓ reicht nicht
-Stufe C:  Opus-Researcher (mit Web) / Opus direkt                   ← teuerste Stufe, nur Hard-Cases
+Stufe C:  Sonnet-5-Schwarm (Agent-Tool, model:"sonnet")            ← teuerste Stufe, nur Hard-Cases
 ```
 
 **Stufe B = `or-research.py … :online`** (OpenRouter `:online`-Plugin): ein **1M-Kontext-Modell** mit eigener
@@ -221,6 +231,33 @@ Schwaermen). **Modell-Default:** `minimax/minimax-m3:online` (guenstig, A/B-gete
 **Eskalation:** `z-ai/glm-5.2:online` (mehr Denkkraft). `reasoning:high` ist im Werkzeug eingebaut — M3 denkt
 bei `:online` ohnehin (~900 Tok), das Setting aendert die Qualitaet kaum (A/B-getestet), bleibt aber konsistent
 mit der „A+B max Thinking"-Policy.
+
+---
+
+## 4a. Stufe C = Sonnet-5-Schwarm — Modell-Mechanik (seit 2026-07-01)
+
+**Was sich geaendert hat:** Bis 2026-06-30 lief Stufe C ueber `subagent_type:general-purpose`
+ohne explizites `model:` — die Researcher liefen automatisch auf Opus[1m], weil die globale
+Umgebungsvariable `CLAUDE_CODE_SUBAGENT_MODEL=opus[1m]` JEDEN Subagent zwang (unabhaengig vom
+`model:`-Parameter). Seit Sonnet 5 (erschienen 2026-06-30, natives 1M-Kontext) steht
+`CLAUDE_CODE_SUBAGENT_MODEL` auf `inherit` (normale Modell-Aufloesung statt Zwangs-Override,
+siehe `~/.claude/rules/highest-model-everywhere.md`). Deshalb ist bei Stufe-C-Spawns jetzt ein
+**explizites `model:`-Argument PFLICHT** — ohne es wuerden die Researcher auf das Session-Modell
+des Hauptagenten zurueckfallen, nicht zwingend auf Sonnet 5.
+
+**Pflicht-Parameter fuer JEDEN Stufe-C-Agent-Tool-Aufruf:**
+
+| Parameter | Wert | Warum |
+|-----------|------|-------|
+| `model` | `"sonnet"` | Alias, loest aktuell zu Sonnet 5 auf (`claude-sonnet-5`) — folgt automatisch dem jeweils neuesten Sonnet, genau wie `"opus"` bei anderen Agents dem neuesten Opus folgt |
+| Effort | **"high"** (Standard) | Kein eigener Effort-Parameter am Agent-Tool fuer Ad-hoc-`general-purpose`-Aufrufe — der Researcher erbt automatisch den globalen Session-Effort (`effortLevel: "high"` in `settings.json`, CLAUDE.md-Standard). Nichts zusaetzlich zu setzen, solange `effortLevel` global "high" bleibt |
+
+**Wichtig — Geltungsbereich:** Diese Umstellung betrifft AUSSCHLIESSLICH die Web-Research-
+Eskalationsstufe C (Engine C in diesem Dokument). Alle anderen Custom-Agents (architect, debugger,
+coder, tester, code-reviewer, optimizer, ui-polisher, batch-reviewer, der `researcher`-Agent
+selbst fuer Stufe A/B-Vorarbeiten, etc.) pinnen jetzt explizit `model: opus[1m]` in ihrem eigenen
+Frontmatter (statt sich auf die globale Umgebungsvariable zu verlassen) — fuer sie aendert sich
+dadurch nichts.
 
 ---
 
@@ -262,10 +299,10 @@ Frage 2 bleiben Pflicht und laufen VOR der Delegation (Policy-Schicht).
 
 ## 6. Was NIEMALS passieren darf
 
-- ❌ Eine Firecrawl-/Crawl-Recherche starten, OHNE Frank vorher zu fragen (Firecrawl/MiniMax vs. Opus)
+- ❌ Eine Firecrawl-/Crawl-Recherche starten, OHNE Frank vorher zu fragen (Firecrawl/MiniMax vs. Sonnet-5-Schwarm)
 - ❌ Mehr als **2** Firecrawl-Researcher gleichzeitig starten (Free-Limit; Rate-Limit/Credit-Verschwendung)
 - ❌ Auf eine ganze Welle warten, statt sofort beim Fertigwerden eines Researchers den naechsten zu spawnen (Continuous-Spawning, §3a — Zeitverlust ist die haeufigste Schwarm-Suende)
-- ❌ Firecrawl-Rohdaten (gecrawlte Seiten) ungefiltert in den teuren Opus-Kontext laden — immer erst MiniMax
+- ❌ Firecrawl-Rohdaten (gecrawlte Seiten) ungefiltert in den teuren Hauptagent-Kontext laden — immer erst MiniMax
 - ❌ Bei einem unsicheren MiniMax-Ergebnis stillschweigend halluzinieren statt zu eskalieren
 - ❌ Test-Crawls „zum Ausprobieren" ohne Franks Freigabe (Credits sind knapp)
 - ❌ Die mittlere Eskalations-Stufe (Stufe B) mit einem ungetesteten Modell „raten" — erst testen, dann verankern
@@ -276,11 +313,12 @@ Frage 2 bleiben Pflicht und laufen VOR der Delegation (Policy-Schicht).
 
 | Regel/System | Bezug |
 |--------------|-------|
-| [[research-persistence]] | Stufe 3 (Opus arbeitet die Ergebnisse in best-practices/ + bugs/ ein) ist genau die Persistenz-Pflicht |
+| [[research-persistence]] | Stufe 3 (Hauptagent arbeitet die Ergebnisse in best-practices/ + bugs/ ein) ist genau die Persistenz-Pflicht |
 | `mm-research.py` | Das Werkzeug fuer Stufe 1+2 (Firecrawl → MiniMax M3 max Thinking) |
 | `best-practices/opencode/go-recherche-modelle.md` | Modell-Begruendung (warum MiniMax M3) + API-Mechanik |
 | `bugs/apis/firecrawl.md` | Firecrawl-Limits/Fallen (Free: 1000/Monat, 2 concurrent, 5 search/min) |
-| `agent-and-researcher-rules.md` | Schwarm-Regeln (7 fuer Opus); diese Regel setzt fuer Firecrawl 2 dagegen |
+| `agent-and-researcher-rules.md` | Schwarm-Regeln (7 fuer den Sonnet-5-Schwarm); diese Regel setzt fuer Firecrawl 2 dagegen |
+| `~/.claude/rules/highest-model-everywhere.md` | Der globale Modell-Mechanismus (env=inherit + Pro-Agent-Pinning), der §4a erst ermoeglicht |
 
 ---
 

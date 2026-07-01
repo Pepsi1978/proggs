@@ -77,7 +77,7 @@ Start: so viele gleichzeitig wie die Engine erlaubt
 
 | Engine | Konstant gleichzeitig | Quelle |
 |--------|----------------------|--------|
-| Opus-Schwarm | **7** (5 sicher, 7 ok empirisch, ~12 → Abstuerze) | diese Regel |
+| Sonnet-5-Schwarm (Research-Eskalation C, `model:"sonnet"`) | **7** (5 sicher, 7 ok empirisch, ~12 → Abstuerze) | diese Regel |
 | OpenRouter (`or-research.py`, Such-Engine `parallel`) | **2** (empirisch 2026-06-21: mehr → kaputte Laeufe durch Last/Provider-Routing) | `research-strategy.md` §3a |
 | Firecrawl (`mm-research.py`) | **2** (hartes Free-Limit) | `research-strategy.md` §3 |
 

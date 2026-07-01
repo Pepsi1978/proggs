@@ -119,9 +119,9 @@ bis Frank A/B gewaehlt UND `touch "$TEMP/research-approved.flag"` gesetzt hat):
   die `gh`-Fix-Status-Pruefung weiterhin selbst.
 - **B (Eskalation): MiniMax + parallel (max Thinking)** → `python3 ~/proggs/or-research.py "<frage>"`
   (kein 2-Limit, hoehere Parallelitaet, pay-per-use, kein Monatslimit).
-- **C (Opus-Schwarm):** NUR auf explizite Wahl → die folgenden 7-parallel-Regeln.
+- **C (Sonnet-5-Schwarm):** NUR auf explizite Wahl → die folgenden 7-parallel-Regeln.
 
-**[Option C — Opus-Schwarm] Direkt 7 Researcher GLEICHZEITIG starten, dann CONTINUOUS-SPAWNING** (Frank 2026-06-02 + 2026-06-03):
+**[Option C — Sonnet-5-Schwarm] Direkt 7 Researcher GLEICHZEITIG starten, dann CONTINUOUS-SPAWNING** (Frank 2026-06-02 + 2026-06-03):
 Bei genug Teilbereichen IMMER mit **7 auf einmal** beginnen (in EINEM Antwortblock) — NICHT erst 4 und
 danach nochmal 3 (das ist Zeitverschwendung). 7 gleichzeitig funktionieren einwandfrei.
 Gibt es MEHR als 7 Themen, dann gilt Continuous-Spawning: sobald EINER fertig wird (es laufen also nur
@@ -152,14 +152,16 @@ Unterthemen als 3 grobe — die Findings werden vollstaendiger und nichts wird g
 
 **Pflicht-Limits pro Researcher** (gegen *Haengen*, siehe `agent-and-researcher-rules.md`
 + `subagent-crash-proofing.md`): max 15 Web-Fetches, max 10 Min. **KEIN kuenstliches
-Eintrags-Cap** — ALLE gefundenen Bugs dokumentieren. (Mit Opus 4.8 / 1M-Kontext gibt es
-kein Absturzrisiko mehr; ein hartes Cap, das echte Funde wegwirft, waere *lossy* und damit
+Eintrags-Cap** — ALLE gefundenen Bugs dokumentieren. (Mit 1M-Kontext gibt es kein
+Absturzrisiko mehr; ein hartes Cap, das echte Funde wegwirft, waere *lossy* und damit
 verboten — siehe `lossless-context-principle.md`. Frank-Korrektur 2026-06-02: "wenn mehr
 Bugs gefunden, dann auch alle dokumentieren".) Findet ein Researcher sehr viele Bugs, bleibt
 er trotzdem vollstaendig: bei Bedarf die Vollliste verlustfrei in eine Datei schreiben
 (File-as-Memory) und dem Hauptagenten eine kompakte Zusammenfassung + Dateipfad zurueckgeben,
-statt zu kappen. Subagenten laufen auf dem hoechsten Opus-Modell (Modell-Policy) —
-`opts.model` nicht setzen. Pro Bug zurueckgeben: **Titel · Symptom · Ursache · Loesung
+statt zu kappen. **Seit 2026-07-01 PFLICHT: `model:"sonnet"` explizit pro Agent-Tool-Aufruf
+setzen** (loest zu Sonnet 5 auf, natives 1M-Kontext) — die globale Opus-Zwangs-Umgebungsvariable
+wurde durch explizites Pinning ersetzt, siehe `research-strategy.md` §4a. Effort bleibt "high"
+(Session-Standard, kein Extra-Parameter noetig). Pro Bug zurueckgeben: **Titel · Symptom · Ursache · Loesung
 (funktionserhaltend!) · betroffene Versionen · Quelle (URL)**.
 
 ### Schritt 3 — Fix-Status-Recherche (was ist schon gefixt?)

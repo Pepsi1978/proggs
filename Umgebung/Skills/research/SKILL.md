@@ -14,7 +14,7 @@ ihre Recherche-Arbeit konsistent und vollstaendig laeuft — ohne dass das "WIE"
 **Policy-Schicht (bleibt getrennt):** Die Regel `~/.claude/rules/research-strategy.md` entscheidet
 das OB/WOMIT (Empfehlung + Frage 1 A/B/C/D + Eskalations-Frage 2 + Kostenkontrolle). Dieser Skill
 ist die Orchestrierungs-Schicht (das WIE). Die Ausfuehrungs-Schicht sind die Skripte
-`mm-research.py` / `or-research.py` bzw. der Opus-Schwarm.
+`mm-research.py` / `or-research.py` bzw. der Sonnet-5-Schwarm.
 
 ---
 
@@ -67,7 +67,7 @@ aufrufender Skill delegiert, fuellt er diese Felder; fehlt eines, hier ERFRAGEN 
 | `zerlegungs_modus` | `feste_liste` \| `selbst_generierend` \| `iterativ_wellen` | ja |
 | `unterthemen[]` | exakte Teilbereiche, **je 2-3 Saetze praezise** beschrieben (das Herz gegen Verlust). Bei `selbst_generierend`/`iterativ_wellen` ganz/teilweise leer + Generierungs-Auftrag | ja* |
 | `version_anker` | LIVE-Softwareversion(en) + Verweis auf bestehenden Stand | bei bug/best_practice PFLICHT |
-| `engine` | `A` (mm/Firecrawl) · `B` (or/OpenRouter `:online`) · `C` (Opus-Schwarm) — aus Frage 1 | ja |
+| `engine` | `A` (mm/Firecrawl) · `B` (or/OpenRouter `:online`) · `C` (Sonnet-5-Schwarm) — aus Frage 1 | ja |
 | `anzahl` · `wellen` · `cap` | Researcher-Zahl, Wellen, Eintrags-Cap (Default **kein Cap**) | ja |
 | `rueckgabe_schema` | welches Output-Format (siehe `references/rueckgabe-schemata.md`) | ja |
 | `persistenz_ziel` | Zielpfad(e), wohin der Aufrufer das Ergebnis einarbeitet | ja |
@@ -116,7 +116,7 @@ konstant so viele gleichzeitig, wie die Engine erlaubt. Kein Wellen-Barrier, kei
 |--------|------------------|--------|
 | A — Firecrawl (mm) | **2** (hartes Free-Limit) | `mm-research.py` |
 | B — OpenRouter (or), `:online` | **7** (`:online` verteilt selbst auf mehrere Modell-Provider → last-stabil; A/B-Test 2026-06-21: 10 echt-parallel sauber. Der intermittente JSON-Tool-Call-Leak §42 wird vom `or-research.py`-Retry gefangen) | `or-research.py … minimax/minimax-m3:online` |
-| C — Opus-Schwarm | **7** | Agent-Tool, `subagent_type:general-purpose` + Prompt |
+| C — Sonnet-5-Schwarm | **7** | Agent-Tool, `subagent_type:general-purpose` + Prompt, **`model:"sonnet"`** (PFLICHT-Parameter, s.u.) |
 
 Praktische Umsetzung — **Continuous-Spawning ist PFLICHT (Zeit nicht verschwenden):** sobald EIN
 Researcher fertig ist, startet SOFORT der naechste, sodass konstant das Engine-Limit gleichzeitig laeuft.
@@ -144,13 +144,21 @@ LLM-/Agent-Reste statt der Windows-SMB-Themen). Der Cleanup fasst NUR die eigene
 Input-Datei `themen.txt` oder fremde Reste anderer Skills (`bp/`, `esc/`, `qdrant/` …). Kein manuelles
 Aufraeumen noetig; fuer Crash-Resume einmalig `RESEARCH_SWARM_RESUME=1` setzen (dann KEIN Cleanup, SKIP-Logik aktiv).
 
-**Engine C (Opus) — NICHT skriptbar (Agent-Tool-Aufrufe macht der Hauptagent), darum Pattern PFLICHT:**
+**Engine C (Sonnet-5-Schwarm) — NICHT skriptbar (Agent-Tool-Aufrufe macht der Hauptagent), darum Pattern PFLICHT:**
 Continuous-Spawning HIER von Hand, aber genauso strikt: **erst 7 Agent-Tool-Aufrufe gleichzeitig**
-(`subagent_type:general-purpose` + Prompt); **sobald EINE Completion-Notification kommt, im selben Zug den
-naechsten wartenden Researcher spawnen** → wieder 7 laufend. NIE auf alle 7 warten (Wellen-Barrier =
-Zeitverlust). Jeder Researcher schreibt sein Ergebnis in eine eigene Datei + gibt nur eine Kurz-Summary
-zurueck (kontextschonend, crash-sicher nach `subagent-crash-proofing`).
+(`subagent_type:general-purpose` + Prompt + **`model:"sonnet"`**); **sobald EINE Completion-Notification
+kommt, im selben Zug den naechsten wartenden Researcher spawnen** → wieder 7 laufend. NIE auf alle 7
+warten (Wellen-Barrier = Zeitverlust). Jeder Researcher schreibt sein Ergebnis in eine eigene Datei +
+gibt nur eine Kurz-Summary zurueck (kontextschonend, crash-sicher nach `subagent-crash-proofing`).
 > laufen 7, einer kommt zurueck → nur noch 6 → SOFORT den 8. spawnen (wieder 7) → … bis alle durch.
+
+**⚡ PFLICHT seit 2026-07-01 — `model:"sonnet"` explizit setzen:** `CLAUDE_CODE_SUBAGENT_MODEL` steht
+seit der Sonnet-5-Umstellung auf `inherit` (nicht mehr `opus[1m]`) — ohne den expliziten `model`-Parameter
+wuerden die Researcher auf ein unbestimmtes Fallback-Modell laufen statt auf Sonnet 5. **Jeder** Engine-C-
+Agent-Tool-Aufruf bekommt daher `model:"sonnet"` (Alias, loest zu Sonnet 5 auf, natives 1M-Kontext).
+Effort bleibt "high" — kein Effort-Parameter am Agent-Tool fuer Ad-hoc-`general-purpose`-Aufrufe noetig,
+das ist bereits der globale Session-Standard (`effortLevel: "high"`). Details/Begruendung:
+`~/.claude/rules/research-strategy.md` §4a.
 
 **Live-Darstellung — jeder Researcher beschriftet mit Engine/Modus + Thema:**
 
@@ -214,7 +222,7 @@ Eskalation gemaess Policy-Regel anbieten (Frage 2). Stufen:
 ```
 A: MiniMax M3 auf Firecrawl-Quellen (mm)         → Standard, Free-Credits
 B: MiniMax M3 :online (or, OpenRouter Go)          → pay-per-use, bis 7 parallel (last-stabil + Retry)
-C: Opus-Schwarm                                    → teuer, nur bewusst gewaehlt
+C: Sonnet-5-Schwarm                                → teuer, nur bewusst gewaehlt
 ```
 
 Nach JEDER Stufe wieder dieselbe ruhige Auswertung (Schritt 5) → der Benutzer entscheidet ueber
@@ -280,7 +288,8 @@ die Hook-Registrierung der verbindliche Abschluss der gesamten Recherche→Persi
   selbst auf mehrere Modell-Provider → last-stabil, A/B-Test 2026-06-21: 10 echt-parallel sauber;
   `or-research.py`-Retry faengt den intermittenten Leak §42), pay-per-use, kein Monatslimit. Modell
   `minimax/minimax-m3:online` — KEINE explizite Such-Engine angeben. Eskalation: `z-ai/glm-5.2:online`.
-- **C (Opus-Schwarm):** nur wenn Frank es ausdruecklich waehlt (teuer); 7 parallel, Continuous-Spawning.
+- **C (Sonnet-5-Schwarm):** nur wenn Frank es ausdruecklich waehlt (teuer); 7 parallel, Continuous-Spawning,
+  `model:"sonnet"` PFLICHT pro Aufruf (Details §4a in `research-strategy.md`).
 
 ---
 

@@ -237,10 +237,14 @@ Zustand den der Benutzer verlieren kann. Commits sind Rettungspunkte — je mehr
 
 ## Parallelisierung & Agenten-Schwarm (KRITISCH)
 
-> **Modell-Policy (2026-06-01):** Alle Subagents/Worker/Researcher laufen IMMER auf dem
-> hoechsten Opus mit groesstem Kontextfenster (`opus[1m]`), NIE Sonnet/Haiku. Gesteuert ueber
-> `CLAUDE_CODE_SUBAGENT_MODEL` (ueberschreibt jedes Agent-Frontmatter, auch fremde Plugins).
-> self-improve/ACE duerfen den Wert NIE von Opus wegaendern. Voll: `~/.claude/rules/highest-model-everywhere.md`.
+> **Modell-Policy (2026-06-01, Mechanismus umgebaut 2026-07-01):** Alle Subagents/Worker/Researcher
+> laufen IMMER auf dem hoechsten Opus mit groesstem Kontextfenster (`opus[1m]`), NIE Sonnet/Haiku —
+> **mit EINER Ausnahme:** die Web-Research-Eskalationsstufe C (Sonnet-5-Schwarm) laeuft bewusst auf
+> Sonnet 5 (natives 1M-Kontext), siehe `research-strategy.md` §4a. `CLAUDE_CODE_SUBAGENT_MODEL`
+> steht seit 2026-07-01 auf `inherit`; jeder der 32 eigenen Custom-Agents pinnt `model: opus[1m]`
+> explizit in seinem Frontmatter — fuer sie aendert sich dadurch nichts. self-improve/ACE duerfen
+> weder die Agent-Pins noch die eine Sonnet-5-Ausnahme rueckgaengig machen. Voll:
+> `~/.claude/rules/highest-model-everywhere.md`.
 
 ### Grundregel: Immer parallel, nie sequentiell
 - Wenn 2+ Aufgaben unabhaengig sind: SOFORT parallel starten — nie eine nach der anderen.
@@ -286,7 +290,8 @@ Richtiges Modell fuer die richtige Aufgabe — alle Subagents laufen auf Opus 4.
 | Bulk-Reviews | `batch-reviewer` | **Opus 4.8 (1M)** | Viele Dateien pruefen |
 | Tests schreiben | `tester` | Opus | Qualitaet bei Tests wichtig |
 | Recherche | `researcher` | **Opus 4.8 (1M)** | Web-Lookup |
-| Alle Subagents/Worker | Explore/Plan/coder/researcher/etc. | **Opus 4.8 (1M)** | Via CLAUDE_CODE_SUBAGENT_MODEL (ueberschreibt Frontmatter) |
+| Alle Subagents/Worker | Explore/Plan/coder/researcher/etc. | **Opus 4.8 (1M)** | Via `model: opus[1m]` im eigenen Agent-Frontmatter (Details: `highest-model-everywhere.md`) |
+| Web-Research-Eskalation C | `research`-Skill Engine C (Sonnet-5-Schwarm) | **Sonnet 5 (1M), Effort High** | Explizit `model:"sonnet"` pro Agent-Tool-Aufruf (einzige Ausnahme, s. `research-strategy.md` §4a) |
 
 **Faustregel**: 3-5 `coder`-Agents fuer parallele Implementation spawnen, dann 1 `code-reviewer` (Opus) fuer die Qualitaetskontrolle.
 

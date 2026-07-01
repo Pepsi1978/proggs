@@ -21,7 +21,7 @@ invocation: user
 > - **zweck:** direktive · **rueckgabe_schema:** `direktive` · **zerlegungs_modus:** `feste_liste`
 > - **unterthemen[]:** die 3 Direktiven-Themen mit je einer 500-Wort-Zusammenfassung des Ist-Zustands (je 2-3 Saetze praezise — werden 1:1 an die Researcher gereicht)
 > - **version_anker:** —
-> - **engine:** C (Opus-Schwarm) · **anzahl/wellen/cap:** 5 Researcher, Continuous-Spawning
+> - **engine:** C (Sonnet-5-Schwarm, `model:"sonnet"`) · **anzahl/wellen/cap:** 5 Researcher, Continuous-Spawning
 > - **persistenz_ziel:** `DIREKTIVEN-RECHERCHE-[DATUM].md` · **dup_quelle:** Ist-Zustand der Direktiven (nur NEUE/verbesserbare Vorschlaege)
 > - **nacharbeit_aufrufer:** KEINE Aenderung an geschuetzten Direktiven-Regeln ohne Franks Freigabe (ACE-Zone)
 > Der research-Skill uebernimmt sichtbare beschriftete Researcher + Continuous-Spawning + Zwischenfazit

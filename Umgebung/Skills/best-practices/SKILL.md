@@ -122,7 +122,7 @@ startet mit einer kurzen Ueberschrift; Eintraege kommen erst beim Recherchieren 
      Auswertung; der Hauptagent arbeitet sie in die Kategorie-Dateien ein (Stufe 3 / `research-persistence`).
    - **B (Eskalation): MiniMax + parallel (max Thinking)** → `python3 ~/proggs/or-research.py "<frage>"`
      (kein 2-Limit, hoehere Parallelitaet, pay-per-use, kein Monatslimit).
-   - **C (Opus-Schwarm):** NUR auf explizite Wahl → die **Researcher-Regeln** unten (7 parallel, Continuous-Spawning).
+   - **C (Sonnet-5-Schwarm):** NUR auf explizite Wahl → die **Researcher-Regeln** unten (7 parallel, Continuous-Spawning).
    - Der `research-approval`-Hook blockt mm/or-research, bis Frank A/B gewaehlt UND die Freigabe gesetzt ist
      (`touch "$TEMP/research-approved.flag"`).
    Jeder Researcher/Lauf bearbeitet einen klar begrenzten Bereich und recherchiert pro Kategorie:
@@ -258,12 +258,13 @@ Jetzt fuettern sich beide Speicher gegenseitig (Compound Intelligence, Direktive
 
 ## Researcher-Regeln (KRITISCH — Absturz-Schutz)
 
-> **Gilt fuer Option C (Opus-Schwarm)** aus Schritt 4. Standard ist A/B (Token-sparende
+> **Gilt fuer Option C (Sonnet-5-Schwarm)** aus Schritt 4. Standard ist A/B (Token-sparende
 > `mm-research.py`/`or-research.py`-Skripte, Regel `research-strategy.md`); die folgenden Regeln
-> greifen, wenn Frank den Opus-Schwarm ausdruecklich waehlt — oder fuer den Changelog-Verbatim-Download
+> greifen, wenn Frank den Sonnet-5-Schwarm ausdruecklich waehlt — oder fuer den Changelog-Verbatim-Download
 > (der NIE ueber einen Researcher laeuft, siehe Changelog-Archiv-Abschnitt).
 
-- **Modell:** Claude Opus 4.8 (1M). **Effort:** X-High.
+- **Modell:** Sonnet 5 (`model:"sonnet"`, seit 2026-07-01 statt Opus 4.8 — natives 1M-Kontext, siehe
+  `research-strategy.md` §4a). **Effort:** High (Standard-Session-Effort — NICHT X-High, Frank-Korrektur 2026-07-01).
 - **Direkt 7 Researcher GLEICHZEITIG starten, dann CONTINUOUS-SPAWNING (Frank 2026-06-02 + 2026-06-03):**
   Bei genug Themen IMMER mit **7 auf einmal** beginnen — NICHT erst 4 und danach nochmal 3 (Zeitverschwendung).
   7 gleichzeitig funktionieren einwandfrei. Gibt es MEHR als 7 Themen: sobald EINER fertig wird (nur noch 6
@@ -275,10 +276,10 @@ Jetzt fuettern sich beide Speicher gegenseitig (Compound Intelligence, Direktive
 - **Warum die Obergrenze NICHT vom Kontextfenster kommt (wichtig):** Web-Researcher sind
   ANFRAGE-DICHT (2–3 Tool-Runden/Turn → 100+ RPM bei 5 Stueck). Zu viele gleichzeitig sprengen das
   Anfrage-Raten-Limit (RPM) bzw. den Server-Burst-Schutz ("server is temporarily limiting requests ·
-  not your usage limit"). Das ist UNABHAENGIG vom 1M-Kontextfenster — Opus 4.8 / 1M loest den
-  *Kontext*-Crash (→ kein Findings-Cap mehr, siehe unten), aber NICHT den *RPM*-Crash. Darum bleibt
-  ~7 die Obergrenze + 429-Backoff. (Anfrage-SPARSE Agenten wie Uebersetzer vertragen 15–20, weil sie
-  ueberwiegend lokal arbeiten.)
+  not your usage limit"). Das ist UNABHAENGIG vom 1M-Kontextfenster — das 1M-Kontext (Opus 4.8[1m]
+  bzw. Sonnet 5, das nativ 1M hat) loest den *Kontext*-Crash (→ kein Findings-Cap mehr, siehe unten),
+  aber NICHT den *RPM*-Crash. Darum bleibt ~7 die Obergrenze + 429-Backoff. (Anfrage-SPARSE Agenten
+  wie Uebersetzer vertragen 15–20, weil sie ueberwiegend lokal arbeiten.)
 - **KEIN Findings-/Ergebnis-Cap (Frank-Korrektur 2026-06-02):** ALLE gefundenen Best-Practices/Bugs
   dokumentieren — kein kuenstliches "max 50". Mit 1M-Kontext ist die Menge kein Absturzrisiko mehr;
   ein hartes Cap waere *lossy* (siehe `lossless-context-principle.md`). Bei sehr vielen Funden
