@@ -52,9 +52,11 @@ data class ChatUiState(
     val isRecording: Boolean = false,
     val isTranscribing: Boolean = false,
     val isSpeaking: Boolean = false,
+    val speakingMessageId: String? = null,
     val isImproving: Boolean = false,
     val isGeneratingTitle: Boolean = false,
-    val contextMode: String = SettingsStore.CONTEXT_MODE_AUTO
+    val contextMode: String = SettingsStore.CONTEXT_MODE_AUTO,
+    val responseSize: String = SettingsStore.RESPONSE_SIZE_MEDIUM
 )
 
 object ChatCommands {
@@ -76,9 +78,9 @@ object ChatCommands {
 class ChatViewModel : ViewModel() {
 
     private companion object {
-        const val TTS_FAST_FIRST_CHARS = 220
+        const val TTS_FAST_FIRST_CHARS = 1100
         const val TTS_TARGET_CHARS = 720
-        const val TTS_MAX_CHARS = 950
+        const val TTS_MAX_CHARS = 1250
         const val TTS_PREFETCH_AHEAD = 2
         const val TTS_RETRY_ATTEMPTS = 2
     }
@@ -89,11 +91,12 @@ class ChatViewModel : ViewModel() {
     private val micRecorder = MicRecorder()
     private val pcmPlayer = PcmPlayer()
     private var speakJob: Job? = null
+    private var speechGeneration = 0
 
     init {
         // Vorlese-Schalter aus den Einstellungen uebernehmen, damit Chat-Icon + Auto-Vorlesen
         // denselben Stand zeigen wie der "Antwort vorlesen"-Schalter in den Einstellungen.
-        _uiState.update { it.copy(ttsEnabled = SettingsStore.ttsEnabled) }
+        _uiState.update { it.copy(ttsEnabled = SettingsStore.ttsEnabled, responseSize = SettingsStore.responseSize) }
         refreshSessions()
 
         // Kategorien vom Server laden, SOBALD das VPN verbunden ist. Vorher (beim App-Start) ist
@@ -230,8 +233,7 @@ class ChatViewModel : ViewModel() {
                     category = state.selectedCategory,
                     title = state.titleOverride.ifBlank { null },
                     context_mode = state.contextMode,
-                    context_prompt = if (state.contextMode == SettingsStore.CONTEXT_MODE_AUTO) null
-                    else SettingsStore.contextPrompt(state.contextMode)
+                    context_prompt = buildContextPrompt(state.contextMode, state.responseSize)
                 )
 
                 CortexLog.checkpoint(
@@ -277,7 +279,7 @@ class ChatViewModel : ViewModel() {
                 // Auto-TTS: Antwort vorlesen falls aktiviert
                 // Auto-Vorlesen folgt dem Schalter aus den Einstellungen (Single Source of Truth).
                 if (SettingsStore.ttsEnabled && response.reply.isNotBlank()) {
-                    speakResponse(response.reply)
+                    speakResponse(response.reply, agentMsg.id)
                 }
 
             } catch (e: Exception) {
@@ -477,6 +479,32 @@ class ChatViewModel : ViewModel() {
         _uiState.update { it.copy(contextMode = mode) }
     }
 
+    fun updateResponseSize(size: String) {
+        val normalized = when (size) {
+            SettingsStore.RESPONSE_SIZE_SHORT,
+            SettingsStore.RESPONSE_SIZE_MEDIUM,
+            SettingsStore.RESPONSE_SIZE_XL -> size
+            else -> SettingsStore.RESPONSE_SIZE_MEDIUM
+        }
+        SettingsStore.responseSize = normalized
+        _uiState.update { it.copy(responseSize = normalized) }
+    }
+
+    fun toggleMessageSpeech(messageId: String) {
+        val message = _uiState.value.messages.firstOrNull { it.id == messageId && !it.isUser } ?: return
+        if (_uiState.value.isSpeaking && _uiState.value.speakingMessageId == messageId) {
+            stopSpeaking()
+        } else {
+            speakResponse(message.text, message.id)
+        }
+    }
+
+    fun prepareMessageShare(messageId: String) {
+        val message = _uiState.value.messages.firstOrNull { it.id == messageId && !it.isUser } ?: return
+        CortexLog.info("ChatVM", "prepareMessageShare", "Teilen-Platzhalter gedrückt", mapOf("message_len" to message.text.length))
+        _uiState.update { it.copy(error = "Teilen wird als Nächstes verknüpft.") }
+    }
+
     fun toggleTts() {
         // Einmal auf den Lautsprecher tippen = laufendes Vorlesen SOFORT abbrechen + an/aus schalten.
         val nowEnabled = !_uiState.value.ttsEnabled
@@ -487,10 +515,11 @@ class ChatViewModel : ViewModel() {
 
     /** Bricht laufendes Vorlesen sofort ab (Lautsprecher-Knopf). */
     fun stopSpeaking() {
+        speechGeneration++
         speakJob?.cancel()
         speakJob = null
         pcmPlayer.stop()
-        _uiState.update { it.copy(isSpeaking = false) }
+        _uiState.update { it.copy(isSpeaking = false, speakingMessageId = null) }
     }
 
     override fun onCleared() {
@@ -503,10 +532,12 @@ class ChatViewModel : ViewModel() {
         _uiState.update { it.copy(error = null) }
     }
 
-    private fun speakResponse(text: String) {
+    private fun speakResponse(text: String, messageId: String? = null) {
+        speechGeneration++
+        val generation = speechGeneration
         speakJob?.cancel()
         speakJob = viewModelScope.launch {
-            _uiState.update { it.copy(isSpeaking = true) }
+            _uiState.update { it.copy(isSpeaking = true, speakingMessageId = messageId) }
             try {
                 val voice = SettingsStore.ttsVoice
                 val chunks = chunkText(text)
@@ -552,10 +583,34 @@ class ChatViewModel : ViewModel() {
             } catch (e: Exception) {
                 CortexLog.error("ChatVM", "speakResponse", "TTS fehlgeschlagen: ${e.message}")
             } finally {
-                pcmPlayer.stop()
-                _uiState.update { it.copy(isSpeaking = false) }
+                if (speechGeneration == generation) {
+                    pcmPlayer.stop()
+                    _uiState.update { it.copy(isSpeaking = false, speakingMessageId = null) }
+                }
             }
         }
+    }
+
+    private fun buildContextPrompt(contextMode: String, responseSize: String): String? {
+        val modePrompt = if (contextMode == SettingsStore.CONTEXT_MODE_AUTO) "" else SettingsStore.contextPrompt(contextMode)
+        val sizePrompt = when (responseSize) {
+            SettingsStore.RESPONSE_SIZE_SHORT -> """
+                Antwortlänge S ist aktiv: Antworte exakt auf den Punkt, kurz und eindeutig.
+                Suche nur nach der wirklich passenden Antwort. Wenn ein perfekter Treffer gefunden ist, nutze ihn sofort
+                und ziehe keine zusätzlichen Gedächtnis- oder Webtreffer künstlich hinzu.
+            """.trimIndent()
+            SettingsStore.RESPONSE_SIZE_XL -> """
+                Antwortlänge XL ist aktiv: Antworte maximal ausführlich, stark strukturiert und mit vielen Details.
+                Bei Websuche: recherchiere breit und gründlich. Bei Gedächtnissuche: beziehe mehrere relevante Einträge ein,
+                vergleiche sie, konsolidiere Widersprüche und erkläre den Gesamtzusammenhang global statt nur den besten Treffer zu nennen.
+                Es gibt kein künstliches Kürzelimit; nutze die verfügbare Antwortlänge sinnvoll aus.
+            """.trimIndent()
+            else -> """
+                Antwortlänge M ist aktiv: Antworte ausgewogen, gut erklärt und anschaulich.
+                Suche bei Bedarf mehrere relevante Gedächtnis- oder Webtreffer, konsolidiere sie, aber bleibe weder zu kurz noch unnötig lang.
+            """.trimIndent()
+        }
+        return listOf(modePrompt, sizePrompt).filter { it.isNotBlank() }.joinToString("\n\n").ifBlank { null }
     }
 
     private suspend fun synthesizeTtsChunk(chunk: String, voice: String, index: Int): ByteArray? {

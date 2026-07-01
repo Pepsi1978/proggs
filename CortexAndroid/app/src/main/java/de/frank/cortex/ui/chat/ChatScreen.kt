@@ -241,7 +241,13 @@ fun ChatScreen(vm: ChatViewModel = viewModel()) {
                 contentPadding = PaddingValues(vertical = 6.dp)
             ) {
                 items(uiState.messages, key = { it.id }) { message ->
-                    ChatBubble(message = message, onOptionClick = vm::sendOption)
+                    ChatBubble(
+                        message = message,
+                        isSpeaking = uiState.speakingMessageId == message.id,
+                        onSpeakClick = { vm.toggleMessageSpeech(message.id) },
+                        onShareClick = { vm.prepareMessageShare(message.id) },
+                        onOptionClick = vm::sendOption
+                    )
                 }
 
                 // Typing indicator
@@ -262,6 +268,8 @@ fun ChatScreen(vm: ChatViewModel = viewModel()) {
                 onOpenCategories = vm::loadCategories,
                 contextMode = uiState.contextMode,
                 onContextModeChange = vm::updateContextMode,
+                responseSize = uiState.responseSize,
+                onResponseSizeChange = vm::updateResponseSize,
                 titleOverride = uiState.titleOverride,
                 onTitleChange = vm::updateTitleOverride,
                 isGeneratingTitle = uiState.isGeneratingTitle,
@@ -430,7 +438,13 @@ private fun formatSessionTimestamp(timestamp: Long): String =
     SimpleDateFormat("dd.MM.yyyy, HH:mm 'Uhr'", Locale.GERMANY).format(Date(timestamp))
 
 @Composable
-private fun ChatBubble(message: ChatMessage, onOptionClick: (ChatOption) -> Unit) {
+private fun ChatBubble(
+    message: ChatMessage,
+    isSpeaking: Boolean,
+    onSpeakClick: () -> Unit,
+    onShareClick: () -> Unit,
+    onOptionClick: (ChatOption) -> Unit
+) {
     val isDark = MaterialTheme.colorScheme.background == DarkBg
 
     Column(
@@ -458,13 +472,40 @@ private fun ChatBubble(message: ChatMessage, onOptionClick: (ChatOption) -> Unit
                 color = MaterialTheme.colorScheme.surface,
                 border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline)
             ) {
-                Text(
-                    text = message.text,
-                    modifier = Modifier.padding(horizontal = 14.dp, vertical = 12.dp),
-                    fontSize = 14.5.sp,
-                    lineHeight = 22.5.sp,
-                    color = MaterialTheme.colorScheme.onSurface
-                )
+                Column(modifier = Modifier.padding(horizontal = 14.dp, vertical = 12.dp)) {
+                    Text(
+                        text = message.text,
+                        fontSize = 14.5.sp,
+                        lineHeight = 22.5.sp,
+                        color = MaterialTheme.colorScheme.onSurface
+                    )
+                    Row(
+                        modifier = Modifier.padding(top = 8.dp),
+                        horizontalArrangement = Arrangement.spacedBy(12.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        MessageBubbleActionIcon(
+                            icon = {
+                                Icon(
+                                    if (isSpeaking) Icons.AutoMirrored.Filled.VolumeOff else Icons.AutoMirrored.Filled.VolumeUp,
+                                    contentDescription = if (isSpeaking) "Vorlesen stoppen" else "Nachricht vorlesen",
+                                    modifier = Modifier.size(20.dp)
+                                )
+                            },
+                            onClick = onSpeakClick
+                        )
+                        MessageBubbleActionIcon(
+                            icon = {
+                                Icon(
+                                    Icons.Default.Share,
+                                    contentDescription = "Nachricht teilen",
+                                    modifier = Modifier.size(19.dp)
+                                )
+                            },
+                            onClick = onShareClick
+                        )
+                    }
+                }
             }
         }
 
@@ -520,6 +561,21 @@ private fun ChatBubble(message: ChatMessage, onOptionClick: (ChatOption) -> Unit
                     }
                 }
             }
+        }
+    }
+}
+
+@Composable
+private fun MessageBubbleActionIcon(icon: @Composable () -> Unit, onClick: () -> Unit) {
+    Box(
+        modifier = Modifier
+            .size(30.dp)
+            .clip(CircleShape)
+            .clickable(onClick = onClick),
+        contentAlignment = Alignment.Center
+    ) {
+        CompositionLocalProvider(LocalContentColor provides Orange) {
+            icon()
         }
     }
 }
@@ -677,6 +733,8 @@ private fun ChatInputBlock(
     onOpenCategories: () -> Unit,
     contextMode: String,
     onContextModeChange: (String) -> Unit,
+    responseSize: String,
+    onResponseSizeChange: (String) -> Unit,
     titleOverride: String,
     onTitleChange: (String) -> Unit,
     isGeneratingTitle: Boolean,
@@ -705,6 +763,8 @@ private fun ChatInputBlock(
             ContextModeBar(
                 selectedMode = contextMode,
                 onModeChange = onContextModeChange,
+                responseSize = responseSize,
+                onResponseSizeChange = onResponseSizeChange,
                 isDark = isDark
             )
 
@@ -900,13 +960,45 @@ private fun ChatInputBlock(
 private fun ContextModeBar(
     selectedMode: String,
     onModeChange: (String) -> Unit,
+    responseSize: String,
+    onResponseSizeChange: (String) -> Unit,
     isDark: Boolean
 ) {
     Row(
         modifier = Modifier.fillMaxWidth(),
-        horizontalArrangement = Arrangement.End,
+        horizontalArrangement = Arrangement.SpaceBetween,
         verticalAlignment = Alignment.CenterVertically
     ) {
+        Row(
+            horizontalArrangement = Arrangement.spacedBy(6.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            listOf(
+                SettingsStore.RESPONSE_SIZE_SHORT to "S",
+                SettingsStore.RESPONSE_SIZE_MEDIUM to "M",
+                SettingsStore.RESPONSE_SIZE_XL to "XL"
+            ).forEach { (size, label) ->
+                val active = responseSize == size
+                val tint = if (active) Orange else MaterialTheme.colorScheme.onSurfaceVariant
+                Box(
+                    modifier = Modifier
+                        .height(38.dp)
+                        .width(if (size == SettingsStore.RESPONSE_SIZE_XL) 44.dp else 38.dp)
+                        .clip(RoundedCornerShape(11.dp))
+                        .background(if (active) Orange.copy(alpha = 0.22f) else if (isDark) DarkField else LightField)
+                        .border(
+                            1.dp,
+                            if (active) Orange.copy(alpha = 0.52f) else if (isDark) DarkFieldBorder else LightFieldBorder,
+                            RoundedCornerShape(11.dp)
+                        )
+                        .clickable { onResponseSizeChange(size) },
+                    contentAlignment = Alignment.Center
+                ) {
+                    Text(label, fontFamily = SpaceGrotesk, fontWeight = FontWeight.Bold, fontSize = 13.sp, color = tint)
+                }
+            }
+        }
+
         val items = listOf(
             Triple(SettingsStore.CONTEXT_MODE_SEARCH, Icons.Default.Search, "Suchen"),
             Triple(SettingsStore.CONTEXT_MODE_SAVE, Icons.Default.Save, "Speichern"),

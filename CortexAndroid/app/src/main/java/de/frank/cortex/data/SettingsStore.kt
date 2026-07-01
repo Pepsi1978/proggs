@@ -19,6 +19,10 @@ object SettingsStore {
     const val CONTEXT_MODE_SAVE = "save"
     const val CONTEXT_MODE_SEARCH = "search"
 
+    const val RESPONSE_SIZE_SHORT = "s"
+    const val RESPONSE_SIZE_MEDIUM = "m"
+    const val RESPONSE_SIZE_XL = "xl"
+
     fun defaultContextPrompt(mode: String): String = when (mode) {
         CONTEXT_MODE_SMALLTALK -> """
             Du bist jetzt im Smalltalk-Modus. Führe ein normales Gespräch mit Frank.
@@ -131,6 +135,16 @@ object SettingsStore {
     var ttsRate: Float
         get() = plain.getFloat("tts_rate", 1.0f)
         set(value) = plain.edit().putFloat("tts_rate", value).apply()
+
+    var responseSize: String
+        get() = plain.getString("response_size", RESPONSE_SIZE_MEDIUM) ?: RESPONSE_SIZE_MEDIUM
+        set(value) = plain.edit().putString(
+            "response_size",
+            when (value) {
+                RESPONSE_SIZE_SHORT, RESPONSE_SIZE_MEDIUM, RESPONSE_SIZE_XL -> value
+                else -> RESPONSE_SIZE_MEDIUM
+            }
+        ).apply()
 
     var recordingToneEnabled: Boolean
         get() = plain.getBoolean("recording_tone_enabled", true)
