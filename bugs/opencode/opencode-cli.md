@@ -37,6 +37,7 @@
 | 13 | ⭐ OpenCode-Go: API-Fehler je Modell / GLM früh „aufgebraucht" / Modell erfindet Fakten | **Zwei Endpunkt-Schemata:** DeepSeek/GLM/Kimi/MiMo = OpenAI (`/zen/go/v1/chat/completions`), Qwen/MiniMax = Anthropic (`/zen/go/v1/messages`). GLM-5.x im Go-Tier nur ~4.300 Req/Mo (nicht für Masse). DeepSeek V4 Pro halluziniert bei Nichtwissen → Abstain-Prompt. | §14 |
 | 14 | ⭐ OpenCode-Go-Modell einrichten / Thinking aktivieren | Go ist **eingebaut** → `/connect`, KEIN Custom-`@ai-sdk/anthropic`-Block (Key-Verlust #21737); nur MERGE-Block für Optionen. Thinking-Keys in `docs/models` (nicht config): Anthropic `options.thinking.budgetTokens`, OpenAI `reasoningEffort`. MiniMax denkt nativ. | §14.4–14.5 |
 | 15 | ⭐ Direkter Python-Call an Go-Gateway/OpenRouter → Cloudflare 403/„1010" | urllib-Default-UA wird geblockt → `User-Agent: curl/8.5.0` setzen (so `mm/or-research _post()`). Erinnerung: `/messages`=`x-api-key`, Thinking `{type:enabled,budget_tokens:N}` (NICHT `adaptive` — das nur bei `/chat/completions`) | §14.6–14.8 |
+| 16 | ⭐ Plugin deinstallieren / Plugin kommt nach Neustart wieder („loading plugins") | Es gibt **KEIN** `plugin remove`. Eintrag steht in MEHREREN Config-Dateien (auch `tui.json`, nicht nur `opencode.jsonc`) → **alle** entfernen; OpenCode **schließen** (sonst regeneriert es Cache+Config sofort); Cache `~/.cache/opencode/packages/<scope>` + plugin-eigene Config (z.B. `dcp.jsonc`) löschen; ggf. `~/.config/opencode/package.json` zurücksetzen (append-only). | §7 (#55d) |
 
 ---
 
@@ -534,6 +535,19 @@ arxiv.org/html/2407.18418v1.
 | opencode-worktree | erzeugt eigene Branches pro Worktree (git-bedingt) → unvereinbar mit „alles direkt auf main"-Workflows | bei Direkt-auf-main NICHT einsetzen; mehrere Fenster auf einem geteilten Worktree bleiben der Weg | git worktree-Mechanik |
 
 **Versionen:** Stand Juni 2026 (OpenCode v1.17.8-Ökosystem).
+
+### 55d. ⭐ Plugin-Deinstallation: kein `remove`-Befehl → Plugin kommt nach Neustart wieder (mehrere Speicherorte)
+**Symptom:** Ein per `opencode plugin <name> --global` installiertes Plugin (real: `@tarquinen/opencode-dcp`) bleibt im Plugin-Picker sichtbar/aktivierbar und lädt bei jedem Start („loading plugins") — **auch nachdem** der `plugin`-Array-Eintrag aus `opencode.jsonc` entfernt und das Cache-Paket gelöscht wurde. Beim nächsten Start sind Cache-Paket **und** plugin-eigene Config (z.B. `dcp.jsonc`) wieder da.
+**Ursache:** (1) OpenCode hat **KEINEN** `plugin remove`/`uninstall`-Befehl — `packages/opencode/src/cli/cmd/plug.ts` hat kein remove-Subkommando (Issue #30526). (2) Der `plugin`-Array wird über **mehrere Config-Dateien gemergt** (§20); `opencode plugin --global` schreibt den Eintrag auch nach **`tui.json`** (`{"plugin":[…]}`), nicht nur in `opencode.jsonc`. Ein **übersehener `tui.json`-Eintrag genügt**, damit OpenCode das Plugin beim Start lädt, das Cache-Paket (`~/.cache/opencode/packages/<scope>/`) **neu herunterlädt** und die plugin-eigene Config neu erzeugt. (3) Zusätzliche Drift-Quelle (Issue #30526): `~/.config/opencode/package.json` ist bei `plugin install --global` (arborist `reify save:true`) **append-only** — `patchPluginList()` räumt dort nie auf; bleibt ein Eintrag stehen, installiert `Loader.resolve()`→`Npm.add()` das Plugin beim Start neu. (4) **Läuft OpenCode während der Bereinigung**, erzeugt es die gelöschten Dateien sofort wieder.
+**Versionen:** opencode-ai 1.17.x (Windows nativ), Vorfall 2026-07-01; Issue #30526 `[BUG]` OPEN. Hinweis: In diesem Vorfall war die `package.json` sauber (nur `@opencode-ai/plugin`) — alleinige Quelle war der `tui.json`-Eintrag + laufender Prozess. Punkt (3) kann je nach Install-Weg trotzdem greifen → immer mitprüfen.
+**FIX (rückstandslos, in dieser Reihenfolge — funktionserhaltend, andere Plugins bleiben):**
+1. OpenCode **komplett beenden** (Prozess killen — nicht nur Fenster; sonst regeneriert es). Sessions bleiben in der DB erhalten.
+2. `plugin`-Eintrag aus **ALLEN** Config-Quellen entfernen: `~/.config/opencode/opencode.jsonc` **UND** `~/.config/opencode/tui.json` (+ evtl. Projekt-`opencode.json` / `.opencode/`). Verifikation: `grep -rl "<scope>" ~/.config/opencode/` muss leer sein.
+3. Falls `~/.config/opencode/package.json` den Eintrag enthält: `package.json`, `package-lock.json`, `node_modules` in `~/.config/opencode/` zurücksetzen — OpenCode baut sie beim Start **nur aus der Config** neu auf (Issue-#30526-Workaround).
+4. Cache-Paket löschen: `~/.cache/opencode/packages/<scope>/` (Windows: `Remove-Item -Recurse -Force`; **`rm -rf ~/…` ist per `bash-guard` blockiert** → PowerShell nutzen).
+5. Plugin-eigene Config löschen (z.B. `~/.config/opencode/dcp.jsonc`).
+6. OpenCode **neu starten**, Picker prüfen. Endkontrolle: kein `<scope>` unter `~/.cache/opencode/packages/` und keine Config nennt `<scope>`.
+**Quelle:** https://github.com/anomalyco/opencode/issues/30526 · https://opencode.ai/docs/troubleshooting · eigener Vorfall (Frank, 2026-07-01); Recherche Firecrawl+MiniMax (Engine A).
 
 ---
 

@@ -83,6 +83,20 @@ Grep by Vercel `{ "type": "remote", "url": "https://mcp.grep.app" }`.
 npm-Plugins werden beim Start automatisch via **Bun** installiert (Cache `~/.cache/opencode/node_modules/`).
 Lade-Reihenfolge: globale Config → Projekt-Config → globales Plugin-Verzeichnis → Projekt-Plugin-Verzeichnis.
 
+### Plugin rückstandslos deinstallieren
+Es gibt **keinen** `opencode plugin remove`/`uninstall`-Befehl (Issue #30526). Ein per
+`opencode plugin <name> --global` installiertes Plugin steckt an bis zu **fünf** Stellen, die
+**alle** entfernt werden müssen — sonst lädt OpenCode es beim nächsten Start neu („loading plugins")
+und zieht Cache + plugin-eigene Config wieder hoch:
+1. **OpenCode schließen** (Prozess beenden, nicht nur Fenster) — sonst regeneriert es die gelöschten Dateien sofort. Sessions bleiben in der DB.
+2. `plugin`-Eintrag aus **allen** Config-Dateien: `~/.config/opencode/opencode.jsonc` **und** `~/.config/opencode/tui.json` (`opencode plugin --global` schreibt den Eintrag auch nach `tui.json`!) + evtl. Projekt-`opencode.json`/`.opencode/`. Die `plugin`-Arrays werden über alle Config-Quellen **gemergt** — ein einziger übersehener Eintrag genügt.
+3. Falls `~/.config/opencode/package.json` den Eintrag enthält (append-only bei `install --global`): `package.json` + `package-lock.json` + `node_modules` in `~/.config/opencode/` zurücksetzen — OpenCode baut sie beim Start nur aus der aktuellen Config neu auf.
+4. Cache-Paket löschen: `~/.cache/opencode/packages/<scope>/` (Windows PowerShell `Remove-Item -Recurse -Force`; `rm -rf ~/…` ist per `bash-guard` blockiert).
+5. Plugin-eigene Config löschen (z.B. `~/.config/opencode/dcp.jsonc`).
+Endkontrolle: `grep -rl "<scope>" ~/.config/opencode/` leer **und** kein `<scope>` unter
+`~/.cache/opencode/packages/`. Andere Plugins bleiben unberührt (funktionserhaltend). Bug-Details:
+Almanach `bugs/opencode/opencode-cli.md` §7 #55d.
+
 ### Grundstruktur
 Ein Plugin ist ein JS/TS-Modul, das Plugin-Funktionen exportiert. Jede Funktion bekommt ein **Kontext-Objekt**
 (nicht einzelne Parameter!) und gibt ein Hooks-Objekt zurück:

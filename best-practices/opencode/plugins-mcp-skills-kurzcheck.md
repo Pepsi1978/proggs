@@ -19,3 +19,4 @@
 | 9 | Kein Triggerwort-Modell | Plugins sind event-getriggert (laufen nur bei ihrem Event), Commands manuell, Skills on-demand nach `description` — ein installiertes Plugin „stört" nicht bei jeder Anfrage | §8 |
 | 10 | Sicherheit (KRITISCH) | npm-Plugins werden auto via Bun installiert + ausgeführt (voller FS-/Shell-Zugriff) → Quellcode prüfen, Paketname exakt (Typosquatting), nur `opencode.ai` ist offiziell | §6, §8 |
 | 11 | Discovery | erst offizielles `opencode.ai/docs/ecosystem` (stärkstes Vertrauenssignal), dann `awesome-opencode`; MCP-Server: `registry.modelcontextprotocol.io` | §6 |
+| 12 | Plugin deinstallieren | KEIN CLI-`remove`; Eintrag aus **ALLEN** Configs entfernen (auch `tui.json`, nicht nur `opencode.jsonc`) + OpenCode **schließen** + Cache `~/.cache/opencode/packages/<scope>` + plugin-Config (z.B. `dcp.jsonc`) löschen; ggf. `~/.config/opencode/package.json` zurücksetzen (append-only). Almanach §7 #55d | §2 |
