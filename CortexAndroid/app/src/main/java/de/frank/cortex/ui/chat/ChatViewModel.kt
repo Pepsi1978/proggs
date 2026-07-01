@@ -96,11 +96,13 @@ class ChatViewModel : ViewModel() {
         // Default-Backoff wenn Gemini 429 ohne Retry-After-Header meldet.
         const val TTS_RATE_LIMIT_DEFAULT_BACKOFF_MS = 2000L
         const val TTS_RATE_LIMIT_MAX_BACKOFF_MS = 8000L
-        // Ein rate-limitierter Chunk wird GEDULDIG wiederholt (nie verworfen), bis diese
-        // Gesamt-Wartezeit erreicht ist. Erst dann greift die Notbremse. So fallen keine
-        // Absaetze mehr weg, nur weil Gemini gerade drosselt (Frank-Vorfall 2026-07-01:
-        // nur 2 von 12 Absaetzen vorgelesen, Rest still uebersprungen).
-        const val TTS_RATE_LIMIT_MAX_TOTAL_WAIT_MS = 120_000L
+        // Ein rate-limitierter Chunk wird GEDULDIG wiederholt (nie sofort verworfen), aber nur
+        // bis zu dieser Gesamt-Wartezeit. Kommt selbst danach kein Ton durch, ist das Kontingent
+        // hoechstwahrscheinlich erschoepft (nicht nur ein kurzer Burst) - dann NICHT minutenlang
+        // still weiter-warten, sondern abbrechen und dem Nutzer klar sagen, was los ist.
+        // Frank-Vorfall 2026-07-01: bei erschoepftem Free-Tier-Kontingent bekam JEDER Request 429,
+        // auch der erste - die alte 120s-Geduld liess die App still haengen (wirkte "kaputt").
+        const val TTS_RATE_LIMIT_GIVEUP_MS = 25_000L
         // Nur so viele TTS-Anfragen GLEICHZEITIG - verhindert den 429-Burst von vornherein.
         // 1 reicht: eine Chunk-Wiedergabe dauert laenger als die Synthese des naechsten
         // Chunks, die serielle Synthese bleibt der Wiedergabe also voraus (keine Luecken)
@@ -123,6 +125,11 @@ class ChatViewModel : ViewModel() {
     // (spaeter hinzugefuegte) Retry-Logik hat durch rekursives Aufsplitten sogar noch mehr
     // Anfragen erzeugt statt zu bremsen.
     @Volatile private var ttsRateLimitedUntil: Long = 0L
+
+    // Wird auf true gesetzt, sobald ein Chunk das Rate-Limit-Zeitlimit erschoepft hat (Kontingent
+    // wahrscheinlich aufgebraucht). speakResponse liest das, um die Session sauber abzubrechen und
+    // dem Nutzer eine klare Meldung zu zeigen, statt still weiter zu warten.
+    @Volatile private var ttsRateLimitExhausted = false
 
     // Begrenzt die GLEICHZEITIGEN Gemini-TTS-Anfragen (siehe TTS_MAX_CONCURRENT_SYNTH).
     private val ttsSemaphore = Semaphore(TTS_MAX_CONCURRENT_SYNTH)
@@ -626,6 +633,10 @@ class ChatViewModel : ViewModel() {
         speakJob?.cancel()
         speakJob = viewModelScope.launch {
             _uiState.update { it.copy(isSpeaking = true, speakingMessageId = messageId) }
+            // Frischer Session-Start: alten Rate-Limit-Zaun/Flag zuruecksetzen, sonst wuerde eine
+            // vorige (erschoepfte) Session diese sofort faelschlich bremsen/abbrechen.
+            ttsRateLimitedUntil = 0L
+            ttsRateLimitExhausted = false
             try {
                 val voice = SettingsStore.ttsVoice
                 val rate = SettingsStore.ttsRate
@@ -658,6 +669,20 @@ class ChatViewModel : ViewModel() {
                         if (speechGeneration != generation) return@coroutineScope
 
                         if (pcm == null || pcm.isEmpty()) {
+                            if (ttsRateLimitExhausted) {
+                                // Rate-Limit erschoepft: NICHT still weiter-warten, sondern die ganze
+                                // Session sauber beenden und dem Nutzer klar sagen, was los ist.
+                                val msg = if (firstAudioLogged)
+                                    "Gemini-Vorlese-Limit erreicht — die restlichen Absätze konnten nicht vorgelesen werden. Bitte später erneut."
+                                else
+                                    "Vorlesen momentan nicht möglich — das Gemini-Vorlese-Limit ist erreicht. Bitte später erneut versuchen."
+                                CortexLog.warn("ChatVM", "speakResponse", "TTS wegen Rate-Limit gestoppt",
+                                    mapOf("index" to index, "any_audio" to firstAudioLogged))
+                                _uiState.update { it.copy(error = msg) }
+                                return@coroutineScope
+                            }
+                            // Echter Inhalts-/Format-Fehler bei genau diesem Chunk -> nur diesen
+                            // ueberspringen, der Rest wird normal weiter vorgelesen.
                             CortexLog.warn("ChatVM", "speakResponse", "TTS-Chunk übersprungen",
                                 mapOf("index" to index, "chunk_len" to chunk.length))
                             return@forEachIndexed
@@ -710,10 +735,11 @@ class ChatViewModel : ViewModel() {
             } catch (e: CancellationException) {
                 throw e
             } catch (e: GeminiRateLimitException) {
-                // KRITISCH (Direktive #3, funktionserhaltend): Ein 429 ist VORUEBERGEHEND.
-                // Den Chunk deswegen NIEMALS verwerfen - sonst fehlen ganze Absaetze in der
-                // Vorlesung (genau der Bug vom 2026-07-01). Stattdessen geduldig mit wachsendem
-                // Backoff erneut versuchen, bis eine grosszuegige Gesamt-Wartezeit erreicht ist.
+                // Ein 429 ist zunaechst VORUEBERGEHEND: den Chunk NICHT sofort verwerfen (sonst
+                // fehlen ganze Absaetze - Bug vom 2026-07-01), sondern mit wachsendem Backoff
+                // geduldig erneut versuchen. ABER nur bis TTS_RATE_LIMIT_GIVEUP_MS - kommt selbst
+                // dann kein Ton, ist das Kontingent erschoepft; dann Flag setzen + aufgeben, damit
+                // speakResponse dem Nutzer klar meldet "Limit erreicht" statt still zu haengen.
                 lastError = e.message
                 val escalated = TTS_RATE_LIMIT_DEFAULT_BACKOFF_MS shl minOf(rateLimitRetries, 2)
                 val backoff = (e.retryAfterMs ?: escalated)
@@ -723,10 +749,10 @@ class ChatViewModel : ViewModel() {
                 rateLimitWaitedMs += backoff
                 CortexLog.warn("ChatVM", "synthesizeTtsChunk", "TTS-Chunk rate-limited, warte ${backoff}ms",
                     mapOf("index" to index, "retry" to rateLimitRetries, "total_wait_ms" to rateLimitWaitedMs, "chunk_len" to chunk.length))
-                if (rateLimitWaitedMs >= TTS_RATE_LIMIT_MAX_TOTAL_WAIT_MS) {
-                    // Notbremse: erst nach sehr langer Drosselung aufgeben (Chunk kommt nie durch).
-                    CortexLog.error("ChatVM", "synthesizeTtsChunk", "TTS-Chunk nach ${rateLimitWaitedMs}ms Rate-Limit aufgegeben",
+                if (rateLimitWaitedMs >= TTS_RATE_LIMIT_GIVEUP_MS) {
+                    CortexLog.error("ChatVM", "synthesizeTtsChunk", "TTS-Chunk nach ${rateLimitWaitedMs}ms Rate-Limit aufgegeben - Kontingent erschoepft?",
                         mapOf("index" to index, "chunk_len" to chunk.length))
+                    ttsRateLimitExhausted = true
                     return null
                 }
                 delay(backoff)
