@@ -11,13 +11,18 @@ import okhttp3.MediaType.Companion.toMediaType
 import okhttp3.MultipartBody
 import okhttp3.OkHttpClient
 import okhttp3.Request
+import okhttp3.Response
 import okhttp3.RequestBody.Companion.toRequestBody
 import okhttp3.logging.HttpLoggingInterceptor
 import org.json.JSONObject
 import retrofit2.Retrofit
 import retrofit2.converter.moshi.MoshiConverterFactory
 import retrofit2.converter.scalars.ScalarsConverterFactory
+import java.io.IOException
 import java.util.concurrent.TimeUnit
+import kotlin.coroutines.resume
+import kotlin.coroutines.resumeWithException
+import kotlinx.coroutines.suspendCancellableCoroutine
 
 object ApiClient {
 
@@ -39,6 +44,7 @@ object ApiClient {
     }.apply {
         level = HttpLoggingInterceptor.Level.BODY
         redactHeader("Authorization")
+        redactHeader("x-goog-api-key")
     }
 
     // --- EIN OkHttpClient pro Backend (Best Practice §1.1) ---
@@ -78,6 +84,17 @@ object ApiClient {
             .callTimeout(120, TimeUnit.SECONDS)
             .connectTimeout(30, TimeUnit.SECONDS)
             .readTimeout(60, TimeUnit.SECONDS)
+            .build()
+    }
+
+    // TTS liefert große Base64-Audioantworten. BODY-Logging würde den ersten Ton stark verzögern
+    // und private Antworttexte ins Log schreiben, deshalb läuft TTS über einen eigenen schlanken Client.
+    private val ttsClient: OkHttpClient by lazy {
+        OkHttpClient.Builder()
+            .callTimeout(60, TimeUnit.SECONDS)
+            .connectTimeout(15, TimeUnit.SECONDS)
+            .readTimeout(45, TimeUnit.SECONDS)
+            .retryOnConnectionFailure(true)
             .build()
     }
 
@@ -378,43 +395,64 @@ object ApiClient {
             .post(body.toRequestBody(jsonMediaType))
             .build()
 
-        val response = withContext(Dispatchers.IO) { externalClient.newCall(request).execute() }
-        val responseBody = response.body?.string() ?: throw Exception("Leere Gemini-TTS-Antwort")
+        executeCancellable(ttsClient, request).use { response ->
+            val responseBody = response.body?.string() ?: throw Exception("Leere Gemini-TTS-Antwort")
 
-        if (!response.isSuccessful) {
-            throw Exception("Gemini-TTS-Fehler ${response.code}: $responseBody")
+            if (!response.isSuccessful) {
+                throw Exception("Gemini-TTS-Fehler ${response.code}: $responseBody")
+            }
+
+            val json = JSONObject(responseBody)
+
+            val candidate = json.optJSONArray("candidates")?.optJSONObject(0)
+            val finishReason = candidate?.optString("finishReason")
+            val blockReason = json.optJSONObject("promptFeedback")?.optString("blockReason").orEmpty()
+            if (blockReason.isNotBlank()) throw Exception("Gemini blockiert: $blockReason")
+            if (finishReason != "STOP" && finishReason != null) {
+                CortexLog.warn("Gemini", "tts", "Unerwarteter finishReason: $finishReason")
+            }
+
+            val audioInline = candidate
+                ?.getJSONObject("content")
+                ?.getJSONArray("parts")
+                ?.getJSONObject(0)
+                ?.getJSONObject("inlineData")
+                ?: throw Exception("Keine Audio-Daten in Gemini-TTS-Antwort")
+
+            val mimeType = audioInline.optString("mimeType", "")
+            val raw = android.util.Base64.decode(audioInline.getString("data"), android.util.Base64.DEFAULT)
+            val pcm = if (mimeType == "audio/wav" && raw.size > 44) raw.copyOfRange(44, raw.size) else raw
+
+            CortexLog.info("Gemini", "tts", "TTS-Audio erhalten", mapOf(
+                "text_len" to text.length,
+                "mime" to mimeType,
+                "raw_bytes" to raw.size,
+                "pcm_bytes" to pcm.size,
+                "elapsed_ms" to (System.currentTimeMillis() - startedAt)
+            ))
+            return pcm
         }
-
-        val json = JSONObject(responseBody)
-
-        val candidate = json.optJSONArray("candidates")?.optJSONObject(0)
-        val finishReason = candidate?.optString("finishReason")
-        val blockReason = json.optJSONObject("promptFeedback")?.optString("blockReason").orEmpty()
-        if (blockReason.isNotBlank()) throw Exception("Gemini blockiert: $blockReason")
-        if (finishReason != "STOP" && finishReason != null) {
-            CortexLog.warn("Gemini", "tts", "Unerwarteter finishReason: $finishReason")
-        }
-
-        val audioInline = candidate
-            ?.getJSONObject("content")
-            ?.getJSONArray("parts")
-            ?.getJSONObject(0)
-            ?.getJSONObject("inlineData")
-            ?: throw Exception("Keine Audio-Daten in Gemini-TTS-Antwort")
-
-        val mimeType = audioInline.optString("mimeType", "")
-        val raw = android.util.Base64.decode(audioInline.getString("data"), android.util.Base64.DEFAULT)
-        val pcm = if (mimeType == "audio/wav" && raw.size > 44) raw.copyOfRange(44, raw.size) else raw
-
-        CortexLog.info("Gemini", "tts", "TTS-Audio erhalten", mapOf(
-            "text_len" to text.length,
-            "mime" to mimeType,
-            "raw_bytes" to raw.size,
-            "pcm_bytes" to pcm.size,
-            "elapsed_ms" to (System.currentTimeMillis() - startedAt)
-        ))
-        return pcm
     }
+
+    private suspend fun executeCancellable(client: OkHttpClient, request: Request): Response =
+        withContext(Dispatchers.IO) {
+            suspendCancellableCoroutine { continuation ->
+                val call = client.newCall(request)
+                continuation.invokeOnCancellation { call.cancel() }
+                try {
+                    val response = call.execute()
+                    if (continuation.isActive) {
+                        continuation.resume(response)
+                    } else {
+                        response.close()
+                    }
+                } catch (e: IOException) {
+                    if (continuation.isActive) continuation.resumeWithException(e)
+                } catch (e: Exception) {
+                    if (continuation.isActive) continuation.resumeWithException(e)
+                }
+            }
+        }
 
     // --- Gemini Text verbessern ---
 
