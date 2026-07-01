@@ -41,6 +41,17 @@ laeuft weiter der alte Code, obwohl die Datei auf dem Server schon neu ist.
 
 ## Der Deploy-Weg (Schritt fuer Schritt)
 
+> ### ⚠️ PFLICHT VOR JEDEM DEPLOY: sichtbare Version + Timestamp erhoehen (Frank-Wunsch 2026-07-01)
+> Bei JEDER Server-Aenderung — **egal welcher Dienst** (agent, brain-api, mcp, dashboard) — MUSS die
+> **sichtbare Dashboard-Version** `VERSION` in `dashboard/app.py` erhoeht und ihr **Timestamp auf die
+> aktuelle Uhrzeit** gesetzt werden. Das ist der EINE Marker, den Frank im Dashboard-Footer sieht:
+> `V0.x (TT.MM.JJJJ, HH:MM Uhr)`. Format:
+> `VERSION = "0.28.0 (TT.MM.JJJJ, HH:MM Uhr)"  # 0.28.0: <was deployt wurde, kurz>`.
+> Aktuelle Zeit holen: `Get-Date -Format 'dd.MM.yyyy, HH:mm'` (Windows).
+> **Danach das dashboard IMMER mit-deployen** (`docker compose up -d --build dashboard`), auch wenn nur
+> der agent geaendert wurde — sonst bleibt der Footer auf dem alten Stand und Frank sieht nicht, dass
+> sein Deploy angekommen ist. (Regel `version-bump-visible-always`: jede Aenderung sichtbar + Timestamp.)
+
 Beispiel: Aenderung am **dashboard** (`app.py`, `static/index.html` o.ae.).
 
 ```bash
