@@ -401,24 +401,56 @@ NICHT und begründet das mit „Commit/Push habe ich nicht gemacht, weil das hie
 ausdrückliche Anweisung erlaubt ist" — obwohl KEINE Regel/Config das je vorgeschrieben hat.
 Franks `AGENTS.md` + `rules-opencode/commit-push-jede-aufgabe-vor-build.md` verlangen im
 Gegenteil IMMER Commit+Push nach jeder Aufgabe, ohne Rückfrage.
-**Ursache:** Vermutlich trainiertes Vorsichtsverhalten des Modells gegenüber „sichtbaren"/geteilten
-Aktionen (`git push` ändert gemeinsamen Remote-Zustand) — ähnliche Vorsicht wie bei anderen
-LLM-Anbietern für „actions visible to others". Reine Text-Regeln (AGENTS.md) setzen sich gegen ein
-so trainiertes Verhalten nicht zuverlässig durch (vgl. `claude-config.md` §1.1: „Rules in prompts
-are requests, hooks in code are laws"). Ein früherer Fix-Versuch (nur zusätzlicher AGENTS.md-Text,
-Commit #47319) hat das Problem NICHT gelöst — es trat mit GPT-5.5 danach erneut auf.
+**Ursache (recherchiert 2026-07-01, 5-Researcher-Schwarm, quellentreu bestätigt):** OpenCode
+liefert einen **hardcodierten System-Prompt** aus, der wörtlich sinngemäß sagt: „NEVER commit
+changes unless the user explicitly asks you to" / „DO NOT push to the remote repository unless
+the user explicitly asks you to do so." Das erklärt das Symptom vollständig — das Modell zitiert
+korrekt OpenCodes EIGENEN eingebauten Prompt, der mit `AGENTS.md`-Regeln kollidiert und sie
+überstimmen kann, solange die Regel den eingebauten Vorbehalt nicht aktiv als überschrieben
+markiert. Verwandtes Muster (Anbieter-Ebene, nicht OpenCode-spezifisch): Anthropics „Claude Code
+Auto Mode"-Engineering-Blog beschreibt einen Permission-Classifier, der Aktionen nach
+Reversibilität/Blast-Radius bewertet und Kategorien wie „Bypass review or affect others: pushing
+directly to main" explizit als erhöhtes Risiko einstuft (anthropic.com/engineering/claude-code-auto-mode)
+— die Vorsicht bei `git push` ist bei mehreren Anbietern bewusst eingebaut, nicht nur Zufall.
+Kein 1:1-Duplikat-Issue bei OpenCode gefunden, aber ein enges Cluster: #14923 „Agent commits and
+pushes without user approval despite explicit rules" (OPEN, Gegenrichtung — zeigt denselben
+Prompt-vs-Regel-Konflikt), #3099 „Agent no follow rules after compact session" (CLOSED/COMPLETED —
+kein aktives Risiko mehr), #11534/#11732 „AGENTS.md wird ignoriert" (beide CLOSED/COMPLETED).
+Reine Text-Regeln (AGENTS.md) setzen sich gegen einen hardcodierten System-Prompt nicht
+zuverlässig durch (vgl. `claude-config.md` §1.1: „Rules in prompts are requests, hooks in code
+are laws"). Ein früherer Fix-Versuch (nur zusätzlicher AGENTS.md-Text, Commit #47319) hat das
+Problem NICHT gelöst, weil der Text zwar geschrieben, aber nie von der Repo-Datei in die LIVE
+`~/.config/opencode/AGENTS.md` übertragen wurde (Deploy-Lücke, separat als Bug erkannt+behoben).
 **Versionen:** beobachtet mit GPT-5.5 (Medium+High-Thinking) via OpenCode, 2026-07-01. Nicht
 modellspezifisch ausgeschlossen — kann bei jedem vorsichtig trainierten Modell auftreten.
 **FIX (Poka-Yoke Stufe 2, Code statt nur Text):** Lokales Plugin `git-dirty-watchdog.js`
 (`~/.config/opencode/plugins/`) prüft bei `session.idle` per `git status --porcelain`, ob das
 Repo „dirty" ist, und macht das per Ton (`error.wav`) + Log-Eintrag SOFORT unübersehbar — committet
 aber bewusst NICHT automatisch (ein Plugin kann nicht sicher unterscheiden, welche Datei zu welcher
-parallelen Session gehört, siehe `parallel-sessions-git.md`). Zusätzlich `commit-push-jede-aufgabe-
-vor-build.md` um einen Satz ergänzt, der genau diese Ausrede vorwegnimmt: „Es gibt KEINE Ausnahme
-für 'ausdrückliche Anweisung'".
+parallelen Session gehört, siehe `parallel-sessions-git.md`). `AGENTS.md` bekam zusätzlich einen
+Satz, der den eingebauten Vorbehalt EXPLIZIT als überschrieben markiert ("diese Regel HIER ist die
+explizite Anweisung, für jede Aufgabe") — reine Erwähnung der Pflicht reicht gegen einen
+hardcodierten Prompt nicht, sie muss ihn aktiv für ungültig erklären. Zusätzlich
+`commit-push-jede-aufgabe-vor-build.md` um einen Satz ergänzt, der genau diese Ausrede
+vorwegnimmt: „Es gibt KEINE Ausnahme für 'ausdrückliche Anweisung'".
+**Recherchierter Goldstandard (nicht 1:1 übernommen, siehe unten):** Aider committet automatisch
+als Tool-NEBENWIRKUNG nach jedem Edit — das LLM wird dabei nicht gefragt, der Commit kommt aus
+einem deterministischen Event-Handler (aider.chat/docs/git.html). Cursor löst es über externe
+Lifecycle-Hooks (GitButler-Integration: jeder Chat → eigener Branch, Commit bei Task-Ende).
+Gemeinsamer Nenner aller zuverlässigen Lösungen: der Commit kommt aus Code, nie aus LLM-Disziplin.
+**Bewusst NICHT 1:1 übernommen:** Alle recherchierten Auto-Commit-Vorbilder nutzen `git add -A` —
+passt nicht zu Franks Multi-Session-Setup (würde fremde Dateien anderer Sessions mitreißen, siehe
+`parallel-sessions-git.md`). Ausbaustufe „datei-basiertes Auto-Commit" (Plugin committet nur
+Dateien, die es selbst per `tool.execute.after` in DIESER Session editiert gesehen hat, analog zum
+Tracking-Muster in `tool-first-guard.js`) ist recherchiert, aber (Stand 2026-07-01) nicht
+umgesetzt — offene Ausbaustufe, siehe `best-practices/opencode/agent-verhalten-commit-disziplin.md`.
 **Status:** Fix deployed 2026-07-01, Live-Verifikation (echter dirty-Session-idle-Trigger in
 OpenCode) steht noch aus.
-**Quelle:** eigener Vorfall (Frank, CortexAndroid-TTS-Aufgabe, 2026-07-01); verwandt: #14923 (§48).
+**Quelle:** eigener Vorfall (Frank, CortexAndroid-TTS-Aufgabe, 2026-07-01); verwandt: #14923 (OPEN,
+§48), #3099/#11534/#11732 (alle CLOSED/COMPLETED — kein aktives Risiko mehr). Recherche 2026-07-01
+(5-Researcher-Schwarm, Sonnet-5): anthropic.com/engineering/claude-code-auto-mode ·
+aider.chat/docs/git.html · blog.gitbutler.com/cursor-hooks-integration · arxiv.org/pdf/2605.07769 ·
+arxiv.org/html/2407.18418v1.
 
 ---
 
