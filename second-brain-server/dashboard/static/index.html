@@ -921,6 +921,7 @@ button{font-family:inherit;cursor:pointer}
                 <label for="reasonAbfrage">Thinking / Reasoning</label>
                 <select class="select" id="reasonAbfrage"></select>
               </div>
+              <div id="modelPricesInfo" style="margin-top:10px"></div>
             </div>
             <div class="field">
               <label>OpenAI Codex / ChatGPT</label>
@@ -1937,6 +1938,12 @@ button{font-family:inherit;cursor:pointer}
         enhanceSelect(sel); };
       fill("modelHaupt", m.haupt); fill("modelSpeicher", m.speicher); fill("modelAbfrage", m.abfrage);
       fillR("reasonHaupt", r.haupt); fillR("reasonSpeicher", r.speicher); fillR("reasonAbfrage", r.abfrage);
+      const prc = c.model_prices || {};
+      const pinfo = document.getElementById("modelPricesInfo");
+      if (pinfo) {
+        const rows = avail.map(v=>{ const p=prc[v]; const pr=(p&&p.input!=null)?`$${p.input} / $${p.output}`:"über Abo"; return `<div style="display:flex;justify-content:space-between;gap:12px;padding:1px 0"><span>${v}</span><span style="opacity:.7">${pr}</span></div>`; }).join("");
+        pinfo.innerHTML = `<div style="font-size:12px;border:1px solid var(--border);border-radius:8px;padding:8px 10px"><div style="font-weight:600;margin-bottom:3px">Preise je 1 Mio Token (Input / Output, USD)</div>${rows}</div>`;
+      }
       const tav = document.getElementById("tavilyEnabled");
       if(tav) tav.checked = c.tavily_enabled !== false;
       syncTavilyState();
