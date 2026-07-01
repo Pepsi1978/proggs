@@ -7,8 +7,16 @@ import de.frank.cortex.vpn.WireGuardManager
 
 class CortexApp : Application() {
 
+    companion object {
+        // App-Context fuer Komponenten ohne eigenen Context (z.B. Mp3Player fuer cacheDir).
+        @Volatile
+        lateinit var appContext: android.content.Context
+            private set
+    }
+
     override fun onCreate() {
         super.onCreate()
+        appContext = applicationContext
 
         // Observability zuerst
         CortexLog.init(this)

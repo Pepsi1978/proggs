@@ -116,6 +116,8 @@ class ChatViewModel : ViewModel() {
 
     private val micRecorder = MicRecorder()
     private val pcmPlayer = PcmPlayer()
+    private val mp3Player = de.frank.cortex.audio.Mp3Player(de.frank.cortex.CortexApp.appContext)
+    private val edgeSynth = de.frank.cortex.audio.EdgeTtsSynthesizer()
     private var speakJob: Job? = null
     private var speechGeneration = 0
 
@@ -619,6 +621,7 @@ class ChatViewModel : ViewModel() {
         speakJob?.cancel()
         speakJob = null
         pcmPlayer.stop()
+        mp3Player.stop()
         _uiState.update { it.copy(isSpeaking = false, speakingMessageId = null) }
     }
 
@@ -626,6 +629,7 @@ class ChatViewModel : ViewModel() {
         super.onCleared()
         speakJob?.cancel()
         pcmPlayer.stop()
+        mp3Player.stop()
     }
 
     fun clearError() {
@@ -643,26 +647,30 @@ class ChatViewModel : ViewModel() {
             ttsRateLimitedUntil = 0L
             ttsRateLimitExhausted = false
             ttsAccessDenied = false
+            // Vorlese-Motor waehlen: Edge (Microsoft, MP3) oder Chirp 3: HD (Google, PCM).
+            val isEdge = SettingsStore.ttsProvider == SettingsStore.TTS_PROVIDER_EDGE
             try {
-                val voice = SettingsStore.ttsVoice
+                val voice = if (isEdge) SettingsStore.edgeTtsVoice else SettingsStore.ttsVoice
                 val rate = SettingsStore.ttsRate
                 val chunks = chunkText(text)
                 if (chunks.isEmpty()) return@launch
                 val ttsStartedAt = System.currentTimeMillis()
                 CortexLog.info("ChatVM", "speakResponse", "TTS Pipeline startet",
-                    mapOf("len" to text.length, "chunks" to chunks.size, "voice" to voice, "rate" to rate))
+                    mapOf("len" to text.length, "chunks" to chunks.size, "voice" to voice, "rate" to rate, "engine" to if (isEdge) "edge" else "chirp"))
 
                 coroutineScope {
                     val pending = mutableMapOf<Int, Deferred<ByteArray?>>()
 
-                    // AudioTrack-Aufbau laeuft PARALLEL zur ersten TTS-Netzwerkanfrage statt
-                    // erst danach - die paar ms AudioTrack-Setup sind so "kostenlos", weil sie
-                    // sich mit dem viel laengeren Netzwerk-Roundtrip ueberlappen.
-                    val playerReady = async(Dispatchers.IO) { pcmPlayer.start(rate) }
+                    // Chirp: durchgehenden AudioTrack PARALLEL zur ersten Netzanfrage aufbauen.
+                    // Edge: kein Vorab-Player noetig (MediaPlayer baut pro Haeppchen auf).
+                    val playerReady = if (isEdge) null else async(Dispatchers.IO) { pcmPlayer.start(rate) }
 
                     fun enqueue(index: Int) {
                         if (index in chunks.indices && pending[index] == null) {
-                            pending[index] = async(Dispatchers.IO) { synthesizeTtsChunk(chunks[index], voice, index) }
+                            pending[index] = async(Dispatchers.IO) {
+                                if (isEdge) synthesizeEdgeChunk(chunks[index], voice, index)
+                                else synthesizeTtsChunk(chunks[index], voice, index)
+                            }
                         }
                     }
 
@@ -670,11 +678,11 @@ class ChatViewModel : ViewModel() {
                     var firstAudioLogged = false
 
                     chunks.forEachIndexed { index, chunk ->
-                        val pcm = pending.remove(index)?.await()
+                        val audio = pending.remove(index)?.await()
                         enqueue(index + TTS_PREFETCH_AHEAD + 1)
                         if (speechGeneration != generation) return@coroutineScope
 
-                        if (pcm == null || pcm.isEmpty()) {
+                        if (audio == null || audio.isEmpty()) {
                             if (ttsAccessDenied) {
                                 // Cloud-TTS-API nicht freigeschaltet o.ae. -> klar melden statt still.
                                 CortexLog.warn("ChatVM", "speakResponse", "TTS wegen Zugriffsfehler gestoppt",
@@ -701,13 +709,17 @@ class ChatViewModel : ViewModel() {
                             return@forEachIndexed
                         }
 
-                        playerReady.await() // no-op sobald der Track laengst steht
                         if (!firstAudioLogged) {
                             CortexLog.info("ChatVM", "speakResponse", "TTS erster Ton bereit",
                                 mapOf("elapsed_ms" to (System.currentTimeMillis() - ttsStartedAt), "chunk_len" to chunk.length))
                             firstAudioLogged = true
                         }
-                        pcmPlayer.writeAndAwait(pcm)
+                        if (isEdge) {
+                            mp3Player.playAndAwait(audio, rate)
+                        } else {
+                            playerReady?.await() // no-op sobald der Track laengst steht
+                            pcmPlayer.writeAndAwait(audio)
+                        }
                     }
                 }
                 CortexLog.info("ChatVM", "speakResponse", "TTS abgeschlossen",
@@ -719,6 +731,7 @@ class ChatViewModel : ViewModel() {
             } finally {
                 if (speechGeneration == generation) {
                     pcmPlayer.stop()
+                    mp3Player.stop()
                     _uiState.update { it.copy(isSpeaking = false, speakingMessageId = null) }
                 }
             }
@@ -803,6 +816,29 @@ class ChatViewModel : ViewModel() {
                 }
                 return concatPcm(pcms)
             }
+        }
+        return null
+    }
+
+    /**
+     * Synthetisiert einen Chunk mit Edge TTS (Microsoft) und gibt die MP3-Bytes zurueck.
+     * Edge ist kostenlos und kennt kein 429/Key-Problem - nur einfache Wiederholung bei
+     * WebSocket-Fehlern; bleibt es dabei, wird der Chunk uebersprungen (null).
+     */
+    private suspend fun synthesizeEdgeChunk(chunk: String, voice: String, index: Int): ByteArray? {
+        repeat(TTS_RETRY_ATTEMPTS) { attempt ->
+            try {
+                val mp3 = edgeSynth.synthesize(chunk, voice)
+                if (mp3.isNotEmpty()) return mp3
+                CortexLog.warn("ChatVM", "synthesizeEdgeChunk", "Edge lieferte leeres Audio",
+                    mapOf("index" to index, "attempt" to (attempt + 1), "chunk_len" to chunk.length))
+            } catch (e: CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                CortexLog.warn("ChatVM", "synthesizeEdgeChunk", "Edge-Chunk fehlgeschlagen: ${e.message}",
+                    mapOf("index" to index, "attempt" to (attempt + 1), "chunk_len" to chunk.length))
+            }
+            if (attempt < TTS_RETRY_ATTEMPTS - 1) delay(300L * (attempt + 1))
         }
         return null
     }

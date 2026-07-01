@@ -23,6 +23,11 @@ object SettingsStore {
     const val RESPONSE_SIZE_MEDIUM = "m"
     const val RESPONSE_SIZE_XL = "xl"
 
+    // Vorlese-Motor (TTS-Provider): Google Chirp 3: HD (Standard) oder Microsoft Edge TTS.
+    const val TTS_PROVIDER_CHIRP = "chirp"
+    const val TTS_PROVIDER_EDGE = "edge"
+    const val DEFAULT_EDGE_VOICE = "de-DE-SeraphinaMultilingualNeural"
+
     fun defaultContextPrompt(mode: String): String = when (mode) {
         CONTEXT_MODE_SMALLTALK -> """
             Du bist jetzt im Smalltalk-Modus. Führe ein normales Gespräch mit Frank.
@@ -159,6 +164,16 @@ object SettingsStore {
     var ttsVoice: String
         get() = plain.getString("tts_voice", "Kore") ?: "Kore"
         set(value) = plain.edit().putString("tts_voice", value).apply()
+
+    // Welcher Vorlese-Motor genutzt wird (TTS_PROVIDER_CHIRP oder TTS_PROVIDER_EDGE).
+    var ttsProvider: String
+        get() = plain.getString("tts_provider", TTS_PROVIDER_CHIRP) ?: TTS_PROVIDER_CHIRP
+        set(value) = plain.edit().putString("tts_provider", value).apply()
+
+    // Gewaehlte Edge-TTS-Stimme (voller Name, z.B. de-DE-SeraphinaMultilingualNeural).
+    var edgeTtsVoice: String
+        get() = plain.getString("edge_tts_voice", DEFAULT_EDGE_VOICE) ?: DEFAULT_EDGE_VOICE
+        set(value) = plain.edit().putString("edge_tts_voice", value).apply()
 
     // Sprechtempo (Design: 0.7–1.4, Schritt 0.05, Standard 1.0). Wird auf die Wiedergabe angewandt.
     var ttsRate: Float

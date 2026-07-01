@@ -69,7 +69,9 @@ fun SettingsScreen(
     var geminiApiKey by remember { mutableStateOf(SettingsStore.geminiApiKey) }
     var googleTtsApiKey by remember { mutableStateOf(SettingsStore.googleTtsApiKey) }
     var ttsEnabled by remember { mutableStateOf(SettingsStore.ttsEnabled) }
+    var ttsProvider by remember { mutableStateOf(SettingsStore.ttsProvider) }
     var ttsVoice by remember { mutableStateOf(SettingsStore.ttsVoice.removePrefix("de-DE-Chirp3-HD-")) }
+    var edgeTtsVoice by remember { mutableStateOf(SettingsStore.edgeTtsVoice) }
     var recordingToneEnabled by remember { mutableStateOf(SettingsStore.recordingToneEnabled) }
     var recordingToneVolume by remember { mutableStateOf(SettingsStore.recordingToneVolume) }
     var biometricLockEnabled by remember { mutableStateOf(SettingsStore.biometricLockEnabled) }
@@ -464,7 +466,46 @@ fun SettingsScreen(
 
                 HorizontalDivider(color = MaterialTheme.colorScheme.outline, modifier = Modifier.padding(horizontal = 14.dp))
 
-                // Voice selector
+                // Vorlese-Motor (TTS-Provider) — Chirp 3: HD (Google) vs. Edge (Microsoft)
+                val isEdgeSel = ttsProvider == SettingsStore.TTS_PROVIDER_EDGE
+                Column(
+                    modifier = Modifier.padding(14.dp),
+                    verticalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    Text("Vorlese-Motor", fontSize = 14.sp)
+                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        TtsEngineChip(
+                            title = "Chirp 3: HD",
+                            subtitle = "Google · viel gratis",
+                            selected = !isEdgeSel,
+                            isDark = isDark,
+                            modifier = Modifier.weight(1f)
+                        ) {
+                            ttsProvider = SettingsStore.TTS_PROVIDER_CHIRP
+                            SettingsStore.ttsProvider = SettingsStore.TTS_PROVIDER_CHIRP
+                        }
+                        TtsEngineChip(
+                            title = "Edge",
+                            subtitle = "Microsoft · kostenlos",
+                            selected = isEdgeSel,
+                            isDark = isDark,
+                            modifier = Modifier.weight(1f)
+                        ) {
+                            ttsProvider = SettingsStore.TTS_PROVIDER_EDGE
+                            SettingsStore.ttsProvider = SettingsStore.TTS_PROVIDER_EDGE
+                        }
+                    }
+                    Text(
+                        if (isEdgeSel) "Edge-TTS von Microsoft — kostenlos, natürliche Stimmen (Seraphina, Florian …)."
+                        else "Chirp 3: HD von Google Cloud — beste Qualität, gratis bis 1 Mio. Zeichen/Monat.",
+                        fontSize = 11.sp,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+
+                HorizontalDivider(color = MaterialTheme.colorScheme.outline, modifier = Modifier.padding(horizontal = 14.dp))
+
+                // Voice selector (engine-aware: Chirp-Stimmen ODER Edge-Stimmen)
                 Row(
                     modifier = Modifier.padding(14.dp),
                     verticalAlignment = Alignment.CenterVertically,
@@ -473,19 +514,22 @@ fun SettingsScreen(
                     Icon(Icons.Default.RecordVoiceOver, null,
                         tint = MaterialTheme.colorScheme.onSurfaceVariant,
                         modifier = Modifier.size(20.dp))
-                    Text("Stimme", fontSize = 14.sp, modifier = Modifier.weight(1f))
+                    Text(if (isEdgeSel) "Edge-Stimme" else "Chirp-Stimme", fontSize = 14.sp, modifier = Modifier.weight(1f))
                     var showVoiceDialog by remember { mutableStateOf(false) }
+                    var showEdgeVoiceDialog by remember { mutableStateOf(false) }
                     val pcmPlayer = remember { PcmPlayer() }
+                    val edgeSynth = remember { de.frank.cortex.audio.EdgeTtsSynthesizer() }
+                    val edgeMp3Player = remember { de.frank.cortex.audio.Mp3Player(context) }
                     val scope = rememberCoroutineScope()
 
                     Surface(
                         shape = RoundedCornerShape(9.dp),
                         color = if (isDark) DarkField else LightField,
                         border = BorderStroke(1.dp, if (isDark) DarkFieldBorder else LightFieldBorder),
-                        modifier = Modifier.clickable { showVoiceDialog = true }
+                        modifier = Modifier.clickable { if (isEdgeSel) showEdgeVoiceDialog = true else showVoiceDialog = true }
                     ) {
                         Text(
-                            voiceLabelFor(ttsVoice),
+                            if (isEdgeSel) edgeVoiceLabelFor(edgeTtsVoice) else voiceLabelFor(ttsVoice),
                             modifier = Modifier.padding(horizontal = 10.dp, vertical = 7.dp),
                             fontSize = 12.5.sp,
                             color = MaterialTheme.colorScheme.onSurface
@@ -512,6 +556,33 @@ fun SettingsScreen(
                                         pcmPlayer.playAndAwait(pcm, SettingsStore.ttsRate)
                                     } catch (e: Exception) {
                                         CortexLog.error("Settings", "testVoice", "TTS-Test fehlgeschlagen: ${e.message}")
+                                        Toast.makeText(context, "Fehler: ${e.message}", Toast.LENGTH_SHORT).show()
+                                    }
+                                }
+                            }
+                        )
+                    }
+                    if (showEdgeVoiceDialog) {
+                        EdgeVoicePickerDialog(
+                            currentVoice = edgeTtsVoice,
+                            onSelect = { voiceId ->
+                                edgeTtsVoice = voiceId
+                                SettingsStore.edgeTtsVoice = voiceId
+                                showEdgeVoiceDialog = false
+                            },
+                            onDismiss = { showEdgeVoiceDialog = false },
+                            onTestVoice = { voiceId ->
+                                scope.launch {
+                                    try {
+                                        edgeMp3Player.stop()
+                                        val short = edgeVoiceShortFor(voiceId)
+                                        val mp3 = edgeSynth.synthesize(
+                                            "Hallo, ich bin $short. Willkommen bei Cortex, deinem zweiten Gehirn.",
+                                            voiceId
+                                        )
+                                        edgeMp3Player.playAndAwait(mp3, SettingsStore.ttsRate)
+                                    } catch (e: Exception) {
+                                        CortexLog.error("Settings", "testEdgeVoice", "Edge-TTS-Test fehlgeschlagen: ${e.message}")
                                         Toast.makeText(context, "Fehler: ${e.message}", Toast.LENGTH_SHORT).show()
                                     }
                                 }
@@ -1208,6 +1279,119 @@ private fun voiceLabelFor(apiName: String): String {
     // Alte Values mit Prefix (z.B. "de-DE-Chirp3-HD-Kore") → stripped
     val stripped = apiName.removePrefix("de-DE-Chirp3-HD-")
     return chirpVoices.firstOrNull { it.name == stripped }?.label ?: stripped
+}
+
+// --- Edge TTS (Microsoft) — dieselben 6 Stimmen wie in BestJournalFrank ---
+private data class EdgeVoiceEntry(
+    val id: String,
+    val short: String,
+    val gender: Gender,
+    val description: String
+)
+
+private val edgeVoices = listOf(
+    EdgeVoiceEntry("de-DE-SeraphinaMultilingualNeural", "Seraphina", Gender.FEMALE, "weiblich · Standard"),
+    EdgeVoiceEntry("de-DE-FlorianMultilingualNeural", "Florian", Gender.MALE, "männlich"),
+    EdgeVoiceEntry("de-DE-KatjaNeural", "Katja", Gender.FEMALE, "weiblich, warm"),
+    EdgeVoiceEntry("de-DE-KillianNeural", "Killian", Gender.MALE, "männlich, warm"),
+    EdgeVoiceEntry("de-DE-ConradNeural", "Conrad", Gender.MALE, "männlich, klar"),
+    EdgeVoiceEntry("de-DE-AmalaNeural", "Amala", Gender.FEMALE, "weiblich, jung"),
+)
+
+private fun edgeVoiceLabelFor(id: String): String = edgeVoices.firstOrNull { it.id == id }?.short ?: id
+private fun edgeVoiceShortFor(id: String): String = edgeVoices.firstOrNull { it.id == id }?.short ?: "die Stimme"
+
+@Composable
+private fun TtsEngineChip(
+    title: String,
+    subtitle: String,
+    selected: Boolean,
+    isDark: Boolean,
+    modifier: Modifier = Modifier,
+    onClick: () -> Unit
+) {
+    val bg = if (selected) Orange.copy(alpha = 0.16f) else if (isDark) DarkField else LightField
+    val border = if (selected) Orange.copy(alpha = 0.55f) else if (isDark) DarkFieldBorder else LightFieldBorder
+    Surface(
+        shape = RoundedCornerShape(10.dp),
+        color = bg,
+        border = BorderStroke(1.dp, border),
+        modifier = modifier.clickable { onClick() }
+    ) {
+        Column(modifier = Modifier.padding(horizontal = 12.dp, vertical = 9.dp)) {
+            Text(title, fontSize = 13.sp, fontWeight = FontWeight.SemiBold,
+                color = if (selected) Orange else MaterialTheme.colorScheme.onSurface)
+            Text(subtitle, fontSize = 10.5.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+        }
+    }
+}
+
+@Composable
+private fun EdgeVoicePickerDialog(
+    currentVoice: String,
+    onSelect: (String) -> Unit,
+    onDismiss: () -> Unit,
+    onTestVoice: (String) -> Unit
+) {
+    val isDark = MaterialTheme.colorScheme.background == DarkBg
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = {
+            Text("Edge-Stimme wählen", fontFamily = SpaceGrotesk,
+                fontWeight = FontWeight.SemiBold, fontSize = 18.sp)
+        },
+        text = {
+            Column {
+                Text("Edge TTS · Microsoft (kostenlos)",
+                    fontFamily = JetBrainsMono, fontSize = 11.sp,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant)
+                Spacer(Modifier.height(12.dp))
+                LazyColumn(
+                    modifier = Modifier.heightIn(min = 150.dp, max = 400.dp),
+                    verticalArrangement = Arrangement.spacedBy(4.dp)
+                ) {
+                    items(edgeVoices) { voice ->
+                        val accent = if (voice.gender == Gender.FEMALE) Color(0xFFF2698E) else Color(0xFF5AB0F2)
+                        val isSelected = currentVoice == voice.id
+                        Surface(
+                            shape = RoundedCornerShape(10.dp),
+                            color = if (isSelected) accent.copy(alpha = 0.14f) else Color.Transparent,
+                            border = BorderStroke(1.dp, if (isSelected) accent.copy(alpha = 0.40f) else Color.Transparent)
+                        ) {
+                            Row(
+                                modifier = Modifier.fillMaxWidth().padding(10.dp),
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.spacedBy(10.dp)
+                            ) {
+                                Surface(shape = RoundedCornerShape(8.dp), color = accent.copy(alpha = 0.15f)) {
+                                    Icon(Icons.Default.RecordVoiceOver, null, tint = accent,
+                                        modifier = Modifier.size(22.dp).padding(4.dp))
+                                }
+                                Column(modifier = Modifier.weight(1f).clickable { onSelect(voice.id) }) {
+                                    Text(voice.short, fontSize = 14.sp, fontWeight = FontWeight.SemiBold,
+                                        color = if (isSelected) accent else MaterialTheme.colorScheme.onSurface)
+                                    Text(voice.description, fontSize = 11.sp,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant)
+                                }
+                                IconButton(onClick = { onTestVoice(voice.id) }, modifier = Modifier.size(30.dp)) {
+                                    Icon(Icons.AutoMirrored.Filled.VolumeUp, "Testen",
+                                        tint = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.size(18.dp))
+                                }
+                                if (isSelected) {
+                                    Icon(Icons.Default.CheckCircle, null, tint = accent, modifier = Modifier.size(18.dp))
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        confirmButton = {
+            TextButton(onClick = onDismiss) { Text("Fertig") }
+        },
+        containerColor = if (isDark) DarkRaised else LightSurface,
+        shape = RoundedCornerShape(22.dp)
+    )
 }
 
 private data class VoiceEntry(
