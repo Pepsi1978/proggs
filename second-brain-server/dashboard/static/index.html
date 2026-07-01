@@ -1952,10 +1952,14 @@ button{font-family:inherit;cursor:pointer}
   }
 
   function isCodexModel(v){ v=(v||"").toLowerCase(); return v.startsWith("gpt-") || v.startsWith("codex/") || v.startsWith("openai-codex/"); }
+  function isGeminiModel(v){ return (v||"").toLowerCase().startsWith("gemini"); }
+  // Thinking/Reasoning-Stufen einstellbar: Codex/GPT (reasoning.effort) UND Gemini (thinking_budget
+  // aus derselben Stufe). minimax/OpenCode denkt nativ und ist ueber diese Stufen nicht steuerbar.
+  function modelSupportsReasoning(v){ return isCodexModel(v) || isGeminiModel(v); }
   function updateReasoningBoxes(){
     [["modelHaupt","reasonHauptBox"],["modelSpeicher","reasonSpeicherBox"],["modelAbfrage","reasonAbfrageBox"]].forEach(([mid,bid])=>{
       const m=document.getElementById(mid), b=document.getElementById(bid); if(!m||!b) return;
-      b.style.display = isCodexModel(m.value) ? "block" : "none";
+      b.style.display = modelSupportsReasoning(m.value) ? "block" : "none";
     });
   }
 
