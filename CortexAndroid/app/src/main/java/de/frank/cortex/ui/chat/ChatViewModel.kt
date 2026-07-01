@@ -23,6 +23,8 @@ import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.sync.Semaphore
+import kotlinx.coroutines.sync.withPermit
 import kotlinx.coroutines.withContext
 import java.util.UUID
 
@@ -94,6 +96,16 @@ class ChatViewModel : ViewModel() {
         // Default-Backoff wenn Gemini 429 ohne Retry-After-Header meldet.
         const val TTS_RATE_LIMIT_DEFAULT_BACKOFF_MS = 2000L
         const val TTS_RATE_LIMIT_MAX_BACKOFF_MS = 8000L
+        // Ein rate-limitierter Chunk wird GEDULDIG wiederholt (nie verworfen), bis diese
+        // Gesamt-Wartezeit erreicht ist. Erst dann greift die Notbremse. So fallen keine
+        // Absaetze mehr weg, nur weil Gemini gerade drosselt (Frank-Vorfall 2026-07-01:
+        // nur 2 von 12 Absaetzen vorgelesen, Rest still uebersprungen).
+        const val TTS_RATE_LIMIT_MAX_TOTAL_WAIT_MS = 120_000L
+        // Nur so viele TTS-Anfragen GLEICHZEITIG - verhindert den 429-Burst von vornherein.
+        // 1 reicht: eine Chunk-Wiedergabe dauert laenger als die Synthese des naechsten
+        // Chunks, die serielle Synthese bleibt der Wiedergabe also voraus (keine Luecken)
+        // und trifft die Rate-Limit-Wand deutlich seltener.
+        const val TTS_MAX_CONCURRENT_SYNTH = 1
     }
 
     private val _uiState = MutableStateFlow(ChatUiState())
@@ -111,6 +123,9 @@ class ChatViewModel : ViewModel() {
     // (spaeter hinzugefuegte) Retry-Logik hat durch rekursives Aufsplitten sogar noch mehr
     // Anfragen erzeugt statt zu bremsen.
     @Volatile private var ttsRateLimitedUntil: Long = 0L
+
+    // Begrenzt die GLEICHZEITIGEN Gemini-TTS-Anfragen (siehe TTS_MAX_CONCURRENT_SYNTH).
+    private val ttsSemaphore = Semaphore(TTS_MAX_CONCURRENT_SYNTH)
 
     init {
         // Vorlese-Schalter aus den Einstellungen uebernehmen, damit Chat-Icon + Auto-Vorlesen
@@ -680,38 +695,56 @@ class ChatViewModel : ViewModel() {
 
     private suspend fun synthesizeTtsChunk(chunk: String, voice: String, index: Int): ByteArray? {
         var lastError: String? = null
-        var wasRateLimited = false
-        repeat(TTS_RETRY_ATTEMPTS) { attempt ->
+        var contentAttempts = 0
+        var rateLimitRetries = 0
+        var rateLimitWaitedMs = 0L
+
+        while (true) {
             // Geteilter Rate-Limit-Zaun: falls GERADE ein anderer Chunk ein 429 ausgeloest hat,
             // erst abwarten statt sofort erneut gegen dieselbe Bremse zu laufen.
-            val waitMs = ttsRateLimitedUntil - System.currentTimeMillis()
-            if (waitMs > 0) delay(waitMs)
+            val gateWaitMs = ttsRateLimitedUntil - System.currentTimeMillis()
+            if (gateWaitMs > 0) delay(gateWaitMs)
             try {
-                return ApiClient.geminiTts(chunk, voice)
+                // Semaphore begrenzt die gleichzeitigen Anfragen -> weniger 429 von vornherein.
+                return ttsSemaphore.withPermit { ApiClient.geminiTts(chunk, voice) }
             } catch (e: CancellationException) {
                 throw e
             } catch (e: GeminiRateLimitException) {
-                wasRateLimited = true
+                // KRITISCH (Direktive #3, funktionserhaltend): Ein 429 ist VORUEBERGEHEND.
+                // Den Chunk deswegen NIEMALS verwerfen - sonst fehlen ganze Absaetze in der
+                // Vorlesung (genau der Bug vom 2026-07-01). Stattdessen geduldig mit wachsendem
+                // Backoff erneut versuchen, bis eine grosszuegige Gesamt-Wartezeit erreicht ist.
                 lastError = e.message
-                val backoff = (e.retryAfterMs ?: TTS_RATE_LIMIT_DEFAULT_BACKOFF_MS)
-                    .coerceAtMost(TTS_RATE_LIMIT_MAX_BACKOFF_MS)
+                val escalated = TTS_RATE_LIMIT_DEFAULT_BACKOFF_MS shl minOf(rateLimitRetries, 2)
+                val backoff = (e.retryAfterMs ?: escalated)
+                    .coerceIn(TTS_RATE_LIMIT_DEFAULT_BACKOFF_MS, TTS_RATE_LIMIT_MAX_BACKOFF_MS)
                 ttsRateLimitedUntil = maxOf(ttsRateLimitedUntil, System.currentTimeMillis() + backoff)
+                rateLimitRetries++
+                rateLimitWaitedMs += backoff
                 CortexLog.warn("ChatVM", "synthesizeTtsChunk", "TTS-Chunk rate-limited, warte ${backoff}ms",
-                    mapOf("index" to index, "attempt" to (attempt + 1), "chunk_len" to chunk.length))
+                    mapOf("index" to index, "retry" to rateLimitRetries, "total_wait_ms" to rateLimitWaitedMs, "chunk_len" to chunk.length))
+                if (rateLimitWaitedMs >= TTS_RATE_LIMIT_MAX_TOTAL_WAIT_MS) {
+                    // Notbremse: erst nach sehr langer Drosselung aufgeben (Chunk kommt nie durch).
+                    CortexLog.error("ChatVM", "synthesizeTtsChunk", "TTS-Chunk nach ${rateLimitWaitedMs}ms Rate-Limit aufgegeben",
+                        mapOf("index" to index, "chunk_len" to chunk.length))
+                    return null
+                }
                 delay(backoff)
             } catch (e: Exception) {
                 lastError = e.message
+                contentAttempts++
                 CortexLog.warn("ChatVM", "synthesizeTtsChunk", "TTS-Chunk fehlgeschlagen: ${e.message}",
-                    mapOf("index" to index, "attempt" to (attempt + 1), "chunk_len" to chunk.length))
-                if (attempt < TTS_RETRY_ATTEMPTS - 1) delay(300L * (attempt + 1))
+                    mapOf("index" to index, "attempt" to contentAttempts, "chunk_len" to chunk.length))
+                if (contentAttempts >= TTS_RETRY_ATTEMPTS) break
+                delay(300L * contentAttempts)
             }
         }
 
-        // Rate-Limit-Fehler NICHT rekursiv aufsplitten - das wuerde die Anfragenzahl genau dann
-        // erhoehen, wenn Gemini schon ueberlastet ist (Root Cause des alten "Lautsprecher tut bei
-        // grossen Nachrichten nichts"-Bugs). Nur bei echten Inhalts-/Format-Fehlern hilft ein
-        // kleineres Haeppchen.
-        if (!wasRateLimited && chunk.length > TTS_RETRY_SPLIT_MIN_CHARS) {
+        // Hierher kommt man NUR ueber den content-Fehler-`break` (der Rate-Limit-Pfad kehrt oben
+        // entweder mit Audio zurueck oder laeuft weiter) - also nur bei echten Inhalts-/Format-
+        // Fehlern. Ein Rate-Limit wird NICHT rekursiv aufgesplittet, das wuerde die Anfragenzahl
+        // genau dann erhoehen, wenn Gemini schon drosselt.
+        if (chunk.length > TTS_RETRY_SPLIT_MIN_CHARS) {
             val retryMax = maxOf(TTS_RETRY_SPLIT_MIN_CHARS, chunk.length / 2)
             val pieces = splitLongTextAtWords(chunk, retryMax)
             if (pieces.size > 1) {
