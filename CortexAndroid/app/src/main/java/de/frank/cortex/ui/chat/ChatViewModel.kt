@@ -82,15 +82,16 @@ object ChatCommands {
 class ChatViewModel : ViewModel() {
 
     private companion object {
-        // 2026-07-01: TTS_FIRST_TARGET_CHARS war bei 220 (Bugfix #47325) bestaetigt "super" schnell.
-        // Ein spaeterer Umbau erhoehte ihn auf 520 - das machte den Start wieder spuerbar langsamer.
-        // Zurueckgesetzt auf den bewaehrten Wert samt der dazugehoerigen (grosszuegigeren) Merge-Regel.
-        const val TTS_FIRST_TARGET_CHARS = 220
-        // Frank-Feedback 2026-07-01: 720 erzeugte eine hoerbare Luecke zwischen 1. und 2. Absatz
-        // (2. Chunk brauchte zu lange zum Synthetisieren). Auf 500 gesenkt - kuerzere Folgechunks
-        // sind schneller fertig synthetisiert, bevor der vorherige Chunk zu Ende gespielt ist.
-        const val TTS_TARGET_CHARS = 500
-        const val TTS_MAX_CHARS = 950
+        // 2026-07-01 (abends): auf 350 erhoeht (vorher 220). Seit dem Wechsel auf Chirp 3:HD ist die
+        // Synthese schnell genug fuer einen groesseren ersten Chunk - das langsame Flash-ueber-Cloud
+        // hatte 220 noetig gemacht. 220 teilte oft schon MITTEN im ersten Absatz; 350 ist das
+        // Ziel/Limit fuer den ersten Chunk (weiterhin schneller Start, aber ganze erste Saetze/Absaetze
+        // bleiben zusammen; ist der erste Absatz laenger als 350, wird an Wortgrenzen bei 350 geteilt).
+        const val TTS_FIRST_TARGET_CHARS = 350
+        // Folgechunks: auf 650 erhoeht (vorher 500). Chirp 3:HD ist schnell genug, dass auch laengere
+        // Folgechunks fertig synthetisiert sind, bevor der vorherige zu Ende gespielt ist (kein Loch).
+        const val TTS_TARGET_CHARS = 650
+        const val TTS_MAX_CHARS = 1000
         const val TTS_PREFETCH_AHEAD = 2
         const val TTS_RETRY_ATTEMPTS = 2
         const val TTS_RETRY_SPLIT_MIN_CHARS = 260
