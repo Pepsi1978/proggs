@@ -83,7 +83,10 @@ class ChatViewModel : ViewModel() {
         // Ein spaeterer Umbau erhoehte ihn auf 520 - das machte den Start wieder spuerbar langsamer.
         // Zurueckgesetzt auf den bewaehrten Wert samt der dazugehoerigen (grosszuegigeren) Merge-Regel.
         const val TTS_FIRST_TARGET_CHARS = 220
-        const val TTS_TARGET_CHARS = 720
+        // Frank-Feedback 2026-07-01: 720 erzeugte eine hoerbare Luecke zwischen 1. und 2. Absatz
+        // (2. Chunk brauchte zu lange zum Synthetisieren). Auf 500 gesenkt - kuerzere Folgechunks
+        // sind schneller fertig synthetisiert, bevor der vorherige Chunk zu Ende gespielt ist.
+        const val TTS_TARGET_CHARS = 500
         const val TTS_MAX_CHARS = 950
         const val TTS_PREFETCH_AHEAD = 2
         const val TTS_RETRY_ATTEMPTS = 2
