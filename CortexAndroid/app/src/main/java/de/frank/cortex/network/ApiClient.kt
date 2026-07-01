@@ -100,9 +100,13 @@ object ApiClient {
             }
             .addInterceptor(timingInterceptor)
             .addInterceptor(loggingInterceptor) // LETZTER Interceptor
-            .callTimeout(120, TimeUnit.SECONDS)
+            // Agent-Antworten mit Internet-Suche brauchen server-seitig 30-40s (Router-LLM +
+            // Websuche + Antwort-Synthese, nacheinander). readTimeout 60s war zu knapp -> "Fehler
+            // Timeout" bei langen Suchen. Grosszuegiger: readTimeout 120s, callTimeout 180s (hartes
+            // Dach, Almanach §L4/BP §6.1) — kein Streaming, daher readTimeout>0 ok (2026-07-01).
+            .callTimeout(180, TimeUnit.SECONDS)
             .connectTimeout(30, TimeUnit.SECONDS)
-            .readTimeout(60, TimeUnit.SECONDS)
+            .readTimeout(120, TimeUnit.SECONDS)
             .writeTimeout(30, TimeUnit.SECONDS)
             .retryOnConnectionFailure(true)
             .build()

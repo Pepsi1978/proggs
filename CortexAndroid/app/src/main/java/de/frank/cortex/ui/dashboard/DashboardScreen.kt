@@ -44,6 +44,15 @@ fun DashboardScreen(vm: DashboardViewModel = viewModel()) {
     val uiState by vm.uiState.collectAsState()
     val vpnState by WireGuardManager.state.collectAsState()
 
+    // Dashboard-Polling nur laufen lassen, solange dieser Screen wirklich sichtbar ist. Beim
+    // Wegnavigieren (z.B. in den Chat) wird der Composable disposed -> screenActive=false -> der
+    // 20s-Poll ruht. Sonst verstopften die Hintergrund-Polls den WireGuard-Mobilfunk-Tunnel und
+    // erzeugten "Fehler Timeout"-Toasts, waehrend man auf die Agent-Antwort wartete (2026-07-01).
+    DisposableEffect(Unit) {
+        vm.setScreenActive(true)
+        onDispose { vm.setScreenActive(false) }
+    }
+
     // VPN Sleep Overlay (design: blur + "Dein Gehirn schläft")
     if (vpnState != TunnelState.CONNECTED) {
         VpnSleepOverlay(onActivateVpn = { WireGuardManager.connect() })

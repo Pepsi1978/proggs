@@ -40,12 +40,25 @@ class DashboardViewModel : ViewModel() {
     private val _uiState = MutableStateFlow(DashboardUiState())
     val uiState: StateFlow<DashboardUiState> = _uiState.asStateFlow()
 
+    // Nur pollen/aktualisieren, wenn der Dashboard-Screen wirklich sichtbar ist. Sonst lief der
+    // 20s-Poll (und der VPN-Connect-Trigger) im Hintergrund WEITER — auch waehrend man im Chat auf
+    // die Agent-Antwort wartet. Ueber den schmalen WireGuard-Mobilfunk-Tunnel verstopften diese
+    // parallelen Polls die Leitung (Connect-Timeouts -> sichtbare "Fehler Timeout"-Toasts) und
+    // konkurrierten mit der Chat-Anfrage um Bandbreite. Der Screen meldet seine Sichtbarkeit via
+    // setScreenActive (Vorfall 2026-07-01: Performance-Debug Internet-Antwort).
+    @Volatile private var screenActive = false
+
+    fun setScreenActive(active: Boolean) {
+        screenActive = active
+    }
+
     init {
         startAutoRefresh()
-        // Sofort aktualisieren, sobald das VPN verbunden ist (statt bis zu 20 s aufs Poll-Intervall zu warten).
+        // Sofort aktualisieren, sobald das VPN verbunden ist (statt bis zu 20 s aufs Poll-Intervall zu
+        // warten) — aber nur wenn das Dashboard gerade sichtbar ist (nicht im Hintergrund/Chat).
         viewModelScope.launch {
             WireGuardManager.state.collect { st ->
-                if (st == TunnelState.CONNECTED) refreshAll()
+                if (st == TunnelState.CONNECTED && screenActive) refreshAll()
             }
         }
     }
@@ -53,7 +66,7 @@ class DashboardViewModel : ViewModel() {
     private fun startAutoRefresh() {
         viewModelScope.launch {
             while (true) {
-                if (WireGuardManager.state.value == TunnelState.CONNECTED) {
+                if (screenActive && WireGuardManager.state.value == TunnelState.CONNECTED) {
                     refreshAll()
                 }
                 delay(20_000)
