@@ -49,7 +49,14 @@ class DashboardViewModel : ViewModel() {
     @Volatile private var screenActive = false
 
     fun setScreenActive(active: Boolean) {
+        val becameActive = active && !screenActive
         screenActive = active
+        // Beim Sichtbarwerden SOFORT laden statt bis zu 20 s auf den naechsten Poll-Tick zu warten
+        // (Frank-Bug 2026-07-02: Dashboard zeigte ~1 Minute lang "0 Gesamteintraege"). Ist das VPN
+        // noch nicht verbunden, uebernimmt der bestehende VPN-Connect-Trigger im init-Block.
+        if (becameActive && WireGuardManager.state.value == TunnelState.CONNECTED) {
+            refreshAll()
+        }
     }
 
     init {
