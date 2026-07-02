@@ -20,7 +20,8 @@
 > - Abgedeckte Spanne: **Compose 1.6 → 1.10**, Material3 1.2 → 1.4. **Strong Skipping** ist seit
 >   Compose-Compiler 2.0.20 / Compose 1.7 default aktiv (gilt fuer beide Projekte).
 >
-> **Ergaenzt 2026-07-02:** §6.8 (`weight(0f)`-Crash aus dynamischen Daten, CortexAndroid-Fund).
+> **Ergaenzt 2026-07-02:** §6.8 (`weight(0f)`-Crash aus dynamischen Daten) und §9.6
+> (unbedingt erzeugte InfiniteTransition tickt in jedem Zustand — Energie) — CortexAndroid-Funde.
 >
 > **Versions-Horizont (Re-Recherche 2026-06-24):** BOM ist inzwischen bei **2026.06.00** (2026-06-17):
 > Compose UI/foundation/animation/runtime **1.11.3**, **Material3 1.4.0** (stabil), **1.12.0-beta01** in
@@ -69,6 +70,7 @@ Dieser Almanach ist die **tiefe, vollstaendige** Quelle fuer **Compose-UI-Bugs**
 | 15 | type-safe Nav crasht (custom Typ) | Eigenen `NavType` per `typeMap` registrieren | §7.4 |
 | 16 | Gespeicherte Aenderung (DataStore/Room) erscheint erst beim naechsten Tap | Flow per `remember(context){…}` / ViewModel-`stateIn` stabil halten — NIE roh im Composable-Body neu bauen | §2.14 |
 | 17 | `weight()` aus dynamischen Daten (Anteile/Zaehler) | Wert 0 crasht (`invalid weight`) — 0-Elemente vorher filtern | §6.8 |
+| 18 | Endlos-Animation nur fuer EINEN Zustand (Puls/Blink) | `rememberInfiniteTransition` in den Zustands-Zweig verschieben — sonst tickt sie in JEDEM Zustand (Akku) | §9.6 |
 
 ---
 
@@ -621,6 +623,13 @@ SearchBar-Modell (`SearchBarState` + `ExpandedFullScreenSearchBar`).
 **Versionen:** betroffen ~1.6.x; **gefixt** in spaeterer animation-Release (Tracking startet von aktueller Groesse) — mit BOM 2026.03.00 (~1.8/1.9) behoben; issuetracker 300134177.
 **FIX:** compose-animation auf aktuelle BOM heben; bei Restsprung `animateContentSize` VOR Ausrichtungs-/Padding-Modifiern platzieren, Alignment am aeusseren Container.
 **Quelle:** issuetracker.google.com/issues/300134177
+
+### 9.6 `rememberInfiniteTransition` unbedingt erzeugt, Wert aber nur in EINEM Zustand gelesen → Dauer-Animations-Ticks (Energie)
+**Symptom:** Keine sichtbare Recomposition-Last, aber dauerhafte Frame-Callbacks/Animations-Ticks (Akku!), solange die Composable im Tree ist — auch wenn die Animation optisch gar nicht laeuft. Typisch: Status-Pill in einer immer sichtbaren TopBar mit Puls-Effekt nur fuer den Zustand „verbinde…".
+**Ursache:** `rememberInfiniteTransition` + `animateFloat` laufen IMMER weiter, sobald sie Teil der Composition sind — unabhaengig davon, ob irgendjemand die Werte liest. Wird der Wert nur in einem `if (state == X)`-Zweig gelesen, tickt die Animation in ALLEN anderen Zustaenden trotzdem endlos.
+**Versionen:** per Design, alle Compose-Versionen.
+**FIX (funktionserhaltend + optisch identisch):** Transition UND `animateFloat` IN den Zustands-Zweig verschieben (`if (state == X) { val t = rememberInfiniteTransition(); … }`) — bedingtes `remember` ist in Compose erlaubt; beim Zustandswechsel wird die Animation sauber disposed/neu erstellt. (Gefunden 2026-07-02, CortexAndroid VPN-Pill: Puls tickte in jedem App-Zustand.)
+**Quelle:** developer.android.com/develop/ui/compose/animation (InfiniteTransition-Lebensdauer = Composition-Lebensdauer)
 
 ---
 
