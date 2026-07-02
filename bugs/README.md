@@ -191,7 +191,7 @@ unbemerkt ohne Erzwingung bleibt. Details in [`SYSTEM.md`](SYSTEM.md).
 | **Groq API** | [`apis/groq-api.md`](apis/groq-api.md) | 2026-07-02 | 21 | „Groq", „LPU", „api.groq.com", „model_decommissioned", „whisper-large-v3", „TPM" |
 | **OpenRouter** (Aggregator) | [`apis/openrouter-api.md`](apis/openrouter-api.md) | 2026-06-08 | 18 | „OpenRouter", „openrouter.ai", „HTTP-Referer", „provider routing", „:free", „:nitro" |
 | **xAI Grok API** | [`apis/xai-grok-api.md`](apis/xai-grok-api.md) | 2026-06-08 | 15 | „Grok", „xAI", „api.x.ai", „grok-4", „Live Search" |
-| **Mistral API** | [`apis/mistral-api.md`](apis/mistral-api.md) | 2026-06-08 | 24 | „Mistral", „api.mistral.ai", „Codestral", „FIM", „tool_call_id 9 Zeichen", „La Plateforme" |
+| **Mistral API** | [`apis/mistral-api.md`](apis/mistral-api.md) | 2026-07-02 | 24 | „Mistral", „api.mistral.ai", „Codestral", „FIM", „tool_call_id 9 Zeichen", „La Plateforme" |
 | **DeepSeek API** | [`apis/deepseek-api.md`](apis/deepseek-api.md) | 2026-07-02 | 14 | „DeepSeek", „deepseek-reasoner", „reasoning_content", „deepseek-chat", „V3/V4" |
 | **Lokale OpenAI-kompatible Server** (Ollama, LM Studio, vLLM, llama.cpp) | [`apis/local-openai-compatible.md`](apis/local-openai-compatible.md) | 2026-06-08 | 20 | „Ollama", „LM Studio", „vLLM", „llama.cpp", „localhost:11434", „num_ctx", „local LLM" |
 | **Weitere LLM-APIs** (Cohere, Together, Fireworks, Perplexity, Bedrock, Azure, Cerebras, Vertex, HF) | [`apis/other-llm-apis.md`](apis/other-llm-apis.md) | 2026-06-08 | Survey | „Cohere", „Together", „Fireworks", „Perplexity", „Bedrock", „Cerebras", „Vertex AI", „SigV4" |

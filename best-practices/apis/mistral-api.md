@@ -1,6 +1,7 @@
-# Mistral API — Best Practices (Stand 2026-06-09)
+# Mistral API — Best Practices (Stand 2026-07-02)
 
-> Gegenstueck zu `bugs/apis/mistral-api.md`. Offiziell empfohlen (Quellen). (Researcher-Recherche 2026-06-09.)
+> Gegenstueck zu `bugs/apis/mistral-api.md`. Offiziell empfohlen (Quellen). (Researcher-Recherche 2026-06-09, Re-Recherche 2026-07-02.)
+> Update 2026-07-02: OCR 4 gezielt nutzen, wenn strukturierte OCR-Bloecke/BBoxen gebraucht werden; Leanstral 1.5 wegen Retirement 30.09.2026 nicht als langfristigen Default pinnen.
 
 ## ⚡ Kurzcheck (Stufe A — vor der Arbeit lesen)
 

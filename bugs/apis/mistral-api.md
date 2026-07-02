@@ -1,7 +1,9 @@
 # Bekannte Bugs: Mistral AI API (Integration)
 
 > PFLICHT-LESEN vor Arbeit an einer Mistral-Integration (api.mistral.ai / La Plateforme).
-> Stand: zuletzt recherchiert am 2026-06-08. Zweite Seite: `best-practices/apis/mistral-api.md`.
+> Stand: zuletzt recherchiert am 2026-06-08, **re-recherchiert am 2026-07-02** (Engine A: Firecrawl+MiniMax). Zweite Seite: `best-practices/apis/mistral-api.md`.
+
+> **Update 2026-07-02:** Neue Changelog-Funde seit 2026-06-08: OCR 4 (`mistral-ocr-4-0`) seit 22.06.2026 mit `include_blocks` und erweitertem `pages`-Parameter; Leanstral 1.5 (`labs-leanstral-1-5`) seit 29.06.2026, Retirement 30.09.2026. Keine neuen belegten Aenderungen an `tool_call_id`, JSON-Mode oder Codestral-Rate-Limits gefunden.
 
 ## ⚡ Kurzcheck (Stufe A — vor der Arbeit lesen)
 
