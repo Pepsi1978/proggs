@@ -188,7 +188,7 @@ unbemerkt ohne Erzwingung bleibt. Details in [`SYSTEM.md`](SYSTEM.md).
 | **OpenAI API** | [`apis/openai-api.md`](apis/openai-api.md) | 2026-06-08 | 26 | „OpenAI", „GPT", „Responses API", „Chat Completions", „o1/o3/o4", „reasoning_effort", „max_completion_tokens", „Azure OpenAI" |
 | **Anthropic Claude API** | [`apis/anthropic-api.md`](apis/anthropic-api.md) | 2026-07-02 | 30 | „Anthropic", „Claude API", „Messages API", „anthropic-version", „x-api-key", „tool_use", „prompt caching", „extended thinking" |
 | **Google Gemini API** | [`apis/google-gemini-api.md`](apis/google-gemini-api.md) | 2026-07-02 | 22 | „Gemini", „google-genai", „generativelanguage", „thinkingBudget", „safetySettings", „Vertex" |
-| **Groq API** | [`apis/groq-api.md`](apis/groq-api.md) | 2026-06-08 | 21 | „Groq", „LPU", „api.groq.com", „model_decommissioned", „whisper-large-v3", „TPM" |
+| **Groq API** | [`apis/groq-api.md`](apis/groq-api.md) | 2026-07-02 | 21 | „Groq", „LPU", „api.groq.com", „model_decommissioned", „whisper-large-v3", „TPM" |
 | **OpenRouter** (Aggregator) | [`apis/openrouter-api.md`](apis/openrouter-api.md) | 2026-06-08 | 18 | „OpenRouter", „openrouter.ai", „HTTP-Referer", „provider routing", „:free", „:nitro" |
 | **xAI Grok API** | [`apis/xai-grok-api.md`](apis/xai-grok-api.md) | 2026-06-08 | 15 | „Grok", „xAI", „api.x.ai", „grok-4", „Live Search" |
 | **Mistral API** | [`apis/mistral-api.md`](apis/mistral-api.md) | 2026-06-08 | 24 | „Mistral", „api.mistral.ai", „Codestral", „FIM", „tool_call_id 9 Zeichen", „La Plateforme" |

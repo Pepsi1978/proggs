@@ -1,10 +1,12 @@
 # Bekannte Bugs: Groq API (Integration)
 
 > PFLICHT-LESEN vor Arbeit an einer Groq-API-Integration (Client-seitig, schnelle LPU-Inferenz).
-> Stand: zuletzt recherchiert am 2026-06-08. Versions-Anker: aktuelle Produktionsmodelle u. a.
+> Stand: zuletzt recherchiert am 2026-06-08, **re-recherchiert am 2026-07-02** (Engine A: Firecrawl+MiniMax). Versions-Anker: aktuelle Produktionsmodelle u. a.
 > `llama-3.3-70b-versatile`, `llama-3.1-8b-instant`, `openai/gpt-oss-120b/-20b`, `whisper-large-v3(-turbo)`.
 > Verwandt: Whisper-Halluzination siehe auch `desktop/groq-transkription.md`. Zweite Seite: noch keine
 > `best-practices-groq-api.md` (Transkriptions-BP existiert: `best-practices/desktop/groq-transkription.md`).
+
+> **Update 2026-07-02:** Neue Groq-Deprecations seit 17.06.2026: `qwen/qwen3-32b` und `meta-llama/llama-4-scout-17b-16e-instruct` Shutdown 17.07.2026; `llama-3.1-8b-instant` und `llama-3.3-70b-versatile` Shutdown 16.08.2026 (Free/Developer-Tier). Zusaetzlich beachten: Rate-Limit-Doku und Modellseiten koennen unterschiedliche Developer-Plan-Werte zeigen; zur Laufzeit Header und Dashboard als Wahrheit nutzen.
 
 ## ⚡ Kurzcheck (Stufe A — vor der Arbeit lesen)
 

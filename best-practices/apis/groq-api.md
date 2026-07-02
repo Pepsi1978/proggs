@@ -1,6 +1,7 @@
-# Groq API — Best Practices (Stand 2026-06-09)
+# Groq API — Best Practices (Stand 2026-07-02)
 
-> Gegenstueck zu `bugs/apis/groq-api.md`. Offiziell empfohlen (Quellen). (Researcher-Recherche 2026-06-09.)
+> Gegenstueck zu `bugs/apis/groq-api.md`. Offiziell empfohlen (Quellen). (Researcher-Recherche 2026-06-09, Re-Recherche 2026-07-02.)
+> Update 2026-07-02: Modell-IDs noch strenger dynamisch behandeln; mehrere bisherige Kernmodelle haben Shutdown-Daten im Juli/August 2026. Rate-Limits immer per Response-Header/Dashboard auswerten, nicht aus statischen Tabellen hardcoden.
 
 ## ⚡ Kurzcheck (Stufe A — vor der Arbeit lesen)
 
