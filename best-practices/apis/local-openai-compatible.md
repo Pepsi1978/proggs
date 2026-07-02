@@ -1,6 +1,6 @@
-# Lokale OpenAI-kompatible Server — Best Practices (Stand 2026-06-09)
+# Lokale OpenAI-kompatible Server — Best Practices (Stand 2026-07-02)
 
-> Gegenstueck zu `bugs/apis/local-openai-compatible.md`. Offiziell empfohlen (Quellen). (Researcher-Recherche 2026-06-09.)
+> Gegenstück zu `bugs/apis/local-openai-compatible.md`. Offiziell empfohlen (Quellen). (Researcher-Recherche 2026-06-09; Re-Recherche 2026-07-02.)
 
 ## ⚡ Kurzcheck (Stufe A — vor der Arbeit lesen)
 
@@ -13,9 +13,9 @@
 | 1 | Endpunkt | `base_url` mit `/v1`; LAN auf `0.0.0.0`; lokal `127.0.0.1` | §1 |
 | 2 | Auth | API-Key nie leer (Platzhalter); echte Auth exakt matchen | §2 |
 | 3 | Modell-Laden | `keep_alive`/TTL bewusst; Alias + `/v1/models` verifizieren | §3 |
-| 4 | Kontextfenster | Ollama Modelfile/`OLLAMA_CONTEXT_LENGTH`; llama.cpp `--ctx-size` | §4 |
+| 4 | Kontextfenster | Ollama Modelfile/`OLLAMA_CONTEXT_LENGTH`; v0.30.9 Context Shift prüfen | §4 |
 | 5 | Tool-Calling | vLLM 2 Flags; llama.cpp `--jinja`; defensiv parsen | §5 |
-| 6 | Structured Output | json_schema ODER grammar (nie beides); pro Server-Format | §6 |
+| 6 | Structured Output | vLLM `structured_outputs`; llama.cpp json_schema ODER grammar | §6 |
 | 7 | Streaming/Embeddings | Stream am `[DONE]` schliessen; `--embeddings`/`--parallel` | §7 |
 | 8 | Timeouts/Drift | First-Request ≥ 60 s; Compat „best-effort", Doku pruefen | §8 |
 
@@ -34,19 +34,19 @@
 - vLLM: Modell wird beim Serverstart einmalig in den VRAM geladen und bleibt resident — kein TTL/Auto-Unload; ein vLLM-Prozess pro Modell. Quelle: https://docs.vllm.ai/en/latest/serving/openai_compatible_server.html · offiziell
 - Modell-Alias setzen und im Client verwenden: vLLM `--served-model-name <alias>`, mit `/v1/models` verifizieren. Quelle: https://docs.vllm.ai/en/latest/serving/openai_compatible_server.html · offiziell
 
-## 4. Kontextfenster setzen (sonst stilles Truncaten)
-- Ollama: Kontext NICHT ueber den `/v1`-Body — pro Modell ein Modelfile mit `PARAMETER num_ctx <wert>` ODER Server-Default `OLLAMA_CONTEXT_LENGTH` setzen, sonst stille Truncation. Quelle: https://ollama.com/blog/openai-compatibility · offiziell
+## 4. Kontextfenster setzen (sonst falsche Kontextannahmen)
+- Ollama: Kontext NICHT über den `/v1`-Body — pro Modell ein Modelfile mit `PARAMETER num_ctx <wert>` ODER Server-Default `OLLAMA_CONTEXT_LENGTH` setzen. Seit v0.30.9 hilft Context Shift bei Fenstern >8k, ersetzt aber keine explizite Konfiguration. Quelle: https://ollama.com/blog/openai-compatibility · offiziell; https://github.com/ollama/ollama/releases · offiziell
 - llama.cpp: `--ctx-size` (alias `-c`) explizit setzen (Default niedrig, oft 512/2048) — bei Concurrency wird der Kontext auf Slots aufgeteilt, also `ctx_size = parallel × gewuenschter_kontext`. Quelle: https://github.com/ggml-org/llama.cpp/blob/master/tools/server/README.md · offiziell
 - vLLM: `--max-model-len` setzen; zu hoher Wert → CUDA OOM, dann senken oder `--gpu-memory-utilization` anpassen. Quelle: https://docs.vllm.ai/en/latest/serving/openai_compatible_server.html · offiziell
 
 ## 5. Tool / Function Calling (Server- und Modell-abhaengig)
 - vLLM: ZWEI Flags noetig — `--enable-auto-tool-choice` UND `--tool-call-parser <parser>` passend zum Modell (`llama3_json` fuer Llama 3.1/3.2, `hermes` fuer Qwen2.5/Hermes, `mistral`, `deepseek_v3`, `llama4_pythonic`); ggf. `--chat-template`. Quelle: https://docs.vllm.ai/en/latest/features/tool_calling/ · offiziell
 - vLLM: `tool_choice="required"`/benannte Funktion erzwingt schema-valides JSON (structured outputs); `tool_choice="auto"` haengt von Modellqualitaet ab (kein strict-mode), defensiv parsen + Retry. Quelle: https://docs.vllm.ai/en/latest/features/tool_calling/ · offiziell
-- llama.cpp: `--jinja` mit korrektem Chat-Template aktivieren; nur Modelle mit Tool-Template verwenden, Argumente client-seitig defensiv parsen. Quelle: https://github.com/ggml-org/llama.cpp/blob/master/tools/server/README.md · offiziell
+- llama.cpp: `--jinja` mit korrektem Chat-Template aktivieren; nur Modelle mit Tool-Template verwenden, Argumente client-seitig defensiv parsen. Alte Builds können `tool_calls[].arguments` als Objekt statt String liefern; Build nach PR #20213 bevorzugen oder defensiv stringifizieren. Quelle: https://github.com/ggml-org/llama.cpp/blob/master/tools/server/README.md · offiziell; https://github.com/ggml-org/llama.cpp/issues/20198 · extern
 
 ## 6. Structured Output / JSON / Grammar
 - LM Studio: `response_format` mit `{"type":"json_schema","json_schema":{...}}` — folgt 1:1 dem OpenAI-Structured-Output-Format, funktioniert ueber die OpenAI-SDKs. Quelle: https://lmstudio.ai/docs/developer/openai-compat/structured-output · offiziell
-- vLLM: ueber `response_format` (json_schema) ODER `extra_body={"structured_outputs":{...}}` (choice/regex/json/grammar/EBNF); Backend via `--structured-outputs-config.backend` (Default `auto`). Quelle: https://docs.vllm.ai/en/latest/features/structured_outputs.html · offiziell
+- vLLM: ab v0.12.0 keine alten `guided_*`-Felder mehr verwenden; über `response_format` (json_schema) ODER `extra_body={"structured_outputs":{...}}` (choice/regex/json/grammar/EBNF) gehen. Backend via `--structured-outputs-config.backend` (Default `auto`). Quelle: https://docs.vllm.ai/en/latest/features/structured_outputs.html · offiziell; https://docs.vllm.ai/en/v0.12.0/serving/openai_compatible_server/ · offiziell
 - llama.cpp: ENTWEDER `response_format` (json_schema, intern in Grammar uebersetzt) ODER GBNF-`grammar` angeben — nie beides gleichzeitig (Konflikt-Fehler). Quelle: https://github.com/ggml-org/llama.cpp/blob/master/tools/server/README.md · offiziell
 
 ## 7. Streaming, Concurrency & Embeddings
@@ -66,6 +66,6 @@
 | 3 Modell-Laden/Keep-Alive | D7, D8, H18 |
 | 4 Kontextfenster | C5, C6, H17 |
 | 5 Tool/Function Calling | E9, E10, E11, E12 |
-| 6 Structured Output/Grammar | F13 |
+| 6 Structured Output/Grammar | F13, H21 |
 | 7 Streaming/Concurrency/Embeddings | C6, G16, I19, I20 |
 | 8 Timeouts & Versions-Drift | D8, G14, G15 |

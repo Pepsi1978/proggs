@@ -1,7 +1,7 @@
 # Bekannte Bugs: Lokale OpenAI-kompatible LLM-Server (Integration)
 
 > PFLICHT-LESEN vor Arbeit mit lokalen/selbst-gehosteten OpenAI-kompatiblen Servern: **Ollama, LM Studio,
-> vLLM, llama.cpp (llama-server), LocalAI, text-generation-webui**. Stand: zuletzt recherchiert am 2026-06-08.
+> vLLM, llama.cpp (llama-server), LocalAI, text-generation-webui**. Stand: zuletzt recherchiert am 2026-06-08, **re-recherchiert am 2026-07-02** (Engine A: Firecrawl+MiniMax).
 > Zweite Seite: `best-practices/apis/local-openai-compatible.md`.
 
 ## ⚡ Kurzcheck (Stufe A — vor der Arbeit lesen)
@@ -20,6 +20,9 @@
 | 6 | `logprobs`/`n` fehlen | Ueber `/v1` still verworfen → native API | §14, §15 |
 | 7 | "model not found" | Modell pullen/laden; vLLM `--served-model-name`, `/v1/models` | §7, §18 |
 | 8 | json_schema+grammar-Fehler | llama.cpp: nur EINS angeben, nicht beides | §13 |
+| 9 | ⭐ vLLM ≥ 0.12 und alte `guided_*`-Parameter | Auf `structured_outputs`-Wrapper migrieren | §21 |
+| 10 | ⭐ llama.cpp Tool-Arguments sind Objekt statt String | Build nach PR #20213 nutzen; clientseitig defensiv stringifizieren | §10 |
+| 11 | Ollama >8k Kontext | v0.30.9 Context Shift kennen; trotzdem `num_ctx` außerhalb `/v1` setzen | §5 |
 
 ---
 
@@ -52,11 +55,11 @@
 
 ## C) Context-Window / `num_ctx` (gefährlichste stille Falle)
 
-### 5. Ollama `/v1` ignoriert `num_ctx` → stille Truncation auf ~4096 ⭐
-- **Symptom:** lange Prompts ohne Fehler abgeschnitten; Modell „vergisst" den Anfang.
-- **Ursache:** der OpenAI-kompatible Endpunkt akzeptiert `num_ctx` NICHT im Body (nur native `/api/generate`); Modelfile-Default 2048, Runtime oft 4096.
-- **FIX:** pro Modell ein Modelfile mit `PARAMETER num_ctx <wert>` + benanntes Modell; alternativ native API; neuere Ollama: `OLLAMA_CONTEXT_LENGTH` als Server-Default (verifizieren).
-- **Quelle:** https://github.com/openclaw/openclaw/issues/4028 · https://www.serverman.co.uk/ai/ollama/ollama-context-window/
+### 5. Ollama `/v1` ignoriert `num_ctx` → falsches Kontextfenster ⭐
+- **Symptom:** lange Prompts werden abgeschnitten, rollen unerwartet aus dem Kontext oder liefern bei Überfüllung einen Fehler.
+- **Ursache:** der OpenAI-kompatible Endpunkt akzeptiert `num_ctx` NICHT zuverlässig im Body (nur native `/api/generate` bzw. Server-/Modell-Konfiguration). Seit Ollama v0.30.9 gibt es Context Shift für Fenster >8k und klarere Fehler bei einzelner Nachricht > Kontextfenster; das ersetzt aber kein explizites `num_ctx`-Setup.
+- **FIX:** pro Modell ein Modelfile mit `PARAMETER num_ctx <wert>` + benanntes Modell; alternativ `OLLAMA_CONTEXT_LENGTH` als Server-Default oder einen geprüften Proxy-Workaround wie `injectNumCtxForOpenAICompat`. In Tests prüfen, ob Context Shift aktiv ist.
+- **Quellen:** https://github.com/openclaw/openclaw/issues/4028 · https://www.serverman.co.uk/ai/ollama/ollama-context-window/ · https://github.com/ollama/ollama/releases
 
 ### 6. textgen-webui: Kontext wird auf Slots aufgeteilt
 - **FIX:** `ctx_size = slots × gewünschter_kontext`.
@@ -84,8 +87,10 @@
 - **Quelle:** https://docs.vllm.ai/en/latest/features/tool_calling/
 
 ### 10. llama.cpp: malformed/incomplete JSON-Argumente bei Tool-Calls
-- **FIX:** `--jinja` mit korrektem Chat-Template; Schema via `response_format`/Grammar erzwingen; client-seitig defensiv parsen + Retry.
-- **Quelle:** https://github.com/ggml-org/llama.cpp/issues/22072
+- **Symptom:** `tool_calls[].arguments` ist ein JSON-Objekt statt OpenAI-kompatibler String; OpenAI-Python-SDK crasht mit `TypeError: the JSON object must be str, bytes or bytearray, not dict`.
+- **Ursache:** llama.cpp gab nach Autoparser-Refactoring geparste Argumente aus; OpenAI-Spec verlangt die rohe String-Repräsentation.
+- **FIX:** llama.cpp-Build nach PR #20213 nutzen; bei alten Builds clientseitig defensiv `json.dumps(arguments)` anwenden. Für weiter offene abgeschnittene JSON-Args `--jinja` mit korrektem Template, Schema via `response_format`/Grammar erzwingen, defensiv parsen + Retry.
+- **Quellen:** https://github.com/ggml-org/llama.cpp/issues/20198 · https://github.com/ggml-org/llama.cpp/issues/22072
 
 ### 11. llama.cpp `--jinja` fügt System-Message ein → stört Fine-Tunes
 - **FIX:** bei Fine-Tunes Template/Tools-Handling prüfen; ggf. eigenes Template ohne Auto-System-Injection.
@@ -128,6 +133,12 @@
 - **Symptom:** „model not found", weil interner Name der HF-Pfad ist.
 - **FIX:** `--served-model-name <alias>` setzen und im Client verwenden; `/v1/models` zum Verifizieren.
 
+### 21. vLLM v0.12.0 entfernt alte `guided_*`-Parameter ⭐
+- **Symptom:** Code mit `guided_json`, `guided_regex`, `guided_choice`, `guided_grammar`, `guided_whitespace_pattern`, `structural_tag` oder `guided_decoding_backend` wirft ab v0.12.0 Fehler oder verliert Structured-Output-Verhalten.
+- **Ursache:** vLLM entfernte die deprecated Felder und verlangt den neuen `structured_outputs`-Wrapper.
+- **FIX:** auf `{"structured_outputs": {"json"|"regex"|"choice"|"grammar"|"whitespace_pattern"|"structural_tag": ...}}` migrieren; `guided_decoding_backend` entfernen. Bei Cohere Command A Reasoning zusätzlich `--tool-call-parser cohere_command3 --reasoning-parser cohere_command3` und Paket `cohere_melody` prüfen.
+- **Quelle:** https://docs.vllm.ai/en/v0.12.0/serving/openai_compatible_server/
+
 ---
 
 ## I) textgen-webui / LocalAI
@@ -140,14 +151,17 @@
 
 ---
 
-## Fix-Status (Stand 2026-06-08)
+## Fix-Status (Stand 2026-07-02)
 
 | Frueherer Bug | Status | Bezug |
 |---|---|---|
 | logprobs auf Ollama `/v1` | **won't-fix** (ollama #16117 CLOSED NOT_PLANNED) | Bug 14 — native API nutzen |
 | leerer api_key crasht SDK | **per Design** ab openai-python 2.34.0 | Bug 4 — Platzhalter setzen |
+| llama.cpp Tool-Arguments als Objekt | **gefixt** per PR #20213, alte Builds bleiben betroffen | Bug 10 — Build aktualisieren / defensiv stringifizieren |
+| vLLM `guided_*`-Felder | **Breaking Change** ab v0.12.0 entfernt | Bug 21 — `structured_outputs` nutzen |
+| Ollama >8k-Kontext | **verbessert** seit v0.30.9 durch Context Shift | Bug 5 — `num_ctx` trotzdem explizit konfigurieren |
 
-**Noch NICHT gefixt / per Design:** `/v1`-Suffix-Pflicht (1), num_ctx-Ignoranz (5), Cold-Start (8), vLLM-Tool-Flags (9), llama.cpp Tool-JSON (10), json_schema/grammar-Konflikt (13).
+**Noch NICHT gefixt / per Design:** `/v1`-Suffix-Pflicht (1), num_ctx-Ignoranz im OpenAI-Body (5), Cold-Start (8), vLLM-Tool-Flags (9), ältere llama.cpp Tool-JSON-Builds und offene abgeschnittene Args (10), json_schema/grammar-Konflikt (13).
 
 ---
 
@@ -158,6 +172,8 @@
 - [ ] Ollama-Kontext über Modelfile/`OLLAMA_CONTEXT_LENGTH` (nicht über `/v1`-Body)?
 - [ ] First-Request-Timeout ≥ 60 s, Modell vorgeladen, `keep_alive` bewusst (Client-`5m`-Override geprüft)?
 - [ ] vLLM Tool-Flags gesetzt? `/v1/models` zum Verifizieren des Namens?
+- [ ] vLLM Structured Outputs: keine alten `guided_*`-Felder mehr?
+- [ ] llama.cpp Tool-Calls: Build nach PR #20213 oder clientseitiger Arguments-String-Fallback?
 - [ ] `logprobs`/`n` nicht blind vorausgesetzt?
 
 ## 🔗 Bezug zu Best Practices
