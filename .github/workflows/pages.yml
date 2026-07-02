@@ -1,0 +1,53 @@
+name: Deploy docs to GitHub Pages
+
+# Deployt die statischen Seiten aus docs/ (Datenschutz-/Rechtsseiten der Apps)
+# nach https://pepsi1978.github.io/proggs/.
+#
+# Warum dieser eigene Workflow statt "Deploy from a branch" (legacy):
+#  1. paths-Filter: laeuft NUR wenn sich docs/ (oder dieser Workflow) aendert.
+#     Frueher loeste JEDER Push auf main einen Pages-Deploy aus — auch bei
+#     Commits, die docs/ gar nicht anfassen (Server-Code, Almanache, Regeln).
+#  2. concurrency-Gruppe: gleichzeitige Deploys warten sauber aufeinander,
+#     statt mit HTTP 400 "in progress deployment" fehlzuschlagen (die Ursache
+#     der GitHub-Fehler-Mails bei parallelen Sessions).
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'docs/**'
+      - '.github/workflows/pages.yml'
+  workflow_dispatch: {}
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+# Nur EIN Pages-Deploy gleichzeitig; laufende NICHT abbrechen, sondern
+# sauber abwarten (verhindert die "in progress deployment"-Fehler).
+concurrency:
+  group: "pages"
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Pages
+        uses: actions/configure-pages@v5
+
+      - name: Upload docs/ as Pages artifact
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: 'docs'
+
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4
