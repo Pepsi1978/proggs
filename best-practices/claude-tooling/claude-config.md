@@ -1,4 +1,4 @@
-# Claude-Code Konfiguration & Regeln-Integration — Best Practices (Stand 2026-06-07, Claude Code 2.1.168)
+# Claude-Code Konfiguration & Regeln-Integration — Best Practices (Stand 2026-07-02, Claude Code 2.1.198)
 
 > **Wie man Regeln / eigene Vorstellungen / Verhalten optimal ins Claude-Code-System integriert.**
 > Die positive Gegenseite ("wie macht man es von vornherein richtig") zum Bug-Almanach
@@ -6,9 +6,11 @@
 > damit der `bug-almanac-guard` nach dem Almanach-Lesen automatisch hierher findet.
 >
 > Quellen-Rangordnung: offiziell (code.claude.com/docs, anthropic.com/engineering) = Grundwahrheit;
-> extern (Blogs/Studien) = klar gelabelte Ergaenzung. Stand: Claude Code 2.1.168 (live ermittelt).
+> extern (Blogs/Studien) = klar gelabelte Ergaenzung. Stand: Claude Code 2.1.198 (live ermittelt).
 > Abgrenzung: Hooks im Detail → `01-hooks/`; MCP → `05-mcp/` + `best-practices-mcp-server.md`;
 > Python → `best-practices-python-windows.md`.
+
+> **Update 2026-07-02:** Re-Recherche bestaetigt den bestehenden Entscheidungsbaum. Neu zu beachten: Symlink-Zielpfade laden bedingte Rules wieder korrekt, Hook-Matcher sind bei Bindestrich-Identifiern exact-match, und neue Env-Flags duerfen nur gezielt zur Diagnose/Policy genutzt werden.
 
 ---
 

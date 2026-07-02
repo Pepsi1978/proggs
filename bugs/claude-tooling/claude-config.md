@@ -9,11 +9,13 @@
 > MCP-Server-Bau → `mcp-server.md` · Python-Scripting → `python-windows.md`.
 > Bei Ueberschneidung (z.B. `settings.json`-hooks-Sektion) gilt dort der jeweilige Almanach.
 >
-> **Stand:** recherchiert am **2026-06-07** fuer **Claude Code 2.1.168** (Windows/MINGW64,
-> **Anker:** claude-code=2.1.168  <!-- maschinenlesbar fuer check-version-anchor.py -->
+> **Stand:** recherchiert am **2026-06-07**, **re-recherchiert am 2026-07-02** (Engine A: Firecrawl+MiniMax) fuer **Claude Code 2.1.198** (Windows/MINGW64,
+> **Anker:** claude-code=2.1.198  <!-- maschinenlesbar fuer check-version-anchor.py -->
 > Node 24.15). Issue-Status hart per `gh issue view` verifiziert. Quellen: offizielle Doku
 > (code.claude.com/docs) + Changelog, GitHub-Issues (anthropics/claude-code), Community.
 > Loesungen sind funktionserhaltend (nie "Feature weglassen").
+
+> **Update 2026-07-02:** Neue relevante Deltas seit 2.1.168: bedingte `.claude/rules/` laden bei Symlink-Zielpfaden wieder korrekt (2.1.198), Hook-Matcher mit Bindestrich-Identifiern matchen nicht mehr versehentlich als Substring (2.1.195), Organisation-Default-Models und neue Env-Flags (`CLAUDE_ENABLE_STREAM_WATCHDOG=0`, `CLAUDE_CODE_DISABLE_MOUSE_CLICKS`, `CLAUDE_CODE_DISABLE_BG_SHELL_PRESSURE_REAP=1`) sind dokumentiert. Bestehende Grundregeln bleiben: harte Garantien in Hooks/Settings, nicht nur in CLAUDE.md.
 
 ---
 
