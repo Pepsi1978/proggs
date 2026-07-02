@@ -1,6 +1,6 @@
 # Bekannte Bugs: xAI Grok API (Integration)
 
-> PFLICHT-LESEN vor Arbeit an einer xAI-Grok-Integration (api.x.ai). Stand: zuletzt recherchiert am 2026-06-08.
+> PFLICHT-LESEN vor Arbeit an einer xAI-Grok-Integration (api.x.ai). Stand: zuletzt recherchiert am 2026-06-08, **re-recherchiert am 2026-07-02** (Engine A: Firecrawl+MiniMax).
 > Versions-Anker: aktuell `grok-4.3`; 8 ältere Slugs am 15.05.2026 retired (lösen still auf
 > 4.3 um). Zweite Seite: `best-practices/apis/xai-grok-api.md`.
 
@@ -19,6 +19,8 @@
 | 5 | 429 trotz Restbudget ⭐ | Eigenes Exp-Backoff, keine Retry-Header; Reasoning-Tokens in TPM | §D |
 | 6 | Endpunkt-Wahl | OpenAI-kompatibler `/v1`, nicht der deprecatete Anthropic-Pfad | §E |
 | 7 | Live/Web-Search | Nur EIN Domain-Filter (≤5 Domains), Verbrauch überwachen | §F |
+| 8 | ⭐ 429 mit Credit-/Spend-Limit | Fehler-Body lesen: Backoff nur bei echtem Rate-Limit | §D |
+| 9 | SDK/Gateway-Modellpräfix | Direkte xAI-API ohne `xai/`; Vercel Gateway mit `x-ai/...` | §E |
 
 ---
 
@@ -31,10 +33,11 @@
 - **FIX:** `grok-4.3` explizit pinnen + `reasoning_effort` bewusst (`none/low/medium/high`); Eval-Baselines neu; Cost-per-Token-Alerts.
 - **Quelle:** https://docs.x.ai/developers/migration/may-15-retirement
 
-### 2. `reasoning_effort` wirft bei grok-4/4.3 einen Error
-- **Ursache:** nur `grok-3-mini(-fast)` unterstützen den Parameter.
-- **FIX:** `reasoning_effort` nur für mini-Modelle senden; bei grok-4-Familie weglassen.
-- **Quelle:** https://docs.oracle.com/en-us/iaas/Content/generative-ai/xai-grok-4.htm
+### 2. `reasoning_effort` falsch oder ohne Kosten-/Timeout-Budget gesetzt
+- **Symptom:** Kosten steigen stark, Reasoning dauert sehr lange oder inkompatible Parameter werden abgelehnt.
+- **Ursache:** `grok-4.3` unterstützt `reasoning_effort` mit `none/low/medium/high`, Default `low`; Reasoning-Tokens werden zum Output-Tarif berechnet. Reasoning-Anfragen brauchen lange Timeouts (xAI-Beispiele bis 3600 s). `presencePenalty`, `frequencyPenalty` und `stop` sind mit Reasoning-Modellen inkompatibel.
+- **FIX:** `reasoning_effort` bewusst setzen, Output-/Reasoning-Budget einplanen, Timeout erhöhen und inkompatible Parameter bei Reasoning weglassen. Bei alten retired Slugs beachten: Redirect kann den Effort fix vorgeben.
+- **Quelle:** https://docs.x.ai/developers/model-capabilities/text/reasoning
 
 ---
 
@@ -68,6 +71,12 @@
 - **FIX:** Schema vereinfachen, `prefixItems` statt Array-`items`, Output zusätzlich client-seitig validieren.
 - **Quelle:** https://docs.x.ai/developers/model-capabilities/text/structured-outputs
 
+### 7a. Regex-`pattern` nutzt nur ECMAScript-Subset
+- **Symptom:** Schema wird akzeptiert/abgelehnt oder matcht anders als lokale Regex-Tests.
+- **Ursache:** xAI unterstützt u. a. keine Backreferences, Unicode-Property-Escapes, Word-Boundaries, Lookahead/Lookbehind oder Inline-Modifier; `^`/`$` sind implizit und der Pattern matcht den gesamten String.
+- **FIX:** Regex vorab auf das dokumentierte Subset reduzieren; komplexe Checks clientseitig validieren.
+- **Quelle:** https://docs.x.ai/developers/guides/structured-outputs
+
 ### 8. Tool-Argumente sind IMMER strict
 - **Ursache:** für Tool-Args ist `strict` implizit `true` → gleiche Schema-Regeln wie #7.
 - **FIX:** Tool-Parameter-Schemas an structured-output-Regeln anpassen.
@@ -85,6 +94,12 @@
 - **Ursache:** RPM/TPM getrennt vom Spending; 6 Tiers nach kumulativem Spend. Reasoning- UND gecachte Tokens zählen in TPM.
 - **FIX:** eigenes Exponential-Backoff (1/2/4/8 s), nicht auf Header verlassen; TPM-Budget inkl. Reasoning-Tokens einplanen.
 - **Quelle:** https://docs.x.ai/docs/key-information/consumption-and-rate-limits
+
+### 10a. 429 bedeutet auch Credit-/Spend-Limit, nicht nur Rate-Limit ⭐
+- **Symptom:** Client backofft endlos, obwohl das Team Guthaben oder Monatsbudget ausgeschöpft hat.
+- **Ursache:** Praxis-Issue zeigte 429 mit Meldung zu Credits/Monthly Spending Limit; Doku beschreibt 429 primär als RPS/TPM-Limit.
+- **FIX:** Fehler-Body immer parsen: Rate-Limit → Backoff; Credit-/Spend-Limit → Benutzer/Console/Zahlungsmethode statt Retry-Schleife.
+- **Quellen:** https://docs.x.ai/developers/guides/debugging · https://github.com/continuedev/continue/issues/10373
 
 ### 11. Multi-Agent- und Image/Video-Endpunkte mit eigenen niedrigeren Limits
 - **FIX:** diese Endpunkte separat drosseln.
@@ -114,17 +129,48 @@
 - **FIX:** nur EINEN Domain-Filter pro Request (je max 5 Domains); für image-search Responses-API/Python-SDK. Kosten/Defaults nicht klar dokumentiert → Verbrauch überwachen.
 - **Quelle:** https://docs.x.ai/docs/guides/live-search
 
+### 16. Altes `search_parameters` / Live-Search-API liefert 410 Gone
+- **Symptom:** Requests mit `search_parameters` brechen mit HTTP 410 Gone ab.
+- **Ursache:** Die alte Live-Search-API wurde Ende 2025/Anfang 2026 abgeschaltet; aktuelle Websuche läuft über `web_search`/`x_search` Built-in-Tools im Responses-Endpoint.
+- **FIX:** auf `/v1/responses` mit `tools` migrieren; Datierung in Quellen ist widersprüchlich, aber 410-Verhalten ist 2026 bestätigt.
+- **Quellen:** https://github.com/langchain-ai/langchain/issues/33961 · https://docs.x.ai/developers/tools/web-search
+
+### 17. LangChain kann `x_search`-Tool-Schema falsch konvertieren
+- **Symptom:** `bind_tools` lehnt `x_search` als unsupported function schema ab.
+- **Ursache:** Server-Side-Tool wird wie normales Function-Tool behandelt.
+- **FIX:** `x_search` manuell als Server-Side-Tool registrieren oder vorerst `web_search` nutzen.
+- **Quelle:** https://github.com/langchain-ai/langchain/issues/33961
+
 ---
 
-## Fix-Status (Stand 2026-06-08)
+## G. SDK-/Gateway-spezifische Fallen
+
+### 18. Fehlerantwort mit HTTP 200 statt 4xx/5xx
+- **Symptom:** Vercel AI SDK erwartete `choices` und crashte mit Zod-Fehler, obwohl der Body eine Service-Unavailable-Fehlermeldung enthielt.
+- **Ursache:** xAI/Gateway lieferte Fehlerbody mit HTTP 200; der Client behandelte ihn als Erfolg.
+- **FIX:** SDK-Version mit Fix nutzen (`ai` 5.0.60+ / `@ai-sdk/xai` 2.0.23+) oder eigene 2xx-Responses zusätzlich auf Fehler-Schema prüfen.
+- **Quelle:** https://github.com/vercel/ai/issues/10533
+
+### 19. Falscher Modell-Präfix je Provider-Pfad
+- **Symptom:** `Model not found` oder 400 Bad Request trotz existierendem Modell.
+- **Ursache:** Direkte xAI-API erwartet native Slugs wie `grok-4.3` ohne `xai/`; Vercel AI Gateway nutzt dagegen Provider-Slugs wie `x-ai/...`. Aggregator-Präfixe sind nicht portabel.
+- **FIX:** Modell-ID pro Providerpfad normalisieren: direkter `XAI_API_KEY` ohne Präfix, Gateway/Aggregator mit deren dokumentiertem Präfix.
+- **Quellen:** https://github.com/cline/cline/issues/8293 · https://github.com/accomplish-ai/coworker/issues/676
+
+---
+
+## Fix-Status (Stand 2026-07-02)
 
 | Frueherer Bug | Status | Bezug |
 |---|---|---|
 | 8 Grok-Slugs (grok-3, grok-4-fast-* …) | **retired** 15.05.2026 (lösen still auf 4.3 um) | Bug 1 — pinnen + Kosten/Qualität prüfen |
 | Grok usage im falschen Stream-Chunk (litellm) | **gefixt** (litellm #17136, CLOSED 2026-02-19) | Bug 4 |
 | `generateObject` grok-4-fast-reasoning (Vercel) | **gefixt** (vercel/ai #9315, CLOSED 2025-11-14) | Bug 9 |
+| `reasoning_effort` bei `grok-4.3` | **unterstützt**, Default `low`; alte Almanach-Annahme korrigiert | Bug 2 |
+| Altes `search_parameters` | **abgeschaltet** / HTTP 410 Gone | Bug 16 — `web_search`/`x_search` nutzen |
+| Vercel-AI 200-Fehlerbody | **gefixt** in aktuellen SDKs; eigene Clients bleiben betroffen | Bug 18 |
 
-**Noch NICHT gefixt / per Design:** `reasoning_effort` nur mini (2), Streaming ohne response_format/Tools (3), strict Schema (7/8), 429 ohne Header (10), Anthropic-Pfad deprecated (14).
+**Noch NICHT gefixt / per Design:** Streaming ohne klar dokumentierte Tool-/Structured-Output-Deltas (3/5/6), strict Schema (7/8), 429 ohne Retry-Header und mit Credit-Limit-Doppelbedeutung (10/10a), Anthropic-Pfad deprecated (14), Provider-Präfixe nicht portabel (19).
 
 **Ehrlichkeits-Hinweis:** Zu Grok gibt es weniger Community-Issues als bei OpenAI; einige Symptome stammen aus Suchsnippets — bei Aufnahme per `gh issue view` verifizieren.
 
@@ -137,6 +183,8 @@
 - [ ] Für Tools/structured outputs `stream=false`?
 - [ ] Eigenes Exponential-Backoff (keine Retry-Header), TPM inkl. Reasoning-Tokens?
 - [ ] OpenAI-kompatibler `/v1` (nicht der deprecatete Anthropic-Pfad)?
+- [ ] Fehler-Body auch bei HTTP 200 und bei 429 geparst?
+- [ ] Keine alten `search_parameters`; Provider-spezifischer Modellpräfix geprüft?
 
 ## 🔗 Bezug zu Best Practices
 
