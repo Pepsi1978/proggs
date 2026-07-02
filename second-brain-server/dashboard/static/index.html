@@ -369,7 +369,8 @@ button{font-family:inherit;cursor:pointer}
 .result:hover{transform:translateY(-3px);border-color:var(--text-faint)}
 .result-accent{width:3px;align-self:stretch;border-radius:99px;flex:none;opacity:.85}
 .result-body{flex:1;min-width:0}
-.result-top{display:flex;align-items:center;gap:10px;margin-bottom:7px}
+.result-top{display:flex;flex-wrap:wrap;align-items:center;gap:8px;margin-bottom:7px}
+.result-top .result-title{margin-right:2px}
 .result-title{font-family:'Space Grotesk';font-weight:600;font-size:17px;color:var(--text)}
 .tag{
   font-size:11px;font-family:'JetBrains Mono';letter-spacing:.04em;padding:3px 9px;border-radius:7px;
@@ -1567,6 +1568,17 @@ button{font-family:inherit;cursor:pointer}
 
   function escapeHtml(s){return (s||"").replace(/[&<>"']/g,m=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[m]));}
 
+  // Alle Kategorien eines Listen-Eintrags (Fallback: die eine primäre). by-category/search liefern
+  // die Liste 'categories' mit; die reine /list-Ansicht nur 'category' -> dann eben die eine.
+  function entryCats(it){
+    return (it && Array.isArray(it.categories) && it.categories.length) ? it.categories : ((it && it.category) ? [it.category] : []);
+  }
+  function entryTagsHtml(it){
+    return entryCats(it).map(name=>{
+      const c = colorFor(name);
+      return `<span class="tag" style="color:${c};background:${c}22">${escapeHtml(cap(name))}</span>`;
+    }).join("");
+  }
   async function loadEntries(){
     const box = document.getElementById("results");
     box.innerHTML = `<div class="state-msg"><div class="spin"></div>lädt…</div>`;
@@ -1599,7 +1611,7 @@ button{font-family:inherit;cursor:pointer}
         <div class="result-body">
           <div class="result-top">
             <span class="result-title">${escapeHtml(it.title||"Ohne Titel")}</span>
-            <span class="tag" style="color:${color};background:${color}22">${escapeHtml(cap(it.category||""))}</span>
+            ${entryTagsHtml(it)}
           </div>
           <div class="result-snippet">${snippet}</div>
         </div>
