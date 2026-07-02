@@ -881,7 +881,7 @@ button{font-family:inherit;cursor:pointer}
           </div>
           <div class="chat-input">
             <div class="chat-tools" aria-label="Werkzeuge für Gespräch und Ablage">
-              <div class="chat-size" id="chatSizeBar" title="Antwortlänge: S kurz · M ausgewogen (Standard) · XL maximal ausführlich — steuert auch die Suchtiefe (Tavily: S=5, M=8, XL=15 Treffer, XL=Tiefensuche)">
+              <div class="chat-size" id="chatSizeBar" title="Antwortlänge: S kurz · M ausgewogen (Standard) · XL maximal ausführlich — steuert auch die Suchtiefe (Tavily: S=8, M=12, XL=20 Treffer, XL=Tiefensuche)">
                 <button type="button" class="chat-size-btn" data-size="s">S</button>
                 <button type="button" class="chat-size-btn" data-size="m">M</button>
                 <button type="button" class="chat-size-btn" data-size="xl">XL</button>
@@ -1391,7 +1391,7 @@ button{font-family:inherit;cursor:pointer}
       seg.style.flex = g.total + " 0 0";
       seg.dataset.cat = g.n.path;
       const kids = g.n.children.size, subTip = kids ? ` · ${kids} Unter` : "";
-      seg.innerHTML = `<div class="seg-tip"><span class="c">${cap(g.n.seg)}</span> · <b>${g.total}</b>${subTip}</div>`;
+      seg.innerHTML = `<div class="seg-tip"><span class="c">${escapeHtml(cap(g.n.seg))}</span> · <b>${g.total}</b>${subTip}</div>`;
       seg.addEventListener("click",()=> goToParent(g.n.path));
       bar.appendChild(seg);
       requestAnimationFrame(()=>{ setTimeout(()=> seg.style.width = (total?(g.total/total*100):0)+"%", 30+i*40); });
@@ -1409,7 +1409,7 @@ button{font-family:inherit;cursor:pointer}
         (hasKids ? `<button class="leg-twist${open?' open':''}" type="button" title="Unterkategorien zeigen"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><path d="m9 6 6 6-6 6"/></svg></button>`
                  : (depth>0 ? `<span class="leg-submark">└</span>` : `<button class="leg-twist leaf" type="button"></button>`))
         + `<span class="swatch" style="background:${colorFor(node.path)}"></span>`
-        + `<span class="leg-name">${cap(node.seg)}</span><span class="leg-count">${ntotal}</span>`;
+        + `<span class="leg-name">${escapeHtml(cap(node.seg))}</span><span class="leg-count">${ntotal}</span>`;
       const tw = row.querySelector(".leg-twist");
       if(tw && hasKids) tw.addEventListener("click", e=>{ e.stopPropagation();
         if(ovExpanded.has(node.path)) ovExpanded.delete(node.path); else ovExpanded.add(node.path);
@@ -1526,7 +1526,9 @@ button{font-family:inherit;cursor:pointer}
     const b = document.createElement("button");
     b.className = "chip" + (kind ? " " + kind : ""); b.dataset.path = path||"";
     if(color) b.dataset.color = color;
-    b.innerHTML = `<span class="cdot"></span>${label}`;
+    // Kategorienamen escapen (Tiefen-Debugging 2026-07-02): Namen koennen via Speicheragent aus
+    // untrusted Text vorgeschlagen werden -> nie roh in innerHTML (Injection-Flaeche).
+    b.innerHTML = `<span class="cdot"></span>${escapeHtml(label)}`;
     b.addEventListener("click",()=>{ curParent = path || null; curCategory = null; curQuery=""; document.getElementById("search").value=""; updateChips(); loadEntries(); });
     return b;
   }
@@ -3017,7 +3019,7 @@ button{font-family:inherit;cursor:pointer}
   }
   /* S/M/XL-Antwortlaengen-Auswahl (Frank-Wunsch 2026-07-02): Standard M, Wahl wird gemerkt.
      Der Server haengt den passenden ZENTRALEN Prompt an (gleiche Texte wie im Handy) und
-     staffelt die Tavily-Suchtiefe (S=5, M=8, XL=15 Treffer, XL=advanced). */
+     staffelt die Tavily-Suchtiefe (S=8, M=12, XL=20 Treffer, XL=advanced — Stand agent 0.47.1). */
   let chatSize = localStorage.getItem("chatSize") || "m";
   (function initChatSize(){
     const host = document.getElementById("chatSizeBar"); if(!host) return;

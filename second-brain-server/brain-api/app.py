@@ -167,19 +167,12 @@ except Exception:  # noqa: BLE001
     DatetimeRange = None  # type: ignore
     HAS_DATETIME_RANGE = False
 
-try:
-    from google import genai
-    from google.genai import types as genai_types
-    from qdrant_client import QdrantClient
-    from qdrant_client.models import (
-        Distance,
-        FieldCondition,
-        Filter,
-        MatchValue,
-        PointStruct,
-        VectorParams,
-    )
-
+def _init_store() -> None:
+    """Gemini-/Qdrant-Clients verbinden + Collection/Indizes sicherstellen. Laeuft beim Start und
+    wird von _require_store NACHGEHOLT, wenn der Start am Qdrant-Boot-Race scheiterte (compose
+    depends_on wartet nur auf START, nicht 'bereit' — docker.md §3). Vorher blieb der Container
+    dann DAUERHAFT degraded/503 bis zum manuellen Neustart (Self-Healing, Direktive #3)."""
+    global qc, gclient, init_error
     gclient = genai.Client(api_key=GEMINI_API_KEY)
     # url=http://... -> kein TLS (api_key wuerde sonst https=True erzwingen). Almanach qdrant.md §4.
     qc = QdrantClient(url=QDRANT_URL, api_key=QDRANT_API_KEY or None, timeout=30.0)
@@ -205,14 +198,47 @@ try:
             qc.create_payload_index(collection_name=COLLECTION, field_name="created_at", field_schema="datetime")
         except Exception:  # noqa: BLE001 — Index existiert bereits / nicht kritisch
             pass
+    init_error = None
     _log(logging.INFO, "Speicher initialisiert", embed_model=EMBED_MODEL, dims=EMBED_DIMS,
          collection=COLLECTION, qdrant_url=QDRANT_URL)
+
+
+try:
+    from google import genai
+    from google.genai import types as genai_types
+    from qdrant_client import QdrantClient
+    from qdrant_client.models import (
+        Distance,
+        FieldCondition,
+        Filter,
+        MatchValue,
+        PointStruct,
+        VectorParams,
+    )
+
+    _init_store()
 except Exception as e:  # noqa: BLE001 — Init-Fehler vollstaendig festhalten, nicht still
     init_error = f"{type(e).__name__}: {e}"
-    log.error("Speicher-Init fehlgeschlagen", exc_info=True)
+    qc = None
+    gclient = None
+    log.error("Speicher-Init fehlgeschlagen (Self-Healing versucht es bei Requests erneut)", exc_info=True)
+
+# Re-Init-Drossel fuer das Self-Healing (max. 1 Versuch alle 5s, thread-sicher — Threadpool-Handler)
+_init_retry_lock = threading.Lock()
+_init_last_attempt = 0.0
 
 # Sichtbarer Patch-Stand: Detail-/Such-APIs liefern den ursprünglichen Speicherzeitpunkt fuer das Dashboard aus.
-VERSION = "1.18.1 (27.06.2026, 21.16 Uhr)"
+# 1.19.0 (Tiefen-Debugging 2026-07-02): (a) /by-date OOM-sicher (chunk_index=0 + nativer Datums-Filter
+# statt ALLE Chunks ALLER Docs mit full_text zu laden — gleiche Fehlerklasse wie 1.13.x/1.14, qdrant §8);
+# (b) rename-category/detach-category pflegen jetzt AUCH das Multi-Category-Array 'categories' +
+# 'parent'/'parents' (seit 1.11.0 blieben Eintraege unter dem ALTEN Namen zaehl-/findbar, detach war
+# fuer Array-Eintraege wirkungslos — cats_from_payload bevorzugt das Array); (c) Papierkorb speichert
+# die Mehrfach-Kategorien mit (Restore verlor sie, nur die primaere blieb); (d) Embedding-Tages-Zaehler
+# thread-sicher (Handler laufen im Threadpool); (e) /reembed-all laedt den Bestand seitenweise per
+# retrieve statt ALLE Volltexte auf einmal (OOM-Backstop); (f) Self-Healing-Init: scheitert der Start
+# am Qdrant-Boot-Race, holt _require_store die Initialisierung throttled nach (vorher blieb der
+# Container dauerhaft 'degraded'/503 bis zum manuellen Neustart).
+VERSION = "1.19.0 (02.07.2026, 18.45 Uhr)"
 
 # Startup-Banner (Observability-First: Log-Pfad + Version EINMAL ausgeben)
 _log(logging.INFO, "brain-api startet", version=VERSION, log_path=LOG_PATH)
@@ -221,13 +247,15 @@ _log(logging.INFO, "brain-api startet", version=VERSION, log_path=LOG_PATH)
 # Defense-in-Depth-Kostenbremse (harter Cap liegt beim Google-AI-Studio-Budget)
 # ---------------------------------------------------------------------------
 _embed_calls = {"day": str(date.today()), "count": 0}
+_embed_lock = threading.Lock()  # Handler laufen im Threadpool (def) -> Zaehler-Mutation thread-sicher halten
 
 
 def _guard_embed_budget(n: int = 1) -> None:
     today = str(date.today())
-    if _embed_calls["day"] != today:
-        _embed_calls["day"], _embed_calls["count"] = today, 0
-    _embed_calls["count"] += n
+    with _embed_lock:
+        if _embed_calls["day"] != today:
+            _embed_calls["day"], _embed_calls["count"] = today, 0
+        _embed_calls["count"] += n
     if _embed_calls["count"] > MAX_EMBED_CALLS_PER_DAY:
         _log(logging.ERROR, "Embedding-Tages-Cap erreicht", count=_embed_calls["count"], cap=MAX_EMBED_CALLS_PER_DAY)
         raise HTTPException(status_code=429, detail="Taegliches Embedding-Limit erreicht (Sicherheits-Cap)")
@@ -501,6 +529,20 @@ def require_auth(authorization: str = Header(default="")) -> None:
 
 
 def _require_store() -> None:
+    global _init_last_attempt, init_error
+    if qc is not None and gclient is not None:
+        return
+    # Self-Healing (Direktive #3): der Start scheiterte (typisch: Qdrant beim Boot noch nicht bereit,
+    # depends_on wartet nur auf START) -> throttled neu initialisieren statt dauerhaft 503 zu bleiben.
+    with _init_retry_lock:
+        if (qc is None or gclient is None) and time.monotonic() - _init_last_attempt >= 5.0:
+            _init_last_attempt = time.monotonic()
+            try:
+                _init_store()
+                _log(logging.INFO, "Speicher-Init nachgeholt (Self-Healing)")
+            except Exception as e:  # noqa: BLE001 — naechster Request versucht es erneut (gedrosselt)
+                init_error = f"{type(e).__name__}: {e}"
+                log.error("Speicher-Re-Init fehlgeschlagen", exc_info=True)
     if qc is None or gclient is None:
         raise HTTPException(status_code=503, detail=f"Speicher nicht initialisiert: {init_error}")
 
@@ -872,16 +914,38 @@ def rename_category(req: RenameCategoryReq) -> dict:
     if not old or not new:
         raise HTTPException(status_code=400, detail="old/new duerfen nicht leer sein")
     flt = Filter(must=[
-        FieldCondition(key="category", match=MatchValue(value=old)),
         FieldCondition(key="user_id", match=MatchValue(value=req.user_id)),
+        # Multi-Category (seit 1.11.0): auch Eintraege matchen, die 'old' NUR im Array 'categories'
+        # tragen (z.B. sekundaere Kategorie) — vorher blieben die komplett unangetastet.
+        Filter(should=[FieldCondition(key="category", match=MatchValue(value=old)),
+                       FieldCondition(key="categories", match=MatchValue(value=old))]),
     ])
-    pts = _scroll(flt)
+    # OOM-sicher: NUR die Kategorie-Felder laden, KEIN full_text (qdrant §8 / Frank-Bug 2026-06-26)
+    pts = _scroll(flt, with_payload=["doc_id", "category", "categories"])
     docs = {p.payload.get("doc_id") for p in pts}
     if old != new and pts:
-        # wait=True: Operation abgeschlossen bevor das Dashboard neu laedt (sonst alte Werte sichtbar)
-        qc.set_payload(collection_name=COLLECTION, payload={"category": new}, points=flt, wait=True)
-    merged = old != new and pts  # informativ: war 'new' schon belegt -> de facto Merge (Aufrufer weiss es)
-    checkpoint("rename_category", "Kategorie in allen Payloads umbenannt (Vektor unangetastet, kein Re-Embed)",
+        # KERN-FIX (Tiefen-Debugging 2026-07-02): das komplette Kategorie-Feld-Set je Punkt neu
+        # ableiten — primaeres 'category', das Array 'categories' UND 'parent'/'parents'. Vorher
+        # wurde NUR 'category' umgeschrieben; cats_from_payload bevorzugt aber das Array, daher
+        # blieb der Eintrag unter dem ALTEN Namen zaehl-/findbar (category-counts, by-category,
+        # by-parent). Gebuendelt je identischem Ziel-Payload (wenige set_payload-Requests).
+        groups: dict[str, tuple[dict, list]] = {}
+        for p in pts:
+            pl = p.payload or {}
+            cats = cats_from_payload(pl)
+            new_cats = _dedup([new if c == old else c for c in cats]) or [new]
+            old_primary = (pl.get("category") or "").strip()
+            cat_primary = new if old_primary == old else old_primary
+            parents = category_parents(new_cats)
+            payload = {"category": cat_primary, "categories": new_cats,
+                       "parent": category_parent(cat_primary) or (parents[0] if parents else ""),
+                       "parents": parents}
+            key = json.dumps(payload, sort_keys=True, ensure_ascii=False)
+            groups.setdefault(key, (payload, []))[1].append(p.id)
+        for payload, ids in groups.values():
+            # wait=True: Operation abgeschlossen bevor das Dashboard neu laedt (sonst alte Werte sichtbar)
+            qc.set_payload(collection_name=COLLECTION, payload=payload, points=ids, wait=True)
+    checkpoint("rename_category", "Kategorie in allen Payloads umbenannt (inkl. categories-Array + parent/parents; Vektor unangetastet, kein Re-Embed)",
                ok=True, old=old, new=new, points=len(pts), entries=len(docs))
     return {"ok": True, "old": old, "new": new, "points": len(pts), "entries": len(docs)}
 
@@ -896,14 +960,36 @@ def detach_category(req: DetachCategoryReq) -> dict:
     if not name:
         raise HTTPException(status_code=400, detail="name darf nicht leer sein")
     flt = Filter(must=[
-        FieldCondition(key="category", match=MatchValue(value=name)),
         FieldCondition(key="user_id", match=MatchValue(value=req.user_id)),
+        # Multi-Category (seit 1.11.0): auch Eintraege matchen, die das Etikett NUR im Array tragen
+        Filter(should=[FieldCondition(key="category", match=MatchValue(value=name)),
+                       FieldCondition(key="categories", match=MatchValue(value=name))]),
     ])
-    pts = _scroll(flt)
+    # OOM-sicher: NUR die Kategorie-Felder laden, KEIN full_text (qdrant §8)
+    pts = _scroll(flt, with_payload=["doc_id", "category", "categories"])
     docs = {p.payload.get("doc_id") for p in pts}
     if pts:
-        qc.set_payload(collection_name=COLLECTION, payload={"category": ""}, points=flt, wait=True)
-    checkpoint("detach_category", "Kategorie-Etikett entfernt — Eintraege bleiben 1:1 erhalten",
+        # KERN-FIX (Tiefen-Debugging 2026-07-02): das Etikett auch aus dem Array 'categories'
+        # entfernen + 'parent'/'parents' neu ableiten. Vorher wurde nur 'category' geleert;
+        # cats_from_payload bevorzugt das Array -> der Eintrag blieb in category-counts/by-category
+        # unter dem Namen sichtbar, detach war fuer Array-Eintraege faktisch WIRKUNGSLOS.
+        # Traegt ein Eintrag mehrere Kategorien, wird die erste verbleibende zur primaeren.
+        groups: dict[str, tuple[dict, list]] = {}
+        for p in pts:
+            pl = p.payload or {}
+            new_cats = [c for c in cats_from_payload(pl) if c != name]
+            cat_primary = (pl.get("category") or "").strip()
+            if cat_primary == name:
+                cat_primary = new_cats[0] if new_cats else ""
+            parents = category_parents(new_cats)
+            payload = {"category": cat_primary, "categories": new_cats,
+                       "parent": category_parent(cat_primary) or (parents[0] if parents else ""),
+                       "parents": parents}
+            key = json.dumps(payload, sort_keys=True, ensure_ascii=False)
+            groups.setdefault(key, (payload, []))[1].append(p.id)
+        for payload, ids in groups.values():
+            qc.set_payload(collection_name=COLLECTION, payload=payload, points=ids, wait=True)
+    checkpoint("detach_category", "Kategorie-Etikett entfernt (auch aus dem categories-Array) — Eintraege bleiben 1:1 erhalten",
                ok=True, name=name, points=len(pts), entries=len(docs))
     return {"ok": True, "name": name, "points": len(pts), "entries": len(docs)}
 
@@ -1024,7 +1110,16 @@ def by_date(date: str, user_id: str = "frank") -> dict:
     """Alle Eintraege, die an einem bestimmten Tag gespeichert wurden (Datum YYYY-MM-DD,
     Praefix-Filter auf created_at). Auf Dokument-Ebene dedupliziert."""
     _require_store()
-    points = _scroll(Filter(must=[FieldCondition(key="user_id", match=MatchValue(value=user_id))]))
+    # OOM-Schutz (gleiche Fehlerklasse wie 1.13.x/1.14, qdrant §8): NUR Chunk 0 je Dokument laden
+    # (full_text ist 1:1 in JEDEM Chunk) und — wenn der Client DatetimeRange kann — den Tag schon
+    # SERVERSEITIG eingrenzen, statt ALLE Chunks ALLER Dokumente mit Volltext in den RAM zu ziehen.
+    # Der Python-Praefix-Check unten bleibt als Fallback/zweite Sicherung (identisches Ergebnis).
+    must = [FieldCondition(key="user_id", match=MatchValue(value=user_id)),
+            FieldCondition(key="chunk_index", match=MatchValue(value=0))]
+    if HAS_DATETIME_RANGE and re.fullmatch(r"\d{4}-\d{2}-\d{2}", (date or "").strip()):
+        d = date.strip()
+        must.append(FieldCondition(key="created_at", range=DatetimeRange(gte=f"{d}T00:00:00Z", lte=f"{d}T23:59:59Z")))
+    points = _scroll(Filter(must=must))
     seen: dict[str, dict] = {}
     for p in points:
         created = p.payload.get("created_at", "")
@@ -1180,6 +1275,9 @@ def delete_entry(doc_id: str, user_id: str = "frank") -> dict:
         "user_id": pl.get("user_id") or user_id,
         "title": (pl.get("title") or "").strip(),
         "category": (pl.get("category") or "").strip(),
+        # Multi-Category mit in den Papierkorb (Tiefen-Debugging 2026-07-02): vorher ging beim
+        # Restore jede sekundaere Kategorie verloren (trash_restore liest via cats_from_payload).
+        "categories": cats_from_payload(pl),
         "text": pl.get("full_text", ""),
         "created_at": pl.get("created_at") or iso_now(),
         "deleted_at": iso_now(),
@@ -1362,14 +1460,19 @@ def reembed_all(req: ReembedReq) -> dict:
     _require_store()
     flt = (Filter(must=[FieldCondition(key="user_id", match=MatchValue(value=req.user_id))])
            if req.user_id.strip() else None)
-    pts = _scroll(flt, limit=req.limit)
-    if not pts:
+    # OOM-Schutz (Tiefen-Debugging 2026-07-02, gleiche Klasse wie 1.13.x/qdrant §8): erst NUR die
+    # Punkt-IDs einsammeln (kein full_text), dann je 100er-Batch die vollen Payloads per retrieve
+    # nachladen — statt ALLE Volltexte ALLER Punkte gleichzeitig in den RAM zu ziehen.
+    id_pts = _scroll(flt, limit=req.limit, with_payload=["doc_id"])
+    if not id_pts:
         return {"ok": True, "reembedded": 0, "total": 0, "note": "keine Punkte"}
-    _guard_embed_budget(len(pts))
+    all_ids = [p.id for p in id_pts]
+    _guard_embed_budget(len(all_ids))
     t0 = time.time()
     done = 0
-    for start in range(0, len(pts), 100):
-        batch = pts[start:start + 100]
+    for start in range(0, len(all_ids), 100):
+        batch = qc.retrieve(collection_name=COLLECTION, ids=all_ids[start:start + 100],
+                            with_payload=True, with_vectors=False)
         points = []
         for p in batch:
             pl = dict(p.payload or {})
@@ -1387,8 +1490,8 @@ def reembed_all(req: ReembedReq) -> dict:
         _upsert_batched(points, wait=True)
         done += len(points)
     checkpoint("reembed_all", "Bestand mit aktuellem Titel+Kategorie-Schema neu eingebettet (Vektor neu, Payload 1:1)",
-               ok=(done == len(pts)), reembedded=done, total=len(pts), ms=int((time.time() - t0) * 1000))
-    return {"ok": True, "reembedded": done, "total": len(pts)}
+               ok=(done == len(all_ids)), reembedded=done, total=len(all_ids), ms=int((time.time() - t0) * 1000))
+    return {"ok": True, "reembedded": done, "total": len(all_ids)}
 
 
 @app.get("/")
