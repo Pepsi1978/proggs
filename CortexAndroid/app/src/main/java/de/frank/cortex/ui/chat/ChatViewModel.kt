@@ -321,6 +321,11 @@ class ChatViewModel : ViewModel() {
             // Sessions-Titel = KI-Zusammenfassung der INTENTION der ersten Frage (Frank-Wunsch
             // 2026-07-02), im Hintergrund via gemini-3.1-flash-lite. Fallback: Roh-Text bleibt.
             if (isFirstMessage) generateSessionIntentTitle(sessionId, text)
+            // Vor dem try deklariert, damit die Abbruch-Pfade unten die TEIL-Antwort noch
+            // persistieren koennen (Frank-Wunsch 2026-07-02: halbe Streaming-Antworten duerfen
+            // nach Session-Wechsel nicht verloren gehen).
+            var streamedMsgId: String? = null
+            val rawAccum = StringBuilder()
             try {
                 if (WireGuardManager.state.value != TunnelState.CONNECTED) {
                     _uiState.update { it.copy(isLoading = false, error = "VPN nicht aktiv") }
@@ -352,8 +357,6 @@ class ChatViewModel : ViewModel() {
                 // Die Antwort waechst live in der Bubble; das Vorlesen startet, sobald der ERSTE
                 // vollstaendige Absatz da ist (nie bei Einzelwoertern — sonst bricht TTS zu frueh ab).
                 // Schlaegt das Streaming fehl BEVOR etwas ankam -> klassischer /chat als Fallback.
-                var streamedMsgId: String? = null
-                val rawAccum = StringBuilder()
                 var spokenUpTo = 0
                 var ttsChannel: Channel<String>? = null
                 val ttsWanted = SettingsStore.ttsEnabled
@@ -481,9 +484,16 @@ class ChatViewModel : ViewModel() {
                 }
 
             } catch (e: CancellationException) {
+                // App/ViewModel wird beendet: die bereits gestreamte TEIL-Antwort trotzdem sichern.
+                persistPartialStreamedReply(sessionId, streamedMsgId, rawAccum)
                 throw e
             } catch (e: Exception) {
                 CortexLog.error("ChatVM", "sendMessage", "Fehler: ${e.message}")
+                // Halbe Streaming-Antwort NICHT verlieren: was schon ankam, wird als normale
+                // Nachricht in der Session-Historie gespeichert (Frank-Wunsch 2026-07-02).
+                // Bei Erfolg ueberschreibt die finale Antwort denselben Datensatz (gleiche id,
+                // CONFLICT_REPLACE) — hier bleibt eben der Teilstand erhalten.
+                persistPartialStreamedReply(sessionId, streamedMsgId, rawAccum)
                 _uiState.update {
                     it.copy(
                         isLoading = false,
@@ -492,6 +502,38 @@ class ChatViewModel : ViewModel() {
                 }
             }
         }
+    }
+
+    /** Sichert eine mittendrin abgebrochene Streaming-Antwort in der Session-Historie.
+     *  NonCancellable: laeuft auch dann zu Ende, wenn die aufrufende Coroutine gerade
+     *  gecancelt wird (z.B. App-Ende) — genau dann ist das Sichern am wichtigsten. */
+    private suspend fun persistPartialStreamedReply(sessionId: String, messageId: String?, rawAccum: StringBuilder) {
+        if (messageId == null) return
+        val partial = rawAccum.toString().trim()
+        if (partial.isBlank()) return
+        withContext(kotlinx.coroutines.NonCancellable + Dispatchers.IO) {
+            try {
+                ChatSessionStore.saveMessage(
+                    sessionId,
+                    StoredChatMessage(
+                        id = messageId,
+                        text = partial,
+                        isUser = false,
+                        action = null,
+                        category = null,
+                        title = null,
+                        recallHits = null,
+                        stored = false,
+                        timestamp = System.currentTimeMillis()
+                    )
+                )
+                CortexLog.info("ChatVM", "persistPartial", "Abgebrochene Streaming-Antwort gesichert",
+                    mapOf("session_id" to sessionId, "chars" to partial.length))
+            } catch (e: Exception) {
+                CortexLog.warn("ChatVM", "persistPartial", "Teil-Antwort konnte nicht gesichert werden: ${e.message}")
+            }
+        }
+        refreshSessions()
     }
 
     fun sendOption(option: ChatOption) {
