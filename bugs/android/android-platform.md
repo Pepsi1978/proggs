@@ -4,11 +4,13 @@
 > Services, WorkManager, Room-Runtime/Migrations, PendingIntent/AlarmManager,
 > Notifications, BroadcastReceiver, Scoped Storage, Doze/Background, targetSdk-Verhalten).
 >
-> **Stand:** zuletzt recherchiert am **2026-06-02** fuer **targetSdk = compileSdk = 36
-> (Android 16 „Baklava")**, minSdk 26 (BestJournalAndroid) bzw. 28 (EntropieReductor),
+> **Stand:** zuletzt recherchiert am **2026-06-02**, **re-recherchiert am 2026-07-02** (Engine A: Firecrawl+MiniMax)
+> fuer **targetSdk = compileSdk = 36 (Android 16 „Baklava")**, minSdk 26 (BestJournalAndroid) bzw. 28 (EntropieReductor),
 > Java 17, **Room 2.7.0**, **WorkManager 2.10.0**, hilt-work 1.2.0, Health Connect,
 > Glance/RemoteViews-Widget, AGP 8.7.3 / 8.10.0. Beide Apps zielen auf API 36 — die
 > Verhaltensaenderungen der Sektion 8 greifen also voll.
+> **Neu 2026-07-02:** **Android 17 (API 37)** existiert bereits (compileSdk 37 wird in Projekten benutzt) →
+> neuer §8.14 (Ausblick API 37); §4.9 um `STOP_REASON_TIMEOUT_ABANDONED`/`getPendingJobReasonsHistory` ergaenzt.
 >
 > Recherche: 7-Researcher-Schwarm (offizielle Quellen zuerst), Fix-Status teils per
 > `gh` hart geprueft. Quelle des Systems: `~/proggs/bugs/SYSTEM.md`.
@@ -70,6 +72,7 @@ Geht es um *Kompilieren/Bauen* → `gradle.md`. Geht es um *was auf dem Screen p
 | 14 | Native `.so` (NDK/SDK), targetSdk 35+ | 16-KB-Page-Size: NDK r28+ / `max-page-size=16384` | §8.3 |
 | 15 | Custom-Permission einer ANDEREN App `granted=false` (ContentProvider-`SecurityException`) | Definierende App ZUERST, nutzende App DANACH neu installieren (`pm grant` hilft nicht) | §2.11 |
 | 16 | `ProcessLifecycleOwner.addObserver` in der Activity | Observer als Feld + in `onDestroy` `removeObserver` — sonst Leak + Mehrfach-Callbacks nach Recreation | §1.12 |
+| 17 | compileSdk/targetSdk **37** (Android 17) | Reflection/JNI auf `static final` crasht; `MessageQueue`-Interna nicht reflektieren; Local-Network-Permission wird Pflicht | §8.14 |
 
 ---
 
@@ -392,7 +395,15 @@ sagt *wie man es von vornherein richtig macht*. Jede Bug-Sektion hier hat dort i
 - **Ursache:** Quota wird jetzt auch im Top-State, bei laufendem FGS und im Active-Bucket erzwungen (JobScheduler/WorkManager/DownloadManager). `setImportantWhileForeground` ist jetzt No-op.
 - **Versionen:** ab Android 16 (API 36).
 - **FIX:** Diagnose via `getStopReason()`; bei Quota-Erschoepfung echten FGS direkt statt Long-running-Worker; fuer Nutzer-Transfers `setUserInitiatedJob(true)` (UIDT, quota-befreit).
-- **Quelle:** https://developer.android.com/develop/background-work/services/fgs/changes
+- **Diagnose-Neuerungen Android 16 (Re-Recherche 2026-07-02):** Neue API `JobScheduler#getPendingJobReasonsHistory()`
+  zeigt, WARUM ein Job nicht lief. Zusaetzlich neuer Stop-Reason **`STOP_REASON_TIMEOUT_ABANDONED`** (statt
+  `STOP_REASON_TIMEOUT`), wenn eine App **JobScheduler direkt** nutzt, KEINE starke Referenz auf `JobParameters`
+  haelt und in einen Timeout laeuft — bei haeufigem Auftreten drosselt das System die Job-Frequenz.
+  **WorkManager/AsyncTask/DownloadManager sind NICHT betroffen** (sie verwalten den Job-Lebenszyklus selbst).
+  Test-Overrides: `adb shell am compat enable OVERRIDE_QUOTA_ENFORCEMENT_TO_TOP_STARTED_JOBS <pkg>` /
+  `OVERRIDE_QUOTA_ENFORCEMENT_TO_FGS_JOBS <pkg>`.
+- **Quelle:** https://developer.android.com/develop/background-work/services/fgs/changes,
+  https://developer.android.com/about/versions/16/behavior-changes-all
 
 ### 4.10 BOOT_COMPLETED: Worker/Alarme nach Reboot neu planen
 - **Symptom:** Nach Neustart laufen geplante (auch periodische) Worker/Alarme nicht mehr.
@@ -734,6 +745,26 @@ sagt *wie man es von vornherein richtig macht*. Jede Bug-Sektion hier hat dort i
 - **Versionen:** ab API 36, per Design.
 - **FIX:** Den Versions-String nur als opaken Token behandeln (Gleichheits-Check gegen den eigenen zuletzt gespeicherten Wert), kein Format/Parsing annehmen.
 - **Quelle:** https://developer.android.com/about/versions/16/behavior-changes-16
+
+### 8.14 Ausblick Android 17 (API 37) — neue Verhaltensaenderungen (Re-Recherche 2026-07-02)
+> **Kontext:** compileSdk **37** wird bereits in Projekten benutzt; targetSdk bleibt vorerst 35/36. Diese
+> Aenderungen greifen erst bei `targetSdk = 37`, sind aber jetzt zu kennen (einige treffen auch beim
+> reinen Kompilieren gegen API 37). Quelle: https://developer.android.com/about/versions/17/behavior-changes-37
+- **`static final`-Felder sind jetzt wirklich unveraenderlich** ⭐: Reflection-Schreibzugriff auf `static final`
+  wirft `IllegalAccessException`; die JNI-Setter (`SetStaticLongField()` etc.) fuehren zum **App-Crash**. Betrifft
+  Libraries/Code, die Konstanten per Reflection/JNI ueberschreiben. → nie `static final` reflektiv setzen.
+- **`MessageQueue` lock-frei neu implementiert:** Code, der private `MessageQueue`-Felder/-Methoden **reflektiert**,
+  bricht. → keine internen Framework-Felder reflektieren.
+- **Local-Network-Permission wird Pflicht** (API 37): LAN/mDNS/Multicast/direkte lokale IP-Zugriffe brauchen die
+  neue Local-Network-Runtime-Permission (in Android 16 noch Opt-in-Preview, s. §8.9). → rechtzeitig deklarieren + anfragen.
+- **ECH (Encrypted Client Hello) per Default aktiv:** TLS-Handshake nutzt ECH — relevant bei striktem
+  Netzwerk-Monitoring/Pinning; normalerweise transparent.
+- **App-Memory-Limits (alle Apps auf Android 17):** aggressiveres Speicherbudget; per adb testbar
+  (`adb shell am memory-limiter manual|ignore|status`). Speicherlastige Pfade (grosse Bitmaps) pruefen.
+- **Grosse Screens:** das temporaere Resizability-Opt-out (`PROPERTY_COMPAT_ALLOW_RESTRICTED_RESIZABILITY`, §8.5)
+  **wirkt ab API 37 nicht mehr** — adaptive Layouts sind dann Pflicht.
+- **FIX (uebergreifend):** Vor einem targetSdk-37-Bump: Reflection/JNI auf `static final` + interne Framework-Felder
+  ausmerzen, Local-Network-Permission-Pfad vorbereiten, adaptive Layouts sicherstellen, Speicherbudget testen.
 
 ---
 
