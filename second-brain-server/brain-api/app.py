@@ -228,7 +228,17 @@ _init_retry_lock = threading.Lock()
 _init_last_attempt = 0.0
 
 # Sichtbarer Patch-Stand: Detail-/Such-APIs liefern den ursprünglichen Speicherzeitpunkt fuer das Dashboard aus.
-# 1.19.0 (Tiefen-Debugging 2026-07-02): (a) /by-date OOM-sicher (chunk_index=0 + nativer Datums-Filter
+# 1.20.0 (Tiefen-Debugging PERFORMANCE 2026-07-02): (a) embed_many — Chunk-Vektoren werden je
+# Schreibweg (store/update/entry-category/entry-categories/trash-restore/reembed-all) GEBUENDELT
+# in Batches (SB_EMBED_BATCH=16) statt seriell je Chunk embedded: identische Vektoren, aber ein
+# 150-Chunk-Dokument macht ~10 statt 150 Gemini-Round-Trips (Speichern grosser Docs: Minuten -> Sekunden);
+# (b) category-counts + /list + resolve_title scannen nur noch Chunk 0 je Dokument (Metadaten sind in
+# jedem Chunk identisch, Ergebnis doc_id-dedupliziert EXAKT gleich, Scan ~5x kleiner — category-counts
+# laeuft bei JEDEM 20s-Dashboard-Poll); (c) Payload-Eingrenzung fuer backfill-parent (nur category/
+# parent statt aller full_texts — qdrant-§8-OOM-Klasse), /purge (nur doc_id), _doc_id_exists +
+# update-leftover-Probe (with_payload=False), /store-Existenzcheck (nur created_at). Alles
+# verhaltensneutral: gleiche Antworten, gleiche Zaehlungen, gleiche Vektoren.
+# Alt: 1.19.0 (Tiefen-Debugging 2026-07-02): (a) /by-date OOM-sicher (chunk_index=0 + nativer Datums-Filter
 # statt ALLE Chunks ALLER Docs mit full_text zu laden — gleiche Fehlerklasse wie 1.13.x/1.14, qdrant §8);
 # (b) rename-category/detach-category pflegen jetzt AUCH das Multi-Category-Array 'categories' +
 # 'parent'/'parents' (seit 1.11.0 blieben Eintraege unter dem ALTEN Namen zaehl-/findbar, detach war
@@ -238,7 +248,7 @@ _init_last_attempt = 0.0
 # retrieve statt ALLE Volltexte auf einmal (OOM-Backstop); (f) Self-Healing-Init: scheitert der Start
 # am Qdrant-Boot-Race, holt _require_store die Initialisierung throttled nach (vorher blieb der
 # Container dauerhaft 'degraded'/503 bis zum manuellen Neustart).
-VERSION = "1.19.0 (02.07.2026, 18.45 Uhr)"
+VERSION = "1.20.0 (02.07.2026, 19.02 Uhr)"
 
 # Startup-Banner (Observability-First: Log-Pfad + Version EINMAL ausgeben)
 _log(logging.INFO, "brain-api startet", version=VERSION, log_path=LOG_PATH)
@@ -289,6 +299,34 @@ def embed(text: str, task_type: str) -> list[float]:
     vec = list(resp.embeddings[0].values)
     probe(len(vec) == EMBED_DIMS, "Embedding-Dimension weicht ab", got=len(vec), want=EMBED_DIMS)
     return vec
+
+
+# Batch-Groesse fuer embed_many: die Gemini-API nimmt MEHRERE contents in EINEM Call entgegen
+# (Antwort: eine embeddings-Liste in Eingabe-Reihenfolge). Konservativ 16 je Request.
+EMBED_BATCH = int(os.getenv("SB_EMBED_BATCH", "16"))
+
+
+def embed_many(texts: list[str], task_type: str) -> list[list[float]]:
+    """MEHRERE Texte in einem API-Call je Batch embedden (Tiefen-Debugging Performance 2026-07-02).
+    Vorher liefen die Chunks eines Dokuments SERIELL durch embed() — ein 150-Chunk-Dokument
+    brauchte 150 Round-Trips (Minuten). Identische Vektoren (gleiche Inputs, gleiches task_type,
+    gleiche Dimension), nur gebuendelte Requests. Bei Anzahl-Mismatch wird HART abgebrochen
+    (RuntimeError) statt Vektoren still falsch zuzuordnen (Direktive #3)."""
+    out: list[list[float]] = []
+    for start in range(0, len(texts), EMBED_BATCH):
+        batch = texts[start:start + EMBED_BATCH]
+        resp = gclient.models.embed_content(
+            model=EMBED_MODEL,
+            contents=batch,
+            config=genai_types.EmbedContentConfig(output_dimensionality=EMBED_DIMS, task_type=task_type),
+        )
+        vecs = [list(e.values) for e in (resp.embeddings or [])]
+        if len(vecs) != len(batch):
+            raise RuntimeError(f"Batch-Embedding: {len(vecs)} Vektoren fuer {len(batch)} Texte")
+        for v in vecs:
+            probe(len(v) == EMBED_DIMS, "Embedding-Dimension weicht ab", got=len(v), want=EMBED_DIMS)
+        out.extend(vecs)
+    return out
 
 
 def _upsert_batched(points: list, wait: bool = True) -> None:
@@ -361,7 +399,10 @@ def _norm_cmp(s: str) -> str:
 
 
 def _doc_id_exists(doc_id: str) -> bool:
-    return bool(_scroll(Filter(must=[FieldCondition(key="doc_id", match=MatchValue(value=doc_id))]), limit=1))
+    # with_payload=False (Performance 2026-07-02): fuer den Existenz-Check braucht es KEINEN Payload —
+    # vorher wurde der volle full_text (bei grossen Docs bis 1,4 MB) nur fuer ein bool geladen.
+    return bool(_scroll(Filter(must=[FieldCondition(key="doc_id", match=MatchValue(value=doc_id))]),
+                        limit=1, with_payload=False))
 
 
 def resolve_title(user_id: str, title: str) -> "tuple[str, str] | None":
@@ -383,7 +424,9 @@ def resolve_title(user_id: str, title: str) -> "tuple[str, str] | None":
     if not needle:
         return None
     matches: dict[str, str] = {}   # doc_id -> echter gespeicherter Titel
-    for p in _scroll(Filter(must=[FieldCondition(key="user_id", match=MatchValue(value=user_id))]),
+    # Performance (2026-07-02): nur Chunk 0 je Dokument — der Titel ist in jedem Chunk identisch.
+    for p in _scroll(Filter(must=[FieldCondition(key="user_id", match=MatchValue(value=user_id)),
+                                  FieldCondition(key="chunk_index", match=MatchValue(value=0))]),
                      with_payload=["doc_id", "title"]):
         t = (p.payload.get("title") or "").strip()
         if t and _norm_cmp(t) == needle:
@@ -674,7 +717,10 @@ def store(req: StoreReq) -> dict:
     created_at = now
     replaced = False
     if req.title and req.title.strip():
-        existing = _scroll(Filter(must=[FieldCondition(key="doc_id", match=MatchValue(value=doc_id))]), limit=1)
+        # Nur created_at laden (Performance 2026-07-02): der volle Payload (inkl. full_text des
+        # ALTEN Dokuments) wurde hier nur fuer das Erstellungsdatum in den RAM gezogen.
+        existing = _scroll(Filter(must=[FieldCondition(key="doc_id", match=MatchValue(value=doc_id))]),
+                           limit=1, with_payload=["created_at"])
         replaced = bool(existing)
         if replaced:
             created_at = existing[0].payload.get("created_at", now)  # Erstellungsdatum erhalten, nur updated_at neu
@@ -688,8 +734,9 @@ def store(req: StoreReq) -> dict:
     _guard_embed_budget(len(chunks))
     t0 = time.time()
     points = []
-    for i, ch in enumerate(chunks):
-        vec = embed(embed_input(req.title, cats, ch), "RETRIEVAL_DOCUMENT")  # Titel + ALLE Kategorien praegen den Vektor mit (chunk_text bleibt 1:1)
+    # Batch-Embedding (Performance 2026-07-02): alle Chunk-Vektoren gebuendelt statt seriell je Chunk
+    vecs = embed_many([embed_input(req.title, cats, ch) for ch in chunks], "RETRIEVAL_DOCUMENT")
+    for i, (ch, vec) in enumerate(zip(chunks, vecs)):
         points.append(PointStruct(id=point_id(doc_id, i), vector=vec, payload={
             "doc_id": doc_id,
             "user_id": req.user_id,
@@ -860,7 +907,11 @@ def backfill_parent(user_id: str = "frank") -> dict:
     Eintraegen per set_payload (KEIN Re-Embed — billig). Macht 'alles unter Haupt' auch fuer den
     Altbestand filterbar. Idempotent: kann gefahrlos mehrfach laufen. Sync def -> Threadpool (fastapi §1)."""
     _require_store()
-    points = _scroll(Filter(must=[FieldCondition(key="user_id", match=MatchValue(value=user_id))]))
+    # OOM-Schutz (2026-07-02, gleiche Klasse wie qdrant §8): NUR die Kategorie-Felder laden —
+    # der Default (voller Payload) zog hier ALLE full_texts ALLER Chunks in den RAM (bei grossen
+    # Almanachen hunderte MB). KEIN chunk_index-Filter: das parent-Feld muss auf JEDEN Chunk.
+    points = _scroll(Filter(must=[FieldCondition(key="user_id", match=MatchValue(value=user_id))]),
+                     with_payload=["category", "parent"])
     # je Hauptkategorie die zugehoerigen Point-IDs sammeln, dann gebuendelt set_payload
     by_par: dict[str, list] = {}
     for p in points:
@@ -885,7 +936,11 @@ def category_counts(user_id: str = "frank") -> dict:
     # OOM-Schutz: NUR die Zaehl-Felder laden (doc_id + Kategorien), NICHT full_text — sonst zieht
     # ein einzelner category-counts-Abruf ALLE Volltexte gleichzeitig in den RAM (Frank-Bug
     # 2026-06-26: 60-70 grosse Almanache -> >2 GB -> OOM-Loop). fastapi §8/§9 (nicht alles in den RAM).
-    points = _scroll(Filter(must=[FieldCondition(key="user_id", match=MatchValue(value=user_id))]),
+    # Performance (2026-07-02): NUR Chunk 0 je Dokument scannen — Kategorien/doc_id sind in JEDEM
+    # Chunk identisch, das Ergebnis (doc_id-dedupliziert) bleibt EXAKT gleich, aber der Scan laeuft
+    # ueber ~5x weniger Punkte. Wichtig: dieser Endpoint laeuft bei JEDEM 20s-Dashboard-Poll.
+    points = _scroll(Filter(must=[FieldCondition(key="user_id", match=MatchValue(value=user_id)),
+                                  FieldCondition(key="chunk_index", match=MatchValue(value=0))]),
                      with_payload=["doc_id", "categories", "category"])
     seen: dict[str, set] = {}
     countable_docs: set = set()
@@ -1023,8 +1078,8 @@ def set_entry_category(req: EntryCategoryReq) -> dict:
     _guard_embed_budget(len(chunks))
     t0 = time.time()
     points = []
-    for i, ch in enumerate(chunks):
-        vec = embed(embed_input(title, new_cats, ch), "RETRIEVAL_DOCUMENT")  # Titel + neue Kategorie praegen den Vektor mit
+    vecs = embed_many([embed_input(title, new_cats, ch) for ch in chunks], "RETRIEVAL_DOCUMENT")  # gebuendelt statt seriell
+    for i, (ch, vec) in enumerate(zip(chunks, vecs)):
         points.append(PointStruct(id=point_id(req.doc_id, i), vector=vec, payload={
             "doc_id": req.doc_id, "user_id": req.user_id, "title": title,
             "category": new_cat, "categories": new_cats, "parent": new_parent, "parents": new_parents, "chunk_index": i, "chunk_count": len(chunks),
@@ -1067,8 +1122,8 @@ def set_entry_categories(req: EntryCategoriesReq) -> dict:
     _guard_embed_budget(len(chunks))
     t0 = time.time()
     points = []
-    for i, ch in enumerate(chunks):
-        vec = embed(embed_input(title, cats, ch), "RETRIEVAL_DOCUMENT")  # Titel + ALLE Kategorien praegen den Vektor mit
+    vecs = embed_many([embed_input(title, cats, ch) for ch in chunks], "RETRIEVAL_DOCUMENT")  # gebuendelt statt seriell
+    for i, (ch, vec) in enumerate(zip(chunks, vecs)):
         points.append(PointStruct(id=point_id(req.doc_id, i), vector=vec, payload={
             "doc_id": req.doc_id, "user_id": req.user_id, "title": title,
             "category": cats[0], "categories": cats,
@@ -1096,7 +1151,8 @@ def purge_user(req: PurgeReq) -> dict:
     if not uid.startswith("eval") or uid == "frank":
         raise HTTPException(status_code=403, detail="purge ist NUR fuer eval-Test-Nutzer erlaubt (Schutz des echten Gehirns)")
     flt = Filter(must=[FieldCondition(key="user_id", match=MatchValue(value=uid))])
-    pts = _scroll(flt)
+    # Nur doc_id laden (Performance 2026-07-02): die Volltexte wurden hier nur fuer die Zaehlung geladen.
+    pts = _scroll(flt, with_payload=["doc_id"])
     docs = {p.payload.get("doc_id") for p in pts}
     if pts:
         qc.delete(collection_name=COLLECTION, points_selector=flt, wait=True)
@@ -1219,7 +1275,10 @@ def list_docs(user_id: str = "frank", limit: int = 500) -> dict:
     # bei 60-70 grossen Almanachen ALLE Volltexte gleichzeitig in den RAM (>2 GB) -> Container-OOM
     # -> Neustart-Loop. 'chars' (Volltext-Laenge) war im Frontend ungenutzt -> entfaellt (0).
     # fastapi §8/§9 (nicht alles gleichzeitig in den RAM laden).
-    points = _scroll(Filter(must=[FieldCondition(key="user_id", match=MatchValue(value=user_id))]),
+    # Performance (2026-07-02): NUR Chunk 0 je Dokument — Metadaten sind in jedem Chunk identisch,
+    # Ergebnis (doc_id-dedupliziert) exakt gleich, Scan ~5x kleiner.
+    points = _scroll(Filter(must=[FieldCondition(key="user_id", match=MatchValue(value=user_id)),
+                                  FieldCondition(key="chunk_index", match=MatchValue(value=0))]),
                      with_payload=["doc_id", "title", "category", "created_at", "updated_at", "text_len"])
     seen: dict[str, dict] = {}
     for p in points:
@@ -1329,8 +1388,8 @@ def update_entry(req: UpdateReq) -> dict:
     _guard_embed_budget(len(chunks))
     t0 = time.time()
     points = []
-    for i, ch in enumerate(chunks):
-        vec = embed(embed_input(title, cats, ch), "RETRIEVAL_DOCUMENT")  # Titel + ALLE Kategorien praegen den Vektor mit
+    vecs = embed_many([embed_input(title, cats, ch) for ch in chunks], "RETRIEVAL_DOCUMENT")  # gebuendelt statt seriell
+    for i, (ch, vec) in enumerate(zip(chunks, vecs)):
         points.append(PointStruct(id=point_id(target_doc_id, i), vector=vec, payload={
             "doc_id": target_doc_id, "user_id": req.user_id, "title": title, "category": category, "categories": cats, "parent": parent, "parents": parents,
             "chunk_index": i, "chunk_count": len(chunks), "chunk_text": ch,
@@ -1341,7 +1400,8 @@ def update_entry(req: UpdateReq) -> dict:
     replaced_ok = bool(points) and points[0].payload["full_text"] == req.text
     # Sonde: nach einer Titel-Migration darf die alte doc_id NICHT mehr existieren (kein Geist-Duplikat)
     if title_changed and target_doc_id != req.doc_id:
-        leftover = _scroll(Filter(must=[FieldCondition(key="doc_id", match=MatchValue(value=req.doc_id))]), limit=1)
+        leftover = _scroll(Filter(must=[FieldCondition(key="doc_id", match=MatchValue(value=req.doc_id))]),
+                           limit=1, with_payload=False)   # nur Existenz-Probe, kein Payload noetig
         probe(not leftover, "Alte doc_id nach Titel-Migration noch vorhanden", old_doc_id=req.doc_id, new_doc_id=target_doc_id)
     checkpoint("update_entry", "Alten Vektor loeschen + neuen Text 1:1 speichern (Titel-Aenderung -> neue doc_id)",
                ok=replaced_ok, doc_id=target_doc_id, old_doc_id=req.doc_id if title_changed else None,
@@ -1425,8 +1485,8 @@ def trash_restore(req: RestoreReq) -> dict:
     _guard_embed_budget(len(chunks))
     now = iso_now()
     points = []
-    for i, ch in enumerate(chunks):
-        vec = embed(embed_input(title, cats, ch), "RETRIEVAL_DOCUMENT")  # Titel + ALLE Kategorien praegen den Vektor mit
+    vecs = embed_many([embed_input(title, cats, ch) for ch in chunks], "RETRIEVAL_DOCUMENT")  # gebuendelt statt seriell
+    for i, (ch, vec) in enumerate(zip(chunks, vecs)):
         points.append(PointStruct(id=point_id(req.doc_id, i), vector=vec, payload={
             "doc_id": req.doc_id, "user_id": entry.get("user_id") or req.user_id,
             "title": title, "category": category, "categories": cats, "parent": parent, "parents": parents, "chunk_index": i, "chunk_count": len(chunks),
@@ -1473,7 +1533,7 @@ def reembed_all(req: ReembedReq) -> dict:
     for start in range(0, len(all_ids), 100):
         batch = qc.retrieve(collection_name=COLLECTION, ids=all_ids[start:start + 100],
                             with_payload=True, with_vectors=False)
-        points = []
+        prepared = []   # (point_id, payload, embed_input) je Punkt — Vektoren danach GEBUENDELT
         for p in batch:
             pl = dict(p.payload or {})
             title = (pl.get("title") or "").strip()
@@ -1485,8 +1545,10 @@ def reembed_all(req: ReembedReq) -> dict:
             if pl["parents"] and not (pl.get("parent") or "").strip():
                 pl["parent"] = pl["parents"][0]
             ch = pl.get("chunk_text", pl.get("full_text", ""))
-            vec = embed(embed_input(title, cats, ch), "RETRIEVAL_DOCUMENT")  # Titel + ALLE Kategorien praegen den Vektor mit
-            points.append(PointStruct(id=p.id, vector=vec, payload=pl))   # Payload inkl. categories/parents
+            prepared.append((p.id, pl, embed_input(title, cats, ch)))
+        vecs = embed_many([inp for _, _, inp in prepared], "RETRIEVAL_DOCUMENT")  # gebuendelt statt seriell je Punkt
+        points = [PointStruct(id=pid, vector=vec, payload=pl)
+                  for (pid, pl, _), vec in zip(prepared, vecs)]   # Payload inkl. categories/parents
         _upsert_batched(points, wait=True)
         done += len(points)
     checkpoint("reembed_all", "Bestand mit aktuellem Titel+Kategorie-Schema neu eingebettet (Vektor neu, Payload 1:1)",

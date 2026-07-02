@@ -3184,7 +3184,13 @@ button{font-family:inherit;cursor:pointer}
     if(tab!==activeTab) setTab(tab);
   })();
   loadOverview();
-  setInterval(()=>{ if(activeTab==="overview" || true) loadOverview(); }, 20000);  // V5: alle 20s
+  /* 20s-Poll (Performance 2026-07-02): laeuft bewusst auf JEDEM Dashboard-Tab (haelt den
+     Verbindungs-Status + die Rail-Daten aktuell), aber NICHT mehr bei verstecktem BROWSER-Tab —
+     unsichtbares Polling loeste bisher weiter alle 20s die komplette Server-Kaskade aus
+     (brain-Scan + agent + CPU-Messung). Beim Sichtbarwerden wird SOFORT aktualisiert, damit nie
+     aeltere Daten zu sehen sind als vorher. Gleiche Anzeige, gleiche 20s-Frequenz bei sichtbarem Tab. */
+  setInterval(()=>{ if(!document.hidden) loadOverview(); }, 20000);
+  document.addEventListener("visibilitychange", ()=>{ if(!document.hidden) loadOverview(); });
 
 })();
 </script>

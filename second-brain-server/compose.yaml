@@ -8,10 +8,23 @@
 #         (Ollama/BGE-M3 wurde am 2026-06-22 entfernt: Datenabfluss ist egal -> Cloud-KI
 #          ist schneller/besser und entlastet den kleinen 8-GB-Server.)
 
+# Docker-Log-Rotation (Tiefen-Debugging Performance 2026-07-02, bugs/server/docker.md §6):
+# der json-file-Default rotiert NICHT — ohne Limits wachsen /var/lib/docker/containers/*-json.log
+# unbegrenzt, bis die Root-Disk voll ist (dann sterben Container UND Host-Dienste). 10 MB x 3 je
+# Dienst reicht fuer Tage an JSON-Logs; die App-Logs liegen zusaetzlich rotierend in den
+# jeweiligen Log-Dateien (brain-logs/, agent logs/). Greift je Container ab der NAECHSTEN
+# Neu-Erstellung (compose up -d --build beim Deploy).
+x-sb-logging: &sb-logging
+  driver: json-file
+  options:
+    max-size: "10m"
+    max-file: "3"
+
 services:
   qdrant:
     image: qdrant/qdrant:v1.18.2     # gepinnt: Reproduzierbarkeit + Security (1.18.1/1.18.2 buendelt Snapshot-Upload-Auth #9031, gRPC-Auth #8676, Snapshot-Restore-von-URL abschaltbar #8628, TLS-Deps #8619). Siehe bugs/server/qdrant.md §6.
     container_name: sb-qdrant
+    logging: *sb-logging
     restart: unless-stopped
     ports:
       - "127.0.0.1:6333:6333"        # REST-API — NUR lokal erreichbar
@@ -35,6 +48,7 @@ services:
   brain-api:
     build: ./brain-api              # schlanker FastAPI-1:1-Speicher (Text 1:1 rein/raus, keine KI im Speicher)
     container_name: sb-brain-api
+    logging: *sb-logging
     restart: unless-stopped
     depends_on:
       - qdrant
@@ -73,6 +87,7 @@ services:
   mcp:
     build: ./mcp-server             # MCP-Server: macht das Gehirn als MCP-Werkzeuge verfuegbar
     container_name: sb-mcp          # (remember / recall / list_memories / brain_health)
+    logging: *sb-logging
     restart: unless-stopped
     depends_on:
       - brain-api
@@ -106,6 +121,7 @@ services:
   agent:
     build: ./agent                  # Bibliothekar-Agent (Schicht 3, Speicher-Seite): Text rein/raus, einordnen + 1:1-Speichern + Logbuch
     container_name: sb-agent
+    logging: *sb-logging
     restart: unless-stopped
     depends_on:
       - brain-api
@@ -153,6 +169,7 @@ services:
   dashboard:
     build: ./dashboard              # privates Web-Cockpit: Uebersicht (Gedaechtnis-Spektrum + Server-Stats), Gehirn-Browser; Dark/Light
     container_name: sb-dashboard
+    logging: *sb-logging
     restart: unless-stopped
     depends_on:
       - brain-api
@@ -191,6 +208,7 @@ services:
   caddy:
     image: caddy:2.11.4-alpine   # gepinnt (Reproduzierbarkeit, bugs/server/docker.md §10). HTTPS-Proxy fuers Cockpit.
     container_name: sb-caddy
+    logging: *sb-logging
     restart: unless-stopped
     depends_on:
       - dashboard

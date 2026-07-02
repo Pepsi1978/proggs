@@ -25,7 +25,7 @@ from fastapi.responses import HTMLResponse, JSONResponse, Response
 
 VERSION = "0.24.2"  # 0.24.2: Vorlesen-Schalter Layout-Fix (Frank-Wunsch 2026-06-26) — der weisse An/Aus-Knopf lag optisch auf dem 'An/Aus'-Text (haesslich). Jetzt steht der Status-Text LINKS vom Switch (DOM-Reihenfolge state->input->track, Farbe via :has(input:checked)), klar getrennt -> der Knopf bewegt sich nur im 52px-Track, keine Ueberlappung mehr. 0.24.1: Vorlesen-Schalter optisch ueberarbeitet + Token-Sparen verifiziert (Frank-Wunsch 2026-06-26) — Schalter sass am Karten-Rand abgeschnitten/haesslich; jetzt in einer umrandeten Box (.vl-box, Border + Orange-Glow wenn an) DIREKT VOR dem Speichern-Button in EINER Zeile, An/Aus-Text faerbt sich orange(an)/grau(aus). VERIFIZIERT (Frank-Sorge Token-Verschwendung): speak() bricht in Zeile 1 per `if(!isOn()||!available) return` ab BEVOR ein /api/tts-fetch passiert -> bei AUS wird KEIN Text an Gemini-TTS gesendet, kein Token-Verbrauch (nur der manuelle "Stimme testen"-Knopf ruft TTS mit festem Mini-Satz). Beschreibung stellt das klar + Logik-Sonde console.debug in speak() macht es in der Browser-Konsole sichtbar. 0.24.0: Vorlesen An/Aus-Schalter in den Einstellungen (Frank-Wunsch 2026-06-26) — neuer Toggle-Schalter in Einstellungen->Vorlesen mit eigenem "Speichern"-Button (Muster wie Modell/Prompt): Schalter umlegen zeigt einen pending Stand, erst "Speichern" schreibt ihn dauerhaft (localStorage cortexTtsOn, gleicher Schluessel wie der Chat-Lautsprecher -> beide bleiben synchron) und zieht den orangen Lautsprecher-Knopf mit + stoppt laufendes Vorlesen sofort. Beim Oeffnen der Einstellungen wird der Schalter auf den echten Stand gesetzt. Reiner Frontend-Teil in index.html (CSS .vl-toggle, HTML in der Vorlesen-Sektion, JS in initTTS + Tab-Wechsel), bestehende Funktion (Chat-Lautsprecher, Stimmenauswahl) unveraendert. 0.23.0: VORLESEN viel schneller (Frank-Wunsch 2026-06-25, Performance) — speak() liest die Antwort jetzt Satz fuer Satz vor (ttsChunks: Schnitt an Satzgrenzen, ~220-Zeichen-Buendel) statt das komplette Audio des GANZEN Textes abzuwarten. Der ERSTE Satz wird sofort generiert + abgespielt, der naechste WAEHRENDDESSEN vorausgeladen (Pipelining); ttsSeq bricht bei neuer Antwort sauber ab. Messung: langer Text ~11s bis zum ersten Ton -> jetzt ~2s. Reiner Frontend-Fix in index.html (speak), GLEICHES Aussehen + gleiche Funktion, nur schneller. 0.22.0: STILLE Kuerzung am Speicher-Pfad endgueltig beseitigt (Frank-Bug 2026-06-25) — /api/chat kuerzte lange Eintraege bei 100000 Zeichen STILL (gleiche Fehlerklasse wie der alte 8000-Bug, nur hoehere Wand). Jetzt benannte Konstante MAX_STORE_CHARS (Default 500000, ~25x Franks groesste Datei, fastapi §8 OOM-Schutz) + LAUTE Ablehnung mit klarer Meldung statt stillem Slice -> nie wieder unbemerkter Textverlust. 0.21.0: FIX langer Eintrag wurde abgeschnitten (Frank-Bug 2026-06-25) — /api/chat cappte den Text bei 8000 Zeichen ('eine Chat-Nachricht ist nie so lang') und schnitt damit lange Eintraege (Almanache ~18k) MITTEN ab; nur die ersten 8000 Zeichen kamen im Gehirn an. Cap auf 100000 erhoeht (brain-api chunkt beliebig lange Texte selbst). Kategorie-Cap 60->120 (tiefe Pfade A/B/C/...). Rekursive Kategorie-Baeume (beliebig tief) sind rein in index.html. 0.20.0: TITEL-Feld im Sendebereich (Frank-Wunsch 2026-06-25) — neues Eingabefeld 'chatTitle' links vom Kategorie-Dropdown (bis 3x so breit via clamp, ausgegrauter Hinweis 'Titel'); fuer GANZ NEUE Eintraege gibt Frank den Titel selbst vor. /api/chat reicht 'title' an den Agenten weiter (Override, analog zur Kategorie); JS schickt den Titel mit und leert das Feld nach erfolgreichem Senden. Greift mit agent 0.24.0 (Titel-Override) + brain-api 1.10.0 (Titel im Embedding). 0.19.2: Vorlese-Stimmen im Dropdown farbig nach Geschlecht (Frank-Wunsch 2026-06-25) — weiblich rosa (#F9A8D4), maennlich hellblau (#7DD3FC), Symbol + ganze Zeile (data-gender -> cs-vf/cs-vm in syncCS; reiner Frontend-Teil in index.html). 0.19.1: Vorlese-Stimmen nach Geschlecht sortiert (weiblich oben, dann maennlich) + gender-Feld pro Stimme (Frank-Wunsch 2026-06-25; gender nach Gehoer/Community, nicht offiziell von Google) -> /api/tts/voices liefert sortiert; das Stimmen-Dropdown laeuft im Frontend durch enhanceSelect (schoenes Custom-Dropdown, Mausrad-Scroll, kein Scrollbalken) mit ♀/♂-Symbol davor. 0.19.0: Unterkategorien-UI v1 (Phasen 2-4, Frank-Wunsch 2026-06-25) — Einstellungen-Kategorien als aufklappbarer Baum (Haupt aufklappbar, Unter eingerueckt) + '+ Unter'-Knopf; Gespraech-/Drawer-Dropdowns hierarchisch (Unter eingerueckt, voller Pfad im Auswahlfeld) + Unterkategorie inline anlegbar; Uebersicht zeigt erst Hauptkategorien (Stapelbalken aggregiert, Legende als aufklappbarer Gruppenbaum), Klick filtert alles UNTER der Hauptkategorie -> neuer Proxy GET /api/by-parent (an brain /by-parent, sync def/Threadpool, graceful). Hierarchie steckt im Namen 'Haupt/Unter' -> keine Schema-Aenderung. 0.18.0: Vorlesen (Text->Sprache) im Gespraech (Frank-Wunsch 2026-06-25) — Lautsprecher-Toggle im Chat (default AN) liest Hauptagent-Antworten vor; neue Endpoints GET /api/tts/voices (30 Gemini-HD-Stimmen + Default) + POST /api/tts (Text+Stimme -> WAV, Gemini-native-TTS via GEMINI_API_KEY, PCM->WAV, x-goog-api-key-Header, to_thread). Stimmenauswahl ganz unten in Einstellungen, Praeferenz im localStorage. Hinweis: 'Chirp 3 HD' (Cloud-TTS) ist fuer das Projekt aktuell 403-gesperrt -> Gemini-native-TTS (gleichwertig) genutzt, Umstellung trivial nach Cloud-TTS-Freischaltung. Plus Einstellungen-Layout: Logbuch+Papierkorb nebeneinander (halbe Breite) unter System-Prompt. 0.17.1: Eval-Logs-Button ist jetzt ein Toggle (Frank-Wunsch 2026-06-25) — Root Cause: der "Logs"-Knopf rief stur showLogs() auf, lud die Liste neu und liess sie offen; ein zweiter Klick tat sichtbar nichts. Jetzt klappt der zweite Klick die offene Logs-Liste (bzw. eine geoeffnete Log-Ansicht) wieder zu, statt endlos scrollen zu muessen. Reiner Frontend-Fix in index.html. 0.17.0: Favicon im Browser-Tab (Frank-Wunsch 2026-06-25) — Cortex-Signet (Gehirn auf orange->rotem Marken-Verlauf) als Inline-SVG-Data-URI im <head> der index.html; vorher zeigte der Tab nur das Browser-Standard-Globus-Symbol. 0.16.0: Backup-Inhalts-Liste + Anzeige-Fixes (Frank-Wunsch 2026-06-25). (a) Neuer Endpoint GET /api/backup/contents listet GENERISCH alle Top-Level-Ordner des Z->Drive-Backups (Qdrant-Snapshots, Logbuch, Eval-Logs + kuenftige) mit Anzahl/Datum-des-letzten/Groesse -> scrollbare Box unter der Backup-Kachel im Einstellungen-Tab (immer aktueller Stand). compose: read-only Mount /srv/samba/gedanken:/gedanken:ro + DASH_BACKUP_ROOT. (b) Eval-Beschreibung 50->90 Saetze. (c) Kategorie-Tags an Eintraegen zeigen echte Schreibweise (CSS text-transform:lowercase entfernt; cap() macht nur ersten Buchstaben gross, erhaelt Bindestriche). 0.15.0: Eintrag-Bearbeitung im Drawer (Frank-Wunsch 2026-06-25). (a) PUT /api/entry reicht jetzt auch 'title' durch -> Titel im Drawer bearbeitbar (brain migriert die doc_id bei Titel-Aenderung). (b) POST /api/entry/category (Proxy an agent /categories/move-entry) verschiebt EINEN Eintrag in eine andere Kategorie fuers Drawer-Kategorie-Dropdown (neue Kategorie landet kanonisch in der Registry -> synchron mit Einstellungen+Gespraech). Frontend: Drawer-Titel im Bearbeiten-Modus editierbar; Kategorie-Dropdown (Gespraech-Stil, nach unten) neben Loeschen + 'In Kategorie speichern'-Button. 0.14.0: Anklickbare Antwort-Knoepfe im Chat (Frank-Wunsch 2026-06-25) — bei einer Speicher- ODER Kategorie-Rueckfrage (save_confirm/store_clarify) zeigt der Chat jetzt Ja/Nein-Knoepfe (chatOptions), Klick schickt die Antwort; Frank muss nicht tippen. 0.13.0: Kategorie-Verwaltung (Frank-Wunsch 2026-06-25) — Proxys /api/categories/detail (Liste mit Eintragszahl+leer-Flag), /api/categories/rename (umbenennen/mergen), /api/categories/delete (Etikett entfernen, Eintraege bleiben) an den Agenten; Frontend: Einstellungen-Abschnitt 'Kategorien' (Dropdown, Umbenennen+Speichern, Loeschen mit Warnung, Merge, Dublettenwarnung, leere anlegen); Gespraech-Dropdown synchron + deutsche Grossschreibung + leere ausgegraut. 0.12.0: Logbuch<->Gehirn-Sync (Frank-Wunsch) — wird ein 'gespraeche'-Eintrag im Gehirn geloescht, loescht das dashboard via agent auch die zugehoerige .txt auf Platte Z; beim Wiederherstellen aus dem Papierkorb wird die .txt zurueckgeschrieben. Eigene Dropdowns im Seiten-Stil; Dropdown-Scrollbalken ausgeblendet; Papierkorb-Bearbeiten mit Abbrechen-Button; Monats-Toggle. 0.11.0: Papierkorb-Bereich + Logbuch nach Monaten (Frank-Wunsch) — /api/trash (GET Liste, PUT editieren, POST /api/trash/restore wiederherstellen) als Proxy an brain; Logbuch /api/logbook/tree (Jahr/Monat-Baum) + /api/logbook?year=&month= (Lazy-Load eines Monats). Papierkorb + Logbuch teilen die Jahr/Monat-Navigation (aktueller Monat umrandet). 0.10.0: Papierkorb-Button im Eintrags-Drawer (Frank-Wunsch) — DELETE /api/entry (Proxy an brain DELETE /entry per doc_id) loescht einen Eintrag dauerhaft aus dem Gedaechtnis, mit eigenem Ja/Nein-Bestaetigungsdialog im Frontend. 0.9.0: Kategorie-Dropdown beim Senden (Frank-Wunsch) — Dropdown neben dem X-Button (Gespraech-Tab) mit allen Kategorien + 'Kategorie +' zum Anlegen; /api/chat reicht die gewaehlte 'category' an den Agenten weiter (Override). 0.8.0: Kategorie-Registry (Frank-Wunsch) — /api/categories GET/POST (Proxy an Agent); Uebersicht zeigt manuell angelegte (noch leere) Kategorien mit count 0. 0.7.0: Drei umschaltbare System-Prompts (Frank-Wunsch) — /api/prompt reicht role (haupt/speicher/abfrage) an den Agenten weiter; UI bekommt drei Umschalt-Buttons ueber dem Prompt-Textfeld. 0.6.2: Modell-pro-Rolle — drei Dropdowns (Hauptagent/Speicheragent/Abfrageagent), /api/config reicht haupt_model/speicher_model/abfrage_model weiter; System-Prompt/Logbuch-Kacheln wieder volle Breite + sauberer Abstand unter der oberen Reihe. 0.6.1: Backup-Kachel — "Mit Google verbinden"-Button + Token-Dialog (/api/backup/connect schreibt Token ins Steuer-Verzeichnis, Host stellt rclone-Verbindung her); Kacheln Bibliothekar-Agent + Backup wieder in voller Originalgroesse nebeneinander (set-row breiter); Steuer-/Status-/Trigger-Dateien jetzt im dashboard-schreibbaren /control statt auf Z (appuser-Permissions). 0.6.0: Google-Drive-Backup-Kachel (Einstellungen, neben Bibliothekar-Agent) — Status + letzter Sync-Zeitstempel, Buttons "Jetzt sichern"/"Wiederherstellen"; liest Status-Datei aus der Z-Wurzel (/gedanken) und schreibt Trigger-Flags, das eigentliche crash-sichere rclone-Backup laeuft auf dem Host (systemd). 0.5.1: Mikrofon-Hybrid-Diktat — Live-Vorschau via Web Speech API (interim) WAEHREND des Sprechens, finale Groq-Whisper-Fassung (mit Satzzeichen) ERSETZT beim Stopp die Vorschau (previewActive-Riegel verhindert, dass spaete Web-Speech-Events Groqs Endfassung ueberschreiben; Fallback auf Vorschau nur bei Groq-Ausfall, mit sichtbarem Hinweis). 0.5.0: Übersicht-Feinschliff (GEDÄCHTNIS-SPEKTRUM rechtsbündig, grosse Eintragszahl wird nicht mehr abgeschnitten + Tausenderpunkte), Browser-Navigation Zurück/Vor (History API), Kategorie gespraeche wieder als Balken/Legende/Chip sichtbar (anklickbar+bearbeitbar) — zaehlt aber NICHT in die Gesamtsumme, sichtbare Dashboard-Version im Rail-Fuss. 0.4.2: Roter X-Loeschen-Button links neben dem Mikrofon im Gespraech-Tab (leert die Eingabezeile komplett, setzt Hoehe zurueck). 0.4.1: Logbuch-Gespraeche (Kategorie gespraeche) zaehlen NICHT mehr in der Uebersicht (bleiben aber als Vektoren im Gehirn, durchsuchbar/recall). 0.4.0: Eintrags-Editor (PUT /api/entry -> brain), Mikrofon-STT (POST /api/transcribe -> Groq whisper-large-v3-turbo), Prompt-Verbesserung (POST /api/improve -> agent), Logbuch liest die .txt-Protokolle von der Samba-Platte (Z) mit Gehirn-Fallback. 0.3.0: Chat-Tab — /api/chat proxied an den Agenten (store/recall) via asyncio.to_thread (kein Event-Loop-Block, bugs/server/fastapi.md §1). 0.2.1: Einstellungen-Tab (Prompt-Editor + Modell-Wahl)
 
-VERSION = "0.33.1 (02.07.2026, 18.45 Uhr)"  # 0.33.1 (Tiefen-Debugging 2026-07-02): (a) /api/entry/category cappt die Ziel-Kategorie jetzt bei 120 statt 60 Zeichen — tiefe Pfade 'A/B/C/...' wurden beim Drawer-Verschieben STILL abgeschnitten und landeten als kaputter Teil-Pfad (Inkonsistenz zu /api/chat, das seit 0.21.0 bewusst 120 erlaubt; Agent _cat_key cappt ebenfalls 120). (b) /api/improve lehnt Texte >8000 Zeichen LAUT ab statt still bei 8000 zu kuerzen (gleiche Fehlerklasse wie der 0.21.0/0.22.0-Speicherpfad-Bug: nie wieder unbemerkter Textverlust; der Agent haette >8000 ohnehin per 422 abgelehnt — vorher wurde ein GEKUERZTER Text verbessert, ohne dass Frank es sah). (c) index.html: Kategorienamen an 3 innerHTML-Stellen (Balken-Tooltip, Legende, Chips) escaped (Injection-Flaeche: Kategorienamen koennen via Speicheragent aus untrusted Text vorgeschlagen werden); veraltete Tavily-Staffel-Texte (5/8/15) auf die echte Staffel S=8/M=12/XL=20 aktualisiert. Alt: 0.33.0: S/M/XL-Antwortlaengen-Chips im Gespraech (vor dem Titel-Feld, Standard M, Wahl wird gemerkt) — Server haengt den ZENTRALEN Prompt an (gleiche Texte wie im Handy) und staffelt die Tavily-Suchtiefe; /api/chat reicht response_size durch. Alt:  # 0.32.0: Eval-Check als Hintergrund-Lauf (Frank-Bug 2026-07-02) — /api/eval/run startet nur noch (30s-Timeout statt 600s-Wartesynchron), neues /api/eval/status + Frontend-Polling alle 5s ('laeuft… X/100 Saetze geprueft'), Ergebnis + Log-Knopf erscheinen automatisch am Ende; beim Seitenladen wird ein bereits laufender Lauf erkannt und weiter angezeigt. 0.31.0: Logbuch-Umbau (Frank-Wunsch 2026-07-02) — Logbuch + Papierkorb jetzt VOLLE Breite untereinander; jede Logbuch-Zeile zeigt vorne Datum/Uhrzeit + kurze Inhalts-Zusammenfassung (erste Frank-Zeile), das doppelte Datum hinten ist weg; stattdessen Zeilen-Papierkorb mit Ja/Nein-Dialog, der den Eintrag aus Logbuch-Datei UND Cortex loescht (bestehender DELETE /api/logbook) — die Ansicht bleibt dabei erhalten (Monat bleibt aufgeklappt, nur die Zeile verschwindet). Chat zeigt 'Kontextgrenze erreicht', wenn der Agent context_limit_reached meldet. 0.30.0: Router (Schritt 1) separat einstellbar — eigenes Modell- und Reasoning-Dropdown 'Router · Schritt 1' in den Einstellungen ('auto (wie Hauptagent)' = Default, exakt bisheriges Verhalten); /api/config reicht router_model/router_reasoning an den Agenten (0.40.0) durch. 0.29.0: Modell-Preise (Input/Output je 1 Mio Token) als Info-Block unter den Modell-Dropdowns (aus /config model_prices; minimax/gpt = Abo). 0.28.0: Reasoning/Thinking-Stufen-Auswahl jetzt auch fuer Gemini-Modelle sichtbar (nicht mehr nur Codex/GPT) — passt zum Agent 0.36.0 (Gemini-Thinking + gemini-3.5-flash/gemini-3-flash-preview). minimax bleibt ohne Auswahl (denkt nativ). 0.27.0: Sichtbarer Dashboard-Bump fuer den Agent-Deploy 0.35.0 (gpt-5.5-502-Fix: ungueltiges 'minimal' reasoning wird auf 'low' gemappt, 'minimal' nicht mehr in der /config-Auswahl, web_search VOR web_search_preview) + Android-App 0.1.43 (Dashboard-Polling ruht wenn Screen versteckt -> kein Tunnel-Stau, Chat-Timeout 60->120/180s). 0.26.0: Bibliothekar-Agent bekommt einen Tavily/Websearch-Schalter, der per /api/config mit Agent und Android-App synchron bleibt. 0.25.5: Sichtbarer Dashboard-Bump fuer Codex/Reasoning-Serverkonfiguration und aktuellen Agent-Deploy. 0.25.4: Dashboard-Footer trennt Version und Datum/Uhrzeit dauerhaft auf zwei Zeilen, damit nichts bis zum Rail-Strich gequetscht wird. 0.25.3: Dashboard-Footer zeigt Host/Privat und sichtbare Version untereinander; Versionszeit mit Doppelpunkt. 0.25.2: Web-Timestamp zeigt Aenderungszeit (updated_at) statt altem Erstellzeitpunkt; Drawer aktualisiert Zeit sofort nach Speichern. 0.25.1: Uebersicht 'Eintraege gesamt' zaehlt Gespraeche und bugfixes/* nicht mehr mit; Kategorien bleiben sichtbar. 0.25.0: Drawer-Buttons im Drawer-Header.
+VERSION = "0.34.0 (02.07.2026, 19.02 Uhr)"  # 0.34.0 (Tiefen-Debugging PERFORMANCE 2026-07-02): (a) /api/overview sammelt seine fuenf UNABHAENGIGEN Reads (brain /health, /category-counts, Registry-Kategorien, agent /health, 250-ms-CPU-Messung) jetzt PARALLEL (ThreadPool) statt seriell — Latenz pro 20s-Poll = Maximum statt Summe der Teil-Latenzen, Ergebnis-JSON identisch; (b) die leeren Kategorien kommen ueber den neuen agent-Endpoint /categories/registry (nur categories.json, KEIN brain-Scan) statt ueber /categories, das pro Poll einen ZWEITEN Qdrant-Metadaten-Full-Scan ausloeste (Fallback auf /categories bei aelterem Agent — Ergebnis identisch); (c) modul-globaler httpx.Client (_HTTP, Connection-Pool + Keep-Alive, transport retries=1 nur fuer den Verbindungsaufbau) fuer ALLE ausgehenden Calls — spuerbar v.a. beim Satz-fuer-Satz-Vorlesen (Gemini-TTS: ein TLS-Handshake je Satz entfaellt) und Groq-STT; (d) index.html: der 20s-Overview-Poll pausiert bei VERSTECKTEM Browser-Tab (document.hidden) und aktualisiert beim Sichtbarwerden SOFORT — unsichtbares Polling loeste bisher weiter alle 20s die komplette Server-Kaskade aus. Verhaltensneutral: gleiche Anzeigen, gleiche Werte, gleiche 20s-Frequenz bei sichtbarem Tab. Alt: 0.33.1 (Tiefen-Debugging 2026-07-02): (a) /api/entry/category cappt die Ziel-Kategorie jetzt bei 120 statt 60 Zeichen — tiefe Pfade 'A/B/C/...' wurden beim Drawer-Verschieben STILL abgeschnitten und landeten als kaputter Teil-Pfad (Inkonsistenz zu /api/chat, das seit 0.21.0 bewusst 120 erlaubt; Agent _cat_key cappt ebenfalls 120). (b) /api/improve lehnt Texte >8000 Zeichen LAUT ab statt still bei 8000 zu kuerzen (gleiche Fehlerklasse wie der 0.21.0/0.22.0-Speicherpfad-Bug: nie wieder unbemerkter Textverlust; der Agent haette >8000 ohnehin per 422 abgelehnt — vorher wurde ein GEKUERZTER Text verbessert, ohne dass Frank es sah). (c) index.html: Kategorienamen an 3 innerHTML-Stellen (Balken-Tooltip, Legende, Chips) escaped (Injection-Flaeche: Kategorienamen koennen via Speicheragent aus untrusted Text vorgeschlagen werden); veraltete Tavily-Staffel-Texte (5/8/15) auf die echte Staffel S=8/M=12/XL=20 aktualisiert. Alt: 0.33.0: S/M/XL-Antwortlaengen-Chips im Gespraech (vor dem Titel-Feld, Standard M, Wahl wird gemerkt) — Server haengt den ZENTRALEN Prompt an (gleiche Texte wie im Handy) und staffelt die Tavily-Suchtiefe; /api/chat reicht response_size durch. Alt:  # 0.32.0: Eval-Check als Hintergrund-Lauf (Frank-Bug 2026-07-02) — /api/eval/run startet nur noch (30s-Timeout statt 600s-Wartesynchron), neues /api/eval/status + Frontend-Polling alle 5s ('laeuft… X/100 Saetze geprueft'), Ergebnis + Log-Knopf erscheinen automatisch am Ende; beim Seitenladen wird ein bereits laufender Lauf erkannt und weiter angezeigt. 0.31.0: Logbuch-Umbau (Frank-Wunsch 2026-07-02) — Logbuch + Papierkorb jetzt VOLLE Breite untereinander; jede Logbuch-Zeile zeigt vorne Datum/Uhrzeit + kurze Inhalts-Zusammenfassung (erste Frank-Zeile), das doppelte Datum hinten ist weg; stattdessen Zeilen-Papierkorb mit Ja/Nein-Dialog, der den Eintrag aus Logbuch-Datei UND Cortex loescht (bestehender DELETE /api/logbook) — die Ansicht bleibt dabei erhalten (Monat bleibt aufgeklappt, nur die Zeile verschwindet). Chat zeigt 'Kontextgrenze erreicht', wenn der Agent context_limit_reached meldet. 0.30.0: Router (Schritt 1) separat einstellbar — eigenes Modell- und Reasoning-Dropdown 'Router · Schritt 1' in den Einstellungen ('auto (wie Hauptagent)' = Default, exakt bisheriges Verhalten); /api/config reicht router_model/router_reasoning an den Agenten (0.40.0) durch. 0.29.0: Modell-Preise (Input/Output je 1 Mio Token) als Info-Block unter den Modell-Dropdowns (aus /config model_prices; minimax/gpt = Abo). 0.28.0: Reasoning/Thinking-Stufen-Auswahl jetzt auch fuer Gemini-Modelle sichtbar (nicht mehr nur Codex/GPT) — passt zum Agent 0.36.0 (Gemini-Thinking + gemini-3.5-flash/gemini-3-flash-preview). minimax bleibt ohne Auswahl (denkt nativ). 0.27.0: Sichtbarer Dashboard-Bump fuer den Agent-Deploy 0.35.0 (gpt-5.5-502-Fix: ungueltiges 'minimal' reasoning wird auf 'low' gemappt, 'minimal' nicht mehr in der /config-Auswahl, web_search VOR web_search_preview) + Android-App 0.1.43 (Dashboard-Polling ruht wenn Screen versteckt -> kein Tunnel-Stau, Chat-Timeout 60->120/180s). 0.26.0: Bibliothekar-Agent bekommt einen Tavily/Websearch-Schalter, der per /api/config mit Agent und Android-App synchron bleibt. 0.25.5: Sichtbarer Dashboard-Bump fuer Codex/Reasoning-Serverkonfiguration und aktuellen Agent-Deploy. 0.25.4: Dashboard-Footer trennt Version und Datum/Uhrzeit dauerhaft auf zwei Zeilen, damit nichts bis zum Rail-Strich gequetscht wird. 0.25.3: Dashboard-Footer zeigt Host/Privat und sichtbare Version untereinander; Versionszeit mit Doppelpunkt. 0.25.2: Web-Timestamp zeigt Aenderungszeit (updated_at) statt altem Erstellzeitpunkt; Drawer aktualisiert Zeit sofort nach Speichern. 0.25.1: Uebersicht 'Eintraege gesamt' zaehlt Gespraeche und bugfixes/* nicht mehr mit; Kategorien bleiben sichtbar. 0.25.0: Drawer-Buttons im Drawer-Header.
 
 BRAIN_URL = os.getenv("BRAIN_URL", "http://brain-api:8000").rstrip("/")
 AGENT_URL = os.getenv("AGENT_URL", "http://agent:8002").rstrip("/")
@@ -99,6 +99,18 @@ TTS_VOICE_NAMES = {v["name"] for v in TTS_VOICES}
 STATIC = Path(__file__).parent / "static"
 HEADERS = {"Authorization": f"Bearer {SB_API_KEY}", "Content-Type": "application/json"}
 
+# Ein modul-globaler httpx.Client (Performance 2026-07-02, BP fastapi §3 Client-Reuse): Connection-
+# Pool + Keep-Alive statt neuem TCP/TLS-Handshake pro Call. Spuerbar v.a. bei den TLS-Zielen
+# (Gemini-TTS liest Satz fuer Satz vor -> VIELE kurze Calls; Groq-STT), aber auch bei den
+# brain-/agent-Proxies. Thread-sicher (Handler laufen im Threadpool). transport retries=1:
+# wiederholt NUR den VERBINDUNGSAUFBAU (nie einen gesendeten Request) — faengt die eine stale
+# Keep-Alive-Verbindung nach einem Upstream-Neustart ab. Timeouts bleiben pro Aufruf explizit.
+_HTTP = httpx.Client(transport=httpx.HTTPTransport(retries=1))
+
+# Kleiner Thread-Pool NUR fuer die parallele /api/overview-Sammlung (5 unabhaengige Reads).
+from concurrent.futures import ThreadPoolExecutor
+_OV_POOL = ThreadPoolExecutor(max_workers=6, thread_name_prefix="ov")
+
 
 def is_overview_total_excluded(category: str | None) -> bool:
     c = (category or "").strip().casefold()
@@ -117,51 +129,51 @@ def _log(level: int, msg: str, **ctx) -> None:
 
 
 def _bget(endpoint: str, **params):
-    r = httpx.get(f"{BRAIN_URL}{endpoint}", params=params or None, headers=HEADERS, timeout=20.0)
+    r = _HTTP.get(f"{BRAIN_URL}{endpoint}", params=params or None, headers=HEADERS, timeout=20.0)
     r.raise_for_status()
     return r.json()
 
 
 def _bpost(endpoint: str, payload: dict):
-    r = httpx.post(f"{BRAIN_URL}{endpoint}", json=payload, headers=HEADERS, timeout=40.0)
+    r = _HTTP.post(f"{BRAIN_URL}{endpoint}", json=payload, headers=HEADERS, timeout=40.0)
     r.raise_for_status()
     return r.json()
 
 
 def _bput(endpoint: str, payload: dict):
     # 60s: ein Eintrags-Ersatz re-embedded den ganzen Text (mehrere Chunks moeglich).
-    r = httpx.put(f"{BRAIN_URL}{endpoint}", json=payload, headers=HEADERS, timeout=60.0)
+    r = _HTTP.put(f"{BRAIN_URL}{endpoint}", json=payload, headers=HEADERS, timeout=60.0)
     r.raise_for_status()
     return r.json()
 
 
 def _bdelete(endpoint: str, **params):
-    r = httpx.delete(f"{BRAIN_URL}{endpoint}", params=params or None, headers=HEADERS, timeout=30.0)
+    r = _HTTP.delete(f"{BRAIN_URL}{endpoint}", params=params or None, headers=HEADERS, timeout=30.0)
     r.raise_for_status()
     return r.json()
 
 
 def _aget(endpoint: str):
-    r = httpx.get(f"{AGENT_URL}{endpoint}", headers=HEADERS, timeout=15.0)
+    r = _HTTP.get(f"{AGENT_URL}{endpoint}", headers=HEADERS, timeout=15.0)
     r.raise_for_status()
     return r.json()
 
 
 def _aput(endpoint: str, payload: dict):
-    r = httpx.put(f"{AGENT_URL}{endpoint}", json=payload, headers=HEADERS, timeout=20.0)
+    r = _HTTP.put(f"{AGENT_URL}{endpoint}", json=payload, headers=HEADERS, timeout=20.0)
     r.raise_for_status()
     return r.json()
 
 
 def _apost(endpoint: str, payload: dict):
     # 60s: ein recall macht ZWEI LLM-Aufrufe (entscheiden + antworten) — grosszuegig timen.
-    r = httpx.post(f"{AGENT_URL}{endpoint}", json=payload, headers=HEADERS, timeout=60.0)
+    r = _HTTP.post(f"{AGENT_URL}{endpoint}", json=payload, headers=HEADERS, timeout=60.0)
     r.raise_for_status()
     return r.json()
 
 
 def _adelete(endpoint: str, **params):
-    r = httpx.delete(f"{AGENT_URL}{endpoint}", params=params or None, headers=HEADERS, timeout=20.0)
+    r = _HTTP.delete(f"{AGENT_URL}{endpoint}", params=params or None, headers=HEADERS, timeout=20.0)
     r.raise_for_status()
     return r.json()
 
@@ -182,11 +194,33 @@ def health() -> dict:
     return {"status": "ok", "version": VERSION}
 
 
+def _registry_categories() -> list:
+    """Leere (Registry-)Kategorien vom Agenten — OHNE brain-Scan (agent 0.49.0, Performance
+    2026-07-02). Der alte Weg (/categories) loeste pro 20s-Poll einen ZWEITEN Qdrant-Full-Scan aus.
+    Fallback auf die volle Liste, solange ein aelterer Agent laeuft — Ergebnis identisch: die
+    befuellten Kategorien stehen schon in den counts und werden beim Ergaenzen uebersprungen."""
+    r = _HTTP.get(f"{AGENT_URL}/categories/registry", headers=HEADERS, timeout=15.0)
+    if r.status_code == 404:   # aelterer Agent ohne den Endpoint (Deploy-Reihenfolge egal)
+        return _aget("/categories").get("categories", []) or []
+    r.raise_for_status()
+    return r.json().get("categories", []) or []
+
+
 @app.get("/api/overview")
 def overview() -> dict:
     out: dict = {"brain": None, "agent": None, "server": None, "categories": [], "total": None}
+    # PARALLEL statt seriell (Performance 2026-07-02): brain /health, /category-counts, die
+    # Registry-Kategorien, agent /health und die 250-ms-CPU-Messung sind fuenf UNABHAENGIGE Reads
+    # ohne Seiteneffekte. Vorher kostete jeder 20s-Poll die SUMME der Latenzen (inkl. der
+    # blockierenden CPU-Messung obendrauf) — jetzt das MAXIMUM. Ergebnis-JSON ist identisch;
+    # die Fehlerbehandlung je Teil bleibt exakt wie vorher (result() wirft im jeweiligen try).
+    f_health = _OV_POOL.submit(_bget, "/health")
+    f_counts = _OV_POOL.submit(_bget, "/category-counts", user_id=USER_ID)
+    f_registry = _OV_POOL.submit(_registry_categories)
+    f_agent = _OV_POOL.submit(lambda: _HTTP.get(f"{AGENT_URL}/health", timeout=8.0).json())
+    f_cpu = _OV_POOL.submit(psutil.cpu_percent, 0.25)   # misst parallel, nicht mehr additiv
     try:
-        h = _bget("/health")
+        h = f_health.result()
         out["brain"] = {"status": h.get("status"), "points": h.get("points"),
                         "version": h.get("version"), "embed_model": h.get("embed_model")}
     except Exception as e:  # noqa: BLE001
@@ -195,12 +229,12 @@ def overview() -> dict:
         # /category-counts ist die deduplizierte Quelle der Wahrheit: keine Volltexte, kein Listenlimit.
         # Logbuch-Gespraeche und technische Bugfix-Fallakten ERSCHEINEN als Kategorien, zaehlen aber
         # serverseitig NICHT in die Gesamtsumme "Einträge gesamt".
-        cc = _bget("/category-counts", user_id=USER_ID)
+        cc = f_counts.result()
         c = Counter(cc.get("counts", {}) or {})
         # Manuell angelegte (noch leere) Kategorien aus der Agent-Registry mit count 0 ergaenzen,
         # damit sie in der Uebersicht erscheinen, auch wenn noch kein Eintrag drin ist (Frank-Wunsch).
         try:
-            for name in (_aget("/categories").get("categories", []) or []):
+            for name in f_registry.result():
                 if name and name not in c and not is_overview_total_excluded(name):
                     c[name] = 0
         except Exception:  # noqa: BLE001 — Registry ist Hilfskontext; Agent-Ausfall darf die Uebersicht nicht killen
@@ -209,8 +243,9 @@ def overview() -> dict:
         out["total"] = cc.get("total_distinct")
     except Exception as e:  # noqa: BLE001
         _log(logging.WARNING, "Kategorien-Abruf fehlgeschlagen", err=str(e))
+        f_registry.cancel()   # haengt an keinem Ergebnis mehr
     try:
-        a = httpx.get(f"{AGENT_URL}/health", timeout=8.0).json()
+        a = f_agent.result()
         out["agent"] = {"status": a.get("status"), "version": a.get("version"),
                         "model": a.get("model"), "sessions": a.get("aktive_sitzungen")}
     except Exception:  # noqa: BLE001
@@ -221,7 +256,7 @@ def overview() -> dict:
         vm = psutil.virtual_memory()
         # Frontend (Cortex) erwartet Speicher/Disk in MB (fmtBytes rechnet MB->GB).
         MB = 1024 * 1024
-        out["server"] = {"cpu_pct": psutil.cpu_percent(interval=0.25),
+        out["server"] = {"cpu_pct": f_cpu.result(),
                          "mem_used": vm.used // MB, "mem_total": vm.total // MB, "mem_pct": vm.percent,
                          "disk_used": du.used // MB, "disk_total": du.total // MB, "disk_pct": du.percent}
     except Exception as e:  # noqa: BLE001
@@ -513,7 +548,7 @@ async def api_eval_run() -> dict:
     2026-07-02: der fruehere synchrone 600s-Wait timte bei langsamen Modellen aus). Fortschritt
     kommt ueber /api/eval/status. Sync httpx via asyncio.to_thread (fastapi §1)."""
     def _run():
-        r = httpx.post(f"{AGENT_URL}/eval-run", headers=HEADERS, timeout=30.0)
+        r = _HTTP.post(f"{AGENT_URL}/eval-run", headers=HEADERS, timeout=30.0)
         r.raise_for_status()
         return r.json()
     try:
@@ -547,7 +582,7 @@ def api_eval_logs() -> dict:
 def api_eval_log(name: str) -> dict:
     """Eine Eval-Log-Datei (Markdown) lesen. Sync def -> Threadpool."""
     try:
-        r = httpx.get(f"{AGENT_URL}/eval-log", params={"name": name}, headers=HEADERS, timeout=20.0)
+        r = _HTTP.get(f"{AGENT_URL}/eval-log", params={"name": name}, headers=HEADERS, timeout=20.0)
         r.raise_for_status()
         return r.json()
     except Exception as e:  # noqa: BLE001
@@ -746,7 +781,7 @@ async def api_improve(request: Request) -> dict:
 def _groq_transcribe(audio: bytes, content_type: str) -> dict:
     files = {"file": ("audio.webm", audio, content_type or "audio/webm")}
     data = {"model": GROQ_STT_MODEL, "language": "de", "response_format": "json"}
-    r = httpx.post(GROQ_STT_URL, files=files, data=data,
+    r = _HTTP.post(GROQ_STT_URL, files=files, data=data,
                    headers={"Authorization": f"Bearer {GROQ_API_KEY}"}, timeout=90.0)
     r.raise_for_status()
     return r.json()
@@ -796,7 +831,7 @@ def _gemini_tts(text: str, voice: str) -> bytes:
         },
     }
     url = f"{GEMINI_TTS_BASE}/{GEMINI_TTS_MODEL}:generateContent"
-    r = httpx.post(url, json=payload,
+    r = _HTTP.post(url, json=payload,
                    headers={"x-goog-api-key": GEMINI_API_KEY, "Content-Type": "application/json"},
                    timeout=60.0)   # expliziter Timeout (fastapi §3); nie None
     r.raise_for_status()

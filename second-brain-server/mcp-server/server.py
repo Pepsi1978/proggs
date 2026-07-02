@@ -27,7 +27,7 @@ from typing import Any
 import httpx
 from mcp.server.fastmcp import FastMCP
 
-VERSION = "1.3.1"  # 1.3.1: get_by_title zeigt den ECHTEN aufgeloesten Titel an (data['title']) statt des Roh-Parameters -> kein doppeltes ' [Kategorie]' mehr bei toleranter Aufloesung. 1.3.0: NEUES Tool get_category_item(category, index) — narrensicheres sequentielles Einlesen einer ganzen Kategorie per Zahl-Index (1..total), OHNE Titel raten zu muessen (Frank-Wunsch 2026-06-27, fuer GANZ schwache Modelle). Jede Antwort nennt selbst den naechsten Aufruf. Loest den OpenCode/DeepSeek-Regelladefehler an der Wurzel. 1.2.0: list_memories warnt bei ready=false (Gehirn laedt nach Neustart noch -> Liste evtl. unvollstaendig; Frank 2026-06-26). 1.1.0: recall um Payload-Filter (category/date/date_from/date_to). 1.0.0: 1:1-Schema (mem0 raus).
+VERSION = "1.3.2"  # 1.3.2 (Tiefen-Debugging PERFORMANCE 2026-07-02): modul-globaler httpx.Client (_HTTP, Connection-Pool + Keep-Alive, transport retries=1 nur fuer den Verbindungsaufbau) statt frischem TCP-Handshake pro Tool-Aufruf gegen die brain-api. Verhaltensneutral. Alt: 1.3.1: get_by_title zeigt den ECHTEN aufgeloesten Titel an (data['title']) statt des Roh-Parameters -> kein doppeltes ' [Kategorie]' mehr bei toleranter Aufloesung. 1.3.0: NEUES Tool get_category_item(category, index) — narrensicheres sequentielles Einlesen einer ganzen Kategorie per Zahl-Index (1..total), OHNE Titel raten zu muessen (Frank-Wunsch 2026-06-27, fuer GANZ schwache Modelle). Jede Antwort nennt selbst den naechsten Aufruf. Loest den OpenCode/DeepSeek-Regelladefehler an der Wurzel. 1.2.0: list_memories warnt bei ready=false (Gehirn laedt nach Neustart noch -> Liste evtl. unvollstaendig; Frank 2026-06-26). 1.1.0: recall um Payload-Filter (category/date/date_from/date_to). 1.0.0: 1:1-Schema (mem0 raus).
 
 # ---------------------------------------------------------------------------
 # Konfiguration (alles aus Umgebungsvariablen — Secrets nie im Code)
@@ -80,6 +80,12 @@ probe(bool(SB_API_KEY) and len(SB_API_KEY) >= 32, "SB_API_KEY fehlt/zu kurz")
 
 HEADERS = {"Authorization": f"Bearer {SB_API_KEY}", "Content-Type": "application/json"}
 
+# Ein modul-globaler httpx.Client (Performance 2026-07-02, BP fastapi §3 Client-Reuse):
+# Connection-Pool + Keep-Alive statt neuem TCP-Handshake pro Tool-Aufruf. transport retries=1
+# wiederholt NUR den Verbindungsaufbau (nie einen gesendeten Request) — faengt die eine stale
+# Keep-Alive-Verbindung nach einem brain-api-Neustart ab. Timeouts bleiben pro Aufruf explizit.
+_HTTP = httpx.Client(transport=httpx.HTTPTransport(retries=1))
+
 
 def _build_mcp() -> FastMCP:
     """DNS-Rebinding-Schutz sauber via allowed_hosts (Almanach mcp-server.md §3.13): statt ihn per
@@ -107,19 +113,19 @@ mcp = _build_mcp()
 # HTTP-Helfer gegen die brain-api (Fehler werden geloggt, NICHT verschluckt)
 # ---------------------------------------------------------------------------
 def _post(path: str, payload: dict) -> dict:
-    r = httpx.post(f"{BRAIN_URL}{path}", json=payload, headers=HEADERS, timeout=120.0)
+    r = _HTTP.post(f"{BRAIN_URL}{path}", json=payload, headers=HEADERS, timeout=120.0)
     r.raise_for_status()
     return r.json()
 
 
 def _get(path: str, params: dict | None = None) -> dict:
-    r = httpx.get(f"{BRAIN_URL}{path}", params=params, headers=HEADERS, timeout=30.0)
+    r = _HTTP.get(f"{BRAIN_URL}{path}", params=params, headers=HEADERS, timeout=30.0)
     r.raise_for_status()
     return r.json()
 
 
 def _delete(path: str, params: dict | None = None) -> dict:
-    r = httpx.delete(f"{BRAIN_URL}{path}", params=params, headers=HEADERS, timeout=30.0)
+    r = _HTTP.delete(f"{BRAIN_URL}{path}", params=params, headers=HEADERS, timeout=30.0)
     r.raise_for_status()
     return r.json()
 
