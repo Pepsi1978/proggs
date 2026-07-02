@@ -766,18 +766,15 @@ fun SettingsScreen(
                     }
                 }
 
-                AgentModelDropdown("Hauptagent", hauptModel, agentModelOptions, isDark) { hauptModel = it }
-                ModelPriceHint(hauptModel, modelPriceLabels)
+                AgentModelDropdown("Hauptagent", hauptModel, agentModelOptions, isDark, priceLabels = modelPriceLabels) { hauptModel = it }
                 if (modelSupportsReasoning(hauptModel)) {
                     AgentModelDropdown("Thinking", hauptReasoning, reasoningOptions, isDark) { hauptReasoning = it }
                 }
-                AgentModelDropdown("Speicheragent", speicherModel, agentModelOptions, isDark) { speicherModel = it }
-                ModelPriceHint(speicherModel, modelPriceLabels)
+                AgentModelDropdown("Speicheragent", speicherModel, agentModelOptions, isDark, priceLabels = modelPriceLabels) { speicherModel = it }
                 if (modelSupportsReasoning(speicherModel)) {
                     AgentModelDropdown("Thinking", speicherReasoning, reasoningOptions, isDark) { speicherReasoning = it }
                 }
-                AgentModelDropdown("Abfrageagent", abfrageModel, agentModelOptions, isDark) { abfrageModel = it }
-                ModelPriceHint(abfrageModel, modelPriceLabels)
+                AgentModelDropdown("Abfrageagent", abfrageModel, agentModelOptions, isDark, priceLabels = modelPriceLabels) { abfrageModel = it }
                 if (modelSupportsReasoning(abfrageModel)) {
                     AgentModelDropdown("Thinking", abfrageReasoning, reasoningOptions, isDark) { abfrageReasoning = it }
                 }
@@ -1115,17 +1112,6 @@ private fun isGeminiModel(model: String): Boolean = model.lowercase().startsWith
 // minimax/OpenCode denkt nativ -> keine Auswahl.
 private fun modelSupportsReasoning(model: String): Boolean = isCodexModel(model) || isGeminiModel(model)
 
-@Composable
-private fun ModelPriceHint(model: String, priceLabels: Map<String, String>) {
-    val label = priceLabels[model] ?: "über Abo (nicht pro Token)"
-    Text(
-        "Preis: $label",
-        fontSize = 11.sp,
-        color = MaterialTheme.colorScheme.onSurfaceVariant,
-        modifier = Modifier.fillMaxWidth().padding(start = 106.dp, top = 1.dp, bottom = 3.dp)
-    )
-}
-
 private fun codexAuthErrorMessage(e: Exception): String {
     val http = e as? HttpException
     if (http != null) {
@@ -1143,6 +1129,7 @@ private fun AgentModelDropdown(
     value: String,
     options: List<String>,
     isDark: Boolean,
+    priceLabels: Map<String, String>? = null,
     onSelect: (String) -> Unit
 ) {
     var open by remember { mutableStateOf(false) }
@@ -1183,7 +1170,20 @@ private fun AgentModelDropdown(
             ) {
                 options.forEach { option ->
                     DropdownMenuItem(
-                        text = { Text(option, fontFamily = JetBrainsMono, fontSize = 12.5.sp) },
+                        text = {
+                            Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
+                                Text(option, fontFamily = JetBrainsMono, fontSize = 12.5.sp)
+                                if (priceLabels != null) {
+                                    // Preis direkt im Dropdown unter dem Modellnamen (Frank-Wunsch):
+                                    // schon BEIM Auswaehlen sehen, wie teuer das Modell ist.
+                                    Text(
+                                        priceLabels[option] ?: "über Abo (nicht pro Token)",
+                                        fontSize = 10.5.sp,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                                    )
+                                }
+                            }
+                        },
                         onClick = {
                             onSelect(option)
                             open = false
