@@ -487,6 +487,10 @@ private fun SessionRow(
 private fun formatSessionTimestamp(timestamp: Long): String =
     SimpleDateFormat("dd.MM.yyyy, HH:mm 'Uhr'", Locale.GERMANY).format(Date(timestamp))
 
+/** Wortzahl einer Nachricht (Whitespace-getrennt) — fuer die Anzeige "(N Wörter)" in der Bubble. */
+private fun countWords(text: String): Int =
+    text.trim().split(Regex("\\s+")).count { it.isNotBlank() }
+
 @Composable
 private fun ChatBubble(
     message: ChatMessage,
@@ -534,7 +538,7 @@ private fun ChatBubble(
                         )
                     }
                     Row(
-                        modifier = Modifier.padding(top = 8.dp),
+                        modifier = Modifier.fillMaxWidth().padding(top = 8.dp),
                         horizontalArrangement = Arrangement.spacedBy(12.dp),
                         verticalAlignment = Alignment.CenterVertically
                     ) {
@@ -557,6 +561,15 @@ private fun ChatBubble(
                                 )
                             },
                             onClick = onShareClick
+                        )
+                        Spacer(Modifier.weight(1f))
+                        // Wortzahl der Antwort, rechtsbuendig (Frank-Wunsch 2026-07-02): auf einen
+                        // Blick sehen, wie lang die Antwort wirklich war (S/M/XL-Kontrolle).
+                        Text(
+                            text = "(${countWords(message.text)} Wörter)",
+                            fontFamily = JetBrainsMono,
+                            fontSize = 10.sp,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
                     }
                 }
