@@ -185,7 +185,7 @@ unbemerkt ohne Erzwingung bleibt. Details in [`SYSTEM.md`](SYSTEM.md).
 | Bereich | Datei | Stand | Bugs | Erkennungs-Trigger (Stichworte) |
 |---------|-------|-------|------|----------------------------------|
 | **Anbieterübergreifend** (Rate-Limit/Retry/SSE/Timeout/HttpClient/Secrets) | [`apis/api-integration-general.md`](apis/api-integration-general.md) | 2026-06-08 | ~20 | „API integrieren", „429", „Rate Limit", „Retry", „Backoff", „SSE", „Streaming", „Timeout", „HttpClient", „API-Key", „Idempotency" |
-| **OpenAI API** | [`apis/openai-api.md`](apis/openai-api.md) | 2026-06-08 | 26 | „OpenAI", „GPT", „Responses API", „Chat Completions", „o1/o3/o4", „reasoning_effort", „max_completion_tokens", „Azure OpenAI" |
+| **OpenAI API** | [`apis/openai-api.md`](apis/openai-api.md) | 2026-07-02 | 26 | „OpenAI", „GPT", „Responses API", „Chat Completions", „o1/o3/o4", „reasoning_effort", „max_completion_tokens", „Azure OpenAI" |
 | **Anthropic Claude API** | [`apis/anthropic-api.md`](apis/anthropic-api.md) | 2026-07-02 | 30 | „Anthropic", „Claude API", „Messages API", „anthropic-version", „x-api-key", „tool_use", „prompt caching", „extended thinking" |
 | **Google Gemini API** | [`apis/google-gemini-api.md`](apis/google-gemini-api.md) | 2026-07-02 | 22 | „Gemini", „google-genai", „generativelanguage", „thinkingBudget", „safetySettings", „Vertex" |
 | **Groq API** | [`apis/groq-api.md`](apis/groq-api.md) | 2026-07-02 | 21 | „Groq", „LPU", „api.groq.com", „model_decommissioned", „whisper-large-v3", „TPM" |

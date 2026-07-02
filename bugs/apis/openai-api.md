@@ -1,9 +1,11 @@
 # Bekannte Bugs: OpenAI API (Integration in eigene Software)
 
 > PFLICHT-LESEN vor Arbeit an einer OpenAI-API-Integration (Client-seitig: eigener Code ruft die API).
-> Stand: zuletzt recherchiert am 2026-06-08. Versions-Anker: API-Stand Juni 2026 (Responses API +
+> Stand: zuletzt recherchiert am 2026-06-08, **re-recherchiert am 2026-07-02** (Engine A: Firecrawl+MiniMax). Versions-Anker: API-Stand Juni 2026 (Responses API +
 > Chat Completions parallel, GPT-5.x aktuell, GPT-4o/4.1/o4-mini in der API ~16./17.02.2026 retired).
 > Zweite Seite (wie macht man es richtig): `best-practices/apis/openai-api.md`.
+
+> **Update 2026-07-02:** Keine neuen belastbaren OpenAI-API-Aenderungen/Deprecations seit 2026-06-08 in den Quellen gefunden. Bereits dokumentierte GPT-5-/Structured-Output-/Reasoning-Fallen bleiben relevant: hohe Reasoning-Token-Kosten, leere Outputs bei zu kleinem Budget und malformed Structured Outputs in aelteren Bugreports.
 
 ## ⚡ Kurzcheck (Stufe A — vor der Arbeit lesen)
 

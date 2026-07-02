@@ -1,7 +1,8 @@
-# OpenAI API — Best Practices (Stand 2026-06-08)
+# OpenAI API — Best Practices (Stand 2026-07-02)
 
 > Gegenstück zu `bugs/apis/openai-api.md`. Offiziell empfohlen (platform.openai.com, developers.openai.com,
-> OpenAI Cookbook). (Researcher-Recherche 2026-06-08.)
+> OpenAI Cookbook). (Researcher-Recherche 2026-06-08, Re-Recherche 2026-07-02.)
+> Update 2026-07-02: Keine neuen belegten Regeln seit 2026-06-08; Responses API, grosszuegiges Reasoning-Budget, strict Structured Outputs und Deprecation-Check bleiben die Kernpraxis.
 
 ## ⚡ Kurzcheck (Stufe A — vor der Arbeit lesen)
 
