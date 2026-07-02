@@ -11,6 +11,7 @@ import androidx.core.content.ContextCompat
 import androidx.fragment.app.FragmentActivity
 import androidx.lifecycle.DefaultLifecycleObserver
 import androidx.lifecycle.LifecycleOwner
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.lifecycleScope
 import androidx.lifecycle.ProcessLifecycleOwner
 import kotlinx.coroutines.launch
@@ -119,21 +120,32 @@ class MainActivity : FragmentActivity() {
         prompt.authenticate(info)
     }
 
+    // Als Feld gehalten, damit er in onDestroy wieder ABGEMELDET werden kann. Vorher wurde bei
+    // jeder Activity-Recreation (Rotation, System-Theme, Prozess-Restore) ein NEUER anonymer
+    // Observer am ProcessLifecycleOwner registriert und nie entfernt — jeder alte hielt die
+    // zerstoerte Activity fest (Leak) und Auth/Disconnect liefen mehrfach.
+    private val processLifecycleObserver = object : DefaultLifecycleObserver {
+        override fun onStart(owner: LifecycleOwner) {
+            authenticateThenConnect()
+        }
+
+        override fun onStop(owner: LifecycleOwner) {
+            authenticatedThisForeground = false
+            appUnlocked = false
+            lifecycleScope.launch { WireGuardManager.disconnect() }
+        }
+    }
+
+    override fun onDestroy() {
+        ProcessLifecycleOwner.get().lifecycle.removeObserver(processLifecycleObserver)
+        super.onDestroy()
+    }
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
 
-        ProcessLifecycleOwner.get().lifecycle.addObserver(object : DefaultLifecycleObserver {
-            override fun onStart(owner: LifecycleOwner) {
-                authenticateThenConnect()
-            }
-
-            override fun onStop(owner: LifecycleOwner) {
-                authenticatedThisForeground = false
-                appUnlocked = false
-                lifecycleScope.launch { WireGuardManager.disconnect() }
-            }
-        })
+        ProcessLifecycleOwner.get().lifecycle.addObserver(processLifecycleObserver)
 
         setContent {
             var themeMode by rememberSaveable { mutableStateOf(SettingsStore.themeMode) }
@@ -143,7 +155,7 @@ class MainActivity : FragmentActivity() {
                 "system" -> systemDark
                 else -> true
             }
-            val vpnState by WireGuardManager.state.collectAsState()
+            val vpnState by WireGuardManager.state.collectAsStateWithLifecycle()
 
             CortexTheme(darkTheme = isDark) {
                 if (SettingsStore.biometricLockEnabled && !appUnlocked) {

@@ -218,6 +218,8 @@ class ChatViewModel : ViewModel() {
                         _uiState.update { it.copy(isTranscribing = false) }
                         CortexLog.info("ChatVM", "toggleRecording", "Stille erkannt — nichts eingefügt")
                     }
+                } catch (e: CancellationException) {
+                    throw e
                 } catch (e: Exception) {
                     CortexLog.error("ChatVM", "toggleRecording", "Transkription fehlgeschlagen: ${e.message}")
                     _uiState.update { it.copy(isTranscribing = false, error = "Transkription fehlgeschlagen: ${e.message}") }
@@ -269,6 +271,8 @@ class ChatViewModel : ViewModel() {
                 val response = ApiClient.agentApi().getCategories()
                 _uiState.update { it.copy(categories = response.categories) }
                 CortexLog.info("ChatVM", "loadCategories", "Kategorien geladen", mapOf("count" to response.categories.size))
+            } catch (e: CancellationException) {
+                throw e
             } catch (e: Exception) {
                 CortexLog.error("ChatVM", "loadCategories", "Fehler: ${e.message}")
             }
@@ -283,6 +287,8 @@ class ChatViewModel : ViewModel() {
                 loadCategories()
                 _uiState.update { it.copy(selectedCategory = name) }
                 CortexLog.info("ChatVM", "createCategory", "Kategorie erstellt: $name")
+            } catch (e: CancellationException) {
+                throw e
             } catch (e: Exception) {
                 CortexLog.error("ChatVM", "createCategory", "Fehler: ${e.message}")
                 _uiState.update { it.copy(error = "Kategorie konnte nicht erstellt werden: ${e.message}") }
@@ -463,6 +469,8 @@ class ChatViewModel : ViewModel() {
                     speakResponse(response.reply)
                 }
 
+            } catch (e: CancellationException) {
+                throw e
             } catch (e: Exception) {
                 CortexLog.error("ChatVM", "sendMessage", "Fehler: ${e.message}")
                 _uiState.update {
@@ -543,6 +551,8 @@ class ChatViewModel : ViewModel() {
                     )
                 }
                 CortexLog.info("ChatVM", "selectSession", "Session geöffnet", mapOf("session_id" to sessionId, "messages" to messages.size))
+            } catch (e: CancellationException) {
+                throw e
             } catch (e: Exception) {
                 CortexLog.error("ChatVM", "selectSession", "Session konnte nicht geladen werden: ${e.message}")
                 _uiState.update { it.copy(error = "Session konnte nicht geladen werden: ${e.message}") }
@@ -577,6 +587,8 @@ class ChatViewModel : ViewModel() {
                     }
                 }
                 CortexLog.info("ChatVM", "deleteSession", "Session gelöscht", mapOf("session_id" to sessionId))
+            } catch (e: CancellationException) {
+                throw e
             } catch (e: Exception) {
                 CortexLog.error("ChatVM", "deleteSession", "Session konnte nicht gelöscht werden: ${e.message}")
                 _uiState.update { it.copy(error = "Session konnte nicht gelöscht werden: ${e.message}") }
@@ -604,29 +616,37 @@ class ChatViewModel : ViewModel() {
 
     private fun refreshSessions() {
         viewModelScope.launch {
+            // null = Laden fehlgeschlagen -> die bisher angezeigte Liste NICHT wegwerfen
+            // (vorher wurde sie faelschlich durch emptyList() geleert).
             val sessions = withContext(Dispatchers.IO) {
                 try {
                     ChatSessionStore.listSessions()
+                } catch (e: CancellationException) {
+                    throw e
                 } catch (e: Exception) {
                     CortexLog.error("ChatVM", "refreshSessions", "Session-Liste konnte nicht geladen werden: ${e.message}")
-                    emptyList()
+                    null
                 }
             }
-            _uiState.update { it.copy(sessions = sessions) }
+            if (sessions != null) _uiState.update { it.copy(sessions = sessions) }
         }
     }
 
     private suspend fun updateSessionsAfterPersist(sessionId: String, message: ChatMessage) {
+        // null = Speichern/Laden fehlgeschlagen -> bisherige Sessions-Liste behalten,
+        // statt sie (wie frueher) durch eine leere Liste zu ersetzen.
         val sessions = withContext(Dispatchers.IO) {
             try {
                 ChatSessionStore.saveMessage(sessionId, message.toStoredMessage())
                 ChatSessionStore.listSessions()
+            } catch (e: CancellationException) {
+                throw e
             } catch (e: Exception) {
                 CortexLog.error("ChatVM", "persistSession", "Nachricht konnte nicht gespeichert werden: ${e.message}")
-                emptyList()
+                null
             }
         }
-        _uiState.update { it.copy(sessions = sessions) }
+        if (sessions != null) _uiState.update { it.copy(sessions = sessions) }
     }
 
     fun improveText(text: String) {
@@ -814,10 +834,21 @@ class ChatViewModel : ViewModel() {
                     repeat(minOf(TTS_PREFETCH_AHEAD + 1, chunks.size)) { enqueue(it) }
                     var firstAudioLogged = false
 
+                    // Beim vorzeitigen Verlassen laufende Prefetch-Synthesen SOFORT abbrechen —
+                    // coroutineScope wartet sonst auf sie (Rate-Limit-Retries bis zu 25 s), und
+                    // der Lautsprecher bliebe solange faelschlich auf "spricht".
+                    fun cancelPending() {
+                        pending.values.forEach { it.cancel() }
+                        pending.clear()
+                    }
+
                     chunks.forEachIndexed { index, chunk ->
                         val audio = pending.remove(index)?.await()
                         enqueue(index + TTS_PREFETCH_AHEAD + 1)
-                        if (speechGeneration != generation) return@coroutineScope
+                        if (speechGeneration != generation) {
+                            cancelPending()
+                            return@coroutineScope
+                        }
 
                         if (audio == null || audio.isEmpty()) {
                             if (ttsAccessDenied) {
@@ -825,6 +856,7 @@ class ChatViewModel : ViewModel() {
                                 CortexLog.warn("ChatVM", "speakResponse", "TTS wegen Zugriffsfehler gestoppt",
                                     mapOf("index" to index))
                                 _uiState.update { it.copy(error = "Vorlesen nicht möglich: Cloud Text-to-Speech API ist für deinen Schlüssel nicht freigeschaltet. Bitte im Google-Cloud-Projekt die \"Cloud Text-to-Speech API\" aktivieren.") }
+                                cancelPending()
                                 return@coroutineScope
                             }
                             if (ttsRateLimitExhausted) {
@@ -837,6 +869,7 @@ class ChatViewModel : ViewModel() {
                                 CortexLog.warn("ChatVM", "speakResponse", "TTS wegen Rate-Limit gestoppt",
                                     mapOf("index" to index, "any_audio" to firstAudioLogged))
                                 _uiState.update { it.copy(error = msg) }
+                                cancelPending()
                                 return@coroutineScope
                             }
                             // Echter Inhalts-/Format-Fehler bei genau diesem Chunk -> nur diesen
@@ -1015,6 +1048,8 @@ class ChatViewModel : ViewModel() {
                     return null
                 }
                 delay(backoff)
+            } catch (e: CancellationException) {
+                throw e
             } catch (e: Exception) {
                 lastError = e.message
                 contentAttempts++

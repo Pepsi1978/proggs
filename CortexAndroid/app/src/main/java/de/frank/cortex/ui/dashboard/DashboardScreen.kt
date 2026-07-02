@@ -27,6 +27,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import de.frank.cortex.data.model.BrainEntry
 import de.frank.cortex.data.model.CategoryInfo
@@ -41,8 +42,8 @@ import java.util.Locale
 
 @Composable
 fun DashboardScreen(vm: DashboardViewModel = viewModel()) {
-    val uiState by vm.uiState.collectAsState()
-    val vpnState by WireGuardManager.state.collectAsState()
+    val uiState by vm.uiState.collectAsStateWithLifecycle()
+    val vpnState by WireGuardManager.state.collectAsStateWithLifecycle()
 
     // Dashboard-Polling nur laufen lassen, solange dieser Screen wirklich sichtbar ist. Beim
     // Wegnavigieren (z.B. in den Chat) wird der Composable disposed -> screenActive=false -> der
@@ -141,7 +142,7 @@ fun DashboardScreen(vm: DashboardViewModel = viewModel()) {
             }
         }
 
-        items(displayItems) { entry ->
+        items(displayItems, key = { it.doc_id }) { entry ->
             EntryCard(entry = entry, onClick = { vm.selectEntry(entry) })
         }
     }
@@ -161,7 +162,9 @@ private fun SpectrumCard(
 ) {
     val isDark = MaterialTheme.colorScheme.background == DarkBg
     val spectrumCounts = if (categoryPath.isEmpty()) categoryCounts else subcategories
-    val spectrumItems = spectrumCounts.entries.sortedByDescending { it.value }
+    // Nur Kategorien mit Eintraegen in den Balken: weight(0f) wuerde crashen
+    // (IllegalArgumentException "invalid weight"), sobald eine leere Kategorie (count 0) kommt.
+    val spectrumItems = spectrumCounts.entries.filter { it.value > 0 }.sortedByDescending { it.value }
     val total = spectrumCounts.values.sum().toFloat().coerceAtLeast(1f)
 
     // Animated count
@@ -874,7 +877,9 @@ private fun formatEntryTimestamp(raw: String?): String {
     if (raw.isNullOrBlank()) return "Datum unbekannt"
     return try {
         val normalized = if (raw.endsWith("Z") || raw.contains("+")) raw else raw + "Z"
-        val dt = OffsetDateTime.parse(normalized)
+        // Server liefert UTC — fuer die Anzeige in die lokale Zeitzone (Europe/Berlin) umrechnen,
+        // sonst steht die Uhrzeit 1-2 Stunden falsch da.
+        val dt = OffsetDateTime.parse(normalized).atZoneSameInstant(java.time.ZoneId.systemDefault())
         val date = DateTimeFormatter.ofPattern("d. MMMM yyyy", Locale.GERMANY).format(dt)
         val time = DateTimeFormatter.ofPattern("HH:mm 'Uhr'", Locale.GERMANY).format(dt)
         "$date, $time"

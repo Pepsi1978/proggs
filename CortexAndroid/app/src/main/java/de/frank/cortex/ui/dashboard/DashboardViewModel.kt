@@ -7,6 +7,7 @@ import de.frank.cortex.network.ApiClient
 import de.frank.cortex.observability.CortexLog
 import de.frank.cortex.vpn.TunnelState
 import de.frank.cortex.vpn.WireGuardManager
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
@@ -95,6 +96,8 @@ class DashboardViewModel : ViewModel() {
                 healthDeferred.join()
 
                 _uiState.update { it.copy(isLoading = false, error = null, isConnected = true) }
+            } catch (e: CancellationException) {
+                throw e
             } catch (e: Exception) {
                 CortexLog.error("DashboardVM", "refreshAll", "Fehler: ${e.message}")
                 _uiState.update { it.copy(isLoading = false, error = e.message, isConnected = false) }
@@ -125,6 +128,8 @@ class DashboardViewModel : ViewModel() {
                 "total_distinct" to counts.total_distinct,
                 "categories" to counts.counts.size
             ))
+        } catch (e: CancellationException) {
+            throw e
         } catch (e: Exception) {
             CortexLog.error("DashboardVM", "loadCategoryCounts", "Fehler: ${e.message}")
         }
@@ -134,6 +139,8 @@ class DashboardViewModel : ViewModel() {
         try {
             val overview = ApiClient.dashboardApi().overview()
             _uiState.update { it.copy(overview = overview) }
+        } catch (e: CancellationException) {
+            throw e
         } catch (e: Exception) {
             CortexLog.error("DashboardVM", "loadOverview", "Fehler: ${e.message}")
         }
@@ -143,6 +150,8 @@ class DashboardViewModel : ViewModel() {
         try {
             val health = ApiClient.brainApi().health()
             _uiState.update { it.copy(health = health) }
+        } catch (e: CancellationException) {
+            throw e
         } catch (e: Exception) {
             CortexLog.error("DashboardVM", "loadHealth", "Fehler: ${e.message}")
         }
@@ -159,6 +168,8 @@ class DashboardViewModel : ViewModel() {
                     SearchRequest(query = query, limit = 20, category = _uiState.value.selectedCategory)
                 )
                 _uiState.update { it.copy(searchResults = response.items) }
+            } catch (e: CancellationException) {
+                throw e
             } catch (e: Exception) {
                 CortexLog.error("DashboardVM", "search", "Fehler: ${e.message}")
             }
@@ -225,6 +236,8 @@ class DashboardViewModel : ViewModel() {
                     }
                 }
                 _uiState.update { it.copy(subcategories = subs) }
+            } catch (e: CancellationException) {
+                throw e
             } catch (e: Exception) {
                 CortexLog.error("DashboardVM", "loadSubcategories", "Fehler: ${e.message}")
             }
@@ -236,12 +249,16 @@ class DashboardViewModel : ViewModel() {
             try {
                 val exactItems = try {
                     ApiClient.brainApi().byCategory(category).items
+                } catch (e: CancellationException) {
+                    throw e
                 } catch (e: Exception) {
                     CortexLog.warn("DashboardVM", "browseCategory", "byCategory fehlgeschlagen: ${e.message}")
                     emptyList()
                 }
                 val childItems = try {
                     ApiClient.brainApi().byParent(category).items
+                } catch (e: CancellationException) {
+                    throw e
                 } catch (e: Exception) {
                     CortexLog.warn("DashboardVM", "browseCategory", "byParent fehlgeschlagen: ${e.message}")
                     emptyList()
@@ -256,6 +273,8 @@ class DashboardViewModel : ViewModel() {
                     "children" to childItems.size,
                     "merged" to merged.size
                 ))
+            } catch (e: CancellationException) {
+                throw e
             } catch (e: Exception) {
                 CortexLog.error("DashboardVM", "browseCategory", "Fehler: ${e.message}")
                 _uiState.update { it.copy(browseResults = emptyList()) }
@@ -315,6 +334,8 @@ class DashboardViewModel : ViewModel() {
                 if (current.none { it.name == name }) current.add(CategoryInfo(name, 0, true))
                 _uiState.update { it.copy(categories = current.sortedBy { cat -> cat.name.lowercase() }, editCategory = name) }
                 loadCategoryCounts()
+            } catch (e: CancellationException) {
+                throw e
             } catch (e: Exception) {
                 CortexLog.error("DashboardVM", "createCategory", "Fehler: ${e.message}")
                 _uiState.update { it.copy(error = "Kategorie konnte nicht erstellt werden: ${e.message}") }
@@ -333,6 +354,8 @@ class DashboardViewModel : ViewModel() {
                 CortexLog.info("DashboardVM", "saveEntryCategory", "Kategorie gespeichert", mapOf("doc_id" to entry.doc_id, "category" to category))
                 loadCategoryCounts()
                 if (_uiState.value.selectedCategory != null) browseCategory(_uiState.value.selectedCategory!!)
+            } catch (e: CancellationException) {
+                throw e
             } catch (e: Exception) {
                 CortexLog.error("DashboardVM", "saveEntryCategory", "Fehler: ${e.message}")
                 _uiState.update { it.copy(error = "Kategorie speichern fehlgeschlagen: ${e.message}") }
@@ -359,6 +382,8 @@ class DashboardViewModel : ViewModel() {
                 CortexLog.info("DashboardVM", "saveEntry", "Eintrag gespeichert: ${entry.doc_id}")
                 // Refresh
                 if (_uiState.value.selectedCategory != null) browseCategory(_uiState.value.selectedCategory!!)
+            } catch (e: CancellationException) {
+                throw e
             } catch (e: Exception) {
                 CortexLog.error("DashboardVM", "saveEntry", "Fehler: ${e.message}")
                 _uiState.update { it.copy(error = "Speichern fehlgeschlagen: ${e.message}") }
@@ -374,6 +399,8 @@ class DashboardViewModel : ViewModel() {
                 _uiState.update { it.copy(selectedEntry = null) }
                 CortexLog.info("DashboardVM", "deleteEntry", "Eintrag gelöscht: ${entry.doc_id}")
                 refreshAll()
+            } catch (e: CancellationException) {
+                throw e
             } catch (e: Exception) {
                 CortexLog.error("DashboardVM", "deleteEntry", "Fehler: ${e.message}")
                 _uiState.update { it.copy(error = "Löschen fehlgeschlagen: ${e.message}") }

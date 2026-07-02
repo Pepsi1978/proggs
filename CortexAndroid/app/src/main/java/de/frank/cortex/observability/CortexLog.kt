@@ -82,10 +82,19 @@ object CortexLog {
         writeToFile(line)
     }
 
+    // Rotation: Log darf nicht unbegrenzt wachsen (Observability-Standard). Bei Ueberschreiten
+    // wird die Datei zu .1 rotiert (eine Generation reicht — die aeltere wird ersetzt).
+    private const val MAX_LOG_BYTES = 5L * 1024 * 1024
+
     private fun writeToFile(line: String) {
         if (!::logFile.isInitialized) return
         lock.withLock {
             try {
+                if (logFile.length() > MAX_LOG_BYTES) {
+                    val rotated = File(logFile.parentFile, logFile.name + ".1")
+                    if (rotated.exists()) rotated.delete()
+                    logFile.renameTo(rotated)
+                }
                 FileWriter(logFile, true).use { it.appendLine(line) }
             } catch (e: Exception) {
                 Log.e(TAG, "Log-Schreibfehler: ${e.message}")

@@ -32,7 +32,6 @@ object ChatSessionStore {
 
     fun init(context: Context) {
         helper = Helper(context.applicationContext)
-        helper.writableDatabase.execSQL("PRAGMA foreign_keys=ON")
         CortexLog.info("ChatSessionStore", "init", "Chat-Session-Datenbank initialisiert")
     }
 
@@ -188,6 +187,12 @@ object ChatSessionStore {
     }
 
     private class Helper(context: Context) : SQLiteOpenHelper(context, "cortex_chat_sessions.db", null, 1) {
+        override fun onConfigure(db: SQLiteDatabase) {
+            // Statt einmaligem "PRAGMA foreign_keys=ON" in init(): das Pragma gilt nur pro
+            // Connection — onConfigure setzt es garantiert fuer JEDE Connection des Helpers.
+            db.setForeignKeyConstraintsEnabled(true)
+        }
+
         override fun onCreate(db: SQLiteDatabase) {
             db.execSQL(
                 """

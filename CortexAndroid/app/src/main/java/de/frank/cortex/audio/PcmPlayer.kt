@@ -117,9 +117,14 @@ class PcmPlayer {
      * startet eine kurze Sitzung, spielt ab, raeumt danach sofort wieder auf.
      */
     suspend fun playAndAwait(pcmData: ByteArray, speed: Float = 1.0f) {
-        start(speed)
-        writeAndAwait(pcmData)
-        stop()
+        // finally: auch bei Coroutine-Abbruch mitten im Abspielen (z.B. Stimmen-Test wird durch
+        // Screen-Wechsel gecancelt) wird der AudioTrack sicher gestoppt + freigegeben (kein Leak).
+        try {
+            start(speed)
+            writeAndAwait(pcmData)
+        } finally {
+            stop()
+        }
     }
 
     /** Bricht laufende Wiedergabe SOFORT ab (Lautsprecher-Knopf / neuer Text / Sitzungsende). */

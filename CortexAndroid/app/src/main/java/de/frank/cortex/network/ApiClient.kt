@@ -156,42 +156,53 @@ object ApiClient {
             .build()
     }
 
-    // --- Retrofit-Instanzen: EINE pro Backend (Best Practice §1.3) ---
-    private val agentRetrofit: Retrofit by lazy {
+    // --- Retrofit-Instanzen: EINE pro Backend (Best Practice §1.3), aber URL-bewusst ---
+    // Frueher waren die Instanzen `by lazy` und froren die Basis-URL vom ersten Zugriff ein:
+    // Aenderte Frank Host/Port in den Einstellungen, ging chatStream (liest die URL live) sofort
+    // an den neuen Server, waehrend /chat, Kategorien & Dashboard bis zum App-Neustart an den
+    // ALTEN gingen. Jetzt wird die Instanz beim naechsten Zugriff neu gebaut, sobald sich die
+    // Basis-URL geaendert hat (OkHttp-Clients bleiben geteilt — Pool/Threads unveraendert).
+    private class UrlBoundApi<T>(
+        private val urlProvider: () -> String,
+        private val create: (String) -> T
+    ) {
+        @Volatile private var boundUrl: String? = null
+        @Volatile private var instance: T? = null
+        fun get(): T {
+            val url = urlProvider()
+            instance?.let { if (boundUrl == url) return it }
+            synchronized(this) {
+                instance?.let { if (boundUrl == url) return it }
+                val fresh = create(url)
+                instance = fresh
+                boundUrl = url
+                return fresh
+            }
+        }
+    }
+
+    private fun buildRetrofit(baseUrl: String, client: OkHttpClient): Retrofit =
         Retrofit.Builder()
-            .baseUrl(SettingsStore.agentUrl() + "/")
-            .client(authClient)
+            .baseUrl("$baseUrl/")
+            .client(client)
             .addConverterFactory(ScalarsConverterFactory.create()) // VOR Moshi (§1.7)
             .addConverterFactory(moshiFactory)
             .build()
-    }
 
-    private val brainRetrofit: Retrofit by lazy {
-        Retrofit.Builder()
-            .baseUrl(SettingsStore.brainUrl() + "/")
-            .client(authClient)
-            .addConverterFactory(ScalarsConverterFactory.create())
-            .addConverterFactory(moshiFactory)
-            .build()
+    private val agentApiHolder = UrlBoundApi({ SettingsStore.agentUrl() }) {
+        buildRetrofit(it, authClient).create(AgentApi::class.java)
     }
-
-    private val dashboardRetrofit: Retrofit by lazy {
-        Retrofit.Builder()
-            .baseUrl(SettingsStore.dashboardUrl() + "/")
-            .client(dashboardClient)
-            .addConverterFactory(ScalarsConverterFactory.create())
-            .addConverterFactory(moshiFactory)
-            .build()
+    private val brainApiHolder = UrlBoundApi({ SettingsStore.brainUrl() }) {
+        buildRetrofit(it, authClient).create(BrainApi::class.java)
     }
-
-    private val agentApi: AgentApi by lazy { agentRetrofit.create(AgentApi::class.java) }
-    private val brainApi: BrainApi by lazy { brainRetrofit.create(BrainApi::class.java) }
-    private val dashboardApi: DashboardApi by lazy { dashboardRetrofit.create(DashboardApi::class.java) }
+    private val dashboardApiHolder = UrlBoundApi({ SettingsStore.dashboardUrl() }) {
+        buildRetrofit(it, dashboardClient).create(DashboardApi::class.java)
+    }
 
     // --- Service-Interfaces ---
-    fun agentApi(): AgentApi = agentApi
-    fun brainApi(): BrainApi = brainApi
-    fun dashboardApi(): DashboardApi = dashboardApi
+    fun agentApi(): AgentApi = agentApiHolder.get()
+    fun brainApi(): BrainApi = brainApiHolder.get()
+    fun dashboardApi(): DashboardApi = dashboardApiHolder.get()
 
     // --- Streaming-Chat (SSE, /chat/stream) ---------------------------------
     private val chatRequestAdapter by lazy { moshi.adapter(ChatRequest::class.java) }
@@ -326,6 +337,8 @@ object ApiClient {
                 }
                 codexFallbackModels.forEach { if (!contains(it)) add(it) }
             }.ifEmpty { codexFallbackModels }
+        } catch (e: kotlinx.coroutines.CancellationException) {
+            throw e
         } catch (_: Exception) {
             codexFallbackModels
         }
@@ -560,7 +573,9 @@ object ApiClient {
                 try {
                     val response = call.execute()
                     if (continuation.isActive) {
-                        continuation.resume(response)
+                        // onCancellation-Variante: wird die Coroutine GENAU zwischen isActive-Check
+                        // und resume abgebrochen, schliesst OkHttp die Response trotzdem (kein Leak).
+                        continuation.resume(response) { _ -> response.close() }
                     } else {
                         response.close()
                     }

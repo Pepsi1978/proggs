@@ -64,6 +64,8 @@ val CategoryColors = listOf(
 )
 
 fun categoryColor(name: String): Color {
-    val index = name.hashCode().let { if (it < 0) -it else it } % CategoryColors.size
+    // floorMod statt Negieren: -Int.MIN_VALUE bleibt negativ (Int-Overflow) und haette einen
+    // negativen Index (Crash) ergeben. floorMod liefert fuer JEDEN Hash garantiert 0..size-1.
+    val index = Math.floorMod(name.hashCode(), CategoryColors.size)
     return CategoryColors[index]
 }

@@ -46,6 +46,7 @@ import de.frank.cortex.network.ApiClient
 import de.frank.cortex.observability.CortexLog
 import de.frank.cortex.ui.theme.*
 import de.frank.cortex.vpn.WireGuardManager
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import retrofit2.HttpException
@@ -123,6 +124,8 @@ fun SettingsScreen(
                                 size_prompt_xl = if (key == SettingsStore.RESPONSE_SIZE_XL) prompt else null
                             )
                         )
+                    } catch (e: CancellationException) {
+                        throw e
                     } catch (e: Exception) {
                         CortexLog.warn("Settings", "syncSizePrompt", "Server-Sync fehlgeschlagen (lokal gespeichert): ${e.message}")
                     }
@@ -138,7 +141,13 @@ fun SettingsScreen(
         contract = ActivityResultContracts.GetContent()
     ) { uri: Uri? ->
         uri?.let {
-            val text = context.contentResolver.openInputStream(it)?.bufferedReader()?.readText()
+            // use{}: Stream sicher schliessen (vorher blieb er offen — Ressourcen-Leak).
+            val text = try {
+                context.contentResolver.openInputStream(it)?.use { s -> s.bufferedReader().readText() }
+            } catch (e: Exception) {
+                CortexLog.warn("Settings", "wgImport", "Config-Datei nicht lesbar: ${e.message}")
+                null
+            }
             if (text != null && WireGuardManager.parseConfig(text)) {
                 SettingsStore.wgConfig = text
                 wgConfig = text
@@ -171,6 +180,8 @@ fun SettingsScreen(
             codexConnected = config.codex?.connected == true
             codexStatus = if (codexConnected) "Server verbunden — GPT/Codex-Modelle sind auswählbar" else "Server nicht verbunden"
             agentModelStatus = "Aktueller Server-Stand geladen"
+        } catch (e: CancellationException) {
+            throw e
         } catch (e: Exception) {
             CortexLog.warn("Settings", "loadAgentModels", "Agent-Modelle nicht geladen: ${e.message}")
             agentModelStatus = "Server-Stand nicht erreichbar"
@@ -412,6 +423,8 @@ fun SettingsScreen(
                                             }
                                         }
                                         codexStatus = "Code abgelaufen"
+                                    } catch (e: CancellationException) {
+                                        throw e
                                     } catch (e: Exception) {
                                         val message = codexAuthErrorMessage(e)
                                         CortexLog.error("Settings", "codexAuth", "Codex-Verbindung fehlgeschlagen: $message")
@@ -436,6 +449,8 @@ fun SettingsScreen(
                                         codexStatus = "Server nicht verbunden"
                                         val config = ApiClient.agentApi().getConfig()
                                         if (config.available.isNotEmpty()) agentModelOptions = config.available
+                                    } catch (e: CancellationException) {
+                                        throw e
                                     } catch (_: Exception) {
                                         Toast.makeText(context, "Trennen fehlgeschlagen", Toast.LENGTH_SHORT).show()
                                     }
@@ -549,6 +564,8 @@ fun SettingsScreen(
                                             voice
                                         )
                                         pcmPlayer.playAndAwait(pcm, SettingsStore.ttsRate)
+                                    } catch (e: CancellationException) {
+                                        throw e
                                     } catch (e: Exception) {
                                         CortexLog.error("Settings", "testVoice", "TTS-Test fehlgeschlagen: ${e.message}")
                                         Toast.makeText(context, "Fehler: ${e.message}", Toast.LENGTH_SHORT).show()
@@ -576,6 +593,8 @@ fun SettingsScreen(
                                             voiceId
                                         )
                                         edgeMp3Player.playAndAwait(mp3, SettingsStore.ttsRate)
+                                    } catch (e: CancellationException) {
+                                        throw e
                                     } catch (e: Exception) {
                                         CortexLog.error("Settings", "testEdgeVoice", "Edge-TTS-Test fehlgeschlagen: ${e.message}")
                                         Toast.makeText(context, "Fehler: ${e.message}", Toast.LENGTH_SHORT).show()
@@ -835,6 +854,8 @@ fun SettingsScreen(
                                         )
                                     )
                                     agentModelStatus = "Modelle gespeichert"
+                                } catch (e: CancellationException) {
+                                    throw e
                                 } catch (e: Exception) {
                                     CortexLog.error("Settings", "saveAgentModels", "Speichern fehlgeschlagen: ${e.message}")
                                     agentModelStatus = "Speichern fehlgeschlagen"
