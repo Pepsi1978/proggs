@@ -4,11 +4,17 @@
 > `propertyInspector`, `code.js`/`plugin.html` im Plugin-Webview, `@elgato/streamdeck`-Node-Code).
 > Teil des Bug-Almanach-Systems — siehe [`SYSTEM.md`](../SYSTEM.md).
 >
-> **Stand:** recherchiert am **2026-06-03** fuer:
+> **Stand:** recherchiert am **2026-06-03**, **re-recherchiert am 2026-07-02** (Engine A: Firecrawl+MiniMax) fuer:
 > - **Stream Deck Software 7.4.2** (Frank, Hardware: Stream Deck XL, Windows) — der reale Ziel-Anker.
+>   **Aktuellste Software Mitte 2026: 7.5.0 (30.06.2026)** — dazwischen 7.4.1 (14.04.) und 7.4.2 (18.05.).
+>   7.5.0 ist ein Hardware-/Feature-Release (NIGHTSWORD v2, Key-Claiming, bessere Profil-Import-Fehler) ohne
+>   Plugin-SDK-Breaking-Changes; der 7.4.2-Anker bleibt fuer die dokumentierten Bugs gueltig.
 > - **SDKVersion 2** (das TVO-Projekt nutzt das klassische HTML/JS-WebSocket-SDK, `CodePath: plugin.html`).
->   Aktuell verfuegbar waere **SDKVersion 3** (Pflicht nur fuer DRM/Marketplace ab Software 6.9).
-> - **`@elgato/streamdeck` 2.1.0** (npm, hart geprueft) + **`@elgato/cli` 1.7.4** (npm, hart geprueft) — fuer das moderne Node.js-SDK.
+>   **SDKVersion 3 + DRM ist seit 2026 Marketplace-PFLICHT** (Details in §O5): neue Plugins ab **19.01.2026**,
+>   Versions-Updates ab **19.02.2026** (MinimumVersion 6.9+, SDKVersion 3, `@elgato/streamdeck` v2+). Fuer Franks
+>   klassisches, NICHT im Marketplace veroeffentlichtes TVO-Plugin bleibt SDKVersion 2 gueltig.
+> - **`@elgato/streamdeck` 2.1.0** + **`@elgato/cli` 1.7.4** — per Re-Recherche 2026-07-02 **weiterhin aktuell**
+>   (keine neuere npm-Version; spaetere CLI-Repo-Commits nur Build-Infra). Fuer das moderne Node.js-SDK (Node 24+, Stream Deck 7.1+).
 > - Gebundelte Node-Runtime der App: **20.20.0 + 24.13.1**. Property-Inspector laeuft in eingebettetem Chromium.
 >
 > Der Almanach deckt BEIDE SDK-Generationen ab: das **klassische WebSocket/JS-SDK** (das aktuelle TVO-Projekt)
@@ -635,6 +641,23 @@ Plugin-Name unique auf dem Marketplace, akkurat, Englisch; Action-Namen ~max. 30
 
 ### O4. Wiederverwendete Profil-UUID blockiert Profil-Update
 Mitgeliefertes `.streamDeckProfile` mit gleicher (Wrapper-/Page-)UUID ueber Versionen → App verweigert Re-Import. FIX: bei jedem Build frische UUIDs (`crypto.randomUUID()`) generieren. (Quelle: nick-liu.com)
+
+### O5. SDKVersion 3 + DRM ist Marketplace-PFLICHT (Stichtage 2026) + `manifest` wird geschuetzte Ressource 🆕
+**Betrifft:** NUR Plugins, die im **Elgato Marketplace** veroeffentlicht werden (Franks klassisches TVO-Plugin ist
+nicht betroffen, solange es nicht in den Marketplace geht).
+**Was gilt (Re-Recherche 2026-07-02):**
+- **Ab 19.01.2026:** NEUE Plugins muessen DRM-kompatibel sein — `Software.MinimumVersion` **6.9+**, `SDKVersion` **3**,
+  Node.js-Plugins `@elgato/streamdeck` **v2+**. **Ab 19.02.2026** gilt das auch fuer **Versions-Updates** bestehender Plugins.
+  (SDKVersion 2 bleibt im Schema formal gueltig `2|3`, ist aber Marketplace-untauglich.)
+- **DRM-Falle fuer den Code (wichtig):** Mit DRM wird die **`manifest.json` zur geschuetzten Ressource** —
+  **`streamDeck.manifest` zur Laufzeit ist ab @elgato/streamdeck v2 ENTFERNT**. Wer Manifest-Werte im Code las, muss die
+  benoetigten Infos in eine **separate JSON-Datei ODER direkt in den Code einbetten**. Ausgelieferte Dateien sind
+  **immutable** (keine Laufzeit-Modifikation) — Dateien zur Laufzeit generieren statt bestehende aendern.
+- **DRM wird erst nach Upload + Verarbeitung in der Maker Console aktiv** (lokal getestetes Plugin ist noch ungeschuetzt).
+  DRM ist seit CLI **1.6** standardmaessig aktiviert.
+- **Weitere Review-Pflichten:** Einreichung (Name/Beschreibung/Medien) auf **Englisch**; **Demo-Video Pflicht** fuer
+  Plugins, die Hardware erfordern oder kostenpflichtige Dienste integrieren. Review-Dauer 4–10 Werktage.
+**Quelle:** docs.elgato.com — Distribution/DRM + Review Process; Marketplace-Banner (SDKVersion-3-Stichtage), re-verifiziert 2026-07-02.
 
 ---
 
