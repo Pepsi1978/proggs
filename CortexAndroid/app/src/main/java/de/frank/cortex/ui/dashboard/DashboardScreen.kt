@@ -559,6 +559,7 @@ private fun Chip(name: String, color: Color?, active: Boolean, isDark: Boolean, 
     }
 }
 
+@OptIn(ExperimentalLayoutApi::class)
 @Composable
 private fun EntryCard(entry: BrainEntry, onClick: () -> Unit) {
     val isDark = MaterialTheme.colorScheme.background == DarkBg
@@ -633,6 +634,7 @@ private fun EntryCard(entry: BrainEntry, onClick: () -> Unit) {
     }
 }
 
+@OptIn(ExperimentalLayoutApi::class)
 @Composable
 private fun EntryDetailScreen(
     entry: BrainEntry,
