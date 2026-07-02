@@ -1,10 +1,11 @@
-# DeepSeek API — Best Practices (Stand 2026-06-09)
+# DeepSeek API — Best Practices (Stand 2026-07-02)
 
-> Gegenstueck zu `bugs/apis/deepseek-api.md`. Offiziell empfohlen (Quellen). (Researcher-Recherche 2026-06-09.)
+> Gegenstueck zu `bugs/apis/deepseek-api.md`. Offiziell empfohlen (Quellen). (Researcher-Recherche 2026-06-09, Re-Recherche 2026-07-02.)
 >
 > WICHTIGE AKTUALISIERUNG: `deepseek-v4-flash` / `deepseek-v4-pro` sind jetzt die aktiven Modelle
 > (1M Kontext, bis 384K Output). Die alten Namen `deepseek-chat` / `deepseek-reasoner` werden am
 > 2026-07-24 15:59 UTC deprecated — fuer Neubau direkt V4 verwenden.
+> Update 2026-07-02: V4 direkt pinnen; bei Frameworks wie LiteLLM explizit pruefen, ob `reasoning_content` fuer V4-Thinking-Multiturn/Tool-Calls erhalten bleibt.
 
 ## ⚡ Kurzcheck (Stufe A — vor der Arbeit lesen)
 

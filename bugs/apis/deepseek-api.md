@@ -1,9 +1,11 @@
 # Bekannte Bugs: DeepSeek API (Integration)
 
 > PFLICHT-LESEN vor Arbeit an einer DeepSeek-Integration (api.deepseek.com). Stand: zuletzt
-> recherchiert am 2026-06-08. Versions-Anker: `deepseek-chat` (V3) + `deepseek-reasoner` (R1) — beide
-> Deprecation 2026-07-24, danach V4-flash/-pro. Zweite Seite: `best-practices/apis/deepseek-api.md`.
+> recherchiert am 2026-06-08, **re-recherchiert am 2026-07-02** (Engine A: Firecrawl+MiniMax). Versions-Anker: `deepseek-v4-flash` + `deepseek-v4-pro`; Legacy-Aliase `deepseek-chat`/`deepseek-reasoner`
+> Deprecation 2026-07-24, danach V4-Modelle direkt nutzen. Zweite Seite: `best-practices/apis/deepseek-api.md`.
 > Compliance-Hinweis: Hosting in China — bei personenbezogenen Daten relevant.
+
+> **Update 2026-07-02:** V4-Flash/Pro, 1M Kontext, 384K Max-Output und Concurrency-Limits (Flash 2500, Pro 500) bleiben bestaetigt. Wichtiger Integrationsbug: LiteLLM strippt bei V4-Thinking-Multiturn/Tool-Calls weiterhin `reasoning_content` und erzeugt 400; Workaround bleibt generationsabhaengig (R1 strippen, V4-Thinking zurueckgeben).
 
 ## ⚡ Kurzcheck (Stufe A — vor der Arbeit lesen)
 
