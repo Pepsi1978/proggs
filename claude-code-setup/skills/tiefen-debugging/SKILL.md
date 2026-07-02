@@ -1,6 +1,6 @@
 ---
 name: tiefen-debugging
-description: "Nutze diesen Skill IMMER bei 'komplettes/tiefgreifendes/iteratives Debugging' — egal ob fuer 'die letzte Implementierung' ODER 'die ganze App [X]' — sowie bei 'Tiefen-Debugging', 'debugge die gesamte App', 'suche alle Bugs/Logikfehler in [App/der letzten Aenderung]' (Brille bugs) ODER 'Performance-Debugging', 'Performance-Analyse', 'finde Engpaesse', 'optimiere die Performance [der App/der letzten Implementierung]' (Brille performance) — auch bei 'mach das gleiche nochmal fuer App Y'. Fuehrt das 7-Schritte-Protokoll aus: Bug-Almanach-Grundierung ZUERST, Funktions-/Lastprofil, priorisierte Dimensionen, CBR-Loops mit steigender Tiefe, verhaltens- und designneutrale Fixes, Build+Install-Verifikation, drei Ergebnis-Listen und Wissens-Rueckschreibung (RETAIN) in Almanach + bug-cases. NICHT fuer EINEN konkreten bekannten Bug (dafuer systematic-debugging) — dies ist der systematische Durchlauf ueber einen ganzen Scope."
+description: "Nutze diesen Skill IMMER bei 'komplettes/tiefgreifendes/iteratives Debugging fuer [App/Software/Modul]', 'Tiefen-Debugging', 'debugge die App', 'mach den Skill fuer App X', 'suche alle Bugs/Logikfehler' (Brille bugs) ODER 'Performance-Debugging', 'Performance-Analyse', 'finde Engpaesse', 'optimiere die Performance' (Brille performance) — auch bei 'mach das gleiche nochmal fuer App Y'. Der Scope ist EXAKT das, was Frank ansagt (ganze App = Standard bei blossem App-Namen; nur wenn er es explizit sagt: ein Modul oder die letzte Aenderung). Fuehrt das 7-Schritte-Protokoll aus: Bug-Almanach-Grundierung ZUERST, Funktions-/Lastprofil, priorisierte Dimensionen, CBR-Loops mit steigender Tiefe, verhaltens- und designneutrale Fixes, projektgerechte Build-/Start-Verifikation, drei Ergebnis-Listen und Wissens-Rueckschreibung (RETAIN) in Almanach + bug-cases. Funktioniert fuer JEDE Software (Android, Server, Desktop, Extension …). NICHT fuer EINEN konkreten bekannten Bug (dafuer systematic-debugging)."
 ---
 
 # Tiefen-Debugging — 7-Schritte-Protokoll (Brille: bugs | performance)
@@ -23,12 +23,15 @@ zurückschreiben). Entstanden aus zwei Real-Läufen über CortexAndroid am 2026-
 | Performance, langsam, Engpässe, optimieren, flüssiger | `performance` |
 | beides / unklar | kurz nachfragen (EINE Frage, dann loslegen) |
 
-**Scope** (was analysiert wird):
+**Scope** (was analysiert wird) — **Franks Ansage hat IMMER Priorität.** Was er vor oder
+mit dem Skill-Aufruf ansagt, gilt exakt; nichts stillschweigend verkleinern:
 
-| Franks Wortlaut | Scope |
-|-----------------|-------|
-| "die letzte Implementierung", "die letzte Änderung", nichts Genanntes | letzte Implementierung (jüngste Commits/Feature — per git log eingrenzen) |
-| "die ganze App", "die gesamte [App]", "in allen Bereichen" | komplette App/Software |
+| Franks Ansage | Scope |
+|---------------|-------|
+| "für App X", "diese App", nur ein App-/Projektname | die KOMPLETTE genannte App/Software (Standard) |
+| ein Modul/Ordner/Feature benannt | genau dieser Teil |
+| EXPLIZIT "die letzte Implementierung/Änderung" | nur die jüngste Änderung (per git log eingrenzen) |
+| kein Ziel erkennbar | kurz nachfragen (EINE Frage) |
 
 Dann die passende Dimensionsliste laden (enthält auch die Schritt-1-Profil-Checkliste
 und die brillen-spezifischen Loop-Tiefenstufen):
@@ -50,7 +53,8 @@ und die brillen-spezifischen Loop-Tiefenstufen):
 
 ### Schritt 0 — Wissens-Grundierung (PFLICHT, vor jeder Analyse)
 
-1. Technische Bereiche der App bestimmen (Kotlin, Compose, Gradle, Networking, Server, …).
+1. Technische Bereiche des Scopes bestimmen (z.B. Kotlin, Compose, Gradle, Networking,
+   Server/FastAPI, .NET/WPF, Swift, TypeScript, Chrome-Extension, Python, APIs …).
 2. `~/proggs/bugs/README.md` prüfen: existiert pro Bereich ein Almanach?
 3. Pro Bereich lesen — Reihenfolge erst Almanach, dann Best Practices:
    - Normal (Stufe A): NUR Kurzcheck (`Read` mit `limit=80`) von
@@ -153,8 +157,17 @@ Dann PFLICHT-Rückschreibung (Funde dürfen nicht verkommen):
 3. Version bumpen (Patch, sichtbarer Zeitstempel nach dem `VERSION_BUMPED_AT`-Muster).
 4. **Commit + Push VOR dem Build** (Regel commit-before-build; nur eigene Dateien,
    atomarer Pfad-Commit `git commit -m "#NNN - ..." -- <pfade>`).
-5. Build (`./gradlew assembleDebug` o.ä.) → Install aufs Gerät → App starten →
-   Crash-Buffer + strukturiertes Log prüfen (Version korrekt, kein FATAL).
+5. **Verifikation je nach Projekttyp** — das Ziel ist immer: gebaut/gestartet + Logs
+   sauber, nicht nur "kompiliert":
+
+   | Projekttyp | Verifikation |
+   |------------|--------------|
+   | Android-App | `./gradlew assembleDebug` → `adb install` → App starten → Crash-Buffer + strukturiertes Log (Version korrekt, kein FATAL) |
+   | Server-Dienst (VPS) | Syntax-/Import-Check (`py_compile` o.ä.) → Deploy (scp + compose up) → Container `healthy` + Versions-Log |
+   | Desktop (.NET/Swift/TS) | `dotnet build` / `swift build` / `tsc --noEmit` → App starten → Log/Fenster prüfen |
+   | Browser-Extension / Web | Build/Lint → laden/öffnen → Console fehlerfrei |
+   | Nicht baubar/startbar | ehrlich sagen; Verifikation = statische Prüfung + Begründung |
+
 6. Almanach-/bug-cases-Rückschreibung als eigener Commit.
 7. Abschluss: drei Listen + Task-Completion-Boxen + Status-Meldung.
 
@@ -166,7 +179,9 @@ Dann PFLICHT-Rückschreibung (Funde dürfen nicht verkommen):
 - Die Wissens-Rückschreibung weglassen oder "auf später" verschieben
 - Performance-Behauptungen als Messwerte ausgeben (statisch hergeleitet ist nicht
   gemessen — ehrlich kennzeichnen, Baseline-Messung als Folgeaufgabe vorschlagen)
-- Build/Install überspringen, wenn die App baubar ist (Verifikationspflicht)
+- Die Verifikation überspringen, wenn das Projekt baubar/startbar ist (Verifikationspflicht)
+- Franks angesagten Scope stillschweigend verkleinern (z.B. nur die letzten Änderungen
+  prüfen, obwohl er die ganze App genannt hat)
 
 ## Haltung
 
