@@ -76,7 +76,7 @@ object ApiClient {
                 mapOf("elapsed_ms" to elapsedMs, "request_bytes" to (request.body?.contentLength() ?: 0L))
             )
             response
-        } catch (e: Exception) {
+        } catch (e: Exception) {   // no-cancellation-rethrow (kein suspend im try)
             val elapsedMs = (System.nanoTime() - startedAt) / 1_000_000
             CortexLog.warn(
                 "HTTP",
@@ -407,7 +407,7 @@ object ApiClient {
         val part = token.split(".").getOrNull(1).orEmpty()
         val decoded = Base64.decode(part, Base64.URL_SAFE or Base64.NO_WRAP or Base64.NO_PADDING)
         JSONObject(String(decoded, Charsets.UTF_8))
-    } catch (_: Exception) {
+    } catch (_: Exception) {   // no-cancellation-rethrow (kein suspend im try)
         null
     }
 
@@ -581,7 +581,7 @@ object ApiClient {
                     }
                 } catch (e: IOException) {
                     if (continuation.isActive) continuation.resumeWithException(e)
-                } catch (e: Exception) {
+                } catch (e: Exception) {   // no-cancellation-rethrow (kein suspend im try)
                     if (continuation.isActive) continuation.resumeWithException(e)
                 }
             }

@@ -1,5 +1,6 @@
 /tools/*
 !/tools/chrome-beenden/
+!/tools/check_cancellation_rethrow.py
 .code-search/
 .think-tank/
 .env

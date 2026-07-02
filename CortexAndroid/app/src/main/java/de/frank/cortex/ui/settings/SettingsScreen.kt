@@ -144,7 +144,7 @@ fun SettingsScreen(
             // use{}: Stream sicher schliessen (vorher blieb er offen — Ressourcen-Leak).
             val text = try {
                 context.contentResolver.openInputStream(it)?.use { s -> s.bufferedReader().readText() }
-            } catch (e: Exception) {
+            } catch (e: Exception) {   // no-cancellation-rethrow (kein suspend im try)
                 CortexLog.warn("Settings", "wgImport", "Config-Datei nicht lesbar: ${e.message}")
                 null
             }

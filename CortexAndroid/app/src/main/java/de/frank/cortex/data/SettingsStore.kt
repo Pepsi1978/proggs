@@ -16,6 +16,7 @@ import com.google.crypto.tink.KeyTemplates
 import com.google.crypto.tink.aead.AeadConfig
 import com.google.crypto.tink.integration.android.AndroidKeysetManager
 import de.frank.cortex.observability.CortexLog
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -115,7 +116,7 @@ object SettingsStore {
                 }
             }
             prefs[booleanPreferencesKey(MIGRATED_FLAG)] ?: false
-        } catch (e: Exception) {
+        } catch (e: Exception) {   // no-cancellation-rethrow (kein suspend im try)
             CortexLog.error("SettingsStore", "init", "DataStore nicht lesbar: ${e.message}")
             false
         }
@@ -138,7 +139,7 @@ object SettingsStore {
                     .build()
                     .keysetHandle
                     .getPrimitive(Aead::class.java)
-            } catch (e: Exception) {
+            } catch (e: Exception) {   // no-cancellation-rethrow (kein suspend im try)
                 CortexLog.error("SettingsStore", "buildAead", "Tink-Init fehlgeschlagen (Versuch ${attempt + 1}): ${e.message}")
                 context.getSharedPreferences("cortex_tink_prefs", Context.MODE_PRIVATE).edit().clear().apply()
             }
@@ -178,13 +179,15 @@ object SettingsStore {
             context.deleteSharedPreferences(ENCRYPTED_PREFS)
             CortexLog.info("SettingsStore", "migrate", "Secrets von EncryptedSharedPreferences uebernommen",
                 mapOf("moved" to moved))
-        } catch (e: Exception) {
+        } catch (e: Exception) {   // no-cancellation-rethrow (kein suspend im try)
             // Alte Datei fehlt/korrupt (frische Installation oder Keystore-Reset): nichts zu
             // uebernehmen — Flag setzen, damit nicht bei jedem Start erneut versucht wird.
             CortexLog.warn("SettingsStore", "migrate", "Keine Alt-Secrets uebernommen: ${e.message}")
             storeScope.launch {
                 try {
                     dataStore.edit { it[booleanPreferencesKey(MIGRATED_FLAG)] = true }
+                } catch (inner: CancellationException) {
+                    throw inner
                 } catch (inner: Exception) {
                     CortexLog.error("SettingsStore", "migrate", "Migrations-Flag nicht setzbar: ${inner.message}")
                 }
@@ -195,7 +198,7 @@ object SettingsStore {
     private fun encryptSecret(key: String, value: String): String? = try {
         val cipher = aead?.encrypt(value.toByteArray(Charsets.UTF_8), key.toByteArray(Charsets.UTF_8))
         if (cipher != null) Base64.encodeToString(cipher, Base64.NO_WRAP) else null
-    } catch (e: Exception) {
+    } catch (e: Exception) {   // no-cancellation-rethrow (kein suspend im try)
         CortexLog.error("SettingsStore", "encrypt", "Verschluesseln fehlgeschlagen ($key): ${e.message}")
         null
     }
@@ -203,7 +206,7 @@ object SettingsStore {
     private fun decryptSecret(key: String, encoded: String): String? = try {
         val cipher = Base64.decode(encoded, Base64.NO_WRAP)
         aead?.decrypt(cipher, key.toByteArray(Charsets.UTF_8))?.toString(Charsets.UTF_8)
-    } catch (e: Exception) {
+    } catch (e: Exception) {   // no-cancellation-rethrow (kein suspend im try)
         CortexLog.error("SettingsStore", "decrypt", "Entschluesseln fehlgeschlagen ($key): ${e.message}")
         null
     }
@@ -220,6 +223,8 @@ object SettingsStore {
                     if (encoded != null) store[stringPreferencesKey(key)] = encoded
                     else store.remove(stringPreferencesKey(key))
                 }
+            } catch (e: CancellationException) {
+                throw e
             } catch (e: Exception) {
                 CortexLog.error("SettingsStore", "setSecret", "Persistieren fehlgeschlagen ($key): ${e.message}")
             }
@@ -231,6 +236,8 @@ object SettingsStore {
         storeScope.launch {
             try {
                 dataStore.edit { store -> keys.forEach { store.remove(stringPreferencesKey(it)) } }
+            } catch (e: CancellationException) {
+                throw e
             } catch (e: Exception) {
                 CortexLog.error("SettingsStore", "removeSecrets", "Entfernen fehlgeschlagen: ${e.message}")
             }

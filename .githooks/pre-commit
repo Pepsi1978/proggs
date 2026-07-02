@@ -87,4 +87,23 @@ if [ "$FAILED" -gt 0 ]; then
     exit 1
 fi
 
+# ---------------------------------------------------------------------------
+# CancellationException-Guard (Poka-Yoke Stufe 2, 2026-07-02): in Kotlin-Coroutine-Dateien
+# darf catch(Exception) die CancellationException nicht verschlucken (Almanach kotlin 2.1).
+# Bewusste Ausnahmen: Marker "// no-cancellation-rethrow" an der catch-Zeile.
+# ---------------------------------------------------------------------------
+CANCEL_CHECK="tools/check_cancellation_rethrow.py"
+if [ -f "$CANCEL_CHECK" ] && command -v python3 >/dev/null 2>&1; then
+    mapfile -t STAGED_KT < <(
+        git diff --cached --name-only --diff-filter=ACMR | grep -E '\.kt$' || true
+    )
+    if [ "${#STAGED_KT[@]}" -gt 0 ]; then
+        if ! python3 "$CANCEL_CHECK" "${STAGED_KT[@]}"; then
+            echo "[pre-commit] CancellationException-Guard: Verstoesse beheben und erneut committen."
+            exit 1
+        fi
+    fi
+fi
+
 exit 0
+

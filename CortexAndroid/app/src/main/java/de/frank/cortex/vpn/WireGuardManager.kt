@@ -49,7 +49,7 @@ object WireGuardManager {
             backend = GoBackend(context)
             tunnel = tunnelImpl
             CortexLog.info("WireGuard", "init", "GoBackend initialisiert")
-        } catch (e: Exception) {
+        } catch (e: Exception) {   // no-cancellation-rethrow (kein suspend im try)
             CortexLog.error("WireGuard", "init", "GoBackend-Initialisierung fehlgeschlagen: ${e.message}")
             _state.value = TunnelState.ERROR
             lastError = e.message
@@ -62,7 +62,7 @@ object WireGuardManager {
             config = Config.parse(reader)
             CortexLog.info("WireGuard", "parseConfig", "Konfiguration geparst")
             true
-        } catch (e: Exception) {
+        } catch (e: Exception) {   // no-cancellation-rethrow (kein suspend im try)
             CortexLog.error("WireGuard", "parseConfig", "Parse-Fehler: ${e.message}")
             lastError = "Konfigurationsfehler: ${e.message}"
             false
@@ -134,7 +134,7 @@ object WireGuardManager {
                 )
                 CortexLog.info("WireGuard", "connect", "Tunnel verbunden (Versuch ${attempt + 1})")
                 return@withContext true
-            } catch (e: Exception) {
+            } catch (e: Exception) {   // no-cancellation-rethrow (kein suspend im try)
                 lastEx = e
                 CortexLog.warn("WireGuard", "connect", "Versuch ${attempt + 1} fehlgeschlagen: ${e.message}")
                 delay(500)
@@ -176,7 +176,7 @@ object WireGuardManager {
             lastError = null
             CortexLog.info("WireGuard", "disconnect", "Tunnel getrennt")
             true
-        } catch (e: Exception) {
+        } catch (e: Exception) {   // no-cancellation-rethrow (kein suspend im try)
             CortexLog.error("WireGuard", "disconnect", "Trenn-Fehler: ${e.message}")
             _state.value = TunnelState.ERROR
             lastError = e.message

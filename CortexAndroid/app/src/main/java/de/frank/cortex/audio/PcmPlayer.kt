@@ -4,6 +4,7 @@ import android.media.AudioAttributes
 import android.media.AudioFormat
 import android.media.AudioTrack
 import de.frank.cortex.observability.CortexLog
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.isActive
@@ -71,7 +72,7 @@ class PcmPlayer {
         if (speed != 1.0f) {
             try {
                 newTrack.playbackParams = android.media.PlaybackParams().setSpeed(speed.coerceIn(0.5f, 2.0f))
-            } catch (e: Exception) {
+            } catch (e: Exception) {   // no-cancellation-rethrow (kein suspend im try)
                 CortexLog.warn("PcmPlayer", "start", "Tempo nicht setzbar: ${e.message}")
             }
         }
@@ -107,6 +108,10 @@ class PcmPlayer {
             ) {
                 delay(40)
             }
+        } catch (e: CancellationException) {
+            // delay(40) im try: die Cancellation der Vorlese-Coroutine muss propagieren,
+            // sonst kehrt writeAndAwait "erfolgreich" zurueck und der Aufrufer spielt weiter.
+            throw e
         } catch (e: Exception) {
             CortexLog.error("PcmPlayer", "writeAndAwait", "Abspiel-Fehler: ${e.message}")
         }

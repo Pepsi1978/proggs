@@ -349,7 +349,7 @@ class ChatViewModel : ViewModel() {
                             try {
                                 ChatSessionStore.enqueueOutbox(item)
                                 true
-                            } catch (e: Exception) {
+                            } catch (e: Exception) {   // no-cancellation-rethrow (kein suspend im try)
                                 CortexLog.error("ChatVM", "outbox", "Einreihen fehlgeschlagen: ${e.message}")
                                 false
                             }
@@ -561,7 +561,7 @@ class ChatViewModel : ViewModel() {
                 val items = withContext(Dispatchers.IO) {
                     try {
                         ChatSessionStore.listOutbox()
-                    } catch (e: Exception) {
+                    } catch (e: Exception) {   // no-cancellation-rethrow (kein suspend im try)
                         CortexLog.error("ChatVM", "outboxFlush", "Outbox nicht lesbar: ${e.message}")
                         emptyList()
                     }
@@ -640,7 +640,7 @@ class ChatViewModel : ViewModel() {
                 )
                 CortexLog.info("ChatVM", "persistPartial", "Abgebrochene Streaming-Antwort gesichert",
                     mapOf("session_id" to sessionId, "chars" to partial.length))
-            } catch (e: Exception) {
+            } catch (e: Exception) {   // no-cancellation-rethrow (kein suspend im try)
                 CortexLog.warn("ChatVM", "persistPartial", "Teil-Antwort konnte nicht gesichert werden: ${e.message}")
             }
         }

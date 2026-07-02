@@ -57,7 +57,7 @@ class Mp3Player(private val context: Context) {
                             if (speed != 1.0f) {
                                 mp.playbackParams = PlaybackParams().setSpeed(speed.coerceIn(0.5f, 2.0f))
                             }
-                        } catch (e: Exception) {
+                        } catch (e: Exception) {   // no-cancellation-rethrow (kein suspend im try)
                             CortexLog.warn("Mp3Player", "playAndAwait", "Tempo nicht setzbar: ${e.message}")
                         }
                         mp.start()
@@ -69,7 +69,7 @@ class Mp3Player(private val context: Context) {
                         true
                     }
                     mp.prepareAsync()
-                } catch (e: Exception) {
+                } catch (e: Exception) {   // no-cancellation-rethrow (kein suspend im try)
                     CortexLog.error("Mp3Player", "playAndAwait", "Abspiel-Fehler: ${e.message}")
                     finishOnce()
                 }
