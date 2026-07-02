@@ -5,13 +5,15 @@
 > und jede App, die Whisper ueber Groq nutzt. Trivialer Kleinkram (String, Doku) ausgenommen.
 > Loesungen sind **funktionserhaltend** — echte (auch leise/kurze) Sprache darf NIE verworfen werden.
 >
-> **Stand:** recherchiert am **2026-06-08** (7 Researcher parallel, offizielle Groq-Doku + OpenAI-
+> **Stand:** recherchiert am **2026-06-08**, **re-recherchiert am 2026-07-02** (Engine A: Firecrawl+MiniMax; keine neuen belastbaren STT-Bugs seit dem Stichtag) (7 Researcher parallel, offizielle Groq-Doku + OpenAI-
 > Whisper-Repo + peer-reviewed Paper zuerst). Software: **Groq Speech-to-Text API** mit
 > `whisper-large-v3` und `whisper-large-v3-turbo` (Cloud, keine lokale Version). App-Kontext:
 > VoiceAgent (.NET 10, WPF, NAudio, 16 kHz mono PCM). GitHub-Status per `gh` verifiziert.
 >
 > **Zugehoerige Best Practices:** [`best-practices/desktop/groq-transkription.md`](../../best-practices/desktop/groq-transkription.md)
 > (zweite Seite: wie man die Pipeline von vornherein richtig baut).
+
+> **Update 2026-07-02:** Keine belegten neuen Groq-Whisper-Halluzinations-/Rate-Limit-/Parameteraenderungen seit 2026-06-08 gefunden. Bestehende Abwehrkette bleibt massgeblich: VAD/Sprachgehalt vor Request, `verbose_json`, UND-Confidence-Gate, Blocklist nur bei Stille-Kontext.
 
 ---
 

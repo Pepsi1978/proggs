@@ -1,9 +1,11 @@
 # Groq-Transkription (Whisper large-v3 / turbo) — Best Practices
 
-**Stand:** 2026-06-08. Zwei Laeufe: (a) bug-fokussiert aus dem Almanach-Lauf #46624,
+**Stand:** 2026-07-02. Zwei Laeufe: (a) bug-fokussiert aus dem Almanach-Lauf #46624,
 (b) breiter Best-Practices-Lauf (7 Researcher parallel, offizielle Groq-/Microsoft-Learn-Doku zuerst).
 Software: **Groq Speech-to-Text API** (`whisper-large-v3`, `whisper-large-v3-turbo`), Cloud.
 Client-Kontext: Always-On-Voice-App VoiceAgent (.NET 10, WPF, NAudio, 16 kHz mono, statischer HttpClient).
+
+> **Update 2026-07-02:** Re-Recherche fand keine neuen belegten Groq-Whisper-STT-Regeln seit 2026-06-08; die bestehende mehrschichtige Stille-/Halluzinationsabwehr bleibt unveraendert.
 
 > **Zweite Seite der Medaille zum Bug-Almanach** ([`bugs/desktop/groq-transkription.md`](../../bugs/desktop/groq-transkription.md)):
 > der Almanach sagt *was schiefgeht*, diese Datei sagt *wie man die Pipeline von vornherein richtig baut*.
