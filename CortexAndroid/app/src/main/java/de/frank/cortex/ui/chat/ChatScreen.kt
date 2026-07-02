@@ -468,7 +468,8 @@ private fun SessionRow(
                 text = session.title,
                 fontWeight = FontWeight.SemiBold,
                 fontSize = 14.sp,
-                maxLines = 2,
+                // 1-3 Zeilen fuer den KI-Intentions-Titel (Frank-Wunsch 2026-07-02, vorher 2)
+                maxLines = 3,
                 overflow = TextOverflow.Ellipsis,
                 color = MaterialTheme.colorScheme.onSurface
             )

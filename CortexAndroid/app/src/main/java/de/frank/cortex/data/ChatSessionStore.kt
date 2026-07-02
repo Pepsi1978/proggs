@@ -90,6 +90,17 @@ object ChatSessionStore {
         }
     }
 
+    /** Setzt den (KI-generierten Intentions-)Titel einer Session — Frank-Wunsch 2026-07-02. */
+    fun updateSessionTitle(sessionId: String, title: String) {
+        val clean = title.trim().ifBlank { return }
+        helper.writableDatabase.update(
+            "sessions",
+            ContentValues().apply { put("title", clean.take(220)) },
+            "id = ?",
+            arrayOf(sessionId)
+        )
+    }
+
     fun deleteSession(sessionId: String) {
         val db = helper.writableDatabase
         db.beginTransaction()

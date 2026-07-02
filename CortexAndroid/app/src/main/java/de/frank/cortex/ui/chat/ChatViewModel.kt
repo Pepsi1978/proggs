@@ -259,6 +259,7 @@ class ChatViewModel : ViewModel() {
 
         val state = _uiState.value
         val sessionId = state.sessionId
+        val isFirstMessage = state.messages.isEmpty()
 
         // User-Nachricht hinzufügen
         val userMsg = ChatMessage(text = text, isUser = true)
@@ -267,6 +268,9 @@ class ChatViewModel : ViewModel() {
         viewModelScope.launch {
             val sendStartedAt = System.currentTimeMillis()
             updateSessionsAfterPersist(sessionId, userMsg)
+            // Sessions-Titel = KI-Zusammenfassung der INTENTION der ersten Frage (Frank-Wunsch
+            // 2026-07-02), im Hintergrund via gemini-3.1-flash-lite. Fallback: Roh-Text bleibt.
+            if (isFirstMessage) generateSessionIntentTitle(sessionId, text)
             try {
                 if (WireGuardManager.state.value != TunnelState.CONNECTED) {
                     _uiState.update { it.copy(isLoading = false, error = "VPN nicht aktiv") }
@@ -535,6 +539,24 @@ class ChatViewModel : ViewModel() {
             } catch (e: Exception) {
                 CortexLog.error("ChatVM", "deleteSession", "Session konnte nicht gelöscht werden: ${e.message}")
                 _uiState.update { it.copy(error = "Session konnte nicht gelöscht werden: ${e.message}") }
+            }
+        }
+    }
+
+    /** Erzeugt im Hintergrund den Intentions-Titel der Session (1-3 Zeilen) und speichert ihn.
+     *  Fehler sind unkritisch — dann bleibt der bisherige Anfangstext-Titel (funktionserhaltend). */
+    private fun generateSessionIntentTitle(sessionId: String, firstMessage: String) {
+        viewModelScope.launch(Dispatchers.IO) {
+            try {
+                val title = ApiClient.geminiSessionTitle(firstMessage)
+                if (title.isNotBlank()) {
+                    ChatSessionStore.updateSessionTitle(sessionId, title)
+                    refreshSessions()
+                }
+            } catch (e: CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                CortexLog.warn("ChatVM", "sessionTitle", "Intentions-Titel fehlgeschlagen (Roh-Titel bleibt): ${e.message}")
             }
         }
     }

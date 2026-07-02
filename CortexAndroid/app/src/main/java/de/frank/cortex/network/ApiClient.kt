@@ -635,6 +635,62 @@ object ApiClient {
         return result
     }
 
+    /**
+     * Intentions-Titel fuer die Sessions-Leiste (Frank-Wunsch 2026-07-02): fasst die ABSICHT der
+     * ersten Frage in 1-3 kurzen Zeilen zusammen. Laeuft im Hintergrund auf gemini-3.1-flash-lite
+     * mit Thinking medium (thinkingBudget 4096, gleiche Stufe wie serverseitig 'medium').
+     */
+    suspend fun geminiSessionTitle(text: String): String {
+        val key = SettingsStore.geminiApiKey
+        if (key.isBlank()) throw IllegalStateException("Gemini-Schlüssel fehlt")
+        val prompt = """
+            Fasse die Absicht der folgenden Nutzer-Nachricht als kurzen Titel zusammen.
+            Der Titel soll sofort erkennen lassen, was der Nutzer wollte (die Intention, nicht den Wortlaut).
+            Länge: ein bis maximal drei kurze Zeilen, insgesamt höchstens 160 Zeichen.
+            Deutsch, mit echten Umlauten. Keine neuen Informationen erfinden.
+            Keine Anführungszeichen, kein Punkt am Ende, keine Erklärung, kein Markdown.
+            Gib ausschließlich den Titel zurück.
+        """.trimIndent()
+        val body = """
+        {
+            "contents": [{"parts": [
+                {"text": ${JSONObject.quote(prompt)}},
+                {"text": ${JSONObject.quote(text.take(4000))}}
+            ]}],
+            "generationConfig": {
+                "thinkingConfig": {"thinkingBudget": 4096},
+                "temperature": 0.2,
+                "maxOutputTokens": 4200
+            }
+        }
+        """.trimIndent()
+
+        val request = Request.Builder()
+            .url("https://generativelanguage.googleapis.com/v1beta/models/gemini-3.1-flash-lite:generateContent")
+            .header("x-goog-api-key", key)
+            .post(body.toRequestBody(jsonMediaType))
+            .build()
+
+        val response = withContext(Dispatchers.IO) { externalClient.newCall(request).execute() }
+        val responseBody = response.body?.string() ?: throw Exception("Leere Gemini-Antwort")
+        if (!response.isSuccessful) throw Exception("Gemini-Fehler ${response.code}: $responseBody")
+
+        val json = JSONObject(responseBody)
+        val candidate = json.optJSONArray("candidates")?.optJSONObject(0)
+        val blockReason = json.optJSONObject("promptFeedback")?.optString("blockReason").orEmpty()
+        if (blockReason.isNotBlank()) throw Exception("Gemini blockiert: $blockReason")
+        val result = candidate
+            ?.getJSONObject("content")
+            ?.getJSONArray("parts")
+            ?.getJSONObject(0)
+            ?.getString("text")
+            ?.trim()
+            ?.trim('"', '„', '“')
+            ?: throw Exception("Kein Titel in Gemini-Antwort")
+        CortexLog.info("Gemini", "sessionTitle", "Session-Titel erzeugt", mapOf("input_len" to text.length, "title" to result.take(80)))
+        return result
+    }
+
     suspend fun geminiTitle(text: String): String {
         val key = SettingsStore.geminiApiKey
         if (key.isBlank()) throw IllegalStateException("Gemini-Schlüssel fehlt")
