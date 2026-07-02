@@ -143,8 +143,8 @@ class ChatViewModel : ViewModel() {
     private val ttsSemaphore = Semaphore(TTS_MAX_CONCURRENT_SYNTH)
 
     init {
-        // Vorlese-Schalter aus den Einstellungen uebernehmen, damit Chat-Icon + Auto-Vorlesen
-        // denselben Stand zeigen wie der "Antwort vorlesen"-Schalter in den Einstellungen.
+        // Vorlese-Zustand aus dem Store uebernehmen — der Lautsprecher-Knopf im Gespraech ist der
+        // EINZIGE Vorlesen-Schalter (der Einstellungen-Schalter wurde 2026-07-02 entfernt).
         _uiState.update { it.copy(ttsEnabled = SettingsStore.ttsEnabled, responseSize = SettingsStore.responseSize) }
         refreshSessions()
 

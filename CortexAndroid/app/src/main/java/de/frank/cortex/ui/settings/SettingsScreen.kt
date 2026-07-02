@@ -20,7 +20,6 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.VolumeOff
 import androidx.compose.material.icons.automirrored.filled.VolumeUp
 import androidx.compose.material.icons.automirrored.filled.Login
 import androidx.compose.material.icons.filled.*
@@ -68,7 +67,6 @@ fun SettingsScreen(
     var groqApiKey by remember { mutableStateOf(SettingsStore.groqApiKey) }
     var geminiApiKey by remember { mutableStateOf(SettingsStore.geminiApiKey) }
     var googleTtsApiKey by remember { mutableStateOf(SettingsStore.googleTtsApiKey) }
-    var ttsEnabled by remember { mutableStateOf(SettingsStore.ttsEnabled) }
     var ttsProvider by remember { mutableStateOf(SettingsStore.ttsProvider) }
     var ttsVoice by remember { mutableStateOf(SettingsStore.ttsVoice.removePrefix("de-DE-Chirp3-HD-")) }
     var edgeTtsVoice by remember { mutableStateOf(SettingsStore.edgeTtsVoice) }
@@ -436,41 +434,9 @@ fun SettingsScreen(
             border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline)
         ) {
             Column {
-                // TTS toggle
-                Row(
-                    modifier = Modifier.padding(14.dp),
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(12.dp)
-                ) {
-                    Icon(
-                        if (ttsEnabled) Icons.AutoMirrored.Filled.VolumeUp else Icons.AutoMirrored.Filled.VolumeOff,
-                        null, tint = Orange, modifier = Modifier.size(21.dp)
-                    )
-                    Text("Antworten vorlesen", fontSize = 14.sp, modifier = Modifier.weight(1f))
-                    // iOS-style toggle
-                    Surface(
-                        shape = RoundedCornerShape(999.dp),
-                        color = if (ttsEnabled) Orange else if (isDark) DarkFieldBorder else LightFieldBorder,
-                        modifier = Modifier
-                            .width(46.dp)
-                            .height(27.dp)
-                            .clickable { ttsEnabled = !ttsEnabled; SettingsStore.ttsEnabled = ttsEnabled }
-                    ) {
-                        Box(
-                            modifier = Modifier.fillMaxSize().padding(3.dp),
-                            contentAlignment = if (ttsEnabled) Alignment.CenterEnd else Alignment.CenterStart
-                        ) {
-                            Box(
-                                modifier = Modifier
-                                    .size(21.dp)
-                                    .clip(RoundedCornerShape(999.dp))
-                                    .background(MaterialTheme.colorScheme.background)
-                            )
-                        }
-                    }
-                }
-
-                HorizontalDivider(color = MaterialTheme.colorScheme.outline, modifier = Modifier.padding(horizontal = 14.dp))
+                // Der fruehere "Antworten vorlesen"-Schalter wurde bewusst ENTFERNT (Frank-Wunsch
+                // 2026-07-02): Das Vorlesen wird ausschliesslich ueber den Lautsprecher-Knopf im
+                // Gespraech gesteuert (an = immer vorlesen, aus = nie) — EIN Schalter statt zwei.
 
                 // Vorlese-Motor (TTS-Provider) — Chirp 3: HD (Google) vs. Edge (Microsoft)
                 val isEdgeSel = ttsProvider == SettingsStore.TTS_PROVIDER_EDGE
