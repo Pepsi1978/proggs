@@ -7,7 +7,8 @@
 > (SO/dev.to/Medium/Blogs) und eigenen Vorfaellen. Loesungen sind **funktionserhaltend**
 > (nie "Feature/encoding weglassen", nie Zeichen verwerfen).
 >
-> **Stand:** recherchiert am **2026-06-02** fuer **CPython 3.13.13** (live ermittelt:
+> **Stand:** recherchiert am **2026-06-02**, **re-recherchiert am 2026-07-02** (Engine A: Firecrawl+MiniMax)
+> fuer **CPython 3.13.13** (live ermittelt:
 > **Anker:** python=3.13.13  <!-- maschinenlesbar fuer check-version-anchor.py -->
 > `python --version`). Kern-Anker: auf dieser Version ist
 > `locale.getpreferredencoding(False)` = **cp1252**, `sys.stdout.encoding` = **cp1252**,
@@ -15,6 +16,13 @@
 > Default** (PEP 686) — auf 3.13.x gilt cp1252 als Datei-/Stream-Default. Versionsangaben
 > pro Bug beachten: einige "per Design"-Fallen gelten dauerhaft, einige Bugs sind in
 > aelteren Versionen schon gefixt (siehe Sektion 8).
+>
+> **Versions-Horizont (Re-Recherche 2026-07-02):** Am Kern-Anker aendert sich NICHTS — bestaetigt.
+> **Python 3.14** ist released (07.10.2025, aktuell 3.14.6) und haelt **cp1252 als Windows-Default bei**
+> (belegt via CPython/Claude-Code-Issue 2026-06 auf Win 11 + 3.14). **PEP 686** ist **Final**, Ziel
+> **unveraendert Python 3.15** (erwartet ~Okt 2026) — dort wird UTF-8-Mode Default (abschaltbar `PYTHONUTF8=0`).
+> Frank laeuft 3.13.13; 3.13.14 existiert (Mini-Patch, keine Windows-Encoding-Relevanz). Solange < 3.15:
+> **jedes `open()`/`subprocess`/`json.dump` braucht explizit `encoding='utf-8'`** — der Almanach bleibt voll gueltig.
 
 ---
 
@@ -103,7 +111,11 @@ machbar.
 **FIX:** `set PYTHONUTF8=1` / `python -X utf8`. Stellt `open()`→UTF-8, stdin/stdout→UTF-8/
 surrogateescape, stderr→UTF-8/backslashreplace. Ersetzt NICHT die explizite `encoding=`-Angabe
 im eigenen Code (die ist robuster, weil unabhaengig von der Umgebung).
-**Quelle:** PEP 540, PEP 686, dev.to/methane/python-use-utf-8-mode-on-windows-212i
+**Hinweis (echtes OS-Encoding ermitteln):** `locale.getpreferredencoding(False)` wird vom UTF-8-Mode
+**verfaelscht** (liefert dann `utf-8`, nicht das echte Locale). Seit **Python 3.11** gibt es
+`locale.getencoding()`, das IMMER das echte Locale-Encoding (auf Windows cp1252) liefert — unabhaengig
+vom UTF-8-Mode. Nutzen, wenn man das tatsaechliche OS-Encoding braucht (z. B. beim Lesen von Konsolen-Output).
+**Quelle:** PEP 540, PEP 686, dev.to/methane/python-use-utf-8-mode-on-windows-212i, docs.python.org (locale.getencoding, 3.11+)
 
 ### 1.4 `print()`/stdout schreibt cp1252 bei Pipe/Redirect (Konsole ≠ Pipe)  ⭐ HAEUFIG
 **Symptom:** `print("café 😀")` zeigt im Terminal korrekt, aber `python x.py > out.txt`,
