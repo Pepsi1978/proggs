@@ -1,4 +1,25 @@
-# Analyse-Dimensionen — Brille `bugs` (Logik-/Codefehler)
+# Brille `bugs` — Profil-Checkliste, Dimensionen und Loop-Stufen
+
+## Schritt 1 — Funktionsprofil (vollständige Checkliste)
+
+Eigenständig und präzise charakterisieren, was die Implementierung fachlich-funktional ist:
+- **Zweck und Verantwortung:** Welches konkrete Problem löst dieses Modul? Welche fachliche Rolle?
+- **Funktionstyp:** Zu welcher Klasse gehört es (Berechnung, Transformation, Persistenz,
+  Kommunikation, Zustandsverwaltung, Validierung, Orchestrierung, Rendering, Caching,
+  Scheduling, Sicherheit, IO, Parsing, Synchronisation, Event-Handling …)? Mehrere möglich —
+  dann alle benennen.
+- **Inputs und Outputs:** Welche Daten/Signale/Ereignisse fließen rein/raus? Realistische
+  Wertebereiche, Typen, Häufigkeiten, Quellen?
+- **Fachliche Invarianten und Korrektheitskriterien:** Was muss jederzeit gelten,
+  unabhängig von der Code-Form?
+- **Lebenszyklus und Aufrufmuster:** Einmalig, wiederholt, parallel, asynchron,
+  ereignisgetrieben, batchweise, persistent, transient?
+- **Externe Wechselwirkungen:** Mit welchen Komponenten/Systemen interagiert es,
+  welche Annahmen macht es über diese?
+- **Implizite Kontextabhängigkeiten:** Welche Umgebungs-, Zeit-, Konfigurations- oder
+  Zustandsannahmen sind nicht ausgesprochen, aber vorausgesetzt?
+
+## Schritt 2 — Debugging-Dimensionen
 
 Mindestens diese generischen Dimensionen auf Anwendbarkeit prüfen, nach Relevanz für den
 ermittelten Funktionstyp priorisieren, pro Dimension kurz begründen warum wichtig
@@ -37,3 +58,11 @@ ermittelten Funktionstyp priorisieren, pro Dimension kurz begründen warum wicht
     aus Schritt 0 (höchste Priorität, empirisch belegt).
 13. **BEST-PRACTICE-Abweichungen** — jede Stelle, an der die Implementierung vom
     dokumentierten Sollzustand abweicht.
+
+## Schritt 5 — Loop-Tiefenstufen (Brille bugs)
+
+- **Loop 1:** offensichtliche logische Fehler im Hauptpfad + direkte Treffer aus dem Almanach.
+- **Loop 2:** Randfälle, implizite Annahmen, dokumentierte Versions-/Umgebungs-Fallen.
+- **Loop 3:** Wechselwirkungen, Reihenfolgeprobleme, subtile Zustandskorruption.
+- **Loop 4+:** nicht offensichtliche Inkonsistenzen, fachliche Edge Cases entlang der
+  Domänenregeln aus dem Funktionsprofil und der bereichsspezifischen Almanach-Dimensionen.

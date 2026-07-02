@@ -1,16 +1,21 @@
 ---
 name: tiefen-debugging
-description: "Nutze diesen Skill IMMER bei 'komplettes Debugging fuer [App]', 'tiefgreifendes/iteratives Debugging der ganzen App', 'Tiefen-Debugging', 'debugge die gesamte App', 'suche alle Bugs/Logikfehler in [App]' (Brille bugs) ODER 'Performance-Debugging fuer [App]', 'Performance-Analyse der ganzen App', 'finde Engpaesse in [App]', 'optimiere die Performance ueberall' (Brille performance) — auch bei 'mach das gleiche nochmal fuer App Y'. Fuehrt das 7-Schritte-Protokoll ueber die KOMPLETTE App aus: Bug-Almanach-Grundierung ZUERST, Funktions-/Lastprofil, priorisierte Dimensionen, CBR-Loops mit steigender Tiefe, verhaltens- und designneutrale Fixes, Build+Install-Verifikation, drei Ergebnis-Listen und Wissens-Rueckschreibung (RETAIN) in Almanach + bug-cases. NICHT fuer einzelne konkrete Bugs (dafuer systematic-debugging) — dies ist der Ganze-App-Durchlauf."
+description: "Nutze diesen Skill IMMER bei 'komplettes/tiefgreifendes/iteratives Debugging' — egal ob fuer 'die letzte Implementierung' ODER 'die ganze App [X]' — sowie bei 'Tiefen-Debugging', 'debugge die gesamte App', 'suche alle Bugs/Logikfehler in [App/der letzten Aenderung]' (Brille bugs) ODER 'Performance-Debugging', 'Performance-Analyse', 'finde Engpaesse', 'optimiere die Performance [der App/der letzten Implementierung]' (Brille performance) — auch bei 'mach das gleiche nochmal fuer App Y'. Fuehrt das 7-Schritte-Protokoll aus: Bug-Almanach-Grundierung ZUERST, Funktions-/Lastprofil, priorisierte Dimensionen, CBR-Loops mit steigender Tiefe, verhaltens- und designneutrale Fixes, Build+Install-Verifikation, drei Ergebnis-Listen und Wissens-Rueckschreibung (RETAIN) in Almanach + bug-cases. NICHT fuer EINEN konkreten bekannten Bug (dafuer systematic-debugging) — dies ist der systematische Durchlauf ueber einen ganzen Scope."
 ---
 
 # Tiefen-Debugging — 7-Schritte-Protokoll (Brille: bugs | performance)
 
-Ein kompletter, iterativer Analyse-Durchlauf über eine ganze App/Software, der bestehende
-Funktionalität, Verhalten, Schnittstellen und Design NIEMALS verändert. Zwei Brillen,
-EIN Gerüst: `bugs` (Logik-/Codefehler) und `performance` (Engpässe). Entstanden aus zwei
-Real-Läufen über CortexAndroid am 2026-07-02 (15 Bugfixes bzw. 8 Optimierungen).
+Ein tiefgreifender, iterativer Analyse-Durchlauf, der bestehende Funktionalität, Verhalten,
+Schnittstellen und Design NIEMALS verändert oder beeinträchtigt. Zwei Brillen, EIN Gerüst:
+`bugs` (Logik-/Codefehler) und `performance` (Engpässe). Vorhandenes Bug-Wissen
+(Bug-Almanach, Bug-Fall-Datenbank) und Best Practices werden AUSNAHMSLOS genutzt —
+präventiv (vorher nachschlagen), reaktiv (bei jedem Fund matchen) und lernend (neue Funde
+zurückschreiben). Entstanden aus zwei Real-Läufen über CortexAndroid am 2026-07-02
+(15 Bugfixes bzw. 8 Optimierungen).
 
 ## Parameter bestimmen (zuerst)
+
+**Brille** (Analyse-Fokus):
 
 | Franks Wortlaut enthält … | Brille |
 |---------------------------|--------|
@@ -18,7 +23,15 @@ Real-Läufen über CortexAndroid am 2026-07-02 (15 Bugfixes bzw. 8 Optimierungen
 | Performance, langsam, Engpässe, optimieren, flüssiger | `performance` |
 | beides / unklar | kurz nachfragen (EINE Frage, dann loslegen) |
 
-Dann die passende Dimensionsliste laden:
+**Scope** (was analysiert wird):
+
+| Franks Wortlaut | Scope |
+|-----------------|-------|
+| "die letzte Implementierung", "die letzte Änderung", nichts Genanntes | letzte Implementierung (jüngste Commits/Feature — per git log eingrenzen) |
+| "die ganze App", "die gesamte [App]", "in allen Bereichen" | komplette App/Software |
+
+Dann die passende Dimensionsliste laden (enthält auch die Schritt-1-Profil-Checkliste
+und die brillen-spezifischen Loop-Tiefenstufen):
 - `references/dimensionen-bugs.md` (Brille bugs)
 - `references/dimensionen-performance.md` (Brille performance)
 
@@ -56,12 +69,14 @@ direkten Almanach-Treffer die schnellsten und sichersten Funde (3 von 15 sofort)
 
 ### Schritt 1 — Funktions- (und bei performance: Last-)Charakterisierung
 
-Alle Quelldateien der App selbst lesen (bei >500-Zeilen-Dateien NIE per Agent editieren
-lassen). Profil erstellen: Zweck, Funktionstypen, Inputs/Outputs, Invarianten, Lebenszyklus,
-externe Wechselwirkungen, implizite Annahmen. Bei `performance` zusätzlich: Hot Paths
-(pro Frame / pro Event / pro Request?), Skalierungsdimensionen, kritische Metrik
-(Latenz/Frame-Time/Energie/Speicher), Ressourcenprofil. Das Profil — nicht der Code-Ort —
-ist die Grundlage aller folgenden Schritte.
+Alle Quelldateien des Scopes selbst lesen (bei >500-Zeilen-Dateien NIE per Agent editieren
+lassen). Präzises Profil nach der vollständigen **Profil-Checkliste in der geladenen
+references-Datei** erstellen — Kurzfassung: Zweck/Verantwortung, Funktionstypen,
+Inputs/Outputs mit realistischen Wertebereichen, fachliche Invarianten, Lebenszyklus/
+Aufrufmuster, externe Wechselwirkungen, implizite Kontextabhängigkeiten. Bei `performance`
+zusätzlich das Lastprofil: Häufigkeit/Hot-Path-Charakter, Skalierungsdimensionen,
+kritische Metrik, Ressourcenprofil. Das Profil — nicht der Code-Ort — ist die Grundlage
+aller folgenden Schritte.
 
 ### Schritt 2 — Analyse-Dimensionen ableiten
 
@@ -77,18 +92,26 @@ Dateien/Funktionen/Hot-Paths als Karte für die Fix-Arbeit — kein Filter für 
 
 ### Schritt 4 — Baseline fixieren
 
-Intendiertes Verhalten, Design/UX-Charakteristik, Schnittstellen und beobachtbare
-Seiteneffekt-Reihenfolgen als INVARIANT definieren. Grauzonen im Zweifel als intendiert
-behandeln und in Liste (c) melden. Performance-Warnung: Lazy/Eager-Wechsel, Caching,
-Parallelisierung, Batching und Off-Main-Auslagerung können Verhalten subtil ändern —
-nur bei nachweisbarer Äquivalenz erlaubt.
+Explizit unterscheiden:
+- **intendiertes Verhalten** — zu erhalten, auch wenn unelegant (INVARIANT: Verhalten,
+  Design/UX-Charakteristik, Schnittstellen/API-Form/Fehlertypen, beobachtbare
+  Seiteneffekt-Reihenfolgen),
+- **fehlerhaftes Verhalten** — DAS ist zu korrigieren (die Baseline friert keine Bugs ein),
+- **Grauzonen** — im Zweifel als intendiert behandeln und in Liste (c) melden.
+
+Best Practices verändern die Baseline NICHT eigenmächtig — sie sind Prüf-Referenz. Würde
+eine Best-Practice-Angleichung Verhalten/Design ändern → Liste (b), kein stiller Fix.
+Performance-Warnung: Lazy/Eager-Wechsel verschieben Fehlerzeitpunkte, Caching kann Stale-
+Daten erzeugen, Parallelisierung ändert Seiteneffekt-Reihenfolgen, Batching ändert
+Latenz-Wahrnehmung, Off-Main-Auslagerung weicht Synchronisierungs-Annahmen auf —
+nur bei nachweisbarer Äquivalenz erlaubt; kennt der Almanach für eine geplante Optimierung
+bereits eine dokumentierte Falle, gilt sie verbindlich.
 
 ### Schritt 5 — Iterative Loops mit CBR (Tiefe steigend)
 
-- Loop 1: Offensichtliches auf dem Hauptpfad/Hot-Path + direkte Almanach-Treffer.
-- Loop 2: Randfälle, implizite Annahmen, Allocation/Cache, Versions-Fallen.
-- Loop 3: Wechselwirkungen, Nebenläufigkeit, versteckte Synchronisation, Kaskaden.
-- Loop 4+: Subtiles entlang der modulspezifischen + Almanach-Dimensionen.
+Analysieren entlang der Schritt-2-Priorisierung — bereichsspezifische Almanach-Dimensionen
+zuerst. Die brillen-spezifischen Loop-Tiefenstufen (Loop 1–4+) stehen in der geladenen
+references-Datei.
 
 Bei JEDEM Fund zuerst CBR:
 - RETRIEVE: `~/proggs/.claude/agent-memory/shared/bug-cases.jsonl` greppen UND — ab dem
@@ -110,8 +133,8 @@ liefern. Danach die technische Verifikation (siehe Ablauf unten).
 
 Drei getrennte Ergebnis-Listen ausgeben:
 - **(a) Behoben** — was, wie, warum Baseline unverändert, genutzte Almanach-Einträge.
-- **(b) Nicht eigenmächtig** — Fixes, die Verhalten/Design berühren würden, mit
-  Trade-off und Empfehlung.
+- **(b) Nicht eigenmächtig** — Fixes, die Verhalten/Design berühren würden (auch
+  Best-Practice-Angleichungen mit Verhaltensänderung), mit Trade-off und Empfehlung.
 - **(c) Grauzonen** — mehrdeutiges Verhalten / unklare Äquivalenz.
 
 Dann PFLICHT-Rückschreibung (Funde dürfen nicht verkommen):
@@ -144,3 +167,9 @@ Dann PFLICHT-Rückschreibung (Funde dürfen nicht verkommen):
 - Performance-Behauptungen als Messwerte ausgeben (statisch hergeleitet ist nicht
   gemessen — ehrlich kennzeichnen, Baseline-Messung als Folgeaufgabe vorschlagen)
 - Build/Install überspringen, wenn die App baubar ist (Verifikationspflicht)
+
+## Haltung
+
+Sei allumfassend und kreativ; achte besonders auf subtile, nicht offensichtliche Funde
+entlang der modulspezifischen UND der bereichsspezifischen (Almanach-)Dimensionen —
+niemals auf Kosten bestehender Funktionalität oder des Designs.

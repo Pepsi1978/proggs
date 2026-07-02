@@ -1,4 +1,35 @@
-# Analyse-Dimensionen — Brille `performance` (Engpässe)
+# Brille `performance` — Last-Checkliste, Dimensionen und Loop-Stufen
+
+## Schritt 1 — Funktions- und Lastprofil (vollständige Checkliste)
+
+**Funktionale Identität:**
+- **Zweck und Verantwortung:** Welches konkrete Problem löst dieses Modul?
+- **Funktionstyp:** Berechnung, Transformation, Persistenz, Kommunikation,
+  Zustandsverwaltung, Rendering, Caching, Scheduling, IO, Parsing, Event-Handling,
+  Streaming, Orchestrierung … (mehrere möglich).
+- **Inputs und Outputs:** Welche Daten/Ereignisse fließen rein/raus, in welchen
+  Wertebereichen und realistischen Größenordnungen?
+
+**Lastprofil und Skalierungsverhalten:**
+- **Häufigkeit und Hot-Path-Charakter:** Wie oft läuft dieser Code unter realistischer
+  Nutzung — pro Sekunde, pro User-Aktion, pro Frame, pro Request, einmalig beim Start,
+  sporadisch?
+- **Skalierungsdimensionen:** Womit wächst die Arbeit — Eingabegröße N, Anzahl Items,
+  Nutzer, Datenvolumen, Frequenz, Parallelität, Zustandsgröße? Wachstumstyp (linear,
+  mehrdimensional, burst-artig)?
+- **Kritische Metrik:** Latenz, Durchsatz, Reaktionszeit, Frame-Time, Boot-Dauer,
+  Energieverbrauch oder Speicher-Footprint — was dominiert, was ist sekundär?
+- **Ressourcenprofil:** CPU, Memory/Allocation, IO, Netzwerk, GPU, Energie, Threads,
+  Locks, Connections — was wird am stärksten beansprucht?
+
+**Kontext:**
+- **Lebenszyklus:** einmalig, wiederholt, parallel, asynchron, ereignisgetrieben,
+  batchweise, kontinuierlich?
+- **Externe Wechselwirkungen:** welche Systeme, mit welcher erwartbaren Latenz/Frequenz?
+- **Implizite Kontextannahmen:** Datenverteilungen, Cache-Zustand, typische Last,
+  Hardware, Umgebung, Parallelitäts-Annahmen.
+
+## Schritt 2 — Performance-Dimensionen
 
 Unterschiedliche Funktions-/Lasttypen haben fundamental unterschiedliche Engpass-Profile —
 Auswahl und Priorisierung müssen zum konkreten Modul passen, nicht zu einer Standardliste.
@@ -49,6 +80,23 @@ begründen; nicht anwendbare mit Begründung überspringen:
     Performance-Falle des Bereichs aus Schritt 0 (höchste Priorität).
 16. **BEST-PRACTICE-Abweichungen** — jede Abweichung vom dokumentierten
     Performance-Sollzustand.
+
+## Schritt 5 — Loop-Tiefenstufen (Brille performance)
+
+- **Loop 1:** offensichtliche Engpässe auf dem Hot Path (überflüssige Arbeit, falsche
+  Datenstruktur, N+1-Muster) + direkte Treffer aus dem Almanach.
+- **Loop 2:** Allocation-/Memory-Druck, Cache-Wirksamkeit, Sequenz vs. Parallelisierbarkeit,
+  einfache Lazy/Eager-Korrekturen, dokumentierte Versions-/Umgebungs-Fallen.
+- **Loop 3:** subtile Wechselwirkungen — Logging-Overhead unter Last, versteckte
+  Synchronisation, schlechte Cache-Locality, indirekte Re-Renders, Kaskadeneffekte
+  zwischen Modulen.
+- **Loop 4+:** nicht offensichtliche Engpässe entlang der modulspezifischen
+  Lastdimensionen und der bereichsspezifischen Almanach-Dimensionen, Mikro-Optimierungen
+  mit nachweisbarer Wirkung, Skalierungs-Edge-Cases an den Grenzen des realistischen
+  Lastprofils.
+
+**Trade-off-Format für Liste (b):** z. B. „spart ~X% Zeit, verschiebt aber den
+Fehlerzeitpunkt / ändert die Sichtbarkeitsreihenfolge / erhöht Speicher um Y".
 
 **Ehrlichkeits-Regel:** Alle Funde sind statisch hergeleitet, keine Messwerte. Im
 Abschlussbericht klar kennzeichnen und bei Bedarf eine Baseline-Messung
