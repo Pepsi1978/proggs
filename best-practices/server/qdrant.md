@@ -18,6 +18,7 @@
 | 4 | Client anbinden | korrekter Port (REST 6333), ohne TLS explizite `http://`-URL | §4 |
 | 5 | Tunen | Quantisierung (Scalar int8/TurboQuant 1.18); `hnsw_ef` zur Suche steuern; Memory-Monitoring | §5 |
 | 6 | Hierarchische Kategorien (Haupt/Unter) filtern | Pfad-String `Haupt/Unter` fuer den Anzeige-Wert + **separates `parent`-Feld** (Keyword-Index) fuer „alles unter Haupt" (`MatchValue`) — KEIN Praefix-Operator in Qdrant. Index VOR Ingest. | §6 |
+| 7 | Einzelfeld + abgeleitetes Array im Payload (z.B. `category`+`categories`, `parent`+`parents`) | Das VOLLE Feld-Set IMMER ZUSAMMEN schreiben — in JEDEM Schreib-/Verwaltungs-/Export-Weg (store/update/rename/detach/move/trash/restore/backfill); Filter matchen beide Formen (`should`). Sonst Feld-Drift: der Lesepfad (bevorzugt das Array) zeigt alte Werte (bugs/server/qdrant.md §9, Tiefen-Debugging 2026-07-02). | §6 |
 
 ---
 

@@ -7,7 +7,8 @@
 >
 > **Stand:** recherchiert am **2026-06-22** (Firecrawl + MiniMax M3, quellentreu; offizielle qdrant.tech-
 > Docs/Blog + GitHub-Issues). **Changelog-Abgleich 2026-06-22:** v1.18.2 (4. Juni 2026) ist weiterhin die
-> **neueste stabile Version** — kein 1.19+. **Anker:** Qdrant **1.18.2** (live: `curl http://127.0.0.1:6333/` → version
+> **neueste stabile Version** — kein 1.19+. **Ergaenzt 2026-07-02** (Tiefen-Debugging second-brain-server):
+> NEU §9 Payload-Schema-Drift bei Einzelfeld→Array-Migration (Kurzcheck #14). **Anker:** Qdrant **1.18.2** (live: `curl http://127.0.0.1:6333/` → version
 > 1.18.2), Docker-Image `qdrant/qdrant:latest`, im Stack mit mem0 2.0.7 (Embeddings @1536).
 > Verwandt: [`self-hosted-ai-agent-server.md`](self-hosted-ai-agent-server.md), [`mem0.md`](mem0.md), [`wireguard.md`](wireguard.md).
 
@@ -30,6 +31,7 @@
 | 11 | Payload-Index NACH dem Ingest angelegt | Der **filterable HNSW** zieht nur Filter-Kanten, wenn der Payload-Index **VOR** den Daten existiert. Nachtraeglich angelegt → HNSW muss neu gebaut werden. Neues Filterfeld (z.B. `parent`) auf Bestand → Index anlegen + Reindex einplanen. | §7 |
 | 12 | `nested`-Filter auf Array-von-Objekten | `nested` ist noetig, damit mehrere Bedingungen **dasselbe** Array-Element treffen (sonst array-uebergreifend). Aber: Community berichtet **unzuverlaessige/langsamere Index-Nutzung** bei `nested` (#2256); „alle diese Werte gleichzeitig"-Subset-Match ist offener Feature-Request (#4679). Fuer einfache Kategorien lieber flache Felder. | §7 |
 | 13 | ⭐ `client.scroll(..., with_payload=True)` ueber viele/grosse Payloads | Laedt ALLE Payload-Felder ALLER Punkte gleichzeitig in den **Client**-RAM (nicht Qdrant-RAM!). Bei grossen Feldern (z.B. Volltext 1:1 pro Chunk) + periodischem Aufruf → Client-Container-OOM-Loop. Fuer Zaehl-/Listen-Operationen NUR die noetigen Felder laden: `with_payload=["feld1","feld2"]` statt `True`. Container-Memory-Limit hochsetzen hilft NICHT (Last waechst unbeschraenkt). | §8 |
+| 14 | Payload-Schema um ein ARRAY neben dem alten Einzelfeld erweitert (z.B. `categories` + `category`) | JEDER Verwaltungs-/Schreibweg muss BEIDE pflegen — ein `set_payload` nur aufs Einzelfeld laesst das Array stehen → der Lesepfad (bevorzugt das Array) zeigt weiter den ALTEN Wert; rename/detach wirken „gar nicht". Auch Export/Trash-Roundtrips muessen das Array mitnehmen. | §9 |
 
 ---
 
@@ -226,6 +228,28 @@ beim Schreiben mitspeichern, statt den Volltext zum Zaehlen zu laden. **Belegt:*
 - [ ] Client: korrekter Port (REST 6333) + `http://`-URL ohne echtes TLS (gegen WRONG_VERSION_NUMBER)?
 - [ ] Snapshot-Backup eingerichtet, Restore getestet (Content-Type NICHT explizit)?
 - [ ] Memory-Monitoring (1.18) im Blick, `max_resident_memory_percent` als Guardrail?
+
+## 9. Payload-Schema-Drift: Einzelfeld→Array-Migration ohne Nachzug ALLER Schreibwege
+**Symptom:** Kategorie umbenennen/loeschen „wirkt nicht": die Uebersicht zaehlt weiter unter dem alten
+Namen, `by-category` findet den Eintrag unter altem UND neuem Namen; nach einem Papierkorb-Restore
+fehlen sekundaere Kategorien.
+**Ursache:** Ein Payload-Schema wurde abwaertskompatibel um ein Array erweitert (`categories` neben
+`category`, `parents` neben `parent`), und der LESE-Pfad bevorzugt das Array. Verwaltungs-Operationen
+(`set_payload` bei rename/detach) schrieben aber nur das ALTE Einzelfeld um — das Array (und die
+abgeleiteten Felder) blieben stehen. Zusaetzlich matchten die Filter nur das Einzelfeld → Eintraege,
+die den Wert NUR im Array trugen, wurden gar nicht erst gefunden. Gleiches Muster beim
+Export/Roundtrip (Trash speicherte nur das Einzelfeld → Restore verlor die Array-Werte).
+**Versionen:** strukturell (App-Logik, jede Qdrant-Version).
+**Betrifft unseren Code:** `brain-api/app.py` rename-category/detach-category/delete_entry(Trash) —
+Multi-Category-Regression seit 1.11.0, GEFIXT 2026-07-02 (1.19.0, Tiefen-Debugging): Filter matchen
+Einzelfeld ODER Array (`should`), `set_payload` schreibt das komplette Feld-Set (`category`,
+`categories`, `parent`, `parents`) je Punkt neu (gebuendelt je identischem Ziel-Payload), Trash
+speichert `categories` mit.
+**FIX (funktionserhaltend, verallgemeinert):** Bei JEDER Einzelfeld→Array-Migration eine Checkliste
+ueber ALLE Schreib-/Verwaltungs-/Export-Wege ziehen (store/update/rename/detach/move/trash/restore/
+backfill) — jeder Weg muss das VOLLE abgeleitete Feld-Set schreiben; jeder Filter muss beide Formen
+matchen (`should`). Lesepfad-Praeferenz (Array vor Einzelfeld) dokumentieren.
+**Quelle:** Tiefen-Debugging second-brain-server 2026-07-02 (statischer Fund).
 
 ---
 

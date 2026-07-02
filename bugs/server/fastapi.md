@@ -9,6 +9,8 @@
 > **Stand:** recherchiert am **2026-06-24** (Firecrawl + MiniMax M3, quellentreu; offizielle
 > fastapi.tiangolo.com / starlette.dev / docs.python.org + GitHub-Issues — gh-OPEN/CLOSED-verifiziert;
 > Engine-B-Eskalation OpenRouter `:online` fuer Threadpool/Body-Limit/BackgroundTasks).
+> **Ergaenzt 2026-07-02** (Tiefen-Debugging second-brain-server): §1-Live-Befunde gefixt (agent 0.48.1);
+> NEU §9 Modul-Level-Init ohne Re-Init → Container dauerhaft degraded (Kurzcheck #13).
 > **Anker:** fastapi=0.138.0 · uvicorn=0.49.0 · starlette=1.0.0 · pydantic=v2 · python=3.13.13 ·
 > httpx>=0.27 · qdrant-client>=1.18 · google-genai>=2.9  <!-- maschinenlesbar fuer check-version-anchor.py -->
 > (projekt-gepinnt in `*/requirements.txt`; FastAPI 0.138 hat **keinen** Pydantic-v1-Support mehr).
@@ -38,6 +40,7 @@
 | 10 | FastAPI `BackgroundTasks` / create_task wirft Exception | Wird **still verschluckt** (Response ist schon raus, kein exception_handler). `add_done_callback` mit Logging ODER try/except IM Task. | §6 |
 | 11 | ⭐ unbehandelte Exception → 500 ohne/mit doppeltem Log | Eigener `@app.exception_handler(Exception)` kann Uvicorns Traceback unterdruecken; `uvicorn.error` hat `propagate=True` → **doppelte** Tracebacks. `logger.exception()` + `propagate=False`. Nie `str(exc)` roh an den Client (Leak). | §7 |
 | 12 | ⭐ Endpoint liest `await request.body()`/`.json()` ohne Groessen-Limit | Starlette hat **kein** Default-Limit fuer rohe Bodies → 30-GB-JSON sprengt den Worker (OOM). `max_length` am Pydantic-Feld + Content-Length-Check/`client_max_body_size` (nginx). Multipart hat eigene Limits. | §8 |
+| 13 | Modul-Level-Init verbindet zu einem abhaengigen Dienst (DB/Qdrant) und faengt den Fehler nur | Boot-Race (compose `depends_on` wartet nur auf START): schlaegt die Init einmal fehl, bleibt der Container DAUERHAFT degraded/503 — /health gibt weiter HTTP 200 → kein Docker-Restart. Init in Funktion kapseln + beim ersten Request throttled NACHHOLEN (Self-Healing). | §9 |
 
 ---
 
@@ -68,13 +71,17 @@ automatisch in einen Threadpool aus (`anyio.to_thread.run_sync`) — der blockie
 (CLOSED/completed — bestaetigt das Verhalten: "async def routes run on the main (single) thread … the
 server processes the requests sequentially"). Kein eingebauter Schalter "async def trotzdem im Threadpool":
 `fastapi/fastapi#10768` ist weiterhin **OPEN**.
-**Betrifft unseren Code (live geprueft 2026-06-24):**
+**Betrifft unseren Code (live geprueft 2026-06-24; NACHTRAG 2026-07-02: ALLE Befunde gefixt):**
 - `dashboard/app.py`: `async def api_put_prompt` / `async def api_put_config` rufen `_aput(...)` =
   **synchrones** `httpx.put` → blockiert den Loop. (Die GET-Handler sind `def` → unkritisch.)
+  → GEFIXT (asyncio.to_thread, dashboard 0.3.0+).
 - `agent/app.py`: `async def chat` ruft `llm_decide` (**synchroner**, potenziell langsamer Gemini-Call!),
   `brain_search`/`brain_categories`/`brain_store` (synchrones `httpx`) → ein einziger Chat-Request
   blockiert waehrend des LLM-Calls den kompletten Agent-Prozess. `async def end_session` ruft
   `flush_session_to_logbook` (sync httpx + Datei-I/O).
+  → GEFIXT: /chat via to_thread (agent 0.5.0); `/end` + der Lock-Sonderfall `_flush_loop` (unten)
+  erst am **2026-07-02 (agent 0.48.1, Tiefen-Debugging)** — der Timeout-Flush lief bis dahin
+  WEITER synchron IM `_lock` direkt im Event-Loop (haengendes brain-api = ganzer Agent eingefroren).
 - `brain-api/app.py`: die Handler sind durchgehend **`def`** (kein `async def`) → korrekt, laufen im
   Threadpool. Genau richtig fuer die synchronen Gemini-/Qdrant-Aufrufe.
 **FIX (funktionserhaltend, drei gleichwertige Wege):**
@@ -295,6 +302,25 @@ Verhalten, das man richtig handhaben muss. Issue-Stati per `gh issue view` direk
 nur einen Vorschlag/eine Diskussion war, ist das oben als solche markiert.
 
 ---
+
+## 9. Modul-Level-Init gegen abhaengigen Dienst ohne Re-Init → Container dauerhaft degraded
+**Symptom:** Nach einem (Server-)Reboot antwortet der Dienst nur noch mit 503 „nicht initialisiert",
+OBWOHL die Abhaengigkeit (Qdrant/DB) laengst wieder laeuft; erst ein manueller Container-Neustart heilt.
+**Ursache:** Der Verbindungsaufbau (Client + Collection/Schema sicherstellen) laeuft beim **Modul-Import**
+in einem `try/except`, das den Fehler nur festhaelt (`init_error`) — es gibt KEINEN zweiten Versuch.
+Compose `depends_on` (Kurzform) wartet nur auf den START der Abhaengigkeit, nicht auf „bereit"
+(docker.md §3) → beim Boot-Race verliert der abhaengige Dienst. Tueckisch: der `/health`-Endpoint gibt
+trotz „degraded" **HTTP 200** zurueck → der Docker-Healthcheck bleibt gruen, `restart: unless-stopped`
+greift nie (der Prozess lebt ja).
+**Versionen:** strukturell (jedes FastAPI/uvicorn-Setup mit Import-Zeit-Init).
+**Betrifft unseren Code:** `brain-api/app.py` (Qdrant-Init beim Import) — GEFIXT 2026-07-02 (1.19.0,
+Tiefen-Debugging): Init in `_init_store()` gekapselt; `_require_store()` holt sie bei jedem Request
+**throttled** (max. 1 Versuch/5s, thread-sicher) nach, bis sie gelingt.
+**FIX (funktionserhaltend):** Init-Funktion + Lazy-Retry im Request-Pfad (throttled, unter Lock) ODER
+`lifespan`-Retry-Schleife; zusaetzlich compose `depends_on`-Langform mit `condition: service_healthy`,
+wo die Abhaengigkeit einen Healthcheck hat. Nie darauf verlassen, dass „restart: unless-stopped" einen
+logisch-degradeden (aber lebenden) Prozess heilt.
+**Quelle:** Tiefen-Debugging second-brain-server 2026-07-02 (statischer Fund, Boot-Race-Analyse).
 
 ## ✅ Pflicht-Checkliste vor dem Commit eines FastAPI/async-Endpoints
 
