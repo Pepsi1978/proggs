@@ -1,7 +1,8 @@
-# OAuth 2.0 (Device-Code, PKCE, Token-Refresh) — Best Practices (Stand 2026-06-08)
+# OAuth 2.0 (Device-Code, PKCE, Token-Refresh) — Best Practices (Stand 2026-07-02)
 
 > Gegenstück zu `bugs/apis/oauth-device-code.md`. Offiziell: RFC 8252/8628/7636/9700/6749, oauth.net,
-> Auth0/Okta/Google. (Researcher-Recherche 2026-06-08.)
+> Auth0/Okta/Google. (Researcher-Recherche 2026-06-08, Re-Recherche 2026-07-02.)
+> Update 2026-07-02: Device-Flow bleibt protokollseitig unveraendert, ist aber operativ Hochrisiko fuer Phishing; nur fuer echte Geraete ohne Browser erlauben, sonst deaktivieren oder Conditional Access erzwingen.
 
 ## ⚡ Kurzcheck (Stufe A — vor der Arbeit lesen)
 

@@ -1,9 +1,11 @@
 # Bekannte Bugs: OAuth 2.0 — Device-Code-Flow, PKCE & Token-Refresh (eigene Software/CLIs)
 
 > PFLICHT-LESEN vor dem Einbau von OAuth-Login in eigene Software/CLIs (Schwerpunkt Device
-> Authorization Grant RFC 8628 + PKCE + Token-Refresh). Stand: zuletzt recherchiert am 2026-06-08.
+> Authorization Grant RFC 8628 + PKCE + Token-Refresh). Stand: zuletzt recherchiert am 2026-06-08, **re-recherchiert am 2026-07-02** (Engine A: Firecrawl+MiniMax).
 > Verwandt: das „als offizielle CLI ausgeben"-Muster siehe `cli-impersonation-subscription-auth.md`.
 > Zweite Seite: `best-practices/apis/oauth-device-code.md`.
+
+> **Update 2026-07-02:** Keine belegte RFC-8628-Protokollaenderung seit 2026-06-08. Aber AppOmni/CSA bestaetigen massiven Device-Code-Phishing-Missbrauch (u. a. Millionen Angriffsversuche, 340+ M365-Organisationen); Salesforce entfernte den OAuth-Device-Flow bereits im September 2025. Device-Flow daher nur fuer echte input-constrained Geraete aktivieren und per Conditional Access/Logs (`deviceCodeFlow`) ueberwachen.
 
 ## ⚡ Kurzcheck (Stufe A — vor der Arbeit lesen)
 
