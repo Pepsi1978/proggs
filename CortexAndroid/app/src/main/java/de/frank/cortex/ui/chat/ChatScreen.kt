@@ -1065,10 +1065,11 @@ private fun ContextModeBar(
             }
         }
 
+        // Smalltalk-Knopf bewusst ENTFERNT (Frank-Wunsch 2026-07-02): Smalltalk erkennt der
+        // Router im Auto-Modus selbst — es bleiben Suchen, Speichern und Automatisch (KI).
         val items = listOf(
             Triple(SettingsStore.CONTEXT_MODE_SEARCH, Icons.Default.Search, "Suchen"),
             Triple(SettingsStore.CONTEXT_MODE_SAVE, Icons.Default.Save, "Speichern"),
-            Triple(SettingsStore.CONTEXT_MODE_SMALLTALK, Icons.Default.Forum, "Smalltalk"),
             Triple(SettingsStore.CONTEXT_MODE_AUTO, Icons.Default.AutoAwesome, "Automatisch")
         )
         Row(
