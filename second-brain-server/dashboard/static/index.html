@@ -2256,19 +2256,52 @@ button{font-family:inherit;cursor:pointer}
         listBox.querySelectorAll(".eval-log-item").forEach(it=> it.addEventListener("click", ()=> showLog(it.dataset.name)));
       }catch(e){ listBox.style.display="block"; listBox.innerHTML = `<div class="eval-fail">Logs konnten nicht geladen werden.</div>`; }
     }
+    /* Hintergrund-Lauf + Fortschritts-Polling (Frank-Bug 2026-07-02): Der Lauf dauert mit
+       langsameren Modellen laenger als jeder Request-Timeout — deshalb startet /api/eval/run nur
+       noch und /api/eval/status liefert den Live-Fortschritt, bis der Lauf wirklich fertig ist. */
+    let evalPollTimer = null;
+    const st = document.getElementById("evalStatus");
+    function evalSetRunningUi(running){ runBtn.disabled = running; }
+    async function pollEvalStatus(){
+      let s = null;
+      try{ s = await api("/api/eval/status"); }catch(e){ return; }   // naechster Poll versucht es erneut
+      if(s && s.running){
+        if(st){ st.textContent = `läuft… ${s.done||0}/${s.total||"?"} Sätze geprüft`; st.style.color = "var(--text-dim)"; }
+        return;
+      }
+      clearInterval(evalPollTimer); evalPollTimer = null;
+      evalSetRunningUi(false);
+      if(s && s.error){ flash("evalStatus", "fehlgeschlagen: "+esc(s.error), false); return; }
+      if(s && s.passed!=null){
+        flash("evalStatus", `fertig: ${s.passed}/${s.total} bestanden`);
+        const cls = (s.passed===s.total) ? "eval-okk" : (s.passed>=s.total*0.8 ? "" : "eval-fail");
+        resBox.style.display="block";
+        resBox.innerHTML = `<div class="eval-sum ${cls}">Ergebnis: ${s.passed}/${s.total} bestanden</div>`
+          + (s.log ? `<button class="btn" id="evalOpenLogBtn" type="button" style="margin-top:6px">Volles Log öffnen</button>` : "");
+        const ob = document.getElementById("evalOpenLogBtn");
+        if(ob) ob.addEventListener("click", ()=> showLog(s.log));
+      }
+    }
+    function startEvalPolling(){
+      evalSetRunningUi(true);
+      if(evalPollTimer) clearInterval(evalPollTimer);
+      evalPollTimer = setInterval(pollEvalStatus, 5000);
+      pollEvalStatus();
+    }
     runBtn.addEventListener("click", async ()=>{
-      runBtn.disabled = true; logsBtn.disabled = true;
+      runBtn.disabled = true;
       resBox.style.display="none"; listBox.style.display="none"; viewBox.style.display="none";
-      const st = document.getElementById("evalStatus");
-      if(st){ st.textContent = "läuft… das dauert 1–3 Minuten"; st.style.color = "var(--text-dim)"; }
+      if(st){ st.textContent = "startet…"; st.style.color = "var(--text-dim)"; }
       try{
         const r = await apiSend("/api/eval/run","POST",{});
-        renderResult(r);
-        if(r && r.ok!==false) flash("evalStatus", `fertig: ${r.passed}/${r.total} bestanden`);
-        else flash("evalStatus","fehlgeschlagen",false);
-      }catch(e){ flash("evalStatus","fehlgeschlagen — Agent erreichbar?",false); }
-      finally{ runBtn.disabled=false; logsBtn.disabled=false; }
+        if(r && r.ok!==false){
+          if(st){ st.textContent = (r.started===false) ? "läuft bereits — Fortschritt wird angezeigt…" : "gestartet — läuft im Hintergrund…"; }
+          startEvalPolling();
+        } else { renderResult(r); flash("evalStatus","fehlgeschlagen",false); runBtn.disabled=false; }
+      }catch(e){ flash("evalStatus","fehlgeschlagen — Agent erreichbar?",false); runBtn.disabled=false; }
     });
+    // Beim Laden der Seite pruefen, ob gerade ein Lauf aktiv ist -> Fortschritt sofort anzeigen.
+    (async ()=>{ try{ const s = await api("/api/eval/status"); if(s && s.running) startEvalPolling(); }catch(_){} })();
     // Toggle: ist die Logs-Liste (oder eine geoeffnete Log-Ansicht) schon offen -> wieder zuklappen,
     // sonst oeffnen. So muss man nicht durch eine riesige Liste scrollen, sondern klappt sie per Klick weg.
     logsBtn.addEventListener("click", ()=>{
