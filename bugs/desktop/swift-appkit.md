@@ -4,16 +4,18 @@
 > Dieser Almanach sammelt die oeffentlich bekannten Bugs/Fallen **und ihre funktionserhaltenden
 > Loesungen** fuer macOS-Overlay-Apps, die mit Swift + AppKit gebaut werden.
 >
-> **Stand:** zuletzt recherchiert am **2026-06-02**.
+> **Stand:** zuletzt recherchiert am **2026-06-02**, **re-recherchiert am 2026-07-02** (Engine A: Firecrawl+MiniMax).
 > **Anker:** swift=6.3.2  <!-- maschinenlesbar fuer check-version-anchor.py -->
-> **Toolchain-Anker:** Xcode **26.5** / Swift **6.3.2** (Mai 2026; Swift 6.2 brachte main-actor-by-default).
+> **Toolchain-Anker:** Xcode **26.5** / Swift **6.3.2** (Mai 2026; Swift 6.2 brachte main-actor-by-default) — per
+> Re-Recherche 2026-07-02 **weiterhin aktuell**. **Swift 6.4** wurde auf der WWDC26 (08.06.2026) angekuendigt
+> (`~Sendable`-Syntax, `weak let`, Modul-Selektoren `::`, Subprocess 1.0) — Release-Datum noch offen; Xcode 26.6 nicht bestaetigt.
 > **Projekt-Anker (Franks Overlay-Apps):** Build per `swiftc` von der Kommandozeile (KEIN Xcode-Projekt,
 > KEIN SwiftPM), Build-Target `arm64-apple-macos13.0` (macOS 13+), **unsandboxed**, Direktverteilung
 > (kein App Store). Frameworks: AppKit, AVFoundation, CoreGraphics, **Carbon** (RegisterEventHotKey), Network.
 > Genutzte heikle APIs: NSPanel `.nonactivatingPanel`, NSWindow.Level, `AXIsProcessTrusted`,
 > CGEvent/`NSEvent.addGlobalMonitorForEvents`, Carbon-HotKey, `AVCaptureDevice.requestAccess`,
 > `setActivationPolicy(.accessory)`/LSUIElement, `window.animator()`/NSAnimationContext.
-> Relevante Systemversionen: Ventura 13, Sonoma 14, **Sequoia 15** (und neuer).
+> Relevante Systemversionen: Ventura 13, Sonoma 14, **Sequoia 15**, **Tahoe 26** (Liquid-Glass-Design; siehe B7).
 >
 > Betroffene Projekte: `~/proggs/ClaudeCodexVoiceOverlay-macOS`, `~/proggs/TerminalVoiceOverlay-macOS`.
 >
@@ -129,6 +131,23 @@
 **Versionen:** eigener Code, alle macOS-Versionen.
 **FIX (funktionserhaltend):** Im Solo-Dock eigener Drag-Pfad: `PromptBoardPanel.soloDockDragHandler` (vom AppDelegate gesetzt) verschiebt den **Pillar DIREKT** um das Delta, klemmt ihn mit `clampFrameToVisibleScreen` (B5) und zieht die Eingabe per `dockToOverlay` nach. An BEIDEN Solo-Dock-Einstiegen per gemeinsamem Helper installieren; beim Verlassen/Schliessen wieder nil. NICHT die Board-Position als Anker nehmen, solange das Board versteckt ist.
 **Quelle:** eigener Vorfall (TerminalVoiceOverlay-macOS, Commit #41577).
+
+### B7. macOS 26 „Tahoe" + Liquid Glass — was fuer die Overlays zu beachten ist (Re-Recherche 2026-07-02)
+**Kontext:** macOS **26 „Tahoe"** ist erschienen (neues **Liquid-Glass**-Design: transluzentes Material, dynamische
+Anpassung an Hell/Dunkel, **vollstaendig transparente Menueleiste**). Betrifft primaer Standard-Fenster/Toolbars/Sidebars
+(neue APIs `NSToolbarItem.isBordered/.style(.prominent)/.backgroundTintColor`, `NSItemBadge`, `NSSplitViewController`
+Sidebar/Inspector), NICHT direkt borderless `.nonactivatingPanel`-Overlays.
+**Fuer Franks Overlays (funktionserhaltend):** Die bewaehrte NSPanel-Config (`.nonactivatingPanel` + `.canJoinAllSpaces`,
+§A/§B) gilt **unveraendert** weiter. Zwei Awareness-Punkte:
+- **Transparente Menueleiste (Tahoe):** ein Top-of-Screen-Overlay kann optisch anders mit der Menueleiste
+  interagieren — auf Tahoe visuell testen (Position/Level), kein Code-Zwang.
+- **Beta-Beobachtung (macOS 26 Beta 4, Juli 2025, unbestaetigt fuer Final):** Ein SwiftUI-`NSWindow`-Overlay zeigte
+  `close`-Crash, wirkungsloses `setFrameOrigin`/`orderOut`, und `canBecomeKey/Main = true` → Crash ~3 s nach Anzeige.
+  **Beim ersten Tahoe-Test gezielt pruefen**; falls reproduzierbar auf Final → hier als echter Bug nachtragen.
+- **App-Icon:** Tahoe bringt das neue **`.icon`-Format** (Icon Composer, `CFBundleIconName`) statt `.icns` —
+  Details im Almanach `assets/icon-building.md`; `.icns` fuer Abwaertskompatibilitaet behalten.
+**Versionen:** macOS 26 (Tahoe). **Quelle:** Apple Newsroom „new software design" (Liquid Glass), WWDC25 Session 310
+„Build an AppKit app with the new design", Medium/Itsuki (Beta-4-Overlay-Bugs, 2025-07-29).
 
 ---
 
