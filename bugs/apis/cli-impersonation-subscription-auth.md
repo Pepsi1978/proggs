@@ -1,7 +1,7 @@
 # Bekannte Bugs/Risiken: „Drittsoftware nutzt KI-Abo statt API-Key" (CLI-Impersonation)
 
 > PFLICHT-LESEN vor dem Versuch, in eigener Software ein KI-ABO (statt API-Key) zu nutzen, indem man
-> sich als die offizielle CLI/App des Anbieters ausgibt. Stand: zuletzt recherchiert am 2026-06-08.
+> sich als die offizielle CLI/App des Anbieters ausgibt. Stand: zuletzt recherchiert am 2026-06-08, **re-recherchiert am 2026-07-02** (Engine A: Firecrawl+MiniMax).
 > Verwandt: OAuth-Mechanik siehe `oauth-device-code.md`. Zweite Seite: `best-practices/apis/cli-impersonation-subscription-auth.md`.
 
 > **Grauzone — ehrlich:** Der offizielle Weg (eigene CLI loggt sich per OAuth ins eigene Abo ein) ist
@@ -9,6 +9,8 @@
 > um fremde Abo-Backends anzuzapfen, bewegt sich zwischen Grauzone und klarem ToS-Verstoss. Anbieter
 > haben 2026 aktiv mit Client-Identity-Checks, Token-Revocation und Bans reagiert. Diese Datei
 > dokumentiert die Mechanik UND die realen Bruchstellen/Risiken — nicht als Empfehlung.
+
+> **Update 2026-07-02:** Neu belegter Praxis-Hinweis: Codex- und ChatGPT-Nutzung teilen sich bei Plus/Pro ein rollierendes 5-Stunden-Fenster; schwere Codex-Sessions koennen Chat-Kontingent im selben Fenster reduzieren. Hermes-Codex-Auth-Fix (`~/.hermes/auth.json` statt `~/.codex/auth.json` beruehren) war bereits vor dem Stichtag geschlossen; seit 2026-06-08 wurde kein neues technisches Hermes-Risiko belegt.
 
 ## ⚡ Kurzcheck (Stufe A — vor der Arbeit lesen)
 

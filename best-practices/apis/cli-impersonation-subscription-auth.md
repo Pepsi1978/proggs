@@ -1,7 +1,8 @@
-# CLI-Impersonation / Subscription-Auth — Best Practices (Stand 2026-06-09)
+# CLI-Impersonation / Subscription-Auth — Best Practices (Stand 2026-07-02)
 
-> Gegenstueck zu `bugs/apis/cli-impersonation-subscription-auth.md`. (Researcher-Recherche 2026-06-09.)
+> Gegenstueck zu `bugs/apis/cli-impersonation-subscription-auth.md`. (Researcher-Recherche 2026-06-09, Re-Recherche 2026-07-02.)
 > Hinweis: ToS/Rechtslage je Anbieter beachten — dies ist technische Doku, keine Rechtsberatung.
+> Update 2026-07-02: Abo-OAuth bleibt nur fuer offizielle/zulässige Clients vertretbar; zusaetzlich Kontingent-Kopplung beachten (Codex und ChatGPT teilen bei Plus/Pro ein rollierendes 5-Stunden-Fenster).
 
 ## ⚡ Kurzcheck (Stufe A — vor der Arbeit lesen)
 
