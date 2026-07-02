@@ -1,11 +1,11 @@
-# TypeScript / Node.js — Best Practices (Stand 2026-06-03, Node v24.15.0 · TypeScript 6.0.2 · npm 11.12.0 · Bun 1.3.11)
+# TypeScript / Node.js — Best Practices (Stand 2026-07-02, Node v24.15.0 · TypeScript 6.0.2 · npm 11.17.0 · Bun 1.3.14)
 
 > **Die "richtige Seite der Medaille" zum Bug-Almanach `~/proggs/bugs/web/typescript.md`.**
 > Dort steht *was schiefgeht und wie man es umgeht* — hier steht *wie man es von vornherein
 > richtig macht, damit der Bug gar nicht erst entsteht*. Die wechselseitige Abschnitts-
 > Bezugstabelle steht unten ("Kopplung zum Bug-Almanach").
 >
-> **Anker (live ermittelt):** Node **v24.15.0**, TypeScript **6.0.2**, npm **11.12.0**, Bun **1.3.11**.
+> **Anker (live ermittelt):** Node **v24.15.0**, TypeScript **6.0.2**, npm **11.17.0**, Bun **1.3.14**.
 > TS 6.0 ist die LETZTE JavaScript-basierte Version vor dem Go-Rewrite (TS 7.0 "Corsa") — viele
 > Defaults wurden in 6.0 modernisiert, deshalb 2026 alles Verhaltens-Relevante EXPLIZIT setzen.
 > Node 24 erlaubt `require(esm)` synchron und kann `.ts` nativ ausfuehren (Type-Stripping stable
@@ -16,6 +16,8 @@
 > **Quellen-Rangordnung:** offizielle Quellen (typescriptlang.org, nodejs.org/api, docs.npmjs.com) =
 > Grundwahrheit; Community/Library-Docs als `extern` gelabelt (fuer ihre eigene Lib aber autoritativ).
 > Jeder Eintrag traegt Quelle + Datum + `offiziell`/`extern`-Flag.
+
+> **Update 2026-07-02:** Re-Recherche seit 2026-06-03 fand keine belegten neuen TypeScript-Breaking-Changes; die Best Practices bleiben fachlich unveraendert. Aktualisiert wurden nur die Live-Anker fuer npm/Bun.
 
 ---
 

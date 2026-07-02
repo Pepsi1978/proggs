@@ -1,10 +1,12 @@
 # Bekannte Bugs: TypeScript & Node.js (+ npm, Bun)
 
 > **PFLICHT-LESEN vor echter Arbeit an TypeScript-/Node-Code.**
-> Stand: zuletzt recherchiert am **2026-06-02**, Abschnitt **J** ergaenzt am **2026-06-03** (aus dem Best-Practices-Lauf), fuer **Node v24.15.0 · TypeScript 6.0.2 · npm 11.12.0 · Bun 1.3.11**.
+> Stand: zuletzt recherchiert am **2026-06-02**, Abschnitt **J** ergaenzt am **2026-06-03** (aus dem Best-Practices-Lauf), **re-recherchiert am 2026-07-02** (Engine A: Firecrawl+MiniMax) fuer **Node v24.15.0 · TypeScript 6.0.2 · npm 11.17.0 · Bun 1.3.14**.
 > **Anker:** typescript=6.0.2  <!-- maschinenlesbar fuer check-version-anchor.py -->
 > Beispielprojekt im Repo: `~/proggs/mcp-code-search` (ESM + Bun + `better-sqlite3`, `moduleResolution: bundler`, `strict: true`).
 > Fokus dieser Datei: **was in der Praxis schiefgeht** (Bugs/Fallen) + funktionserhaltende Loesung. Die "richtige Seite der Medaille" — *wie man es von vornherein richtig macht* — steht in `~/proggs/best-practices/web/typescript.md` (wechselseitige Bezugstabelle unten).
+
+> **Update 2026-07-02:** Re-Recherche seit 2026-06-03 fand keine belegten neuen TypeScript-6.0.2/6.0.3/6.1-Breaking-Changes. Live-Deltas: npm **11.17.0** und Bun **1.3.14**; die bestehenden Regeln zu expliziten TS-Defaults, Node/Bun-ESM-Unterschieden und Windows/Bun-Fallen bleiben unveraendert gueltig.
 
 ---
 
