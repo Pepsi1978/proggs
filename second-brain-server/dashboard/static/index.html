@@ -2295,7 +2295,7 @@ button{font-family:inherit;cursor:pointer}
       try{
         const r = await apiSend("/api/eval/run","POST",{});
         if(r && r.ok!==false){
-          if(st){ st.textContent = (r.started===false) ? "läuft bereits — Fortschritt wird angezeigt…" : "gestartet — läuft im Hintergrund…"; }
+          if(st){ st.textContent = (r.started_now===false) ? "läuft bereits — Fortschritt wird angezeigt…" : "gestartet — läuft im Hintergrund…"; }
           startEvalPolling();
         } else { renderResult(r); flash("evalStatus","fehlgeschlagen",false); runBtn.disabled=false; }
       }catch(e){ flash("evalStatus","fehlgeschlagen — Agent erreichbar?",false); runBtn.disabled=false; }
