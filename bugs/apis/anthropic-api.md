@@ -1,8 +1,10 @@
 # Bekannte Bugs: Anthropic Claude API (Messages API, Integration)
 
 > PFLICHT-LESEN vor Arbeit an einer Anthropic-Claude-API-Integration (Client-seitig).
-> Stand: zuletzt recherchiert am 2026-06-08. Versions-Anker: `anthropic-version: 2023-06-01` (weiterhin
-> Pflichtwert), aktuelle Modelle Opus 4.x/Sonnet 4.6. Zweite Seite: `best-practices/apis/anthropic-api.md`.
+> Stand: zuletzt recherchiert am 2026-06-08, **re-recherchiert am 2026-07-02** (Engine A: Firecrawl+MiniMax). Versions-Anker: `anthropic-version: 2023-06-01` (weiterhin
+> Pflichtwert), aktuelle Modelle Opus 4.8/Sonnet 5. Zweite Seite: `best-practices/apis/anthropic-api.md`.
+
+> **Update 2026-07-02:** Keine belegten neuen Messages-/Prompt-Caching-/Tool-Use-/Batch-API-Bugs seit 2026-06-08 gefunden. Bestehende Migrationsfallen bleiben relevant: Prefill wird bei aktuellen Claude-Modellen nicht unterstuetzt, Adaptive Thinking ersetzt manuelle `budget_tokens` bei neueren Modellen, und Sampling-Parameter koennen bei Opus 4.7+ 400-Fehler ausloesen.
 
 ## ⚡ Kurzcheck (Stufe A — vor der Arbeit lesen)
 

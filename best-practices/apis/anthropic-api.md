@@ -1,6 +1,7 @@
-# Anthropic Claude API (Messages API) — Best Practices (Stand 2026-06-08)
+# Anthropic Claude API (Messages API) — Best Practices (Stand 2026-07-02)
 
-> Gegenstück zu `bugs/apis/anthropic-api.md`. Offiziell (platform.claude.com). (Researcher-Recherche 2026-06-08.)
+> Gegenstück zu `bugs/apis/anthropic-api.md`. Offiziell (platform.claude.com). (Researcher-Recherche 2026-06-08, Re-Recherche 2026-07-02.)
+> Update 2026-07-02: Keine belegten neuen API-Bugs seit 2026-06-08 gefunden; die Regeln zu Adaptive Thinking, Prefill-Verbot, Tool-Use-Paarung, Prompt-Caching und Batch-API bleiben unveraendert gueltig.
 
 ## ⚡ Kurzcheck (Stufe A — vor der Arbeit lesen)
 
