@@ -100,7 +100,10 @@ fun CategoryPickerPill(
     var newName by rememberSaveable { mutableStateOf("") }
 
     val tree = remember(categories) { buildCategoryTree(categories) }
-    val rows = flattenVisible(tree, expanded.toSet())
+    // derivedStateOf: flattenVisible lief vorher bei JEDER Recomposition des Pills — also auch
+    // bei jedem Tastendruck im Eingabefeld daneben (der ganze Input-Block recomposed mit).
+    // Jetzt wird nur neu geflattet, wenn sich der Baum oder die aufgeklappten Pfade aendern.
+    val rows by remember(tree) { derivedStateOf { flattenVisible(tree, expanded.toSet()) } }
 
     fun toggle(path: String) {
         if (expanded.contains(path)) expanded.remove(path) else expanded.add(path)

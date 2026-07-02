@@ -162,10 +162,14 @@ private fun SpectrumCard(
 ) {
     val isDark = MaterialTheme.colorScheme.background == DarkBg
     val spectrumCounts = if (categoryPath.isEmpty()) categoryCounts else subcategories
-    // Nur Kategorien mit Eintraegen in den Balken: weight(0f) wuerde crashen
-    // (IllegalArgumentException "invalid weight"), sobald eine leere Kategorie (count 0) kommt.
-    val spectrumItems = spectrumCounts.entries.filter { it.value > 0 }.sortedByDescending { it.value }
-    val total = spectrumCounts.values.sum().toFloat().coerceAtLeast(1f)
+    // remember: Filter/Sortierung nur bei Datenaenderung neu berechnen — die Card recomposed
+    // waehrend der Zaehler-Animation pro FRAME, ohne remember liefen die Sortierungen ~66x/s.
+    // Filter > 0: weight(0f) wuerde crashen (IllegalArgumentException "invalid weight"),
+    // sobald eine leere Kategorie (count 0) kommt.
+    val spectrumItems = remember(spectrumCounts) {
+        spectrumCounts.entries.filter { it.value > 0 }.sortedByDescending { it.value }
+    }
+    val total = remember(spectrumCounts) { spectrumCounts.values.sum().toFloat().coerceAtLeast(1f) }
 
     // Animated count
     val animatedCount = remember { Animatable(0f) }
@@ -212,15 +216,9 @@ private fun SpectrumCard(
                     horizontalArrangement = Arrangement.spacedBy(9.dp),
                     modifier = Modifier.padding(vertical = 6.dp)
                 ) {
-                    Text(
-                        text = "${animatedCount.value.toInt()}",
-                        fontFamily = SpaceGrotesk,
-                        fontWeight = FontWeight.Bold,
-                        fontSize = 52.sp,
-                        lineHeight = 52.sp,
-                        letterSpacing = (-1).sp,
-                        color = MaterialTheme.colorScheme.onSurface
-                    )
+                    // Eigene kleine Composable: der animierte Wert wird NUR dort gelesen, damit
+                    // waehrend der 1,1s-Animation nur die Zahl recomposed — nicht die ganze Card.
+                    AnimatedCountText(animatedCount)
                     Text(
                         text = "EINTRÄGE\nGESAMT",
                         fontFamily = JetBrainsMono,
@@ -293,11 +291,14 @@ private fun SpectrumCard(
                     }
                 }
 
-                // Legend: entweder Hauptkategorien (Root) oder Subcategories (Drilldown)
-                val legendItems = if (categoryPath.isEmpty()) {
-                    categoryCounts.entries.sortedByDescending { it.value }
-                } else {
-                    subcategories.entries.sortedByDescending { it.value }
+                // Legend: entweder Hauptkategorien (Root) oder Subcategories (Drilldown).
+                // remember: Sortierung nur bei Datenaenderung, nicht pro Animations-Frame.
+                val legendItems = remember(categoryPath.isEmpty(), categoryCounts, subcategories) {
+                    if (categoryPath.isEmpty()) {
+                        categoryCounts.entries.sortedByDescending { it.value }
+                    } else {
+                        subcategories.entries.sortedByDescending { it.value }
+                    }
                 }
 
                 Column(
@@ -344,6 +345,19 @@ private fun SpectrumCard(
             }
         }
     }
+}
+
+@Composable
+private fun AnimatedCountText(animatedCount: Animatable<Float, *>) {
+    Text(
+        text = "${animatedCount.value.toInt()}",
+        fontFamily = SpaceGrotesk,
+        fontWeight = FontWeight.Bold,
+        fontSize = 52.sp,
+        lineHeight = 52.sp,
+        letterSpacing = (-1).sp,
+        color = MaterialTheme.colorScheme.onSurface
+    )
 }
 
 private val SpectrumColors = listOf(

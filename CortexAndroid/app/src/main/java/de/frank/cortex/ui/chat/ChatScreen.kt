@@ -51,8 +51,6 @@ import de.frank.cortex.observability.CortexLog
 import de.frank.cortex.ui.theme.*
 import de.frank.cortex.vpn.TunnelState
 import de.frank.cortex.vpn.WireGuardManager
-import java.text.SimpleDateFormat
-import java.util.Date
 import java.util.Locale
 
 @Composable
@@ -239,7 +237,7 @@ fun ChatScreen(vm: ChatViewModel = viewModel()) {
                 verticalArrangement = Arrangement.spacedBy(16.dp),
                 contentPadding = PaddingValues(vertical = 6.dp)
             ) {
-                items(uiState.messages, key = { it.id }) { message ->
+                items(uiState.messages, key = { it.id }, contentType = { it.isUser }) { message ->
                     ChatBubble(
                         message = message,
                         isSpeaking = uiState.speakingMessageId == message.id,
@@ -486,12 +484,22 @@ private fun SessionRow(
     }
 }
 
-private fun formatSessionTimestamp(timestamp: Long): String =
-    SimpleDateFormat("dd.MM.yyyy, HH:mm 'Uhr'", Locale.GERMANY).format(Date(timestamp))
+// DateTimeFormatter statt SimpleDateFormat: thread-safe UND wiederverwendbar — vorher wurde pro
+// SessionRow-Aufruf (jede Drawer-Recomposition) ein neues SimpleDateFormat gebaut (teuer).
+private val sessionTimestampFormatter =
+    java.time.format.DateTimeFormatter.ofPattern("dd.MM.yyyy, HH:mm 'Uhr'", Locale.GERMANY)
 
-/** Wortzahl einer Nachricht (Whitespace-getrennt) — fuer die Anzeige "(N Wörter)" in der Bubble. */
+private fun formatSessionTimestamp(timestamp: Long): String =
+    java.time.Instant.ofEpochMilli(timestamp)
+        .atZone(java.time.ZoneId.systemDefault())
+        .format(sessionTimestampFormatter)
+
+/** Wortzahl einer Nachricht (Whitespace-getrennt) — fuer die Anzeige "(N Wörter)" in der Bubble.
+ *  Regex einmalig kompiliert (lief vorher pro Bubble-Recomposition neu — beim Streaming pro Delta). */
+private val wordSplitRegex = Regex("\\s+")
+
 private fun countWords(text: String): Int =
-    text.trim().split(Regex("\\s+")).count { it.isNotBlank() }
+    text.trim().split(wordSplitRegex).count { it.isNotBlank() }
 
 @Composable
 private fun ChatBubble(
@@ -567,8 +575,11 @@ private fun ChatBubble(
                         Spacer(Modifier.weight(1f))
                         // Wortzahl der Antwort, rechtsbuendig (Frank-Wunsch 2026-07-02): auf einen
                         // Blick sehen, wie lang die Antwort wirklich war (S/M/XL-Kontrolle).
+                        // remember(text): der O(n)-Split laeuft nur bei Text-Aenderung, nicht bei
+                        // jeder Recomposition (z.B. isSpeaking-Wechsel).
+                        val wordCount = remember(message.text) { countWords(message.text) }
                         Text(
-                            text = "(${countWords(message.text)} Wörter)",
+                            text = "($wordCount Wörter)",
                             fontFamily = JetBrainsMono,
                             fontSize = 10.sp,
                             color = MaterialTheme.colorScheme.onSurfaceVariant

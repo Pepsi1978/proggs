@@ -8,6 +8,7 @@ import de.frank.cortex.observability.CortexLog
 import de.frank.cortex.vpn.TunnelState
 import de.frank.cortex.vpn.WireGuardManager
 import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.async
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
@@ -247,22 +248,31 @@ class DashboardViewModel : ViewModel() {
     private fun browseCategory(category: String) {
         viewModelScope.launch {
             try {
-                val exactItems = try {
-                    ApiClient.brainApi().byCategory(category).items
-                } catch (e: CancellationException) {
-                    throw e
-                } catch (e: Exception) {
-                    CortexLog.warn("DashboardVM", "browseCategory", "byCategory fehlgeschlagen: ${e.message}")
-                    emptyList()
+                // byCategory + byParent sind unabhaengig — PARALLEL statt seriell abfragen:
+                // ueber den langsamen WireGuard-Mobilfunk-Tunnel addierte sich vorher die Latenz
+                // beider Roundtrips (Drilldown fuehlbar traege). Merge/Ergebnis bleibt identisch.
+                val exactDeferred = async {
+                    try {
+                        ApiClient.brainApi().byCategory(category).items
+                    } catch (e: CancellationException) {
+                        throw e
+                    } catch (e: Exception) {
+                        CortexLog.warn("DashboardVM", "browseCategory", "byCategory fehlgeschlagen: ${e.message}")
+                        emptyList()
+                    }
                 }
-                val childItems = try {
-                    ApiClient.brainApi().byParent(category).items
-                } catch (e: CancellationException) {
-                    throw e
-                } catch (e: Exception) {
-                    CortexLog.warn("DashboardVM", "browseCategory", "byParent fehlgeschlagen: ${e.message}")
-                    emptyList()
+                val childDeferred = async {
+                    try {
+                        ApiClient.brainApi().byParent(category).items
+                    } catch (e: CancellationException) {
+                        throw e
+                    } catch (e: Exception) {
+                        CortexLog.warn("DashboardVM", "browseCategory", "byParent fehlgeschlagen: ${e.message}")
+                        emptyList()
+                    }
                 }
+                val exactItems = exactDeferred.await()
+                val childItems = childDeferred.await()
                 val merged = (exactItems + childItems)
                     .distinctBy { it.doc_id }
                     .sortedByDescending { it.updated_at ?: it.created_at ?: "" }

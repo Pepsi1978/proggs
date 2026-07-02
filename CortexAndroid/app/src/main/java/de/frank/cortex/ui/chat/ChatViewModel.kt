@@ -30,6 +30,10 @@ import kotlinx.coroutines.sync.withPermit
 import kotlinx.coroutines.withContext
 import java.util.UUID
 
+// @Immutable: alle Felder sind val und werden nach der Konstruktion nie mutiert (auch die
+// options-Liste nicht) — das garantiert Compose, dass ChatBubble bei unveraenderter Message
+// geskippt werden darf, obwohl List<> formal instabil ist.
+@androidx.compose.runtime.Immutable
 data class ChatMessage(
     val id: String = UUID.randomUUID().toString(),
     val text: String,
@@ -355,6 +359,13 @@ class ChatViewModel : ViewModel() {
                 val ttsWanted = SettingsStore.ttsEnabled
 
                 fun handleDelta(delta: String) {
+                    // Fuer die Absatzgrenzen-Pruefung unten: eine NEUE "\n\n"-Grenze kann nur
+                    // entstehen, wenn dieses Delta ein '\n' enthaelt oder direkt an ein '\n'
+                    // anschliesst. Nur dann lohnt die lastIndexOf-Suche — vorher lief sie bei
+                    // JEDEM Delta ueber den kompletten Puffer (O(n) pro Delta, O(n^2) pro Antwort).
+                    val boundaryPossible = ttsWanted &&
+                        (delta.indexOf('\n') >= 0 ||
+                            (rawAccum.isNotEmpty() && rawAccum[rawAccum.length - 1] == '\n'))
                     rawAccum.append(delta)
                     val current = rawAccum.toString()
                     val msgId = streamedMsgId
@@ -365,7 +376,7 @@ class ChatViewModel : ViewModel() {
                     } else {
                         _uiState.update { st -> st.copy(messages = st.messages.map { if (it.id == msgId) it.copy(text = current) else it }) }
                     }
-                    if (ttsWanted) {
+                    if (boundaryPossible) {
                         val boundary = rawAccum.lastIndexOf("\n\n")
                         if (boundary > spokenUpTo) {
                             val ready = rawAccum.substring(spokenUpTo, boundary).trim()
@@ -989,12 +1000,17 @@ class ChatViewModel : ViewModel() {
     }
 
     /** Kleine lokale Variante des Server-Markdown-Strippers fuer gestreamte TTS-Absaetze
-     *  (der finale Reply kommt bereits bereinigt vom Server — die Deltas sind Rohtext). */
+     *  (der finale Reply kommt bereits bereinigt vom Server — die Deltas sind Rohtext).
+     *  Regexe einmalig kompiliert (vorher pro Absatz neu — unnoetige Arbeit auf dem Stream-Pfad). */
+    private val ttsBoldRegex = Regex("\\*\\*(.+?)\\*\\*")
+    private val ttsHeadingRegex = Regex("(?m)^#{1,6}\\s*")
+    private val ttsBulletRegex = Regex("(?m)^[-*•]\\s+")
+
     private fun localTtsClean(s: String): String = s
-        .replace(Regex("\\*\\*(.+?)\\*\\*"), "$1")
+        .replace(ttsBoldRegex, "$1")
         .replace("**", "")
-        .replace(Regex("(?m)^#{1,6}\\s*"), "")
-        .replace(Regex("(?m)^[-*•]\\s+"), "")
+        .replace(ttsHeadingRegex, "")
+        .replace(ttsBulletRegex, "")
         .trim()
 
     private fun buildContextPrompt(contextMode: String, responseSize: String): String? {
@@ -1104,11 +1120,15 @@ class ChatViewModel : ViewModel() {
         return null
     }
 
+    private val whitespaceRunRegex = Regex("[ \t]+")
+    private val paragraphSplitRegex = Regex("\n{2,}")
+    private val sentenceSplitRegex = Regex("(?<=[.!?])\\s+")
+
     private fun chunkText(text: String): List<String> {
         val normalized = text
             .replace("\r\n", "\n")
             .replace("\r", "\n")
-            .replace(Regex("[ \t]+"), " ")
+            .replace(whitespaceRunRegex, " ")
             .trim()
         if (normalized.isBlank()) return emptyList()
 
@@ -1119,7 +1139,7 @@ class ChatViewModel : ViewModel() {
         // bleibt nur als API-Sicherheitsgrenze: einzig UEBERLANGE Absaetze werden an
         // Satzgrenzen geteilt (sonst lehnt die TTS-API die Anfrage ab).
         return normalized
-            .split(Regex("\n{2,}"))
+            .split(paragraphSplitRegex)
             .map { it.replace("\n", " ").trim() }
             .filter { it.isNotBlank() }
             .flatMap { splitParagraphForTts(it) }
@@ -1127,7 +1147,7 @@ class ChatViewModel : ViewModel() {
 
     private fun splitParagraphForTts(paragraph: String): List<String> {
         if (paragraph.length <= TTS_MAX_CHARS) return listOf(paragraph)
-        val sentences = paragraph.split(Regex("(?<=[.!?])\\s+")).filter { it.isNotBlank() }
+        val sentences = paragraph.split(sentenceSplitRegex).filter { it.isNotBlank() }
         val result = mutableListOf<String>()
         var current = ""
 

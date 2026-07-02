@@ -182,23 +182,6 @@ private fun VpnPill(state: TunnelState, onClick: () -> Unit) {
         )
     }
 
-    // Pulse animation for CONNECTING
-    val infiniteTransition = rememberInfiniteTransition(label = "vpn_pulse")
-    val pulseAlpha by infiniteTransition.animateFloat(
-        initialValue = 0.7f, targetValue = 0f,
-        animationSpec = infiniteRepeatable(
-            animation = tween(1500, easing = EaseOut),
-            repeatMode = RepeatMode.Restart
-        ), label = "pulse_alpha"
-    )
-    val pulseScale by infiniteTransition.animateFloat(
-        initialValue = 0.9f, targetValue = 2.4f,
-        animationSpec = infiniteRepeatable(
-            animation = tween(1500, easing = EaseOut),
-            repeatMode = RepeatMode.Restart
-        ), label = "pulse_scale"
-    )
-
     Row(
         modifier = Modifier
             .height(34.dp)
@@ -219,6 +202,25 @@ private fun VpnPill(state: TunnelState, onClick: () -> Unit) {
                     .background(dotColor)
             )
             if (state == TunnelState.CONNECTING) {
+                // Puls-Animation NUR im CONNECTING-Zustand erzeugen: vorher lief die
+                // InfiniteTransition dauerhaft (die TopBar ist immer sichtbar) und erzeugte in
+                // JEDEM App-Zustand pro Frame Animations-Ticks — reine Energie-/CPU-Verschwendung,
+                // da der Puls nur hier gelesen wird. Optik identisch (gleiche Specs).
+                val infiniteTransition = rememberInfiniteTransition(label = "vpn_pulse")
+                val pulseAlpha by infiniteTransition.animateFloat(
+                    initialValue = 0.7f, targetValue = 0f,
+                    animationSpec = infiniteRepeatable(
+                        animation = tween(1500, easing = EaseOut),
+                        repeatMode = RepeatMode.Restart
+                    ), label = "pulse_alpha"
+                )
+                val pulseScale by infiniteTransition.animateFloat(
+                    initialValue = 0.9f, targetValue = 2.4f,
+                    animationSpec = infiniteRepeatable(
+                        animation = tween(1500, easing = EaseOut),
+                        repeatMode = RepeatMode.Restart
+                    ), label = "pulse_scale"
+                )
                 Box(
                     modifier = Modifier
                         .size(9.dp)
