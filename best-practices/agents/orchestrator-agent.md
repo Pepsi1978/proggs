@@ -1,11 +1,12 @@
-# Orchestrator-/Boss-Agent — Best Practices (Stand 2026-06-09)
+# Orchestrator-/Boss-Agent — Best Practices (Stand 2026-07-02)
 
 > Die **Praeventions-Seite** zum Bug-Almanach `bugs/agents/orchestrator-agent.md`. Der Almanach
 > sagt *was schiefgeht und wie man es umgeht*; diese Datei sagt *wie man einen Haupt-/Boss-/
 > Orchestrator-Agenten von vornherein so baut, dass die Bugs gar nicht erst entstehen*.
 > Vor der Arbeit beide lesen — **erst Almanach, dann Best Practices**.
 > Quell-Flag pro Empfehlung: `offiziell` = Hersteller-Doku (Anthropic/OpenAI/Framework), `extern` = Community/Paper/Blog.
-> Aktualisiert per Best-Practices-Recherche (7 Researcher, offizielle Quellen zuerst) am 2026-06-09.
+> Aktualisiert per Best-Practices-Recherche (7 Researcher, offizielle Quellen zuerst) am 2026-06-09, Re-Recherche 2026-07-02.
+> Update 2026-07-02: Keine neuen belegten Framework-Bugs seit dem Stand; weiter auf einfache Single-Agent-Loops, typisierte Zustandsuebergaenge, Tool-Budget und programmgesteuerte Verifikation setzen.
 
 ## ⚡ Kurzcheck (Stufe A — vor der Arbeit lesen)
 

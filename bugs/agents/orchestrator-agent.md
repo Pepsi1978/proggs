@@ -9,7 +9,7 @@
 > ODER **from-scratch** gegen die rohen LLM-APIs (das VoiceAgent-Muster: eigene Loop, direkte HTTP-Calls).
 > Sektionen 1–7 sind weitgehend plattform-/framework-uebergreifend; **Sektion 8** sammelt die
 > Bugs, die spezifisch beim Bau EXTERNER/selbstgebauter Agenten auftreten.
-> **Stand:** recherchiert am 2026-06-09. Anker: Claude Code **2.1.169** (Opus 4.x) + die
+> **Stand:** recherchiert am 2026-06-09, **re-recherchiert am 2026-07-02** (Engine A: Firecrawl+MiniMax). Anker: Claude Code **2.1.198** (Sonnet 5/Opus 4.x) + die
 > aktuellen Versionen (Juni 2026) der Frameworks LangGraph (~1.0/0.4), CrewAI (~0.105+),
 > AutoGen/AG2 (1.0 GA, Maintenance), Microsoft Agent Framework, OpenAI Agents SDK (~0.7),
 > Claude Agent SDK. Issue-Status wurde am 2026-06-09 hart per `gh` geprueft.
@@ -18,6 +18,8 @@
 > `best-practices/agents/orchestrator-agent.md`.
 > Eng verwandte Harness-Regeln (immer geladen): `subagent-crash-proofing.md`,
 > `lossless-context-principle.md`, `metacognitive-monitoring.md`, `agent-and-researcher-rules.md`.
+
+> **Update 2026-07-02:** Keine neuen belastbaren Bug-/Breaking-Change-Funde nach 2026-06-09 fuer LangGraph, CrewAI, AutoGen/AG2, OpenAI Agents SDK oder Claude Agent SDK in den Quellen. Die dokumentierten Orchestrator-Risiken bleiben massgeblich: Intent-Readback, echte Stop-Bedingungen, schlanke Subagent-Prompts, Tool-Whitelist, Verifier statt Modell-„done".
 
 ---
 
