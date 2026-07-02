@@ -1,6 +1,6 @@
 # Wake-Word / Keyword-Spotting (.NET, C#/WPF) — Best Practices
 
-> Stand: **2026-06-08** · Ziel: **.NET 10** (`net10.0-windows`, WPF) ·
+> Stand: **2026-07-02** · Ziel: **.NET 10** (`net10.0-windows`, WPF) ·
 > Engine-Empfehlung: **sherpa-onnx** `org.k2fsa.sherpa.onnx` **1.13.2** (Apache-2.0) ·
 > Audio: **NAudio 2.2.1** (NAudio 3 Preview im Blick). Gegenseite (was schiefgeht): `bugs/desktop/wake-word.md`.
 >
@@ -8,6 +8,7 @@
 > dokumentierten Bugs gar nicht erst entstehen. Quellen: Researcher-Schwarm 2026-06-07/08
 > (7 parallele Agenten: sherpa-onnx-API, Audio-Pipeline, Effizienz, Testbarkeit, WPF-Threading,
 > Deployment, Privacy/UX) + Live-Verifikation. Offizielle Quellen = Grundwahrheit; `extern` = sekundaer.
+> Update 2026-07-02: Keine neuen belegten Wake-Word-Regeln seit 2026-06-08; sherpa-onnx bleibt die empfohlene offline/faehige Standard-Engine im bestehenden Setup.
 
 ---
 

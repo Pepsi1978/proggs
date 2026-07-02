@@ -1,11 +1,13 @@
 # Bekannte Bugs: Wake-Word-Detection / Keyword-Spotting in .NET (C#/WPF)
 
 > **PFLICHT-LESEN vor Arbeit an Wake-Word / Keyword-Spotting in einer .NET-Desktop-App.**
-> Stand: zuletzt recherchiert am **2026-06-08** fuer
+> Stand: zuletzt recherchiert am **2026-06-08**, **re-recherchiert am 2026-07-02** (Engine A: Firecrawl+MiniMax; keine neuen belastbaren Bugs/Deprecations seit dem Stichtag) fuer
 > **.NET 10.0.204** (`net10.0-windows`, WPF) · **sherpa-onnx** NuGet `org.k2fsa.sherpa.onnx` **1.13.2** (14.05.2026, Apache-2.0) ·
 > **NAudio 2.2.1** · **Picovoice Porcupine .NET 4.0.2** · **NanoWakeWord** (.NET Standard 2.0).
 > Zielprojekt: **VoiceAgent** (`~/proggs/VoiceAgent`). Gegenseite (Praevention):
 > `best-practices/desktop/wake-word.md`.
+
+> **Update 2026-07-02:** Re-Recherche fand keine neuen belastbaren .NET/NAudio/sherpa-onnx/Porcupine-Deprecations oder Bugs seit 2026-06-08. Die bestehenden Deployment-, Audioformat-, Streaming-KWS- und TTS-Self-Trigger-Regeln bleiben unveraendert massgeblich.
 
 ---
 
