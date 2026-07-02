@@ -12,7 +12,7 @@ interface AgentApi {
     suspend fun getCategories(): CategoriesResponse
 
     @POST("/categories")
-    suspend fun createCategory(@Body request: CreateCategoryRequest): SimpleResponse
+    suspend fun createCategory(@Body request: CreateCategoryRequest): CreateCategoryResponse
 
     @GET("/health")
     suspend fun health(): SimpleResponse

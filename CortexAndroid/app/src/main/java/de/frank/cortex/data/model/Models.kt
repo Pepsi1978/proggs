@@ -63,6 +63,17 @@ data class CreateCategoryRequest(
     val name: String
 )
 
+// Antwort des Agenten auf POST /categories: der KANONISCHE key (evtl. anders normalisiert als der
+// getippte Name) + die vollstaendige Kategorienliste (inkl. leerer). key nutzen, damit der Eintrag
+// exakt denselben Kategorie-String bekommt, den by-category filtert.
+@JsonClass(generateAdapter = true)
+data class CreateCategoryResponse(
+    val ok: Boolean,
+    val key: String? = null,
+    val categories: List<String>? = null,
+    val detail: String? = null
+)
+
 // --- Brain API ---
 
 @JsonClass(generateAdapter = true)

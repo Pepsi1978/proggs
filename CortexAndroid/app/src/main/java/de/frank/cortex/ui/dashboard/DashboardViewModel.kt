@@ -89,10 +89,12 @@ class DashboardViewModel : ViewModel() {
             try {
                 // Parallele Aufrufe
                 val countsDeferred = launch { loadCategoryCounts() }
+                val catsDeferred = launch { loadCategories() }
                 val overviewDeferred = launch { loadOverview() }
                 val healthDeferred = launch { loadHealth() }
 
                 countsDeferred.join()
+                catsDeferred.join()
                 overviewDeferred.join()
                 healthDeferred.join()
 
@@ -115,14 +117,12 @@ class DashboardViewModel : ViewModel() {
                 val main = name.substringBefore("/")
                 mainCounts[main] = (mainCounts[main] ?: 0) + count
             }
-            val categories = counts.counts.entries
-                .sortedBy { it.key.lowercase() }
-                .map { CategoryInfo(name = it.key, count = it.value, empty = it.value == 0) }
+            // NUR die Zaehler fuer die Uebersicht (Balken). Die Kategorien-LISTE fuer den Picker
+            // kommt aus loadCategories() (Registry, inkl. leerer) — category-counts laesst leere weg.
             _uiState.update {
                 it.copy(
                     totalEntries = counts.total_distinct,
-                    categoryCounts = mainCounts,
-                    categories = categories
+                    categoryCounts = mainCounts
                 )
             }
             CortexLog.info("DashboardVM", "loadCategoryCounts", "Gesamtzahl aus Brain-API übernommen", mapOf(
@@ -133,6 +133,21 @@ class DashboardViewModel : ViewModel() {
             throw e
         } catch (e: Exception) {
             CortexLog.error("DashboardVM", "loadCategoryCounts", "Fehler: ${e.message}")
+        }
+    }
+
+    /** Vollstaendige Kategorienliste (inkl. LEERER) fuer den „+ Kategorie"-Picker — aus der Agent-
+     *  Registry (/categories/detail), NICHT aus category-counts (das leere Kategorien weglaesst,
+     *  weshalb eine gerade angelegte Kategorie vorher NICHT im Picker auftauchte). Gleiche Quelle
+     *  wie der Chat-Tab (der die Kategorie deshalb korrekt zeigte). */
+    private suspend fun loadCategories() {
+        try {
+            val resp = ApiClient.agentApi().getCategories()
+            _uiState.update { it.copy(categories = resp.categories) }
+        } catch (e: CancellationException) {
+            throw e
+        } catch (e: Exception) {
+            CortexLog.error("DashboardVM", "loadCategories", "Fehler: ${e.message}")
         }
     }
 
@@ -339,11 +354,12 @@ class DashboardViewModel : ViewModel() {
     fun createCategory(name: String) {
         viewModelScope.launch {
             try {
-                ApiClient.agentApi().createCategory(CreateCategoryRequest(name))
-                val current = _uiState.value.categories.toMutableList()
-                if (current.none { it.name == name }) current.add(CategoryInfo(name, 0, true))
-                _uiState.update { it.copy(categories = current.sortedBy { cat -> cat.name.lowercase() }, editCategory = name) }
-                loadCategoryCounts()
+                val resp = ApiClient.agentApi().createCategory(CreateCategoryRequest(name))
+                val key = resp.key?.takeIf { it.isNotBlank() } ?: name   // kanonischer Kategorie-String
+                loadCategories()   // Picker-Liste frisch aus der Registry (enthaelt jetzt die neue Kategorie)
+                // Neue Kategorie SOFORT dem offenen Eintrag zuordnen (wie im Web-Drawer) — genau dafuer
+                // legt Frank sie im „+ Kategorie"-Dialog an; addEntryCategory speichert per re-embed.
+                if (_uiState.value.selectedEntry != null) addEntryCategory(key)
             } catch (e: CancellationException) {
                 throw e
             } catch (e: Exception) {
