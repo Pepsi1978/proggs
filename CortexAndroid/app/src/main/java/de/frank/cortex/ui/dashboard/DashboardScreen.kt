@@ -66,13 +66,12 @@ fun DashboardScreen(vm: DashboardViewModel = viewModel()) {
             isEditing = uiState.isEditing,
             editText = uiState.editText,
             editTitle = uiState.editTitle,
-            editCategory = uiState.editCategory,
             categories = uiState.categories,
             onEditTextChange = vm::updateEditText,
             onEditTitleChange = vm::updateEditTitle,
-            onEditCategoryChange = vm::updateEditCategory,
             onCreateCategory = vm::createCategory,
-            onSaveCategory = vm::saveEntryCategory,
+            onAddCategory = vm::addEntryCategory,
+            onRemoveCategory = vm::removeEntryCategory,
             onToggleEdit = vm::toggleEditing,
             onCancelEdit = vm::cancelEditing,
             onSave = vm::saveEntry,
@@ -596,20 +595,26 @@ private fun EntryCard(entry: BrainEntry, onClick: () -> Unit) {
                     )
                 }
             }
-            // Category tag
-            entry.category?.let {
-                Surface(
-                    shape = RoundedCornerShape(7.dp),
-                    color = categoryColor(it).copy(alpha = 0.14f)
+            // Category tags — ALLE Kategorien des Eintrags (Fallback: die eine primäre)
+            val cardCats = entry.categories?.takeIf { it.isNotEmpty() } ?: listOfNotNull(entry.category)
+            if (cardCats.isNotEmpty()) {
+                FlowRow(
+                    horizontalArrangement = Arrangement.spacedBy(6.dp),
+                    verticalArrangement = Arrangement.spacedBy(6.dp)
                 ) {
-                    Row(
-                        modifier = Modifier.padding(horizontal = 9.dp, vertical = 3.dp),
-                        horizontalArrangement = Arrangement.spacedBy(6.dp),
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Box(Modifier.size(7.dp).clip(CircleShape).background(categoryColor(it)))
-                        Text(it, fontSize = 11.sp, fontWeight = FontWeight.SemiBold,
-                            color = categoryColor(it))
+                    cardCats.forEach { cat ->
+                        val cc = categoryColor(cat)
+                        Surface(shape = RoundedCornerShape(7.dp), color = cc.copy(alpha = 0.14f)) {
+                            Row(
+                                modifier = Modifier.padding(horizontal = 9.dp, vertical = 3.dp),
+                                horizontalArrangement = Arrangement.spacedBy(6.dp),
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Box(Modifier.size(7.dp).clip(CircleShape).background(cc))
+                                Text(cat.substringAfterLast("/"), fontSize = 11.sp,
+                                    fontWeight = FontWeight.SemiBold, color = cc)
+                            }
+                        }
                     }
                 }
             }
@@ -634,13 +639,12 @@ private fun EntryDetailScreen(
     isEditing: Boolean,
     editText: String,
     editTitle: String,
-    editCategory: String?,
     categories: List<CategoryInfo>,
     onEditTextChange: (String) -> Unit,
     onEditTitleChange: (String) -> Unit,
-    onEditCategoryChange: (String?) -> Unit,
     onCreateCategory: (String) -> Unit,
-    onSaveCategory: () -> Unit,
+    onAddCategory: (String) -> Unit,
+    onRemoveCategory: (String) -> Unit,
     onToggleEdit: () -> Unit,
     onCancelEdit: () -> Unit,
     onSave: () -> Unit,
@@ -658,9 +662,28 @@ private fun EntryDetailScreen(
         verticalArrangement = Arrangement.spacedBy(13.dp)
     ) {
         item {
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                CategoryChip(entry.category ?: "Ohne Kategorie")
-                Spacer(Modifier.weight(1f))
+            Row(verticalAlignment = Alignment.Top) {
+                val cats = entry.categories?.takeIf { it.isNotEmpty() } ?: listOfNotNull(entry.category)
+                val canRemove = cats.size > 1
+                FlowRow(
+                    modifier = Modifier.weight(1f),
+                    horizontalArrangement = Arrangement.spacedBy(7.dp),
+                    verticalArrangement = Arrangement.spacedBy(7.dp)
+                ) {
+                    cats.forEach { cat ->
+                        RemovableCategoryChip(cat, canRemove) { onRemoveCategory(cat) }
+                    }
+                    // "＋ Kategorie": öffnet den bestehenden Kategoriebaum; Auswahl fügt sofort hinzu.
+                    CategoryPickerPill(
+                        categories = categories,
+                        selectedCategory = null,
+                        onCategoryChange = { picked -> if (picked != null) onAddCategory(picked) },
+                        onCreateCategory = onCreateCategory,
+                        isDark = isDark,
+                        placeholderLabel = "＋ Kategorie",
+                        showAuto = false
+                    )
+                }
                 IconButton(onClick = onBack) {
                     Icon(Icons.Default.Close, contentDescription = "Schließen",
                         tint = MaterialTheme.colorScheme.onSurfaceVariant)
@@ -715,25 +738,6 @@ private fun EntryDetailScreen(
 
         item {
             Column(verticalArrangement = Arrangement.spacedBy(9.dp)) {
-                Row(
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(9.dp)
-                ) {
-                    CategoryPickerPill(
-                        categories = categories,
-                        selectedCategory = editCategory ?: entry.category,
-                        onCategoryChange = onEditCategoryChange,
-                        onCreateCategory = onCreateCategory,
-                        isDark = isDark
-                    )
-                    DetailButton(
-                        text = "Kategorie speichern",
-                        icon = Icons.Default.Save,
-                        color = Mint,
-                        modifier = Modifier.weight(1f),
-                        onClick = onSaveCategory
-                    )
-                }
                 Row(horizontalArrangement = Arrangement.spacedBy(9.dp)) {
                     DetailButton(
                         text = "Löschen",
@@ -842,12 +846,12 @@ private fun EntryDetailScreen(
 }
 
 @Composable
-private fun CategoryChip(category: String) {
+private fun RemovableCategoryChip(category: String, removable: Boolean, onRemove: () -> Unit) {
     val color = categoryColor(category)
     Surface(shape = RoundedCornerShape(8.dp), color = color.copy(alpha = 0.14f)) {
         Row(
-            Modifier.padding(horizontal = 10.dp, vertical = 4.dp),
-            horizontalArrangement = Arrangement.spacedBy(6.dp),
+            Modifier.padding(start = 10.dp, end = if (removable) 5.dp else 10.dp, top = 4.dp, bottom = 4.dp),
+            horizontalArrangement = Arrangement.spacedBy(5.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
             Box(Modifier.size(7.dp).clip(CircleShape).background(color))
@@ -857,6 +861,17 @@ private fun CategoryChip(category: String) {
                 fontWeight = FontWeight.SemiBold,
                 color = color
             )
+            if (removable) {
+                Icon(
+                    Icons.Default.Close,
+                    contentDescription = "${category.substringAfterLast("/")} entfernen",
+                    tint = color,
+                    modifier = Modifier
+                        .size(16.dp)
+                        .clip(CircleShape)
+                        .clickable(onClick = onRemove)
+                )
+            }
         }
     }
 }

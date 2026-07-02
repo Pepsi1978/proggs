@@ -373,6 +373,55 @@ class DashboardViewModel : ViewModel() {
         }
     }
 
+    // ── Multi-Category: mehrere Kategorien pro Eintrag (Frank-Wunsch 2026-07-02) ──────────────────
+    /** Aktuelle Kategorien des offenen Eintrags (Fallback: die eine primaere). */
+    private fun currentEntryCats(entry: BrainEntry): List<String> =
+        entry.categories?.takeIf { it.isNotEmpty() } ?: listOfNotNull(entry.category)
+
+    /** Eine WEITERE Kategorie hinzufuegen (sofort speichern; brain bettet den Eintrag mit allen neu ein). */
+    fun addEntryCategory(name: String) {
+        val entry = _uiState.value.selectedEntry ?: return
+        val clean = name.trim()
+        if (clean.isEmpty()) return
+        val cur = currentEntryCats(entry)
+        if (cur.any { it.equals(clean, ignoreCase = true) }) return   // schon zugeordnet
+        if (cur.size >= 12) {
+            _uiState.update { it.copy(error = "Höchstens 12 Kategorien pro Eintrag") }
+            return
+        }
+        setEntryCategories(entry, cur + clean)
+    }
+
+    /** Eine Kategorie entfernen (mindestens eine bleibt immer). */
+    fun removeEntryCategory(name: String) {
+        val entry = _uiState.value.selectedEntry ?: return
+        val cur = currentEntryCats(entry)
+        if (cur.size <= 1) return
+        setEntryCategories(entry, cur.filterNot { it.equals(name, ignoreCase = true) })
+    }
+
+    private fun setEntryCategories(entry: BrainEntry, newCats: List<String>) {
+        if (newCats.isEmpty()) return
+        viewModelScope.launch {
+            try {
+                val resp = ApiClient.brainApi().setCategories(SetCategoriesRequest(entry.doc_id, newCats))
+                val applied = resp.categories?.takeIf { it.isNotEmpty() } ?: newCats
+                val updatedEntry = entry.copy(categories = applied, category = applied.first())
+                _uiState.update { it.copy(selectedEntry = updatedEntry) }
+                CortexLog.info("DashboardVM", "setEntryCategories", "Kategorien gesetzt", mapOf(
+                    "doc_id" to entry.doc_id, "categories" to applied.joinToString(",")
+                ))
+                loadCategoryCounts()
+                if (_uiState.value.selectedCategory != null) browseCategory(_uiState.value.selectedCategory!!)
+            } catch (e: CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                CortexLog.error("DashboardVM", "setEntryCategories", "Fehler: ${e.message}")
+                _uiState.update { it.copy(error = "Kategorien speichern fehlgeschlagen: ${e.message}") }
+            }
+        }
+    }
+
     fun saveEntry() {
         val entry = _uiState.value.selectedEntry ?: return
         viewModelScope.launch {

@@ -38,6 +38,9 @@ interface BrainApi {
     @POST("/entry/category")
     suspend fun changeCategory(@Body request: ChangeCategoryRequest): SimpleResponse
 
+    @POST("/entry/categories")
+    suspend fun setCategories(@Body request: SetCategoriesRequest): SetCategoriesResponse
+
     @DELETE("/entry")
     suspend fun deleteEntry(
         @Query("doc_id") docId: String,

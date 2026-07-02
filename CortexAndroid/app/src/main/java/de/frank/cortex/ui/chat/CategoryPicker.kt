@@ -91,7 +91,9 @@ fun CategoryPickerPill(
     onCategoryChange: (String?) -> Unit,
     onCreateCategory: (String) -> Unit,
     onOpen: () -> Unit = {},
-    isDark: Boolean
+    isDark: Boolean,
+    placeholderLabel: String = "Auto",   // Label wenn nichts gewaehlt (z.B. "＋ Kategorie" fuer Hinzufuegen)
+    showAuto: Boolean = true             // "Auto-Kategorie"-Zeile im Menue (beim Hinzufuegen: aus)
 ) {
     var open by remember { mutableStateOf(false) }
     val expanded = remember { mutableStateListOf<String>() }
@@ -128,7 +130,7 @@ fun CategoryPickerPill(
             ) {
                 Box(Modifier.size(8.dp).clip(CircleShape).background(catColor))
                 Text(
-                    text = selectedCategory?.let { cap(it.substringAfterLast("/")) } ?: "Auto",
+                    text = selectedCategory?.let { cap(it.substringAfterLast("/")) } ?: placeholderLabel,
                     fontSize = 12.sp,
                     fontWeight = FontWeight.SemiBold,
                     color = MaterialTheme.colorScheme.onSurface
@@ -153,20 +155,22 @@ fun CategoryPickerPill(
                 .widthIn(min = 320.dp, max = 380.dp)
                 .heightIn(max = 460.dp)
         ) {
-            // Spezial: Auto-Kategorie
-            DropdownMenuItem(
-                modifier = Modifier.heightIn(min = 36.dp),
-                contentPadding = PaddingValues(horizontal = 12.dp, vertical = 2.dp),
-                text = {
-                    Text(
-                        "Auto-Kategorie",
-                        color = if (selectedCategory == null) Iris else MaterialTheme.colorScheme.onSurface,
-                        fontSize = 14.sp,
-                        fontWeight = FontWeight.SemiBold
-                    )
-                },
-                onClick = { onCategoryChange(null); open = false }
-            )
+            // Spezial: Auto-Kategorie (beim Hinzufuegen ausgeblendet — dort ergibt "Auto" keinen Sinn)
+            if (showAuto) {
+                DropdownMenuItem(
+                    modifier = Modifier.heightIn(min = 36.dp),
+                    contentPadding = PaddingValues(horizontal = 12.dp, vertical = 2.dp),
+                    text = {
+                        Text(
+                            "Auto-Kategorie",
+                            color = if (selectedCategory == null) Iris else MaterialTheme.colorScheme.onSurface,
+                            fontSize = 14.sp,
+                            fontWeight = FontWeight.SemiBold
+                        )
+                    },
+                    onClick = { onCategoryChange(null); open = false }
+                )
+            }
 
             // Kategorie-Baum (Drilldown)
             rows.forEach { row ->

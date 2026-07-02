@@ -100,6 +100,7 @@ data class BrainEntry(
     val doc_id: String,
     val title: String?,
     val category: String?,
+    val categories: List<String>? = null,
     val score: Double? = null,
     val match: String? = null,
     val text: String?,
@@ -128,6 +129,24 @@ data class ChangeCategoryRequest(
     val doc_id: String,
     val category: String,
     val user_id: String = "frank"
+)
+
+// Multi-Category: die VOLLSTAENDIGE Kategorie-Liste eines Eintrags setzen (brain re-embedded -> in
+// jeder Kategorie auffindbar). Erste = primaer. Hinter dem "+ Kategorie" in der Detailansicht.
+@JsonClass(generateAdapter = true)
+data class SetCategoriesRequest(
+    val doc_id: String,
+    val categories: List<String>,
+    val user_id: String = "frank"
+)
+
+@JsonClass(generateAdapter = true)
+data class SetCategoriesResponse(
+    val ok: Boolean,
+    val doc_id: String? = null,
+    val categories: List<String>? = null,
+    val parents: List<String>? = null,
+    val detail: String? = null
 )
 
 @JsonClass(generateAdapter = true)
