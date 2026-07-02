@@ -155,6 +155,8 @@ class ChatViewModel : ViewModel() {
                 if (st == TunnelState.CONNECTED) {
                     loadCategories()
                     syncSizePromptsWithServer()
+                    // Gemerkte Speicher-Auftraege (Offline-Outbox) automatisch nachsenden.
+                    flushOutbox()
                 }
             }
         }
@@ -328,7 +330,45 @@ class ChatViewModel : ViewModel() {
             val rawAccum = StringBuilder()
             try {
                 if (WireGuardManager.state.value != TunnelState.CONNECTED) {
-                    _uiState.update { it.copy(isLoading = false, error = "VPN nicht aktiv") }
+                    // Offline-Outbox (Frank-Wunsch 2026-07-02): SPEICHER-Auftraege gehen ohne
+                    // VPN nicht verloren, sondern werden gemerkt und beim naechsten Tunnel-
+                    // Aufbau automatisch gesendet. Andere Modi verhalten sich wie bisher.
+                    if (state.contextMode == SettingsStore.CONTEXT_MODE_SAVE) {
+                        val item = de.frank.cortex.data.OutboxItem(
+                            id = UUID.randomUUID().toString(),
+                            sessionId = sessionId,
+                            text = text,
+                            category = state.selectedCategory,
+                            title = state.titleOverride.ifBlank { null },
+                            contextMode = state.contextMode,
+                            responseSize = state.responseSize,
+                            requestId = UUID.randomUUID().toString(),
+                            createdAt = System.currentTimeMillis()
+                        )
+                        val queued = withContext(Dispatchers.IO) {
+                            try {
+                                ChatSessionStore.enqueueOutbox(item)
+                                true
+                            } catch (e: Exception) {
+                                CortexLog.error("ChatVM", "outbox", "Einreihen fehlgeschlagen: ${e.message}")
+                                false
+                            }
+                        }
+                        if (queued) {
+                            CortexLog.info("ChatVM", "outbox", "Speicher-Auftrag gemerkt (kein VPN)",
+                                mapOf("chars" to text.length, "session_id" to sessionId))
+                            val notice = ChatMessage(
+                                text = "📮 Kein VPN — dein Speicher-Auftrag ist gemerkt und wird automatisch gesendet, sobald der Tunnel steht.",
+                                isUser = false,
+                                action = "outbox"
+                            )
+                            _uiState.update { it.copy(isLoading = false, messages = it.messages + notice) }
+                        } else {
+                            _uiState.update { it.copy(isLoading = false, error = "VPN nicht aktiv — merken fehlgeschlagen") }
+                        }
+                    } else {
+                        _uiState.update { it.copy(isLoading = false, error = "VPN nicht aktiv") }
+                    }
                     return@launch
                 }
 
@@ -503,6 +543,74 @@ class ChatViewModel : ViewModel() {
                         error = "Fehler: ${e.message}"
                     )
                 }
+            }
+        }
+    }
+
+    // Schutz gegen parallele Flush-Laeufe (mehrere CONNECTED-Events kurz nacheinander).
+    @Volatile private var outboxFlushing = false
+
+    /** Sendet gemerkte Speicher-Auftraege (Offline-Outbox) nach, sobald der Tunnel steht.
+     *  Sequenziell + idempotent (request_id aus der Einreihung — der Server dedupliziert,
+     *  selbst wenn ein Flush-Versuch nach dem Senden abbricht und wiederholt wird). */
+    private fun flushOutbox() {
+        if (outboxFlushing) return
+        outboxFlushing = true
+        viewModelScope.launch {
+            try {
+                val items = withContext(Dispatchers.IO) {
+                    try {
+                        ChatSessionStore.listOutbox()
+                    } catch (e: Exception) {
+                        CortexLog.error("ChatVM", "outboxFlush", "Outbox nicht lesbar: ${e.message}")
+                        emptyList()
+                    }
+                }
+                if (items.isEmpty()) return@launch
+                CortexLog.info("ChatVM", "outboxFlush", "Sende gemerkte Speicher-Auftraege", mapOf("count" to items.size))
+                for (item in items) {
+                    if (WireGuardManager.state.value != TunnelState.CONNECTED) break
+                    try {
+                        val response = ApiClient.agentApi().chat(
+                            ChatRequest(
+                                text = item.text,
+                                session_id = item.sessionId,
+                                category = item.category,
+                                title = item.title,
+                                context_mode = item.contextMode,
+                                context_prompt = buildContextPrompt(item.contextMode, item.responseSize),
+                                response_size = item.responseSize,
+                                request_id = item.requestId
+                            )
+                        )
+                        val agentMsg = ChatMessage(
+                            text = response.reply,
+                            isUser = false,
+                            action = response.action,
+                            category = response.category,
+                            title = response.title,
+                            recallHits = response.recall_hits,
+                            options = response.options,
+                            stored = response.stored
+                        )
+                        updateSessionsAfterPersist(item.sessionId, agentMsg)
+                        // Ist die betroffene Session gerade offen: Antwort auch live anzeigen.
+                        if (_uiState.value.sessionId == item.sessionId) {
+                            _uiState.update { it.copy(messages = it.messages + agentMsg) }
+                        }
+                        withContext(Dispatchers.IO) { ChatSessionStore.deleteOutboxItem(item.id) }
+                        CortexLog.info("ChatVM", "outboxFlush", "Speicher-Auftrag nachgesendet",
+                            mapOf("action" to response.action, "stored" to response.stored))
+                    } catch (e: CancellationException) {
+                        throw e
+                    } catch (e: Exception) {
+                        // Rest bleibt in der Outbox — naechster Tunnel-Aufbau versucht es erneut.
+                        CortexLog.warn("ChatVM", "outboxFlush", "Nachsenden fehlgeschlagen (Rest bleibt gemerkt): ${e.message}")
+                        break
+                    }
+                }
+            } finally {
+                outboxFlushing = false
             }
         }
     }

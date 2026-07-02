@@ -26,6 +26,21 @@ data class StoredChatMessage(
     val timestamp: Long
 )
 
+/** Ein gemerkter Speicher-Auftrag (Offline-Outbox, Frank-Wunsch 2026-07-02): wird ohne VPN
+ *  eingereiht und automatisch gesendet, sobald der Tunnel steht. request_id macht den
+ *  spaeteren Versand idempotent (Server dedupliziert — keine Doppel-Speicherung). */
+data class OutboxItem(
+    val id: String,
+    val sessionId: String,
+    val text: String,
+    val category: String?,
+    val title: String?,
+    val contextMode: String,
+    val responseSize: String,
+    val requestId: String,
+    val createdAt: Long
+)
+
 object ChatSessionStore {
 
     private lateinit var helper: Helper
@@ -98,6 +113,56 @@ object ChatSessionStore {
             "id = ?",
             arrayOf(sessionId)
         )
+    }
+
+    // --- Offline-Outbox (Speicher-Auftraege ohne VPN) ---
+
+    fun enqueueOutbox(item: OutboxItem) {
+        helper.writableDatabase.insertWithOnConflict(
+            "outbox",
+            null,
+            ContentValues().apply {
+                put("id", item.id)
+                put("session_id", item.sessionId)
+                put("text", item.text)
+                put("category", item.category)
+                put("title", item.title)
+                put("context_mode", item.contextMode)
+                put("response_size", item.responseSize)
+                put("request_id", item.requestId)
+                put("created_at", item.createdAt)
+            },
+            SQLiteDatabase.CONFLICT_REPLACE
+        )
+    }
+
+    fun listOutbox(): List<OutboxItem> = helper.readableDatabase.query(
+        "outbox",
+        arrayOf("id", "session_id", "text", "category", "title", "context_mode", "response_size", "request_id", "created_at"),
+        null, null, null, null,
+        "created_at ASC"
+    ).use { cursor ->
+        buildList {
+            while (cursor.moveToNext()) {
+                add(
+                    OutboxItem(
+                        id = cursor.getString(0),
+                        sessionId = cursor.getString(1),
+                        text = cursor.getString(2),
+                        category = cursor.getStringOrNull(3),
+                        title = cursor.getStringOrNull(4),
+                        contextMode = cursor.getString(5),
+                        responseSize = cursor.getString(6),
+                        requestId = cursor.getString(7),
+                        createdAt = cursor.getLong(8)
+                    )
+                )
+            }
+        }
+    }
+
+    fun deleteOutboxItem(id: String) {
+        helper.writableDatabase.delete("outbox", "id = ?", arrayOf(id))
     }
 
     fun deleteSession(sessionId: String) {
@@ -186,7 +251,21 @@ object ChatSessionStore {
         }
     }
 
-    private class Helper(context: Context) : SQLiteOpenHelper(context, "cortex_chat_sessions.db", null, 1) {
+    private const val OUTBOX_TABLE_SQL = """
+        CREATE TABLE IF NOT EXISTS outbox (
+            id TEXT PRIMARY KEY,
+            session_id TEXT NOT NULL,
+            text TEXT NOT NULL,
+            category TEXT,
+            title TEXT,
+            context_mode TEXT NOT NULL,
+            response_size TEXT NOT NULL,
+            request_id TEXT NOT NULL,
+            created_at INTEGER NOT NULL
+        )
+    """
+
+    private class Helper(context: Context) : SQLiteOpenHelper(context, "cortex_chat_sessions.db", null, 2) {
         override fun onConfigure(db: SQLiteDatabase) {
             // Statt einmaligem "PRAGMA foreign_keys=ON" in init(): das Pragma gilt nur pro
             // Connection — onConfigure setzt es garantiert fuer JEDE Connection des Helpers.
@@ -223,10 +302,15 @@ object ChatSessionStore {
             )
             db.execSQL("CREATE INDEX idx_sessions_updated_at ON sessions(updated_at DESC)")
             db.execSQL("CREATE INDEX idx_messages_session_timestamp ON messages(session_id, timestamp ASC)")
+            db.execSQL(OUTBOX_TABLE_SQL.trimIndent())
         }
 
         override fun onUpgrade(db: SQLiteDatabase, oldVersion: Int, newVersion: Int) {
-            // Version 1 ist das initiale Session-Schema.
+            // Version 1 -> 2: Offline-Outbox fuer Speicher-Auftraege (additiv, keine
+            // bestehenden Daten betroffen — echte Migration statt destruktivem Neuaufbau).
+            if (oldVersion < 2) {
+                db.execSQL(OUTBOX_TABLE_SQL.trimIndent())
+            }
         }
     }
 }
