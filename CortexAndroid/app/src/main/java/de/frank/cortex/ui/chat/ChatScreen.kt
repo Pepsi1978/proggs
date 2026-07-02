@@ -166,10 +166,6 @@ fun ChatScreen(vm: ChatViewModel = viewModel()) {
                     vm.selectSession(session.id)
                 },
                 onSessionDelete = { session -> vm.deleteSession(session.id) },
-                onNewChat = {
-                    inputText = ""
-                    vm.startNewChat()
-                },
                 onClose = vm::closeSessionsPanel
             )
         }
@@ -321,7 +317,6 @@ private fun SessionDrawer(
     currentSessionId: String,
     onSessionClick: (ChatSessionSummary) -> Unit,
     onSessionDelete: (ChatSessionSummary) -> Unit,
-    onNewChat: () -> Unit,
     onClose: () -> Unit
 ) {
     var deleteCandidate by remember { mutableStateOf<ChatSessionSummary?>(null) }
@@ -351,11 +346,17 @@ private fun SessionDrawer(
         )
     }
 
+    // Eigene, klar abgesetzte Seitenleisten-Optik (Frank-Wunsch 2026-07-02): hellerer Panel-
+    // Hintergrund (surfaceVariant statt surface), abgerundete rechte Kante + Iris-Akzentrahmen,
+    // damit sich die Leiste sichtbar vom Rest der App abhebt.
+    val drawerShape = RoundedCornerShape(topEnd = 24.dp, bottomEnd = 24.dp)
     ModalDrawerSheet(
         modifier = Modifier
             .fillMaxHeight()
-            .width(322.dp),
-        drawerContainerColor = MaterialTheme.colorScheme.surface,
+            .width(322.dp)
+            .border(1.dp, Iris.copy(alpha = 0.35f), drawerShape),
+        drawerShape = drawerShape,
+        drawerContainerColor = MaterialTheme.colorScheme.surfaceVariant,
         drawerContentColor = MaterialTheme.colorScheme.onSurface
     ) {
         Column(
@@ -366,8 +367,19 @@ private fun SessionDrawer(
         ) {
             Row(
                 modifier = Modifier.fillMaxWidth(),
-                verticalAlignment = Alignment.CenterVertically
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(10.dp)
             ) {
+                Box(
+                    modifier = Modifier
+                        .size(36.dp)
+                        .clip(RoundedCornerShape(11.dp))
+                        .background(Iris.copy(alpha = 0.16f))
+                        .border(1.dp, Iris.copy(alpha = 0.4f), RoundedCornerShape(11.dp)),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Icon(Icons.Default.Forum, null, tint = Iris, modifier = Modifier.size(19.dp))
+                }
                 Column(modifier = Modifier.weight(1f)) {
                     Text(
                         text = "Sessions",
@@ -387,16 +399,9 @@ private fun SessionDrawer(
                 }
             }
 
-            Button(
-                onClick = onNewChat,
-                modifier = Modifier.fillMaxWidth(),
-                shape = RoundedCornerShape(14.dp),
-                colors = ButtonDefaults.buttonColors(containerColor = Iris)
-            ) {
-                Icon(Icons.Default.AddComment, contentDescription = null, modifier = Modifier.size(18.dp))
-                Spacer(Modifier.width(8.dp))
-                Text("Neuer Chat")
-            }
+            // Der "Neuer Chat"-Button lebt in der Top-Bar rechts neben dem Sessions-Knopf —
+            // hier war er doppelt und wurde entfernt (Frank-Wunsch 2026-07-02).
+            HorizontalDivider(color = Iris.copy(alpha = 0.22f))
 
             if (sessions.isEmpty()) {
                 Surface(
