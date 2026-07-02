@@ -252,6 +252,21 @@ Worker die Anfrage bekommt; Werte "verschwinden".
 ist pro Worker isoliert; Mutationen werden nicht propagiert.
 **FIX:** Prozessuebergreifenden State NIE im Modul-Dict halten — Redis/DB/`/dev/shm`/Dateisystem nutzen.
 Pro Container EIN uvicorn-Prozess + Replikation auf Cluster-Ebene (FastAPI-Doku-Empfehlung).
+
+### 5.4 In-Memory-Sessions gehen bei JEDEM Deploy/Neustart verloren (auch mit nur 1 Worker)  [ECHTER VORFALL 2026-07-02]
+**Symptom:** Logbuch-/Verlaufs-Eintraege enthalten nur die Nutzer-FRAGE, nie die Antwort; Gespraeche
+erscheinen fragmentiert als mehrere Teil-Eintraege. Faellt erst spaet auf, weil der Timeout-Flush
+die Rumpf-Sessions Minuten spaeter "normal" wegschreibt.
+**Ursache:** Chat-Sessions lagen NUR im RAM (`_sessions`-Dict). Jeder `docker compose up --build`
+(an Deploy-Tagen 8+) killte den Prozess: laufende LLM-Antworten kamen nie in die Session, halbe
+Sessions gingen verloren oder wurden unvollstaendig geflusht; Fortsetzungen nach dem Deploy landeten
+in einer NEUEN Session. (Real getroffen: sb-agent, Frank-Bug 2026-07-02.)
+**FIX (funktionserhaltend, sb-agent 0.45.0):** Sessions bei JEDER Aenderung ATOMAR auf Platte
+spiegeln (Snapshot unter Lock, Schreiben via `to_thread` ausserhalb, `tmp` + `os.replace`), beim
+Startup wiederherstellen (Gespraech laeuft in DERSELBEN Session weiter), Spiegel-Datei erst NACH
+erfolgreichem Flush loeschen. Shutdown flusht bewusst NICHT (sonst zerhackt jedes Deploy das
+Gespraech in Teil-Eintraege). Merksatz: **Session-State, der einen Neustart ueberleben soll, ist
+Persistenz-Pflicht — RAM ist nur Cache.**
 **Bezug aktueller Code:** `_sessions: dict` + `asyncio.Lock` im `agent`-Dienst ist nur innerhalb EINES Prozesses
 korrekt. Aktuell laeuft der Container mit einem uvicorn-Default-Prozess → ok. Bei Skalierung auf `--workers > 1`
 **bricht** das in-memory Session-Modell (und `asyncio.Lock` schuetzt dann nichts prozessuebergreifend).
