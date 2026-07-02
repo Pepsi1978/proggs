@@ -148,7 +148,47 @@ class ChatViewModel : ViewModel() {
         // der Tunnel noch aus, der Aufruf liefe ins Leere — deshalb blieb das Dropdown leer.
         viewModelScope.launch {
             WireGuardManager.state.collect { st ->
-                if (st == TunnelState.CONNECTED) loadCategories()
+                if (st == TunnelState.CONNECTED) {
+                    loadCategories()
+                    syncSizePromptsWithServer()
+                }
+            }
+        }
+    }
+
+    // S/M/XL-Prompts zentral halten (Frank-Wunsch 2026-07-02): Server = Quelle der Wahrheit,
+    // damit das Dashboard DIESELBEN Texte nutzt. Einmalig pro App-Lauf.
+    @Volatile private var sizePromptsSynced = false
+
+    private fun syncSizePromptsWithServer() {
+        if (sizePromptsSynced) return
+        sizePromptsSynced = true
+        viewModelScope.launch(Dispatchers.IO) {
+            try {
+                val cfg = ApiClient.agentApi().getConfig()
+                if (cfg.size_prompts_custom) {
+                    // Server hat gepflegte Prompts -> lokal uebernehmen (Server gewinnt).
+                    cfg.size_prompts.forEach { (k, v) ->
+                        if (k in setOf("s", "m", "xl") && v.isNotBlank()) SettingsStore.setResponseSizePrompt(k, v)
+                    }
+                    CortexLog.info("ChatVM", "syncSizePrompts", "Zentrale S/M/XL-Prompts vom Server uebernommen")
+                } else {
+                    // Server noch ohne eigene Prompts -> Franks lokal gepflegte Handy-Prompts
+                    // EINMALIG hochladen (Seed) — inkl. seiner XL-Anpassung.
+                    ApiClient.agentApi().updateConfig(
+                        de.frank.cortex.data.model.AgentConfigRequest(
+                            size_prompt_s = SettingsStore.responseSizePrompt("s"),
+                            size_prompt_m = SettingsStore.responseSizePrompt("m"),
+                            size_prompt_xl = SettingsStore.responseSizePrompt("xl")
+                        )
+                    )
+                    CortexLog.info("ChatVM", "syncSizePrompts", "Handy-Prompts als zentrale Quelle zum Server geladen (Seed)")
+                }
+            } catch (e: CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                sizePromptsSynced = false   // naechster VPN-Connect versucht es erneut
+                CortexLog.warn("ChatVM", "syncSizePrompts", "Prompt-Sync fehlgeschlagen: ${e.message}")
             }
         }
     }

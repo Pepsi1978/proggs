@@ -146,6 +146,9 @@ data class AgentConfigResponse(
     // Router (Schritt 1 = Einordnung der Nachricht): eigenes Modell/Reasoning; leer = "wie Hauptagent".
     val router_model: String = "",
     val router_reasoning: String = "",
+    // Zentrale S/M/XL-Prompts (Quelle der Wahrheit auf dem Server; custom=false -> App darf seeden).
+    val size_prompts: Map<String, String> = emptyMap(),
+    val size_prompts_custom: Boolean = false,
     val codex: CodexState? = null,
     val tavily_enabled: Boolean = true,
     val model: String? = null,
@@ -161,15 +164,20 @@ data class CodexState(
 
 @JsonClass(generateAdapter = true)
 data class AgentConfigRequest(
-    val haupt_model: String,
-    val speicher_model: String,
-    val abfrage_model: String,
+    // Alle Felder optional — der Server aendert nur, was gesetzt ist (z.B. reiner Prompt-Sync).
+    val haupt_model: String? = null,
+    val speicher_model: String? = null,
+    val abfrage_model: String? = null,
     val haupt_reasoning: String? = null,
     val speicher_reasoning: String? = null,
     val abfrage_reasoning: String? = null,
     // "auto" = wie Hauptagent (Server speichert dann leer); sonst explizite Router-Wahl.
     val router_model: String? = null,
     val router_reasoning: String? = null,
+    // Zentrale S/M/XL-Prompts zum Server syncen (Seed + jede Aenderung in den Einstellungen).
+    val size_prompt_s: String? = null,
+    val size_prompt_m: String? = null,
+    val size_prompt_xl: String? = null,
     val tavily_enabled: Boolean? = null
 )
 
