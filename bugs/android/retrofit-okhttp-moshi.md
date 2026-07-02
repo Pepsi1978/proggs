@@ -11,6 +11,7 @@
 > logging-interceptor **4.12.0** · Kotlin **2.1.0** · KSP **2.1.0-1.0.29** · AGP 8.7.3 (**R8 full mode** = Default).
 > Neuer (nicht im Projekt): OkHttp **5.x**, Moshi **2.0.0-alpha** (KSP2-only, kotlin-metadata statt kotlin-reflect).
 >
+> **Ergaenzt 2026-07-02:** A10 (`by lazy`-Retrofit friert baseUrl aus veraenderlichen Settings ein, CortexAndroid-Fund).
 > **Abgrenzung (was steht woanders):** generisches HTTP/LLM-API-Verhalten → [`../apis/api-integration-general.md`](../apis/api-integration-general.md).
 > Allgemeine R8-/Shrinker-Regeln → [`../android-build/r8.md`](../android-build/r8.md). Hier geht es KONKRET um
 > Retrofit/OkHttp/Moshi. Reine Kotlin-Coroutinen → [`kotlin.md`](kotlin.md).
@@ -55,6 +56,7 @@
 | 30 | `@Field parameters can only be used with form encoding` | `@FormUrlEncoded` an die Methode | A1 |
 | 31 | `does not contain {id}` / `Missing parameter for {id}` | `@Path`-Value exakt = `{platzhalter}`; `@Path` nie null | A4 |
 | 32 | `baseUrl must end in /` / Endpoint-404 | baseUrl mit `/` enden, Endpoints OHNE führenden `/` | A9 |
+| 32b | Server-URL in Settings geaendert, Retrofit ruft weiter die alte | `by lazy`-Retrofit friert baseUrl ein — Instanz URL-gebunden neu bauen | A10 |
 | 33 | Tokens/PII in Logcat (Release) | `Level.NONE` in Release + `redactHeader("Authorization"/"Cookie")` | SEC1 |
 | 34 | App offline nach Server-Cert-Wechsel | Backup-Pin setzen (oder Intermediate pinnen) | SEC3 |
 | 35 | Chat/API-Antwort wirkt langsam trotz schnellem Server | `HttpLoggingInterceptor.Level.BODY` vom Hot Path nehmen; nur Timing/Status/Größen loggen | SEC4 |
@@ -556,6 +558,13 @@
 - **Versionen:** by-design.
 - **FIX:** baseUrl IMMER mit `/` enden (`.../v2/`), Endpoints OHNE führenden Slash (`users/me`).
 - **Quelle:** https://github.com/square/retrofit/issues/2010
+
+### A10. Retrofit `by lazy` + baseUrl aus veraenderlichen Settings → eingefrorene alte URL
+- **Symptom:** Nutzer aendert Server-Host/Port in den App-Einstellungen — ein Teil der Requests geht sofort an die neue Adresse (direkte OkHttp-Calls, die die URL live lesen), Retrofit-Calls gehen bis zum App-Neustart weiter an die ALTE. Wirkt wie ein „halb kaputter" Server-Wechsel.
+- **Ursache:** `Retrofit.Builder().baseUrl(Settings.url())` in einem `by lazy`/Singleton friert die URL vom ERSTEN Zugriff ein — Retrofit-Instanzen sind unveraenderlich, die Settings nicht.
+- **Versionen:** by-design (Retrofit 2.x).
+- **FIX (funktionserhaltend):** Instanz an die URL binden: beim Zugriff aktuelle URL mit der gebauten vergleichen, bei Abweichung Retrofit (nicht den OkHttpClient!) neu bauen — Pool/Threads bleiben geteilt. (Gefunden 2026-07-02 in CortexAndroid ApiClient; dort als `UrlBoundApi`-Holder geloest.)
+- **Quelle:** square.github.io/retrofit (immutable instances)
 
 ---
 

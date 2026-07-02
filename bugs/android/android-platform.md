@@ -13,6 +13,8 @@
 > Recherche: 7-Researcher-Schwarm (offizielle Quellen zuerst), Fix-Status teils per
 > `gh` hart geprueft. Quelle des Systems: `~/proggs/bugs/SYSTEM.md`.
 >
+> **Ergaenzt 2026-07-02:** §1.12 (ProcessLifecycleOwner-Observer-Leak, CortexAndroid-Fund).
+>
 > **Ergaenzung 2026-06-02 (Best-Practices-Lauf):** Die Best-Practices-Seite
 > [`best-practices/android/android-platform.md`](../../best-practices/android/android-platform.md)
 > ist die „so macht man es richtig"-Seite zu diesem Almanach. Dabei kamen zusaetzliche Bug-Funde
@@ -67,6 +69,7 @@ Geht es um *Kompilieren/Bauen* → `gradle.md`. Geht es um *was auf dem Screen p
 | 13 | State nach Hintergrund-Kill weg | ViewModel ueberlebt nicht Process Death → `SavedStateHandle`/Persistenz | §1.5, §1.6 |
 | 14 | Native `.so` (NDK/SDK), targetSdk 35+ | 16-KB-Page-Size: NDK r28+ / `max-page-size=16384` | §8.3 |
 | 15 | Custom-Permission einer ANDEREN App `granted=false` (ContentProvider-`SecurityException`) | Definierende App ZUERST, nutzende App DANACH neu installieren (`pm grant` hilft nicht) | §2.11 |
+| 16 | `ProcessLifecycleOwner.addObserver` in der Activity | Observer als Feld + in `onDestroy` `removeObserver` — sonst Leak + Mehrfach-Callbacks nach Recreation | §1.12 |
 
 ---
 
@@ -167,6 +170,13 @@ sagt *wie man es von vornherein richtig macht*. Jede Bug-Sektion hier hat dort i
 - **Versionen:** Bug Android 11–13; `configChanges` per Design.
 - **FIX:** Wo moeglich Config-Changes ueber System-Recreation + ViewModel/SavedState handhaben statt manuell. Wenn manuell: alle noetigen Flags deklarieren UND lesen; State lifecycle-robust halten, nicht auf den Callback verlassen.
 - **Quelle:** https://developer.android.com/guide/topics/resources/runtime-changes
+
+### 1.12 `ProcessLifecycleOwner`-Observer in der Activity registriert → Leak + Mehrfach-Callbacks
+- **Symptom:** Nach Rotation/System-Theme-Wechsel/Prozess-Restore laufen App-Vordergrund-Callbacks (Auth-Prompt, VPN-Connect/Disconnect) MEHRFACH; Memory-Profiler zeigt zerstoerte Activities, die nicht freigegeben werden.
+- **Ursache:** `ProcessLifecycleOwner.get().lifecycle.addObserver(...)` in `Activity.onCreate` mit anonymem Observer: Der Process-Lifecycle lebt fuer immer, die Activity nicht — bei jeder Recreation kommt ein NEUER Observer dazu, keiner wird entfernt, und jeder alte haelt seine tote Activity fest.
+- **Versionen:** per Design (lifecycle-process, alle Versionen).
+- **FIX (funktionserhaltend):** Observer als Feld halten und in `onDestroy()` per `removeObserver()` abmelden — ODER die Logik in eine Klasse mit Prozess-Lebensdauer (Application/Singleton) verlegen, wenn sie wirklich pro Prozess statt pro Activity gemeint ist. (Gefunden 2026-07-02 in CortexAndroid MainActivity: Biometrie-Auth + VPN-Autoconnect.)
+- **Quelle:** developer.android.com/reference/androidx/lifecycle/ProcessLifecycleOwner
 
 ---
 

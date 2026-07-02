@@ -20,6 +20,8 @@
 > - Abgedeckte Spanne: **Compose 1.6 → 1.10**, Material3 1.2 → 1.4. **Strong Skipping** ist seit
 >   Compose-Compiler 2.0.20 / Compose 1.7 default aktiv (gilt fuer beide Projekte).
 >
+> **Ergaenzt 2026-07-02:** §6.8 (`weight(0f)`-Crash aus dynamischen Daten, CortexAndroid-Fund).
+>
 > **Versions-Horizont (Re-Recherche 2026-06-24):** BOM ist inzwischen bei **2026.06.00** (2026-06-17):
 > Compose UI/foundation/animation/runtime **1.11.3**, **Material3 1.4.0** (stabil), **1.12.0-beta01** in
 > Arbeit; **Material3 1.5.x noch Alpha** (1.5.0-alpha22). **navigation-compose 2.9.x** ist verfuegbar.
@@ -66,6 +68,7 @@ Dieser Almanach ist die **tiefe, vollstaendige** Quelle fuer **Compose-UI-Bugs**
 | 14 | Crash „infinity constraints" | Kein verschachteltes gleichachsiges Scrollen | §6.1 |
 | 15 | type-safe Nav crasht (custom Typ) | Eigenen `NavType` per `typeMap` registrieren | §7.4 |
 | 16 | Gespeicherte Aenderung (DataStore/Room) erscheint erst beim naechsten Tap | Flow per `remember(context){…}` / ViewModel-`stateIn` stabil halten — NIE roh im Composable-Body neu bauen | §2.14 |
+| 17 | `weight()` aus dynamischen Daten (Anteile/Zaehler) | Wert 0 crasht (`invalid weight`) — 0-Elemente vorher filtern | §6.8 |
 
 ---
 
@@ -440,6 +443,13 @@ Im Composable `val activity = LocalContext.current.findActivity()` (Pattern aus 
 **Versionen:** Compose 1.6 → 1.10; issuetracker 237985810.
 **FIX:** State-Writes auf den Main-Thread (`withContext(Dispatchers.Main)`) oder in `Snapshot.withMutableSnapshot { … }` kapseln. Hintergrundarbeit auf IO belassen, nur das State-Update auf Main.
 **Quelle:** issuetracker.google.com/issues/237985810
+
+### 6.8 `IllegalArgumentException: invalid weight` bei `Modifier.weight(0f)` aus dynamischen Daten
+**Symptom:** Crash `IllegalArgumentException: invalid weight; must be greater than zero`, sobald ein Listenelement mit Wert 0 in eine gewichtete Row/Column gerendert wird (z.B. Anteils-Balken: `weight(count / total)` mit `count == 0`).
+**Ursache:** `RowScope/ColumnScope.weight()` verlangt strikt `> 0` (`require(weight > 0.0)`). Bei Gewichten, die aus Server-/Nutzerdaten berechnet werden (Kategorie-Zaehler, Prozent-Anteile), ist 0 ein voellig normaler Datenwert — der Crash ist damit ein klassischer Datenrand-Fall, der im Test (alle Kategorien gefuellt) nie auftritt.
+**Versionen:** per Design, alle Compose-Versionen.
+**FIX (funktionserhaltend):** Elemente mit Anteil 0 VOR dem Rendern der gewichteten Reihe herausfiltern (`entries.filter { it.value > 0 }`) — optisch identisch, da 0-Anteile ohnehin keine Breite haetten. Alternativ `coerceAtLeast(0.0001f)`, wenn das Element sichtbar bleiben soll. (Gefunden 2026-07-02 im CortexAndroid-Dashboard-Spektrum-Balken.)
+**Quelle:** developer.android.com Referenz `RowScope.weight` (require weight > 0)
 
 ---
 
