@@ -47,7 +47,7 @@ from pydantic import BaseModel, Field
 VERSION = "0.31.0"  # 0.31.0: Speicher-Cap-Klasse endgueltig beseitigt (Frank-Bug 2026-06-25) — ChatReq.text max_length 100000 -> 500000 (konsistenter, GROSSZUEGIGER Backstop ~25x Franks groesste Datei; lehnt nur als allerletzte OOM-Schranke laut via 422 ab). Der eigentliche stille Slice sass im dashboard /api/chat (jetzt laute Ablehnung statt text[:N]); brain-api StoreReq hat keinen Cap und chunkt selbst -> auf dem gesamten Speicher-Pfad gibt es jetzt KEINE stille Kuerzung mehr. 0.30.0: AUSGABE-Haertung fuer grosse Eintraege (Frank-Wunsch 2026-06-25) — beim Nachschlagen bekam der Leseagent (Filter) den VOLLTEXT aller Treffer (5x18k -> Kontext-Ueberlauf-Risiko), obwohl er nur Nummern waehlt; jetzt nur ein Relevanz-Schnipsel pro Treffer (LESE_SNIPPET_CHARS, bevorzugt der gematchte Chunk). Der Hauptagent (Antwort) bekommt den Inhalt jetzt pro Treffer (ANSWER_HIT_CHARS) UND gesamt (ANSWER_TOTAL_CHARS) gedeckelt mit 'gekuerzt'-Hinweis + Verweis auf den Drawer-Volltext. So koennen Lese-/Hauptagent an beliebig grossen Eintraegen nicht mehr ueberlaufen. 0.29.0: FIX 2. Cap-Schicht (Frank-Bug 2026-06-25) — ChatReq.text war auf max_length=8000 begrenzt (Pydantic lehnte laengere Texte ab -> 422 -> 'nicht erreichbar'); jetzt 100000 (brain-api chunkt selbst). Alle Kategorie-Namen-Caps 60->120 (tiefe Pfade A/B/C/...). 0.28.0: FIX Speichern grosser Texte + Titel-Uebernahme (Frank-Bug 2026-06-25). Root Cause: bei intent=save musste der Router den Text WORTWOERTLICH in quote+reply echoen -> grosse Pastes sprengten max_tokens=2048 -> abgeschnittenes JSON -> Fallback 'nicht verstanden', danach KI-Titel statt Frank-Titel, am Ende NICHTS gespeichert (Confirm kam nie sauber). Fix: Sind Titel ODER Kategorie aus dem Dashboard gesetzt (klares Speicher-Signal) und kein offenes pending -> Router UEBERSPRINGEN, direkt intent=save (voller user_text wird 1:1 zum quote). Rueckfrage zeigt langen Text gekuerzt (gespeichert wird der VOLLE Text) -> klare 'Soll ich ... ablegen?'-Frage mit Ja/Nein. Dashboard leert das Titel-Feld nur noch, wenn der Server den Save erkannt hat (sonst bleibt der Titel fuer den Retry). 0.27.0: Beliebig tiefe Kategorie-Hierarchie (Frank-Wunsch 2026-06-25) — _cat_key normalisiert Pfade jetzt OHNE Tiefen-Limit (A/B/C/...), Speicheragent-Prompts (DEFAULT_SPEICHER + geschuetztes SPEICHER_SCHEMA) erlauben/erklaeren beliebig tiefe Pfade statt nur 2 Ebenen. Dashboard baut die Baeume rekursiv. 0.26.0: Speicheragent kennt 2-Ebenen-Hierarchie (Phase 6, Frank-Wunsch 2026-06-25) — beim Ablegen waehlt er eine passende bestehende Unterkategorie 'Haupt/Unter' zeichengenau ODER schlaegt eine neue 'Haupt/Unter' vor und fragt per Eskalation/Rueckfrage nach (Frank wird vor dem Anlegen gefragt). Kernregel im GESCHUETZTEN SPEICHER_SCHEMA (gilt auch bei custom Prompt) + Erklaerung & Beispiele E/F im DEFAULT_SPEICHER. Max 2 Ebenen, kein Schraegstrich wo flach genuegt; zusammen mit _cat_key-Normalisierung (0.23.2) keine Schreibvarianten-Dubletten. 0.25.0: Eval-Set um 10 TITEL-Saetze erweitert (Frank-Wunsch 2026-06-25, id 91-100) — pruefen das Titel-Feature aus allen Blickwinkeln: store_title (Frank gibt Titel+Kategorie vor -> Eintrag landet unter GENAU dem Titel, per by-title verifiziert, KEIN KI-Titel), query 95-97 (Eintrag ueber Titel+Inhalt auffindbar -> beweist Titel im Embedding), save_confirm_title (Bestaetigungs-Rueckfrage LIEST den Titel woertlich vor, speichert nichts). Zwei neue _eval_one-Zweige (store_title/save_confirm_title), isoliert unter EVAL_USER, nach dem Lauf gepurgt. 0.24.0: TITEL-Override beim Senden (Frank-Wunsch 2026-06-25) — ChatReq.title reicht einen im Dashboard-Sendefeld eingetippten Titel durch (analog zur Kategorie-Wahl); _process_turn merkt ihn im pending und LIEST ihn in der Bestaetigungs-Rueckfrage VOR ('Soll ich das als T unter K ablegen: ...?'); _do_store nimmt den Frank-Titel mit Vorrang (Frank-Titel > KI-Titel > Text-Anfang) und ueberspringt bei Titel+Kategorie den unnoetigen Speicheragent-LLM-Call. So bekommen ganz neue Eintraege ihren Titel von Frank statt KI-geraten -> der dann (brain-api 1.10.0) den Vektor mitpraegt. 0.23.2: Kategorie-Hierarchie-Normalisierung (Phase 5 Fundament, Frank-Wunsch 2026-06-25) — _cat_key normalisiert jetzt Schraegstriche auf genau 2 Ebenen 'Haupt/Unter' (' / ' -> '/', max 2 Ebenen, leere Teile weg), damit Unterkategorien aus dem Dashboard/Speicheragent keine Schreibvarianten-Dubletten erzeugen. 0.23.1: Eval-Set an die Internet-Suche angepasst (Etappe 3) — #52 (Wetter München) + #53 (Dortmund-Ergebnis) von kind 'smalltalk' auf 'internet' umgestellt (echte Live-Fragen gehoeren jetzt ans Internet-Werkzeug, nicht mehr smalltalk); neuer 'internet'-kind im Eval-Flow prueft NUR das Routing (intent==internet, keine echte Tavily-Suche -> spart Credits) + eigene Bereichs-Zeile im Log. 0.23.0: Internet-Suche als 3. Werkzeug (Frank-Wunsch 2026-06-25, Etappe 2). Neuer intent='internet' im Router fuer aktuelle/aeussere Fragen (Wetter, Sport, News, Kurse) -> Tavily-Suche (tavily_search, fuer KI-Agenten gebaut; Key NUR im VPS-.env TAVILY_API_KEY, nie im Repo) -> der HAUPTAGENT formuliert die Antwort aus den Suchergebnissen (hauptagent_answer_internet + HAUPTAGENT_INTERNET_AUFTRAG, mit kurzer Quellenangabe). Router-Persona + ROUTER_SCHEMA + intent-Validierung um 'internet' erweitert; Faustregel internet=aktuell/aeusserlich vs. smalltalk=zeitloses Allgemeinwissen. Tool-Fehler gefangen (ai-agent §3.2), Timeout 20s; fehlt der Key -> ehrliche Fehlanzeige statt Crash. 0.22.0: Agenten-Prompt-Umbau + Leseagent-Architektur (Frank-Wunsch 2026-06-25, nach den Recherche-Prompts). (1) Alle 3 editierbaren Prompts (Hauptagent/Speicheragent/Leseagent) in klarer Struktur ROLLE/AUFGABE/KONTEXT/KATEGORIEN/EINGABEFORMAT/REGELN/AUSGABEFORMAT/BEISPIELE neu geschrieben — die Arbeitsweise steht jetzt fast komplett im EDITIERBAREN Prompt, nur das nackte JSON-Schema bleibt geschuetzt angehaengt. Dynamische {kategorien} bleiben (KEINE feste Liste, respektiert Franks Kategorie-Verwaltung). (2) ARCHITEKTUR-Wechsel: Der Leseagent FORMULIERT die Antwort nicht mehr — er FILTERT nur die Gehirn-Treffer und gibt per JSON deren NUMMERN zurueck (ABFRAGE_SCHEMA, leseagent_select). Der HAUPTAGENT formuliert danach die Antwort aus den ORIGINAL-Treffern (hauptagent_answer + build_hauptagent_answer_prompt + HAUPTAGENT_ANSWER_AUFTRAG) — so kann der Leseagent keinen Text verfaelschen (Wortwoertlichkeit garantiert). 3-Schritt-Kette Router->Filter->Formulierung; query-Flow + Eval-Flow umgestellt; Rolle 'abfrage' im Dashboard jetzt 'Leseagent'. 0.21.0: Eval-Set auf 90 Saetze (Frank-Wunsch 2026-06-25) — +10 komplett sinnlose Plauder-Saetze ('Mann Mann Mann war das ein Tag', 'Im Fruehtau zu Berge', 'Pass mal auf'), die der Hauptagent als 'smalltalk' erkennen muss (nicht speichern/suchen). 0.20.0: Eval-Set auf 80 Saetze erweitert (Frank-Wunsch 2026-06-25) — +30 reine Smalltalk-/Wissens-Saetze (Wetter, Sport, 'erklaer mir Pythagoras', Plauderei, Aussagen ohne Speicher-Signal). Pruefen: Router routet als 'smalltalk' (NICHT speichern, NICHT im Gedaechtnis suchen) -> der Hauptagent funktioniert auch als normaler Sprachassistent. Hinweis: kein Internet-Tool, statische Wissensfragen aus Modell-Wissen, Live-Fragen ehrlich verneint. 0.19.0: POST /categories/move-entry (Frank-Wunsch 2026-06-25) — verschiebt EINEN Eintrag (doc_id) in eine andere Kategorie fuers Kategorie-Dropdown im Drawer: stellt die Ziel-Kategorie kanonisch sicher (neue -> Registry, sofort in Einstellungen+Gespraech-Dropdown synchron), setzt sie via brain set_payload (Vektor bleibt, kein Re-Embed); befuellte Registry-Kategorie wandert aus der Registry. brain_set_entry_category-Helfer. 0.18.0: Eval-Check (Frank-Wunsch 2026-06-25) — Selbsttest aller 3 Agenten gegen 50 feste Saetze (24 Speichern versch. Kategorien -> 18 Abfragen mit erwartetem Inhalt -> Smalltalk -> 3 Injektion). Laeuft unter ISOLIERTEM Test-Nutzer 'eval-test' (nie Franks Gehirn), raeumt danach HART auf (brain /purge — kein Papierkorb). Detail-Log (Markdown) auf Z /eval-logs, 14 Tage Retention. POST /eval-run (via to_thread), GET /eval-logs, GET /eval-log. brain_store/brain_search um user_id erweitert; brain_by_title/brain_purge-Helfer. 0.17.0: Anklickbare Antwort-Knoepfe (Frank-Wunsch 2026-06-25 — sichtbare Manifestation der Haertung). save_confirm UND store_clarify (Eskalation) liefern jetzt 'options' [{label,send}]; /chat reicht sie durch -> das Dashboard zeigt Ja/Nein-Knoepfe unter der Rueckfrage (z.B. 'Ja, „Musik" anlegen' / 'Nein, „Sonstiges"'), Frank klickt statt zu tippen. 0.16.0: Agenten-Haertung Paket C1 (Frank-Wunsch 2026-06-25). B10 Rate-Limit-/5xx-Resilienz: llm_generate ist jetzt ein Retry-Wrapper um _llm_generate_once — bei 429/408/5xx Full-Jitter-Backoff (Retry-After-Header bevorzugt), max 3 Versuche, NUR auf dieser einen Schicht (verhindert 3x5=243-Call-Multiplikation); 400/401/403/404 nie wiederholt. Deckt Gemini-SDK UND OpenCode/httpx ab. Laeuft im Threadpool -> sleep blockiert nur den Worker, nicht den Event-Loop. 0.15.0: Agenten-Haertung Paket B (Frank-Wunsch 2026-06-25). B3 "no receipt, no claim": _store_final bestaetigt "gespeichert" NUR mit doc_id-Quittung vom brain — ohne ID ehrliche Fehlermeldung statt falscher Erfolg. B4 typisiertes Routing: Hauptagent-intent gegen festes Enum validiert (halluzinierter Wert -> smalltalk, geloggt) + Routing-Trace via checkpoint. B5 Schema-Robustheit: llm_generate erkennt MAX_TOKENS (abgeschnittene Antwort) und meldet es als Sonde, statt unvollstaendiges JSON still falsch zu parsen. 0.14.0: Agenten-Haertung Paket A (Frank-Wunsch 2026-06-25). A1 Injektions-Schutz: gespeicherte/gefundene Inhalte sind in ALLEN 3 geschuetzten Bloecken als DATEN (keine Befehle) markiert (Lethal-Trifecta-Luecke geschlossen). A2 Eskalation: Speicheragent liefert eskalation+rueckfrage; will er eine NEUE (unbekannte) Kategorie anlegen ODER ist er unsicher, wird NICHT still gespeichert, sondern bei Frank zurueckgefragt (neuer pending-mode store_clarify: confirm_yes->vorgeschlagene/neue Kategorie, confirm_no->Sonstiges). Dashboard-Override bleibt ohne Rueckfrage. _do_store in _store_final (gemeinsamer Endpunkt) + Eskalations-Verzweigung refaktoriert. 0.13.0: Kategorie-Verwaltung + deutsche Rechtschreibung (Frank-Wunsch 2026-06-25). _cat_key macht KEIN lowercase/Slug mehr -> Kategorien werden 1:1 als Klartext (Substantive gross, Leerzeichen) gespeichert; Dubletten-Schutz jetzt case-insensitiv via _canonical_category (bestehende Schreibweise gewinnt). Leseagent (llm_answer) bekommt NUR Payload-Kategorien (brain_categories), Speicheragent die VOLLE Liste (inkl. leerer). Neue Endpoints GET /categories/detail (mit Eintragszahl+leer-Flag), POST /categories/rename (brain set_payload, auch Merge), POST /categories/delete (Etikett entfernen, Eintraege bleiben); brain-Helfer rename/detach/counts. Speicher-Prompt + geschuetztes Schema verlangen deutsche Rechtschreibung + zeichengenaue Wiederverwendung. 0.12.0: Standard-Prompts aller 3 Agenten (Haupt/Speicher/Abfrage) + improve-Prompt + LLM-Marker (OFFENER PUNKT/ÄHNLICHE EINTRÄGE/Beispiele) selbst auf echte deutsche Umlaute umgestellt — vorher predigten sie Umlaute, waren aber in ae/oe/ue geschrieben (Frank-Wunsch). 0.11.0: Deutsche Umlaute global (Frank-Wunsch) — _cat_key erhaelt ä/ö/ü/ß (kein ae/oe/ue mehr), CONV_CATEGORY 'gespräche', Logbuch-Header/Titel 'Gespräch'/'Gespräche', Speicheragent-Prompt erlaubt Umlaut-Kategorien; path-Helper erkennt alte+neue Praefixe. 0.10.0: DELETE /logbook (Frank-Wunsch) — loescht eine Logbuch-.txt von Platte Z (agent als uid 1000 mit Schreibrecht; Dashboard hat /logbook nur read-only). Pfad streng validiert (kein Traversal, nur .txt in LOGBOOK_DIR); Vektor-Kopie bleibt. 0.9.0: Kategorie-Override beim Senden (Frank-Wunsch 2026-06-24) — waehlt Frank im Dashboard-Dropdown eine Kategorie, wird der bestaetigte Text GENAU dort abgelegt (keine Auto-Kategorie, kein Dubletten-Ersatz); die Rueckfrage nennt die Kategorie. /chat + ChatReq um 'category'; _process_turn reicht sie durch, merkt sie im pending bis zur Bestaetigung; _do_store(override_category). Keine Wahl -> Speicheragent entscheidet wie bisher. 0.8.0: Kategorie-Registry (Frank-Wunsch 2026-06-24) — Kategorien koennen VORAB angelegt werden (auch ohne Eintrag) und ueberleben in categories.json (agent-data). all_categories() = Vereinigung(Gehirn-Kategorien + Registry); der Speicheragent kennt manuell angelegte Kategorien sofort. Neue Endpoints GET/POST /categories. 0.7.0: Drei editierbare System-Prompts (Frank-Wunsch 2026-06-24) — Hauptagent, Speicheragent UND Abfrageagent haben je einen EIGENEN, im Dashboard umschalt-/speicherbaren Prompt (vorher teilten Haupt+Abfrage einen, der Speicheragent war fest). Pro Rolle eigene Datei (haupt-prompt.txt/speicher-prompt.txt/abfrage-prompt.txt); das CODE-kritische JSON-Schema (Router bzw. Speicher) bleibt geschuetzt angehaengt; Anti-Halluzinations-Constraints des Abfrageagenten bleiben geschuetzt. Migration: alter gemeinsamer prompt.txt -> Haupt-Prompt. /prompt + /api/prompt um role-Parameter (Abwaertskompat: ohne role = haupt). 0.6.0: Modell-pro-Rolle (Frank-Wunsch) — Hauptagent, Speicheragent und Abfrageagent koennen je ein EIGENES Modell nutzen (3 Dropdowns im Dashboard); config.json speichert haupt_model/speicher_model/abfrage_model (Migration vom alten Einzel-'model'); /config + /health geben 'models' zurueck (Abwaertskompat: 'model' = Hauptagent). 0.5.0: Agenten-Dreiteilung (Frank-Wunsch) — Frank redet nur mit dem HAUPTAGENTEN. Dieser routet: erkennt Speicher-Absicht und fragt IMMER ZUERST mit WORTWOERTLICHEM Zitat zurueck ("Soll ich ablegen: ...?"), speichert erst nach Zustimmung 1:1 ueber den SPEICHERAGENTEN (Kategorie/Titel/Dublette); Wissensfragen ueber den ABFRAGEAGENTEN (Vektorsuche + Antwort NUR aus Treffern, mit Hinweis "nachgeschaut"). Confirm-vor-Speichern im CODE erzwungen (Zustandsautomat), nicht nur im Prompt. /chat-Schwerlast via asyncio.to_thread (Event-Loop frei, fastapi §1 / ai-agent §3.1). DEFAULT_INSTRUCTIONS=Hauptagent-Persona, SCHEMA_BLOCK->ROUTER_SCHEMA, neuer SPEICHER_SYSTEM. 0.4.0: Multi-Provider — OpenCode Zen Go (minimax-m3 ueber Anthropic /messages-Schema) als zweiter Provider neben Gemini; Modell-Liste aufgeraeumt (3.1-pro/3.1-flash raus, minimax/minimax-m3 rein); neuer /improve-Endpoint (eingesprochenen Text grammatikalisch verbessern OHNE Inhaltsaenderung). 0.3.0: Phase 4b Abruf-Seite — vierter Modus 'recall': Wissensfrage -> read-only Vektorsuche im Gehirn (brain-api /search) -> ZWEITER LLM-Aufruf llm_answer, antwortet NUR aus den Treffern (nichts erfinden), nutzt denselben editierbaren Prompt OHNE Schema. Ein Eingang, zwei Koepfe. SCHEMA_BLOCK um action 'recall' + Feld 'query' erweitert; DEFAULT_INSTRUCTIONS: Wissensfragen -> recall + Antwort-Ton-Abschnitt. maxOutputTokens hoch + finishReason-Pruefung (Gemini-Almanach B4/D10). 0.2.1: Prompt-Haertung (echte Umlaute + Anweisung, Injection-Schutz, Ehrlichkeitsschutz bei Wissensfragen, expliziter Feld-Kontrakt + ausgefuellte Few-shot-Beispiele, Kategorie-Schluessel-Format). 0.2.0: System-Prompt-Instruktionen + Modell editierbar/speicherbar (GET/PUT /prompt + /config, Datei-Persistenz unter /app/data); JSON-Schema bleibt code-seitig geschuetzt. 0.1.3: Zeitstempel JE Nachricht wieder RAUS (verwaessern die semantische Suche im Gehirn) - nur Kopf-Datum/Uhrzeit bleibt. Aktueller-Zeitpunkt-im-Prompt (korrekte Titel) bleibt. 0.1.2: Zeitpunkt+Zeitstempel. 0.1.1: /end+Kategorie. 0.1.0: Phase 4a.
 
 VERSION = "0.31.1"  # Wirksamer Counter-Bump: gespeicherte Gespraech-Eintraege erhalten sekundengenauen Zeitstempel.
-VERSION = "0.39.0"  # 0.39.0: Offizielle API-Preise auch fuer die gpt-5.x-Modelle in MODEL_PRICES (Frank-Wunsch 2026-07-02) — die Modelle laufen zwar uebers ChatGPT-Abo, verbrauchen aber das Codex-Kontingent; die API-Preise (developers.openai.com/api/docs/pricing) dienen als Verbrauchs-Anhaltspunkt. Dashboard-Preisliste + App-Dropdown zeigen sie automatisch statt 'ueber Abo' (beide lesen /config model_prices). Nur minimax bleibt 'Abo'. 0.38.1: REVERT des Router-Reasoning-Deckels (Frank-Anweisung 2026-07-02: die Reasoning-Stufe stellt er SELBST ein — keine Funktionsveraenderung; medium bleibt medium, high bleibt high, auch fuer den Router). Der neutrale reasoning_override-Parameter (Default None = keine Wirkung) bleibt als Erweiterungspunkt fuer kuenftiges Streaming erhalten. 0.38.0: PERFORMANCE Router-Reasoning-Deckel (Frank-Wunsch 2026-07-02) — der Hauptagent-ROUTER (reine JSON-Klassifikation save/query/internet/smalltalk) laeuft jetzt gedeckelt auf reasoning 'low' (neuer reasoning_override-Parameter durch llm_generate/_llm_generate_once bis codex_generate + Gemini thinking_budget); die ANTWORT-Aufrufe behalten die eingestellte Thinking-Stufe. Bei gpt-5.5 mit 'medium' kostete allein das Routing 15-40s BEVOR die Antwort startete -> Gesamtwartezeit bei Gedaechtnis-/Internetfragen grob halbiert, Smalltalk deutlich schneller. 0.37.0: FIX S/M/XL-Antwortlaenge wirkungslos (Frank-Bug 2026-07-02) — der context_prompt der App (Modus-Prompt + Antwortlaengen-Prompt S/M/XL aus den Einstellungen) wurde (a) im Auto-Modus vom Router KOMPLETT ignoriert und erreichte (b) die Antwort-Formulierung (hauptagent_answer / _internet / _native_web) NIE. Jetzt: Router beruecksichtigt den Zusatzauftrag auch im Auto-Modus, und alle drei Antwort-Funktionen bekommen ihn als eigenen ZUSATZAUFTRAG-Block (_context_prompt_block) -> S/M/XL wirkt fuer Smalltalk, Gedaechtnis- UND Internet-Antworten. 0.36.1: Modell-Preise pro 1 Mio Token (Input/Output, offiziell recherchiert) im /config -> Dashboard + App koennen sie anzeigen (MODEL_PRICES; minimax/gpt = Abo). 0.36.0: Zwei neue Gemini-Modelle (gemini-3.5-flash, gemini-3-flash-preview) + Thinking-Steuerung fuer ALLE Gemini-Modelle aus der Reasoning-Stufe (thinking_budget, auf max_output_tokens addiert wg. Almanach B4; 3.x-Minimum statt 0; robuster Retry ohne thinking bei Ablehnung). Markdown-Stripper _strip_markdown_tts entfernt **Fett**/Ueberschriften/Listen aus TTS-Antworten (gemini-2.5-flash erzeugte sie trotz Verbot). 0.35.1: Native-Websuche-Antwort haelt jetzt den TTS-Stil des Hauptagent-Prompts ein (MEHRERE kurze Absaetze je 1-10 Zeilen statt EIN Block, keine Quellenliste) — Gemini-Grounding gab sonst einen einzigen langen Absatz; Gemini laeuft durch EXAKT denselben Prompt+Pfad wie GPT. 0.35.0: Fix 502 bei gpt-5.5 (Frank-Vorfall 2026-07-01) — 'minimal' reasoning.effort wird von gpt-5.x NICHT unterstuetzt (nur none/low/medium/high/xhigh); _sanitize_reasoning_effort mappt minimal->low VOR dem Codex-Call, reasoning_available (App /config) bietet 'minimal' nicht mehr an, CODEX_WEB_TOOL_TYPES nutzt web_search VOR web_search_preview (gpt-5.5 lehnt web_search_preview ab -> spart Fehlversuch). 0.34.1: Fix native-Websuche-Antwortformat — HAUPTAGENT_NATIVE_WEB_AUFTRAG verlangt jetzt explizit Fließtext (KEIN Router-JSON, kein intent/query-Objekt); gemini-3.1-flash-lite gab sonst das Router-JSON statt einer echten Antwort zurueck. 0.34.0: Modellnative Websuche jetzt auch fuer Gemini (google_search-Grounding, inkl. gemini-3.1-flash-lite/2.5-flash) — bei Tavily-aus nutzt JEDES faehige Hauptmodell seine eigene Suche (Gemini ODER Codex/GPT), nicht mehr nur Codex; minimax bleibt auf Tavily (keine native Suche). 0.33.1: Tavily-aus blockiert Internetfragen nicht mehr pauschal; bei Codex/GPT-Hauptmodell nutzt der Internet-Pfad modellnative Websuche mit Tool-Fallback. 0.33.0: Tavily/Websearch ist jetzt per persistenter Agent-Konfiguration an-/abschaltbar; /config liefert tavily_enabled und der Internet-Pfad nutzt Tavily nur bei aktivem Schalter. 0.32.1: Codex-Responses-Request an ChatGPT-Backendvertrag angepasst (input items, store=false, kein max_output_tokens) und Provider-400 als 502 statt FastAPI-500 gemeldet. 0.32.0: experimenteller OpenAI-Codex-Provider per ChatGPT-Device-Code, Codex-Modelle + Reasoning je Agent.
+VERSION = "0.40.0"  # 0.40.0: ROUTER separat einstellbar (Frank-Wunsch 2026-07-02) — Schritt 1 (Klassifikation save/query/internet/smalltalk) kann ein EIGENES Modell (z.B. schnelles Flash) und/oder einen EIGENEN Reasoning-Effort bekommen (config.json router_model/router_reasoning, /config GET+PUT, ''/'auto' = wie Hauptagent = exakt bisheriges Verhalten). Die sichtbare Antwort (Schritt 2) kommt IMMER vom eingestellten Hauptagenten: bei delegiertem Router formuliert neu hauptagent_answer_smalltalk (Persona + geschuetzter Gespraechs-Auftrag) die Smalltalk-Antwort mit dem Hauptagent-Modell (Fallback: Router-Reply). Kein automatisches Deckeln — es gilt ausschliesslich Franks Wahl. 0.39.0: Offizielle API-Preise auch fuer die gpt-5.x-Modelle in MODEL_PRICES (Frank-Wunsch 2026-07-02) — die Modelle laufen zwar uebers ChatGPT-Abo, verbrauchen aber das Codex-Kontingent; die API-Preise (developers.openai.com/api/docs/pricing) dienen als Verbrauchs-Anhaltspunkt. Dashboard-Preisliste + App-Dropdown zeigen sie automatisch statt 'ueber Abo' (beide lesen /config model_prices). Nur minimax bleibt 'Abo'. 0.38.1: REVERT des Router-Reasoning-Deckels (Frank-Anweisung 2026-07-02: die Reasoning-Stufe stellt er SELBST ein — keine Funktionsveraenderung; medium bleibt medium, high bleibt high, auch fuer den Router). Der neutrale reasoning_override-Parameter (Default None = keine Wirkung) bleibt als Erweiterungspunkt fuer kuenftiges Streaming erhalten. 0.38.0: PERFORMANCE Router-Reasoning-Deckel (Frank-Wunsch 2026-07-02) — der Hauptagent-ROUTER (reine JSON-Klassifikation save/query/internet/smalltalk) laeuft jetzt gedeckelt auf reasoning 'low' (neuer reasoning_override-Parameter durch llm_generate/_llm_generate_once bis codex_generate + Gemini thinking_budget); die ANTWORT-Aufrufe behalten die eingestellte Thinking-Stufe. Bei gpt-5.5 mit 'medium' kostete allein das Routing 15-40s BEVOR die Antwort startete -> Gesamtwartezeit bei Gedaechtnis-/Internetfragen grob halbiert, Smalltalk deutlich schneller. 0.37.0: FIX S/M/XL-Antwortlaenge wirkungslos (Frank-Bug 2026-07-02) — der context_prompt der App (Modus-Prompt + Antwortlaengen-Prompt S/M/XL aus den Einstellungen) wurde (a) im Auto-Modus vom Router KOMPLETT ignoriert und erreichte (b) die Antwort-Formulierung (hauptagent_answer / _internet / _native_web) NIE. Jetzt: Router beruecksichtigt den Zusatzauftrag auch im Auto-Modus, und alle drei Antwort-Funktionen bekommen ihn als eigenen ZUSATZAUFTRAG-Block (_context_prompt_block) -> S/M/XL wirkt fuer Smalltalk, Gedaechtnis- UND Internet-Antworten. 0.36.1: Modell-Preise pro 1 Mio Token (Input/Output, offiziell recherchiert) im /config -> Dashboard + App koennen sie anzeigen (MODEL_PRICES; minimax/gpt = Abo). 0.36.0: Zwei neue Gemini-Modelle (gemini-3.5-flash, gemini-3-flash-preview) + Thinking-Steuerung fuer ALLE Gemini-Modelle aus der Reasoning-Stufe (thinking_budget, auf max_output_tokens addiert wg. Almanach B4; 3.x-Minimum statt 0; robuster Retry ohne thinking bei Ablehnung). Markdown-Stripper _strip_markdown_tts entfernt **Fett**/Ueberschriften/Listen aus TTS-Antworten (gemini-2.5-flash erzeugte sie trotz Verbot). 0.35.1: Native-Websuche-Antwort haelt jetzt den TTS-Stil des Hauptagent-Prompts ein (MEHRERE kurze Absaetze je 1-10 Zeilen statt EIN Block, keine Quellenliste) — Gemini-Grounding gab sonst einen einzigen langen Absatz; Gemini laeuft durch EXAKT denselben Prompt+Pfad wie GPT. 0.35.0: Fix 502 bei gpt-5.5 (Frank-Vorfall 2026-07-01) — 'minimal' reasoning.effort wird von gpt-5.x NICHT unterstuetzt (nur none/low/medium/high/xhigh); _sanitize_reasoning_effort mappt minimal->low VOR dem Codex-Call, reasoning_available (App /config) bietet 'minimal' nicht mehr an, CODEX_WEB_TOOL_TYPES nutzt web_search VOR web_search_preview (gpt-5.5 lehnt web_search_preview ab -> spart Fehlversuch). 0.34.1: Fix native-Websuche-Antwortformat — HAUPTAGENT_NATIVE_WEB_AUFTRAG verlangt jetzt explizit Fließtext (KEIN Router-JSON, kein intent/query-Objekt); gemini-3.1-flash-lite gab sonst das Router-JSON statt einer echten Antwort zurueck. 0.34.0: Modellnative Websuche jetzt auch fuer Gemini (google_search-Grounding, inkl. gemini-3.1-flash-lite/2.5-flash) — bei Tavily-aus nutzt JEDES faehige Hauptmodell seine eigene Suche (Gemini ODER Codex/GPT), nicht mehr nur Codex; minimax bleibt auf Tavily (keine native Suche). 0.33.1: Tavily-aus blockiert Internetfragen nicht mehr pauschal; bei Codex/GPT-Hauptmodell nutzt der Internet-Pfad modellnative Websuche mit Tool-Fallback. 0.33.0: Tavily/Websearch ist jetzt per persistenter Agent-Konfiguration an-/abschaltbar; /config liefert tavily_enabled und der Internet-Pfad nutzt Tavily nur bei aktivem Schalter. 0.32.1: Codex-Responses-Request an ChatGPT-Backendvertrag angepasst (input items, store=false, kein max_output_tokens) und Provider-400 als 502 statt FastAPI-500 gemeldet. 0.32.0: experimenteller OpenAI-Codex-Provider per ChatGPT-Device-Code, Codex-Modelle + Reasoning je Agent.
 
 # ---------------------------------------------------------------------------
 # Konfiguration (alles aus Umgebungsvariablen — Secrets nie im Code)
@@ -164,6 +164,27 @@ ROLE_REASONING = {"haupt": "medium", "speicher": "medium", "abfrage": "medium"}
 # WICHTIG (Frank-Direktive 2026-07-02): Die Reasoning-Stufe stellt Frank SELBST pro Rolle ein.
 # KEIN automatisches Deckeln/Downgraden — auch nicht fuer den Router-Aufruf. Ein frueherer
 # 'low'-Deckel fuer den Router (0.38.0) wurde auf Franks Anweisung zurueckgenommen (0.38.1).
+
+# ROUTER (Schritt 1 = Klassifikation save/query/internet/smalltalk) — von FRANK einstellbar
+# (Dashboard + App, 2026-07-02): eigenes Modell und/oder eigener Effort fuer NUR das Routing.
+# Leerer String = "wie Hauptagent" (Default, exakt bisheriges Verhalten). Die sichtbare Antwort
+# (Schritt 2) kommt IMMER vom eingestellten Hauptagenten — auch bei Smalltalk (siehe _process_turn).
+ROUTER_MODEL = ""
+ROUTER_REASONING = ""
+
+
+def _router_model() -> str:
+    return (ROUTER_MODEL or "").strip() or ROLE_MODELS["haupt"]
+
+
+def _router_reasoning() -> str:
+    return (ROUTER_REASONING or "").strip() or ROLE_REASONING.get("haupt", "medium")
+
+
+def _router_is_delegated() -> bool:
+    """True, wenn das Routing auf einem ANDEREN Modell laeuft als der Hauptagent."""
+    return _router_model() != ROLE_MODELS["haupt"]
+
 
 _codex_pending: dict[str, dict] = {}
 
@@ -1246,6 +1267,19 @@ def load_reasoning() -> dict:
     return out
 
 
+def load_router_config() -> "tuple[str, str]":
+    """(router_model, router_reasoning) aus config.json — leer = 'wie Hauptagent' (Default)."""
+    try:
+        if CONFIG_FILE.exists():
+            cfg = json.loads(CONFIG_FILE.read_text(encoding="utf-8"))
+            rm = (cfg.get("router_model") or "").strip()
+            rr = (cfg.get("router_reasoning") or "").strip().lower()
+            return rm, (rr if rr in VALID_REASONING_EFFORTS else "")
+    except Exception as e:  # noqa: BLE001
+        _log(logging.WARNING, "Router-Konfiguration nicht lesbar — nutze 'wie Hauptagent'", err=str(e))
+    return "", ""
+
+
 def load_tavily_enabled() -> bool:
     """Tavily-Schalter aus config.json laden; Default bleibt an fuer bestehendes Verhalten."""
     try:
@@ -1257,10 +1291,13 @@ def load_tavily_enabled() -> bool:
     return True
 
 
-def save_models(models: dict, reasoning: dict | None = None, tavily_enabled: bool | None = None) -> None:
-    """Atomar je-Rolle-Modelle, Reasoning und optionale Tool-Schalter speichern."""
+def save_models(models: dict, reasoning: dict | None = None, tavily_enabled: bool | None = None,
+                router_model: str | None = None, router_reasoning: str | None = None) -> None:
+    """Atomar je-Rolle-Modelle, Reasoning, Router-Einstellung und optionale Tool-Schalter speichern.
+    router_model/router_reasoning: None = aktuellen Wert behalten; '' = 'wie Hauptagent'."""
     Path(AGENT_DATA_DIR).mkdir(parents=True, exist_ok=True)
     current_tavily = load_tavily_enabled()
+    current_router_model, current_router_reasoning = load_router_config()
     data = {f"{r}_model": (models.get(r) or AGENT_MODEL_DEFAULT) for r in ("haupt", "speicher", "abfrage")}
     if reasoning is not None:
         data["reasoning"] = {
@@ -1268,6 +1305,8 @@ def save_models(models: dict, reasoning: dict | None = None, tavily_enabled: boo
             for r in ("haupt", "speicher", "abfrage")
         }
     data["tavily_enabled"] = current_tavily if tavily_enabled is None else bool(tavily_enabled)
+    data["router_model"] = current_router_model if router_model is None else router_model
+    data["router_reasoning"] = current_router_reasoning if router_reasoning is None else router_reasoning
     tmp = CONFIG_FILE.with_suffix(".tmp")
     tmp.write_text(json.dumps(data, ensure_ascii=False, indent=2), encoding="utf-8", newline="\n")
     os.replace(tmp, CONFIG_FILE)
@@ -1363,10 +1402,12 @@ def hauptagent_route(session: dict, user_text: str, pending: dict | None, contex
         f"OFFENER PUNKT (Rückfrage):\n{pending_txt}\n\n"
         f"AKTUELLE NACHRICHT VON FRANK:\n{user_text}"
     )
-    # Reasoning-Stufe: exakt die von Frank eingestellte Rollen-Stufe — KEIN Deckeln (Frank 2026-07-02).
+    # ROUTER (Schritt 1): Modell + Effort sind von Frank SEPARAT einstellbar (Dashboard/App,
+    # 2026-07-02) — leer = 'wie Hauptagent'. KEIN automatisches Deckeln; es gilt exakt Franks Wahl.
     raw = _extract_json(llm_generate(
-        build_hauptagent_prompt(), user_block, model=ROLE_MODELS["haupt"],
-        json_mode=True, max_tokens=2048, temperature=0.3))
+        build_hauptagent_prompt(), user_block, model=_router_model(),
+        json_mode=True, max_tokens=2048, temperature=0.3,
+        reasoning_override=_router_reasoning()))
     try:
         data = json.loads(raw)
         if not isinstance(data, dict):
@@ -1552,6 +1593,31 @@ def _context_prompt_block(context_prompt: str) -> str:
     if not extra:
         return ""
     return f"ZUSATZAUFTRAG VON FRANK (strikt befolgen, z.B. gewünschte Antwortlänge):\n{extra}\n\n"
+
+
+HAUPTAGENT_SMALLTALK_AUFTRAG = """JETZT BIST DU IM GESPRÄCHS-MODUS: Antworte direkt auf Franks aktuelle Nachricht als normaler Fließtext (KEIN JSON, kein intent/query-Objekt).
+- Führe ein normales, freundliches, intelligentes Gespräch. Speichere nichts, suche nichts — das ist bereits entschieden.
+- Halte dich an dein Ausgabeformat oben (mehrere kurze Absätze, TTS-optimiert, keine Listen, keine Überschriften).
+- Antworte in normalem, freundlichem Deutsch mit echten Umlauten (ä, ö, ü, ß)."""
+
+
+def build_hauptagent_smalltalk_prompt() -> str:
+    """HAUPTAGENT im Gespraechs-Modus: editierbare Persona + geschuetzter Smalltalk-Auftrag. Wird nur
+    gebraucht, wenn der ROUTER auf einem anderen Modell laeuft (sonst liefert der Router-Call den Reply)."""
+    instr = load_instructions("haupt").replace("{kategorien}", "(nicht relevant)")
+    return instr + "\n\n" + HAUPTAGENT_SMALLTALK_AUFTRAG
+
+
+def hauptagent_answer_smalltalk(session: dict, question: str, context_prompt: str = "") -> str:
+    """Smalltalk-Antwort vom EINGESTELLTEN Hauptagenten (Schritt 2), wenn das Routing an ein anderes
+    (schnelles) Modell delegiert ist — die sichtbare Antwort kommt so weiter aus Franks Modell-Wahl."""
+    user_block = (
+        f"BISHERIGES GESPRÄCH:\n{_history_text(session)}\n\n"
+        f"{_context_prompt_block(context_prompt)}"
+        f"AKTUELLE NACHRICHT VON FRANK:\n{question}"
+    )
+    return _strip_markdown_tts(llm_generate(build_hauptagent_smalltalk_prompt(), user_block, model=ROLE_MODELS["haupt"],
+                        json_mode=False, max_tokens=ANSWER_MAX_TOKENS, temperature=0.5))
 
 
 def hauptagent_answer(session: dict, question: str, selected: list[dict], context_prompt: str = "") -> str:
@@ -1790,10 +1856,11 @@ def require_auth(authorization: str = Header(default="")) -> None:
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    global ROLE_MODELS, ROLE_REASONING, TAVILY_ENABLED
+    global ROLE_MODELS, ROLE_REASONING, TAVILY_ENABLED, ROUTER_MODEL, ROUTER_REASONING
     ROLE_MODELS = load_models()   # gespeicherte Modell-Wahl JE ROLLE uebernehmen (sonst Env-Default)
     ROLE_REASONING = load_reasoning()
     TAVILY_ENABLED = load_tavily_enabled()
+    ROUTER_MODEL, ROUTER_REASONING = load_router_config()
     # Diagnose: nutzt EINE Rolle ein OpenCode-Modell (minimax), muss der OpenCode-Key da sein.
     if any(_is_opencode(m) for m in ROLE_MODELS.values()):
         probe(bool(OPENCODE_API_KEY), "OPENCODE_API_KEY fehlt, aber OpenCode-Modell aktiv", models=ROLE_MODELS)
@@ -1847,6 +1914,8 @@ class ConfigReq(BaseModel):
     haupt_reasoning: str | None = Field(default=None, description="Reasoning Effort Hauptagent: none|minimal|low|medium|high|xhigh")
     speicher_reasoning: str | None = Field(default=None, description="Reasoning Effort Speicheragent")
     abfrage_reasoning: str | None = Field(default=None, description="Reasoning Effort Abfrageagent")
+    router_model: str | None = Field(default=None, description="Modell NUR fuers Routing (Schritt 1); ''/'auto' = wie Hauptagent")
+    router_reasoning: str | None = Field(default=None, description="Reasoning Effort NUR fuers Routing; ''/'auto' = wie Hauptagent")
     tavily_enabled: bool | None = Field(default=None, description="Tavily-Websearch fuer intent=internet an/aus")
 
 
@@ -1942,6 +2011,7 @@ def get_config() -> dict:
     available = AVAILABLE_MODELS + [m for m in codex_models() if m not in AVAILABLE_MODELS]
     return {"models": ROLE_MODELS, "model": ROLE_MODELS["haupt"],
             "reasoning": ROLE_REASONING, "reasoning_available": REASONING_AVAILABLE,
+            "router_model": ROUTER_MODEL, "router_reasoning": ROUTER_REASONING,
             "tavily_enabled": TAVILY_ENABLED,
             "codex": {"connected": codex_connected()},
             "default": AGENT_MODEL_DEFAULT, "available": available, "model_prices": MODEL_PRICES}
@@ -1949,7 +2019,7 @@ def get_config() -> dict:
 
 @app.put("/config", dependencies=[Depends(require_auth)])
 def put_config(req: ConfigReq) -> dict:
-    global ROLE_MODELS, ROLE_REASONING, TAVILY_ENABLED
+    global ROLE_MODELS, ROLE_REASONING, TAVILY_ENABLED, ROUTER_MODEL, ROUTER_REASONING
     new = dict(ROLE_MODELS)
     if req.model and req.model.strip():          # Abwaertskompat: EIN Modell -> alle drei Rollen
         m = req.model.strip()
@@ -1964,12 +2034,24 @@ def put_config(req: ConfigReq) -> dict:
             new_reasoning[role] = v
     ROLE_MODELS = new
     ROLE_REASONING = new_reasoning
+    # Router (Schritt 1): ''/'auto' setzt zurueck auf 'wie Hauptagent'; sonst Franks explizite Wahl.
+    if req.router_model is not None:
+        rm = req.router_model.strip()
+        ROUTER_MODEL = "" if rm.lower() in {"", "auto"} else rm
+    if req.router_reasoning is not None:
+        rr = req.router_reasoning.strip().lower()
+        if rr in {"", "auto"}:
+            ROUTER_REASONING = ""
+        elif rr in VALID_REASONING_EFFORTS:
+            ROUTER_REASONING = rr
     if req.tavily_enabled is not None:
         TAVILY_ENABLED = bool(req.tavily_enabled)
-    save_models(ROLE_MODELS, ROLE_REASONING, TAVILY_ENABLED)      # sofort aktiv, kein Neustart noetig
+    save_models(ROLE_MODELS, ROLE_REASONING, TAVILY_ENABLED, ROUTER_MODEL, ROUTER_REASONING)  # sofort aktiv, kein Neustart noetig
     _log(logging.INFO, "Agent-Konfiguration gewechselt", models=ROLE_MODELS, reasoning=ROLE_REASONING,
+         router_model=ROUTER_MODEL or "(wie Hauptagent)", router_reasoning=ROUTER_REASONING or "(wie Hauptagent)",
          tavily_enabled=TAVILY_ENABLED)
-    return {"status": "ok", "models": ROLE_MODELS, "reasoning": ROLE_REASONING, "tavily_enabled": TAVILY_ENABLED}
+    return {"status": "ok", "models": ROLE_MODELS, "reasoning": ROLE_REASONING,
+            "router_model": ROUTER_MODEL, "router_reasoning": ROUTER_REASONING, "tavily_enabled": TAVILY_ENABLED}
 
 
 @app.post("/codex/auth/start", dependencies=[Depends(require_auth)])
@@ -2622,8 +2704,15 @@ def _process_turn(session: dict, user_text: str, pending: dict | None, category:
                    ok=bool(search.get("ok")), query=q, treffer=len(search.get("results") or []))
         return {"reply": answer, "action": "internet", "pending": None}
 
-    # 4) Smalltalk / sonstiges
-    return {"reply": route.get("reply") or "Erzaehl mir was, oder frag mich was aus deinem Gedaechtnis.",
+    # 4) Smalltalk / sonstiges — laeuft der Router auf einem ANDEREN Modell, formuliert die
+    #    sichtbare Antwort trotzdem der eingestellte HAUPTAGENT (Schritt 2 = Franks Standard-Wahl).
+    reply = (route.get("reply") or "").strip()
+    if _router_is_delegated():
+        try:
+            reply = (hauptagent_answer_smalltalk(session, user_text, context_prompt) or "").strip() or reply
+        except Exception:  # noqa: BLE001 — Fallback: Router-Reply statt Fehler
+            _log(logging.ERROR, "Smalltalk-Antwort des Hauptagenten fehlgeschlagen — nutze Router-Reply", exc_info=True)
+    return {"reply": reply or "Erzaehl mir was, oder frag mich was aus deinem Gedaechtnis.",
             "action": "smalltalk", "pending": None}
 
 

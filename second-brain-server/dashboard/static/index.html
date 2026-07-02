@@ -907,6 +907,14 @@ button{font-family:inherit;cursor:pointer}
               </div>
             </div>
             <div class="field">
+              <label for="modelRouter">Router · Schritt 1 (nur Einordnung der Nachricht)</label>
+              <select class="select" id="modelRouter"></select>
+              <div class="field" id="reasonRouterBox" style="margin-top:8px;display:none">
+                <label for="reasonRouter">Thinking / Reasoning (Router)</label>
+                <select class="select" id="reasonRouter"></select>
+              </div>
+            </div>
+            <div class="field">
               <label for="modelSpeicher">Speicheragent · ablegen</label>
               <select class="select" id="modelSpeicher"></select>
               <div class="field" id="reasonSpeicherBox" style="margin-top:8px;display:none">
@@ -1938,6 +1946,22 @@ button{font-family:inherit;cursor:pointer}
         enhanceSelect(sel); };
       fill("modelHaupt", m.haupt); fill("modelSpeicher", m.speicher); fill("modelAbfrage", m.abfrage);
       fillR("reasonHaupt", r.haupt); fillR("reasonSpeicher", r.speicher); fillR("reasonAbfrage", r.abfrage);
+      // Router (Schritt 1): eigenes Modell/Reasoning NUR fuers Einordnen; "auto" = wie Hauptagent.
+      const rsel = document.getElementById("modelRouter");
+      if (rsel) {
+        const rm = c.router_model || "auto";
+        rsel.innerHTML = [`<option value="auto"${rm==="auto"?" selected":""}>auto (wie Hauptagent)</option>`]
+          .concat(avail.map(v=>`<option${v===rm?" selected":""}>${v}</option>`)).join("");
+        rsel.addEventListener("change", updateReasoningBoxes);
+        enhanceSelect(rsel);
+      }
+      const rrsel = document.getElementById("reasonRouter");
+      if (rrsel) {
+        const rr = c.router_reasoning || "auto";
+        rrsel.innerHTML = [`<option value="auto"${rr==="auto"?" selected":""}>auto (wie Hauptagent)</option>`]
+          .concat(ravail.map(v=>`<option${v===rr?" selected":""}>${v}</option>`)).join("");
+        enhanceSelect(rrsel);
+      }
       const prc = c.model_prices || {};
       const pinfo = document.getElementById("modelPricesInfo");
       if (pinfo) {
@@ -1964,9 +1988,12 @@ button{font-family:inherit;cursor:pointer}
   // aus derselben Stufe). minimax/OpenCode denkt nativ und ist ueber diese Stufen nicht steuerbar.
   function modelSupportsReasoning(v){ return isCodexModel(v) || isGeminiModel(v); }
   function updateReasoningBoxes(){
-    [["modelHaupt","reasonHauptBox"],["modelSpeicher","reasonSpeicherBox"],["modelAbfrage","reasonAbfrageBox"]].forEach(([mid,bid])=>{
+    [["modelHaupt","reasonHauptBox"],["modelRouter","reasonRouterBox"],["modelSpeicher","reasonSpeicherBox"],["modelAbfrage","reasonAbfrageBox"]].forEach(([mid,bid])=>{
       const m=document.getElementById(mid), b=document.getElementById(bid); if(!m||!b) return;
-      b.style.display = modelSupportsReasoning(m.value) ? "block" : "none";
+      let v = m.value;
+      // Router auf "auto" folgt dem Hauptagenten -> Reasoning-Box nach dessen Modell richten.
+      if (mid==="modelRouter" && v==="auto") { const h=document.getElementById("modelHaupt"); if(h) v=h.value; }
+      b.style.display = modelSupportsReasoning(v) ? "block" : "none";
     });
   }
 
@@ -2539,6 +2566,7 @@ button{font-family:inherit;cursor:pointer}
     try{ await apiSend("/api/config","PUT",{
       haupt_model:val("modelHaupt"), speicher_model:val("modelSpeicher"), abfrage_model:val("modelAbfrage"),
       haupt_reasoning:val("reasonHaupt"), speicher_reasoning:val("reasonSpeicher"), abfrage_reasoning:val("reasonAbfrage"),
+      router_model:val("modelRouter"), router_reasoning:val("reasonRouter"),
       tavily_enabled: !!(document.getElementById("tavilyEnabled")?.checked)
     }); flash("modelStatus","Modelle gespeichert"); }
     catch(e){ flash("modelStatus","Speichern fehlgeschlagen",false); }

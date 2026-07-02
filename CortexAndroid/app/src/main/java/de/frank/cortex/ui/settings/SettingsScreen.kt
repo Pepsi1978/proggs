@@ -85,6 +85,9 @@ fun SettingsScreen(
     var hauptReasoning by remember { mutableStateOf("medium") }
     var speicherReasoning by remember { mutableStateOf("medium") }
     var abfrageReasoning by remember { mutableStateOf("medium") }
+    // Router (Schritt 1 = Einordnung der Nachricht): eigenes Modell/Thinking, ROUTER_AUTO = wie Hauptagent.
+    var routerModel by remember { mutableStateOf(ROUTER_AUTO) }
+    var routerReasoning by remember { mutableStateOf(ROUTER_AUTO) }
     var tavilyEnabled by remember { mutableStateOf(true) }
     var modelPriceLabels by remember { mutableStateOf<Map<String, String>>(emptyMap()) }
     var agentModelsLoading by remember { mutableStateOf(false) }
@@ -133,7 +136,7 @@ fun SettingsScreen(
             if (config.reasoning_available.isNotEmpty()) reasoningOptions = config.reasoning_available
             modelPriceLabels = config.model_prices.mapValues { (_, p) ->
                 if (p.input != null && p.output != null)
-                    "\$${p.input} Input · \$${p.output} Output — pro 1 Mio Token"
+                    "\$${p.input} Input · \$${p.output} Output"
                 else "über Abo (nicht pro Token)"
             }
             val models = config.models
@@ -144,6 +147,8 @@ fun SettingsScreen(
             hauptReasoning = reasoning["haupt"] ?: "medium"
             speicherReasoning = reasoning["speicher"] ?: "medium"
             abfrageReasoning = reasoning["abfrage"] ?: "medium"
+            routerModel = config.router_model.ifBlank { ROUTER_AUTO }
+            routerReasoning = config.router_reasoning.ifBlank { ROUTER_AUTO }
             tavilyEnabled = config.tavily_enabled
             codexConnected = config.codex?.connected == true
             codexStatus = if (codexConnected) "Server verbunden — GPT/Codex-Modelle sind auswählbar" else "Server nicht verbunden"
@@ -736,6 +741,17 @@ fun SettingsScreen(
                 if (modelSupportsReasoning(hauptModel)) {
                     AgentModelDropdown("Thinking", hauptReasoning, reasoningOptions, isDark) { hauptReasoning = it }
                 }
+                // Router (Schritt 1): darf ein eigenes (schnelles) Modell + eigenes Thinking nutzen;
+                // "auto (wie Hauptagent)" = exakt bisheriges Verhalten. Die Antwort (Schritt 2)
+                // formuliert immer der Hauptagent.
+                AgentModelDropdown(
+                    "Router", routerModel, listOf(ROUTER_AUTO) + agentModelOptions, isDark,
+                    priceLabels = modelPriceLabels + (ROUTER_AUTO to "übernimmt Modell + Thinking vom Hauptagenten")
+                ) { routerModel = it }
+                val effectiveRouterModel = if (routerModel == ROUTER_AUTO) hauptModel else routerModel
+                if (routerModel != ROUTER_AUTO && modelSupportsReasoning(effectiveRouterModel)) {
+                    AgentModelDropdown("Thinking", routerReasoning, listOf(ROUTER_AUTO) + reasoningOptions, isDark) { routerReasoning = it }
+                }
                 AgentModelDropdown("Speicheragent", speicherModel, agentModelOptions, isDark, priceLabels = modelPriceLabels) { speicherModel = it }
                 if (modelSupportsReasoning(speicherModel)) {
                     AgentModelDropdown("Thinking", speicherReasoning, reasoningOptions, isDark) { speicherReasoning = it }
@@ -795,6 +811,8 @@ fun SettingsScreen(
                                             haupt_reasoning = hauptReasoning,
                                             speicher_reasoning = speicherReasoning,
                                             abfrage_reasoning = abfrageReasoning,
+                                            router_model = if (routerModel == ROUTER_AUTO) "auto" else routerModel,
+                                            router_reasoning = if (routerReasoning == ROUTER_AUTO) "auto" else routerReasoning,
                                             tavily_enabled = tavilyEnabled
                                         )
                                     )
@@ -1066,6 +1084,9 @@ private fun PromptButtonRow(
         }
     }
 }
+
+// Router-"auto": Schritt 1 (Einordnung) folgt Modell + Thinking des Hauptagenten.
+private const val ROUTER_AUTO = "auto (wie Hauptagent)"
 
 private fun isCodexModel(model: String): Boolean {
     val m = model.lowercase()
