@@ -83,15 +83,10 @@ object ChatCommands {
 class ChatViewModel : ViewModel() {
 
     private companion object {
-        // 2026-07-01 (abends): auf 350 erhoeht (vorher 220). Seit dem Wechsel auf Chirp 3:HD ist die
-        // Synthese schnell genug fuer einen groesseren ersten Chunk - das langsame Flash-ueber-Cloud
-        // hatte 220 noetig gemacht. 220 teilte oft schon MITTEN im ersten Absatz; 350 ist das
-        // Ziel/Limit fuer den ersten Chunk (weiterhin schneller Start, aber ganze erste Saetze/Absaetze
-        // bleiben zusammen; ist der erste Absatz laenger als 350, wird an Wortgrenzen bei 350 geteilt).
-        const val TTS_FIRST_TARGET_CHARS = 350
-        // Folgechunks: auf 650 erhoeht (vorher 500). Chirp 3:HD ist schnell genug, dass auch laengere
-        // Folgechunks fertig synthetisiert sind, bevor der vorherige zu Ende gespielt ist (kein Loch).
-        const val TTS_TARGET_CHARS = 650
+        // 2026-07-02: Das Zeichen-Aufbau-System (erster Chunk 350, Folgechunks 650) wurde auf
+        // Franks Wunsch ENTFERNT — jeder komplette Absatz ist jetzt ein eigener Vorlese-Chunk
+        // (siehe chunkText). TTS_MAX_CHARS bleibt als reine API-Sicherheitsgrenze bestehen
+        // (nur UEBERLANGE Absaetze werden an Satzgrenzen geteilt, sonst lehnt die TTS-API ab).
         const val TTS_MAX_CHARS = 1000
         const val TTS_PREFETCH_AHEAD = 2
         const val TTS_RETRY_ATTEMPTS = 2
@@ -1007,42 +1002,17 @@ class ChatViewModel : ViewModel() {
             .trim()
         if (normalized.isBlank()) return emptyList()
 
-        val units = normalized
-            .split(Regex("\n{2,}|\n"))
-            .map { it.trim() }
+        // Frank-Regel 2026-07-02: IMMER komplette Absaetze als Vorlese-Einheiten — jeder Absatz
+        // (durch Leerzeile getrennt) wird einzeln synthetisiert und vorgelesen. Das fruehere
+        // Zeichen-Aufbau-System (erster Chunk max 350, Folge-Chunks ~650, Deckel 1000, Absaetze
+        // wurden zusammengelegt oder mitten drin geteilt) ist bewusst ENTFERNT. TTS_MAX_CHARS
+        // bleibt nur als API-Sicherheitsgrenze: einzig UEBERLANGE Absaetze werden an
+        // Satzgrenzen geteilt (sonst lehnt die TTS-API die Anfrage ab).
+        return normalized
+            .split(Regex("\n{2,}"))
+            .map { it.replace("\n", " ").trim() }
             .filter { it.isNotBlank() }
             .flatMap { splitParagraphForTts(it) }
-
-        val chunks = mutableListOf<String>()
-        var current = ""
-
-        fun flush() {
-            if (current.isNotBlank()) {
-                chunks.add(current.trim())
-                current = ""
-            }
-        }
-
-        // Bewaehrte, grosszuegige Merge-Regel aus Bugfix #47325: ein Absatz darf ueber "target"
-        // hinauswachsen, SOLANGE der bisherige Chunk noch klein ist (< target/2) - das haelt
-        // natuerliche Absaetze zusammen statt sie stur bei "target" Zeichen zu kappen.
-        units.forEach { unit ->
-            val target = if (chunks.isEmpty()) TTS_FIRST_TARGET_CHARS else TTS_TARGET_CHARS
-            val candidate = if (current.isBlank()) unit else "$current\n\n$unit"
-            if (candidate.length <= target || (current.length < target / 2 && candidate.length <= TTS_MAX_CHARS)) {
-                current = candidate
-            } else {
-                flush()
-                current = unit
-            }
-        }
-        flush()
-        val first = chunks.firstOrNull()
-        return if (first != null && first.length > TTS_FIRST_TARGET_CHARS) {
-            splitLongTextAtWords(first, TTS_FIRST_TARGET_CHARS) + chunks.drop(1)
-        } else {
-            chunks
-        }
     }
 
     private fun splitParagraphForTts(paragraph: String): List<String> {

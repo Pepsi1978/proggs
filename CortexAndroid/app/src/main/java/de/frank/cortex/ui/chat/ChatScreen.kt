@@ -952,7 +952,9 @@ private fun ChatInputBlock(
 
                 Spacer(Modifier.weight(1f))
 
-                // TTS toggle (38x38, orange when on)
+                // TTS toggle (38x38): AN = orange, AUS = grau — so ist auf einen Blick erkennbar,
+                // dass das Vorlesen ausgeschaltet ist (Frank-Wunsch 2026-07-02).
+                val ttsOffColor = MaterialTheme.colorScheme.onSurfaceVariant
                 ActionButton(
                     icon = {
                         Icon(
@@ -961,9 +963,9 @@ private fun ChatInputBlock(
                             null, Modifier.size(21.dp)
                         )
                     },
-                    bg = actionOrangeBg,
-                    border = actionOrangeBorder,
-                    tint = Orange,
+                    bg = if (ttsEnabled) actionOrangeBg else ttsOffColor.copy(alpha = 0.14f),
+                    border = if (ttsEnabled) actionOrangeBorder else ttsOffColor.copy(alpha = 0.35f),
+                    tint = if (ttsEnabled) Orange else ttsOffColor,
                     onClick = onToggleTts
                 )
 
