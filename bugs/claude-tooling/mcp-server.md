@@ -8,12 +8,21 @@
 > dann GitHub-Issues, Community (mcpcat.io, auth0, dev.to) und eigenen Vorfaellen.
 > Loesungen sind funktionserhaltend (nie „Feature weglassen").
 >
-> **Stand:** recherchiert am **2026-06-03** fuer **MCP TypeScript-SDK 1.27.1** (Projekt
+> **Stand:** recherchiert am **2026-06-03**, **re-recherchiert am 2026-07-02** (Engine A: Firecrawl+MiniMax)
+> fuer **MCP TypeScript-SDK 1.27.1** (Projekt
 > `~/proggs/mcp-code-search`, `^1.27.1`, Bun 1.3.11, Node 24.15.0, TS 5.9.3, zod v4 ^4.3.6),
 > Spec-Revisionen 2024-11-05 / 2025-03-26 / 2025-06-18 / 2025-11-25. **1.27.1 wurde am
 > 2026-02-24 veroeffentlicht** — entscheidend fuer den Fix-Status (Sektion 9): einige
 > Schema-/Error-Bugs sind erst in 1.28.0 (2026-03-25) / 1.29.0 (2026-03-30) gefixt und
 > auf dem Anker 1.27.1 noch AKTIV.
+>
+> **⚡ GROSSER UMBRUCH VORAUS (Re-Recherche 2026-07-02) — siehe neue §8.8:** (1) **MCP TS-SDK v2**
+> ist als `v2.0.0-beta.1` (30.06.2026) da, **stabiles v2 geplant 28.07.2026** — Package-Split
+> (`@modelcontextprotocol/server` + `/client` statt `/sdk`), „bring your own schema" (Zod nicht mehr
+> Pflicht), `serveStdio()`/`createMcpHandler()`, Codemod `v1-to-v2`. v1.x bekommt noch **≥6 Monate**
+> Fixes. (2) **Spec-Revision `2026-07-28`** (Release Candidate, „groesste Revision seit Launch",
+> Breaking Changes): **Stateless Core** (kein `initialize`-Handshake / keine `Mcp-Session-Id`),
+> **Roots/Sampling/Logging deprecatet**. Frank bleibt vorerst auf v1/1.27.1 — das ist **Migrations-Vorwissen**.
 >
 > **Abgrenzung:** Dies ist die **Server-Autor-Seite** (einen MCP-Server BAUEN). Das
 > *Konfigurieren/Verbinden* von Servern in Claude Code steht in `best-practices/claude-tooling/mcp.md`,
@@ -630,7 +639,11 @@ Header auf 2025-03-26 defaulten statt hart crashen); bei Mismatch optional eigen
 - **RFC 8707 Resource-Indicator-Mismatch:** `resource` (Token-Request) ≠ exakte MCP-Server-URL → audience-fail. → `resource`/Audience exakt auf die Server-URL setzen; keine generischen Audiences; `authInfo.scopes` in jedem Handler pruefen.
 - **401 ohne `WWW-Authenticate` + Protected-Resource-Metadata (RFC 9728):** kein Discovery moeglich. → `/.well-known/oauth-protected-resource` publizieren; 401 mit `WWW-Authenticate: Bearer ... resource_metadata=...`.
 - **Klassiker:** Token-Passthrough (fremdes Token weiterreichen), fehlende Audience-Validierung, Redirect-URI-Mismatch, fehlender CSRF-`state`, Tokens im Klartext. → Audience hart pruefen, `state` erzwingen, Tokens nie im Klartext, **PKCE** ist in OAuth 2.1 Pflicht.
-**Quelle:** [MCP Authorization Tutorial](https://modelcontextprotocol.io/docs/tutorials/security/authorization), [Stytch-Guide](https://stytch.com/blog/MCP-authentication-and-authorization-guide/).
+- **Dynamic Client Registration (RFC 7591) ist im aktuellen Spec-Draft DEPRECATED** (Re-Recherche 2026-07-02) —
+  nur noch fuer Abwaertskompatibilitaet mit AS ohne CIMD. Neu: **Client ID Metadata Documents (CIMD)** — eine
+  HTTPS-URL dient als `client_id`, von der der AS die Client-Metadaten abruft. Praxis-Falle: DCR wird real kaum
+  unterstuetzt (~4% der AS-Endpunkte) → fuer breite Kompatibilitaet CIMD einplanen, DCR nicht als einzigen Weg.
+**Quelle:** [MCP Authorization Tutorial](https://modelcontextprotocol.io/docs/tutorials/security/authorization), [Stytch-Guide](https://stytch.com/blog/MCP-authentication-and-authorization-guide/), MCP-Spec-Draft Authorization (re-verifiziert 2026-07-02).
 
 ### 8.7 ESM: lokale Imports ohne `.js`-Endung brechen unter Bun/Node
 **Symptom:** `ERR_MODULE_NOT_FOUND` / „Must use import to load ES Module".
@@ -639,6 +652,34 @@ Header auf 2025-03-26 defaulten statt hart crashen); bei Mismatch optional eigen
 **FIX:** `"type":"module"` in package.json, `"module"/"moduleResolution":"NodeNext"` in tsconfig,
 lokale Imports MIT `.js`. SDK-Subpath-Imports immer mit `.js` (`@modelcontextprotocol/sdk/server/mcp.js`).
 **Anker-Hinweis:** `index.ts` importiert korrekt mit `.js`-Endungen und `"type":"module"`.
+
+### 8.8 Ausblick: SDK v2 (28.07.2026) + Spec-Revision 2026-07-28 — was auf Frank zukommt 🆕
+**Kontext:** Der `mcp-code-search`-Server laeuft auf **v1 (1.27.1)** und bleibt es bis zu einer bewussten
+Migration. Die folgenden Aenderungen sind **Migrations-Vorwissen**, kein akuter Bug — aber sie aendern das
+Fundament, darum HIER dokumentiert.
+- **SDK v2 (`v2.0.0-beta.1`, 30.06.2026; stabil geplant 28.07.2026):**
+  - **Package-Split:** `@modelcontextprotocol/sdk` → `@modelcontextprotocol/server` + `@modelcontextprotocol/client`
+    (+ optionale Adapter fuer Express/Hono/Fastify/Node-`http`). Imports/Deps aendern sich beim Umstieg.
+  - **„Bring your own schema":** `inputSchema`/`outputSchema` akzeptieren jede **Standard-Schema**-Lib
+    (Zod v4, ArkType nativ; Valibot via Adapter; pures JSON Schema via `fromJsonSchema`). **Zod ist nicht mehr Pflicht.**
+  - **Serving = ein Aufruf:** `serveStdio()` (lokal) / `createMcpHandler()` (HTTP, Web-Standard `Request`/`Response`,
+    laeuft auf Node/Bun/Deno/Workers). Typisierter `ctx` (Logging/Progress/Cancellation/Elicitation) statt v1-`extra`-Bag.
+  - **Migration:** `npx @modelcontextprotocol/codemod@beta v1-to-v2 .`. **v1.x bekommt ≥6 Monate weiter Bug-/Security-Fixes.**
+- **Spec-Revision 2026-07-28 (Release Candidate, groesste Revision seit Launch, BREAKING):**
+  - **Stateless Core:** `initialize`/`initialized`-Handshake entfernt (SEP-2575), `Mcp-Session-Id` entfernt (SEP-2567) —
+    jede Anfrage self-contained, Sessions nur noch opt-in (Explicit-Handle-Pattern, IDs vom Modell weitergereicht).
+  - **Multi-Round-Trip statt SSE-Stream:** Elicitation/Server→Client via `InputRequiredResult` + `requestState` (SEP-2322);
+    Server-Requests nur waehrend aktiver Verarbeitung einer Client-Request (SEP-2260, jetzt Requirement).
+  - **Routing/Caching-Header:** `Mcp-Method`/`Mcp-Name` Pflicht (SEP-2243); `ttlMs`/`cacheScope`-Hints (SEP-2549).
+  - **Deprecatet: Roots, Sampling, Logging.** Extensions first-class (Reverse-DNS-IDs), Tasks als Extension,
+    „MCP Apps" (server-gerenderte UIs), Full JSON Schema 2020-12 fuer Tools, Authorization-Hardening (OAuth/OIDC).
+- **Konkreter v1-Bug, den v2 fixt — Output-Schema-Crash (#1308, 16.12.2025):** Tool-Output-Validierung crasht
+  (`Cannot read properties of undefined (reading '_zod')`), sobald `outputSchema` **kein plain `z.object({...})`** ist —
+  `.optional()`, `.nullable()`, `.nullish()`, `z.union()` schlagen fehl (silent fail → `isError:true`). Root Cause:
+  `normalizeObjectSchema` liefert `undefined` fuer Nicht-Object-Schemas. **Auf v1.x (inkl. 1.27.1) AKTIV**, in v2 gefixt.
+  **Workaround auf v1:** `outputSchema` immer als flaches `z.object({...})` halten (kein optional/nullable/union auf oberster Ebene);
+  Optionalitaet in einzelne Felder verlagern. Verwandt: #969 (discriminatedUnion), #594 (nur non-nullable).
+**Quelle:** github.com/modelcontextprotocol/typescript-sdk (v2-Releases, Issue #1308), blog.modelcontextprotocol.io (2026-07-28 RC).
 
 ---
 
@@ -665,7 +706,7 @@ lokale Imports MIT `.js`. SDK-Subpath-Imports immer mit `.js` (`@modelcontextpro
 - **OPEN (echte Bugs):** ts-sdk #1944 (406 JSON-only Accept, 2.3), #893 (dynamische Capabilities, 8.5),
   #2108 (Protocol-Version Header/Body, 8.4), #2042 (transitive CVEs, 8.2), #1028 (manueller ListTools
   ohne inputSchema, 3.9), #1658 (Session-Rekonstruktion, 2.5), #1049 (stdio-Crash bei Server-Exit, 7.1),
-  #852 (Browser-Session-Reuse); python-sdk #396 (Exception-Handling, 4.8), #2433 (CRLF Windows, 1.5),
+  #1308 (**outputSchema non-object `_zod`-Crash** auf v1.x, 8.8 — in v2 gefixt), #852 (Browser-Session-Reuse); python-sdk #396 (Exception-Handling, 4.8), #2433 (CRLF Windows, 1.5),
   #2278 (SSE-Deprecation-Tracking, 2.1); claude-code #58510 (Windows Plugin-npx, 6.1), #43177 (kein
   stdio-Auto-Reconnect, 7.1).
 - **NOT_PLANNED (won't-fix → Workaround DAUERHAFT):** claude-code #1254 (env nicht durchgereicht, 5.2),
