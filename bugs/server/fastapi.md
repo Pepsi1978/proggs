@@ -11,6 +11,8 @@
 > Engine-B-Eskalation OpenRouter `:online` fuer Threadpool/Body-Limit/BackgroundTasks).
 > **Ergaenzt 2026-07-02** (Tiefen-Debugging second-brain-server): §1-Live-Befunde gefixt (agent 0.48.1);
 > NEU §9 Modul-Level-Init ohne Re-Init → Container dauerhaft degraded (Kurzcheck #13).
+> **Ergaenzt 2026-07-02 abends** (Tiefen-Debugging PERFORMANCE): NEU §10 gepollter Aggregations-
+> Endpoint — serielle Sub-Reads/Doppel-Scans/Poll ohne Sichtbarkeits-Gate + Client-Reuse (Kurzcheck #14).
 > **Anker:** fastapi=0.138.0 · uvicorn=0.49.0 · starlette=1.0.0 · pydantic=v2 · python=3.13.13 ·
 > httpx>=0.27 · qdrant-client>=1.18 · google-genai>=2.9  <!-- maschinenlesbar fuer check-version-anchor.py -->
 > (projekt-gepinnt in `*/requirements.txt`; FastAPI 0.138 hat **keinen** Pydantic-v1-Support mehr).
@@ -41,6 +43,7 @@
 | 11 | ⭐ unbehandelte Exception → 500 ohne/mit doppeltem Log | Eigener `@app.exception_handler(Exception)` kann Uvicorns Traceback unterdruecken; `uvicorn.error` hat `propagate=True` → **doppelte** Tracebacks. `logger.exception()` + `propagate=False`. Nie `str(exc)` roh an den Client (Leak). | §7 |
 | 12 | ⭐ Endpoint liest `await request.body()`/`.json()` ohne Groessen-Limit | Starlette hat **kein** Default-Limit fuer rohe Bodies → 30-GB-JSON sprengt den Worker (OOM). `max_length` am Pydantic-Feld + Content-Length-Check/`client_max_body_size` (nginx). Multipart hat eigene Limits. | §8 |
 | 13 | Modul-Level-Init verbindet zu einem abhaengigen Dienst (DB/Qdrant) und faengt den Fehler nur | Boot-Race (compose `depends_on` wartet nur auf START): schlaegt die Init einmal fehl, bleibt der Container DAUERHAFT degraded/503 — /health gibt weiter HTTP 200 → kein Docker-Restart. Init in Funktion kapseln + beim ersten Request throttled NACHHOLEN (Self-Healing). | §9 |
+| 14 | Gepollter Aggregations-Endpoint (Overview/Status) sammelt mehrere Sub-Reads SERIELL (+ blockierende Messung wie `psutil.cpu_percent(interval=…)`) | Latenz pro Poll = SUMME aller Teil-Latenzen; Proxy-Ketten koennen dieselbe teure Arbeit DOPPELT ausloesen (direkt + indirekt ueber einen zweiten Dienst). Unabhaengige Reads ohne Seiteneffekte PARALLEL sammeln (ThreadPool/gather — Latenz = Maximum); Doppel-Arbeit per schlankem Spezial-Endpoint ersetzen; Frontend-Polls bei `document.hidden` pausieren + bei visibilitychange sofort refreshen; ad-hoc httpx-Calls durch EINEN modul-globalen Client (Pool, transport-retries=1) ersetzen. | §10 |
 
 ---
 
@@ -321,6 +324,37 @@ Tiefen-Debugging): Init in `_init_store()` gekapselt; `_require_store()` holt si
 wo die Abhaengigkeit einen Healthcheck hat. Nie darauf verlassen, dass „restart: unless-stopped" einen
 logisch-degradeden (aber lebenden) Prozess heilt.
 **Quelle:** Tiefen-Debugging second-brain-server 2026-07-02 (statischer Fund, Boot-Race-Analyse).
+
+## 10. Gepollter Aggregations-Endpoint: serielle Sub-Reads, Doppel-Scans, blockierende Messung
+
+**Symptom:** Ein regelmaessig gepollter Sammel-Endpoint (Dashboard-Overview, Status-Seite) ist traege
+(Sekunden), obwohl jeder Teil-Read schnell ist; die Backend-Dienste zeigen periodische Lastspitzen im
+Poll-Takt — auch wenn NIEMAND hinschaut (Browser-Tab im Hintergrund).
+**Ursache (drei Muster, die sich addieren):**
+1. **Seriell statt parallel:** unabhaengige Sub-Reads (Health mehrerer Dienste, Zaehl-Endpoints,
+   System-Metriken) laufen nacheinander → Latenz = SUMME. Eine blockierende Messung wie
+   `psutil.cpu_percent(interval=0.25)` kommt obendrauf.
+2. **Doppel-Arbeit ueber Proxy-Ketten:** der Aggregator ruft einen teuren Endpoint direkt UND ein
+   zweiter Dienst ruft ihn fuer seine eigene Antwort NOCHMAL (hier: /category-counts lief pro
+   20s-Poll ZWEIMAL — direkt + via agent /categories → brain).
+3. **Poll ohne Sichtbarkeits-Gate:** `setInterval` im Frontend feuert auch bei verstecktem
+   Browser-Tab weiter (Browser drosseln nur auf ~1/min, stoppen nicht) → die komplette
+   Server-Kaskade laeuft fuer niemanden.
+**Versionen:** strukturell (jedes Poll-Dashboard).
+**Betrifft unseren Code:** `dashboard/app.py /api/overview` + `index.html` — GEFIXT 2026-07-02
+(dashboard 0.34.0/agent 0.49.0, Tiefen-Debugging Performance): 5 Reads parallel (ThreadPool,
+Latenz 0,27s statt Summe), leerer-Kategorien-Ergaenzung ueber neuen schlanken agent-Endpoint
+`/categories/registry` (nur Datei, kein brain-Scan), Frontend-Gate `if(!document.hidden)` +
+visibilitychange-Sofort-Refresh.
+**FIX (funktionserhaltend):** Unabhaengige, seiteneffektfreie Reads parallel sammeln (Ergebnis-JSON
+identisch, Fehlerbehandlung pro Future wie vorher); fuer Hilfsdaten schlanke Spezial-Endpoints statt
+des teuren Vollwegs; Frontend-Polls bei `document.hidden` pausieren und beim Sichtbarwerden sofort
+aktualisieren (niemand sieht je aeltere Daten als vorher). Dazu Client-Reuse: EIN modul-globaler
+`httpx.Client(transport=httpx.HTTPTransport(retries=1))` statt ad-hoc-Calls — Keep-Alive spart je
+TLS-Ziel ~100-200 ms; `retries=1` wiederholt NUR den Verbindungsaufbau (faengt stale Keep-Alive nach
+Upstream-Neustart, verhaltensgleich zu frisch-oeffnen).
+**Quelle:** Tiefen-Debugging second-brain-server (Performance) 2026-07-02, statisch hergeleitet +
+live verifiziert (overview 0,27s, alle Container healthy).
 
 ## ✅ Pflicht-Checkliste vor dem Commit eines FastAPI/async-Endpoints
 

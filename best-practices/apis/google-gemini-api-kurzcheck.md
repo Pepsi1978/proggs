@@ -20,3 +20,4 @@
 | 6 | Antwortpruefung | 200 OK ≠ Text: block/finishReason erst pruefen | §6 |
 | 7 | Caching/Token | Wiederkehrendes an Prompt-Anfang; `system_instruction` | §7 |
 | 8 | Streaming/Limits | `?alt=sse`; Backoff bei 429; Billing aktiv | §8 |
+| 9 | Embeddings (mehrere Texte) | `embed_content` BATCHEN: `contents=[t1,t2,…]` -> eine embeddings-Liste in Eingabe-Reihenfolge; nie seriell je Text | §9 |

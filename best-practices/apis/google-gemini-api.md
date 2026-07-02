@@ -18,6 +18,7 @@
 | 6 | Antwortpruefung | 200 OK ≠ Text: block/finishReason erst pruefen | §6 |
 | 7 | Caching/Token | Wiederkehrendes an Prompt-Anfang; `system_instruction` | §7 |
 | 8 | Streaming/Limits | `?alt=sse`; Backoff bei 429; Billing aktiv | §8 |
+| 9 | Embeddings (mehrere Texte) | `embed_content` BATCHEN: `contents=[t1,t2,…]` -> eine embeddings-Liste in Eingabe-Reihenfolge; nie seriell je Text | §9 |
 
 ## 1. SDK & Client
 - Ausschliesslich das einheitliche SDK `google-genai` (Py) / `@google/genai` (JS) / `google.golang.org/genai` (Go) verwenden; Init ueber `client = genai.Client(api_key=...)` bzw. `genai.Client(vertexai=True, project=..., location=...)`. Altes SDK ist deprecated. Quelle: https://ai.google.dev/gemini-api/docs/libraries · offiziell
@@ -53,6 +54,10 @@
 ## 8. Streaming, Rate-Limits & Resilienz
 - `streamGenerateContent` mit `?alt=sse` aufrufen und zeilenweise parsen (Default ist fortlaufendes JSON-Array); letzten Chunk auf `finishReason` pruefen. Quelle: https://ai.google.dev/gemini-api/docs/deprecations · offiziell
 - Clientseitiges Rate-Limiting + Exponential-Backoff bei 429 (Free ~60 RPM/Modell); Billing aktivieren (auch fuer Free-Tier) und Timeout/Retry im SDK konfigurieren. Quelle: https://ai.google.dev/gemini-api/docs/libraries · offiziell
+
+## 9. Embeddings: Batchen statt seriell (Stand 2026-07-02)
+- `embed_content` nimmt MEHRERE `contents` in EINEM Call entgegen; `resp.embeddings` kommt in Eingabe-Reihenfolge zurueck. N Texte (z.B. Dokument-Chunks) NIE seriell je Text embedden — ein 150-Chunk-Dokument macht sonst 150 Round-Trips (Minuten) statt ~10 Batches (Sekunden). Identische Vektoren (gleiche Inputs, gleiches `task_type`, gleiche `output_dimensionality`). Quelle: ai.google.dev/gemini-api/docs/embeddings (Batch-Beispiele) · offiziell; live verifiziert 2026-07-02 (brain-api 1.20.0 `embed_many`, 3-Chunk-Store 0,66s, 1:1-Roundtrip + Suche ok)
+- Batch-Groesse konservativ halten (z.B. 16 je Request) und die Vektor-ANZAHL gegen die Eingabe-Anzahl pruefen — bei Mismatch HART abbrechen statt Vektoren still falsch zuzuordnen.
 
 ## 🔗 Bezug zum Bug-Almanach
 | Best-Practice | Bug-Abschnitt (`bugs/apis/google-gemini-api.md`) |

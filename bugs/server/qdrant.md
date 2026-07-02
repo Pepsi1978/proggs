@@ -8,7 +8,9 @@
 > **Stand:** recherchiert am **2026-06-22** (Firecrawl + MiniMax M3, quellentreu; offizielle qdrant.tech-
 > Docs/Blog + GitHub-Issues). **Changelog-Abgleich 2026-06-22:** v1.18.2 (4. Juni 2026) ist weiterhin die
 > **neueste stabile Version** — kein 1.19+. **Ergaenzt 2026-07-02** (Tiefen-Debugging second-brain-server):
-> NEU §9 Payload-Schema-Drift bei Einzelfeld→Array-Migration (Kurzcheck #14). **Anker:** Qdrant **1.18.2** (live: `curl http://127.0.0.1:6333/` → version
+> NEU §9 Payload-Schema-Drift bei Einzelfeld→Array-Migration (Kurzcheck #14). **Ergaenzt 2026-07-02
+> abends** (Tiefen-Debugging PERFORMANCE): NEU §10 Alle-Chunks-Scan statt Chunk-0 + Payload-Eingrenzung
+> bei Existenz-/Teil-Reads (Kurzcheck #15). **Anker:** Qdrant **1.18.2** (live: `curl http://127.0.0.1:6333/` → version
 > 1.18.2), Docker-Image `qdrant/qdrant:latest`, im Stack mit mem0 2.0.7 (Embeddings @1536).
 > Verwandt: [`self-hosted-ai-agent-server.md`](self-hosted-ai-agent-server.md), [`mem0.md`](mem0.md), [`wireguard.md`](wireguard.md).
 
@@ -32,6 +34,7 @@
 | 12 | `nested`-Filter auf Array-von-Objekten | `nested` ist noetig, damit mehrere Bedingungen **dasselbe** Array-Element treffen (sonst array-uebergreifend). Aber: Community berichtet **unzuverlaessige/langsamere Index-Nutzung** bei `nested` (#2256); „alle diese Werte gleichzeitig"-Subset-Match ist offener Feature-Request (#4679). Fuer einfache Kategorien lieber flache Felder. | §7 |
 | 13 | ⭐ `client.scroll(..., with_payload=True)` ueber viele/grosse Payloads | Laedt ALLE Payload-Felder ALLER Punkte gleichzeitig in den **Client**-RAM (nicht Qdrant-RAM!). Bei grossen Feldern (z.B. Volltext 1:1 pro Chunk) + periodischem Aufruf → Client-Container-OOM-Loop. Fuer Zaehl-/Listen-Operationen NUR die noetigen Felder laden: `with_payload=["feld1","feld2"]` statt `True`. Container-Memory-Limit hochsetzen hilft NICHT (Last waechst unbeschraenkt). | §8 |
 | 14 | Payload-Schema um ein ARRAY neben dem alten Einzelfeld erweitert (z.B. `categories` + `category`) | JEDER Verwaltungs-/Schreibweg muss BEIDE pflegen — ein `set_payload` nur aufs Einzelfeld laesst das Array stehen → der Lesepfad (bevorzugt das Array) zeigt weiter den ALTEN Wert; rename/detach wirken „gar nicht". Auch Export/Trash-Roundtrips muessen das Array mitnehmen. | §9 |
+| 15 | Zaehl-/Listen-/Titel-Scan bei Chunk-Schema (Metadaten in JEDEM Chunk identisch, doc_id-dedupliziert) | OHNE `chunk_index=0`-Filter scannt jede Metadaten-Operation ALLE Chunks (~5x mehr Punkte, bei jedem Poll). Filter `chunk_index=0` liefert EXAKT dasselbe deduplizierte Ergebnis. Existenz-Checks mit `with_payload=False`, Teil-Reads mit Feldliste (nie vollen Payload fuer ein bool/created_at). | §10 |
 
 ---
 
@@ -250,6 +253,31 @@ ueber ALLE Schreib-/Verwaltungs-/Export-Wege ziehen (store/update/rename/detach/
 backfill) — jeder Weg muss das VOLLE abgeleitete Feld-Set schreiben; jeder Filter muss beide Formen
 matchen (`should`). Lesepfad-Praeferenz (Array vor Einzelfeld) dokumentieren.
 **Quelle:** Tiefen-Debugging second-brain-server 2026-07-02 (statischer Fund).
+
+## 10. Alle-Chunks-Scan statt Chunk-0 bei repliziertem Metadaten-Schema (Performance)
+
+**Symptom:** Zaehl-/Listen-/Lookup-Operationen (Kategorie-Zaehlung, Eintragsliste, Titel-Aufloesung)
+werden mit wachsendem Bestand traege und uebertragen ein Vielfaches der noetigen Daten — besonders
+teuer, wenn ein Dashboard sie im Poll-Takt (z.B. alle 20s) ausloest.
+**Ursache:** Beim Chunk-Schema (ein Dokument = N Punkte, Metadaten wie doc_id/title/category/full_text
+sind in JEDEM Chunk identisch repliziert) scannen Metadaten-Operationen ohne `chunk_index=0`-Filter
+ALLE Chunks, obwohl das Ergebnis anschliessend auf doc_id dedupliziert wird — bei ~2100 Punkten fuer
+~590 Dokumente also ~3,5x mehr Punkte pro Scan, bei grossen Almanach-Dokumenten deutlich mehr.
+Verwandt: Existenz-Checks/Teil-Reads mit `with_payload=True` (Default) ziehen den kompletten Payload
+inkl. `full_text` (bis 1,4 MB je Punkt), obwohl nur ein bool oder ein einzelnes Feld gebraucht wird —
+gleiche Klasse wie §8, nur auf `limit=1`-Ebene.
+**Versionen:** strukturell (App-Logik, jede Qdrant-Version).
+**Betrifft unseren Code:** `brain-api/app.py` category-counts (laeuft bei JEDEM 20s-Dashboard-Poll!),
+/list, resolve_title Stufe 3, _doc_id_exists, /store-Existenzcheck, backfill-parent (voller Payload
+fuer alle Punkte — OOM-Klasse §8), /purge — GEFIXT 2026-07-02 (1.20.0, Tiefen-Debugging Performance):
+`chunk_index=0`-Filter + `with_payload=False`/Feldlisten. Ergebnis-identisch (doc_id-dedupliziert).
+**FIX (funktionserhaltend):** Bei jedem Scan fragen: (a) genuegt EIN Chunk je Dokument (Metadaten
+repliziert)? → `chunk_index=0`-Filter; (b) welche Felder braucht das Ergebnis WIRKLICH? →
+`with_payload=[…]` bzw. `False` fuer reine Existenz. ACHTUNG Ausnahme: Operationen, die JEDEN Punkt
+anfassen muessen (set_payload-Backfills, Re-Embeds), duerfen NICHT auf Chunk 0 gefiltert werden —
+dort nur die Payload-Feldliste eingrenzen.
+**Quelle:** Tiefen-Debugging second-brain-server (Performance) 2026-07-02, statisch + live verifiziert
+(Zaehlungen vor/nach identisch: total_distinct 592).
 
 ---
 
