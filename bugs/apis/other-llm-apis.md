@@ -1,9 +1,11 @@
 # Bekannte Bugs: Weitere LLM-APIs (Survey + Integrations-Fallen)
 
 > PFLICHT-LESEN vor Arbeit an einer Integration eines hier gelisteten Anbieters. Stand: zuletzt
-> recherchiert am 2026-06-08. Survey der wichtigen Anbieter, die NICHT eine eigene Datei haben
+> recherchiert am 2026-06-08, **re-recherchiert am 2026-07-02** (Engine A: Firecrawl+MiniMax). Survey der wichtigen Anbieter, die NICHT eine eigene Datei haben
 > (OpenAI/Anthropic/Gemini/Groq/OpenRouter/Grok/Mistral/DeepSeek/lokal: siehe jeweils eigene Datei).
 > Zweite Seite: `best-practices/apis/other-llm-apis.md`.
+
+> **Update 2026-07-02:** Einziger belegter neuer Anbieter-Fund seit 2026-06-08: Cerebras `gemma-4-31b` Preview mit Image-Input-Unterstuetzung seit 29.06.2026. Cerebras API-Version 2 wird Default und alte Versionen/`disable_reasoning` laufen am 21.07.2026 aus; weiterhin Modell-/Parameter-IDs nicht hardcoden.
 
 ## ⚡ Kurzcheck (Stufe A — vor der Arbeit lesen)
 

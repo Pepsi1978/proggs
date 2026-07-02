@@ -1,7 +1,8 @@
-# Weitere LLM-APIs — Best Practices (Stand 2026-06-09)
+# Weitere LLM-APIs — Best Practices (Stand 2026-07-02)
 
-> Gegenstueck zu `bugs/apis/other-llm-apis.md`. Offiziell empfohlen (Quellen). (Researcher-Recherche 2026-06-09.)
+> Gegenstueck zu `bugs/apis/other-llm-apis.md`. Offiziell empfohlen (Quellen). (Researcher-Recherche 2026-06-09, Re-Recherche 2026-07-02.)
 > Ein Abschnitt pro Anbieter — gleiche Anbieter-Liste wie die Bug-Datei.
+> Update 2026-07-02: Cerebras `gemma-4-31b` ist als Image-Input-Preview interessant; alte Cerebras-API/Parameter vor 21.07.2026 migrieren.
 
 ## ⚡ Kurzcheck (Stufe A — vor der Arbeit lesen)
 
