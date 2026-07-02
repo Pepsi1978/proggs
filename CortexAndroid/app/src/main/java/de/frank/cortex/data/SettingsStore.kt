@@ -2,16 +2,51 @@ package de.frank.cortex.data
 
 import android.content.Context
 import android.content.SharedPreferences
+import android.util.Base64
+import androidx.datastore.core.DataStore
+import androidx.datastore.preferences.core.Preferences
+import androidx.datastore.preferences.core.booleanPreferencesKey
+import androidx.datastore.preferences.core.edit
+import androidx.datastore.preferences.core.stringPreferencesKey
+import androidx.datastore.preferences.preferencesDataStore
 import androidx.security.crypto.EncryptedSharedPreferences
 import androidx.security.crypto.MasterKey
+import com.google.crypto.tink.Aead
+import com.google.crypto.tink.KeyTemplates
+import com.google.crypto.tink.aead.AeadConfig
+import com.google.crypto.tink.integration.android.AndroidKeysetManager
 import de.frank.cortex.observability.CortexLog
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.runBlocking
+import java.util.concurrent.ConcurrentHashMap
+
+// DataStore-Delegate muss top-level leben (eine Instanz pro Prozess).
+private val Context.cortexSecretsDataStore: DataStore<Preferences> by preferencesDataStore(name = "cortex_secrets_ds")
 
 object SettingsStore {
 
-    private const val ENCRYPTED_PREFS = "cortex_secrets"
+    private const val ENCRYPTED_PREFS = "cortex_secrets"          // Alt-Speicher (nur noch Migration)
     private const val PLAIN_PREFS = "cortex_prefs"
+    private const val MIGRATED_FLAG = "_migrated_from_encrypted_prefs"
 
-    private lateinit var encrypted: SharedPreferences
+    // Schluessel-Speicher seit 2026-07-02: DataStore + Tink (BP client-anbindung Kurzcheck #4) —
+    // EncryptedSharedPreferences ist deprecated und wird nicht mehr gepflegt. Werte liegen
+    // Tink-AEAD-verschluesselt (Master-Key im Android Keystore) als Base64 im DataStore; eine
+    // In-Memory-Kopie haelt die bisherige SYNCHRONE API unveraendert (alle Aufrufer bleiben 1:1).
+    private lateinit var dataStore: DataStore<Preferences>
+    private var aead: Aead? = null
+    private val secretCache = ConcurrentHashMap<String, String>()
+    private val storeScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
+
+    private val SECRET_KEYS = listOf(
+        "sb_api_key", "groq_api_key", "gemini_api_key", "google_tts_api_key",
+        "wg_config", "codex_access_token", "codex_refresh_token"
+    )
+
     private lateinit var plain: SharedPreferences
 
     const val CONTEXT_MODE_AUTO = "auto"
@@ -66,72 +101,178 @@ object SettingsStore {
     }
 
     fun init(context: Context) {
+        plain = context.getSharedPreferences(PLAIN_PREFS, Context.MODE_PRIVATE)
+        dataStore = context.cortexSecretsDataStore
+        aead = buildAead(context)
+
+        // In-Memory-Kopie laden (einmalig blockierend beim App-Start — wie frueher
+        // EncryptedSharedPreferences.create, das ebenfalls synchron initialisierte).
+        val migrated = try {
+            val prefs = runBlocking { dataStore.data.first() }
+            prefs.asMap().forEach { (key, value) ->
+                if (value is String) {
+                    decryptSecret(key.name, value)?.let { secretCache[key.name] = it }
+                }
+            }
+            prefs[booleanPreferencesKey(MIGRATED_FLAG)] ?: false
+        } catch (e: Exception) {
+            CortexLog.error("SettingsStore", "init", "DataStore nicht lesbar: ${e.message}")
+            false
+        }
+
+        if (!migrated) migrateFromEncryptedPrefs(context)
+        CortexLog.info("SettingsStore", "init", "SettingsStore initialisiert (DataStore+Tink)",
+            mapOf("secrets_cached" to secretCache.size, "aead" to (aead != null)))
+    }
+
+    /** Tink-AEAD mit Keystore-Master-Key. Bei korruptem Keyset (z.B. Keystore-Reset) wird das
+     *  Keyset einmal verworfen und frisch aufgebaut — die App darf am Start nie crashen. */
+    private fun buildAead(context: Context): Aead? {
+        AeadConfig.register()
+        repeat(2) { attempt ->
+            try {
+                return AndroidKeysetManager.Builder()
+                    .withSharedPref(context, "cortex_tink_keyset", "cortex_tink_prefs")
+                    .withKeyTemplate(KeyTemplates.get("AES256_GCM"))
+                    .withMasterKeyUri("android-keystore://cortex_tink_master_key")
+                    .build()
+                    .keysetHandle
+                    .getPrimitive(Aead::class.java)
+            } catch (e: Exception) {
+                CortexLog.error("SettingsStore", "buildAead", "Tink-Init fehlgeschlagen (Versuch ${attempt + 1}): ${e.message}")
+                context.getSharedPreferences("cortex_tink_prefs", Context.MODE_PRIVATE).edit().clear().apply()
+            }
+        }
+        return null   // Notlauf: Secrets nur in-memory fuer diese Sitzung (Fehler ist geloggt)
+    }
+
+    /** Einmalige Uebernahme der Alt-Secrets aus EncryptedSharedPreferences (deprecated).
+     *  Erst nach erfolgreicher Uebernahme wird die alte Datei geloescht — kein Key geht verloren. */
+    private fun migrateFromEncryptedPrefs(context: Context) {
         try {
             val masterKey = MasterKey.Builder(context)
                 .setKeyScheme(MasterKey.KeyScheme.AES256_GCM)
                 .build()
-
-            encrypted = EncryptedSharedPreferences.create(
-                context,
-                ENCRYPTED_PREFS,
-                masterKey,
-                EncryptedSharedPreferences.PrefKeyEncryptionScheme.AES256_SIV,
-                EncryptedSharedPreferences.PrefValueEncryptionScheme.AES256_GCM
-            )
-            plain = context.getSharedPreferences(PLAIN_PREFS, Context.MODE_PRIVATE)
-            CortexLog.info("SettingsStore", "init", "SettingsStore initialisiert")
-        } catch (e: Exception) {
-            CortexLog.error("SettingsStore", "init", "Fehler bei Initialisierung: ${e.message}")
-            // Fallback: neue EncryptedPrefs anlegen
-            context.getSharedPreferences(ENCRYPTED_PREFS, Context.MODE_PRIVATE).edit().clear().apply()
-            val masterKey = MasterKey.Builder(context)
-                .setKeyScheme(MasterKey.KeyScheme.AES256_GCM)
-                .build()
-            encrypted = EncryptedSharedPreferences.create(
+            val old = EncryptedSharedPreferences.create(
                 context, ENCRYPTED_PREFS, masterKey,
                 EncryptedSharedPreferences.PrefKeyEncryptionScheme.AES256_SIV,
                 EncryptedSharedPreferences.PrefValueEncryptionScheme.AES256_GCM
             )
-            plain = context.getSharedPreferences(PLAIN_PREFS, Context.MODE_PRIVATE)
+            var moved = 0
+            SECRET_KEYS.forEach { key ->
+                val value = old.getString(key, null)
+                if (!value.isNullOrEmpty()) {
+                    secretCache[key] = value
+                    moved++
+                }
+            }
+            // Synchron persistieren (Migration ist der eine Moment, wo Warten korrekt ist).
+            runBlocking {
+                dataStore.edit { store ->
+                    secretCache.forEach { (key, value) ->
+                        encryptSecret(key, value)?.let { store[stringPreferencesKey(key)] = it }
+                    }
+                    store[booleanPreferencesKey(MIGRATED_FLAG)] = true
+                }
+            }
+            context.deleteSharedPreferences(ENCRYPTED_PREFS)
+            CortexLog.info("SettingsStore", "migrate", "Secrets von EncryptedSharedPreferences uebernommen",
+                mapOf("moved" to moved))
+        } catch (e: Exception) {
+            // Alte Datei fehlt/korrupt (frische Installation oder Keystore-Reset): nichts zu
+            // uebernehmen — Flag setzen, damit nicht bei jedem Start erneut versucht wird.
+            CortexLog.warn("SettingsStore", "migrate", "Keine Alt-Secrets uebernommen: ${e.message}")
+            storeScope.launch {
+                try {
+                    dataStore.edit { it[booleanPreferencesKey(MIGRATED_FLAG)] = true }
+                } catch (inner: Exception) {
+                    CortexLog.error("SettingsStore", "migrate", "Migrations-Flag nicht setzbar: ${inner.message}")
+                }
+            }
         }
     }
 
-    // --- Secrets (verschlüsselt) ---
+    private fun encryptSecret(key: String, value: String): String? = try {
+        val cipher = aead?.encrypt(value.toByteArray(Charsets.UTF_8), key.toByteArray(Charsets.UTF_8))
+        if (cipher != null) Base64.encodeToString(cipher, Base64.NO_WRAP) else null
+    } catch (e: Exception) {
+        CortexLog.error("SettingsStore", "encrypt", "Verschluesseln fehlgeschlagen ($key): ${e.message}")
+        null
+    }
+
+    private fun decryptSecret(key: String, encoded: String): String? = try {
+        val cipher = Base64.decode(encoded, Base64.NO_WRAP)
+        aead?.decrypt(cipher, key.toByteArray(Charsets.UTF_8))?.toString(Charsets.UTF_8)
+    } catch (e: Exception) {
+        CortexLog.error("SettingsStore", "decrypt", "Entschluesseln fehlgeschlagen ($key): ${e.message}")
+        null
+    }
+
+    private fun getSecret(key: String): String = secretCache[key] ?: ""
+
+    private fun setSecret(key: String, value: String) {
+        secretCache[key] = value
+        // Persistenz asynchron (wie frueher .apply()); der Cache traegt die Session sofort.
+        storeScope.launch {
+            try {
+                val encoded = encryptSecret(key, value)
+                dataStore.edit { store ->
+                    if (encoded != null) store[stringPreferencesKey(key)] = encoded
+                    else store.remove(stringPreferencesKey(key))
+                }
+            } catch (e: Exception) {
+                CortexLog.error("SettingsStore", "setSecret", "Persistieren fehlgeschlagen ($key): ${e.message}")
+            }
+        }
+    }
+
+    private fun removeSecrets(vararg keys: String) {
+        keys.forEach { secretCache.remove(it) }
+        storeScope.launch {
+            try {
+                dataStore.edit { store -> keys.forEach { store.remove(stringPreferencesKey(it)) } }
+            } catch (e: Exception) {
+                CortexLog.error("SettingsStore", "removeSecrets", "Entfernen fehlgeschlagen: ${e.message}")
+            }
+        }
+    }
+
+    // --- Secrets (verschlüsselt via Tink, persistiert im DataStore) ---
 
     var sbApiKey: String
-        get() = encrypted.getString("sb_api_key", "") ?: ""
-        set(value) = encrypted.edit().putString("sb_api_key", value).apply()
+        get() = getSecret("sb_api_key")
+        set(value) = setSecret("sb_api_key", value)
 
     var groqApiKey: String
-        get() = encrypted.getString("groq_api_key", "") ?: ""
-        set(value) = encrypted.edit().putString("groq_api_key", value).apply()
+        get() = getSecret("groq_api_key")
+        set(value) = setSecret("groq_api_key", value)
 
     var geminiApiKey: String
-        get() = encrypted.getString("gemini_api_key", "") ?: ""
-        set(value) = encrypted.edit().putString("gemini_api_key", value).apply()
+        get() = getSecret("gemini_api_key")
+        set(value) = setSecret("gemini_api_key", value)
 
     // Dedizierter Schluessel fuer die Google Cloud Text-to-Speech API (Chirp 3: HD).
     // Leer -> es wird der Gemini-Schluessel benutzt. Gefuellt -> dieser Schluessel wird fuer TTS
     // genutzt (wie in BestJournalFrank, dessen TTS-Schluessel-Projekt die Cloud-TTS-API aktiv hat).
     var googleTtsApiKey: String
-        get() = encrypted.getString("google_tts_api_key", "") ?: ""
-        set(value) = encrypted.edit().putString("google_tts_api_key", value).apply()
+        get() = getSecret("google_tts_api_key")
+        set(value) = setSecret("google_tts_api_key", value)
 
     /** Der fuer TTS zu verwendende Schluessel: dedizierter TTS-Key falls gesetzt, sonst Gemini-Key. */
     val ttsApiKey: String
         get() = googleTtsApiKey.ifBlank { geminiApiKey }
 
     var wgConfig: String
-        get() = encrypted.getString("wg_config", "") ?: ""
-        set(value) = encrypted.edit().putString("wg_config", value).apply()
+        get() = getSecret("wg_config")
+        set(value) = setSecret("wg_config", value)
 
     var codexAccessToken: String
-        get() = encrypted.getString("codex_access_token", "") ?: ""
-        set(value) = encrypted.edit().putString("codex_access_token", value).apply()
+        get() = getSecret("codex_access_token")
+        set(value) = setSecret("codex_access_token", value)
 
     var codexRefreshToken: String
-        get() = encrypted.getString("codex_refresh_token", "") ?: ""
-        set(value) = encrypted.edit().putString("codex_refresh_token", value).apply()
+        get() = getSecret("codex_refresh_token")
+        set(value) = setSecret("codex_refresh_token", value)
 
     // --- Verbindung ---
 
@@ -218,10 +359,7 @@ object SettingsStore {
         get() = codexAccessToken.isNotBlank()
 
     fun clearCodexAuth() {
-        encrypted.edit()
-            .remove("codex_access_token")
-            .remove("codex_refresh_token")
-            .apply()
+        removeSecrets("codex_access_token", "codex_refresh_token")
         codexLocalEnabled = false
     }
 

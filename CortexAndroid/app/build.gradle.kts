@@ -104,8 +104,11 @@ dependencies {
     implementation(libs.okhttp)
     implementation(libs.okhttp.logging)
 
-    // Security
+    // Security — DataStore + Tink ist der aktive Schluessel-Speicher; security-crypto
+    // (deprecated) bleibt nur fuer die einmalige Migration der Alt-Secrets.
     implementation(libs.security.crypto)
+    implementation(libs.datastore.preferences)
+    implementation(libs.tink.android)
     implementation(libs.biometric)
     implementation(libs.fragment)
 

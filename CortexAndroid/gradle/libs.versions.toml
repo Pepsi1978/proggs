@@ -7,6 +7,8 @@ retrofit = "2.11.0"
 okhttp = "4.12.0"
 moshi = "1.15.1"
 securityCrypto = "1.1.0-alpha06"
+datastore = "1.1.1"
+tink = "1.15.0"
 navigationCompose = "2.8.7"
 lifecycleRuntime = "2.8.7"
 activityCompose = "1.9.3"
@@ -47,7 +49,12 @@ okhttp = { group = "com.squareup.okhttp3", name = "okhttp", version.ref = "okhtt
 okhttp-logging = { group = "com.squareup.okhttp3", name = "logging-interceptor", version.ref = "okhttp" }
 
 # Security
+# security-crypto (EncryptedSharedPreferences) ist DEPRECATED — bleibt NUR fuer die einmalige
+# Migration der Alt-Secrets drin (SettingsStore.migrateFromEncryptedPrefs). Neuer Speicher:
+# DataStore + Tink (BP client-anbindung Kurzcheck #4).
 security-crypto = { group = "androidx.security", name = "security-crypto", version.ref = "securityCrypto" }
+datastore-preferences = { group = "androidx.datastore", name = "datastore-preferences", version.ref = "datastore" }
+tink-android = { group = "com.google.crypto.tink", name = "tink-android", version.ref = "tink" }
 biometric = { group = "androidx.biometric", name = "biometric", version.ref = "biometric" }
 fragment = { group = "androidx.fragment", name = "fragment", version.ref = "fragment" }
 
