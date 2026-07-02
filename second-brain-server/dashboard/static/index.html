@@ -2914,6 +2914,9 @@ button{font-family:inherit;cursor:pointer}
       chatAppend("agent", r.reply || "(keine Antwort)", meta || null);
       if(window.speakTTS && r.reply) window.speakTTS(r.reply);    // Antwort vorlesen (wenn Lautsprecher an)
       if(r.options && r.options.length) chatOptions(r.options);   // anklickbare Ja/Nein-Knöpfe
+      // Sichtbare Meldung, wenn das Server-Kontextfenster (40 Nachrichten) erstmals ueberschritten
+      // wurde (Frank-Wunsch 2026-07-02) — kommt pro Session genau einmal vom Agenten.
+      if(r.context_limit_reached) chatAppend("agent", "⚠️ Kontextgrenze erreicht — ältere Nachrichten dieses Gesprächs fließen ab jetzt nicht mehr in die Antworten ein.");
     }catch(e){
       typing.remove();
       chatAppend("agent", "Der Agent ist gerade nicht erreichbar — versuch es bitte gleich nochmal.");

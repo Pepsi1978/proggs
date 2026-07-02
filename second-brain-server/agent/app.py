@@ -72,7 +72,7 @@ TZNAME = os.getenv("AGENT_TZ", "Europe/Berlin")
 CONV_CATEGORY = os.getenv("AGENT_CONV_CATEGORY", "gespräche")  # deutsche Umlaute (Frank 2026-06-24); Altbestand wird migriert
 DEDUP_CANDIDATES = int(os.getenv("AGENT_DEDUP_CANDIDATES", "3"))
 DEDUP_MIN_SCORE = float(os.getenv("AGENT_DEDUP_MIN_SCORE", "0.70"))  # ab hier dem LLM als Kandidat zeigen
-HISTORY_MAX = int(os.getenv("AGENT_HISTORY_MAX", "20"))             # so viele letzte Nachrichten an das LLM
+HISTORY_MAX = int(os.getenv("AGENT_HISTORY_MAX", "40"))             # so viele letzte Nachrichten an das LLM (Frank 2026-07-02: 40 = 20 Paare)
 RECALL_LIMIT = int(os.getenv("AGENT_RECALL_LIMIT", "5"))            # so viele Gehirn-Treffer fuers Nachschlagen (Phase 4b)
 ANSWER_MAX_TOKENS = int(os.getenv("AGENT_ANSWER_MAX_TOKENS", "4096"))  # grosszuegig: Thinking-Tokens zaehlen dagegen (Gemini-Almanach B4)
 # Ausgabe-Haertung (Frank-Wunsch 2026-06-25): grosse Eintraege duerfen Lese-/Hauptagent nicht sprengen.
@@ -2823,6 +2823,7 @@ async def chat(req: ChatReq) -> dict:
         session["pending"] = outcome.get("pending")
         session["messages"].append({"role": "agent", "text": outcome.get("reply", "")})
         session["last_activity"] = time.monotonic()
+        limit_hit = _mark_context_limit(session)
 
     checkpoint("chat", "Hauptagent routet: speichern (nach Bestaetigung), nachschlagen oder reden",
                ok=(outcome.get("action") in ("save_confirm", "store", "cancel", "recall", "internet", "smalltalk")),
@@ -2832,7 +2833,18 @@ async def chat(req: ChatReq) -> dict:
     return {"ok": True, "reply": outcome.get("reply", ""), "action": outcome.get("action"),
             "session_id": sid, "category": outcome.get("category"), "title": outcome.get("title"),
             "stored": outcome.get("stored", False), "replaced": outcome.get("replaced", False),
-            "recall_hits": outcome.get("recall_hits"), "options": outcome.get("options")}
+            "recall_hits": outcome.get("recall_hits"), "options": outcome.get("options"),
+            "context_limit_reached": limit_hit}
+
+
+def _mark_context_limit(session: dict) -> bool:
+    """True GENAU EINMAL pro Session, wenn der Verlauf erstmals HISTORY_MAX ueberschreitet —
+    die App zeigt dann sichtbar 'Kontextgrenze erreicht' (Frank-Wunsch 2026-07-02). Aeltere
+    Nachrichten fliessen ab da nicht mehr in die LLM-Prompts ein (_history_text-Fenster)."""
+    if len(session["messages"]) > HISTORY_MAX and not session.get("context_limit_notified"):
+        session["context_limit_notified"] = True
+        return True
+    return False
 
 
 def _sse_event(obj: dict) -> str:
@@ -2888,6 +2900,7 @@ async def chat_stream(req: ChatReq) -> StreamingResponse:
                 session["pending"] = outcome.get("pending")
                 session["messages"].append({"role": "agent", "text": outcome.get("reply", "")})
                 session["last_activity"] = time.monotonic()
+                limit_hit = _mark_context_limit(session)
             checkpoint("chat_stream", "Streaming-Chat abgeschlossen (identische Pipeline wie /chat)",
                        ok=(outcome.get("action") in ("save_confirm", "store", "cancel", "recall", "internet", "smalltalk")),
                        action=outcome.get("action"), ms=int((time.time() - t0) * 1000))
@@ -2895,7 +2908,8 @@ async def chat_stream(req: ChatReq) -> StreamingResponse:
                 "ok": True, "reply": outcome.get("reply", ""), "action": outcome.get("action"),
                 "session_id": sid, "category": outcome.get("category"), "title": outcome.get("title"),
                 "stored": outcome.get("stored", False), "replaced": outcome.get("replaced", False),
-                "recall_hits": outcome.get("recall_hits"), "options": outcome.get("options")}})
+                "recall_hits": outcome.get("recall_hits"), "options": outcome.get("options"),
+                "context_limit_reached": limit_hit}})
         except Exception as e:  # noqa: BLE001 — Stream laeuft schon: Fehler als Event melden, nie crashen
             _log(logging.ERROR, "chat_stream fehlgeschlagen", exc_info=True)
             yield _sse_event({"type": "error", "message": f"{type(e).__name__}"})

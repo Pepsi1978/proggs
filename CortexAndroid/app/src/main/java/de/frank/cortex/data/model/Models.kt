@@ -19,6 +19,9 @@ data class ChatRequest(
 @JsonClass(generateAdapter = true)
 data class ChatResponse(
     val ok: Boolean,
+    // True genau EINMAL pro Session, wenn der Verlauf erstmals das Server-Kontextfenster
+    // (AGENT_HISTORY_MAX, 40 Nachrichten) ueberschreitet -> sichtbare Chat-Meldung.
+    val context_limit_reached: Boolean = false,
     val reply: String,
     val action: String,
     val session_id: String?,

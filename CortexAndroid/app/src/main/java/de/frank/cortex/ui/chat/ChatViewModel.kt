@@ -378,6 +378,18 @@ class ChatViewModel : ViewModel() {
                 }
                 updateSessionsAfterPersist(sessionId, agentMsg)
 
+                // Sichtbare Meldung, wenn das Server-Kontextfenster (40 Nachrichten) erstmals
+                // ueberschritten wurde (Frank-Wunsch 2026-07-02) — kommt pro Session genau einmal.
+                if (response.context_limit_reached) {
+                    val notice = ChatMessage(
+                        text = "⚠️ Kontextgrenze erreicht — ältere Nachrichten dieses Gesprächs fließen ab jetzt nicht mehr in die Antworten ein.",
+                        isUser = false,
+                        action = "context_limit"
+                    )
+                    _uiState.update { it.copy(messages = it.messages + notice) }
+                    updateSessionsAfterPersist(sessionId, notice)
+                }
+
                 CortexLog.checkpoint(
                     step = "chat_send",
                     intent = "Nachricht an Agent senden",
