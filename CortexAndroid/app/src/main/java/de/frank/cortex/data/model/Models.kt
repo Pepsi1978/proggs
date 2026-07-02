@@ -16,7 +16,11 @@ data class ChatRequest(
     val context_prompt: String? = null,
     // S/M/XL-Profil explizit mitschicken — steuert serverseitig auch die Tavily-Suchtiefe
     // (xl = advanced-Tiefensuche mit mehr Treffern, Frank-Wunsch 2026-07-02).
-    val response_size: String? = null
+    val response_size: String? = null,
+    // Idempotency-Key (UUID pro Nutzer-Intent): Stream-Versuch und /chat-Fallback tragen
+    // DENSELBEN Key — der Server (agent 0.48.0) verarbeitet Duplikate nur EINMAL
+    // (verhindert Doppel-Speicherung nach Tunnel-Abriss, Frank-Wunsch 2026-07-02).
+    val request_id: String? = null
 )
 
 @JsonClass(generateAdapter = true)

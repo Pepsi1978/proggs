@@ -339,7 +339,10 @@ class ChatViewModel : ViewModel() {
                     title = state.titleOverride.ifBlank { null },
                     context_mode = state.contextMode,
                     context_prompt = buildContextPrompt(state.contextMode, state.responseSize),
-                    response_size = state.responseSize
+                    response_size = state.responseSize,
+                    // EIN Key pro Nutzer-Intent: Stream und /chat-Fallback nutzen dasselbe
+                    // request-Objekt -> der Server dedupliziert (keine Doppel-Verarbeitung).
+                    request_id = UUID.randomUUID().toString()
                 )
 
                 CortexLog.checkpoint(
