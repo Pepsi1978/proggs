@@ -1,16 +1,21 @@
-# Bekannte Bugs & Fallen: C#/.NET 8 — WPF, WinUI 3, Windows-Desktop
+# Bekannte Bugs & Fallen: C#/.NET 10 — WPF, WinUI 3, Windows-Desktop
 
 > **PFLICHT-LESEN vor JEDER echten Arbeit an C#/.NET-Code** (`.cs`, `.csproj`, `.xaml`
 > in WPF-/WinUI-3-/WinForms-/Konsolen-/Backend-Projekten). Trivialer Kleinkram (einzelner
 > String, Doku, Versions-Bump) ausgenommen. Loesungen sind **funktionserhaltend** — nie
 > "Feature weglassen".
 >
-> **Stand:** recherchiert am **2026-06-02** fuer **.NET 8 (net8.0-windows), SDK 10.0.204,
-> **Anker:** dotnet=8.0  <!-- maschinenlesbar fuer check-version-anchor.py -->
-> C# 12, WPF auf .NET, WinUI 3 / Windows App SDK, Windows 10/11**. Kontext: self-contained
+> **Stand:** recherchiert am **2026-06-02**, **re-recherchiert am 2026-07-02** (Engine A: Firecrawl+MiniMax)
+> — **LIVE jetzt .NET 10** (Sprung von .NET 8): `dotnet --version` = **10.0.301**, alle 4 Projekte auf
+> **net10.0-windows**, **C# 14**.
+> **Anker:** dotnet=10.0  <!-- maschinenlesbar fuer check-version-anchor.py -->
+> WPF auf .NET, WinUI 3 / Windows App SDK, Windows 10/11. Kontext: self-contained
 > single-file Desktop-Overlays (TerminalVoiceOverlay, ClaudeVoiceOverlay, PromptBoard).
-> GitHub-Issue-Status am 2026-06-02 per `gh` verifiziert (OPEN/CLOSED je Bug vermerkt).
+> **.NET 10 ist LTS** (Support bis 14.11.2028). GitHub-Issue-Status per `gh` verifiziert (OPEN/CLOSED je Bug).
 > Versionsangaben pro Bug beachten — viele Punkte sind "per Design" und gelten dauerhaft.
+> **Beim Sprung net8.0→net10.0 MUSS man die Breaking Changes von .NET 9 UND .NET 10 pruefen** (9 wird
+> uebersprungen). Die neuen Punkte des Sprungs stehen gebuendelt in **§17**; die alten §13-Punkte (.NET 7→8)
+> gelten weiter, wenn ein Projekt diesen Sprung noch nicht gemacht hat.
 
 ---
 
@@ -28,6 +33,7 @@
 | 4 | WPF veroeffentlichen | Kein `PublishTrimmed`/AOT bei WPF verwenden | §1.5 |
 | 5 | Transparentes Click-through-Overlay | Overlay in WPF bauen, nicht WinUI 3 | §12.7 |
 | 6 | Clipboard-Zugriff | IMMER Retry-Schleife um jeden Clipboard-Aufruf | §4.1 |
+| 7 | Upgrade net8.0 → **net10.0** (C# 14) | `field`-Keyword-Konflikt + null-cond.-Assignment-Falle; single-file native-lib-Suche geaendert; Clipboard-Obsoletion | §17 |
 | 7 | Overlay liegt nicht obenauf | `SetWindowPos(HWND_TOPMOST, SWP_NOACTIVATE)` periodisch setzen | §2.1 |
 | 8 | Scharfe Anzeige ueber Monitore | `app.manifest PerMonitorV2`; Position per physische Pixel | §3.1 |
 | 9 | Viele HTTP-Calls (Whisper/Gemini) | Ein statischer Client mit `PooledConnectionLifetime` | §8.1 |
@@ -1048,6 +1054,64 @@ NICHT aus einer Einzel-URL verifiziert — bei Bedarf `gh repo clone dotnet/rosl
 `docs/compilers/CSharp/Compiler Breaking Changes - DotNet 8.md`.
 
 ---
+
+## 17. .NET 9 + .NET 10: Neuerungen & Breaking Changes beim Sprung von net8.0 (WPF/Desktop)
+
+> Recherchiert 2026-07-02 (Engine A). Frank ist von .NET 8 auf **.NET 10** (net10.0-windows, C# 14). Quellen:
+> learn.microsoft.com „What's new in WPF/.NET for .NET 9/10", „.NET 10 breaking changes", „What's new in C# 14".
+> **Pflicht:** Breaking Changes von .NET 9 UND .NET 10 pruefen (9 wird uebersprungen).
+
+### 17.1 WPF-Neuerungen (.NET 9 → .NET 10)
+- **.NET 9:** Fluent theme (Windows-11-Look), **`ThemeMode`** (Light/Dark/System zur Laufzeit), Support fuer
+  Windows-**Akzentfarbe**, silbenbasierte Ligaturen. Fluent-UI ist **„still in progress"** — nicht auf Vollstaendigkeit verlassen.
+- **.NET 10:** Fluent-Styles fuer weitere Controls (`DatePicker`, `GridSplitter`, `GridView`, `GroupBox`,
+  `Hyperlink`, `Label`, `NavigationWindow`, `RichTextBox`, `TextBox`); Expander-Animation- + HighContrast-Crash-Fixes;
+  RTL-Layout-Fixes (`MenuItem`/`Expander`/`TreeViewItem`); Performance (XAML-Parsing, Font-Rendering, DynamicResources).
+- **Neue APIs (additiv, nicht breaking):** `MessageBoxButton`/`MessageBoxResult` bekommen die vollen Win32-Werte
+  (`AbortRetryIgnore`, `RetryCancel`, `CancelTryContinue`, `Abort`, `Retry`, `Ignore`, `TryAgain`, `Continue`);
+  **Grid-Kurzschreibweise** als String: `<Grid ColumnDefinitions="1*, 2*, Auto, *, 300" RowDefinitions="1*, Auto, 25"/>`.
+
+### 17.2 Clipboard-Umbau (.NET 9/10) — ⭐ relevant fuer die Voice-Overlays (§4)
+- **Symptom nach Upgrade:** Compile-**Obsolete-Warnungen** auf `Clipboard.SetData`/`GetData`/`SetDataObject` mit
+  beliebigen Objekten; im Extremfall Laufzeitfehler, weil `BinaryFormatter` (in .NET 9 komplett obsolet/entfernt) intern nicht mehr traegt.
+- **Ursache:** WPF und WinForms nutzen ab .NET 10 **dieselbe Clipboard-Codebasis**; `BinaryFormatter`-basierte
+  Clipboard-Pfade sind obsoleted.
+- **FIX:** Fuer eigene Typen die **neuen JSON-Serialisierungs-Methoden** nutzen (`SetDataAsJson`/`TryGetData<T>`);
+  fuer reinen Text bleibt `Clipboard.SetText`/`GetText` unveraendert gueltig (Frank nutzt fast nur Text →
+  **die Retry-Schleife aus §4.1 bleibt der Kern, kein Handlungsdruck**). Nur bei Objekt-Clipboard-Daten migrieren.
+
+### 17.3 .NET 10 Breaking Changes, die Desktop-/Overlay-Apps treffen
+| Aenderung | Wirkung | FIX |
+|-----------|---------|-----|
+| **Single-file: native library search geaendert** | P/Invoke findet native `.dll` neben der EXE evtl. nicht mehr | Native Libs explizit ausliefern/laden; `DllImportSearchPath` gezielt setzen |
+| **`DllImportSearchPath.AssemblyDirectory` sucht NUR im Assembly-Verzeichnis** | frueher breitere Suche → jetzt `DllNotFoundException` moeglich | Pfad-Strategie pruefen (relevant fuer `SetWindowsHookEx`/native Overlay-Libs, §1.7/§14) |
+| **Keine Default-SIGTERM-/Terminierungs-Handler** | Prozess-Shutdown-Verhalten anders (v.a. Konsolen-/Backend-Teil) | eigenen Signal-Handler registrieren, wenn Graceful-Shutdown gebraucht |
+| **HTTP/3 aus bei `PublishTrimmed`** | HTTP/3-Requests fallen still auf HTTP/2 zurueck | bewusst; falls HTTP/3 gebraucht: nicht trimmen bzw. Feature erzwingen |
+| **C# 14 Overload-Resolution mit `Span`-Parametern** | andere Ueberladung wird gewaehlt → subtile Verhaltensaenderung | bei Span-lastigem Code Ueberladungen pruefen/testen |
+
+### 17.4 C# 14 — neue Features + die zwei echten Fallen
+- **`field`-Keyword (field-backed properties)** — ⭐ **BREAKING:** `field` ist jetzt ein **kontextuelles Keyword**.
+  Wer eine Variable/ein Member namens `field` hat (z. B. „Datenbank-Field"), bekommt Konflikte/Warnungen.
+  **FIX:** `@field` oder `this.field` zum Disambiguieren, oder umbenennen. Beispiel-Nutzen:
+  `public string Msg { get; set => field = value ?? throw new ArgumentNullException(); }`.
+- **Null-conditional Assignment** `customer?.Order = GetCurrentOrder();` — ⭐ **Falle:** die rechte Seite wird
+  **nur ausgewertet, wenn links nicht null** ist → **Seiteneffekte von `GetCurrentOrder()` bleiben aus**, wenn `customer==null`.
+  Nicht mit `++`/`--` kombinierbar.
+- **Extension members** (`extension`-Bloecke: Properties/statische/Operatoren) — alte `this`-Syntax bleibt gueltig, Umstieg freiwillig.
+- Weiter: `nameof(List<>)` (unbound generics), `Span`/`ReadOnlySpan` implizite Konvertierungen, Modifier an
+  untypisierten Lambda-Parametern, `partial`-Konstruktoren/-Events. Vollstaendige C#-14-Breaking-Changes:
+  learn.microsoft.com „compiler breaking changes - dotnet 10".
+
+### 17.5 File-based Apps (.NET 10) — neu, kein Bug
+`dotnet run app.cs` fuehrt eine **einzelne `.cs`-Datei ohne `.csproj`/`.sln`** aus; NuGet/SDK per `#:package`/`#:sdk`-Direktiven,
+Shebang `#!/usr/bin/env dotnet` fuer Skripte; `dotnet project convert app.cs` macht ein volles Projekt daraus.
+Nuetzlich fuer kleine Tools/Skripte (ersetzt teils Python-Helfer auf Windows).
+
+### 17.6 WinForms-Teil (Frank nutzt WinForms fuer DPI/Tray, §15) — .NET 10
+- **Dark Mode final** (`Application.SetColorMode(SystemColorMode)` nicht mehr experimentell, Warnung **WFO5001** entfaellt),
+  **Async Forms final** (WFO5002 entfaellt). Neue Obsolete-Analyzer: **WFDEV004** (`Form.OnClosing`/`OnClosed`),
+  **WFDEV005** (`GetData` → **`TryGetData<T>`**), **WFDEV006** (einzelne Legacy-Controls). Neue API `Form.ScreenCaptureMode`
+  (`Allow`/`HideContent`/`HideWindow`).
 
 ## Pflicht-Checkliste vor C#/.NET-Arbeit
 
