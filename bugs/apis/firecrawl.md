@@ -117,7 +117,7 @@ Frank meldete das v2.11.0-Changelog mit der Frage, ob es die gehaeuften Such-Feh
 Guthaben via `GET /v2/team/credit-usage`) — ein Anbieter-Changelog ist selten die Ursache, solange
 wir auf dem stabilen **v1**-Endpoint bleiben. **Quelle:** Franks v2.11.0-Changelog + Live-Test 2026-06-25.
 
-## 4. Kopplung zur Best-Practices-Seite
+## 🔗 Bezug zur Best-Practices-Seite
 
 `best-practices/apis/firecrawl.md` — wie man Firecrawl von vornherein richtig + sparsam nutzt
 (2-parallel-Muster, search-vs-scrape-Wahl, Credit-Budgetierung, mm-research.py-Pipeline).

@@ -125,6 +125,15 @@ LLM-`json` (5 Credits/Seite) vorziehen.
 v2-Umstieg waere ein **Breaking Change** (siehe Almanach Kurzcheck #11). Guthaben-Stand 2026-06-25:
 **9.827 Credits** (OpenRouter-Promo aktiv).
 
+## 🔗 Bezug zum Bug-Almanach
+
+| Best-Practice-Abschnitt (diese Datei) | Bug-Almanach-Abschnitt (`bugs/apis/firecrawl.md`) |
+|---|---|
+| §1 Credit-Schonung, §2 Parallelitaet | Kurzcheck #1, #3; §1 Free-Plan |
+| §3 Saubere Pipeline, §4 Python-Aufruf | Kurzcheck #2, #6; §2, §3 |
+| §6 Endpoint-Wahl und Credit-Kosten | Kurzcheck #5, #7, #8, #9; §3b |
+| §7 Research Index / deterministicJson | Kurzcheck #11, #12; §3c |
+
 ---
 
 ## Quellen

@@ -40,8 +40,8 @@ INTENTIONALLY_UNMAPPED = {
     # android-build/ — Release-PROZESS (Play Console, kein Datei-Edit; AndroidManifest.xml/build.gradle
     # teilen sich android-platform/gradle — ein eigener Datei-Trigger wuerde diese kapern)
     "play-store-release",
-    # agents/ — Konzept/Orchestrierung (kein sauberes Datei-Pattern)
-    "orchestrator-agent",
+    # agents/ — Konzept/Orchestrierung/Loop-Design (kein sauberes Datei-Pattern)
+    "orchestrator-agent", "loop-engineering",
     # claude-tooling/ — Konzept (Desktop-App-Tabs / Harness-Selbstverbesserung, kein Datei-Pattern)
     # cowork-git-push: Cowork-Git-Workflow-Querschnitt (kein Datei-Pattern; greift ueber cowork-git.sh-Nutzung)
     # cowork-scheduled-tasks: Cowork-Aufgabenplanung — Prozess/Workflow-Querschnitt (kein Datei-Pattern)

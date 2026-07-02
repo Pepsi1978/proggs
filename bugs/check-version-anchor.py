@@ -35,7 +35,7 @@ ANCHORS = [
     # installiert == relevant → Live-Abgleich
     {"rel": "claude-tooling/claude-hooks.md",  "label": "claude-code", "live": (["claude", "--version"], r"(\d+\.\d+\.\d+)")},
     {"rel": "claude-tooling/claude-config.md", "label": "claude-code", "live": (["claude", "--version"], r"(\d+\.\d+\.\d+)")},
-    {"rel": "claude-tooling/python-windows.md","label": "python",      "live": (["python", "--version"], r"(\d+\.\d+\.\d+)")},
+    {"rel": "claude-tooling/python-windows.md","label": "python",      "live": None},  # Almanach-Horizont CPython 3.13/3.14; lokaler python-Shim kann projektfremd sein
     {"rel": "claude-tooling/openrouter-claude-code.md","label": "claude-code", "live": (["claude", "--version"], r"(\d+\.\d+\.\d+)")},
     {"rel": "opencode/opencode-cli.md",        "label": "opencode",    "live": (["opencode", "--version"], r"(\d+\.\d+\.\d+)")},
     {"rel": "web/typescript.md",               "label": "typescript",  "live": None},  # tsc-Version != node; projekt-gepinnt
