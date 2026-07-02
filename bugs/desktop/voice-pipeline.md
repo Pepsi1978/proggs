@@ -5,7 +5,7 @@
 > welcher App (VoiceAgent, TVO/CVO-Overlays, EntropieReductor-Mikrofon). Loesungen sind
 > **funktionserhaltend** — Franks Rede darf NIE still verworfen werden.
 >
-> **Stand:** recherchiert am **2026-06-10** (8 Researcher parallel, offizielle Quellen zuerst:
+> **Stand:** recherchiert am **2026-06-10**, **re-recherchiert am 2026-07-02** (Engine A: Firecrawl+MiniMax; keine neuen belastbaren Bugreports seit dem Stichtag) (8 Researcher parallel, offizielle Quellen zuerst:
 > Azure/Google/Deepgram/AssemblyAI-Doku, Alexa/Google-Assistant-Design, LiveKit/Sierra/Deepgram-
 > Engineering-Blogs, HA/Rhasspy/Willow-Praxis). Software-Anker: **.NET 10.0.204** (net10.0-windows,
 > WPF) · **NAudio 2.2.1** · **sherpa-onnx 1.13.2** · **Groq Whisper** (large-v3-turbo) ·
@@ -15,6 +15,8 @@
 > `wake-word.md` (KWS-Engine/Deployment), `groq-transkription.md` (Whisper-Halluzination/Groq-API),
 > `dotnet-csharp.md` (WPF/async). **Gegenseite (Praevention):**
 > `best-practices/desktop/voice-pipeline.md`.
+
+> **Update 2026-07-02:** Keine neuen belegten Bugs/Regressionen seit 2026-06-10 gefunden. Bestehende Designrisiken wurden bestaetigt: silence-only VAD verwechselt Denkpausen mit Turn-Ende, Barge-in braucht Echo-/Filler-Handling, und Tool-Calls duerfen nicht mitten in der Wiedergabe unkontrolliert unterbrochen werden.
 
 ---
 

@@ -1,10 +1,12 @@
 # Voice-Agent-Sprachpipeline (Spracheingabe → Verstehen → Sprachausgabe) — Best Practices
 
-**Stand:** 2026-06-10 (8 Researcher parallel: Azure/Google/Deepgram/AssemblyAI-Doku,
+**Stand:** 2026-07-02 (8 Researcher parallel: Azure/Google/Deepgram/AssemblyAI-Doku,
 Alexa/Google-Assistant-Design, LiveKit/Sierra/GetStream-Engineering, HA/Rhasspy/Willow-Praxis,
 Windows-Audio, Groq, Google-TTS). Versions-Anker: **.NET 10.0.204** (net10.0-windows, WPF) ·
 **NAudio 2.2.1** · **sherpa-onnx 1.13.2** · **Groq Whisper large-v3-turbo** · **Google TTS Chirp 3 HD** ·
 VoiceAgent **1.2.0**.
+
+> **Update 2026-07-02:** Re-Recherche fand keine neuen belegten Speech-Pipeline-Bugs seit 2026-06-10. Die Kernpraxis bleibt: FSM, Timer nur im Idle, semantisches Endpointing statt reiner Stille, Barge-in mit Echo-/Filler-Schutz, Tool-Call-Abschnitte bewusst interruptible/non-interruptible markieren.
 
 > **Zweite Seite der Medaille zum Bug-Almanach** ([`bugs/desktop/voice-pipeline.md`](../../bugs/desktop/voice-pipeline.md)):
 > der Almanach sagt *was schiefgeht*, diese Datei sagt *wie man eine Sprach-Pipeline von
