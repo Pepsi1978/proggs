@@ -1,8 +1,8 @@
 # Bekannte Bugs: Lokale OpenAI-kompatible LLM-Server (Integration)
 
 > PFLICHT-LESEN vor Arbeit mit lokalen/selbst-gehosteten OpenAI-kompatiblen Servern: **Ollama, LM Studio,
-> vLLM, llama.cpp (llama-server), LocalAI, text-generation-webui**. Stand: zuletzt recherchiert am
-> 2026-06-08. Zweite Seite: `best-practices/apis/local-openai-compatible.md`.
+> vLLM, llama.cpp (llama-server), LocalAI, text-generation-webui**. Stand: zuletzt recherchiert am 2026-06-08.
+> Zweite Seite: `best-practices/apis/local-openai-compatible.md`.
 
 ## ⚡ Kurzcheck (Stufe A — vor der Arbeit lesen)
 

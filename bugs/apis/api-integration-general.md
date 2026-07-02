@@ -1,8 +1,8 @@
 # Bekannte Bugs: API-Integration anbieterübergreifend (Client-seitig)
 
 > PFLICHT-LESEN vor Arbeit an JEDER HTTP-/LLM-API-Integration (Rate-Limiting, Retries, SSE-Streaming,
-> Timeouts, Connection-Pooling, Secret-Handling, Fehlerbehandlung). Stand: zuletzt recherchiert am
-> 2026-06-08. Anbieterspezifika: siehe die jeweilige Datei in `bugs/apis/`.
+> Timeouts, Connection-Pooling, Secret-Handling, Fehlerbehandlung). Stand: zuletzt recherchiert am 2026-06-08.
+> Anbieterspezifika: siehe die jeweilige Datei in `bugs/apis/`.
 > Zweite Seite: `best-practices/apis/api-integration-general.md`.
 
 ## ⚡ Kurzcheck (Stufe A — vor der Arbeit lesen)

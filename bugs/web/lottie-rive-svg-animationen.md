@@ -2,8 +2,8 @@
 
 > **PFLICHT-LESEN VOR DER ARBEIT.** Kuratierter Bug-Almanach für Lottie/Bodymovin,
 > Rive Web (`@rive-app/canvas`, `@rive-app/react-canvas`), SVG-/SMIL-/CSS-Animationen,
-> animierte Assets, Reduced Motion, Accessibility und Vite-Asset-Fallen. Stand recherchiert
-> **2026-06-26**. Lokale Versionsanker: `lottie-web 5.13.0`, `@rive-app/canvas 2.38.3`,
+> animierte Assets, Reduced Motion, Accessibility und Vite-Asset-Fallen. Stand: recherchiert am 2026-06-26.
+> Lokale Versionsanker: `lottie-web 5.13.0`, `@rive-app/canvas 2.38.3`,
 > `@rive-app/react-canvas 4.29.3`; für diese konkreten Versionen wurde **kein belastbarer
 > Fixstatus** gefunden. Gegenseite: `best-practices/web/lottie-rive-svg-animationen.md`.
 

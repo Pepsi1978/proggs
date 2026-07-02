@@ -1,7 +1,7 @@
 # Bekannte Bugs: xAI Grok API (Integration)
 
-> PFLICHT-LESEN vor Arbeit an einer xAI-Grok-Integration (api.x.ai). Stand: zuletzt recherchiert am
-> 2026-06-08. Versions-Anker: aktuell `grok-4.3`; 8 ältere Slugs am 15.05.2026 retired (lösen still auf
+> PFLICHT-LESEN vor Arbeit an einer xAI-Grok-Integration (api.x.ai). Stand: zuletzt recherchiert am 2026-06-08.
+> Versions-Anker: aktuell `grok-4.3`; 8 ältere Slugs am 15.05.2026 retired (lösen still auf
 > 4.3 um). Zweite Seite: `best-practices/apis/xai-grok-api.md`.
 
 ## ⚡ Kurzcheck (Stufe A — vor der Arbeit lesen)
