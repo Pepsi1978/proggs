@@ -41,13 +41,13 @@ from zoneinfo import ZoneInfo
 
 import httpx
 from fastapi import Depends, FastAPI, Header, HTTPException, Request
-from fastapi.responses import JSONResponse
+from fastapi.responses import JSONResponse, StreamingResponse
 from pydantic import BaseModel, Field
 
 VERSION = "0.31.0"  # 0.31.0: Speicher-Cap-Klasse endgueltig beseitigt (Frank-Bug 2026-06-25) — ChatReq.text max_length 100000 -> 500000 (konsistenter, GROSSZUEGIGER Backstop ~25x Franks groesste Datei; lehnt nur als allerletzte OOM-Schranke laut via 422 ab). Der eigentliche stille Slice sass im dashboard /api/chat (jetzt laute Ablehnung statt text[:N]); brain-api StoreReq hat keinen Cap und chunkt selbst -> auf dem gesamten Speicher-Pfad gibt es jetzt KEINE stille Kuerzung mehr. 0.30.0: AUSGABE-Haertung fuer grosse Eintraege (Frank-Wunsch 2026-06-25) — beim Nachschlagen bekam der Leseagent (Filter) den VOLLTEXT aller Treffer (5x18k -> Kontext-Ueberlauf-Risiko), obwohl er nur Nummern waehlt; jetzt nur ein Relevanz-Schnipsel pro Treffer (LESE_SNIPPET_CHARS, bevorzugt der gematchte Chunk). Der Hauptagent (Antwort) bekommt den Inhalt jetzt pro Treffer (ANSWER_HIT_CHARS) UND gesamt (ANSWER_TOTAL_CHARS) gedeckelt mit 'gekuerzt'-Hinweis + Verweis auf den Drawer-Volltext. So koennen Lese-/Hauptagent an beliebig grossen Eintraegen nicht mehr ueberlaufen. 0.29.0: FIX 2. Cap-Schicht (Frank-Bug 2026-06-25) — ChatReq.text war auf max_length=8000 begrenzt (Pydantic lehnte laengere Texte ab -> 422 -> 'nicht erreichbar'); jetzt 100000 (brain-api chunkt selbst). Alle Kategorie-Namen-Caps 60->120 (tiefe Pfade A/B/C/...). 0.28.0: FIX Speichern grosser Texte + Titel-Uebernahme (Frank-Bug 2026-06-25). Root Cause: bei intent=save musste der Router den Text WORTWOERTLICH in quote+reply echoen -> grosse Pastes sprengten max_tokens=2048 -> abgeschnittenes JSON -> Fallback 'nicht verstanden', danach KI-Titel statt Frank-Titel, am Ende NICHTS gespeichert (Confirm kam nie sauber). Fix: Sind Titel ODER Kategorie aus dem Dashboard gesetzt (klares Speicher-Signal) und kein offenes pending -> Router UEBERSPRINGEN, direkt intent=save (voller user_text wird 1:1 zum quote). Rueckfrage zeigt langen Text gekuerzt (gespeichert wird der VOLLE Text) -> klare 'Soll ich ... ablegen?'-Frage mit Ja/Nein. Dashboard leert das Titel-Feld nur noch, wenn der Server den Save erkannt hat (sonst bleibt der Titel fuer den Retry). 0.27.0: Beliebig tiefe Kategorie-Hierarchie (Frank-Wunsch 2026-06-25) — _cat_key normalisiert Pfade jetzt OHNE Tiefen-Limit (A/B/C/...), Speicheragent-Prompts (DEFAULT_SPEICHER + geschuetztes SPEICHER_SCHEMA) erlauben/erklaeren beliebig tiefe Pfade statt nur 2 Ebenen. Dashboard baut die Baeume rekursiv. 0.26.0: Speicheragent kennt 2-Ebenen-Hierarchie (Phase 6, Frank-Wunsch 2026-06-25) — beim Ablegen waehlt er eine passende bestehende Unterkategorie 'Haupt/Unter' zeichengenau ODER schlaegt eine neue 'Haupt/Unter' vor und fragt per Eskalation/Rueckfrage nach (Frank wird vor dem Anlegen gefragt). Kernregel im GESCHUETZTEN SPEICHER_SCHEMA (gilt auch bei custom Prompt) + Erklaerung & Beispiele E/F im DEFAULT_SPEICHER. Max 2 Ebenen, kein Schraegstrich wo flach genuegt; zusammen mit _cat_key-Normalisierung (0.23.2) keine Schreibvarianten-Dubletten. 0.25.0: Eval-Set um 10 TITEL-Saetze erweitert (Frank-Wunsch 2026-06-25, id 91-100) — pruefen das Titel-Feature aus allen Blickwinkeln: store_title (Frank gibt Titel+Kategorie vor -> Eintrag landet unter GENAU dem Titel, per by-title verifiziert, KEIN KI-Titel), query 95-97 (Eintrag ueber Titel+Inhalt auffindbar -> beweist Titel im Embedding), save_confirm_title (Bestaetigungs-Rueckfrage LIEST den Titel woertlich vor, speichert nichts). Zwei neue _eval_one-Zweige (store_title/save_confirm_title), isoliert unter EVAL_USER, nach dem Lauf gepurgt. 0.24.0: TITEL-Override beim Senden (Frank-Wunsch 2026-06-25) — ChatReq.title reicht einen im Dashboard-Sendefeld eingetippten Titel durch (analog zur Kategorie-Wahl); _process_turn merkt ihn im pending und LIEST ihn in der Bestaetigungs-Rueckfrage VOR ('Soll ich das als T unter K ablegen: ...?'); _do_store nimmt den Frank-Titel mit Vorrang (Frank-Titel > KI-Titel > Text-Anfang) und ueberspringt bei Titel+Kategorie den unnoetigen Speicheragent-LLM-Call. So bekommen ganz neue Eintraege ihren Titel von Frank statt KI-geraten -> der dann (brain-api 1.10.0) den Vektor mitpraegt. 0.23.2: Kategorie-Hierarchie-Normalisierung (Phase 5 Fundament, Frank-Wunsch 2026-06-25) — _cat_key normalisiert jetzt Schraegstriche auf genau 2 Ebenen 'Haupt/Unter' (' / ' -> '/', max 2 Ebenen, leere Teile weg), damit Unterkategorien aus dem Dashboard/Speicheragent keine Schreibvarianten-Dubletten erzeugen. 0.23.1: Eval-Set an die Internet-Suche angepasst (Etappe 3) — #52 (Wetter München) + #53 (Dortmund-Ergebnis) von kind 'smalltalk' auf 'internet' umgestellt (echte Live-Fragen gehoeren jetzt ans Internet-Werkzeug, nicht mehr smalltalk); neuer 'internet'-kind im Eval-Flow prueft NUR das Routing (intent==internet, keine echte Tavily-Suche -> spart Credits) + eigene Bereichs-Zeile im Log. 0.23.0: Internet-Suche als 3. Werkzeug (Frank-Wunsch 2026-06-25, Etappe 2). Neuer intent='internet' im Router fuer aktuelle/aeussere Fragen (Wetter, Sport, News, Kurse) -> Tavily-Suche (tavily_search, fuer KI-Agenten gebaut; Key NUR im VPS-.env TAVILY_API_KEY, nie im Repo) -> der HAUPTAGENT formuliert die Antwort aus den Suchergebnissen (hauptagent_answer_internet + HAUPTAGENT_INTERNET_AUFTRAG, mit kurzer Quellenangabe). Router-Persona + ROUTER_SCHEMA + intent-Validierung um 'internet' erweitert; Faustregel internet=aktuell/aeusserlich vs. smalltalk=zeitloses Allgemeinwissen. Tool-Fehler gefangen (ai-agent §3.2), Timeout 20s; fehlt der Key -> ehrliche Fehlanzeige statt Crash. 0.22.0: Agenten-Prompt-Umbau + Leseagent-Architektur (Frank-Wunsch 2026-06-25, nach den Recherche-Prompts). (1) Alle 3 editierbaren Prompts (Hauptagent/Speicheragent/Leseagent) in klarer Struktur ROLLE/AUFGABE/KONTEXT/KATEGORIEN/EINGABEFORMAT/REGELN/AUSGABEFORMAT/BEISPIELE neu geschrieben — die Arbeitsweise steht jetzt fast komplett im EDITIERBAREN Prompt, nur das nackte JSON-Schema bleibt geschuetzt angehaengt. Dynamische {kategorien} bleiben (KEINE feste Liste, respektiert Franks Kategorie-Verwaltung). (2) ARCHITEKTUR-Wechsel: Der Leseagent FORMULIERT die Antwort nicht mehr — er FILTERT nur die Gehirn-Treffer und gibt per JSON deren NUMMERN zurueck (ABFRAGE_SCHEMA, leseagent_select). Der HAUPTAGENT formuliert danach die Antwort aus den ORIGINAL-Treffern (hauptagent_answer + build_hauptagent_answer_prompt + HAUPTAGENT_ANSWER_AUFTRAG) — so kann der Leseagent keinen Text verfaelschen (Wortwoertlichkeit garantiert). 3-Schritt-Kette Router->Filter->Formulierung; query-Flow + Eval-Flow umgestellt; Rolle 'abfrage' im Dashboard jetzt 'Leseagent'. 0.21.0: Eval-Set auf 90 Saetze (Frank-Wunsch 2026-06-25) — +10 komplett sinnlose Plauder-Saetze ('Mann Mann Mann war das ein Tag', 'Im Fruehtau zu Berge', 'Pass mal auf'), die der Hauptagent als 'smalltalk' erkennen muss (nicht speichern/suchen). 0.20.0: Eval-Set auf 80 Saetze erweitert (Frank-Wunsch 2026-06-25) — +30 reine Smalltalk-/Wissens-Saetze (Wetter, Sport, 'erklaer mir Pythagoras', Plauderei, Aussagen ohne Speicher-Signal). Pruefen: Router routet als 'smalltalk' (NICHT speichern, NICHT im Gedaechtnis suchen) -> der Hauptagent funktioniert auch als normaler Sprachassistent. Hinweis: kein Internet-Tool, statische Wissensfragen aus Modell-Wissen, Live-Fragen ehrlich verneint. 0.19.0: POST /categories/move-entry (Frank-Wunsch 2026-06-25) — verschiebt EINEN Eintrag (doc_id) in eine andere Kategorie fuers Kategorie-Dropdown im Drawer: stellt die Ziel-Kategorie kanonisch sicher (neue -> Registry, sofort in Einstellungen+Gespraech-Dropdown synchron), setzt sie via brain set_payload (Vektor bleibt, kein Re-Embed); befuellte Registry-Kategorie wandert aus der Registry. brain_set_entry_category-Helfer. 0.18.0: Eval-Check (Frank-Wunsch 2026-06-25) — Selbsttest aller 3 Agenten gegen 50 feste Saetze (24 Speichern versch. Kategorien -> 18 Abfragen mit erwartetem Inhalt -> Smalltalk -> 3 Injektion). Laeuft unter ISOLIERTEM Test-Nutzer 'eval-test' (nie Franks Gehirn), raeumt danach HART auf (brain /purge — kein Papierkorb). Detail-Log (Markdown) auf Z /eval-logs, 14 Tage Retention. POST /eval-run (via to_thread), GET /eval-logs, GET /eval-log. brain_store/brain_search um user_id erweitert; brain_by_title/brain_purge-Helfer. 0.17.0: Anklickbare Antwort-Knoepfe (Frank-Wunsch 2026-06-25 — sichtbare Manifestation der Haertung). save_confirm UND store_clarify (Eskalation) liefern jetzt 'options' [{label,send}]; /chat reicht sie durch -> das Dashboard zeigt Ja/Nein-Knoepfe unter der Rueckfrage (z.B. 'Ja, „Musik" anlegen' / 'Nein, „Sonstiges"'), Frank klickt statt zu tippen. 0.16.0: Agenten-Haertung Paket C1 (Frank-Wunsch 2026-06-25). B10 Rate-Limit-/5xx-Resilienz: llm_generate ist jetzt ein Retry-Wrapper um _llm_generate_once — bei 429/408/5xx Full-Jitter-Backoff (Retry-After-Header bevorzugt), max 3 Versuche, NUR auf dieser einen Schicht (verhindert 3x5=243-Call-Multiplikation); 400/401/403/404 nie wiederholt. Deckt Gemini-SDK UND OpenCode/httpx ab. Laeuft im Threadpool -> sleep blockiert nur den Worker, nicht den Event-Loop. 0.15.0: Agenten-Haertung Paket B (Frank-Wunsch 2026-06-25). B3 "no receipt, no claim": _store_final bestaetigt "gespeichert" NUR mit doc_id-Quittung vom brain — ohne ID ehrliche Fehlermeldung statt falscher Erfolg. B4 typisiertes Routing: Hauptagent-intent gegen festes Enum validiert (halluzinierter Wert -> smalltalk, geloggt) + Routing-Trace via checkpoint. B5 Schema-Robustheit: llm_generate erkennt MAX_TOKENS (abgeschnittene Antwort) und meldet es als Sonde, statt unvollstaendiges JSON still falsch zu parsen. 0.14.0: Agenten-Haertung Paket A (Frank-Wunsch 2026-06-25). A1 Injektions-Schutz: gespeicherte/gefundene Inhalte sind in ALLEN 3 geschuetzten Bloecken als DATEN (keine Befehle) markiert (Lethal-Trifecta-Luecke geschlossen). A2 Eskalation: Speicheragent liefert eskalation+rueckfrage; will er eine NEUE (unbekannte) Kategorie anlegen ODER ist er unsicher, wird NICHT still gespeichert, sondern bei Frank zurueckgefragt (neuer pending-mode store_clarify: confirm_yes->vorgeschlagene/neue Kategorie, confirm_no->Sonstiges). Dashboard-Override bleibt ohne Rueckfrage. _do_store in _store_final (gemeinsamer Endpunkt) + Eskalations-Verzweigung refaktoriert. 0.13.0: Kategorie-Verwaltung + deutsche Rechtschreibung (Frank-Wunsch 2026-06-25). _cat_key macht KEIN lowercase/Slug mehr -> Kategorien werden 1:1 als Klartext (Substantive gross, Leerzeichen) gespeichert; Dubletten-Schutz jetzt case-insensitiv via _canonical_category (bestehende Schreibweise gewinnt). Leseagent (llm_answer) bekommt NUR Payload-Kategorien (brain_categories), Speicheragent die VOLLE Liste (inkl. leerer). Neue Endpoints GET /categories/detail (mit Eintragszahl+leer-Flag), POST /categories/rename (brain set_payload, auch Merge), POST /categories/delete (Etikett entfernen, Eintraege bleiben); brain-Helfer rename/detach/counts. Speicher-Prompt + geschuetztes Schema verlangen deutsche Rechtschreibung + zeichengenaue Wiederverwendung. 0.12.0: Standard-Prompts aller 3 Agenten (Haupt/Speicher/Abfrage) + improve-Prompt + LLM-Marker (OFFENER PUNKT/ÄHNLICHE EINTRÄGE/Beispiele) selbst auf echte deutsche Umlaute umgestellt — vorher predigten sie Umlaute, waren aber in ae/oe/ue geschrieben (Frank-Wunsch). 0.11.0: Deutsche Umlaute global (Frank-Wunsch) — _cat_key erhaelt ä/ö/ü/ß (kein ae/oe/ue mehr), CONV_CATEGORY 'gespräche', Logbuch-Header/Titel 'Gespräch'/'Gespräche', Speicheragent-Prompt erlaubt Umlaut-Kategorien; path-Helper erkennt alte+neue Praefixe. 0.10.0: DELETE /logbook (Frank-Wunsch) — loescht eine Logbuch-.txt von Platte Z (agent als uid 1000 mit Schreibrecht; Dashboard hat /logbook nur read-only). Pfad streng validiert (kein Traversal, nur .txt in LOGBOOK_DIR); Vektor-Kopie bleibt. 0.9.0: Kategorie-Override beim Senden (Frank-Wunsch 2026-06-24) — waehlt Frank im Dashboard-Dropdown eine Kategorie, wird der bestaetigte Text GENAU dort abgelegt (keine Auto-Kategorie, kein Dubletten-Ersatz); die Rueckfrage nennt die Kategorie. /chat + ChatReq um 'category'; _process_turn reicht sie durch, merkt sie im pending bis zur Bestaetigung; _do_store(override_category). Keine Wahl -> Speicheragent entscheidet wie bisher. 0.8.0: Kategorie-Registry (Frank-Wunsch 2026-06-24) — Kategorien koennen VORAB angelegt werden (auch ohne Eintrag) und ueberleben in categories.json (agent-data). all_categories() = Vereinigung(Gehirn-Kategorien + Registry); der Speicheragent kennt manuell angelegte Kategorien sofort. Neue Endpoints GET/POST /categories. 0.7.0: Drei editierbare System-Prompts (Frank-Wunsch 2026-06-24) — Hauptagent, Speicheragent UND Abfrageagent haben je einen EIGENEN, im Dashboard umschalt-/speicherbaren Prompt (vorher teilten Haupt+Abfrage einen, der Speicheragent war fest). Pro Rolle eigene Datei (haupt-prompt.txt/speicher-prompt.txt/abfrage-prompt.txt); das CODE-kritische JSON-Schema (Router bzw. Speicher) bleibt geschuetzt angehaengt; Anti-Halluzinations-Constraints des Abfrageagenten bleiben geschuetzt. Migration: alter gemeinsamer prompt.txt -> Haupt-Prompt. /prompt + /api/prompt um role-Parameter (Abwaertskompat: ohne role = haupt). 0.6.0: Modell-pro-Rolle (Frank-Wunsch) — Hauptagent, Speicheragent und Abfrageagent koennen je ein EIGENES Modell nutzen (3 Dropdowns im Dashboard); config.json speichert haupt_model/speicher_model/abfrage_model (Migration vom alten Einzel-'model'); /config + /health geben 'models' zurueck (Abwaertskompat: 'model' = Hauptagent). 0.5.0: Agenten-Dreiteilung (Frank-Wunsch) — Frank redet nur mit dem HAUPTAGENTEN. Dieser routet: erkennt Speicher-Absicht und fragt IMMER ZUERST mit WORTWOERTLICHEM Zitat zurueck ("Soll ich ablegen: ...?"), speichert erst nach Zustimmung 1:1 ueber den SPEICHERAGENTEN (Kategorie/Titel/Dublette); Wissensfragen ueber den ABFRAGEAGENTEN (Vektorsuche + Antwort NUR aus Treffern, mit Hinweis "nachgeschaut"). Confirm-vor-Speichern im CODE erzwungen (Zustandsautomat), nicht nur im Prompt. /chat-Schwerlast via asyncio.to_thread (Event-Loop frei, fastapi §1 / ai-agent §3.1). DEFAULT_INSTRUCTIONS=Hauptagent-Persona, SCHEMA_BLOCK->ROUTER_SCHEMA, neuer SPEICHER_SYSTEM. 0.4.0: Multi-Provider — OpenCode Zen Go (minimax-m3 ueber Anthropic /messages-Schema) als zweiter Provider neben Gemini; Modell-Liste aufgeraeumt (3.1-pro/3.1-flash raus, minimax/minimax-m3 rein); neuer /improve-Endpoint (eingesprochenen Text grammatikalisch verbessern OHNE Inhaltsaenderung). 0.3.0: Phase 4b Abruf-Seite — vierter Modus 'recall': Wissensfrage -> read-only Vektorsuche im Gehirn (brain-api /search) -> ZWEITER LLM-Aufruf llm_answer, antwortet NUR aus den Treffern (nichts erfinden), nutzt denselben editierbaren Prompt OHNE Schema. Ein Eingang, zwei Koepfe. SCHEMA_BLOCK um action 'recall' + Feld 'query' erweitert; DEFAULT_INSTRUCTIONS: Wissensfragen -> recall + Antwort-Ton-Abschnitt. maxOutputTokens hoch + finishReason-Pruefung (Gemini-Almanach B4/D10). 0.2.1: Prompt-Haertung (echte Umlaute + Anweisung, Injection-Schutz, Ehrlichkeitsschutz bei Wissensfragen, expliziter Feld-Kontrakt + ausgefuellte Few-shot-Beispiele, Kategorie-Schluessel-Format). 0.2.0: System-Prompt-Instruktionen + Modell editierbar/speicherbar (GET/PUT /prompt + /config, Datei-Persistenz unter /app/data); JSON-Schema bleibt code-seitig geschuetzt. 0.1.3: Zeitstempel JE Nachricht wieder RAUS (verwaessern die semantische Suche im Gehirn) - nur Kopf-Datum/Uhrzeit bleibt. Aktueller-Zeitpunkt-im-Prompt (korrekte Titel) bleibt. 0.1.2: Zeitpunkt+Zeitstempel. 0.1.1: /end+Kategorie. 0.1.0: Phase 4a.
 
 VERSION = "0.31.1"  # Wirksamer Counter-Bump: gespeicherte Gespraech-Eintraege erhalten sekundengenauen Zeitstempel.
-VERSION = "0.40.0"  # 0.40.0: ROUTER separat einstellbar (Frank-Wunsch 2026-07-02) — Schritt 1 (Klassifikation save/query/internet/smalltalk) kann ein EIGENES Modell (z.B. schnelles Flash) und/oder einen EIGENEN Reasoning-Effort bekommen (config.json router_model/router_reasoning, /config GET+PUT, ''/'auto' = wie Hauptagent = exakt bisheriges Verhalten). Die sichtbare Antwort (Schritt 2) kommt IMMER vom eingestellten Hauptagenten: bei delegiertem Router formuliert neu hauptagent_answer_smalltalk (Persona + geschuetzter Gespraechs-Auftrag) die Smalltalk-Antwort mit dem Hauptagent-Modell (Fallback: Router-Reply). Kein automatisches Deckeln — es gilt ausschliesslich Franks Wahl. 0.39.0: Offizielle API-Preise auch fuer die gpt-5.x-Modelle in MODEL_PRICES (Frank-Wunsch 2026-07-02) — die Modelle laufen zwar uebers ChatGPT-Abo, verbrauchen aber das Codex-Kontingent; die API-Preise (developers.openai.com/api/docs/pricing) dienen als Verbrauchs-Anhaltspunkt. Dashboard-Preisliste + App-Dropdown zeigen sie automatisch statt 'ueber Abo' (beide lesen /config model_prices). Nur minimax bleibt 'Abo'. 0.38.1: REVERT des Router-Reasoning-Deckels (Frank-Anweisung 2026-07-02: die Reasoning-Stufe stellt er SELBST ein — keine Funktionsveraenderung; medium bleibt medium, high bleibt high, auch fuer den Router). Der neutrale reasoning_override-Parameter (Default None = keine Wirkung) bleibt als Erweiterungspunkt fuer kuenftiges Streaming erhalten. 0.38.0: PERFORMANCE Router-Reasoning-Deckel (Frank-Wunsch 2026-07-02) — der Hauptagent-ROUTER (reine JSON-Klassifikation save/query/internet/smalltalk) laeuft jetzt gedeckelt auf reasoning 'low' (neuer reasoning_override-Parameter durch llm_generate/_llm_generate_once bis codex_generate + Gemini thinking_budget); die ANTWORT-Aufrufe behalten die eingestellte Thinking-Stufe. Bei gpt-5.5 mit 'medium' kostete allein das Routing 15-40s BEVOR die Antwort startete -> Gesamtwartezeit bei Gedaechtnis-/Internetfragen grob halbiert, Smalltalk deutlich schneller. 0.37.0: FIX S/M/XL-Antwortlaenge wirkungslos (Frank-Bug 2026-07-02) — der context_prompt der App (Modus-Prompt + Antwortlaengen-Prompt S/M/XL aus den Einstellungen) wurde (a) im Auto-Modus vom Router KOMPLETT ignoriert und erreichte (b) die Antwort-Formulierung (hauptagent_answer / _internet / _native_web) NIE. Jetzt: Router beruecksichtigt den Zusatzauftrag auch im Auto-Modus, und alle drei Antwort-Funktionen bekommen ihn als eigenen ZUSATZAUFTRAG-Block (_context_prompt_block) -> S/M/XL wirkt fuer Smalltalk, Gedaechtnis- UND Internet-Antworten. 0.36.1: Modell-Preise pro 1 Mio Token (Input/Output, offiziell recherchiert) im /config -> Dashboard + App koennen sie anzeigen (MODEL_PRICES; minimax/gpt = Abo). 0.36.0: Zwei neue Gemini-Modelle (gemini-3.5-flash, gemini-3-flash-preview) + Thinking-Steuerung fuer ALLE Gemini-Modelle aus der Reasoning-Stufe (thinking_budget, auf max_output_tokens addiert wg. Almanach B4; 3.x-Minimum statt 0; robuster Retry ohne thinking bei Ablehnung). Markdown-Stripper _strip_markdown_tts entfernt **Fett**/Ueberschriften/Listen aus TTS-Antworten (gemini-2.5-flash erzeugte sie trotz Verbot). 0.35.1: Native-Websuche-Antwort haelt jetzt den TTS-Stil des Hauptagent-Prompts ein (MEHRERE kurze Absaetze je 1-10 Zeilen statt EIN Block, keine Quellenliste) — Gemini-Grounding gab sonst einen einzigen langen Absatz; Gemini laeuft durch EXAKT denselben Prompt+Pfad wie GPT. 0.35.0: Fix 502 bei gpt-5.5 (Frank-Vorfall 2026-07-01) — 'minimal' reasoning.effort wird von gpt-5.x NICHT unterstuetzt (nur none/low/medium/high/xhigh); _sanitize_reasoning_effort mappt minimal->low VOR dem Codex-Call, reasoning_available (App /config) bietet 'minimal' nicht mehr an, CODEX_WEB_TOOL_TYPES nutzt web_search VOR web_search_preview (gpt-5.5 lehnt web_search_preview ab -> spart Fehlversuch). 0.34.1: Fix native-Websuche-Antwortformat — HAUPTAGENT_NATIVE_WEB_AUFTRAG verlangt jetzt explizit Fließtext (KEIN Router-JSON, kein intent/query-Objekt); gemini-3.1-flash-lite gab sonst das Router-JSON statt einer echten Antwort zurueck. 0.34.0: Modellnative Websuche jetzt auch fuer Gemini (google_search-Grounding, inkl. gemini-3.1-flash-lite/2.5-flash) — bei Tavily-aus nutzt JEDES faehige Hauptmodell seine eigene Suche (Gemini ODER Codex/GPT), nicht mehr nur Codex; minimax bleibt auf Tavily (keine native Suche). 0.33.1: Tavily-aus blockiert Internetfragen nicht mehr pauschal; bei Codex/GPT-Hauptmodell nutzt der Internet-Pfad modellnative Websuche mit Tool-Fallback. 0.33.0: Tavily/Websearch ist jetzt per persistenter Agent-Konfiguration an-/abschaltbar; /config liefert tavily_enabled und der Internet-Pfad nutzt Tavily nur bei aktivem Schalter. 0.32.1: Codex-Responses-Request an ChatGPT-Backendvertrag angepasst (input items, store=false, kein max_output_tokens) und Provider-400 als 502 statt FastAPI-500 gemeldet. 0.32.0: experimenteller OpenAI-Codex-Provider per ChatGPT-Device-Code, Codex-Modelle + Reasoning je Agent.
+VERSION = "0.41.0"  # 0.41.0: ANTWORT-STREAMING (Frank-Wunsch 2026-07-02, v.a. fuer M/XL) — neuer Endpunkt POST /chat/stream (SSE): identische _process_turn-Pipeline, aber die Antwort-Formulierung streamt live ({type:delta,text} je Chunk, {type:done,response} = exakte /chat-Antwort am Ende; die App ersetzt den Rohstream durch den finalen bereinigten Reply -> selbstheilend). Getragen von on_delta-Callbacks durch llm_generate/_llm_generate_once: Gemini via generate_content_stream (inkl. Grounding-Websuche, mit Fallback ohne thinking_config), GPT/Codex via vorhandenem SSE-Konsum (output_text.delta, inkl. native Websuche), minimax/OpenCode bleibt nicht-streamend (ein Chunk am Ende). Router/Speicher-/Leseagent (JSON) streamen bewusst NICHT. Fehler vor dem 1. Chunk -> nicht-streamender Fallback (funktionserhaltend). 0.40.0: ROUTER separat einstellbar (Frank-Wunsch 2026-07-02) — Schritt 1 (Klassifikation save/query/internet/smalltalk) kann ein EIGENES Modell (z.B. schnelles Flash) und/oder einen EIGENEN Reasoning-Effort bekommen (config.json router_model/router_reasoning, /config GET+PUT, ''/'auto' = wie Hauptagent = exakt bisheriges Verhalten). Die sichtbare Antwort (Schritt 2) kommt IMMER vom eingestellten Hauptagenten: bei delegiertem Router formuliert neu hauptagent_answer_smalltalk (Persona + geschuetzter Gespraechs-Auftrag) die Smalltalk-Antwort mit dem Hauptagent-Modell (Fallback: Router-Reply). Kein automatisches Deckeln — es gilt ausschliesslich Franks Wahl. 0.39.0: Offizielle API-Preise auch fuer die gpt-5.x-Modelle in MODEL_PRICES (Frank-Wunsch 2026-07-02) — die Modelle laufen zwar uebers ChatGPT-Abo, verbrauchen aber das Codex-Kontingent; die API-Preise (developers.openai.com/api/docs/pricing) dienen als Verbrauchs-Anhaltspunkt. Dashboard-Preisliste + App-Dropdown zeigen sie automatisch statt 'ueber Abo' (beide lesen /config model_prices). Nur minimax bleibt 'Abo'. 0.38.1: REVERT des Router-Reasoning-Deckels (Frank-Anweisung 2026-07-02: die Reasoning-Stufe stellt er SELBST ein — keine Funktionsveraenderung; medium bleibt medium, high bleibt high, auch fuer den Router). Der neutrale reasoning_override-Parameter (Default None = keine Wirkung) bleibt als Erweiterungspunkt fuer kuenftiges Streaming erhalten. 0.38.0: PERFORMANCE Router-Reasoning-Deckel (Frank-Wunsch 2026-07-02) — der Hauptagent-ROUTER (reine JSON-Klassifikation save/query/internet/smalltalk) laeuft jetzt gedeckelt auf reasoning 'low' (neuer reasoning_override-Parameter durch llm_generate/_llm_generate_once bis codex_generate + Gemini thinking_budget); die ANTWORT-Aufrufe behalten die eingestellte Thinking-Stufe. Bei gpt-5.5 mit 'medium' kostete allein das Routing 15-40s BEVOR die Antwort startete -> Gesamtwartezeit bei Gedaechtnis-/Internetfragen grob halbiert, Smalltalk deutlich schneller. 0.37.0: FIX S/M/XL-Antwortlaenge wirkungslos (Frank-Bug 2026-07-02) — der context_prompt der App (Modus-Prompt + Antwortlaengen-Prompt S/M/XL aus den Einstellungen) wurde (a) im Auto-Modus vom Router KOMPLETT ignoriert und erreichte (b) die Antwort-Formulierung (hauptagent_answer / _internet / _native_web) NIE. Jetzt: Router beruecksichtigt den Zusatzauftrag auch im Auto-Modus, und alle drei Antwort-Funktionen bekommen ihn als eigenen ZUSATZAUFTRAG-Block (_context_prompt_block) -> S/M/XL wirkt fuer Smalltalk, Gedaechtnis- UND Internet-Antworten. 0.36.1: Modell-Preise pro 1 Mio Token (Input/Output, offiziell recherchiert) im /config -> Dashboard + App koennen sie anzeigen (MODEL_PRICES; minimax/gpt = Abo). 0.36.0: Zwei neue Gemini-Modelle (gemini-3.5-flash, gemini-3-flash-preview) + Thinking-Steuerung fuer ALLE Gemini-Modelle aus der Reasoning-Stufe (thinking_budget, auf max_output_tokens addiert wg. Almanach B4; 3.x-Minimum statt 0; robuster Retry ohne thinking bei Ablehnung). Markdown-Stripper _strip_markdown_tts entfernt **Fett**/Ueberschriften/Listen aus TTS-Antworten (gemini-2.5-flash erzeugte sie trotz Verbot). 0.35.1: Native-Websuche-Antwort haelt jetzt den TTS-Stil des Hauptagent-Prompts ein (MEHRERE kurze Absaetze je 1-10 Zeilen statt EIN Block, keine Quellenliste) — Gemini-Grounding gab sonst einen einzigen langen Absatz; Gemini laeuft durch EXAKT denselben Prompt+Pfad wie GPT. 0.35.0: Fix 502 bei gpt-5.5 (Frank-Vorfall 2026-07-01) — 'minimal' reasoning.effort wird von gpt-5.x NICHT unterstuetzt (nur none/low/medium/high/xhigh); _sanitize_reasoning_effort mappt minimal->low VOR dem Codex-Call, reasoning_available (App /config) bietet 'minimal' nicht mehr an, CODEX_WEB_TOOL_TYPES nutzt web_search VOR web_search_preview (gpt-5.5 lehnt web_search_preview ab -> spart Fehlversuch). 0.34.1: Fix native-Websuche-Antwortformat — HAUPTAGENT_NATIVE_WEB_AUFTRAG verlangt jetzt explizit Fließtext (KEIN Router-JSON, kein intent/query-Objekt); gemini-3.1-flash-lite gab sonst das Router-JSON statt einer echten Antwort zurueck. 0.34.0: Modellnative Websuche jetzt auch fuer Gemini (google_search-Grounding, inkl. gemini-3.1-flash-lite/2.5-flash) — bei Tavily-aus nutzt JEDES faehige Hauptmodell seine eigene Suche (Gemini ODER Codex/GPT), nicht mehr nur Codex; minimax bleibt auf Tavily (keine native Suche). 0.33.1: Tavily-aus blockiert Internetfragen nicht mehr pauschal; bei Codex/GPT-Hauptmodell nutzt der Internet-Pfad modellnative Websuche mit Tool-Fallback. 0.33.0: Tavily/Websearch ist jetzt per persistenter Agent-Konfiguration an-/abschaltbar; /config liefert tavily_enabled und der Internet-Pfad nutzt Tavily nur bei aktivem Schalter. 0.32.1: Codex-Responses-Request an ChatGPT-Backendvertrag angepasst (input items, store=false, kein max_output_tokens) und Provider-400 als 502 statt FastAPI-500 gemeldet. 0.32.0: experimenteller OpenAI-Codex-Provider per ChatGPT-Device-Code, Codex-Modelle + Reasoning je Agent.
 
 # ---------------------------------------------------------------------------
 # Konfiguration (alles aus Umgebungsvariablen — Secrets nie im Code)
@@ -445,8 +445,19 @@ def _extract_response_text(data: dict) -> str:
     return "".join(parts).strip()
 
 
+def _safe_delta(on_delta, chunk: str) -> None:
+    """Delta-Callback fuers Streaming — Fehler im Callback duerfen NIE die Antwort-Erzeugung killen."""
+    if on_delta is None or not chunk:
+        return
+    try:
+        on_delta(chunk)
+    except Exception:  # noqa: BLE001 — Streaming ist Komfort, die Antwort selbst hat Vorrang
+        pass
+
+
 def codex_generate(system: str, user: str, model: str, max_tokens: int, temperature: float,
-                   reasoning_effort: str = "medium", web_tool_type: str | None = None) -> str:
+                   reasoning_effort: str = "medium", web_tool_type: str | None = None,
+                   on_delta=None) -> str:
     access = _codex_tokens(refresh_if_needed=True).get("access_token", "")
     body: dict[str, Any] = {
         "model": _codex_slug(model),
@@ -492,6 +503,7 @@ def codex_generate(system: str, user: str, model: str, max_tokens: int, temperat
                 delta = event.get("delta")
                 if isinstance(delta, str):
                     text_parts.append(delta)
+                    _safe_delta(on_delta, delta)   # Live-Streaming an die App (2026-07-02)
                 continue
             if event_type == "response.completed":
                 resp = event.get("response")
@@ -510,7 +522,8 @@ def codex_generate(system: str, user: str, model: str, max_tokens: int, temperat
 
 
 def codex_generate_with_native_web(system: str, user: str, model: str, max_tokens: int,
-                                   temperature: float, reasoning_effort: str = "medium") -> str:
+                                   temperature: float, reasoning_effort: str = "medium",
+                                   on_delta=None) -> str:
     """Codex/ChatGPT-Responses mit modellnativer Websuche. Der Backendvertrag ist nicht so stabil wie
     der reine Textpfad; deshalb probieren wir zwei bekannte Responses-Tool-Namen und loggen jeden Fehlschlag."""
     last_exc: Exception | None = None
@@ -524,6 +537,7 @@ def codex_generate_with_native_web(system: str, user: str, model: str, max_token
                 temperature=temperature,
                 reasoning_effort=reasoning_effort,
                 web_tool_type=tool_type,
+                on_delta=on_delta,
             )
             checkpoint("native_web", "Codex/GPT-Websuche ausgeführt", ok=True, model=model, tool=tool_type)
             return text
@@ -562,7 +576,7 @@ def opencode_generate(system: str, user: str, model: str, max_tokens: int, tempe
     return "".join(parts).strip()
 
 
-def gemini_generate_with_native_web(system: str, user: str, model: str, max_tokens: int, temperature: float) -> str:
+def gemini_generate_with_native_web(system: str, user: str, model: str, max_tokens: int, temperature: float, on_delta=None) -> str:
     """Gemini mit modellnativer Websuche (Grounding with Google Search, `google_search`-Tool).
     Unterstuetzt ab gemini-2.0-flash aufwaerts (inkl. gemini-3.1-flash-lite, gemini-2.5-flash).
     Freitext-Antwort mit eingebetteten Such-Quellen; KEIN json_mode (Tools + response_mime_type
@@ -573,6 +587,24 @@ def gemini_generate_with_native_web(system: str, user: str, model: str, max_toke
     tool = genai_types.Tool(google_search=genai_types.GoogleSearch())
     base_kwargs = dict(system_instruction=system, temperature=temperature,
                        max_output_tokens=max_tokens, tools=[tool])
+    if on_delta is not None:
+        # Streaming (2026-07-02): Grounding funktioniert auch mit generate_content_stream.
+        # Fehler VOR dem ersten Chunk -> nicht-streamender Fallback unten (funktionserhaltend).
+        parts: list[str] = []
+        try:
+            for ev in _gemini_generate_stream(model=model, contents=user, base_kwargs=base_kwargs, base_max_tokens=max_tokens):
+                t = getattr(ev, "text", None)
+                if t:
+                    parts.append(t)
+                    _safe_delta(on_delta, t)
+            streamed = "".join(parts).strip()
+            if streamed:
+                checkpoint("native_web", "Gemini-Websuche (Grounding, gestreamt) ausgefuehrt", ok=True, model=model)
+                return streamed
+        except Exception as e:  # noqa: BLE001
+            if parts:
+                raise
+            _log(logging.WARNING, "Gemini-Websuche-Streaming fehlgeschlagen -> nicht-streamend", model=model, err=str(e)[:200])
     resp = _gemini_generate(model=model, contents=user, base_kwargs=base_kwargs, base_max_tokens=max_tokens)
     text = (resp.text or "").strip() if getattr(resp, "text", None) else ""
     finish = None
@@ -667,7 +699,27 @@ def _gemini_generate(*, model: str, contents: str, base_kwargs: dict, base_max_t
         return gclient.models.generate_content(model=model, contents=contents, config=genai_types.GenerateContentConfig(**kw))
 
 
-def _llm_generate_once(system: str, user: str, *, model: str, json_mode: bool, max_tokens: int, temperature: float, reasoning_override: "str | None" = None) -> str:
+def _gemini_generate_stream(*, model: str, contents: str, base_kwargs: dict, base_max_tokens: int, effort_override: "str | None" = None):
+    """Streaming-Variante von _gemini_generate (generate_content_stream) — gleiche Thinking-Steuerung,
+    gleicher Retry ohne thinking_config bei Ablehnung. Gibt den Chunk-Iterator zurueck."""
+    tc, budget = _gemini_thinking_config(model, effort_override)
+    kw = dict(base_kwargs)
+    if tc is not None:
+        kw["thinking_config"] = tc
+        if budget > 0:
+            kw["max_output_tokens"] = base_max_tokens + budget
+    try:
+        return gclient.models.generate_content_stream(model=model, contents=contents, config=genai_types.GenerateContentConfig(**kw))
+    except Exception as e:  # noqa: BLE001 — thinking_config evtl. fuers Modell ungueltig -> ohne retry
+        if tc is None:
+            raise
+        _log(logging.WARNING, "Gemini thinking_config (stream) abgelehnt -> retry ohne", model=model, err=str(e)[:200])
+        kw.pop("thinking_config", None)
+        kw["max_output_tokens"] = base_max_tokens
+        return gclient.models.generate_content_stream(model=model, contents=contents, config=genai_types.GenerateContentConfig(**kw))
+
+
+def _llm_generate_once(system: str, user: str, *, model: str, json_mode: bool, max_tokens: int, temperature: float, reasoning_override: "str | None" = None, on_delta=None) -> str:
     """EIN einzelner LLM-Aufruf (Gemini ODER OpenCode-Go, Modell-pro-Rolle). Der Retry-Wrapper
     llm_generate() umschliesst ihn. Bei json_mode nutzt Gemini response_mime_type=application/json;
     OpenCode/minimax erzwingt das JSON ueber das Schema im System-Prompt (Aufrufer parst per _extract_json).
@@ -675,14 +727,35 @@ def _llm_generate_once(system: str, user: str, *, model: str, json_mode: bool, m
     if _is_codex(model):
         role = next((r for r, m in ROLE_MODELS.items() if m == model), "haupt")
         return codex_generate(system, user, model=model, max_tokens=max_tokens, temperature=temperature,
-                              reasoning_effort=reasoning_override or ROLE_REASONING.get(role, "medium"))
+                              reasoning_effort=reasoning_override or ROLE_REASONING.get(role, "medium"),
+                              on_delta=on_delta)
     if _is_opencode(model):
+        # OpenCode/minimax: kein Streaming implementiert — Antwort kommt am Ende komplett (Fallback).
         return opencode_generate(system, user, model=model, max_tokens=max_tokens, temperature=temperature)
     if gclient is None:
         raise RuntimeError(f"Gemini nicht initialisiert: {init_error}")
     kwargs: dict[str, Any] = dict(system_instruction=system, temperature=temperature, max_output_tokens=max_tokens)
     if json_mode:
         kwargs["response_mime_type"] = "application/json"
+    if on_delta is not None and not json_mode:
+        # Gemini-Streaming (2026-07-02): Chunks live an die App; bei Fehler VOR dem ersten Chunk
+        # sauber auf den nicht-streamenden Pfad zurueckfallen (funktionserhaltend).
+        parts: list[str] = []
+        try:
+            for ev in _gemini_generate_stream(model=model, contents=user, base_kwargs=kwargs,
+                                              base_max_tokens=max_tokens, effort_override=reasoning_override):
+                t = getattr(ev, "text", None)
+                if t:
+                    parts.append(t)
+                    _safe_delta(on_delta, t)
+            text = "".join(parts).strip()
+            if text:
+                return text
+            probe(False, "Gemini-Stream lieferte leeren Text -> nicht-streamender Fallback", model=model)
+        except Exception as e:  # noqa: BLE001
+            if parts:
+                raise   # mitten im Stream gescheitert -> Retry-Schicht uebernimmt (App heilt via Final-Reply)
+            _log(logging.WARNING, "Gemini-Streaming fehlgeschlagen -> nicht-streamender Fallback", model=model, err=str(e)[:200])
     resp = _gemini_generate(model=model, contents=user, base_kwargs=kwargs, base_max_tokens=max_tokens, effort_override=reasoning_override)
     text = (resp.text or "").strip() if getattr(resp, "text", None) else ""
     finish = None
@@ -729,7 +802,7 @@ def _retry_after_s(exc: Exception) -> "float | None":
     return None
 
 
-def llm_generate(system: str, user: str, *, model: str, json_mode: bool, max_tokens: int, temperature: float, reasoning_override: "str | None" = None) -> str:
+def llm_generate(system: str, user: str, *, model: str, json_mode: bool, max_tokens: int, temperature: float, reasoning_override: "str | None" = None, on_delta=None) -> str:
     """Provider-neutraler Einstieg MIT B10-Retry: bei 429/5xx Full-Jitter-Backoff (Retry-After bevorzugt),
     max LLM_MAX_RETRIES Versuche, nur auf DIESER einen Schicht (sonst multiplizieren sich Retries:
     3 Schichten x 5 = 243 Calls). 400/401/403/404 werden NIE wiederholt. Laeuft im Threadpool (to_thread)
@@ -737,7 +810,7 @@ def llm_generate(system: str, user: str, *, model: str, json_mode: bool, max_tok
     last_exc: "Exception | None" = None
     for attempt in range(LLM_MAX_RETRIES + 1):
         try:
-            return _llm_generate_once(system, user, model=model, json_mode=json_mode, max_tokens=max_tokens, temperature=temperature, reasoning_override=reasoning_override)
+            return _llm_generate_once(system, user, model=model, json_mode=json_mode, max_tokens=max_tokens, temperature=temperature, reasoning_override=reasoning_override, on_delta=on_delta)
         except Exception as e:  # noqa: BLE001 — retrybare Fehler abfangen, Rest sofort weiterreichen
             code = _retryable_code(e)
             if code is None or attempt >= LLM_MAX_RETRIES:
@@ -1608,7 +1681,7 @@ def build_hauptagent_smalltalk_prompt() -> str:
     return instr + "\n\n" + HAUPTAGENT_SMALLTALK_AUFTRAG
 
 
-def hauptagent_answer_smalltalk(session: dict, question: str, context_prompt: str = "") -> str:
+def hauptagent_answer_smalltalk(session: dict, question: str, context_prompt: str = "", on_delta=None) -> str:
     """Smalltalk-Antwort vom EINGESTELLTEN Hauptagenten (Schritt 2), wenn das Routing an ein anderes
     (schnelles) Modell delegiert ist — die sichtbare Antwort kommt so weiter aus Franks Modell-Wahl."""
     user_block = (
@@ -1617,10 +1690,10 @@ def hauptagent_answer_smalltalk(session: dict, question: str, context_prompt: st
         f"AKTUELLE NACHRICHT VON FRANK:\n{question}"
     )
     return _strip_markdown_tts(llm_generate(build_hauptagent_smalltalk_prompt(), user_block, model=ROLE_MODELS["haupt"],
-                        json_mode=False, max_tokens=ANSWER_MAX_TOKENS, temperature=0.5))
+                        json_mode=False, max_tokens=ANSWER_MAX_TOKENS, temperature=0.5, on_delta=on_delta))
 
 
-def hauptagent_answer(session: dict, question: str, selected: list[dict], context_prompt: str = "") -> str:
+def hauptagent_answer(session: dict, question: str, selected: list[dict], context_prompt: str = "", on_delta=None) -> str:
     """HAUPTAGENT im Antwort-Modus (Aufgabe 2): formuliert Franks Antwort NUR aus den vom Leseagenten
     ausgewaehlten ORIGINAL-Treffern (Freitext, kein JSON). Erfindet nichts; leere Auswahl -> ehrliche
     Fehlanzeige. Nutzt den Hauptagent-Persona-Prompt + geschuetzten Antwort-Auftrag."""
@@ -1651,7 +1724,7 @@ def hauptagent_answer(session: dict, question: str, selected: list[dict], contex
         f"FRAGE VON FRANK:\n{question}"
     )
     text = _strip_markdown_tts(llm_generate(build_hauptagent_answer_prompt(), user_block, model=ROLE_MODELS["haupt"],
-                        json_mode=False, max_tokens=ANSWER_MAX_TOKENS, temperature=0.4))
+                        json_mode=False, max_tokens=ANSWER_MAX_TOKENS, temperature=0.4, on_delta=on_delta))
     if not text:
         text = ("Ich hab in deinem Gedächtnis nachgeschaut — dazu finde ich gerade nichts. Magst du es anders formulieren?"
                 if not selected else
@@ -1725,7 +1798,7 @@ def hauptagent_supports_native_web() -> bool:
     return model_supports_native_web(ROLE_MODELS.get("haupt", ""))
 
 
-def hauptagent_answer_native_web(session: dict, question: str, context_prompt: str = "") -> str:
+def hauptagent_answer_native_web(session: dict, question: str, context_prompt: str = "", on_delta=None) -> str:
     """Fallback für Internetfragen, wenn Tavily ausgeschaltet/fehlend ist: das gewählte Modell nutzt
     seine EIGENE Websuche — Codex/GPT über Responses-`web_search`, Gemini über `google_search`-Grounding.
     Nur aufrufen, wenn hauptagent_supports_native_web() True ist (sonst RuntimeError)."""
@@ -1739,15 +1812,15 @@ def hauptagent_answer_native_web(session: dict, question: str, context_prompt: s
     )
     if _is_gemini(model):
         return _strip_markdown_tts(gemini_generate_with_native_web(
-            system, user_block, model=model, max_tokens=ANSWER_MAX_TOKENS, temperature=0.4))
+            system, user_block, model=model, max_tokens=ANSWER_MAX_TOKENS, temperature=0.4, on_delta=on_delta))
     if _is_codex(model):
         return _strip_markdown_tts(codex_generate_with_native_web(
             system, user_block, model=model, max_tokens=ANSWER_MAX_TOKENS,
-            temperature=0.4, reasoning_effort=ROLE_REASONING.get("haupt", "medium")))
+            temperature=0.4, reasoning_effort=ROLE_REASONING.get("haupt", "medium"), on_delta=on_delta))
     raise RuntimeError(f"Modell {model} hat keine modellnative Websuche")
 
 
-def hauptagent_answer_internet(session: dict, question: str, search: dict, context_prompt: str = "") -> str:
+def hauptagent_answer_internet(session: dict, question: str, search: dict, context_prompt: str = "", on_delta=None) -> str:
     """HAUPTAGENT formuliert Franks Antwort aus den Tavily-Suchergebnissen (Freitext). Kein Key / Fehler
     -> ehrliche Fehlanzeige (nie crashen)."""
     if not search.get("ok"):
@@ -1774,7 +1847,7 @@ def hauptagent_answer_internet(session: dict, question: str, search: dict, conte
         f"FRAGE VON FRANK:\n{question}"
     )
     text = _strip_markdown_tts(llm_generate(build_hauptagent_internet_prompt(), user_block, model=ROLE_MODELS["haupt"],
-                        json_mode=False, max_tokens=ANSWER_MAX_TOKENS, temperature=0.4))
+                        json_mode=False, max_tokens=ANSWER_MAX_TOKENS, temperature=0.4, on_delta=on_delta))
     return text or "Ich hab im Internet nachgeschaut, konnte aber gerade keine Antwort formulieren. Versuch es gleich nochmal."
 
 
@@ -2601,7 +2674,7 @@ def improve(req: ImproveReq) -> dict:
     return {"ok": True, "text": better}
 
 
-def _process_turn(session: dict, user_text: str, pending: dict | None, category: str = "", title: str = "", store_timestamp: bool = False, context_mode: str = "auto", context_prompt: str = "") -> dict:
+def _process_turn(session: dict, user_text: str, pending: dict | None, category: str = "", title: str = "", store_timestamp: bool = False, context_mode: str = "auto", context_prompt: str = "", on_delta=None) -> dict:
     """Ein Gespraechszug — laeuft komplett synchron (LLM + brain) und wird vom async-Handler per
     asyncio.to_thread aufgerufen, damit der Event-Loop NICHT blockiert (fastapi §1 / ai-agent §3.1).
     Liest nur session['messages'] (Verlauf), MUTIERT die Session nicht — gibt 'pending' zum Setzen zurueck.
@@ -2676,7 +2749,7 @@ def _process_turn(session: dict, user_text: str, pending: dict | None, category:
                     "action": "error", "pending": None}
         try:
             selected, _note = leseagent_select(user_text, hits, payload_cats)  # Leseagent: filtert (nur Nummern), formuliert NICHT
-            answer = hauptagent_answer(session, user_text, selected, context_prompt)  # Hauptagent: formuliert aus den ORIGINAL-Treffern (+ S/M/XL-Auftrag)
+            answer = hauptagent_answer(session, user_text, selected, context_prompt, on_delta)  # Hauptagent: formuliert aus den ORIGINAL-Treffern (+ S/M/XL-Auftrag)
         except Exception as e:  # noqa: BLE001 — Antwort-LLM darf den Endpunkt nie killen
             _log(logging.ERROR, "Antwort-Formulierung fehlgeschlagen", exc_info=True)
             return {"reply": f"Beim Beantworten ist etwas schiefgegangen ({type(e).__name__}). Versuch es gleich nochmal.",
@@ -2691,11 +2764,11 @@ def _process_turn(session: dict, user_text: str, pending: dict | None, category:
         try:
             search = tavily_search(q)                              # Tool-Fehler werden in tavily_search gefangen (ai-agent §3.2)
             if not search.get("ok") and search.get("reason") in {"deaktiviert", "kein_key"} and hauptagent_supports_native_web():
-                answer = hauptagent_answer_native_web(session, user_text, context_prompt)
+                answer = hauptagent_answer_native_web(session, user_text, context_prompt, on_delta)
                 checkpoint("internet_answer", "Tavily nicht aktiv -> Modell nutzt eigene native Websuche",
                            ok=True, query=q, model=ROLE_MODELS["haupt"], tavily_reason=search.get("reason"))
                 return {"reply": answer, "action": "internet", "pending": None}
-            answer = hauptagent_answer_internet(session, user_text, search, context_prompt)
+            answer = hauptagent_answer_internet(session, user_text, search, context_prompt, on_delta)
         except Exception as e:  # noqa: BLE001 — Internet-Pfad darf den Endpunkt nie killen
             _log(logging.ERROR, "Internet-Antwort fehlgeschlagen", exc_info=True)
             return {"reply": f"Die Internet-Suche ist gerade schiefgegangen ({type(e).__name__}). Versuch es gleich nochmal.",
@@ -2709,7 +2782,7 @@ def _process_turn(session: dict, user_text: str, pending: dict | None, category:
     reply = (route.get("reply") or "").strip()
     if _router_is_delegated():
         try:
-            reply = (hauptagent_answer_smalltalk(session, user_text, context_prompt) or "").strip() or reply
+            reply = (hauptagent_answer_smalltalk(session, user_text, context_prompt, on_delta) or "").strip() or reply
         except Exception:  # noqa: BLE001 — Fallback: Router-Reply statt Fehler
             _log(logging.ERROR, "Smalltalk-Antwort des Hauptagenten fehlgeschlagen — nutze Router-Reply", exc_info=True)
     return {"reply": reply or "Erzaehl mir was, oder frag mich was aus deinem Gedaechtnis.",
@@ -2760,6 +2833,75 @@ async def chat(req: ChatReq) -> dict:
             "session_id": sid, "category": outcome.get("category"), "title": outcome.get("title"),
             "stored": outcome.get("stored", False), "replaced": outcome.get("replaced", False),
             "recall_hits": outcome.get("recall_hits"), "options": outcome.get("options")}
+
+
+def _sse_event(obj: dict) -> str:
+    return "data: " + json.dumps(obj, ensure_ascii=False) + "\n\n"
+
+
+@app.post("/chat/stream", dependencies=[Depends(require_auth)])
+async def chat_stream(req: ChatReq) -> StreamingResponse:
+    """Streaming-Variante von /chat (Frank-Wunsch 2026-07-02): identische Pipeline (_process_turn),
+    aber die Antwort-Formulierung kommt live als SSE-Datenstrom. Events:
+    {"type":"delta","text":...} pro Text-Chunk, abschliessend {"type":"done","response":{...}}
+    (response = EXAKT die /chat-Antwort; die App ersetzt den gestreamten Rohtext am Ende durch den
+    finalen, bereinigten Reply — verlorene/doppelte Deltas heilen sich dadurch selbst).
+    Fehler im Stream -> {"type":"error"} (kein HTTP-Fehler mehr moeglich, Header sind raus)."""
+    if gclient is None and not any(_is_opencode(m) or _is_codex(m) for m in ROLE_MODELS.values()):
+        raise HTTPException(status_code=503, detail=f"Agent nicht bereit: {init_error}")
+    sid = (req.session_id or req.user_id).strip()
+    t0 = time.time()
+    async with _lock:
+        session = _sessions.get(sid)
+        if session is None:
+            session = _new_session(req.user_id)
+            _sessions[sid] = session
+        session["messages"].append({"role": "frank", "text": req.text})
+        pending = session.get("pending")
+
+    loop = asyncio.get_running_loop()
+    queue: asyncio.Queue = asyncio.Queue()
+
+    def on_delta(chunk: str) -> None:
+        # Kommt aus dem Worker-Thread -> threadsicher in die asyncio-Queue legen (fastapi §1).
+        loop.call_soon_threadsafe(queue.put_nowait, chunk)
+
+    async def gen():
+        turn = asyncio.ensure_future(asyncio.to_thread(
+            _process_turn, session, req.text, pending,
+            (req.category or "").strip(), (req.title or "").strip(), req.store_timestamp,
+            _norm_context_mode(req.context_mode), (req.context_prompt or "").strip(), on_delta,
+        ))
+        try:
+            while True:
+                getter = asyncio.ensure_future(queue.get())
+                done, _ = await asyncio.wait({getter, turn}, return_when=asyncio.FIRST_COMPLETED)
+                if getter in done:
+                    yield _sse_event({"type": "delta", "text": getter.result()})
+                    continue
+                getter.cancel()
+                break
+            outcome = await turn   # Turn-Exceptions landen hier -> Error-Event unten
+            while not queue.empty():   # Rest-Deltas ausliefern, die nach Turn-Ende noch anstanden
+                yield _sse_event({"type": "delta", "text": queue.get_nowait()})
+            async with _lock:
+                session["pending"] = outcome.get("pending")
+                session["messages"].append({"role": "agent", "text": outcome.get("reply", "")})
+                session["last_activity"] = time.monotonic()
+            checkpoint("chat_stream", "Streaming-Chat abgeschlossen (identische Pipeline wie /chat)",
+                       ok=(outcome.get("action") in ("save_confirm", "store", "cancel", "recall", "internet", "smalltalk")),
+                       action=outcome.get("action"), ms=int((time.time() - t0) * 1000))
+            yield _sse_event({"type": "done", "response": {
+                "ok": True, "reply": outcome.get("reply", ""), "action": outcome.get("action"),
+                "session_id": sid, "category": outcome.get("category"), "title": outcome.get("title"),
+                "stored": outcome.get("stored", False), "replaced": outcome.get("replaced", False),
+                "recall_hits": outcome.get("recall_hits"), "options": outcome.get("options")}})
+        except Exception as e:  # noqa: BLE001 — Stream laeuft schon: Fehler als Event melden, nie crashen
+            _log(logging.ERROR, "chat_stream fehlgeschlagen", exc_info=True)
+            yield _sse_event({"type": "error", "message": f"{type(e).__name__}"})
+
+    return StreamingResponse(gen(), media_type="text/event-stream",
+                             headers={"Cache-Control": "no-cache", "X-Accel-Buffering": "no"})
 
 
 @app.post("/end", dependencies=[Depends(require_auth)])

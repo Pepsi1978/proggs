@@ -5,6 +5,7 @@ import de.frank.cortex.data.SettingsStore
 import de.frank.cortex.data.model.*
 import de.frank.cortex.observability.CortexLog
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.withContext
 import android.util.Base64
 import okhttp3.MediaType.Companion.toMediaType
@@ -191,6 +192,55 @@ object ApiClient {
     fun agentApi(): AgentApi = agentApi
     fun brainApi(): BrainApi = brainApi
     fun dashboardApi(): DashboardApi = dashboardApi
+
+    // --- Streaming-Chat (SSE, /chat/stream) ---------------------------------
+    private val chatRequestAdapter by lazy { moshi.adapter(ChatRequest::class.java) }
+    private val chatResponseAdapter by lazy { moshi.adapter(ChatResponse::class.java) }
+
+    // Eigener Client fuers Streaming (teilt Pool/Auth mit authClient): grosses Gesamtdach fuer
+    // lange XL-Antworten; readTimeout gilt PRO Chunk (jeder Delta setzt die Uhr zurueck).
+    private val streamingClient: OkHttpClient by lazy {
+        authClient.newBuilder()
+            .callTimeout(600, TimeUnit.SECONDS)
+            .readTimeout(120, TimeUnit.SECONDS)
+            .build()
+    }
+
+    /**
+     * POST /chat/stream — Antwort-Text kommt live als SSE-Deltas (onDelta, aus dem IO-Thread),
+     * am Ende liefert der Server die finale ChatResponse (bereinigter Reply). Die App ersetzt
+     * den gestreamten Rohtext durch diesen finalen Reply — verlorene Deltas heilen sich so selbst.
+     */
+    suspend fun chatStream(request: ChatRequest, onDelta: (String) -> Unit): ChatResponse =
+        withContext(Dispatchers.IO) {
+            val body = chatRequestAdapter.toJson(request).toRequestBody(jsonMediaType)
+            val httpReq = Request.Builder()
+                .url(SettingsStore.agentUrl() + "/chat/stream")
+                .post(body)
+                .build()
+            executeCancellable(streamingClient, httpReq).use { resp ->
+                if (!resp.isSuccessful) {
+                    val err = resp.body?.string().orEmpty().take(300)
+                    throw Exception("Stream-HTTP ${resp.code}: $err")
+                }
+                val source = resp.body?.source() ?: throw Exception("Leerer Stream-Body")
+                var final: ChatResponse? = null
+                while (true) {
+                    ensureActive()
+                    val line = source.readUtf8Line() ?: break
+                    if (!line.startsWith("data:")) continue
+                    val payload = line.removePrefix("data:").trim()
+                    if (payload.isEmpty()) continue
+                    val evt = JSONObject(payload)
+                    when (evt.optString("type")) {
+                        "delta" -> evt.optString("text").takeIf { it.isNotEmpty() }?.let(onDelta)
+                        "done" -> final = chatResponseAdapter.fromJson(evt.getJSONObject("response").toString())
+                        "error" -> throw Exception("Agent-Stream-Fehler: ${evt.optString("message")}")
+                    }
+                }
+                final ?: throw Exception("Stream endete ohne Abschluss-Event")
+            }
+        }
 
     suspend fun codexStartDeviceAuth(): CodexAuthStartResponse {
         val body = """{"client_id":${JSONObject.quote(CODEX_CLIENT_ID)}}"""

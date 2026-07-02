@@ -18,6 +18,7 @@ import de.frank.cortex.vpn.WireGuardManager
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Deferred
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.async
 import kotlinx.coroutines.coroutineScope
@@ -296,11 +297,71 @@ class ChatViewModel : ViewModel() {
                 )
 
                 val agentCallStartedAt = System.currentTimeMillis()
-                val response = ApiClient.agentApi().chat(request)
+
+                // === Streaming (Frank-Wunsch 2026-07-02) ===
+                // Die Antwort waechst live in der Bubble; das Vorlesen startet, sobald der ERSTE
+                // vollstaendige Absatz da ist (nie bei Einzelwoertern — sonst bricht TTS zu frueh ab).
+                // Schlaegt das Streaming fehl BEVOR etwas ankam -> klassischer /chat als Fallback.
+                var streamedMsgId: String? = null
+                val rawAccum = StringBuilder()
+                var spokenUpTo = 0
+                var ttsChannel: Channel<String>? = null
+                val ttsWanted = SettingsStore.ttsEnabled
+
+                fun handleDelta(delta: String) {
+                    rawAccum.append(delta)
+                    val current = rawAccum.toString()
+                    val msgId = streamedMsgId
+                    if (msgId == null) {
+                        val m = ChatMessage(text = current, isUser = false)
+                        streamedMsgId = m.id
+                        _uiState.update { it.copy(messages = it.messages + m, isLoading = false) }
+                    } else {
+                        _uiState.update { st -> st.copy(messages = st.messages.map { if (it.id == msgId) it.copy(text = current) else it }) }
+                    }
+                    if (ttsWanted) {
+                        val boundary = rawAccum.lastIndexOf("\n\n")
+                        if (boundary > spokenUpTo) {
+                            val ready = rawAccum.substring(spokenUpTo, boundary).trim()
+                            spokenUpTo = boundary + 2
+                            if (ready.isNotBlank()) {
+                                val ch = ttsChannel ?: startStreamingSpeech().also { ttsChannel = it }
+                                ch.trySend(localTtsClean(ready))
+                            }
+                        }
+                    }
+                }
+
+                val response = try {
+                    ApiClient.chatStream(request, ::handleDelta)
+                } catch (e: CancellationException) {
+                    ttsChannel?.close()
+                    throw e
+                } catch (e: Exception) {
+                    ttsChannel?.close()
+                    if (rawAccum.isEmpty()) {
+                        // Noch nichts empfangen -> gefahrloser Fallback auf den bisherigen Weg.
+                        CortexLog.warn("ChatVM", "sendMessage", "Streaming fehlgeschlagen -> klassischer /chat: ${e.message}")
+                        ttsChannel = null
+                        ApiClient.agentApi().chat(request)
+                    } else {
+                        throw e
+                    }
+                }
                 val agentElapsedMs = System.currentTimeMillis() - agentCallStartedAt
 
+                // Rest-Text nach dem letzten vollstaendigen Absatz vorlesen + Pipeline abschliessen.
+                ttsChannel?.let { ch ->
+                    val rest = rawAccum.substring(spokenUpTo.coerceAtMost(rawAccum.length)).trim()
+                    if (rest.isNotBlank()) ch.trySend(localTtsClean(rest))
+                    ch.close()
+                }
+
+                val finalText = response.reply
+                val existingId = streamedMsgId
                 val agentMsg = ChatMessage(
-                    text = response.reply,
+                    id = existingId ?: UUID.randomUUID().toString(),
+                    text = finalText,
                     isUser = false,
                     action = response.action,
                     category = response.category,
@@ -310,11 +371,14 @@ class ChatViewModel : ViewModel() {
                     stored = response.stored
                 )
 
-                _uiState.update {
-                    it.copy(
-                        messages = it.messages + agentMsg,
+                _uiState.update { st ->
+                    st.copy(
+                        messages = if (existingId != null)
+                            st.messages.map { if (it.id == existingId) agentMsg else it }
+                        else
+                            st.messages + agentMsg,
                         isLoading = false,
-                        titleOverride = if (response.action == "store") "" else it.titleOverride
+                        titleOverride = if (response.action == "store") "" else st.titleOverride
                     )
                 }
                 updateSessionsAfterPersist(sessionId, agentMsg)
@@ -340,8 +404,10 @@ class ChatViewModel : ViewModel() {
                     )
                 )
 
-                // Auto-Vorlesen ist global; die Bubble-ID bleibt der manuellen Replay-Funktion vorbehalten.
-                if (SettingsStore.ttsEnabled && response.reply.isNotBlank()) {
+                // Auto-Vorlesen: Wurde schon waehrend des Streams absatzweise vorgelesen (ttsChannel),
+                // NICHT erneut starten. Sonst (kurze Antwort ohne Absatz-Grenze / klassischer Fallback)
+                // wie bisher die komplette Antwort vorlesen.
+                if (SettingsStore.ttsEnabled && response.reply.isNotBlank() && ttsChannel == null) {
                     speakResponse(response.reply)
                 }
 
@@ -738,6 +804,95 @@ class ChatViewModel : ViewModel() {
             }
         }
     }
+
+    /**
+     * Streaming-Vorlese-Pipeline (Frank-Vorgabe 2026-07-02): konsumiert FERTIGE Absaetze aus einem
+     * Channel — das Vorlesen beginnt also fruehestens mit dem ersten vollstaendigen Absatz, nie mit
+     * Einzelwoertern (sonst haelt das TTS-Modell den Text faelschlich fuer komplett und bricht ab).
+     * Synthese laeuft dem Abspielen ueber einen kleinen Audio-Puffer voraus (Prefetch wie speakResponse).
+     */
+    private fun startStreamingSpeech(): Channel<String> {
+        speechGeneration++
+        val generation = speechGeneration
+        speakJob?.cancel()
+        val textChannel = Channel<String>(Channel.UNLIMITED)
+        speakJob = viewModelScope.launch {
+            _uiState.update { it.copy(isSpeaking = true, speakingMessageId = null) }
+            ttsRateLimitedUntil = 0L
+            ttsRateLimitExhausted = false
+            ttsAccessDenied = false
+            val isEdge = SettingsStore.ttsProvider == SettingsStore.TTS_PROVIDER_EDGE
+            try {
+                val voice = if (isEdge) SettingsStore.edgeTtsVoice else SettingsStore.ttsVoice
+                val rate = SettingsStore.ttsRate
+                CortexLog.info("ChatVM", "streamSpeech", "Streaming-TTS-Pipeline startet",
+                    mapOf("voice" to voice, "rate" to rate, "engine" to if (isEdge) "edge" else "chirp"))
+                coroutineScope {
+                    val playerReady = if (isEdge) null else async(Dispatchers.IO) { pcmPlayer.start(rate) }
+                    val audioChannel = Channel<ByteArray?>(2)   // Puffer 2 = Prefetch waehrend des Abspielens
+                    val synthJob = launch(Dispatchers.IO) {
+                        var index = 0
+                        try {
+                            for (para in textChannel) {
+                                for (chunk in chunkText(para)) {
+                                    audioChannel.send(
+                                        if (isEdge) synthesizeEdgeChunk(chunk, voice, index)
+                                        else synthesizeTtsChunk(chunk, voice, index)
+                                    )
+                                    index++
+                                }
+                            }
+                        } finally {
+                            audioChannel.close()
+                        }
+                    }
+                    var firstAudioLogged = false
+                    for (audio in audioChannel) {
+                        if (speechGeneration != generation) break
+                        if (audio == null || audio.isEmpty()) {
+                            if (ttsAccessDenied) {
+                                _uiState.update { it.copy(error = "Vorlesen nicht möglich: Cloud Text-to-Speech API ist für deinen Schlüssel nicht freigeschaltet.") }
+                                break
+                            }
+                            if (ttsRateLimitExhausted) {
+                                _uiState.update { it.copy(error = "Vorlese-Limit erreicht — die restlichen Absätze konnten nicht vorgelesen werden.") }
+                                break
+                            }
+                            continue   // einzelnen kaputten Chunk ueberspringen, Rest weiter vorlesen
+                        }
+                        if (!firstAudioLogged) {
+                            CortexLog.info("ChatVM", "streamSpeech", "Erster Ton (erster fertiger Absatz)")
+                            firstAudioLogged = true
+                        }
+                        if (isEdge) mp3Player.playAndAwait(audio, rate)
+                        else { playerReady?.await(); pcmPlayer.writeAndAwait(audio) }
+                    }
+                    synthJob.cancel()
+                }
+            } catch (e: CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                CortexLog.error("ChatVM", "streamSpeech", "Streaming-TTS fehlgeschlagen: ${e.message}")
+            } finally {
+                textChannel.close()
+                if (speechGeneration == generation) {
+                    pcmPlayer.stop()
+                    mp3Player.stop()
+                    _uiState.update { it.copy(isSpeaking = false, speakingMessageId = null) }
+                }
+            }
+        }
+        return textChannel
+    }
+
+    /** Kleine lokale Variante des Server-Markdown-Strippers fuer gestreamte TTS-Absaetze
+     *  (der finale Reply kommt bereits bereinigt vom Server — die Deltas sind Rohtext). */
+    private fun localTtsClean(s: String): String = s
+        .replace(Regex("\\*\\*(.+?)\\*\\*"), "$1")
+        .replace("**", "")
+        .replace(Regex("(?m)^#{1,6}\\s*"), "")
+        .replace(Regex("(?m)^[-*•]\\s+"), "")
+        .trim()
 
     private fun buildContextPrompt(contextMode: String, responseSize: String): String? {
         val modePrompt = if (contextMode == SettingsStore.CONTEXT_MODE_AUTO) "" else SettingsStore.contextPrompt(contextMode)
