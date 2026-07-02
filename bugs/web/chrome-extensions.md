@@ -7,10 +7,12 @@
 > offizielle Chrome-Developer-Doku zuerst, GitHub-Issues hart per `gh` geprueft).
 > Ergaenzung: nach jedem neuen Chrome-Extension-Bug hier einen Eintrag hinzufuegen.
 >
-> **Stand:** recherchiert/verifiziert am **2026-06-02** fuer **Chrome & Edge 148**
-> (Chromium 148; installiert: Chrome 148.0.7778.217, Edge 148.0.3967.96). Versionsanker
-> ist Chrome 148 — das `Versionen:`-Feld pro Bug sagt, ab wann etwas gilt/gefixt ist.
-> Bei deutlich neuerer Browser-Version: kurz pruefen, ob die Eintraege noch zutreffen.
+> **Stand:** recherchiert am **2026-06-02**, **re-recherchiert/verifiziert am 2026-07-02** (Engine A: Firecrawl+MiniMax)
+> fuer **Chrome 149** (live installiert: **Chrome 149.0.7827.115**; Anker war 148). Das `Versionen:`-Feld pro Bug
+> sagt, ab wann etwas gilt/gefixt ist. **Re-Recherche 2026-07-02:** Der Sprung 148→149 brachte KEINE neuen/
+> geaenderten Extension-APIs (Chrome-149-Release-Notes ohne Extension-relevante Aenderungen); SW-Lifecycle, DNR-Limits
+> und Permissions unveraendert. Aktualisiert wurden die **MV2-Endgueltig-Timeline** (§N.64: 31.08.2026 Web-Store-Entfernung)
+> und der **Store-Review-Stau seit April 2026** (§O.67).
 >
 > Gegenstueck (Praevention, „so baut man es von vornherein richtig"):
 > `best-practices/web/chrome-extensions.md` (Bezugs-Tabelle unten).
@@ -763,9 +765,13 @@ bei Disconnect automatisch reconnecten statt aufzugeben.
 ### 64. MV2 ist seit Chrome 139 (Juli 2025) komplett entfernt
 **Symptom:** MV2-Erweiterung laeuft nicht mehr; Enterprise-Policy `ExtensionManifestV2Availability` wirkt nicht mehr.
 **Ursache:** Schrittweiser Auslauf; ab Chrome 139 MV2-Support + Policy entfernt, kein Re-Enable mehr.
-**Versionen:** MV2 deaktiviert ab Stable Okt 2024; default-aus 31.03.2025; **endgueltig weg ab Chrome 139** (Jun/Jul 2025).
+**Versionen:** MV2 deaktiviert ab Stable Okt 2024; default-aus 31.03.2025; **Chrome 138 (24.07.2025)** MV2 auf
+ALLEN Kanaelen fuer alle Nutzer deaktiviert (kein Re-Enable); **Chrome 139 (~05.08.2025)** Enterprise-Policy
+`ExtensionManifestV2Availability` **entfernt** (wirkt sofort, nicht schrittweise). **Endgueltig: 31. August 2026 =
+letzte MV2-Erweiterungen werden aus dem Chrome Web Store ENTFERNT** (offizielle Timeline, Stand 08.07.2026). Auf
+Chrome ≤138 installierte MV2 bleiben, bekommen aber keine Updates und sind nach der Store-Entfernung nicht neu installierbar.
 **FIX:** Es gibt kein Zurueck — alles auf MV3. Jeder MV2-spezifische Workaround ist obsolet.
-**Quelle:** developer.chrome.com — mv2-deprecation-timeline.
+**Quelle:** developer.chrome.com — mv2-deprecation-timeline (re-verifiziert 2026-07-02).
 
 ### 65. Entfernte/migrierte APIs
 **Symptom:** `chrome.extension.*`, `chrome.tabs.executeScript/insertCSS`, `browser_action`/`page_action`,
@@ -813,7 +819,12 @@ Privacy-Practices-Tab sind die drei Hauptrisiken.
 - **Version muss hoeher sein** als die letzte, sonst Upload-Fehler.
 - **Self-Hosting (CRX + `update_url`)** erlaubt Consumer-Installs nur auf **Linux**; Windows/macOS brauchen
   Enterprise-Policy. Unlisted/Private gehen trotzdem durchs Review.
-**Quelle:** developer.chrome.com — review-process / cws-dashboard-privacy / register / cws-policy-updates-2025 / host-on-linux.
+- **Review-Stau seit April 2026 (Chrome-Team-PSA, 23.04.2026):** „surge in new extensions" → laengere Wartezeiten
+  fuer **neue Submissions UND Updates** (ueber die ueblichen „wenige Tage" hinaus). Beschleunigung: frueh + staged
+  submitten, **pending Items NICHT resubmitten** (setzt die Queue-Position zurueck), Permissions minimieren
+  (`activeTab`/optional host permissions statt breiter Hosts), Dead Code/ungenutzte Dateien entfernen,
+  Remote-Hosted-Code entfernen, Kontaktinfo im Dashboard + funktionierende Privacy-Policy-URL verifizieren.
+**Quelle:** developer.chrome.com — review-process / cws-dashboard-privacy / register / cws-policy-updates-2025 / host-on-linux; Chrome-Team-PSA 2026-04-23.
 
 ---
 
