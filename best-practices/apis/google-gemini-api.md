@@ -1,6 +1,7 @@
-# Google Gemini API — Best Practices (Stand 2026-06-09)
+# Google Gemini API — Best Practices (Stand 2026-07-02)
 
-> Gegenstueck zu `bugs/apis/google-gemini-api.md`. Offiziell empfohlen (Quellen). (Researcher-Recherche 2026-06-09.)
+> Gegenstueck zu `bugs/apis/google-gemini-api.md`. Offiziell empfohlen (Quellen). (Researcher-Recherche 2026-06-09, Re-Recherche 2026-07-02.)
+> Update 2026-07-02: Keine neuen belegten SDK-/Thinking-/FinishReason-Regeln; Deprecation-Seite weiter aktiv vor jedem Release pruefen und stabile Modell-IDs pinnen.
 
 ## ⚡ Kurzcheck (Stufe A — vor der Arbeit lesen)
 

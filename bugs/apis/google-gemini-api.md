@@ -1,9 +1,11 @@
 # Bekannte Bugs: Google Gemini API (Integration)
 
 > PFLICHT-LESEN vor Arbeit an einer Gemini-API-Integration (Client-seitig).
-> Stand: zuletzt recherchiert am 2026-06-08. Versions-Anker: NEUES einheitliches SDK `google-genai`
+> Stand: zuletzt recherchiert am 2026-06-08, **re-recherchiert am 2026-07-02** (Engine A: Firecrawl+MiniMax). Versions-Anker: NEUES einheitliches SDK `google-genai`
 > (altes `google-generativeai`/`@google/generative-ai` deprecated seit 30.11.2025), Modelle Gemini
 > 2.5/3.x. Zweite Seite: `best-practices/apis/google-gemini-api.md`.
+
+> **Update 2026-07-02:** Keine neuen belastbaren `google-genai`-/`thinkingConfig`-/`finishReason`-Bugs seit 2026-06-08 gefunden. Bestaetigt bleibt der Deprecation-/Shutdown-Druck: alte 1.0/1.5- und Preview-Modelle sind weg; weitere 2.5-/Embedding-Varianten laufen 2026 aus. Modell-IDs weiter pinnen und Deprecations vor Releases pruefen.
 
 ## ⚡ Kurzcheck (Stufe A — vor der Arbeit lesen)
 
