@@ -283,7 +283,8 @@ class ChatViewModel : ViewModel() {
                     category = state.selectedCategory,
                     title = state.titleOverride.ifBlank { null },
                     context_mode = state.contextMode,
-                    context_prompt = buildContextPrompt(state.contextMode, state.responseSize)
+                    context_prompt = buildContextPrompt(state.contextMode, state.responseSize),
+                    response_size = state.responseSize
                 )
 
                 CortexLog.checkpoint(
