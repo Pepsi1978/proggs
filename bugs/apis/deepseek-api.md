@@ -1,7 +1,7 @@
 # Bekannte Bugs: DeepSeek API (Integration)
 
-> PFLICHT-LESEN vor Arbeit an einer DeepSeek-Integration (api.deepseek.com). Stand: zuletzt
-> recherchiert am 2026-06-08, **re-recherchiert am 2026-07-02** (Engine A: Firecrawl+MiniMax). Versions-Anker: `deepseek-v4-flash` + `deepseek-v4-pro`; Legacy-Aliase `deepseek-chat`/`deepseek-reasoner`
+> PFLICHT-LESEN vor Arbeit an einer DeepSeek-Integration (api.deepseek.com). Stand: zuletzt recherchiert am 2026-06-08, **re-recherchiert am 2026-07-02** (Engine A: Firecrawl+MiniMax).
+> Versions-Anker: `deepseek-v4-flash` + `deepseek-v4-pro`; Legacy-Aliase `deepseek-chat`/`deepseek-reasoner`
 > Deprecation 2026-07-24, danach V4-Modelle direkt nutzen. Zweite Seite: `best-practices/apis/deepseek-api.md`.
 > Compliance-Hinweis: Hosting in China — bei personenbezogenen Daten relevant.
 

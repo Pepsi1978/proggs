@@ -1,7 +1,7 @@
 # Bekannte Bugs: Weitere LLM-APIs (Survey + Integrations-Fallen)
 
-> PFLICHT-LESEN vor Arbeit an einer Integration eines hier gelisteten Anbieters. Stand: zuletzt
-> recherchiert am 2026-06-08, **re-recherchiert am 2026-07-02** (Engine A: Firecrawl+MiniMax). Survey der wichtigen Anbieter, die NICHT eine eigene Datei haben
+> PFLICHT-LESEN vor Arbeit an einer Integration eines hier gelisteten Anbieters. Stand: zuletzt recherchiert am 2026-06-08, **re-recherchiert am 2026-07-02** (Engine A: Firecrawl+MiniMax).
+> Survey der wichtigen Anbieter, die NICHT eine eigene Datei haben
 > (OpenAI/Anthropic/Gemini/Groq/OpenRouter/Grok/Mistral/DeepSeek/lokal: siehe jeweils eigene Datei).
 > Zweite Seite: `best-practices/apis/other-llm-apis.md`.
 
