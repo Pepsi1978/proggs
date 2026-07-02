@@ -170,7 +170,7 @@ unbemerkt ohne Erzwingung bleibt. Details in [`SYSTEM.md`](SYSTEM.md).
 
 | Bereich | Datei | Stand | Bugs | Erkennungs-Trigger (Dateien / Stichworte) |
 |---------|-------|-------|------|-------------------------------------------|
-| **App-Icon-Building** (Windows `.ico`, Android Adaptive Icons, macOS `.icns`) | [`assets/icon-building.md`](assets/icon-building.md) | 2026-06-07 | ~30 | `*.ico`, `*.icns`, `ic_launcher*.xml`, `*.iconset/`, `<ApplicationIcon>` · „Icon", „App-Icon", „.ico", „.icns", „Adaptive Icon", „mipmap", „Icon-Cache", „schwarze/transparente Ecken", „Verknuepfung/Shortcut-Icon", „iconutil", „Squircle", „Pillow ICO" |
+| **App-Icon-Building** (Windows `.ico`, Android Adaptive Icons, macOS `.icns`) | [`assets/icon-building.md`](assets/icon-building.md) | 2026-07-02 | ~31 | `*.ico`, `*.icns`, `ic_launcher*.xml`, `*.iconset/`, `<ApplicationIcon>` · „Icon", „App-Icon", „.ico", „.icns", „Adaptive Icon", „mipmap", „Icon-Cache", „schwarze/transparente Ecken", „Verknuepfung/Shortcut-Icon", „iconutil", „Squircle", „Pillow ICO" |
 | **Visuelle Qualität für 3D** (engine-übergreifend: PBR/Licht/PostFX/Assets) | [`assets/3d-visual-quality.md`](assets/3d-visual-quality.md) | 2026-06-13 | 13 | Normal-/Roughness-/Metallic-Maps, `.hdr`/`.exr`, `.gltf`/`.glb`/`.ktx2` · „PBR", „IBL", „HDRI", „Tonemapping", „ACES", „AgX", „PBR Neutral", „Linear/sRGB", „Color Management", „Normal Map Y-Flip", „TAA", „Shadow Acne", „KTX2", „Draco", „glTF-Transform" · Best-Practices: `best-practices/assets/3d-visual-quality.md` |
 
 ---

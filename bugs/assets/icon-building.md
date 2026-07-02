@@ -5,10 +5,13 @@
 > Kleinkram (ein bestehendes Icon 1:1 kopieren) ausgenommen. Loesungen sind
 > **funktionserhaltend** — nie "Icon weglassen".
 >
-> **Stand:** recherchiert am **2026-06-07** (7 Researcher parallel, offizielle Quellen
-> zuerst) fuer **Windows 11 Build 26200 (Explorer 26100), .NET 10.0.204 / WPF, Pillow
+> **Stand:** recherchiert am **2026-06-07**, **re-recherchiert am 2026-07-02** (Engine A: Firecrawl+MiniMax)
+> fuer **Windows 11 Build 26200 (Explorer 26100), .NET 10.0.204 / WPF, Pillow
 > 12.1.1, ImageMagick 7, Android 16 / API 36 / AGP 9.x, macOS 15 Sequoia + macOS 26 Tahoe**.
 > Viele Punkte sind "per Design" und gelten versionsunabhaengig.
+> **Re-Recherche 2026-07-02:** Anker weitgehend bestaetigt (Windows-Icon-Cache = wie Win10, Play-512px-Regeln,
+> iconutil/.iconset unveraendert). Neu ergaenzt: **Android 16 QPR 2 Auto-Theming** (§6.4) und der ausfuehrliche
+> macOS-26-`.icon`-Workflow inkl. `actool`→`Assets.car` + Xcode-26.1-Falle (§7.3).
 
 ---
 
@@ -209,7 +212,12 @@ Slash = Assembly-Root). Defensiv: Pack-URI-Laden in try/catch mit Fallback (kein
 **Ursache:** Kein `<monochrome>`-Layer.
 **FIX:** `<monochrome android:drawable="@drawable/ic_launcher_mono"/>` — flaches einfarbiges Drawable
 (nur ueber Alpha modelliert, kein Schatten/Maske). API 33+.
-**Quelle:** proandroiddev.com/android-13-implementing-themed-icons
+**Neu (Re-Recherche 2026-07-02):** Ab **Android 16 QPR 2** themt Android App-Icons **automatisch**, auch wenn
+die App KEINEN monochrome-Layer liefert (System leitet ihn ab). Der `<monochrome>`-Layer bleibt aber
+**empfohlen** — nur er garantiert ein korrektes themed Icon auf **Android 13–16 (vor QPR 2)** und die
+Kontrolle ueber das Ergebnis (die Auto-Ableitung kann bei detailreichen Foregrounds schlechter aussehen).
+Also: monochrome-Layer weiter mitliefern, nicht auf die Auto-Ableitung verlassen.
+**Quelle:** proandroiddev.com/android-13-implementing-themed-icons, developer.android.com (Adaptive Icons, Stand 2026-06-16)
 
 ### 6.5 Play-Store-Icon 512px
 **Symptom:** Upload abgelehnt / falsche Rundung.
@@ -244,7 +252,16 @@ Asset-Catalog (`AppIcon.appiconset`) generiert `.icns`/`Assets.car` + Plist-Keys
 Tahoe und aelter ab Xcode 26.1 "by design" gebrochen.
 **FIX:** Mit Icon Composer `.icon` fuer Tahoe; klassisches Squircle-`.icns` als Basis fuers Min-Target.
 `CFBundleIconName` (Asset-Catalog) bzw. `CFBundleIconFile` (klassisch) in Info.plist setzen.
-**Quelle:** successfulsoftware.net/2025/09/26/... · mjtsai.com/blog/2025/08/08/...
+**Workflow im Detail (Re-Recherche 2026-07-02):** `.icon` ist ein **Ordner** (Vektoren + JSON, Finder blendet
+die Endung aus). (1) Mit **Icon Composer** erzeugen (max 4 Layer). (2) Mit **`actool`** (braucht Xcode-Toolchain)
+zu **`Assets.car`** kompilieren, z. B. `xcrun actool app.icon --compile <out> --app-icon Icon --include-all-app-icons
+--minimum-deployment-target 26.0 --platform macosx --output-partial-info-plist temp.plist`. (3) **BEIDE** —
+`Assets.car` UND die alte `.icns` — in `Contents/Resources` legen, **vor** dem Signieren (Tahoe zeigt Liquid-Glass,
+aeltere macOS das `.icns`). (4) `CFBundleIconName` (→ Icon-Name) UND `CFBundleIconFile` (→ `AppIcon.icns`) in die
+Info.plist. **Fallen:** die „gleicher Name fuer `.icon` + `.appiconset`"-Technik ist ab **Xcode 26.1** weg (nutze
+getrennte Namen / `--include-all-app-icons`, sonst App-Store-Reject `ITMS-90236`). Erscheinungsbild-Varianten des
+`.icon` (Default/Dark/Clear-Light/Clear-Dark/Tinted) betreffen nur Tahoe. Fuer die kommenden Jahre BEIDE Formate ausliefern.
+**Quelle:** successfulsoftware.net/2025/09/26/... · hendrik-erz.de/... · mjtsai.com/blog/2025/08/08/... (Updates bis 2026-02)
 
 ### 7.4 macOS-Icon-Cache
 **FIX:** `sudo rm -rf /Library/Caches/com.apple.iconservices.store` + Dock-iconcache loeschen →
