@@ -360,37 +360,56 @@ constructor(
             Diag.d(DiagnosticArea.AMAZFIT, TAG, "Health Connect lieferte keine Exercise-Sessions im ${days}-Tage-Fenster")
             return 0
         }
-        // Existierende Workouts im gleichen Zeitfenster fuer Dedup.
+        // Existierende Workouts im gleichen Zeitfenster (volle Entities fuer Dedup + Ersetzen).
         val end = System.currentTimeMillis()
         val start = end - days.toLong() * 24L * 60L * 60L * 1000L
-        val existingStartMs = workoutDao.getStartMsInRange(start, end)
         val toleranceMs = 5L * 60L * 1000L // 5 Minuten +/- ist immer noch derselbe Lauf
+        val existing = workoutDao.observeRange(start, end).first()
 
         // Sync-Zeitstempel setzen sobald Health Connect erfolgreich Sessions lieferte (auch bei
         // 0 neuen) — so bleibt der "Zuletzt synchronisiert"-Status aktuell (frueher gesetzt beim Sync).
         appSettings.setLastAmazfitSync(System.currentTimeMillis())
 
-        val toInsert = sessions.mapNotNull { session ->
-            val isDuplicate = existingStartMs.any { existing ->
-                kotlin.math.abs(existing - session.startMs) <= toleranceMs
+        // Frank-Bugfix 2026-07-03: Nicht nur NEUE Trainings einfuegen, sondern bestehende LEERE
+        // HC-Eintraege (z.B. datenarme Zepp-Version) durch die datenreichere HC-Version ERSETZEN.
+        // Geschuetzt bleiben: bestehende Strava-Trainings (Frank will sie behalten) und manuell
+        // editierte Eintraege (manualOverridesMs != null).
+        var inserted = 0
+        var replaced = 0
+        for (session in sessions) {
+            val newEntity = healthConnectSessionToEntity(session)
+            val match = existing.find { kotlin.math.abs(it.startMs - session.startMs) <= toleranceMs }
+            when {
+                match == null -> {
+                    workoutDao.upsert(newEntity)
+                    inserted++
+                }
+                match.source == "strava" || match.manualOverridesMs != null -> {
+                    // bewusst behalten — nicht ueberschreiben
+                }
+                else -> {
+                    if (match.trackId != newEntity.trackId) workoutDao.deleteByTrackId(match.trackId)
+                    workoutDao.upsert(newEntity)
+                    replaced++
+                }
             }
-            if (isDuplicate) null else healthConnectSessionToEntity(session)
         }
-        if (toInsert.isEmpty()) {
-            Diag.d(DiagnosticArea.AMAZFIT, 
+        if (inserted + replaced == 0) {
+            Diag.d(
+                DiagnosticArea.AMAZFIT,
                 TAG,
-                "Alle ${sessions.size} HC-Sessions sind bereits in der DB — keine neuen Workouts",
+                "Alle ${sessions.size} HC-Sessions sind bereits (unveraendert) in der DB",
             )
             return 0
         }
-        workoutDao.upsertAll(toInsert)
-        // Neue Trainings → Drive-Backup anstossen (debounced), damit das Workouts-Backup aktuell bleibt.
+        // Neue/aktualisierte Trainings → Drive-Backup anstossen (debounced).
         syncCoordinatorLazy.get().requestSync("Training: Sync/Aenderung")
-        Diag.i(DiagnosticArea.AMAZFIT,
+        Diag.i(
+            DiagnosticArea.AMAZFIT,
             TAG,
-            "Health-Connect-Workouts eingefuegt: ${toInsert.size} (von ${sessions.size} im HC-Fenster)",
+            "Health-Connect-Workouts: $inserted neu, $replaced ersetzt (von ${sessions.size} im HC-Fenster)",
         )
-        return toInsert.size
+        return inserted + replaced
     }
 
     /**
