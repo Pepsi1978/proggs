@@ -7,6 +7,7 @@ import androidx.datastore.preferences.core.floatPreferencesKey
 import androidx.datastore.preferences.core.intPreferencesKey
 import androidx.datastore.preferences.core.longPreferencesKey
 import androidx.datastore.preferences.core.stringPreferencesKey
+import androidx.datastore.preferences.core.stringSetPreferencesKey
 import androidx.datastore.preferences.preferencesDataStore
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.flow.Flow
@@ -205,6 +206,19 @@ class AppSettings @Inject constructor(
     suspend fun setLastCalendarSync(value: Long) = ds.edit { it[KEY_LAST_CALENDAR_SYNC] = value }
     suspend fun setLastOuraSync(value: Long) = ds.edit { it[KEY_LAST_OURA_SYNC] = value }
     suspend fun setLastAmazfitSync(value: Long) = ds.edit { it[KEY_LAST_AMAZFIT_SYNC] = value }
+
+    /**
+     * Frank-Bugfix 2026-07-04: Tombstones fuer manuell geloeschte Trainings. Ohne diese Liste
+     * wuerde der naechste Health-Connect-Sync ein geloeschtes Training sofort wieder importieren.
+     * Gespeichert wird der Start-Zeitstempel (Epoch-ms); der Sync ueberspringt Sessions, deren
+     * Start (+/- 5 Min) hier steht.
+     */
+    suspend fun addDeletedWorkoutStart(startMs: Long) = ds.edit { prefs ->
+        prefs[KEY_DELETED_WORKOUTS] = (prefs[KEY_DELETED_WORKOUTS] ?: emptySet()) + startMs.toString()
+    }
+
+    suspend fun getDeletedWorkoutStarts(): Set<Long> =
+        ds.data.first()[KEY_DELETED_WORKOUTS]?.mapNotNull { it.toLongOrNull() }?.toSet() ?: emptySet()
     suspend fun setLastHealthConnectSync(value: Long) = ds.edit { it[KEY_LAST_HEALTH_CONNECT_SYNC] = value }
     suspend fun setWorkoutsBackupFingerprint(value: Int) = ds.edit { it[KEY_WORKOUTS_BACKUP_FP] = value }
     suspend fun setMainBackupFingerprint(value: Int) = ds.edit { it[KEY_MAIN_BACKUP_FP] = value }
@@ -342,6 +356,7 @@ class AppSettings @Inject constructor(
         private val KEY_LAST_CALENDAR_SYNC = longPreferencesKey("last_calendar_sync_ms")
         private val KEY_LAST_OURA_SYNC = longPreferencesKey("last_oura_sync_ms")
         private val KEY_LAST_AMAZFIT_SYNC = longPreferencesKey("last_amazfit_sync_ms")
+        private val KEY_DELETED_WORKOUTS = stringSetPreferencesKey("deleted_workout_starts")
         private val KEY_LAST_HEALTH_CONNECT_SYNC = longPreferencesKey("last_health_connect_sync_ms")
         private val KEY_WORKOUTS_BACKUP_FP = intPreferencesKey("workouts_backup_fingerprint")
         private val KEY_MAIN_BACKUP_FP = intPreferencesKey("main_backup_fingerprint")

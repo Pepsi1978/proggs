@@ -333,6 +333,9 @@ constructor(
             )
         }
         if (!workoutCleanupDone && payload.amazfitWorkouts.isNotEmpty()) {
+            // Frank-Bugfix 2026-07-04: manuell geloeschte Trainings nicht aus dem Backup zurueckholen.
+            val mainDeletedStarts = appSettings.getDeletedWorkoutStarts()
+            val mainDeleteToleranceMs = 5L * 60L * 1000L
             val merged =
                 payload.amazfitWorkouts.map { backupWorkout ->
                     val freshFromBackup = backupWorkout.toEntity()
@@ -352,6 +355,9 @@ constructor(
                         )
                     }
                 }
+                    .filterNot { entity ->
+                        mainDeletedStarts.any { kotlin.math.abs(it - entity.startMs) <= mainDeleteToleranceMs }
+                    }
             amazfitWorkoutDao.upsertAll(merged)
             inserted += merged.size
         }
@@ -943,6 +949,10 @@ constructor(
                     return 0
                 }
         if (workoutsPayload.workouts.isEmpty()) return 0
+        // Frank-Bugfix 2026-07-04: manuell geloeschte Trainings NICHT aus dem Backup wiederherstellen
+        // (sonst kommt ein geloeschtes Training beim naechsten Restore zurueck).
+        val deletedStarts = appSettings.getDeletedWorkoutStarts()
+        val restoreToleranceMs = 5L * 60L * 1000L
         val merged =
             workoutsPayload.workouts.map { backupWorkout ->
                 val freshFromBackup = backupWorkout.toEntity()
@@ -982,10 +992,13 @@ constructor(
                         )
                 }
             }
+                .filterNot { entity ->
+                    deletedStarts.any { kotlin.math.abs(it - entity.startMs) <= restoreToleranceMs }
+                }
         amazfitWorkoutDao.upsertAll(merged)
-        Diag.i(DiagnosticArea.DRIVE_BACKUP, 
+        Diag.i(DiagnosticArea.DRIVE_BACKUP,
             "SyncEntries",
-            "Restore: ${merged.size} Workouts aus separatem Backup wiederhergestellt",
+            "Restore: ${merged.size} Workouts aus Backup wiederhergestellt (geloeschte via Tombstone uebersprungen)",
         )
         return merged.size
     }

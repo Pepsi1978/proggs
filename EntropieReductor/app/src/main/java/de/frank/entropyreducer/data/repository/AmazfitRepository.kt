@@ -293,6 +293,9 @@ constructor(
      * Dashboards die Aenderung sofort mitbekommen (z.B. VO2max-Fallback in Aufgabe 7).
      */
     suspend fun deleteWorkoutByTrackId(trackId: String): Int {
+        // Frank-Bugfix 2026-07-04: Start-Zeitstempel als Tombstone merken, BEVOR geloescht wird —
+        // sonst importiert der naechste Health-Connect-Sync das Training sofort wieder.
+        workoutDao.getById(trackId)?.let { appSettings.addDeletedWorkoutStart(it.startMs) }
         val deleted = workoutDao.deleteByTrackId(trackId)
         if (deleted > 0) {
             syncCoordinatorLazy.get().requestSync("Training: Sync/Aenderung")
@@ -365,6 +368,9 @@ constructor(
         val start = end - days.toLong() * 24L * 60L * 60L * 1000L
         val toleranceMs = 5L * 60L * 1000L // 5 Minuten +/- ist immer noch derselbe Lauf
         val existing = workoutDao.observeRange(start, end).first()
+        // Frank-Bugfix 2026-07-04: Tombstones manuell geloeschter Trainings — diese Sessions duerfen
+        // NICHT wieder importiert werden, auch wenn sie in Health Connect noch existieren.
+        val deletedStarts = appSettings.getDeletedWorkoutStarts()
 
         // Sync-Zeitstempel setzen sobald Health Connect erfolgreich Sessions lieferte (auch bei
         // 0 neuen) — so bleibt der "Zuletzt synchronisiert"-Status aktuell (frueher gesetzt beim Sync).
@@ -376,7 +382,13 @@ constructor(
         // editierte Eintraege (manualOverridesMs != null).
         var inserted = 0
         var replaced = 0
+        var skippedDeleted = 0
         for (session in sessions) {
+            // Manuell geloeschtes Training? Nicht erneut importieren (Tombstone gewinnt).
+            if (deletedStarts.any { kotlin.math.abs(it - session.startMs) <= toleranceMs }) {
+                skippedDeleted++
+                continue
+            }
             val newEntity = healthConnectSessionToEntity(session)
             val match = existing.find { kotlin.math.abs(it.startMs - session.startMs) <= toleranceMs }
             when {
@@ -398,7 +410,7 @@ constructor(
             Diag.d(
                 DiagnosticArea.AMAZFIT,
                 TAG,
-                "Alle ${sessions.size} HC-Sessions sind bereits (unveraendert) in der DB",
+                "Alle ${sessions.size} HC-Sessions bereits in der DB (oder geloescht: $skippedDeleted uebersprungen)",
             )
             return 0
         }
@@ -407,7 +419,7 @@ constructor(
         Diag.i(
             DiagnosticArea.AMAZFIT,
             TAG,
-            "Health-Connect-Workouts: $inserted neu, $replaced ersetzt (von ${sessions.size} im HC-Fenster)",
+            "Health-Connect-Workouts: $inserted neu, $replaced ersetzt, $skippedDeleted geloescht-uebersprungen (von ${sessions.size})",
         )
         return inserted + replaced
     }
