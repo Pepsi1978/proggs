@@ -475,16 +475,6 @@ private fun TerrainGrid(
     editedLabels: Set<String> = emptySet(),
     onEditClick: () -> Unit = {},
 ) {
-    StatsGrid(
-        items =
-            listOf(
-                "Schrittfrequenz" to (w.cadence?.let { "$it spm" } ?: "—"),
-                "Schrittlänge" to (w.strideLengthCm?.let { "$it cm" } ?: "—"),
-            ),
-        editedLabels = editedLabels,
-        onItemClick = onEditClick,
-    )
-    Spacer(Modifier.height(8.dp))
     // Frank-Wunsch 2026-05-17: VO2max-Box nur bei Lauf-basierten Sportarten
     // anzeigen. Bei Crosstrainer/Rudern/Krafttraining/etc. komplett weglassen
     // damit Frank sofort sieht "das war kein Laufen".

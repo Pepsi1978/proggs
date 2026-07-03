@@ -214,39 +214,6 @@ fun EditTrainingValuesDialog(
                     )
                 }
 
-                // Schritt-Zeile
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(8.dp),
-                ) {
-                    OutlinedTextField(
-                        value = cadence,
-                        onValueChange = { s -> cadence = s.filter { it.isDigit() } },
-                        label = { Text("Schrittfrequenz (spm)") },
-                        placeholder = { Text("85") },
-                        singleLine = true,
-                        keyboardOptions =
-                            KeyboardOptions(
-                                keyboardType = KeyboardType.Number,
-                                imeAction = ImeAction.Next,
-                            ),
-                        modifier = Modifier.weight(1f),
-                    )
-                    OutlinedTextField(
-                        value = stride,
-                        onValueChange = { s -> stride = s.filter { it.isDigit() } },
-                        label = { Text("Schrittlänge (cm)") },
-                        placeholder = { Text("98") },
-                        singleLine = true,
-                        keyboardOptions =
-                            KeyboardOptions(
-                                keyboardType = KeyboardType.Number,
-                                imeAction = ImeAction.Next,
-                            ),
-                        modifier = Modifier.weight(1f),
-                    )
-                }
-
                 // Kalorien
                 OutlinedTextField(
                     value = calories,
