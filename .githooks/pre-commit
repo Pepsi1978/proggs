@@ -105,5 +105,25 @@ if [ -f "$CANCEL_CHECK" ] && command -v python3 >/dev/null 2>&1; then
     fi
 fi
 
+# ---------------------------------------------------------------------------
+# Android-Bug-Guard (Poka-Yoke Stufe 2, 2026-07-03, #47446): blockiert
+# @Insert(onConflict = REPLACE) auf Room-Tabellen mit CASCADE-Kindern —
+# REPLACE = DELETE+INSERT loescht die Kinder still (Almanach room K1,
+# realer Datenverlust EntropieReductor #47442). Nur exit-Code 2 blockiert;
+# Skript-Fehler (andere Codes) lassen den Commit bewusst durch.
+# Bewusste Ausnahme: COMMIT_ALLOW_REPLACE_CASCADE=1 git commit ...
+# ---------------------------------------------------------------------------
+BUG_GUARD=".githooks/android-bug-guard.py"
+if [ -f "$BUG_GUARD" ] && command -v python3 >/dev/null 2>&1; then
+    set +e
+    python3 "$BUG_GUARD"
+    guard_status=$?
+    set -e
+    if [ "$guard_status" -eq 2 ] && [ "${COMMIT_ALLOW_REPLACE_CASCADE:-0}" != "1" ]; then
+        echo "[pre-commit] Android-Bug-Guard: REPLACE+CASCADE-Verstoss beheben (@Upsert) und erneut committen."
+        exit 1
+    fi
+fi
+
 exit 0
 

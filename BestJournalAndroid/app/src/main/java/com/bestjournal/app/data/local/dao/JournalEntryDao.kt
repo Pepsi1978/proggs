@@ -2,10 +2,9 @@ package com.bestjournal.app.data.local.dao
 
 import androidx.room.Dao
 import androidx.room.Delete
-import androidx.room.Insert
-import androidx.room.OnConflictStrategy
 import androidx.room.Query
 import androidx.room.Update
+import androidx.room.Upsert
 import com.bestjournal.app.data.local.entity.JournalEntryEntity
 import kotlinx.coroutines.flow.Flow
 
@@ -63,7 +62,12 @@ interface JournalEntryDao {
     @Query("SELECT * FROM journal_entries WHERE isSynced = 0")
     suspend fun getUnsyncedEntries(): List<JournalEntryEntity>
 
-    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    // Bugfix 2026-07-03 (Room-Almanach K1, gefunden vom android-bug-guard): @Upsert statt
+    // @Insert(REPLACE) — REPLACE ist DELETE+INSERT und wuerde bei einem Insert mit bestehender
+    // id via CASCADE alle entry_follow_ups + entry_photos des Eintrags still loeschen.
+    // Verhaltensneutral: saveEntry() legt immer neue Eintraege an (id=0 -> Insert + rowId),
+    // Edits laufen separat ueber update().
+    @Upsert
     suspend fun insert(entry: JournalEntryEntity): Long
 
     @Update suspend fun update(entry: JournalEntryEntity)
