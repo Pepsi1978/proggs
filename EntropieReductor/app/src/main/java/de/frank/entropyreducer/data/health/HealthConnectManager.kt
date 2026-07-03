@@ -675,7 +675,11 @@ class HealthConnectManager @Inject constructor(
                     }
                 }
             val maxPaceSecPerKm = maxSpeedMps?.takeIf { it > 0.1 }?.let { 1000.0 / it }
-            val cadence = cadenceAvg?.takeIf { it > 0.0 }?.toInt()
+            // Frank-Bugfix 2026-07-04: Health Connect liefert StepsCadenceRecord als Schritte/Min
+            // BEIDE Beine (~158 beim Laufen); Polar/Strava zeigen die Kadenz pro Bein (~79). Fuer
+            // Konsistenz mit Franks Polar-App halbieren. Die Schrittlaenge unten nutzt bewusst den
+            // VOLLEN cadenceAvg (beide Beine) — sonst waere sie doppelt so lang.
+            val cadence = cadenceAvg?.takeIf { it > 0.0 }?.let { (it / 2.0).toInt() }
             val strideLengthCm = run {
                 val d = distanceMeters
                 val cad = cadenceAvg

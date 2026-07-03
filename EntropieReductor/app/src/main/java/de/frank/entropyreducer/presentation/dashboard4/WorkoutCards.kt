@@ -229,14 +229,11 @@ private fun WorkoutItem(workout: WhoopWorkoutEntity) {
         Spacer(Modifier.height(10.dp))
         val distanceText =
             workout.distanceMeter?.takeIf { it > 0.0 }?.let { "%.2f km".format(it / 1000.0) }
-        val altitudeText =
-            workout.altitudeGainMeter?.takeIf { it > 0.0 }?.let { "%.0f m".format(it) }
         val kcal = workout.kilojoule?.let { "%.0f".format(it / 4.184) } ?: "—"
 
         // Frank-Wunsch 2026-05-09: "Aufzeichnung %"-Pill komplett raus. Wenn keine
-        // Distanz oder Höhe: nur 3 Pills (Kalorien, Ø Puls, Max Puls) — und die
-        // sollen mittig stehen, nicht linksbündig die ganze Breite einnehmen.
-        if (distanceText != null || altitudeText != null) {
+        // Distanz: nur 3 Pills (Kalorien, Ø Puls, Max Puls) — mittig statt linksbündig.
+        if (distanceText != null) {
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.spacedBy(6.dp),
@@ -252,19 +249,11 @@ private fun WorkoutItem(workout: WhoopWorkoutEntity) {
                     value = workout.maxHeartRate?.let { "$it bpm" } ?: "—",
                     modifier = Modifier.weight(1f),
                 )
-                if (distanceText != null) {
-                    StatPill(
-                        label = "Strecke",
-                        value = distanceText,
-                        modifier = Modifier.weight(1f),
-                    )
-                } else {
-                    StatPill(
-                        label = "Höhe +",
-                        value = altitudeText ?: "—",
-                        modifier = Modifier.weight(1f),
-                    )
-                }
+                StatPill(
+                    label = "Strecke",
+                    value = distanceText,
+                    modifier = Modifier.weight(1f),
+                )
             }
         } else {
             // 3 Pills mittig (10% padding links und rechts → wirkt zentriert)

@@ -478,8 +478,6 @@ private fun TerrainGrid(
     StatsGrid(
         items =
             listOf(
-                "Höhe ↑" to (w.altitudeGainMeters?.let { "%.0f m".format(it) } ?: "—"),
-                "Höhe ↓" to (w.altitudeLossMeters?.let { "%.0f m".format(it) } ?: "—"),
                 "Schrittfrequenz" to (w.cadence?.let { "$it spm" } ?: "—"),
                 "Schrittlänge" to (w.strideLengthCm?.let { "$it cm" } ?: "—"),
             ),

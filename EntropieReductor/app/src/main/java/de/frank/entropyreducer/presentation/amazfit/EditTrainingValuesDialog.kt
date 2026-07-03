@@ -214,43 +214,6 @@ fun EditTrainingValuesDialog(
                     )
                 }
 
-                // Hoehe-Zeile
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(8.dp),
-                ) {
-                    OutlinedTextField(
-                        value = altGain,
-                        onValueChange = { s ->
-                            altGain = s.filter { it.isDigit() || it == '.' || it == ',' }
-                        },
-                        label = { Text("Höhe ↑ (m)") },
-                        placeholder = { Text("210") },
-                        singleLine = true,
-                        keyboardOptions =
-                            KeyboardOptions(
-                                keyboardType = KeyboardType.Number,
-                                imeAction = ImeAction.Next,
-                            ),
-                        modifier = Modifier.weight(1f),
-                    )
-                    OutlinedTextField(
-                        value = altLoss,
-                        onValueChange = { s ->
-                            altLoss = s.filter { it.isDigit() || it == '.' || it == ',' }
-                        },
-                        label = { Text("Höhe ↓ (m)") },
-                        placeholder = { Text("205") },
-                        singleLine = true,
-                        keyboardOptions =
-                            KeyboardOptions(
-                                keyboardType = KeyboardType.Number,
-                                imeAction = ImeAction.Next,
-                            ),
-                        modifier = Modifier.weight(1f),
-                    )
-                }
-
                 // Schritt-Zeile
                 Row(
                     modifier = Modifier.fillMaxWidth(),
