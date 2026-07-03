@@ -72,6 +72,7 @@ Dieser Almanach ist die **tiefe, vollstaendige** Quelle fuer **Compose-UI-Bugs**
 | 17 | `weight()` aus dynamischen Daten (Anteile/Zaehler) | Wert 0 crasht (`invalid weight`) — 0-Elemente vorher filtern | §6.8 |
 | 18 | Endlos-Animation nur fuer EINEN Zustand (Puls/Blink) | `rememberInfiniteTransition` in den Zustands-Zweig verschieben — sonst tickt sie in JEDEM Zustand (Akku) | §9.6 |
 | 19 | Pager-Swipe/Interaktion ruckelt, alle Seiten recomposen | `staticCompositionLocalOf`-Wert stabil remembern (State-backed Holder) — neue Instanz pro Recomposition invalidiert den GESAMTEN Subtree | §1.7 |
+| 20 | Chart-Scrubbing/Drag ruckelt trotz `remember` | `remember`-Key zu breit: hochfrequenter State (selectedX) im Key invalidiert die teure Berechnung pro Frame — Heavy/Finalize-Split (`remember(data)` + `remember(selected, heavy)`) | §10.9 |
 
 ---
 
@@ -698,6 +699,13 @@ SearchBar-Modell (`SearchBarState` + `ExpandedFullScreenSearchBar`).
 **Versionen:** alle; Strong Skipping (ab Compiler 2.0.20) entschaerft viele Faelle (siehe §1.3).
 **FIX:** Compose-Compiler-Reports aktivieren (`composeCompiler { reportsDestination/metricsDestination }`), IMMER auf Release laufen lassen; `classes.txt`/`composables.txt` auswerten und instabile Klassen stabilisieren. *(Plugin-Setup → gradle.md.)*
 **Quelle:** developer.android.com/develop/ui/compose/performance/stability/diagnose
+
+### 10.9 `remember` mit zu breitem Key — Memoization laeuft trotzdem jeden Frame   ⭐ EIGENER VORFALL 2026-07-03
+**Symptom:** Interaktion (Chart-Scrubbing, Drag, Slider) ruckelt, OBWOHL die teure Berechnung in `remember(...)` steckt.
+**Ursache:** Ein hochfrequent wechselnder Wert (z.B. `selectedSnapshot` beim Scrubbing — aendert sich pro Move-Event) steht MIT im `remember`-Key → jede Aenderung invalidiert den Cache, die teure Pipeline (groupBy/sortedMap ueber die ganze Historie) laeuft de facto pro Frame. Das `remember` sieht korrekt aus, ist aber fuer den heissen Fall wirkungslos. EntropieReductor-Vorfall (#47449): drei Biomarker-Graph-Karten mit `remember(selectedSnapshot, history) { groupBy-Pipeline }`.
+**Versionen:** per Design (alle Compose-Versionen).
+**FIX (funktionserhaltend):** Heavy/Finalize-Split: die datenabhaengige Schwerarbeit in `remember(data) { heavy(data) }`, den billigen selektionsabhaengigen Rest in `remember(selected, heavy) { finalize(selected, heavy) }`. Auch abgeleitete Listen (z.B. `reversed()`) in den Heavy-Teil ziehen (sonst Allokation pro Frame). Alternativ `derivedStateOf`, wenn der Selektionswert ein Compose-State ist.
+**Quelle:** eigener Vorfall EntropieReductor #47449 · developer.android.com/develop/ui/compose/performance (remember-Guidance)
 
 ---
 
