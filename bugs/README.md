@@ -199,6 +199,7 @@ unbemerkt ohne Erzwingung bleibt. Details in [`SYSTEM.md`](SYSTEM.md).
 | **CLI-Impersonation / Abo-OAuth** (Codex-Abo, Hermes-Trick, Anthropic-Ban) | [`apis/cli-impersonation-subscription-auth.md`](apis/cli-impersonation-subscription-auth.md) | 2026-07-02 | — | „als Codex CLI ausgeben", „ChatGPT-Abo per Geraetekode", „Hermes", „Codex device-auth", „Abo statt API-Key", „Copilot-Token" |
 | **TTS-Provider** (Edge-TTS, Google Chirp 3 HD, Android-native, Chrome-MV3) | [`apis/tts-provider.md`](apis/tts-provider.md) | 2026-06-14 | ~104 | „TTS", „Text-to-Speech", „Vorlesen", „Vorlese-Funktion", „vorlese-overlay", „Edge-TTS", „Sec-MS-GEC", „No audio received", „Chirp 3 HD", „de-DE-Chirp3-HD", „SSML", „markup/pause", „TextToSpeech", „MediaPlayer", „Offscreen-Document", „Stimme/Voice", „ElevenLabs" |
 | **Firecrawl** (Web-Scrape/Search-API, Recherche-Pipeline) | [`apis/firecrawl.md`](apis/firecrawl.md) | 2026-06-20 | ~6 (Free-Limits + Integration) | „Firecrawl", „firecrawl.dev", „/v1/search", „/v1/scrape", „1000 Credits", „2 concurrent", „5 search/min", „error code 1010", „mm-research", „Recherche-Pipeline" |
+| **Strava API** (Workout-Sync, OAuth, Abo-Pflicht) | [`apis/strava-api.md`](apis/strava-api.md) | 2026-07-03 | 4 (Kurzcheck + Fix-Status) | „Strava", „strava.com/api", „athlete/activities", „Application Status Inactive", „403 Forbidden Strava", „activity:read_all", „X-ReadRateLimit", „Strava-Abo API", „Trainings werden nicht synchronisiert" |
 
 ---
 
