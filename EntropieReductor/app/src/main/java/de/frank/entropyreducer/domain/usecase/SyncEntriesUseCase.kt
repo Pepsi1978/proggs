@@ -136,6 +136,13 @@ constructor(
         var updated = 0
         var deleted = 0
 
+        // Live-Logik-Sonde (Frank-Wunsch 2026-07-03, #47447): Bestand der Kind-Datensaetze
+        // VOR dem Merge festhalten. Der Abschluss-CHECKPOINT prueft die Invariante
+        // "Followups schrumpfen nie staerker, als Tombstone-Loeschungen erklaeren" —
+        // Fruehwarnung fuer stillen Multi-Device-Kind-Datenverlust (z.B. REPLACE+CASCADE).
+        val followupsVorher = entropyEntryFollowupDao.getAllForBackup().size
+        var followupTombstoneDeletes = 0
+
         // --- Loesch-Protokoll (Tombstones, Sync-Etappe 1.2) ---
         // Remote-Tombstones in den lokalen Store mergen (neuester Loeschzeitpunkt pro Eintrag
         // gewinnt) und die Gesamtliste fuer das Anwenden je Typ holen.
@@ -637,6 +644,7 @@ constructor(
                 if (ts > local.updatedAt) {
                     entropyEntryFollowupDao.deleteById(id)
                     deleted++
+                    followupTombstoneDeletes++
                 }
             }
         }
@@ -878,6 +886,36 @@ constructor(
             "Restore abgeschlossen: $inserted Eintraege NEU eingespielt, $updated aktualisiert, " +
                 "$deleted via Tombstone geloescht (Tombstones gesamt: ${allTombstones.size})",
         )
+
+        // Live-Logik-Sonden (Frank-Wunsch 2026-07-03, #47447): der LWW-Merge bestaetigt sich
+        // selbst (kind CHECKPOINT, gleicher Stil wie HabitRoomMigrator). Grep-Hebel:
+        // adb logcat | grep "CHECKPOINT sync=" — ok=false ist ein Multi-Device-Verlust-Alarm.
+        Diag.i(
+            DiagnosticArea.DRIVE_BACKUP,
+            "SyncEntries",
+            "CHECKPOINT sync=lww_merge inserted=$inserted updated=$updated deleted=$deleted ok=true",
+        )
+        val followupsNachher = entropyEntryFollowupDao.getAllForBackup().size
+        val followupsMinErwartet = followupsVorher - followupTombstoneDeletes
+        val followupsOk = followupsNachher >= followupsMinErwartet
+        if (followupsOk) {
+            Diag.i(
+                DiagnosticArea.DRIVE_BACKUP,
+                "SyncEntries",
+                "CHECKPOINT sync=followup_bestand erwartetMin=$followupsMinErwartet " +
+                    "tatsaechlich=$followupsNachher (vorher=$followupsVorher, " +
+                    "tombstoneLoeschungen=$followupTombstoneDeletes) ok=true",
+            )
+        } else {
+            Diag.e(
+                DiagnosticArea.DRIVE_BACKUP,
+                "SyncEntries",
+                "CHECKPOINT sync=followup_bestand erwartetMin=$followupsMinErwartet " +
+                    "tatsaechlich=$followupsNachher (vorher=$followupsVorher, " +
+                    "tombstoneLoeschungen=$followupTombstoneDeletes) ok=false — Kind-Datensaetze " +
+                    "staerker geschrumpft als Tombstones erklaeren (moeglicher CASCADE-/Merge-Verlust)!",
+            )
+        }
         driveSession.end()
         return Result.success(RestoreOutcome.Merged(inserted = inserted, updated = updated))
     }
