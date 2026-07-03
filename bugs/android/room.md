@@ -416,7 +416,7 @@
 - **Ursache:** SQLite `REPLACE` loest den Konflikt durch **Loeschen** der alten Zeile + neues Insert. Haengt an einer FK ein `onDelete = CASCADE`, feuert der Cascade und nimmt die Kinder mit. Bei `autoGenerate` bekommt die „ersetzte" Zeile zudem eine **neue** ID → Referenzen zeigen ins Leere.
 - **Versionen:** SQLite-Verhalten per Design, alle Versionen.
 - **FIX (funktionserhaltend):** Statt `@Insert(onConflict = REPLACE)` die `@Upsert`-Annotation (Room 2.5+) — echtes UPDATE bei Konflikt, kein Delete, kein Cascade. Alternativ IGNORE-Insert + bei Rueckgabe `-1` gezieltes `@Update`.
-- **Quelle:** https://dexterslog.com/posts/insert-on-conflict-replace-with-on-delete-cascade-in-sqlite/ · https://www.sqlite.org/lang_conflict.html
+- **Eigener Vorfall (EntropieReductor, 2026-07-03, #47442):** Besonders heimtueckisch im **Multi-Device-Sync**: Ein LWW-Merge mit Tombstones verwaltete Kind-Datensaetze (Followups, Tool-Permissions) explizit — aber der Eltern-Update lief ueber `@Insert(REPLACE)` und CASCADE loeschte bei JEDEM Sync-Update die lokalen Kinder, die der Merge gerade erhalten wollte (lokal neue, noch nicht hochgeladene Kinder gingen unwiederbringlich verloren). Erkennungsregel: Vor jedem `onConflict = REPLACE` pruefen, ob eine FK mit `onDelete = CASCADE` auf DIESE Tabelle zeigt — dann `@Upsert`.
 
 ### K2. `@Upsert` (ab Room 2.5) statt REPLACE — UNIQUE-Sonderfall
 - **Symptom:** `@Upsert` unbekannt in alten Versionen; oder Verhalten bei UNIQUE-Konflikt (nicht-PK) unklar.
