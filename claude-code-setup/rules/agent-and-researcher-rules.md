@@ -144,3 +144,15 @@ for f in sorted(glob.glob('PFAD/*.EXTENSION')):
 
 `sed` auf Windows Git Bash kann `\u`-Escape-Sequenzen nicht korrekt verarbeiten.
 IMMER Python `str.replace()` oder `re.sub()` verwenden.
+
+### Zusatzregel: Vor Annotation-/Modifier-Einfuegungen die Zeilen UEBER der Zielsignatur pruefen
+
+> Vorfall 2026-07-03 (EntropieReductor #47443): Ein Batch-Fix fuegte `@Synchronized` vor
+> `fun add(...)` ein — die Funktion HATTE bereits ein `@Synchronized` in der Zeile darueber,
+> das der Analyse-Grep (Start an der `fun`-Zeile) nicht sah. Build-Fehler
+> "This annotation is not repeatable".
+
+Bevor ein Batch- oder Einzel-Edit eine Annotation, einen Modifier oder einen Kommentar VOR
+eine Funktions-/Klassen-Signatur einfuegt: IMMER zuerst `grep -B5` (bzw. im Python-Skript die
+5 Zeilen vor der Signatur) pruefen — existiert das Einzufuegende dort schon, ist der Fund ein
+False Positive und der Edit entfaellt.
