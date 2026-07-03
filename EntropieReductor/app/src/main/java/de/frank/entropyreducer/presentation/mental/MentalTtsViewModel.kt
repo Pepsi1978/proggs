@@ -38,7 +38,7 @@ import kotlinx.coroutines.withContext
  * zuerst der Anker (so oft wie [MentalTtsUiState.ankerCount]), danach der Folgesatz (so oft wie
  * [MentalTtsUiState.folgeCount]). Beispiel 4 Saetze, anker=2, folge=1:
  *   1,1,2 · 1,1,3 · 1,1,4
- * Zwischen JEDEM gesprochenen Satz liegen [PAUSE_MS] (5 Sekunden). Die Reihenfolge ergibt sich
+ * Zwischen JEDEM gesprochenen Satz liegen [PAUSE_MS] (6 Sekunden). Die Reihenfolge ergibt sich
  * direkt aus der aktuellen Sortierung des Mentalboards — sortiert Frank um, aendert sich die
  * Vorlese-Reihenfolge automatisch mit (die Sequenz wird bei jedem Start frisch gebildet).
  *
@@ -82,7 +82,7 @@ constructor(
 
     private companion object {
         const val TAG = "MentalTts"
-        const val PAUSE_MS = 5_000L
+        const val PAUSE_MS = 6_000L
         const val MAX_DURATION_MS = 15 * 60 * 1_000L // 15 Minuten Sicherheits-Auto-Stop
         const val RANGE_MIN = 1
         const val RANGE_MAX = 10
