@@ -57,6 +57,7 @@ fun LaunchScreen(onStart: () -> Unit) {
     val cosmos = LocalCosmos.current
     val variantLabel = BuildConfig.VARIANT_LABEL
     val versionName = BuildConfig.VERSION_NAME
+    val versionUpdatedAt = BuildConfig.VERSION_UPDATED_AT
 
     // Sanfter Atemeffekt am Logo, damit der Bildschirm lebendig wirkt.
     val infinite = rememberInfiniteTransition(label = "launchPulse")
@@ -149,7 +150,11 @@ fun LaunchScreen(onStart: () -> Unit) {
 
             Spacer(Modifier.height(8.dp))
 
-            Text(text = "v$versionName", fontSize = 13.sp, color = cosmos.textSecondary)
+            Text(
+                text = "Version $versionName ($versionUpdatedAt)",
+                fontSize = 13.sp,
+                color = cosmos.textSecondary,
+            )
 
             Spacer(Modifier.height(48.dp))
 

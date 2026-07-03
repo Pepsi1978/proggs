@@ -47,10 +47,9 @@ import kotlinx.coroutines.withContext
  * bis Frank den Lautsprecher erneut drueckt ODER die Sicherheitsgrenze [MAX_DURATION_MS] (15 Minuten)
  * erreicht ist — dann stoppt die App automatisch, damit nicht aus Versehen endlos vorgelesen wird.
  *
- * Kosten/Netz: Jeder EINDEUTIGE Satz wird nur EINMAL ueber Google-TTS synthetisiert
- * ([TtsPlayer.synthesizeToCache]); alle Wiederholungen und Schleifen-Durchgaenge spielen dieselbe
- * gecachte Audiodatei. Das spart TTS-Kosten/Datenvolumen massiv und klingt identisch. Beim Stop
- * wird der Sequenz-Cache wieder aufgeraeumt.
+ * Kosten/Netz: Folgesaetze werden pro Lauf gecacht. Der Anker (Satz 1) wird dagegen bei JEDEM
+ * Auftreten frisch ueber Google-TTS synthetisiert, damit er nicht immer mit exakt derselben
+ * Betonung aus derselben MP3-Datei kommt. Beim Stop wird der Sequenz-Cache wieder aufgeraeumt.
  *
  * Threading (Bug-Almanach media3 T1/L1): Der MediaPlayer wird ausschliesslich aus
  * withContext(Dispatchers.Main) bedient; Freigabe deterministisch in [stop]/[onCleared].
@@ -72,6 +71,11 @@ data class MentalTtsUiState(
     /** Endlosschleife aktiv? */
     val loop: Boolean = false,
     val error: String? = null,
+)
+
+private data class SpeechItem(
+    val text: String,
+    val freshEveryTime: Boolean,
 )
 
 @HiltViewModel
@@ -200,57 +204,62 @@ constructor(
                 "anker=$anker folge=$folge loop=$loop)",
         )
 
-        // 1) Prefetch: jeden EINDEUTIGEN Satz genau einmal synthetisieren (sonst exakte 2s-Pausen
-        //    durch Netz-Latenz gestoert). synthesizeToCache laeuft intern auf Dispatchers.IO.
+        // 1) Prefetch: Folgesaetze nur einmal synthetisieren. Der Anker bleibt bewusst draussen,
+        //    weil er pro Auftreten frisch an Google-TTS geschickt werden soll.
         val fileCache = HashMap<String, File>()
-        for (text in sequence.distinct()) {
+        for (text in sequence.filterNot { it.freshEveryTime }.map { it.text }.distinct()) {
             currentCoroutineContext().ensureActive()
             fileCache[text] = ttsPlayer.synthesizeToCache(text)
         }
         Diag.d(
             DiagnosticArea.GOOGLE_TTS,
             TAG,
-            "Prefetch fertig: ${fileCache.size} eindeutige Saetze synthetisiert/gecacht",
+            "Prefetch fertig: ${fileCache.size} Folgesaetze synthetisiert/gecacht; " +
+                "Anker wird pro Auftreten frisch synthetisiert",
         )
 
-        // 2) Wiedergabe auf dem Main-Thread (MediaPlayer-Threading-Vertrag), Loop + 15-Min-Limit.
+        // 2) Wiedergabe mit frischer Anker-Synthese, Loop + 15-Min-Limit.
         val deadline = SystemClock.elapsedRealtime() + MAX_DURATION_MS
-        withContext(Dispatchers.Main) {
-            do {
-                for ((index, text) in sequence.withIndex()) {
-                    ensureActive()
-                    if (SystemClock.elapsedRealtime() >= deadline) {
-                        Diag.d(
-                            DiagnosticArea.GOOGLE_TTS,
-                            TAG,
-                            "15-Minuten-Grenze erreicht — automatischer Stop",
-                        )
-                        return@withContext
-                    }
-                    ttsPlayer.playCachedFileAwait(fileCache.getValue(text))
-                    // 2 Sekunden Pause zwischen jedem Satz — auch ueber Schleifen-Grenzen hinweg,
-                    // nur nach dem allerletzten Satz eines NICHT-Endlos-Laufs nicht.
-                    val isLastOfRun = index == sequence.lastIndex
-                    if (!isLastOfRun || loop) {
-                        delay(PAUSE_MS)
-                    }
+        do {
+            for ((index, item) in sequence.withIndex()) {
+                currentCoroutineContext().ensureActive()
+                if (SystemClock.elapsedRealtime() >= deadline) {
+                    Diag.d(
+                        DiagnosticArea.GOOGLE_TTS,
+                        TAG,
+                        "15-Minuten-Grenze erreicht — automatischer Stop",
+                    )
+                    return
                 }
-            } while (loop && SystemClock.elapsedRealtime() < deadline)
-        }
+                val file =
+                    if (item.freshEveryTime) {
+                        ttsPlayer.synthesizeToCache(item.text, forceFresh = true)
+                    } else {
+                        fileCache.getValue(item.text)
+                    }
+                withContext(Dispatchers.Main) { ttsPlayer.playCachedFileAwait(file) }
+                // 2 Sekunden Pause zwischen jedem Satz — auch ueber Schleifen-Grenzen hinweg,
+                // nur nach dem allerletzten Satz eines NICHT-Endlos-Laufs nicht.
+                val isLastOfRun = index == sequence.lastIndex
+                if (!isLastOfRun || loop) {
+                    delay(PAUSE_MS)
+                }
+            }
+        } while (loop && SystemClock.elapsedRealtime() < deadline)
     }
 
     /**
      * Baut die flache Vorlese-Sequenz aus den Saetzen. Bei nur einem Satz wird dieser eine Satz
      * [anker]-mal vorgelesen (es gibt keinen Folgesatz).
      */
-    private fun buildSequence(texts: List<String>, anker: Int, folge: Int): List<String> {
+    private fun buildSequence(texts: List<String>, anker: Int, folge: Int): List<SpeechItem> {
         if (texts.isEmpty()) return emptyList()
         val first = texts.first()
-        if (texts.size == 1) return List(anker) { first }
+        if (texts.size == 1) return List(anker) { SpeechItem(first, freshEveryTime = true) }
         return buildList {
             for (i in 1 until texts.size) {
-                repeat(anker) { add(first) }
-                repeat(folge) { add(texts[i]) }
+                repeat(anker) { add(SpeechItem(first, freshEveryTime = true)) }
+                repeat(folge) { add(SpeechItem(texts[i], freshEveryTime = false)) }
             }
         }
     }
