@@ -283,7 +283,7 @@ class AppSettings @Inject constructor(
 
     /**
      * Frank-Wunsch 2026-05-17: Polar-Quellen (V3 AccessLink, V4, Flow Web, TCX,
-     * JSON-Bulk) kurzfristig komplett deaktivieren — Strava bleibt aktive
+     * JSON-Bulk) kurzfristig komplett deaktivieren — Health Connect bleibt aktive
      * Trainings-Quelle. Default true. Wenn false: Polar-Workers laufen wieder
      * (periodischer Sync, Foreground-Trigger, manueller Refresh-Button).
      *

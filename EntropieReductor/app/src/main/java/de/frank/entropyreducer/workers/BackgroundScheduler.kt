@@ -296,7 +296,7 @@ class BackgroundScheduler @Inject constructor(
     }
 
     // runAmazfitSyncNow + cancelAmazfitSync entfernt 2026-05-17 (Frank-Wunsch):
-    // Zepp-Cloud-API komplett raus. Workouts kommen ueber Strava-Sync
+    // Zepp-Cloud-API komplett raus. Workouts kommen ueber Health-Connect-Sync
     // (BiomarkerViewModel.refreshNow), Daily-Werte ueber Health Connect.
 
     // runPolarSyncNow + cancelPolarSync entfernt 2026-05-17 (Frank-Wunsch).

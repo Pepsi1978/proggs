@@ -160,7 +160,6 @@ fun ApiKeysScreen(
             }
             item { PolarOAuthCard(oauthVm, oauthState) }
             item { WhoopOAuthCard(oauthVm, oauthState) }
-            item { StravaOAuthCard(oauthVm, oauthState) }
             item { OuraApiCard(ouraVm, ouraState) }
             item { HealthConnectApiCard(healthConnectVm, healthConnectState) }
             item {
@@ -193,7 +192,7 @@ private fun ReloadAllDataCard(onReload: () -> Unit, message: String?) {
             )
             Spacer(Modifier.height(4.dp))
             Text(
-                "Holt die komplette Historie von Whoop, Oura, Strava und Health Connect neu — " +
+                "Holt die komplette Historie von Whoop, Oura und Health Connect neu — " +
                     "statt nur der neuesten Daten. Sinnvoll z.B. nach einem Geraetewechsel. " +
                     "Laeuft nur, wenn du diesen Knopf drueckst.",
                 style = MaterialTheme.typography.bodySmall,
@@ -403,27 +402,16 @@ private fun WhoopOAuthCard(vm: OAuthViewModel, state: OAuthUiState) {
 }
 
 /**
- * Polar-OAuth-Card (Frank-Wunsch 2026-05-16). Polar AccessLink ist die
- * alleinige Workout-Quelle nachdem Strava entfernt wurde (Strava verlor die
- * Brustgurt-HR-Daten). Polar zieht die H10-Daten sauber durch.
- *
- * Anleitung in der Card:
- *  1. Account auf admin.polaraccesslink.com erstellen (Login mit Polar-Flow)
- *  2. Neue App registrieren, Client-ID und Client-Secret kopieren
- *  3. Callback URL eintragen: localhost
- *  4. Hier Client-ID + Secret eintragen, Speichern, Verbinden
- *
- * Anders als Strava: Polar nutzt HTTP-Basic-Auth beim Token-Endpoint, daher
- * keine speziellen Anforderungen an die Redirect-URI-Domain. Wir nutzen
- * dennoch den localhost-Trick aus Strava-Erfahrung damit Polar's Domain-
- * Validator nicht zickt.
+ * Polar-Historie-Card (Frank-Wunsch 2026-05-16): reiner ZIP-Bulk-Import der
+ * Polar-Trainings-Historie. Keine Live-API-Anbindung — Live-Trainings kommen
+ * ueber Health Connect (siehe HealthConnectManager).
  */
 @Composable
 private fun PolarOAuthCard(vm: OAuthViewModel, state: OAuthUiState) {
     val cosmos = LocalCosmos.current
     // Frank-Wunsch 2026-05-17: Nur noch ZIP-Bulk-Import — keine OAuth-Verbindung
-    // mehr. Polar AccessLink V3/V4/Flow-Web sind komplett entfernt. Polar-
-    // Daten kommen ueber Strava (Live) oder ueber den ZIP-Bulk-Import (Historie).
+    // mehr. Polar AccessLink V3/V4/Flow-Web sind komplett entfernt. Live-Trainings
+    // kommen ueber Health Connect, Historie ueber den ZIP-Bulk-Import.
     val bulkImportPicker = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.GetContent(),
     ) { uri ->
@@ -444,7 +432,7 @@ private fun PolarOAuthCard(vm: OAuthViewModel, state: OAuthUiState) {
                     "flow.polar.com/data/export-data)? Hier kannst du ALLE " +
                     "Trainings deiner Polar-Historie auf einmal importieren. " +
                     "Bei 10 Jahren Trainings dauert der Vorgang ca. 30-60 Sek. " +
-                    "Live-Daten kommen ueber Strava (Polar → Strava-Mirror).",
+                    "Live-Daten kommen ueber Health Connect.",
                 style = MaterialTheme.typography.bodySmall,
                 color = cosmos.textSecondary,
             )
@@ -461,143 +449,6 @@ private fun PolarOAuthCard(vm: OAuthViewModel, state: OAuthUiState) {
             Text(
                 "Powered by Polar — Daten nur fuer persoenliche Analyse.",
                 style = MaterialTheme.typography.bodySmall,
-                color = cosmos.textSecondary,
-            )
-        }
-    }
-}
-
-/**
- * Strava-OAuth-Card (Frank-Wunsch 2026-05-16, revived 2026-05-17).
- * Strava bekommt via Polar->Strava-Sync die Workout-Daten inkl. HR-Stream
- * vom externen Brustgurt. Wir holen sie via Strava-API mit vollen Streams.
- */
-@Composable
-private fun StravaOAuthCard(vm: OAuthViewModel, state: OAuthUiState) {
-    val cosmos = LocalCosmos.current
-    var secretHidden by remember { mutableStateOf(true) }
-    val launcher = rememberLauncherForActivityResult(
-        contract = ActivityResultContracts.StartActivityForResult(),
-    ) { result ->
-        result.data?.let { data -> vm.onStravaAuthResult(data) }
-    }
-
-    GlassCard(modifier = Modifier.fillMaxWidth()) {
-        Column {
-            Text(
-                "Strava",
-                style = MaterialTheme.typography.titleMedium,
-                color = androidx.compose.ui.graphics.Color(0xFFFC4C02), // Strava-Orange
-            )
-            Spacer(Modifier.height(4.dp))
-            Text(
-                "Workouts mit GPS, Puls, Pace, Cadence und Splits von Strava holen. " +
-                    "Lege eine Personal Use App auf https://www.strava.com/settings/api an. " +
-                    "Authorization Callback Domain darf 'localhost' sein. " +
-                    "Dann in der Zepp-App: Profil → Drittanbieterkonto → Strava verknüpfen, damit " +
-                    "deine T-Rex 3 die Trainings automatisch nach Strava pusht. Erfordert keine " +
-                    "spezielle Redirect-URI in Strava — wir starten den Flow per Mobile-Authorize.",
-                style = MaterialTheme.typography.bodySmall,
-                color = cosmos.textSecondary,
-            )
-            Spacer(Modifier.height(12.dp))
-            OutlinedTextField(
-                value = state.stravaClientId,
-                onValueChange = vm::setStravaClientId,
-                modifier = Modifier.fillMaxWidth(),
-                placeholder = { Text("Client ID (Zahl)", color = cosmos.textSecondary) },
-                singleLine = true,
-            )
-            Spacer(Modifier.height(8.dp))
-            OutlinedTextField(
-                value = state.stravaClientSecret,
-                onValueChange = vm::setStravaClientSecret,
-                modifier = Modifier.fillMaxWidth(),
-                placeholder = { Text("Client Secret", color = cosmos.textSecondary) },
-                visualTransformation = if (secretHidden) PasswordVisualTransformation() else VisualTransformation.None,
-                singleLine = true,
-                trailingIcon = {
-                    IconButton(onClick = { secretHidden = !secretHidden }) {
-                        Icon(
-                            imageVector = if (secretHidden) Icons.Outlined.Visibility else Icons.Outlined.VisibilityOff,
-                            contentDescription = if (secretHidden) "Anzeigen" else "Verbergen",
-                            tint = cosmos.textSecondary,
-                        )
-                    }
-                },
-            )
-            Spacer(Modifier.height(8.dp))
-            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                OutlinedButton(
-                    onClick = vm::saveStravaCredentials,
-                    modifier = Modifier.weight(1f),
-                ) { Text("Speichern") }
-                if (state.stravaConnected) {
-                    Button(
-                        onClick = vm::disconnectStrava,
-                        modifier = Modifier.weight(1f),
-                        colors = ButtonDefaults.buttonColors(containerColor = LocalCosmos.current.crit),
-                    ) {
-                        Icon(Icons.Outlined.LinkOff, null, modifier = Modifier.size(18.dp))
-                        Spacer(Modifier.size(6.dp))
-                        Text("Trennen")
-                    }
-                } else {
-                    Button(
-                        onClick = {
-                            vm.buildStravaAuthIntent()?.let { launcher.launch(it) }
-                        },
-                        modifier = Modifier.weight(1f),
-                        colors = ButtonDefaults.buttonColors(
-                            containerColor = androidx.compose.ui.graphics.Color(0xFFFC4C02),
-                        ),
-                    ) {
-                        Icon(Icons.Outlined.Link, null, modifier = Modifier.size(18.dp))
-                        Spacer(Modifier.size(6.dp))
-                        Text("Verbinden")
-                    }
-                }
-            }
-            if (state.stravaConnected) {
-                Spacer(Modifier.height(8.dp))
-                ConnectionLabel(
-                    label = if (state.stravaAthleteId > 0L) {
-                        "Verbunden — Athlete #${state.stravaAthleteId}"
-                    } else {
-                        "Verbunden"
-                    },
-                    color = LocalCosmos.current.ok,
-                    icon = Icons.Outlined.CheckCircle,
-                )
-                if (state.stravaLastSyncMs > 0L) {
-                    val deltaMin = (System.currentTimeMillis() - state.stravaLastSyncMs) / 60_000L
-                    val label = when {
-                        deltaMin < 1 -> "Zuletzt synchronisiert: gerade eben"
-                        deltaMin < 60 -> "Zuletzt synchronisiert: vor $deltaMin Min"
-                        deltaMin < 1440 -> "Zuletzt synchronisiert: vor ${deltaMin / 60} h"
-                        else -> "Zuletzt synchronisiert: vor ${deltaMin / 1440} Tagen"
-                    }
-                    Spacer(Modifier.height(4.dp))
-                    Text(label, style = MaterialTheme.typography.labelSmall, color = cosmos.textSecondary)
-                }
-                Spacer(Modifier.height(8.dp))
-                Button(
-                    onClick = vm::syncStravaNow,
-                    modifier = Modifier.fillMaxWidth(),
-                    colors = ButtonDefaults.buttonColors(
-                        containerColor = androidx.compose.ui.graphics.Color(0xFFFC4C02),
-                    ),
-                ) {
-                    Icon(Icons.Outlined.PlayArrow, null, modifier = Modifier.size(18.dp))
-                    Spacer(Modifier.size(6.dp))
-                    Text("Jetzt synchronisieren (Strava)")
-                }
-            }
-            // Hinweis fuer Branding-Pflicht laut Strava-Guidelines.
-            Spacer(Modifier.height(8.dp))
-            Text(
-                "Powered by Strava — Daten von Strava nur fuer persoenliche Analyse.",
-                style = MaterialTheme.typography.labelSmall,
                 color = cosmos.textSecondary,
             )
         }

@@ -30,7 +30,7 @@ import java.util.Locale
 /**
  * Manuelle Override-Werte fuer ein Training (Frank-Wunsch 2026-05-17).
  *
- * Frank kann einzelne Werte nachtraeglich eintragen wenn Strava sie nicht geliefert hat (z.B.
+ * Frank kann einzelne Werte nachtraeglich eintragen wenn die Quelle sie nicht geliefert hat (z.B.
  * Hoehenverlust, Schrittlaenge, oder wenn der Puls fehlerhaft uebertragen wurde). VO2max ist
  * BEWUSST ausgenommen — der wird IMMER aus avgHeartRate + distance + duration berechnet
  * (ACSM-Formel).

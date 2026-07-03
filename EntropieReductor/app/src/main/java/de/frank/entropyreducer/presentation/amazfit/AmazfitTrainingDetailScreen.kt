@@ -533,7 +533,7 @@ private fun StatsGrid(
                                     Icon(
                                         imageVector = Icons.Outlined.Lock,
                                         contentDescription =
-                                            "Manuell editiert — vor Strava-Sync geschützt",
+                                            "Manuell editiert — vor Sync geschützt",
                                         tint = accent,
                                         modifier = Modifier.size(12.dp),
                                     )
@@ -1254,7 +1254,7 @@ private fun ZoomableChartFullscreen(
                                     when (singleFingerMode) {
                                         "y" -> {
                                             // Frank-Wunsch 2026-05-17 Iteration 9:
-                                            // Inhalt folgt dem Finger (Strava-Pattern):
+                                            // Inhalt folgt dem Finger (Scrubbing-Pattern):
                                             // Finger nach oben -> Graph wandert nach oben.
                                             //
                                             // Frank-Wunsch 2026-05-18: Bei invertY=true

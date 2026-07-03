@@ -118,64 +118,9 @@ class EncryptedSecretsStore @Inject constructor(
     // Zepp / Amazfit Cloud-API wurde entfernt (Sprint 3, 2026-05-22):
     // - API lieferte seit Mai 2026 keine neuen Workouts mehr (Zepp-App-Update)
     // - Plaintext-Credentials (E-Mail + Passwort) in EncryptedSharedPrefs waren ein Risiko
-    // - Strava ist seit 2026-05-17 die primaere Quelle fuer Workouts
+    // - Health Connect ist seit 2026-07-03 die primaere Quelle fuer Workouts
     // Historische Daten mit source="zepp" in amazfit_workouts bleiben erhalten.
     // Die Migration im prefs-Initializer entfernt alte Eintraege beim ersten Start.
-
-    // Strava — Frank-Wunsch 2026-05-16. OAuth2 (PKCE/Standard) mit AppAuth.
-    // Zepp pusht Workouts direkt zu Strava (Drittanbieter-Verknuepfung in der
-    // Zepp-App), wir holen sie hier mit voller Detail-Tiefe (GPS-Stream,
-    // HR-Stream, Pace pro km, Splits, Cadence, Hoehenmeter). Strava ist Primaer-
-    // Quelle fuer Workouts ab 10.05.2026 — die Zepp-Cloud-API liefert seit dem
-    // Zepp-App-Update nur noch unvollstaendige bis gar keine neuen Workouts.
-    var stravaClientId: String?
-        get() = prefs.getString(KEY_STRAVA_CLIENT_ID, null)
-        set(value) { prefs.edit().putString(KEY_STRAVA_CLIENT_ID, value).apply() }
-
-    var stravaClientSecret: String?
-        get() = prefs.getString(KEY_STRAVA_CLIENT_SECRET, null)
-        set(value) { prefs.edit().putString(KEY_STRAVA_CLIENT_SECRET, value).apply() }
-
-    /** AppAuth-serialisierter AuthState als JSON — enthaelt Access + rotierenden Refresh-Token. */
-    var stravaAuthStateJson: String?
-        get() = prefs.getString(KEY_STRAVA_AUTH_STATE, null)
-        set(value) { prefs.edit().putString(KEY_STRAVA_AUTH_STATE, value).apply() }
-
-    var stravaAthleteId: Long
-        get() = prefs.getLong(KEY_STRAVA_ATHLETE_ID, 0L)
-        set(value) { prefs.edit().putLong(KEY_STRAVA_ATHLETE_ID, value).apply() }
-
-    var stravaLastSyncEpochMs: Long
-        get() = prefs.getLong(KEY_STRAVA_LAST_SYNC, 0L)
-        set(value) { prefs.edit().putLong(KEY_STRAVA_LAST_SYNC, value).apply() }
-
-    /**
-     * Cooldown-Sperre nach einem HTTP 429 (Rate-Limit) von Strava. Solange
-     * `System.currentTimeMillis() < stravaRateLimitedUntilMs` laeuft, wird KEIN neuer
-     * Strava-Sync gestartet. Verhindert das fruehere Hammering (mehrere Syncs pro
-     * Foreground feuerten je 429 und hielten das Limit dauerhaft erschoepft). 0 = kein Cooldown.
-     */
-    var stravaRateLimitedUntilMs: Long
-        get() = prefs.getLong(KEY_STRAVA_RATELIMIT_UNTIL, 0L)
-        set(value) { prefs.edit().putLong(KEY_STRAVA_RATELIMIT_UNTIL, value).apply() }
-
-    /**
-     * Frank-Wunsch 2026-05-24: Einmaliger Backfill-Marker. Vor diesem Datum gespeicherte
-     * Strava-Trainings nutzten die Bewegungszeit (moving_time) als Dauer; jetzt soll die
-     * verstrichene Zeit (elapsed_time) gelten. Beim ersten Sync nach dem Update korrigiert
-     * der Backfill die bestehenden Trainings einmalig und setzt dieses Flag. false = Backfill
-     * steht noch aus.
-     */
-    var stravaElapsedBackfillDone: Boolean
-        get() = prefs.getBoolean(KEY_STRAVA_ELAPSED_BACKFILL_DONE, false)
-        set(value) { prefs.edit().putBoolean(KEY_STRAVA_ELAPSED_BACKFILL_DONE, value).apply() }
-
-    fun clearStravaAuthState() {
-        prefs.edit()
-            .remove(KEY_STRAVA_AUTH_STATE)
-            .remove(KEY_STRAVA_ATHLETE_ID)
-            .apply()
-    }
 
     // Oura Ring — Frank-Wunsch 2026-05-10. Personal Access Token aus
     // https://cloud.ouraring.com/personal-access-tokens. Single-User-Token,
@@ -292,13 +237,5 @@ class EncryptedSecretsStore @Inject constructor(
         private const val KEY_OURA_PAT = "oura_personal_access_token"
         private const val KEY_OURA_LAST_SYNC = "oura_last_sync_ms"
         // Polar-OAuth-Keys entfernt 2026-05-17 (Frank-Wunsch).
-        // Strava (Frank-Wunsch 2026-05-16, revived 2026-05-17)
-        private const val KEY_STRAVA_CLIENT_ID = "strava_client_id"
-        private const val KEY_STRAVA_CLIENT_SECRET = "strava_client_secret"
-        private const val KEY_STRAVA_AUTH_STATE = "strava_auth_state_json"
-        private const val KEY_STRAVA_ATHLETE_ID = "strava_athlete_id"
-        private const val KEY_STRAVA_LAST_SYNC = "strava_last_sync_ms"
-        private const val KEY_STRAVA_RATELIMIT_UNTIL = "strava_ratelimit_until_ms"
-        private const val KEY_STRAVA_ELAPSED_BACKFILL_DONE = "strava_elapsed_backfill_done"
     }
 }

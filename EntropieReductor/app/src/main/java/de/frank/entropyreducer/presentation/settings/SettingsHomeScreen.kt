@@ -196,7 +196,7 @@ private fun sectionsFor(): List<SectionDef> =
             accent = LocalCosmos.current.accentForscher,
             title = "Diagnose-Protokoll",
             subtitle =
-                "Fehler und Erfolge aller Verknuepfungen (Strava, Whoop, Oura, Drive, Kalender, KI-Schluessel) — siehst du warum etwas nicht aktualisiert.",
+                "Fehler und Erfolge aller Verknuepfungen (Whoop, Oura, Drive, Kalender, KI-Schluessel) — siehst du warum etwas nicht aktualisiert.",
             route = Routes.SETTINGS_DIAGNOSTICS,
         ),
     )

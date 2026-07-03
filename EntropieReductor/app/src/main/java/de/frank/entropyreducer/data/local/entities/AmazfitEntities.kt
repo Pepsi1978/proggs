@@ -135,7 +135,7 @@ data class AmazfitWorkoutEntity(
     val paceStreamJson: String? = null,
     /** Frank-Wunsch 2026-05-17: Zeitstempel (epoch-ms) wann der Benutzer
      *  zuletzt manuell einzelne Werte ueberschrieben hat. null = keine
-     *  manuellen Edits. Beim Strava-Sync werden bei gesetztem Wert die
+     *  manuellen Edits. Beim Trainings-Sync werden bei gesetztem Wert die
      *  Summary-Felder NICHT mehr ueberschrieben — nur Streams (GPS, HR,
      *  Pace) werden aktualisiert. */
     val manualOverridesMs: Long? = null,

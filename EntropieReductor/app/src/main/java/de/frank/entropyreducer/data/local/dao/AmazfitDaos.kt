@@ -112,7 +112,7 @@ interface AmazfitWorkoutDao {
     /**
      * Loescht alle Workouts die NICHT von Polar stammen.
      *
-     * Frank-Wunsch 2026-05-16: Nach dem Strava-Revert und der Umstellung auf
+     * Frank-Wunsch 2026-05-16: Nach der Umstellung auf
      * Polar als alleinige Trainings-Quelle sollen die alten Zepp/Health-Connect-
      * Eintraege weg — sie haben kein Update mehr, die "T-Rex 3"-Labels nerven
      * und sie verwirren die Trainings-Liste.
@@ -199,7 +199,7 @@ interface AmazfitWorkoutDao {
     suspend fun renameSportName(oldName: String, newName: String): Int
 
     /**
-     * Frank-Wunsch 2026-05-24: Einmaliger Strava-Dauer-Backfill. Setzt NUR durationSeconds
+     * Frank-Wunsch 2026-05-24: Dauer-Korrektur per gezieltem UPDATE. Setzt NUR durationSeconds
      * und endMs eines Trainings (per trackId) auf die verstrichene Zeit (elapsed_time) —
      * alle anderen Felder (GPS, Puls, Splits, Pace) bleiben unangetastet. Die WHERE-Klausel
      * `durationSeconds != :durationSeconds` macht das idempotent (kein Schreibzugriff wenn

@@ -298,7 +298,7 @@ constructor(
             }
         }
         // Frank-Wunsch 2026-05-23: KEIN refreshNow() mehr beim Oeffnen des Biomarker-Tabs
-        // (Moment 3 raus). Die Daten-APIs (Whoop/Oura/Strava/Kalender) synchronisieren NUR
+        // (Moment 3 raus). Die Daten-APIs (Whoop/Oura/Kalender) synchronisieren NUR
         // noch beim frischen App-Start (zentral im StartupViewModel) und beim manuellen
         // Aktualisieren-Knopf. Der Tab zeigt die bereits in der DB liegenden Daten.
         //
@@ -311,7 +311,7 @@ constructor(
 
     /**
      * Frank-Wunsch 2026-06-19 (Sync-Etappe 1.1): Beim Sichtbarwerden des Biomarker-Tabs die
-     * teuren Fitness-APIs (Whoop/Oura/Strava/Health Connect/Kalender) aktualisieren — und NUR
+     * teuren Fitness-APIs (Whoop/Oura/Health Connect/Kalender) aktualisieren — und NUR
      * dann (nicht bei jedem App-Start). So zahlt Frank den API-Verkehr nur, wenn er die Werte
      * wirklich anschaut. Setzt zugleich den 8h-Timer neu (siehe [ForegroundSyncManager]); dessen
      * apiMutex verhindert parallele Doppellaeufe (z.B. mit dem 8h-Automatik-Sync beim Foreground).
@@ -896,39 +896,34 @@ constructor(
         // State erhalten (bis zum naechsten Refresh).
         viewModelScope.launch {
             _refreshing.value = true
-            _message.value = "⟳ Wird synchronisiert: Whoop · Strava · Oura · Health Connect …"
+            _message.value = "⟳ Wird synchronisiert: Whoop · Training · Oura · Health Connect …"
 
             val whoopJob = async { repo.syncLastDays(365) }
             val ouraJob = async {
                 runCatching { ouraRepo.syncLastDays(365) }.getOrElse { Result.failure(it) }
             }
-            // Frank-Bugfix 2026-05-23: NUR EIN Strava-Sync. Frueher liefen hier
-            // amazfitRepo.syncLastDays(365) UND mergeFromStrava(30) parallel — beide
-            // synchronisieren Strava (syncLastDays ist nur ein Wrapper um mergeFromStrava).
-            // Zusammen mit dem ON_START-Sync sprengte das Stravas Rate-Limit (HTTP 429).
-            // Jetzt nur dieser eine Job; der StravaRepository-Mutex faengt verbleibende
-            // Ueberschneidungen mit dem App-Start-Sync sauber ab.
-            val stravaJob = async {
-                runCatching { amazfitRepo.mergeFromStrava(days = 30) }.getOrElse { -1 }
+            // Frank-Wunsch 2026-07-03: Trainings kommen jetzt aus Health Connect (Strava entfernt).
+            // Die Zepp-/Polar-App schreibt die Sessions in Health Connect; mergeFromHealthConnect
+            // uebernimmt sie inkl. GPS, Puls-/Tempoverlauf, Hoehenmeter, Cadence.
+            val trainingJob = async {
+                runCatching { amazfitRepo.mergeFromHealthConnect(days = 30) }.getOrElse { 0 }
             }
             refreshWeight()
 
             val whoopRes = whoopJob.await()
             val ouraRes = ouraJob.await()
-            val stravaCount = stravaJob.await()
+            val trainingCount = trainingJob.await()
             _refreshing.value = false
 
             // Frank-Wunsch 2026-05-18: Footer aufgeraeumt.
-            // (1) Amazfit-Eintrag entfernt — der Wert war redundant mit Strava
-            //     (der "Amazfit"-Sync ruft intern mergeFromStrava, daher ist
-            //     "Amazfit 7" und "Strava 7" derselbe Zaehler).
+            // (1) "Training" = Workouts aus Health Connect (frueher Strava).
             // (2) HC zu "Health Connect" ausgeschrieben.
             // (3) Bei jeder Quelle "0" statt "✗" wenn keine neuen Werte —
             //     egal ob der Sync fehlschlug oder einfach nichts Neues kam.
             val parts = mutableListOf<String>()
             val whoopCount = whoopRes.getOrNull() ?: 0
             parts.add("Whoop $whoopCount")
-            parts.add("Strava ${stravaCount.coerceAtLeast(0)}")
+            parts.add("Training ${trainingCount.coerceAtLeast(0)}")
             val ouraCount =
                 ouraRes.getOrNull()?.let { m ->
                     if (m is Map<*, *>) m.values.filterIsInstance<Int>().sum() else 0
@@ -959,7 +954,7 @@ constructor(
             // mit 5s-Debounce. Erfasst auch Whoop/Oura, die selbst kein requestSync ausloesen;
             // dirtyDuringUpload sorgt fuer einen zweiten Lauf, falls nach den 5s noch Werte kommen.
             syncCoordinator.requestSync(
-                "Biomarker: Voll-Refresh aller Quellen (Whoop/Oura/Strava/HC)",
+                "Biomarker: Voll-Refresh aller Quellen (Whoop/Oura/HC)",
                 SyncCoordinator.BIOMARKER_DEBOUNCE_MS,
             )
         }

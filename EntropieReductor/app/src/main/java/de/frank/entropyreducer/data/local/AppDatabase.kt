@@ -496,7 +496,7 @@ abstract class AppDatabase : RoomDatabase() {
         /**
          * Schema 17 -> 18 (Frank-Wunsch 2026-05-17): Neue Spalte `manualOverridesMs` in
          * amazfit_workouts. Markiert ob der Benutzer manuelle Edits vorgenommen hat — null = keine.
-         * Beim Strava- Sync werden Workouts mit gesetztem manualOverridesMs nur in den
+         * Beim Trainings-Sync werden Workouts mit gesetztem manualOverridesMs nur in den
          * Stream-Feldern aktualisiert, nicht in den Summary-Werten.
          */
         val MIGRATION_17_18: Migration =

@@ -12,7 +12,7 @@ import okhttp3.Response
  * Interceptor ist die EINE Stelle die jeden Call sieht, statt jeden Aufrufer einzeln zu
  * instrumentieren.
  *
- * Bewusst NUR fuer die KI-/TTS-Hosts: Whoop, Oura, Strava, Kalender, Drive und Health Connect
+ * Bewusst NUR fuer die KI-/TTS-Hosts: Whoop, Oura, Kalender, Drive und Health Connect
  * haben klare Repository-Sync-Methoden und loggen dort selbst (sonst doppelte Eintraege).
  *
  * Sicherheit: Es werden NUR Methode, Pfad und HTTP-Code geloggt — niemals Header (API-Keys!)

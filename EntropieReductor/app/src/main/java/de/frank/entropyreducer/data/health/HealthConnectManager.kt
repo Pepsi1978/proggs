@@ -569,8 +569,8 @@ class HealthConnectManager @Inject constructor(
             val avgHr = aggregate?.get(HeartRateRecord.BPM_AVG)
             val maxHr = aggregate?.get(HeartRateRecord.BPM_MAX)
 
-            // Frank-Wunsch 2026-07-03: Health Connect wird die alleinige Workout-Quelle (Strava raus).
-            // Wir holen dieselben Felder wie zuvor der Strava-Streams-Pfad: Geschwindigkeit/Pace,
+            // Frank-Wunsch 2026-07-03: Health Connect wird die alleinige Workout-Quelle.
+            // Wir holen alle Trainings-Detailfelder: Geschwindigkeit/Pace,
             // Hoehenmeter, Cadence via Aggregate — plus Puls-, Tempo- und GPS-Zeitreihen aus den
             // Roh-Records. Ein separates Aggregate, damit ein einzelnes fehlendes Sub-Feld (z.B. keine
             // Speed-Daten) nicht die Basiswerte oben mit-reisst.
@@ -602,7 +602,7 @@ class HealthConnectManager @Inject constructor(
                 ?.joinToString(prefix = "[", postfix = "]", separator = ",") { loc ->
                     "[${"%.6f".format(Locale.US, loc.latitude)},${"%.6f".format(Locale.US, loc.longitude)}]"
                 }
-            // Hoehenverlust aus den Routen-Hoehen (HC hat nur ElevationGained = Gewinn). Analog StravaRepo:
+            // Hoehenverlust aus den Routen-Hoehen (HC hat nur ElevationGained = Gewinn). Analog zur bisherigen Streams-Logik:
             // negative Delta-Summe. Gewinn als Fallback aus der Route, falls das Aggregate leer war.
             var altGainFromRoute = 0.0
             var altLoss = 0.0
@@ -670,7 +670,7 @@ class HealthConnectManager @Inject constructor(
                 }
             val maxPaceSecPerKm = maxSpeedMps?.takeIf { it > 0.1 }?.let { 1000.0 / it }
             val cadence = cadenceAvg?.takeIf { it > 0.0 }?.toInt()
-            // Schrittlaenge aus Cadence (Schritte/Min, beide Beine) + Distanz + Dauer — analog StravaRepo.
+            // Schrittlaenge aus Cadence (Schritte/Min, beide Beine) + Distanz + Dauer.
             val strideLengthCm = run {
                 val d = distanceMeters
                 val cad = cadenceAvg
@@ -681,7 +681,7 @@ class HealthConnectManager @Inject constructor(
                 } else null
             }
 
-            // Live-Logik-Sonde (Intent: "genau die gleichen Daten wie zuvor von Strava"): meldet je
+            // Live-Logik-Sonde (Intent: "genau dieselben Trainings-Detaildaten"): meldet je
             // importiertem Training, welche der gewuenschten Felder Health Connect tatsaechlich lieferte.
             Diag.d(
                 DiagnosticArea.HEALTH_CONNECT,
@@ -738,7 +738,7 @@ data class HealthConnectExerciseSession(
     val calories: Double?,
     val avgHeartRate: Int?,
     val maxHeartRate: Int?,
-    // Frank-Wunsch 2026-07-03: dieselben Detail-Felder wie zuvor der Strava-Streams-Pfad, damit
+    // Frank-Wunsch 2026-07-03: dieselben Detail-Felder wie ein voller Streams-Import, damit
     // Health Connect die alleinige Workout-Quelle sein kann. JSON-Strings im exakten UI-Parser-Format
     // (AmazfitTrainingDetailScreen): gpsTrackJson [[lat,lon],...], heartRateSeriesJson [[ts,bpm],...],
     // paceStreamJson [[ts,secProKm],...].

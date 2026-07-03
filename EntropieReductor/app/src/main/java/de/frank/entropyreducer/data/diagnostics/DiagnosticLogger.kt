@@ -22,13 +22,13 @@ import org.json.JSONObject
  *
  * Zweck (Frank-Klarstellung 2026-05-23): Das Log dient VOR ALLEM dem spaeteren Debuggen durch
  * Claude. Wenn Tage spaeter ein Sync-/API-Fehler untersucht werden soll, muss nachvollziehbar sein
- * WAS WANN in welchem Bereich (Strava, Whoop, Oura, Drive, Kalender, Groq, Gemini, Claude, TTS,
+ * WAS WANN in welchem Bereich (Whoop, Oura, Drive, Kalender, Groq, Gemini, Claude, TTS,
  * Health Connect) schiefging — inklusive HTTP-Codes und Stacktraces. Sekundaer dient der
  * In-App-Screen Frank zum schnellen Reinschauen.
  *
  * DREI Persistenz-Schichten (Defense in Depth):
  * 1. Room-DB → speist den In-App-Diagnose-Screen, 14 Tage, gefiltert/farbig.
- * 2. Logcat → sofortiges Live-Debugging (`adb logcat -s Diag/STRAVA`), rotiert aber schnell.
+ * 2. Logcat → sofortiges Live-Debugging (`adb logcat -s Diag/HEALTH_CONNECT`), rotiert aber schnell.
  * 3. JSONL-Datei pro Tag im externen App-Ordner
  *    (`<externalFilesDir>/diagnostics/diag-YYYY-MM-DD.jsonl`) → von Claude per `adb pull` auch Tage
  *    spaeter auslesbar und grep-/parsebar. DAS ist die Schicht fuer das Nachhinein-Debuggen. Pfad

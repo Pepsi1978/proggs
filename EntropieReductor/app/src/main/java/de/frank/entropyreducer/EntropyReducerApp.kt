@@ -294,11 +294,11 @@ class EntropyReducerApp : Application(), Configuration.Provider {
                 }
         }
 
-        // Frank-Wunsch 2026-05-17: V2-Cleanup vor der Strava-only-Phase.
+        // Frank-Wunsch 2026-05-17: V2-Cleanup.
         // Behaelt nur Trainings der letzten ~2 Jahre bis 30.03.2026 17:25 Berlin —
         // alles davor (Uralt-Polar-Daten) UND alles danach (Polar-Duplikate vom
         // 17.05., 14.05., 09.05., 08.05., 01.05.) wird in einer SQL-Operation
-        // entfernt. Danach soll Strava sauber neu reinkommen.
+        // entfernt. Danach sollen die Trainings sauber neu reinkommen.
         //
         // 7-Sekunden-Delay: 2 Sekunden nach V1, damit V1-Cleanup + Drive-Refresh
         // zuerst fertig sind und V2 nur die danach noch da-bleibenden Trainings

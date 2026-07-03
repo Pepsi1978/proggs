@@ -68,12 +68,6 @@ constructor(
      * sofort verfuegbare Quelle.
      */
     private val healthConnect: HealthConnectManager,
-    /**
-     * Strava ist seit 2026-05-17 alleinige Live-API-Quelle fuer Workouts — Polar-Repo wurde
-     * entfernt (Frank-Wunsch). Polar-Historie kommt nur noch ueber Polar-ZIP-Bulk-Import (siehe
-     * PolarBulkImporter).
-     */
-    private val stravaRepo: dagger.Lazy<StravaRepository>,
 ) {
 
     fun observeLatestDaily(): Flow<AmazfitDailyEntity?> = dailyDao.getLatest()
@@ -133,10 +127,9 @@ constructor(
      * (non-null) uebergeben wurde, behaelt alles andere bei. VO2max ist explizit nicht editierbar —
      * wird im UI live aus den anderen Werten berechnet.
      *
-     * Bei spaeterem Strava-Sync werden manuelle Werte NICHT automatisch ueber- schrieben:
-     * mergeFromStrava (siehe unten) nutzt "fresh wins if not null", d.h. ein neuer non-null-Wert
-     * wuerde den manuellen ersetzen. Wenn Frank das nicht will, einfach den Sync nicht erneut
-     * triggern.
+     * Manuelle Werte bleiben bei spaeteren Trainings-Syncs erhalten: mergeFromHealthConnect
+     * fuegt nur NEUE Sessions ein und laesst bestehende Eintraege (inkl. manueller Edits)
+     * unangetastet.
      *
      * @return true wenn das Workout gefunden und aktualisiert wurde
      */
@@ -247,8 +240,8 @@ constructor(
                 strideLengthCm = strideLengthCm ?: existing.strideLengthCm,
                 calories = calories ?: existing.calories,
                 // Frank-Wunsch 2026-05-17: Markiere als manuell editiert. Verhindert
-                // dass nachfolgende Strava-Syncs die hier gesetzten Summary-Werte
-                // wieder ueberschreiben (siehe mergeFromStrava).
+                // dass nachfolgende Trainings-Syncs die hier gesetzten Summary-Werte
+                // wieder ueberschreiben.
                 manualOverridesMs = now,
                 manualOverrideFields = mergedFields,
                 createdAt = now,
@@ -340,27 +333,6 @@ constructor(
     // komplett raus. Polar-Daten kommen nur noch via Polar-ZIP-Bulk-Import.
 
     /**
-     * Frank-Wunsch 2026-05-17: syncLastDays ist jetzt nur noch Wrapper um mergeFromStrava.
-     * Zepp-Cloud-API komplett raus.
-     */
-    suspend fun syncLastDays(days: Int = 365): Result<Int> =
-        runCatchingCancellable {
-                val syncTs = System.currentTimeMillis()
-                appSettings.setLastAmazfitSync(syncTs)
-                val stravaCount = mergeFromStrava(days = days.coerceAtMost(60))
-                if (stravaCount > 0) {
-                    Diag.i(DiagnosticArea.AMAZFIT, TAG, "Strava-Merge: $stravaCount Workouts importiert/aktualisiert")
-                    syncCoordinatorLazy.get().requestSync("Training: Sync/Aenderung")
-                }
-                return@runCatchingCancellable stravaCount
-            }
-            .onFailure {
-                if (it !is kotlinx.coroutines.CancellationException) {
-                    Diag.e(DiagnosticArea.AMAZFIT, TAG, "Amazfit-Sync fehlgeschlagen", it)
-                }
-            }
-
-    /**
      * Frank-Wunsch 2026-05-16: Workouts aus Health Connect als zweite Quelle importieren — vor
      * allem wenn die T-Rex 3 zwar via Bluetooth in die Zepp-App geschickt hat, aber Zepp die Daten
      * noch nicht in die Cloud hochgeladen hat. Health Connect hat den Workout-Datensatz dann schon
@@ -394,6 +366,10 @@ constructor(
         val existingStartMs = workoutDao.getStartMsInRange(start, end)
         val toleranceMs = 5L * 60L * 1000L // 5 Minuten +/- ist immer noch derselbe Lauf
 
+        // Sync-Zeitstempel setzen sobald Health Connect erfolgreich Sessions lieferte (auch bei
+        // 0 neuen) — so bleibt der "Zuletzt synchronisiert"-Status aktuell (frueher gesetzt beim Sync).
+        appSettings.setLastAmazfitSync(System.currentTimeMillis())
+
         val toInsert = sessions.mapNotNull { session ->
             val isDuplicate = existingStartMs.any { existing ->
                 kotlin.math.abs(existing - session.startMs) <= toleranceMs
@@ -408,7 +384,9 @@ constructor(
             return 0
         }
         workoutDao.upsertAll(toInsert)
-        Diag.i(DiagnosticArea.AMAZFIT, 
+        // Neue Trainings → Drive-Backup anstossen (debounced), damit das Workouts-Backup aktuell bleibt.
+        syncCoordinatorLazy.get().requestSync("Training: Sync/Aenderung")
+        Diag.i(DiagnosticArea.AMAZFIT,
             TAG,
             "Health-Connect-Workouts eingefuegt: ${toInsert.size} (von ${sessions.size} im HC-Fenster)",
         )
@@ -459,257 +437,6 @@ constructor(
             paceStreamJson = s.paceStreamJson,
             createdAt = System.currentTimeMillis(),
         )
-    }
-
-    /**
-     * Frank-Wunsch 2026-05-24: Einmaliger Backfill. Bestehende Strava-Trainings der letzten
-     * 30 Tage bekommen die verstrichene Zeit (elapsed_time) als Dauer statt der frueher
-     * gespeicherten Bewegungszeit (moving_time). NUR Strava-Trainings (`source == "strava"`),
-     * NUR die Dauer (durationSeconds + endMs) via gezieltem DAO-UPDATE — GPS/Puls/Splits und
-     * alle anderen Felder bleiben unangetastet. Polar-Trainings werden nicht beruehrt.
-     *
-     * Laeuft genau einmal (Flag in EncryptedSecretsStore). Es wird NUR der billige Listen-Call
-     * gemacht (kein Detail/Streams/Laps) -> keine Rate-Limit-Gefahr. Schlaegt der Call fehl
-     * (Cooldown/Netz), bleibt das Flag ungesetzt und der naechste Sync versucht es erneut.
-     */
-    suspend fun backfillStravaElapsedDurationsOnce() {
-        if (secrets.stravaElapsedBackfillDone) return
-        val repo = stravaRepo.get()
-        if (!repo.isAuthenticated()) return
-        val elapsedByTrackId =
-            repo.fetchElapsedDurations(days = 30).getOrElse {
-                Diag.d(DiagnosticArea.AMAZFIT, TAG, "Strava-Dauer-Backfill verschoben: ${it.message}")
-                return
-            }
-        val end = System.currentTimeMillis()
-        val start = end - 30L * 24L * 60L * 60L * 1000L
-        val existing = workoutDao.observeRange(start, end).first()
-        var updated = 0
-        for (w in existing) {
-            if (w.source != "strava") continue
-            val elapsed = elapsedByTrackId[w.trackId] ?: continue
-            updated += workoutDao.updateDurationByTrackId(
-                trackId = w.trackId,
-                durationSeconds = elapsed,
-                endMs = w.startMs + elapsed * 1000L,
-            )
-        }
-        secrets.stravaElapsedBackfillDone = true
-        Diag.i(DiagnosticArea.AMAZFIT, 
-            TAG,
-            "Strava-Dauer-Backfill abgeschlossen: $updated Training(s) auf verstrichene Zeit korrigiert",
-        )
-    }
-
-    /**
-     * Frank-Wunsch 2026-05-16: Strava-Workouts in die `amazfit_workouts`-Tabelle mergen. Strava ist
-     * die zuverlaessigste Quelle mit vollen Detail-Daten (GPS, HR, Pace, Splits), daher hat Strava
-     * VORRANG.
-     *
-     * Strategie:
-     * 1. Strava-Activities der letzten [days] Tage holen (inkl. Streams + Laps).
-     * 2. Pro Strava-Workout: pruefe ob ein existierender Eintrag innerhalb +/- 5 Min am gleichen
-     *    Start liegt. Falls JA: alten Eintrag loeschen (nach trackId) und Strava-Eintrag inserten.
-     *    Falls NEIN: einfach inserten.
-     * 3. Pure Insertion erfolgt via upsertAll (REPLACE-Strategie der DB).
-     *
-     * Rate-Limit-Schutz steckt im StravaRepository — wir muessen hier nichts machen.
-     */
-    suspend fun mergeFromStrava(days: Int = 60): Int {
-        val repo = stravaRepo.get()
-        if (!repo.isAuthenticated()) {
-            Diag.d(DiagnosticArea.AMAZFIT, TAG, "Strava: nicht verbunden — kein Strava-Merge")
-            return 0
-        }
-        // Frank-Wunsch 2026-05-24: einmaliger Dauer-Backfill bestehender Strava-Trainings
-        // (moving_time -> elapsed_time). Laeuft nur beim ersten Sync nach dem Update.
-        backfillStravaElapsedDurationsOnce()
-        // Frank-Wunsch 2026-05-23 (Schritt 4): Existierende Workouts ZUERST holen — damit der
-        // Strava-Sync die teuren Detail-Calls (GPS/Puls/Splits) NUR fuer NEUE Workouts macht
-        // (inkrementell). Die bekannten trackIds werden an fetchWorkoutsAsEntities uebergeben.
-        val end = System.currentTimeMillis()
-        val start = end - days.toLong() * 24L * 60L * 60L * 1000L
-        val toleranceMs = 5L * 60L * 1000L
-        // Hole alle existierenden Workouts im Range (Liste statt nur startMs damit
-        // wir auch trackId fuer das Loeschen haben).
-        val existingInRange = workoutDao.observeRange(start, end).first()
-        val knownTrackIds = existingInRange.map { it.trackId }.toSet()
-
-        val result = repo.fetchWorkoutsAsEntities(days = days, knownTrackIds = knownTrackIds)
-        val stravaEntities = result.getOrDefault(emptyList())
-        // Frank-Wunsch 2026-05-17: Sync-Zeitstempel setzen sobald die API
-        // erfolgreich antwortet — auch wenn 0 neue Workouts. Damit zeigt der
-        // "Zuletzt synchronisiert"-Header auch bei reinen App-Start-Auto-
-        // Syncs (mergeFromStrava direkt ohne syncLastDays-Wrapper) einen
-        // frischen Zeitstempel.
-        appSettings.setLastAmazfitSync(System.currentTimeMillis())
-        if (stravaEntities.isEmpty()) {
-            return 0
-        }
-        val toleranceList = existingInRange.map { it.trackId to it.startMs }
-        // Frank-Wunsch 2026-05-17: Map trackId → existing-Entity damit wir bei
-        // einem matchByStrava pruefen koennen ob der Benutzer manuelle Edits
-        // gemacht hat (manualOverridesMs != null).
-        val existingByTrackId = existingInRange.associateBy { it.trackId }
-
-        var replaceCount = 0
-        var newCount = 0
-        var protectedCount = 0
-        val toInsert = mutableListOf<AmazfitWorkoutEntity>()
-        for (strava in stravaEntities) {
-            // Strava-Workout selbst hat eindeutigen trackId "strava_$id". Wenn es
-            // schon mit DEM trackId existiert (z.B. Frueher-Sync):
-            //  - bei manualOverridesMs == null: kompletter REPLACE (wie bisher)
-            //  - bei manualOverridesMs != null: nur Streams (GPS/HR/Pace) frisch
-            //    schreiben, Summary-Felder (Pace/HR/Hoehe/Cadence/Stride/Kalorien/
-            //    VO2max) behalten. Damit ueberleben Frank's manuelle Edits jeden
-            //    nachfolgenden Strava-Sync.
-            val matchByStrava = toleranceList.find { it.first == strava.trackId }
-            if (matchByStrava != null) {
-                val existing = existingByTrackId[strava.trackId]
-                if (existing != null) {
-                    // Frank-Bugfix 2026-05-17: IMMER "fresh wins if not null, existing
-                    // als Fallback" — egal ob manuell editiert oder nicht. Frueher
-                    // (#823) machte ich bei manualOverridesMs == null einen kompletten
-                    // REPLACE — das hat aber bei aelteren Strava-Trainings die HR-
-                    // und Pace-Daten (die Strava nur fuer junge Workouts liefert) auf
-                    // null gesetzt und Frank's vorhandene Werte zerstoert.
-                    //
-                    // Jetzt: Wenn Strava einen Wert liefert -> der gewinnt. Wenn
-                    // Strava null hat -> existing bleibt. Manuell editierte Felder
-                    // werden zusaetzlich durch manualOverridesMs geschuetzt: dann
-                    // gewinnt IMMER existing (Strava-Wert wird ignoriert).
-                    val isManual = existing.manualOverridesMs != null
-                    val merged =
-                        existing.copy(
-                            durationSeconds =
-                                if (isManual) existing.durationSeconds
-                                else (strava.durationSeconds ?: existing.durationSeconds),
-                            sportType =
-                                if (isManual) existing.sportType
-                                else (strava.sportType ?: existing.sportType),
-                            sportName =
-                                if (isManual) existing.sportName
-                                else (strava.sportName ?: existing.sportName),
-                            distanceMeters =
-                                if (isManual) existing.distanceMeters
-                                else (strava.distanceMeters ?: existing.distanceMeters),
-                            // Summary-Felder: bei manualOverridesMs IMMER existing behalten,
-                            // sonst fresh-wins-if-not-null.
-                            avgPaceSecPerKm =
-                                if (isManual) existing.avgPaceSecPerKm
-                                else (strava.avgPaceSecPerKm ?: existing.avgPaceSecPerKm),
-                            maxPaceSecPerKm =
-                                if (isManual) existing.maxPaceSecPerKm
-                                else (strava.maxPaceSecPerKm ?: existing.maxPaceSecPerKm),
-                            avgSpeedKmh =
-                                if (isManual) existing.avgSpeedKmh
-                                else (strava.avgSpeedKmh ?: existing.avgSpeedKmh),
-                            maxSpeedKmh =
-                                if (isManual) existing.maxSpeedKmh
-                                else (strava.maxSpeedKmh ?: existing.maxSpeedKmh),
-                            calories =
-                                if (isManual) existing.calories
-                                else (strava.calories ?: existing.calories),
-                            avgHeartRate =
-                                if (isManual) existing.avgHeartRate
-                                else (strava.avgHeartRate ?: existing.avgHeartRate),
-                            maxHeartRate =
-                                if (isManual) existing.maxHeartRate
-                                else (strava.maxHeartRate ?: existing.maxHeartRate),
-                            altitudeGainMeters =
-                                if (isManual) existing.altitudeGainMeters
-                                else (strava.altitudeGainMeters ?: existing.altitudeGainMeters),
-                            altitudeLossMeters =
-                                if (isManual) existing.altitudeLossMeters
-                                else (strava.altitudeLossMeters ?: existing.altitudeLossMeters),
-                            cadence =
-                                if (isManual) existing.cadence
-                                else (strava.cadence ?: existing.cadence),
-                            strideLengthCm =
-                                if (isManual) existing.strideLengthCm
-                                else (strava.strideLengthCm ?: existing.strideLengthCm),
-                            // Streams: IMMER aktualisieren wenn Strava welche liefert
-                            // (auch bei isManual — Streams sind kein manuell-editierbares Feld).
-                            gpsTrackJson = strava.gpsTrackJson ?: existing.gpsTrackJson,
-                            heartRateSeriesJson =
-                                strava.heartRateSeriesJson ?: existing.heartRateSeriesJson,
-                            paceStreamJson = strava.paceStreamJson ?: existing.paceStreamJson,
-                            paceSeriesJson = strava.paceSeriesJson ?: existing.paceSeriesJson,
-                            splitsJson = strava.splitsJson ?: existing.splitsJson,
-                            // Metadaten + VO2max nicht ueberschreiben.
-                            source = strava.source ?: existing.source,
-                            city = strava.city ?: existing.city,
-                            vo2Max = existing.vo2Max,
-                            // manualOverridesMs bleibt erhalten (NIE durch Sync resetten).
-                            manualOverridesMs = existing.manualOverridesMs,
-                            createdAt = strava.createdAt,
-                        )
-                    toInsert += merged
-                    if (isManual) {
-                        protectedCount += 1
-                        Diag.i(DiagnosticArea.AMAZFIT, 
-                            TAG,
-                            "Strava-Merge: ${strava.trackId} ist manuell editiert (manualOverridesMs=${existing.manualOverridesMs}) — Summary-Werte BLEIBEN, nur Streams aktualisiert",
-                        )
-                    } else {
-                        replaceCount += 1
-                        Diag.d(DiagnosticArea.AMAZFIT, 
-                            TAG,
-                            "Strava-Merge: ${strava.trackId} fresh-wins-if-not-null gemerged (kein manueller Edit)",
-                        )
-                    }
-                } else {
-                    // Neuer Eintrag — direkt einfuegen.
-                    toInsert += strava
-                    newCount += 1
-                }
-                continue
-            }
-            // Sonst: gibt es einen anderen Eintrag (zepp_xxx, hc_xxx) im selben
-            // 5-Min-Fenster? Wenn JA: alten loeschen, Strava inserten.
-            val matchByTime = toleranceList.find {
-                kotlin.math.abs(it.second - strava.startMs) <= toleranceMs &&
-                    it.first != strava.trackId
-            }
-            if (matchByTime != null) {
-                Diag.d(DiagnosticArea.AMAZFIT, 
-                    TAG,
-                    "Strava-Merge: ueberschreibe ${matchByTime.first} mit ${strava.trackId} (gleicher Start +/- 5 Min)",
-                )
-                workoutDao.upsert(strava) // Strava-Eintrag inserten (eigene trackId)
-                // Alten Eintrag mit fremder trackId loeschen — kann via direkten Query
-                // erfolgen, gibt aber keinen deleteById im DAO. Workaround: delete alle
-                // mit dem startMs des alten, dann Strava neu inserten.
-                // Pragmatisch: Wir lassen den alten Eintrag stehen — er hat eigene
-                // trackId und stoert nicht weiter (Hero zeigt den juengsten startMs).
-                // ABER: Hero zeigt "letzten" via observeAll DESC by startMs — wenn
-                // beide gleich-startMs haben, alphabetisch nach trackId. "strava_" > "hc_"
-                // also Strava gewinnt. OK so.
-                replaceCount += 1
-            } else {
-                toInsert += strava
-                newCount += 1
-            }
-        }
-        if (toInsert.isNotEmpty()) {
-            workoutDao.upsertAll(toInsert)
-        }
-        Diag.i(DiagnosticArea.AMAZFIT, 
-            TAG,
-            "Strava-Merge: $newCount neu eingefuegt, $replaceCount aktualisiert/ueberschrieben, " +
-                "$protectedCount mit manuellen Edits (nur Streams aktualisiert)",
-        )
-        // Frank-Wunsch 2026-05-19: Sobald ueber Strava ein neuer/aktualisierter
-        // Eintrag reinkommt automatisch Drive-Backup triggern — damit das
-        // Workouts-Backup (entropy_reducer_workouts_v1.json) immer den aktuellen
-        // Stand abbildet. Debounce in requestSync() (1500 ms) sorgt dafuer dass
-        // mehrere Merges hintereinander nur EINEN Upload ausloesen.
-        val touched = newCount + replaceCount + protectedCount
-        if (touched > 0) {
-            syncCoordinatorLazy.get().requestSync("Training: Sync/Aenderung")
-        }
-        return touched
     }
 
     /**
@@ -829,7 +556,7 @@ constructor(
                         }
                     }
                 }
-                // Zepp-Cloud-Detail-Fetch entfernt 2026-05-17 (Frank-Wunsch): Strava-
+                // Zepp-Cloud-Detail-Fetch entfernt 2026-05-17 (Frank-Wunsch): Health-Connect-
                 // Workouts haben Details schon beim Sync, Polar-Bulk hat keinen Online-
                 // Endpoint. Andere source-Werte sind altlasten — kein Refresh moeglich.
                 false

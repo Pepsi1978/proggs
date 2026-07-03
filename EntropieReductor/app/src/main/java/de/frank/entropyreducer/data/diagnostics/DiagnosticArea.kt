@@ -15,7 +15,6 @@ enum class DiagnosticArea(val displayName: String) {
     CLAUDE("Claude API"),
     GOOGLE_TTS("Google Cloud TTS"),
     WHOOP("Whoop"),
-    STRAVA("Strava"),
     OURA("Oura-Ring"),
     HEALTH_CONNECT("Health Connect"),
     OAUTH("OAuth-Anmeldung"),

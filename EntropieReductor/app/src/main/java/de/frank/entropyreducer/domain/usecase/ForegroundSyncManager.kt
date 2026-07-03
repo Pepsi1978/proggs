@@ -26,7 +26,7 @@ import kotlinx.coroutines.sync.Mutex
  *    Synchronitaet (Aufgaben, Gewohnheiten, Texte ...). Laeuft bei JEDEM App-Start und
  *    JEDEM Foreground-Wechsel SOFORT (kein Throttle). Siehe [syncDriveNow].
  *
- * 2. **Fitness-APIs (Whoop/Oura/Strava/Health Connect/Kalender)** — teuer (Datenverbrauch +
+ * 2. **Fitness-APIs (Whoop/Oura/Health Connect/Kalender)** — teuer (Datenverbrauch +
  *    Rate-Limit). Laeuft NUR (a) automatisch nach 8 h ODER (b) wenn Frank den Biomarker-Tab
  *    oeffnet ([syncApisNow]). Jede vollstaendige API-Aktualisierung setzt den 8-h-Timer neu.
  *    So zahlt Frank den teuren API-Verkehr nur, wenn er die Biomarker-Werte wirklich anschaut.
@@ -117,7 +117,7 @@ constructor(
     }
 
     /**
-     * Voller Fitness-API-Abgleich (Whoop/Oura/Strava/Health Connect/Kalender). Wird (a) von
+     * Voller Fitness-API-Abgleich (Whoop/Oura/Health Connect/Kalender). Wird (a) von
      * [syncApisIfStale] nach 8 h ODER (b) beim Klick auf den Biomarker-Tab aufgerufen
      * ([reason] = "Biomarker-Tab"). Stempelt am Ende den "Zuletzt synchronisiert"-Footer —
      * dieser Zeitstempel ist gleichzeitig der 8-h-Timer (jede API-Aktualisierung setzt ihn neu).
@@ -133,7 +133,7 @@ constructor(
             var hcCount = 0
             var whoopCount = 0
             var ouraCount = 0
-            var stravaCount = 0
+            var trainingCount = 0
             coroutineScope {
                 val hcDeferred =
                     async { runCatching { healthConnectRepository.syncToCache() }.getOrDefault(0) }
@@ -153,11 +153,10 @@ constructor(
                             0
                         }
                     }
-                val stravaDeferred =
+                val trainingDeferred =
                     async {
-                        runCatching { amazfit.mergeFromStrava(days = 30) }
-                            .getOrDefault(-1)
-                            .coerceAtLeast(0)
+                        // Frank-Wunsch 2026-07-03: Trainings kommen jetzt aus Health Connect (Strava raus).
+                        runCatching { amazfit.mergeFromHealthConnect(days = 30) }.getOrDefault(0)
                     }
                 val calendarDeferred =
                     async {
@@ -168,7 +167,7 @@ constructor(
                 hcCount = hcDeferred.await()
                 whoopCount = whoopDeferred.await()
                 ouraCount = ouraDeferred.await()
-                stravaCount = stravaDeferred.await()
+                trainingCount = trainingDeferred.await()
                 calendarDeferred.await()
             }
 
@@ -184,13 +183,13 @@ constructor(
                     nowZ.minute,
                 )
             val footer =
-                "✓ $footerTs · Whoop $whoopCount · Strava $stravaCount · " +
+                "✓ $footerTs · Whoop $whoopCount · Training $trainingCount · " +
                     "Oura $ouraCount · Health Connect $hcCount"
             runCatching { appSettings.setLastRefreshFooter(footer, System.currentTimeMillis()) }
             Diag.i(
                 DiagnosticArea.APP,
                 "ForegroundSync",
-                "API-Sync FERTIG ($reason): Whoop=$whoopCount Strava=$stravaCount Oura=$ouraCount HC=$hcCount -> 8h-Timer neu gesetzt",
+                "API-Sync FERTIG ($reason): Whoop=$whoopCount Training=$trainingCount Oura=$ouraCount HC=$hcCount -> 8h-Timer neu gesetzt",
             )
         } finally {
             apiMutex.unlock()

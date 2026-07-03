@@ -59,17 +59,6 @@ constructor(
     // Polar AccessLink V3 + V4 OAuth-Configs entfernt 2026-05-17 (Frank-Wunsch:
     // Polar nur noch ueber ZIP-Bulk-Import, keine API-Anbindung mehr).
 
-    /**
-     * Strava (Frank-Wunsch 2026-05-16, revived 2026-05-17). mobile/authorize oeffnet Strava-App
-     * falls installiert, sonst Browser. Strava ist Confidential Client — verlangt Client-Secret bei
-     * Token-Exchange UND beim Refresh — ClientSecretPost analog zu Whoop.
-     */
-    val stravaConfig =
-        AuthorizationServiceConfiguration(
-            Uri.parse("https://www.strava.com/oauth/mobile/authorize"),
-            Uri.parse("https://www.strava.com/oauth/token"),
-        )
-
     /** Gemeinsamer AuthorizationService — leichtgewichtig, kann pro Aufruf erzeugt werden. */
     fun newService(): AuthorizationService = AuthorizationService(context)
 
@@ -372,130 +361,6 @@ constructor(
     // Polar-Historie wird ausschliesslich ueber Polar-ZIP-Bulk-Import eingelesen,
     // siehe PolarBulkImporter + PolarBulkImportWorker. Live-API-Anbindung entfaellt.
 
-    /* =================================== Strava =================================== */
-
-    /**
-     * Strava-OAuth analog zu Whoop. Rotierende Refresh-Tokens — der AuthState haelt sie automatisch
-     * aktuell, aber wir muessen nach jedem Refresh den State persistieren (saveStravaAuthState).
-     */
-    fun buildStravaAuthIntent(clientId: String, redirectUri: String): Intent {
-        Diag.d(DiagnosticArea.OAUTH, TAG, "Strava: buildAuthIntent — clientId='$clientId' redirect='$redirectUri'")
-        val request =
-            AuthorizationRequest.Builder(
-                    stravaConfig,
-                    clientId,
-                    ResponseTypeValues.CODE,
-                    Uri.parse(redirectUri),
-                )
-                .setScopes(*STRAVA_SCOPES.toTypedArray())
-                .setAdditionalParameters(mapOf("approval_prompt" to "auto"))
-                .build()
-        return newService().getAuthorizationRequestIntent(request)
-    }
-
-    fun loadStravaAuthState(): AuthState {
-        val json = secrets.stravaAuthStateJson
-        return if (json != null) {
-            try {
-                AuthState.jsonDeserialize(json)
-            } catch (e: JSONException) {
-                AuthState()
-            }
-        } else AuthState()
-    }
-
-    fun saveStravaAuthState(state: AuthState) {
-        secrets.stravaAuthStateJson = state.jsonSerializeString()
-    }
-
-    fun clearStravaAuthState() {
-        secrets.clearStravaAuthState()
-    }
-
-    suspend fun handleStravaAuthResult(intent: Intent, clientSecret: String?): Result<Unit> {
-        val resp = AuthorizationResponse.fromIntent(intent)
-        val ex = AuthorizationException.fromIntent(intent)
-        if (ex != null) {
-            Diag.e(DiagnosticArea.OAUTH, 
-                TAG,
-                "Strava: AuthException type=${ex.type} code=${ex.code} error=${ex.error} desc=${ex.errorDescription}",
-            )
-        }
-        if (resp == null) {
-            return Result.failure(ex ?: IllegalStateException("Keine Strava-Authorization-Antwort"))
-        }
-        if (clientSecret.isNullOrBlank()) {
-            return Result.failure(
-                IllegalStateException(
-                    "Strava-Client-Secret fehlt — bitte in den API-Settings eintragen"
-                )
-            )
-        }
-        val state = AuthState(resp, ex)
-        val tokenRequest = resp.createTokenExchangeRequest(mapOf("client_secret" to clientSecret))
-        val tokenResult = exchangeToken(tokenRequest)
-        return tokenResult
-            .onSuccess { tokenResp ->
-                Diag.i(DiagnosticArea.OAUTH, 
-                    TAG,
-                    "Strava: Token-Exchange OK — access-Laenge=${tokenResp.accessToken?.length ?: 0}, refresh-vorhanden=${tokenResp.refreshToken != null}",
-                )
-                state.update(tokenResp, null)
-                saveStravaAuthState(state)
-                val athleteIdRaw = tokenResp.additionalParameters["athlete"]
-                athleteIdRaw?.let { json ->
-                    val match = Regex("\"id\"\\s*:\\s*(\\d+)").find(json)
-                    match?.groupValues?.getOrNull(1)?.toLongOrNull()?.let {
-                        secrets.stravaAthleteId = it
-                        Diag.d(DiagnosticArea.OAUTH, TAG, "Strava: athleteId=$it gespeichert")
-                    }
-                }
-            }
-            .onFailure { failure ->
-                Diag.e(DiagnosticArea.OAUTH, TAG, "Strava: Token-Exchange fehlgeschlagen — ${failure.message}", failure)
-                clearStravaAuthState()
-            }
-            .map { Unit }
-    }
-
-    /**
-     * Frischer Access-Token fuer Strava. Strava ist Confidential Client — Client-Secret beim
-     * Refresh PFLICHT (sonst invalid_client).
-     */
-    suspend fun freshStravaAccessToken(): String? {
-        val state = loadStravaAuthState()
-        if (!state.isAuthorized) {
-            Diag.d(DiagnosticArea.OAUTH, TAG, "Strava-Refresh: kein AuthState — kein Token")
-            return null
-        }
-        val clientSecret = secrets.stravaClientSecret
-        if (clientSecret.isNullOrBlank()) {
-            Diag.e(DiagnosticArea.OAUTH, TAG, "Strava-Refresh: Client-Secret fehlt")
-            throw IllegalStateException(
-                "Strava-Client-Secret fehlt — bitte in den API-Schluessel-Settings neu eingeben."
-            )
-        }
-        val clientAuth = ClientSecretPost(clientSecret)
-        val service = newService()
-        return suspendCancellableCoroutine { cont ->
-            state.performActionWithFreshTokens(service, clientAuth) { accessToken, _, ex ->
-                if (ex != null) {
-                    Diag.e(DiagnosticArea.OAUTH, 
-                        TAG,
-                        "Strava-Token-Refresh fehlgeschlagen — type=${ex.type} error=${ex.error} desc=${ex.errorDescription}",
-                        ex,
-                    )
-                    cont.resume(null)
-                } else {
-                    Diag.d(DiagnosticArea.OAUTH, TAG, "Strava-Token-Refresh OK — Laenge=${accessToken?.length ?: 0}")
-                    saveStravaAuthState(state)
-                    cont.resume(accessToken)
-                }
-                service.dispose()
-            }
-        }
-    }
-
     /* ================================== Helper ================================== */
 
     private suspend fun exchangeToken(
@@ -572,19 +437,5 @@ constructor(
 
         // Polar V3/V4 Konstanten entfernt 2026-05-17 (Frank-Wunsch).
 
-        /** Strava Redirect-URI + Scopes. */
-        // Frank-Befund 2026-05-16 (#763), erneut 2026-05-19: Strava parst die
-        // Redirect-URI streng als URL und vergleicht den HOST-Teil mit der
-        // "Authorization Callback Domain" auf der Strava-API-Seite. Bei
-        // `de.frank.entropyreducer://oauth/strava/callback` ist host="oauth" —
-        // das matched nicht zur typischen Callback-Domain. Loesung: host="localhost"
-        // einbauen, dann traegt Frank im Strava-Dashboard einfach "localhost" als
-        // Callback Domain ein (Default-Hinweis im Strava-Formular). Whoop und
-        // Google akzeptieren das gleiche Pattern, daher kein Konflikt.
-        // Fehlermeldung ohne diesen Host:
-        //   {"resource":"Application","field":"redirect_uri","code":"invalid"}
-        const val STRAVA_REDIRECT_URI_DEFAULT =
-            "de.frank.entropyreducer://localhost/oauth/strava/callback"
-        val STRAVA_SCOPES = listOf("activity:read_all", "read")
     }
 }

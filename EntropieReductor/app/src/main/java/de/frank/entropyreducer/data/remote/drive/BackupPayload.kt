@@ -484,7 +484,7 @@ data class BackupAmazfitWorkout(
      * Schema v11 (Frank-Bugfix 2026-05-22): Schutz-Stempel fuer manuell editierte
      * Workouts. Bevor dieses Feld im Backup landete, gingen manuell gesetzte
      * Werte (avgHeartRate, maxHeartRate, Pace, Hoehe, Cadence, Stride, Kalorien)
-     * nach Restore + Re-Sync verloren weil `mergeFromStrava` den Schutz nur
+     * nach Restore + Re-Sync verloren weil der Trainings-Sync den Schutz nur
      * bei manualOverridesMs != null aktiviert. Default null = kein Edit oder
      * Restore aus altem Backup-Format.
      */
@@ -875,8 +875,8 @@ fun AmazfitWorkoutEntity.toBackup(): BackupAmazfitWorkout =
         city = city,
         paceStreamJson = paceStreamJson,
         // Schema v11: Schutz-Stempel und Feld-Tracking mitsichern damit
-        // mergeFromStrava nach Restore die manuellen Edits weiterhin schuetzt
-        // (siehe AmazfitRepository.mergeFromStrava: isManual-Check).
+        // der Trainings-Sync nach Restore die manuellen Edits weiterhin schuetzt
+        // (siehe AmazfitRepository: isManual-Check).
         manualOverridesMs = manualOverridesMs,
         manualOverrideFields = manualOverrideFields,
         createdAt = createdAt,
@@ -1057,9 +1057,9 @@ fun BackupAmazfitWorkout.toEntity(): AmazfitWorkoutEntity =
         city = city,
         paceStreamJson = paceStreamJson,
         // Schema v11: Schutz-Stempel + Feld-Labels uebernehmen damit
-        // mergeFromStrava nach dem Restore die manuellen Edits nicht
+        // der Trainings-Sync nach dem Restore die manuellen Edits nicht
         // ueberschreibt. Alte Backups (v1-v10) liefern hier null —
-        // der Schutz greift dann nicht und der naechste Strava-Sync
+        // der Schutz greift dann nicht und der naechste Trainings-Sync
         // gewinnt, was bei alten Backups akzeptabel ist (vorher gab es
         // diesen Schutz auf alten Geraeten ebenfalls nicht).
         manualOverridesMs = manualOverridesMs,

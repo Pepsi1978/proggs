@@ -13,7 +13,7 @@ enum class DiagnosticLevel {
     /** Funktioniert, aber mit Einschraenkung (z.B. Sync uebersprungen wegen Cooldown). */
     WARN,
 
-    /** Wichtiger Erfolg (z.B. "Strava-Sync OK, 12 Workouts"). */
+    /** Wichtiger Erfolg (z.B. "Training-Sync OK, 12 Workouts"). */
     SUCCESS,
 
     /** Reine Information ohne Wertung. */

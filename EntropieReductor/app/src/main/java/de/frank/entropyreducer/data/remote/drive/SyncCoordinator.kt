@@ -184,7 +184,7 @@ constructor(
      * Frank-Wunsch 2026-05-23: Blockierender Backup-Upload fuer den App-Start. Im Gegensatz zu
      * [requestSync] (debounced, fire-and-forget) WARTET diese Methode bis der komplette Upload
      * (Haupt + Workouts + Health) durch ist. So kann der Start-Ablauf sicherstellen, dass das
-     * Drive-Backup KOMPLETT abgeschlossen ist, BEVOR die anderen API-Syncs (Whoop/Oura/Strava/
+     * Drive-Backup KOMPLETT abgeschlossen ist, BEVOR die anderen API-Syncs (Whoop/Oura/
      * Kalender) starten. Ohne verbundenes Drive-Konto kehrt sie sofort zurueck.
      */
     suspend fun syncNowAndWait() {
@@ -573,7 +573,7 @@ constructor(
                         // Nur bei echter Aenderung die vollen Entities (inkl. Streams) laden.
                         val workoutEntities = amazfitWorkoutDaoLazy.get().observeAll().first()
                         // M2-Schutz (Frank-Wunsch 2026-06-19, Almanach M2): Wenn lokal KEINE
-                        // Trainings vorhanden sind (frisch installiert / vor dem ersten Strava-/
+                        // Trainings vorhanden sind (frisch installiert / vor dem ersten Trainings-
                         // Polar-Sync), aber das Remote-Workouts-Backup welche hat, NICHT mit leer
                         // ueberschreiben. Trainings sind zwar re-syncbar, aber manuelle Edits +
                         // Detail-Streams (GPS/Puls/Pace) sollen nicht durch ein leeres Geraet
@@ -804,7 +804,7 @@ constructor(
 
         /**
          * Frank-Wunsch 2026-06-19: laengeres Debounce-Fenster fuer den Biomarker-Bereich (5 s).
-         * Dort laden mehrere APIs (Whoop/Oura/Strava/Health Connect) ueber mehrere Sekunden nach;
+         * Dort laden mehrere APIs (Whoop/Oura/Health Connect) ueber mehrere Sekunden nach;
          * mit 5 s werden sie zu EINEM Upload gesammelt. Kommen nach dem Upload noch weitere Werte,
          * sorgt dirtyDuringUpload fuer einen zweiten Lauf.
          */

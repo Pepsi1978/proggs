@@ -14,7 +14,6 @@ import de.frank.entropyreducer.data.remote.GoogleTtsApi
 import de.frank.entropyreducer.data.remote.GroqWhisperApi
 import de.frank.entropyreducer.data.remote.calendar.GoogleCalendarApi
 import de.frank.entropyreducer.data.remote.oura.OuraApi
-import de.frank.entropyreducer.data.remote.strava.StravaApi
 import de.frank.entropyreducer.data.remote.whoop.WhoopApi
 import kotlinx.serialization.json.Json
 import okhttp3.Cache
@@ -166,19 +165,4 @@ object NetworkModule {
     @Provides @Singleton
     fun provideOuraApi(@Named("oura") retrofit: Retrofit): OuraApi =
         retrofit.create(OuraApi::class.java)
-
-    /* ----- Strava API V3 (Frank-Wunsch 2026-05-16, revived 2026-05-17) ----- */
-    @Provides
-    @Singleton
-    @Named("strava")
-    fun provideStravaRetrofit(client: OkHttpClient, json: Json): Retrofit =
-        Retrofit.Builder()
-            .baseUrl("https://www.strava.com/")
-            .client(client)
-            .addConverterFactory(json.asConverterFactory("application/json".toMediaType()))
-            .build()
-
-    @Provides @Singleton
-    fun provideStravaApi(@Named("strava") retrofit: Retrofit): StravaApi =
-        retrofit.create(StravaApi::class.java)
 }

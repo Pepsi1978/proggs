@@ -54,7 +54,7 @@ import kotlinx.coroutines.launch
 
 /**
  * Diagnose-Protokoll (Frank-Wunsch 2026-05-23): Zeigt die internen Fehler- und Erfolgs-Meldungen
- * aller API-Bereiche (Strava, Whoop, Oura, Drive-Backup, Kalender, Groq, Gemini, Claude, TTS,
+ * aller API-Bereiche (Whoop, Oura, Drive-Backup, Kalender, Groq, Gemini, Claude, TTS,
  * Health Connect). Farbig nach Schweregrad, filterbar pro Bereich, mit Export (Teilen) und
  * Loeschen. So sieht Frank ohne Logcat sofort WARUM etwas nicht aktualisiert.
  */

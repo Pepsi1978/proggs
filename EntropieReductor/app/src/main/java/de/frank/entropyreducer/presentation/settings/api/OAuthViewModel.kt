@@ -22,7 +22,7 @@ import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
-/** Zustand der OAuth-Verbindungen für Whoop, Google Calendar und Strava. */
+/** Zustand der OAuth-Verbindungen für Whoop und Google Calendar. */
 data class OAuthUiState(
     val calendarAccountEmail: String? = null,
     val whoopConnected: Boolean = false,
@@ -32,13 +32,6 @@ data class OAuthUiState(
     // Polar-OAuth-State entfernt 2026-05-17 (Frank-Wunsch). Polar-Bulk-Import-
     // Status braucht keinen Persistent-State — der ZIP-Picker startet den
     // Worker direkt.
-    // Strava (Frank-Wunsch 2026-05-16, revived 2026-05-17).
-    val stravaConnected: Boolean = false,
-    val stravaClientId: String = "",
-    val stravaClientSecret: String = "",
-    val stravaRedirectUri: String = OAuthService.STRAVA_REDIRECT_URI_DEFAULT,
-    val stravaAthleteId: Long = 0L,
-    val stravaLastSyncMs: Long = 0L,
     val message: String? = null,
 )
 
@@ -101,7 +94,7 @@ class OAuthViewModel @Inject constructor(
      * Frank-Wunsch 2026-05-23: "Alles neu laden"-Knopf in den API-Einstellungen. Setzt alle
      * Sync-Zeitstempel zurueck, sodass der nachfolgende Sync NICHT inkrementell laeuft, sondern
      * die volle Historie neu holt. Laeuft NUR auf manuellen Knopf-Druck. Reihenfolge wie beim
-     * App-Start (Health Connect -> Whoop -> Oura -> Strava). Jeder Schritt defensiv (runCatching),
+     * App-Start (Health Connect -> Whoop -> Oura -> Training). Jeder Schritt defensiv (runCatching),
      * damit ein Fehler bei einer Quelle die anderen nicht stoppt.
      */
     fun reloadAllData() {
@@ -114,7 +107,6 @@ class OAuthViewModel @Inject constructor(
                     it.copy(message = "Lade alle Daten neu — das kann einen Moment dauern …")
                 }
                 // Zeitstempel zuruecksetzen -> die Sync-Methoden laden voll (lastSync == 0).
-                secrets.stravaLastSyncEpochMs = 0L
                 secrets.ouraLastSyncEpochMs = 0L
                 runCatching {
                     appSettings.setLastWhoopSync(0L)
@@ -128,12 +120,9 @@ class OAuthViewModel @Inject constructor(
                     if (oauth.loadWhoopAuthState().isAuthorized) whoopRepo.syncLastDays(365)
                 }
                 runCatching { if (ouraRepo.isTokenConfigured()) ouraRepo.syncLastDays(365) }
-                runCatching { amazfitRepo.mergeFromStrava(days = 60) }
+                runCatching { amazfitRepo.mergeFromHealthConnect(days = 60) }
                 _state.update {
-                    it.copy(
-                        message = "Alle Daten wurden neu geladen.",
-                        stravaLastSyncMs = secrets.stravaLastSyncEpochMs,
-                    )
+                    it.copy(message = "Alle Daten wurden neu geladen.")
                 }
             } finally {
                 reloadInProgress = false
@@ -146,11 +135,6 @@ class OAuthViewModel @Inject constructor(
         whoopConnected = oauth.loadWhoopAuthState().isAuthorized,
         whoopClientId = secrets.whoopClientId.orEmpty(),
         whoopClientSecret = secrets.whoopClientSecret.orEmpty(),
-        stravaConnected = oauth.loadStravaAuthState().isAuthorized,
-        stravaClientId = secrets.stravaClientId.orEmpty(),
-        stravaClientSecret = secrets.stravaClientSecret.orEmpty(),
-        stravaAthleteId = secrets.stravaAthleteId,
-        stravaLastSyncMs = secrets.stravaLastSyncEpochMs,
     )
 
     fun setWhoopClientId(value: String) { _state.update { it.copy(whoopClientId = value) } }
@@ -210,67 +194,6 @@ class OAuthViewModel @Inject constructor(
         _state.update { it.copy(whoopConnected = false, message = "Whoop getrennt.") }
     }
 
-    /* ------------------------------- Strava ------------------------------- */
-
-    fun setStravaClientId(value: String) { _state.update { it.copy(stravaClientId = value) } }
-    fun setStravaClientSecret(value: String) { _state.update { it.copy(stravaClientSecret = value) } }
-
-    fun saveStravaCredentials() {
-        val rawId = state.value.stravaClientId.trim()
-        val rawSecret = state.value.stravaClientSecret.trim()
-        // Strava's Client-ID ist eine Zahl (3-6 Stellen), Secret ist hex (~40 Zeichen).
-        if (rawId.isNotBlank() && !rawId.matches(Regex("^[0-9]{1,12}$"))) {
-            _state.update {
-                it.copy(message = "Strava-Client-ID ist normalerweise eine Zahl wie '123456'. " +
-                    "Eingabe wurde NICHT gespeichert.")
-            }
-            return
-        }
-        if (rawSecret.length > 256) {
-            _state.update {
-                it.copy(message = "Strava-Client-Secret ist ungewoehnlich lang " +
-                    "(${rawSecret.length} Zeichen). Eingabe wurde NICHT gespeichert.")
-            }
-            return
-        }
-        secrets.stravaClientId = rawId.ifBlank { null }
-        secrets.stravaClientSecret = rawSecret.ifBlank { null }
-        _state.update { it.copy(message = "Strava-Credentials gespeichert.") }
-    }
-
-    fun buildStravaAuthIntent(): Intent? {
-        val clientId = secrets.stravaClientId
-        if (clientId.isNullOrBlank()) {
-            _state.update { it.copy(message = "Bitte zuerst die Strava-Client-ID speichern.") }
-            return null
-        }
-        return oauth.buildStravaAuthIntent(clientId, state.value.stravaRedirectUri)
-    }
-
-    fun onStravaAuthResult(intent: Intent) {
-        viewModelScope.launch {
-            val result = oauth.handleStravaAuthResult(intent, secrets.stravaClientSecret)
-            result.onSuccess {
-                _state.update {
-                    it.copy(
-                        stravaConnected = true,
-                        stravaAthleteId = secrets.stravaAthleteId,
-                        message = "Strava verbunden. Sync laeuft beim naechsten Refresh.",
-                    )
-                }
-            }.onFailure { ex ->
-                _state.update { it.copy(message = "Strava-Auth fehlgeschlagen: ${ex.message}") }
-            }
-        }
-    }
-
-    fun disconnectStrava() {
-        oauth.clearStravaAuthState()
-        _state.update {
-            it.copy(stravaConnected = false, stravaAthleteId = 0L, message = "Strava getrennt.")
-        }
-    }
-
     /* ---------------------------- Google Calendar ---------------------------- */
 
     fun onCalendarSignInSuccess(account: GoogleSignInAccount) {
@@ -305,35 +228,6 @@ class OAuthViewModel @Inject constructor(
     // Polar-V3/V4/FlowWeb OAuth-Methoden entfernt 2026-05-17 (Frank-Wunsch).
     // Polar-Historie kommt jetzt nur noch ueber Polar-ZIP-Bulk-Import
     // (siehe startPolarBulkImport unten).
-
-    /**
-     * Frank-Wunsch 2026-05-17: manueller Strava-Sync-Trigger.
-     * Holt die letzten 30 Tage Workouts mit kompletter Stream-Tiefe
-     * (GPS, HR, Pace, Cadence, Splits) und schreibt sie in die DB.
-     */
-    fun syncStravaNow() {
-        _state.update { it.copy(message = "Strava-Sync laeuft — Workouts inkl. Streams werden geladen…") }
-        viewModelScope.launch {
-            val count = withContext(Dispatchers.IO) {
-                runCatching {
-                    amazfitRepo.mergeFromStrava(days = 30)
-                }.getOrElse {
-                    Diag.w(DiagnosticArea.OAUTH, "OAuthViewModel", "Strava-Sync fehlgeschlagen: ${it.message}")
-                    -1
-                }
-            }
-            _state.update {
-                it.copy(
-                    stravaLastSyncMs = if (count >= 0) System.currentTimeMillis() else it.stravaLastSyncMs,
-                    message = when {
-                        count < 0 -> "Strava-Sync fehlgeschlagen — bitte Logcat pruefen oder neu verbinden."
-                        count == 0 -> "Strava-Sync: keine neuen Workouts."
-                        else -> "Strava-Sync: $count Workouts importiert/aktualisiert."
-                    },
-                )
-            }
-        }
-    }
 
     // Polar Flow Web Methoden (disconnectPolarFlowWeb, savePolarFlowWebWorkoutJson,
     // savePolarFlowWebCookies, reloadPolarFlowWebWorkout) entfernt 2026-05-17.
