@@ -1,6 +1,7 @@
 package de.frank.entropyreducer.presentation.components
 
 import android.app.Application
+import android.widget.Toast
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Box
@@ -12,12 +13,14 @@ import androidx.compose.material.icons.outlined.Stop
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
@@ -74,12 +77,14 @@ class VoiceCaptureViewModel @Inject constructor(
     private fun startRecording(onResult: (String) -> Unit) {
         val app = getApplication<Application>()
         runCatching {
-            recorder.start()
             RecordingService.start(app)
+            recorder.start()
             pendingCallback = onResult
             _state.value = VoiceCaptureState.RECORDING
             _error.value = null
         }.onFailure { ex ->
+            if (recorder.isRecording()) recorder.discard()
+            RecordingService.stop(app)
             _error.value = ex.message ?: "Aufnahme konnte nicht gestartet werden"
             _state.value = VoiceCaptureState.IDLE
         }
@@ -90,6 +95,7 @@ class VoiceCaptureViewModel @Inject constructor(
         val file = recorder.stop()
         RecordingService.stop(app)
         if (file == null || !file.exists() || file.length() == 0L) {
+            _error.value = "Aufnahme war leer. Bitte noch einmal aufnehmen."
             _state.value = VoiceCaptureState.IDLE
             pendingCallback = null
             return
@@ -136,7 +142,15 @@ fun WhisperMicButton(
     size: Dp = 44.dp,
     vm: VoiceCaptureViewModel = hiltViewModel(),
 ) {
+    val context = LocalContext.current
     val state by vm.state.collectAsStateWithLifecycle()
+    val error by vm.error.collectAsStateWithLifecycle()
+    LaunchedEffect(error) {
+        error?.let { msg ->
+            Toast.makeText(context, msg, Toast.LENGTH_LONG).show()
+            vm.clearError()
+        }
+    }
     val (bg, icon, tint) = when (state) {
         VoiceCaptureState.IDLE -> Triple(
             LocalCosmos.current.accent,

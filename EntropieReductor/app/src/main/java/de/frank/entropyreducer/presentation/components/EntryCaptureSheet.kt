@@ -1,5 +1,6 @@
 package de.frank.entropyreducer.presentation.components
 
+import android.widget.Toast
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -39,6 +40,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
@@ -71,6 +73,7 @@ fun EntryCaptureSheet(
     voiceVm: VoiceCaptureViewModel = hiltViewModel(),
 ) {
     val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
+    val context = LocalContext.current
     val cosmos = LocalCosmos.current
     val voiceState by voiceVm.state.collectAsStateWithLifecycle()
     val voiceError by voiceVm.error.collectAsStateWithLifecycle()
@@ -86,7 +89,12 @@ fun EntryCaptureSheet(
         )
 
     // Bei Fehler kurz anzeigen, dann auf CHOOSE zurueck.
-    LaunchedEffect(voiceError) { voiceError?.let { voiceVm.clearError() } }
+    LaunchedEffect(voiceError) {
+        voiceError?.let { msg ->
+            Toast.makeText(context, msg, Toast.LENGTH_LONG).show()
+            voiceVm.clearError()
+        }
+    }
 
     ModalBottomSheet(
         onDismissRequest = {

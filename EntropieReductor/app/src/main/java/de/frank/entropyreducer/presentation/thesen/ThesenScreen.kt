@@ -1,6 +1,7 @@
 package de.frank.entropyreducer.presentation.thesen
 
 import android.content.Context
+import android.widget.Toast
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -38,6 +39,7 @@ import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -115,6 +117,12 @@ fun ThesenScreen(
     val voiceVm: VoiceCaptureViewModel = hiltViewModel()
     val voiceState by voiceVm.state.collectAsStateWithLifecycle()
     val voiceError by voiceVm.error.collectAsStateWithLifecycle()
+    LaunchedEffect(voiceError) {
+        voiceError?.let { msg ->
+            Toast.makeText(context, msg, Toast.LENGTH_LONG).show()
+            voiceVm.clearError()
+        }
+    }
     val improveVm: ThesenImproveViewModel = hiltViewModel()
     val improveState by improveVm.state.collectAsStateWithLifecycle()
     val improvedText by improveVm.improvedText.collectAsStateWithLifecycle()

@@ -24,8 +24,8 @@ import androidx.core.content.ContextCompat
  *
  * Permissions:
  * - [Manifest.permission.RECORD_AUDIO] (immer): für MediaRecorder.
- * - [Manifest.permission.POST_NOTIFICATIONS] (Android 13 = API 33+): für den
- *   Foreground-Service-Notification-Channel "Aufnahme".
+ * - [Manifest.permission.POST_NOTIFICATIONS] (Android 13 = API 33+): wird optional
+ *   mit angefragt, darf die Aufnahme aber nicht blockieren.
  */
 class MicPermissionState internal constructor(
     val check: () -> Boolean,
@@ -42,8 +42,12 @@ fun rememberMicPermissionState(
     val launcher = rememberLauncherForActivityResult(
         ActivityResultContracts.RequestMultiplePermissions()
     ) { results ->
-        val denied = results.filterValues { !it }.keys.toList()
-        if (denied.isEmpty()) onAllGranted() else onDenied(denied)
+        val deniedRequired = results
+            .filterKeys { it == Manifest.permission.RECORD_AUDIO }
+            .filterValues { !it }
+            .keys
+            .toList()
+        if (deniedRequired.isEmpty()) onAllGranted() else onDenied(deniedRequired)
     }
 
     return remember(ctx) {
@@ -52,14 +56,7 @@ fun rememberMicPermissionState(
                 val recordOk = ContextCompat.checkSelfPermission(
                     ctx, Manifest.permission.RECORD_AUDIO,
                 ) == PackageManager.PERMISSION_GRANTED
-                val notifOk = if (Build.VERSION.SDK_INT >= 33) {
-                    ContextCompat.checkSelfPermission(
-                        ctx, Manifest.permission.POST_NOTIFICATIONS,
-                    ) == PackageManager.PERMISSION_GRANTED
-                } else {
-                    true  // Vor Android 13 wird die Notification implizit erlaubt.
-                }
-                recordOk && notifOk
+                recordOk
             },
             request = {
                 val perms = mutableListOf(Manifest.permission.RECORD_AUDIO)

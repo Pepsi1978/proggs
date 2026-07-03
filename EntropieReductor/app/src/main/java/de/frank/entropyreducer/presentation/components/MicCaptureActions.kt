@@ -1,5 +1,6 @@
 package de.frank.entropyreducer.presentation.components
 
+import android.widget.Toast
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -23,6 +24,7 @@ import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -33,6 +35,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
@@ -91,8 +94,17 @@ fun MicCaptureActions(
     onWriteClick: (() -> Unit)? = null,
     voiceVm: VoiceCaptureViewModel = hiltViewModel(),
 ) {
+    val context = LocalContext.current
     val voiceState by voiceVm.state.collectAsStateWithLifecycle()
+    val voiceError by voiceVm.error.collectAsStateWithLifecycle()
     var inputDialogOpen by remember { mutableStateOf(false) }
+
+    LaunchedEffect(voiceError) {
+        voiceError?.let { msg ->
+            Toast.makeText(context, msg, Toast.LENGTH_LONG).show()
+            voiceVm.clearError()
+        }
+    }
 
     // Liefert ein fertiges Transkript entweder ans Review-Fenster (wenn gesetzt)
     // oder direkt an onTextCommit (altes Verhalten der anderen Reiter).

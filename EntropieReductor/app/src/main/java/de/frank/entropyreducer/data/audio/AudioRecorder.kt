@@ -22,9 +22,9 @@ class AudioRecorder @Inject constructor(
 
     /** Startet eine Aufnahme und gibt die Ziel-Datei zurück. */
     fun start(): File {
+        if (recorder != null) discard()
         val dir = File(context.cacheDir, "audio").apply { if (!exists()) mkdirs() }
         val file = File(dir, "${UUID.randomUUID()}.m4a")
-        currentFile = file
 
         val rec = if (Build.VERSION.SDK_INT >= 31) {
             MediaRecorder(context)
@@ -32,18 +32,26 @@ class AudioRecorder @Inject constructor(
             @Suppress("DEPRECATION")
             MediaRecorder()
         }
-        rec.apply {
-            setAudioSource(MediaRecorder.AudioSource.MIC)
-            setOutputFormat(MediaRecorder.OutputFormat.MPEG_4)
-            setAudioEncoder(MediaRecorder.AudioEncoder.AAC)
-            setAudioChannels(1)
-            setAudioSamplingRate(16_000)
-            setAudioEncodingBitRate(64_000)
-            setOutputFile(file.absolutePath)
-            prepare()
-            start()
+        try {
+            rec.apply {
+                setAudioSource(MediaRecorder.AudioSource.MIC)
+                setOutputFormat(MediaRecorder.OutputFormat.MPEG_4)
+                setAudioEncoder(MediaRecorder.AudioEncoder.AAC)
+                setAudioChannels(1)
+                setAudioSamplingRate(16_000)
+                setAudioEncodingBitRate(64_000)
+                setOutputFile(file.absolutePath)
+                prepare()
+                start()
+            }
+        } catch (t: Throwable) {
+            rec.release()
+            file.delete()
+            currentFile = null
+            throw t
         }
         recorder = rec
+        currentFile = file
         return file
     }
 
