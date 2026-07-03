@@ -294,6 +294,8 @@ class ProcessEntryUseCase @Inject constructor(
                 // Sicherheitsnetz: auch wenn die KI doch mehr als 3 Woerter liefert, hart kappen.
                 Result.success(limitToThreeWords(raw))
             }
+        } catch (cancellation: kotlinx.coroutines.CancellationException) {
+            throw cancellation
         } catch (t: Throwable) {
             Result.failure(t)
         }

@@ -90,6 +90,8 @@ class TtsPlayer @Inject constructor(
                 playFile(audioFile, onPlaybackStart, onComplete, onError)
             }
             TtsResult.Success
+        } catch (cancellation: kotlinx.coroutines.CancellationException) {
+            throw cancellation
         } catch (e: Exception) {
             Diag.e(DiagnosticArea.GOOGLE_TTS, TAG, "TTS-Synthese fehlgeschlagen: ${e.message}", e)
             onError?.invoke(e)
@@ -99,13 +101,20 @@ class TtsPlayer @Inject constructor(
 
     /** Stoppt die laufende Wiedergabe. Nach `stop()` ist sofort eine neue möglich. */
     fun stop() {
+        val mp = mediaPlayer
+        // Bugfix 2026-07-03 (TTS-Almanach AC4): Listener VOR release() nullen — ein noch
+        // gequeutes onPrepared koennte sonst player.start() auf dem released Player aufrufen
+        // (IllegalStateException-Crash bei "Vorlesen + sofort Stopp").
+        mp?.setOnPreparedListener(null)
+        mp?.setOnCompletionListener(null)
+        mp?.setOnErrorListener(null)
         try {
-            mediaPlayer?.takeIf { it.isPlaying }?.stop()
+            mp?.takeIf { it.isPlaying }?.stop()
         } catch (_: IllegalStateException) {
             // Player schon released — ignorieren
         }
-        mediaPlayer?.release()
-        mediaPlayer = null
+        mp?.release()
+        if (mediaPlayer === mp) mediaPlayer = null
     }
 
     private suspend fun synthesize(
@@ -134,7 +143,15 @@ class TtsPlayer @Inject constructor(
         // (Frank-Wunsch 2026-07-03) — nicht bei jedem Zeichen, sonst liefe das Backup dauernd.
         if (usageStore.add(text.length)) usageBackup.backupNow()
         val audioBytes = Base64.decode(response.audioContentBase64, Base64.DEFAULT)
-        targetFile.writeBytes(audioBytes)
+        // Bugfix 2026-07-03 (TTS-Almanach AC9): atomar ueber .part-Datei + rename schreiben —
+        // eine halb geschriebene MP3 (Prozess-Tod/Abbruch mitten im write) wuerde sonst vom
+        // Cache-Check (exists && length > 0) dauerhaft als gueltiger Treffer akzeptiert.
+        val partFile = File(targetFile.parentFile, targetFile.name + ".part")
+        partFile.writeBytes(audioBytes)
+        if (!partFile.renameTo(targetFile)) {
+            partFile.copyTo(targetFile, overwrite = true)
+            partFile.delete()
+        }
         return targetFile
     }
 
@@ -212,6 +229,10 @@ class TtsPlayer @Inject constructor(
             }
             mp.setOnErrorListener { _, what, extra ->
                 Diag.e(DiagnosticArea.GOOGLE_TTS, TAG, "MediaPlayer error what=$what extra=$extra")
+                // Bugfix 2026-07-03 (TTS-Almanach AC1): fehlerhaften Player sofort freigeben,
+                // statt ihn bis zum naechsten stop() im Feld zu halten.
+                mp.release()
+                if (mediaPlayer === mp) mediaPlayer = null
                 if (cont.isActive) {
                     cont.resumeWithException(IllegalStateException("MediaPlayer error $what/$extra"))
                 }
@@ -219,6 +240,8 @@ class TtsPlayer @Inject constructor(
             }
             mediaPlayer = mp
             mp.prepareAsync()
+        } catch (cancellation: kotlinx.coroutines.CancellationException) {
+            throw cancellation
         } catch (e: Exception) {
             mp.release()
             if (mediaPlayer === mp) mediaPlayer = null
@@ -247,31 +270,42 @@ class TtsPlayer @Inject constructor(
         // prepareAsync() statt prepare() — vermeidet StrictMode-DiskRead-Violation
         // auf dem Main-Thread und ist laut MediaPlayer-Doku der empfohlene Weg.
         // Quelle: developer.android.com/reference/android/media/MediaPlayer
-        mediaPlayer = MediaPlayer().apply {
-            setDataSource(file.absolutePath)
-            setOnPreparedListener { player ->
-                player.start()
-                onPlaybackStart?.invoke()
+        // Bugfix 2026-07-03 (TTS-Almanach AC4): Instanz-Guards — Listener duerfen nur den
+        // EIGENEN Player starten/aufraeumen, nie den inzwischen aktuellen einer neueren
+        // Wiedergabe; Setup-Fehler geben den Player sofort frei (vorher leakte das Objekt).
+        val mp = MediaPlayer()
+        mediaPlayer = mp
+        try {
+            mp.setDataSource(file.absolutePath)
+            mp.setOnPreparedListener { player ->
+                if (mediaPlayer === player) {
+                    player.start()
+                    onPlaybackStart?.invoke()
+                }
             }
-            setOnCompletionListener {
+            mp.setOnCompletionListener {
                 onComplete?.invoke()
-                cleanup(file)
+                cleanup(mp, file)
             }
-            setOnErrorListener { _, what, extra ->
+            mp.setOnErrorListener { _, what, extra ->
                 Diag.e(DiagnosticArea.GOOGLE_TTS, TAG, "MediaPlayer error what=$what extra=$extra")
                 onError?.invoke(IllegalStateException("MediaPlayer error $what/$extra"))
-                cleanup(file)
+                cleanup(mp, file)
                 true
             }
-            prepareAsync()
+            mp.prepareAsync()
+        } catch (e: Exception) {
+            try { mp.release() } catch (_: Exception) { /* ignore */ }
+            if (mediaPlayer === mp) mediaPlayer = null
+            throw e
         }
     }
 
-    private fun cleanup(file: File) {
+    private fun cleanup(mp: MediaPlayer, file: File) {
         try {
-            mediaPlayer?.release()
+            mp.release()
         } catch (_: Exception) { /* ignore */ }
-        mediaPlayer = null
+        if (mediaPlayer === mp) mediaPlayer = null
         if (file.exists()) file.delete()
     }
 }

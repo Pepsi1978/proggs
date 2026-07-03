@@ -111,6 +111,9 @@ class PolarBulkImporter @Inject constructor(
         } ?: false
 
         if (isDirectTcx) {
+            // Bugfix 2026-07-03: der eingangs geoeffnete ZIP-InputStream wird in diesem Zweig
+            // nie konsumiert — schliessen statt leaken (nur der else-Zweig nutzt ihn per use{}).
+            try { inputStream.close() } catch (_: java.io.IOException) { /* ignore */ }
             // Datei direkt als TCX-XML laden
             val fullText = resolver.openInputStream(zipUri)?.bufferedReader()?.use { it.readText() }
             if (!fullText.isNullOrBlank()) {

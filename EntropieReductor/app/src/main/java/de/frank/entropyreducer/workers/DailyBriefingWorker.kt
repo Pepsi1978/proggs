@@ -64,6 +64,8 @@ class DailyBriefingWorker @AssistedInject constructor(
                 body = "Tippen, um es vom Genie vorlesen zu lassen.",
             )
             Result.success()
+        } catch (cancellation: kotlinx.coroutines.CancellationException) {
+            throw cancellation
         } catch (t: Throwable) {
             Diag.e(DiagnosticArea.BRIEFING, TAG, "DailyBriefingWorker fehlgeschlagen", t)
             Result.retry()

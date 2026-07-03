@@ -67,6 +67,8 @@ class KiQuestionWorker @AssistedInject constructor(
                 )
             }
             Result.success()
+        } catch (cancellation: kotlinx.coroutines.CancellationException) {
+            throw cancellation
         } catch (e: Throwable) {
             Diag.e(DiagnosticArea.AGENTIC, TAG, "KI-Frage-Worker fehlgeschlagen", e)
             Result.retry()

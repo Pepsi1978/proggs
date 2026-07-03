@@ -90,6 +90,8 @@ class DriveSession @Inject constructor(
         } catch (e: UserRecoverableAuthException) {
             Diag.w(DiagnosticArea.DRIVE_BACKUP, TAG, "Consent erforderlich: ${e.message}")
             throw DriveConsentRequiredException(e.intent ?: Intent())
+        } catch (cancellation: kotlinx.coroutines.CancellationException) {
+            throw cancellation
         } catch (t: Throwable) {
             Diag.e(DiagnosticArea.DRIVE_BACKUP, TAG, "Token-Hol fehlgeschlagen: ${t.javaClass.simpleName}: ${t.message}", t)
             throw t

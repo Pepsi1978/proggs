@@ -126,6 +126,8 @@ constructor(private val hypothesisRepository: HypothesisRepository) : AgenticToo
                 data = resultJson,
                 createdEntityIds = listOf(id),
             )
+        } catch (cancellation: kotlinx.coroutines.CancellationException) {
+            throw cancellation
         } catch (t: Throwable) {
             ToolResult.Failure(
                 message = "Fehler beim Anlegen der Hypothese: ${t.message ?: t::class.simpleName}"

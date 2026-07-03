@@ -254,6 +254,8 @@ constructor(
                 // anzuzeigen.
                 deletedFlow.value = true
                 templateCreated.tryEmit(true)
+            } catch (cancellation: kotlinx.coroutines.CancellationException) {
+                throw cancellation
             } catch (t: Throwable) {
                 templateCreated.tryEmit(false)
             }
@@ -317,6 +319,8 @@ constructor(
                 // Backup-Trigger, damit der Nachtrag auch ohne Gemini-Rescore gesichert wird.
                 entries.triggerBackup("Aufgaben-Nachtrag: hinzugefuegt")
                 rescoreWithCurrentFollowups()
+            } catch (cancellation: kotlinx.coroutines.CancellationException) {
+                throw cancellation
             } catch (e: Exception) {
                 errorFlow.value = "Nachtrag konnte nicht gespeichert werden: ${e.message}"
             } finally {

@@ -123,6 +123,8 @@ constructor(
             } else {
                 Result.failure(e)
             }
+        } catch (cancellation: kotlinx.coroutines.CancellationException) {
+            throw cancellation
         } catch (t: Throwable) {
             Diag.e(DiagnosticArea.DRIVE_BACKUP, TAG, "upload($fileName) failed: ${t.javaClass.simpleName}: ${t.message}", t)
             Result.failure(t)

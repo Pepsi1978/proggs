@@ -115,6 +115,8 @@ constructor(private val entryRepository: EntryRepository) : AgenticTool {
                 data = resultJson,
                 updatedEntityIds = listOf(id),
             )
+        } catch (cancellation: kotlinx.coroutines.CancellationException) {
+            throw cancellation
         } catch (t: Throwable) {
             ToolResult.Failure(
                 message = "Fehler beim Aktualisieren des Status: ${t.message ?: t::class.simpleName}"

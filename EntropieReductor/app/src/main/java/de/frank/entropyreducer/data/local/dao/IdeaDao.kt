@@ -8,6 +8,7 @@ import androidx.room.Query
 import androidx.room.Relation
 import androidx.room.Transaction
 import androidx.room.Update
+import androidx.room.Upsert
 import de.frank.entropyreducer.data.local.entities.IdeaEntity
 import de.frank.entropyreducer.data.local.entities.IdeaFollowupEntity
 import kotlinx.coroutines.flow.Flow
@@ -53,10 +54,12 @@ interface IdeaDao {
     @Query("SELECT * FROM idea_followups")
     suspend fun getAllFollowupsForBackup(): List<IdeaFollowupEntity>
 
-    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    // Bugfix 2026-07-03 (Room-Almanach K1): @Upsert — REPLACE loeschte via CASCADE die
+    // idea_followups des Eintrags bei jedem Update/Sync.
+    @Upsert
     suspend fun upsertIdea(idea: IdeaEntity)
 
-    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    @Upsert
     suspend fun upsertIdeas(ideas: List<IdeaEntity>)
 
     @Insert(onConflict = OnConflictStrategy.REPLACE)

@@ -150,6 +150,8 @@ constructor(private val hypothesisRepository: HypothesisRepository) : AgenticToo
                 }
 
             ToolResult.Success(data = resultJson)
+        } catch (cancellation: kotlinx.coroutines.CancellationException) {
+            throw cancellation
         } catch (t: Throwable) {
             ToolResult.Failure(
                 message = "Fehler beim Lesen der Hypothesen: ${t.message ?: t::class.simpleName}"

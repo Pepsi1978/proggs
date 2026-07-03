@@ -125,6 +125,8 @@ constructor(private val whoopRepository: WhoopRepository) : AgenticTool {
                 }
 
             ToolResult.Success(data = resultJson)
+        } catch (cancellation: kotlinx.coroutines.CancellationException) {
+            throw cancellation
         } catch (t: Throwable) {
             ToolResult.Failure(
                 message = "Fehler beim Lesen der Biomarker-Daten: ${t.message ?: t::class.simpleName}"

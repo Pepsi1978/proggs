@@ -141,6 +141,8 @@ constructor(private val memoryRepository: MemoryRepository) : AgenticTool {
                 }
 
             ToolResult.Success(data = resultJson)
+        } catch (cancellation: kotlinx.coroutines.CancellationException) {
+            throw cancellation
         } catch (t: Throwable) {
             ToolResult.Failure(
                 message = "Fehler beim Lesen der Memories: ${t.message ?: t::class.simpleName}"

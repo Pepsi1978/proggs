@@ -109,6 +109,8 @@ class WidgetActionReceiver : BroadcastReceiver() {
                         ),
                     )
                 }
+            } catch (cancellation: kotlinx.coroutines.CancellationException) {
+                throw cancellation
             } catch (e: Exception) {
                 Diag.e(DiagnosticArea.APP, "WidgetActionReceiver", "completeTask fehlgeschlagen", e)
             } finally {

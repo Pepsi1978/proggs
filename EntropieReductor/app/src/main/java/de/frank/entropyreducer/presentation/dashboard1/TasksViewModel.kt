@@ -668,6 +668,8 @@ class TasksViewModel @Inject constructor(
             try {
                 val question = generateKiQuestion(previousText)
                 kiQuestions.setCurrent(question)
+            } catch (cancellation: kotlinx.coroutines.CancellationException) {
+                throw cancellation
             } catch (t: Throwable) {
                 Diag.e(DiagnosticArea.TASKS, "TasksViewModel", "refreshKiQuestion failed", t)
             }
@@ -747,6 +749,8 @@ class TasksViewModel @Inject constructor(
                         updatedAt = System.currentTimeMillis(),
                     ),
                 )
+            } catch (cancellation: kotlinx.coroutines.CancellationException) {
+                throw cancellation
             } catch (t: Throwable) {
                 Diag.e(DiagnosticArea.TASKS, "TasksViewModel", "Memory speichern fehlgeschlagen", t)
             }

@@ -107,6 +107,8 @@ constructor(private val entryRepository: EntryRepository) : AgenticTool {
                 data = resultJson,
                 deletedEntityIds = listOf(id),
             )
+        } catch (cancellation: kotlinx.coroutines.CancellationException) {
+            throw cancellation
         } catch (t: Throwable) {
             ToolResult.Failure(
                 message = "Fehler beim Löschen der Aufgabe: ${t.message ?: t::class.simpleName}"

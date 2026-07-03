@@ -84,6 +84,8 @@ constructor(@ApplicationContext private val context: Context, private val sessio
             } else {
                 Result.failure(e)
             }
+        } catch (cancellation: kotlinx.coroutines.CancellationException) {
+            throw cancellation
         } catch (t: Throwable) {
             Diag.e(DiagnosticArea.DRIVE_BACKUP, TAG, "fetchFile($fileName) failed: ${t.javaClass.simpleName}: ${t.message}", t)
             Result.failure(t)
@@ -115,6 +117,8 @@ constructor(@ApplicationContext private val context: Context, private val sessio
             } else {
                 false
             }
+        } catch (cancellation: kotlinx.coroutines.CancellationException) {
+            throw cancellation
         } catch (_: Throwable) {
             false
         }

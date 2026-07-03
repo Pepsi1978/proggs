@@ -154,6 +154,8 @@ constructor(
             }
 
             ToolResult.Success(data = resultJson)
+        } catch (cancellation: kotlinx.coroutines.CancellationException) {
+            throw cancellation
         } catch (t: Throwable) {
             ToolResult.Failure(
                 "Fehler beim Lesen der Prompt-Ergebnisse: ${t.message ?: t::class.simpleName}"

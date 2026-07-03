@@ -107,6 +107,8 @@ class MatchInsightUseCase @Inject constructor(
                 ?: return null
             if (parsed.matchedIndex < 0 || parsed.matchedIndex >= all.size) return null
             all[parsed.matchedIndex]
+        } catch (cancellation: kotlinx.coroutines.CancellationException) {
+            throw cancellation
         } catch (_: Throwable) {
             null
         }

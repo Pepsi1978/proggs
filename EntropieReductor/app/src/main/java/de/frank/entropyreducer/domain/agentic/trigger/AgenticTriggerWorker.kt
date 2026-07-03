@@ -84,6 +84,8 @@ constructor(
                 rescheduleNext(trigger, now)
             }
             Result.success()
+        } catch (cancellation: kotlinx.coroutines.CancellationException) {
+            throw cancellation
         } catch (t: Throwable) {
             Diag.e(DiagnosticArea.AGENTIC, TAG, "AgenticTriggerWorker fehlgeschlagen", t)
             Result.retry()
@@ -107,6 +109,8 @@ constructor(
                     )
                 }
             }
+        } catch (cancellation: kotlinx.coroutines.CancellationException) {
+            throw cancellation
         } catch (t: Throwable) {
             Diag.e(DiagnosticArea.AGENTIC, TAG, "Auto-Run fuer ${trigger.id} fehlgeschlagen", t)
         }

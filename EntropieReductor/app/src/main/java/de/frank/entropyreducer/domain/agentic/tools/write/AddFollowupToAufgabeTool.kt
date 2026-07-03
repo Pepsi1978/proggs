@@ -125,6 +125,8 @@ constructor(
                 createdEntityIds = listOf(followupId),
                 updatedEntityIds = listOf(aufgabeId),
             )
+        } catch (cancellation: kotlinx.coroutines.CancellationException) {
+            throw cancellation
         } catch (t: Throwable) {
             ToolResult.Failure(
                 message = "Fehler beim Hinzufügen des Nachtrags: ${t.message ?: t::class.simpleName}"

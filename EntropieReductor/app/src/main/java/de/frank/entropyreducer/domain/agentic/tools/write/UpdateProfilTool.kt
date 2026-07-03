@@ -109,6 +109,8 @@ constructor(
                 data = resultJson,
                 updatedEntityIds = listOf("profile_text"),
             )
+        } catch (cancellation: kotlinx.coroutines.CancellationException) {
+            throw cancellation
         } catch (t: Throwable) {
             ToolResult.Failure(
                 message = "Fehler beim Aktualisieren des Profils: ${t.message ?: t::class.simpleName}"

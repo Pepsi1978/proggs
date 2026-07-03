@@ -103,6 +103,8 @@ constructor(private val memoryRepository: MemoryRepository) : AgenticTool {
                 data = resultJson,
                 createdEntityIds = listOf(id),
             )
+        } catch (cancellation: kotlinx.coroutines.CancellationException) {
+            throw cancellation
         } catch (t: Throwable) {
             ToolResult.Failure(
                 message = "Fehler beim Speichern des Memory-Eintrags: ${t.message ?: t::class.simpleName}"

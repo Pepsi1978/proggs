@@ -63,6 +63,8 @@ class TriggerPollingWorker @AssistedInject constructor(
                 }
             }
             Result.success()
+        } catch (cancellation: kotlinx.coroutines.CancellationException) {
+            throw cancellation
         } catch (t: Throwable) {
             Diag.e(DiagnosticArea.AGENTIC, TAG, "TriggerPollingWorker fehlgeschlagen", t)
             Result.retry()

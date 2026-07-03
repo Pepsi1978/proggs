@@ -54,6 +54,8 @@ class CalendarSession @Inject constructor(
         } catch (e: UserRecoverableAuthException) {
             Diag.w(DiagnosticArea.GOOGLE_CALENDAR, TAG, "Consent erforderlich: ${e.message}")
             throw CalendarConsentRequiredException(e.intent ?: Intent())
+        } catch (cancellation: kotlinx.coroutines.CancellationException) {
+            throw cancellation
         } catch (t: Throwable) {
             Diag.e(DiagnosticArea.GOOGLE_CALENDAR, TAG, "Token-Hol fehlgeschlagen: ${t.javaClass.simpleName}: ${t.message}", t)
             throw t

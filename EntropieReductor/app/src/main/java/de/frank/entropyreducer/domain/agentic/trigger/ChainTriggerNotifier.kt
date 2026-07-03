@@ -146,6 +146,8 @@ constructor(
                     // L5-5: Semaphore beschraenkt globale Chain-Concurrency
                     launch { concurrencyLimiter.withPermit { runChainOne(trigger) } }
                 }
+            } catch (cancellation: kotlinx.coroutines.CancellationException) {
+                throw cancellation
             } catch (t: Throwable) {
                 Diag.e(DiagnosticArea.AGENTIC, TAG, "ChainTriggerNotifier fehlgeschlagen", t)
             }
@@ -184,6 +186,8 @@ constructor(
                     }
                 }
             triggerRepo.markFired(trigger.id, System.currentTimeMillis(), null)
+        } catch (cancellation: kotlinx.coroutines.CancellationException) {
+            throw cancellation
         } catch (t: Throwable) {
             Diag.e(DiagnosticArea.AGENTIC, TAG, "Chain-Run fuer ${trigger.id} fehlgeschlagen", t)
         }

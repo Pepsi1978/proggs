@@ -65,6 +65,8 @@ constructor(private val appSettings: AppSettings) : AgenticTool {
                 }
 
             ToolResult.Success(data = resultJson)
+        } catch (cancellation: kotlinx.coroutines.CancellationException) {
+            throw cancellation
         } catch (t: Throwable) {
             ToolResult.Failure(
                 message = "Fehler beim Lesen des Profils: ${t.message ?: t::class.simpleName}"

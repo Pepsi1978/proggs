@@ -6,6 +6,7 @@ import androidx.room.Insert
 import androidx.room.OnConflictStrategy
 import androidx.room.Query
 import androidx.room.Update
+import androidx.room.Upsert
 import de.frank.entropyreducer.data.local.entities.PromptExecutionEntity
 import de.frank.entropyreducer.data.local.entities.PromptExecutionStepEntity
 import de.frank.entropyreducer.data.local.entities.PromptToolPermissionEntity
@@ -42,7 +43,9 @@ interface PromptExecutionDao {
     @Query("SELECT * FROM prompt_executions WHERE status = 'RUNNING'")
     suspend fun getRunning(): List<PromptExecutionEntity>
 
-    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    // Bugfix 2026-07-03 (Room-Almanach K1): @Upsert — REPLACE loeschte via CASCADE die
+    // Execution-Steps bei jedem Status-Update der laufenden Ausfuehrung.
+    @Upsert
     suspend fun upsert(execution: PromptExecutionEntity)
 
     @Update suspend fun update(execution: PromptExecutionEntity)

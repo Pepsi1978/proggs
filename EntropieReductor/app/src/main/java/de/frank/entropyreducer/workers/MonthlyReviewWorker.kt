@@ -64,6 +64,8 @@ class MonthlyReviewWorker @AssistedInject constructor(
                 )
                 Result.success()
             }
+        } catch (cancellation: kotlinx.coroutines.CancellationException) {
+            throw cancellation
         } catch (t: Throwable) {
             Diag.e(DiagnosticArea.BRIEFING, TAG, "MonthlyReviewWorker fehlgeschlagen", t)
             Result.retry()

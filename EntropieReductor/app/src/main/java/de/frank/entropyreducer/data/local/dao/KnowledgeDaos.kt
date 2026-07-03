@@ -6,6 +6,7 @@ import androidx.room.Insert
 import androidx.room.OnConflictStrategy
 import androidx.room.Query
 import androidx.room.Update
+import androidx.room.Upsert
 import de.frank.entropyreducer.data.local.entities.GenieCodexVersionEntity
 import de.frank.entropyreducer.data.local.entities.MemoryEntryEntity
 import de.frank.entropyreducer.data.local.entities.SavedPromptEntity
@@ -30,7 +31,9 @@ interface SavedPromptDao {
     @Query("SELECT * FROM saved_prompts WHERE id = :id")
     suspend fun getById(id: String): SavedPromptEntity?
 
-    @Insert(onConflict = OnConflictStrategy.REPLACE) suspend fun upsert(prompt: SavedPromptEntity)
+    // Bugfix 2026-07-03 (Room-Almanach K1): @Upsert — REPLACE loeschte via CASCADE die
+    // Tool-Permissions/Daily-Usage/Trigger des Prompts bei jeder Prompt-Aenderung.
+    @Upsert suspend fun upsert(prompt: SavedPromptEntity)
 
     @Update suspend fun update(prompt: SavedPromptEntity)
 

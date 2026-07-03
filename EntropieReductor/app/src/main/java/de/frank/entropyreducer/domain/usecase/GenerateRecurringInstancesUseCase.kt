@@ -562,6 +562,8 @@ class GenerateRecurringInstancesUseCase @Inject constructor(
                         "Verwaiste Konvertierung '${orphan.title}' in Loop-Instanz $recId umgewandelt.",
                     )
                 }
+            } catch (cancellation: kotlinx.coroutines.CancellationException) {
+                throw cancellation
             } catch (e: Exception) {
                 Diag.w(DiagnosticArea.TASKS, 
                     TAG,

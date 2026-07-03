@@ -34,6 +34,8 @@ class CorrelationWorker @AssistedInject constructor(
             )
         }
         Result.success()
+    } catch (cancellation: kotlinx.coroutines.CancellationException) {
+        throw cancellation
     } catch (t: Throwable) {
         Diag.e(DiagnosticArea.BIOMARKER, TAG, "CorrelationWorker fehlgeschlagen", t)
         Result.retry()

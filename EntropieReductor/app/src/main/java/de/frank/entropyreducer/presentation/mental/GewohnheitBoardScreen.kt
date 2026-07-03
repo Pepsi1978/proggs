@@ -385,6 +385,8 @@ fun GewohnheitBoardScreen(
                                         @Suppress("DEPRECATION")
                                         val vibrator = context.getSystemService(Context.VIBRATOR_SERVICE) as? Vibrator
                                         vibrator?.vibrate(VibrationEffect.createOneShot(500, 255))
+                                    } catch (cancellation: kotlinx.coroutines.CancellationException) {
+                                        throw cancellation
                                     } catch (_: Exception) { /* Vibration nicht verfuegbar */ }
                                     suggestVm.resetProcessedIdeas()
                                 }

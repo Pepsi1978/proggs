@@ -528,6 +528,8 @@ class ScientistViewModel @Inject constructor(
             try {
                 val q = generateScientistQuestion(avoidPreviousText = previousText)
                 scientistQuestions.setCurrent(q)
+            } catch (cancellation: kotlinx.coroutines.CancellationException) {
+                throw cancellation
             } catch (t: Throwable) {
                 Diag.e(DiagnosticArea.AGENTIC, "ScientistViewModel", "refreshScientistQuestion failed", t)
             }
@@ -568,6 +570,8 @@ class ScientistViewModel @Inject constructor(
                         updatedAt = System.currentTimeMillis(),
                     ),
                 )
+            } catch (cancellation: kotlinx.coroutines.CancellationException) {
+                throw cancellation
             } catch (t: Throwable) {
                 Diag.e(DiagnosticArea.AGENTIC, "ScientistViewModel", "Memory speichern fehlgeschlagen", t)
             }

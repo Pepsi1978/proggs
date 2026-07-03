@@ -100,6 +100,8 @@ constructor(private val scientistRepository: ScientistRepository) : AgenticTool 
                 }
 
             ToolResult.Success(data = resultJson)
+        } catch (cancellation: kotlinx.coroutines.CancellationException) {
+            throw cancellation
         } catch (t: Throwable) {
             ToolResult.Failure(
                 message = "Fehler beim Lesen der Forscher-Sessions: ${t.message ?: t::class.simpleName}"

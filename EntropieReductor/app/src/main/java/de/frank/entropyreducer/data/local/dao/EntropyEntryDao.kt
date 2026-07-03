@@ -6,6 +6,7 @@ import androidx.room.Insert
 import androidx.room.OnConflictStrategy
 import androidx.room.Query
 import androidx.room.Update
+import androidx.room.Upsert
 import de.frank.entropyreducer.data.local.entities.EntropyEntryEntity
 import de.frank.entropyreducer.domain.model.EntropyCategory
 import de.frank.entropyreducer.domain.model.EntryStatus
@@ -108,7 +109,10 @@ interface EntropyEntryDao {
     )
     suspend fun getRecentManualDurationSamples(limit: Int): List<EntropyEntryEntity>
 
-    @Insert(onConflict = OnConflictStrategy.REPLACE) suspend fun upsert(entry: EntropyEntryEntity)
+    // Bugfix 2026-07-03 (Room-Almanach K1): @Upsert statt @Insert(REPLACE) — REPLACE ist
+    // DELETE+INSERT und feuert den CASCADE der entropy_entry_followups: jedes Update eines
+    // bestehenden Eintrags (auch via Drive-Sync-LWW) loeschte still alle seine Nachtraege.
+    @Upsert suspend fun upsert(entry: EntropyEntryEntity)
 
     @Update suspend fun update(entry: EntropyEntryEntity)
 

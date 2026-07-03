@@ -47,6 +47,8 @@ class KiTriggerWorker @AssistedInject constructor(
             // Generator-Failure (Kein Key, Network down) NICHT als Worker-Fehler retry-en —
             // das führt zu Endlos-Retries. Lieber als Erfolg melden mit count=0.
             Result.success()
+        } catch (cancellation: kotlinx.coroutines.CancellationException) {
+            throw cancellation
         } catch (t: Throwable) {
             Diag.e(DiagnosticArea.AGENTIC, TAG, "KiTriggerWorker fehlgeschlagen mit harter Exception", t)
             Result.retry()
