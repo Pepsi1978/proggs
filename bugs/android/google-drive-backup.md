@@ -51,6 +51,7 @@
 | 28 | `HiltWorker`-Crash nach Prozess-Tod | Default-WM-Initializer entfernen + `Configuration.Provider` (Property!) | WM1 |
 | 29 | FGS-Crash Android 14/15 | Service-Typ im Manifest mergen; `onTimeout`/StopReason behandeln | WM4, WM6 |
 | 30 | Backup „aktiviert" aber tot | Zeitstempel des letzten ERFOLGREICHEN Backups zeigen + warnen | INC1, INC2 |
+| 31 | Sign-In `DEVELOPER_ERROR` (Code 10) nach Keystore-Wechsel | Neuen SHA-1 in Cloud Console (Android-Client, Package **inkl. `.debug`**) hinterlegen; neue „Google Auth Platform"-UI hat nur EIN SHA-Feld → alten Wert **überschreiben** | CM8 |
 
 ---
 
@@ -744,6 +745,7 @@
 - **Versionen:** durchgehend.
 - **FIX:** Web-Client-ID eintragen; Web- + Android-OAuth-Client anlegen; beide SHA-1 (Debug-Keystore + Play-App-Signing) hinterlegen.
 - **Quelle:** https://www.codestudy.net/blog/error-10-developer-console-is-not-set-up-correctly-not-using-firebase-one-tap-sign-up/
+- **PRAXIS-FALL (Entropie Reductor, 2026-07-03):** Reiner `GoogleSignIn`-Flow `DEFAULT_SIGN_IN` + `requestScopes(DRIVE_APPDATA)` OHNE Firebase / OHNE `requestIdToken` braucht **keine** Web-Client-ID — er matcht den Android-OAuth-Client allein ueber **Package-Name + SHA-1**. Nach Wechsel auf einen **gemeinsamen Debug-Keystore** aenderte sich der SHA-1; der in der Cloud Console hinterlegte (alte) SHA-1 passte nicht mehr → Code 10. Zwei Fallen dabei: (1) Debug-Build mit `applicationIdSuffix ".debug"` → der Android-OAuth-Client muss auf den ECHTEN Package `…​.debug` lauten (nicht den Basis-Package). (2) Die neue **„Google Auth Platform"-Oberflaeche erlaubt pro Android-Client nur EINEN SHA-1** (kein „SHA-1 hinzufuegen" wie in der alten UI) → den vorhandenen Wert **ueberschreiben**; wer zwei Keys parallel braucht, legt **zwei Android-Clients** an (gleicher Package, je 1 SHA-1). Das appDataFolder-Backup bleibt erhalten (an Package + Cloud-Projekt gebunden, NICHT an den SHA-1 — vgl. AV7). SHA-1 auslesen: `keytool -list -v -keystore <keystore> -alias androiddebugkey -storepass android`.
 
 ### CM9. Fehlkonfiguration getarnt als `GetCredentialCancellationException`
 - **Symptom:** „Activity is cancelled by the user", obwohl Nutzer nichts tat; hohe „Abbruch"-Rate.
