@@ -1,6 +1,5 @@
 package de.frank.entropyreducer.presentation.navigation
 
-import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -35,10 +34,6 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.setValue
-import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -52,13 +47,9 @@ import de.frank.entropyreducer.presentation.theme.LocalCosmos
 /**
  * Bottom-Bar mit zentralem Mic-Button (FAB-Style).
  *
- * Zwei Modi (Frank-Wunsch 2026-05-17, zweite Iteration):
- * - **Sub-Bar (Default)** — pro aktivem Top-Level-Tab wird sofort die 3-Symbol- Sub-Bar angezeigt,
- *   mit eigener Akzent-Farbe fuer ALLE Icons + Texte + Mic (Aufgaben mint, Analyse cyan, Forscher
- *   violett, Biomarker rosé). Der Hintergrund bleibt grau wie der Rest der App.
- * - **5-Tab-Switcher** — nach einer Zurueck-Geste sichtbar. Zeigt die vier Top-Level-Tabs
- *   (Aufgaben/Analyse/Forscher/Biomarker) und den Mic-Button in Standardfarben. Klick auf einen Tab
- *   navigiert dorthin und kehrt sofort in die Sub-Bar zurueck.
+ * Zeigt unten immer nur die vier Hauptreiter Aufgaben/Analyse/Forscher/Biomarker plus Mic.
+ * Sub-Navigation sitzt ausschliesslich oben in [SubTabRow]. Die alten Sub-Bar-Parameter bleiben als
+ * No-Op erhalten, damit bestehende Screen-Signaturen nicht gleichzeitig umgebaut werden muessen.
  *
  * [forcedSubMode] erzwingt die Sub-Bar fuer einen bestimmten Parent-Tab — wird vom
  * Sub-Platzhalter-Screen genutzt, damit die Bar dort konsistent in der Tab-Farbe leuchtet.
@@ -79,35 +70,8 @@ fun CosmosBottomBar(
 ) {
     val cosmos = LocalCosmos.current
 
-    // Geteilter Switcher-State (Frank-Wunsch 2026-05-17, dritte Iteration):
-    // - Beim Erststart der App: showSwitcher = true → 5-Tab-Uebersicht.
-    // - Tap auf einen Tab in der Uebersicht: showSwitcher = false → Sub-Bar.
-    // - Zurueck-Geste aus Sub-Bar: showSwitcher = true → Uebersicht.
-    // - Tab-Wechsel: State bleibt erhalten (CompositionLocal lebt in AppNavGraph),
-    //   d.h. die Uebersicht erscheint nicht ungewollt wieder waehrend Navigation.
-    val switcher = LocalBottomBarSwitcher.current
-    val showSwitcher = switcher.showSwitcher
-
-    val isOnMainTab = currentTab in MAIN_TABS
-    // Frank-Wunsch 2026-05-25: Die Uebersichtsleiste (showSwitcher) gewinnt IMMER —
-    // auch auf einem Sub-Screen (forcedSubMode). Dadurch kann man durch erneutes
-    // Tippen auf den bereits offenen Unterbereich (z.B. Journal/Entropie/Thesen)
-    // zurueck zur Standardleiste (Aufgaben/Analyse/Forscher/Biomarker) gelangen —
-    // nicht nur ueber den Haupt-Tab.
-    val activeSubMode: String? =
-        when {
-            showSwitcher -> null
-            forcedSubMode != null -> forcedSubMode
-            isOnMainTab -> currentTab
-            else -> null
-        }
-
-    // Zurueck-Geste:
-    //  - Sub-Bar sichtbar (und kein forced/sub-screen) → Switcher anzeigen
-    //  - forcedSubMode aktiv → BackHandler aus, NavGraph pop wird greifen
-    BackHandler(enabled = forcedSubMode == null && !showSwitcher && isOnMainTab) {
-        switcher.showSwitcher = true
-    }
+    // Poka-Yoke gegen Regression: Diese BottomBar darf nie wieder in den alten Sub-Bar-Modus
+    // wechseln. Subtabs sind oben, unten bleibt die Hauptnavigation immer gleich.
 
     val bottomInset = WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding()
     // Glut: warme, solide Bar-Flaeche (Mockup --bg2) statt halbtransparentem Navy.
@@ -122,67 +86,17 @@ fun CosmosBottomBar(
                 .background(barBg)
     ) {
         Box(modifier = Modifier.fillMaxWidth().height(72.dp).align(Alignment.TopCenter)) {
-            if (activeSubMode == null) {
-                NormalTabsRow(
-                    currentTab = currentTab,
-                    onTabSelected = { tab ->
-                        // Aus dem Switcher heraus: navigieren UND Switcher schliessen.
-                        // Die naechste Re-Composition zeigt automatisch die Sub-Bar
-                        // fuer den neuen Tab.
-                        switcher.showSwitcher = false
-                        onTabSelected(tab)
-                    },
-                )
-                MicButton(
-                    state = micState,
-                    onClick = onMicClick,
-                    size = 56.dp,
-                    accentColor = cosmos.accent,
-                    modifier = Modifier.align(Alignment.Center),
-                )
-            } else {
-                val tint = subModeTint(activeSubMode)
-                val subTint = subModeSubTint(activeSubMode)
-                SubModeRow(
-                    parentTab = activeSubMode,
-                    tint = tint,
-                    subTint = subTint,
-                    selectedSubIndex = selectedSubIndex,
-                    onParentClick = {
-                        // Klick auf das Parent-Icon links:
-                        //  - Auf Sub-Screen (forcedSubMode): zurueck zum Parent-Tab
-                        //    (popBackStack via onTabSelected → tabSwitch).
-                        //  - Auf Main-Screen: 5-Tab-Switcher anzeigen.
-                        if (forcedSubMode != null) {
-                            onTabSelected(activeSubMode)
-                        } else {
-                            switcher.showSwitcher = true
-                        }
-                    },
-                    onSubAreaClick = { index ->
-                        if (index == selectedSubIndex) {
-                            // Re-Tap auf den bereits offenen Unterbereich → zurueck zur
-                            // Uebersichtsleiste UND zur Parent-Hauptansicht (Frank-Wunsch
-                            // 2026-05-25, Praezisierung): vorher blieb die ANSICHT im
-                            // Unterbereich (z.B. Thesen / Biomarker-"1") haengen, waehrend
-                            // die Leiste schon die Uebersicht mit markiertem Parent zeigte.
-                            // onTabSelected springt auf das Parent-Hauptpattern
-                            // (Aufgaben/Analyse/Forscher/Biomarker) — passend zur Markierung.
-                            switcher.showSwitcher = true
-                            onTabSelected(activeSubMode)
-                        } else {
-                            onSubAreaSelected(activeSubMode, index)
-                        }
-                    },
-                )
-                MicButton(
-                    state = micState,
-                    onClick = onMicClick,
-                    size = 56.dp,
-                    accentColor = subTint,
-                    modifier = Modifier.align(Alignment.Center),
-                )
-            }
+            NormalTabsRow(
+                currentTab = currentTab,
+                onTabSelected = onTabSelected,
+            )
+            MicButton(
+                state = micState,
+                onClick = onMicClick,
+                size = 56.dp,
+                accentColor = cosmos.accent,
+                modifier = Modifier.align(Alignment.Center),
+            )
         }
     }
 }
@@ -450,16 +364,3 @@ private fun subModeSubTint(tab: String): Color {
     }
 }
 
-private val MAIN_TABS = setOf(Routes.TASKS, Routes.ANALYSIS, Routes.SCIENTIST, Routes.BIOMARKER)
-
-/**
- * Geteilter Switcher-State (5-Tab-Uebersicht vs. Sub-Bar). Wird per [CompositionLocalProvider] in
- * [AppNavGraph] bereitgestellt, damit der Zustand Tab-Wechsel ueberlebt. Initialwert `true` ist
- * beim App-Start gewollt — Frank will dort zuerst die 5-Tab-Uebersicht sehen und einen Tab waehlen.
- */
-class BottomBarSwitcherState {
-    var showSwitcher by mutableStateOf(true)
-}
-
-val LocalBottomBarSwitcher =
-    staticCompositionLocalOf<BottomBarSwitcherState> { BottomBarSwitcherState() }

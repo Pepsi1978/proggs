@@ -623,11 +623,8 @@ fun BiomarkerHostScreen(
                 }
                 item("ft_spacer", span = { GridItemSpan(2) }) { Spacer(Modifier.height(80.dp)) }
             }
-            // Frank-Wunsch 2026-05-22 Phase 2: einheitliche Mic-Aktion.
-            // Akzent folgt der BottomBar: Cyan im Switcher, Rosé im Sub-Modus.
-            val switcher =
-                de.frank.entropyreducer.presentation.navigation.LocalBottomBarSwitcher.current
-            val micAccent = if (switcher.showSwitcher) LocalCosmos.current.accent else LocalCosmos.current.accentBio
+            // BottomBar ist immer die orange Hauptleiste; Mic-Aktionen folgen derselben Farbe.
+            val micAccent = LocalCosmos.current.accent
             de.frank.entropyreducer.presentation.components.MicCaptureActions(
                 visible = micActionsOpen,
                 accent = micAccent,

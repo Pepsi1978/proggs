@@ -185,11 +185,8 @@ fun AnalysisScreen(
             ) {
                 Snackbar(it)
             }
-            // Frank-Wunsch 2026-05-22: einheitliche Mic-Aktion mit BottomBar-Farbe.
-            // Switcher offen → Cyan, sonst Gruen (Analyse-Sub).
-            val switcher =
-                de.frank.entropyreducer.presentation.navigation.LocalBottomBarSwitcher.current
-            val micAccent = if (switcher.showSwitcher) LocalCosmos.current.accent else LocalCosmos.current.accentAnalyse
+            // BottomBar ist immer die orange Hauptleiste; Mic-Aktionen folgen derselben Farbe.
+            val micAccent = LocalCosmos.current.accent
             de.frank.entropyreducer.presentation.components.MicCaptureActions(
                 visible = micActionsOpen,
                 accent = micAccent,
