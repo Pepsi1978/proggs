@@ -17,9 +17,15 @@ import javax.inject.Singleton
 object DatabaseModule {
 
     /**
-     * Haupt-Datenbank (Aufgaben, Biomarker, Kalender, Memory, Insights etc.). Stage 1: destructive
-     * fallback ist explizit gewollt — Schema ist noch in Bewegung, Datenverlust hier ist akzeptabel
-     * weil die meisten Tabellen wieder befuellt werden (Whoop-Sync, Calendar-Sync, KI-Vorschlaege).
+     * Haupt-Datenbank (Aufgaben, Biomarker, Kalender, Memory, Insights etc.).
+     *
+     * Migrations-Politik (verschaerft 2026-07-03, #47447 — Room-Almanach M1/M2):
+     * Der fruehere pauschale destructive fallback war eine tickende Datenverlust-Bombe —
+     * ein einziger Versions-Bump ohne Migration haette ALLE lokalen Daten still verworfen.
+     * Jetzt gilt: destruktiv NUR noch fuer Uralt-Staende < 10 (fuer die nie Migrationen
+     * geschrieben wurden); ab Version 10 crasht ein fehlender Migrationspfad LAUT beim
+     * Start (Poka-Yoke wie bei der ScientistDatabase) — dann MUSS eine echte
+     * Migration/@AutoMigration ergaenzt werden, nie der Fallback zurueckkommen.
      */
     @Provides
     @Singleton
@@ -55,7 +61,10 @@ object DatabaseModule {
                 AppDatabase.MIGRATION_33_34,
                 AppDatabase.MIGRATION_34_35,
             )
-            .fallbackToDestructiveMigration(dropAllTables = true)
+            // Destruktiv NUR von Uralt-Versionen 1-9 (keine Migrationen vorhanden, kein
+            // Geraet mehr auf diesem Stand). Ab Version 10: NIE destruktiv — fehlende
+            // Migration = lauter Start-Crash statt stillem Verlust aller Daten.
+            .fallbackToDestructiveMigrationFrom(true, 1, 2, 3, 4, 5, 6, 7, 8, 9)
             .build()
 
     /**
