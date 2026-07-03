@@ -41,6 +41,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.unit.dp
+import de.frank.entropyreducer.BuildConfig
 import de.frank.entropyreducer.presentation.components.CosmosScaffold
 import de.frank.entropyreducer.presentation.components.GlassCard
 import de.frank.entropyreducer.presentation.navigation.Routes
@@ -64,6 +65,14 @@ fun SettingsHomeScreen(onBack: () -> Unit, onOpen: (String) -> Unit) {
             contentPadding = androidx.compose.foundation.layout.PaddingValues(16.dp),
             verticalArrangement = Arrangement.spacedBy(12.dp),
         ) {
+            item {
+                Text(
+                    text = "Version ${BuildConfig.VERSION_NAME} (${BuildConfig.VERSION_UPDATED_AT})",
+                    style = MaterialTheme.typography.labelSmall,
+                    color = cosmos.textSecondary,
+                    modifier = Modifier.padding(bottom = 4.dp),
+                )
+            }
             sections.forEach { sec ->
                 item {
                     SectionCard(
