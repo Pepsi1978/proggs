@@ -281,6 +281,32 @@ class StravaRepository @Inject constructor(
                     "Gesamt ${overallUsage ?: "?"} von ${overallLimit ?: "?"} (je 15-Min,Tag).",
                 t,
             )
+        } else if (http?.code() == 403) {
+            // Diagnose-Sonde 2026-07-03 (#47451, Vorfall "Trainings kommen nicht mehr an"):
+            // Der 403-Fehler-Body wurde bisher weggeworfen — dabei steht dort die Ursache.
+            // Strava antwortet bei fehlender Token-Berechtigung mit {"message":"Authorization
+            // Error","errors":[{"resource":"AccessToken","field":"activity:read_permission",
+            // "code":"missing"}]} — passiert, wenn beim Strava-Login die (abwaehlbare!)
+            // Consent-Checkbox "Aktivitaeten ansehen" nicht gesetzt war. Body genau EINMAL
+            // lesen (Almanach retrofit S5).
+            val body = runCatching { http.response()?.errorBody()?.string() }.getOrNull()
+            val scopeMissing =
+                body?.contains("activity:read_permission") == true ||
+                    body?.contains("Authorization Error") == true
+            val hint =
+                if (scopeMissing) {
+                    " — dem Token fehlt die Aktivitaets-Berechtigung! Fix: In den App-" +
+                        "Einstellungen Strava trennen und NEU verbinden; beim Strava-Consent " +
+                        "ALLE Haekchen (\"Aktivitaeten ansehen\") gesetzt lassen."
+                } else {
+                    ""
+                }
+            Diag.e(DiagnosticArea.STRAVA, TAG, "Strava 403 Forbidden — Body: ${body ?: "(leer)"}$hint", t)
+            diagnostics.error(
+                DiagnosticArea.STRAVA,
+                "Strava-Zugriff verweigert (HTTP 403): ${body ?: "(kein Fehler-Body)"}$hint",
+                t,
+            )
         } else {
             Diag.e(DiagnosticArea.STRAVA, TAG, "Strava-Sync fehlgeschlagen", t)
             diagnostics.error(
