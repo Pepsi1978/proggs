@@ -64,6 +64,7 @@ fun SubAreaScreen(
     onBack: () -> Unit,
     onSwitchSub: (parentTab: String, index: Int) -> Unit,
     onSwitchTab: (route: String) -> Unit,
+    showBottomBar: Boolean = true,
 ) {
     val cosmos = LocalCosmos.current
     val meta = subSlotMeta(parentTab, subIndex)
@@ -79,6 +80,7 @@ fun SubAreaScreen(
 
     CosmosScaffold(
         title = "$parentLabel · ${meta.title}",
+        showBottomBar = showBottomBar,
         bottomBar = {
             CosmosBottomBar(
                 currentTab = parentTab,

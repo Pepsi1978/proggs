@@ -277,6 +277,7 @@ private val Accent: Color
 fun GewohnheitBoardScreen(
     onSwitchSub: (parentTab: String, index: Int) -> Unit,
     onSwitchTab: (route: String) -> Unit,
+    showBottomBar: Boolean = true,
 ) {
     val cosmos = LocalCosmos.current
     val context = androidx.compose.ui.platform.LocalContext.current
@@ -358,6 +359,7 @@ fun GewohnheitBoardScreen(
 
     CosmosScaffold(
         title = "Gewohnheit",
+        showBottomBar = showBottomBar,
         actions = {
             if (suggestState == SuggestState.LOADING) {
                 CircularProgressIndicator(

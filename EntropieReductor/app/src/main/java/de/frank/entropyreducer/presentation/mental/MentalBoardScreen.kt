@@ -255,6 +255,7 @@ internal val MentalAccent: Color
 fun MentalBoardScreen(
     onSwitchSub: (parentTab: String, index: Int) -> Unit,
     onSwitchTab: (route: String) -> Unit,
+    showBottomBar: Boolean = true,
 ) {
     val cosmos = LocalCosmos.current
     val context = androidx.compose.ui.platform.LocalContext.current
@@ -330,6 +331,7 @@ fun MentalBoardScreen(
 
     CosmosScaffold(
         title = "Mental",
+        showBottomBar = showBottomBar,
         actions = {
             MentalTtsControls(
                 state = ttsState,

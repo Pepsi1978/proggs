@@ -95,6 +95,7 @@ fun ThesenScreen(
     onSwitchSub: (parentTab: String, index: Int) -> Unit,
     onSwitchTab: (route: String) -> Unit,
     onOpenEntry: (entryId: String) -> Unit = {},
+    showBottomBar: Boolean = true,
 ) {
     val cosmos = LocalCosmos.current
     val context = LocalContext.current
@@ -197,6 +198,7 @@ fun ThesenScreen(
 
     CosmosScaffold(
         title = "Thesen",
+        showBottomBar = showBottomBar,
         bottomBar = {
             CosmosBottomBar(
                 currentTab = Routes.SCIENTIST,

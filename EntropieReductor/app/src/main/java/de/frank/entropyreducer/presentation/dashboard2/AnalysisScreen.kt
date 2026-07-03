@@ -80,6 +80,7 @@ fun AnalysisScreen(
     onSwitchTab: (String) -> Unit,
     currentTab: String,
     onOpenSubArea: (parentTab: String, index: Int) -> Unit = { _, _ -> },
+    showBottomBar: Boolean = true,
     vm: AnalysisViewModel = hiltViewModel(),
 ) {
     val state by vm.state.collectAsStateWithLifecycle()
@@ -105,6 +106,7 @@ fun AnalysisScreen(
 
     CosmosScaffold(
         title = "Analyse",
+        showBottomBar = showBottomBar,
         actions = {
             ThemeToggleIcon(current = themeMode, onCycle = themeVm::cycle)
             IconButton(onClick = onOpenSettings) {

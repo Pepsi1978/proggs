@@ -75,6 +75,7 @@ fun BiomarkerHostScreen(
     onOpenOuraDetail: (String) -> Unit = {},
     onOpenHealthConnectDetail: (String) -> Unit = {},
     onOpenSubArea: (parentTab: String, index: Int) -> Unit = { _, _ -> },
+    showBottomBar: Boolean = true,
     vm: BiomarkerViewModel = hiltViewModel(),
 ) {
     // Frank-Wunsch 2026-06-19 (Sync-Etappe 1.1): Bei jedem Sichtbarwerden des Biomarker-Tabs die
@@ -141,6 +142,7 @@ fun BiomarkerHostScreen(
 
     CosmosScaffold(
         title = "Biomarker",
+        showBottomBar = showBottomBar,
         actions = {
             IsolatedThemeToggleIcon()
             IconButton(onClick = vm::refreshNow) {

@@ -62,6 +62,7 @@ fun JournalScreen(
     onSwitchSub: (parentTab: String, index: Int) -> Unit,
     onSwitchTab: (route: String) -> Unit,
     onOpenEntry: (sourceId: Long) -> Unit,
+    showBottomBar: Boolean = true,
     vm: JournalViewModel = hiltViewModel(),
 ) {
     val cosmos = LocalCosmos.current
@@ -70,6 +71,7 @@ fun JournalScreen(
 
     CosmosScaffold(
         title = "Journal",
+        showBottomBar = showBottomBar,
         // Frank-Wunsch 2026-05-24: kompakter Header zieht Titel + Sync-Kopf + Liste
         // dichter zusammen (weniger Luft unter "Journal").
         compactHeader = true,

@@ -48,6 +48,7 @@ fun ScientistScreen(
     onSwitchTab: (String) -> Unit,
     currentTab: String,
     onOpenSubArea: (parentTab: String, index: Int) -> Unit = { _, _ -> },
+    showBottomBar: Boolean = true,
     vm: ScientistViewModel = hiltViewModel(),
 ) {
     val cosmos = LocalCosmos.current
@@ -57,6 +58,7 @@ fun ScientistScreen(
 
     CosmosScaffold(
         title = "Forscher",
+        showBottomBar = showBottomBar,
         actions = {
             ThemeToggleIcon(current = themeMode, onCycle = themeVm::cycle)
             IconButton(onClick = onOpenSettings) {

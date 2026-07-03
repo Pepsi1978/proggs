@@ -137,6 +137,7 @@ fun TasksScreen(
     onOpenEntryDetail: (entryId: String) -> Unit = {},
     // Frank-Wunsch 2026-06-01: Klick auf eine Loop-Karte oeffnet den Loop-Detail-Screen.
     onOpenLoopDetail: (templateId: String) -> Unit = {},
+    showBottomBar: Boolean = true,
     vm: TasksViewModel = hiltViewModel(),
 ) {
     val state by vm.state.collectAsStateWithLifecycle()
@@ -336,6 +337,7 @@ fun TasksScreen(
     CosmosScaffold(
         title = "Aufgaben",
         titleEndContent = {},
+        showBottomBar = showBottomBar,
         actions = {
             // Refresh-Button (Frank-Wunsch 2026-05-22): aktualisiert den
             // gesamten Aufgabenreiter — Rollover, Bucket-Balance, Auto-Archiv
