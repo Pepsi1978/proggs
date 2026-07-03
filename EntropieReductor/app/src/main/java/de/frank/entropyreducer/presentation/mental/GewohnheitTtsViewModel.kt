@@ -40,8 +40,11 @@ import kotlinx.coroutines.withContext
  * - Nur die Gewohnheiten UEBER dem Separator werden vorgelesen.
  */
 
-private val Context.gewohnheitTtsStore by preferencesDataStore(name = "gewohnheit_tts_settings")
-private val KEY_REPEAT = intPreferencesKey("repeat_count")
+// internal (nicht private): das Mental-Vorlesen mit aktivem "G"-Haekchen liest die
+// "wie-oft"-Zahl der Gewohnheiten aus DIESEM Store (gleicher DataStore, keine zweite Instanz
+// auf dieselbe Datei — das wuerde crashen). Frank-Wunsch 2026-07-03.
+internal val Context.gewohnheitTtsStore by preferencesDataStore(name = "gewohnheit_tts_settings")
+internal val KEY_REPEAT = intPreferencesKey("repeat_count")
 private val KEY_LOOP = booleanPreferencesKey("loop_enabled")
 
 data class GewohnheitTtsUiState(

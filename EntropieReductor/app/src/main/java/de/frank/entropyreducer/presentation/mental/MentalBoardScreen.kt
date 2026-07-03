@@ -287,6 +287,10 @@ fun MentalBoardScreen(
     val ttsState by ttsVm.uiState.collectAsStateWithLifecycle()
     // Live-Zaehler des TTS-Monatskontingents — wird unten als letztes Listenelement gezeigt.
     val ttsUsage by ttsVm.usage.collectAsStateWithLifecycle()
+    // Gewohnheiten fuer das optionale Mitlesen (G-Haekchen, Frank-Wunsch 2026-07-03). Flow stabil
+    // per remember(context) halten (gleiche Instanz — sonst Emission-Verlust, siehe mentalsStream).
+    val gewohnheitenStream = remember(context) { gewohnheitenFlow(context) }
+    val gewohnheiten by gewohnheitenStream.collectAsStateWithLifecycle(initialValue = emptyList())
 
     // Fehler (z.B. kein TTS-Schluessel hinterlegt) als Toast zeigen, danach quittieren.
     LaunchedEffect(ttsState.error) {
@@ -338,10 +342,11 @@ fun MentalBoardScreen(
         actions = {
             MentalTtsControls(
                 state = ttsState,
-                onToggle = { ttsVm.togglePlayback(displayed) },
+                onToggle = { ttsVm.togglePlayback(displayed, gewohnheiten) },
                 onAnkerChange = ttsVm::setAnkerCount,
                 onFolgeChange = ttsVm::setFolgeCount,
                 onLoopChange = ttsVm::setLoop,
+                onIncludeHabitsChange = ttsVm::setIncludeHabits,
             )
         },
         bottomBar = {
@@ -661,8 +666,21 @@ private fun MentalTtsControls(
     onAnkerChange: (Int) -> Unit,
     onFolgeChange: (Int) -> Unit,
     onLoopChange: (Boolean) -> Unit,
+    onIncludeHabitsChange: (Boolean) -> Unit,
 ) {
     Row(verticalAlignment = Alignment.CenterVertically) {
+        // "G"-Haekchen: Gewohnheiten am Ende des Mentalblocks mitlesen (Frank-Wunsch 2026-07-03).
+        Text(
+            text = "G",
+            fontWeight = FontWeight.Bold,
+            color = MentalAccent,
+            style = MaterialTheme.typography.labelLarge,
+        )
+        Checkbox(
+            checked = state.includeHabits,
+            onCheckedChange = onIncludeHabitsChange,
+            colors = CheckboxDefaults.colors(checkedColor = MentalAccent),
+        )
         // Neue Anordnung: Häkchen · Dropdown 1 · Dropdown 2 · Lautsprecher
         Checkbox(
             checked = state.loop,

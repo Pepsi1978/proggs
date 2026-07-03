@@ -48,6 +48,11 @@ import kotlinx.coroutines.withContext
  * bis Frank den Lautsprecher erneut drueckt ODER die Sicherheitsgrenze [MAX_DURATION_MS] (15 Minuten)
  * erreicht ist — dann stoppt die App automatisch, damit nicht aus Versehen endlos vorgelesen wird.
  *
+ * Gewohnheiten mitlesen ("G"-Haekchen, Frank-Wunsch 2026-07-03): Ist [MentalTtsUiState.includeHabits]
+ * aktiv, werden die Gewohnheiten NACH dem Mentalblock angehaengt — in der Vorleseweise des
+ * Gewohnheit-Reiters (jeder Satz [gewohnheitRepeat]-mal, aus dem gemeinsamen gewohnheit_tts_settings-
+ * Store). Der Mental-Loop wiederholt dann Mentalblock UND Gewohnheiten gemeinsam.
+ *
  * Kosten/Netz: Jede Sequenzposition wird frisch ueber Google-TTS synthetisiert. Dadurch bekommt
  * auch jede Wiederholung desselben Satzes eine eigene Betonung statt exakt dieselbe MP3-Datei.
  * Beim Stop wird der Sequenz-Cache wieder aufgeraeumt.
@@ -56,12 +61,13 @@ import kotlinx.coroutines.withContext
  * withContext(Dispatchers.Main) bedient; Freigabe deterministisch in [stop]/[onCleared].
  */
 
-/* Eigener kleiner DataStore nur fuer die drei Vorlese-Einstellungen (anker/folge/loop). Bewusst
+/* Eigener kleiner DataStore nur fuer die Vorlese-Einstellungen (anker/folge/loop/G). Bewusst
  * getrennt vom "mental_board"-Store (Saetze) — andere Datei, kein Konflikt. */
 private val Context.mentalTtsStore by preferencesDataStore(name = "mental_tts_settings")
 private val KEY_ANKER = intPreferencesKey("anker_count")
 private val KEY_FOLGE = intPreferencesKey("folge_count")
 private val KEY_LOOP = booleanPreferencesKey("loop_enabled")
+private val KEY_INCLUDE_HABITS = booleanPreferencesKey("include_habits")
 
 data class MentalTtsUiState(
     val isPlaying: Boolean = false,
@@ -71,7 +77,17 @@ data class MentalTtsUiState(
     val folgeCount: Int = 1,
     /** Endlosschleife aktiv? */
     val loop: Boolean = false,
+    /** "G"-Haekchen: Gewohnheiten am Ende mitlesen? */
+    val includeHabits: Boolean = false,
     val error: String? = null,
+)
+
+/** Interne Momentaufnahme der vier persistierten Vorlese-Einstellungen. */
+private data class MentalSettings(
+    val anker: Int,
+    val folge: Int,
+    val loop: Boolean,
+    val includeHabits: Boolean,
 )
 
 @HiltViewModel
@@ -97,12 +113,13 @@ constructor(
     private val ctx: Context
         get() = getApplication()
 
-    private val settingsFlow: Flow<Triple<Int, Int, Boolean>> =
+    private val settingsFlow: Flow<MentalSettings> =
         ctx.mentalTtsStore.data.map { p ->
-            Triple(
-                (p[KEY_ANKER] ?: 1).coerceIn(RANGE_MIN, RANGE_MAX),
-                (p[KEY_FOLGE] ?: 1).coerceIn(RANGE_MIN, RANGE_MAX),
-                p[KEY_LOOP] ?: false,
+            MentalSettings(
+                anker = (p[KEY_ANKER] ?: 1).coerceIn(RANGE_MIN, RANGE_MAX),
+                folge = (p[KEY_FOLGE] ?: 1).coerceIn(RANGE_MIN, RANGE_MAX),
+                loop = p[KEY_LOOP] ?: false,
+                includeHabits = p[KEY_INCLUDE_HABITS] ?: false,
             )
         }
 
@@ -110,12 +127,13 @@ constructor(
     private val errorFlow = MutableStateFlow<String?>(null)
 
     val uiState: StateFlow<MentalTtsUiState> =
-        combine(settingsFlow, isPlayingFlow, errorFlow) { (anker, folge, loop), playing, err ->
+        combine(settingsFlow, isPlayingFlow, errorFlow) { s, playing, err ->
                 MentalTtsUiState(
                     isPlaying = playing,
-                    ankerCount = anker,
-                    folgeCount = folge,
-                    loop = loop,
+                    ankerCount = s.anker,
+                    folgeCount = s.folge,
+                    loop = s.loop,
+                    includeHabits = s.includeHabits,
                     error = err,
                 )
             }
@@ -145,6 +163,11 @@ constructor(
         viewModelScope.launch { ctx.mentalTtsStore.edit { it[KEY_LOOP] = enabled } }
     }
 
+    /** "G"-Haekchen: Gewohnheiten am Ende mitlesen. */
+    fun setIncludeHabits(enabled: Boolean) {
+        viewModelScope.launch { ctx.mentalTtsStore.edit { it[KEY_INCLUDE_HABITS] = enabled } }
+    }
+
     fun dismissError() {
         errorFlow.value = null
     }
@@ -153,24 +176,42 @@ constructor(
 
     /**
      * Lautsprecher-Druck: laeuft gerade etwas, wird gestoppt (Toggle); sonst startet das Vorlesen
-     * der aktuellen Mental-Liste (in der uebergebenen Reihenfolge).
+     * der aktuellen Mental-Liste (in der uebergebenen Reihenfolge). Ist das "G"-Haekchen aktiv,
+     * werden die uebergebenen [gewohnheiten] am Ende mitgelesen.
      */
-    fun togglePlayback(mentals: List<Mental>) {
+    fun togglePlayback(mentals: List<Mental>, gewohnheiten: List<Mental> = emptyList()) {
         if (isPlayingFlow.value) {
             stop()
             return
         }
-        val texts = mentals.map { it.text.trim() }.filter { it.isNotEmpty() }
-        if (texts.isEmpty()) {
+        val mentalTexts = mentals.map { it.text.trim() }.filter { it.isNotEmpty() }
+        if (mentalTexts.isEmpty()) {
             errorFlow.value = "Keine Mentals zum Vorlesen vorhanden."
             return
         }
         isPlayingFlow.value = true
         ttsJob =
             viewModelScope.launch {
-                val (anker, folge, loop) = settingsFlow.first()
+                val s = settingsFlow.first()
+                // Gewohnheiten nur anhaengen, wenn das "G"-Haekchen aktiv ist. Ihre "wie-oft pro
+                // Satz"-Zahl kommt aus dem Gewohnheit-Reiter (gemeinsamer DataStore) — die
+                // Gesamt-Wiederholung steuert allein der Mental-Loop.
+                val gewohnheitTexts =
+                    if (s.includeHabits) {
+                        gewohnheiten.map { it.text.trim() }.filter { it.isNotEmpty() }
+                    } else {
+                        emptyList()
+                    }
+                val gewohnheitRepeat =
+                    if (s.includeHabits && gewohnheitTexts.isNotEmpty()) {
+                        ctx.gewohnheitTtsStore.data
+                            .map { (it[KEY_REPEAT] ?: 1).coerceIn(RANGE_MIN, RANGE_MAX) }
+                            .first()
+                    } else {
+                        1
+                    }
                 try {
-                    runSequence(texts, anker, folge, loop)
+                    runSequence(mentalTexts, s.anker, s.folge, s.loop, gewohnheitTexts, gewohnheitRepeat)
                 } catch (e: CancellationException) {
                     throw e // Cancellation NIE verschlucken (Bug-Almanach kotlin §2.1)
                 } catch (e: Exception) {
@@ -194,20 +235,25 @@ constructor(
 
     /* ----------------------------- Vorlese-Schleife ----------------------------- */
 
-    private suspend fun runSequence(texts: List<String>, anker: Int, folge: Int, loop: Boolean) {
-        val sequence = buildSequence(texts, anker, folge)
+    private suspend fun runSequence(
+        mentalTexts: List<String>,
+        anker: Int,
+        folge: Int,
+        loop: Boolean,
+        gewohnheitTexts: List<String>,
+        gewohnheitRepeat: Int,
+    ) {
+        // Mentalblock (Anker-Schema) + optional Gewohnheiten am Ende (jeder Satz gewohnheitRepeat-mal).
+        val mentalSeq = buildSequence(mentalTexts, anker, folge)
+        val gewohnheitSeq = buildHabitSequence(gewohnheitTexts, gewohnheitRepeat)
+        val sequence = mentalSeq + gewohnheitSeq
         if (sequence.isEmpty()) return
         Diag.d(
             DiagnosticArea.GOOGLE_TTS,
             TAG,
-            "Sequenz gebildet: ${sequence.size} Saetze (saetze=${texts.size} " +
-                "anker=$anker folge=$folge loop=$loop)",
-        )
-
-        Diag.d(
-            DiagnosticArea.GOOGLE_TTS,
-            TAG,
-            "Kein Prefetch: jede Sequenzposition wird frisch synthetisiert",
+            "Sequenz gebildet: mental=${mentalSeq.size} + gewohnheit=${gewohnheitSeq.size} " +
+                "(mentals=${mentalTexts.size} anker=$anker folge=$folge loop=$loop, " +
+                "gewohnheiten=${gewohnheitTexts.size} repeat=$gewohnheitRepeat)",
         )
 
         // Wiedergabe mit frischer Synthese pro Satzvorkommen, Loop + 15-Min-Limit.
@@ -225,7 +271,7 @@ constructor(
                 }
                 val file = ttsPlayer.synthesizeToCache(text, forceFresh = true)
                 withContext(Dispatchers.Main) { ttsPlayer.playCachedFileAwait(file) }
-                // 2 Sekunden Pause zwischen jedem Satz — auch ueber Schleifen-Grenzen hinweg,
+                // 6 Sekunden Pause zwischen jedem Satz — auch ueber Schleifen-Grenzen hinweg,
                 // nur nach dem allerletzten Satz eines NICHT-Endlos-Laufs nicht.
                 val isLastOfRun = index == sequence.lastIndex
                 if (!isLastOfRun || loop) {
@@ -236,7 +282,7 @@ constructor(
     }
 
     /**
-     * Baut die flache Vorlese-Sequenz aus den Saetzen. Bei nur einem Satz wird dieser eine Satz
+     * Baut die flache Mental-Vorlese-Sequenz aus den Saetzen. Bei nur einem Satz wird dieser eine Satz
      * [anker]-mal vorgelesen (es gibt keinen Folgesatz).
      */
     private fun buildSequence(texts: List<String>, anker: Int, folge: Int): List<String> {
@@ -247,6 +293,16 @@ constructor(
             for (i in 1 until texts.size) {
                 repeat(anker) { add(first) }
                 repeat(folge) { add(texts[i]) }
+            }
+        }
+    }
+
+    /** Baut die Gewohnheit-Sequenz: jeder Satz [times]-mal hintereinander (Gewohnheit-Reiter-Weise). */
+    private fun buildHabitSequence(texts: List<String>, times: Int): List<String> {
+        if (texts.isEmpty()) return emptyList()
+        return buildList {
+            for (text in texts) {
+                repeat(times) { add(text) }
             }
         }
     }
