@@ -71,6 +71,7 @@ Dieser Almanach ist die **tiefe, vollstaendige** Quelle fuer **Compose-UI-Bugs**
 | 16 | Gespeicherte Aenderung (DataStore/Room) erscheint erst beim naechsten Tap | Flow per `remember(context){…}` / ViewModel-`stateIn` stabil halten — NIE roh im Composable-Body neu bauen | §2.14 |
 | 17 | `weight()` aus dynamischen Daten (Anteile/Zaehler) | Wert 0 crasht (`invalid weight`) — 0-Elemente vorher filtern | §6.8 |
 | 18 | Endlos-Animation nur fuer EINEN Zustand (Puls/Blink) | `rememberInfiniteTransition` in den Zustands-Zweig verschieben — sonst tickt sie in JEDEM Zustand (Akku) | §9.6 |
+| 19 | Pager-Swipe/Interaktion ruckelt, alle Seiten recomposen | `staticCompositionLocalOf`-Wert stabil remembern (State-backed Holder) — neue Instanz pro Recomposition invalidiert den GESAMTEN Subtree | §1.7 |
 
 ---
 
@@ -117,6 +118,13 @@ Dieser Almanach ist die **tiefe, vollstaendige** Quelle fuer **Compose-UI-Bugs**
 **Versionen:** per Design (1.6 → 1.10).
 **FIX:** Typ in eigene `@Immutable`-Wrapper-Klasse packen ODER Stability-Konfigurationsdatei (`stabilityConfigurationFile`) mit dem voll-qualifizierten Klassennamen anlegen.
 **Quelle:** developer.android.com/develop/ui/compose/performance/stability/fix
+
+### 1.7 `staticCompositionLocalOf` mit pro-Recomposition neu erzeugtem Wert → GESAMTER Subtree recomposed   ⭐ EIGENER VORFALL 2026-07-03
+**Symptom:** UI ruckelt bei Interaktionen, die den Provider-Host recomposen — z. B. `HorizontalPager`-Swipes, bei denen ALLE Seiten (trotz `beyondViewportPageCount`) jedes Mal komplett neu komponiert werden.
+**Ursache:** `staticCompositionLocalOf` trackt Leser NICHT — aendert sich der `provides`-Wert, wird der KOMPLETTE `content`-Block des Providers invalidiert. Wird der Wert (z. B. ein State-Holder wie `MicActionsState(isOpen) { … }`) ohne `remember` im Body erzeugt, ist er bei JEDER Host-Recomposition eine neue Instanz → jede Host-Recomposition (etwa durch einen `pagerState.currentPage`-Read in Composition) recomposed den gesamten Baum darunter. EntropieReductor-Vorfall: 4 Sub-Tab-Screens wurden bei jedem Swipe voll neu komponiert (#47440).
+**Versionen:** per Design (alle Compose-Versionen).
+**FIX (funktionserhaltend):** Provider-Wert stabil halten: Holder EINMAL per `remember { … }` erzeugen und veraenderliche Felder intern aus `State<T>` lesen (`val isOpen get() = state.value`) statt als eingefrorene Konstruktorwerte. Hochfrequente Reads wie `pagerState.currentPage` fuer Seiteneffekte per `snapshotFlow` beobachten statt in Composition zu lesen. `staticCompositionLocalOf` nur fuer Werte, die sich praktisch nie aendern — sonst `compositionLocalOf` (feingranulares Leser-Tracking).
+**Quelle:** developer.android.com/develop/ui/compose/compositionlocal (staticCompositionLocalOf-Absatz) + eigener Vorfall EntropieReductor #47440.
 
 ---
 
