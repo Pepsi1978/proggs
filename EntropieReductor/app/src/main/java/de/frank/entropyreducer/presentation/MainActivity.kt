@@ -13,6 +13,7 @@ import androidx.compose.runtime.setValue
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import androidx.lifecycle.lifecycleScope
 import androidx.lifecycle.viewModelScope
 import dagger.hilt.android.AndroidEntryPoint
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -23,6 +24,7 @@ import de.frank.entropyreducer.data.repository.PromptRepository
 import de.frank.entropyreducer.data.settings.AppSettings
 import de.frank.entropyreducer.data.settings.EncryptedSecretsStore
 import de.frank.entropyreducer.data.settings.ThemeMode
+import de.frank.entropyreducer.data.tts.TtsUsageBackup
 import de.frank.entropyreducer.domain.usecase.SyncEntriesUseCase
 import de.frank.entropyreducer.presentation.launch.LaunchScreen
 import de.frank.entropyreducer.presentation.navigation.AppNavGraph
@@ -46,8 +48,15 @@ import kotlinx.coroutines.launch
 @AndroidEntryPoint
 class MainActivity : ComponentActivity() {
 
+    @Inject
+    lateinit var usageBackup: TtsUsageBackup
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        // Frank-Wunsch 2026-07-03: TTS-Zaehlerstand aus dem Drive-Backup wiederherstellen (hebt den
+        // lokalen Wert an, wenn der Drive-Wert groesser ist) — ueberlebt eine Neuinstallation.
+        // Fehler werden in restoreOnStart() geschluckt; blockiert den App-Start nie.
+        lifecycleScope.launch { usageBackup.restoreOnStart() }
         enableEdgeToEdge()
         handleWidgetIntent(intent)
         val widgetFastTrack = hasWidgetExtras(intent)

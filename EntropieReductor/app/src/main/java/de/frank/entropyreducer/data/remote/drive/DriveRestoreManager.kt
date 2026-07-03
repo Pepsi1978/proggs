@@ -27,8 +27,14 @@ constructor(@ApplicationContext private val context: Context, private val sessio
     private val workoutsFileName = "entropy_reducer_workouts_v1.json"
     private val healthFileName = "entropy_reducer_health_v1.json"
 
+    /** TTS-Zaehlerstand (Monat + kumulierte Zeichen). Frank-Wunsch 2026-07-03. */
+    private val ttsUsageFileName = "entropy_reducer_tts_usage_v1.json"
+
     /** Haupt-Backup (Aufgaben/Insights/Memories/etc.). */
     suspend fun fetchLatest(): Result<String?> = fetchFile(mainFileName)
+
+    /** Holt den TTS-Zaehlerstand aus dem appDataFolder (oder `null`, wenn keiner existiert). */
+    suspend fun fetchTtsUsage(): Result<String?> = fetchFile(ttsUsageFileName)
 
     /**
      * Frank-Wunsch 2026-05-19: Separates Workouts-Backup mit den teuren Detail-Streams (GPS-Track,

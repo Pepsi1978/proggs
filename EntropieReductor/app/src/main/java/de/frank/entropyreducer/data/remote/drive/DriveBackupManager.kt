@@ -52,9 +52,20 @@ constructor(
      */
     private val healthFileName = "entropy_reducer_health_v1.json"
 
+    /**
+     * Frank-Wunsch 2026-07-03: Kleiner separater Zaehlerstand des TTS-Monatskontingents (Chirp 3 HD),
+     * damit der Verbrauch eine Neuinstallation ueberlebt. Genau EIN Wert (Monat + Zeichen), wird bei
+     * jeder 50k-Schwelle ueberschrieben.
+     */
+    private val ttsUsageFileName = "entropy_reducer_tts_usage_v1.json"
+
     /** Lade Haupt-Backup hoch (Aufgaben/Insights/Memories/etc.) */
     suspend fun upload(jsonContent: String): Result<Unit> =
         uploadFile(mainFileName, jsonContent, label = "main")
+
+    /** Lade den TTS-Zaehlerstand hoch (separate kleine Datei). Frank-Wunsch 2026-07-03. */
+    suspend fun uploadTtsUsage(jsonContent: String): Result<Unit> =
+        uploadFile(ttsUsageFileName, jsonContent, label = "tts_usage")
 
     /** Lade Workouts-Backup hoch (separate Datei). Frank-Wunsch 2026-05-19. */
     suspend fun uploadWorkouts(jsonContent: String): Result<Unit> =

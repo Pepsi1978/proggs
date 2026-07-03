@@ -14,6 +14,7 @@ import de.frank.entropyreducer.data.remote.TtsVoice
 import de.frank.entropyreducer.data.remote.tts.GoogleTtsVoices
 import de.frank.entropyreducer.data.settings.AppSettings
 import de.frank.entropyreducer.data.settings.EncryptedSecretsStore
+import de.frank.entropyreducer.data.tts.TtsUsageBackup
 import de.frank.entropyreducer.data.tts.TtsUsageStore
 import java.io.File
 import javax.inject.Inject
@@ -45,6 +46,7 @@ class TtsPlayer @Inject constructor(
     private val secrets: EncryptedSecretsStore,
     private val settings: AppSettings,
     private val usageStore: TtsUsageStore,
+    private val usageBackup: TtsUsageBackup,
 ) {
 
     private companion object {
@@ -128,7 +130,9 @@ class TtsPlayer @Inject constructor(
         // keinen Zeichen-Zaehler, also zaehlt die App selbst mit (Observability). Cache-Treffer
         // gehen gar nicht durch diese Methode und werden korrekt NICHT gezaehlt. TTS rechnet pro
         // Eingabe-Zeichen (inkl. Leerzeichen) ab -> text.length ist die korrekte Groesse.
-        usageStore.add(text.length)
+        // Meldet add() eine neue 50k-Schwelle, wird der Stand fire-and-forget ins Drive gesichert
+        // (Frank-Wunsch 2026-07-03) — nicht bei jedem Zeichen, sonst liefe das Backup dauernd.
+        if (usageStore.add(text.length)) usageBackup.backupNow()
         val audioBytes = Base64.decode(response.audioContentBase64, Base64.DEFAULT)
         targetFile.writeBytes(audioBytes)
         return targetFile
