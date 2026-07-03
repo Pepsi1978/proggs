@@ -10,8 +10,11 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.NavController
@@ -23,6 +26,9 @@ import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
 import de.frank.entropyreducer.presentation.amazfit.AmazfitTrainingDetailScreen
 import de.frank.entropyreducer.presentation.amazfit.AmazfitTrainingsScreen
+import de.frank.entropyreducer.presentation.components.LocalMicActionsOpen
+import de.frank.entropyreducer.presentation.components.MicActionsState
+import de.frank.entropyreducer.presentation.components.MicState
 import de.frank.entropyreducer.presentation.components.LocalBelowSubTabRow
 import de.frank.entropyreducer.presentation.dashboard1.TasksScreen
 import de.frank.entropyreducer.presentation.dashboard2.AnalysisScreen
@@ -116,56 +122,71 @@ private fun AppNavHostInner(nav: androidx.navigation.NavHostController, modifier
                 val tabs = remember { subTabsFor(Routes.TASKS) }
                 val pagerState = rememberPagerState(initialPage = 0) { tabs.size }
                 val coroutineScope = rememberCoroutineScope()
+                var micActionsOpen by remember { mutableStateOf(false) }
+                LaunchedEffect(pagerState.currentPage) { micActionsOpen = false }
+                val micActionsState = MicActionsState(micActionsOpen) { micActionsOpen = it }
 
-                Column(modifier = Modifier.fillMaxSize()) {
-                    SubTabRow(
-                        tabs = tabs,
-                        selectedIndex = pagerState.currentPage,
-                        tabColor = cosmos.accentTasksSub,
-                        onTabSelected = { index ->
-                            coroutineScope.launch {
-                                pagerState.animateScrollToPage(index)
-                            }
-                        },
-                        modifier = Modifier.fillMaxWidth(),
-                    )
+                Box(modifier = Modifier.fillMaxSize()) {
+                    Column(modifier = Modifier.fillMaxSize()) {
+                        SubTabRow(
+                            tabs = tabs,
+                            selectedIndex = pagerState.currentPage,
+                            tabColor = cosmos.accentTasksSub,
+                            onTabSelected = { index ->
+                                coroutineScope.launch {
+                                    pagerState.animateScrollToPage(index)
+                                }
+                            },
+                            modifier = Modifier.fillMaxWidth(),
+                        )
 
-                    CompositionLocalProvider(LocalBelowSubTabRow provides true) {
-                        HorizontalPager(
-                            state = pagerState,
-                            modifier = Modifier.weight(1f),
-                            beyondViewportPageCount = tabs.size - 1,
-                        ) { page ->
-                            when (page) {
-                                0 -> TasksScreen(
-                                    onOpenSettings = { nav.navigate(Routes.SETTINGS_HOME) },
-                                    onSwitchTab = { route -> nav.tabSwitch(route) },
-                                    currentTab = Routes.TASKS,
-                                    onOpenSubArea = { parent, index -> nav.navigate(Routes.subRouteFor(parent, index)) },
-                                    onOpenEntryDetail = { entryId -> nav.navigate(Routes.entropyEntryDetail(entryId)) },
-                                    onOpenLoopDetail = { templateId -> nav.navigate(Routes.loopTemplateDetail(templateId)) },
-                                    showBottomBar = true,
-                                )
-                                1 -> GewohnheitBoardScreen(
-                                    onSwitchSub = { p, i -> nav.navigate(Routes.subRouteFor(p, i)) },
-                                    onSwitchTab = { route -> nav.tabSwitch(route) },
-                                    showBottomBar = true,
-                                )
-                                2 -> MentalBoardScreen(
-                                    onSwitchSub = { p, i -> nav.navigate(Routes.subRouteFor(p, i)) },
-                                    onSwitchTab = { route -> nav.tabSwitch(route) },
-                                    showBottomBar = true,
-                                )
-                                3 -> IdeenScreen(
-                                    onBack = { nav.popBackStack() },
-                                    onSwitchSub = { p, i -> nav.navigate(Routes.subRouteFor(p, i)) },
-                                    onSwitchTab = { route -> nav.tabSwitch(route) },
-                                    onOpenEntry = { entryId -> nav.navigate(Routes.ideeEntryDetail(entryId)) },
-                                    showBottomBar = true,
-                                )
+                        CompositionLocalProvider(
+                            LocalBelowSubTabRow provides true,
+                            LocalMicActionsOpen provides micActionsState,
+                        ) {
+                            HorizontalPager(
+                                state = pagerState,
+                                modifier = Modifier.weight(1f),
+                                beyondViewportPageCount = tabs.size - 1,
+                            ) { page ->
+                                when (page) {
+                                    0 -> TasksScreen(
+                                        onOpenSettings = { nav.navigate(Routes.SETTINGS_HOME) },
+                                        onSwitchTab = { route -> nav.tabSwitch(route) },
+                                        currentTab = Routes.TASKS,
+                                        onOpenSubArea = { parent, index -> nav.navigate(Routes.subRouteFor(parent, index)) },
+                                        onOpenEntryDetail = { entryId -> nav.navigate(Routes.entropyEntryDetail(entryId)) },
+                                        onOpenLoopDetail = { templateId -> nav.navigate(Routes.loopTemplateDetail(templateId)) },
+                                        showBottomBar = false,
+                                    )
+                                    1 -> GewohnheitBoardScreen(
+                                        onSwitchSub = { p, i -> nav.navigate(Routes.subRouteFor(p, i)) },
+                                        onSwitchTab = { route -> nav.tabSwitch(route) },
+                                        showBottomBar = false,
+                                    )
+                                    2 -> MentalBoardScreen(
+                                        onSwitchSub = { p, i -> nav.navigate(Routes.subRouteFor(p, i)) },
+                                        onSwitchTab = { route -> nav.tabSwitch(route) },
+                                        showBottomBar = false,
+                                    )
+                                    3 -> IdeenScreen(
+                                        onBack = { nav.popBackStack() },
+                                        onSwitchSub = { p, i -> nav.navigate(Routes.subRouteFor(p, i)) },
+                                        onSwitchTab = { route -> nav.tabSwitch(route) },
+                                        onOpenEntry = { entryId -> nav.navigate(Routes.ideeEntryDetail(entryId)) },
+                                        showBottomBar = false,
+                                    )
+                                }
                             }
                         }
                     }
+                    CosmosBottomBar(
+                        currentTab = Routes.TASKS,
+                        micState = MicState.IDLE,
+                        onTabSelected = { route -> nav.tabSwitch(route) },
+                        onMicClick = { micActionsState.toggle() },
+                        modifier = Modifier.align(Alignment.BottomCenter),
+                    )
                 }
             }
 
@@ -176,45 +197,60 @@ private fun AppNavHostInner(nav: androidx.navigation.NavHostController, modifier
                 val tabs = remember { subTabsFor(Routes.ANALYSIS) }
                 val pagerState = rememberPagerState(initialPage = 0) { tabs.size }
                 val coroutineScope = rememberCoroutineScope()
+                var micActionsOpen by remember { mutableStateOf(false) }
+                LaunchedEffect(pagerState.currentPage) { micActionsOpen = false }
+                val micActionsState = MicActionsState(micActionsOpen) { micActionsOpen = it }
 
-                Column(modifier = Modifier.fillMaxSize()) {
-                    SubTabRow(
-                        tabs = tabs,
-                        selectedIndex = pagerState.currentPage,
-                        tabColor = cosmos.accentAnalyse,
-                        onTabSelected = { index ->
-                            coroutineScope.launch {
-                                pagerState.animateScrollToPage(index)
-                            }
-                        },
-                        modifier = Modifier.fillMaxWidth(),
-                    )
+                Box(modifier = Modifier.fillMaxSize()) {
+                    Column(modifier = Modifier.fillMaxSize()) {
+                        SubTabRow(
+                            tabs = tabs,
+                            selectedIndex = pagerState.currentPage,
+                            tabColor = cosmos.accentAnalyse,
+                            onTabSelected = { index ->
+                                coroutineScope.launch {
+                                    pagerState.animateScrollToPage(index)
+                                }
+                            },
+                            modifier = Modifier.fillMaxWidth(),
+                        )
 
-                    CompositionLocalProvider(LocalBelowSubTabRow provides true) {
-                        HorizontalPager(
-                            state = pagerState,
-                            modifier = Modifier.weight(1f),
-                            beyondViewportPageCount = tabs.size - 1,
-                        ) { page ->
-                            when (page) {
-                                0 -> AnalysisScreen(
-                                    onOpenSettings = { nav.navigate(Routes.SETTINGS_HOME) },
-                                    onSwitchTab = { route -> nav.tabSwitch(route) },
-                                    currentTab = Routes.ANALYSIS,
-                                    onOpenSubArea = { parent, index -> nav.navigate(Routes.subRouteFor(parent, index)) },
-                                    showBottomBar = true,
-                                )
-                                else -> SubAreaScreen(
-                                    parentTab = Routes.ANALYSIS,
-                                    subIndex = page + 1,
-                                    onBack = { nav.popBackStack() },
-                                    onSwitchSub = { p, i -> nav.navigate(Routes.subRouteFor(p, i)) },
-                                    onSwitchTab = { route -> nav.tabSwitch(route) },
-                                    showBottomBar = true,
-                                )
+                        CompositionLocalProvider(
+                            LocalBelowSubTabRow provides true,
+                            LocalMicActionsOpen provides micActionsState,
+                        ) {
+                            HorizontalPager(
+                                state = pagerState,
+                                modifier = Modifier.weight(1f),
+                                beyondViewportPageCount = tabs.size - 1,
+                            ) { page ->
+                                when (page) {
+                                    0 -> AnalysisScreen(
+                                        onOpenSettings = { nav.navigate(Routes.SETTINGS_HOME) },
+                                        onSwitchTab = { route -> nav.tabSwitch(route) },
+                                        currentTab = Routes.ANALYSIS,
+                                        onOpenSubArea = { parent, index -> nav.navigate(Routes.subRouteFor(parent, index)) },
+                                        showBottomBar = false,
+                                    )
+                                    else -> SubAreaScreen(
+                                        parentTab = Routes.ANALYSIS,
+                                        subIndex = page + 1,
+                                        onBack = { nav.popBackStack() },
+                                        onSwitchSub = { p, i -> nav.navigate(Routes.subRouteFor(p, i)) },
+                                        onSwitchTab = { route -> nav.tabSwitch(route) },
+                                        showBottomBar = false,
+                                    )
+                                }
                             }
                         }
                     }
+                    CosmosBottomBar(
+                        currentTab = Routes.ANALYSIS,
+                        micState = MicState.IDLE,
+                        onTabSelected = { route -> nav.tabSwitch(route) },
+                        onMicClick = { micActionsState.toggle() },
+                        modifier = Modifier.align(Alignment.BottomCenter),
+                    )
                 }
             }
 
@@ -225,60 +261,75 @@ private fun AppNavHostInner(nav: androidx.navigation.NavHostController, modifier
                 val tabs = remember { subTabsFor(Routes.SCIENTIST) }
                 val pagerState = rememberPagerState(initialPage = 0) { tabs.size }
                 val coroutineScope = rememberCoroutineScope()
+                var micActionsOpen by remember { mutableStateOf(false) }
+                LaunchedEffect(pagerState.currentPage) { micActionsOpen = false }
+                val micActionsState = MicActionsState(micActionsOpen) { micActionsOpen = it }
 
-                Column(modifier = Modifier.fillMaxSize()) {
-                    SubTabRow(
-                        tabs = tabs,
-                        selectedIndex = pagerState.currentPage,
-                        tabColor = cosmos.accentForscher,
-                        onTabSelected = { index ->
-                            coroutineScope.launch {
-                                pagerState.animateScrollToPage(index)
-                            }
-                        },
-                        modifier = Modifier.fillMaxWidth(),
-                    )
+                Box(modifier = Modifier.fillMaxSize()) {
+                    Column(modifier = Modifier.fillMaxSize()) {
+                        SubTabRow(
+                            tabs = tabs,
+                            selectedIndex = pagerState.currentPage,
+                            tabColor = cosmos.accentForscher,
+                            onTabSelected = { index ->
+                                coroutineScope.launch {
+                                    pagerState.animateScrollToPage(index)
+                                }
+                            },
+                            modifier = Modifier.fillMaxWidth(),
+                        )
 
-                    CompositionLocalProvider(LocalBelowSubTabRow provides true) {
-                        HorizontalPager(
-                            state = pagerState,
-                            modifier = Modifier.weight(1f),
-                            beyondViewportPageCount = tabs.size - 1,
-                        ) { page ->
-                            // Frank-Wunsch 2026-06-24: Hauptreiter "Forscher" steht ganz
-                            // vorne (page 0 = ScientistScreen). Danach Entropie (Tagebuch),
-                            // Thesen und Journal in ihrer logischen Reihenfolge.
-                            when (page) {
-                                0 -> ScientistScreen(
-                                    onOpenSettings = { nav.navigate(Routes.SETTINGS_HOME) },
-                                    onSwitchTab = { route -> nav.tabSwitch(route) },
-                                    currentTab = Routes.SCIENTIST,
-                                    onOpenSubArea = { parent, index -> nav.navigate(Routes.subRouteFor(parent, index)) },
-                                    showBottomBar = true,
-                                )
-                                1 -> TagebuchScreen(
-                                    onBack = { nav.popBackStack() },
-                                    onSwitchSub = { p, i -> nav.navigate(Routes.subRouteFor(p, i)) },
-                                    onSwitchTab = { route -> nav.tabSwitch(route) },
-                                    onOpenEntry = { entryId -> nav.navigate(Routes.tagebuchEntryDetail(entryId)) },
-                                    showBottomBar = true,
-                                )
-                                2 -> de.frank.entropyreducer.presentation.thesen.ThesenScreen(
-                                    onBack = { nav.popBackStack() },
-                                    onSwitchSub = { p, i -> nav.navigate(Routes.subRouteFor(p, i)) },
-                                    onSwitchTab = { route -> nav.tabSwitch(route) },
-                                    onOpenEntry = { entryId -> nav.navigate(Routes.thesenEntryDetail(entryId)) },
-                                    showBottomBar = true,
-                                )
-                                3 -> de.frank.entropyreducer.presentation.journal.JournalScreen(
-                                    onSwitchSub = { p, i -> nav.navigate(Routes.subRouteFor(p, i)) },
-                                    onSwitchTab = { route -> nav.tabSwitch(route) },
-                                    onOpenEntry = { sourceId -> nav.navigate(Routes.journalEntryDetail(sourceId)) },
-                                    showBottomBar = true,
-                                )
+                        CompositionLocalProvider(
+                            LocalBelowSubTabRow provides true,
+                            LocalMicActionsOpen provides micActionsState,
+                        ) {
+                            HorizontalPager(
+                                state = pagerState,
+                                modifier = Modifier.weight(1f),
+                                beyondViewportPageCount = tabs.size - 1,
+                            ) { page ->
+                                // Frank-Wunsch 2026-06-24: Hauptreiter "Forscher" steht ganz
+                                // vorne (page 0 = ScientistScreen). Danach Entropie (Tagebuch),
+                                // Thesen und Journal in ihrer logischen Reihenfolge.
+                                when (page) {
+                                    0 -> ScientistScreen(
+                                        onOpenSettings = { nav.navigate(Routes.SETTINGS_HOME) },
+                                        onSwitchTab = { route -> nav.tabSwitch(route) },
+                                        currentTab = Routes.SCIENTIST,
+                                        onOpenSubArea = { parent, index -> nav.navigate(Routes.subRouteFor(parent, index)) },
+                                        showBottomBar = false,
+                                    )
+                                    1 -> TagebuchScreen(
+                                        onBack = { nav.popBackStack() },
+                                        onSwitchSub = { p, i -> nav.navigate(Routes.subRouteFor(p, i)) },
+                                        onSwitchTab = { route -> nav.tabSwitch(route) },
+                                        onOpenEntry = { entryId -> nav.navigate(Routes.tagebuchEntryDetail(entryId)) },
+                                        showBottomBar = false,
+                                    )
+                                    2 -> de.frank.entropyreducer.presentation.thesen.ThesenScreen(
+                                        onBack = { nav.popBackStack() },
+                                        onSwitchSub = { p, i -> nav.navigate(Routes.subRouteFor(p, i)) },
+                                        onSwitchTab = { route -> nav.tabSwitch(route) },
+                                        onOpenEntry = { entryId -> nav.navigate(Routes.thesenEntryDetail(entryId)) },
+                                        showBottomBar = false,
+                                    )
+                                    3 -> de.frank.entropyreducer.presentation.journal.JournalScreen(
+                                        onSwitchSub = { p, i -> nav.navigate(Routes.subRouteFor(p, i)) },
+                                        onSwitchTab = { route -> nav.tabSwitch(route) },
+                                        onOpenEntry = { sourceId -> nav.navigate(Routes.journalEntryDetail(sourceId)) },
+                                        showBottomBar = false,
+                                    )
+                                }
                             }
                         }
                     }
+                    CosmosBottomBar(
+                        currentTab = Routes.SCIENTIST,
+                        micState = MicState.IDLE,
+                        onTabSelected = { route -> nav.tabSwitch(route) },
+                        onMicClick = { micActionsState.toggle() },
+                        modifier = Modifier.align(Alignment.BottomCenter),
+                    )
                 }
             }
 
@@ -289,53 +340,68 @@ private fun AppNavHostInner(nav: androidx.navigation.NavHostController, modifier
                 val tabs = remember { subTabsFor(Routes.BIOMARKER) }
                 val pagerState = rememberPagerState(initialPage = 0) { tabs.size }
                 val coroutineScope = rememberCoroutineScope()
+                var micActionsOpen by remember { mutableStateOf(false) }
+                LaunchedEffect(pagerState.currentPage) { micActionsOpen = false }
+                val micActionsState = MicActionsState(micActionsOpen) { micActionsOpen = it }
 
-                Column(modifier = Modifier.fillMaxSize()) {
-                    SubTabRow(
-                        tabs = tabs,
-                        selectedIndex = pagerState.currentPage,
-                        tabColor = cosmos.accentBio,
-                        onTabSelected = { index ->
-                            coroutineScope.launch {
-                                pagerState.animateScrollToPage(index)
-                            }
-                        },
-                        modifier = Modifier.fillMaxWidth(),
-                    )
+                Box(modifier = Modifier.fillMaxSize()) {
+                    Column(modifier = Modifier.fillMaxSize()) {
+                        SubTabRow(
+                            tabs = tabs,
+                            selectedIndex = pagerState.currentPage,
+                            tabColor = cosmos.accentBio,
+                            onTabSelected = { index ->
+                                coroutineScope.launch {
+                                    pagerState.animateScrollToPage(index)
+                                }
+                            },
+                            modifier = Modifier.fillMaxWidth(),
+                        )
 
-                    CompositionLocalProvider(LocalBelowSubTabRow provides true) {
-                        HorizontalPager(
-                            state = pagerState,
-                            modifier = Modifier.weight(1f),
-                            beyondViewportPageCount = tabs.size - 1,
-                        ) { page ->
-                            // Frank-Wunsch 2026-06-24: Hauptreiter "Biomarker" steht ganz
-                            // vorne (page 0 = BiomarkerHostScreen). Danach die drei SubArea-
-                            // Platzhalter (Schlafdetails, Trainings-Uebersicht, Bestleistungen)
-                            // in ihrer logischen Reihenfolge mit subIndex 1..3.
-                            when (page) {
-                                0 -> BiomarkerHostScreen(
-                                    onOpenSettings = { nav.navigate(Routes.SETTINGS_HOME) },
-                                    onSwitchTab = { route -> nav.tabSwitch(route) },
-                                    onOpenMetricDetail = { metricKey -> nav.navigate(Routes.biomarkerDetail(metricKey)) },
-                                    onOpenTrainingDetail = { trackId -> nav.navigate(Routes.amazfitTrainingDetail(trackId)) },
-                                    onOpenAllTrainings = { nav.navigate(Routes.AMAZFIT_TRAININGS) },
-                                    onOpenOuraDetail = { metricKey -> nav.navigate(Routes.ouraDetail(metricKey)) },
-                                    onOpenHealthConnectDetail = { metricKey -> nav.navigate(Routes.healthConnectDetail(metricKey)) },
-                                    onOpenSubArea = { parent, index -> nav.navigate(Routes.subRouteFor(parent, index)) },
-                                    showBottomBar = true,
-                                )
-                                1, 2, 3 -> SubAreaScreen(
-                                    parentTab = Routes.BIOMARKER,
-                                    subIndex = page,
-                                    onBack = { nav.popBackStack() },
-                                    onSwitchSub = { p, i -> nav.navigate(Routes.subRouteFor(p, i)) },
-                                    onSwitchTab = { route -> nav.tabSwitch(route) },
-                                    showBottomBar = true,
-                                )
+                        CompositionLocalProvider(
+                            LocalBelowSubTabRow provides true,
+                            LocalMicActionsOpen provides micActionsState,
+                        ) {
+                            HorizontalPager(
+                                state = pagerState,
+                                modifier = Modifier.weight(1f),
+                                beyondViewportPageCount = tabs.size - 1,
+                            ) { page ->
+                                // Frank-Wunsch 2026-06-24: Hauptreiter "Biomarker" steht ganz
+                                // vorne (page 0 = BiomarkerHostScreen). Danach die drei SubArea-
+                                // Platzhalter (Schlafdetails, Trainings-Uebersicht, Bestleistungen)
+                                // in ihrer logischen Reihenfolge mit subIndex 1..3.
+                                when (page) {
+                                    0 -> BiomarkerHostScreen(
+                                        onOpenSettings = { nav.navigate(Routes.SETTINGS_HOME) },
+                                        onSwitchTab = { route -> nav.tabSwitch(route) },
+                                        onOpenMetricDetail = { metricKey -> nav.navigate(Routes.biomarkerDetail(metricKey)) },
+                                        onOpenTrainingDetail = { trackId -> nav.navigate(Routes.amazfitTrainingDetail(trackId)) },
+                                        onOpenAllTrainings = { nav.navigate(Routes.AMAZFIT_TRAININGS) },
+                                        onOpenOuraDetail = { metricKey -> nav.navigate(Routes.ouraDetail(metricKey)) },
+                                        onOpenHealthConnectDetail = { metricKey -> nav.navigate(Routes.healthConnectDetail(metricKey)) },
+                                        onOpenSubArea = { parent, index -> nav.navigate(Routes.subRouteFor(parent, index)) },
+                                        showBottomBar = false,
+                                    )
+                                    1, 2, 3 -> SubAreaScreen(
+                                        parentTab = Routes.BIOMARKER,
+                                        subIndex = page,
+                                        onBack = { nav.popBackStack() },
+                                        onSwitchSub = { p, i -> nav.navigate(Routes.subRouteFor(p, i)) },
+                                        onSwitchTab = { route -> nav.tabSwitch(route) },
+                                        showBottomBar = false,
+                                    )
+                                }
                             }
                         }
                     }
+                    CosmosBottomBar(
+                        currentTab = Routes.BIOMARKER,
+                        micState = MicState.IDLE,
+                        onTabSelected = { route -> nav.tabSwitch(route) },
+                        onMicClick = { micActionsState.toggle() },
+                        modifier = Modifier.align(Alignment.BottomCenter),
+                    )
                 }
             }
 

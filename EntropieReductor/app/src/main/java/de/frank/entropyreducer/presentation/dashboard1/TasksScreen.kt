@@ -110,6 +110,7 @@ import de.frank.entropyreducer.presentation.ThemeViewModel
 import de.frank.entropyreducer.presentation.components.CosmosScaffold
 import de.frank.entropyreducer.presentation.components.EntropyCategoryPill
 import de.frank.entropyreducer.presentation.components.GlassCard
+import de.frank.entropyreducer.presentation.components.LocalMicActionsOpen
 import de.frank.entropyreducer.presentation.components.ThemeToggleIcon
 import de.frank.entropyreducer.presentation.navigation.CosmosBottomBar
 import de.frank.entropyreducer.presentation.priorityRampColor
@@ -184,7 +185,7 @@ fun TasksScreen(
     // "Schreiben" und "Aufnehmen" in Orange (1:1 wie der Entropie-Reiter).
     // Kein eckiges BottomSheet mehr. Die Permission wird erst beim Klick auf
     // "Aufnehmen" innerhalb der Actions geprueft.
-    var micActionsOpen by remember { mutableStateOf(false) }
+    val micActions = LocalMicActionsOpen.current
 
     // Frank-Wunsch 2026-05-31: Nach dem Einsprechen einer Aufgabe erscheint ein
     // Review-Fenster mit dem transkribierten Text. Hier wird das aktuelle
@@ -369,7 +370,7 @@ fun TasksScreen(
                 currentTab = currentTab,
                 micState = state.micState,
                 onTabSelected = onSwitchTab,
-                onMicClick = { micActionsOpen = !micActionsOpen },
+                onMicClick = { micActions.toggle() },
                 onSubAreaSelected = onOpenSubArea,
             )
         },
@@ -758,10 +759,10 @@ fun TasksScreen(
             // BottomBar ist immer die orange Hauptleiste; Mic-Aktionen folgen derselben Farbe.
             val micAccent = LocalCosmos.current.accent
             de.frank.entropyreducer.presentation.components.MicCaptureActions(
-                visible = micActionsOpen,
+                visible = micActions.isOpen,
                 accent = micAccent,
                 onTextCommit = { text, source -> vm.processCapturedText(text, source) },
-                onClose = { micActionsOpen = false },
+                onClose = { micActions.close() },
                 // Frank-Wunsch 2026-05-31: eingesprochene Aufgaben erst im
                 // Review-Fenster pruefen/verbessern/benennen, dann speichern.
                 onReviewTranscript = { reviewTranscript = it },

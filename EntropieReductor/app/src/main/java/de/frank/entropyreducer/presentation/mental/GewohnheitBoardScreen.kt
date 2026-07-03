@@ -66,6 +66,7 @@ import androidx.datastore.preferences.preferencesDataStore
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import de.frank.entropyreducer.presentation.components.CosmosScaffold
+import de.frank.entropyreducer.presentation.components.LocalMicActionsOpen
 import de.frank.entropyreducer.presentation.components.MicCaptureActions
 import de.frank.entropyreducer.presentation.components.MicState
 import de.frank.entropyreducer.presentation.navigation.CosmosBottomBar
@@ -336,7 +337,7 @@ fun GewohnheitBoardScreen(
 
     var showAddDialog by remember { mutableStateOf(false) }
     var editTarget by remember { mutableStateOf<Mental?>(null) }
-    var micActionsOpen by remember { mutableStateOf(false) }
+    val micActions = LocalMicActionsOpen.current
 
     val lazyListState = rememberLazyListState()
     // Separator-Swaps SIND erlaubt — der Separator bewegt sich mit. Erst in
@@ -428,7 +429,7 @@ fun GewohnheitBoardScreen(
                 currentTab = Routes.TASKS,
                 micState = MicState.IDLE,
                 onTabSelected = { route -> onSwitchTab(route) },
-                onMicClick = { micActionsOpen = !micActionsOpen },
+                onMicClick = { micActions.toggle() },
                 onSubAreaSelected = { parent, index -> onSwitchSub(parent, index) },
                 forcedSubMode = Routes.TASKS,
                 selectedSubIndex = 1,
@@ -538,10 +539,10 @@ fun GewohnheitBoardScreen(
             }
 
             MicCaptureActions(
-                visible = micActionsOpen,
+                visible = micActions.isOpen,
                 accent = Accent,
                 onTextCommit = { text, _ -> scope.launch { addGewohnheit(context, text) } },
-                onClose = { micActionsOpen = false },
+                onClose = { micActions.close() },
                 onWriteClick = { showAddDialog = true },
                 modifier = Modifier.align(Alignment.BottomCenter),
             )

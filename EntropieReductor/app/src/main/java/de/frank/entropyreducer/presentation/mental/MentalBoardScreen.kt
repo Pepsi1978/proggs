@@ -60,6 +60,7 @@ import androidx.datastore.preferences.preferencesDataStore
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import de.frank.entropyreducer.data.tts.TtsUsage
 import de.frank.entropyreducer.presentation.components.CosmosScaffold
+import de.frank.entropyreducer.presentation.components.LocalMicActionsOpen
 import de.frank.entropyreducer.presentation.components.MicCaptureActions
 import de.frank.entropyreducer.presentation.components.MicState
 import de.frank.entropyreducer.presentation.navigation.CosmosBottomBar
@@ -320,7 +321,7 @@ fun MentalBoardScreen(
     // Bugfix 2026-06-11 (Frank): "+ Neues Mental" und der Mic-Button oeffneten nur den
     // Tipp-Dialog — die Sprachaufnahme (Groq Whisper Large V3 Turbo) fehlte. Beide Wege
     // oeffnen jetzt wie bei Ideen/Loop die Auswahl "Schreiben" / "Aufnehmen".
-    var micActionsOpen by remember { mutableStateOf(false) }
+    val micActions = LocalMicActionsOpen.current
 
     val lazyListState = rememberLazyListState()
     val reorderState =
@@ -354,7 +355,7 @@ fun MentalBoardScreen(
                 currentTab = Routes.TASKS,
                 micState = MicState.IDLE,
                 onTabSelected = { route -> onSwitchTab(route) },
-                onMicClick = { micActionsOpen = !micActionsOpen },
+                onMicClick = { micActions.toggle() },
                 onSubAreaSelected = { parent, index -> onSwitchSub(parent, index) },
                 forcedSubMode = Routes.TASKS,
                 // Mentalboard ist Sub-Bereich 2 unter Aufgaben → dauerhaft hervorheben.
@@ -374,7 +375,7 @@ fun MentalBoardScreen(
                 LazyColumn(
                     state = lazyListState,
                     modifier = Modifier.fillMaxSize(),
-                    contentPadding = PaddingValues(16.dp),
+                    contentPadding = PaddingValues(start = 16.dp, top = 16.dp, end = 16.dp, bottom = 160.dp),
                     verticalArrangement = Arrangement.spacedBy(10.dp),
                 ) {
                     items(displayed, key = { it.id }) { mental ->
@@ -411,10 +412,10 @@ fun MentalBoardScreen(
             // "Schreiben" oeffnet den bisherigen "Neues Mental"-Dialog (orange Diskette),
             // "Aufnehmen" transkribiert per Groq Whisper und speichert direkt als Mental.
             MicCaptureActions(
-                visible = micActionsOpen,
+                visible = micActions.isOpen,
                 accent = MentalAccent,
                 onTextCommit = { text, _ -> scope.launch { addMental(context, text) } },
-                onClose = { micActionsOpen = false },
+                onClose = { micActions.close() },
                 onWriteClick = { showAddDialog = true },
                 modifier = Modifier.align(Alignment.BottomCenter),
             )

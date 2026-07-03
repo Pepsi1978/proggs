@@ -60,6 +60,7 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import de.frank.entropyreducer.presentation.components.CosmosScaffold
 import de.frank.entropyreducer.presentation.components.GlassCard
+import de.frank.entropyreducer.presentation.components.LocalMicActionsOpen
 import de.frank.entropyreducer.presentation.components.MicState
 import de.frank.entropyreducer.presentation.components.VoiceCaptureState
 import de.frank.entropyreducer.presentation.components.VoiceCaptureViewModel
@@ -112,7 +113,7 @@ fun ThesenScreen(
     var inputDialogOpen by remember { mutableStateOf(false) }
     // Frank-Wunsch 2026-05-18 Folgeauftrag: Erst nur Mic-Button anzeigen.
     // Klick auf Mic legt rechts "Aufnehmen" und links "Schreiben" frei.
-    var actionsExpanded by remember { mutableStateOf(false) }
+    val micActions = LocalMicActionsOpen.current
     // A12: echte Whisper-Aufnahme via Groq + Gemini-Text-Verbesserung.
     val voiceVm: VoiceCaptureViewModel = hiltViewModel()
     val voiceState by voiceVm.state.collectAsStateWithLifecycle()
@@ -140,7 +141,7 @@ fun ThesenScreen(
             onAllGranted = {
                 voiceVm.toggle { transcript ->
                     pendingTranscript = transcript
-                    actionsExpanded = false
+                    micActions.close()
                 }
             }
         )
@@ -222,7 +223,7 @@ fun ThesenScreen(
                 // Klick faltet die zwei Aktions-Buttons (Stift + Aufnehmen-Mic)
                 // direkt darueber auf — vorher ist im Thesen-Bereich
                 // KEIN Mikrofon zu sehen.
-                onMicClick = { actionsExpanded = !actionsExpanded },
+                onMicClick = { micActions.toggle() },
                 onSubAreaSelected = { parent, index -> onSwitchSub(parent, index) },
                 forcedSubMode = Routes.SCIENTIST,
                 // Frank-Wunsch 2026-06-09: Thesen ist jetzt Sub-Bereich 2 unter
@@ -309,7 +310,7 @@ fun ThesenScreen(
             // Sein Klick setzt actionsExpanded=true → es erscheinen direkt
             // ueber der BottomBar (rechts: Aufnehmen-Mic, links: Schreiben).
             // Standardmaessig ist im Thesen-Bereich NICHTS zu sehen.
-            if (actionsExpanded) {
+            if (micActions.isOpen) {
                 val actionAccent = LocalCosmos.current.accent
                 Row(
                     modifier = Modifier.align(Alignment.BottomCenter).padding(bottom = 110.dp),
@@ -324,7 +325,7 @@ fun ThesenScreen(
                         iconTint = Color.Black,
                         onClick = {
                             inputDialogOpen = true
-                            actionsExpanded = false
+                            micActions.close()
                         },
                     )
                     // A12: echte Whisper-Aufnahme via Groq Large V3 Turbo.
@@ -345,7 +346,7 @@ fun ThesenScreen(
                                     if (micPermission.check()) {
                                         voiceVm.toggle { transcript ->
                                             pendingTranscript = transcript
-                                            actionsExpanded = false
+                                            micActions.close()
                                         }
                                     } else {
                                         micPermission.request()
@@ -354,7 +355,7 @@ fun ThesenScreen(
                                 VoiceCaptureState.RECORDING -> {
                                     voiceVm.toggle { transcript ->
                                         pendingTranscript = transcript
-                                        actionsExpanded = false
+                                        micActions.close()
                                     }
                                 }
                                 VoiceCaptureState.PROCESSING -> Unit

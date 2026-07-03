@@ -37,9 +37,7 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -52,6 +50,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import de.frank.entropyreducer.presentation.ThemeViewModel
 import de.frank.entropyreducer.presentation.components.CosmosScaffold
 import de.frank.entropyreducer.presentation.components.GlassCard
+import de.frank.entropyreducer.presentation.components.LocalMicActionsOpen
 import de.frank.entropyreducer.presentation.components.MarkdownView
 import de.frank.entropyreducer.presentation.components.StatusBar
 import de.frank.entropyreducer.presentation.components.ThemeToggleIcon
@@ -101,7 +100,7 @@ fun AnalysisScreen(
     // Mic-Tap oeffnet zwei runde Buttons (Schreiben/Aufnehmen) in Gruen — der
     // resultierende Text wird ueber TasksViewModel.processCapturedText als
     // neue Aufgabe gespeichert.
-    var micActionsOpen by remember { mutableStateOf(false) }
+    val micActions = LocalMicActionsOpen.current
     val tasksVm: de.frank.entropyreducer.presentation.dashboard1.TasksViewModel = hiltViewModel()
 
     CosmosScaffold(
@@ -118,7 +117,7 @@ fun AnalysisScreen(
                 currentTab = currentTab,
                 micState = de.frank.entropyreducer.presentation.components.MicState.IDLE,
                 onTabSelected = onSwitchTab,
-                onMicClick = { micActionsOpen = !micActionsOpen },
+                onMicClick = { micActions.toggle() },
                 onSubAreaSelected = onOpenSubArea,
             )
         },
@@ -188,10 +187,10 @@ fun AnalysisScreen(
             // BottomBar ist immer die orange Hauptleiste; Mic-Aktionen folgen derselben Farbe.
             val micAccent = LocalCosmos.current.accent
             de.frank.entropyreducer.presentation.components.MicCaptureActions(
-                visible = micActionsOpen,
+                visible = micActions.isOpen,
                 accent = micAccent,
                 onTextCommit = { text, source -> tasksVm.processCapturedText(text, source) },
-                onClose = { micActionsOpen = false },
+                onClose = { micActions.close() },
                 modifier = Modifier.align(Alignment.BottomCenter),
             )
         }
