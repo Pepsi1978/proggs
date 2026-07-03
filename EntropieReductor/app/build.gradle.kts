@@ -15,7 +15,7 @@ plugins {
 // .gitignore ausgeschlossen, kommt also nie ins Git-Repo.
 val skBase: JFile = JFile(System.getProperty("user.home"))
     .resolve("SK").resolve("EntropieReductor")
-val skKeystoreSrc: JFile = skBase.resolve("entropiereductor.debug.keystore")
+val skKeystoreSrc: JFile = skBase.resolve("debug-shared.keystore")
 val rootKeystoreDst: JFile = rootProject.file("debug-shared.keystore")
 
 // Frank-Wunsch 2026-05-17: Google-Maps-API-Key fuer Satelliten-Karte im
