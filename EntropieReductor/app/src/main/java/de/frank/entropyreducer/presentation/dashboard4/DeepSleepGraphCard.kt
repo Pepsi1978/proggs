@@ -70,10 +70,14 @@ internal fun DeepSleepGraphCard(
     val cosmos = LocalCosmos.current
     val accent = SleepStageColors.Deep
 
+    // Performance-Fix 2026-07-03 (#47449): Schwerarbeit haengt nur an history — beim
+    // Chart-Scrubbing (selectedSnapshot aendert sich pro Move-Event) lief die komplette
+    // groupBy-Pipeline sonst in JEDEM Frame neu.
+    val heavy = if (precomputed == null) remember(history) { deepSleepHeavy(history) } else null
     val derived =
         precomputed
-            ?: remember(selectedSnapshot, history) {
-                deepSleepDerived(selectedSnapshot = selectedSnapshot, history = history)
+            ?: remember(selectedSnapshot, heavy) {
+                deepSleepDerived(selectedSnapshot = selectedSnapshot, heavy = heavy!!)
             }
 
     // Frank-Wunsch 2026-05-17: Header-Zahl bekommt die gleiche Ampel-Farbe wie
@@ -184,10 +188,16 @@ data class DeepSleepDerived(
 
 data class DeepSleepRow(val date: LocalDate, val percent: Double, val deltaToPrevDay: Double?)
 
-internal fun deepSleepDerived(
-    selectedSnapshot: BiomarkerSnapshotEntity?,
-    history: List<BiomarkerSnapshotEntity>,
-): DeepSleepDerived {
+/** History-abhaengige Schwerarbeit — aendert sich beim Scrubbing NICHT, daher separat memoiziert. */
+internal data class DeepSleepHeavy(
+    val all: List<Pair<LocalDate, Double>>,
+    val last30: List<Double>,
+    val avg30: Double?,
+    val rows: List<DeepSleepRow>,
+    val chartPoints: List<Pair<Long, Double>>,
+)
+
+internal fun deepSleepHeavy(history: List<BiomarkerSnapshotEntity>): DeepSleepHeavy {
     // Historie in chronologischer Reihenfolge ASC mit gueltigen Werten.
     val zone = ZoneId.systemDefault()
     val all =
@@ -201,12 +211,7 @@ internal fun deepSleepDerived(
             .mapValues { entry -> entry.value.average() }
             .toSortedMap()
             .map { (date, pct) -> date to pct }
-
-    val current = selectedSnapshot?.percent() ?: all.lastOrNull()?.second
     val last30 = all.takeLast(30).map { it.second }
-    val avg30 = if (last30.size >= 3) last30.average() else null
-    val delta = if (current != null && avg30 != null) current - avg30 else null
-
     // Historie als Zeilen mit Delta zum jeweiligen Vortag — neuester Eintrag oben.
     val rows = mutableListOf<DeepSleepRow>()
     all.forEachIndexed { idx, (date, pct) ->
@@ -214,18 +219,38 @@ internal fun deepSleepDerived(
         val deltaPrev = if (prev != null) pct - prev else null
         rows += DeepSleepRow(date = date, percent = pct, deltaToPrevDay = deltaPrev)
     }
-    val chartPoints = all.map { (date, pct) ->
-        date.atStartOfDay(zone).toInstant().toEpochMilli() to pct
-    }
-    return DeepSleepDerived(
-        currentPercent = current,
-        avg30Percent = avg30,
-        deltaVsAvg = delta,
-        last30Percent = last30,
-        historyRows = rows.reversed(),
-        chartPoints = chartPoints,
+    return DeepSleepHeavy(
+        all = all,
+        last30 = last30,
+        avg30 = if (last30.size >= 3) last30.average() else null,
+        rows = rows.reversed(),
+        chartPoints = all.map { (date, pct) ->
+            date.atStartOfDay(zone).toInstant().toEpochMilli() to pct
+        },
     )
 }
+
+internal fun deepSleepDerived(
+    selectedSnapshot: BiomarkerSnapshotEntity?,
+    heavy: DeepSleepHeavy,
+): DeepSleepDerived {
+    val current = selectedSnapshot?.percent() ?: heavy.all.lastOrNull()?.second
+    val delta = if (current != null && heavy.avg30 != null) current - heavy.avg30 else null
+    return DeepSleepDerived(
+        currentPercent = current,
+        avg30Percent = heavy.avg30,
+        deltaVsAvg = delta,
+        last30Percent = heavy.last30,
+        historyRows = heavy.rows,
+        chartPoints = heavy.chartPoints,
+    )
+}
+
+/** Kompatibilitaets-Wrapper (BiomarkerViewModel berechnet off-UI vor) — Verhalten identisch. */
+internal fun deepSleepDerived(
+    selectedSnapshot: BiomarkerSnapshotEntity?,
+    history: List<BiomarkerSnapshotEntity>,
+): DeepSleepDerived = deepSleepDerived(selectedSnapshot, deepSleepHeavy(history))
 
 private fun BiomarkerSnapshotEntity.percent(): Double? {
     val deep = sleepDeepMinutes ?: return null

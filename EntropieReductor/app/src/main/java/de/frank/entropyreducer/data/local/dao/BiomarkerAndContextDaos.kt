@@ -32,6 +32,11 @@ interface BiomarkerSnapshotDao {
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun upsert(snapshot: BiomarkerSnapshotEntity)
 
+    /** Performance-Fix 2026-07-03 (#47449): Batch-Variante fuer den Start-Restore —
+     *  EINE Transaktion statt N Einzeltransaktionen (vorher ~300 pro App-Start). */
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun upsertAll(snapshots: List<BiomarkerSnapshotEntity>)
+
     @Query("DELETE FROM biomarker_snapshots")
     suspend fun deleteAll()
 

@@ -56,9 +56,13 @@ internal fun HrvGraphCard(
     val cosmos = LocalCosmos.current
     val accent = LocalCosmos.current.accent
 
+    // Performance-Fix 2026-07-03 (#47449): Schwerarbeit haengt nur an history — beim
+    // Chart-Scrubbing (selectedSnapshot aendert sich pro Move-Event) lief die komplette
+    // groupBy-Pipeline sonst in JEDEM Frame neu (gleiches Muster wie InteractiveLineChart-Audit).
+    val heavy = remember(history) { hrvHeavy(history) }
     val derived =
-        remember(selectedSnapshot, history) {
-            hrvDerived(selectedSnapshot = selectedSnapshot, history = history)
+        remember(selectedSnapshot, heavy) {
+            hrvDerived(selectedSnapshot = selectedSnapshot, heavy = heavy)
         }
 
     GlassCard(modifier = Modifier.fillMaxWidth().clickable { onClick() }) {
@@ -128,10 +132,14 @@ private data class HrvDerived(
     val last30Ms: List<Double>,
 )
 
-private fun hrvDerived(
-    selectedSnapshot: BiomarkerSnapshotEntity?,
-    history: List<BiomarkerSnapshotEntity>,
-): HrvDerived {
+/** History-abhaengige Schwerarbeit — aendert sich beim Scrubbing NICHT, daher separat memoiziert. */
+private data class HrvHeavy(
+    val all: List<Double>,
+    val last30: List<Double>,
+    val avgAll: Double?,
+)
+
+private fun hrvHeavy(history: List<BiomarkerSnapshotEntity>): HrvHeavy {
     val zone = ZoneId.systemDefault()
     val all =
         history
@@ -144,19 +152,27 @@ private fun hrvDerived(
             .mapValues { entry -> entry.value.average() }
             .toSortedMap()
             .map { (_, hrv) -> hrv }
+    return HrvHeavy(
+        all = all,
+        last30 = all.takeLast(30),
+        avgAll = all.takeIf { it.isNotEmpty() }?.average(),
+    )
+}
 
-    val current = selectedSnapshot?.hrvMs ?: all.lastOrNull()
-    val last30 = all.takeLast(30)
-    val avgAll = all.takeIf { it.isNotEmpty() }?.average()
+private fun hrvDerived(
+    selectedSnapshot: BiomarkerSnapshotEntity?,
+    heavy: HrvHeavy,
+): HrvDerived {
+    val current = selectedSnapshot?.hrvMs ?: heavy.all.lastOrNull()
     // Frank-Wunsch 2026-06-21: Abweichung zum Gesamt-Durchschnitt fuer das
     // Trend-Badge im Footer (Plus = ueber Schnitt = Gruen, Minus = Rot).
-    val delta = if (current != null && avgAll != null) current - avgAll else null
+    val delta = if (current != null && heavy.avgAll != null) current - heavy.avgAll else null
 
     return HrvDerived(
         currentMs = current,
-        avgAllMs = avgAll,
+        avgAllMs = heavy.avgAll,
         deltaVsAvg = delta,
-        last30Ms = last30,
+        last30Ms = heavy.last30,
     )
 }
 

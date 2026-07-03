@@ -1010,13 +1010,13 @@ constructor(
                     return 0
                 }
         var count = 0
-        // Whoop Daily Recovery
-        payload.whoopSnapshots
-            .map { it.toEntity() }
-            .forEach { snap ->
-                biomarkerSnapshotDao.upsert(snap)
-                count++
-            }
+        // Whoop Daily Recovery — Performance-Fix 2026-07-03 (#47449): Batch-Upsert in EINER
+        // Transaktion statt einer Einzeltransaktion pro Snapshot (vorher ~300 pro App-Start).
+        if (payload.whoopSnapshots.isNotEmpty()) {
+            val snaps = payload.whoopSnapshots.map { it.toEntity() }
+            biomarkerSnapshotDao.upsertAll(snaps)
+            count += snaps.size
+        }
         // Whoop Workouts
         if (payload.whoopWorkouts.isNotEmpty()) {
             val list = payload.whoopWorkouts.map { it.toEntity() }

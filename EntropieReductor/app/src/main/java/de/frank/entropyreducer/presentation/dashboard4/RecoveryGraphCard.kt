@@ -69,9 +69,13 @@ internal fun RecoveryGraphCard(
     val cosmos = LocalCosmos.current
     val accent = LocalCosmos.current.ok
 
+    // Performance-Fix 2026-07-03 (#47449): Schwerarbeit haengt nur an history — beim
+    // Chart-Scrubbing (selectedSnapshot aendert sich pro Move-Event) lief die komplette
+    // groupBy-Pipeline sonst in JEDEM Frame neu.
+    val heavy = remember(history) { recoveryHeavy(history) }
     val derived =
-        remember(selectedSnapshot, history) {
-            recoveryDerived(selectedSnapshot = selectedSnapshot, history = history)
+        remember(selectedSnapshot, heavy) {
+            recoveryDerived(selectedSnapshot = selectedSnapshot, heavy = heavy)
         }
 
     var sheetOpen by remember { mutableStateOf(false) }
@@ -159,10 +163,15 @@ internal data class RecoveryRow(
     val deltaToPrevDay: Double?,
 )
 
-private fun recoveryDerived(
-    selectedSnapshot: BiomarkerSnapshotEntity?,
-    history: List<BiomarkerSnapshotEntity>,
-): RecoveryDerived {
+/** History-abhaengige Schwerarbeit — aendert sich beim Scrubbing NICHT, daher separat memoiziert. */
+private data class RecoveryHeavy(
+    val all: List<Pair<java.time.LocalDate, Double>>,
+    val last30: List<Double>,
+    val avg30: Double?,
+    val rows: List<RecoveryRow>,
+)
+
+private fun recoveryHeavy(history: List<BiomarkerSnapshotEntity>): RecoveryHeavy {
     val zone = ZoneId.systemDefault()
     val all =
         history
@@ -175,24 +184,39 @@ private fun recoveryDerived(
             .mapValues { entry -> entry.value.average() }
             .toSortedMap()
             .map { (date, pct) -> date to pct }
-
-    val current = selectedSnapshot?.recoveryScore?.toDouble() ?: all.lastOrNull()?.second
     val last30 = all.takeLast(30).map { it.second }
-    val avg30 = if (last30.size >= 3) last30.average() else null
-    val delta = if (current != null && avg30 != null) current - avg30 else null
-
     val rows = mutableListOf<RecoveryRow>()
     all.forEachIndexed { idx, (date, pct) ->
         val prev = if (idx > 0) all[idx - 1].second else null
         val deltaPrev = if (prev != null) pct - prev else null
         rows += RecoveryRow(date = date, percent = pct, deltaToPrevDay = deltaPrev)
     }
+    return RecoveryHeavy(
+        all = all,
+        last30 = last30,
+        avg30 = if (last30.size >= 3) last30.average() else null,
+        // Neuester Eintrag oben — reversed schon hier, damit das Finalize pro Scrub-Frame
+        // keine neue Liste alloziert.
+        rows = rows.reversed(),
+    )
+}
+
+private fun recoveryDerived(
+    selectedSnapshot: BiomarkerSnapshotEntity?,
+    heavy: RecoveryHeavy,
+): RecoveryDerived {
+    val all = heavy.all
+    val last30 = heavy.last30
+    val avg30 = heavy.avg30
+    val current = selectedSnapshot?.recoveryScore?.toDouble() ?: all.lastOrNull()?.second
+    val delta = if (current != null && avg30 != null) current - avg30 else null
+
     return RecoveryDerived(
         currentPercent = current,
         avg30Percent = avg30,
         deltaVsAvg = delta,
         last30Percent = last30,
-        historyRows = rows.reversed(),
+        historyRows = heavy.rows,
     )
 }
 
