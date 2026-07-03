@@ -31,6 +31,7 @@
 | 13 | `/agents` `/doctor` `/config` `/permissions` → "isn't available" | Settings-Datei direkt editieren oder Befehl in der eigenständigen CLI | §J3 |
 | 14 | Skript/CI/Pipe gewünscht (`-p`, `--output-format`) | Geht im Desktop NICHT — bewusst in die CLI/Agent SDK wechseln | §J1 |
 | 15 | macOS: "Claude is damaged" / schwarzer Hauptbereich | Notarisierungs-/Asar-Problem; App updaten, sonst CLI; `xattr` hilft oft nicht | §A8 |
+| 16 | CLI-Verknüpfung nach Windows-Neustart: Fenster blitzt auf + schließt sofort (5-6 Klicks nötig) | NIE per Vorab-Heuristik lösen — Launcher muss NACH dem Start verifizieren + automatisch wiederholen (`Start-WtCliRobust` in `~/start-wt-common.ps1`) | §O1 |
 
 ---
 
@@ -607,3 +608,16 @@ Gegenseite: `best-practices/claude-tooling/claude-code-desktop-vs-cli.md`.
 9. **Cloud-Session?** Kein CLAUDE.md/Skills/MCP/Terminal — kontextkritische Arbeit lokal. (§I1)
 10. **Skript/CI/Batch?** Bewusst in die CLI — Desktop ist interaktiv. (§J1)
 11. **Stabilität:** Bei vielen parallelen Sessions oder riesiger History eher CLI; bei Crash `claude --safe-mode`. (§K1)
+
+---
+
+## §O — CLI-Start-Verknüpfungen (Windows Terminal, selbst erlebt)
+
+### §O1. Kaltstart-Race: CLI-Verknüpfung blitzt auf und schließt sofort (Monarch-Handshake)  [⭐ HÄUFIG — selbst erlebt, 3. Fix-Generation]
+**Symptom:** Nach einem Windows-Neustart öffnet der Klick auf eine CLI-Verknüpfung (Claude/OpenCode/Codex/Gemini via `wt.exe new-tab`) kurz ein Terminal-Fenster, das sich sofort wieder schließt; erst nach 5-6 Klicks startet das CLI. Sobald EINMAL ein gesundes Fenster existiert, funktioniert danach jeder Start — bis zum nächsten Reboot. Ein mitstartendes Overlay (TVO-Mikrofonknopf) erscheint/verschwindet mit dem Fenster — reiner Zeuge, kein Täter.
+**Ursache (Root Cause, bewiesen 2026-07-03):** Windows Terminal verwaltet Fenster über eine Monarch/Peasant-COM-Architektur. Beim Boot existiert oft ein halbtoter WT-Prozess; jeder Andock-Versuch (`-w 0` ODER Setting `windowingBehavior: useAnyExisting` — das dockt auch OHNE `-w 0` an!) geht an den Sterbenden und das neue Fenster stirbt mit. Beweis im Launcher-Log: bei 5 Klicks in 14 s hatte der einzige WT-Prozess jedes Mal eine andere PID (Prozesse starben fortlaufend); kein Crash im Ereignisprotokoll (Fenster schließen "regulär").
+**Warum 2 Fix-Generationen scheiterten:** (1) "Prozess läuft?"-Check (2026-06-11) und (2) "MainWindowHandle != 0?"-Check (2026-06-24) versuchen VORHER zu erraten, ob das Andocken klappt — ein sterbender Prozess kann aber ein gültiges Fensterhandle haben, und `useAnyExisting` machte den "frisches Fenster"-Fallback (ohne `-w`) wirkungslos.
+**Versionen:** Windows 11, Windows Terminal 1.24.x; architekturbedingt (Monarch-Election-Races sind in microsoft/terminal mehrfach dokumentiert).
+**FIX (Architekturwechsel — prüfen statt raten, 2026-07-03):** Zentrale Funktion `Start-WtCliRobust` in `C:\Users\barwa\start-wt-common.ps1` (Repo-Spiegel: `claude-code-setup/launcher/`), von allen vier Launchern (`start-{claude,opencode,codex,gemini}-wt.ps1`) dot-sourced. Drei Schichten: (a) präventiv Zombie-WT-Prozesse ohne Fenster (>15 s alt) beenden; (b) nach jedem Start bis 8 s verifizieren, ob das innere CLI-pwsh existiert (CIM `Win32_Process`, CommandLine-Match + CreationDate-Filter) und 3 s stabil bleibt — sonst automatisch neu versuchen, ab Versuch 2 mit `-w new` (überschreibt `useAnyExisting` wirklich); (c) nach 3 Fehlversuchen garantierter Fallback in ein klassisches Konsolenfenster (pwsh direkt, kein Monarch). Ein Klick genügt damit immer — das Mehrfach-Klicken übernimmt das Skript.
+**Merksatz:** Die Gesundheit des WT-Monarchen ist von außen NICHT zuverlässig erkennbar — Erfolg lässt sich nur NACH dem Start verifizieren.
+**Quelle:** eigener Vorfall + Log-Beweis 2026-07-03 (`start-claude-wt.log` 12:11 Uhr); microsoft/terminal Monarch/Peasant-Architektur (offiziell).
