@@ -10,10 +10,8 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.NavController
@@ -25,7 +23,6 @@ import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
 import de.frank.entropyreducer.presentation.amazfit.AmazfitTrainingDetailScreen
 import de.frank.entropyreducer.presentation.amazfit.AmazfitTrainingsScreen
-import de.frank.entropyreducer.presentation.components.MicState
 import de.frank.entropyreducer.presentation.components.LocalBelowSubTabRow
 import de.frank.entropyreducer.presentation.dashboard1.TasksScreen
 import de.frank.entropyreducer.presentation.dashboard2.AnalysisScreen
@@ -93,13 +90,6 @@ private fun AppNavHost(
 private fun AppNavHostInner(nav: androidx.navigation.NavHostController, modifier: Modifier) {
     val cosmos = LocalCosmos.current
 
-    // Mic-State fuer die BottomBar
-    var micState by remember { mutableStateOf(MicState.IDLE) }
-    var micActionsOpen by remember { mutableStateOf(false) }
-
-    // Aktueller Tab fuer die BottomBar
-    var currentTab by remember { mutableStateOf(Routes.TASKS) }
-
     val widgetLink by
         de.frank.entropyreducer.presentation.widget.WidgetDeepLinkBus.events.collectAsStateWithLifecycle()
     LaunchedEffect(widgetLink) {
@@ -114,17 +104,6 @@ private fun AppNavHostInner(nav: androidx.navigation.NavHostController, modifier
                 de.frank.entropyreducer.presentation.widget.WidgetDeepLinkBus.clear()
             }
             else -> Unit
-        }
-    }
-
-    // Aktuellen Tab aus der Navigation ableiten
-    LaunchedEffect(nav.currentBackStackEntry) {
-        nav.currentBackStackEntry?.destination?.route?.let { route ->
-            when (route) {
-                Routes.TASKS, Routes.ANALYSIS, Routes.SCIENTIST, Routes.BIOMARKER -> {
-                    currentTab = route
-                }
-            }
         }
     }
 
@@ -165,24 +144,24 @@ private fun AppNavHostInner(nav: androidx.navigation.NavHostController, modifier
                                     onOpenSubArea = { parent, index -> nav.navigate(Routes.subRouteFor(parent, index)) },
                                     onOpenEntryDetail = { entryId -> nav.navigate(Routes.entropyEntryDetail(entryId)) },
                                     onOpenLoopDetail = { templateId -> nav.navigate(Routes.loopTemplateDetail(templateId)) },
-                                    showBottomBar = false,
+                                    showBottomBar = true,
                                 )
                                 1 -> GewohnheitBoardScreen(
                                     onSwitchSub = { p, i -> nav.navigate(Routes.subRouteFor(p, i)) },
                                     onSwitchTab = { route -> nav.tabSwitch(route) },
-                                    showBottomBar = false,
+                                    showBottomBar = true,
                                 )
                                 2 -> MentalBoardScreen(
                                     onSwitchSub = { p, i -> nav.navigate(Routes.subRouteFor(p, i)) },
                                     onSwitchTab = { route -> nav.tabSwitch(route) },
-                                    showBottomBar = false,
+                                    showBottomBar = true,
                                 )
                                 3 -> IdeenScreen(
                                     onBack = { nav.popBackStack() },
                                     onSwitchSub = { p, i -> nav.navigate(Routes.subRouteFor(p, i)) },
                                     onSwitchTab = { route -> nav.tabSwitch(route) },
                                     onOpenEntry = { entryId -> nav.navigate(Routes.ideeEntryDetail(entryId)) },
-                                    showBottomBar = false,
+                                    showBottomBar = true,
                                 )
                             }
                         }
@@ -223,7 +202,7 @@ private fun AppNavHostInner(nav: androidx.navigation.NavHostController, modifier
                                     onSwitchTab = { route -> nav.tabSwitch(route) },
                                     currentTab = Routes.ANALYSIS,
                                     onOpenSubArea = { parent, index -> nav.navigate(Routes.subRouteFor(parent, index)) },
-                                    showBottomBar = false,
+                                    showBottomBar = true,
                                 )
                                 else -> SubAreaScreen(
                                     parentTab = Routes.ANALYSIS,
@@ -231,7 +210,7 @@ private fun AppNavHostInner(nav: androidx.navigation.NavHostController, modifier
                                     onBack = { nav.popBackStack() },
                                     onSwitchSub = { p, i -> nav.navigate(Routes.subRouteFor(p, i)) },
                                     onSwitchTab = { route -> nav.tabSwitch(route) },
-                                    showBottomBar = false,
+                                    showBottomBar = true,
                                 )
                             }
                         }
@@ -275,27 +254,27 @@ private fun AppNavHostInner(nav: androidx.navigation.NavHostController, modifier
                                     onSwitchTab = { route -> nav.tabSwitch(route) },
                                     currentTab = Routes.SCIENTIST,
                                     onOpenSubArea = { parent, index -> nav.navigate(Routes.subRouteFor(parent, index)) },
-                                    showBottomBar = false,
+                                    showBottomBar = true,
                                 )
                                 1 -> TagebuchScreen(
                                     onBack = { nav.popBackStack() },
                                     onSwitchSub = { p, i -> nav.navigate(Routes.subRouteFor(p, i)) },
                                     onSwitchTab = { route -> nav.tabSwitch(route) },
                                     onOpenEntry = { entryId -> nav.navigate(Routes.tagebuchEntryDetail(entryId)) },
-                                    showBottomBar = false,
+                                    showBottomBar = true,
                                 )
                                 2 -> de.frank.entropyreducer.presentation.thesen.ThesenScreen(
                                     onBack = { nav.popBackStack() },
                                     onSwitchSub = { p, i -> nav.navigate(Routes.subRouteFor(p, i)) },
                                     onSwitchTab = { route -> nav.tabSwitch(route) },
                                     onOpenEntry = { entryId -> nav.navigate(Routes.thesenEntryDetail(entryId)) },
-                                    showBottomBar = false,
+                                    showBottomBar = true,
                                 )
                                 3 -> de.frank.entropyreducer.presentation.journal.JournalScreen(
                                     onSwitchSub = { p, i -> nav.navigate(Routes.subRouteFor(p, i)) },
                                     onSwitchTab = { route -> nav.tabSwitch(route) },
                                     onOpenEntry = { sourceId -> nav.navigate(Routes.journalEntryDetail(sourceId)) },
-                                    showBottomBar = false,
+                                    showBottomBar = true,
                                 )
                             }
                         }
@@ -344,7 +323,7 @@ private fun AppNavHostInner(nav: androidx.navigation.NavHostController, modifier
                                     onOpenOuraDetail = { metricKey -> nav.navigate(Routes.ouraDetail(metricKey)) },
                                     onOpenHealthConnectDetail = { metricKey -> nav.navigate(Routes.healthConnectDetail(metricKey)) },
                                     onOpenSubArea = { parent, index -> nav.navigate(Routes.subRouteFor(parent, index)) },
-                                    showBottomBar = false,
+                                    showBottomBar = true,
                                 )
                                 1, 2, 3 -> SubAreaScreen(
                                     parentTab = Routes.BIOMARKER,
@@ -352,7 +331,7 @@ private fun AppNavHostInner(nav: androidx.navigation.NavHostController, modifier
                                     onBack = { nav.popBackStack() },
                                     onSwitchSub = { p, i -> nav.navigate(Routes.subRouteFor(p, i)) },
                                     onSwitchTab = { route -> nav.tabSwitch(route) },
-                                    showBottomBar = false,
+                                    showBottomBar = true,
                                 )
                             }
                         }
@@ -537,16 +516,5 @@ private fun AppNavHostInner(nav: androidx.navigation.NavHostController, modifier
             }
         }
 
-        // Fixierte BottomBar unten
-        CosmosBottomBar(
-            currentTab = currentTab,
-            micState = micState,
-            onTabSelected = { route ->
-                currentTab = route
-                nav.tabSwitch(route)
-            },
-            onMicClick = { micActionsOpen = !micActionsOpen },
-            modifier = Modifier.align(androidx.compose.ui.Alignment.BottomCenter),
-        )
     }
 }
