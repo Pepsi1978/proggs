@@ -145,6 +145,7 @@ fun WhisperMicButton(
     val context = LocalContext.current
     val state by vm.state.collectAsStateWithLifecycle()
     val error by vm.error.collectAsStateWithLifecycle()
+    val actionAccent = LocalCosmos.current.accent
     LaunchedEffect(error) {
         error?.let { msg ->
             Toast.makeText(context, msg, Toast.LENGTH_LONG).show()
@@ -153,17 +154,17 @@ fun WhisperMicButton(
     }
     val (bg, icon, tint) = when (state) {
         VoiceCaptureState.IDLE -> Triple(
-            LocalCosmos.current.accent,
+            actionAccent,
             Icons.Outlined.Mic,
             Color.White,
         )
         VoiceCaptureState.RECORDING -> Triple(
-            LocalCosmos.current.crit,
+            actionAccent,
             Icons.Outlined.Stop,
             Color.White,
         )
         VoiceCaptureState.PROCESSING -> Triple(
-            LocalCosmos.current.accentForscher,
+            actionAccent,
             Icons.Outlined.Mic,
             Color.White,
         )

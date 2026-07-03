@@ -85,12 +85,6 @@ fun MicButton(
         remember(baseAccent) {
             Brush.radialGradient(0f to baseAccent, 1f to baseAccent.copy(alpha = 0.65f))
         }
-    val critColor = LocalCosmos.current.crit
-    val recordingBrush =
-        remember(critColor) {
-            Brush.radialGradient(0f to critColor, 1f to critColor.copy(alpha = 0.7f))
-        }
-
     Box(modifier = modifier.size(size + 32.dp), contentAlignment = Alignment.Center) {
         // Pulsierende Ringe bei Aufnahme
         if (state == MicState.RECORDING) {
@@ -105,7 +99,7 @@ fun MicButton(
                             alpha = ringAlpha * 0.5f
                         }
                         .clip(CircleShape)
-                        .background(LocalCosmos.current.crit.copy(alpha = 0.3f))
+                        .background(baseAccent.copy(alpha = 0.3f))
             )
         }
 
@@ -115,7 +109,7 @@ fun MicButton(
                 Modifier.size(size)
                     .scale(targetScale)
                     .clip(CircleShape)
-                    .background(if (state == MicState.RECORDING) recordingBrush else accentBrush)
+                    .background(accentBrush)
                     .clickable { onClick() },
             contentAlignment = Alignment.Center,
         ) {

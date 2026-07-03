@@ -314,6 +314,7 @@ fun TagebuchScreen(
             // ueber der BottomBar (rechts: Aufnehmen-Mic, links: Schreiben).
             // Standardmaessig ist im Tagebuch-Bereich NICHTS zu sehen.
             if (actionsExpanded) {
+                val actionAccent = LocalCosmos.current.accent
                 Row(
                     modifier = Modifier.align(Alignment.BottomCenter).padding(bottom = 110.dp),
                     horizontalArrangement = Arrangement.spacedBy(32.dp),
@@ -321,7 +322,7 @@ fun TagebuchScreen(
                     FabIconButton(
                         icon = Icons.Outlined.Edit,
                         label = "Schreiben",
-                        backgroundColor = TagebuchAccent.copy(alpha = 0.7f),
+                        backgroundColor = actionAccent.copy(alpha = 0.7f),
                         // Frank-Wunsch 2026-05-22 (dritte Iteration): Icon schwarz
                         // wie der zentrale BottomBar-Mic.
                         iconTint = Color.Black,
@@ -340,10 +341,7 @@ fun TagebuchScreen(
                     FabIconButton(
                         icon = recordIcon,
                         label = recordLabel,
-                        backgroundColor =
-                            if (voiceState == VoiceCaptureState.RECORDING)
-                                Color(0xFFE53935).copy(alpha = 0.7f)
-                            else TagebuchAccent.copy(alpha = 0.7f),
+                        backgroundColor = actionAccent.copy(alpha = 0.7f),
                         iconTint = Color.Black,
                         onClick = {
                             when (voiceState) {

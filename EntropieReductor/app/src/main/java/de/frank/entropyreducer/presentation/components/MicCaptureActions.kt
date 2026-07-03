@@ -97,6 +97,7 @@ fun MicCaptureActions(
     val context = LocalContext.current
     val voiceState by voiceVm.state.collectAsStateWithLifecycle()
     val voiceError by voiceVm.error.collectAsStateWithLifecycle()
+    val actionAccent = LocalCosmos.current.accent
     var inputDialogOpen by remember { mutableStateOf(false) }
 
     LaunchedEffect(voiceError) {
@@ -157,7 +158,7 @@ fun MicCaptureActions(
         FabActionButton(
             icon = Icons.Outlined.Edit,
             label = "Schreiben",
-            background = accent.copy(alpha = 0.7f),
+            background = actionAccent.copy(alpha = 0.7f),
             // Frank-Wunsch 2026-05-22 (dritte Iteration): Icon-Tint immer Schwarz,
             // analog zum schwarzen Mic-Symbol im zentralen BottomBar-Button.
             tint = Color.Black,
@@ -173,8 +174,7 @@ fun MicCaptureActions(
         FabActionButton(
             icon = recordIcon,
             label = recordLabel,
-            background = if (recording) Color(0xFFE53935).copy(alpha = 0.7f)
-            else accent.copy(alpha = 0.7f),
+            background = actionAccent.copy(alpha = 0.7f),
             tint = Color.Black,
             onClick = {
                 when (voiceState) {
