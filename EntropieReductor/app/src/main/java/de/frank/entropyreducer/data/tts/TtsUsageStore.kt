@@ -76,9 +76,6 @@ constructor(
      *         und der Stand deshalb ins Drive gesichert werden soll; sonst `false`.
      */
     @Synchronized
-    // Bugfix 2026-07-03: @Synchronized — add() ist ein Read-Modify-Write auf SharedPreferences;
-    // parallele Synthesen (Mental-Sequenz-Vorab-Synthese) konnten sich sonst Zeichen verlieren.
-    @Synchronized
     fun add(chars: Int): Boolean {
         if (chars <= 0) return false
         val nowMonth = currentMonthKey()
