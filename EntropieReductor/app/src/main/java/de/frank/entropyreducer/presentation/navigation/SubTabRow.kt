@@ -31,6 +31,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import de.frank.entropyreducer.presentation.theme.LocalCosmos
@@ -100,12 +101,15 @@ fun SubTabRow(
 
             // Sliding Indikator-Hintergrund (hinter den Tab-Texten, gleitet zur Position).
             // Feste Hoehe statt fillMaxHeight — sonst waechst der Indikator ueber den Screen.
+            // Performance-Fix 2026-07-03: Lambda-offset statt offset(x=) — der animierte Wert
+            // wird erst in der Layout-Phase gelesen. Vorher recomposete die gesamte SubTabRow
+            // in JEDEM Frame der 250-ms-Slide-Animation (parallel zum Pager-Swipe → Ruckeln).
             Box(
                 modifier =
                     Modifier.width(tabWidth)
                         .height(SUB_TAB_HEIGHT)
                         .padding(horizontal = 3.dp, vertical = 3.dp)
-                        .offset(x = tabWidth * animatedIndex)
+                        .offset { IntOffset(x = (tabWidth * animatedIndex).roundToPx(), y = 0) }
                         .clip(RoundedCornerShape(9.dp))
                         .background(tabColor.copy(alpha = 0.3f)),
             )

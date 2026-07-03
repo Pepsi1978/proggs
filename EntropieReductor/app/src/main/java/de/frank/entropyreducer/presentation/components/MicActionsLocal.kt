@@ -1,5 +1,7 @@
 package de.frank.entropyreducer.presentation.components
 
+import androidx.compose.runtime.Stable
+import androidx.compose.runtime.State
 import androidx.compose.runtime.staticCompositionLocalOf
 
 /**
@@ -27,10 +29,22 @@ import androidx.compose.runtime.staticCompositionLocalOf
  * (bzw. Composition) einen klaren Fehler, falls ein Screen vergisst, sich in den
  * Provider einzubinden — kein lautloses Versagen mehr.
  */
+/**
+ * Performance-Fix 2026-07-03 (ruckelige Sub-Tab-Swipes): Der Holder liest [isOpen] jetzt
+ * live aus einem [State] statt ihn als eingefrorenen Konstruktorwert zu halten. Dadurch
+ * kann AppNavGraph EINE stabile Instanz pro Host remembern — vorher wurde bei jeder
+ * Host-Recomposition (z. B. currentPage-Wechsel mitten im Swipe) eine NEUE Instanz an das
+ * staticCompositionLocal uebergeben, was die KOMPLETTE Composition aller vier Pager-Seiten
+ * invalidierte und das Swipen ruckeln liess. API (isOpen/setOpen/toggle/close) unveraendert.
+ */
+@Stable
 class MicActionsState(
-    val isOpen: Boolean,
+    private val isOpenState: State<Boolean>,
     val setOpen: (Boolean) -> Unit,
 ) {
+    val isOpen: Boolean
+        get() = isOpenState.value
+
     fun toggle() = setOpen(!isOpen)
     fun close() = setOpen(false)
 }

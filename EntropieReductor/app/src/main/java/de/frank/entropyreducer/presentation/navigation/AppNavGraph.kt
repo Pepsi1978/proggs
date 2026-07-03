@@ -13,7 +13,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
-import androidx.compose.runtime.setValue
+import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -122,9 +122,15 @@ private fun AppNavHostInner(nav: androidx.navigation.NavHostController, modifier
                 val tabs = remember { subTabsFor(Routes.TASKS) }
                 val pagerState = rememberPagerState(initialPage = 0) { tabs.size }
                 val coroutineScope = rememberCoroutineScope()
-                var micActionsOpen by remember { mutableStateOf(false) }
-                LaunchedEffect(pagerState.currentPage) { micActionsOpen = false }
-                val micActionsState = MicActionsState(micActionsOpen) { micActionsOpen = it }
+                // Performance-Fix 2026-07-03: EINE stabile MicActionsState-Instanz pro Host
+                // (remember) statt einer neuen Instanz pro Recomposition — sonst invalidiert
+                // das staticCompositionLocal bei jedem Swipe alle Pager-Seiten (Ruckeln).
+                // currentPage wird per snapshotFlow beobachtet statt als Composition-Read.
+                val micActionsOpen = remember { mutableStateOf(false) }
+                LaunchedEffect(pagerState) {
+                    snapshotFlow { pagerState.currentPage }.collect { micActionsOpen.value = false }
+                }
+                val micActionsState = remember { MicActionsState(micActionsOpen) { micActionsOpen.value = it } }
 
                 Box(modifier = Modifier.fillMaxSize()) {
                     Column(modifier = Modifier.fillMaxSize()) {
@@ -197,9 +203,15 @@ private fun AppNavHostInner(nav: androidx.navigation.NavHostController, modifier
                 val tabs = remember { subTabsFor(Routes.ANALYSIS) }
                 val pagerState = rememberPagerState(initialPage = 0) { tabs.size }
                 val coroutineScope = rememberCoroutineScope()
-                var micActionsOpen by remember { mutableStateOf(false) }
-                LaunchedEffect(pagerState.currentPage) { micActionsOpen = false }
-                val micActionsState = MicActionsState(micActionsOpen) { micActionsOpen = it }
+                // Performance-Fix 2026-07-03: EINE stabile MicActionsState-Instanz pro Host
+                // (remember) statt einer neuen Instanz pro Recomposition — sonst invalidiert
+                // das staticCompositionLocal bei jedem Swipe alle Pager-Seiten (Ruckeln).
+                // currentPage wird per snapshotFlow beobachtet statt als Composition-Read.
+                val micActionsOpen = remember { mutableStateOf(false) }
+                LaunchedEffect(pagerState) {
+                    snapshotFlow { pagerState.currentPage }.collect { micActionsOpen.value = false }
+                }
+                val micActionsState = remember { MicActionsState(micActionsOpen) { micActionsOpen.value = it } }
 
                 Box(modifier = Modifier.fillMaxSize()) {
                     Column(modifier = Modifier.fillMaxSize()) {
@@ -261,9 +273,15 @@ private fun AppNavHostInner(nav: androidx.navigation.NavHostController, modifier
                 val tabs = remember { subTabsFor(Routes.SCIENTIST) }
                 val pagerState = rememberPagerState(initialPage = 0) { tabs.size }
                 val coroutineScope = rememberCoroutineScope()
-                var micActionsOpen by remember { mutableStateOf(false) }
-                LaunchedEffect(pagerState.currentPage) { micActionsOpen = false }
-                val micActionsState = MicActionsState(micActionsOpen) { micActionsOpen = it }
+                // Performance-Fix 2026-07-03: EINE stabile MicActionsState-Instanz pro Host
+                // (remember) statt einer neuen Instanz pro Recomposition — sonst invalidiert
+                // das staticCompositionLocal bei jedem Swipe alle Pager-Seiten (Ruckeln).
+                // currentPage wird per snapshotFlow beobachtet statt als Composition-Read.
+                val micActionsOpen = remember { mutableStateOf(false) }
+                LaunchedEffect(pagerState) {
+                    snapshotFlow { pagerState.currentPage }.collect { micActionsOpen.value = false }
+                }
+                val micActionsState = remember { MicActionsState(micActionsOpen) { micActionsOpen.value = it } }
 
                 Box(modifier = Modifier.fillMaxSize()) {
                     Column(modifier = Modifier.fillMaxSize()) {
@@ -340,9 +358,15 @@ private fun AppNavHostInner(nav: androidx.navigation.NavHostController, modifier
                 val tabs = remember { subTabsFor(Routes.BIOMARKER) }
                 val pagerState = rememberPagerState(initialPage = 0) { tabs.size }
                 val coroutineScope = rememberCoroutineScope()
-                var micActionsOpen by remember { mutableStateOf(false) }
-                LaunchedEffect(pagerState.currentPage) { micActionsOpen = false }
-                val micActionsState = MicActionsState(micActionsOpen) { micActionsOpen = it }
+                // Performance-Fix 2026-07-03: EINE stabile MicActionsState-Instanz pro Host
+                // (remember) statt einer neuen Instanz pro Recomposition — sonst invalidiert
+                // das staticCompositionLocal bei jedem Swipe alle Pager-Seiten (Ruckeln).
+                // currentPage wird per snapshotFlow beobachtet statt als Composition-Read.
+                val micActionsOpen = remember { mutableStateOf(false) }
+                LaunchedEffect(pagerState) {
+                    snapshotFlow { pagerState.currentPage }.collect { micActionsOpen.value = false }
+                }
+                val micActionsState = remember { MicActionsState(micActionsOpen) { micActionsOpen.value = it } }
 
                 Box(modifier = Modifier.fillMaxSize()) {
                     Column(modifier = Modifier.fillMaxSize()) {
