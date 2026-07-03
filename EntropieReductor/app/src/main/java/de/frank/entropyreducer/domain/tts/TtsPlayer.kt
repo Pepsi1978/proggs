@@ -129,18 +129,17 @@ class TtsPlayer @Inject constructor(
 
     /* ============================ Mental-Vorlese-Sequenz ============================ */
     //
-    // Eigener Pfad für das Mentalboard-Vorlesen (Frank-Wunsch 2026-06-16): Folgesätze werden
-    // gecacht, der Anker-Satz kann aber bewusst frisch synthetisiert werden. So bleibt das
-    // Datenvolumen für die variierenden Folgesätze niedrig, während der wiederholte erste Satz
-    // nicht immer exakt dieselbe MP3-Datei mit derselben Betonung abspielt. Bewusst getrennt von
-    // speak()/cleanup() (die genau EINE Datei nutzen und nach Wiedergabe löschen) — die
-    // Sequenz-Dateien dürfen NICHT gelöscht werden, solange die Sequenz läuft.
+    // Eigener Pfad für das Mentalboard-Vorlesen (Frank-Wunsch 2026-06-16): Sequenzen können
+    // bewusst frische Dateien erzeugen, damit Wiederholungen nicht exakt dieselbe MP3-Datei mit
+    // derselben Betonung abspielen. Bewusst getrennt von speak()/cleanup() (die genau EINE Datei
+    // nutzen und nach Wiedergabe löschen) — die Sequenz-Dateien dürfen NICHT gelöscht werden,
+    // solange die Sequenz läuft.
 
     /**
      * Synthetisiert [text] in eine EINDEUTIG benannte Cache-Datei und gibt sie zurueck.
      * Existiert die Datei fuer denselben Text+Stimme bereits (gleicher Hash), wird sie OHNE
      * neuen TTS-Aufruf wiederverwendet (Caching). Bei [forceFresh] wird bewusst eine neue Datei
-     * erzeugt, damit wiederholte Anker-Saetze neu an Google-TTS geschickt werden. Loescht selbst
+     * erzeugt, damit Satz-Wiederholungen neu an Google-TTS geschickt werden. Loescht selbst
      * nichts — Aufrufer raeumt am Ende per [clearSequenceCache] auf.
      *
      * @throws IllegalStateException wenn kein TTS-API-Schluessel hinterlegt ist (mit Klartext-

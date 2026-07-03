@@ -13,7 +13,6 @@ import dagger.hilt.android.lifecycle.HiltViewModel
 import de.frank.entropyreducer.data.diagnostics.Diag
 import de.frank.entropyreducer.data.diagnostics.DiagnosticArea
 import de.frank.entropyreducer.domain.tts.TtsPlayer
-import java.io.File
 import javax.inject.Inject
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
@@ -47,9 +46,9 @@ import kotlinx.coroutines.withContext
  * bis Frank den Lautsprecher erneut drueckt ODER die Sicherheitsgrenze [MAX_DURATION_MS] (15 Minuten)
  * erreicht ist — dann stoppt die App automatisch, damit nicht aus Versehen endlos vorgelesen wird.
  *
- * Kosten/Netz: Folgesaetze werden pro Lauf gecacht. Der Anker (Satz 1) wird dagegen bei JEDEM
- * Auftreten frisch ueber Google-TTS synthetisiert, damit er nicht immer mit exakt derselben
- * Betonung aus derselben MP3-Datei kommt. Beim Stop wird der Sequenz-Cache wieder aufgeraeumt.
+ * Kosten/Netz: Jede Sequenzposition wird frisch ueber Google-TTS synthetisiert. Dadurch bekommt
+ * auch jede Wiederholung desselben Satzes eine eigene Betonung statt exakt dieselbe MP3-Datei.
+ * Beim Stop wird der Sequenz-Cache wieder aufgeraeumt.
  *
  * Threading (Bug-Almanach media3 T1/L1): Der MediaPlayer wird ausschliesslich aus
  * withContext(Dispatchers.Main) bedient; Freigabe deterministisch in [stop]/[onCleared].
@@ -71,11 +70,6 @@ data class MentalTtsUiState(
     /** Endlosschleife aktiv? */
     val loop: Boolean = false,
     val error: String? = null,
-)
-
-private data class SpeechItem(
-    val text: String,
-    val freshEveryTime: Boolean,
 )
 
 @HiltViewModel
@@ -204,24 +198,16 @@ constructor(
                 "anker=$anker folge=$folge loop=$loop)",
         )
 
-        // 1) Prefetch: Folgesaetze nur einmal synthetisieren. Der Anker bleibt bewusst draussen,
-        //    weil er pro Auftreten frisch an Google-TTS geschickt werden soll.
-        val fileCache = HashMap<String, File>()
-        for (text in sequence.filterNot { it.freshEveryTime }.map { it.text }.distinct()) {
-            currentCoroutineContext().ensureActive()
-            fileCache[text] = ttsPlayer.synthesizeToCache(text)
-        }
         Diag.d(
             DiagnosticArea.GOOGLE_TTS,
             TAG,
-            "Prefetch fertig: ${fileCache.size} Folgesaetze synthetisiert/gecacht; " +
-                "Anker wird pro Auftreten frisch synthetisiert",
+            "Kein Prefetch: jede Sequenzposition wird frisch synthetisiert",
         )
 
-        // 2) Wiedergabe mit frischer Anker-Synthese, Loop + 15-Min-Limit.
+        // Wiedergabe mit frischer Synthese pro Satzvorkommen, Loop + 15-Min-Limit.
         val deadline = SystemClock.elapsedRealtime() + MAX_DURATION_MS
         do {
-            for ((index, item) in sequence.withIndex()) {
+            for ((index, text) in sequence.withIndex()) {
                 currentCoroutineContext().ensureActive()
                 if (SystemClock.elapsedRealtime() >= deadline) {
                     Diag.d(
@@ -231,12 +217,7 @@ constructor(
                     )
                     return
                 }
-                val file =
-                    if (item.freshEveryTime) {
-                        ttsPlayer.synthesizeToCache(item.text, forceFresh = true)
-                    } else {
-                        fileCache.getValue(item.text)
-                    }
+                val file = ttsPlayer.synthesizeToCache(text, forceFresh = true)
                 withContext(Dispatchers.Main) { ttsPlayer.playCachedFileAwait(file) }
                 // 2 Sekunden Pause zwischen jedem Satz — auch ueber Schleifen-Grenzen hinweg,
                 // nur nach dem allerletzten Satz eines NICHT-Endlos-Laufs nicht.
@@ -252,14 +233,14 @@ constructor(
      * Baut die flache Vorlese-Sequenz aus den Saetzen. Bei nur einem Satz wird dieser eine Satz
      * [anker]-mal vorgelesen (es gibt keinen Folgesatz).
      */
-    private fun buildSequence(texts: List<String>, anker: Int, folge: Int): List<SpeechItem> {
+    private fun buildSequence(texts: List<String>, anker: Int, folge: Int): List<String> {
         if (texts.isEmpty()) return emptyList()
         val first = texts.first()
-        if (texts.size == 1) return List(anker) { SpeechItem(first, freshEveryTime = true) }
+        if (texts.size == 1) return List(anker) { first }
         return buildList {
             for (i in 1 until texts.size) {
-                repeat(anker) { add(SpeechItem(first, freshEveryTime = true)) }
-                repeat(folge) { add(SpeechItem(texts[i], freshEveryTime = false)) }
+                repeat(anker) { add(first) }
+                repeat(folge) { add(texts[i]) }
             }
         }
     }
