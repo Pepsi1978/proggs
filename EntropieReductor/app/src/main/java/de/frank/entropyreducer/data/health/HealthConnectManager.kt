@@ -11,12 +11,17 @@ import androidx.health.connect.client.records.BodyFatRecord
 import androidx.health.connect.client.records.BodyWaterMassRecord
 import androidx.health.connect.client.records.BoneMassRecord
 import androidx.health.connect.client.records.DistanceRecord
+import androidx.health.connect.client.records.ElevationGainedRecord
+import androidx.health.connect.client.records.ExerciseRouteResult
 import androidx.health.connect.client.records.ExerciseSessionRecord
 import androidx.health.connect.client.records.HeartRateRecord
 import androidx.health.connect.client.records.HeightRecord
 import androidx.health.connect.client.records.LeanBodyMassRecord
+import androidx.health.connect.client.records.SpeedRecord
+import androidx.health.connect.client.records.StepsCadenceRecord
 import androidx.health.connect.client.records.TotalCaloriesBurnedRecord
 import androidx.health.connect.client.records.WeightRecord
+import java.util.Locale
 import androidx.health.connect.client.request.AggregateRequest
 import androidx.health.connect.client.request.ReadRecordsRequest
 import androidx.health.connect.client.time.TimeRangeFilter
@@ -542,6 +547,7 @@ class HealthConnectManager @Inject constructor(
         sessions.map { session ->
             val sessionStart = session.startTime
             val sessionEnd = session.endTime
+            val durationSeconds = (sessionEnd.epochSecond - sessionStart.epochSecond).coerceAtLeast(0L)
             // Aggregate fuer Distanz + Kalorien + avgHR exakt im Session-Zeitfenster.
             // Bei Fehlern (z.B. fehlende Permission fuer ein Sub-Feld) defaulten wir
             // auf null — die Session bleibt importiert, nur das einzelne Feld fehlt.
@@ -562,16 +568,152 @@ class HealthConnectManager @Inject constructor(
             val calorieKcal = aggregate?.get(TotalCaloriesBurnedRecord.ENERGY_TOTAL)?.inKilocalories
             val avgHr = aggregate?.get(HeartRateRecord.BPM_AVG)
             val maxHr = aggregate?.get(HeartRateRecord.BPM_MAX)
+
+            // Frank-Wunsch 2026-07-03: Health Connect wird die alleinige Workout-Quelle (Strava raus).
+            // Wir holen dieselben Felder wie zuvor der Strava-Streams-Pfad: Geschwindigkeit/Pace,
+            // Hoehenmeter, Cadence via Aggregate — plus Puls-, Tempo- und GPS-Zeitreihen aus den
+            // Roh-Records. Ein separates Aggregate, damit ein einzelnes fehlendes Sub-Feld (z.B. keine
+            // Speed-Daten) nicht die Basiswerte oben mit-reisst.
+            val extraAgg = runCatching {
+                c.aggregate(
+                    AggregateRequest(
+                        metrics = setOf(
+                            SpeedRecord.SPEED_AVG,
+                            SpeedRecord.SPEED_MAX,
+                            ElevationGainedRecord.ELEVATION_GAINED_TOTAL,
+                            StepsCadenceRecord.RATE_AVG,
+                        ),
+                        timeRangeFilter = TimeRangeFilter.between(sessionStart, sessionEnd),
+                    ),
+                )
+            }.getOrNull()
+            val avgSpeedMps = extraAgg?.get(SpeedRecord.SPEED_AVG)?.inMetersPerSecond
+            val maxSpeedMps = extraAgg?.get(SpeedRecord.SPEED_MAX)?.inMetersPerSecond
+            val elevationGainMeters = extraAgg?.get(ElevationGainedRecord.ELEVATION_GAINED_TOTAL)?.inMeters
+            val cadenceAvg = extraAgg?.get(StepsCadenceRecord.RATE_AVG)
+
+            // GPS-Route aus dem Session-Record (kein separater Read noetig). Nur bei Consent + Daten.
+            val routeLocations = (session.exerciseRouteResult as? ExerciseRouteResult.Data)
+                ?.exerciseRoute?.route.orEmpty()
+            // gpsTrackJson im UI-Format [[lat,lon],...] (Dezimalgrad; Locale.US → Punkt als Dezimaltrenner).
+            val gpsTrackJson = routeLocations
+                .filter { it.latitude in -90.0..90.0 && it.longitude in -180.0..180.0 }
+                .takeIf { it.isNotEmpty() }
+                ?.joinToString(prefix = "[", postfix = "]", separator = ",") { loc ->
+                    "[${"%.6f".format(Locale.US, loc.latitude)},${"%.6f".format(Locale.US, loc.longitude)}]"
+                }
+            // Hoehenverlust aus den Routen-Hoehen (HC hat nur ElevationGained = Gewinn). Analog StravaRepo:
+            // negative Delta-Summe. Gewinn als Fallback aus der Route, falls das Aggregate leer war.
+            var altGainFromRoute = 0.0
+            var altLoss = 0.0
+            var prevAlt: Double? = null
+            for (loc in routeLocations) {
+                val alt = loc.altitude?.inMeters ?: continue
+                val p = prevAlt
+                if (p != null) {
+                    if (alt > p) altGainFromRoute += (alt - p) else if (alt < p) altLoss += (p - alt)
+                }
+                prevAlt = alt
+            }
+            val altitudeGainMeters = elevationGainMeters ?: altGainFromRoute.takeIf { it > 0.0 }
+            val altitudeLossMeters = altLoss.takeIf { it > 0.0 }
+
+            // Pulsverlauf: alle HeartRateRecord-Samples im Fenster → [[relSek,bpm],...], Range 30..230.
+            val hrSamples = runCatching {
+                c.readRecords(
+                    ReadRecordsRequest(
+                        recordType = HeartRateRecord::class,
+                        timeRangeFilter = TimeRangeFilter.between(sessionStart, sessionEnd),
+                        ascendingOrder = true,
+                    ),
+                ).records.flatMap { it.samples }
+            }.getOrDefault(emptyList())
+            val heartRateSeriesJson = hrSamples
+                .mapNotNull { smp ->
+                    val bpm = smp.beatsPerMinute
+                    if (bpm in 30L..230L) {
+                        "[${(smp.time.epochSecond - sessionStart.epochSecond).coerceAtLeast(0L)},$bpm]"
+                    } else null
+                }
+                .takeIf { it.isNotEmpty() }
+                ?.joinToString(prefix = "[", postfix = "]", separator = ",")
+
+            // Tempoverlauf: SpeedRecord-Samples (m/s) → sec/km, [[relSek,secProKm],...], Range 150..1500.
+            val speedSamples = runCatching {
+                c.readRecords(
+                    ReadRecordsRequest(
+                        recordType = SpeedRecord::class,
+                        timeRangeFilter = TimeRangeFilter.between(sessionStart, sessionEnd),
+                        ascendingOrder = true,
+                    ),
+                ).records.flatMap { it.samples }
+            }.getOrDefault(emptyList())
+            val paceStreamJson = speedSamples
+                .mapNotNull { smp ->
+                    val mps = smp.speed.inMetersPerSecond
+                    if (mps > 0.1) {
+                        val secPerKm = 1000.0 / mps
+                        if (secPerKm in 150.0..1500.0) {
+                            "[${(smp.time.epochSecond - sessionStart.epochSecond).coerceAtLeast(0L)}," +
+                                "${"%.1f".format(Locale.US, secPerKm)}]"
+                        } else null
+                    } else null
+                }
+                .takeIf { it.isNotEmpty() }
+                ?.joinToString(prefix = "[", postfix = "]", separator = ",")
+
+            // Pace/Speed abgeleitet: bevorzugt aus dem Speed-Aggregate, sonst aus Distanz/Dauer.
+            val avgPaceSecPerKm = avgSpeedMps?.takeIf { it > 0.1 }?.let { 1000.0 / it }
+                ?: run {
+                    val d = distanceMeters
+                    if (d != null && d > 0.0 && durationSeconds > 0L) durationSeconds.toDouble() / (d / 1000.0) else null
+                }
+            val maxPaceSecPerKm = maxSpeedMps?.takeIf { it > 0.1 }?.let { 1000.0 / it }
+            val cadence = cadenceAvg?.takeIf { it > 0.0 }?.toInt()
+            // Schrittlaenge aus Cadence (Schritte/Min, beide Beine) + Distanz + Dauer — analog StravaRepo.
+            val strideLengthCm = run {
+                val d = distanceMeters
+                val cad = cadenceAvg
+                if (d != null && cad != null && cad > 0.0 && durationSeconds > 0L) {
+                    val totalSteps = cad * (durationSeconds / 60.0)
+                    val strideM = if (totalSteps > 0.0) d / totalSteps else 0.0
+                    if (strideM in 0.4..2.5) (strideM * 100.0).toInt() else null
+                } else null
+            }
+
+            // Live-Logik-Sonde (Intent: "genau die gleichen Daten wie zuvor von Strava"): meldet je
+            // importiertem Training, welche der gewuenschten Felder Health Connect tatsaechlich lieferte.
+            Diag.d(
+                DiagnosticArea.HEALTH_CONNECT,
+                TAG,
+                "CHECKPOINT hc_training start=$sessionStart dur=${durationSeconds}s " +
+                    "dist=${distanceMeters?.toInt()}m gps=${routeLocations.size}pts hr=${hrSamples.size} " +
+                    "speed=${speedSamples.size} avgPace=${avgPaceSecPerKm?.let { "%.0f".format(Locale.US, it) }} " +
+                    "cad=$cadence gain=${altitudeGainMeters?.toInt()} loss=${altitudeLossMeters?.toInt()} " +
+                    "cal=${calorieKcal?.toInt()} avgHr=${avgHr?.toInt()}",
+            )
+
             HealthConnectExerciseSession(
                 startMs = sessionStart.toEpochMilli(),
                 endMs = sessionEnd.toEpochMilli(),
-                durationSeconds = (sessionEnd.epochSecond - sessionStart.epochSecond).coerceAtLeast(0L),
+                durationSeconds = durationSeconds,
                 exerciseType = session.exerciseType,
                 title = session.title?.takeIf { it.isNotBlank() },
                 distanceMeters = distanceMeters,
                 calories = calorieKcal,
                 avgHeartRate = avgHr?.toInt(),
                 maxHeartRate = maxHr?.toInt(),
+                avgPaceSecPerKm = avgPaceSecPerKm,
+                maxPaceSecPerKm = maxPaceSecPerKm,
+                avgSpeedKmh = avgSpeedMps?.times(3.6),
+                maxSpeedKmh = maxSpeedMps?.times(3.6),
+                cadence = cadence,
+                strideLengthCm = strideLengthCm,
+                altitudeGainMeters = altitudeGainMeters,
+                altitudeLossMeters = altitudeLossMeters,
+                gpsTrackJson = gpsTrackJson,
+                heartRateSeriesJson = heartRateSeriesJson,
+                paceStreamJson = paceStreamJson,
             )
         }
     }.onFailure { Diag.w(DiagnosticArea.HEALTH_CONNECT, TAG, "readExerciseSessions failed", it) }.getOrDefault(emptyList())
@@ -596,4 +738,19 @@ data class HealthConnectExerciseSession(
     val calories: Double?,
     val avgHeartRate: Int?,
     val maxHeartRate: Int?,
+    // Frank-Wunsch 2026-07-03: dieselben Detail-Felder wie zuvor der Strava-Streams-Pfad, damit
+    // Health Connect die alleinige Workout-Quelle sein kann. JSON-Strings im exakten UI-Parser-Format
+    // (AmazfitTrainingDetailScreen): gpsTrackJson [[lat,lon],...], heartRateSeriesJson [[ts,bpm],...],
+    // paceStreamJson [[ts,secProKm],...].
+    val avgPaceSecPerKm: Double? = null,
+    val maxPaceSecPerKm: Double? = null,
+    val avgSpeedKmh: Double? = null,
+    val maxSpeedKmh: Double? = null,
+    val cadence: Int? = null,
+    val strideLengthCm: Int? = null,
+    val altitudeGainMeters: Double? = null,
+    val altitudeLossMeters: Double? = null,
+    val gpsTrackJson: String? = null,
+    val heartRateSeriesJson: String? = null,
+    val paceStreamJson: String? = null,
 )
