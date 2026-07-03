@@ -58,6 +58,7 @@ import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.stringPreferencesKey
 import androidx.datastore.preferences.preferencesDataStore
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import de.frank.entropyreducer.data.tts.TtsUsage
 import de.frank.entropyreducer.presentation.components.CosmosScaffold
 import de.frank.entropyreducer.presentation.components.MicCaptureActions
 import de.frank.entropyreducer.presentation.components.MicState
@@ -284,6 +285,8 @@ fun MentalBoardScreen(
     // 15-Minuten-Auto-Stop. hiltViewModel() haengt am NavBackStackEntry dieses Screens.
     val ttsVm: MentalTtsViewModel = hiltViewModel()
     val ttsState by ttsVm.uiState.collectAsStateWithLifecycle()
+    // Live-Zaehler des TTS-Monatskontingents — wird unten als letztes Listenelement gezeigt.
+    val ttsUsage by ttsVm.usage.collectAsStateWithLifecycle()
 
     // Fehler (z.B. kein TTS-Schluessel hinterlegt) als Toast zeigen, danach quittieren.
     LaunchedEffect(ttsState.error) {
@@ -391,6 +394,11 @@ fun MentalBoardScreen(
                             )
                         }
                     }
+                    // Frank-Wunsch 2026-07-03: Immer UNTER dem letzten Satz — egal wie viele es sind
+                    // — der TTS-Verbrauch des Monats (Chirp 3 HD, 1-Mio-Gratis-Kontingent).
+                    item(key = "tts_usage_footer") {
+                        TtsUsageFooter(usage = ttsUsage)
+                    }
                 }
             }
 
@@ -435,6 +443,48 @@ fun MentalBoardScreen(
                 editTarget = null
             },
         )
+    }
+}
+
+/**
+ * Zeigt den laufenden Monatsverbrauch des Google-TTS-Kontingents (Chirp 3 HD). Steht als letztes
+ * Element der Mental-Liste immer unter dem letzten Satz. Orange = Audio/Vorlesen (Farbkonvention).
+ * Eigener Box-Balken statt Material3-`LinearProgressIndicator` (dessen Signatur sich in 1.4.0
+ * aenderte — so kann der Build nicht daran brechen).
+ */
+@Composable
+private fun TtsUsageFooter(usage: TtsUsage) {
+    val cosmos = LocalCosmos.current
+    val used = usage.charsThisMonth.coerceAtMost(usage.limit)
+    val fraction = if (usage.limit > 0L) used.toFloat() / usage.limit.toFloat() else 0f
+    val orange = Color(0xFFFF9800)
+    val trackBg = if (cosmos.isDark) Color(0xFF2A2620) else Color(0xFFECE6DE)
+    val textColor = if (cosmos.isDark) Color(0xFFB9B2A6) else Color(0xFF6B6459)
+    val usedStr = String.format(java.util.Locale.GERMANY, "%,d", usage.charsThisMonth)
+    val limitStr = String.format(java.util.Locale.GERMANY, "%,d", usage.limit)
+    Column(modifier = Modifier.fillMaxWidth().padding(top = 8.dp, bottom = 4.dp)) {
+        Text(
+            text = "Chirp 3 HD: $usedStr von $limitStr Zeichen · ${usage.percentFree} % frei",
+            color = textColor,
+            fontWeight = FontWeight.Medium,
+            style = MaterialTheme.typography.bodySmall,
+        )
+        Spacer(Modifier.height(6.dp))
+        Box(
+            modifier =
+                Modifier.fillMaxWidth()
+                    .height(6.dp)
+                    .clip(RoundedCornerShape(3.dp))
+                    .background(trackBg)
+        ) {
+            Box(
+                modifier =
+                    Modifier.fillMaxWidth(fraction.coerceIn(0f, 1f))
+                        .height(6.dp)
+                        .clip(RoundedCornerShape(3.dp))
+                        .background(orange)
+            )
+        }
     }
 }
 

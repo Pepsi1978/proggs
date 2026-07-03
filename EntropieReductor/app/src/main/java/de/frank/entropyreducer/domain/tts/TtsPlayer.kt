@@ -14,6 +14,7 @@ import de.frank.entropyreducer.data.remote.TtsVoice
 import de.frank.entropyreducer.data.remote.tts.GoogleTtsVoices
 import de.frank.entropyreducer.data.settings.AppSettings
 import de.frank.entropyreducer.data.settings.EncryptedSecretsStore
+import de.frank.entropyreducer.data.tts.TtsUsageStore
 import java.io.File
 import javax.inject.Inject
 import javax.inject.Singleton
@@ -43,6 +44,7 @@ class TtsPlayer @Inject constructor(
     private val ttsApi: GoogleTtsApi,
     private val secrets: EncryptedSecretsStore,
     private val settings: AppSettings,
+    private val usageStore: TtsUsageStore,
 ) {
 
     private companion object {
@@ -122,6 +124,11 @@ class TtsPlayer @Inject constructor(
                 audioConfig = TtsAudioConfig(audioEncoding = "MP3"),
             ),
         )
+        // Erfolgreicher Google-Call -> Zeichen fuers Monats-Kontingent verbuchen. Google bietet
+        // keinen Zeichen-Zaehler, also zaehlt die App selbst mit (Observability). Cache-Treffer
+        // gehen gar nicht durch diese Methode und werden korrekt NICHT gezaehlt. TTS rechnet pro
+        // Eingabe-Zeichen (inkl. Leerzeichen) ab -> text.length ist die korrekte Groesse.
+        usageStore.add(text.length)
         val audioBytes = Base64.decode(response.audioContentBase64, Base64.DEFAULT)
         targetFile.writeBytes(audioBytes)
         return targetFile

@@ -12,6 +12,8 @@ import androidx.lifecycle.viewModelScope
 import dagger.hilt.android.lifecycle.HiltViewModel
 import de.frank.entropyreducer.data.diagnostics.Diag
 import de.frank.entropyreducer.data.diagnostics.DiagnosticArea
+import de.frank.entropyreducer.data.tts.TtsUsage
+import de.frank.entropyreducer.data.tts.TtsUsageStore
 import de.frank.entropyreducer.domain.tts.TtsPlayer
 import javax.inject.Inject
 import kotlinx.coroutines.CancellationException
@@ -78,7 +80,11 @@ class MentalTtsViewModel
 constructor(
     application: Application,
     private val ttsPlayer: TtsPlayer,
+    usageStore: TtsUsageStore,
 ) : AndroidViewModel(application) {
+
+    /** Live-Monatsverbrauch des TTS-Kontingents (Anzeige unter dem letzten Satz im Mentalboard). */
+    val usage: StateFlow<TtsUsage> = usageStore.usage
 
     private companion object {
         const val TAG = "MentalTts"
