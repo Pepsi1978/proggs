@@ -342,6 +342,25 @@ class AppSettings @Inject constructor(
         it[KEY_PRIO_MEMORY_LIMIT] = value.coerceIn(10, 2000)
     }
 
+    /** Second-Brain-Connector: schreibt Ideen automatisch in die Kategorie "Ideen". */
+    val secondBrainIdeasConnectorEnabledFlow: Flow<Boolean> = ds.data
+        .map { it[KEY_SECOND_BRAIN_IDEAS_ENABLED] ?: false }
+        .distinctUntilChanged()
+
+    suspend fun setSecondBrainIdeasConnectorEnabled(value: Boolean) = ds.edit {
+        it[KEY_SECOND_BRAIN_IDEAS_ENABLED] = value
+    }
+
+    suspend fun readSecondBrainIdeaSyncStamps(): Set<String> =
+        ds.data.first()[KEY_SECOND_BRAIN_IDEA_SYNC_STAMPS] ?: emptySet()
+
+    suspend fun markSecondBrainIdeaSynced(ideaId: String, stamp: String) = ds.edit { prefs ->
+        val withoutOldStamp = (prefs[KEY_SECOND_BRAIN_IDEA_SYNC_STAMPS] ?: emptySet())
+            .filterNot { it.startsWith("$ideaId:") }
+            .toSet()
+        prefs[KEY_SECOND_BRAIN_IDEA_SYNC_STAMPS] = withoutOldStamp + stamp
+    }
+
     companion object {
         private val KEY_WHISPER_MODEL = stringPreferencesKey("whisper_model")
         private val KEY_GEMINI_MODEL = stringPreferencesKey("gemini_model")
@@ -383,6 +402,8 @@ class AppSettings @Inject constructor(
         // Prioritaets-Gedaechtnis (Frank-Wunsch 2026-06-19)
         private val KEY_PRIO_MEMORY_ENABLED = booleanPreferencesKey("prio_memory_enabled")
         private val KEY_PRIO_MEMORY_LIMIT = intPreferencesKey("prio_memory_limit")
+        private val KEY_SECOND_BRAIN_IDEAS_ENABLED = booleanPreferencesKey("second_brain_ideas_enabled")
+        private val KEY_SECOND_BRAIN_IDEA_SYNC_STAMPS = stringSetPreferencesKey("second_brain_idea_sync_stamps")
 
         const val DEFAULT_WHISPER = "whisper-large-v3-turbo"
         // Frank-Wunsch 2026-05-09: Default-Modell ist Gemini 3.1 Flash-Lite. Greift

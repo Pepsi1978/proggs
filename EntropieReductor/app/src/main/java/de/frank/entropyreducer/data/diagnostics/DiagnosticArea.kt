@@ -24,6 +24,7 @@ enum class DiagnosticArea(val displayName: String) {
     BIOMARKER("Biomarker & Analyse"),
     TASKS("Aufgaben & Loops"),
     AGENTIC("KI-Agenten"),
+    SECOND_BRAIN("Second Brain"),
     DATABASE("Datenbank & Migration"),
     BRIEFING("Briefings & Reviews");
 

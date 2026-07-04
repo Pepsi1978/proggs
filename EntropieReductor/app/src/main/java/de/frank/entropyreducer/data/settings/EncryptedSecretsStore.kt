@@ -72,6 +72,16 @@ class EncryptedSecretsStore @Inject constructor(
         get() = prefs.getString(KEY_TTS, null)
         set(value) { prefs.edit().putString(KEY_TTS, value).apply() }
 
+    /** Bearer-Key fuer den privaten Second-Brain-Server (Ideen-Connector). */
+    var secondBrainApiKey: String?
+        get() = prefs.getString(KEY_SECOND_BRAIN, null)
+        set(value) { prefs.edit().putString(KEY_SECOND_BRAIN, value).apply() }
+
+    /** WireGuard-Konfiguration fuer den privaten Second-Brain-Tunnel. */
+    var secondBrainWireGuardConfig: String?
+        get() = prefs.getString(KEY_SECOND_BRAIN_WG, null)
+        set(value) { prefs.edit().putString(KEY_SECOND_BRAIN_WG, value).apply() }
+
     // OAuth — Whoop
     var whoopClientId: String?
         get() = prefs.getString(KEY_WHOOP_CLIENT_ID, null)
@@ -214,6 +224,8 @@ class EncryptedSecretsStore @Inject constructor(
         private const val KEY_GROQ = "groq_api_key"
         private const val KEY_GEMINI = "gemini_api_key"
         private const val KEY_TTS = "google_tts_api_key"
+        private const val KEY_SECOND_BRAIN = "second_brain_api_key"
+        private const val KEY_SECOND_BRAIN_WG = "second_brain_wireguard_config"
         private const val KEY_WHOOP_CLIENT_ID = "whoop_client_id"
         private const val KEY_WHOOP_CLIENT_SECRET = "whoop_client_secret"
         private const val KEY_WHOOP_ACCESS = "whoop_access_token"

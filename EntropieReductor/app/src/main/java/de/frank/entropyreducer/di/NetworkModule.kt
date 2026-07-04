@@ -12,6 +12,7 @@ import de.frank.entropyreducer.data.diagnostics.DiagnosticHttpInterceptor
 import de.frank.entropyreducer.data.remote.GeminiApi
 import de.frank.entropyreducer.data.remote.GoogleTtsApi
 import de.frank.entropyreducer.data.remote.GroqWhisperApi
+import de.frank.entropyreducer.data.remote.brain.SecondBrainApi
 import de.frank.entropyreducer.data.remote.calendar.GoogleCalendarApi
 import de.frank.entropyreducer.data.remote.oura.OuraApi
 import de.frank.entropyreducer.data.remote.whoop.WhoopApi
@@ -74,6 +75,20 @@ object NetworkModule {
         builder.addInterceptor(diagnosticInterceptor)
         return builder.build()
     }
+
+    @Provides
+    @Singleton
+    @Named("secondBrain")
+    fun provideSecondBrainRetrofit(client: OkHttpClient, json: Json): Retrofit =
+        Retrofit.Builder()
+            .baseUrl("http://10.8.0.1:8000/")
+            .client(client)
+            .addConverterFactory(json.asConverterFactory("application/json".toMediaType()))
+            .build()
+
+    @Provides @Singleton
+    fun provideSecondBrainApi(@Named("secondBrain") retrofit: Retrofit): SecondBrainApi =
+        retrofit.create(SecondBrainApi::class.java)
 
     @Provides
     @Singleton

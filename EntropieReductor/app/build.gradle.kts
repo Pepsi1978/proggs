@@ -72,9 +72,9 @@ android {
         applicationId = "de.frank.entropyreducer"
         minSdk = 28
         targetSdk = 36
-        versionCode = 254
-        versionName = "0.18.4"
-        buildConfigField("String", "VERSION_UPDATED_AT", "\"04.07.2026, 00.58 Uhr\"")
+        versionCode = 255
+        versionName = "0.19.0"
+        buildConfigField("String", "VERSION_UPDATED_AT", "\"04.07.2026, 12.43 Uhr\"")
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
 
@@ -269,6 +269,9 @@ dependencies {
     // Apache 2.0, ~120kb. Bietet RecurrenceRule + RecurrenceRuleIterator zum Berechnen
     // naechster Vorkommen. Wird nur von RecurringTemplateRepository/UseCase importiert.
     implementation(libs.lib.recur)
+
+    // WireGuard-Tunnel fuer private Second-Brain-Anbindung wie in CortexAndroid.
+    implementation(libs.wireguard.tunnel)
 
     // Pruefe Internet-Konnektivitaet
     implementation(libs.core.ktx)

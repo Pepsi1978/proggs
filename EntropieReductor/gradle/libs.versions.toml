@@ -37,6 +37,7 @@ healthConnect = "1.1.0-alpha07"
 mapsCompose = "6.4.1"
 playServicesMaps = "19.0.0"
 libRecur = "0.16.1"
+wireguard = "1.0.20260102"
 
 [libraries]
 # Compose BOM
@@ -136,6 +137,9 @@ play-services-maps = { group = "com.google.android.gms", name = "play-services-m
 
 # RFC-5545 RRULE-Parser (Wiederkehrende Aufgaben — Sprint 2, Frank-Wunsch 2026-05-22)
 lib-recur = { group = "org.dmfs", name = "lib-recur", version.ref = "libRecur" }
+
+# WireGuard-Tunnel fuer private Second-Brain-Anbindung.
+wireguard-tunnel = { group = "com.wireguard.android", name = "tunnel", version.ref = "wireguard" }
 
 [plugins]
 android-application = { id = "com.android.application", version.ref = "agp" }

@@ -9,6 +9,7 @@ import de.frank.entropyreducer.data.local.entities.SavedPromptEntity
 import de.frank.entropyreducer.data.remote.drive.GoogleSignInHelper
 import de.frank.entropyreducer.data.remote.drive.SyncCoordinator
 import de.frank.entropyreducer.data.remote.drive.SyncStatus
+import de.frank.entropyreducer.data.remote.brain.SecondBrainIdeaConnector
 import de.frank.entropyreducer.data.remote.tts.GoogleTtsVoice
 import de.frank.entropyreducer.data.remote.tts.GoogleTtsVoices
 import de.frank.entropyreducer.data.repository.EntryRepository
@@ -48,6 +49,14 @@ data class ApiKeysUiState(
     val ttsVoices: List<GoogleTtsVoice> = GoogleTtsVoices.ALL,
     val ttsSpeakState: TtsSpeakState = TtsSpeakState.IDLE,
     val ttsLastError: String? = null,
+    val secondBrainKey: String = "",
+    val secondBrainWireGuardConfig: String = "",
+    val secondBrainSaved: Boolean = false,
+    val secondBrainWireGuardSaved: Boolean = false,
+    val secondBrainEnabled: Boolean = false,
+    val secondBrainStatus: ConnectionStatus = ConnectionStatus.UNKNOWN,
+    val secondBrainMessage: String = "Noch nicht synchronisiert.",
+    val secondBrainSyncing: Boolean = false,
 )
 
 enum class ConnectionStatus {
@@ -72,6 +81,7 @@ constructor(
     private val testApi: TestApiKeyUseCase,
     private val settings: AppSettings,
     private val ttsPlayer: TtsPlayer,
+    private val secondBrainIdeaConnector: SecondBrainIdeaConnector,
 ) : ViewModel() {
     private val _state =
         MutableStateFlow(
@@ -79,9 +89,13 @@ constructor(
                 groqKey = secrets.groqApiKey.orEmpty(),
                 geminiKey = secrets.geminiApiKey.orEmpty(),
                 ttsKey = secrets.googleTtsApiKey.orEmpty(),
+                secondBrainKey = secrets.secondBrainApiKey.orEmpty(),
+                secondBrainWireGuardConfig = secrets.secondBrainWireGuardConfig.orEmpty(),
                 groqSaved = !secrets.groqApiKey.isNullOrBlank(),
                 geminiSaved = !secrets.geminiApiKey.isNullOrBlank(),
                 ttsSaved = !secrets.googleTtsApiKey.isNullOrBlank(),
+                secondBrainSaved = !secrets.secondBrainApiKey.isNullOrBlank(),
+                secondBrainWireGuardSaved = !secrets.secondBrainWireGuardConfig.isNullOrBlank(),
             )
         )
     val state: StateFlow<ApiKeysUiState> = _state.asStateFlow()
@@ -92,6 +106,21 @@ constructor(
             settings.ttsVoiceFlow.collect { stored ->
                 val effective = stored.ifBlank { GoogleTtsVoices.DEFAULT_VOICE_NAME }
                 _state.update { it.copy(ttsVoiceName = effective) }
+            }
+        }
+        viewModelScope.launch {
+            settings.secondBrainIdeasConnectorEnabledFlow.collect { enabled ->
+                _state.update { it.copy(secondBrainEnabled = enabled) }
+            }
+        }
+        viewModelScope.launch {
+            secondBrainIdeaConnector.state.collect { sync ->
+                _state.update {
+                    it.copy(
+                        secondBrainMessage = sync.lastMessage,
+                        secondBrainSyncing = sync.syncing,
+                    )
+                }
             }
         }
     }
@@ -108,6 +137,14 @@ constructor(
         _state.update { it.copy(ttsKey = value) }
     }
 
+    fun setSecondBrain(value: String) {
+        _state.update { it.copy(secondBrainKey = value) }
+    }
+
+    fun setSecondBrainWireGuardConfig(value: String) {
+        _state.update { it.copy(secondBrainWireGuardConfig = value) }
+    }
+
     fun saveGroq() {
         secrets.groqApiKey = state.value.groqKey.trim().ifBlank { null }
         _state.update { it.copy(groqSaved = !state.value.groqKey.isBlank()) }
@@ -121,6 +158,16 @@ constructor(
     fun saveTts() {
         secrets.googleTtsApiKey = state.value.ttsKey.trim().ifBlank { null }
         _state.update { it.copy(ttsSaved = !state.value.ttsKey.isBlank()) }
+    }
+
+    fun saveSecondBrain() {
+        secrets.secondBrainApiKey = state.value.secondBrainKey.trim().ifBlank { null }
+        _state.update { it.copy(secondBrainSaved = state.value.secondBrainKey.isNotBlank()) }
+    }
+
+    fun saveSecondBrainWireGuardConfig() {
+        secrets.secondBrainWireGuardConfig = state.value.secondBrainWireGuardConfig.trim().ifBlank { null }
+        _state.update { it.copy(secondBrainWireGuardSaved = state.value.secondBrainWireGuardConfig.isNotBlank()) }
     }
 
     fun testGemini() {
@@ -161,6 +208,22 @@ constructor(
                 )
             }
         }
+    }
+
+    fun testSecondBrain() {
+        viewModelScope.launch {
+            _state.update { it.copy(secondBrainStatus = ConnectionStatus.TESTING) }
+            val ok = secondBrainIdeaConnector.testConnection(state.value.secondBrainKey)
+            _state.update { it.copy(secondBrainStatus = if (ok) ConnectionStatus.OK else ConnectionStatus.FAIL) }
+        }
+    }
+
+    fun setSecondBrainEnabled(value: Boolean) {
+        viewModelScope.launch { settings.setSecondBrainIdeasConnectorEnabled(value) }
+    }
+
+    fun syncSecondBrainIdeasNow() {
+        secondBrainIdeaConnector.syncAllNow(viewModelScope)
     }
 
     /** Speichert die ausgewaehlte Chirp-3-HD-Stimme und aktualisiert das UI sofort. */

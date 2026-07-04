@@ -1,7 +1,9 @@
 package de.frank.entropyreducer.presentation
 
 import android.content.Intent
+import android.net.VpnService
 import android.os.Bundle
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
@@ -51,6 +53,24 @@ class MainActivity : ComponentActivity() {
     @Inject
     lateinit var usageBackup: TtsUsageBackup
 
+    @Inject
+    lateinit var appSettings: AppSettings
+
+    @Inject
+    lateinit var secrets: EncryptedSecretsStore
+
+    @Inject
+    lateinit var secondBrainVpnConnector: de.frank.entropyreducer.data.remote.brain.SecondBrainVpnConnector
+
+    private val vpnPermissionLauncher =
+        registerForActivityResult(ActivityResultContracts.StartActivityForResult()) { result ->
+            if (result.resultCode == RESULT_OK) {
+                lifecycleScope.launch(Dispatchers.IO) { secondBrainVpnConnector.connect() }
+            } else {
+                secondBrainVpnConnector.reportConsentDenied()
+            }
+        }
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         // Frank-Wunsch 2026-07-03: TTS-Zaehlerstand aus dem Drive-Backup wiederherstellen (hebt den
@@ -93,6 +113,31 @@ class MainActivity : ComponentActivity() {
         super.onNewIntent(intent)
         setIntent(intent)
         handleWidgetIntent(intent)
+    }
+
+    override fun onStart() {
+        super.onStart()
+        maybeStartSecondBrainTunnel()
+    }
+
+    override fun onStop() {
+        lifecycleScope.launch(Dispatchers.IO) { secondBrainVpnConnector.disconnect() }
+        super.onStop()
+    }
+
+    private fun maybeStartSecondBrainTunnel() {
+        lifecycleScope.launch(Dispatchers.IO) {
+            val enabled = appSettings.secondBrainIdeasConnectorEnabledFlow.first()
+            val hasConfig = !secrets.secondBrainWireGuardConfig.isNullOrBlank()
+            if (!enabled || !hasConfig) return@launch
+            if (!secondBrainVpnConnector.loadSavedConfig()) return@launch
+            val permissionIntent = VpnService.prepare(this@MainActivity)
+            if (permissionIntent != null) {
+                launch(Dispatchers.Main) { vpnPermissionLauncher.launch(permissionIntent) }
+            } else {
+                secondBrainVpnConnector.connect()
+            }
+        }
     }
 
     private fun hasWidgetExtras(intent: Intent?): Boolean {
@@ -183,8 +228,10 @@ class StartupViewModel @Inject constructor(
     private val appSettings: de.frank.entropyreducer.data.settings.AppSettings,
     private val journalMirror: de.frank.entropyreducer.data.repository.JournalMirrorRepository,
     private val foregroundSync: de.frank.entropyreducer.domain.usecase.ForegroundSyncManager,
+    private val secondBrainIdeaConnector: de.frank.entropyreducer.data.remote.brain.SecondBrainIdeaConnector,
 ) : ViewModel() {
     init {
+        secondBrainIdeaConnector.start(viewModelScope)
         if (!startupRanThisProcess) {
             startupRanThisProcess = true
             viewModelScope.launch(Dispatchers.IO) {

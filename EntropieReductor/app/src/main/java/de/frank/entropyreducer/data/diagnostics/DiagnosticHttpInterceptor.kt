@@ -67,6 +67,7 @@ constructor(
             host.contains("generativelanguage") -> DiagnosticArea.GEMINI
             host.contains("texttospeech") -> DiagnosticArea.GOOGLE_TTS
             host.contains("anthropic.com") -> DiagnosticArea.CLAUDE
+            host == "10.8.0.1" -> DiagnosticArea.SECOND_BRAIN
             else -> null
         }
 }

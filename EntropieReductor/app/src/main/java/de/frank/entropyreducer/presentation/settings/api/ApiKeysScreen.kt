@@ -39,6 +39,7 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextFieldDefaults
 import androidx.compose.runtime.Composable
@@ -151,6 +152,18 @@ fun ApiKeysScreen(
                 )
             }
             item {
+                SecondBrainConnectorCard(
+                    state = state,
+                    onValueChange = vm::setSecondBrain,
+                    onSave = vm::saveSecondBrain,
+                    onTest = vm::testSecondBrain,
+                    onWireGuardConfigChange = vm::setSecondBrainWireGuardConfig,
+                    onSaveWireGuardConfig = vm::saveSecondBrainWireGuardConfig,
+                    onEnabledChange = vm::setSecondBrainEnabled,
+                    onSyncNow = vm::syncSecondBrainIdeasNow,
+                )
+            }
+            item {
                 TtsVoiceCard(
                     state = state,
                     onSelectVoice = vm::setTtsVoice,
@@ -171,6 +184,98 @@ fun ApiKeysScreen(
                 )
             }
             item { Spacer(Modifier.height(80.dp)) }
+        }
+    }
+}
+
+@Composable
+private fun SecondBrainConnectorCard(
+    state: ApiKeysUiState,
+    onValueChange: (String) -> Unit,
+    onSave: () -> Unit,
+    onTest: () -> Unit,
+    onWireGuardConfigChange: (String) -> Unit,
+    onSaveWireGuardConfig: () -> Unit,
+    onEnabledChange: (Boolean) -> Unit,
+    onSyncNow: () -> Unit,
+) {
+    val cosmos = LocalCosmos.current
+    GlassCard(modifier = Modifier.fillMaxWidth()) {
+        Column {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Icon(Icons.Outlined.Link, null, tint = cosmos.accentTasksSub, modifier = Modifier.size(20.dp))
+                Spacer(Modifier.size(8.dp))
+                Text("Second-Brain-Connector", style = MaterialTheme.typography.titleMedium, color = cosmos.accentTasksSub)
+                Spacer(Modifier.weight(1f))
+                Switch(
+                    checked = state.secondBrainEnabled,
+                    onCheckedChange = onEnabledChange,
+                    enabled = state.secondBrainSaved,
+                )
+            }
+            Spacer(Modifier.height(4.dp))
+            Text(
+                "Speichert jede Idee aus Aufgaben → Ideen einzeln in die Second-Brain-Kategorie „Ideen“. " +
+                    "Alt-Ideen werden beim Einschalten zuerst nachgetragen.",
+                style = MaterialTheme.typography.bodySmall,
+                color = cosmos.textSecondary,
+            )
+            Spacer(Modifier.height(12.dp))
+            ApiKeyCard(
+                title = "Second Brain API Key",
+                subtitle = "Privater Bearer-Key für http://10.8.0.1:8000 über WireGuard.",
+                accent = cosmos.accentTasksSub,
+                value = state.secondBrainKey,
+                onValueChange = onValueChange,
+                onSave = onSave,
+                onTest = onTest,
+                status = state.secondBrainStatus,
+            )
+            Spacer(Modifier.height(12.dp))
+            OutlinedTextField(
+                value = state.secondBrainWireGuardConfig,
+                onValueChange = onWireGuardConfigChange,
+                modifier = Modifier.fillMaxWidth().heightIn(min = 96.dp),
+                placeholder = { Text("WireGuard-Konfiguration aus Cortex einfügen", color = cosmos.textSecondary) },
+                minLines = 4,
+                colors = TextFieldDefaults.colors(
+                    focusedContainerColor = Color.Transparent,
+                    unfocusedContainerColor = Color.Transparent,
+                    focusedTextColor = cosmos.textPrimary,
+                    unfocusedTextColor = cosmos.textPrimary,
+                    cursorColor = cosmos.accentTasksSub,
+                    focusedIndicatorColor = cosmos.accentTasksSub,
+                    unfocusedIndicatorColor = cosmos.glassBorder,
+                ),
+            )
+            Spacer(Modifier.height(8.dp))
+            Button(
+                onClick = onSaveWireGuardConfig,
+                modifier = Modifier.fillMaxWidth(),
+                colors = ButtonDefaults.buttonColors(containerColor = cosmos.accentTasksSub),
+            ) {
+                Text(if (state.secondBrainWireGuardSaved) "WireGuard-Konfig aktualisieren" else "WireGuard-Konfig speichern")
+            }
+            Spacer(Modifier.height(12.dp))
+            OutlinedButton(
+                onClick = onSyncNow,
+                modifier = Modifier.fillMaxWidth(),
+                enabled = state.secondBrainSaved && !state.secondBrainSyncing,
+            ) {
+                if (state.secondBrainSyncing) {
+                    CircularProgressIndicator(modifier = Modifier.size(16.dp), strokeWidth = 2.dp)
+                    Spacer(Modifier.size(8.dp))
+                    Text("Speichere Ideen …")
+                } else {
+                    Text("Alt-Ideen jetzt ins Second Brain speichern")
+                }
+            }
+            Spacer(Modifier.height(8.dp))
+            Text(
+                state.secondBrainMessage,
+                style = MaterialTheme.typography.bodySmall,
+                color = cosmos.textSecondary,
+            )
         }
     }
 }
