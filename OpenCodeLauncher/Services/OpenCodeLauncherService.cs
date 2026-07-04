@@ -36,7 +36,7 @@ public sealed class OpenCodeLauncherService
     /// Schreibt die Provider-Order (exakt der gewählte Provider, ohne Fallback)
     /// in die globale opencode.jsonc/opencode.json. Gibt den Modell-String zurück, der an opencode -m geht.
     /// </summary>
-    public string ConfigureProvider(string slug, ProviderEntry chosen, IReadOnlyList<ProviderEntry> allProviders)
+    public string ConfigureProvider(string slug, string modelDisplayName, ProviderEntry chosen, IReadOnlyList<ProviderEntry> allProviders)
     {
         var log = Logger.Instance;
         var modelString = $"openrouter/{slug}";
@@ -44,7 +44,7 @@ public sealed class OpenCodeLauncherService
         try
         {
             var root = ReadConfig();
-            root = PatchProvider(root, slug, chosen, allProviders);
+            root = PatchProvider(root, slug, modelDisplayName, chosen, allProviders);
             WriteConfig(root);
             log.Info("OpenCodeLauncherService", "ConfigureProvider",
                 $"opencode-Konfig gepatched: {slug} via {chosen.ProviderName}",
@@ -170,7 +170,7 @@ public sealed class OpenCodeLauncherService
         return json;
     }
 
-    private static JsonNode PatchProvider(JsonNode root, string slug, ProviderEntry chosen, IReadOnlyList<ProviderEntry> all)
+    private static JsonNode PatchProvider(JsonNode root, string slug, string modelDisplayName, ProviderEntry chosen, IReadOnlyList<ProviderEntry> all)
     {
         // order enthält bewusst nur den gewählten Provider: Frank will exaktes Routing ohne Fallback.
         var order = new JsonArray { chosen.ProviderSlug };
@@ -185,7 +185,7 @@ public sealed class OpenCodeLauncherService
 
         var models = JsonExtensions.EnsureObject(root).GetOrAddObject("provider").GetOrAddObject("openrouter").GetOrAddObject("models");
         var modelNode = models.GetOrAddObject(slug);
-        modelNode["name"] = $"{chosen.ProviderName} via OpenRouter";
+        modelNode["name"] = $"{modelDisplayName} via {chosen.ProviderName}";
         modelNode["options"] = optionsBlock;
 
         return root;

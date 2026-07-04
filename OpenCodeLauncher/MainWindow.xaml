@@ -1,6 +1,7 @@
 <Window x:Class="OpenCodeLauncher.MainWindow"
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:shell="clr-namespace:System.Windows.Shell;assembly=PresentationFramework"
         xmlns:vm="clr-namespace:OpenCodeLauncher.ViewModels"
         xmlns:m="clr-namespace:OpenCodeLauncher.Models"
         Title="OpenCode Launcher"
@@ -18,6 +19,14 @@
         TextOptions.TextRenderingMode="ClearType"
         FontFamily="Segoe UI Variable Text, Segoe UI, sans-serif"
         FontSize="14">
+    <shell:WindowChrome.WindowChrome>
+        <shell:WindowChrome CaptionHeight="0"
+                            ResizeBorderThickness="6"
+                            GlassFrameThickness="0"
+                            CornerRadius="0"
+                            UseAeroCaptionButtons="False"/>
+    </shell:WindowChrome.WindowChrome>
+
     <Window.Resources>
         <Style x:Key="Card" TargetType="Border">
             <Setter Property="Background" Value="#28283A"/>
@@ -142,7 +151,7 @@
         </Style>
     </Window.Resources>
 
-    <Border Background="#242434" CornerRadius="0" BorderBrush="#3A3A52" BorderThickness="1">
+    <Border Background="#242434" CornerRadius="0" BorderBrush="#242434" BorderThickness="0">
         <Grid>
             <Grid.RowDefinitions>
                 <RowDefinition Height="Auto"/>

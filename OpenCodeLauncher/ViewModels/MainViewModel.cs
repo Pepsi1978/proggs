@@ -25,8 +25,8 @@ public sealed partial class MainViewModel : ObservableObject
         if (Models.Count > 0) SelectedModel = Models[0];
         WorkDir = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), "proggs");
 
-        var version = Assembly.GetExecutingAssembly().GetName().Version?.ToString(3) ?? "1.0.3";
-        Version = $"Version {version} (04.07.2026, 20:58 Uhr)";
+        var version = Assembly.GetExecutingAssembly().GetName().Version?.ToString(3) ?? "1.0.4";
+        Version = $"Version {version} (04.07.2026, 21:05 Uhr)";
     }
 
     public ObservableCollection<ModelEntry> Models { get; } = new();
@@ -153,7 +153,7 @@ public sealed partial class MainViewModel : ObservableObject
         }
         try
         {
-            var modelString = _launcher.ConfigureProvider(SelectedModel.Slug, SelectedProvider, Providers);
+            var modelString = _launcher.ConfigureProvider(SelectedModel.Slug, SelectedModel.DisplayName, SelectedProvider, Providers);
             _launcher.Launch(modelString, WorkDir);
             StatusText = $"OpenCode gestartet: {SelectedModel.DisplayName} via {SelectedProvider.ProviderName}";
         }
