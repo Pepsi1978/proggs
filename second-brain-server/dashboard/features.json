@@ -1,7 +1,31 @@
 {
-	"stand": "04.07.2026, 19.55 Uhr",
+	"stand": "05.07.2026, 01.10 Uhr",
 	"hinweis": "PFLEGE-PFLICHT: Bei JEDEM Deploy, der ein neues System/Feature einbaut, hier einen Eintrag ERGAENZEN (neueste zuerst) — mit Datum + Uhrzeit und ausfuehrlicher Erklaerung. Diese Datei ist die Quelle des Info-Bereichs in den Dashboard-Einstellungen (GET /api/features). Regel verankert in DEPLOY.md.",
 	"features": [
+		{
+			"id": "nachtschicht-bibliothekar",
+			"name": "Nachtschicht-Bibliothekar: das Gehirn räumt nachts auf",
+			"eingebaut": "05.07.2026, 01.10 Uhr",
+			"dienst": "librarian 0.1.0 (NEUER 5. Dienst) + dashboard 0.38.0 + brain-api 1.22.0",
+			"kurz": "Ein eigener Sleep-Time-Agent läuft jede Nacht um 04:10 (nach dem 4-Uhr-Backup) durch alle Einträge und legt morgens Vorschläge vor — er verändert nie etwas ohne Klick.",
+			"erklaerung": "Der Bibliothekar ist ein fünfter Container (sb-librarian) mit eigener innerer Uhr. Nachts prüft er das komplette Gehirn: Dubletten (fast identische Einträge → Zusammenführ-Vorschlag mit fertig formuliertem Misch-Text, Bereich 13), Widersprüche (unvereinbare Aussagen zum selben Thema → Klär-Liste, Bereich 12), womöglich Veraltetes (Preise, Versionen, Termine, die vom Alter her nicht mehr stimmen dürften, Bereich 16), zu volle oder fast leere Kategorien (Unterkategorien-Vorschläge, Bereich 15), Wissens-Lücken (wonach oft gefragt wird, ohne dass etwas gespeichert ist, Bereich 17) und alte Gesprächs-Monate (Monats-Zusammenfassung als ZUSÄTZLICHE Ebene, Originale bleiben 1:1, Bereich 14). Einzige Auto-Arbeit ist der Nachzügler-Lauf: Einträge ohne Verknüpfung im Personen-/Themen-Register werden nachverknüpft (verändert keinen Eintragstext). Alles andere sind reine VORSCHLÄGE — Löschen geht immer nur in den wiederherstellbaren Papierkorb. Sicherheitsnetz: hartes LLM-Aufruf-Budget pro Nacht (Standard 250), Drossel für Vorschläge pro Aufgabe, und der Lauf wartet auf das Ende des Host-Backups. Der Morgen-Report (Bereich 18) fasst jede Nacht zusammen: 'Heute Nacht: 3 Dubletten-Vorschläge, 2 womöglich veraltet, 14 nachverknüpft.'"
+		},
+		{
+			"id": "bibliothekar-abarbeiten",
+			"name": "Bibliothekar-Tab: Tages-Listen mit Ja / Nein / eigenem Vorschlag",
+			"eingebaut": "05.07.2026, 01.10 Uhr",
+			"dienst": "dashboard 0.38.0 + librarian 0.1.0",
+			"kurz": "Neuer Dashboard-Tab: pro Tag eine Fund-Liste; jeden Fund per Ja/Nein/eigenem Text entscheiden, dann Starten — bei Unklarheit stellt der Bibliothekar Rückfragen.",
+			"erklaerung": "Im neuen Tab 'Bibliothekar' (Mond-Symbol, mit Zähler für offene Funde) bleiben die Nächte als eigene Tage stehen — wer 3-4 Tage weg war, arbeitet jeden Tag einzeln ab. Pro Fund gibt es die Beschreibung, die konkrete Empfehlung, die beteiligten Einträge mit Auszug, und drei Wege: der Ja-Knopf führt genau die angezeigte Empfehlung aus, der Nein-Knopf lehnt ab (der Fund kommt so schnell nicht wieder), und 'Eigener Vorschlag' öffnet ein Textfeld für eine eigene Anweisung (z. B. 'benenn es um in …'). Unten sammelt EIN Starten-Knopf alle Entscheidungen ein und setzt sie um. Versteht der Bibliothekar eine eigene Anweisung nicht eindeutig, stellt er GENAU EINE Rückfrage direkt am Fund — antworten, nochmal Starten, fertig. Erledigte und abgelehnte Funde fallen aus der offenen Liste und wandern in einen zusammenklappbaren 'bereits entschieden'-Bereich. Ausgeführt wird ausschließlich über die bestehenden brain-api-Wege (Zusammenführen = neuer Eintrag + Originale in den Papierkorb, immer wiederherstellbar)."
+		},
+		{
+			"id": "bibliothekar-eigene-aufgaben",
+			"name": "Eigene Nacht-Aufgaben: dem Bibliothekar per Gespräch Neues beibringen",
+			"eingebaut": "05.07.2026, 01.10 Uhr",
+			"dienst": "librarian 0.1.0 + dashboard 0.38.0",
+			"kurz": "Über ein Plus-Feld definierst du im Dialog eigene Nacht-Aufgaben — der Bibliothekar fragt nach, macht Vorschläge, und am Ende drückst du auf Speichern.",
+			"erklaerung": "In den Bibliothekar-Einstellungen gibt es neben den 7 Standard-Aufgaben (alle einzeln an/aus, mit Startzeit, Nacht-Modell-Wahl, Vorschlags-Limit und LLM-Budget) den Bereich 'Eigene Aufgaben'. Der Plus-Knopf startet ein kurzes Interview: Du beschreibst frei, was nachts zusätzlich passieren soll; der Bibliothekar fragt nach, sagt ehrlich, ob die Idee als Nacht-Aufgabe umsetzbar und sinnvoll ist, und schlägt Verbesserungen vor — bis eine präzise Arbeitsanweisung steht, die du mit 'Aufgabe speichern' übernimmst. Nachts arbeitet er eigene Aufgaben generisch ab: Er sichtet die Eintrags-Liste, liest gezielt die relevanten Volltexte und erzeugt daraus wieder nur VORSCHLÄGE für die Tages-Liste. Eigene Aufgaben lassen sich jederzeit an-/ausschalten und über den Papierkorb löschen — die Standard-Aufgaben sind fest eingebaut und nur abschaltbar."
+		},
 		{
 			"id": "quellen-drilldown",
 			"name": "Quellen-Drilldown: jede Antwort bis zur Quelle nachprüfbar",

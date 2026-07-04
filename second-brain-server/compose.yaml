@@ -166,6 +166,46 @@ services:
       retries: 3
       start_period: 30s
 
+  librarian:
+    build: ./librarian              # Nachtschicht-Bibliothekar (Sleep-Time-Agent): raeumt nachts auf, schreibt NUR Vorschlaege
+    container_name: sb-librarian
+    logging: *sb-logging
+    restart: unless-stopped
+    depends_on:
+      - brain-api
+    ports:
+      # An die WireGuard-IP gebunden -> NUR ueber den VPN-Tunnel erreichbar (wie brain-api/agent).
+      - "10.8.0.1:8004:8004"
+    env_file:
+      - .env                        # GEMINI_API_KEY / SB_API_KEY / OPENCODE_API_KEY (NICHT im Repo)
+    environment:
+      BRAIN_URL: http://brain-api:8000   # interner Compose-DNS-Name des Gehirns
+      SB_USER_ID: frank
+      LIB_TZ: Europe/Berlin
+      LIB_DATA_DIR: /app/data            # Config + State + Tages-Reports (persistent)
+      LIB_LOG_PATH: /app/logs/librarian.jsonl
+      LIB_BACKUP_STATUS: /gedanken/.gdrive-backup-status.json   # Host-Backup-Status (nur lesen)
+    volumes:
+      # Config/State/Reports ueberleben Neustart/Rebuild. Host-Ordner muss uid 1000 gehoeren
+      # (chown beim Deploy — Container laeuft als uid 1000, bugs/server/docker.md §4).
+      - ./librarian-data:/app/data
+      - ./librarian-logs:/app/logs
+      # Z-Wurzel NUR LESEN: Backup-Statusdatei checken, bevor der Nachtlauf startet.
+      - /srv/samba/gedanken:/gedanken:ro
+    deploy:
+      resources:
+        limits:
+          memory: 512M
+          cpus: "1.0"
+        reservations:
+          memory: 128M
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request,sys; sys.exit(0 if urllib.request.urlopen('http://127.0.0.1:8004/health',timeout=5).status==200 else 1)"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 30s
+
   dashboard:
     build: ./dashboard              # privates Web-Cockpit: Uebersicht (Gedaechtnis-Spektrum + Server-Stats), Gehirn-Browser; Dark/Light
     container_name: sb-dashboard
@@ -180,6 +220,7 @@ services:
     environment:
       BRAIN_URL: http://brain-api:8000
       AGENT_URL: http://agent:8002
+      LIBRARIAN_URL: http://librarian:8004   # Nachtschicht-Bibliothekar (Proxy /api/lib/*)
       SB_USER_ID: frank
       DASH_HOSTFS: /hostfs
       DASH_LOGBOOK_DIR: /logbook        # Logbuch-.txt-Protokolle anzeigen (gleicher Ordner wie der agent schreibt)

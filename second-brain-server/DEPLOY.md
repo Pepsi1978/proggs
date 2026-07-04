@@ -32,6 +32,7 @@ VPN-Tunnel erreichbar). Oeffentlich offen ist nur SSH (22) + WireGuard (51820/ud
 | `mcp` | `./mcp-server` | 8001 (TCP) | ja (`--build`) |
 | `agent` | `./agent` | 8002 (`/health`) | ja (`--build`) |
 | `dashboard` | `./dashboard` | 8003 (`/api/health`) | ja (`--build`) |
+| `librarian` | `./librarian` | 8004 (`/health`) | ja (`--build`) |
 | `qdrant` | (Fertig-Image, kein Bau) | 127.0.0.1:6333 | nein |
 | `caddy` | (Fertig-Image, kein Bau) | 443 | nein |
 
@@ -107,6 +108,9 @@ Hat sich die `compose.yaml` selbst geaendert: die compose.yaml ebenfalls hochlad
 5. **`agent` und `agent-data`**: der Container laeuft als uid 1000 — der Host-Ordner
    `/opt/second-brain/agent-data` (und die Logbuch-/Eval-Ordner) muessen `frank`/uid 1000 gehoeren
    (`chown` beim ersten Anlegen). Sonst kann der Agent seine `prompt.txt`/`config.json` nicht schreiben.
+   **Gleiches gilt fuer den `librarian`**: `/opt/second-brain/librarian-data` und
+   `/opt/second-brain/librarian-logs` muessen uid 1000 gehoeren (`chown -R 1000:1000 …` beim ersten Anlegen),
+   sonst kann der Nachtschicht-Bibliothekar Config/State/Tages-Reports nicht schreiben.
 6. **`.env` nie ueberschreiben/loeschen** — die Secrets (GEMINI_API_KEY, QDRANT_API_KEY, SB_API_KEY,
    GROQ_API_KEY, …) liegen NUR auf dem VPS in `/opt/second-brain/.env`, nicht im Repo. scp nur die
    geaenderten Code-Dateien, nie die `.env`.

@@ -818,6 +818,11 @@ button{font-family:inherit;cursor:pointer}
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5Z"/></svg>
         <span class="nav-label">Gespräch</span>
       </button>
+      <button class="nav-btn" data-tab="librarian">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79Z"/></svg>
+        <span class="nav-label">Bibliothekar</span>
+        <span class="lib-badge" id="libNavBadge" style="display:none">0</span>
+      </button>
       <button class="nav-btn" data-tab="settings">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1Z"/></svg>
         <span class="nav-label">Einstellungen</span>
@@ -951,6 +956,145 @@ button{font-family:inherit;cursor:pointer}
             </div>
             <div class="chat-divider" aria-hidden="true"></div>
             <textarea id="chatText" rows="1" placeholder="Ablegen oder nachschlagen…" autocomplete="off"></textarea>
+          </div>
+        </div>
+      </section>
+
+      <!-- ════ BIBLIOTHEKAR (Nachtschicht) ════ -->
+      <style>
+        /* Nachtschicht-Bibliothekar — eigene, kleine Styles auf Basis der bestehenden Tokens */
+        .lib-badge{display:inline-flex;align-items:center;justify-content:center;min-width:18px;height:18px;
+          padding:0 5px;border-radius:9px;font-size:11px;font-weight:700;
+          background:linear-gradient(145deg,var(--accent),var(--accent-2));color:var(--accent-ink)}
+        .lib-days{display:flex;gap:8px;flex-wrap:wrap;margin:12px 0 16px}
+        .lib-day{display:inline-flex;align-items:center;gap:7px;padding:8px 14px;border-radius:11px;
+          border:1px solid var(--border);background:var(--surface-2);cursor:pointer;font-size:13px;color:var(--text)}
+        .lib-day:hover{border-color:var(--text-faint)}
+        .lib-day.active{border-color:transparent;background:linear-gradient(145deg,var(--accent),var(--accent-2));color:var(--accent-ink)}
+        .lib-day .n{font-weight:700}
+        .lib-item{border:1px solid var(--border);border-radius:13px;padding:14px 16px;margin-bottom:12px;background:var(--surface-2)}
+        .lib-item.done{opacity:.62}
+        .lib-item h4{margin:0 0 6px;font-size:14.5px;display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+        .lib-task-chip{font-size:11px;padding:2px 9px;border-radius:9px;border:1px solid var(--border);color:var(--text-faint);white-space:nowrap}
+        .lib-item p{margin:4px 0;font-size:13px;color:var(--text-dim);line-height:1.5}
+        .lib-item .emp{color:var(--text)}
+        .lib-ctx{margin-top:8px;font-size:12.5px}
+        .lib-ctx summary{cursor:pointer;color:var(--text-faint)}
+        .lib-ctx .k{border-left:3px solid var(--border);padding:6px 10px;margin:6px 0;color:var(--text-dim);white-space:pre-wrap;word-break:break-word}
+        .lib-choice{display:flex;gap:8px;flex-wrap:wrap;margin-top:10px}
+        .lib-choice .btn.sel-ja{background:rgba(90,208,160,.16);border-color:var(--good);color:var(--good)}
+        .lib-choice .btn.sel-nein{background:rgba(242,105,142,.14);border-color:#F2698E;color:#F2698E}
+        .lib-choice .btn.sel-eigen{background:rgba(255,166,87,.14);border-color:var(--accent);color:var(--accent)}
+        .lib-own{width:100%;margin-top:9px;padding:10px 12px;border-radius:11px;border:1px solid var(--border);
+          background:var(--surface);color:var(--text);font:inherit;font-size:13px;min-height:60px;resize:vertical}
+        .lib-dialog{margin-top:9px;display:flex;flex-direction:column;gap:6px}
+        .lib-msg{padding:8px 12px;border-radius:11px;font-size:13px;line-height:1.5;max-width:92%;white-space:pre-wrap;word-break:break-word}
+        .lib-msg.frank{align-self:flex-end;background:linear-gradient(145deg,var(--accent),var(--accent-2));color:var(--accent-ink)}
+        .lib-msg.bib{align-self:flex-start;background:var(--surface);border:1px solid var(--border);color:var(--text)}
+        .lib-msg.bib.frage{border-color:var(--accent)}
+        .lib-result{padding:8px 12px;border-radius:10px;margin-top:6px;font-size:13px;border:1px solid var(--border);color:var(--text-dim)}
+        .lib-result.ok{border-color:rgba(90,208,160,.5)}
+        .lib-result.fail{border-color:rgba(242,105,142,.5)}
+        .lib-taskrow{display:flex;align-items:center;gap:10px;padding:9px 0;border-bottom:1px solid var(--border);font-size:13.5px}
+        .lib-taskrow:last-child{border-bottom:none}
+        .lib-taskrow .nm{flex:1;min-width:0}
+        .lib-taskrow .nm b{display:block}
+        .lib-taskrow .nm span{color:var(--text-faint);font-size:12px}
+        .lib-sw{appearance:none;width:40px;height:22px;border-radius:11px;background:var(--surface);border:1px solid var(--border);
+          position:relative;cursor:pointer;flex-shrink:0;transition:background .2s}
+        .lib-sw::after{content:"";position:absolute;top:2px;left:2px;width:16px;height:16px;border-radius:50%;
+          background:var(--text-faint);transition:left .2s,background .2s}
+        .lib-sw:checked{background:linear-gradient(145deg,var(--accent),var(--accent-2));border-color:transparent}
+        .lib-sw:checked::after{left:20px;background:#fff}
+        .lib-trash{background:none;border:none;cursor:pointer;color:var(--text-faint);padding:6px;border-radius:8px;flex-shrink:0}
+        .lib-trash:hover{color:#F2698E;background:rgba(242,105,142,.1)}
+        .lib-trash svg{width:16px;height:16px;stroke-width:2}
+        .lib-ivlog{display:flex;flex-direction:column;gap:8px;max-height:340px;overflow-y:auto;margin:10px 0;
+          padding:12px;border:1px solid var(--border);border-radius:12px;background:var(--surface)}
+        .lib-grid2{display:grid;grid-template-columns:repeat(auto-fit,minmax(190px,1fr));gap:12px}
+        .lib-run-line{display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-top:10px}
+        .lib-spin{display:inline-block;width:14px;height:14px;border:2px solid var(--border);border-top-color:var(--accent);
+          border-radius:50%;animation:libspin .8s linear infinite;vertical-align:-2px}
+        @keyframes libspin{to{transform:rotate(360deg)}}
+      </style>
+      <section class="view settings" id="view-librarian">
+        <div class="card set-section">
+          <h3><span class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79Z"/></svg></span>Morgen-Report</h3>
+          <p class="set-desc" id="libReportText">Lade den letzten Nachtlauf …</p>
+          <p class="set-desc" id="libReportMeta" style="margin-top:4px"></p>
+          <div class="lib-run-line">
+            <button class="btn btn-sm" id="libRunNow">Jetzt laufen lassen</button>
+            <span class="set-desc" id="libRunState"></span>
+          </div>
+        </div>
+
+        <div class="card set-section">
+          <h3><span class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg></span>Abarbeiten</h3>
+          <p class="set-desc">Wähle einen Tag, entscheide jeden Fund (Ja / Nein / eigener Vorschlag) und drücke unten auf <b>Starten</b>. Erledigtes fällt aus der Liste; jeder Tag bleibt erhalten, bis alles entschieden ist.</p>
+          <div class="lib-days" id="libDays"><span class="set-desc">Lade Tage …</span></div>
+          <div id="libItems"></div>
+          <div id="libResults"></div>
+          <div class="lib-run-line">
+            <button class="btn btn-primary" id="libStart">Starten</button>
+            <span class="set-desc" id="libStartHint"></span>
+          </div>
+        </div>
+
+        <div class="card set-section">
+          <h3><span class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><circle cx="12" cy="12" r="3"/><path d="M12 1v4M12 19v4M4.2 4.2l2.8 2.8M17 17l2.8 2.8M1 12h4M19 12h4M4.2 19.8 7 17M17 7l2.8-2.8"/></svg></span>Bibliothekar-Einstellungen</h3>
+          <p class="set-desc">Hier steuerst du, wie der Nachtschicht-Bibliothekar arbeitet. Änderungen gelten ab der nächsten Nacht.</p>
+          <div class="lib-taskrow" style="border-bottom:1px solid var(--border)">
+            <div class="nm"><b>Bibliothekar aktiv</b><span>Schaltet den kompletten Nachtlauf an oder aus.</span></div>
+            <input type="checkbox" class="lib-sw" id="libEnabled">
+          </div>
+          <div class="lib-grid2" style="margin-top:14px">
+            <div class="field">
+              <label for="libStartTime">Startzeit (nachts)</label>
+              <input type="time" class="select" id="libStartTime" value="04:10">
+            </div>
+            <div class="field">
+              <label for="libModel">Nacht-Modell</label>
+              <select class="select" id="libModel"></select>
+            </div>
+            <div class="field">
+              <label for="libMaxPer">Max. Vorschläge je Aufgabe/Nacht</label>
+              <input type="number" class="select" id="libMaxPer" min="1" max="50" value="8">
+            </div>
+            <div class="field">
+              <label for="libBudget">LLM-Budget je Nacht (Aufrufe)</label>
+              <input type="number" class="select" id="libBudget" min="20" max="2000" value="250">
+            </div>
+          </div>
+          <div class="field" style="margin-top:8px">
+            <label>Standard-Aufgaben (an/aus — nicht löschbar)</label>
+            <div id="libTaskToggles"></div>
+          </div>
+          <div class="lib-run-line">
+            <button class="btn btn-primary" id="libSaveSettings">Speichern</button>
+            <span class="set-desc" id="libSettingsState"></span>
+          </div>
+        </div>
+
+        <div class="card set-section">
+          <h3><span class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M12 5v14M5 12h14"/></svg></span>Eigene Aufgaben</h3>
+          <p class="set-desc">Bring dem Bibliothekar zusätzliche Nacht-Aufgaben bei. Über das Plus startest du ein kurzes Gespräch: Er fragt nach, macht Vorschläge, und am Ende drückst du auf Speichern. Eigene Aufgaben kannst du an-/ausschalten und mit dem Papierkorb wieder löschen.</p>
+          <div id="libCustomList"></div>
+          <div class="lib-run-line">
+            <button class="btn btn-sm" id="libCustomNew">＋ Neue Aufgabe definieren</button>
+          </div>
+          <div id="libInterview" style="display:none;margin-top:12px">
+            <div class="lib-ivlog" id="libIvLog"></div>
+            <div id="libIvTaskBox" style="display:none;border:1px solid var(--accent);border-radius:12px;padding:12px;margin-bottom:10px">
+              <b id="libIvTaskName"></b>
+              <p class="set-desc" id="libIvTaskDef" style="margin-top:4px"></p>
+            </div>
+            <textarea class="lib-own" id="libIvText" placeholder="Beschreib dem Bibliothekar, was er nachts zusätzlich tun soll …"></textarea>
+            <div class="lib-run-line">
+              <button class="btn btn-sm" id="libIvSend">Senden</button>
+              <button class="btn btn-sm btn-primary" id="libIvSave" style="display:none">Aufgabe speichern</button>
+              <button class="btn btn-sm" id="libIvCancel">Abbrechen</button>
+              <span class="set-desc" id="libIvState"></span>
+            </div>
           </div>
         </div>
       </section>
@@ -1281,6 +1425,7 @@ button{font-family:inherit;cursor:pointer}
   <button class="tab-btn active" data-tab="overview" aria-label="Übersicht"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><rect x="3" y="3" width="7" height="9" rx="1.5"/><rect x="14" y="3" width="7" height="5" rx="1.5"/><rect x="14" y="12" width="7" height="9" rx="1.5"/><rect x="3" y="16" width="7" height="5" rx="1.5"/></svg></button>
   <button class="tab-btn" data-tab="brain" aria-label="Gehirn"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M9.5 3.5A3 3 0 0 0 7 8a3 3 0 0 0-1 5.5A3 3 0 0 0 9 19a2.5 2.5 0 0 0 3-2.4V5.9A2.5 2.5 0 0 0 9.5 3.5Z"/><path d="M14.5 3.5A3 3 0 0 1 17 8a3 3 0 0 1 1 5.5A3 3 0 0 1 15 19a2.5 2.5 0 0 1-3-2.4"/></svg></button>
   <button class="tab-btn" data-tab="chat" aria-label="Gespräch"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5Z"/></svg></button>
+  <button class="tab-btn" data-tab="librarian" aria-label="Bibliothekar"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79Z"/></svg></button>
   <button class="tab-btn" data-tab="settings" aria-label="Einstellungen"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1Z"/></svg></button>
 </nav>
 
@@ -1335,9 +1480,10 @@ button{font-family:inherit;cursor:pointer}
     overview:{title:"Übersicht",sub:"Dein Gehirn auf einen Blick"},
     brain:{title:"Gehirn",sub:"Durchsuche und stöbere deine Einträge"},
     chat:{title:"Gespräch",sub:"Mit deinem Gehirn reden — ablegen und nachschlagen"},
+    librarian:{title:"Bibliothekar",sub:"Nachtschicht: Vorschläge prüfen und abarbeiten"},
     settings:{title:"Einstellungen",sub:"Agent & Server konfigurieren"}
   };
-  let activeTab = "overview", brainLoaded = false, settingsLoaded = false;
+  let activeTab = "overview", brainLoaded = false, settingsLoaded = false, libLoaded = false;
   function setTab(tab){
     if(!TABS[tab]) return;
     activeTab = tab;
@@ -1348,6 +1494,7 @@ button{font-family:inherit;cursor:pointer}
     document.getElementById("pageSub").textContent = TABS[tab].sub;
     if(tab==="brain" && !brainLoaded){ brainLoaded = true; loadEntries(); }
     if(tab==="settings" && !settingsLoaded){ settingsLoaded = true; loadSettings(); }
+    if(tab==="librarian"){ libLoaded = true; loadLibrarian(); }
     if(tab==="settings" && window.syncTtsToggle){ window.syncTtsToggle(); }   // Vorlesen-Schalter auf echten Stand
     if(tab==="chat"){ if(typeof loadChatCategories==="function") loadChatCategories(); setTimeout(()=>{ const t=document.getElementById("chatText"); if(t) t.focus(); }, 60); }
   }
@@ -3361,6 +3508,328 @@ button{font-family:inherit;cursor:pointer}
      aeltere Daten zu sehen sind als vorher. Gleiche Anzeige, gleiche 20s-Frequenz bei sichtbarem Tab. */
   setInterval(()=>{ if(!document.hidden) loadOverview(); }, 20000);
   document.addEventListener("visibilitychange", ()=>{ if(!document.hidden) loadOverview(); });
+
+  /* ── Nachtschicht-Bibliothekar ─────────────────────────────────────────────
+     Frontend fuer den librarian-Dienst (Proxy /api/lib/*): Morgen-Report, Tages-Listen
+     zum Abarbeiten (Ja/Nein/eigener Vorschlag + Starten + Rueckfragen-Schleife),
+     Einstellungen und eigene Zusatzaufgaben per Interview. */
+  async function jlib(path, method, body){
+    const opt = {method: method||"GET", headers:{Accept:"application/json"}};
+    if(body!==undefined){ opt.headers["Content-Type"]="application/json"; opt.body=JSON.stringify(body); }
+    const r = await fetch("/api/lib/"+path, opt);
+    const d = await r.json().catch(()=>({}));
+    if(!r.ok) throw new Error(d.detail||("HTTP "+r.status));
+    return d;
+  }
+  let libDay=null, libSel={}, libNightPoll=null, libProcPoll=null, libIv=[], libIvTask=null;
+
+  function libFmtDay(d){ const p=(d||"").split("-"); return p.length===3 ? p[2]+"."+p[1]+"."+p[0] : d; }
+  function libBadge(days){
+    const open=(days||[]).reduce((s,d)=>s+(d.offen||0),0);
+    const b=document.getElementById("libNavBadge");
+    b.style.display = open>0 ? "inline-flex" : "none"; b.textContent=open;
+  }
+
+  function loadLibrarian(){ loadLibStatus(); loadLibReports(true); loadLibSettings(); }
+
+  async function loadLibStatus(){
+    const txt=document.getElementById("libReportText"), meta=document.getElementById("libReportMeta");
+    try{
+      const s = await jlib("status");
+      const lr = s.last_run;
+      if(s.night && s.night.running){
+        txt.innerHTML='<span class="lib-spin"></span> Der Bibliothekar arbeitet gerade: '+escapeHtml(s.night.detail||"Lauf läuft …");
+        meta.textContent="";
+        if(!libNightPoll){
+          libNightPoll=setInterval(async()=>{
+            try{
+              const x=await jlib("status");
+              if(!(x.night&&x.night.running)){ clearInterval(libNightPoll); libNightPoll=null; loadLibStatus(); loadLibReports(true); }
+              else{ txt.innerHTML='<span class="lib-spin"></span> '+escapeHtml(x.night.detail||"läuft …"); }
+            }catch(_){ }
+          },5000);
+        }
+      } else if(lr){
+        txt.textContent = lr.zusammenfassung || "Letzter Lauf ohne Zusammenfassung.";
+        meta.textContent = "Letzter Lauf: "+(lr.finished? lr.finished.replace("T"," ").slice(0,16)+" Uhr":"?")
+          +" · Dauer "+(lr.dauer_s??"?")+" s · "+(lr.llm_calls??"?")+" KI-Aufrufe · Nächster automatischer Lauf: "+(s.next_run||"?");
+        if((lr.fehler||[]).length) meta.textContent += " · Hinweise: "+lr.fehler.join(" | ");
+      } else {
+        txt.textContent = "Noch kein Nachtlauf gelaufen. Der erste startet automatisch ("+(s.next_run||"04:10 Uhr")+") — oder du drückst „Jetzt laufen lassen“.";
+        meta.textContent = "";
+      }
+    }catch(e){ txt.textContent="Bibliothekar nicht erreichbar ("+e.message+")."; meta.textContent=""; }
+  }
+
+  document.getElementById("libRunNow").addEventListener("click", async()=>{
+    const st=document.getElementById("libRunState");
+    try{ const r=await jlib("run-now","POST",{}); st.textContent=r.detail||""; loadLibStatus(); }
+    catch(e){ st.textContent="Fehler: "+e.message; }
+  });
+
+  async function loadLibReports(pickDay){
+    const box=document.getElementById("libDays");
+    try{
+      const r = await jlib("reports");
+      const days=r.days||[];
+      libBadge(days);
+      box.innerHTML="";
+      if(!days.length){
+        box.innerHTML='<span class="set-desc">Noch keine Tages-Reports — nach dem ersten Nachtlauf erscheinen sie hier.</span>';
+        document.getElementById("libItems").innerHTML=""; return;
+      }
+      days.forEach(d=>{
+        const b=document.createElement("button");
+        b.className="lib-day"+(d.date===libDay?" active":""); b.dataset.date=d.date;
+        b.innerHTML=escapeHtml(libFmtDay(d.date))+' <span class="n">'+(d.offen||0)+' offen</span>';
+        b.addEventListener("click",()=>openLibDay(d.date));
+        box.appendChild(b);
+      });
+      if(pickDay){
+        const firstOpen = days.find(d=>(d.offen||0)>0) || days[0];
+        openLibDay(libDay && days.some(d=>d.date===libDay) ? libDay : firstOpen.date);
+      }
+    }catch(e){ box.innerHTML='<span class="set-desc">Fehler: '+escapeHtml(e.message)+'</span>'; }
+  }
+
+  async function openLibDay(day){
+    libDay=day; libSel={};
+    document.querySelectorAll("#libDays .lib-day").forEach(b=>b.classList.toggle("active", b.dataset.date===day));
+    document.getElementById("libResults").innerHTML="";
+    document.getElementById("libStartHint").textContent="";
+    const box=document.getElementById("libItems");
+    box.innerHTML='<p class="set-desc"><span class="lib-spin"></span> Lade Funde …</p>';
+    try{
+      const r=await jlib("report?day="+encodeURIComponent(day));
+      renderLibItems(r.report||{});
+    }catch(e){ box.innerHTML='<p class="set-desc">Fehler: '+escapeHtml(e.message)+'</p>'; }
+  }
+
+  function renderLibItems(rep){
+    const box=document.getElementById("libItems"); box.innerHTML="";
+    const items=rep.items||[];
+    const open=items.filter(i=>i.status==="offen");
+    const done=items.filter(i=>i.status!=="offen");
+    if(!open.length){
+      const p=document.createElement("p"); p.className="set-desc";
+      p.textContent = items.length ? "Alle Funde dieses Tages sind entschieden. ✔" : "Für diesen Tag gibt es keine offenen Funde.";
+      box.appendChild(p);
+    }
+    open.forEach(it=>box.appendChild(libItemCard(it)));
+    if(done.length){
+      const det=document.createElement("details"); det.className="lib-ctx";
+      det.innerHTML='<summary>'+done.length+' bereits entschieden (anzeigen)</summary>';
+      done.forEach(it=>{
+        const d=document.createElement("div"); d.className="lib-item done";
+        d.innerHTML='<h4>'+(it.status==="erledigt"?"✅ ":"✖ ")+escapeHtml(it.titel||"")+'</h4><p>'+escapeHtml(it.ergebnis||"")+'</p>';
+        det.appendChild(d);
+      });
+      box.appendChild(det);
+    }
+  }
+
+  function libItemCard(it){
+    const card=document.createElement("div"); card.className="lib-item"; card.dataset.id=it.id;
+    const dlg=it.dialog||[];
+    const lastBib = dlg.length>0 && dlg[dlg.length-1].von!=="frank";   // offene Rueckfrage des Bibliothekars
+    let h='<h4><span class="lib-task-chip">'+escapeHtml(it.taskname||it.task||"")+'</span>'+escapeHtml(it.titel||"Fund")+'</h4>';
+    h+='<p>'+escapeHtml(it.beschreibung||"")+'</p>';
+    h+='<p class="emp"><b>Empfehlung:</b> '+escapeHtml(it.empfehlung||"")+'</p>';
+    if((it.kontext||[]).length){
+      h+='<details class="lib-ctx"><summary>Beteiligte Einträge ansehen</summary>'
+        +(it.kontext||[]).map(k=>'<div class="k"><b>'+escapeHtml(k.titel||k.doc_id||"?")+'</b>'+(k.kategorie?(' · '+escapeHtml(k.kategorie)):'')+'\n'+escapeHtml(k.auszug||"")+'</div>').join("")
+        +'</details>';
+    }
+    if(dlg.length){
+      h+='<div class="lib-dialog">'+dlg.map((m,i)=>'<div class="lib-msg '+(m.von==="frank"?"frank":"bib")
+        +((m.von!=="frank"&&i===dlg.length-1)?" frage":"")+'">'+escapeHtml(m.text||"")+'</div>').join("")+'</div>';
+    }
+    card.innerHTML=h;
+    const row=document.createElement("div"); row.className="lib-choice";
+    const bJa=document.createElement("button"); bJa.textContent=it.ja_label||"Ja";
+    const bNein=document.createElement("button"); bNein.textContent=it.nein_label||"Nein";
+    const bEig=document.createElement("button"); bEig.textContent="Eigener Vorschlag";
+    const ta=document.createElement("textarea"); ta.className="lib-own"; ta.style.display="none";
+    ta.placeholder = lastBib ? "Deine Antwort auf die Rückfrage …"
+      : "Sag in eigenen Worten, was gemacht werden soll (z. B. umbenennen, anderer Text, andere Kategorie) …";
+    function paint(){
+      const sel=libSel[it.id]&&libSel[it.id].choice;
+      bJa.className="btn btn-sm"+(sel==="ja"?" sel-ja":"");
+      bNein.className="btn btn-sm"+(sel==="nein"?" sel-nein":"");
+      bEig.className="btn btn-sm"+(sel==="eigen"?" sel-eigen":"");
+      ta.style.display = sel==="eigen" ? "block" : "none";
+    }
+    function setChoice(c){
+      const cur=libSel[it.id]&&libSel[it.id].choice;
+      if(cur===c){ delete libSel[it.id]; } else { libSel[it.id]={choice:c,text:ta.value}; }
+      paint();
+      if(libSel[it.id]&&libSel[it.id].choice==="eigen") ta.focus();
+    }
+    bJa.addEventListener("click",()=>setChoice("ja"));
+    bNein.addEventListener("click",()=>setChoice("nein"));
+    bEig.addEventListener("click",()=>setChoice("eigen"));
+    ta.addEventListener("input",()=>{ if(libSel[it.id]) libSel[it.id].text=ta.value; });
+    row.appendChild(bJa); row.appendChild(bNein); row.appendChild(bEig);
+    card.appendChild(row); card.appendChild(ta);
+    paint();
+    if(lastBib){ setChoice("eigen"); }
+    return card;
+  }
+
+  document.getElementById("libStart").addEventListener("click", async()=>{
+    const hint=document.getElementById("libStartHint");
+    const decisions=Object.entries(libSel)
+      .filter(([id,v])=>v.choice && (v.choice!=="eigen" || (v.text||"").trim()))
+      .map(([id,v])=>({id:id, choice:v.choice, text:(v.text||"").trim()}));
+    if(!libDay){ hint.textContent="Bitte erst einen Tag wählen."; return; }
+    if(!decisions.length){ hint.textContent="Bitte erst mindestens einen Fund entscheiden (bei eigenem Vorschlag auch Text eintippen)."; return; }
+    hint.innerHTML='<span class="lib-spin"></span> Setze um …';
+    try{
+      const r=await jlib("process","POST",{date:libDay, decisions:decisions});
+      if(!r.started){ hint.textContent=r.detail||"Es läuft bereits eine Abarbeitung."; return; }
+      if(libProcPoll) clearInterval(libProcPoll);
+      libProcPoll=setInterval(async()=>{
+        try{
+          const s=await jlib("process-status"); const p=s.process||{};
+          if(p.running){ hint.innerHTML='<span class="lib-spin"></span> Setze um … '+(p.done||0)+"/"+(p.total||0); return; }
+          clearInterval(libProcPoll); libProcPoll=null;
+          showLibResults(p);
+          await loadLibReports(false);
+          await openLibDay(libDay);
+        }catch(_){ }
+      },2000);
+    }catch(e){ hint.textContent="Fehler: "+e.message; }
+  });
+
+  function showLibResults(p){
+    const box=document.getElementById("libResults"); box.innerHTML="";
+    (p.results||[]).forEach(r=>{
+      const d=document.createElement("div"); d.className="lib-result "+(r.ok?"ok":"fail");
+      d.textContent=(r.ok?"✓ ":"✗ ")+(r.titel||r.id||"")+" — "+(r.ergebnis||"");
+      box.appendChild(d);
+    });
+    const hint=document.getElementById("libStartHint");
+    if((p.rueckfragen||[]).length){
+      hint.textContent="Der Bibliothekar hat "+p.rueckfragen.length+" Rückfrage(n) — beantworte sie bei den markierten Funden und drücke nochmal Starten.";
+    } else if(p.error){ hint.textContent="Fehler: "+p.error; }
+    else if((p.results||[]).length){ hint.textContent="Alles umgesetzt."; }
+  }
+
+  /* — Einstellungen des Bibliothekars — */
+  async function loadLibSettings(){
+    try{
+      const r=await jlib("settings");
+      const s=r.settings||{};
+      document.getElementById("libEnabled").checked=!!s.enabled;
+      document.getElementById("libStartTime").value=s.start_time||"04:10";
+      const sel=document.getElementById("libModel"); sel.innerHTML="";
+      (r.models||[]).forEach(m=>{ const o=document.createElement("option"); o.value=m; o.textContent=m; if(m===s.model)o.selected=true; sel.appendChild(o); });
+      document.getElementById("libMaxPer").value=s.max_per_task??8;
+      document.getElementById("libBudget").value=s.llm_budget??250;
+      const tg=document.getElementById("libTaskToggles"); tg.innerHTML="";
+      (r.standard_tasks||[]).forEach(t=>{
+        const row=document.createElement("div"); row.className="lib-taskrow";
+        row.innerHTML='<div class="nm"><b>'+escapeHtml(t.name)+' <span style="font-weight:400;color:var(--text-faint)">(Nr. '+escapeHtml(String(t.nr))+')</span></b><span>'+escapeHtml(t.desc)+'</span></div>';
+        const sw=document.createElement("input"); sw.type="checkbox"; sw.className="lib-sw";
+        sw.checked=(s.tasks||{})[t.key]!==false; sw.dataset.key=t.key;
+        row.appendChild(sw); tg.appendChild(row);
+      });
+      renderLibCustom(s.custom_tasks||[]);
+    }catch(e){ document.getElementById("libSettingsState").textContent="Bibliothekar nicht erreichbar ("+e.message+")."; }
+  }
+
+  document.getElementById("libSaveSettings").addEventListener("click", async()=>{
+    const st=document.getElementById("libSettingsState");
+    const tasks={}; document.querySelectorAll("#libTaskToggles .lib-sw").forEach(sw=>{ tasks[sw.dataset.key]=sw.checked; });
+    try{
+      await jlib("settings","PUT",{
+        enabled:document.getElementById("libEnabled").checked,
+        start_time:document.getElementById("libStartTime").value||"04:10",
+        model:document.getElementById("libModel").value,
+        tasks:tasks,
+        max_per_task:parseInt(document.getElementById("libMaxPer").value)||8,
+        llm_budget:parseInt(document.getElementById("libBudget").value)||250
+      });
+      st.textContent="Gespeichert — gilt ab der nächsten Nacht.";
+      loadLibStatus();
+    }catch(e){ st.textContent="Fehler: "+e.message; }
+  });
+
+  /* — Eigene Aufgaben (Liste + Interview) — */
+  function renderLibCustom(list){
+    const box=document.getElementById("libCustomList"); box.innerHTML="";
+    if(!list.length){ box.innerHTML='<p class="set-desc">Noch keine eigenen Aufgaben.</p>'; return; }
+    list.forEach(t=>{
+      const row=document.createElement("div"); row.className="lib-taskrow";
+      row.innerHTML='<div class="nm"><b>'+escapeHtml(t.name||"")+'</b><span>'+escapeHtml(t.definition||"")+'</span></div>';
+      const sw=document.createElement("input"); sw.type="checkbox"; sw.className="lib-sw"; sw.checked=t.enabled!==false;
+      sw.title="Aufgabe an/aus";
+      sw.addEventListener("change", async()=>{
+        try{ await jlib("custom-tasks/"+encodeURIComponent(t.id),"PUT",{enabled:sw.checked}); }
+        catch(e){ sw.checked=!sw.checked; alert("Fehler: "+e.message); }
+      });
+      const del=document.createElement("button"); del.className="lib-trash"; del.title="Aufgabe löschen";
+      del.innerHTML='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M3 6h18M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2m3 0v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6h14Z"/></svg>';
+      del.addEventListener("click", async()=>{
+        if(!confirm('Eigene Aufgabe „'+(t.name||"")+'“ wirklich löschen?')) return;
+        try{ await jlib("custom-tasks/"+encodeURIComponent(t.id),"DELETE"); loadLibSettings(); }
+        catch(e){ alert("Fehler: "+e.message); }
+      });
+      row.appendChild(sw); row.appendChild(del); box.appendChild(row);
+    });
+  }
+
+  function libIvRender(){
+    const log=document.getElementById("libIvLog"); log.innerHTML="";
+    const greet=document.createElement("div"); greet.className="lib-msg bib";
+    greet.textContent="Hallo Frank! Beschreib mir, was ich nachts zusätzlich für dich tun soll — ich frage nach, mache Vorschläge und sage dir ehrlich, ob es als Nacht-Aufgabe Sinn ergibt.";
+    log.appendChild(greet);
+    libIv.forEach(m=>{ const d=document.createElement("div"); d.className="lib-msg "+(m.von==="frank"?"frank":"bib"); d.textContent=m.text; log.appendChild(d); });
+    log.scrollTop=log.scrollHeight;
+  }
+
+  document.getElementById("libCustomNew").addEventListener("click",()=>{
+    libIv=[]; libIvTask=null;
+    document.getElementById("libIvTaskBox").style.display="none";
+    document.getElementById("libIvSave").style.display="none";
+    document.getElementById("libInterview").style.display="block";
+    document.getElementById("libIvState").textContent="";
+    libIvRender();
+    document.getElementById("libIvText").focus();
+  });
+  document.getElementById("libIvCancel").addEventListener("click",()=>{ document.getElementById("libInterview").style.display="none"; });
+
+  document.getElementById("libIvSend").addEventListener("click", async()=>{
+    const ta=document.getElementById("libIvText"); const txt=(ta.value||"").trim(); if(!txt) return;
+    const st=document.getElementById("libIvState");
+    libIv.push({von:"frank",text:txt}); ta.value=""; libIvRender();
+    st.innerHTML='<span class="lib-spin"></span> Der Bibliothekar denkt nach …';
+    try{
+      const r=await jlib("custom-tasks/interview","POST",{messages:libIv});
+      libIv.push({von:"bibliothekar",text:r.reply||"…"}); libIvRender(); st.textContent="";
+      if(r.fertig && r.task){
+        libIvTask=r.task;
+        document.getElementById("libIvTaskName").textContent=r.task.name||"";
+        document.getElementById("libIvTaskDef").textContent=r.task.definition||"";
+        document.getElementById("libIvTaskBox").style.display="block";
+        document.getElementById("libIvSave").style.display="inline-flex";
+      }
+    }catch(e){ st.textContent="Fehler: "+e.message; }
+  });
+
+  document.getElementById("libIvSave").addEventListener("click", async()=>{
+    if(!libIvTask) return;
+    const st=document.getElementById("libIvState");
+    try{
+      await jlib("custom-tasks","POST",{name:libIvTask.name,definition:libIvTask.definition});
+      st.textContent="Aufgabe gespeichert — sie läuft ab der nächsten Nacht mit.";
+      document.getElementById("libInterview").style.display="none";
+      loadLibSettings();
+    }catch(e){ st.textContent="Fehler: "+e.message; }
+  });
+
+  // Morgen-Badge schon beim Seitenstart fuellen (ohne den Tab zu oeffnen)
+  (async()=>{ try{ const r=await jlib("reports"); libBadge(r.days||[]); }catch(_){ } })();
 
 })();
 </script>

@@ -277,9 +277,12 @@ _init_last_attempt = 0.0
 # Extraktion macht der Agent). Entity = Name+Typ+Aliases+verknuepfte doc_ids, Vektor fuers
 # fuzzy Wiederfinden. /entities/docs raeumt tote doc_ids lazy auf (Self-Healing).
 # Antwort-Felder /search additiv erweitert: matched_by, dense_score, bm25_rank, retrieval.
-# 1.21.1: /purge raeumt jetzt AUCH die Entitaeten des eval-Test-Nutzers auf (der erweiterte
+# 1.22.0: /entities/list?with_docs=1 liefert zusaetzlich die verknuepften doc_ids je Entitaet —
+# der Nachtschicht-Bibliothekar (librarian) braucht sie fuer den Nachzuegler-Lauf (Eintraege OHNE
+# Entity-Verknuepfung finden). Rein additiv, Default-Antwort unveraendert.
+# Alt: 1.21.1: /purge raeumt jetzt AUCH die Entitaeten des eval-Test-Nutzers auf (der erweiterte
 # Eval-Check legt Test-Entitaeten an) + invalidiert den BM25-Cache (purge lief an _delete_doc vorbei).
-VERSION = "1.21.1 (04.07.2026, 21.55 Uhr)"
+VERSION = "1.22.0 (05.07.2026, 00.55 Uhr)"
 
 # Startup-Banner (Observability-First: Log-Pfad + Version EINMAL ausgeben)
 _log(logging.INFO, "brain-api startet", version=VERSION, log_path=LOG_PATH)
@@ -1897,15 +1900,18 @@ def entities_upsert(req: EntityUpsertReq) -> dict:
 
 
 @app.get("/entities/list", dependencies=[Depends(require_auth)])
-def entities_list(user_id: str = "frank") -> dict:
-    """Alle Entitaeten (Metadaten, ohne Vektoren) — fuers Dashboard/den Agenten."""
+def entities_list(user_id: str = "frank", with_docs: bool = False) -> dict:
+    """Alle Entitaeten (Metadaten, ohne Vektoren) — fuers Dashboard/den Agenten.
+    with_docs=1 (Nachtschicht-Bibliothekar): liefert zusaetzlich die verknuepften doc_ids je
+    Entitaet, damit der Nachzuegler-Lauf Eintraege OHNE Verknuepfung finden kann (rein additiv)."""
     _require_store()
     pts = _scroll_col(ENTITY_COLLECTION,
                       Filter(must=[FieldCondition(key="user_id", match=MatchValue(value=user_id))]),
                       with_payload=["name", "type", "aliases", "doc_ids", "doc_count", "created_at", "updated_at"])
     items = [{"name": p.payload.get("name"), "type": p.payload.get("type") or None,
               "aliases": p.payload.get("aliases") or [], "doc_count": int(p.payload.get("doc_count") or 0),
-              "created_at": p.payload.get("created_at"), "updated_at": p.payload.get("updated_at")}
+              "created_at": p.payload.get("created_at"), "updated_at": p.payload.get("updated_at"),
+              **({"doc_ids": p.payload.get("doc_ids") or []} if with_docs else {})}
              for p in pts]
     items.sort(key=lambda x: (-(x["doc_count"]), (x["name"] or "").lower()))
     return {"ok": True, "count": len(items), "items": items}
