@@ -5,7 +5,7 @@
         xmlns:vm="clr-namespace:OpenCodeLauncher.ViewModels"
         xmlns:m="clr-namespace:OpenCodeLauncher.Models"
         Title="OpenCode Launcher"
-        Height="1150" Width="2200"
+        Height="900" Width="1720"
         MinHeight="600" MinWidth="960"
         WindowStartupLocation="CenterScreen"
         Background="#242434"
@@ -174,9 +174,9 @@
                     <TextBlock Text="{Binding Version}" Foreground="#888894" FontSize="12" Margin="12,1,0,0" VerticalAlignment="Center"/>
                 </StackPanel>
                 <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center" Margin="0,0,8,0">
-                    <Button x:Name="MinBtn" Width="40" Height="32" Background="Transparent" BorderThickness="0" Foreground="#C0C0CC" Content="—" Click="MinBtn_Click" Cursor="Hand"/>
-                    <Button x:Name="MaxBtn" Width="40" Height="32" Background="Transparent" BorderThickness="0" Foreground="#C0C0CC" Content="□" Click="MaxBtn_Click" Cursor="Hand"/>
-                    <Button x:Name="CloseBtn" Width="40" Height="32" Background="Transparent" BorderThickness="0" Foreground="#C0C0CC" Content="✕" Click="CloseBtn_Click" Cursor="Hand"/>
+                    <Button x:Name="MinBtn" Width="40" Height="32" Background="Transparent" BorderThickness="0" Foreground="#C0C0CC" Content="—" FontSize="18" Click="MinBtn_Click" Cursor="Hand"/>
+                    <Button x:Name="MaxBtn" Width="40" Height="32" Background="Transparent" BorderThickness="0" Foreground="#C0C0CC" Content="▢" FontSize="18" Click="MaxBtn_Click" Cursor="Hand"/>
+                    <Button x:Name="CloseBtn" Width="40" Height="32" Background="Transparent" BorderThickness="0" Foreground="#C0C0CC" Content="✕" FontSize="16" Click="CloseBtn_Click" Cursor="Hand"/>
                 </StackPanel>
             </Grid>
 

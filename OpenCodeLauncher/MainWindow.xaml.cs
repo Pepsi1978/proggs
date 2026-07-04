@@ -37,7 +37,7 @@ public partial class MainWindow : Window
             HwndSource.FromHwnd(hwnd)?.AddHook(WndProc);
             ApplyWindowTheme();
         };
-        StateChanged += (_, _) => MaxBtn.Content = WindowState == WindowState.Maximized ? "❐" : "□";
+        StateChanged += (_, _) => MaxBtn.Content = WindowState == WindowState.Maximized ? "❐" : "▢";
         ContentRendered += (_, _) => Title = $"OpenCode Launcher — {ViewModel.Version}";
     }
 

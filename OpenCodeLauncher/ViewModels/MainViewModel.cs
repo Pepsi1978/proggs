@@ -25,8 +25,8 @@ public sealed partial class MainViewModel : ObservableObject
         if (Models.Count > 0) SelectedModel = Models[0];
         WorkDir = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), "proggs");
 
-        var version = Assembly.GetExecutingAssembly().GetName().Version?.ToString(3) ?? "1.0.5";
-        Version = $"Version {version} (04.07.2026, 21:15 Uhr)";
+        var version = Assembly.GetExecutingAssembly().GetName().Version?.ToString(3) ?? "1.0.7";
+        Version = $"Version {version} (04.07.2026, 21:31 Uhr)";
     }
 
     public ObservableCollection<ModelEntry> Models { get; } = new();
@@ -119,13 +119,7 @@ public sealed partial class MainViewModel : ObservableObject
         if (SelectedModel == null) return;
         var idx = Models.IndexOf(SelectedModel);
         if (idx < 0) return;
-        var result = MessageBox.Show(
-            $"Möchtest du das Modell '{SelectedModel.DisplayName}' wirklich aus der Modellliste entfernen?",
-            "Modell entfernen",
-            MessageBoxButton.YesNo,
-            MessageBoxImage.Warning,
-            MessageBoxResult.No);
-        if (result != MessageBoxResult.Yes) return;
+        if (!ConfirmRemoveModel(SelectedModel.DisplayName, SelectedModel.Slug)) return;
         _registry.RemoveAt(idx);
         Models.RemoveAt(idx);
         if (Models.Count > 0)
@@ -295,5 +289,83 @@ public sealed partial class MainViewModel : ObservableObject
         input.Focus();
         input.SelectAll();
         return w.ShowDialog() == true ? input.Text.Trim() : string.Empty;
+    }
+
+    private static bool ConfirmRemoveModel(string displayName, string slug)
+    {
+        var w = new Window
+        {
+            Title = "Modell entfernen",
+            Width = 520,
+            Height = 230,
+            WindowStartupLocation = WindowStartupLocation.CenterScreen,
+            ResizeMode = ResizeMode.NoResize,
+            WindowStyle = WindowStyle.None,
+            Background = new System.Windows.Media.SolidColorBrush(System.Windows.Media.Color.FromRgb(36, 36, 52)),
+        };
+
+        var root = new System.Windows.Controls.Border
+        {
+            Background = new System.Windows.Media.SolidColorBrush(System.Windows.Media.Color.FromRgb(36, 36, 52)),
+            BorderBrush = new System.Windows.Media.SolidColorBrush(System.Windows.Media.Color.FromRgb(58, 58, 82)),
+            BorderThickness = new Thickness(1),
+            CornerRadius = new CornerRadius(14),
+            Padding = new Thickness(22)
+        };
+        var sp = new System.Windows.Controls.StackPanel();
+        sp.Children.Add(new System.Windows.Controls.TextBlock
+        {
+            Text = "Modell entfernen?",
+            Foreground = System.Windows.Media.Brushes.White,
+            FontSize = 18,
+            FontWeight = FontWeights.SemiBold,
+            Margin = new Thickness(0, 0, 0, 12)
+        });
+        sp.Children.Add(new System.Windows.Controls.TextBlock
+        {
+            Text = $"{displayName}\n{slug}",
+            Foreground = new System.Windows.Media.SolidColorBrush(System.Windows.Media.Color.FromRgb(184, 184, 196)),
+            TextWrapping = TextWrapping.Wrap,
+            Margin = new Thickness(0, 0, 0, 18)
+        });
+        sp.Children.Add(new System.Windows.Controls.TextBlock
+        {
+            Text = "Das Modell wird nur aus der Launcher-Liste entfernt. OpenCode selbst bleibt unverändert.",
+            Foreground = new System.Windows.Media.SolidColorBrush(System.Windows.Media.Color.FromRgb(136, 136, 148)),
+            TextWrapping = TextWrapping.Wrap,
+            Margin = new Thickness(0, 0, 0, 22)
+        });
+
+        var buttons = new System.Windows.Controls.StackPanel
+        {
+            Orientation = System.Windows.Controls.Orientation.Horizontal,
+            HorizontalAlignment = HorizontalAlignment.Right
+        };
+        var cancel = DialogButton("Abbrechen", false);
+        var remove = DialogButton("Entfernen", true);
+        cancel.Click += (_, _) => { w.DialogResult = false; w.Close(); };
+        remove.Click += (_, _) => { w.DialogResult = true; w.Close(); };
+        buttons.Children.Add(cancel);
+        buttons.Children.Add(remove);
+        sp.Children.Add(buttons);
+        root.Child = sp;
+        w.Content = root;
+        return w.ShowDialog() == true;
+    }
+
+    private static System.Windows.Controls.Button DialogButton(string text, bool accent)
+    {
+        return new System.Windows.Controls.Button
+        {
+            Content = text,
+            Padding = new Thickness(18, 8, 18, 8),
+            Margin = new Thickness(8, 0, 0, 0),
+            Foreground = System.Windows.Media.Brushes.White,
+            Background = new System.Windows.Media.SolidColorBrush(accent
+                ? System.Windows.Media.Color.FromRgb(91, 91, 214)
+                : System.Windows.Media.Color.FromRgb(43, 43, 61)),
+            BorderThickness = new Thickness(0),
+            Cursor = System.Windows.Input.Cursors.Hand
+        };
     }
 }
