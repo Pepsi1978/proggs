@@ -159,8 +159,6 @@ fun ApiKeysScreen(
                     onTest = vm::testSecondBrain,
                     onWireGuardConfigChange = vm::setSecondBrainWireGuardConfig,
                     onSaveWireGuardConfig = vm::saveSecondBrainWireGuardConfig,
-                    onEnabledChange = vm::setSecondBrainEnabled,
-                    onSyncNow = vm::syncSecondBrainIdeasNow,
                 )
             }
             item {
@@ -196,8 +194,6 @@ private fun SecondBrainConnectorCard(
     onTest: () -> Unit,
     onWireGuardConfigChange: (String) -> Unit,
     onSaveWireGuardConfig: () -> Unit,
-    onEnabledChange: (Boolean) -> Unit,
-    onSyncNow: () -> Unit,
 ) {
     val cosmos = LocalCosmos.current
     GlassCard(modifier = Modifier.fillMaxWidth()) {
@@ -205,18 +201,12 @@ private fun SecondBrainConnectorCard(
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Icon(Icons.Outlined.Link, null, tint = cosmos.accentTasksSub, modifier = Modifier.size(20.dp))
                 Spacer(Modifier.size(8.dp))
-                Text("Second-Brain-Connector", style = MaterialTheme.typography.titleMedium, color = cosmos.accentTasksSub)
-                Spacer(Modifier.weight(1f))
-                Switch(
-                    checked = state.secondBrainEnabled,
-                    onCheckedChange = onEnabledChange,
-                    enabled = state.secondBrainSaved,
-                )
+                Text("Second-Brain-Verbindung", style = MaterialTheme.typography.titleMedium, color = cosmos.accentTasksSub)
             }
             Spacer(Modifier.height(4.dp))
             Text(
-                "Speichert jede Idee aus Aufgaben → Ideen einzeln in die Second-Brain-Kategorie „Ideen“. " +
-                    "Alt-Ideen werden beim Einschalten zuerst nachgetragen.",
+                "Verbindung zum Second Brain (Schlüssel + WireGuard). Welche Inhalte synchronisiert " +
+                    "werden (z. B. Ideen), stellst du im Bereich „Second Brain“ ein.",
                 style = MaterialTheme.typography.bodySmall,
                 color = cosmos.textSecondary,
             )
@@ -256,26 +246,6 @@ private fun SecondBrainConnectorCard(
             ) {
                 Text(if (state.secondBrainWireGuardSaved) "WireGuard-Konfig aktualisieren" else "WireGuard-Konfig speichern")
             }
-            Spacer(Modifier.height(12.dp))
-            OutlinedButton(
-                onClick = onSyncNow,
-                modifier = Modifier.fillMaxWidth(),
-                enabled = state.secondBrainSaved && !state.secondBrainSyncing,
-            ) {
-                if (state.secondBrainSyncing) {
-                    CircularProgressIndicator(modifier = Modifier.size(16.dp), strokeWidth = 2.dp)
-                    Spacer(Modifier.size(8.dp))
-                    Text("Speichere Ideen …")
-                } else {
-                    Text("Alt-Ideen jetzt ins Second Brain speichern")
-                }
-            }
-            Spacer(Modifier.height(8.dp))
-            Text(
-                state.secondBrainMessage,
-                style = MaterialTheme.typography.bodySmall,
-                color = cosmos.textSecondary,
-            )
         }
     }
 }

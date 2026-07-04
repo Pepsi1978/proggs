@@ -45,6 +45,7 @@ import de.frank.entropyreducer.presentation.mental.GewohnheitBoardScreen
 import de.frank.entropyreducer.presentation.mental.MentalBoardScreen
 import de.frank.entropyreducer.presentation.settings.SettingsHomeScreen
 import de.frank.entropyreducer.presentation.settings.api.ApiKeysScreen
+import de.frank.entropyreducer.presentation.settings.secondbrain.SecondBrainSettingsScreen
 import de.frank.entropyreducer.presentation.settings.codex.CodexScreen
 import de.frank.entropyreducer.presentation.settings.export.ExportScreen
 import de.frank.entropyreducer.presentation.settings.memory.MemoryScreen
@@ -552,6 +553,11 @@ private fun AppNavHostInner(nav: androidx.navigation.NavHostController, modifier
             }
             composable(Routes.SETTINGS_API) {
                 ApiKeysScreen(
+                    onBack = { nav.popBackStack() }
+                )
+            }
+            composable(Routes.SETTINGS_SECOND_BRAIN) {
+                SecondBrainSettingsScreen(
                     onBack = { nav.popBackStack() }
                 )
             }

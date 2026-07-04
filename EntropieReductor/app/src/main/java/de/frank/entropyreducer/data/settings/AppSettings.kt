@@ -361,6 +361,36 @@ class AppSettings @Inject constructor(
         prefs[KEY_SECOND_BRAIN_IDEA_SYNC_STAMPS] = withoutOldStamp + stamp
     }
 
+    // Frank-Wunsch 2026-07-04: Pro Idee den zuletzt ins Second Brain hochgeladenen TITEL merken.
+    // Noetig, um beim Loeschen einer Idee (oder bei Titel-Aenderung) den alten Brain-Eintrag per
+    // Titel (DELETE /by-title) gezielt zu entfernen — der Brain nutzt den Titel als Schluessel.
+    // Format je Element: "<ideaId>=<titel>" — die ideaId ist eine UUID (enthaelt kein '='), der
+    // Titel danach darf '=' enthalten (split limit=2 trennt nur am ersten '=').
+    suspend fun readSecondBrainIdeaTitles(): Map<String, String> =
+        (ds.data.first()[KEY_SECOND_BRAIN_IDEA_TITLES] ?: emptySet())
+            .mapNotNull { entry ->
+                val parts = entry.split('=', limit = 2)
+                if (parts.size == 2) parts[0] to parts[1] else null
+            }
+            .toMap()
+
+    suspend fun setSecondBrainIdeaTitle(ideaId: String, title: String) = ds.edit { prefs ->
+        val without = (prefs[KEY_SECOND_BRAIN_IDEA_TITLES] ?: emptySet())
+            .filterNot { it.startsWith("$ideaId=") }
+            .toSet()
+        prefs[KEY_SECOND_BRAIN_IDEA_TITLES] = without + "$ideaId=$title"
+    }
+
+    /** Entfernt Sync-Marke UND gemerkten Titel einer Idee (nach Loeschung aus dem Brain). */
+    suspend fun clearSecondBrainIdeaSync(ideaId: String) = ds.edit { prefs ->
+        prefs[KEY_SECOND_BRAIN_IDEA_SYNC_STAMPS] =
+            (prefs[KEY_SECOND_BRAIN_IDEA_SYNC_STAMPS] ?: emptySet())
+                .filterNot { it.startsWith("$ideaId:") }.toSet()
+        prefs[KEY_SECOND_BRAIN_IDEA_TITLES] =
+            (prefs[KEY_SECOND_BRAIN_IDEA_TITLES] ?: emptySet())
+                .filterNot { it.startsWith("$ideaId=") }.toSet()
+    }
+
     companion object {
         private val KEY_WHISPER_MODEL = stringPreferencesKey("whisper_model")
         private val KEY_GEMINI_MODEL = stringPreferencesKey("gemini_model")
@@ -404,6 +434,7 @@ class AppSettings @Inject constructor(
         private val KEY_PRIO_MEMORY_LIMIT = intPreferencesKey("prio_memory_limit")
         private val KEY_SECOND_BRAIN_IDEAS_ENABLED = booleanPreferencesKey("second_brain_ideas_enabled")
         private val KEY_SECOND_BRAIN_IDEA_SYNC_STAMPS = stringSetPreferencesKey("second_brain_idea_sync_stamps")
+        private val KEY_SECOND_BRAIN_IDEA_TITLES = stringSetPreferencesKey("second_brain_idea_titles")
 
         const val DEFAULT_WHISPER = "whisper-large-v3-turbo"
         // Frank-Wunsch 2026-05-09: Default-Modell ist Gemini 3.1 Flash-Lite. Greift

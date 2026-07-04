@@ -21,6 +21,7 @@ import androidx.compose.material.icons.outlined.Bolt
 import androidx.compose.material.icons.outlined.CalendarMonth
 import androidx.compose.material.icons.outlined.ChatBubbleOutline
 import androidx.compose.material.icons.outlined.ChevronRight
+import androidx.compose.material.icons.outlined.CloudSync
 import androidx.compose.material.icons.outlined.EmojiEvents
 import androidx.compose.material.icons.outlined.Inventory2
 import androidx.compose.material.icons.outlined.IosShare
@@ -126,6 +127,13 @@ private fun sectionsFor(): List<SectionDef> =
             title = "API-Schlüssel",
             subtitle = "Verwalte deine API-Schlüssel und verknuepfe deine bevorzugten Anbieter.",
             route = Routes.SETTINGS_API,
+        ),
+        SectionDef(
+            icon = Icons.Outlined.CloudSync,
+            accent = LocalCosmos.current.accentTasksSub,
+            title = "Second Brain",
+            subtitle = "Wähle, welche Bereiche (z. B. Ideen) automatisch ins Second Brain synchronisiert werden.",
+            route = Routes.SETTINGS_SECOND_BRAIN,
         ),
         SectionDef(
             icon = Icons.Outlined.Psychology,

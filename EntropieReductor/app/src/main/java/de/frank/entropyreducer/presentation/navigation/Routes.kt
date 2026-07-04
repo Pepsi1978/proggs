@@ -105,6 +105,7 @@ object Routes {
     // Settings-Stack
     const val SETTINGS_HOME = "settings"
     const val SETTINGS_API = "settings/api_keys"
+    const val SETTINGS_SECOND_BRAIN = "settings/second_brain"
     const val SETTINGS_MODELS = "settings/models"
     const val SETTINGS_PROFILE = "settings/profile"
     const val SETTINGS_PROMPTS = "settings/prompts"

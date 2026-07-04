@@ -126,16 +126,51 @@ class SecondBrainIdeaConnector @Inject constructor(
             _state.value = _state.value.copy(lastMessage = "Connector aktiv, aber API-Key fehlt.")
             return
         }
+        val auth = "Bearer $key"
         val sorted = rows.sortedBy { it.idea.timestampMs }
+        val currentIds = sorted.map { it.idea.id }.toSet()
+        val uploadedTitles = settings.readSecondBrainIdeaTitles()
+
+        // 1) Loeschungen (Frank-Wunsch 2026-07-04): Ideen, die frueher hochgeladen wurden, jetzt aber
+        //    nicht mehr existieren (in der App geloescht) -> per Titel aus dem Brain entfernen.
+        val deletedIds = uploadedTitles.keys - currentIds
+        var deleted = 0
+        for (id in deletedIds) {
+            val title = uploadedTitles[id] ?: continue
+            try {
+                val resp = api.forget(auth, title)
+                settings.clearSecondBrainIdeaSync(id)
+                deleted++
+                Diag.i(
+                    DiagnosticArea.SECOND_BRAIN,
+                    TAG,
+                    "CHECKPOINT step=forgetIdea expected=deleted actual=deleted=${resp.deleted} ok=${resp.ok} id=$id title=\"$title\"",
+                )
+            } catch (e: CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                Diag.e(
+                    DiagnosticArea.SECOND_BRAIN,
+                    TAG,
+                    "CHECKPOINT step=forgetIdea expected=deleted actual=error ok=false id=$id title=\"$title\" message=${e.message ?: e::class.java.simpleName}",
+                    e,
+                )
+            }
+        }
+
+        // 2) Uploads: neue/geaenderte Ideen (per Sync-Stamp) hochladen.
         val knownStamps = settings.readSecondBrainIdeaSyncStamps().toMutableSet()
         val pending = sorted.filter { row -> syncStamp(row) !in knownStamps }
         Diag.i(
             DiagnosticArea.SECOND_BRAIN,
             TAG,
-            "CHECKPOINT step=syncPreflight expected=pending_calculated actual=total=${sorted.size},pending=${pending.size},known=${knownStamps.size} ok=true reason=$reason",
+            "CHECKPOINT step=syncPreflight expected=pending_calculated actual=total=${sorted.size},pending=${pending.size},deleted=$deleted,known=${knownStamps.size} ok=true reason=$reason",
         )
         if (pending.isEmpty()) {
-            _state.value = _state.value.copy(lastMessage = "Alle Ideen sind im Second Brain aktuell.")
+            _state.value = _state.value.copy(
+                lastMessage = if (deleted > 0) "$deleted Idee(n) im Second Brain geloescht, Rest aktuell."
+                else "Alle Ideen sind im Second Brain aktuell.",
+            )
             return
         }
 
@@ -143,8 +178,28 @@ class SecondBrainIdeaConnector @Inject constructor(
         var synced = 0
         for (row in pending) {
             val stamp = syncStamp(row)
-            val title = stableBrainTitle(row)
+            val title = brainTitle(row)
             val text = row.toBrainText()
+            // Titel-Aenderung: alten Brain-Eintrag (anderer Titel) zuerst entfernen, sonst Leiche.
+            val previousTitle = uploadedTitles[row.idea.id]
+            if (previousTitle != null && previousTitle != title) {
+                try {
+                    api.forget(auth, previousTitle)
+                    Diag.i(
+                        DiagnosticArea.SECOND_BRAIN,
+                        TAG,
+                        "CHECKPOINT step=forgetOldTitle expected=deleted actual=done ok=true id=${row.idea.id} old=\"$previousTitle\" new=\"$title\"",
+                    )
+                } catch (e: CancellationException) {
+                    throw e
+                } catch (e: Exception) {
+                    Diag.w(
+                        DiagnosticArea.SECOND_BRAIN,
+                        TAG,
+                        "CHECKPOINT step=forgetOldTitle expected=deleted actual=error ok=false id=${row.idea.id} old=\"$previousTitle\" message=${e.message ?: e::class.java.simpleName}",
+                    )
+                }
+            }
             val request = SecondBrainStoreRequest(
                 title = title,
                 category = "Ideen",
@@ -153,15 +208,16 @@ class SecondBrainIdeaConnector @Inject constructor(
             Diag.d(
                 DiagnosticArea.SECOND_BRAIN,
                 TAG,
-                "CHECKPOINT step=storeIdeaRequest id=${row.idea.id} title=\"$title\" chars=${text.length} followups=${row.followups.size} stamp=$stamp",
+                "CHECKPOINT step=storeIdeaRequest id=${row.idea.id} title=\"$title\" chars=${text.length} stamp=$stamp",
             )
             try {
                 val response = api.store(
-                    authorization = "Bearer $key",
+                    authorization = auth,
                     idempotencyKey = "entropy-idea-${row.idea.id}-$stamp",
                     request = request,
                 )
                 settings.markSecondBrainIdeaSynced(row.idea.id, stamp)
+                settings.setSecondBrainIdeaTitle(row.idea.id, title)
                 knownStamps.removeAll { it.startsWith("${row.idea.id}:") }
                 knownStamps += stamp
                 synced++
@@ -190,14 +246,14 @@ class SecondBrainIdeaConnector @Inject constructor(
         }
         _state.value = _state.value.copy(
             syncing = false,
-            lastMessage = "$reason abgeschlossen: $synced Idee(n) gespeichert.",
+            lastMessage = "$reason abgeschlossen: $synced gespeichert" + (if (deleted > 0) ", $deleted geloescht." else "."),
             syncedCount = synced,
             lastSyncedAtMs = System.currentTimeMillis(),
         )
         Diag.i(
             DiagnosticArea.SECOND_BRAIN,
             TAG,
-            "CHECKPOINT step=syncComplete expected=all_pending_synced actual=synced=$synced,pending=${pending.size} ok=${synced == pending.size} reason=$reason",
+            "CHECKPOINT step=syncComplete expected=all_pending_synced actual=synced=$synced,deleted=$deleted,pending=${pending.size} ok=${synced == pending.size} reason=$reason",
         )
     }
 
@@ -207,42 +263,24 @@ class SecondBrainIdeaConnector @Inject constructor(
         return "${row.idea.id}:${maxOf(ideaVersion, followupVersion)}"
     }
 
-    private fun stableBrainTitle(row: IdeaWithFollowups): String {
-        val created = DATE_TITLE.format(Instant.ofEpochMilli(row.idea.timestampMs).atZone(ZoneId.systemDefault()))
-        return "EntropieReductor Idee $created ${row.idea.id.take(8)}"
-    }
+    // Frank-Wunsch 2026-07-04: Brain-Titel = NUR der Ideen-Titel (z. B. "Frage Meditation ausprobieren"),
+    // nicht mehr die interne ID/Datum. Leerer Titel -> kurzer Fallback, damit der Brain nie einen
+    // leeren Titel-Schluessel bekommt.
+    private fun brainTitle(row: IdeaWithFollowups): String =
+        row.idea.title.trim().ifBlank { "Idee ${row.idea.id.take(8)}" }
 
+    // Frank-Wunsch 2026-07-04: reiner, lesbarer Text ohne Rauten/Markup. Nur Erstell-/Aktualisierungs-
+    // datum, dann "Idee:" (verbesserte Fassung, sonst Original) und — falls vorhanden — "Zusammenfassung:".
+    // Bewusst KEINE Nachtraege (Followups) im Brain-Text.
     private fun IdeaWithFollowups.toBrainText(): String = buildString {
-        appendLine("# ${idea.title.ifBlank { "Idee" }}")
+        appendLine("Erstellt am: ${formatTs(idea.timestampMs)}")
+        appendLine("Aktualisiert am: ${formatTs(idea.updatedAt ?: idea.timestampMs)}")
         appendLine()
-        appendLine("Quelle: EntropieReductor / Aufgaben / Ideen")
-        appendLine("Kategorie: Ideen")
-        appendLine("ID: ${idea.id}")
-        appendLine("Erstellt: ${formatTs(idea.timestampMs)}")
-        appendLine("Aktualisiert: ${formatTs(idea.updatedAt ?: idea.timestampMs)}")
-        appendLine()
-        appendLine("## Text")
-        appendLine(idea.text.trim())
-        if (!idea.improvedText.isNullOrBlank()) {
-            appendLine()
-            appendLine("## Verbesserte Fassung")
-            appendLine(idea.improvedText.trim())
-        }
+        val ideaText = idea.improvedText?.takeIf { it.isNotBlank() }?.trim() ?: idea.text.trim()
+        appendLine("Idee: $ideaText")
         if (!idea.summary.isNullOrBlank()) {
             appendLine()
-            appendLine("## Zusammenfassung")
-            appendLine(idea.summary.trim())
-        }
-        if (followups.isNotEmpty()) {
-            appendLine()
-            appendLine("## Nachträge")
-            followups.sortedBy { it.createdAtMs }.forEachIndexed { index, followup ->
-                appendLine("${index + 1}. ${formatTs(followup.createdAtMs)}")
-                appendLine(followup.text.trim())
-                if (!followup.improvedText.isNullOrBlank()) {
-                    appendLine("Verbessert: ${followup.improvedText.trim()}")
-                }
-            }
+            appendLine("Zusammenfassung: ${idea.summary.trim()}")
         }
     }.trim()
 
@@ -251,7 +289,6 @@ class SecondBrainIdeaConnector @Inject constructor(
 
     private companion object {
         const val TAG = "SecondBrainIdeas"
-        val DATE_TITLE: DateTimeFormatter = DateTimeFormatter.ofPattern("yyyy-MM-dd HH.mm", Locale.GERMANY)
         val DATE_TEXT: DateTimeFormatter = DateTimeFormatter.ofPattern("dd.MM.yyyy, HH:mm 'Uhr'", Locale.GERMANY)
     }
 }
