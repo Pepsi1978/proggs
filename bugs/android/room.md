@@ -5,7 +5,8 @@
 > Stand: recherchiert am **2026-06-15** mit **7 Researchern parallel** (offizielle Quellen zuerst:
 > developer.android.com Room-Guides + Release-Notes, Google Issue Tracker, maven.google.com) + dediziertem
 > **Fix-Status-Lauf** (2 Researcher; Versions-Timeline + 12 `b/`-Issues hart gegen die Release-Notes geprueft).
-> ~63 Eintraege in 9 Sektionen (inkl. Fix-Status-Tabelle).
+> ~64 Eintraege in 9 Sektionen (inkl. Fix-Status-Tabelle). **Ergaenzt 2026-07-04:** T11
+> (Sync-Schleife mit Einzel-Writes → N Invalidationen → UI-Recompose-Sturm; EntropieReductor-Fund).
 >
 > **Versions-Anker (live aus den Projekten):** Room **2.7.0** · KSP **2.1.0-1.0.29** · Kotlin **2.1.0** ·
 > AGP **8.7.3** · `room.generateKotlin` = Default ON (KSP). (BestJournalAndroid `gradle/libs.versions.toml`;
@@ -53,6 +54,7 @@
 | 20 | Nach 2.6→2.7-Upgrade neue Compile-Fehler (Nullability, abstrakte DAO-`val`) | Kotlin-Codegen ist ab 2.7.0 Default: DAO-Properties → Funktionen, Collections non-null | V1 |
 | 21 | KSP laeuft nicht / `is too old for kotlin` | KSP-Praefix = Kotlin-Version exakt (2.1.0 ↔ `2.1.0-1.0.29`) | V2 |
 | 22 | Du jagst einen Bug, der evtl. schon gefixt ist | Fix-Status-Tabelle unten lesen: 2.7.0 → mind. **2.7.2** patchen; viele Fixes erst in **2.8.x** | §Fix-Status |
+| 23 | Sync-/Import-Schleife schreibt pro Element einzeln (upsert/UPDATE), UI ruckelt/flackert waehrenddessen | ALLE Writes der Schleife in EINE `withTransaction{}` — N Invalidationen → 1; Netzwerk-Fetches VOR die Transaktion ziehen | T11 |
 
 ---
 
@@ -321,6 +323,13 @@
 - **Versionen:** suspending-Transaction-Deadlock **gefixt ab 2.8.0** (b/415006268, in 2.8.0-alpha01); Auto-Close+Flow-Deadlock **gefixt ab 2.8.2** (b/446643789). In **2.7.0 noch vorhanden**.
 - **FIX (funktionserhaltend):** Wenn ihr den neuen `AndroidSQLiteDriver` UND suspending Transactions / `setAutoCloseTimeout` nutzt: Upgrade auf **≥ 2.8.2** einplanen. Wer (noch) keinen eigenen Driver setzt, ist von T10 nicht betroffen.
 - **Quelle:** https://issuetracker.google.com/issues/415006268 · https://issuetracker.google.com/446643789
+
+### T11. Sync-Schleife mit Einzel-Writes → N Flow-Invalidationen → UI-Recompose-Sturm (Scroll-Jank) ⭐ EIGENER VORFALL 2026-07-04
+- **Symptom:** UI ruckelt/flackert waehrend eines Hintergrund-Syncs merklich — besonders beim gleichzeitigen Scrollen direkt nach dem Screen-Oeffnen. Kein Fehler, keine Exception; die App wirkt nur „zaeh", Werte erscheinen troepfelnd.
+- **Ursache:** Ein Import/Sync/Backfill schreibt in einer Schleife PRO Element einzeln (`upsert`/`UPDATE`), teils noch mit `delay()` gestreckt. **Jeder einzelne Write invalidiert die tabellenweiten Room-Flows** (T6) → jede Invalidation emittiert einen neuen UI-State → bei unstable State-Objekten (Compose Strong-Skipping `===`-Falle) recomposen ALLE sichtbaren Karten pro Write auf dem Main-Thread. 26 Einzel-Writes = 26 komplette UI-Recompositions, waehrend der Benutzer scrollt. EntropieReductor-Vorfall (#47476): HC-Trainings-Merge (N upserts) + Open-Meteo-Wetter-Backfill (26 UPDATEs mit `delay(150)` dazwischen) liefen genau beim Biomarker-Tab-Oeffnen.
+- **Versionen:** per Design (tabellenweite Invalidation), alle Room-Versionen.
+- **FIX (funktionserhaltend):** ALLE Writes der Schleife in **EINE** `appDatabase.withTransaction { }` batchen → genau 1 Invalidation am Transaktionsende statt N. Netzwerk-/Suspend-Fremdarbeit (API-Fetches, `delay`) gehoert VOR die Transaktion (T3: kein Dispatcher-Wechsel/keine Fremd-Suspension im Block!): erst Ergebnisse in eine Liste sammeln, dann atomar schreiben. Werte/Verhalten identisch — sie erscheinen atomar statt troepfelnd. Ergaenzend `.distinctUntilChanged()` auf den DAO-Flows (T6) gegen inhaltsgleiche Emissionen.
+- **Quelle:** eigener Vorfall EntropieReductor #47476 · https://developer.android.com/training/data-storage/room/async-queries (Flow-Invalidation) · T3/T6 in dieser Datei
 
 ---
 

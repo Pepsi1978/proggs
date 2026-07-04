@@ -44,6 +44,7 @@
 | 13 | Insert mit Konflikt | `@Upsert` (ab 2.5) statt `@Insert(onConflict=REPLACE)` — REPLACE = DELETE+INSERT → CASCADE-Datenverlust | §7 |
 | 14 | Mehrere DB-Zugriffe | Genau EINE `RoomDatabase`-Instanz prozessweit (Singleton, via Hilt `@Singleton`) | §8 |
 | 15 | KSP | KSP-Suffix = Kotlin-Version exakt; nur `ksp(room-compiler)`, kein `kapt` für Room | §1 |
+| 16 | Sync-/Import-Schleife (viele Writes) | ALLE Writes in EINE `withTransaction{}` (1 Flow-Invalidation statt N → kein UI-Recompose-Sturm); Netzwerk-Fetches VOR die Transaktion sammeln | §4 |
 
 ---
 
@@ -134,6 +135,12 @@
 - **RxJava:** bei optionalem Ergebnis `Maybe<T>` statt `Single<T>` (sonst `EmptyResultSetException`).
 - **Driver:** Wer den neuen `AndroidSQLiteDriver` mit suspending Transactions / `setAutoCloseTimeout` nutzt,
   sollte ≥ **2.8.2** einplanen (Deadlock-Fixes).
+- **Sync-/Import-Schleifen batchen (2026-07-04, EntropieReductor-Fund):** Schreibt eine Schleife pro Element
+  einzeln (`upsert`/`UPDATE`), invalidiert JEDER Write die tabellenweiten Flows → pro Write ein neuer UI-State
+  → sichtbarer Recompose-Sturm/Jank während des Syncs. Stattdessen ALLE Writes der Schleife in **EINE**
+  `withTransaction { }` (genau 1 Invalidation am Ende). Netzwerk-/Fremd-suspend-Arbeit (API-Fetches, `delay`)
+  gehört VOR die Transaktion: erst Ergebnisse in eine Liste sammeln, dann atomar schreiben (Bug-Gegenpart:
+  Almanach T11).
 
 ## §5 `@Relation`
 
