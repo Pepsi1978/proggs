@@ -108,17 +108,16 @@ public partial class MainWindow : Window
     private OpenCodeLauncher.Models.ModelGroupEntry? _dragSourceGroup;
     private int _dragSourceIndex = -1;
 
-    private void ModelGroup_PreviewMouseLeftButtonDown(object sender, MouseButtonEventArgs e)
+    private void ModelGroupGrip_PreviewMouseLeftButtonDown(object sender, MouseButtonEventArgs e)
     {
-        if (FindAncestor<System.Windows.Controls.ListBoxItem>(e.OriginalSource as DependencyObject) != null) return;
         _dragStartPoint = e.GetPosition(this);
         _dragSourceGroup = (sender as FrameworkElement)?.DataContext as OpenCodeLauncher.Models.ModelGroupEntry;
         _dragSourceGroupIndex = _dragSourceGroup == null ? -1 : ViewModel.ModelGroups.IndexOf(_dragSourceGroup);
+        e.Handled = true;
     }
 
-    private void ModelGroup_PreviewMouseMove(object sender, MouseEventArgs e)
+    private void ModelGroupGrip_PreviewMouseMove(object sender, MouseEventArgs e)
     {
-        if (FindAncestor<System.Windows.Controls.ListBoxItem>(e.OriginalSource as DependencyObject) != null) return;
         if (e.LeftButton != MouseButtonState.Pressed || _dragSourceGroup == null || _dragSourceGroupIndex < 0) return;
 
         var current = e.GetPosition(this);
@@ -135,6 +134,17 @@ public partial class MainWindow : Window
             _dragSourceGroup = null;
             _dragSourceGroupIndex = -1;
         }
+        e.Handled = true;
+    }
+
+    private void ModelGroup_PreviewMouseLeftButtonDown(object sender, MouseButtonEventArgs e)
+    {
+        // Gruppen werden nur über den Griff verschoben; der restliche Header bleibt fürs Auf-/Zuklappen klickbar.
+    }
+
+    private void ModelGroup_PreviewMouseMove(object sender, MouseEventArgs e)
+    {
+        // Gruppen-Drag bewusst nur über ModelGroupGrip_PreviewMouseMove.
     }
 
     private void ModelGroup_DragEnter(object sender, DragEventArgs e) => SetDragEffects(e);

@@ -75,6 +75,53 @@
                 </Trigger>
             </Style.Triggers>
         </Style>
+        <Style x:Key="HeaderToggleBtn" TargetType="Button">
+            <Setter Property="Background" Value="Transparent"/>
+            <Setter Property="Foreground" Value="#E8E8EC"/>
+            <Setter Property="BorderThickness" Value="0"/>
+            <Setter Property="Padding" Value="6,4"/>
+            <Setter Property="Cursor" Value="Hand"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Button">
+                        <Border x:Name="bd" Background="{TemplateBinding Background}" CornerRadius="6" Padding="{TemplateBinding Padding}">
+                            <ContentPresenter HorizontalAlignment="Left" VerticalAlignment="Center"/>
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="bd" Property="Background" Value="#34344A"/>
+                            </Trigger>
+                            <Trigger Property="IsPressed" Value="True">
+                                <Setter TargetName="bd" Property="Background" Value="#2C2C40"/>
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+        <Style x:Key="WindowBtn" TargetType="Button">
+            <Setter Property="Background" Value="Transparent"/>
+            <Setter Property="Foreground" Value="#C0C0CC"/>
+            <Setter Property="BorderThickness" Value="0"/>
+            <Setter Property="Cursor" Value="Hand"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Button">
+                        <Border x:Name="bd" Background="{TemplateBinding Background}" CornerRadius="6">
+                            <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="bd" Property="Background" Value="#34344A"/>
+                            </Trigger>
+                            <Trigger Property="IsPressed" Value="True">
+                                <Setter TargetName="bd" Property="Background" Value="#2C2C40"/>
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
         <Style x:Key="ModelItem" TargetType="ListBoxItem">
             <Setter Property="Padding" Value="12,10"/>
             <Setter Property="Margin" Value="2"/>
@@ -175,9 +222,9 @@
                     <TextBlock Text="{Binding Version}" Foreground="#888894" FontSize="12" Margin="12,1,0,0" VerticalAlignment="Center"/>
                 </StackPanel>
                 <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center" Margin="0,0,8,0">
-                    <Button x:Name="MinBtn" Width="40" Height="32" Background="Transparent" BorderThickness="0" Foreground="#C0C0CC" Content="—" FontSize="18" Click="MinBtn_Click" Cursor="Hand"/>
-                    <Button x:Name="MaxBtn" Width="40" Height="32" Background="Transparent" BorderThickness="0" Foreground="#C0C0CC" Content="▢" FontSize="18" Click="MaxBtn_Click" Cursor="Hand"/>
-                    <Button x:Name="CloseBtn" Width="40" Height="32" Background="Transparent" BorderThickness="0" Foreground="#C0C0CC" Content="✕" FontSize="16" Click="CloseBtn_Click" Cursor="Hand"/>
+                    <Button x:Name="MinBtn" Style="{StaticResource WindowBtn}" Width="40" Height="32" Content="—" FontSize="18" Click="MinBtn_Click"/>
+                    <Button x:Name="MaxBtn" Style="{StaticResource WindowBtn}" Width="40" Height="32" Content="▢" FontSize="18" Click="MaxBtn_Click"/>
+                    <Button x:Name="CloseBtn" Style="{StaticResource WindowBtn}" Width="40" Height="32" Content="✕" FontSize="16" Click="CloseBtn_Click"/>
                 </StackPanel>
             </Grid>
 
@@ -218,8 +265,10 @@
                                                         <ColumnDefinition Width="*"/>
                                                         <ColumnDefinition Width="Auto"/>
                                                     </Grid.ColumnDefinitions>
-                                                    <TextBlock Text="⋮⋮" Foreground="#606078" FontSize="13" Margin="0,0,8,0" VerticalAlignment="Center" Cursor="SizeAll"/>
-                                                    <Button Grid.Column="1" Background="Transparent" BorderThickness="0" Padding="0" HorizontalContentAlignment="Left"
+                                                    <TextBlock Text="⋮⋮" Foreground="#606078" FontSize="13" Margin="0,0,8,0" VerticalAlignment="Center" Cursor="SizeAll"
+                                                               PreviewMouseLeftButtonDown="ModelGroupGrip_PreviewMouseLeftButtonDown"
+                                                               PreviewMouseMove="ModelGroupGrip_PreviewMouseMove"/>
+                                                    <Button Grid.Column="1" Style="{StaticResource HeaderToggleBtn}" HorizontalContentAlignment="Left"
                                                             Command="{Binding DataContext.ToggleGroupCommand, RelativeSource={RelativeSource AncestorType=Window}}"
                                                             CommandParameter="{Binding}">
                                                         <TextBlock Text="{Binding HeaderText}" Foreground="#E8E8EC" FontSize="13" FontWeight="SemiBold"/>
