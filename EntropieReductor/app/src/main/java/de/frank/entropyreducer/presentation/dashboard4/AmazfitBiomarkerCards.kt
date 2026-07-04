@@ -458,6 +458,15 @@ internal fun AmazfitWorkoutRow(
                         style = MaterialTheme.typography.bodySmall,
                     )
                 }
+                // Wetter pro Training (Frank-Wunsch): stuendliche Temperatur + Wetter-Icon
+                // am GPS-Ort/zur Trainingszeit — direkt neben den Trainings-Metriken.
+                weatherLabel(workout)?.let { wLabel ->
+                    Text(
+                        text = "  ·  $wLabel",
+                        color = cosmos.textSecondary,
+                        style = MaterialTheme.typography.bodySmall,
+                    )
+                }
             }
         }
         // Frank-Wunsch 2026-05-09: in der Trainings-Liste statt Max-HR den
@@ -519,6 +528,34 @@ internal fun formatDuration(seconds: Long): String {
     val m = (seconds % 3600) / 60
     val s = seconds % 60
     return if (h > 0) "%d:%02d:%02d".format(h, m, s) else "%d:%02d".format(m, s)
+}
+
+/**
+ * Wetter-Icon (Emoji) zur Wetterlage — Frank-Wunsch: ein Zeichen (Sonne/Wolke/…) pro Training.
+ * Die Woerter kommen aus [de.frank.entropyreducer.data.repository.WeatherRepository.wmoToCondition].
+ */
+internal fun weatherEmoji(condition: String?): String =
+    when (condition) {
+        "sonnig" -> "☀️"
+        "heiter" -> "🌤️"
+        "bewölkt" -> "☁️"
+        "wechselhaft" -> "⛅"
+        "regnerisch" -> "🌧️"
+        "schneeig" -> "🌨️"
+        "neblig" -> "🌫️"
+        "gewittrig" -> "⛈️"
+        "windig" -> "💨"
+        "schwül" -> "🥵"
+        else -> "🌡️"
+    }
+
+/**
+ * Kompaktes Wetter-Label "18°C ☀️" fuer die Trainings-Anzeige — null wenn fuer das Training
+ * (noch) keine Temperatur recherchiert wurde (kein GPS / API-Fehler / Abruf ausstehend).
+ */
+internal fun weatherLabel(w: AmazfitWorkoutEntity): String? {
+    val temp = w.weatherTempCelsius ?: return null
+    return "$temp°C ${weatherEmoji(w.weatherCondition)}"
 }
 
 /**
