@@ -127,9 +127,12 @@ class MainActivity : ComponentActivity() {
 
     private fun maybeStartSecondBrainTunnel() {
         lifecycleScope.launch(Dispatchers.IO) {
-            val enabled = appSettings.secondBrainIdeasConnectorEnabledFlow.first()
+            // Frank-Wunsch 2026-07-04: Tunnel kommt — genau wie in CortexAndroid — allein durch eine
+            // vorhandene WireGuard-Config hoch. Der "Second Brain aktiviert"-Toggle ist KEINE
+            // Vorbedingung mehr; die Existenz der Config signalisiert den Verbindungswunsch (Cortex
+            // prueft in onStart ebenso nur, ob eine Config vorhanden ist).
             val hasConfig = !secrets.secondBrainWireGuardConfig.isNullOrBlank()
-            if (!enabled || !hasConfig) return@launch
+            if (!hasConfig) return@launch
             if (!secondBrainVpnConnector.loadSavedConfig()) return@launch
             val permissionIntent = VpnService.prepare(this@MainActivity)
             if (permissionIntent != null) {
