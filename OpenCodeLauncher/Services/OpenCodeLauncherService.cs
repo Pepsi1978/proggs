@@ -52,7 +52,7 @@ public sealed class OpenCodeLauncherService
         }
         catch (Exception ex)
         {
-            log.Error("OpenCodeLauncherService", "ConfigureProvider", ex.Message, new { slug, chosen.ProviderName });
+            log.Error("OpenCodeLauncherService", "ConfigureProvider", ex, new { slug, chosen.ProviderName });
             throw;
         }
 
@@ -79,14 +79,19 @@ public sealed class OpenCodeLauncherService
             if (!string.IsNullOrEmpty(wt))
             {
                 psi.FileName = wt;
-                // -d = Arbeitsverzeichnis; pwsh -NoExit hält das Fenster nach opencode-Beginn offen.
-                psi.Arguments = $"-d \"{workDir}\" pwsh -NoExit -Command \"opencode -m {modelString}\"";
+                psi.ArgumentList.Add("-d");
+                psi.ArgumentList.Add(workDir);
+                psi.ArgumentList.Add("pwsh");
+                psi.ArgumentList.Add("-NoExit");
+                psi.ArgumentList.Add("-Command");
+                psi.ArgumentList.Add($"opencode -m '{modelString}'");
             }
             else
             {
                 psi.FileName = "pwsh";
-                psi.Arguments = $"-NoExit -Command \"Set-Location -LiteralPath '{workDir}'; opencode -m {modelString}\"";
-                psi.UseShellExecute = true;
+                psi.ArgumentList.Add("-NoExit");
+                psi.ArgumentList.Add("-Command");
+                psi.ArgumentList.Add($"Set-Location -LiteralPath '{workDir}'; opencode -m '{modelString}'");
             }
 
             var p = Process.Start(psi);
@@ -94,7 +99,7 @@ public sealed class OpenCodeLauncherService
         }
         catch (Exception ex)
         {
-            log.Error("OpenCodeLauncherService", "Launch", ex.Message, new { modelString, workDir });
+            log.Error("OpenCodeLauncherService", "Launch", ex, new { modelString, workDir });
             throw;
         }
     }
@@ -129,15 +134,13 @@ public sealed class OpenCodeLauncherService
         if (raw.Length > 0 && raw[0] == '\uFEFF') raw = raw[1..];
         if (string.IsNullOrWhiteSpace(raw)) return new JsonObject();
 
-        // opencode.jsonc enthält // Kommentare -> JsonNode.Parse kennt kein CommentHandling,
-        // darum über JsonDocument parsen (JsonDocumentOptions unterstützt CommentHandling)
-        // und anschließend in eine mutable JsonNode konvertieren.
-        using var doc = JsonDocument.Parse(raw, new JsonDocumentOptions
+        // JSONC direkt als JsonNode parsen. Nicht über GetRawText gehen: das liefert die
+        // Original-Kommentare zurück und würde beim zweiten Parse wieder an "//" scheitern.
+        return JsonNode.Parse(raw, null, new JsonDocumentOptions
         {
             CommentHandling = JsonCommentHandling.Skip,
             AllowTrailingCommas = true
-        });
-        return JsonNode.Parse(doc.RootElement.GetRawText()) ?? new JsonObject();
+        }) ?? new JsonObject();
     }
 
     private void WriteConfig(JsonNode root)

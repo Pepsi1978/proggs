@@ -8,11 +8,6 @@ namespace OpenCodeLauncher;
 
 public partial class MainWindow : Window
 {
-    // Mica/Acrylic über DWM (Windows 11). Kurzcheck §W7/C9: WindowChrome & DWM-Material.
-    // Wir nutzen nur den Mica-Backdrop + runde Ecken über DWM (kein AllowsTransparency=True,
-    // das WebView/Airspace-Probleme macht). Hintergrund wird auf Transparent gesetzt.
-    private const int DWMWA_SYSTEMBACKDROP_TYPE = 38;
-    private const int DWMSBT_MAINWINDOW = 2;   // Mica
     private const int DWMWA_USE_IMMERSIVE_DARK_MODE = 20;
     private const int WM_GETMINMAXINFO = 0x0024;
     private const int MONITOR_DEFAULTTONEAREST = 2;
@@ -38,20 +33,18 @@ public partial class MainWindow : Window
         {
             var hwnd = new WindowInteropHelper(this).Handle;
             HwndSource.FromHwnd(hwnd)?.AddHook(WndProc);
-            ApplyMica();
+            ApplyWindowTheme();
         };
         StateChanged += (_, _) => MaxBtn.Content = WindowState == WindowState.Maximized ? "❐" : "□";
         ContentRendered += (_, _) => Title = $"OpenCode Launcher — {ViewModel.Version}";
     }
 
-    private void ApplyMica()
+    private void ApplyWindowTheme()
     {
         var hwnd = new System.Windows.Interop.WindowInteropHelper(this).Handle;
         if (hwnd == IntPtr.Zero) return;
         int dark = 1;
         DwmSetWindowAttribute(hwnd, DWMWA_USE_IMMERSIVE_DARK_MODE, ref dark, sizeof(int));
-        int backdrop = DWMSBT_MAINWINDOW;
-        DwmSetWindowAttribute(hwnd, DWMWA_SYSTEMBACKDROP_TYPE, ref backdrop, sizeof(int));
     }
 
     private void TitleBar_MouseDown(object sender, MouseButtonEventArgs e)

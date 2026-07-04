@@ -25,8 +25,8 @@ public sealed partial class MainViewModel : ObservableObject
         if (Models.Count > 0) SelectedModel = Models[0];
         WorkDir = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), "proggs");
 
-        var version = Assembly.GetExecutingAssembly().GetName().Version?.ToString(3) ?? "1.0.2";
-        Version = $"Version {version} (04.07.2026, 20:24 Uhr)";
+        var version = Assembly.GetExecutingAssembly().GetName().Version?.ToString(3) ?? "1.0.3";
+        Version = $"Version {version} (04.07.2026, 20:58 Uhr)";
     }
 
     public ObservableCollection<ModelEntry> Models { get; } = new();
@@ -38,6 +38,9 @@ public sealed partial class MainViewModel : ObservableObject
     [ObservableProperty] private bool _isLoading;
     [ObservableProperty] private string _statusText = "Bereit.";
     [ObservableProperty] private string _version = string.Empty;
+    [ObservableProperty] private string _lastErrorDetails = "Noch kein Fehler protokolliert.";
+    [ObservableProperty] private string _lastErrorPath = string.Empty;
+    [ObservableProperty] private bool _hasLastError;
 
     partial void OnSelectedModelChanged(ModelEntry? value)
     {
@@ -72,7 +75,11 @@ public sealed partial class MainViewModel : ObservableObject
         catch (Exception ex)
         {
             StatusText = $"Fehler: {ex.Message}";
-            Logger.Instance.Error("MainViewModel", "LoadProvidersAsync", ex.Message);
+            var details = BuildErrorDetails("Provider laden", ex, model, null, null);
+            LastErrorPath = Logger.Instance.WriteErrorReport("provider_load", details);
+            LastErrorDetails = details + $"{Environment.NewLine}{Environment.NewLine}Gespeichert unter: {LastErrorPath}";
+            HasLastError = true;
+            Logger.Instance.Error("MainViewModel", "LoadProvidersAsync", ex, new { model.Slug, LastErrorPath });
         }
         finally
         {
@@ -152,9 +159,100 @@ public sealed partial class MainViewModel : ObservableObject
         }
         catch (Exception ex)
         {
-            StatusText = $"Start fehlgeschlagen: {ex.Message}";
-            Logger.Instance.Error("MainViewModel", "Start", ex.Message);
+            var details = BuildErrorDetails("OpenCode starten", ex, SelectedModel, SelectedProvider, WorkDir);
+            LastErrorPath = Logger.Instance.WriteErrorReport("start", details);
+            LastErrorDetails = details + $"{Environment.NewLine}{Environment.NewLine}Gespeichert unter: {LastErrorPath}";
+            HasLastError = true;
+            StatusText = $"Start fehlgeschlagen. Details gespeichert: {Path.GetFileName(LastErrorPath)}";
+            Logger.Instance.Error("MainViewModel", "Start", ex, new
+            {
+                model = SelectedModel.Slug,
+                provider = SelectedProvider.ProviderName,
+                providerSlug = SelectedProvider.ProviderSlug,
+                WorkDir,
+                LastErrorPath
+            });
         }
+    }
+
+    [RelayCommand]
+    private void ShowLastError()
+    {
+        var w = new Window
+        {
+            Title = "OpenCode Launcher - Fehlerdetails",
+            Width = 980,
+            Height = 720,
+            WindowStartupLocation = WindowStartupLocation.CenterScreen,
+            Background = new System.Windows.Media.SolidColorBrush(System.Windows.Media.Color.FromRgb(32, 32, 40)),
+        };
+        var grid = new System.Windows.Controls.Grid { Margin = new Thickness(14) };
+        grid.RowDefinitions.Add(new System.Windows.Controls.RowDefinition { Height = new GridLength(1, GridUnitType.Star) });
+        grid.RowDefinitions.Add(new System.Windows.Controls.RowDefinition { Height = GridLength.Auto });
+        var text = new System.Windows.Controls.TextBox
+        {
+            Text = LastErrorDetails,
+            IsReadOnly = true,
+            AcceptsReturn = true,
+            AcceptsTab = true,
+            TextWrapping = TextWrapping.NoWrap,
+            VerticalScrollBarVisibility = System.Windows.Controls.ScrollBarVisibility.Auto,
+            HorizontalScrollBarVisibility = System.Windows.Controls.ScrollBarVisibility.Auto,
+            Background = new System.Windows.Media.SolidColorBrush(System.Windows.Media.Color.FromRgb(24, 24, 30)),
+            Foreground = System.Windows.Media.Brushes.White,
+            BorderBrush = new System.Windows.Media.SolidColorBrush(System.Windows.Media.Color.FromRgb(72, 72, 86)),
+            Padding = new Thickness(10)
+        };
+        var close = new System.Windows.Controls.Button
+        {
+            Content = "Schließen",
+            Padding = new Thickness(20, 7, 20, 7),
+            HorizontalAlignment = HorizontalAlignment.Right,
+            Margin = new Thickness(0, 12, 0, 0)
+        };
+        close.Click += (_, _) => w.Close();
+        System.Windows.Controls.Grid.SetRow(text, 0);
+        System.Windows.Controls.Grid.SetRow(close, 1);
+        grid.Children.Add(text);
+        grid.Children.Add(close);
+        w.Content = grid;
+        w.ShowDialog();
+    }
+
+    [RelayCommand]
+    private void OpenLogFolder()
+    {
+        var folder = string.IsNullOrWhiteSpace(LastErrorPath)
+            ? Path.GetDirectoryName(Logger.Instance.LogPath)
+            : Path.GetDirectoryName(LastErrorPath);
+        if (!string.IsNullOrWhiteSpace(folder) && Directory.Exists(folder))
+            System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo(folder) { UseShellExecute = true });
+    }
+
+    private static string BuildErrorDetails(string action, Exception ex, ModelEntry? model, ProviderEntry? provider, string? workDir)
+    {
+        var sb = new System.Text.StringBuilder();
+        sb.AppendLine($"Aktion: {action}");
+        sb.AppendLine($"Zeit: {DateTime.Now:yyyy-MM-dd HH:mm:ss.fff}");
+        sb.AppendLine($"App-Version: {Assembly.GetExecutingAssembly().GetName().Version?.ToString(3)}");
+        sb.AppendLine($"Arbeitsverzeichnis: {workDir ?? "(nicht gesetzt)"}");
+        sb.AppendLine($"Modell: {model?.DisplayName ?? "(nicht gesetzt)"} [{model?.Slug ?? "-"}]");
+        sb.AppendLine($"Provider: {provider?.ProviderName ?? "(nicht gesetzt)"} [{provider?.ProviderSlug ?? "-"} / {provider?.Tag ?? "-"}]");
+        sb.AppendLine($"Logdatei: {Logger.Instance.LogPath}");
+        sb.AppendLine();
+        AppendException(sb, ex, 0);
+        return sb.ToString();
+    }
+
+    private static void AppendException(System.Text.StringBuilder sb, Exception ex, int depth)
+    {
+        var prefix = depth == 0 ? "Exception" : $"Inner Exception {depth}";
+        sb.AppendLine($"{prefix}: {ex.GetType().FullName}");
+        sb.AppendLine($"Message: {ex.Message}");
+        sb.AppendLine("StackTrace:");
+        sb.AppendLine(ex.StackTrace ?? "(keine StackTrace verfügbar)");
+        sb.AppendLine();
+        if (ex.InnerException != null) AppendException(sb, ex.InnerException, depth + 1);
     }
 
     // Drag&Drop-Unterstützung: Reihenfolge ändern.
