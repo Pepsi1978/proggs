@@ -25,7 +25,8 @@ public sealed partial class MainViewModel : ObservableObject
         if (Models.Count > 0) SelectedModel = Models[0];
         WorkDir = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), "proggs");
 
-        Version = $"Version 1.0.0 ({DateTime.Now:dd.MM.yyyy}, {DateTime.Now:HH:mm} Uhr)";
+        var version = Assembly.GetExecutingAssembly().GetName().Version?.ToString(3) ?? "1.0.2";
+        Version = $"Version {version} (04.07.2026, 20:24 Uhr)";
     }
 
     public ObservableCollection<ModelEntry> Models { get; } = new();

@@ -7,7 +7,7 @@
         Height="720" Width="1180"
         MinHeight="600" MinWidth="960"
         WindowStartupLocation="CenterScreen"
-        Background="Transparent"
+        Background="#1F1F27"
         WindowStyle="None"
         ResizeMode="CanResize"
         AllowsTransparency="False"
@@ -142,7 +142,7 @@
         </Style>
     </Window.Resources>
 
-    <Border Background="#1A1A20" CornerRadius="10" BorderBrush="#33333D" BorderThickness="1">
+    <Border Background="#1F1F27" CornerRadius="0" BorderBrush="#33333D" BorderThickness="1">
         <Grid>
             <Grid.RowDefinitions>
                 <RowDefinition Height="Auto"/>
@@ -151,7 +151,7 @@
             </Grid.RowDefinitions>
 
             <!-- Titelleiste (dragbar) -->
-            <Grid Grid.Row="0" Height="48" Background="#1F1F26" MouseLeftButtonDown="TitleBar_MouseDown">
+            <Grid Grid.Row="0" Height="48" Background="#1F1F27" MouseLeftButtonDown="TitleBar_MouseDown">
                 <Grid.ColumnDefinitions>
                     <ColumnDefinition Width="*"/>
                     <ColumnDefinition Width="Auto"/>
@@ -159,9 +159,11 @@
                 <StackPanel Orientation="Horizontal" VerticalAlignment="Center" Margin="18,0,0,0">
                     <TextBlock Text="✦" Foreground="#8A8AF0" FontSize="18" Margin="0,0,10,0" VerticalAlignment="Center"/>
                     <TextBlock Text="OpenCode Launcher" Foreground="#E8E8EC" FontSize="15" FontWeight="SemiBold" VerticalAlignment="Center"/>
+                    <TextBlock Text="{Binding Version}" Foreground="#888894" FontSize="12" Margin="12,1,0,0" VerticalAlignment="Center"/>
                 </StackPanel>
                 <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center" Margin="0,0,8,0">
                     <Button x:Name="MinBtn" Width="40" Height="32" Background="Transparent" BorderThickness="0" Foreground="#C0C0CC" Content="—" Click="MinBtn_Click" Cursor="Hand"/>
+                    <Button x:Name="MaxBtn" Width="40" Height="32" Background="Transparent" BorderThickness="0" Foreground="#C0C0CC" Content="□" Click="MaxBtn_Click" Cursor="Hand"/>
                     <Button x:Name="CloseBtn" Width="40" Height="32" Background="Transparent" BorderThickness="0" Foreground="#C0C0CC" Content="✕" Click="CloseBtn_Click" Cursor="Hand"/>
                 </StackPanel>
             </Grid>
@@ -240,10 +242,11 @@
                                   ColumnWidth="Auto" RowHeaderWidth="0">
                             <DataGrid.Columns>
                                 <DataGridTextColumn Header="Provider" Binding="{Binding ProviderName}" Width="*" SortMemberPath="ProviderName"/>
-                                <DataGridTextColumn Header="Input $/1M" Binding="{Binding InputPerMillion, StringFormat={}{0:0.0000}}" Width="90"/>
-                                <DataGridTextColumn Header="Output $/1M" Binding="{Binding OutputPerMillion, StringFormat={}{0:0.0000}}" Width="100"/>
+                                <DataGridTextColumn Header="Input $/1M" Binding="{Binding InputPerMillion, StringFormat={}{0:0.####}}" Width="90"/>
+                                <DataGridTextColumn Header="Output $/1M" Binding="{Binding OutputPerMillion, StringFormat={}{0:0.####}}" Width="100"/>
+                                <DataGridTextColumn Header="Cache Read $/1M" Binding="{Binding CacheReadText}" Width="120"/>
                                 <DataGridTextColumn Header="Kontext" Binding="{Binding ContextLength, StringFormat=N0}" Width="90"/>
-                                <DataGridTextColumn Header="Throughput tok/s" Binding="{Binding ThroughputLast30m, StringFormat={}{0:0.#}}" Width="110"/>
+                                <DataGridTextColumn Header="Throughput" Binding="{Binding ThroughputText}" Width="105"/>
                                 <DataGridTextColumn Header="Status" Binding="{Binding StatusText}" Width="100"/>
                             </DataGrid.Columns>
                         </DataGrid>

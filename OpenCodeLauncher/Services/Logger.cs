@@ -1,6 +1,7 @@
 using System.IO;
 using System.Text.Json;
 using System.Diagnostics;
+using System.Text.Json.Serialization.Metadata;
 
 namespace OpenCodeLauncher.Services;
 
@@ -19,7 +20,8 @@ public sealed class Logger
     private readonly JsonSerializerOptions _jsonOpts = new()
     {
         WriteIndented = false,
-        Encoder = System.Text.Encodings.Web.JavaScriptEncoder.UnsafeRelaxedJsonEscaping
+        Encoder = System.Text.Encodings.Web.JavaScriptEncoder.UnsafeRelaxedJsonEscaping,
+        TypeInfoResolver = new DefaultJsonTypeInfoResolver()
     };
 
     private Logger()

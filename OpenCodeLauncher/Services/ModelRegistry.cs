@@ -1,5 +1,6 @@
 using System.IO;
 using System.Text.Json;
+using System.Text.Json.Serialization.Metadata;
 using OpenCodeLauncher.Models;
 
 namespace OpenCodeLauncher.Services;
@@ -20,7 +21,8 @@ public sealed class ModelRegistry
     private static readonly JsonSerializerOptions JsonOpts = new()
     {
         WriteIndented = true,
-        Encoder = System.Text.Encodings.Web.JavaScriptEncoder.UnsafeRelaxedJsonEscaping
+        Encoder = System.Text.Encodings.Web.JavaScriptEncoder.UnsafeRelaxedJsonEscaping,
+        TypeInfoResolver = new DefaultJsonTypeInfoResolver()
     };
 
     public List<ModelEntry> Models { get; private set; } = new();

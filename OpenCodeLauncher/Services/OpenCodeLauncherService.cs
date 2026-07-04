@@ -3,6 +3,7 @@ using System.IO;
 using System.Text;
 using System.Text.Json;
 using System.Text.Json.Nodes;
+using System.Text.Json.Serialization.Metadata;
 using OpenCodeLauncher.Models;
 
 namespace OpenCodeLauncher.Services;
@@ -12,29 +13,28 @@ namespace OpenCodeLauncher.Services;
 /// Vorgehen (Nutzer-Entscheidung: opencode.json schreiben + opencode starten):
 ///   1. Globale opencode.json (~/.config/opencode/opencode.json) BOM-frei einlesen
 ///      (Kurzcheck §10.3: UTF-8-BOM bricht Parse) und als JsonDocument verarbeiten.
-///   2. provider.openrouter.models.<slug>.options.provider.order = [gewählter Provider,
-///      dann alle weiteren in Preis-Sortierung] + allow_fallbacks:true setzen.
-///      allow_fallbacks:true = OpenRouter probiert bei Fehler automatisch den nächsten
-///      Provider aus order — das gewünschte Fallback-Verhalten.
+///   2. provider.openrouter.models.<slug>.options.provider.order = [gewählter Provider]
+///      + allow_fallbacks:false setzen. Dadurch läuft OpenCode exakt über den gewählten Provider.
 ///   3. Datei atomar + BOM-frei zurückschreiben (.bak Backup).
 ///   4. opencode -m openrouter/<slug> "<workdir>" in neuem Windows-Terminal starten.
 /// OpenCode zeigt im Banner das Modell (openrouter/<slug>) und verbindet sich dann.
 /// </summary>
 public sealed class OpenCodeLauncherService
 {
-    private static readonly string ConfigPath = Path.Combine(
+    private static readonly string ConfigDir = Path.Combine(
         Environment.GetFolderPath(Environment.SpecialFolder.UserProfile),
-        ".config", "opencode", "opencode.json");
+        ".config", "opencode");
 
     private static readonly JsonSerializerOptions JsonOpts = new()
     {
         WriteIndented = true,
-        Encoder = System.Text.Encodings.Web.JavaScriptEncoder.UnsafeRelaxedJsonEscaping
+        Encoder = System.Text.Encodings.Web.JavaScriptEncoder.UnsafeRelaxedJsonEscaping,
+        TypeInfoResolver = new DefaultJsonTypeInfoResolver()
     };
 
     /// <summary>
-    /// Schreibt die Provider-Order (gewählter Provider + alle weiteren als Fallback)
-    /// in die globale opencode.json. Gibt den Modell-String zurück, der an opencode -m geht.
+    /// Schreibt die Provider-Order (exakt der gewählte Provider, ohne Fallback)
+    /// in die globale opencode.jsonc/opencode.json. Gibt den Modell-String zurück, der an opencode -m geht.
     /// </summary>
     public string ConfigureProvider(string slug, ProviderEntry chosen, IReadOnlyList<ProviderEntry> allProviders)
     {
@@ -47,8 +47,8 @@ public sealed class OpenCodeLauncherService
             root = PatchProvider(root, slug, chosen, allProviders);
             WriteConfig(root);
             log.Info("OpenCodeLauncherService", "ConfigureProvider",
-                $"opencode.json gepatched: {slug} via {chosen.ProviderName}",
-                new { order = new[] { chosen.ProviderSlug }.Concat(allProviders.Where(p => p != chosen).Select(p => p.ProviderSlug)).Take(6).ToArray() });
+                $"opencode-Konfig gepatched: {slug} via {chosen.ProviderName}",
+                new { order = new[] { chosen.ProviderSlug } });
         }
         catch (Exception ex)
         {
@@ -121,14 +121,15 @@ public sealed class OpenCodeLauncherService
 
     private JsonNode ReadConfig()
     {
-        if (!File.Exists(ConfigPath))
+        var configPath = ResolveConfigPath();
+        if (!File.Exists(configPath))
             return new JsonObject();
-        var raw = File.ReadAllText(ConfigPath);
+        var raw = File.ReadAllText(configPath);
         // BOM-frei sicherstellen (Kurzcheck §10.3): BOM bricht Parse.
         if (raw.Length > 0 && raw[0] == '\uFEFF') raw = raw[1..];
         if (string.IsNullOrWhiteSpace(raw)) return new JsonObject();
 
-        // opencode.json enthält // Kommentare -> JsonNode.Parse kennt kein CommentHandling,
+        // opencode.jsonc enthält // Kommentare -> JsonNode.Parse kennt kein CommentHandling,
         // darum über JsonDocument parsen (JsonDocumentOptions unterstützt CommentHandling)
         // und anschließend in eine mutable JsonNode konvertieren.
         using var doc = JsonDocument.Parse(raw, new JsonDocumentOptions
@@ -141,34 +142,40 @@ public sealed class OpenCodeLauncherService
 
     private void WriteConfig(JsonNode root)
     {
-        var dir = Path.GetDirectoryName(ConfigPath)!;
+        var configPath = ResolveConfigPath();
+        var dir = Path.GetDirectoryName(configPath)!;
         Directory.CreateDirectory(dir);
         // Backup (.bak überschreibt vorherigen Lauf — bewusst, nur ein Rollback-Punkt nötig).
-        if (File.Exists(ConfigPath)) File.Copy(ConfigPath, ConfigPath + ".bak", overwrite: true);
+        if (File.Exists(configPath)) File.Copy(configPath, configPath + ".bak", overwrite: true);
 
         // Temp-Datei + atomares Replace (verhindert korrupte Config bei Absturz mitten im Schreiben).
-        var tmp = ConfigPath + ".tmp";
+        var tmp = configPath + ".tmp";
         using (var fs = new FileStream(tmp, FileMode.Create, FileAccess.Write, FileShare.None))
         using (var sw = new StreamWriter(fs, new UTF8Encoding(encoderShouldEmitUTF8Identifier: false)))
         {
             sw.Write(root.ToJsonString(JsonOpts));
         }
-        File.Move(tmp, ConfigPath, overwrite: true);
+        File.Move(tmp, configPath, overwrite: true);
+    }
+
+    private static string ResolveConfigPath()
+    {
+        var jsonc = Path.Combine(ConfigDir, "opencode.jsonc");
+        if (File.Exists(jsonc)) return jsonc;
+
+        var json = Path.Combine(ConfigDir, "opencode.json");
+        return json;
     }
 
     private static JsonNode PatchProvider(JsonNode root, string slug, ProviderEntry chosen, IReadOnlyList<ProviderEntry> all)
     {
-        // order = [chosen, dann alle weiteren up-Provider in Preis-Sortierung]
-        var order = new JsonArray();
-        order.Add(chosen.ProviderSlug);
-        foreach (var p in all.Where(p => p != chosen && p.IsUp))
-            if (!order.Any(x => x?.GetValue<string>() == p.ProviderSlug))
-                order.Add(p.ProviderSlug);
+        // order enthält bewusst nur den gewählten Provider: Frank will exaktes Routing ohne Fallback.
+        var order = new JsonArray { chosen.ProviderSlug };
 
         var providerBlock = new JsonObject
         {
             ["order"] = order,
-            ["allow_fallbacks"] = true,
+            ["allow_fallbacks"] = false,
             ["require_parameters"] = true,
         };
         var optionsBlock = new JsonObject { ["provider"] = providerBlock };

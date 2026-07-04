@@ -2,6 +2,7 @@ using System.IO;
 using System.Net.Http;
 using System.Net.Http.Headers;
 using System.Text.Json;
+using System.Text.RegularExpressions;
 using OpenCodeLauncher.Models;
 
 namespace OpenCodeLauncher.Services;
@@ -84,6 +85,7 @@ public sealed class OpenRouterService
                 }
             }
 
+            await EnrichProviderMetricsFromWebAsync(slug, providers, ct).ConfigureAwait(false);
             providers.Sort(CompareByPrice);
             log.Info("OpenRouterService", "GetProvidersAsync", $"slug={slug} -> {providers.Count} Provider");
             return (displayName, providers);
@@ -115,6 +117,7 @@ public sealed class OpenRouterService
             {
                 p.PromptPerToken = ParseDouble(pr, "prompt");
                 p.CompletionPerToken = ParseDouble(pr, "completion");
+                p.CacheReadPerToken = ParseDouble(pr, "input_cache_read");
                 p.Discount = pr.TryGetProperty("discount", out var d) && d.ValueKind == JsonValueKind.Number ? d.GetDouble() : null;
             }
 
@@ -132,6 +135,49 @@ public sealed class OpenRouterService
             Logger.Instance.Warn("OpenRouterService", "ParseEndpoint", $"Endpoint übersprungen: {ex.Message}");
             return null;
         }
+    }
+
+    private static async Task EnrichProviderMetricsFromWebAsync(string slug, List<ProviderEntry> providers, CancellationToken ct)
+    {
+        if (providers.Count == 0 || providers.All(p => p.ThroughputLast30m.HasValue)) return;
+
+        try
+        {
+            var html = await Http.GetStringAsync($"https://openrouter.ai/{slug}/providers", ct).ConfigureAwait(false);
+            var metrics = new Dictionary<string, double>(StringComparer.OrdinalIgnoreCase);
+            var matches = Regex.Matches(
+                html,
+                "provider_name\\\\\":\\\\\"(?<name>[^\\\\\"]+)\\\\\".*?routing_heuristics\\\\\":\\{(?<body>.*?)\\}",
+                RegexOptions.Singleline);
+
+            foreach (Match match in matches)
+            {
+                var name = match.Groups["name"].Value;
+                if (metrics.ContainsKey(name)) continue;
+
+                var body = match.Groups["body"].Value;
+                var throughput = ReadMetric(body, "p50_throughput_30_minutes") ?? ReadMetric(body, "p50_throughput");
+                if (throughput.HasValue) metrics[name] = throughput.Value;
+            }
+
+            foreach (var provider in providers)
+            {
+                if (!provider.ThroughputLast30m.HasValue && metrics.TryGetValue(provider.ProviderName, out var throughput))
+                    provider.ThroughputLast30m = throughput;
+            }
+        }
+        catch (Exception ex)
+        {
+            Logger.Instance.Warn("OpenRouterService", "EnrichProviderMetricsFromWebAsync", $"TPS-Web-Fallback fehlgeschlagen: {ex.Message}", new { slug });
+        }
+    }
+
+    private static double? ReadMetric(string body, string name)
+    {
+        var match = Regex.Match(body, $"{Regex.Escape(name)}\\\\\":(?<value>[0-9.]+)");
+        return match.Success && double.TryParse(match.Groups["value"].Value, System.Globalization.NumberStyles.Float, System.Globalization.CultureInfo.InvariantCulture, out var value)
+            ? value
+            : null;
     }
 
     private static double ParseDouble(JsonElement parent, string name)

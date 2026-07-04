@@ -18,6 +18,7 @@ public sealed class ProviderEntry
 
     public double PromptPerToken { get; set; }
     public double CompletionPerToken { get; set; }
+    public double CacheReadPerToken { get; set; }
     public double? Discount { get; set; }
 
     public int ContextLength { get; set; }
@@ -33,6 +34,15 @@ public sealed class ProviderEntry
 
     [JsonIgnore]
     public double OutputPerMillion => CompletionPerToken * 1_000_000.0;
+
+    [JsonIgnore]
+    public double CacheReadPerMillion => CacheReadPerToken * 1_000_000.0;
+
+    [JsonIgnore]
+    public string CacheReadText => CacheReadPerToken > 0 ? $"{CacheReadPerMillion:0.####}" : "--";
+
+    [JsonIgnore]
+    public string ThroughputText => ThroughputLast30m.HasValue ? $"{ThroughputLast30m.Value:0.#} tps" : "--";
 
     [JsonIgnore]
     public string StatusText => Status switch

@@ -1,6 +1,7 @@
 using System.Runtime.InteropServices;
 using System.Windows;
 using System.Windows.Input;
+using System.Windows.Interop;
 using OpenCodeLauncher.ViewModels;
 
 namespace OpenCodeLauncher;
@@ -13,9 +14,17 @@ public partial class MainWindow : Window
     private const int DWMWA_SYSTEMBACKDROP_TYPE = 38;
     private const int DWMSBT_MAINWINDOW = 2;   // Mica
     private const int DWMWA_USE_IMMERSIVE_DARK_MODE = 20;
+    private const int WM_GETMINMAXINFO = 0x0024;
+    private const int MONITOR_DEFAULTTONEAREST = 2;
 
     [DllImport("dwmapi.dll")]
     private static extern int DwmSetWindowAttribute(IntPtr hwnd, int attr, ref int value, int size);
+
+    [DllImport("user32.dll")]
+    private static extern IntPtr MonitorFromWindow(IntPtr hwnd, int flags);
+
+    [DllImport("user32.dll", SetLastError = true)]
+    private static extern bool GetMonitorInfo(IntPtr hMonitor, ref MONITORINFO lpmi);
 
     public MainViewModel ViewModel { get; }
 
@@ -25,7 +34,13 @@ public partial class MainWindow : Window
         ViewModel = new MainViewModel();
         DataContext = ViewModel;
 
-        Loaded += (_, _) => ApplyMica();
+        SourceInitialized += (_, _) =>
+        {
+            var hwnd = new WindowInteropHelper(this).Handle;
+            HwndSource.FromHwnd(hwnd)?.AddHook(WndProc);
+            ApplyMica();
+        };
+        StateChanged += (_, _) => MaxBtn.Content = WindowState == WindowState.Maximized ? "❐" : "□";
         ContentRendered += (_, _) => Title = $"OpenCode Launcher — {ViewModel.Version}";
     }
 
@@ -55,7 +70,38 @@ public partial class MainWindow : Window
     }
 
     private void MinBtn_Click(object sender, RoutedEventArgs e) => WindowState = WindowState.Minimized;
+    private void MaxBtn_Click(object sender, RoutedEventArgs e) => WindowState = WindowState == WindowState.Maximized ? WindowState.Normal : WindowState.Maximized;
     private void CloseBtn_Click(object sender, RoutedEventArgs e) => Close();
+
+    private IntPtr WndProc(IntPtr hwnd, int msg, IntPtr wParam, IntPtr lParam, ref bool handled)
+    {
+        if (msg == WM_GETMINMAXINFO)
+        {
+            AdjustMaximizedSize(hwnd, lParam);
+            handled = true;
+        }
+        return IntPtr.Zero;
+    }
+
+    private static void AdjustMaximizedSize(IntPtr hwnd, IntPtr lParam)
+    {
+        var monitor = MonitorFromWindow(hwnd, MONITOR_DEFAULTTONEAREST);
+        if (monitor == IntPtr.Zero) return;
+
+        var info = new MONITORINFO { cbSize = Marshal.SizeOf<MONITORINFO>() };
+        if (!GetMonitorInfo(monitor, ref info)) return;
+
+        var mmi = Marshal.PtrToStructure<MINMAXINFO>(lParam);
+        var work = info.rcWork;
+        var monitorRect = info.rcMonitor;
+
+        mmi.ptMaxPosition.x = Math.Abs(work.left - monitorRect.left);
+        mmi.ptMaxPosition.y = Math.Abs(work.top - monitorRect.top);
+        mmi.ptMaxSize.x = Math.Abs(work.right - work.left);
+        mmi.ptMaxSize.y = Math.Abs(work.bottom - work.top);
+
+        Marshal.StructureToPtr(mmi, lParam, true);
+    }
 
     private void BrowseWorkDir_Click(object sender, RoutedEventArgs e) => ViewModel.BrowseWorkDirCommand.Execute(null);
 
@@ -120,5 +166,40 @@ public partial class MainWindow : Window
         var t = el.TransformToAncestor(el.Parent as System.Windows.Media.Visual ?? el);
         var r = new Rect(el.RenderSize);
         return t.TransformBounds(r);
+    }
+
+    [StructLayout(LayoutKind.Sequential)]
+    private struct POINT
+    {
+        public int x;
+        public int y;
+    }
+
+    [StructLayout(LayoutKind.Sequential)]
+    private struct MINMAXINFO
+    {
+        public POINT ptReserved;
+        public POINT ptMaxSize;
+        public POINT ptMaxPosition;
+        public POINT ptMinTrackSize;
+        public POINT ptMaxTrackSize;
+    }
+
+    [StructLayout(LayoutKind.Sequential)]
+    private struct RECT
+    {
+        public int left;
+        public int top;
+        public int right;
+        public int bottom;
+    }
+
+    [StructLayout(LayoutKind.Sequential)]
+    private struct MONITORINFO
+    {
+        public int cbSize;
+        public RECT rcMonitor;
+        public RECT rcWork;
+        public int dwFlags;
     }
 }
