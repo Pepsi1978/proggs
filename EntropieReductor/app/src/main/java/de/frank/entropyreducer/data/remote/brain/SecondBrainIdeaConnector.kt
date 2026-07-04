@@ -80,6 +80,36 @@ class SecondBrainIdeaConnector @Inject constructor(
     }
 
     /**
+     * Frank-Wunsch 2026-07-04 (Fix „Idee bleibt liegen"): Schiebt ausstehende (noch nicht
+     * hochgeladene) Ideen aktiv nach — mit Retry gegen einen wackligen WireGuard-Tunnel, genau wie
+     * [pullFromBrain] es beim Runterladen tut. Wird beim App-Vordergrund (MainActivity.onStart) und
+     * beim Betreten des Ideen-Reiters aufgerufen.
+     *
+     * Root Cause davor: Der Push haengt sonst allein am Ideen-Flow-Observer in [start], der bei
+     * unveraenderter Liste nicht neu feuert. Schlug der erste Upload unterwegs (ohne Netz) fehl,
+     * blieb die Idee liegen, bis die App als Prozess frisch startete ODER sich eine Idee aenderte —
+     * genau der beobachtete „ich oeffne die App und es passiert nichts"-Fall. Zusaetzlich hatte der
+     * Push (anders als der Pull) keinen Retry gegen den intermittierenden Tunnel.
+     *
+     * Idempotent (Sync-Stamp + idempotencyKey): gefahrlos bei jedem Vordergrund aufrufbar; ist
+     * nichts offen, kehrt [syncRows] sofort zurueck.
+     */
+    fun retryPendingUploads(scope: CoroutineScope) {
+        scope.launch(Dispatchers.IO) {
+            if (!settings.secondBrainIdeasConnectorEnabledFlow.first()) return@launch
+            if (secrets.secondBrainApiKey.orEmpty().isBlank()) return@launch
+            repeat(PUSH_RETRIES) { attempt ->
+                val rows = ideaDao.getAllIdeasForBackup().map { idea ->
+                    IdeaWithFollowups(idea, ideaDao.getFollowupsForIdea(idea.id))
+                }
+                val hadNetworkError = syncRows(rows, reason = "Nachhol-Upload")
+                if (!hadNetworkError) return@launch
+                if (attempt < PUSH_RETRIES - 1) delay(PUSH_RETRY_DELAY_MS)
+            }
+        }
+    }
+
+    /**
      * Frank-Wunsch 2026-07-04: Vollstaendiger Neu-Sync. Leert die Brain-Kategorie „Ideen" komplett
      * (alte Formate + Karteileichen bereits geloeschter Ideen), setzt die lokalen Sync-Marken zurueck
      * und laedt danach ALLE aktuellen Ideen frisch im neuen Format hoch. Die App-Ideen bleiben
@@ -303,7 +333,13 @@ class SecondBrainIdeaConnector @Inject constructor(
             .getOrDefault(System.currentTimeMillis())
     }
 
-    private suspend fun syncRows(rows: List<IdeaWithFollowups>, reason: String) {
+    /**
+     * Laedt ausstehende/geaenderte Ideen hoch und entfernt in der App geloeschte per Titel.
+     * @return true, wenn ein NETZFEHLER den Upload abbrach (Retry sinnvoll) — false, wenn fertig,
+     *         nichts zu tun war oder nur ein nicht-netzbedingter Grund (fehlender Key) vorlag.
+     *         Bestehende Aufrufer (Flow-Observer, syncAllNow, resyncAll) ignorieren den Rueckgabewert.
+     */
+    private suspend fun syncRows(rows: List<IdeaWithFollowups>, reason: String): Boolean {
         val key = secrets.secondBrainApiKey.orEmpty().trim()
         if (key.isBlank()) {
             Diag.w(
@@ -312,7 +348,7 @@ class SecondBrainIdeaConnector @Inject constructor(
                 "CHECKPOINT step=syncPreflight expected=api_key_present actual=missing ok=false reason=$reason rows=${rows.size}",
             )
             _state.value = _state.value.copy(lastMessage = "Connector aktiv, aber API-Key fehlt.")
-            return
+            return false
         }
         val auth = "Bearer $key"
         val sorted = rows.sortedBy { it.idea.timestampMs }
@@ -359,7 +395,7 @@ class SecondBrainIdeaConnector @Inject constructor(
                 lastMessage = if (deleted > 0) "$deleted Idee(n) im Second Brain geloescht, Rest aktuell."
                 else "Alle Ideen sind im Second Brain aktuell.",
             )
-            return
+            return false
         }
 
         _state.value = _state.value.copy(syncing = true, lastMessage = "$reason: ${pending.size} Idee(n) offen.")
@@ -429,7 +465,7 @@ class SecondBrainIdeaConnector @Inject constructor(
                     lastMessage = "Sync gestoppt bei '${row.idea.title}': $msg",
                     syncedCount = synced,
                 )
-                return
+                return true
             }
         }
         _state.value = _state.value.copy(
@@ -443,6 +479,7 @@ class SecondBrainIdeaConnector @Inject constructor(
             TAG,
             "CHECKPOINT step=syncComplete expected=all_pending_synced actual=synced=$synced,deleted=$deleted,pending=${pending.size} ok=${synced == pending.size} reason=$reason",
         )
+        return false
     }
 
     private fun syncStamp(row: IdeaWithFollowups): String {
@@ -477,6 +514,10 @@ class SecondBrainIdeaConnector @Inject constructor(
 
     private companion object {
         const val TAG = "SecondBrainIdeas"
+        // Fix 2026-07-04: Retry-Kadenz fuer den Nachhol-Upload — analog zu pullFromBrain (4x, 3s),
+        // faengt den intermittierenden WireGuard-Tunnel ab (mal erreichbar, mal 30s-Timeout).
+        const val PUSH_RETRIES = 4
+        const val PUSH_RETRY_DELAY_MS = 3000L
         val DATE_TEXT: DateTimeFormatter = DateTimeFormatter.ofPattern("dd.MM.yyyy, HH:mm 'Uhr'", Locale.GERMANY)
     }
 }

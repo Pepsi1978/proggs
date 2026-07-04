@@ -125,6 +125,11 @@ class MainActivity : ComponentActivity() {
         // App holen. Mit Retry (der WireGuard-Tunnel braucht nach dem Vordergrund-Wechsel kurz);
         // prueft intern Key + aktivierten Ideen-Schalter.
         secondBrainIdeaConnector.pullFromBrain(lifecycleScope)
+        // Fix 2026-07-04: Ausstehende Ideen-Uploads aktiv nachschieben. Eine Idee, deren erster
+        // Upload unterwegs (ohne Netz) fehlschlug, wird so beim naechsten App-Vordergrund mit
+        // Internet automatisch hochgeladen — statt am Flow-Observer liegen zu bleiben (mit Retry
+        // gegen den nach dem Vordergrund-Wechsel noch nicht ganz oben stehenden WireGuard-Tunnel).
+        secondBrainIdeaConnector.retryPendingUploads(lifecycleScope)
     }
 
     override fun onStop() {
