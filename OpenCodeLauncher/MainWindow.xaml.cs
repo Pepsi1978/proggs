@@ -125,15 +125,7 @@ public partial class MainWindow : Window
             Math.Abs(current.Y - _dragStartPoint.Y) < SystemParameters.MinimumVerticalDragDistance)
             return;
 
-        try
-        {
-            DragDrop.DoDragDrop(this, _dragSourceGroup, DragDropEffects.Move);
-        }
-        finally
-        {
-            _dragSourceGroup = null;
-            _dragSourceGroupIndex = -1;
-        }
+        DragDrop.DoDragDrop(this, _dragSourceGroup, DragDropEffects.Move);
         e.Handled = true;
     }
 
@@ -159,15 +151,13 @@ public partial class MainWindow : Window
         {
             var targetIndex = ViewModel.ModelGroups.IndexOf(targetGroup);
             ViewModel.MoveGroup(_dragSourceGroupIndex, targetIndex);
+            _dragSourceGroup = null;
+            _dragSourceGroupIndex = -1;
             e.Handled = true;
             return;
         }
 
-        if (e.Data.GetDataPresent(typeof(OpenCodeLauncher.Models.ModelEntry)) && _dragSourceGroup != null && _dragSourceIndex >= 0)
-        {
-            ViewModel.MoveModel(_dragSourceGroup, _dragSourceIndex, targetGroup, targetGroup.Models.Count);
-            e.Handled = true;
-        }
+        e.Handled = true;
     }
 
     private void ModelList_PreviewMouseLeftButtonDown(object sender, MouseButtonEventArgs e)
@@ -197,7 +187,6 @@ public partial class MainWindow : Window
         }
         finally
         {
-            _dragSourceGroup = null;
             _dragSourceIndex = -1;
         }
     }
@@ -211,10 +200,17 @@ public partial class MainWindow : Window
         var lb = sender as System.Windows.Controls.ListBox;
         var targetGroup = lb?.DataContext as OpenCodeLauncher.Models.ModelGroupEntry;
         if (lb == null || targetGroup == null) return;
+        if (!ReferenceEquals(_dragSourceGroup, targetGroup))
+        {
+            _dragSourceGroup = null;
+            _dragSourceIndex = -1;
+            e.Handled = true;
+            return;
+        }
         var pos = e.GetPosition(lb);
         var targetIdx = IndexFromPoint(lb, pos);
         if (targetIdx < 0) targetIdx = targetGroup.Models.Count;
-        ViewModel.MoveModel(_dragSourceGroup, _dragSourceIndex, targetGroup, targetIdx);
+        ViewModel.MoveModel(_dragSourceGroup, _dragSourceIndex, targetIdx);
         _dragSourceGroup = null;
         _dragSourceIndex = -1;
         e.Handled = true;

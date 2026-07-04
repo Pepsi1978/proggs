@@ -122,6 +122,22 @@
                 </Setter.Value>
             </Setter>
         </Style>
+        <Style x:Key="RoundedTextBox" TargetType="TextBox">
+            <Setter Property="Background" Value="#2B2B3D"/>
+            <Setter Property="Foreground" Value="#E8E8EC"/>
+            <Setter Property="BorderBrush" Value="#41415A"/>
+            <Setter Property="BorderThickness" Value="1"/>
+            <Setter Property="Padding" Value="9,7"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="TextBox">
+                        <Border Background="{TemplateBinding Background}" BorderBrush="{TemplateBinding BorderBrush}" BorderThickness="{TemplateBinding BorderThickness}" CornerRadius="8">
+                            <ScrollViewer x:Name="PART_ContentHost" Margin="{TemplateBinding Padding}"/>
+                        </Border>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
         <Style x:Key="ModelItem" TargetType="ListBoxItem">
             <Setter Property="Padding" Value="12,10"/>
             <Setter Property="Margin" Value="2"/>
@@ -326,8 +342,7 @@
                         </Grid.RowDefinitions>
                         <DockPanel Grid.Row="0" Margin="0,0,0,10">
                             <TextBlock FontSize="13" FontWeight="SemiBold" Foreground="#B8B8C4" VerticalAlignment="Center" Margin="0,0,12,0">
-                                <Run Text="Provider"/>
-                                <Run Text=" — " Foreground="#555560"/>
+                                <Run Text="Provider "/>
                                 <Run Text="{Binding SelectedModel.DisplayName, FallbackValue='—'}" Foreground="#8A8AF0"/>
                             </TextBlock>
                             <Button Style="{StaticResource GhostBtn}" Content="↻ Aktualisieren" DockPanel.Dock="Right" Padding="10,5" FontSize="12"
@@ -365,7 +380,7 @@
                         <ColumnDefinition Width="Auto"/>
                     </Grid.ColumnDefinitions>
                     <TextBlock Grid.Column="0" Text="Arbeitsverzeichnis:" Foreground="#888894" VerticalAlignment="Center" Margin="0,0,8,0"/>
-                    <TextBox Grid.Column="1" x:Name="WorkDirBox" Text="{Binding WorkDir, UpdateSourceTrigger=PropertyChanged}" Margin="0,0,8,0" Padding="9,7" Background="#2B2B3D" Foreground="#E8E8EC" BorderBrush="#41415A" BorderThickness="1"/>
+                    <TextBox Grid.Column="1" x:Name="WorkDirBox" Style="{StaticResource RoundedTextBox}" Text="{Binding WorkDir, UpdateSourceTrigger=PropertyChanged}" Margin="0,0,8,0"/>
                     <Button Grid.Column="2" Style="{StaticResource GhostBtn}" Content="…" Margin="0,0,8,0" Padding="14,5" Click="BrowseWorkDir_Click"/>
                     <Button Grid.Column="3" Style="{StaticResource GhostBtn}" Content="Fehlerdetails" Padding="12,7" Margin="0,0,8,0" IsEnabled="{Binding HasLastError}"
                             Command="{Binding ShowLastErrorCommand}"/>

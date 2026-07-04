@@ -25,8 +25,8 @@ public sealed partial class MainViewModel : ObservableObject
         SelectedModel = ModelGroups.FirstOrDefault(g => g.Models.Count > 0)?.Models.FirstOrDefault();
         WorkDir = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), "proggs");
 
-        var version = Assembly.GetExecutingAssembly().GetName().Version?.ToString(3) ?? "1.0.10";
-        Version = $"Version {version} (04.07.2026, 22:16 Uhr)";
+        var version = Assembly.GetExecutingAssembly().GetName().Version?.ToString(3) ?? "1.0.11";
+        Version = $"Version {version} (04.07.2026, 22:31 Uhr)";
     }
 
     public ObservableCollection<ModelGroupEntry> ModelGroups { get; } = new();
@@ -275,11 +275,11 @@ public sealed partial class MainViewModel : ObservableObject
     }
 
     // Drag&Drop-Unterstützung: Reihenfolge ändern.
-    public void MoveModel(ModelGroupEntry fromGroup, int from, ModelGroupEntry toGroup, int to)
+    public void MoveModel(ModelGroupEntry group, int from, int to)
     {
-        if (from < 0 || from >= fromGroup.Models.Count) return;
-        var item = fromGroup.Models[from];
-        _registry.MoveModel(fromGroup, from, toGroup, to);
+        if (from < 0 || from >= group.Models.Count) return;
+        var item = group.Models[from];
+        _registry.MoveModel(group, from, to);
         SelectedModel = item;
     }
 

@@ -38,8 +38,25 @@ public sealed class ModelRegistry
                 var json = File.ReadAllText(FilePath);
                 if (json.TrimStart().StartsWith("["))
                 {
+                    using var doc = JsonDocument.Parse(json);
+                    var isGroupFile = doc.RootElement.ValueKind == JsonValueKind.Array &&
+                                      doc.RootElement.GetArrayLength() > 0 &&
+                                      doc.RootElement[0].TryGetProperty("Models", out _);
+                    if (isGroupFile)
+                    {
+                        var parsedGroups = JsonSerializer.Deserialize<ObservableCollection<ModelGroupEntry>>(json, JsonOpts);
+                        if (parsedGroups != null && parsedGroups.Count > 0)
+                        {
+                            reg.Groups = parsedGroups;
+                            reg.RepairAndNormalize();
+                            reg.Save();
+                            Logger.Instance.Info("ModelRegistry", "Load", $"{parsedGroups.Count} Modellgruppen geladen", new { FilePath });
+                            return reg;
+                        }
+                    }
+
                     var oldList = JsonSerializer.Deserialize<List<ModelEntry>>(json, JsonOpts);
-                    if (oldList != null && oldList.Count > 0)
+                    if (oldList != null && oldList.Any(m => !string.IsNullOrWhiteSpace(m.Slug)))
                     {
                         reg.Groups = CreateDefaults(oldList);
                         reg.Save();
@@ -52,7 +69,7 @@ public sealed class ModelRegistry
                 if (groups != null && groups.Count > 0)
                 {
                     reg.Groups = groups;
-                    reg.EnsureDefaults();
+                    reg.RepairAndNormalize();
                     reg.Save();
                     Logger.Instance.Info("ModelRegistry", "Load", $"{groups.Count} Modellgruppen geladen", new { FilePath });
                     return reg;
@@ -111,20 +128,18 @@ public sealed class ModelRegistry
         Logger.Instance.Info("ModelRegistry", "RemoveAt", $"entfernt: {m.Slug}", new { group = group.Title });
     }
 
-    public void MoveModel(ModelGroupEntry fromGroup, int from, ModelGroupEntry toGroup, int to)
+    public void MoveModel(ModelGroupEntry group, int from, int to)
     {
-        if (from < 0 || from >= fromGroup.Models.Count) return;
+        if (from < 0 || from >= group.Models.Count) return;
         if (to < 0) to = 0;
-        if (to > toGroup.Models.Count) to = toGroup.Models.Count;
-        if (ReferenceEquals(fromGroup, toGroup) && from == to) return;
-        var item = fromGroup.Models[from];
-        fromGroup.Models.RemoveAt(from);
-        item.ProviderId = toGroup.ProviderId;
-        item.ProviderName = toGroup.ProviderName;
-        if (ReferenceEquals(fromGroup, toGroup) && to > from) to--;
-        toGroup.Models.Insert(Math.Clamp(to, 0, toGroup.Models.Count), item);
+        if (to > group.Models.Count) to = group.Models.Count;
+        if (from == to) return;
+        var item = group.Models[from];
+        group.Models.RemoveAt(from);
+        if (to > from) to--;
+        group.Models.Insert(Math.Clamp(to, 0, group.Models.Count), item);
         Save();
-        Logger.Instance.Info("ModelRegistry", "MoveModel", $"{fromGroup.Title}:{from} -> {toGroup.Title}:{to}");
+        Logger.Instance.Info("ModelRegistry", "MoveModel", $"{group.Title}:{from} -> {to}");
     }
 
     public void MoveGroup(int from, int to)
@@ -137,7 +152,7 @@ public sealed class ModelRegistry
         Logger.Instance.Info("ModelRegistry", "MoveGroup", $"{from} -> {to}");
     }
 
-    private void EnsureDefaults()
+    private void RepairAndNormalize()
     {
         foreach (var defaults in CreateDefaults())
         {
@@ -149,15 +164,26 @@ public sealed class ModelRegistry
             }
             group.ProviderId = defaults.ProviderId;
             group.ProviderName = defaults.ProviderName;
+            if (group.Models.Count == 0 || group.Models.All(m => string.IsNullOrWhiteSpace(m.Slug)))
+            {
+                group.Models.Clear();
+                foreach (var model in defaults.Models) group.Models.Add(model);
+                continue;
+            }
+
+            var cleaned = group.Models
+                .Where(m => !string.IsNullOrWhiteSpace(m.Slug))
+                .GroupBy(m => m.Slug, StringComparer.OrdinalIgnoreCase)
+                .Select(g => g.First())
+                .ToList();
+            group.Models.Clear();
+            foreach (var model in cleaned) group.Models.Add(model);
+
             foreach (var model in group.Models)
             {
                 model.ProviderId = group.ProviderId;
                 model.ProviderName = group.ProviderName;
-            }
-            foreach (var model in defaults.Models)
-            {
-                if (!group.Models.Any(m => string.Equals(m.Slug, model.Slug, StringComparison.OrdinalIgnoreCase)))
-                    group.Models.Add(model);
+                if (string.IsNullOrWhiteSpace(model.DisplayName)) model.DisplayName = ToDisplayName(model.Slug);
             }
         }
     }
