@@ -102,64 +102,127 @@ public partial class MainWindow : Window
 
     private void BrowseWorkDir_Click(object sender, RoutedEventArgs e) => ViewModel.BrowseWorkDirCommand.Execute(null);
 
-    // ---- Drag & Drop für die Modell-Liste (Reihenfolge ändern) ----
+    // ---- Drag & Drop für Modellgruppen und Modelle ----
     private Point _dragStartPoint;
+    private int _dragSourceGroupIndex = -1;
+    private OpenCodeLauncher.Models.ModelGroupEntry? _dragSourceGroup;
     private int _dragSourceIndex = -1;
 
-    private void ModelList_PreviewMouseLeftButtonDown(object sender, MouseButtonEventArgs e)
+    private void ModelGroup_PreviewMouseLeftButtonDown(object sender, MouseButtonEventArgs e)
     {
-        _dragStartPoint = e.GetPosition(ModelList);
-        _dragSourceIndex = IndexFromOriginalSource(e.OriginalSource);
+        if (FindAncestor<System.Windows.Controls.ListBoxItem>(e.OriginalSource as DependencyObject) != null) return;
+        _dragStartPoint = e.GetPosition(this);
+        _dragSourceGroup = (sender as FrameworkElement)?.DataContext as OpenCodeLauncher.Models.ModelGroupEntry;
+        _dragSourceGroupIndex = _dragSourceGroup == null ? -1 : ViewModel.ModelGroups.IndexOf(_dragSourceGroup);
     }
 
-    private void ModelList_PreviewMouseMove(object sender, MouseEventArgs e)
+    private void ModelGroup_PreviewMouseMove(object sender, MouseEventArgs e)
     {
-        if (e.LeftButton != MouseButtonState.Pressed || _dragSourceIndex < 0) return;
+        if (FindAncestor<System.Windows.Controls.ListBoxItem>(e.OriginalSource as DependencyObject) != null) return;
+        if (e.LeftButton != MouseButtonState.Pressed || _dragSourceGroup == null || _dragSourceGroupIndex < 0) return;
 
-        var current = e.GetPosition(ModelList);
+        var current = e.GetPosition(this);
         if (Math.Abs(current.X - _dragStartPoint.X) < SystemParameters.MinimumHorizontalDragDistance &&
             Math.Abs(current.Y - _dragStartPoint.Y) < SystemParameters.MinimumVerticalDragDistance)
             return;
 
-        var item = ViewModel.Models[_dragSourceIndex];
         try
         {
-            DragDrop.DoDragDrop(ModelList, item, DragDropEffects.Move);
+            DragDrop.DoDragDrop(this, _dragSourceGroup, DragDropEffects.Move);
         }
         finally
         {
+            _dragSourceGroup = null;
+            _dragSourceGroupIndex = -1;
+        }
+    }
+
+    private void ModelGroup_DragEnter(object sender, DragEventArgs e) => SetDragEffects(e);
+    private void ModelGroup_DragOver(object sender, DragEventArgs e) => SetDragEffects(e);
+
+    private void ModelGroup_Drop(object sender, DragEventArgs e)
+    {
+        var targetGroup = (sender as FrameworkElement)?.DataContext as OpenCodeLauncher.Models.ModelGroupEntry;
+        if (targetGroup == null) return;
+
+        if (e.Data.GetDataPresent(typeof(OpenCodeLauncher.Models.ModelGroupEntry)) && _dragSourceGroupIndex >= 0)
+        {
+            var targetIndex = ViewModel.ModelGroups.IndexOf(targetGroup);
+            ViewModel.MoveGroup(_dragSourceGroupIndex, targetIndex);
+            e.Handled = true;
+            return;
+        }
+
+        if (e.Data.GetDataPresent(typeof(OpenCodeLauncher.Models.ModelEntry)) && _dragSourceGroup != null && _dragSourceIndex >= 0)
+        {
+            ViewModel.MoveModel(_dragSourceGroup, _dragSourceIndex, targetGroup, targetGroup.Models.Count);
+            e.Handled = true;
+        }
+    }
+
+    private void ModelList_PreviewMouseLeftButtonDown(object sender, MouseButtonEventArgs e)
+    {
+        var lb = sender as System.Windows.Controls.ListBox;
+        if (lb == null) return;
+        _dragStartPoint = e.GetPosition(lb);
+        _dragSourceGroup = lb.DataContext as OpenCodeLauncher.Models.ModelGroupEntry;
+        _dragSourceIndex = IndexFromOriginalSource(lb, e.OriginalSource);
+    }
+
+    private void ModelList_PreviewMouseMove(object sender, MouseEventArgs e)
+    {
+        var lb = sender as System.Windows.Controls.ListBox;
+        if (lb == null || _dragSourceGroup == null) return;
+        if (e.LeftButton != MouseButtonState.Pressed || _dragSourceIndex < 0) return;
+
+        var current = e.GetPosition(lb);
+        if (Math.Abs(current.X - _dragStartPoint.X) < SystemParameters.MinimumHorizontalDragDistance &&
+            Math.Abs(current.Y - _dragStartPoint.Y) < SystemParameters.MinimumVerticalDragDistance)
+            return;
+
+        var item = _dragSourceGroup.Models[_dragSourceIndex];
+        try
+        {
+            DragDrop.DoDragDrop(lb, item, DragDropEffects.Move);
+        }
+        finally
+        {
+            _dragSourceGroup = null;
             _dragSourceIndex = -1;
         }
     }
 
-    private void ModelList_DragEnter(object sender, DragEventArgs e)
-    {
-        e.Effects = e.Data.GetDataPresent(typeof(OpenCodeLauncher.Models.ModelEntry)) ? DragDropEffects.Move : DragDropEffects.None;
-        e.Handled = true;
-    }
-
-    private void ModelList_DragOver(object sender, DragEventArgs e)
-    {
-        e.Effects = e.Data.GetDataPresent(typeof(OpenCodeLauncher.Models.ModelEntry)) ? DragDropEffects.Move : DragDropEffects.None;
-        e.Handled = true;
-    }
+    private void ModelList_DragEnter(object sender, DragEventArgs e) => SetDragEffects(e);
+    private void ModelList_DragOver(object sender, DragEventArgs e) => SetDragEffects(e);
 
     private void ModelList_Drop(object sender, DragEventArgs e)
     {
-        if (_dragSourceIndex < 0) return;
-        var lb = ModelList;
+        if (_dragSourceGroup == null || _dragSourceIndex < 0) return;
+        var lb = sender as System.Windows.Controls.ListBox;
+        var targetGroup = lb?.DataContext as OpenCodeLauncher.Models.ModelGroupEntry;
+        if (lb == null || targetGroup == null) return;
         var pos = e.GetPosition(lb);
         var targetIdx = IndexFromPoint(lb, pos);
-        if (targetIdx < 0) targetIdx = ViewModel.Models.Count - 1;
-        ViewModel.MoveModel(_dragSourceIndex, targetIdx);
+        if (targetIdx < 0) targetIdx = targetGroup.Models.Count;
+        ViewModel.MoveModel(_dragSourceGroup, _dragSourceIndex, targetGroup, targetIdx);
+        _dragSourceGroup = null;
         _dragSourceIndex = -1;
         e.Handled = true;
     }
 
-    private int IndexFromOriginalSource(object source)
+    private static void SetDragEffects(DragEventArgs e)
     {
-        var item = System.Windows.Controls.ItemsControl.ContainerFromElement(ModelList, source as DependencyObject) as System.Windows.Controls.ListBoxItem;
-        return item == null ? -1 : ModelList.ItemContainerGenerator.IndexFromContainer(item);
+        e.Effects = e.Data.GetDataPresent(typeof(OpenCodeLauncher.Models.ModelEntry)) ||
+                    e.Data.GetDataPresent(typeof(OpenCodeLauncher.Models.ModelGroupEntry))
+            ? DragDropEffects.Move
+            : DragDropEffects.None;
+        e.Handled = true;
+    }
+
+    private static int IndexFromOriginalSource(System.Windows.Controls.ListBox lb, object source)
+    {
+        var item = System.Windows.Controls.ItemsControl.ContainerFromElement(lb, source as DependencyObject) as System.Windows.Controls.ListBoxItem;
+        return item == null ? -1 : lb.ItemContainerGenerator.IndexFromContainer(item);
     }
 
     private static int IndexFromPoint(System.Windows.Controls.ListBox lb, Point p)
@@ -181,6 +244,16 @@ public partial class MainWindow : Window
         var t = el.TransformToAncestor(ancestor);
         var r = new Rect(el.RenderSize);
         return t.TransformBounds(r);
+    }
+
+    private static T? FindAncestor<T>(DependencyObject? current) where T : DependencyObject
+    {
+        while (current != null)
+        {
+            if (current is T typed) return typed;
+            current = System.Windows.Media.VisualTreeHelper.GetParent(current);
+        }
+        return null;
     }
 
     [StructLayout(LayoutKind.Sequential)]

@@ -21,15 +21,15 @@ public sealed partial class MainViewModel : ObservableObject
     public MainViewModel()
     {
         _registry = ModelRegistry.Load();
-        foreach (var m in _registry.Models) Models.Add(m);
-        if (Models.Count > 0) SelectedModel = Models[0];
+        foreach (var g in _registry.Groups) ModelGroups.Add(g);
+        SelectedModel = ModelGroups.FirstOrDefault(g => g.Models.Count > 0)?.Models.FirstOrDefault();
         WorkDir = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), "proggs");
 
-        var version = Assembly.GetExecutingAssembly().GetName().Version?.ToString(3) ?? "1.0.8";
-        Version = $"Version {version} (04.07.2026, 21:38 Uhr)";
+        var version = Assembly.GetExecutingAssembly().GetName().Version?.ToString(3) ?? "1.0.9";
+        Version = $"Version {version} (04.07.2026, 22:05 Uhr)";
     }
 
-    public ObservableCollection<ModelEntry> Models { get; } = new();
+    public ObservableCollection<ModelGroupEntry> ModelGroups { get; } = new();
     public ObservableCollection<ProviderEntry> Providers { get; } = new();
 
     [ObservableProperty] private ModelEntry? _selectedModel;
@@ -58,6 +58,22 @@ public sealed partial class MainViewModel : ObservableObject
         StatusText = $"Lade Provider für {model.DisplayName} …";
         try
         {
+            if (!string.Equals(model.ProviderId, "openrouter", StringComparison.OrdinalIgnoreCase))
+            {
+                Providers.Clear();
+                var direct = new ProviderEntry
+                {
+                    ProviderName = model.ProviderName,
+                    ProviderSlug = model.ProviderId,
+                    Tag = model.ProviderId,
+                    Status = 0
+                };
+                Providers.Add(direct);
+                SelectedProvider = direct;
+                StatusText = $"{model.DisplayName} über {model.ProviderName} bereit.";
+                return;
+            }
+
             var (displayName, providers) = await _router.GetProvidersAsync(model.Slug, ct);
             if (!string.IsNullOrWhiteSpace(displayName) && displayName != model.DisplayName)
             {
@@ -96,15 +112,16 @@ public sealed partial class MainViewModel : ObservableObject
     [RelayCommand]
     private void AddModel()
     {
+        var targetGroup = FindGroupForModel(SelectedModel) ?? ModelGroups.FirstOrDefault(g => g.Id == "openrouter") ?? ModelGroups.FirstOrDefault();
+        if (targetGroup == null) return;
         var slug = SimplePrompt("Neues Modell hinzufügen",
-            "OpenRouter-Slug eingeben (z.B. 'z-ai/glm-5.2'):", "");
+            $"Modell-ID für '{targetGroup.Title}' eingeben (ohne Provider-Präfix):", "");
         if (string.IsNullOrWhiteSpace(slug)) return;
         var display = SimplePrompt("Anzeigename",
             "Anzeigename (frei lassen für Slug):", slug);
-        if (_registry.AddModel(slug, display))
+        if (_registry.AddModel(targetGroup, slug, display))
         {
-            var entry = _registry.Models.Last();
-            Models.Add(entry);
+            var entry = targetGroup.Models.Last();
             SelectedModel = entry;
         }
         else
@@ -117,15 +134,16 @@ public sealed partial class MainViewModel : ObservableObject
     private void RemoveModel()
     {
         if (SelectedModel == null) return;
-        var idx = Models.IndexOf(SelectedModel);
+        var group = FindGroupForModel(SelectedModel);
+        if (group == null) return;
+        var idx = group.Models.IndexOf(SelectedModel);
         if (idx < 0) return;
         if (!ConfirmRemoveModel(SelectedModel.DisplayName, SelectedModel.Slug)) return;
-        _registry.RemoveAt(idx);
-        Models.RemoveAt(idx);
-        if (Models.Count > 0)
-            SelectedModel = Models[Math.Clamp(idx, 0, Models.Count - 1)];
+        _registry.RemoveAt(group, idx);
+        if (group.Models.Count > 0)
+            SelectedModel = group.Models[Math.Clamp(idx, 0, group.Models.Count - 1)];
         else
-            SelectedModel = null;
+            SelectedModel = ModelGroups.SelectMany(g => g.Models).FirstOrDefault();
     }
 
     [RelayCommand]
@@ -154,7 +172,7 @@ public sealed partial class MainViewModel : ObservableObject
         }
         try
         {
-            var modelString = _launcher.ConfigureProvider(SelectedModel.Slug, SelectedModel.DisplayName, SelectedProvider, Providers);
+            var modelString = _launcher.ConfigureProvider(SelectedModel, SelectedProvider, Providers);
             _launcher.Launch(modelString, WorkDir);
             StatusText = $"OpenCode gestartet: {SelectedModel.DisplayName} via {SelectedProvider.ProviderName}";
         }
@@ -167,7 +185,7 @@ public sealed partial class MainViewModel : ObservableObject
             StatusText = $"Start fehlgeschlagen. Details gespeichert: {Path.GetFileName(LastErrorPath)}";
             Logger.Instance.Error("MainViewModel", "Start", ex, new
             {
-                model = SelectedModel.Slug,
+                model = SelectedModel.ModelString,
                 provider = SelectedProvider.ProviderName,
                 providerSlug = SelectedProvider.ProviderSlug,
                 WorkDir,
@@ -257,14 +275,30 @@ public sealed partial class MainViewModel : ObservableObject
     }
 
     // Drag&Drop-Unterstützung: Reihenfolge ändern.
-    public void MoveModel(int from, int to)
+    public void MoveModel(ModelGroupEntry fromGroup, int from, ModelGroupEntry toGroup, int to)
     {
-        if (from < 0 || from >= Models.Count || to < 0 || to >= Models.Count || from == to) return;
-        _registry.Move(from, to);
-        var item = Models[from];
-        Models.RemoveAt(from);
-        Models.Insert(to, item);
+        if (from < 0 || from >= fromGroup.Models.Count) return;
+        var item = fromGroup.Models[from];
+        _registry.MoveModel(fromGroup, from, toGroup, to);
         SelectedModel = item;
+    }
+
+    public void MoveGroup(int from, int to)
+    {
+        _registry.MoveGroup(from, to);
+    }
+
+    [RelayCommand]
+    private void ToggleGroup(ModelGroupEntry group)
+    {
+        group.IsExpanded = !group.IsExpanded;
+        _registry.Save();
+    }
+
+    private ModelGroupEntry? FindGroupForModel(ModelEntry? model)
+    {
+        if (model == null) return null;
+        return ModelGroups.FirstOrDefault(g => g.Models.Contains(model));
     }
 
     // Minimaler Input-Dialog ohne eigene Window-XAML (System.Windows.MessageBox kann kein Text-Eingabefeld).

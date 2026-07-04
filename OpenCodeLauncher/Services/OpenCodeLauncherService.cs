@@ -36,23 +36,29 @@ public sealed class OpenCodeLauncherService
     /// Schreibt die Provider-Order (exakt der gewählte Provider, ohne Fallback)
     /// in die globale opencode.jsonc/opencode.json. Gibt den Modell-String zurück, der an opencode -m geht.
     /// </summary>
-    public string ConfigureProvider(string slug, string modelDisplayName, ProviderEntry chosen, IReadOnlyList<ProviderEntry> allProviders)
+    public string ConfigureProvider(ModelEntry model, ProviderEntry chosen, IReadOnlyList<ProviderEntry> allProviders)
     {
         var log = Logger.Instance;
-        var modelString = $"openrouter/{slug}";
+        var modelString = model.ModelString;
+
+        if (!string.Equals(model.ProviderId, "openrouter", StringComparison.OrdinalIgnoreCase))
+        {
+            log.Info("OpenCodeLauncherService", "ConfigureProvider", $"Direktmodell ohne OpenRouter-Routing: {modelString}");
+            return modelString;
+        }
 
         try
         {
             var root = ReadConfig();
-            root = PatchProvider(root, slug, modelDisplayName, chosen, allProviders);
+            root = PatchProvider(root, model.Slug, model.DisplayName, chosen, allProviders);
             WriteConfig(root);
             log.Info("OpenCodeLauncherService", "ConfigureProvider",
-                $"opencode-Konfig gepatched: {slug} via {chosen.ProviderName}",
+                $"opencode-Konfig gepatched: {model.Slug} via {chosen.ProviderName}",
                 new { order = new[] { chosen.ProviderSlug } });
         }
         catch (Exception ex)
         {
-            log.Error("OpenCodeLauncherService", "ConfigureProvider", ex, new { slug, chosen.ProviderName });
+            log.Error("OpenCodeLauncherService", "ConfigureProvider", ex, new { model.Slug, model.ProviderId, chosen.ProviderName });
             throw;
         }
 

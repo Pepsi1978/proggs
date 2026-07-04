@@ -1,4 +1,5 @@
 using System.IO;
+using System.Collections.ObjectModel;
 using System.Text.Json;
 using System.Text.Json.Serialization.Metadata;
 using OpenCodeLauncher.Models;
@@ -25,7 +26,7 @@ public sealed class ModelRegistry
         TypeInfoResolver = new DefaultJsonTypeInfoResolver()
     };
 
-    public List<ModelEntry> Models { get; private set; } = new();
+    public ObservableCollection<ModelGroupEntry> Groups { get; private set; } = new();
 
     public static ModelRegistry Load()
     {
@@ -35,11 +36,25 @@ public sealed class ModelRegistry
             if (File.Exists(FilePath))
             {
                 var json = File.ReadAllText(FilePath);
-                var list = JsonSerializer.Deserialize<List<ModelEntry>>(json, JsonOpts);
-                if (list != null && list.Count > 0)
+                if (json.TrimStart().StartsWith("["))
                 {
-                    reg.Models = list;
-                    Logger.Instance.Info("ModelRegistry", "Load", $"{list.Count} Modelle geladen", new { FilePath });
+                    var oldList = JsonSerializer.Deserialize<List<ModelEntry>>(json, JsonOpts);
+                    if (oldList != null && oldList.Count > 0)
+                    {
+                        reg.Groups = CreateDefaults(oldList);
+                        reg.Save();
+                        Logger.Instance.Info("ModelRegistry", "Load", $"{oldList.Count} Modelle aus alter Liste migriert", new { FilePath });
+                        return reg;
+                    }
+                }
+
+                var groups = JsonSerializer.Deserialize<ObservableCollection<ModelGroupEntry>>(json, JsonOpts);
+                if (groups != null && groups.Count > 0)
+                {
+                    reg.Groups = groups;
+                    reg.EnsureDefaults();
+                    reg.Save();
+                    Logger.Instance.Info("ModelRegistry", "Load", $"{groups.Count} Modellgruppen geladen", new { FilePath });
                     return reg;
                 }
             }
@@ -49,7 +64,7 @@ public sealed class ModelRegistry
             Logger.Instance.Warn("ModelRegistry", "Load", $"Laden fehlgeschlagen, Defaults: {ex.Message}");
         }
 
-        reg.Models = CreateDefaults();
+        reg.Groups = CreateDefaults();
         reg.Save();
         return reg;
     }
@@ -59,7 +74,7 @@ public sealed class ModelRegistry
         try
         {
             Directory.CreateDirectory(Dir);
-            File.WriteAllText(FilePath, JsonSerializer.Serialize(Models, JsonOpts));
+            File.WriteAllText(FilePath, JsonSerializer.Serialize(Groups, JsonOpts));
         }
         catch (Exception ex)
         {
@@ -67,47 +82,170 @@ public sealed class ModelRegistry
         }
     }
 
-    public bool AddModel(string slug, string displayName)
+    public bool AddModel(ModelGroupEntry group, string slug, string displayName)
     {
         slug = slug.Trim().ToLowerInvariant();
-        if (Models.Any(m => string.Equals(m.Slug, slug, StringComparison.OrdinalIgnoreCase)))
+        if (group.Models.Any(m => string.Equals(m.Slug, slug, StringComparison.OrdinalIgnoreCase)))
         {
             Logger.Instance.Warn("ModelRegistry", "AddModel", $"Slug existiert bereits: {slug}");
             return false;
         }
-        Models.Add(new ModelEntry { Slug = slug, DisplayName = string.IsNullOrWhiteSpace(displayName) ? slug : displayName });
+        group.Models.Add(new ModelEntry
+        {
+            Slug = slug,
+            DisplayName = string.IsNullOrWhiteSpace(displayName) ? ToDisplayName(slug) : displayName,
+            ProviderId = group.ProviderId,
+            ProviderName = group.ProviderName
+        });
         Save();
-        Logger.Instance.Info("ModelRegistry", "AddModel", $"hinzugefügt: {slug}", new { displayName });
+        Logger.Instance.Info("ModelRegistry", "AddModel", $"hinzugefügt: {slug}", new { group = group.Title, displayName });
         return true;
     }
 
-    public void RemoveAt(int index)
+    public void RemoveAt(ModelGroupEntry group, int index)
     {
-        if (index < 0 || index >= Models.Count) return;
-        var m = Models[index];
-        Models.RemoveAt(index);
+        if (index < 0 || index >= group.Models.Count) return;
+        var m = group.Models[index];
+        group.Models.RemoveAt(index);
         Save();
-        Logger.Instance.Info("ModelRegistry", "RemoveAt", $"entfernt: {m.Slug}");
+        Logger.Instance.Info("ModelRegistry", "RemoveAt", $"entfernt: {m.Slug}", new { group = group.Title });
     }
 
-    public void Move(int from, int to)
+    public void MoveModel(ModelGroupEntry fromGroup, int from, ModelGroupEntry toGroup, int to)
     {
-        if (from < 0 || from >= Models.Count || to < 0 || to >= Models.Count || from == to) return;
-        var item = Models[from];
-        Models.RemoveAt(from);
-        Models.Insert(to, item);
+        if (from < 0 || from >= fromGroup.Models.Count) return;
+        if (to < 0) to = 0;
+        if (to > toGroup.Models.Count) to = toGroup.Models.Count;
+        if (ReferenceEquals(fromGroup, toGroup) && from == to) return;
+        var item = fromGroup.Models[from];
+        fromGroup.Models.RemoveAt(from);
+        item.ProviderId = toGroup.ProviderId;
+        item.ProviderName = toGroup.ProviderName;
+        if (ReferenceEquals(fromGroup, toGroup) && to > from) to--;
+        toGroup.Models.Insert(Math.Clamp(to, 0, toGroup.Models.Count), item);
         Save();
-        Logger.Instance.Info("ModelRegistry", "Move", $"{from} -> {to}");
+        Logger.Instance.Info("ModelRegistry", "MoveModel", $"{fromGroup.Title}:{from} -> {toGroup.Title}:{to}");
     }
 
-    private static List<ModelEntry> CreateDefaults() => new()
+    public void MoveGroup(int from, int to)
     {
-        new() { Slug = "z-ai/glm-5.2",             DisplayName = "GLM 5.2" },
-        new() { Slug = "minimax/minimax-m3",       DisplayName = "MiniMax M3" },
-        new() { Slug = "qwen/qwen3.7-max",         DisplayName = "Qwen 3.7 Max" },
-        new() { Slug = "xiaomi/mimo-v2.5-pro",     DisplayName = "MiMo V2.5 Pro" },
-        new() { Slug = "deepseek/deepseek-v4-pro", DisplayName = "DeepSeek V4 Pro" },
-        new() { Slug = "deepseek/deepseek-v4-flash", DisplayName = "DeepSeek V4 Flash" },
-        new() { Slug = "xiaomi/mimo-v2.5",         DisplayName = "MiMo V2.5" },
+        if (from < 0 || from >= Groups.Count || to < 0 || to >= Groups.Count || from == to) return;
+        var item = Groups[from];
+        Groups.RemoveAt(from);
+        Groups.Insert(to, item);
+        Save();
+        Logger.Instance.Info("ModelRegistry", "MoveGroup", $"{from} -> {to}");
+    }
+
+    private void EnsureDefaults()
+    {
+        foreach (var defaults in CreateDefaults())
+        {
+            var group = Groups.FirstOrDefault(g => string.Equals(g.Id, defaults.Id, StringComparison.OrdinalIgnoreCase));
+            if (group == null)
+            {
+                Groups.Add(defaults);
+                continue;
+            }
+            group.ProviderId = defaults.ProviderId;
+            group.ProviderName = defaults.ProviderName;
+            foreach (var model in group.Models)
+            {
+                model.ProviderId = group.ProviderId;
+                model.ProviderName = group.ProviderName;
+            }
+            foreach (var model in defaults.Models)
+            {
+                if (!group.Models.Any(m => string.Equals(m.Slug, model.Slug, StringComparison.OrdinalIgnoreCase)))
+                    group.Models.Add(model);
+            }
+        }
+    }
+
+    private static ObservableCollection<ModelGroupEntry> CreateDefaults(IEnumerable<ModelEntry>? openRouterModels = null) => new()
+    {
+        CreateGroup("openrouter", "OpenRouter", "openrouter", "OpenRouter", NormalizeOpenRouter(openRouterModels).ToArray()),
+        CreateGroup("opencode-zen-free", "OpenCode Zen Free", "opencode", "OpenCode Zen", new[]
+        {
+            Model("gpt-5-nano", "GPT-5 Nano", "opencode", "OpenCode Zen"),
+            Model("deepseek-v4-flash-free", "DeepSeek V4 Flash Free", "opencode", "OpenCode Zen"),
+            Model("mimo-v2.5-free", "MiMo V2.5 Free", "opencode", "OpenCode Zen"),
+            Model("nemotron-3-ultra-free", "Nemotron 3 Ultra Free", "opencode", "OpenCode Zen"),
+            Model("north-mini-code-free", "North Mini Code Free", "opencode", "OpenCode Zen"),
+        }),
+        CreateGroup("openai", "OpenAI", "openai", "OpenAI", new[]
+        {
+            Model("gpt-5.3-codex-spark", "GPT-5.3 Codex Spark", "openai", "OpenAI"),
+            Model("gpt-5.4", "GPT-5.4", "openai", "OpenAI"),
+            Model("gpt-5.4-fast", "GPT-5.4 Fast", "openai", "OpenAI"),
+            Model("gpt-5.4-mini", "GPT-5.4 Mini", "openai", "OpenAI"),
+            Model("gpt-5.4-mini-fast", "GPT-5.4 Mini Fast", "openai", "OpenAI"),
+            Model("gpt-5.5", "GPT-5.5", "openai", "OpenAI"),
+            Model("gpt-5.5-fast", "GPT-5.5 Fast", "openai", "OpenAI"),
+        }),
+        CreateGroup("opencode-go", "OpenCode-Go", "opencode-go", "OpenCode-Go", new[]
+        {
+            Model("deepseek-v4-flash", "DeepSeek V4 Flash", "opencode-go", "OpenCode-Go"),
+            Model("deepseek-v4-pro", "DeepSeek V4 Pro", "opencode-go", "OpenCode-Go"),
+            Model("glm-5.1", "GLM 5.1", "opencode-go", "OpenCode-Go"),
+            Model("glm-5.2", "GLM 5.2", "opencode-go", "OpenCode-Go"),
+            Model("kimi-k2.6", "Kimi K2.6", "opencode-go", "OpenCode-Go"),
+            Model("kimi-k2.7-code", "Kimi K2.7 Code", "opencode-go", "OpenCode-Go"),
+            Model("mimo-v2.5", "MiMo V2.5", "opencode-go", "OpenCode-Go"),
+            Model("mimo-v2.5-pro", "MiMo V2.5 Pro", "opencode-go", "OpenCode-Go"),
+            Model("minimax-m2.7", "MiniMax M2.7", "opencode-go", "OpenCode-Go"),
+            Model("minimax-m3", "MiniMax M3", "opencode-go", "OpenCode-Go"),
+            Model("qwen3.6-plus", "Qwen3.6 Plus", "opencode-go", "OpenCode-Go"),
+            Model("qwen3.7-max", "Qwen3.7 Max", "opencode-go", "OpenCode-Go"),
+            Model("qwen3.7-plus", "Qwen3.7 Plus", "opencode-go", "OpenCode-Go"),
+        }),
     };
+
+    private static IEnumerable<ModelEntry> NormalizeOpenRouter(IEnumerable<ModelEntry>? source)
+    {
+        var models = source?.ToList() ?? new List<ModelEntry>
+        {
+            Model("z-ai/glm-5.2", "GLM 5.2", "openrouter", "OpenRouter"),
+            Model("minimax/minimax-m3", "MiniMax M3", "openrouter", "OpenRouter"),
+            Model("qwen/qwen3.7-max", "Qwen 3.7 Max", "openrouter", "OpenRouter"),
+            Model("xiaomi/mimo-v2.5-pro", "MiMo V2.5 Pro", "openrouter", "OpenRouter"),
+            Model("deepseek/deepseek-v4-pro", "DeepSeek V4 Pro", "openrouter", "OpenRouter"),
+            Model("deepseek/deepseek-v4-flash", "DeepSeek V4 Flash", "openrouter", "OpenRouter"),
+            Model("xiaomi/mimo-v2.5", "MiMo V2.5", "openrouter", "OpenRouter"),
+        };
+        foreach (var model in models)
+        {
+            model.ProviderId = "openrouter";
+            model.ProviderName = "OpenRouter";
+            if (model.Slug.StartsWith("openrouter/", StringComparison.OrdinalIgnoreCase))
+                model.Slug = model.Slug["openrouter/".Length..];
+            if (string.IsNullOrWhiteSpace(model.DisplayName)) model.DisplayName = ToDisplayName(model.Slug);
+            yield return model;
+        }
+    }
+
+    private static ModelGroupEntry CreateGroup(string id, string title, string providerId, string providerName, IReadOnlyList<ModelEntry> models) => new()
+    {
+        Id = id,
+        Title = title,
+        ProviderId = providerId,
+        ProviderName = providerName,
+        IsExpanded = true,
+        Models = new ObservableCollection<ModelEntry>(models)
+    };
+
+    private static ModelEntry Model(string slug, string displayName, string providerId, string providerName) => new()
+    {
+        Slug = slug,
+        DisplayName = displayName,
+        ProviderId = providerId,
+        ProviderName = providerName
+    };
+
+    private static string ToDisplayName(string slug)
+    {
+        var name = slug.Split('/').Last();
+        return string.Join(" ", name.Split('-', StringSplitOptions.RemoveEmptyEntries).Select(part =>
+            part.Length == 0 ? part : char.ToUpperInvariant(part[0]) + part[1..]));
+    }
 }

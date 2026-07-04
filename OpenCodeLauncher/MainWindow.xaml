@@ -28,6 +28,7 @@
     </shell:WindowChrome.WindowChrome>
 
     <Window.Resources>
+        <BooleanToVisibilityConverter x:Key="BoolToVisibility"/>
         <Style x:Key="Card" TargetType="Border">
             <Setter Property="Background" Value="#28283A"/>
             <Setter Property="CornerRadius" Value="12"/>
@@ -201,29 +202,64 @@
                             <Button Style="{StaticResource GhostBtn}" Content="+ Hinzufügen" DockPanel.Dock="Right" Margin="8,0,0,0" Padding="10,5" FontSize="12"
                                     Command="{Binding AddModelCommand}"/>
                         </DockPanel>
-                        <ListBox x:Name="ModelList" Grid.Row="1" Style="{x:Null}"
-                                 Background="Transparent" BorderThickness="0"
-                                  ItemsSource="{Binding Models}" SelectedItem="{Binding SelectedModel}"
-                                  ItemContainerStyle="{StaticResource ModelItem}"
-                                  AllowDrop="True" PreviewMouseLeftButtonDown="ModelList_PreviewMouseLeftButtonDown" PreviewMouseMove="ModelList_PreviewMouseMove"
-                                  DragEnter="ModelList_DragEnter" DragOver="ModelList_DragOver" Drop="ModelList_Drop"
-                                  ScrollViewer.HorizontalScrollBarVisibility="Disabled">
-                            <ListBox.ItemTemplate>
-                                <DataTemplate DataType="m:ModelEntry">
-                                    <Grid>
-                                        <Grid.ColumnDefinitions>
-                                            <ColumnDefinition Width="Auto"/>
-                                            <ColumnDefinition Width="*"/>
-                                        </Grid.ColumnDefinitions>
-                                        <TextBlock Text="⋮⋮" Foreground="#555560" FontSize="13" Margin="0,0,8,0" VerticalAlignment="Center" Cursor="SizeAll"/>
-                                        <StackPanel Grid.Column="1">
-                                            <TextBlock Text="{Binding DisplayName}" FontWeight="SemiBold" Foreground="#E8E8EC"/>
-                                            <TextBlock Text="{Binding Slug}" FontSize="11" Foreground="#888894"/>
-                                        </StackPanel>
-                                    </Grid>
-                                </DataTemplate>
-                            </ListBox.ItemTemplate>
-                        </ListBox>
+                        <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
+                            <ItemsControl x:Name="ModelGroupsList" ItemsSource="{Binding ModelGroups}">
+                                <ItemsControl.ItemTemplate>
+                                    <DataTemplate DataType="m:ModelGroupEntry">
+                                        <Border Background="#26263A" BorderBrush="#373750" BorderThickness="1" CornerRadius="10" Margin="0,0,0,8" Padding="8"
+                                                AllowDrop="True"
+                                                PreviewMouseLeftButtonDown="ModelGroup_PreviewMouseLeftButtonDown"
+                                                PreviewMouseMove="ModelGroup_PreviewMouseMove"
+                                                DragEnter="ModelGroup_DragEnter" DragOver="ModelGroup_DragOver" Drop="ModelGroup_Drop">
+                                            <StackPanel>
+                                                <Grid Margin="0,0,0,6">
+                                                    <Grid.ColumnDefinitions>
+                                                        <ColumnDefinition Width="Auto"/>
+                                                        <ColumnDefinition Width="*"/>
+                                                        <ColumnDefinition Width="Auto"/>
+                                                    </Grid.ColumnDefinitions>
+                                                    <TextBlock Text="⋮⋮" Foreground="#606078" FontSize="13" Margin="0,0,8,0" VerticalAlignment="Center" Cursor="SizeAll"/>
+                                                    <Button Grid.Column="1" Background="Transparent" BorderThickness="0" Padding="0" HorizontalContentAlignment="Left"
+                                                            Command="{Binding DataContext.ToggleGroupCommand, RelativeSource={RelativeSource AncestorType=Window}}"
+                                                            CommandParameter="{Binding}">
+                                                        <TextBlock Text="{Binding HeaderText}" Foreground="#E8E8EC" FontSize="13" FontWeight="SemiBold"/>
+                                                    </Button>
+                                                    <TextBlock Grid.Column="2" Text="▾" Foreground="#8A8AF0" FontSize="13" VerticalAlignment="Center"/>
+                                                </Grid>
+
+                                                <ListBox Style="{x:Null}"
+                                                         Background="Transparent" BorderThickness="0"
+                                                         ItemsSource="{Binding Models}"
+                                                         SelectedItem="{Binding DataContext.SelectedModel, RelativeSource={RelativeSource AncestorType=Window}, Mode=TwoWay}"
+                                                         ItemContainerStyle="{StaticResource ModelItem}"
+                                                         AllowDrop="True"
+                                                         Visibility="{Binding IsExpanded, Converter={StaticResource BoolToVisibility}}"
+                                                         PreviewMouseLeftButtonDown="ModelList_PreviewMouseLeftButtonDown"
+                                                         PreviewMouseMove="ModelList_PreviewMouseMove"
+                                                         DragEnter="ModelList_DragEnter" DragOver="ModelList_DragOver" Drop="ModelList_Drop"
+                                                         ScrollViewer.HorizontalScrollBarVisibility="Disabled">
+                                                    <ListBox.ItemTemplate>
+                                                        <DataTemplate DataType="m:ModelEntry">
+                                                            <Grid>
+                                                                <Grid.ColumnDefinitions>
+                                                                    <ColumnDefinition Width="Auto"/>
+                                                                    <ColumnDefinition Width="*"/>
+                                                                </Grid.ColumnDefinitions>
+                                                                <TextBlock Text="⋮⋮" Foreground="#555560" FontSize="13" Margin="0,0,8,0" VerticalAlignment="Center" Cursor="SizeAll"/>
+                                                                <StackPanel Grid.Column="1">
+                                                                    <TextBlock Text="{Binding DisplayName}" FontWeight="SemiBold" Foreground="#E8E8EC"/>
+                                                                    <TextBlock Text="{Binding ModelString}" FontSize="11" Foreground="#888894"/>
+                                                                </StackPanel>
+                                                            </Grid>
+                                                        </DataTemplate>
+                                                    </ListBox.ItemTemplate>
+                                                </ListBox>
+                                            </StackPanel>
+                                        </Border>
+                                    </DataTemplate>
+                                </ItemsControl.ItemTemplate>
+                            </ItemsControl>
+                        </ScrollViewer>
                         <DockPanel Grid.Row="2" Margin="0,10,0,0">
                             <Button Style="{StaticResource GhostBtn}" Content="Entfernen" DockPanel.Dock="Right" Padding="10,5" FontSize="12"
                                     Command="{Binding RemoveModelCommand}"/>
