@@ -4,22 +4,28 @@ import de.frank.entropyreducer.data.diagnostics.Diag
 import de.frank.entropyreducer.data.diagnostics.DiagnosticArea
 import de.frank.entropyreducer.data.local.dao.IdeaDao
 import de.frank.entropyreducer.data.local.dao.IdeaWithFollowups
+import de.frank.entropyreducer.data.local.entities.IdeaEntity
 import de.frank.entropyreducer.data.settings.AppSettings
 import de.frank.entropyreducer.data.settings.EncryptedSecretsStore
 import java.time.Instant
+import java.time.LocalDateTime
+import java.time.OffsetDateTime
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
 import java.util.Locale
+import java.util.UUID
 import java.util.concurrent.atomic.AtomicBoolean
 import javax.inject.Inject
 import javax.inject.Singleton
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
@@ -173,6 +179,97 @@ class SecondBrainIdeaConnector @Inject constructor(
             _state.value = _state.value.copy(lastMessage = "Second Brain nicht erreichbar: ${e.message}")
             false
         }
+    }
+
+    /**
+     * Frank-Wunsch 2026-07-04 (Etappe 2, Brain->App): Holt Ideen, die im Second Brain (Kategorie
+     * „Ideen") NEU angelegt wurden, in die App. Abgleich per Titel; in der App geloeschte Ideen
+     * kommen NICHT zurueck (bekannte Titel = Tombstone). Die importierte Idee bekommt den
+     * Brain-Zeitstempel und nur den Text (keine verbesserte Version) — die kann in der App ergaenzt
+     * werden, wodurch sie automatisch wieder ins Brain hochgeladen wird (App->Brain).
+     * Mit Retry, weil der WireGuard-Tunnel nach dem App-Start ein paar Sekunden braucht.
+     */
+    fun pullFromBrain(scope: CoroutineScope) {
+        scope.launch(Dispatchers.IO) {
+            repeat(4) {
+                if (pullOnce()) return@launch
+                delay(3000)
+            }
+        }
+    }
+
+    /** Ein Pull-Versuch. true = Brain erreichbar (fertig), false = Netzfehler (Tunnel evtl. noch nicht oben -> Retry). */
+    private suspend fun pullOnce(): Boolean {
+        if (!settings.secondBrainIdeasConnectorEnabledFlow.first()) return true
+        val key = secrets.secondBrainApiKey.orEmpty().trim()
+        if (key.isBlank()) return true
+        val auth = "Bearer $key"
+        val brain = try {
+            api.byCategory(auth, "Ideen")
+        } catch (e: CancellationException) {
+            throw e
+        } catch (e: Exception) {
+            Diag.w(
+                DiagnosticArea.SECOND_BRAIN,
+                TAG,
+                "CHECKPOINT step=pullUnreachable actual=error ok=false message=${e.message ?: e::class.java.simpleName}",
+            )
+            return false
+        }
+        val appTitles = ideaDao.getAllIdeasForBackup().map { it.title.trim() }.toSet()
+        val knownTitles = settings.readSecondBrainIdeaTitles().values.map { it.trim() }.toSet()
+        var imported = 0
+        for (item in brain.items) {
+            val title = item.title?.trim().orEmpty()
+            if (title.isBlank()) continue
+            if (title in appTitles) continue      // schon in der App
+            if (title in knownTitles) continue     // Tombstone: in der App geloescht -> nicht zurueckholen
+            val ts = parseIsoToMs(item.createdAt)
+            val newId = UUID.randomUUID().toString()
+            // Reihenfolge: erst als „synchron" markieren, DANN anlegen — sonst wuerde der
+            // App->Brain-Flow die frische Idee sofort im App-Format neu hochladen (Ping-Pong).
+            settings.markSecondBrainIdeaSynced(newId, "$newId:$ts")
+            settings.setSecondBrainIdeaTitle(newId, title)
+            ideaDao.upsertIdea(
+                IdeaEntity(
+                    id = newId,
+                    timestampMs = ts,
+                    title = title,
+                    text = item.text.trim(),
+                    summary = null,
+                    improvedText = null,
+                    isImproved = false,
+                    updatedAt = null,
+                ),
+            )
+            imported++
+            Diag.i(
+                DiagnosticArea.SECOND_BRAIN,
+                TAG,
+                "CHECKPOINT step=pullImported expected=idea_created actual=created ok=true title=\"$title\" ts=$ts id=$newId",
+            )
+        }
+        Diag.i(
+            DiagnosticArea.SECOND_BRAIN,
+            TAG,
+            "CHECKPOINT step=pullComplete expected=brain_scanned actual=brain=${brain.items.size},imported=$imported ok=true",
+        )
+        if (imported > 0) {
+            _state.value = _state.value.copy(
+                lastMessage = "$imported neue Idee(n) aus dem Second Brain geholt.",
+                lastSyncedAtMs = System.currentTimeMillis(),
+            )
+        }
+        return true
+    }
+
+    /** ISO-8601-Zeitstempel des Brains -> Millis; robust gegen die gaengigen Formate. */
+    private fun parseIsoToMs(iso: String?): Long {
+        if (iso.isNullOrBlank()) return System.currentTimeMillis()
+        return runCatching { OffsetDateTime.parse(iso).toInstant().toEpochMilli() }
+            .recoverCatching { Instant.parse(iso).toEpochMilli() }
+            .recoverCatching { LocalDateTime.parse(iso).atZone(ZoneId.systemDefault()).toInstant().toEpochMilli() }
+            .getOrDefault(System.currentTimeMillis())
     }
 
     private suspend fun syncRows(rows: List<IdeaWithFollowups>, reason: String) {

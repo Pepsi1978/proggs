@@ -75,4 +75,7 @@ data class SecondBrainCategoryResponse(
 data class SecondBrainCategoryItem(
     @SerialName("doc_id") val docId: String? = null,
     val title: String? = null,
+    val text: String = "",
+    @SerialName("created_at") val createdAt: String? = null,
+    @SerialName("updated_at") val updatedAt: String? = null,
 )

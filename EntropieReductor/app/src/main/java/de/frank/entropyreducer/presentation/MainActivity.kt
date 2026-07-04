@@ -62,6 +62,9 @@ class MainActivity : ComponentActivity() {
     @Inject
     lateinit var secondBrainVpnConnector: de.frank.entropyreducer.data.remote.brain.SecondBrainVpnConnector
 
+    @Inject
+    lateinit var secondBrainIdeaConnector: de.frank.entropyreducer.data.remote.brain.SecondBrainIdeaConnector
+
     private val vpnPermissionLauncher =
         registerForActivityResult(ActivityResultContracts.StartActivityForResult()) { result ->
             if (result.resultCode == RESULT_OK) {
@@ -118,6 +121,10 @@ class MainActivity : ComponentActivity() {
     override fun onStart() {
         super.onStart()
         maybeStartSecondBrainTunnel()
+        // Etappe 2 (Brain->App, Frank-Wunsch 2026-07-04): im Second Brain neu angelegte Ideen in die
+        // App holen. Mit Retry (der WireGuard-Tunnel braucht nach dem Vordergrund-Wechsel kurz);
+        // prueft intern Key + aktivierten Ideen-Schalter.
+        secondBrainIdeaConnector.pullFromBrain(lifecycleScope)
     }
 
     override fun onStop() {
