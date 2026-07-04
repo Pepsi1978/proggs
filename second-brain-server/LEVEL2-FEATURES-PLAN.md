@@ -5,6 +5,16 @@
 > Franks Vision: Das Second Brain soll wie ein **Unterbewusstsein** funktionieren — immer da,
 > immer relevant, mit Gesamtüberblick; Langzeitgedächtnis (Qdrant) + Kurzzeitgedächtnis;
 > lernt in jeder (Programmier-)Session automatisch dazu.
+>
+> **Schwester-Plan:** Eine parallele Cowork-Session hat am selben Tag unabhängig recherchiert und
+> `best-practices/second-brain/second-brain-2.0-unterbewusstsein-50-features.md` erstellt (#47463).
+> Beide Pläne decken sich im Kern (Kern-Blöcke, Schlaf-Agent, Hybrid-Suche/RRF, Session-Hooks,
+> Notify/Question/Review, bi-temporale Fakten, Soft-Decay) — das validiert die Richtung doppelt.
+> Nur dort: ntfy-Push-Kanal, ACE-Playbook pro Projekt, Spaced-Repetition-Resurfacing, ColBERT-
+> Rescoring, Heat-Score, Blocks-als-Markdown-in-Git, Agent-Inbox. Nur hier: Android-System-Capture
+> (Widget/Share-Sheet/Tile), Gehirn-Gesundheits-KPIs, Wissens-Graph-Ansicht, Friction-Detektor,
+> Multi-Query-Recall, Wochenrückblick, Morning-Brain-Dump-Ritual, Streaming-TTS. Bei der Umsetzung
+> BEIDE Listen als Ideen-Pool nutzen.
 
 ## Ist-Stand (worauf aufgebaut wird)
 
