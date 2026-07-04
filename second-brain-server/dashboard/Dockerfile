@@ -6,6 +6,7 @@ ENV PYTHONUNBUFFERED=1 PIP_NO_CACHE_DIR=1
 COPY requirements.txt .
 RUN pip install --upgrade pip && pip install -r requirements.txt
 COPY app.py .
+COPY features.json .
 COPY static ./static
 RUN chown -R appuser:appuser /app
 USER appuser
