@@ -335,8 +335,9 @@ class SecondBrainIdeaConnector @Inject constructor(
 
     /**
      * Laedt ausstehende/geaenderte Ideen hoch und entfernt in der App geloeschte per Titel.
-     * @return true, wenn ein NETZFEHLER den Upload abbrach (Retry sinnvoll) — false, wenn fertig,
-     *         nichts zu tun war oder nur ein nicht-netzbedingter Grund (fehlender Key) vorlag.
+     * @return true, wenn ein NETZFEHLER einen Upload ODER eine Loeschung (forget) abbrach (Retry
+     *         sinnvoll) — false, wenn fertig, nichts zu tun war oder nur ein nicht-netzbedingter
+     *         Grund (fehlender Key) vorlag.
      *         Bestehende Aufrufer (Flow-Observer, syncAllNow, resyncAll) ignorieren den Rueckgabewert.
      */
     private suspend fun syncRows(rows: List<IdeaWithFollowups>, reason: String): Boolean {
@@ -359,6 +360,10 @@ class SecondBrainIdeaConnector @Inject constructor(
         //    nicht mehr existieren (in der App geloescht) -> per Titel aus dem Brain entfernen.
         val deletedIds = uploadedTitles.keys - currentIds
         var deleted = 0
+        // Fix 2026-07-04: Auch eine fehlgeschlagene Loeschung (forget) soll den Retry ausloesen —
+        // sonst wuerde eine offline geloeschte Idee erst beim naechsten App-Start (statt sofort per
+        // Retry) aus dem Brain verschwinden. true, sobald ein forget an einem Netzfehler scheitert.
+        var deletionNetworkError = false
         for (id in deletedIds) {
             val title = uploadedTitles[id] ?: continue
             try {
@@ -373,6 +378,7 @@ class SecondBrainIdeaConnector @Inject constructor(
             } catch (e: CancellationException) {
                 throw e
             } catch (e: Exception) {
+                deletionNetworkError = true
                 Diag.e(
                     DiagnosticArea.SECOND_BRAIN,
                     TAG,
@@ -395,7 +401,7 @@ class SecondBrainIdeaConnector @Inject constructor(
                 lastMessage = if (deleted > 0) "$deleted Idee(n) im Second Brain geloescht, Rest aktuell."
                 else "Alle Ideen sind im Second Brain aktuell.",
             )
-            return false
+            return deletionNetworkError
         }
 
         _state.value = _state.value.copy(syncing = true, lastMessage = "$reason: ${pending.size} Idee(n) offen.")
@@ -479,7 +485,7 @@ class SecondBrainIdeaConnector @Inject constructor(
             TAG,
             "CHECKPOINT step=syncComplete expected=all_pending_synced actual=synced=$synced,deleted=$deleted,pending=${pending.size} ok=${synced == pending.size} reason=$reason",
         )
-        return false
+        return deletionNetworkError
     }
 
     private fun syncStamp(row: IdeaWithFollowups): String {
