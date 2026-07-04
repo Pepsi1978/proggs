@@ -32,6 +32,7 @@
 | 4 | OpenCode `type:"remote"` verbindet nicht (Auth) | Header-Syntax: **`{env:VAR}` — NIEMALS `${env:VAR}`** (Dollar killt es). Bei API-Key-Servern `"oauth": false` + `headers`. Unser sb-mcp braucht GAR keinen Header (WireGuard). | §1 |
 | 5 | `opencode mcp debug <name>` zeigt „failed", TUI nutzt das Tool aber | Bekannt irrefuehrend — Debug-Status ≠ TUI-Realitaet. Im Zweifel `/status` in der TUI + echten Tool-Aufruf testen. | §1 |
 | 6 | Claude Code: Remote-MCP startet nicht (Windows) | NICHT `mcp-remote` als stdio-Wrapper nehmen (#3423: bricht auf Windows sofort ab). **Direkt** `type:"http"` + `url` in `.mcp.json` nutzen (kein npx-Child-Prozess). | §2 |
+| 6a | Codex-App an das Gehirn anbinden / haengt beim ersten Verbinden | Einstellungen → MCP Server → **Streamable HTTP**, Name `second-brain`, URL `http://10.8.0.1:8001/mcp` (HTTP! Port 8001 spricht kein TLS — HTTPS gibt es nur fuers Cockpit an 443), Token/Header LEER. Haengt die App beim ersten Verbinden kurz: warten bzw. App neu starten — der Eintrag ist bereits in `~/.codex/config.toml` gespeichert und funktioniert danach. | §2a |
 | 7 | ⭐ Tools des Gehirns tauchen gar nicht auf | Reihenfolge pruefen: `enabled:true`? global `tools:{...false}` aktiv? Tunnel/Host-Header ok? Bei Claude: 64-Zeichen-Limit `mcp__<server>__<tool>` (unser `second-brain` ist kurz genug). `/status`(OpenCode) bzw. `/mcp`(Claude) zeigt den Verbindungsstatus. | §3 |
 | 8 | ⭐ Server-only-Agent soll NUR das Gehirn nutzen | OpenCode: global `tools:{"*":false}`-Aequivalent vermeiden — gezielt `"second-brain*": true` im Agent + andere Tools `deny`. Claude Code: MCP-Tools-nur-fuer-Subagent ist seit #6915 moeglich. | §4 |
 | 9 | Unerwartet hohe Token / teuer beim Server-Agenten | Jedes MCP-Tool-Schema laedt in JEDEN Prompt (~10-20k+ bei vielen Servern). Claude Tool Search ab 2.1.7 mildert automatisch (ihr: 2.1.187). Nicht gebrauchte MCP pro Agent deaktivieren. | §7 |
@@ -90,6 +91,25 @@ manuelle `npx`-Aufruf klappt. Verwandt: #4097 (transport closes after init, DUPL
   Server-Argumente.
 **Versionen:** Claude Code 2.1.187; #3423 CLOSED/completed. **Quelle:** code.claude.com/docs (mcp) ·
 github.com/anthropics/claude-code/issues/3423 · /issues/4097.
+
+## 2a. Codex-App (OpenAI Desktop): Gehirn anbinden — bestaetigte Werte + Erst-Verbindungs-Haenger
+**Symptom:** Beim Hinzufuegen des sb-mcp in der Codex-App (Einstellungen → Integrationen → MCP Server)
+scheint die App sich aufzuhaengen; unklar, ob der Eintrag gespeichert wurde.
+**Befund (live verifiziert 2026-07-04):** Der Dialog schreibt den Eintrag SOFORT nach
+`~/.codex/config.toml` (`[mcp_servers.second-brain]` mit `enabled = true` + `url`), auch wenn die UI
+noch haengt. Der Server war dabei nachweislich gesund (initialize-Handshake per curl in 0,08 s, HTTP 200).
+Das Haengen ist ein transienter Erst-Verbindungs-Effekt der App — nach Warten/App-Neustart lief die
+Verbindung ohne weitere Aenderung.
+**Bestaetigte Eintrags-Werte (Codex-App-Dialog):**
+- Name: `second-brain` · Umschalter: **Streamable HTTP** (nicht STDIO)
+- URL: `http://10.8.0.1:8001/mcp` — **HTTP, nicht HTTPS** (Port 8001 spricht kein TLS; HTTPS existiert
+  auf dem VPS nur fuer das Cockpit an `https://10.8.0.1:443` via Caddy → Mikrofon-secure-context)
+- Bearer-Token-Umgebungsvariable / Header / Header-aus-Env: **alles leer** (WireGuard-Tunnel ist der Kanal)
+**FIX (funktionserhaltend):** Werte wie oben eintragen, speichern; haengt die UI → kurz warten oder App
+neu starten (Config ist schon geschrieben), NICHT den Eintrag loeschen/neu anlegen. Voraussetzung wie
+immer §5: WireGuard-Tunnel aktiv.
+**Versionen:** Codex-App 26.623.101652 (Windows), sb-mcp 1.3.2. **Quelle:** eigener Live-Vorfall
+2026-07-04 (curl-Handshake + config.toml-Inspektion), als solcher gekennzeichnet.
 
 ## 3. Tools des Gehirns tauchen nicht auf / werden nicht genutzt
 **Symptom:** Verbindung gilt als „connected", aber keine `second-brain_*`-Tools; oder das Modell ruft sie nie.
