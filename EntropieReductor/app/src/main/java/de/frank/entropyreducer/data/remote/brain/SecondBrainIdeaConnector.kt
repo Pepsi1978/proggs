@@ -216,8 +216,11 @@ class SecondBrainIdeaConnector @Inject constructor(
             )
             return false
         }
-        val appTitles = ideaDao.getAllIdeasForBackup().map { it.title.trim() }.toSet()
-        val knownTitles = settings.readSecondBrainIdeaTitles().values.map { it.trim() }.toSet()
+        val brainTitles = brain.items.mapNotNull { it.title?.trim() }.filter { it.isNotEmpty() }.toSet()
+        val appIdeas = ideaDao.getAllIdeasForBackup()
+        val appTitles = appIdeas.map { it.title.trim() }.toSet()
+        val uploadedMap = settings.readSecondBrainIdeaTitles()
+        val knownTitles = uploadedMap.values.map { it.trim() }.toSet()
         var imported = 0
         for (item in brain.items) {
             val title = item.title?.trim().orEmpty()
@@ -249,14 +252,42 @@ class SecondBrainIdeaConnector @Inject constructor(
                 "CHECKPOINT step=pullImported expected=idea_created actual=created ok=true title=\"$title\" ts=$ts id=$newId",
             )
         }
+        // Loeschung Brain->App (Frank-Wunsch 2026-07-04): App-Ideen, die vom Brain kamen (Titel in
+        // uploadedMap = synchronisiert) UND in der App existieren, aber im Brain NICHT mehr vorhanden
+        // sind -> wurden im Brain geloescht -> auch in der App entfernen. SICHERUNG (Ladefenster-Schutz,
+        // brain-api §1.15): NUR loeschen, wenn das Brain sicher vollstaendig geladen ist (health.ready) —
+        // sonst wuerde eine kurz unvollstaendige Server-Antwort App-Ideen faelschlich loeschen.
+        var deletedInApp = 0
+        val ready = try {
+            api.health(auth).ready
+        } catch (e: CancellationException) {
+            throw e
+        } catch (e: Exception) {
+            false
+        }
+        if (ready) {
+            for (idea in appIdeas) {
+                val syncedTitle = (uploadedMap[idea.id] ?: continue).trim()
+                if (syncedTitle.isNotEmpty() && syncedTitle !in brainTitles) {
+                    ideaDao.deleteIdeaById(idea.id)
+                    settings.clearSecondBrainIdeaSync(idea.id)
+                    deletedInApp++
+                    Diag.i(
+                        DiagnosticArea.SECOND_BRAIN,
+                        TAG,
+                        "CHECKPOINT step=pullDeletedInApp expected=idea_removed actual=removed ok=true title=\"$syncedTitle\" id=${idea.id}",
+                    )
+                }
+            }
+        }
         Diag.i(
             DiagnosticArea.SECOND_BRAIN,
             TAG,
-            "CHECKPOINT step=pullComplete expected=brain_scanned actual=brain=${brain.items.size},imported=$imported ok=true",
+            "CHECKPOINT step=pullComplete expected=brain_scanned actual=brain=${brain.items.size},imported=$imported,deletedInApp=$deletedInApp,ready=$ready ok=true",
         )
-        if (imported > 0) {
+        if (imported > 0 || deletedInApp > 0) {
             _state.value = _state.value.copy(
-                lastMessage = "$imported neue Idee(n) aus dem Second Brain geholt.",
+                lastMessage = "Second Brain synchronisiert: $imported neu, $deletedInApp entfernt.",
                 lastSyncedAtMs = System.currentTimeMillis(),
             )
         }
