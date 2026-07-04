@@ -26,6 +26,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -235,10 +236,17 @@ fun AmazfitTrainingsScreen(
             } else {
                 items(state.filtered, key = { it.trackId }) { w ->
                     GlassCard(modifier = Modifier.fillMaxWidth()) {
+                        // Performance (Tiefen-Debugging 2026-07-04, Almanach compose §10.5):
+                        // RestingHr-Suche memoiziert — lief vorher pro sichtbarem Item bei
+                        // jeder Recomposition ueber die GANZE Whoop-Historie (O(n) + 2
+                        // ZonedDateTime-Allokationen pro Snapshot). Ergebnis identisch.
+                        val restingHr = remember(state.snapshots, w.startMs) {
+                            findRestingHrForWorkoutDay(state.snapshots, w.startMs)
+                        }
                         AmazfitWorkoutRow(
                             workout = w,
                             onClick = { onOpenDetail(w.trackId) },
-                            restingHrForDay = findRestingHrForWorkoutDay(state.snapshots, w.startMs),
+                            restingHrForDay = restingHr,
                         )
                     }
                 }

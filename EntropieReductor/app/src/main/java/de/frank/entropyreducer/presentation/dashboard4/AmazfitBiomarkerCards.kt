@@ -105,7 +105,12 @@ internal fun AmazfitLastTrainingHeroCard(
     onSaveOverrides: (String, ManualWorkoutOverrides) -> Unit = { _, _ -> },
 ) {
     val latest = workouts.firstOrNull() ?: return
-    val restingHr = findRestingHrForWorkoutDay(snapshots, latest.startMs)
+    // Performance (Tiefen-Debugging 2026-07-04, Almanach compose §10.5): O(n)-Suche ueber die
+    // gesamte Whoop-Historie (inkl. 2 ZonedDateTime-Allokationen pro Snapshot) lief bei JEDER
+    // Recomposition — memoiziert auf (snapshots, startMs). Ergebnis identisch.
+    val restingHr = remember(snapshots, latest.startMs) {
+        findRestingHrForWorkoutDay(snapshots, latest.startMs)
+    }
     LetzterLaufHero(
         w = latest,
         restingHrForDay = restingHr,
@@ -176,10 +181,15 @@ internal fun AmazfitTrainingsCard(
             } else {
                 rest.forEachIndexed { i, w ->
                     if (i > 0) Spacer(Modifier.height(8.dp))
+                    // Performance (Tiefen-Debugging 2026-07-04): RestingHr-Suche memoiziert —
+                    // lief vorher pro Row bei jeder Recomposition ueber die ganze Whoop-Historie.
+                    val restingHr = remember(snapshots, w.startMs) {
+                        findRestingHrForWorkoutDay(snapshots, w.startMs)
+                    }
                     AmazfitWorkoutRow(
                         workout = w,
                         onClick = { onOpenDetail(w.trackId) },
-                        restingHrForDay = findRestingHrForWorkoutDay(snapshots, w.startMs),
+                        restingHrForDay = restingHr,
                     )
                 }
                 val remaining = workouts.size - 1 - rest.size

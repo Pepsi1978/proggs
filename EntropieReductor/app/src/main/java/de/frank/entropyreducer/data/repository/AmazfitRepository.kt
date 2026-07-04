@@ -389,36 +389,43 @@ constructor(
         var inserted = 0
         var replaced = 0
         var skippedDeleted = 0
-        for (session in sessions) {
-            // Manuell geloeschtes Training? Nicht erneut importieren (Tombstone gewinnt).
-            if (deletedStarts.any { kotlin.math.abs(it - session.startMs) <= toleranceMs }) {
-                skippedDeleted++
-                continue
-            }
-            val newEntity = healthConnectSessionToEntity(session)
-            val match = existing.find { kotlin.math.abs(it.startMs - session.startMs) <= toleranceMs }
-            when {
-                match == null -> {
-                    workoutDao.upsert(newEntity)
-                    inserted++
+        // Performance (Tiefen-Debugging 2026-07-04): ALLE Schreibvorgaenge des Merges in EINER
+        // Room-Transaktion — vorher invalidierte jeder einzelne upsert die amazfit_workouts-Flows
+        // (N Emissionen -> N komplette Biomarker-UI-Recompositions waehrend Frank scrollt).
+        // Jetzt genau EINE Invalidation am Transaktionsende. Reihenfolge/Ergebnis identisch;
+        // im Block laufen NUR DAO-Aufrufe (kein Netzwerk, kein Dispatcher-Wechsel — Room-BP §4).
+        appDatabase.withTransaction {
+            for (session in sessions) {
+                // Manuell geloeschtes Training? Nicht erneut importieren (Tombstone gewinnt).
+                if (deletedStarts.any { kotlin.math.abs(it - session.startMs) <= toleranceMs }) {
+                    skippedDeleted++
+                    continue
                 }
-                match.source == "strava" || match.manualOverridesMs != null -> {
-                    // bewusst behalten — nicht ueberschreiben
-                }
-                else -> {
-                    // Frank-Bugfix: Wetter (Open-Meteo) vom bestehenden Eintrag uebernehmen — sonst
-                    // wuerde die frische HC-Version (weather=null) das schon recherchierte Wetter
-                    // loeschen und der Backfill muesste es neu holen (sichtbares Flackern). So bleibt
-                    // ein einmal recherchierter Wert stabil; nur Trainings OHNE Wetter holt der Backfill.
-                    val preserved =
-                        newEntity.copy(
-                            weatherTempCelsius = match.weatherTempCelsius,
-                            weatherCondition = match.weatherCondition,
-                            weatherFetchedMs = match.weatherFetchedMs,
-                        )
-                    if (match.trackId != preserved.trackId) workoutDao.deleteByTrackId(match.trackId)
-                    workoutDao.upsert(preserved)
-                    replaced++
+                val newEntity = healthConnectSessionToEntity(session)
+                val match = existing.find { kotlin.math.abs(it.startMs - session.startMs) <= toleranceMs }
+                when {
+                    match == null -> {
+                        workoutDao.upsert(newEntity)
+                        inserted++
+                    }
+                    match.source == "strava" || match.manualOverridesMs != null -> {
+                        // bewusst behalten — nicht ueberschreiben
+                    }
+                    else -> {
+                        // Frank-Bugfix: Wetter (Open-Meteo) vom bestehenden Eintrag uebernehmen — sonst
+                        // wuerde die frische HC-Version (weather=null) das schon recherchierte Wetter
+                        // loeschen und der Backfill muesste es neu holen (sichtbares Flackern). So bleibt
+                        // ein einmal recherchierter Wert stabil; nur Trainings OHNE Wetter holt der Backfill.
+                        val preserved =
+                            newEntity.copy(
+                                weatherTempCelsius = match.weatherTempCelsius,
+                                weatherCondition = match.weatherCondition,
+                                weatherFetchedMs = match.weatherFetchedMs,
+                            )
+                        if (match.trackId != preserved.trackId) workoutDao.deleteByTrackId(match.trackId)
+                        workoutDao.upsert(preserved)
+                        replaced++
+                    }
                 }
             }
         }
@@ -460,13 +467,22 @@ constructor(
         val candidates = workoutDao.getWorkoutsMissingWeather()
         if (candidates.isEmpty()) return 0
         var enriched = 0
+        // Performance (Tiefen-Debugging 2026-07-04): Fetch-Phase und Write-Phase getrennt.
+        // Vorher schrieb jeder Abruf sofort einzeln (updateWeather) -> bis zu 26 Room-
+        // Invalidationen ueber ~4s gestreckt (delay), jede loeste eine KOMPLETTE Recomposition
+        // aller sichtbaren Biomarker-Karten aus — genau waehrend Frank nach dem Tab-Wechsel
+        // scrollt (sein Ruckel-Report). Jetzt: erst alle Netzwerk-Fetches sammeln (delay als
+        // API-Schonung bleibt ZWISCHEN den Fetches), dann ALLE Writes in EINER Transaktion
+        // = genau 1 Invalidation. Werte/Verhalten identisch, nur atomar statt troepfelnd.
+        data class WeatherWrite(val trackId: String, val temp: Int?, val condition: String?, val fetchedMs: Long)
+        val writes = ArrayList<WeatherWrite>(minOf(candidates.size, maxPerRun))
         for ((processed, w) in candidates.withIndex()) {
             if (processed >= maxPerRun) break
             val now = System.currentTimeMillis()
             val latLon = firstLatLon(w.gpsTrackJson)
             if (latLon == null) {
                 // Kein brauchbarer GPS-Punkt -> Abruf-Zeitstempel setzen (nicht erneut versuchen).
-                workoutDao.updateWeather(w.trackId, null, null, now)
+                writes.add(WeatherWrite(w.trackId, null, null, now))
                 continue
             }
             val info =
@@ -478,9 +494,17 @@ constructor(
                     durationMinutes = w.durationSeconds?.let { it / 60 },
                 )
             // Auch bei null (API-Fehler/keine Daten): fetchedMs setzen -> kein Dauer-Retry.
-            workoutDao.updateWeather(w.trackId, info?.tempCelsius, info?.condition, now)
+            writes.add(WeatherWrite(w.trackId, info?.tempCelsius, info?.condition, now))
             if (info != null) enriched++
             delay(150) // sanftes Rate-Limiting gegen Open-Meteo-Burst
+        }
+        if (writes.isNotEmpty()) {
+            // NUR DAO-Aufrufe im Block (kein Netzwerk, kein Dispatcher-Wechsel — Room-BP §4).
+            appDatabase.withTransaction {
+                for (wr in writes) {
+                    workoutDao.updateWeather(wr.trackId, wr.temp, wr.condition, wr.fetchedMs)
+                }
+            }
         }
         if (enriched > 0) {
             Diag.i(
