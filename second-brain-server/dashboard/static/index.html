@@ -1016,6 +1016,8 @@ button{font-family:inherit;cursor:pointer}
         /* Modell + Thinking nebeneinander (Einstellungen -> Bibliothekar-Agent, Frank-Wunsch 05.07.) */
         .mr-pair{display:grid;grid-template-columns:1fr 1fr;gap:10px;align-items:end;margin-bottom:12px}
         .mr-pair .field{margin-bottom:0}
+        /* Limit-Felder ausgegraut, wenn 'Ohne Begrenzung' AN ist (Frank-Wunsch 05.07.) */
+        .lib-dim{opacity:.4;pointer-events:none}
         .lib-run-line{display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-top:10px}
         .lib-spin{display:inline-block;width:14px;height:14px;border:2px solid var(--border);border-top-color:var(--accent);
           border-radius:50%;animation:libspin .8s linear infinite;vertical-align:-2px}
@@ -3749,6 +3751,7 @@ button{font-family:inherit;cursor:pointer}
       (r.reasoning_available||["none","low","medium","high","xhigh"]).forEach(v=>{ const o=document.createElement("option"); o.value=v; o.textContent=v; if(v===(s.reasoning||"high"))o.selected=true; rs.appendChild(o); });
       document.getElementById("libMaxPer").value=s.max_per_task??8;
       document.getElementById("libBudget").value=s.llm_budget??250;
+      syncLibLimits();
       const tg=document.getElementById("libTaskToggles"); tg.innerHTML="";
       (r.standard_tasks||[]).forEach(t=>{
         const row=document.createElement("div"); row.className="lib-taskrow";
@@ -3760,6 +3763,17 @@ button{font-family:inherit;cursor:pointer}
       renderLibCustom(s.custom_tasks||[]);
     }catch(e){ document.getElementById("libSettingsState").textContent="Bibliothekar nicht erreichbar ("+e.message+")."; }
   }
+
+  // 'Ohne Begrenzung' AN -> die zwei Limit-Felder ausgrauen + sperren (sichtbar wirkungslos)
+  function syncLibLimits(){
+    const off=document.getElementById("libUnlimited").checked;
+    ["libMaxPer","libBudget"].forEach(id=>{
+      const el=document.getElementById(id); if(!el) return;
+      el.disabled=off;
+      const f=el.closest(".field"); if(f) f.classList.toggle("lib-dim", off);
+    });
+  }
+  document.getElementById("libUnlimited").addEventListener("change", syncLibLimits);
 
   document.getElementById("libSaveSettings").addEventListener("click", async()=>{
     const st=document.getElementById("libSettingsState");
