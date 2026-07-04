@@ -43,8 +43,29 @@ synchron gehalten.
 Richtung App → Brain (Upload, Update, Löschung, Titel-Änderung) ist damit vollständig.
 Der Server hat alles Nötige (`/store`, `DELETE /by-title`, `/by-category`) — kein Server-Umbau.
 
-## Etappe 2 (offen) — Brain → App
+## Etappe 2 (umgesetzt, v0.20.6) — Brain → App
 
-Im Brain (Kategorie „Ideen") neu angelegte Einträge in die App holen (via `/by-category`),
-inkl. Doppel-/Konflikt-Vermeidung (Titel-Abgleich, Tombstones gegen Wiederauferstehung
-gelöschter Ideen). Bewusst als zweiter Schritt, damit Etappe 1 schnell testbar ist.
+Im Brain (Kategorie „Ideen") neu angelegte Einträge werden in die App geholt (via `/by-category`),
+mit Titel-Abgleich + Tombstones (uploadedTitles) gegen Wiederauferstehung. Import mit Brain-Zeitstempel,
+nur Text. Löschung Brain→App: im Brain entfernte, in der App synchronisierte Ideen werden auch in der
+App gelöscht — abgesichert durch `health.ready` (Ladefenster-Schutz gegen fälschliches Massenlöschen).
+Trigger: beim App-Start (MainActivity) UND beim Betreten des Ideen-Reiters (IdeenScreen + IdeenBrainSyncViewModel),
+je mit Retry für den Tunnel-Aufbau. Alle vier Richtungen live verifiziert.
+
+## Etappe 3 (offen, To-Do 2026-07-04) — dasselbe für ALLE weiteren Listen
+
+Frank-Wunsch: den kompletten Ideen-Sync **1:1 auf alle weiteren App-Listen** ausrollen, je mit
+eigenem An/Aus-Schalter im Second-Brain-Einstellungsbereich:
+- **Entropie / „Forscher"** (EntropyEntryEntity / EntropyEntryDao)
+- **Thesen**
+- **Journal** (Tagebuch / JournalMirror)
+- **Gewohnheiten** (HabitEntity / HabitDao)
+- **Mental** (MentalEntity / MentalSentenceDao)
+
+Jeweils volle bidirektionale Synchronität (rein UND raus) wie bei Ideen — eigene Brain-Kategorie,
+Import/Upload/Löschung beidseitig, Ladefenster- + Tombstone-Schutz, Resync-Knopf.
+
+**Umsetzungs-Hinweis:** Den `SecondBrainIdeaConnector` **generisch parametrisieren** (Kategorie +
+jeweilige DAO + **EIGENE** Settings-Marken-Keys pro Liste — sonst vermischen sich Sync-Stamps/Tombstones)
+statt N Kopien. Schalter je Liste im `SecondBrainSettingsScreen`, Pull-Trigger je Reiter-Screen.
+(Auch als Projekt-Memory `second-brain-all-lists-sync-todo` festgehalten.)
