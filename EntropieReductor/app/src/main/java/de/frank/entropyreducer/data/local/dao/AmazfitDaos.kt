@@ -212,6 +212,31 @@ interface AmazfitWorkoutDao {
             "WHERE trackId = :trackId AND durationSeconds != :durationSeconds",
     )
     suspend fun updateDurationByTrackId(trackId: String, durationSeconds: Long, endMs: Long): Int
+
+    /**
+     * Wetter pro Training (Open-Meteo) setzen: Temperatur (°C), Wetterlage-Wort und den
+     * Abruf-Zeitstempel per trackId. [fetchedMs] wird IMMER gesetzt — auch wenn temp/condition
+     * null sind (API-Fehler/kein Ergebnis) — damit dasselbe Training nicht bei jedem Sync
+     * erneut abgefragt wird.
+     *
+     * @return 1 wenn aktualisiert, sonst 0
+     */
+    @Query(
+        "UPDATE amazfit_workouts SET weatherTempCelsius = :temp, weatherCondition = :condition, " +
+            "weatherFetchedMs = :fetchedMs WHERE trackId = :trackId",
+    )
+    suspend fun updateWeather(trackId: String, temp: Int?, condition: String?, fetchedMs: Long): Int
+
+    /**
+     * Kandidaten fuer den Wetter-Backfill: Trainings, die noch nie einen Wetter-Abruf hatten
+     * (weatherFetchedMs IS NULL) und einen GPS-Track besitzen (ohne Koordinaten kein Wetter).
+     * Neueste zuerst — so bekommen die aktuellen Trainings zuerst ihr Wetter.
+     */
+    @Query(
+        "SELECT * FROM amazfit_workouts WHERE weatherFetchedMs IS NULL AND gpsTrackJson IS NOT NULL " +
+            "ORDER BY startMs DESC",
+    )
+    suspend fun getWorkoutsMissingWeather(): List<AmazfitWorkoutEntity>
 }
 
 /**

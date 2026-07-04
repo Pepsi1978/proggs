@@ -6,7 +6,7 @@ import de.frank.entropyreducer.data.remote.OpenMeteoApi
 import java.time.Instant
 import java.time.LocalDate
 import java.time.ZoneId
-import java.time.format.DateTimeFormatter
+import java.time.ZoneOffset
 import javax.inject.Inject
 import javax.inject.Singleton
 
@@ -49,23 +49,27 @@ constructor(
         cityHint: String? = null,
         durationMinutes: Long? = null,
     ): WeatherInfo? {
-        val zone = ZoneId.systemDefault()
-        val zdt = Instant.ofEpochMilli(startMs).atZone(zone)
-        val dateStr = zdt.format(DateTimeFormatter.ISO_LOCAL_DATE) // yyyy-MM-dd
-        val targetHour = "%sT%02d:00".format(dateStr, zdt.hour)
-        val today = LocalDate.now(zone)
-        val useRecentEndpoint = !zdt.toLocalDate().isBefore(today.minusDays(7))
+        // Grobes Datum in Geraete-Zeitzone — nur fuer die Wahl des Endpunkts und das
+        // Archive-Datumsfenster. Die exakte Ziel-Stunde wird NACH dem Call in der ORTSZEIT
+        // des GPS-Punkts bestimmt (utc_offset aus der Antwort, timezone=auto).
+        val sysZone = ZoneId.systemDefault()
+        val sysDate = Instant.ofEpochMilli(startMs).atZone(sysZone).toLocalDate()
+        val today = LocalDate.now(sysZone)
+        // Innerhalb der letzten 7 Tage: Forecast-Endpunkt (Archive hat ein paar Tage Verzug).
+        val useRecentEndpoint = !sysDate.isBefore(today.minusDays(7))
 
         return try {
             val response =
                 if (useRecentEndpoint) {
                     openMeteo.getRecentWeather(latitude = lat, longitude = lon)
                 } else {
+                    // +/- 1 Tag Puffer, damit die Ortszeit-Stunde des Trainings sicher im
+                    // Datumsfenster liegt (Zeitzonen-Randfall um Mitternacht).
                     openMeteo.getHistoricalWeather(
                         latitude = lat,
                         longitude = lon,
-                        startDate = dateStr,
-                        endDate = dateStr,
+                        startDate = sysDate.minusDays(1).toString(),
+                        endDate = sysDate.plusDays(1).toString(),
                     )
                 }
 
@@ -73,7 +77,7 @@ constructor(
                 Diag.w(
                     DiagnosticArea.BIOMARKER,
                     TAG,
-                    "Open-Meteo Fehler für lat=$lat lon=$lon am $targetHour: ${response.reason}",
+                    "Open-Meteo Fehler für lat=$lat lon=$lon am $sysDate: ${response.reason}",
                 )
                 return null
             }
@@ -82,7 +86,7 @@ constructor(
                 Diag.w(
                     DiagnosticArea.BIOMARKER,
                     TAG,
-                    "Open-Meteo: leere hourly-Antwort für lat=$lat lon=$lon am $targetHour",
+                    "Open-Meteo: leere hourly-Antwort für lat=$lat lon=$lon am $sysDate",
                 )
                 return null
             }
@@ -91,10 +95,24 @@ constructor(
                 Diag.d(
                     DiagnosticArea.BIOMARKER,
                     TAG,
-                    "Open-Meteo: keine Daten für lat=$lat lon=$lon am $targetHour",
+                    "Open-Meteo: keine Daten für lat=$lat lon=$lon am $sysDate",
                 )
                 return null
             }
+
+            // Ziel-Stunde in der ORTSZEIT des GPS-Punkts: startMs (UTC-epoch) um den von
+            // Open-Meteo gelieferten utc_offset verschieben ergibt die Wanduhr-Zeit am
+            // Trainingsort. hourly.time ist bei timezone=auto ebenfalls Ortszeit (ohne Suffix).
+            val offsetSec = response.utcOffsetSeconds ?: 0
+            val localWall = Instant.ofEpochMilli(startMs)
+                .plusSeconds(offsetSec.toLong())
+                .atZone(ZoneOffset.UTC)
+            val targetHour = "%04d-%02d-%02dT%02d:00".format(
+                localWall.year,
+                localWall.monthValue,
+                localWall.dayOfMonth,
+                localWall.hour,
+            )
 
             val bestIndex = hourly.time.indexOf(targetHour)
 
@@ -103,7 +121,7 @@ constructor(
                     DiagnosticArea.BIOMARKER,
                     TAG,
                     "Open-Meteo: keine passende Stunde fuer lat=$lat lon=$lon bei $targetHour " +
-                        "(recent=$useRecentEndpoint, erste=${hourly.time.firstOrNull()}, letzte=${hourly.time.lastOrNull()})",
+                        "(recent=$useRecentEndpoint, offset=${offsetSec}s, erste=${hourly.time.firstOrNull()}, letzte=${hourly.time.lastOrNull()})",
                 )
                 return null
             }
@@ -126,8 +144,8 @@ constructor(
             Diag.d(
                 DiagnosticArea.BIOMARKER,
                 TAG,
-                "Open-Meteo OK: lat=$lat lon=$lon bei $targetHour -> " +
-                    "${temp.toInt()}°C ($condition) [WMO=$wmoCode, recent=$useRecentEndpoint]",
+                "Open-Meteo OK: lat=$lat lon=$lon bei $targetHour (Ortszeit) -> " +
+                    "${temp.toInt()}°C ($condition) [WMO=$wmoCode, recent=$useRecentEndpoint, offset=${offsetSec}s]",
             )
 
             WeatherInfo(tempCelsius = temp.toInt(), condition = condition)
@@ -136,7 +154,7 @@ constructor(
             Diag.w(
                 DiagnosticArea.BIOMARKER,
                 TAG,
-                "Open-Meteo Aufruf fehlgeschlagen für lat=$lat lon=$lon bei $targetHour",
+                "Open-Meteo Aufruf fehlgeschlagen für lat=$lat lon=$lon (startMs=$startMs)",
                 t,
             )
             null

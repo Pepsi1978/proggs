@@ -16,9 +16,13 @@ import java.time.Instant
 import java.time.ZoneId
 import javax.inject.Inject
 import javax.inject.Singleton
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.first
 import kotlinx.serialization.json.Json
+import kotlinx.serialization.json.doubleOrNull
+import kotlinx.serialization.json.jsonArray
+import kotlinx.serialization.json.jsonPrimitive
 
 /**
  * Holt taegliche Werte und Workouts aus der Zepp-Cloud (Amazfit T-Rex 3) und speichert sie in zwei
@@ -68,6 +72,8 @@ constructor(
      * sofort verfuegbare Quelle.
      */
     private val healthConnect: HealthConnectManager,
+    /** Wetter-Rueckblick pro Training (Open-Meteo): stuendliche Temperatur am GPS-Ort. */
+    private val weatherRepository: WeatherRepository,
 ) {
 
     fun observeLatestDaily(): Flow<AmazfitDailyEntity?> = dailyDao.getLatest()
@@ -406,6 +412,10 @@ constructor(
                 }
             }
         }
+        // Wetter-Rueckblick (Open-Meteo) fuer alle Trainings ohne Wetter nachziehen — neue UND
+        // bestehende (auch wenn keine neuen Sessions kamen). Ein Fehler hier darf den
+        // Trainings-Sync nie kippen.
+        runCatchingCancellable { backfillMissingWeather() }
         if (inserted + replaced == 0) {
             Diag.d(
                 DiagnosticArea.AMAZFIT,
@@ -422,6 +432,70 @@ constructor(
             "Health-Connect-Workouts: $inserted neu, $replaced ersetzt, $skippedDeleted geloescht-uebersprungen (von ${sessions.size})",
         )
         return inserted + replaced
+    }
+
+    /**
+     * Wetter-Rueckblick pro Training (Open-Meteo, Frank-Wunsch): holt fuer alle Trainings mit
+     * GPS-Track, die noch keinen Wetter-Abruf hatten (weatherFetchedMs IS NULL), die STUENDLICHE
+     * Temperatur + Wetterlage am exakten Ort/zur exakten Zeit (Ortszeit) und schreibt sie ins
+     * Entity. Auch bei erfolglosem Abruf wird weatherFetchedMs gesetzt, damit dasselbe Training
+     * nicht bei jedem Sync erneut abgefragt wird (Poka-Yoke gegen endlose Retries + API-Last).
+     * Deckt neue UND bestehende Trainings ab ("fuer jedes Training das dort abgespeichert ist").
+     *
+     * @param maxPerRun Obergrenze pro Durchlauf, damit ein erster Backfill mit vielen Alt-Trainings
+     *   den Sync nicht unbegrenzt verlaengert; der Rest wird beim naechsten Sync nachgezogen.
+     * @return Anzahl der Trainings, die tatsaechlich ein Wetter-Ergebnis bekamen.
+     */
+    suspend fun backfillMissingWeather(maxPerRun: Int = 200): Int {
+        val candidates = workoutDao.getWorkoutsMissingWeather()
+        if (candidates.isEmpty()) return 0
+        var enriched = 0
+        for ((processed, w) in candidates.withIndex()) {
+            if (processed >= maxPerRun) break
+            val now = System.currentTimeMillis()
+            val latLon = firstLatLon(w.gpsTrackJson)
+            if (latLon == null) {
+                // Kein brauchbarer GPS-Punkt -> Abruf-Zeitstempel setzen (nicht erneut versuchen).
+                workoutDao.updateWeather(w.trackId, null, null, now)
+                continue
+            }
+            val info =
+                weatherRepository.fetchWeatherFor(
+                    lat = latLon.first,
+                    lon = latLon.second,
+                    startMs = w.startMs,
+                    cityHint = w.city,
+                    durationMinutes = w.durationSeconds?.let { it / 60 },
+                )
+            // Auch bei null (API-Fehler/keine Daten): fetchedMs setzen -> kein Dauer-Retry.
+            workoutDao.updateWeather(w.trackId, info?.tempCelsius, info?.condition, now)
+            if (info != null) enriched++
+            delay(150) // sanftes Rate-Limiting gegen Open-Meteo-Burst
+        }
+        if (enriched > 0) {
+            Diag.i(
+                DiagnosticArea.AMAZFIT,
+                TAG,
+                "Wetter-Backfill: $enriched Trainings mit stuendlichem Wetter angereichert",
+            )
+            syncCoordinatorLazy.get().requestSync("Training: Wetter ergaenzt")
+        }
+        return enriched
+    }
+
+    /**
+     * Erster [lat, lon] aus gpsTrackJson (Format [[lat,lon],...]). null wenn leer/unparsebar —
+     * dann gibt es keinen Ort fuer die Wetter-Recherche.
+     */
+    private fun firstLatLon(gpsTrackJson: String?): Pair<Double, Double>? {
+        if (gpsTrackJson.isNullOrBlank()) return null
+        return runCatchingCancellable {
+            val arr = Json.parseToJsonElement(gpsTrackJson).jsonArray
+            val first = arr.firstOrNull()?.jsonArray ?: return@runCatchingCancellable null
+            val lat = first.getOrNull(0)?.jsonPrimitive?.doubleOrNull ?: return@runCatchingCancellable null
+            val lon = first.getOrNull(1)?.jsonPrimitive?.doubleOrNull ?: return@runCatchingCancellable null
+            lat to lon
+        }.getOrNull()
     }
 
     /**

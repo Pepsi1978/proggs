@@ -23,7 +23,10 @@ interface OpenMeteoApi {
         @Query("start_date") startDate: String,
         @Query("end_date") endDate: String,
         @Query("hourly") hourly: String = "temperature_2m,weather_code",
-        @Query("timezone") timezone: String = "Europe/Berlin",
+        // timezone=auto: Open-Meteo liefert die Stundenwerte in der ORTSZEIT des
+        // angefragten GPS-Punkts + utc_offset_seconds — so stimmt die Trainings-Stunde
+        // fuer jeden Standort (Frank-Wunsch: exakte Stunde am exakten Ort, nicht fest Berlin).
+        @Query("timezone") timezone: String = "auto",
     ): OpenMeteoResponse
 
     @GET("https://api.open-meteo.com/v1/forecast")
@@ -33,13 +36,16 @@ interface OpenMeteoApi {
         @Query("past_days") pastDays: Int = 7,
         @Query("forecast_days") forecastDays: Int = 1,
         @Query("hourly") hourly: String = "temperature_2m,weather_code",
-        @Query("timezone") timezone: String = "Europe/Berlin",
+        @Query("timezone") timezone: String = "auto",
     ): OpenMeteoResponse
 }
 
 @Serializable
 data class OpenMeteoResponse(
     val hourly: OpenMeteoHourly? = null,
+    /** Offset der zurueckgelieferten (Orts-)Zeitstempel zu UTC in Sekunden. Bei timezone=auto
+     *  die Zeitzone des GPS-Punkts. Wird genutzt, um die Trainings-Stunde in Ortszeit zu matchen. */
+    @SerialName("utc_offset_seconds") val utcOffsetSeconds: Int? = null,
     val error: Boolean? = null,
     val reason: String? = null,
 )
