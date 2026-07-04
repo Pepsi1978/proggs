@@ -1514,6 +1514,7 @@ button{font-family:inherit;cursor:pointer}
     document.querySelectorAll("[data-tab]").forEach(b=>b.classList.toggle("active",b.dataset.tab===tab));
     document.getElementById("pageTitle").textContent = TABS[tab].title;
     document.getElementById("pageSub").textContent = TABS[tab].sub;
+    if(tab==="overview"){ loadOverview(); loadVitals(); }   // sofort frisch beim Betreten
     if(tab==="brain" && !brainLoaded){ brainLoaded = true; loadEntries(); }
     if(tab==="settings" && !settingsLoaded){ settingsLoaded = true; loadSettings(); }
     if(tab==="librarian"){ libLoaded = true; loadLibrarian(); }
@@ -1675,6 +1676,22 @@ button{font-family:inherit;cursor:pointer}
     }catch(e){
       USING_DEMO = true; renderOverview(DEMO.overview()); setConnected(false);
     }
+  }
+
+  /* Schnell-Vitals (Frank-Wunsch 05.07.): CPU/RAM/Disk/Agent alle 3 s — NUR im Übersicht-Tab. */
+  async function loadVitals(){
+    try{
+      const d = await api("/api/vitals");
+      const ag = d.agent||{}, ok = ag.status==="ok";
+      const as = document.getElementById("agentStatus");
+      as.classList.toggle("off",!ok);
+      document.getElementById("agentWord").textContent = ok ? "Bereit" : "offline";
+      document.getElementById("agentSub").textContent = (ag.model||"–") + " · " + (ag.sessions ?? 0) + " Sitzungen";
+      const sv = d.server||{};
+      setVital("cpu", sv.cpu_pct);
+      setVital("mem", sv.mem_pct, fmtBytes(sv.mem_used)+" / "+fmtBytes(sv.mem_total));
+      setVital("disk", sv.disk_pct, fmtBytes(sv.disk_used)+" / "+fmtBytes(sv.disk_total));
+    }catch(_){ /* Kachel behaelt den letzten Stand — der 20s-Overview meldet Verbindungsprobleme */ }
   }
 
   /* ── Gehirn: Suche / Chips / Liste ────────────────────────────────────── */
@@ -3528,8 +3545,11 @@ button{font-family:inherit;cursor:pointer}
      unsichtbares Polling loeste bisher weiter alle 20s die komplette Server-Kaskade aus
      (brain-Scan + agent + CPU-Messung). Beim Sichtbarwerden wird SOFORT aktualisiert, damit nie
      aeltere Daten zu sehen sind als vorher. Gleiche Anzeige, gleiche 20s-Frequenz bei sichtbarem Tab. */
-  setInterval(()=>{ if(!document.hidden) loadOverview(); }, 20000);
-  document.addEventListener("visibilitychange", ()=>{ if(!document.hidden) loadOverview(); });
+  /* Polls laufen NUR, wenn der Uebersicht-Tab aktiv UND der Browser-Tab sichtbar ist
+     (Frank-Wunsch 05.07.): auf anderen Tabs wird gar nichts abgerufen. */
+  setInterval(()=>{ if(!document.hidden && activeTab==="overview") loadOverview(); }, 20000);
+  setInterval(()=>{ if(!document.hidden && activeTab==="overview") loadVitals(); }, 3000);
+  document.addEventListener("visibilitychange", ()=>{ if(!document.hidden && activeTab==="overview"){ loadOverview(); loadVitals(); } });
 
   /* ── Nachtschicht-Bibliothekar ─────────────────────────────────────────────
      Frontend fuer den librarian-Dienst (Proxy /api/lib/*): Morgen-Report, Tages-Listen
