@@ -65,6 +65,7 @@ QDRANT_PORT = int(os.getenv("QDRANT_PORT", "6333"))
 # gegen das Klartext-HTTP-Qdrant sprechen -> [SSL: WRONG_VERSION_NUMBER]. (bugs/server/qdrant.md §4)
 QDRANT_URL = os.getenv("QDRANT_URL", f"http://{QDRANT_HOST}:{QDRANT_PORT}")
 COLLECTION = os.getenv("SB_COLLECTION", "brain")
+ENTITY_COLLECTION = os.getenv("SB_ENTITY_COLLECTION", "brain_entities")   # Entity-Register (Nr. 36)
 EMBED_MODEL = os.getenv("GEMINI_EMBED_MODEL", "gemini-embedding-001")
 EMBED_DIMS = int(os.getenv("SB_EMBED_DIMS", "1536"))
 # Chunking fuer die SUCHE (gemini-embedding-001: ~2048 Token Input-Limit). Konservativ in Zeichen.
@@ -198,6 +199,21 @@ def _init_store() -> None:
             qc.create_payload_index(collection_name=COLLECTION, field_name="created_at", field_schema="datetime")
         except Exception:  # noqa: BLE001 — Index existiert bereits / nicht kritisch
             pass
+    # Entity-Register (Level-2 Nr. 36, Hub-and-Spoke): zweite, KLEINE Collection — eine Entitaet
+    # (Person/Ort/Geraet/Projekt/Praeparat/...) je Punkt, mit verknuepften doc_ids im Payload.
+    # Vektor = Embedding des Namens+Typs+Aliases (fuers fuzzy Wiederfinden). KEIN Voll-Graph
+    # (belegt Overkill, memory-evolution Kurzcheck #6).
+    if ENTITY_COLLECTION not in _existing:
+        qc.create_collection(
+            collection_name=ENTITY_COLLECTION,
+            vectors_config=VectorParams(size=EMBED_DIMS, distance=Distance.COSINE),
+        )
+        _log(logging.INFO, "Entity-Collection angelegt", collection=ENTITY_COLLECTION, dims=EMBED_DIMS)
+    for _field in ("name_key", "type", "user_id"):
+        try:
+            qc.create_payload_index(collection_name=ENTITY_COLLECTION, field_name=_field, field_schema="keyword")
+        except Exception:  # noqa: BLE001 — Index existiert bereits / nicht kritisch
+            pass
     init_error = None
     _log(logging.INFO, "Speicher initialisiert", embed_model=EMBED_MODEL, dims=EMBED_DIMS,
          collection=COLLECTION, qdrant_url=QDRANT_URL)
@@ -248,7 +264,20 @@ _init_last_attempt = 0.0
 # retrieve statt ALLE Volltexte auf einmal (OOM-Backstop); (f) Self-Healing-Init: scheitert der Start
 # am Qdrant-Boot-Race, holt _require_store die Initialisierung throttled nach (vorher blieb der
 # Container dauerhaft 'degraded'/503 bis zum manuellen Neustart).
-VERSION = "1.20.0 (02.07.2026, 19.02 Uhr)"
+# 1.21.0 (Level-2 Such-Intelligenz, 2026-07-04): (a) HYBRID-SUCHE — /search kombiniert die
+# semantische Vektorsuche mit einer BM25-Stichwortsuche ueber ALLE Chunk-Texte (+Titel/Kategorien)
+# und fusioniert beide Ranglisten per RRF (Reciprocal Rank Fusion, k=60). Exakte Begriffe
+# (Geraetenamen, Praeparate, Projektnamen), die das Embedding "verwaescht", treffen jetzt sicher.
+# Bewusst IN-PROZESS statt Qdrant-Sparse-Migration: null Risiko am Produktivbestand, kein
+# fastembed/ONNX im Image; Index cached (TTL + Invalidierung bei jedem Schreibweg), laedt NUR
+# chunk_text/Metadaten (nie full_text -> kein OOM, qdrant §8). Notaus: SB_HYBRID=0.
+# (b) ENTITY-REGISTER (Hub-and-Spoke, leichtes Entity-Linking statt Voll-Graph — memory-evolution
+# Kurzcheck #6): zweite Collection 'brain_entities' mit REINEN Speicher-Endpunkten
+# /entities/upsert|find|list|docs|delete (KEIN LLM — brain-api bleibt stummer Speicher; die
+# Extraktion macht der Agent). Entity = Name+Typ+Aliases+verknuepfte doc_ids, Vektor fuers
+# fuzzy Wiederfinden. /entities/docs raeumt tote doc_ids lazy auf (Self-Healing).
+# Antwort-Felder /search additiv erweitert: matched_by, dense_score, bm25_rank, retrieval.
+VERSION = "1.21.0 (04.07.2026, 19.45 Uhr)"
 
 # Startup-Banner (Observability-First: Log-Pfad + Version EINMAL ausgeben)
 _log(logging.INFO, "brain-api startet", version=VERSION, log_path=LOG_PATH)
@@ -353,6 +382,7 @@ def _upsert_batched(points: list, wait: bool = True) -> None:
         size += est
     if batch:
         qc.upsert(collection_name=COLLECTION, points=batch, wait=wait)
+    _bm25_invalidate()   # Hybrid-Suche: Stichwort-Index beim naechsten /search frisch bauen
 
 
 def make_doc_id(user_id: str, title: str | None) -> str:
@@ -513,6 +543,7 @@ def point_id(doc_id: str, idx: int) -> str:
 def _delete_doc(doc_id: str) -> None:
     qc.delete(collection_name=COLLECTION,
               points_selector=Filter(must=[FieldCondition(key="doc_id", match=MatchValue(value=doc_id))]))
+    _bm25_invalidate()   # Hybrid-Suche: geloeschte Eintraege sofort aus dem Stichwort-Index
 
 
 # --- Papierkorb (Soft-Delete): thread-sicher + atomar (Handler laufen im Threadpool, fastapi §1) -----
@@ -560,6 +591,126 @@ def _scroll(flt: "Filter | None", limit: "int | None" = None, with_payload=True,
         if off is None or not pts:
             break
     return out
+
+
+# ---------------------------------------------------------------------------
+# Hybrid-Suche Teil 1: BM25-Stichwort-Index (in-Prozess, gecacht) + RRF-Fusion
+# ---------------------------------------------------------------------------
+# WARUM in-Prozess statt Qdrant-Sparse-Vektoren: Sparse-Vektoren erfordern eine Collection-
+# Migration des Produktivbestands + fastembed/ONNX im Image (bewusst entfernt 2026-06-23).
+# Bei Franks Korpusgroesse (hunderte Eintraege, wenige tausend Chunks) laeuft ein Python-BM25
+# in Millisekunden — gleiche Funktion (exakte Begriffe treffen), null Migrationsrisiko.
+# OOM-SICHER: der Index laedt NUR chunk_text (max ~4 KB je Chunk) + kleine Metadaten,
+# NIEMALS full_text (qdrant §8 / fastapi §8). Cache: TTL + Invalidierung bei jedem Schreibweg.
+HYBRID_ENABLED = os.getenv("SB_HYBRID", "1").strip() not in ("0", "false", "no")
+BM25_TTL_S = float(os.getenv("SB_BM25_TTL_S", "60"))    # Index-Cache-Lebensdauer
+BM25_K1 = float(os.getenv("SB_BM25_K1", "1.5"))
+BM25_B = float(os.getenv("SB_BM25_B", "0.75"))
+RRF_K = int(os.getenv("SB_RRF_K", "60"))                # Standard-Konstante der RRF-Formel
+
+_TOKEN_RE = re.compile(r"[a-z0-9äöüß]+")
+
+
+def _bm25_tokens(text: str) -> list[str]:
+    """Einfache, deutsch-freundliche Tokenisierung (lowercase, Wortzeichen inkl. Umlaute)."""
+    return _TOKEN_RE.findall((text or "").lower())
+
+
+class _Bm25Index:
+    """BM25 ueber alle Chunks eines Nutzers. Dokumente = Chunks (Titel+Kategorien+chunk_text),
+    Ergebnis wird auf doc_id-Ebene dedupliziert (bestes Chunk gewinnt)."""
+
+    def __init__(self, chunks: list[dict]):
+        import math
+        self.chunks = chunks                       # je: {doc_id,title,category,categories,parent,parents,created_at,updated_at,text}
+        self.tf: list[dict] = []                   # Term-Frequenzen je Chunk
+        self.dl: list[int] = []                    # Dokumentlaengen
+        df: dict[str, int] = {}                    # Dokument-Frequenz je Term
+        for c in chunks:
+            toks = _bm25_tokens(f"{c.get('title') or ''} {' '.join(c.get('categories') or [])} {c.get('text') or ''}")
+            freq: dict[str, int] = {}
+            for t in toks:
+                freq[t] = freq.get(t, 0) + 1
+            self.tf.append(freq)
+            self.dl.append(len(toks))
+            for t in freq:
+                df[t] = df.get(t, 0) + 1
+        n = max(1, len(chunks))
+        self.avgdl = (sum(self.dl) / n) if chunks else 0.0
+        # IDF nach BM25+ (nie negativ — haeufige Woerter zaehlen einfach wenig)
+        self.idf = {t: math.log(1.0 + (n - d + 0.5) / (d + 0.5)) for t, d in df.items()}
+
+    def search(self, query: str, limit: int, allow) -> list[tuple[dict, float]]:
+        """Top-Chunks fuer die Query, doc_id-dedupliziert. 'allow' = Praedikat ueber die
+        Chunk-Metadaten (Kategorie-/Parent-/Datums-Scope wie im dense-Pfad)."""
+        q = _bm25_tokens(query)
+        if not q or not self.chunks:
+            return []
+        best: dict[str, tuple[dict, float]] = {}
+        for i, c in enumerate(self.chunks):
+            if not allow(c):
+                continue
+            freq, dl = self.tf[i], self.dl[i]
+            score = 0.0
+            for t in q:
+                f = freq.get(t)
+                if not f:
+                    continue
+                idf = self.idf.get(t, 0.0)
+                score += idf * (f * (BM25_K1 + 1)) / (f + BM25_K1 * (1 - BM25_B + BM25_B * dl / max(1.0, self.avgdl)))
+            if score <= 0.0:
+                continue
+            did = c.get("doc_id")
+            if did not in best or score > best[did][1]:
+                best[did] = (c, score)
+        ranked = sorted(best.values(), key=lambda x: x[1], reverse=True)
+        return ranked[:limit]
+
+
+_bm25_cache: dict[str, tuple[float, "_Bm25Index"]] = {}   # user_id -> (built_at, index)
+_bm25_lock = threading.Lock()
+
+
+def _bm25_invalidate() -> None:
+    """Nach JEDEM Schreibweg (Upsert/Delete) den Index verwerfen — naechste Suche baut frisch."""
+    with _bm25_lock:
+        _bm25_cache.clear()
+
+
+def _bm25_index(user_id: str) -> "_Bm25Index":
+    """Gecachter BM25-Index (TTL + Schreib-Invalidierung). Baut aus NUR chunk_text + Metadaten."""
+    now = time.monotonic()
+    with _bm25_lock:
+        hit = _bm25_cache.get(user_id)
+        if hit and now - hit[0] < BM25_TTL_S:
+            return hit[1]
+    # Build AUSSERHALB des Locks (Scroll/Bau nicht serialisieren, fastapi §2-Prinzip)
+    pts = _scroll(Filter(must=[FieldCondition(key="user_id", match=MatchValue(value=user_id))]),
+                  with_payload=["doc_id", "title", "category", "categories", "parent", "parents",
+                                "created_at", "updated_at", "chunk_text"])
+    chunks = [{
+        "doc_id": p.payload.get("doc_id"), "title": p.payload.get("title") or "",
+        "category": p.payload.get("category") or "", "categories": cats_from_payload(p.payload),
+        "parent": p.payload.get("parent") or "", "parents": p.payload.get("parents") or [],
+        "created_at": p.payload.get("created_at") or "", "updated_at": p.payload.get("updated_at"),
+        "text": p.payload.get("chunk_text") or "",
+    } for p in pts]
+    idx = _Bm25Index(chunks)
+    with _bm25_lock:
+        _bm25_cache[user_id] = (time.monotonic(), idx)
+    probe(len(chunks) < 200_000, "BM25-Index ungewoehnlich gross", chunks=len(chunks))
+    return idx
+
+
+def _rrf_fuse(ranked_lists: list[list[str]], k: int = None) -> dict[str, float]:
+    """Reciprocal Rank Fusion: doc_id -> Summe 1/(k+rank) ueber alle Ranglisten (rang-basiert,
+    score-frei — genau darum robust gegen unterschiedliche Score-Skalen von dense vs. BM25)."""
+    kk = k if k is not None else RRF_K
+    fused: dict[str, float] = {}
+    for lst in ranked_lists:
+        for rank, did in enumerate(lst, start=1):
+            fused[did] = fused.get(did, 0.0) + 1.0 / (kk + rank)
+    return fused
 
 
 # ---------------------------------------------------------------------------
@@ -1253,17 +1404,70 @@ def search(req: SearchReq) -> dict:
                          "score": float(h.score), "match": h.payload.get("chunk_text", ""),
                          "created_at": h.payload.get("created_at"),
                          "updated_at": h.payload.get("updated_at"),
-                         "text": h.payload.get("full_text", "")}
-    items = sorted(best.values(), key=lambda x: x["score"], reverse=True)[:req.limit]
+                         "text": h.payload.get("full_text", ""),
+                         "dense_score": float(h.score), "matched_by": ["dense"], "bm25_rank": None}
+    dense_ranked = sorted(best.values(), key=lambda x: x["score"], reverse=True)
+
+    # --- HYBRID (Level-2 Nr. 34): BM25-Stichwortsuche + RRF-Fusion mit der Vektorsuche ---------
+    # Die Vektorsuche findet BEDEUTUNG, BM25 findet EXAKTE WOERTER (Geraetenamen, Praeparate,
+    # Projektnamen, Zahlen). RRF fusioniert beide Ranglisten rein rang-basiert. Der BM25-Pfad
+    # respektiert DENSELBEN Scope (Kategorie/Parent/Datum) via Praedikat ueber die Chunk-Metadaten.
+    bm25_used = False
+    if HYBRID_ENABLED:
+        try:
+            _cat = (req.category or "").strip()
+            _par = (req.parent or "").strip()
+
+            def _allow(c: dict) -> bool:
+                if _cat and _cat not in (c.get("categories") or []) and _cat != (c.get("category") or ""):
+                    return False
+                if not _cat and _par and _par not in (c.get("parents") or []) and _par != (c.get("parent") or ""):
+                    return False
+                if gte or lte:
+                    created = (c.get("created_at") or "")[:10]
+                    if (gte and created < gte[:10]) or (lte and created > lte[:10]):
+                        return False
+                return True
+
+            bm_hits = _bm25_index(req.user_id).search(req.query, limit=max(req.limit * 4, 20), allow=_allow)
+            bm25_used = True
+            bm_ranked_ids = [c.get("doc_id") for c, _s in bm_hits]
+            fused = _rrf_fuse([[d["doc_id"] for d in dense_ranked], bm_ranked_ids])
+            # BM25-only-Treffer brauchen ein Item-Geruest; full_text wird NUR fuer die finalen
+            # Top-N nachgeladen (limit=1 je doc — full_text 1:1 in jedem Chunk, OOM-sicher).
+            bm_meta = {c.get("doc_id"): (c, rank) for rank, (c, _s) in enumerate(bm_hits, start=1)}
+            order = sorted(fused.items(), key=lambda kv: kv[1], reverse=True)[:req.limit]
+            items = []
+            for did, _f in order:
+                it = best.get(did)
+                if it is None:
+                    c, rank = bm_meta[did]
+                    pts = _scroll(Filter(must=[FieldCondition(key="doc_id", match=MatchValue(value=did))]), limit=1)
+                    full = pts[0].payload.get("full_text", "") if pts else ""
+                    it = {"doc_id": did, "title": c.get("title") or None,
+                          "category": c.get("category") or None,
+                          "score": 0.0, "dense_score": None, "match": c.get("text") or "",
+                          "created_at": c.get("created_at") or None, "updated_at": c.get("updated_at"),
+                          "text": full, "matched_by": ["bm25"], "bm25_rank": rank}
+                elif did in bm_meta:
+                    it["matched_by"] = ["dense", "bm25"]
+                    it["bm25_rank"] = bm_meta[did][1]
+                items.append(it)
+        except Exception:  # noqa: BLE001 — Hybrid darf die Suche NIE brechen: sauber auf dense zurueckfallen
+            _log(logging.ERROR, "Hybrid/BM25-Pfad fehlgeschlagen — Fallback auf reine Vektorsuche", exc_info=True)
+            items = dense_ranked[:req.limit]
+    else:
+        items = dense_ranked[:req.limit]
 
     applied = {"category": req.category or None, "parent": req.parent or None, "date": req.date or None,
                "date_from": req.date_from or None, "date_to": req.date_to or None}
     has_filter = any(applied.values())
-    checkpoint("search", "Erst Payload-Filter (Kategorie/Datum) eingrenzen, DANN semantisch suchen",
+    checkpoint("search", "Hybrid: Payload-Scope -> Vektorsuche + BM25 -> RRF-Fusion",
                ok=isinstance(items, list), query_len=len(req.query), hits=len(items),
-               filters=applied if has_filter else None,
+               filters=applied if has_filter else None, hybrid=bm25_used,
                native_date=bool((gte or lte) and not py_date_filter), ms=int((time.time() - t0) * 1000))
-    return {"ok": True, "count": len(items), "items": items, "filters": applied if has_filter else None}
+    return {"ok": True, "count": len(items), "items": items, "filters": applied if has_filter else None,
+            "retrieval": "hybrid" if bm25_used else "dense"}
 
 
 @app.get("/list", dependencies=[Depends(require_auth)])
@@ -1556,7 +1760,231 @@ def reembed_all(req: ReembedReq) -> dict:
     return {"ok": True, "reembedded": done, "total": len(all_ids)}
 
 
+# ---------------------------------------------------------------------------
+# Entity-Register (Level-2 Nr. 36): leichtes Entity-Linking, Hub-and-Spoke
+# ---------------------------------------------------------------------------
+# REINE Speicher-Endpunkte (kein LLM — brain-api bleibt "stummer Speicher"; die Extraktion
+# uebernimmt der Agent). Eine Entitaet = ein Punkt: Name + Typ + Aliases + verknuepfte doc_ids.
+# Der Vektor (Embedding von Name/Typ/Aliases) dient NUR dem fuzzy Wiederfinden ("Whoop-Band"
+# findet "Whoop"). "Alles ueber X"-Fragen werden damit VOLLSTAENDIG (alle verknuepften Eintraege)
+# statt "die 5 aehnlichsten".
+def _entity_key(name: str) -> str:
+    return re.sub(r"\s+", " ", (name or "").strip()).casefold()
+
+
+def _entity_point_id(user_id: str, name: str) -> str:
+    return str(uuid.uuid5(uuid.NAMESPACE_URL, f"sb-entity/{user_id}/{_entity_key(name)}"))
+
+
+def _entity_embed_text(name: str, etype: str, aliases: list[str]) -> str:
+    parts = [f"Entität: {name}"]
+    if etype:
+        parts.append(f"Typ: {etype}")
+    if aliases:
+        parts.append("Auch bekannt als: " + ", ".join(aliases))
+    return " | ".join(parts)
+
+
+def _entity_get(user_id: str, name: str):
+    """Exakter Lookup per name_key ODER Alias. Gibt den Qdrant-Punkt oder None."""
+    key = _entity_key(name)
+    if not key:
+        return None
+    pts = _scroll_col(ENTITY_COLLECTION, Filter(must=[
+        FieldCondition(key="user_id", match=MatchValue(value=user_id)),
+        FieldCondition(key="name_key", match=MatchValue(value=key))]), limit=1)
+    if pts:
+        return pts[0]
+    # Alias-Suche: Aliases liegen normalisiert in 'alias_keys' (Keyword-Array waere moeglich,
+    # aber der Bestand ist klein -> Metadaten-Scan reicht und bleibt schema-einfach)
+    for p in _scroll_col(ENTITY_COLLECTION, Filter(must=[
+            FieldCondition(key="user_id", match=MatchValue(value=user_id))]),
+            with_payload=["name", "name_key", "alias_keys"]):
+        if key in (p.payload.get("alias_keys") or []):
+            return _scroll_col(ENTITY_COLLECTION, Filter(must=[
+                FieldCondition(key="user_id", match=MatchValue(value=user_id)),
+                FieldCondition(key="name_key", match=MatchValue(value=p.payload.get("name_key")))]), limit=1)[0]
+    return None
+
+
+def _scroll_col(collection: str, flt: "Filter | None", limit: "int | None" = None,
+                with_payload=True, page: int = 1000) -> list:
+    """Wie _scroll, aber fuer eine waehlbare Collection (Entity-Register)."""
+    out: list = []
+    off = None
+    while True:
+        want = page if limit is None else min(page, limit - len(out))
+        if want <= 0:
+            break
+        pts, off = qc.scroll(collection_name=collection, scroll_filter=flt, limit=want,
+                             offset=off, with_payload=with_payload)
+        out.extend(pts)
+        if off is None or not pts:
+            break
+    return out
+
+
+class EntityUpsertReq(BaseModel):
+    name: str = Field(..., min_length=1, max_length=120, description="Anzeigename der Entitaet (z.B. 'Whoop', 'EntropieReductor')")
+    type: str = Field(default="", max_length=40, description="Typ: Person/Ort/Geraet/Projekt/Praeparat/Organisation/Sonstiges")
+    aliases: list[str] = Field(default_factory=list, max_length=20, description="Alternative Namen/Schreibweisen")
+    doc_ids: list[str] = Field(default_factory=list, max_length=500, description="Zu verknuepfende Eintrags-IDs (werden mit dem Bestand VEREINIGT)")
+    user_id: str = Field(default="frank")
+
+
+class EntityUnlinkReq(BaseModel):
+    name: str = Field(..., min_length=1, max_length=120)
+    doc_id: str = Field(..., min_length=1)
+    user_id: str = Field(default="frank")
+
+
+@app.post("/entities/upsert", dependencies=[Depends(require_auth)])
+def entities_upsert(req: EntityUpsertReq) -> dict:
+    """Legt eine Entitaet an ODER erweitert sie (merge): doc_ids/aliases werden VEREINIGT, nie
+    ueberschrieben. Re-Embed nur, wenn sich das Profil (Name/Typ/Aliases) aendert — reine
+    doc_id-Verknuepfungen sind ein billiges set_payload."""
+    _require_store()
+    name = req.name.strip()
+    existing = _entity_get(req.user_id, name)
+    now = iso_now()
+    new_aliases = _dedup([a.strip() for a in req.aliases if a and a.strip()])
+    if existing is not None:
+        pl = existing.payload or {}
+        aliases = _dedup((pl.get("aliases") or []) + new_aliases)
+        doc_ids = _dedup([d for d in (pl.get("doc_ids") or []) if d] + [d.strip() for d in req.doc_ids if d and d.strip()])
+        etype = (req.type or "").strip() or (pl.get("type") or "")
+        profile_changed = (set(aliases) != set(pl.get("aliases") or [])) or (etype != (pl.get("type") or ""))
+        payload = {"user_id": req.user_id, "name": pl.get("name") or name, "name_key": pl.get("name_key") or _entity_key(name),
+                   "type": etype, "aliases": aliases, "alias_keys": [_entity_key(a) for a in aliases],
+                   "doc_ids": doc_ids, "doc_count": len(doc_ids),
+                   "created_at": pl.get("created_at") or now, "updated_at": now}
+        if profile_changed:
+            _guard_embed_budget(1)
+            vec = embed(_entity_embed_text(payload["name"], etype, aliases), "RETRIEVAL_DOCUMENT")
+            qc.upsert(collection_name=ENTITY_COLLECTION,
+                      points=[PointStruct(id=existing.id, vector=vec, payload=payload)], wait=True)
+        else:
+            qc.set_payload(collection_name=ENTITY_COLLECTION, payload=payload, points=[existing.id], wait=True)
+        checkpoint("entity_upsert", "Entitaet erweitert (merge doc_ids/aliases)", ok=True,
+                   name=payload["name"], docs=len(doc_ids), reembedded=profile_changed)
+        return {"ok": True, "created": False, "name": payload["name"], "type": etype,
+                "aliases": aliases, "doc_ids": doc_ids}
+    doc_ids = _dedup([d.strip() for d in req.doc_ids if d and d.strip()])
+    etype = (req.type or "").strip()
+    _guard_embed_budget(1)
+    vec = embed(_entity_embed_text(name, etype, new_aliases), "RETRIEVAL_DOCUMENT")
+    payload = {"user_id": req.user_id, "name": name, "name_key": _entity_key(name), "type": etype,
+               "aliases": new_aliases, "alias_keys": [_entity_key(a) for a in new_aliases],
+               "doc_ids": doc_ids, "doc_count": len(doc_ids), "created_at": now, "updated_at": now}
+    qc.upsert(collection_name=ENTITY_COLLECTION,
+              points=[PointStruct(id=_entity_point_id(req.user_id, name), vector=vec, payload=payload)], wait=True)
+    checkpoint("entity_upsert", "Neue Entitaet angelegt", ok=True, name=name, type=etype or None, docs=len(doc_ids))
+    return {"ok": True, "created": True, "name": name, "type": etype, "aliases": new_aliases, "doc_ids": doc_ids}
+
+
+@app.get("/entities/list", dependencies=[Depends(require_auth)])
+def entities_list(user_id: str = "frank") -> dict:
+    """Alle Entitaeten (Metadaten, ohne Vektoren) — fuers Dashboard/den Agenten."""
+    _require_store()
+    pts = _scroll_col(ENTITY_COLLECTION,
+                      Filter(must=[FieldCondition(key="user_id", match=MatchValue(value=user_id))]),
+                      with_payload=["name", "type", "aliases", "doc_ids", "doc_count", "created_at", "updated_at"])
+    items = [{"name": p.payload.get("name"), "type": p.payload.get("type") or None,
+              "aliases": p.payload.get("aliases") or [], "doc_count": int(p.payload.get("doc_count") or 0),
+              "created_at": p.payload.get("created_at"), "updated_at": p.payload.get("updated_at")}
+             for p in pts]
+    items.sort(key=lambda x: (-(x["doc_count"]), (x["name"] or "").lower()))
+    return {"ok": True, "count": len(items), "items": items}
+
+
+@app.get("/entities/find", dependencies=[Depends(require_auth)])
+def entities_find(name: str, user_id: str = "frank", semantic: bool = True) -> dict:
+    """Entitaet finden: exakt (Name/Alias, case-insensitiv), sonst optional per Vektorsuche (fuzzy).
+    Fuzzy gibt max. 3 Kandidaten mit Score — der AGENT entscheidet, ob ein Kandidat passt."""
+    _require_store()
+    hit = _entity_get(user_id, name)
+    if hit is not None:
+        pl = hit.payload or {}
+        return {"ok": True, "found": True, "exact": True,
+                "entity": {"name": pl.get("name"), "type": pl.get("type") or None,
+                           "aliases": pl.get("aliases") or [], "doc_ids": pl.get("doc_ids") or []}}
+    if not semantic:
+        return {"ok": True, "found": False, "exact": False, "candidates": []}
+    _guard_embed_budget(1)
+    qvec = embed(_entity_embed_text(name.strip(), "", []), "RETRIEVAL_QUERY")
+    raw = qc.query_points(collection_name=ENTITY_COLLECTION, query=qvec,
+                          query_filter=Filter(must=[FieldCondition(key="user_id", match=MatchValue(value=user_id))]),
+                          limit=3, with_payload=True).points
+    cands = [{"name": h.payload.get("name"), "type": h.payload.get("type") or None,
+              "score": float(h.score), "aliases": h.payload.get("aliases") or [],
+              "doc_ids": h.payload.get("doc_ids") or []} for h in raw]
+    return {"ok": True, "found": False, "exact": False, "candidates": cands}
+
+
+@app.get("/entities/docs", dependencies=[Depends(require_auth)])
+def entities_docs(name: str, user_id: str = "frank", limit: int = 10) -> dict:
+    """Die mit einer Entitaet verknuepften EINTRAEGE (je Volltext 1:1, neueste zuerst, gedeckelt).
+    Self-Healing: doc_ids, deren Eintrag nicht mehr existiert (geloescht), werden lazy aus der
+    Entitaet entfernt — das Register heilt sich beim Lesen selbst."""
+    _require_store()
+    hit = _entity_get(user_id, name)
+    if hit is None:
+        return {"ok": True, "found": False, "name": name, "items": []}
+    pl = hit.payload or {}
+    doc_ids = [d for d in (pl.get("doc_ids") or []) if d]
+    items, alive = [], []
+    for did in doc_ids:
+        pts = _scroll(Filter(must=[FieldCondition(key="doc_id", match=MatchValue(value=did))]), limit=1)
+        if not pts:
+            continue   # toter Verweis -> faellt aus 'alive' raus (lazy cleanup unten)
+        alive.append(did)
+        p = pts[0].payload
+        items.append({"doc_id": did, "title": p.get("title") or None,
+                      "category": p.get("category") or None, "categories": cats_from_payload(p),
+                      "created_at": p.get("created_at"), "updated_at": p.get("updated_at"),
+                      "text": p.get("full_text", "")})
+    if len(alive) != len(doc_ids):   # Self-Healing: tote doc_ids austragen
+        qc.set_payload(collection_name=ENTITY_COLLECTION,
+                       payload={"doc_ids": alive, "doc_count": len(alive), "updated_at": iso_now()},
+                       points=[hit.id], wait=False)
+        _log(logging.INFO, "Entity-Register: tote doc_ids entfernt", name=pl.get("name"),
+             entfernt=len(doc_ids) - len(alive))
+    items = _sort_recent(items)[:max(1, min(limit, 50))]
+    checkpoint("entity_docs", "Alles-ueber-X: verknuepfte Eintraege einer Entitaet (vollstaendig statt Top-5)",
+               ok=True, name=pl.get("name"), docs=len(items))
+    return {"ok": True, "found": True, "name": pl.get("name"), "type": pl.get("type") or None,
+            "aliases": pl.get("aliases") or [], "count": len(items), "items": items}
+
+
+@app.post("/entities/unlink", dependencies=[Depends(require_auth)])
+def entities_unlink(req: EntityUnlinkReq) -> dict:
+    """Traegt EINE doc_id aus einer Entitaet aus (der Eintrag selbst bleibt unberuehrt)."""
+    _require_store()
+    hit = _entity_get(req.user_id, req.name)
+    if hit is None:
+        return {"ok": True, "found": False, "name": req.name}
+    pl = hit.payload or {}
+    doc_ids = [d for d in (pl.get("doc_ids") or []) if d and d != req.doc_id]
+    qc.set_payload(collection_name=ENTITY_COLLECTION,
+                   payload={"doc_ids": doc_ids, "doc_count": len(doc_ids), "updated_at": iso_now()},
+                   points=[hit.id], wait=True)
+    return {"ok": True, "found": True, "name": pl.get("name"), "doc_ids": doc_ids}
+
+
+@app.delete("/entities", dependencies=[Depends(require_auth)])
+def entities_delete(name: str, user_id: str = "frank") -> dict:
+    """Loescht eine Entitaet aus dem Register (NUR den Registereintrag — nie einen Gehirn-Eintrag)."""
+    _require_store()
+    hit = _entity_get(user_id, name)
+    if hit is None:
+        return {"ok": True, "deleted": False, "name": name}
+    qc.delete(collection_name=ENTITY_COLLECTION, points_selector=[hit.id], wait=True)
+    checkpoint("entity_delete", "Entitaet aus dem Register geloescht (Eintraege bleiben 1:1)", ok=True, name=name)
+    return {"ok": True, "deleted": True, "name": (hit.payload or {}).get("name") or name}
+
+
 @app.get("/")
 def root() -> dict:
     return {"service": "Second Brain — brain-api (1:1-Speicher)", "version": VERSION,
-            "endpoints": ["/health", "/store", "/by-title", "/by-category", "/by-parent", "/by-date", "/search", "/list", "/entry", "/entry/categories", "/reembed-all", "/forget"]}
+            "endpoints": ["/health", "/store", "/by-title", "/by-category", "/by-parent", "/by-date", "/search", "/list", "/entry", "/entry/categories", "/reembed-all", "/forget",
+                          "/entities/upsert", "/entities/find", "/entities/list", "/entities/docs", "/entities/unlink"]}
