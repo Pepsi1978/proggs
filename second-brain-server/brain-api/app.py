@@ -277,7 +277,9 @@ _init_last_attempt = 0.0
 # Extraktion macht der Agent). Entity = Name+Typ+Aliases+verknuepfte doc_ids, Vektor fuers
 # fuzzy Wiederfinden. /entities/docs raeumt tote doc_ids lazy auf (Self-Healing).
 # Antwort-Felder /search additiv erweitert: matched_by, dense_score, bm25_rank, retrieval.
-VERSION = "1.21.0 (04.07.2026, 19.45 Uhr)"
+# 1.21.1: /purge raeumt jetzt AUCH die Entitaeten des eval-Test-Nutzers auf (der erweiterte
+# Eval-Check legt Test-Entitaeten an) + invalidiert den BM25-Cache (purge lief an _delete_doc vorbei).
+VERSION = "1.21.1 (04.07.2026, 21.55 Uhr)"
 
 # Startup-Banner (Observability-First: Log-Pfad + Version EINMAL ausgeben)
 _log(logging.INFO, "brain-api startet", version=VERSION, log_path=LOG_PATH)
@@ -1307,9 +1309,21 @@ def purge_user(req: PurgeReq) -> dict:
     docs = {p.payload.get("doc_id") for p in pts}
     if pts:
         qc.delete(collection_name=COLLECTION, points_selector=flt, wait=True)
-    checkpoint("purge", "Test-Nutzer HART geloescht (kein Papierkorb)", ok=True, user_id=uid, points=len(pts), entries=len(docs))
-    _log(logging.INFO, "Eval-Test-Nutzer gepurged", user_id=uid, points=len(pts), entries=len(docs))
-    return {"ok": True, "user_id": uid, "points": len(pts), "entries": len(docs)}
+        _bm25_invalidate()   # Hybrid-Index frisch (purge laeuft an _delete_doc vorbei)
+    # Level-2 (1.21.1): auch die ENTITAETEN des Test-Nutzers loeschen — der Eval legt jetzt
+    # Test-Entitaeten an; ohne diese Zeile blieben sie nach jedem Lauf im Register liegen.
+    ents = 0
+    try:
+        ent_pts = _scroll_col(ENTITY_COLLECTION, flt, with_payload=False)
+        ents = len(ent_pts)
+        if ent_pts:
+            qc.delete(collection_name=ENTITY_COLLECTION, points_selector=flt, wait=True)
+    except Exception:  # noqa: BLE001 — Entity-Aufraeumung darf den purge nie kippen
+        _log(logging.WARNING, "purge: Entity-Aufraeumung fehlgeschlagen", exc_info=True)
+    checkpoint("purge", "Test-Nutzer HART geloescht (kein Papierkorb, inkl. Entitaeten)", ok=True,
+               user_id=uid, points=len(pts), entries=len(docs), entities=ents)
+    _log(logging.INFO, "Eval-Test-Nutzer gepurged", user_id=uid, points=len(pts), entries=len(docs), entities=ents)
+    return {"ok": True, "user_id": uid, "points": len(pts), "entries": len(docs), "entities": ents}
 
 
 @app.get("/by-date", dependencies=[Depends(require_auth)])
