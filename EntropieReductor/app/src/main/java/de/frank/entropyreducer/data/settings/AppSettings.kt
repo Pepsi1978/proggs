@@ -391,6 +391,13 @@ class AppSettings @Inject constructor(
                 .filterNot { it.startsWith("$ideaId=") }.toSet()
     }
 
+    /** Setzt ALLE Ideen-Sync-Marken + Titel zurueck — fuer den vollstaendigen Neu-Sync
+     *  (danach gilt jede Idee als „noch nicht hochgeladen" und wird frisch geschrieben). */
+    suspend fun clearAllSecondBrainIdeaSync() = ds.edit { prefs ->
+        prefs.remove(KEY_SECOND_BRAIN_IDEA_SYNC_STAMPS)
+        prefs.remove(KEY_SECOND_BRAIN_IDEA_TITLES)
+    }
+
     companion object {
         private val KEY_WHISPER_MODEL = stringPreferencesKey("whisper_model")
         private val KEY_GEMINI_MODEL = stringPreferencesKey("gemini_model")

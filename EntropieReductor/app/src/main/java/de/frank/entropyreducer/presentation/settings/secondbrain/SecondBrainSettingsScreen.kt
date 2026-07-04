@@ -14,6 +14,8 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.outlined.ArrowBack
 import androidx.compose.material.icons.outlined.Lightbulb
+import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -131,6 +133,23 @@ fun SecondBrainSettingsScreen(
                                 Text("Alt-Ideen jetzt ins Second Brain speichern")
                             }
                         }
+                        Spacer(Modifier.height(12.dp))
+                        Text(
+                            "Vollständiger Neu-Sync: löscht alle Ideen-Einträge im Second Brain und " +
+                                "schreibt alle Ideen deines Handys frisch im aktuellen Format neu. " +
+                                "Deine Ideen in der App bleiben unverändert.",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = cosmos.textSecondary,
+                        )
+                        Spacer(Modifier.height(8.dp))
+                        Button(
+                            onClick = vm::resyncAll,
+                            modifier = Modifier.fillMaxWidth(),
+                            enabled = vm.hasConnection && !syncState.syncing,
+                            colors = ButtonDefaults.buttonColors(containerColor = cosmos.accentTasksSub),
+                        ) {
+                            Text("Alle Ideen neu ins Second Brain schreiben")
+                        }
                     }
                 }
             }
@@ -200,5 +219,10 @@ constructor(
 
     fun syncNow() {
         connector.syncAllNow(viewModelScope)
+    }
+
+    /** Vollstaendiger Neu-Sync: Brain-Kategorie „Ideen" leeren + alle Handy-Ideen frisch hochladen. */
+    fun resyncAll() {
+        connector.resyncAll(viewModelScope)
     }
 }

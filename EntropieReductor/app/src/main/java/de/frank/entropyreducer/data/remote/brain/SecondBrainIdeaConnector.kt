@@ -73,6 +73,66 @@ class SecondBrainIdeaConnector @Inject constructor(
         }
     }
 
+    /**
+     * Frank-Wunsch 2026-07-04: Vollstaendiger Neu-Sync. Leert die Brain-Kategorie „Ideen" komplett
+     * (alte Formate + Karteileichen bereits geloeschter Ideen), setzt die lokalen Sync-Marken zurueck
+     * und laedt danach ALLE aktuellen Ideen frisch im neuen Format hoch. Die App-Ideen bleiben
+     * unberuehrt (das Handy ist die Quelle der Wahrheit) — es wird nur das Brain neu geschrieben.
+     */
+    fun resyncAll(scope: CoroutineScope) {
+        Diag.i(DiagnosticArea.SECOND_BRAIN, TAG, "CHECKPOINT step=resyncRequested expected=resync_start actual=resync_start ok=true")
+        scope.launch(Dispatchers.IO) {
+            val key = secrets.secondBrainApiKey.orEmpty().trim()
+            if (key.isBlank()) {
+                _state.value = _state.value.copy(lastMessage = "Second-Brain-API-Key fehlt.")
+                return@launch
+            }
+            val auth = "Bearer $key"
+            _state.value = _state.value.copy(syncing = true, lastMessage = "Bereinige Second Brain …")
+            var removed = 0
+            try {
+                val existing = api.byCategory(auth, "Ideen")
+                for (item in existing.items) {
+                    val t = item.title ?: continue
+                    try {
+                        api.forget(auth, t)
+                        removed++
+                    } catch (e: CancellationException) {
+                        throw e
+                    } catch (e: Exception) {
+                        Diag.w(
+                            DiagnosticArea.SECOND_BRAIN,
+                            TAG,
+                            "CHECKPOINT step=resyncForget actual=error ok=false title=\"$t\" message=${e.message ?: e::class.java.simpleName}",
+                        )
+                    }
+                }
+                Diag.i(
+                    DiagnosticArea.SECOND_BRAIN,
+                    TAG,
+                    "CHECKPOINT step=resyncCleared expected=category_emptied actual=removed=$removed ok=true",
+                )
+            } catch (e: CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                _state.value = _state.value.copy(syncing = false, lastMessage = "Bereinigung fehlgeschlagen: ${e.message}")
+                Diag.e(
+                    DiagnosticArea.SECOND_BRAIN,
+                    TAG,
+                    "CHECKPOINT step=resyncCleared actual=error ok=false message=${e.message ?: e::class.java.simpleName}",
+                    e,
+                )
+                return@launch
+            }
+            // Lokale Marken zuruecksetzen -> jede Idee gilt als „neu" und wird frisch hochgeladen.
+            settings.clearAllSecondBrainIdeaSync()
+            val rows = ideaDao.getAllIdeasForBackup().map { idea ->
+                IdeaWithFollowups(idea, ideaDao.getFollowupsForIdea(idea.id))
+            }
+            syncRows(rows, reason = "Vollstaendiger Neu-Sync")
+        }
+    }
+
     suspend fun testConnection(apiKeyOverride: String? = null): Boolean = withContext(Dispatchers.IO) {
         val key = apiKeyOverride?.trim().orEmpty().ifBlank { secrets.secondBrainApiKey.orEmpty() }
         if (key.isBlank()) {

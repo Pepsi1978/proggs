@@ -26,6 +26,13 @@ interface SecondBrainApi {
         @Header("Authorization") authorization: String,
         @Query("title") title: String,
     ): SecondBrainForgetResponse
+
+    /** Alle Eintraege einer Kategorie (GET /by-category) — fuer den vollstaendigen Neu-Sync. */
+    @GET("by-category")
+    suspend fun byCategory(
+        @Header("Authorization") authorization: String,
+        @Query("category") category: String,
+    ): SecondBrainCategoryResponse
 }
 
 @Serializable
@@ -54,5 +61,18 @@ data class SecondBrainHealthResponse(
 data class SecondBrainForgetResponse(
     val ok: Boolean = false,
     val deleted: Boolean = false,
+    val title: String? = null,
+)
+
+@Serializable
+data class SecondBrainCategoryResponse(
+    val ok: Boolean = false,
+    val count: Int = 0,
+    val items: List<SecondBrainCategoryItem> = emptyList(),
+)
+
+@Serializable
+data class SecondBrainCategoryItem(
+    @SerialName("doc_id") val docId: String? = null,
     val title: String? = null,
 )
