@@ -342,13 +342,58 @@ class AppSettings @Inject constructor(
         it[KEY_PRIO_MEMORY_LIMIT] = value.coerceIn(10, 2000)
     }
 
-    /** Second-Brain-Connector: schreibt Ideen automatisch in die Kategorie "Ideen". */
-    val secondBrainIdeasConnectorEnabledFlow: Flow<Boolean> = ds.data
-        .map { it[KEY_SECOND_BRAIN_IDEAS_ENABLED] ?: false }
+    /** Second-Brain-Connector: schreibt App-Bereiche automatisch in ihre Brain-Kategorie. */
+    fun secondBrainConnectorEnabledFlow(areaKey: String): Flow<Boolean> = ds.data
+        .map { it[secondBrainEnabledKey(areaKey)] ?: false }
         .distinctUntilChanged()
+
+    val secondBrainIdeasConnectorEnabledFlow: Flow<Boolean> = secondBrainConnectorEnabledFlow("ideas")
+
+    suspend fun setSecondBrainConnectorEnabled(areaKey: String, value: Boolean) = ds.edit {
+        it[secondBrainEnabledKey(areaKey)] = value
+    }
 
     suspend fun setSecondBrainIdeasConnectorEnabled(value: Boolean) = ds.edit {
         it[KEY_SECOND_BRAIN_IDEAS_ENABLED] = value
+    }
+
+    suspend fun readSecondBrainSyncStamps(areaKey: String): Set<String> =
+        ds.data.first()[secondBrainSyncStampsKey(areaKey)] ?: emptySet()
+
+    suspend fun markSecondBrainSynced(areaKey: String, rowId: String, stamp: String) = ds.edit { prefs ->
+        val key = secondBrainSyncStampsKey(areaKey)
+        val withoutOldStamp = (prefs[key] ?: emptySet())
+            .filterNot { it.startsWith("$rowId:") }
+            .toSet()
+        prefs[key] = withoutOldStamp + stamp
+    }
+
+    suspend fun readSecondBrainTitles(areaKey: String): Map<String, String> =
+        (ds.data.first()[secondBrainTitlesKey(areaKey)] ?: emptySet())
+            .mapNotNull { entry ->
+                val parts = entry.split('=', limit = 2)
+                if (parts.size == 2) parts[0] to parts[1] else null
+            }
+            .toMap()
+
+    suspend fun setSecondBrainTitle(areaKey: String, rowId: String, title: String) = ds.edit { prefs ->
+        val key = secondBrainTitlesKey(areaKey)
+        val without = (prefs[key] ?: emptySet())
+            .filterNot { it.startsWith("$rowId=") }
+            .toSet()
+        prefs[key] = without + "$rowId=$title"
+    }
+
+    suspend fun clearSecondBrainSync(areaKey: String, rowId: String) = ds.edit { prefs ->
+        val stampKey = secondBrainSyncStampsKey(areaKey)
+        val titleKey = secondBrainTitlesKey(areaKey)
+        prefs[stampKey] = (prefs[stampKey] ?: emptySet()).filterNot { it.startsWith("$rowId:") }.toSet()
+        prefs[titleKey] = (prefs[titleKey] ?: emptySet()).filterNot { it.startsWith("$rowId=") }.toSet()
+    }
+
+    suspend fun clearAllSecondBrainSync(areaKey: String) = ds.edit { prefs ->
+        prefs.remove(secondBrainSyncStampsKey(areaKey))
+        prefs.remove(secondBrainTitlesKey(areaKey))
     }
 
     suspend fun readSecondBrainIdeaSyncStamps(): Set<String> =
@@ -442,6 +487,18 @@ class AppSettings @Inject constructor(
         private val KEY_SECOND_BRAIN_IDEAS_ENABLED = booleanPreferencesKey("second_brain_ideas_enabled")
         private val KEY_SECOND_BRAIN_IDEA_SYNC_STAMPS = stringSetPreferencesKey("second_brain_idea_sync_stamps")
         private val KEY_SECOND_BRAIN_IDEA_TITLES = stringSetPreferencesKey("second_brain_idea_titles")
+
+        private fun secondBrainEnabledKey(areaKey: String) =
+            if (areaKey == "ideas") KEY_SECOND_BRAIN_IDEAS_ENABLED
+            else booleanPreferencesKey("second_brain_${areaKey}_enabled")
+
+        private fun secondBrainSyncStampsKey(areaKey: String) =
+            if (areaKey == "ideas") KEY_SECOND_BRAIN_IDEA_SYNC_STAMPS
+            else stringSetPreferencesKey("second_brain_${areaKey}_sync_stamps")
+
+        private fun secondBrainTitlesKey(areaKey: String) =
+            if (areaKey == "ideas") KEY_SECOND_BRAIN_IDEA_TITLES
+            else stringSetPreferencesKey("second_brain_${areaKey}_titles")
 
         const val DEFAULT_WHISPER = "whisper-large-v3-turbo"
         // Frank-Wunsch 2026-05-09: Default-Modell ist Gemini 3.1 Flash-Lite. Greift

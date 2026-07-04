@@ -1,6 +1,6 @@
 # Second-Brain-Einstellungsbereich + Ideen-Sync — Design
 
-**Stand:** 2026-07-04 · **Status Etappe 1:** umgesetzt (v0.20.0) · **Etappe 2:** offen
+**Stand:** 2026-07-04 · **Status Etappe 1:** umgesetzt (v0.20.0) · **Etappe 2:** umgesetzt (v0.20.6) · **Etappe 3:** umgesetzt (v0.21.0)
 
 ## Ziel (Frank-Wunsch 2026-07-04)
 
@@ -52,7 +52,7 @@ App gelöscht — abgesichert durch `health.ready` (Ladefenster-Schutz gegen fä
 Trigger: beim App-Start (MainActivity) UND beim Betreten des Ideen-Reiters (IdeenScreen + IdeenBrainSyncViewModel),
 je mit Retry für den Tunnel-Aufbau. Alle vier Richtungen live verifiziert.
 
-## Etappe 3 (offen, To-Do 2026-07-04) — dasselbe für ALLE weiteren Listen
+## Etappe 3 (umgesetzt, v0.21.0) — dasselbe für ALLE weiteren Listen
 
 Frank-Wunsch: den kompletten Ideen-Sync **1:1 auf alle weiteren App-Listen** ausrollen, je mit
 eigenem An/Aus-Schalter im Second-Brain-Einstellungsbereich:
@@ -65,7 +65,7 @@ eigenem An/Aus-Schalter im Second-Brain-Einstellungsbereich:
 Jeweils volle bidirektionale Synchronität (rein UND raus) wie bei Ideen — eigene Brain-Kategorie,
 Import/Upload/Löschung beidseitig, Ladefenster- + Tombstone-Schutz, Resync-Knopf.
 
-**Umsetzungs-Hinweis:** Den `SecondBrainIdeaConnector` **generisch parametrisieren** (Kategorie +
-jeweilige DAO + **EIGENE** Settings-Marken-Keys pro Liste — sonst vermischen sich Sync-Stamps/Tombstones)
-statt N Kopien. Schalter je Liste im `SecondBrainSettingsScreen`, Pull-Trigger je Reiter-Screen.
-(Auch als Projekt-Memory `second-brain-all-lists-sync-todo` festgehalten.)
+**Umsetzung:** Der vorhandene `SecondBrainIdeaConnector` ist generisch parametrisiert (Kategorie +
+jeweilige DAO/DataStore-Quelle + **eigene** Settings-Marken-Keys pro Liste). Schalter je Liste stehen
+im `SecondBrainSettingsScreen`; Pull-/Retry-Trigger laufen beim App-Vordergrund und beim Betreten der
+jeweiligen Reiter.

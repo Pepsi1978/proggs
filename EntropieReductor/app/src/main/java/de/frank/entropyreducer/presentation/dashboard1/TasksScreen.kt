@@ -144,6 +144,8 @@ fun TasksScreen(
     val state by vm.state.collectAsStateWithLifecycle()
     val cosmos = LocalCosmos.current
     val snackbar = remember { SnackbarHostState() }
+    val brainSyncVm: de.frank.entropyreducer.presentation.ideen.IdeenBrainSyncViewModel = hiltViewModel()
+    LaunchedEffect(Unit) { brainSyncVm.pullNow("entropy") }
     // Frank-Wunsch 2026-05-24: Der Loop-Bereich (wiederkehrende Aufgaben) ist jetzt ein
     // Akkordeon-Dropdown im Aufgaben-Reiter (zwischen SPAETER und ERLEDIGT) statt eines
     // eigenen Sub-Screens. Vorlagen + ihre Verknuepfung (Checkbox an = Aufgabe erscheint

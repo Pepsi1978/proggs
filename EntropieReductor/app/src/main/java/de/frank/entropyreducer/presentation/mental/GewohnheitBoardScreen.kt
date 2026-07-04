@@ -288,6 +288,9 @@ fun GewohnheitBoardScreen(
     val suggestions by suggestVm.suggestions.collectAsStateWithLifecycle()
     val suggestState by suggestVm.state.collectAsStateWithLifecycle()
 
+    val brainSyncVm: de.frank.entropyreducer.presentation.ideen.IdeenBrainSyncViewModel = hiltViewModel()
+    LaunchedEffect(Unit) { brainSyncVm.pullNow("habits") }
+
     // TTS-System (Vorlesen der Gewohnheiten ueber dem Separator)
     val ttsVm: GewohnheitTtsViewModel = hiltViewModel()
     val ttsState by ttsVm.uiState.collectAsStateWithLifecycle()

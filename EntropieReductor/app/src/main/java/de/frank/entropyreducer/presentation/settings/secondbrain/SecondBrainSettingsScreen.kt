@@ -33,6 +33,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewModelScope
 import dagger.hilt.android.lifecycle.HiltViewModel
+import de.frank.entropyreducer.data.remote.brain.SecondBrainArea
 import de.frank.entropyreducer.data.remote.brain.SecondBrainIdeaConnector
 import de.frank.entropyreducer.data.remote.brain.SecondBrainIdeaSyncState
 import de.frank.entropyreducer.data.settings.AppSettings
@@ -57,7 +58,6 @@ fun SecondBrainSettingsScreen(
     vm: SecondBrainSettingsViewModel = hiltViewModel(),
 ) {
     val cosmos = LocalCosmos.current
-    val ideasEnabled by vm.ideasEnabled.collectAsStateWithLifecycle()
     val syncState by vm.syncState.collectAsStateWithLifecycle()
     CosmosScaffold(
         title = "Second Brain",
@@ -94,16 +94,17 @@ fun SecondBrainSettingsScreen(
                     }
                 }
             }
-            item {
-                AreaToggleCard(
-                    title = "Ideen",
-                    description = "Jede Idee aus „Aufgaben → Ideen“ wird als Eintrag in der " +
-                        "Second-Brain-Kategorie „Ideen“ gespeichert und synchron gehalten: " +
-                        "Änderungen werden hochgeladen, in der App gelöschte Ideen im Brain entfernt.",
-                    checked = ideasEnabled,
-                    onCheckedChange = vm::setIdeasEnabled,
-                    enabled = vm.hasConnection,
-                )
+            vm.areaToggles.forEach { areaToggle ->
+                item(key = areaToggle.area.key) {
+                    val checked by areaToggle.enabled.collectAsStateWithLifecycle()
+                    AreaToggleCard(
+                        title = areaToggle.area.label,
+                        description = areaDescription(areaToggle.area),
+                        checked = checked,
+                        onCheckedChange = { vm.setAreaEnabled(areaToggle.area.key, it) },
+                        enabled = vm.hasConnection,
+                    )
+                }
             }
             item {
                 GlassCard(modifier = Modifier.fillMaxWidth()) {
@@ -130,14 +131,14 @@ fun SecondBrainSettingsScreen(
                                 Spacer(Modifier.size(8.dp))
                                 Text("Synchronisiere …")
                             } else {
-                                Text("Alt-Ideen jetzt ins Second Brain speichern")
+                                Text("Aktive Bereiche jetzt ins Second Brain speichern")
                             }
                         }
                         Spacer(Modifier.height(12.dp))
                         Text(
-                            "Vollständiger Neu-Sync: löscht alle Ideen-Einträge im Second Brain und " +
-                                "schreibt alle Ideen deines Handys frisch im aktuellen Format neu. " +
-                                "Deine Ideen in der App bleiben unverändert.",
+                            "Vollständiger Neu-Sync: löscht die aktiven Kategorien im Second Brain " +
+                                "und schreibt die passenden Einträge deines Handys frisch im aktuellen " +
+                                "Format neu. Deine App-Einträge bleiben unverändert.",
                             style = MaterialTheme.typography.bodySmall,
                             color = cosmos.textSecondary,
                         )
@@ -148,7 +149,7 @@ fun SecondBrainSettingsScreen(
                             enabled = vm.hasConnection && !syncState.syncing,
                             colors = ButtonDefaults.buttonColors(containerColor = cosmos.accentTasksSub),
                         ) {
-                            Text("Alle Ideen neu ins Second Brain schreiben")
+                            Text("Aktive Bereiche neu ins Second Brain schreiben")
                         }
                     }
                 }
@@ -157,6 +158,21 @@ fun SecondBrainSettingsScreen(
         }
     }
 }
+
+private fun areaDescription(area: SecondBrainArea): String = when (area.key) {
+    "ideas" -> "Jede Idee aus „Aufgaben → Ideen“ wird in der Kategorie „Ideen“ gespeichert und bidirektional synchron gehalten."
+    "habits" -> "Alle festen Gewohnheiten über den Gewohnheitsvorschlägen werden in der Kategorie „Gewohnheiten“ synchron gehalten."
+    "mental" -> "Alle Sätze aus dem Mental-Reiter werden in der Kategorie „Mental“ synchron gehalten."
+    "entropy" -> "Alle Entropie-Einträge werden in der Kategorie „Entropie“ synchron gehalten."
+    "theses" -> "Alle Thesen werden in der Kategorie „Thesen“ synchron gehalten."
+    "journal" -> "Alle Einträge aus dem Journal-Reiter werden in der Kategorie „Tagebucheinträge“ synchron gehalten."
+    else -> "Dieser Bereich wird in der Kategorie „${area.category}“ synchron gehalten."
+}
+
+data class SecondBrainAreaToggle(
+    val area: SecondBrainArea,
+    val enabled: StateFlow<Boolean>,
+)
 
 @Composable
 private fun AreaToggleCard(
@@ -202,9 +218,13 @@ constructor(
     /** Verbindung eingerichtet = Second-Brain-API-Key hinterlegt (Bereich „API-Schlüssel"). */
     val hasConnection: Boolean = !secrets.secondBrainApiKey.isNullOrBlank()
 
-    val ideasEnabled: StateFlow<Boolean> =
-        settings.secondBrainIdeasConnectorEnabledFlow
-            .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), false)
+    val areaToggles: List<SecondBrainAreaToggle> = connector.areas.map { area ->
+        SecondBrainAreaToggle(
+            area = area,
+            enabled = settings.secondBrainConnectorEnabledFlow(area.key)
+                .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), false),
+        )
+    }
 
     val syncState: StateFlow<SecondBrainIdeaSyncState> =
         connector.state.stateIn(
@@ -213,8 +233,8 @@ constructor(
             SecondBrainIdeaSyncState(),
         )
 
-    fun setIdeasEnabled(value: Boolean) {
-        viewModelScope.launch { settings.setSecondBrainIdeasConnectorEnabled(value) }
+    fun setAreaEnabled(areaKey: String, value: Boolean) {
+        viewModelScope.launch { settings.setSecondBrainConnectorEnabled(areaKey, value) }
     }
 
     fun syncNow() {

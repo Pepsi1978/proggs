@@ -103,6 +103,8 @@ fun ThesenScreen(
     val cosmos = LocalCosmos.current
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
+    val brainSyncVm: de.frank.entropyreducer.presentation.ideen.IdeenBrainSyncViewModel = hiltViewModel()
+    LaunchedEffect(Unit) { brainSyncVm.pullNow("theses") }
     // Stabiler Flow (Bug-Almanach jetpack-compose.md Kurzcheck #16 / §2.14): den rohen cold
     // Flow NICHT pro Recomposition neu bauen, sonst verpasst collectAsStateWithLifecycle
     // Emissionen (gespeicherte Aenderung erscheint erst beim naechsten Tap). remember stabilisiert

@@ -66,8 +66,10 @@ fun JournalScreen(
     vm: JournalViewModel = hiltViewModel(),
 ) {
     val cosmos = LocalCosmos.current
+    val brainSyncVm: de.frank.entropyreducer.presentation.ideen.IdeenBrainSyncViewModel = hiltViewModel()
     val entries by vm.entries.collectAsStateWithLifecycle()
     val status by vm.syncStatus.collectAsStateWithLifecycle()
+    androidx.compose.runtime.LaunchedEffect(Unit) { brainSyncVm.pullNow("journal") }
 
     CosmosScaffold(
         title = "Journal",

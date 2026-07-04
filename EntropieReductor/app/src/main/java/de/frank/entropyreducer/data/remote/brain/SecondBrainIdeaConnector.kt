@@ -1,12 +1,30 @@
 package de.frank.entropyreducer.data.remote.brain
 
+import android.content.Context
+import dagger.hilt.android.qualifiers.ApplicationContext
 import de.frank.entropyreducer.data.diagnostics.Diag
 import de.frank.entropyreducer.data.diagnostics.DiagnosticArea
+import de.frank.entropyreducer.data.local.dao.EntropyEntryDao
+import de.frank.entropyreducer.data.local.dao.HabitDao
 import de.frank.entropyreducer.data.local.dao.IdeaDao
 import de.frank.entropyreducer.data.local.dao.IdeaWithFollowups
+import de.frank.entropyreducer.data.local.dao.MentalSentenceDao
+import de.frank.entropyreducer.data.local.entities.EntropyEntryEntity
+import de.frank.entropyreducer.data.local.entities.HabitEntity
 import de.frank.entropyreducer.data.local.entities.IdeaEntity
+import de.frank.entropyreducer.data.local.entities.MentalEntity
+import de.frank.entropyreducer.data.local.journalmirror.JournalMirrorDao
+import de.frank.entropyreducer.data.local.journalmirror.JournalMirrorEntryEntity
 import de.frank.entropyreducer.data.settings.AppSettings
 import de.frank.entropyreducer.data.settings.EncryptedSecretsStore
+import de.frank.entropyreducer.domain.model.EntropyCategory
+import de.frank.entropyreducer.domain.model.EntrySource
+import de.frank.entropyreducer.domain.model.EntryStatus
+import de.frank.entropyreducer.domain.model.TimeBucket
+import de.frank.entropyreducer.presentation.thesen.ThesenEntry
+import de.frank.entropyreducer.presentation.thesen.addThesenEntry
+import de.frank.entropyreducer.presentation.thesen.deleteThesenEntry
+import de.frank.entropyreducer.presentation.thesen.thesenEntriesFlow
 import java.time.Instant
 import java.time.LocalDateTime
 import java.time.OffsetDateTime
@@ -21,11 +39,13 @@ import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
@@ -36,87 +56,109 @@ data class SecondBrainIdeaSyncState(
     val lastSyncedAtMs: Long = 0L,
 )
 
+data class SecondBrainArea(
+    val key: String,
+    val label: String,
+    val category: String,
+)
+
+data class SecondBrainSyncRow(
+    val id: String,
+    val createdAtMs: Long,
+    val updatedAtMs: Long,
+    val title: String,
+    val bodyLabel: String,
+    val body: String,
+    val summary: String? = null,
+)
+
+private data class SecondBrainSyncTarget(
+    val area: SecondBrainArea,
+    val observeRows: () -> Flow<List<SecondBrainSyncRow>>,
+    val loadRows: suspend () -> List<SecondBrainSyncRow>,
+    val insertFromBrain: suspend (SecondBrainCategoryItem) -> SecondBrainSyncRow?,
+    val deleteById: suspend (String) -> Unit,
+)
+
 @Singleton
 class SecondBrainIdeaConnector @Inject constructor(
     private val ideaDao: IdeaDao,
+    private val habitDao: HabitDao,
+    private val mentalDao: MentalSentenceDao,
+    private val entropyDao: EntropyEntryDao,
+    private val journalMirrorDao: JournalMirrorDao,
     private val settings: AppSettings,
     private val secrets: EncryptedSecretsStore,
     private val api: SecondBrainApi,
+    @ApplicationContext private val appContext: Context,
 ) {
     private val started = AtomicBoolean(false)
     private val _state = MutableStateFlow(SecondBrainIdeaSyncState())
     val state: StateFlow<SecondBrainIdeaSyncState> = _state.asStateFlow()
 
+    val areas: List<SecondBrainArea> = listOf(
+        AREAS_IDEAS,
+        AREAS_HABITS,
+        AREAS_MENTAL,
+        AREAS_ENTROPY,
+        AREAS_THESES,
+        AREAS_JOURNAL,
+    )
+
+    private val targets: List<SecondBrainSyncTarget> by lazy { buildTargets() }
+
     fun start(scope: CoroutineScope) {
         if (!started.compareAndSet(false, true)) return
         Diag.i(DiagnosticArea.SECOND_BRAIN, TAG, "CHECKPOINT step=connectorStart expected=observer_registered actual=observer_registered ok=true")
-        scope.launch(Dispatchers.IO) {
-            combine(
-                settings.secondBrainIdeasConnectorEnabledFlow,
-                ideaDao.getAllIdeasWithFollowups(),
-            ) { enabled, ideas -> enabled to ideas }
-                .collect { (enabled, ideas) ->
-                    if (enabled) {
-                        Diag.d(
-                            DiagnosticArea.SECOND_BRAIN,
-                            TAG,
-                            "CHECKPOINT step=observerEmission enabled=true ideas=${ideas.size}",
-                        )
-                        syncRows(ideas, reason = "Automatischer Ideen-Sync")
-                    } else {
-                        Diag.d(DiagnosticArea.SECOND_BRAIN, TAG, "CHECKPOINT step=observerEmission enabled=false")
+        targets.forEach { target ->
+            scope.launch(Dispatchers.IO) {
+                combine(
+                    settings.secondBrainConnectorEnabledFlow(target.area.key),
+                    target.observeRows(),
+                ) { enabled, rows -> enabled to rows }
+                    .collect { (enabled, rows) ->
+                        if (enabled) {
+                            Diag.d(
+                                DiagnosticArea.SECOND_BRAIN,
+                                TAG,
+                                "CHECKPOINT step=observerEmission area=${target.area.key} enabled=true rows=${rows.size}",
+                            )
+                            syncRows(target, rows, reason = "Automatischer ${target.area.label}-Sync")
+                        } else {
+                            Diag.d(DiagnosticArea.SECOND_BRAIN, TAG, "CHECKPOINT step=observerEmission area=${target.area.key} enabled=false")
+                        }
                     }
-                }
+            }
         }
     }
 
-    fun syncAllNow(scope: CoroutineScope) {
-        Diag.i(DiagnosticArea.SECOND_BRAIN, TAG, "CHECKPOINT step=manualSyncRequested expected=sync_start actual=sync_start ok=true")
+    fun syncAllNow(scope: CoroutineScope, areaKey: String? = null) {
+        Diag.i(DiagnosticArea.SECOND_BRAIN, TAG, "CHECKPOINT step=manualSyncRequested expected=sync_start actual=sync_start ok=true area=${areaKey ?: "all"}")
         scope.launch(Dispatchers.IO) {
-            syncRows(ideaDao.getAllIdeasForBackup().map { idea ->
-                IdeaWithFollowups(idea, ideaDao.getFollowupsForIdea(idea.id))
-            }, reason = "Manueller Ideen-Sync")
+            for (target in selectedTargets(areaKey)) {
+                if (!settings.secondBrainConnectorEnabledFlow(target.area.key).first()) continue
+                syncRows(target, target.loadRows(), reason = "Manueller ${target.area.label}-Sync")
+            }
         }
     }
 
-    /**
-     * Frank-Wunsch 2026-07-04 (Fix „Idee bleibt liegen"): Schiebt ausstehende (noch nicht
-     * hochgeladene) Ideen aktiv nach — mit Retry gegen einen wackligen WireGuard-Tunnel, genau wie
-     * [pullFromBrain] es beim Runterladen tut. Wird beim App-Vordergrund (MainActivity.onStart) und
-     * beim Betreten des Ideen-Reiters aufgerufen.
-     *
-     * Root Cause davor: Der Push haengt sonst allein am Ideen-Flow-Observer in [start], der bei
-     * unveraenderter Liste nicht neu feuert. Schlug der erste Upload unterwegs (ohne Netz) fehl,
-     * blieb die Idee liegen, bis die App als Prozess frisch startete ODER sich eine Idee aenderte —
-     * genau der beobachtete „ich oeffne die App und es passiert nichts"-Fall. Zusaetzlich hatte der
-     * Push (anders als der Pull) keinen Retry gegen den intermittierenden Tunnel.
-     *
-     * Idempotent (Sync-Stamp + idempotencyKey): gefahrlos bei jedem Vordergrund aufrufbar; ist
-     * nichts offen, kehrt [syncRows] sofort zurueck.
-     */
-    fun retryPendingUploads(scope: CoroutineScope) {
+    fun retryPendingUploads(scope: CoroutineScope, areaKey: String? = null) {
         scope.launch(Dispatchers.IO) {
-            if (!settings.secondBrainIdeasConnectorEnabledFlow.first()) return@launch
             if (secrets.secondBrainApiKey.orEmpty().isBlank()) return@launch
             repeat(PUSH_RETRIES) { attempt ->
-                val rows = ideaDao.getAllIdeasForBackup().map { idea ->
-                    IdeaWithFollowups(idea, ideaDao.getFollowupsForIdea(idea.id))
+                var hadNetworkError = false
+                for (target in selectedTargets(areaKey)) {
+                    if (!settings.secondBrainConnectorEnabledFlow(target.area.key).first()) continue
+                    hadNetworkError = syncRows(target, target.loadRows(), reason = "Nachhol-Upload ${target.area.label}") || hadNetworkError
                 }
-                val hadNetworkError = syncRows(rows, reason = "Nachhol-Upload")
                 if (!hadNetworkError) return@launch
                 if (attempt < PUSH_RETRIES - 1) delay(PUSH_RETRY_DELAY_MS)
             }
         }
     }
 
-    /**
-     * Frank-Wunsch 2026-07-04: Vollstaendiger Neu-Sync. Leert die Brain-Kategorie „Ideen" komplett
-     * (alte Formate + Karteileichen bereits geloeschter Ideen), setzt die lokalen Sync-Marken zurueck
-     * und laedt danach ALLE aktuellen Ideen frisch im neuen Format hoch. Die App-Ideen bleiben
-     * unberuehrt (das Handy ist die Quelle der Wahrheit) — es wird nur das Brain neu geschrieben.
-     */
-    fun resyncAll(scope: CoroutineScope) {
-        Diag.i(DiagnosticArea.SECOND_BRAIN, TAG, "CHECKPOINT step=resyncRequested expected=resync_start actual=resync_start ok=true")
+    fun resyncAll(scope: CoroutineScope, areaKey: String? = null) {
+        Diag.i(DiagnosticArea.SECOND_BRAIN, TAG, "CHECKPOINT step=resyncRequested expected=resync_start actual=resync_start ok=true area=${areaKey ?: "all"}")
         scope.launch(Dispatchers.IO) {
             val key = secrets.secondBrainApiKey.orEmpty().trim()
             if (key.isBlank()) {
@@ -124,59 +166,41 @@ class SecondBrainIdeaConnector @Inject constructor(
                 return@launch
             }
             val auth = "Bearer $key"
-            _state.value = _state.value.copy(syncing = true, lastMessage = "Bereinige Second Brain …")
-            var removed = 0
-            try {
-                val existing = api.byCategory(auth, "Ideen")
-                for (item in existing.items) {
-                    val t = item.title ?: continue
-                    try {
-                        api.forget(auth, t)
-                        removed++
-                    } catch (e: CancellationException) {
-                        throw e
-                    } catch (e: Exception) {
-                        Diag.w(
-                            DiagnosticArea.SECOND_BRAIN,
-                            TAG,
-                            "CHECKPOINT step=resyncForget actual=error ok=false title=\"$t\" message=${e.message ?: e::class.java.simpleName}",
-                        )
+            for (target in selectedTargets(areaKey)) {
+                if (!settings.secondBrainConnectorEnabledFlow(target.area.key).first()) continue
+                _state.value = _state.value.copy(syncing = true, lastMessage = "Bereinige ${target.area.category} im Second Brain …")
+                var removed = 0
+                try {
+                    val existing = api.byCategory(auth, target.area.category)
+                    for (item in existing.items) {
+                        val t = item.title ?: continue
+                        try {
+                            api.forget(auth, t)
+                            removed++
+                        } catch (e: CancellationException) {
+                            throw e
+                        } catch (e: Exception) {
+                            Diag.w(DiagnosticArea.SECOND_BRAIN, TAG, "CHECKPOINT step=resyncForget area=${target.area.key} actual=error ok=false title=\"$t\" message=${e.message ?: e::class.java.simpleName}")
+                        }
                     }
+                    Diag.i(DiagnosticArea.SECOND_BRAIN, TAG, "CHECKPOINT step=resyncCleared area=${target.area.key} expected=category_emptied actual=removed=$removed ok=true")
+                } catch (e: CancellationException) {
+                    throw e
+                } catch (e: Exception) {
+                    _state.value = _state.value.copy(syncing = false, lastMessage = "Bereinigung fehlgeschlagen: ${e.message}")
+                    Diag.e(DiagnosticArea.SECOND_BRAIN, TAG, "CHECKPOINT step=resyncCleared area=${target.area.key} actual=error ok=false message=${e.message ?: e::class.java.simpleName}", e)
+                    continue
                 }
-                Diag.i(
-                    DiagnosticArea.SECOND_BRAIN,
-                    TAG,
-                    "CHECKPOINT step=resyncCleared expected=category_emptied actual=removed=$removed ok=true",
-                )
-            } catch (e: CancellationException) {
-                throw e
-            } catch (e: Exception) {
-                _state.value = _state.value.copy(syncing = false, lastMessage = "Bereinigung fehlgeschlagen: ${e.message}")
-                Diag.e(
-                    DiagnosticArea.SECOND_BRAIN,
-                    TAG,
-                    "CHECKPOINT step=resyncCleared actual=error ok=false message=${e.message ?: e::class.java.simpleName}",
-                    e,
-                )
-                return@launch
+                settings.clearAllSecondBrainSync(target.area.key)
+                syncRows(target, target.loadRows(), reason = "Vollständiger Neu-Sync ${target.area.label}")
             }
-            // Lokale Marken zuruecksetzen -> jede Idee gilt als „neu" und wird frisch hochgeladen.
-            settings.clearAllSecondBrainIdeaSync()
-            val rows = ideaDao.getAllIdeasForBackup().map { idea ->
-                IdeaWithFollowups(idea, ideaDao.getFollowupsForIdea(idea.id))
-            }
-            syncRows(rows, reason = "Vollstaendiger Neu-Sync")
         }
     }
 
     suspend fun testConnection(apiKeyOverride: String? = null): Boolean = withContext(Dispatchers.IO) {
         val key = apiKeyOverride?.trim().orEmpty().ifBlank { secrets.secondBrainApiKey.orEmpty() }
         if (key.isBlank()) {
-            Diag.w(
-                DiagnosticArea.SECOND_BRAIN,
-                TAG,
-                "CHECKPOINT step=healthCheck expected=api_key_present actual=missing ok=false",
-            )
+            Diag.w(DiagnosticArea.SECOND_BRAIN, TAG, "CHECKPOINT step=healthCheck expected=api_key_present actual=missing ok=false")
             _state.value = _state.value.copy(lastMessage = "Second-Brain-API-Key fehlt.")
             return@withContext false
         }
@@ -184,109 +208,61 @@ class SecondBrainIdeaConnector @Inject constructor(
         try {
             val health = api.health("Bearer $key")
             val ok = health.ready || health.status == "ok"
-            Diag.i(
-                DiagnosticArea.SECOND_BRAIN,
-                TAG,
-                "CHECKPOINT step=healthCheckResponse expected=reachable actual=status=${health.status},ready=${health.ready},version=${health.version ?: "unbekannt"} ok=$ok",
-            )
+            Diag.i(DiagnosticArea.SECOND_BRAIN, TAG, "CHECKPOINT step=healthCheckResponse expected=reachable actual=status=${health.status},ready=${health.ready},version=${health.version ?: "unbekannt"} ok=$ok")
             _state.value = _state.value.copy(
-                lastMessage = if (health.ready) {
-                    "Second Brain verbunden (${health.version ?: health.status})."
-                } else {
-                    "Second Brain antwortet, lädt aber noch (${health.status})."
-                }
+                lastMessage = if (health.ready) "Second Brain verbunden (${health.version ?: health.status})."
+                else "Second Brain antwortet, lädt aber noch (${health.status}).",
             )
             true
         } catch (e: CancellationException) {
             throw e
         } catch (e: Exception) {
-            Diag.e(
-                DiagnosticArea.SECOND_BRAIN,
-                TAG,
-                "CHECKPOINT step=healthCheckResponse expected=reachable actual=error ok=false message=${e.message ?: e::class.java.simpleName}",
-                e,
-            )
+            Diag.e(DiagnosticArea.SECOND_BRAIN, TAG, "CHECKPOINT step=healthCheckResponse expected=reachable actual=error ok=false message=${e.message ?: e::class.java.simpleName}", e)
             _state.value = _state.value.copy(lastMessage = "Second Brain nicht erreichbar: ${e.message}")
             false
         }
     }
 
-    /**
-     * Frank-Wunsch 2026-07-04 (Etappe 2, Brain->App): Holt Ideen, die im Second Brain (Kategorie
-     * „Ideen") NEU angelegt wurden, in die App. Abgleich per Titel; in der App geloeschte Ideen
-     * kommen NICHT zurueck (bekannte Titel = Tombstone). Die importierte Idee bekommt den
-     * Brain-Zeitstempel und nur den Text (keine verbesserte Version) — die kann in der App ergaenzt
-     * werden, wodurch sie automatisch wieder ins Brain hochgeladen wird (App->Brain).
-     * Mit Retry, weil der WireGuard-Tunnel nach dem App-Start ein paar Sekunden braucht.
-     */
-    fun pullFromBrain(scope: CoroutineScope) {
+    fun pullFromBrain(scope: CoroutineScope, areaKey: String? = null) {
         scope.launch(Dispatchers.IO) {
             repeat(4) {
-                if (pullOnce()) return@launch
+                val ok = selectedTargets(areaKey).all { pullOnce(it) }
+                if (ok) return@launch
                 delay(3000)
             }
         }
     }
 
-    /** Ein Pull-Versuch. true = Brain erreichbar (fertig), false = Netzfehler (Tunnel evtl. noch nicht oben -> Retry). */
-    private suspend fun pullOnce(): Boolean {
-        if (!settings.secondBrainIdeasConnectorEnabledFlow.first()) return true
+    private suspend fun pullOnce(target: SecondBrainSyncTarget): Boolean {
+        if (!settings.secondBrainConnectorEnabledFlow(target.area.key).first()) return true
         val key = secrets.secondBrainApiKey.orEmpty().trim()
         if (key.isBlank()) return true
         val auth = "Bearer $key"
         val brain = try {
-            api.byCategory(auth, "Ideen")
+            api.byCategory(auth, target.area.category)
         } catch (e: CancellationException) {
             throw e
         } catch (e: Exception) {
-            Diag.w(
-                DiagnosticArea.SECOND_BRAIN,
-                TAG,
-                "CHECKPOINT step=pullUnreachable actual=error ok=false message=${e.message ?: e::class.java.simpleName}",
-            )
+            Diag.w(DiagnosticArea.SECOND_BRAIN, TAG, "CHECKPOINT step=pullUnreachable area=${target.area.key} actual=error ok=false message=${e.message ?: e::class.java.simpleName}")
             return false
         }
         val brainTitles = brain.items.mapNotNull { it.title?.trim() }.filter { it.isNotEmpty() }.toSet()
-        val appIdeas = ideaDao.getAllIdeasForBackup()
-        val appTitles = appIdeas.map { it.title.trim() }.toSet()
-        val uploadedMap = settings.readSecondBrainIdeaTitles()
+        val appRows = target.loadRows()
+        val appTitles = appRows.map { it.title.trim() }.toSet()
+        val uploadedMap = settings.readSecondBrainTitles(target.area.key)
         val knownTitles = uploadedMap.values.map { it.trim() }.toSet()
         var imported = 0
         for (item in brain.items) {
             val title = item.title?.trim().orEmpty()
             if (title.isBlank()) continue
-            if (title in appTitles) continue      // schon in der App
-            if (title in knownTitles) continue     // Tombstone: in der App geloescht -> nicht zurueckholen
-            val ts = parseIsoToMs(item.createdAt)
-            val newId = UUID.randomUUID().toString()
-            // Reihenfolge: erst als „synchron" markieren, DANN anlegen — sonst wuerde der
-            // App->Brain-Flow die frische Idee sofort im App-Format neu hochladen (Ping-Pong).
-            settings.markSecondBrainIdeaSynced(newId, "$newId:$ts")
-            settings.setSecondBrainIdeaTitle(newId, title)
-            ideaDao.upsertIdea(
-                IdeaEntity(
-                    id = newId,
-                    timestampMs = ts,
-                    title = title,
-                    text = item.text.trim(),
-                    summary = null,
-                    improvedText = null,
-                    isImproved = false,
-                    updatedAt = null,
-                ),
-            )
+            if (title in appTitles) continue
+            if (title in knownTitles) continue
+            val row = target.insertFromBrain(item) ?: continue
+            settings.markSecondBrainSynced(target.area.key, row.id, syncStamp(row))
+            settings.setSecondBrainTitle(target.area.key, row.id, row.title)
             imported++
-            Diag.i(
-                DiagnosticArea.SECOND_BRAIN,
-                TAG,
-                "CHECKPOINT step=pullImported expected=idea_created actual=created ok=true title=\"$title\" ts=$ts id=$newId",
-            )
+            Diag.i(DiagnosticArea.SECOND_BRAIN, TAG, "CHECKPOINT step=pullImported area=${target.area.key} expected=row_created actual=created ok=true title=\"${row.title}\" id=${row.id}")
         }
-        // Loeschung Brain->App (Frank-Wunsch 2026-07-04): App-Ideen, die vom Brain kamen (Titel in
-        // uploadedMap = synchronisiert) UND in der App existieren, aber im Brain NICHT mehr vorhanden
-        // sind -> wurden im Brain geloescht -> auch in der App entfernen. SICHERUNG (Ladefenster-Schutz,
-        // brain-api §1.15): NUR loeschen, wenn das Brain sicher vollstaendig geladen ist (health.ready) —
-        // sonst wuerde eine kurz unvollstaendige Server-Antwort App-Ideen faelschlich loeschen.
         var deletedInApp = 0
         val ready = try {
             api.health(auth).ready
@@ -296,35 +272,358 @@ class SecondBrainIdeaConnector @Inject constructor(
             false
         }
         if (ready) {
-            for (idea in appIdeas) {
-                val syncedTitle = (uploadedMap[idea.id] ?: continue).trim()
+            for (row in appRows) {
+                val syncedTitle = (uploadedMap[row.id] ?: continue).trim()
                 if (syncedTitle.isNotEmpty() && syncedTitle !in brainTitles) {
-                    ideaDao.deleteIdeaById(idea.id)
-                    settings.clearSecondBrainIdeaSync(idea.id)
+                    target.deleteById(row.id)
+                    settings.clearSecondBrainSync(target.area.key, row.id)
                     deletedInApp++
-                    Diag.i(
-                        DiagnosticArea.SECOND_BRAIN,
-                        TAG,
-                        "CHECKPOINT step=pullDeletedInApp expected=idea_removed actual=removed ok=true title=\"$syncedTitle\" id=${idea.id}",
-                    )
+                    Diag.i(DiagnosticArea.SECOND_BRAIN, TAG, "CHECKPOINT step=pullDeletedInApp area=${target.area.key} expected=row_removed actual=removed ok=true title=\"$syncedTitle\" id=${row.id}")
                 }
             }
         }
-        Diag.i(
-            DiagnosticArea.SECOND_BRAIN,
-            TAG,
-            "CHECKPOINT step=pullComplete expected=brain_scanned actual=brain=${brain.items.size},imported=$imported,deletedInApp=$deletedInApp,ready=$ready ok=true",
-        )
+        Diag.i(DiagnosticArea.SECOND_BRAIN, TAG, "CHECKPOINT step=pullComplete area=${target.area.key} expected=brain_scanned actual=brain=${brain.items.size},imported=$imported,deletedInApp=$deletedInApp,ready=$ready ok=true")
         if (imported > 0 || deletedInApp > 0) {
             _state.value = _state.value.copy(
-                lastMessage = "Second Brain synchronisiert: $imported neu, $deletedInApp entfernt.",
+                lastMessage = "${target.area.label}: $imported neu, $deletedInApp entfernt.",
                 lastSyncedAtMs = System.currentTimeMillis(),
             )
         }
         return true
     }
 
-    /** ISO-8601-Zeitstempel des Brains -> Millis; robust gegen die gaengigen Formate. */
+    private suspend fun syncRows(target: SecondBrainSyncTarget, rows: List<SecondBrainSyncRow>, reason: String): Boolean {
+        val key = secrets.secondBrainApiKey.orEmpty().trim()
+        if (key.isBlank()) {
+            Diag.w(DiagnosticArea.SECOND_BRAIN, TAG, "CHECKPOINT step=syncPreflight area=${target.area.key} expected=api_key_present actual=missing ok=false reason=$reason rows=${rows.size}")
+            _state.value = _state.value.copy(lastMessage = "Connector aktiv, aber API-Key fehlt.")
+            return false
+        }
+        val auth = "Bearer $key"
+        val sorted = rows.sortedBy { it.createdAtMs }
+        val currentIds = sorted.map { it.id }.toSet()
+        val uploadedTitles = settings.readSecondBrainTitles(target.area.key)
+
+        val deletedIds = uploadedTitles.keys - currentIds
+        var deleted = 0
+        var deletionNetworkError = false
+        for (id in deletedIds) {
+            val title = uploadedTitles[id] ?: continue
+            try {
+                val resp = api.forget(auth, title)
+                settings.clearSecondBrainSync(target.area.key, id)
+                deleted++
+                Diag.i(DiagnosticArea.SECOND_BRAIN, TAG, "CHECKPOINT step=forgetRow area=${target.area.key} expected=deleted actual=deleted=${resp.deleted} ok=${resp.ok} id=$id title=\"$title\"")
+            } catch (e: CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                deletionNetworkError = true
+                Diag.e(DiagnosticArea.SECOND_BRAIN, TAG, "CHECKPOINT step=forgetRow area=${target.area.key} expected=deleted actual=error ok=false id=$id title=\"$title\" message=${e.message ?: e::class.java.simpleName}", e)
+            }
+        }
+
+        val knownStamps = settings.readSecondBrainSyncStamps(target.area.key).toMutableSet()
+        val pending = sorted.filter { row -> syncStamp(row) !in knownStamps }
+        Diag.i(DiagnosticArea.SECOND_BRAIN, TAG, "CHECKPOINT step=syncPreflight area=${target.area.key} expected=pending_calculated actual=total=${sorted.size},pending=${pending.size},deleted=$deleted,known=${knownStamps.size} ok=true reason=$reason")
+        if (pending.isEmpty()) {
+            _state.value = _state.value.copy(
+                lastMessage = if (deleted > 0) "$deleted ${target.area.label}-Eintrag(e) im Second Brain gelöscht, Rest aktuell."
+                else "${target.area.label} ist im Second Brain aktuell.",
+            )
+            return deletionNetworkError
+        }
+
+        _state.value = _state.value.copy(syncing = true, lastMessage = "$reason: ${pending.size} offen.")
+        var synced = 0
+        for (row in pending) {
+            val stamp = syncStamp(row)
+            val title = brainTitle(row)
+            val text = row.toBrainText()
+            val previousTitle = uploadedTitles[row.id]
+            if (previousTitle != null && previousTitle != title) {
+                try {
+                    api.forget(auth, previousTitle)
+                    Diag.i(DiagnosticArea.SECOND_BRAIN, TAG, "CHECKPOINT step=forgetOldTitle area=${target.area.key} expected=deleted actual=done ok=true id=${row.id} old=\"$previousTitle\" new=\"$title\"")
+                } catch (e: CancellationException) {
+                    throw e
+                } catch (e: Exception) {
+                    Diag.w(DiagnosticArea.SECOND_BRAIN, TAG, "CHECKPOINT step=forgetOldTitle area=${target.area.key} expected=deleted actual=error ok=false id=${row.id} old=\"$previousTitle\" message=${e.message ?: e::class.java.simpleName}")
+                }
+            }
+            val request = SecondBrainStoreRequest(title = title, category = target.area.category, text = text)
+            try {
+                val response = api.store(
+                    authorization = auth,
+                    idempotencyKey = "entropy-${target.area.key}-${row.id}-$stamp",
+                    request = request,
+                )
+                settings.markSecondBrainSynced(target.area.key, row.id, stamp)
+                settings.setSecondBrainTitle(target.area.key, row.id, title)
+                knownStamps.removeAll { it.startsWith("${row.id}:") }
+                knownStamps += stamp
+                synced++
+                Diag.i(DiagnosticArea.SECOND_BRAIN, TAG, "CHECKPOINT step=storeResponse area=${target.area.key} expected=ok actual=ok=${response.ok},docId=${response.docId ?: "leer"},replaced=${response.replaced} ok=${response.ok} id=${row.id}")
+            } catch (e: CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                val msg = e.message ?: e::class.java.simpleName
+                Diag.e(DiagnosticArea.SECOND_BRAIN, TAG, "CHECKPOINT step=storeResponse area=${target.area.key} expected=ok actual=error ok=false id=${row.id} title=\"$title\" synced_before_error=$synced message=$msg", e)
+                _state.value = _state.value.copy(syncing = false, lastMessage = "Sync gestoppt bei '$title': $msg", syncedCount = synced)
+                return true
+            }
+        }
+        _state.value = _state.value.copy(
+            syncing = false,
+            lastMessage = "$reason abgeschlossen: $synced gespeichert" + (if (deleted > 0) ", $deleted gelöscht." else "."),
+            syncedCount = synced,
+            lastSyncedAtMs = System.currentTimeMillis(),
+        )
+        Diag.i(DiagnosticArea.SECOND_BRAIN, TAG, "CHECKPOINT step=syncComplete area=${target.area.key} expected=all_pending_synced actual=synced=$synced,deleted=$deleted,pending=${pending.size} ok=${synced == pending.size} reason=$reason")
+        return deletionNetworkError
+    }
+
+    private fun buildTargets(): List<SecondBrainSyncTarget> = listOf(
+        SecondBrainSyncTarget(
+            area = AREAS_IDEAS,
+            observeRows = { ideaDao.getAllIdeasWithFollowups().mapRows { it.toIdeaRows() } },
+            loadRows = { loadIdeaRows() },
+            insertFromBrain = { item -> insertIdeaFromBrain(item) },
+            deleteById = { id -> ideaDao.deleteIdeaById(id) },
+        ),
+        SecondBrainSyncTarget(
+            area = AREAS_HABITS,
+            observeRows = { habitDao.getAll().mapRows { rows -> rows.map { it.toSyncRow() } } },
+            loadRows = { habitDao.getAllForBackup().map { it.toSyncRow() } },
+            insertFromBrain = { item -> insertHabitFromBrain(item) },
+            deleteById = { id -> habitDao.deleteById(id) },
+        ),
+        SecondBrainSyncTarget(
+            area = AREAS_MENTAL,
+            observeRows = { mentalDao.getAll().mapRows { rows -> rows.map { it.toSyncRow() } } },
+            loadRows = { mentalDao.getAllForBackup().map { it.toSyncRow() } },
+            insertFromBrain = { item -> insertMentalFromBrain(item) },
+            deleteById = { id -> mentalDao.deleteById(id) },
+        ),
+        SecondBrainSyncTarget(
+            area = AREAS_ENTROPY,
+            observeRows = { entropyDao.getActive().mapRows { rows -> rows.map { it.toSyncRow() } } },
+            loadRows = { entropyDao.getAllForBackup().filter { it.status != EntryStatus.ARCHIVIERT }.map { it.toSyncRow() } },
+            insertFromBrain = { item -> insertEntropyFromBrain(item) },
+            deleteById = { id -> entropyDao.deleteById(id) },
+        ),
+        SecondBrainSyncTarget(
+            area = AREAS_THESES,
+            observeRows = { thesenEntriesFlow(appContext).mapRows { rows -> rows.map { it.toSyncRow() } } },
+            loadRows = { thesenEntriesFlow(appContext).first().map { it.toSyncRow() } },
+            insertFromBrain = { item -> insertThesisFromBrain(item) },
+            deleteById = { id -> deleteThesenEntry(appContext, id, propagate = false) },
+        ),
+        SecondBrainSyncTarget(
+            area = AREAS_JOURNAL,
+            observeRows = { journalMirrorDao.observeEntries().mapRows { rows -> rows.map { it.toSyncRow() } } },
+            loadRows = { journalMirrorDao.observeEntries().first().map { it.toSyncRow() } },
+            insertFromBrain = { item -> insertJournalFromBrain(item) },
+            deleteById = { id -> journalMirrorDao.deleteEntriesByIds(listOf(id.toLong())) },
+        ),
+    )
+
+    private fun selectedTargets(areaKey: String?): List<SecondBrainSyncTarget> =
+        if (areaKey == null) targets else targets.filter { it.area.key == areaKey }
+
+    private suspend fun loadIdeaRows(): List<SecondBrainSyncRow> =
+        ideaDao.getAllIdeasForBackup().map { idea ->
+            IdeaWithFollowups(idea, ideaDao.getFollowupsForIdea(idea.id))
+        }.toIdeaRows()
+
+    private fun List<IdeaWithFollowups>.toIdeaRows(): List<SecondBrainSyncRow> = map { row ->
+        val ideaText = row.idea.improvedText?.takeIf { it.isNotBlank() }?.trim() ?: row.idea.text.trim()
+        SecondBrainSyncRow(
+            id = row.idea.id,
+            createdAtMs = row.idea.timestampMs,
+            updatedAtMs = maxOf(row.idea.updatedAt ?: row.idea.timestampMs, row.followups.maxOfOrNull { it.createdAtMs } ?: 0L),
+            title = row.idea.title.trim().ifBlank { "Idee ${row.idea.id.take(8)}" },
+            bodyLabel = "Idee",
+            body = ideaText,
+            summary = row.idea.summary?.takeIf { it.isNotBlank() }?.trim(),
+        )
+    }
+
+    private suspend fun insertIdeaFromBrain(item: SecondBrainCategoryItem): SecondBrainSyncRow {
+        val title = item.title?.trim().orEmpty()
+        val ts = parseIsoToMs(item.createdAt)
+        val newId = UUID.randomUUID().toString()
+        val entity = IdeaEntity(
+            id = newId,
+            timestampMs = ts,
+            title = title,
+            text = item.text.trim(),
+            summary = null,
+            improvedText = null,
+            isImproved = false,
+            updatedAt = null,
+        )
+        ideaDao.upsertIdea(entity)
+        return listOf(IdeaWithFollowups(entity, emptyList())).toIdeaRows().first()
+    }
+
+    private fun HabitEntity.toSyncRow(): SecondBrainSyncRow = SecondBrainSyncRow(
+        id = id,
+        createdAtMs = updatedAt.takeIf { it > 0L } ?: 0L,
+        updatedAtMs = updatedAt.takeIf { it > 0L } ?: 0L,
+        title = text.trim().shortTitle("Gewohnheit", id),
+        bodyLabel = "Gewohnheit",
+        body = text.trim(),
+    )
+
+    private suspend fun insertHabitFromBrain(item: SecondBrainCategoryItem): SecondBrainSyncRow {
+        val ts = parseIsoToMs(item.createdAt)
+        val nextPosition = habitDao.maxPosition() + 1
+        val entity = HabitEntity(
+            id = UUID.randomUUID().toString(),
+            text = item.text.trim(),
+            updatedAt = ts,
+            position = nextPosition,
+        )
+        habitDao.upsert(entity)
+        return entity.toSyncRow()
+    }
+
+    private fun MentalEntity.toSyncRow(): SecondBrainSyncRow = SecondBrainSyncRow(
+        id = id,
+        createdAtMs = updatedAt.takeIf { it > 0L } ?: 0L,
+        updatedAtMs = updatedAt.takeIf { it > 0L } ?: 0L,
+        title = text.trim().shortTitle("Mental", id),
+        bodyLabel = "Mental",
+        body = text.trim(),
+    )
+
+    private suspend fun insertMentalFromBrain(item: SecondBrainCategoryItem): SecondBrainSyncRow {
+        val ts = parseIsoToMs(item.createdAt)
+        val nextPosition = mentalDao.maxPosition() + 1
+        val entity = MentalEntity(
+            id = UUID.randomUUID().toString(),
+            text = item.text.trim(),
+            updatedAt = ts,
+            position = nextPosition,
+        )
+        mentalDao.upsert(entity)
+        return entity.toSyncRow()
+    }
+
+    private fun EntropyEntryEntity.toSyncRow(): SecondBrainSyncRow = SecondBrainSyncRow(
+        id = id,
+        createdAtMs = createdAt,
+        updatedAtMs = updatedAt,
+        title = title.trim().ifBlank { rawTranscript.trim().shortTitle("Entropie", id) },
+        bodyLabel = "Entropie",
+        body = description.ifBlank { rawTranscript }.trim(),
+        summary = listOf(
+            "Status: ${status.name}",
+            "Kategorie: ${category.name}",
+            "Priorität: ${manualPriorityScore ?: priorityScore}",
+            "Bucket: ${manualBucket ?: timeBucket}",
+            aiNotes?.takeIf { it.isNotBlank() }?.let { "KI-Notizen: ${it.trim()}" },
+        ).filterNotNull().joinToString("\n"),
+    )
+
+    private suspend fun insertEntropyFromBrain(item: SecondBrainCategoryItem): SecondBrainSyncRow {
+        val ts = parseIsoToMs(item.createdAt)
+        val title = item.title?.trim().orEmpty().ifBlank { "Entropie ${formatTs(ts)}" }
+        val text = item.text.trim()
+        val entity = EntropyEntryEntity(
+            id = UUID.randomUUID().toString(),
+            rawTranscript = text,
+            title = title,
+            description = text,
+            category = EntropyCategory.SONSTIGES,
+            severity = 1,
+            priorityScore = 0.0,
+            priorityReason = "Aus Second Brain importiert.",
+            status = EntryStatus.OFFEN,
+            timeBucket = TimeBucket.SPAETER,
+            estimatedDurationMinutes = null,
+            createdAt = ts,
+            updatedAt = ts,
+            resolvedAt = null,
+            tags = emptyList(),
+            aiNotes = null,
+            source = EntrySource.NUTZER_TEXT,
+            biomarkerSnapshotId = null,
+        )
+        entropyDao.upsert(entity)
+        return entity.toSyncRow()
+    }
+
+    private fun ThesenEntry.toSyncRow(): SecondBrainSyncRow = SecondBrainSyncRow(
+        id = id,
+        createdAtMs = timestampMs,
+        updatedAtMs = maxOf(updatedAt.takeIf { it > 0L } ?: timestampMs, followups.maxOfOrNull { it.createdAtMs } ?: 0L),
+        title = title.trim().ifBlank { text.trim().shortTitle("These", id) },
+        bodyLabel = "These",
+        body = improvedText?.takeIf { it.isNotBlank() }?.trim() ?: text.trim(),
+        summary = summary?.takeIf { it.isNotBlank() }?.trim(),
+    )
+
+    private suspend fun insertThesisFromBrain(item: SecondBrainCategoryItem): SecondBrainSyncRow {
+        val ts = parseIsoToMs(item.createdAt)
+        val title = item.title?.trim().orEmpty().ifBlank { "These ${formatTs(ts)}" }
+        val entry = ThesenEntry.create(item.text.trim()).copy(
+            id = UUID.randomUUID().toString(),
+            timestampMs = ts,
+            title = title,
+            updatedAt = ts,
+        )
+        addThesenEntry(appContext, entry)
+        return entry.toSyncRow()
+    }
+
+    private suspend fun insertJournalFromBrain(item: SecondBrainCategoryItem): SecondBrainSyncRow {
+        val ts = parseIsoToMs(item.createdAt)
+        val entity = JournalMirrorEntryEntity(
+            sourceId = -System.nanoTime(),
+            timestamp = ts,
+            title = item.title?.trim(),
+            displayText = item.text.trim(),
+            rawText = item.text.trim(),
+            improvedText = null,
+            isImproved = false,
+            summary = null,
+        )
+        journalMirrorDao.upsertEntries(listOf(entity))
+        return entity.toSyncRow()
+    }
+
+    private fun JournalMirrorEntryEntity.toSyncRow(): SecondBrainSyncRow = SecondBrainSyncRow(
+        id = sourceId.toString(),
+        createdAtMs = timestamp,
+        updatedAtMs = timestamp,
+        title = title?.trim().takeUnless { it.isNullOrBlank() } ?: displayText.trim().shortTitle("Tagebucheintrag", sourceId.toString()),
+        bodyLabel = "Tagebucheintrag",
+        body = (improvedText?.takeIf { isImproved && it.isNotBlank() } ?: displayText.ifBlank { rawText }).trim(),
+        summary = summary?.takeIf { it.isNotBlank() }?.trim(),
+    )
+
+    private fun String.shortTitle(prefix: String, id: String): String {
+        val firstLine = lineSequence().firstOrNull().orEmpty().trim()
+        val base = if (firstLine.length <= 80) firstLine else firstLine.take(80).trim() + "…"
+        return base.ifBlank { "$prefix ${id.take(8)}" }
+    }
+
+    private fun syncStamp(row: SecondBrainSyncRow): String = "${row.id}:${maxOf(row.createdAtMs, row.updatedAtMs)}"
+
+    private fun brainTitle(row: SecondBrainSyncRow): String = row.title.trim().ifBlank { "${row.bodyLabel} ${row.id.take(8)}" }
+
+    private fun SecondBrainSyncRow.toBrainText(): String = buildString {
+        appendLine("Erstellt am: ${formatTs(createdAtMs)}")
+        appendLine("Aktualisiert am: ${formatTs(updatedAtMs)}")
+        appendLine()
+        appendLine("$bodyLabel: ${body.trim()}")
+        if (!summary.isNullOrBlank()) {
+            appendLine()
+            appendLine("Zusammenfassung: ${summary.trim()}")
+        }
+    }.trim()
+
     private fun parseIsoToMs(iso: String?): Long {
         if (iso.isNullOrBlank()) return System.currentTimeMillis()
         return runCatching { OffsetDateTime.parse(iso).toInstant().toEpochMilli() }
@@ -333,195 +632,20 @@ class SecondBrainIdeaConnector @Inject constructor(
             .getOrDefault(System.currentTimeMillis())
     }
 
-    /**
-     * Laedt ausstehende/geaenderte Ideen hoch und entfernt in der App geloeschte per Titel.
-     * @return true, wenn ein NETZFEHLER einen Upload ODER eine Loeschung (forget) abbrach (Retry
-     *         sinnvoll) — false, wenn fertig, nichts zu tun war oder nur ein nicht-netzbedingter
-     *         Grund (fehlender Key) vorlag.
-     *         Bestehende Aufrufer (Flow-Observer, syncAllNow, resyncAll) ignorieren den Rueckgabewert.
-     */
-    private suspend fun syncRows(rows: List<IdeaWithFollowups>, reason: String): Boolean {
-        val key = secrets.secondBrainApiKey.orEmpty().trim()
-        if (key.isBlank()) {
-            Diag.w(
-                DiagnosticArea.SECOND_BRAIN,
-                TAG,
-                "CHECKPOINT step=syncPreflight expected=api_key_present actual=missing ok=false reason=$reason rows=${rows.size}",
-            )
-            _state.value = _state.value.copy(lastMessage = "Connector aktiv, aber API-Key fehlt.")
-            return false
-        }
-        val auth = "Bearer $key"
-        val sorted = rows.sortedBy { it.idea.timestampMs }
-        val currentIds = sorted.map { it.idea.id }.toSet()
-        val uploadedTitles = settings.readSecondBrainIdeaTitles()
-
-        // 1) Loeschungen (Frank-Wunsch 2026-07-04): Ideen, die frueher hochgeladen wurden, jetzt aber
-        //    nicht mehr existieren (in der App geloescht) -> per Titel aus dem Brain entfernen.
-        val deletedIds = uploadedTitles.keys - currentIds
-        var deleted = 0
-        // Fix 2026-07-04: Auch eine fehlgeschlagene Loeschung (forget) soll den Retry ausloesen —
-        // sonst wuerde eine offline geloeschte Idee erst beim naechsten App-Start (statt sofort per
-        // Retry) aus dem Brain verschwinden. true, sobald ein forget an einem Netzfehler scheitert.
-        var deletionNetworkError = false
-        for (id in deletedIds) {
-            val title = uploadedTitles[id] ?: continue
-            try {
-                val resp = api.forget(auth, title)
-                settings.clearSecondBrainIdeaSync(id)
-                deleted++
-                Diag.i(
-                    DiagnosticArea.SECOND_BRAIN,
-                    TAG,
-                    "CHECKPOINT step=forgetIdea expected=deleted actual=deleted=${resp.deleted} ok=${resp.ok} id=$id title=\"$title\"",
-                )
-            } catch (e: CancellationException) {
-                throw e
-            } catch (e: Exception) {
-                deletionNetworkError = true
-                Diag.e(
-                    DiagnosticArea.SECOND_BRAIN,
-                    TAG,
-                    "CHECKPOINT step=forgetIdea expected=deleted actual=error ok=false id=$id title=\"$title\" message=${e.message ?: e::class.java.simpleName}",
-                    e,
-                )
-            }
-        }
-
-        // 2) Uploads: neue/geaenderte Ideen (per Sync-Stamp) hochladen.
-        val knownStamps = settings.readSecondBrainIdeaSyncStamps().toMutableSet()
-        val pending = sorted.filter { row -> syncStamp(row) !in knownStamps }
-        Diag.i(
-            DiagnosticArea.SECOND_BRAIN,
-            TAG,
-            "CHECKPOINT step=syncPreflight expected=pending_calculated actual=total=${sorted.size},pending=${pending.size},deleted=$deleted,known=${knownStamps.size} ok=true reason=$reason",
-        )
-        if (pending.isEmpty()) {
-            _state.value = _state.value.copy(
-                lastMessage = if (deleted > 0) "$deleted Idee(n) im Second Brain geloescht, Rest aktuell."
-                else "Alle Ideen sind im Second Brain aktuell.",
-            )
-            return deletionNetworkError
-        }
-
-        _state.value = _state.value.copy(syncing = true, lastMessage = "$reason: ${pending.size} Idee(n) offen.")
-        var synced = 0
-        for (row in pending) {
-            val stamp = syncStamp(row)
-            val title = brainTitle(row)
-            val text = row.toBrainText()
-            // Titel-Aenderung: alten Brain-Eintrag (anderer Titel) zuerst entfernen, sonst Leiche.
-            val previousTitle = uploadedTitles[row.idea.id]
-            if (previousTitle != null && previousTitle != title) {
-                try {
-                    api.forget(auth, previousTitle)
-                    Diag.i(
-                        DiagnosticArea.SECOND_BRAIN,
-                        TAG,
-                        "CHECKPOINT step=forgetOldTitle expected=deleted actual=done ok=true id=${row.idea.id} old=\"$previousTitle\" new=\"$title\"",
-                    )
-                } catch (e: CancellationException) {
-                    throw e
-                } catch (e: Exception) {
-                    Diag.w(
-                        DiagnosticArea.SECOND_BRAIN,
-                        TAG,
-                        "CHECKPOINT step=forgetOldTitle expected=deleted actual=error ok=false id=${row.idea.id} old=\"$previousTitle\" message=${e.message ?: e::class.java.simpleName}",
-                    )
-                }
-            }
-            val request = SecondBrainStoreRequest(
-                title = title,
-                category = "Ideen",
-                text = text,
-            )
-            Diag.d(
-                DiagnosticArea.SECOND_BRAIN,
-                TAG,
-                "CHECKPOINT step=storeIdeaRequest id=${row.idea.id} title=\"$title\" chars=${text.length} stamp=$stamp",
-            )
-            try {
-                val response = api.store(
-                    authorization = auth,
-                    idempotencyKey = "entropy-idea-${row.idea.id}-$stamp",
-                    request = request,
-                )
-                settings.markSecondBrainIdeaSynced(row.idea.id, stamp)
-                settings.setSecondBrainIdeaTitle(row.idea.id, title)
-                knownStamps.removeAll { it.startsWith("${row.idea.id}:") }
-                knownStamps += stamp
-                synced++
-                Diag.i(
-                    DiagnosticArea.SECOND_BRAIN,
-                    TAG,
-                    "CHECKPOINT step=storeIdeaResponse expected=ok actual=ok=${response.ok},docId=${response.docId ?: "leer"},replaced=${response.replaced} ok=${response.ok} id=${row.idea.id}",
-                )
-            } catch (e: CancellationException) {
-                throw e
-            } catch (e: Exception) {
-                val msg = e.message ?: e::class.java.simpleName
-                Diag.e(
-                    DiagnosticArea.SECOND_BRAIN,
-                    TAG,
-                    "CHECKPOINT step=storeIdeaResponse expected=ok actual=error ok=false id=${row.idea.id} title=\"$title\" synced_before_error=$synced message=$msg",
-                    e,
-                )
-                _state.value = _state.value.copy(
-                    syncing = false,
-                    lastMessage = "Sync gestoppt bei '${row.idea.title}': $msg",
-                    syncedCount = synced,
-                )
-                return true
-            }
-        }
-        _state.value = _state.value.copy(
-            syncing = false,
-            lastMessage = "$reason abgeschlossen: $synced gespeichert" + (if (deleted > 0) ", $deleted geloescht." else "."),
-            syncedCount = synced,
-            lastSyncedAtMs = System.currentTimeMillis(),
-        )
-        Diag.i(
-            DiagnosticArea.SECOND_BRAIN,
-            TAG,
-            "CHECKPOINT step=syncComplete expected=all_pending_synced actual=synced=$synced,deleted=$deleted,pending=${pending.size} ok=${synced == pending.size} reason=$reason",
-        )
-        return deletionNetworkError
-    }
-
-    private fun syncStamp(row: IdeaWithFollowups): String {
-        val ideaVersion = row.idea.updatedAt ?: row.idea.timestampMs
-        val followupVersion = row.followups.maxOfOrNull { it.createdAtMs } ?: 0L
-        return "${row.idea.id}:${maxOf(ideaVersion, followupVersion)}"
-    }
-
-    // Frank-Wunsch 2026-07-04: Brain-Titel = NUR der Ideen-Titel (z. B. "Frage Meditation ausprobieren"),
-    // nicht mehr die interne ID/Datum. Leerer Titel -> kurzer Fallback, damit der Brain nie einen
-    // leeren Titel-Schluessel bekommt.
-    private fun brainTitle(row: IdeaWithFollowups): String =
-        row.idea.title.trim().ifBlank { "Idee ${row.idea.id.take(8)}" }
-
-    // Frank-Wunsch 2026-07-04: reiner, lesbarer Text ohne Rauten/Markup. Nur Erstell-/Aktualisierungs-
-    // datum, dann "Idee:" (verbesserte Fassung, sonst Original) und — falls vorhanden — "Zusammenfassung:".
-    // Bewusst KEINE Nachtraege (Followups) im Brain-Text.
-    private fun IdeaWithFollowups.toBrainText(): String = buildString {
-        appendLine("Erstellt am: ${formatTs(idea.timestampMs)}")
-        appendLine("Aktualisiert am: ${formatTs(idea.updatedAt ?: idea.timestampMs)}")
-        appendLine()
-        val ideaText = idea.improvedText?.takeIf { it.isNotBlank() }?.trim() ?: idea.text.trim()
-        appendLine("Idee: $ideaText")
-        if (!idea.summary.isNullOrBlank()) {
-            appendLine()
-            appendLine("Zusammenfassung: ${idea.summary.trim()}")
-        }
-    }.trim()
-
     private fun formatTs(ms: Long): String =
         DATE_TEXT.format(Instant.ofEpochMilli(ms).atZone(ZoneId.systemDefault()))
 
+    private fun <T> Flow<T>.mapRows(mapper: suspend (T) -> List<SecondBrainSyncRow>): Flow<List<SecondBrainSyncRow>> =
+        map { mapper(it) }
+
     private companion object {
-        const val TAG = "SecondBrainIdeas"
-        // Fix 2026-07-04: Retry-Kadenz fuer den Nachhol-Upload — analog zu pullFromBrain (4x, 3s),
-        // faengt den intermittierenden WireGuard-Tunnel ab (mal erreichbar, mal 30s-Timeout).
+        const val TAG = "SecondBrainSync"
+        val AREAS_IDEAS = SecondBrainArea("ideas", "Ideen", "Ideen")
+        val AREAS_HABITS = SecondBrainArea("habits", "Gewohnheiten", "Gewohnheiten")
+        val AREAS_MENTAL = SecondBrainArea("mental", "Mental", "Mental")
+        val AREAS_ENTROPY = SecondBrainArea("entropy", "Entropie", "Entropie")
+        val AREAS_THESES = SecondBrainArea("theses", "Thesen", "Thesen")
+        val AREAS_JOURNAL = SecondBrainArea("journal", "Tagebucheinträge", "Tagebucheinträge")
         const val PUSH_RETRIES = 4
         const val PUSH_RETRY_DELAY_MS = 3000L
         val DATE_TEXT: DateTimeFormatter = DateTimeFormatter.ofPattern("dd.MM.yyyy, HH:mm 'Uhr'", Locale.GERMANY)

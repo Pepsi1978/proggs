@@ -18,11 +18,11 @@ class IdeenBrainSyncViewModel
 constructor(
     private val connector: SecondBrainIdeaConnector,
 ) : ViewModel() {
-    fun pullNow() {
-        connector.pullFromBrain(viewModelScope)
+    fun pullNow(areaKey: String = "ideas") {
+        connector.pullFromBrain(viewModelScope, areaKey)
         // Fix 2026-07-04: Beim Betreten des Ideen-Reiters nicht nur runterladen, sondern auch
         // ausstehende Uploads nachschieben — sonst bleibt eine unterwegs (ohne Netz) nicht
         // hochgeladene Idee liegen, bis die App als Prozess neu startet.
-        connector.retryPendingUploads(viewModelScope)
+        connector.retryPendingUploads(viewModelScope, areaKey)
     }
 }
