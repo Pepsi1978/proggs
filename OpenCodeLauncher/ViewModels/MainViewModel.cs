@@ -25,8 +25,8 @@ public sealed partial class MainViewModel : ObservableObject
         if (Models.Count > 0) SelectedModel = Models[0];
         WorkDir = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), "proggs");
 
-        var version = Assembly.GetExecutingAssembly().GetName().Version?.ToString(3) ?? "1.0.4";
-        Version = $"Version {version} (04.07.2026, 21:05 Uhr)";
+        var version = Assembly.GetExecutingAssembly().GetName().Version?.ToString(3) ?? "1.0.5";
+        Version = $"Version {version} (04.07.2026, 21:15 Uhr)";
     }
 
     public ObservableCollection<ModelEntry> Models { get; } = new();
@@ -119,6 +119,13 @@ public sealed partial class MainViewModel : ObservableObject
         if (SelectedModel == null) return;
         var idx = Models.IndexOf(SelectedModel);
         if (idx < 0) return;
+        var result = MessageBox.Show(
+            $"Möchtest du das Modell '{SelectedModel.DisplayName}' wirklich aus der Modellliste entfernen?",
+            "Modell entfernen",
+            MessageBoxButton.YesNo,
+            MessageBoxImage.Warning,
+            MessageBoxResult.No);
+        if (result != MessageBoxResult.Yes) return;
         _registry.RemoveAt(idx);
         Models.RemoveAt(idx);
         if (Models.Count > 0)

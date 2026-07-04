@@ -5,7 +5,7 @@
         xmlns:vm="clr-namespace:OpenCodeLauncher.ViewModels"
         xmlns:m="clr-namespace:OpenCodeLauncher.Models"
         Title="OpenCode Launcher"
-        Height="720" Width="1180"
+        Height="1150" Width="2200"
         MinHeight="600" MinWidth="960"
         WindowStartupLocation="CenterScreen"
         Background="#242434"
@@ -23,7 +23,7 @@
         <shell:WindowChrome CaptionHeight="0"
                             ResizeBorderThickness="6"
                             GlassFrameThickness="0"
-                            CornerRadius="0"
+                            CornerRadius="18"
                             UseAeroCaptionButtons="False"/>
     </shell:WindowChrome.WindowChrome>
 
@@ -110,8 +110,9 @@
             <Setter Property="RowHeight" Value="34"/>
             <Setter Property="ColumnHeaderHeight" Value="38"/>
             <Setter Property="HeadersVisibility" Value="Column"/>
-            <Setter Property="GridLinesVisibility" Value="Horizontal"/>
+            <Setter Property="GridLinesVisibility" Value="All"/>
             <Setter Property="CanUserSortColumns" Value="True"/>
+            <Setter Property="CanUserResizeColumns" Value="True"/>
         </Style>
         <Style TargetType="DataGridColumnHeader">
             <Setter Property="Background" Value="#242434"/>
@@ -151,7 +152,7 @@
         </Style>
     </Window.Resources>
 
-    <Border Background="#242434" CornerRadius="0" BorderBrush="#242434" BorderThickness="0">
+    <Border Background="#242434" CornerRadius="18" BorderBrush="#242434" BorderThickness="0">
         <Grid>
             <Grid.RowDefinitions>
                 <RowDefinition Height="Auto"/>
@@ -202,10 +203,11 @@
                         </DockPanel>
                         <ListBox x:Name="ModelList" Grid.Row="1" Style="{x:Null}"
                                  Background="Transparent" BorderThickness="0"
-                                 ItemsSource="{Binding Models}" SelectedItem="{Binding SelectedModel}"
-                                 ItemContainerStyle="{StaticResource ModelItem}"
-                                 AllowDrop="True" Drop="ModelList_Drop" DragEnter="ModelList_DragEnter" PreviewMouseMove="ModelList_PreviewMouseMove"
-                                 ScrollViewer.HorizontalScrollBarVisibility="Disabled">
+                                  ItemsSource="{Binding Models}" SelectedItem="{Binding SelectedModel}"
+                                  ItemContainerStyle="{StaticResource ModelItem}"
+                                  AllowDrop="True" PreviewMouseLeftButtonDown="ModelList_PreviewMouseLeftButtonDown" PreviewMouseMove="ModelList_PreviewMouseMove"
+                                  DragEnter="ModelList_DragEnter" DragOver="ModelList_DragOver" Drop="ModelList_Drop"
+                                  ScrollViewer.HorizontalScrollBarVisibility="Disabled">
                             <ListBox.ItemTemplate>
                                 <DataTemplate DataType="m:ModelEntry">
                                     <Grid>
@@ -252,13 +254,13 @@
                                   HeadersVisibility="Column" CanUserSortColumns="True"
                                   ColumnWidth="Auto" RowHeaderWidth="0">
                             <DataGrid.Columns>
-                                <DataGridTextColumn Header="Provider" Binding="{Binding ProviderName}" Width="*" SortMemberPath="ProviderName"/>
-                                <DataGridTextColumn Header="Input $/1M" Binding="{Binding InputPerMillion, StringFormat={}{0:0.####}}" Width="90"/>
-                                <DataGridTextColumn Header="Output $/1M" Binding="{Binding OutputPerMillion, StringFormat={}{0:0.####}}" Width="100"/>
-                                <DataGridTextColumn Header="Cache Read $/1M" Binding="{Binding CacheReadText}" Width="120"/>
-                                <DataGridTextColumn Header="Kontext" Binding="{Binding ContextLength, StringFormat=N0}" Width="90"/>
-                                <DataGridTextColumn Header="Throughput" Binding="{Binding ThroughputText}" Width="105"/>
-                                <DataGridTextColumn Header="Status" Binding="{Binding StatusText}" Width="100"/>
+                                <DataGridTextColumn Header="Provider" Binding="{Binding ProviderName}" Width="520" SortMemberPath="ProviderName"/>
+                                <DataGridTextColumn Header="Input $/1M" Binding="{Binding InputPerMillion, StringFormat={}{0:0.####}}" Width="170"/>
+                                <DataGridTextColumn Header="Output $/1M" Binding="{Binding OutputPerMillion, StringFormat={}{0:0.####}}" Width="170"/>
+                                <DataGridTextColumn Header="Cache Read $/1M" Binding="{Binding CacheReadText}" Width="220"/>
+                                <DataGridTextColumn Header="Kontext" Binding="{Binding ContextLength, StringFormat=N0}" Width="150"/>
+                                <DataGridTextColumn Header="Throughput" Binding="{Binding ThroughputText}" Width="150"/>
+                                <DataGridTextColumn Header="Status" Binding="{Binding StatusText}" Width="*" MinWidth="160"/>
                             </DataGrid.Columns>
                         </DataGrid>
                     </Grid>
