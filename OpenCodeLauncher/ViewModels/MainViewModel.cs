@@ -25,8 +25,8 @@ public sealed partial class MainViewModel : ObservableObject
         if (Models.Count > 0) SelectedModel = Models[0];
         WorkDir = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), "proggs");
 
-        var version = Assembly.GetExecutingAssembly().GetName().Version?.ToString(3) ?? "1.0.7";
-        Version = $"Version {version} (04.07.2026, 21:31 Uhr)";
+        var version = Assembly.GetExecutingAssembly().GetName().Version?.ToString(3) ?? "1.0.8";
+        Version = $"Version {version} (04.07.2026, 21:38 Uhr)";
     }
 
     public ObservableCollection<ModelEntry> Models { get; } = new();
@@ -301,7 +301,8 @@ public sealed partial class MainViewModel : ObservableObject
             WindowStartupLocation = WindowStartupLocation.CenterScreen,
             ResizeMode = ResizeMode.NoResize,
             WindowStyle = WindowStyle.None,
-            Background = new System.Windows.Media.SolidColorBrush(System.Windows.Media.Color.FromRgb(36, 36, 52)),
+            AllowsTransparency = true,
+            Background = System.Windows.Media.Brushes.Transparent,
         };
 
         var root = new System.Windows.Controls.Border
@@ -355,7 +356,7 @@ public sealed partial class MainViewModel : ObservableObject
 
     private static System.Windows.Controls.Button DialogButton(string text, bool accent)
     {
-        return new System.Windows.Controls.Button
+        var button = new System.Windows.Controls.Button
         {
             Content = text,
             Padding = new Thickness(18, 8, 18, 8),
@@ -367,5 +368,17 @@ public sealed partial class MainViewModel : ObservableObject
             BorderThickness = new Thickness(0),
             Cursor = System.Windows.Input.Cursors.Hand
         };
+        var template = new System.Windows.Controls.ControlTemplate(typeof(System.Windows.Controls.Button));
+        var border = new System.Windows.FrameworkElementFactory(typeof(System.Windows.Controls.Border));
+        border.SetValue(System.Windows.Controls.Border.BackgroundProperty, new System.Windows.TemplateBindingExtension(System.Windows.Controls.Button.BackgroundProperty));
+        border.SetValue(System.Windows.Controls.Border.CornerRadiusProperty, new CornerRadius(8));
+        border.SetValue(System.Windows.Controls.Border.PaddingProperty, new System.Windows.TemplateBindingExtension(System.Windows.Controls.Button.PaddingProperty));
+        var presenter = new System.Windows.FrameworkElementFactory(typeof(System.Windows.Controls.ContentPresenter));
+        presenter.SetValue(System.Windows.Controls.ContentPresenter.HorizontalAlignmentProperty, HorizontalAlignment.Center);
+        presenter.SetValue(System.Windows.Controls.ContentPresenter.VerticalAlignmentProperty, VerticalAlignment.Center);
+        border.AppendChild(presenter);
+        template.VisualTree = border;
+        button.Template = template;
+        return button;
     }
 }
