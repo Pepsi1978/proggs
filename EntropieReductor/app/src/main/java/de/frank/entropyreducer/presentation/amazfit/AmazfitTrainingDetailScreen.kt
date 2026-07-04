@@ -73,6 +73,7 @@ import de.frank.entropyreducer.presentation.dashboard4.formatDistance
 import de.frank.entropyreducer.presentation.dashboard4.formatDuration
 import de.frank.entropyreducer.presentation.dashboard4.formatPace
 import de.frank.entropyreducer.presentation.dashboard4.formatStartLabel
+import de.frank.entropyreducer.presentation.dashboard4.weatherLabel
 import de.frank.entropyreducer.presentation.theme.CosmosColors
 import de.frank.entropyreducer.presentation.theme.LocalCosmos
 import kotlinx.serialization.json.Json
@@ -359,12 +360,24 @@ private fun HeroCard(w: AmazfitWorkoutEntity, onEditClick: () -> Unit = {}) {
                 }
                 Spacer(Modifier.size(12.dp))
                 Column(modifier = Modifier.weight(1f)) {
-                    Text(
-                        text = w.sportName ?: "Sport",
-                        style = MaterialTheme.typography.titleLarge,
-                        color = cosmos.textPrimary,
-                        fontWeight = FontWeight.Bold,
-                    )
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Text(
+                            text = w.sportName ?: "Sport",
+                            style = MaterialTheme.typography.titleLarge,
+                            color = cosmos.textPrimary,
+                            fontWeight = FontWeight.Bold,
+                        )
+                        // Wetter direkt neben dem Titel (Frank-Wunsch): Temperatur + Wetter-Icon.
+                        weatherLabel(w)?.let { wLabel ->
+                            Spacer(Modifier.size(8.dp))
+                            Text(
+                                text = wLabel,
+                                style = MaterialTheme.typography.titleMedium,
+                                color = cosmos.textSecondary,
+                                fontWeight = FontWeight.SemiBold,
+                            )
+                        }
+                    }
                     Text(
                         text = formatStartLabel(w.startMs),
                         style = MaterialTheme.typography.labelMedium,

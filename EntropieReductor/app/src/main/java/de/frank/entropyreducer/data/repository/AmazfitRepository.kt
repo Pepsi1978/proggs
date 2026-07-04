@@ -406,8 +406,18 @@ constructor(
                     // bewusst behalten — nicht ueberschreiben
                 }
                 else -> {
-                    if (match.trackId != newEntity.trackId) workoutDao.deleteByTrackId(match.trackId)
-                    workoutDao.upsert(newEntity)
+                    // Frank-Bugfix: Wetter (Open-Meteo) vom bestehenden Eintrag uebernehmen — sonst
+                    // wuerde die frische HC-Version (weather=null) das schon recherchierte Wetter
+                    // loeschen und der Backfill muesste es neu holen (sichtbares Flackern). So bleibt
+                    // ein einmal recherchierter Wert stabil; nur Trainings OHNE Wetter holt der Backfill.
+                    val preserved =
+                        newEntity.copy(
+                            weatherTempCelsius = match.weatherTempCelsius,
+                            weatherCondition = match.weatherCondition,
+                            weatherFetchedMs = match.weatherFetchedMs,
+                        )
+                    if (match.trackId != preserved.trackId) workoutDao.deleteByTrackId(match.trackId)
+                    workoutDao.upsert(preserved)
                     replaced++
                 }
             }

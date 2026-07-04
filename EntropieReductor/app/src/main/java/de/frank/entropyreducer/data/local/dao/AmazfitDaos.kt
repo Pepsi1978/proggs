@@ -145,7 +145,8 @@ interface AmazfitWorkoutDao {
             "altitudeGainMeters, altitudeLossMeters, trainingEffectAerobic, " +
             "trainingEffectAnaerobic, vo2Max, cadence, strideLengthCm, " +
             "recoveryTimeHours, skinTempCelsius, swolf, poolLaps, " +
-            "poolLengthMeters, source, city, createdAt " +
+            "poolLengthMeters, source, city, " +
+            "weatherTempCelsius, weatherCondition, weatherFetchedMs, createdAt " +
             "FROM amazfit_workouts ORDER BY startMs DESC"
     )
     suspend fun getAllForBackupSlim(): List<AmazfitWorkoutBackupRow>
@@ -174,7 +175,7 @@ interface AmazfitWorkoutDao {
      * aendert.
      */
     @Query(
-        "SELECT trackId, createdAt, manualOverridesMs FROM amazfit_workouts ORDER BY startMs DESC"
+        "SELECT trackId, createdAt, manualOverridesMs, weatherFetchedMs FROM amazfit_workouts ORDER BY startMs DESC"
     )
     suspend fun getFingerprintRows(): List<AmazfitWorkoutFingerprintRow>
 
@@ -274,6 +275,9 @@ data class AmazfitWorkoutBackupRow(
     val poolLengthMeters: Double?,
     val source: String?,
     val city: String?,
+    val weatherTempCelsius: Int?,
+    val weatherCondition: String?,
+    val weatherFetchedMs: Long?,
     val createdAt: Long,
 )
 
@@ -287,4 +291,7 @@ data class AmazfitWorkoutFingerprintRow(
     val trackId: String,
     val createdAt: Long,
     val manualOverridesMs: Long?,
+    /** Wetter-Abruf-Zeitstempel im Fingerprint: so triggert ein Wetter-Backfill ein neues
+     *  Drive-Backup (sonst bliebe der Hash gleich und das Wetter kaeme nie in die Cloud). */
+    val weatherFetchedMs: Long?,
 )

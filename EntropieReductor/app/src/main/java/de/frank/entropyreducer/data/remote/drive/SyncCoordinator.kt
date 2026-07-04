@@ -561,7 +561,7 @@ constructor(
                             .get()
                             .getFingerprintRows()
                             .joinToString("|") {
-                                "${it.trackId}:${it.createdAt}:${it.manualOverridesMs ?: 0L}"
+                                "${it.trackId}:${it.createdAt}:${it.manualOverridesMs ?: 0L}:${it.weatherFetchedMs ?: 0L}"
                             }
                             .hashCode()
                     val lastFingerprint = appSettingsLazy.get().workoutsBackupFingerprintFlow.first()

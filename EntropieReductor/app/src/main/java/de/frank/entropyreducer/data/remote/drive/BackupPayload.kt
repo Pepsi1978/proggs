@@ -479,6 +479,11 @@ data class BackupAmazfitWorkout(
     val poolLengthMeters: Double? = null,
     val source: String? = null,
     val city: String? = null,
+    /** Wetter pro Training (Open-Meteo) — mitgesichert, damit es nach Restore auf einem neuen
+     *  Geraet wieder da ist und der Backfill nur fehlende Werte ergaenzt (nullable = alte Backups). */
+    val weatherTempCelsius: Int? = null,
+    val weatherCondition: String? = null,
+    val weatherFetchedMs: Long? = null,
     val paceStreamJson: String? = null,
     /**
      * Schema v11 (Frank-Bugfix 2026-05-22): Schutz-Stempel fuer manuell editierte
@@ -817,6 +822,9 @@ fun de.frank.entropyreducer.data.local.dao.AmazfitWorkoutBackupRow.toBackup():
         poolLengthMeters = poolLengthMeters,
         source = source,
         city = city,
+        weatherTempCelsius = weatherTempCelsius,
+        weatherCondition = weatherCondition,
+        weatherFetchedMs = weatherFetchedMs,
         paceStreamJson = null,
         // Slim-Projection liest die Felder nicht aus der DB (SELECT-Spalten
         // sind explizit ohne manualOverridesMs/Fields). Default null reicht
@@ -873,6 +881,9 @@ fun AmazfitWorkoutEntity.toBackup(): BackupAmazfitWorkout =
         poolLengthMeters = poolLengthMeters,
         source = source,
         city = city,
+        weatherTempCelsius = weatherTempCelsius,
+        weatherCondition = weatherCondition,
+        weatherFetchedMs = weatherFetchedMs,
         paceStreamJson = paceStreamJson,
         // Schema v11: Schutz-Stempel und Feld-Tracking mitsichern damit
         // der Trainings-Sync nach Restore die manuellen Edits weiterhin schuetzt
@@ -1055,6 +1066,9 @@ fun BackupAmazfitWorkout.toEntity(): AmazfitWorkoutEntity =
         poolLengthMeters = poolLengthMeters,
         source = source,
         city = city,
+        weatherTempCelsius = weatherTempCelsius,
+        weatherCondition = weatherCondition,
+        weatherFetchedMs = weatherFetchedMs,
         paceStreamJson = paceStreamJson,
         // Schema v11: Schutz-Stempel + Feld-Labels uebernehmen damit
         // der Trainings-Sync nach dem Restore die manuellen Edits nicht

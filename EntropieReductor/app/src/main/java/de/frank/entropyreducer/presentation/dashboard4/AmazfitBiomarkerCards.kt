@@ -262,12 +262,24 @@ private fun LetzterLaufHero(
                 }
                 Spacer(Modifier.size(10.dp))
                 Column(modifier = Modifier.weight(1f)) {
-                    Text(
-                        text = w.sportName ?: "Sport",
-                        style = MaterialTheme.typography.titleMedium,
-                        color = cosmos.textPrimary,
-                        fontWeight = FontWeight.Bold,
-                    )
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Text(
+                            text = w.sportName ?: "Sport",
+                            style = MaterialTheme.typography.titleMedium,
+                            color = cosmos.textPrimary,
+                            fontWeight = FontWeight.Bold,
+                        )
+                        // Wetter direkt neben dem Titel (Frank-Wunsch): Temperatur + Wetter-Icon.
+                        weatherLabel(w)?.let { wLabel ->
+                            Spacer(Modifier.size(8.dp))
+                            Text(
+                                text = wLabel,
+                                style = MaterialTheme.typography.titleSmall,
+                                color = cosmos.textSecondary,
+                                fontWeight = FontWeight.SemiBold,
+                            )
+                        }
+                    }
                     Text(
                         text = formatStartLabel(w.startMs),
                         style = MaterialTheme.typography.labelSmall,
