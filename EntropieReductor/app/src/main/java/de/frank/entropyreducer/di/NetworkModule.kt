@@ -12,6 +12,7 @@ import de.frank.entropyreducer.data.diagnostics.DiagnosticHttpInterceptor
 import de.frank.entropyreducer.data.remote.GeminiApi
 import de.frank.entropyreducer.data.remote.GoogleTtsApi
 import de.frank.entropyreducer.data.remote.GroqWhisperApi
+import de.frank.entropyreducer.data.remote.OpenMeteoApi
 import de.frank.entropyreducer.data.remote.brain.SecondBrainApi
 import de.frank.entropyreducer.data.remote.calendar.GoogleCalendarApi
 import de.frank.entropyreducer.data.remote.oura.OuraApi
@@ -89,6 +90,24 @@ object NetworkModule {
     @Provides @Singleton
     fun provideSecondBrainApi(@Named("secondBrain") retrofit: Retrofit): SecondBrainApi =
         retrofit.create(SecondBrainApi::class.java)
+
+    // Open-Meteo (Wetter pro Training) — kostenlos, kein API-Key. Der geteilte
+    // OkHttp-Singleton wird wiederverwendet. baseUrl = Archive-API (historische
+    // Trainings via relativem "v1/archive"); der Forecast-Endpunkt fuer aktuelle
+    // Trainings nutzt in OpenMeteoApi einen absoluten URL und ueberschreibt diese baseUrl.
+    @Provides
+    @Singleton
+    @Named("openMeteo")
+    fun provideOpenMeteoRetrofit(client: OkHttpClient, json: Json): Retrofit =
+        Retrofit.Builder()
+            .baseUrl("https://archive-api.open-meteo.com/")
+            .client(client)
+            .addConverterFactory(json.asConverterFactory("application/json".toMediaType()))
+            .build()
+
+    @Provides @Singleton
+    fun provideOpenMeteoApi(@Named("openMeteo") retrofit: Retrofit): OpenMeteoApi =
+        retrofit.create(OpenMeteoApi::class.java)
 
     @Provides
     @Singleton
