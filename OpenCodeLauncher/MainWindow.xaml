@@ -271,24 +271,19 @@
                                     <DataTemplate DataType="m:ModelGroupEntry">
                                         <Border Background="#26263A" BorderBrush="#373750" BorderThickness="1" CornerRadius="10" Margin="0,0,0,8" Padding="8"
                                                 AllowDrop="True"
-                                                PreviewMouseLeftButtonDown="ModelGroup_PreviewMouseLeftButtonDown"
-                                                PreviewMouseMove="ModelGroup_PreviewMouseMove"
                                                 DragEnter="ModelGroup_DragEnter" DragOver="ModelGroup_DragOver" Drop="ModelGroup_Drop">
                                             <StackPanel>
-                                                <Grid Margin="0,0,0,6">
+                                                <Grid Margin="0,0,0,6" Background="Transparent" Cursor="Hand"
+                                                      PreviewMouseLeftButtonDown="ModelGroupHeader_PreviewMouseLeftButtonDown"
+                                                      PreviewMouseMove="ModelGroupHeader_PreviewMouseMove"
+                                                      MouseLeftButtonUp="ModelGroupHeader_MouseLeftButtonUp">
                                                     <Grid.ColumnDefinitions>
                                                         <ColumnDefinition Width="Auto"/>
                                                         <ColumnDefinition Width="*"/>
                                                         <ColumnDefinition Width="Auto"/>
                                                     </Grid.ColumnDefinitions>
-                                                    <TextBlock Text="⋮⋮" Foreground="#606078" FontSize="13" Margin="0,0,8,0" VerticalAlignment="Center" Cursor="SizeAll"
-                                                               PreviewMouseLeftButtonDown="ModelGroupGrip_PreviewMouseLeftButtonDown"
-                                                               PreviewMouseMove="ModelGroupGrip_PreviewMouseMove"/>
-                                                    <Button Grid.Column="1" Style="{StaticResource HeaderToggleBtn}" HorizontalContentAlignment="Left"
-                                                            Command="{Binding DataContext.ToggleGroupCommand, RelativeSource={RelativeSource AncestorType=Window}}"
-                                                            CommandParameter="{Binding}">
-                                                        <TextBlock Text="{Binding HeaderText}" Foreground="#E8E8EC" FontSize="13" FontWeight="SemiBold"/>
-                                                    </Button>
+                                                    <TextBlock Text="⋮⋮" Foreground="#606078" FontSize="13" Margin="0,0,8,0" VerticalAlignment="Center" Cursor="SizeAll"/>
+                                                    <TextBlock Grid.Column="1" Text="{Binding HeaderText}" Foreground="#E8E8EC" FontSize="13" FontWeight="SemiBold" VerticalAlignment="Center"/>
                                                     <TextBlock Grid.Column="2" Text="▾" Foreground="#8A8AF0" FontSize="13" VerticalAlignment="Center"/>
                                                 </Grid>
 

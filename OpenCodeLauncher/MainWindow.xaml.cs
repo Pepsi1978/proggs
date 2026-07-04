@@ -106,17 +106,19 @@ public partial class MainWindow : Window
     private Point _dragStartPoint;
     private int _dragSourceGroupIndex = -1;
     private OpenCodeLauncher.Models.ModelGroupEntry? _dragSourceGroup;
+    private bool _groupDragStarted;
     private int _dragSourceIndex = -1;
 
-    private void ModelGroupGrip_PreviewMouseLeftButtonDown(object sender, MouseButtonEventArgs e)
+    private void ModelGroupHeader_PreviewMouseLeftButtonDown(object sender, MouseButtonEventArgs e)
     {
         _dragStartPoint = e.GetPosition(this);
         _dragSourceGroup = (sender as FrameworkElement)?.DataContext as OpenCodeLauncher.Models.ModelGroupEntry;
         _dragSourceGroupIndex = _dragSourceGroup == null ? -1 : ViewModel.ModelGroups.IndexOf(_dragSourceGroup);
+        _groupDragStarted = false;
         e.Handled = true;
     }
 
-    private void ModelGroupGrip_PreviewMouseMove(object sender, MouseEventArgs e)
+    private void ModelGroupHeader_PreviewMouseMove(object sender, MouseEventArgs e)
     {
         if (e.LeftButton != MouseButtonState.Pressed || _dragSourceGroup == null || _dragSourceGroupIndex < 0) return;
 
@@ -125,18 +127,21 @@ public partial class MainWindow : Window
             Math.Abs(current.Y - _dragStartPoint.Y) < SystemParameters.MinimumVerticalDragDistance)
             return;
 
-        DragDrop.DoDragDrop(this, _dragSourceGroup, DragDropEffects.Move);
+        _groupDragStarted = true;
+        DragDrop.DoDragDrop(sender as DependencyObject ?? this, _dragSourceGroup, DragDropEffects.Move);
+        _dragSourceGroup = null;
+        _dragSourceGroupIndex = -1;
         e.Handled = true;
     }
 
-    private void ModelGroup_PreviewMouseLeftButtonDown(object sender, MouseButtonEventArgs e)
+    private void ModelGroupHeader_MouseLeftButtonUp(object sender, MouseButtonEventArgs e)
     {
-        // Gruppen werden nur über den Griff verschoben; der restliche Header bleibt fürs Auf-/Zuklappen klickbar.
-    }
-
-    private void ModelGroup_PreviewMouseMove(object sender, MouseEventArgs e)
-    {
-        // Gruppen-Drag bewusst nur über ModelGroupGrip_PreviewMouseMove.
+        if (!_groupDragStarted && (sender as FrameworkElement)?.DataContext is OpenCodeLauncher.Models.ModelGroupEntry group)
+            ViewModel.ToggleGroupCommand.Execute(group);
+        _dragSourceGroup = null;
+        _dragSourceGroupIndex = -1;
+        _groupDragStarted = false;
+        e.Handled = true;
     }
 
     private void ModelGroup_DragEnter(object sender, DragEventArgs e) => SetDragEffects(e);
