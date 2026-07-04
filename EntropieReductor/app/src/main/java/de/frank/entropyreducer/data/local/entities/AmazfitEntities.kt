@@ -145,5 +145,14 @@ data class AmazfitWorkoutEntity(
      *  kein Feld manuell editiert. Wird im DetailScreen genutzt um pro
      *  Stat-Karte ein Schloss-Icon anzuzeigen. */
     val manualOverrideFields: String? = null,
+    /** Frank-Wunsch (Wetter pro Training, Open-Meteo): Lufttemperatur in °C zum
+     *  Trainings-Start (gerundet). null = nicht recherchiert / kein GPS / API-Fehler. */
+    val weatherTempCelsius: Int? = null,
+    /** Wetterlage als deutsches Einzelwort (z.B. "sonnig", "bewölkt", "regnerisch")
+     *  aus dem WMO-Code — steuert das Wetter-Icon in der Trainings-Anzeige. */
+    val weatherCondition: String? = null,
+    /** Zeitstempel (epoch-ms) wann das Wetter zuletzt geholt wurde. null = noch nie
+     *  versucht; gesetzt (auch wenn kein Ergebnis kam) = nicht erneut abfragen. */
+    val weatherFetchedMs: Long? = null,
     val createdAt: Long,
 )

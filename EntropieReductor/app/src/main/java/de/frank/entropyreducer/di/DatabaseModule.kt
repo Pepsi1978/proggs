@@ -60,6 +60,7 @@ object DatabaseModule {
                 AppDatabase.MIGRATION_32_33,
                 AppDatabase.MIGRATION_33_34,
                 AppDatabase.MIGRATION_34_35,
+                AppDatabase.MIGRATION_35_36,
             )
             // Destruktiv NUR von Uralt-Versionen 1-9 (keine Migrationen vorhanden, kein
             // Geraet mehr auf diesem Stand). Ab Version 10: NIE destruktiv — fehlende

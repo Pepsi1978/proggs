@@ -110,7 +110,7 @@ import de.frank.entropyreducer.data.local.entities.WhoopWorkoutEntity
             // ID-Architektur Etappe 4 (Frank-Wunsch 2026-06-19): Mental-Board-Saetze
             de.frank.entropyreducer.data.local.entities.MentalEntity::class,
         ],
-    version = 35,
+    version = 36,
     exportSchema = true,
 )
 // Version 10 (2026-05-09 Abend): InsightEntity und MemoryEntryEntity sind aus
@@ -1093,6 +1093,21 @@ abstract class AppDatabase : RoomDatabase() {
             object : Migration(34, 35) {
                 override fun migrate(db: SupportSQLiteDatabase) {
                     db.execSQL("ALTER TABLE ideas ADD COLUMN updatedAt INTEGER")
+                }
+            }
+
+        /**
+         * Migration 35 -> 36 (Wetter pro Training, Open-Meteo): drei ADDITIVE, NULLABLE Spalten
+         * an `amazfit_workouts` — Lufttemperatur (°C), Wetterlage (Wort) und Abruf-Zeitstempel.
+         * Kein NOT NULL / kein SQL-DEFAULT -> Bestandszeilen bekommen NULL, kein identityHash-
+         * Mismatch (M3), kein Datenverlust. Befuellt wird spaeter per Open-Meteo-Backfill.
+         */
+        val MIGRATION_35_36: Migration =
+            object : Migration(35, 36) {
+                override fun migrate(db: SupportSQLiteDatabase) {
+                    db.execSQL("ALTER TABLE amazfit_workouts ADD COLUMN weatherTempCelsius INTEGER")
+                    db.execSQL("ALTER TABLE amazfit_workouts ADD COLUMN weatherCondition TEXT")
+                    db.execSQL("ALTER TABLE amazfit_workouts ADD COLUMN weatherFetchedMs INTEGER")
                 }
             }
     }
