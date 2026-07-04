@@ -1011,7 +1011,11 @@ button{font-family:inherit;cursor:pointer}
         .lib-trash svg{width:16px;height:16px;stroke-width:2}
         .lib-ivlog{display:flex;flex-direction:column;gap:8px;max-height:340px;overflow-y:auto;margin:10px 0;
           padding:12px;border:1px solid var(--border);border-radius:12px;background:var(--surface)}
-        .lib-grid2{display:grid;grid-template-columns:repeat(auto-fit,minmax(190px,1fr));gap:12px}
+        .lib-grid5{display:grid;grid-template-columns:repeat(5,1fr);gap:12px}
+        @media (max-width:1100px){.lib-grid5{grid-template-columns:repeat(auto-fit,minmax(180px,1fr))}}
+        /* Modell + Thinking nebeneinander (Einstellungen -> Bibliothekar-Agent, Frank-Wunsch 05.07.) */
+        .mr-pair{display:grid;grid-template-columns:1fr 1fr;gap:10px;align-items:end;margin-bottom:12px}
+        .mr-pair .field{margin-bottom:0}
         .lib-run-line{display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-top:10px}
         .lib-spin{display:inline-block;width:14px;height:14px;border:2px solid var(--border);border-top-color:var(--accent);
           border-radius:50%;animation:libspin .8s linear infinite;vertical-align:-2px}
@@ -1047,7 +1051,11 @@ button{font-family:inherit;cursor:pointer}
             <div class="nm"><b>Bibliothekar aktiv</b><span>Schaltet den kompletten Nachtlauf an oder aus.</span></div>
             <input type="checkbox" class="lib-sw" id="libEnabled">
           </div>
-          <div class="lib-grid2" style="margin-top:14px">
+          <div class="lib-taskrow" style="border-bottom:1px solid var(--border)">
+            <div class="nm"><b>Ohne Begrenzung durcharbeiten</b><span>Empfohlen an: Der Bibliothekar arbeitet jede Nacht ALLES ab (kein Vorschlags-Limit, kein KI-Budget) — nur eine stille Notbremse gegen Endlosschleifen bleibt. Aus = die zwei Limit-Felder rechts gelten.</span></div>
+            <input type="checkbox" class="lib-sw" id="libUnlimited">
+          </div>
+          <div class="lib-grid5" style="margin-top:14px">
             <div class="field">
               <label for="libStartTime">Startzeit (nachts)</label>
               <input type="time" class="select" id="libStartTime" value="04:10">
@@ -1057,12 +1065,16 @@ button{font-family:inherit;cursor:pointer}
               <select class="select" id="libModel"></select>
             </div>
             <div class="field">
-              <label for="libMaxPer">Max. Vorschläge je Aufgabe/Nacht</label>
-              <input type="number" class="select" id="libMaxPer" min="1" max="50" value="8">
+              <label for="libReasoning">Thinking / Reasoning</label>
+              <select class="select" id="libReasoning"></select>
             </div>
             <div class="field">
-              <label for="libBudget">LLM-Budget je Nacht (Aufrufe)</label>
-              <input type="number" class="select" id="libBudget" min="20" max="2000" value="250">
+              <label for="libMaxPer">Max. Vorschläge je Aufgabe</label>
+              <input type="number" class="select" id="libMaxPer" min="1" max="50" value="8" title="Gilt nur, wenn „Ohne Begrenzung“ AUS ist">
+            </div>
+            <div class="field">
+              <label for="libBudget">KI-Budget je Nacht</label>
+              <input type="number" class="select" id="libBudget" min="20" max="20000" value="250" title="Gilt nur, wenn „Ohne Begrenzung“ AUS ist">
             </div>
           </div>
           <div class="field" style="margin-top:8px">
@@ -1105,39 +1117,47 @@ button{font-family:inherit;cursor:pointer}
           <div class="card set-section">
             <h3><span class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M12 2a4 4 0 0 1 4 4v1a4 4 0 0 1-8 0V6a4 4 0 0 1 4-4Z"/><path d="M5 21v-1a7 7 0 0 1 14 0v1"/></svg></span>Bibliothekar-Agent</h3>
             <p class="set-desc">Drei Agenten — wähle für jeden ein eigenes Modell. Der <b>Hauptagent</b> redet mit dir, der <b>Speicheragent</b> legt 1:1 ab, der <b>Abfrageagent</b> sucht im Gehirn.</p>
-            <div class="field">
-              <label for="modelHaupt">Hauptagent · Gespräch &amp; Steuerung</label>
-              <select class="select" id="modelHaupt"></select>
-              <div class="field" id="reasonHauptBox" style="margin-top:8px;display:none">
-                <label for="reasonHaupt">Thinking / Reasoning</label>
+            <div class="mr-pair">
+              <div class="field">
+                <label for="modelHaupt">Hauptagent · Gespräch &amp; Steuerung</label>
+                <select class="select" id="modelHaupt"></select>
+              </div>
+              <div class="field" id="reasonHauptBox" style="display:none">
+                <label for="reasonHaupt">Thinking</label>
                 <select class="select" id="reasonHaupt"></select>
               </div>
             </div>
-            <div class="field">
-              <label for="modelRouter">Router · Schritt 1 (nur Einordnung der Nachricht)</label>
-              <select class="select" id="modelRouter"></select>
-              <div class="field" id="reasonRouterBox" style="margin-top:8px;display:none">
-                <label for="reasonRouter">Thinking / Reasoning (Router)</label>
+            <div class="mr-pair">
+              <div class="field">
+                <label for="modelRouter">Router · Schritt 1 (nur Einordnung)</label>
+                <select class="select" id="modelRouter"></select>
+              </div>
+              <div class="field" id="reasonRouterBox" style="display:none">
+                <label for="reasonRouter">Thinking</label>
                 <select class="select" id="reasonRouter"></select>
               </div>
             </div>
-            <div class="field">
-              <label for="modelSpeicher">Speicheragent · ablegen</label>
-              <select class="select" id="modelSpeicher"></select>
-              <div class="field" id="reasonSpeicherBox" style="margin-top:8px;display:none">
-                <label for="reasonSpeicher">Thinking / Reasoning</label>
+            <div class="mr-pair">
+              <div class="field">
+                <label for="modelSpeicher">Speicheragent · ablegen</label>
+                <select class="select" id="modelSpeicher"></select>
+              </div>
+              <div class="field" id="reasonSpeicherBox" style="display:none">
+                <label for="reasonSpeicher">Thinking</label>
                 <select class="select" id="reasonSpeicher"></select>
               </div>
             </div>
-            <div class="field">
-              <label for="modelAbfrage">Abfrageagent · suchen</label>
-              <select class="select" id="modelAbfrage"></select>
-              <div class="field" id="reasonAbfrageBox" style="margin-top:8px;display:none">
-                <label for="reasonAbfrage">Thinking / Reasoning</label>
+            <div class="mr-pair">
+              <div class="field">
+                <label for="modelAbfrage">Abfrageagent · suchen</label>
+                <select class="select" id="modelAbfrage"></select>
+              </div>
+              <div class="field" id="reasonAbfrageBox" style="display:none">
+                <label for="reasonAbfrage">Thinking</label>
                 <select class="select" id="reasonAbfrage"></select>
               </div>
-              <div id="modelPricesInfo" style="margin-top:10px"></div>
             </div>
+            <div id="modelPricesInfo" style="margin-top:2px;margin-bottom:10px"></div>
             <div class="field">
               <label>OpenAI Codex / ChatGPT</label>
               <div class="muted-note" id="codexState">Status wird geladen…</div>
@@ -3721,9 +3741,12 @@ button{font-family:inherit;cursor:pointer}
       const r=await jlib("settings");
       const s=r.settings||{};
       document.getElementById("libEnabled").checked=!!s.enabled;
+      document.getElementById("libUnlimited").checked=s.unlimited!==false;
       document.getElementById("libStartTime").value=s.start_time||"04:10";
       const sel=document.getElementById("libModel"); sel.innerHTML="";
       (r.models||[]).forEach(m=>{ const o=document.createElement("option"); o.value=m; o.textContent=m; if(m===s.model)o.selected=true; sel.appendChild(o); });
+      const rs=document.getElementById("libReasoning"); rs.innerHTML="";
+      (r.reasoning_available||["none","low","medium","high","xhigh"]).forEach(v=>{ const o=document.createElement("option"); o.value=v; o.textContent=v; if(v===(s.reasoning||"high"))o.selected=true; rs.appendChild(o); });
       document.getElementById("libMaxPer").value=s.max_per_task??8;
       document.getElementById("libBudget").value=s.llm_budget??250;
       const tg=document.getElementById("libTaskToggles"); tg.innerHTML="";
@@ -3744,8 +3767,10 @@ button{font-family:inherit;cursor:pointer}
     try{
       await jlib("settings","PUT",{
         enabled:document.getElementById("libEnabled").checked,
+        unlimited:document.getElementById("libUnlimited").checked,
         start_time:document.getElementById("libStartTime").value||"04:10",
         model:document.getElementById("libModel").value,
+        reasoning:document.getElementById("libReasoning").value||"high",
         tasks:tasks,
         max_per_task:parseInt(document.getElementById("libMaxPer").value)||8,
         llm_budget:parseInt(document.getElementById("libBudget").value)||250

@@ -180,6 +180,7 @@ services:
       - .env                        # GEMINI_API_KEY / SB_API_KEY / OPENCODE_API_KEY (NICHT im Repo)
     environment:
       BRAIN_URL: http://brain-api:8000   # interner Compose-DNS-Name des Gehirns
+      AGENT_URL: http://agent:8002       # LLM-Durchgriff fuer Codex/GPT (agent /llm, 0.52.0)
       SB_USER_ID: frank
       LIB_TZ: Europe/Berlin
       LIB_DATA_DIR: /app/data            # Config + State + Tages-Reports (persistent)

@@ -42,7 +42,7 @@ from fastapi import Depends, FastAPI, Header, HTTPException, Request
 from fastapi.responses import JSONResponse
 from pydantic import BaseModel, Field
 
-VERSION = "0.1.0 (05.07.2026, 00.45 Uhr)"  # 0.1.0: Erstausgabe — kompletter Nachtschicht-Bibliothekar (Bereiche 11-18 + Nachzuegler-Lauf + eigene Zusatzaufgaben mit Interview)
+VERSION = "0.2.0 (05.07.2026, 01.45 Uhr)"  # 0.2.0 (Frank-Wuensche 2026-07-05): (a) GPT/Codex-Modelle nutzbar — gpt-* laeuft ueber den NEUEN Agent-Durchgriff POST /llm (agent 0.52.0, bestehende ChatGPT-OAuth-Anmeldung inkl. Token-Refresh, keine Auth-Duplikation); Modell-Liste in /settings kommt jetzt aus agent /config (alle verbundenen Provider). (b) THINKING einstellbar (none/low/medium/high/xhigh, Default high) — wirkt bei GPT als reasoning.effort und bei Gemini als thinking_budget. (c) 'OHNE BEGRENZUNG durcharbeiten'-Schalter (Default AN): hebt Vorschlags-Limit, Scan-Limits und LLM-Budget auf — der Bibliothekar arbeitet bis er durch ist; es bleibt NUR die stille Notbremse gegen Endlosschleifen (LIB_LLM_BACKSTOP, Default 5000 Calls/Nacht, ai-agent-Almanach 2.1). Alt: 0.1.0: Erstausgabe (Bereiche 11-18 + Nachzuegler + eigene Aufgaben)
 
 # ---------------------------------------------------------------------------
 # Konfiguration (Secrets nur aus der Umgebung, nie im Code)
@@ -54,6 +54,10 @@ OPENCODE_API_KEY = os.getenv("OPENCODE_API_KEY", "")
 OPENCODE_GO_URL = os.getenv("OPENCODE_GO_URL", "https://opencode.ai/zen/go/v1").rstrip("/")
 OPENCODE_ANTHROPIC_VERSION = os.getenv("OPENCODE_ANTHROPIC_VERSION", "2023-06-01")
 USER_ID = os.getenv("SB_USER_ID", "frank")
+AGENT_URL = os.getenv("AGENT_URL", "http://agent:8002").rstrip("/")   # LLM-Durchgriff fuer Codex/GPT (agent 0.52.0)
+# Stille Notbremse gegen Endlosschleifen, wenn 'Ohne Begrenzung' aktiv ist (Almanach ai-agent §2.1:
+# ein Cap muss STOPPEN koennen). 5000 Calls erreicht ehrliche Nacht-Arbeit nie — nur ein Amoklauf.
+LLM_BACKSTOP = int(os.getenv("LIB_LLM_BACKSTOP", "5000"))
 TZNAME = os.getenv("LIB_TZ", "Europe/Berlin")
 DATA_DIR = Path(os.getenv("LIB_DATA_DIR", "/app/data"))
 REPORTS_DIR = DATA_DIR / "reports"
@@ -64,8 +68,11 @@ LOG_LEVEL = os.getenv("LIB_LOG_LEVEL", "INFO").upper()
 # Status-Datei des Host-Backups (read-only gemountete Z-Wurzel). Fehlt sie -> Zeitanker reicht.
 BACKUP_STATUS_PATH = os.getenv("LIB_BACKUP_STATUS", "/gedanken/.gdrive-backup-status.json")
 CONV_CATEGORY = os.getenv("LIB_CONV_CATEGORY", "gespräche")
-# Gleiche Auswahl wie der Tages-Agent (Frank waehlt im Dashboard; nachts darf es das staerkere sein).
+# Basis-Auswahl (immer verfuegbar). Die VOLLE Liste inkl. verbundener Codex/GPT-Modelle kommt zur
+# Laufzeit aus agent /config (siehe _all_models) — Frank waehlt im Dashboard; nachts darf es das
+# staerkste sein (sein Wunsch: GPT mit kraeftigem Thinking).
 AVAILABLE_MODELS = ["gemini-3.1-flash-lite", "gemini-3.5-flash", "gemini-3-flash-preview", "gemini-2.5-flash", "minimax/minimax-m3"]
+REASONING_AVAILABLE = ["none", "low", "medium", "high", "xhigh"]
 REPORT_RETENTION_DAYS = int(os.getenv("LIB_REPORT_RETENTION_DAYS", "30"))
 DISMISS_RECHECK_DAYS = int(os.getenv("LIB_DISMISS_RECHECK_DAYS", "120"))   # abgelehnte Funde so lange nicht erneut vorschlagen
 
@@ -195,12 +202,14 @@ DEFAULT_CONFIG: dict = {
     "enabled": True,
     "start_time": "04:10",
     "model": "gemini-2.5-flash",          # Nacht darf gruendlicher sein als der Tages-Default; Frank stellt es im Dashboard um
+    "reasoning": "high",                   # Thinking-Stufe der Nacht (GPT reasoning.effort / Gemini thinking_budget)
+    "unlimited": True,                     # Frank-Wunsch 2026-07-05: OHNE Begrenzung durcharbeiten, bis alles erledigt ist
     "tasks": {k: True for k in STANDARD_TASKS},
-    "max_per_task": 8,                     # max NEUE Vorschlaege je Aufgabe und Nacht (Drossel gegen Morgen-Flut)
-    "llm_budget": 250,                     # harter LLM-Call-Deckel pro Nacht (Kosten-Notbremse, STOPPT statt mailt)
-    "nachzuegler_max": 60,                 # max Eintraege je Nacht nachverknuepfen
-    "dubletten_scan_max": 150,             # max Eintraege je Nacht auf Dubletten scannen (Erstlauf arbeitet sich durch)
-    "veraltet_max": 50,                    # max Veraltet-Pruefungen je Nacht
+    "max_per_task": 8,                     # greift NUR wenn unlimited=False (Drossel gegen Morgen-Flut)
+    "llm_budget": 250,                     # greift NUR wenn unlimited=False; bei unlimited zaehlt LLM_BACKSTOP
+    "nachzuegler_max": 60,                 # greift NUR wenn unlimited=False
+    "dubletten_scan_max": 150,             # greift NUR wenn unlimited=False
+    "veraltet_max": 50,                    # greift NUR wenn unlimited=False
     "veraltet_min_age_days": 45,           # juengere Eintraege gelten nie als veraltet
     "custom_tasks": [],                    # [{id, name, definition, enabled, created_at}] — Franks eigene Aufgaben
 }
@@ -215,8 +224,11 @@ def load_config() -> dict:
                 merged["tasks"].update({k2: bool(v2) for k2, v2 in v.items() if k2 in STANDARD_TASKS})
             else:
                 merged[k] = v
-    if merged.get("model") not in AVAILABLE_MODELS:
+    model = str(merged.get("model") or "")
+    if model not in AVAILABLE_MODELS and not model.lower().startswith("gpt-"):
         merged["model"] = DEFAULT_CONFIG["model"]
+    if str(merged.get("reasoning") or "") not in REASONING_AVAILABLE:
+        merged["reasoning"] = DEFAULT_CONFIG["reasoning"]
     return merged
 
 
@@ -266,6 +278,22 @@ def _is_opencode(model: str) -> bool:
     return "/" in (model or "")
 
 
+def _is_codex(model: str) -> bool:
+    return (model or "").strip().lower().startswith("gpt-")
+
+
+def _agent_llm(system: str, user: str, model: str, json_mode: bool, max_tokens: int,
+               temperature: float, reasoning: str) -> str:
+    """Codex/GPT laeuft ueber den Agent-Durchgriff POST /llm (agent 0.52.0): dort lebt die
+    ChatGPT-OAuth-Anmeldung inkl. Token-Refresh — hier wird nichts dupliziert."""
+    r = _HTTP.post(f"{AGENT_URL}/llm",
+                   json={"system": system, "user": user, "model": model, "json_mode": json_mode,
+                         "max_tokens": max_tokens, "temperature": temperature, "reasoning": reasoning},
+                   headers=HEADERS, timeout=300.0)
+    r.raise_for_status()
+    return (r.json().get("text") or "").strip()
+
+
 def _opencode_generate(system: str, user: str, model: str, max_tokens: int, temperature: float) -> str:
     """OpenCode Zen Go (Anthropic /messages-Schema). Pflicht-Header laut Almanach opencode-cli.md
     §14.6/§14.8: x-api-key (NICHT Bearer), anthropic-version, curl-User-Agent (Cloudflare-Bypass)."""
@@ -282,17 +310,24 @@ def _opencode_generate(system: str, user: str, model: str, max_tokens: int, temp
     return "".join(b.get("text", "") for b in (data.get("content") or []) if b.get("type") == "text").strip()
 
 
-def _gemini_once(system: str, user: str, model: str, json_mode: bool, max_tokens: int, temperature: float) -> str:
+# Franks Thinking-Stufe -> Gemini-thinking_budget (wird auf max_output_tokens ADDIERT, Almanach B4).
+_GEMINI_THINKING_BUDGET = {"none": 0, "low": 1024, "medium": 4096, "high": 8192, "xhigh": 16384}
+
+
+def _gemini_once(system: str, user: str, model: str, json_mode: bool, max_tokens: int,
+                 temperature: float, reasoning: str = "high") -> str:
     if gclient is None:
         raise RuntimeError(f"Gemini nicht initialisiert: {init_error}")
     kw: dict[str, Any] = dict(system_instruction=system, temperature=temperature, max_output_tokens=max_tokens)
     if json_mode:
         kw["response_mime_type"] = "application/json"
-    # Thinking-Budget moderat fest (nachts zaehlt Gruendlichkeit; Budget wird ADDIERT, Gemini-Almanach B4)
-    if genai_types is not None and hasattr(genai_types, "ThinkingConfig"):
+    budget = _GEMINI_THINKING_BUDGET.get(reasoning, 8192)
+    if budget == 0 and not model.strip().lower().startswith("gemini-2"):
+        budget = 512   # 3.x kann Thinking nicht komplett aus -> Minimum statt 0
+    if budget > 0 and genai_types is not None and hasattr(genai_types, "ThinkingConfig"):
         try:
-            kw["thinking_config"] = genai_types.ThinkingConfig(thinking_budget=4096)
-            kw["max_output_tokens"] = max_tokens + 4096
+            kw["thinking_config"] = genai_types.ThinkingConfig(thinking_budget=budget)
+            kw["max_output_tokens"] = max_tokens + budget
         except Exception:  # noqa: BLE001 — SDK ohne thinking_budget: ohne weiterlaufen
             kw.pop("thinking_config", None)
             kw["max_output_tokens"] = max_tokens
@@ -330,14 +365,20 @@ def _retry_code(exc: Exception) -> "int | None":
 
 
 def llm(system: str, user: str, *, model: str, json_mode: bool = True,
-        max_tokens: int = 2048, temperature: float = 0.2) -> str:
+        max_tokens: int = 2048, temperature: float = 0.2, reasoning: "str | None" = None) -> str:
     """Provider-neutraler LLM-Aufruf mit Full-Jitter-Backoff (nur 429/5xx, nie 4xx-Clientfehler).
+    gpt-* -> Agent-Durchgriff (Codex-OAuth), minimax -> OpenCode, sonst Gemini. Die Thinking-Stufe
+    kommt aus der Bibliothekar-Konfiguration (Frank stellt sie im Dashboard ein).
     Laeuft immer in Hintergrund-/Threadpool-Threads -> time.sleep blockiert den Event-Loop nicht."""
+    if reasoning is None:
+        reasoning = load_config().get("reasoning", "high")
     for attempt in range(LLM_MAX_RETRIES + 1):
         try:
+            if _is_codex(model):
+                return _agent_llm(system, user, model, json_mode, max_tokens, temperature, reasoning)
             if _is_opencode(model):
                 return _opencode_generate(system, user, model, max_tokens, temperature)
-            return _gemini_once(system, user, model, json_mode, max_tokens, temperature)
+            return _gemini_once(system, user, model, json_mode, max_tokens, temperature, reasoning)
         except Exception as e:  # noqa: BLE001
             code = _retry_code(e)
             if code is None or attempt >= LLM_MAX_RETRIES:
@@ -930,9 +971,12 @@ def _task_kategorien(cfg: dict, st: dict, budget: NightBudget, entries: dict, re
               if c and c.casefold() not in (CONV_CATEGORY.casefold(), "gespraeche")
               and not (c == "bugfixes" or c.startswith("bugfixes/"))}
     found = 0
+    _unlimited = int(cfg.get("max_per_task", 8)) >= 10**9
+    cap_split = 10**9 if _unlimited else 3
+    cap_orphan = 10**9 if _unlimited else 5
     # a) zu volle Kategorien (nur OBERSTE Ebene ohne '/') -> Aufteilungs-Vorschlag
     for cat, n in sorted(counts.items(), key=lambda x: -x[1]):
-        if found >= 3 or n < 30 or "/" in cat:
+        if found >= cap_split or n < 30 or "/" in cat:
             continue
         key = f"kat-split:{cat.casefold()}"
         if _finding_blocked(st, key) or not budget.take():
@@ -968,7 +1012,7 @@ def _task_kategorien(cfg: dict, st: dict, budget: NightBudget, entries: dict, re
         found += 1
     # b) verwaiste Kategorien (1-2 Eintraege) -> Hinweis-Vorschlag (Frank entscheidet per eigenem Text)
     for cat, n in sorted(counts.items(), key=lambda x: x[1]):
-        if found >= 5 or n > 2 or n == 0 or "/" in cat:
+        if found >= cap_orphan or n > 2 or n == 0 or "/" in cat:
             continue
         key = f"kat-orphan:{cat.casefold()}"
         if _finding_blocked(st, key):
@@ -1059,7 +1103,8 @@ def _task_verdichtung(cfg: dict, st: dict, budget: NightBudget, entries: dict, r
     limit_month = (datetime.now(TZ) - timedelta(days=28)).strftime("%Y-%m")
     candidates = sorted(m for m in by_month if m < limit_month and m not in done_months)
     found = 0
-    for month in candidates[:1]:   # 1 Monat je Nacht (Kosten + Ruhe)
+    ver_cap = 10**9 if int(cfg.get("max_per_task", 8)) >= 10**9 else 1   # unbegrenzt: alle offenen Monate
+    for month in candidates[:ver_cap]:
         key = f"ver:{month}"
         if _finding_blocked(st, key):
             continue
@@ -1171,7 +1216,15 @@ def _run_night(manual: bool) -> None:
     day = datetime.now(TZ).strftime("%Y-%m-%d")
     cfg = load_config()
     st = load_state()
-    budget = NightBudget(int(cfg.get("llm_budget", 250)))
+    # 'Ohne Begrenzung durcharbeiten' (Frank-Wunsch 2026-07-05): alle Arbeits-Limits aufheben —
+    # der Lauf arbeitet, bis er durch ist. Es bleibt NUR die stille Notbremse LLM_BACKSTOP gegen
+    # Endlosschleifen (ai-agent-Almanach §2.1: ein Cap muss STOPPEN koennen, erreicht ehrliche
+    # Arbeit aber nie — die Nacht ist ohnehin durch die Eintragszahl begrenzt).
+    unlimited = bool(cfg.get("unlimited", True))
+    if unlimited:
+        for _k in ("max_per_task", "nachzuegler_max", "dubletten_scan_max", "veraltet_max"):
+            cfg[_k] = 10**9
+    budget = NightBudget(LLM_BACKSTOP if unlimited else int(cfg.get("llm_budget", 250)))
     existing = load_report(day)
     report: dict = existing or {"date": day, "items": [], "zahlen": {}, "auto": {}, "fehler": [],
                                 "zusammenfassung": "", "started": datetime.now(TZ).isoformat(timespec="seconds")}
@@ -1545,19 +1598,37 @@ def process_status() -> dict:
 
 
 # --- Einstellungen ---------------------------------------------------------
+def _all_models() -> list[str]:
+    """Basis-Modelle + alles, was der Tages-Agent kennt (v.a. verbundene Codex/GPT-Modelle).
+    Agent nicht erreichbar -> nur Basis (nie crashen)."""
+    models = list(AVAILABLE_MODELS)
+    try:
+        r = _HTTP.get(f"{AGENT_URL}/config", headers=HEADERS, timeout=15.0)
+        r.raise_for_status()
+        for m in (r.json().get("available") or []):
+            if isinstance(m, str) and m and m not in models:
+                models.append(m)
+    except Exception:  # noqa: BLE001
+        _log(logging.WARNING, "Agent-Modellliste nicht abrufbar — nur Basis-Modelle", exc_info=True)
+    return models
+
+
 class SettingsReq(BaseModel):
     enabled: "bool | None" = None
     start_time: "str | None" = Field(default=None, pattern="^([01]?\\d|2[0-3]):[0-5]\\d$")
     model: "str | None" = None
+    reasoning: "str | None" = Field(default=None, max_length=10)
+    unlimited: "bool | None" = None
     tasks: "dict[str, bool] | None" = None
     max_per_task: "int | None" = Field(default=None, ge=1, le=50)
-    llm_budget: "int | None" = Field(default=None, ge=20, le=2000)
+    llm_budget: "int | None" = Field(default=None, ge=20, le=20000)
 
 
 @app.get("/settings", dependencies=[Depends(require_auth)])
 def get_settings() -> dict:
     cfg = load_config()
-    return {"ok": True, "settings": cfg, "models": AVAILABLE_MODELS,
+    return {"ok": True, "settings": cfg, "models": _all_models(),
+            "reasoning_available": REASONING_AVAILABLE,
             "standard_tasks": [{"key": k, **v} for k, v in STANDARD_TASKS.items()]}
 
 
@@ -1569,9 +1640,16 @@ def put_settings(req: SettingsReq) -> dict:
     if req.start_time:
         cfg["start_time"] = req.start_time
     if req.model:
-        if req.model not in AVAILABLE_MODELS:
+        if req.model not in _all_models():
             raise HTTPException(status_code=422, detail="Unbekanntes Modell")
         cfg["model"] = req.model
+    if req.reasoning:
+        v = req.reasoning.strip().lower()
+        if v not in REASONING_AVAILABLE:
+            raise HTTPException(status_code=422, detail="Unbekannte Thinking-Stufe")
+        cfg["reasoning"] = v
+    if req.unlimited is not None:
+        cfg["unlimited"] = bool(req.unlimited)
     if req.tasks:
         for k, v in req.tasks.items():
             if k in STANDARD_TASKS:
@@ -1582,7 +1660,8 @@ def put_settings(req: SettingsReq) -> dict:
         cfg["llm_budget"] = int(req.llm_budget)
     save_config(cfg)
     checkpoint("settings", "Bibliothekar-Einstellungen gespeichert", ok=True,
-               enabled=cfg["enabled"], start=cfg["start_time"], model=cfg["model"])
+               enabled=cfg["enabled"], start=cfg["start_time"], model=cfg["model"],
+               reasoning=cfg.get("reasoning"), unlimited=cfg.get("unlimited"))
     return {"ok": True, "settings": cfg}
 
 
