@@ -143,6 +143,10 @@ fun IdeenScreen(
     // Wird nach jedem neuen Eintrag asynchron erzeugt — Detail-Screen zeigt sie als
     // Bullet-Points statt eines leeren Platzhalters.
     val summaryVm: IdeenSummaryViewModel = hiltViewModel()
+    // Frank-Wunsch 2026-07-04: Beim Betreten des Ideen-Reiters SOFORT neue Ideen aus dem Second
+    // Brain holen (Brain->App) — ohne auf den naechsten App-Start oder einen Timer zu warten.
+    val brainSyncVm: IdeenBrainSyncViewModel = hiltViewModel()
+    LaunchedEffect(Unit) { brainSyncVm.pullNow() }
     var pendingTranscript by remember { mutableStateOf<String?>(null) }
     val micPermission =
         rememberMicPermissionState(
