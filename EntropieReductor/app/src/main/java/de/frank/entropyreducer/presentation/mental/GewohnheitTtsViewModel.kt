@@ -34,7 +34,7 @@ import kotlinx.coroutines.withContext
 /**
  * Vorlese-System fuer den Gewohnheitsreiter (einfacher als MentalTtsViewModel):
  * - Jeder Satz wird [repeatCount]-mal vorgelesen.
- * - 7 Sekunden Pause zwischen jedem gesprochenen Satz.
+ * - 9 Sekunden Pause zwischen jedem gesprochenen Satz.
  * - Jede Wiederholung wird frisch ueber TTS synthetisiert, damit sie nie exakt gleich klingt.
  * - Endlosschleife bis 15 Minuten (Sicherheits-Auto-Stop).
  * - Nur die Gewohnheiten UEBER dem Separator werden vorgelesen.
@@ -66,7 +66,9 @@ constructor(
 
     private companion object {
         const val TAG = "GewohnheitTts"
-        const val PAUSE_MS = 7_000L
+        // Frank-Wunsch 2026-07-04: 9 Sekunden Denk-Pause zwischen den vorgelesenen Saetzen
+        // (optimale Zeit zum Nachdenken) — einheitlich mit dem Mental-Reiter.
+        const val PAUSE_MS = 9_000L
         const val MAX_DURATION_MS = 15 * 60 * 1_000L
         const val RANGE_MIN = 1
         const val RANGE_MAX = 10
