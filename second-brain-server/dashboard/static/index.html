@@ -700,6 +700,32 @@ button{font-family:inherit;cursor:pointer}
   background:rgba(244,166,90,.10);color:var(--accent);font-size:13px;font-weight:600;font-family:inherit;
   cursor:pointer;transition:background .2s,transform .1s}
 .chat-opt-btn:hover{background:rgba(244,166,90,.20);transform:translateY(-1px)}
+/* ── Quellen-Drilldown (Level-2 Nr. 39): anklickbare Quellen-Chips unter einer Gedächtnis-Antwort ── */
+.chat-srcs{display:flex;gap:7px;flex-wrap:wrap;align-items:center;margin:2px 0 10px 0}
+.chat-srcs .src-label{font-size:11px;color:var(--text-faint);font-family:'JetBrains Mono';margin-right:2px}
+.chat-src-chip{display:inline-flex;align-items:center;gap:6px;max-width:340px;padding:5px 12px;border-radius:10px;
+  border:1px solid var(--border);background:var(--surface-2);color:var(--text-dim);font-size:12.5px;font-family:inherit;
+  cursor:pointer;transition:border-color .2s,color .2s,transform .1s}
+.chat-src-chip:hover,.chat-src-chip:focus-visible{border-color:var(--accent);color:var(--text);transform:translateY(-1px)}
+.chat-src-chip .src-title{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.chat-src-chip .src-cat{font-size:10.5px;color:var(--text-faint);font-family:'JetBrains Mono';flex:none}
+.conf-badge{display:inline-flex;align-items:center;gap:5px;padding:4px 10px;border-radius:9px;font-size:11px;
+  font-family:'JetBrains Mono';border:1px solid var(--border);color:var(--text-dim);flex:none}
+.conf-badge.hoch{border-color:rgba(120,220,150,.5);color:#7ddc96}
+.conf-badge.mittel{border-color:rgba(244,166,90,.5);color:var(--accent)}
+.conf-badge.niedrig{border-color:rgba(242,105,142,.5);color:var(--bad)}
+/* ── Info-Bereich (Einstellungen, Level-2): Feature-Chronik als Akkordeon ── */
+.feat-item{border:1px solid var(--border);border-radius:12px;margin-bottom:9px;background:var(--surface-2);overflow:hidden}
+.feat-head{display:flex;align-items:center;gap:10px;width:100%;padding:12px 15px;background:none;border:none;
+  color:var(--text);font-family:inherit;font-size:14px;font-weight:600;text-align:left;cursor:pointer}
+.feat-head:hover,.feat-head:focus-visible{color:var(--accent)}
+.feat-head .feat-when{margin-left:auto;flex:none;font-size:11px;font-weight:400;color:var(--text-faint);font-family:'JetBrains Mono'}
+.feat-head .feat-chev{flex:none;transition:transform .2s;color:var(--text-faint)}
+.feat-item.open .feat-head .feat-chev{transform:rotate(90deg)}
+.feat-body{display:none;padding:0 15px 14px;font-size:13.5px;line-height:1.65;color:var(--text-dim)}
+.feat-item.open .feat-body{display:block}
+.feat-body .feat-dienst{font-size:11.5px;color:var(--text-faint);font-family:'JetBrains Mono';margin-bottom:8px}
+.feat-body .feat-kurz{color:var(--text);margin-bottom:8px}
 .eval-box{background:var(--surface-2);border:1px solid var(--border);border-radius:12px;padding:14px;margin-top:10px;font-size:13.5px;color:var(--text-dim);max-height:540px;overflow-y:auto}
 .eval-box pre{white-space:pre-wrap;word-break:break-word;font-family:'JetBrains Mono',monospace;font-size:12px;line-height:1.55;color:var(--text);margin:0}
 .eval-sum{font-size:15px;font-weight:600;color:var(--text);margin-bottom:8px}
@@ -1113,6 +1139,13 @@ button{font-family:inherit;cursor:pointer}
             <span class="muted-note" id="ttsStatus" style="margin-right:auto"></span>
             <button class="btn" id="ttsTestBtn" type="button">▶ Stimme testen</button>
           </div>
+        </div>
+
+        <!-- ── System-Info: Feature-Chronik (Level-2, Frank-Wunsch 2026-07-04) ── -->
+        <div class="card set-section" id="featureInfoSection">
+          <h3><span class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><circle cx="12" cy="12" r="9"/><path d="M12 8h.01M11 12h1v4h1"/></svg></span>System-Info: Was Cortex kann</h3>
+          <p class="set-desc">Die komplette Chronik aller eingebauten Systeme — <b>was</b> eingebaut wurde, <b>wann</b> (Datum + Uhrzeit) und <b>wie es funktioniert</b>. Zum Nachlesen, wenn du einen Bereich ändern lassen willst und wissen musst, wie er heißt und wo er sitzt. Neuestes zuerst; jeder Punkt ist aufklappbar.</p>
+          <div id="featList"><span class="muted-note">lädt…</span></div>
         </div>
       </section>
 
@@ -3039,6 +3072,80 @@ button{font-family:inherit;cursor:pointer}
     logEl.appendChild(wrap);
     logEl.scrollTop = logEl.scrollHeight;
   }
+  /* Quellen-Drilldown (Level-2 Nr. 39): anklickbare Quellen-Chips + Konfidenz-Etikett unter einer
+     Gedächtnis-Antwort. Klick öffnet den bekannten Drawer — openEntry lädt den Volltext per Titel
+     nach. Alles per textContent gesetzt (Titel/Kategorien sind Daten, keine HTML — Injection-sicher). */
+  function chatSources(sources, confidence){
+    if(!sources || !sources.length) return;
+    const logEl = document.getElementById("chatLog");
+    const wrap = document.createElement("div");
+    wrap.className = "chat-srcs";
+    const lbl = document.createElement("span");
+    lbl.className = "src-label"; lbl.textContent = "Quellen:";
+    wrap.appendChild(lbl);
+    sources.forEach(s=>{
+      const b = document.createElement("button");
+      b.className = "chat-src-chip"; b.type = "button";
+      b.title = "Eintrag im Volltext öffnen";
+      const t = document.createElement("span"); t.className = "src-title";
+      t.textContent = s.title || "(ohne Titel)";
+      b.appendChild(t);
+      if(s.category){ const c = document.createElement("span"); c.className = "src-cat"; c.textContent = s.category; b.appendChild(c); }
+      const realTitle = (s.title && s.title !== "(ohne Titel)") ? s.title : "";
+      b.addEventListener("click", ()=> openEntry({title: realTitle, category: s.category||"", doc_id: s.doc_id||""}, !!realTitle));
+      wrap.appendChild(b);
+    });
+    if(confidence && confidence.level && confidence.level !== "keine"){
+      const cb = document.createElement("span");
+      cb.className = "conf-badge " + confidence.level;
+      cb.title = confidence.text || "";
+      cb.textContent = "Sicherheit: " + confidence.level;
+      wrap.appendChild(cb);
+    }
+    logEl.appendChild(wrap);
+    logEl.scrollTop = logEl.scrollHeight;
+  }
+  /* ── System-Info: Feature-Chronik (Level-2, Frank-Wunsch 2026-07-04) ──────────────────────────
+     Lädt /api/features (dashboard/features.json) einmal beim Start und rendert ein Akkordeon:
+     jedes eingebaute System mit Einbau-Datum/Uhrzeit, Dienst und ausführlicher Erklärung.
+     Alles per textContent (Injection-sicher). Fehler -> ehrlicher Hinweis statt leerer Fläche. */
+  (async function initFeatureInfo(){
+    const host = document.getElementById("featList");
+    if(!host) return;
+    try{
+      const d = await api("/api/features");
+      const feats = (d && d.features) || [];
+      host.textContent = "";
+      if(!feats.length){ host.textContent = "Chronik nicht verfügbar (" + ((d && d.error) || "leer") + ")."; return; }
+      feats.forEach(f=>{
+        const item = document.createElement("div"); item.className = "feat-item";
+        const head = document.createElement("button"); head.className = "feat-head"; head.type = "button";
+        head.setAttribute("aria-expanded", "false");
+        const chev = document.createElement("span"); chev.className = "feat-chev"; chev.textContent = "▸";
+        const name = document.createElement("span"); name.textContent = f.name || f.id || "(ohne Namen)";
+        const when = document.createElement("span"); when.className = "feat-when"; when.textContent = f.eingebaut || "";
+        head.appendChild(chev); head.appendChild(name); head.appendChild(when);
+        const body = document.createElement("div"); body.className = "feat-body";
+        const dienst = document.createElement("div"); dienst.className = "feat-dienst";
+        dienst.textContent = (f.dienst ? "Sitzt in: " + f.dienst : "") + (f.eingebaut ? "  ·  eingebaut: " + f.eingebaut : "");
+        const kurz = document.createElement("div"); kurz.className = "feat-kurz"; kurz.textContent = f.kurz || "";
+        const erkl = document.createElement("div"); erkl.textContent = f.erklaerung || "";
+        body.appendChild(dienst); body.appendChild(kurz); body.appendChild(erkl);
+        head.addEventListener("click", ()=>{
+          const open = item.classList.toggle("open");
+          head.setAttribute("aria-expanded", open ? "true" : "false");
+        });
+        item.appendChild(head); item.appendChild(body);
+        host.appendChild(item);
+      });
+      const note = document.createElement("span");
+      note.className = "muted-note";
+      note.textContent = feats.length + " eingebaute Systeme · Stand " + (d.stand || "—");
+      host.appendChild(note);
+    }catch(_){
+      host.textContent = "Chronik konnte nicht geladen werden — Dashboard-Dienst prüfen.";
+    }
+  })();
   async function sendChat(){
     if(chatBusy) return;
     const ta = document.getElementById("chatText");
@@ -3067,6 +3174,7 @@ button{font-family:inherit;cursor:pointer}
       chatAppend("agent", r.reply || "(keine Antwort)", meta || null);
       if(window.speakTTS && r.reply) window.speakTTS(r.reply);    // Antwort vorlesen (wenn Lautsprecher an)
       if(r.options && r.options.length) chatOptions(r.options);   // anklickbare Ja/Nein-Knöpfe
+      if(r.action==="recall") chatSources(r.sources, r.confidence);   // Nr. 39: Quellen-Chips + Konfidenz
       // Sichtbare Meldung, wenn das Server-Kontextfenster (40 Nachrichten) erstmals ueberschritten
       // wurde (Frank-Wunsch 2026-07-02) — kommt pro Session genau einmal vom Agenten.
       if(r.context_limit_reached) chatAppend("agent", "⚠️ Kontextgrenze erreicht — ältere Nachrichten dieses Gesprächs fließen ab jetzt nicht mehr in die Antworten ein.");

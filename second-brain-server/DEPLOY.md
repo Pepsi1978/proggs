@@ -41,6 +41,16 @@ laeuft weiter der alte Code, obwohl die Datei auf dem Server schon neu ist.
 
 ## Der Deploy-Weg (Schritt fuer Schritt)
 
+> ### ⚠️ PFLICHT bei jedem Deploy MIT NEUEM FEATURE: Feature-Chronik pflegen (Frank-Wunsch 2026-07-04)
+> Baut ein Deploy ein neues System/Feature ein (egal welcher Dienst), MUSS in
+> `dashboard/features.json` ein Eintrag ERGAENZT werden (neueste zuerst): id, name,
+> `eingebaut` (Datum + Uhrzeit), `dienst`, `kurz` (1 Satz) und `erklaerung` (ausfuehrlich,
+> leichtes Deutsch — was es ist, wie es funktioniert, wo es sitzt). Diese Datei speist den
+> Info-Bereich "System-Info: Was Cortex kann" in den Dashboard-Einstellungen (GET /api/features) —
+> Franks Nachschlagewerk, was alles eingebaut ist. Reine Bugfixes ohne neues System: kein Eintrag
+> noetig. Da features.json ins dashboard-Image gebacken ist, das dashboard danach mit `--build`
+> neu bauen (das passiert durch die Version-Bump-Regel unten ohnehin).
+>
 > ### ⚠️ PFLICHT VOR JEDEM DEPLOY: sichtbare Version + Timestamp erhoehen (Frank-Wunsch 2026-07-01)
 > Bei JEDER Server-Aenderung — **egal welcher Dienst** (agent, brain-api, mcp, dashboard) — MUSS die
 > **sichtbare Dashboard-Version** `VERSION` in `dashboard/app.py` erhoeht und ihr **Timestamp auf die
