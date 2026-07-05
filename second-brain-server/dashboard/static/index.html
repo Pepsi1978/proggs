@@ -1451,6 +1451,18 @@ button{font-family:inherit;cursor:pointer}
   </div>
 </div>
 
+<!-- ── Bestaetigungs-Dialog: gelernte Regeln auf offene Vorschlaege anwenden ── -->
+<div class="confirm-overlay" id="applyRulesOverlay">
+  <div class="confirm-box">
+    <h4>Regeln auf Vorschläge anwenden?</h4>
+    <p>Der Bibliothekar geht jetzt alle offenen Vorschläge durch und entfernt die, die deinen gelernten Regeln widersprechen. Die betroffenen Vorschläge fallen aus der Abarbeiten-Liste — im Gehirn wird nichts gelöscht.</p>
+    <div class="confirm-actions">
+      <button class="btn" id="applyRulesNo">Abbrechen</button>
+      <button class="btn btn-primary" id="applyRulesYes">Ja, anwenden</button>
+    </div>
+  </div>
+</div>
+
 <!-- ── Mit Google Drive verbinden (rclone-Token einfügen) ──────────────────── -->
 <div class="confirm-overlay" id="connectOverlay">
   <div class="confirm-box" style="width:min(580px,94vw)">
@@ -4098,11 +4110,14 @@ button{font-family:inherit;cursor:pointer}
   }
 
   /* — Gelernte Regeln rückwirkend auf offene Vorschläge anwenden (Frank-Wunsch 2026-07-05) — */
+  /* Bestätigung über ein internes, theme-gerechtes Modal (kein natives confirm() = "Windows-Fenster") */
   let libApplyPoll=null;
-  async function applyLearnedRules(){
+  const applyRulesOverlay=document.getElementById("applyRulesOverlay");
+  function openApplyRules(){ if(applyRulesOverlay) applyRulesOverlay.classList.add("open"); }
+  function closeApplyRules(){ if(applyRulesOverlay) applyRulesOverlay.classList.remove("open"); }
+  async function runApplyRules(){
     const btn=document.getElementById("libApplyRules");
     const st=document.getElementById("libApplyState");
-    if(!confirm("Der Bibliothekar geht jetzt ALLE offenen Vorschläge durch und entfernt die, die deinen gelernten Regeln widersprechen.\n\nDie betroffenen Vorschläge fallen aus der Abarbeiten-Liste — im Gehirn wird nichts gelöscht. Fortfahren?")) return;
     if(btn) btn.disabled=true;
     st.innerHTML='<span class="lib-spin"></span> Wird gestartet …';
     try{
@@ -4129,7 +4144,11 @@ button{font-family:inherit;cursor:pointer}
       }catch(e){ clearInterval(libApplyPoll); libApplyPoll=null; if(btn) btn.disabled=false; st.textContent="Status nicht abrufbar: "+e.message; }
     },1500);
   }
-  document.getElementById("libApplyRules")?.addEventListener("click", applyLearnedRules);
+  document.getElementById("libApplyRules")?.addEventListener("click", openApplyRules);
+  document.getElementById("applyRulesNo")?.addEventListener("click", closeApplyRules);
+  document.getElementById("applyRulesYes")?.addEventListener("click", ()=>{ closeApplyRules(); runApplyRules(); });
+  if(applyRulesOverlay) applyRulesOverlay.addEventListener("click", e=>{ if(e.target===applyRulesOverlay) closeApplyRules(); });
+  document.addEventListener("keydown", e=>{ if(e.key==="Escape" && applyRulesOverlay && applyRulesOverlay.classList.contains("open")) closeApplyRules(); });
 
   function libIvRender(){
     const log=document.getElementById("libIvLog"); log.innerHTML="";
