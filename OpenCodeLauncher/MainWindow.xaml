@@ -565,12 +565,12 @@
                                         </Style>
                                     </DataGridTextColumn.ElementStyle>
                                 </DataGridTextColumn>
-                                <DataGridTextColumn Header="Input $/1M" Binding="{Binding InputPerMillion, StringFormat={}{0:0.####}}" Width="150"/>
-                                <DataGridTextColumn Header="Output $/1M" Binding="{Binding OutputPerMillion, StringFormat={}{0:0.####}}" Width="150"/>
-                                <DataGridTextColumn Header="Cache $/1M" Binding="{Binding CacheReadText}" Width="150"/>
-                                <DataGridTextColumn Header="Kontext" Binding="{Binding ContextLength, StringFormat=N0}" Width="140"/>
-                                <DataGridTextColumn Header="Throughput" Binding="{Binding ThroughputText}" Width="140"/>
-                                <DataGridTemplateColumn Header="Status" Width="*" MinWidth="150">
+                                <DataGridTextColumn Header="Input $/1M" Binding="{Binding InputPerMillion, StringFormat={}{0:0.####}}" Width="150" MinWidth="90"/>
+                                <DataGridTextColumn Header="Output $/1M" Binding="{Binding OutputPerMillion, StringFormat={}{0:0.####}}" Width="150" MinWidth="90"/>
+                                <DataGridTextColumn Header="Cache $/1M" Binding="{Binding CacheReadText}" Width="150" MinWidth="90"/>
+                                <DataGridTextColumn Header="Kontext" Binding="{Binding ContextLength, StringFormat=N0}" Width="140" MinWidth="90"/>
+                                <DataGridTextColumn Header="Throughput" Binding="{Binding ThroughputText}" Width="140" MinWidth="100"/>
+                                <DataGridTemplateColumn Header="Status" Width="150" MinWidth="150">
                                     <DataGridTemplateColumn.CellTemplate>
                                         <DataTemplate>
                                             <Border Style="{StaticResource StatusPill}">

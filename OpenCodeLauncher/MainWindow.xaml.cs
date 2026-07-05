@@ -17,8 +17,6 @@ public partial class MainWindow : Window
     private const int MONITOR_DEFAULTTONEAREST = 2;
     private readonly LayoutSettings _layoutSettings;
     private int _providerResizeColumnIndex = -1;
-    private double _providerResizeLeftWidth;
-    private double _providerResizeRightWidth;
 
     [DllImport("dwmapi.dll")]
     private static extern int DwmSetWindowAttribute(IntPtr hwnd, int attr, ref int value, int size);
@@ -195,10 +193,10 @@ public partial class MainWindow : Window
         var left = ProviderGrid.Columns[index];
         var right = ProviderGrid.Columns[index + 1];
         _providerResizeColumnIndex = index;
-        _providerResizeLeftWidth = left.ActualWidth;
-        _providerResizeRightWidth = right.ActualWidth;
-        left.Width = new System.Windows.Controls.DataGridLength(_providerResizeLeftWidth);
-        right.Width = new System.Windows.Controls.DataGridLength(_providerResizeRightWidth);
+        foreach (var column in ProviderGrid.Columns)
+        {
+            if (column.ActualWidth > 0) column.Width = new System.Windows.Controls.DataGridLength(column.ActualWidth);
+        }
         e.Handled = true;
     }
 
@@ -210,8 +208,8 @@ public partial class MainWindow : Window
         var right = ProviderGrid.Columns[_providerResizeColumnIndex + 1];
         var minLeft = Math.Max(left.MinWidth, 60);
         var minRight = Math.Max(right.MinWidth, 60);
-        var total = _providerResizeLeftWidth + _providerResizeRightWidth;
-        var newLeft = Math.Clamp(_providerResizeLeftWidth + e.HorizontalChange, minLeft, total - minRight);
+        var total = left.ActualWidth + right.ActualWidth;
+        var newLeft = Math.Clamp(left.ActualWidth + e.HorizontalChange, minLeft, total - minRight);
         left.Width = new System.Windows.Controls.DataGridLength(newLeft);
         right.Width = new System.Windows.Controls.DataGridLength(total - newLeft);
         e.Handled = true;
@@ -220,8 +218,6 @@ public partial class MainWindow : Window
     private void ProviderColumnResizeCompleted(object sender, DragCompletedEventArgs e)
     {
         _providerResizeColumnIndex = -1;
-        _providerResizeLeftWidth = 0;
-        _providerResizeRightWidth = 0;
     }
 
     // ---- Drag & Drop für Modellgruppen und Modelle ----
