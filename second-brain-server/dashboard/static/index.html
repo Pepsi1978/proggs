@@ -1067,8 +1067,12 @@ button{font-family:inherit;cursor:pointer}
         </div>
 
         <div class="card set-section">
-          <h3><span class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M22 10v6M2 10l10-5 10 5-10 5z"/><path d="M6 12v5c3 3 9 3 12 0v-5"/></svg></span>Gelernte Regeln</h3>
-          <p class="set-desc">Was du dem Bibliothekar über den <b>Lernen</b>-Knopf an einzelnen Funden beigebracht hast — sie fließen ab dem nächsten Lauf verbindlich in alle seine Urteile ein. Jede Zeile zeigt die Kurzfassung; <b>Bearbeiten</b> öffnet die komplette Regel zum Ändern, <b>KI fragen</b> lässt den Bibliothekar beurteilen, ob er mit der Regel perfekt arbeiten kann.</p>
+          <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap">
+            <h3 style="margin:0"><span class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M22 10v6M2 10l10-5 10 5-10 5z"/><path d="M6 12v5c3 3 9 3 12 0v-5"/></svg></span>Gelernte Regeln</h3>
+            <button class="btn btn-sm" id="libApplyRules" title="Der Bibliothekar prüft alle offenen Vorschläge gegen deine gelernten Regeln und entfernt die, die einer Regel widersprechen.">Regeln auf Vorschläge anwenden</button>
+          </div>
+          <p class="set-desc">Was du dem Bibliothekar über den <b>Lernen</b>-Knopf an einzelnen Funden beigebracht hast — sie fließen ab dem nächsten Lauf verbindlich in alle seine Urteile ein. Jede Zeile zeigt die Kurzfassung; <b>Bearbeiten</b> öffnet die komplette Regel zum Ändern, <b>KI fragen</b> lässt den Bibliothekar beurteilen, ob er mit der Regel perfekt arbeiten kann. Mit <b>Regeln auf Vorschläge anwenden</b> (oben rechts) wendest du die Regeln <b>rückwirkend</b> auf die aktuell offenen Vorschläge an — betroffene fallen sofort aus der Abarbeiten-Liste (im Gehirn wird nichts gelöscht).</p>
+          <div id="libApplyState" class="set-desc" style="margin-top:2px"></div>
           <div id="libLearnList"></div>
         </div>
 
@@ -4092,6 +4096,40 @@ button{font-family:inherit;cursor:pointer}
       box.appendChild(wrap);
     });
   }
+
+  /* — Gelernte Regeln rückwirkend auf offene Vorschläge anwenden (Frank-Wunsch 2026-07-05) — */
+  let libApplyPoll=null;
+  async function applyLearnedRules(){
+    const btn=document.getElementById("libApplyRules");
+    const st=document.getElementById("libApplyState");
+    if(!confirm("Der Bibliothekar geht jetzt ALLE offenen Vorschläge durch und entfernt die, die deinen gelernten Regeln widersprechen.\n\nDie betroffenen Vorschläge fallen aus der Abarbeiten-Liste — im Gehirn wird nichts gelöscht. Fortfahren?")) return;
+    if(btn) btn.disabled=true;
+    st.innerHTML='<span class="lib-spin"></span> Wird gestartet …';
+    try{
+      const r=await jlib("apply-rules","POST",{});
+      if(!r.started){ st.textContent=r.detail||"Konnte nicht gestartet werden."; if(btn) btn.disabled=false; return; }
+    }catch(e){ st.textContent="Fehler: "+e.message; if(btn) btn.disabled=false; return; }
+    clearInterval(libApplyPoll);
+    libApplyPoll=setInterval(async()=>{
+      try{
+        const s=(await jlib("apply-rules-status")).apply||{};
+        if(s.running){
+          st.innerHTML='<span class="lib-spin"></span> Prüfe Vorschläge … '+(s.done||0)+'/'+(s.total||0)+' geprüft · '+(s.removed||0)+' entfernt';
+        }else{
+          clearInterval(libApplyPoll); libApplyPoll=null; if(btn) btn.disabled=false;
+          if(s.error){ st.textContent="Fehler: "+s.error; return; }
+          if(s.note){ st.textContent=s.note; }
+          else{
+            let msg='Fertig — '+(s.removed||0)+' von '+(s.total||0)+' Vorschlägen durch die Regeln entfernt, '+(s.kept||0)+' bleiben.';
+            if(s.batches_failed) msg+=' ('+s.batches_failed+' Teil-Prüfung(en) fehlgeschlagen — die betroffenen bleiben offen.)';
+            st.textContent=msg;
+          }
+          loadLibReports(true);   // Badge + Tages-Listen aktualisieren (entfernte Funde fallen raus)
+        }
+      }catch(e){ clearInterval(libApplyPoll); libApplyPoll=null; if(btn) btn.disabled=false; st.textContent="Status nicht abrufbar: "+e.message; }
+    },1500);
+  }
+  document.getElementById("libApplyRules")?.addEventListener("click", applyLearnedRules);
 
   function libIvRender(){
     const log=document.getElementById("libIvLog"); log.innerHTML="";

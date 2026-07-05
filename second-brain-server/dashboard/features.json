@@ -1,7 +1,15 @@
 {
-	"stand": "05.07.2026, 02.51 Uhr",
+	"stand": "05.07.2026, 11.47 Uhr",
 	"hinweis": "PFLEGE-PFLICHT: Bei JEDEM Deploy, der ein neues System/Feature einbaut, hier einen Eintrag ERGAENZEN (neueste zuerst) — mit Datum + Uhrzeit und ausfuehrlicher Erklaerung. Diese Datei ist die Quelle des Info-Bereichs in den Dashboard-Einstellungen (GET /api/features). Regel verankert in DEPLOY.md.",
 	"features": [
+		{
+			"id": "bibliothekar-regeln-anwenden",
+			"name": "Regeln auf Vorschläge anwenden: gelernte Regeln rückwirkend auf offene Funde",
+			"eingebaut": "05.07.2026, 11.47 Uhr",
+			"dienst": "librarian 0.7.0 + dashboard 0.44.0",
+			"kurz": "Ein Knopf oben rechts in der Karte 'Gelernte Regeln' wendet deine Regeln rückwirkend auf die aktuell offenen Vorschläge an — betroffene fallen sofort aus der Abarbeiten-Liste, im Gehirn wird nichts gelöscht.",
+			"erklaerung": "Gelernte Regeln flossen bisher NUR in künftige Nacht-Urteile ein — hattest du also schon viele offene Vorschläge und brachtest dem Bibliothekar danach eine neue Regel bei, galt sie für diese bestehenden Vorschläge nicht. Der neue Knopf 'Regeln auf Vorschläge anwenden' (oben rechts in 'Gelernte Regeln') schließt genau diese Lücke: Nach einer Sicherheitsabfrage geht der Bibliothekar ALLE offenen Vorschläge über alle Tage durch und prüft jeden stapelweise gegen deine aktiven gelernten Regeln. Vorschläge, die einer Regel klar widersprechen (er würde sie nach der Regel gar nicht mehr machen), setzt er auf 'abgelehnt' — sie verschwinden aus der Abarbeiten-Liste und werden über die Fund-Registrierung nicht sofort neu vorgeschlagen. Er arbeitet konservativ (im Zweifel bleibt ein Vorschlag). Während des Laufs zeigt das Dashboard den Fortschritt ('Prüfe Vorschläge … X/Y geprüft · Z entfernt'), danach eine Ergebnis-Zeile und lädt die Tages-Listen frisch. Wichtig: Es ist NICHT-destruktiv — es fallen nur die Vorschläge weg, an deinen echten Einträgen im Gehirn ändert sich nichts. Technisch: POST /apply-rules im librarian startet einen Hintergrund-Lauf (eigener Thread, damit der Dienst antwortbar bleibt), das Nacht-Modell fällt die Urteile, GET /apply-rules-status liefert den Fortschritt; der Knopf ist gesperrt, solange der Nachtlauf oder eine Abarbeitung läuft."
+		},
 		{
 			"id": "bibliothekar-lernen",
 			"name": "Lernen-Knopf: dem Bibliothekar an einzelnen Funden etwas beibringen",

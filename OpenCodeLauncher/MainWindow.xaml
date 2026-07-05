@@ -23,7 +23,7 @@
         <shell:WindowChrome CaptionHeight="0"
                             ResizeBorderThickness="6"
                             GlassFrameThickness="0"
-                            CornerRadius="18"
+                            CornerRadius="12"
                             UseAeroCaptionButtons="False"/>
     </shell:WindowChrome.WindowChrome>
 
@@ -375,11 +375,11 @@
             </Ellipse.Triggers>
         </Ellipse>
 
-        <Border Margin="11" HorizontalAlignment="Stretch" VerticalAlignment="Stretch" Background="{DynamicResource WindowBg}" BorderBrush="{DynamicResource GlassBorderBrush}" BorderThickness="1" CornerRadius="18">
+        <Border Margin="11" HorizontalAlignment="Stretch" VerticalAlignment="Stretch" Background="{DynamicResource WindowBg}" BorderBrush="{DynamicResource GlassBorderBrush}" BorderThickness="1" CornerRadius="12">
             <Border.Effect>
                 <DropShadowEffect BlurRadius="100" ShadowDepth="40" Direction="270" Opacity="0.7" Color="#000000"/>
             </Border.Effect>
-            <Border CornerRadius="18" ClipToBounds="True" Background="{DynamicResource WindowBg}">
+            <Border CornerRadius="12" ClipToBounds="True" Background="{DynamicResource WindowBg}">
             <Grid>
             <Grid.RowDefinitions>
                 <RowDefinition Height="Auto"/>
@@ -589,7 +589,7 @@
             </Grid>
 
             <!-- Fußleiste: Arbeitsverzeichnis + Start + Version -->
-            <Border Grid.Row="2" Background="{DynamicResource TitleBarBg}" BorderBrush="{DynamicResource BorderBrushSoft}" BorderThickness="0,1,0,0" Padding="16,14" CornerRadius="0,0,18,18">
+            <Border Grid.Row="2" Background="{DynamicResource TitleBarBg}" BorderBrush="{DynamicResource BorderBrushSoft}" BorderThickness="0,1,0,0" Padding="16,14" CornerRadius="0,0,12,12">
                 <Grid>
                     <Grid.ColumnDefinitions>
                         <ColumnDefinition Width="Auto"/>

@@ -42,7 +42,7 @@ from fastapi import Depends, FastAPI, Header, HTTPException, Request
 from fastapi.responses import JSONResponse
 from pydantic import BaseModel, Field
 
-VERSION = "0.6.0 (05.07.2026, 02.45 Uhr)"  # 0.6.0 (Frank-Wunsch 2026-07-05): Gelernte Regeln EDITIERBAR + 'KI fragen' — (a) PUT /learn/{id} nimmt jetzt auch text an (Frank bearbeitet die komplette Regel im Dashboard, updated_at wird gestempelt); (b) NEU POST /learn/check: der Bibliothekar beurteilt selbst, ob eine Regel fuer seine Nacht-Urteile sinnvoll, eindeutig und gut umsetzbar ist (bekommt die anderen aktiven Regeln zum Kollisions-Check mit; Antwort 2-4 Saetze leichtes Deutsch). Alt: 0.5.0 (05.07.2026, 02.40 Uhr)  # 0.5.0 (Frank-Wunsch 2026-07-05): LERNEN-KNOPF an jedem Fund — Frank bringt dem Bibliothekar an einem konkreten Fall bei, wie er kuenftig mit solchen Faellen umgehen soll (Beispiel: 'Kurzcheck + Vollversion NIEMALS zusammenfuehren'). Ablauf wie beim Aufgaben-Interview: POST /learn/interview versteht die Lehre, stellt bei Unklarheit GENAU EINE Rueckfrage, nennt die finale Regel-Fassung; Frank bestaetigt -> POST /learn speichert sie in lernregeln.json. Die gelernten Regeln fliessen als Pflicht-Block (_with_rules) in ALLE 10 Nacht-Urteils-Prompts ein (Dubletten/Widersprueche, Veraltet, Gaertner, Luecken, Entwurf, Verdichtung, eigene Aufgaben, Entity-Extraktion, Entscheidungs-Umsetzung). Verwaltung: in /settings als 'lernregeln' + PUT/DELETE /learn/{id} (an/aus + Papierkorb). Alt: 0.4.0 (05.07.2026, 02.29 Uhr)  # 0.4.0 (Frank-Wunsch 2026-07-05): Zusammenfuehrungen mit KATEGORIE-WAHL + EDITIERBAREM Merge-Text — (a) Dubletten-Vorschlaege tragen jetzt die UNION aller Kategorien beider Quell-Eintraege (aktion.kategorien; Multi-Category, ein Eintrag kann z.B. 3 Kategorien mitbringen); (b) beim Abarbeiten kann Frank pro Vorschlag den kompletten Merge-Text editieren und Kategorien abwaehlen — die Decision nimmt merge_text + kategorien als Overrides an (nur bei choice=ja, wirkt vor dem Ausfuehren); (c) _execute_action merge speichert mit categories-Liste (brain /store Multi-Category, erste = primaer) und nennt die Kategorien im Ergebnis. Abwaertskompatibel: alte offene Items ohne kategorien-Feld laufen unveraendert. Alt: 0.3.0 (05.07.2026, 02.16 Uhr)  # 0.3.0 (Frank-Wunsch 2026-07-05): Nacht-BILANZ — der Tages-Report enthaelt jetzt fuer JEDE Aufgabe eine ehrliche Ergebnis-Zeile, AUCH wenn nichts gefunden wurde ('Dubletten-Vorschläge: keine Dubletten gefunden', 'Nachzügler: nichts zu tun — alles verknüpft', 'X: ausgeschaltet' bei deaktivierter Aufgabe, eigene Aufgaben inklusive). Steht in report.bilanz + last_run.bilanz -> Morgen-Report-Karte und Tages-Ansicht zeigen die komplette Bilanz. Alt: 0.2.0 (05.07.2026, 01.45 Uhr)  # 0.2.0 (Frank-Wuensche 2026-07-05): (a) GPT/Codex-Modelle nutzbar — gpt-* laeuft ueber den NEUEN Agent-Durchgriff POST /llm (agent 0.52.0, bestehende ChatGPT-OAuth-Anmeldung inkl. Token-Refresh, keine Auth-Duplikation); Modell-Liste in /settings kommt jetzt aus agent /config (alle verbundenen Provider). (b) THINKING einstellbar (none/low/medium/high/xhigh, Default high) — wirkt bei GPT als reasoning.effort und bei Gemini als thinking_budget. (c) 'OHNE BEGRENZUNG durcharbeiten'-Schalter (Default AN): hebt Vorschlags-Limit, Scan-Limits und LLM-Budget auf — der Bibliothekar arbeitet bis er durch ist; es bleibt NUR die stille Notbremse gegen Endlosschleifen (LIB_LLM_BACKSTOP, Default 5000 Calls/Nacht, ai-agent-Almanach 2.1). Alt: 0.1.0: Erstausgabe (Bereiche 11-18 + Nachzuegler + eigene Aufgaben)
+VERSION = "0.7.0 (05.07.2026, 11.47 Uhr)"  # 0.7.0 (Frank-Wunsch 2026-07-05): NEU Knopf 'Regeln auf Vorschlaege anwenden' — die gelernten Regeln flossen bisher NUR in kuenftige Nacht-Urteile ein; jetzt kann Frank sie RUECKWIRKEND auf die bereits erzeugten OFFENEN Funde anwenden. POST /apply-rules startet einen Hintergrund-Lauf (sync def -> Threadpool + eigener Thread mit starker Referenz, fastapi §1/§6), der ALLE offenen Funde ueber alle Tages-Reports sammelt und stapelweise (LIB_APPLY_BATCH, Default 20) vom Nacht-Modell gegen die aktiven gelernten Regeln pruefen laesst: Funde, die einer Regel klar widersprechen (der Bibliothekar wuerde sie GAR NICHT mehr vorschlagen), werden auf status='abgelehnt' gesetzt und fallen aus der Abarbeiten-Liste (finding_keys -> nicht sofort neu vorgeschlagen). NICHT-destruktiv: nur die VORSCHLAEGE fallen weg, im Gehirn wird NICHTS geaendert/geloescht. Konservativ (im Zweifel behalten); ein fehlgeschlagener Batch stoppt den Rest nicht (betroffene bleiben offen). GET /apply-rules-status fuers Fortschritts-Polling. Blockiert, solange Nachtlauf/Abarbeitung laeuft. Alt: 0.6.0 (05.07.2026, 02.45 Uhr)  # 0.6.0 (Frank-Wunsch 2026-07-05): Gelernte Regeln EDITIERBAR + 'KI fragen' — (a) PUT /learn/{id} nimmt jetzt auch text an (Frank bearbeitet die komplette Regel im Dashboard, updated_at wird gestempelt); (b) NEU POST /learn/check: der Bibliothekar beurteilt selbst, ob eine Regel fuer seine Nacht-Urteile sinnvoll, eindeutig und gut umsetzbar ist (bekommt die anderen aktiven Regeln zum Kollisions-Check mit; Antwort 2-4 Saetze leichtes Deutsch). Alt: 0.5.0 (05.07.2026, 02.40 Uhr)  # 0.5.0 (Frank-Wunsch 2026-07-05): LERNEN-KNOPF an jedem Fund — Frank bringt dem Bibliothekar an einem konkreten Fall bei, wie er kuenftig mit solchen Faellen umgehen soll (Beispiel: 'Kurzcheck + Vollversion NIEMALS zusammenfuehren'). Ablauf wie beim Aufgaben-Interview: POST /learn/interview versteht die Lehre, stellt bei Unklarheit GENAU EINE Rueckfrage, nennt die finale Regel-Fassung; Frank bestaetigt -> POST /learn speichert sie in lernregeln.json. Die gelernten Regeln fliessen als Pflicht-Block (_with_rules) in ALLE 10 Nacht-Urteils-Prompts ein (Dubletten/Widersprueche, Veraltet, Gaertner, Luecken, Entwurf, Verdichtung, eigene Aufgaben, Entity-Extraktion, Entscheidungs-Umsetzung). Verwaltung: in /settings als 'lernregeln' + PUT/DELETE /learn/{id} (an/aus + Papierkorb). Alt: 0.4.0 (05.07.2026, 02.29 Uhr)  # 0.4.0 (Frank-Wunsch 2026-07-05): Zusammenfuehrungen mit KATEGORIE-WAHL + EDITIERBAREM Merge-Text — (a) Dubletten-Vorschlaege tragen jetzt die UNION aller Kategorien beider Quell-Eintraege (aktion.kategorien; Multi-Category, ein Eintrag kann z.B. 3 Kategorien mitbringen); (b) beim Abarbeiten kann Frank pro Vorschlag den kompletten Merge-Text editieren und Kategorien abwaehlen — die Decision nimmt merge_text + kategorien als Overrides an (nur bei choice=ja, wirkt vor dem Ausfuehren); (c) _execute_action merge speichert mit categories-Liste (brain /store Multi-Category, erste = primaer) und nennt die Kategorien im Ergebnis. Abwaertskompatibel: alte offene Items ohne kategorien-Feld laufen unveraendert. Alt: 0.3.0 (05.07.2026, 02.16 Uhr)  # 0.3.0 (Frank-Wunsch 2026-07-05): Nacht-BILANZ — der Tages-Report enthaelt jetzt fuer JEDE Aufgabe eine ehrliche Ergebnis-Zeile, AUCH wenn nichts gefunden wurde ('Dubletten-Vorschläge: keine Dubletten gefunden', 'Nachzügler: nichts zu tun — alles verknüpft', 'X: ausgeschaltet' bei deaktivierter Aufgabe, eigene Aufgaben inklusive). Steht in report.bilanz + last_run.bilanz -> Morgen-Report-Karte und Tages-Ansicht zeigen die komplette Bilanz. Alt: 0.2.0 (05.07.2026, 01.45 Uhr)  # 0.2.0 (Frank-Wuensche 2026-07-05): (a) GPT/Codex-Modelle nutzbar — gpt-* laeuft ueber den NEUEN Agent-Durchgriff POST /llm (agent 0.52.0, bestehende ChatGPT-OAuth-Anmeldung inkl. Token-Refresh, keine Auth-Duplikation); Modell-Liste in /settings kommt jetzt aus agent /config (alle verbundenen Provider). (b) THINKING einstellbar (none/low/medium/high/xhigh, Default high) — wirkt bei GPT als reasoning.effort und bei Gemini als thinking_budget. (c) 'OHNE BEGRENZUNG durcharbeiten'-Schalter (Default AN): hebt Vorschlags-Limit, Scan-Limits und LLM-Budget auf — der Bibliothekar arbeitet bis er durch ist; es bleibt NUR die stille Notbremse gegen Endlosschleifen (LIB_LLM_BACKSTOP, Default 5000 Calls/Nacht, ai-agent-Almanach 2.1). Alt: 0.1.0: Erstausgabe (Bereiche 11-18 + Nachzuegler + eigene Aufgaben)
 
 # ---------------------------------------------------------------------------
 # Konfiguration (Secrets nur aus der Umgebung, nie im Code)
@@ -1599,6 +1599,137 @@ def _run_process(day: str, decisions: list[dict]) -> None:
 
 
 # ---------------------------------------------------------------------------
+# Gelernte Regeln RUECKWIRKEND auf offene Funde anwenden (Frank-Wunsch 2026-07-05)
+# Knopf "Regeln auf Vorschlaege anwenden": die gelernten Regeln flossen bisher nur in
+# KUENFTIGE Nacht-Urteile ein (_with_rules). Hiermit prueft der Bibliothekar seine bereits
+# erzeugten OFFENEN Funde nachtraeglich gegen die aktiven Regeln und wirft die aus der
+# Abarbeiten-Liste (status='abgelehnt'), die einer Regel klar widersprechen. NICHT-destruktiv:
+# nur die VORSCHLAEGE fallen weg, im Gehirn wird nichts geaendert/geloescht.
+# ---------------------------------------------------------------------------
+_apply = {"running": False, "done": 0, "total": 0, "removed": 0, "kept": 0,
+          "batches_failed": 0, "error": None, "note": "", "started_at": None, "finished_at": None}
+_apply_lock = threading.Lock()
+_apply_thread: "threading.Thread | None" = None
+
+APPLY_RULES_BATCH = int(os.getenv("LIB_APPLY_BATCH", "20"))
+
+APPLY_RULES_SYSTEM = """Du bist der Nachtschicht-Bibliothekar von Franks zweitem Gehirn. Frank hat dir
+GELERNTE REGELN beigebracht (siehe unten). Er moechte jetzt, dass du deine bereits erzeugten, noch
+OFFENEN Vorschlaege (Funde) NACHTRAEGLICH gegen diese Regeln pruefst.
+
+Aufgabe: Entscheide fuer JEDEN Fund, ob eine deiner gelernten Regeln ihn VERBIETET — also ob du diesen
+Vorschlag nach der Regel GAR NICHT (mehr) machen wuerdest. NUR dann kommt der Fund weg.
+
+Sei KONSERVATIV: Entferne einen Fund NUR, wenn eine Regel klar und direkt auf ihn zutrifft. Im Zweifel
+BEHALTEN. Regeln, die einen Fund nicht betreffen, aendern nichts an ihm.
+
+Antworte NUR mit diesem JSON:
+{"entfernen":[{"id":"<fund-id>","regel":"<kurz: welche Regel greift>","grund":"<1 Satz: warum dieser Fund der Regel widerspricht>"}]}
+Funde, die bleiben, NICHT auflisten. Trifft keine Regel zu -> {"entfernen":[]}."""
+
+
+def _collect_open_items() -> "tuple[dict, list[dict]]":
+    """Alle OFFENEN Funde ueber alle Tages-Reports. Gibt (reports_by_day, entries) zurueck; jedes
+    entry = {"day","item"}, wobei item eine REFERENZ ins rep-Objekt ist -> Aenderung + save_report(rep)
+    persistiert sie. Tage ohne offene Funde werden gar nicht erst geladen (offen==0)."""
+    reps: "dict[str, dict]" = {}
+    entries: "list[dict]" = []
+    for meta in list_report_days():
+        day = meta.get("date")
+        if not day or not meta.get("offen"):
+            continue
+        rep = load_report(day)
+        if not rep:
+            continue
+        reps[day] = rep
+        for it in rep.get("items", []):
+            if it.get("status") == "offen":
+                entries.append({"day": day, "item": it})
+    return reps, entries
+
+
+def _run_apply_rules() -> None:
+    """Hintergrund-Lauf: aktive gelernte Regeln auf ALLE offenen Funde anwenden. Sync -> Thread."""
+    cfg = load_config()
+    st = load_state()
+    removed = 0
+    batches_failed = 0
+    try:
+        if not _learned_block().strip():
+            with _apply_lock:
+                _apply["note"] = "Keine aktiven gelernten Regeln — es gibt nichts anzuwenden."
+            return
+        reps, entries = _collect_open_items()
+        with _apply_lock:
+            _apply["total"] = len(entries)
+        if not entries:
+            with _apply_lock:
+                _apply["note"] = "Keine offenen Vorschläge vorhanden."
+            return
+        by_id = {e["item"]["id"]: e for e in entries}
+        changed_days: "set[str]" = set()
+        system = _with_rules(APPLY_RULES_SYSTEM)
+        for start in range(0, len(entries), APPLY_RULES_BATCH):
+            batch = entries[start:start + APPLY_RULES_BATCH]
+            lines = []
+            for e in batch:
+                it = e["item"]
+                typ = (it.get("aktion") or {}).get("typ") or "hinweis"
+                lines.append(
+                    f"ID: {it['id']}\n"
+                    f"Aufgabe: {it.get('taskname') or it.get('task') or '?'} (Aktion: {typ})\n"
+                    f"Titel: {it.get('titel') or ''}\n"
+                    f"Beschreibung: {(it.get('beschreibung') or '')[:400]}\n"
+                    f"Empfehlung: {(it.get('empfehlung') or '')[:250]}")
+            user = "OFFENE VORSCHLÄGE (prüfe jeden gegen deine gelernten Regeln):\n\n" + "\n\n".join(lines)
+            try:
+                verdict = json.loads(_extract_json(llm(system, user, model=cfg["model"], max_tokens=4096)))
+                remove = verdict.get("entfernen") or []
+            except Exception:  # noqa: BLE001 — ein Batch darf den Lauf nicht stoppen
+                _log(logging.ERROR, "Regel-Anwendung: Batch fehlgeschlagen", start=start, exc_info=True)
+                batches_failed += 1
+                with _apply_lock:
+                    _apply["done"] = min(_apply["total"], start + len(batch))
+                    _apply["batches_failed"] = batches_failed
+                continue
+            for r in remove:
+                e = by_id.get((r.get("id") or "").strip())
+                if not e:
+                    continue
+                it = e["item"]
+                if it.get("status") != "offen":
+                    continue
+                regel = (r.get("regel") or "").strip()
+                grund = (r.get("grund") or "").strip()
+                it["status"] = "abgelehnt"
+                it["ergebnis"] = ("Durch gelernte Regel entfernt"
+                                  + (f" — {regel}" if regel else "")
+                                  + (f": {grund}" if grund else "."))
+                _mark_finding(st, it.get("key") or f"item:{it['id']}", "abgelehnt")
+                changed_days.add(e["day"])
+                removed += 1
+            with _apply_lock:
+                _apply["done"] = min(_apply["total"], start + len(batch))
+                _apply["removed"] = removed
+        for day in changed_days:
+            save_report(reps[day])
+        save_state(st)
+        kept = len(entries) - removed
+        with _apply_lock:
+            _apply["kept"] = kept
+        checkpoint("apply_rules", "Gelernte Regeln auf offene Vorschläge angewandt", ok=True,
+                   geprueft=len(entries), entfernt=removed, behalten=kept, batches_failed=batches_failed)
+    except Exception as e:  # noqa: BLE001
+        _log(logging.ERROR, "Regel-Anwendung fehlgeschlagen", exc_info=True)
+        with _apply_lock:
+            _apply["error"] = f"{type(e).__name__}: {e}"
+    finally:
+        with _apply_lock:
+            _apply.update({"running": False,
+                           "finished_at": datetime.now(TZ).isoformat(timespec="seconds")})
+
+
+# ---------------------------------------------------------------------------
 # API
 # ---------------------------------------------------------------------------
 def require_auth(authorization: str = Header(default="")) -> None:
@@ -1680,6 +1811,9 @@ class ProcessReq(BaseModel):
 @app.post("/process", dependencies=[Depends(require_auth)])
 def process(req: ProcessReq) -> dict:
     global _proc_thread
+    with _apply_lock:
+        if _apply["running"]:
+            return {"ok": True, "started": False, "detail": "Es läuft gerade eine Regel-Anwendung — bitte danach erneut."}
     with _proc_lock:
         if _proc["running"]:
             return {"ok": True, "started": False, "detail": "Es läuft bereits eine Abarbeitung."}
@@ -1696,6 +1830,37 @@ def process(req: ProcessReq) -> dict:
 def process_status() -> dict:
     with _proc_lock:
         return {"ok": True, "process": dict(_proc)}
+
+
+@app.post("/apply-rules", dependencies=[Depends(require_auth)])
+def apply_rules() -> dict:
+    """Wendet die aktiven gelernten Regeln RUECKWIRKEND auf alle offenen Funde an (Hintergrund-Lauf).
+    Blockiert, solange Nachtlauf oder Abarbeitung laeuft (gemeinsamer Report-Schreibzugriff)."""
+    global _apply_thread
+    with _apply_lock:
+        if _apply["running"]:
+            return {"ok": True, "started": False, "detail": "Es läuft bereits eine Regel-Anwendung."}
+    with _night_lock:
+        if _night["running"]:
+            return {"ok": True, "started": False, "detail": "Der Nachtlauf läuft gerade — bitte danach erneut."}
+    with _proc_lock:
+        if _proc["running"]:
+            return {"ok": True, "started": False, "detail": "Es läuft gerade eine Abarbeitung — bitte danach erneut."}
+    if not _learned_block().strip():
+        return {"ok": True, "started": False, "detail": "Keine aktiven gelernten Regeln — es gibt nichts anzuwenden."}
+    with _apply_lock:
+        _apply.update({"running": True, "done": 0, "total": 0, "removed": 0, "kept": 0,
+                       "batches_failed": 0, "error": None, "note": "",
+                       "started_at": datetime.now(TZ).isoformat(timespec="seconds"), "finished_at": None})
+    _apply_thread = threading.Thread(target=_run_apply_rules, daemon=True, name="apply-rules")
+    _apply_thread.start()
+    return {"ok": True, "started": True}
+
+
+@app.get("/apply-rules-status", dependencies=[Depends(require_auth)])
+def apply_rules_status() -> dict:
+    with _apply_lock:
+        return {"ok": True, "apply": dict(_apply)}
 
 
 # --- Einstellungen ---------------------------------------------------------
