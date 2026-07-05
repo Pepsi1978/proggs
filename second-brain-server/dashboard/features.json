@@ -1,326 +1,342 @@
 {
-	"stand": "05.07.2026, 11.47 Uhr",
-	"hinweis": "PFLEGE-PFLICHT: Bei JEDEM Deploy, der ein neues System/Feature einbaut, hier einen Eintrag ERGAENZEN (neueste zuerst) — mit Datum + Uhrzeit und ausfuehrlicher Erklaerung. Diese Datei ist die Quelle des Info-Bereichs in den Dashboard-Einstellungen (GET /api/features). Regel verankert in DEPLOY.md.",
-	"features": [
-		{
-			"id": "bibliothekar-regeln-anwenden",
-			"name": "Regeln auf Vorschläge anwenden: gelernte Regeln rückwirkend auf offene Funde",
-			"eingebaut": "05.07.2026, 11.47 Uhr",
-			"dienst": "librarian 0.7.0 + dashboard 0.44.0",
-			"kurz": "Ein Knopf oben rechts in der Karte 'Gelernte Regeln' wendet deine Regeln rückwirkend auf die aktuell offenen Vorschläge an — betroffene fallen sofort aus der Abarbeiten-Liste, im Gehirn wird nichts gelöscht.",
-			"erklaerung": "Gelernte Regeln flossen bisher NUR in künftige Nacht-Urteile ein — hattest du also schon viele offene Vorschläge und brachtest dem Bibliothekar danach eine neue Regel bei, galt sie für diese bestehenden Vorschläge nicht. Der neue Knopf 'Regeln auf Vorschläge anwenden' (oben rechts in 'Gelernte Regeln') schließt genau diese Lücke: Nach einer Sicherheitsabfrage geht der Bibliothekar ALLE offenen Vorschläge über alle Tage durch und prüft jeden stapelweise gegen deine aktiven gelernten Regeln. Vorschläge, die einer Regel klar widersprechen (er würde sie nach der Regel gar nicht mehr machen), setzt er auf 'abgelehnt' — sie verschwinden aus der Abarbeiten-Liste und werden über die Fund-Registrierung nicht sofort neu vorgeschlagen. Er arbeitet konservativ (im Zweifel bleibt ein Vorschlag). Während des Laufs zeigt das Dashboard den Fortschritt ('Prüfe Vorschläge … X/Y geprüft · Z entfernt'), danach eine Ergebnis-Zeile und lädt die Tages-Listen frisch. Wichtig: Es ist NICHT-destruktiv — es fallen nur die Vorschläge weg, an deinen echten Einträgen im Gehirn ändert sich nichts. Technisch: POST /apply-rules im librarian startet einen Hintergrund-Lauf (eigener Thread, damit der Dienst antwortbar bleibt), das Nacht-Modell fällt die Urteile, GET /apply-rules-status liefert den Fortschritt; der Knopf ist gesperrt, solange der Nachtlauf oder eine Abarbeitung läuft."
-		},
-		{
-			"id": "bibliothekar-lernen",
-			"name": "Lernen-Knopf: dem Bibliothekar an einzelnen Funden etwas beibringen",
-			"eingebaut": "05.07.2026, 02.45 Uhr",
-			"dienst": "librarian 0.5.0-0.6.0 + dashboard 0.42.0-0.43.0",
-			"kurz": "Jeder Fund hat hinten einen Lernen-Knopf: Lehre eintippen, der Bibliothekar fragt nach, du bestätigst die finale Regel — ab dann gilt sie in allen künftigen Nacht-Urteilen.",
-			"erklaerung": "Der graue Lernen-Knopf am Ende jedes Funds wird beim Klick rot und öffnet ein Lern-Fenster. Dort beschreibst du frei, wie der Bibliothekar mit solchen Fällen künftig umgehen soll (Beispiel: 'Kurzcheck und Vollversion eines Almanachs werden NIEMALS zusammengeführt — die Kurzversion ist absichtlich da, damit ein KI-Modell erst tokenarm liest und dann entscheidet, ob es die Langversion braucht'). Nach dem Speichern versteht der Bibliothekar die Lehre, stellt bei Unklarheit genau eine Rückfrage und nennt dann die finale Regel-Fassung ('Das würde ich mir merken: …'), die du mit einem Klick bestätigst. Alle bestätigten Regeln stehen in der Karte 'Gelernte Regeln' (zwischen Abarbeiten und Einstellungen): scrollbare Liste mit 1-2-Satz-Kurzfassung, 'Bearbeiten' öffnet die komplette Regel als Editor, 'KI fragen' lässt den Bibliothekar selbst beurteilen, ob die Regel für seine Nachtarbeit sinnvoll und gut umsetzbar ist (mit Kollisions-Check gegen die anderen Regeln; Antwort als wegklickbare Info-Box). Jede Regel ist einzeln an-/abschaltbar und löschbar. Technisch fließen alle aktiven Regeln als Pflicht-Block in sämtliche Nacht-Urteils-Aufrufe ein — Dubletten, Widersprüche, Veraltet, Kategorien, Lücken, Verdichtung, eigene Aufgaben und die Umsetzung deiner Entscheidungen."
-		},
-		{
-			"id": "bibliothekar-merge-steuerung",
-			"name": "Zusammenführungen voll steuerbar: Text editieren + Kategorien wählen",
-			"eingebaut": "05.07.2026, 02.29 Uhr",
-			"dienst": "librarian 0.4.0 + dashboard 0.41.0",
-			"kurz": "Bei Dubletten-Vorschlägen kannst du den kompletten Zusammenführungs-Text lesen und bearbeiten und per leuchtender Chips bestimmen, welche Kategorien der neue Eintrag bekommt.",
-			"erklaerung": "Jeder Zusammenführungs-Vorschlag hat einen aufklappbaren Bereich mit dem kompletten vorgeschlagenen Misch-Text in einem Editor. Änderst du ihn und drückst 'Änderung übernehmen', wird genau deine Fassung gespeichert — ohne den Knopf gilt der ursprüngliche Vorschlag. Darunter stehen ALLE Kategorien beider Quell-Einträge als orange leuchtende Chips (hatte ein Eintrag zwei Kategorien und der andere eine, sind es drei). Standardmäßig sind alle aktiv; ein Klick wählt ab (durchgestrichen), mindestens eine bleibt. Der zusammengeführte Eintrag bekommt exakt die aktiven Kategorien als echte Mehrfach-Kategorien. Die Originale wandern wie immer in den wiederherstellbaren Papierkorb."
-		},
-		{
-			"id": "bibliothekar-bilanz",
-			"name": "Nacht-Bilanz: jede Aufgabe meldet ihr Ergebnis, auch 'nichts gefunden'",
-			"eingebaut": "05.07.2026, 02.17 Uhr",
-			"dienst": "librarian 0.3.0 + dashboard 0.40.1",
-			"kurz": "Die Tages-Auswertung enthält für jede Aufgabe eine ehrliche Zeile — auch wenn nichts gefunden wurde oder eine Aufgabe ausgeschaltet war.",
-			"erklaerung": "Früher nannte die Zusammenfassung nur die Aufgaben mit Funden — was nichts fand, blieb unsichtbar. Jetzt schreibt der Nachtlauf eine komplette Bilanz: 'Dubletten-Vorschläge: 3 Vorschläge', 'Widerspruchs-Suche: keine Widersprüche gefunden', 'Nachzügler-Verknüpfung: nichts zu tun — alle Einträge sind bereits im Register verknüpft', 'Veraltet-Erkennung: ausgeschaltet'. Eigene Aufgaben erscheinen genauso. Die Bilanz steht direkt in der Morgen-Report-Karte (🔸 = Funde, ▫️ = nichts) und zusätzlich zusammenklappbar über den Funden in der Tages-Ansicht. So siehst du jeden Morgen auf einen Blick, dass wirklich ALLES gelaufen ist — nicht nur das, was etwas gefunden hat."
-		},
-		{
-			"id": "bibliothekar-autosave-unbegrenzt",
-			"name": "Bibliothekar-Einstellungen: Auto-Speichern + 'Ohne Begrenzung durcharbeiten'",
-			"eingebaut": "05.07.2026, 02.11 Uhr",
-			"dienst": "librarian 0.2.0 + dashboard 0.40.0",
-			"kurz": "Jede Einstellungs-Änderung speichert sich sofort automatisch; der Ohne-Begrenzung-Schalter lässt den Bibliothekar nachts ALLES abarbeiten, ohne Limits.",
-			"erklaerung": "Der Speichern-Knopf in den Bibliothekar-Einstellungen ist weg: Schalter umlegen, Modell wechseln, Zeit ändern — alles speichert sich sofort mit sichtbarer 'Gespeichert'-Rückmeldung, vergessen ist unmöglich. Der neue Schalter 'Ohne Begrenzung durcharbeiten' (standardmäßig an) hebt alle Arbeits-Limits auf: kein Vorschlags-Limit pro Aufgabe, kein KI-Budget, keine Scan-Grenzen — der Bibliothekar arbeitet, bis er durch ist. Die beiden Limit-Felder werden dabei sichtbar ausgegraut. Im Hintergrund bleibt nur eine stille Notbremse gegen Endlosschleifen (5000 Aufrufe pro Nacht — ehrliche Arbeit erreicht das nie, der komplette Erstlauf brauchte 149). Die Abarbeiten-Karte zeigt außerdem dynamisch an, welches Modell mit welcher Thinking-Stufe deine Entscheidungen umsetzt."
-		},
-		{
-			"id": "bibliothekar-gpt-thinking",
-			"name": "GPT als Nachtmodell + Thinking-Stufe für den Bibliothekar",
-			"eingebaut": "05.07.2026, 01.55 Uhr",
-			"dienst": "librarian 0.2.0 + agent 0.52.0 + dashboard 0.38.1",
-			"kurz": "Der Bibliothekar kann jetzt die verbundenen GPT-Modelle nutzen (aktuell gpt-5.5 mit Thinking high) — über die bestehende Codex-Anmeldung, ohne doppelte Verbindung.",
-			"erklaerung": "Der Tages-Agent hat einen internen LLM-Durchgriff bekommen (POST /llm): Der Bibliothekar reicht GPT-Aufrufe dorthin durch und nutzt damit die bestehende ChatGPT/Codex-Anmeldung samt automatischem Token-Refresh — die Anmelde-Logik existiert nur einmal. Die Nachtmodell-Auswahl zeigt deshalb alle verbundenen Modelle (Gemini, minimax UND alle GPT-Modelle), daneben ein eigenes Thinking-Dropdown (none bis xhigh, Standard high), das bei GPT als reasoning.effort und bei Gemini als Denk-Budget wirkt. Nachts wartet niemand auf Antworten — deshalb darf hier das stärkste Modell mit vollem Denken arbeiten. Zusätzlich wurden im Einstellungen-Tab die Agenten-Zeilen kompakter: Modell und Thinking stehen jetzt bei jeder Rolle nebeneinander, und die Karte heißt 'Agenten' (der Bibliothekar als Spezialagent hat seinen eigenen Bereich)."
-		},
-		{
-			"id": "uebersicht-vitals-schnell",
-			"name": "Übersicht-Kacheln: 3-Sekunden-Aktualisierung, nur bei geöffneter Übersicht",
-			"eingebaut": "05.07.2026, 01.45 Uhr",
-			"dienst": "dashboard 0.39.0",
-			"kurz": "Prozessor, Arbeitsspeicher und Speicherplatz aktualisieren sich alle 3 Sekunden — und sämtliche Übersicht-Abrufe laufen nur noch, wenn die Übersicht wirklich offen ist.",
-			"erklaerung": "Früher wurden die Server-Kacheln nur alle 20 Sekunden mit einer Viertelsekunden-Stichprobe aktualisiert — der Prozessor schien dadurch minutenlang auf demselben Wert festzustehen. Jetzt gibt es einen eigenen, leichten Schnell-Abruf (/api/vitals) nur für die Kacheln, der alle 3 Sekunden läuft und die echte Durchschnittslast seit dem letzten Abruf misst. Gleichzeitig wurde das Abrufen sparsamer: Sowohl der Schnell-Abruf als auch der große 20-Sekunden-Überblick laufen ausschließlich, wenn der Übersicht-Tab aktiv und das Browserfenster sichtbar ist — auf allen anderen Tabs wird gar nichts abgerufen."
-		},
-		{
-			"id": "nachtschicht-bibliothekar",
-			"name": "Nachtschicht-Bibliothekar: das Gehirn räumt nachts auf",
-			"eingebaut": "05.07.2026, 01.10 Uhr",
-			"dienst": "librarian 0.1.0 (NEUER 5. Dienst) + dashboard 0.38.0 + brain-api 1.22.0",
-			"kurz": "Ein eigener Sleep-Time-Agent läuft jede Nacht um 04:10 (nach dem 4-Uhr-Backup) durch alle Einträge und legt morgens Vorschläge vor — er verändert nie etwas ohne Klick.",
-			"erklaerung": "Der Bibliothekar ist ein fünfter Container (sb-librarian) mit eigener innerer Uhr. Nachts prüft er das komplette Gehirn: Dubletten (fast identische Einträge → Zusammenführ-Vorschlag mit fertig formuliertem Misch-Text, Bereich 13), Widersprüche (unvereinbare Aussagen zum selben Thema → Klär-Liste, Bereich 12), womöglich Veraltetes (Preise, Versionen, Termine, die vom Alter her nicht mehr stimmen dürften, Bereich 16), zu volle oder fast leere Kategorien (Unterkategorien-Vorschläge, Bereich 15), Wissens-Lücken (wonach oft gefragt wird, ohne dass etwas gespeichert ist, Bereich 17) und alte Gesprächs-Monate (Monats-Zusammenfassung als ZUSÄTZLICHE Ebene, Originale bleiben 1:1, Bereich 14). Einzige Auto-Arbeit ist der Nachzügler-Lauf: Einträge ohne Verknüpfung im Personen-/Themen-Register werden nachverknüpft (verändert keinen Eintragstext). Alles andere sind reine VORSCHLÄGE — Löschen geht immer nur in den wiederherstellbaren Papierkorb. Sicherheitsnetz: hartes LLM-Aufruf-Budget pro Nacht (Standard 250), Drossel für Vorschläge pro Aufgabe, und der Lauf wartet auf das Ende des Host-Backups. Der Morgen-Report (Bereich 18) fasst jede Nacht zusammen: 'Heute Nacht: 3 Dubletten-Vorschläge, 2 womöglich veraltet, 14 nachverknüpft.'"
-		},
-		{
-			"id": "bibliothekar-abarbeiten",
-			"name": "Bibliothekar-Tab: Tages-Listen mit Ja / Nein / eigenem Vorschlag",
-			"eingebaut": "05.07.2026, 01.10 Uhr",
-			"dienst": "dashboard 0.38.0 + librarian 0.1.0",
-			"kurz": "Neuer Dashboard-Tab: pro Tag eine Fund-Liste; jeden Fund per Ja/Nein/eigenem Text entscheiden, dann Starten — bei Unklarheit stellt der Bibliothekar Rückfragen.",
-			"erklaerung": "Im neuen Tab 'Bibliothekar' (Mond-Symbol, mit Zähler für offene Funde) bleiben die Nächte als eigene Tage stehen — wer 3-4 Tage weg war, arbeitet jeden Tag einzeln ab. Pro Fund gibt es die Beschreibung, die konkrete Empfehlung, die beteiligten Einträge mit Auszug, und drei Wege: der Ja-Knopf führt genau die angezeigte Empfehlung aus, der Nein-Knopf lehnt ab (der Fund kommt so schnell nicht wieder), und 'Eigener Vorschlag' öffnet ein Textfeld für eine eigene Anweisung (z. B. 'benenn es um in …'). Unten sammelt EIN Starten-Knopf alle Entscheidungen ein und setzt sie um. Versteht der Bibliothekar eine eigene Anweisung nicht eindeutig, stellt er GENAU EINE Rückfrage direkt am Fund — antworten, nochmal Starten, fertig. Erledigte und abgelehnte Funde fallen aus der offenen Liste und wandern in einen zusammenklappbaren 'bereits entschieden'-Bereich. Ausgeführt wird ausschließlich über die bestehenden brain-api-Wege (Zusammenführen = neuer Eintrag + Originale in den Papierkorb, immer wiederherstellbar)."
-		},
-		{
-			"id": "bibliothekar-eigene-aufgaben",
-			"name": "Eigene Nacht-Aufgaben: dem Bibliothekar per Gespräch Neues beibringen",
-			"eingebaut": "05.07.2026, 01.10 Uhr",
-			"dienst": "librarian 0.1.0 + dashboard 0.38.0",
-			"kurz": "Über ein Plus-Feld definierst du im Dialog eigene Nacht-Aufgaben — der Bibliothekar fragt nach, macht Vorschläge, und am Ende drückst du auf Speichern.",
-			"erklaerung": "In den Bibliothekar-Einstellungen gibt es neben den 7 Standard-Aufgaben (alle einzeln an/aus, mit Startzeit, Nacht-Modell-Wahl, Vorschlags-Limit und LLM-Budget) den Bereich 'Eigene Aufgaben'. Der Plus-Knopf startet ein kurzes Interview: Du beschreibst frei, was nachts zusätzlich passieren soll; der Bibliothekar fragt nach, sagt ehrlich, ob die Idee als Nacht-Aufgabe umsetzbar und sinnvoll ist, und schlägt Verbesserungen vor — bis eine präzise Arbeitsanweisung steht, die du mit 'Aufgabe speichern' übernimmst. Nachts arbeitet er eigene Aufgaben generisch ab: Er sichtet die Eintrags-Liste, liest gezielt die relevanten Volltexte und erzeugt daraus wieder nur VORSCHLÄGE für die Tages-Liste. Eigene Aufgaben lassen sich jederzeit an-/ausschalten und über den Papierkorb löschen — die Standard-Aufgaben sind fest eingebaut und nur abschaltbar."
-		},
-		{
-			"id": "quellen-drilldown",
-			"name": "Quellen-Drilldown: jede Antwort bis zur Quelle nachprüfbar",
-			"eingebaut": "04.07.2026, 19.55 Uhr",
-			"dienst": "agent 0.50.0 + dashboard 0.37.0",
-			"kurz": "Unter jeder Gedächtnis-Antwort stehen anklickbare Quellen-Chips — ein Klick öffnet den benutzten Eintrag im Volltext.",
-			"erklaerung": "Der Agent gibt zu jeder Antwort aus dem Gedächtnis jetzt strukturiert zurück, WELCHE Einträge er wirklich benutzt hat (Feld 'sources' in /chat und /chat/stream: Eintrags-ID, Titel, Kategorie, Trefferstärke). Das Dashboard zeigt sie als Chips unter der Antwort; ein Klick öffnet den bekannten Seiten-Drawer mit dem wortwörtlichen 1:1-Text des Eintrags. So ist jede Aussage des Agenten überprüfbar — und wenn ein Eintrag veraltet ist, kann er direkt dort korrigiert werden. Zusammen mit der Konfidenz-Anzeige entsteht überprüfbares Vertrauen: man sieht, WAS der Agent sagt, WOHER er es hat und WIE sicher die Grundlage ist."
-		},
-		{
-			"id": "confidence",
-			"name": "Konfidenz: der Agent sagt, wie sicher seine Antwort ist",
-			"eingebaut": "04.07.2026, 19.50 Uhr",
-			"dienst": "agent 0.50.0",
-			"kurz": "Jede Gedächtnis-Antwort trägt eine ehrliche Sicherheits-Einschätzung: hoch, mittel, niedrig — oder ehrlich 'nichts gefunden'.",
-			"erklaerung": "Die Vektorsuche liefert zu jedem Treffer einen Ähnlichkeits-Score — der wurde bisher weggeworfen. Jetzt bewertet der Agent daraus die Grundlage seiner Antwort: Wie viele Einträge stützen sie? Wie stark ist der beste Treffer (Schwellen einstellbar über AGENT_CONF_STRONG/AGENT_CONF_WEAK)? Ist ein exakter Wortlaut-Treffer (BM25) oder ein vollständiger Themen-Register-Treffer dabei? Das Ergebnis webt er kurz in die Antwort ein ('das steht übereinstimmend in 3 Einträgen' vs. 'nur ein einzelner, schwacher Treffer — mit Vorsicht') und liefert es strukturiert im Feld 'confidence' an App und Dashboard. Bei nichts Gefundenem sagt er das ehrlich, statt zu raten. Hintergrund aus der Recherche: Vertrauens-Transparenz allein brachte in Studien +30 % Zeitersparnis, weil man nicht mehr alles nachprüfen muss."
-		},
-		{
-			"id": "multi-query",
-			"name": "Multi-Query-Recall: eine Frage, drei Suchanläufe",
-			"eingebaut": "04.07.2026, 19.50 Uhr",
-			"dienst": "agent 0.50.0",
-			"kurz": "Der Agent formuliert jede Gedächtnis-Frage intern in 2 Varianten um und sucht mit allen dreien gleichzeitig — deutlich bessere Treffer bei vagen, gesprochenen Fragen.",
-			"erklaerung": "Ins Gehirn gesprochene Fragen sind oft ungenau formuliert ('was war das mit dem Zeug für besseren Schlaf?'). Vor der Suche bildet das Router-Modell (schnell und günstig) intern bis zu 2 alternative Suchanfragen mit anderen Worten (Synonyme, Fachbegriffe statt Umschreibungen). Alle Varianten werden PARALLEL gesucht und die Ergebnislisten per RRF (Reciprocal Rank Fusion) verschmolzen: Was in mehreren Listen weit oben steht, gewinnt. Kostet etwa eine Sekunde und einen kleinen LLM-Aufruf pro Frage; abschaltbar über AGENT_MULTI_QUERY=0. Die Varianten sind unsichtbar — man merkt nur, dass vage Fragen öfter das Richtige finden."
-		},
-		{
-			"id": "entity-register",
-			"name": "Themen-Register (Entity-Linking): 'Alles über X' wird vollständig",
-			"eingebaut": "04.07.2026, 19.45 Uhr",
-			"dienst": "brain-api 1.21.0 + agent 0.50.0",
-			"kurz": "Ein Register der konkreten Dinge im Gehirn (Personen, Geräte, Projekte, Präparate, Orte) — jede Entität kennt ALLE Einträge, in denen sie vorkommt.",
-			"erklaerung": "Wie ein Register hinten im Buch: Nach jedem Speichern extrahiert ein Hintergrund-Lauf (Speicher-Modell, blockiert nichts) die zentralen Entitäten des neuen Eintrags und verknüpft sie in einer zweiten, kleinen Qdrant-Collection ('brain_entities') mit der Eintrags-ID. Fragen wie 'Was weiß ich alles über die Whoop?' oder 'Alles über den EntropieReductor' holen dann ALLE verknüpften Einträge (vollständig) statt nur der 5 semantisch ähnlichsten. Bewusst LEICHT gebaut (Hub-and-Spoke) statt als voller Wissensgraph — die Recherche belegte, dass GraphRAG für persönliche Gedächtnisse Overkill ist (mem0 hat seinen Graph-Layer wieder entfernt). Das Register heilt sich selbst (gelöschte Einträge werden beim Lesen ausgetragen) und kann per POST /entities/rebuild über den ganzen Bestand aufgebaut werden (Fortschritt: GET /entities/rebuild-status). Die brain-api bleibt dabei 'stummer Speicher' — die KI-Extraktion sitzt komplett im Agenten."
-		},
-		{
-			"id": "zeit-suche",
-			"name": "Zeit-bewusste Suche: 'letzten Monat', 'im Winter', 'vor 3 Wochen'",
-			"eingebaut": "04.07.2026, 19.50 Uhr",
-			"dienst": "agent 0.50.0 (Filter-Endpunkt seit brain-api 1.1.0)",
-			"kurz": "Zeitausdrücke in der Frage werden erkannt und grenzen die Suche auf den gemeinten Zeitraum ein — mit Sicherheitsnetz.",
-			"erklaerung": "Ein deterministischer Parser (ohne LLM — schnell, kostenlos, vorhersagbar, Zeitzone Europe/Berlin) erkennt deutsche Zeitausdrücke in der Frage: gestern/vorgestern, letzte/diese Woche, letzter/dieser Monat, letztes/dieses Jahr, 'vor 3 Wochen' (auch Zahlwörter wie 'vor drei Wochen'), 'seit 2 Monaten', 'im Dezember 2025', 'im Winter/Sommer/...', 'am 12.05.'. Der erkannte Zeitraum wird als Speicherdatum-Filter (created_at) an die Suche gehängt — es wird also nur in Einträgen aus dieser Zeit gesucht. WEICH mit Netz: Ergibt der Zeitraum null Treffer, sucht der Agent automatisch noch einmal ohne Filter, damit nie fälschlich 'dazu ist nichts gespeichert' kommt, nur weil das Datum nicht passte."
-		},
-		{
-			"id": "hybrid-suche",
-			"name": "Hybrid-Suche: Bedeutung UND exakte Wörter (BM25 + RRF)",
-			"eingebaut": "04.07.2026, 19.45 Uhr",
-			"dienst": "brain-api 1.21.0",
-			"kurz": "Die Suche kombiniert jetzt zwei Verfahren: semantische Vektorsuche (versteht Bedeutung) und BM25-Stichwortsuche (trifft exakte Begriffe) — verschmolzen per RRF.",
-			"erklaerung": "Die bisherige Suche war rein semantisch: Die Frage wird zum Zahlenvektor, Qdrant liefert bedeutungsähnliche Einträge. Stark bei vagen Fragen, aber exakte, seltene Wörter (Gerätenamen wie 'Whoop', Präparate wie 'Magnesiumbisglycinat', Projektnamen, Zahlen) 'verwässern' im Embedding. Jetzt läuft parallel eine klassische BM25-Stichwortsuche über alle Text-Stücke (plus Titel und Kategorien), und beide Ranglisten werden per Reciprocal Rank Fusion (RRF, k=60) verschmolzen: Ein Eintrag bekommt Punkte dafür, wie weit oben er in JEDER Liste steht — was beide Verfahren gut finden, gewinnt. Bewusst OHNE Umbau der Qdrant-Collection umgesetzt (in-Prozess-Index über die Chunk-Texte, gecacht, bei jedem Schreiben frisch): null Migrationsrisiko am Produktivbestand, kein neues ML-Paket im Server-Image. Notschalter: SB_HYBRID=0. Laut Recherche DER eine belegte Retrieval-Gewinn für persönliche Wissensspeicher."
-		},
-		{
-			"id": "info-bereich",
-			"name": "Dieser Info-Bereich: die Feature-Chronik",
-			"eingebaut": "04.07.2026, 19.55 Uhr",
-			"dienst": "dashboard 0.37.0",
-			"kurz": "Die anklickbare Liste aller eingebauten Systeme — was, wann, wie es funktioniert.",
-			"erklaerung": "Es wird viel in den Cortex-Server eingebaut — irgendwann weiß man nicht mehr, was alles drin ist und wie die Teile heißen, wenn man sie ändern lassen will. Dieser Bereich löst das: Jedes eingebaute System steht hier mit Einbau-Datum und Uhrzeit, dem Dienst, in dem es sitzt, einem Kurzsatz und einer ausführlichen Erklärung. Die Daten leben in der Datei dashboard/features.json im Repo; der Server liefert sie über GET /api/features aus. Bei jedem künftigen Einbau wird dort ein Eintrag ergänzt — diese Pflegepflicht ist in DEPLOY.md verankert, damit die Chronik nie veraltet."
-		},
-		{
-			"id": "idempotenz",
-			"name": "Idempotenz: keine doppelten Nachrichten bei Verbindungsabrissen",
-			"eingebaut": "02.07.2026",
-			"dienst": "agent 0.48.0",
-			"kurz": "Jede Nachricht trägt eine eindeutige Kennung — Wiederholungen (Tunnel-Abriss, App-Retry) werden nur EINMAL verarbeitet.",
-			"erklaerung": "Die Handy-App schickt pro Nachricht eine request_id (UUID). Kommt dieselbe Kennung erneut an (z.B. weil der WireGuard-Tunnel kurz abriss und die App automatisch neu sendete), wird die bereits berechnete Antwort aus einem 15-Minuten-Zwischenspeicher zurückgegeben, statt alles doppelt zu verarbeiten. Läuft die Erstverarbeitung noch, wartet das Duplikat auf deren Ergebnis. Verhindert doppelte Gedächtnis-Einträge und doppelte Chat-Nachrichten. Die Streaming-Variante ist zusätzlich abriss-fest: Auch wenn der Client mitten im Stream wegbricht, wird die fertige Antwort in Session und Zwischenspeicher geschrieben."
-		},
-		{
-			"id": "streaming",
-			"name": "Antwort-Streaming: die Antwort erscheint Wort für Wort",
-			"eingebaut": "02.07.2026",
-			"dienst": "agent 0.41.0",
-			"kurz": "Statt auf die komplette Antwort zu warten, streamt der Agent sie live (SSE) — besonders spürbar bei langen M/XL-Antworten.",
-			"erklaerung": "Der Endpunkt POST /chat/stream liefert die Antwort als Live-Datenstrom (Server-Sent Events): Text-Häppchen, sobald das Modell sie erzeugt, am Ende die exakte Gesamtantwort als Abschluss-Ereignis (die App ersetzt den Rohstream damit — verlorene oder doppelte Häppchen heilen sich selbst). Funktioniert für Gemini (inklusive Grounding-Websuche) und GPT/Codex; die Router- und Filter-Schritte (reine JSON-Arbeit) streamen bewusst nicht. Bei einem Fehler vor dem ersten Häppchen fällt der Agent automatisch auf die nicht-streamende Antwort zurück."
-		},
-		{
-			"id": "sessions-persistent",
-			"name": "Gesprächs-Sicherung: kein Verlauf geht durch Neustarts verloren",
-			"eingebaut": "02.07.2026",
-			"dienst": "agent 0.45.0",
-			"kurz": "Jede Gesprächssitzung wird bei jeder Änderung crash-sicher auf Platte gespiegelt und beim Start wiederhergestellt.",
-			"erklaerung": "Früher lebten die Gespräche nur im Arbeitsspeicher — jedes Deploy oder jeder Neustart verlor sie, und ins Logbuch gelangten halbe Gespräche (Frage ohne Antwort). Jetzt wird jede Sitzung bei jeder Änderung atomar als Datei gespiegelt (erst temporär schreiben, dann umbenennen — nie halbe Dateien) und beim Start wiederhergestellt: Das Gespräch läuft in DERSELBEN Sitzung weiter, und das Logbuch bekommt EINEN vollständigen Eintrag mit Frage UND Antwort. Die Datei wird erst nach erfolgreichem Logbuch-Eintrag gelöscht."
-		},
-		{
-			"id": "dubletten-rueckfrage",
-			"name": "Dubletten-Rückfrage: nichts wird doppelt gespeichert",
-			"eingebaut": "02.07.2026",
-			"dienst": "agent 0.44.0",
-			"kurz": "Vor dem Speichern prüft der Agent auf ähnliche bestehende Einträge und fragt: zusätzlich speichern oder ersetzen?",
-			"erklaerung": "Bei jeder Speicher-Absicht wird zuerst gesucht, ob es schon ähnliche Einträge gibt (Ähnlichkeit ab 0,70, Gesprächs-Logs ausgenommen). Gibt es welche, zitiert der Agent sie (Titel, Kategorie, Ähnlichkeit in Prozent, Auszug) und fragt mit Knöpfen: 'Zusätzlich speichern', 'Ersetzen' oder 'Abbrechen'. Bei mehreren Kandidaten kommt eine Nummern-Auswahl, welcher ersetzt werden soll. Die Antworten werden deterministisch erkannt (nicht vom LLM geraten). So sieht man sofort, was schon im Gedächtnis liegt, und nichts landet unbemerkt doppelt."
-		},
-		{
-			"id": "smxl",
-			"name": "S/M/XL-Antwortlängen: zentral gepflegt für App und Dashboard",
-			"eingebaut": "02.07.2026",
-			"dienst": "agent 0.46.0-0.47.1",
-			"kurz": "Drei wählbare Antwortlängen — kurz, mittel, ausführlich — wirken auf Antwort UND Internet-Suchtiefe, mit EINER zentralen Prompt-Quelle.",
-			"erklaerung": "Die Wahl S/M/XL (Chips im Gespräch, in App und Dashboard) steuert zweierlei: (1) den Antwort-Stil über zentrale, editierbare Prompts (size-prompts.json auf dem Server — Handy und Dashboard nutzen exakt dieselben Texte), und (2) die Tiefe der Internet-Suche (S=8 Treffer schnell, M=12, XL=20 mit Tiefensuche). So ist eine XL-Antwort nicht nur länger formuliert, sondern steht auch auf mehr Suchmaterial."
-		},
-		{
-			"id": "router-separat",
-			"name": "Router separat einstellbar + Modell-pro-Rolle",
-			"eingebaut": "02.07.2026 (Modell-pro-Rolle seit 24.06.2026)",
-			"dienst": "agent 0.6.0 / 0.40.0",
-			"kurz": "Jede Agenten-Rolle (Hauptagent, Speicheragent, Leseagent, Router) kann ein eigenes Modell und eigene Denk-Stufe bekommen.",
-			"erklaerung": "Der erste Schritt jeder Nachricht ist die Klassifikation (speichern? nachschlagen? Internet? Plaudern?) — dafür reicht ein schnelles, günstiges Modell, während die sichtbare Antwort vom stärkeren Hauptagenten kommt. In den Einstellungen lassen sich Modell und Reasoning-Stufe pro Rolle wählen ('auto' = wie Hauptagent). Es gilt IMMER exakt die eingestellte Wahl — der Server deckelt nie automatisch. Die neuen Level-2-Aufgaben nutzen bestehende Rollen: Multi-Query-Umformulierung läuft über das Router-Modell, die Entitäten-Extraktion über das Speicher-Modell."
-		},
-		{
-			"id": "performance-haertung",
-			"name": "Performance- und Stabilitäts-Härtung (Tiefen-Debugging)",
-			"eingebaut": "02.07.2026, 19.02 Uhr",
-			"dienst": "brain-api 1.19.0-1.20.0, agent 0.48.1-0.49.0, dashboard 0.34.0",
-			"kurz": "Gebündelte Embeddings, sparsame Datenbank-Scans, wiederverwendete Verbindungen, parallele Übersichts-Abfrage — alles verhaltensneutral, nur schneller.",
-			"erklaerung": "Ein Tiefen-Debugging-Durchlauf hat die schleichenden Kostenfresser beseitigt: Chunk-Vektoren werden beim Speichern gebündelt statt einzeln zur Embedding-API geschickt (großes Dokument: Minuten -> Sekunden); Zähl- und Listen-Abfragen scannen nur noch einen Chunk pro Dokument (identisches Ergebnis, ~5x kleinerer Scan — wichtig, weil die Übersicht alle 20 Sekunden pollt); alle Dienste nutzen EINEN wiederverwendeten HTTP-Client (kein TLS-Handschlag pro Aufruf — spürbar beim satzweisen Vorlesen); die Übersicht sammelt ihre fünf unabhängigen Teilwerte parallel statt nacheinander; und das Browser-Polling pausiert, wenn der Tab unsichtbar ist."
-		},
-		{
-			"id": "kategorie-einlesen",
-			"name": "Narrensicheres Kategorie-Einlesen (auch für schwache Modelle)",
-			"eingebaut": "27.06.2026",
-			"dienst": "brain-api 1.17.0",
-			"kurz": "Eine ganze Kategorie lässt sich Eintrag für Eintrag per Nummer durchlesen — keine Titel raten, keine Listen parsen.",
-			"erklaerung": "GET /category-item?category=X&index=N liefert genau EINEN Eintrag (1-basiert) plus die Gesamtzahl. Ein Client (z.B. OpenCode mit einem schwachen Modell) iteriert einfach 1, 2, 3 ... bis zur Gesamtzahl — eine Zahl kann kein Modell falsch tippen. Stabile Titel-Sortierung über alle Aufrufe, speicherschonend (Metadaten für die Liste, Volltext nur für den einen Eintrag). Dazu passend ist der Titel-Abruf tolerant (1.16.0): angeklebte Listen-Dekorationen wie ' [Kategorie]' oder '— N Zeichen' werden automatisch abgestreift."
-		},
-		{
-			"id": "ladefenster-schutz",
-			"name": "Ladefenster-Schutz: nie halbe Zahlen nach einem Neustart",
-			"eingebaut": "26.06.2026",
-			"dienst": "brain-api 1.15.0",
-			"kurz": "Direkt nach einem Neustart meldet das Gehirn ehrlich 'lade noch', statt unvollständige Listen als Wahrheit auszugeben.",
-			"erklaerung": "Während Qdrant nach einem Container-Neustart die Collection lädt, liefern Zählungen und Listen kurzzeitig UNVOLLSTÄNDIGE Werte ohne Fehlermeldung (ein realer Vorfall zeigte 193 statt 1224 Punkte). Die Endpunkte /health und /list geben deshalb den Qdrant-Ladezustand ('collection_status') und ein 'ready'-Flag zurück. Clients wie der MCP-Server warnen bei ready=false ('Gehirn lädt noch'), statt eine halbe Liste als vollständig auszugeben. Das schützt auch den Lösch-Sync der Apps vor fälschlichem Massenlöschen."
-		},
-		{
-			"id": "vorlesen",
-			"name": "Vorlesen (TTS): Antworten satzweise, schnell",
-			"eingebaut": "25.06.2026",
-			"dienst": "dashboard 0.18.0-0.24.2",
-			"kurz": "Antworten werden mit 30 wählbaren Gemini-HD-Stimmen vorgelesen — satzweise gepipelined, der erste Ton kommt nach ~2 Sekunden.",
-			"erklaerung": "Ein Lautsprecher-Schalter im Gespräch (und ein Schalter in den Einstellungen, beide synchron) liest Agent-Antworten vor. Die Sprachausgabe läuft über Gemini-native TTS mit 30 Stimmen (nach Geschlecht sortiert und farbig markiert, Vorschau per 'Stimme testen'). Statt das Audio des ganzen Textes abzuwarten, wird Satz für Satz generiert und der nächste Satz WÄHREND der Wiedergabe vorgeladen — die Wartezeit bis zum ersten Ton sank von ~11 auf ~2 Sekunden. Bei ausgeschaltetem Vorlesen wird kein einziges TTS-Token verbraucht."
-		},
-		{
-			"id": "diktat",
-			"name": "Mikrofon-Diktat mit Live-Vorschau",
-			"eingebaut": "24.06.2026",
-			"dienst": "dashboard 0.4.0/0.5.1",
-			"kurz": "Einsprechen statt tippen: Live-Vorschau während des Sprechens, beim Stopp ersetzt die präzise Whisper-Fassung den Text.",
-			"erklaerung": "Das Mikrofon im Gespräch nutzt einen Hybrid: Während des Sprechens zeigt die Browser-Spracherkennung eine Live-Vorschau, beim Stopp transkribiert Groq Whisper (whisper-large-v3-turbo, dasselbe Modell wie in den Voice-Overlays) die Aufnahme mit korrekten Satzzeichen und ersetzt die Vorschau. Ein Riegel verhindert, dass späte Browser-Ereignisse die fertige Whisper-Fassung überschreiben. Dazu gibt es den 'Verbessern'-Knopf (/api/improve), der eingesprochenen Text grammatikalisch glättet, ohne den Inhalt zu verändern."
-		},
-		{
-			"id": "internet-suche",
-			"name": "Internet-Suche als drittes Werkzeug",
-			"eingebaut": "25.06.2026 (native Websuche 01.07.2026)",
-			"dienst": "agent 0.23.0-0.35.0",
-			"kurz": "Aktuelle Fragen (Wetter, Sport, News) beantwortet der Agent über eine echte Websuche — Tavily oder die modell-eigene Suche.",
-			"erklaerung": "Der Router erkennt Live-/Außenwelt-Fragen als eigenen Intent 'internet'. Dann sucht Tavily (eine für KI-Agenten gebaute Such-API) und der Hauptagent formuliert die Antwort aus den Ergebnissen, mit kurzer Quellenangabe. Ist Tavily abgeschaltet (Schalter in den Einstellungen), nutzen fähige Modelle ihre EIGENE native Websuche (Gemini-Grounding bzw. GPT web_search). Die Suchtiefe folgt dem S/M/XL-Profil. Zeitlose Wissensfragen beantwortet der Agent weiter direkt — die Websuche ist nur für Aktuelles."
-		},
-		{
-			"id": "eval-check",
-			"name": "Eval-Check: Selbsttest mit 100 festen Sätzen",
-			"eingebaut": "25.06.2026",
-			"dienst": "agent 0.18.0-0.43.0",
-			"kurz": "Ein Knopf prüft alle Agenten gegen 100 feste Testsätze — isoliert vom echten Gehirn, mit detailliertem Prüfbericht.",
-			"erklaerung": "Der Eval-Check spielt 100 vordefinierte Sätze durch: Speichern in verschiedene Kategorien, Abfragen mit erwartetem Inhalt, Titel-Vorgaben, Smalltalk, Internet-Routing und sogar Injektions-Versuche. Alles läuft unter einem isolierten Test-Nutzer ('eval-test'), der NIE Franks echtes Gehirn berührt und danach hart aufgeräumt wird. Der Lauf startet als Hintergrund-Job (Fortschrittsanzeige im Dashboard), das Ergebnis-Log (Markdown, 14 Tage aufbewahrt) zeigt jede einzelne Prüfung. So merkt man nach jeder Änderung sofort, ob die Agenten-Kette noch stimmt."
-		},
-		{
-			"id": "multi-kategorie",
-			"name": "Mehrfach-Kategorien pro Eintrag",
-			"eingebaut": "25.06.2026 (UI 02.07.2026)",
-			"dienst": "brain-api 1.11.0 + dashboard 0.35.0/0.36.0",
-			"kurz": "Ein Eintrag kann in MEHREREN Kategorien gleichzeitig liegen — alle prägen die Auffindbarkeit mit.",
-			"erklaerung": "Ein Eintrag über 'Katzen-Futter' kann gleichzeitig unter 'Persönlich' und 'Katzen' liegen. Alle Kategorien (samt Hierarchie-Ebenen) fließen ins Embedding ein — der Eintrag ist in jeder seiner Kategorien auch semantisch auffindbar. Im Drawer werden alle Kategorien als entfernbare Chips gezeigt, ein Plus fügt weitere hinzu; die Ergebnislisten zeigen alle Chips je Eintrag. Umbenennen und Löschen von Kategorien pflegt seit dem Tiefen-Debugging (1.19.0) auch die Mehrfach-Zuordnungen sauber mit."
-		},
-		{
-			"id": "kategorien-hierarchie",
-			"name": "Kategorie-System: Hierarchie, Registry, Verwaltung",
-			"eingebaut": "25.06.2026",
-			"dienst": "brain-api 1.9.0 + agent 0.8.0/0.13.0 + dashboard 0.19.0",
-			"kurz": "Kategorien mit Unter-Ebenen ('Gesundheit/Schlaf'), vorab anlegbar, umbenennbar, zusammenführbar — in deutscher Rechtschreibung.",
-			"erklaerung": "Kategorien können hierarchisch sein ('Haupt/Unter', beliebig tief); die Übersicht zeigt erst Hauptkategorien und filtert auf Klick alles darunter. Leere Kategorien lassen sich VORAB anlegen (Registry-Datei, überlebt Neustarts) — der Speicheragent kennt sie sofort und wählt bestehende Kategorien zeichengenau, statt Schreibvarianten-Dubletten zu erzeugen. Umbenennen (auch Zusammenführen) und Löschen (nur das Etikett — Einträge bleiben IMMER erhalten) laufen über die Einstellungen. Beim Einordnen neuer Einträge fragt der Agent nach, bevor er eine NEUE Kategorie anlegt."
-		},
-		{
-			"id": "titel-system",
-			"name": "Titel-System: Titel als Schlüssel, im Embedding, editierbar",
-			"eingebaut": "25.06.2026",
-			"dienst": "brain-api 1.8.0/1.10.0 + agent 0.24.0",
-			"kurz": "Jeder Eintrag kann einen Titel tragen — gleicher Titel ersetzt den alten Eintrag, der Titel prägt die Suche mit und ist im Drawer editierbar.",
-			"erklaerung": "Der Titel ist der Schlüssel eines Eintrags: 'aktualisiere Direktive 1' ersetzt den bestehenden Eintrag gleichen Titels, statt eine Dublette anzulegen. Titel (und Kategorien) werden dem Text vor dem Embedden als Präfix vorangestellt — identifizierende Titel sind starke Suchsignale, der 1:1-Text bleibt unverändert. Beim Senden kann ein eigener Titel vorgegeben werden (Feld neben dem Kategorie-Dropdown); die Bestätigungs-Rückfrage liest ihn wörtlich vor. Titel-Änderungen im Drawer migrieren den Eintrag sauber auf den neuen Schlüssel."
-		},
-		{
-			"id": "papierkorb",
-			"name": "Papierkorb: Löschen ist umkehrbar",
-			"eingebaut": "24.06.2026",
-			"dienst": "brain-api 1.4.0 + dashboard 0.11.0",
-			"kurz": "Gelöschte Einträge wandern in einen Papierkorb (1:1-Text erhalten) und lassen sich wiederherstellen oder vorher editieren.",
-			"erklaerung": "Löschen ist ein Soft-Delete: Der Eintrag verschwindet aus dem aktiven Gehirn, sein wortwörtlicher Text landet mit allen Metadaten in einer Papierkorb-Datei auf dem persistenten Volume. Im Dashboard lässt er sich ansehen, noch im Papierkorb bearbeiten und mit einem Klick wiederherstellen (wird frisch eingebettet, Erstellungsdatum bleibt). Erst 'Papierkorb leeren' löscht unwiderruflich. Die Reihenfolge ist crash-sicher: erst in den Papierkorb sichern, DANN aus dem Gehirn entfernen."
-		},
-		{
-			"id": "logbuch",
-			"name": "Gesprächs-Logbuch: jede Unterhaltung wird protokolliert",
-			"eingebaut": "23.06.2026",
-			"dienst": "agent + dashboard (Logbuch-Tab), Ablage auf Platte Z",
-			"kurz": "Beendete Gespräche landen als Text-Protokoll auf der Samba-Platte UND als durchsuchbarer Eintrag im Gehirn.",
-			"erklaerung": "Jede Gesprächssitzung wird nach dem Ende (bewusst per /end oder nach 30 Minuten Ruhe) zweifach gesichert: als .txt-Protokoll mit Zeitstempeln auf der Samba-Platte (Franks Z:) und als Eintrag in der Kategorie 'gespräche' im Gehirn — damit auch alte Unterhaltungen semantisch durchsuchbar sind ('was hatten wir über X besprochen?'). Das Dashboard zeigt das Logbuch nach Jahren/Monaten gegliedert, mit Vorschau-Zeile und Lösch-Knopf, der Datei UND Gehirn-Eintrag gemeinsam entfernt. Gespräche zählen bewusst nicht in die Eintrags-Gesamtzahl."
-		},
-		{
-			"id": "backup",
-			"name": "Backup-System: täglicher Snapshot + Google-Drive-Sicherung",
-			"eingebaut": "24.06.2026",
-			"dienst": "Host-systemd + dashboard 0.6.0/0.16.0 + Windows-Tool CortexBackup",
-			"kurz": "Das Gehirn wird täglich um 4 Uhr gesichert (Qdrant-Snapshot) und crash-sicher zu Google Drive gespiegelt — mit Notfall-Wiederherstellung.",
-			"erklaerung": "Drei Schichten: (1) Ein täglicher Qdrant-Snapshot (4 Uhr) sichert die komplette Vektor-Datenbank. (2) Ein Host-Dienst spiegelt Snapshots, Logbuch und Eval-Logs per rclone zu Google Drive; die Backup-Kachel in den Einstellungen zeigt Status und letzten Zeitpunkt, 'Jetzt sichern'/'Wiederherstellen' stoßen Läufe an, eine Inhalts-Liste zeigt, was im Drive-Backup liegt. (3) Das Windows-Tool 'CortexBackup' ist die Disaster-Recovery: Es kann den kompletten Server-Zustand auf einen frischen VPS zurückspielen."
-		},
-		{
-			"id": "mcp-server",
-			"name": "MCP-Server: das Gehirn in Claude Code und OpenCode",
-			"eingebaut": "23.06.2026",
-			"dienst": "mcp-server (Port 8001)",
-			"kurz": "Programmier-Umgebungen greifen über das MCP-Protokoll direkt aufs Gehirn zu: merken, abrufen, durchsuchen, vergessen.",
-			"erklaerung": "Der MCP-Server stellt die Gehirn-Funktionen als Werkzeuge bereit: remember (speichern), recall (semantisch suchen), get_by_title/get_by_category/get_by_date/get_category_item (gezielt abrufen), list_memories (Überblick), forget (löschen), brain_health (Zustand). Damit haben Claude Code, OpenCode und andere CLIs auf allen Rechnern DASSELBE zentrale Gedächtnis — z.B. für die Regel 'funktionierende Bugfixes ins Gehirn'. Der Zugriff läuft ausschließlich über den WireGuard-Tunnel."
-		},
-		{
-			"id": "agenten-architektur",
-			"name": "Drei-Agenten-Architektur: Router, Speicheragent, Leseagent",
-			"eingebaut": "24.06.2026 (Leseagent-Umbau 25.06.2026)",
-			"dienst": "agent 0.5.0/0.22.0",
-			"kurz": "Frank redet mit EINEM Agenten — dahinter arbeiten drei spezialisierte Köpfe, jeder mit eigenem editierbarem Prompt.",
-			"erklaerung": "Der HAUPTAGENT klassifiziert jede Nachricht (speichern? nachschlagen? Internet? plaudern?) und führt das Gespräch. Der SPEICHERAGENT bestimmt für bestätigte Texte Kategorie und Titel — den Text selbst verändert er NIE (1:1-Prinzip). Der LESEAGENT filtert bei Fragen die Suchtreffer und gibt nur deren NUMMERN zurück — formulieren darf er nicht, damit er nichts verfälschen kann; die Antwort formuliert der Hauptagent aus den Original-Treffern. Speichern passiert NUR nach ausdrücklicher Bestätigung mit wortwörtlichem Zitat ('Soll ich das ablegen: ...?') — im Code erzwungen, nicht nur im Prompt. Alle drei Prompts sind im Dashboard editierbar; nur die JSON-Schemata bleiben geschützt."
-		},
-		{
-			"id": "eins-zu-eins",
-			"name": "Das 1:1-Prinzip: der Speicher verändert NIE einen Text",
-			"eingebaut": "23.06.2026",
-			"dienst": "brain-api 1.0.0 (Grundprinzip)",
-			"kurz": "Alles wird WORTWÖRTLICH gespeichert und wortwörtlich zurückgegeben — keine KI-Bearbeitung, kein Zusammenfassen, kein Dazudichten.",
-			"erklaerung": "Das Fundament des ganzen Systems: Text geht 1:1 hinein (der Vektor dient NUR dem Wiederfinden) und kommt 1:1 heraus. Die frühere mem0-Schicht hatte Inhalte beim Speichern 'verstanden' und dabei verfälscht — sie wurde deshalb komplett entfernt. Lange Texte werden für die SUCHE in überlappende Stücke zerlegt, aber der volle Originaltext liegt unverändert in jedem Stück — der Abruf liefert immer das ganze Dokument. Live-Checkpoints im Log beweisen das Prinzip bei jedem Speichervorgang ('gespeicherter Volltext == Eingabe'). Alles Verstehen/Zusammenfassen passiert ausschließlich in der Agenten-Schicht, die nur LIEST."
-		},
-		{
-			"id": "wireguard",
-			"name": "Sicherheitsmodell: alles nur über WireGuard-VPN",
-			"eingebaut": "23.06.2026",
-			"dienst": "VPS-Infrastruktur (Hostinger, compose)",
-			"kurz": "Kein Dienst ist öffentlich erreichbar — Dashboard, Agent, Gehirn und MCP existieren nur im privaten VPN-Tunnel.",
-			"erklaerung": "Alle Dienste binden ausschließlich an die WireGuard-IP 10.8.0.1 — aus dem Internet ist nur SSH und der WireGuard-Port sichtbar. Handy, PC und Programmier-CLIs verbinden sich über den Tunnel (die Android-App bringt die VPN-Anbindung mit). Zusätzlich verlangt jeder Dienst einen Bearer-Token, und Qdrant selbst ist per API-Key geschützt und nur containerintern erreichbar. Ein Endpoint-Monitor auf dem Host überwacht den Tunnel."
-		}
-	]
+ "stand": "05.07.2026, 14.55 Uhr",
+ "hinweis": "PFLEGE-PFLICHT: Bei JEDEM Deploy, der ein neues System/Feature einbaut, hier einen Eintrag ERGAENZEN (neueste zuerst) — mit Datum + Uhrzeit und ausfuehrlicher Erklaerung. Diese Datei ist die Quelle des Info-Bereichs in den Dashboard-Einstellungen (GET /api/features). Regel verankert in DEPLOY.md.",
+ "features": [
+  {
+   "id": "session-mitlernen",
+   "name": "Session-Mitlernen: Programmier-Sessions fließen automatisch ins Gehirn",
+   "eingebaut": "05.07.2026, 14.38 Uhr",
+   "dienst": "agent 0.53.0 + SessionEnd-Hook auf Franks PC (Gruppe D 27/28/31/32)",
+   "kurz": "Am Ende jeder Claude-Code-Session landet automatisch ein verdichtetes Protokoll (gemacht/entschieden/gelernt) unter Programmierung/Sessions — und der Kern-Block „Woran Frank gerade baut“ wird nachgezogen.",
+   "erklaerung": "Ein SessionEnd-Hook auf dem PC sammelt beim Beenden jeder Programmier-Session die Rohdaten: Franks Eingaben aus dem Sitzungs-Transkript, die git-Commits und die geänderten Dateien seit Session-Beginn (Geheimnisse werden vorher entfernt). Er schickt sie über das WireGuard-VPN an den neuen Agent-Endpunkt /session-log, der sofort antwortet und im Hintergrund per KI (Speicheragent-Modell) ein kompaktes Protokoll destilliert: Zusammenfassung in 5-10 Sätzen, echte Entscheidungen, Gelerntes, Commit-Liste und ein durchsuchbarer Auszug der Original-Eingaben (Episoden-Gedächtnis). Der Eintrag heißt „Session Claude Code <Projekt> — Datum Uhrzeit“ und liegt unter Programmierung/Sessions. Danach pflegt derselbe Lauf den Kern-Block „Woran Frank gerade baut“ [Programmierung/Kern-Blöcke] nach — eine immer aktuelle Liste der laufenden Projekte, neueste Arbeit zuerst. Fragen wie „Woran habe ich zuletzt gearbeitet?“ oder „Wie ist der Stand beim X?“ erkennt der Agent jetzt zielsicher und antwortet chronologisch aus genau diesen Protokollen plus Kern-Block, mit anklickbaren Quellen. OpenCode speist im gleichen Format ein — das Gehirn hat den Überblick über alle Werkzeuge. Ein Format-Wächter im Hook meldet laut, falls Claude Code sein Transkript-Format je ändert."
+  },
+  {
+   "id": "reibungs-detektor",
+   "name": "Reibungs-Detektor: Der Bibliothekar findet nachts wiederkehrende Fehler-Muster",
+   "eingebaut": "05.07.2026, 14.47 Uhr",
+   "dienst": "librarian 0.8.0 (Gruppe D Plan-Nr. 33) — 8. Standard-Nachtaufgabe",
+   "kurz": "Der Nachtschicht-Bibliothekar liest die Session-Protokolle der letzten 7 Tage und erkennt wiederkehrende Reibung — derselbe Fehlertyp mehrfach, wiederholte Korrekturen, vergessene Pflichtschritte — und schlägt eine Verbesserung vor.",
+   "erklaerung": "Bisher gingen wiederkehrende Fehlversuche und Korrekturen aus Programmier-Sessions verloren (Recherche-Befund: „Korrekturen fließen nie zurück“). Jetzt schaut der Bibliothekar jede Nacht in die automatischen Session-Protokolle unter Programmierung/Sessions (letzte 7 Tage) und sucht nach echten MUSTERN — ein Problem zählt erst, wenn es mindestens zweimal auftauchte; Einzelfälle werden ignoriert, maximal 3 Funde pro Nacht. Jeder Fund erscheint im Morgen-Report mit Beleg („wo und wie oft“) und konkretem Verbesserungs-Vorschlag. Ja legt einen Merkzettel unter Programmierung/Verbesserungen an, Nein sperrt den Fund 120 Tage — und über den Lernen-Knopf kann Frank daraus direkt eine gelernte Regel für alle künftigen Nacht-Urteile machen. Die Aufgabe hat einen eigenen An/Aus-Schalter in den Bibliothekar-Einstellungen und eine ehrliche Bilanz-Zeile (auch „keine wiederkehrende Reibung erkannt“)."
+  },
+  {
+   "id": "bibliothekar-regeln-anwenden",
+   "name": "Regeln auf Vorschläge anwenden: gelernte Regeln rückwirkend auf offene Funde",
+   "eingebaut": "05.07.2026, 11.47 Uhr",
+   "dienst": "librarian 0.7.0 + dashboard 0.44.0",
+   "kurz": "Ein Knopf oben rechts in der Karte 'Gelernte Regeln' wendet deine Regeln rückwirkend auf die aktuell offenen Vorschläge an — betroffene fallen sofort aus der Abarbeiten-Liste, im Gehirn wird nichts gelöscht.",
+   "erklaerung": "Gelernte Regeln flossen bisher NUR in künftige Nacht-Urteile ein — hattest du also schon viele offene Vorschläge und brachtest dem Bibliothekar danach eine neue Regel bei, galt sie für diese bestehenden Vorschläge nicht. Der neue Knopf 'Regeln auf Vorschläge anwenden' (oben rechts in 'Gelernte Regeln') schließt genau diese Lücke: Nach einer Sicherheitsabfrage geht der Bibliothekar ALLE offenen Vorschläge über alle Tage durch und prüft jeden stapelweise gegen deine aktiven gelernten Regeln. Vorschläge, die einer Regel klar widersprechen (er würde sie nach der Regel gar nicht mehr machen), setzt er auf 'abgelehnt' — sie verschwinden aus der Abarbeiten-Liste und werden über die Fund-Registrierung nicht sofort neu vorgeschlagen. Er arbeitet konservativ (im Zweifel bleibt ein Vorschlag). Während des Laufs zeigt das Dashboard den Fortschritt ('Prüfe Vorschläge … X/Y geprüft · Z entfernt'), danach eine Ergebnis-Zeile und lädt die Tages-Listen frisch. Wichtig: Es ist NICHT-destruktiv — es fallen nur die Vorschläge weg, an deinen echten Einträgen im Gehirn ändert sich nichts. Technisch: POST /apply-rules im librarian startet einen Hintergrund-Lauf (eigener Thread, damit der Dienst antwortbar bleibt), das Nacht-Modell fällt die Urteile, GET /apply-rules-status liefert den Fortschritt; der Knopf ist gesperrt, solange der Nachtlauf oder eine Abarbeitung läuft."
+  },
+  {
+   "id": "bibliothekar-lernen",
+   "name": "Lernen-Knopf: dem Bibliothekar an einzelnen Funden etwas beibringen",
+   "eingebaut": "05.07.2026, 02.45 Uhr",
+   "dienst": "librarian 0.5.0-0.6.0 + dashboard 0.42.0-0.43.0",
+   "kurz": "Jeder Fund hat hinten einen Lernen-Knopf: Lehre eintippen, der Bibliothekar fragt nach, du bestätigst die finale Regel — ab dann gilt sie in allen künftigen Nacht-Urteilen.",
+   "erklaerung": "Der graue Lernen-Knopf am Ende jedes Funds wird beim Klick rot und öffnet ein Lern-Fenster. Dort beschreibst du frei, wie der Bibliothekar mit solchen Fällen künftig umgehen soll (Beispiel: 'Kurzcheck und Vollversion eines Almanachs werden NIEMALS zusammengeführt — die Kurzversion ist absichtlich da, damit ein KI-Modell erst tokenarm liest und dann entscheidet, ob es die Langversion braucht'). Nach dem Speichern versteht der Bibliothekar die Lehre, stellt bei Unklarheit genau eine Rückfrage und nennt dann die finale Regel-Fassung ('Das würde ich mir merken: …'), die du mit einem Klick bestätigst. Alle bestätigten Regeln stehen in der Karte 'Gelernte Regeln' (zwischen Abarbeiten und Einstellungen): scrollbare Liste mit 1-2-Satz-Kurzfassung, 'Bearbeiten' öffnet die komplette Regel als Editor, 'KI fragen' lässt den Bibliothekar selbst beurteilen, ob die Regel für seine Nachtarbeit sinnvoll und gut umsetzbar ist (mit Kollisions-Check gegen die anderen Regeln; Antwort als wegklickbare Info-Box). Jede Regel ist einzeln an-/abschaltbar und löschbar. Technisch fließen alle aktiven Regeln als Pflicht-Block in sämtliche Nacht-Urteils-Aufrufe ein — Dubletten, Widersprüche, Veraltet, Kategorien, Lücken, Verdichtung, eigene Aufgaben und die Umsetzung deiner Entscheidungen."
+  },
+  {
+   "id": "bibliothekar-merge-steuerung",
+   "name": "Zusammenführungen voll steuerbar: Text editieren + Kategorien wählen",
+   "eingebaut": "05.07.2026, 02.29 Uhr",
+   "dienst": "librarian 0.4.0 + dashboard 0.41.0",
+   "kurz": "Bei Dubletten-Vorschlägen kannst du den kompletten Zusammenführungs-Text lesen und bearbeiten und per leuchtender Chips bestimmen, welche Kategorien der neue Eintrag bekommt.",
+   "erklaerung": "Jeder Zusammenführungs-Vorschlag hat einen aufklappbaren Bereich mit dem kompletten vorgeschlagenen Misch-Text in einem Editor. Änderst du ihn und drückst 'Änderung übernehmen', wird genau deine Fassung gespeichert — ohne den Knopf gilt der ursprüngliche Vorschlag. Darunter stehen ALLE Kategorien beider Quell-Einträge als orange leuchtende Chips (hatte ein Eintrag zwei Kategorien und der andere eine, sind es drei). Standardmäßig sind alle aktiv; ein Klick wählt ab (durchgestrichen), mindestens eine bleibt. Der zusammengeführte Eintrag bekommt exakt die aktiven Kategorien als echte Mehrfach-Kategorien. Die Originale wandern wie immer in den wiederherstellbaren Papierkorb."
+  },
+  {
+   "id": "bibliothekar-bilanz",
+   "name": "Nacht-Bilanz: jede Aufgabe meldet ihr Ergebnis, auch 'nichts gefunden'",
+   "eingebaut": "05.07.2026, 02.17 Uhr",
+   "dienst": "librarian 0.3.0 + dashboard 0.40.1",
+   "kurz": "Die Tages-Auswertung enthält für jede Aufgabe eine ehrliche Zeile — auch wenn nichts gefunden wurde oder eine Aufgabe ausgeschaltet war.",
+   "erklaerung": "Früher nannte die Zusammenfassung nur die Aufgaben mit Funden — was nichts fand, blieb unsichtbar. Jetzt schreibt der Nachtlauf eine komplette Bilanz: 'Dubletten-Vorschläge: 3 Vorschläge', 'Widerspruchs-Suche: keine Widersprüche gefunden', 'Nachzügler-Verknüpfung: nichts zu tun — alle Einträge sind bereits im Register verknüpft', 'Veraltet-Erkennung: ausgeschaltet'. Eigene Aufgaben erscheinen genauso. Die Bilanz steht direkt in der Morgen-Report-Karte (🔸 = Funde, ▫️ = nichts) und zusätzlich zusammenklappbar über den Funden in der Tages-Ansicht. So siehst du jeden Morgen auf einen Blick, dass wirklich ALLES gelaufen ist — nicht nur das, was etwas gefunden hat."
+  },
+  {
+   "id": "bibliothekar-autosave-unbegrenzt",
+   "name": "Bibliothekar-Einstellungen: Auto-Speichern + 'Ohne Begrenzung durcharbeiten'",
+   "eingebaut": "05.07.2026, 02.11 Uhr",
+   "dienst": "librarian 0.2.0 + dashboard 0.40.0",
+   "kurz": "Jede Einstellungs-Änderung speichert sich sofort automatisch; der Ohne-Begrenzung-Schalter lässt den Bibliothekar nachts ALLES abarbeiten, ohne Limits.",
+   "erklaerung": "Der Speichern-Knopf in den Bibliothekar-Einstellungen ist weg: Schalter umlegen, Modell wechseln, Zeit ändern — alles speichert sich sofort mit sichtbarer 'Gespeichert'-Rückmeldung, vergessen ist unmöglich. Der neue Schalter 'Ohne Begrenzung durcharbeiten' (standardmäßig an) hebt alle Arbeits-Limits auf: kein Vorschlags-Limit pro Aufgabe, kein KI-Budget, keine Scan-Grenzen — der Bibliothekar arbeitet, bis er durch ist. Die beiden Limit-Felder werden dabei sichtbar ausgegraut. Im Hintergrund bleibt nur eine stille Notbremse gegen Endlosschleifen (5000 Aufrufe pro Nacht — ehrliche Arbeit erreicht das nie, der komplette Erstlauf brauchte 149). Die Abarbeiten-Karte zeigt außerdem dynamisch an, welches Modell mit welcher Thinking-Stufe deine Entscheidungen umsetzt."
+  },
+  {
+   "id": "bibliothekar-gpt-thinking",
+   "name": "GPT als Nachtmodell + Thinking-Stufe für den Bibliothekar",
+   "eingebaut": "05.07.2026, 01.55 Uhr",
+   "dienst": "librarian 0.2.0 + agent 0.52.0 + dashboard 0.38.1",
+   "kurz": "Der Bibliothekar kann jetzt die verbundenen GPT-Modelle nutzen (aktuell gpt-5.5 mit Thinking high) — über die bestehende Codex-Anmeldung, ohne doppelte Verbindung.",
+   "erklaerung": "Der Tages-Agent hat einen internen LLM-Durchgriff bekommen (POST /llm): Der Bibliothekar reicht GPT-Aufrufe dorthin durch und nutzt damit die bestehende ChatGPT/Codex-Anmeldung samt automatischem Token-Refresh — die Anmelde-Logik existiert nur einmal. Die Nachtmodell-Auswahl zeigt deshalb alle verbundenen Modelle (Gemini, minimax UND alle GPT-Modelle), daneben ein eigenes Thinking-Dropdown (none bis xhigh, Standard high), das bei GPT als reasoning.effort und bei Gemini als Denk-Budget wirkt. Nachts wartet niemand auf Antworten — deshalb darf hier das stärkste Modell mit vollem Denken arbeiten. Zusätzlich wurden im Einstellungen-Tab die Agenten-Zeilen kompakter: Modell und Thinking stehen jetzt bei jeder Rolle nebeneinander, und die Karte heißt 'Agenten' (der Bibliothekar als Spezialagent hat seinen eigenen Bereich)."
+  },
+  {
+   "id": "uebersicht-vitals-schnell",
+   "name": "Übersicht-Kacheln: 3-Sekunden-Aktualisierung, nur bei geöffneter Übersicht",
+   "eingebaut": "05.07.2026, 01.45 Uhr",
+   "dienst": "dashboard 0.39.0",
+   "kurz": "Prozessor, Arbeitsspeicher und Speicherplatz aktualisieren sich alle 3 Sekunden — und sämtliche Übersicht-Abrufe laufen nur noch, wenn die Übersicht wirklich offen ist.",
+   "erklaerung": "Früher wurden die Server-Kacheln nur alle 20 Sekunden mit einer Viertelsekunden-Stichprobe aktualisiert — der Prozessor schien dadurch minutenlang auf demselben Wert festzustehen. Jetzt gibt es einen eigenen, leichten Schnell-Abruf (/api/vitals) nur für die Kacheln, der alle 3 Sekunden läuft und die echte Durchschnittslast seit dem letzten Abruf misst. Gleichzeitig wurde das Abrufen sparsamer: Sowohl der Schnell-Abruf als auch der große 20-Sekunden-Überblick laufen ausschließlich, wenn der Übersicht-Tab aktiv und das Browserfenster sichtbar ist — auf allen anderen Tabs wird gar nichts abgerufen."
+  },
+  {
+   "id": "nachtschicht-bibliothekar",
+   "name": "Nachtschicht-Bibliothekar: das Gehirn räumt nachts auf",
+   "eingebaut": "05.07.2026, 01.10 Uhr",
+   "dienst": "librarian 0.1.0 (NEUER 5. Dienst) + dashboard 0.38.0 + brain-api 1.22.0",
+   "kurz": "Ein eigener Sleep-Time-Agent läuft jede Nacht um 04:10 (nach dem 4-Uhr-Backup) durch alle Einträge und legt morgens Vorschläge vor — er verändert nie etwas ohne Klick.",
+   "erklaerung": "Der Bibliothekar ist ein fünfter Container (sb-librarian) mit eigener innerer Uhr. Nachts prüft er das komplette Gehirn: Dubletten (fast identische Einträge → Zusammenführ-Vorschlag mit fertig formuliertem Misch-Text, Bereich 13), Widersprüche (unvereinbare Aussagen zum selben Thema → Klär-Liste, Bereich 12), womöglich Veraltetes (Preise, Versionen, Termine, die vom Alter her nicht mehr stimmen dürften, Bereich 16), zu volle oder fast leere Kategorien (Unterkategorien-Vorschläge, Bereich 15), Wissens-Lücken (wonach oft gefragt wird, ohne dass etwas gespeichert ist, Bereich 17) und alte Gesprächs-Monate (Monats-Zusammenfassung als ZUSÄTZLICHE Ebene, Originale bleiben 1:1, Bereich 14). Einzige Auto-Arbeit ist der Nachzügler-Lauf: Einträge ohne Verknüpfung im Personen-/Themen-Register werden nachverknüpft (verändert keinen Eintragstext). Alles andere sind reine VORSCHLÄGE — Löschen geht immer nur in den wiederherstellbaren Papierkorb. Sicherheitsnetz: hartes LLM-Aufruf-Budget pro Nacht (Standard 250), Drossel für Vorschläge pro Aufgabe, und der Lauf wartet auf das Ende des Host-Backups. Der Morgen-Report (Bereich 18) fasst jede Nacht zusammen: 'Heute Nacht: 3 Dubletten-Vorschläge, 2 womöglich veraltet, 14 nachverknüpft.'"
+  },
+  {
+   "id": "bibliothekar-abarbeiten",
+   "name": "Bibliothekar-Tab: Tages-Listen mit Ja / Nein / eigenem Vorschlag",
+   "eingebaut": "05.07.2026, 01.10 Uhr",
+   "dienst": "dashboard 0.38.0 + librarian 0.1.0",
+   "kurz": "Neuer Dashboard-Tab: pro Tag eine Fund-Liste; jeden Fund per Ja/Nein/eigenem Text entscheiden, dann Starten — bei Unklarheit stellt der Bibliothekar Rückfragen.",
+   "erklaerung": "Im neuen Tab 'Bibliothekar' (Mond-Symbol, mit Zähler für offene Funde) bleiben die Nächte als eigene Tage stehen — wer 3-4 Tage weg war, arbeitet jeden Tag einzeln ab. Pro Fund gibt es die Beschreibung, die konkrete Empfehlung, die beteiligten Einträge mit Auszug, und drei Wege: der Ja-Knopf führt genau die angezeigte Empfehlung aus, der Nein-Knopf lehnt ab (der Fund kommt so schnell nicht wieder), und 'Eigener Vorschlag' öffnet ein Textfeld für eine eigene Anweisung (z. B. 'benenn es um in …'). Unten sammelt EIN Starten-Knopf alle Entscheidungen ein und setzt sie um. Versteht der Bibliothekar eine eigene Anweisung nicht eindeutig, stellt er GENAU EINE Rückfrage direkt am Fund — antworten, nochmal Starten, fertig. Erledigte und abgelehnte Funde fallen aus der offenen Liste und wandern in einen zusammenklappbaren 'bereits entschieden'-Bereich. Ausgeführt wird ausschließlich über die bestehenden brain-api-Wege (Zusammenführen = neuer Eintrag + Originale in den Papierkorb, immer wiederherstellbar)."
+  },
+  {
+   "id": "bibliothekar-eigene-aufgaben",
+   "name": "Eigene Nacht-Aufgaben: dem Bibliothekar per Gespräch Neues beibringen",
+   "eingebaut": "05.07.2026, 01.10 Uhr",
+   "dienst": "librarian 0.1.0 + dashboard 0.38.0",
+   "kurz": "Über ein Plus-Feld definierst du im Dialog eigene Nacht-Aufgaben — der Bibliothekar fragt nach, macht Vorschläge, und am Ende drückst du auf Speichern.",
+   "erklaerung": "In den Bibliothekar-Einstellungen gibt es neben den 7 Standard-Aufgaben (alle einzeln an/aus, mit Startzeit, Nacht-Modell-Wahl, Vorschlags-Limit und LLM-Budget) den Bereich 'Eigene Aufgaben'. Der Plus-Knopf startet ein kurzes Interview: Du beschreibst frei, was nachts zusätzlich passieren soll; der Bibliothekar fragt nach, sagt ehrlich, ob die Idee als Nacht-Aufgabe umsetzbar und sinnvoll ist, und schlägt Verbesserungen vor — bis eine präzise Arbeitsanweisung steht, die du mit 'Aufgabe speichern' übernimmst. Nachts arbeitet er eigene Aufgaben generisch ab: Er sichtet die Eintrags-Liste, liest gezielt die relevanten Volltexte und erzeugt daraus wieder nur VORSCHLÄGE für die Tages-Liste. Eigene Aufgaben lassen sich jederzeit an-/ausschalten und über den Papierkorb löschen — die Standard-Aufgaben sind fest eingebaut und nur abschaltbar."
+  },
+  {
+   "id": "quellen-drilldown",
+   "name": "Quellen-Drilldown: jede Antwort bis zur Quelle nachprüfbar",
+   "eingebaut": "04.07.2026, 19.55 Uhr",
+   "dienst": "agent 0.50.0 + dashboard 0.37.0",
+   "kurz": "Unter jeder Gedächtnis-Antwort stehen anklickbare Quellen-Chips — ein Klick öffnet den benutzten Eintrag im Volltext.",
+   "erklaerung": "Der Agent gibt zu jeder Antwort aus dem Gedächtnis jetzt strukturiert zurück, WELCHE Einträge er wirklich benutzt hat (Feld 'sources' in /chat und /chat/stream: Eintrags-ID, Titel, Kategorie, Trefferstärke). Das Dashboard zeigt sie als Chips unter der Antwort; ein Klick öffnet den bekannten Seiten-Drawer mit dem wortwörtlichen 1:1-Text des Eintrags. So ist jede Aussage des Agenten überprüfbar — und wenn ein Eintrag veraltet ist, kann er direkt dort korrigiert werden. Zusammen mit der Konfidenz-Anzeige entsteht überprüfbares Vertrauen: man sieht, WAS der Agent sagt, WOHER er es hat und WIE sicher die Grundlage ist."
+  },
+  {
+   "id": "confidence",
+   "name": "Konfidenz: der Agent sagt, wie sicher seine Antwort ist",
+   "eingebaut": "04.07.2026, 19.50 Uhr",
+   "dienst": "agent 0.50.0",
+   "kurz": "Jede Gedächtnis-Antwort trägt eine ehrliche Sicherheits-Einschätzung: hoch, mittel, niedrig — oder ehrlich 'nichts gefunden'.",
+   "erklaerung": "Die Vektorsuche liefert zu jedem Treffer einen Ähnlichkeits-Score — der wurde bisher weggeworfen. Jetzt bewertet der Agent daraus die Grundlage seiner Antwort: Wie viele Einträge stützen sie? Wie stark ist der beste Treffer (Schwellen einstellbar über AGENT_CONF_STRONG/AGENT_CONF_WEAK)? Ist ein exakter Wortlaut-Treffer (BM25) oder ein vollständiger Themen-Register-Treffer dabei? Das Ergebnis webt er kurz in die Antwort ein ('das steht übereinstimmend in 3 Einträgen' vs. 'nur ein einzelner, schwacher Treffer — mit Vorsicht') und liefert es strukturiert im Feld 'confidence' an App und Dashboard. Bei nichts Gefundenem sagt er das ehrlich, statt zu raten. Hintergrund aus der Recherche: Vertrauens-Transparenz allein brachte in Studien +30 % Zeitersparnis, weil man nicht mehr alles nachprüfen muss."
+  },
+  {
+   "id": "multi-query",
+   "name": "Multi-Query-Recall: eine Frage, drei Suchanläufe",
+   "eingebaut": "04.07.2026, 19.50 Uhr",
+   "dienst": "agent 0.50.0",
+   "kurz": "Der Agent formuliert jede Gedächtnis-Frage intern in 2 Varianten um und sucht mit allen dreien gleichzeitig — deutlich bessere Treffer bei vagen, gesprochenen Fragen.",
+   "erklaerung": "Ins Gehirn gesprochene Fragen sind oft ungenau formuliert ('was war das mit dem Zeug für besseren Schlaf?'). Vor der Suche bildet das Router-Modell (schnell und günstig) intern bis zu 2 alternative Suchanfragen mit anderen Worten (Synonyme, Fachbegriffe statt Umschreibungen). Alle Varianten werden PARALLEL gesucht und die Ergebnislisten per RRF (Reciprocal Rank Fusion) verschmolzen: Was in mehreren Listen weit oben steht, gewinnt. Kostet etwa eine Sekunde und einen kleinen LLM-Aufruf pro Frage; abschaltbar über AGENT_MULTI_QUERY=0. Die Varianten sind unsichtbar — man merkt nur, dass vage Fragen öfter das Richtige finden."
+  },
+  {
+   "id": "entity-register",
+   "name": "Themen-Register (Entity-Linking): 'Alles über X' wird vollständig",
+   "eingebaut": "04.07.2026, 19.45 Uhr",
+   "dienst": "brain-api 1.21.0 + agent 0.50.0",
+   "kurz": "Ein Register der konkreten Dinge im Gehirn (Personen, Geräte, Projekte, Präparate, Orte) — jede Entität kennt ALLE Einträge, in denen sie vorkommt.",
+   "erklaerung": "Wie ein Register hinten im Buch: Nach jedem Speichern extrahiert ein Hintergrund-Lauf (Speicher-Modell, blockiert nichts) die zentralen Entitäten des neuen Eintrags und verknüpft sie in einer zweiten, kleinen Qdrant-Collection ('brain_entities') mit der Eintrags-ID. Fragen wie 'Was weiß ich alles über die Whoop?' oder 'Alles über den EntropieReductor' holen dann ALLE verknüpften Einträge (vollständig) statt nur der 5 semantisch ähnlichsten. Bewusst LEICHT gebaut (Hub-and-Spoke) statt als voller Wissensgraph — die Recherche belegte, dass GraphRAG für persönliche Gedächtnisse Overkill ist (mem0 hat seinen Graph-Layer wieder entfernt). Das Register heilt sich selbst (gelöschte Einträge werden beim Lesen ausgetragen) und kann per POST /entities/rebuild über den ganzen Bestand aufgebaut werden (Fortschritt: GET /entities/rebuild-status). Die brain-api bleibt dabei 'stummer Speicher' — die KI-Extraktion sitzt komplett im Agenten."
+  },
+  {
+   "id": "zeit-suche",
+   "name": "Zeit-bewusste Suche: 'letzten Monat', 'im Winter', 'vor 3 Wochen'",
+   "eingebaut": "04.07.2026, 19.50 Uhr",
+   "dienst": "agent 0.50.0 (Filter-Endpunkt seit brain-api 1.1.0)",
+   "kurz": "Zeitausdrücke in der Frage werden erkannt und grenzen die Suche auf den gemeinten Zeitraum ein — mit Sicherheitsnetz.",
+   "erklaerung": "Ein deterministischer Parser (ohne LLM — schnell, kostenlos, vorhersagbar, Zeitzone Europe/Berlin) erkennt deutsche Zeitausdrücke in der Frage: gestern/vorgestern, letzte/diese Woche, letzter/dieser Monat, letztes/dieses Jahr, 'vor 3 Wochen' (auch Zahlwörter wie 'vor drei Wochen'), 'seit 2 Monaten', 'im Dezember 2025', 'im Winter/Sommer/...', 'am 12.05.'. Der erkannte Zeitraum wird als Speicherdatum-Filter (created_at) an die Suche gehängt — es wird also nur in Einträgen aus dieser Zeit gesucht. WEICH mit Netz: Ergibt der Zeitraum null Treffer, sucht der Agent automatisch noch einmal ohne Filter, damit nie fälschlich 'dazu ist nichts gespeichert' kommt, nur weil das Datum nicht passte."
+  },
+  {
+   "id": "hybrid-suche",
+   "name": "Hybrid-Suche: Bedeutung UND exakte Wörter (BM25 + RRF)",
+   "eingebaut": "04.07.2026, 19.45 Uhr",
+   "dienst": "brain-api 1.21.0",
+   "kurz": "Die Suche kombiniert jetzt zwei Verfahren: semantische Vektorsuche (versteht Bedeutung) und BM25-Stichwortsuche (trifft exakte Begriffe) — verschmolzen per RRF.",
+   "erklaerung": "Die bisherige Suche war rein semantisch: Die Frage wird zum Zahlenvektor, Qdrant liefert bedeutungsähnliche Einträge. Stark bei vagen Fragen, aber exakte, seltene Wörter (Gerätenamen wie 'Whoop', Präparate wie 'Magnesiumbisglycinat', Projektnamen, Zahlen) 'verwässern' im Embedding. Jetzt läuft parallel eine klassische BM25-Stichwortsuche über alle Text-Stücke (plus Titel und Kategorien), und beide Ranglisten werden per Reciprocal Rank Fusion (RRF, k=60) verschmolzen: Ein Eintrag bekommt Punkte dafür, wie weit oben er in JEDER Liste steht — was beide Verfahren gut finden, gewinnt. Bewusst OHNE Umbau der Qdrant-Collection umgesetzt (in-Prozess-Index über die Chunk-Texte, gecacht, bei jedem Schreiben frisch): null Migrationsrisiko am Produktivbestand, kein neues ML-Paket im Server-Image. Notschalter: SB_HYBRID=0. Laut Recherche DER eine belegte Retrieval-Gewinn für persönliche Wissensspeicher."
+  },
+  {
+   "id": "info-bereich",
+   "name": "Dieser Info-Bereich: die Feature-Chronik",
+   "eingebaut": "04.07.2026, 19.55 Uhr",
+   "dienst": "dashboard 0.37.0",
+   "kurz": "Die anklickbare Liste aller eingebauten Systeme — was, wann, wie es funktioniert.",
+   "erklaerung": "Es wird viel in den Cortex-Server eingebaut — irgendwann weiß man nicht mehr, was alles drin ist und wie die Teile heißen, wenn man sie ändern lassen will. Dieser Bereich löst das: Jedes eingebaute System steht hier mit Einbau-Datum und Uhrzeit, dem Dienst, in dem es sitzt, einem Kurzsatz und einer ausführlichen Erklärung. Die Daten leben in der Datei dashboard/features.json im Repo; der Server liefert sie über GET /api/features aus. Bei jedem künftigen Einbau wird dort ein Eintrag ergänzt — diese Pflegepflicht ist in DEPLOY.md verankert, damit die Chronik nie veraltet."
+  },
+  {
+   "id": "idempotenz",
+   "name": "Idempotenz: keine doppelten Nachrichten bei Verbindungsabrissen",
+   "eingebaut": "02.07.2026",
+   "dienst": "agent 0.48.0",
+   "kurz": "Jede Nachricht trägt eine eindeutige Kennung — Wiederholungen (Tunnel-Abriss, App-Retry) werden nur EINMAL verarbeitet.",
+   "erklaerung": "Die Handy-App schickt pro Nachricht eine request_id (UUID). Kommt dieselbe Kennung erneut an (z.B. weil der WireGuard-Tunnel kurz abriss und die App automatisch neu sendete), wird die bereits berechnete Antwort aus einem 15-Minuten-Zwischenspeicher zurückgegeben, statt alles doppelt zu verarbeiten. Läuft die Erstverarbeitung noch, wartet das Duplikat auf deren Ergebnis. Verhindert doppelte Gedächtnis-Einträge und doppelte Chat-Nachrichten. Die Streaming-Variante ist zusätzlich abriss-fest: Auch wenn der Client mitten im Stream wegbricht, wird die fertige Antwort in Session und Zwischenspeicher geschrieben."
+  },
+  {
+   "id": "streaming",
+   "name": "Antwort-Streaming: die Antwort erscheint Wort für Wort",
+   "eingebaut": "02.07.2026",
+   "dienst": "agent 0.41.0",
+   "kurz": "Statt auf die komplette Antwort zu warten, streamt der Agent sie live (SSE) — besonders spürbar bei langen M/XL-Antworten.",
+   "erklaerung": "Der Endpunkt POST /chat/stream liefert die Antwort als Live-Datenstrom (Server-Sent Events): Text-Häppchen, sobald das Modell sie erzeugt, am Ende die exakte Gesamtantwort als Abschluss-Ereignis (die App ersetzt den Rohstream damit — verlorene oder doppelte Häppchen heilen sich selbst). Funktioniert für Gemini (inklusive Grounding-Websuche) und GPT/Codex; die Router- und Filter-Schritte (reine JSON-Arbeit) streamen bewusst nicht. Bei einem Fehler vor dem ersten Häppchen fällt der Agent automatisch auf die nicht-streamende Antwort zurück."
+  },
+  {
+   "id": "sessions-persistent",
+   "name": "Gesprächs-Sicherung: kein Verlauf geht durch Neustarts verloren",
+   "eingebaut": "02.07.2026",
+   "dienst": "agent 0.45.0",
+   "kurz": "Jede Gesprächssitzung wird bei jeder Änderung crash-sicher auf Platte gespiegelt und beim Start wiederhergestellt.",
+   "erklaerung": "Früher lebten die Gespräche nur im Arbeitsspeicher — jedes Deploy oder jeder Neustart verlor sie, und ins Logbuch gelangten halbe Gespräche (Frage ohne Antwort). Jetzt wird jede Sitzung bei jeder Änderung atomar als Datei gespiegelt (erst temporär schreiben, dann umbenennen — nie halbe Dateien) und beim Start wiederhergestellt: Das Gespräch läuft in DERSELBEN Sitzung weiter, und das Logbuch bekommt EINEN vollständigen Eintrag mit Frage UND Antwort. Die Datei wird erst nach erfolgreichem Logbuch-Eintrag gelöscht."
+  },
+  {
+   "id": "dubletten-rueckfrage",
+   "name": "Dubletten-Rückfrage: nichts wird doppelt gespeichert",
+   "eingebaut": "02.07.2026",
+   "dienst": "agent 0.44.0",
+   "kurz": "Vor dem Speichern prüft der Agent auf ähnliche bestehende Einträge und fragt: zusätzlich speichern oder ersetzen?",
+   "erklaerung": "Bei jeder Speicher-Absicht wird zuerst gesucht, ob es schon ähnliche Einträge gibt (Ähnlichkeit ab 0,70, Gesprächs-Logs ausgenommen). Gibt es welche, zitiert der Agent sie (Titel, Kategorie, Ähnlichkeit in Prozent, Auszug) und fragt mit Knöpfen: 'Zusätzlich speichern', 'Ersetzen' oder 'Abbrechen'. Bei mehreren Kandidaten kommt eine Nummern-Auswahl, welcher ersetzt werden soll. Die Antworten werden deterministisch erkannt (nicht vom LLM geraten). So sieht man sofort, was schon im Gedächtnis liegt, und nichts landet unbemerkt doppelt."
+  },
+  {
+   "id": "smxl",
+   "name": "S/M/XL-Antwortlängen: zentral gepflegt für App und Dashboard",
+   "eingebaut": "02.07.2026",
+   "dienst": "agent 0.46.0-0.47.1",
+   "kurz": "Drei wählbare Antwortlängen — kurz, mittel, ausführlich — wirken auf Antwort UND Internet-Suchtiefe, mit EINER zentralen Prompt-Quelle.",
+   "erklaerung": "Die Wahl S/M/XL (Chips im Gespräch, in App und Dashboard) steuert zweierlei: (1) den Antwort-Stil über zentrale, editierbare Prompts (size-prompts.json auf dem Server — Handy und Dashboard nutzen exakt dieselben Texte), und (2) die Tiefe der Internet-Suche (S=8 Treffer schnell, M=12, XL=20 mit Tiefensuche). So ist eine XL-Antwort nicht nur länger formuliert, sondern steht auch auf mehr Suchmaterial."
+  },
+  {
+   "id": "router-separat",
+   "name": "Router separat einstellbar + Modell-pro-Rolle",
+   "eingebaut": "02.07.2026 (Modell-pro-Rolle seit 24.06.2026)",
+   "dienst": "agent 0.6.0 / 0.40.0",
+   "kurz": "Jede Agenten-Rolle (Hauptagent, Speicheragent, Leseagent, Router) kann ein eigenes Modell und eigene Denk-Stufe bekommen.",
+   "erklaerung": "Der erste Schritt jeder Nachricht ist die Klassifikation (speichern? nachschlagen? Internet? Plaudern?) — dafür reicht ein schnelles, günstiges Modell, während die sichtbare Antwort vom stärkeren Hauptagenten kommt. In den Einstellungen lassen sich Modell und Reasoning-Stufe pro Rolle wählen ('auto' = wie Hauptagent). Es gilt IMMER exakt die eingestellte Wahl — der Server deckelt nie automatisch. Die neuen Level-2-Aufgaben nutzen bestehende Rollen: Multi-Query-Umformulierung läuft über das Router-Modell, die Entitäten-Extraktion über das Speicher-Modell."
+  },
+  {
+   "id": "performance-haertung",
+   "name": "Performance- und Stabilitäts-Härtung (Tiefen-Debugging)",
+   "eingebaut": "02.07.2026, 19.02 Uhr",
+   "dienst": "brain-api 1.19.0-1.20.0, agent 0.48.1-0.49.0, dashboard 0.34.0",
+   "kurz": "Gebündelte Embeddings, sparsame Datenbank-Scans, wiederverwendete Verbindungen, parallele Übersichts-Abfrage — alles verhaltensneutral, nur schneller.",
+   "erklaerung": "Ein Tiefen-Debugging-Durchlauf hat die schleichenden Kostenfresser beseitigt: Chunk-Vektoren werden beim Speichern gebündelt statt einzeln zur Embedding-API geschickt (großes Dokument: Minuten -> Sekunden); Zähl- und Listen-Abfragen scannen nur noch einen Chunk pro Dokument (identisches Ergebnis, ~5x kleinerer Scan — wichtig, weil die Übersicht alle 20 Sekunden pollt); alle Dienste nutzen EINEN wiederverwendeten HTTP-Client (kein TLS-Handschlag pro Aufruf — spürbar beim satzweisen Vorlesen); die Übersicht sammelt ihre fünf unabhängigen Teilwerte parallel statt nacheinander; und das Browser-Polling pausiert, wenn der Tab unsichtbar ist."
+  },
+  {
+   "id": "kategorie-einlesen",
+   "name": "Narrensicheres Kategorie-Einlesen (auch für schwache Modelle)",
+   "eingebaut": "27.06.2026",
+   "dienst": "brain-api 1.17.0",
+   "kurz": "Eine ganze Kategorie lässt sich Eintrag für Eintrag per Nummer durchlesen — keine Titel raten, keine Listen parsen.",
+   "erklaerung": "GET /category-item?category=X&index=N liefert genau EINEN Eintrag (1-basiert) plus die Gesamtzahl. Ein Client (z.B. OpenCode mit einem schwachen Modell) iteriert einfach 1, 2, 3 ... bis zur Gesamtzahl — eine Zahl kann kein Modell falsch tippen. Stabile Titel-Sortierung über alle Aufrufe, speicherschonend (Metadaten für die Liste, Volltext nur für den einen Eintrag). Dazu passend ist der Titel-Abruf tolerant (1.16.0): angeklebte Listen-Dekorationen wie ' [Kategorie]' oder '— N Zeichen' werden automatisch abgestreift."
+  },
+  {
+   "id": "ladefenster-schutz",
+   "name": "Ladefenster-Schutz: nie halbe Zahlen nach einem Neustart",
+   "eingebaut": "26.06.2026",
+   "dienst": "brain-api 1.15.0",
+   "kurz": "Direkt nach einem Neustart meldet das Gehirn ehrlich 'lade noch', statt unvollständige Listen als Wahrheit auszugeben.",
+   "erklaerung": "Während Qdrant nach einem Container-Neustart die Collection lädt, liefern Zählungen und Listen kurzzeitig UNVOLLSTÄNDIGE Werte ohne Fehlermeldung (ein realer Vorfall zeigte 193 statt 1224 Punkte). Die Endpunkte /health und /list geben deshalb den Qdrant-Ladezustand ('collection_status') und ein 'ready'-Flag zurück. Clients wie der MCP-Server warnen bei ready=false ('Gehirn lädt noch'), statt eine halbe Liste als vollständig auszugeben. Das schützt auch den Lösch-Sync der Apps vor fälschlichem Massenlöschen."
+  },
+  {
+   "id": "vorlesen",
+   "name": "Vorlesen (TTS): Antworten satzweise, schnell",
+   "eingebaut": "25.06.2026",
+   "dienst": "dashboard 0.18.0-0.24.2",
+   "kurz": "Antworten werden mit 30 wählbaren Gemini-HD-Stimmen vorgelesen — satzweise gepipelined, der erste Ton kommt nach ~2 Sekunden.",
+   "erklaerung": "Ein Lautsprecher-Schalter im Gespräch (und ein Schalter in den Einstellungen, beide synchron) liest Agent-Antworten vor. Die Sprachausgabe läuft über Gemini-native TTS mit 30 Stimmen (nach Geschlecht sortiert und farbig markiert, Vorschau per 'Stimme testen'). Statt das Audio des ganzen Textes abzuwarten, wird Satz für Satz generiert und der nächste Satz WÄHREND der Wiedergabe vorgeladen — die Wartezeit bis zum ersten Ton sank von ~11 auf ~2 Sekunden. Bei ausgeschaltetem Vorlesen wird kein einziges TTS-Token verbraucht."
+  },
+  {
+   "id": "diktat",
+   "name": "Mikrofon-Diktat mit Live-Vorschau",
+   "eingebaut": "24.06.2026",
+   "dienst": "dashboard 0.4.0/0.5.1",
+   "kurz": "Einsprechen statt tippen: Live-Vorschau während des Sprechens, beim Stopp ersetzt die präzise Whisper-Fassung den Text.",
+   "erklaerung": "Das Mikrofon im Gespräch nutzt einen Hybrid: Während des Sprechens zeigt die Browser-Spracherkennung eine Live-Vorschau, beim Stopp transkribiert Groq Whisper (whisper-large-v3-turbo, dasselbe Modell wie in den Voice-Overlays) die Aufnahme mit korrekten Satzzeichen und ersetzt die Vorschau. Ein Riegel verhindert, dass späte Browser-Ereignisse die fertige Whisper-Fassung überschreiben. Dazu gibt es den 'Verbessern'-Knopf (/api/improve), der eingesprochenen Text grammatikalisch glättet, ohne den Inhalt zu verändern."
+  },
+  {
+   "id": "internet-suche",
+   "name": "Internet-Suche als drittes Werkzeug",
+   "eingebaut": "25.06.2026 (native Websuche 01.07.2026)",
+   "dienst": "agent 0.23.0-0.35.0",
+   "kurz": "Aktuelle Fragen (Wetter, Sport, News) beantwortet der Agent über eine echte Websuche — Tavily oder die modell-eigene Suche.",
+   "erklaerung": "Der Router erkennt Live-/Außenwelt-Fragen als eigenen Intent 'internet'. Dann sucht Tavily (eine für KI-Agenten gebaute Such-API) und der Hauptagent formuliert die Antwort aus den Ergebnissen, mit kurzer Quellenangabe. Ist Tavily abgeschaltet (Schalter in den Einstellungen), nutzen fähige Modelle ihre EIGENE native Websuche (Gemini-Grounding bzw. GPT web_search). Die Suchtiefe folgt dem S/M/XL-Profil. Zeitlose Wissensfragen beantwortet der Agent weiter direkt — die Websuche ist nur für Aktuelles."
+  },
+  {
+   "id": "eval-check",
+   "name": "Eval-Check: Selbsttest mit 100 festen Sätzen",
+   "eingebaut": "25.06.2026",
+   "dienst": "agent 0.18.0-0.43.0",
+   "kurz": "Ein Knopf prüft alle Agenten gegen 100 feste Testsätze — isoliert vom echten Gehirn, mit detailliertem Prüfbericht.",
+   "erklaerung": "Der Eval-Check spielt 100 vordefinierte Sätze durch: Speichern in verschiedene Kategorien, Abfragen mit erwartetem Inhalt, Titel-Vorgaben, Smalltalk, Internet-Routing und sogar Injektions-Versuche. Alles läuft unter einem isolierten Test-Nutzer ('eval-test'), der NIE Franks echtes Gehirn berührt und danach hart aufgeräumt wird. Der Lauf startet als Hintergrund-Job (Fortschrittsanzeige im Dashboard), das Ergebnis-Log (Markdown, 14 Tage aufbewahrt) zeigt jede einzelne Prüfung. So merkt man nach jeder Änderung sofort, ob die Agenten-Kette noch stimmt."
+  },
+  {
+   "id": "multi-kategorie",
+   "name": "Mehrfach-Kategorien pro Eintrag",
+   "eingebaut": "25.06.2026 (UI 02.07.2026)",
+   "dienst": "brain-api 1.11.0 + dashboard 0.35.0/0.36.0",
+   "kurz": "Ein Eintrag kann in MEHREREN Kategorien gleichzeitig liegen — alle prägen die Auffindbarkeit mit.",
+   "erklaerung": "Ein Eintrag über 'Katzen-Futter' kann gleichzeitig unter 'Persönlich' und 'Katzen' liegen. Alle Kategorien (samt Hierarchie-Ebenen) fließen ins Embedding ein — der Eintrag ist in jeder seiner Kategorien auch semantisch auffindbar. Im Drawer werden alle Kategorien als entfernbare Chips gezeigt, ein Plus fügt weitere hinzu; die Ergebnislisten zeigen alle Chips je Eintrag. Umbenennen und Löschen von Kategorien pflegt seit dem Tiefen-Debugging (1.19.0) auch die Mehrfach-Zuordnungen sauber mit."
+  },
+  {
+   "id": "kategorien-hierarchie",
+   "name": "Kategorie-System: Hierarchie, Registry, Verwaltung",
+   "eingebaut": "25.06.2026",
+   "dienst": "brain-api 1.9.0 + agent 0.8.0/0.13.0 + dashboard 0.19.0",
+   "kurz": "Kategorien mit Unter-Ebenen ('Gesundheit/Schlaf'), vorab anlegbar, umbenennbar, zusammenführbar — in deutscher Rechtschreibung.",
+   "erklaerung": "Kategorien können hierarchisch sein ('Haupt/Unter', beliebig tief); die Übersicht zeigt erst Hauptkategorien und filtert auf Klick alles darunter. Leere Kategorien lassen sich VORAB anlegen (Registry-Datei, überlebt Neustarts) — der Speicheragent kennt sie sofort und wählt bestehende Kategorien zeichengenau, statt Schreibvarianten-Dubletten zu erzeugen. Umbenennen (auch Zusammenführen) und Löschen (nur das Etikett — Einträge bleiben IMMER erhalten) laufen über die Einstellungen. Beim Einordnen neuer Einträge fragt der Agent nach, bevor er eine NEUE Kategorie anlegt."
+  },
+  {
+   "id": "titel-system",
+   "name": "Titel-System: Titel als Schlüssel, im Embedding, editierbar",
+   "eingebaut": "25.06.2026",
+   "dienst": "brain-api 1.8.0/1.10.0 + agent 0.24.0",
+   "kurz": "Jeder Eintrag kann einen Titel tragen — gleicher Titel ersetzt den alten Eintrag, der Titel prägt die Suche mit und ist im Drawer editierbar.",
+   "erklaerung": "Der Titel ist der Schlüssel eines Eintrags: 'aktualisiere Direktive 1' ersetzt den bestehenden Eintrag gleichen Titels, statt eine Dublette anzulegen. Titel (und Kategorien) werden dem Text vor dem Embedden als Präfix vorangestellt — identifizierende Titel sind starke Suchsignale, der 1:1-Text bleibt unverändert. Beim Senden kann ein eigener Titel vorgegeben werden (Feld neben dem Kategorie-Dropdown); die Bestätigungs-Rückfrage liest ihn wörtlich vor. Titel-Änderungen im Drawer migrieren den Eintrag sauber auf den neuen Schlüssel."
+  },
+  {
+   "id": "papierkorb",
+   "name": "Papierkorb: Löschen ist umkehrbar",
+   "eingebaut": "24.06.2026",
+   "dienst": "brain-api 1.4.0 + dashboard 0.11.0",
+   "kurz": "Gelöschte Einträge wandern in einen Papierkorb (1:1-Text erhalten) und lassen sich wiederherstellen oder vorher editieren.",
+   "erklaerung": "Löschen ist ein Soft-Delete: Der Eintrag verschwindet aus dem aktiven Gehirn, sein wortwörtlicher Text landet mit allen Metadaten in einer Papierkorb-Datei auf dem persistenten Volume. Im Dashboard lässt er sich ansehen, noch im Papierkorb bearbeiten und mit einem Klick wiederherstellen (wird frisch eingebettet, Erstellungsdatum bleibt). Erst 'Papierkorb leeren' löscht unwiderruflich. Die Reihenfolge ist crash-sicher: erst in den Papierkorb sichern, DANN aus dem Gehirn entfernen."
+  },
+  {
+   "id": "logbuch",
+   "name": "Gesprächs-Logbuch: jede Unterhaltung wird protokolliert",
+   "eingebaut": "23.06.2026",
+   "dienst": "agent + dashboard (Logbuch-Tab), Ablage auf Platte Z",
+   "kurz": "Beendete Gespräche landen als Text-Protokoll auf der Samba-Platte UND als durchsuchbarer Eintrag im Gehirn.",
+   "erklaerung": "Jede Gesprächssitzung wird nach dem Ende (bewusst per /end oder nach 30 Minuten Ruhe) zweifach gesichert: als .txt-Protokoll mit Zeitstempeln auf der Samba-Platte (Franks Z:) und als Eintrag in der Kategorie 'gespräche' im Gehirn — damit auch alte Unterhaltungen semantisch durchsuchbar sind ('was hatten wir über X besprochen?'). Das Dashboard zeigt das Logbuch nach Jahren/Monaten gegliedert, mit Vorschau-Zeile und Lösch-Knopf, der Datei UND Gehirn-Eintrag gemeinsam entfernt. Gespräche zählen bewusst nicht in die Eintrags-Gesamtzahl."
+  },
+  {
+   "id": "backup",
+   "name": "Backup-System: täglicher Snapshot + Google-Drive-Sicherung",
+   "eingebaut": "24.06.2026",
+   "dienst": "Host-systemd + dashboard 0.6.0/0.16.0 + Windows-Tool CortexBackup",
+   "kurz": "Das Gehirn wird täglich um 4 Uhr gesichert (Qdrant-Snapshot) und crash-sicher zu Google Drive gespiegelt — mit Notfall-Wiederherstellung.",
+   "erklaerung": "Drei Schichten: (1) Ein täglicher Qdrant-Snapshot (4 Uhr) sichert die komplette Vektor-Datenbank. (2) Ein Host-Dienst spiegelt Snapshots, Logbuch und Eval-Logs per rclone zu Google Drive; die Backup-Kachel in den Einstellungen zeigt Status und letzten Zeitpunkt, 'Jetzt sichern'/'Wiederherstellen' stoßen Läufe an, eine Inhalts-Liste zeigt, was im Drive-Backup liegt. (3) Das Windows-Tool 'CortexBackup' ist die Disaster-Recovery: Es kann den kompletten Server-Zustand auf einen frischen VPS zurückspielen."
+  },
+  {
+   "id": "mcp-server",
+   "name": "MCP-Server: das Gehirn in Claude Code und OpenCode",
+   "eingebaut": "23.06.2026",
+   "dienst": "mcp-server (Port 8001)",
+   "kurz": "Programmier-Umgebungen greifen über das MCP-Protokoll direkt aufs Gehirn zu: merken, abrufen, durchsuchen, vergessen.",
+   "erklaerung": "Der MCP-Server stellt die Gehirn-Funktionen als Werkzeuge bereit: remember (speichern), recall (semantisch suchen), get_by_title/get_by_category/get_by_date/get_category_item (gezielt abrufen), list_memories (Überblick), forget (löschen), brain_health (Zustand). Damit haben Claude Code, OpenCode und andere CLIs auf allen Rechnern DASSELBE zentrale Gedächtnis — z.B. für die Regel 'funktionierende Bugfixes ins Gehirn'. Der Zugriff läuft ausschließlich über den WireGuard-Tunnel."
+  },
+  {
+   "id": "agenten-architektur",
+   "name": "Drei-Agenten-Architektur: Router, Speicheragent, Leseagent",
+   "eingebaut": "24.06.2026 (Leseagent-Umbau 25.06.2026)",
+   "dienst": "agent 0.5.0/0.22.0",
+   "kurz": "Frank redet mit EINEM Agenten — dahinter arbeiten drei spezialisierte Köpfe, jeder mit eigenem editierbarem Prompt.",
+   "erklaerung": "Der HAUPTAGENT klassifiziert jede Nachricht (speichern? nachschlagen? Internet? plaudern?) und führt das Gespräch. Der SPEICHERAGENT bestimmt für bestätigte Texte Kategorie und Titel — den Text selbst verändert er NIE (1:1-Prinzip). Der LESEAGENT filtert bei Fragen die Suchtreffer und gibt nur deren NUMMERN zurück — formulieren darf er nicht, damit er nichts verfälschen kann; die Antwort formuliert der Hauptagent aus den Original-Treffern. Speichern passiert NUR nach ausdrücklicher Bestätigung mit wortwörtlichem Zitat ('Soll ich das ablegen: ...?') — im Code erzwungen, nicht nur im Prompt. Alle drei Prompts sind im Dashboard editierbar; nur die JSON-Schemata bleiben geschützt."
+  },
+  {
+   "id": "eins-zu-eins",
+   "name": "Das 1:1-Prinzip: der Speicher verändert NIE einen Text",
+   "eingebaut": "23.06.2026",
+   "dienst": "brain-api 1.0.0 (Grundprinzip)",
+   "kurz": "Alles wird WORTWÖRTLICH gespeichert und wortwörtlich zurückgegeben — keine KI-Bearbeitung, kein Zusammenfassen, kein Dazudichten.",
+   "erklaerung": "Das Fundament des ganzen Systems: Text geht 1:1 hinein (der Vektor dient NUR dem Wiederfinden) und kommt 1:1 heraus. Die frühere mem0-Schicht hatte Inhalte beim Speichern 'verstanden' und dabei verfälscht — sie wurde deshalb komplett entfernt. Lange Texte werden für die SUCHE in überlappende Stücke zerlegt, aber der volle Originaltext liegt unverändert in jedem Stück — der Abruf liefert immer das ganze Dokument. Live-Checkpoints im Log beweisen das Prinzip bei jedem Speichervorgang ('gespeicherter Volltext == Eingabe'). Alles Verstehen/Zusammenfassen passiert ausschließlich in der Agenten-Schicht, die nur LIEST."
+  },
+  {
+   "id": "wireguard",
+   "name": "Sicherheitsmodell: alles nur über WireGuard-VPN",
+   "eingebaut": "23.06.2026",
+   "dienst": "VPS-Infrastruktur (Hostinger, compose)",
+   "kurz": "Kein Dienst ist öffentlich erreichbar — Dashboard, Agent, Gehirn und MCP existieren nur im privaten VPN-Tunnel.",
+   "erklaerung": "Alle Dienste binden ausschließlich an die WireGuard-IP 10.8.0.1 — aus dem Internet ist nur SSH und der WireGuard-Port sichtbar. Handy, PC und Programmier-CLIs verbinden sich über den Tunnel (die Android-App bringt die VPN-Anbindung mit). Zusätzlich verlangt jeder Dienst einen Bearer-Token, und Qdrant selbst ist per API-Key geschützt und nur containerintern erreichbar. Ein Endpoint-Monitor auf dem Host überwacht den Tunnel."
+  }
+ ]
 }
