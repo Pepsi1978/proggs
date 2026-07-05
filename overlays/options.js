@@ -7,6 +7,91 @@
 // (gruenes Haekchen) gesteuert, nicht hier — daher kein Checkbox-Feld mehr.
 const FIELDS = ["groqKey", "geminiKey", "geminiModel"];
 
+let currentPageHost = "";
+
+function normalizeHostList(list) {
+	return Array.isArray(list)
+		? Array.from(
+				new Set(
+					list
+						.map((x) => String(x || "").toLowerCase().trim())
+						.filter(Boolean),
+				),
+			)
+		: [];
+}
+
+async function getActiveTab() {
+	try {
+		const tabs = await chrome.tabs.query({ active: true, lastFocusedWindow: true });
+		if (tabs && tabs[0]) return tabs[0];
+	} catch (_) {
+		/* Fallback unten */
+	}
+	try {
+		const tabs = await chrome.tabs.query({ active: true, currentWindow: true });
+		return tabs && tabs[0] ? tabs[0] : null;
+	} catch (_) {
+		return null;
+	}
+}
+
+function hostFromUrl(url) {
+	try {
+		const u = new URL(url || "");
+		if (u.protocol !== "http:" && u.protocol !== "https:") return "";
+		return u.hostname.toLowerCase();
+	} catch (_) {
+		return "";
+	}
+}
+
+function requestPageState(tabId) {
+	return new Promise((resolve) => {
+		if (tabId == null) {
+			resolve(null);
+			return;
+		}
+		try {
+			chrome.tabs.sendMessage(tabId, { type: "OV_GET_PAGE_STATE" }, (res) => {
+				if (chrome.runtime.lastError || !res) {
+					resolve(null);
+					return;
+				}
+				resolve(res);
+			});
+		} catch (_) {
+			resolve(null);
+		}
+	});
+}
+
+async function loadCurrentPageToggle() {
+	const cb = document.getElementById("currentSiteEnabled");
+	const hint = document.getElementById("currentSiteHint");
+	const tab = await getActiveTab();
+	currentPageHost = hostFromUrl(tab && tab.url);
+	let profile = "";
+	if (tab && tab.id != null) {
+		const state = await requestPageState(tab.id);
+		if (!currentPageHost && state && state.host) {
+			currentPageHost = String(state.host).toLowerCase();
+		}
+		profile = state && state.profile ? ` (${state.profile})` : "";
+	}
+	const data = await chrome.storage.local.get("ovDisabledHosts");
+	const disabled = normalizeHostList(data.ovDisabledHosts).includes(currentPageHost);
+	if (!currentPageHost) {
+		cb.checked = false;
+		cb.disabled = true;
+		hint.textContent = "Für diese aktive Seite ist kein Overlay-Profil erreichbar.";
+		return;
+	}
+	cb.disabled = false;
+	cb.checked = !disabled;
+	hint.textContent = `Aktuelle Webseite: ${currentPageHost}${profile}`;
+}
+
 async function load() {
 	const all = await chrome.storage.local.get(FIELDS);
 	for (const id of FIELDS) {
@@ -24,6 +109,17 @@ async function save() {
 }
 
 document.getElementById("save").addEventListener("click", save);
+
+document.getElementById("currentSiteEnabled").addEventListener("change", async (e) => {
+	if (!currentPageHost) return;
+	const data = await chrome.storage.local.get("ovDisabledHosts");
+	const hosts = normalizeHostList(data.ovDisabledHosts);
+	const idx = hosts.indexOf(currentPageHost);
+	if (e.target.checked && idx >= 0) hosts.splice(idx, 1);
+	if (!e.target.checked && idx < 0) hosts.push(currentPageHost);
+	await chrome.storage.local.set({ ovDisabledHosts: hosts });
+	loadCurrentPageToggle();
+});
 
 // ── Overlay verschiebbar (1:1 wie beim Vorlese-Overlay) ──
 // Aktiv = Overlay per linker/rechter Maustaste verschiebbar, bleibt wo losgelassen.
@@ -80,4 +176,5 @@ document.getElementById("clearLog").addEventListener("click", async () => {
 });
 
 load();
+loadCurrentPageToggle();
 refreshLog();

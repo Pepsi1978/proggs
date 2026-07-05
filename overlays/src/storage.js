@@ -22,6 +22,7 @@
 		autoGeminiCorrection: true,
 		whisperModel: "whisper-large-v3-turbo",
 		whisperLang: "de",
+		ovDisabledHosts: [],
 	};
 
 	const cache = { ...DEFAULTS };

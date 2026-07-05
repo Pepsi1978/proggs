@@ -24,6 +24,7 @@
 	let current = null;
 	let lastEdgeVoices = [];
 	let lastGoogleVoices = [];
+	let currentPageHost = "";
 
 	function send(msg) {
 		try {
@@ -54,6 +55,88 @@
 
 	async function persist() {
 		current = await window.VOSettings.save(current);
+	}
+
+	function normalizeHostList(list) {
+		return Array.isArray(list)
+			? Array.from(
+					new Set(
+						list
+							.map((x) => String(x || "").toLowerCase().trim())
+							.filter(Boolean),
+					),
+				)
+			: [];
+	}
+
+	async function getActiveTab() {
+		try {
+			const tabs = await chrome.tabs.query({ active: true, lastFocusedWindow: true });
+			if (tabs && tabs[0]) return tabs[0];
+		} catch (_) {
+			/* unten Fallback versuchen */
+		}
+		try {
+			const tabs = await chrome.tabs.query({ active: true, currentWindow: true });
+			return tabs && tabs[0] ? tabs[0] : null;
+		} catch (_) {
+			return null;
+		}
+	}
+
+	function hostFromUrl(url) {
+		try {
+			const u = new URL(url || "");
+			if (u.protocol !== "http:" && u.protocol !== "https:") return "";
+			return u.hostname.toLowerCase();
+		} catch (_) {
+			return "";
+		}
+	}
+
+	function requestPageState(tabId) {
+		return new Promise((resolve) => {
+			if (tabId == null) {
+				resolve(null);
+				return;
+			}
+			try {
+				chrome.tabs.sendMessage(tabId, { type: "VO_GET_PAGE_STATE" }, (res) => {
+					if (chrome.runtime.lastError || !res) {
+						resolve(null);
+						return;
+					}
+					resolve(res);
+				});
+			} catch (_) {
+				resolve(null);
+			}
+		});
+	}
+
+	function updatePageToggle() {
+		const cb = $("page-enabled");
+		const help = $("page-enabled-help");
+		const hosts = normalizeHostList(current && current.disabledHosts);
+		if (!currentPageHost) {
+			cb.checked = false;
+			cb.disabled = true;
+			help.textContent = "Für diese aktive Seite kann kein Webseiten-Schalter gesetzt werden.";
+			return;
+		}
+		cb.disabled = false;
+		cb.checked = !hosts.includes(currentPageHost);
+		help.textContent = `Aktuelle Webseite: ${currentPageHost}`;
+	}
+
+	async function loadCurrentPage() {
+		const tab = await getActiveTab();
+		currentPageHost = hostFromUrl(tab && tab.url);
+		if (!currentPageHost && tab && tab.id != null) {
+			const state = await requestPageState(tab.id);
+			currentPageHost = state && state.host ? String(state.host).toLowerCase() : "";
+		}
+		updatePageToggle();
 	}
 
 	// ----- Favoriten (Sterne) -------------------------------------------------
@@ -208,6 +291,18 @@
 				t.addEventListener("click", () => showTab(t.dataset.tab)),
 			);
 
+		// Aktuelle Webseite
+		$("page-enabled").addEventListener("change", async (e) => {
+			if (!currentPageHost) return;
+			const hosts = normalizeHostList(current.disabledHosts);
+			const idx = hosts.indexOf(currentPageHost);
+			if (e.target.checked && idx >= 0) hosts.splice(idx, 1);
+			if (!e.target.checked && idx < 0) hosts.push(currentPageHost);
+			current.disabledHosts = hosts;
+			await persist();
+			updatePageToggle();
+		});
+
 		// Edge
 		$("edge-voice").addEventListener("change", async (e) => {
 			current.edge.voice = e.target.value;
@@ -325,6 +420,10 @@
 	// ----- Start --------------------------------------------------------------
 	async function init() {
 		current = await window.VOSettings.load();
+		document.getElementById("version").textContent =
+			chrome.runtime.getManifest().version_name ||
+			chrome.runtime.getManifest().version;
+		await loadCurrentPage();
 
 		markEngine(current.activeEngine);
 		showTab(current.activeEngine);

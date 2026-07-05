@@ -12,6 +12,7 @@
  *   - Google-API-Key
  *   - Overlay-Position
  *   - autoSpeak: Vorlesen bei Textauswahl automatisch starten
+ *   - disabledHosts: Webseiten, auf denen das Overlay ausgeschaltet ist
  */
 (function () {
 	"use strict";
@@ -38,6 +39,7 @@
 		autoMode: false, // A-Button: ab markiertem Wort absatzweise bis Ende vorlesen
 		favoriteVoices: [], // mit Stern markierte Lieblings-Stimmen (Liste von IDs)
 		draggable: false, // Overlay per Maus verschiebbar (sonst fester Platz)
+		disabledHosts: [], // Hostnamen, auf denen das Overlay nicht angezeigt wird
 	});
 
 	// Tiefe, robuste Zusammenführung mit den Defaults, damit fehlende Felder
@@ -69,6 +71,15 @@
 							s.favoriteVoices.filter(
 								(x) => typeof x === "string" && x.length > 0,
 							),
+						),
+					)
+				: [],
+			disabledHosts: Array.isArray(s.disabledHosts)
+				? Array.from(
+						new Set(
+							s.disabledHosts
+								.map((x) => String(x || "").toLowerCase().trim())
+								.filter(Boolean),
 						),
 					)
 				: [],

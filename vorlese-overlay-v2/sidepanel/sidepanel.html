@@ -20,6 +20,15 @@
     </header>
 
     <main class="sp-body">
+      <!-- Aktuelle Webseite -->
+      <section class="sp-section sp-page-toggle">
+        <label class="sp-check-row">
+          <input type="checkbox" class="sp-check" id="page-enabled" />
+          <span>Overlay auf dieser Webseite aktiv</span>
+        </label>
+        <p class="sp-help" id="page-enabled-help">Aktive Seite wird ermittelt…</p>
+      </section>
+
       <!-- Aktive Engine -->
       <section class="sp-section">
         <span class="sp-label">Aktive Stimme (nutzt der Lautsprecher)</span>
@@ -106,6 +115,7 @@
       <!-- Aktualisieren -->
       <section class="sp-section">
         <button class="sp-reload" type="button" id="reload">Auf neue Version aktualisieren</button>
+        <p class="sp-help">Installiert: <b id="version">…</b></p>
         <p class="sp-help">
           Lädt die Erweiterung mit der neuesten Version neu. API-Key, Stimme und Position
           bleiben erhalten. Nutze das nach einem Update — NICHT die Erweiterung entfernen

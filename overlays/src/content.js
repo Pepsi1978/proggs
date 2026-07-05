@@ -17,9 +17,55 @@
 
 	await OV.storage.load();
 
+	function normalizeHostList(list) {
+		return Array.isArray(list)
+			? Array.from(
+					new Set(
+						list
+							.map((x) => String(x || "").toLowerCase().trim())
+							.filter(Boolean),
+					),
+				)
+			: [];
+	}
+
+	function pageDisabled() {
+		return normalizeHostList(OV.storage.get("ovDisabledHosts", [])).includes(
+			host.toLowerCase(),
+		);
+	}
+
+	try {
+		chrome.runtime.onMessage.addListener((msg, _sender, sendResponse) => {
+			if (!msg || msg.type !== "OV_GET_PAGE_STATE") return;
+			sendResponse({
+				host: host.toLowerCase(),
+				profile: profile.label,
+				disabled: pageDisabled(),
+			});
+		});
+	} catch (e) {
+		console.warn("[Overlays] page-state listener:", e);
+	}
+
+	try {
+		chrome.storage.onChanged.addListener(async (changes, area) => {
+			if (area !== "local" || !changes.ovDisabledHosts) return;
+			await OV.storage.load();
+			if (pageDisabled()) OV.ui.removeOverlay(profile);
+			else boot();
+		});
+	} catch (e) {
+		console.warn("[Overlays] disabled-host listener:", e);
+	}
+
 	function boot() {
 		if (!document.body) {
 			setTimeout(boot, 300);
+			return;
+		}
+		if (pageDisabled()) {
+			OV.ui.removeOverlay(profile);
 			return;
 		}
 		try {

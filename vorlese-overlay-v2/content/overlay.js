@@ -38,9 +38,11 @@
 
 	const SAMPLE_TEXT =
 		"Dies ist ein Beispielsatz, mit dem du die gewählte Stimme und das Tempo prüfen kannst.";
+	const PAGE_HOST = (location.hostname || "").toLowerCase();
 
 	let lastSelection = "";
 	let isPlaying = false;
+	let overlayPageDisabled = false;
 	let hintTimer = null;
 	// Vom Panel gesetzte Funktion, um Status-/Fehlermeldungen im Panel anzuzeigen.
 	let panelStatusHandler = null;
@@ -88,6 +90,7 @@
 	//   - A-Button (autoMode) an  -> ab der Auswahl absatzweise bis zum Ende vorlesen
 	//   - sonst Haekchen (autoSpeak) an -> nur den markierten Text vorlesen
 	function onSelectionSettled(e) {
+		if (overlayPageDisabled) return;
 		// Markierungen im Overlay selbst ignorieren (Buttons/Panel/Drag).
 		try {
 			const path = e && e.composedPath ? e.composedPath() : [];
@@ -210,7 +213,71 @@
 	shadow.appendChild(panel);
 	let panelBuilt = false;
 
-	document.documentElement.appendChild(host);
+	function normalizeHostList(list) {
+		return Array.isArray(list)
+			? Array.from(
+					new Set(
+						list
+							.map((x) => String(x || "").toLowerCase().trim())
+							.filter(Boolean),
+					),
+				)
+			: [];
+	}
+
+	function isCurrentHostDisabled(settings) {
+		return !!(
+			PAGE_HOST && normalizeHostList(settings && settings.disabledHosts).includes(PAGE_HOST)
+		);
+	}
+
+	function mountOverlayHost() {
+		if (!host.isConnected) document.documentElement.appendChild(host);
+	}
+
+	function unmountOverlayHost() {
+		if (isPlaying || autoReading) sendMessage({ type: MSG.STOP });
+		clearEndWatchdog();
+		isPaused = false;
+		autoReading = false;
+		autoQueue = [];
+		clearParagraphHighlight();
+		resetProgress();
+		setPauseButtonVisible(false);
+		setPauseButtonState(false);
+		setState("stopped");
+		panel.classList.remove("vo-open");
+		if (host.isConnected) host.remove();
+	}
+
+	function applyPageDisabledState(disabled) {
+		overlayPageDisabled = !!disabled;
+		if (overlayPageDisabled) unmountOverlayHost();
+		else mountOverlayHost();
+	}
+
+	function positionAfterEnable(pos) {
+		cssReady.then(() =>
+			requestAnimationFrame(() => {
+				if (overlayPageDisabled) return;
+				positionInitial(pos);
+				logLayout("Overlay", container, {
+					initial: true,
+					angedockt: dockedToOverlays,
+					verschiebbar: draggable,
+				});
+
+				if (!draggable) {
+					let tries = 0;
+					const dockTimer = setInterval(() => {
+						tries++;
+						if (!dockedToOverlays && anchorToOverlays()) dockedToOverlays = true;
+						if (dockedToOverlays || tries >= 20) clearInterval(dockTimer);
+					}, 300);
+				}
+			}),
+		);
+	}
 
 	// ----- Hinweis-Bubble ------------------------------------------------------
 	// Auf Wunsch des Benutzers deaktiviert: die erklaerenden Text-Bubbles am Rand
@@ -489,6 +556,8 @@
 
 	Promise.all([window.VOSettings.getPosition(), window.VOSettings.load()]).then(
 		([pos, s]) => {
+			applyPageDisabledState(isCurrentHostDisabled(s));
+			if (overlayPageDisabled) return;
 			draggable = !!(s && s.draggable);
 			autoMode = !!(s && s.autoMode);
 			applyAutoButton();
@@ -497,27 +566,7 @@
 
 			// Position ERST nach CSS-Load + naechstem Frame anwenden (sonst falsche
 			// Breitenmessung -> Sprung an den Rand).
-			cssReady.then(() =>
-				requestAnimationFrame(() => {
-					positionInitial(pos);
-					logLayout("Overlay", container, {
-						initial: true,
-						angedockt: dockedToOverlays,
-						verschiebbar: draggable,
-					});
-
-					// Nur andocken wenn NICHT verschiebbar; Overlays laden evtl. spaeter.
-					if (!draggable) {
-						let tries = 0;
-						const dockTimer = setInterval(() => {
-							tries++;
-							if (!dockedToOverlays && anchorToOverlays())
-								dockedToOverlays = true;
-							if (dockedToOverlays || tries >= 20) clearInterval(dockTimer);
-						}, 300);
-					}
-				}),
-			);
+			positionAfterEnable(pos);
 		},
 	);
 
@@ -532,12 +581,20 @@
 		if (area !== "local" || !changes.vo_settings) return;
 		const nv = changes.vo_settings.newValue;
 		if (!nv) return;
+		const wasDisabled = overlayPageDisabled;
+		applyPageDisabledState(isCurrentHostDisabled(nv));
+		if (overlayPageDisabled) return;
+		autoMode = !!nv.autoMode;
+		applyAutoButton();
 		if (typeof nv.autoSpeak === "boolean" && nv.autoSpeak !== autoSpeakOn) {
 			autoSpeakOn = nv.autoSpeak;
 			applyAutoSpeakBox();
 		}
 		const was = draggable;
 		draggable = !!nv.draggable;
+		if (wasDisabled) {
+			window.VOSettings.getPosition().then((pos) => positionAfterEnable(pos));
+		}
 		// Verschiebbar AUS -> zurueck an den Standardort.
 		if (was && !draggable) resetToDocked();
 	});
@@ -1233,10 +1290,16 @@
 	window.VOOverlay = window.VOOverlay || {};
 	window.VOOverlay.toggleSettings = () => togglePanel();
 
-	chrome.runtime.onMessage.addListener((msg) => {
+	chrome.runtime.onMessage.addListener((msg, _sender, sendResponse) => {
 		if (!msg || typeof msg !== "object") return;
 
+		if (msg.type === "VO_GET_PAGE_STATE") {
+			sendResponse({ host: PAGE_HOST, disabled: overlayPageDisabled });
+			return;
+		}
+
 		if (msg.type === MSG.OPEN_SETTINGS) {
+			if (overlayPageDisabled) return;
 			togglePanel();
 			return;
 		}
@@ -1332,6 +1395,7 @@
 			// = 1 Chunk -> bliebe bei 0%). Der Balken laeuft jetzt zeitbasiert ueber
 			// die Status-Events playing/paused/resumed. Hier bewusst nichts tun.
 		} else if (msg.type === MSG.SPEAK_COMMAND) {
+			if (overlayPageDisabled) return;
 			if (window.VODiag)
 				window.VODiag.log("INFO", "UI_EREIGNIS", "overlay.tastenkuerzel", {});
 			onSpeakerClick();

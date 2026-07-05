@@ -69,6 +69,13 @@ body {
 	margin-bottom: 16px;
 }
 
+.sp-page-toggle {
+	border: 1px solid var(--sp-border);
+	background: var(--sp-row);
+	border-radius: 12px;
+	padding: 11px 12px;
+}
+
 .sp-label {
 	display: block;
 	font-size: 12px;

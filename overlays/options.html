@@ -74,6 +74,11 @@
 			<p class="sub">Die API-Keys werden nur lokal im Browser gespeichert (chrome.storage), nie hochgeladen.</p>
 
 			<div class="card">
+				<label class="toggle"><input type="checkbox" id="currentSiteEnabled" /> Overlay auf dieser Webseite aktiv</label>
+				<div class="hint" id="currentSiteHint">Aktive Seite wird ermittelt…</div>
+			</div>
+
+			<div class="card">
 				<label for="groqKey">Groq API-Key (Whisper Spracheingabe)</label>
 				<div class="hint">Kostenlos auf <a href="https://console.groq.com/keys" target="_blank">console.groq.com</a>. Noetig fuer den Mic-Button.</div>
 				<input type="password" id="groqKey" placeholder="gsk_..." autocomplete="off" />

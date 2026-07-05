@@ -1,7 +1,8 @@
 {
 	"manifest_version": 3,
 	"name": "Vorlese-Overlay",
-	"version": "0.11.0",
+	"version": "0.11.1",
+	"version_name": "0.11.1 (05.07.2026, 20:29 Uhr)",
 	"description": "Markierten Text auf jeder Webseite vorlesen — Edge TTS (kostenlos) oder Google Chirp 3 HD.",
 	"default_locale": "de",
 	"action": {

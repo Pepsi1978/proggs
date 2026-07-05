@@ -404,5 +404,23 @@
 		}, 3000);
 	}
 
-	OV.ui = { buildOverlay, startWatchdog };
+	function removeOverlay(profile) {
+		const target = profile || currentProfile;
+		if (!target) return;
+		profileKeys(target).forEach((key) => {
+			document.getElementById(btnId(target.id, key))?.remove?.();
+		});
+		document.getElementById("stt-live-preview")?.remove?.();
+		if (currentProfile && currentProfile.id === target.id) currentProfile = null;
+		if (domObserver) {
+			domObserver.disconnect();
+			domObserver = null;
+		}
+		if (uiInterval) {
+			clearInterval(uiInterval);
+			uiInterval = null;
+		}
+	}
+
+	OV.ui = { buildOverlay, startWatchdog, removeOverlay };
 })();
