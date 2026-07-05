@@ -60,8 +60,8 @@ public partial class MainWindow : Window
 
     private void UpdateThemeButton(ThemeManager.AppTheme theme)
     {
-        // Button zeigt das ZIEL-Design: Sonne im Dunkelmodus, Mond im Tagmodus.
-        ThemeBtn.Content = theme == ThemeManager.AppTheme.Dark ? "☀" : "☾";
+        // Button zeigt das Ziel-Design: Sonne im Dunkelmodus, Mond im Tagmodus.
+        ThemeBtn.Content = theme == ThemeManager.AppTheme.Dark ? "\uE706" : "\uE708";
         ThemeBtn.ToolTip = theme == ThemeManager.AppTheme.Dark ? "Zum Tagmodus wechseln" : "Zum Nachtmodus wechseln";
     }
 

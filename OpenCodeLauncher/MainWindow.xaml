@@ -154,6 +154,8 @@
         <Style x:Key="ThemeBtn" TargetType="Button" BasedOn="{StaticResource WindowBtn}">
             <Setter Property="Foreground" Value="{DynamicResource AccentBrush}"/>
             <Setter Property="Background" Value="{DynamicResource AccentSoftBg}"/>
+            <Setter Property="FontFamily" Value="Segoe Fluent Icons, Segoe MDL2 Assets"/>
+            <Setter Property="FontSize" Value="17"/>
         </Style>
 
         <Style x:Key="RoundedTextBox" TargetType="TextBox">
@@ -202,8 +204,8 @@
 
         <!-- Status-Pill (Provider-Tabelle) -->
         <Style x:Key="StatusPill" TargetType="Border">
-            <Setter Property="CornerRadius" Value="20"/>
-            <Setter Property="Padding" Value="9,3"/>
+            <Setter Property="CornerRadius" Value="8"/>
+            <Setter Property="Padding" Value="9,4"/>
             <Setter Property="HorizontalAlignment" Value="Left"/>
             <Setter Property="Background" Value="{DynamicResource StatusOkBg}"/>
             <Setter Property="BorderBrush" Value="{DynamicResource StatusOkFg}"/>
@@ -371,7 +373,7 @@
             </Ellipse.Triggers>
         </Ellipse>
 
-        <Border Margin="28" HorizontalAlignment="Stretch" VerticalAlignment="Stretch" Background="{DynamicResource WindowBg}" BorderBrush="{DynamicResource GlassBorderBrush}" BorderThickness="1" CornerRadius="22">
+        <Border Margin="11" HorizontalAlignment="Stretch" VerticalAlignment="Stretch" Background="{DynamicResource WindowBg}" BorderBrush="{DynamicResource GlassBorderBrush}" BorderThickness="1" CornerRadius="22">
             <Border.Effect>
                 <DropShadowEffect BlurRadius="100" ShadowDepth="40" Direction="270" Opacity="0.7" Color="#000000"/>
             </Border.Effect>
@@ -398,12 +400,12 @@
                         <TextBlock Text="✦" Foreground="{DynamicResource AccentBrush}" FontSize="17" HorizontalAlignment="Center" VerticalAlignment="Center"/>
                     </Border>
                     <TextBlock Text="OpenCode Launcher" Foreground="{DynamicResource TextBrush}" FontSize="15" FontWeight="SemiBold" VerticalAlignment="Center"/>
-                    <Border Margin="12,0,0,0" CornerRadius="20" Padding="9,2" Background="{DynamicResource SurfaceBg}" BorderBrush="{DynamicResource BorderBrushSoft}" BorderThickness="1" VerticalAlignment="Center">
+                    <Border Margin="12,0,0,0" CornerRadius="8" Padding="9,3" Background="{DynamicResource SurfaceBg}" BorderBrush="{DynamicResource BorderBrushSoft}" BorderThickness="1" VerticalAlignment="Center">
                         <TextBlock Text="{Binding Version}" Foreground="{DynamicResource DimBrush}" FontSize="12"/>
                     </Border>
                 </StackPanel>
                 <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center" Margin="0,0,10,0">
-                    <Button x:Name="ThemeBtn" Style="{StaticResource ThemeBtn}" Width="42" Height="33" Content="☀" FontSize="15" Margin="0,0,8,0" ToolTip="Design wechseln" Click="ThemeBtn_Click"/>
+                    <Button x:Name="ThemeBtn" Style="{StaticResource ThemeBtn}" Width="42" Height="33" Content="&#xE706;" Margin="0,0,8,0" ToolTip="Design wechseln" Click="ThemeBtn_Click"/>
                     <Button x:Name="MinBtn" Style="{StaticResource WindowBtn}" Width="40" Height="32" Content="—" FontSize="16" Click="MinBtn_Click"/>
                     <Button x:Name="MaxBtn" Style="{StaticResource WindowBtn}" Width="40" Height="32" Content="▢" FontSize="13" Click="MaxBtn_Click"/>
                     <Button x:Name="CloseBtn" Style="{StaticResource CloseBtn}" Width="40" Height="32" Content="✕" FontSize="14" Click="CloseBtn_Click"/>
@@ -536,19 +538,21 @@
                             <RowDefinition Height="Auto"/>
                             <RowDefinition Height="*"/>
                         </Grid.RowDefinitions>
-                        <DockPanel Grid.Row="0" Margin="4,0,4,12">
+                        <DockPanel Grid.Row="0" Margin="4,0,4,12" LastChildFill="False">
                             <TextBlock VerticalAlignment="Center">
                                 <Run Text="PROVIDER " FontSize="12" FontWeight="Bold" Foreground="{DynamicResource MutedBrush}"/>
                                 <Run Text="{Binding SelectedModel.DisplayName, FallbackValue='—', Mode=OneWay}" FontSize="15" FontWeight="Bold" Foreground="{DynamicResource AccentBrush}"/>
                             </TextBlock>
-                            <Button Style="{StaticResource GhostBtn}" Content="↻ Aktualisieren" DockPanel.Dock="Right" Padding="12,6" FontSize="12"
+                            <Button Style="{StaticResource GhostBtn}" Content="Aktualisieren" DockPanel.Dock="Right" Padding="10,6" FontSize="12" MinWidth="0"
                                     Command="{Binding RefreshCommand}"/>
                         </DockPanel>
                         <DataGrid x:Name="ProviderGrid" Grid.Row="1"
                                   ItemsSource="{Binding Providers}" SelectedItem="{Binding SelectedProvider}"
                                   AutoGenerateColumns="False" IsReadOnly="True" SelectionMode="Single"
                                   HeadersVisibility="Column" CanUserSortColumns="True"
-                                  ColumnWidth="Auto" RowHeaderWidth="0">
+                                  ColumnWidth="Auto" RowHeaderWidth="0"
+                                  ScrollViewer.VerticalScrollBarVisibility="Hidden"
+                                  ScrollViewer.HorizontalScrollBarVisibility="Disabled">
                             <DataGrid.Columns>
                                 <DataGridTextColumn Header="Provider" Binding="{Binding ProviderName}" Width="440" SortMemberPath="ProviderName">
                                     <DataGridTextColumn.ElementStyle>
