@@ -42,7 +42,7 @@ from fastapi import Depends, FastAPI, Header, HTTPException, Request
 from fastapi.responses import JSONResponse
 from pydantic import BaseModel, Field
 
-VERSION = "0.2.0 (05.07.2026, 01.45 Uhr)"  # 0.2.0 (Frank-Wuensche 2026-07-05): (a) GPT/Codex-Modelle nutzbar — gpt-* laeuft ueber den NEUEN Agent-Durchgriff POST /llm (agent 0.52.0, bestehende ChatGPT-OAuth-Anmeldung inkl. Token-Refresh, keine Auth-Duplikation); Modell-Liste in /settings kommt jetzt aus agent /config (alle verbundenen Provider). (b) THINKING einstellbar (none/low/medium/high/xhigh, Default high) — wirkt bei GPT als reasoning.effort und bei Gemini als thinking_budget. (c) 'OHNE BEGRENZUNG durcharbeiten'-Schalter (Default AN): hebt Vorschlags-Limit, Scan-Limits und LLM-Budget auf — der Bibliothekar arbeitet bis er durch ist; es bleibt NUR die stille Notbremse gegen Endlosschleifen (LIB_LLM_BACKSTOP, Default 5000 Calls/Nacht, ai-agent-Almanach 2.1). Alt: 0.1.0: Erstausgabe (Bereiche 11-18 + Nachzuegler + eigene Aufgaben)
+VERSION = "0.3.0 (05.07.2026, 02.16 Uhr)"  # 0.3.0 (Frank-Wunsch 2026-07-05): Nacht-BILANZ — der Tages-Report enthaelt jetzt fuer JEDE Aufgabe eine ehrliche Ergebnis-Zeile, AUCH wenn nichts gefunden wurde ('Dubletten-Vorschläge: keine Dubletten gefunden', 'Nachzügler: nichts zu tun — alles verknüpft', 'X: ausgeschaltet' bei deaktivierter Aufgabe, eigene Aufgaben inklusive). Steht in report.bilanz + last_run.bilanz -> Morgen-Report-Karte und Tages-Ansicht zeigen die komplette Bilanz. Alt: 0.2.0 (05.07.2026, 01.45 Uhr)  # 0.2.0 (Frank-Wuensche 2026-07-05): (a) GPT/Codex-Modelle nutzbar — gpt-* laeuft ueber den NEUEN Agent-Durchgriff POST /llm (agent 0.52.0, bestehende ChatGPT-OAuth-Anmeldung inkl. Token-Refresh, keine Auth-Duplikation); Modell-Liste in /settings kommt jetzt aus agent /config (alle verbundenen Provider). (b) THINKING einstellbar (none/low/medium/high/xhigh, Default high) — wirkt bei GPT als reasoning.effort und bei Gemini als thinking_budget. (c) 'OHNE BEGRENZUNG durcharbeiten'-Schalter (Default AN): hebt Vorschlags-Limit, Scan-Limits und LLM-Budget auf — der Bibliothekar arbeitet bis er durch ist; es bleibt NUR die stille Notbremse gegen Endlosschleifen (LIB_LLM_BACKSTOP, Default 5000 Calls/Nacht, ai-agent-Almanach 2.1). Alt: 0.1.0: Erstausgabe (Bereiche 11-18 + Nachzuegler + eigene Aufgaben)
 
 # ---------------------------------------------------------------------------
 # Konfiguration (Secrets nur aus der Umgebung, nie im Code)
@@ -1282,6 +1282,34 @@ def _run_night(manual: bool) -> None:
             save_state(st)
             save_report(report)
 
+        # Nacht-BILANZ: fuer JEDE Aufgabe eine ehrliche Zeile — auch wenn nichts gefunden wurde
+        # (Frank-Wunsch 2026-07-05: 'wenn da nichts gefunden wurde, soll das auch mit drinstehen').
+        bilanz: list[str] = []
+        if tasks_cfg.get("nachzuegler", True):
+            nz = int(report["auto"].get("nachzuegler_verknuepft", 0) or 0)
+            bilanz.append(f"Nachzügler-Verknüpfung: {nz} Einträge nachverknüpft" if nz else
+                          "Nachzügler-Verknüpfung: nichts zu tun — alle Einträge sind bereits im Register verknüpft")
+        else:
+            bilanz.append("Nachzügler-Verknüpfung: ausgeschaltet")
+        for _key, _label, _zero in (
+            ("dubletten", "Dubletten-Vorschläge", "keine Dubletten gefunden"),
+            ("widersprueche", "Widerspruchs-Suche", "keine Widersprüche gefunden"),
+            ("veraltet", "Veraltet-Erkennung", "nichts Veraltetes gefunden"),
+            ("kategorien", "Kategorien-Gärtner", "keine Kategorie-Vorschläge nötig"),
+            ("luecken", "Wissens-Lücken-Detektor", "keine Wissens-Lücken erkannt"),
+            ("verdichtung", "Logbuch-Verdichtung", "kein Monat zum Verdichten fällig"),
+        ):
+            if not tasks_cfg.get(_key, True):
+                bilanz.append(f"{_label}: ausgeschaltet")
+                continue
+            _n = int(report["zahlen"].get(_key, 0) or 0)
+            bilanz.append(f"{_label}: {_n} " + ("Vorschlag" if _n == 1 else "Vorschläge") if _n else f"{_label}: {_zero}")
+        for _k, _n in report["zahlen"].items():
+            if _k.startswith("custom:"):
+                _nm = _k.split(":", 1)[1]
+                bilanz.append(f"Eigene Aufgabe „{_nm}“: {_n} Fund(e)" if _n else f"Eigene Aufgabe „{_nm}“: nichts gefunden")
+        report["bilanz"] = bilanz
+
         # Morgen-Report-Zusammenfassung (Bereich 18)
         offen = [i for i in report["items"] if i.get("status") == "offen"]
         parts = []
@@ -1305,7 +1333,8 @@ def _run_night(manual: bool) -> None:
         save_report(report)
         st["last_run"] = {"date": day, "finished": report["finished"], "dauer_s": report["dauer_s"],
                           "zusammenfassung": report["zusammenfassung"], "offen": len(offen),
-                          "llm_calls": budget.used, "manual": manual, "fehler": report["fehler"]}
+                          "llm_calls": budget.used, "manual": manual, "fehler": report["fehler"],
+                          "bilanz": bilanz}
         if not manual:
             st["last_auto_date"] = day
         save_state(st)

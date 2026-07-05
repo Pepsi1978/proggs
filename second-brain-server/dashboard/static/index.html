@@ -1028,6 +1028,7 @@ button{font-family:inherit;cursor:pointer}
           <h3><span class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79Z"/></svg></span>Morgen-Report</h3>
           <p class="set-desc" id="libReportText">Lade den letzten Nachtlauf …</p>
           <p class="set-desc" id="libReportMeta" style="margin-top:4px"></p>
+          <div class="set-desc" id="libReportBilanz" style="margin-top:8px"></div>
           <div class="lib-run-line">
             <button class="btn btn-sm" id="libRunNow">Jetzt laufen lassen</button>
             <span class="set-desc" id="libRunState"></span>
@@ -3575,12 +3576,13 @@ button{font-family:inherit;cursor:pointer}
 
   async function loadLibStatus(){
     const txt=document.getElementById("libReportText"), meta=document.getElementById("libReportMeta");
+    const bil=document.getElementById("libReportBilanz");
     try{
       const s = await jlib("status");
       const lr = s.last_run;
       if(s.night && s.night.running){
         txt.innerHTML='<span class="lib-spin"></span> Der Bibliothekar arbeitet gerade: '+escapeHtml(s.night.detail||"Lauf läuft …");
-        meta.textContent="";
+        meta.textContent=""; if(bil) bil.innerHTML="";
         if(!libNightPoll){
           libNightPoll=setInterval(async()=>{
             try{
@@ -3595,11 +3597,16 @@ button{font-family:inherit;cursor:pointer}
         meta.textContent = "Letzter Lauf: "+(lr.finished? lr.finished.replace("T"," ").slice(0,16)+" Uhr":"?")
           +" · Dauer "+(lr.dauer_s??"?")+" s · "+(lr.llm_calls??"?")+" KI-Aufrufe · Nächster automatischer Lauf: "+(s.next_run||"?");
         if((lr.fehler||[]).length) meta.textContent += " · Hinweise: "+lr.fehler.join(" | ");
+        // Nacht-Bilanz: eine ehrliche Zeile je Aufgabe — auch "nichts gefunden" steht drin.
+        if(bil) bil.innerHTML = (lr.bilanz||[]).map(l=>{
+          const found = /: \d/.test(l) && !/: 0 /.test(l);
+          return '<div style="padding:2px 0">'+(found?"🔸 ":"▫️ ")+escapeHtml(l)+'</div>';
+        }).join("");
       } else {
         txt.textContent = "Noch kein Nachtlauf gelaufen. Der erste startet automatisch ("+(s.next_run||"04:10 Uhr")+") — oder du drückst „Jetzt laufen lassen“.";
-        meta.textContent = "";
+        meta.textContent = ""; if(bil) bil.innerHTML="";
       }
-    }catch(e){ txt.textContent="Bibliothekar nicht erreichbar ("+e.message+")."; meta.textContent=""; }
+    }catch(e){ txt.textContent="Bibliothekar nicht erreichbar ("+e.message+")."; meta.textContent=""; if(bil) bil.innerHTML=""; }
   }
 
   document.getElementById("libRunNow").addEventListener("click", async()=>{
@@ -3648,6 +3655,13 @@ button{font-family:inherit;cursor:pointer}
 
   function renderLibItems(rep){
     const box=document.getElementById("libItems"); box.innerHTML="";
+    // Tages-Bilanz dieses Laufs (auch "nichts gefunden"-Zeilen) — zusammenklappbar ueber den Funden.
+    if((rep.bilanz||[]).length){
+      const det=document.createElement("details"); det.className="lib-ctx"; det.style.marginBottom="10px";
+      det.innerHTML='<summary>Bilanz dieses Tages anzeigen (alle Aufgaben, auch ohne Funde)</summary>'
+        +(rep.bilanz||[]).map(l=>'<div class="k">'+escapeHtml(l)+'</div>').join("");
+      box.appendChild(det);
+    }
     const items=rep.items||[];
     const open=items.filter(i=>i.status==="offen");
     const done=items.filter(i=>i.status!=="offen");
