@@ -66,7 +66,7 @@ object ChatSessionStore {
                 add(
                     ChatSessionSummary(
                         id = cursor.getString(0),
-                        title = cursor.getString(1),
+                        title = compactSessionTitle(cursor.getString(1)),
                         createdAt = cursor.getLong(2),
                         updatedAt = cursor.getLong(3),
                         messageCount = cursor.getInt(4)
@@ -106,10 +106,10 @@ object ChatSessionStore {
 
     /** Setzt den (KI-generierten Intentions-)Titel einer Session — Frank-Wunsch 2026-07-02. */
     fun updateSessionTitle(sessionId: String, title: String) {
-        val clean = title.trim().ifBlank { return }
+        val clean = compactSessionTitle(title).ifBlank { return }
         helper.writableDatabase.update(
             "sessions",
-            ContentValues().apply { put("title", clean.take(220)) },
+            ContentValues().apply { put("title", clean) },
             "id = ?",
             arrayOf(sessionId)
         )
@@ -212,7 +212,7 @@ object ChatSessionStore {
     }
 
     private fun ensureSession(db: SQLiteDatabase, sessionId: String, titleHint: String?, now: Long) {
-        val title = titleHint?.trim()?.take(80)?.ifBlank { null } ?: "Neue Unterhaltung"
+        val title = titleHint?.let(::compactSessionTitle)?.ifBlank { null } ?: "Neue Unterhaltung"
         val exists = db.query(
             "sessions",
             arrayOf("title"),
@@ -250,6 +250,14 @@ object ChatSessionStore {
             )
         }
     }
+
+    private fun compactSessionTitle(title: String): String = title
+        .trim()
+        .replace(Regex("\\s+"), " ")
+        .split(' ')
+        .filter { it.isNotBlank() }
+        .take(4)
+        .joinToString(" ")
 
     private const val OUTBOX_TABLE_SQL = """
         CREATE TABLE IF NOT EXISTS outbox (

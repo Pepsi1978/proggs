@@ -1169,7 +1169,7 @@ class ChatViewModel : ViewModel() {
 
     private fun buildContextPrompt(contextMode: String, responseSize: String): String? {
         val modePrompt = if (contextMode == SettingsStore.CONTEXT_MODE_AUTO) "" else SettingsStore.contextPrompt(contextMode)
-        val sizePrompt = if (responseSize == SettingsStore.RESPONSE_SIZE_AUTO) "" else SettingsStore.responseSizePrompt(responseSize)
+        val sizePrompt = SettingsStore.responseSizePrompt(responseSize)
         return listOf(modePrompt, sizePrompt).filter { it.isNotBlank() }.joinToString("\n\n").ifBlank { null }
     }
 

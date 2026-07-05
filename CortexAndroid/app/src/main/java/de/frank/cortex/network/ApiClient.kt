@@ -652,7 +652,7 @@ object ApiClient {
 
     /**
      * Intentions-Titel fuer die Sessions-Leiste (Frank-Wunsch 2026-07-02): fasst die ABSICHT der
-     * ersten Frage in 1-3 kurzen Zeilen zusammen. Laeuft im Hintergrund auf gemini-3.1-flash-lite
+     * ersten Frage in maximal vier Woertern zusammen. Laeuft im Hintergrund auf gemini-3.1-flash-lite
      * mit Thinking medium (thinkingBudget 4096, gleiche Stufe wie serverseitig 'medium').
      */
     suspend fun geminiSessionTitle(text: String): String {
@@ -661,7 +661,7 @@ object ApiClient {
         val prompt = """
             Fasse die Absicht der folgenden Nutzer-Nachricht als kurzen Titel zusammen.
             Der Titel soll sofort erkennen lassen, was der Nutzer wollte (die Intention, nicht den Wortlaut).
-            Länge: ein bis maximal drei kurze Zeilen, insgesamt höchstens 160 Zeichen.
+            Länge: maximal vier Wörter. Niemals mehr als vier Wörter.
             Deutsch, mit echten Umlauten. Keine neuen Informationen erfinden.
             Keine Anführungszeichen, kein Punkt am Ende, keine Erklärung, kein Markdown.
             Gib ausschließlich den Titel zurück.

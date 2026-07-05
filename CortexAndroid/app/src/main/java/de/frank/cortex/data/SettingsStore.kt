@@ -85,7 +85,11 @@ object SettingsStore {
     }
 
     fun defaultResponseSizePrompt(size: String): String = when (size) {
-        RESPONSE_SIZE_AUTO -> ""
+        RESPONSE_SIZE_AUTO -> """
+            Antwortlänge A ist aktiv: Passe Länge, Detailgrad und Struktur automatisch an Franks Eingabe an.
+            Kurze, klare Fragen beantwortest du kurz und direkt. Komplexe Fragen oder Arbeitsaufträge beantwortest du so ausführlich,
+            strukturiert und gründlich, wie es für die bestmögliche Antwort sinnvoll ist. Keine künstliche Länge erzwingen.
+        """.trimIndent()
         RESPONSE_SIZE_SHORT -> """
             Antwortlänge S ist aktiv: Antworte exakt auf den Punkt, kurz und eindeutig.
             Suche nur nach der wirklich passenden Antwort. Wenn ein perfekter Treffer gefunden ist, nutze ihn sofort

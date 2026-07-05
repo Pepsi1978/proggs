@@ -99,8 +99,9 @@ fun SettingsScreen(
     var codexUserCode by remember { mutableStateOf("") }
     var codexAuthId by remember { mutableStateOf("") }
     var codexConnecting by remember { mutableStateOf(false) }
-    var selectedContextPromptMode by remember { mutableStateOf(SettingsStore.CONTEXT_MODE_SMALLTALK) }
+    var selectedContextPromptMode by remember { mutableStateOf(SettingsStore.RESPONSE_SIZE_AUTO) }
     fun loadEditablePrompt(key: String): String = when (key) {
+        SettingsStore.RESPONSE_SIZE_AUTO,
         SettingsStore.RESPONSE_SIZE_SHORT,
         SettingsStore.RESPONSE_SIZE_MEDIUM,
         SettingsStore.RESPONSE_SIZE_XL -> SettingsStore.responseSizePrompt(key)
@@ -108,6 +109,7 @@ fun SettingsScreen(
     }
     fun saveEditablePrompt(key: String, prompt: String) {
         when (key) {
+            SettingsStore.RESPONSE_SIZE_AUTO -> SettingsStore.setResponseSizePrompt(key, prompt)
             SettingsStore.RESPONSE_SIZE_SHORT,
             SettingsStore.RESPONSE_SIZE_MEDIUM,
             SettingsStore.RESPONSE_SIZE_XL -> {
@@ -897,7 +899,7 @@ fun SettingsScreen(
                     Icon(Icons.Default.Tune, null, tint = Orange, modifier = Modifier.size(22.dp))
                     Column(modifier = Modifier.weight(1f)) {
                         Text("Modus-Prompts", fontSize = 14.sp, fontWeight = FontWeight.SemiBold)
-                        Text("Zusatzauftrag für Modi und Antwortlängen S/M/XL", fontSize = 11.5.sp,
+                        Text("Zusatzauftrag für Modi und Antwortlängen A/S/M/XL", fontSize = 11.5.sp,
                             color = MaterialTheme.colorScheme.onSurfaceVariant)
                     }
                 }
@@ -1048,16 +1050,6 @@ fun SettingsScreen(
             }
         }
 
-        // Speichern button
-        Button(
-            onClick = { /* save all */ },
-            modifier = Modifier.fillMaxWidth().height(48.dp),
-            shape = RoundedCornerShape(14.dp),
-            colors = ButtonDefaults.buttonColors(containerColor = Iris)
-        ) {
-            Text("Speichern", fontSize = 15.sp, fontWeight = FontWeight.SemiBold)
-        }
-
         Spacer(Modifier.height(24.dp))
     }
 }
@@ -1070,11 +1062,11 @@ private fun ContextPromptModeButtons(
 ) {
     Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
         val modeItems = listOf(
-            PromptButtonItem(SettingsStore.CONTEXT_MODE_SMALLTALK, "Smalltalk", { Icon(Icons.Default.Forum, null, modifier = Modifier.size(20.dp)) }),
             PromptButtonItem(SettingsStore.CONTEXT_MODE_SAVE, "Speichern", { Icon(Icons.Default.Save, null, modifier = Modifier.size(20.dp)) }),
             PromptButtonItem(SettingsStore.CONTEXT_MODE_SEARCH, "Suchen", { Icon(Icons.Default.Search, null, modifier = Modifier.size(20.dp)) })
         )
         val sizeItems = listOf(
+            PromptButtonItem(SettingsStore.RESPONSE_SIZE_AUTO, "A", { Text("A", fontSize = 14.sp, fontWeight = FontWeight.Bold) }),
             PromptButtonItem(SettingsStore.RESPONSE_SIZE_SHORT, "S", { Text("S", fontSize = 14.sp, fontWeight = FontWeight.Bold) }),
             PromptButtonItem(SettingsStore.RESPONSE_SIZE_MEDIUM, "M", { Text("M", fontSize = 14.sp, fontWeight = FontWeight.Bold) }),
             PromptButtonItem(SettingsStore.RESPONSE_SIZE_XL, "XL", { Text("XL", fontSize = 14.sp, fontWeight = FontWeight.Bold) })
