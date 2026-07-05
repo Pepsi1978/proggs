@@ -143,3 +143,33 @@ nicht alles:
 > Greift bei echter Bereichsarbeit, NICHT bei Kleinkram (einzelner String, Doku, Versions-Bump) und
 > NICHT beim blossen Nachdenken/Planen. Einzeln abrufen (`recall`/`get_by_title`), nie `get_by_category`
 > (s. P2 oben). Kein passender Eintrag im Gehirn? Frank kurz melden. Hintergrund: `bugs/SYSTEM.md` + `best-practices/`.
+
+### 9. Session-Ende ins Gehirn — Cross-CLI-Gedächtnis (Gruppe D, PFLICHT)
+
+Wenn eine Arbeitsphase ENDET (Frank verabschiedet sich, sagt "fertig für heute", oder die
+letzte Aufgabe ist committed+gepusht und nichts Neues kommt), speichere EINE
+Session-Zusammenfassung ins Gehirn — im EXAKT gleichen Format wie Claude Code, damit das
+Gehirn CLI-übergreifend den Überblick hat:
+
+1. Echte Uhrzeit abfragen (`date '+%Y-%m-%d %H:%M'`) — NIEMALS schätzen.
+2. `second-brain`-Werkzeug **`remember`** mit:
+   - Titel: `Session OpenCode <Projekt-Ordnername> — YYYY-MM-DD HH:MM` (genau dieses Schema, nichts abwandeln)
+   - Kategorie: `Programmierung/Sessions`
+   - Text in dieser Struktur:
+     ```
+     Automatisches Session-Protokoll — OpenCode, Projekt <name>
+     ## Zusammenfassung
+     <5-10 Sätze: WAS wurde gemacht und WARUM — nur was wirklich passiert ist, nichts erfinden>
+     ## Entscheidungen
+     - <jede echte Entscheidung mit Begründung; Abschnitt weglassen wenn keine>
+     ## Gelernt
+     - <jede Erkenntnis/Fehlerursache; Abschnitt weglassen wenn keine>
+     ## Commits
+     - <git log --oneline der Session-Commits>
+     ```
+3. Nur EINMAL pro Arbeitsphase (nicht nach jeder Kleinigkeit). Mini-Sessions ohne Commits
+   und ohne Substanz: nichts speichern.
+
+Warum: Claude Code speist seine Sessions automatisch unter demselben Titel-Schema ein
+(SessionEnd-Hook). Der Nacht-Bibliothekar und der Cortex-Agent („Woran habe ich zuletzt
+gearbeitet?") lesen diese Kategorie chronologisch — ein abweichendes Format bricht das.
