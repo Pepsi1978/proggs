@@ -12,7 +12,7 @@ public partial class MainWindow : Window
 {
     private const int DWMWA_USE_IMMERSIVE_DARK_MODE = 20;
     private const int DWMWA_WINDOW_CORNER_PREFERENCE = 33;
-    private const int DWMWCP_ROUND = 2;
+    private const int DWMWCP_ROUNDSMALL = 3;
     private const int WM_GETMINMAXINFO = 0x0024;
     private const int MONITOR_DEFAULTTONEAREST = 2;
     private readonly LayoutSettings _layoutSettings;
@@ -79,7 +79,7 @@ public partial class MainWindow : Window
         if (hwnd == IntPtr.Zero) return;
         int dark = ThemeManager.Current == ThemeManager.AppTheme.Dark ? 1 : 0;
         DwmSetWindowAttribute(hwnd, DWMWA_USE_IMMERSIVE_DARK_MODE, ref dark, sizeof(int));
-        int cornerPreference = DWMWCP_ROUND;
+        int cornerPreference = DWMWCP_ROUNDSMALL;
         DwmSetWindowAttribute(hwnd, DWMWA_WINDOW_CORNER_PREFERENCE, ref cornerPreference, sizeof(int));
     }
 
