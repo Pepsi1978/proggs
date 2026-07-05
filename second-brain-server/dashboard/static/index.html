@@ -1018,6 +1018,12 @@ button{font-family:inherit;cursor:pointer}
         .mr-pair .field{margin-bottom:0}
         /* Limit-Felder ausgegraut, wenn 'Ohne Begrenzung' AN ist (Frank-Wunsch 05.07.) */
         .lib-dim{opacity:.4;pointer-events:none}
+        /* Kategorien-Chips am Zusammenfuehrungs-Vorschlag: leuchtend = bleibt, Klick = abwaehlen */
+        .lib-cat-chip{padding:6px 13px;border-radius:10px;border:1px solid var(--border);background:var(--surface);
+          color:var(--text-faint);cursor:pointer;font-size:12.5px;font-weight:600}
+        .lib-cat-chip.on{border-color:var(--accent);color:var(--accent);background:rgba(255,166,87,.13);
+          box-shadow:0 0 7px rgba(255,166,87,.28)}
+        .lib-cat-chip:not(.on){text-decoration:line-through;opacity:.6}
         .lib-run-line{display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-top:10px}
         .lib-spin{display:inline-block;width:14px;height:14px;border:2px solid var(--border);border-top-color:var(--accent);
           border-radius:50%;animation:libspin .8s linear infinite;vertical-align:-2px}
@@ -3563,7 +3569,7 @@ button{font-family:inherit;cursor:pointer}
     if(!r.ok) throw new Error(d.detail||("HTTP "+r.status));
     return d;
   }
-  let libDay=null, libSel={}, libNightPoll=null, libProcPoll=null, libIv=[], libIvTask=null;
+  let libDay=null, libSel={}, libOverrides={}, libNightPoll=null, libProcPoll=null, libIv=[], libIvTask=null;
 
   function libFmtDay(d){ const p=(d||"").split("-"); return p.length===3 ? p[2]+"."+p[1]+"."+p[0] : d; }
   function libBadge(days){
@@ -3641,7 +3647,7 @@ button{font-family:inherit;cursor:pointer}
   }
 
   async function openLibDay(day){
-    libDay=day; libSel={};
+    libDay=day; libSel={}; libOverrides={};
     document.querySelectorAll("#libDays .lib-day").forEach(b=>b.classList.toggle("active", b.dataset.date===day));
     document.getElementById("libResults").innerHTML="";
     document.getElementById("libStartHint").textContent="";
@@ -3700,6 +3706,55 @@ button{font-family:inherit;cursor:pointer}
         +((m.von!=="frank"&&i===dlg.length-1)?" frage":"")+'">'+escapeHtml(m.text||"")+'</div>').join("")+'</div>';
     }
     card.innerHTML=h;
+
+    /* Zusammenfuehrungs-Vorschlaege (Frank-Wunsch 05.07.): Volltext lesen + editieren
+       (eigener Uebernehmen-Knopf — ohne Druecken gilt der Original-Vorschlag) und die
+       Kategorien beider Quellen als leuchtende Chips ab-/anwaehlen. */
+    if(it.aktion && it.aktion.typ==="merge"){
+      const ov = libOverrides[it.id] = {merge_text:"", cats:[]};
+      let cats=(it.aktion.kategorien||[]).slice();
+      if(!cats.length){
+        const s=new Set(); (it.kontext||[]).forEach(k=>{ if(k.kategorie) s.add(k.kategorie); });
+        if(it.aktion.kategorie) s.add(it.aktion.kategorie);
+        cats=[...s];
+      }
+      ov.cats=cats.slice();
+      const det=document.createElement("details"); det.className="lib-ctx";
+      const sum=document.createElement("summary"); sum.textContent="Kompletten Zusammenführungs-Text lesen / bearbeiten"; det.appendChild(sum);
+      const mta=document.createElement("textarea"); mta.className="lib-own"; mta.style.minHeight="170px"; mta.value=it.aktion.text||"";
+      const mrow=document.createElement("div"); mrow.className="lib-run-line";
+      const msave=document.createElement("button"); msave.className="btn btn-sm btn-primary"; msave.textContent="Änderung übernehmen";
+      const mstate=document.createElement("span"); mstate.className="set-desc";
+      mstate.textContent="Ohne „Änderung übernehmen“ wird der ursprüngliche Vorschlag gespeichert.";
+      mta.addEventListener("input",()=>{
+        const saved = ov.merge_text || (it.aktion.text||"");
+        mstate.textContent = (mta.value===saved) ? "" : "Geändert — noch nicht übernommen.";
+      });
+      msave.addEventListener("click",()=>{
+        ov.merge_text=mta.value;
+        mstate.textContent="✓ Übernommen — genau diese Fassung wird beim Zusammenführen gespeichert.";
+      });
+      mrow.appendChild(msave); mrow.appendChild(mstate);
+      det.appendChild(mta); det.appendChild(mrow);
+      card.appendChild(det);
+      if(cats.length){
+        const lbl=document.createElement("p"); lbl.className="set-desc"; lbl.style.marginTop="8px";
+        lbl.textContent="Kategorien des zusammengeführten Eintrags — Klick wählt ab (mindestens eine bleibt):";
+        const cr=document.createElement("div"); cr.className="lib-choice";
+        cats.forEach(c=>{
+          const ch=document.createElement("button"); ch.className="lib-cat-chip on"; ch.textContent=c; ch.title="Klick: Kategorie ab-/anwählen";
+          ch.addEventListener("click",()=>{
+            const on=ch.classList.contains("on");
+            if(on && ov.cats.length<=1) return;   // mindestens eine Kategorie behalten
+            ch.classList.toggle("on", !on);
+            ov.cats = on ? ov.cats.filter(x=>x!==c) : [...ov.cats, c];
+          });
+          cr.appendChild(ch);
+        });
+        card.appendChild(lbl); card.appendChild(cr);
+      }
+    }
+
     const row=document.createElement("div"); row.className="lib-choice";
     const bJa=document.createElement("button"); bJa.textContent=it.ja_label||"Ja";
     const bNein=document.createElement("button"); bNein.textContent=it.nein_label||"Nein";
@@ -3735,7 +3790,15 @@ button{font-family:inherit;cursor:pointer}
     const hint=document.getElementById("libStartHint");
     const decisions=Object.entries(libSel)
       .filter(([id,v])=>v.choice && (v.choice!=="eigen" || (v.text||"").trim()))
-      .map(([id,v])=>({id:id, choice:v.choice, text:(v.text||"").trim()}));
+      .map(([id,v])=>{
+        const d={id:id, choice:v.choice, text:(v.text||"").trim()};
+        const o=libOverrides[id];
+        if(o && v.choice==="ja"){    // Merge-Overrides: editierter Text + gewaehlte Kategorien
+          if(o.merge_text) d.merge_text=o.merge_text;
+          if(o.cats && o.cats.length) d.kategorien=o.cats;
+        }
+        return d;
+      });
     if(!libDay){ hint.textContent="Bitte erst einen Tag wählen."; return; }
     if(!decisions.length){ hint.textContent="Bitte erst mindestens einen Fund entscheiden (bei eigenem Vorschlag auch Text eintippen)."; return; }
     hint.innerHTML='<span class="lib-spin"></span> Setze um …';

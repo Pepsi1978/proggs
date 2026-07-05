@@ -42,7 +42,7 @@ from fastapi import Depends, FastAPI, Header, HTTPException, Request
 from fastapi.responses import JSONResponse
 from pydantic import BaseModel, Field
 
-VERSION = "0.3.0 (05.07.2026, 02.16 Uhr)"  # 0.3.0 (Frank-Wunsch 2026-07-05): Nacht-BILANZ — der Tages-Report enthaelt jetzt fuer JEDE Aufgabe eine ehrliche Ergebnis-Zeile, AUCH wenn nichts gefunden wurde ('Dubletten-Vorschläge: keine Dubletten gefunden', 'Nachzügler: nichts zu tun — alles verknüpft', 'X: ausgeschaltet' bei deaktivierter Aufgabe, eigene Aufgaben inklusive). Steht in report.bilanz + last_run.bilanz -> Morgen-Report-Karte und Tages-Ansicht zeigen die komplette Bilanz. Alt: 0.2.0 (05.07.2026, 01.45 Uhr)  # 0.2.0 (Frank-Wuensche 2026-07-05): (a) GPT/Codex-Modelle nutzbar — gpt-* laeuft ueber den NEUEN Agent-Durchgriff POST /llm (agent 0.52.0, bestehende ChatGPT-OAuth-Anmeldung inkl. Token-Refresh, keine Auth-Duplikation); Modell-Liste in /settings kommt jetzt aus agent /config (alle verbundenen Provider). (b) THINKING einstellbar (none/low/medium/high/xhigh, Default high) — wirkt bei GPT als reasoning.effort und bei Gemini als thinking_budget. (c) 'OHNE BEGRENZUNG durcharbeiten'-Schalter (Default AN): hebt Vorschlags-Limit, Scan-Limits und LLM-Budget auf — der Bibliothekar arbeitet bis er durch ist; es bleibt NUR die stille Notbremse gegen Endlosschleifen (LIB_LLM_BACKSTOP, Default 5000 Calls/Nacht, ai-agent-Almanach 2.1). Alt: 0.1.0: Erstausgabe (Bereiche 11-18 + Nachzuegler + eigene Aufgaben)
+VERSION = "0.4.0 (05.07.2026, 02.29 Uhr)"  # 0.4.0 (Frank-Wunsch 2026-07-05): Zusammenfuehrungen mit KATEGORIE-WAHL + EDITIERBAREM Merge-Text — (a) Dubletten-Vorschlaege tragen jetzt die UNION aller Kategorien beider Quell-Eintraege (aktion.kategorien; Multi-Category, ein Eintrag kann z.B. 3 Kategorien mitbringen); (b) beim Abarbeiten kann Frank pro Vorschlag den kompletten Merge-Text editieren und Kategorien abwaehlen — die Decision nimmt merge_text + kategorien als Overrides an (nur bei choice=ja, wirkt vor dem Ausfuehren); (c) _execute_action merge speichert mit categories-Liste (brain /store Multi-Category, erste = primaer) und nennt die Kategorien im Ergebnis. Abwaertskompatibel: alte offene Items ohne kategorien-Feld laufen unveraendert. Alt: 0.3.0 (05.07.2026, 02.16 Uhr)  # 0.3.0 (Frank-Wunsch 2026-07-05): Nacht-BILANZ — der Tages-Report enthaelt jetzt fuer JEDE Aufgabe eine ehrliche Ergebnis-Zeile, AUCH wenn nichts gefunden wurde ('Dubletten-Vorschläge: keine Dubletten gefunden', 'Nachzügler: nichts zu tun — alles verknüpft', 'X: ausgeschaltet' bei deaktivierter Aufgabe, eigene Aufgaben inklusive). Steht in report.bilanz + last_run.bilanz -> Morgen-Report-Karte und Tages-Ansicht zeigen die komplette Bilanz. Alt: 0.2.0 (05.07.2026, 01.45 Uhr)  # 0.2.0 (Frank-Wuensche 2026-07-05): (a) GPT/Codex-Modelle nutzbar — gpt-* laeuft ueber den NEUEN Agent-Durchgriff POST /llm (agent 0.52.0, bestehende ChatGPT-OAuth-Anmeldung inkl. Token-Refresh, keine Auth-Duplikation); Modell-Liste in /settings kommt jetzt aus agent /config (alle verbundenen Provider). (b) THINKING einstellbar (none/low/medium/high/xhigh, Default high) — wirkt bei GPT als reasoning.effort und bei Gemini als thinking_budget. (c) 'OHNE BEGRENZUNG durcharbeiten'-Schalter (Default AN): hebt Vorschlags-Limit, Scan-Limits und LLM-Budget auf — der Bibliothekar arbeitet bis er durch ist; es bleibt NUR die stille Notbremse gegen Endlosschleifen (LIB_LLM_BACKSTOP, Default 5000 Calls/Nacht, ai-agent-Almanach 2.1). Alt: 0.1.0: Erstausgabe (Bereiche 11-18 + Nachzuegler + eigene Aufgaben)
 
 # ---------------------------------------------------------------------------
 # Konfiguration (Secrets nur aus der Umgebung, nie im Code)
@@ -431,11 +431,13 @@ def brain_search(query: str, limit: int = 5) -> list[dict]:
     return r.json().get("items", [])
 
 
-def brain_store(text: str, title: str, category: str) -> dict:
+def brain_store(text: str, title: str, category: str, categories: "list[str] | None" = None) -> dict:
     payload: dict = {"text": text, "user_id": USER_ID}
     if title.strip():
         payload["title"] = title.strip()
-    if category.strip():
+    if categories:
+        payload["categories"] = [c.strip() for c in categories if c and c.strip()][:12]   # Multi-Category (erste = primaer)
+    elif category.strip():
         payload["category"] = category.strip()
     r = _HTTP.post(f"{BRAIN_URL}/store", json=payload, headers=HEADERS, timeout=180.0)
     r.raise_for_status()
@@ -761,8 +763,10 @@ def _all_entries_with_text() -> dict[str, dict]:
                 did = (it.get("doc_id") or "").strip()
                 if did and did not in out:
                     m = meta.get(did, {})
+                    prim = (it.get("category") or cat or "").strip()
+                    cats = [c.strip() for c in (it.get("categories") or []) if isinstance(c, str) and c.strip()] or ([prim] if prim else [])
                     out[did] = {"title": (it.get("title") or "").strip(),
-                                "category": (it.get("category") or cat or "").strip(),
+                                "category": prim, "categories": cats,
                                 "created_at": it.get("created_at") or m.get("created_at"),
                                 "updated_at": m.get("updated_at") or it.get("created_at"),
                                 "text": it.get("text") or ""}
@@ -771,7 +775,9 @@ def _all_entries_with_text() -> dict[str, dict]:
     # Eintraege ganz ohne Kategorie stehen nur in /list — Metadaten reichen dort (kein Volltext)
     for did, m in meta.items():
         if did not in out:
-            out[did] = {"title": (m.get("title") or "").strip(), "category": (m.get("category") or "").strip(),
+            prim = (m.get("category") or "").strip()
+            out[did] = {"title": (m.get("title") or "").strip(), "category": prim,
+                        "categories": [prim] if prim else [],
                         "created_at": m.get("created_at"), "updated_at": m.get("updated_at"), "text": ""}
     return out
 
@@ -871,12 +877,19 @@ def _task_dubletten_widersprueche(cfg: dict, st: dict, budget: NightBudget, entr
                 mx = (verdict.get("merged_text") or "").strip()
                 if not mx:
                     continue
+                # ALLE Kategorien beider Quellen (Union, Reihenfolge stabil) — Frank waehlt im
+                # Dashboard per Chip ab, welche der zusammengefuehrte Eintrag behalten soll.
+                union_cats: list[str] = []
+                for c in (e.get("categories") or [e.get("category")]) + (oe.get("categories") or [oe.get("category")]):
+                    if c and c.strip() and not any(c.casefold() == u.casefold() for u in union_cats):
+                        union_cats.append(c.strip())
                 item = _new_item("dubletten", key,
                                  f"Dublette: „{e['title'] or did}“ + „{oe['title'] or other}“",
                                  verdict.get("begruendung") or "Beide Einträge sagen im Kern dasselbe.",
                                  f"Zu EINEM Eintrag „{mt}“ zusammenführen (die Originale werden ersetzt bzw. wandern in den Papierkorb — wiederherstellbar).",
                                  {"typ": "merge", "doc_ids": [did, other], "titel": mt,
-                                  "kategorie": e["category"] or oe["category"], "text": mx},
+                                  "kategorie": union_cats[0] if union_cats else "",
+                                  "kategorien": union_cats[:12], "text": mx},
                                  kontext, ja_label="Zusammenführen", nein_label="Getrennt lassen")
                 report["items"].append(item)
                 _mark_finding(st, key, "offen")
@@ -1421,14 +1434,16 @@ def _execute_action(aktion: dict) -> str:
         return "Zur Kenntnis genommen — nichts verändert."
     if typ == "merge":
         titel = (aktion.get("titel") or "").strip()
-        stored = brain_store(aktion.get("text") or "", titel, (aktion.get("kategorie") or "").strip())
+        kats = [c for c in (aktion.get("kategorien") or []) if c and c.strip()]
+        stored = brain_store(aktion.get("text") or "", titel, (aktion.get("kategorie") or "").strip(), categories=kats or None)
         new_id = stored.get("doc_id") or ""
         dropped = 0
         for did in aktion.get("doc_ids") or []:
             if did and did != new_id:
                 brain_delete(did)
                 dropped += 1
-        return f"Zusammengeführt zu „{titel}“ — {dropped} Original(e) in den Papierkorb (wiederherstellbar)."
+        kat_info = f" · Kategorien: {', '.join(kats)}" if kats else ""
+        return f"Zusammengeführt zu „{titel}“ — {dropped} Original(e) in den Papierkorb (wiederherstellbar){kat_info}."
     if typ == "papierkorb":
         r = brain_delete(aktion.get("doc_id") or "")
         return "In den Papierkorb verschoben (wiederherstellbar)." if r.get("deleted") else "Eintrag war schon nicht mehr da."
@@ -1485,7 +1500,16 @@ def _run_process(day: str, decisions: list[dict]) -> None:
                     _mark_finding(st, item.get("key") or f"item:{item['id']}", "abgelehnt")
                     results.append({"id": item["id"], "titel": item["titel"], "ok": True, "ergebnis": item["ergebnis"]})
                 elif choice == "ja":
-                    res = _execute_action(item.get("aktion") or {"typ": "hinweis"})
+                    aktion = dict(item.get("aktion") or {"typ": "hinweis"})
+                    if aktion.get("typ") == "merge":
+                        # Franks Dashboard-Overrides: editierter Merge-Text + abgewaehlte Kategorien
+                        if (d.get("merge_text") or "").strip():
+                            aktion["text"] = d["merge_text"].strip()
+                        kats = [k.strip() for k in (d.get("kategorien") or []) if isinstance(k, str) and k.strip()]
+                        if kats:
+                            aktion["kategorien"] = kats[:12]
+                            aktion["kategorie"] = kats[0]
+                    res = _execute_action(aktion)
                     item["status"] = "erledigt"
                     item["ergebnis"] = res
                     _mark_finding(st, item.get("key") or f"item:{item['id']}", "erledigt")
@@ -1598,6 +1622,10 @@ class Decision(BaseModel):
     id: str = Field(..., min_length=1, max_length=40)
     choice: str = Field(..., pattern="^(ja|nein|eigen)$")
     text: str = Field(default="", max_length=8000)
+    # Nur fuer Zusammenfuehrungs-Vorschlaege (Frank-Wunsch 2026-07-05): Frank kann den
+    # Merge-Text im Dashboard editieren und die Kategorien per Chip an-/abwaehlen.
+    merge_text: str = Field(default="", max_length=200000)
+    kategorien: "list[str] | None" = Field(default=None, max_length=12)
 
 
 class ProcessReq(BaseModel):
