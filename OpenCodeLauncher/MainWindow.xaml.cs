@@ -17,6 +17,8 @@ public partial class MainWindow : Window
     private const int MONITOR_DEFAULTTONEAREST = 2;
     private readonly LayoutSettings _layoutSettings;
     private int _providerResizeColumnIndex = -1;
+    private double[]? _providerResizeStartWidths;
+    private double _providerResizeTotalDelta;
 
     [DllImport("dwmapi.dll")]
     private static extern int DwmSetWindowAttribute(IntPtr hwnd, int attr, ref int value, int size);
@@ -190,34 +192,46 @@ public partial class MainWindow : Window
         var index = ProviderGrid.Columns.IndexOf(header.Column);
         if (index < 0 || index >= ProviderGrid.Columns.Count - 1) return;
 
-        var left = ProviderGrid.Columns[index];
-        var right = ProviderGrid.Columns[index + 1];
         _providerResizeColumnIndex = index;
-        foreach (var column in ProviderGrid.Columns)
+        _providerResizeTotalDelta = 0;
+        _providerResizeStartWidths = ProviderGrid.Columns
+            .Select(column => Math.Max(column.ActualWidth, Math.Max(column.MinWidth, 60)))
+            .ToArray();
+        for (var i = 0; i < ProviderGrid.Columns.Count; i++)
         {
-            if (column.ActualWidth > 0) column.Width = new System.Windows.Controls.DataGridLength(column.ActualWidth);
+            ProviderGrid.Columns[i].Width = new System.Windows.Controls.DataGridLength(_providerResizeStartWidths[i]);
         }
         e.Handled = true;
     }
 
     private void ProviderColumnResizeDelta(object sender, DragDeltaEventArgs e)
     {
-        if (_providerResizeColumnIndex < 0 || _providerResizeColumnIndex >= ProviderGrid.Columns.Count - 1) return;
+        if (_providerResizeStartWidths == null || _providerResizeColumnIndex < 0 || _providerResizeColumnIndex >= ProviderGrid.Columns.Count - 1) return;
 
         var left = ProviderGrid.Columns[_providerResizeColumnIndex];
         var right = ProviderGrid.Columns[_providerResizeColumnIndex + 1];
         var minLeft = Math.Max(left.MinWidth, 60);
         var minRight = Math.Max(right.MinWidth, 60);
-        var total = left.ActualWidth + right.ActualWidth;
-        var newLeft = Math.Clamp(left.ActualWidth + e.HorizontalChange, minLeft, total - minRight);
+        var startLeft = _providerResizeStartWidths[_providerResizeColumnIndex];
+        var startRight = _providerResizeStartWidths[_providerResizeColumnIndex + 1];
+        var pairWidth = startLeft + startRight;
+        _providerResizeTotalDelta += e.HorizontalChange;
+        var newLeft = Math.Clamp(startLeft + _providerResizeTotalDelta, minLeft, pairWidth - minRight);
+
+        for (var i = 0; i < ProviderGrid.Columns.Count; i++)
+        {
+            ProviderGrid.Columns[i].Width = new System.Windows.Controls.DataGridLength(_providerResizeStartWidths[i]);
+        }
         left.Width = new System.Windows.Controls.DataGridLength(newLeft);
-        right.Width = new System.Windows.Controls.DataGridLength(total - newLeft);
+        right.Width = new System.Windows.Controls.DataGridLength(pairWidth - newLeft);
         e.Handled = true;
     }
 
     private void ProviderColumnResizeCompleted(object sender, DragCompletedEventArgs e)
     {
         _providerResizeColumnIndex = -1;
+        _providerResizeStartWidths = null;
+        _providerResizeTotalDelta = 0;
     }
 
     // ---- Drag & Drop für Modellgruppen und Modelle ----
