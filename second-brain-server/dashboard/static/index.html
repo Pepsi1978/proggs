@@ -1030,6 +1030,13 @@ button{font-family:inherit;cursor:pointer}
         .lib-learn:hover{border-color:var(--text-faint)}
         .lib-learn.act{border-color:#F2698E;color:#F2698E;background:rgba(242,105,142,.12);box-shadow:0 0 8px rgba(242,105,142,.3)}
         .lib-learn.done{border-color:var(--good);color:var(--good);background:rgba(90,208,160,.12)}
+        /* Gelernte-Regeln-Liste: breites, scrollbares Feld zwischen Abarbeiten und Einstellungen */
+        #libLearnList{max-height:380px;overflow-y:auto;padding-right:4px}
+        .lib-fb{position:relative;border:1px solid var(--border);border-radius:11px;padding:10px 36px 10px 12px;
+          margin-top:8px;font-size:13px;color:var(--text-dim);line-height:1.5}
+        .lib-fb .fbx{position:absolute;top:6px;right:8px;background:none;border:none;color:var(--text-faint);
+          cursor:pointer;font-size:14px;padding:2px 6px;border-radius:6px}
+        .lib-fb .fbx:hover{color:var(--text);background:var(--surface)}
         .lib-run-line{display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-top:10px}
         .lib-spin{display:inline-block;width:14px;height:14px;border:2px solid var(--border);border-top-color:var(--accent);
           border-radius:50%;animation:libspin .8s linear infinite;vertical-align:-2px}
@@ -1057,6 +1064,12 @@ button{font-family:inherit;cursor:pointer}
             <button class="btn btn-primary" id="libStart">Starten</button>
             <span class="set-desc" id="libStartHint"></span>
           </div>
+        </div>
+
+        <div class="card set-section">
+          <h3><span class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M22 10v6M2 10l10-5 10 5-10 5z"/><path d="M6 12v5c3 3 9 3 12 0v-5"/></svg></span>Gelernte Regeln</h3>
+          <p class="set-desc">Was du dem Bibliothekar über den <b>Lernen</b>-Knopf an einzelnen Funden beigebracht hast — sie fließen ab dem nächsten Lauf verbindlich in alle seine Urteile ein. Jede Zeile zeigt die Kurzfassung; <b>Bearbeiten</b> öffnet die komplette Regel zum Ändern, <b>KI fragen</b> lässt den Bibliothekar beurteilen, ob er mit der Regel perfekt arbeiten kann.</p>
+          <div id="libLearnList"></div>
         </div>
 
         <div class="card set-section">
@@ -1099,12 +1112,6 @@ button{font-family:inherit;cursor:pointer}
           <div class="lib-run-line">
             <span class="set-desc" id="libSettingsState">Änderungen speichern sich automatisch.</span>
           </div>
-        </div>
-
-        <div class="card set-section">
-          <h3><span class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M22 10v6M2 10l10-5 10 5-10 5z"/><path d="M6 12v5c3 3 9 3 12 0v-5"/></svg></span>Gelernte Regeln</h3>
-          <p class="set-desc">Was du dem Bibliothekar über den <b>Lernen</b>-Knopf an einzelnen Funden beigebracht hast. Diese Regeln fließen ab dem nächsten Lauf verbindlich in alle seine Urteile ein. Einzeln an-/abschaltbar und löschbar.</p>
-          <div id="libLearnList"></div>
         </div>
 
         <div class="card set-section">
@@ -4011,15 +4018,24 @@ button{font-family:inherit;cursor:pointer}
     });
   }
 
-  /* — Gelernte Regeln (Lernen-Knopf) verwalten — */
+  /* — Gelernte Regeln: scrollbare Liste mit Kurzfassung, Bearbeiten-Editor + 'KI fragen' — */
+  function libRuleSummary(s){
+    s=(s||"").replace(/\s+/g," ").trim();
+    const m=s.match(/^(.*?[.!?])(?:\s+(.*?[.!?]))?/);   // die ersten 1-2 Saetze als Kurzfassung
+    let out=m ? (m[1]+(m[2]? " "+m[2] : "")) : s;
+    if(out.length>190) out=out.slice(0,190)+"…";
+    return out||"(leer)";
+  }
   function renderLibLearned(list){
     const box=document.getElementById("libLearnList"); if(!box) return;
     box.innerHTML="";
     if(!list.length){ box.innerHTML='<p class="set-desc">Noch nichts gelernt — nutze den Lernen-Knopf an einem Fund.</p>'; return; }
     list.forEach(t=>{
-      const row=document.createElement("div"); row.className="lib-taskrow";
+      const wrap=document.createElement("div"); wrap.style.borderBottom="1px solid var(--border)";
+      const row=document.createElement("div"); row.className="lib-taskrow"; row.style.borderBottom="none";
       const meta=(t.fund_titel? "Gelernt am Fund: „"+t.fund_titel+"“" : "")+(t.created_at? " · "+String(t.created_at).slice(0,10):"");
-      row.innerHTML='<div class="nm"><b>'+escapeHtml((t.text||"").slice(0,160)+((t.text||"").length>160?"…":""))+'</b><span>'+escapeHtml(meta)+'</span></div>';
+      row.innerHTML='<div class="nm"><b>'+escapeHtml(libRuleSummary(t.text))+'</b><span>'+escapeHtml(meta)+'</span></div>';
+      const editB=document.createElement("button"); editB.className="btn btn-sm"; editB.textContent="Bearbeiten";
       const sw=document.createElement("input"); sw.type="checkbox"; sw.className="lib-sw"; sw.checked=t.enabled!==false; sw.title="Regel an/aus";
       sw.addEventListener("change", async()=>{
         try{ await jlib("learn/"+encodeURIComponent(t.id),"PUT",{enabled:sw.checked}); }
@@ -4032,7 +4048,48 @@ button{font-family:inherit;cursor:pointer}
         try{ await jlib("learn/"+encodeURIComponent(t.id),"DELETE"); loadLibSettings(); }
         catch(e){ alert("Fehler: "+e.message); }
       });
-      row.appendChild(sw); row.appendChild(del); box.appendChild(row);
+      row.appendChild(editB); row.appendChild(sw); row.appendChild(del);
+      wrap.appendChild(row);
+      /* Bearbeiten-Bereich: komplette Regel als Editor + Speichern + 'KI fragen' + wegklickbare Antwort */
+      const ed=document.createElement("div"); ed.style.cssText="display:none;padding:0 0 12px";
+      const eta=document.createElement("textarea"); eta.className="lib-own"; eta.style.minHeight="120px"; eta.value=t.text||"";
+      const er=document.createElement("div"); er.className="lib-run-line";
+      const esave=document.createElement("button"); esave.className="btn btn-sm btn-primary"; esave.textContent="Speichern";
+      const eask=document.createElement("button"); eask.className="btn btn-sm"; eask.textContent="KI fragen";
+      eask.title="Den Bibliothekar fragen: Ist das für dich eine sinnvolle Regel, kannst du sie gut umsetzen?";
+      const estate=document.createElement("span"); estate.className="set-desc";
+      const fb=document.createElement("div"); fb.className="lib-fb"; fb.style.display="none";
+      const fbx=document.createElement("button"); fbx.className="fbx"; fbx.textContent="✕"; fbx.title="Hinweis ausblenden";
+      const fbt=document.createElement("div");
+      fbx.addEventListener("click",()=>{ fb.style.display="none"; });
+      fb.appendChild(fbx); fb.appendChild(fbt);
+      er.appendChild(esave); er.appendChild(eask); er.appendChild(estate);
+      ed.appendChild(eta); ed.appendChild(er); ed.appendChild(fb);
+      wrap.appendChild(ed);
+      editB.addEventListener("click",()=>{
+        const open=ed.style.display==="none";
+        ed.style.display=open?"block":"none";
+        editB.textContent=open?"Zuklappen":"Bearbeiten";
+      });
+      esave.addEventListener("click", async()=>{
+        const v=(eta.value||"").trim();
+        if(v.length<5){ estate.textContent="Regel-Text ist zu kurz."; return; }
+        try{
+          await jlib("learn/"+encodeURIComponent(t.id),"PUT",{text:v});
+          t.text=v;
+          const b=row.querySelector(".nm b"); if(b) b.textContent=libRuleSummary(v);
+          estate.textContent="✓ Gespeichert — gilt ab dem nächsten Urteil.";
+        }catch(e){ estate.textContent="Fehler: "+e.message; }
+      });
+      eask.addEventListener("click", async()=>{
+        estate.innerHTML='<span class="lib-spin"></span> Frage den Bibliothekar …';
+        try{
+          const r=await jlib("learn/check","POST",{text:(eta.value||"").trim()});
+          fbt.textContent="🌙 "+(r.antwort||"(keine Antwort)");
+          fb.style.display="block"; estate.textContent="";
+        }catch(e){ estate.textContent="Fehler: "+e.message; }
+      });
+      box.appendChild(wrap);
     });
   }
 

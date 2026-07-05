@@ -42,7 +42,7 @@ from fastapi import Depends, FastAPI, Header, HTTPException, Request
 from fastapi.responses import JSONResponse
 from pydantic import BaseModel, Field
 
-VERSION = "0.5.0 (05.07.2026, 02.40 Uhr)"  # 0.5.0 (Frank-Wunsch 2026-07-05): LERNEN-KNOPF an jedem Fund — Frank bringt dem Bibliothekar an einem konkreten Fall bei, wie er kuenftig mit solchen Faellen umgehen soll (Beispiel: 'Kurzcheck + Vollversion NIEMALS zusammenfuehren'). Ablauf wie beim Aufgaben-Interview: POST /learn/interview versteht die Lehre, stellt bei Unklarheit GENAU EINE Rueckfrage, nennt die finale Regel-Fassung; Frank bestaetigt -> POST /learn speichert sie in lernregeln.json. Die gelernten Regeln fliessen als Pflicht-Block (_with_rules) in ALLE 10 Nacht-Urteils-Prompts ein (Dubletten/Widersprueche, Veraltet, Gaertner, Luecken, Entwurf, Verdichtung, eigene Aufgaben, Entity-Extraktion, Entscheidungs-Umsetzung). Verwaltung: in /settings als 'lernregeln' + PUT/DELETE /learn/{id} (an/aus + Papierkorb). Alt: 0.4.0 (05.07.2026, 02.29 Uhr)  # 0.4.0 (Frank-Wunsch 2026-07-05): Zusammenfuehrungen mit KATEGORIE-WAHL + EDITIERBAREM Merge-Text — (a) Dubletten-Vorschlaege tragen jetzt die UNION aller Kategorien beider Quell-Eintraege (aktion.kategorien; Multi-Category, ein Eintrag kann z.B. 3 Kategorien mitbringen); (b) beim Abarbeiten kann Frank pro Vorschlag den kompletten Merge-Text editieren und Kategorien abwaehlen — die Decision nimmt merge_text + kategorien als Overrides an (nur bei choice=ja, wirkt vor dem Ausfuehren); (c) _execute_action merge speichert mit categories-Liste (brain /store Multi-Category, erste = primaer) und nennt die Kategorien im Ergebnis. Abwaertskompatibel: alte offene Items ohne kategorien-Feld laufen unveraendert. Alt: 0.3.0 (05.07.2026, 02.16 Uhr)  # 0.3.0 (Frank-Wunsch 2026-07-05): Nacht-BILANZ — der Tages-Report enthaelt jetzt fuer JEDE Aufgabe eine ehrliche Ergebnis-Zeile, AUCH wenn nichts gefunden wurde ('Dubletten-Vorschläge: keine Dubletten gefunden', 'Nachzügler: nichts zu tun — alles verknüpft', 'X: ausgeschaltet' bei deaktivierter Aufgabe, eigene Aufgaben inklusive). Steht in report.bilanz + last_run.bilanz -> Morgen-Report-Karte und Tages-Ansicht zeigen die komplette Bilanz. Alt: 0.2.0 (05.07.2026, 01.45 Uhr)  # 0.2.0 (Frank-Wuensche 2026-07-05): (a) GPT/Codex-Modelle nutzbar — gpt-* laeuft ueber den NEUEN Agent-Durchgriff POST /llm (agent 0.52.0, bestehende ChatGPT-OAuth-Anmeldung inkl. Token-Refresh, keine Auth-Duplikation); Modell-Liste in /settings kommt jetzt aus agent /config (alle verbundenen Provider). (b) THINKING einstellbar (none/low/medium/high/xhigh, Default high) — wirkt bei GPT als reasoning.effort und bei Gemini als thinking_budget. (c) 'OHNE BEGRENZUNG durcharbeiten'-Schalter (Default AN): hebt Vorschlags-Limit, Scan-Limits und LLM-Budget auf — der Bibliothekar arbeitet bis er durch ist; es bleibt NUR die stille Notbremse gegen Endlosschleifen (LIB_LLM_BACKSTOP, Default 5000 Calls/Nacht, ai-agent-Almanach 2.1). Alt: 0.1.0: Erstausgabe (Bereiche 11-18 + Nachzuegler + eigene Aufgaben)
+VERSION = "0.6.0 (05.07.2026, 02.45 Uhr)"  # 0.6.0 (Frank-Wunsch 2026-07-05): Gelernte Regeln EDITIERBAR + 'KI fragen' — (a) PUT /learn/{id} nimmt jetzt auch text an (Frank bearbeitet die komplette Regel im Dashboard, updated_at wird gestempelt); (b) NEU POST /learn/check: der Bibliothekar beurteilt selbst, ob eine Regel fuer seine Nacht-Urteile sinnvoll, eindeutig und gut umsetzbar ist (bekommt die anderen aktiven Regeln zum Kollisions-Check mit; Antwort 2-4 Saetze leichtes Deutsch). Alt: 0.5.0 (05.07.2026, 02.40 Uhr)  # 0.5.0 (Frank-Wunsch 2026-07-05): LERNEN-KNOPF an jedem Fund — Frank bringt dem Bibliothekar an einem konkreten Fall bei, wie er kuenftig mit solchen Faellen umgehen soll (Beispiel: 'Kurzcheck + Vollversion NIEMALS zusammenfuehren'). Ablauf wie beim Aufgaben-Interview: POST /learn/interview versteht die Lehre, stellt bei Unklarheit GENAU EINE Rueckfrage, nennt die finale Regel-Fassung; Frank bestaetigt -> POST /learn speichert sie in lernregeln.json. Die gelernten Regeln fliessen als Pflicht-Block (_with_rules) in ALLE 10 Nacht-Urteils-Prompts ein (Dubletten/Widersprueche, Veraltet, Gaertner, Luecken, Entwurf, Verdichtung, eigene Aufgaben, Entity-Extraktion, Entscheidungs-Umsetzung). Verwaltung: in /settings als 'lernregeln' + PUT/DELETE /learn/{id} (an/aus + Papierkorb). Alt: 0.4.0 (05.07.2026, 02.29 Uhr)  # 0.4.0 (Frank-Wunsch 2026-07-05): Zusammenfuehrungen mit KATEGORIE-WAHL + EDITIERBAREM Merge-Text — (a) Dubletten-Vorschlaege tragen jetzt die UNION aller Kategorien beider Quell-Eintraege (aktion.kategorien; Multi-Category, ein Eintrag kann z.B. 3 Kategorien mitbringen); (b) beim Abarbeiten kann Frank pro Vorschlag den kompletten Merge-Text editieren und Kategorien abwaehlen — die Decision nimmt merge_text + kategorien als Overrides an (nur bei choice=ja, wirkt vor dem Ausfuehren); (c) _execute_action merge speichert mit categories-Liste (brain /store Multi-Category, erste = primaer) und nennt die Kategorien im Ergebnis. Abwaertskompatibel: alte offene Items ohne kategorien-Feld laufen unveraendert. Alt: 0.3.0 (05.07.2026, 02.16 Uhr)  # 0.3.0 (Frank-Wunsch 2026-07-05): Nacht-BILANZ — der Tages-Report enthaelt jetzt fuer JEDE Aufgabe eine ehrliche Ergebnis-Zeile, AUCH wenn nichts gefunden wurde ('Dubletten-Vorschläge: keine Dubletten gefunden', 'Nachzügler: nichts zu tun — alles verknüpft', 'X: ausgeschaltet' bei deaktivierter Aufgabe, eigene Aufgaben inklusive). Steht in report.bilanz + last_run.bilanz -> Morgen-Report-Karte und Tages-Ansicht zeigen die komplette Bilanz. Alt: 0.2.0 (05.07.2026, 01.45 Uhr)  # 0.2.0 (Frank-Wuensche 2026-07-05): (a) GPT/Codex-Modelle nutzbar — gpt-* laeuft ueber den NEUEN Agent-Durchgriff POST /llm (agent 0.52.0, bestehende ChatGPT-OAuth-Anmeldung inkl. Token-Refresh, keine Auth-Duplikation); Modell-Liste in /settings kommt jetzt aus agent /config (alle verbundenen Provider). (b) THINKING einstellbar (none/low/medium/high/xhigh, Default high) — wirkt bei GPT als reasoning.effort und bei Gemini als thinking_budget. (c) 'OHNE BEGRENZUNG durcharbeiten'-Schalter (Default AN): hebt Vorschlags-Limit, Scan-Limits und LLM-Budget auf — der Bibliothekar arbeitet bis er durch ist; es bleibt NUR die stille Notbremse gegen Endlosschleifen (LIB_LLM_BACKSTOP, Default 5000 Calls/Nacht, ai-agent-Almanach 2.1). Alt: 0.1.0: Erstausgabe (Bereiche 11-18 + Nachzuegler + eigene Aufgaben)
 
 # ---------------------------------------------------------------------------
 # Konfiguration (Secrets nur aus der Umgebung, nie im Code)
@@ -1882,19 +1882,62 @@ def learn_save(req: LearnSaveReq) -> dict:
     return {"ok": True, "regel": rule}
 
 
-class LearnToggleReq(BaseModel):
-    enabled: bool
+class LearnUpdateReq(BaseModel):
+    enabled: "bool | None" = None
+    text: "str | None" = Field(default=None, min_length=5, max_length=4000, description="Editierter Regel-Text (Frank bearbeitet die Regel im Dashboard)")
 
 
 @app.put("/learn/{rule_id}", dependencies=[Depends(require_auth)])
-def learn_toggle(rule_id: str, req: LearnToggleReq) -> dict:
+def learn_update(rule_id: str, req: LearnUpdateReq) -> dict:
     rules = load_learned()
     for r in rules:
         if r.get("id") == rule_id:
-            r["enabled"] = bool(req.enabled)
+            if req.enabled is not None:
+                r["enabled"] = bool(req.enabled)
+            if req.text is not None and req.text.strip():
+                r["text"] = req.text.strip()
+                r["updated_at"] = datetime.now(TZ).isoformat(timespec="seconds")
+                checkpoint("learn_edit", "Gelernte Regel editiert — gilt ab dem naechsten Urteil",
+                           ok=True, rule_id=rule_id, chars=len(r["text"]))
             save_learned(rules)
             return {"ok": True, "regel": r}
     raise HTTPException(status_code=404, detail="Regel nicht gefunden")
+
+
+LEARN_CHECK_SYSTEM = """Du bist der Nachtschicht-Bibliothekar von Franks zweitem Gehirn — der Agent,
+der jede Nacht um die eingestellte Zeit die Nacht-Urteile faellt (Dubletten, Widersprueche,
+Veraltet, Kategorien, Luecken, Verdichtung). Frank fragt dich, ob die folgende GELERNTE REGEL
+fuer dich sinnvoll, eindeutig formuliert und gut umsetzbar ist.
+Pruefe ehrlich: Verstehst du sie zweifelsfrei? Ist sie konkret genug (nicht zu schwammig, nicht
+zu breit)? Kollidiert sie mit einer der anderen bestehenden Regeln? Kannst du sie in deinen
+Urteilen direkt anwenden?
+Antworte in 2-4 Saetzen leichtem Deutsch (du-Form): entweder eine klare Bestaetigung
+('Ja, damit kann ich perfekt arbeiten, weil …') ODER konkrete Verbesserungsvorschlaege
+(was genau umformuliert werden sollte und warum).
+Antworte NUR mit diesem JSON: {"antwort":"..."}"""
+
+
+class LearnCheckReq(BaseModel):
+    text: str = Field(..., min_length=5, max_length=4000)
+
+
+@app.post("/learn/check", dependencies=[Depends(require_auth)])
+def learn_check(req: LearnCheckReq) -> dict:
+    """'KI fragen': der Bibliothekar beurteilt selbst, ob er mit der Regel gut arbeiten kann.
+    Bekommt die anderen aktiven Regeln mit (Kollisions-Check). Sync def -> Threadpool."""
+    cfg = load_config()
+    others = [r["text"] for r in load_learned() if r.get("enabled", True) and (r.get("text") or "").strip()
+              and r.get("text", "").strip() != req.text.strip()]
+    others_block = ("\n\nDeine ANDEREN bestehenden Regeln (auf Kollision pruefen):\n"
+                    + "\n".join(f"- {t}" for t in others[:30])) if others else ""
+    try:
+        raw = json.loads(_extract_json(llm(LEARN_CHECK_SYSTEM,
+                                           f"ZU PRUEFENDE REGEL:\n{req.text.strip()}{others_block}",
+                                           model=cfg["model"], max_tokens=1024, temperature=0.3)))
+    except Exception as e:  # noqa: BLE001
+        _log(logging.ERROR, "Regel-Pruefung fehlgeschlagen", exc_info=True)
+        raise HTTPException(status_code=502, detail=f"Prüfung fehlgeschlagen: {type(e).__name__}")
+    return {"ok": True, "antwort": (raw.get("antwort") or "").strip() or "Keine Einschätzung erhalten."}
 
 
 @app.delete("/learn/{rule_id}", dependencies=[Depends(require_auth)])
