@@ -516,15 +516,28 @@
                     <GridSplitter.Template>
                         <ControlTemplate TargetType="GridSplitter">
                             <Grid Background="Transparent">
-                                <Border Width="3"
+                                <Border x:Name="GripHalo"
+                                        Width="16"
                                         HorizontalAlignment="Center"
-                                        CornerRadius="2"
-                                        Background="{DynamicResource BorderBrushStrong}"
-                                        Opacity="0.7"/>
+                                        Background="{DynamicResource SurfaceBg}"
+                                        BorderBrush="{DynamicResource GlassBorderBrush}"
+                                        BorderThickness="1,0"
+                                        CornerRadius="8"
+                                        Opacity="0.48"/>
+                                <StackPanel x:Name="GripLines"
+                                            Orientation="Horizontal"
+                                            HorizontalAlignment="Center"
+                                            VerticalAlignment="Stretch"
+                                            Opacity="0.9">
+                                    <Border Width="2" Margin="0,9" CornerRadius="1" Background="{DynamicResource AccentLineBrush}"/>
+                                    <Border Width="2" Margin="3,9" CornerRadius="1" Background="{DynamicResource AccentBrush}"/>
+                                    <Border Width="2" Margin="0,9" CornerRadius="1" Background="{DynamicResource AccentLineBrush}"/>
+                                </StackPanel>
                             </Grid>
                             <ControlTemplate.Triggers>
                                 <Trigger Property="IsMouseOver" Value="True">
-                                    <Setter Property="Opacity" Value="1"/>
+                                    <Setter TargetName="GripHalo" Property="Opacity" Value="0.78"/>
+                                    <Setter TargetName="GripLines" Property="Opacity" Value="1"/>
                                 </Trigger>
                             </ControlTemplate.Triggers>
                         </ControlTemplate>
