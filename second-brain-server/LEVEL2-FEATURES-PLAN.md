@@ -1,5 +1,17 @@
 # Second Brain — Level-2-Plan: 50 Feature-Vorschläge (Stand 2026-07-04)
 
+> **UMSETZUNGS-STATUS (Stand 2026-07-05, 14.55 Uhr):**
+>
+> | Gruppe | Punkte | Status |
+> |--------|--------|--------|
+> | A — Gedächtnis-Architektur | 1-10 | 🔴 offen |
+> | B — Nachtschicht-Bibliothekar | 11-18 | ✅ FERTIG (librarian 0.1.0-0.8.0, 2026-07-05) |
+> | C — Proaktivität / Unterbewusstsein | 19-26 | 🔴 offen |
+> | D — Mitlernen in Programmier-Sessions | 27-33 | ✅ FERTIG (agent 0.53.0 + SessionEnd-Hook + librarian 0.8.0, 2026-07-05) — Detail: D27 /session-log, D28 Kern-Block, D29 Entscheidungs-Regel, D30 OpenCode-AGENTS.md, D31 Projektstand-Recall, D32 Episoden-Auszug+Schema-Canary, D33 Reibungs-Detektor. Hinweis zu D32: bewusst als verdichtete Episode IM Session-Eintrag umgesetzt (Prompts-Auszug), nicht als separates Voll-Transkript-Archiv |
+> | E — Such-Intelligenz | 34-39 | ✅ FERTIG (brain-api 1.21.0 + agent 0.50.0-0.51.2, 2026-07-04) |
+> | F — Frontends | 40-46 | 🔴 offen |
+> | G — Sprache & Capture | 47-50 | 🔴 offen |
+
 > Ergebnis der Recherche vom 2026-07-04 (Engine A: Firecrawl+MiniMax, 7 Themen + 2 Retries,
 > ~44 Quellen). Recherche-Wissen persistiert in `best-practices/second-brain/memory-evolution-2026.md`.
 > Franks Vision: Das Second Brain soll wie ein **Unterbewusstsein** funktionieren — immer da,
