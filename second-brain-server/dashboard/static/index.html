@@ -1024,6 +1024,12 @@ button{font-family:inherit;cursor:pointer}
         .lib-cat-chip.on{border-color:var(--accent);color:var(--accent);background:rgba(255,166,87,.13);
           box-shadow:0 0 7px rgba(255,166,87,.28)}
         .lib-cat-chip:not(.on){text-decoration:line-through;opacity:.6}
+        /* Lernen-Knopf hinten an jedem Fund: grau -> Klick: rot (aktiv) -> gespeichert: gruen */
+        .lib-learn{margin-left:auto;padding:8px 15px;border-radius:11px;border:1px solid var(--border);
+          background:var(--surface-2);color:var(--text-faint);cursor:pointer;font-size:13px;font-weight:600}
+        .lib-learn:hover{border-color:var(--text-faint)}
+        .lib-learn.act{border-color:#F2698E;color:#F2698E;background:rgba(242,105,142,.12);box-shadow:0 0 8px rgba(242,105,142,.3)}
+        .lib-learn.done{border-color:var(--good);color:var(--good);background:rgba(90,208,160,.12)}
         .lib-run-line{display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-top:10px}
         .lib-spin{display:inline-block;width:14px;height:14px;border:2px solid var(--border);border-top-color:var(--accent);
           border-radius:50%;animation:libspin .8s linear infinite;vertical-align:-2px}
@@ -1093,6 +1099,12 @@ button{font-family:inherit;cursor:pointer}
           <div class="lib-run-line">
             <span class="set-desc" id="libSettingsState">Änderungen speichern sich automatisch.</span>
           </div>
+        </div>
+
+        <div class="card set-section">
+          <h3><span class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M22 10v6M2 10l10-5 10 5-10 5z"/><path d="M6 12v5c3 3 9 3 12 0v-5"/></svg></span>Gelernte Regeln</h3>
+          <p class="set-desc">Was du dem Bibliothekar über den <b>Lernen</b>-Knopf an einzelnen Funden beigebracht hast. Diese Regeln fließen ab dem nächsten Lauf verbindlich in alle seine Urteile ein. Einzeln an-/abschaltbar und löschbar.</p>
+          <div id="libLearnList"></div>
         </div>
 
         <div class="card set-section">
@@ -3780,7 +3792,64 @@ button{font-family:inherit;cursor:pointer}
     bEig.addEventListener("click",()=>setChoice("eigen"));
     ta.addEventListener("input",()=>{ if(libSel[it.id]) libSel[it.id].text=ta.value; });
     row.appendChild(bJa); row.appendChild(bNein); row.appendChild(bEig);
-    card.appendChild(row); card.appendChild(ta);
+
+    /* Lernen-Knopf (Frank-Wunsch 05.07.): hinten am Fund. Grau -> Klick: rot + Lern-Fenster.
+       Frank tippt die Lehre ein, der Bibliothekar fragt bei Unklarheit nach, nennt die finale
+       Regel-Fassung, Frank bestaetigt — ab dann fliesst die Regel in alle kuenftigen Urteile ein. */
+    const bLearn=document.createElement("button"); bLearn.className="lib-learn"; bLearn.textContent="Lernen";
+    bLearn.title="Dem Bibliothekar an diesem Fund etwas für die Zukunft beibringen";
+    row.appendChild(bLearn);
+    const lp=document.createElement("div"); lp.style.display="none"; lp.style.marginTop="10px";
+    const llog=document.createElement("div"); llog.className="lib-dialog";
+    const greet=document.createElement("div"); greet.className="lib-msg bib";
+    greet.textContent="Was soll ich mir für die Zukunft zu solchen Funden merken? Beschreib es frei — ich frage nach, wenn mir etwas unklar ist.";
+    llog.appendChild(greet);
+    const lta=document.createElement("textarea"); lta.className="lib-own"; lta.placeholder="Deine Lern-Nachricht …";
+    const lrow=document.createElement("div"); lrow.className="lib-run-line";
+    const lsend=document.createElement("button"); lsend.className="btn btn-sm btn-primary"; lsend.textContent="Speichern";
+    const lstate=document.createElement("span"); lstate.className="set-desc";
+    const lprop=document.createElement("div");
+    lprop.style.cssText="display:none;border:1px solid var(--accent);border-radius:12px;padding:12px;margin-top:10px";
+    const lpTitle=document.createElement("b"); lpTitle.textContent="Das würde ich mir merken:";
+    const lpText=document.createElement("p"); lpText.className="set-desc"; lpText.style.marginTop="4px";
+    const lpRow=document.createElement("div"); lpRow.className="lib-run-line";
+    const lpYes=document.createElement("button"); lpYes.className="btn btn-sm btn-primary"; lpYes.textContent="Ja, genau so merken";
+    lpRow.appendChild(lpYes); lprop.appendChild(lpTitle); lprop.appendChild(lpText); lprop.appendChild(lpRow);
+    lrow.appendChild(lsend); lrow.appendChild(lstate);
+    lp.appendChild(llog); lp.appendChild(lta); lp.appendChild(lrow); lp.appendChild(lprop);
+    let lmsgs=[], lregel="";
+    bLearn.addEventListener("click",()=>{
+      const opening = lp.style.display==="none";
+      lp.style.display = opening ? "block" : "none";
+      if(!bLearn.classList.contains("done")) bLearn.classList.toggle("act", opening);
+      if(opening && !bLearn.classList.contains("done")) lta.focus();
+    });
+    lsend.addEventListener("click", async()=>{
+      const t=(lta.value||"").trim(); if(!t) return;
+      lmsgs.push({von:"frank",text:t});
+      const d=document.createElement("div"); d.className="lib-msg frank"; d.textContent=t; llog.appendChild(d);
+      lta.value=""; lprop.style.display="none";
+      lstate.innerHTML='<span class="lib-spin"></span> Der Bibliothekar denkt nach …';
+      try{
+        const r=await jlib("learn/interview","POST",{messages:lmsgs, fund_titel:it.titel||"",
+          fund_beschreibung:it.beschreibung||"", task:it.taskname||it.task||""});
+        lmsgs.push({von:"bibliothekar",text:r.reply||"…"});
+        const b=document.createElement("div"); b.className="lib-msg bib"+(r.fertig?"":" frage"); b.textContent=r.reply||"…"; llog.appendChild(b);
+        lstate.textContent = r.fertig ? "" : "Bitte beantworte die Rückfrage und drücke wieder Speichern.";
+        if(r.fertig && r.regel){ lregel=r.regel; lpText.textContent=r.regel; lprop.style.display="block"; }
+      }catch(e){ lstate.textContent="Fehler: "+e.message; }
+    });
+    lpYes.addEventListener("click", async()=>{
+      try{
+        await jlib("learn","POST",{text:lregel, fund_titel:it.titel||"", task:it.taskname||it.task||""});
+        lstate.textContent="✓ Gelernt und gespeichert — gilt ab dem nächsten Urteil.";
+        lprop.style.display="none"; lta.style.display="none"; lsend.style.display="none";
+        bLearn.classList.remove("act"); bLearn.classList.add("done"); bLearn.textContent="Gelernt ✓";
+        loadLibSettings();   // Liste der gelernten Regeln aktualisieren
+      }catch(e){ lstate.textContent="Fehler beim Speichern: "+e.message; }
+    });
+
+    card.appendChild(row); card.appendChild(ta); card.appendChild(lp);
     paint();
     if(lastBib){ setChoice("eigen"); }
     return card;
@@ -3869,6 +3938,7 @@ button{font-family:inherit;cursor:pointer}
         row.appendChild(sw); tg.appendChild(row);
       });
       renderLibCustom(s.custom_tasks||[]);
+      renderLibLearned(r.lernregeln||[]);
       libSettingsReady=true;
     }catch(e){ document.getElementById("libSettingsState").textContent="Bibliothekar nicht erreichbar ("+e.message+")."; }
   }
@@ -3935,6 +4005,31 @@ button{font-family:inherit;cursor:pointer}
       del.addEventListener("click", async()=>{
         if(!confirm('Eigene Aufgabe „'+(t.name||"")+'“ wirklich löschen?')) return;
         try{ await jlib("custom-tasks/"+encodeURIComponent(t.id),"DELETE"); loadLibSettings(); }
+        catch(e){ alert("Fehler: "+e.message); }
+      });
+      row.appendChild(sw); row.appendChild(del); box.appendChild(row);
+    });
+  }
+
+  /* — Gelernte Regeln (Lernen-Knopf) verwalten — */
+  function renderLibLearned(list){
+    const box=document.getElementById("libLearnList"); if(!box) return;
+    box.innerHTML="";
+    if(!list.length){ box.innerHTML='<p class="set-desc">Noch nichts gelernt — nutze den Lernen-Knopf an einem Fund.</p>'; return; }
+    list.forEach(t=>{
+      const row=document.createElement("div"); row.className="lib-taskrow";
+      const meta=(t.fund_titel? "Gelernt am Fund: „"+t.fund_titel+"“" : "")+(t.created_at? " · "+String(t.created_at).slice(0,10):"");
+      row.innerHTML='<div class="nm"><b>'+escapeHtml((t.text||"").slice(0,160)+((t.text||"").length>160?"…":""))+'</b><span>'+escapeHtml(meta)+'</span></div>';
+      const sw=document.createElement("input"); sw.type="checkbox"; sw.className="lib-sw"; sw.checked=t.enabled!==false; sw.title="Regel an/aus";
+      sw.addEventListener("change", async()=>{
+        try{ await jlib("learn/"+encodeURIComponent(t.id),"PUT",{enabled:sw.checked}); }
+        catch(e){ sw.checked=!sw.checked; alert("Fehler: "+e.message); }
+      });
+      const del=document.createElement("button"); del.className="lib-trash"; del.title="Regel löschen";
+      del.innerHTML='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M3 6h18M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2m3 0v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6h14Z"/></svg>';
+      del.addEventListener("click", async()=>{
+        if(!confirm("Gelernte Regel wirklich löschen?")) return;
+        try{ await jlib("learn/"+encodeURIComponent(t.id),"DELETE"); loadLibSettings(); }
         catch(e){ alert("Fehler: "+e.message); }
       });
       row.appendChild(sw); row.appendChild(del); box.appendChild(row);

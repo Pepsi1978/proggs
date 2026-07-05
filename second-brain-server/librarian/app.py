@@ -42,7 +42,7 @@ from fastapi import Depends, FastAPI, Header, HTTPException, Request
 from fastapi.responses import JSONResponse
 from pydantic import BaseModel, Field
 
-VERSION = "0.4.0 (05.07.2026, 02.29 Uhr)"  # 0.4.0 (Frank-Wunsch 2026-07-05): Zusammenfuehrungen mit KATEGORIE-WAHL + EDITIERBAREM Merge-Text — (a) Dubletten-Vorschlaege tragen jetzt die UNION aller Kategorien beider Quell-Eintraege (aktion.kategorien; Multi-Category, ein Eintrag kann z.B. 3 Kategorien mitbringen); (b) beim Abarbeiten kann Frank pro Vorschlag den kompletten Merge-Text editieren und Kategorien abwaehlen — die Decision nimmt merge_text + kategorien als Overrides an (nur bei choice=ja, wirkt vor dem Ausfuehren); (c) _execute_action merge speichert mit categories-Liste (brain /store Multi-Category, erste = primaer) und nennt die Kategorien im Ergebnis. Abwaertskompatibel: alte offene Items ohne kategorien-Feld laufen unveraendert. Alt: 0.3.0 (05.07.2026, 02.16 Uhr)  # 0.3.0 (Frank-Wunsch 2026-07-05): Nacht-BILANZ — der Tages-Report enthaelt jetzt fuer JEDE Aufgabe eine ehrliche Ergebnis-Zeile, AUCH wenn nichts gefunden wurde ('Dubletten-Vorschläge: keine Dubletten gefunden', 'Nachzügler: nichts zu tun — alles verknüpft', 'X: ausgeschaltet' bei deaktivierter Aufgabe, eigene Aufgaben inklusive). Steht in report.bilanz + last_run.bilanz -> Morgen-Report-Karte und Tages-Ansicht zeigen die komplette Bilanz. Alt: 0.2.0 (05.07.2026, 01.45 Uhr)  # 0.2.0 (Frank-Wuensche 2026-07-05): (a) GPT/Codex-Modelle nutzbar — gpt-* laeuft ueber den NEUEN Agent-Durchgriff POST /llm (agent 0.52.0, bestehende ChatGPT-OAuth-Anmeldung inkl. Token-Refresh, keine Auth-Duplikation); Modell-Liste in /settings kommt jetzt aus agent /config (alle verbundenen Provider). (b) THINKING einstellbar (none/low/medium/high/xhigh, Default high) — wirkt bei GPT als reasoning.effort und bei Gemini als thinking_budget. (c) 'OHNE BEGRENZUNG durcharbeiten'-Schalter (Default AN): hebt Vorschlags-Limit, Scan-Limits und LLM-Budget auf — der Bibliothekar arbeitet bis er durch ist; es bleibt NUR die stille Notbremse gegen Endlosschleifen (LIB_LLM_BACKSTOP, Default 5000 Calls/Nacht, ai-agent-Almanach 2.1). Alt: 0.1.0: Erstausgabe (Bereiche 11-18 + Nachzuegler + eigene Aufgaben)
+VERSION = "0.5.0 (05.07.2026, 02.40 Uhr)"  # 0.5.0 (Frank-Wunsch 2026-07-05): LERNEN-KNOPF an jedem Fund — Frank bringt dem Bibliothekar an einem konkreten Fall bei, wie er kuenftig mit solchen Faellen umgehen soll (Beispiel: 'Kurzcheck + Vollversion NIEMALS zusammenfuehren'). Ablauf wie beim Aufgaben-Interview: POST /learn/interview versteht die Lehre, stellt bei Unklarheit GENAU EINE Rueckfrage, nennt die finale Regel-Fassung; Frank bestaetigt -> POST /learn speichert sie in lernregeln.json. Die gelernten Regeln fliessen als Pflicht-Block (_with_rules) in ALLE 10 Nacht-Urteils-Prompts ein (Dubletten/Widersprueche, Veraltet, Gaertner, Luecken, Entwurf, Verdichtung, eigene Aufgaben, Entity-Extraktion, Entscheidungs-Umsetzung). Verwaltung: in /settings als 'lernregeln' + PUT/DELETE /learn/{id} (an/aus + Papierkorb). Alt: 0.4.0 (05.07.2026, 02.29 Uhr)  # 0.4.0 (Frank-Wunsch 2026-07-05): Zusammenfuehrungen mit KATEGORIE-WAHL + EDITIERBAREM Merge-Text — (a) Dubletten-Vorschlaege tragen jetzt die UNION aller Kategorien beider Quell-Eintraege (aktion.kategorien; Multi-Category, ein Eintrag kann z.B. 3 Kategorien mitbringen); (b) beim Abarbeiten kann Frank pro Vorschlag den kompletten Merge-Text editieren und Kategorien abwaehlen — die Decision nimmt merge_text + kategorien als Overrides an (nur bei choice=ja, wirkt vor dem Ausfuehren); (c) _execute_action merge speichert mit categories-Liste (brain /store Multi-Category, erste = primaer) und nennt die Kategorien im Ergebnis. Abwaertskompatibel: alte offene Items ohne kategorien-Feld laufen unveraendert. Alt: 0.3.0 (05.07.2026, 02.16 Uhr)  # 0.3.0 (Frank-Wunsch 2026-07-05): Nacht-BILANZ — der Tages-Report enthaelt jetzt fuer JEDE Aufgabe eine ehrliche Ergebnis-Zeile, AUCH wenn nichts gefunden wurde ('Dubletten-Vorschläge: keine Dubletten gefunden', 'Nachzügler: nichts zu tun — alles verknüpft', 'X: ausgeschaltet' bei deaktivierter Aufgabe, eigene Aufgaben inklusive). Steht in report.bilanz + last_run.bilanz -> Morgen-Report-Karte und Tages-Ansicht zeigen die komplette Bilanz. Alt: 0.2.0 (05.07.2026, 01.45 Uhr)  # 0.2.0 (Frank-Wuensche 2026-07-05): (a) GPT/Codex-Modelle nutzbar — gpt-* laeuft ueber den NEUEN Agent-Durchgriff POST /llm (agent 0.52.0, bestehende ChatGPT-OAuth-Anmeldung inkl. Token-Refresh, keine Auth-Duplikation); Modell-Liste in /settings kommt jetzt aus agent /config (alle verbundenen Provider). (b) THINKING einstellbar (none/low/medium/high/xhigh, Default high) — wirkt bei GPT als reasoning.effort und bei Gemini als thinking_budget. (c) 'OHNE BEGRENZUNG durcharbeiten'-Schalter (Default AN): hebt Vorschlags-Limit, Scan-Limits und LLM-Budget auf — der Bibliothekar arbeitet bis er durch ist; es bleibt NUR die stille Notbremse gegen Endlosschleifen (LIB_LLM_BACKSTOP, Default 5000 Calls/Nacht, ai-agent-Almanach 2.1). Alt: 0.1.0: Erstausgabe (Bereiche 11-18 + Nachzuegler + eigene Aufgaben)
 
 # ---------------------------------------------------------------------------
 # Konfiguration (Secrets nur aus der Umgebung, nie im Code)
@@ -63,6 +63,7 @@ DATA_DIR = Path(os.getenv("LIB_DATA_DIR", "/app/data"))
 REPORTS_DIR = DATA_DIR / "reports"
 CONFIG_FILE = DATA_DIR / "config.json"
 STATE_FILE = DATA_DIR / "state.json"
+LEARN_FILE = DATA_DIR / "lernregeln.json"   # Franks gelernte Regeln (Lernen-Knopf an jedem Fund)
 LOG_PATH = os.getenv("LIB_LOG_PATH", "/app/logs/librarian.jsonl")
 LOG_LEVEL = os.getenv("LIB_LOG_LEVEL", "INFO").upper()
 # Status-Datei des Host-Backups (read-only gemountete Z-Wurzel). Fehlt sie -> Zeitanker reicht.
@@ -254,6 +255,36 @@ def load_state() -> dict:
     if isinstance(st, dict):
         merged.update(st)
     return merged
+
+
+# ---------------------------------------------------------------------------
+# Gelernte Regeln (Lernen-Knopf, Frank-Wunsch 2026-07-05): Frank bringt dem Bibliothekar an
+# einem konkreten Fund bei, wie er kuenftig mit solchen Faellen umgehen soll. Die Regeln
+# fliessen als Pflicht-Block in ALLE Nacht-Urteils-Prompts ein (Dubletten, Veraltet, Gaertner,
+# Luecken, Verdichtung, eigene Aufgaben, Entscheidungs-Umsetzung).
+# ---------------------------------------------------------------------------
+def load_learned() -> list[dict]:
+    data = _read_json(LEARN_FILE, [])
+    return data if isinstance(data, list) else []
+
+
+def save_learned(rules: list[dict]) -> None:
+    with _file_lock:
+        _write_json(LEARN_FILE, rules)
+
+
+def _learned_block() -> str:
+    rules = [r for r in load_learned() if r.get("enabled", True) and (r.get("text") or "").strip()]
+    if not rules:
+        return ""
+    lines = "\n".join(f"- {r['text'].strip()}" for r in rules)
+    return ("\n\nGELERNTE REGELN VON FRANK (verbindlich — aus frueheren Funden gelernt, "
+            "IMMER beachten und im Zweifel VOR allgemeinen Erwaegungen anwenden):\n" + lines)[:6000]
+
+
+def _with_rules(system: str) -> str:
+    """Haengt Franks gelernte Regeln an einen Nacht-Urteils-Prompt an (leer, wenn keine da sind)."""
+    return system + _learned_block()
 
 
 def save_state(st: dict) -> None:
@@ -622,6 +653,19 @@ Antworte IMMER NUR mit diesem JSON:
  "task":{"name":"kurzer Name","definition":"praezise Arbeitsanweisung fuer die Nacht (2-6 Saetze)"}}
 "task" nur fuellen, wenn fertig=true (sonst null)."""
 
+LEARN_INTERVIEW_SYSTEM = """Du bist der Nachtschicht-Bibliothekar von Franks zweitem Gehirn. Frank
+bringt dir gerade an einem KONKRETEN Fund bei, wie du kuenftig mit solchen Faellen umgehen sollst
+(Lernen-Knopf). Du bekommst den Fund und Franks Lern-Nachricht (ggf. mit bisherigem Dialog).
+Dein Auftrag:
+- Verstehe die Lehre dahinter und formuliere daraus EINE praezise, allgemeine Regel fuer deine
+  kuenftigen Nacht-Urteile (nicht nur fuer diesen einen Fund, sondern fuer die ganze Fall-Klasse).
+- Ist dir etwas WIRKLICH unklar, stelle GENAU EINE kurze Rueckfrage (fertig=false).
+- Ist alles klar: fertig=true, sage Frank in 'reply' kurz in leichtem Deutsch, was du dir merken
+  wuerdest, und lege die finale Regel in 'regel' ab (2-4 Saetze, direktiv formuliert, so dass ein
+  kuenftiges Urteil sie direkt anwenden kann). Frank bestaetigt danach per Klick.
+Antworte IMMER NUR mit diesem JSON:
+{"reply":"deine Nachricht an Frank","fertig":true/false,"regel":"nur wenn fertig=true, sonst leer"}"""
+
 DECIDE_SYSTEM = f"""Du bist der Nachtschicht-Bibliothekar und setzt Franks Entscheidung zu EINEM
 Vorschlag um. Du bekommst den Fund (Beschreibung, Empfehlung, beteiligte Eintraege mit Auszuegen)
 und Franks eigene Anweisung dazu (ggf. mit bisherigem Rueckfrage-Dialog).
@@ -811,7 +855,7 @@ def _task_nachzuegler(cfg: dict, st: dict, budget: NightBudget, entries: dict, r
         e = entries[did]
         try:
             content = f"Titel: {e['title']}\n\n{e['text']}"[:2500]
-            raw = _extract_json(llm(ENTITY_EXTRACT_SYSTEM, content, model=cfg["model"], max_tokens=512, temperature=0.1))
+            raw = _extract_json(llm(_with_rules(ENTITY_EXTRACT_SYSTEM), content, model=cfg["model"], max_tokens=512, temperature=0.1))
             ents = json.loads(raw).get("entitaeten") or []
             for x in ents[:6]:
                 name = (x.get("name") or "").strip() if isinstance(x, dict) else ""
@@ -865,7 +909,7 @@ def _task_dubletten_widersprueche(cfg: dict, st: dict, budget: NightBudget, entr
                         f"angelegt {e.get('created_at') or '?'}):\n{_excerpt(e['text'], 2400)}\n\n"
                         f"EINTRAG B (doc_id={other}, Titel: {oe['title']}, Kategorie: {oe['category']}, "
                         f"angelegt {oe.get('created_at') or '?'}):\n{_excerpt(oe['text'], 2400)}")
-                verdict = json.loads(_extract_json(llm(PAIR_JUDGE_SYSTEM, user, model=cfg["model"], max_tokens=4096)))
+                verdict = json.loads(_extract_json(llm(_with_rules(PAIR_JUDGE_SYSTEM), user, model=cfg["model"], max_tokens=4096)))
             except Exception:  # noqa: BLE001
                 _log(logging.WARNING, "Paar-Urteil fehlgeschlagen", pair=pair, exc_info=True)
                 continue
@@ -959,7 +1003,7 @@ def _task_veraltet(cfg: dict, st: dict, budget: NightBudget, entries: dict, repo
         try:
             user = (f"Eintrag (Titel: {e['title']}, Kategorie: {e['category']}, zuletzt geändert vor "
                     f"{age_days(e)} Tagen, heute ist {now.strftime('%d.%m.%Y')}):\n{_excerpt(e['text'], 1500)}")
-            verdict = json.loads(_extract_json(llm(STALE_JUDGE_SYSTEM, user, model=cfg["model"], max_tokens=512)))
+            verdict = json.loads(_extract_json(llm(_with_rules(STALE_JUDGE_SYSTEM), user, model=cfg["model"], max_tokens=512)))
         except Exception:  # noqa: BLE001
             _log(logging.WARNING, "Veraltet-Urteil fehlgeschlagen", doc_id=did, exc_info=True)
             continue
@@ -998,7 +1042,7 @@ def _task_kategorien(cfg: dict, st: dict, budget: NightBudget, entries: dict, re
         titles = "\n".join(f"- {did}: {e['title'] or '(ohne Titel)'}" for did, e in members[:80])
         try:
             user = f"Kategorie: {cat} ({n} Einträge)\nEinträge:\n{titles}"
-            verdict = json.loads(_extract_json(llm(GARDENER_SPLIT_SYSTEM, user, model=cfg["model"], max_tokens=2048)))
+            verdict = json.loads(_extract_json(llm(_with_rules(GARDENER_SPLIT_SYSTEM), user, model=cfg["model"], max_tokens=2048)))
         except Exception:  # noqa: BLE001
             _log(logging.WARNING, "Gaertner-Urteil fehlgeschlagen", cat=cat, exc_info=True)
             continue
@@ -1057,7 +1101,7 @@ def _task_luecken(cfg: dict, st: dict, budget: NightBudget, entries: dict, repor
         return
     corpus = "\n\n---\n\n".join(_excerpt(e["text"], 1500) for _, e in recent)[:35000]
     try:
-        verdict = json.loads(_extract_json(llm(GAP_SYSTEM, f"Gespräche der letzten Zeit:\n\n{corpus}", model=cfg["model"], max_tokens=1024)))
+        verdict = json.loads(_extract_json(llm(_with_rules(GAP_SYSTEM), f"Gespräche der letzten Zeit:\n\n{corpus}", model=cfg["model"], max_tokens=1024)))
     except Exception:  # noqa: BLE001
         _log(logging.WARNING, "Luecken-Analyse fehlgeschlagen", exc_info=True)
         report["zahlen"]["luecken"] = 0
@@ -1083,7 +1127,7 @@ def _task_luecken(cfg: dict, st: dict, budget: NightBudget, entries: dict, repor
             break
         try:
             frag = "\n\n".join(f"[{h.get('title') or '?'}] {_excerpt(h.get('text') or h.get('match') or '', 500)}" for h in hits) or "(keine Fundstücke)"
-            draft = json.loads(_extract_json(llm(GAP_DRAFT_SYSTEM, f"Thema: {thema}\n\nFundstücke:\n{frag}", model=cfg["model"], max_tokens=1500)))
+            draft = json.loads(_extract_json(llm(_with_rules(GAP_DRAFT_SYSTEM), f"Thema: {thema}\n\nFundstücke:\n{frag}", model=cfg["model"], max_tokens=1500)))
         except Exception:  # noqa: BLE001
             draft = {}
         titel = (draft.get("titel") or thema).strip()[:200]
@@ -1131,7 +1175,7 @@ def _task_verdichtung(cfg: dict, st: dict, budget: NightBudget, entries: dict, r
         convs = sorted(by_month[month], key=lambda e: e.get("created_at") or "")
         corpus = "\n\n---\n\n".join(_excerpt(e["text"], 2000) for e in convs)[:60000]
         try:
-            draft = json.loads(_extract_json(llm(CONDENSE_SYSTEM, f"Monat: {month} — {len(convs)} Gespräche:\n\n{corpus}",
+            draft = json.loads(_extract_json(llm(_with_rules(CONDENSE_SYSTEM), f"Monat: {month} — {len(convs)} Gespräche:\n\n{corpus}",
                                                  model=cfg["model"], max_tokens=3000)))
         except Exception:  # noqa: BLE001
             _log(logging.WARNING, "Verdichtung fehlgeschlagen", month=month, exc_info=True)
@@ -1164,7 +1208,7 @@ def _task_custom(cfg: dict, st: dict, budget: NightBudget, entries: dict, report
                   for did, e in entries.items() if _is_worklike(e)]
     meta_blob = "\n".join(meta_lines[:800])
     try:
-        sel = json.loads(_extract_json(llm(CUSTOM_SELECT_SYSTEM,
+        sel = json.loads(_extract_json(llm(_with_rules(CUSTOM_SELECT_SYSTEM),
                                            f"AUFGABE: {definition}\n\nEINTRAGS-LISTE (doc_id | Titel | Kategorie | Datum):\n{meta_blob}",
                                            model=cfg["model"], max_tokens=1024)))
         picked = [d for d in (sel.get("doc_ids") or []) if d in entries][:12]
@@ -1177,7 +1221,7 @@ def _task_custom(cfg: dict, st: dict, budget: NightBudget, entries: dict, report
         report["fehler"].append(f"Eigene Aufgabe „{tname}“: LLM-Budget erschöpft.")
         return
     try:
-        result = json.loads(_extract_json(llm(CUSTOM_RUN_SYSTEM,
+        result = json.loads(_extract_json(llm(_with_rules(CUSTOM_RUN_SYSTEM),
                                               f"AUFGABE: {definition}\n\nEINTRAGS-VOLLTEXTE:\n{texts}",
                                               model=cfg["model"], max_tokens=4096)))
     except Exception:  # noqa: BLE001
@@ -1523,7 +1567,7 @@ def _run_process(day: str, decisions: list[dict]) -> None:
                     user = (f"FUND: {item['titel']}\nBeschreibung: {item['beschreibung']}\n"
                             f"Empfehlung war: {item['empfehlung']}\nBeteiligte Einträge:\n{ktx or '(keine)'}\n\n"
                             f"DIALOG:\n{dialog}")
-                    verdict = json.loads(_extract_json(llm(DECIDE_SYSTEM, user, model=cfg["model"], max_tokens=4096)))
+                    verdict = json.loads(_extract_json(llm(_with_rules(DECIDE_SYSTEM), user, model=cfg["model"], max_tokens=4096)))
                     frage = (verdict.get("rueckfrage") or "").strip()
                     if frage:
                         item["dialog"].append({"von": "bibliothekar", "text": frage})
@@ -1686,6 +1730,7 @@ def get_settings() -> dict:
     cfg = load_config()
     return {"ok": True, "settings": cfg, "models": _all_models(),
             "reasoning_available": REASONING_AVAILABLE,
+            "lernregeln": load_learned(),
             "standard_tasks": [{"key": k, **v} for k, v in STANDARD_TASKS.items()]}
 
 
@@ -1789,6 +1834,77 @@ def custom_delete(task_id: str) -> dict:
         raise HTTPException(status_code=404, detail="Aufgabe nicht gefunden")
     save_config(cfg)
     checkpoint("custom_delete", "Eigene Aufgabe geloescht", ok=True, task_id=task_id)
+    return {"ok": True}
+
+
+# --- Lernen-Knopf: Frank lehrt den Bibliothekar an einem konkreten Fund ----------------------
+class LearnInterviewReq(BaseModel):
+    messages: list[InterviewMsg] = Field(..., min_length=1, max_length=30)
+    fund_titel: str = Field(default="", max_length=300)
+    fund_beschreibung: str = Field(default="", max_length=3000)
+    task: str = Field(default="", max_length=120)
+
+
+@app.post("/learn/interview", dependencies=[Depends(require_auth)])
+def learn_interview(req: LearnInterviewReq) -> dict:
+    """Lern-Dialog zu einem Fund: versteht Franks Lehre, fragt bei Unklarheit GENAU EINMAL nach,
+    liefert am Ende die finale Regel-Fassung zur Bestaetigung. Sync def -> Threadpool."""
+    cfg = load_config()
+    dialog = "\n".join(f"{'FRANK' if m.von == 'frank' else 'BIBLIOTHEKAR'}: {m.text}" for m in req.messages)
+    user = (f"FUND (Aufgabe: {req.task or '?'}): {req.fund_titel or '(ohne Titel)'}\n"
+            f"Beschreibung des Funds: {req.fund_beschreibung or '(keine)'}\n\nLERN-DIALOG:\n{dialog}")
+    try:
+        raw = json.loads(_extract_json(llm(LEARN_INTERVIEW_SYSTEM, user, model=cfg["model"],
+                                           max_tokens=1536, temperature=0.3)))
+    except Exception as e:  # noqa: BLE001
+        _log(logging.ERROR, "Lern-Interview fehlgeschlagen", exc_info=True)
+        raise HTTPException(status_code=502, detail=f"Lern-Dialog fehlgeschlagen: {type(e).__name__}")
+    return {"ok": True, "reply": (raw.get("reply") or "").strip(),
+            "fertig": bool(raw.get("fertig")), "regel": (raw.get("regel") or "").strip()}
+
+
+class LearnSaveReq(BaseModel):
+    text: str = Field(..., min_length=5, max_length=4000)
+    fund_titel: str = Field(default="", max_length=300)
+    task: str = Field(default="", max_length=120)
+
+
+@app.post("/learn", dependencies=[Depends(require_auth)])
+def learn_save(req: LearnSaveReq) -> dict:
+    rules = load_learned()
+    rule = {"id": uuid.uuid4().hex[:10], "text": req.text.strip(), "enabled": True,
+            "fund_titel": req.fund_titel.strip(), "task": req.task.strip(),
+            "created_at": datetime.now(TZ).isoformat(timespec="seconds")}
+    rules.append(rule)
+    save_learned(rules)
+    checkpoint("learn_save", "Gelernte Regel gespeichert — gilt ab dem naechsten Urteil",
+               ok=True, rule_id=rule["id"], chars=len(rule["text"]))
+    return {"ok": True, "regel": rule}
+
+
+class LearnToggleReq(BaseModel):
+    enabled: bool
+
+
+@app.put("/learn/{rule_id}", dependencies=[Depends(require_auth)])
+def learn_toggle(rule_id: str, req: LearnToggleReq) -> dict:
+    rules = load_learned()
+    for r in rules:
+        if r.get("id") == rule_id:
+            r["enabled"] = bool(req.enabled)
+            save_learned(rules)
+            return {"ok": True, "regel": r}
+    raise HTTPException(status_code=404, detail="Regel nicht gefunden")
+
+
+@app.delete("/learn/{rule_id}", dependencies=[Depends(require_auth)])
+def learn_delete(rule_id: str) -> dict:
+    rules = load_learned()
+    remaining = [r for r in rules if r.get("id") != rule_id]
+    if len(remaining) == len(rules):
+        raise HTTPException(status_code=404, detail="Regel nicht gefunden")
+    save_learned(remaining)
+    checkpoint("learn_delete", "Gelernte Regel geloescht", ok=True, rule_id=rule_id)
     return {"ok": True}
 
 
