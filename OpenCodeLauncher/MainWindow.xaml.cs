@@ -186,7 +186,9 @@ public partial class MainWindow : Window
 
     private void ProviderColumnResizeStarted(object sender, DragStartedEventArgs e)
     {
-        var header = FindAncestor<System.Windows.Controls.Primitives.DataGridColumnHeader>(e.OriginalSource as DependencyObject);
+        if (e.OriginalSource is not Thumb { Name: "ProviderColumnResizeThumb" } thumb) return;
+
+        var header = FindAncestor<System.Windows.Controls.Primitives.DataGridColumnHeader>(thumb);
         if (header?.Column == null) return;
 
         var index = ProviderGrid.Columns.IndexOf(header.Column);
@@ -206,6 +208,7 @@ public partial class MainWindow : Window
 
     private void ProviderColumnResizeDelta(object sender, DragDeltaEventArgs e)
     {
+        if (e.OriginalSource is not Thumb { Name: "ProviderColumnResizeThumb" }) return;
         if (_providerResizeStartWidths == null || _providerResizeColumnIndex < 0 || _providerResizeColumnIndex >= ProviderGrid.Columns.Count - 1) return;
 
         var left = ProviderGrid.Columns[_providerResizeColumnIndex];
@@ -229,6 +232,7 @@ public partial class MainWindow : Window
 
     private void ProviderColumnResizeCompleted(object sender, DragCompletedEventArgs e)
     {
+        if (e.OriginalSource is not Thumb { Name: "ProviderColumnResizeThumb" }) return;
         _providerResizeColumnIndex = -1;
         _providerResizeStartWidths = null;
         _providerResizeTotalDelta = 0;

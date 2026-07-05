@@ -206,7 +206,7 @@
         <Style x:Key="StatusPill" TargetType="Border">
             <Setter Property="CornerRadius" Value="8"/>
             <Setter Property="Padding" Value="9,4"/>
-            <Setter Property="HorizontalAlignment" Value="Left"/>
+            <Setter Property="HorizontalAlignment" Value="Center"/>
             <Setter Property="Background" Value="{DynamicResource StatusOkBg}"/>
             <Setter Property="BorderBrush" Value="{DynamicResource StatusOkFg}"/>
             <Setter Property="BorderThickness" Value="1"/>
@@ -262,7 +262,7 @@
             <Setter Property="HeadersVisibility" Value="Column"/>
             <Setter Property="GridLinesVisibility" Value="All"/>
             <Setter Property="CanUserSortColumns" Value="True"/>
-            <Setter Property="CanUserResizeColumns" Value="True"/>
+            <Setter Property="CanUserResizeColumns" Value="False"/>
         </Style>
         <Style TargetType="DataGridColumnHeader">
             <Setter Property="Background" Value="{DynamicResource TableHeaderBg}"/>
@@ -275,6 +275,26 @@
             <Setter Property="BorderThickness" Value="0,0,1,1"/>
             <Setter Property="SeparatorBrush" Value="{DynamicResource AccentLineBrush}"/>
             <Setter Property="SeparatorVisibility" Value="Visible"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="DataGridColumnHeader">
+                        <Border Background="{TemplateBinding Background}"
+                                BorderBrush="{TemplateBinding BorderBrush}"
+                                BorderThickness="{TemplateBinding BorderThickness}">
+                            <Grid>
+                                <ContentPresenter HorizontalAlignment="{TemplateBinding HorizontalContentAlignment}"
+                                                  VerticalAlignment="Center"
+                                                  Margin="{TemplateBinding Padding}"/>
+                                <Thumb x:Name="ProviderColumnResizeThumb"
+                                       Width="8"
+                                       HorizontalAlignment="Right"
+                                       Cursor="SizeWE"
+                                       Background="Transparent"/>
+                            </Grid>
+                        </Border>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
         </Style>
         <Style TargetType="DataGridCell">
             <Setter Property="Padding" Value="12,0"/>
@@ -555,6 +575,7 @@
                                   ItemsSource="{Binding Providers}" SelectedItem="{Binding SelectedProvider}"
                                   AutoGenerateColumns="False" IsReadOnly="True" SelectionMode="Single"
                                   HeadersVisibility="Column" CanUserSortColumns="True"
+                                  CanUserResizeColumns="False"
                                   ColumnWidth="Auto" RowHeaderWidth="0"
                                   ScrollViewer.VerticalScrollBarVisibility="Hidden"
                                   ScrollViewer.HorizontalScrollBarVisibility="Disabled">
