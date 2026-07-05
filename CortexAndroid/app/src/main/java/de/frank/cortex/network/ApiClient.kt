@@ -706,9 +706,14 @@ object ApiClient {
         return result
     }
 
-    suspend fun geminiTitle(text: String): String {
+    suspend fun geminiTitle(text: String, attempt: Int = 1): String {
         val key = SettingsStore.geminiApiKey
         if (key.isBlank()) throw IllegalStateException("Gemini-Schlüssel fehlt")
+        val variantInstruction = if (attempt > 1) {
+            "\nDies ist Titelversuch $attempt. Erzeuge bewusst eine andere passende Titelvariante als zuvor, ohne Fakten zu erfinden."
+        } else {
+            ""
+        }
         val prompt = """
             Erzeuge aus dem folgenden deutschen Eintrag einen kurzen, präzisen Titel.
             Der Titel soll den Inhalt oder die wichtigste Intention zusammenfassen.
@@ -717,6 +722,7 @@ object ApiClient {
             Keine Details erfinden.
             Keine Anführungszeichen, kein Punkt am Ende, keine Erklärung, kein Markdown.
             Gib ausschließlich den Titel zurück.
+            $variantInstruction
         """.trimIndent()
         val body = """
         {
@@ -726,7 +732,7 @@ object ApiClient {
             ]}],
             "generationConfig": {
                 "thinkingConfig": {"thinkingBudget": 64},
-                "temperature": 0.15,
+                "temperature": ${if (attempt > 1) "0.55" else "0.15"},
                 "maxOutputTokens": 64
             }
         }
@@ -759,7 +765,7 @@ object ApiClient {
             ?.trim('"', '„', '“', '.', ' ')
             ?: throw Exception("Kein Titel in Gemini-Antwort")
 
-        CortexLog.info("Gemini", "title", "Titel erzeugt", mapOf("input_len" to text.length, "title" to result))
+        CortexLog.info("Gemini", "title", "Titel erzeugt", mapOf("input_len" to text.length, "attempt" to attempt, "title" to result))
         return result
     }
 }

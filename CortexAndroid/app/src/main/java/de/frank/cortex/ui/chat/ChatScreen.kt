@@ -355,25 +355,25 @@ private fun SessionDrawer(
             .width(322.dp)
             .border(1.dp, Iris.copy(alpha = 0.35f), drawerShape),
         drawerShape = drawerShape,
-        drawerContainerColor = MaterialTheme.colorScheme.surfaceVariant,
+        drawerContainerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.90f),
         drawerContentColor = MaterialTheme.colorScheme.onSurface
     ) {
         Column(
             modifier = Modifier
                 .fillMaxSize()
-                .padding(horizontal = 16.dp, vertical = 10.dp),
-            verticalArrangement = Arrangement.spacedBy(8.dp)
+                .padding(horizontal = 16.dp, vertical = 0.dp),
+            verticalArrangement = Arrangement.spacedBy(1.dp)
         ) {
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .height(34.dp)
+                    .height(12.dp)
             ) {
                 IconButton(
                     onClick = onClose,
                     modifier = Modifier
                         .align(Alignment.TopEnd)
-                        .offset(y = (-7).dp)
+                        .offset(y = (-36).dp)
                 ) {
                     Icon(Icons.Default.Close, contentDescription = "Sessions schließen")
                 }
@@ -402,7 +402,7 @@ private fun SessionDrawer(
                 LazyColumn(
                     modifier = Modifier.fillMaxSize(),
                     verticalArrangement = Arrangement.spacedBy(10.dp),
-                    contentPadding = PaddingValues(bottom = 12.dp)
+                    contentPadding = PaddingValues(top = 2.dp, bottom = 12.dp)
                 ) {
                     items(sessions, key = { it.id }) { session ->
                         val active = session.id == currentSessionId

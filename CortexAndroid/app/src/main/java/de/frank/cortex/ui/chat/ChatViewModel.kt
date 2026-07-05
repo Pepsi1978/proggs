@@ -121,6 +121,8 @@ class ChatViewModel : ViewModel() {
     private val edgeSynth = de.frank.cortex.audio.EdgeTtsSynthesizer()
     private var speakJob: Job? = null
     private var speechGeneration = 0
+    private var lastTitleSource: String? = null
+    private var titleAttempt = 0
 
     // Geteilter Rate-Limit-Zaun: sobald EIN Chunk ein 429 von Gemini-TTS bekommt, warten ALLE
     // gerade laufenden/naechsten Chunk-Synthesen bis zu diesem Zeitpunkt - statt weiter parallel
@@ -976,10 +978,13 @@ class ChatViewModel : ViewModel() {
             _uiState.update { it.copy(error = "Kein Text für einen Titel") }
             return
         }
+        titleAttempt = if (lastTitleSource == source) titleAttempt + 1 else 1
+        lastTitleSource = source
+        val attempt = titleAttempt
         viewModelScope.launch {
             _uiState.update { it.copy(isGeneratingTitle = true, error = null) }
             try {
-                val title = withContext(Dispatchers.IO) { ApiClient.geminiTitle(source) }
+                val title = withContext(Dispatchers.IO) { ApiClient.geminiTitle(source, attempt) }
                 _uiState.update { it.copy(titleOverride = title.take(200), isGeneratingTitle = false) }
             } catch (e: CancellationException) {
                 throw e

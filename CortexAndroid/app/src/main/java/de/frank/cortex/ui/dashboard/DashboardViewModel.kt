@@ -10,6 +10,7 @@ import de.frank.cortex.vpn.WireGuardManager
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.async
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
 
@@ -49,15 +50,20 @@ class DashboardViewModel : ViewModel() {
     // konkurrierten mit der Chat-Anfrage um Bandbreite. Der Screen meldet seine Sichtbarkeit via
     // setScreenActive (Vorfall 2026-07-01: Performance-Debug Internet-Antwort).
     @Volatile private var screenActive = false
+    private var enterDashboardRefreshJob: Job? = null
 
     fun setScreenActive(active: Boolean) {
         val becameActive = active && !screenActive
         screenActive = active
-        // Beim Sichtbarwerden SOFORT laden statt bis zu 20 s auf den naechsten Poll-Tick zu warten
-        // (Frank-Bug 2026-07-02: Dashboard zeigte ~1 Minute lang "0 Gesamteintraege"). Ist das VPN
-        // noch nicht verbunden, uebernimmt der bestehende VPN-Connect-Trigger im init-Block.
+        if (!active) enterDashboardRefreshJob?.cancel()
+        // Beim Wechsel aufs Dashboard zwei Sekunden warten, damit der sichtbare CPU-Wert nicht den
+        // kurzen Abruf-Peak selbst zeigt. Der normale 5s-Vitals-Poll bleibt danach unveraendert aktiv.
         if (becameActive && WireGuardManager.state.value == TunnelState.CONNECTED) {
-            refreshAll()
+            enterDashboardRefreshJob?.cancel()
+            enterDashboardRefreshJob = viewModelScope.launch {
+                delay(2_000)
+                if (screenActive && WireGuardManager.state.value == TunnelState.CONNECTED) refreshAll()
+            }
         }
     }
 
