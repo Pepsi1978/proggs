@@ -355,7 +355,7 @@ private fun SessionDrawer(
             .width(322.dp)
             .border(1.dp, Iris.copy(alpha = 0.35f), drawerShape),
         drawerShape = drawerShape,
-        drawerContainerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.90f),
+        drawerContainerColor = MaterialTheme.colorScheme.surfaceVariant,
         drawerContentColor = MaterialTheme.colorScheme.onSurface
     ) {
         Column(
@@ -367,22 +367,24 @@ private fun SessionDrawer(
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .height(12.dp)
+                    .height(28.dp)
             ) {
                 IconButton(
                     onClick = onClose,
                     modifier = Modifier
                         .align(Alignment.TopEnd)
-                        .offset(y = (-36).dp)
+                        .offset(y = (-10).dp)
                 ) {
-                    Icon(Icons.Default.Close, contentDescription = "Sessions schließen")
+                    Icon(
+                        Icons.Default.Close,
+                        contentDescription = "Sessions schließen",
+                        modifier = Modifier.size(30.dp)
+                    )
                 }
             }
 
             // Der "Neuer Chat"-Button lebt in der Top-Bar rechts neben dem Sessions-Knopf —
             // hier war er doppelt und wurde entfernt (Frank-Wunsch 2026-07-02).
-            HorizontalDivider(color = Iris.copy(alpha = 0.22f))
-
             if (sessions.isEmpty()) {
                 Surface(
                     shape = RoundedCornerShape(18.dp),
