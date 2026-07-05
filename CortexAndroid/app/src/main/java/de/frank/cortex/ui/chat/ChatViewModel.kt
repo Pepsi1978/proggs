@@ -651,6 +651,107 @@ class ChatViewModel : ViewModel() {
         sendMessage(option.send)
     }
 
+    fun saveEditedStoreConfirmation(source: ChatMessage, editedText: String) {
+        val text = editedText.trim()
+        if (text.isBlank()) {
+            _uiState.update { it.copy(error = "Kein Text zum Speichern") }
+            return
+        }
+
+        val state = _uiState.value
+        val sessionId = state.sessionId
+        val category = source.category ?: state.selectedCategory
+        val title = source.title ?: state.titleOverride.ifBlank { null }
+        val userMsg = ChatMessage(
+            text = text,
+            isUser = true,
+            action = "store_edit",
+            category = category,
+            title = title
+        )
+        _uiState.update { it.copy(messages = it.messages + userMsg, isLoading = true, error = null) }
+
+        viewModelScope.launch {
+            updateSessionsAfterPersist(sessionId, userMsg)
+            try {
+                if (WireGuardManager.state.value != TunnelState.CONNECTED) {
+                    val item = de.frank.cortex.data.OutboxItem(
+                        id = UUID.randomUUID().toString(),
+                        sessionId = sessionId,
+                        text = text,
+                        category = category,
+                        title = title,
+                        contextMode = SettingsStore.CONTEXT_MODE_SAVE,
+                        responseSize = state.responseSize,
+                        requestId = UUID.randomUUID().toString(),
+                        createdAt = System.currentTimeMillis()
+                    )
+                    val queued = withContext(Dispatchers.IO) {
+                        try {
+                            ChatSessionStore.enqueueOutbox(item)
+                            true
+                        } catch (e: Exception) {   // no-cancellation-rethrow (kein suspend im try)
+                            CortexLog.error("ChatVM", "saveEditedStore", "Einreihen fehlgeschlagen: ${e.message}")
+                            false
+                        }
+                    }
+                    if (queued) {
+                        val notice = ChatMessage(
+                            text = "📮 Kein VPN — dein editierter Speicher-Auftrag ist gemerkt und wird automatisch gesendet, sobald der Tunnel steht.",
+                            isUser = false,
+                            action = "outbox"
+                        )
+                        _uiState.update { it.copy(isLoading = false, messages = it.messages + notice) }
+                        updateSessionsAfterPersist(sessionId, notice)
+                    } else {
+                        _uiState.update { it.copy(isLoading = false, error = "VPN nicht aktiv — merken fehlgeschlagen") }
+                    }
+                    return@launch
+                }
+
+                val response = withContext(Dispatchers.IO) {
+                    ApiClient.agentApi().chat(
+                        ChatRequest(
+                            text = text,
+                            session_id = sessionId,
+                            category = category,
+                            title = title,
+                            context_mode = SettingsStore.CONTEXT_MODE_SAVE,
+                            context_prompt = buildContextPrompt(SettingsStore.CONTEXT_MODE_SAVE, state.responseSize),
+                            response_size = state.responseSize,
+                            request_id = UUID.randomUUID().toString()
+                        )
+                    )
+                }
+                val agentMsg = ChatMessage(
+                    text = response.reply,
+                    isUser = false,
+                    action = response.action,
+                    category = response.category,
+                    title = response.title,
+                    recallHits = response.recall_hits,
+                    options = response.options,
+                    stored = response.stored
+                )
+                _uiState.update { st ->
+                    st.copy(
+                        messages = st.messages + agentMsg,
+                        isLoading = false,
+                        titleOverride = if (response.action == "store") "" else st.titleOverride
+                    )
+                }
+                updateSessionsAfterPersist(sessionId, agentMsg)
+                CortexLog.info("ChatVM", "saveEditedStore", "Editierter Speicher-Auftrag gesendet",
+                    mapOf("stored" to response.stored, "action" to response.action, "chars" to text.length))
+            } catch (e: CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                CortexLog.error("ChatVM", "saveEditedStore", "Fehler: ${e.message}")
+                _uiState.update { it.copy(isLoading = false, error = "Speichern fehlgeschlagen: ${e.message}") }
+            }
+        }
+    }
+
     fun startNewChat() {
         stopSpeaking()
         if (micRecorder.isRecording()) {
@@ -670,6 +771,7 @@ class ChatViewModel : ViewModel() {
                 isLoading = false,
                 error = null,
                 titleOverride = "",
+                selectedCategory = null,
                 sessionId = "android-${UUID.randomUUID()}",
                 isSessionsPanelOpen = false,
                 isRecording = false,
@@ -708,6 +810,7 @@ class ChatViewModel : ViewModel() {
                         isLoading = false,
                         error = null,
                         titleOverride = "",
+                        selectedCategory = null,
                         isRecording = false,
                         isTranscribing = false,
                         isImproving = false,
@@ -741,6 +844,7 @@ class ChatViewModel : ViewModel() {
                             isLoading = false,
                             error = null,
                             titleOverride = "",
+                            selectedCategory = null,
                             isRecording = false,
                             isTranscribing = false,
                             isImproving = false,

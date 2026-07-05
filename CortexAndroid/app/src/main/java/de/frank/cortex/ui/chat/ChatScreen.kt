@@ -243,7 +243,8 @@ fun ChatScreen(vm: ChatViewModel = viewModel()) {
                         isSpeaking = uiState.speakingMessageId == message.id,
                         onSpeakClick = { vm.toggleMessageSpeech(message.id, message.text) },
                         onShareClick = { vm.prepareMessageShare(message.id) },
-                        onOptionClick = vm::sendOption
+                        onOptionClick = vm::sendOption,
+                        onEditedStoreSave = vm::saveEditedStoreConfirmation
                     )
                 }
 
@@ -360,39 +361,20 @@ private fun SessionDrawer(
         Column(
             modifier = Modifier
                 .fillMaxSize()
-                .padding(horizontal = 16.dp, vertical = 18.dp),
-            verticalArrangement = Arrangement.spacedBy(14.dp)
+                .padding(horizontal = 16.dp, vertical = 10.dp),
+            verticalArrangement = Arrangement.spacedBy(8.dp)
         ) {
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(10.dp)
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(34.dp)
             ) {
-                Box(
+                IconButton(
+                    onClick = onClose,
                     modifier = Modifier
-                        .size(36.dp)
-                        .clip(RoundedCornerShape(11.dp))
-                        .background(Iris.copy(alpha = 0.16f))
-                        .border(1.dp, Iris.copy(alpha = 0.4f), RoundedCornerShape(11.dp)),
-                    contentAlignment = Alignment.Center
+                        .align(Alignment.TopEnd)
+                        .offset(y = (-7).dp)
                 ) {
-                    Icon(Icons.Default.Forum, null, tint = Iris, modifier = Modifier.size(19.dp))
-                }
-                Column(modifier = Modifier.weight(1f)) {
-                    Text(
-                        text = "Sessions",
-                        fontFamily = SpaceGrotesk,
-                        fontWeight = FontWeight.SemiBold,
-                        fontSize = 22.sp
-                    )
-                    Text(
-                        text = "Aktuelle Unterhaltung steht oben",
-                        fontFamily = JetBrainsMono,
-                        fontSize = 10.5.sp,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-                }
-                IconButton(onClick = onClose) {
                     Icon(Icons.Default.Close, contentDescription = "Sessions schließen")
                 }
             }
@@ -465,7 +447,8 @@ private fun SessionRow(
             Text(
                 text = session.title,
                 fontWeight = FontWeight.SemiBold,
-                fontSize = 14.sp,
+                fontSize = 16.5.sp,
+                lineHeight = 21.sp,
                 // KEIN Abschneiden (Frank-Wunsch 2026-07-02): Der KI-Intentions-Titel wird IMMER
                 // vollstaendig angezeigt — braucht er 4-6 Zeilen, waechst die Kachel einfach mit.
                 maxLines = Int.MAX_VALUE,
@@ -501,15 +484,26 @@ private val wordSplitRegex = Regex("\\s+")
 private fun countWords(text: String): Int =
     text.trim().split(wordSplitRegex).count { it.isNotBlank() }
 
+private val quotedStoreTextRegex = Regex("[„\"]([^„“\"]+)[“\"]")
+
+private fun extractEditableStoreText(messageText: String): String =
+    quotedStoreTextRegex.findAll(messageText).map { it.groupValues[1] }.lastOrNull()?.trim()
+        ?: messageText.trim()
+
 @Composable
 private fun ChatBubble(
     message: ChatMessage,
     isSpeaking: Boolean,
     onSpeakClick: () -> Unit,
     onShareClick: () -> Unit,
-    onOptionClick: (ChatOption) -> Unit
+    onOptionClick: (ChatOption) -> Unit,
+    onEditedStoreSave: (ChatMessage, String) -> Unit
 ) {
     val isDark = MaterialTheme.colorScheme.background == DarkBg
+    val canEditStoreText = !message.isUser && message.action in setOf("save_confirm", "store_clarify")
+    val initialEditableText = remember(message.text) { extractEditableStoreText(message.text) }
+    var isEditingStoreText by rememberSaveable(message.id) { mutableStateOf(false) }
+    var editedStoreText by rememberSaveable(message.id) { mutableStateOf(initialEditableText) }
 
     Column(
         modifier = Modifier.fillMaxWidth(),
@@ -624,24 +618,78 @@ private fun ChatBubble(
                 horizontalArrangement = Arrangement.spacedBy(8.dp)
             ) {
                 message.options.forEach { option ->
-                    Surface(
-                        shape = RoundedCornerShape(999.dp),
-                        color = Iris.copy(alpha = 0.16f),
-                        border = BorderStroke(1.dp, if (isDark) DarkUserBorder else LightUserBorder)
+                    OptionChip(label = option.label, isDark = isDark) {
+                        onOptionClick(option)
+                    }
+                }
+                if (canEditStoreText) {
+                    OptionChip(
+                        label = if (isEditingStoreText) "Speichern" else "Editieren",
+                        isDark = isDark,
+                        tint = if (isEditingStoreText) Mint else Amber
                     ) {
-                        Text(
-                            text = option.label,
-                            modifier = Modifier
-                                .clickable { onOptionClick(option) }
-                                .padding(horizontal = 18.dp, vertical = 8.dp),
-                            fontWeight = FontWeight.SemiBold,
-                            fontSize = 13.sp,
-                            color = Iris
-                        )
+                        if (isEditingStoreText) {
+                            onEditedStoreSave(message, editedStoreText)
+                            isEditingStoreText = false
+                        } else {
+                            editedStoreText = initialEditableText
+                            isEditingStoreText = true
+                        }
                     }
                 }
             }
         }
+
+        if (canEditStoreText && isEditingStoreText) {
+            Surface(
+                shape = RoundedCornerShape(14.dp),
+                color = if (isDark) DarkField else LightField,
+                border = BorderStroke(1.dp, Amber.copy(alpha = 0.55f)),
+                modifier = Modifier
+                    .padding(top = 8.dp)
+                    .fillMaxWidth()
+            ) {
+                BasicTextField(
+                    value = editedStoreText,
+                    onValueChange = { editedStoreText = it },
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .defaultMinSize(minHeight = 96.dp)
+                        .padding(12.dp),
+                    textStyle = LocalTextStyle.current.copy(
+                        fontSize = 14.5.sp,
+                        lineHeight = 21.7.sp,
+                        color = MaterialTheme.colorScheme.onSurface
+                    ),
+                    minLines = 3,
+                    maxLines = 8
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun OptionChip(
+    label: String,
+    isDark: Boolean,
+    tint: Color = Iris,
+    onClick: () -> Unit
+) {
+    Surface(
+        shape = RoundedCornerShape(999.dp),
+        color = tint.copy(alpha = 0.16f),
+        border = BorderStroke(1.dp, if (isDark) DarkUserBorder else LightUserBorder)
+    ) {
+        Text(
+            text = label,
+            modifier = Modifier
+                .clickable(onClick = onClick)
+                .padding(horizontal = 18.dp, vertical = 8.dp),
+            fontWeight = FontWeight.SemiBold,
+            fontSize = 13.sp,
+            color = tint
+        )
     }
 }
 

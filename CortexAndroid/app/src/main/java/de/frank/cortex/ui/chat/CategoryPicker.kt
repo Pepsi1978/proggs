@@ -92,7 +92,7 @@ fun CategoryPickerPill(
     onCreateCategory: (String) -> Unit,
     onOpen: () -> Unit = {},
     isDark: Boolean,
-    placeholderLabel: String = "Auto",   // Label wenn nichts gewaehlt (z.B. "＋ Kategorie" fuer Hinzufuegen)
+    placeholderLabel: String = "Autokategorie",   // Label wenn nichts gewaehlt (z.B. "＋ Kategorie" fuer Hinzufuegen)
     showAuto: Boolean = true             // "Auto-Kategorie"-Zeile im Menue (beim Hinzufuegen: aus)
 ) {
     var open by remember { mutableStateOf(false) }
@@ -162,7 +162,7 @@ fun CategoryPickerPill(
                     contentPadding = PaddingValues(horizontal = 12.dp, vertical = 2.dp),
                     text = {
                         Text(
-                            "Auto-Kategorie",
+                            "Autokategorie",
                             color = if (selectedCategory == null) Iris else MaterialTheme.colorScheme.onSurface,
                             fontSize = 14.sp,
                             fontWeight = FontWeight.SemiBold

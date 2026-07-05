@@ -13,9 +13,9 @@ android {
         applicationId = "de.frank.cortex"
         minSdk = 26
         targetSdk = 35
-        versionCode = 65
-        versionName = "0.3.5"
-        buildConfigField("String", "VERSION_BUMPED_AT", "\"05.07.2026, 21.28 Uhr\"")
+        versionCode = 66
+        versionName = "0.3.6"
+        buildConfigField("String", "VERSION_BUMPED_AT", "\"05.07.2026, 22:01 Uhr\"")
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
