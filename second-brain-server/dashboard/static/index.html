@@ -3348,9 +3348,15 @@ button{font-family:inherit;cursor:pointer}
      jedes eingebaute System mit Einbau-Datum/Uhrzeit, Dienst und ausführlicher Erklärung.
      Alles per textContent (Injection-sicher). Fehler -> ehrlicher Hinweis statt leerer Fläche. */
   let featureInfoItems = [];
+  const CORTEX_KNOWLEDGE_TITLE_PREFIX = "Cortex Wissen: ";
+  function featureKnowledgeTitle(f){
+    const raw = (f.name || f.id || "").trim();
+    return raw.startsWith(CORTEX_KNOWLEDGE_TITLE_PREFIX) ? raw : CORTEX_KNOWLEDGE_TITLE_PREFIX + raw;
+  }
   function featureKnowledgeText(f){
     const meta = (f.dienst ? "Sitzt in: " + f.dienst : "") + (f.eingebaut ? "  ·  eingebaut: " + f.eingebaut : "");
-    return [meta, f.kurz || "", f.erklaerung || ""].filter(Boolean).join("\n\n");
+    const intro = "Dieser Eintrag ist Cortex-Wissen: Er beschreibt, wie Cortex funktioniert, was Cortex kann inzwischen und welche Fähigkeit im Gesamtsystem eingebaut ist. Er soll bei Fragen wie 'Was kann Cortex alles schon?' oder 'Wie funktioniert Cortex?' über die semantische Suche gefunden werden.";
+    return [intro, meta, f.kurz || "", f.erklaerung || ""].filter(Boolean).join("\n\n");
   }
   async function saveCortexKnowledge(){
     const btn = document.getElementById("saveCortexKnowledgeBtn");
@@ -3361,7 +3367,7 @@ button{font-family:inherit;cursor:pointer}
     let saved = 0;
     try{
       for(const f of feats){
-        const title = (f.name || f.id || "").trim();
+        const title = featureKnowledgeTitle(f);
         const text = featureKnowledgeText(f).trim();
         if(!title || !text) continue;
         if(status) status.textContent = `${saved + 1}/${feats.length} wird gespeichert: ${title}`;
