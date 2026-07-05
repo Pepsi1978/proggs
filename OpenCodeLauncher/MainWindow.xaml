@@ -286,10 +286,17 @@
                                                   VerticalAlignment="Center"
                                                   Margin="{TemplateBinding Padding}"/>
                                 <Thumb x:Name="ProviderColumnResizeThumb"
-                                       Width="8"
+                                       Width="6"
                                        HorizontalAlignment="Right"
                                        Cursor="SizeWE"
-                                       Background="Transparent"/>
+                                       Background="Transparent"
+                                       Loaded="ProviderColumnResizeThumb_Loaded">
+                                    <Thumb.Template>
+                                        <ControlTemplate TargetType="Thumb">
+                                            <Border Background="Transparent"/>
+                                        </ControlTemplate>
+                                    </Thumb.Template>
+                                </Thumb>
                             </Grid>
                         </Border>
                     </ControlTemplate>

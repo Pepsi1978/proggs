@@ -238,6 +238,18 @@ public partial class MainWindow : Window
         _providerResizeTotalDelta = 0;
     }
 
+    private void ProviderColumnResizeThumb_Loaded(object sender, RoutedEventArgs e)
+    {
+        if (sender is not Thumb thumb) return;
+
+        var header = FindAncestor<System.Windows.Controls.Primitives.DataGridColumnHeader>(thumb);
+        if (header?.Column == null) return;
+
+        var isLastColumn = ProviderGrid.Columns.IndexOf(header.Column) == ProviderGrid.Columns.Count - 1;
+        thumb.Visibility = isLastColumn ? Visibility.Collapsed : Visibility.Visible;
+        header.BorderThickness = isLastColumn ? new Thickness(0, 0, 0, 1) : new Thickness(0, 0, 1, 1);
+    }
+
     // ---- Drag & Drop für Modellgruppen und Modelle ----
     private Point _dragStartPoint;
     private int _dragSourceGroupIndex = -1;

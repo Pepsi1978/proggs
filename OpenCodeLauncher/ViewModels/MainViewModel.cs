@@ -26,8 +26,8 @@ public sealed partial class MainViewModel : ObservableObject
         _ = RefreshOpenRouterFreeModelsAsync();
         WorkDir = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), "proggs");
 
-        var version = Assembly.GetExecutingAssembly().GetName().Version?.ToString(3) ?? "1.5.5";
-        Version = $"Version {version} (05.07.2026, 14:58 Uhr)";
+        var version = Assembly.GetExecutingAssembly().GetName().Version?.ToString(3) ?? "1.5.6";
+        Version = $"Version {version} (05.07.2026, 15:09 Uhr)";
     }
 
     public ObservableCollection<ModelGroupEntry> ModelGroups { get; } = new();
