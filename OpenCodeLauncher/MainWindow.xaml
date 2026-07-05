@@ -373,11 +373,11 @@
             </Ellipse.Triggers>
         </Ellipse>
 
-        <Border Margin="11" HorizontalAlignment="Stretch" VerticalAlignment="Stretch" Background="{DynamicResource WindowBg}" BorderBrush="{DynamicResource GlassBorderBrush}" BorderThickness="1" CornerRadius="22">
+        <Border Margin="11" HorizontalAlignment="Stretch" VerticalAlignment="Stretch" Background="{DynamicResource WindowBg}" BorderBrush="{DynamicResource GlassBorderBrush}" BorderThickness="1" CornerRadius="18">
             <Border.Effect>
                 <DropShadowEffect BlurRadius="100" ShadowDepth="40" Direction="270" Opacity="0.7" Color="#000000"/>
             </Border.Effect>
-            <Border CornerRadius="22" ClipToBounds="True" Background="{DynamicResource WindowBg}">
+            <Border CornerRadius="18" ClipToBounds="True" Background="{DynamicResource WindowBg}">
             <Grid>
             <Grid.RowDefinitions>
                 <RowDefinition Height="Auto"/>
@@ -599,7 +599,7 @@
             </Grid>
 
             <!-- Fußleiste: Arbeitsverzeichnis + Start + Version -->
-            <Border Grid.Row="2" Background="{DynamicResource TitleBarBg}" BorderBrush="{DynamicResource BorderBrushSoft}" BorderThickness="0,1,0,0" Padding="16,14" CornerRadius="0,0,22,22">
+            <Border Grid.Row="2" Background="{DynamicResource TitleBarBg}" BorderBrush="{DynamicResource BorderBrushSoft}" BorderThickness="0,1,0,0" Padding="16,14" CornerRadius="0,0,18,18">
                 <Grid>
                     <Grid.ColumnDefinitions>
                         <ColumnDefinition Width="Auto"/>
