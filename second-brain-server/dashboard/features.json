@@ -1,7 +1,15 @@
 {
-	"stand": "05.07.2026, 23.07 Uhr",
+	"stand": "06.07.2026, 00.09 Uhr",
 	"hinweis": "PFLEGE-PFLICHT: Bei JEDEM Deploy, der ein neues System/Feature einbaut, hier einen Eintrag ERGAENZEN (neueste zuerst) — mit Datum + Uhrzeit und ausfuehrlicher Erklaerung. Diese Datei ist die Quelle des Info-Bereichs in den Dashboard-Einstellungen (GET /api/features). Regel verankert in DEPLOY.md.",
 	"features": [
+		{
+			"id": "no-limit-gedaechtnissuche-arbeitscache",
+			"name": "No-Limit-Gedächtnissuche: alle Treffer lesen und per Arbeitscache verdichten",
+			"eingebaut": "06.07.2026, 00.09 Uhr",
+			"dienst": "agent 0.55.1 + brain-api 1.22.2 + dashboard 0.46.6",
+			"kurz": "Semantische Gedächtnisfragen und Entity-Abfragen hören nicht mehr bei 5, 8 oder 50 Treffern auf. Limit 0 bedeutet jetzt: alle Treffer im Suchraum lesen; große Mengen werden über einen Arbeitscache blockweise zusammengefasst.",
+			"erklaerung": "Vorher hatte die normale Gedächtnissuche mehrere Schutz-Limits: der Agent holte standardmäßig 5 Treffer, das Entity-Register 8 und die brain-api ließ /search nur bis 50 Treffer zu. Das war als Kontextschutz gedacht, führte aber bei Fragen wie 'Was kann Cortex alles?' oder 'fasse alle passenden Einträge zusammen' zu falschen, unvollständigen Antworten. Jetzt bedeutet AGENT_RECALL_LIMIT=0 und AGENT_ENTITY_DOCS_LIMIT=0: kein Ergebnislimit. Die brain-api akzeptiert /search limit=0 als 'alle Treffer im gefilterten Suchraum' und lädt dabei Kandidaten zuerst ohne full_text, damit nicht unnötig Volltexte in den RAM wandern; Volltexte werden erst für die finalen Dokumente nachgeladen. Der Agent kippt große Trefferlisten nicht in ein einziges Kontextfenster, sondern nutzt einen Arbeitscache: Treffer in Blöcke teilen, jeden Block zusammenfassen, Zwischenspeicher hierarchisch weiter verdichten und daraus die Endantwort bauen. Kategorie-Gesamtfragen wie 'Was kann Cortex alles?' lesen zusätzlich die Kategorie sequenziell per /category-item, also Eintrag 1 bis N, damit auch 100 oder 200 Einträge vollständig verarbeitet werden können. Reine Zählfragen nutzen weiterhin /category-counts und liefern die exakte Zahl."
+		},
 		{
 			"id": "cortex-wissen-speichern",
 			"name": "Cortex Wissen speichern: System-Info als eigene Cortex-Einträge ablegen",

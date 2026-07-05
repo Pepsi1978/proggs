@@ -282,7 +282,7 @@ _init_last_attempt = 0.0
 # Entity-Verknuepfung finden). Rein additiv, Default-Antwort unveraendert.
 # Alt: 1.21.1: /purge raeumt jetzt AUCH die Entitaeten des eval-Test-Nutzers auf (der erweiterte
 # Eval-Check legt Test-Entitaeten an) + invalidiert den BM25-Cache (purge lief an _delete_doc vorbei).
-VERSION = "1.22.1 (05.07.2026, 23.53 Uhr)"  # 1.22.1: /search akzeptiert limit=0 als "alle Treffer im Scope" und hat kein 50er Ergebnis-Cap mehr. Dense laedt Kandidaten ohne full_text und holt Volltexte nur fuer finale doc_ids nach; /entities/docs akzeptiert limit=0 als alle verknuepften Eintraege. Alt: 1.22.0 /entities/list?with_docs=1.
+VERSION = "1.22.2 (06.07.2026, 00.09 Uhr)"  # 1.22.2: Timestamp-Korrektur fuer den nach Mitternacht abgeschlossenen Deploy. Verhalten wie 1.22.1: /search akzeptiert limit=0 als "alle Treffer im Scope" und hat kein 50er Ergebnis-Cap mehr; /entities/docs akzeptiert limit=0 als alle verknuepften Eintraege. Alt: 1.22.1 (05.07.2026, 23.53 Uhr).
 
 # Startup-Banner (Observability-First: Log-Pfad + Version EINMAL ausgeben)
 _log(logging.INFO, "brain-api startet", version=VERSION, log_path=LOG_PATH)
