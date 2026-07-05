@@ -1,7 +1,55 @@
 {
-	"stand": "05.07.2026, 01.10 Uhr",
+	"stand": "05.07.2026, 02.51 Uhr",
 	"hinweis": "PFLEGE-PFLICHT: Bei JEDEM Deploy, der ein neues System/Feature einbaut, hier einen Eintrag ERGAENZEN (neueste zuerst) — mit Datum + Uhrzeit und ausfuehrlicher Erklaerung. Diese Datei ist die Quelle des Info-Bereichs in den Dashboard-Einstellungen (GET /api/features). Regel verankert in DEPLOY.md.",
 	"features": [
+		{
+			"id": "bibliothekar-lernen",
+			"name": "Lernen-Knopf: dem Bibliothekar an einzelnen Funden etwas beibringen",
+			"eingebaut": "05.07.2026, 02.45 Uhr",
+			"dienst": "librarian 0.5.0-0.6.0 + dashboard 0.42.0-0.43.0",
+			"kurz": "Jeder Fund hat hinten einen Lernen-Knopf: Lehre eintippen, der Bibliothekar fragt nach, du bestätigst die finale Regel — ab dann gilt sie in allen künftigen Nacht-Urteilen.",
+			"erklaerung": "Der graue Lernen-Knopf am Ende jedes Funds wird beim Klick rot und öffnet ein Lern-Fenster. Dort beschreibst du frei, wie der Bibliothekar mit solchen Fällen künftig umgehen soll (Beispiel: 'Kurzcheck und Vollversion eines Almanachs werden NIEMALS zusammengeführt — die Kurzversion ist absichtlich da, damit ein KI-Modell erst tokenarm liest und dann entscheidet, ob es die Langversion braucht'). Nach dem Speichern versteht der Bibliothekar die Lehre, stellt bei Unklarheit genau eine Rückfrage und nennt dann die finale Regel-Fassung ('Das würde ich mir merken: …'), die du mit einem Klick bestätigst. Alle bestätigten Regeln stehen in der Karte 'Gelernte Regeln' (zwischen Abarbeiten und Einstellungen): scrollbare Liste mit 1-2-Satz-Kurzfassung, 'Bearbeiten' öffnet die komplette Regel als Editor, 'KI fragen' lässt den Bibliothekar selbst beurteilen, ob die Regel für seine Nachtarbeit sinnvoll und gut umsetzbar ist (mit Kollisions-Check gegen die anderen Regeln; Antwort als wegklickbare Info-Box). Jede Regel ist einzeln an-/abschaltbar und löschbar. Technisch fließen alle aktiven Regeln als Pflicht-Block in sämtliche Nacht-Urteils-Aufrufe ein — Dubletten, Widersprüche, Veraltet, Kategorien, Lücken, Verdichtung, eigene Aufgaben und die Umsetzung deiner Entscheidungen."
+		},
+		{
+			"id": "bibliothekar-merge-steuerung",
+			"name": "Zusammenführungen voll steuerbar: Text editieren + Kategorien wählen",
+			"eingebaut": "05.07.2026, 02.29 Uhr",
+			"dienst": "librarian 0.4.0 + dashboard 0.41.0",
+			"kurz": "Bei Dubletten-Vorschlägen kannst du den kompletten Zusammenführungs-Text lesen und bearbeiten und per leuchtender Chips bestimmen, welche Kategorien der neue Eintrag bekommt.",
+			"erklaerung": "Jeder Zusammenführungs-Vorschlag hat einen aufklappbaren Bereich mit dem kompletten vorgeschlagenen Misch-Text in einem Editor. Änderst du ihn und drückst 'Änderung übernehmen', wird genau deine Fassung gespeichert — ohne den Knopf gilt der ursprüngliche Vorschlag. Darunter stehen ALLE Kategorien beider Quell-Einträge als orange leuchtende Chips (hatte ein Eintrag zwei Kategorien und der andere eine, sind es drei). Standardmäßig sind alle aktiv; ein Klick wählt ab (durchgestrichen), mindestens eine bleibt. Der zusammengeführte Eintrag bekommt exakt die aktiven Kategorien als echte Mehrfach-Kategorien. Die Originale wandern wie immer in den wiederherstellbaren Papierkorb."
+		},
+		{
+			"id": "bibliothekar-bilanz",
+			"name": "Nacht-Bilanz: jede Aufgabe meldet ihr Ergebnis, auch 'nichts gefunden'",
+			"eingebaut": "05.07.2026, 02.17 Uhr",
+			"dienst": "librarian 0.3.0 + dashboard 0.40.1",
+			"kurz": "Die Tages-Auswertung enthält für jede Aufgabe eine ehrliche Zeile — auch wenn nichts gefunden wurde oder eine Aufgabe ausgeschaltet war.",
+			"erklaerung": "Früher nannte die Zusammenfassung nur die Aufgaben mit Funden — was nichts fand, blieb unsichtbar. Jetzt schreibt der Nachtlauf eine komplette Bilanz: 'Dubletten-Vorschläge: 3 Vorschläge', 'Widerspruchs-Suche: keine Widersprüche gefunden', 'Nachzügler-Verknüpfung: nichts zu tun — alle Einträge sind bereits im Register verknüpft', 'Veraltet-Erkennung: ausgeschaltet'. Eigene Aufgaben erscheinen genauso. Die Bilanz steht direkt in der Morgen-Report-Karte (🔸 = Funde, ▫️ = nichts) und zusätzlich zusammenklappbar über den Funden in der Tages-Ansicht. So siehst du jeden Morgen auf einen Blick, dass wirklich ALLES gelaufen ist — nicht nur das, was etwas gefunden hat."
+		},
+		{
+			"id": "bibliothekar-autosave-unbegrenzt",
+			"name": "Bibliothekar-Einstellungen: Auto-Speichern + 'Ohne Begrenzung durcharbeiten'",
+			"eingebaut": "05.07.2026, 02.11 Uhr",
+			"dienst": "librarian 0.2.0 + dashboard 0.40.0",
+			"kurz": "Jede Einstellungs-Änderung speichert sich sofort automatisch; der Ohne-Begrenzung-Schalter lässt den Bibliothekar nachts ALLES abarbeiten, ohne Limits.",
+			"erklaerung": "Der Speichern-Knopf in den Bibliothekar-Einstellungen ist weg: Schalter umlegen, Modell wechseln, Zeit ändern — alles speichert sich sofort mit sichtbarer 'Gespeichert'-Rückmeldung, vergessen ist unmöglich. Der neue Schalter 'Ohne Begrenzung durcharbeiten' (standardmäßig an) hebt alle Arbeits-Limits auf: kein Vorschlags-Limit pro Aufgabe, kein KI-Budget, keine Scan-Grenzen — der Bibliothekar arbeitet, bis er durch ist. Die beiden Limit-Felder werden dabei sichtbar ausgegraut. Im Hintergrund bleibt nur eine stille Notbremse gegen Endlosschleifen (5000 Aufrufe pro Nacht — ehrliche Arbeit erreicht das nie, der komplette Erstlauf brauchte 149). Die Abarbeiten-Karte zeigt außerdem dynamisch an, welches Modell mit welcher Thinking-Stufe deine Entscheidungen umsetzt."
+		},
+		{
+			"id": "bibliothekar-gpt-thinking",
+			"name": "GPT als Nachtmodell + Thinking-Stufe für den Bibliothekar",
+			"eingebaut": "05.07.2026, 01.55 Uhr",
+			"dienst": "librarian 0.2.0 + agent 0.52.0 + dashboard 0.38.1",
+			"kurz": "Der Bibliothekar kann jetzt die verbundenen GPT-Modelle nutzen (aktuell gpt-5.5 mit Thinking high) — über die bestehende Codex-Anmeldung, ohne doppelte Verbindung.",
+			"erklaerung": "Der Tages-Agent hat einen internen LLM-Durchgriff bekommen (POST /llm): Der Bibliothekar reicht GPT-Aufrufe dorthin durch und nutzt damit die bestehende ChatGPT/Codex-Anmeldung samt automatischem Token-Refresh — die Anmelde-Logik existiert nur einmal. Die Nachtmodell-Auswahl zeigt deshalb alle verbundenen Modelle (Gemini, minimax UND alle GPT-Modelle), daneben ein eigenes Thinking-Dropdown (none bis xhigh, Standard high), das bei GPT als reasoning.effort und bei Gemini als Denk-Budget wirkt. Nachts wartet niemand auf Antworten — deshalb darf hier das stärkste Modell mit vollem Denken arbeiten. Zusätzlich wurden im Einstellungen-Tab die Agenten-Zeilen kompakter: Modell und Thinking stehen jetzt bei jeder Rolle nebeneinander, und die Karte heißt 'Agenten' (der Bibliothekar als Spezialagent hat seinen eigenen Bereich)."
+		},
+		{
+			"id": "uebersicht-vitals-schnell",
+			"name": "Übersicht-Kacheln: 3-Sekunden-Aktualisierung, nur bei geöffneter Übersicht",
+			"eingebaut": "05.07.2026, 01.45 Uhr",
+			"dienst": "dashboard 0.39.0",
+			"kurz": "Prozessor, Arbeitsspeicher und Speicherplatz aktualisieren sich alle 3 Sekunden — und sämtliche Übersicht-Abrufe laufen nur noch, wenn die Übersicht wirklich offen ist.",
+			"erklaerung": "Früher wurden die Server-Kacheln nur alle 20 Sekunden mit einer Viertelsekunden-Stichprobe aktualisiert — der Prozessor schien dadurch minutenlang auf demselben Wert festzustehen. Jetzt gibt es einen eigenen, leichten Schnell-Abruf (/api/vitals) nur für die Kacheln, der alle 3 Sekunden läuft und die echte Durchschnittslast seit dem letzten Abruf misst. Gleichzeitig wurde das Abrufen sparsamer: Sowohl der Schnell-Abruf als auch der große 20-Sekunden-Überblick laufen ausschließlich, wenn der Übersicht-Tab aktiv und das Browserfenster sichtbar ist — auf allen anderen Tabs wird gar nichts abgerufen."
+		},
 		{
 			"id": "nachtschicht-bibliothekar",
 			"name": "Nachtschicht-Bibliothekar: das Gehirn räumt nachts auf",
