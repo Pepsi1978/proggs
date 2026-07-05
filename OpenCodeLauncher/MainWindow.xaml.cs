@@ -35,13 +35,18 @@ public partial class MainWindow : Window
     {
         InitializeComponent();
         _layoutSettings = LayoutSettings.Load();
+        RestoreWindowLayout();
         ModelColumn.Width = new GridLength(_layoutSettings.ModelPaneWidth);
         ViewModel = new MainViewModel();
         DataContext = ViewModel;
 
         UpdateThemeButton(ThemeManager.Current);
         ThemeManager.ThemeChanged += OnThemeChanged;
-        Closed += (_, _) => ThemeManager.ThemeChanged -= OnThemeChanged;
+        Closed += (_, _) =>
+        {
+            SaveWindowLayout();
+            ThemeManager.ThemeChanged -= OnThemeChanged;
+        };
 
         SourceInitialized += (_, _) =>
         {
@@ -52,8 +57,41 @@ public partial class MainWindow : Window
         ProviderGrid.AddHandler(Thumb.DragStartedEvent, new DragStartedEventHandler(ProviderColumnResizeStarted), true);
         ProviderGrid.AddHandler(Thumb.DragDeltaEvent, new DragDeltaEventHandler(ProviderColumnResizeDelta), true);
         ProviderGrid.AddHandler(Thumb.DragCompletedEvent, new DragCompletedEventHandler(ProviderColumnResizeCompleted), true);
-        StateChanged += (_, _) => MaxBtn.Content = WindowState == WindowState.Maximized ? "❐" : "▢";
+        LocationChanged += (_, _) => SaveWindowLayout();
+        SizeChanged += (_, _) => SaveWindowLayout();
+        StateChanged += (_, _) =>
+        {
+            MaxBtn.Content = WindowState == WindowState.Maximized ? "❐" : "▢";
+            SaveWindowLayout();
+        };
         ContentRendered += (_, _) => Title = $"OpenCode Launcher — {ViewModel.Version}";
+    }
+
+    private void RestoreWindowLayout()
+    {
+        if (_layoutSettings.WindowLeft < 0 || _layoutSettings.WindowTop < 0) return;
+
+        WindowStartupLocation = WindowStartupLocation.Manual;
+        Width = Math.Max(_layoutSettings.WindowWidth, MinWidth);
+        Height = Math.Max(_layoutSettings.WindowHeight, MinHeight);
+        Left = Math.Clamp(_layoutSettings.WindowLeft, SystemParameters.VirtualScreenLeft, SystemParameters.VirtualScreenLeft + SystemParameters.VirtualScreenWidth - Width);
+        Top = Math.Clamp(_layoutSettings.WindowTop, SystemParameters.VirtualScreenTop, SystemParameters.VirtualScreenTop + SystemParameters.VirtualScreenHeight - Height);
+        if (_layoutSettings.WindowState == "Maximized") WindowState = WindowState.Maximized;
+    }
+
+    private void SaveWindowLayout()
+    {
+        if (WindowState == WindowState.Minimized) return;
+
+        var bounds = WindowState == WindowState.Maximized ? RestoreBounds : new Rect(Left, Top, Width, Height);
+        if (bounds.Width < MinWidth || bounds.Height < MinHeight) return;
+
+        _layoutSettings.WindowLeft = bounds.Left;
+        _layoutSettings.WindowTop = bounds.Top;
+        _layoutSettings.WindowWidth = bounds.Width;
+        _layoutSettings.WindowHeight = bounds.Height;
+        _layoutSettings.WindowState = WindowState == WindowState.Maximized ? "Maximized" : "Normal";
+        _layoutSettings.Save();
     }
 
     private void OnThemeChanged(ThemeManager.AppTheme theme)
