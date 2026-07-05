@@ -248,6 +248,7 @@ public partial class MainWindow : Window
         var isLastColumn = ProviderGrid.Columns.IndexOf(header.Column) == ProviderGrid.Columns.Count - 1;
         thumb.Visibility = isLastColumn ? Visibility.Collapsed : Visibility.Visible;
         header.BorderThickness = isLastColumn ? new Thickness(0, 0, 0, 1) : new Thickness(0, 0, 1, 1);
+        header.SeparatorVisibility = isLastColumn ? Visibility.Collapsed : Visibility.Visible;
     }
 
     // ---- Drag & Drop für Modellgruppen und Modelle ----

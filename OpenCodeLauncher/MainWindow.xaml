@@ -260,7 +260,7 @@
             <Setter Property="RowHeight" Value="44"/>
             <Setter Property="ColumnHeaderHeight" Value="38"/>
             <Setter Property="HeadersVisibility" Value="Column"/>
-            <Setter Property="GridLinesVisibility" Value="All"/>
+            <Setter Property="GridLinesVisibility" Value="Horizontal"/>
             <Setter Property="CanUserSortColumns" Value="True"/>
             <Setter Property="CanUserResizeColumns" Value="False"/>
         </Style>
@@ -305,14 +305,18 @@
         </Style>
         <Style TargetType="DataGridCell">
             <Setter Property="Padding" Value="12,0"/>
-            <Setter Property="BorderThickness" Value="0"/>
+            <Setter Property="BorderBrush" Value="{DynamicResource BorderBrushSoft}"/>
+            <Setter Property="BorderThickness" Value="0,0,1,0"/>
             <Setter Property="Foreground" Value="{DynamicResource TextBrush}"/>
             <Setter Property="HorizontalContentAlignment" Value="Center"/>
             <Setter Property="FocusVisualStyle" Value="{x:Null}"/>
             <Setter Property="Template">
                 <Setter.Value>
                     <ControlTemplate TargetType="DataGridCell">
-                        <Border Background="Transparent" Padding="{TemplateBinding Padding}">
+                        <Border Background="Transparent"
+                                BorderBrush="{TemplateBinding BorderBrush}"
+                                BorderThickness="{TemplateBinding BorderThickness}"
+                                Padding="{TemplateBinding Padding}">
                             <ContentPresenter HorizontalAlignment="{TemplateBinding HorizontalContentAlignment}" VerticalAlignment="Center"/>
                         </Border>
                     </ControlTemplate>
@@ -602,6 +606,24 @@
                                 <DataGridTextColumn Header="Kontext" Binding="{Binding ContextLength, StringFormat=N0}" Width="140" MinWidth="90"/>
                                 <DataGridTextColumn Header="Throughput" Binding="{Binding ThroughputText}" Width="140" MinWidth="100"/>
                                 <DataGridTemplateColumn Header="Status" Width="150" MinWidth="150">
+                                    <DataGridTemplateColumn.CellStyle>
+                                        <Style TargetType="DataGridCell">
+                                            <Setter Property="Padding" Value="12,0"/>
+                                            <Setter Property="BorderThickness" Value="0"/>
+                                            <Setter Property="Foreground" Value="{DynamicResource TextBrush}"/>
+                                            <Setter Property="HorizontalContentAlignment" Value="Center"/>
+                                            <Setter Property="FocusVisualStyle" Value="{x:Null}"/>
+                                            <Setter Property="Template">
+                                                <Setter.Value>
+                                                    <ControlTemplate TargetType="DataGridCell">
+                                                        <Border Background="Transparent" Padding="{TemplateBinding Padding}">
+                                                            <ContentPresenter HorizontalAlignment="{TemplateBinding HorizontalContentAlignment}" VerticalAlignment="Center"/>
+                                                        </Border>
+                                                    </ControlTemplate>
+                                                </Setter.Value>
+                                            </Setter>
+                                        </Style>
+                                    </DataGridTemplateColumn.CellStyle>
                                     <DataGridTemplateColumn.CellTemplate>
                                         <DataTemplate>
                                             <Border Style="{StaticResource StatusPill}">
