@@ -4042,15 +4042,28 @@ button{font-family:inherit;cursor:pointer}
     if(out.length>190) out=out.slice(0,190)+"…";
     return out||"(leer)";
   }
+  /* KI-Ueberschrift bevorzugen (vom Bibliothekar-Modell gebildet); Fallback: wortwoertliche
+     Kurzfassung — fuer alte Regeln, deren Titel noch nachgezogen wird. */
+  function libRuleTitle(t){
+    return (t && t.titel && String(t.titel).trim()) ? String(t.titel).trim() : libRuleSummary(t && t.text);
+  }
   function renderLibLearned(list){
     const box=document.getElementById("libLearnList"); if(!box) return;
     box.innerHTML="";
     if(!list.length){ box.innerHTML='<p class="set-desc">Noch nichts gelernt — nutze den Lernen-Knopf an einem Fund.</p>'; return; }
+    /* Bestehende Regeln ohne KI-Titel: einmalig vom Bibliothekar nachziehen lassen, dann neu rendern. */
+    if(!renderLibLearned._backfilling && list.some(t=>!(t && t.titel && String(t.titel).trim()))){
+      renderLibLearned._backfilling=true;
+      jlib("learn/backfill-titles","POST").then(r=>{
+        renderLibLearned._backfilling=false;
+        if(r && Array.isArray(r.regeln)) renderLibLearned(r.regeln);
+      }).catch(()=>{ renderLibLearned._backfilling=false; });
+    }
     list.forEach(t=>{
       const wrap=document.createElement("div"); wrap.style.borderBottom="1px solid var(--border)";
       const row=document.createElement("div"); row.className="lib-taskrow"; row.style.borderBottom="none";
       const meta=(t.fund_titel? "Gelernt am Fund: „"+t.fund_titel+"“" : "")+(t.created_at? " · "+String(t.created_at).slice(0,10):"");
-      row.innerHTML='<div class="nm"><b>'+escapeHtml(libRuleSummary(t.text))+'</b><span>'+escapeHtml(meta)+'</span></div>';
+      row.innerHTML='<div class="nm"><b>'+escapeHtml(libRuleTitle(t))+'</b><span>'+escapeHtml(meta)+'</span></div>';
       const editB=document.createElement("button"); editB.className="btn btn-sm"; editB.textContent="Bearbeiten";
       const sw=document.createElement("input"); sw.type="checkbox"; sw.className="lib-sw"; sw.checked=t.enabled!==false; sw.title="Regel an/aus";
       sw.addEventListener("change", async()=>{
@@ -4091,9 +4104,10 @@ button{font-family:inherit;cursor:pointer}
         const v=(eta.value||"").trim();
         if(v.length<5){ estate.textContent="Regel-Text ist zu kurz."; return; }
         try{
-          await jlib("learn/"+encodeURIComponent(t.id),"PUT",{text:v});
+          const rr=await jlib("learn/"+encodeURIComponent(t.id),"PUT",{text:v});
           t.text=v;
-          const b=row.querySelector(".nm b"); if(b) b.textContent=libRuleSummary(v);
+          if(rr && rr.regel && rr.regel.titel) t.titel=rr.regel.titel;   // vom Modell neu gebildete Überschrift übernehmen
+          const b=row.querySelector(".nm b"); if(b) b.textContent=libRuleTitle(t);
           estate.textContent="✓ Gespeichert — gilt ab dem nächsten Urteil.";
         }catch(e){ estate.textContent="Fehler: "+e.message; }
       });

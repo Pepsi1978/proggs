@@ -42,7 +42,7 @@ from fastapi import Depends, FastAPI, Header, HTTPException, Request
 from fastapi.responses import JSONResponse
 from pydantic import BaseModel, Field
 
-VERSION = "0.8.0 (05.07.2026, 14.47 Uhr)"  # 0.8.0 (Gruppe D Plan-Nr. 33, Frank-Auftrag 2026-07-05): NEU Reibungs-Detektor als 8. Standard-Nachtaufgabe — liest die automatischen Session-Protokolle der Programmier-Sessions (Programmierung/Sessions, letzte 7 Tage; eingespeist vom SessionEnd-Hook via agent 0.53.0 /session-log) und findet WIEDERKEHRENDE Reibung: derselbe Fehlertyp mehrfach, wiederholte Korrekturen am selben Thema, mehrfach vergessene Pflichtschritte. Nur echte Muster (>=2 Vorkommen, max 3 pro Nacht), Einzelfaelle zaehlen nicht. Funde landen im Morgen-Report mit Vorschlags-Prinzip: Ja legt einen Verbesserungs-Merkzettel unter Programmierung/Verbesserungen an (typ 'neu'), Nein sperrt den Fund 120 Tage; zusammen mit dem Lernen-Knopf kann Frank daraus direkt eine Lernregel machen. Eigene Bilanz-Zeile (auch 'keine wiederkehrende Reibung erkannt'), Toggle erscheint automatisch in den Einstellungen (standard_tasks ist dynamisch). Recherche-Befund 'Korrekturen fliessen nie zurueck' damit repariert. Alt: 0.7.0 (05.07.2026, 11.47 Uhr)  # 0.7.0 (Frank-Wunsch 2026-07-05): NEU Knopf 'Regeln auf Vorschlaege anwenden' — die gelernten Regeln flossen bisher NUR in kuenftige Nacht-Urteile ein; jetzt kann Frank sie RUECKWIRKEND auf die bereits erzeugten OFFENEN Funde anwenden. POST /apply-rules startet einen Hintergrund-Lauf (sync def -> Threadpool + eigener Thread mit starker Referenz, fastapi §1/§6), der ALLE offenen Funde ueber alle Tages-Reports sammelt und stapelweise (LIB_APPLY_BATCH, Default 20) vom Nacht-Modell gegen die aktiven gelernten Regeln pruefen laesst: Funde, die einer Regel klar widersprechen (der Bibliothekar wuerde sie GAR NICHT mehr vorschlagen), werden auf status='abgelehnt' gesetzt und fallen aus der Abarbeiten-Liste (finding_keys -> nicht sofort neu vorgeschlagen). NICHT-destruktiv: nur die VORSCHLAEGE fallen weg, im Gehirn wird NICHTS geaendert/geloescht. Konservativ (im Zweifel behalten); ein fehlgeschlagener Batch stoppt den Rest nicht (betroffene bleiben offen). GET /apply-rules-status fuers Fortschritts-Polling. Blockiert, solange Nachtlauf/Abarbeitung laeuft. Alt: 0.6.0 (05.07.2026, 02.45 Uhr)  # 0.6.0 (Frank-Wunsch 2026-07-05): Gelernte Regeln EDITIERBAR + 'KI fragen' — (a) PUT /learn/{id} nimmt jetzt auch text an (Frank bearbeitet die komplette Regel im Dashboard, updated_at wird gestempelt); (b) NEU POST /learn/check: der Bibliothekar beurteilt selbst, ob eine Regel fuer seine Nacht-Urteile sinnvoll, eindeutig und gut umsetzbar ist (bekommt die anderen aktiven Regeln zum Kollisions-Check mit; Antwort 2-4 Saetze leichtes Deutsch). Alt: 0.5.0 (05.07.2026, 02.40 Uhr)  # 0.5.0 (Frank-Wunsch 2026-07-05): LERNEN-KNOPF an jedem Fund — Frank bringt dem Bibliothekar an einem konkreten Fall bei, wie er kuenftig mit solchen Faellen umgehen soll (Beispiel: 'Kurzcheck + Vollversion NIEMALS zusammenfuehren'). Ablauf wie beim Aufgaben-Interview: POST /learn/interview versteht die Lehre, stellt bei Unklarheit GENAU EINE Rueckfrage, nennt die finale Regel-Fassung; Frank bestaetigt -> POST /learn speichert sie in lernregeln.json. Die gelernten Regeln fliessen als Pflicht-Block (_with_rules) in ALLE 10 Nacht-Urteils-Prompts ein (Dubletten/Widersprueche, Veraltet, Gaertner, Luecken, Entwurf, Verdichtung, eigene Aufgaben, Entity-Extraktion, Entscheidungs-Umsetzung). Verwaltung: in /settings als 'lernregeln' + PUT/DELETE /learn/{id} (an/aus + Papierkorb). Alt: 0.4.0 (05.07.2026, 02.29 Uhr)  # 0.4.0 (Frank-Wunsch 2026-07-05): Zusammenfuehrungen mit KATEGORIE-WAHL + EDITIERBAREM Merge-Text — (a) Dubletten-Vorschlaege tragen jetzt die UNION aller Kategorien beider Quell-Eintraege (aktion.kategorien; Multi-Category, ein Eintrag kann z.B. 3 Kategorien mitbringen); (b) beim Abarbeiten kann Frank pro Vorschlag den kompletten Merge-Text editieren und Kategorien abwaehlen — die Decision nimmt merge_text + kategorien als Overrides an (nur bei choice=ja, wirkt vor dem Ausfuehren); (c) _execute_action merge speichert mit categories-Liste (brain /store Multi-Category, erste = primaer) und nennt die Kategorien im Ergebnis. Abwaertskompatibel: alte offene Items ohne kategorien-Feld laufen unveraendert. Alt: 0.3.0 (05.07.2026, 02.16 Uhr)  # 0.3.0 (Frank-Wunsch 2026-07-05): Nacht-BILANZ — der Tages-Report enthaelt jetzt fuer JEDE Aufgabe eine ehrliche Ergebnis-Zeile, AUCH wenn nichts gefunden wurde ('Dubletten-Vorschläge: keine Dubletten gefunden', 'Nachzügler: nichts zu tun — alles verknüpft', 'X: ausgeschaltet' bei deaktivierter Aufgabe, eigene Aufgaben inklusive). Steht in report.bilanz + last_run.bilanz -> Morgen-Report-Karte und Tages-Ansicht zeigen die komplette Bilanz. Alt: 0.2.0 (05.07.2026, 01.45 Uhr)  # 0.2.0 (Frank-Wuensche 2026-07-05): (a) GPT/Codex-Modelle nutzbar — gpt-* laeuft ueber den NEUEN Agent-Durchgriff POST /llm (agent 0.52.0, bestehende ChatGPT-OAuth-Anmeldung inkl. Token-Refresh, keine Auth-Duplikation); Modell-Liste in /settings kommt jetzt aus agent /config (alle verbundenen Provider). (b) THINKING einstellbar (none/low/medium/high/xhigh, Default high) — wirkt bei GPT als reasoning.effort und bei Gemini als thinking_budget. (c) 'OHNE BEGRENZUNG durcharbeiten'-Schalter (Default AN): hebt Vorschlags-Limit, Scan-Limits und LLM-Budget auf — der Bibliothekar arbeitet bis er durch ist; es bleibt NUR die stille Notbremse gegen Endlosschleifen (LIB_LLM_BACKSTOP, Default 5000 Calls/Nacht, ai-agent-Almanach 2.1). Alt: 0.1.0: Erstausgabe (Bereiche 11-18 + Nachzuegler + eigene Aufgaben)
+VERSION = "0.9.0 (05.07.2026, 15.06 Uhr)"  # 0.9.0 (Frank-Wunsch 2026-07-05): Gelernte Regeln bekommen eine KI-ZUSAMMENFASSENDE UEBERSCHRIFT statt wortwoertlichem Text-Anfang — das Bibliothekar-Modell (aus den Einstellungen, load_config()['model']) bildet aus jeder gelernten Regel eine knappe Ueberschrift (max 10 Woerter, leichtes Deutsch). Titel wird beim Speichern (/learn) und Editieren (/learn/{id}) erzeugt und persistiert (Feld 'titel'); NEU POST /learn/backfill-titles zieht die Ueberschriften fuer alle BESTEHENDEN Regeln ohne Titel nach (idempotent). Robust: bei jedem LLM-Fehler Fallback auf die wortwoertliche Kurzfassung (nichts stirbt still). Das Dashboard zeigt jetzt t.titel (Fallback auf die alte wortwoertliche Kurzfassung fuer noch nicht nachgezogene Regeln). Alt: 0.8.0 (05.07.2026, 14.47 Uhr)  # 0.8.0 (Gruppe D Plan-Nr. 33, Frank-Auftrag 2026-07-05): NEU Reibungs-Detektor als 8. Standard-Nachtaufgabe — liest die automatischen Session-Protokolle der Programmier-Sessions (Programmierung/Sessions, letzte 7 Tage; eingespeist vom SessionEnd-Hook via agent 0.53.0 /session-log) und findet WIEDERKEHRENDE Reibung: derselbe Fehlertyp mehrfach, wiederholte Korrekturen am selben Thema, mehrfach vergessene Pflichtschritte. Nur echte Muster (>=2 Vorkommen, max 3 pro Nacht), Einzelfaelle zaehlen nicht. Funde landen im Morgen-Report mit Vorschlags-Prinzip: Ja legt einen Verbesserungs-Merkzettel unter Programmierung/Verbesserungen an (typ 'neu'), Nein sperrt den Fund 120 Tage; zusammen mit dem Lernen-Knopf kann Frank daraus direkt eine Lernregel machen. Eigene Bilanz-Zeile (auch 'keine wiederkehrende Reibung erkannt'), Toggle erscheint automatisch in den Einstellungen (standard_tasks ist dynamisch). Recherche-Befund 'Korrekturen fliessen nie zurueck' damit repariert. Alt: 0.7.0 (05.07.2026, 11.47 Uhr)  # 0.7.0 (Frank-Wunsch 2026-07-05): NEU Knopf 'Regeln auf Vorschlaege anwenden' — die gelernten Regeln flossen bisher NUR in kuenftige Nacht-Urteile ein; jetzt kann Frank sie RUECKWIRKEND auf die bereits erzeugten OFFENEN Funde anwenden. POST /apply-rules startet einen Hintergrund-Lauf (sync def -> Threadpool + eigener Thread mit starker Referenz, fastapi §1/§6), der ALLE offenen Funde ueber alle Tages-Reports sammelt und stapelweise (LIB_APPLY_BATCH, Default 20) vom Nacht-Modell gegen die aktiven gelernten Regeln pruefen laesst: Funde, die einer Regel klar widersprechen (der Bibliothekar wuerde sie GAR NICHT mehr vorschlagen), werden auf status='abgelehnt' gesetzt und fallen aus der Abarbeiten-Liste (finding_keys -> nicht sofort neu vorgeschlagen). NICHT-destruktiv: nur die VORSCHLAEGE fallen weg, im Gehirn wird NICHTS geaendert/geloescht. Konservativ (im Zweifel behalten); ein fehlgeschlagener Batch stoppt den Rest nicht (betroffene bleiben offen). GET /apply-rules-status fuers Fortschritts-Polling. Blockiert, solange Nachtlauf/Abarbeitung laeuft. Alt: 0.6.0 (05.07.2026, 02.45 Uhr)  # 0.6.0 (Frank-Wunsch 2026-07-05): Gelernte Regeln EDITIERBAR + 'KI fragen' — (a) PUT /learn/{id} nimmt jetzt auch text an (Frank bearbeitet die komplette Regel im Dashboard, updated_at wird gestempelt); (b) NEU POST /learn/check: der Bibliothekar beurteilt selbst, ob eine Regel fuer seine Nacht-Urteile sinnvoll, eindeutig und gut umsetzbar ist (bekommt die anderen aktiven Regeln zum Kollisions-Check mit; Antwort 2-4 Saetze leichtes Deutsch). Alt: 0.5.0 (05.07.2026, 02.40 Uhr)  # 0.5.0 (Frank-Wunsch 2026-07-05): LERNEN-KNOPF an jedem Fund — Frank bringt dem Bibliothekar an einem konkreten Fall bei, wie er kuenftig mit solchen Faellen umgehen soll (Beispiel: 'Kurzcheck + Vollversion NIEMALS zusammenfuehren'). Ablauf wie beim Aufgaben-Interview: POST /learn/interview versteht die Lehre, stellt bei Unklarheit GENAU EINE Rueckfrage, nennt die finale Regel-Fassung; Frank bestaetigt -> POST /learn speichert sie in lernregeln.json. Die gelernten Regeln fliessen als Pflicht-Block (_with_rules) in ALLE 10 Nacht-Urteils-Prompts ein (Dubletten/Widersprueche, Veraltet, Gaertner, Luecken, Entwurf, Verdichtung, eigene Aufgaben, Entity-Extraktion, Entscheidungs-Umsetzung). Verwaltung: in /settings als 'lernregeln' + PUT/DELETE /learn/{id} (an/aus + Papierkorb). Alt: 0.4.0 (05.07.2026, 02.29 Uhr)  # 0.4.0 (Frank-Wunsch 2026-07-05): Zusammenfuehrungen mit KATEGORIE-WAHL + EDITIERBAREM Merge-Text — (a) Dubletten-Vorschlaege tragen jetzt die UNION aller Kategorien beider Quell-Eintraege (aktion.kategorien; Multi-Category, ein Eintrag kann z.B. 3 Kategorien mitbringen); (b) beim Abarbeiten kann Frank pro Vorschlag den kompletten Merge-Text editieren und Kategorien abwaehlen — die Decision nimmt merge_text + kategorien als Overrides an (nur bei choice=ja, wirkt vor dem Ausfuehren); (c) _execute_action merge speichert mit categories-Liste (brain /store Multi-Category, erste = primaer) und nennt die Kategorien im Ergebnis. Abwaertskompatibel: alte offene Items ohne kategorien-Feld laufen unveraendert. Alt: 0.3.0 (05.07.2026, 02.16 Uhr)  # 0.3.0 (Frank-Wunsch 2026-07-05): Nacht-BILANZ — der Tages-Report enthaelt jetzt fuer JEDE Aufgabe eine ehrliche Ergebnis-Zeile, AUCH wenn nichts gefunden wurde ('Dubletten-Vorschläge: keine Dubletten gefunden', 'Nachzügler: nichts zu tun — alles verknüpft', 'X: ausgeschaltet' bei deaktivierter Aufgabe, eigene Aufgaben inklusive). Steht in report.bilanz + last_run.bilanz -> Morgen-Report-Karte und Tages-Ansicht zeigen die komplette Bilanz. Alt: 0.2.0 (05.07.2026, 01.45 Uhr)  # 0.2.0 (Frank-Wuensche 2026-07-05): (a) GPT/Codex-Modelle nutzbar — gpt-* laeuft ueber den NEUEN Agent-Durchgriff POST /llm (agent 0.52.0, bestehende ChatGPT-OAuth-Anmeldung inkl. Token-Refresh, keine Auth-Duplikation); Modell-Liste in /settings kommt jetzt aus agent /config (alle verbundenen Provider). (b) THINKING einstellbar (none/low/medium/high/xhigh, Default high) — wirkt bei GPT als reasoning.effort und bei Gemini als thinking_budget. (c) 'OHNE BEGRENZUNG durcharbeiten'-Schalter (Default AN): hebt Vorschlags-Limit, Scan-Limits und LLM-Budget auf — der Bibliothekar arbeitet bis er durch ist; es bleibt NUR die stille Notbremse gegen Endlosschleifen (LIB_LLM_BACKSTOP, Default 5000 Calls/Nacht, ai-agent-Almanach 2.1). Alt: 0.1.0: Erstausgabe (Bereiche 11-18 + Nachzuegler + eigene Aufgaben)
 
 # ---------------------------------------------------------------------------
 # Konfiguration (Secrets nur aus der Umgebung, nie im Code)
@@ -2098,6 +2098,47 @@ def learn_interview(req: LearnInterviewReq) -> dict:
             "fertig": bool(raw.get("fertig")), "regel": (raw.get("regel") or "").strip()}
 
 
+# KI-Ueberschrift fuer gelernte Regeln (Frank-Wunsch 2026-07-05): das Bibliothekar-Modell bildet
+# aus der Regel eine knappe, zusammenfassende Ueberschrift — statt den Text wortwoertlich zu kappen.
+RULE_TITLE_SYSTEM = """Du bist der Nachtschicht-Bibliothekar von Franks zweitem Gehirn. Du bekommst
+eine von Frank GELERNTE REGEL (Volltext). Bilde daraus EINE kurze, zusammenfassende Ueberschrift in
+leichtem Deutsch, die auf einen Blick sagt, worum es in der Regel geht.
+Vorgaben fuer die Ueberschrift:
+- HOECHSTENS 10 Woerter.
+- Keine Anfuehrungszeichen, kein Punkt am Ende, keine Einleitung wie 'Regel:' oder 'Ueberschrift:'.
+- Nur die Kernaussage der Regel, sachlich und knapp.
+Antworte NUR mit diesem JSON: {"titel":"..."}"""
+
+
+def _fallback_title(text: str) -> str:
+    """Wortwoertliche Notfassung (erste ~10 Woerter) — nur wenn die KI-Titelbildung scheitert."""
+    words = (text or "").replace("\n", " ").split()
+    t = " ".join(words[:10]).strip()
+    return (t + ("…" if len(words) > 10 else "")) or "Gelernte Regel"
+
+
+def _gen_rule_title(text: str) -> str:
+    """Bildet per Bibliothekar-Modell (load_config()['model']) eine zusammenfassende Ueberschrift
+    (max 10 Woerter) aus einer gelernten Regel. Robust: bei JEDEM Fehler Fallback auf die
+    wortwoertliche Kurzfassung (nichts stirbt still). Sync def -> laeuft im Threadpool des
+    aufrufenden Endpunkts (fastapi §1)."""
+    text = (text or "").strip()
+    if not text:
+        return "Gelernte Regel"
+    try:
+        cfg = load_config()
+        raw = json.loads(_extract_json(llm(RULE_TITLE_SYSTEM, f"GELERNTE REGEL:\n{text}",
+                                           model=cfg["model"], max_tokens=256, temperature=0.3)))
+        titel = (raw.get("titel") or "").strip().strip('"„“”').rstrip(".").strip()
+        words = titel.split()
+        if len(words) > 10:                      # harte 10-Woerter-Grenze absichern
+            titel = " ".join(words[:10])
+        return titel or _fallback_title(text)
+    except Exception:  # noqa: BLE001 — Titel ist nie kritisch: lieber wortwoertlicher Fallback
+        _log(logging.WARNING, "KI-Titel fuer gelernte Regel fehlgeschlagen -> Fallback", exc_info=True)
+        return _fallback_title(text)
+
+
 class LearnSaveReq(BaseModel):
     text: str = Field(..., min_length=5, max_length=4000)
     fund_titel: str = Field(default="", max_length=300)
@@ -2107,7 +2148,8 @@ class LearnSaveReq(BaseModel):
 @app.post("/learn", dependencies=[Depends(require_auth)])
 def learn_save(req: LearnSaveReq) -> dict:
     rules = load_learned()
-    rule = {"id": uuid.uuid4().hex[:10], "text": req.text.strip(), "enabled": True,
+    text = req.text.strip()
+    rule = {"id": uuid.uuid4().hex[:10], "text": text, "titel": _gen_rule_title(text), "enabled": True,
             "fund_titel": req.fund_titel.strip(), "task": req.task.strip(),
             "created_at": datetime.now(TZ).isoformat(timespec="seconds")}
     rules.append(rule)
@@ -2115,6 +2157,24 @@ def learn_save(req: LearnSaveReq) -> dict:
     checkpoint("learn_save", "Gelernte Regel gespeichert — gilt ab dem naechsten Urteil",
                ok=True, rule_id=rule["id"], chars=len(rule["text"]))
     return {"ok": True, "regel": rule}
+
+
+@app.post("/learn/backfill-titles", dependencies=[Depends(require_auth)])
+def learn_backfill_titles() -> dict:
+    """Zieht fuer alle BESTEHENDEN gelernten Regeln OHNE KI-Titel nachtraeglich eine zusammenfassende
+    Ueberschrift (max 10 Woerter) per Bibliothekar-Modell nach. Idempotent: Regeln, die bereits einen
+    'titel' haben, bleiben unangetastet. Sync def -> Threadpool (fastapi §1)."""
+    rules = load_learned()
+    done = 0
+    for r in rules:
+        if not (r.get("titel") or "").strip() and (r.get("text") or "").strip():
+            r["titel"] = _gen_rule_title(r["text"])
+            done += 1
+    if done:
+        save_learned(rules)
+        checkpoint("learn_backfill_titles", "KI-Ueberschriften fuer bestehende gelernte Regeln nachgezogen",
+                   ok=True, count=done)
+    return {"ok": True, "count": done, "regeln": rules}
 
 
 class LearnUpdateReq(BaseModel):
@@ -2131,6 +2191,7 @@ def learn_update(rule_id: str, req: LearnUpdateReq) -> dict:
                 r["enabled"] = bool(req.enabled)
             if req.text is not None and req.text.strip():
                 r["text"] = req.text.strip()
+                r["titel"] = _gen_rule_title(r["text"])   # Ueberschrift zum neuen Text neu bilden
                 r["updated_at"] = datetime.now(TZ).isoformat(timespec="seconds")
                 checkpoint("learn_edit", "Gelernte Regel editiert — gilt ab dem naechsten Urteil",
                            ok=True, rule_id=rule_id, chars=len(r["text"]))
