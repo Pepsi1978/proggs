@@ -3578,7 +3578,9 @@ button{font-family:inherit;cursor:pointer}
     const start = (location.hash||"").replace(/^#/,"");
     const tab = TABS[start] ? start : "overview";
     try{ history.replaceState({tab:tab}, "", "#"+tab); }catch(_){ }
-    if(tab!==activeTab) setTab(tab);
+    // Hash-Start nach dem kompletten Skript aktivieren: Bibliothekar-State/Listener stehen weiter unten.
+    // Sonst startet loadLibrarian() beim Reload auf #librarian zu frueh und Listen bleiben leer.
+    setTimeout(()=>{ if(tab!==activeTab) setTab(tab); },0);
   })();
   loadOverview();
   /* 20s-Poll (Performance 2026-07-02): laeuft bewusst auf JEDEM Dashboard-Tab (haelt den
