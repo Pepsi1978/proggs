@@ -605,7 +605,7 @@
                                 <DataGridTextColumn Header="Cache $/1M" Binding="{Binding CacheReadText}" Width="150" MinWidth="90"/>
                                 <DataGridTextColumn Header="Kontext" Binding="{Binding ContextLength, StringFormat=N0}" Width="140" MinWidth="90"/>
                                 <DataGridTextColumn Header="Throughput" Binding="{Binding ThroughputText}" Width="140" MinWidth="100"/>
-                                <DataGridTemplateColumn Header="Status" Width="150" MinWidth="150">
+                                <DataGridTemplateColumn Header="Status" Width="*" MinWidth="150">
                                     <DataGridTemplateColumn.CellStyle>
                                         <Style TargetType="DataGridCell">
                                             <Setter Property="Padding" Value="12,0"/>
