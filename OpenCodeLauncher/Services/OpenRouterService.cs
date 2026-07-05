@@ -97,6 +97,79 @@ public sealed class OpenRouterService
         }
     }
 
+    public async Task<List<ModelEntry>> GetFreeModelsAsync(CancellationToken ct = default)
+    {
+        var log = Logger.Instance;
+        try
+        {
+            using var req = new HttpRequestMessage(HttpMethod.Get, $"{BaseUrl}/models");
+            if (_apiKey != null) req.Headers.Authorization = new AuthenticationHeaderValue("Bearer", _apiKey);
+
+            using var resp = await Http.SendAsync(req, ct).ConfigureAwait(false);
+            resp.EnsureSuccessStatusCode();
+
+            await using var stream = await resp.Content.ReadAsStreamAsync(ct).ConfigureAwait(false);
+            var doc = await JsonDocument.ParseAsync(stream, cancellationToken: ct).ConfigureAwait(false);
+            var models = new List<ModelEntry>();
+
+            if (doc.RootElement.TryGetProperty("data", out var data) && data.ValueKind == JsonValueKind.Array)
+            {
+                foreach (var item in data.EnumerateArray())
+                {
+                    var model = ParseFreeModel(item);
+                    if (model != null) models.Add(model);
+                }
+            }
+
+            models.Sort((a, b) => string.Compare(a.DisplayName, b.DisplayName, StringComparison.OrdinalIgnoreCase));
+            log.Info("OpenRouterService", "GetFreeModelsAsync", $"{models.Count} kostenlose OpenRouter-Modelle geladen");
+            return models;
+        }
+        catch (Exception ex)
+        {
+            log.Error("OpenRouterService", "GetFreeModelsAsync", $"Free-Modellliste fehlgeschlagen: {ex.Message}", new { ex.GetType().Name });
+            throw;
+        }
+    }
+
+    private static ModelEntry? ParseFreeModel(JsonElement item)
+    {
+        try
+        {
+            if (!item.TryGetProperty("id", out var idEl) || idEl.ValueKind != JsonValueKind.String) return null;
+            var id = idEl.GetString() ?? string.Empty;
+            if (!id.EndsWith(":free", StringComparison.OrdinalIgnoreCase)) return null;
+
+            if (!item.TryGetProperty("pricing", out var pricing) || pricing.ValueKind != JsonValueKind.Object) return null;
+            var prompt = ParseDouble(pricing, "prompt");
+            var completion = ParseDouble(pricing, "completion");
+            if (prompt != 0 || completion != 0) return null;
+
+            var name = item.TryGetProperty("name", out var nameEl) && nameEl.ValueKind == JsonValueKind.String
+                ? nameEl.GetString() ?? id
+                : id;
+
+            return new ModelEntry
+            {
+                Slug = id,
+                DisplayName = NormalizeFreeModelName(name),
+                ProviderId = "openrouter",
+                ProviderName = "OpenRouter"
+            };
+        }
+        catch (Exception ex)
+        {
+            Logger.Instance.Warn("OpenRouterService", "ParseFreeModel", $"Modell übersprungen: {ex.Message}");
+            return null;
+        }
+    }
+
+    private static string NormalizeFreeModelName(string name)
+    {
+        var normalized = Regex.Replace(name, "\\s*\\(free\\)\\s*$", " Free", RegexOptions.IgnoreCase).Trim();
+        return normalized.Replace(": ", " ");
+    }
+
     private static ProviderEntry? ParseEndpoint(JsonElement ep)
     {
         try

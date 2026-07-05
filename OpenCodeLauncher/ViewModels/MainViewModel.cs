@@ -23,10 +23,11 @@ public sealed partial class MainViewModel : ObservableObject
         _registry = ModelRegistry.Load();
         foreach (var g in _registry.Groups) ModelGroups.Add(g);
         SelectedModel = ModelGroups.FirstOrDefault(g => g.Models.Count > 0)?.Models.FirstOrDefault();
+        _ = RefreshOpenRouterFreeModelsAsync();
         WorkDir = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), "proggs");
 
-        var version = Assembly.GetExecutingAssembly().GetName().Version?.ToString(3) ?? "1.0.13";
-        Version = $"Version {version} (04.07.2026, 22:52 Uhr)";
+        var version = Assembly.GetExecutingAssembly().GetName().Version?.ToString(3) ?? "1.1.0";
+        Version = $"Version {version} (05.07.2026, 12:00 Uhr)";
     }
 
     public ObservableCollection<ModelGroupEntry> ModelGroups { get; } = new();
@@ -47,6 +48,28 @@ public sealed partial class MainViewModel : ObservableObject
         SelectedProvider = null;
         Providers.Clear();
         if (value != null) _ = LoadProvidersAsync(value);
+    }
+
+    private async Task RefreshOpenRouterFreeModelsAsync()
+    {
+        try
+        {
+            var freeModels = await _router.GetFreeModelsAsync();
+            if (freeModels.Count == 0) return;
+
+            _registry.ReplaceGroupModels("openrouter-free", freeModels);
+            var group = ModelGroups.FirstOrDefault(g => string.Equals(g.Id, "openrouter-free", StringComparison.OrdinalIgnoreCase));
+            if (group != null)
+            {
+                group.Models.Clear();
+                foreach (var model in freeModels) group.Models.Add(model);
+                group.RefreshHeaderText();
+            }
+        }
+        catch (Exception ex)
+        {
+            Logger.Instance.Warn("MainViewModel", "RefreshOpenRouterFreeModelsAsync", $"OpenRouterFree bleibt bei Fallback-Liste: {ex.Message}");
+        }
     }
 
     private async Task LoadProvidersAsync(ModelEntry model)

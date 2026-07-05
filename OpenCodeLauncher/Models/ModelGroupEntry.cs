@@ -17,4 +17,6 @@ public sealed partial class ModelGroupEntry : ObservableObject
 
     [JsonIgnore]
     public string HeaderText => $"{Title} ({Models.Count})";
+
+    public void RefreshHeaderText() => OnPropertyChanged(nameof(HeaderText));
 }

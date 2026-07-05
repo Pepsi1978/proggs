@@ -8,8 +8,8 @@ namespace OpenCodeLauncher.Services;
 
 /// <summary>
 /// Persistente Liste der gepflegten Modelle (JSON in %AppData%/OpenCodeLauncher).
-/// Beim ersten Start werden die 7 Default-Modelle angelegt (Slugs verifiziert am
-/// 04.07.2026 gegen GET /api/v1/models). Reihenfolge per Drag&Drop änderbar,
+/// Beim ersten Start werden Default-Gruppen angelegt (Slugs verifiziert gegen
+/// GET /api/v1/models). Reihenfolge per Drag&Drop änderbar,
 /// neue Modelle per AddModel, entfernen per RemoveModel.
 /// </summary>
 public sealed class ModelRegistry
@@ -152,6 +152,27 @@ public sealed class ModelRegistry
         Logger.Instance.Info("ModelRegistry", "MoveGroup", $"{from} -> {to}");
     }
 
+    public void ReplaceGroupModels(string groupId, IEnumerable<ModelEntry> models)
+    {
+        var group = Groups.FirstOrDefault(g => string.Equals(g.Id, groupId, StringComparison.OrdinalIgnoreCase));
+        if (group == null) return;
+
+        group.Models.Clear();
+        foreach (var model in models)
+        {
+            model.ProviderId = group.ProviderId;
+            model.ProviderName = group.ProviderName;
+            if (model.Slug.StartsWith("openrouter/", StringComparison.OrdinalIgnoreCase))
+                model.Slug = model.Slug["openrouter/".Length..];
+            if (string.IsNullOrWhiteSpace(model.DisplayName)) model.DisplayName = ToDisplayName(model.Slug);
+            group.Models.Add(model);
+        }
+
+        Save();
+        group.RefreshHeaderText();
+        Logger.Instance.Info("ModelRegistry", "ReplaceGroupModels", $"{group.Title}: {group.Models.Count} Modelle aktualisiert");
+    }
+
     private void RepairAndNormalize()
     {
         foreach (var defaults in CreateDefaults())
@@ -191,6 +212,32 @@ public sealed class ModelRegistry
     private static ObservableCollection<ModelGroupEntry> CreateDefaults(IEnumerable<ModelEntry>? openRouterModels = null) => new()
     {
         CreateGroup("openrouter", "OpenRouter", "openrouter", "OpenRouter", NormalizeOpenRouter(openRouterModels).ToArray()),
+        CreateGroup("openrouter-free", "OpenRouterFree", "openrouter", "OpenRouter", new[]
+        {
+            Model("poolside/laguna-xs-2.1:free", "Poolside Laguna XS 2.1 Free", "openrouter", "OpenRouter"),
+            Model("cohere/north-mini-code:free", "Cohere North Mini Code Free", "openrouter", "OpenRouter"),
+            Model("nvidia/nemotron-3.5-content-safety:free", "NVIDIA Nemotron 3.5 Content Safety Free", "openrouter", "OpenRouter"),
+            Model("nvidia/nemotron-3-ultra-550b-a55b:free", "NVIDIA Nemotron 3 Ultra Free", "openrouter", "OpenRouter"),
+            Model("nvidia/nemotron-3-nano-omni-30b-a3b-reasoning:free", "NVIDIA Nemotron 3 Nano Omni Free", "openrouter", "OpenRouter"),
+            Model("poolside/laguna-xs.2:free", "Poolside Laguna XS.2 Free", "openrouter", "OpenRouter"),
+            Model("poolside/laguna-m.1:free", "Poolside Laguna M.1 Free", "openrouter", "OpenRouter"),
+            Model("google/gemma-4-26b-a4b-it:free", "Google Gemma 4 26B A4B Free", "openrouter", "OpenRouter"),
+            Model("google/gemma-4-31b-it:free", "Google Gemma 4 31B Free", "openrouter", "OpenRouter"),
+            Model("nvidia/nemotron-3-super-120b-a12b:free", "NVIDIA Nemotron 3 Super Free", "openrouter", "OpenRouter"),
+            Model("liquid/lfm-2.5-1.2b-thinking:free", "LiquidAI LFM2.5 1.2B Thinking Free", "openrouter", "OpenRouter"),
+            Model("liquid/lfm-2.5-1.2b-instruct:free", "LiquidAI LFM2.5 1.2B Instruct Free", "openrouter", "OpenRouter"),
+            Model("nvidia/nemotron-3-nano-30b-a3b:free", "NVIDIA Nemotron 3 Nano 30B A3B Free", "openrouter", "OpenRouter"),
+            Model("nvidia/nemotron-nano-12b-v2-vl:free", "NVIDIA Nemotron Nano 12B 2 VL Free", "openrouter", "OpenRouter"),
+            Model("qwen/qwen3-next-80b-a3b-instruct:free", "Qwen3 Next 80B A3B Instruct Free", "openrouter", "OpenRouter"),
+            Model("nvidia/nemotron-nano-9b-v2:free", "NVIDIA Nemotron Nano 9B V2 Free", "openrouter", "OpenRouter"),
+            Model("openai/gpt-oss-120b:free", "OpenAI GPT OSS 120B Free", "openrouter", "OpenRouter"),
+            Model("openai/gpt-oss-20b:free", "OpenAI GPT OSS 20B Free", "openrouter", "OpenRouter"),
+            Model("qwen/qwen3-coder:free", "Qwen3 Coder Free", "openrouter", "OpenRouter"),
+            Model("cognitivecomputations/dolphin-mistral-24b-venice-edition:free", "Venice Uncensored Free", "openrouter", "OpenRouter"),
+            Model("meta-llama/llama-3.3-70b-instruct:free", "Llama 3.3 70B Instruct Free", "openrouter", "OpenRouter"),
+            Model("meta-llama/llama-3.2-3b-instruct:free", "Llama 3.2 3B Instruct Free", "openrouter", "OpenRouter"),
+            Model("nousresearch/hermes-3-llama-3.1-405b:free", "Hermes 3 405B Instruct Free", "openrouter", "OpenRouter"),
+        }),
         CreateGroup("opencode-zen-free", "OpenCode Zen Free", "opencode", "OpenCode Zen", new[]
         {
             Model("gpt-5-nano", "GPT-5 Nano", "opencode", "OpenCode Zen"),
