@@ -874,7 +874,7 @@ button{font-family:inherit;cursor:pointer}
         <div class="vitals">
           <div class="card vital">
             <div class="vital-head">
-              <span class="vital-label">Bibliothekar-Agent</span>
+              <span class="vital-label">Agent</span>
               <span class="vital-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M12 2a4 4 0 0 1 4 4v1a4 4 0 0 1-8 0V6a4 4 0 0 1 4-4Z"/><path d="M5 21v-1a7 7 0 0 1 14 0v1"/></svg></span>
             </div>
             <div class="vital-status" id="agentStatus"><span class="dot"></span><span id="agentWord">–</span></div>
@@ -1036,7 +1036,7 @@ button{font-family:inherit;cursor:pointer}
 
         <div class="card set-section">
           <h3><span class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg></span>Abarbeiten</h3>
-          <p class="set-desc">Wähle einen Tag, entscheide jeden Fund (Ja / Nein / eigener Vorschlag) und drücke unten auf <b>Starten</b>. Erledigtes fällt aus der Liste; jeder Tag bleibt erhalten, bis alles entschieden ist.</p>
+          <p class="set-desc">Wähle einen Tag, entscheide jeden Fund (Ja / Nein / eigener Vorschlag) und drücke unten auf <b>Starten</b>. Erledigtes fällt aus der Liste; jeder Tag bleibt erhalten, bis alles entschieden ist. <b id="libProcNote"></b></p>
           <div class="lib-days" id="libDays"><span class="set-desc">Lade Tage …</span></div>
           <div id="libItems"></div>
           <div id="libResults"></div>
@@ -1084,8 +1084,7 @@ button{font-family:inherit;cursor:pointer}
             <div id="libTaskToggles"></div>
           </div>
           <div class="lib-run-line">
-            <button class="btn btn-primary" id="libSaveSettings">Speichern</button>
-            <span class="set-desc" id="libSettingsState"></span>
+            <span class="set-desc" id="libSettingsState">Änderungen speichern sich automatisch.</span>
           </div>
         </div>
 
@@ -1117,8 +1116,8 @@ button{font-family:inherit;cursor:pointer}
       <section class="view settings" id="view-settings">
         <div class="set-row">
           <div class="card set-section">
-            <h3><span class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M12 2a4 4 0 0 1 4 4v1a4 4 0 0 1-8 0V6a4 4 0 0 1 4-4Z"/><path d="M5 21v-1a7 7 0 0 1 14 0v1"/></svg></span>Bibliothekar-Agent</h3>
-            <p class="set-desc">Drei Agenten — wähle für jeden ein eigenes Modell. Der <b>Hauptagent</b> redet mit dir, der <b>Speicheragent</b> legt 1:1 ab, der <b>Abfrageagent</b> sucht im Gehirn.</p>
+            <h3><span class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M12 2a4 4 0 0 1 4 4v1a4 4 0 0 1-8 0V6a4 4 0 0 1 4-4Z"/><path d="M5 21v-1a7 7 0 0 1 14 0v1"/></svg></span>Agenten</h3>
+            <p class="set-desc">Die Tages-Agenten — wähle für jeden ein eigenes Modell. Der <b>Hauptagent</b> redet mit dir, der <b>Speicheragent</b> legt 1:1 ab, der <b>Abfrageagent</b> sucht im Gehirn. (Der Nachtschicht-Bibliothekar ist ein Spezialagent und hat seinen eigenen Bereich.)</p>
             <div class="mr-pair">
               <div class="field">
                 <label for="modelHaupt">Hauptagent · Gespräch &amp; Steuerung</label>
@@ -3757,8 +3756,18 @@ button{font-family:inherit;cursor:pointer}
     else if((p.results||[]).length){ hint.textContent="Alles umgesetzt."; }
   }
 
-  /* — Einstellungen des Bibliothekars — */
+  /* — Einstellungen des Bibliothekars (AUTO-SAVE, Frank-Wunsch 05.07.: kein Speichern-Knopf,
+       jede Aenderung speichert sich sofort — Vergessen unmoeglich) — */
+  let libSettingsReady=false, libSaveTimer=null;
+
+  function libUpdateProcNote(s){
+    const note=document.getElementById("libProcNote");
+    if(note) note.textContent="Abgearbeitet wird alles vom eingestellten Nacht-Modell aus den Bibliothekar-Einstellungen: "
+      +(s.model||"?")+" · Thinking "+(s.reasoning||"high")+".";
+  }
+
   async function loadLibSettings(){
+    libSettingsReady=false;
     try{
       const r=await jlib("settings");
       const s=r.settings||{};
@@ -3772,15 +3781,18 @@ button{font-family:inherit;cursor:pointer}
       document.getElementById("libMaxPer").value=s.max_per_task??8;
       document.getElementById("libBudget").value=s.llm_budget??250;
       syncLibLimits();
+      libUpdateProcNote(s);
       const tg=document.getElementById("libTaskToggles"); tg.innerHTML="";
       (r.standard_tasks||[]).forEach(t=>{
         const row=document.createElement("div"); row.className="lib-taskrow";
         row.innerHTML='<div class="nm"><b>'+escapeHtml(t.name)+' <span style="font-weight:400;color:var(--text-faint)">(Nr. '+escapeHtml(String(t.nr))+')</span></b><span>'+escapeHtml(t.desc)+'</span></div>';
         const sw=document.createElement("input"); sw.type="checkbox"; sw.className="lib-sw";
         sw.checked=(s.tasks||{})[t.key]!==false; sw.dataset.key=t.key;
+        sw.addEventListener("change", queueLibSave);
         row.appendChild(sw); tg.appendChild(row);
       });
       renderLibCustom(s.custom_tasks||[]);
+      libSettingsReady=true;
     }catch(e){ document.getElementById("libSettingsState").textContent="Bibliothekar nicht erreichbar ("+e.message+")."; }
   }
 
@@ -3793,25 +3805,39 @@ button{font-family:inherit;cursor:pointer}
       const f=el.closest(".field"); if(f) f.classList.toggle("lib-dim", off);
     });
   }
-  document.getElementById("libUnlimited").addEventListener("change", syncLibLimits);
 
-  document.getElementById("libSaveSettings").addEventListener("click", async()=>{
-    const st=document.getElementById("libSettingsState");
+  function collectLibSettings(){
     const tasks={}; document.querySelectorAll("#libTaskToggles .lib-sw").forEach(sw=>{ tasks[sw.dataset.key]=sw.checked; });
-    try{
-      await jlib("settings","PUT",{
-        enabled:document.getElementById("libEnabled").checked,
-        unlimited:document.getElementById("libUnlimited").checked,
-        start_time:document.getElementById("libStartTime").value||"04:10",
-        model:document.getElementById("libModel").value,
-        reasoning:document.getElementById("libReasoning").value||"high",
-        tasks:tasks,
-        max_per_task:parseInt(document.getElementById("libMaxPer").value)||8,
-        llm_budget:parseInt(document.getElementById("libBudget").value)||250
-      });
-      st.textContent="Gespeichert — gilt ab der nächsten Nacht.";
-      loadLibStatus();
-    }catch(e){ st.textContent="Fehler: "+e.message; }
+    return {
+      enabled:document.getElementById("libEnabled").checked,
+      unlimited:document.getElementById("libUnlimited").checked,
+      start_time:document.getElementById("libStartTime").value||"04:10",
+      model:document.getElementById("libModel").value,
+      reasoning:document.getElementById("libReasoning").value||"high",
+      tasks:tasks,
+      max_per_task:parseInt(document.getElementById("libMaxPer").value)||8,
+      llm_budget:parseInt(document.getElementById("libBudget").value)||250
+    };
+  }
+
+  function queueLibSave(){
+    if(!libSettingsReady) return;   // beim Befuellen der Felder nicht speichern
+    const st=document.getElementById("libSettingsState");
+    st.textContent="Speichere …";
+    clearTimeout(libSaveTimer);
+    libSaveTimer=setTimeout(async()=>{
+      try{
+        const r=await jlib("settings","PUT",collectLibSettings());
+        st.textContent="Gespeichert — gilt ab der nächsten Nacht (bzw. sofort bei „Jetzt laufen lassen“).";
+        libUpdateProcNote((r&&r.settings)||{});
+        loadLibStatus();
+      }catch(e){ st.textContent="Fehler beim Speichern: "+e.message; }
+    },500);
+  }
+
+  ["libEnabled","libUnlimited","libStartTime","libModel","libReasoning","libMaxPer","libBudget"].forEach(id=>{
+    const el=document.getElementById(id); if(!el) return;
+    el.addEventListener("change", ()=>{ if(id==="libUnlimited") syncLibLimits(); queueLibSave(); });
   });
 
   /* — Eigene Aufgaben (Liste + Interview) — */
