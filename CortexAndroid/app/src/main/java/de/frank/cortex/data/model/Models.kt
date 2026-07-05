@@ -257,6 +257,12 @@ data class OverviewResponse(
 )
 
 @JsonClass(generateAdapter = true)
+data class VitalsResponse(
+    val agent: AgentOverview?,
+    val server: ServerOverview?
+)
+
+@JsonClass(generateAdapter = true)
 data class BrainOverview(
     val status: String?,
     val version: String?,

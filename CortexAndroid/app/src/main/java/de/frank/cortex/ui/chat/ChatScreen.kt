@@ -1053,6 +1053,7 @@ private fun ContextModeBar(
             verticalAlignment = Alignment.CenterVertically
         ) {
             listOf(
+                SettingsStore.RESPONSE_SIZE_AUTO to "A",
                 SettingsStore.RESPONSE_SIZE_SHORT to "S",
                 SettingsStore.RESPONSE_SIZE_MEDIUM to "M",
                 SettingsStore.RESPONSE_SIZE_XL to "XL"

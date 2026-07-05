@@ -55,6 +55,7 @@ object SettingsStore {
     const val CONTEXT_MODE_SAVE = "save"
     const val CONTEXT_MODE_SEARCH = "search"
 
+    const val RESPONSE_SIZE_AUTO = "auto"
     const val RESPONSE_SIZE_SHORT = "s"
     const val RESPONSE_SIZE_MEDIUM = "m"
     const val RESPONSE_SIZE_XL = "xl"
@@ -84,6 +85,7 @@ object SettingsStore {
     }
 
     fun defaultResponseSizePrompt(size: String): String = when (size) {
+        RESPONSE_SIZE_AUTO -> ""
         RESPONSE_SIZE_SHORT -> """
             Antwortlänge S ist aktiv: Antworte exakt auf den Punkt, kurz und eindeutig.
             Suche nur nach der wirklich passenden Antwort. Wenn ein perfekter Treffer gefunden ist, nutze ihn sofort
@@ -329,12 +331,12 @@ object SettingsStore {
         set(value) = plain.edit().putFloat("tts_rate", value).apply()
 
     var responseSize: String
-        get() = plain.getString("response_size", RESPONSE_SIZE_MEDIUM) ?: RESPONSE_SIZE_MEDIUM
+        get() = plain.getString("response_size", RESPONSE_SIZE_AUTO) ?: RESPONSE_SIZE_AUTO
         set(value) = plain.edit().putString(
             "response_size",
             when (value) {
-                RESPONSE_SIZE_SHORT, RESPONSE_SIZE_MEDIUM, RESPONSE_SIZE_XL -> value
-                else -> RESPONSE_SIZE_MEDIUM
+                RESPONSE_SIZE_AUTO, RESPONSE_SIZE_SHORT, RESPONSE_SIZE_MEDIUM, RESPONSE_SIZE_XL -> value
+                else -> RESPONSE_SIZE_AUTO
             }
         ).apply()
 

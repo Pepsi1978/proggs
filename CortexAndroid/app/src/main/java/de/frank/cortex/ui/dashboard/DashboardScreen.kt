@@ -1,7 +1,9 @@
 package de.frank.cortex.ui.dashboard
 
+import androidx.activity.compose.BackHandler
 import androidx.compose.animation.core.*
 import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -10,6 +12,8 @@ import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.relocation.BringIntoViewRequester
+import androidx.compose.foundation.relocation.bringIntoViewRequester
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
@@ -23,6 +27,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -36,6 +41,7 @@ import de.frank.cortex.ui.common.VpnSleepOverlay
 import de.frank.cortex.ui.theme.*
 import de.frank.cortex.vpn.TunnelState
 import de.frank.cortex.vpn.WireGuardManager
+import kotlinx.coroutines.delay
 import java.time.OffsetDateTime
 import java.time.format.DateTimeFormatter
 import java.util.Locale
@@ -58,6 +64,12 @@ fun DashboardScreen(vm: DashboardViewModel = viewModel()) {
     if (vpnState != TunnelState.CONNECTED) {
         VpnSleepOverlay(onActivateVpn = { WireGuardManager.connect() })
         return
+    }
+
+    BackHandler(
+        enabled = uiState.selectedEntry != null || uiState.categoryPath.isNotEmpty() || uiState.selectedCategory != null
+    ) {
+        vm.handleBackNavigation()
     }
 
     if (uiState.selectedEntry != null) {
@@ -401,16 +413,16 @@ private fun VitalsGrid(overview: de.frank.cortex.data.model.OverviewResponse) {
             sub = "${overview.agent?.model ?: "?"} \u00B7 ${overview.agent?.sessions ?: 0} Sitzungen",
             isStatus = true, dot = if (overview.agent?.status == "ok") Mint else Rose),
         VitalItem("memory", "Prozessor",
-            "${overview.server?.cpu_pct?.toInt() ?: 0}", "%",
-            "8 Kerne", meter = ((overview.server?.cpu_pct ?: 0.0) / 100.0).toFloat()),
+            formatPercent(overview.server?.cpu_pct), "%",
+            "Aktualisiert alle 5 s", meter = ((overview.server?.cpu_pct ?: 0.0) / 100.0).toFloat().coerceIn(0f, 1f)),
         VitalItem("developer_board", "Arbeitsspeicher",
-            "${overview.server?.mem_pct?.toInt() ?: 0}", "%",
-            "${formatBytes(overview.server?.mem_used)} / ${formatBytes(overview.server?.mem_total)}",
-            meter = ((overview.server?.mem_pct ?: 0.0) / 100.0).toFloat()),
+            formatPercent(overview.server?.mem_pct), "%",
+            "${formatMegabytesAsGigabytes(overview.server?.mem_used)} / ${formatMegabytesAsGigabytes(overview.server?.mem_total)}",
+            meter = ((overview.server?.mem_pct ?: 0.0) / 100.0).toFloat().coerceIn(0f, 1f)),
         VitalItem("hard_drive", "Speicherplatz",
-            "${overview.server?.disk_pct?.toInt() ?: 0}", "%",
-            "${formatBytes(overview.server?.disk_used)} / ${formatBytes(overview.server?.disk_total)}",
-            meter = ((overview.server?.disk_pct ?: 0.0) / 100.0).toFloat())
+            formatPercent(overview.server?.disk_pct), "%",
+            "${formatMegabytesAsGigabytes(overview.server?.disk_used)} / ${formatMegabytesAsGigabytes(overview.server?.disk_total)}",
+            meter = ((overview.server?.disk_pct ?: 0.0) / 100.0).toFloat().coerceIn(0f, 1f))
     )
 
     // 2x2 Grid (design: gap 11)
@@ -634,7 +646,7 @@ private fun EntryCard(entry: BrainEntry, onClick: () -> Unit) {
     }
 }
 
-@OptIn(ExperimentalLayoutApi::class)
+@OptIn(ExperimentalFoundationApi::class, ExperimentalLayoutApi::class)
 @Composable
 private fun EntryDetailScreen(
     entry: BrainEntry,
@@ -654,13 +666,33 @@ private fun EntryDetailScreen(
     onBack: () -> Unit
 ) {
     var showDeleteConfirm by remember { mutableStateOf(false) }
+    var titleFocused by remember { mutableStateOf(false) }
+    var textFocused by remember { mutableStateOf(false) }
+    val titleBringIntoViewRequester = remember { BringIntoViewRequester() }
+    val textBringIntoViewRequester = remember { BringIntoViewRequester() }
     val isDark = MaterialTheme.colorScheme.background == DarkBg
+
+    LaunchedEffect(titleFocused, editTitle) {
+        if (titleFocused) {
+            delay(120)
+            titleBringIntoViewRequester.bringIntoView()
+        }
+    }
+
+    LaunchedEffect(textFocused, editText) {
+        if (textFocused) {
+            delay(120)
+            textBringIntoViewRequester.bringIntoView()
+        }
+    }
 
     LazyColumn(
         modifier = Modifier
             .fillMaxSize()
-            .background(MaterialTheme.colorScheme.background),
-        contentPadding = PaddingValues(20.dp),
+            .background(MaterialTheme.colorScheme.background)
+            .imePadding()
+            .imeNestedScroll(),
+        contentPadding = PaddingValues(start = 20.dp, top = 20.dp, end = 20.dp, bottom = 36.dp),
         verticalArrangement = Arrangement.spacedBy(13.dp)
     ) {
         item {
@@ -703,7 +735,11 @@ private fun EntryDetailScreen(
                     BasicTextField(
                         value = editTitle,
                         onValueChange = onEditTitleChange,
-                        modifier = Modifier.fillMaxWidth().padding(13.dp),
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .bringIntoViewRequester(titleBringIntoViewRequester)
+                            .onFocusChanged { titleFocused = it.isFocused }
+                            .padding(13.dp),
                         textStyle = LocalTextStyle.current.copy(
                             fontFamily = SpaceGrotesk,
                             fontWeight = FontWeight.SemiBold,
@@ -787,7 +823,12 @@ private fun EntryDetailScreen(
                     BasicTextField(
                         value = editText,
                         onValueChange = onEditTextChange,
-                        modifier = Modifier.fillMaxWidth().defaultMinSize(minHeight = 220.dp).padding(14.dp),
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .defaultMinSize(minHeight = 220.dp)
+                            .bringIntoViewRequester(textBringIntoViewRequester)
+                            .onFocusChanged { textFocused = it.isFocused }
+                            .padding(14.dp),
                         textStyle = LocalTextStyle.current.copy(
                             fontFamily = JetBrainsMono,
                             fontSize = 13.sp,
@@ -919,11 +960,9 @@ private fun formatEntryTimestamp(raw: String?): String {
     }
 }
 
-private fun formatBytes(bytes: Long?): String {
-    if (bytes == null) return "?"
-    return when {
-        bytes >= 1_073_741_824 -> "${"%.1f".format(bytes / 1_073_741_824.0)} GB"
-        bytes >= 1_048_576 -> "${"%.0f".format(bytes / 1_048_576.0)} MB"
-        else -> "${"%.0f".format(bytes / 1024.0)} KB"
-    }
+private fun formatPercent(value: Double?): String = String.format(Locale.GERMANY, "%.1f", value ?: 0.0)
+
+private fun formatMegabytesAsGigabytes(megabytes: Long?): String {
+    if (megabytes == null) return "?"
+    return String.format(Locale.GERMANY, "%.1f GB", megabytes / 1024.0)
 }

@@ -81,6 +81,14 @@ class DashboardViewModel : ViewModel() {
                 delay(20_000)
             }
         }
+        viewModelScope.launch {
+            while (true) {
+                if (screenActive && WireGuardManager.state.value == TunnelState.CONNECTED) {
+                    loadVitals()
+                }
+                delay(5_000)
+            }
+        }
     }
 
     fun refreshAll() {
@@ -162,6 +170,32 @@ class DashboardViewModel : ViewModel() {
         }
     }
 
+    private suspend fun loadVitals() {
+        try {
+            val vitals = ApiClient.dashboardApi().vitals()
+            _uiState.update { state ->
+                val current = state.overview
+                state.copy(
+                    overview = if (current != null) {
+                        current.copy(agent = vitals.agent ?: current.agent, server = vitals.server ?: current.server)
+                    } else {
+                        OverviewResponse(
+                            total = state.totalEntries,
+                            brain = state.health?.let { BrainOverview(it.status, it.version, it.points) },
+                            agent = vitals.agent,
+                            server = vitals.server
+                        )
+                    },
+                    isConnected = true
+                )
+            }
+        } catch (e: CancellationException) {
+            throw e
+        } catch (e: Exception) {
+            CortexLog.error("DashboardVM", "loadVitals", "Fehler: ${e.message}")
+        }
+    }
+
     private suspend fun loadHealth() {
         try {
             val health = ApiClient.brainApi().health()
@@ -234,6 +268,16 @@ class DashboardViewModel : ViewModel() {
                 selectedCategory = null,
                 browseResults = emptyList()
             )
+        }
+    }
+
+    fun handleBackNavigation() {
+        val state = _uiState.value
+        when {
+            state.selectedEntry != null -> clearSelection()
+            state.categoryPath.size > 1 -> drillBack(state.categoryPath.lastIndex)
+            state.categoryPath.isNotEmpty() -> drillToRoot()
+            state.selectedCategory != null -> selectCategory(null)
         }
     }
 

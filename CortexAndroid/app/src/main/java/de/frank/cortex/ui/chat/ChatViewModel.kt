@@ -65,7 +65,7 @@ data class ChatUiState(
     val isImproving: Boolean = false,
     val isGeneratingTitle: Boolean = false,
     val contextMode: String = SettingsStore.CONTEXT_MODE_AUTO,
-    val responseSize: String = SettingsStore.RESPONSE_SIZE_MEDIUM
+    val responseSize: String = SettingsStore.RESPONSE_SIZE_AUTO
 )
 
 object ChatCommands {
@@ -898,10 +898,11 @@ class ChatViewModel : ViewModel() {
 
     fun updateResponseSize(size: String) {
         val normalized = when (size) {
+            SettingsStore.RESPONSE_SIZE_AUTO,
             SettingsStore.RESPONSE_SIZE_SHORT,
             SettingsStore.RESPONSE_SIZE_MEDIUM,
             SettingsStore.RESPONSE_SIZE_XL -> size
-            else -> SettingsStore.RESPONSE_SIZE_MEDIUM
+            else -> SettingsStore.RESPONSE_SIZE_AUTO
         }
         SettingsStore.responseSize = normalized
         _uiState.update { it.copy(responseSize = normalized) }
@@ -1168,7 +1169,7 @@ class ChatViewModel : ViewModel() {
 
     private fun buildContextPrompt(contextMode: String, responseSize: String): String? {
         val modePrompt = if (contextMode == SettingsStore.CONTEXT_MODE_AUTO) "" else SettingsStore.contextPrompt(contextMode)
-        val sizePrompt = SettingsStore.responseSizePrompt(responseSize)
+        val sizePrompt = if (responseSize == SettingsStore.RESPONSE_SIZE_AUTO) "" else SettingsStore.responseSizePrompt(responseSize)
         return listOf(modePrompt, sizePrompt).filter { it.isNotBlank() }.joinToString("\n\n").ifBlank { null }
     }
 
