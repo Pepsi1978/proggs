@@ -4,28 +4,47 @@
     <!-- ===== OpenCode Launcher · Light ===== -->
     <!-- Gleiche Keys wie DarkTheme.xaml. -->
 
-    <SolidColorBrush x:Key="WindowBg"          Color="#F5F4FA"/>
-    <SolidColorBrush x:Key="TitleBarBg"        Color="#FFFFFF"/>
-    <SolidColorBrush x:Key="CardBg"            Color="#FFFFFF"/>
-    <SolidColorBrush x:Key="SurfaceBg"         Color="#F6F5FC"/>
-    <SolidColorBrush x:Key="HoverBg"           Color="#EEECF8"/>
-    <SolidColorBrush x:Key="ChipBg"            Color="#EEECF7"/>
+    <LinearGradientBrush x:Key="DesktopBg" StartPoint="0.5,0" EndPoint="0.5,1">
+        <GradientStop Color="#F2F0FE" Offset="0"/>
+        <GradientStop Color="#E9E7F8" Offset="0.55"/>
+        <GradientStop Color="#E2E0F2" Offset="1"/>
+    </LinearGradientBrush>
 
-    <SolidColorBrush x:Key="BorderBrushSoft"   Color="#E7E4F1"/>
-    <SolidColorBrush x:Key="BorderBrushStrong" Color="#DBD8EA"/>
-    <SolidColorBrush x:Key="GridLineBrush"     Color="#E7E4F1"/>
+    <SolidColorBrush x:Key="WindowBg"          Color="#85FFFFFF"/>
+    <SolidColorBrush x:Key="TitleBarBg"        Color="#00FFFFFF"/>
+    <SolidColorBrush x:Key="CardBg"            Color="#8CFFFFFF"/>
+    <SolidColorBrush x:Key="SurfaceBg"         Color="#8CFFFFFF"/>
+    <SolidColorBrush x:Key="HoverBg"           Color="#1A7C6CF5"/>
+    <SolidColorBrush x:Key="ChipBg"            Color="#1A7C6CF5"/>
+
+    <SolidColorBrush x:Key="AuraOneBrush"       Color="#577C6CF5"/>
+    <SolidColorBrush x:Key="AuraTwoBrush"       Color="#47EC6EC4"/>
+    <SolidColorBrush x:Key="AuraThreeBrush"     Color="#4D589EFF"/>
+    <SolidColorBrush x:Key="GlassBorderBrush"   Color="#BFFFFFFF"/>
+    <SolidColorBrush x:Key="GlassBrightBrush"   Color="#E6FFFFFF"/>
+    <SolidColorBrush x:Key="AccentGlowBrush"    Color="#737C6CF5"/>
+    <SolidColorBrush x:Key="PanelBg"            Color="#8CFFFFFF"/>
+    <SolidColorBrush x:Key="TableHeaderBg"      Color="#B8FFFFFF"/>
+
+    <SolidColorBrush x:Key="BorderBrushSoft"   Color="#1A281E50"/>
+    <SolidColorBrush x:Key="BorderBrushStrong" Color="#BFFFFFFF"/>
+    <SolidColorBrush x:Key="GridLineBrush"     Color="#1A281E50"/>
 
     <SolidColorBrush x:Key="TextBrush"         Color="#211D33"/>
-    <SolidColorBrush x:Key="MutedBrush"        Color="#6A6782"/>
-    <SolidColorBrush x:Key="DimBrush"          Color="#9995AD"/>
+    <SolidColorBrush x:Key="MutedBrush"        Color="#9E1D1930"/>
+    <SolidColorBrush x:Key="DimBrush"          Color="#6B1D1930"/>
 
-    <SolidColorBrush x:Key="AccentBrush"        Color="#7C6CF5"/>
+    <SolidColorBrush x:Key="AccentBrush"        Color="#6F60E8"/>
+    <LinearGradientBrush x:Key="AccentGradientBrush" StartPoint="0.5,0" EndPoint="0.5,1">
+        <GradientStop Color="#A79CFF" Offset="0"/>
+        <GradientStop Color="#7C6CF5" Offset="1"/>
+    </LinearGradientBrush>
     <SolidColorBrush x:Key="AccentHoverBrush"   Color="#6455E0"/>
     <SolidColorBrush x:Key="AccentPressedBrush" Color="#5646C8"/>
-    <SolidColorBrush x:Key="AccentSoftBg"       Color="#ECEAFB"/>
-    <SolidColorBrush x:Key="AccentLineBrush"    Color="#D9D4F7"/>
+    <SolidColorBrush x:Key="AccentSoftBg"       Color="#D9EDEAFD"/>
+    <SolidColorBrush x:Key="AccentLineBrush"    Color="#527C6CF5"/>
 
-    <SolidColorBrush x:Key="SelectedBg"         Color="#EEEBFC"/>
+    <SolidColorBrush x:Key="SelectedBg"         Color="#D9EEEBFC"/>
     <SolidColorBrush x:Key="SelectedBorderBrush" Color="#7C6CF5"/>
     <SolidColorBrush x:Key="RowSelectedBg"      Color="#F1EEFC"/>
 
