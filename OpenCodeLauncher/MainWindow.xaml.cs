@@ -36,6 +36,10 @@ public partial class MainWindow : Window
         ViewModel = new MainViewModel();
         DataContext = ViewModel;
 
+        UpdateThemeButton(ThemeManager.Current);
+        ThemeManager.ThemeChanged += OnThemeChanged;
+        Closed += (_, _) => ThemeManager.ThemeChanged -= OnThemeChanged;
+
         SourceInitialized += (_, _) =>
         {
             var hwnd = new WindowInteropHelper(this).Handle;
@@ -46,11 +50,28 @@ public partial class MainWindow : Window
         ContentRendered += (_, _) => Title = $"OpenCode Launcher — {ViewModel.Version}";
     }
 
+    private void OnThemeChanged(ThemeManager.AppTheme theme)
+    {
+        ApplyWindowTheme();
+        UpdateThemeButton(theme);
+        _layoutSettings.Theme = theme.ToString();
+        _layoutSettings.Save();
+    }
+
+    private void UpdateThemeButton(ThemeManager.AppTheme theme)
+    {
+        // Button zeigt das ZIEL-Design: Sonne im Dunkelmodus, Mond im Tagmodus.
+        ThemeBtn.Content = theme == ThemeManager.AppTheme.Dark ? "☀" : "☾";
+        ThemeBtn.ToolTip = theme == ThemeManager.AppTheme.Dark ? "Zum Tagmodus wechseln" : "Zum Nachtmodus wechseln";
+    }
+
+    private void ThemeBtn_Click(object sender, RoutedEventArgs e) => ThemeManager.Toggle();
+
     private void ApplyWindowTheme()
     {
         var hwnd = new System.Windows.Interop.WindowInteropHelper(this).Handle;
         if (hwnd == IntPtr.Zero) return;
-        int dark = 1;
+        int dark = ThemeManager.Current == ThemeManager.AppTheme.Dark ? 1 : 0;
         DwmSetWindowAttribute(hwnd, DWMWA_USE_IMMERSIVE_DARK_MODE, ref dark, sizeof(int));
         int cornerPreference = DWMWCP_ROUND;
         DwmSetWindowAttribute(hwnd, DWMWA_WINDOW_CORNER_PREFERENCE, ref cornerPreference, sizeof(int));

@@ -6,6 +6,8 @@
         <ResourceDictionary>
             <ResourceDictionary.MergedDictionaries>
                 <ResourceDictionary Source="pack://application:,,,/PresentationFramework.Aero2;component/themes/Aero2.NormalColor.xaml" />
+                <!-- Startdesign: Dark. Der ThemeManager tauscht diesen Eintrag zur Laufzeit. -->
+                <ResourceDictionary Source="Themes/DarkTheme.xaml" />
             </ResourceDictionary.MergedDictionaries>
         </ResourceDictionary>
     </Application.Resources>

@@ -23,6 +23,9 @@ public sealed class LayoutSettings
 
     public double ModelPaneWidth { get; set; } = DefaultModelPaneWidth;
 
+    /// <summary>Gewaehltes Design: "Dark" oder "Light". Wird beim App-Start angewendet.</summary>
+    public string Theme { get; set; } = "Dark";
+
     public static LayoutSettings Load()
     {
         try
