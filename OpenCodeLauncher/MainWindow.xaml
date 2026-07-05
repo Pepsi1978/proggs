@@ -247,7 +247,7 @@
             <!-- Hauptbereich -->
             <Grid Grid.Row="1" Margin="14,10,14,12">
                 <Grid.ColumnDefinitions>
-                    <ColumnDefinition Width="300" MinWidth="240"/>
+                    <ColumnDefinition x:Name="ModelColumn" Width="300" MinWidth="240" MaxWidth="760"/>
                     <ColumnDefinition Width="16"/>
                     <ColumnDefinition Width="*"/>
                 </Grid.ColumnDefinitions>
@@ -265,7 +265,11 @@
                             <Button Style="{StaticResource GhostBtn}" Content="+ Hinzufügen" DockPanel.Dock="Right" Margin="8,0,0,0" Padding="10,5" FontSize="12"
                                     Command="{Binding AddModelCommand}"/>
                         </DockPanel>
-                        <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
+                        <ScrollViewer x:Name="ModelScrollViewer"
+                                      Grid.Row="1"
+                                      VerticalScrollBarVisibility="Hidden"
+                                      HorizontalScrollBarVisibility="Disabled"
+                                      PreviewMouseWheel="ModelScrollViewer_PreviewMouseWheel">
                             <ItemsControl x:Name="ModelGroupsList" ItemsSource="{Binding ModelGroups}">
                                 <ItemsControl.ItemTemplate>
                                     <DataTemplate DataType="m:ModelGroupEntry">
@@ -327,6 +331,33 @@
                         </DockPanel>
                     </Grid>
                 </Border>
+
+                <GridSplitter Grid.Column="1"
+                              Width="16"
+                              HorizontalAlignment="Stretch"
+                              VerticalAlignment="Stretch"
+                              ResizeDirection="Columns"
+                              ResizeBehavior="PreviousAndNext"
+                              DragCompleted="ModelSplitter_DragCompleted"
+                              Background="Transparent"
+                              Cursor="SizeWE">
+                    <GridSplitter.Template>
+                        <ControlTemplate TargetType="GridSplitter">
+                            <Grid Background="Transparent">
+                                <Border Width="3"
+                                        HorizontalAlignment="Center"
+                                        CornerRadius="2"
+                                        Background="#E8E8EC"
+                                        Opacity="0.45"/>
+                            </Grid>
+                            <ControlTemplate.Triggers>
+                                <Trigger Property="IsMouseOver" Value="True">
+                                    <Setter Property="Opacity" Value="1"/>
+                                </Trigger>
+                            </ControlTemplate.Triggers>
+                        </ControlTemplate>
+                    </GridSplitter.Template>
+                </GridSplitter>
 
                 <!-- Rechte Spalte: Provider -->
                 <Border Grid.Column="2" Style="{StaticResource Card}">

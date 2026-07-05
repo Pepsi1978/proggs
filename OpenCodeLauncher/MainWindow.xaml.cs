@@ -1,7 +1,9 @@
 using System.Runtime.InteropServices;
 using System.Windows;
+using System.Windows.Controls.Primitives;
 using System.Windows.Input;
 using System.Windows.Interop;
+using OpenCodeLauncher.Services;
 using OpenCodeLauncher.ViewModels;
 
 namespace OpenCodeLauncher;
@@ -13,6 +15,7 @@ public partial class MainWindow : Window
     private const int DWMWCP_ROUND = 2;
     private const int WM_GETMINMAXINFO = 0x0024;
     private const int MONITOR_DEFAULTTONEAREST = 2;
+    private readonly LayoutSettings _layoutSettings;
 
     [DllImport("dwmapi.dll")]
     private static extern int DwmSetWindowAttribute(IntPtr hwnd, int attr, ref int value, int size);
@@ -28,6 +31,8 @@ public partial class MainWindow : Window
     public MainWindow()
     {
         InitializeComponent();
+        _layoutSettings = LayoutSettings.Load();
+        ModelColumn.Width = new GridLength(_layoutSettings.ModelPaneWidth);
         ViewModel = new MainViewModel();
         DataContext = ViewModel;
 
@@ -101,6 +106,18 @@ public partial class MainWindow : Window
     }
 
     private void BrowseWorkDir_Click(object sender, RoutedEventArgs e) => ViewModel.BrowseWorkDirCommand.Execute(null);
+
+    private void ModelSplitter_DragCompleted(object sender, DragCompletedEventArgs e)
+    {
+        _layoutSettings.ModelPaneWidth = ModelColumn.ActualWidth;
+        _layoutSettings.Save();
+    }
+
+    private void ModelScrollViewer_PreviewMouseWheel(object sender, MouseWheelEventArgs e)
+    {
+        ModelScrollViewer.ScrollToVerticalOffset(ModelScrollViewer.VerticalOffset - e.Delta);
+        e.Handled = true;
+    }
 
     // ---- Drag & Drop für Modellgruppen und Modelle ----
     private Point _dragStartPoint;
