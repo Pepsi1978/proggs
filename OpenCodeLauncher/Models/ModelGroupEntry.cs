@@ -11,6 +11,8 @@ public sealed partial class ModelGroupEntry : ObservableObject
     public string ProviderId { get; set; } = string.Empty;
     public string ProviderName { get; set; } = string.Empty;
     public ObservableCollection<ModelEntry> Models { get; set; } = new();
+    public List<string> HiddenModelSlugs { get; set; } = new();
+    public List<string> KnownSyncedModelSlugs { get; set; } = new();
 
     [ObservableProperty]
     private bool _isExpanded = true;

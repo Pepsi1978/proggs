@@ -124,6 +124,11 @@ public sealed class ModelRegistry
         if (index < 0 || index >= group.Models.Count) return;
         var m = group.Models[index];
         group.Models.RemoveAt(index);
+        if (string.Equals(group.Id, "openrouter-free", StringComparison.OrdinalIgnoreCase))
+        {
+            AddUnique(group.HiddenModelSlugs, m.Slug);
+            AddUnique(group.KnownSyncedModelSlugs, m.Slug);
+        }
         Save();
         Logger.Instance.Info("ModelRegistry", "RemoveAt", $"entfernt: {m.Slug}", new { group = group.Title });
     }
@@ -173,6 +178,60 @@ public sealed class ModelRegistry
         Logger.Instance.Info("ModelRegistry", "ReplaceGroupModels", $"{group.Title}: {group.Models.Count} Modelle aktualisiert");
     }
 
+    public void SyncOpenRouterFreeModels(IEnumerable<ModelEntry> remoteModels)
+    {
+        var group = Groups.FirstOrDefault(g => string.Equals(g.Id, "openrouter-free", StringComparison.OrdinalIgnoreCase));
+        if (group == null) return;
+
+        var remote = remoteModels
+            .Where(m => !string.IsNullOrWhiteSpace(m.Slug))
+            .GroupBy(m => m.Slug, StringComparer.OrdinalIgnoreCase)
+            .Select(g => NormalizeModel(g.First(), group.ProviderId, group.ProviderName))
+            .ToList();
+        if (remote.Count == 0) return;
+
+        var currentSlugs = group.Models.Select(m => m.Slug).ToHashSet(StringComparer.OrdinalIgnoreCase);
+        if (group.KnownSyncedModelSlugs.Count == 0)
+        {
+            foreach (var slug in currentSlugs) AddUnique(group.KnownSyncedModelSlugs, slug);
+        }
+
+        var knownSlugs = group.KnownSyncedModelSlugs.ToHashSet(StringComparer.OrdinalIgnoreCase);
+        foreach (var removedSlug in knownSlugs.Where(slug => !currentSlugs.Contains(slug)))
+            AddUnique(group.HiddenModelSlugs, removedSlug);
+
+        var hiddenSlugs = group.HiddenModelSlugs.ToHashSet(StringComparer.OrdinalIgnoreCase);
+        var remoteBySlug = remote.ToDictionary(m => m.Slug, StringComparer.OrdinalIgnoreCase);
+        var merged = new List<ModelEntry>();
+
+        foreach (var existing in group.Models)
+        {
+            if (hiddenSlugs.Contains(existing.Slug)) continue;
+            if (!remoteBySlug.TryGetValue(existing.Slug, out var remoteModel)) continue;
+            existing.ProviderId = group.ProviderId;
+            existing.ProviderName = group.ProviderName;
+            existing.DisplayName = remoteModel.DisplayName;
+            merged.Add(existing);
+        }
+
+        var mergedSlugs = merged.Select(m => m.Slug).ToHashSet(StringComparer.OrdinalIgnoreCase);
+        foreach (var remoteModel in remote)
+        {
+            if (hiddenSlugs.Contains(remoteModel.Slug) || mergedSlugs.Contains(remoteModel.Slug)) continue;
+            merged.Add(remoteModel);
+            mergedSlugs.Add(remoteModel.Slug);
+        }
+
+        group.Models.Clear();
+        foreach (var model in merged) group.Models.Add(model);
+        group.KnownSyncedModelSlugs = remote.Select(m => m.Slug).Distinct(StringComparer.OrdinalIgnoreCase).ToList();
+        group.HiddenModelSlugs = group.HiddenModelSlugs.Distinct(StringComparer.OrdinalIgnoreCase).ToList();
+
+        Save();
+        group.RefreshHeaderText();
+        Logger.Instance.Info("ModelRegistry", "SyncOpenRouterFreeModels", $"{group.Models.Count} sichtbare, {group.HiddenModelSlugs.Count} ausgeblendete OpenRouterFree-Modelle");
+    }
+
     private void RepairAndNormalize()
     {
         foreach (var defaults in CreateDefaults())
@@ -206,6 +265,14 @@ public sealed class ModelRegistry
                 model.ProviderName = group.ProviderName;
                 if (string.IsNullOrWhiteSpace(model.DisplayName)) model.DisplayName = ToDisplayName(model.Slug);
             }
+            group.HiddenModelSlugs = group.HiddenModelSlugs
+                .Where(slug => !string.IsNullOrWhiteSpace(slug))
+                .Distinct(StringComparer.OrdinalIgnoreCase)
+                .ToList();
+            group.KnownSyncedModelSlugs = group.KnownSyncedModelSlugs
+                .Where(slug => !string.IsNullOrWhiteSpace(slug))
+                .Distinct(StringComparer.OrdinalIgnoreCase)
+                .ToList();
         }
     }
 
@@ -304,8 +371,27 @@ public sealed class ModelRegistry
         ProviderId = providerId,
         ProviderName = providerName,
         IsExpanded = true,
-        Models = new ObservableCollection<ModelEntry>(models)
+        Models = new ObservableCollection<ModelEntry>(models),
+        KnownSyncedModelSlugs = string.Equals(id, "openrouter-free", StringComparison.OrdinalIgnoreCase)
+            ? models.Select(m => m.Slug).ToList()
+            : new List<string>()
     };
+
+    private static ModelEntry NormalizeModel(ModelEntry model, string providerId, string providerName)
+    {
+        model.ProviderId = providerId;
+        model.ProviderName = providerName;
+        if (model.Slug.StartsWith($"{providerId}/", StringComparison.OrdinalIgnoreCase))
+            model.Slug = model.Slug[$"{providerId}/".Length..];
+        if (string.IsNullOrWhiteSpace(model.DisplayName)) model.DisplayName = ToDisplayName(model.Slug);
+        return model;
+    }
+
+    private static void AddUnique(List<string> values, string value)
+    {
+        if (string.IsNullOrWhiteSpace(value)) return;
+        if (!values.Contains(value, StringComparer.OrdinalIgnoreCase)) values.Add(value);
+    }
 
     private static ModelEntry Model(string slug, string displayName, string providerId, string providerName) => new()
     {

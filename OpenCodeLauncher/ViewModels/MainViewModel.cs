@@ -26,8 +26,8 @@ public sealed partial class MainViewModel : ObservableObject
         _ = RefreshOpenRouterFreeModelsAsync();
         WorkDir = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), "proggs");
 
-        var version = Assembly.GetExecutingAssembly().GetName().Version?.ToString(3) ?? "1.2.0";
-        Version = $"Version {version} (05.07.2026, 12:10 Uhr)";
+        var version = Assembly.GetExecutingAssembly().GetName().Version?.ToString(3) ?? "1.2.1";
+        Version = $"Version {version} (05.07.2026, 12:39 Uhr)";
     }
 
     public ObservableCollection<ModelGroupEntry> ModelGroups { get; } = new();
@@ -57,12 +57,10 @@ public sealed partial class MainViewModel : ObservableObject
             var freeModels = await _router.GetFreeModelsAsync();
             if (freeModels.Count == 0) return;
 
-            _registry.ReplaceGroupModels("openrouter-free", freeModels);
+            _registry.SyncOpenRouterFreeModels(freeModels);
             var group = ModelGroups.FirstOrDefault(g => string.Equals(g.Id, "openrouter-free", StringComparison.OrdinalIgnoreCase));
             if (group != null)
             {
-                group.Models.Clear();
-                foreach (var model in freeModels) group.Models.Add(model);
                 group.RefreshHeaderText();
             }
         }
