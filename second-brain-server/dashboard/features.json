@@ -1,7 +1,15 @@
 {
-	"stand": "05.07.2026, 14.55 Uhr",
+	"stand": "05.07.2026, 22.36 Uhr",
 	"hinweis": "PFLEGE-PFLICHT: Bei JEDEM Deploy, der ein neues System/Feature einbaut, hier einen Eintrag ERGAENZEN (neueste zuerst) — mit Datum + Uhrzeit und ausfuehrlicher Erklaerung. Diese Datei ist die Quelle des Info-Bereichs in den Dashboard-Einstellungen (GET /api/features). Regel verankert in DEPLOY.md.",
 	"features": [
+		{
+			"id": "cortex-wissen-speichern",
+			"name": "Cortex Wissen speichern: System-Info als eigene Cortex-Einträge ablegen",
+			"eingebaut": "05.07.2026, 22.36 Uhr",
+			"dienst": "dashboard 0.46.2",
+			"kurz": "In Einstellungen -> System-Info gibt es rechts den Button 'Cortex Wissen speichern'. Er legt jeden Punkt aus 'Was Cortex kann' einzeln in der Kategorie Cortex ab.",
+			"erklaerung": "Der Button liest dieselbe Feature-Chronik, die im Akkordeon sichtbar ist. Für jeden Punkt wird genau ein eigener Gehirn-Eintrag gespeichert: Titel ist die sichtbare Überschrift, Text ist der sichtbare Detailinhalt mit Dienst, Einbauzeit, Kurzbeschreibung und Erklärung. Gespeichert wird über den neuen Dashboard-Proxy POST /api/store, damit der Browser keinen internen SB_API_KEY kennt. Die Kategorie ist fest 'Cortex'. Weil die brain-api Titel als Schlüssel nutzt, ersetzt ein späterer Klick denselben Eintrag sauber, statt Dubletten anzulegen. So kann Frank Cortex später direkt fragen: 'Was kannst du alles schon?' und bekommt die Feature-Chronik als normales Cortex-Wissen zurück."
+		},
 		{
 			"id": "session-mitlernen",
 			"name": "Session-Mitlernen: Programmier-Sessions fließen automatisch ins Gehirn",
