@@ -1,7 +1,8 @@
 {
 	"manifest_version": 3,
 	"name": "Overlays (Voice + Tools)",
-	"version": "0.6.5",
+	"version": "0.6.6",
+	"version_name": "0.6.6 (05.07.2026, 12:21 Uhr)",
 	"description": "Universelles Overlay fuer mehrere Webseiten. Spracheingabe (Whisper), Prompt-Builder und Tools. Buttons pro Seite ueber eine zentrale Registry konfigurierbar.",
 	"permissions": ["storage", "clipboardRead", "clipboardWrite", "sidePanel"],
 	"host_permissions": [
@@ -51,7 +52,8 @@
 				"https://web.arena.ai/*",
 				"https://chat.lmsys.org/*",
 				"https://arena.lmsys.org/*",
-				"https://notebooklm.google.com/*"
+				"https://notebooklm.google.com/*",
+				"https://10.8.0.1/*"
 			],
 			"css": ["src/overlay.css"],
 			"js": [

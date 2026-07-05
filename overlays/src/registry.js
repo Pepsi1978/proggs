@@ -117,6 +117,14 @@
 			gemini: true,
 			layout: { right: RIGHT, left: LEFT },
 		},
+		{
+			id: "cortex",
+			label: "Cortex-Dashboard",
+			match: (host) => host === "10.8.0.1",
+			uiPos: CHAT_POS,
+			gemini: true,
+			layout: { right: RIGHT, left: LEFT },
+		},
 	];
 
 	OV.findProfile = (host) => {

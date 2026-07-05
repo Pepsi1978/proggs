@@ -17,6 +17,7 @@ Unterstuetzte Seiten (jede ehemalige Tampermonkey-Seite ist ein Profil):
 | Mistral | `chat.mistral.ai` | volle Leiste (8) |
 | LMArena | `arena.ai`, `web.arena.ai`, `*.lmsys.org` | volle Leiste (8) |
 | NotebookLM | `notebooklm.google.com` | volle Leiste (8) |
+| Cortex-Dashboard | `10.8.0.1` | volle Leiste (8) |
 
 "Volle Leiste" = 🎙️ Mic · ⏎ Auto-Send · 📋 Einfuegen · 📎 Kopieren · ❌ Leeren ·
 G (Gemini-Korrektur) · ✨ Prompt (Frank) · 🪄 Prompt (allgemein) · ggf. 💾 Memory.

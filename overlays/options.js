@@ -38,7 +38,7 @@ dragCb.addEventListener("change", (e) => {
 
 // ── Aktualisieren ──
 document.getElementById("ver").textContent =
-	chrome.runtime.getManifest().version;
+	chrome.runtime.getManifest().version_name || chrome.runtime.getManifest().version;
 
 // "Erweiterung neu laden" laedt die Erweiterung mit dem neuesten lokalen Code neu
 // UND danach automatisch die offene Seite (aktiver Tab) — kein manuelles F5 mehr.
