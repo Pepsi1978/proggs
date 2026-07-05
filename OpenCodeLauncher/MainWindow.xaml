@@ -256,11 +256,11 @@
             <Setter Property="Foreground" Value="{DynamicResource TextBrush}"/>
             <Setter Property="BorderThickness" Value="0"/>
             <Setter Property="HorizontalGridLinesBrush" Value="{DynamicResource GridLineBrush}"/>
-            <Setter Property="VerticalGridLinesBrush" Value="Transparent"/>
+            <Setter Property="VerticalGridLinesBrush" Value="{DynamicResource BorderBrushSoft}"/>
             <Setter Property="RowHeight" Value="44"/>
             <Setter Property="ColumnHeaderHeight" Value="38"/>
             <Setter Property="HeadersVisibility" Value="Column"/>
-            <Setter Property="GridLinesVisibility" Value="Horizontal"/>
+            <Setter Property="GridLinesVisibility" Value="All"/>
             <Setter Property="CanUserSortColumns" Value="True"/>
             <Setter Property="CanUserResizeColumns" Value="True"/>
         </Style>
@@ -271,7 +271,9 @@
             <Setter Property="FontWeight" Value="SemiBold"/>
             <Setter Property="FontSize" Value="11"/>
             <Setter Property="BorderBrush" Value="{DynamicResource BorderBrushSoft}"/>
-            <Setter Property="BorderThickness" Value="0,0,0,1"/>
+            <Setter Property="BorderThickness" Value="0,0,1,1"/>
+            <Setter Property="SeparatorBrush" Value="{DynamicResource AccentLineBrush}"/>
+            <Setter Property="SeparatorVisibility" Value="Visible"/>
         </Style>
         <Style TargetType="DataGridCell">
             <Setter Property="Padding" Value="12,0"/>
@@ -505,45 +507,27 @@
                 </Border>
 
                 <GridSplitter Grid.Column="1"
-                              Width="22"
+                              Width="10"
                               HorizontalAlignment="Stretch"
                               VerticalAlignment="Stretch"
                               ResizeDirection="Columns"
                               ResizeBehavior="PreviousAndNext"
                               DragCompleted="ModelSplitter_DragCompleted"
                               Background="Transparent"
-                              Panel.ZIndex="10"
-                              ToolTip="Provider-Bereich breiter oder schmaler ziehen"
                               Cursor="SizeWE">
                     <GridSplitter.Template>
                         <ControlTemplate TargetType="GridSplitter">
                             <Grid Background="Transparent">
-                                <Border x:Name="GripHalo"
-                                        Width="18"
+                                <Border x:Name="GripLine"
+                                        Width="1"
                                         HorizontalAlignment="Center"
-                                        Background="{DynamicResource AccentSoftBg}"
-                                        BorderBrush="{DynamicResource AccentLineBrush}"
-                                        BorderThickness="1"
-                                        CornerRadius="9"
-                                        Opacity="0.86">
-                                    <Border.Effect>
-                                        <DropShadowEffect BlurRadius="18" ShadowDepth="0" Opacity="0.45" Color="#7C6CF5"/>
-                                    </Border.Effect>
-                                </Border>
-                                <StackPanel x:Name="GripLines"
-                                            Orientation="Horizontal"
-                                            HorizontalAlignment="Center"
-                                            VerticalAlignment="Stretch"
-                                            Opacity="1">
-                                    <Border Width="3" Margin="0,8" CornerRadius="1.5" Background="{DynamicResource AccentLineBrush}"/>
-                                    <Border Width="3" Margin="3,8" CornerRadius="1.5" Background="{DynamicResource AccentBrush}"/>
-                                    <Border Width="3" Margin="0,8" CornerRadius="1.5" Background="{DynamicResource AccentLineBrush}"/>
-                                </StackPanel>
+                                        Background="{DynamicResource BorderBrushStrong}"
+                                        Opacity="0.62"/>
                             </Grid>
                             <ControlTemplate.Triggers>
                                 <Trigger Property="IsMouseOver" Value="True">
-                                    <Setter TargetName="GripHalo" Property="Opacity" Value="1"/>
-                                    <Setter TargetName="GripLines" Property="Opacity" Value="1"/>
+                                    <Setter TargetName="GripLine" Property="Width" Value="2"/>
+                                    <Setter TargetName="GripLine" Property="Opacity" Value="0.95"/>
                                 </Trigger>
                             </ControlTemplate.Triggers>
                         </ControlTemplate>
