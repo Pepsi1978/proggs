@@ -50,7 +50,7 @@ VERSION = "0.31.0"  # 0.31.0: Speicher-Cap-Klasse endgueltig beseitigt (Frank-Bu
 VERSION = "0.31.1"  # Wirksamer Counter-Bump: gespeicherte Gespraech-Eintraege erhalten sekundengenauen Zeitstempel.
 VERSION = "0.53.0 (05.07.2026, 14.14 Uhr)"  # 0.53.0 (Gruppe D "Mitlernen in Programmier-Sessions", Plan-Nr. 27/28/31/32, Frank-Auftrag 2026-07-05): NEU POST /session-log — nimmt vom SessionEnd-Hook jeder Programmier-Session (Claude Code, OpenCode) die Rohdaten entgegen (CLI, Projekt, Franks Prompts, Commits, geaenderte Dateien), antwortet SOFORT und verdichtet im HINTERGRUND per LLM (Speicheragent-Modell) zu "gemacht/entschieden/gelernt" + Episoden-Auszug -> Gehirn-Eintrag unter Programmierung/Sessions (D27+D32). Danach pflegt derselbe Lauf automatisch den Kern-Block "Woran Frank gerade baut" [Programmierung/Kern-Blöcke] nach: titel-basiertes Ueberschreiben, Zeichen-Limit, Changelog-Datei in agent-data (D28). NEU Projektstand-Recall (D31): Fragen wie "Woran habe ich zuletzt gearbeitet?"/"Wie ist der Stand beim X?"/"Was war in der letzten Session?" werden DETERMINISTISCH erkannt (Poka-Yoke wie 0.51.2, kein LLM-Ermessen) und aus den neuesten Session-Protokollen + Kern-Block beantwortet (chronologisch rueckwaerts, mit Quellen-Chips + Confidence); existiert (noch) kein Session-Wissen -> weicher Fallback in die normale Abrufkette (funktionserhaltend). brain_search kann jetzt kategorie-gefiltert suchen (category-Param an brain /search). Rein additiv, Tages-Pfade unveraendert. Alt: 0.52.0 (05.07.2026, 01.40 Uhr)  # 0.52.0: NEU POST /llm — interner LLM-Durchgriff fuer den Nachtschicht-Bibliothekar (librarian 0.2.0): der Bibliothekar kann damit ALLE hier verbundenen Provider nutzen, vor allem die Codex/GPT-Modelle ueber die bestehende ChatGPT-OAuth-Anmeldung (inkl. Token-Refresh + Retry + Reasoning-Sanitizing), ohne die Auth-Logik zu duplizieren (Frank-Wunsch 2026-07-05: Nachtagent soll das staerkste Modell = GPT mit einstellbarem Thinking fahren). Rein additiv, Tages-Pfade unveraendert. Alt: 0.51.2 (04.07.2026, 23.10 Uhr)  # 0.51.2: DETERMINISTISCHE Router-Haertung (Live-Fund direkt nach 0.51.1): der Router stufte 'Zeig mir alles zur WireGuard-Einrichtung' als smalltalk ein -> Abrufkette (Register/Hybrid/Quellen) lief nie. 'Alles ueber X'-/'Was weiss ich ueber X'-Saetze sind per Definition Gedaechtnis-Fragen -> erkennt entity_name_from_question das Muster und der Router sagt smalltalk (kein pending), erzwingt der CODE intent=query (Poka-Yoke: LLM-Ermessen an dieser eindeutigen Stelle eliminiert; gleiches Muster wie explicit_save). Mit Routing-Checkpoint. Alt: 0.51.1 (04.07.2026, 23.00 Uhr)  # 0.51.1 (Eval-Nacharbeit, 2 Funde aus dem 112/114-Lauf): (a) FIX 'Alles ueber X'-Erkennung — das Muster kannte nur das nackte 'zu', nicht die gebeugten Formen 'zur'/'zum' ('Zeig mir alles ZUR Quorbanit-Kartusche' wurde nicht als Register-Frage erkannt, Eval-Fall #112; Root Cause deterministisch per Regex-Test bewiesen, zu[rm]? an allen 5 Stellen). (b) Eval-Fall #76 traegt jetzt also_ok:['save'] — Frank-Urteil 2026-07-04: 'Heute war ein anstrengender Tag' DARF auch als Tagebuch-Speicherwunsch gedeutet werden (die Bestaetigungs-Rueckfrage schuetzt ohnehin); der smalltalk-Pruefzweig akzeptiert also_ok-Intents als PASS, damit legitime Doppeldeutigkeit den Eval nicht mehr flackern laesst. Alt: 0.51.0 (04.07.2026, 22.05 Uhr)  # 0.51.0 (Eval-Erweiterung Level-2, Frank-Wunsch 2026-07-04): Der Eval-Check sichert jetzt auch die 6 neuen Such-Intelligenz-Systeme ab — 14 neue Faelle (id 101-114): 6 DETERMINISTISCHE Funktionstests ohne LLM (Zeit-Parser richtig UND kein Fehlalarm bei Nicht-Zeit-Fragen, 'Alles ueber X'-Erkennung, RRF-Fusion-Reihenfolge) + 8 End-to-End-Faelle unter dem isolierten EVAL_USER (Kunstwort-Eintrag anlegen -> Hybrid/BM25 MUSS ihn per exakter Bestellnummer auf Platz 1 treffen inkl. matched_by-Beweis; Zeit-Frage ueber die ECHTE smart_recall-Kette mit time_filter-Meta; Multi-Query-Varianten nicht-identisch; Entity-Roundtrip anlegen->per ALIAS finden->Docs; 'Zeig mir alles zu X' zieht das Register; Confidence-Stufen inkl. 'keine' bei leerer Auswahl; sources-Felder befuellbar mit doc_id+Titel). Dafuer smart_recall/brain_entities_*/entity_extract_and_link um user_id-Parameter erweitert (Default Frank, unveraendertes Verhalten — der Eval testet DIESELBE Kette isoliert). Level-2-Faelle laufen OHNE Router-Call (billiger, gezielter); Eval-Log mit sprechenden Bereichs-Labels je Fall. Alt: 0.50.0 (Level-2 Such-Intelligenz, Frank-Auftrag 2026-07-04, Plan-Nr. 34-39): (1) Nr. 35 ZEIT-BEWUSSTE SUCHE — parse_time_range erkennt deutsche Zeitausdruecke in der Frage ('letzten Monat', 'im Winter', 'vor 3 Wochen', 'im Dezember 2025', 'am 12.05.', 'seit 2 Wochen', 'gestern' ...) deterministisch (LLM-frei, Europe/Berlin) und haengt sie als created_at-Datumsfilter an die Gehirn-Suche; WEICH mit Netz (rag-retrieval §2): 0 Treffer im Zeitraum -> automatisch nochmal UNGEFILTERT suchen statt faelschlich 'nichts gespeichert'. (2) Nr. 37 MULTI-QUERY-RECALL — der Agent formuliert intern bis zu 2 Suchvarianten (Router-Modell, 1 kleiner JSON-Call) und sucht mit Original+Varianten PARALLEL (ThreadPool), Ranglisten per RRF fusioniert (bessere Quote bei vagen/gesprochenen Fragen); abschaltbar AGENT_MULTI_QUERY=0. (3) Nr. 36 ENTITY-LINKING (Hub-and-Spoke) — nach JEDEM erfolgreichen Speichern extrahiert ein best-effort-Hintergrund-Thread (Speicher-Modell) Entitaeten (Personen/Orte/Geraete/Projekte/Praeparate) und verknuepft sie im brain-api-Entity-Register (/entities/upsert) mit der doc_id; 'Alles ueber X'/'Was weiss ich ueber X'-Fragen holen ZUSAETZLICH ALLE ueber die Entitaet verknuepften Eintraege (vollstaendig statt Top-5); POST /entities/rebuild baut das Register als Hintergrund-Lauf ueber den Bestand auf (GET /entities/rebuild-status). (4) Nr. 38 CONFIDENCE — jede Gedaechtnis-Antwort kennt ihre Sicherheit: _confidence_info bewertet Trefferzahl + besten Score (Schwellen AGENT_CONF_STRONG/WEAK) + exakte-Wortlaut-Treffer (BM25) zu hoch/mittel/niedrig/keine; der Hauptagent webt es ehrlich in die Antwort ein ('steht uebereinstimmend in 3 Eintraegen' vs. 'nur ein schwacher Treffer'), strukturiert als 'confidence' in /chat + /chat/stream. (5) Nr. 39 QUELLEN-DRILLDOWN — /chat + /chat/stream liefern 'sources' (doc_id/Titel/Kategorie/Score/matched_by der vom Leseagenten GEWAEHLTEN Eintraege) -> Dashboard zeigt anklickbare Quellen-Chips unter der Antwort (Drawer mit Volltext 1:1). Alles rein additiv; Modell-Zuordnung: Multi-Query->Router-Modell, Entity-Extraktion->Speicher-Modell. Alt: 0.49.0 (Tiefen-Debugging PERFORMANCE 2026-07-02): (a) modul-globaler httpx.Client (_HTTP, Connection-Pool + Keep-Alive, transport retries=1 NUR fuer den Verbindungsaufbau) fuer ALLE ausgehenden Calls (brain-api, Tavily, OpenCode, Codex inkl. Stream + Auth) — vorher oeffnete jeder Call eine frische TCP/TLS-Verbindung (~100-200 ms je TLS-Ziel, spuerbar bei Satz-fuer-Satz-TTS/Chat-Ketten); (b) NEU GET /categories/registry: nur die Registry-Kategorien OHNE brain-Scan — das Dashboard ergaenzt damit die leeren Kategorien der Uebersicht, statt pro 20s-Poll einen ZWEITEN Qdrant-Metadaten-Full-Scan (via /categories -> brain /category-counts) auszuloesen. Verhaltensneutral: gleiche Antworten, gleiche Uebersicht. Alt: 0.48.1 (Tiefen-Debugging 2026-07-02): (a) _flush_loop flusht Sessions jetzt AUSSERHALB des _lock UND im Threadpool (asyncio.to_thread) — vorher lief der SYNCHRONE Flush (httpx bis 120s + Datei-I/O) IM Lock DIREKT im Event-Loop und fror bei langsamem/haengendem brain-api den GANZEN Agenten ein (alle /chat, /health; fastapi-Almanach §1 Sonderfall + Kurzcheck #2 — dort seit 2026-06-24 als Live-Befund dokumentiert). (b) /end laesst flush_session_to_logbook via asyncio.to_thread laufen (gleiche Falle im async-Handler). (c) brain_categories() liest jetzt /category-counts statt /list?limit=1000 — vollstaendig (kein stilles 1000er-Cap, auch sekundaere Multi-Kategorien) UND OOM-sicherer Endpoint. Alt: 0.48.0: IDEMPOTENZ fuer /chat + /chat/stream (Frank-Wunsch 2026-07-02, Almanach ai-agent §5.2): Die App schickt pro Nutzer-Intent eine request_id (UUID; Stream-Versuch und /chat-Fallback tragen DIESELBE). Duplikate (Tunnel-Abriss-Retry, OkHttp-Stale-POST-Retry, Stream-Fallback) werden nur EINMAL verarbeitet: fertige Antwort liegt 15 min im Dedup-Store (in-memory, unter _lock) und wird unveraendert zurueckgegeben; laeuft die Erstverarbeitung noch, wartet das Duplikat bis 240s auf ihr Ergebnis (409 danach). KEINE Doppel-Speicherung im Gedaechtnis, keine doppelte Session-Nachricht mehr. Dazu /chat/stream-Finalisierung DISCONNECT-FEST: Session-Update + Snapshot + Dedup-Ablage laufen als eigenstaendige Task am Turn-Ende (add_done_callback + shield) — bricht der Client mitten im Stream ab, landet die fertige Antwort trotzdem in Session + Dedup (vorher ging sie verloren: Session ohne Agent-Antwort). Fehlgeschlagene Erstverarbeitung gibt die request_id frei (ehrlicher Retry darf neu rechnen). 0.47.1: Tavily-Treffer-Staffel erneut angehoben (Frank): S=8, M=12, XL=20 (gewuenscht 25, API-Maximum ist 20). 0.47.0: S/M/XL-Prompts ZENTRAL (Frank-Wunsch 2026-07-02) — size-prompts.json in agent-data ist die Quelle der Wahrheit fuer Handy UND Dashboard (Seed: die App laedt Franks lokal gepflegte Prompts einmalig hoch, danach haelt sie sich synchron). /config liefert size_prompts + size_prompts_custom; PUT /config nimmt size_prompt_s/m/xl an. Clients OHNE eigenen context_prompt (Dashboard-Gespraech) bekommen den zentralen Prompt serverseitig angehaengt -> S/M/XL wirkt dort identisch fuer Gedaechtnis, Tavily (inkl. Suchtiefen-Staffel), native Websuche, Smalltalk und Speichern. 0.46.1: Tavily-Treffer-Staffel nach Frank-Vorgabe angehoben: S=5, M=8, XL=15 (vorher 3/5/8) — detailliertere Antworten. 0.46.0: Tavily-Suchtiefe folgt dem S/M/XL-Profil (Frank-Wunsch 2026-07-02) — die App schickt response_size (s|m|xl) explizit mit (ChatReq); tavily_search staffelt danach: s=basic+3 Treffer (schnell), m=basic+5 (wie bisher, Default), xl=ADVANCED-Tiefensuche+8 Treffer+40s-Timeout. Der S/M/XL-Antwort-Prompt floss schon seit 0.37.0 in die Antwort-Formulierung ein — jetzt ist auch die SUCHE selbst entsprechend stark/schwach. Native Websuche (Gemini-Grounding/GPT web_search) steuert sich weiterhin ueber den XL-Prompt im user_block selbst. 0.45.0: FIX 'im Logbuch steht nur meine Frage, nie die Antwort' (Frank-Bug 2026-07-02, Direktive #3). Root Cause: Sessions lebten NUR im RAM — jedes Deploy/jeder Neustart (heute 8+) verlor sie bzw. hinterliess Rumpf-Sessions (Frage ohne fertige Antwort), die der 30-min-Timeout-Flush dann unvollstaendig ins Logbuch schrieb; Fortsetzungen landeten als neue Session = fragmentierte Eintraege. Fix (Defense in Depth): Sessions werden bei JEDER Aenderung ATOMAR nach /app/data/sessions/<sid>.json gespiegelt (Snapshot im Lock, Schreiben via to_thread ausserhalb, tmp+os.replace), beim Start WIEDERHERGESTELLT (Gespraech laeuft in DERSELBEN Session weiter -> EIN vollstaendiger Logbuch-Eintrag mit Frage UND Antwort), und die Datei wird erst NACH erfolgreichem Flush (Timeout//end) geloescht. Shutdown flusht bewusst NICHT mehr implizit. 0.44.0: SICHTBARE Dubletten-Rueckfrage VOR dem Speichern (Frank-Wunsch 2026-07-02) — bei intent=save wird zuerst nach aehnlichen Eintraegen gesucht (Score >= DEDUP_MIN_SCORE 0,70, ohne Gespraeche); gibt es welche, ZITIERT der Agent sie (Titel, Kategorie, Aehnlichkeit %, Auszug) und fragt: 'zusaetzlich speichern oder einen bestehenden ersetzen?' (Knoepfe Speichern/Ersetzen/Nein). 'Speichern' legt NEU ab und sperrt den stillen Speicheragent-Dubletten-Ersatz (allow_replace=False); 'Ersetzen' ersetzt bei EINEM Kandidaten direkt (gleicher Titel+Kategorie -> titel-basierte doc_id ueberschreibt), bei MEHREREN kommt die Auswahl-Rueckfrage 'Welchen Eintrag soll ich ersetzen?' (Nummern-Knoepfe, neuer pending-mode replace_pick). Antworten werden deterministisch erkannt (ersetz/speicher/Nummer), der Router kann sie nicht verwechseln. 0.43.1: Feld-Fix started_now (Bool) vs started_at (Zeitstempel) im /eval-run-Response — vorher ueberschrieb der Zeitstempel das Bool, das Dashboard konnte Doppelstart nicht erkennen. 0.43.0: FIX Eval-Check 'fehlgeschlagen/kein Log' (Frank-Bug 2026-07-02) — Root Cause: Der Lauf dauert mit GPT-Hauptagent laenger als der 600s-Dashboard-Timeout; der synchrone Request brach ab, der Lauf lief unsichtbar weiter, das Log entsteht erst am Ende. Jetzt: /eval-run startet einen HINTERGRUND-Thread (starke Referenz, ai-agent §6) und kehrt sofort zurueck; neues GET /eval-status liefert Live-Fortschritt (running/done/total/passed/log/error); Doppel-Start wird abgefangen (started:false). 0.42.0: Kontextfenster 40 Nachrichten (AGENT_HISTORY_MAX Default 20->40, Frank: 20 Paare) + context_limit_reached-Flag in /chat und /chat/stream (genau EINMAL pro Session beim ersten Ueberschreiten -> App/Dashboard zeigen sichtbar 'Kontextgrenze erreicht'). 0.41.0: ANTWORT-STREAMING (Frank-Wunsch 2026-07-02, v.a. fuer M/XL) — neuer Endpunkt POST /chat/stream (SSE): identische _process_turn-Pipeline, aber die Antwort-Formulierung streamt live ({type:delta,text} je Chunk, {type:done,response} = exakte /chat-Antwort am Ende; die App ersetzt den Rohstream durch den finalen bereinigten Reply -> selbstheilend). Getragen von on_delta-Callbacks durch llm_generate/_llm_generate_once: Gemini via generate_content_stream (inkl. Grounding-Websuche, mit Fallback ohne thinking_config), GPT/Codex via vorhandenem SSE-Konsum (output_text.delta, inkl. native Websuche), minimax/OpenCode bleibt nicht-streamend (ein Chunk am Ende). Router/Speicher-/Leseagent (JSON) streamen bewusst NICHT. Fehler vor dem 1. Chunk -> nicht-streamender Fallback (funktionserhaltend). 0.40.0: ROUTER separat einstellbar (Frank-Wunsch 2026-07-02) — Schritt 1 (Klassifikation save/query/internet/smalltalk) kann ein EIGENES Modell (z.B. schnelles Flash) und/oder einen EIGENEN Reasoning-Effort bekommen (config.json router_model/router_reasoning, /config GET+PUT, ''/'auto' = wie Hauptagent = exakt bisheriges Verhalten). Die sichtbare Antwort (Schritt 2) kommt IMMER vom eingestellten Hauptagenten: bei delegiertem Router formuliert neu hauptagent_answer_smalltalk (Persona + geschuetzter Gespraechs-Auftrag) die Smalltalk-Antwort mit dem Hauptagent-Modell (Fallback: Router-Reply). Kein automatisches Deckeln — es gilt ausschliesslich Franks Wahl. 0.39.0: Offizielle API-Preise auch fuer die gpt-5.x-Modelle in MODEL_PRICES (Frank-Wunsch 2026-07-02) — die Modelle laufen zwar uebers ChatGPT-Abo, verbrauchen aber das Codex-Kontingent; die API-Preise (developers.openai.com/api/docs/pricing) dienen als Verbrauchs-Anhaltspunkt. Dashboard-Preisliste + App-Dropdown zeigen sie automatisch statt 'ueber Abo' (beide lesen /config model_prices). Nur minimax bleibt 'Abo'. 0.38.1: REVERT des Router-Reasoning-Deckels (Frank-Anweisung 2026-07-02: die Reasoning-Stufe stellt er SELBST ein — keine Funktionsveraenderung; medium bleibt medium, high bleibt high, auch fuer den Router). Der neutrale reasoning_override-Parameter (Default None = keine Wirkung) bleibt als Erweiterungspunkt fuer kuenftiges Streaming erhalten. 0.38.0: PERFORMANCE Router-Reasoning-Deckel (Frank-Wunsch 2026-07-02) — der Hauptagent-ROUTER (reine JSON-Klassifikation save/query/internet/smalltalk) laeuft jetzt gedeckelt auf reasoning 'low' (neuer reasoning_override-Parameter durch llm_generate/_llm_generate_once bis codex_generate + Gemini thinking_budget); die ANTWORT-Aufrufe behalten die eingestellte Thinking-Stufe. Bei gpt-5.5 mit 'medium' kostete allein das Routing 15-40s BEVOR die Antwort startete -> Gesamtwartezeit bei Gedaechtnis-/Internetfragen grob halbiert, Smalltalk deutlich schneller. 0.37.0: FIX S/M/XL-Antwortlaenge wirkungslos (Frank-Bug 2026-07-02) — der context_prompt der App (Modus-Prompt + Antwortlaengen-Prompt S/M/XL aus den Einstellungen) wurde (a) im Auto-Modus vom Router KOMPLETT ignoriert und erreichte (b) die Antwort-Formulierung (hauptagent_answer / _internet / _native_web) NIE. Jetzt: Router beruecksichtigt den Zusatzauftrag auch im Auto-Modus, und alle drei Antwort-Funktionen bekommen ihn als eigenen ZUSATZAUFTRAG-Block (_context_prompt_block) -> S/M/XL wirkt fuer Smalltalk, Gedaechtnis- UND Internet-Antworten. 0.36.1: Modell-Preise pro 1 Mio Token (Input/Output, offiziell recherchiert) im /config -> Dashboard + App koennen sie anzeigen (MODEL_PRICES; minimax/gpt = Abo). 0.36.0: Zwei neue Gemini-Modelle (gemini-3.5-flash, gemini-3-flash-preview) + Thinking-Steuerung fuer ALLE Gemini-Modelle aus der Reasoning-Stufe (thinking_budget, auf max_output_tokens addiert wg. Almanach B4; 3.x-Minimum statt 0; robuster Retry ohne thinking bei Ablehnung). Markdown-Stripper _strip_markdown_tts entfernt **Fett**/Ueberschriften/Listen aus TTS-Antworten (gemini-2.5-flash erzeugte sie trotz Verbot). 0.35.1: Native-Websuche-Antwort haelt jetzt den TTS-Stil des Hauptagent-Prompts ein (MEHRERE kurze Absaetze je 1-10 Zeilen statt EIN Block, keine Quellenliste) — Gemini-Grounding gab sonst einen einzigen langen Absatz; Gemini laeuft durch EXAKT denselben Prompt+Pfad wie GPT. 0.35.0: Fix 502 bei gpt-5.5 (Frank-Vorfall 2026-07-01) — 'minimal' reasoning.effort wird von gpt-5.x NICHT unterstuetzt (nur none/low/medium/high/xhigh); _sanitize_reasoning_effort mappt minimal->low VOR dem Codex-Call, reasoning_available (App /config) bietet 'minimal' nicht mehr an, CODEX_WEB_TOOL_TYPES nutzt web_search VOR web_search_preview (gpt-5.5 lehnt web_search_preview ab -> spart Fehlversuch). 0.34.1: Fix native-Websuche-Antwortformat — HAUPTAGENT_NATIVE_WEB_AUFTRAG verlangt jetzt explizit Fließtext (KEIN Router-JSON, kein intent/query-Objekt); gemini-3.1-flash-lite gab sonst das Router-JSON statt einer echten Antwort zurueck. 0.34.0: Modellnative Websuche jetzt auch fuer Gemini (google_search-Grounding, inkl. gemini-3.1-flash-lite/2.5-flash) — bei Tavily-aus nutzt JEDES faehige Hauptmodell seine eigene Suche (Gemini ODER Codex/GPT), nicht mehr nur Codex; minimax bleibt auf Tavily (keine native Suche). 0.33.1: Tavily-aus blockiert Internetfragen nicht mehr pauschal; bei Codex/GPT-Hauptmodell nutzt der Internet-Pfad modellnative Websuche mit Tool-Fallback. 0.33.0: Tavily/Websearch ist jetzt per persistenter Agent-Konfiguration an-/abschaltbar; /config liefert tavily_enabled und der Internet-Pfad nutzt Tavily nur bei aktivem Schalter. 0.32.1: Codex-Responses-Request an ChatGPT-Backendvertrag angepasst (input items, store=false, kein max_output_tokens) und Provider-400 als 502 statt FastAPI-500 gemeldet. 0.32.0: experimenteller OpenAI-Codex-Provider per ChatGPT-Device-Code, Codex-Modelle + Reasoning je Agent.
 
-VERSION = "0.54.0 (05.07.2026, 20.55 Uhr)"  # 0.54.0: Antwortlaenge 'auto' fuer Cortex Android — kein S/M/XL-Laengenprompt, Tavily-Standardsuchtiefe wie M.
+VERSION = "0.55.0 (05.07.2026, 23.53 Uhr)"  # 0.55.0: Normale semantische Gedaechtnissuche hat kein 5/8er Ergebnislimit mehr (AGENT_RECALL_LIMIT=0, AGENT_ENTITY_DOCS_LIMIT=0 = alle). Grosse Trefferlisten werden ueber Arbeitscache blockweise gelesen/verdichtet statt in den Leseagenten gekippt. Kategorie-Gesamtfragen lesen weiter sequenziell per /category-item; brain-api 1.22.1 hebt /search limit=0 + entities/docs limit=0 auf "alle". Alt: 0.54.1 Kategorie-Gesamtfragen mit Arbeitscache.
 
 # ---------------------------------------------------------------------------
 # Konfiguration (alles aus Umgebungsvariablen — Secrets nie im Code)
@@ -76,7 +76,7 @@ CONV_CATEGORY = os.getenv("AGENT_CONV_CATEGORY", "gespräche")  # deutsche Umlau
 DEDUP_CANDIDATES = int(os.getenv("AGENT_DEDUP_CANDIDATES", "3"))
 DEDUP_MIN_SCORE = float(os.getenv("AGENT_DEDUP_MIN_SCORE", "0.70"))  # ab hier dem LLM als Kandidat zeigen
 HISTORY_MAX = int(os.getenv("AGENT_HISTORY_MAX", "40"))             # so viele letzte Nachrichten an das LLM (Frank 2026-07-02: 40 = 20 Paare)
-RECALL_LIMIT = int(os.getenv("AGENT_RECALL_LIMIT", "5"))            # so viele Gehirn-Treffer fuers Nachschlagen (Phase 4b)
+RECALL_LIMIT = int(os.getenv("AGENT_RECALL_LIMIT", "0"))            # 0 = kein Ergebnislimit; grosse Antworten laufen ueber Arbeitscache statt Top-N
 # Level-2 Such-Intelligenz (Frank-Auftrag 2026-07-04, Plan-Nr. 35-38):
 MULTI_QUERY_ENABLED = os.getenv("AGENT_MULTI_QUERY", "1").strip() not in ("0", "false", "no")
 MULTI_QUERY_VARIANTS = int(os.getenv("AGENT_MULTI_QUERY_VARIANTS", "2"))   # zusaetzliche Suchvarianten (intern)
@@ -84,12 +84,13 @@ CONF_STRONG = float(os.getenv("AGENT_CONF_STRONG", "0.72"))   # dense-Score ab d
 CONF_WEAK = float(os.getenv("AGENT_CONF_WEAK", "0.55"))       # darunter gilt ein Treffer als SCHWACH
 ENTITY_ENABLED = os.getenv("AGENT_ENTITIES", "1").strip() not in ("0", "false", "no")
 ENTITY_EXTRACT_CHARS = int(os.getenv("AGENT_ENTITY_EXTRACT_CHARS", "2500"))  # Extraktions-Fenster je Eintrag (Kostenschutz)
-ENTITY_DOCS_LIMIT = int(os.getenv("AGENT_ENTITY_DOCS_LIMIT", "8"))           # max Eintraege aus dem Entity-Register je Frage
+ENTITY_DOCS_LIMIT = int(os.getenv("AGENT_ENTITY_DOCS_LIMIT", "0"))           # 0 = alle Entity-Eintraege; Arbeitscache verhindert Kontext-Ueberlauf
 ANSWER_MAX_TOKENS = int(os.getenv("AGENT_ANSWER_MAX_TOKENS", "4096"))  # grosszuegig: Thinking-Tokens zaehlen dagegen (Gemini-Almanach B4)
 # Ausgabe-Haertung (Frank-Wunsch 2026-06-25): grosse Eintraege duerfen Lese-/Hauptagent nicht sprengen.
 LESE_SNIPPET_CHARS = int(os.getenv("AGENT_LESE_SNIPPET_CHARS", "1200"))   # Leseagent waehlt NUR Nummern -> pro Treffer reicht ein Relevanz-Schnipsel (kein Volltext)
 ANSWER_HIT_CHARS = int(os.getenv("AGENT_ANSWER_HIT_CHARS", "8000"))       # Hauptagent-Antwort: max pro ausgewaehltem Treffer
 ANSWER_TOTAL_CHARS = int(os.getenv("AGENT_ANSWER_TOTAL_CHARS", "24000"))  # Hauptagent-Antwort: Gesamt-Kontextbudget (gegen Ueberlauf/Kosten)
+RECALL_WORKING_CACHE_THRESHOLD = int(os.getenv("AGENT_RECALL_WORKING_CACHE_THRESHOLD", "20"))
 # Internet-Suche (Frank-Wunsch 2026-06-25): Tavily — fuer KI-Agenten gebaut, liefert Snippets + kurze
 # Antwort. Key NUR im VPS-.env (TAVILY_API_KEY=tvly-...), NIE im Repo. Fehlt der Key -> Agent sagt ehrlich,
 # dass die Internet-Suche noch nicht eingerichtet ist (kein Crash). Tool-Fehler werden gefangen (ai-agent §3.2).
@@ -873,6 +874,32 @@ def brain_search(query: str, limit: int, user_id: str = USER_ID,
     return r.json().get("items", [])
 
 
+def brain_by_category(category: str, user_id: str = USER_ID) -> list[dict]:
+    """Alle Eintraege einer Kategorie sequenziell, 1:1 vom brain-api /category-item.
+
+    Bewusst NICHT /search: Kategorie-Gesamtfragen duerfen nicht von RECALL_LIMIT/ENTITY_DOCS_LIMIT
+    abgeschnitten werden. Bewusst NICHT /by-category: sehr grosse Kategorien werden Eintrag fuer
+    Eintrag gelesen, damit nicht 100+ Volltexte auf einmal im RAM landen.
+    """
+    r = _HTTP.get(f"{BRAIN_URL}/category-item", params={"category": category, "user_id": user_id, "index": 1},
+                  headers=HEADERS, timeout=60.0)
+    r.raise_for_status()
+    first = r.json()
+    total = int(first.get("total") or 0)
+    if not first.get("found") or total <= 0:
+        return []
+    items = [first]
+    for index in range(2, total + 1):
+        r = _HTTP.get(f"{BRAIN_URL}/category-item",
+                      params={"category": category, "user_id": user_id, "index": index},
+                      headers=HEADERS, timeout=60.0)
+        r.raise_for_status()
+        item = r.json()
+        if item.get("found"):
+            items.append(item)
+    return items
+
+
 def brain_by_title(title: str, user_id: str) -> dict:
     """Exakter Abruf per Titel (fuer die Eval-Verifikation: ist der Eintrag wirklich drin?)."""
     r = _HTTP.get(f"{BRAIN_URL}/by-title", params={"title": title, "user_id": user_id}, headers=HEADERS, timeout=30.0)
@@ -914,6 +941,194 @@ def brain_category_counts() -> dict:
     except Exception:  # noqa: BLE001
         _log(logging.WARNING, "category-counts-Abruf fehlgeschlagen", exc_info=True)
         return {}
+
+
+_COUNT_QUESTION_RE = re.compile(r"\b(wie\s+viele|wieviele|anzahl|zahl|count|zaehl|zähl)\b", re.IGNORECASE)
+_FULL_CATEGORY_RE = re.compile(
+    r"\b(alle|alles|komplett|vollstaendig|vollständig|gesamt|ueberblick|überblick|zusammenfass|was\s+(?:weiss|weiß|kann))\b",
+    re.IGNORECASE,
+)
+FULL_CATEGORY_BATCH_CHARS = int(os.getenv("AGENT_FULL_CATEGORY_BATCH_CHARS", "28000"))
+
+
+def _norm_count_text(s: str) -> str:
+    return (s or "").casefold().replace("ä", "ae").replace("ö", "oe").replace("ü", "ue").replace("ß", "ss")
+
+
+def _best_category_match(text: str, counts: dict[str, int]) -> tuple[str, int] | None:
+    norm = _norm_count_text(text)
+    matches: list[tuple[int, str, int]] = []
+    for cat, count in counts.items():
+        c_norm = _norm_count_text(cat)
+        tokens = [t for t in re.split(r"[^a-z0-9]+", c_norm) if len(t) >= 3]
+        score = 0
+        if c_norm and c_norm in norm:
+            score += 100
+        score += sum(10 for t in tokens if t in norm)
+        # "Cortex-Wissen" ist Titel-/Inhalts-Sprache; die echte Kategorie heisst bewusst "Cortex".
+        if cat.casefold() == "cortex" and "cortex" in norm:
+            score += 80
+        if score:
+            matches.append((score, cat, count))
+    if not matches:
+        return None
+    matches.sort(key=lambda x: (-x[0], x[1].casefold()))
+    _score, cat, count = matches[0]
+    return cat, count
+
+
+def _category_count_answer(text: str) -> dict | None:
+    """Beantwortet reine Kategorie-Zaehlfragen deterministisch aus /category-counts.
+
+    Root Cause 2026-07-05: Der normale Recall liefert absichtlich nur Top-N Treffer (Standard 5,
+    Entity-Register 8). Diese Trefferzahl ist NICHT die Kategorie-Gesamtzahl. Zaehlfragen muessen
+    deshalb vor der semantischen Suche abgefangen werden.
+    """
+    if not _COUNT_QUESTION_RE.search(text or ""):
+        return None
+    counts = {k: v for k, v in brain_category_counts().items() if k.casefold() != CONV_CATEGORY.casefold()}
+    if not counts:
+        return None
+    match = _best_category_match(text, counts)
+    if not match:
+        return None
+    cat, count = match
+    reply = (f"In der Kategorie „{cat}“ gibt es aktuell {count} Einträge. "
+             "Das ist die vollständige Kategorie-Zählung aus dem Gehirn, nicht nur die Anzahl der Top-Treffer der semantischen Suche.")
+    return {"reply": reply, "action": "category_count", "pending": None,
+            "recall_hits": 0, "sources": [],
+            "confidence": {"level": "hoch", "hits": count, "top_score": None,
+                           "text": f"vollständige Kategorie-Zählung aus /category-counts für {cat}"}}
+
+
+def _pack_text_blocks(chunks: list[str], batch_chars: int = FULL_CATEGORY_BATCH_CHARS) -> list[str]:
+    blocks: list[str] = []
+    cur: list[str] = []
+    cur_len = 0
+    for chunk in chunks:
+        if cur and cur_len + len(chunk) + 2 > batch_chars:
+            blocks.append("\n\n".join(cur))
+            cur, cur_len = [], 0
+        cur.append(chunk)
+        cur_len += len(chunk) + 2
+    if cur:
+        blocks.append("\n\n".join(cur))
+    return blocks
+
+
+def _category_blocks(items: list[dict], batch_chars: int = FULL_CATEGORY_BATCH_CHARS) -> list[str]:
+    """Alle Kategorie-Eintraege in LLM-verdauliche Bloecke aufteilen, ohne Eintraege wegzulassen."""
+    chunks: list[str] = []
+    for idx, it in enumerate(items, 1):
+        title = (it.get("title") or "(ohne Titel)").strip()
+        text = (it.get("text") or "").strip()
+        header = f"[{idx}/{len(items)}] Titel: {title}\n"
+        if not text:
+            chunks.append(header)
+            continue
+        parts = [text[i:i + batch_chars] for i in range(0, len(text), batch_chars)]
+        for part_idx, part in enumerate(parts, 1):
+            label = header if len(parts) == 1 else f"{header}Teil {part_idx}/{len(parts)}:\n"
+            chunks.append(label + part)
+    return _pack_text_blocks(chunks, batch_chars)
+
+
+def _summarize_category_blocks(cat: str, blocks: list[str]) -> list[str]:
+    """Arbeitscache: Bloecke lesen, kompakte Zwischenfassungen bilden, bei Bedarf hierarchisch verdichten."""
+    stage: list[str] = []
+    for i, block in enumerate(blocks, 1):
+        prompt = (
+            f"Frank fragt nach der kompletten Kategorie „{cat}“. Dies ist Block {i}/{len(blocks)}. "
+            "Lies ALLE enthaltenen Eintraege. Fasse jeden enthaltenen Eintrag kompakt zusammen: "
+            "Titel + 1 kurzer Satz, was darin steht. Erfinde nichts."
+        )
+        stage.append(llm_generate(build_hauptagent_answer_prompt(), prompt + "\n\n" + block,
+                                  model=ROLE_MODELS["haupt"], json_mode=False,
+                                  max_tokens=ANSWER_MAX_TOKENS, temperature=0.2))
+    round_no = 1
+    while sum(len(s) for s in stage) > FULL_CATEGORY_BATCH_CHARS and len(stage) > 1:
+        next_stage: list[str] = []
+        for i, block in enumerate(_pack_text_blocks(stage), 1):
+            prompt = (
+                f"Arbeitscache-Verdichtung Runde {round_no}, Block {i}. "
+                "Verdichte diese Zwischenzusammenfassungen weiter, ohne Themen oder Eintraege zu verlieren. "
+                "Gruppiere aehnliche Faehigkeiten/Informationen."
+            )
+            next_stage.append(llm_generate(build_hauptagent_answer_prompt(), prompt + "\n\n" + block,
+                                           model=ROLE_MODELS["haupt"], json_mode=False,
+                                           max_tokens=ANSWER_MAX_TOKENS, temperature=0.2))
+        stage = next_stage
+        round_no += 1
+    return stage
+
+
+def _semantic_working_cache_answer(session: dict, question: str, hits: list[dict], context_prompt: str = "", on_delta=None) -> dict:
+    """Antwortet aus ALLEN semantischen Treffern via Arbeitscache statt Leseagent-Top-N."""
+    summaries = _summarize_category_blocks("semantische Suche", _category_blocks(hits))
+    final_context = "\n\n".join(f"ZWISCHENSPEICHER {i + 1}:\n{s}" for i, s in enumerate(summaries))
+    auftrag = (
+        f"Frank fragt: {question}\n\n"
+        f"Du hast {len(hits)} semantische Treffer ohne Ergebnislimit geladen. Die Zwischenspeicher unten decken ALLE geladenen Treffer ab. "
+        "Beantworte Franks Frage daraus. Relevante Treffer verwenden, irrelevante Treffer weglassen, aber nicht behaupten, es gaebe nur die wenigen Treffer eines Top-N-Limits. "
+        "Sage bei grossen Zusammenfassungen kurz, dass du die Treffer ueber einen Arbeitscache verdichtet hast. Erfinde nichts."
+    )
+    user_block = (f"BISHERIGES GESPRÄCH:\n{_history_text(session)}\n\n"
+                  f"{_context_prompt_block(context_prompt)}"
+                  f"AUFTRAG:\n{auftrag}\n\n"
+                  f"SEMANTISCHER ARBEITSCACHE:\n{final_context}")
+    reply = _strip_markdown_tts(llm_generate(build_hauptagent_answer_prompt(), user_block,
+                                            model=ROLE_MODELS["haupt"], json_mode=False,
+                                            max_tokens=ANSWER_MAX_TOKENS, temperature=0.3,
+                                            on_delta=on_delta))
+    sources = [{"doc_id": h.get("doc_id"), "title": h.get("title") or "(ohne Titel)",
+                "category": h.get("category"),
+                "score": h.get("dense_score") if h.get("dense_score") is not None else h.get("score"),
+                "matched_by": h.get("matched_by") or ["dense"]}
+               for h in hits if h.get("doc_id")]
+    return {"reply": reply, "action": "recall_full", "pending": None,
+            "recall_hits": len(hits), "sources": sources,
+            "confidence": _confidence_info(hits)}
+
+
+def _full_category_answer(session: dict, text: str, context_prompt: str = "", on_delta=None) -> dict | None:
+    """Beantwortet Kategorie-Gesamtfragen aus ALLEN Eintraegen der Kategorie, nicht aus Top-N."""
+    if not _FULL_CATEGORY_RE.search(text or ""):
+        return None
+    counts = {k: v for k, v in brain_category_counts().items() if k.casefold() != CONV_CATEGORY.casefold()}
+    match = _best_category_match(text, counts)
+    if not match:
+        return None
+    cat, expected_count = match
+    items = brain_by_category(cat)
+    if not items:
+        return {"reply": f"Ich habe die Kategorie „{cat}“ gefunden, aber keine Einträge darin geladen.",
+                "action": "category_full", "pending": None, "recall_hits": 0, "sources": [],
+                "confidence": {"level": "keine", "hits": 0, "top_score": None, "text": "keine Kategorie-Einträge geladen"}}
+    summaries = _summarize_category_blocks(cat, _category_blocks(items))
+    final_context = "\n\n".join(f"ZWISCHENSPEICHER {i + 1}:\n{s}" for i, s in enumerate(summaries))
+    auftrag = (
+        f"Frank fragt: {text}\n\n"
+        f"Du hast die Kategorie „{cat}“ vollständig geladen: {len(items)} Einträge "
+        f"(category-counts meldet {expected_count}). Die Zwischenspeicher unten decken ALLE geladenen Einträge ab. "
+        "Erstelle daraus eine gut verständliche Gesamtantwort. Sage am Anfang klar, dass alle Einträge der Kategorie gelesen wurden. "
+        "Wenn Frank nach 'was kann Cortex' fragt, erkläre die Fähigkeiten gruppiert und einfach. "
+        "Keine erfundenen Features; nur was in den Einträgen steht."
+    )
+    user_block = (f"BISHERIGES GESPRÄCH:\n{_history_text(session)}\n\n"
+                  f"{_context_prompt_block(context_prompt)}"
+                  f"AUFTRAG:\n{auftrag}\n\n"
+                  f"KATEGORIE-ARBEITSCACHE:\n{final_context}")
+    reply = _strip_markdown_tts(llm_generate(build_hauptagent_answer_prompt(), user_block,
+                                            model=ROLE_MODELS["haupt"], json_mode=False,
+                                            max_tokens=ANSWER_MAX_TOKENS, temperature=0.3,
+                                            on_delta=on_delta))
+    sources = [{"doc_id": it.get("doc_id"), "title": it.get("title") or "(ohne Titel)",
+                "category": it.get("category") or cat, "score": None, "matched_by": ["category_full"]}
+               for it in items if it.get("doc_id")]
+    return {"reply": reply, "action": "category_full", "pending": None,
+            "recall_hits": len(items), "sources": sources,
+            "confidence": {"level": "hoch", "hits": len(items), "top_score": None,
+                           "text": f"vollständige Kategorie „{cat}“ gelesen ({len(items)} Einträge)"}}
 
 
 def brain_rename_category(old: str, new: str) -> dict:
@@ -1208,7 +1423,9 @@ def smart_recall(user_text: str, query: str, user_id: str = USER_ID) -> "tuple[l
                                      "created_at": it.get("created_at"), "updated_at": it.get("updated_at"),
                                      "matched_by": ["entity"], "bm25_rank": None})
                 hits = ent_hits + hits
-    hits = hits[:max(RECALL_LIMIT, ENTITY_DOCS_LIMIT)]
+    caps = [x for x in (RECALL_LIMIT, ENTITY_DOCS_LIMIT) if x > 0]
+    if caps:
+        hits = hits[:max(caps)]
     return hits, meta
 
 
@@ -3732,6 +3949,18 @@ def _process_turn(session: dict, user_text: str, pending: dict | None, category:
             return _ps
         intent = "query"   # nichts in den Sessions gefunden -> normale Gehirn-Suche versuchen
 
+    if intent in ("query", "smalltalk") and not pending:
+        full_answer = _full_category_answer(session, user_text, context_prompt, on_delta)
+        if full_answer is not None:
+            checkpoint("category_full", "Kategorie-Gesamtfrage aus ALLEN Kategorie-Eintraegen beantwortet",
+                       ok=True, frage=user_text[:120], treffer=full_answer.get("recall_hits"))
+            return full_answer
+        count_answer = _category_count_answer(user_text)
+        if count_answer is not None:
+            checkpoint("category_count", "Kategorie-Zaehlfrage deterministisch beantwortet (kein Top-N-Recall)",
+                       ok=True, frage=user_text[:120], reply=count_answer.get("reply"))
+            return count_answer
+
     if intent == "query":
         q = (route.get("query") or "").strip() or user_text.strip()
         try:
@@ -3740,6 +3969,16 @@ def _process_turn(session: dict, user_text: str, pending: dict | None, category:
             _log(logging.ERROR, "Recall-Suche fehlgeschlagen", exc_info=True)
             return {"reply": f"Das Nachschlagen hat gerade nicht geklappt ({type(e).__name__}). Versuch es bitte gleich nochmal.",
                     "action": "error", "pending": None}
+        if hits and (RECALL_LIMIT <= 0 or len(hits) > RECALL_WORKING_CACHE_THRESHOLD or _FULL_CATEGORY_RE.search(user_text)):
+            try:
+                answer_obj = _semantic_working_cache_answer(session, user_text, hits, context_prompt, on_delta)
+                checkpoint("recall_full", "Semantische Suche ohne Ergebnislimit via Arbeitscache beantwortet",
+                           ok=True, query=q, treffer=len(hits), meta=recall_meta or None)
+                return answer_obj
+            except Exception as e:  # noqa: BLE001
+                _log(logging.ERROR, "Recall-Arbeitscache fehlgeschlagen", exc_info=True)
+                return {"reply": f"Beim Verarbeiten aller Suchtreffer ist etwas schiefgegangen ({type(e).__name__}). Versuch es gleich nochmal.",
+                        "action": "error", "pending": None}
         try:
             selected, _note = leseagent_select(user_text, hits, payload_cats)  # Leseagent: filtert (nur Nummern), formuliert NICHT
             confidence = _confidence_info(selected)                            # Nr. 38: Sicherheit der Grundlage

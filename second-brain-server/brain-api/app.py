@@ -282,7 +282,7 @@ _init_last_attempt = 0.0
 # Entity-Verknuepfung finden). Rein additiv, Default-Antwort unveraendert.
 # Alt: 1.21.1: /purge raeumt jetzt AUCH die Entitaeten des eval-Test-Nutzers auf (der erweiterte
 # Eval-Check legt Test-Entitaeten an) + invalidiert den BM25-Cache (purge lief an _delete_doc vorbei).
-VERSION = "1.22.0 (05.07.2026, 00.55 Uhr)"
+VERSION = "1.22.1 (05.07.2026, 23.53 Uhr)"  # 1.22.1: /search akzeptiert limit=0 als "alle Treffer im Scope" und hat kein 50er Ergebnis-Cap mehr. Dense laedt Kandidaten ohne full_text und holt Volltexte nur fuer finale doc_ids nach; /entities/docs akzeptiert limit=0 als alle verknuepften Eintraege. Alt: 1.22.0 /entities/list?with_docs=1.
 
 # Startup-Banner (Observability-First: Log-Pfad + Version EINMAL ausgeben)
 _log(logging.INFO, "brain-api startet", version=VERSION, log_path=LOG_PATH)
@@ -760,7 +760,7 @@ class StoreReq(BaseModel):
 class SearchReq(BaseModel):
     query: str = Field(..., min_length=1)
     user_id: str = Field(default="frank")
-    limit: int = Field(default=5, ge=1, le=50)
+    limit: int = Field(default=5, ge=0, description="0 = alle Treffer im gefilterten Suchraum; sonst Top-N")
     # Optionale Payload-Filter: erst eingrenzen, DANN semantisch suchen (Franks "war letzten Monat angeln").
     category: str | None = Field(default=None, description="Nur in dieser exakten (Unter-)Kategorie suchen ('Haupt/Unter')")
     parent: str | None = Field(default=None, description="Nur unter dieser Hauptkategorie suchen (= alles in 'Haupt/...'), via parent-Feld")
@@ -1400,12 +1400,24 @@ def search(req: SearchReq) -> dict:
         else:
             py_date_filter = True
 
+    effective_limit = req.limit
+    search_point_limit = 0
+    if effective_limit <= 0:
+        count_pts = _scroll(Filter(must=must), with_payload=["doc_id", "created_at"])
+        if py_date_filter:
+            count_pts = [p for p in count_pts
+                         if not ((gte and (p.payload.get("created_at") or "")[:10] < gte[:10])
+                                 or (lte and (p.payload.get("created_at") or "")[:10] > lte[:10]))]
+        effective_limit = max(1, len({p.payload.get("doc_id") for p in count_pts if p.payload.get("doc_id")}))
+        search_point_limit = max(1, len(count_pts))
+
     # Bei Python-Datums-Nachfilter mehr Kandidaten holen, damit datumspassende Treffer nicht durchrutschen.
-    overfetch = req.limit * (20 if py_date_filter else 4)
+    overfetch = search_point_limit or (effective_limit * (20 if py_date_filter else 4))
     raw = qc.query_points(
         collection_name=COLLECTION, query=qvec,
         query_filter=Filter(must=must),
-        limit=overfetch, with_payload=True,
+        limit=overfetch,
+        with_payload=["doc_id", "title", "category", "categories", "created_at", "updated_at", "chunk_text"],
     ).points
 
     best: dict[str, dict] = {}
@@ -1421,7 +1433,7 @@ def search(req: SearchReq) -> dict:
                          "score": float(h.score), "match": h.payload.get("chunk_text", ""),
                          "created_at": h.payload.get("created_at"),
                          "updated_at": h.payload.get("updated_at"),
-                         "text": h.payload.get("full_text", ""),
+                         "text": "",
                          "dense_score": float(h.score), "matched_by": ["dense"], "bm25_rank": None}
     dense_ranked = sorted(best.values(), key=lambda x: x["score"], reverse=True)
 
@@ -1446,14 +1458,14 @@ def search(req: SearchReq) -> dict:
                         return False
                 return True
 
-            bm_hits = _bm25_index(req.user_id).search(req.query, limit=max(req.limit * 4, 20), allow=_allow)
+            bm_hits = _bm25_index(req.user_id).search(req.query, limit=max(effective_limit * 4, 20), allow=_allow)
             bm25_used = True
             bm_ranked_ids = [c.get("doc_id") for c, _s in bm_hits]
             fused = _rrf_fuse([[d["doc_id"] for d in dense_ranked], bm_ranked_ids])
             # BM25-only-Treffer brauchen ein Item-Geruest; full_text wird NUR fuer die finalen
             # Top-N nachgeladen (limit=1 je doc — full_text 1:1 in jedem Chunk, OOM-sicher).
             bm_meta = {c.get("doc_id"): (c, rank) for rank, (c, _s) in enumerate(bm_hits, start=1)}
-            order = sorted(fused.items(), key=lambda kv: kv[1], reverse=True)[:req.limit]
+            order = sorted(fused.items(), key=lambda kv: kv[1], reverse=True)[:effective_limit]
             items = []
             for did, _f in order:
                 it = best.get(did)
@@ -1472,9 +1484,15 @@ def search(req: SearchReq) -> dict:
                 items.append(it)
         except Exception:  # noqa: BLE001 — Hybrid darf die Suche NIE brechen: sauber auf dense zurueckfallen
             _log(logging.ERROR, "Hybrid/BM25-Pfad fehlgeschlagen — Fallback auf reine Vektorsuche", exc_info=True)
-            items = dense_ranked[:req.limit]
+            items = dense_ranked[:effective_limit]
     else:
-        items = dense_ranked[:req.limit]
+        items = dense_ranked[:effective_limit]
+
+    for it in items:
+        if not it.get("text") and it.get("doc_id"):
+            pts = _scroll(Filter(must=[FieldCondition(key="doc_id", match=MatchValue(value=it["doc_id"]))]), limit=1)
+            if pts:
+                it["text"] = pts[0].payload.get("full_text", "")
 
     applied = {"category": req.category or None, "parent": req.parent or None, "date": req.date or None,
                "date_from": req.date_from or None, "date_to": req.date_to or None}
@@ -1482,6 +1500,7 @@ def search(req: SearchReq) -> dict:
     checkpoint("search", "Hybrid: Payload-Scope -> Vektorsuche + BM25 -> RRF-Fusion",
                ok=isinstance(items, list), query_len=len(req.query), hits=len(items),
                filters=applied if has_filter else None, hybrid=bm25_used,
+               requested_limit=req.limit, effective_limit=effective_limit, search_point_limit=search_point_limit or overfetch,
                native_date=bool((gte or lte) and not py_date_filter), ms=int((time.time() - t0) * 1000))
     return {"ok": True, "count": len(items), "items": items, "filters": applied if has_filter else None,
             "retrieval": "hybrid" if bm25_used else "dense"}
@@ -1969,7 +1988,9 @@ def entities_docs(name: str, user_id: str = "frank", limit: int = 10) -> dict:
                        points=[hit.id], wait=False)
         _log(logging.INFO, "Entity-Register: tote doc_ids entfernt", name=pl.get("name"),
              entfernt=len(doc_ids) - len(alive))
-    items = _sort_recent(items)[:max(1, min(limit, 50))]
+    items = _sort_recent(items)
+    if limit > 0:
+        items = items[:limit]
     checkpoint("entity_docs", "Alles-ueber-X: verknuepfte Eintraege einer Entitaet (vollstaendig statt Top-5)",
                ok=True, name=pl.get("name"), docs=len(items))
     return {"ok": True, "found": True, "name": pl.get("name"), "type": pl.get("type") or None,
