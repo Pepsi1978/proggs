@@ -1,15 +1,7 @@
 {
-	"stand": "05.07.2026, 15.18 Uhr",
+	"stand": "05.07.2026, 14.55 Uhr",
 	"hinweis": "PFLEGE-PFLICHT: Bei JEDEM Deploy, der ein neues System/Feature einbaut, hier einen Eintrag ERGAENZEN (neueste zuerst) — mit Datum + Uhrzeit und ausfuehrlicher Erklaerung. Diese Datei ist die Quelle des Info-Bereichs in den Dashboard-Einstellungen (GET /api/features). Regel verankert in DEPLOY.md.",
 	"features": [
-		{
-			"id": "bibliothekar-regel-ueberschrift",
-			"name": "Gelernte Regeln bekommen eine KI-Überschrift statt Text-Anfang",
-			"eingebaut": "05.07.2026, 15.18 Uhr",
-			"dienst": "librarian 0.9.0 + dashboard 0.24.3",
-			"kurz": "In der Karte 'Gelernte Regeln' steht jetzt eine vom Bibliothekar-Modell gebildete, zusammenfassende Überschrift (höchstens 10 Wörter) statt des wortwörtlich abgeschnittenen Regel-Anfangs.",
-			"erklaerung": "Bisher nahm das Dashboard als Überschrift einer gelernten Regel einfach die ersten ein bis zwei Sätze der Regel wortwörtlich — bei langen oder umständlich formulierten Regeln war auf einen Blick oft nicht klar, worum es geht. Jetzt bildet das Bibliothekar-Modell (dasselbe, das du in den Bibliothekar-Einstellungen wählst) aus jeder Regel eine kurze, zusammenfassende Überschrift in leichtem Deutsch mit höchstens zehn Wörtern. Die Überschrift entsteht automatisch beim Speichern einer neuen Regel (Lernen-Knopf) und wird bei jeder Bearbeitung neu gebildet — sie wird dauerhaft mitgespeichert (Feld 'titel'), es kostet also nur einmal einen KI-Aufruf, nicht bei jedem Ansehen. Deine bereits vorhandenen gelernten Regeln bekommen ihre Überschrift automatisch nachgezogen, sobald du die Karte 'Gelernte Regeln' öffnest (ein einmaliger Hintergrund-Lauf über den neuen Endpunkt POST /learn/backfill-titles). Sollte die KI-Titelbildung einmal scheitern, fällt sie auf die alte wortwörtliche Kurzfassung zurück — es geht nie eine Anzeige verloren. Technisch: librarian 0.9.0 erzeugt den Titel (Funktion _gen_rule_title), das Dashboard (index.html) zeigt bevorzugt t.titel und nutzt die alte Kurzfassung nur als Fallback."
-		},
 		{
 			"id": "session-mitlernen",
 			"name": "Session-Mitlernen: Programmier-Sessions fließen automatisch ins Gehirn",
