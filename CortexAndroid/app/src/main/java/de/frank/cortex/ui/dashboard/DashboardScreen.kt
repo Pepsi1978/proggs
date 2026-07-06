@@ -624,7 +624,7 @@ private fun EntryCard(entry: BrainEntry, onClick: () -> Unit) {
                                 verticalAlignment = Alignment.CenterVertically
                             ) {
                                 Box(Modifier.size(7.dp).clip(CircleShape).background(cc))
-                                Text(cat.substringAfterLast("/"), fontSize = 11.sp,
+                                Text(displayCategoryName(cat), fontSize = 11.sp,
                                     fontWeight = FontWeight.SemiBold, color = cc)
                             }
                         }
@@ -792,6 +792,35 @@ private fun EntryDetailScreen(
                         onClick = onToggleEdit
                     )
                 }
+                if (showDeleteConfirm) {
+                    Surface(
+                        modifier = Modifier.fillMaxWidth(),
+                        shape = RoundedCornerShape(14.dp),
+                        color = Rose.copy(alpha = 0.12f),
+                        border = BorderStroke(1.dp, Rose.copy(alpha = 0.32f))
+                    ) {
+                        Column(Modifier.padding(14.dp)) {
+                            Text("Diesen Eintrag wirklich löschen?", fontSize = 13.5.sp,
+                                color = MaterialTheme.colorScheme.onSurface)
+                            Spacer(Modifier.height(11.dp))
+                            Row(horizontalArrangement = Arrangement.spacedBy(9.dp)) {
+                                Button(
+                                    onClick = { showDeleteConfirm = false },
+                                    modifier = Modifier.weight(1f).height(40.dp),
+                                    shape = RoundedCornerShape(11.dp),
+                                    colors = ButtonDefaults.buttonColors(containerColor = if (isDark) DarkChip else LightChip),
+                                    border = BorderStroke(1.dp, if (isDark) DarkChipBorder else LightChipBorder)
+                                ) { Text("Abbrechen", fontWeight = FontWeight.SemiBold, fontSize = 13.5.sp) }
+                                Button(
+                                    onClick = onDelete,
+                                    modifier = Modifier.weight(1f).height(40.dp),
+                                    shape = RoundedCornerShape(11.dp),
+                                    colors = ButtonDefaults.buttonColors(containerColor = Rose)
+                                ) { Text("Löschen", fontWeight = FontWeight.SemiBold, fontSize = 13.5.sp) }
+                            }
+                        }
+                    }
+                }
                 if (isEditing) {
                     Row(horizontalArrangement = Arrangement.spacedBy(9.dp)) {
                         DetailButton(
@@ -854,43 +883,13 @@ private fun EntryDetailScreen(
                 }
             }
         }
-
-        if (showDeleteConfirm) {
-            item {
-                Surface(
-                    shape = RoundedCornerShape(14.dp),
-                    color = Rose.copy(alpha = 0.12f),
-                    border = BorderStroke(1.dp, Rose.copy(alpha = 0.32f))
-                ) {
-                    Column(Modifier.padding(14.dp)) {
-                        Text("Diesen Eintrag wirklich löschen?", fontSize = 13.5.sp,
-                            color = MaterialTheme.colorScheme.onSurface)
-                        Spacer(Modifier.height(11.dp))
-                        Row(horizontalArrangement = Arrangement.spacedBy(9.dp)) {
-                            Button(
-                                onClick = { showDeleteConfirm = false },
-                                modifier = Modifier.weight(1f).height(40.dp),
-                                shape = RoundedCornerShape(11.dp),
-                                colors = ButtonDefaults.buttonColors(containerColor = if (isDark) DarkChip else LightChip),
-                                border = BorderStroke(1.dp, if (isDark) DarkChipBorder else LightChipBorder)
-                            ) { Text("Abbrechen", fontWeight = FontWeight.SemiBold, fontSize = 13.5.sp) }
-                            Button(
-                                onClick = onDelete,
-                                modifier = Modifier.weight(1f).height(40.dp),
-                                shape = RoundedCornerShape(11.dp),
-                                colors = ButtonDefaults.buttonColors(containerColor = Rose)
-                            ) { Text("Löschen", fontWeight = FontWeight.SemiBold, fontSize = 13.5.sp) }
-                        }
-                    }
-                }
-            }
-        }
     }
 }
 
 @Composable
 private fun RemovableCategoryChip(category: String, removable: Boolean, onRemove: () -> Unit) {
     val color = categoryColor(category)
+    val label = displayCategoryName(category)
     Surface(shape = RoundedCornerShape(8.dp), color = color.copy(alpha = 0.14f)) {
         Row(
             Modifier.padding(start = 10.dp, end = if (removable) 5.dp else 10.dp, top = 4.dp, bottom = 4.dp),
@@ -899,7 +898,7 @@ private fun RemovableCategoryChip(category: String, removable: Boolean, onRemove
         ) {
             Box(Modifier.size(7.dp).clip(CircleShape).background(color))
             Text(
-                category.substringAfterLast("/"),
+                label,
                 fontSize = 11.5.sp,
                 fontWeight = FontWeight.SemiBold,
                 color = color
@@ -907,7 +906,7 @@ private fun RemovableCategoryChip(category: String, removable: Boolean, onRemove
             if (removable) {
                 Icon(
                     Icons.Default.Close,
-                    contentDescription = "${category.substringAfterLast("/")} entfernen",
+                    contentDescription = "$label entfernen",
                     tint = color,
                     modifier = Modifier
                         .size(16.dp)
@@ -917,6 +916,11 @@ private fun RemovableCategoryChip(category: String, removable: Boolean, onRemove
             }
         }
     }
+}
+
+private fun displayCategoryName(category: String): String {
+    val label = category.substringAfterLast("/")
+    return label.replaceFirstChar { if (it.isLowerCase()) it.titlecase(Locale.GERMANY) else it.toString() }
 }
 
 @Composable
