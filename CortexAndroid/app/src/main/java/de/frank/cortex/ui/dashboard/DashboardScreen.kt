@@ -172,13 +172,24 @@ private fun SpectrumCard(
     onDrillToRoot: () -> Unit
 ) {
     val isDark = MaterialTheme.colorScheme.background == DarkBg
+    var sortMode by remember { mutableStateOf(OverviewSortMode.Count) }
     val spectrumCounts = if (categoryPath.isEmpty()) categoryCounts else subcategories
     // remember: Filter/Sortierung nur bei Datenaenderung neu berechnen — die Card recomposed
     // waehrend der Zaehler-Animation pro FRAME, ohne remember liefen die Sortierungen ~66x/s.
     // Filter > 0: weight(0f) wuerde crashen (IllegalArgumentException "invalid weight"),
     // sobald eine leere Kategorie (count 0) kommt.
-    val spectrumItems = remember(spectrumCounts) {
-        spectrumCounts.entries.filter { it.value > 0 }.sortedByDescending { it.value }
+    val spectrumItems = remember(spectrumCounts, sortMode) {
+        val visible = spectrumCounts.entries.filter { it.value > 0 }
+        when (sortMode) {
+            OverviewSortMode.Count -> visible.sortedWith(
+                compareByDescending<Map.Entry<String, Int>> { it.value }
+                    .thenBy { displayCategoryName(it.key).lowercase(Locale.GERMANY) }
+            )
+            OverviewSortMode.Alphabet -> visible.sortedWith(
+                compareBy<Map.Entry<String, Int>> { displayCategoryName(it.key).lowercase(Locale.GERMANY) }
+                    .thenByDescending { it.value }
+            )
+        }
     }
     val total = remember(spectrumCounts) { spectrumCounts.values.sum().toFloat().coerceAtLeast(1f) }
 
@@ -236,6 +247,30 @@ private fun SpectrumCard(
                         fontSize = 10.sp,
                         letterSpacing = 1.5.sp,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+
+                Row(
+                    modifier = Modifier.padding(top = 8.dp, bottom = 13.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    Text(
+                        text = "SORTIERUNG",
+                        fontFamily = JetBrainsMono,
+                        fontSize = 9.5.sp,
+                        letterSpacing = 1.4.sp,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                    OverviewSortButton(
+                        text = "Menge",
+                        active = sortMode == OverviewSortMode.Count,
+                        onClick = { sortMode = OverviewSortMode.Count }
+                    )
+                    OverviewSortButton(
+                        text = "Alphabet",
+                        active = sortMode == OverviewSortMode.Alphabet,
+                        onClick = { sortMode = OverviewSortMode.Alphabet }
                     )
                 }
 
@@ -302,21 +337,11 @@ private fun SpectrumCard(
                     }
                 }
 
-                // Legend: entweder Hauptkategorien (Root) oder Subcategories (Drilldown).
-                // remember: Sortierung nur bei Datenaenderung, nicht pro Animations-Frame.
-                val legendItems = remember(categoryPath.isEmpty(), categoryCounts, subcategories) {
-                    if (categoryPath.isEmpty()) {
-                        categoryCounts.entries.sortedByDescending { it.value }
-                    } else {
-                        subcategories.entries.sortedByDescending { it.value }
-                    }
-                }
-
                 Column(
                     modifier = Modifier.padding(top = 14.dp),
                     verticalArrangement = Arrangement.spacedBy(1.dp)
                 ) {
-                    legendItems.forEachIndexed { index, entry ->
+                    spectrumItems.forEachIndexed { index, entry ->
                         val (name, count) = entry
                         Row(
                             modifier = Modifier
@@ -354,6 +379,33 @@ private fun SpectrumCard(
                     }
                 }
             }
+        }
+    }
+}
+
+private enum class OverviewSortMode {
+    Count,
+    Alphabet
+}
+
+@Composable
+private fun OverviewSortButton(text: String, active: Boolean, onClick: () -> Unit) {
+    val color = if (active) Orange else MaterialTheme.colorScheme.onSurfaceVariant
+    Surface(
+        shape = RoundedCornerShape(999.dp),
+        color = if (active) Orange.copy(alpha = 0.18f) else Color.Transparent,
+        border = BorderStroke(1.dp, if (active) Orange.copy(alpha = 0.55f) else MaterialTheme.colorScheme.outline),
+        modifier = Modifier
+            .height(30.dp)
+            .clickable(onClick = onClick)
+    ) {
+        Row(
+            modifier = Modifier.padding(horizontal = 11.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(6.dp)
+        ) {
+            if (active) Box(Modifier.size(6.dp).clip(CircleShape).background(Orange))
+            Text(text, fontSize = 11.5.sp, fontWeight = FontWeight.SemiBold, color = color)
         }
     }
 }
