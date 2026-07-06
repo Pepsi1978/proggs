@@ -27,8 +27,8 @@ public sealed partial class MainViewModel : ObservableObject
         _ = RefreshOpenRouterFreeModelsAsync();
         WorkDir = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), "proggs");
 
-        var version = Assembly.GetExecutingAssembly().GetName().Version?.ToString(3) ?? "1.7.4";
-        Version = $"Version {version} (06.07.2026, 18:13 Uhr)";
+        var version = Assembly.GetExecutingAssembly().GetName().Version?.ToString(3) ?? "1.7.5";
+        Version = $"Version {version} (06.07.2026, 18:25 Uhr)";
     }
 
     public ObservableCollection<ModelGroupEntry> ModelGroups { get; } = new();
@@ -186,6 +186,7 @@ public sealed partial class MainViewModel : ObservableObject
                     Tag = model.ProviderId,
                     Status = 0
                 };
+                await EnrichDirectProviderAsync(model, direct, ct);
                 Providers.Add(direct);
                 SelectedProvider = direct;
                 StatusText = $"{model.DisplayName} über {model.ProviderName} bereit.";
@@ -218,6 +219,41 @@ public sealed partial class MainViewModel : ObservableObject
         finally
         {
             IsLoading = false;
+        }
+    }
+
+    private async Task EnrichDirectProviderAsync(ModelEntry model, ProviderEntry direct, CancellationToken ct)
+    {
+        var metadata = OpenCodeModelMetadataCatalog.Find(model.ProviderId, model.Slug);
+        if (metadata == null) return;
+
+        direct.ContextLength = metadata.ContextLength;
+        try
+        {
+            var (_, providers) = await _router.GetProvidersAsync(metadata.OpenRouterSlug, ct);
+            if (providers.Count == 0) return;
+
+            var fastest = providers
+                .Where(p => p.ThroughputLast30m.HasValue)
+                .OrderByDescending(p => p.ThroughputLast30m!.Value)
+                .FirstOrDefault();
+            if (fastest != null)
+            {
+                direct.ThroughputLast30m = fastest.ThroughputLast30m;
+                direct.ContextLength = Math.Max(direct.ContextLength, fastest.ContextLength);
+            }
+            else
+            {
+                direct.ContextLength = Math.Max(direct.ContextLength, providers.Max(p => p.ContextLength));
+            }
+        }
+        catch (OperationCanceledException)
+        {
+            throw;
+        }
+        catch (Exception ex)
+        {
+            Logger.Instance.Warn("MainViewModel", "EnrichDirectProviderAsync", $"OpenCode-Metadaten-Fallback für {model.Slug}: {ex.Message}", new { model.ProviderId, metadata.OpenRouterSlug });
         }
     }
 
