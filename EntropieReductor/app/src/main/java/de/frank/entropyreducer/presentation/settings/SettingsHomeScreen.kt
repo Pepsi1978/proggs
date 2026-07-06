@@ -31,6 +31,7 @@ import androidx.compose.material.icons.outlined.Memory
 import androidx.compose.material.icons.outlined.MonitorHeart
 import androidx.compose.material.icons.outlined.Person
 import androidx.compose.material.icons.outlined.Psychology
+import androidx.compose.material.icons.outlined.RecordVoiceOver
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -45,12 +46,14 @@ import androidx.compose.ui.unit.dp
 import de.frank.entropyreducer.BuildConfig
 import de.frank.entropyreducer.presentation.components.CosmosScaffold
 import de.frank.entropyreducer.presentation.components.GlassCard
+import de.frank.entropyreducer.presentation.components.MicState
+import de.frank.entropyreducer.presentation.navigation.CosmosBottomBar
 import de.frank.entropyreducer.presentation.navigation.Routes
 import de.frank.entropyreducer.presentation.theme.LocalCosmos
 
 /** Top-Liste der 7 Settings-Sektionen (Spec §6, Bild 16/26). */
 @Composable
-fun SettingsHomeScreen(onBack: () -> Unit, onOpen: (String) -> Unit) {
+fun SettingsHomeScreen(onBack: () -> Unit, onOpen: (String) -> Unit, onSwitchTab: (String) -> Unit) {
     val cosmos = LocalCosmos.current
     val sections = sectionsFor()
     CosmosScaffold(
@@ -60,10 +63,18 @@ fun SettingsHomeScreen(onBack: () -> Unit, onOpen: (String) -> Unit) {
                 Icon(Icons.AutoMirrored.Outlined.ArrowBack, "Zurück", tint = cosmos.textPrimary)
             }
         },
+        bottomBar = {
+            CosmosBottomBar(
+                currentTab = Routes.SETTINGS_HOME,
+                micState = MicState.IDLE,
+                onTabSelected = onSwitchTab,
+                onMicClick = { },
+            )
+        },
     ) { padding ->
         LazyColumn(
             modifier = Modifier.fillMaxSize().padding(padding),
-            contentPadding = androidx.compose.foundation.layout.PaddingValues(16.dp),
+            contentPadding = androidx.compose.foundation.layout.PaddingValues(start = 16.dp, top = 16.dp, end = 16.dp, bottom = 112.dp),
             verticalArrangement = Arrangement.spacedBy(12.dp),
         ) {
             item {
@@ -100,6 +111,13 @@ private data class SectionDef(
 @Composable
 private fun sectionsFor(): List<SectionDef> =
     listOf(
+        SectionDef(
+            icon = Icons.Outlined.RecordVoiceOver,
+            accent = LocalCosmos.current.accent,
+            title = "Vorlesen",
+            subtitle = "Lege fest, wie lange Mental- und Gewohnheits-Sätze beim Vorlesen pausieren.",
+            route = Routes.SETTINGS_TTS,
+        ),
         SectionDef(
             icon = Icons.Outlined.CalendarMonth,
             accent = LocalCosmos.current.accent,

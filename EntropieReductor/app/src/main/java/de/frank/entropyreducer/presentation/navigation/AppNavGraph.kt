@@ -31,7 +31,6 @@ import de.frank.entropyreducer.presentation.components.MicActionsState
 import de.frank.entropyreducer.presentation.components.MicState
 import de.frank.entropyreducer.presentation.components.LocalBelowSubTabRow
 import de.frank.entropyreducer.presentation.dashboard1.TasksScreen
-import de.frank.entropyreducer.presentation.dashboard2.AnalysisScreen
 import de.frank.entropyreducer.presentation.dashboard3.ScientistScreen
 import de.frank.entropyreducer.presentation.dashboard4.BiomarkerDetailScreen
 import de.frank.entropyreducer.presentation.dashboard4.BiomarkerHostScreen
@@ -52,6 +51,7 @@ import de.frank.entropyreducer.presentation.settings.memory.MemoryScreen
 import de.frank.entropyreducer.presentation.settings.models.ModelsScreen
 import de.frank.entropyreducer.presentation.settings.profile.ProfileScreen
 import de.frank.entropyreducer.presentation.settings.prompts.PromptsScreen
+import de.frank.entropyreducer.presentation.settings.TtsSettingsScreen
 import de.frank.entropyreducer.presentation.tagebuch.TagebuchScreen
 import de.frank.entropyreducer.presentation.theme.LocalCosmos
 import kotlinx.coroutines.launch
@@ -189,76 +189,6 @@ private fun AppNavHostInner(nav: androidx.navigation.NavHostController, modifier
                     }
                     CosmosBottomBar(
                         currentTab = Routes.TASKS,
-                        micState = MicState.IDLE,
-                        onTabSelected = { route -> nav.tabSwitch(route) },
-                        onMicClick = { micActionsState.toggle() },
-                        modifier = Modifier.align(Alignment.BottomCenter),
-                    )
-                }
-            }
-
-            // ============================================================
-            // ANALYSE-HOST mit SubTabRow + HorizontalPager
-            // ============================================================
-            composable(Routes.ANALYSIS) {
-                val tabs = remember { subTabsFor(Routes.ANALYSIS) }
-                val pagerState = rememberPagerState(initialPage = 0) { tabs.size }
-                val coroutineScope = rememberCoroutineScope()
-                // Performance-Fix 2026-07-03: EINE stabile MicActionsState-Instanz pro Host
-                // (remember) statt einer neuen Instanz pro Recomposition — sonst invalidiert
-                // das staticCompositionLocal bei jedem Swipe alle Pager-Seiten (Ruckeln).
-                // currentPage wird per snapshotFlow beobachtet statt als Composition-Read.
-                val micActionsOpen = remember { mutableStateOf(false) }
-                LaunchedEffect(pagerState) {
-                    snapshotFlow { pagerState.currentPage }.collect { micActionsOpen.value = false }
-                }
-                val micActionsState = remember { MicActionsState(micActionsOpen) { micActionsOpen.value = it } }
-
-                Box(modifier = Modifier.fillMaxSize()) {
-                    Column(modifier = Modifier.fillMaxSize()) {
-                        SubTabRow(
-                            tabs = tabs,
-                            selectedIndex = pagerState.currentPage,
-                            tabColor = cosmos.accentAnalyse,
-                            onTabSelected = { index ->
-                                coroutineScope.launch {
-                                    pagerState.animateScrollToPage(index)
-                                }
-                            },
-                            modifier = Modifier.fillMaxWidth(),
-                        )
-
-                        CompositionLocalProvider(
-                            LocalBelowSubTabRow provides true,
-                            LocalMicActionsOpen provides micActionsState,
-                        ) {
-                            HorizontalPager(
-                                state = pagerState,
-                                modifier = Modifier.weight(1f),
-                                beyondViewportPageCount = tabs.size - 1,
-                            ) { page ->
-                                when (page) {
-                                    0 -> AnalysisScreen(
-                                        onOpenSettings = { nav.navigate(Routes.SETTINGS_HOME) },
-                                        onSwitchTab = { route -> nav.tabSwitch(route) },
-                                        currentTab = Routes.ANALYSIS,
-                                        onOpenSubArea = { parent, index -> nav.navigate(Routes.subRouteFor(parent, index)) },
-                                        showBottomBar = false,
-                                    )
-                                    else -> SubAreaScreen(
-                                        parentTab = Routes.ANALYSIS,
-                                        subIndex = page + 1,
-                                        onBack = { nav.popBackStack() },
-                                        onSwitchSub = { p, i -> nav.navigate(Routes.subRouteFor(p, i)) },
-                                        onSwitchTab = { route -> nav.tabSwitch(route) },
-                                        showBottomBar = false,
-                                    )
-                                }
-                            }
-                        }
-                    }
-                    CosmosBottomBar(
-                        currentTab = Routes.ANALYSIS,
                         micState = MicState.IDLE,
                         onTabSelected = { route -> nav.tabSwitch(route) },
                         onMicClick = { micActionsState.toggle() },
@@ -549,6 +479,7 @@ private fun AppNavHostInner(nav: androidx.navigation.NavHostController, modifier
                 SettingsHomeScreen(
                     onBack = { nav.popBackStack() },
                     onOpen = { route -> nav.navigate(route) },
+                    onSwitchTab = { route -> nav.tabSwitch(route) },
                 )
             }
             composable(Routes.SETTINGS_API) {
@@ -607,6 +538,11 @@ private fun AppNavHostInner(nav: androidx.navigation.NavHostController, modifier
             }
             composable(Routes.SETTINGS_DIAGNOSTICS) {
                 de.frank.entropyreducer.presentation.settings.diagnostics.DiagnosticLogScreen(
+                    onBack = { nav.popBackStack() }
+                )
+            }
+            composable(Routes.SETTINGS_TTS) {
+                TtsSettingsScreen(
                     onBack = { nav.popBackStack() }
                 )
             }

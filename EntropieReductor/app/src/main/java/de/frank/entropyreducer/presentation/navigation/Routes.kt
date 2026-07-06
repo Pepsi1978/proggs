@@ -116,6 +116,7 @@ object Routes {
     const val SETTINGS_ARCHIVE = "settings/archive"
     const val SETTINGS_WIDGET = "settings/widget"
     const val SETTINGS_DIAGNOSTICS = "settings/diagnostics"
+    const val SETTINGS_TTS = "settings/tts"
 
     // Prioritaets-Gedaechtnis (Frank-Wunsch 2026-06-19)
     const val SETTINGS_PRIORITY_MEMORY = "settings/priority_memory"

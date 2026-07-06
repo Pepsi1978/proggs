@@ -28,6 +28,7 @@ import androidx.compose.material.icons.outlined.Lightbulb
 import androidx.compose.material.icons.outlined.MonitorHeart
 import androidx.compose.material.icons.outlined.Psychology
 import androidx.compose.material.icons.outlined.Science
+import androidx.compose.material.icons.outlined.Settings
 import androidx.compose.material.icons.outlined.Tune
 import androidx.compose.material.icons.outlined.Warning
 import androidx.compose.material3.Icon
@@ -47,7 +48,7 @@ import de.frank.entropyreducer.presentation.theme.LocalCosmos
 /**
  * Bottom-Bar mit zentralem Mic-Button (FAB-Style).
  *
- * Zeigt unten immer nur die vier Hauptreiter Aufgaben/Analyse/Forscher/Biomarker plus Mic.
+ * Zeigt unten immer nur die vier Hauptreiter Aufgaben/Forscher/Biomarker/Einstellungen plus Mic.
  * Sub-Navigation sitzt ausschliesslich oben in [SubTabRow]. Die alten Sub-Bar-Parameter bleiben als
  * No-Op erhalten, damit bestehende Screen-Signaturen nicht gleichzeitig umgebaut werden muessen.
  *
@@ -120,27 +121,27 @@ private fun NormalTabsRow(currentTab: String, onTabSelected: (String) -> Unit) {
             selected = currentTab == Routes.TASKS,
         )
         TabItem(
-            label = "Analyse",
-            icon = Icons.Outlined.Analytics,
-            tint = overviewTint,
-            onClick = { onTabSelected(Routes.ANALYSIS) },
-            selected = currentTab == Routes.ANALYSIS,
-        )
-        // Luecke fuer den Mic-Button
-        Spacer(Modifier.width(64.dp))
-        TabItem(
             label = "Forscher",
             icon = Icons.Outlined.Science,
             tint = overviewTint,
             onClick = { onTabSelected(Routes.SCIENTIST) },
             selected = currentTab == Routes.SCIENTIST,
         )
+        // Luecke fuer den Mic-Button
+        Spacer(Modifier.width(64.dp))
         TabItem(
             label = "Biomarker",
             icon = Icons.Outlined.MonitorHeart,
             tint = overviewTint,
             onClick = { onTabSelected(Routes.BIOMARKER) },
             selected = currentTab == Routes.BIOMARKER,
+        )
+        TabItem(
+            label = "Einstellungen",
+            icon = Icons.Outlined.Settings,
+            tint = overviewTint,
+            onClick = { onTabSelected(Routes.SETTINGS_HOME) },
+            selected = currentTab == Routes.SETTINGS_HOME,
         )
     }
 }

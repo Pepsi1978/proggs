@@ -68,6 +68,7 @@ private val KEY_ANKER = intPreferencesKey("anker_count")
 private val KEY_FOLGE = intPreferencesKey("folge_count")
 private val KEY_LOOP = booleanPreferencesKey("loop_enabled")
 private val KEY_INCLUDE_HABITS = booleanPreferencesKey("include_habits")
+private val KEY_MENTAL_PAUSE_SECONDS = intPreferencesKey("pause_seconds")
 
 data class MentalTtsUiState(
     val isPlaying: Boolean = false,
@@ -79,6 +80,8 @@ data class MentalTtsUiState(
     val loop: Boolean = false,
     /** "G"-Haekchen: Gewohnheiten am Ende mitlesen? */
     val includeHabits: Boolean = false,
+    /** Pause zwischen zwei gesprochenen Mental-Saetzen (1..30 Sekunden). */
+    val pauseSeconds: Int = 9,
     val error: String? = null,
 )
 
@@ -88,6 +91,7 @@ private data class MentalSettings(
     val folge: Int,
     val loop: Boolean,
     val includeHabits: Boolean,
+    val pauseSeconds: Int,
 )
 
 @HiltViewModel
@@ -104,12 +108,12 @@ constructor(
 
     private companion object {
         const val TAG = "MentalTts"
-        // Frank-Wunsch 2026-07-04: 9 Sekunden Denk-Pause zwischen den vorgelesenen Saetzen
-        // (optimale Zeit, um ueber die mentale Frage nachzudenken). Gilt Mental UND Gewohnheit.
-        const val PAUSE_MS = 9_000L
+        const val DEFAULT_PAUSE_SECONDS = 9
         const val MAX_DURATION_MS = 15 * 60 * 1_000L // 15 Minuten Sicherheits-Auto-Stop
         const val RANGE_MIN = 1
         const val RANGE_MAX = 10
+        const val PAUSE_RANGE_MIN = 1
+        const val PAUSE_RANGE_MAX = 30
     }
 
     private val ctx: Context
@@ -122,6 +126,8 @@ constructor(
                 folge = (p[KEY_FOLGE] ?: 1).coerceIn(RANGE_MIN, RANGE_MAX),
                 loop = p[KEY_LOOP] ?: false,
                 includeHabits = p[KEY_INCLUDE_HABITS] ?: false,
+                pauseSeconds = (p[KEY_MENTAL_PAUSE_SECONDS] ?: DEFAULT_PAUSE_SECONDS)
+                    .coerceIn(PAUSE_RANGE_MIN, PAUSE_RANGE_MAX),
             )
         }
 
@@ -136,6 +142,7 @@ constructor(
                     folgeCount = s.folge,
                     loop = s.loop,
                     includeHabits = s.includeHabits,
+                    pauseSeconds = s.pauseSeconds,
                     error = err,
                 )
             }
@@ -168,6 +175,14 @@ constructor(
     /** "G"-Haekchen: Gewohnheiten am Ende mitlesen. */
     fun setIncludeHabits(enabled: Boolean) {
         viewModelScope.launch { ctx.mentalTtsStore.edit { it[KEY_INCLUDE_HABITS] = enabled } }
+    }
+
+    fun setPauseSeconds(seconds: Int) {
+        viewModelScope.launch {
+            ctx.mentalTtsStore.edit {
+                it[KEY_MENTAL_PAUSE_SECONDS] = seconds.coerceIn(PAUSE_RANGE_MIN, PAUSE_RANGE_MAX)
+            }
+        }
     }
 
     fun dismissError() {
@@ -204,16 +219,31 @@ constructor(
                     } else {
                         emptyList()
                     }
-                val gewohnheitRepeat =
+                val gewohnheitSettings =
                     if (s.includeHabits && gewohnheitTexts.isNotEmpty()) {
                         ctx.gewohnheitTtsStore.data
-                            .map { (it[KEY_REPEAT] ?: 1).coerceIn(RANGE_MIN, RANGE_MAX) }
+                            .map {
+                                Pair(
+                                    (it[KEY_REPEAT] ?: 1).coerceIn(RANGE_MIN, RANGE_MAX),
+                                    (it[KEY_GEWOHNHEIT_PAUSE_SECONDS] ?: DEFAULT_PAUSE_SECONDS)
+                                        .coerceIn(PAUSE_RANGE_MIN, PAUSE_RANGE_MAX),
+                                )
+                            }
                             .first()
                     } else {
-                        1
+                        Pair(1, DEFAULT_PAUSE_SECONDS)
                     }
                 try {
-                    runSequence(mentalTexts, s.anker, s.folge, s.loop, gewohnheitTexts, gewohnheitRepeat)
+                    runSequence(
+                        mentalTexts = mentalTexts,
+                        anker = s.anker,
+                        folge = s.folge,
+                        loop = s.loop,
+                        gewohnheitTexts = gewohnheitTexts,
+                        gewohnheitRepeat = gewohnheitSettings.first,
+                        mentalPauseMs = s.pauseSeconds * 1_000L,
+                        gewohnheitPauseMs = gewohnheitSettings.second * 1_000L,
+                    )
                 } catch (e: CancellationException) {
                     throw e // Cancellation NIE verschlucken (Bug-Almanach kotlin §2.1)
                 } catch (e: Exception) {
@@ -244,24 +274,27 @@ constructor(
         loop: Boolean,
         gewohnheitTexts: List<String>,
         gewohnheitRepeat: Int,
+        mentalPauseMs: Long,
+        gewohnheitPauseMs: Long,
     ) {
         // Mentalblock (Anker-Schema) + optional Gewohnheiten am Ende (jeder Satz gewohnheitRepeat-mal).
-        val mentalSeq = buildSequence(mentalTexts, anker, folge)
-        val gewohnheitSeq = buildHabitSequence(gewohnheitTexts, gewohnheitRepeat)
+        val mentalSeq = buildSequence(mentalTexts, anker, folge).map { SpokenStep(it, mentalPauseMs) }
+        val gewohnheitSeq = buildHabitSequence(gewohnheitTexts, gewohnheitRepeat).map { SpokenStep(it, gewohnheitPauseMs) }
         val sequence = mentalSeq + gewohnheitSeq
         if (sequence.isEmpty()) return
         Diag.d(
             DiagnosticArea.GOOGLE_TTS,
             TAG,
-            "Sequenz gebildet: mental=${mentalSeq.size} + gewohnheit=${gewohnheitSeq.size} " +
+                "Sequenz gebildet: mental=${mentalSeq.size} + gewohnheit=${gewohnheitSeq.size} " +
                 "(mentals=${mentalTexts.size} anker=$anker folge=$folge loop=$loop, " +
-                "gewohnheiten=${gewohnheitTexts.size} repeat=$gewohnheitRepeat)",
+                "mentalPauseMs=$mentalPauseMs gewohnheiten=${gewohnheitTexts.size} " +
+                "repeat=$gewohnheitRepeat gewohnheitPauseMs=$gewohnheitPauseMs)",
         )
 
         // Wiedergabe mit frischer Synthese pro Satzvorkommen, Loop + 15-Min-Limit.
         val deadline = SystemClock.elapsedRealtime() + MAX_DURATION_MS
         do {
-            for ((index, text) in sequence.withIndex()) {
+            for ((index, step) in sequence.withIndex()) {
                 currentCoroutineContext().ensureActive()
                 if (SystemClock.elapsedRealtime() >= deadline) {
                     Diag.d(
@@ -271,17 +304,17 @@ constructor(
                     )
                     return
                 }
-                val file = ttsPlayer.synthesizeToCache(text, forceFresh = true)
+                val file = ttsPlayer.synthesizeToCache(step.text, forceFresh = true)
                 withContext(Dispatchers.Main) { ttsPlayer.playCachedFileAwait(file) }
-                // 9 Sekunden Pause zwischen jedem Satz — auch ueber Schleifen-Grenzen hinweg,
-                // nur nach dem allerletzten Satz eines NICHT-Endlos-Laufs nicht.
                 val isLastOfRun = index == sequence.lastIndex
                 if (!isLastOfRun || loop) {
-                    delay(PAUSE_MS)
+                    delay(step.pauseMs)
                 }
             }
         } while (loop && SystemClock.elapsedRealtime() < deadline)
     }
+
+    private data class SpokenStep(val text: String, val pauseMs: Long)
 
     /**
      * Baut die flache Mental-Vorlese-Sequenz aus den Saetzen. Bei nur einem Satz wird dieser eine Satz

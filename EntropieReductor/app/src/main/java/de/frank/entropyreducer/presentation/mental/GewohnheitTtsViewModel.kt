@@ -45,6 +45,7 @@ import kotlinx.coroutines.withContext
 // auf dieselbe Datei — das wuerde crashen). Frank-Wunsch 2026-07-03.
 internal val Context.gewohnheitTtsStore by preferencesDataStore(name = "gewohnheit_tts_settings")
 internal val KEY_REPEAT = intPreferencesKey("repeat_count")
+internal val KEY_GEWOHNHEIT_PAUSE_SECONDS = intPreferencesKey("pause_seconds")
 private val KEY_LOOP = booleanPreferencesKey("loop_enabled")
 
 data class GewohnheitTtsUiState(
@@ -53,7 +54,15 @@ data class GewohnheitTtsUiState(
     val repeatCount: Int = 1,
     /** Endlosschleife aktiv? */
     val loop: Boolean = false,
+    /** Pause zwischen zwei gesprochenen Gewohnheits-Saetzen (1..30 Sekunden). */
+    val pauseSeconds: Int = 9,
     val error: String? = null,
+)
+
+private data class GewohnheitTtsSettings(
+    val repeatCount: Int,
+    val loop: Boolean,
+    val pauseSeconds: Int,
 )
 
 @HiltViewModel
@@ -66,22 +75,24 @@ constructor(
 
     private companion object {
         const val TAG = "GewohnheitTts"
-        // Frank-Wunsch 2026-07-04: 9 Sekunden Denk-Pause zwischen den vorgelesenen Saetzen
-        // (optimale Zeit zum Nachdenken) — einheitlich mit dem Mental-Reiter.
-        const val PAUSE_MS = 9_000L
+        const val DEFAULT_PAUSE_SECONDS = 9
         const val MAX_DURATION_MS = 15 * 60 * 1_000L
         const val RANGE_MIN = 1
         const val RANGE_MAX = 10
+        const val PAUSE_RANGE_MIN = 1
+        const val PAUSE_RANGE_MAX = 30
     }
 
     private val ctx: Context
         get() = getApplication()
 
-    private val settingsFlow: Flow<Pair<Int, Boolean>> =
+    private val settingsFlow: Flow<GewohnheitTtsSettings> =
         ctx.gewohnheitTtsStore.data.map { p ->
-            Pair(
-                (p[KEY_REPEAT] ?: 1).coerceIn(RANGE_MIN, RANGE_MAX),
-                p[KEY_LOOP] ?: false,
+            GewohnheitTtsSettings(
+                repeatCount = (p[KEY_REPEAT] ?: 1).coerceIn(RANGE_MIN, RANGE_MAX),
+                loop = p[KEY_LOOP] ?: false,
+                pauseSeconds = (p[KEY_GEWOHNHEIT_PAUSE_SECONDS] ?: DEFAULT_PAUSE_SECONDS)
+                    .coerceIn(PAUSE_RANGE_MIN, PAUSE_RANGE_MAX),
             )
         }
 
@@ -89,11 +100,12 @@ constructor(
     private val errorFlow = MutableStateFlow<String?>(null)
 
     val uiState: StateFlow<GewohnheitTtsUiState> =
-        combine(settingsFlow, isPlayingFlow, errorFlow) { (repeat, loop), playing, err ->
+        combine(settingsFlow, isPlayingFlow, errorFlow) { settings, playing, err ->
                 GewohnheitTtsUiState(
                     isPlaying = playing,
-                    repeatCount = repeat,
-                    loop = loop,
+                    repeatCount = settings.repeatCount,
+                    loop = settings.loop,
+                    pauseSeconds = settings.pauseSeconds,
                     error = err,
                 )
             }
@@ -115,6 +127,14 @@ constructor(
         viewModelScope.launch { ctx.gewohnheitTtsStore.edit { it[KEY_LOOP] = enabled } }
     }
 
+    fun setPauseSeconds(seconds: Int) {
+        viewModelScope.launch {
+            ctx.gewohnheitTtsStore.edit {
+                it[KEY_GEWOHNHEIT_PAUSE_SECONDS] = seconds.coerceIn(PAUSE_RANGE_MIN, PAUSE_RANGE_MAX)
+            }
+        }
+    }
+
     fun dismissError() {
         errorFlow.value = null
     }
@@ -132,9 +152,9 @@ constructor(
         isPlayingFlow.value = true
         ttsJob =
             viewModelScope.launch {
-                val (repeat, loop) = settingsFlow.first()
+                val settings = settingsFlow.first()
                 try {
-                    runSequence(texts, repeat, loop)
+                    runSequence(texts, settings.repeatCount, settings.loop, settings.pauseSeconds * 1_000L)
                 } catch (e: CancellationException) {
                     throw e
                 } catch (e: Exception) {
@@ -156,14 +176,14 @@ constructor(
         isPlayingFlow.value = false
     }
 
-    private suspend fun runSequence(texts: List<String>, repeat: Int, loop: Boolean) {
+    private suspend fun runSequence(texts: List<String>, repeat: Int, loop: Boolean, pauseMs: Long) {
         val sequence = buildSequence(texts, repeat)
         if (sequence.isEmpty()) return
         Diag.d(
             DiagnosticArea.GOOGLE_TTS,
             TAG,
             "Sequenz gebildet: ${sequence.size} Saetze (saetze=${texts.size} " +
-                "repeat=$repeat loop=$loop)",
+                "repeat=$repeat loop=$loop pauseMs=$pauseMs)",
         )
 
         val deadline = SystemClock.elapsedRealtime() + MAX_DURATION_MS
@@ -182,7 +202,7 @@ constructor(
                 withContext(Dispatchers.Main) { ttsPlayer.playCachedFileAwait(file) }
                 val isLastOfRun = index == sequence.lastIndex
                 if (!isLastOfRun || loop) {
-                    delay(PAUSE_MS)
+                    delay(pauseMs)
                 }
             }
         } while (loop && SystemClock.elapsedRealtime() < deadline)
