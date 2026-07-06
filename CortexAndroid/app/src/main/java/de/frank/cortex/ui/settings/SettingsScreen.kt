@@ -1271,7 +1271,7 @@ private fun LimitSettingsCard(
             ) {
                 Icon(Icons.Default.Memory, null, tint = Orange, modifier = Modifier.size(22.dp))
                 Column(modifier = Modifier.weight(1f)) {
-                    Text("Qdrant-/Quadrant-Limit-Einstellungen", fontSize = 14.sp, fontWeight = FontWeight.SemiBold)
+                    Text("Qdrant Limits", fontSize = 14.sp, fontWeight = FontWeight.SemiBold)
                     Text(
                         "Steuert, wie breit Cortex im Gehirn sucht und wie viel Kontext Agenten bekommen.",
                         fontSize = 11.5.sp,

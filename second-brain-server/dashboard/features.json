@@ -1,14 +1,14 @@
 {
-	"stand": "06.07.2026, 15:37 Uhr",
+	"stand": "06.07.2026, 15:57 Uhr",
 	"hinweis": "PFLEGE-PFLICHT: Bei JEDEM Deploy, der ein neues System/Feature einbaut, hier einen Eintrag ERGAENZEN (neueste zuerst) — mit Datum + Uhrzeit und ausfuehrlicher Erklaerung. Diese Datei ist die Quelle des Info-Bereichs in den Dashboard-Einstellungen (GET /api/features). Regel verankert in DEPLOY.md.",
 	"features": [
 		{
 			"id": "qdrant-agent-runtime-limits",
 			"name": "Qdrant- und Agent-Limits direkt in den Einstellungen steuern",
-			"eingebaut": "06.07.2026, 15:37 Uhr",
-			"dienst": "Android 0.5.0 + agent 0.56.1 + brain-api 1.23.0 + dashboard 0.52.0",
-			"kurz": "In den Android- UND Server-Einstellungen gibt es jetzt eine eigene Qdrant-/Quadrant-Limit-Karte mit Zahlenfeldern, Erklärungstexten und serverseitigem Speichern.",
-			"erklaerung": "Die Android-App und die Cortex-Server-Webseite zeigen unter Einstellungen eine neue Karte 'Qdrant-/Quadrant-Limits'. Im Web-Dashboard sitzt sie direkt unter 'Agenten' und oberhalb von 'System-Prompt'. Dort kann Frank die wichtigsten Such- und Kontextgrenzen direkt bearbeiten: normale Gedächtnisfragen, explizite Vollabrufe, Mehrfachsuche-Varianten, Leseagent-Schnipsel, Antwort-Kontext, Gesprächsverlauf, Zusatzprompt, Chat-Nachrichtenlimit sowie Brain-API-Werte für Vektor-Overfetch, BM25-Kandidaten und Chunking. Jeder Punkt hat eine einfache Erklärung zum Aufklappen, damit klar ist, ob ein größerer Wert mehr Treffer, mehr Kontext oder mehr Rechenzeit bedeutet. Speichern geht an den Agenten-Endpunkt /config; Agent-Limits werden persistent in agent-data/config.json abgelegt und wirken sofort im laufenden Prozess. Brain-Limits werden an brain-api /limits weitergereicht und dort in brain-data/runtime-limits.json gespeichert. Bestehende Einträge bleiben wortwörtlich 1:1 erhalten; Chunk-Größe und Überlappung gelten für neue oder neu gespeicherte Einträge. Normale Fragen bleiben geschützt: Limit 0 bedeutet nur beim bewusst expliziten Vollabruf 'alle Treffer', nicht bei jeder Alltagsfrage."
+			"eingebaut": "06.07.2026, 15:57 Uhr",
+			"dienst": "Android 0.5.1 + agent 0.56.1 + brain-api 1.23.0 + dashboard 0.52.1",
+			"kurz": "In den Android- UND Server-Einstellungen gibt es jetzt eine eigene Karte 'Qdrant Limits' mit Zahlenfeldern, Erklärungstexten und serverseitigem Speichern.",
+			"erklaerung": "Die Android-App und die Cortex-Server-Webseite zeigen unter Einstellungen eine neue Karte 'Qdrant Limits'. Im Web-Dashboard sitzt sie direkt unter 'Agenten' und oberhalb von 'System-Prompt'. Dort kann Frank die wichtigsten Such- und Kontextgrenzen direkt bearbeiten: normale Gedächtnisfragen, explizite Vollabrufe, Mehrfachsuche-Varianten, Leseagent-Schnipsel, Antwort-Kontext, Gesprächsverlauf, Zusatzprompt, Chat-Nachrichtenlimit sowie Brain-API-Werte für Vektor-Overfetch, BM25-Kandidaten und Chunking. Jeder Punkt hat eine einfache Erklärung zum Aufklappen, damit klar ist, ob ein größerer Wert mehr Treffer, mehr Kontext oder mehr Rechenzeit bedeutet. Speichern geht an den Agenten-Endpunkt /config; Agent-Limits werden persistent in agent-data/config.json abgelegt und wirken sofort im laufenden Prozess. Brain-Limits werden an brain-api /limits weitergereicht und dort in brain-data/runtime-limits.json gespeichert. Bestehende Einträge bleiben wortwörtlich 1:1 erhalten; Chunk-Größe und Überlappung gelten für neue oder neu gespeicherte Einträge. Normale Fragen bleiben geschützt: Limit 0 bedeutet nur beim bewusst expliziten Vollabruf 'alle Treffer', nicht bei jeder Alltagsfrage."
 		},
 		{
 			"id": "gedaechtnis-plus-internet-route",
