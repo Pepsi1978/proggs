@@ -279,6 +279,18 @@ public sealed class ModelRegistry
     private static ObservableCollection<ModelGroupEntry> CreateDefaults(IEnumerable<ModelEntry>? openRouterModels = null) => new()
     {
         CreateGroup("openrouter", "OpenRouter", "openrouter", "OpenRouter", NormalizeOpenRouter(openRouterModels).ToArray()),
+        CreateGroup("entropic", "Entropic", "anthropic", "Entropic", new[]
+        {
+            Model("claude-fable-5", "Claude Fable 5", "anthropic", "Entropic"),
+            Model("claude-opus-4-8", "Claude Opus 4.8", "anthropic", "Entropic"),
+            Model("claude-sonnet-5", "Claude Sonnet 5", "anthropic", "Entropic"),
+            Model("claude-haiku-4-5", "Claude Haiku 4.5", "anthropic", "Entropic"),
+            Model("claude-opus-4-7", "Claude Opus 4.7", "anthropic", "Entropic"),
+            Model("claude-opus-4-6", "Claude Opus 4.6", "anthropic", "Entropic"),
+            Model("claude-sonnet-4-6", "Claude Sonnet 4.6", "anthropic", "Entropic"),
+            Model("claude-opus-4-5", "Claude Opus 4.5", "anthropic", "Entropic"),
+            Model("claude-sonnet-4-5", "Claude Sonnet 4.5", "anthropic", "Entropic"),
+        }),
         CreateGroup("openrouter-free", "OpenRouterFree", "openrouter", "OpenRouter", new[]
         {
             Model("poolside/laguna-xs-2.1:free", "Poolside Laguna XS 2.1 Free", "openrouter", "OpenRouter"),

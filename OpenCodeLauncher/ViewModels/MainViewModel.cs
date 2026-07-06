@@ -27,8 +27,8 @@ public sealed partial class MainViewModel : ObservableObject
         _ = RefreshOpenRouterFreeModelsAsync();
         WorkDir = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), "proggs");
 
-        var version = Assembly.GetExecutingAssembly().GetName().Version?.ToString(3) ?? "1.6.5";
-        Version = $"Version {version} (06.07.2026, 13:34 Uhr)";
+        var version = Assembly.GetExecutingAssembly().GetName().Version?.ToString(3) ?? "1.7.0";
+        Version = $"Version {version} (06.07.2026, 17:32 Uhr)";
     }
 
     public ObservableCollection<ModelGroupEntry> ModelGroups { get; } = new();
@@ -41,6 +41,8 @@ public sealed partial class MainViewModel : ObservableObject
     [ObservableProperty] private bool _hasThinkingOptions;
     [ObservableProperty] private bool _hasNoThinkingOptions = true;
     [ObservableProperty] private string _thinkingEmptyText = "Modell wählen.";
+    [ObservableProperty] private string _thinkingTitle = "THINKING";
+    [ObservableProperty] private string _thinkingSubtitle = "Reasoning-Level";
     [ObservableProperty] private string _workDir = string.Empty;
     [ObservableProperty] private bool _isLoading;
     [ObservableProperty] private string _statusText = "Bereit.";
@@ -55,6 +57,8 @@ public sealed partial class MainViewModel : ObservableObject
         Providers.Clear();
         SelectedThinkingOption = null;
         ThinkingOptions.Clear();
+        ThinkingTitle = IsClaudeCodeModel(value) ? "EFFORT" : "THINKING";
+        ThinkingSubtitle = IsClaudeCodeModel(value) ? "Claude-Code-Level" : "Reasoning-Level";
         UpdateThinkingState("Lade Thinking …");
         if (value != null) _ = LoadThinkingOptionsAsync(value);
         if (value != null) _ = LoadProvidersAsync(value);
@@ -63,7 +67,8 @@ public sealed partial class MainViewModel : ObservableObject
     partial void OnSelectedThinkingOptionChanged(ThinkingOptionEntry? value)
     {
         if (SelectedModel == null || value == null) return;
-        StatusText = $"Thinking für {SelectedModel.DisplayName}: {value.DisplayName}";
+        var label = IsClaudeCodeModel(SelectedModel) ? "Effort" : "Thinking";
+        StatusText = $"{label} für {SelectedModel.DisplayName}: {value.DisplayName}";
     }
 
     private async Task LoadThinkingOptionsAsync(ModelEntry model)
@@ -84,14 +89,16 @@ public sealed partial class MainViewModel : ObservableObject
             if (ct.IsCancellationRequested) return;
             ThinkingOptions.Clear();
             foreach (var option in levels.Select(ToThinkingOption)) ThinkingOptions.Add(option);
-            UpdateThinkingState(levels.Count == 0 ? "Kein Thinking für dieses Modell erkannt." : "Thinking-Wert wählen.");
+            var empty = IsClaudeCodeModel(model) ? "Kein Effort für dieses Modell erkannt." : "Kein Thinking für dieses Modell erkannt.";
+            var prompt = IsClaudeCodeModel(model) ? "Effort-Wert wählen." : "Thinking-Wert wählen.";
+            UpdateThinkingState(levels.Count == 0 ? empty : prompt);
         }
         catch (OperationCanceledException) { /* ok */ }
         catch (Exception ex)
         {
-            Logger.Instance.Warn("MainViewModel", "LoadThinkingOptionsAsync", $"Thinking-Level nicht geladen: {ex.Message}", new { model.Slug });
+            Logger.Instance.Warn("MainViewModel", "LoadThinkingOptionsAsync", $"Thinking-/Effort-Level nicht geladen: {ex.Message}", new { model.Slug });
             ThinkingOptions.Clear();
-            UpdateThinkingState("Thinking konnte nicht geladen werden.");
+            UpdateThinkingState(IsClaudeCodeModel(model) ? "Effort konnte nicht geladen werden." : "Thinking konnte nicht geladen werden.");
         }
     }
 
@@ -284,6 +291,15 @@ public sealed partial class MainViewModel : ObservableObject
         try
         {
             var thinkingLevel = SelectedThinkingOption?.CommandValue;
+            if (IsClaudeCodeModel(SelectedModel))
+            {
+                _launcher.LaunchClaudeCode(SelectedModel.Slug, WorkDir, thinkingLevel);
+                StatusText = string.IsNullOrWhiteSpace(thinkingLevel)
+                    ? $"Claude Code gestartet: {SelectedModel.DisplayName}"
+                    : $"Claude Code gestartet: {SelectedModel.DisplayName} · Effort {SelectedThinkingOption?.DisplayName}";
+                return;
+            }
+
             var modelString = _launcher.ConfigureProvider(SelectedModel, SelectedProvider, Providers, thinkingLevel);
             _launcher.Launch(modelString, WorkDir, thinkingLevel);
             StatusText = string.IsNullOrWhiteSpace(thinkingLevel)
@@ -418,6 +434,9 @@ public sealed partial class MainViewModel : ObservableObject
         if (model == null) return null;
         return ModelGroups.FirstOrDefault(g => g.Models.Contains(model));
     }
+
+    private static bool IsClaudeCodeModel(ModelEntry? model) =>
+        string.Equals(model?.ProviderId, "anthropic", StringComparison.OrdinalIgnoreCase);
 
     // Minimaler Input-Dialog ohne eigene Window-XAML (System.Windows.MessageBox kann kein Text-Eingabefeld).
     private static string SimplePrompt(string title, string label, string defaultValue)

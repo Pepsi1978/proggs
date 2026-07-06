@@ -19,9 +19,19 @@ public static class OpenCodeVariantCatalog
             "openai" => GetOpenAiLevels(slug),
             "opencode" => GetOpenCodeZenLevels(slug),
             "opencode-go" => GetOpenCodeGoLevels(slug),
+            "anthropic" => GetAnthropicLevels(slug),
             "openrouter" => GetOpenRouterLevels(slug, KnownOpenRouterReasoning(slug)),
             _ => []
         };
+    }
+
+    private static IReadOnlyList<string> GetAnthropicLevels(string slug)
+    {
+        if (slug is "claude-fable-5" or "claude-opus-4-8" or "claude-opus-4-7" or "claude-sonnet-5")
+            return ["low", "medium", "high", "xhigh", "max"];
+        if (slug is "claude-opus-4-6" or "claude-sonnet-4-6") return ["low", "medium", "high", "max"];
+        if (slug is "claude-opus-4-5") return ["low", "medium", "high"];
+        return [];
     }
 
     public static IReadOnlyList<string> GetOpenRouterLevels(string slug, bool supportsReasoning)

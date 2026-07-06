@@ -666,8 +666,8 @@
                             <RowDefinition Height="*"/>
                         </Grid.RowDefinitions>
                         <StackPanel Grid.Row="0" Margin="4,0,4,12">
-                            <TextBlock Text="THINKING" FontSize="12" FontWeight="Bold" Foreground="{DynamicResource MutedBrush}"/>
-                            <TextBlock Text="Reasoning-Level" FontSize="11" Foreground="{DynamicResource DimBrush}" Margin="0,3,0,0"/>
+                            <TextBlock Text="{Binding ThinkingTitle}" FontSize="12" FontWeight="Bold" Foreground="{DynamicResource MutedBrush}"/>
+                            <TextBlock Text="{Binding ThinkingSubtitle}" FontSize="11" Foreground="{DynamicResource DimBrush}" Margin="0,3,0,0"/>
                         </StackPanel>
 
                         <Border Grid.Row="1" Background="{DynamicResource SurfaceBg}" BorderBrush="{DynamicResource BorderBrushSoft}" BorderThickness="1" CornerRadius="13" Padding="8">

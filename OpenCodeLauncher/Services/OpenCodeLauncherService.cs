@@ -42,6 +42,18 @@ public sealed class OpenCodeLauncherService
         new("bright-white", "#F2F2F2"),
     ];
 
+    private static readonly TerminalTabColor[] ClaudeTerminalTabColors =
+    [
+        new("red", "#FF3B3B"),
+        new("orange", "#FF8C42"),
+        new("yellow", "#FFD93D"),
+        new("green", "#4CAF50"),
+        new("cyan", "#00BCD4"),
+        new("blue", "#2196F3"),
+        new("purple", "#9C27B0"),
+        new("pink", "#FF1493"),
+    ];
+
     private static readonly string ConfigDir = Path.Combine(
         Environment.GetFolderPath(Environment.SpecialFolder.UserProfile),
         ".config", "opencode");
@@ -158,6 +170,69 @@ public sealed class OpenCodeLauncherService
         }
     }
 
+    /// <summary>Startet Claude Code wie die Desktop-Verknüpfung, aber mit gewähltem Modell und Effort.</summary>
+    public void LaunchClaudeCode(string modelId, string workDir, string? effortLevel)
+    {
+        var log = Logger.Instance;
+        effortLevel = NormalizeThinkingLevel(effortLevel);
+        try
+        {
+            Directory.CreateDirectory(workDir);
+            var wt = ResolveWt();
+            var tabColor = PickClaudeTerminalTabColor();
+            var innerScript = BuildClaudeCodeStartScript(modelId, workDir, effortLevel, tabColor.Name);
+            var robustLauncherScript = ResolveRobustLauncherScript();
+
+            if (!string.IsNullOrEmpty(wt) && !string.IsNullOrEmpty(robustLauncherScript))
+            {
+                var process = LaunchClaudeCodeViaRobustPowerShell(wt, robustLauncherScript, innerScript, workDir, modelId, effortLevel, tabColor, log);
+                log.Info("OpenCodeLauncherService", "LaunchClaudeCode", $"robuster Claude-Code-Launcher gestartet (PID {process?.Id})", new { modelId, workDir, effortLevel, tabColor = tabColor.Name });
+                return;
+            }
+
+            var psi = new ProcessStartInfo
+            {
+                UseShellExecute = false,
+                CreateNoWindow = false,
+                WorkingDirectory = workDir,
+            };
+            if (!string.IsNullOrEmpty(wt))
+            {
+                psi.FileName = wt;
+                psi.ArgumentList.Add("new-tab");
+                psi.ArgumentList.Add("--tabColor");
+                psi.ArgumentList.Add(tabColor.Hex);
+                psi.ArgumentList.Add("--title");
+                psi.ArgumentList.Add(BuildClaudeCodeTitle(tabColor.Name, effortLevel));
+                psi.ArgumentList.Add("--startingDirectory");
+                psi.ArgumentList.Add(workDir);
+                psi.ArgumentList.Add("pwsh.exe");
+                psi.ArgumentList.Add("-NoExit");
+                psi.ArgumentList.Add("-ExecutionPolicy");
+                psi.ArgumentList.Add("Bypass");
+                psi.ArgumentList.Add("-File");
+                psi.ArgumentList.Add(innerScript);
+            }
+            else
+            {
+                psi.FileName = "pwsh.exe";
+                psi.ArgumentList.Add("-NoExit");
+                psi.ArgumentList.Add("-ExecutionPolicy");
+                psi.ArgumentList.Add("Bypass");
+                psi.ArgumentList.Add("-File");
+                psi.ArgumentList.Add(innerScript);
+            }
+
+            var p = Process.Start(psi);
+            log.Info("OpenCodeLauncherService", "LaunchClaudeCode", $"Claude Code gestartet (PID {p?.Id})", new { modelId, workDir, effortLevel, wtUsed = wt != null });
+        }
+        catch (Exception ex)
+        {
+            log.Error("OpenCodeLauncherService", "LaunchClaudeCode", ex, new { modelId, workDir, effortLevel });
+            throw;
+        }
+    }
+
     private static string? ResolveWt()
     {
         try
@@ -212,6 +287,9 @@ public sealed class OpenCodeLauncherService
             return TerminalTabColors[RandomNumberGenerator.GetInt32(TerminalTabColors.Length)];
         }
     }
+
+    private static TerminalTabColor PickClaudeTerminalTabColor() =>
+        ClaudeTerminalTabColors[RandomNumberGenerator.GetInt32(ClaudeTerminalTabColors.Length)];
 
     private static TabColorState ReadTabColorState()
     {
@@ -308,6 +386,119 @@ try {
         psi.ArgumentList.Add(tempScript);
         return Process.Start(psi);
     }
+
+    private static Process? LaunchClaudeCodeViaRobustPowerShell(
+        string wtPath,
+        string robustLauncherScript,
+        string innerScript,
+        string workDir,
+        string modelId,
+        string? effortLevel,
+        TerminalTabColor tabColor,
+        Logger log)
+    {
+        var title = BuildClaudeCodeTitle(tabColor.Name, effortLevel);
+        var tabArgs = new[]
+        {
+            "new-tab",
+            "--tabColor", tabColor.Hex,
+            "--title", title,
+            "--startingDirectory", workDir,
+            "pwsh.exe",
+            "-NoExit",
+            "-ExecutionPolicy", "Bypass",
+            "-File", innerScript
+        };
+        var fallbackArgs = new[]
+        {
+            "-NoExit",
+            "-ExecutionPolicy", "Bypass",
+            "-File", innerScript
+        };
+
+        var tempScript = Path.Combine(Path.GetTempPath(), $"opencode-launcher-claude-wt-{Guid.NewGuid():N}.ps1");
+        var script = $$"""
+$ErrorActionPreference = 'Continue'
+. {{PowerShellLiteral(robustLauncherScript)}}
+$tabArgs = @({{PowerShellArrayLiteral(tabArgs)}})
+$fallbackArgs = @({{PowerShellArrayLiteral(fallbackArgs)}})
+try {
+    $ok = Start-WtCliRobust -LogFile {{PowerShellLiteral(log.LogPath)}} -WtPath {{PowerShellLiteral(wtPath)}} -TabArgs $tabArgs -InnerMatch 'opencode-launcher-claude-code-' -FallbackPwshArgs $fallbackArgs -FallbackWorkDir {{PowerShellLiteral(workDir)}}
+    if (-not $ok) { exit 2 }
+} finally {
+    Remove-Item -LiteralPath $PSCommandPath -Force -ErrorAction SilentlyContinue
+}
+""";
+        File.WriteAllText(tempScript, script, new UTF8Encoding(encoderShouldEmitUTF8Identifier: false));
+
+        var pwshExe = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ProgramFiles), "PowerShell", "7", "pwsh.exe");
+        if (!File.Exists(pwshExe)) pwshExe = "pwsh.exe";
+        var psi = new ProcessStartInfo
+        {
+            FileName = pwshExe,
+            UseShellExecute = false,
+            CreateNoWindow = true,
+            WorkingDirectory = workDir,
+        };
+        psi.ArgumentList.Add("-NoProfile");
+        psi.ArgumentList.Add("-ExecutionPolicy");
+        psi.ArgumentList.Add("Bypass");
+        psi.ArgumentList.Add("-File");
+        psi.ArgumentList.Add(tempScript);
+        log.Info("OpenCodeLauncherService", "LaunchClaudeCodeViaRobustPowerShell", "Claude-Code-Start vorbereitet", new { modelId, effortLevel, tabColor = tabColor.Name });
+        return Process.Start(psi);
+    }
+
+    private static string BuildClaudeCodeStartScript(string modelId, string workDir, string? effortLevel, string colorName)
+    {
+        effortLevel = NormalizeThinkingLevel(effortLevel);
+        var tempScript = Path.Combine(Path.GetTempPath(), $"opencode-launcher-claude-code-{Guid.NewGuid():N}.ps1");
+        var script = $$"""
+$ErrorActionPreference = 'Continue'
+[Console]::Write("`e[?1004l")
+Set-Location -LiteralPath {{PowerShellLiteral(workDir)}}
+
+$profilePath = Join-Path $HOME 'Documents\PowerShell\Microsoft.PowerShell_profile.ps1'
+if (Test-Path $profilePath) {
+    . $profilePath
+}
+
+$focusKiller = Start-ThreadJob -ScriptBlock {
+    $esc = [char]0x1B
+    while ($true) {
+        Start-Sleep -Seconds 1
+        try { [Console]::Write("$esc[?1004l") } catch { break }
+    }
+}
+
+try {
+    $claudeArgs = @('--dangerously-skip-permissions', '--model', {{PowerShellLiteral(modelId)}})
+    $effort = {{PowerShellLiteral(effortLevel ?? string.Empty)}}
+    if ($effort) {
+        $claudeArgs += @('--effort', $effort)
+    }
+    $colorName = {{PowerShellLiteral(colorName)}}
+    if ($colorName) {
+        $claudeArgs += "/color $colorName"
+    } else {
+        $claudeArgs += '/color'
+    }
+    & claude @claudeArgs
+} finally {
+    if ($focusKiller) {
+        Stop-Job $focusKiller -ErrorAction SilentlyContinue
+        Remove-Job $focusKiller -Force -ErrorAction SilentlyContinue
+    }
+    [Console]::Write("`e[?1004l")
+    Remove-Item -LiteralPath $PSCommandPath -Force -ErrorAction SilentlyContinue
+}
+""";
+        File.WriteAllText(tempScript, script, new UTF8Encoding(encoderShouldEmitUTF8Identifier: false));
+        return tempScript;
+    }
+
+    private static string BuildClaudeCodeTitle(string colorName, string? effortLevel) =>
+        string.IsNullOrWhiteSpace(effortLevel) ? $"Claude-{colorName}" : $"Claude-{colorName}-{effortLevel}";
 
     private static string PowerShellArrayLiteral(IEnumerable<string> values) => string.Join(", ", values.Select(PowerShellLiteral));
 
