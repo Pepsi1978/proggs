@@ -28,7 +28,7 @@ VERSION = "0.24.2"  # 0.24.2: Vorlesen-Schalter Layout-Fix (Frank-Wunsch 2026-06
 VERSION = "0.46.0 (05.07.2026, 15.13 Uhr)"  # 0.46.0 (Frank-Betonung 2026-07-05): Die sichtbare Dashboard-Version ist der EINE Gesamt-Versionszaehler des GANZEN Cortex-Servers — bei JEDER Aenderung an IRGENDEINEM Dienst (agent, librarian, brain-api, dashboard, mcp) wird sie erhoeht + Timestamp von der ECHTEN Uhr (date/Get-Date), und das dashboard mit-deployt, damit Frank den Deploy im Footer sieht. Dieser Bump buendelt die heutigen, im Footer bisher UNSICHTBAREN Deploys nach (Regel stand laengst in DEPLOY.md, beim agent/librarian-Deploy heute versaeumt — ab jetzt ausnahmslos mit): agent 0.53.0 (Gruppe D Session-Mitlernen: POST /session-log + Kern-Block + Projektstand-Recall), librarian 0.8.0 (Reibungs-Detektor als 8. Nachtaufgabe), Feature-Chronik +2 Eintraege (session-mitlernen, reibungs-detektor). Alt: 0.45.0 (05.07.2026, 12.13 Uhr)  # 0.45.0 (Frank-Wunsch 2026-07-05): Der Knopf 'Regeln auf Vorschläge anwenden' fragt jetzt ueber ein INTERNES, theme-gerechtes Bestaetigungs-Modal (.confirm-overlay/.confirm-box, gleicher Stil wie Loeschen/Wiederherstellen — passt sich Hell-/Dunkelmodus an) statt ueber das native Browser-confirm(), das wie ein systemfremdes 'Windows-Fenster' aussah. Neuer Dialog #applyRulesOverlay (Abbrechen / 'Ja, anwenden'); die eigentliche POST+Polling-Logik (runApplyRules) startet erst nach Bestaetigung. Schliessbar per Abbrechen, Klick auf den Hintergrund und Escape. Reiner Frontend-Teil in index.html. Alt: 0.44.1 (05.07.2026, 12.03 Uhr)  # 0.44.1 (Fix 2026-07-05): librarian-Proxy-Whitelist _LIB_ALLOWED um 'apply-rules' + 'apply-rules-status' ergaenzt — ohne sie lehnte der /api/lib/*-Proxy die neuen Endpoints mit 404 'Unbekannter Bibliothekar-Endpunkt' ab (der Knopf haette nicht funktioniert). Beim Deploy-Verify gefangen, bevor Frank es erlebt. Alt: 0.44.0 (05.07.2026, 11.47 Uhr)  # 0.44.0 (Frank-Wunsch 2026-07-05): NEU Knopf 'Regeln auf Vorschläge anwenden' oben rechts in der Karte 'Gelernte Regeln' — wendet die gelernten Regeln RUECKWIRKEND auf die aktuell offenen Vorschläge an (bisher galten neue Regeln nur fuer kuenftige Nacht-Urteile). Klick -> Bestaetigungsdialog -> POST /api/lib/apply-rules (Proxy -> librarian 0.7.0), Fortschritts-Polling GET /api/lib/apply-rules-status ('Prüfe Vorschläge … X/Y geprüft · Z entfernt'), am Ende Ergebnis-Zeile + Tages-Listen/Badge neu geladen (loadLibReports). Betroffene Vorschläge fallen aus der Abarbeiten-Liste; im Gehirn wird nichts geloescht. Reiner Frontend-Teil in index.html + sichtbarer Bump. Alt: 0.43.1 (05.07.2026, 02.52 Uhr)  # 0.43.1: Feature-Chronik nachgezogen (Frank-Wunsch 2026-07-05) — 6 neue System-Info-Eintraege fuer alles seit dem Bibliothekar-Erstausbau: Lernen-Knopf + Gelernte Regeln, Merge-Steuerung (Text-Editor + Kategorien-Chips), Nacht-Bilanz, Auto-Speichern + Ohne-Begrenzung, GPT-Nachtmodell + Thinking, schnelle Uebersicht-Vitals. Alt: 0.43.0 (05.07.2026, 02.45 Uhr)  # 0.43.0 (Frank-Wunsch 2026-07-05): Karte 'Gelernte Regeln' ausgebaut und ZWISCHEN Abarbeiten und Bibliothekar-Einstellungen verschoben — breites, scrollbares Feld; jede Regel zeigt nur die Kurzfassung (erste 1-2 Saetze); 'Bearbeiten' klappt die KOMPLETTE Regel als Editor auf (Speichern schreibt sie zurueck, librarian 0.6.0); NEUER 'KI fragen'-Knopf: der Bibliothekar beurteilt selbst, ob die Regel sinnvoll formuliert und fuer seine 04:10-Urteile gut umsetzbar ist — Antwort erscheint als wegklickbare Info-Box (X). An/Aus-Schalter + Papierkorb bleiben. Alt: 0.42.0 (05.07.2026, 02.40 Uhr)  # 0.42.0 (Frank-Wunsch 2026-07-05): LERNEN-KNOPF hinten an jedem Fund im Abarbeiten-Bereich — grau, Klick macht ihn rot und oeffnet das Lern-Fenster: Lern-Nachricht eintippen, Speichern druecken; der Bibliothekar fragt bei Unklarheit nach, nennt dann 'Das würde ich mir merken: …' und Frank bestaetigt mit 'Ja, genau so merken' (Knopf wird gruen 'Gelernt ✓'). NEUE Karte 'Gelernte Regeln' im Bibliothekar-Bereich: alle gelernten Regeln mit Fund-Herkunft, einzeln an/aus + Papierkorb. Proxy-Whitelist um learn/* erweitert. Die Regeln wirken ab dem naechsten Nacht-Urteil (librarian 0.5.0). Alt: 0.41.0 (05.07.2026, 02.29 Uhr)  # 0.41.0 (Frank-Wunsch 2026-07-05): Zusammenfuehrungs-Vorschlaege voll steuerbar — (a) aufklappbarer Bereich 'Kompletten Zusammenführungs-Text lesen / bearbeiten' mit Editor + eigenem 'Änderung übernehmen'-Knopf (ohne Druecken gilt der Original-Vorschlag), (b) ALLE Kategorien beider Quell-Eintraege als leuchtende Chips (standardmaessig aktiv; Klick waehlt ab, durchgestrichen = kommt weg, mindestens eine bleibt) — der zusammengefuehrte Eintrag bekommt genau die aktiven Kategorien (Multi-Category). Overrides gehen als merge_text/kategorien mit der Ja-Entscheidung an librarian 0.4.0. Alt: 0.40.1 (05.07.2026, 02.17 Uhr)  # 0.40.1 (Frank-Wunsch 2026-07-05): NACHT-BILANZ sichtbar — der Morgen-Report zeigt fuer JEDE Aufgabe eine Ergebnis-Zeile, auch wenn nichts gefunden wurde ('Dubletten-Vorschläge: keine Dubletten gefunden', 'Nachzügler: nichts zu tun', 'ausgeschaltet' bei deaktivierten Aufgaben, eigene Aufgaben inklusive; 🔸 = Funde, ▫️ = nichts). Die Tages-Ansicht beim Abarbeiten hat dieselbe Bilanz zusammenklappbar ueber den Funden. Kommt aus librarian 0.3.0 (report.bilanz + last_run.bilanz). Alt: 0.40.0 (05.07.2026, 02.11 Uhr)  # 0.40.0 (Frank-Wuensche 2026-07-05): (a) Bibliothekar-Einstellungen speichern sich jetzt AUTOMATISCH bei jeder Aenderung (Schalter/Dropdown/Feld -> 'Speichere …' -> 'Gespeichert'; Speichern-Knopf entfernt — Vergessen unmoeglich; 500ms-Debounce, kein Speichern waehrend des Befuellens). (b) Abarbeiten-Karte sagt jetzt sichtbar, WER umsetzt: '(Abgearbeitet wird alles vom eingestellten Nacht-Modell: <modell> · Thinking <stufe>)' — dynamisch aus den echten Einstellungen. (c) Einstellungen-Tab: Karte 'Bibliothekar-Agent' heisst jetzt 'Agenten' (der Nachtschicht-Bibliothekar ist ein Spezialagent mit eigenem Bereich — Namens-Kollision beseitigt); Uebersicht-Kachel entsprechend 'Agent'. Alt: 0.39.1 (05.07.2026, 01.52 Uhr)  # 0.39.1: Versions-Zeitstempel korrigiert — die naechtlichen 0.38.x/0.39.0-Stempel waren HANDGESCHAETZT und liefen der echten Uhr ~30 min voraus (Frank-Fund 2026-07-05, 'Footer zeigt 02.20, es ist 01.51'). Ab jetzt wird der Stempel IMMER per date/Get-Date von der echten Uhr geholt (steht so schon in DEPLOY.md — heute Nacht missachtet, nie wieder). Server-Uhren selbst sind NTP-korrekt (verifiziert). 0.39.0 (Frank-Wunsch 2026-07-05): Uebersicht-Kacheln (Prozessor/Arbeitsspeicher/Speicherplatz/Agent) aktualisieren sich jetzt alle 3 SEKUNDEN ueber den NEUEN leichten GET /api/vitals (nur psutil + Agent-Ping, kein Gehirn-Scan) — und ALLE Uebersicht-Polls (3s-Vitals + 20s-Komplett-Overview) laufen NUR noch, wenn der Uebersicht-Tab wirklich aktiv UND der Browser-Tab sichtbar ist (vorher pollte der 20s-Overview auch auf anderen Tabs weiter). CPU-Wert ist jetzt die echte Durchschnittslast seit dem letzten Abruf (cpu_percent interval=None, 3s-Fenster) statt einer 250-ms-Stichprobe alle 20 s, die scheinbar bei einem Wert 'einfror'. Alt: 0.38.2 (05.07.2026, 02.10 Uhr)  # 0.38.2: Bibliothekar-Einstellungen — bei aktivem 'Ohne Begrenzung durcharbeiten' werden die zwei Limit-Felder (Max. Vorschlaege je Aufgabe, KI-Budget je Nacht) AUSGEGRAUT + gesperrt (sichtbar wirkungslos, Frank-Wunsch 2026-07-05); Umschalten wirkt sofort, Speichern wie gehabt. Alt: 0.38.1 (05.07.2026, 01.55 Uhr)  # 0.38.1 (Frank-Wuensche 2026-07-05): Bibliothekar-Einstellungen ausgebaut — (a) Nacht-Modell-Liste enthaelt jetzt AUCH die verbundenen Codex/GPT-Modelle (librarian 0.2.0 zieht sie aus agent /config; gpt-* laeuft ueber den neuen Agent-Durchgriff POST /llm mit der bestehenden ChatGPT-OAuth-Anmeldung), (b) eigenes Thinking/Reasoning-Dropdown (none-xhigh) direkt NEBEN dem Modell, (c) 'Ohne Begrenzung durcharbeiten'-Schalter (Default AN): kein Vorschlags-Limit, kein KI-Budget — der Bibliothekar arbeitet nachts alles ab, nur die stille Endlosschleifen-Notbremse bleibt; Limit-Felder gelten nur bei AUS. Einstellungs-Reihe jetzt 5 Felder nebeneinander (Startzeit, Modell, Thinking, Limit, Budget). Alt: 0.38.0 (05.07.2026, 01.00 Uhr)  # 0.38.0: NACHTSCHICHT-BIBLIOTHEKAR komplett (Frank-Auftrag 2026-07-05, Plan-Bereiche 11-18 + Nachzuegler-Bonus): NEUER 5. Dienst 'librarian' (Container sb-librarian, Port 8004, eigener Sleep-Time-Agent) laeuft jede Nacht 04:10 nach dem 4-Uhr-Backup und schreibt NUR VORSCHLAEGE (nie eigenmaechtige Aenderungen; Loeschen immer via Papierkorb): Dubletten-Merge (13), Widerspruchs-Suche (12), Veraltet-Erkennung (16), Kategorien-Gaertner (15), Wissens-Luecken (17), Logbuch-Monats-Verdichtung (14), Morgen-Report (18) + Nachzuegler-Lauf (Entity-Backfill, einzige Auto-Aufgabe) + Franks EIGENE Zusatzaufgaben (per Interview definiert, Plus-Feld, an/aus, Papierkorb nur fuer eigene). Dashboard: NEUER Tab 'Bibliothekar' — Morgen-Report-Karte, Tages-Listen (mehrere Tage bleiben stehen; erledigte Funde fallen raus), pro Fund Ja/Nein/eigener-Vorschlag-Textfeld + 'Starten'-Knopf, Rueckfragen-Schleife (Bibliothekar fragt nach, Frank antwortet, nochmal Starten -> alles wird umgesetzt), Einstellungen (an/aus, Startzeit, Modellwahl, Aufgaben-Schalter, Vorschlags-Limit, LLM-Budget, 'Jetzt laufen lassen'). dashboard/app.py: whitelisted Proxy /api/lib/* -> librarian + LIBRARIAN_URL. brain-api 1.22.0 (/entities/list?with_docs=1). Alt: 0.37.3 (04.07.2026, 23.00 Uhr)  # 0.37.3: sichtbarer Bump fuer agent 0.51.1 (Eval-Nacharbeit: 'Alles ueber X' erkennt jetzt auch 'zur'/'zum'; Eval-Fall #76 akzeptiert per Frank-Urteil auch die Tagebuch-Deutung). Alt: 0.37.2 (04.07.2026, 22.05 Uhr)  # 0.37.2: sichtbarer Bump fuer den Server-Deploy agent 0.51.0 (Eval-Check + 14 Level-2-Faelle: Hybrid/BM25, Zeit-Parser, Entity-Register, Multi-Query, Confidence, Quellen) + brain-api 1.21.1 (/purge raeumt auch Test-Entitaeten auf + BM25-Cache-Invalidierung). Alt: 0.37.1 (04.07.2026, 21.40 Uhr)  # 0.37.1: FIX Browser zeigte nach dem Deploy die ALTE Oberflaeche (Frank-Bug 2026-07-04 — der neue Info-Bereich 'fehlte' im Dashboard, war aber laengst auf dem Server). Root Cause: der Root-Handler lieferte index.html OHNE Cache-Header aus -> der Browser durfte seine alte Kopie beliebig lange aus dem Cache zeigen. Jetzt Cache-Control: no-cache -> der Browser fragt bei jedem Laden beim Server nach, neue Oberflaechen sind nach JEDEM Deploy sofort sichtbar (einmaliger Hard-Reload noch noetig, danach nie wieder). Alt: 0.37.0 (04.07.2026, 19.55 Uhr)  # 0.37.0 (Level-2 Such-Intelligenz, Frank-Auftrag 2026-07-04): (a) Nr. 39 QUELLEN-DRILLDOWN — der Chat zeigt unter jeder Gedaechtnis-Antwort anklickbare Quellen-Chips (Titel + Kategorie der vom Leseagenten benutzten Eintraege, aus dem neuen 'sources'-Feld des Agenten 0.50.0); Klick oeffnet den bekannten Drawer mit dem Volltext 1:1 — jede Antwort ist bis zur Quelle nachpruefbar. Dazu ein dezentes Konfidenz-Etikett (hoch/mittel/niedrig aus 'confidence'). (b) INFO-BEREICH in den Einstellungen (Frank-Wunsch: 'was ist alles eingebaut?') — neue Sektion 'System-Info: Was Cortex kann' mit der kompletten, anklickbaren Feature-Chronik: jedes eingebaute System mit Einbau-Datum+Uhrzeit und ausfuehrlicher Erklaerung (was es ist, wie es funktioniert, in welchem Dienst es sitzt). Quelle ist die NEUE, im Repo gepflegte dashboard/features.json (GET /api/features liest sie; bei jedem kuenftigen Einbau wird dort ein Eintrag ergaenzt — Pflegepflicht in DEPLOY.md verankert). Alt: 0.36.0 (02.07.2026, 20.42 Uhr)  # 0.36.0 (Multi-Category in der Liste 2026-07-02, Frank-Wunsch): In der Kategorie-/Such-Ergebnisliste zeigt jede Eintragszeile jetzt ALLE Kategorien des Eintrags als Chips (entryTagsHtml/entryCats, Fallback auf die eine primaere) statt nur eines Tags — d.h. klickt man in der Uebersicht auf 'Persoenlich', sieht man bei einem Mehrfach-Eintrag direkt auch 'Katzen'. by-category/search liefern die 'categories'-Liste bereits mit; nur reine /list zeigt weiter die primaere. Rein Frontend (index.html: entryCats/entryTagsHtml, result-top flex-wrap). Alt: 0.35.0 (Multi-Category-UI 2026-07-02, Frank-Wunsch): Drawer zeigt jetzt ALLE Kategorien eines Eintrags als entfernbare Chips + ein Plus (bestehender Kategoriebaum-Popover) zum Hinzufuegen weiterer; sofortiges Speichern ueber den NEUEN Proxy POST /api/entry/categories (asyncio.to_thread -> brain /entry/categories, Re-Embed; validiert doc_id + nichtleere Liste, je <=120 Zeichen, dedupliziert, max 12). Das alte Einzel-Dropdown 'In Kategorie speichern' entfaellt. Backend war seit brain-api 1.11.0 bereit. Alt: 0.34.0 (Tiefen-Debugging PERFORMANCE 2026-07-02): (a) /api/overview sammelt seine fuenf UNABHAENGIGEN Reads (brain /health, /category-counts, Registry-Kategorien, agent /health, 250-ms-CPU-Messung) jetzt PARALLEL (ThreadPool) statt seriell — Latenz pro 20s-Poll = Maximum statt Summe der Teil-Latenzen, Ergebnis-JSON identisch; (b) die leeren Kategorien kommen ueber den neuen agent-Endpoint /categories/registry (nur categories.json, KEIN brain-Scan) statt ueber /categories, das pro Poll einen ZWEITEN Qdrant-Metadaten-Full-Scan ausloeste (Fallback auf /categories bei aelterem Agent — Ergebnis identisch); (c) modul-globaler httpx.Client (_HTTP, Connection-Pool + Keep-Alive, transport retries=1 nur fuer den Verbindungsaufbau) fuer ALLE ausgehenden Calls — spuerbar v.a. beim Satz-fuer-Satz-Vorlesen (Gemini-TTS: ein TLS-Handshake je Satz entfaellt) und Groq-STT; (d) index.html: der 20s-Overview-Poll pausiert bei VERSTECKTEM Browser-Tab (document.hidden) und aktualisiert beim Sichtbarwerden SOFORT — unsichtbares Polling loeste bisher weiter alle 20s die komplette Server-Kaskade aus. Verhaltensneutral: gleiche Anzeigen, gleiche Werte, gleiche 20s-Frequenz bei sichtbarem Tab. Alt: 0.33.1 (Tiefen-Debugging 2026-07-02): (a) /api/entry/category cappt die Ziel-Kategorie jetzt bei 120 statt 60 Zeichen — tiefe Pfade 'A/B/C/...' wurden beim Drawer-Verschieben STILL abgeschnitten und landeten als kaputter Teil-Pfad (Inkonsistenz zu /api/chat, das seit 0.21.0 bewusst 120 erlaubt; Agent _cat_key cappt ebenfalls 120). (b) /api/improve lehnt Texte >8000 Zeichen LAUT ab statt still bei 8000 zu kuerzen (gleiche Fehlerklasse wie der 0.21.0/0.22.0-Speicherpfad-Bug: nie wieder unbemerkter Textverlust; der Agent haette >8000 ohnehin per 422 abgelehnt — vorher wurde ein GEKUERZTER Text verbessert, ohne dass Frank es sah). (c) index.html: Kategorienamen an 3 innerHTML-Stellen (Balken-Tooltip, Legende, Chips) escaped (Injection-Flaeche: Kategorienamen koennen via Speicheragent aus untrusted Text vorgeschlagen werden); veraltete Tavily-Staffel-Texte (5/8/15) auf die echte Staffel S=8/M=12/XL=20 aktualisiert. Alt: 0.33.0: S/M/XL-Antwortlaengen-Chips im Gespraech (vor dem Titel-Feld, Standard M, Wahl wird gemerkt) — Server haengt den ZENTRALEN Prompt an (gleiche Texte wie im Handy) und staffelt die Tavily-Suchtiefe; /api/chat reicht response_size durch. Alt:  # 0.32.0: Eval-Check als Hintergrund-Lauf (Frank-Bug 2026-07-02) — /api/eval/run startet nur noch (30s-Timeout statt 600s-Wartesynchron), neues /api/eval/status + Frontend-Polling alle 5s ('laeuft… X/100 Saetze geprueft'), Ergebnis + Log-Knopf erscheinen automatisch am Ende; beim Seitenladen wird ein bereits laufender Lauf erkannt und weiter angezeigt. 0.31.0: Logbuch-Umbau (Frank-Wunsch 2026-07-02) — Logbuch + Papierkorb jetzt VOLLE Breite untereinander; jede Logbuch-Zeile zeigt vorne Datum/Uhrzeit + kurze Inhalts-Zusammenfassung (erste Frank-Zeile), das doppelte Datum hinten ist weg; stattdessen Zeilen-Papierkorb mit Ja/Nein-Dialog, der den Eintrag aus Logbuch-Datei UND Cortex loescht (bestehender DELETE /api/logbook) — die Ansicht bleibt dabei erhalten (Monat bleibt aufgeklappt, nur die Zeile verschwindet). Chat zeigt 'Kontextgrenze erreicht', wenn der Agent context_limit_reached meldet. 0.30.0: Router (Schritt 1) separat einstellbar — eigenes Modell- und Reasoning-Dropdown 'Router · Schritt 1' in den Einstellungen ('auto (wie Hauptagent)' = Default, exakt bisheriges Verhalten); /api/config reicht router_model/router_reasoning an den Agenten (0.40.0) durch. 0.29.0: Modell-Preise (Input/Output je 1 Mio Token) als Info-Block unter den Modell-Dropdowns (aus /config model_prices; minimax/gpt = Abo). 0.28.0: Reasoning/Thinking-Stufen-Auswahl jetzt auch fuer Gemini-Modelle sichtbar (nicht mehr nur Codex/GPT) — passt zum Agent 0.36.0 (Gemini-Thinking + gemini-3.5-flash/gemini-3-flash-preview). minimax bleibt ohne Auswahl (denkt nativ). 0.27.0: Sichtbarer Dashboard-Bump fuer den Agent-Deploy 0.35.0 (gpt-5.5-502-Fix: ungueltiges 'minimal' reasoning wird auf 'low' gemappt, 'minimal' nicht mehr in der /config-Auswahl, web_search VOR web_search_preview) + Android-App 0.1.43 (Dashboard-Polling ruht wenn Screen versteckt -> kein Tunnel-Stau, Chat-Timeout 60->120/180s). 0.26.0: Bibliothekar-Agent bekommt einen Tavily/Websearch-Schalter, der per /api/config mit Agent und Android-App synchron bleibt. 0.25.5: Sichtbarer Dashboard-Bump fuer Codex/Reasoning-Serverkonfiguration und aktuellen Agent-Deploy. 0.25.4: Dashboard-Footer trennt Version und Datum/Uhrzeit dauerhaft auf zwei Zeilen, damit nichts bis zum Rail-Strich gequetscht wird. 0.25.3: Dashboard-Footer zeigt Host/Privat und sichtbare Version untereinander; Versionszeit mit Doppelpunkt. 0.25.2: Web-Timestamp zeigt Aenderungszeit (updated_at) statt altem Erstellzeitpunkt; Drawer aktualisiert Zeit sofort nach Speichern. 0.25.1: Uebersicht 'Eintraege gesamt' zaehlt Gespraeche und bugfixes/* nicht mehr mit; Kategorien bleiben sichtbar. 0.25.0: Drawer-Buttons im Drawer-Header.
 
 VERSION = "0.50.0 (06.07.2026, 14:15 Uhr)"  # 0.50.0: Sichtbarer Cortex-Server-Bump für agent 0.56.2. Fix: Verschachtelte Anfragen mit "erst Gedächtnis, dann Internet" werden nicht mehr auf eine Einzelroute reduziert; der Agent führt Gedächtnis-Suche und Websuche sequenziell aus und kombiniert die Antwort. Alt: 0.49.0.
-VERSION = "0.52.2 (06.07.2026, 16:46 Uhr)"  # 0.52.2: Gesprächskategorie kanonisch groß geschrieben (Gespräche) und Android-Dashboard-Anzeige abgesichert. Alt: 0.52.1.
+VERSION = "0.53.0 (06.07.2026, 17:23 Uhr)"  # 0.53.0: Qdrant-Limits in den Einstellungen stark erweitert. Die Karte erklaert jetzt pro Wert Suchart, betroffene Agenten, Richtung nach unten/oben, Wechselwirkungen und Systembereiche; neuer Empfehlungslauf scannt Health, Kategorien und kompakte Eintragsmetadaten und traegt passende Agent-/Brain-Limits in die Felder ein. Alt: 0.52.2.
 
 BRAIN_URL = os.getenv("BRAIN_URL", "http://brain-api:8000").rstrip("/")
 AGENT_URL = os.getenv("AGENT_URL", "http://agent:8002").rstrip("/")
@@ -192,7 +192,28 @@ async def unhandled(request: Request, exc: Exception) -> JSONResponse:
     return JSONResponse(status_code=500, content={"error": type(exc).__name__, "detail": str(exc)})
 
 
-FEATURES_FILE = Path(__file__).parent / "features.json"   # Feature-Chronik (ins Image gebacken, Repo-gepflegt)
+FEATURES_SEED_FILE = Path(__file__).parent / "features.json"   # Seed im Image; editierbare Kopie lebt persistent in /app/data
+FEATURES_FILE = Path(os.getenv("DASH_FEATURES_FILE", str(FEATURES_SEED_FILE)))
+
+
+def _read_features_data() -> dict:
+    """Feature-Chronik lesen. Beim ersten Start wird der Image-Seed in die persistente Datei kopiert."""
+    src = FEATURES_FILE
+    if not src.exists() and src != FEATURES_SEED_FILE and FEATURES_SEED_FILE.exists():
+        src.parent.mkdir(parents=True, exist_ok=True)
+        src.write_text(FEATURES_SEED_FILE.read_text(encoding="utf-8"), encoding="utf-8", newline="\n")
+    with open(src, "r", encoding="utf-8") as f:
+        data = json.load(f)
+    if not isinstance(data.get("features"), list):
+        data["features"] = []
+    return data
+
+
+def _write_features_data(data: dict) -> None:
+    FEATURES_FILE.parent.mkdir(parents=True, exist_ok=True)
+    tmp = FEATURES_FILE.with_suffix(".tmp")
+    tmp.write_text(json.dumps(data, ensure_ascii=False, indent=2), encoding="utf-8", newline="\n")
+    os.replace(tmp, FEATURES_FILE)
 
 
 @app.get("/api/features")
@@ -202,14 +223,44 @@ def api_features() -> dict:
     im Repo gepflegte features.json — bei jedem Deploy mit neuem Feature kommt dort ein Eintrag
     dazu (Pflegepflicht in DEPLOY.md). Kaputte/fehlende Datei -> ehrliche Meldung, nie Crash."""
     try:
-        with open(FEATURES_FILE, "r", encoding="utf-8") as f:
-            data = json.load(f)
+        data = _read_features_data()
         feats = data.get("features") or []
         return {"ok": True, "count": len(feats), "features": feats,
                 "stand": data.get("stand"), "version": VERSION}
     except Exception as e:  # noqa: BLE001
         _log(logging.WARNING, "features.json nicht lesbar", err=str(e))
         return {"ok": False, "count": 0, "features": [], "error": f"{type(e).__name__}"}
+
+
+@app.put("/api/features/{feature_id}")
+async def api_put_feature(feature_id: str, request: Request) -> dict:
+    body = await request.json()
+    fid = (feature_id or "").strip()
+    data = await asyncio.to_thread(_read_features_data)
+    features = data.get("features") or []
+    for item in features:
+        if (item.get("id") or "") == fid:
+            for key, limit in (("name", 160), ("eingebaut", 40), ("dienst", 220), ("kurz", 800), ("erklaerung", 8000)):
+                if key in body:
+                    item[key] = str(body.get(key) or "").strip()[:limit]
+            await asyncio.to_thread(_write_features_data, data)
+            _log(logging.INFO, "Feature-Chronik-Eintrag bearbeitet", id=fid)
+            return {"ok": True, "feature": item, "count": len(features)}
+    return JSONResponse(status_code=404, content={"ok": False, "detail": "Feature nicht gefunden"})
+
+
+@app.delete("/api/features/{feature_id}")
+async def api_delete_feature(feature_id: str) -> dict:
+    fid = (feature_id or "").strip()
+    data = await asyncio.to_thread(_read_features_data)
+    features = data.get("features") or []
+    kept = [f for f in features if (f.get("id") or "") != fid]
+    if len(kept) == len(features):
+        return JSONResponse(status_code=404, content={"ok": False, "detail": "Feature nicht gefunden"})
+    data["features"] = kept
+    await asyncio.to_thread(_write_features_data, data)
+    _log(logging.INFO, "Feature-Chronik-Eintrag geloescht", id=fid)
+    return {"ok": True, "count": len(kept)}
 
 
 @app.get("/api/health")
@@ -507,9 +558,161 @@ async def api_put_config(request: Request) -> dict:
     payload = {k: body.get(k) for k in (
         "haupt_model", "speicher_model", "abfrage_model", "model",
         "haupt_reasoning", "speicher_reasoning", "abfrage_reasoning",
-        "router_model", "router_reasoning", "tavily_enabled", "limits"
+        "router_model", "router_reasoning", "tavily_enabled", "limits",
+        "size_prompt_auto", "size_prompt_s", "size_prompt_m", "size_prompt_xl",
+        "context_prompt_save", "context_prompt_search"
     ) if k in body and body.get(k) is not None}
     return await asyncio.to_thread(_aput, "/config", payload)
+
+
+def _clampi(value: int, low: int, high: int) -> int:
+    return max(low, min(high, int(value)))
+
+
+@app.get("/api/limits/recommendation")
+def api_limits_recommendation() -> dict:
+    """Empfohlene Agent-/Brain-Limits aus dem aktuellen Cortex-Bestand ableiten.
+
+    Der Lauf liest bewusst KEINE Volltexte: /category-counts scannt alle Dokumente dedupliziert,
+    /list liefert kompakte Metadaten. Das ist gruendlich fuer die Dimensionierung, aber OOM-sicher.
+    """
+    health: dict = {}
+    counts_raw: dict = {}
+    entries_raw: dict = {}
+    current: dict = {}
+    try:
+        health = _bget("/health")
+    except Exception as e:  # noqa: BLE001
+        _log(logging.WARNING, "Limit-Empfehlung: Health nicht lesbar", err=str(e))
+    try:
+        counts_raw = _bget("/category-counts", user_id=USER_ID)
+    except Exception as e:  # noqa: BLE001
+        _log(logging.WARNING, "Limit-Empfehlung: category-counts nicht lesbar", err=str(e))
+    try:
+        entries_raw = _bget("/list", user_id=USER_ID, limit=5000)
+    except Exception as e:  # noqa: BLE001
+        _log(logging.WARNING, "Limit-Empfehlung: list nicht lesbar", err=str(e))
+    try:
+        current = _aget("/config").get("limits") or {}
+    except Exception as e:  # noqa: BLE001
+        _log(logging.WARNING, "Limit-Empfehlung: aktuelle Limits nicht lesbar", err=str(e))
+
+    counts = Counter(counts_raw.get("counts", {}) or {})
+    entries = entries_raw.get("items", []) or []
+    total = int(counts_raw.get("total_distinct") or entries_raw.get("count") or len(entries) or 0)
+    top = counts.most_common(10)
+    top_count = int(top[0][1]) if top else 0
+    cortex_count = sum(v for k, v in counts.items() if (k or "").casefold() == "cortex" or (k or "").casefold().startswith("cortex/"))
+    programming_count = sum(v for k, v in counts.items() if (k or "").casefold().startswith("programmierung"))
+    category_count = len(counts)
+    points = int(health.get("points") or 0)
+    avg_chunks_per_doc = round(points / total, 2) if total else 0
+    chars = []
+    for it in entries:
+        try:
+            n = int(it.get("chars") or 0)
+        except (TypeError, ValueError):
+            n = 0
+        if n > 0:
+            chars.append(n)
+    avg_chars = int(sum(chars) / len(chars)) if chars else 0
+    largest_chars = max(chars) if chars else 0
+
+    broad_topic = max(top_count, cortex_count, programming_count)
+    recall_normal = _clampi(max(50, broad_topic + 20 if broad_topic else 50), 1, 500)
+    if total >= 300 or category_count >= 30:
+        recall_normal = max(recall_normal, 120)
+    if total >= 900:
+        recall_normal = max(recall_normal, 180)
+    multi_query = 3 if total >= 250 or category_count >= 25 or broad_topic >= 80 else 2
+    snippet = 2200 if avg_chars >= 18000 or avg_chunks_per_doc >= 6 else (1600 if avg_chars >= 8000 or avg_chunks_per_doc >= 3 else 1200)
+    answer_hit = 14000 if largest_chars >= 60000 else (10000 if avg_chars >= 10000 else 8000)
+    answer_total = 72000 if broad_topic >= 150 or total >= 600 else (48000 if broad_topic >= 60 or total >= 200 else 32000)
+    answer_tokens = 8192 if answer_total >= 48000 else 6144
+    work_threshold = 15 if avg_chars >= 18000 or avg_chunks_per_doc >= 6 else 20
+    full_batch = 32000 if avg_chars >= 10000 else 28000
+    dedup_candidates = 5 if total >= 250 else 3
+    entity_extract = 4000 if avg_chars >= 10000 else 2500
+
+    overfetch = 4
+    if avg_chunks_per_doc >= 6 or broad_topic >= 120:
+        overfetch = 8
+    elif avg_chunks_per_doc >= 3 or broad_topic >= 60:
+        overfetch = 6
+    bm25_factor = 6 if category_count >= 35 or broad_topic >= 120 else (5 if category_count >= 20 or broad_topic >= 60 else 4)
+    bm25_min = _clampi(max(20, broad_topic // 4 + 20), 20, 200)
+    chunk_chars = 4000
+    chunk_overlap = 300 if avg_chunks_per_doc >= 6 else 250
+
+    recommended = {
+        "agent": {
+            "dedup_candidates": dedup_candidates,
+            "history_max": 40,
+            "recall_full_limit": 0,
+            "multi_query_variants": multi_query,
+            "entity_extract_chars": entity_extract,
+            "entity_docs_limit": 0,
+            "lese_snippet_chars": snippet,
+            "answer_hit_chars": answer_hit,
+            "answer_total_chars": answer_total,
+            "answer_max_tokens": answer_tokens,
+            "recall_working_cache_threshold": work_threshold,
+            "recall_normal_max": recall_normal,
+            "full_category_batch_chars": full_batch,
+            "context_prompt_max_chars": 4000,
+            "chat_text_max_chars": 500000,
+        },
+        "brain": {
+            "chunk_chars": chunk_chars,
+            "chunk_overlap": chunk_overlap,
+            "search_overfetch_factor": overfetch,
+            "search_date_overfetch_factor": 20 if total < 500 else 25,
+            "bm25_candidate_factor": bm25_factor,
+            "bm25_min_candidates": bm25_min,
+        },
+    }
+    reasons = {
+        "agent.recall_normal_max": f"Größtes Thema/Kategorie umfasst ca. {broad_topic} Einträge; normale Gedächtnisfragen sollen genug Randtreffer sehen, aber nicht jedes Alltagsgespräch zum Vollscan machen.",
+        "agent.recall_full_limit": "0 bleibt empfohlen, weil explizite Vollabrufe und 'alles über ...'-Fragen den gesamten passenden Suchraum lesen dürfen sollen.",
+        "agent.multi_query_variants": f"{multi_query} Varianten passen zur aktuellen Kategorienbreite ({category_count} Kategorien) und verbessern Synonyme ohne zu viele parallele Suchläufe.",
+        "agent.entity_extract_chars": f"Ø-Dokumentgröße ca. {avg_chars} Zeichen; ein größeres Extraktionsfenster verknüpft lange Einträge zuverlässiger mit Entitäten.",
+        "agent.entity_docs_limit": "0 erlaubt Entity-Fragen wie 'Alles über X' vollständig; der Arbeitscache verhindert, dass viele Treffer direkt ins Kontextfenster kippen.",
+        "agent.lese_snippet_chars": f"Ø-Dokumentgröße ca. {avg_chars} Zeichen, Ø-Chunks je Eintrag ca. {avg_chunks_per_doc}; der Leseagent bekommt deshalb genug Ausschnitt pro Treffer.",
+        "agent.answer_hit_chars": f"Größter kompakter Eintrag in der Stichprobe: ca. {largest_chars} Zeichen; pro Treffer bleibt genug Text für lange Cortex-/Almanach-Einträge.",
+        "agent.answer_total_chars": "Das Gesamtbudget ist höher als der Standard, damit breite Cortex-Zusammenfassungen mehrere Einträge gleichzeitig berücksichtigen können.",
+        "agent.answer_max_tokens": "Die Ausgabe darf länger werden, damit große Zusammenfassungen nicht unnötig am Modell-Output-Limit enden.",
+        "agent.recall_working_cache_threshold": "Ab dieser Trefferzahl verdichtet der Agent blockweise; das schützt große Vollabrufe vor Kontextüberlauf.",
+        "agent.full_category_batch_chars": "Kategorie-Gesamtfragen werden in Blöcken verdichtet; die Blockgröße balanciert Vollständigkeit und Modellstabilität.",
+        "agent.dedup_candidates": f"Bei {total} Einträgen lohnt eine etwas breitere Duplikat-Prüfung, ohne jeden Speichervorgang schwer zu machen.",
+        "agent.history_max": "40 Nachrichten halten den laufenden Dialog verständlich, ohne Gedächtnistreffer zu verdrängen.",
+        "agent.context_prompt_max_chars": "4000 Zeichen reichen für Antwortmodus und Zusatzauftrag, bleiben aber klein genug gegenüber dem Gedächtniskontext.",
+        "agent.chat_text_max_chars": "500000 Zeichen bleibt ein großzügiger Schutzdeckel: große Eingaben sind möglich, stille Kürzung bleibt verhindert.",
+        "brain.search_overfetch_factor": f"Qdrant sucht Chunks; bei Ø {avg_chunks_per_doc} Chunks je Eintrag muss die Brain-API mehr Rohpunkte holen, bevor sie auf Dokumente dedupliziert.",
+        "brain.search_date_overfetch_factor": "Datumsfilter brauchen mehr Reserve, falls Python nachfiltern muss; sonst fallen datumspassende Chunks zu früh heraus.",
+        "brain.bm25_candidate_factor": "BM25 ergänzt die semantische Suche um exakte Wörter, Namen, Versionen und Fehlercodes; mehr Kategorien erhöhen den Bedarf.",
+        "brain.bm25_min_candidates": "Auch bei kleinem Trefferlimit bleibt die Stichwortsuche breit genug für exakte Begriffe.",
+        "brain.chunk_chars": "4000 Zeichen bleiben nahe am bewährten Embedding-Fenster: genug Zusammenhang, ohne neue Chunks zu groß zu machen.",
+        "brain.chunk_overlap": "Mehr Überlappung schützt Satz- und Absatzgrenzen bei längeren Einträgen; sie wirkt nur auf neue oder neu eingebettete Einträge.",
+    }
+    return {
+        "ok": True,
+        "recommended": recommended,
+        "reasons": reasons,
+        "current": current,
+        "analysis": {
+            "total_entries": total,
+            "qdrant_points": points,
+            "categories": category_count,
+            "top_categories": [{"name": k, "count": int(v)} for k, v in top],
+            "cortex_entries": int(cortex_count),
+            "programming_entries": int(programming_count),
+            "avg_chunks_per_entry": avg_chunks_per_doc,
+            "avg_chars_sample": avg_chars,
+            "largest_chars_sample": largest_chars,
+            "entry_sample_size": len(entries),
+            "scan": "Health + alle Kategorie-Zählungen + kompakte Eintragsmetadaten; keine Volltexte geladen (OOM-sicher).",
+        },
+    }
 
 
 @app.post("/api/codex/auth/start")
@@ -691,8 +894,11 @@ async def api_chat(request: Request) -> dict:
     ttl = (body.get("title") or "").strip()
     if ttl:                       # im Sendefeld eingetippter Titel (Override) an den Agenten durchreichen
         payload["title"] = ttl[:200]
+    cm = (body.get("context_mode") or "").strip().lower()
+    if cm in ("auto", "save", "search"):
+        payload["context_mode"] = cm
     rs = (body.get("response_size") or "").strip().lower()
-    if rs in ("s", "m", "xl"):    # S/M/XL-Profil (Frank 2026-07-02): Agent haengt den zentralen Prompt an + staffelt Tavily
+    if rs in ("auto", "s", "m", "xl"):    # A/S/M/XL-Profil: Agent haengt den zentralen Prompt an + staffelt Tavily
         payload["response_size"] = rs
     try:
         return await asyncio.to_thread(_apost, "/chat", payload)

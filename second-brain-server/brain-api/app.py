@@ -102,6 +102,7 @@ DEFAULT_BRAIN_LIMITS = {
     "chunk_chars": CHUNK_CHARS,
     "chunk_overlap": CHUNK_OVERLAP,
     "search_overfetch_factor": SEARCH_OVERFETCH_FACTOR,
+    "search_date_overfetch_factor": SEARCH_DATE_OVERFETCH_FACTOR,
     "bm25_candidate_factor": BM25_CANDIDATE_FACTOR,
     "bm25_min_candidates": BM25_MIN_CANDIDATES,
 }
@@ -109,6 +110,7 @@ BRAIN_LIMIT_BOUNDS = {
     "chunk_chars": (500, 20000),
     "chunk_overlap": (0, 5000),
     "search_overfetch_factor": (1, 20),
+    "search_date_overfetch_factor": (1, 50),
     "bm25_candidate_factor": (1, 20),
     "bm25_min_candidates": (1, 1000),
 }
@@ -190,19 +192,21 @@ def current_brain_limits() -> dict[str, int]:
         "chunk_chars": CHUNK_CHARS,
         "chunk_overlap": CHUNK_OVERLAP,
         "search_overfetch_factor": SEARCH_OVERFETCH_FACTOR,
+        "search_date_overfetch_factor": SEARCH_DATE_OVERFETCH_FACTOR,
         "bm25_candidate_factor": BM25_CANDIDATE_FACTOR,
         "bm25_min_candidates": BM25_MIN_CANDIDATES,
     }
 
 
 def apply_brain_limits(limits: dict[str, Any]) -> dict[str, int]:
-    global CHUNK_CHARS, CHUNK_OVERLAP, SEARCH_OVERFETCH_FACTOR
+    global CHUNK_CHARS, CHUNK_OVERLAP, SEARCH_OVERFETCH_FACTOR, SEARCH_DATE_OVERFETCH_FACTOR
     global BM25_CANDIDATE_FACTOR, BM25_MIN_CANDIDATES
     clean = {k: _coerce_brain_limit(k, limits.get(k, DEFAULT_BRAIN_LIMITS[k])) for k in DEFAULT_BRAIN_LIMITS}
     clean["chunk_overlap"] = min(clean["chunk_overlap"], max(0, clean["chunk_chars"] - 1))
     CHUNK_CHARS = clean["chunk_chars"]
     CHUNK_OVERLAP = clean["chunk_overlap"]
     SEARCH_OVERFETCH_FACTOR = clean["search_overfetch_factor"]
+    SEARCH_DATE_OVERFETCH_FACTOR = clean["search_date_overfetch_factor"]
     BM25_CANDIDATE_FACTOR = clean["bm25_candidate_factor"]
     BM25_MIN_CANDIDATES = clean["bm25_min_candidates"]
     return clean
@@ -372,7 +376,7 @@ _init_last_attempt = 0.0
 # Entity-Verknuepfung finden). Rein additiv, Default-Antwort unveraendert.
 # Alt: 1.21.1: /purge raeumt jetzt AUCH die Entitaeten des eval-Test-Nutzers auf (der erweiterte
 # Eval-Check legt Test-Entitaeten an) + invalidiert den BM25-Cache (purge lief an _delete_doc vorbei).
-VERSION = "1.23.0 (06.07.2026, 15:33 Uhr)"  # 1.23.0: Runtime-Limits fuer Cortex-Einstellungen sind jetzt die aktive Brain-API-Version. /limits liefert und speichert Chunking, dense Overfetch und BM25-Kandidaten persistent in brain-data; /search und chunk_text nutzen die Werte sofort. Defaults bleiben Env-kompatibel; bestehende Eintraege bleiben 1:1 erhalten. Alt: 1.22.2 (06.07.2026, 00.09 Uhr): Timestamp-Korrektur fuer den nach Mitternacht abgeschlossenen Deploy; /search limit=0 und /entities/docs limit=0 bleiben unveraendert erhalten.
+VERSION = "1.24.0 (06.07.2026, 17:23 Uhr)"  # 1.24.0: Dashboard-Limits vervollstaendigt. Zusaetzlich zu Chunking, dense Overfetch und BM25 ist jetzt auch search_date_overfetch_factor persistent ueber /limits einstellbar; Datumsfragen ohne nativen DatetimeRange-Fallback koennen damit gruendlicher suchen, ohne die uebrigen Suchpfade zu veraendern. Alt: 1.23.0.
 
 # Startup-Banner (Observability-First: Log-Pfad + Version EINMAL ausgeben)
 _log(logging.INFO, "brain-api startet", version=VERSION, log_path=LOG_PATH)

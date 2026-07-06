@@ -1,7 +1,15 @@
 {
-	"stand": "06.07.2026, 15:57 Uhr",
+	"stand": "06.07.2026, 17:23 Uhr",
 	"hinweis": "PFLEGE-PFLICHT: Bei JEDEM Deploy, der ein neues System/Feature einbaut, hier einen Eintrag ERGAENZEN (neueste zuerst) — mit Datum + Uhrzeit und ausfuehrlicher Erklaerung. Diese Datei ist die Quelle des Info-Bereichs in den Dashboard-Einstellungen (GET /api/features). Regel verankert in DEPLOY.md.",
 	"features": [
+		{
+			"id": "qdrant-limit-erklaerungen-und-empfehlungen",
+			"name": "Qdrant-Limits verstehen: ausführliche Erklärungen plus automatische Empfehlung",
+			"eingebaut": "06.07.2026, 17:23 Uhr",
+			"dienst": "dashboard 0.53.0 + agent 0.57.0 + brain-api 1.24.0",
+			"kurz": "Die Qdrant-Limit-Karte erklärt jetzt jedes Limit deutlich ausführlicher und kann empfohlene Werte aus dem aktuellen Cortex-Bestand berechnen und in die Felder eintragen.",
+			"erklaerung": "Die Einstellungen unter 'Qdrant Limits' zeigen jetzt nicht mehr nur kurze Hilfetexte, sondern pro Wert einen vollständigen Zusammenhang: wofür der Wert gut ist, ob er semantische Vektorsuche, BM25-Stichwortsuche, Kategorie-Vollabruf, Entity-Abruf, Speicher-Chunking oder reinen Agent-Kontext betrifft, welcher Agent damit arbeitet, was ein kleinerer Wert bewirkt, was ein größerer Wert bewirkt und welche anderen Limits dadurch mitbetroffen sind. Zusätzlich gibt es den Button 'Empfohlene Limits ermitteln'. Beim Drücken scannt das Dashboard den aktuellen Cortex-Bestand über die sicheren Metadaten-Endpunkte: Health/Qdrant-Punkte, alle Kategorie-Zählungen und die kompakte Eintragsliste ohne Volltexte. Daraus werden Gesamtmenge, größte Themen/Kategorien, Cortex-Anteil, Programmier-Anteil, durchschnittliche Chunks je Eintrag und Dokumentgrößen abgeleitet. Der Empfehlungslauf trägt passende Werte direkt in die Felder ein und schreibt unter jede Karte die konkrete Empfehlung samt Begründung. Speichern bleibt ein separater Schritt, damit Frank die Vorschläge vor Aktivierung prüfen kann. Außerdem sind bisher nur per Environment-Variable mögliche abrufnahe Agent-Limits jetzt echte Runtime-Limits: Duplikat-Kandidaten, Entity-Extraktionsfenster, Entity-Vollabruflimit, Antwort-Max-Tokens, Arbeitscache-Schwelle und Kategorie-Batchgröße. In der Brain-API kam Datums-Overfetch hinzu, damit Zeitfragen mit Fallback-Nachfilterung genauso erklärbar und einstellbar sind. Bestehende Einträge bleiben 1:1 erhalten; Chunk-Größe und Überlappung wirken wie bisher nur auf neue oder neu eingebettete Einträge."
+		},
 		{
 			"id": "qdrant-agent-runtime-limits",
 			"name": "Qdrant- und Agent-Limits direkt in den Einstellungen steuern",
