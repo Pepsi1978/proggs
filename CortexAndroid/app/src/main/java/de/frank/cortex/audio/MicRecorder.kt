@@ -1,8 +1,12 @@
 package de.frank.cortex.audio
 
+import android.Manifest
+import android.content.pm.PackageManager
 import android.media.AudioFormat
 import android.media.AudioRecord
 import android.media.MediaRecorder
+import androidx.core.content.ContextCompat
+import de.frank.cortex.CortexApp
 import de.frank.cortex.observability.CortexLog
 import kotlinx.coroutines.*
 import java.io.ByteArrayOutputStream
@@ -25,6 +29,12 @@ class MicRecorder {
 
     fun start(scope: CoroutineScope): Boolean {
         if (isRecording) return true
+        if (ContextCompat.checkSelfPermission(CortexApp.appContext, Manifest.permission.RECORD_AUDIO) !=
+            PackageManager.PERMISSION_GRANTED
+        ) {
+            CortexLog.error("MicRecorder", "start", "RECORD_AUDIO nicht gewährt")
+            return false
+        }
 
         val bufferSize = AudioRecord.getMinBufferSize(SAMPLE_RATE, CHANNEL, ENCODING)
         if (bufferSize <= 0) {
@@ -32,10 +42,18 @@ class MicRecorder {
             return false
         }
 
-        recorder = AudioRecord(
-            MediaRecorder.AudioSource.VOICE_RECOGNITION, // Samsung-kompatibel (statt MIC)
-            SAMPLE_RATE, CHANNEL, ENCODING, bufferSize * 2
-        )
+        recorder = try {
+            AudioRecord(
+                MediaRecorder.AudioSource.VOICE_RECOGNITION, // Samsung-kompatibel (statt MIC)
+                SAMPLE_RATE, CHANNEL, ENCODING, bufferSize * 2
+            )
+        } catch (e: SecurityException) {
+            CortexLog.error("MicRecorder", "start", "AudioRecord ohne Mikrofonberechtigung blockiert: ${e.message}")
+            return false
+        } catch (e: Exception) {
+            CortexLog.error("MicRecorder", "start", "AudioRecord konnte nicht erstellt werden: ${e.message}")
+            return false
+        }
 
         if (recorder?.state != AudioRecord.STATE_INITIALIZED) {
             CortexLog.error("MicRecorder", "start", "AudioRecord konnte nicht initialisiert werden (state=${recorder?.state})")
@@ -45,7 +63,19 @@ class MicRecorder {
         }
 
         buffer.reset()
-        recorder?.startRecording()
+        try {
+            recorder?.startRecording()
+        } catch (e: SecurityException) {
+            CortexLog.error("MicRecorder", "start", "startRecording ohne Mikrofonberechtigung blockiert: ${e.message}")
+            recorder?.release()
+            recorder = null
+            return false
+        } catch (e: IllegalStateException) {
+            CortexLog.error("MicRecorder", "start", "startRecording fehlgeschlagen: ${e.message}")
+            recorder?.release()
+            recorder = null
+            return false
+        }
         isRecording = true
         startedAtMs = System.currentTimeMillis()
 

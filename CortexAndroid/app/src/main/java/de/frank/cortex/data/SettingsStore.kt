@@ -23,7 +23,15 @@ import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
+import org.json.JSONArray
+import org.json.JSONObject
 import java.util.concurrent.ConcurrentHashMap
+
+data class UserContextPrompt(
+    val id: String,
+    val text: String,
+    val enabled: Boolean = true
+)
 
 // DataStore-Delegate muss top-level leben (eine Instanz pro Prozess).
 private val Context.cortexSecretsDataStore: DataStore<Preferences> by preferencesDataStore(name = "cortex_secrets_ds")
@@ -388,6 +396,42 @@ object SettingsStore {
 
     fun setResponseSizePrompt(size: String, prompt: String) {
         plain.edit().putString("response_size_prompt_$size", prompt).apply()
+    }
+
+    fun userContextPrompts(): List<UserContextPrompt> {
+        val raw = plain.getString("user_context_prompts", "[]") ?: "[]"
+        return try {
+            val array = JSONArray(raw)
+            buildList {
+                for (i in 0 until array.length()) {
+                    val item = array.optJSONObject(i) ?: continue
+                    val id = item.optString("id").takeIf { it.isNotBlank() } ?: continue
+                    add(
+                        UserContextPrompt(
+                            id = id,
+                            text = item.optString("text"),
+                            enabled = item.optBoolean("enabled", true)
+                        )
+                    )
+                }
+            }
+        } catch (e: Exception) {   // no-cancellation-rethrow (kein suspend im try)
+            CortexLog.warn("SettingsStore", "userContextPrompts", "Kontext-Prompts nicht lesbar: ${e.message}")
+            emptyList()
+        }
+    }
+
+    fun setUserContextPrompts(prompts: List<UserContextPrompt>) {
+        val array = JSONArray()
+        prompts.forEach { prompt ->
+            array.put(
+                JSONObject()
+                    .put("id", prompt.id)
+                    .put("text", prompt.text)
+                    .put("enabled", prompt.enabled)
+            )
+        }
+        plain.edit().putString("user_context_prompts", array.toString()).apply()
     }
 
     // --- Hilfsmethoden ---

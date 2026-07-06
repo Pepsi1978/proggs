@@ -9,6 +9,7 @@ import de.frank.cortex.data.ChatSessionSummary
 import de.frank.cortex.data.model.*
 import de.frank.cortex.data.SettingsStore
 import de.frank.cortex.data.StoredChatMessage
+import de.frank.cortex.data.UserContextPrompt
 import de.frank.cortex.network.ApiClient
 import de.frank.cortex.network.GeminiRateLimitException
 import de.frank.cortex.network.GeminiTtsAccessException
@@ -65,7 +66,8 @@ data class ChatUiState(
     val isImproving: Boolean = false,
     val isGeneratingTitle: Boolean = false,
     val contextMode: String = SettingsStore.CONTEXT_MODE_AUTO,
-    val responseSize: String = SettingsStore.RESPONSE_SIZE_AUTO
+    val responseSize: String = SettingsStore.RESPONSE_SIZE_AUTO,
+    val userContextPrompts: List<UserContextPrompt> = emptyList()
 )
 
 object ChatCommands {
@@ -147,7 +149,13 @@ class ChatViewModel : ViewModel() {
     init {
         // Vorlese-Zustand aus dem Store uebernehmen — der Lautsprecher-Knopf im Gespraech ist der
         // EINZIGE Vorlesen-Schalter (der Einstellungen-Schalter wurde 2026-07-02 entfernt).
-        _uiState.update { it.copy(ttsEnabled = SettingsStore.ttsEnabled, responseSize = SettingsStore.responseSize) }
+        _uiState.update {
+            it.copy(
+                ttsEnabled = SettingsStore.ttsEnabled,
+                responseSize = SettingsStore.responseSize,
+                userContextPrompts = SettingsStore.userContextPrompts()
+            )
+        }
         refreshSessions()
 
         // Kategorien vom Server laden, SOBALD das VPN verbunden ist. Vorher (beim App-Start) ist
@@ -651,6 +659,51 @@ class ChatViewModel : ViewModel() {
 
     fun sendOption(option: ChatOption) {
         sendMessage(option.send)
+    }
+
+    fun addUserContextPrompt(text: String) {
+        val trimmed = text.trim()
+        if (trimmed.isBlank()) {
+            _uiState.update { it.copy(error = "Prompt ist leer") }
+            return
+        }
+        val updated = SettingsStore.userContextPrompts() + UserContextPrompt(
+            id = UUID.randomUUID().toString(),
+            text = trimmed,
+            enabled = true
+        )
+        SettingsStore.setUserContextPrompts(updated)
+        _uiState.update { it.copy(userContextPrompts = updated) }
+        CortexLog.checkpoint(
+            step = "context_prompt_add",
+            intent = "Zusatz-Prompt speichern und bei Chat-Anfragen mitsenden",
+            expected = "prompt_saved",
+            actual = "prompt_saved",
+            ok = true,
+            ctx = mapOf("prompts" to updated.size, "chars" to trimmed.length)
+        )
+    }
+
+    fun updateUserContextPrompt(id: String, text: String) {
+        val updated = SettingsStore.userContextPrompts().map {
+            if (it.id == id) it.copy(text = text) else it
+        }
+        SettingsStore.setUserContextPrompts(updated)
+        _uiState.update { it.copy(userContextPrompts = updated) }
+    }
+
+    fun toggleUserContextPrompt(id: String, enabled: Boolean) {
+        val updated = SettingsStore.userContextPrompts().map {
+            if (it.id == id) it.copy(enabled = enabled) else it
+        }
+        SettingsStore.setUserContextPrompts(updated)
+        _uiState.update { it.copy(userContextPrompts = updated) }
+    }
+
+    fun deleteUserContextPrompt(id: String) {
+        val updated = SettingsStore.userContextPrompts().filterNot { it.id == id }
+        SettingsStore.setUserContextPrompts(updated)
+        _uiState.update { it.copy(userContextPrompts = updated) }
     }
 
     fun saveEditedStoreConfirmation(source: ChatMessage, editedText: String) {
@@ -1279,7 +1332,11 @@ class ChatViewModel : ViewModel() {
     private fun buildContextPrompt(contextMode: String, responseSize: String): String? {
         val modePrompt = if (contextMode == SettingsStore.CONTEXT_MODE_AUTO) "" else SettingsStore.contextPrompt(contextMode)
         val sizePrompt = SettingsStore.responseSizePrompt(responseSize)
-        return listOf(modePrompt, sizePrompt).filter { it.isNotBlank() }.joinToString("\n\n").ifBlank { null }
+        val activeUserPrompts = SettingsStore.userContextPrompts()
+            .filter { it.enabled && it.text.isNotBlank() }
+            .mapIndexed { index, prompt -> "Zusatz-Prompt ${index + 1}:\n${prompt.text.trim()}" }
+            .joinToString("\n\n")
+        return listOf(modePrompt, sizePrompt, activeUserPrompts).filter { it.isNotBlank() }.joinToString("\n\n").ifBlank { null }
     }
 
     private suspend fun synthesizeTtsChunk(chunk: String, voice: String, index: Int): ByteArray? {

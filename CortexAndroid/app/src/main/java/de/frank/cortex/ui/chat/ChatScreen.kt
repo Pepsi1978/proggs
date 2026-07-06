@@ -42,10 +42,13 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.ui.window.Dialog
+import androidx.compose.ui.window.DialogProperties
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import de.frank.cortex.data.ChatSessionSummary
 import de.frank.cortex.data.SettingsStore
+import de.frank.cortex.data.UserContextPrompt
 import de.frank.cortex.data.model.ChatOption
 import de.frank.cortex.observability.CortexLog
 import de.frank.cortex.ui.theme.*
@@ -53,11 +56,17 @@ import de.frank.cortex.vpn.TunnelState
 import de.frank.cortex.vpn.WireGuardManager
 import java.util.Locale
 
+private enum class TranscriptionTarget { ChatInput, ContextPrompt }
+
 @Composable
 fun ChatScreen(vm: ChatViewModel = viewModel()) {
     val uiState by vm.uiState.collectAsStateWithLifecycle()
     val vpnState by WireGuardManager.state.collectAsStateWithLifecycle()
     var inputText by rememberSaveable { mutableStateOf("") }
+    var isContextPromptDialogOpen by rememberSaveable { mutableStateOf(false) }
+    var contextPromptDraft by remember { mutableStateOf("") }
+    var transcriptionTarget by remember { mutableStateOf(TranscriptionTarget.ChatInput) }
+    var pendingMicTarget by remember { mutableStateOf(TranscriptionTarget.ChatInput) }
     val listState = rememberLazyListState()
     val drawerState = rememberDrawerState(
         initialValue = DrawerValue.Closed,
@@ -91,6 +100,9 @@ fun ChatScreen(vm: ChatViewModel = viewModel()) {
         }
     }
 
+    fun appendTranscription(existing: String, text: String): String =
+        if (existing.isBlank()) text else "$existing $text"
+
     DisposableEffect(recordingTone) {
         onDispose { recordingTone.release() }
     }
@@ -100,6 +112,7 @@ fun ChatScreen(vm: ChatViewModel = viewModel()) {
         contract = ActivityResultContracts.RequestPermission()
     ) { granted ->
         if (granted) {
+            transcriptionTarget = pendingMicTarget
             playRecordingTone()
             vm.toggleRecording()
         }
@@ -108,7 +121,11 @@ fun ChatScreen(vm: ChatViewModel = viewModel()) {
     // Transkribierten Text ins Eingabefeld übernehmen
     LaunchedEffect(Unit) {
         vm.transcribedText.collect { text ->
-            inputText = if (inputText.isBlank()) text else "$inputText $text"
+            if (transcriptionTarget == TranscriptionTarget.ContextPrompt && isContextPromptDialogOpen) {
+                contextPromptDraft = appendTranscription(contextPromptDraft, text)
+            } else {
+                inputText = appendTranscription(inputText, text)
+            }
         }
     }
 
@@ -277,7 +294,10 @@ fun ChatScreen(vm: ChatViewModel = viewModel()) {
                 isRecording = uiState.isRecording,
                 isTranscribing = uiState.isTranscribing,
                 isImproving = uiState.isImproving,
+                onOpenContextPrompts = { isContextPromptDialogOpen = true },
                 onMicToggle = {
+                    pendingMicTarget = TranscriptionTarget.ChatInput
+                    transcriptionTarget = TranscriptionTarget.ChatInput
                     CortexLog.info("ChatScreen", "micClick", "Mikrofon angeklickt")
                     val hasPermission = context.checkSelfPermission(Manifest.permission.RECORD_AUDIO) ==
                             PackageManager.PERMISSION_GRANTED
@@ -300,6 +320,38 @@ fun ChatScreen(vm: ChatViewModel = viewModel()) {
                     vm.updateTitleOverride("")
                 },
                 onImprove = { vm.improveText(inputText) }
+            )
+        }
+
+        if (isContextPromptDialogOpen) {
+            ContextPromptDialog(
+                prompts = uiState.userContextPrompts,
+                draft = contextPromptDraft,
+                onDraftChange = { contextPromptDraft = it },
+                isRecording = uiState.isRecording && transcriptionTarget == TranscriptionTarget.ContextPrompt,
+                isTranscribing = uiState.isTranscribing && transcriptionTarget == TranscriptionTarget.ContextPrompt,
+                onMicToggle = {
+                    pendingMicTarget = TranscriptionTarget.ContextPrompt
+                    transcriptionTarget = TranscriptionTarget.ContextPrompt
+                    val hasPermission = context.checkSelfPermission(Manifest.permission.RECORD_AUDIO) ==
+                            PackageManager.PERMISSION_GRANTED
+                    if (hasPermission) {
+                        if (!uiState.isRecording && !uiState.isTranscribing) {
+                            playRecordingTone()
+                        }
+                        vm.toggleRecording()
+                    } else {
+                        micPermissionLauncher.launch(Manifest.permission.RECORD_AUDIO)
+                    }
+                },
+                onSend = {
+                    vm.addUserContextPrompt(contextPromptDraft)
+                    contextPromptDraft = ""
+                },
+                onPromptChange = vm::updateUserContextPrompt,
+                onPromptEnabledChange = vm::toggleUserContextPrompt,
+                onPromptDelete = vm::deleteUserContextPrompt,
+                onClose = { isContextPromptDialogOpen = false }
             )
         }
 
@@ -871,6 +923,7 @@ private fun ChatInputBlock(
     isRecording: Boolean,
     isTranscribing: Boolean,
     isImproving: Boolean,
+    onOpenContextPrompts: () -> Unit,
     onMicToggle: () -> Unit,
     onSend: () -> Unit,
     onClear: () -> Unit,
@@ -879,7 +932,6 @@ private fun ChatInputBlock(
     val isDark = MaterialTheme.colorScheme.background == DarkBg
     val actionOrangeBg = Orange.copy(alpha = 0.20f)
     val actionOrangeBorder = Orange.copy(alpha = 0.42f)
-    val recordingRed = Color(0xFFFF3B30)
 
     Surface(
         modifier = Modifier.imePadding(),
@@ -892,6 +944,7 @@ private fun ChatInputBlock(
                 onModeChange = onContextModeChange,
                 responseSize = responseSize,
                 onResponseSizeChange = onResponseSizeChange,
+                onOpenContextPrompts = onOpenContextPrompts,
                 isDark = isDark
             )
 
@@ -1046,21 +1099,9 @@ private fun ChatInputBlock(
                 )
 
                 // Mic (38x38, orange, highlighted when recording)
-                ActionButton(
-                    icon = {
-                        if (isTranscribing) {
-                            CircularProgressIndicator(
-                                modifier = Modifier.size(21.dp),
-                                strokeWidth = 2.dp,
-                                color = Amber
-                            )
-                        } else {
-                            Icon(Icons.Default.Mic, null, Modifier.size(21.dp))
-                        }
-                    },
-                    bg = if (isRecording) recordingRed.copy(alpha = 0.28f) else actionOrangeBg,
-                    border = if (isRecording) recordingRed else actionOrangeBorder,
-                    tint = if (isRecording) recordingRed else Orange,
+                MicActionButton(
+                    isRecording = isRecording,
+                    isTranscribing = isTranscribing,
                     onClick = onMicToggle
                 )
 
@@ -1086,11 +1127,227 @@ private fun ChatInputBlock(
 }
 
 @Composable
+private fun ContextPromptDialog(
+    prompts: List<UserContextPrompt>,
+    draft: String,
+    onDraftChange: (String) -> Unit,
+    isRecording: Boolean,
+    isTranscribing: Boolean,
+    onMicToggle: () -> Unit,
+    onSend: () -> Unit,
+    onPromptChange: (String, String) -> Unit,
+    onPromptEnabledChange: (String, Boolean) -> Unit,
+    onPromptDelete: (String) -> Unit,
+    onClose: () -> Unit
+) {
+    val isDark = MaterialTheme.colorScheme.background == DarkBg
+    Dialog(
+        onDismissRequest = onClose,
+        properties = DialogProperties(usePlatformDefaultWidth = false)
+    ) {
+        Surface(
+            modifier = Modifier
+                .fillMaxSize()
+                .systemBarsPadding()
+                .imePadding(),
+            color = MaterialTheme.colorScheme.background
+        ) {
+            Column(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(16.dp)
+            ) {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text(
+                        "Kontext-Prompts",
+                        fontFamily = SpaceGrotesk,
+                        fontWeight = FontWeight.Bold,
+                        fontSize = 24.sp,
+                        color = MaterialTheme.colorScheme.onSurface
+                    )
+                    IconButton(onClick = onClose) {
+                        Icon(Icons.Default.Close, contentDescription = "Schließen")
+                    }
+                }
+
+                Spacer(Modifier.height(12.dp))
+
+                Surface(
+                    shape = RoundedCornerShape(18.dp),
+                    color = if (isDark) DarkField else LightField,
+                    border = BorderStroke(1.dp, if (draft.isNotBlank()) Iris else if (isDark) DarkFieldBorder else LightFieldBorder)
+                ) {
+                    Column(Modifier.padding(12.dp)) {
+                        BasicTextField(
+                            value = draft,
+                            onValueChange = onDraftChange,
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .defaultMinSize(minHeight = 120.dp),
+                            textStyle = LocalTextStyle.current.copy(
+                                fontSize = 15.sp,
+                                lineHeight = 22.sp,
+                                color = MaterialTheme.colorScheme.onSurface
+                            ),
+                            minLines = 4,
+                            maxLines = 8,
+                            decorationBox = { inner ->
+                                if (draft.isEmpty()) {
+                                    Text("Prompt", fontSize = 15.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                                }
+                                inner()
+                            }
+                        )
+
+                        Spacer(Modifier.height(12.dp))
+
+                        Row(
+                            horizontalArrangement = Arrangement.spacedBy(10.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            MicActionButton(
+                                isRecording = isRecording,
+                                isTranscribing = isTranscribing,
+                                onClick = onMicToggle
+                            )
+                            Box(
+                                modifier = Modifier
+                                    .size(38.dp)
+                                    .clip(RoundedCornerShape(11.dp))
+                                    .background(if (draft.isNotBlank()) Orange else MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.18f))
+                                    .clickable(enabled = draft.isNotBlank(), onClick = onSend),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Icon(
+                                    Icons.AutoMirrored.Filled.Send,
+                                    contentDescription = "Prompt speichern",
+                                    tint = if (draft.isNotBlank()) Color.White else MaterialTheme.colorScheme.onSurfaceVariant,
+                                    modifier = Modifier.size(20.dp)
+                                )
+                            }
+                            Text(
+                                "Mikrofon transkribiert direkt in dieses Prompt-Feld.",
+                                fontSize = 12.sp,
+                                lineHeight = 16.sp,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
+                    }
+                }
+
+                Spacer(Modifier.height(14.dp))
+                HorizontalDivider(color = MaterialTheme.colorScheme.outline.copy(alpha = 0.45f))
+                Spacer(Modifier.height(10.dp))
+
+                if (prompts.isEmpty()) {
+                    Box(Modifier.fillMaxWidth().weight(1f), contentAlignment = Alignment.Center) {
+                        Text(
+                            "Noch keine Kontext-Prompts gespeichert.",
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            fontSize = 14.sp
+                        )
+                    }
+                } else {
+                    LazyColumn(
+                        modifier = Modifier.weight(1f),
+                        verticalArrangement = Arrangement.spacedBy(10.dp),
+                        contentPadding = PaddingValues(bottom = 20.dp)
+                    ) {
+                        items(prompts, key = { it.id }) { prompt ->
+                            ContextPromptRow(
+                                prompt = prompt,
+                                onTextChange = { onPromptChange(prompt.id, it) },
+                                onEnabledChange = { onPromptEnabledChange(prompt.id, it) },
+                                onDelete = { onPromptDelete(prompt.id) }
+                            )
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun ContextPromptRow(
+    prompt: UserContextPrompt,
+    onTextChange: (String) -> Unit,
+    onEnabledChange: (Boolean) -> Unit,
+    onDelete: () -> Unit
+) {
+    val isDark = MaterialTheme.colorScheme.background == DarkBg
+    Surface(
+        shape = RoundedCornerShape(16.dp),
+        color = if (isDark) DarkField else LightField,
+        border = BorderStroke(1.dp, if (prompt.enabled) Iris.copy(alpha = 0.5f) else MaterialTheme.colorScheme.outline.copy(alpha = 0.38f))
+    ) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(12.dp),
+            horizontalArrangement = Arrangement.spacedBy(10.dp),
+            verticalAlignment = Alignment.Top
+        ) {
+            Switch(
+                checked = prompt.enabled,
+                onCheckedChange = onEnabledChange,
+                modifier = Modifier.padding(top = 2.dp)
+            )
+            Column(Modifier.weight(1f)) {
+                Text(
+                    contextPromptTitle(prompt.text),
+                    fontFamily = SpaceGrotesk,
+                    fontWeight = FontWeight.Bold,
+                    fontSize = 16.sp,
+                    color = if (prompt.enabled) Iris else MaterialTheme.colorScheme.onSurfaceVariant
+                )
+                Spacer(Modifier.height(6.dp))
+                BasicTextField(
+                    value = prompt.text,
+                    onValueChange = onTextChange,
+                    modifier = Modifier.fillMaxWidth(),
+                    textStyle = LocalTextStyle.current.copy(
+                        fontSize = 14.sp,
+                        lineHeight = 20.sp,
+                        color = MaterialTheme.colorScheme.onSurface
+                    ),
+                    minLines = 2,
+                    maxLines = 12,
+                    decorationBox = { inner ->
+                        if (prompt.text.isEmpty()) {
+                            Text("Prompt", fontSize = 14.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                        }
+                        inner()
+                    }
+                )
+            }
+            IconButton(onClick = onDelete) {
+                Icon(Icons.Default.Delete, contentDescription = "Prompt löschen", tint = MaterialTheme.colorScheme.onSurfaceVariant)
+            }
+        }
+    }
+}
+
+private fun contextPromptTitle(text: String): String {
+    val title = Regex("[\\p{L}\\p{N}]+")
+        .findAll(text.trim())
+        .map { it.value }
+        .take(3)
+        .joinToString(" ")
+    return title.ifBlank { "Prompt" }
+}
+
+@Composable
 private fun ContextModeBar(
     selectedMode: String,
     onModeChange: (String) -> Unit,
     responseSize: String,
     onResponseSizeChange: (String) -> Unit,
+    onOpenContextPrompts: () -> Unit,
     isDark: Boolean
 ) {
     Row(
@@ -1099,7 +1356,7 @@ private fun ContextModeBar(
         verticalAlignment = Alignment.CenterVertically
     ) {
         Row(
-            horizontalArrangement = Arrangement.spacedBy(6.dp),
+            horizontalArrangement = Arrangement.spacedBy(4.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
             listOf(
@@ -1113,7 +1370,7 @@ private fun ContextModeBar(
                 Box(
                     modifier = Modifier
                         .height(38.dp)
-                        .width(if (size == SettingsStore.RESPONSE_SIZE_XL) 44.dp else 38.dp)
+                        .width(38.dp)
                         .clip(RoundedCornerShape(11.dp))
                         .background(if (active) Orange.copy(alpha = 0.22f) else if (isDark) DarkField else LightField)
                         .border(
@@ -1129,6 +1386,23 @@ private fun ContextModeBar(
             }
         }
 
+        Box(
+            modifier = Modifier
+                .size(38.dp)
+                .clip(RoundedCornerShape(11.dp))
+                .background(if (isDark) DarkField else LightField)
+                .border(
+                    1.dp,
+                    if (isDark) DarkFieldBorder else LightFieldBorder,
+                    RoundedCornerShape(11.dp)
+                )
+                .clickable(onClick = onOpenContextPrompts),
+            contentAlignment = Alignment.Center
+        ) {
+            Text("K", fontFamily = SpaceGrotesk, fontWeight = FontWeight.Bold, fontSize = 15.sp,
+                color = MaterialTheme.colorScheme.onSurfaceVariant)
+        }
+
         // Smalltalk-Knopf bewusst ENTFERNT (Frank-Wunsch 2026-07-02): Smalltalk erkennt der
         // Router im Auto-Modus selbst — es bleiben Suchen, Speichern und Automatisch (KI).
         val items = listOf(
@@ -1137,7 +1411,7 @@ private fun ContextModeBar(
             Triple(SettingsStore.CONTEXT_MODE_AUTO, Icons.Default.AutoAwesome, "Automatisch")
         )
         Row(
-            horizontalArrangement = Arrangement.spacedBy(8.dp),
+            horizontalArrangement = Arrangement.spacedBy(4.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
             items.forEach { (mode, icon, label) ->
@@ -1161,6 +1435,34 @@ private fun ContextModeBar(
             }
         }
     }
+}
+
+@Composable
+private fun MicActionButton(
+    isRecording: Boolean,
+    isTranscribing: Boolean,
+    onClick: () -> Unit
+) {
+    val actionOrangeBg = Orange.copy(alpha = 0.20f)
+    val actionOrangeBorder = Orange.copy(alpha = 0.42f)
+    val recordingRed = Color(0xFFFF3B30)
+    ActionButton(
+        icon = {
+            if (isTranscribing) {
+                CircularProgressIndicator(
+                    modifier = Modifier.size(21.dp),
+                    strokeWidth = 2.dp,
+                    color = Amber
+                )
+            } else {
+                Icon(Icons.Default.Mic, null, Modifier.size(21.dp))
+            }
+        },
+        bg = if (isRecording) recordingRed.copy(alpha = 0.28f) else actionOrangeBg,
+        border = if (isRecording) recordingRed else actionOrangeBorder,
+        tint = if (isRecording) recordingRed else Orange,
+        onClick = onClick
+    )
 }
 
 @Composable
