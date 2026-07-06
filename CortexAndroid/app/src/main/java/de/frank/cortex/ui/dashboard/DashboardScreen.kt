@@ -292,7 +292,7 @@ private fun SpectrumCard(
                         categoryPath.forEachIndexed { index, segment ->
                             Text("›", fontSize = 11.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
                             Text(
-                                text = segment,
+                                text = displayCategoryName(segment),
                                 fontSize = 11.sp,
                                 fontWeight = if (index == categoryPath.lastIndex) FontWeight.Bold else FontWeight.Normal,
                                 color = if (index == categoryPath.lastIndex) MaterialTheme.colorScheme.onSurface else Iris,
@@ -339,7 +339,7 @@ private fun SpectrumCard(
                             )
                             Spacer(Modifier.width(10.dp))
                             Text(
-                                text = name,
+                                text = displayCategoryName(name),
                                 fontSize = 13.5.sp,
                                 modifier = Modifier.weight(1f),
                                 color = MaterialTheme.colorScheme.onSurface
@@ -565,7 +565,7 @@ private fun Chip(name: String, color: Color?, active: Boolean, isDark: Boolean, 
             if (color != null) {
                 Box(Modifier.size(8.dp).clip(CircleShape).background(col))
             }
-            Text(name, fontSize = 12.5.sp, fontWeight = FontWeight.SemiBold,
+            Text(displayCategoryName(name), fontSize = 12.5.sp, fontWeight = FontWeight.SemiBold,
                 color = if (active) col else MaterialTheme.colorScheme.onSurfaceVariant)
         }
     }

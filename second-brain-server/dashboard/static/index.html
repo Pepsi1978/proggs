@@ -3019,7 +3019,7 @@ button{font-family:inherit;cursor:pointer}
         <span style="flex:none">${escapeHtml(title)}</span>
         <span class="log-sum">${escapeHtml(logSummary(it.text||""))}</span>
         <button type="button" class="log-del" title="Eintrag aus Logbuch UND Cortex löschen"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M3 6h18M8 6V4a1 1 0 0 1 1-1h6a1 1 0 0 1 1 1v2m2 0v14a1 1 0 0 1-1 1H7a1 1 0 0 1-1-1V6"/><path d="M10 11v6M14 11v6"/></svg></button>`;
-      row.addEventListener("click", ()=> openEntry({title, category:"gespraeche", text:it.text||"", when,
+      row.addEventListener("click", ()=> openEntry({title, category:"Gespräche", text:it.text||"", when,
         logbook:true, path:it.path||"", brain_title:brainTitle}, false));
       row.querySelector(".log-del").addEventListener("click", e=>{
         e.stopPropagation();

@@ -47,7 +47,7 @@ VERSION = "0.9.0 (05.07.2026, 15.06 Uhr)"  # 0.9.0 (Frank-Wunsch 2026-07-05): Ge
 # ---------------------------------------------------------------------------
 # Konfiguration (Secrets nur aus der Umgebung, nie im Code)
 # ---------------------------------------------------------------------------
-VERSION = "0.10.0 (06.07.2026, 11:45 Uhr)"  # 0.10.0: Standard- und eigene Nacht-Aufgaben sind editierbar. /settings liefert zu jeder Standard-Aufgabe den kompletten aktuellen Prompt, /standard-tasks/{key} speichert Franks bearbeitete Definition als verbindlichen Override, und /custom-tasks/interview kann bestehende Aufgaben mit Verlauf verbessern. Eigene Aufgaben koennen per PUT jetzt Name/Definition aktualisieren. Alt: 0.9.0.
+VERSION = "0.10.1 (06.07.2026, 16:46 Uhr)"  # 0.10.1: Gesprächskategorie kanonisch groß geschrieben (Gespräche) und weiter als Betriebsdaten aus Nacht-Aufräumung ausgeklammert. Alt: 0.10.0.
 
 GEMINI_API_KEY = os.getenv("GEMINI_API_KEY") or os.getenv("GOOGLE_API_KEY", "")
 SB_API_KEY = os.getenv("SB_API_KEY", "")
@@ -70,7 +70,7 @@ LOG_PATH = os.getenv("LIB_LOG_PATH", "/app/logs/librarian.jsonl")
 LOG_LEVEL = os.getenv("LIB_LOG_LEVEL", "INFO").upper()
 # Status-Datei des Host-Backups (read-only gemountete Z-Wurzel). Fehlt sie -> Zeitanker reicht.
 BACKUP_STATUS_PATH = os.getenv("LIB_BACKUP_STATUS", "/gedanken/.gdrive-backup-status.json")
-CONV_CATEGORY = os.getenv("LIB_CONV_CATEGORY", "gespräche")
+CONV_CATEGORY = os.getenv("LIB_CONV_CATEGORY", "Gespräche")
 # Basis-Auswahl (immer verfuegbar). Die VOLLE Liste inkl. verbundener Codex/GPT-Modelle kommt zur
 # Laufzeit aus agent /config (siehe _all_models) — Frank waehlt im Dashboard; nachts darf es das
 # staerkste sein (sein Wunsch: GPT mit kraeftigem Thinking).

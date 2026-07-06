@@ -344,7 +344,7 @@
 			"eingebaut": "23.06.2026",
 			"dienst": "agent + dashboard (Logbuch-Tab), Ablage auf Platte Z",
 			"kurz": "Beendete Gespräche landen als Text-Protokoll auf der Samba-Platte UND als durchsuchbarer Eintrag im Gehirn.",
-			"erklaerung": "Jede Gesprächssitzung wird nach dem Ende (bewusst per /end oder nach 30 Minuten Ruhe) zweifach gesichert: als .txt-Protokoll mit Zeitstempeln auf der Samba-Platte (Franks Z:) und als Eintrag in der Kategorie 'gespräche' im Gehirn — damit auch alte Unterhaltungen semantisch durchsuchbar sind ('was hatten wir über X besprochen?'). Das Dashboard zeigt das Logbuch nach Jahren/Monaten gegliedert, mit Vorschau-Zeile und Lösch-Knopf, der Datei UND Gehirn-Eintrag gemeinsam entfernt. Gespräche zählen bewusst nicht in die Eintrags-Gesamtzahl."
+			"erklaerung": "Jede Gesprächssitzung wird nach dem Ende (bewusst per /end oder nach 30 Minuten Ruhe) zweifach gesichert: als .txt-Protokoll mit Zeitstempeln auf der Samba-Platte (Franks Z:) und als Eintrag in der Kategorie 'Gespräche' im Gehirn — damit auch alte Unterhaltungen semantisch durchsuchbar sind ('was hatten wir über X besprochen?'). Das Dashboard zeigt das Logbuch nach Jahren/Monaten gegliedert, mit Vorschau-Zeile und Lösch-Knopf, der Datei UND Gehirn-Eintrag gemeinsam entfernt. Gespräche zählen bewusst nicht in die Eintrags-Gesamtzahl."
 		},
 		{
 			"id": "backup",
