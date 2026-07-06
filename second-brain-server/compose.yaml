@@ -227,12 +227,14 @@ services:
       DASH_LOGBOOK_DIR: /logbook        # Logbuch-.txt-Protokolle anzeigen (gleicher Ordner wie der agent schreibt)
       DASH_BACKUP_DIR: /control         # Steuer-Verzeichnis (dashboard-schreibbar): Backup-Status lesen + Trigger-/Login-Flags schreiben
       DASH_BACKUP_ROOT: /gedanken       # komplettes Z-Backup (read-only) -> Inhalts-Liste "was liegt im Drive-Backup"
+      DASH_FEATURES_FILE: /app/data/features.json  # bearbeitbare System-Info-Chronik persistent speichern
       # GROQ_API_KEY kommt aus .env via env_file (Groq whisper-large-v3-turbo fuer den Mikrofon-Button).
     volumes:
       - /opt/second-brain:/hostfs:ro   # NUR fuer die Speicherplatz-Anzeige (read-only; kein Host-Root)
       - /srv/samba/gedanken/Logbuch:/logbook:ro   # Logbuch-Protokolle nur LESEN (Anzeige im Einstellungen-Tab)
       - /srv/samba/gedanken:/gedanken:ro          # komplettes Z-Backup nur LESEN -> Inhalts-Liste (Qdrant-Snapshots, Logbuch, Eval-Logs, kuenftige Ordner)
       - /opt/second-brain/backup-control:/control # Steuer-Verzeichnis (dashboard-uid beschreibbar): Status lesen + Trigger-/Login-Flags schreiben; Host-systemd fuehrt aus
+      - ./dashboard-data:/app/data      # Dashboard uid 10002 muss schreiben koennen: bearbeitbare System-Info-Chronik
     deploy:
       resources:
         limits:
