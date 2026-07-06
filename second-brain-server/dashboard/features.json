@@ -1,7 +1,15 @@
 {
-	"stand": "06.07.2026, 18:54 Uhr",
+	"stand": "06.07.2026, 19:08 Uhr",
 	"hinweis": "PFLEGE-PFLICHT: Bei JEDEM Deploy, der ein neues System/Feature einbaut, hier einen Eintrag ERGAENZEN (neueste zuerst) — mit Datum + Uhrzeit und ausfuehrlicher Erklaerung. Diese Datei ist die Quelle des Info-Bereichs in den Dashboard-Einstellungen (GET /api/features). Regel verankert in DEPLOY.md.",
 	"features": [
+		{
+			"id": "agenten-einstellungen-ohne-preisfenster",
+			"name": "Agenten-Einstellungen: Preisfenster entfernt",
+			"eingebaut": "06.07.2026, 19:08 Uhr",
+			"dienst": "dashboard 0.55.1",
+			"kurz": "Die Agenten-Karte zeigt nur noch Modellwahl, Thinking, Codex-Verbindung und Tavily-Schalter; das Preisfenster ist komplett entfernt.",
+			"erklaerung": "Unter Einstellungen -> Agenten stand bisher unter den Modell-Dropdowns eine separate Preisbox mit Modellkosten je 1 Mio Token. Frank braucht diese Anzeige nicht mehr. Deshalb wurde der Preiscontainer aus der Agenten-Karte entfernt und die zugehörige Rendering-Logik in loadSettings() gelöscht. Die eigentliche Agenten-Konfiguration bleibt unverändert: Hauptagent, Router, Speicheragent und Abfrageagent behalten ihre Modell- und Thinking-Auswahl; Codex-Verbindungsstatus, Gerätecode, Tavily-Schalter und Speichern funktionieren weiter wie vorher."
+		},
 		{
 			"id": "kontext-prompts-dashboard-android-sync",
 			"name": "Kontext-Prompts: Android-K jetzt auch im Dashboard und zentral synchronisiert",

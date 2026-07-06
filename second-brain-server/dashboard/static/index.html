@@ -1271,7 +1271,6 @@ button{font-family:inherit;cursor:pointer}
                 <select class="select" id="reasonAbfrage"></select>
               </div>
             </div>
-            <div id="modelPricesInfo" style="margin-top:2px;margin-bottom:10px"></div>
             <div class="field">
               <label>OpenAI Codex / ChatGPT</label>
               <div class="muted-note" id="codexState">Status wird geladen…</div>
@@ -2519,12 +2518,6 @@ button{font-family:inherit;cursor:pointer}
         rrsel.innerHTML = [`<option value="auto"${rr==="auto"?" selected":""}>auto (wie Hauptagent)</option>`]
           .concat(ravail.map(v=>`<option${v===rr?" selected":""}>${v}</option>`)).join("");
         enhanceSelect(rrsel);
-      }
-      const prc = c.model_prices || {};
-      const pinfo = document.getElementById("modelPricesInfo");
-      if (pinfo) {
-        const rows = avail.map(v=>{ const p=prc[v]; const pr=(p&&p.input!=null)?`$${p.input} / $${p.output}`:"über Abo"; return `<div style="display:flex;justify-content:space-between;gap:12px;padding:1px 0"><span>${v}</span><span style="opacity:.7">${pr}</span></div>`; }).join("");
-        pinfo.innerHTML = `<div style="font-size:12px;border:1px solid var(--border);border-radius:8px;padding:8px 10px"><div style="font-weight:600;margin-bottom:3px">Preise je 1 Mio Token (Input / Output, USD)</div>${rows}</div>`;
       }
       const tav = document.getElementById("tavilyEnabled");
       if(tav) tav.checked = c.tavily_enabled !== false;
