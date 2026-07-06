@@ -244,6 +244,7 @@ public sealed class ModelRegistry
             }
             group.ProviderId = defaults.ProviderId;
             group.ProviderName = defaults.ProviderName;
+            group.Title = defaults.Title;
             if (group.Models.Count == 0 || group.Models.All(m => string.IsNullOrWhiteSpace(m.Slug)))
             {
                 group.Models.Clear();
@@ -279,17 +280,17 @@ public sealed class ModelRegistry
     private static ObservableCollection<ModelGroupEntry> CreateDefaults(IEnumerable<ModelEntry>? openRouterModels = null) => new()
     {
         CreateGroup("openrouter", "OpenRouter", "openrouter", "OpenRouter", NormalizeOpenRouter(openRouterModels).ToArray()),
-        CreateGroup("entropic", "Entropic", "anthropic", "Entropic", new[]
+        CreateGroup("entropic", "Anthropic", "anthropic", "Anthropic", new[]
         {
-            Model("claude-fable-5", "Claude Fable 5", "anthropic", "Entropic"),
-            Model("claude-opus-4-8", "Claude Opus 4.8", "anthropic", "Entropic"),
-            Model("claude-sonnet-5", "Claude Sonnet 5", "anthropic", "Entropic"),
-            Model("claude-haiku-4-5", "Claude Haiku 4.5", "anthropic", "Entropic"),
-            Model("claude-opus-4-7", "Claude Opus 4.7", "anthropic", "Entropic"),
-            Model("claude-opus-4-6", "Claude Opus 4.6", "anthropic", "Entropic"),
-            Model("claude-sonnet-4-6", "Claude Sonnet 4.6", "anthropic", "Entropic"),
-            Model("claude-opus-4-5", "Claude Opus 4.5", "anthropic", "Entropic"),
-            Model("claude-sonnet-4-5", "Claude Sonnet 4.5", "anthropic", "Entropic"),
+            Model("claude-fable-5", "Claude Fable 5", "anthropic", "Anthropic"),
+            Model("claude-opus-4-8", "Claude Opus 4.8", "anthropic", "Anthropic"),
+            Model("claude-sonnet-5", "Claude Sonnet 5", "anthropic", "Anthropic"),
+            Model("claude-haiku-4-5", "Claude Haiku 4.5", "anthropic", "Anthropic"),
+            Model("claude-opus-4-7", "Claude Opus 4.7", "anthropic", "Anthropic"),
+            Model("claude-opus-4-6", "Claude Opus 4.6", "anthropic", "Anthropic"),
+            Model("claude-sonnet-4-6", "Claude Sonnet 4.6", "anthropic", "Anthropic"),
+            Model("claude-opus-4-5", "Claude Opus 4.5", "anthropic", "Anthropic"),
+            Model("claude-sonnet-4-5", "Claude Sonnet 4.5", "anthropic", "Anthropic"),
         }),
         CreateGroup("openrouter-free", "OpenRouterFree", "openrouter", "OpenRouter", new[]
         {
