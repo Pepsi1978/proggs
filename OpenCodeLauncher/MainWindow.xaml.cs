@@ -1,6 +1,7 @@
 using System.Runtime.InteropServices;
 using System.Windows;
 using System.Windows.Controls.Primitives;
+using System.Windows.Data;
 using System.Windows.Input;
 using System.Windows.Interop;
 using OpenCodeLauncher.Services;
@@ -321,6 +322,8 @@ public partial class MainWindow : Window
         _dragStartPoint = e.GetPosition(lb);
         _dragSourceGroup = lb.DataContext as OpenCodeLauncher.Models.ModelGroupEntry;
         _dragSourceIndex = IndexFromOriginalSource(lb, e.OriginalSource);
+        if (_dragSourceGroup != null && _dragSourceIndex >= 0 && _dragSourceIndex < _dragSourceGroup.Models.Count)
+            ViewModel.SelectedModel = _dragSourceGroup.Models[_dragSourceIndex];
     }
 
     private void ModelList_PreviewMouseMove(object sender, MouseEventArgs e)
@@ -450,4 +453,13 @@ public partial class MainWindow : Window
         public RECT rcWork;
         public int dwFlags;
     }
+}
+
+public sealed class ReferenceEqualsConverter : IMultiValueConverter
+{
+    public object Convert(object[] values, Type targetType, object parameter, System.Globalization.CultureInfo culture)
+        => values.Length >= 2 && ReferenceEquals(values[0], values[1]);
+
+    public object[] ConvertBack(object value, Type[] targetTypes, object parameter, System.Globalization.CultureInfo culture)
+        => targetTypes.Select(_ => Binding.DoNothing).ToArray();
 }

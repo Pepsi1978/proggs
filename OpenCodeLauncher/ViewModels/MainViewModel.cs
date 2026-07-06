@@ -27,8 +27,8 @@ public sealed partial class MainViewModel : ObservableObject
         _ = RefreshOpenRouterFreeModelsAsync();
         WorkDir = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), "proggs");
 
-        var version = Assembly.GetExecutingAssembly().GetName().Version?.ToString(3) ?? "1.6.0";
-        Version = $"Version {version} (06.07.2026, 11:38 Uhr)";
+        var version = Assembly.GetExecutingAssembly().GetName().Version?.ToString(3) ?? "1.6.1";
+        Version = $"Version {version} (06.07.2026, 12:06 Uhr)";
     }
 
     public ObservableCollection<ModelGroupEntry> ModelGroups { get; } = new();
@@ -109,6 +109,8 @@ public sealed partial class MainViewModel : ObservableObject
 
         if (provider == "openai" || slug.StartsWith("gpt-5", StringComparison.OrdinalIgnoreCase))
             return ["none", "minimal", "low", "medium", "high", "xhigh"];
+        if (provider == "opencode" || provider == "opencode-go")
+            return ["medium", "high", "max"];
         if (provider == "anthropic" || slug.Contains("claude", StringComparison.OrdinalIgnoreCase))
             return ["high", "max"];
         if (provider == "google" || slug.Contains("gemini", StringComparison.OrdinalIgnoreCase))

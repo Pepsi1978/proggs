@@ -56,12 +56,12 @@ public sealed class OpenCodeLauncherService
 
         if (!string.Equals(model.ProviderId, "openrouter", StringComparison.OrdinalIgnoreCase))
         {
-            if (string.Equals(model.ProviderId, "openai", StringComparison.OrdinalIgnoreCase) && !string.IsNullOrWhiteSpace(thinkingLevel))
+            if (!string.IsNullOrWhiteSpace(thinkingLevel))
             {
                 var root = ReadConfig();
                 PatchDirectThinking(root, model.ProviderId, model.Slug, model.DisplayName, thinkingLevel);
                 WriteConfig(root);
-                log.Info("OpenCodeLauncherService", "ConfigureProvider", $"OpenAI-Thinking gesetzt: {model.Slug} -> {thinkingLevel}");
+                log.Info("OpenCodeLauncherService", "ConfigureProvider", $"Direktmodell-Thinking gesetzt: {model.ProviderId}/{model.Slug} -> {thinkingLevel}");
             }
             log.Info("OpenCodeLauncherService", "ConfigureProvider", $"Direktmodell ohne OpenRouter-Routing: {modelString}");
             return modelString;
@@ -106,6 +106,15 @@ public sealed class OpenCodeLauncherService
             if (!string.IsNullOrEmpty(wt))
             {
                 var tabColor = PickTerminalTabColor();
+                var robustLauncherScript = ResolveRobustLauncherScript();
+                if (!string.IsNullOrEmpty(robustLauncherScript))
+                {
+                    var robustProcess = LaunchViaRobustPowerShell(wt, robustLauncherScript, modelString, workDir, thinkingLevel, tabColor, log);
+                    log.Info("OpenCodeLauncherService", "Launch", $"robuster Windows-Terminal-Launcher gestartet (PID {robustProcess?.Id})", new { modelString, workDir, thinkingLevel, tabColor = tabColor.Name });
+                    return;
+                }
+
+                log.Warn("OpenCodeLauncherService", "Launch", "start-wt-common.ps1 nicht gefunden; nutze direkten Windows-Terminal-Start ohne Retry-Wrapper");
                 psi.FileName = wt;
                 psi.ArgumentList.Add("new-tab");
                 psi.ArgumentList.Add("--tabColor");
@@ -161,6 +170,81 @@ public sealed class OpenCodeLauncherService
     private static TerminalTabColor PickTerminalTabColor() => TerminalTabColors[Random.Shared.Next(TerminalTabColors.Length)];
 
     private static string EscapePowerShellSingleQuotedValue(string value) => value.Replace("'", "''", StringComparison.Ordinal);
+
+    private static string? ResolveRobustLauncherScript()
+    {
+        var home = Environment.GetFolderPath(Environment.SpecialFolder.UserProfile);
+        var installed = Path.Combine(home, "start-wt-common.ps1");
+        if (File.Exists(installed)) return installed;
+
+        var repoMirror = Path.Combine(home, "proggs", "claude-code-setup", "launcher", "start-wt-common.ps1");
+        return File.Exists(repoMirror) ? repoMirror : null;
+    }
+
+    private static Process? LaunchViaRobustPowerShell(
+        string wtPath,
+        string robustLauncherScript,
+        string modelString,
+        string workDir,
+        string? thinkingLevel,
+        TerminalTabColor tabColor,
+        Logger log)
+    {
+        var title = string.IsNullOrWhiteSpace(thinkingLevel) ? $"OpenCode-{tabColor.Name}" : $"OpenCode-{tabColor.Name}-{thinkingLevel}";
+        var command = BuildOpenCodeCommand(modelString, thinkingLevel);
+        var tabArgs = new[]
+        {
+            "new-tab",
+            "--tabColor", tabColor.Hex,
+            "--title", title,
+            "--startingDirectory", workDir,
+            "pwsh.exe",
+            "-NoExit",
+            "-ExecutionPolicy", "Bypass",
+            "-Command", command
+        };
+        var fallbackArgs = new[]
+        {
+            "-NoExit",
+            "-ExecutionPolicy", "Bypass",
+            "-Command", command
+        };
+
+        var tempScript = Path.Combine(Path.GetTempPath(), $"opencode-launcher-wt-{Guid.NewGuid():N}.ps1");
+        var script = $$"""
+$ErrorActionPreference = 'Continue'
+. {{PowerShellLiteral(robustLauncherScript)}}
+$tabArgs = @({{PowerShellArrayLiteral(tabArgs)}})
+$fallbackArgs = @({{PowerShellArrayLiteral(fallbackArgs)}})
+try {
+    $ok = Start-WtCliRobust -LogFile {{PowerShellLiteral(log.LogPath)}} -WtPath {{PowerShellLiteral(wtPath)}} -TabArgs $tabArgs -InnerMatch 'opencode\s+-m' -FallbackPwshArgs $fallbackArgs -FallbackWorkDir {{PowerShellLiteral(workDir)}}
+    if (-not $ok) { exit 2 }
+} finally {
+    Remove-Item -LiteralPath $PSCommandPath -Force -ErrorAction SilentlyContinue
+}
+""";
+        File.WriteAllText(tempScript, script, new UTF8Encoding(encoderShouldEmitUTF8Identifier: false));
+
+        var pwshExe = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ProgramFiles), "PowerShell", "7", "pwsh.exe");
+        if (!File.Exists(pwshExe)) pwshExe = "pwsh.exe";
+        var psi = new ProcessStartInfo
+        {
+            FileName = pwshExe,
+            UseShellExecute = false,
+            CreateNoWindow = true,
+            WorkingDirectory = workDir,
+        };
+        psi.ArgumentList.Add("-NoProfile");
+        psi.ArgumentList.Add("-ExecutionPolicy");
+        psi.ArgumentList.Add("Bypass");
+        psi.ArgumentList.Add("-File");
+        psi.ArgumentList.Add(tempScript);
+        return Process.Start(psi);
+    }
+
+    private static string PowerShellArrayLiteral(IEnumerable<string> values) => string.Join(", ", values.Select(PowerShellLiteral));
+
+    private static string PowerShellLiteral(string value) => $"'{EscapePowerShellSingleQuotedValue(value)}'";
 
     private static string BuildOpenCodeCommand(string modelString, string? thinkingLevel)
     {
