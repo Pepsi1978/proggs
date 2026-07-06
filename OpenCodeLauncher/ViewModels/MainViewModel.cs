@@ -27,8 +27,8 @@ public sealed partial class MainViewModel : ObservableObject
         _ = RefreshOpenRouterFreeModelsAsync();
         WorkDir = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), "proggs");
 
-        var version = Assembly.GetExecutingAssembly().GetName().Version?.ToString(3) ?? "1.6.3";
-        Version = $"Version {version} (06.07.2026, 12:48 Uhr)";
+        var version = Assembly.GetExecutingAssembly().GetName().Version?.ToString(3) ?? "1.6.4";
+        Version = $"Version {version} (06.07.2026, 13:15 Uhr)";
     }
 
     public ObservableCollection<ModelGroupEntry> ModelGroups { get; } = new();
@@ -104,19 +104,7 @@ public sealed partial class MainViewModel : ObservableObject
 
     private static IEnumerable<string> GetStaticThinkingLevels(ModelEntry model)
     {
-        var provider = model.ProviderId.ToLowerInvariant();
-        var slug = model.Slug.ToLowerInvariant();
-
-        if (provider == "openai" || slug.StartsWith("gpt-5", StringComparison.OrdinalIgnoreCase))
-            return ["none", "minimal", "low", "medium", "high", "xhigh"];
-        if (provider == "opencode" || provider == "opencode-go")
-            return ["medium", "high", "max"];
-        if (provider == "anthropic" || slug.Contains("claude", StringComparison.OrdinalIgnoreCase))
-            return ["high", "max"];
-        if (provider == "google" || slug.Contains("gemini", StringComparison.OrdinalIgnoreCase))
-            return ["low", "high"];
-
-        return [];
+        return OpenCodeVariantCatalog.GetLauncherLevels(model);
     }
 
     private static ThinkingOptionEntry ToThinkingOption(string value)
@@ -129,6 +117,7 @@ public sealed partial class MainViewModel : ObservableObject
             {
                 "xhigh" => "X High",
                 "max" => "Max",
+                "thinking" => "Thinking",
                 "none" => "None",
                 "minimal" => "Minimal",
                 "low" => "Low",
@@ -145,6 +134,7 @@ public sealed partial class MainViewModel : ObservableObject
                 "high" => "gründlich",
                 "xhigh" => "maximal hoch",
                 "max" => "Maximum",
+                "thinking" => "aktiviert",
                 _ => "Thinking"
             }
         };

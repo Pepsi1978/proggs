@@ -68,7 +68,7 @@ public sealed class OpenCodeLauncherService
             if (!string.IsNullOrWhiteSpace(thinkingLevel))
             {
                 var root = ReadConfig();
-                PatchDirectThinking(root, model.ProviderId, model.Slug, model.DisplayName, thinkingLevel);
+                PatchDirectModel(root, model.ProviderId, model.Slug, model.DisplayName);
                 WriteConfig(root);
                 PatchModelVariantState(modelString, thinkingLevel);
                 log.Info("OpenCodeLauncherService", "ConfigureProvider", $"Direktmodell-Thinking gesetzt: {model.ProviderId}/{model.Slug} -> {thinkingLevel}");
@@ -428,7 +428,7 @@ try {
             ["require_parameters"] = true,
         };
         var optionsBlock = new JsonObject { ["provider"] = providerBlock };
-        ApplyThinkingOptions(optionsBlock, thinkingLevel, includeOpenRouterReasoningObject: true);
+        ClearThinkingOptions(optionsBlock);
 
         var models = JsonExtensions.EnsureObject(root).GetOrAddObject("provider").GetOrAddObject("openrouter").GetOrAddObject("models");
         var modelNode = models.GetOrAddObject(slug);
@@ -438,33 +438,23 @@ try {
         return root;
     }
 
-    private static void PatchDirectThinking(JsonNode root, string providerId, string slug, string modelDisplayName, string thinkingLevel)
+    private static void PatchDirectModel(JsonNode root, string providerId, string slug, string modelDisplayName)
     {
         var models = JsonExtensions.EnsureObject(root).GetOrAddObject("provider").GetOrAddObject(providerId).GetOrAddObject("models");
         var modelNode = models.GetOrAddObject(slug);
         modelNode["name"] = modelDisplayName;
 
         var optionsBlock = modelNode.GetOrAddObject("options");
-        ApplyThinkingOptions(optionsBlock, thinkingLevel, includeOpenRouterReasoningObject: false);
+        ClearThinkingOptions(optionsBlock);
     }
 
-    private static void ApplyThinkingOptions(JsonObject optionsBlock, string? thinkingLevel, bool includeOpenRouterReasoningObject)
+    private static void ClearThinkingOptions(JsonObject optionsBlock)
     {
-        if (string.IsNullOrWhiteSpace(thinkingLevel))
-        {
-            optionsBlock.Remove("reasoningEffort");
-            optionsBlock.Remove("reasoning");
-            return;
-        }
-
-        optionsBlock["reasoningEffort"] = thinkingLevel;
-        if (includeOpenRouterReasoningObject)
-        {
-            optionsBlock["reasoning"] = new JsonObject
-            {
-                ["effort"] = thinkingLevel
-            };
-        }
+        optionsBlock.Remove("reasoningEffort");
+        optionsBlock.Remove("reasoningSummary");
+        optionsBlock.Remove("reasoning");
+        optionsBlock.Remove("thinking");
+        optionsBlock.Remove("effort");
     }
 }
 

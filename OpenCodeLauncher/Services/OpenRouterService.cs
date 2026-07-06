@@ -200,31 +200,9 @@ public sealed class OpenRouterService
 
     private static List<string> ParseThinkingLevels(JsonElement item)
     {
-        if (item.TryGetProperty("reasoning", out var reasoning) && reasoning.ValueKind == JsonValueKind.Object)
-        {
-            if (reasoning.TryGetProperty("supported_efforts", out var efforts))
-            {
-                if (efforts.ValueKind == JsonValueKind.Array)
-                {
-                    var levels = efforts.EnumerateArray()
-                        .Where(e => e.ValueKind == JsonValueKind.String)
-                        .Select(e => e.GetString())
-                        .Where(s => !string.IsNullOrWhiteSpace(s))
-                        .Select(s => s!)
-                        .Distinct(StringComparer.OrdinalIgnoreCase)
-                        .ToList();
-                    if (levels.Count > 0) return levels;
-                }
-
-                if (efforts.ValueKind == JsonValueKind.Null && ModelMentionsReasoning(item))
-                    return ["none", "minimal", "low", "medium", "high", "xhigh"];
-            }
-
-            if (ModelMentionsReasoning(item))
-                return ["none", "minimal", "low", "medium", "high", "xhigh"];
-        }
-
-        return [];
+        if (!item.TryGetProperty("id", out var idEl) || idEl.ValueKind != JsonValueKind.String) return [];
+        var id = idEl.GetString() ?? string.Empty;
+        return OpenCodeVariantCatalog.GetOpenRouterLevels(id, ModelMentionsReasoning(item)).ToList();
     }
 
     private static bool ModelMentionsReasoning(JsonElement item)
