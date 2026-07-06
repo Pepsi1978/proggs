@@ -1007,6 +1007,11 @@ button{font-family:inherit;cursor:pointer}
         .lib-taskrow .nm{flex:1;min-width:0}
         .lib-taskrow .nm b{display:block}
         .lib-taskrow .nm span{color:var(--text-faint);font-size:12px}
+        .lib-task-edit{display:none;padding:0 0 14px;margin-bottom:6px;border-bottom:1px solid var(--border)}
+        .lib-task-edit.open{display:block}
+        .lib-task-prompt{min-height:155px;font-family:ui-monospace,SFMono-Regular,Consolas,monospace;font-size:12.5px}
+        .lib-proposal{display:none;border:1px solid var(--accent);border-radius:12px;padding:10px 12px;margin-top:8px;background:rgba(255,166,87,.08)}
+        .lib-proposal b{display:block;margin-bottom:4px}
         .lib-sw{appearance:none;width:40px;height:22px;border-radius:11px;background:var(--surface);border:1px solid var(--border);
           position:relative;cursor:pointer;flex-shrink:0;transition:background .2s}
         .lib-sw::after{content:"";position:absolute;top:2px;left:2px;width:16px;height:16px;border-radius:50%;
@@ -4006,12 +4011,16 @@ button{font-family:inherit;cursor:pointer}
       libUpdateProcNote(s);
       const tg=document.getElementById("libTaskToggles"); tg.innerHTML="";
       (r.standard_tasks||[]).forEach(t=>{
+        const wrap=document.createElement("div");
         const row=document.createElement("div"); row.className="lib-taskrow";
-        row.innerHTML='<div class="nm"><b>'+escapeHtml(t.name)+' <span style="font-weight:400;color:var(--text-faint)">(Nr. '+escapeHtml(String(t.nr))+')</span></b><span>'+escapeHtml(t.desc)+'</span></div>';
+        row.innerHTML='<div class="nm"><b>'+escapeHtml(t.name)+' <span style="font-weight:400;color:var(--text-faint)">(Nr. '+escapeHtml(String(t.nr))+')</span></b><span>'+escapeHtml((t.customized?"Bearbeitet · ":"")+(t.desc||""))+'</span></div>';
+        const editB=document.createElement("button"); editB.className="btn btn-sm"; editB.textContent="Bearbeiten";
         const sw=document.createElement("input"); sw.type="checkbox"; sw.className="lib-sw";
         sw.checked=(s.tasks||{})[t.key]!==false; sw.dataset.key=t.key;
         sw.addEventListener("change", queueLibSave);
-        row.appendChild(sw); tg.appendChild(row);
+        const ed=createLibTaskEditBox({name:t.name,definition:t.definition||t.desc||""}, "standard", next=>jlib("standard-tasks/"+encodeURIComponent(t.key),"PUT",{definition:next.definition}));
+        editB.addEventListener("click",()=>{ const open=!ed.classList.contains("open"); ed.classList.toggle("open",open); editB.textContent=open?"Zuklappen":"Bearbeiten"; });
+        row.appendChild(editB); row.appendChild(sw); wrap.appendChild(row); wrap.appendChild(ed); tg.appendChild(wrap);
       });
       renderLibCustom(s.custom_tasks||[]);
       renderLibLearned(r.lernregeln||[]);
@@ -4063,13 +4072,64 @@ button{font-family:inherit;cursor:pointer}
     el.addEventListener("change", ()=>{ if(id==="libUnlimited") syncLibLimits(); queueLibSave(); });
   });
 
+  function createLibTaskEditBox(task, targetType, onSave){
+    const ed=document.createElement("div"); ed.className="lib-task-edit";
+    let dialog=[], proposal=null;
+    ed.innerHTML='<p class="set-desc" style="margin-top:0">Aktueller kompletter Prompt / komplette Aufgabe. Du kannst direkt speichern oder unten mit dem Bibliothekar über eine Verbesserung sprechen.</p>'+
+      '<textarea class="lib-own lib-task-prompt"></textarea>'+
+      '<div class="lib-ivlog" style="max-height:230px"></div>'+
+      '<div class="lib-proposal"><b></b><p class="set-desc" style="margin:0"></p></div>'+
+      '<textarea class="lib-own" placeholder="Was soll die KI an dieser Aufgabe verbessern? Schreib oder diktiere hier deine Änderung …"></textarea>'+
+      '<div class="lib-run-line"><button class="btn btn-sm lib-ai">KI prüfen / überarbeiten</button><button class="btn btn-sm btn-primary lib-save">Ja, speichern</button><button class="btn btn-sm lib-over">Nein, weiter überarbeiten</button><span class="set-desc lib-state"></span></div>';
+    const prompt=ed.querySelector(".lib-task-prompt");
+    const log=ed.querySelector(".lib-ivlog");
+    const change=ed.querySelectorAll("textarea")[1];
+    const prop=ed.querySelector(".lib-proposal");
+    const propName=prop.querySelector("b");
+    const propDef=prop.querySelector("p");
+    const state=ed.querySelector(".lib-state");
+    prompt.value=task.definition||"";
+    function render(){
+      log.innerHTML="";
+      const greet=document.createElement("div"); greet.className="lib-msg bib";
+      greet.textContent="Ich sehe mir diese Nacht-Aufgabe mit dem kompletten aktuellen Prompt an. Sag mir, was anders werden soll; ich prüfe, ob das nachts möglich ist, und formuliere einen speicherbaren Vorschlag.";
+      log.appendChild(greet);
+      dialog.forEach(m=>{ const d=document.createElement("div"); d.className="lib-msg "+(m.von==="frank"?"frank":"bib"); d.textContent=m.text; log.appendChild(d); });
+      log.scrollTop=log.scrollHeight;
+      if(proposal){ propName.textContent=proposal.name||task.name||"Aufgabe"; propDef.textContent=proposal.definition||""; prop.style.display="block"; }
+      else prop.style.display="none";
+    }
+    render();
+    ed.querySelector(".lib-ai").addEventListener("click", async()=>{
+      const txt=(change.value||"").trim(); if(!txt) return;
+      dialog.push({von:"frank",text:txt}); change.value=""; render();
+      state.innerHTML='<span class="lib-spin"></span> Der Bibliothekar denkt nach …';
+      try{
+        const r=await jlib("custom-tasks/interview","POST",{messages:dialog,mode:"edit",target_type:targetType,current_task:{name:task.name||"",definition:prompt.value||""}});
+        dialog.push({von:"bibliothekar",text:r.reply||"…"});
+        if(r.fertig && r.task){ proposal=r.task; prompt.value=r.task.definition||prompt.value; }
+        render(); state.textContent="";
+      }catch(e){ state.textContent="Fehler: "+e.message; }
+    });
+    ed.querySelector(".lib-over").addEventListener("click",()=>{ change.focus(); });
+    ed.querySelector(".lib-save").addEventListener("click", async()=>{
+      const next={name:(proposal&&proposal.name)||task.name||"Aufgabe",definition:(prompt.value||"").trim()};
+      if(next.definition.length<10){ state.textContent="Die Aufgabe ist zu kurz."; return; }
+      try{ await onSave(next); state.textContent="✓ Gespeichert — gilt ab der nächsten Nacht."; loadLibSettings(); }
+      catch(e){ state.textContent="Fehler: "+e.message; }
+    });
+    return ed;
+  }
+
   /* — Eigene Aufgaben (Liste + Interview) — */
   function renderLibCustom(list){
     const box=document.getElementById("libCustomList"); box.innerHTML="";
     if(!list.length){ box.innerHTML='<p class="set-desc">Noch keine eigenen Aufgaben.</p>'; return; }
     list.forEach(t=>{
+      const wrap=document.createElement("div");
       const row=document.createElement("div"); row.className="lib-taskrow";
       row.innerHTML='<div class="nm"><b>'+escapeHtml(t.name||"")+'</b><span>'+escapeHtml(t.definition||"")+'</span></div>';
+      const editB=document.createElement("button"); editB.className="btn btn-sm"; editB.textContent="Bearbeiten";
       const sw=document.createElement("input"); sw.type="checkbox"; sw.className="lib-sw"; sw.checked=t.enabled!==false;
       sw.title="Aufgabe an/aus";
       sw.addEventListener("change", async()=>{
@@ -4083,7 +4143,9 @@ button{font-family:inherit;cursor:pointer}
         try{ await jlib("custom-tasks/"+encodeURIComponent(t.id),"DELETE"); loadLibSettings(); }
         catch(e){ alert("Fehler: "+e.message); }
       });
-      row.appendChild(sw); row.appendChild(del); box.appendChild(row);
+      const ed=createLibTaskEditBox(t, "custom", next=>jlib("custom-tasks/"+encodeURIComponent(t.id),"PUT",{name:next.name,definition:next.definition}));
+      editB.addEventListener("click",()=>{ const open=!ed.classList.contains("open"); ed.classList.toggle("open",open); editB.textContent=open?"Zuklappen":"Bearbeiten"; });
+      row.appendChild(editB); row.appendChild(sw); row.appendChild(del); wrap.appendChild(row); wrap.appendChild(ed); box.appendChild(wrap);
     });
   }
 

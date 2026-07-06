@@ -47,6 +47,8 @@ VERSION = "0.9.0 (05.07.2026, 15.06 Uhr)"  # 0.9.0 (Frank-Wunsch 2026-07-05): Ge
 # ---------------------------------------------------------------------------
 # Konfiguration (Secrets nur aus der Umgebung, nie im Code)
 # ---------------------------------------------------------------------------
+VERSION = "0.10.0 (06.07.2026, 11:45 Uhr)"  # 0.10.0: Standard- und eigene Nacht-Aufgaben sind editierbar. /settings liefert zu jeder Standard-Aufgabe den kompletten aktuellen Prompt, /standard-tasks/{key} speichert Franks bearbeitete Definition als verbindlichen Override, und /custom-tasks/interview kann bestehende Aufgaben mit Verlauf verbessern. Eigene Aufgaben koennen per PUT jetzt Name/Definition aktualisieren. Alt: 0.9.0.
+
 GEMINI_API_KEY = os.getenv("GEMINI_API_KEY") or os.getenv("GOOGLE_API_KEY", "")
 SB_API_KEY = os.getenv("SB_API_KEY", "")
 BRAIN_URL = os.getenv("BRAIN_URL", "http://brain-api:8000").rstrip("/")
@@ -214,6 +216,7 @@ DEFAULT_CONFIG: dict = {
     "dubletten_scan_max": 150,             # greift NUR wenn unlimited=False
     "veraltet_max": 50,                    # greift NUR wenn unlimited=False
     "veraltet_min_age_days": 45,           # juengere Eintraege gelten nie als veraltet
+    "standard_task_overrides": {},          # key -> {definition}; Frank kann Standard-Aufgaben im Dashboard nachschaerfen
     "custom_tasks": [],                    # [{id, name, definition, enabled, created_at}] — Franks eigene Aufgaben
 }
 
@@ -225,6 +228,12 @@ def load_config() -> dict:
         for k, v in cfg.items():
             if k == "tasks" and isinstance(v, dict):
                 merged["tasks"].update({k2: bool(v2) for k2, v2 in v.items() if k2 in STANDARD_TASKS})
+            elif k == "standard_task_overrides" and isinstance(v, dict):
+                merged["standard_task_overrides"] = {
+                    k2: {"definition": str((v2 or {}).get("definition") or "").strip()[:4000]}
+                    for k2, v2 in v.items()
+                    if k2 in STANDARD_TASKS and isinstance(v2, dict) and str((v2 or {}).get("definition") or "").strip()
+                }
             else:
                 merged[k] = v
     model = str(merged.get("model") or "")
@@ -611,6 +620,52 @@ Gespraechs-Protokolle EINES Monats zu einer Monats-Zusammenfassung in leichtem D
 {_UNTRUSTED}
 Antworte NUR mit diesem JSON: {{"text":"die Zusammenfassung"}}"""
 
+
+def _default_standard_definition(key: str) -> str:
+    """Volltext fuer den Dashboard-Editor: fachliche Aufgabe + aktueller Arbeits-Prompt."""
+    meta = STANDARD_TASKS.get(key, {})
+    head = (f"Aufgabe {meta.get('nr', '?')}: {meta.get('name', key)}\n"
+            f"Kurzbeschreibung: {meta.get('desc', '')}\n\nAktueller Arbeits-Prompt:\n")
+    if key in {"dubletten", "widersprueche"}:
+        return head + PAIR_JUDGE_SYSTEM
+    if key == "veraltet":
+        return head + STALE_JUDGE_SYSTEM
+    if key == "kategorien":
+        return head + GARDENER_SPLIT_SYSTEM
+    if key == "luecken":
+        return head + GAP_SYSTEM + "\n\nZusatz-Prompt fuer neue Eintrags-Entwuerfe:\n" + GAP_DRAFT_SYSTEM
+    if key == "verdichtung":
+        return head + CONDENSE_SYSTEM
+    if key == "nachzuegler":
+        return head + ENTITY_EXTRACT_SYSTEM
+    return head + (meta.get("desc") or "")
+
+
+def _effective_standard_definition(cfg: dict, key: str) -> str:
+    ov = ((cfg.get("standard_task_overrides") or {}).get(key) or {}).get("definition")
+    return str(ov or "").strip() or _default_standard_definition(key)
+
+
+def _task_override_block(cfg: dict, keys: "str | list[str]") -> str:
+    if isinstance(keys, str):
+        keys = [keys]
+    overrides = cfg.get("standard_task_overrides") or {}
+    parts: list[str] = []
+    for key in keys:
+        text = str(((overrides.get(key) or {}).get("definition") or "")).strip()
+        if text:
+            name = STANDARD_TASKS.get(key, {}).get("name", key)
+            parts.append(f"### {name}\n{text}")
+    if not parts:
+        return ""
+    return ("\n\nFRANKS AKTUELL BEARBEITETE AUFGABEN-DEFINITION(EN) "
+            "(verbindlich, solange sie nicht den erlaubten JSON-Ausgabeformen widersprechen):\n" +
+            "\n\n".join(parts))[:7000]
+
+
+def _with_task_override(system: str, cfg: dict, keys: "str | list[str]") -> str:
+    return system + _task_override_block(cfg, keys)
+
 ENTITY_EXTRACT_SYSTEM = """Du extrahierst ENTITAETEN aus einem gespeicherten Gedaechtnis-Eintrag.
 - Entitaeten sind konkrete, benennbare Dinge: Personen, Orte, Geraete/Produkte, Projekte/Apps, Praeparate/Wirkstoffe, Organisationen, Tiere.
 - KEINE abstrakten Begriffe (kein 'Gesundheit', 'Idee', 'Training' allgemein), KEINE Daten/Zahlen, KEINE ganzen Saetze.
@@ -642,9 +697,11 @@ Maximal 6 Funde. Keine Funde -> leere Liste.
 Antworte NUR mit diesem JSON: {{"funde":[{{"titel":"kurz","beschreibung":"...","empfehlung":"...","aktion":{{...}}}}]}}"""
 
 INTERVIEW_SYSTEM = """Du bist der Nachtschicht-Bibliothekar von Franks zweitem Gehirn und hilfst ihm,
-eine NEUE eigene Nacht-Aufgabe zu definieren. Fuehre ein kurzes, freundliches Interview in leichtem
-Deutsch (du-Form): Frag nach, was er genau will, mach eigene Vorschlaege, sag ehrlich, ob die Idee
-als Nacht-Aufgabe sinnvoll umsetzbar ist — und schlage Verbesserungen vor.
+eine NEUE oder BESTEHENDE Nacht-Aufgabe zu definieren oder zu verbessern. Fuehre ein kurzes,
+freundliches Interview in leichtem Deutsch (du-Form): Frag nach, was er genau will, mach eigene
+Vorschlaege, sag ehrlich, ob die Idee als Nacht-Aufgabe sinnvoll umsetzbar ist — und schlage
+Verbesserungen vor. Wenn eine AKTUELLE AUFGABE mitgegeben ist, erhalte ihren Sinn und arbeite Franks
+Änderungswunsch in die bestehende Aufgabe ein, statt bei null anzufangen.
 WAS DU NACHTS KANNST: alle Eintraege lesen (Titel, Kategorien, Datum, Volltexte), Dinge pruefen/
 vergleichen/finden und daraus VORSCHLAEGE erzeugen, die Frank morgens per Klick bestaetigt
 (zusammenfuehren, Text aktualisieren, in Papierkorb, Kategorie aendern, neuen Eintrag anlegen, Hinweis).
@@ -857,7 +914,7 @@ def _task_nachzuegler(cfg: dict, st: dict, budget: NightBudget, entries: dict, r
         e = entries[did]
         try:
             content = f"Titel: {e['title']}\n\n{e['text']}"[:2500]
-            raw = _extract_json(llm(_with_rules(ENTITY_EXTRACT_SYSTEM), content, model=cfg["model"], max_tokens=512, temperature=0.1))
+            raw = _extract_json(llm(_with_rules(_with_task_override(ENTITY_EXTRACT_SYSTEM, cfg, "nachzuegler")), content, model=cfg["model"], max_tokens=512, temperature=0.1))
             ents = json.loads(raw).get("entitaeten") or []
             for x in ents[:6]:
                 name = (x.get("name") or "").strip() if isinstance(x, dict) else ""
@@ -911,7 +968,7 @@ def _task_dubletten_widersprueche(cfg: dict, st: dict, budget: NightBudget, entr
                         f"angelegt {e.get('created_at') or '?'}):\n{_excerpt(e['text'], 2400)}\n\n"
                         f"EINTRAG B (doc_id={other}, Titel: {oe['title']}, Kategorie: {oe['category']}, "
                         f"angelegt {oe.get('created_at') or '?'}):\n{_excerpt(oe['text'], 2400)}")
-                verdict = json.loads(_extract_json(llm(_with_rules(PAIR_JUDGE_SYSTEM), user, model=cfg["model"], max_tokens=4096)))
+                verdict = json.loads(_extract_json(llm(_with_rules(_with_task_override(PAIR_JUDGE_SYSTEM, cfg, ["dubletten", "widersprueche"])), user, model=cfg["model"], max_tokens=4096)))
             except Exception:  # noqa: BLE001
                 _log(logging.WARNING, "Paar-Urteil fehlgeschlagen", pair=pair, exc_info=True)
                 continue
@@ -1005,7 +1062,7 @@ def _task_veraltet(cfg: dict, st: dict, budget: NightBudget, entries: dict, repo
         try:
             user = (f"Eintrag (Titel: {e['title']}, Kategorie: {e['category']}, zuletzt geändert vor "
                     f"{age_days(e)} Tagen, heute ist {now.strftime('%d.%m.%Y')}):\n{_excerpt(e['text'], 1500)}")
-            verdict = json.loads(_extract_json(llm(_with_rules(STALE_JUDGE_SYSTEM), user, model=cfg["model"], max_tokens=512)))
+            verdict = json.loads(_extract_json(llm(_with_rules(_with_task_override(STALE_JUDGE_SYSTEM, cfg, "veraltet")), user, model=cfg["model"], max_tokens=512)))
         except Exception:  # noqa: BLE001
             _log(logging.WARNING, "Veraltet-Urteil fehlgeschlagen", doc_id=did, exc_info=True)
             continue
@@ -1044,7 +1101,7 @@ def _task_kategorien(cfg: dict, st: dict, budget: NightBudget, entries: dict, re
         titles = "\n".join(f"- {did}: {e['title'] or '(ohne Titel)'}" for did, e in members[:80])
         try:
             user = f"Kategorie: {cat} ({n} Einträge)\nEinträge:\n{titles}"
-            verdict = json.loads(_extract_json(llm(_with_rules(GARDENER_SPLIT_SYSTEM), user, model=cfg["model"], max_tokens=2048)))
+            verdict = json.loads(_extract_json(llm(_with_rules(_with_task_override(GARDENER_SPLIT_SYSTEM, cfg, "kategorien")), user, model=cfg["model"], max_tokens=2048)))
         except Exception:  # noqa: BLE001
             _log(logging.WARNING, "Gaertner-Urteil fehlgeschlagen", cat=cat, exc_info=True)
             continue
@@ -1103,7 +1160,7 @@ def _task_luecken(cfg: dict, st: dict, budget: NightBudget, entries: dict, repor
         return
     corpus = "\n\n---\n\n".join(_excerpt(e["text"], 1500) for _, e in recent)[:35000]
     try:
-        verdict = json.loads(_extract_json(llm(_with_rules(GAP_SYSTEM), f"Gespräche der letzten Zeit:\n\n{corpus}", model=cfg["model"], max_tokens=1024)))
+        verdict = json.loads(_extract_json(llm(_with_rules(_with_task_override(GAP_SYSTEM, cfg, "luecken")), f"Gespräche der letzten Zeit:\n\n{corpus}", model=cfg["model"], max_tokens=1024)))
     except Exception:  # noqa: BLE001
         _log(logging.WARNING, "Luecken-Analyse fehlgeschlagen", exc_info=True)
         report["zahlen"]["luecken"] = 0
@@ -1129,7 +1186,7 @@ def _task_luecken(cfg: dict, st: dict, budget: NightBudget, entries: dict, repor
             break
         try:
             frag = "\n\n".join(f"[{h.get('title') or '?'}] {_excerpt(h.get('text') or h.get('match') or '', 500)}" for h in hits) or "(keine Fundstücke)"
-            draft = json.loads(_extract_json(llm(_with_rules(GAP_DRAFT_SYSTEM), f"Thema: {thema}\n\nFundstücke:\n{frag}", model=cfg["model"], max_tokens=1500)))
+            draft = json.loads(_extract_json(llm(_with_rules(_with_task_override(GAP_DRAFT_SYSTEM, cfg, "luecken")), f"Thema: {thema}\n\nFundstücke:\n{frag}", model=cfg["model"], max_tokens=1500)))
         except Exception:  # noqa: BLE001
             draft = {}
         titel = (draft.get("titel") or thema).strip()[:200]
@@ -1177,7 +1234,7 @@ def _task_verdichtung(cfg: dict, st: dict, budget: NightBudget, entries: dict, r
         convs = sorted(by_month[month], key=lambda e: e.get("created_at") or "")
         corpus = "\n\n---\n\n".join(_excerpt(e["text"], 2000) for e in convs)[:60000]
         try:
-            draft = json.loads(_extract_json(llm(_with_rules(CONDENSE_SYSTEM), f"Monat: {month} — {len(convs)} Gespräche:\n\n{corpus}",
+            draft = json.loads(_extract_json(llm(_with_rules(_with_task_override(CONDENSE_SYSTEM, cfg, "verdichtung")), f"Monat: {month} — {len(convs)} Gespräche:\n\n{corpus}",
                                                  model=cfg["model"], max_tokens=3000)))
         except Exception:  # noqa: BLE001
             _log(logging.WARNING, "Verdichtung fehlgeschlagen", month=month, exc_info=True)
@@ -1280,7 +1337,7 @@ def _task_friction(cfg: dict, st: dict, budget: NightBudget, entries: dict, repo
     corpus = "\n\n=====\n\n".join(f"[{e.get('title') or '?'}]\n{_excerpt(e['text'], 2200)}"
                                   for _, e in sess[:14])[:35000]
     try:
-        verdict = json.loads(_extract_json(llm(_with_rules(FRICTION_SYSTEM),
+        verdict = json.loads(_extract_json(llm(_with_rules(_with_task_override(FRICTION_SYSTEM, cfg, "friction")),
                                                f"Session-Protokolle (neueste zuerst):\n\n{corpus}",
                                                model=cfg["model"], max_tokens=1200)))
     except Exception:  # noqa: BLE001 — Analyse-Fehler beendet die Nacht nicht
@@ -1949,6 +2006,16 @@ def _all_models() -> list[str]:
     return models
 
 
+def _standard_task_rows(cfg: dict) -> list[dict]:
+    rows = []
+    overrides = cfg.get("standard_task_overrides") or {}
+    for k, v in STANDARD_TASKS.items():
+        rows.append({"key": k, **v,
+                     "definition": _effective_standard_definition(cfg, k),
+                     "customized": k in overrides})
+    return rows
+
+
 class SettingsReq(BaseModel):
     enabled: "bool | None" = None
     start_time: "str | None" = Field(default=None, pattern="^([01]?\\d|2[0-3]):[0-5]\\d$")
@@ -1966,7 +2033,7 @@ def get_settings() -> dict:
     return {"ok": True, "settings": cfg, "models": _all_models(),
             "reasoning_available": REASONING_AVAILABLE,
             "lernregeln": load_learned(),
-            "standard_tasks": [{"key": k, **v} for k, v in STANDARD_TASKS.items()]}
+            "standard_tasks": _standard_task_rows(cfg)}
 
 
 @app.put("/settings", dependencies=[Depends(require_auth)])
@@ -2002,6 +2069,23 @@ def put_settings(req: SettingsReq) -> dict:
     return {"ok": True, "settings": cfg}
 
 
+class StandardTaskReq(BaseModel):
+    definition: str = Field(..., min_length=10, max_length=4000)
+
+
+@app.put("/standard-tasks/{task_key}", dependencies=[Depends(require_auth)])
+def standard_task_update(task_key: str, req: StandardTaskReq) -> dict:
+    if task_key not in STANDARD_TASKS:
+        raise HTTPException(status_code=404, detail="Standard-Aufgabe nicht gefunden")
+    cfg = load_config()
+    cfg.setdefault("standard_task_overrides", {})[task_key] = {"definition": req.definition.strip()}
+    save_config(cfg)
+    checkpoint("standard_task_update", "Standard-Aufgabe bearbeitet", ok=True, task=task_key)
+    return {"ok": True, "task": {"key": task_key, **STANDARD_TASKS[task_key],
+                                   "definition": _effective_standard_definition(cfg, task_key),
+                                   "customized": True}}
+
+
 # --- Eigene Zusatzaufgaben (Interview + Verwaltung) --------------------------
 class InterviewMsg(BaseModel):
     von: str = Field(..., pattern="^(frank|bibliothekar)$")
@@ -2010,16 +2094,27 @@ class InterviewMsg(BaseModel):
 
 class InterviewReq(BaseModel):
     messages: list[InterviewMsg] = Field(..., min_length=1, max_length=30)
+    mode: str = Field(default="new", pattern="^(new|edit)$")
+    target_type: str = Field(default="custom", pattern="^(custom|standard)$")
+    current_task: "dict[str, Any] | None" = None
 
 
 @app.post("/custom-tasks/interview", dependencies=[Depends(require_auth)])
 def custom_interview(req: InterviewReq) -> dict:
-    """Interview-Dialog fuer eine neue eigene Aufgabe. Sync def -> Threadpool (fastapi §1)."""
+    """Interview-Dialog fuer neue oder bestehende Nacht-Aufgaben. Sync def -> Threadpool (fastapi §1)."""
     cfg = load_config()
     dialog = "\n".join(f"{'FRANK' if m.von == 'frank' else 'BIBLIOTHEKAR'}: {m.text}" for m in req.messages)
+    cur = req.current_task if isinstance(req.current_task, dict) else {}
+    current = ""
+    if cur:
+        current = ("AKTUELLE AUFGABE (vor Franks neuer Änderung):\n"
+                   f"Name: {str(cur.get('name') or '')[:120]}\n"
+                   f"Definition/Prompt:\n{str(cur.get('definition') or '')[:6000]}\n\n")
+    target = "Standard-Aufgabe" if req.target_type == "standard" else "eigene Aufgabe"
     try:
-        raw = json.loads(_extract_json(llm(INTERVIEW_SYSTEM, f"Bisheriger Dialog:\n{dialog}",
-                                           model=cfg["model"], max_tokens=2048, temperature=0.4)))
+        raw = json.loads(_extract_json(llm(INTERVIEW_SYSTEM,
+                                           f"Modus: {req.mode} ({target})\n\n{current}Bisheriger Dialog:\n{dialog}",
+                                            model=cfg["model"], max_tokens=2048, temperature=0.4)))
     except Exception as e:  # noqa: BLE001
         _log(logging.ERROR, "Interview-Call fehlgeschlagen", exc_info=True)
         raise HTTPException(status_code=502, detail=f"Interview fehlgeschlagen: {type(e).__name__}")
@@ -2044,17 +2139,25 @@ def custom_add(req: CustomTaskReq) -> dict:
     return {"ok": True, "task": task}
 
 
-class CustomToggleReq(BaseModel):
-    enabled: bool
+class CustomTaskUpdateReq(BaseModel):
+    enabled: "bool | None" = None
+    name: "str | None" = Field(default=None, min_length=2, max_length=80)
+    definition: "str | None" = Field(default=None, min_length=10, max_length=4000)
 
 
 @app.put("/custom-tasks/{task_id}", dependencies=[Depends(require_auth)])
-def custom_toggle(task_id: str, req: CustomToggleReq) -> dict:
+def custom_toggle(task_id: str, req: CustomTaskUpdateReq) -> dict:
     cfg = load_config()
     for t in cfg.get("custom_tasks", []):
         if t.get("id") == task_id:
-            t["enabled"] = bool(req.enabled)
+            if req.enabled is not None:
+                t["enabled"] = bool(req.enabled)
+            if req.name is not None:
+                t["name"] = req.name.strip()
+            if req.definition is not None:
+                t["definition"] = req.definition.strip()
             save_config(cfg)
+            checkpoint("custom_update", "Eigene Aufgabe aktualisiert", ok=True, name=t.get("name"))
             return {"ok": True, "task": t}
     raise HTTPException(status_code=404, detail="Aufgabe nicht gefunden")
 

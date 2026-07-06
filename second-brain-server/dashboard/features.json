@@ -1,7 +1,15 @@
 {
-	"stand": "06.07.2026, 00.09 Uhr",
+	"stand": "06.07.2026, 11:45 Uhr",
 	"hinweis": "PFLEGE-PFLICHT: Bei JEDEM Deploy, der ein neues System/Feature einbaut, hier einen Eintrag ERGAENZEN (neueste zuerst) — mit Datum + Uhrzeit und ausfuehrlicher Erklaerung. Diese Datei ist die Quelle des Info-Bereichs in den Dashboard-Einstellungen (GET /api/features). Regel verankert in DEPLOY.md.",
 	"features": [
+		{
+			"id": "bibliothekar-aufgaben-editor",
+			"name": "Bibliothekar-Aufgaben bearbeiten: Standard- und eigene Nachtaufgaben per KI verbessern",
+			"eingebaut": "06.07.2026, 11:45 Uhr",
+			"dienst": "librarian 0.10.0 + dashboard 0.47.0",
+			"kurz": "In Bibliothekar-Einstellungen und Eigene Aufgaben gibt es jetzt vor dem An/Aus-Schalter einen Bearbeiten-Button. Er zeigt den kompletten aktuellen Prompt und startet darunter einen KI-Dialog zur Überarbeitung.",
+			"erklaerung": "Jede Standard-Aufgabe und jede eigene Nacht-Aufgabe hat jetzt einen Bearbeiten-Button direkt vor dem Schalter. Beim Öffnen erscheint ein kleines Bearbeitungsfenster mit dem vollständigen aktuellen Prompt bzw. der kompletten Aufgaben-Definition. Darunter kann Frank eine Änderung diktieren oder eintippen; der Bibliothekar prüft mit dem eingestellten Nacht-Modell, ob die Änderung nachts sinnvoll und technisch möglich ist, fragt bei Bedarf nach und formuliert einen speicherbaren Vorschlag. Die Diskussion bleibt während des Bearbeitens im Verlauf, sodass jede weitere Antwort auf dem bisherigen Gespräch aufbaut. Mit 'Ja, speichern' wird bei Standard-Aufgaben ein Override in der Bibliothekar-Konfiguration abgelegt und bei eigenen Aufgaben Name/Definition direkt aktualisiert. Beim Nachtlauf werden Standard-Overrides als verbindlicher Zusatz in die jeweiligen Arbeits-Prompts gehängt; die erlaubten sicheren JSON-Aktionsformen bleiben erhalten. So kann Frank die festen Aufgaben 12/13/14/15/16/17/33 nachschärfen, ohne Code anfassen zu müssen, und eigene Aufgaben nachträglich genauso weiterentwickeln wie beim ersten Definieren."
+		},
 		{
 			"id": "no-limit-gedaechtnissuche-arbeitscache",
 			"name": "No-Limit-Gedächtnissuche: alle Treffer lesen und per Arbeitscache verdichten",
