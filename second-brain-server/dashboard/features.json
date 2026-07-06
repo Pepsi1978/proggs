@@ -1,7 +1,23 @@
 {
-	"stand": "06.07.2026, 11:55 Uhr",
+	"stand": "06.07.2026, 15:26 Uhr",
 	"hinweis": "PFLEGE-PFLICHT: Bei JEDEM Deploy, der ein neues System/Feature einbaut, hier einen Eintrag ERGAENZEN (neueste zuerst) — mit Datum + Uhrzeit und ausfuehrlicher Erklaerung. Diese Datei ist die Quelle des Info-Bereichs in den Dashboard-Einstellungen (GET /api/features). Regel verankert in DEPLOY.md.",
 	"features": [
+		{
+			"id": "qdrant-agent-runtime-limits",
+			"name": "Qdrant- und Agent-Limits direkt in den Einstellungen steuern",
+			"eingebaut": "06.07.2026, 15:26 Uhr",
+			"dienst": "Android 0.5.0 + agent 0.56.1 + brain-api 1.18.0 + dashboard 0.51.0",
+			"kurz": "In den Android-Einstellungen gibt es jetzt eine eigene Qdrant-/Quadrant-Limit-Karte mit Zahlenfeldern, Erklärungstexten und serverseitigem Speichern.",
+			"erklaerung": "Die Android-App zeigt oberhalb der Kontext-Prompts eine neue Karte 'Qdrant-/Quadrant-Limit-Einstellungen'. Dort kann Frank die wichtigsten Such- und Kontextgrenzen direkt bearbeiten: normale Gedächtnisfragen, explizite Vollabrufe, Mehrfachsuche-Varianten, Leseagent-Schnipsel, Antwort-Kontext, Gesprächsverlauf, Zusatzprompt, Chat-Nachrichtenlimit sowie Brain-API-Werte für Vektor-Overfetch, BM25-Kandidaten und Chunking. Jeder Punkt hat eine einfache Erklärung zum Aufklappen, damit klar ist, ob ein größerer Wert mehr Treffer, mehr Kontext oder mehr Rechenzeit bedeutet. Speichern geht an den Agenten-Endpunkt /config; Agent-Limits werden persistent in agent-data/config.json abgelegt und wirken sofort im laufenden Prozess. Brain-Limits werden an brain-api /limits weitergereicht und dort in brain-data/runtime-limits.json gespeichert. Bestehende Einträge bleiben wortwörtlich 1:1 erhalten; Chunk-Größe und Überlappung gelten für neue oder neu gespeicherte Einträge. Normale Fragen bleiben geschützt: Limit 0 bedeutet nur beim bewusst expliziten Vollabruf 'alle Treffer', nicht bei jeder Alltagsfrage."
+		},
+		{
+			"id": "gedaechtnis-plus-internet-route",
+			"name": "Gedächtnis plus Internet: verschachtelte Fragen werden kombiniert beantwortet",
+			"eingebaut": "06.07.2026, 14:15 Uhr",
+			"dienst": "agent 0.56.2 + dashboard 0.50.0",
+			"kurz": "Wenn eine Frage ausdrücklich erst Cortex-Gedächtnis und danach Internet verlangt, führt der Agent jetzt beide Schritte aus und kombiniert die Antwort.",
+			"erklaerung": "Der Router konnte bisher nur einen Intent zurückgeben: speichern, nachschlagen, Internet oder Smalltalk. Bei Anfragen wie 'Schau erst in meinem Gedächtnis nach und prüfe danach im Internet' ging dadurch eine Seite verloren. Jetzt gibt es die Composite-Route query_internet. Der Agent sucht zuerst im Gehirn, wählt relevante Einträge mit dem Leseagenten aus, führt danach die Websuche aus und formuliert eine gemeinsame Antwort, die sauber trennt: was in Franks Gedächtnis steht und was die aktuelle externe Recherche sagt. Zusätzlich gibt es eine deterministische Sicherheitskorrektur: Wenn Frank oder der Zusatzprompt klar beide Schritte verlangt, wird die Route auch dann auf Gedächtnis plus Internet gesetzt, wenn das Modell nur eine Einzelroute geliefert hätte. Bestehende Clients bleiben kompatibel, weil die Antwort weiter als Recall-Aktion mit Quellen geliefert wird."
+		},
 		{
 			"id": "uebersicht-kategorie-sortierung",
 			"name": "Übersicht: Kategorie-Sortierung nach Menge oder Alphabet",

@@ -42,6 +42,7 @@ import androidx.fragment.app.FragmentActivity
 import de.frank.cortex.BuildConfig
 import de.frank.cortex.audio.PcmPlayer
 import de.frank.cortex.data.SettingsStore
+import de.frank.cortex.data.model.*
 import de.frank.cortex.network.ApiClient
 import de.frank.cortex.observability.CortexLog
 import de.frank.cortex.ui.theme.*
@@ -94,6 +95,10 @@ fun SettingsScreen(
     var agentModelsLoading by remember { mutableStateOf(false) }
     var agentModelsSaving by remember { mutableStateOf(false) }
     var agentModelStatus by remember { mutableStateOf("") }
+    var runtimeLimits by remember { mutableStateOf(RuntimeLimits()) }
+    var limitDrafts by remember { mutableStateOf(limitsToDrafts(RuntimeLimits())) }
+    var limitsSaving by remember { mutableStateOf(false) }
+    var limitsStatus by remember { mutableStateOf("Server-Stand wird geladen") }
     var codexConnected by remember { mutableStateOf(false) }
     var codexStatus by remember { mutableStateOf("Server-Codex-Status wird geladen") }
     var codexUserCode by remember { mutableStateOf("") }
@@ -179,6 +184,9 @@ fun SettingsScreen(
             routerModel = config.router_model.ifBlank { ROUTER_AUTO }
             routerReasoning = config.router_reasoning.ifBlank { ROUTER_AUTO }
             tavilyEnabled = config.tavily_enabled
+            runtimeLimits = config.limits
+            limitDrafts = limitsToDrafts(config.limits)
+            limitsStatus = "Aktuelle Limits geladen"
             codexConnected = config.codex?.connected == true
             codexStatus = if (codexConnected) "Server verbunden — GPT/Codex-Modelle sind auswählbar" else "Server nicht verbunden"
             agentModelStatus = "Aktueller Server-Stand geladen"
@@ -187,6 +195,7 @@ fun SettingsScreen(
         } catch (e: Exception) {
             CortexLog.warn("Settings", "loadAgentModels", "Agent-Modelle nicht geladen: ${e.message}")
             agentModelStatus = "Server-Stand nicht erreichbar"
+            limitsStatus = "Limits nicht erreichbar"
         } finally {
             agentModelsLoading = false
         }
@@ -881,6 +890,39 @@ fun SettingsScreen(
             }
         }
 
+        // === QDRANT-/QUADRANT-LIMITS ===
+        SectionHeader("QDRANT-LIMITS")
+        LimitSettingsCard(
+            isDark = isDark,
+            drafts = limitDrafts,
+            status = limitsStatus,
+            saving = limitsSaving,
+            onDraftChange = { key, value -> limitDrafts = limitDrafts + (key to value.filter { it.isDigit() }.take(7)) },
+            onSave = {
+                screenScope.launch {
+                    limitsSaving = true
+                    try {
+                        val next = draftsToLimits(runtimeLimits, limitDrafts)
+                        val response = ApiClient.agentApi().updateConfig(
+                            AgentConfigRequest(limits = next)
+                        )
+                        runtimeLimits = response.limits
+                        limitDrafts = limitsToDrafts(response.limits)
+                        limitsStatus = "Limits gespeichert und sofort aktiv"
+                        Toast.makeText(context, "Qdrant-Limits gespeichert", Toast.LENGTH_SHORT).show()
+                    } catch (e: CancellationException) {
+                        throw e
+                    } catch (e: Exception) {
+                        CortexLog.error("Settings", "saveLimits", "Limit-Speichern fehlgeschlagen: ${e.message}")
+                        limitsStatus = "Speichern fehlgeschlagen"
+                        Toast.makeText(context, "Limits konnten nicht gespeichert werden", Toast.LENGTH_SHORT).show()
+                    } finally {
+                        limitsSaving = false
+                    }
+                }
+            }
+        )
+
         // === KONTEXT ===
         SectionHeader("KONTEXT")
         Surface(
@@ -1051,6 +1093,303 @@ fun SettingsScreen(
         }
 
         Spacer(Modifier.height(24.dp))
+    }
+}
+
+private data class LimitItem(
+    val key: String,
+    val label: String,
+    val unit: String,
+    val summary: String,
+    val explanation: String
+)
+
+private val runtimeLimitItems = listOf(
+    LimitItem(
+        "agent.recall_normal_max",
+        "Normale Gedächtnisfrage",
+        "Treffer",
+        "Wie viele Einträge der Agent bei normalen Fragen höchstens aus dem Gehirn holt.",
+        "Bei einer normalen Frage sucht Cortex zuerst in Qdrant nach passenden Einträgen. Dieser Wert ist die Obergrenze für die besten Dokumente, die danach an den Leseagenten gehen. Größer heißt: Cortex schaut breiter und findet eher Randtreffer, wird aber langsamer und gibt dem Leseagenten mehr Rauschen. Kleiner heißt: schneller und fokussierter, aber ein seltener passender Eintrag kann fehlen. Nach der Mehrfachsuche werden die zusammengeführten Treffer wieder auf diesen Wert begrenzt."
+    ),
+    LimitItem(
+        "agent.recall_full_limit",
+        "Expliziter Vollabruf",
+        "Treffer · 0 = alle",
+        "Nur für Fragen wie „Zeig mir alles über ...“ oder „komplette Kategorie“.",
+        "Normale Fragen nutzen dieses Limit nicht. Es greift nur, wenn du bewusst alles sehen willst. 0 bedeutet: keine Trefferbegrenzung, also alle passenden Einträge. Größer als 0 begrenzt auch solche Vollfragen. Kleiner macht Vollabrufe schneller, kann aber bei echten Alles-Fragen unvollständig werden."
+    ),
+    LimitItem(
+        "agent.multi_query_variants",
+        "Mehrfachsuche-Varianten",
+        "Varianten",
+        "Zusätzliche Suchformulierungen neben deiner Originalfrage.",
+        "Cortex sucht immer mit deiner Originalfrage. Dieser Wert sagt, wie viele alternative Suchformulierungen der Router zusätzlich erzeugen darf. 2 bedeutet: Originalfrage plus 2 Varianten, also maximal 3 Suchläufe. Größer findet mehr Formulierungen und Synonyme, kostet aber mehr Zeit und kann mehr Rauschen erzeugen. 0 heißt: nur deine Originalfrage."
+    ),
+    LimitItem(
+        "agent.lese_snippet_chars",
+        "Leseagent-Schnipsel",
+        "Zeichen je Treffer",
+        "Wie viel Text der Leseagent pro Treffer zum Auswählen sieht.",
+        "Der Leseagent liest nicht sofort jeden Volltext. Er bekommt pro Treffer nur einen relevanten Ausschnitt und entscheidet daraus, welche Einträge wirklich zur Frage passen. Größer gibt ihm mehr Kontext und hilft bei langen Einträgen. Kleiner ist schneller und spart Kontext, kann aber wichtige Stellen außerhalb des Schnipsels übersehen."
+    ),
+    LimitItem(
+        "agent.answer_hit_chars",
+        "Antwort je Eintrag",
+        "Zeichen je Eintrag",
+        "Wie viel Volltext der Antwort-Agent pro ausgewähltem Eintrag bekommt.",
+        "Nachdem der Leseagent passende Einträge gewählt hat, bekommt der Antwort-Agent pro Eintrag höchstens diesen Textumfang. Größer erlaubt genauere Antworten aus langen Dokumenten. Kleiner schützt vor Kontextüberlauf, kann aber Details abschneiden. Dieser Wert kann nie sinnvoll größer sein als das Gesamtbudget."
+    ),
+    LimitItem(
+        "agent.answer_total_chars",
+        "Antwort-Kontext gesamt",
+        "Zeichen gesamt",
+        "Gesamtes Trefferbudget für die finale Antwort.",
+        "Das ist der Deckel für alle ausgewählten Einträge zusammen. Beispiel: Wenn 10 Einträge ausgewählt werden, teilt Cortex dieses Budget auf sie auf. Größer gibt dem Antwort-Agenten mehr Material, wird aber langsamer und teurer. Kleiner hält Antworten stabiler und verhindert Hänger, kann aber Zusammenhänge verkürzen."
+    ),
+    LimitItem(
+        "agent.history_max",
+        "Gesprächsverlauf",
+        "Nachrichten",
+        "Wie viele alte Chat-Nachrichten der Agent zusätzlich mitnimmt.",
+        "Dieser Wert ist getrennt von der Gedächtnissuche. Er sagt nur, wie viel vom laufenden Gespräch als Kontext an das Modell geht. Größer hilft, wenn du dich auf frühere Chatstellen beziehst. Kleiner spart Kontext und reduziert Verwirrung durch alte Nebenthemen. 0 bedeutet: kein alter Verlauf."
+    ),
+    LimitItem(
+        "agent.context_prompt_max_chars",
+        "Zusatzprompt",
+        "Zeichen",
+        "Maximale Länge des Zusatzauftrags aus der App.",
+        "Der Zusatzprompt enthält zum Beispiel Modus- und Antwortlängen-Anweisungen. Größer erlaubt ausführlichere Spezialanweisungen. Kleiner schützt davor, dass sehr lange Zusatztexte den eigentlichen Auftrag verdrängen. Wenn der App-Text länger ist, lehnt der Server ihn laut ab, statt ihn still zu kürzen."
+    ),
+    LimitItem(
+        "agent.chat_text_max_chars",
+        "Chat-Nachricht",
+        "Zeichen",
+        "Sicherheitsdeckel für eine einzelne normale Chat-Nachricht.",
+        "Sehr lange Texte sind erlaubt, aber nicht unbegrenzt. Dieser Wert schützt Server und Modell vor Speicherproblemen. Größer erlaubt riesige Pastes. Kleiner schützt stärker vor Hängern. Wenn der Text zu lang ist, kommt ein klarer Fehler; Cortex schneidet den Text nicht heimlich ab."
+    ),
+    LimitItem(
+        "brain.search_overfetch_factor",
+        "Vektor-Overfetch",
+        "Faktor",
+        "Wie viele rohe Qdrant-Punkte intern pro gewünschtem Treffer geholt werden.",
+        "Qdrant sucht auf Chunk-Ebene. Ein Dokument kann mehrere Chunks haben, deshalb holt die Brain-API intern mehr Rohpunkte und dedupliziert danach auf Dokumente. Faktor 4 bei 50 Treffern bedeutet: bis zu 200 rohe Vektor-Punkte. Größer verbessert die Chance, nach dem Deduplizieren genug gute Dokumente zu behalten. Kleiner ist schneller, kann aber passende Dokumente verlieren."
+    ),
+    LimitItem(
+        "brain.bm25_candidate_factor",
+        "BM25-Kandidaten",
+        "Faktor",
+        "Zusätzliche Stichworttreffer für exakte Namen, Zahlen und Begriffe.",
+        "Neben der semantischen Vektorsuche läuft BM25 als Stichwortsuche. Das hilft bei exakten Wörtern wie Namen, Orten, Medikamenten, Versionsnummern oder Fehlercodes. Faktor 4 bei 50 Treffern bedeutet: bis zu 200 BM25-Kandidaten. Größer findet mehr exakte Worttreffer. Kleiner ist schneller, kann aber seltene Begriffe übersehen."
+    ),
+    LimitItem(
+        "brain.bm25_min_candidates",
+        "BM25-Mindestkandidaten",
+        "Kandidaten",
+        "Mindestzahl für BM25, auch wenn das Trefferlimit klein ist.",
+        "Wenn du nur wenige Treffer anforderst, sorgt dieser Wert dafür, dass die Stichwortsuche trotzdem nicht zu schmal sucht. Größer ist sicherer für exakte Begriffe, kostet aber etwas mehr Rechenzeit. Kleiner ist schneller, kann aber bei kleinen Limits exakte Worttreffer verlieren."
+    ),
+    LimitItem(
+        "brain.chunk_chars",
+        "Suchstück-Größe",
+        "Zeichen",
+        "Wie lang neue Suchstücke beim Speichern werden.",
+        "Das Gehirn speichert den Volltext 1:1. Für die Suche wird der Text zusätzlich in überlappende Suchstücke zerlegt. Größer heißt: jedes Suchstück enthält mehr Zusammenhang. Kleiner heißt: genauere Trefferstellen und mehr Chunks. Wichtig: Diese Einstellung gilt für neue oder neu gespeicherte Einträge; bestehende Einträge behalten ihre alten Suchstücke, bis sie neu gespeichert oder neu eingebettet werden."
+    ),
+    LimitItem(
+        "brain.chunk_overlap",
+        "Suchstück-Überlappung",
+        "Zeichen",
+        "Wie stark sich benachbarte Suchstücke überschneiden.",
+        "Überlappung verhindert, dass ein wichtiger Satz genau an einer Chunk-Grenze zerschnitten wird. Größer ist sicherer für zusammenhängende Sätze, erzeugt aber mehr doppelte Suchfläche. Kleiner spart Speicher und Embedding-Aufwand, kann aber Grenzfälle verschlechtern. Der Wert muss kleiner als die Suchstück-Größe sein; der Server sichert das ab."
+    )
+)
+
+private fun limitsToDrafts(limits: RuntimeLimits): Map<String, String> = mapOf(
+    "agent.history_max" to limits.agent.history_max.toString(),
+    "agent.recall_full_limit" to limits.agent.recall_full_limit.toString(),
+    "agent.multi_query_variants" to limits.agent.multi_query_variants.toString(),
+    "agent.lese_snippet_chars" to limits.agent.lese_snippet_chars.toString(),
+    "agent.answer_hit_chars" to limits.agent.answer_hit_chars.toString(),
+    "agent.answer_total_chars" to limits.agent.answer_total_chars.toString(),
+    "agent.recall_normal_max" to limits.agent.recall_normal_max.toString(),
+    "agent.context_prompt_max_chars" to limits.agent.context_prompt_max_chars.toString(),
+    "agent.chat_text_max_chars" to limits.agent.chat_text_max_chars.toString(),
+    "brain.chunk_chars" to limits.brain.chunk_chars.toString(),
+    "brain.chunk_overlap" to limits.brain.chunk_overlap.toString(),
+    "brain.search_overfetch_factor" to limits.brain.search_overfetch_factor.toString(),
+    "brain.bm25_candidate_factor" to limits.brain.bm25_candidate_factor.toString(),
+    "brain.bm25_min_candidates" to limits.brain.bm25_min_candidates.toString()
+)
+
+private fun limitInt(drafts: Map<String, String>, key: String, fallback: Int): Int =
+    drafts[key]?.toIntOrNull() ?: fallback
+
+private fun draftsToLimits(current: RuntimeLimits, drafts: Map<String, String>): RuntimeLimits = RuntimeLimits(
+    agent = AgentRuntimeLimits(
+        history_max = limitInt(drafts, "agent.history_max", current.agent.history_max),
+        recall_full_limit = limitInt(drafts, "agent.recall_full_limit", current.agent.recall_full_limit),
+        multi_query_variants = limitInt(drafts, "agent.multi_query_variants", current.agent.multi_query_variants),
+        lese_snippet_chars = limitInt(drafts, "agent.lese_snippet_chars", current.agent.lese_snippet_chars),
+        answer_hit_chars = limitInt(drafts, "agent.answer_hit_chars", current.agent.answer_hit_chars),
+        answer_total_chars = limitInt(drafts, "agent.answer_total_chars", current.agent.answer_total_chars),
+        recall_normal_max = limitInt(drafts, "agent.recall_normal_max", current.agent.recall_normal_max),
+        context_prompt_max_chars = limitInt(drafts, "agent.context_prompt_max_chars", current.agent.context_prompt_max_chars),
+        chat_text_max_chars = limitInt(drafts, "agent.chat_text_max_chars", current.agent.chat_text_max_chars)
+    ),
+    brain = BrainRuntimeLimits(
+        chunk_chars = limitInt(drafts, "brain.chunk_chars", current.brain.chunk_chars),
+        chunk_overlap = limitInt(drafts, "brain.chunk_overlap", current.brain.chunk_overlap),
+        search_overfetch_factor = limitInt(drafts, "brain.search_overfetch_factor", current.brain.search_overfetch_factor),
+        bm25_candidate_factor = limitInt(drafts, "brain.bm25_candidate_factor", current.brain.bm25_candidate_factor),
+        bm25_min_candidates = limitInt(drafts, "brain.bm25_min_candidates", current.brain.bm25_min_candidates)
+    )
+)
+
+@Composable
+private fun LimitSettingsCard(
+    isDark: Boolean,
+    drafts: Map<String, String>,
+    status: String,
+    saving: Boolean,
+    onDraftChange: (String, String) -> Unit,
+    onSave: () -> Unit
+) {
+    var expandedKey by remember { mutableStateOf<String?>(null) }
+    Surface(
+        shape = RoundedCornerShape(16.dp),
+        color = MaterialTheme.colorScheme.surface,
+        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline)
+    ) {
+        Column(
+            modifier = Modifier.padding(14.dp),
+            verticalArrangement = Arrangement.spacedBy(10.dp)
+        ) {
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(12.dp)
+            ) {
+                Icon(Icons.Default.Memory, null, tint = Orange, modifier = Modifier.size(22.dp))
+                Column(modifier = Modifier.weight(1f)) {
+                    Text("Qdrant-/Quadrant-Limit-Einstellungen", fontSize = 14.sp, fontWeight = FontWeight.SemiBold)
+                    Text(
+                        "Steuert, wie breit Cortex im Gehirn sucht und wie viel Kontext Agenten bekommen.",
+                        fontSize = 11.5.sp,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+            }
+
+            Text(
+                "Speichern wirkt serverseitig: normale Fragen nutzen diese Limits sofort. Limit 0 bedeutet nur beim expliziten Vollabruf „alle Treffer“; normale Fragen bleiben geschützt.",
+                fontSize = 11.5.sp,
+                lineHeight = 16.sp,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+
+            runtimeLimitItems.forEachIndexed { index, item ->
+                LimitRow(
+                    item = item,
+                    value = drafts[item.key].orEmpty(),
+                    isDark = isDark,
+                    expanded = expandedKey == item.key,
+                    onValueChange = { onDraftChange(item.key, it) },
+                    onToggle = { expandedKey = if (expandedKey == item.key) null else item.key }
+                )
+                if (index < runtimeLimitItems.lastIndex) {
+                    HorizontalDivider(color = MaterialTheme.colorScheme.outline.copy(alpha = 0.55f))
+                }
+            }
+
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(10.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text(status, fontSize = 11.5.sp, color = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.weight(1f))
+                Button(
+                    onClick = onSave,
+                    enabled = !saving,
+                    shape = RoundedCornerShape(12.dp),
+                    colors = ButtonDefaults.buttonColors(containerColor = Orange)
+                ) {
+                    if (saving) {
+                        CircularProgressIndicator(modifier = Modifier.size(16.dp), strokeWidth = 2.dp, color = Color.White)
+                    } else {
+                        Text("Speichern", fontSize = 13.sp, fontWeight = FontWeight.SemiBold)
+                    }
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun LimitRow(
+    item: LimitItem,
+    value: String,
+    isDark: Boolean,
+    expanded: Boolean,
+    onValueChange: (String) -> Unit,
+    onToggle: () -> Unit
+) {
+    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(10.dp)
+        ) {
+            Column(modifier = Modifier.weight(1f)) {
+                Text(item.label, fontSize = 13.5.sp, fontWeight = FontWeight.SemiBold)
+                Text(item.summary, fontSize = 11.sp, lineHeight = 15.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            }
+            Surface(
+                shape = RoundedCornerShape(10.dp),
+                color = if (isDark) DarkField else LightField,
+                border = BorderStroke(1.dp, if (isDark) DarkFieldBorder else LightFieldBorder),
+                modifier = Modifier.width(98.dp)
+            ) {
+                BasicTextField(
+                    value = value,
+                    onValueChange = onValueChange,
+                    modifier = Modifier.padding(horizontal = 10.dp, vertical = 9.dp),
+                    singleLine = true,
+                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                    textStyle = LocalTextStyle.current.copy(
+                        fontFamily = JetBrainsMono,
+                        fontSize = 12.5.sp,
+                        color = MaterialTheme.colorScheme.onSurface
+                    )
+                )
+            }
+        }
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
+            Text(item.unit, fontFamily = JetBrainsMono, fontSize = 10.5.sp, color = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.weight(1f))
+            TextButton(onClick = onToggle) {
+                Text(if (expanded) "Erklärung ausblenden" else "Erklärung", fontSize = 12.sp)
+                Icon(if (expanded) Icons.Default.ExpandLess else Icons.Default.ExpandMore, null, modifier = Modifier.size(17.dp))
+            }
+        }
+        if (expanded) {
+            Surface(
+                shape = RoundedCornerShape(12.dp),
+                color = if (isDark) DarkField else LightField,
+                border = BorderStroke(1.dp, if (isDark) DarkFieldBorder else LightFieldBorder),
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Text(
+                    item.explanation,
+                    modifier = Modifier.padding(12.dp),
+                    fontSize = 12.sp,
+                    lineHeight = 17.sp,
+                    color = MaterialTheme.colorScheme.onSurface
+                )
+            }
+        }
     }
 }
 

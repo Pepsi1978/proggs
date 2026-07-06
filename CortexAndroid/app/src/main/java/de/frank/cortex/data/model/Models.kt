@@ -183,6 +183,7 @@ data class AgentConfigResponse(
     // Zentrale S/M/XL-Prompts (Quelle der Wahrheit auf dem Server; custom=false -> App darf seeden).
     val size_prompts: Map<String, String> = emptyMap(),
     val size_prompts_custom: Boolean = false,
+    val limits: RuntimeLimits = RuntimeLimits(),
     val codex: CodexState? = null,
     val tavily_enabled: Boolean = true,
     val model: String? = null,
@@ -212,7 +213,8 @@ data class AgentConfigRequest(
     val size_prompt_s: String? = null,
     val size_prompt_m: String? = null,
     val size_prompt_xl: String? = null,
-    val tavily_enabled: Boolean? = null
+    val tavily_enabled: Boolean? = null,
+    val limits: RuntimeLimits? = null
 )
 
 @JsonClass(generateAdapter = true)
@@ -220,7 +222,36 @@ data class AgentConfigUpdateResponse(
     val status: String,
     val models: Map<String, String> = emptyMap(),
     val reasoning: Map<String, String> = emptyMap(),
-    val tavily_enabled: Boolean = true
+    val tavily_enabled: Boolean = true,
+    val limits: RuntimeLimits = RuntimeLimits()
+)
+
+@JsonClass(generateAdapter = true)
+data class RuntimeLimits(
+    val agent: AgentRuntimeLimits = AgentRuntimeLimits(),
+    val brain: BrainRuntimeLimits = BrainRuntimeLimits()
+)
+
+@JsonClass(generateAdapter = true)
+data class AgentRuntimeLimits(
+    val history_max: Int = 40,
+    val recall_full_limit: Int = 0,
+    val multi_query_variants: Int = 2,
+    val lese_snippet_chars: Int = 1200,
+    val answer_hit_chars: Int = 8000,
+    val answer_total_chars: Int = 24000,
+    val recall_normal_max: Int = 50,
+    val context_prompt_max_chars: Int = 4000,
+    val chat_text_max_chars: Int = 500000
+)
+
+@JsonClass(generateAdapter = true)
+data class BrainRuntimeLimits(
+    val chunk_chars: Int = 4000,
+    val chunk_overlap: Int = 200,
+    val search_overfetch_factor: Int = 4,
+    val bm25_candidate_factor: Int = 4,
+    val bm25_min_candidates: Int = 20
 )
 
 @JsonClass(generateAdapter = true)

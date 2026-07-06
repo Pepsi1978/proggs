@@ -43,14 +43,15 @@ from zoneinfo import ZoneInfo
 import httpx
 from fastapi import Depends, FastAPI, Header, HTTPException, Request
 from fastapi.responses import JSONResponse, StreamingResponse
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, field_validator
 
 VERSION = "0.31.0"  # 0.31.0: Speicher-Cap-Klasse endgueltig beseitigt (Frank-Bug 2026-06-25) — ChatReq.text max_length 100000 -> 500000 (konsistenter, GROSSZUEGIGER Backstop ~25x Franks groesste Datei; lehnt nur als allerletzte OOM-Schranke laut via 422 ab). Der eigentliche stille Slice sass im dashboard /api/chat (jetzt laute Ablehnung statt text[:N]); brain-api StoreReq hat keinen Cap und chunkt selbst -> auf dem gesamten Speicher-Pfad gibt es jetzt KEINE stille Kuerzung mehr. 0.30.0: AUSGABE-Haertung fuer grosse Eintraege (Frank-Wunsch 2026-06-25) — beim Nachschlagen bekam der Leseagent (Filter) den VOLLTEXT aller Treffer (5x18k -> Kontext-Ueberlauf-Risiko), obwohl er nur Nummern waehlt; jetzt nur ein Relevanz-Schnipsel pro Treffer (LESE_SNIPPET_CHARS, bevorzugt der gematchte Chunk). Der Hauptagent (Antwort) bekommt den Inhalt jetzt pro Treffer (ANSWER_HIT_CHARS) UND gesamt (ANSWER_TOTAL_CHARS) gedeckelt mit 'gekuerzt'-Hinweis + Verweis auf den Drawer-Volltext. So koennen Lese-/Hauptagent an beliebig grossen Eintraegen nicht mehr ueberlaufen. 0.29.0: FIX 2. Cap-Schicht (Frank-Bug 2026-06-25) — ChatReq.text war auf max_length=8000 begrenzt (Pydantic lehnte laengere Texte ab -> 422 -> 'nicht erreichbar'); jetzt 100000 (brain-api chunkt selbst). Alle Kategorie-Namen-Caps 60->120 (tiefe Pfade A/B/C/...). 0.28.0: FIX Speichern grosser Texte + Titel-Uebernahme (Frank-Bug 2026-06-25). Root Cause: bei intent=save musste der Router den Text WORTWOERTLICH in quote+reply echoen -> grosse Pastes sprengten max_tokens=2048 -> abgeschnittenes JSON -> Fallback 'nicht verstanden', danach KI-Titel statt Frank-Titel, am Ende NICHTS gespeichert (Confirm kam nie sauber). Fix: Sind Titel ODER Kategorie aus dem Dashboard gesetzt (klares Speicher-Signal) und kein offenes pending -> Router UEBERSPRINGEN, direkt intent=save (voller user_text wird 1:1 zum quote). Rueckfrage zeigt langen Text gekuerzt (gespeichert wird der VOLLE Text) -> klare 'Soll ich ... ablegen?'-Frage mit Ja/Nein. Dashboard leert das Titel-Feld nur noch, wenn der Server den Save erkannt hat (sonst bleibt der Titel fuer den Retry). 0.27.0: Beliebig tiefe Kategorie-Hierarchie (Frank-Wunsch 2026-06-25) — _cat_key normalisiert Pfade jetzt OHNE Tiefen-Limit (A/B/C/...), Speicheragent-Prompts (DEFAULT_SPEICHER + geschuetztes SPEICHER_SCHEMA) erlauben/erklaeren beliebig tiefe Pfade statt nur 2 Ebenen. Dashboard baut die Baeume rekursiv. 0.26.0: Speicheragent kennt 2-Ebenen-Hierarchie (Phase 6, Frank-Wunsch 2026-06-25) — beim Ablegen waehlt er eine passende bestehende Unterkategorie 'Haupt/Unter' zeichengenau ODER schlaegt eine neue 'Haupt/Unter' vor und fragt per Eskalation/Rueckfrage nach (Frank wird vor dem Anlegen gefragt). Kernregel im GESCHUETZTEN SPEICHER_SCHEMA (gilt auch bei custom Prompt) + Erklaerung & Beispiele E/F im DEFAULT_SPEICHER. Max 2 Ebenen, kein Schraegstrich wo flach genuegt; zusammen mit _cat_key-Normalisierung (0.23.2) keine Schreibvarianten-Dubletten. 0.25.0: Eval-Set um 10 TITEL-Saetze erweitert (Frank-Wunsch 2026-06-25, id 91-100) — pruefen das Titel-Feature aus allen Blickwinkeln: store_title (Frank gibt Titel+Kategorie vor -> Eintrag landet unter GENAU dem Titel, per by-title verifiziert, KEIN KI-Titel), query 95-97 (Eintrag ueber Titel+Inhalt auffindbar -> beweist Titel im Embedding), save_confirm_title (Bestaetigungs-Rueckfrage LIEST den Titel woertlich vor, speichert nichts). Zwei neue _eval_one-Zweige (store_title/save_confirm_title), isoliert unter EVAL_USER, nach dem Lauf gepurgt. 0.24.0: TITEL-Override beim Senden (Frank-Wunsch 2026-06-25) — ChatReq.title reicht einen im Dashboard-Sendefeld eingetippten Titel durch (analog zur Kategorie-Wahl); _process_turn merkt ihn im pending und LIEST ihn in der Bestaetigungs-Rueckfrage VOR ('Soll ich das als T unter K ablegen: ...?'); _do_store nimmt den Frank-Titel mit Vorrang (Frank-Titel > KI-Titel > Text-Anfang) und ueberspringt bei Titel+Kategorie den unnoetigen Speicheragent-LLM-Call. So bekommen ganz neue Eintraege ihren Titel von Frank statt KI-geraten -> der dann (brain-api 1.10.0) den Vektor mitpraegt. 0.23.2: Kategorie-Hierarchie-Normalisierung (Phase 5 Fundament, Frank-Wunsch 2026-06-25) — _cat_key normalisiert jetzt Schraegstriche auf genau 2 Ebenen 'Haupt/Unter' (' / ' -> '/', max 2 Ebenen, leere Teile weg), damit Unterkategorien aus dem Dashboard/Speicheragent keine Schreibvarianten-Dubletten erzeugen. 0.23.1: Eval-Set an die Internet-Suche angepasst (Etappe 3) — #52 (Wetter München) + #53 (Dortmund-Ergebnis) von kind 'smalltalk' auf 'internet' umgestellt (echte Live-Fragen gehoeren jetzt ans Internet-Werkzeug, nicht mehr smalltalk); neuer 'internet'-kind im Eval-Flow prueft NUR das Routing (intent==internet, keine echte Tavily-Suche -> spart Credits) + eigene Bereichs-Zeile im Log. 0.23.0: Internet-Suche als 3. Werkzeug (Frank-Wunsch 2026-06-25, Etappe 2). Neuer intent='internet' im Router fuer aktuelle/aeussere Fragen (Wetter, Sport, News, Kurse) -> Tavily-Suche (tavily_search, fuer KI-Agenten gebaut; Key NUR im VPS-.env TAVILY_API_KEY, nie im Repo) -> der HAUPTAGENT formuliert die Antwort aus den Suchergebnissen (hauptagent_answer_internet + HAUPTAGENT_INTERNET_AUFTRAG, mit kurzer Quellenangabe). Router-Persona + ROUTER_SCHEMA + intent-Validierung um 'internet' erweitert; Faustregel internet=aktuell/aeusserlich vs. smalltalk=zeitloses Allgemeinwissen. Tool-Fehler gefangen (ai-agent §3.2), Timeout 20s; fehlt der Key -> ehrliche Fehlanzeige statt Crash. 0.22.0: Agenten-Prompt-Umbau + Leseagent-Architektur (Frank-Wunsch 2026-06-25, nach den Recherche-Prompts). (1) Alle 3 editierbaren Prompts (Hauptagent/Speicheragent/Leseagent) in klarer Struktur ROLLE/AUFGABE/KONTEXT/KATEGORIEN/EINGABEFORMAT/REGELN/AUSGABEFORMAT/BEISPIELE neu geschrieben — die Arbeitsweise steht jetzt fast komplett im EDITIERBAREN Prompt, nur das nackte JSON-Schema bleibt geschuetzt angehaengt. Dynamische {kategorien} bleiben (KEINE feste Liste, respektiert Franks Kategorie-Verwaltung). (2) ARCHITEKTUR-Wechsel: Der Leseagent FORMULIERT die Antwort nicht mehr — er FILTERT nur die Gehirn-Treffer und gibt per JSON deren NUMMERN zurueck (ABFRAGE_SCHEMA, leseagent_select). Der HAUPTAGENT formuliert danach die Antwort aus den ORIGINAL-Treffern (hauptagent_answer + build_hauptagent_answer_prompt + HAUPTAGENT_ANSWER_AUFTRAG) — so kann der Leseagent keinen Text verfaelschen (Wortwoertlichkeit garantiert). 3-Schritt-Kette Router->Filter->Formulierung; query-Flow + Eval-Flow umgestellt; Rolle 'abfrage' im Dashboard jetzt 'Leseagent'. 0.21.0: Eval-Set auf 90 Saetze (Frank-Wunsch 2026-06-25) — +10 komplett sinnlose Plauder-Saetze ('Mann Mann Mann war das ein Tag', 'Im Fruehtau zu Berge', 'Pass mal auf'), die der Hauptagent als 'smalltalk' erkennen muss (nicht speichern/suchen). 0.20.0: Eval-Set auf 80 Saetze erweitert (Frank-Wunsch 2026-06-25) — +30 reine Smalltalk-/Wissens-Saetze (Wetter, Sport, 'erklaer mir Pythagoras', Plauderei, Aussagen ohne Speicher-Signal). Pruefen: Router routet als 'smalltalk' (NICHT speichern, NICHT im Gedaechtnis suchen) -> der Hauptagent funktioniert auch als normaler Sprachassistent. Hinweis: kein Internet-Tool, statische Wissensfragen aus Modell-Wissen, Live-Fragen ehrlich verneint. 0.19.0: POST /categories/move-entry (Frank-Wunsch 2026-06-25) — verschiebt EINEN Eintrag (doc_id) in eine andere Kategorie fuers Kategorie-Dropdown im Drawer: stellt die Ziel-Kategorie kanonisch sicher (neue -> Registry, sofort in Einstellungen+Gespraech-Dropdown synchron), setzt sie via brain set_payload (Vektor bleibt, kein Re-Embed); befuellte Registry-Kategorie wandert aus der Registry. brain_set_entry_category-Helfer. 0.18.0: Eval-Check (Frank-Wunsch 2026-06-25) — Selbsttest aller 3 Agenten gegen 50 feste Saetze (24 Speichern versch. Kategorien -> 18 Abfragen mit erwartetem Inhalt -> Smalltalk -> 3 Injektion). Laeuft unter ISOLIERTEM Test-Nutzer 'eval-test' (nie Franks Gehirn), raeumt danach HART auf (brain /purge — kein Papierkorb). Detail-Log (Markdown) auf Z /eval-logs, 14 Tage Retention. POST /eval-run (via to_thread), GET /eval-logs, GET /eval-log. brain_store/brain_search um user_id erweitert; brain_by_title/brain_purge-Helfer. 0.17.0: Anklickbare Antwort-Knoepfe (Frank-Wunsch 2026-06-25 — sichtbare Manifestation der Haertung). save_confirm UND store_clarify (Eskalation) liefern jetzt 'options' [{label,send}]; /chat reicht sie durch -> das Dashboard zeigt Ja/Nein-Knoepfe unter der Rueckfrage (z.B. 'Ja, „Musik" anlegen' / 'Nein, „Sonstiges"'), Frank klickt statt zu tippen. 0.16.0: Agenten-Haertung Paket C1 (Frank-Wunsch 2026-06-25). B10 Rate-Limit-/5xx-Resilienz: llm_generate ist jetzt ein Retry-Wrapper um _llm_generate_once — bei 429/408/5xx Full-Jitter-Backoff (Retry-After-Header bevorzugt), max 3 Versuche, NUR auf dieser einen Schicht (verhindert 3x5=243-Call-Multiplikation); 400/401/403/404 nie wiederholt. Deckt Gemini-SDK UND OpenCode/httpx ab. Laeuft im Threadpool -> sleep blockiert nur den Worker, nicht den Event-Loop. 0.15.0: Agenten-Haertung Paket B (Frank-Wunsch 2026-06-25). B3 "no receipt, no claim": _store_final bestaetigt "gespeichert" NUR mit doc_id-Quittung vom brain — ohne ID ehrliche Fehlermeldung statt falscher Erfolg. B4 typisiertes Routing: Hauptagent-intent gegen festes Enum validiert (halluzinierter Wert -> smalltalk, geloggt) + Routing-Trace via checkpoint. B5 Schema-Robustheit: llm_generate erkennt MAX_TOKENS (abgeschnittene Antwort) und meldet es als Sonde, statt unvollstaendiges JSON still falsch zu parsen. 0.14.0: Agenten-Haertung Paket A (Frank-Wunsch 2026-06-25). A1 Injektions-Schutz: gespeicherte/gefundene Inhalte sind in ALLEN 3 geschuetzten Bloecken als DATEN (keine Befehle) markiert (Lethal-Trifecta-Luecke geschlossen). A2 Eskalation: Speicheragent liefert eskalation+rueckfrage; will er eine NEUE (unbekannte) Kategorie anlegen ODER ist er unsicher, wird NICHT still gespeichert, sondern bei Frank zurueckgefragt (neuer pending-mode store_clarify: confirm_yes->vorgeschlagene/neue Kategorie, confirm_no->Sonstiges). Dashboard-Override bleibt ohne Rueckfrage. _do_store in _store_final (gemeinsamer Endpunkt) + Eskalations-Verzweigung refaktoriert. 0.13.0: Kategorie-Verwaltung + deutsche Rechtschreibung (Frank-Wunsch 2026-06-25). _cat_key macht KEIN lowercase/Slug mehr -> Kategorien werden 1:1 als Klartext (Substantive gross, Leerzeichen) gespeichert; Dubletten-Schutz jetzt case-insensitiv via _canonical_category (bestehende Schreibweise gewinnt). Leseagent (llm_answer) bekommt NUR Payload-Kategorien (brain_categories), Speicheragent die VOLLE Liste (inkl. leerer). Neue Endpoints GET /categories/detail (mit Eintragszahl+leer-Flag), POST /categories/rename (brain set_payload, auch Merge), POST /categories/delete (Etikett entfernen, Eintraege bleiben); brain-Helfer rename/detach/counts. Speicher-Prompt + geschuetztes Schema verlangen deutsche Rechtschreibung + zeichengenaue Wiederverwendung. 0.12.0: Standard-Prompts aller 3 Agenten (Haupt/Speicher/Abfrage) + improve-Prompt + LLM-Marker (OFFENER PUNKT/ÄHNLICHE EINTRÄGE/Beispiele) selbst auf echte deutsche Umlaute umgestellt — vorher predigten sie Umlaute, waren aber in ae/oe/ue geschrieben (Frank-Wunsch). 0.11.0: Deutsche Umlaute global (Frank-Wunsch) — _cat_key erhaelt ä/ö/ü/ß (kein ae/oe/ue mehr), CONV_CATEGORY 'gespräche', Logbuch-Header/Titel 'Gespräch'/'Gespräche', Speicheragent-Prompt erlaubt Umlaut-Kategorien; path-Helper erkennt alte+neue Praefixe. 0.10.0: DELETE /logbook (Frank-Wunsch) — loescht eine Logbuch-.txt von Platte Z (agent als uid 1000 mit Schreibrecht; Dashboard hat /logbook nur read-only). Pfad streng validiert (kein Traversal, nur .txt in LOGBOOK_DIR); Vektor-Kopie bleibt. 0.9.0: Kategorie-Override beim Senden (Frank-Wunsch 2026-06-24) — waehlt Frank im Dashboard-Dropdown eine Kategorie, wird der bestaetigte Text GENAU dort abgelegt (keine Auto-Kategorie, kein Dubletten-Ersatz); die Rueckfrage nennt die Kategorie. /chat + ChatReq um 'category'; _process_turn reicht sie durch, merkt sie im pending bis zur Bestaetigung; _do_store(override_category). Keine Wahl -> Speicheragent entscheidet wie bisher. 0.8.0: Kategorie-Registry (Frank-Wunsch 2026-06-24) — Kategorien koennen VORAB angelegt werden (auch ohne Eintrag) und ueberleben in categories.json (agent-data). all_categories() = Vereinigung(Gehirn-Kategorien + Registry); der Speicheragent kennt manuell angelegte Kategorien sofort. Neue Endpoints GET/POST /categories. 0.7.0: Drei editierbare System-Prompts (Frank-Wunsch 2026-06-24) — Hauptagent, Speicheragent UND Abfrageagent haben je einen EIGENEN, im Dashboard umschalt-/speicherbaren Prompt (vorher teilten Haupt+Abfrage einen, der Speicheragent war fest). Pro Rolle eigene Datei (haupt-prompt.txt/speicher-prompt.txt/abfrage-prompt.txt); das CODE-kritische JSON-Schema (Router bzw. Speicher) bleibt geschuetzt angehaengt; Anti-Halluzinations-Constraints des Abfrageagenten bleiben geschuetzt. Migration: alter gemeinsamer prompt.txt -> Haupt-Prompt. /prompt + /api/prompt um role-Parameter (Abwaertskompat: ohne role = haupt). 0.6.0: Modell-pro-Rolle (Frank-Wunsch) — Hauptagent, Speicheragent und Abfrageagent koennen je ein EIGENES Modell nutzen (3 Dropdowns im Dashboard); config.json speichert haupt_model/speicher_model/abfrage_model (Migration vom alten Einzel-'model'); /config + /health geben 'models' zurueck (Abwaertskompat: 'model' = Hauptagent). 0.5.0: Agenten-Dreiteilung (Frank-Wunsch) — Frank redet nur mit dem HAUPTAGENTEN. Dieser routet: erkennt Speicher-Absicht und fragt IMMER ZUERST mit WORTWOERTLICHEM Zitat zurueck ("Soll ich ablegen: ...?"), speichert erst nach Zustimmung 1:1 ueber den SPEICHERAGENTEN (Kategorie/Titel/Dublette); Wissensfragen ueber den ABFRAGEAGENTEN (Vektorsuche + Antwort NUR aus Treffern, mit Hinweis "nachgeschaut"). Confirm-vor-Speichern im CODE erzwungen (Zustandsautomat), nicht nur im Prompt. /chat-Schwerlast via asyncio.to_thread (Event-Loop frei, fastapi §1 / ai-agent §3.1). DEFAULT_INSTRUCTIONS=Hauptagent-Persona, SCHEMA_BLOCK->ROUTER_SCHEMA, neuer SPEICHER_SYSTEM. 0.4.0: Multi-Provider — OpenCode Zen Go (minimax-m3 ueber Anthropic /messages-Schema) als zweiter Provider neben Gemini; Modell-Liste aufgeraeumt (3.1-pro/3.1-flash raus, minimax/minimax-m3 rein); neuer /improve-Endpoint (eingesprochenen Text grammatikalisch verbessern OHNE Inhaltsaenderung). 0.3.0: Phase 4b Abruf-Seite — vierter Modus 'recall': Wissensfrage -> read-only Vektorsuche im Gehirn (brain-api /search) -> ZWEITER LLM-Aufruf llm_answer, antwortet NUR aus den Treffern (nichts erfinden), nutzt denselben editierbaren Prompt OHNE Schema. Ein Eingang, zwei Koepfe. SCHEMA_BLOCK um action 'recall' + Feld 'query' erweitert; DEFAULT_INSTRUCTIONS: Wissensfragen -> recall + Antwort-Ton-Abschnitt. maxOutputTokens hoch + finishReason-Pruefung (Gemini-Almanach B4/D10). 0.2.1: Prompt-Haertung (echte Umlaute + Anweisung, Injection-Schutz, Ehrlichkeitsschutz bei Wissensfragen, expliziter Feld-Kontrakt + ausgefuellte Few-shot-Beispiele, Kategorie-Schluessel-Format). 0.2.0: System-Prompt-Instruktionen + Modell editierbar/speicherbar (GET/PUT /prompt + /config, Datei-Persistenz unter /app/data); JSON-Schema bleibt code-seitig geschuetzt. 0.1.3: Zeitstempel JE Nachricht wieder RAUS (verwaessern die semantische Suche im Gehirn) - nur Kopf-Datum/Uhrzeit bleibt. Aktueller-Zeitpunkt-im-Prompt (korrekte Titel) bleibt. 0.1.2: Zeitpunkt+Zeitstempel. 0.1.1: /end+Kategorie. 0.1.0: Phase 4a.
 
 VERSION = "0.31.1"  # Wirksamer Counter-Bump: gespeicherte Gespraech-Eintraege erhalten sekundengenauen Zeitstempel.
 VERSION = "0.53.0 (05.07.2026, 14.14 Uhr)"  # 0.53.0 (Gruppe D "Mitlernen in Programmier-Sessions", Plan-Nr. 27/28/31/32, Frank-Auftrag 2026-07-05): NEU POST /session-log — nimmt vom SessionEnd-Hook jeder Programmier-Session (Claude Code, OpenCode) die Rohdaten entgegen (CLI, Projekt, Franks Prompts, Commits, geaenderte Dateien), antwortet SOFORT und verdichtet im HINTERGRUND per LLM (Speicheragent-Modell) zu "gemacht/entschieden/gelernt" + Episoden-Auszug -> Gehirn-Eintrag unter Programmierung/Sessions (D27+D32). Danach pflegt derselbe Lauf automatisch den Kern-Block "Woran Frank gerade baut" [Programmierung/Kern-Blöcke] nach: titel-basiertes Ueberschreiben, Zeichen-Limit, Changelog-Datei in agent-data (D28). NEU Projektstand-Recall (D31): Fragen wie "Woran habe ich zuletzt gearbeitet?"/"Wie ist der Stand beim X?"/"Was war in der letzten Session?" werden DETERMINISTISCH erkannt (Poka-Yoke wie 0.51.2, kein LLM-Ermessen) und aus den neuesten Session-Protokollen + Kern-Block beantwortet (chronologisch rueckwaerts, mit Quellen-Chips + Confidence); existiert (noch) kein Session-Wissen -> weicher Fallback in die normale Abrufkette (funktionserhaltend). brain_search kann jetzt kategorie-gefiltert suchen (category-Param an brain /search). Rein additiv, Tages-Pfade unveraendert. Alt: 0.52.0 (05.07.2026, 01.40 Uhr)  # 0.52.0: NEU POST /llm — interner LLM-Durchgriff fuer den Nachtschicht-Bibliothekar (librarian 0.2.0): der Bibliothekar kann damit ALLE hier verbundenen Provider nutzen, vor allem die Codex/GPT-Modelle ueber die bestehende ChatGPT-OAuth-Anmeldung (inkl. Token-Refresh + Retry + Reasoning-Sanitizing), ohne die Auth-Logik zu duplizieren (Frank-Wunsch 2026-07-05: Nachtagent soll das staerkste Modell = GPT mit einstellbarem Thinking fahren). Rein additiv, Tages-Pfade unveraendert. Alt: 0.51.2 (04.07.2026, 23.10 Uhr)  # 0.51.2: DETERMINISTISCHE Router-Haertung (Live-Fund direkt nach 0.51.1): der Router stufte 'Zeig mir alles zur WireGuard-Einrichtung' als smalltalk ein -> Abrufkette (Register/Hybrid/Quellen) lief nie. 'Alles ueber X'-/'Was weiss ich ueber X'-Saetze sind per Definition Gedaechtnis-Fragen -> erkennt entity_name_from_question das Muster und der Router sagt smalltalk (kein pending), erzwingt der CODE intent=query (Poka-Yoke: LLM-Ermessen an dieser eindeutigen Stelle eliminiert; gleiches Muster wie explicit_save). Mit Routing-Checkpoint. Alt: 0.51.1 (04.07.2026, 23.00 Uhr)  # 0.51.1 (Eval-Nacharbeit, 2 Funde aus dem 112/114-Lauf): (a) FIX 'Alles ueber X'-Erkennung — das Muster kannte nur das nackte 'zu', nicht die gebeugten Formen 'zur'/'zum' ('Zeig mir alles ZUR Quorbanit-Kartusche' wurde nicht als Register-Frage erkannt, Eval-Fall #112; Root Cause deterministisch per Regex-Test bewiesen, zu[rm]? an allen 5 Stellen). (b) Eval-Fall #76 traegt jetzt also_ok:['save'] — Frank-Urteil 2026-07-04: 'Heute war ein anstrengender Tag' DARF auch als Tagebuch-Speicherwunsch gedeutet werden (die Bestaetigungs-Rueckfrage schuetzt ohnehin); der smalltalk-Pruefzweig akzeptiert also_ok-Intents als PASS, damit legitime Doppeldeutigkeit den Eval nicht mehr flackern laesst. Alt: 0.51.0 (04.07.2026, 22.05 Uhr)  # 0.51.0 (Eval-Erweiterung Level-2, Frank-Wunsch 2026-07-04): Der Eval-Check sichert jetzt auch die 6 neuen Such-Intelligenz-Systeme ab — 14 neue Faelle (id 101-114): 6 DETERMINISTISCHE Funktionstests ohne LLM (Zeit-Parser richtig UND kein Fehlalarm bei Nicht-Zeit-Fragen, 'Alles ueber X'-Erkennung, RRF-Fusion-Reihenfolge) + 8 End-to-End-Faelle unter dem isolierten EVAL_USER (Kunstwort-Eintrag anlegen -> Hybrid/BM25 MUSS ihn per exakter Bestellnummer auf Platz 1 treffen inkl. matched_by-Beweis; Zeit-Frage ueber die ECHTE smart_recall-Kette mit time_filter-Meta; Multi-Query-Varianten nicht-identisch; Entity-Roundtrip anlegen->per ALIAS finden->Docs; 'Zeig mir alles zu X' zieht das Register; Confidence-Stufen inkl. 'keine' bei leerer Auswahl; sources-Felder befuellbar mit doc_id+Titel). Dafuer smart_recall/brain_entities_*/entity_extract_and_link um user_id-Parameter erweitert (Default Frank, unveraendertes Verhalten — der Eval testet DIESELBE Kette isoliert). Level-2-Faelle laufen OHNE Router-Call (billiger, gezielter); Eval-Log mit sprechenden Bereichs-Labels je Fall. Alt: 0.50.0 (Level-2 Such-Intelligenz, Frank-Auftrag 2026-07-04, Plan-Nr. 34-39): (1) Nr. 35 ZEIT-BEWUSSTE SUCHE — parse_time_range erkennt deutsche Zeitausdruecke in der Frage ('letzten Monat', 'im Winter', 'vor 3 Wochen', 'im Dezember 2025', 'am 12.05.', 'seit 2 Wochen', 'gestern' ...) deterministisch (LLM-frei, Europe/Berlin) und haengt sie als created_at-Datumsfilter an die Gehirn-Suche; WEICH mit Netz (rag-retrieval §2): 0 Treffer im Zeitraum -> automatisch nochmal UNGEFILTERT suchen statt faelschlich 'nichts gespeichert'. (2) Nr. 37 MULTI-QUERY-RECALL — der Agent formuliert intern bis zu 2 Suchvarianten (Router-Modell, 1 kleiner JSON-Call) und sucht mit Original+Varianten PARALLEL (ThreadPool), Ranglisten per RRF fusioniert (bessere Quote bei vagen/gesprochenen Fragen); abschaltbar AGENT_MULTI_QUERY=0. (3) Nr. 36 ENTITY-LINKING (Hub-and-Spoke) — nach JEDEM erfolgreichen Speichern extrahiert ein best-effort-Hintergrund-Thread (Speicher-Modell) Entitaeten (Personen/Orte/Geraete/Projekte/Praeparate) und verknuepft sie im brain-api-Entity-Register (/entities/upsert) mit der doc_id; 'Alles ueber X'/'Was weiss ich ueber X'-Fragen holen ZUSAETZLICH ALLE ueber die Entitaet verknuepften Eintraege (vollstaendig statt Top-5); POST /entities/rebuild baut das Register als Hintergrund-Lauf ueber den Bestand auf (GET /entities/rebuild-status). (4) Nr. 38 CONFIDENCE — jede Gedaechtnis-Antwort kennt ihre Sicherheit: _confidence_info bewertet Trefferzahl + besten Score (Schwellen AGENT_CONF_STRONG/WEAK) + exakte-Wortlaut-Treffer (BM25) zu hoch/mittel/niedrig/keine; der Hauptagent webt es ehrlich in die Antwort ein ('steht uebereinstimmend in 3 Eintraegen' vs. 'nur ein schwacher Treffer'), strukturiert als 'confidence' in /chat + /chat/stream. (5) Nr. 39 QUELLEN-DRILLDOWN — /chat + /chat/stream liefern 'sources' (doc_id/Titel/Kategorie/Score/matched_by der vom Leseagenten GEWAEHLTEN Eintraege) -> Dashboard zeigt anklickbare Quellen-Chips unter der Antwort (Drawer mit Volltext 1:1). Alles rein additiv; Modell-Zuordnung: Multi-Query->Router-Modell, Entity-Extraktion->Speicher-Modell. Alt: 0.49.0 (Tiefen-Debugging PERFORMANCE 2026-07-02): (a) modul-globaler httpx.Client (_HTTP, Connection-Pool + Keep-Alive, transport retries=1 NUR fuer den Verbindungsaufbau) fuer ALLE ausgehenden Calls (brain-api, Tavily, OpenCode, Codex inkl. Stream + Auth) — vorher oeffnete jeder Call eine frische TCP/TLS-Verbindung (~100-200 ms je TLS-Ziel, spuerbar bei Satz-fuer-Satz-TTS/Chat-Ketten); (b) NEU GET /categories/registry: nur die Registry-Kategorien OHNE brain-Scan — das Dashboard ergaenzt damit die leeren Kategorien der Uebersicht, statt pro 20s-Poll einen ZWEITEN Qdrant-Metadaten-Full-Scan (via /categories -> brain /category-counts) auszuloesen. Verhaltensneutral: gleiche Antworten, gleiche Uebersicht. Alt: 0.48.1 (Tiefen-Debugging 2026-07-02): (a) _flush_loop flusht Sessions jetzt AUSSERHALB des _lock UND im Threadpool (asyncio.to_thread) — vorher lief der SYNCHRONE Flush (httpx bis 120s + Datei-I/O) IM Lock DIREKT im Event-Loop und fror bei langsamem/haengendem brain-api den GANZEN Agenten ein (alle /chat, /health; fastapi-Almanach §1 Sonderfall + Kurzcheck #2 — dort seit 2026-06-24 als Live-Befund dokumentiert). (b) /end laesst flush_session_to_logbook via asyncio.to_thread laufen (gleiche Falle im async-Handler). (c) brain_categories() liest jetzt /category-counts statt /list?limit=1000 — vollstaendig (kein stilles 1000er-Cap, auch sekundaere Multi-Kategorien) UND OOM-sicherer Endpoint. Alt: 0.48.0: IDEMPOTENZ fuer /chat + /chat/stream (Frank-Wunsch 2026-07-02, Almanach ai-agent §5.2): Die App schickt pro Nutzer-Intent eine request_id (UUID; Stream-Versuch und /chat-Fallback tragen DIESELBE). Duplikate (Tunnel-Abriss-Retry, OkHttp-Stale-POST-Retry, Stream-Fallback) werden nur EINMAL verarbeitet: fertige Antwort liegt 15 min im Dedup-Store (in-memory, unter _lock) und wird unveraendert zurueckgegeben; laeuft die Erstverarbeitung noch, wartet das Duplikat bis 240s auf ihr Ergebnis (409 danach). KEINE Doppel-Speicherung im Gedaechtnis, keine doppelte Session-Nachricht mehr. Dazu /chat/stream-Finalisierung DISCONNECT-FEST: Session-Update + Snapshot + Dedup-Ablage laufen als eigenstaendige Task am Turn-Ende (add_done_callback + shield) — bricht der Client mitten im Stream ab, landet die fertige Antwort trotzdem in Session + Dedup (vorher ging sie verloren: Session ohne Agent-Antwort). Fehlgeschlagene Erstverarbeitung gibt die request_id frei (ehrlicher Retry darf neu rechnen). 0.47.1: Tavily-Treffer-Staffel erneut angehoben (Frank): S=8, M=12, XL=20 (gewuenscht 25, API-Maximum ist 20). 0.47.0: S/M/XL-Prompts ZENTRAL (Frank-Wunsch 2026-07-02) — size-prompts.json in agent-data ist die Quelle der Wahrheit fuer Handy UND Dashboard (Seed: die App laedt Franks lokal gepflegte Prompts einmalig hoch, danach haelt sie sich synchron). /config liefert size_prompts + size_prompts_custom; PUT /config nimmt size_prompt_s/m/xl an. Clients OHNE eigenen context_prompt (Dashboard-Gespraech) bekommen den zentralen Prompt serverseitig angehaengt -> S/M/XL wirkt dort identisch fuer Gedaechtnis, Tavily (inkl. Suchtiefen-Staffel), native Websuche, Smalltalk und Speichern. 0.46.1: Tavily-Treffer-Staffel nach Frank-Vorgabe angehoben: S=5, M=8, XL=15 (vorher 3/5/8) — detailliertere Antworten. 0.46.0: Tavily-Suchtiefe folgt dem S/M/XL-Profil (Frank-Wunsch 2026-07-02) — die App schickt response_size (s|m|xl) explizit mit (ChatReq); tavily_search staffelt danach: s=basic+3 Treffer (schnell), m=basic+5 (wie bisher, Default), xl=ADVANCED-Tiefensuche+8 Treffer+40s-Timeout. Der S/M/XL-Antwort-Prompt floss schon seit 0.37.0 in die Antwort-Formulierung ein — jetzt ist auch die SUCHE selbst entsprechend stark/schwach. Native Websuche (Gemini-Grounding/GPT web_search) steuert sich weiterhin ueber den XL-Prompt im user_block selbst. 0.45.0: FIX 'im Logbuch steht nur meine Frage, nie die Antwort' (Frank-Bug 2026-07-02, Direktive #3). Root Cause: Sessions lebten NUR im RAM — jedes Deploy/jeder Neustart (heute 8+) verlor sie bzw. hinterliess Rumpf-Sessions (Frage ohne fertige Antwort), die der 30-min-Timeout-Flush dann unvollstaendig ins Logbuch schrieb; Fortsetzungen landeten als neue Session = fragmentierte Eintraege. Fix (Defense in Depth): Sessions werden bei JEDER Aenderung ATOMAR nach /app/data/sessions/<sid>.json gespiegelt (Snapshot im Lock, Schreiben via to_thread ausserhalb, tmp+os.replace), beim Start WIEDERHERGESTELLT (Gespraech laeuft in DERSELBEN Session weiter -> EIN vollstaendiger Logbuch-Eintrag mit Frage UND Antwort), und die Datei wird erst NACH erfolgreichem Flush (Timeout//end) geloescht. Shutdown flusht bewusst NICHT mehr implizit. 0.44.0: SICHTBARE Dubletten-Rueckfrage VOR dem Speichern (Frank-Wunsch 2026-07-02) — bei intent=save wird zuerst nach aehnlichen Eintraegen gesucht (Score >= DEDUP_MIN_SCORE 0,70, ohne Gespraeche); gibt es welche, ZITIERT der Agent sie (Titel, Kategorie, Aehnlichkeit %, Auszug) und fragt: 'zusaetzlich speichern oder einen bestehenden ersetzen?' (Knoepfe Speichern/Ersetzen/Nein). 'Speichern' legt NEU ab und sperrt den stillen Speicheragent-Dubletten-Ersatz (allow_replace=False); 'Ersetzen' ersetzt bei EINEM Kandidaten direkt (gleicher Titel+Kategorie -> titel-basierte doc_id ueberschreibt), bei MEHREREN kommt die Auswahl-Rueckfrage 'Welchen Eintrag soll ich ersetzen?' (Nummern-Knoepfe, neuer pending-mode replace_pick). Antworten werden deterministisch erkannt (ersetz/speicher/Nummer), der Router kann sie nicht verwechseln. 0.43.1: Feld-Fix started_now (Bool) vs started_at (Zeitstempel) im /eval-run-Response — vorher ueberschrieb der Zeitstempel das Bool, das Dashboard konnte Doppelstart nicht erkennen. 0.43.0: FIX Eval-Check 'fehlgeschlagen/kein Log' (Frank-Bug 2026-07-02) — Root Cause: Der Lauf dauert mit GPT-Hauptagent laenger als der 600s-Dashboard-Timeout; der synchrone Request brach ab, der Lauf lief unsichtbar weiter, das Log entsteht erst am Ende. Jetzt: /eval-run startet einen HINTERGRUND-Thread (starke Referenz, ai-agent §6) und kehrt sofort zurueck; neues GET /eval-status liefert Live-Fortschritt (running/done/total/passed/log/error); Doppel-Start wird abgefangen (started:false). 0.42.0: Kontextfenster 40 Nachrichten (AGENT_HISTORY_MAX Default 20->40, Frank: 20 Paare) + context_limit_reached-Flag in /chat und /chat/stream (genau EINMAL pro Session beim ersten Ueberschreiten -> App/Dashboard zeigen sichtbar 'Kontextgrenze erreicht'). 0.41.0: ANTWORT-STREAMING (Frank-Wunsch 2026-07-02, v.a. fuer M/XL) — neuer Endpunkt POST /chat/stream (SSE): identische _process_turn-Pipeline, aber die Antwort-Formulierung streamt live ({type:delta,text} je Chunk, {type:done,response} = exakte /chat-Antwort am Ende; die App ersetzt den Rohstream durch den finalen bereinigten Reply -> selbstheilend). Getragen von on_delta-Callbacks durch llm_generate/_llm_generate_once: Gemini via generate_content_stream (inkl. Grounding-Websuche, mit Fallback ohne thinking_config), GPT/Codex via vorhandenem SSE-Konsum (output_text.delta, inkl. native Websuche), minimax/OpenCode bleibt nicht-streamend (ein Chunk am Ende). Router/Speicher-/Leseagent (JSON) streamen bewusst NICHT. Fehler vor dem 1. Chunk -> nicht-streamender Fallback (funktionserhaltend). 0.40.0: ROUTER separat einstellbar (Frank-Wunsch 2026-07-02) — Schritt 1 (Klassifikation save/query/internet/smalltalk) kann ein EIGENES Modell (z.B. schnelles Flash) und/oder einen EIGENEN Reasoning-Effort bekommen (config.json router_model/router_reasoning, /config GET+PUT, ''/'auto' = wie Hauptagent = exakt bisheriges Verhalten). Die sichtbare Antwort (Schritt 2) kommt IMMER vom eingestellten Hauptagenten: bei delegiertem Router formuliert neu hauptagent_answer_smalltalk (Persona + geschuetzter Gespraechs-Auftrag) die Smalltalk-Antwort mit dem Hauptagent-Modell (Fallback: Router-Reply). Kein automatisches Deckeln — es gilt ausschliesslich Franks Wahl. 0.39.0: Offizielle API-Preise auch fuer die gpt-5.x-Modelle in MODEL_PRICES (Frank-Wunsch 2026-07-02) — die Modelle laufen zwar uebers ChatGPT-Abo, verbrauchen aber das Codex-Kontingent; die API-Preise (developers.openai.com/api/docs/pricing) dienen als Verbrauchs-Anhaltspunkt. Dashboard-Preisliste + App-Dropdown zeigen sie automatisch statt 'ueber Abo' (beide lesen /config model_prices). Nur minimax bleibt 'Abo'. 0.38.1: REVERT des Router-Reasoning-Deckels (Frank-Anweisung 2026-07-02: die Reasoning-Stufe stellt er SELBST ein — keine Funktionsveraenderung; medium bleibt medium, high bleibt high, auch fuer den Router). Der neutrale reasoning_override-Parameter (Default None = keine Wirkung) bleibt als Erweiterungspunkt fuer kuenftiges Streaming erhalten. 0.38.0: PERFORMANCE Router-Reasoning-Deckel (Frank-Wunsch 2026-07-02) — der Hauptagent-ROUTER (reine JSON-Klassifikation save/query/internet/smalltalk) laeuft jetzt gedeckelt auf reasoning 'low' (neuer reasoning_override-Parameter durch llm_generate/_llm_generate_once bis codex_generate + Gemini thinking_budget); die ANTWORT-Aufrufe behalten die eingestellte Thinking-Stufe. Bei gpt-5.5 mit 'medium' kostete allein das Routing 15-40s BEVOR die Antwort startete -> Gesamtwartezeit bei Gedaechtnis-/Internetfragen grob halbiert, Smalltalk deutlich schneller. 0.37.0: FIX S/M/XL-Antwortlaenge wirkungslos (Frank-Bug 2026-07-02) — der context_prompt der App (Modus-Prompt + Antwortlaengen-Prompt S/M/XL aus den Einstellungen) wurde (a) im Auto-Modus vom Router KOMPLETT ignoriert und erreichte (b) die Antwort-Formulierung (hauptagent_answer / _internet / _native_web) NIE. Jetzt: Router beruecksichtigt den Zusatzauftrag auch im Auto-Modus, und alle drei Antwort-Funktionen bekommen ihn als eigenen ZUSATZAUFTRAG-Block (_context_prompt_block) -> S/M/XL wirkt fuer Smalltalk, Gedaechtnis- UND Internet-Antworten. 0.36.1: Modell-Preise pro 1 Mio Token (Input/Output, offiziell recherchiert) im /config -> Dashboard + App koennen sie anzeigen (MODEL_PRICES; minimax/gpt = Abo). 0.36.0: Zwei neue Gemini-Modelle (gemini-3.5-flash, gemini-3-flash-preview) + Thinking-Steuerung fuer ALLE Gemini-Modelle aus der Reasoning-Stufe (thinking_budget, auf max_output_tokens addiert wg. Almanach B4; 3.x-Minimum statt 0; robuster Retry ohne thinking bei Ablehnung). Markdown-Stripper _strip_markdown_tts entfernt **Fett**/Ueberschriften/Listen aus TTS-Antworten (gemini-2.5-flash erzeugte sie trotz Verbot). 0.35.1: Native-Websuche-Antwort haelt jetzt den TTS-Stil des Hauptagent-Prompts ein (MEHRERE kurze Absaetze je 1-10 Zeilen statt EIN Block, keine Quellenliste) — Gemini-Grounding gab sonst einen einzigen langen Absatz; Gemini laeuft durch EXAKT denselben Prompt+Pfad wie GPT. 0.35.0: Fix 502 bei gpt-5.5 (Frank-Vorfall 2026-07-01) — 'minimal' reasoning.effort wird von gpt-5.x NICHT unterstuetzt (nur none/low/medium/high/xhigh); _sanitize_reasoning_effort mappt minimal->low VOR dem Codex-Call, reasoning_available (App /config) bietet 'minimal' nicht mehr an, CODEX_WEB_TOOL_TYPES nutzt web_search VOR web_search_preview (gpt-5.5 lehnt web_search_preview ab -> spart Fehlversuch). 0.34.1: Fix native-Websuche-Antwortformat — HAUPTAGENT_NATIVE_WEB_AUFTRAG verlangt jetzt explizit Fließtext (KEIN Router-JSON, kein intent/query-Objekt); gemini-3.1-flash-lite gab sonst das Router-JSON statt einer echten Antwort zurueck. 0.34.0: Modellnative Websuche jetzt auch fuer Gemini (google_search-Grounding, inkl. gemini-3.1-flash-lite/2.5-flash) — bei Tavily-aus nutzt JEDES faehige Hauptmodell seine eigene Suche (Gemini ODER Codex/GPT), nicht mehr nur Codex; minimax bleibt auf Tavily (keine native Suche). 0.33.1: Tavily-aus blockiert Internetfragen nicht mehr pauschal; bei Codex/GPT-Hauptmodell nutzt der Internet-Pfad modellnative Websuche mit Tool-Fallback. 0.33.0: Tavily/Websearch ist jetzt per persistenter Agent-Konfiguration an-/abschaltbar; /config liefert tavily_enabled und der Internet-Pfad nutzt Tavily nur bei aktivem Schalter. 0.32.1: Codex-Responses-Request an ChatGPT-Backendvertrag angepasst (input items, store=false, kein max_output_tokens) und Provider-400 als 502 statt FastAPI-500 gemeldet. 0.32.0: experimenteller OpenAI-Codex-Provider per ChatGPT-Device-Code, Codex-Modelle + Reasoning je Agent.
 
-VERSION = "0.56.2 (06.07.2026, 14:58 Uhr)"  # 0.56.2: Composite-Route query_internet fuer verschachtelte Anfragen: erst Gedächtnis-Kontext, dann Internet-Abgleich. Root Cause: Router-Schema erlaubte bisher genau EINEN intent; dadurch wurde bei Kettenanforderungen nur query ODER internet ausgeführt. Jetzt liefert der Router optional web_query, der Server führt beide bestehenden Pfade sequenziell aus und formuliert eine kombinierte Antwort. Alt: 0.55.1.
+VERSION = "0.56.0 (06.07.2026, 13:52 Uhr)"  # 0.56.0: Composite-Route query_internet fuer verschachtelte Anfragen (erst Gedächtnis-Kontext, dann Internet-Abgleich). Root Cause: Router-Schema erlaubte bisher genau EINEN intent; dadurch wurde bei Kettenanforderungen nur query ODER internet ausgeführt. Jetzt liefert der Router optional web_query, der Server führt beide bestehenden Pfade sequenziell aus und formuliert eine kombinierte Antwort. Alt: 0.55.3 (06.07.2026, 13:23 Uhr).
+VERSION = "0.56.2 (06.07.2026, 14:15 Uhr)"  # 0.56.2: Wirksamer sichtbarer Bump fuer die Composite-Route query_internet: verschachtelte Anfragen mit erst Gedächtnis-Kontext, dann Internet-Abgleich werden sequenziell ausgefuehrt und kombiniert beantwortet. Alt: 0.56.1 (06.07.2026, 13:47 Uhr): Qdrant-/Agent-Limits sind zur Laufzeit einstellbar und persistent: /config liefert und speichert limits, Agent-Limits greifen sofort im laufenden Prozess, Brain-API-Limits werden an /limits weitergereicht. Android-Einstellungen koennen damit Trefferzahl, Multi-Query, Lese-/Antwort-Kontext, Verlauf, Zusatzprompt, Chat-Backstop sowie Qdrant-Overfetch/BM25/Chunking steuern. Rein additiv; Defaults bleiben Env-kompatibel.
 
 # ---------------------------------------------------------------------------
 # Konfiguration (alles aus Umgebungsvariablen — Secrets nie im Code)
@@ -69,28 +70,60 @@ OPENCODE_API_KEY = os.getenv("OPENCODE_API_KEY", "")
 OPENCODE_GO_URL = os.getenv("OPENCODE_GO_URL", "https://opencode.ai/zen/go/v1").rstrip("/")
 OPENCODE_ANTHROPIC_VERSION = os.getenv("OPENCODE_ANTHROPIC_VERSION", "2023-06-01")
 USER_ID = os.getenv("SB_USER_ID", "frank")
-SESSION_TIMEOUT_S = int(os.getenv("AGENT_SESSION_TIMEOUT_MIN", "30")) * 60
+def _env_int(name: str, default: int) -> int:
+    try:
+        return int(os.getenv(name, str(default)))
+    except (TypeError, ValueError):
+        return default
+
+
+SESSION_TIMEOUT_S = _env_int("AGENT_SESSION_TIMEOUT_MIN", 30) * 60
 LOGBOOK_DIR = os.getenv("AGENT_LOGBOOK_DIR", "/logbook")  # gemountet auf /srv/samba/gedanken/Logbuch
 TZNAME = os.getenv("AGENT_TZ", "Europe/Berlin")
 CONV_CATEGORY = os.getenv("AGENT_CONV_CATEGORY", "gespräche")  # deutsche Umlaute (Frank 2026-06-24); Altbestand wird migriert
-DEDUP_CANDIDATES = int(os.getenv("AGENT_DEDUP_CANDIDATES", "3"))
+DEDUP_CANDIDATES = _env_int("AGENT_DEDUP_CANDIDATES", 3)
 DEDUP_MIN_SCORE = float(os.getenv("AGENT_DEDUP_MIN_SCORE", "0.70"))  # ab hier dem LLM als Kandidat zeigen
-HISTORY_MAX = int(os.getenv("AGENT_HISTORY_MAX", "40"))             # so viele letzte Nachrichten an das LLM (Frank 2026-07-02: 40 = 20 Paare)
-RECALL_LIMIT = int(os.getenv("AGENT_RECALL_LIMIT", "0"))            # 0 = kein Ergebnislimit; grosse Antworten laufen ueber Arbeitscache statt Top-N
+DEFAULT_AGENT_LIMITS = {
+    "history_max": _env_int("AGENT_HISTORY_MAX", 40),
+    "recall_full_limit": _env_int("AGENT_RECALL_LIMIT", 0),            # 0 = historisch "kein Ergebnislimit"
+    "multi_query_variants": _env_int("AGENT_MULTI_QUERY_VARIANTS", 2),
+    "lese_snippet_chars": _env_int("AGENT_LESE_SNIPPET_CHARS", 1200),
+    "answer_hit_chars": _env_int("AGENT_ANSWER_HIT_CHARS", 8000),
+    "answer_total_chars": _env_int("AGENT_ANSWER_TOTAL_CHARS", 24000),
+    "recall_normal_max": _env_int("AGENT_RECALL_NORMAL_MAX", 50),
+    "context_prompt_max_chars": _env_int("AGENT_CONTEXT_PROMPT_MAX_CHARS", 4000),
+    "chat_text_max_chars": _env_int("AGENT_CHAT_TEXT_MAX_CHARS", 500_000),
+}
+AGENT_LIMIT_BOUNDS = {
+    "history_max": (0, 200),
+    "recall_full_limit": (0, 5000),
+    "multi_query_variants": (0, 5),
+    "lese_snippet_chars": (200, 10000),
+    "answer_hit_chars": (500, 50000),
+    "answer_total_chars": (1000, 200000),
+    "recall_normal_max": (1, 500),
+    "context_prompt_max_chars": (0, 20000),
+    "chat_text_max_chars": (1000, 1_000_000),
+}
+HISTORY_MAX = DEFAULT_AGENT_LIMITS["history_max"]
+RECALL_LIMIT = DEFAULT_AGENT_LIMITS["recall_full_limit"]
 # Level-2 Such-Intelligenz (Frank-Auftrag 2026-07-04, Plan-Nr. 35-38):
 MULTI_QUERY_ENABLED = os.getenv("AGENT_MULTI_QUERY", "1").strip() not in ("0", "false", "no")
-MULTI_QUERY_VARIANTS = int(os.getenv("AGENT_MULTI_QUERY_VARIANTS", "2"))   # zusaetzliche Suchvarianten (intern)
+MULTI_QUERY_VARIANTS = DEFAULT_AGENT_LIMITS["multi_query_variants"]   # zusaetzliche Suchvarianten (intern)
 CONF_STRONG = float(os.getenv("AGENT_CONF_STRONG", "0.72"))   # dense-Score ab dem ein Treffer als STARK gilt
 CONF_WEAK = float(os.getenv("AGENT_CONF_WEAK", "0.55"))       # darunter gilt ein Treffer als SCHWACH
 ENTITY_ENABLED = os.getenv("AGENT_ENTITIES", "1").strip() not in ("0", "false", "no")
-ENTITY_EXTRACT_CHARS = int(os.getenv("AGENT_ENTITY_EXTRACT_CHARS", "2500"))  # Extraktions-Fenster je Eintrag (Kostenschutz)
-ENTITY_DOCS_LIMIT = int(os.getenv("AGENT_ENTITY_DOCS_LIMIT", "0"))           # 0 = alle Entity-Eintraege; Arbeitscache verhindert Kontext-Ueberlauf
-ANSWER_MAX_TOKENS = int(os.getenv("AGENT_ANSWER_MAX_TOKENS", "4096"))  # grosszuegig: Thinking-Tokens zaehlen dagegen (Gemini-Almanach B4)
+ENTITY_EXTRACT_CHARS = _env_int("AGENT_ENTITY_EXTRACT_CHARS", 2500)  # Extraktions-Fenster je Eintrag (Kostenschutz)
+ENTITY_DOCS_LIMIT = _env_int("AGENT_ENTITY_DOCS_LIMIT", 0)           # 0 = alle Entity-Eintraege; Arbeitscache verhindert Kontext-Ueberlauf
+ANSWER_MAX_TOKENS = _env_int("AGENT_ANSWER_MAX_TOKENS", 4096)  # grosszuegig: Thinking-Tokens zaehlen dagegen (Gemini-Almanach B4)
 # Ausgabe-Haertung (Frank-Wunsch 2026-06-25): grosse Eintraege duerfen Lese-/Hauptagent nicht sprengen.
-LESE_SNIPPET_CHARS = int(os.getenv("AGENT_LESE_SNIPPET_CHARS", "1200"))   # Leseagent waehlt NUR Nummern -> pro Treffer reicht ein Relevanz-Schnipsel (kein Volltext)
-ANSWER_HIT_CHARS = int(os.getenv("AGENT_ANSWER_HIT_CHARS", "8000"))       # Hauptagent-Antwort: max pro ausgewaehltem Treffer
-ANSWER_TOTAL_CHARS = int(os.getenv("AGENT_ANSWER_TOTAL_CHARS", "24000"))  # Hauptagent-Antwort: Gesamt-Kontextbudget (gegen Ueberlauf/Kosten)
-RECALL_WORKING_CACHE_THRESHOLD = int(os.getenv("AGENT_RECALL_WORKING_CACHE_THRESHOLD", "20"))
+LESE_SNIPPET_CHARS = DEFAULT_AGENT_LIMITS["lese_snippet_chars"]   # Leseagent waehlt NUR Nummern -> pro Treffer reicht ein Relevanz-Schnipsel (kein Volltext)
+ANSWER_HIT_CHARS = DEFAULT_AGENT_LIMITS["answer_hit_chars"]       # Hauptagent-Antwort: max pro ausgewaehltem Treffer
+ANSWER_TOTAL_CHARS = DEFAULT_AGENT_LIMITS["answer_total_chars"]  # Hauptagent-Antwort: Gesamt-Kontextbudget (gegen Ueberlauf/Kosten)
+RECALL_WORKING_CACHE_THRESHOLD = _env_int("AGENT_RECALL_WORKING_CACHE_THRESHOLD", 20)
+RECALL_NORMAL_MAX = DEFAULT_AGENT_LIMITS["recall_normal_max"]  # Poka-Yoke: normale Fragen duerfen nie hunderte Treffer intern zusammenfassen
+CONTEXT_PROMPT_MAX_CHARS = DEFAULT_AGENT_LIMITS["context_prompt_max_chars"]
+CHAT_TEXT_MAX_CHARS = DEFAULT_AGENT_LIMITS["chat_text_max_chars"]
 # Internet-Suche (Frank-Wunsch 2026-06-25): Tavily — fuer KI-Agenten gebaut, liefert Snippets + kurze
 # Antwort. Key NUR im VPS-.env (TAVILY_API_KEY=tvly-...), NIE im Repo. Fehlt der Key -> Agent sagt ehrlich,
 # dass die Internet-Suche noch nicht eingerichtet ist (kein Crash). Tool-Fehler werden gefangen (ai-agent §3.2).
@@ -1362,6 +1395,20 @@ def entity_name_from_question(text: str) -> str:
 
 
 # --- smart_recall: Zeit-Filter + Multi-Query + Entity-Register + RRF, mit weichem Fallback ---------
+def _wants_exhaustive_recall(text: str) -> bool:
+    """True nur bei bewusst breiten Gedaechtnisfragen; normale Fragen bleiben schnell/top-relevant."""
+    return bool(_FULL_CATEGORY_RE.search(text or "") or entity_name_from_question(text or ""))
+
+
+def _recall_search_limit(user_text: str) -> int:
+    """Search-Limit fuer /search: 0 (=alle) nur bei explizitem Vollabruf, sonst Default 50."""
+    if _wants_exhaustive_recall(user_text):
+        return RECALL_LIMIT
+    if RECALL_LIMIT > 0:
+        return min(RECALL_LIMIT, RECALL_NORMAL_MAX)
+    return RECALL_NORMAL_MAX
+
+
 def smart_recall(user_text: str, query: str, user_id: str = USER_ID) -> "tuple[list[dict], dict]":
     """Die komplette Level-2-Abrufkette (Nr. 35-37) VOR dem Leseagenten:
     1. Zeitausdruck in Franks ORIGINAL-Nachricht -> created_at-Filter (weich: 0 Treffer -> ungefiltert).
@@ -1374,6 +1421,8 @@ def smart_recall(user_text: str, query: str, user_id: str = USER_ID) -> "tuple[l
     if d_label:
         meta["time_filter"] = {"from": d_from, "to": d_to, "label": d_label}
 
+    search_limit = _recall_search_limit(user_text)
+    meta["search_limit"] = search_limit
     queries = [query]
     if MULTI_QUERY_ENABLED:
         variants = multi_query_variants(query)
@@ -1383,13 +1432,13 @@ def smart_recall(user_text: str, query: str, user_id: str = USER_ID) -> "tuple[l
 
     def _one(q: str) -> list[dict]:
         try:
-            return brain_search(q, RECALL_LIMIT, user_id=user_id, date_from=d_from, date_to=d_to)
+            return brain_search(q, search_limit, user_id=user_id, date_from=d_from, date_to=d_to)
         except Exception:  # noqa: BLE001 — einzelne Varianten-Suche darf den Recall nicht kippen
             _log(logging.WARNING, "Teil-Suche fehlgeschlagen", exc_info=True)
             return []
 
     if len(queries) == 1:
-        lists = [brain_search(queries[0], RECALL_LIMIT, user_id=user_id, date_from=d_from, date_to=d_to)]
+        lists = [brain_search(queries[0], search_limit, user_id=user_id, date_from=d_from, date_to=d_to)]
     else:
         from concurrent.futures import ThreadPoolExecutor
         with ThreadPoolExecutor(max_workers=len(queries)) as ex:   # wir laufen selbst im Threadpool (sync)
@@ -1400,7 +1449,7 @@ def smart_recall(user_text: str, query: str, user_id: str = USER_ID) -> "tuple[l
     # als ein falsches 'nichts gespeichert' — der Filter grenzt ein, er darf nicht verschlucken.
     if d_label and not hits:
         try:
-            hits = brain_search(query, RECALL_LIMIT, user_id=user_id)
+            hits = brain_search(query, search_limit, user_id=user_id)
             meta["time_filter_fallback"] = True
         except Exception:  # noqa: BLE001
             _log(logging.WARNING, "Zeit-Fallback-Suche fehlgeschlagen", exc_info=True)
@@ -1423,9 +1472,12 @@ def smart_recall(user_text: str, query: str, user_id: str = USER_ID) -> "tuple[l
                                      "created_at": it.get("created_at"), "updated_at": it.get("updated_at"),
                                      "matched_by": ["entity"], "bm25_rank": None})
                 hits = ent_hits + hits
-    caps = [x for x in (RECALL_LIMIT, ENTITY_DOCS_LIMIT) if x > 0]
-    if caps:
-        hits = hits[:max(caps)]
+    if _wants_exhaustive_recall(user_text):
+        caps = [x for x in (search_limit, ENTITY_DOCS_LIMIT) if x > 0]
+        if caps:
+            hits = hits[:max(caps)]
+    elif search_limit > 0:
+        hits = hits[:search_limit]
     return hits, meta
 
 
@@ -2061,6 +2113,24 @@ def load_tavily_enabled() -> bool:
     return True
 
 
+def _read_config_file() -> dict:
+    try:
+        if CONFIG_FILE.exists():
+            data = json.loads(CONFIG_FILE.read_text(encoding="utf-8"))
+            if isinstance(data, dict):
+                return data
+    except Exception as e:  # noqa: BLE001
+        _log(logging.WARNING, "config.json nicht lesbar — nutze Defaults", err=str(e))
+    return {}
+
+
+def _write_config_file(data: dict) -> None:
+    Path(AGENT_DATA_DIR).mkdir(parents=True, exist_ok=True)
+    tmp = CONFIG_FILE.with_suffix(".tmp")
+    tmp.write_text(json.dumps(data, ensure_ascii=False, indent=2), encoding="utf-8", newline="\n")
+    os.replace(tmp, CONFIG_FILE)
+
+
 def save_models(models: dict, reasoning: dict | None = None, tavily_enabled: bool | None = None,
                 router_model: str | None = None, router_reasoning: str | None = None) -> None:
     """Atomar je-Rolle-Modelle, Reasoning, Router-Einstellung und optionale Tool-Schalter speichern.
@@ -2068,7 +2138,8 @@ def save_models(models: dict, reasoning: dict | None = None, tavily_enabled: boo
     Path(AGENT_DATA_DIR).mkdir(parents=True, exist_ok=True)
     current_tavily = load_tavily_enabled()
     current_router_model, current_router_reasoning = load_router_config()
-    data = {f"{r}_model": (models.get(r) or AGENT_MODEL_DEFAULT) for r in ("haupt", "speicher", "abfrage")}
+    data = _read_config_file()
+    data.update({f"{r}_model": (models.get(r) or AGENT_MODEL_DEFAULT) for r in ("haupt", "speicher", "abfrage")})
     if reasoning is not None:
         data["reasoning"] = {
             r: ((reasoning.get(r) or "medium") if (reasoning.get(r) or "medium") in VALID_REASONING_EFFORTS else "medium")
@@ -2077,9 +2148,99 @@ def save_models(models: dict, reasoning: dict | None = None, tavily_enabled: boo
     data["tavily_enabled"] = current_tavily if tavily_enabled is None else bool(tavily_enabled)
     data["router_model"] = current_router_model if router_model is None else router_model
     data["router_reasoning"] = current_router_reasoning if router_reasoning is None else router_reasoning
-    tmp = CONFIG_FILE.with_suffix(".tmp")
-    tmp.write_text(json.dumps(data, ensure_ascii=False, indent=2), encoding="utf-8", newline="\n")
-    os.replace(tmp, CONFIG_FILE)
+    _write_config_file(data)
+
+
+def _coerce_agent_limit(key: str, value: Any) -> int:
+    low, high = AGENT_LIMIT_BOUNDS[key]
+    try:
+        n = int(value)
+    except (TypeError, ValueError):
+        n = DEFAULT_AGENT_LIMITS[key]
+    return max(low, min(high, n))
+
+
+def current_agent_limits() -> dict[str, int]:
+    return {
+        "history_max": HISTORY_MAX,
+        "recall_full_limit": RECALL_LIMIT,
+        "multi_query_variants": MULTI_QUERY_VARIANTS,
+        "lese_snippet_chars": LESE_SNIPPET_CHARS,
+        "answer_hit_chars": ANSWER_HIT_CHARS,
+        "answer_total_chars": ANSWER_TOTAL_CHARS,
+        "recall_normal_max": RECALL_NORMAL_MAX,
+        "context_prompt_max_chars": CONTEXT_PROMPT_MAX_CHARS,
+        "chat_text_max_chars": CHAT_TEXT_MAX_CHARS,
+    }
+
+
+def apply_agent_limits(limits: dict[str, Any]) -> dict[str, int]:
+    global HISTORY_MAX, RECALL_LIMIT, MULTI_QUERY_VARIANTS, LESE_SNIPPET_CHARS
+    global ANSWER_HIT_CHARS, ANSWER_TOTAL_CHARS, RECALL_NORMAL_MAX
+    global CONTEXT_PROMPT_MAX_CHARS, CHAT_TEXT_MAX_CHARS
+    clean = {k: _coerce_agent_limit(k, limits.get(k, DEFAULT_AGENT_LIMITS[k])) for k in DEFAULT_AGENT_LIMITS}
+    if clean["answer_hit_chars"] > clean["answer_total_chars"]:
+        clean["answer_hit_chars"] = clean["answer_total_chars"]
+    HISTORY_MAX = clean["history_max"]
+    RECALL_LIMIT = clean["recall_full_limit"]
+    MULTI_QUERY_VARIANTS = clean["multi_query_variants"]
+    LESE_SNIPPET_CHARS = clean["lese_snippet_chars"]
+    ANSWER_HIT_CHARS = clean["answer_hit_chars"]
+    ANSWER_TOTAL_CHARS = clean["answer_total_chars"]
+    RECALL_NORMAL_MAX = clean["recall_normal_max"]
+    CONTEXT_PROMPT_MAX_CHARS = clean["context_prompt_max_chars"]
+    CHAT_TEXT_MAX_CHARS = clean["chat_text_max_chars"]
+    return clean
+
+
+def load_agent_limits() -> dict[str, int]:
+    cfg = _read_config_file()
+    stored = cfg.get("limits", {}).get("agent") if isinstance(cfg.get("limits"), dict) else {}
+    merged = dict(DEFAULT_AGENT_LIMITS)
+    if isinstance(stored, dict):
+        merged.update({k: stored[k] for k in DEFAULT_AGENT_LIMITS if k in stored})
+    return apply_agent_limits(merged)
+
+
+def save_agent_limits(update: dict[str, Any]) -> dict[str, int]:
+    cur = current_agent_limits()
+    for k in DEFAULT_AGENT_LIMITS:
+        if k in update:
+            cur[k] = update[k]
+    clean = apply_agent_limits(cur)
+    cfg = _read_config_file()
+    limits = cfg.get("limits") if isinstance(cfg.get("limits"), dict) else {}
+    limits["agent"] = clean
+    cfg["limits"] = limits
+    _write_config_file(cfg)
+    return clean
+
+
+def get_brain_limits() -> dict:
+    try:
+        r = _HTTP.get(f"{BRAIN_URL}/limits", headers=HEADERS, timeout=8.0)
+        if r.status_code == 200:
+            data = r.json()
+            return data.get("limits") if isinstance(data.get("limits"), dict) else {}
+        _log(logging.WARNING, "Brain-API-Limits nicht ladbar", status=r.status_code)
+    except Exception as e:  # noqa: BLE001
+        _log(logging.WARNING, "Brain-API-Limits nicht erreichbar", err=f"{type(e).__name__}: {e}")
+    return {}
+
+
+def save_brain_limits(update: dict[str, Any]) -> dict:
+    r = _HTTP.put(f"{BRAIN_URL}/limits", json={"limits": update}, headers=HEADERS, timeout=15.0)
+    if r.status_code != 200:
+        raise HTTPException(status_code=502, detail=f"Brain-API-Limits nicht gespeichert: HTTP {r.status_code}")
+    data = r.json()
+    return data.get("limits") if isinstance(data.get("limits"), dict) else {}
+
+
+def combined_limits() -> dict:
+    return {"agent": current_agent_limits(), "brain": get_brain_limits()}
+
+
+load_agent_limits()
 
 
 def build_hauptagent_prompt() -> str:
@@ -2184,7 +2345,7 @@ def hauptagent_route(session: dict, user_text: str, pending: dict | None, contex
     now_line = (f"AKTUELLER ZEITPUNKT: {_wd}, {now.strftime('%d.%m.%Y')}, {now.strftime('%H:%M')} Uhr "
                 "(Zeitzone Europe/Berlin).")
     mode = _norm_context_mode(context_mode)
-    prompt = (context_prompt or "").strip()[:4000]
+    prompt = (context_prompt or "").strip()[:CONTEXT_PROMPT_MAX_CHARS]
     mode_txt = "(Auto — kein spezieller Modus)"
     if mode != "auto":
         mode_txt = f"Modus: {mode}\nZusatzauftrag von Frank:\n{prompt or '(kein Zusatzprompt hinterlegt)'}"
@@ -2211,7 +2372,7 @@ def hauptagent_route(session: dict, user_text: str, pending: dict | None, contex
             raise ValueError("kein Objekt")
     except Exception:  # noqa: BLE001 — defensiv: nie crashen, sauber zurueckfallen
         _log(logging.WARNING, "Hauptagent-JSON nicht parsebar", raw=raw[:300])
-        return {"intent": "smalltalk", "quote": "", "query": "", "web_query": "",
+        return {"intent": "smalltalk", "quote": "", "query": "",
                 "reply": "Sorry, das habe ich nicht ganz verstanden — sag es nochmal?"}
     data.setdefault("intent", "smalltalk")
     data.setdefault("quote", "")
@@ -2436,7 +2597,7 @@ def leseagent_select(question: str, hits: list[dict], categories: list[str]) -> 
 def _context_prompt_block(context_prompt: str) -> str:
     """Zusatzauftrag aus der App (Kontextmodus-Prompt + Antwortlaenge S/M/XL) als eigener Block
     fuer die Antwort-Formulierung. Leerer Prompt -> leerer Block (kein Rauschen im user_block)."""
-    extra = (context_prompt or "").strip()[:4000]
+    extra = (context_prompt or "").strip()[:CONTEXT_PROMPT_MAX_CHARS]
     if not extra:
         return ""
     return f"ZUSATZAUFTRAG VON FRANK (strikt befolgen, z.B. gewünschte Antwortlänge):\n{extra}\n\n"
@@ -2718,6 +2879,7 @@ def hauptagent_answer_recall_internet(session: dict, question: str, selected: li
                         json_mode=False, max_tokens=ANSWER_MAX_TOKENS, temperature=0.4, on_delta=on_delta))
     return text or "Ich habe im Gedächtnis und im Internet nachgeschaut, konnte aber gerade keine Antwort formulieren. Versuch es gleich nochmal."
 
+
 # ---------------------------------------------------------------------------
 # Logbuch: Gespraech ZWEIFACH sichern (Gehirn + .txt auf der Samba-Platte)
 # ---------------------------------------------------------------------------
@@ -2909,16 +3071,30 @@ async def unhandled(request: Request, exc: Exception) -> JSONResponse:
 
 
 class ChatReq(BaseModel):
-    text: str = Field(..., min_length=1, max_length=500_000, description="Franks Textnachricht (auch lange Eintraege/Almanache — brain-api chunkt sie selbst). 500_000 = GROSSZUEGIGER OOM-Backstop (fastapi §8, ~25x Franks groesste Datei); lehnt nur als allerletzte Schranke laut via 422 ab. Der eigentliche Schutz vor STILLEM Verlust ist die laute Ablehnung im dashboard (MAX_STORE_CHARS). frueher 8000/100000 -> schnitt lange Eintraege ab.")
+    text: str = Field(..., min_length=1, description="Franks Textnachricht (auch lange Eintraege/Almanache — brain-api chunkt sie selbst). Die Maximalgroesse ist zur Laufzeit ueber chat_text_max_chars einstellbar und wird laut via 422 abgelehnt, nie still gekuerzt.")
     session_id: str | None = Field(default=None, description="Gespraechs-ID (sonst pro Nutzer eine laufende Sitzung)")
     user_id: str = Field(default="frank")
     category: str | None = Field(default=None, max_length=120, description="Im Dashboard gewaehlte Kategorie (Override, tiefe Pfade A/B/C/...); leer = Agent entscheidet")
     title: str | None = Field(default=None, max_length=200, description="Im Dashboard eingetippter Titel (Override); leer = Speicheragent vergibt den Titel")
     store_timestamp: bool = Field(default=False, description="Cortex-Gespraech: beim finalen Speichern Datum+Uhrzeit bis Sekunden in den Text schreiben")
     context_mode: str | None = Field(default="auto", max_length=20, description="UI-Kontextmodus: auto | smalltalk | save | search")
-    context_prompt: str | None = Field(default=None, max_length=4000, description="Zusatzprompt des gewaehlten Kontextmodus aus der Handy-App")
+    context_prompt: str | None = Field(default=None, description="Zusatzprompt des gewaehlten Kontextmodus aus der Handy-App; Limit ist context_prompt_max_chars")
     response_size: str | None = Field(default=None, max_length=8, description="Antwortlaengen-Profil auto|s|m|xl — steuert zusaetzlich die Tavily-Suchtiefe (xl = advanced)")
     request_id: str | None = Field(default=None, max_length=64, description="Idempotency-Key der App (UUID pro Nutzer-Intent) — Duplikate (Tunnel-Abriss-Retry, Stream-Fallback) werden nur EINMAL verarbeitet")
+
+    @field_validator("text")
+    @classmethod
+    def _text_within_runtime_limit(cls, value: str) -> str:
+        if len(value) > CHAT_TEXT_MAX_CHARS:
+            raise ValueError(f"Text ist zu lang: {len(value)} Zeichen, erlaubt sind {CHAT_TEXT_MAX_CHARS}")
+        return value
+
+    @field_validator("context_prompt")
+    @classmethod
+    def _context_prompt_within_runtime_limit(cls, value: str | None) -> str | None:
+        if value is not None and len(value) > CONTEXT_PROMPT_MAX_CHARS:
+            raise ValueError(f"Zusatzprompt ist zu lang: {len(value)} Zeichen, erlaubt sind {CONTEXT_PROMPT_MAX_CHARS}")
+        return value
 
 
 class EndReq(BaseModel):
@@ -2946,6 +3122,7 @@ class ConfigReq(BaseModel):
     size_prompt_m: str | None = Field(default=None, max_length=4000, description="Zentraler M-Antwortlaengen-Prompt")
     size_prompt_xl: str | None = Field(default=None, max_length=4000, description="Zentraler XL-Antwortlaengen-Prompt")
     tavily_enabled: bool | None = Field(default=None, description="Tavily-Websearch fuer intent=internet an/aus")
+    limits: dict[str, Any] | None = Field(default=None, description="Laufzeitlimits: {'agent': {...}, 'brain': {...}}")
 
 
 class CodexAuthPollReq(BaseModel):
@@ -3044,6 +3221,7 @@ def get_config() -> dict:
             "router_model": ROUTER_MODEL, "router_reasoning": ROUTER_REASONING,
             "size_prompts": size_prompts, "size_prompts_custom": size_custom,
             "tavily_enabled": TAVILY_ENABLED,
+            "limits": combined_limits(),
             "codex": {"connected": codex_connected()},
             "default": AGENT_MODEL_DEFAULT, "available": available, "model_prices": MODEL_PRICES}
 
@@ -3077,6 +3255,15 @@ def put_config(req: ConfigReq) -> dict:
             ROUTER_REASONING = rr
     if req.tavily_enabled is not None:
         TAVILY_ENABLED = bool(req.tavily_enabled)
+    limit_result = None
+    if isinstance(req.limits, dict):
+        agent_update = req.limits.get("agent") if isinstance(req.limits.get("agent"), dict) else None
+        brain_update = req.limits.get("brain") if isinstance(req.limits.get("brain"), dict) else None
+        # Brain zuerst: Wenn die tiefe Suchschicht nicht speichern kann, bekommt die App klar einen Fehler
+        # statt einer scheinbar erfolgreichen Teil-Konfiguration.
+        brain_limits = save_brain_limits(brain_update) if brain_update is not None else get_brain_limits()
+        agent_limits = save_agent_limits(agent_update) if agent_update is not None else current_agent_limits()
+        limit_result = {"agent": agent_limits, "brain": brain_limits}
     # Zentrale S/M/XL-Prompts (App-Seed/Edit) — nur speichern, wenn mindestens eines gesetzt ist.
     if any(v is not None for v in (req.size_prompt_s, req.size_prompt_m, req.size_prompt_xl)):
         save_size_prompts({"s": req.size_prompt_s, "m": req.size_prompt_m, "xl": req.size_prompt_xl})
@@ -3084,10 +3271,11 @@ def put_config(req: ConfigReq) -> dict:
              felder=[k for k, v in (("s", req.size_prompt_s), ("m", req.size_prompt_m), ("xl", req.size_prompt_xl)) if v])
     save_models(ROLE_MODELS, ROLE_REASONING, TAVILY_ENABLED, ROUTER_MODEL, ROUTER_REASONING)  # sofort aktiv, kein Neustart noetig
     _log(logging.INFO, "Agent-Konfiguration gewechselt", models=ROLE_MODELS, reasoning=ROLE_REASONING,
-         router_model=ROUTER_MODEL or "(wie Hauptagent)", router_reasoning=ROUTER_REASONING or "(wie Hauptagent)",
-         tavily_enabled=TAVILY_ENABLED)
+          router_model=ROUTER_MODEL or "(wie Hauptagent)", router_reasoning=ROUTER_REASONING or "(wie Hauptagent)",
+          tavily_enabled=TAVILY_ENABLED, limits=limit_result)
     return {"status": "ok", "models": ROLE_MODELS, "reasoning": ROLE_REASONING,
-            "router_model": ROUTER_MODEL, "router_reasoning": ROUTER_REASONING, "tavily_enabled": TAVILY_ENABLED}
+            "router_model": ROUTER_MODEL, "router_reasoning": ROUTER_REASONING,
+            "tavily_enabled": TAVILY_ENABLED, "limits": limit_result or combined_limits()}
 
 
 @app.post("/codex/auth/start", dependencies=[Depends(require_auth)])
@@ -4150,7 +4338,7 @@ def _process_turn(session: dict, user_text: str, pending: dict | None, category:
             _log(logging.ERROR, "Recall-Suche fehlgeschlagen", exc_info=True)
             return {"reply": f"Das Nachschlagen hat gerade nicht geklappt ({type(e).__name__}). Versuch es bitte gleich nochmal.",
                     "action": "error", "pending": None}
-        if hits and (RECALL_LIMIT <= 0 or len(hits) > RECALL_WORKING_CACHE_THRESHOLD or _FULL_CATEGORY_RE.search(user_text)):
+        if hits and _wants_exhaustive_recall(user_text):
             try:
                 answer_obj = _semantic_working_cache_answer(session, user_text, hits, context_prompt, on_delta)
                 checkpoint("recall_full", "Semantische Suche ohne Ergebnislimit via Arbeitscache beantwortet",

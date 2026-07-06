@@ -45,6 +45,7 @@ import traceback
 import uuid
 from datetime import date, datetime, timezone
 from logging.handlers import RotatingFileHandler
+from pathlib import Path
 from typing import Any
 
 from fastapi import Depends, FastAPI, Header, HTTPException, Request
@@ -52,6 +53,9 @@ from fastapi.responses import JSONResponse
 from pydantic import BaseModel, Field
 
 VERSION = "1.17.0"  # 1.17.0: NARRENSICHERES SEQUENTIELLES KATEGORIE-EINLESEN (Frank-Wunsch 2026-06-27, fuer GANZ schwache Modelle). NEU: GET /category-item?category=&index=N -> EIN Eintrag per 1-basiertem Index + 'total'. Der Client iteriert index=1..total, OHNE einen Titel raten oder die Liste parsen zu muessen (eine Zahl kann kein Modell vermasseln). Stabile Titel-Sortierung (konsistent ueber Aufrufe), OOM-sicher (Metadaten fuer die Liste, Volltext nur fuer den einen Eintrag). Loest den OpenCode/DeepSeek-Fehler an der Wurzel (Poka-Yoke Stufe 3), ohne eine Namensstruktur/einen Titel zu aendern. Rein additiv. 1.16.0: TOLERANTER TITEL-ABRUF (Frank-Bug 2026-06-27, OpenCode/DeepSeek). /by-title hasht den Titel exakt -> schwache LLMs klebten dem Titel die Listen-Dekoration ' [Kategorie]' (auch ' — N Zeichen' / fuehrende '92.') aus der list_memories-Zeile an -> Eintrag wurde NIE gefunden (reproduziert: 'Versionszaehler... [Programmierung/Rules]' -> Miss). Fix: resolve_title() macht /by-title UND DELETE /by-title tolerant in 3 Stufen (exakter Hash unveraendert -> Dekoration abstreifen+exakt -> Scroll-Fallback nur 'title'-Feld, eindeutiger normalisierter Vergleich). Rein additiv (schneller Hauptpfad unveraendert), funktionserhaltend, Eindeutigkeits-Pflicht (lieber 'nicht gefunden' als falscher Eintrag). 1.15.0: LADEFENSTER-SCHUTZ (Frank-Wunsch 2026-06-26, Direktive #3). Direkt nach Container-Neustart laedt Qdrant die Collection -> points_count/scroll liefern kurz UNVOLLSTAENDIG OHNE Fehler (Vorfall: brain_health zeigte 193 statt 1224, /list 175 statt 264 -> 'nur die Haelfte angezeigt'). Fix: /health + /list geben jetzt 'collection_status' (Qdrant green/yellow/grey/red) + 'ready' (green/yellow = Daten geladen+abfragbar) zurueck. REIN ADDITIV - kein bestehendes Feld, kein 'status', kein Lese-/Schreibpfad veraendert (0 Regressionsrisiko). MCP list_memories warnt bei ready=false ('Gehirn laedt noch') statt eine halbe Liste als vollstaendig auszugeben. qdrant.md §2c (Status green abwarten). 1.14.0: VOLLSTAENDIGER + SICHERER ABRUF, auch SEHR grosser Dokumente (Frank-Wunsch 2026-06-26, Direktive #3 — 'MCP perfekt, Daten vollstaendig abrufen, auch sehr grosse Dateien'). (a) by-title (= get_by_title im MCP) lud ALLE Chunks eines Docs mit je voller full_text-Kopie -> ein 1,4-Mio-Zeichen-Doc stuerzte brain-api beim Abruf per OOM ab (reproduziert). Jetzt limit=1 (1 Chunk genuegt, full_text 1:1 in jedem Chunk) -> grosse Docs abrufbar. (b) _scroll PAGINIERT jetzt (next_page_offset) -> laedt wirklich ALLE Punkte, auch >10.000 (vorher still abgeschnitten). limit=None=alle, limit=N=hoechstens N. (c) text_len ZENTRAL in _upsert_batched: Dokumentgroesse als kleines Feld -> /list (= list_memories 'X Zeichen') zeigt wieder die echte Groesse OHNE full_text zu laden (behebt die '0 Zeichen'-Regression aus 1.13.2). (d) by-category/by-parent laden nur chunk_index=0 je Doc -> kein N-Chunks-OOM bei grossen Docs. Backfill setzt text_len auf den Bestand. search/recall (begrenzte overfetch) folgt separat. 1.13.2: OOM-LOOP-FIX Teil 2 (Frank-Bug 2026-06-26) — der eigentliche PERIODISCHE Trigger war /list: das Dashboard pollt /api/overview ALLE 20s (index.html setInterval), das brain-api /list ruft; /list lud per _scroll(with_payload=True) ALLE Volltexte in den RAM, nur fuer die im Frontend UNGENUTZTE 'chars'-Laenge. Jetzt /list metadaten-only (with_payload=['doc_id','title','category','created_at','updated_at'], chars=0). Zusammen mit dem category-counts-Fix (1.13.1) ist der OOM-Loop an der WURZEL behoben (Direktive #3). by_category/by_parent geben weiter full_text (Drawer-Anzeige) -> on-demand-Absicherung folgt separat. 1.13.1: OOM-LOOP-FIX (Frank-Bug 2026-06-26) — category-counts lud per _scroll(with_payload=True) ALLE Punkte MIT full_text (1:1 in JEDEM Chunk) in den RAM, nur um Kategorien zu ZAEHLEN. Bei 60-70 grossen Almanachen >2 GB -> Container-OOM -> Neustart-Loop alle ~20s (brain-api war staendig kurz nicht erreichbar -> Dashboard zeigte '0 Eintraege'/'Server nicht erreichbar'). Fix: _scroll bekommt with_payload-Parameter; category-counts laedt NUR ['doc_id','categories','category'] (Zaehl-Felder, KEIN full_text) -> Speicher winzig, funktionserhaltend (zaehlt identisch). fastapi §8/§9 (nicht alles gleichzeitig in den RAM). Daten unberuehrt (990 points). 1.13.0: SEHR grosse Dokumente speichern OHNE Qdrant-32MB-Crash (Frank-Bug 2026-06-25, vom Regressionstest gefunden). Root Cause 2: full_text haengt 1:1 in JEDEM Chunk -> ein 600k-Zeichen-Doc (~150 Chunks) ergab ~102 MB in EINEM Upsert -> Qdrant lehnt > 32 MB ab (400). Fix: _upsert_batched() splittet jeden Upsert in Batches unter UPSERT_MAX_BYTES (Default 24 MB) — funktionserhaltend (dieselben Punkte/Payloads, nur mehrere Requests), kein Lesepfad veraendert. Gilt fuer ALLE Schreibwege (store/entry-category/entry-categories/update/trash_restore/reembed-all). 1.12.0: SEHR grosse Dokumente zuverlaessig (Frank-Wunsch 2026-06-25, Direktive-#3-Debugging). Edit-/Papierkorb-Text-Cap 200_000 -> 1_000_000 (deckt Franks 20-30x-Almanache); StoreReq.text bleibt bewusst UNGECAPPT (= der eigentliche Speicherpfad, chunkt selbst). Diese Caps sind reine OOM-Backstops (fastapi §8), nie stille Kuerzung. Hintergrund: der urspruengliche 'halbe Datei'-Bug sass NICHT hier — full_text wird in jedem Chunk 1:1 gespeichert (Z. 528, Sonde Z. 535) und by_title/by_category/by_parent/search geben full_text 1:1 zurueck; die Kuerzung war ein STILLER text[:8000]-Slice im dashboard VOR der Speicherung (#47233). Regressionstest: tests/large_doc_roundtrip.py. 1.11.0: MEHRFACH-KATEGORIEN pro Eintrag (Multi-Category, Frank-Wunsch 2026-06-25, Etappe 1). Payload-Arrays 'categories'/'parents' (Keyword-Index) zusaetzlich zu primaer 'category'/'parent' (abwaertskompatibel). embed_input() nimmt die Kategorie-LISTE -> ALLE Kategorien + Hierarchie-Ebenen ('A/B/C' -> 'A > B > C') praegen den Vektor (Eintrag in allen Kategorien semantisch auffindbar). Filter by-category/by-parent/search matchen das Array ODER das alte Einzelfeld (nested should, keine Uebergangsluecke). category-counts zaehlt pro Kategorie (Eintrag in jeder seiner) + total_distinct (Eintraege gesamt = doc_id-dedupliziert, Frank: Gesamt zaehlt 1x). NEU POST /entry/categories (volle Liste setzen + re-embed). /reembed-all backfillt categories/parents (= Migration + Re-Embed in einem). Schreibwege store/update/entry-category/trash_restore reichen die Liste durch. 1.10.0: TITEL praegt jetzt das EMBEDDING mit (Frank-Wunsch 2026-06-25). embed_input() stellt '[Titel: T | Kategorie: K]' dem Embed-Input voran (full_text/chunk_text bleiben 1:1); identifizierende Titel sind starke Diskriminatoren (rag-retrieval §4). Alle Speicher-Wege (store/update_entry/entry-category/trash_restore) reichen den Titel ins Embedding durch -> jede Aenderung fuehrt zum neuen Vektor MIT Titel. NEU: POST /reembed-all bettet den Bestand mit dem aktuellen Titel+Kategorie-Schema neu ein (Vektor neu, Payload 1:1, idempotent, 100er-Batches). 1.9.0: Unterkategorien-Fundament (Frank-Wunsch 2026-06-25, Phase 1). (a) 2-Ebenen-Kategorie 'Haupt/Unter' -> zusaetzliches Payload-Feld 'parent' (Teil vor '/') + keyword-Index, weil Qdrant KEINEN Praefix-Operator hat (bugs/server/qdrant.md §7); GET /by-parent (alles unter Haupt), POST /backfill-parent (parent auf Altbestand via set_payload, kein Re-Embed). (b) Kategorie praegt jetzt das EMBEDDING mit: embed_input() stellt '[Kategorie: X]' dem Embed-Input voran (full_text/chunk_text bleiben 1:1) -> bessere Treffer (rag-retrieval §4). Folge: Kategorie-Wechsel (POST /entry/category) embeddet jetzt FRISCH statt set_payload. store/update_entry/trash_restore setzen parent + Kategorie-Praefix. /search um parent-Filter erweitert. 1.8.0: Eintrag-Bearbeitung im Drawer (Frank-Wunsch 2026-06-25). (a) PUT /entry kann jetzt auch den TITEL aendern — UpdateReq.title (optional); bei echter Titel-Aenderung wandert der Eintrag auf die neue (titel-basierte) doc_id (alte doc_id wird geloescht, Ziel-Titel-Kollision wird ersetzt wie /store), created_at/category bleiben; Antwort gibt die neue doc_id + title_changed; Sonde stellt sicher dass keine Geist-doc_id zurueckbleibt. (b) POST /entry/category — Kategorie EINES Eintrags per set_payload aendern (Vektor unangetastet, KEIN Re-Embed), fuer das Kategorie-Dropdown im Drawer; mit Intent-Sonde. 1.7.0: POST /purge {user_id} — HARTES Loeschen ALLER Eintraege eines TEST-Nutzers (qc.delete, kein Papierkorb), fuer die Eval-Aufraeumung. Schutz: nur 'eval*'-Nutzer, NIEMALS 'frank' (403). 1.6.0: Kategorie-Verwaltung — POST /rename-category (set_payload auf allen Chunks, Vektor bleibt; bei existierendem Ziel = Merge), POST /detach-category (Kategorie-Etikett entfernen, Eintraege bleiben 1:1 erhalten — loescht NIE einen Eintrag), GET /category-counts (Payload-Kategorien mit Eintragszahl auf doc_id-Ebene). 1.5.0: Eintraege nach Aktualitaet sortiert — /by-category + /list geben das NEUESTE zuerst zurueck (Frank-Wunsch 2026-06-24: Kategorie-Ansicht war unsortiert), via _sort_recent (updated_at, sonst created_at); created_at jetzt in beiden Listen-Antworten. 1.4.0: Papierkorb (Soft-Delete) — DELETE /entry verschiebt jetzt in den Papierkorb (trash.json, persistentes /app/data-Volume) statt endgueltig zu loeschen; GET /trash (neueste zuerst), PUT /trash (Text im Papierkorb editieren, ohne Re-Embed), POST /trash/restore (frisch embedden + unter doc_id zurueck ins Gehirn, created_at erhalten). 1.3.0: DELETE /entry — Eintrag dauerhaft per doc_id loeschen (alle Chunks), fuer den Papierkorb-Button im Dashboard-Drawer (Frank-Wunsch). 1.2.0: PUT /entry — Eintrag per doc_id 1:1 ersetzen (alte Vektoren loeschen, neuen Text frisch embedden, Titel/Kategorie/created_at erhalten); doc_id jetzt in allen Listen-/Abruf-Antworten (Frontend-Editor). 1.1.0: /search um Payload-Filter (Kategorie + Datum/Bereich). 1.0.0: mem0 raus -> direkter 1:1-Speicher.
+
+# Aktive sichtbare Version; die alte lange Historie bleibt direkt darüber erhalten.
+VERSION = "1.18.0 (06.07.2026, 13:47 Uhr)"  # 1.18.0: Runtime-Limits fuer Cortex-Einstellungen. /limits liefert und speichert Chunking, dense Overfetch und BM25-Kandidaten persistent in brain-data; /search und chunk_text nutzen die Werte sofort. Defaults bleiben Env-kompatibel; bestehende Eintraege bleiben 1:1 erhalten.
 
 # ---------------------------------------------------------------------------
 # Konfiguration (alles aus Umgebungsvariablen — Secrets nie im Code)
@@ -68,9 +72,20 @@ COLLECTION = os.getenv("SB_COLLECTION", "brain")
 ENTITY_COLLECTION = os.getenv("SB_ENTITY_COLLECTION", "brain_entities")   # Entity-Register (Nr. 36)
 EMBED_MODEL = os.getenv("GEMINI_EMBED_MODEL", "gemini-embedding-001")
 EMBED_DIMS = int(os.getenv("SB_EMBED_DIMS", "1536"))
+def _env_int(name: str, default: int) -> int:
+    try:
+        return int(os.getenv(name, str(default)))
+    except (TypeError, ValueError):
+        return default
+
+
 # Chunking fuer die SUCHE (gemini-embedding-001: ~2048 Token Input-Limit). Konservativ in Zeichen.
-CHUNK_CHARS = int(os.getenv("SB_CHUNK_CHARS", "4000"))
-CHUNK_OVERLAP = int(os.getenv("SB_CHUNK_OVERLAP", "200"))
+CHUNK_CHARS = _env_int("SB_CHUNK_CHARS", 4000)
+CHUNK_OVERLAP = _env_int("SB_CHUNK_OVERLAP", 200)
+SEARCH_OVERFETCH_FACTOR = _env_int("SB_SEARCH_OVERFETCH_FACTOR", 4)
+SEARCH_DATE_OVERFETCH_FACTOR = _env_int("SB_SEARCH_DATE_OVERFETCH_FACTOR", 20)
+BM25_CANDIDATE_FACTOR = _env_int("SB_BM25_CANDIDATE_FACTOR", 4)
+BM25_MIN_CANDIDATES = _env_int("SB_BM25_MIN_CANDIDATES", 20)
 MAX_EMBED_CALLS_PER_DAY = int(os.getenv("SB_MAX_EMBED_CALLS_PER_DAY", "20000"))  # Defense-in-Depth-Cap
 # Qdrant lehnt einen Upsert-Request > ~32 MB mit 400 ab. Da der 1:1-Volltext (full_text) in JEDEM
 # Chunk haengt, kann EIN grosses Dokument (viele Chunks) ein einzelnes Upsert ueber 32 MB treiben.
@@ -82,6 +97,21 @@ LOG_LEVEL = os.getenv("SB_LOG_LEVEL", "INFO").upper()
 # damit sie im Dashboard wiederhergestellt/editiert werden koennen. KEINE Vektoren — reiner Textspeicher.
 DATA_DIR = os.getenv("SB_DATA_DIR", "/app/data")
 TRASH_PATH = os.getenv("SB_TRASH_PATH", os.path.join(DATA_DIR, "trash.json"))
+LIMITS_FILE = Path(os.getenv("SB_LIMITS_FILE", os.path.join(DATA_DIR, "runtime-limits.json")))
+DEFAULT_BRAIN_LIMITS = {
+    "chunk_chars": CHUNK_CHARS,
+    "chunk_overlap": CHUNK_OVERLAP,
+    "search_overfetch_factor": SEARCH_OVERFETCH_FACTOR,
+    "bm25_candidate_factor": BM25_CANDIDATE_FACTOR,
+    "bm25_min_candidates": BM25_MIN_CANDIDATES,
+}
+BRAIN_LIMIT_BOUNDS = {
+    "chunk_chars": (500, 20000),
+    "chunk_overlap": (0, 5000),
+    "search_overfetch_factor": (1, 20),
+    "bm25_candidate_factor": (1, 20),
+    "bm25_min_candidates": (1, 1000),
+}
 
 
 def is_overview_total_excluded(category: str | None) -> bool:
@@ -144,6 +174,66 @@ def checkpoint(step: str, intent: str, ok: bool, **ctx: Any) -> None:
 
 def iso_now() -> str:
     return datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
+
+
+def _coerce_brain_limit(key: str, value: Any) -> int:
+    low, high = BRAIN_LIMIT_BOUNDS[key]
+    try:
+        n = int(value)
+    except (TypeError, ValueError):
+        n = DEFAULT_BRAIN_LIMITS[key]
+    return max(low, min(high, n))
+
+
+def current_brain_limits() -> dict[str, int]:
+    return {
+        "chunk_chars": CHUNK_CHARS,
+        "chunk_overlap": CHUNK_OVERLAP,
+        "search_overfetch_factor": SEARCH_OVERFETCH_FACTOR,
+        "bm25_candidate_factor": BM25_CANDIDATE_FACTOR,
+        "bm25_min_candidates": BM25_MIN_CANDIDATES,
+    }
+
+
+def apply_brain_limits(limits: dict[str, Any]) -> dict[str, int]:
+    global CHUNK_CHARS, CHUNK_OVERLAP, SEARCH_OVERFETCH_FACTOR
+    global BM25_CANDIDATE_FACTOR, BM25_MIN_CANDIDATES
+    clean = {k: _coerce_brain_limit(k, limits.get(k, DEFAULT_BRAIN_LIMITS[k])) for k in DEFAULT_BRAIN_LIMITS}
+    clean["chunk_overlap"] = min(clean["chunk_overlap"], max(0, clean["chunk_chars"] - 1))
+    CHUNK_CHARS = clean["chunk_chars"]
+    CHUNK_OVERLAP = clean["chunk_overlap"]
+    SEARCH_OVERFETCH_FACTOR = clean["search_overfetch_factor"]
+    BM25_CANDIDATE_FACTOR = clean["bm25_candidate_factor"]
+    BM25_MIN_CANDIDATES = clean["bm25_min_candidates"]
+    return clean
+
+
+def load_brain_limits() -> dict[str, int]:
+    merged = dict(DEFAULT_BRAIN_LIMITS)
+    try:
+        if LIMITS_FILE.exists():
+            stored = json.loads(LIMITS_FILE.read_text(encoding="utf-8"))
+            if isinstance(stored, dict):
+                merged.update({k: stored[k] for k in DEFAULT_BRAIN_LIMITS if k in stored})
+    except Exception as e:  # noqa: BLE001
+        _log(logging.WARNING, "runtime-limits.json nicht lesbar — nutze Defaults", err=str(e))
+    return apply_brain_limits(merged)
+
+
+def save_brain_limits(update: dict[str, Any]) -> dict[str, int]:
+    cur = current_brain_limits()
+    for k in DEFAULT_BRAIN_LIMITS:
+        if k in update:
+            cur[k] = update[k]
+    clean = apply_brain_limits(cur)
+    LIMITS_FILE.parent.mkdir(parents=True, exist_ok=True)
+    tmp = LIMITS_FILE.with_suffix(".tmp")
+    tmp.write_text(json.dumps(clean, ensure_ascii=False, indent=2), encoding="utf-8", newline="\n")
+    os.replace(tmp, LIMITS_FILE)
+    return clean
+
+
+load_brain_limits()
 
 
 # ---------------------------------------------------------------------------
@@ -769,6 +859,10 @@ class SearchReq(BaseModel):
     date_to: str | None = Field(default=None, description="Bis zu diesem Tag (YYYY-MM-DD, inklusive)")
 
 
+class LimitsReq(BaseModel):
+    limits: dict[str, int] = Field(default_factory=dict, description="Runtime-Limits fuer Suche und Chunking")
+
+
 class UpdateReq(BaseModel):
     doc_id: str = Field(..., min_length=1, description="ID des zu ersetzenden Eintrags (aus /list, /by-category, /search)")
     text: str = Field(..., min_length=1, max_length=1_000_000, description="Neuer 1:1-Text — ersetzt den alten Vektor komplett. Sehr grosse Dokumente OK (brain-api chunkt selbst); max_length ist NUR ein OOM-Backstop (fastapi §8), KEINE stille Kuerzung — ueber der Grenze lehnt Pydantic laut via 422 ab.")
@@ -862,6 +956,18 @@ def health() -> dict:
         "embed_dims": EMBED_DIMS,
         "embed_calls_today": _embed_calls["count"],
     }
+
+
+@app.get("/limits", dependencies=[Depends(require_auth)])
+def get_limits() -> dict:
+    return {"ok": True, "limits": current_brain_limits(), "defaults": DEFAULT_BRAIN_LIMITS}
+
+
+@app.put("/limits", dependencies=[Depends(require_auth)])
+def put_limits(req: LimitsReq) -> dict:
+    limits = save_brain_limits(req.limits or {})
+    _log(logging.INFO, "Brain-API-Limits gespeichert", **limits)
+    return {"ok": True, "limits": limits, "defaults": DEFAULT_BRAIN_LIMITS}
 
 
 @app.post("/store", dependencies=[Depends(require_auth)])
@@ -1412,7 +1518,7 @@ def search(req: SearchReq) -> dict:
         search_point_limit = max(1, len(count_pts))
 
     # Bei Python-Datums-Nachfilter mehr Kandidaten holen, damit datumspassende Treffer nicht durchrutschen.
-    overfetch = search_point_limit or (effective_limit * (20 if py_date_filter else 4))
+    overfetch = search_point_limit or (effective_limit * (SEARCH_DATE_OVERFETCH_FACTOR if py_date_filter else SEARCH_OVERFETCH_FACTOR))
     raw = qc.query_points(
         collection_name=COLLECTION, query=qvec,
         query_filter=Filter(must=must),
@@ -1458,7 +1564,7 @@ def search(req: SearchReq) -> dict:
                         return False
                 return True
 
-            bm_hits = _bm25_index(req.user_id).search(req.query, limit=max(effective_limit * 4, 20), allow=_allow)
+            bm_hits = _bm25_index(req.user_id).search(req.query, limit=max(effective_limit * BM25_CANDIDATE_FACTOR, BM25_MIN_CANDIDATES), allow=_allow)
             bm25_used = True
             bm_ranked_ids = [c.get("doc_id") for c, _s in bm_hits]
             fused = _rrf_fuse([[d["doc_id"] for d in dense_ranked], bm_ranked_ids])
@@ -1501,6 +1607,7 @@ def search(req: SearchReq) -> dict:
                ok=isinstance(items, list), query_len=len(req.query), hits=len(items),
                filters=applied if has_filter else None, hybrid=bm25_used,
                requested_limit=req.limit, effective_limit=effective_limit, search_point_limit=search_point_limit or overfetch,
+               dense_factor=SEARCH_OVERFETCH_FACTOR, bm25_factor=BM25_CANDIDATE_FACTOR,
                native_date=bool((gte or lte) and not py_date_filter), ms=int((time.time() - t0) * 1000))
     return {"ok": True, "count": len(items), "items": items, "filters": applied if has_filter else None,
             "retrieval": "hybrid" if bm25_used else "dense"}
