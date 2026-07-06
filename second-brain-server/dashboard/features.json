@@ -1,7 +1,15 @@
 {
-	"stand": "06.07.2026, 18:10 Uhr",
+	"stand": "06.07.2026, 18:22 Uhr",
 	"hinweis": "PFLEGE-PFLICHT: Bei JEDEM Deploy, der ein neues System/Feature einbaut, hier einen Eintrag ERGAENZEN (neueste zuerst) — mit Datum + Uhrzeit und ausfuehrlicher Erklaerung. Diese Datei ist die Quelle des Info-Bereichs in den Dashboard-Einstellungen (GET /api/features). Regel verankert in DEPLOY.md.",
 	"features": [
+		{
+			"id": "qdrant-limit-best-practice-empfehlungen",
+			"name": "Qdrant-Limits: Empfehlungen nach Retrieval-Best-Practice",
+			"eingebaut": "06.07.2026, 18:22 Uhr",
+			"dienst": "dashboard 0.54.2",
+			"kurz": "Der Empfehlungsbutton optimiert die Limits jetzt auf Antwortqualität statt auf möglichst große Normalabrufe und zeigt unter jedem Feld nur noch den empfohlenen Wert.",
+			"erklaerung": "Die automatische Qdrant-Limit-Empfehlung wurde fachlich neu ausgerichtet: Normale Gedächtnisfragen werden nicht mehr aus der größten Kategorie oder Gesamtmenge nach oben skaliert, sondern bleiben in einem fokussierten RAG-Korridor von 20 bis 50 Dokumentkandidaten. Das schützt vor Suchrauschen und Lost-in-the-Middle-Effekten. Vollständigkeit bleibt trotzdem erhalten, aber nur dort, wo sie fachlich hingehört: bei ausdrücklich vollständigen Fragen, Entity-Vollabrufen und Kategorie-Gesamtfragen über Arbeitscache und Kategorie-Leser. Die Empfehlung berücksichtigt weiterhin Bestand, Kategorien, Qdrant-Punkte, Dokumentlängen und Chunkzahl, leitet daraus aber kleinere Normalabrufe, passendere Antwortbudgets, frühe Arbeitscache-Verdichtung, Hybrid-/BM25-Reserve und künftige Chunk-Werte näher an typischen RAG-Startwerten ab. Die Oberfläche ist ruhiger: Unter jedem Zahlenfeld steht nach dem Lauf nur noch 'Empfehlung: Wert Einheit', keine langen Begründungssätze mehr. Die kompakte Empfehlungsbox nennt den Qualitätsansatz und die gescannten Metadaten; Speichern bleibt wie bisher ein separater Schritt."
+		},
 		{
 			"id": "dashboard-modus-prompts-und-systeminfo-editor",
 			"name": "Dashboard-Gespräch synchron mit Android: Modus-Schalter, Prompt-Editor und bearbeitbare System-Info",
