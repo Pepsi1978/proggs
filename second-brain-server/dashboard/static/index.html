@@ -782,7 +782,7 @@ button{font-family:inherit;cursor:pointer}
 .user-context-tools{display:flex;flex-direction:column;gap:7px;align-items:center}
 .user-context-title{font-family:'Space Grotesk';font-size:14px;font-weight:700;color:var(--text);margin-bottom:6px}
 .user-context-row:not(.active) .user-context-title{color:var(--text-faint)}
-.user-context-text{width:100%;min-height:70px;resize:vertical;border:none;outline:none;background:transparent;color:var(--text);font-family:inherit;font-size:13.5px;line-height:1.55}
+.user-context-text{width:100%;min-height:70px;resize:none;overflow:hidden;border:none;outline:none;background:transparent;color:var(--text);font-family:inherit;font-size:13.5px;line-height:1.55}
 .user-context-icon{width:34px;height:34px;display:inline-flex;align-items:center;justify-content:center;border-radius:10px;border:1px solid var(--border);background:var(--surface);color:var(--text-dim);font-family:'Space Grotesk';font-weight:800;cursor:pointer}
 .user-context-icon:hover{border-color:var(--accent);color:var(--accent)}
 .user-context-icon.busy{animation:btnpulse 1s var(--ease-soft) infinite}
@@ -2622,14 +2622,20 @@ button{font-family:inherit;cursor:pointer}
       const body = document.createElement("div");
       const title = document.createElement("div"); title.className = "user-context-title"; title.textContent = userContextTitle(p.text);
       const ta = document.createElement("textarea"); ta.className = "user-context-text"; ta.value = p.text; ta.spellcheck = false;
-      ta.addEventListener("input", ()=>{ p.text = ta.value; title.textContent = userContextTitle(p.text); saveUserContextPromptsDebounced(); });
+      ta.addEventListener("input", ()=>{ p.text = ta.value; title.textContent = userContextTitle(p.text); growUserContextText(ta); saveUserContextPromptsDebounced(); });
       body.append(title, ta);
       const del = document.createElement("button"); del.className = "user-context-icon danger"; del.type = "button"; del.title = "Prompt löschen";
       del.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M3 6h18M8 6V4a1 1 0 0 1 1-1h6a1 1 0 0 1 1 1v2m2 0v14a1 1 0 0 1-1 1H7a1 1 0 0 1-1-1V6"/><path d="M10 11v6M14 11v6"/></svg>';
       del.addEventListener("click", async ()=>{ const yes = await catConfirm("Kontext-Prompt löschen?", "Diesen Zusatz-Prompt wirklich löschen?", "Ja, löschen"); if(!yes) return; userContextPrompts = userContextPrompts.filter(x=>x.id!==p.id); paintUserContextPromptList(); saveUserContextPromptsDebounced(0); });
       row.append(tools, body, del);
       host.appendChild(row);
+      growUserContextText(ta);
     });
+  }
+
+  function growUserContextText(ta){
+    ta.style.height = "auto";
+    ta.style.height = (ta.scrollHeight + 2) + "px";
   }
 
   async function addUserContextPrompt(){
