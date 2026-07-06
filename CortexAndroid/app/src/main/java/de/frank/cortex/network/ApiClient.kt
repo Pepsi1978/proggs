@@ -589,10 +589,10 @@ object ApiClient {
 
     // --- Gemini Text verbessern ---
 
-    suspend fun geminiImprove(text: String): String {
+    suspend fun geminiImprove(text: String, extraInstruction: String? = null): String {
         val key = SettingsStore.geminiApiKey
         if (key.isBlank()) throw IllegalStateException("Gemini-Schlüssel fehlt")
-        val prompt = """
+        val basePrompt = """
             Du bist ein deutscher Korrektur- und Formulierungsassistent für diktierte oder getippte Notizen.
             Nimm den folgenden Text vollständig als Quelle.
             Erkenne aus dieser Quelle die gemeinte Intention und formuliere sie in sehr gutes, klares, natürliches Deutsch um.
@@ -603,6 +603,8 @@ object ApiClient {
             Wenn der Quelltext unklar ist, bewahre die Unklarheit, statt sie zu erfinden.
             Gib ausschließlich den verbesserten Text zurück, ohne Erklärung, Markdown, Überschrift oder Anführungszeichen.
         """.trimIndent()
+        val prompt = listOfNotNull(basePrompt, extraInstruction?.trim()?.takeIf { it.isNotBlank() })
+            .joinToString("\n\n")
         val body = """
         {
             "contents": [{"parts": [

@@ -25,6 +25,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.Backspace
 import androidx.compose.material.icons.automirrored.filled.Send
+import androidx.compose.material.icons.automirrored.filled.Undo
 import androidx.compose.material.icons.automirrored.filled.VolumeOff
 import androidx.compose.material.icons.automirrored.filled.VolumeUp
 import androidx.compose.material.icons.filled.*
@@ -328,6 +329,7 @@ fun ChatScreen(vm: ChatViewModel = viewModel()) {
                 prompts = uiState.userContextPrompts,
                 draft = contextPromptDraft,
                 onDraftChange = { contextPromptDraft = it },
+                improvingPromptId = uiState.improvingContextPromptId,
                 isRecording = uiState.isRecording && transcriptionTarget == TranscriptionTarget.ContextPrompt,
                 isTranscribing = uiState.isTranscribing && transcriptionTarget == TranscriptionTarget.ContextPrompt,
                 onMicToggle = {
@@ -350,6 +352,8 @@ fun ChatScreen(vm: ChatViewModel = viewModel()) {
                 },
                 onPromptChange = vm::updateUserContextPrompt,
                 onPromptEnabledChange = vm::toggleUserContextPrompt,
+                onPromptImprove = vm::improveUserContextPrompt,
+                onPromptRestoreOriginal = vm::restoreUserContextPromptOriginal,
                 onPromptDelete = vm::deleteUserContextPrompt,
                 onClose = { isContextPromptDialogOpen = false }
             )
@@ -1131,12 +1135,15 @@ private fun ContextPromptDialog(
     prompts: List<UserContextPrompt>,
     draft: String,
     onDraftChange: (String) -> Unit,
+    improvingPromptId: String?,
     isRecording: Boolean,
     isTranscribing: Boolean,
     onMicToggle: () -> Unit,
     onSend: () -> Unit,
     onPromptChange: (String, String) -> Unit,
     onPromptEnabledChange: (String, Boolean) -> Unit,
+    onPromptImprove: (String) -> Unit,
+    onPromptRestoreOriginal: (String) -> Unit,
     onPromptDelete: (String) -> Unit,
     onClose: () -> Unit
 ) {
@@ -1260,8 +1267,11 @@ private fun ContextPromptDialog(
                         items(prompts, key = { it.id }) { prompt ->
                             ContextPromptRow(
                                 prompt = prompt,
+                                isImproving = improvingPromptId == prompt.id,
                                 onTextChange = { onPromptChange(prompt.id, it) },
                                 onEnabledChange = { onPromptEnabledChange(prompt.id, it) },
+                                onImprove = { onPromptImprove(prompt.id) },
+                                onRestoreOriginal = { onPromptRestoreOriginal(prompt.id) },
                                 onDelete = { onPromptDelete(prompt.id) }
                             )
                         }
@@ -1275,8 +1285,11 @@ private fun ContextPromptDialog(
 @Composable
 private fun ContextPromptRow(
     prompt: UserContextPrompt,
+    isImproving: Boolean,
     onTextChange: (String) -> Unit,
     onEnabledChange: (Boolean) -> Unit,
+    onImprove: () -> Unit,
+    onRestoreOriginal: () -> Unit,
     onDelete: () -> Unit
 ) {
     val isDark = MaterialTheme.colorScheme.background == DarkBg
@@ -1292,11 +1305,51 @@ private fun ContextPromptRow(
             horizontalArrangement = Arrangement.spacedBy(10.dp),
             verticalAlignment = Alignment.Top
         ) {
-            Switch(
-                checked = prompt.enabled,
-                onCheckedChange = onEnabledChange,
-                modifier = Modifier.padding(top = 2.dp)
-            )
+            Column(
+                horizontalAlignment = Alignment.CenterHorizontally,
+                verticalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                Switch(
+                    checked = prompt.enabled,
+                    onCheckedChange = onEnabledChange
+                )
+                Box(
+                    modifier = Modifier
+                        .size(38.dp)
+                        .clip(RoundedCornerShape(11.dp))
+                        .background(Mint.copy(alpha = 0.13f))
+                        .border(1.dp, Mint.copy(alpha = 0.30f), RoundedCornerShape(11.dp))
+                        .clickable(enabled = prompt.text.isNotBlank() && !isImproving, onClick = onImprove),
+                    contentAlignment = Alignment.Center
+                ) {
+                    if (isImproving) {
+                        CircularProgressIndicator(
+                            modifier = Modifier.size(20.dp),
+                            strokeWidth = 2.dp,
+                            color = Mint
+                        )
+                    } else {
+                        Text("G", fontFamily = SpaceGrotesk, fontWeight = FontWeight.Bold,
+                            fontSize = 18.sp, color = Mint)
+                    }
+                }
+                Box(
+                    modifier = Modifier
+                        .size(38.dp)
+                        .clip(RoundedCornerShape(11.dp))
+                        .background(MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.13f))
+                        .border(1.dp, MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.28f), RoundedCornerShape(11.dp))
+                        .clickable(enabled = !prompt.originalText.isNullOrBlank(), onClick = onRestoreOriginal),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Icon(
+                        Icons.AutoMirrored.Filled.Undo,
+                        contentDescription = "Original wiederherstellen",
+                        tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                        modifier = Modifier.size(20.dp)
+                    )
+                }
+            }
             Column(Modifier.weight(1f)) {
                 Text(
                     contextPromptTitle(prompt.text),
@@ -1316,7 +1369,7 @@ private fun ContextPromptRow(
                         color = MaterialTheme.colorScheme.onSurface
                     ),
                     minLines = 2,
-                    maxLines = 12,
+                    maxLines = Int.MAX_VALUE,
                     decorationBox = { inner ->
                         if (prompt.text.isEmpty()) {
                             Text("Prompt", fontSize = 14.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)

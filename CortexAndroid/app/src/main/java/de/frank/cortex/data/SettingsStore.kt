@@ -30,7 +30,8 @@ import java.util.concurrent.ConcurrentHashMap
 data class UserContextPrompt(
     val id: String,
     val text: String,
-    val enabled: Boolean = true
+    val enabled: Boolean = true,
+    val originalText: String? = null
 )
 
 // DataStore-Delegate muss top-level leben (eine Instanz pro Prozess).
@@ -410,7 +411,8 @@ object SettingsStore {
                         UserContextPrompt(
                             id = id,
                             text = item.optString("text"),
-                            enabled = item.optBoolean("enabled", true)
+                            enabled = item.optBoolean("enabled", true),
+                            originalText = item.optString("original_text").takeIf { it.isNotBlank() }
                         )
                     )
                 }
@@ -429,6 +431,7 @@ object SettingsStore {
                     .put("id", prompt.id)
                     .put("text", prompt.text)
                     .put("enabled", prompt.enabled)
+                    .put("original_text", prompt.originalText ?: "")
             )
         }
         plain.edit().putString("user_context_prompts", array.toString()).apply()

@@ -67,7 +67,8 @@ data class ChatUiState(
     val isGeneratingTitle: Boolean = false,
     val contextMode: String = SettingsStore.CONTEXT_MODE_AUTO,
     val responseSize: String = SettingsStore.RESPONSE_SIZE_AUTO,
-    val userContextPrompts: List<UserContextPrompt> = emptyList()
+    val userContextPrompts: List<UserContextPrompt> = emptyList(),
+    val improvingContextPromptId: String? = null
 )
 
 object ChatCommands {
@@ -670,7 +671,8 @@ class ChatViewModel : ViewModel() {
         val updated = SettingsStore.userContextPrompts() + UserContextPrompt(
             id = UUID.randomUUID().toString(),
             text = trimmed,
-            enabled = true
+            enabled = true,
+            originalText = trimmed
         )
         SettingsStore.setUserContextPrompts(updated)
         _uiState.update { it.copy(userContextPrompts = updated) }
@@ -696,6 +698,73 @@ class ChatViewModel : ViewModel() {
         val updated = SettingsStore.userContextPrompts().map {
             if (it.id == id) it.copy(enabled = enabled) else it
         }
+        SettingsStore.setUserContextPrompts(updated)
+        _uiState.update { it.copy(userContextPrompts = updated) }
+    }
+
+    fun improveUserContextPrompt(id: String) {
+        val prompt = SettingsStore.userContextPrompts().firstOrNull { it.id == id } ?: return
+        val original = prompt.text.trim()
+        if (original.isBlank()) {
+            _uiState.update { it.copy(error = "Prompt ist leer") }
+            return
+        }
+        viewModelScope.launch {
+            _uiState.update { it.copy(improvingContextPromptId = id, error = null) }
+            try {
+                CortexLog.checkpoint(
+                    step = "context_prompt_gemini_improve",
+                    intent = "Kontext-Prompt als Zusatzanweisung fuer Agenten verbessern",
+                    expected = "verbesserter Prompt ersetzt Prompt-Karte",
+                    actual = "warte…",
+                    ok = false,
+                    ctx = mapOf("prompt_id" to id, "input_len" to original.length)
+                )
+                val extra = """
+                    Zusatzaufgabe: Dieser Text ist kein normaler Chat-Text, sondern eine zusätzliche Anweisung,
+                    die später zusammen mit einer eigentlichen Nutzerfrage an einen Agenten gesendet wird.
+                    Optimiere ihn deshalb so, dass der Agent ihn eindeutig als dauerhaft geltende Zusatzanweisung
+                    zur folgenden Frage versteht. Beginne den verbesserten Text mit: "Zusätzliche Anweisung an den Agenten:"
+                    und formuliere danach die Anweisung klar, vollständig, direkt und handlungsorientiert.
+                """.trimIndent()
+                val improved = withContext(Dispatchers.IO) { ApiClient.geminiImprove(original, extra) }.trim()
+                if (improved.isBlank()) throw IllegalStateException("Gemini hat leeren Text zurückgegeben")
+                val updated = SettingsStore.userContextPrompts().map {
+                    if (it.id == id) it.copy(text = improved, originalText = it.originalText ?: original) else it
+                }
+                SettingsStore.setUserContextPrompts(updated)
+                _uiState.update { it.copy(userContextPrompts = updated, improvingContextPromptId = null) }
+                CortexLog.checkpoint(
+                    step = "context_prompt_gemini_improve",
+                    intent = "Kontext-Prompt als Zusatzanweisung fuer Agenten verbessern",
+                    expected = "verbesserter Prompt ersetzt Prompt-Karte",
+                    actual = "output_len=${improved.length}",
+                    ok = true,
+                    ctx = mapOf("prompt_id" to id, "input_len" to original.length, "output_len" to improved.length)
+                )
+            } catch (e: CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                CortexLog.error("ChatVM", "improveUserContextPrompt", "Gemini-Kontext-Prompt-Verbesserung fehlgeschlagen: ${e.message}")
+                _uiState.update {
+                    it.copy(
+                        improvingContextPromptId = null,
+                        error = "Gemini konnte den Prompt nicht verbessern: ${e.message}"
+                    )
+                }
+            }
+        }
+    }
+
+    fun restoreUserContextPromptOriginal(id: String) {
+        val prompts = SettingsStore.userContextPrompts()
+        val prompt = prompts.firstOrNull { it.id == id } ?: return
+        val original = prompt.originalText?.trim().orEmpty()
+        if (original.isBlank()) {
+            _uiState.update { it.copy(error = "Kein Original für diesen Prompt gespeichert") }
+            return
+        }
+        val updated = prompts.map { if (it.id == id) it.copy(text = original) else it }
         SettingsStore.setUserContextPrompts(updated)
         _uiState.update { it.copy(userContextPrompts = updated) }
     }
