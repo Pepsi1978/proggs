@@ -1,7 +1,15 @@
 {
-	"stand": "06.07.2026, 11:45 Uhr",
+	"stand": "06.07.2026, 11:55 Uhr",
 	"hinweis": "PFLEGE-PFLICHT: Bei JEDEM Deploy, der ein neues System/Feature einbaut, hier einen Eintrag ERGAENZEN (neueste zuerst) — mit Datum + Uhrzeit und ausfuehrlicher Erklaerung. Diese Datei ist die Quelle des Info-Bereichs in den Dashboard-Einstellungen (GET /api/features). Regel verankert in DEPLOY.md.",
 	"features": [
+		{
+			"id": "uebersicht-kategorie-sortierung",
+			"name": "Übersicht: Kategorie-Sortierung nach Menge oder Alphabet",
+			"eingebaut": "06.07.2026, 11:55 Uhr",
+			"dienst": "dashboard 0.48.0",
+			"kurz": "In der Einträge-gesamt-Blase gibt es jetzt zwei orange leuchtende Sortier-Schalter: Menge und Alphabet. Standard ist Menge.",
+			"erklaerung": "Die Kategorie-Legende in der Übersicht ist jetzt besser konzentrierbar: Sie füllt die Reihenfolge spaltenweise von oben nach unten, statt die größten Kategorien nebeneinander über die ganze Bildschirmbreite zu verteilen. Der Schalter 'Menge' ist standardmäßig aktiv und sortiert wie bisher nach Anzahl der Einträge, nur im neuen vertikalen Lesemuster. Der Schalter 'Alphabet' sortiert dieselben Haupt- und Unterkategorien alphabetisch, ebenfalls von oben nach unten und dann in die nächste Spalte. Die Schalter sitzen direkt unter 'Einträge gesamt' in der Spektrum-Karte, nutzen den bestehenden orange-roten Cortex-Glanzstil und setzen semantisch korrekt aria-pressed für Bedienhilfen. Backend-Daten und Zählung bleiben unverändert; nur die Darstellung im Dashboard wechselt clientseitig."
+		},
 		{
 			"id": "bibliothekar-aufgaben-editor",
 			"name": "Bibliothekar-Aufgaben bearbeiten: Standard- und eigene Nachtaufgaben per KI verbessern",

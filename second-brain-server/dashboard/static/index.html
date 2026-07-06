@@ -284,7 +284,16 @@ button{font-family:inherit;cursor:pointer}
 .seg:hover .seg-tip{opacity:1;transform:translate(-50%,0)}
 
 /* Legende */
-.legend{position:relative;z-index:1;display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:4px;margin-top:24px}
+.overview-sort{position:relative;z-index:1;display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-top:22px}
+.overview-sort-label{font-family:'JetBrains Mono';font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:var(--text-faint);margin-right:4px}
+.overview-sort-btn{
+  display:inline-flex;align-items:center;gap:8px;padding:8px 13px;border-radius:999px;border:1px solid var(--border);
+  background:var(--surface-2);color:var(--text-dim);font-size:12.5px;font-weight:700;transition:border-color .22s,background .22s,color .22s,box-shadow .22s,transform .16s;
+}
+.overview-sort-btn:hover{border-color:var(--accent);color:var(--text);transform:translateY(-1px)}
+.overview-sort-btn.active{border-color:transparent;color:var(--accent-ink);background:linear-gradient(135deg,#F97316,#F2495A);box-shadow:0 0 34px -10px rgba(249,115,22,.9),0 0 0 1px rgba(255,255,255,.12) inset}
+.overview-sort-btn.active::before{content:"";width:7px;height:7px;border-radius:50%;background:#fff;box-shadow:0 0 12px rgba(255,255,255,.8)}
+.legend{position:relative;z-index:1;display:grid;grid-auto-flow:column;grid-template-rows:repeat(var(--legend-rows,8),auto);grid-auto-columns:minmax(0,1fr);gap:4px 10px;margin-top:16px}
 .leg-row{
   display:flex;align-items:center;gap:11px;padding:9px 12px;border-radius:11px;border:1px solid transparent;
   transition:background .25s,border-color .25s,transform .2s;
@@ -540,7 +549,7 @@ button{font-family:inherit;cursor:pointer}
   .spectrum-card{padding:24px 20px}
   .big-num .n{font-size:clamp(52px,16vw,72px)}
   .vitals{grid-template-columns:1fr 1fr;gap:12px}
-  .legend{grid-template-columns:1fr 1fr}
+  .legend{grid-template-rows:repeat(var(--legend-rows,8),auto);grid-auto-columns:minmax(0,1fr)}
   /* untere Tab-Leiste */
   .tabbar{
     display:flex;position:fixed;left:0;right:0;bottom:0;z-index:35;
@@ -870,6 +879,11 @@ button{font-family:inherit;cursor:pointer}
                 <div>Modell · <span class="v" id="metaEmbed">–</span></div>
               </div>
             </div>
+          </div>
+          <div class="overview-sort" aria-label="Kategorie-Sortierung">
+            <span class="overview-sort-label">Sortierung</span>
+            <button class="overview-sort-btn active" type="button" data-overview-sort="count" aria-pressed="true">Menge</button>
+            <button class="overview-sort-btn" type="button" data-overview-sort="alpha" aria-pressed="false">Alphabet</button>
           </div>
           <div class="bar" id="bar"></div>
           <div class="legend" id="legend"></div>
@@ -1629,10 +1643,11 @@ button{font-family:inherit;cursor:pointer}
   }
   function renderOverview(d){
     LAST_OVERVIEW = d;
-    const cats = (d.categories||[]).slice().sort((a,b)=>b.count-a.count);
-    buildColors(cats);
+    const cats = (d.categories||[]).slice();
+    const countCats = cats.slice().sort((a,b)=>(b.count||0)-(a.count||0) || a.name.localeCompare(b.name,"de"));
+    buildColors(countCats);
     const ovRoot = buildPathTree(cats);   // Pfadbaum beliebiger Tiefe
-    const tops = catSortedKids(ovRoot).map(n=>({n, total:catNodeTotal(n)})).sort((a,b)=> b.total-a.total || a.n.seg.localeCompare(b.n.seg,"de"));
+    const tops = overviewSortedKids(ovRoot).map(n=>({n, total:catNodeTotal(n)}));
     const total = d.total ?? cats.reduce((s,c)=>s+c.count,0);
     animateNum(document.getElementById("totalNum"), total);
     renderChips(cats);   // Kategorie-Chips fürs Gehirn aus denselben Daten
@@ -1675,6 +1690,7 @@ button{font-family:inherit;cursor:pointer}
     /* Legende — aufklappbarer Baum BELIEBIGER Tiefe; je oberster Kategorie eine Grid-Zelle */
     const leg = document.getElementById("legend");
     leg.innerHTML = "";
+    leg.style.setProperty("--legend-rows", String(Math.max(4, Math.min(12, Math.ceil(tops.length / 3)))));
     const renderLegNode = (node, depth, container)=>{
       const open = ovExpanded.has(node.path), hasKids = node.children.size>0, ntotal = catNodeTotal(node);
       const row = document.createElement("div");
@@ -1692,7 +1708,7 @@ button{font-family:inherit;cursor:pointer}
       });
       row.addEventListener("click",()=> depth===0 ? goToParent(node.path) : goToCategory(node.path));
       container.appendChild(row);
-      if(open && hasKids) catSortedKids(node).forEach(ch=> renderLegNode(ch, depth+1, container));
+      if(open && hasKids) overviewSortedKids(node).forEach(ch=> renderLegNode(ch, depth+1, container));
     };
     tops.forEach(({n})=>{
       const grp = document.createElement("div");
@@ -1756,7 +1772,22 @@ button{font-family:inherit;cursor:pointer}
   let curParent = null;          // Gehirn-Drilldown: alle Einträge UNTER diesem Kategoriepfad (inkl. Unterpfade)
   let brainCatRoot = { children:new Map() };
   let LAST_OVERVIEW = null;       // letzter Overview-Datensatz (für Re-Render beim Auf-/Zuklappen)
+  let overviewSortMode = "count"; // Standard: wie bisher nach Menge, aber spaltenweise gelesen
   const ovExpanded = new Set();   // aufgeklappte Hauptkategorien in der Übersicht-Legende
+  function updateOverviewSortButtons(){
+    document.querySelectorAll("[data-overview-sort]").forEach(btn=>{
+      const on = btn.dataset.overviewSort === overviewSortMode;
+      btn.classList.toggle("active", on);
+      btn.setAttribute("aria-pressed", on ? "true" : "false");
+    });
+  }
+  function setOverviewSortMode(mode){
+    overviewSortMode = mode === "alpha" ? "alpha" : "count";
+    updateOverviewSortButtons();
+    if(LAST_OVERVIEW) renderOverview(LAST_OVERVIEW);
+  }
+  document.querySelectorAll("[data-overview-sort]").forEach(btn=> btn.addEventListener("click",()=> setOverviewSortMode(btn.dataset.overviewSort)));
+  updateOverviewSortButtons();
   /* Flache Kategorienliste -> nach Hauptkategorie gruppiert, größte zuerst (für Balken + Legende). */
   function groupByParent(cats){
     const m = new Map();
@@ -2422,6 +2453,12 @@ button{font-family:inherit;cursor:pointer}
     return root;
   }
   function catNodeTotal(node){ let t = node.cat ? (node.cat.count||0) : 0; for(const ch of node.children.values()) t += catNodeTotal(ch); return t; }
+  function overviewSortedKids(node){
+    return [...node.children.values()].sort((a,b)=>{
+      if(overviewSortMode === "alpha") return a.seg.localeCompare(b.seg,"de",{sensitivity:"base"}) || catNodeTotal(b)-catNodeTotal(a);
+      return catNodeTotal(b)-catNodeTotal(a) || a.seg.localeCompare(b.seg,"de",{sensitivity:"base"});
+    });
+  }
   function catSortedKids(node){ return [...node.children.values()].sort((a,b)=> a.seg.localeCompare(b.seg,"de")); }
   function catRenameMode(on){
     document.getElementById("catRenameWrap").style.display = on ? "" : "none";
