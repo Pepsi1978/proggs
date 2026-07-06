@@ -132,6 +132,40 @@ public sealed class OpenRouterService
         }
     }
 
+    public async Task<List<string>> GetThinkingLevelsAsync(string slug, CancellationToken ct = default)
+    {
+        var log = Logger.Instance;
+        try
+        {
+            using var req = new HttpRequestMessage(HttpMethod.Get, $"{BaseUrl}/models");
+            if (_apiKey != null) req.Headers.Authorization = new AuthenticationHeaderValue("Bearer", _apiKey);
+
+            using var resp = await Http.SendAsync(req, ct).ConfigureAwait(false);
+            resp.EnsureSuccessStatusCode();
+
+            await using var stream = await resp.Content.ReadAsStreamAsync(ct).ConfigureAwait(false);
+            var doc = await JsonDocument.ParseAsync(stream, cancellationToken: ct).ConfigureAwait(false);
+            if (!doc.RootElement.TryGetProperty("data", out var data) || data.ValueKind != JsonValueKind.Array)
+                return [];
+
+            foreach (var item in data.EnumerateArray())
+            {
+                if (!item.TryGetProperty("id", out var idEl) || idEl.ValueKind != JsonValueKind.String) continue;
+                if (!string.Equals(idEl.GetString(), slug, StringComparison.OrdinalIgnoreCase)) continue;
+
+                var levels = ParseThinkingLevels(item);
+                log.Info("OpenRouterService", "GetThinkingLevelsAsync", $"slug={slug} -> {levels.Count} Thinking-Level");
+                return levels;
+            }
+        }
+        catch (Exception ex)
+        {
+            log.Warn("OpenRouterService", "GetThinkingLevelsAsync", $"Thinking-Level-Fallback für {slug}: {ex.Message}");
+        }
+
+        return [];
+    }
+
     private static ModelEntry? ParseFreeModel(JsonElement item)
     {
         try
@@ -162,6 +196,58 @@ public sealed class OpenRouterService
             Logger.Instance.Warn("OpenRouterService", "ParseFreeModel", $"Modell übersprungen: {ex.Message}");
             return null;
         }
+    }
+
+    private static List<string> ParseThinkingLevels(JsonElement item)
+    {
+        if (item.TryGetProperty("reasoning", out var reasoning) && reasoning.ValueKind == JsonValueKind.Object)
+        {
+            if (reasoning.TryGetProperty("supported_efforts", out var efforts))
+            {
+                if (efforts.ValueKind == JsonValueKind.Array)
+                {
+                    var levels = efforts.EnumerateArray()
+                        .Where(e => e.ValueKind == JsonValueKind.String)
+                        .Select(e => e.GetString())
+                        .Where(s => !string.IsNullOrWhiteSpace(s))
+                        .Select(s => s!)
+                        .Distinct(StringComparer.OrdinalIgnoreCase)
+                        .ToList();
+                    if (levels.Count > 0) return levels;
+                }
+
+                if (efforts.ValueKind == JsonValueKind.Null && ModelMentionsReasoning(item))
+                    return ["none", "minimal", "low", "medium", "high", "xhigh"];
+            }
+
+            if (ModelMentionsReasoning(item))
+                return ["none", "minimal", "low", "medium", "high", "xhigh"];
+        }
+
+        return [];
+    }
+
+    private static bool ModelMentionsReasoning(JsonElement item)
+    {
+        if (item.TryGetProperty("supported_parameters", out var parameters) && parameters.ValueKind == JsonValueKind.Array)
+        {
+            foreach (var parameter in parameters.EnumerateArray())
+            {
+                if (parameter.ValueKind != JsonValueKind.String) continue;
+                var value = parameter.GetString() ?? string.Empty;
+                if (value.Contains("reasoning", StringComparison.OrdinalIgnoreCase)) return true;
+            }
+        }
+
+        if (item.TryGetProperty("id", out var idEl) && idEl.ValueKind == JsonValueKind.String)
+        {
+            var id = idEl.GetString() ?? string.Empty;
+            return id.Contains("gpt-5", StringComparison.OrdinalIgnoreCase)
+                || id.Contains("reasoning", StringComparison.OrdinalIgnoreCase)
+                || id.Contains("thinking", StringComparison.OrdinalIgnoreCase);
+        }
+
+        return false;
     }
 
     private static string NormalizeFreeModelName(string name)

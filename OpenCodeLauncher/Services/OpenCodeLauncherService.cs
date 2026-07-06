@@ -48,13 +48,21 @@ public sealed class OpenCodeLauncherService
     /// Schreibt die Provider-Order (exakt der gewählte Provider, ohne Fallback)
     /// in die globale opencode.jsonc/opencode.json. Gibt den Modell-String zurück, der an opencode -m geht.
     /// </summary>
-    public string ConfigureProvider(ModelEntry model, ProviderEntry chosen, IReadOnlyList<ProviderEntry> allProviders)
+    public string ConfigureProvider(ModelEntry model, ProviderEntry chosen, IReadOnlyList<ProviderEntry> allProviders, string? thinkingLevel)
     {
         var log = Logger.Instance;
         var modelString = model.ModelString;
+        thinkingLevel = NormalizeThinkingLevel(thinkingLevel);
 
         if (!string.Equals(model.ProviderId, "openrouter", StringComparison.OrdinalIgnoreCase))
         {
+            if (string.Equals(model.ProviderId, "openai", StringComparison.OrdinalIgnoreCase) && !string.IsNullOrWhiteSpace(thinkingLevel))
+            {
+                var root = ReadConfig();
+                PatchDirectThinking(root, model.ProviderId, model.Slug, model.DisplayName, thinkingLevel);
+                WriteConfig(root);
+                log.Info("OpenCodeLauncherService", "ConfigureProvider", $"OpenAI-Thinking gesetzt: {model.Slug} -> {thinkingLevel}");
+            }
             log.Info("OpenCodeLauncherService", "ConfigureProvider", $"Direktmodell ohne OpenRouter-Routing: {modelString}");
             return modelString;
         }
@@ -62,11 +70,11 @@ public sealed class OpenCodeLauncherService
         try
         {
             var root = ReadConfig();
-            root = PatchProvider(root, model.Slug, model.DisplayName, chosen, allProviders);
+            root = PatchProvider(root, model.Slug, model.DisplayName, chosen, allProviders, thinkingLevel);
             WriteConfig(root);
             log.Info("OpenCodeLauncherService", "ConfigureProvider",
                 $"opencode-Konfig gepatched: {model.Slug} via {chosen.ProviderName}",
-                new { order = new[] { chosen.ProviderSlug } });
+                new { order = new[] { chosen.ProviderSlug }, thinkingLevel });
         }
         catch (Exception ex)
         {
@@ -78,9 +86,10 @@ public sealed class OpenCodeLauncherService
     }
 
     /// <summary>Startet opencode in einem neuen Windows-Terminal-Fenster.</summary>
-    public void Launch(string modelString, string workDir)
+    public void Launch(string modelString, string workDir, string? thinkingLevel)
     {
         var log = Logger.Instance;
+        thinkingLevel = NormalizeThinkingLevel(thinkingLevel);
         try
         {
             Directory.CreateDirectory(workDir);
@@ -102,13 +111,13 @@ public sealed class OpenCodeLauncherService
                 psi.ArgumentList.Add("--tabColor");
                 psi.ArgumentList.Add(tabColor.Hex);
                 psi.ArgumentList.Add("--title");
-                psi.ArgumentList.Add($"OpenCode-{tabColor.Name}");
+                psi.ArgumentList.Add(string.IsNullOrWhiteSpace(thinkingLevel) ? $"OpenCode-{tabColor.Name}" : $"OpenCode-{tabColor.Name}-{thinkingLevel}");
                 psi.ArgumentList.Add("--startingDirectory");
                 psi.ArgumentList.Add(workDir);
                 psi.ArgumentList.Add("pwsh");
                 psi.ArgumentList.Add("-NoExit");
                 psi.ArgumentList.Add("-Command");
-                psi.ArgumentList.Add($"opencode -m '{EscapePowerShellSingleQuotedValue(modelString)}'");
+                psi.ArgumentList.Add(BuildOpenCodeCommand(modelString, thinkingLevel));
                 log.Info("OpenCodeLauncherService", "Launch", $"Terminal-Tabfarbe gewählt: {tabColor.Name} ({tabColor.Hex})");
             }
             else
@@ -116,15 +125,15 @@ public sealed class OpenCodeLauncherService
                 psi.FileName = "pwsh";
                 psi.ArgumentList.Add("-NoExit");
                 psi.ArgumentList.Add("-Command");
-                psi.ArgumentList.Add($"Set-Location -LiteralPath '{EscapePowerShellSingleQuotedValue(workDir)}'; opencode -m '{EscapePowerShellSingleQuotedValue(modelString)}'");
+                psi.ArgumentList.Add($"Set-Location -LiteralPath '{EscapePowerShellSingleQuotedValue(workDir)}'; {BuildOpenCodeCommand(modelString, thinkingLevel)}");
             }
 
             var p = Process.Start(psi);
-            log.Info("OpenCodeLauncherService", "Launch", $"opencode gestartet (PID {p?.Id})", new { modelString, workDir, wtUsed = wt != null });
+            log.Info("OpenCodeLauncherService", "Launch", $"opencode gestartet (PID {p?.Id})", new { modelString, workDir, thinkingLevel, wtUsed = wt != null });
         }
         catch (Exception ex)
         {
-            log.Error("OpenCodeLauncherService", "Launch", ex, new { modelString, workDir });
+            log.Error("OpenCodeLauncherService", "Launch", ex, new { modelString, workDir, thinkingLevel });
             throw;
         }
     }
@@ -152,6 +161,18 @@ public sealed class OpenCodeLauncherService
     private static TerminalTabColor PickTerminalTabColor() => TerminalTabColors[Random.Shared.Next(TerminalTabColors.Length)];
 
     private static string EscapePowerShellSingleQuotedValue(string value) => value.Replace("'", "''", StringComparison.Ordinal);
+
+    private static string BuildOpenCodeCommand(string modelString, string? thinkingLevel)
+    {
+        var command = $"opencode -m '{EscapePowerShellSingleQuotedValue(modelString)}'";
+        if (!string.IsNullOrWhiteSpace(thinkingLevel))
+            command += $" --variant '{EscapePowerShellSingleQuotedValue(thinkingLevel)}'";
+        return command;
+    }
+
+    private static string? NormalizeThinkingLevel(string? thinkingLevel) => string.IsNullOrWhiteSpace(thinkingLevel)
+        ? null
+        : thinkingLevel.Trim().ToLowerInvariant();
 
     private JsonNode ReadConfig()
     {
@@ -199,7 +220,7 @@ public sealed class OpenCodeLauncherService
         return json;
     }
 
-    private static JsonNode PatchProvider(JsonNode root, string slug, string modelDisplayName, ProviderEntry chosen, IReadOnlyList<ProviderEntry> all)
+    private static JsonNode PatchProvider(JsonNode root, string slug, string modelDisplayName, ProviderEntry chosen, IReadOnlyList<ProviderEntry> all, string? thinkingLevel)
     {
         // order enthält bewusst nur den gewählten Provider: Frank will exaktes Routing ohne Fallback.
         var order = new JsonArray { chosen.ProviderSlug };
@@ -211,6 +232,7 @@ public sealed class OpenCodeLauncherService
             ["require_parameters"] = true,
         };
         var optionsBlock = new JsonObject { ["provider"] = providerBlock };
+        ApplyThinkingOptions(optionsBlock, thinkingLevel, includeOpenRouterReasoningObject: true);
 
         var models = JsonExtensions.EnsureObject(root).GetOrAddObject("provider").GetOrAddObject("openrouter").GetOrAddObject("models");
         var modelNode = models.GetOrAddObject(slug);
@@ -218,6 +240,35 @@ public sealed class OpenCodeLauncherService
         modelNode["options"] = optionsBlock;
 
         return root;
+    }
+
+    private static void PatchDirectThinking(JsonNode root, string providerId, string slug, string modelDisplayName, string thinkingLevel)
+    {
+        var models = JsonExtensions.EnsureObject(root).GetOrAddObject("provider").GetOrAddObject(providerId).GetOrAddObject("models");
+        var modelNode = models.GetOrAddObject(slug);
+        modelNode["name"] = modelDisplayName;
+
+        var optionsBlock = modelNode.GetOrAddObject("options");
+        ApplyThinkingOptions(optionsBlock, thinkingLevel, includeOpenRouterReasoningObject: false);
+    }
+
+    private static void ApplyThinkingOptions(JsonObject optionsBlock, string? thinkingLevel, bool includeOpenRouterReasoningObject)
+    {
+        if (string.IsNullOrWhiteSpace(thinkingLevel))
+        {
+            optionsBlock.Remove("reasoningEffort");
+            optionsBlock.Remove("reasoning");
+            return;
+        }
+
+        optionsBlock["reasoningEffort"] = thinkingLevel;
+        if (includeOpenRouterReasoningObject)
+        {
+            optionsBlock["reasoning"] = new JsonObject
+            {
+                ["effort"] = thinkingLevel
+            };
+        }
     }
 }
 

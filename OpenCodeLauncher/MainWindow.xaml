@@ -567,8 +567,15 @@
                     </GridSplitter.Template>
                 </GridSplitter>
 
-                <!-- Rechte Spalte: Provider -->
-                <Border Grid.Column="2" Style="{StaticResource Card}" Padding="0">
+                <!-- Rechte Spalte: Provider + Thinking -->
+                <Grid Grid.Column="2">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*" MinWidth="540"/>
+                        <ColumnDefinition Width="14"/>
+                        <ColumnDefinition Width="210" MinWidth="190" MaxWidth="260"/>
+                    </Grid.ColumnDefinitions>
+
+                <Border Grid.Column="0" Style="{StaticResource Card}" Padding="0">
                     <Grid Margin="14,15,14,6">
                         <Grid.RowDefinitions>
                             <RowDefinition Height="Auto"/>
@@ -591,7 +598,7 @@
                                   ScrollViewer.VerticalScrollBarVisibility="Hidden"
                                   ScrollViewer.HorizontalScrollBarVisibility="Disabled">
                             <DataGrid.Columns>
-                                <DataGridTextColumn Header="Provider" Binding="{Binding ProviderName}" Width="440" SortMemberPath="ProviderName">
+                                <DataGridTextColumn Header="Provider" Binding="{Binding ProviderName}" Width="280" SortMemberPath="ProviderName">
                                     <DataGridTextColumn.ElementStyle>
                                         <Style TargetType="TextBlock">
                                             <Setter Property="FontWeight" Value="SemiBold"/>
@@ -639,6 +646,46 @@
                         </DataGrid>
                     </Grid>
                 </Border>
+
+                <Border Grid.Column="2" Style="{StaticResource Card}" Padding="0">
+                    <Grid Margin="12,15,12,12">
+                        <Grid.RowDefinitions>
+                            <RowDefinition Height="Auto"/>
+                            <RowDefinition Height="*"/>
+                        </Grid.RowDefinitions>
+                        <StackPanel Grid.Row="0" Margin="4,0,4,12">
+                            <TextBlock Text="THINKING" FontSize="12" FontWeight="Bold" Foreground="{DynamicResource MutedBrush}"/>
+                            <TextBlock Text="Reasoning-Level" FontSize="11" Foreground="{DynamicResource DimBrush}" Margin="0,3,0,0"/>
+                        </StackPanel>
+
+                        <Border Grid.Row="1" Background="{DynamicResource SurfaceBg}" BorderBrush="{DynamicResource BorderBrushSoft}" BorderThickness="1" CornerRadius="13" Padding="8">
+                            <Grid>
+                                <ListBox Style="{x:Null}"
+                                         Background="Transparent" BorderThickness="0"
+                                         ItemsSource="{Binding ThinkingOptions}"
+                                         SelectedItem="{Binding SelectedThinkingOption, Mode=TwoWay}"
+                                         ItemContainerStyle="{StaticResource ModelItem}"
+                                         ScrollViewer.HorizontalScrollBarVisibility="Disabled"
+                                         Visibility="{Binding HasThinkingOptions, Converter={StaticResource BoolToVisibility}}">
+                                    <ListBox.ItemTemplate>
+                                        <DataTemplate DataType="m:ThinkingOptionEntry">
+                                            <StackPanel>
+                                                <TextBlock Text="{Binding DisplayName}" FontWeight="SemiBold" Foreground="{DynamicResource TextBrush}"/>
+                                                <TextBlock Text="{Binding Description}" FontSize="11" Foreground="{DynamicResource DimBrush}" Margin="0,2,0,0"/>
+                                            </StackPanel>
+                                        </DataTemplate>
+                                    </ListBox.ItemTemplate>
+                                </ListBox>
+
+                                <StackPanel VerticalAlignment="Center" Margin="10" Visibility="{Binding HasNoThinkingOptions, Converter={StaticResource BoolToVisibility}}">
+                                    <TextBlock Text="—" FontSize="30" Foreground="{DynamicResource DimBrush}" HorizontalAlignment="Center" Margin="0,0,0,8"/>
+                                    <TextBlock Text="{Binding ThinkingEmptyText}" Foreground="{DynamicResource DimBrush}" TextAlignment="Center" TextWrapping="Wrap"/>
+                                </StackPanel>
+                            </Grid>
+                        </Border>
+                    </Grid>
+                </Border>
+                </Grid>
             </Grid>
 
             <!-- Fußleiste: Arbeitsverzeichnis + Start + Version -->

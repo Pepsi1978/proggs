@@ -17,6 +17,7 @@ public sealed partial class MainViewModel : ObservableObject
     private readonly OpenRouterService _router = new();
     private readonly OpenCodeLauncherService _launcher = new();
     private CancellationTokenSource? _loadCts;
+    private CancellationTokenSource? _thinkingCts;
 
     public MainViewModel()
     {
@@ -26,15 +27,20 @@ public sealed partial class MainViewModel : ObservableObject
         _ = RefreshOpenRouterFreeModelsAsync();
         WorkDir = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), "proggs");
 
-        var version = Assembly.GetExecutingAssembly().GetName().Version?.ToString(3) ?? "1.5.9";
-        Version = $"Version {version} (06.07.2026, 11:35 Uhr)";
+        var version = Assembly.GetExecutingAssembly().GetName().Version?.ToString(3) ?? "1.6.0";
+        Version = $"Version {version} (06.07.2026, 11:38 Uhr)";
     }
 
     public ObservableCollection<ModelGroupEntry> ModelGroups { get; } = new();
     public ObservableCollection<ProviderEntry> Providers { get; } = new();
+    public ObservableCollection<ThinkingOptionEntry> ThinkingOptions { get; } = new();
 
     [ObservableProperty] private ModelEntry? _selectedModel;
     [ObservableProperty] private ProviderEntry? _selectedProvider;
+    [ObservableProperty] private ThinkingOptionEntry? _selectedThinkingOption;
+    [ObservableProperty] private bool _hasThinkingOptions;
+    [ObservableProperty] private bool _hasNoThinkingOptions = true;
+    [ObservableProperty] private string _thinkingEmptyText = "Modell wählen.";
     [ObservableProperty] private string _workDir = string.Empty;
     [ObservableProperty] private bool _isLoading;
     [ObservableProperty] private string _statusText = "Bereit.";
@@ -47,7 +53,99 @@ public sealed partial class MainViewModel : ObservableObject
     {
         SelectedProvider = null;
         Providers.Clear();
+        SelectedThinkingOption = null;
+        ThinkingOptions.Clear();
+        UpdateThinkingState("Lade Thinking …");
+        if (value != null) _ = LoadThinkingOptionsAsync(value);
         if (value != null) _ = LoadProvidersAsync(value);
+    }
+
+    partial void OnSelectedThinkingOptionChanged(ThinkingOptionEntry? value)
+    {
+        if (SelectedModel == null || value == null) return;
+        StatusText = $"Thinking für {SelectedModel.DisplayName}: {value.DisplayName}";
+    }
+
+    private async Task LoadThinkingOptionsAsync(ModelEntry model)
+    {
+        _thinkingCts?.Cancel();
+        _thinkingCts = new CancellationTokenSource();
+        var ct = _thinkingCts.Token;
+
+        try
+        {
+            var levels = GetStaticThinkingLevels(model).ToList();
+            if (string.Equals(model.ProviderId, "openrouter", StringComparison.OrdinalIgnoreCase))
+            {
+                var apiLevels = await _router.GetThinkingLevelsAsync(model.Slug, ct);
+                if (apiLevels.Count > 0) levels = apiLevels;
+            }
+
+            if (ct.IsCancellationRequested) return;
+            ThinkingOptions.Clear();
+            foreach (var option in levels.Select(ToThinkingOption)) ThinkingOptions.Add(option);
+            UpdateThinkingState(levels.Count == 0 ? "Kein Thinking für dieses Modell erkannt." : "Thinking-Wert wählen.");
+        }
+        catch (OperationCanceledException) { /* ok */ }
+        catch (Exception ex)
+        {
+            Logger.Instance.Warn("MainViewModel", "LoadThinkingOptionsAsync", $"Thinking-Level nicht geladen: {ex.Message}", new { model.Slug });
+            ThinkingOptions.Clear();
+            UpdateThinkingState("Thinking konnte nicht geladen werden.");
+        }
+    }
+
+    private void UpdateThinkingState(string emptyText)
+    {
+        HasThinkingOptions = ThinkingOptions.Count > 0;
+        HasNoThinkingOptions = !HasThinkingOptions;
+        ThinkingEmptyText = HasThinkingOptions ? "" : emptyText;
+    }
+
+    private static IEnumerable<string> GetStaticThinkingLevels(ModelEntry model)
+    {
+        var provider = model.ProviderId.ToLowerInvariant();
+        var slug = model.Slug.ToLowerInvariant();
+
+        if (provider == "openai" || slug.StartsWith("gpt-5", StringComparison.OrdinalIgnoreCase))
+            return ["none", "minimal", "low", "medium", "high", "xhigh"];
+        if (provider == "anthropic" || slug.Contains("claude", StringComparison.OrdinalIgnoreCase))
+            return ["high", "max"];
+        if (provider == "google" || slug.Contains("gemini", StringComparison.OrdinalIgnoreCase))
+            return ["low", "high"];
+
+        return [];
+    }
+
+    private static ThinkingOptionEntry ToThinkingOption(string value)
+    {
+        var normalized = value.Trim().ToLowerInvariant();
+        return new ThinkingOptionEntry
+        {
+            Value = normalized,
+            DisplayName = normalized switch
+            {
+                "xhigh" => "X High",
+                "max" => "Max",
+                "none" => "None",
+                "minimal" => "Minimal",
+                "low" => "Low",
+                "medium" => "Medium",
+                "high" => "High",
+                _ => normalized
+            },
+            Description = normalized switch
+            {
+                "none" => "aus",
+                "minimal" => "sehr knapp",
+                "low" => "leicht",
+                "medium" => "empfohlen",
+                "high" => "gründlich",
+                "xhigh" => "maximal hoch",
+                "max" => "Maximum",
+                _ => "Thinking"
+            }
+        };
     }
 
     private async Task RefreshOpenRouterFreeModelsAsync()
@@ -193,9 +291,12 @@ public sealed partial class MainViewModel : ObservableObject
         }
         try
         {
-            var modelString = _launcher.ConfigureProvider(SelectedModel, SelectedProvider, Providers);
-            _launcher.Launch(modelString, WorkDir);
-            StatusText = $"OpenCode gestartet: {SelectedModel.DisplayName} via {SelectedProvider.ProviderName}";
+            var thinkingLevel = SelectedThinkingOption?.CommandValue;
+            var modelString = _launcher.ConfigureProvider(SelectedModel, SelectedProvider, Providers, thinkingLevel);
+            _launcher.Launch(modelString, WorkDir, thinkingLevel);
+            StatusText = string.IsNullOrWhiteSpace(thinkingLevel)
+                ? $"OpenCode gestartet: {SelectedModel.DisplayName} via {SelectedProvider.ProviderName}"
+                : $"OpenCode gestartet: {SelectedModel.DisplayName} via {SelectedProvider.ProviderName} · Thinking {SelectedThinkingOption?.DisplayName}";
         }
         catch (Exception ex)
         {
