@@ -248,10 +248,8 @@ try {
 
     private static string BuildOpenCodeCommand(string modelString, string? thinkingLevel)
     {
-        var command = $"opencode -m '{EscapePowerShellSingleQuotedValue(modelString)}'";
-        if (!string.IsNullOrWhiteSpace(thinkingLevel))
-            command += $" --variant '{EscapePowerShellSingleQuotedValue(thinkingLevel)}'";
-        return command;
+        // Der interaktive TUI-Start akzeptiert kein --variant; Thinking wird vorab in opencode.json(c) geschrieben.
+        return $"opencode -m '{EscapePowerShellSingleQuotedValue(modelString)}'";
     }
 
     private static string? NormalizeThinkingLevel(string? thinkingLevel) => string.IsNullOrWhiteSpace(thinkingLevel)
