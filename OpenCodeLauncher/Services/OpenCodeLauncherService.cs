@@ -477,6 +477,7 @@ try {
     $claudeArgs = @('--dangerously-skip-permissions', '--settings', $sessionSettings, '--model', {{PowerShellLiteral(modelId)}})
     $effort = {{PowerShellLiteral(effortLevel ?? string.Empty)}}
     if ($effort) {
+        $env:CLAUDE_CODE_EFFORT_LEVEL = $effort
         $claudeArgs += @('--effort', $effort)
     }
     $colorName = {{PowerShellLiteral(colorName)}}
@@ -507,10 +508,13 @@ try {
         {
             ["model"] = modelId
         };
-        if (!string.IsNullOrWhiteSpace(effortLevel)) root["effortLevel"] = effortLevel;
+        if (IsPersistableClaudeEffort(effortLevel)) root["effortLevel"] = effortLevel;
         File.WriteAllText(tempSettings, root.ToJsonString(JsonOpts), new UTF8Encoding(encoderShouldEmitUTF8Identifier: false));
         return tempSettings;
     }
+
+    private static bool IsPersistableClaudeEffort(string? effortLevel) =>
+        effortLevel is "low" or "medium" or "high" or "xhigh";
 
     private static string BuildClaudeCodeTitle(string colorName, string? effortLevel) =>
         string.IsNullOrWhiteSpace(effortLevel) ? $"Claude-{colorName}" : $"Claude-{colorName}-{effortLevel}";
