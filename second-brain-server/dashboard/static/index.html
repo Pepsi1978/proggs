@@ -452,6 +452,19 @@ button{font-family:inherit;cursor:pointer}
   display:grid;place-items:center}
 .set-section h3 .ico svg{width:17px;height:17px;stroke-width:1.8}
 .set-desc{color:var(--text-dim);font-size:14px;margin:8px 0 20px;line-height:1.55}
+.limits-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:12px;margin-top:14px}
+.limit-card{border:1px solid var(--border-soft);border-radius:13px;background:var(--surface-2);padding:14px 15px}
+.limit-card-top{display:flex;align-items:flex-start;gap:12px}
+.limit-card-title{font-weight:700;font-size:13.5px;color:var(--text)}
+.limit-card-summary{font-size:12.5px;line-height:1.45;color:var(--text-dim);margin-top:4px}
+.limit-card input{width:104px;flex:none;padding:10px 11px;border-radius:10px;border:1px solid var(--border);
+  background:var(--surface);color:var(--text);font-family:'JetBrains Mono';font-size:13px;text-align:right}
+.limit-card input:focus{outline:none;border-color:var(--accent);box-shadow:0 0 0 4px rgba(244,166,90,.12)}
+.limit-unit{font-family:'JetBrains Mono';font-size:10.5px;color:var(--text-faint);margin-top:6px;text-align:right}
+.limit-detail{margin-top:9px;border-top:1px solid var(--border);padding-top:8px}
+.limit-detail summary{cursor:pointer;color:var(--accent);font-size:12.5px;font-weight:700;list-style:none}
+.limit-detail summary::-webkit-details-marker{display:none}
+.limit-detail p{margin:8px 0 0;color:var(--text-dim);font-size:12.5px;line-height:1.55}
 .field{margin-bottom:18px}
 .field label{display:block;font-size:13px;font-weight:600;margin-bottom:8px;color:var(--text-dim)}
 .select,.textarea{
@@ -1257,6 +1270,16 @@ button{font-family:inherit;cursor:pointer}
             <div class="backup-contents" id="backupContents" aria-live="polite">
               <div class="bc-empty">lädt…</div>
             </div>
+          </div>
+        </div>
+
+        <div class="card set-section" id="runtimeLimitsSection">
+          <h3><span class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M12 3v18M3 12h18"/><path d="M7 7h10v10H7z"/></svg></span>Qdrant-/Quadrant-Limits</h3>
+          <p class="set-desc">Steuert direkt auf dem Server, wie breit Cortex im Gehirn sucht und wie viel Kontext die Agenten bekommen. Speichern wirkt sofort: normale Fragen bleiben geschützt; <b>0</b> bedeutet nur beim expliziten Vollabruf „alle Treffer“.</p>
+          <div class="limits-grid" id="runtimeLimitList"><span class="muted-note">Limits laden…</span></div>
+          <div class="row-end" style="margin-top:14px;flex-wrap:wrap">
+            <span class="muted-note" id="limitStatus" style="margin-right:auto"></span>
+            <button class="btn btn-primary" id="saveLimitsBtn" type="button">Limits speichern</button>
           </div>
         </div>
 
@@ -2327,6 +2350,27 @@ button{font-family:inherit;cursor:pointer}
 
   /* ── Einstellungen: Modell + System-Prompt laden / speichern / zurücksetzen ── */
   let promptDefault = "", promptRole = "haupt";
+  let runtimeLimitsState = {agent:{}, brain:{}};
+  const RUNTIME_LIMIT_DEFAULTS = {
+    agent:{history_max:40,recall_full_limit:0,multi_query_variants:2,lese_snippet_chars:1200,answer_hit_chars:8000,answer_total_chars:24000,recall_normal_max:50,context_prompt_max_chars:4000,chat_text_max_chars:500000},
+    brain:{chunk_chars:4000,chunk_overlap:200,search_overfetch_factor:4,bm25_candidate_factor:4,bm25_min_candidates:20}
+  };
+  const RUNTIME_LIMIT_FIELDS = [
+    ["agent.recall_normal_max","Normale Gedächtnisfrage","Treffer","Wie viele Einträge normale Fragen höchstens aus dem Gehirn holen.","Bei einer normalen Frage sucht Cortex zuerst in Qdrant nach passenden Einträgen. Dieser Wert ist die Obergrenze für die besten Dokumente, die danach an den Leseagenten gehen. Größer heißt: Cortex schaut breiter und findet eher Randtreffer, wird aber langsamer und bekommt mehr Rauschen. Kleiner ist schneller und fokussierter, kann aber seltene passende Einträge verpassen."],
+    ["agent.recall_full_limit","Expliziter Vollabruf","Treffer · 0 = alle","Nur für Fragen wie „Zeig mir alles über …“ oder komplette Kategorien.","Normale Fragen nutzen dieses Limit nicht. Es greift nur, wenn du bewusst alles sehen willst. 0 bedeutet: keine Trefferbegrenzung, also alle passenden Einträge. Größer als 0 begrenzt auch solche Vollfragen."],
+    ["agent.multi_query_variants","Mehrfachsuche-Varianten","Varianten","Zusätzliche Suchformulierungen neben deiner Originalfrage.","Cortex sucht immer mit deiner Originalfrage. Dieser Wert sagt, wie viele alternative Suchformulierungen der Router zusätzlich erzeugen darf. 2 bedeutet: Originalfrage plus 2 Varianten, also maximal 3 Suchläufe. Größer findet mehr Formulierungen und Synonyme, kostet aber mehr Zeit."],
+    ["agent.lese_snippet_chars","Leseagent-Schnipsel","Zeichen je Treffer","Wie viel Text der Leseagent pro Treffer zum Auswählen sieht.","Der Leseagent bekommt pro Treffer nur einen relevanten Ausschnitt und entscheidet daraus, welche Einträge zur Frage passen. Größer gibt mehr Kontext und hilft bei langen Einträgen. Kleiner spart Kontext, kann aber wichtige Stellen außerhalb des Schnipsels übersehen."],
+    ["agent.answer_hit_chars","Antwort je Eintrag","Zeichen je Eintrag","Wie viel Volltext der Antwort-Agent pro ausgewähltem Eintrag bekommt.","Nachdem der Leseagent passende Einträge gewählt hat, bekommt der Antwort-Agent pro Eintrag höchstens diesen Textumfang. Größer erlaubt genauere Antworten aus langen Dokumenten. Kleiner schützt vor Kontextüberlauf."],
+    ["agent.answer_total_chars","Antwort-Kontext gesamt","Zeichen gesamt","Gesamtes Trefferbudget für die finale Antwort.","Das ist der Deckel für alle ausgewählten Einträge zusammen. Größer gibt dem Antwort-Agenten mehr Material, wird aber langsamer und teurer. Kleiner hält Antworten stabiler, kann aber Zusammenhänge verkürzen."],
+    ["agent.history_max","Gesprächsverlauf","Nachrichten","Wie viele alte Chat-Nachrichten der Agent zusätzlich mitnimmt.","Dieser Wert ist getrennt von der Gedächtnissuche. Er sagt nur, wie viel vom laufenden Gespräch als Kontext an das Modell geht. Größer hilft bei Bezügen auf frühere Chatstellen. 0 bedeutet: kein alter Verlauf."],
+    ["agent.context_prompt_max_chars","Zusatzprompt","Zeichen","Maximale Länge des Zusatzauftrags aus App und Dashboard.","Der Zusatzprompt enthält zum Beispiel Antwortlängen- oder Modus-Anweisungen. Größer erlaubt ausführlichere Spezialanweisungen. Kleiner schützt davor, dass sehr lange Zusatztexte den eigentlichen Auftrag verdrängen. Zu lange Texte werden laut abgelehnt, nicht still gekürzt."],
+    ["agent.chat_text_max_chars","Chat-Nachricht","Zeichen","Sicherheitsdeckel für eine einzelne normale Chat-Nachricht.","Sehr lange Texte sind erlaubt, aber nicht unbegrenzt. Dieser Wert schützt Server und Modell vor Speicherproblemen. Wenn der Text zu lang ist, kommt ein klarer Fehler; Cortex schneidet ihn nicht heimlich ab."],
+    ["brain.search_overfetch_factor","Vektor-Overfetch","Faktor","Wie viele rohe Qdrant-Punkte intern pro gewünschtem Treffer geholt werden.","Qdrant sucht auf Chunk-Ebene. Ein Dokument kann mehrere Chunks haben, deshalb holt die Brain-API intern mehr Rohpunkte und dedupliziert danach auf Dokumente. Größer verbessert die Chance, nach dem Deduplizieren genug gute Dokumente zu behalten."],
+    ["brain.bm25_candidate_factor","BM25-Kandidaten","Faktor","Zusätzliche Stichworttreffer für exakte Namen, Zahlen und Begriffe.","Neben der semantischen Vektorsuche läuft BM25 als Stichwortsuche. Das hilft bei exakten Wörtern wie Namen, Orten, Medikamenten, Versionsnummern oder Fehlercodes. Größer findet mehr exakte Worttreffer, kostet aber mehr Rechenzeit."],
+    ["brain.bm25_min_candidates","BM25-Mindestkandidaten","Kandidaten","Mindestzahl für BM25, auch wenn das Trefferlimit klein ist.","Wenn du nur wenige Treffer anforderst, sorgt dieser Wert dafür, dass die Stichwortsuche trotzdem nicht zu schmal sucht. Größer ist sicherer für exakte Begriffe, kleiner ist schneller."],
+    ["brain.chunk_chars","Suchstück-Größe","Zeichen","Wie lang neue Suchstücke beim Speichern werden.","Das Gehirn speichert den Volltext 1:1. Für die Suche wird der Text zusätzlich in überlappende Suchstücke zerlegt. Diese Einstellung gilt für neue oder neu gespeicherte Einträge; bestehende Einträge behalten ihre alten Suchstücke, bis sie neu gespeichert oder neu eingebettet werden."],
+    ["brain.chunk_overlap","Suchstück-Überlappung","Zeichen","Wie stark sich benachbarte Suchstücke überschneiden.","Überlappung verhindert, dass ein wichtiger Satz genau an einer Chunk-Grenze zerschnitten wird. Größer ist sicherer für zusammenhängende Sätze, erzeugt aber mehr doppelte Suchfläche. Der Server begrenzt den Wert auf kleiner als die Suchstück-Größe."]
+  ].map(([path,label,unit,summary,explanation])=>({path,label,unit,summary,explanation}));
   async function apiSend(path, method, body){
     const r = await fetch(path,{method, headers:{"Content-Type":"application/json",Accept:"application/json"}, body:JSON.stringify(body)});
     if(!r.ok) throw new Error(r.status);
@@ -2380,9 +2424,10 @@ button{font-family:inherit;cursor:pointer}
       const tav = document.getElementById("tavilyEnabled");
       if(tav) tav.checked = c.tavily_enabled !== false;
       syncTavilyState();
+      renderRuntimeLimits(c.limits || {});
       document.getElementById("codexState").textContent = c.codex?.connected ? "Verbunden — Codex-Modelle sind auswählbar." : "Nicht verbunden — verbinde dich per Gerätecode.";
       updateReasoningBoxes();
-    }catch(e){ /* Agent nicht erreichbar — Dropdowns bleiben leer */ }
+    }catch(e){ const st=document.getElementById("limitStatus"); if(st) st.textContent="Limits nicht erreichbar"; }
     /* System-Prompt der aktuell gewählten Rolle (haupt/speicher/abfrage) laden */
     await loadPrompt(promptRole);
     loadCatManager(); // Kategorie-Verwaltung (umbenennen/löschen/anlegen) — Quelle für das Gespräch-Dropdown
@@ -2409,6 +2454,62 @@ button{font-family:inherit;cursor:pointer}
   function syncTavilyState(){
     const cb=document.getElementById("tavilyEnabled"), st=document.getElementById("tavilyState");
     if(st) st.textContent = (!cb || cb.checked) ? "An" : "Aus";
+  }
+
+  function cloneRuntimeLimits(src){
+    const s = src || {};
+    return {agent:{...RUNTIME_LIMIT_DEFAULTS.agent,...(s.agent||{})}, brain:{...RUNTIME_LIMIT_DEFAULTS.brain,...(s.brain||{})}};
+  }
+  function limitValue(limits, path){
+    const [group,key]=path.split(".");
+    return Number((limits[group]||{})[key] ?? (RUNTIME_LIMIT_DEFAULTS[group]||{})[key] ?? 0);
+  }
+  function setLimitValue(limits, path, value){
+    const [group,key]=path.split(".");
+    if(!limits[group]) limits[group]={};
+    limits[group][key]=value;
+  }
+  function renderRuntimeLimits(limits){
+    runtimeLimitsState = cloneRuntimeLimits(limits);
+    const list = document.getElementById("runtimeLimitList"); if(!list) return;
+    list.innerHTML = RUNTIME_LIMIT_FIELDS.map(f=>{
+      const id = "limit-" + f.path.replace(/\./g,"-");
+      return `<div class="limit-card">
+        <div class="limit-card-top">
+          <div style="flex:1;min-width:0">
+            <div class="limit-card-title">${escapeHtml(f.label)}</div>
+            <div class="limit-card-summary">${escapeHtml(f.summary)}</div>
+          </div>
+          <div>
+            <input id="${id}" data-limit-path="${escapeHtml(f.path)}" inputmode="numeric" pattern="[0-9]*" value="${limitValue(runtimeLimitsState,f.path)}" />
+            <div class="limit-unit">${escapeHtml(f.unit)}</div>
+          </div>
+        </div>
+        <details class="limit-detail"><summary>Erklärung</summary><p>${escapeHtml(f.explanation)}</p></details>
+      </div>`;
+    }).join("");
+    list.querySelectorAll("input[data-limit-path]").forEach(inp=>{
+      inp.addEventListener("input", ()=>{ inp.value = inp.value.replace(/\D/g,"").slice(0,7); });
+    });
+    const st=document.getElementById("limitStatus"); if(st){ st.textContent="Aktuelle Limits geladen"; st.style.color=""; }
+  }
+  function collectRuntimeLimits(){
+    const next = cloneRuntimeLimits(runtimeLimitsState);
+    document.querySelectorAll("input[data-limit-path]").forEach(inp=>{
+      const fallback = limitValue(next, inp.dataset.limitPath);
+      const n = parseInt(inp.value,10);
+      setLimitValue(next, inp.dataset.limitPath, Number.isFinite(n) ? n : fallback);
+    });
+    return next;
+  }
+  async function saveRuntimeLimits(){
+    const btn=document.getElementById("saveLimitsBtn"); if(btn) btn.disabled=true;
+    try{
+      const r = await apiSend("/api/config","PUT",{limits:collectRuntimeLimits()});
+      renderRuntimeLimits((r && r.limits) || collectRuntimeLimits());
+      flash("limitStatus","Limits gespeichert und sofort aktiv");
+    }catch(e){ flash("limitStatus","Limits konnten nicht gespeichert werden",false); }
+    finally{ if(btn) btn.disabled=false; }
   }
 
   /* ── Kategorie-Verwaltung: umbenennen / zusammenführen / löschen / leere anlegen ──
@@ -3110,6 +3211,7 @@ button{font-family:inherit;cursor:pointer}
     flash("promptStatus","Auf Original zurückgesetzt — zum Übernehmen Speichern");
   }
   document.getElementById("saveModelBtn") && document.getElementById("saveModelBtn").addEventListener("click", saveModel);
+  document.getElementById("saveLimitsBtn") && document.getElementById("saveLimitsBtn").addEventListener("click", saveRuntimeLimits);
   document.getElementById("tavilyEnabled") && document.getElementById("tavilyEnabled").addEventListener("change", syncTavilyState);
   document.getElementById("codexConnectBtn") && document.getElementById("codexConnectBtn").addEventListener("click", startCodexAuth);
   document.getElementById("codexDisconnectBtn") && document.getElementById("codexDisconnectBtn").addEventListener("click", disconnectCodex);
