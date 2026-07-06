@@ -1303,7 +1303,7 @@ button{font-family:inherit;cursor:pointer}
 
         <div class="card set-section" id="runtimeLimitsSection">
           <h3><span class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M12 3v18M3 12h18"/><path d="M7 7h10v10H7z"/></svg></span>Qdrant Limits</h3>
-          <p class="set-desc">Steuert direkt auf dem Server, wie breit Cortex im Gehirn sucht, wie viel Kontext die Agenten bekommen und welche Qdrant-/Hybrid-Suche beteiligt ist. Der Empfehlungsbutton nutzt Best Practices für RAG: normale Fragen bleiben fokussiert, exakte Vollabrufe bleiben getrennt vollständig. Speichern wirkt sofort; <b>0</b> bedeutet nur bei ausdrücklich vollständigen Abrufen „alle Treffer“.</p>
+          <p class="set-desc">Steuert direkt auf dem Server, wie breit Cortex im Gehirn sucht, wie viel Kontext die Agenten bekommen und welche Qdrant-/Hybrid-Suche beteiligt ist. Der Empfehlungsbutton nutzt Best Practices für RAG und zeigt nur Richtwerte unter den Feldern; er ändert keine Feldwerte. Speichern wirkt sofort und speichert ausschließlich die Zahlen, die du selbst in die Felder einträgst. <b>0</b> bedeutet nur bei ausdrücklich vollständigen Abrufen „alle Treffer“.</p>
           <div class="limits-grid" id="runtimeLimitList"><span class="muted-note">Limits laden…</span></div>
           <div class="limit-reco-box" id="limitRecommendationBox" hidden></div>
           <div class="row-end" style="margin-top:14px;flex-wrap:wrap">
@@ -2649,17 +2649,6 @@ button{font-family:inherit;cursor:pointer}
   function applyRuntimeLimitRecommendations(rec){
     if(!rec || !rec.recommended) return;
     runtimeLimitRecommendation = rec;
-    for(const group of ["agent","brain"]){
-      const vals = rec.recommended[group] || {};
-      Object.keys(vals).forEach(key=>{
-        const path = group+"."+key;
-        const value = Number(vals[key]);
-        if(!Number.isFinite(value)) return;
-        setLimitValue(runtimeLimitsState, path, value);
-        const inp = document.querySelector(`input[data-limit-path="${path}"]`);
-        if(inp) inp.value = String(value);
-      });
-    }
     RUNTIME_LIMIT_FIELDS.forEach(f=>{
       const el = document.querySelector(`[data-limit-rec="${f.path}"]`);
       if(!el) return;
@@ -2671,11 +2660,11 @@ button{font-family:inherit;cursor:pointer}
     const box=document.getElementById("limitRecommendationBox"); if(!box || !rec || !rec.analysis) return;
     const a=rec.analysis;
     box.hidden=false;
-    box.innerHTML = `<h4>Best-Practice-Empfehlung eingetragen</h4>
+    box.innerHTML = `<h4>Best-Practice-Empfehlung berechnet</h4>
       <div>${escapeHtml(a.quality_profile||"Normale Suche bleibt fokussiert; Vollabruf bleibt separat.")}</div>
       <div style="margin-top:6px">Bestand: ${Number(a.total_entries||0)} Einträge · ${Number(a.categories||0)} Kategorien · ${Number(a.qdrant_points||0)} Qdrant-Punkte · Ø ${escapeHtml(String(a.avg_chunks_per_entry||0))} Chunks/Eintrag.</div>
       <div style="margin-top:6px">Scan-Art: ${escapeHtml(a.scan||"")}</div>
-      <div style="margin-top:7px;color:var(--accent)">Die Werte stehen jetzt in den Feldern. Erst „Limits speichern“ macht sie aktiv.</div>`;
+      <div style="margin-top:7px;color:var(--accent)">Die Empfehlung ist nur eine Richtlinie unter den Feldern. Gespeichert werden ausschließlich die Zahlen, die du selbst in die Felder einträgst.</div>`;
   }
   async function recommendRuntimeLimits(){
     const btn=document.getElementById("recommendLimitsBtn"); if(btn) btn.disabled=true;
@@ -2684,7 +2673,7 @@ button{font-family:inherit;cursor:pointer}
       const rec = await api("/api/limits/recommendation");
       applyRuntimeLimitRecommendations(rec);
       renderRuntimeLimitRecommendationBox(rec);
-      flash("limitStatus","Empfehlungen ermittelt und in die Felder eingetragen — zum Aktivieren speichern");
+      flash("limitStatus","Empfehlungen ermittelt — Feldwerte unverändert");
     }catch(e){ flash("limitStatus","Empfehlungen konnten nicht ermittelt werden",false); }
     finally{ if(btn) btn.disabled=false; }
   }
