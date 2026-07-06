@@ -1697,6 +1697,7 @@ button{font-family:inherit;cursor:pointer}
     if(tab==="settings" && !settingsLoaded){ settingsLoaded = true; loadSettings(); }
     if(tab==="librarian"){ libLoaded = true; loadLibrarian(); }
     if(tab==="settings" && window.syncTtsToggle){ window.syncTtsToggle(); }   // Vorlesen-Schalter auf echten Stand
+    if(tab==="settings") scheduleUserContextTextGrowth();
     if(tab==="chat"){ if(typeof loadChatCategories==="function") loadChatCategories(); setTimeout(()=>{ const t=document.getElementById("chatText"); if(t) t.focus(); }, 60); }
   }
   /* ── Browser-Navigation (Zurueck/Vor): jeder Tab-Wechsel = ein History-Eintrag (#tab); die
@@ -2629,13 +2630,25 @@ button{font-family:inherit;cursor:pointer}
       del.addEventListener("click", async ()=>{ const yes = await catConfirm("Kontext-Prompt löschen?", "Diesen Zusatz-Prompt wirklich löschen?", "Ja, löschen"); if(!yes) return; userContextPrompts = userContextPrompts.filter(x=>x.id!==p.id); paintUserContextPromptList(); saveUserContextPromptsDebounced(0); });
       row.append(tools, body, del);
       host.appendChild(row);
-      growUserContextText(ta);
     });
+    scheduleUserContextTextGrowth();
   }
 
   function growUserContextText(ta){
+    if(!ta || !ta.isConnected || !ta.getClientRects().length) return;
     ta.style.height = "auto";
     ta.style.height = (ta.scrollHeight + 2) + "px";
+  }
+
+  function growAllUserContextTexts(){
+    document.querySelectorAll(".user-context-text").forEach(growUserContextText);
+  }
+
+  function scheduleUserContextTextGrowth(){
+    requestAnimationFrame(()=>{
+      growAllUserContextTexts();
+      setTimeout(growAllUserContextTexts, 80);
+    });
   }
 
   async function addUserContextPrompt(){
@@ -2668,6 +2681,7 @@ button{font-family:inherit;cursor:pointer}
     if(p2) p2.style.display = modes ? "none" : "";
     if(b1) b1.classList.toggle("active", modes);
     if(b2) b2.classList.toggle("active", !modes);
+    if(!modes) scheduleUserContextTextGrowth();
   }
 
   function currentModePromptDef(){
@@ -4215,7 +4229,12 @@ button{font-family:inherit;cursor:pointer}
      (Frank-Wunsch 05.07.): auf anderen Tabs wird gar nichts abgerufen. */
   setInterval(()=>{ if(!document.hidden && activeTab==="overview") loadOverview(); }, 20000);
   setInterval(()=>{ if(!document.hidden && activeTab==="overview") loadVitals(); }, 3000);
-  document.addEventListener("visibilitychange", ()=>{ if(!document.hidden && activeTab==="overview"){ loadOverview(); loadVitals(); } });
+  document.addEventListener("visibilitychange", ()=>{
+    if(document.hidden) return;
+    if(activeTab==="overview"){ loadOverview(); loadVitals(); }
+    if(activeTab==="settings") scheduleUserContextTextGrowth();
+  });
+  window.addEventListener("resize", ()=>{ if(activeTab==="settings") scheduleUserContextTextGrowth(); });
 
   /* ── Nachtschicht-Bibliothekar ─────────────────────────────────────────────
      Frontend fuer den librarian-Dienst (Proxy /api/lib/*): Morgen-Report, Tages-Listen
