@@ -21,6 +21,18 @@ namespace OpenCodeLauncher.Services;
 /// </summary>
 public sealed class OpenCodeLauncherService
 {
+    private static readonly TerminalTabColor[] TerminalTabColors =
+    [
+        new("red", "#FF3B3B"),
+        new("orange", "#FF8C42"),
+        new("yellow", "#FFD93D"),
+        new("green", "#4CAF50"),
+        new("cyan", "#00BCD4"),
+        new("blue", "#2196F3"),
+        new("purple", "#9C27B0"),
+        new("pink", "#FF1493"),
+    ];
+
     private static readonly string ConfigDir = Path.Combine(
         Environment.GetFolderPath(Environment.SpecialFolder.UserProfile),
         ".config", "opencode");
@@ -84,20 +96,27 @@ public sealed class OpenCodeLauncherService
 
             if (!string.IsNullOrEmpty(wt))
             {
+                var tabColor = PickTerminalTabColor();
                 psi.FileName = wt;
-                psi.ArgumentList.Add("-d");
+                psi.ArgumentList.Add("new-tab");
+                psi.ArgumentList.Add("--tabColor");
+                psi.ArgumentList.Add(tabColor.Hex);
+                psi.ArgumentList.Add("--title");
+                psi.ArgumentList.Add($"OpenCode-{tabColor.Name}");
+                psi.ArgumentList.Add("--startingDirectory");
                 psi.ArgumentList.Add(workDir);
                 psi.ArgumentList.Add("pwsh");
                 psi.ArgumentList.Add("-NoExit");
                 psi.ArgumentList.Add("-Command");
-                psi.ArgumentList.Add($"opencode -m '{modelString}'");
+                psi.ArgumentList.Add($"opencode -m '{EscapePowerShellSingleQuotedValue(modelString)}'");
+                log.Info("OpenCodeLauncherService", "Launch", $"Terminal-Tabfarbe gewählt: {tabColor.Name} ({tabColor.Hex})");
             }
             else
             {
                 psi.FileName = "pwsh";
                 psi.ArgumentList.Add("-NoExit");
                 psi.ArgumentList.Add("-Command");
-                psi.ArgumentList.Add($"Set-Location -LiteralPath '{workDir}'; opencode -m '{modelString}'");
+                psi.ArgumentList.Add($"Set-Location -LiteralPath '{EscapePowerShellSingleQuotedValue(workDir)}'; opencode -m '{EscapePowerShellSingleQuotedValue(modelString)}'");
             }
 
             var p = Process.Start(psi);
@@ -129,6 +148,10 @@ public sealed class OpenCodeLauncherService
         catch { /* Fallback unten */ }
         return null;
     }
+
+    private static TerminalTabColor PickTerminalTabColor() => TerminalTabColors[Random.Shared.Next(TerminalTabColors.Length)];
+
+    private static string EscapePowerShellSingleQuotedValue(string value) => value.Replace("'", "''", StringComparison.Ordinal);
 
     private JsonNode ReadConfig()
     {
@@ -197,6 +220,8 @@ public sealed class OpenCodeLauncherService
         return root;
     }
 }
+
+internal sealed record TerminalTabColor(string Name, string Hex);
 
 internal static class JsonExtensions
 {
