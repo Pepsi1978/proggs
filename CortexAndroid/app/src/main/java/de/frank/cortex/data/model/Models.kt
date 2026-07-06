@@ -180,9 +180,11 @@ data class AgentConfigResponse(
     // Router (Schritt 1 = Einordnung der Nachricht): eigenes Modell/Reasoning; leer = "wie Hauptagent".
     val router_model: String = "",
     val router_reasoning: String = "",
-    // Zentrale S/M/XL-Prompts (Quelle der Wahrheit auf dem Server; custom=false -> App darf seeden).
+    // Zentrale A/S/M/XL- und Modus-Prompts (Quelle der Wahrheit auf dem Server; custom=false -> App darf seeden).
     val size_prompts: Map<String, String> = emptyMap(),
     val size_prompts_custom: Boolean = false,
+    val context_prompts: Map<String, String> = emptyMap(),
+    val context_prompts_custom: Boolean = false,
     val limits: RuntimeLimits = RuntimeLimits(),
     val codex: CodexState? = null,
     val tavily_enabled: Boolean = true,
@@ -209,10 +211,13 @@ data class AgentConfigRequest(
     // "auto" = wie Hauptagent (Server speichert dann leer); sonst explizite Router-Wahl.
     val router_model: String? = null,
     val router_reasoning: String? = null,
-    // Zentrale S/M/XL-Prompts zum Server syncen (Seed + jede Aenderung in den Einstellungen).
+    // Zentrale A/S/M/XL- und Modus-Prompts zum Server syncen (Seed + jede Aenderung in den Einstellungen).
+    val size_prompt_auto: String? = null,
     val size_prompt_s: String? = null,
     val size_prompt_m: String? = null,
     val size_prompt_xl: String? = null,
+    val context_prompt_save: String? = null,
+    val context_prompt_search: String? = null,
     val tavily_enabled: Boolean? = null,
     val limits: RuntimeLimits? = null
 )

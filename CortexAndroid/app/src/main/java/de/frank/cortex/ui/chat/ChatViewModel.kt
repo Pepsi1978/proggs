@@ -173,7 +173,7 @@ class ChatViewModel : ViewModel() {
         }
     }
 
-    // S/M/XL-Prompts zentral halten (Frank-Wunsch 2026-07-02): Server = Quelle der Wahrheit,
+    // Modus- und A/S/M/XL-Prompts zentral halten: Server = Quelle der Wahrheit,
     // damit das Dashboard DIESELBEN Texte nutzt. Einmalig pro App-Lauf.
     @Volatile private var sizePromptsSynced = false
 
@@ -183,23 +183,31 @@ class ChatViewModel : ViewModel() {
         viewModelScope.launch(Dispatchers.IO) {
             try {
                 val cfg = ApiClient.agentApi().getConfig()
-                if (cfg.size_prompts_custom) {
+                if (cfg.size_prompts_custom || cfg.context_prompts_custom) {
                     // Server hat gepflegte Prompts -> lokal uebernehmen (Server gewinnt).
                     cfg.size_prompts.forEach { (k, v) ->
-                        if (k in setOf("s", "m", "xl") && v.isNotBlank()) SettingsStore.setResponseSizePrompt(k, v)
+                        if (k in setOf("auto", "s", "m", "xl") && v.isNotBlank()) SettingsStore.setResponseSizePrompt(k, v)
                     }
-                    CortexLog.info("ChatVM", "syncSizePrompts", "Zentrale S/M/XL-Prompts vom Server uebernommen")
-                } else {
-                    // Server noch ohne eigene Prompts -> Franks lokal gepflegte Handy-Prompts
-                    // EINMALIG hochladen (Seed) — inkl. seiner XL-Anpassung.
+                    cfg.context_prompts.forEach { (k, v) ->
+                        if (k in setOf(SettingsStore.CONTEXT_MODE_SAVE, SettingsStore.CONTEXT_MODE_SEARCH) && v.isNotBlank()) {
+                            SettingsStore.setContextPrompt(k, v)
+                        }
+                    }
+                    CortexLog.info("ChatVM", "syncSizePrompts", "Zentrale Modus- und A/S/M/XL-Prompts vom Server uebernommen")
+                }
+                if (!cfg.size_prompts_custom || !cfg.context_prompts_custom) {
+                    // Server noch ohne eigene Prompts -> Franks lokal gepflegte Handy-Prompts EINMALIG hochladen (Seed).
                     ApiClient.agentApi().updateConfig(
                         de.frank.cortex.data.model.AgentConfigRequest(
-                            size_prompt_s = SettingsStore.responseSizePrompt("s"),
-                            size_prompt_m = SettingsStore.responseSizePrompt("m"),
-                            size_prompt_xl = SettingsStore.responseSizePrompt("xl")
+                            size_prompt_auto = if (!cfg.size_prompts_custom) SettingsStore.responseSizePrompt("auto") else null,
+                            size_prompt_s = if (!cfg.size_prompts_custom) SettingsStore.responseSizePrompt("s") else null,
+                            size_prompt_m = if (!cfg.size_prompts_custom) SettingsStore.responseSizePrompt("m") else null,
+                            size_prompt_xl = if (!cfg.size_prompts_custom) SettingsStore.responseSizePrompt("xl") else null,
+                            context_prompt_save = if (!cfg.context_prompts_custom) SettingsStore.contextPrompt(SettingsStore.CONTEXT_MODE_SAVE) else null,
+                            context_prompt_search = if (!cfg.context_prompts_custom) SettingsStore.contextPrompt(SettingsStore.CONTEXT_MODE_SEARCH) else null
                         )
                     )
-                    CortexLog.info("ChatVM", "syncSizePrompts", "Handy-Prompts als zentrale Quelle zum Server geladen (Seed)")
+                    CortexLog.info("ChatVM", "syncSizePrompts", "Fehlende Handy-Prompts als zentrale Quelle zum Server geladen (Seed)")
                 }
             } catch (e: CancellationException) {
                 throw e

@@ -1,7 +1,15 @@
 {
-	"stand": "06.07.2026, 17:23 Uhr",
+	"stand": "06.07.2026, 17:55 Uhr",
 	"hinweis": "PFLEGE-PFLICHT: Bei JEDEM Deploy, der ein neues System/Feature einbaut, hier einen Eintrag ERGAENZEN (neueste zuerst) — mit Datum + Uhrzeit und ausfuehrlicher Erklaerung. Diese Datei ist die Quelle des Info-Bereichs in den Dashboard-Einstellungen (GET /api/features). Regel verankert in DEPLOY.md.",
 	"features": [
+		{
+			"id": "dashboard-modus-prompts-und-systeminfo-editor",
+			"name": "Dashboard-Gespräch synchron mit Android: Modus-Schalter, Prompt-Editor und bearbeitbare System-Info",
+			"eingebaut": "06.07.2026, 17:55 Uhr",
+			"dienst": "dashboard 0.54.0 + agent 0.58.0 + Android 0.5.5",
+			"kurz": "Im Dashboard-Gespräch gibt es jetzt A/S/M/XL sowie Suchen, Speichern und Auto. Die dazugehörigen Prompts sind zentral in den Einstellungen editierbar und mit Android synchron. System-Info-Einträge können bearbeitet oder gelöscht werden.",
+			"erklaerung": "Der Gesprächsbereich des Web-Dashboards hat jetzt dieselben Steuerknöpfe wie die Android-App: Antwortlänge A/S/M/XL und die drei Modi Suchen, Speichern und KI-Automatik. Beim Senden übergibt das Dashboard context_mode und response_size an den Agenten. Der Agent hängt für Dashboard-Nachrichten ohne eigenen Zusatzprompt serverseitig den zentral gespeicherten Modus- und Antwortlängen-Prompt an. Unter Einstellungen sitzt zwischen System-Prompt und Logbuch die neue Karte 'Modus-Prompts'. Dort lassen sich Suchen, Speichern, A, S, M und XL bearbeiten und speichern. Diese Werte liegen persistent im Agenten unter agent-data und werden über /config von Android und Dashboard gemeinsam genutzt: Änderungen im Dashboard erscheinen beim nächsten App-Sync auf dem Handy, Änderungen am Handy aktualisieren denselben Serverstand. Außerdem ist die System-Info-Chronik 'Was Cortex kann' jetzt selbst pflegbar. Jeder Eintrag zeigt rechts Datum/Uhrzeit, einen Papierkorb und Bearbeiten. Bearbeiten öffnet direkt im Eintrag die Felder Name, Datum, Dienst, Kurzbeschreibung und Erklärung; derselbe Button wird zu Speichern. Löschen fragt vorher nach. Die bearbeitete Chronik liegt im persistenten dashboard-data-Ordner, damit Änderungen Neustart und Rebuild überleben."
+		},
 		{
 			"id": "qdrant-limit-erklaerungen-und-empfehlungen",
 			"name": "Qdrant-Limits verstehen: ausführliche Erklärungen plus automatische Empfehlung",

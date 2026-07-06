@@ -493,12 +493,15 @@ button{font-family:inherit;cursor:pointer}
 .log-row{display:flex;align-items:center;gap:12px;padding:12px 14px;border-radius:11px;background:var(--surface-2);
   border:1px solid var(--border-soft);font-size:13.5px}
 .log-row .when{font-family:'JetBrains Mono';font-size:11.5px;color:var(--text-faint);margin-left:auto}
-/* S/M/XL-Antwortlaengen-Chips im Gespraech (Frank-Wunsch 2026-07-02, Standard M) */
-.chat-size{display:flex;gap:4px;flex:none;align-items:center}
+/* A/S/M/XL-Antwortlaengen-Chips + Modus-Schalter im Gespraech */
+.chat-size,.chat-mode{display:flex;gap:4px;flex:none;align-items:center}
 .chat-size-btn{font-family:'Space Grotesk';font-weight:700;font-size:11.5px;padding:7px 10px;border-radius:9px;
   border:1px solid var(--border);background:var(--surface-2);color:var(--text-faint);cursor:pointer}
-.chat-size-btn:hover{border-color:var(--accent)}
-.chat-size-btn.active{color:var(--accent);border-color:var(--accent);background:rgba(244,166,90,.14)}
+.chat-size-btn,.chat-mode-btn{height:34px;min-width:34px;display:inline-flex;align-items:center;justify-content:center}
+.chat-size-btn:hover,.chat-mode-btn:hover{border-color:var(--accent)}
+.chat-size-btn.active,.chat-mode-btn.active{color:var(--accent);border-color:var(--accent);background:rgba(244,166,90,.14)}
+.chat-mode-btn{border-radius:9px;border:1px solid var(--border);background:var(--surface-2);color:var(--text-faint);cursor:pointer;transition:border-color .15s,color .15s,background .15s}
+.chat-mode-btn svg{width:17px;height:17px;stroke-width:2}
 /* Zusammenfassung in der Logbuch-Zeile (eine Zeile, laeuft mit "…" aus) + Zeilen-Papierkorb */
 .log-row .log-sum{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;
   font-size:12.5px;color:var(--text-dim)}
@@ -756,12 +759,19 @@ button{font-family:inherit;cursor:pointer}
 .feat-head:hover,.feat-head:focus-visible{color:var(--accent)}
 .feat-head .feat-when{margin-left:auto;flex:none;font-size:11px;font-weight:400;color:var(--text-faint);font-family:'JetBrains Mono'}
 .feat-head .feat-chev{flex:none;transition:transform .2s;color:var(--text-faint)}
+.feat-name{flex:1;min-width:160px}
+.feat-actions{display:flex;gap:6px;flex:none;align-items:center}
+.feat-actions .btn{padding:6px 9px;font-size:11.5px;min-height:30px}
+.feat-actions svg{width:15px;height:15px;stroke-width:2}
 .feat-item.open .feat-head .feat-chev{transform:rotate(90deg)}
 .feat-body{display:none;padding:0 15px 14px;font-size:13.5px;line-height:1.65;color:var(--text-dim)}
 .feat-item.open .feat-body{display:block}
 .feat-body .feat-dienst{font-size:11.5px;color:var(--text-faint);font-family:'JetBrains Mono';margin-bottom:8px}
 .feat-body .feat-kurz{color:var(--text);margin-bottom:8px}
 .cortex-knowledge-status{display:block;margin:0 0 14px auto;text-align:right}
+.mode-prompt-buttons{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px}
+.mode-prompt-buttons .btn.active{border-color:var(--accent);color:var(--accent);background:rgba(244,166,90,.14)}
+.mode-prompt-meta{display:flex;justify-content:space-between;gap:12px;align-items:center;flex-wrap:wrap;margin:8px 0 10px}
 @media(max-width:820px){.cortex-knowledge-status{text-align:left}}
 .eval-box{background:var(--surface-2);border:1px solid var(--border);border-radius:12px;padding:14px;margin-top:10px;font-size:13.5px;color:var(--text-dim);max-height:540px;overflow-y:auto}
 .eval-box pre{white-space:pre-wrap;word-break:break-word;font-family:'JetBrains Mono',monospace;font-size:12px;line-height:1.55;color:var(--text);margin:0}
@@ -972,7 +982,8 @@ button{font-family:inherit;cursor:pointer}
           </div>
           <div class="chat-input">
             <div class="chat-tools" aria-label="Werkzeuge für Gespräch und Ablage">
-              <div class="chat-size" id="chatSizeBar" title="Antwortlänge: S kurz · M ausgewogen (Standard) · XL maximal ausführlich — steuert auch die Suchtiefe (Tavily: S=8, M=12, XL=20 Treffer, XL=Tiefensuche)">
+              <div class="chat-size" id="chatSizeBar" title="Antwortlänge: A automatisch · S kurz · M ausgewogen · XL maximal ausführlich — steuert auch die Suchtiefe (Tavily: S=8, A/M=12, XL=20 Treffer, XL=Tiefensuche)">
+                <button type="button" class="chat-size-btn" data-size="auto">A</button>
                 <button type="button" class="chat-size-btn" data-size="s">S</button>
                 <button type="button" class="chat-size-btn" data-size="m">M</button>
                 <button type="button" class="chat-size-btn" data-size="xl">XL</button>
@@ -982,6 +993,15 @@ button{font-family:inherit;cursor:pointer}
                 <option value="">Auto-Kategorie</option>
                 <option value="__new__">➕ Neue Kategorie…</option>
               </select>
+              <div class="chat-mode" id="chatModeBar" title="Modus: Suchen · Speichern · Automatisch. Nutzt dieselben Modus-Prompts wie die Android-App.">
+                <button type="button" class="chat-mode-btn" data-mode="search" aria-label="Suchmodus" title="Suchmodus">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><circle cx="11" cy="11" r="7"/><path d="m21 21-4.3-4.3"/></svg>
+                </button>
+                <button type="button" class="chat-mode-btn" data-mode="save" aria-label="Speichermodus" title="Speichermodus">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2Z"/><path d="M17 21v-8H7v8"/><path d="M7 3v5h8"/></svg>
+                </button>
+                <button type="button" class="chat-mode-btn" data-mode="auto" aria-label="KI-Automatikmodus" title="KI-Automatikmodus">A</button>
+              </div>
               <button class="chat-btn chat-clear" id="chatClear" aria-label="Eingabe löschen" title="Eingabe löschen">
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>
               </button>
@@ -1320,6 +1340,22 @@ button{font-family:inherit;cursor:pointer}
             <div id="evalResult" class="eval-box" style="display:none"></div>
             <div id="evalLogList" class="eval-box" style="display:none"></div>
             <div id="evalLogView" class="eval-box" style="display:none"></div>
+          </div>
+        </div>
+
+        <div class="card set-section" id="modePromptSection">
+          <h3><span class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M4 7h16"/><path d="M4 12h10"/><path d="M4 17h7"/><path d="M17 14l3 3-3 3"/></svg></span>Modus-Prompts</h3>
+          <p class="set-desc">Bearbeitet die zentralen Prompts für Gesprächsmodi und Antwortlängen. Diese Texte sind die gemeinsame Quelle für Dashboard und Android-App: Speichern hier wirkt auf dem Handy, Speichern am Handy wirkt hier.</p>
+          <div class="mode-prompt-buttons" id="modePromptButtons"></div>
+          <div class="mode-prompt-meta">
+            <span class="muted-note" id="modePromptHint">Prompt wählen…</span>
+            <span class="muted-note" id="modePromptStatus"></span>
+          </div>
+          <div class="field">
+            <textarea class="textarea" id="modePromptArea" spellcheck="false" placeholder="Prompt lädt…" style="min-height:240px;height:260px"></textarea>
+          </div>
+          <div class="row-end">
+            <button class="btn btn-primary" id="saveModePromptBtn" type="button">Speichern</button>
           </div>
         </div>
 
@@ -2361,6 +2397,16 @@ button{font-family:inherit;cursor:pointer}
   /* ── Einstellungen: Modell + System-Prompt laden / speichern / zurücksetzen ── */
   let promptDefault = "", promptRole = "haupt";
   let runtimeLimitsState = {agent:{}, brain:{}};
+  let modePromptState = {size:{}, context:{}};
+  let selectedModePrompt = "size_auto";
+  const MODE_PROMPT_DEFS = [
+    {key:"context_search", label:"Suchen", group:"context", subkey:"search", field:"context_prompt_search", hint:"Prompt für den Suchmodus im Gespräch."},
+    {key:"context_save", label:"Speichern", group:"context", subkey:"save", field:"context_prompt_save", hint:"Prompt für den Speichermodus im Gespräch."},
+    {key:"size_auto", label:"A", group:"size", subkey:"auto", field:"size_prompt_auto", hint:"Antwortlänge automatisch: Cortex entscheidet Länge und Tiefe passend zur Frage."},
+    {key:"size_s", label:"S", group:"size", subkey:"s", field:"size_prompt_s", hint:"Antwortlänge kurz und direkt."},
+    {key:"size_m", label:"M", group:"size", subkey:"m", field:"size_prompt_m", hint:"Antwortlänge ausgewogen."},
+    {key:"size_xl", label:"XL", group:"size", subkey:"xl", field:"size_prompt_xl", hint:"Antwortlänge maximal ausführlich."}
+  ];
   let runtimeLimitRecommendation = null;
   const RUNTIME_LIMIT_DEFAULTS = {
     agent:{dedup_candidates:3,history_max:40,recall_full_limit:0,multi_query_variants:2,entity_extract_chars:2500,entity_docs_limit:0,lese_snippet_chars:1200,answer_hit_chars:8000,answer_total_chars:24000,answer_max_tokens:4096,recall_working_cache_threshold:20,recall_normal_max:50,full_category_batch_chars:28000,context_prompt_max_chars:4000,chat_text_max_chars:500000},
@@ -2442,6 +2488,7 @@ button{font-family:inherit;cursor:pointer}
       const tav = document.getElementById("tavilyEnabled");
       if(tav) tav.checked = c.tavily_enabled !== false;
       syncTavilyState();
+      renderModePrompts(c);
       renderRuntimeLimits(c.limits || {});
       document.getElementById("codexState").textContent = c.codex?.connected ? "Verbunden — Codex-Modelle sind auswählbar." : "Nicht verbunden — verbinde dich per Gerätecode.";
       updateReasoningBoxes();
@@ -2453,6 +2500,62 @@ button{font-family:inherit;cursor:pointer}
     loadTrash();     // Papierkorb — gelöschte Einträge nach Lösch-Monat
     loadBackup();    // Google-Drive-Backup-Status (Kachel neben Bibliothekar-Agent)
   }
+
+  function renderModePrompts(config){
+    const buttons = document.getElementById("modePromptButtons");
+    const area = document.getElementById("modePromptArea");
+    if(!buttons || !area) return;
+    modePromptState = {
+      size: {...(config && config.size_prompts ? config.size_prompts : {})},
+      context: {...(config && config.context_prompts ? config.context_prompts : {})}
+    };
+    buttons.innerHTML = "";
+    MODE_PROMPT_DEFS.forEach(def=>{
+      const b = document.createElement("button");
+      b.className = "btn";
+      b.type = "button";
+      b.textContent = def.label;
+      b.dataset.promptKey = def.key;
+      b.addEventListener("click", ()=>{
+        selectedModePrompt = def.key;
+        paintModePromptEditor();
+      });
+      buttons.appendChild(b);
+    });
+    paintModePromptEditor();
+  }
+
+  function currentModePromptDef(){
+    return MODE_PROMPT_DEFS.find(d=>d.key===selectedModePrompt) || MODE_PROMPT_DEFS[0];
+  }
+
+  function paintModePromptEditor(){
+    const def = currentModePromptDef();
+    const area = document.getElementById("modePromptArea");
+    const hint = document.getElementById("modePromptHint");
+    document.querySelectorAll("#modePromptButtons .btn").forEach(b=> b.classList.toggle("active", b.dataset.promptKey===def.key));
+    if(area) area.value = ((modePromptState[def.group] || {})[def.subkey] || "").trim();
+    if(hint) hint.textContent = def.hint;
+  }
+
+  async function saveModePrompt(){
+    const def = currentModePromptDef();
+    const area = document.getElementById("modePromptArea");
+    const text = (area && area.value || "").trim();
+    if(!text){ flash("modePromptStatus", "Prompt darf nicht leer sein", false); return; }
+    const btn = document.getElementById("saveModePromptBtn");
+    if(btn) btn.disabled = true;
+    try{
+      const payload = {}; payload[def.field] = text;
+      const r = await apiSend("/api/config", "PUT", payload);
+      if(!modePromptState[def.group]) modePromptState[def.group] = {};
+      modePromptState[def.group][def.subkey] = text;
+      flash("modePromptStatus", "Prompt gespeichert und synchronisiert");
+      if(r && (r.size_prompts || r.context_prompts)) renderModePrompts(r);
+    }catch(e){ flash("modePromptStatus", "Prompt konnte nicht gespeichert werden", false); }
+    finally{ if(btn) btn.disabled = false; }
+  }
+  document.getElementById("saveModePromptBtn") && document.getElementById("saveModePromptBtn").addEventListener("click", saveModePrompt);
 
   function isCodexModel(v){ v=(v||"").toLowerCase(); return v.startsWith("gpt-") || v.startsWith("codex/") || v.startsWith("openai-codex/"); }
   function isGeminiModel(v){ return (v||"").toLowerCase().startsWith("gemini"); }
@@ -3605,45 +3708,102 @@ button{font-family:inherit;cursor:pointer}
       if(btn){ btn.disabled = false; btn.textContent = "Cortex Wissen speichern"; }
     }
   }
-  (async function initFeatureInfo(){
+  function renderFeatureInfo(feats, stand){
     const host = document.getElementById("featList");
     if(!host) return;
-    const saveBtn = document.getElementById("saveCortexKnowledgeBtn");
-    if(saveBtn) saveBtn.addEventListener("click", saveCortexKnowledge);
+    host.textContent = "";
+    if(!feats.length){ host.textContent = "Chronik nicht verfügbar (leer)."; return; }
+    feats.forEach(f=>{
+      const item = document.createElement("div"); item.className = "feat-item";
+      const head = document.createElement("div"); head.className = "feat-head"; head.tabIndex = 0; head.setAttribute("role", "button");
+      head.setAttribute("aria-expanded", "false");
+      const chev = document.createElement("span"); chev.className = "feat-chev"; chev.textContent = "▸";
+      const name = document.createElement("span"); name.className = "feat-name"; name.textContent = f.name || f.id || "(ohne Namen)";
+      const when = document.createElement("span"); when.className = "feat-when"; when.textContent = f.eingebaut || "";
+      const actions = document.createElement("span"); actions.className = "feat-actions";
+      const del = document.createElement("button"); del.className = "btn btn-danger"; del.type = "button"; del.title = "System-Info löschen";
+      del.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M3 6h18M8 6V4a1 1 0 0 1 1-1h6a1 1 0 0 1 1 1v2m2 0v14a1 1 0 0 1-1 1H7a1 1 0 0 1-1-1V6"/><path d="M10 11v6M14 11v6"/></svg>';
+      const edit = document.createElement("button"); edit.className = "btn"; edit.type = "button"; edit.textContent = "Bearbeiten";
+      actions.append(del, edit);
+      head.append(chev, name, when, actions);
+      const body = document.createElement("div"); body.className = "feat-body";
+      const dienst = document.createElement("div"); dienst.className = "feat-dienst";
+      dienst.textContent = (f.dienst ? "Sitzt in: " + f.dienst : "") + (f.eingebaut ? "  ·  eingebaut: " + f.eingebaut : "");
+      const kurz = document.createElement("div"); kurz.className = "feat-kurz"; kurz.textContent = f.kurz || "";
+      const erkl = document.createElement("div"); erkl.textContent = f.erklaerung || "";
+      const editor = document.createElement("div"); editor.style.display = "none";
+      editor.innerHTML = '<div class="field"><label>Name</label><input class="cat-input" data-feat-field="name" maxlength="160"></div>'+
+        '<div class="field"><label>Datum und Uhrzeit</label><input class="cat-input" data-feat-field="eingebaut" maxlength="40"></div>'+
+        '<div class="field"><label>Dienst</label><input class="cat-input" data-feat-field="dienst" maxlength="220"></div>'+
+        '<div class="field"><label>Kurzbeschreibung</label><textarea class="lib-own" data-feat-field="kurz" style="min-height:80px"></textarea></div>'+
+        '<div class="field"><label>Erklärung</label><textarea class="lib-own" data-feat-field="erklaerung" style="min-height:190px"></textarea></div>'+
+        '<span class="muted-note" data-feat-status></span>';
+      body.append(dienst, kurz, erkl, editor);
+      const openItem = ()=>{ const open = item.classList.add("open"); head.setAttribute("aria-expanded", "true"); };
+      head.addEventListener("click", ()=>{
+        const open = item.classList.toggle("open");
+        head.setAttribute("aria-expanded", open ? "true" : "false");
+      });
+      head.addEventListener("keydown", e=>{ if(e.key==="Enter" || e.key===" "){ e.preventDefault(); head.click(); } });
+      actions.addEventListener("click", e=> e.stopPropagation());
+      edit.addEventListener("click", async ()=>{
+        const editing = editor.style.display !== "none";
+        if(!editing){
+          editor.querySelector('[data-feat-field="name"]').value = f.name || "";
+          editor.querySelector('[data-feat-field="eingebaut"]').value = f.eingebaut || "";
+          editor.querySelector('[data-feat-field="dienst"]').value = f.dienst || "";
+          editor.querySelector('[data-feat-field="kurz"]').value = f.kurz || "";
+          editor.querySelector('[data-feat-field="erklaerung"]').value = f.erklaerung || "";
+          editor.style.display = "block"; dienst.style.display = kurz.style.display = erkl.style.display = "none";
+          edit.textContent = "Speichern"; openItem();
+          return;
+        }
+        edit.disabled = true;
+        const payload = {};
+        editor.querySelectorAll("[data-feat-field]").forEach(inp=> payload[inp.dataset.featField] = inp.value || "");
+        try{
+          const r = await apiSend("/api/features/" + encodeURIComponent(f.id), "PUT", payload);
+          if(!r || r.ok === false) throw new Error((r && r.detail) || "Speichern fehlgeschlagen");
+          Object.assign(f, r.feature || payload);
+          await loadFeatureInfo();
+        }catch(e){ const st=editor.querySelector("[data-feat-status]"); if(st) st.textContent = "Speichern fehlgeschlagen"; }
+        finally{ edit.disabled = false; }
+      });
+      del.addEventListener("click", async ()=>{
+        const yes = await catConfirm("System-Info löschen?", "Diesen Punkt aus 'Was Cortex kann' wirklich löschen?", "Ja, löschen");
+        if(!yes) return;
+        del.disabled = true;
+        try{
+          const r = await apiSend("/api/features/" + encodeURIComponent(f.id), "DELETE", {});
+          if(!r || r.ok === false) throw new Error((r && r.detail) || "Löschen fehlgeschlagen");
+          await loadFeatureInfo();
+        }catch(e){ del.disabled = false; }
+      });
+      item.append(head, body);
+      host.appendChild(item);
+    });
+    const note = document.createElement("span");
+    note.className = "muted-note";
+    note.textContent = feats.length + " eingebaute Systeme · Stand " + (stand || "—");
+    host.appendChild(note);
+  }
+  async function loadFeatureInfo(){
+    const host = document.getElementById("featList");
+    if(!host) return;
     try{
       const d = await api("/api/features");
       const feats = (d && d.features) || [];
       featureInfoItems = feats;
-      host.textContent = "";
       if(!feats.length){ host.textContent = "Chronik nicht verfügbar (" + ((d && d.error) || "leer") + ")."; return; }
-      feats.forEach(f=>{
-        const item = document.createElement("div"); item.className = "feat-item";
-        const head = document.createElement("button"); head.className = "feat-head"; head.type = "button";
-        head.setAttribute("aria-expanded", "false");
-        const chev = document.createElement("span"); chev.className = "feat-chev"; chev.textContent = "▸";
-        const name = document.createElement("span"); name.textContent = f.name || f.id || "(ohne Namen)";
-        const when = document.createElement("span"); when.className = "feat-when"; when.textContent = f.eingebaut || "";
-        head.appendChild(chev); head.appendChild(name); head.appendChild(when);
-        const body = document.createElement("div"); body.className = "feat-body";
-        const dienst = document.createElement("div"); dienst.className = "feat-dienst";
-        dienst.textContent = (f.dienst ? "Sitzt in: " + f.dienst : "") + (f.eingebaut ? "  ·  eingebaut: " + f.eingebaut : "");
-        const kurz = document.createElement("div"); kurz.className = "feat-kurz"; kurz.textContent = f.kurz || "";
-        const erkl = document.createElement("div"); erkl.textContent = f.erklaerung || "";
-        body.appendChild(dienst); body.appendChild(kurz); body.appendChild(erkl);
-        head.addEventListener("click", ()=>{
-          const open = item.classList.toggle("open");
-          head.setAttribute("aria-expanded", open ? "true" : "false");
-        });
-        item.appendChild(head); item.appendChild(body);
-        host.appendChild(item);
-      });
-      const note = document.createElement("span");
-      note.className = "muted-note";
-      note.textContent = feats.length + " eingebaute Systeme · Stand " + (d.stand || "—");
-      host.appendChild(note);
+      renderFeatureInfo(feats, d && d.stand);
     }catch(_){
       host.textContent = "Chronik konnte nicht geladen werden — Dashboard-Dienst prüfen.";
     }
+  }
+  (function initFeatureInfo(){
+    const saveBtn = document.getElementById("saveCortexKnowledgeBtn");
+    if(saveBtn) saveBtn.addEventListener("click", saveCortexKnowledge);
+    loadFeatureInfo();
   })();
   async function sendChat(){
     if(chatBusy) return;
@@ -3661,7 +3821,7 @@ button{font-family:inherit;cursor:pointer}
       const cat = (catSel && catSel.value && catSel.value!=="__new__") ? catSel.value : "";
       const titEl = document.getElementById("chatTitle");
       const titV = titEl ? titEl.value.trim() : "";
-      const r = await apiSend("/api/chat","POST",{text, session_id:chatSession, category:cat, title:titV, response_size:chatSize});
+      const r = await apiSend("/api/chat","POST",{text, session_id:chatSession, category:cat, title:titV, response_size:chatSize, context_mode:chatMode});
       typing.remove();
       if(titEl && (r.action==="save_confirm" || r.action==="store_clarify" || r.action==="store")) titEl.value = "";   // Titel nur leeren, wenn der Server den Speicher-Vorgang erkannt hat (Server haelt ihn im pending) — sonst fuer den naechsten Versuch behalten
       let meta = "";
@@ -3686,17 +3846,31 @@ button{font-family:inherit;cursor:pointer}
       ta.focus();
     }
   }
-  /* S/M/XL-Antwortlaengen-Auswahl (Frank-Wunsch 2026-07-02): Standard M, Wahl wird gemerkt.
-     Der Server haengt den passenden ZENTRALEN Prompt an (gleiche Texte wie im Handy) und
-     staffelt die Tavily-Suchtiefe (S=8, M=12, XL=20 Treffer, XL=advanced — Stand agent 0.47.1). */
-  let chatSize = localStorage.getItem("chatSize") || "m";
+  /* A/S/M/XL-Antwortlaengen-Auswahl: gleicher zentraler Prompt wie in der Android-App. */
+  let chatSize = localStorage.getItem("chatSize") || "auto";
   (function initChatSize(){
     const host = document.getElementById("chatSizeBar"); if(!host) return;
     const btns = host.querySelectorAll(".chat-size-btn");
+    if(!["auto","s","m","xl"].includes(chatSize)) chatSize = "auto";
     const paint = ()=> btns.forEach(b=> b.classList.toggle("active", b.dataset.size===chatSize));
     btns.forEach(b=> b.addEventListener("click", ()=>{
       chatSize = b.dataset.size;
       localStorage.setItem("chatSize", chatSize);
+      paint();
+    }));
+    paint();
+  })();
+
+  /* Modus-Auswahl: Suchen / Speichern / KI-Automatik, synchron zu den zentralen Modus-Prompts. */
+  let chatMode = localStorage.getItem("chatMode") || "auto";
+  (function initChatMode(){
+    const host = document.getElementById("chatModeBar"); if(!host) return;
+    const btns = host.querySelectorAll(".chat-mode-btn");
+    if(!["auto","save","search"].includes(chatMode)) chatMode = "auto";
+    const paint = ()=> btns.forEach(b=> b.classList.toggle("active", b.dataset.mode===chatMode));
+    btns.forEach(b=> b.addEventListener("click", ()=>{
+      chatMode = b.dataset.mode;
+      localStorage.setItem("chatMode", chatMode);
       paint();
     }));
     paint();

@@ -114,7 +114,9 @@ Hat sich die `compose.yaml` selbst geaendert: die compose.yaml ebenfalls hochlad
    (`chown` beim ersten Anlegen). Sonst kann der Agent seine `prompt.txt`/`config.json` nicht schreiben.
    **Gleiches gilt fuer den `librarian`**: `/opt/second-brain/librarian-data` und
    `/opt/second-brain/librarian-logs` muessen uid 1000 gehoeren (`chown -R 1000:1000 …` beim ersten Anlegen),
-   sonst kann der Nachtschicht-Bibliothekar Config/State/Tages-Reports nicht schreiben.
+   sonst kann der Nachtschicht-Bibliothekar Config/State/Tages-Reports nicht schreiben. Fuer das
+   Dashboard muss `/opt/second-brain/dashboard-data` uid 10002 gehoeren (`chown -R 10002:10002 …`),
+   damit die bearbeitbare System-Info-Chronik persistent gespeichert werden kann.
 6. **`.env` nie ueberschreiben/loeschen** — die Secrets (GEMINI_API_KEY, QDRANT_API_KEY, SB_API_KEY,
    GROQ_API_KEY, …) liegen NUR auf dem VPS in `/opt/second-brain/.env`, nicht im Repo. scp nur die
    geaenderten Code-Dateien, nie die `.env`.

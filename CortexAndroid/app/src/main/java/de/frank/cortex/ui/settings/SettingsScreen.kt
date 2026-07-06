@@ -114,18 +114,19 @@ fun SettingsScreen(
     }
     fun saveEditablePrompt(key: String, prompt: String) {
         when (key) {
-            SettingsStore.RESPONSE_SIZE_AUTO -> SettingsStore.setResponseSizePrompt(key, prompt)
+            SettingsStore.RESPONSE_SIZE_AUTO,
             SettingsStore.RESPONSE_SIZE_SHORT,
             SettingsStore.RESPONSE_SIZE_MEDIUM,
             SettingsStore.RESPONSE_SIZE_XL -> {
                 SettingsStore.setResponseSizePrompt(key, prompt)
-                // Zentral zum Server syncen (Frank-Wunsch 2026-07-02): Dashboard nutzt DENSELBEN
-                // Prompt. Best effort — offline bleibt der lokale Stand, Sync holt es beim
+                // Zentral zum Server syncen: Dashboard nutzt DENSELBEN Prompt.
+                // Best effort — offline bleibt der lokale Stand, Sync holt es beim
                 // naechsten App-Start nach (ChatViewModel.syncSizePromptsWithServer).
                 screenScope.launch {
                     try {
                         ApiClient.agentApi().updateConfig(
                             de.frank.cortex.data.model.AgentConfigRequest(
+                                size_prompt_auto = if (key == SettingsStore.RESPONSE_SIZE_AUTO) prompt else null,
                                 size_prompt_s = if (key == SettingsStore.RESPONSE_SIZE_SHORT) prompt else null,
                                 size_prompt_m = if (key == SettingsStore.RESPONSE_SIZE_MEDIUM) prompt else null,
                                 size_prompt_xl = if (key == SettingsStore.RESPONSE_SIZE_XL) prompt else null
@@ -138,7 +139,23 @@ fun SettingsScreen(
                     }
                 }
             }
-            else -> SettingsStore.setContextPrompt(key, prompt)
+            else -> {
+                SettingsStore.setContextPrompt(key, prompt)
+                screenScope.launch {
+                    try {
+                        ApiClient.agentApi().updateConfig(
+                            de.frank.cortex.data.model.AgentConfigRequest(
+                                context_prompt_save = if (key == SettingsStore.CONTEXT_MODE_SAVE) prompt else null,
+                                context_prompt_search = if (key == SettingsStore.CONTEXT_MODE_SEARCH) prompt else null
+                            )
+                        )
+                    } catch (e: CancellationException) {
+                        throw e
+                    } catch (e: Exception) {
+                        CortexLog.warn("Settings", "syncContextPrompt", "Server-Sync fehlgeschlagen (lokal gespeichert): ${e.message}")
+                    }
+                }
+            }
         }
     }
     var contextPromptDraft by remember { mutableStateOf(loadEditablePrompt(selectedContextPromptMode)) }
@@ -184,6 +201,19 @@ fun SettingsScreen(
             routerModel = config.router_model.ifBlank { ROUTER_AUTO }
             routerReasoning = config.router_reasoning.ifBlank { ROUTER_AUTO }
             tavilyEnabled = config.tavily_enabled
+            if (config.size_prompts_custom) {
+                config.size_prompts.forEach { (k, v) ->
+                    if (k in setOf("auto", "s", "m", "xl") && v.isNotBlank()) SettingsStore.setResponseSizePrompt(k, v)
+                }
+            }
+            if (config.context_prompts_custom) {
+                config.context_prompts.forEach { (k, v) ->
+                    if (k in setOf(SettingsStore.CONTEXT_MODE_SAVE, SettingsStore.CONTEXT_MODE_SEARCH) && v.isNotBlank()) {
+                        SettingsStore.setContextPrompt(k, v)
+                    }
+                }
+            }
+            contextPromptDraft = loadEditablePrompt(selectedContextPromptMode)
             runtimeLimits = config.limits
             limitDrafts = limitsToDrafts(config.limits)
             limitsStatus = "Aktuelle Limits geladen"

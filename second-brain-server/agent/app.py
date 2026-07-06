@@ -52,6 +52,7 @@ VERSION = "0.53.0 (05.07.2026, 14.14 Uhr)"  # 0.53.0 (Gruppe D "Mitlernen in Pro
 
 VERSION = "0.56.0 (06.07.2026, 13:52 Uhr)"  # 0.56.0: Composite-Route query_internet fuer verschachtelte Anfragen (erst Gedächtnis-Kontext, dann Internet-Abgleich). Root Cause: Router-Schema erlaubte bisher genau EINEN intent; dadurch wurde bei Kettenanforderungen nur query ODER internet ausgeführt. Jetzt liefert der Router optional web_query, der Server führt beide bestehenden Pfade sequenziell aus und formuliert eine kombinierte Antwort. Alt: 0.55.3 (06.07.2026, 13:23 Uhr).
 VERSION = "0.57.0 (06.07.2026, 17:23 Uhr)"  # 0.57.0: Qdrant-/Gedächtnis-Limits vollständig dashboardfähig. Zusätzlich zu den bisherigen Recall-/Kontextwerten sind jetzt Duplikat-Suchkandidaten, Entity-Extraktionsfenster, Entity-Vollabruflimit, Antwort-Max-Tokens, Arbeitscache-Schwelle und Kategorie-Batchgröße persistent über /config.limits.agent einstellbar; die Werte wirken sofort im laufenden Agenten. Alt: 0.56.3.
+VERSION = "0.58.0 (06.07.2026, 17:55 Uhr)"  # 0.58.0: Zentrale Modus- und A/S/M/XL-Prompts. /config liefert und speichert jetzt neben S/M/XL auch A/Auto sowie Speichern- und Suchen-Modus-Prompts; Clients ohne eigenen context_prompt (Dashboard) bekommen den kombinierten zentralen Prompt serverseitig angehängt. Android und Dashboard nutzen dieselbe Quelle in agent-data. Alt: 0.57.0.
 
 # ---------------------------------------------------------------------------
 # Konfiguration (alles aus Umgebungsvariablen — Secrets nie im Code)
@@ -3365,8 +3366,12 @@ def put_config(req: ConfigReq) -> dict:
     _log(logging.INFO, "Agent-Konfiguration gewechselt", models=ROLE_MODELS, reasoning=ROLE_REASONING,
           router_model=ROUTER_MODEL or "(wie Hauptagent)", router_reasoning=ROUTER_REASONING or "(wie Hauptagent)",
           tavily_enabled=TAVILY_ENABLED, limits=limit_result)
+    size_prompts, size_custom = load_size_prompts()
+    context_prompts, context_custom = load_context_prompts()
     return {"status": "ok", "models": ROLE_MODELS, "reasoning": ROLE_REASONING,
             "router_model": ROUTER_MODEL, "router_reasoning": ROUTER_REASONING,
+            "size_prompts": size_prompts, "size_prompts_custom": size_custom,
+            "context_prompts": context_prompts, "context_prompts_custom": context_custom,
             "tavily_enabled": TAVILY_ENABLED, "limits": limit_result or combined_limits()}
 
 
