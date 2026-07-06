@@ -33,6 +33,7 @@ import re
 import threading
 import time
 import traceback
+import uuid
 from contextlib import asynccontextmanager
 from datetime import datetime
 from logging.handlers import RotatingFileHandler
@@ -52,7 +53,7 @@ VERSION = "0.53.0 (05.07.2026, 14.14 Uhr)"  # 0.53.0 (Gruppe D "Mitlernen in Pro
 
 VERSION = "0.56.0 (06.07.2026, 13:52 Uhr)"  # 0.56.0: Composite-Route query_internet fuer verschachtelte Anfragen (erst Gedächtnis-Kontext, dann Internet-Abgleich). Root Cause: Router-Schema erlaubte bisher genau EINEN intent; dadurch wurde bei Kettenanforderungen nur query ODER internet ausgeführt. Jetzt liefert der Router optional web_query, der Server führt beide bestehenden Pfade sequenziell aus und formuliert eine kombinierte Antwort. Alt: 0.55.3 (06.07.2026, 13:23 Uhr).
 VERSION = "0.57.0 (06.07.2026, 17:23 Uhr)"  # 0.57.0: Qdrant-/Gedächtnis-Limits vollständig dashboardfähig. Zusätzlich zu den bisherigen Recall-/Kontextwerten sind jetzt Duplikat-Suchkandidaten, Entity-Extraktionsfenster, Entity-Vollabruflimit, Antwort-Max-Tokens, Arbeitscache-Schwelle und Kategorie-Batchgröße persistent über /config.limits.agent einstellbar; die Werte wirken sofort im laufenden Agenten. Alt: 0.56.3.
-VERSION = "0.58.0 (06.07.2026, 17:55 Uhr)"  # 0.58.0: Zentrale Modus- und A/S/M/XL-Prompts. /config liefert und speichert jetzt neben S/M/XL auch A/Auto sowie Speichern- und Suchen-Modus-Prompts; Clients ohne eigenen context_prompt (Dashboard) bekommen den kombinierten zentralen Prompt serverseitig angehängt. Android und Dashboard nutzen dieselbe Quelle in agent-data. Alt: 0.57.0.
+VERSION = "0.59.0 (06.07.2026, 18:54 Uhr)"  # 0.59.0: Zentrale frei eingesprochene Kontext-Prompts für Android und Dashboard. /config liefert/speichert user_context_prompts persistent in agent-data; aktive Prompts werden serverseitig als Zusatz-Prompt N an Dashboard-Gespräche angehängt. Android kann die Liste seeden, übernehmen und bei Änderungen synchronisieren. Alt: 0.58.0.
 
 # ---------------------------------------------------------------------------
 # Konfiguration (alles aus Umgebungsvariablen — Secrets nie im Code)
@@ -2095,6 +2096,7 @@ DEFAULT_CONTEXT_PROMPTS = {
                "Interpretiere seine Eingabe als Such- oder Erinnerungsfrage, formuliere klare Suchstichworte\n"
                "und antworte anschließend nur aus echten Gedächtnis-Treffern."),
 }
+USER_CONTEXT_PROMPTS_FILE = Path(AGENT_DATA_DIR) / "user-context-prompts.json"
 
 
 def load_size_prompts() -> "tuple[dict, bool]":
@@ -2155,6 +2157,48 @@ def save_context_prompts(update: dict) -> None:
     os.replace(tmp, CONTEXT_PROMPTS_FILE)
 
 
+def _clean_user_context_prompt(item: dict) -> dict | None:
+    text = (item.get("text") or "").strip()[:4000]
+    if not text:
+        return None
+    pid = (item.get("id") or "").strip()[:80] or str(uuid.uuid4())
+    original = (item.get("original_text") or item.get("originalText") or "").strip()[:4000]
+    return {"id": pid, "text": text, "enabled": bool(item.get("enabled", True)), "original_text": original}
+
+
+def load_user_context_prompts() -> "tuple[list[dict], bool]":
+    """(prompts, custom) — frei eingesprochene Kontext-Prompts für App + Dashboard."""
+    try:
+        if USER_CONTEXT_PROMPTS_FILE.exists():
+            raw = json.loads(USER_CONTEXT_PROMPTS_FILE.read_text(encoding="utf-8"))
+            items = raw if isinstance(raw, list) else raw.get("prompts", []) if isinstance(raw, dict) else []
+            out = []
+            for item in items[:80]:
+                if isinstance(item, dict):
+                    cleaned = _clean_user_context_prompt(item)
+                    if cleaned:
+                        out.append(cleaned)
+            return out, True
+    except Exception as e:  # noqa: BLE001
+        _log(logging.WARNING, "user-context-prompts.json nicht lesbar — nutze leere Liste", err=str(e))
+    return [], False
+
+
+def save_user_context_prompts(prompts: list[dict]) -> list[dict]:
+    """Atomar ersetzen: Liste ist absichtlich die gemeinsame 1:1-Quelle für App + Dashboard."""
+    out = []
+    for item in prompts[:80]:
+        if isinstance(item, dict):
+            cleaned = _clean_user_context_prompt(item)
+            if cleaned:
+                out.append(cleaned)
+    Path(AGENT_DATA_DIR).mkdir(parents=True, exist_ok=True)
+    tmp = USER_CONTEXT_PROMPTS_FILE.with_suffix(".tmp")
+    tmp.write_text(json.dumps(out, ensure_ascii=False, indent=2), encoding="utf-8", newline="\n")
+    os.replace(tmp, USER_CONTEXT_PROMPTS_FILE)
+    return out
+
+
 def build_ui_context_prompt(context_mode: str | None, response_size: str | None, client_prompt: str | None) -> str:
     """Serverseitiger Zusatzprompt fuer Clients ohne eigenen context_prompt (Dashboard).
 
@@ -2169,6 +2213,12 @@ def build_ui_context_prompt(context_mode: str | None, response_size: str | None,
     if mode in ("save", "search"):
         parts.append(load_context_prompts()[0][mode])
     parts.append(load_size_prompts()[0][rsize])
+    active_user_prompts = [p for p in load_user_context_prompts()[0] if p.get("enabled") and (p.get("text") or "").strip()]
+    if active_user_prompts:
+        parts.append("\n\n".join(
+            f"Zusatz-Prompt {i + 1}:\n{(p.get('text') or '').strip()}"
+            for i, p in enumerate(active_user_prompts)
+        ))
     return "\n\n".join(p for p in parts if p.strip())[:CONTEXT_PROMPT_MAX_CHARS]
 
 
@@ -3190,6 +3240,13 @@ class PromptReq(BaseModel):
     role: str | None = Field(default="haupt", description="Welcher Agent: haupt | speicher | abfrage (Default haupt)")
 
 
+class UserContextPromptReq(BaseModel):
+    id: str | None = Field(default=None, max_length=80)
+    text: str = Field(..., min_length=1, max_length=4000)
+    enabled: bool = True
+    original_text: str | None = Field(default=None, max_length=4000)
+
+
 class ConfigReq(BaseModel):
     # Modell-pro-Rolle (alle optional). Abwaertskompat: 'model' setzt alle drei Rollen.
     haupt_model: str | None = Field(default=None, description="Modell des Hauptagenten (Gespraech/Routing)")
@@ -3207,6 +3264,7 @@ class ConfigReq(BaseModel):
     size_prompt_xl: str | None = Field(default=None, max_length=4000, description="Zentraler XL-Antwortlaengen-Prompt")
     context_prompt_save: str | None = Field(default=None, max_length=4000, description="Zentraler Speichern-Modus-Prompt")
     context_prompt_search: str | None = Field(default=None, max_length=4000, description="Zentraler Suchen-Modus-Prompt")
+    user_context_prompts: list[UserContextPromptReq] | None = Field(default=None, description="Frei eingesprochene Kontext-Prompts aus App/Dashboard, inklusive Aktivstatus")
     tavily_enabled: bool | None = Field(default=None, description="Tavily-Websearch fuer intent=internet an/aus")
     limits: dict[str, Any] | None = Field(default=None, description="Laufzeitlimits: {'agent': {...}, 'brain': {...}}")
 
@@ -3217,6 +3275,7 @@ class CodexAuthPollReq(BaseModel):
 
 class ImproveReq(BaseModel):
     text: str = Field(..., min_length=1, max_length=8000, description="Eingesprochener Roh-Text, der sprachlich verbessert werden soll")
+    extra_instruction: str | None = Field(default=None, max_length=2000, description="Optionaler Zusatzauftrag, z.B. Kontext-Prompt als Agentenanweisung optimieren")
 
 
 class CategoryReq(BaseModel):
@@ -3303,11 +3362,13 @@ def get_config() -> dict:
     available = AVAILABLE_MODELS + [m for m in codex_models() if m not in AVAILABLE_MODELS]
     size_prompts, size_custom = load_size_prompts()
     context_prompts, context_custom = load_context_prompts()
+    user_context_prompts, user_context_custom = load_user_context_prompts()
     return {"models": ROLE_MODELS, "model": ROLE_MODELS["haupt"],
             "reasoning": ROLE_REASONING, "reasoning_available": REASONING_AVAILABLE,
             "router_model": ROUTER_MODEL, "router_reasoning": ROUTER_REASONING,
             "size_prompts": size_prompts, "size_prompts_custom": size_custom,
             "context_prompts": context_prompts, "context_prompts_custom": context_custom,
+            "user_context_prompts": user_context_prompts, "user_context_prompts_custom": user_context_custom,
             "tavily_enabled": TAVILY_ENABLED,
             "limits": combined_limits(),
             "codex": {"connected": codex_connected()},
@@ -3362,16 +3423,21 @@ def put_config(req: ConfigReq) -> dict:
         save_context_prompts({"save": req.context_prompt_save, "search": req.context_prompt_search})
         _log(logging.INFO, "Modus-Prompts zentral gespeichert",
              felder=[k for k, v in (("save", req.context_prompt_save), ("search", req.context_prompt_search)) if v])
+    if req.user_context_prompts is not None:
+        saved_user_prompts = save_user_context_prompts([p.model_dump() for p in req.user_context_prompts])
+        _log(logging.INFO, "Kontext-Prompts zentral gespeichert", anzahl=len(saved_user_prompts))
     save_models(ROLE_MODELS, ROLE_REASONING, TAVILY_ENABLED, ROUTER_MODEL, ROUTER_REASONING)  # sofort aktiv, kein Neustart noetig
     _log(logging.INFO, "Agent-Konfiguration gewechselt", models=ROLE_MODELS, reasoning=ROLE_REASONING,
           router_model=ROUTER_MODEL or "(wie Hauptagent)", router_reasoning=ROUTER_REASONING or "(wie Hauptagent)",
           tavily_enabled=TAVILY_ENABLED, limits=limit_result)
     size_prompts, size_custom = load_size_prompts()
     context_prompts, context_custom = load_context_prompts()
+    user_context_prompts, user_context_custom = load_user_context_prompts()
     return {"status": "ok", "models": ROLE_MODELS, "reasoning": ROLE_REASONING,
             "router_model": ROUTER_MODEL, "router_reasoning": ROUTER_REASONING,
             "size_prompts": size_prompts, "size_prompts_custom": size_custom,
             "context_prompts": context_prompts, "context_prompts_custom": context_custom,
+            "user_context_prompts": user_context_prompts, "user_context_prompts_custom": user_context_custom,
             "tavily_enabled": TAVILY_ENABLED, "limits": limit_result or combined_limits()}
 
 
@@ -4098,7 +4164,11 @@ def improve(req: ImproveReq) -> dict:
     Almanach ai-agent-frameworks §3.1)."""
     src = req.text.strip()
     try:
-        better = llm_generate(IMPROVE_SYSTEM, src, model=ROLE_MODELS["haupt"], json_mode=False, max_tokens=2048, temperature=0.3).strip()
+        system = IMPROVE_SYSTEM
+        extra = (req.extra_instruction or "").strip()
+        if extra:
+            system = f"{IMPROVE_SYSTEM}\n\nZusatzauftrag:\n{extra}"
+        better = llm_generate(system, src, model=ROLE_MODELS["haupt"], json_mode=False, max_tokens=2048, temperature=0.3).strip()
     except Exception as e:  # noqa: BLE001 — Tool-Fehler sauber zurueckgeben statt crashen (§3.2)
         _log(logging.ERROR, "Textverbesserung fehlgeschlagen", exc_info=True)
         raise HTTPException(status_code=502, detail=f"Verbesserung fehlgeschlagen: {type(e).__name__}")

@@ -769,9 +769,25 @@ button{font-family:inherit;cursor:pointer}
 .feat-body .feat-dienst{font-size:11.5px;color:var(--text-faint);font-family:'JetBrains Mono';margin-bottom:8px}
 .feat-body .feat-kurz{color:var(--text);margin-bottom:8px}
 .cortex-knowledge-status{display:block;margin:0 0 14px auto;text-align:right}
+.mode-prompt-tabs{display:flex;gap:8px;flex-wrap:wrap;margin:10px 0 14px}
+.mode-prompt-tabs .btn.active{border-color:var(--accent);color:var(--accent);background:rgba(244,166,90,.14)}
 .mode-prompt-buttons{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px}
 .mode-prompt-buttons .btn.active{border-color:var(--accent);color:var(--accent);background:rgba(244,166,90,.14)}
 .mode-prompt-meta{display:flex;justify-content:space-between;gap:12px;align-items:center;flex-wrap:wrap;margin:8px 0 10px}
+.user-context-compose{border:1px solid var(--border);background:var(--surface-2);border-radius:14px;padding:12px;margin-top:4px}
+.user-context-actions{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-top:10px}
+.user-context-list{display:flex;flex-direction:column;gap:10px;margin-top:14px}
+.user-context-row{display:grid;grid-template-columns:auto minmax(0,1fr) auto;gap:10px;align-items:start;border:1px solid var(--border);background:var(--surface-2);border-radius:14px;padding:12px}
+.user-context-row.active{border-color:rgba(139,124,255,.55)}
+.user-context-tools{display:flex;flex-direction:column;gap:7px;align-items:center}
+.user-context-title{font-family:'Space Grotesk';font-size:14px;font-weight:700;color:var(--text);margin-bottom:6px}
+.user-context-row:not(.active) .user-context-title{color:var(--text-faint)}
+.user-context-text{width:100%;min-height:70px;resize:vertical;border:none;outline:none;background:transparent;color:var(--text);font-family:inherit;font-size:13.5px;line-height:1.55}
+.user-context-icon{width:34px;height:34px;display:inline-flex;align-items:center;justify-content:center;border-radius:10px;border:1px solid var(--border);background:var(--surface);color:var(--text-dim);font-family:'Space Grotesk';font-weight:800;cursor:pointer}
+.user-context-icon:hover{border-color:var(--accent);color:var(--accent)}
+.user-context-icon.busy{animation:btnpulse 1s var(--ease-soft) infinite}
+.user-context-icon.danger:hover{border-color:var(--bad);color:var(--bad)}
+.user-context-empty{padding:18px;border:1px dashed var(--border);border-radius:12px;color:var(--text-faint);text-align:center}
 @media(max-width:820px){.cortex-knowledge-status{text-align:left}}
 .eval-box{background:var(--surface-2);border:1px solid var(--border);border-radius:12px;padding:14px;margin-top:10px;font-size:13.5px;color:var(--text-dim);max-height:540px;overflow-y:auto}
 .eval-box pre{white-space:pre-wrap;word-break:break-word;font-family:'JetBrains Mono',monospace;font-size:12px;line-height:1.55;color:var(--text);margin:0}
@@ -1345,17 +1361,40 @@ button{font-family:inherit;cursor:pointer}
 
         <div class="card set-section" id="modePromptSection">
           <h3><span class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M4 7h16"/><path d="M4 12h10"/><path d="M4 17h7"/><path d="M17 14l3 3-3 3"/></svg></span>Modus-Prompts</h3>
-          <p class="set-desc">Bearbeitet die zentralen Prompts für Gesprächsmodi und Antwortlängen. Diese Texte sind die gemeinsame Quelle für Dashboard und Android-App: Speichern hier wirkt auf dem Handy, Speichern am Handy wirkt hier.</p>
-          <div class="mode-prompt-buttons" id="modePromptButtons"></div>
-          <div class="mode-prompt-meta">
-            <span class="muted-note" id="modePromptHint">Prompt wählen…</span>
-            <span class="muted-note" id="modePromptStatus"></span>
+          <p class="set-desc">Bearbeitet die zentralen Prompts für Gesprächsmodi, Antwortlängen und frei wählbare Zusatz-Kontexte. Diese Texte sind die gemeinsame Quelle für Dashboard und Android-App: Speichern hier wirkt auf dem Handy, Speichern am Handy wirkt hier.</p>
+          <div class="mode-prompt-tabs">
+            <button class="btn active" id="modePromptTabModes" type="button">Modus-Prompts</button>
+            <button class="btn" id="modePromptTabContexts" type="button">Kontext-Prompts</button>
           </div>
-          <div class="field">
-            <textarea class="textarea" id="modePromptArea" spellcheck="false" placeholder="Prompt lädt…" style="min-height:240px;height:260px"></textarea>
+          <div id="modePromptPanelModes">
+            <div class="mode-prompt-buttons" id="modePromptButtons"></div>
+            <div class="mode-prompt-meta">
+              <span class="muted-note" id="modePromptHint">Prompt wählen…</span>
+              <span class="muted-note" id="modePromptStatus"></span>
+            </div>
+            <div class="field">
+              <textarea class="textarea" id="modePromptArea" spellcheck="false" placeholder="Prompt lädt…" style="min-height:240px;height:260px"></textarea>
+            </div>
+            <div class="row-end">
+              <button class="btn btn-primary" id="saveModePromptBtn" type="button">Speichern</button>
+            </div>
           </div>
-          <div class="row-end">
-            <button class="btn btn-primary" id="saveModePromptBtn" type="button">Speichern</button>
+          <div id="modePromptPanelContexts" style="display:none">
+            <div class="mode-prompt-meta">
+              <span class="muted-note">Diese Prompts werden bei aktivem Häkchen an jede Dashboard- und Android-Frage angehängt.</span>
+              <span class="muted-note" id="userContextPromptStatus"></span>
+            </div>
+            <div class="user-context-compose">
+              <textarea class="textarea" id="userContextPromptDraft" spellcheck="false" placeholder="Prompt einsprechen oder eintippen…" style="min-height:120px;height:140px"></textarea>
+              <div class="user-context-actions">
+                <button class="chat-btn chat-mic" id="contextPromptMic" type="button" aria-label="Kontext-Prompt einsprechen" title="Kontext-Prompt einsprechen">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M12 3a3 3 0 0 0-3 3v6a3 3 0 0 0 6 0V6a3 3 0 0 0-3-3Z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><path d="M12 19v3"/></svg>
+                </button>
+                <button class="btn btn-primary" id="saveUserContextPromptBtn" type="button">Prompt speichern</button>
+                <span class="muted-note">Mikrofon transkribiert direkt in dieses Prompt-Feld.</span>
+              </div>
+            </div>
+            <div class="user-context-list" id="userContextPromptList"></div>
           </div>
         </div>
 
@@ -2399,6 +2438,8 @@ button{font-family:inherit;cursor:pointer}
   let runtimeLimitsState = {agent:{}, brain:{}};
   let modePromptState = {size:{}, context:{}};
   let selectedModePrompt = "size_auto";
+  let userContextPrompts = [];
+  let userContextSaveTimer = null;
   const MODE_PROMPT_DEFS = [
     {key:"context_search", label:"Suchen", group:"context", subkey:"search", field:"context_prompt_search", hint:"Prompt für den Suchmodus im Gespräch."},
     {key:"context_save", label:"Speichern", group:"context", subkey:"save", field:"context_prompt_save", hint:"Prompt für den Speichermodus im Gespräch."},
@@ -2489,6 +2530,7 @@ button{font-family:inherit;cursor:pointer}
       if(tav) tav.checked = c.tavily_enabled !== false;
       syncTavilyState();
       renderModePrompts(c);
+      renderUserContextPrompts(c);
       renderRuntimeLimits(c.limits || {});
       document.getElementById("codexState").textContent = c.codex?.connected ? "Verbunden — Codex-Modelle sind auswählbar." : "Nicht verbunden — verbinde dich per Gerätecode.";
       updateReasoningBoxes();
@@ -2525,6 +2567,110 @@ button{font-family:inherit;cursor:pointer}
     paintModePromptEditor();
   }
 
+  function renderUserContextPrompts(config){
+    userContextPrompts = Array.isArray(config && config.user_context_prompts) ? config.user_context_prompts.map(cleanUserContextPrompt).filter(Boolean) : [];
+    paintUserContextPromptList();
+  }
+
+  function cleanUserContextPrompt(p){
+    const text = (p && p.text || "").trim();
+    if(!text) return null;
+    return {
+      id: (p.id || makeClientId()).slice(0,80),
+      text,
+      enabled: p.enabled !== false,
+      original_text: (p.original_text || p.originalText || "").trim()
+    };
+  }
+
+  function makeClientId(){
+    return (window.crypto && crypto.randomUUID) ? crypto.randomUUID() : String(Date.now()) + "-" + String(Math.random()).slice(2);
+  }
+
+  function userContextTitle(text){
+    const words = (text || "").trim().match(/[\p{L}\p{N}]+/gu) || [];
+    return words.slice(0,3).join(" ") || "Prompt";
+  }
+
+  function userContextPayload(){
+    return userContextPrompts.map(p=>({id:p.id, text:(p.text||"").trim(), enabled:p.enabled!==false, original_text:(p.original_text||"").trim()})).filter(p=>p.text);
+  }
+
+  async function saveUserContextPromptsNow(){
+    const saved = userContextPayload();
+    const r = await apiSend("/api/config", "PUT", {user_context_prompts:saved});
+    userContextPrompts = Array.isArray(r && r.user_context_prompts) ? r.user_context_prompts.map(cleanUserContextPrompt).filter(Boolean) : saved;
+    paintUserContextPromptList();
+    flash("userContextPromptStatus", "Kontext-Prompts synchronisiert");
+  }
+
+  function saveUserContextPromptsDebounced(delay=650){
+    clearTimeout(userContextSaveTimer);
+    userContextSaveTimer = setTimeout(()=> saveUserContextPromptsNow().catch(()=>flash("userContextPromptStatus", "Sync fehlgeschlagen", false)), delay);
+  }
+
+  function paintUserContextPromptList(){
+    const host = document.getElementById("userContextPromptList");
+    if(!host) return;
+    host.textContent = "";
+    if(!userContextPrompts.length){
+      const empty = document.createElement("div"); empty.className = "user-context-empty"; empty.textContent = "Noch keine Kontext-Prompts gespeichert."; host.appendChild(empty); return;
+    }
+    userContextPrompts.forEach(p=>{
+      const row = document.createElement("div"); row.className = "user-context-row" + (p.enabled !== false ? " active" : "");
+      const tools = document.createElement("div"); tools.className = "user-context-tools";
+      const cb = document.createElement("input"); cb.type = "checkbox"; cb.checked = p.enabled !== false; cb.title = "Prompt aktiv";
+      cb.addEventListener("change", ()=>{ p.enabled = cb.checked; row.classList.toggle("active", p.enabled); saveUserContextPromptsDebounced(0); });
+      const improve = document.createElement("button"); improve.className = "user-context-icon"; improve.type = "button"; improve.textContent = "G"; improve.title = "Mit Gemini verbessern";
+      improve.addEventListener("click", ()=> improveUserContextPrompt(p.id, improve));
+      const restore = document.createElement("button"); restore.className = "user-context-icon"; restore.type = "button"; restore.textContent = "R"; restore.title = "Original wiederherstellen"; restore.disabled = !p.original_text;
+      restore.addEventListener("click", ()=>{ if(!p.original_text) return; p.text = p.original_text; paintUserContextPromptList(); saveUserContextPromptsDebounced(0); });
+      tools.append(cb, improve, restore);
+      const body = document.createElement("div");
+      const title = document.createElement("div"); title.className = "user-context-title"; title.textContent = userContextTitle(p.text);
+      const ta = document.createElement("textarea"); ta.className = "user-context-text"; ta.value = p.text; ta.spellcheck = false;
+      ta.addEventListener("input", ()=>{ p.text = ta.value; title.textContent = userContextTitle(p.text); saveUserContextPromptsDebounced(); });
+      body.append(title, ta);
+      const del = document.createElement("button"); del.className = "user-context-icon danger"; del.type = "button"; del.title = "Prompt löschen";
+      del.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M3 6h18M8 6V4a1 1 0 0 1 1-1h6a1 1 0 0 1 1 1v2m2 0v14a1 1 0 0 1-1 1H7a1 1 0 0 1-1-1V6"/><path d="M10 11v6M14 11v6"/></svg>';
+      del.addEventListener("click", async ()=>{ const yes = await catConfirm("Kontext-Prompt löschen?", "Diesen Zusatz-Prompt wirklich löschen?", "Ja, löschen"); if(!yes) return; userContextPrompts = userContextPrompts.filter(x=>x.id!==p.id); paintUserContextPromptList(); saveUserContextPromptsDebounced(0); });
+      row.append(tools, body, del);
+      host.appendChild(row);
+    });
+  }
+
+  async function addUserContextPrompt(){
+    const area = document.getElementById("userContextPromptDraft");
+    const text = (area && area.value || "").trim();
+    if(!text){ flash("userContextPromptStatus", "Prompt darf nicht leer sein", false); return; }
+    userContextPrompts.push({id:makeClientId(), text, enabled:true, original_text:text});
+    if(area){ area.value = ""; autoGrow(area); }
+    paintUserContextPromptList();
+    try{ await saveUserContextPromptsNow(); }catch(e){ flash("userContextPromptStatus", "Sync fehlgeschlagen", false); }
+  }
+
+  async function improveUserContextPrompt(id, btn){
+    const p = userContextPrompts.find(x=>x.id===id); if(!p || !p.text.trim()) return;
+    if(btn){ btn.disabled = true; btn.classList.add("busy"); }
+    const extra = 'Dieser Text ist kein normaler Chat-Text, sondern eine zusätzliche Anweisung, die später zusammen mit einer eigentlichen Nutzerfrage an einen Agenten gesendet wird. Optimiere ihn deshalb so, dass der Agent ihn eindeutig als dauerhaft geltende Zusatzanweisung zur folgenden Frage versteht. Beginne den verbesserten Text mit: "Zusätzliche Anweisung an den Agenten:" und formuliere danach die Anweisung klar, vollständig, direkt und handlungsorientiert.';
+    try{
+      const r = await apiSend("/api/improve", "POST", {text:p.text, extra_instruction:extra});
+      if(r && r.ok!==false && r.text){ p.original_text = p.original_text || p.text; p.text = r.text.trim(); paintUserContextPromptList(); await saveUserContextPromptsNow(); }
+      else flash("userContextPromptStatus", (r && r.detail) || "Verbesserung fehlgeschlagen", false);
+    }catch(e){ flash("userContextPromptStatus", "Verbesserung fehlgeschlagen", false); }
+    finally{ if(btn){ btn.disabled = false; btn.classList.remove("busy"); } }
+  }
+
+  function setModePromptTab(tab){
+    const modes = tab !== "contexts";
+    const p1 = document.getElementById("modePromptPanelModes"), p2 = document.getElementById("modePromptPanelContexts");
+    const b1 = document.getElementById("modePromptTabModes"), b2 = document.getElementById("modePromptTabContexts");
+    if(p1) p1.style.display = modes ? "" : "none";
+    if(p2) p2.style.display = modes ? "none" : "";
+    if(b1) b1.classList.toggle("active", modes);
+    if(b2) b2.classList.toggle("active", !modes);
+  }
+
   function currentModePromptDef(){
     return MODE_PROMPT_DEFS.find(d=>d.key===selectedModePrompt) || MODE_PROMPT_DEFS[0];
   }
@@ -2556,6 +2702,9 @@ button{font-family:inherit;cursor:pointer}
     finally{ if(btn) btn.disabled = false; }
   }
   document.getElementById("saveModePromptBtn") && document.getElementById("saveModePromptBtn").addEventListener("click", saveModePrompt);
+  document.getElementById("modePromptTabModes") && document.getElementById("modePromptTabModes").addEventListener("click", ()=>setModePromptTab("modes"));
+  document.getElementById("modePromptTabContexts") && document.getElementById("modePromptTabContexts").addEventListener("click", ()=>setModePromptTab("contexts"));
+  document.getElementById("saveUserContextPromptBtn") && document.getElementById("saveUserContextPromptBtn").addEventListener("click", addUserContextPrompt);
 
   function isCodexModel(v){ v=(v||"").toLowerCase(); return v.startsWith("gpt-") || v.startsWith("codex/") || v.startsWith("openai-codex/"); }
   function isGeminiModel(v){ return (v||"").toLowerCase().startsWith("gemini"); }
@@ -3949,6 +4098,46 @@ button{font-family:inherit;cursor:pointer}
     recording = true; micBtn.classList.add("recording");
   }
 
+  async function toggleContextPromptMic(){
+    const micBtn = document.getElementById("contextPromptMic");
+    if(recording){ if(mediaRec && mediaRec.state!=="inactive") mediaRec.stop(); return; }
+    if(!navigator.mediaDevices || !window.MediaRecorder){ flash("userContextPromptStatus", "Mikrofon wird vom Browser nicht unterstützt", false); return; }
+    let stream;
+    try{ stream = await navigator.mediaDevices.getUserMedia({audio:true}); }
+    catch(e){ flash("userContextPromptStatus", "Kein Mikrofon-Zugriff", false); return; }
+    const ta = document.getElementById("userContextPromptDraft");
+    if(!ta){ stream.getTracks().forEach(t=>t.stop()); return; }
+    micBaseText = ta.value.trim();
+    liveTranscript = ""; previewActive = true;
+    startSpeechPreview(ta);
+    audioChunks = [];
+    mediaRec = new MediaRecorder(stream);
+    mediaRec.ondataavailable = e=>{ if(e.data && e.data.size) audioChunks.push(e.data); };
+    mediaRec.onstop = async ()=>{
+      recording = false; if(micBtn) micBtn.classList.remove("recording");
+      previewActive = false;
+      stream.getTracks().forEach(t=>t.stop());
+      if(speechRec){ try{ speechRec.stop(); }catch(e){} speechRec = null; }
+      const type = (audioChunks[0] && audioChunks[0].type) || "audio/webm";
+      const blob = new Blob(audioChunks, {type});
+      if(!blob.size){ return; }
+      if(micBtn){ micBtn.disabled = true; micBtn.classList.add("busy"); }
+      try{
+        const r = await fetch("/api/transcribe",{method:"POST",headers:{"Content-Type":blob.type||"audio/webm"},body:blob});
+        const d = await r.json();
+        if(d && d.ok && d.text){ setMicText(ta, d.text); ta.focus(); }
+        else if(liveTranscript){ ta.focus(); flash("userContextPromptStatus", "Groq nicht erreichbar — Live-Vorschau übernommen", false); }
+        else flash("userContextPromptStatus", (d && d.detail) || "Transkription fehlgeschlagen", false);
+      }catch(e){
+        if(liveTranscript){ ta.focus(); flash("userContextPromptStatus", "Groq nicht erreichbar — Live-Vorschau übernommen", false); }
+        else flash("userContextPromptStatus", "Transkription fehlgeschlagen", false);
+      }
+      finally{ if(micBtn){ micBtn.disabled = false; micBtn.classList.remove("busy"); } }
+    };
+    mediaRec.start();
+    recording = true; if(micBtn) micBtn.classList.add("recording");
+  }
+
   /* ── G-Button: eingesprochenen Text grammatikalisch/sprachlich verbessern (Inhalt 1:1) ───── */
   async function improveText(){
     const ta = document.getElementById("chatText");
@@ -3999,6 +4188,8 @@ button{font-family:inherit;cursor:pointer}
     ta.addEventListener("keydown", e=>{ if(e.key==="Enter" && !e.shiftKey){ e.preventDefault(); sendChat(); } });
     ta.addEventListener("input", ()=> autoGrow(ta));
     const mic = document.getElementById("chatMic"); if(mic) mic.addEventListener("click", toggleMic);
+    const cpmic = document.getElementById("contextPromptMic"); if(cpmic) cpmic.addEventListener("click", toggleContextPromptMic);
+    const cpDraft = document.getElementById("userContextPromptDraft"); if(cpDraft) cpDraft.addEventListener("input", ()=>autoGrow(cpDraft));
     const imp = document.getElementById("chatImprove"); if(imp) imp.addEventListener("click", improveText);
     const clr = document.getElementById("chatClear"); if(clr) clr.addEventListener("click", ()=>{ ta.value=""; autoGrow(ta); ta.focus(); });
     const cat = document.getElementById("chatCategory"); if(cat) cat.addEventListener("change", onCategoryChange);

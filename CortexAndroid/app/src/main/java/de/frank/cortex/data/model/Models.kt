@@ -173,6 +173,14 @@ data class ModelPrice(
 )
 
 @JsonClass(generateAdapter = true)
+data class AgentUserContextPrompt(
+    val id: String,
+    val text: String,
+    val enabled: Boolean = true,
+    val original_text: String? = null
+)
+
+@JsonClass(generateAdapter = true)
 data class AgentConfigResponse(
     val models: Map<String, String> = emptyMap(),
     val reasoning: Map<String, String> = emptyMap(),
@@ -185,6 +193,8 @@ data class AgentConfigResponse(
     val size_prompts_custom: Boolean = false,
     val context_prompts: Map<String, String> = emptyMap(),
     val context_prompts_custom: Boolean = false,
+    val user_context_prompts: List<AgentUserContextPrompt> = emptyList(),
+    val user_context_prompts_custom: Boolean = false,
     val limits: RuntimeLimits = RuntimeLimits(),
     val codex: CodexState? = null,
     val tavily_enabled: Boolean = true,
@@ -218,6 +228,7 @@ data class AgentConfigRequest(
     val size_prompt_xl: String? = null,
     val context_prompt_save: String? = null,
     val context_prompt_search: String? = null,
+    val user_context_prompts: List<AgentUserContextPrompt>? = null,
     val tavily_enabled: Boolean? = null,
     val limits: RuntimeLimits? = null
 )

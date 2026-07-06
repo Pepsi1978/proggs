@@ -1,7 +1,15 @@
 {
-	"stand": "06.07.2026, 18:41 Uhr",
+	"stand": "06.07.2026, 18:54 Uhr",
 	"hinweis": "PFLEGE-PFLICHT: Bei JEDEM Deploy, der ein neues System/Feature einbaut, hier einen Eintrag ERGAENZEN (neueste zuerst) — mit Datum + Uhrzeit und ausfuehrlicher Erklaerung. Diese Datei ist die Quelle des Info-Bereichs in den Dashboard-Einstellungen (GET /api/features). Regel verankert in DEPLOY.md.",
 	"features": [
+		{
+			"id": "kontext-prompts-dashboard-android-sync",
+			"name": "Kontext-Prompts: Android-K jetzt auch im Dashboard und zentral synchronisiert",
+			"eingebaut": "06.07.2026, 18:54 Uhr",
+			"dienst": "dashboard 0.55.0 + agent 0.59.0 + Android 0.6.0",
+			"kurz": "Die frei einsprechbaren Kontext-Prompts aus der Android-App sind jetzt dieselbe zentrale Liste im Dashboard: Text, Reihenfolge, Aktivstatus und Originaltext bleiben synchron.",
+			"erklaerung": "Unter Einstellungen -> Modus-Prompts gibt es jetzt einen zweiten Reiter 'Kontext-Prompts'. Er bildet die Android-K-Funktion im Web nach: ein eigenes Prompt-Feld, Mikrofon-Diktat mit Groq/Web-Speech-Hybrid, Speichern, Aktiv-Häkchen, G zum Verbessern über Gemini, R zum Original-Wiederherstellen und Papierkorb zum Löschen. Die Liste wird über /api/config in agent-data/user-context-prompts.json gespeichert und ist die gemeinsame Quelle für Dashboard und Android. Android übernimmt eine vorhandene Serverliste beim Start und lädt lokale Handy-Prompts einmalig hoch, wenn der Server noch leer ist. Jede Änderung am Handy oder im Dashboard schreibt dieselbe zentrale Liste zurück. Bei Dashboard-Gesprächen hängt der Agent alle aktiven freien Kontext-Prompts serverseitig als 'Zusatz-Prompt N:' an den zentralen Modus-/Antwortlängen-Prompt an; Android sendet nach dem Sync denselben Inhalt selbst mit. Dadurch gelten aktive Kontext-Prompts bei Web- und Handy-Gesprächen gleich, ohne doppelte oder auseinanderlaufende Prompttexte. Der G-Button im Dashboard nutzt einen Zusatzauftrag an /api/improve, damit der Text ausdrücklich als dauerhafte Zusatzanweisung an den Agenten optimiert wird."
+		},
 		{
 			"id": "qdrant-limit-best-practice-empfehlungen",
 			"name": "Qdrant-Limits: Empfehlungen nach Retrieval-Best-Practice",

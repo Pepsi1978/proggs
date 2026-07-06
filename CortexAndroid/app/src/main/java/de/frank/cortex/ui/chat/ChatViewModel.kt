@@ -176,6 +176,40 @@ class ChatViewModel : ViewModel() {
     // Modus- und A/S/M/XL-Prompts zentral halten: Server = Quelle der Wahrheit,
     // damit das Dashboard DIESELBEN Texte nutzt. Einmalig pro App-Lauf.
     @Volatile private var sizePromptsSynced = false
+    private var userContextPromptSyncJob: Job? = null
+
+    private fun UserContextPrompt.toAgentPrompt() = AgentUserContextPrompt(
+        id = id,
+        text = text,
+        enabled = enabled,
+        original_text = originalText
+    )
+
+    private fun AgentUserContextPrompt.toLocalPrompt() = UserContextPrompt(
+        id = id,
+        text = text,
+        enabled = enabled,
+        originalText = original_text
+    )
+
+    private fun syncUserContextPromptsToServer(prompts: List<UserContextPrompt>, debounceMs: Long = 600L) {
+        if (WireGuardManager.state.value != TunnelState.CONNECTED) return
+        userContextPromptSyncJob?.cancel()
+        userContextPromptSyncJob = viewModelScope.launch(Dispatchers.IO) {
+            if (debounceMs > 0) delay(debounceMs)
+            try {
+                ApiClient.agentApi().updateConfig(
+                    AgentConfigRequest(user_context_prompts = prompts.map { it.toAgentPrompt() })
+                )
+                CortexLog.info("ChatVM", "syncUserContextPrompts", "Kontext-Prompts zum Server synchronisiert",
+                    mapOf("count" to prompts.size))
+            } catch (e: CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                CortexLog.warn("ChatVM", "syncUserContextPrompts", "Kontext-Prompt-Sync fehlgeschlagen: ${e.message}")
+            }
+        }
+    }
 
     private fun syncSizePromptsWithServer() {
         if (sizePromptsSynced) return
@@ -195,6 +229,13 @@ class ChatViewModel : ViewModel() {
                     }
                     CortexLog.info("ChatVM", "syncSizePrompts", "Zentrale Modus- und A/S/M/XL-Prompts vom Server uebernommen")
                 }
+                if (cfg.user_context_prompts_custom) {
+                    val serverPrompts = cfg.user_context_prompts.map { it.toLocalPrompt() }
+                    SettingsStore.setUserContextPrompts(serverPrompts)
+                    _uiState.update { it.copy(userContextPrompts = serverPrompts) }
+                    CortexLog.info("ChatVM", "syncSizePrompts", "Zentrale Kontext-Prompts vom Server uebernommen",
+                        mapOf("count" to serverPrompts.size))
+                }
                 if (!cfg.size_prompts_custom || !cfg.context_prompts_custom) {
                     // Server noch ohne eigene Prompts -> Franks lokal gepflegte Handy-Prompts EINMALIG hochladen (Seed).
                     ApiClient.agentApi().updateConfig(
@@ -208,6 +249,14 @@ class ChatViewModel : ViewModel() {
                         )
                     )
                     CortexLog.info("ChatVM", "syncSizePrompts", "Fehlende Handy-Prompts als zentrale Quelle zum Server geladen (Seed)")
+                }
+                val localUserPrompts = SettingsStore.userContextPrompts()
+                if (!cfg.user_context_prompts_custom && localUserPrompts.isNotEmpty()) {
+                    ApiClient.agentApi().updateConfig(
+                        AgentConfigRequest(user_context_prompts = localUserPrompts.map { it.toAgentPrompt() })
+                    )
+                    CortexLog.info("ChatVM", "syncSizePrompts", "Lokale Kontext-Prompts als zentrale Quelle zum Server geladen",
+                        mapOf("count" to localUserPrompts.size))
                 }
             } catch (e: CancellationException) {
                 throw e
@@ -684,6 +733,7 @@ class ChatViewModel : ViewModel() {
         )
         SettingsStore.setUserContextPrompts(updated)
         _uiState.update { it.copy(userContextPrompts = updated) }
+        syncUserContextPromptsToServer(updated, debounceMs = 0L)
         CortexLog.checkpoint(
             step = "context_prompt_add",
             intent = "Zusatz-Prompt speichern und bei Chat-Anfragen mitsenden",
@@ -700,6 +750,7 @@ class ChatViewModel : ViewModel() {
         }
         SettingsStore.setUserContextPrompts(updated)
         _uiState.update { it.copy(userContextPrompts = updated) }
+        syncUserContextPromptsToServer(updated)
     }
 
     fun toggleUserContextPrompt(id: String, enabled: Boolean) {
@@ -708,6 +759,7 @@ class ChatViewModel : ViewModel() {
         }
         SettingsStore.setUserContextPrompts(updated)
         _uiState.update { it.copy(userContextPrompts = updated) }
+        syncUserContextPromptsToServer(updated, debounceMs = 0L)
     }
 
     fun improveUserContextPrompt(id: String) {
@@ -742,6 +794,7 @@ class ChatViewModel : ViewModel() {
                 }
                 SettingsStore.setUserContextPrompts(updated)
                 _uiState.update { it.copy(userContextPrompts = updated, improvingContextPromptId = null) }
+                syncUserContextPromptsToServer(updated, debounceMs = 0L)
                 CortexLog.checkpoint(
                     step = "context_prompt_gemini_improve",
                     intent = "Kontext-Prompt als Zusatzanweisung fuer Agenten verbessern",
@@ -775,12 +828,14 @@ class ChatViewModel : ViewModel() {
         val updated = prompts.map { if (it.id == id) it.copy(text = original) else it }
         SettingsStore.setUserContextPrompts(updated)
         _uiState.update { it.copy(userContextPrompts = updated) }
+        syncUserContextPromptsToServer(updated, debounceMs = 0L)
     }
 
     fun deleteUserContextPrompt(id: String) {
         val updated = SettingsStore.userContextPrompts().filterNot { it.id == id }
         SettingsStore.setUserContextPrompts(updated)
         _uiState.update { it.copy(userContextPrompts = updated) }
+        syncUserContextPromptsToServer(updated, debounceMs = 0L)
     }
 
     fun saveEditedStoreConfirmation(source: ChatMessage, editedText: String) {
