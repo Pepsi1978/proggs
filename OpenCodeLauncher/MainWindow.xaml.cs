@@ -15,7 +15,14 @@ public partial class MainWindow : Window
     private const int DWMWA_WINDOW_CORNER_PREFERENCE = 33;
     private const int DWMWCP_ROUND = 2;
     private const int WM_GETMINMAXINFO = 0x0024;
+    private const int WM_SYSCOMMAND = 0x0112;
+    private const int SC_RESTORE = 0xF120;
     private const int MONITOR_DEFAULTTONEAREST = 2;
+    private const int SW_RESTORE = 9;
+    private const uint SWP_NOSIZE = 0x0001;
+    private const uint SWP_NOMOVE = 0x0002;
+    private const uint SWP_SHOWWINDOW = 0x0040;
+    private static readonly IntPtr HWND_TOP = IntPtr.Zero;
     private readonly LayoutSettings _layoutSettings;
     private int _providerResizeColumnIndex = -1;
     private double[]? _providerResizeStartWidths;
@@ -29,6 +36,15 @@ public partial class MainWindow : Window
 
     [DllImport("user32.dll", SetLastError = true)]
     private static extern bool GetMonitorInfo(IntPtr hMonitor, ref MONITORINFO lpmi);
+
+    [DllImport("user32.dll")]
+    private static extern bool ShowWindow(IntPtr hwnd, int nCmdShow);
+
+    [DllImport("user32.dll")]
+    private static extern bool SetForegroundWindow(IntPtr hwnd);
+
+    [DllImport("user32.dll", SetLastError = true)]
+    private static extern bool SetWindowPos(IntPtr hwnd, IntPtr hwndInsertAfter, int x, int y, int cx, int cy, uint flags);
 
     public MainViewModel ViewModel { get; }
 
@@ -64,8 +80,34 @@ public partial class MainWindow : Window
         {
             MaxBtn.Content = WindowState == WindowState.Maximized ? "❐" : "▢";
             SaveWindowLayout();
+            if (WindowState != WindowState.Minimized) QueueBringToTaskbarForeground();
         };
+        Activated += (_, _) => QueueBringToTaskbarForeground();
         ContentRendered += (_, _) => Title = $"OpenCode Launcher — {ViewModel.Version}";
+    }
+
+    private void QueueBringToTaskbarForeground()
+    {
+        Dispatcher.BeginInvoke(new Action(BringToTaskbarForeground), System.Windows.Threading.DispatcherPriority.ApplicationIdle);
+    }
+
+    private void BringToTaskbarForeground()
+    {
+        if (WindowState == WindowState.Minimized) WindowState = WindowState.Normal;
+        if (!IsVisible) Show();
+
+        var hwnd = new WindowInteropHelper(this).Handle;
+        if (hwnd == IntPtr.Zero) return;
+
+        ShowWindow(hwnd, SW_RESTORE);
+        SetWindowPos(hwnd, HWND_TOP, 0, 0, 0, 0, SWP_NOMOVE | SWP_NOSIZE | SWP_SHOWWINDOW);
+        if (!SetForegroundWindow(hwnd))
+        {
+            // Fallback gegen Windows-Z-Order-Hänger bei randlosen WPF-Fenstern: nur kurz pulsen, nie dauerhaft topmost bleiben.
+            Topmost = true;
+            Topmost = false;
+            SetWindowPos(hwnd, HWND_TOP, 0, 0, 0, 0, SWP_NOMOVE | SWP_NOSIZE | SWP_SHOWWINDOW);
+        }
     }
 
     private void RestoreWindowLayout()
@@ -147,6 +189,10 @@ public partial class MainWindow : Window
         {
             AdjustMaximizedSize(hwnd, lParam);
             handled = true;
+        }
+        else if (msg == WM_SYSCOMMAND && ((int)wParam & 0xFFF0) == SC_RESTORE)
+        {
+            QueueBringToTaskbarForeground();
         }
         return IntPtr.Zero;
     }
