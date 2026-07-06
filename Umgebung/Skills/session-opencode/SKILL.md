@@ -1,6 +1,6 @@
 ---
 name: session-opencode
-description: 'OpenCode-Variante des Session-Backup/Restore (PowerShell-portiert fuer OpenCode shell=pwsh), mit EIGENEN Dateien getrennt vom Claude-Code-Backup. Nutze IMMER in OpenCode, wenn der Benutzer sagt: "session opencode backup", "starte session opencode backup", "sichere die opencode session", "opencode session sichern", "backup vor /new", "sichere den opencode stand" -> Modus BACKUP; "session opencode restore", "starte session opencode restore", "opencode session wiederherstellen", "lade das opencode backup", "mache in opencode weiter wo wir waren" (direkt nach /new) -> Modus RESTORE. BACKUP schreibt eine sehr gruendliche Uebergabe-Notiz (Ziel, letzte Aufgaben + letzte Ergebnisse, offene/gestellte Fragen, uncommitteter Stand, naechste Schritte) lokal UND ins Repo, bevor der Benutzer /new eingibt; RESTORE liest die neueste Notiz und setzt nahtlos fort. Speziell fuer OpenCode — NICHT mit dem Claude-Code-"session"-Skill verwechseln (eigene Backup-Dateien).'
+description: 'OpenCode-Variante des Session-Backup/Restore (PowerShell-portiert fuer OpenCode shell=pwsh), mit EIGENEN Dateien getrennt vom Claude-Code-Backup. Nutze IMMER in OpenCode, wenn der Benutzer sagt: "session opencode backup", "starte session opencode backup", "sichere die opencode session", "opencode session sichern", "backup vor /new", "sichere den opencode stand" -> Modus BACKUP; "session opencode restore", "starte session opencode restore", "opencode session wiederherstellen", "lade das opencode backup", "mache in opencode weiter wo wir waren" (direkt nach /new) -> Modus RESTORE. BACKUP schreibt eine sehr gruendliche Uebergabe-Notiz (Ziel, letzte Aufgaben + Ergebnisse, offene Fragen, Vorabinfos, Plaene, uncommitteter Stand, naechste Schritte) lokal UND ins Repo; RESTORE liest die neueste Notiz, sagt klar wo zuletzt gearbeitet wurde und welche Fortsetzungen sinnvoll sind, dann setzt es nahtlos fort. Speziell fuer OpenCode — NICHT mit dem Claude-Code-"session"-Skill verwechseln (eigene Backup-Dateien).'
 ---
 
 # Session-OpenCode — Backup & Restore (PowerShell)
@@ -59,7 +59,14 @@ vermischen. Diese Pfade sind ANDERS als beim Claude-Code-Skill (`session-backup.
 > **exakten Unterbrechungspunkt** im Abschnitt "Laufende/unterbrochene Aufgabe" festzuhalten — so
 > genau, dass die frische Session ohne jeden Kontext exakt diesen einen Schritt wieder aufnimmt.
 
-### Schritt 1: Uncommitteten Stand erfassen (PFLICHT bei laufender/unterbrochener Aufgabe)
+> **WICHTIG — Backup muss die spaetere Restore-Einleitung ERMOEGLICHEN:** Nicht nur technische
+> Daten sichern. Das Backup muss so geschrieben sein, dass die naechste Session Frank sofort sagen
+> kann: "Hier waren wir, das ist wichtig, dort koennen wir weitermachen." Sammle deshalb aktiv auch
+> Plaene, Vorab-Informationen, besprochene Richtungen, offene Entscheidungen, Warnungen und sinnvolle
+> Anschlussarbeiten aus der ganzen aktuellen Session ein. Wenn diese Informationen im Backup fehlen,
+> kann Restore sie spaeter nicht ehrlich rekonstruieren.
+
+### Schritt 1: Arbeitsstand + Orientierungsstoff erfassen (PFLICHT)
 
 Bevor du die Notiz schreibst, EINMAL den nicht-committeten Arbeitsstand abfragen (git-Befehle sind
 in PowerShell identisch):
@@ -77,6 +84,24 @@ eigenen/relevanten Dateien, keine fremden Parallel-Session-Dateien. **Keine Secr
 (API-Keys/Tokens aus halbfertigen Edits rausredaktieren — die Datei wandert ins Repo). Groesse per
 `--shortstat`: bei grossem Diff (Richtwert ~120+ Zeilen / mehrere Dateien) NICHT inline, sondern in
 `$HOME/.claude/session-opencode-backup.diff` auslagern (Schritt 2b). Kleiner Diff: ruhig inline.
+
+Zusaetzlich VOR dem Schreiben der Notiz die gesamte Session gedanklich kuratieren. Fuelle die
+Restore-relevanten Abschnitte bewusst, nicht nebenbei:
+
+- **Letzte Aufgaben & Ergebnisse:** Was wurde wirklich gemacht, in welcher Reihenfolge, mit welchem
+  konkreten Ergebnis/Commit/Deploy/Verifikation?
+- **Offene & gestellte Fragen:** Was hat Frank gefragt, was wurde beantwortet, was ist noch offen?
+- **Vorab-Informationen:** Welche Session-Kontexte, Randbedingungen, Warnungen, Zahlen, Live-Zustaende
+  oder Benutzerpraeferenzen muss die naechste Session kennen?
+- **Getroffene Entscheidungen:** Welche Richtung wurde gewaehlt und warum, damit die naechste Session
+  nicht zurueckrudert?
+- **Fehlgeschlagene Ansaetze:** Was darf NICHT nochmal versucht werden?
+- **Plaene & moegliche Weiterarbeit:** Welche Ausbaustufen, Anschlussaufgaben oder Ideen wurden
+  besprochen, auch wenn sie noch kein hartes To-do sind?
+- **Naechste Schritte:** Was ist die erste konkrete Aktion nach Restore, falls Frank weitermachen will?
+
+Wenn es keine laufende Aufgabe gibt, trotzdem die letzten Arbeitsbereiche und sinnvolle Fortsetzungen
+eintragen. Ein Backup mit nur "alles fertig" ist zu duenn, wenn im Chat Plaene oder Kontext standen.
 
 ### Schritt 2: An beide Orte schreiben — DIREKT per PowerShell-Here-String
 
@@ -234,13 +259,32 @@ kurz abstimmen. Passt alles, direkt weiter.
 ### Schritt 3: Kontext laden und fortsetzen
 
 Lies die gewaehlte Datei vollstaendig (Read-Tool), verinnerliche Ziel, Status, **letzte Aufgaben +
-Ergebnisse**, **offene/gestellte Fragen**, naechste Schritte und besonders die fehlgeschlagenen
-Ansaetze. Verweist das Backup auf eine ausgelagerte Diff-Datei
+Ergebnisse**, **offene/gestellte Fragen**, **Vorab-Informationen**, **Plaene und moegliche
+Weiterarbeit**, naechste Schritte und besonders die fehlgeschlagenen Ansaetze. Verweist das Backup auf eine ausgelagerte Diff-Datei
 (`.claude/session-opencode-backup.diff`), lies diese ebenfalls vollstaendig. **Ist der Abschnitt
 "Laufende/unterbrochene Aufgabe" gefuellt, hat er VORRANG:** nimm den dort beschriebenen, zuletzt
 unterbrochenen Schritt sauber neu auf und fuehre ihn zu Ende, BEVOR du zu den allgemeinen "Naechsten
-Schritten" uebergehst. Fasse dem Benutzer in 3-4 Saetzen zusammen, wo ihr steht (inkl. an welchem
-Schritt zuletzt unterbrochen wurde), und mach dann genau dort weiter.
+Schritten" uebergehst.
+
+### Schritt 3b: Wiedereinstiegs-Einleitung fuer Frank (PFLICHT)
+
+Nach dem Einlesen und BEVOR du die Backup-Datei leerst, gib dem Benutzer eine klare Orientierung.
+Der Zweck des Restores ist nicht nur technisches Aufraeumen, sondern dass Frank sofort weiss, woran
+ihr zuletzt gearbeitet habt und wo er sinnvoll weitermachen kann. Antworte deshalb IMMER mit diesen
+vier Teilen, auch wenn laut Backup keine Aufgabe offen ist:
+
+1. **Woran wir zuletzt gearbeitet haben:** 3-6 konkrete Punkte aus "Letzte Aufgaben & Ergebnisse".
+2. **Wo wir aufgehoert haben:** laufende/unterbrochene Aufgabe ODER ausdruecklich "nichts offen,
+   sauber abgeschlossen"; falls Drift erkannt wurde, kurz dazusagen.
+3. **Wichtige Vorab-Informationen:** offene Fragen, Entscheidungen, Recherche-Ergebnisse,
+   Warnungen, fehlgeschlagene Ansaetze und Dinge, die NICHT nochmal versucht werden sollen.
+4. **Woran wir jetzt weiterarbeiten koennten:** 2-5 konkrete Fortsetzungsoptionen aus den
+   Naechsten Schritten/Plaenen; wenn keine Plaene im Backup stehen, aus dem gespeicherten Ziel und
+   Status ableiten und klar als Vorschlag kennzeichnen.
+
+Formuliere das als menschliche Einleitung, nicht als reine Datei-/Commit-Meldung. Eine gute erste
+Zeile ist z.B.: "Wir waren zuletzt bei <Projekt/Bereich>. Der Stand aus dem Backup ist: ...". Erst
+danach fortsetzen oder, wenn nichts offen ist, auf Franks Entscheidung warten.
 
 ### Schritt 4: Backups leeren + ausgelagerte Diff-Datei loeschen (Repo-Leerung pushen)
 
@@ -306,6 +350,12 @@ Was soll in dieser Arbeitsphase insgesamt erreicht werden?
 > Ruecksprache verloren.
 - [Frage] — [Antwort, falls vorhanden / sonst "noch offen, wartet auf Benutzer"]
 
+## Vorab-Informationen fuer die naechste Session (WICHTIG)
+> Alles, was Frank beim Wiedereinstieg wissen muss, BEVOR er die naechste Entscheidung trifft:
+> Kontext aus der Session, Randbedingungen, Warnungen, relevante Zahlen, Live-Zustaende,
+> Benutzerpraeferenzen, Annahmen und Dinge, die im Chat besprochen wurden, aber nicht direkt Code sind.
+- [Kontext/Warnung/Info] — [warum sie fuer die Fortsetzung wichtig ist]
+
 ## Aktueller Status
 - Erledigt: [was fertig ist, mit Commit-Nummer falls relevant]
 - In Arbeit: [was begonnen, aber nicht abgeschlossen ist]
@@ -322,6 +372,13 @@ Was soll in dieser Arbeitsphase insgesamt erreicht werden?
 
 ## Wichtige Recherche-Ergebnisse
 - [Kernfakt, der sofort relevant ist, mit Quelle falls vorhanden]
+
+## Plaene & moegliche Weiterarbeit (WICHTIG)
+> Nicht nur harte To-dos. Auch besprochene Richtungen, spaetere Ausbaustufen, Ideen, verworfene
+> Alternativen und sinnvolle Anschlussarbeiten festhalten. Ziel: Nach dem Restore kann Frank sofort
+> entscheiden, ob er dort weitermachen will.
+1. [Fortsetzungsoption/Plan] — [Nutzen + erster konkreter Schritt]
+2. [Weitere Option] — [Nutzen + erster konkreter Schritt]
 
 ## Naechste Schritte (priorisiert)
 1. [Konkrete erste Aktion — so praezise, dass sie sofort ausfuehrbar ist]
@@ -346,6 +403,7 @@ Repo-Stand.
 - **restore ist Pflicht-erster-Schritt nach `/new`.** Erst lesen, dann arbeiten.
 - **Bei parallelen Sessions:** Das Repo-Backup ist eine gemeinsame Datei. Beim Stagen NUR die
   Backup-Datei namentlich nehmen, nie `git add -A` (fremde In-Flight-Dateien anderer Sessions).
-- **Besondere Gruendlichkeit (Frank-Wunsch):** Die Abschnitte "Letzte Aufgaben & Ergebnisse" und
-  "Offene & gestellte Fragen" immer sorgfaeltig fuellen — gerade die letzten Ergebnisse und jede
-  offene Ruecksprache sind das, was beim Weiterarbeiten am meisten zaehlt.
+- **Besondere Gruendlichkeit (Frank-Wunsch):** Die Abschnitte "Letzte Aufgaben & Ergebnisse",
+  "Offene & gestellte Fragen", "Vorab-Informationen" und "Plaene & moegliche Weiterarbeit" immer
+  sorgfaeltig fuellen. Restore soll Frank nicht nur technisch fortsetzen lassen, sondern ihm sofort
+  erklaeren, wo ihr zuletzt wart und welche Richtung als Naechstes sinnvoll ist.
