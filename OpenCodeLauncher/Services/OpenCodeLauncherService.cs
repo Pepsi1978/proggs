@@ -1,5 +1,6 @@
 using System.Diagnostics;
 using System.IO;
+using System.Security.Cryptography;
 using System.Text;
 using System.Text.Json;
 using System.Text.Json.Nodes;
@@ -23,14 +24,22 @@ public sealed class OpenCodeLauncherService
 {
     private static readonly TerminalTabColor[] TerminalTabColors =
     [
-        new("red", "#FF3B3B"),
-        new("orange", "#FF8C42"),
-        new("yellow", "#FFD93D"),
-        new("green", "#4CAF50"),
-        new("cyan", "#00BCD4"),
-        new("blue", "#2196F3"),
-        new("purple", "#9C27B0"),
-        new("pink", "#FF1493"),
+        new("black", "#0C0C0C"),
+        new("red", "#C50F1F"),
+        new("green", "#13A10E"),
+        new("yellow", "#C19C00"),
+        new("blue", "#0037DA"),
+        new("purple", "#881798"),
+        new("cyan", "#3A96DD"),
+        new("white", "#CCCCCC"),
+        new("bright-black", "#767676"),
+        new("bright-red", "#E74856"),
+        new("bright-green", "#16C60C"),
+        new("bright-yellow", "#F9F1A5"),
+        new("bright-blue", "#3B78FF"),
+        new("bright-purple", "#B4009E"),
+        new("bright-cyan", "#61D6D6"),
+        new("bright-white", "#F2F2F2"),
     ];
 
     private static readonly string ConfigDir = Path.Combine(
@@ -61,6 +70,7 @@ public sealed class OpenCodeLauncherService
                 var root = ReadConfig();
                 PatchDirectThinking(root, model.ProviderId, model.Slug, model.DisplayName, thinkingLevel);
                 WriteConfig(root);
+                PatchModelVariantState(modelString, thinkingLevel);
                 log.Info("OpenCodeLauncherService", "ConfigureProvider", $"Direktmodell-Thinking gesetzt: {model.ProviderId}/{model.Slug} -> {thinkingLevel}");
             }
             log.Info("OpenCodeLauncherService", "ConfigureProvider", $"Direktmodell ohne OpenRouter-Routing: {modelString}");
@@ -72,6 +82,7 @@ public sealed class OpenCodeLauncherService
             var root = ReadConfig();
             root = PatchProvider(root, model.Slug, model.DisplayName, chosen, allProviders, thinkingLevel);
             WriteConfig(root);
+            PatchModelVariantState(modelString, thinkingLevel);
             log.Info("OpenCodeLauncherService", "ConfigureProvider",
                 $"opencode-Konfig gepatched: {model.Slug} via {chosen.ProviderName}",
                 new { order = new[] { chosen.ProviderSlug }, thinkingLevel });
@@ -167,7 +178,63 @@ public sealed class OpenCodeLauncherService
         return null;
     }
 
-    private static TerminalTabColor PickTerminalTabColor() => TerminalTabColors[Random.Shared.Next(TerminalTabColors.Length)];
+    private static TerminalTabColor PickTerminalTabColor()
+    {
+        try
+        {
+            var colorByName = TerminalTabColors.ToDictionary(c => c.Name, StringComparer.OrdinalIgnoreCase);
+            var state = ReadTabColorState();
+            var remaining = state.Remaining
+                .Where(name => colorByName.ContainsKey(name) && !string.Equals(name, state.LastColor, StringComparison.OrdinalIgnoreCase))
+                .Distinct(StringComparer.OrdinalIgnoreCase)
+                .ToList();
+
+            if (remaining.Count == 0)
+            {
+                remaining = TerminalTabColors
+                    .Select(c => c.Name)
+                    .Where(name => !string.Equals(name, state.LastColor, StringComparison.OrdinalIgnoreCase))
+                    .ToList();
+            }
+
+            var index = RandomNumberGenerator.GetInt32(remaining.Count);
+            var pickedName = remaining[index];
+            remaining.RemoveAt(index);
+            WriteTabColorState(new TabColorState
+            {
+                LastColor = pickedName,
+                Remaining = remaining
+            });
+            return colorByName[pickedName];
+        }
+        catch
+        {
+            return TerminalTabColors[RandomNumberGenerator.GetInt32(TerminalTabColors.Length)];
+        }
+    }
+
+    private static TabColorState ReadTabColorState()
+    {
+        var path = ResolveTabColorStatePath();
+        if (!File.Exists(path)) return new TabColorState();
+
+        var raw = File.ReadAllText(path, Encoding.UTF8);
+        return JsonSerializer.Deserialize<TabColorState>(raw, JsonOpts) ?? new TabColorState();
+    }
+
+    private static void WriteTabColorState(TabColorState state)
+    {
+        var path = ResolveTabColorStatePath();
+        Directory.CreateDirectory(Path.GetDirectoryName(path)!);
+        var tmp = path + ".tmp";
+        File.WriteAllText(tmp, JsonSerializer.Serialize(state, JsonOpts), new UTF8Encoding(encoderShouldEmitUTF8Identifier: false));
+        File.Move(tmp, path, overwrite: true);
+    }
+
+    private static string ResolveTabColorStatePath() => Path.Combine(
+        Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData),
+        "OpenCodeLauncher",
+        "tab-color-state.json");
 
     private static string EscapePowerShellSingleQuotedValue(string value) => value.Replace("'", "''", StringComparison.Ordinal);
 
@@ -255,6 +322,53 @@ try {
     private static string? NormalizeThinkingLevel(string? thinkingLevel) => string.IsNullOrWhiteSpace(thinkingLevel)
         ? null
         : thinkingLevel.Trim().ToLowerInvariant();
+
+    private static string ResolveModelStatePath()
+    {
+        var home = Environment.GetFolderPath(Environment.SpecialFolder.UserProfile);
+        return Path.Combine(home, ".local", "state", "opencode", "model.json");
+    }
+
+    private static void PatchModelVariantState(string modelString, string? thinkingLevel)
+    {
+        thinkingLevel = NormalizeThinkingLevel(thinkingLevel);
+        if (string.IsNullOrWhiteSpace(thinkingLevel)) return;
+
+        var statePath = ResolveModelStatePath();
+        var stateDir = Path.GetDirectoryName(statePath)!;
+        Directory.CreateDirectory(stateDir);
+
+        JsonNode root;
+        try
+        {
+            if (File.Exists(statePath))
+            {
+                var raw = File.ReadAllText(statePath);
+                root = string.IsNullOrWhiteSpace(raw) ? new JsonObject() : JsonNode.Parse(raw) ?? new JsonObject();
+            }
+            else
+            {
+                root = new JsonObject();
+            }
+        }
+        catch (Exception ex)
+        {
+            Logger.Instance.Warn("OpenCodeLauncherService", "PatchModelVariantState", $"model.json konnte nicht gelesen werden, State wird neu aufgebaut: {ex.Message}", new { statePath });
+            root = new JsonObject();
+        }
+
+        var obj = JsonExtensions.EnsureObject(root);
+        var variants = obj.GetOrAddObject("variant");
+        variants[modelString] = thinkingLevel;
+
+        var tmp = statePath + ".tmp";
+        using (var fs = new FileStream(tmp, FileMode.Create, FileAccess.Write, FileShare.None))
+        using (var sw = new StreamWriter(fs, new UTF8Encoding(encoderShouldEmitUTF8Identifier: false)))
+        {
+            sw.Write(obj.ToJsonString(JsonOpts));
+        }
+        File.Move(tmp, statePath, overwrite: true);
+    }
 
     private JsonNode ReadConfig()
     {
@@ -355,6 +469,12 @@ try {
 }
 
 internal sealed record TerminalTabColor(string Name, string Hex);
+
+internal sealed class TabColorState
+{
+    public string? LastColor { get; set; }
+    public List<string> Remaining { get; set; } = [];
+}
 
 internal static class JsonExtensions
 {
