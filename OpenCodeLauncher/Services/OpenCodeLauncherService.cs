@@ -453,6 +453,7 @@ try {
     {
         effortLevel = NormalizeThinkingLevel(effortLevel);
         var tempScript = Path.Combine(Path.GetTempPath(), $"opencode-launcher-claude-code-{Guid.NewGuid():N}.ps1");
+        var tempSettings = BuildClaudeCodeSessionSettings(modelId, effortLevel);
         var script = $$"""
 $ErrorActionPreference = 'Continue'
 [Console]::Write("`e[?1004l")
@@ -472,7 +473,8 @@ $focusKiller = Start-ThreadJob -ScriptBlock {
 }
 
 try {
-    $claudeArgs = @('--dangerously-skip-permissions', '--model', {{PowerShellLiteral(modelId)}})
+    $sessionSettings = {{PowerShellLiteral(tempSettings)}}
+    $claudeArgs = @('--dangerously-skip-permissions', '--settings', $sessionSettings, '--model', {{PowerShellLiteral(modelId)}})
     $effort = {{PowerShellLiteral(effortLevel ?? string.Empty)}}
     if ($effort) {
         $claudeArgs += @('--effort', $effort)
@@ -490,11 +492,24 @@ try {
         Remove-Job $focusKiller -Force -ErrorAction SilentlyContinue
     }
     [Console]::Write("`e[?1004l")
+    Remove-Item -LiteralPath {{PowerShellLiteral(tempSettings)}} -Force -ErrorAction SilentlyContinue
     Remove-Item -LiteralPath $PSCommandPath -Force -ErrorAction SilentlyContinue
 }
 """;
         File.WriteAllText(tempScript, script, new UTF8Encoding(encoderShouldEmitUTF8Identifier: false));
         return tempScript;
+    }
+
+    private static string BuildClaudeCodeSessionSettings(string modelId, string? effortLevel)
+    {
+        var tempSettings = Path.Combine(Path.GetTempPath(), $"opencode-launcher-claude-settings-{Guid.NewGuid():N}.json");
+        var root = new JsonObject
+        {
+            ["model"] = modelId
+        };
+        if (!string.IsNullOrWhiteSpace(effortLevel)) root["effortLevel"] = effortLevel;
+        File.WriteAllText(tempSettings, root.ToJsonString(JsonOpts), new UTF8Encoding(encoderShouldEmitUTF8Identifier: false));
+        return tempSettings;
     }
 
     private static string BuildClaudeCodeTitle(string colorName, string? effortLevel) =>
