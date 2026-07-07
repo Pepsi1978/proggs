@@ -1,0 +1,7 @@
+interface:
+  display_name: "code-review"
+  short_description: "Reviews code changes using CodeRabbit AI"
+  default_prompt: "Use $coderabbit-codex-plugins-official--code-review for this task."
+
+policy:
+  allow_implicit_invocation: false

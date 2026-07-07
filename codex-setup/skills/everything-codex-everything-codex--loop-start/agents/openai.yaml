@@ -1,0 +1,7 @@
+interface:
+  display_name: "loop-start"
+  short_description: "loop-start"
+  default_prompt: "Use $everything-codex-everything-codex--loop-start for this task."
+
+policy:
+  allow_implicit_invocation: false

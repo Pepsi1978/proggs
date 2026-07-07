@@ -1,0 +1,3 @@
+# Lokale Konfiguration — diese Datei NICHT ins Repo committen.
+# Kopiere sie als `local.properties` und passe die Pfade an dein System an.
+sdk.dir=C\:\\Users\\barwa\\AppData\\Local\\Android\\Sdk

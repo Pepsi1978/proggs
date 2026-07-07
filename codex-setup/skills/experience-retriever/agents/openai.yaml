@@ -1,0 +1,7 @@
+interface:
+  display_name: "experience-retriever"
+  short_description: "Erfahrungs-Abrufer — durchsucht den Erfahrungsspeicher"
+  default_prompt: "Use $experience-retriever for this task."
+
+policy:
+  allow_implicit_invocation: false

@@ -1,0 +1,7 @@
+interface:
+  display_name: "go-review"
+  short_description: "Comprehensive Go code review for idiomatic patterns"
+  default_prompt: "Use $everything-codex-everything-codex--go-review for this task."
+
+policy:
+  allow_implicit_invocation: false

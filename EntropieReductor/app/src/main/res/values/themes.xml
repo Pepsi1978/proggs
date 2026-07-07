@@ -1,0 +1,48 @@
+<resources>
+    <!--
+        Splash-/Bootstrap-Theme: nutzt das System-Theme, weil das eigentliche
+        Theming komplett in Compose passiert (siehe presentation/theme/Theme.kt).
+        Dadurch entfaellt die Abhaengigkeit zu com.google.android.material:material.
+        minSdk = 28: tools:targetApi-Schutzlinien sind nicht mehr noetig.
+    -->
+    <style name="Theme.EntropieReductor" parent="android:Theme.Material.NoActionBar">
+        <item name="android:statusBarColor">@android:color/transparent</item>
+        <item name="android:navigationBarColor">@android:color/transparent</item>
+        <item name="android:windowDrawsSystemBarBackgrounds">true</item>
+        <item name="android:windowBackground">@color/cosmos_bg_dark</item>
+    </style>
+
+    <!--
+        Widget-spezifische Style-Overrides (Frank-Wunsch 2026-05-11).
+        Versucht den ListView-Scrollbar so klein wie moeglich zu machen
+        (Glance erlaubt kein komplettes Ausblenden — Receiver-Theme wird
+        von Nova ignoriert). Minimale Groesse 1dp + transparente Farben.
+    -->
+    <style name="WidgetListViewNoScrollbar" parent="@android:style/Widget.Material.ListView">
+        <item name="android:scrollbars">none</item>
+        <item name="android:scrollbarSize">1dp</item>
+        <item name="android:scrollbarFadeDuration">100</item>
+        <item name="android:scrollbarDefaultDelayBeforeFade">0</item>
+        <item name="android:scrollbarThumbVertical">@android:color/transparent</item>
+        <item name="android:scrollbarTrackVertical">@android:color/transparent</item>
+        <item name="android:fadeScrollbars">true</item>
+        <item name="android:overScrollMode">never</item>
+    </style>
+
+    <!--
+        Theme das beim Widget-Receiver gesetzt wird (im Manifest). Setzt
+        android:listViewStyle und scrollbar-Defaults — das wirkt auf die
+        ListView die Glance intern fuer LazyColumn nutzt. Falls Launcher
+        das Theme respektiert: Scrollbar ist 1dp breit + transparent.
+    -->
+    <style name="Theme.EntropieReductor.Widget" parent="android:Theme.Material.NoActionBar">
+        <item name="android:listViewStyle">@style/WidgetListViewNoScrollbar</item>
+        <item name="android:scrollbars">none</item>
+        <item name="android:scrollbarSize">1dp</item>
+        <item name="android:scrollbarFadeDuration">100</item>
+        <item name="android:scrollbarDefaultDelayBeforeFade">0</item>
+        <item name="android:scrollbarThumbVertical">@android:color/transparent</item>
+        <item name="android:scrollbarTrackVertical">@android:color/transparent</item>
+        <item name="android:fadeScrollbars">true</item>
+    </style>
+</resources>

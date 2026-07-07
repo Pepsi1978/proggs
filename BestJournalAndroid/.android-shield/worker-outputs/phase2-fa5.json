@@ -1,0 +1,152 @@
+{
+  "worker": "fa5",
+  "applied": [
+    {
+      "key": "json_key_categories",
+      "old": "श्रेण्या",
+      "new": "shreniyaan"
+    },
+    {
+      "key": "json_key_category_advices",
+      "old": "सल्ले",
+      "new": "sujhaav"
+    },
+    {
+      "key": "json_key_category_color",
+      "old": "रंग",
+      "new": "rang"
+    },
+    {
+      "key": "json_key_category_entropy_level",
+      "old": "एन्ट्रोपी_स्तर",
+      "new": "entropy_star"
+    },
+    {
+      "key": "json_key_category_icon",
+      "old": "चिन्ह",
+      "new": "aikan"
+    },
+    {
+      "key": "json_key_category_name",
+      "old": "नाव",
+      "new": "naam"
+    },
+    {
+      "key": "json_key_category_summary",
+      "old": "सारांश",
+      "new": "saaraansh"
+    },
+    {
+      "key": "json_key_derivation_date",
+      "old": "तारीख",
+      "new": "tareekh"
+    },
+    {
+      "key": "json_key_derivation_summary",
+      "old": "सारांश",
+      "new": "saaraansh"
+    },
+    {
+      "key": "json_key_heading_analysis",
+      "old": "शीर्षक_विश्लेषण",
+      "new": "shirshak_vishleshan"
+    },
+    {
+      "key": "json_key_heading_results",
+      "old": "शीर्षक_परिणाम",
+      "new": "shirshak_natije"
+    },
+    {
+      "key": "json_key_heading_top5",
+      "old": "शीर्षक_शीर्ष5",
+      "new": "shirshak_top5"
+    },
+    {
+      "key": "json_key_item_connection",
+      "old": "संबंध",
+      "new": "sambandh"
+    },
+    {
+      "key": "json_key_item_derivation",
+      "old": "व्युत्पत्ती",
+      "new": "vyutpatti"
+    },
+    {
+      "key": "json_key_item_description",
+      "old": "वर्णन",
+      "new": "vivaran"
+    },
+    {
+      "key": "json_key_item_explanation",
+      "old": "स्पष्टीकरण",
+      "new": "vyaakhya"
+    },
+    {
+      "key": "json_key_item_priority",
+      "old": "प्राधान्य",
+      "new": "prathamikta"
+    },
+    {
+      "key": "json_key_item_reference",
+      "old": "संदर्भ",
+      "new": "sandarbh"
+    },
+    {
+      "key": "json_key_item_title",
+      "old": "शीर्षक",
+      "new": "shirshak"
+    },
+    {
+      "key": "json_key_overall_analysis",
+      "old": "एकूण_विश्लेषण",
+      "new": "samagra_vishleshan"
+    },
+    {
+      "key": "json_key_overall_entropy",
+      "old": "एकूण_एन्ट्रोपी",
+      "new": "samagra_entropy"
+    },
+    {
+      "key": "json_key_progress",
+      "old": "प्रगती",
+      "new": "pragati"
+    },
+    {
+      "key": "json_key_top_actions",
+      "old": "शीर्ष_उपाय",
+      "new": "mukhya_kadam"
+    },
+    {
+      "key": "json_key_trend",
+      "old": "कल",
+      "new": "rujhan"
+    },
+    {
+      "key": "json_value_priority_high",
+      "old": "उच्च",
+      "new": "uchch"
+    },
+    {
+      "key": "json_value_priority_low",
+      "old": "कमी",
+      "new": "kam"
+    },
+    {
+      "key": "json_value_priority_medium",
+      "old": "मध्यम",
+      "new": "madhyam"
+    }
+  ],
+  "count": 27,
+  "validation": {
+    "xmlValid": true
+  },
+  "plugin_bugs_observed": [
+    {
+      "hook": "pretooluse-bash.sh",
+      "type": "false-positive-on-readonly",
+      "detail": "Inline `python -c` das eine geschuetzte Datei (auch nur lesend) referenziert wird blockiert. Read-only-Verifikation musste als separate .py-Datei laufen. Funktion des Guards ist korrekt (Schreibschutz), nur Read-Verifikation faellt mit darunter.",
+      "severity": "low"
+    }
+  ]
+}

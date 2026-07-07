@@ -1,0 +1,227 @@
+{
+  "worker": "r1-dsgvo",
+  "findings": [
+    {
+      "findingId": "C1",
+      "riskLevel": "🟧",
+      "category": "DSGVO",
+      "language": "de",
+      "jurisdiction": "DE/EU",
+      "file": "app/src/main/res/values/strings.xml",
+      "line": 670,
+      "currentText": "Firebase Analytics — hilft uns die App zu verbessern. Keine persönlichen Inhalte, nur anonyme Klick-Zahlen. Datenübertragung: Google USA (Data Privacy Framework).",
+      "context": "LIVE-String. consent_toggle_analytics_title='Anonyme Nutzungsanalyse' (Z.670) + consent_toggle_analytics_body (Z.671) werden im PrivacyPreferencesSheet (ConsentScreen + Settings) gerendert. settings_analytics_title='Anonyme Statistik' (Z.728) gleiche Aussage. Der Begriff 'anonym' wird systematisch fuer Firebase Analytics verwendet.",
+      "rationale": "Firebase Analytics erhebt eine App-Instance-ID sowie Geraete-/Nutzungssignale; das sind nach EDSA/DSK pseudonyme, NICHT anonyme Daten (echte Anonymisierung = nicht re-identifizierbar, dann waere keine Einwilligung noetig). Die Bezeichnung 'anonym' / 'anonyme Klick-Zahlen' ist datenschutzrechtlich angreifbar und kann als irrefuehrende geschaeftliche Handlung (§5 UWG) sowie unzutreffende Transparenzangabe (Art. 13 DSGVO) gewertet werden. Abmahnrisiko, weil 'anonym' Tracking verharmlost.",
+      "invasivityLevel": "text-only",
+      "suggestedFixes": [
+        {
+          "text": "Firebase Analytics — hilft uns die App zu verbessern. Keine Tagebuchinhalte, nur pseudonyme Nutzungsstatistiken (z. B. Klick-Zahlen). Datenübertragung: Google USA (Data Privacy Framework).",
+          "lengthDeltaPct": 4,
+          "rationale": "'anonym'→'pseudonym', 'persönliche Inhalte'→'Tagebuchinhalte' (praeziser). Rechtlich korrekt, gleiche Laenge.",
+          "stillSafe": true
+        },
+        {
+          "text": "Firebase Analytics — hilft uns, die App zu verbessern. Es werden keine Tagebuchinhalte erfasst, nur pseudonyme Ereignis-Zahlen (Klicks, geöffnete Bildschirme). Übertragung an Google in den USA (EU-US Data Privacy Framework).",
+          "lengthDeltaPct": 22,
+          "rationale": "Ausfuehrlichere, voll korrekte Variante mit Beispielen.",
+          "stillSafe": true
+        },
+        {
+          "text": "Firebase Analytics zur Produktverbesserung. Keine Tagebuchinhalte; nur pseudonyme Nutzungszahlen. Datenübertragung: Google USA (Data Privacy Framework).",
+          "lengthDeltaPct": -8,
+          "rationale": "Kuerzeste korrekte Variante.",
+          "stillSafe": true
+        }
+      ],
+      "impactWithoutFix": "Werbe-/Transparenzaussage 'anonym' ist unzutreffend; Abmahnrisiko (UWG §5) + DSGVO-Transparenzmangel (Art. 13). Mit dem Wort 'pseudonym' rechtssicher und konsistent zur (korrekten) DE-Datenschutzerklaerung."
+    },
+    {
+      "findingId": "C2",
+      "riskLevel": "🟧",
+      "category": "DSGVO",
+      "language": "de",
+      "jurisdiction": "DE/EU",
+      "file": "app/src/main/res/values/strings.xml",
+      "line": 670,
+      "currentText": "Anonyme Nutzungsanalyse",
+      "context": "Titel im LIVE PrivacyPreferencesSheet (consent_toggle_analytics_title, Z.670). Schwester-Strings: settings_analytics_title='Anonyme Statistik' (Z.728), consent_card3_title='Anonyme Statistiken' (Z.615, allerdings dead code). Gleicher 'anonym'-Begriff fuer pseudonymes Firebase Analytics.",
+      "rationale": "Wie C1: 'anonym' fuer Firebase Analytics ist datenschutzrechtlich falsch (pseudonym). Als Toggle-/Settings-Titel besonders sichtbar. §5 UWG + Art. 13 DSGVO. Systematischer Fund ueber mehrere Titel-Strings — sollten konsistent gefixt werden (auch settings_analytics_title Z.728).",
+      "invasivityLevel": "text-only",
+      "suggestedFixes": [
+        {
+          "text": "Pseudonyme Nutzungsanalyse",
+          "lengthDeltaPct": 8,
+          "rationale": "Direkter, rechtssicherer Ersatz; gleiche Bedeutung.",
+          "stillSafe": true
+        },
+        {
+          "text": "Nutzungsstatistik",
+          "lengthDeltaPct": -28,
+          "rationale": "Neutral, vermeidet die anonym/pseudonym-Frage ganz; kuerzer.",
+          "stillSafe": true
+        },
+        {
+          "text": "Anonymisierte Nutzungsanalyse",
+          "lengthDeltaPct": 16,
+          "rationale": "NUR zulaessig falls Google-Konfiguration IP-Anonymisierung + keine User-ID nutzt — sonst NICHT verwenden. Im Zweifel Variante 1/2.",
+          "stillSafe": false
+        }
+      ],
+      "impactWithoutFix": "Toggle-Titel 'Anonyme Nutzungsanalyse'/'Anonyme Statistik' verharmlost Tracking; gleiche Abmahn-/Transparenz-Risiken wie C1. Beide Titel-Strings (Z.670 + Z.728) angleichen."
+    },
+    {
+      "findingId": "C3",
+      "riskLevel": "🟨",
+      "category": "DSGVO",
+      "language": "de",
+      "jurisdiction": "DE/EU",
+      "file": "app/src/main/res/values/strings.xml",
+      "line": 1061,
+      "currentText": "Deine Daten sind lokal gespeichert, KI-Anfragen sind verschlüsselt",
+      "context": "LIVE in OnboardingScreen.kt:308 (stringResource(R.string.onboarding_feature_secure)). Pauschale Lokal-Aussage als Onboarding-Feature-Highlight. Realitaet: bei aktiven Cloud-Funktionen (Gemini, Groq, Edge-TTS, Drive-Backup) verlassen Texte/Audio das Geraet (USA). Die DE-Datenschutzerklaerung stellt das korrekt dar; nur dieser plakative Onboarding-Claim steht ohne Einschraenkung.",
+      "rationale": "Art. 5 Abs. 1 lit. a / Art. 13 DSGVO (Transparenz) + §5 UWG: 'Deine Daten sind lokal gespeichert' ist als unbedingte Aussage unvollstaendig, weil optionale Cloud-Funktionen Daten in die USA senden. 'lokal' stimmt fuer den Speicher-Default, aber der Verarbeitungsfluss (KI/TTS/Cloud-Backup) wird im selben Satz nicht relativiert. Niedrig-mittel, da Onboarding kein Vertrags-/Einwilligungskontext ist und die echte Einwilligung separat granular eingeholt wird.",
+      "invasivityLevel": "text-only",
+      "suggestedFixes": [
+        {
+          "text": "Deine Einträge liegen standardmäßig auf deinem Gerät. Cloud-Funktionen (KI, Vorlesen, Backup) sind optional und verschlüsselt.",
+          "lengthDeltaPct": 30,
+          "rationale": "Macht 'standardmaessig lokal' + 'optionale Cloud' transparent. Voll korrekt.",
+          "stillSafe": true
+        },
+        {
+          "text": "Standardmäßig lokal gespeichert — Cloud-Funktionen nutzt du nur, wenn du sie aktivierst.",
+          "lengthDeltaPct": -2,
+          "rationale": "Kurz, betont Opt-in, gleiche Laenge.",
+          "stillSafe": true
+        },
+        {
+          "text": "Deine Daten bleiben auf dem Gerät, solange du keine Cloud-Funktion aktivierst; Übertragungen sind verschlüsselt.",
+          "lengthDeltaPct": 18,
+          "rationale": "Bedingte Lokal-Aussage, rechtssicher.",
+          "stillSafe": true
+        }
+      ],
+      "impactWithoutFix": "Plakativer Onboarding-Claim koennte als irrefuehrend gelten, wenn Nutzer ihn als absolute Garantie liest. Geringes, aber vermeidbares Restrisiko; mit Relativierung deckungsgleich zur korrekten Datenschutzerklaerung."
+    },
+    {
+      "findingId": "C4",
+      "riskLevel": "🟨",
+      "category": "DSGVO",
+      "language": "de",
+      "jurisdiction": "DE/EU",
+      "file": "app/src/main/res/values/strings.xml",
+      "line": 630,
+      "currentText": "Mit den Premium-Stimmen klingt das Vorlesen natürlicher und angenehmer. Dein Text wird verschlüsselt an Microsoft gesendet und als Audio zurückgegeben.\\n\\n✓ Kein KI-Training mit deinen Texten\\n✓ Verschlüsselt nach EU-US Data Privacy Framework",
+      "context": "privacy_gate_tts_body — Pre-Usage-Gate vor Microsoft-Edge-TTS-Transfer. Tatsachenbehauptungen ueber einen Dritten: 'Kein KI-Training mit deinen Texten' + 'nach EU-US Data Privacy Framework'. Laut Roentgen nutzt EdgeTtsPlayer.kt den oeffentlichen/inoffiziellen Endpunkt wss://speech.platform.bing.com OHNE formelles DPA/Vertrag mit Microsoft.",
+      "rationale": "Art. 28/44 ff. DSGVO + §5 UWG: Eine 'Kein KI-Training'- und 'DPF'-Zusage ueber Microsoft ist nur haltbar, wenn ein Auftragsverarbeitungs-/Nutzungsvertrag das tatsaechlich zusichert. Beim inoffiziellen Bing-Edge-TTS-Endpunkt existiert typischerweise KEIN solcher Vertrag — die Zusage ueber den Dritten ist dann nicht belegbar (Tatsachenbehauptung ins Blaue). Zusaetzlich AVV-Luecke (Art. 28). needs-clarification: Frank/Anwalt muss klaeren, ob ein nutzbarer MS-Dienst mit DPA verwendet wird oder auf eine offizielle Azure-Speech-Ressource (mit DPA) gewechselt wird.",
+      "invasivityLevel": "text-only",
+      "suggestedFixes": [
+        {
+          "text": "Mit den Premium-Stimmen klingt das Vorlesen natürlicher. Dein Text wird verschlüsselt (HTTPS/TLS) an einen Microsoft-Sprachdienst in den USA gesendet und als Audio zurückgegeben.\\n\\n✓ Übertragung ausschließlich zur Sprachsynthese\\n✓ Drittlandübermittlung USA (Microsoft ist nach dem EU-US Data Privacy Framework zertifiziert)",
+          "lengthDeltaPct": 26,
+          "rationale": "Entfernt die unbelegbare 'Kein KI-Training'-Zusage; stellt nur Verschluesselung + Zweck + DPF-Zertifizierung des Anbieters dar (verifizierbar). Rechtssicher ohne Tatsachenbehauptung ueber MS-Trainingsverhalten.",
+          "stillSafe": true
+        },
+        {
+          "text": "Premium-Stimmen lassen das Vorlesen natürlicher klingen. Dein Text wird verschlüsselt an Microsoft (USA) gesendet und als Audio zurückgegeben.\\n\\n✓ Laut Microsoft kein Training mit Kundentexten\\n✓ Drittlandübermittlung USA (EU-US Data Privacy Framework)",
+          "lengthDeltaPct": 8,
+          "rationale": "Behaelt No-Training-Aussage, aber als zugeschriebene Aussage ('Laut Microsoft') — nur zulaessig, wenn ein nutzbarer MS-Dienst mit entsprechendem DPA verwendet wird.",
+          "stillSafe": false
+        },
+        {
+          "text": "Premium-Stimmen für natürlicheres Vorlesen. Der Text wird zur Sprachsynthese verschlüsselt an Microsoft (USA, EU-US Data Privacy Framework) übermittelt. Datenschutzfreundliche Alternative: die Standardstimme deines Geräts (offline).",
+          "lengthDeltaPct": 14,
+          "rationale": "Bietet zusaetzlich die lokale Alternative an (Datenminimierung, Art. 5/25).",
+          "stillSafe": true
+        }
+      ],
+      "impactWithoutFix": "Falls kein MS-Vertrag besteht, sind 'Kein KI-Training' und die DPF-Zusage ueber den inoffiziellen Bing-Endpunkt nicht belegbar → UWG-§5-Risiko + Art.-28-Luecke. Variante 1 entfernt die riskante Zusage und bleibt korrekt. ENTSCHEIDUNG durch Frank/Anwalt noetig (needs-clarification)."
+    },
+    {
+      "findingId": "C5",
+      "riskLevel": "🟨",
+      "category": "DSGVO",
+      "language": "de",
+      "jurisdiction": "DE/EU",
+      "file": "app/src/main/AndroidManifest.xml",
+      "line": 19,
+      "currentText": "<application ...> (keine <meta-data android:name=\"firebase_analytics_collection_enabled\" android:value=\"false\"/>)",
+      "context": "BestJournalApp.onCreate() ruft FirebaseAnalytics.setAnalyticsCollectionEnabled(false) zur Laufzeit auf (Default PREF_ANALYTICS_ENABLED=false) BEVOR andere Firebase-Calls laufen — gute Laufzeit-Opt-out-Logik. Im Manifest fehlt jedoch das statische meta-data-Flag, das die Collection bereits beim SDK-Init (vor Ausfuehrung von onCreate-Code) unterbindet.",
+      "rationale": "§25 TDDDG / Art. 6 DSGVO: Firebase Analytics ist standardmaessig aktiviert. Der Laufzeit-Aufruf in onCreate ist zwar frueh, aber das Firebase-SDK initialisiert teils ueber den ContentProvider 'FirebaseInitProvider' VOR Application.onCreate — es kann ein kurzes Fenster geben, in dem das SDK als 'enabled' gilt, bevor der Code greift. Das statische Flag firebase_analytics_collection_enabled=false (+ optional google_analytics_default_allow_analytics_storage=false) schliesst dieses Fenster konzeptionell (Poka-Yoke Stufe 3). Niedrig, weil eine Laufzeit-Absicherung existiert; aber sauberer Consent-by-default verlangt das Manifest-Flag.",
+      "invasivityLevel": "function-required",
+      "suggestedFixes": [
+        {
+          "text": "Im <application>-Block ergaenzen: <meta-data android:name=\"firebase_analytics_collection_enabled\" android:value=\"false\" /> und <meta-data android:name=\"firebase_analytics_collection_deactivated\" android:value=\"true\" /> — dann wird Analytics erst durch den expliziten setAnalyticsCollectionEnabled(true)-Aufruf nach Einwilligung aktiv.",
+          "lengthDeltaPct": 0,
+          "rationale": "Standard-Firebase-Mechanismus fuer consent-by-default; ergaenzt (ersetzt nicht) die bestehende Laufzeit-Logik. KEIN Funktionsverlust: bei Einwilligung schaltet der Code Analytics weiterhin ein.",
+          "stillSafe": true
+        },
+        {
+          "text": "Alternativ nur firebase_analytics_collection_enabled=false setzen (minimaler Eingriff) und im Consent-Pfad setAnalyticsCollectionEnabled(true) beibehalten.",
+          "lengthDeltaPct": 0,
+          "rationale": "Minimalvariante; deckt das SDK-Init-Fenster ab.",
+          "stillSafe": true
+        },
+        {
+          "text": "Falls Default-Aktivierung bewusst gewuenscht: in der Datenschutzerklaerung das kurze Init-Fenster transparent machen — schwaecher als das Flag, daher nur Fallback.",
+          "lengthDeltaPct": 0,
+          "rationale": "Nur Transparenz statt Praevention; rechtlich schwaecher als Variante 1/2.",
+          "stillSafe": false
+        }
+      ],
+      "impactWithoutFix": "Kurzes SDK-Init-Fenster, in dem Analytics theoretisch vor dem Laufzeit-Opt-out aktiv sein koennte → §25-TDDDG-Restrisiko. Mit dem Manifest-Flag ist Consent-by-default lueckenlos (Poka-Yoke)."
+    },
+    {
+      "findingId": "C6",
+      "riskLevel": "🟨",
+      "category": "DSGVO",
+      "language": "de",
+      "jurisdiction": "DE/EU",
+      "file": "app/src/main/java/com/bestjournal/app/.../PdfExporter.kt (Settings -> PDF-Export, premium-gated)",
+      "line": 0,
+      "currentText": "PDF-Export ist Premium-Feature (paywall_feature_pdf); kein kostenfreier Daten-Export (kein JSON).",
+      "context": "Roentgen: dataExport.premiumGated=true. Datenexport/Portabilitaet nur fuer zahlende Nutzer. Lokale Daten sind dem Nutzer ohnehin zugaenglich (In-App-Ansicht) und das Drive-Backup liegt im eigenen Konto.",
+      "rationale": "Art. 15 (Auskunft) und Art. 12 Abs. 5 DSGVO verlangen, dass Betroffenenrechte grundsaetzlich UNENTGELTLICH ausgeuebt werden koennen. Art. 20 (Portabilitaet) verlangt ein 'strukturiertes, gaengiges, maschinenlesbares Format' — ein PDF ist dafuer nur eingeschraenkt geeignet (eher menschen- als maschinenlesbar). Daten liegen lokal/eigenes Drive, daher ist der Verantwortlichen-Pflichtumfang begrenzt; dennoch sollte ein einfacher, kostenfreier Export-/Auskunftsweg existieren. Niedrig, da kein klassischer Server-Datenbestand beim Verantwortlichen liegt.",
+      "invasivityLevel": "function-required",
+      "suggestedFixes": [
+        {
+          "text": "Einen kostenfreien Basis-Export anbieten (z. B. einfacher Text-/Markdown- oder JSON-Export der eigenen Eintraege), waehrend der komfortable, formatierte PDF-Export Premium bleibt.",
+          "lengthDeltaPct": 0,
+          "rationale": "Erfuellt Art. 15/20 unentgeltlich; Premium-PDF bleibt als Komfort-Feature erhalten (kein Funktionsverlust).",
+          "stillSafe": true
+        },
+        {
+          "text": "In der Datenschutzerklaerung klarstellen, dass Auskunft/Export jederzeit kostenfrei per E-Mail (Art. 15) angefordert werden kann, zusaetzlich zum Premium-PDF.",
+          "lengthDeltaPct": 0,
+          "rationale": "Prozessualer Mindestweg ohne App-Aenderung; schwaecher als ein In-App-Export.",
+          "stillSafe": true
+        },
+        {
+          "text": "PDF-Export fuer den reinen Eigen-Datenexport generell kostenfrei machen, Premium nur fuer Zusatz-Layouts/Design.",
+          "lengthDeltaPct": 0,
+          "rationale": "Sauberste DSGVO-Loesung, aber groesserer Eingriff ins Monetarisierungs-Konzept — mit Frank abstimmen.",
+          "stillSafe": true
+        }
+      ],
+      "impactWithoutFix": "Wenn Datenexport ausschliesslich hinter der Paywall liegt, koennte das als Erschwerung der unentgeltlichen Betroffenenrechte (Art. 12 Abs. 5) ausgelegt werden. Ein kostenfreier Basis-Export entschaerft das vollstaendig. Mit Anwalt abstimmen (needs-clarification)."
+    }
+  ],
+  "verifiedOk": [
+    "Consent-Architektur (Art. 6/7/9): ConsentScreen v4 = layered consent nach EDSA 03/2023; drei VISUELL IDENTISCHE Kupfer-Buttons (Alles akzeptieren / Nur Erforderliche / Manuelle Auswahl) — gleichrangig, keine Dark Patterns (Code-Kommentar belegt EDSA 3.1.2 + UWG EmpCo-RL).",
+    "Granularitaet: ConsentViewModel hat getrennte Toggles je Datenfluss (analytics/groq/gemini/tts/driveBackup) — KEIN Accept-all-only. PrivacyPreferencesSheet rendert alle einzeln.",
+    "Opt-in (Default OFF): alle MutableStateFlow starten auf false; PrivacyGateHelper-Keys default false; BestJournalApp liest PREF_ANALYTICS_ENABLED default false. Vorbildlich.",
+    "Widerruf (Art. 7 Abs. 3): PrivacyPreferencesSheet ist in Settings erneut erreichbar (SettingsScreen:3824), Toggles bidirektional; zusaetzlich zweistufiger 356a-BGB-Widerrufsbutton (settings_revoke_*) mit Eingangsbestaetigung.",
+    "Art.-9-Pre-Usage-Gate: PrivacyGateDialog/PrivacyGateState gated Gemini/Groq/EdgeTts vor dem ERSTEN USA-Transfer; privacy_gate_gemini_body enthaelt EXPLIZITEN Art.-9-Hinweis (Gesundheit/Religion/Beziehungen) + 'keine Fachperson' (HWG). Genau wie von DSGVO verlangt.",
+    "Analytics-Consent-Timing: BestJournalApp.onCreate() ruft setAnalyticsCollectionEnabled(false als Default) VOR allen anderen Firebase-Calls — Laufzeit-Opt-out vorhanden (einziger Rest: Manifest-Flag fehlt, siehe C5).",
+    "Drittland-Transfer (Art. 44 ff.): DE-Datenschutzerklaerung benennt ALLE Empfaenger mit Rechtsgrundlage — Groq (SCC Art. 46), Microsoft Bing Speech (DPF + SCC), Gemini (DPF + SCC), Firebase Analytics/AppCheck/RemoteConfig (DPF + SCC), Drive, Gmail. Microsoft/Edge-TTS ist NICHT vergessen (Brief-Vermutung widerlegt).",
+    "Cloud-Backup Art. 9: DE-Datenschutzerklaerung adressiert EXPLIZIT, dass Stimmungswerte (positiv/neutral/belastend) als Art.-9-Gesundheitsdaten beim geraeteweiten Android-System-Backup verschluesselt an den Google-Backup-Bereich gehen, inkl. Opt-out-Hinweis (Geraete-Settings). Vorbildlich — kein eigenes Finding noetig.",
+    "Loesch-Flow (Art. 17): deleteAccount() loescht Drive-Backup ZUERST + verifiziert (re-list appDataFolder), ehrlicher Fehlerdialog wenn Drive-Loeschung scheitert, dann lokale DBs/Fotos/Cache/Alarme; 'unwiderruflich'-Wording korrekt abgesichert.",
+    "consent_card1_body ('Deine Eintraege bleiben auf deinem Geraet') + consent_card3_title sind DEAD CODE — in ConsentScreen v4 nicht mehr gerendert (durch promise bullets ersetzt). Daher KEIN Live-Irrefuehrungsrisiko (Brief-Finding 'consent_card1' entschaerft). Empfehlung: tote Strings entfernen.",
+    "consent_promise_local/_no_training/_optional_ai sind die LIVE Onboarding-Bullets und inhaltlich korrekt ('Datenschutzgesetze verlangen Einwilligung' / 'Du entscheidest' / 'jederzeit aenderbar') — keine falschen Lokal-Garantien.",
+    "Permission-Begruendungen (Mic/Kamera/Notifications) zweckgebunden und korrekt (Play-Policy + Art. 13).",
+    "networkSecurityConfig: cleartextTrafficPermitted=false, nur System-Trust-Anchors; INTERNET/RECORD_AUDIO/CAMERA zweckgebunden; Secrets ausserhalb Repo (SK-Ordner).",
+    "Drive-Backup-Verschluesselung: Datenschutzerklaerung sagt korrekt 'verschluesselte Uebertragung (HTTPS/TLS 1.2+)' + App-Data-Ordner — keine ueberzogene E2E-Behauptung; consent_toggle_drive_body ('verschluesselt') ist durch die TLS-Aussage gedeckt.",
+    "Datenschutzerklaerung-Vollstaendigkeit (DE): Verantwortlicher, Anschrift, Zweck, Rechtsgrundlagen, Empfaenger, Drittland, Speicherdauer, Betroffenenrechte, Art.-20-Portabilitaet, Beschwerderecht, Kontakt — alle vorhanden (Roentgen verifiziert)."
+  ],
+  "plugin_bugs_observed": []
+}

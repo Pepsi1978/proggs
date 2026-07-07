@@ -1,0 +1,7 @@
+{"unit": "nav", "ts": "2026-06-10T21:10:49.682823", "startDestination": "splash", "routeCount": 9, "note": "main route uses 4-page HorizontalPager (Retro/Dashboard/Journal/Settings); no WorkManager found"}
+{"unit": "entities", "count": 5, "note": "sensitive: rawText/improvedText/displayText/summary/followUpText/moodTag (journal), filePath+isVideo (photos), advice analysis JSON, retrospective summaryText", "ts": "2026-06-10T21:12:01.995735"}
+{"unit": "viewmodels", "count": 9, "note": "all HiltViewModel; Billing+AI+Drive injected widely", "ts": "2026-06-10T21:12:01.995763"}
+{"unit": "di", "count": 5, "note": "Groq Retrofit(api.groq.com), FirebaseAnalytics, FirebaseAiService, FirebaseFunctions europe-west1 getSubscriptionStatus, BillingManager, Drive, CredentialManager, EncryptedSharedPreferences (deprecated API)", "ts": "2026-06-10T21:12:01.995771"}
+{"unit": "usecases", "count": 11, "note": "AI: AnalyzeEntropy/GenerateAdvice/Summarize/ImproveText/GenerateRetrospective via FirebaseAiService(Gemini); Transcribe via Groq; SyncWithDrive zip backup; SignInWithGoogle", "ts": "2026-06-10T21:12:01.995778"}
+{"unit": "background", "trigger": "AlarmManager", "note": "DailyReminderManager setExactAndAllowWhileIdle RTC_WAKEUP daily reminder; NO WorkManager", "ts": "2026-06-10T21:12:01.995782"}
+{"unit": "dialogs+entrypoints+output", "ts": "2026-06-10T21:15:49.774548", "note": "output JSON written + validated; all 8 units complete"}

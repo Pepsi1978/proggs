@@ -1,0 +1,377 @@
+package com.bestjournal.app.util
+
+import android.os.Bundle
+import com.google.firebase.analytics.FirebaseAnalytics
+import javax.inject.Inject
+import javax.inject.Singleton
+
+/**
+ * Centralized analytics tracker for all Firebase Analytics events. Injected as a Singleton via Hilt
+ * into ViewModels and utility classes.
+ */
+@Singleton
+class AnalyticsTracker @Inject constructor(private val firebaseAnalytics: FirebaseAnalytics) {
+
+    // ── Onboarding ──────────────────────────────────────────────────────
+
+    fun trackOnboardingStarted() {
+        firebaseAnalytics.logEvent("onboarding_started", null)
+    }
+
+    fun trackOnboardingCompleted() {
+        firebaseAnalytics.logEvent("onboarding_completed", null)
+    }
+
+    fun trackOnboardingSkipped(screenIndex: Int) {
+        firebaseAnalytics.logEvent(
+            "onboarding_skipped",
+            Bundle().apply { putInt("screen_index", screenIndex) },
+        )
+    }
+
+    fun trackOnboardingScreenViewed(screenIndex: Int) {
+        firebaseAnalytics.logEvent(
+            "onboarding_screen_viewed",
+            Bundle().apply { putInt("screen_index", screenIndex) },
+        )
+    }
+
+    fun trackOnboardingGoalsSelected(goals: String) {
+        firebaseAnalytics.logEvent(
+            "onboarding_goals_selected",
+            Bundle().apply { putString("goals", goals.take(100)) },
+        )
+    }
+
+    fun trackTrialStartedOnboarding() {
+        firebaseAnalytics.logEvent("trial_started_onboarding", null)
+    }
+
+    // ── Entry Events ────────────────────────────────────────────────────
+
+    fun trackEntryCreated(source: String) {
+        firebaseAnalytics.logEvent("entry_created", Bundle().apply { putString("source", source) })
+    }
+
+    fun trackEntryImproved() {
+        firebaseAnalytics.logEvent("entry_improved", null)
+    }
+
+    fun trackEntryDeleted() {
+        firebaseAnalytics.logEvent("entry_deleted", null)
+    }
+
+    // ── Dashboard Events ────────────────────────────────────────────────
+
+    fun trackDashboardViewed(scenario: Int) {
+        firebaseAnalytics.logEvent(
+            "dashboard_viewed",
+            Bundle().apply { putInt("scenario", scenario) },
+        )
+    }
+
+    fun trackDashboardRefreshed(scenario: Int) {
+        firebaseAnalytics.logEvent(
+            "dashboard_refreshed",
+            Bundle().apply { putInt("scenario", scenario) },
+        )
+    }
+
+    fun trackProfileSwitched(fromScenario: Int, toScenario: Int) {
+        firebaseAnalytics.logEvent(
+            "profile_switched",
+            Bundle().apply {
+                putInt("from_scenario", fromScenario)
+                putInt("to_scenario", toScenario)
+            },
+        )
+    }
+
+    // ── Paywall Events ──────────────────────────────────────────────────
+
+    fun trackPaywallShown(source: String) {
+        firebaseAnalytics.logEvent("paywall_shown", Bundle().apply { putString("source", source) })
+    }
+
+    fun trackPaywallDismissed() {
+        firebaseAnalytics.logEvent("paywall_dismissed", null)
+    }
+
+    fun trackTrialCtaClicked() {
+        firebaseAnalytics.logEvent("trial_cta_clicked", null)
+    }
+
+    fun trackMonthlyCtaClicked() {
+        firebaseAnalytics.logEvent("monthly_cta_clicked", null)
+    }
+
+    fun trackLifetimeCtaClicked() {
+        firebaseAnalytics.logEvent("lifetime_cta_clicked", null)
+    }
+
+    fun trackYearlyCtaClicked() {
+        firebaseAnalytics.logEvent("yearly_cta_clicked", null)
+    }
+
+    fun trackNoThanksClicked() {
+        firebaseAnalytics.logEvent("no_thanks_clicked", null)
+    }
+
+    fun trackTrialTimelineViewed() {
+        firebaseAnalytics.logEvent("trial_timeline_viewed", null)
+    }
+
+    fun trackPaywallPersonalized(goal: String) {
+        firebaseAnalytics.logEvent(
+            "paywall_personalized",
+            Bundle().apply { putString("goal", goal) },
+        )
+    }
+
+    fun trackYearlyBadgeViewed() {
+        firebaseAnalytics.logEvent("yearly_badge_viewed", null)
+    }
+
+    fun trackExitIntentShown() {
+        firebaseAnalytics.logEvent("exit_intent_shown", null)
+    }
+
+    fun trackExitIntentAccepted() {
+        firebaseAnalytics.logEvent("exit_intent_accepted", null)
+    }
+
+    fun trackExitIntentRejected() {
+        firebaseAnalytics.logEvent("exit_intent_rejected", null)
+    }
+
+    fun trackLifetimePurchased(value: Double = 0.0, currency: String = "EUR") {
+        firebaseAnalytics.logEvent(
+            FirebaseAnalytics.Event.PURCHASE,
+            Bundle().apply {
+                putString("subscription_type", "lifetime")
+                putDouble(FirebaseAnalytics.Param.VALUE, value)
+                putString(FirebaseAnalytics.Param.CURRENCY, currency)
+            },
+        )
+    }
+
+    fun trackSubscriptionPurchased(type: String, value: Double = 0.0, currency: String = "EUR") {
+        firebaseAnalytics.logEvent(
+            FirebaseAnalytics.Event.PURCHASE,
+            Bundle().apply {
+                putString("subscription_type", type)
+                putDouble(FirebaseAnalytics.Param.VALUE, value)
+                putString(FirebaseAnalytics.Param.CURRENCY, currency)
+            },
+        )
+    }
+
+    fun trackPremiumBenefitsViewed() {
+        firebaseAnalytics.logEvent("premium_benefits_viewed", null)
+    }
+
+    // ── Retention Events ────────────────────────────────────────────────
+
+    fun trackStreakUpdated(length: Int) {
+        firebaseAnalytics.logEvent(
+            "streak_updated",
+            Bundle().apply { putInt("streak_length", length) },
+        )
+    }
+
+    fun trackStreakBroken() {
+        firebaseAnalytics.logEvent("streak_broken", null)
+    }
+
+    fun trackStreakMilestone(days: Int) {
+        firebaseAnalytics.logEvent("streak_milestone", Bundle().apply { putInt("days", days) })
+    }
+
+    fun trackReminderEnabled() {
+        firebaseAnalytics.logEvent("reminder_enabled", null)
+    }
+
+    fun trackReminderDisabled() {
+        firebaseAnalytics.logEvent("reminder_disabled", null)
+    }
+
+    fun trackReminderTimeChanged(hour: Int) {
+        firebaseAnalytics.logEvent("reminder_time_changed", Bundle().apply { putInt("hour", hour) })
+    }
+
+    fun trackReminderOpened() {
+        firebaseAnalytics.logEvent("reminder_opened", null)
+    }
+
+    fun trackReminderNotificationShown() {
+        firebaseAnalytics.logEvent("reminder_notification_shown", null)
+    }
+
+    // ── Review Events ─────────────────────────────────────────────────
+
+    fun trackReviewPromptConditionsMet() {
+        firebaseAnalytics.logEvent("review_prompt_conditions_met", null)
+    }
+
+    fun trackReviewFlowLaunched() {
+        firebaseAnalytics.logEvent("review_flow_launched", null)
+    }
+
+    // ── Weekly Review Events ───────────────────────────────────────────
+
+    fun trackWeeklyReviewNotificationShown() {
+        firebaseAnalytics.logEvent("weekly_review_notification_shown", null)
+    }
+
+    fun trackWeeklyReviewNotificationOpened() {
+        firebaseAnalytics.logEvent("weekly_review_notification_opened", null)
+    }
+
+    fun trackWeeklyReviewUpsellShown() {
+        firebaseAnalytics.logEvent("weekly_review_upsell_shown", null)
+    }
+
+    fun trackWeeklyReviewUpsellClicked() {
+        firebaseAnalytics.logEvent("weekly_review_upsell_clicked", null)
+    }
+
+    // ── Daily Prompt Events ──────────────────────────────────────────────
+
+    fun trackDailyPromptShown(promptId: String) {
+        firebaseAnalytics.logEvent(
+            "daily_prompt_shown",
+            Bundle().apply { putString("prompt_id", promptId) },
+        )
+    }
+
+    fun trackDailyPromptUsed(promptId: String) {
+        firebaseAnalytics.logEvent(
+            "daily_prompt_used",
+            Bundle().apply { putString("prompt_id", promptId) },
+        )
+    }
+
+    fun trackDailyPromptPremiumBlocked() {
+        firebaseAnalytics.logEvent("daily_prompt_premium_blocked", null)
+    }
+
+    // ── Upsell Events ───────────────────────────────────────────────────
+
+    fun trackUpsellBannerShown(source: String) {
+        firebaseAnalytics.logEvent(
+            "upsell_banner_shown",
+            Bundle().apply { putString("source", source) },
+        )
+    }
+
+    fun trackUpsellBannerClicked(source: String) {
+        firebaseAnalytics.logEvent(
+            "upsell_banner_clicked",
+            Bundle().apply { putString("source", source) },
+        )
+    }
+
+    // ── Export Events ───────────────────────────────────────────────────
+
+    fun trackExportInitiated() {
+        firebaseAnalytics.logEvent("export_initiated", null)
+    }
+
+    fun trackExportCompleted(entryCount: Int) {
+        firebaseAnalytics.logEvent(
+            "export_completed",
+            Bundle().apply { putInt("entry_count", entryCount) },
+        )
+    }
+
+    fun trackExportPremiumBlocked() {
+        firebaseAnalytics.logEvent("export_premium_blocked", null)
+    }
+
+    // ── Churn Flow Events ───────────────────────────────────────────────
+
+    fun trackFreeLimitIndicatorShown(remaining: Int) {
+        firebaseAnalytics.logEvent(
+            "free_limit_indicator_shown",
+            Bundle().apply { putInt("remaining", remaining) },
+        )
+    }
+
+    fun trackFreeLimitUpgradeClicked() {
+        firebaseAnalytics.logEvent("free_limit_upgrade_clicked", null)
+    }
+
+    fun trackChurnFlowOpened() {
+        firebaseAnalytics.logEvent("churn_flow_opened", null)
+    }
+
+    fun trackChurnReasonSelected(reason: String) {
+        firebaseAnalytics.logEvent(
+            "churn_reason_selected",
+            Bundle().apply { putString("reason", reason) },
+        )
+    }
+
+    fun trackChurnOfferShown() {
+        firebaseAnalytics.logEvent("churn_offer_shown", null)
+    }
+
+    fun trackChurnOfferAccepted() {
+        firebaseAnalytics.logEvent("churn_offer_accepted", null)
+    }
+
+    fun trackChurnConfirmed() {
+        firebaseAnalytics.logEvent("churn_confirmed", null)
+    }
+
+    /**
+     * Loop-9 audit (Frank, 2026-04-30): user chose to pause the subscription
+     * rather than cancel or accept the retention price. This is functionally
+     * different from accepting the retention offer and deserves its own
+     * analytics event so the churn dashboard can distinguish the two paths.
+     */
+    fun trackChurnPaused() {
+        firebaseAnalytics.logEvent("churn_paused", null)
+    }
+
+    // ── Achievement Events ──────────────────────────────────────────────
+
+    fun trackAchievementUnlocked(achievementId: String) {
+        firebaseAnalytics.logEvent(
+            "achievement_unlocked",
+            Bundle().apply { putString("achievement_id", achievementId) },
+        )
+    }
+
+    fun trackAchievementsViewed() {
+        firebaseAnalytics.logEvent("achievements_viewed", null)
+    }
+
+    // ── TTS (Edge Read-Aloud) Diagnostics ────────────────────────────────
+    // Fires when the TTS watchdog aborts a request due to silence from Edge TTS.
+    // Used to detect voices that Microsoft has deprecated server-side, regional
+    // outages, or any unexpected hang that bypasses the registry-level fix.
+    // Dashboard query: count events grouped by voice + locale to find bad voices.
+
+    fun trackTtsWatchdogFired(voice: String, locale: String, reason: String) {
+        firebaseAnalytics.logEvent(
+            "tts_watchdog_fired",
+            Bundle().apply {
+                putString("voice", voice.take(100))
+                putString("locale", locale.take(20))
+                putString("reason", reason.take(20))
+            },
+        )
+    }
+
+    fun trackTtsFailure(voice: String, locale: String, error: String) {
+        firebaseAnalytics.logEvent(
+            "tts_failure",
+            Bundle().apply {
+                putString("voice", voice.take(100))
+                putString("locale", locale.take(20))
+                putString("error", error.take(100))
+            },
+        )
+    }
+}

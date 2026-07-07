@@ -1,0 +1,7 @@
+interface:
+  display_name: "orchestrate"
+  short_description: "orchestrate"
+  default_prompt: "Use $everything-codex-everything-codex--orchestrate for this task."
+
+policy:
+  allow_implicit_invocation: false

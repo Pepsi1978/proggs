@@ -1,0 +1,7 @@
+interface:
+  display_name: "intelligence-researcher"
+  short_description: "Dedicated intelligence researcher for self-improve Stufe 5"
+  default_prompt: "Use $intelligence-researcher for this task."
+
+policy:
+  allow_implicit_invocation: false

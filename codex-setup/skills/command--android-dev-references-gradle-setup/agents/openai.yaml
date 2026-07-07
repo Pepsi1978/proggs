@@ -1,0 +1,7 @@
+interface:
+  display_name: "command--android-dev-references-gradle-setup"
+  short_description: "android-dev:references:gradle-setup"
+  default_prompt: "Use $command--android-dev-references-gradle-setup for this task."
+
+policy:
+  allow_implicit_invocation: false

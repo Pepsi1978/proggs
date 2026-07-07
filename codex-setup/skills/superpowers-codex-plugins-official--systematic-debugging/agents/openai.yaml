@@ -1,0 +1,7 @@
+interface:
+  display_name: "systematic-debugging"
+  short_description: "encountering any bug, test failure, or unexpected behavior"
+  default_prompt: "Use $superpowers-codex-plugins-official--systematic-debugging for this task."
+
+policy:
+  allow_implicit_invocation: true

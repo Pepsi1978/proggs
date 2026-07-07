@@ -1,0 +1,7 @@
+interface:
+  display_name: "übersetzung"
+  short_description: "Translate Android strings into the supported locales"
+  default_prompt: "Use $übersetzung for this task."
+
+policy:
+  allow_implicit_invocation: true

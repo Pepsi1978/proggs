@@ -1,0 +1,7 @@
+interface:
+  display_name: "python-reviewer"
+  short_description: "Expert Python code reviewer specializing in PEP 8 compliance"
+  default_prompt: "Use $everything-codex-everything-codex--python-reviewer for this task."
+
+policy:
+  allow_implicit_invocation: false

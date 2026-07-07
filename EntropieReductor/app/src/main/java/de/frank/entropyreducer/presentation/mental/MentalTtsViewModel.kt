@@ -1,0 +1,224 @@
+package de.frank.entropyreducer.presentation.mental
+
+import android.app.Application
+import android.content.Context
+import androidx.datastore.preferences.core.booleanPreferencesKey
+import androidx.datastore.preferences.core.edit
+import androidx.datastore.preferences.core.intPreferencesKey
+import androidx.datastore.preferences.preferencesDataStore
+import androidx.lifecycle.AndroidViewModel
+import androidx.lifecycle.viewModelScope
+import dagger.hilt.android.lifecycle.HiltViewModel
+import de.frank.entropyreducer.data.settings.AppSettings
+import de.frank.entropyreducer.data.tts.TtsUsage
+import de.frank.entropyreducer.data.tts.TtsUsageStore
+import de.frank.entropyreducer.di.ApplicationScope
+import javax.inject.Inject
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.SharingStarted
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.stateIn
+import kotlinx.coroutines.launch
+
+/**
+ * Vorlese-System fuer das Mentalboard (Frank-Wunsch 2026-06-16).
+ *
+ * Muster (Anker-Schema): Satz 1 ist der "Anker". Vorgelesen wird paarweise — vor JEDEM Folgesatz
+ * zuerst der Anker (so oft wie [MentalTtsUiState.ankerCount]), danach der Folgesatz (so oft wie
+ * [MentalTtsUiState.folgeCount]). Beispiel 4 Saetze, anker=2, folge=1:
+ *   1,1,2 · 1,1,3 · 1,1,4
+ * Zwischen JEDEM gesprochenen Satz liegen [PAUSE_MS] (9 Sekunden). Die Reihenfolge ergibt sich
+ * direkt aus der aktuellen Sortierung des Mentalboards — sortiert Frank um, aendert sich die
+ * Vorlese-Reihenfolge automatisch mit (die Sequenz wird bei jedem Start frisch gebildet).
+ *
+ * Endlosschleife (gruenes Haekchen): nach einem kompletten Durchgang beginnt die Sequenz von vorne,
+ * bis Frank den Lautsprecher erneut drueckt ODER die globale Sicherheitsgrenze aus den Vorlesen-
+ * Einstellungen erreicht ist — dann stoppt die App automatisch, damit nicht aus Versehen endlos
+ * vorgelesen wird.
+ *
+ * Gewohnheiten mitlesen ("G"-Haekchen, Frank-Wunsch 2026-07-03): Ist [MentalTtsUiState.includeHabits]
+ * aktiv, werden die Gewohnheiten NACH dem Mentalblock angehaengt — in der Vorleseweise des
+ * Gewohnheit-Reiters (jeder Satz [gewohnheitRepeat]-mal, aus dem gemeinsamen gewohnheit_tts_settings-
+ * Store). Der Mental-Loop wiederholt dann Mentalblock UND Gewohnheiten gemeinsam.
+ *
+ * Kosten/Netz: Jede Sequenzposition wird frisch ueber Google-TTS synthetisiert. Dadurch bekommt
+ * auch jede Wiederholung desselben Satzes eine eigene Betonung statt exakt dieselbe MP3-Datei.
+ * Beim Stop wird der Sequenz-Cache wieder aufgeraeumt.
+ *
+ * Threading (Bug-Almanach media3 T1/L1): Der MediaPlayer wird ausschliesslich aus
+ * withContext(Dispatchers.Main) bedient; Freigabe deterministisch in [stop]/[onCleared].
+ */
+
+/* Eigener kleiner DataStore nur fuer die Vorlese-Einstellungen (anker/folge/loop/G). Bewusst
+ * getrennt vom "mental_board"-Store (Saetze) — andere Datei, kein Konflikt. */
+internal val Context.mentalTtsStore by preferencesDataStore(name = "mental_tts_settings")
+private val KEY_ANKER = intPreferencesKey("anker_count")
+private val KEY_FOLGE = intPreferencesKey("folge_count")
+private val KEY_LOOP = booleanPreferencesKey("loop_enabled")
+private val KEY_INCLUDE_HABITS = booleanPreferencesKey("include_habits")
+private val KEY_MENTAL_PAUSE_SECONDS = intPreferencesKey("pause_seconds")
+private val KEY_RANDOM_PLAYBACK = booleanPreferencesKey("random_playback")
+
+data class MentalTtsUiState(
+    val isPlaying: Boolean = false,
+    /** Wie oft der Anker (Satz 1) vor jedem Folgesatz vorgelesen wird (1..10). */
+    val ankerCount: Int = 1,
+    /** Wie oft jeder Folgesatz vorgelesen wird (1..10). */
+    val folgeCount: Int = 1,
+    /** Endlosschleife aktiv? */
+    val loop: Boolean = false,
+    /** "G"-Haekchen: Gewohnheiten am Ende mitlesen? */
+    val includeHabits: Boolean = false,
+    /** Zufällige Satzreihenfolge: jeden Satzblock einmal pro Durchlauf, Wiederholungen bleiben direkt zusammen. */
+    val randomPlayback: Boolean = false,
+    /** Pause zwischen zwei gesprochenen Mental-Saetzen (1..30 Sekunden). */
+    val pauseSeconds: Int = 9,
+    /** Globale Sicherheitsgrenze fuer automatischen Vorlese-Stop (15..120 Minuten). */
+    val autoStopMinutes: Int = AppSettings.DEFAULT_TTS_AUTO_STOP_MINUTES,
+    val autoStopEndsAtWallClockMs: Long? = null,
+    val error: String? = null,
+)
+
+/** Interne Momentaufnahme der vier persistierten Vorlese-Einstellungen. */
+private data class MentalSettings(
+    val anker: Int,
+    val folge: Int,
+    val loop: Boolean,
+    val includeHabits: Boolean,
+    val randomPlayback: Boolean,
+    val pauseSeconds: Int,
+)
+
+@HiltViewModel
+class MentalTtsViewModel
+@Inject
+    constructor(
+        application: Application,
+        private val appSettings: AppSettings,
+        private val playback: MentalTtsPlaybackController,
+        usageStore: TtsUsageStore,
+        @ApplicationScope private val applicationScope: CoroutineScope,
+    ) : AndroidViewModel(application) {
+
+    /** Live-Monatsverbrauch des TTS-Kontingents (Anzeige unter dem letzten Satz im Mentalboard). */
+    val usage: StateFlow<TtsUsage> = usageStore.usage
+
+    private companion object {
+        const val TAG = "MentalTts"
+        const val DEFAULT_PAUSE_SECONDS = 9
+        const val RANGE_MIN = 1
+        const val RANGE_MAX = 10
+        const val PAUSE_RANGE_MIN = 1
+        const val PAUSE_RANGE_MAX = 30
+    }
+
+    private val ctx: Context
+        get() = getApplication()
+
+    private val settingsFlow: Flow<MentalSettings> =
+        ctx.mentalTtsStore.data.map { p ->
+            MentalSettings(
+                anker = (p[KEY_ANKER] ?: 1).coerceIn(RANGE_MIN, RANGE_MAX),
+                folge = (p[KEY_FOLGE] ?: 1).coerceIn(RANGE_MIN, RANGE_MAX),
+                loop = p[KEY_LOOP] ?: false,
+                includeHabits = p[KEY_INCLUDE_HABITS] ?: false,
+                randomPlayback = p[KEY_RANDOM_PLAYBACK] ?: false,
+                pauseSeconds = (p[KEY_MENTAL_PAUSE_SECONDS] ?: DEFAULT_PAUSE_SECONDS)
+                    .coerceIn(PAUSE_RANGE_MIN, PAUSE_RANGE_MAX),
+            )
+        }
+
+    val uiState: StateFlow<MentalTtsUiState> =
+        combine(
+            settingsFlow,
+            appSettings.ttsAutoStopMinutesFlow,
+            playback.isPlayingFlow,
+            playback.autoStopEndsAtWallClockMsFlow,
+            playback.errorFlow,
+        ) { s, autoStopMinutes, playing, autoStopEndsAt, err ->
+                MentalTtsUiState(
+                    isPlaying = playing,
+                    ankerCount = s.anker,
+                    folgeCount = s.folge,
+                    loop = s.loop,
+                    includeHabits = s.includeHabits,
+                    randomPlayback = s.randomPlayback,
+                    pauseSeconds = s.pauseSeconds,
+                    autoStopMinutes = autoStopMinutes,
+                    autoStopEndsAtWallClockMs = autoStopEndsAt,
+                    error = err,
+                )
+            }
+            .stateIn(
+                scope = viewModelScope,
+                started = SharingStarted.WhileSubscribed(5_000),
+                initialValue = MentalTtsUiState(),
+            )
+
+    /* ----------------------------- Einstellungen ----------------------------- */
+
+    fun setAnkerCount(n: Int) {
+        viewModelScope.launch {
+            ctx.mentalTtsStore.edit { it[KEY_ANKER] = n.coerceIn(RANGE_MIN, RANGE_MAX) }
+        }
+    }
+
+    fun setFolgeCount(n: Int) {
+        viewModelScope.launch {
+            ctx.mentalTtsStore.edit { it[KEY_FOLGE] = n.coerceIn(RANGE_MIN, RANGE_MAX) }
+        }
+    }
+
+    fun setLoop(enabled: Boolean) {
+        viewModelScope.launch { ctx.mentalTtsStore.edit { it[KEY_LOOP] = enabled } }
+    }
+
+    /** "G"-Haekchen: Gewohnheiten am Ende mitlesen. */
+    fun setIncludeHabits(enabled: Boolean) {
+        viewModelScope.launch { ctx.mentalTtsStore.edit { it[KEY_INCLUDE_HABITS] = enabled } }
+    }
+
+    fun setRandomPlayback(enabled: Boolean) {
+        viewModelScope.launch { ctx.mentalTtsStore.edit { it[KEY_RANDOM_PLAYBACK] = enabled } }
+    }
+
+    fun setPauseSeconds(seconds: Int) {
+        viewModelScope.launch {
+            ctx.mentalTtsStore.edit {
+                it[KEY_MENTAL_PAUSE_SECONDS] = seconds.coerceIn(PAUSE_RANGE_MIN, PAUSE_RANGE_MAX)
+            }
+        }
+    }
+
+    fun setAutoStopMinutes(minutes: Int) {
+        // Dieser globale Wert muss Navigation weg vom Settings-Screen überleben.
+        applicationScope.launch { appSettings.setTtsAutoStopMinutes(minutes) }
+    }
+
+    fun dismissError() {
+        playback.dismissError()
+    }
+
+    /* ----------------------------- Steuerung ----------------------------- */
+
+    /**
+     * Lautsprecher-Druck: läuft gerade etwas, wird gestoppt (Toggle); sonst startet das Vorlesen
+     * der aktuellen Mental-Liste (in der übergebenen Reihenfolge). Ist das "G"-Häkchen aktiv,
+     * werden die übergebenen [gewohnheiten] am Ende mitgelesen.
+     */
+    fun togglePlayback(mentals: List<Mental>, gewohnheiten: List<Mental> = emptyList()) {
+        playback.toggleMentalPlayback(mentals, gewohnheiten)
+    }
+
+    fun stop() {
+        playback.stop()
+    }
+
+    override fun onCleared() {
+        super.onCleared()
+        // Playback lebt im ApplicationScope weiter. Stop nur per Lautsprecher oder Timeout.
+    }
+}

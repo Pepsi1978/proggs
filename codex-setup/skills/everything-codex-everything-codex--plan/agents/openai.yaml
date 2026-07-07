@@ -1,0 +1,7 @@
+interface:
+  display_name: "plan"
+  short_description: "Restate requirements, assess risks, and create step-by-step"
+  default_prompt: "Use $everything-codex-everything-codex--plan for this task."
+
+policy:
+  allow_implicit_invocation: false

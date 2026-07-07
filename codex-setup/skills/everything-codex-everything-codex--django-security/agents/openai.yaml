@@ -1,0 +1,7 @@
+interface:
+  display_name: "django-security"
+  short_description: "Django security best practices, authentication, authorization"
+  default_prompt: "Use $everything-codex-everything-codex--django-security for this task."
+
+policy:
+  allow_implicit_invocation: false

@@ -1,0 +1,7 @@
+interface:
+  display_name: "trailofbits-scan-apk"
+  short_description: "Scans Android APKs for Firebase security misconfigurations"
+  default_prompt: "Use $firebase-apk-scanner-trailofbits--trailofbits-scan-apk for this task."
+
+policy:
+  allow_implicit_invocation: false

@@ -1,0 +1,7 @@
+interface:
+  display_name: "command--command--codebase-memory-tracing"
+  short_description: "command--command--codebase-memory-tracing skill"
+  default_prompt: "Use $command--codebase-memory-tracing for this task."
+
+policy:
+  allow_implicit_invocation: false

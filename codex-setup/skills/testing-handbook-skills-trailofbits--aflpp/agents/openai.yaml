@@ -1,0 +1,7 @@
+interface:
+  display_name: "aflpp"
+  short_description: "aflpp skill"
+  default_prompt: "Use $testing-handbook-skills-trailofbits--aflpp for this task."
+
+policy:
+  allow_implicit_invocation: false

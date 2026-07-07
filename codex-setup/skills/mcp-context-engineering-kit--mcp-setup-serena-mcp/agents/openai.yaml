@@ -1,0 +1,7 @@
+interface:
+  display_name: "mcp:setup-serena-mcp"
+  short_description: "setup Serena MCP server for semantic code retrieval and editing"
+  default_prompt: "Use $mcp-context-engineering-kit--mcp-setup-serena-mcp for this task."
+
+policy:
+  allow_implicit_invocation: false

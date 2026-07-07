@@ -1,0 +1,7 @@
+interface:
+  display_name: "designer"
+  short_description: "designer skill"
+  default_prompt: "Use $designer for this task."
+
+policy:
+  allow_implicit_invocation: false

@@ -1,0 +1,21 @@
+# .NET build output
+bin/
+obj/
+
+# Visual Studio / Rider
+.vs/
+.idea/
+*.user
+*.suo
+
+# Lokale, nicht versionierte Konfiguration / Secrets (gehoeren in ~/SK/VoiceAgent/)
+keys.json
+*.local.json
+
+# Publish-Ausgabe
+publish/
+release/
+
+# Logs (Observability-First: nie ins Repo — liegen normal in %LOCALAPPDATA%\VoiceAgent\logs\)
+*.log
+logs/

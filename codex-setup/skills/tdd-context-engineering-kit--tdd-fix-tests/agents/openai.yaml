@@ -1,0 +1,7 @@
+interface:
+  display_name: "tdd:fix-tests"
+  short_description: "Systematically fix all failing tests after business logic"
+  default_prompt: "Use $tdd-context-engineering-kit--tdd-fix-tests for this task."
+
+policy:
+  allow_implicit_invocation: false

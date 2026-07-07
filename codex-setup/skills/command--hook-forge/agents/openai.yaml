@@ -1,0 +1,7 @@
+interface:
+  display_name: "command--command--hook-forge"
+  short_description: "Nutze diesen Skill IMMER wenn ein neuer Codex Hook erstellt"
+  default_prompt: "Use $command--hook-forge for this task."
+
+policy:
+  allow_implicit_invocation: false

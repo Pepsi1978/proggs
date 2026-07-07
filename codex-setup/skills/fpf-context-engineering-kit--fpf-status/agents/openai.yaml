@@ -1,0 +1,7 @@
+interface:
+  display_name: "fpf:status"
+  short_description: "Display the current state of the FPF knowledge base"
+  default_prompt: "Use $fpf-context-engineering-kit--fpf-status for this task."
+
+policy:
+  allow_implicit_invocation: false

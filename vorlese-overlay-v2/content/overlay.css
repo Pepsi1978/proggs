@@ -1,0 +1,584 @@
+/*
+ * Vorlese-Overlay — Styling des schwebenden Bedienelements.
+ *
+ * Dieses CSS wird in den Shadow Root des Overlays injiziert (siehe overlay.js).
+ * Dadurch ist es vollstaendig von der jeweiligen Webseite isoliert: weder kann
+ * die Seite unsere Buttons veraendern, noch beeinflussen wir die Seite.
+ *
+ * Alle Klassen sind mit "vo-" praefixiert, damit sie auch ausserhalb des
+ * Shadow DOM (Fallback) eindeutig bleiben.
+ */
+
+:host {
+	all: initial;
+}
+
+.vo-container {
+	position: fixed;
+	z-index: 2147483647; /* maximaler z-index, damit nichts uns verdeckt */
+	display: flex;
+	flex-direction: row;
+	align-items: center;
+	flex-wrap: wrap;
+	/* Horizontale Reihe wie die Overlays-Erweiterung. 10px Abstand = GENAU der
+	   gleiche symmetrische Abstand wie zwischen den ChromeOverlays-Buttons
+	   (dort 42px Button bei 52px Raster = 10px Luecke). Kleiner row-gap, damit
+	   der Fortschrittsbalken knapp unter die Buttons umbricht. */
+	gap: 6px 10px;
+	font-family:
+		-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+	user-select: none;
+	-webkit-user-select: none;
+	touch-action: none;
+}
+
+/* Buttons ------------------------------------------------------------------ */
+
+.vo-btn {
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	border: none;
+	cursor: pointer;
+	color: #ffffff;
+	background: rgba(28, 28, 32, 0.82);
+	backdrop-filter: blur(10px) saturate(140%);
+	-webkit-backdrop-filter: blur(10px) saturate(140%);
+	box-shadow:
+		0 4px 16px rgba(0, 0, 0, 0.28),
+		0 0 0 1px rgba(255, 255, 255, 0.1) inset;
+	transition:
+		transform 0.15s ease,
+		background 0.15s ease,
+		box-shadow 0.15s ease;
+	padding: 0;
+}
+
+.vo-btn:hover {
+	background: rgba(40, 40, 46, 0.92);
+	/* "hochpoppen" wie das Spracheingabe-Symbol der Overlays-Erweiterung */
+	transform: scale(1.15);
+}
+
+.vo-btn:active {
+	transform: scale(0.93);
+}
+
+.vo-btn svg {
+	width: 55%;
+	height: 55%;
+	display: block;
+	fill: currentColor;
+	pointer-events: none;
+}
+
+.vo-speaker {
+	width: 42px;
+	height: 42px;
+	border-radius: 50%;
+	order: 3; /* rechts in der Reihe: [Kaestchen] [A] [Lautsprecher] */
+}
+
+/* Zustand „spielt gerade" — Button bekommt einen aktiven Farbton */
+.vo-speaker.vo-playing {
+	background: rgba(220, 60, 70, 0.92);
+	box-shadow:
+		0 4px 18px rgba(220, 60, 70, 0.45),
+		0 0 0 1px rgba(255, 255, 255, 0.18) inset;
+}
+
+.vo-speaker.vo-loading {
+	background: rgba(60, 120, 220, 0.92);
+}
+
+/* kleiner rotierender Ring bei „laedt" */
+.vo-speaker.vo-loading svg {
+	animation: vo-pulse 0.9s ease-in-out infinite;
+}
+
+@keyframes vo-pulse {
+	0%,
+	100% {
+		opacity: 1;
+	}
+	50% {
+		opacity: 0.35;
+	}
+}
+
+.vo-gear {
+	width: 32px;
+	height: 32px;
+	border-radius: 50%;
+}
+
+/* Hinweis-Bubble ----------------------------------------------------------- */
+
+.vo-hint {
+	position: absolute;
+	right: 56px;
+	top: 8px;
+	max-width: 220px;
+	background: rgba(28, 28, 32, 0.95);
+	color: #fff;
+	font-size: 13px;
+	line-height: 1.35;
+	padding: 8px 11px;
+	border-radius: 10px;
+	box-shadow: 0 4px 16px rgba(0, 0, 0, 0.3);
+	opacity: 0;
+	transform: translateX(6px);
+	transition:
+		opacity 0.18s ease,
+		transform 0.18s ease;
+	pointer-events: none;
+	white-space: normal;
+}
+
+.vo-hint.vo-show {
+	opacity: 1;
+	transform: translateX(0);
+}
+
+.vo-hint.vo-error {
+	background: rgba(200, 50, 55, 0.96);
+}
+
+/* Einstellungs-Panel (Modal) ---------------------------------------------- */
+
+.vo-panel {
+	position: fixed;
+	z-index: 2147483647;
+	width: 340px;
+	max-width: calc(100vw - 24px);
+	max-height: calc(100vh - 24px);
+	overflow-y: auto;
+	background: #1c1c20;
+	color: #f2f2f5;
+	border-radius: 16px;
+	box-shadow:
+		0 18px 60px rgba(0, 0, 0, 0.55),
+		0 0 0 1px rgba(255, 255, 255, 0.08) inset;
+	font-family:
+		-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+	font-size: 14px;
+	padding: 0;
+	display: none;
+}
+
+.vo-panel.vo-open {
+	display: block;
+}
+
+.vo-panel-head {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	padding: 16px 18px 10px;
+}
+
+.vo-panel-title {
+	font-size: 16px;
+	font-weight: 600;
+	margin: 0;
+}
+
+.vo-close {
+	border: none;
+	background: rgba(255, 255, 255, 0.08);
+	color: #fff;
+	width: 28px;
+	height: 28px;
+	border-radius: 50%;
+	cursor: pointer;
+	font-size: 16px;
+	line-height: 1;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+}
+
+.vo-close:hover {
+	background: rgba(255, 255, 255, 0.16);
+}
+
+.vo-panel-body {
+	padding: 4px 18px 18px;
+}
+
+.vo-section {
+	margin-top: 14px;
+}
+
+.vo-label {
+	display: block;
+	font-size: 12px;
+	font-weight: 600;
+	text-transform: uppercase;
+	letter-spacing: 0.04em;
+	color: #9a9aa2;
+	margin-bottom: 6px;
+}
+
+/* Engine-Umschalter (Segmented Control) */
+.vo-engine-switch {
+	display: flex;
+	background: rgba(255, 255, 255, 0.07);
+	border-radius: 10px;
+	padding: 3px;
+	gap: 3px;
+}
+
+.vo-engine-opt {
+	flex: 1;
+	text-align: center;
+	padding: 8px 6px;
+	border-radius: 8px;
+	cursor: pointer;
+	font-weight: 500;
+	color: #cfcfd6;
+	transition:
+		background 0.15s ease,
+		color 0.15s ease;
+}
+
+.vo-engine-opt.vo-active {
+	background: #3a82f6;
+	color: #fff;
+}
+
+/* Tabs */
+.vo-tabs {
+	display: flex;
+	gap: 6px;
+	margin-top: 16px;
+	border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.vo-tab {
+	background: none;
+	border: none;
+	color: #9a9aa2;
+	padding: 8px 4px;
+	margin-bottom: -1px;
+	cursor: pointer;
+	font-size: 14px;
+	font-weight: 500;
+	border-bottom: 2px solid transparent;
+}
+
+.vo-tab.vo-active {
+	color: #fff;
+	border-bottom-color: #3a82f6;
+}
+
+.vo-tabpage {
+	display: none;
+}
+
+.vo-tabpage.vo-active {
+	display: block;
+}
+
+/* Formularelemente */
+.vo-select,
+.vo-input {
+	width: 100%;
+	box-sizing: border-box;
+	background: rgba(255, 255, 255, 0.07);
+	border: 1px solid rgba(255, 255, 255, 0.12);
+	color: #fff;
+	border-radius: 9px;
+	padding: 9px 10px;
+	font-size: 14px;
+	outline: none;
+}
+
+.vo-select:focus,
+.vo-input:focus {
+	border-color: #3a82f6;
+}
+
+.vo-select:disabled,
+.vo-input:disabled {
+	opacity: 0.5;
+	cursor: not-allowed;
+}
+
+.vo-select option {
+	background: #1c1c20;
+	color: #fff;
+}
+
+.vo-row {
+	display: flex;
+	align-items: center;
+	gap: 10px;
+}
+
+.vo-range {
+	flex: 1;
+	accent-color: #3a82f6;
+}
+
+.vo-range-val {
+	min-width: 38px;
+	text-align: right;
+	font-variant-numeric: tabular-nums;
+	color: #cfcfd6;
+}
+
+.vo-test {
+	margin-top: 12px;
+	width: 100%;
+	background: #3a82f6;
+	border: none;
+	color: #fff;
+	padding: 10px;
+	border-radius: 10px;
+	font-size: 14px;
+	font-weight: 600;
+	cursor: pointer;
+}
+
+.vo-test:hover {
+	background: #2f72e0;
+}
+
+.vo-test:disabled {
+	opacity: 0.5;
+	cursor: not-allowed;
+}
+
+.vo-help {
+	font-size: 12px;
+	color: #8a8a92;
+	margin-top: 6px;
+	line-height: 1.4;
+}
+
+.vo-status {
+	font-size: 13px;
+	margin-top: 10px;
+	min-height: 17px;
+}
+
+.vo-status.vo-ok {
+	color: #57c777;
+}
+.vo-status.vo-err {
+	color: #ee6a6a;
+}
+
+/* Pause-Button ------------------------------------------------------------ */
+
+/* Erbt Grundform von .vo-btn (40×40px wäre Standard — hier gleiche Größe
+   wie .vo-gear verwenden, damit er neben dem Lautsprecher nicht zu groß wirkt) */
+.vo-pause-btn {
+	width: 42px;
+	height: 42px;
+	border-radius: 50%;
+	order: 4; /* erscheint waehrend der Wiedergabe rechts neben dem Lautsprecher */
+}
+
+/* Zustand „pausiert": leicht blauer Akzent, damit erkennbar ist, dass
+   die Wiedergabe angehalten wurde und ein Klick sie fortsetzt */
+.vo-pause-btn.vo-paused {
+	background: rgba(58, 130, 246, 0.22);
+	box-shadow:
+		0 4px 14px rgba(58, 130, 246, 0.28),
+		0 0 0 1px rgba(58, 130, 246, 0.38) inset;
+}
+
+.vo-pause-btn.vo-paused:hover {
+	background: rgba(58, 130, 246, 0.34);
+}
+
+/* Fortschrittsbalken ------------------------------------------------------ */
+
+/* Schmale Leiste unterhalb der Button-Gruppe; volle Breite des Containers */
+.vo-progress-wrap {
+	width: 100%;
+	flex-basis: 100%; /* bricht unter die horizontale Button-Reihe um */
+	order: 5;
+	height: 5px;
+	border-radius: 3px;
+	background: rgba(255, 255, 255, 0.12);
+	overflow: hidden;
+}
+
+/* Die füllende Leiste; Breite wird per JS in % gesetzt */
+.vo-progress {
+	height: 100%;
+	width: 0%;
+	border-radius: 3px;
+	background: #3a82f6;
+	transition: width 0.2s ease;
+}
+
+/* Auto-Lese-Button (A) ----------------------------------------------------- */
+
+/* Erbt Grundform von .vo-btn. Etwas kleiner, ueber dem Lautsprecher. Der
+   Buchstabe A zeigt den Auto-Lese-Modus an. */
+.vo-auto-btn {
+	width: 42px;
+	height: 42px;
+	border-radius: 50%;
+	order: 2; /* Mitte: links neben dem Lautsprecher, gleiche Groesse */
+	display: flex;
+	align-items: center;
+	justify-content: center;
+}
+
+/* Das A ist jetzt ein SVG-Text, im viewBox-Mittelpunkt (12,12) verankert
+   (text-anchor=middle + dominant-baseline=central) -> exakt zentriert ohne
+   Pixel-Korrekturen. Das SVG selbst wird per flex im Kreis zentriert. */
+/* Spezifischer als `.vo-btn svg` (55%), damit die Groesse hier gilt. */
+.vo-auto-btn .vo-auto-letter {
+	width: 64%;
+	height: 64%;
+	pointer-events: none;
+}
+
+.vo-auto-letter text {
+	font-family:
+		-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+	font-size: 17px;
+	font-weight: 700;
+	fill: #ffffff;
+}
+
+/* Zustand „aktiv": der A-Button leuchtet, damit der Auto-Lese-Modus klar
+   erkennbar ist. */
+.vo-auto-btn.vo-active {
+	/* Gleiches Gruen wie der aktive Enter-/Gemini-Button der Overlays-Erweiterung */
+	background: #16a34a;
+	box-shadow:
+		0 4px 18px rgba(22, 163, 74, 0.5),
+		0 0 0 1px rgba(255, 255, 255, 0.22) inset;
+}
+
+.vo-auto-btn.vo-active:hover {
+	background: #15803d;
+}
+
+/* Haekchen-Viereck unter dem Zahnrad (Auto-Vorlesen an/aus) ---------------- */
+
+/* Erbt Grundform von .vo-btn, ist aber bewusst ECKIG (ein Viereck) und etwas
+   kleiner — sieht aus wie ein Kontrollkaestchen. */
+.vo-autospeak-box {
+	width: 28px;
+	height: 28px;
+	border-radius: 7px;
+	order: 1; /* ganz links, deutlich kleiner als A und Lautsprecher */
+}
+
+/* Der Haken ist nur sichtbar, wenn das Kaestchen aktiv ist. */
+.vo-autospeak-check {
+	font-size: 18px;
+	font-weight: 700;
+	line-height: 1;
+	color: #ffffff;
+	opacity: 0;
+	pointer-events: none;
+	transition: opacity 0.12s ease;
+}
+
+/* Aktiv: gruener Hintergrund + sichtbarer Haken. */
+.vo-autospeak-box.vo-checked {
+	background: rgba(60, 190, 110, 0.95);
+	box-shadow:
+		0 4px 14px rgba(60, 190, 110, 0.4),
+		0 0 0 1px rgba(255, 255, 255, 0.22) inset;
+}
+
+.vo-autospeak-box.vo-checked .vo-autospeak-check {
+	opacity: 1;
+}
+
+.vo-autospeak-box.vo-checked:hover {
+	background: rgba(60, 190, 110, 1);
+}
+
+/* Aktualisieren-Button im Panel ------------------------------------------- */
+
+.vo-reload {
+	width: 100%;
+	background: rgba(255, 255, 255, 0.08);
+	border: 1px solid rgba(255, 255, 255, 0.16);
+	color: #fff;
+	padding: 10px;
+	border-radius: 10px;
+	font-size: 14px;
+	font-weight: 600;
+	cursor: pointer;
+	transition: background 0.15s ease;
+}
+
+.vo-reload:hover {
+	background: rgba(255, 255, 255, 0.16);
+}
+
+.vo-reload:disabled {
+	opacity: 0.6;
+	cursor: not-allowed;
+}
+
+/* Haekchen-Zeile (automatisch vorlesen) ----------------------------------- */
+
+.vo-check-row {
+	display: flex;
+	align-items: center;
+	gap: 10px;
+	cursor: pointer;
+	font-size: 14px;
+	color: #f2f2f5;
+}
+
+.vo-check {
+	width: 18px;
+	height: 18px;
+	flex: 0 0 auto;
+	accent-color: #3a82f6;
+	cursor: pointer;
+}
+
+/* Stern-Button fuer Lieblings-Stimmen ------------------------------------- */
+
+/* Die Stimmen-Zeile ist ein Flex-Row: das Dropdown nimmt den Platz, der Stern
+   sitzt rechts daneben mit fester Groesse. */
+.vo-row .vo-select {
+	flex: 1;
+	width: auto;
+	min-width: 0;
+}
+
+.vo-star {
+	flex: 0 0 auto;
+	width: 38px;
+	height: 38px;
+	border-radius: 9px;
+	border: 1px solid rgba(255, 255, 255, 0.12);
+	background: rgba(255, 255, 255, 0.07);
+	color: #cfcfd6;
+	font-size: 20px;
+	line-height: 1;
+	cursor: pointer;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	transition:
+		background 0.15s ease,
+		color 0.15s ease;
+}
+
+.vo-star:hover {
+	background: rgba(255, 255, 255, 0.16);
+}
+
+/* Aktiver Stern: golden hervorgehoben */
+.vo-star.vo-star-on {
+	color: #ffcc33;
+	border-color: rgba(255, 204, 51, 0.5);
+	background: rgba(255, 204, 51, 0.12);
+}

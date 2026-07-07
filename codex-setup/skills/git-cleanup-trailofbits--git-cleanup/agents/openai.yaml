@@ -1,0 +1,7 @@
+interface:
+  display_name: "git-cleanup"
+  short_description: "Safely analyzes and cleans up local git branches and worktrees"
+  default_prompt: "Use $git-cleanup-trailofbits--git-cleanup for this task."
+
+policy:
+  allow_implicit_invocation: false

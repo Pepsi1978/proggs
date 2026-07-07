@@ -1,0 +1,210 @@
+{
+  "corruptByLocale": {
+    "gu": [
+      {
+        "key": "legend_in_progress_range",
+        "text": "ચાલુ (34–66%)",
+        "reason": "nur 2 Buchstaben"
+      }
+    ],
+    "ja": [
+      {
+        "key": "settings_weekly_review_off",
+        "text": "日曜15:00",
+        "reason": "nur 2 Buchstaben"
+      },
+      {
+        "key": "retro_at_a_glance",
+        "text": "一目で",
+        "reason": "extrem kurz"
+      },
+      {
+        "key": "retro_at_a_glance_colon",
+        "text": "一目で：",
+        "reason": "extrem kurz"
+      }
+    ],
+    "ko": [
+      {
+        "key": "retro_at_a_glance",
+        "text": "한눈에",
+        "reason": "extrem kurz"
+      },
+      {
+        "key": "retro_at_a_glance_colon",
+        "text": "한눈에:",
+        "reason": "extrem kurz"
+      },
+      {
+        "key": "churn_are_you_sure",
+        "text": "정말요?",
+        "reason": "extrem kurz"
+      }
+    ],
+    "zh-rCN": [
+      {
+        "key": "journal_daily_prompt",
+        "text": "今日引子",
+        "reason": "extrem kurz"
+      },
+      {
+        "key": "settings_sounds_on",
+        "text": "声音已开",
+        "reason": "extrem kurz"
+      },
+      {
+        "key": "settings_sounds_off",
+        "text": "声音已关",
+        "reason": "extrem kurz"
+      },
+      {
+        "key": "settings_tts_on",
+        "text": "朗读已开",
+        "reason": "extrem kurz"
+      },
+      {
+        "key": "settings_tts_off",
+        "text": "朗读已关",
+        "reason": "extrem kurz"
+      },
+      {
+        "key": "settings_weekly_review_off",
+        "text": "周日 15:00",
+        "reason": "nur 2 Buchstaben"
+      },
+      {
+        "key": "settings_crisis_call_de",
+        "text": "拨打 0800 111 0 111",
+        "reason": "nur 2 Buchstaben"
+      },
+      {
+        "key": "settings_crisis_call_de_alt",
+        "text": "拨打 0800 111 0 222",
+        "reason": "nur 2 Buchstaben"
+      },
+      {
+        "key": "retro_cd_info",
+        "text": "关于回顾",
+        "reason": "extrem kurz"
+      },
+      {
+        "key": "retro_at_a_glance",
+        "text": "一目了然",
+        "reason": "extrem kurz"
+      },
+      {
+        "key": "onboarding_how_step3_title",
+        "text": "添加照片",
+        "reason": "extrem kurz"
+      },
+      {
+        "key": "paywall_headline_clarity",
+        "text": "更懂自己",
+        "reason": "extrem kurz"
+      },
+      {
+        "key": "churn_reason_unused",
+        "text": "用得不多",
+        "reason": "extrem kurz"
+      },
+      {
+        "key": "churn_exclusive_offer",
+        "text": "专属优惠",
+        "reason": "extrem kurz"
+      },
+      {
+        "key": "churn_are_you_sure",
+        "text": "确定吗？",
+        "reason": "extrem kurz"
+      },
+      {
+        "key": "follow_up_recording_hint",
+        "text": "点按录音",
+        "reason": "extrem kurz"
+      }
+    ],
+    "zh-rTW": [
+      {
+        "key": "journal_daily_prompt",
+        "text": "今日引子",
+        "reason": "extrem kurz"
+      },
+      {
+        "key": "settings_sounds_on",
+        "text": "聲音已開",
+        "reason": "extrem kurz"
+      },
+      {
+        "key": "settings_sounds_off",
+        "text": "聲音已關",
+        "reason": "extrem kurz"
+      },
+      {
+        "key": "settings_tts_on",
+        "text": "朗讀已開",
+        "reason": "extrem kurz"
+      },
+      {
+        "key": "settings_tts_off",
+        "text": "朗讀已關",
+        "reason": "extrem kurz"
+      },
+      {
+        "key": "settings_weekly_review_off",
+        "text": "週日 15:00",
+        "reason": "nur 2 Buchstaben"
+      },
+      {
+        "key": "settings_crisis_call_de",
+        "text": "撥打 0800 111 0 111",
+        "reason": "nur 2 Buchstaben"
+      },
+      {
+        "key": "settings_crisis_call_de_alt",
+        "text": "撥打 0800 111 0 222",
+        "reason": "nur 2 Buchstaben"
+      },
+      {
+        "key": "retro_cd_info",
+        "text": "關於回顧",
+        "reason": "extrem kurz"
+      },
+      {
+        "key": "retro_at_a_glance",
+        "text": "一目瞭然",
+        "reason": "extrem kurz"
+      },
+      {
+        "key": "onboarding_how_step3_title",
+        "text": "新增照片",
+        "reason": "extrem kurz"
+      },
+      {
+        "key": "paywall_headline_clarity",
+        "text": "更懂自己",
+        "reason": "extrem kurz"
+      },
+      {
+        "key": "churn_reason_unused",
+        "text": "用得不多",
+        "reason": "extrem kurz"
+      },
+      {
+        "key": "churn_exclusive_offer",
+        "text": "專屬優惠",
+        "reason": "extrem kurz"
+      },
+      {
+        "key": "churn_are_you_sure",
+        "text": "確定嗎？",
+        "reason": "extrem kurz"
+      },
+      {
+        "key": "follow_up_recording_hint",
+        "text": "點按錄音",
+        "reason": "extrem kurz"
+      }
+    ]
+  },
+  "total": 39
+}

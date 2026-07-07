@@ -1,0 +1,97 @@
+{
+ "identicalSummary": {
+  "gu": {
+   "total": 33,
+   "jsonKey": 27,
+   "legitToken": [
+    "achievements_title",
+    "consent_footer_link_impressum",
+    "consent_info_system_backup_title",
+    "label_premium",
+    "settings_about_version",
+    "settings_premium_section"
+   ],
+   "realUntranslated": []
+  },
+  "kn": {
+   "total": 3,
+   "jsonKey": 0,
+   "legitToken": [
+    "label_premium",
+    "settings_about_version",
+    "settings_premium_section"
+   ],
+   "realUntranslated": []
+  },
+  "ml": {
+   "total": 32,
+   "jsonKey": 27,
+   "legitToken": [
+    "achievements_title",
+    "consent_footer_link_impressum",
+    "label_premium",
+    "settings_about_version",
+    "settings_premium_section"
+   ],
+   "realUntranslated": []
+  }
+ },
+ "placeholderIssues": {
+  "gu": [],
+  "kn": [],
+  "ml": []
+ },
+ "randomSampleKeys": {
+  "gu": [
+   "dashboard_loading_auto_update",
+   "journal_achievement_unlocked",
+   "consent_btn_accept_all",
+   "paywall_exit_bonus_days",
+   "action_send",
+   "urgency_low",
+   "dashboard_inner_mirror",
+   "follow_up_premium_subscribe",
+   "onboarding_how_title",
+   "journal_speak",
+   "journal_save",
+   "dashboard_title",
+   "settings_feedback_allow_gmail",
+   "toggle_voice_on",
+   "profile_style_chronicler"
+  ],
+  "kn": [
+   "journal_drive_uploading",
+   "settings_premium_desc",
+   "onboarding_start_free",
+   "settings_feedback_read_error",
+   "churn_promo_months_remaining",
+   "consent_details_expand",
+   "action_discard",
+   "profile_goals_long",
+   "onboarding_perspectives_title",
+   "ai_retro_month_task",
+   "profile_summary_desc",
+   "settings_feedback_send",
+   "ai_retro_week_intro",
+   "dashboard_inner_mirror",
+   "error_recording_failed"
+  ],
+  "ml": [
+   "retro_at_a_glance",
+   "dashboard_gemini_unavailable",
+   "ai_prompt_custom_intro",
+   "ai_retro_year_rules",
+   "consent_promise_no_training",
+   "journal_rate_limit",
+   "churn_accept_offer",
+   "legend_progress_range",
+   "retro_yearly_subtitle",
+   "follow_up_dialog_label",
+   "settings_delete_account_in_progress",
+   "ai_prompt_rerank_system",
+   "biometric_subtitle",
+   "entry_photos_videos_add_title",
+   "journal_state_transcribing"
+  ]
+ }
+}

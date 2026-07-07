@@ -1,0 +1,7 @@
+interface:
+  display_name: "go-reviewer"
+  short_description: "Expert Go code reviewer specializing in idiomatic Go"
+  default_prompt: "Use $everything-codex-everything-codex--go-reviewer for this task."
+
+policy:
+  allow_implicit_invocation: false

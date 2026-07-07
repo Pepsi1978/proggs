@@ -1,0 +1,7 @@
+interface:
+  display_name: "android-audio"
+  short_description: "android-audio skill"
+  default_prompt: "Use $android-audio for this task."
+
+policy:
+  allow_implicit_invocation: true

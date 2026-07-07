@@ -1,0 +1,7 @@
+interface:
+  display_name: "instinct-import"
+  short_description: "Import instincts from file or URL into project/global scope"
+  default_prompt: "Use $everything-codex-everything-codex--instinct-import for this task."
+
+policy:
+  allow_implicit_invocation: false

@@ -1,0 +1,107 @@
+{
+	"_comment": "Kuratierte Ergaenzung zur LIVE-OpenRouter-Sortierung. Das Startmenue holt Kontext/Preis/Tool-Support/Benchmarks (coding_index, agentic_index) LIVE von der OpenRouter-API. Diese Datei steuert nur (1) die Eignungs-Einschaetzung pro Anbieter-Familie fuer Claude Code (steht in keinem Benchmark), (2) die Kategorie-Texte fuer Liste 2, (3) Anzeige-Einstellungen. Aenderbar ohne Programmierkenntnisse.",
+	"version": 2,
+	"updated": "2026-06-17",
+
+	"settings": {
+		"codingSortPrimary": "agentic_index",
+		"codingSortSecondary": "coding_index",
+		"codingMaxRows": 25,
+		"requireToolsForCoding": true,
+		"pinAnthropicTop": false,
+		"defaultModelSlug": "~anthropic/claude-opus-latest"
+	},
+
+	"compatibility": {
+		"anthropic/": {
+			"rating": "A+",
+			"note": "Nativ gebaut. Werkzeuge, Subagenten, Hooks, MCP, Skills laufen perfekt (wie dein Opus-Abo)."
+		},
+		"openai/": {
+			"rating": "A-",
+			"note": "Sehr stark, Werkzeug-Aufrufe zuverlaessig."
+		},
+		"google/": {
+			"rating": "B+",
+			"note": "Gut + riesiger Kontext; sehr lange Sessions koennen mal zicken."
+		},
+		"deepseek/": {
+			"rating": "B+",
+			"note": "Bestes Preis-Leistung. Werkzeuge brauchbar, ideal fuer Routine-Coding."
+		},
+		"x-ai/": { "rating": "B", "note": "Grok: solide, Werkzeuge meist ok." },
+		"moonshotai/": {
+			"rating": "B",
+			"note": "Kimi: stark im Coding, Werkzeuge brauchbar."
+		},
+		"qwen/": {
+			"rating": "B",
+			"note": "Qwen-Coder: gut + guenstig, Werkzeuge meist ok."
+		},
+		"z-ai/": {
+			"rating": "B",
+			"note": "GLM-Reihe: solides Coding, Werkzeuge brauchbar."
+		},
+		"mistralai/": {
+			"rating": "B-",
+			"note": "Codestral: schnell fuer Autocomplete/kurze Tasks."
+		},
+		"minimax/": {
+			"rating": "B-",
+			"note": "Brauchbar; Werkzeug-Verhalten variabel."
+		},
+		"meta-llama/": {
+			"rating": "C+",
+			"note": "Werkzeug-Aufrufe variabel — eher experimentell in Claude Code."
+		}
+	},
+	"compatibilityDefault": {
+		"rating": "C",
+		"note": "Unbekannte Eignung in Claude Code — experimentell. Werkzeug-Verhalten vor produktiver Nutzung testen."
+	},
+
+	"categories": [
+		{
+			"key": "coding",
+			"name": "Programmieren & Terminal (Tools/Agenten)",
+			"blurb": "Code schreiben, Refactoren, Terminal-Arbeit mit Werkzeugen. IN CLAUDE CODE STARTBAR.",
+			"startable": true
+		},
+		{
+			"key": "reasoning",
+			"name": "Tiefes Nachdenken / Planen",
+			"blurb": "Reasoning-Modelle fuer schwierige Logik, Architektur, Planung.",
+			"startable": true
+		},
+		{
+			"key": "longcontext",
+			"name": "Sehr grosser Kontext",
+			"blurb": "Ganze Codebasen / lange Dokumente am Stueck (>= 400K Token).",
+			"startable": true
+		},
+		{
+			"key": "cheap",
+			"name": "Guenstig & Kostenlos",
+			"blurb": "Sparmodelle und :free-Varianten fuer Routine. Free hat strenge Limits.",
+			"startable": true
+		},
+		{
+			"key": "vision",
+			"name": "Bilder verstehen (Input)",
+			"blurb": "Screenshots/Diagramme als Eingabe lesen. In Claude Code nur begrenzt nuetzlich.",
+			"startable": true
+		},
+		{
+			"key": "multimodal",
+			"name": "Multimodal (Datei/Audio-Input)",
+			"blurb": "Modelle, die Dateien oder Audio als Eingabe verarbeiten.",
+			"startable": true
+		},
+		{
+			"key": "imagegen",
+			"name": "Bild-Erzeugung",
+			"blurb": "Erzeugen Bilder. NICHT in Claude Code startbar — nur zur Info.",
+			"startable": false
+		}
+	]
+}

@@ -1,0 +1,7 @@
+interface:
+  display_name: "skill-reviewer"
+  short_description: "Review existing Codex skills for structure, triggering quality"
+  default_prompt: "Use $plugin-dev-codex-plugins-official--skill-reviewer for this task."
+
+policy:
+  allow_implicit_invocation: false

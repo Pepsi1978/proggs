@@ -1,0 +1,7 @@
+interface:
+  display_name: "customaize-agent:thought-based-reasoning"
+  short_description: "tackling complex reasoning tasks requiring step-by-step logic"
+  default_prompt: "Use $customaize-agent-context-engineering-kit--customaize-agent-thought-based-reasoning for this task."
+
+policy:
+  allow_implicit_invocation: false

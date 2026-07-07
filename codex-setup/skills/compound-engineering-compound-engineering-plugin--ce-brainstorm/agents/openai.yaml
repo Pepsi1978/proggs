@@ -1,0 +1,7 @@
+interface:
+  display_name: "ce:brainstorm"
+  short_description: "Explore requirements and approaches through collaborative"
+  default_prompt: "Use $compound-engineering-compound-engineering-plugin--ce-brainstorm for this task."
+
+policy:
+  allow_implicit_invocation: false

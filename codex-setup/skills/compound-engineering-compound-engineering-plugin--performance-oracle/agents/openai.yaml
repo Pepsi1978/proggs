@@ -1,0 +1,7 @@
+interface:
+  display_name: "performance-oracle"
+  short_description: "Analyzes code for performance bottlenecks, algorithmic"
+  default_prompt: "Use $compound-engineering-compound-engineering-plugin--performance-oracle for this task."
+
+policy:
+  allow_implicit_invocation: false

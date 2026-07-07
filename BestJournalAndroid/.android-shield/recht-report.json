@@ -1,0 +1,1604 @@
+{
+  "mode": "default",
+  "generatedAt": "2026-06-10T20:04:41Z",
+  "auditedLanguages": [
+    "de",
+    "ar",
+    "bn",
+    "en",
+    "es",
+    "fr",
+    "gu",
+    "hi",
+    "in",
+    "it",
+    "ja",
+    "kn",
+    "ko",
+    "ml",
+    "mr",
+    "nl",
+    "pl",
+    "pt-rBR",
+    "pt-rPT",
+    "ta",
+    "te",
+    "th",
+    "tr",
+    "uk",
+    "ur",
+    "zh-rCN",
+    "zh-rTW"
+  ],
+  "auditedJurisdictions": [
+    "DE/EU",
+    "UK",
+    "US/CA(CCPA)",
+    "Play-Store-global (ohne RU/CN-Mainland)"
+  ],
+  "findings": {
+    "textual": [
+      {
+        "findingId": "C1",
+        "riskLevel": "🟧",
+        "category": "DSGVO",
+        "language": "de",
+        "jurisdiction": "DE/EU",
+        "file": "app/src/main/res/values/strings.xml",
+        "line": 670,
+        "currentText": "Firebase Analytics — hilft uns die App zu verbessern. Keine persönlichen Inhalte, nur anonyme Klick-Zahlen. Datenübertragung: Google USA (Data Privacy Framework).",
+        "context": "LIVE-String. consent_toggle_analytics_title='Anonyme Nutzungsanalyse' (Z.670) + consent_toggle_analytics_body (Z.671) werden im PrivacyPreferencesSheet (ConsentScreen + Settings) gerendert. settings_analytics_title='Anonyme Statistik' (Z.728) gleiche Aussage. Der Begriff 'anonym' wird systematisch fuer Firebase Analytics verwendet.",
+        "rationale": "Firebase Analytics erhebt eine App-Instance-ID sowie Geraete-/Nutzungssignale; das sind nach EDSA/DSK pseudonyme, NICHT anonyme Daten (echte Anonymisierung = nicht re-identifizierbar, dann waere keine Einwilligung noetig). Die Bezeichnung 'anonym' / 'anonyme Klick-Zahlen' ist datenschutzrechtlich angreifbar und kann als irrefuehrende geschaeftliche Handlung (§5 UWG) sowie unzutreffende Transparenzangabe (Art. 13 DSGVO) gewertet werden. Abmahnrisiko, weil 'anonym' Tracking verharmlost.",
+        "invasivityLevel": "text-only",
+        "suggestedFixes": [
+          {
+            "text": "Firebase Analytics — hilft uns die App zu verbessern. Keine Tagebuchinhalte, nur pseudonyme Nutzungsstatistiken (z. B. Klick-Zahlen). Datenübertragung: Google USA (Data Privacy Framework).",
+            "lengthDeltaPct": 4,
+            "rationale": "'anonym'→'pseudonym', 'persönliche Inhalte'→'Tagebuchinhalte' (praeziser). Rechtlich korrekt, gleiche Laenge.",
+            "stillSafe": true
+          },
+          {
+            "text": "Firebase Analytics — hilft uns, die App zu verbessern. Es werden keine Tagebuchinhalte erfasst, nur pseudonyme Ereignis-Zahlen (Klicks, geöffnete Bildschirme). Übertragung an Google in den USA (EU-US Data Privacy Framework).",
+            "lengthDeltaPct": 22,
+            "rationale": "Ausfuehrlichere, voll korrekte Variante mit Beispielen.",
+            "stillSafe": true
+          },
+          {
+            "text": "Firebase Analytics zur Produktverbesserung. Keine Tagebuchinhalte; nur pseudonyme Nutzungszahlen. Datenübertragung: Google USA (Data Privacy Framework).",
+            "lengthDeltaPct": -8,
+            "rationale": "Kuerzeste korrekte Variante.",
+            "stillSafe": true
+          }
+        ],
+        "impactWithoutFix": "Werbe-/Transparenzaussage 'anonym' ist unzutreffend; Abmahnrisiko (UWG §5) + DSGVO-Transparenzmangel (Art. 13). Mit dem Wort 'pseudonym' rechtssicher und konsistent zur (korrekten) DE-Datenschutzerklaerung."
+      },
+      {
+        "findingId": "C2",
+        "riskLevel": "🟧",
+        "category": "DSGVO",
+        "language": "de",
+        "jurisdiction": "DE/EU",
+        "file": "app/src/main/res/values/strings.xml",
+        "line": 670,
+        "currentText": "Anonyme Nutzungsanalyse",
+        "context": "Titel im LIVE PrivacyPreferencesSheet (consent_toggle_analytics_title, Z.670). Schwester-Strings: settings_analytics_title='Anonyme Statistik' (Z.728), consent_card3_title='Anonyme Statistiken' (Z.615, allerdings dead code). Gleicher 'anonym'-Begriff fuer pseudonymes Firebase Analytics.",
+        "rationale": "Wie C1: 'anonym' fuer Firebase Analytics ist datenschutzrechtlich falsch (pseudonym). Als Toggle-/Settings-Titel besonders sichtbar. §5 UWG + Art. 13 DSGVO. Systematischer Fund ueber mehrere Titel-Strings — sollten konsistent gefixt werden (auch settings_analytics_title Z.728).",
+        "invasivityLevel": "text-only",
+        "suggestedFixes": [
+          {
+            "text": "Pseudonyme Nutzungsanalyse",
+            "lengthDeltaPct": 8,
+            "rationale": "Direkter, rechtssicherer Ersatz; gleiche Bedeutung.",
+            "stillSafe": true
+          },
+          {
+            "text": "Nutzungsstatistik",
+            "lengthDeltaPct": -28,
+            "rationale": "Neutral, vermeidet die anonym/pseudonym-Frage ganz; kuerzer.",
+            "stillSafe": true
+          },
+          {
+            "text": "Anonymisierte Nutzungsanalyse",
+            "lengthDeltaPct": 16,
+            "rationale": "NUR zulaessig falls Google-Konfiguration IP-Anonymisierung + keine User-ID nutzt — sonst NICHT verwenden. Im Zweifel Variante 1/2.",
+            "stillSafe": false
+          }
+        ],
+        "impactWithoutFix": "Toggle-Titel 'Anonyme Nutzungsanalyse'/'Anonyme Statistik' verharmlost Tracking; gleiche Abmahn-/Transparenz-Risiken wie C1. Beide Titel-Strings (Z.670 + Z.728) angleichen."
+      },
+      {
+        "findingId": "C3",
+        "riskLevel": "🟨",
+        "category": "DSGVO",
+        "language": "de",
+        "jurisdiction": "DE/EU",
+        "file": "app/src/main/res/values/strings.xml",
+        "line": 1061,
+        "currentText": "Deine Daten sind lokal gespeichert, KI-Anfragen sind verschlüsselt",
+        "context": "LIVE in OnboardingScreen.kt:308 (stringResource(R.string.onboarding_feature_secure)). Pauschale Lokal-Aussage als Onboarding-Feature-Highlight. Realitaet: bei aktiven Cloud-Funktionen (Gemini, Groq, Edge-TTS, Drive-Backup) verlassen Texte/Audio das Geraet (USA). Die DE-Datenschutzerklaerung stellt das korrekt dar; nur dieser plakative Onboarding-Claim steht ohne Einschraenkung.",
+        "rationale": "Art. 5 Abs. 1 lit. a / Art. 13 DSGVO (Transparenz) + §5 UWG: 'Deine Daten sind lokal gespeichert' ist als unbedingte Aussage unvollstaendig, weil optionale Cloud-Funktionen Daten in die USA senden. 'lokal' stimmt fuer den Speicher-Default, aber der Verarbeitungsfluss (KI/TTS/Cloud-Backup) wird im selben Satz nicht relativiert. Niedrig-mittel, da Onboarding kein Vertrags-/Einwilligungskontext ist und die echte Einwilligung separat granular eingeholt wird.",
+        "invasivityLevel": "text-only",
+        "suggestedFixes": [
+          {
+            "text": "Deine Einträge liegen standardmäßig auf deinem Gerät. Cloud-Funktionen (KI, Vorlesen, Backup) sind optional und verschlüsselt.",
+            "lengthDeltaPct": 30,
+            "rationale": "Macht 'standardmaessig lokal' + 'optionale Cloud' transparent. Voll korrekt.",
+            "stillSafe": true
+          },
+          {
+            "text": "Standardmäßig lokal gespeichert — Cloud-Funktionen nutzt du nur, wenn du sie aktivierst.",
+            "lengthDeltaPct": -2,
+            "rationale": "Kurz, betont Opt-in, gleiche Laenge.",
+            "stillSafe": true
+          },
+          {
+            "text": "Deine Daten bleiben auf dem Gerät, solange du keine Cloud-Funktion aktivierst; Übertragungen sind verschlüsselt.",
+            "lengthDeltaPct": 18,
+            "rationale": "Bedingte Lokal-Aussage, rechtssicher.",
+            "stillSafe": true
+          }
+        ],
+        "impactWithoutFix": "Plakativer Onboarding-Claim koennte als irrefuehrend gelten, wenn Nutzer ihn als absolute Garantie liest. Geringes, aber vermeidbares Restrisiko; mit Relativierung deckungsgleich zur korrekten Datenschutzerklaerung."
+      },
+      {
+        "findingId": "C4",
+        "riskLevel": "🟨",
+        "category": "DSGVO",
+        "language": "de",
+        "jurisdiction": "DE/EU",
+        "file": "app/src/main/res/values/strings.xml",
+        "line": 630,
+        "currentText": "Mit den Premium-Stimmen klingt das Vorlesen natürlicher und angenehmer. Dein Text wird verschlüsselt an Microsoft gesendet und als Audio zurückgegeben.\\n\\n✓ Kein KI-Training mit deinen Texten\\n✓ Verschlüsselt nach EU-US Data Privacy Framework",
+        "context": "privacy_gate_tts_body — Pre-Usage-Gate vor Microsoft-Edge-TTS-Transfer. Tatsachenbehauptungen ueber einen Dritten: 'Kein KI-Training mit deinen Texten' + 'nach EU-US Data Privacy Framework'. Laut Roentgen nutzt EdgeTtsPlayer.kt den oeffentlichen/inoffiziellen Endpunkt wss://speech.platform.bing.com OHNE formelles DPA/Vertrag mit Microsoft.",
+        "rationale": "Art. 28/44 ff. DSGVO + §5 UWG: Eine 'Kein KI-Training'- und 'DPF'-Zusage ueber Microsoft ist nur haltbar, wenn ein Auftragsverarbeitungs-/Nutzungsvertrag das tatsaechlich zusichert. Beim inoffiziellen Bing-Edge-TTS-Endpunkt existiert typischerweise KEIN solcher Vertrag — die Zusage ueber den Dritten ist dann nicht belegbar (Tatsachenbehauptung ins Blaue). Zusaetzlich AVV-Luecke (Art. 28). needs-clarification: Frank/Anwalt muss klaeren, ob ein nutzbarer MS-Dienst mit DPA verwendet wird oder auf eine offizielle Azure-Speech-Ressource (mit DPA) gewechselt wird.",
+        "invasivityLevel": "text-only",
+        "suggestedFixes": [
+          {
+            "text": "Mit den Premium-Stimmen klingt das Vorlesen natürlicher. Dein Text wird verschlüsselt (HTTPS/TLS) an einen Microsoft-Sprachdienst in den USA gesendet und als Audio zurückgegeben.\\n\\n✓ Übertragung ausschließlich zur Sprachsynthese\\n✓ Drittlandübermittlung USA (Microsoft ist nach dem EU-US Data Privacy Framework zertifiziert)",
+            "lengthDeltaPct": 26,
+            "rationale": "Entfernt die unbelegbare 'Kein KI-Training'-Zusage; stellt nur Verschluesselung + Zweck + DPF-Zertifizierung des Anbieters dar (verifizierbar). Rechtssicher ohne Tatsachenbehauptung ueber MS-Trainingsverhalten.",
+            "stillSafe": true
+          },
+          {
+            "text": "Premium-Stimmen lassen das Vorlesen natürlicher klingen. Dein Text wird verschlüsselt an Microsoft (USA) gesendet und als Audio zurückgegeben.\\n\\n✓ Laut Microsoft kein Training mit Kundentexten\\n✓ Drittlandübermittlung USA (EU-US Data Privacy Framework)",
+            "lengthDeltaPct": 8,
+            "rationale": "Behaelt No-Training-Aussage, aber als zugeschriebene Aussage ('Laut Microsoft') — nur zulaessig, wenn ein nutzbarer MS-Dienst mit entsprechendem DPA verwendet wird.",
+            "stillSafe": false
+          },
+          {
+            "text": "Premium-Stimmen für natürlicheres Vorlesen. Der Text wird zur Sprachsynthese verschlüsselt an Microsoft (USA, EU-US Data Privacy Framework) übermittelt. Datenschutzfreundliche Alternative: die Standardstimme deines Geräts (offline).",
+            "lengthDeltaPct": 14,
+            "rationale": "Bietet zusaetzlich die lokale Alternative an (Datenminimierung, Art. 5/25).",
+            "stillSafe": true
+          }
+        ],
+        "impactWithoutFix": "Falls kein MS-Vertrag besteht, sind 'Kein KI-Training' und die DPF-Zusage ueber den inoffiziellen Bing-Endpunkt nicht belegbar → UWG-§5-Risiko + Art.-28-Luecke. Variante 1 entfernt die riskante Zusage und bleibt korrekt. ENTSCHEIDUNG durch Frank/Anwalt noetig (needs-clarification)."
+      },
+      {
+        "findingId": "C5",
+        "riskLevel": "🟨",
+        "category": "DSGVO",
+        "language": "de",
+        "jurisdiction": "DE/EU",
+        "file": "app/src/main/AndroidManifest.xml",
+        "line": 19,
+        "currentText": "<application ...> (keine <meta-data android:name=\"firebase_analytics_collection_enabled\" android:value=\"false\"/>)",
+        "context": "BestJournalApp.onCreate() ruft FirebaseAnalytics.setAnalyticsCollectionEnabled(false) zur Laufzeit auf (Default PREF_ANALYTICS_ENABLED=false) BEVOR andere Firebase-Calls laufen — gute Laufzeit-Opt-out-Logik. Im Manifest fehlt jedoch das statische meta-data-Flag, das die Collection bereits beim SDK-Init (vor Ausfuehrung von onCreate-Code) unterbindet.",
+        "rationale": "§25 TDDDG / Art. 6 DSGVO: Firebase Analytics ist standardmaessig aktiviert. Der Laufzeit-Aufruf in onCreate ist zwar frueh, aber das Firebase-SDK initialisiert teils ueber den ContentProvider 'FirebaseInitProvider' VOR Application.onCreate — es kann ein kurzes Fenster geben, in dem das SDK als 'enabled' gilt, bevor der Code greift. Das statische Flag firebase_analytics_collection_enabled=false (+ optional google_analytics_default_allow_analytics_storage=false) schliesst dieses Fenster konzeptionell (Poka-Yoke Stufe 3). Niedrig, weil eine Laufzeit-Absicherung existiert; aber sauberer Consent-by-default verlangt das Manifest-Flag.",
+        "invasivityLevel": "function-required",
+        "suggestedFixes": [
+          {
+            "text": "Im <application>-Block ergaenzen: <meta-data android:name=\"firebase_analytics_collection_enabled\" android:value=\"false\" /> und <meta-data android:name=\"firebase_analytics_collection_deactivated\" android:value=\"true\" /> — dann wird Analytics erst durch den expliziten setAnalyticsCollectionEnabled(true)-Aufruf nach Einwilligung aktiv.",
+            "lengthDeltaPct": 0,
+            "rationale": "Standard-Firebase-Mechanismus fuer consent-by-default; ergaenzt (ersetzt nicht) die bestehende Laufzeit-Logik. KEIN Funktionsverlust: bei Einwilligung schaltet der Code Analytics weiterhin ein.",
+            "stillSafe": true
+          },
+          {
+            "text": "Alternativ nur firebase_analytics_collection_enabled=false setzen (minimaler Eingriff) und im Consent-Pfad setAnalyticsCollectionEnabled(true) beibehalten.",
+            "lengthDeltaPct": 0,
+            "rationale": "Minimalvariante; deckt das SDK-Init-Fenster ab.",
+            "stillSafe": true
+          },
+          {
+            "text": "Falls Default-Aktivierung bewusst gewuenscht: in der Datenschutzerklaerung das kurze Init-Fenster transparent machen — schwaecher als das Flag, daher nur Fallback.",
+            "lengthDeltaPct": 0,
+            "rationale": "Nur Transparenz statt Praevention; rechtlich schwaecher als Variante 1/2.",
+            "stillSafe": false
+          }
+        ],
+        "impactWithoutFix": "Kurzes SDK-Init-Fenster, in dem Analytics theoretisch vor dem Laufzeit-Opt-out aktiv sein koennte → §25-TDDDG-Restrisiko. Mit dem Manifest-Flag ist Consent-by-default lueckenlos (Poka-Yoke)."
+      },
+      {
+        "findingId": "C6",
+        "riskLevel": "🟨",
+        "category": "DSGVO",
+        "language": "de",
+        "jurisdiction": "DE/EU",
+        "file": "app/src/main/java/com/bestjournal/app/.../PdfExporter.kt (Settings -> PDF-Export, premium-gated)",
+        "line": 0,
+        "currentText": "PDF-Export ist Premium-Feature (paywall_feature_pdf); kein kostenfreier Daten-Export (kein JSON).",
+        "context": "Roentgen: dataExport.premiumGated=true. Datenexport/Portabilitaet nur fuer zahlende Nutzer. Lokale Daten sind dem Nutzer ohnehin zugaenglich (In-App-Ansicht) und das Drive-Backup liegt im eigenen Konto.",
+        "rationale": "Art. 15 (Auskunft) und Art. 12 Abs. 5 DSGVO verlangen, dass Betroffenenrechte grundsaetzlich UNENTGELTLICH ausgeuebt werden koennen. Art. 20 (Portabilitaet) verlangt ein 'strukturiertes, gaengiges, maschinenlesbares Format' — ein PDF ist dafuer nur eingeschraenkt geeignet (eher menschen- als maschinenlesbar). Daten liegen lokal/eigenes Drive, daher ist der Verantwortlichen-Pflichtumfang begrenzt; dennoch sollte ein einfacher, kostenfreier Export-/Auskunftsweg existieren. Niedrig, da kein klassischer Server-Datenbestand beim Verantwortlichen liegt.",
+        "invasivityLevel": "function-required",
+        "suggestedFixes": [
+          {
+            "text": "Einen kostenfreien Basis-Export anbieten (z. B. einfacher Text-/Markdown- oder JSON-Export der eigenen Eintraege), waehrend der komfortable, formatierte PDF-Export Premium bleibt.",
+            "lengthDeltaPct": 0,
+            "rationale": "Erfuellt Art. 15/20 unentgeltlich; Premium-PDF bleibt als Komfort-Feature erhalten (kein Funktionsverlust).",
+            "stillSafe": true
+          },
+          {
+            "text": "In der Datenschutzerklaerung klarstellen, dass Auskunft/Export jederzeit kostenfrei per E-Mail (Art. 15) angefordert werden kann, zusaetzlich zum Premium-PDF.",
+            "lengthDeltaPct": 0,
+            "rationale": "Prozessualer Mindestweg ohne App-Aenderung; schwaecher als ein In-App-Export.",
+            "stillSafe": true
+          },
+          {
+            "text": "PDF-Export fuer den reinen Eigen-Datenexport generell kostenfrei machen, Premium nur fuer Zusatz-Layouts/Design.",
+            "lengthDeltaPct": 0,
+            "rationale": "Sauberste DSGVO-Loesung, aber groesserer Eingriff ins Monetarisierungs-Konzept — mit Frank abstimmen.",
+            "stillSafe": true
+          }
+        ],
+        "impactWithoutFix": "Wenn Datenexport ausschliesslich hinter der Paywall liegt, koennte das als Erschwerung der unentgeltlichen Betroffenenrechte (Art. 12 Abs. 5) ausgelegt werden. Ein kostenfreier Basis-Export entschaerft das vollstaendig. Mit Anwalt abstimmen (needs-clarification)."
+      },
+      {
+        "findingId": "B1",
+        "riskLevel": "🟥",
+        "category": "UWG",
+        "language": "de",
+        "jurisdiction": "DE/EU",
+        "file": "app/src/main/res/values/strings.xml",
+        "line": 1035,
+        "stringKey": "retro_benefit_weekly",
+        "currentText": "Unbegrenzte Wochenrueckblicke, nicht nur die ersten 2 Wochen",
+        "codeReality": "Reviews haben fuer Premium keinen Anzahl-Cap (GenerateRetrospectiveUseCase.kt:189 gated nur !isPremium auf FREE_WEEKLY_REVIEW_COUNT=2). ABER jede Rueckblick-Generierung ist eine KI-Anfrage und zaehlt gegen das harte Tageskontingent: 150/Tag/Profil, Stopp ab 151 (Constants.kt:100 SUB_HARD_LIMIT=151; AiRateLimiter.kt:59-64) plus 50 Anfragen/Stunde (Constants.kt:237).",
+        "gap": "Das Wort 'Unbegrenzt' verspricht grenzenlose Erzeugung. Tatsaechlich existiert ein hartes Tages- und Stundenkontingent, das auch das Erstellen von Wochenrueckblicken verbraucht. Es ist also nicht 'unbegrenzt'.",
+        "rationale": "UWG §5 Abs. 1 Nr. 1 (irrefuehrende Angabe ueber wesentliche Merkmale/Umfang der Leistung): Eine absolute 'Unbegrenzt'-Zusage neben einem in der App selbst dokumentierten 150/Tag-Limit ist eine Fehlvorstellung ueber den Leistungsumfang. Kein unmittelbarer Fair-Use-Hinweis an der Werbestelle (der Erklaer-Dialog ai_limits_dialog_body liegt separat).",
+        "invasivityLevel": "text-only",
+        "suggestedFixes": [
+          {
+            "text": "Wochenrueckblicke ohne festes Wochenlimit – nicht nur die ersten 2 Wochen (faire Tageskontingente gelten)",
+            "lengthDeltaPct": 18,
+            "rationale": "Behaelt den Verkaufsvorteil (kein 2-Wochen-Deckel wie Free), ersetzt das absolute 'Unbegrenzt' durch die zutreffende Aussage + dezenten Fair-Use-Verweis.",
+            "stillSafe": true
+          },
+          {
+            "text": "Alle Wochenrueckblicke statt nur der ersten 2 – im Rahmen deines KI-Tageskontingents",
+            "lengthDeltaPct": 5,
+            "rationale": "Kurz, marketingstark ('Alle'), nennt die Kontingent-Bindung knapp.",
+            "stillSafe": true
+          },
+          {
+            "text": "Wochenrueckblicke für deinen gesamten Zeitraum, nicht nur 2 Wochen",
+            "lengthDeltaPct": -8,
+            "rationale": "Vermeidet 'unbegrenzt' ganz und betont stattdessen den echten Vorteil (gesamter Zeitraum vs. 2 Wochen).",
+            "stillSafe": true
+          }
+        ],
+        "impactWithoutFix": "Ein Mitbewerber oder Abmahnverein laesst die App in-app das 150/Tag-Limit anzeigen, stellt es der Werbung 'Unbegrenzt' gegenueber und mahnt wegen irrefuehrender Spitzenstellungs-/Unbegrenztheitswerbung ab (UWG §5). Abmahnkosten + Unterlassungserklaerung mit Vertragsstrafe."
+      },
+      {
+        "findingId": "B2",
+        "riskLevel": "🟥",
+        "category": "UWG",
+        "language": "de",
+        "jurisdiction": "DE/EU",
+        "file": "app/src/main/res/values/strings.xml",
+        "line": 505,
+        "stringKey": "settings_premium_feature_profiles",
+        "currentText": "Unbegrenzte individuelle KI-Profile",
+        "codeReality": "Profil-ANZAHL ist fuer Premium tatsaechlich unbegrenzt (CustomAnalysesStore.kt add() hat keinen Cap; Free-Cap ist customList.size>=2, SettingsScreen.kt:1787). ABER die NUTZUNG jedes Profils ist hart begrenzt: 150 KI-Anfragen pro Tag und Profil (Constants.kt:100 SUB_HARD_LIMIT=151), 600/Tag fuer die 4 vordefinierten zusammen, +150/Tag je eigenem Profil.",
+        "gap": "'Unbegrenzt' ohne Zusatz ist zweideutig: Es trifft auf die Anzahl der Profile zu, NICHT auf deren Nutzung. Ein durchschnittlicher Verbraucher liest 'unbegrenzte Profile' als 'unbegrenzt nutzbare Profile'.",
+        "rationale": "UWG §5 Abs. 1 Nr. 1: Wesentliche Einschraenkung (150/Tag/Profil) wird durch den absoluten Begriff 'Unbegrenzt' verschleiert. Auch §5a (Vorenthalten wesentlicher Information) greift, da die Nutzungsgrenze an der Werbestelle fehlt. Identischer Wortlaut auch paywall_feature_profiles@1125.",
+        "invasivityLevel": "text-only",
+        "suggestedFixes": [
+          {
+            "text": "Beliebig viele eigene KI-Profile anlegen (je Profil 150 KI-Analysen/Tag)",
+            "lengthDeltaPct": 60,
+            "rationale": "Praezise: 'beliebig viele' = Anzahl-Vorteil bleibt; nennt die Nutzungsgrenze konkret und ehrlich.",
+            "stillSafe": true
+          },
+          {
+            "text": "So viele eigene KI-Profile wie du willst – mit fairem Tageskontingent pro Profil",
+            "lengthDeltaPct": 55,
+            "rationale": "Marketingstark ('so viele wie du willst'), Fair-Use knapp erwaehnt ohne abschreckende Zahl.",
+            "stillSafe": true
+          },
+          {
+            "text": "Eigene KI-Profile ohne Anzahllimit",
+            "lengthDeltaPct": 0,
+            "rationale": "Minimaler Eingriff: verschiebt 'unbegrenzt' praezise auf 'Anzahllimit', sodass die Aussage nur noch das meint, was im Code stimmt (die Anzahl).",
+            "stillSafe": true
+          }
+        ],
+        "impactWithoutFix": "Verbraucherschuetzer testet Premium, stoesst nach 150 Anfragen pro Profil auf 'keine weiteren Anfragen bis morgen' und mahnt wegen irrefuehrender Werbung mit 'Unbegrenzt' ab. Besonders heikel, weil die App das Limit selbst klar dokumentiert – Vorsatz/Fahrlaessigkeit leicht nachweisbar."
+      },
+      {
+        "findingId": "B3",
+        "riskLevel": "🟥",
+        "category": "UWG",
+        "language": "de",
+        "jurisdiction": "DE/EU",
+        "file": "app/src/main/res/values/strings.xml",
+        "line": 495,
+        "stringKey": "settings_premium_feature_5_perspectives",
+        "currentText": "Alle KI-Profile (4 vordefiniert + unbegrenzt eigene)",
+        "codeReality": "'4 vordefiniert' ist korrekt (Constants.kt:73 FIRST_CUSTOM_SCENARIO_INDEX=4, DASHBOARD_SCENARIO_COUNT=5 – Indizes 0..3 fest). 'unbegrenzt eigene' = Anzahl korrekt unbegrenzt (CustomAnalysesStore.add() ohne Cap), aber Nutzung 150/Tag/Profil (SUB_HARD_LIMIT=151).",
+        "gap": "Zahl '4' stimmt. 'unbegrenzt eigene' wiederholt die Anzahl-vs-Nutzung-Zweideutigkeit aus B2.",
+        "rationale": "UWG §5 Abs. 1: gleiche absolute 'unbegrenzt'-Aussage wie B2. Identischer Wortlaut auch churn_offer_feature_perspectives@1177 (Retention-Angebot – dort besonders sensibel, da Halte-Anreiz).",
+        "invasivityLevel": "text-only",
+        "suggestedFixes": [
+          {
+            "text": "Alle KI-Profile (4 vordefinierte + beliebig viele eigene)",
+            "lengthDeltaPct": 5,
+            "rationale": "Behaelt Struktur und Zahl '4', ersetzt 'unbegrenzt' durch 'beliebig viele' (= Anzahl, was zutrifft).",
+            "stillSafe": true
+          },
+          {
+            "text": "Alle KI-Profile: 4 vordefinierte plus eigene ohne Anzahllimit",
+            "lengthDeltaPct": 8,
+            "rationale": "Praezisiert 'ohne Anzahllimit', sodass die Aussage nur die Anzahl betrifft.",
+            "stillSafe": true
+          },
+          {
+            "text": "Alle 4 vordefinierten KI-Profile + so viele eigene wie du brauchst",
+            "lengthDeltaPct": 12,
+            "rationale": "Marketingstark, vermeidet das juristisch heikle 'unbegrenzt'.",
+            "stillSafe": true
+          }
+        ],
+        "impactWithoutFix": "Im Retention-/Kuendigungsdialog (churn_offer) ist eine irrefuehrende 'unbegrenzt'-Zusage doppelt riskant: irrefuehrende Werbung (UWG §5) plus moeglicher Vorwurf einer unlauteren Halte-Taktik, wenn der Bleibe-Anreiz auf einer Falschaussage beruht."
+      },
+      {
+        "findingId": "B4",
+        "riskLevel": "🟥",
+        "category": "UWG",
+        "language": "de",
+        "jurisdiction": "DE/EU",
+        "file": "app/src/main/res/values/strings.xml",
+        "line": 1061,
+        "stringKey": "onboarding_feature_secure",
+        "currentText": "Deine Daten sind lokal gespeichert, KI-Anfragen sind verschluesselt",
+        "codeReality": "'Lokal gespeichert': standardmaessig zutreffend – Tagebuch in lokalen Room-DBs, Google-Drive-Backup ist OPTIONAL und default AUS (PREF_DRIVE_BACKUP_ENABLED default false, SyncWithDriveUseCase.kt:43; W9-Befund B). 'KI-Anfragen verschluesselt': es ist Transportverschluesselung – HTTPS zu Groq (api.groq.com, USA, Constants.kt:5), WSS zu Edge-TTS, Firebase AI Logic zu Gemini. KEINE Ende-zu-Ende-Verschluesselung; die Inhalte werden bei Drittanbietern im Klartext verarbeitet.",
+        "gap": "(1) 'lokal gespeichert' verschweigt das aktivierbare Cloud-Backup. (2) 'verschluesselt' suggeriert dem Laien Schutz vor dem KI-Anbieter; tatsaechlich verlassen die Daten das Geraet und werden bei US-Diensten verarbeitet – nur der Transportweg ist verschluesselt.",
+        "rationale": "UWG §5 Abs. 1 Nr. 1 (irrefuehrende Angabe ueber Eigenschaften/Sicherheit). Datenschutz-Werbung mit 'verschluesselt'/'sicher' ist ein bekanntes Abmahnfeld, weil Verbraucher Transport- mit Inhaltsverschluesselung verwechseln. Aussage muss die tatsaechliche Verarbeitungslage abbilden.",
+        "invasivityLevel": "text-only",
+        "suggestedFixes": [
+          {
+            "text": "Deine Eintraege bleiben auf dem Geraet; KI-Anfragen werden verschluesselt uebertragen",
+            "lengthDeltaPct": 12,
+            "rationale": "'verschluesselt uebertragen' ist die ehrliche Transport-Formulierung; 'bleiben auf dem Geraet' stimmt im Default und bleibt vertrauensbildend.",
+            "stillSafe": true
+          },
+          {
+            "text": "Daten standardmaessig nur lokal – KI-Anfragen laufen verschluesselt ueber sichere Verbindungen",
+            "lengthDeltaPct": 30,
+            "rationale": "'standardmaessig nur lokal' deckt das optionale Drive-Backup ehrlich ab, ohne den Vertrauensvorteil zu verlieren.",
+            "stillSafe": true
+          },
+          {
+            "text": "Deine Eintraege speichern wir lokal auf deinem Geraet; fuer KI-Funktionen werden sie verschluesselt an unsere KI-Dienste gesendet",
+            "lengthDeltaPct": 80,
+            "rationale": "Maximale Ehrlichkeit (nennt KI-Dienste), passend wenn das Onboarding etwas mehr Erklaertext vertraegt.",
+            "stillSafe": true
+          }
+        ],
+        "impactWithoutFix": "Abmahnung wegen irrefuehrender Sicherheitswerbung: 'verschluesselt' + 'lokal' erwecken den Eindruck, die Daten verliessen das Geraet nie bzw. seien gegen den KI-Anbieter geschuetzt. Datenschutz-/Verbraucherverbaende greifen solche Aussagen gezielt auf; zusaetzlich Reputationsrisiko bei sensiblen Tagebuchdaten (Art.9-naehe)."
+      },
+      {
+        "findingId": "B5",
+        "riskLevel": "🟧",
+        "category": "UWG",
+        "language": "de",
+        "jurisdiction": "DE/EU",
+        "file": "app/src/main/res/values/strings.xml",
+        "line": 1080,
+        "stringKey": "onboarding_premium_feature_noads",
+        "currentText": "Keine Werbung, ungestoert schreiben und reflektieren",
+        "codeReality": "KEIN Werbe-SDK im gesamten Projekt: build.gradle.kts, gradle/libs.versions.toml und der Quellcode enthalten kein AdMob/com.google.android.gms.ads/AppLovin/IronSource/Unity-Ads (nur com.google.gms.google-services = Firebase, kein Ads-Modul). Bestaetigt durch Schwester-Worker W9 (G-no-ads: 'No ad SDK anywhere. Free tier shows no ads either'). Die Free-Version zeigt also ebenfalls keine Werbung.",
+        "gap": "'Keine Werbung' wird als bezahlter Premium-Vorteil beworben, obwohl es ueberhaupt keine Werbung gibt – auch nicht in Free. Es wird ein Unterschied/Mehrwert suggeriert, der nicht existiert.",
+        "rationale": "UWG §5 Abs. 1 (irrefuehrende Werbung mit Selbstverstaendlichkeiten/nicht vorhandenem Vorteil) und §5 Abs. 2 (Werbung, die zur Annahme verleitet, ein Vorteil sei dem Bezahlangebot vorbehalten). Ein als Premium-Benefit verkaufter 'Wegfall' von etwas, das nie existierte, ist eine Fehlvorstellung ueber den Wert des Abos. Identisch paywall_feature_noads@1124.",
+        "invasivityLevel": "text-only",
+        "suggestedFixes": [
+          {
+            "text": "Ungestoert schreiben und reflektieren",
+            "lengthDeltaPct": -35,
+            "rationale": "Streicht die hohle 'keine Werbung'-Aussage und behaelt den realen, positiven Nutzen (Ruhe/Fokus). Sauberste Loesung.",
+            "stillSafe": true
+          },
+          {
+            "text": "Komplett werbefrei – wie die ganze App",
+            "lengthDeltaPct": -20,
+            "rationale": "Falls 'werbefrei' als Vertrauensmerkmal bleiben soll: ehrlich klarstellen, dass die GESAMTE App werbefrei ist (kein Premium-exklusiver Vorteil).",
+            "stillSafe": true
+          },
+          {
+            "text": "Voller Fokus auf dich – keine Ablenkungen",
+            "lengthDeltaPct": -25,
+            "rationale": "Emotionaler Premium-Nutzen ohne die juristisch heikle Werbe-Differenzierungs-Behauptung.",
+            "stillSafe": true
+          }
+        ],
+        "impactWithoutFix": "Abmahnung wegen Werbung mit einer Selbstverstaendlichkeit / nicht existierendem Vorteil (UWG §5). Verbraucher koennte argumentieren, er habe das Abo (auch) wegen 'keine Werbung' gekauft, obwohl Free identisch werbefrei ist – Rueckabwicklungs-/Erstattungsforderungen denkbar."
+      },
+      {
+        "findingId": "B6",
+        "riskLevel": "🟧",
+        "category": "UWG",
+        "language": "de",
+        "jurisdiction": "DE/EU",
+        "file": "app/src/main/res/values/strings.xml",
+        "line": 1131,
+        "stringKey": "paywall_headline_clarity_sub",
+        "currentText": "Die KI erkennt Muster, die dir verborgen bleiben",
+        "codeReality": "Mustererkennung existiert als Feature (Dashboard-Entropie-Analyse via Gemini; DashboardScreen rendert Kategorie-Bloecke + Top-5-Aktionen). Jeder KI-Output traegt einen Disclaimer (AiGeneratedBadge.kt wird in DashboardScreen/RetrospectiveScreen/EntryDetailScreen verwendet; AiOutputDisclaimer.kt; ai_generated_tooltip@785 'kann Fehler enthalten. Bitte eigenstaendig pruefen'; ai_banner_body@1203 'Alle KI-Ausgaben sind Anregungen, keine professionelle Beratung').",
+        "gap": "'erkennt Muster, die dir verborgen bleiben' ist eine starke, kaum objektiv beweisbare Wirkungszusage (die KI sehe mehr als der Nutzer selbst). Der Output-Disclaimer mildert, aber die Werbe-Headline selbst ist absolut formuliert.",
+        "rationale": "UWG §5 Abs. 1 Nr. 1 (unhaltbare Wirkungs-/Spitzenzusage): Behauptungen ueber eine die menschliche Selbstwahrnehmung uebersteigende Erkennungsleistung sind schwer belegbar. Zulaessige Anpreisung endet dort, wo eine konkrete, nachpruefbare Tatsachenbehauptung suggeriert wird.",
+        "invasivityLevel": "text-only",
+        "suggestedFixes": [
+          {
+            "text": "Die KI macht wiederkehrende Muster in deinen Eintraegen sichtbar",
+            "lengthDeltaPct": 8,
+            "rationale": "'macht sichtbar' beschreibt die echte Funktion, ohne die unbeweisbare 'verborgen'-Spitzenzusage. Bleibt attraktiv.",
+            "stillSafe": true
+          },
+          {
+            "text": "Entdecke Muster in deinen Eintraegen, die im Alltag leicht untergehen",
+            "lengthDeltaPct": 18,
+            "rationale": "Relativiert von 'dir verborgen' (absolut) zu 'im Alltag leicht untergehen' (plausibel, belegbar).",
+            "stillSafe": true
+          },
+          {
+            "text": "Erkenne Zusammenhaenge in deinen Gedanken, die du sonst uebersiehst",
+            "lengthDeltaPct": 5,
+            "rationale": "Weicher formuliert ('sonst uebersiehst' statt 'verborgen bleiben'), behaelt den Aha-Nutzen.",
+            "stillSafe": true
+          }
+        ],
+        "impactWithoutFix": "Beanstandung als unbelegte Wirkungszusage. Geringeres, aber reales Risiko: schwer, im Streitfall den Beweis zu fuehren, dass die KI Muster erkennt, die dem Nutzer tatsaechlich 'verborgen' waren. Abschwaechung kostet nichts und beseitigt die Angriffsflaeche."
+      },
+      {
+        "findingId": "B7",
+        "riskLevel": "🟧",
+        "category": "UWG",
+        "language": "de",
+        "jurisdiction": "DE/EU",
+        "file": "app/src/main/res/values/strings.xml",
+        "line": 527,
+        "stringKey": "settings_feedback_dialog_desc",
+        "currentText": "Deine Nachricht an die Entwickler - wir lesen alles und antworten persoenlich!",
+        "codeReality": "Reines Leistungsversprechen ohne technische Garantie (Feedback wird per E-Mail/Cloud-Function an den Entwickler zugestellt). Verstaerkt durch settings_report_ai_confirm_body@639 'wir antworten innerhalb von 24 Stunden an Werktagen' – eine konkrete Reaktionszeit-Zusage.",
+        "gap": "'wir lesen alles und antworten persoenlich' + '24 Stunden an Werktagen' sind verbindliche Zusagen. Bei einem Einzelentwickler ist eine ausnahmslose persoenliche Antwort innerhalb 24 Std faktisch kaum durchhaltbar.",
+        "rationale": "UWG §5 Abs. 1 Nr. 1 (irrefuehrende Angabe ueber den Umfang des Kundendienstes): Eine pauschale Antwort-/Reaktionszeitzusage, die regelmaessig nicht eingehalten wird, ist irrefuehrend. Konkrete Zeitfenster ('24 Stunden') sind besonders angreifbar.",
+        "invasivityLevel": "text-only",
+        "suggestedFixes": [
+          {
+            "text": "Deine Nachricht an die Entwickler – wir lesen jede Nachricht und melden uns so schnell wie moeglich.",
+            "lengthDeltaPct": 5,
+            "rationale": "Behaelt die persoenliche, nahbare Note ('wir lesen jede Nachricht'), ersetzt die harte 'antworten persoenlich'-Garantie durch ein realistisches 'so schnell wie moeglich'.",
+            "stillSafe": true
+          },
+          {
+            "text": "Schreib uns – wir lesen jede Rueckmeldung und antworten in der Regel innerhalb weniger Werktage.",
+            "lengthDeltaPct": 8,
+            "rationale": "'in der Regel' + 'wenige Werktage' ist haltbar und ehrlich; ersetzt die starre 24-Std-Zusage (ebenfalls @639 anpassen).",
+            "stillSafe": true
+          },
+          {
+            "text": "Dein direkter Draht zu den Entwicklern – wir lesen alles und antworten so oft wir koennen persoenlich.",
+            "lengthDeltaPct": 6,
+            "rationale": "'so oft wir koennen' relativiert die Ausnahmslosigkeit, behaelt aber den persoenlichen Charakter als Verkaufsargument.",
+            "stillSafe": true
+          }
+        ],
+        "impactWithoutFix": "Ein Nutzer, der keine (rechtzeitige) Antwort erhaelt, kann die Zusage als irrefuehrend ruegen; Mitbewerber koennen die '24-Stunden'-Aussage abmahnen. Geringer Aufwand zur Entschaerfung, vermeidbares Risiko."
+      },
+      {
+        "findingId": "B8",
+        "riskLevel": "🟧",
+        "category": "UWG",
+        "language": "de",
+        "jurisdiction": "DE/EU",
+        "file": "app/src/main/res/values/strings.xml",
+        "line": 933,
+        "stringKey": "ai_prompt_custom_intro",
+        "currentText": "Wenn der Auftrag Recherche, Ideen, Alternativen, Vorschlaege, Empfehlungen oder neue Informationen verlangt, dann liefere diese AKTIV, auch wenn sie in den Eintraegen nicht vorkommen.",
+        "codeReality": "Der Custom-Profil-System-Prompt erlaubt einen frei waehlbaren Nutzer-Fokus (%1$s, profile_style_custom@1417) und weist die KI an, aktiv zu empfehlen – OHNE Inline-Verbotsklausel gegen Gesundheits-/Rechts-/Finanzberatung. Globaler Output-Disclaimer ist vorhanden (ai_banner_body@1203 'keine professionelle Beratung', AiGeneratedBadge an allen KI-Ausgaben, CrisisHelpDialog).",
+        "gap": "Ohne prompt-seitigen Guardrail kann ein Nutzer die KI per Custom-Auftrag zu medizinischen/rechtlichen/finanziellen Ratschlaegen anweisen. Der globale Disclaimer mildert, ersetzt aber keine inhaltliche Schranke im Prompt.",
+        "rationale": "UWG §5/§5a in Verbindung mit HWG-/Rechtsdienstleistungs-/Finanzberatungs-Grenzen: Wird die KI als aktiver Empfehlungs-/Beratungs-Generator vermarktet/eingesetzt, ohne fachliche Schranke, koennen Ausgaben als professionelle Beratung (miss)verstanden werden. Defensiver Guardrail ist die Poka-Yoke-Loesung.",
+        "invasivityLevel": "text-only",
+        "suggestedFixes": [
+          {
+            "text": "Wenn der Auftrag Recherche, Ideen, Alternativen, Vorschlaege oder neue Informationen verlangt, dann liefere diese AKTIV, auch wenn sie in den Eintraegen nicht vorkommen. Gib dabei KEINE medizinischen, rechtlichen oder finanziellen Diagnosen oder verbindlichen Ratschlaege; verweise bei solchen Themen auf Fachpersonen.",
+            "lengthDeltaPct": 55,
+            "rationale": "Behaelt die aktive, hilfreiche Funktion und ergaenzt einen klaren Themen-Guardrail (Poka-Yoke) – die KI bleibt nuetzlich, gibt aber keine Fachberatung aus.",
+            "stillSafe": true
+          },
+          {
+            "text": "Liefere AKTIV Ideen, Alternativen und Vorschlaege, auch ueber die Eintraege hinaus – aber formuliere sie als unverbindliche Anregungen und keine fachliche (medizinische/rechtliche/finanzielle) Beratung.",
+            "lengthDeltaPct": 30,
+            "rationale": "Kompakter Guardrail, der den Beratungs-Charakter entschaerft, ohne die Kernfunktion zu beschneiden.",
+            "stillSafe": true
+          },
+          {
+            "text": "Liefere AKTIV Recherche, Ideen und Vorschlaege ueber die Eintraege hinaus. Bei gesundheits-, rechts- oder finanzbezogenen Themen bleibe allgemein und empfiehl, Fachleute hinzuzuziehen.",
+            "lengthDeltaPct": 20,
+            "rationale": "Minimaler, klarer Schutz fuer genau die kritischen Themenfelder; Funktion bleibt voll erhalten.",
+            "stillSafe": true
+          }
+        ],
+        "impactWithoutFix": "Erzeugt die KI auf einen Custom-Auftrag hin eine konkrete Gesundheits-/Heilaussage oder Rechtsempfehlung, drohen HWG-/RDG-Risiken und Produkthaftungs-/UWG-Vorwuerfe. Ein Inline-Guardrail ist eine billige, funktionserhaltende Absicherung (Direktive #3 Poka-Yoke)."
+      },
+      {
+        "findingId": "F1",
+        "riskLevel": "🟧",
+        "category": "DarkPattern",
+        "language": "de",
+        "jurisdiction": "DE/EU",
+        "file": "app/src/main/java/com/bestjournal/app/ui/screens/settings/ChurnFlowDialog.kt",
+        "line": 1089,
+        "currentText": "TextButton(onClick = onConfirmCancel ...) { Text(stringResource(R.string.action_go_google_play) [\"Zu Google Play\"], color = onSurfaceVariant.copy(alpha = 0.6f) ...) }  // Subdued grey link instead of the previous red, so it does not compete visually with the primary \"Bleiben\"-Button above.",
+        "context": "Churn-Flow Step 3 (Endgueltige Kuendigungs-Bestaetigung 'Bist du sicher?'). Der STAY-Button 'Doch lieber bleiben' (churn_stay, ChurnFlowDialog.kt:1066-1083) ist ein gefuellter, primary-farbiger, PULSIEREND animierter Button (scale(stayButtonScale)); der ECHTE Kuendigungsweg 'Zu Google Play' (Z.1089-1095) ist ein TextButton mit alpha 0.6. Vorgelagert: Confirmshaming-Titel 'Schade, dass du gehst' (churn_sorry_title strings.xml:1172) + 4-stufiger Flow mit Grund-Umfrage (Step 1) und Retention-Angebot (Step 2).",
+        "rationale": "Asymmetrische Choice-Architecture am Entscheidungspunkt: der Erhalt-Weg wird optisch maximal hervorgehoben (gefuellt+primary+Pulsanimation), der Kuendigungsweg bewusst entwertet (grau, alpha 0.6, flacher TextButton). Der Code-Kommentar (Z.1087-1088) gibt die Absicht ausdruecklich zu ('so it does not compete visually'). In Kombination mit Confirmshaming-Titel und mehrstufiger Obstruktion erfuellt das die anerkannten Dark-Pattern-Merkmale 'Confirmshaming' + 'Obstruction'/'Nagging' nach EU UCPD (RL 2005/29/EG, irrefuehrende/aggressive Geschaeftspraktik), Para 4a UWG und der EU-Digital-Fairness-Pruefung von Kuendigungsfluessen. Para 312k BGB verlangt zudem, dass die Kuendigung ebenso einfach wie der Abschluss moeglich sein muss; die optische Entwertung des Kuendigungspfads konterkariert das.",
+        "invasivityLevel": "layout-required",
+        "suggestedFixes": [
+          {
+            "fix": "Beiden Aktionen am Step 3 gleiches visuelles Gewicht geben: 'Zu Google Play' ebenfalls als gefuellten/OutlinedButton in voller Lesbarkeit (alpha 1.0, gleiche Hoehe/Form wie 'Doch lieber bleiben'); die Pulsanimation vom Stay-Button entfernen. invasiveSnippet (Skizze): ersetze den TextButton(Z.1089) durch `OutlinedButton(onClick = onConfirmCancel, modifier = Modifier.fillMaxWidth().height(48.dp), shape = RoundedCornerShape(14.dp)) { Text(stringResource(R.string.action_go_google_play)) }` und entferne `.scale(stayButtonScale)` aus dem Stay-Button (Z.1070).",
+            "lengthDeltaPct": 0
+          },
+          {
+            "fix": "Minimal (text/style-only, falls Layout-Umbau zu invasiv): alpha von 0.6f auf 1.0f anheben (Z.1092) und die Pulsanimation am Stay-Button deaktivieren, damit kein optisches Gefaelle bleibt. Confirmshaming-Titel 'Schade, dass du gehst' (strings.xml:1172) auf neutral aendern, z.B. 'Abo verwalten'.",
+            "lengthDeltaPct": 0
+          },
+          {
+            "fix": "Grund-Umfrage (Step 1) ueberspringbar machen: einen 'Ueberspringen / Direkt kuendigen'-Pfad von Step 0 direkt zu Step 3 anbieten (kein Pflicht-Survey vor der Kuendigung). Reduziert die Obstruktion von 4 auf 2 Schritte.",
+            "lengthDeltaPct": 0
+          }
+        ],
+        "impactWithoutFix": "Abmahnrisiko (Verbraucherschutzverbaende / Wettbewerber) wegen aggressiver/irrefuehrender Kuendigungserschwerung; erhoehtes Risiko unter der laufenden EU-Digital-Fairness-Initiative gegen Dark Patterns in Kuendigungsfluessen. Der dokumentierte Vorsatz im Code-Kommentar waere in einem Verfahren ein belastendes Beweismittel."
+      },
+      {
+        "findingId": "D1",
+        "riskLevel": "🟧",
+        "category": "Abo-Transparenz",
+        "language": "de",
+        "jurisdiction": "DE/EU",
+        "file": "app/src/main/java/com/bestjournal/app/ui/screens/paywall/PaywallScreen.kt",
+        "line": 528,
+        "currentText": "OutlinedButton(onClick = { ... launchPurchase(\"monthly\") }) { Text(stringResource(R.string.paywall_monthly_plan, displayMonthlyPrice) [\"Monatsabo, %1$s pro Monat\"]) }  // keine angrenzende Verlaengerungs-/Kuendigungszeile",
+        "context": "Kauf-Pfad paywall-monthly. Der einzige Auto-Renewal-Hinweis (paywall_yearly_note strings.xml:1108 = 'Danach %1$s pro Jahr, verlaengert sich automatisch / In der Testphase jederzeit kuendbar') steht bei PaywallScreen.kt:461-466 UEBER dem JAHRES-Button und ist textuell ans Jahresabo gebunden. Neben dem Monats-Button (Z.528-540) steht KEIN 'verlaengert sich automatisch monatlich'-Hinweis. Die Verlaengerungs-Info haengt am Lesen der Jahres-Note + dem optionalen Nutzungsbedingungen-Link (Z.670-680).",
+        "rationale": "Para 312d BGB i.V.m. Art. 246a Para 1 EGBGB verlangt, dass Laufzeit, automatische Verlaengerung und Kuendigungsbedingungen VOR Vertragsschluss klar und verstaendlich gegeben werden - pro Vertragsart. Die Google-Play-Subscriptions-Policy verlangt ebenfalls, Auto-Renewal pro Plan klar zu kommunizieren. Da die Auto-Renewal-Angabe ausschliesslich am Jahres-Plan haengt, fehlt sie fuer den Monats-Plan an der Stelle der Kaufentscheidung. (Der Para-312j-Bestellbutton selbst wird vom Google-Play-Sheet uebernommen - das schliesst aber die in-App-Transparenzluecke beim Monats-Plan nicht.)",
+        "invasivityLevel": "text-only",
+        "suggestedFixes": [
+          {
+            "fix": "Eigene Verlaengerungszeile unter dem Monats-Button einfuegen: neuer String paywall_monthly_note = 'Verlaengert sich automatisch monatlich, jederzeit ueber Google Play kuendbar.' und unter PaywallScreen.kt:540 als labelSmall rendern (analog paywall_yearly_note).",
+            "lengthDeltaPct": 6
+          },
+          {
+            "fix": "Den bestehenden Auto-Renewal-Satz plan-neutral formulieren und EINMAL ueber beiden Buttons platzieren: 'Abos verlaengern sich automatisch (monatlich bzw. jaehrlich) und sind jederzeit ueber Google Play kuendbar.' - deckt Monat und Jahr ab.",
+            "lengthDeltaPct": 4
+          },
+          {
+            "fix": "Minimal: den Monats-Button-Text um den Verlaengerungshinweis ergaenzen: paywall_monthly_plan = 'Monatsabo, %1$s pro Monat - verlaengert sich automatisch'.",
+            "lengthDeltaPct": 3
+          }
+        ],
+        "impactWithoutFix": "Abmahnrisiko wegen unvollstaendiger Abo-Pflichtangaben beim Monats-Plan (Para 312d/Art. 246a EGBGB); moegliche Play-Policy-Beanstandung (Auto-Renewal nicht pro Plan klar)."
+      },
+      {
+        "findingId": "D2",
+        "riskLevel": "🟧",
+        "category": "BGB",
+        "language": "de",
+        "jurisdiction": "DE/EU",
+        "file": "app/src/main/res/values/strings.xml",
+        "line": 1100,
+        "currentText": "<!-- Para 356 Abs. 5 BGB Sofort-Verzichts-Dialog (M1 Audit v6, 2026-04-28) - VOR launchPurchaseFlow -->  <string name=\"paywall_purchase_loading_toast\">Kaufvorgang wird geladen, bitte versuche es gleich nochmal.</string>",
+        "context": "Alle Kauf-Pfade (paywall-monthly/yearly/lifetime, exit-discount), insbesondere paywall-lifetime (sofortige, vollstaendige Freischaltung digitaler Inhalte). Der Kommentar Z.1100 behauptet einen 'Sofort-Verzichts-Dialog' VOR launchPurchaseFlow - der einzige String darunter ist aber ein reiner Lade-Toast. Eine Code-Suche in PaywallScreen.kt + PaywallViewModel.kt nach einem Verzichts-/Einwilligungsdialog vor launchPurchaseFlow ergab KEINEN solchen Dialog (das einzige Dialog( in PaywallScreen.kt:703 ist der Exit-Intent-Rabattdialog).",
+        "rationale": "Bei sofortiger Bereitstellung digitaler Inhalte erlischt das Widerrufsrecht nach Para 356 Abs. 5 BGB NUR, wenn der Verbraucher (a) ausdruecklich zustimmt, dass mit der Ausfuehrung VOR Ablauf der Widerrufsfrist begonnen wird, UND (b) seine Kenntnis vom Verlust des Widerrufsrechts bestaetigt. Der vorhandene Hinweis paywall_legal_hint (Z.1115) nennt nur das '14-taegige Widerrufsrecht' und verweist auf die Nutzungsbedingungen - er holt KEINE ausdrueckliche Verzichts-/Kenntnis-Bestaetigung ein. Damit fehlt fuer den Lifetime-Kauf (sofort voll freigeschaltet) und fuer Abos mit Sofortzugang die Para-356-Abs.5-Einwilligung. Folge: das Widerrufsrecht erlischt NICHT - der Nutzer kann auch nach sofortiger Nutzung widerrufen, was der Anbieter wirtschaftlich nicht eingeplant hat; zugleich Widerspruch zwischen '14 Tage Widerruf' und faktischer Sofort-Freischaltung. Der irrefuehrende Kommentar suggeriert faelschlich Compliance.",
+        "invasivityLevel": "function-required",
+        "suggestedFixes": [
+          {
+            "fix": "Echten Para-356-Abs.5-Einwilligungsdialog VOR launchPurchaseFlow einbauen (mind. fuer Lifetime, empfohlen fuer alle Sofort-Zugang-Kaeufe): Checkbox + Bestaetigung. invasiveSnippet (Skizze): vor `viewModel.launchPurchaseFlow(...)` einen AlertDialog mit neuem String paywall_immediate_provision_consent = 'Ich verlange ausdruecklich die sofortige Bereitstellung der Premium-Inhalte und bestaetige, dass mein Widerrufsrecht mit vollstaendiger Vertragserfuellung erlischt.' + Pflicht-Checkbox; Kauf erst nach Bestaetigung ausloesen.",
+            "lengthDeltaPct": 0
+          },
+          {
+            "fix": "Falls Sofort-Verzicht NICHT gewollt: den irrefuehrenden Kommentar (Z.1100) entfernen und das 14-taegige Widerrufsrecht aktiv gewaehren (kein Erloeschen) - dann ist der Status korrekt, aber der Anbieter traegt das Widerrufsrisiko bei Sofortnutzung. Konsistenz von paywall_legal_hint sicherstellen.",
+            "lengthDeltaPct": 0
+          },
+          {
+            "fix": "Hybrid: Abos (Zugang ohnehin laufzeitgebunden) ohne Verzicht lassen, NUR fuer den Lifetime-Einmalkauf den Para-356-Abs.5-Verzichtsdialog einbauen - das ist der wirtschaftlich kritische Fall (Einmalzahlung + sofortiger Dauerzugang).",
+            "lengthDeltaPct": 0
+          }
+        ],
+        "impactWithoutFix": "Beim Lifetime-Einmalkauf bleibt das 14-Tage-Widerrufsrecht bestehen (Erloeschen nicht wirksam herbeigefuehrt) -> Rueckabwicklungsrisiko trotz Sofortnutzung. Abmahnrisiko wegen widerspruechlicher/unvollstaendiger Widerrufsinformation; stale Code-Kommentar verschleiert die Luecke fuer kuenftige Sessions."
+      },
+      {
+        "findingId": "E1",
+        "riskLevel": "🟧",
+        "category": "PlayPolicy",
+        "language": "de",
+        "jurisdiction": "DE/EU",
+        "file": "app/src/main/java/com/bestjournal/app/billing/SubscriptionState.kt",
+        "line": 3,
+        "currentText": "sealed class SubscriptionState { data object Free : SubscriptionState(); data object Subscribed : SubscriptionState() }",
+        "context": "Globale Abo-Zustandsmodellierung. SubscriptionState ist binaer (nur Free/Subscribed). Google-Play-Zustaende GRACE_PERIOD / ON_HOLD / PAUSED sind NICHT als eigene Zugriffsentscheidung modelliert. Serverseitig (SubscriptionStatusService/BillingManager.kt:450-456) wird nur SUBSCRIPTION_STATE_EXPIRED gesondert behandelt -> Free; andere Nicht-Aktiv-Zustaende fallen durch. Pause wird zwar angeboten (churn_pause_sub -> Google Play), aber kein eigener App-Zustand dafuer.",
+        "rationale": "Die Google Play Subscriptions Policy verlangt korrektes Verhalten waehrend der Grace Period (Zahlung fehlgeschlagen, Zugang soll WEITERLAUFEN, bis Play die Zahlung mehrfach erneut versucht) und On-Hold/Paused. Bei binaerem Free/Subscribed-Modell besteht das Risiko, dass ein Nutzer in der Play-Grace-Period (sollte Premium behalten) zu frueh auf Free herabgestuft wird - ein konkreter Verbrauchernachteil (bezahlte Leistung faellt waehrend des Zahlungs-Retry-Fensters weg) und ein Play-Policy-Verstoss. Para 241 Abs. 2 / 280 BGB (Nebenpflichten, vertragsgemaesse Leistung) stuetzt zusaetzlich den Verbraucheranspruch auf ungestoerten Zugang in der Grace Period.",
+        "invasivityLevel": "function-required",
+        "suggestedFixes": [
+          {
+            "fix": "SubscriptionState um GracePeriod (Zugang AKTIV) und OnHold/Paused (Zugang gesperrt, aber nicht 'Free') erweitern und das Cloud-Mapping entsprechend ergaenzen. invasiveSnippet (Skizze): `sealed class SubscriptionState { data object Free; data object Subscribed; data object GracePeriod; data object OnHold }` + im SubscriptionStatusService SUBSCRIPTION_STATE_IN_GRACE_PERIOD -> GracePeriod (Feature-Zugang wie Subscribed), ON_HOLD/PAUSED -> OnHold.",
+            "lengthDeltaPct": 0
+          },
+          {
+            "fix": "Minimal-invasiv ohne neue States: in der Zugriffslogik GRACE_PERIOD wie Subscribed behandeln (Zugang halten), bis Play EXPIRED meldet - d.h. nur EXPIRED (nicht 'alles ausser aktiv') fuehrt zu Free. So wird das Fruehzeitig-Downgrade in der Grace Period verhindert.",
+            "lengthDeltaPct": 0
+          },
+          {
+            "fix": "Gezielter Code-Review von BillingManager.kt:450-456 + SubscriptionStatusService: pruefen, welcher _subscriptionState bei purchaseToken-Antworten fuer grace/on-hold/paused gesetzt wird, und sicherstellen, dass kein Nicht-aktiv-Zustand faelschlich auf Free faellt.",
+            "lengthDeltaPct": 0
+          }
+        ],
+        "impactWithoutFix": "Nutzer in der Play-Grace-Period verlieren bezahlten Premium-Zugang vorzeitig (Verbrauchernachteil + Play-Policy-Verstoss); Pausierte Abos koennen falsch dargestellt werden. Risiko von Beschwerden/Erstattungsforderungen und Play-Beanstandung."
+      },
+      {
+        "findingId": "E2",
+        "riskLevel": "🟨",
+        "category": "PlayPolicy",
+        "language": "de",
+        "jurisdiction": "DE/EU",
+        "file": "app/src/main/java/com/bestjournal/app/ui/screens/settings/SettingsScreen.kt",
+        "line": 0,
+        "currentText": "(kein UI-Element) - SettingsViewModel.restorePurchases() existiert (SettingsViewModel.kt:133), ist aber an KEINEN Button gebunden. Restore laeuft nur automatisch: billingManager.restorePurchases() bei App-Start (MainActivity.kt:211) + refreshSubscriptionStatus() beim Oeffnen der Einstellungen.",
+        "context": "Wiederherstellung von Kaeufen. Grep nach 'restore'/'Wiederherstell' in SettingsScreen.kt + strings.xml ergab KEINEN user-ausloesbaren 'Kaeufe wiederherstellen'-Button. Nur Auto-Restore.",
+        "rationale": "Google Play empfiehlt/erwartet einen vom Nutzer ausloesbaren Weg, frueher gekaufte Berechtigungen wiederherzustellen (Geraetewechsel, Neuinstallation, Konto-Resync). Faellt der automatische Restore aus (z.B. Play-Cache, falsches Konto initial), hat der Nutzer KEINE manuelle Moeglichkeit - der bezahlte Lifetime-Kauf oder das aktive Abo wirken dann verloren. Verbraucherrechtlich (Para 241 Abs. 2 BGB) ist der ungehinderte Zugang zur bezahlten Leistung geschuldet; das Fehlen eines Wiederherstellungs-Buttons erschwert die Durchsetzung.",
+        "invasivityLevel": "function-required",
+        "suggestedFixes": [
+          {
+            "fix": "Vorhandene SettingsViewModel.restorePurchases() an einen sichtbaren Button im Abo-/Premium-Bereich der Einstellungen binden. invasiveSnippet (Skizze): neuer String settings_restore_purchases = 'Kaeufe wiederherstellen' + `TextButton(onClick = { viewModel.restorePurchases() }) { Text(stringResource(R.string.settings_restore_purchases)) }` mit Erfolgs-/Fehlermeldung (Snackbar). Logik existiert bereits - nur UI-Verdrahtung.",
+            "lengthDeltaPct": 0
+          },
+          {
+            "fix": "Button kontextsensitiv auch auf der Paywall anzeigen ('Bereits gekauft? Wiederherstellen'), damit Nutzer mit aktivem Abo/Lifetime nicht erneut zur Kasse geleitet werden.",
+            "lengthDeltaPct": 0
+          },
+          {
+            "fix": "Minimal: im Premium-Bereich der Einstellungen einen Hinweis + Button platzieren, der refreshSubscriptionStatus() + restorePurchases() manuell anstoesst und das Ergebnis sichtbar zurueckmeldet.",
+            "lengthDeltaPct": 0
+          }
+        ],
+        "impactWithoutFix": "Bei fehlgeschlagenem Auto-Restore (Geraetewechsel/Neuinstallation) erscheint die bezahlte Berechtigung als verloren -> Support-Aufwand, Erstattungs-/Doppelkauf-Beschwerden, moegliche Play-Beanstandung."
+      },
+      {
+        "findingId": "E3",
+        "riskLevel": "🟨",
+        "category": "Abo-Transparenz",
+        "language": "de",
+        "jurisdiction": "DE/EU",
+        "file": "app/src/main/java/com/bestjournal/app/ui/screens/settings/ChurnFlowDialog.kt",
+        "line": 689,
+        "currentText": "val displayRetentionPrice = retentionPrice ?: run { if (subscriptionType == YEARLY) Constants.RETENTION_YEARLY_PRICE else Constants.RETENTION_MONTHLY_PRICE }  // Constants.kt:128-129: RETENTION_MONTHLY_PRICE=\"2,99 EUR\", RETENTION_YEARLY_PRICE=\"22,49 EUR\"",
+        "context": "Kauf-Pfad churn-retention (Retention-Rabattangebot im Kuendigungs-Flow). Der Live-Play-Preis (retentionPrice) wird zuerst genutzt (Elvis ?:); NUR wenn er noch null ist (Play-Antwort steht aus), faellt die Anzeige auf den hardcodierten EUR-Wert zurueck (ChurnFlowDialog.kt:692-693). Die Konstanten sind feste deutsche EUR-Preise (Constants.kt:128-129).",
+        "rationale": "Para 1 PAngV / Para 5 UWG: angezeigte Preise muessen dem tatsaechlich geforderten Gesamtpreis in der jeweiligen Waehrung/Region entsprechen. Der Fallback '2,99 EUR'/'22,49 EUR' ist deutsch-locale-fix und stimmt fuer Nutzer ausserhalb der Eurozone bzw. mit abweichendem regionalem Play-Preis NICHT. Zwar greift er nur kurz (bis Play den Live-Preis liefert), aber in diesem Fenster kann einem Nutzer ein falscher regionaler Preis im Retention-Angebot angezeigt werden -> Irrefuehrungsrisiko. (Risiko geringer als bei reinem Hardcode, da Live-Preis Vorrang hat.)",
+        "invasivityLevel": "text-only",
+        "suggestedFixes": [
+          {
+            "fix": "Statt eines festen EUR-Fallbacks bei noch nicht geladenem Preis ein neutrales Lade-Platzhalter-Symbol anzeigen (Ellipsis '...', analog zur Haupt-Paywall PaywallScreen.kt:128) und die CTA erst aktivieren, wenn der echte Play-Preis vorliegt. invasiveSnippet: `val displayRetentionPrice = retentionPrice ?: \"\\u2026\"`.",
+            "lengthDeltaPct": 0
+          },
+          {
+            "fix": "Den Retention-CTA deaktivieren/ausblenden, solange retentionPrice == null (kein Angebot mit potenziell falschem Preis zeigen).",
+            "lengthDeltaPct": 0
+          },
+          {
+            "fix": "Falls ein Fallback noetig bleibt: ihn als unverbindlich kennzeichnen ('ca.' bzw. 'Preis wird geladen') statt als exakten Betrag, damit kein konkreter Falschpreis suggeriert wird.",
+            "lengthDeltaPct": 2
+          }
+        ],
+        "impactWithoutFix": "Kurzzeitige Anzeige eines falschen regionalen Preises im Retention-Angebot fuer Nicht-EUR-Nutzer -> PAngV/UWG-Irrefuehrungsrisiko; geringe, aber reale Abmahn-/Beschwerdegefahr."
+      },
+      {
+        "findingId": "F2",
+        "riskLevel": "🟨",
+        "category": "DarkPattern",
+        "language": "de",
+        "jurisdiction": "DE/EU",
+        "file": "app/src/main/res/values/strings.xml",
+        "line": 1124,
+        "currentText": "<string name=\"paywall_feature_noads\">Spreche oder schreibe ungestoert, ohne Werbung</string>  (+ onboarding_premium_feature_noads strings.xml:1080 = 'Keine Werbung, ungestoert schreiben und reflektieren')",
+        "context": "Premium-Feature-Liste auf der Paywall + Onboarding. 'ohne Werbung' / 'Keine Werbung' wird als BEZAHLTER Premium-Vorteil beworben. Verifiziert: 0 Werbe-SDK in app/src/main (grep nach gms.ads/admob/ironsource/applovin/unity-ads/InterstitialAd/AdView/MobileAds = 0 Treffer) UND 0 Werbe-Dependency in build.gradle.kts / libs.versions.toml. Die Free-Variante zeigt also ebenfalls KEINE Werbung.",
+        "rationale": "Para 5 UWG (irrefuehrende geschaeftliche Handlung) / EU UCPD: 'ohne Werbung' als kostenpflichtigen Vorteil zu bewerben, obwohl die App generell (auch gratis) keine Werbung enthaelt, suggeriert einen Mehrwert, den der Kauf nicht liefert (hohle Leistung). Das kann die Kaufentscheidung beeinflussen. Primaere Zustaendigkeit: UWG-Werbeaussagen-Audit (R2, siehe r2-uwg.jsonl) - hier als abo-bezogener Cross-Ref dokumentiert, da es in der Premium-Benefit-Liste steht.",
+        "invasivityLevel": "text-only",
+        "suggestedFixes": [
+          {
+            "fix": "Den Punkt 'ohne Werbung' aus der Premium-Liste (paywall_feature_noads + onboarding_premium_feature_noads) ENTFERNEN, da werbefrei kein exklusiver Premium-Vorteil ist (auch Free ist werbefrei).",
+            "lengthDeltaPct": -100
+          },
+          {
+            "fix": "Umformulieren zu einer App-weiten Eigenschaft (kein Premium-exklusiver Claim), z.B. als allgemeiner Hinweis 'Best Journal ist komplett werbefrei' AUSSERHALB der Premium-Leistungsliste.",
+            "lengthDeltaPct": 0
+          },
+          {
+            "fix": "Falls kuenftig Werbung im Free-Tier geplant ist: erst dann den Claim als Premium-Vorteil zulassen - solange keine Ads existieren, nicht als Kaufargument fuehren.",
+            "lengthDeltaPct": 0
+          }
+        ],
+        "impactWithoutFix": "UWG-Para-5-Abmahnrisiko wegen hohler Premium-Leistung ('ad-free' ohne existierende Werbung). Cross-Ref zu R2-UWG - dort fuehrende Bewertung."
+      },
+      {
+        "findingId": "A1",
+        "riskLevel": "🟥",
+        "category": "HWG",
+        "language": "de",
+        "jurisdiction": "DE/EU",
+        "file": "app/src/main/res/values/strings.xml",
+        "line": 808,
+        "stringKey": "ai_prompt_no_dates_rule",
+        "currentText": "RICHTIG: \"Deine Borreliose haengt direkt mit dem Bewegungsmangel zusammen.\" ... RICHTIG: \"Laufen ist der Schluessel zur mentalen Klarheit, die du beim Intervalltraining spuerst.\"",
+        "context": "System-Prompt-Regel (TTS-Datumsverbot), an JEDE Dashboard-Analyse angehaengt. Die 'RICHTIG'-Beispiele sind das Stil-Vorbild, das die KI nachahmt -> Gemini wird auf krankheitsbezogene Kausalaussagen trainiert.",
+        "rationale": "HWG Sec.3 (irrefuehrende Heilaussagen) + Produkthaftung: Die App liefert per Prompt-Beispiel eine medizinische Kausalbehauptung ('Borreliose haengt direkt mit Bewegungsmangel zusammen') als Vorbild. Da die App den Prompt verantwortet, verantwortet sie auch krankheitsbezogene Outputs, die daraus entstehen. 'Schluessel zur mentalen Klarheit' = Wirkversprechen. Funktionserhaltung: Nur die BEISPIELE austauschen (Ordnung/Projekte/Schlafrhythmus statt Borreliose/mentale Klarheit) — die TTS-Datumsregel-Funktion bleibt voll erhalten.",
+        "invasivityLevel": "text-only",
+        "suggestedFixes": [
+          {
+            "fix": "Krankheits-Beispiele durch neutrale Alltags-Beispiele ersetzen: FALSCH \"Eintraege vom 3.4. zeigen dein volles Postfach\" / RICHTIG \"Dein Postfach laeuft seit Tagen ueber und raubt dir Zeit.\"",
+            "lengthDeltaPct": 0
+          },
+          {
+            "fix": "Zweites Beispiel neutral: FALSCH \"Laufen am 24.04. brachte dir Klarheit\" / RICHTIG \"Bewegung schafft dir spuerbar mehr Ueberblick im Alltag.\" (keine medizinische Kausalitaet)",
+            "lengthDeltaPct": 0
+          },
+          {
+            "fix": "Zusatz-Satz in die Regel: \"Stelle KEINE medizinischen Kausalzusammenhaenge her (z.B. Krankheit X kommt von Verhalten Y) — bleibe bei beobachtbaren Alltagsmustern.\"",
+            "lengthDeltaPct": 8
+          }
+        ],
+        "impactWithoutFix": "KI gibt mit hoher Wahrscheinlichkeit krankheitsbezogene Kausalaussagen aus (Borreliose-Stil). Abmahnrisiko HWG/UWG, Produkthaftung wenn Nutzer medizinische Schluesse zieht."
+      },
+      {
+        "findingId": "A2",
+        "riskLevel": "🟥",
+        "category": "HWG",
+        "language": "de",
+        "jurisdiction": "DE/EU",
+        "file": "app/src/main/res/values/strings.xml",
+        "line": 914,
+        "stringKey": "ai_prompt_entropy_intro",
+        "currentText": "Du bist ein empathischer, hochintelligenter Lebensberater und Muster-Analyst. ... Finde wiederkehrende Quellen von Stress, Unordnung und Belastung. ... Alles, was Unordnung, Stress, Energieverlust, Schmerz, Schlafprobleme, emotionale Belastung oder Kontrollverlust im Leben des Nutzers erzeugt.",
+        "context": "System-Prompt des Profils 'Raeume dein Leben auf'. Erzeugt ein 'Ratschlags-Dashboard' mit Prioritaet 'hoch=sofort handeln'. Die KI gibt aktiv Handlungsratschlaege bei 'Schmerz' und 'Schlafproblemen'.",
+        "rationale": "HWG-Grenzbereich + Produkthaftung: 'Lebensberater', der gezielt 'Schmerz, Schlafprobleme, emotionale Belastung' analysiert und konkrete Massnahmen ('sofort handeln') gibt, naehert sich Gesundheits-/Psychoberatung. 'Schmerz' + 'Schlafprobleme' sind explizit koerper-/krankheitsnah. Funktionserhaltung: Wort 'Schmerz' und 'Schlafprobleme' aus der Sucheliste nehmen ODER um Guardrail ergaenzen — die Aufraeum-/Belastungs-Funktion bleibt voll.",
+        "invasivityLevel": "text-only",
+        "suggestedFixes": [
+          {
+            "fix": "Suchliste entschaerfen: '...Unordnung, Stress, Energieverlust, Ueberforderung, Zeitdruck oder Kontrollverlust...' (Schmerz/Schlafprobleme entfernen, bleibt Alltags-Belastung)",
+            "lengthDeltaPct": -3
+          },
+          {
+            "fix": "Guardrail-Satz anfuegen: 'Du gibst KEINE medizinischen, therapeutischen oder diagnostischen Ratschlaege. Bei gesundheitlichen Themen verweist du wertneutral auf Fachpersonen.'",
+            "lengthDeltaPct": 14
+          },
+          {
+            "fix": "Rolle umbenennen: 'einfuehlsamer Ordnungs- und Muster-Analyst' statt 'Lebensberater' (vermeidet Beratungs-Berufsbild)",
+            "lengthDeltaPct": -1
+          }
+        ],
+        "impactWithoutFix": "KI produziert handlungsleitende Ratschlaege zu Schmerz/Schlaf (Gesundheitsberatung-Anschein). Ohne sichtbaren Disclaimer am Output: HWG-/Haftungsrisiko."
+      },
+      {
+        "findingId": "A3",
+        "riskLevel": "🟥",
+        "category": "Produkthaftung",
+        "language": "de",
+        "jurisdiction": "DE/EU",
+        "file": "app/src/main/res/values/strings.xml",
+        "line": 933,
+        "stringKey": "ai_prompt_custom_intro",
+        "currentText": "SCHRITT 2 — AUFGABE AUSFUEHREN: %1$s ... Wenn der Auftrag Recherche, Ideen, Alternativen, Vorschlaege, Empfehlungen oder neue Informationen verlangt, dann liefere diese AKTIV, auch wenn sie in den Eintraegen nicht vorkommen.",
+        "context": "Custom-Profil: %1$s ist ein FREI vom Nutzer waehlbarer Auftrag. Der Prompt enthaelt KEINE Verbots-/Schutzklausel. Nutzer kann 'gib mir medizinische Ratschlaege zu meiner Krankheit' eintragen -> KI liefert aktiv ueber die Tagebuchdaten hinaus.",
+        "rationale": "Produkthaftung + HWG/RDG-Risiko: Unbegrenzter, frei steuerbarer KI-Output ohne fachlichen Guardrail. Der Nutzer kann die KI in medizinische/rechtliche/finanzielle Beratung lenken; der Prompt 'liefere AKTIV neue Informationen' verstaerkt das. Auch der Re-Ranker (ai_prompt_rerank_system, Z.940) hat KEINEN Health-Guardrail. Funktionserhaltung: Custom-Funktion (eigener Fokus) bleibt voll — nur ein Verbots-Satz fuer Fachberatung wird ergaenzt.",
+        "invasivityLevel": "text-only",
+        "suggestedFixes": [
+          {
+            "fix": "Guardrail in ai_prompt_custom_intro anfuegen: 'UNABHAENGIG vom Auftrag gibst du KEINE medizinischen Diagnosen, Therapieempfehlungen, Rechts- oder Finanzberatung. Verweise bei solchen Themen wertneutral auf qualifizierte Fachpersonen.'",
+            "lengthDeltaPct": 9
+          },
+          {
+            "fix": "Gleichen Guardrail-Satz in ai_prompt_rerank_system (Z.940) ergaenzen, da der Re-Ranker neue Massnahmen frei generiert",
+            "lengthDeltaPct": 6
+          },
+          {
+            "fix": "In ai_prompt_custom_rules (Z.935) als zusaetzliche AUFTRAGS-REGEL spiegeln, damit der Guardrail auch im zweiten Prompt-Block steht",
+            "lengthDeltaPct": 5
+          }
+        ],
+        "impactWithoutFix": "Nutzer kann KI zu Heilaussagen/Rechtsrat verleiten; App haftet fuer den generierten Inhalt (Produkthaftung, HWG, ggf. RDG). Kein technischer Schutz vorhanden."
+      },
+      {
+        "findingId": "A4",
+        "riskLevel": "🟥",
+        "category": "HWG",
+        "language": "de",
+        "jurisdiction": "DE/EU",
+        "file": "app/src/main/res/values/strings.xml",
+        "line": 390,
+        "stringKey": "profile_entropy_long",
+        "currentText": "Die KI sucht gezielt nach Stress, Belastung und Unordnung in deinen Eintraegen. Du bekommst: eine Analyse deiner groessten Belastungsquellen, 5 konkrete Massnahmen zum Aufraeumen, Tipps die dir im Alltag helfen koennen. Ideal wenn du das Gefuehl hast, dass gerade alles zu viel wird.",
+        "context": "Profil-Beschreibung (Auswahl-Screen), bewirbt das Entropy-Profil. 'wenn alles zu viel wird' + '5 konkrete Massnahmen' + 'Tipps' = Wirkversprechen im psychischen Belastungs-Kontext.",
+        "rationale": "HWG-Grenzbereich (Werbeaussage): Die Kombination 'wenn alles zu viel wird' (psychische Ueberlastung) + Versprechen konkreter Massnahmen/Tipps positioniert das Feature als Stress-/Belastungs-Hilfe. Grenzt an gesundheitsbezogenes Wirkversprechen. Funktionserhaltung: Reine Werbe-/Beschreibungstext, frei umformulierbar ohne Funktionsverlust.",
+        "invasivityLevel": "text-only",
+        "suggestedFixes": [
+          {
+            "fix": "Verkaufsstark + sicher: 'Die KI findet, was dich im Alltag belastet, und sortiert es. Du bekommst eine Uebersicht deiner groessten Belastungsquellen und 5 konkrete Aufraeum-Schritte. Ideal, wenn du den Ueberblick zurueckgewinnen willst.' (kein Heilbezug)",
+            "lengthDeltaPct": -8
+          },
+          {
+            "fix": "Disclaimer-Halbsatz anfuegen: '... helfen koennen. (Anregungen zur Selbstreflexion, keine Therapie.)'",
+            "lengthDeltaPct": 10
+          },
+          {
+            "fix": "'alles zu viel wird' -> 'der Alltag unuebersichtlich wird' (entfernt den Ueberlastungs-/Gesundheits-Beiklang, bleibt einladend)",
+            "lengthDeltaPct": -2
+          }
+        ],
+        "impactWithoutFix": "Wird als gesundheitsbezogenes Wirkversprechen lesbar (HWG/UWG Sec.5). Im Verbund mit Paywall (paywall_headline_stress, onboarding_goal_stress) verstaerkt sich die Wirkungsaussage."
+      },
+      {
+        "findingId": "A5",
+        "riskLevel": "🟧",
+        "category": "HWG",
+        "language": "de",
+        "jurisdiction": "DE/EU",
+        "file": "app/src/main/res/values/strings.xml",
+        "line": 897,
+        "stringKey": "ai_prompt_goals_definition",
+        "currentText": "Direkt: \"Ich will abnehmen\" ... Klagen: \"Mein Schlaf ist so schlecht\" = implizites Ziel Schlafverbesserung",
+        "context": "Goals-Profil-Prompt: leitet die KI an, Gesundheits-/Koerperziele ('abnehmen', 'Schlafverbesserung') zu erkennen und Fortschritt zu verfolgen + 'naechste Schritte' (top_massnahmen) zu liefern.",
+        "rationale": "HWG-Grenzbereich: KI verfolgt aktiv Abnehm-/Schlafziele und gibt 'naechste Schritte'. Bewegt sich in Wellness-/Gesundheitsberatung. Keine Diagnose-Anweisung (mildernd). Funktionserhaltung: Beispiele bleiben moeglich, aber Guardrail noetig, dass keine konkreten medizinischen Empfehlungen (Diaeten, Medikamente) gegeben werden.",
+        "invasivityLevel": "text-only",
+        "suggestedFixes": [
+          {
+            "fix": "Guardrail in ai_prompt_goals_intro (Z.896) oder _rules (Z.899): 'Bei Gesundheits- oder Koerperzielen begleitest du nur motivierend; gib KEINE Diaet-, Medikamenten- oder Therapieempfehlungen.'",
+            "lengthDeltaPct": 7
+          },
+          {
+            "fix": "Beispiel 'abnehmen' durch neutrales Ziel ersetzen: 'Ich will mehr sparen' / 'Ich will das Projekt fertig machen'",
+            "lengthDeltaPct": 0
+          },
+          {
+            "fix": "Beibehalten, aber Health-Disclaimer (ai_output_health_disclaimer) auf dem Goals-Dashboard sicherstellen (ist via AiOutputDisclaimer am Dashboard-Listenende gegeben)",
+            "lengthDeltaPct": 0
+          }
+        ],
+        "impactWithoutFix": "KI koennte konkrete Abnehm-/Schlaf-Empfehlungen geben (Gesundheitsberatung). Mittel, da motivierender Rahmen und Disclaimer am Dashboard vorhanden."
+      },
+      {
+        "findingId": "A6",
+        "riskLevel": "🟧",
+        "category": "HWG",
+        "language": "de",
+        "jurisdiction": "DE/EU",
+        "file": "app/src/main/res/values/strings.xml",
+        "line": 904,
+        "stringKey": "ai_prompt_insight_intro",
+        "currentText": "Du bist ein einfuehlsamer, tiefgruendiger Muster-Analyst fuer persoenliche Entwicklung. ... Finde darin verborgene Muster, ... unbewusste Ueberzeugungen, emotionale Reaktionsmuster ... (Begleittext Z.905/910: 'wohlwollender Spiegel', 'Vermeidungsmuster', Bereiche 'Aengste', 'Resilienz', 'Grenzen')",
+        "context": "Selbsterkenntnis-Profil-Prompt. Erzeugt psychologisch anmutende Profile mit Bereichen 'Aengste', 'Resilienz', 'Denkmuster'. Naehe zu Psychoanalyse/Psychotherapie.",
+        "rationale": "HWG-Grenzbereich (psychische Gesundheit): Begriffe 'unbewusste Ueberzeugungen', 'emotionale Reaktionsmuster', 'Vermeidungsmuster', 'Aengste', 'Resilienz' sind psychotherapeutisches Vokabular. Risiko, dass Ausgaben wie psychologische Befunde wirken. Keine Diagnose-Anweisung (mildernd), Disclaimer am Dashboard vorhanden. Funktionserhaltung: Selbsterkenntnis-Funktion bleibt; ein Anti-Pathologisierungs-Satz schuetzt.",
+        "invasivityLevel": "text-only",
+        "suggestedFixes": [
+          {
+            "fix": "Anti-Pathologisierungs-Guardrail in ai_prompt_insight_attitude (Z.905): 'Du stellst KEINE psychologischen Diagnosen und benennst keine Stoerungen oder Krankheiten. Du beschreibst nur beobachtbare Muster aus den eigenen Worten des Nutzers.'",
+            "lengthDeltaPct": 6
+          },
+          {
+            "fix": "Bereich 'Aengste' (Z.910) zu 'Sorgen' umbenennen (alltagssprachlich, weniger klinisch)",
+            "lengthDeltaPct": 0
+          },
+          {
+            "fix": "Beibehalten + sicherstellen dass AiOutputDisclaimer auf dem Insight-Dashboard erscheint (gegeben via Dashboard-Footer Z.1455)",
+            "lengthDeltaPct": 0
+          }
+        ],
+        "impactWithoutFix": "Ausgaben koennen wie psychologische Befunde/Diagnosen wirken (z.B. 'Du zeigst ein Vermeidungsmuster/Angststoerung'). HWG-/Haftungsnaehe bei pathologisierenden Formulierungen."
+      },
+      {
+        "findingId": "A7",
+        "riskLevel": "🟧",
+        "category": "HWG",
+        "language": "de",
+        "jurisdiction": "DE/EU",
+        "file": "app/src/main/java/com/bestjournal/app/ui/screens/dashboard/DashboardScreen.kt",
+        "line": 2221,
+        "stringKey": "urgency_high / legend_high_burden",
+        "currentText": "Dringend — Sofort handeln  (Advice-Detail-Dialog zeigt einzelnen Ratschlag mit Prioritaet 'hoch', OHNE Disclaimer)",
+        "context": "AdviceDerivationDialog (DashboardScreen.kt:2221) ist die Detailansicht EINES Ratschlags. Hier kann ein als 'hoch / Dringend — Sofort handeln' priorisierter KI-Ratschlag ohne sichtbaren Health-Disclaimer stehen. Der AiOutputDisclaimer haengt nur am Ende der Listen-Ansicht (Z.1455), nicht im Detail-Dialog.",
+        "rationale": "HWG-/Haftungs-Coverage-Luecke: Genau im Moment des dringlichsten Handlungsratschlags ('Sofort handeln') fehlt die Abgrenzung 'keine Therapie'. Direktive: Disclaimer soll an JEDER Stelle sichtbar sein, wo KI-Gesundheitsratschlaege erscheinen koennen. invasivityLevel ehrlich: layout-required (eine Compose-Zeile in den Dialog einfuegen).",
+        "invasivityLevel": "layout-required",
+        "suggestedFixes": [
+          {
+            "fix": "In AdviceDerivationDialog vor dem confirmButton eine kompakte Disclaimer-Zeile (ai_output_health_disclaimer) ergaenzen — eine Zeile Compose: 'AiOutputDisclaimer()' am Ende der text-Column",
+            "lengthDeltaPct": 0
+          },
+          {
+            "fix": "Alternativ kleineren Text 'Anregung, keine Therapie' unter advice.description einblenden",
+            "lengthDeltaPct": 0
+          },
+          {
+            "fix": "'Sofort handeln' zu 'Bald angehen' / 'Zuerst kuemmern' abmildern (entfernt Notfall-/Gesundheits-Imperativ aus dem Wohlbefindens-Kontext)",
+            "lengthDeltaPct": 0
+          }
+        ],
+        "impactWithoutFix": "Dringlichkeits-Ratschlag der KI ohne Therapie-Abgrenzung im Detail-Dialog. Im psychischen Belastungs-Kontext als Gesundheitsanweisung lesbar."
+      },
+      {
+        "findingId": "Z1",
+        "riskLevel": "🟧",
+        "category": "AI-Act",
+        "language": "de",
+        "jurisdiction": "DE/EU",
+        "file": "app/src/main/java/com/bestjournal/app/ui/components/CrisisHelpDialog.kt",
+        "line": 49,
+        "stringKey": "settings_crisis_dialog_body",
+        "currentText": "CrisisHelpDialog vorhanden (Telefonseelsorge, 112, findahelpline.com), ABER nur manuell ueber Settings-Button (SettingsScreen.kt:3587) aufrufbar. KEINE automatische Krisen-/Suizid-Erkennung im Code.",
+        "context": "grep nach suizid/crisis/harm/selbstverletz/krise in data/ai/repository/usecase = NONE. Die KI analysiert 'Schmerz, emotionale Belastung' (entropy/insight), aber wenn ein Eintrag Selbstgefaehrdungs-Signale enthaelt, triggert NICHTS automatisch den Hilfe-Verweis.",
+        "rationale": "Ethik- + Produkthaftungs-Thema (kein hartes Gesetz in DE, aber Branchenstandard fuer Mental-Health-nahe Apps, vgl. SB-243-Logik): Eine App, die emotionale Belastung analysiert und Ratschlaege gibt, sollte bei erkennbaren Krisen-Signalen proaktiv auf Hilfe verweisen. Der Dialog existiert, ist aber nur tief in den Einstellungen versteckt. Funktionserhaltung: rein additiv — keine bestehende Funktion betroffen.",
+        "invasivityLevel": "layout-required",
+        "suggestedFixes": [
+          {
+            "fix": "Leichtgewichtige Keyword-Heuristik (lokal, keine Cloud) auf den Eintragstext: bei Treffer (Suizid/Selbstverletzung/etc.) nicht-blockierende Karte mit Verweis auf CrisisHelpDialog einblenden",
+            "lengthDeltaPct": 0
+          },
+          {
+            "fix": "CrisisHelpDialog-Zugang prominenter machen: dauerhafter kleiner 'Hilfe in Krisen'-Link im Footer der KI-Analyse-Screens (nicht nur Settings)",
+            "lengthDeltaPct": 0
+          },
+          {
+            "fix": "Mindestens: im Health-Disclaimer-Langtext (ai_output_health_disclaimer_long, vorhanden Z.1488) bleibt der Verweis 'Krisenhilfe in deinen Einstellungen' — verifiziert: CrisisHelpDialog existiert in Settings, Verweis ist also NICHT irrefuehrend (positiv)",
+            "lengthDeltaPct": 0
+          }
+        ],
+        "impactWithoutFix": "Bei einem Krisen-Eintrag verweist die App nicht aktiv auf Hilfe. Reputations-/Haftungsrisiko; kein technisches Schutznetz fuer den gefaehrlichsten Anwendungsfall."
+      },
+      {
+        "findingId": "Z2",
+        "riskLevel": "🟧",
+        "category": "AI-Act",
+        "language": "de",
+        "jurisdiction": "EU",
+        "file": "app/src/main/res/values/strings.xml",
+        "line": 904,
+        "stringKey": "ai_prompt_insight_intro / profile_insight_*",
+        "currentText": "KI leitet aus Tagebuchtext 'wiederkehrende Gefuehle', 'emotionale Reaktionsmuster' ab (Insight-Profil). = Emotions-/Stimmungsanalyse aus Text.",
+        "context": "EU AI Act Art. 50 Abs. 3 (Emotionserkennungs-Offenlegung). Bewertung der Einordnung.",
+        "rationale": "Art. 50(3) (Emotionserkennung-Transparenzpflicht) zielt laut Definition (Art. 3 Nr. 39 i.V.m. Annex) primaer auf BIOMETRIE-basierte Emotionserkennung (Gesicht, Stimme, physiologische Signale). Text-Sentiment aus selbst geschriebenem Tagebuch faellt NACH ueberwiegender Auslegung NICHT unter das biometrische Emotionserkennungssystem -> Art. 50(3)-Pflicht greift hier wahrscheinlich NICHT. Trotzdem dokumentieren, da Graubereich. Die generelle KI-Kennzeichnung (Art. 50 Abs. 1/4) ist abgedeckt (Badge+Tooltip+Banner).",
+        "invasivityLevel": "text-only",
+        "suggestedFixes": [
+          {
+            "fix": "Interne AI-Risikoklassifizierung dokumentieren: 'Stimmungsanalyse aus Nutzer-Text = NICHT biometrisch, begrenztes Risiko Art.50(1)' (Pflicht-internes Artefakt, kein UI-Text)",
+            "lengthDeltaPct": 0
+          },
+          {
+            "fix": "Vorsorglich im AiInfoBanner/Tooltip ergaenzen: '... erkennt Themen und Stimmungen in deinen Texten.' (Transparenz ueber die Emotionsanalyse)",
+            "lengthDeltaPct": 0
+          },
+          {
+            "fix": "Keine UI-Pflicht-Aenderung noetig; Fachanwalt vor Release zur AI-Act-Einordnung bestaetigen lassen",
+            "lengthDeltaPct": 0
+          }
+        ],
+        "impactWithoutFix": "Geringes Restrisiko: falls eine Aufsicht Text-Stimmungsanalyse doch als Emotionserkennung wertet, fehlt die explizite Offenlegung. Mit vorhandener KI-Kennzeichnung gut abgesichert."
+      },
+      {
+        "findingId": "Z3",
+        "riskLevel": "🟨",
+        "category": "AI-Act",
+        "language": "de",
+        "jurisdiction": "EU",
+        "file": "app/src/main/res/values/strings.xml",
+        "line": 805,
+        "stringKey": "ai_prompt_response_language",
+        "currentText": "ANTWORTSPRACHE: Antworte vollstaendig auf Deutsch. Alle Texte und Ueberschriften muessen auf Deutsch sein, keine andere Sprache.",
+        "context": "Wird an JEDEN Prompt angehaengt. translatable. Bei Lokalisierung in 26 Sprachen muss 'Deutsch' durch die Zielsprache ersetzt werden.",
+        "rationale": "Funktions-/Lokalisierungs-Hinweis (kein Rechtsverstoss): Wenn der Uebersetzer-Skill 'Deutsch' nicht pro Locale ersetzt, antwortet die KI in falscher Sprache. Hier nur dokumentiert, da R4-Scope (gehoert zum Uebersetzungs-Worker).",
+        "invasivityLevel": "text-only",
+        "suggestedFixes": [
+          {
+            "fix": "Sicherstellen, dass values-xx/strings.xml jeweils die Zielsprache nennt (Aufgabe des uebersetzung-Skills)",
+            "lengthDeltaPct": 0
+          },
+          {
+            "fix": "Keine Aenderung in values/ (de) noetig",
+            "lengthDeltaPct": 0
+          },
+          {
+            "fix": "Pre-Commit-Check: ai_prompt_response_language darf pro Locale nicht woertlich 'Deutsch' enthalten (ausser de)",
+            "lengthDeltaPct": 0
+          }
+        ],
+        "impactWithoutFix": "Kein Rechtsrisiko; nur Funktions-/Qualitaetsrisiko bei Lokalisierung."
+      }
+    ],
+    "crossLingual": [
+      {
+        "findingId": "X1",
+        "riskLevel": "🟥",
+        "category": "DSGVO/Irreführung Account-Löschung",
+        "language": "alle außer de/en",
+        "jurisdiction": "alle Zielmärkte",
+        "file": "values-*/strings.xml",
+        "stringKeys": [
+          "settings_delete_account_subtitle",
+          "settings_delete_account_confirm_body"
+        ],
+        "currentText": "Übersetzungen behaupten, das GOOGLE-KONTO werde gelöscht — aktuelles DE sagt ausdrücklich das Gegenteil ('dein Google-Konto bleibt bestehen'); confirm_body nennt 'Firebase-Konto' statt App-Anmeldung und lässt Audio-Aufnahmen aus der Löschliste weg",
+        "rationale": "Faktisch falsche Aussage über den Löschumfang (Art. 17 DSGVO Transparenz + Play Account-Deletion-Policy + Irreführung). Stale-Drift: DE wurde nach der Übersetzung geändert.",
+        "invasivityLevel": "text-only",
+        "fixPlan": "Beide Keys per übersetzung-Skill aus aktuellem DE in alle betroffenen Sprachen neu übersetzen (Phase 3).",
+        "affectedLanguages": "~24 (alle außer en; de ist Quelle)",
+        "impactWithoutFix": "Nutzer glauben, ihr Google-Konto werde gelöscht — irreführende Datenlösch-Zusage, abmahn- und Play-Policy-relevant."
+      },
+      {
+        "findingId": "X2",
+        "riskLevel": "🟥",
+        "category": "PAngV/Preisangabe",
+        "language": "alle außer de",
+        "jurisdiction": "alle Zielmärkte",
+        "file": "values-*/strings.xml",
+        "stringKeys": [
+          "paywall_from_per_day"
+        ],
+        "currentText": "DE (aktuell): 'Jahresabo, %1$s pro Jahr' — Übersetzungen (stale): 'pro Tag'-Semantik. %1$s wird mit dem JAHRESPREIS gefüllt.",
+        "rationale": "In den Übersetzungen erscheint der Jahrespreis als Tagespreis ('39,99 € pro Tag') — krasse Preis-Irreführung (PAngV, UWG §5). Key-Name 'per_day' belegt die alte Semantik.",
+        "invasivityLevel": "text-only",
+        "fixPlan": "Key in ALLEN 26 Sprachen aus aktuellem DE neu übersetzen (Phase 3). DE selbst ist korrekt.",
+        "affectedLanguages": "bis zu 26 — pro Sprache verifizieren, Neuübersetzung deckt alle ab",
+        "impactWithoutFix": "Falsche Preisangabe auf der Paywall in Fremdsprachen — hohes Abmahnrisiko."
+      },
+      {
+        "findingId": "X3",
+        "riskLevel": "🟧",
+        "category": "BGB §356a/Widerruf",
+        "language": "fast alle außer de/en",
+        "jurisdiction": "DE/EU-Nutzer in Fremdsprachen",
+        "file": "values-*/strings.xml",
+        "stringKeys": [
+          "settings_revoke_subtitle",
+          "settings_revoke_confirm_title",
+          "settings_revoke_confirm_body"
+        ],
+        "currentText": "subtitle: 'Premium-Kauf' statt '§ 356a BGB — Widerruf direkt per App'; confirm-Texte beschreiben den alten E-Mail-App-Flow statt Direktversand",
+        "rationale": "Der gesetzliche Widerrufs-Einstieg ist in Fremdsprachen falsch beschriftet/beschrieben — Auffindbarkeit des Widerrufsrechts leidet (§ 356a BGB).",
+        "invasivityLevel": "text-only",
+        "fixPlan": "3 Keys per übersetzung-Skill neu übersetzen (Phase 3).",
+        "affectedLanguages": "~24",
+        "impactWithoutFix": "Widerrufs-Funktion schwer auffindbar; Beschreibung entspricht nicht dem realen Flow."
+      },
+      {
+        "findingId": "X4",
+        "riskLevel": "🟧",
+        "category": "DSGVO/CCPA Consent-Texte stale",
+        "language": "fast alle außer de/en",
+        "jurisdiction": "USA-CA + EU",
+        "file": "values-*/strings.xml",
+        "stringKeys": [
+          "consent_toggle_do_not_sell_body",
+          "privacy_gate_tts_title",
+          "privacy_gate_tts_body",
+          "privacy_gate_groq_body"
+        ],
+        "currentText": "do_not_sell: stark gekürzt + erfundenes Jahr '2026', 'verkauft Daten nirgendwo' fehlt; privacy_gate_groq/tts: ältere Fassung, SCC-Rechtsgrundlage fehlt",
+        "rationale": "Stale Consent-/Transparenztexte: Drittland-Rechtsgrundlage (SCC) und CCPA-Aufklärung unvollständig in den Übersetzungen (Art. 13/44 DSGVO, CCPA).",
+        "invasivityLevel": "text-only",
+        "fixPlan": "4 Keys per übersetzung-Skill neu übersetzen (Phase 3).",
+        "affectedLanguages": "~24",
+        "impactWithoutFix": "Unvollständige Datenschutz-Aufklärung in Fremdsprachen."
+      },
+      {
+        "findingId": "X5",
+        "riskLevel": "🟧",
+        "category": "i18n-Vollständigkeit",
+        "language": "ALLE 26",
+        "jurisdiction": "alle",
+        "file": "values-*/strings.xml",
+        "stringKeys": [
+          "datetime_months_relative",
+          "datetime_years_relative"
+        ],
+        "currentText": "'vor %1$d Monat(en)/Jahr(en)' — unübersetztes Deutsch in allen 26 Sprachen (minutes/hours/days sind korrekt übersetzt)",
+        "rationale": "Nutzer-sichtbare relative Datumsangaben erscheinen in jeder Sprache deutsch — Qualitäts-/Professionalitätsmangel, in Fremdsprach-Märkten unschön (kein hartes Rechtsrisiko, aber sichtbar).",
+        "invasivityLevel": "text-only",
+        "fixPlan": "2 Plurals × 26 Sprachen per übersetzung-Skill (Phase 3).",
+        "affectedLanguages": "26/26 (maschinell verifiziert)",
+        "impactWithoutFix": "Deutsche Textfetzen in allen Fremdsprachen-UIs."
+      },
+      {
+        "findingId": "X6",
+        "riskLevel": "🟧",
+        "category": "KI-Prompt-Integrität",
+        "language": "pl, nl, pt-rBR, hi, in",
+        "jurisdiction": "—",
+        "file": "values-pl|nl|pt-rBR|hi|in/strings.xml",
+        "stringKeys": [
+          "ai_prompt_custom_schema",
+          "ai_prompt_rerank_system",
+          "ai_prompt_rerank_entries_header",
+          "ai_prompt_rerank_actions_header",
+          "ai_prompt_rerank_user_focus_header"
+        ],
+        "currentText": "pl/nl/pt-rBR: massiv veraltete Prompt-Strukturen (z.B. 1520 vs 4463 Zeichen, literales %1$s an Gemini, pt-rBR mit rohen Newlines); hi/nl/pl/in: rerank-Header unübersetzt deutsch",
+        "rationale": "Veraltete KI-Prompts liefern andere/schlechtere Analysen in diesen Sprachen + literales %1$s im Prompt; kein Crash (nur %1$s, kein %d), aber Funktions-Drift.",
+        "invasivityLevel": "text-only",
+        "fixPlan": "Betroffene Keys pro Sprache aus aktuellem DE neu übersetzen (Phase 3); pt-rPT als Vorlage für pt-rBR-rerank.",
+        "affectedLanguages": "pl(6 Keys), nl(1), pt-rBR(1), hi(3 Header), in(2 Header)",
+        "impactWithoutFix": "KI-Qualität in 5 Sprachen degradiert; %1$s-Artefakte in Prompts/UI-Labels."
+      },
+      {
+        "findingId": "X7",
+        "riskLevel": "🟧",
+        "category": "UI-Format-Artefakt",
+        "language": "pl",
+        "jurisdiction": "—",
+        "file": "values-pl/strings.xml",
+        "stringKeys": [
+          "dashboard_profile_focus_summary",
+          "dashboard_profile_focus_entropy",
+          "dashboard_profile_focus_goals",
+          "dashboard_profile_focus_insight"
+        ],
+        "currentText": "4 Dashboard-UI-Labels enthalten literales %1$s (DE-aktuell hat keine Format-Args) — UI zeigt '%1$s' an polnische Nutzer",
+        "rationale": "Sichtbares Format-Artefakt im UI (Qualität).",
+        "invasivityLevel": "text-only",
+        "fixPlan": "4 Keys pl neu übersetzen (Phase 3).",
+        "affectedLanguages": "pl",
+        "impactWithoutFix": "Kaputt aussehende Dashboard-Labels für pl-Nutzer."
+      },
+      {
+        "findingId": "X8",
+        "riskLevel": "🟧",
+        "category": "Abo-Transparenz ai_limits",
+        "language": "kn, en, es",
+        "jurisdiction": "—",
+        "file": "values-kn|en|es/strings.xml",
+        "stringKeys": [
+          "ai_limits_dialog_body"
+        ],
+        "currentText": "Die Klausel '+150/Tag für jedes eigene Profil' fehlt (DE nennt 150 viermal, kn/en/es nur dreimal); hi fehlt zudem die 'Bis zu 150 Text-Verbesserungen'-Bullet",
+        "rationale": "Unvollständige Fair-Use-Offenlegung — gerade dieser Dialog ist die Absicherung gegen die 'Unbegrenzt'-Claims (B1-B3) und muss vollständig sein.",
+        "invasivityLevel": "text-only",
+        "fixPlan": "ai_limits_dialog_body für kn/en/es/hi aus aktuellem DE neu übersetzen (Phase 3).",
+        "affectedLanguages": "kn, en, es, hi",
+        "impactWithoutFix": "Limit-Offenlegung lückenhaft in 4 Sprachen."
+      },
+      {
+        "findingId": "X9",
+        "riskLevel": "🟨",
+        "category": "Anzeige-Artefakt tr",
+        "language": "tr",
+        "jurisdiction": "—",
+        "file": "values-tr/strings.xml",
+        "stringKeys": [
+          "legend_* (15 Keys)"
+        ],
+        "currentText": "Doppeltes %% zeigt türkischen Nutzern '67–100 %%'",
+        "rationale": "Sichtbares Doppel-Prozent (in Nicht-Format-Strings ist %% nicht nötig).",
+        "invasivityLevel": "text-only",
+        "fixPlan": "15 legend_*-Keys tr korrigieren (Phase 3, mechanisch).",
+        "affectedLanguages": "tr",
+        "impactWithoutFix": "Unsauber wirkende Prozentanzeigen."
+      },
+      {
+        "findingId": "X10",
+        "riskLevel": "🟨",
+        "category": "Einzel-Übersetzungsfehler",
+        "language": "ta, te, mr, pt-rPT, ur",
+        "jurisdiction": "—",
+        "file": "values-*/strings.xml",
+        "stringKeys": [
+          "prompt_clear_confirm_text (ta,te)",
+          "consent_footer_link_impressum (te,mr,pt-rPT)",
+          "privacy_gate_tts_title (ur)",
+          "ai_prompt_no_dates_rule Feldname (tr)"
+        ],
+        "currentText": "ta/te: falsches Löschobjekt ('Eintrag' statt 'Individuelle Analyse'); te/pt-rPT: 'Impressum' unübersetzt, mr: 'परिचय' (=Einführung) falsch; ur: TTS-Gate-Titel stale; tr: Feldname 'datum' statt 'herleitung'",
+        "rationale": "Einzelne semantische Übersetzungsfehler in rechtlich relevanten/funktionalen Strings.",
+        "invasivityLevel": "text-only",
+        "fixPlan": "Einzelkeys pro Sprache neu übersetzen (Phase 3).",
+        "affectedLanguages": "ta, te, mr, pt-rPT, ur, tr",
+        "impactWithoutFix": "Verwirrende Dialoge/Labels in Einzelsprachen."
+      },
+      {
+        "findingId": "X11",
+        "riskLevel": "🟨",
+        "category": "needs-clarification",
+        "language": "mr",
+        "jurisdiction": "—",
+        "file": "values-mr/strings.xml",
+        "stringKeys": [
+          "json_key_* (27 Keys)"
+        ],
+        "currentText": "mr nutzt Devanagari-JSON-Keys (रंग, नाव) statt Romanisierung — bn/hi nutzen romanisierte Keys",
+        "rationale": "Potentielles JSON-Parse-Risiko falls die KI die Devanagari-Keys nicht 1:1 zurückgibt. Funktional konsistent solange Prompt UND Parser dieselben getString-Werte nutzen — Code-seitig plausibel, aber unverifiziert auf KI-Seite.",
+        "invasivityLevel": "text-only",
+        "fixPlan": "Option: mr-json_keys auf romanisierte Form angleichen (wie bn/hi) — konservativ, in Phase 2 entscheiden.",
+        "affectedLanguages": "mr",
+        "impactWithoutFix": "Mögliche Dashboard-Analyse-Parsefehler für mr-Nutzer."
+      },
+      {
+        "findingId": "X12",
+        "riskLevel": "🟨",
+        "category": "Konsistenz/Kosmetik",
+        "language": "ko, zh, ur",
+        "jurisdiction": "—",
+        "file": "values-*/strings.xml",
+        "stringKeys": [
+          "diverse"
+        ],
+        "currentText": "ko: Höflichkeits-Register-Mix (27× 해요체 / 14× 합니다체); zh: ~5 ASCII-Kommas nach Latein-Token; ur: 'DSGVOآرٹ.9' ohne Leerzeichen, 2 RTL-Hinweise ohne RLM",
+        "rationale": "Rein kosmetische Konsistenzpunkte, kein Rechtsrisiko.",
+        "invasivityLevel": "text-only",
+        "fixPlan": "Optional in Phase 3 mitnehmen oder bewusst akzeptieren.",
+        "affectedLanguages": "ko, zh-rCN, zh-rTW, ur",
+        "impactWithoutFix": "Minimal — Stil."
+      },
+      {
+        "findingId": "X13",
+        "riskLevel": "🟨",
+        "category": "lint/i18n-Hygiene",
+        "language": "alle 26",
+        "jurisdiction": "—",
+        "file": "values/strings.xml",
+        "stringKeys": [
+          "dev_seed_dialog_title",
+          "dev_seed_dialog_message",
+          "dev_seed_add_action",
+          "dev_seed_delete_all_action",
+          "dev_seed_cancel_action"
+        ],
+        "currentText": "5 Debug-only-Strings (Test-Daten-Dialog, BuildConfig.DEBUG) fehlen in allen 26 Sprachen",
+        "rationale": "Erscheinen nie im Release (doppelt DEBUG-geguarded, W7-verifiziert). Sauberste Lösung: translatable=\"false\" — dann lint-sauber und bewusst von Übersetzung ausgenommen.",
+        "invasivityLevel": "text-only",
+        "fixPlan": "translatable=\"false\" auf die 5 dev_seed_*-Keys im DE setzen (Phase 2/3).",
+        "affectedLanguages": "—",
+        "impactWithoutFix": "MissingTranslation-Lint-Rauschen."
+      }
+    ],
+    "deadUrls": [],
+    "missingDocs": []
+  },
+  "verifiedOk": {
+    "r1_dsgvo": [
+      "Consent-Architektur (Art. 6/7/9): ConsentScreen v4 = layered consent nach EDSA 03/2023; drei VISUELL IDENTISCHE Kupfer-Buttons (Alles akzeptieren / Nur Erforderliche / Manuelle Auswahl) — gleichrangig, keine Dark Patterns (Code-Kommentar belegt EDSA 3.1.2 + UWG EmpCo-RL).",
+      "Granularitaet: ConsentViewModel hat getrennte Toggles je Datenfluss (analytics/groq/gemini/tts/driveBackup) — KEIN Accept-all-only. PrivacyPreferencesSheet rendert alle einzeln.",
+      "Opt-in (Default OFF): alle MutableStateFlow starten auf false; PrivacyGateHelper-Keys default false; BestJournalApp liest PREF_ANALYTICS_ENABLED default false. Vorbildlich.",
+      "Widerruf (Art. 7 Abs. 3): PrivacyPreferencesSheet ist in Settings erneut erreichbar (SettingsScreen:3824), Toggles bidirektional; zusaetzlich zweistufiger 356a-BGB-Widerrufsbutton (settings_revoke_*) mit Eingangsbestaetigung.",
+      "Art.-9-Pre-Usage-Gate: PrivacyGateDialog/PrivacyGateState gated Gemini/Groq/EdgeTts vor dem ERSTEN USA-Transfer; privacy_gate_gemini_body enthaelt EXPLIZITEN Art.-9-Hinweis (Gesundheit/Religion/Beziehungen) + 'keine Fachperson' (HWG). Genau wie von DSGVO verlangt.",
+      "Analytics-Consent-Timing: BestJournalApp.onCreate() ruft setAnalyticsCollectionEnabled(false als Default) VOR allen anderen Firebase-Calls — Laufzeit-Opt-out vorhanden (einziger Rest: Manifest-Flag fehlt, siehe C5).",
+      "Drittland-Transfer (Art. 44 ff.): DE-Datenschutzerklaerung benennt ALLE Empfaenger mit Rechtsgrundlage — Groq (SCC Art. 46), Microsoft Bing Speech (DPF + SCC), Gemini (DPF + SCC), Firebase Analytics/AppCheck/RemoteConfig (DPF + SCC), Drive, Gmail. Microsoft/Edge-TTS ist NICHT vergessen (Brief-Vermutung widerlegt).",
+      "Cloud-Backup Art. 9: DE-Datenschutzerklaerung adressiert EXPLIZIT, dass Stimmungswerte (positiv/neutral/belastend) als Art.-9-Gesundheitsdaten beim geraeteweiten Android-System-Backup verschluesselt an den Google-Backup-Bereich gehen, inkl. Opt-out-Hinweis (Geraete-Settings). Vorbildlich — kein eigenes Finding noetig.",
+      "Loesch-Flow (Art. 17): deleteAccount() loescht Drive-Backup ZUERST + verifiziert (re-list appDataFolder), ehrlicher Fehlerdialog wenn Drive-Loeschung scheitert, dann lokale DBs/Fotos/Cache/Alarme; 'unwiderruflich'-Wording korrekt abgesichert.",
+      "consent_card1_body ('Deine Eintraege bleiben auf deinem Geraet') + consent_card3_title sind DEAD CODE — in ConsentScreen v4 nicht mehr gerendert (durch promise bullets ersetzt). Daher KEIN Live-Irrefuehrungsrisiko (Brief-Finding 'consent_card1' entschaerft). Empfehlung: tote Strings entfernen.",
+      "consent_promise_local/_no_training/_optional_ai sind die LIVE Onboarding-Bullets und inhaltlich korrekt ('Datenschutzgesetze verlangen Einwilligung' / 'Du entscheidest' / 'jederzeit aenderbar') — keine falschen Lokal-Garantien.",
+      "Permission-Begruendungen (Mic/Kamera/Notifications) zweckgebunden und korrekt (Play-Policy + Art. 13).",
+      "networkSecurityConfig: cleartextTrafficPermitted=false, nur System-Trust-Anchors; INTERNET/RECORD_AUDIO/CAMERA zweckgebunden; Secrets ausserhalb Repo (SK-Ordner).",
+      "Drive-Backup-Verschluesselung: Datenschutzerklaerung sagt korrekt 'verschluesselte Uebertragung (HTTPS/TLS 1.2+)' + App-Data-Ordner — keine ueberzogene E2E-Behauptung; consent_toggle_drive_body ('verschluesselt') ist durch die TLS-Aussage gedeckt.",
+      "Datenschutzerklaerung-Vollstaendigkeit (DE): Verantwortlicher, Anschrift, Zweck, Rechtsgrundlagen, Empfaenger, Drittland, Speicherdauer, Betroffenenrechte, Art.-20-Portabilitaet, Beschwerderecht, Kontakt — alle vorhanden (Roentgen verifiziert)."
+    ],
+    "r2_uwg": [
+      {
+        "stringKey": "ai_limits_dialog_body",
+        "line": 1199,
+        "note": "ALLE Zahlen exakt zur Code-Realitaet: 150/Tag/Profil (SUB_HARD_LIMIT=151 -> 150 effektiv), 600/Tag (4x150), +150/eigenes Profil, 1-30 hoechste (SUB_PREMIUM_LIMIT=30), 31-100 Standard, 30-Min-Pause bei 101 (SUB_COOLDOWN_AT=101 + COOLDOWN_MINUTES=30), 101-150 Standard, ab 151 Stopp, 50/Stunde -> 5-Min-Pause (SPAM_HOURLY_AI_LIMIT_PREMIUM=50, minutesLeft=5), Free 5/Woche/Profil (FREE_WEEKLY_DASHBOARD_LIMIT=5 per scenario) + 5 Text/Woche, Reset Montag 0:00. Dies IST die korrekte Fair-Use-Offenlegung."
+      },
+      {
+        "stringKey": "ai_limit_body",
+        "line": 1191,
+        "note": "5/Woche Free + 'bis zu 150 pro Tag' Premium korrekt relativiert ('bis zu'), deckt sich mit FREE_WEEKLY_*_LIMIT=5 und SUB_HARD_LIMIT=151. 'pro Woche je Profil' beim Dashboard stimmt (per-scenario buckets)."
+      },
+      {
+        "stringKey": "limit_used_of_max",
+        "line": 796,
+        "note": "X von Y genutzt-Zaehler bestaetigt, dass ein begrenztes Kontingent existiert und transparent angezeigt wird. Konsistent."
+      },
+      {
+        "stringKey": "settings_premium_feature_voice / _voice_desc",
+        "line": 503,
+        "note": "'Praezisere Spracherkennung'/'Hoehere Qualitaet' substantiiert: Free=lokales Whisper base int8 (LocalWhisperTranscriber), Premium=Groq whisper-large-v3-turbo (Constants:6). large-v3-turbo ist objektiv genaueres Modell -> Komparativ belastbar."
+      },
+      {
+        "stringKey": "ai_generated_tooltip",
+        "line": 785,
+        "note": "Vorbildlicher KI-Disclaimer (Google Gemini genannt, 'kann Fehler enthalten, bitte eigenstaendig pruefen'). Erfuellt EU AI Act Art.50 Transparenz; wird via AiGeneratedBadge an allen KI-Ausgaben gerendert."
+      },
+      {
+        "stringKey": "ai_banner_body",
+        "line": 1203,
+        "note": "Enthaelt 'Alle KI-Ausgaben sind Anregungen, keine professionelle Beratung.' -> zentraler Health/Beratungs-Disclaimer, der die Lebensberater-/Muster-Prompts (ai_prompt_entropy_intro, ai_prompt_insight_intro, profile_style_advisor/insight) substanziell entschaerft."
+      },
+      {
+        "stringKey": "paywall_feature_followups / settings_premium_feature_followups_desc",
+        "line": 1420,
+        "note": "'Unbegrenzte Nachtraege' fuer Premium im Wesentlichen zutreffend: Nachtrag-Anzahl ohne Cap (EntryDetailViewModel:326 gated nur Free existing>=1), Nachtrag ist reiner Text ohne KI-Kontingent. NIEDRIG-Restrisiko, kein Fix noetig (nur die KI-Folgeanalyse faellt unters Tageslimit)."
+      },
+      {
+        "stringKey": "ai_limits_disclaimer / ai_banner_title",
+        "line": 1197,
+        "note": "Kurz-Disclaimer 'KI-Tageskontingent fuer intensive Nutzung' + 'Dein Tagebuch wird von KI unterstuetzt' = ehrliche Transparenz, positiv."
+      },
+      {
+        "stringKey": "onboarding_feature_profiles / onboarding_premium_profiles",
+        "line": 1085,
+        "note": "'4 intelligente Analyse-/Dashboard-Profile' konsistent mit FIRST_CUSTOM_SCENARIO_INDEX=4 (Indizes 0..3). Zahl korrekt."
+      },
+      {
+        "stringKey": "retro_weekly_p3",
+        "line": 1024,
+        "note": "'Jeden Sonntag automatisch, wenn mindestens 2 Eintraege' = transparente Bedingung, deckt sich mit Weekly-Review-Automatik. Korrekt."
+      }
+    ],
+    "r3_abo": [
+      "Para 312j BGB (Button-Loesung) ERFUELLT: ALLE app-eigenen Kauf-CTAs (monthly PaywallScreen.kt:529-531, yearly :473-475, lifetime :569-571, exit-discount :829-835) rufen viewModel.launchPurchaseFlow(...) -> oeffnen das Google-Play-Billing-Sheet, das die 'zahlungspflichtig bestellen'-Bestaetigung uebernimmt. KEIN app-nativer Button loest eine Zahlungspflicht ohne diese Bestaetigung aus.",
+      "Onboarding-CTA 'Kostenlos starten' (onboarding_start_free, OnboardingScreen.kt:907) ist UNKRITISCH: onClick=onStartTrial (Z.893) ruft nur analyticsTracker.trackTrialStartedOnboarding() + saveGoals() + completeOnboarding() + onFinished() - KEINE Billing-/Purchase-Logik (OnboardingViewModel.kt enthaelt 0 billing/purchase/subscribe-Aufrufe). Der Button startet nur die kostenlose App - daher ist 'Kostenlos starten' korrekt und kein Para-312j-Verstoss.",
+      "paywall_exit_start_discount (strings.xml:1144) = 'Zahlungspflichtig - 2 Monate zum halben Preis' erfuellt die Para-312j-Button-Loesung vorbildlich (klares 'Zahlungspflichtig'-Praefix).",
+      "Para 356a BGB In-App-Widerruf (Pflicht ab 19.06.2026) korrekt umgesetzt: zweistufiger AlertDialog (SettingsScreen.kt:3613ff), Confirm-Button (Z.3634-3637) versendet via Gmail-API die Widerrufserklaerung an den Support UND eine separate Eingangsbestaetigung an den Nutzer (settings_revoke_confirm_user_body) mit Zeitstempel. Hinweis 'Abos zusaetzlich ueber Google Play kuendigen' (settings_revoke_confirm_body) korrekt (Widerruf != Abo-Kuendigung).",
+      "Para 312k BGB Kuendigung: Kuendigung wird an die echte Google-Play-Abo-Seite delegiert (play.google.com/store/account/subscriptions via ChurnFlowDialog.kt onConfirmCancel) - policy-konforme Stelle, keine in-app Sackgasse. (Optische Entwertung des Pfads aber als F1 bemaengelt.)",
+      "Preisanzeige PAngV: Haupt-Paywall-Preise kommen LIVE aus Google Play formattedPrice; hardcodierte EUR-Fallbacks (MONTHLY/YEARLY/LIFETIME_PRICE_DISPLAY) werden auf der Haupt-Paywall NICHT gezeigt (Ellipsis bis geladen, PaywallScreen.kt:128). Nur der Retention-Fallback ist betroffen (E3).",
+      "paywall_yearly_note (strings.xml:1108) korrekte Abo-Pflichtangabe am Jahres-Plan: Preis + 'verlaengert sich automatisch' + 'In der Testphase jederzeit kuendbar'.",
+      "Trial-Transparenz: Timeline 'Heute / Tag 7 Erinnerung / Tag 8 Erste Zahlung' (paywall_day7/reminder/day8/first_payment) kommuniziert die automatische Umwandlung Trial->Bezahlabo transparent; verbraucherfreundliche Tag-7-Erinnerung vor Abbuchung.",
+      "Churn auto-renew + Datenerhalt-Hinweise korrekt: churn_auto_renew_note (1163), churn_google_play_redirect (467 - 'Deine Tagebucheintraege bleiben natuerlich erhalten'), settings_premium_cancelled_desc (483 - Restlaufzeit + Reaktivierung via Play).",
+      "Kauf-Fehlerpfade ohne Geld-Verlust: acknowledgePurchase mit 3 Retries + PREF_PENDING_ACK_TOKEN-Recovery beim naechsten Start (verhindert Auto-Refund); isPurchaseInFlight-Guard gegen Doppel-Tap (BillingManager.kt)."
+    ],
+    "r4_hwg_ai": [
+      "ai_generated_tooltip (Z.785): KI-Kennzeichnung 'Google Gemini' + Fehlerhinweis (AI Act Art.50) — vorbildlich.",
+      "ai_generated_badge 'KI-generiert' (Z.784): Badge-Komponente AiGeneratedBadge/Inline gerendert auf Dashboard(270), EntryDetail(343,436), Retrospective(322,1080), FollowUp(213).",
+      "AiInfoBanner: dismissbarer KI-Transparenz-Banner auf Dashboard (DashboardScreen:372, gesteuert via shouldShowAiInfoBanner) — Art.50 Offenlegung KI-Einsatz.",
+      "label_improved '✨ KI verbessert' (Z.51/1005): Textverbesserungs-Output in JournalScreen als KI gekennzeichnet (Art.50).",
+      "ai_output_health_disclaimer (Z.1487) + _long (Z.1488): HWG-Therapie-Disclaimer-Strings vorhanden; AiOutputDisclaimer gerendert auf Dashboard-Listenende(1455), EntryDetail(392,636), Retrospective(675), FollowUp(290).",
+      "CrisisHelpDialog (Komponente vorhanden): 112 + Telefonseelsorge 0800-1110111/-222 + findahelpline.com, korrekte tel:/VIEW-Intents mit Fallback-Toast.",
+      "Verweis 'Krisenhilfe in deinen Einstellungen' (in ai_output_health_disclaimer_long) ist NICHT irrefuehrend — CrisisHelpDialog existiert tatsaechlich in den Einstellungen (SettingsScreen:3587/3816).",
+      "ai_banner_body (Z.1203): 'Lebensratschlaege ... keine professionelle Beratung' — Disclaimer direkt am Banner (positiv).",
+      "ai_prompt_summary_intro (Z.923): verbietet der KI ausdruecklich Coaching/Problemsuche/Bewertung ('DU BEWERTEST NICHT') — gute Selbstbegrenzung des neutralen Profils."
+    ],
+    "urls": "33 URLs geprüft, 0 tot; Play-Pflicht-URLs (Privacy + Lösch-Anleitung) live",
+    "literals": "0 i18n-Leaks in .kt (837 stringResource-Aufrufe, alle Literale legitim)",
+    "guCorruption": "gu-Korruptions-Vorfall vollständig repariert (1170 Knoten gescannt, 0 Funde)",
+    "ukNoRussianMix": "uk sauber ukrainisch, 0 ru-Kontamination",
+    "cnTwDifferentiation": "zh-rCN/zh-rTW echt differenziert (kein Kopier-Verdacht)",
+    "brPtDifferentiation": "pt-rBR/pt-rPT echt differenziert (56% — unter Schwelle)",
+    "numbersAiLimits": "ai_limits-Zahlen exakt in 23/26 Sprachen (kn/en/es Klausel fehlt → X8)"
+  },
+  "codeVerdicts": [
+    {
+      "claim": "A-unbegrenzt-vs-limits",
+      "statement": "Werbung: 'Unbegrenzte Wochenrueckblicke', 'Unbegrenzte individuelle KI-Profile', 'Unbegrenzte Nachtraege' — Dialog nennt 150/Tag/Profil, 600/Tag, Qualitaetsstufen, Stopp ab 151, 50/h.",
+      "verdict": "TEILWEISE",
+      "evidence": [
+        {
+          "file": "app/src/main/java/com/bestjournal/app/util/Constants.kt",
+          "line": 88,
+          "code": "MAX_ENTRIES_FREE_ANALYSIS = Int.MAX_VALUE; MAX_ENTRIES_SUBSCRIBED_ANALYSIS = Int.MAX_VALUE"
+        },
+        {
+          "file": "app/src/main/java/com/bestjournal/app/util/Constants.kt",
+          "line": 98,
+          "code": "SUB_PREMIUM_LIMIT=30; SUB_COOLDOWN_AT=101; SUB_HARD_LIMIT=151"
+        },
+        {
+          "file": "app/src/main/java/com/bestjournal/app/util/Constants.kt",
+          "line": 237,
+          "code": "SPAM_HOURLY_AI_LIMIT_PREMIUM = 50"
+        },
+        {
+          "file": "app/src/main/res/values/strings.xml",
+          "line": 1199,
+          "code": "ai_limits_dialog_body: 150/Tag/Profil, 600/Tag, 1-30 hoechste Qualitaet, 31-100 Standard, 101. Anfrage 30-Min-Pause, ab 151 Stopp, 50/Stunde"
+        },
+        {
+          "file": "app/src/main/java/com/bestjournal/app/data/remote/ai/AiUsageTracker.kt",
+          "line": 290,
+          "code": "count<premiumLimit->Allowed(FLASH); count<cooldownAt->Allowed(FLASH_LITE); count<hardLimit->Cooldown; else HardLimitReached"
+        }
+      ],
+      "detail": "Eintraege/Wochenrueckblicke/eigene Profile/Nachtraege sind fuer Premium TATSAECHLICH uncapped (Int.MAX_VALUE, kein MAX_PROFILES-Cap — custom-Profile-Liste dynamisch). Aber 'unbegrenzt' meint die ANZAHL der analysierten Eintraege/Profile, NICHT die Anzahl der KI-Anfragen pro Tag: pro Profil greift ein hartes Tageslimit von 150 KI-Anfragen (ab 151 blockiert), 600/Tag fuer die 4 Standardprofile, plus 50/Stunde Spam-Schutz fuer ALLE inkl. Premium. Die Dialog-Zahlen (30/100/101-Pause/151/50h) sind 1:1 die Code-Konstanten (SUB_*). Free: 5 Dashboard/Woche/Profil + 5 Text/Woche (FREE_WEEKLY_*_LIMIT=5), 2 Wochenrueckblicke (FREE_WEEKLY_REVIEW_COUNT=2).",
+      "legalRelevance": "UWG 5/UCPD: 'unbegrenzt' ist nur dann unbedenklich, wenn dem Nutzer klar ist, dass es sich auf Eintragsmenge/Profilzahl bezieht und NICHT auf taegliche KI-Nutzung — der ai_limits_dialog stellt das transparent dar (Limits gelten ausdruecklich AUCH fuer Premium), was die Irrefuehrungsgefahr stark senkt. Empfehlung: bei 'unbegrenzt'-Strings einen Hinweis/Stern auf das Tageskontingent verlinken."
+    },
+    {
+      "claim": "B-daten-bleiben-auf-geraet",
+      "statement": "consent_card1_body 'Deine Eintraege bleiben auf deinem Geraet' + onboarding_feature_secure 'Deine Daten sind lokal gespeichert, KI-Anfragen sind verschluesselt'.",
+      "verdict": "TEILWEISE",
+      "evidence": [
+        {
+          "file": "app/src/main/res/values/strings.xml",
+          "line": 612,
+          "code": "consent_card1_body: Deine Eintraege bleiben auf deinem Geraet."
+        },
+        {
+          "file": "app/src/main/java/com/bestjournal/app/ui/components/PrivacyGateDialog.kt",
+          "line": 180,
+          "code": "if (PrivacyGateHelper.hasConsented(context, service)) action() else { pending=action; showDialog=true }"
+        },
+        {
+          "file": "app/src/main/java/com/bestjournal/app/util/PrivacyGateHelper.kt",
+          "line": 35,
+          "code": ".getBoolean(service.prefKey, false)  // alle 3 Cloud-Consents default false"
+        },
+        {
+          "file": "app/src/main/java/com/bestjournal/app/domain/usecase/SyncWithDriveUseCase.kt",
+          "line": 43,
+          "code": "if (!encryptedPrefs.getBoolean(PREF_DRIVE_BACKUP_ENABLED, false)) { return ... }"
+        }
+      ],
+      "detail": "Die DB liegt lokal (Room) — was das Geraet verlaesst, ist immer durch einen aktiv erteilten, per-Service-Consent (Default OFF) gated: Gemini (Eintragstext), Groq (Audio), Edge-TTS (Eintragstext fuers Vorlesen), Drive-Backup (ganze DB), Analytics (Events). PrivacyGateState.run() prueft hasConsented bei JEDER Aktion neu (nicht nur beim Aktivieren). Drive prueft PREF_DRIVE_BACKUP_ENABLED vor JEDER Sync. Aber: 'Eintraege bleiben auf dem Geraet' ist als absolute Aussage zu stark — bei aktivierter KI/TTS/Backup verlassen Eintragsinhalte das Geraet (verschluesselt, mit Consent).",
+      "legalRelevance": "Die Pauschalaussage 'bleiben auf deinem Geraet' kann irrefuehrend wirken, da bei eingeschalteten Cloud-Funktionen Eintragstext an Google/Microsoft/Drive geht. Da dies opt-in (Default OFF) und je Service separat eingewilligt ist, ist es vertretbar — Empfehlung: Formulierung praezisieren ('bleiben standardmaessig/ohne Cloud-Funktionen auf deinem Geraet')."
+    },
+    {
+      "claim": "C-gemini-kein-ki-training",
+      "statement": "privacy_gate_gemini_body: 'Kein KI-Training mit deinen Daten' + 'Anfragen werden nicht dauerhaft gespeichert' + 'EU-US Data Privacy Framework'.",
+      "verdict": "TEILWEISE",
+      "evidence": [
+        {
+          "file": "app/src/main/java/com/bestjournal/app/data/remote/ai/FirebaseAiService.kt",
+          "line": 49,
+          "code": "Firebase.ai(backend = GenerativeBackend.googleAI()).generativeModel(...)"
+        },
+        {
+          "file": "app/src/main/java/com/bestjournal/app/data/remote/ai/FirebaseAiService.kt",
+          "line": 21,
+          "code": "MODEL_FLASH=\"gemini-3.1-flash-lite\"; MODEL_FLASH_LITE=\"gemini-2.5-flash-lite\""
+        },
+        {
+          "file": "app/src/main/java/com/bestjournal/app/BestJournalApp.kt",
+          "line": 78,
+          "code": "FirebaseAppCheck.getInstance().installAppCheckProviderFactory(factory) // Play Integrity in release"
+        }
+      ],
+      "detail": "Zugang laeuft ueber Firebase AI Logic SDK (com.google.firebase.ai) mit GenerativeBackend.googleAI() — das ist der Firebase-vermittelte 'Gemini Developer API'-Backend (NICHT vertexAI()). Ueber Firebase AI Logic mit App Check gilt Googles Zusicherung, dass Prompts/Antworten des kostenpflichtigen/Firebase-Pfads NICHT zum Modelltraining verwendet und nicht dauerhaft gespeichert werden. WICHTIGER VORBEHALT: googleAI() (Gemini Developer API) hat je nach Abrechnungsstatus des Firebase-Projekts andere Datennutzungsregeln als vertexAI(); nur wenn das Projekt auf dem kostenpflichtigen/Blaze-Tier mit aktivierter AI Logic laeuft, greift die 'kein Training'-Zusage zuverlaessig. Der Code allein kann den Billing-Status nicht beweisen.",
+      "legalRelevance": "Die 'kein KI-Training'-Aussage haengt am Firebase-Projekt-Billing-Tier (Blaze + AI Logic). MUSS gegen die Firebase-Console/Google-Vertragslage verifiziert werden — auf dem kostenlosen Spark/Free-Tier des Gemini-Developer-API koennten Daten zum Training genutzt werden, was die Werbeaussage falsch machen wuerde. Nicht-codeseitig pruefbar -> als offenes Compliance-Item kennzeichnen."
+    },
+    {
+      "claim": "D-groq-audio-sofort-geloescht",
+      "statement": "privacy_gate_groq_body: 'Aufnahme wird nach der Umwandlung sofort geloescht'.",
+      "verdict": "WAHR",
+      "evidence": [
+        {
+          "file": "app/src/main/java/com/bestjournal/app/ui/screens/journal/JournalViewModel.kt",
+          "line": 485,
+          "code": "audioFile.delete()  // im onSuccess der Transkription"
+        },
+        {
+          "file": "app/src/main/java/com/bestjournal/app/ui/screens/journal/JournalViewModel.kt",
+          "line": 504,
+          "code": "audioFile.delete()  // auch im onFailure"
+        },
+        {
+          "file": "app/src/main/java/com/bestjournal/app/ui/screens/entrydetail/EntryDetailViewModel.kt",
+          "line": 584,
+          "code": "audioFile.delete() (success+fail 584/605)"
+        },
+        {
+          "file": "app/src/main/java/com/bestjournal/app/ui/screens/settings/SettingsViewModel.kt",
+          "line": 1103,
+          "code": "audioFile.delete() (success+fail 1103/1117)"
+        }
+      ],
+      "detail": "Die lokale WAV-Datei wird nach Abschluss der Transkription geloescht — in ALLEN drei Aufrufpfaden (Journal, EntryDetail, Settings/Prompt) und sowohl im Erfolgs- als auch im Fehlerfall (delete() in beiden Branches). Bezieht sich auf die LOKALE Datei; was Groq serverseitig mit der hochgeladenen Aufnahme tut, ist nicht codeseitig pruefbar (Groq-Policy: keine Speicherung von Audio). Lokale Loeschung = bestaetigt.",
+      "legalRelevance": "Aussage bzgl. der lokalen Aufnahme ist codeseitig belegt. Die serverseitige Loeschung bei Groq beruht auf deren Policy/AVV — sollte vertraglich (Groq Data Processing) abgesichert sein, ist aber nicht aus dem App-Code beweisbar."
+    },
+    {
+      "claim": "E-edge-tts-microsoft",
+      "statement": "Vorlesen via Edge-TTS (Microsoft, wss://speech.platform.bing.com) — durch Consent gated? Welche Daten an Microsoft? Default an/aus?",
+      "verdict": "WAHR",
+      "evidence": [
+        {
+          "file": "app/src/main/java/com/bestjournal/app/util/EdgeTtsPlayer.kt",
+          "line": 98,
+          "code": "wss://speech.platform.bing.com/consumer/speech/synthesize/readaloud/edge/v1"
+        },
+        {
+          "file": "app/src/main/java/com/bestjournal/app/util/EdgeTtsPlayer.kt",
+          "line": 160,
+          "code": "<voice name='$voice'>$escaped</voice>  // 'escaped' = der vorzulesende Eintragstext"
+        },
+        {
+          "file": "app/src/main/java/com/bestjournal/app/ui/screens/entrydetail/EntryDetailScreen.kt",
+          "line": 189,
+          "code": "val edgeTtsGate = rememberPrivacyGateState(PrivacyGateHelper.CloudService.EdgeTts)"
+        },
+        {
+          "file": "app/src/main/java/com/bestjournal/app/util/PrivacyGateHelper.kt",
+          "line": 24,
+          "code": "KEY_EDGE_TTS_CONSENTED default false (hasConsented => false)"
+        }
+      ],
+      "detail": "Edge-TTS schickt den vorzulesenden TEXT (Tagebucheintrag/Rueckblick) per WebSocket an Microsofts bing.com-Endpoint. Es ist durch den EdgeTts-PrivacyGate (Default OFF) gated und in Dashboard-, EntryDetail- und Retrospective-Screen verdrahtet (rememberPrivacyGateState EdgeTts). An Microsoft geht der Eintragstext; an Firebase Analytics gehen NUR voice/locale/error (kein Eintragstext, siehe logTtsFailure). Die erzeugte tts_audio.mp3 wird nach Wiedergabe geloescht (onCompletion/onError, Zeile 290/294).",
+      "legalRelevance": "Drittlandtransfer (USA, Microsoft) von potenziell sensiblem Eintragstext (Art. 9 DSGVO) — durch granularen Opt-in-Consent (Default OFF) abgedeckt. privacy_gate_edge_tts-Text sollte ausdruecklich nennen, dass der Eintragstext an Microsoft geht; ist der Standard-Edge-Consumer-Endpoint (kein Azure-Vertrag/AVV) — Rechtsgrundlage und fehlender AVV mit Microsoft kritisch pruefen."
+    },
+    {
+      "claim": "F-okhttp-logging-release",
+      "statement": "Loggt der okhttp-logging-interceptor im RELEASE-Build die Request/Response-Bodies (Datenleck)?",
+      "verdict": "FALSCH",
+      "evidence": [
+        {
+          "file": "app/src/main/java/com/bestjournal/app/di/NetworkModule.kt",
+          "line": 32,
+          "code": "if (BuildConfig.DEBUG) HttpLoggingInterceptor.Level.BODY"
+        },
+        {
+          "file": "app/src/main/java/com/bestjournal/app/di/NetworkModule.kt",
+          "line": 33,
+          "code": "else HttpLoggingInterceptor.Level.NONE"
+        }
+      ],
+      "detail": "Kein Datenleck: Level.BODY (vollstaendiges Body-Logging) wird AUSSCHLIESSLICH bei BuildConfig.DEBUG gesetzt; im Release-Build ist das Level NONE — es werden keine Header oder Bodies geloggt. Die Behauptung eines Release-Logging-Lecks ist falsch (korrekt abgesichert).",
+      "legalRelevance": "Korrekt — keine Logcat-Exfiltration von Eintragstext/API-Keys im Produktiv-Build. Best-Practice erfuellt."
+    },
+    {
+      "claim": "G-ohne-werbung",
+      "statement": "'ohne Werbung' als Premium-Feature — gibt es ueberhaupt ein Ad-SDK? Suggeriert der Claim faelschlich, Free habe Werbung?",
+      "verdict": "TEILWEISE",
+      "evidence": [
+        {
+          "file": "(repo-weit)",
+          "line": 0,
+          "code": "grep admob|gms.ads|MobileAds|AdView|applovin|ironsource|unityads|facebook.ads|vungle = 0 Treffer in app/src/main + build.gradle.kts + libs.versions.toml"
+        }
+      ],
+      "detail": "Es existiert KEIN Ad-SDK und kein AdView irgendwo im Code oder in den Dependencies. Die App zeigt also weder im Free- noch im Premium-Modus Werbung. Ein Premium-Feature 'ohne Werbung' ist damit gegenstandslos und kann den Eindruck erwecken, die kostenlose Version enthalte Werbung (die es nicht gibt).",
+      "legalRelevance": "UWG 5/UCPD: Ein als Premium-Vorteil beworbenes 'ohne Werbung' kann irrefuehrend sein, wenn die Gratis-Version ebenfalls werbefrei ist (Vorspiegelung eines nicht existierenden Nachteils der Free-Version). Empfehlung: 'ohne Werbung' aus der Premium-Feature-Liste entfernen ODER neutral als generelle App-Eigenschaft darstellen. (Hinweis: kein 'ohne Werbung'-String in den geprueften Premium-Listen direkt gefunden — falls vorhanden, streichen.)"
+    },
+    {
+      "claim": "H-analytics-vor-consent",
+      "statement": "Werden Analytics-Events VOR der Consent-Erteilung gesendet (Splash/Onboarding-Start)?",
+      "verdict": "FALSCH",
+      "evidence": [
+        {
+          "file": "app/src/main/java/com/bestjournal/app/BestJournalApp.kt",
+          "line": 44,
+          "code": "val analyticsEnabled = prefs.getBoolean(PREF_ANALYTICS_ENABLED, false)"
+        },
+        {
+          "file": "app/src/main/java/com/bestjournal/app/BestJournalApp.kt",
+          "line": 45,
+          "code": "FirebaseAnalytics.getInstance(this).setAnalyticsCollectionEnabled(analyticsEnabled) // VOR allen anderen Firebase-Calls"
+        },
+        {
+          "file": "app/src/main/java/com/bestjournal/app/ui/screens/consent/ConsentViewModel.kt",
+          "line": 134,
+          "code": "firebaseAnalytics.setAnalyticsCollectionEnabled(_analyticsEnabled.value) // erst nach Consent"
+        }
+      ],
+      "detail": "Analytics ist von Anfang an deaktiviert: in Application.onCreate() wird setAnalyticsCollectionEnabled mit Default FALSE (PREF_ANALYTICS_ENABLED, Default false) gesetzt — und zwar bewusst VOR allen anderen Firebase-Aufrufen (expliziter DSGVO-Kommentar Z.41-43). Erst wenn der Nutzer im ConsentScreen zustimmt, wird es auf true gesetzt (ConsentViewModel:134). Es werden also keine Events vor Einwilligung gesendet. Behauptung 'Events vor Consent' = falsch.",
+      "legalRelevance": "DSGVO/TTDSG-konform: kein Tracking ohne vorherige Einwilligung; Default-OFF + setAnalyticsCollectionEnabled vor jeglichem Firebase-Event ist die korrekte Umsetzung. CCPA: PREF_DO_NOT_SELL widerruft zusaetzlich alle Cloud-Consents."
+    }
+  ],
+  "openFindingsCount": 0,
+  "riskCounts": {
+    "🟥": 10,
+    "🟧": 21,
+    "🟨": 13
+  },
+  "fixedThisRun": 40,
+  "skippedThisRun": 0,
+  "userAlternativesApplied": 0,
+  "invasiveChangesApplied": 2,
+  "manualFixesPending": 1,
+  "previousRunDelta": {
+    "newFindings": 44,
+    "resolvedFindings": 0,
+    "note": "Letzter Lauf 2026-05-22 endete mit 0; App+Skills seitdem geändert — Vollscan-Neubewertung"
+  },
+  "acceptedDocumented": [
+    "E2",
+    "D2-architecture",
+    "C6",
+    "Z1",
+    "Z2",
+    "Z3",
+    "X12-rest"
+  ],
+  "loopResult": "converged",
+  "completedAt": "2026-06-10T23:23:55Z",
+  "phase4": {
+    "assembleDebug": "SUCCESS in 25s (v0.21.11 build 292)",
+    "crossLingualMatrixFinal": "26/26 Sprachen: 0 fehlende Keys, 0 Format-Mismatches, 0 naked %, 0 unescapte Apostrophe (nach 22 Eskapierungen en/nl/uk)",
+    "spotChecks": "B1-B4/A1/A2/F1/A7/C5/D1/C1/C2/X2 alle verifiziert"
+  }
+}

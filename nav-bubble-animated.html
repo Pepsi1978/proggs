@@ -1,0 +1,312 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Nav-Bubble Animated — 20 Varianten</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/icon?family=Material+Symbols+Rounded" rel="stylesheet">
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:'Inter',sans-serif;background:#f0f0f0;transition:background .4s;min-height:100vh}
+body.dark{background:#1a1a1a;color:#e0e0e0}
+.material-symbols-rounded{font-variation-settings:'FILL' 1,'wght' 500,'GRAD' 0,'opsz' 24}
+.controls{position:sticky;top:0;z-index:100;display:flex;justify-content:center;align-items:center;gap:16px;padding:16px;background:rgba(255,255,255,0.9);backdrop-filter:blur(10px);border-bottom:1px solid #e0e0e0}
+body.dark .controls{background:rgba(30,30,30,0.9);border-bottom-color:#333}
+.controls h1{font-size:18px;font-weight:700}
+.toggle-btn{padding:8px 20px;border-radius:20px;border:2px solid #333;background:transparent;font-family:inherit;font-weight:600;cursor:pointer;font-size:14px;color:#333}
+body.dark .toggle-btn{border-color:#aaa;color:#aaa}
+.hint{text-align:center;padding:8px;font-size:13px;color:#999}
+.grid{display:flex;flex-wrap:wrap;justify-content:center;gap:32px;padding:24px 16px 60px}
+.variant{display:flex;flex-direction:column;align-items:center;gap:10px}
+.variant-label{font-size:14px;font-weight:700;color:#333;background:#fff;padding:5px 16px;border-radius:10px;box-shadow:0 2px 8px rgba(0,0,0,0.08)}
+body.dark .variant-label{background:#2a2a2a;color:#ddd}
+.variant-desc{font-size:11px;color:#888;max-width:280px;text-align:center;line-height:1.4}
+.phone{width:300px;height:480px;border-radius:32px;overflow:hidden;position:relative;box-shadow:0 8px 40px rgba(0,0,0,0.15);border:3px solid #ccc}
+body.dark .phone{border-color:#444;box-shadow:0 8px 40px rgba(0,0,0,0.5)}
+.phone-content{width:100%;height:100%;position:relative;display:flex;flex-direction:column}
+.fake-content{flex:1;padding:16px;overflow:hidden}
+.fake-card{border-radius:14px;padding:14px;margin-bottom:10px}
+.fake-line{height:9px;border-radius:5px;margin-bottom:7px}
+.fake-line.short{width:60%}.fake-line.medium{width:80%}.fake-line.long{width:100%}
+.light-bg{background:#fafafa}
+.light-bg .fake-card{background:#fff;box-shadow:0 1px 4px rgba(0,0,0,0.06)}
+.light-bg .fake-line{background:#e8e8e8}
+.dark-bg{background:#121212}
+.dark-bg .fake-card{background:#1e1e1e}
+.dark-bg .fake-line{background:#2a2a2a}
+
+/* Base nav */
+.nb{position:absolute;bottom:10px;left:50%;transform:translateX(-50%);display:flex;align-items:center;padding:4px 6px;gap:0}
+.ni{display:flex;flex-direction:column;align-items:center;justify-content:center;padding:8px 14px;cursor:pointer;position:relative;z-index:2;transition:color .3s,transform .3s;gap:2px}
+.ni .material-symbols-rounded{font-size:22px;transition:all .3s}
+.ni .lb{font-size:9px;font-weight:600;max-height:0;opacity:0;overflow:hidden;transition:all .3s}
+.ni.active .lb{max-height:16px;opacity:1}
+
+/* Sliding indicator (shared by many variants) */
+.indicator{position:absolute;z-index:1;transition:all .4s cubic-bezier(.4,0,.2,1)}
+
+/* === A1: Sliding Teal Pill === */
+.a1{background:#fff;border-radius:28px;box-shadow:0 4px 20px rgba(0,0,0,0.08)}
+.dark-bg .a1{background:#1e1e1e;box-shadow:0 4px 20px rgba(0,0,0,0.4)}
+.a1 .indicator{height:calc(100% - 8px);top:4px;border-radius:22px;background:linear-gradient(135deg,#0097A7,#00BCD4);box-shadow:0 4px 12px rgba(0,151,167,0.3)}
+.a1 .ni{color:#999}.a1 .ni.active{color:#fff}
+.dark-bg .a1 .ni{color:#666}.dark-bg .a1 .ni.active{color:#fff}
+
+/* === A2: Bouncing Orange Dot === */
+.a2{background:#fff;border-radius:24px;box-shadow:0 2px 16px rgba(0,0,0,0.06)}
+.dark-bg .a2{background:#1e1e1e;box-shadow:0 2px 16px rgba(0,0,0,0.4)}
+.a2 .indicator{bottom:6px;width:6px;height:6px;border-radius:50%;background:#E07830;box-shadow:0 0 8px rgba(224,120,48,0.5);transition:all .5s cubic-bezier(.68,-.55,.27,1.55)}
+.a2 .ni{color:#bbb}.a2 .ni.active{color:#E07830;transform:translateY(-2px)}
+.dark-bg .a2 .ni{color:#555}.dark-bg .a2 .ni.active{color:#FFB74D}
+.dark-bg .a2 .indicator{background:#FFB74D;box-shadow:0 0 8px rgba(255,183,77,0.5)}
+
+/* === A3: Glowing Ring === */
+.a3{background:#111;border-radius:50px;box-shadow:0 4px 24px rgba(0,0,0,0.3);padding:6px 14px}
+.dark-bg .a3{background:#0a0a0a}
+.light-bg .a3{background:#1a1a1a}
+.a3 .indicator{height:40px;top:50%;transform:translateY(-50%);border-radius:50%;border:2px solid #00ffc8;box-shadow:0 0 16px rgba(0,255,200,0.4),inset 0 0 8px rgba(0,255,200,0.1);width:40px;aspect-ratio:1;transition:all .4s cubic-bezier(.4,0,.2,1)}
+.a3 .ni{color:#555;padding:10px 12px}.a3 .ni.active{color:#00ffc8;text-shadow:0 0 8px rgba(0,255,200,0.5)}
+.a3 .ni .lb{color:inherit}
+
+/* === A4: Elastic Blob === */
+.a4{background:#fff;border-radius:30px;box-shadow:0 4px 20px rgba(0,0,0,0.08);padding:4px}
+.dark-bg .a4{background:#1e1e1e;box-shadow:0 4px 20px rgba(0,0,0,0.4)}
+.a4 .indicator{height:calc(100% - 8px);top:4px;border-radius:24px;background:linear-gradient(135deg,#667eea,#764ba2);box-shadow:0 4px 16px rgba(102,126,234,0.3);transition:all .5s cubic-bezier(.68,-.3,.27,1.3)}
+.a4 .ni{color:#999}.a4 .ni.active{color:#fff}
+.dark-bg .a4 .ni{color:#666}.dark-bg .a4 .ni.active{color:#fff}
+.dark-bg .a4 .indicator{background:linear-gradient(135deg,#4a5a8a,#5a3a7a)}
+
+/* === A5: Spotlight Sweep === */
+.a5{background:#fff;border-radius:26px;box-shadow:0 2px 16px rgba(0,0,0,0.06)}
+.dark-bg .a5{background:#1e1e1e;box-shadow:0 2px 16px rgba(0,0,0,0.4)}
+.a5 .indicator{height:100%;top:0;border-radius:26px;background:radial-gradient(circle at 50% 30%,rgba(0,151,167,0.15),transparent 70%);transition:all .5s ease}
+.a5 .ni{color:#bbb}.a5 .ni.active{color:#0097A7}
+.dark-bg .a5 .ni{color:#555}.dark-bg .a5 .ni.active{color:#4DD0E1}
+.dark-bg .a5 .indicator{background:radial-gradient(circle at 50% 30%,rgba(77,208,225,0.12),transparent 70%)}
+
+/* === A6: Rising Bar === */
+.a6{background:#fff;border-radius:24px;box-shadow:0 4px 20px rgba(0,0,0,0.08)}
+.dark-bg .a6{background:#1e1e1e;box-shadow:0 4px 20px rgba(0,0,0,0.4)}
+.a6 .indicator{bottom:0;height:3px;border-radius:0 0 24px 24px;background:linear-gradient(90deg,#E07830,#FFB74D);transition:all .4s cubic-bezier(.4,0,.2,1)}
+.a6 .ni{color:#bbb}.a6 .ni.active{color:#E07830}
+.dark-bg .a6 .ni{color:#555}.dark-bg .a6 .ni.active{color:#FFB74D}
+
+/* === A7: Gradient Flow === */
+.a7{border-radius:28px;box-shadow:0 4px 20px rgba(0,0,0,0.1);overflow:hidden;background:#eee}
+.dark-bg .a7{background:#222}
+.a7 .indicator{height:100%;top:0;background:linear-gradient(135deg,#43e97b,#38f9d7);opacity:0.85;border-radius:0;transition:all .5s cubic-bezier(.4,0,.2,1)}
+.dark-bg .a7 .indicator{background:linear-gradient(135deg,#1a6b3a,#1a7a6a)}
+.a7 .ni{color:#777}.a7 .ni.active{color:#003828}
+.dark-bg .a7 .ni{color:#666}.dark-bg .a7 .ni.active{color:#fff}
+.a7 .ni .lb{color:inherit}
+
+/* === A8: Scale Pop === */
+.a8{background:#fff;border-radius:50px;box-shadow:0 2px 16px rgba(0,0,0,0.08);padding:6px 14px}
+.dark-bg .a8{background:#2a2a2a;box-shadow:0 2px 20px rgba(0,0,0,0.5)}
+.a8 .indicator{display:none}
+.a8 .ni{color:#bbb;transition:all .35s cubic-bezier(.68,-.55,.27,1.55)}.a8 .ni.active{color:#0097A7;transform:scale(1.25) translateY(-4px)}
+.a8 .ni.active .material-symbols-rounded{filter:drop-shadow(0 4px 8px rgba(0,151,167,0.4))}
+.dark-bg .a8 .ni{color:#555}.dark-bg .a8 .ni.active{color:#4DD0E1}
+
+/* === A9: Sunset Slide === */
+.a9{background:linear-gradient(135deg,#ffecd2,#fcb69f);border-radius:28px;box-shadow:0 6px 24px rgba(252,182,159,0.25);padding:6px 8px}
+.dark-bg .a9{background:linear-gradient(135deg,#3a2818,#4a2a20)}
+.a9 .indicator{height:calc(100% - 8px);top:4px;border-radius:20px;background:rgba(255,255,255,0.5);backdrop-filter:blur(8px);transition:all .4s cubic-bezier(.4,0,.2,1)}
+.dark-bg .a9 .indicator{background:rgba(255,255,255,0.08)}
+.a9 .ni{color:#b08060}.a9 .ni.active{color:#6a2a00}
+.dark-bg .a9 .ni{color:#7a6050}.dark-bg .a9 .ni.active{color:#FFB74D}
+.a9 .ni .lb{color:inherit}
+
+/* === A10: Magnetic Pull === */
+.a10{background:#fff;border-radius:26px;box-shadow:0 4px 20px rgba(0,0,0,0.08)}
+.dark-bg .a10{background:#1e1e1e;box-shadow:0 4px 20px rgba(0,0,0,0.4)}
+.a10 .indicator{height:calc(100% - 8px);top:4px;border-radius:20px;background:#0097A7;transition:all .6s cubic-bezier(.25,.46,.45,.94)}
+.dark-bg .a10 .indicator{background:#00838F}
+.a10 .ni{color:#999}.a10 .ni.active{color:#fff}
+.dark-bg .a10 .ni{color:#666}.dark-bg .a10 .ni.active{color:#fff}
+
+/* === A11: Aurora Shift === */
+.a11{border-radius:28px;box-shadow:0 4px 20px rgba(0,0,0,0.1);padding:4px 6px;background:#fff}
+.dark-bg .a11{background:#1e1e1e}
+.a11 .indicator{height:calc(100% - 8px);top:4px;border-radius:22px;background:linear-gradient(135deg,#0097A7,#E07830);box-shadow:0 4px 16px rgba(0,151,167,0.2);transition:all .45s cubic-bezier(.4,0,.2,1)}
+.dark-bg .a11 .indicator{background:linear-gradient(135deg,#005f6a,#8a4a1a)}
+.a11 .ni{color:#999}.a11 .ni.active{color:#fff}
+.dark-bg .a11 .ni{color:#666}.dark-bg .a11 .ni.active{color:#fff}
+
+/* === A12: Neon Slide === */
+.a12{background:#111;border-radius:50px;box-shadow:0 4px 24px rgba(0,0,0,0.3);padding:6px 14px}
+.dark-bg .a12,.light-bg .a12{background:#111}
+.a12 .indicator{height:calc(100% - 12px);top:6px;border-radius:50px;background:rgba(0,255,200,0.08);border:1px solid rgba(0,255,200,0.3);box-shadow:0 0 20px rgba(0,255,200,0.15);transition:all .4s cubic-bezier(.4,0,.2,1)}
+.a12 .ni{color:#555;padding:8px 12px}.a12 .ni.active{color:#00ffc8;text-shadow:0 0 8px rgba(0,255,200,0.4)}
+.a12 .ni .lb{color:inherit}
+
+/* === A13: Gold Slide === */
+.a13{background:#1a1a1a;border-radius:26px;box-shadow:0 4px 20px rgba(0,0,0,0.2);border:1px solid rgba(212,175,55,0.15);padding:4px 6px}
+.dark-bg .a13{background:#0a0a0a}
+.light-bg .a13{background:#1a1a1a}
+.a13 .indicator{height:calc(100% - 8px);top:4px;border-radius:20px;background:linear-gradient(135deg,rgba(212,175,55,0.2),rgba(212,175,55,0.08));border:1px solid rgba(212,175,55,0.25);transition:all .4s cubic-bezier(.4,0,.2,1)}
+.a13 .ni{color:#666}.a13 .ni.active{color:#D4AF37}
+.a13 .ni.active .material-symbols-rounded{filter:drop-shadow(0 0 4px rgba(212,175,55,0.4))}
+.a13 .ni .lb{color:#D4AF37}
+
+/* === A14: Spring Pill === */
+.a14{background:#E0F2F1;border-radius:28px;box-shadow:0 2px 12px rgba(0,0,0,0.06);padding:4px 6px}
+.dark-bg .a14{background:#1a2e2c;box-shadow:0 2px 16px rgba(0,0,0,0.4)}
+.a14 .indicator{height:calc(100% - 8px);top:4px;border-radius:22px;background:#fff;box-shadow:0 2px 8px rgba(0,0,0,0.08);transition:all .5s cubic-bezier(.68,-.55,.27,1.55)}
+.dark-bg .a14 .indicator{background:#0d2320;box-shadow:none}
+.a14 .ni{color:#5f8a87}.a14 .ni.active{color:#00695C}
+.dark-bg .a14 .ni{color:#5a8a84}.dark-bg .a14 .ni.active{color:#80CBC4}
+
+/* === A15: Candy Wave === */
+.a15{background:linear-gradient(90deg,#a18cd1,#fbc2eb,#a18cd1);background-size:200% 100%;border-radius:30px;box-shadow:0 6px 20px rgba(161,140,209,0.2);padding:6px 8px;animation:candyBg 4s ease infinite}
+@keyframes candyBg{0%,100%{background-position:0% 50%}50%{background-position:100% 50%}}
+.dark-bg .a15{background:linear-gradient(90deg,#4a3868,#6a4a6a,#4a3868);background-size:200% 100%;animation:candyBg 4s ease infinite}
+.a15 .indicator{height:calc(100% - 8px);top:4px;border-radius:24px;background:rgba(255,255,255,0.35);backdrop-filter:blur(4px);transition:all .5s cubic-bezier(.4,0,.2,1)}
+.dark-bg .a15 .indicator{background:rgba(255,255,255,0.1)}
+.a15 .ni{color:rgba(255,255,255,0.5)}.a15 .ni.active{color:#fff}
+.a15 .ni .lb{color:#fff}
+
+/* === A16: Ripple Teal === */
+.a16{background:#fff;border-radius:26px;box-shadow:0 4px 20px rgba(0,0,0,0.08)}
+.dark-bg .a16{background:#1e1e1e;box-shadow:0 4px 20px rgba(0,0,0,0.4)}
+.a16 .indicator{width:44px;height:44px;top:50%;transform:translateY(-50%);border-radius:50%;background:rgba(0,151,167,0.12);box-shadow:0 0 0 0 rgba(0,151,167,0.2);transition:left .4s cubic-bezier(.4,0,.2,1);animation:ripplePulse 2s ease infinite}
+@keyframes ripplePulse{0%{box-shadow:0 0 0 0 rgba(0,151,167,0.2)}70%{box-shadow:0 0 0 10px rgba(0,151,167,0)}100%{box-shadow:0 0 0 0 rgba(0,151,167,0)}}
+.dark-bg .a16 .indicator{background:rgba(77,208,225,0.1)}
+.a16 .ni{color:#bbb}.a16 .ni.active{color:#0097A7}
+.dark-bg .a16 .ni{color:#555}.dark-bg .a16 .ni.active{color:#4DD0E1}
+
+/* === A17: Liquid Morph === */
+.a17{background:#fff;border-radius:28px;box-shadow:0 4px 20px rgba(0,0,0,0.08);padding:4px}
+.dark-bg .a17{background:#1e1e1e;box-shadow:0 4px 20px rgba(0,0,0,0.4)}
+.a17 .indicator{height:calc(100% - 8px);top:4px;border-radius:22px;background:linear-gradient(135deg,#f093fb,#f5576c);box-shadow:0 4px 16px rgba(245,87,108,0.25);transition:all .5s cubic-bezier(.4,0,.2,1)}
+.dark-bg .a17 .indicator{background:linear-gradient(135deg,#8a4570,#8a3040)}
+.a17 .ni{color:#999}.a17 .ni.active{color:#fff}
+.dark-bg .a17 .ni{color:#666}.dark-bg .a17 .ni.active{color:#fff}
+
+/* === A18: Underline Slide === */
+.a18{background:#fff;border-radius:22px;box-shadow:0 2px 12px rgba(0,0,0,0.06);padding:4px 8px}
+.dark-bg .a18{background:#1e1e1e;box-shadow:0 2px 16px rgba(0,0,0,0.4)}
+.a18 .indicator{bottom:6px;height:3px;border-radius:2px;background:#0097A7;transition:all .35s cubic-bezier(.4,0,.2,1)}
+.dark-bg .a18 .indicator{background:#4DD0E1}
+.a18 .ni{color:#bbb;padding:10px 14px}.a18 .ni.active{color:#0097A7}
+.dark-bg .a18 .ni{color:#555}.dark-bg .a18 .ni.active{color:#4DD0E1}
+
+/* === A19: Inverted Slide === */
+.a19{background:#222;border-radius:50px;box-shadow:0 4px 20px rgba(0,0,0,0.15);padding:6px 10px}
+.dark-bg .a19{background:#f5f5f5}
+.a19 .indicator{height:calc(100% - 10px);top:5px;border-radius:50px;background:#fff;box-shadow:0 2px 8px rgba(0,0,0,0.15);transition:all .4s cubic-bezier(.4,0,.2,1)}
+.dark-bg .a19 .indicator{background:#222}
+.a19 .ni{color:#777;padding:8px 12px}.a19 .ni.active{color:#222}
+.dark-bg .a19 .ni{color:#888}.dark-bg .a19 .ni.active{color:#fff}
+.a19 .ni .lb{color:inherit}
+
+/* === A20: Dual Color Split === */
+.a20{background:#fff;border-radius:26px;box-shadow:0 4px 20px rgba(0,0,0,0.08);padding:4px 6px}
+.dark-bg .a20{background:#1e1e1e;box-shadow:0 4px 20px rgba(0,0,0,0.4)}
+.a20 .indicator{height:calc(100% - 8px);top:4px;border-radius:20px;background:linear-gradient(180deg,rgba(0,151,167,0.15) 0%,rgba(224,120,48,0.15) 100%);border:1px solid rgba(0,151,167,0.15);transition:all .45s cubic-bezier(.4,0,.2,1)}
+.dark-bg .a20 .indicator{background:linear-gradient(180deg,rgba(77,208,225,0.1) 0%,rgba(255,183,77,0.1) 100%);border-color:rgba(77,208,225,0.12)}
+.a20 .ni{color:#bbb}.a20 .ni.active{color:#0097A7}
+.dark-bg .a20 .ni{color:#555}.dark-bg .a20 .ni.active{color:#4DD0E1}
+</style>
+</head>
+<body>
+<div class="controls">
+  <h1>Animierte Nav-Bubbles — 20 Varianten</h1>
+  <button class="toggle-btn" onclick="toggleDark()">Hell / Dunkel</button>
+</div>
+<p class="hint">Klicke auf die Icons — die Animation wandert zum ausgewaehlten Tab!</p>
+<div class="grid" id="grid"></div>
+<script>
+const V=[
+{id:'a1',name:'A1. Sliding Teal Pill',desc:'Teal-Gradient-Pill gleitet sanft zum aktiven Tab.',cls:'a1'},
+{id:'a2',name:'A2. Bouncing Dot',desc:'Orangener Punkt springt elastisch zum Tab. Icon hebt sich.',cls:'a2'},
+{id:'a3',name:'A3. Neon Ring',desc:'Leuchtender Ring schwebt zum aktiven Icon.',cls:'a3'},
+{id:'a4',name:'A4. Elastic Blob',desc:'Lila-Blob dehnt sich elastisch zum Ziel.',cls:'a4'},
+{id:'a5',name:'A5. Spotlight',desc:'Sanfter Lichtkreis wandert zum aktiven Tab.',cls:'a5'},
+{id:'a6',name:'A6. Rising Bar',desc:'Orange-Gradient-Linie gleitet am unteren Rand.',cls:'a6'},
+{id:'a7',name:'A7. Gradient Flow',desc:'Gruener Gradient fliesst hinter dem aktiven Tab.',cls:'a7'},
+{id:'a8',name:'A8. Scale Pop',desc:'Aktives Icon springt hoch und wird groesser (kein Indikator).',cls:'a8'},
+{id:'a9',name:'A9. Sunset Slide',desc:'Frosted-Pill gleitet auf warmem Pfirsich-Hintergrund.',cls:'a9'},
+{id:'a10',name:'A10. Magnetic Pull',desc:'Teal-Pill wird wie magnetisch zum Tab gezogen.',cls:'a10'},
+{id:'a11',name:'A11. Aurora Shift',desc:'Teal-zu-Orange Gradient (App-Farben) gleitet zum Tab.',cls:'a11'},
+{id:'a12',name:'A12. Neon Slide',desc:'Leuchtender Rahmen gleitet auf dunklem Hintergrund.',cls:'a12'},
+{id:'a13',name:'A13. Gold Luxe Slide',desc:'Goldener Rahmen wandert elegant auf schwarzer Basis.',cls:'a13'},
+{id:'a14',name:'A14. Spring Material',desc:'Weisse Pill federt elastisch (Material You Style).',cls:'a14'},
+{id:'a15',name:'A15. Candy Wave',desc:'Animierter Hintergrund + frosted Pill wandert mit.',cls:'a15'},
+{id:'a16',name:'A16. Ripple Pulse',desc:'Pulsierender Kreis wandert und pulsiert am Ziel.',cls:'a16'},
+{id:'a17',name:'A17. Liquid Pink',desc:'Pink-Gradient-Pill fliesst smooth zum naechsten Tab.',cls:'a17'},
+{id:'a18',name:'A18. Underline Slide',desc:'Feine Teal-Linie gleitet unter dem aktiven Tab.',cls:'a18'},
+{id:'a19',name:'A19. Inverted Slide',desc:'Weisse Pill auf dunklem Grund (invertiert im Dark Mode).',cls:'a19'},
+{id:'a20',name:'A20. Dual Color',desc:'Teal-Orange Gradient-Pill vereint die App-Farben.',cls:'a20'},
+];
+const T=[
+{icon:'auto_awesome',label:'Rueckblick'},
+{icon:'analytics',label:'Dashboard'},
+{icon:'book',label:'Tagebuch'},
+{icon:'settings',label:'Einstell.'},
+];
+const grid=document.getElementById('grid');
+const isDark=()=>document.body.classList.contains('dark');
+
+function render(){
+grid.innerHTML='';
+V.forEach(v=>{
+const d=document.createElement('div');d.className='variant';
+const hasIndicator=v.cls!=='a8';
+d.innerHTML=`<span class="variant-label">${v.name}</span>
+<div class="phone"><div class="phone-content ${isDark()?'dark-bg':'light-bg'}">
+<div class="fake-content">
+<div class="fake-card"><div class="fake-line long"></div><div class="fake-line medium"></div><div class="fake-line short"></div></div>
+<div class="fake-card"><div class="fake-line medium"></div><div class="fake-line long"></div></div>
+<div class="fake-card"><div class="fake-line short"></div><div class="fake-line long"></div><div class="fake-line medium"></div></div>
+</div>
+<div class="nb ${v.cls}" id="bubble-${v.id}">
+${hasIndicator?'<div class="indicator" id="ind-'+v.id+'"></div>':''}
+${T.map((t,i)=>`<div class="ni ${i===2?'active':''}" data-idx="${i}" onclick="setActive('${v.id}',${i},this)">
+<span class="material-symbols-rounded">${t.icon}</span><span class="lb">${t.label}</span></div>`).join('')}
+</div></div></div><p class="variant-desc">${v.desc}</p>`;
+grid.appendChild(d);
+});
+// Initial indicator positions
+V.forEach(v=>{if(v.cls==='a8')return;positionIndicator(v.id,2)});
+}
+
+function positionIndicator(vid,idx){
+const bubble=document.getElementById('bubble-'+vid);
+const ind=document.getElementById('ind-'+vid);
+if(!ind||!bubble)return;
+const items=bubble.querySelectorAll('.ni');
+const item=items[idx];
+if(!item)return;
+const bRect=bubble.getBoundingClientRect();
+const iRect=item.getBoundingClientRect();
+const left=iRect.left-bRect.left;
+const width=iRect.width;
+// Special sizing for specific variants
+const cls=bubble.className;
+if(cls.includes('a2')){
+  ind.style.left=(left+width/2-3)+'px';
+}else if(cls.includes('a3')){
+  ind.style.left=(left+width/2-20)+'px';
+}else if(cls.includes('a16')){
+  ind.style.left=(left+width/2-22)+'px';
+}else if(cls.includes('a6')||cls.includes('a18')){
+  ind.style.left=left+'px';ind.style.width=width+'px';
+}else{
+  ind.style.left=left+'px';ind.style.width=width+'px';
+}
+}
+
+function setActive(vid,idx,el){
+const bubble=document.getElementById('bubble-'+vid);
+bubble.querySelectorAll('.ni').forEach((item,i)=>item.classList.toggle('active',i===idx));
+positionIndicator(vid,idx);
+}
+
+function toggleDark(){document.body.classList.toggle('dark');render();}
+render();
+window.addEventListener('resize',()=>V.forEach(v=>{if(v.cls!=='a8'){const active=document.querySelector('#bubble-'+v.id+' .ni.active');if(active)positionIndicator(v.id,parseInt(active.dataset.idx))}}));
+</script>
+</body>
+</html>

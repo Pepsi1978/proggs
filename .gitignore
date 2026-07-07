@@ -1,0 +1,50 @@
+/tools/*
+!/tools/chrome-beenden/
+!/tools/check_cancellation_rethrow.py
+.code-search/
+.think-tank/
+.env
+!codex-setup/bin/
+!codex-setup/bin/git
+!codex-setup/bin/git.cmd
+test_api.ts
+.mcp.json
+BestJournalAndroid/app/google-services.json
+BestJournalAndroid/local.properties
+BestJournalAndroid/*.jks
+BestJournalAndroid/**/*.jks
+
+# Build cache
+**/.kotlin/
+**/__pycache__/
+.gitnexus/
+.claude/worktrees/
+.claude/skills/
+
+# Screenshots (managed manually for monetization/designer skills)
+BestJournalAndroid/Screenshots/
+BestJournalFrank/Screenshots/
+
+# Hinweis 2026-05-09: scripts/screenshot.sh schreibt ab sofort nach
+# ~/Pictures/Claude Screenshots/ (Frank-Standardordner) — also ausserhalb
+# des Repos. Kein .gitignore-Eintrag noetig. Falls jemand das Skript mit
+# -o auf einen In-Repo-Pfad umlenkt, soll diese Datei manuell ignoriert werden.
+
+# .NET Build-Artefakte (PDB-Symboldateien werden bei jedem Release-Build neu
+# erzeugt — sollen nicht im Repo liegen).
+**/publish/*.pdb
+
+# Plattformspezifische Lock-Dateien (Cron/Scheduled-Tasks pro Rechner).
+.claude/scheduled_tasks.lock
+.superpowers/
+
+# Cowork-Push: Token-Datei (liegt in .git/, hier zusaetzlich als Defense-in-Depth)
+.cowork-credentials
+.git-credentials
+
+# --- Cowork add: Build-/Abhaengigkeits-Artefakte (Android/Gradle/Node) ---
+**/build/
+**/.gradle/
+**/node_modul
+# Cowork-Robustheits-Testdatei (nur temporaer, nie tracken)
+cowork-robustness-test.txt

@@ -1,0 +1,7 @@
+interface:
+  display_name: "coding-standards"
+  short_description: "Universal coding standards, best practices, and patterns for"
+  default_prompt: "Use $everything-codex-everything-codex--coding-standards for this task."
+
+policy:
+  allow_implicit_invocation: false

@@ -1,0 +1,7 @@
+interface:
+  display_name: "quality-nonconformance"
+  short_description: "quality-nonconformance skill"
+  default_prompt: "Use $everything-codex-everything-codex--quality-nonconformance for this task."
+
+policy:
+  allow_implicit_invocation: false

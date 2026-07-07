@@ -1,0 +1,7 @@
+interface:
+  display_name: "production-scheduling"
+  short_description: "production-scheduling skill"
+  default_prompt: "Use $everything-codex-everything-codex--production-scheduling for this task."
+
+policy:
+  allow_implicit_invocation: false

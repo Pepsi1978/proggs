@@ -1,0 +1,2759 @@
+{
+  "deTranslatableKeys": 1085,
+  "locales": {
+    "ar": {
+      "xmlValid": true,
+      "xmlError": null,
+      "missing": [],
+      "untranslated": [
+        "ai_prompt_rerank_actions_header",
+        "ai_prompt_rerank_user_focus_header",
+        "ai_prompt_rerank_entries_header",
+        "settings_about_version"
+      ],
+      "fmtMismatch": [],
+      "barePct": [
+        {
+          "key": "ai_limit_yearly",
+          "loc_text": "اشتراك سنوي، %1$s سنويا (وفّر 37\\u00A0%%)"
+        },
+        {
+          "key": "churn_discount_badge",
+          "loc_text": "وفّر %1$d\\u00A0%%"
+        },
+        {
+          "key": "paywall_instead_per_month",
+          "loc_text": "وفِّر %1$d%% مقارنةً بالخطة الشهرية"
+        }
+      ],
+      "xliffLost": [],
+      "translatedCount": 1085,
+      "problemCount": 7,
+      "status": "PROBLEME"
+    },
+    "bn": {
+      "xmlValid": true,
+      "xmlError": null,
+      "missing": [],
+      "untranslated": [
+        "label_premium",
+        "settings_premium_section",
+        "settings_about_version"
+      ],
+      "fmtMismatch": [],
+      "barePct": [
+        {
+          "key": "ai_limit_yearly",
+          "loc_text": "বার্ষিক সাবস্ক্রিপশন, %1$s/বছর (37%% সাশ্রয়)"
+        },
+        {
+          "key": "churn_discount_badge",
+          "loc_text": "%1$d%% সাশ্রয়"
+        },
+        {
+          "key": "paywall_instead_per_month",
+          "loc_text": "মাসিক প্ল্যানের তুলনায় %1$d%% সাশ্রয়"
+        }
+      ],
+      "xliffLost": [],
+      "translatedCount": 1085,
+      "problemCount": 6,
+      "status": "PROBLEME"
+    },
+    "en": {
+      "xmlValid": true,
+      "xmlError": null,
+      "missing": [],
+      "untranslated": [
+        "retro_cd_video",
+        "retro_share_text_label",
+        "month_november",
+        "journal_drive_backup_dialog",
+        "month_april",
+        "month_september",
+        "settings_themes_manager",
+        "label_video",
+        "nav_dashboard",
+        "dashboard_title",
+        "summary_relevant",
+        "month_august",
+        "json_key_category_name",
+        "achievements_title",
+        "label_premium",
+        "theme_neutral",
+        "label_original",
+        "consent_details_expand",
+        "settings_theme",
+        "follow_up_tab_original",
+        "settings_dashboard_section",
+        "json_key_trend",
+        "custom_relevant_label",
+        "settings_premium_section",
+        "json_key_category_icon",
+        "splash_start",
+        "settings_about_version",
+        "theme_one_dark",
+        "settings_feedback"
+      ],
+      "fmtMismatch": [],
+      "barePct": [
+        {
+          "key": "ai_limit_yearly",
+          "loc_text": "Yearly, %1$s/year (save 37%%)"
+        },
+        {
+          "key": "churn_discount_badge",
+          "loc_text": "%1$d%% SAVE"
+        },
+        {
+          "key": "paywall_instead_per_month",
+          "loc_text": "Save %1$d%% vs. monthly plan"
+        }
+      ],
+      "xliffLost": [
+        {
+          "key": "ai_retro_month_title_prompt",
+          "de": 4,
+          "loc": 0
+        },
+        {
+          "key": "ai_retro_month_task",
+          "de": 4,
+          "loc": 0
+        },
+        {
+          "key": "ai_retro_week_title_prompt",
+          "de": 4,
+          "loc": 0
+        },
+        {
+          "key": "ai_retro_year_task",
+          "de": 2,
+          "loc": 0
+        },
+        {
+          "key": "ai_retro_year_title_prompt",
+          "de": 4,
+          "loc": 0
+        }
+      ],
+      "translatedCount": 1085,
+      "problemCount": 37,
+      "status": "PROBLEME"
+    },
+    "es": {
+      "xmlValid": true,
+      "xmlError": null,
+      "missing": [],
+      "untranslated": [
+        "retro_cd_video",
+        "label_video",
+        "retro_photo_n",
+        "entry_cd_photo_page",
+        "entry_photos_videos",
+        "label_premium",
+        "label_photo",
+        "label_original",
+        "retro_cd_photo",
+        "follow_up_tab_original",
+        "settings_premium_section",
+        "settings_export_photos",
+        "settings_about_version",
+        "theme_one_dark"
+      ],
+      "fmtMismatch": [
+        {
+          "key": "legend_reflection_deep",
+          "de": [],
+          "loc": [
+            "%%"
+          ]
+        },
+        {
+          "key": "legend_high_focus",
+          "de": [],
+          "loc": [
+            "%%"
+          ]
+        },
+        {
+          "key": "legend_activity_high",
+          "de": [],
+          "loc": [
+            "%%"
+          ]
+        },
+        {
+          "key": "legend_activity_medium",
+          "de": [],
+          "loc": [
+            "%%"
+          ]
+        },
+        {
+          "key": "legend_activity_low",
+          "de": [],
+          "loc": [
+            "%%"
+          ]
+        },
+        {
+          "key": "legend_reflection_surface",
+          "de": [],
+          "loc": [
+            "%%"
+          ]
+        },
+        {
+          "key": "legend_reflection_aware",
+          "de": [],
+          "loc": [
+            "%%"
+          ]
+        },
+        {
+          "key": "legend_medium_burden",
+          "de": [],
+          "loc": [
+            "%%"
+          ]
+        },
+        {
+          "key": "legend_high_burden",
+          "de": [],
+          "loc": [
+            "%%"
+          ]
+        },
+        {
+          "key": "legend_medium_focus",
+          "de": [],
+          "loc": [
+            "%%"
+          ]
+        },
+        {
+          "key": "legend_blocked_range",
+          "de": [],
+          "loc": [
+            "%%"
+          ]
+        },
+        {
+          "key": "legend_low_focus",
+          "de": [],
+          "loc": [
+            "%%"
+          ]
+        },
+        {
+          "key": "legend_low_burden",
+          "de": [],
+          "loc": [
+            "%%"
+          ]
+        },
+        {
+          "key": "legend_progress_range",
+          "de": [],
+          "loc": [
+            "%%"
+          ]
+        },
+        {
+          "key": "legend_in_progress_range",
+          "de": [],
+          "loc": [
+            "%%"
+          ]
+        }
+      ],
+      "barePct": [
+        {
+          "key": "ai_limit_yearly",
+          "loc_text": "Suscripción anual, %1$s/año (ahorra 37\\u00A0%%)"
+        },
+        {
+          "key": "churn_discount_badge",
+          "loc_text": "%1$d\\u00A0%% DE DESCUENTO"
+        },
+        {
+          "key": "paywall_instead_per_month",
+          "loc_text": "Ahorra %1$d%% frente al plan mensual"
+        }
+      ],
+      "xliffLost": [],
+      "translatedCount": 1085,
+      "problemCount": 32,
+      "status": "PROBLEME"
+    },
+    "fr": {
+      "xmlValid": true,
+      "xmlError": null,
+      "missing": [],
+      "untranslated": [
+        "entry_gallery",
+        "label_premium",
+        "label_original",
+        "follow_up_tab_original",
+        "settings_premium_section",
+        "dashboard_analysis_fallback",
+        "settings_about_version",
+        "theme_one_dark"
+      ],
+      "fmtMismatch": [
+        {
+          "key": "legend_reflection_deep",
+          "de": [],
+          "loc": [
+            "%%"
+          ]
+        },
+        {
+          "key": "legend_high_focus",
+          "de": [],
+          "loc": [
+            "%%"
+          ]
+        },
+        {
+          "key": "legend_activity_high",
+          "de": [],
+          "loc": [
+            "%%"
+          ]
+        },
+        {
+          "key": "legend_activity_medium",
+          "de": [],
+          "loc": [
+            "%%"
+          ]
+        },
+        {
+          "key": "legend_activity_low",
+          "de": [],
+          "loc": [
+            "%%"
+          ]
+        },
+        {
+          "key": "legend_reflection_surface",
+          "de": [],
+          "loc": [
+            "%%"
+          ]
+        },
+        {
+          "key": "legend_reflection_aware",
+          "de": [],
+          "loc": [
+            "%%"
+          ]
+        },
+        {
+          "key": "legend_medium_burden",
+          "de": [],
+          "loc": [
+            "%%"
+          ]
+        },
+        {
+          "key": "legend_high_burden",
+          "de": [],
+          "loc": [
+            "%%"
+          ]
+        },
+        {
+          "key": "legend_medium_focus",
+          "de": [],
+          "loc": [
+            "%%"
+          ]
+        },
+        {
+          "key": "legend_blocked_range",
+          "de": [],
+          "loc": [
+            "%%"
+          ]
+        },
+        {
+          "key": "legend_low_focus",
+          "de": [],
+          "loc": [
+            "%%"
+          ]
+        },
+        {
+          "key": "legend_low_burden",
+          "de": [],
+          "loc": [
+            "%%"
+          ]
+        },
+        {
+          "key": "legend_progress_range",
+          "de": [],
+          "loc": [
+            "%%"
+          ]
+        },
+        {
+          "key": "legend_in_progress_range",
+          "de": [],
+          "loc": [
+            "%%"
+          ]
+        }
+      ],
+      "barePct": [
+        {
+          "key": "ai_limit_yearly",
+          "loc_text": "Abonnement annuel, %1$s/an (économise 37\\u202F%%)"
+        },
+        {
+          "key": "churn_discount_badge",
+          "loc_text": "%1$d\\u202F%% DE RÉDUCTION"
+        },
+        {
+          "key": "paywall_instead_per_month",
+          "loc_text": "Économise %1$d%% par rapport au mensuel"
+        }
+      ],
+      "xliffLost": [],
+      "translatedCount": 1085,
+      "problemCount": 26,
+      "status": "PROBLEME"
+    },
+    "gu": {
+      "xmlValid": true,
+      "xmlError": null,
+      "missing": [],
+      "untranslated": [
+        "json_key_item_explanation",
+        "json_key_progress",
+        "json_key_category_summary",
+        "json_key_heading_analysis",
+        "json_key_overall_analysis",
+        "json_key_top_actions",
+        "consent_footer_link_impressum",
+        "json_value_priority_high",
+        "json_key_item_priority",
+        "json_key_item_derivation",
+        "consent_info_system_backup_title",
+        "json_value_priority_low",
+        "json_key_category_name",
+        "json_key_category_color",
+        "achievements_title",
+        "json_key_item_title",
+        "label_premium",
+        "json_key_categories",
+        "json_value_priority_medium",
+        "json_key_derivation_summary",
+        "json_key_category_advices",
+        "json_key_item_reference",
+        "json_key_trend",
+        "settings_premium_section",
+        "json_key_heading_top5",
+        "json_key_derivation_date",
+        "json_key_category_entropy_level",
+        "json_key_category_icon",
+        "json_key_item_connection",
+        "json_key_item_description",
+        "settings_about_version",
+        "json_key_heading_results",
+        "json_key_overall_entropy"
+      ],
+      "fmtMismatch": [],
+      "barePct": [
+        {
+          "key": "ai_limit_yearly",
+          "loc_text": "વાર્ષિક સબ્સ્ક્રિપ્શન, %1$s/વર્ષ (37%% બચાવો)"
+        },
+        {
+          "key": "churn_discount_badge",
+          "loc_text": "%1$d%% બચત"
+        },
+        {
+          "key": "paywall_instead_per_month",
+          "loc_text": "માસિક પ્લાન કરતાં %1$d%% બચત"
+        }
+      ],
+      "xliffLost": [],
+      "translatedCount": 1085,
+      "problemCount": 36,
+      "status": "PROBLEME"
+    },
+    "hi": {
+      "xmlValid": true,
+      "xmlError": null,
+      "missing": [],
+      "untranslated": [
+        "ai_prompt_rerank_actions_header",
+        "consent_footer_link_impressum",
+        "ai_prompt_rerank_user_focus_header",
+        "label_premium",
+        "settings_premium_section",
+        "ai_prompt_rerank_entries_header",
+        "settings_about_version"
+      ],
+      "fmtMismatch": [
+        {
+          "key": "legend_reflection_deep",
+          "de": [],
+          "loc": [
+            "%%"
+          ]
+        },
+        {
+          "key": "legend_high_focus",
+          "de": [],
+          "loc": [
+            "%%"
+          ]
+        },
+        {
+          "key": "legend_activity_high",
+          "de": [],
+          "loc": [
+            "%%"
+          ]
+        },
+        {
+          "key": "legend_activity_medium",
+          "de": [],
+          "loc": [
+            "%%"
+          ]
+        },
+        {
+          "key": "legend_activity_low",
+          "de": [],
+          "loc": [
+            "%%"
+          ]
+        },
+        {
+          "key": "legend_reflection_surface",
+          "de": [],
+          "loc": [
+            "%%"
+          ]
+        },
+        {
+          "key": "ai_prompt_custom_intro",
+          "de": [
+            "%1$s"
+          ],
+          "loc": [
+            "%%",
+            "%1$s"
+          ]
+        },
+        {
+          "key": "legend_reflection_aware",
+          "de": [],
+          "loc": [
+            "%%"
+          ]
+        },
+        {
+          "key": "legend_medium_burden",
+          "de": [],
+          "loc": [
+            "%%"
+          ]
+        },
+        {
+          "key": "legend_high_burden",
+          "de": [],
+          "loc": [
+            "%%"
+          ]
+        },
+        {
+          "key": "legend_medium_focus",
+          "de": [],
+          "loc": [
+            "%%"
+          ]
+        },
+        {
+          "key": "legend_blocked_range",
+          "de": [],
+          "loc": [
+            "%%"
+          ]
+        },
+        {
+          "key": "legend_low_focus",
+          "de": [],
+          "loc": [
+            "%%"
+          ]
+        },
+        {
+          "key": "profile_style_custom",
+          "de": [
+            "%1$s"
+          ],
+          "loc": [
+            "%%",
+            "%1$s"
+          ]
+        },
+        {
+          "key": "legend_low_burden",
+          "de": [],
+          "loc": [
+            "%%"
+          ]
+        },
+        {
+          "key": "legend_progress_range",
+          "de": [],
+          "loc": [
+            "%%"
+          ]
+        },
+        {
+          "key": "legend_in_progress_range",
+          "de": [],
+          "loc": [
+            "%%"
+          ]
+        }
+      ],
+      "barePct": [
+        {
+          "key": "ai_limit_yearly",
+          "loc_text": "सालाना सदस्यता, %1$s प्रति वर्ष (37\\u00A0%% बचत)"
+        },
+        {
+          "key": "ai_prompt_custom_intro",
+          "loc_text": "आप एक समझदार, ध्यान देने वाले डायरी विश्लेषक हैं।\\n\\nपहला कदम, फोकस समझना:\\nयूज़"
+        },
+        {
+          "key": "churn_discount_badge",
+          "loc_text": "%1$d\\u00A0%% बचाएं"
+        },
+        {
+          "key": "profile_style_custom",
+          "loc_text": "\\n- यूज़र के निम्न व्यक्तिगत फोकस के साथ समीक्षा लिखें: \\\"%1$s\\\"\\n\\nपीएफएलआईसीएच"
+        },
+        {
+          "key": "paywall_instead_per_month",
+          "loc_text": "मासिक प्लान की तुलना में %1$d%% बचाएं"
+        }
+      ],
+      "xliffLost": [],
+      "translatedCount": 1085,
+      "problemCount": 29,
+      "status": "PROBLEME"
+    },
+    "in": {
+      "xmlValid": true,
+      "xmlError": null,
+      "missing": [],
+      "untranslated": [
+        "retro_cd_video",
+        "month_november",
+        "month_april",
+        "ai_prompt_rerank_actions_header",
+        "month_september",
+        "label_video",
+        "retro_photo_n",
+        "entry_cd_photo_page",
+        "ai_prompt_rerank_user_focus_header",
+        "month_june",
+        "entry_camera",
+        "month_october",
+        "label_premium",
+        "label_photo",
+        "retro_cd_photo",
+        "month_july",
+        "settings_premium_section",
+        "ai_prompt_rerank_entries_header",
+        "settings_about_version"
+      ],
+      "fmtMismatch": [
+        {
+          "key": "legend_reflection_deep",
+          "de": [],
+          "loc": [
+            "%%"
+          ]
+        },
+        {
+          "key": "legend_high_focus",
+          "de": [],
+          "loc": [
+            "%%"
+          ]
+        },
+        {
+          "key": "legend_activity_high",
+          "de": [],
+          "loc": [
+            "%%"
+          ]
+        },
+        {
+          "key": "legend_activity_medium",
+          "de": [],
+          "loc": [
+            "%%"
+          ]
+        },
+        {
+          "key": "legend_activity_low",
+          "de": [],
+          "loc": [
+            "%%"
+          ]
+        },
+        {
+          "key": "legend_reflection_surface",
+          "de": [],
+          "loc": [
+            "%%"
+          ]
+        },
+        {
+          "key": "ai_prompt_custom_intro",
+          "de": [
+            "%1$s"
+          ],
+          "loc": [
+            "%%",
+            "%1$s"
+          ]
+        },
+        {
+          "key": "legend_reflection_aware",
+          "de": [],
+          "loc": [
+            "%%"
+          ]
+        },
+        {
+          "key": "legend_medium_burden",
+          "de": [],
+          "loc": [
+            "%%"
+          ]
+        },
+        {
+          "key": "legend_high_burden",
+          "de": [],
+          "loc": [
+            "%%"
+          ]
+        },
+        {
+          "key": "legend_medium_focus",
+          "de": [],
+          "loc": [
+            "%%"
+          ]
+        },
+        {
+          "key": "legend_blocked_range",
+          "de": [],
+          "loc": [
+            "%%"
+          ]
+        },
+        {
+          "key": "legend_low_focus",
+          "de": [],
+          "loc": [
+            "%%"
+          ]
+        },
+        {
+          "key": "legend_low_burden",
+          "de": [],
+          "loc": [
+            "%%"
+          ]
+        },
+        {
+          "key": "legend_progress_range",
+          "de": [],
+          "loc": [
+            "%%"
+          ]
+        },
+        {
+          "key": "legend_in_progress_range",
+          "de": [],
+          "loc": [
+            "%%"
+          ]
+        }
+      ],
+      "barePct": [
+        {
+          "key": "ai_limit_yearly",
+          "loc_text": "Langganan tahunan, %1$s/tahun (hemat 37\\u00A0%%)"
+        },
+        {
+          "key": "ai_prompt_custom_intro",
+          "loc_text": "Kamu adalah analis jurnal yang cerdas dan penuh perhatian.\\n\\nDUA LANGKAH:\\n1. B"
+        },
+        {
+          "key": "churn_discount_badge",
+          "loc_text": "HEMAT %1$d\\u00A0%%"
+        },
+        {
+          "key": "paywall_instead_per_month",
+          "loc_text": "Hemat %1$d%% vs. paket bulanan"
+        }
+      ],
+      "xliffLost": [],
+      "translatedCount": 1085,
+      "problemCount": 39,
+      "status": "PROBLEME"
+    },
+    "it": {
+      "xmlValid": true,
+      "xmlError": null,
+      "missing": [],
+      "untranslated": [
+        "retro_cd_video",
+        "label_video",
+        "retro_photo_n",
+        "entry_cd_photo_page",
+        "nav_dashboard",
+        "dashboard_title",
+        "label_premium",
+        "label_photo",
+        "retro_cd_photo",
+        "settings_dashboard_section",
+        "settings_premium_section",
+        "settings_about_version",
+        "theme_one_dark",
+        "settings_feedback"
+      ],
+      "fmtMismatch": [
+        {
+          "key": "profile_style_custom",
+          "de": [
+            "%1$s"
+          ],
+          "loc": [
+            "%%",
+            "%1$s"
+          ]
+        }
+      ],
+      "barePct": [
+        {
+          "key": "ai_limit_yearly",
+          "loc_text": "Abbonamento annuale, %1$s/anno (risparmi il 37%%)"
+        },
+        {
+          "key": "churn_discount_badge",
+          "loc_text": "%1$d%% DI SCONTO"
+        },
+        {
+          "key": "profile_style_custom",
+          "loc_text": "- STILE PROFILO (Personalizzato): Scrivi questa retrospettiva con un chiaro rife"
+        },
+        {
+          "key": "paywall_instead_per_month",
+          "loc_text": "Risparmia il %1$d%% rispetto al piano mensile"
+        }
+      ],
+      "xliffLost": [],
+      "translatedCount": 1085,
+      "problemCount": 19,
+      "status": "PROBLEME"
+    },
+    "ja": {
+      "xmlValid": true,
+      "xmlError": null,
+      "missing": [],
+      "untranslated": [
+        "settings_about_version"
+      ],
+      "fmtMismatch": [
+        {
+          "key": "legend_reflection_deep",
+          "de": [],
+          "loc": [
+            "%%"
+          ]
+        },
+        {
+          "key": "legend_high_focus",
+          "de": [],
+          "loc": [
+            "%%"
+          ]
+        },
+        {
+          "key": "legend_activity_high",
+          "de": [],
+          "loc": [
+            "%%"
+          ]
+        },
+        {
+          "key": "legend_activity_medium",
+          "de": [],
+          "loc": [
+            "%%"
+          ]
+        },
+        {
+          "key": "legend_activity_low",
+          "de": [],
+          "loc": [
+            "%%"
+          ]
+        },
+        {
+          "key": "legend_reflection_surface",
+          "de": [],
+          "loc": [
+            "%%"
+          ]
+        },
+        {
+          "key": "legend_reflection_aware",
+          "de": [],
+          "loc": [
+            "%%"
+          ]
+        },
+        {
+          "key": "legend_medium_burden",
+          "de": [],
+          "loc": [
+            "%%"
+          ]
+        },
+        {
+          "key": "legend_high_burden",
+          "de": [],
+          "loc": [
+            "%%"
+          ]
+        },
+        {
+          "key": "legend_medium_focus",
+          "de": [],
+          "loc": [
+            "%%"
+          ]
+        },
+        {
+          "key": "legend_blocked_range",
+          "de": [],
+          "loc": [
+            "%%"
+          ]
+        },
+        {
+          "key": "legend_low_focus",
+          "de": [],
+          "loc": [
+            "%%"
+          ]
+        },
+        {
+          "key": "legend_low_burden",
+          "de": [],
+          "loc": [
+            "%%"
+          ]
+        },
+        {
+          "key": "legend_progress_range",
+          "de": [],
+          "loc": [
+            "%%"
+          ]
+        },
+        {
+          "key": "legend_in_progress_range",
+          "de": [],
+          "loc": [
+            "%%"
+          ]
+        }
+      ],
+      "barePct": [
+        {
+          "key": "ai_limit_yearly",
+          "loc_text": "年額プラン、年%1$s(37\\u00A0%%お得)"
+        },
+        {
+          "key": "churn_discount_badge",
+          "loc_text": "%1$d\\u00A0%%オフ"
+        },
+        {
+          "key": "paywall_instead_per_month",
+          "loc_text": "月額プランより%1$d%%お得"
+        }
+      ],
+      "xliffLost": [],
+      "translatedCount": 1085,
+      "problemCount": 19,
+      "status": "PROBLEME"
+    },
+    "kn": {
+      "xmlValid": true,
+      "xmlError": null,
+      "missing": [],
+      "untranslated": [
+        "label_premium",
+        "settings_premium_section",
+        "settings_about_version"
+      ],
+      "fmtMismatch": [],
+      "barePct": [
+        {
+          "key": "ai_limit_yearly",
+          "loc_text": "ವಾರ್ಷಿಕ ಚಂದಾದಾರಿಕೆ, ವರ್ಷಕ್ಕೆ %1$s (37%% ಉಳಿಸಿ)"
+        },
+        {
+          "key": "churn_discount_badge",
+          "loc_text": "%1$d%% ಉಳಿಸಿ"
+        },
+        {
+          "key": "paywall_instead_per_month",
+          "loc_text": "ಮಾಸಿಕ ಯೋಜನೆಗಿಂತ %1$d%% ಉಳಿತಾಯ"
+        }
+      ],
+      "xliffLost": [],
+      "translatedCount": 1085,
+      "problemCount": 6,
+      "status": "PROBLEME"
+    },
+    "ko": {
+      "xmlValid": true,
+      "xmlError": null,
+      "missing": [],
+      "untranslated": [
+        "settings_about_version"
+      ],
+      "fmtMismatch": [
+        {
+          "key": "legend_reflection_deep",
+          "de": [],
+          "loc": [
+            "%%"
+          ]
+        },
+        {
+          "key": "legend_high_focus",
+          "de": [],
+          "loc": [
+            "%%"
+          ]
+        },
+        {
+          "key": "legend_activity_high",
+          "de": [],
+          "loc": [
+            "%%"
+          ]
+        },
+        {
+          "key": "legend_activity_medium",
+          "de": [],
+          "loc": [
+            "%%"
+          ]
+        },
+        {
+          "key": "legend_activity_low",
+          "de": [],
+          "loc": [
+            "%%"
+          ]
+        },
+        {
+          "key": "legend_reflection_surface",
+          "de": [],
+          "loc": [
+            "%%"
+          ]
+        },
+        {
+          "key": "ai_prompt_custom_intro",
+          "de": [
+            "%1$s"
+          ],
+          "loc": [
+            "%%",
+            "%1$s"
+          ]
+        },
+        {
+          "key": "legend_reflection_aware",
+          "de": [],
+          "loc": [
+            "%%"
+          ]
+        },
+        {
+          "key": "legend_medium_burden",
+          "de": [],
+          "loc": [
+            "%%"
+          ]
+        },
+        {
+          "key": "legend_high_burden",
+          "de": [],
+          "loc": [
+            "%%"
+          ]
+        },
+        {
+          "key": "legend_medium_focus",
+          "de": [],
+          "loc": [
+            "%%"
+          ]
+        },
+        {
+          "key": "legend_blocked_range",
+          "de": [],
+          "loc": [
+            "%%"
+          ]
+        },
+        {
+          "key": "legend_low_focus",
+          "de": [],
+          "loc": [
+            "%%"
+          ]
+        },
+        {
+          "key": "profile_style_custom",
+          "de": [
+            "%1$s"
+          ],
+          "loc": [
+            "%%",
+            "%1$s"
+          ]
+        },
+        {
+          "key": "legend_low_burden",
+          "de": [],
+          "loc": [
+            "%%"
+          ]
+        },
+        {
+          "key": "legend_progress_range",
+          "de": [],
+          "loc": [
+            "%%"
+          ]
+        },
+        {
+          "key": "legend_in_progress_range",
+          "de": [],
+          "loc": [
+            "%%"
+          ]
+        }
+      ],
+      "barePct": [
+        {
+          "key": "ai_limit_yearly",
+          "loc_text": "연 요금제, 연 %1$s (37\\u00A0%% 절약)"
+        },
+        {
+          "key": "ai_prompt_custom_intro",
+          "loc_text": "당신은 예리하고 섬세한 일기 분석가예요.\\n\\n2단계 접근:\\n\\n━━ 1단계: 맥락 ━━\\n먼저 기록 전체를 읽고, 사용자의 삶을 전반적으로 "
+        },
+        {
+          "key": "churn_discount_badge",
+          "loc_text": "%1$d\\u00A0%% 할인"
+        },
+        {
+          "key": "profile_style_custom",
+          "loc_text": "개인 분석 — 필수 규칙:\\n- 분석의 최소 60%%는 사용자의 주제에 관한 것이어야 해요: \\\"%1$s\\\"\\n- 주제를 위한 별도 섹션(제목 "
+        },
+        {
+          "key": "paywall_instead_per_month",
+          "loc_text": "월정액 대비 %1$d%% 절약"
+        }
+      ],
+      "xliffLost": [],
+      "translatedCount": 1085,
+      "problemCount": 23,
+      "status": "PROBLEME"
+    },
+    "ml": {
+      "xmlValid": true,
+      "xmlError": null,
+      "missing": [],
+      "untranslated": [
+        "json_key_item_explanation",
+        "json_key_progress",
+        "json_key_category_summary",
+        "json_key_heading_analysis",
+        "json_key_overall_analysis",
+        "json_key_top_actions",
+        "consent_footer_link_impressum",
+        "json_value_priority_high",
+        "json_key_item_priority",
+        "json_key_item_derivation",
+        "json_value_priority_low",
+        "json_key_category_name",
+        "json_key_category_color",
+        "achievements_title",
+        "json_key_item_title",
+        "label_premium",
+        "json_key_categories",
+        "json_value_priority_medium",
+        "json_key_derivation_summary",
+        "json_key_category_advices",
+        "json_key_item_reference",
+        "json_key_trend",
+        "settings_premium_section",
+        "json_key_heading_top5",
+        "json_key_derivation_date",
+        "json_key_category_entropy_level",
+        "json_key_category_icon",
+        "json_key_item_connection",
+        "json_key_item_description",
+        "settings_about_version",
+        "json_key_heading_results",
+        "json_key_overall_entropy"
+      ],
+      "fmtMismatch": [],
+      "barePct": [
+        {
+          "key": "ai_limit_yearly",
+          "loc_text": "വർഷ സബ്സ്ക്രിപ്ഷൻ, %1$s/വർഷം (37%% ലാഭം)"
+        },
+        {
+          "key": "churn_discount_badge",
+          "loc_text": "%1$d%% ലാഭിക്കൂ"
+        },
+        {
+          "key": "paywall_instead_per_month",
+          "loc_text": "പ്രതിമാസ പ്ലാനേക്കാൾ %1$d%% ലാഭം"
+        }
+      ],
+      "xliffLost": [],
+      "translatedCount": 1085,
+      "problemCount": 35,
+      "status": "PROBLEME"
+    },
+    "mr": {
+      "xmlValid": true,
+      "xmlError": null,
+      "missing": [],
+      "untranslated": [
+        "achievements_title",
+        "label_premium",
+        "settings_premium_section",
+        "settings_about_version"
+      ],
+      "fmtMismatch": [],
+      "barePct": [
+        {
+          "key": "ai_limit_yearly",
+          "loc_text": "वार्षिक सदस्यत्व, %1$s/वर्ष (37%% बचत)"
+        },
+        {
+          "key": "churn_discount_badge",
+          "loc_text": "%1$d%% बचत"
+        },
+        {
+          "key": "paywall_instead_per_month",
+          "loc_text": "मासिक योजनेपेक्षा %1$d%% बचत"
+        }
+      ],
+      "xliffLost": [],
+      "translatedCount": 1085,
+      "problemCount": 7,
+      "status": "PROBLEME"
+    },
+    "nl": {
+      "xmlValid": true,
+      "xmlError": null,
+      "missing": [],
+      "untranslated": [
+        "retro_cd_video",
+        "month_november",
+        "month_april",
+        "ai_prompt_rerank_actions_header",
+        "month_september",
+        "label_video",
+        "retro_photo_n",
+        "entry_cd_photo_page",
+        "ai_prompt_rerank_user_focus_header",
+        "nav_dashboard",
+        "dashboard_title",
+        "month_june",
+        "summary_relevant",
+        "month_october",
+        "entry_tts_stop",
+        "json_key_item_title",
+        "label_premium",
+        "label_photo",
+        "legend_urgent",
+        "dashboard_tts_stop",
+        "retro_cd_photo",
+        "achievement_secret",
+        "consent_details_expand",
+        "month_july",
+        "settings_dashboard_section",
+        "json_key_trend",
+        "custom_relevant_label",
+        "settings_premium_section",
+        "json_key_derivation_date",
+        "churn_automatic",
+        "cd_night",
+        "splash_start",
+        "dashboard_analysis_fallback",
+        "ai_prompt_rerank_entries_header",
+        "settings_automatic",
+        "settings_about_version",
+        "retro_tts_stop",
+        "theme_one_dark",
+        "settings_feedback"
+      ],
+      "fmtMismatch": [
+        {
+          "key": "legend_reflection_deep",
+          "de": [],
+          "loc": [
+            "%%"
+          ]
+        },
+        {
+          "key": "legend_high_focus",
+          "de": [],
+          "loc": [
+            "%%"
+          ]
+        },
+        {
+          "key": "legend_activity_high",
+          "de": [],
+          "loc": [
+            "%%"
+          ]
+        },
+        {
+          "key": "legend_activity_medium",
+          "de": [],
+          "loc": [
+            "%%"
+          ]
+        },
+        {
+          "key": "ai_prompt_custom_schema",
+          "de": [],
+          "loc": [
+            "%1$s",
+            "%1$s"
+          ]
+        },
+        {
+          "key": "legend_activity_low",
+          "de": [],
+          "loc": [
+            "%%"
+          ]
+        },
+        {
+          "key": "legend_reflection_surface",
+          "de": [],
+          "loc": [
+            "%%"
+          ]
+        },
+        {
+          "key": "legend_reflection_aware",
+          "de": [],
+          "loc": [
+            "%%"
+          ]
+        },
+        {
+          "key": "legend_medium_burden",
+          "de": [],
+          "loc": [
+            "%%"
+          ]
+        },
+        {
+          "key": "legend_high_burden",
+          "de": [],
+          "loc": [
+            "%%"
+          ]
+        },
+        {
+          "key": "legend_medium_focus",
+          "de": [],
+          "loc": [
+            "%%"
+          ]
+        },
+        {
+          "key": "legend_blocked_range",
+          "de": [],
+          "loc": [
+            "%%"
+          ]
+        },
+        {
+          "key": "legend_low_focus",
+          "de": [],
+          "loc": [
+            "%%"
+          ]
+        },
+        {
+          "key": "profile_style_custom",
+          "de": [
+            "%1$s"
+          ],
+          "loc": [
+            "%%",
+            "%1$s"
+          ]
+        },
+        {
+          "key": "legend_low_burden",
+          "de": [],
+          "loc": [
+            "%%"
+          ]
+        },
+        {
+          "key": "legend_progress_range",
+          "de": [],
+          "loc": [
+            "%%"
+          ]
+        },
+        {
+          "key": "legend_in_progress_range",
+          "de": [],
+          "loc": [
+            "%%"
+          ]
+        }
+      ],
+      "barePct": [
+        {
+          "key": "ai_limit_yearly",
+          "loc_text": "Jaarabonnement, %1$s/jaar (bespaar 37\\u00A0%%)"
+        },
+        {
+          "key": "churn_discount_badge",
+          "loc_text": "%1$d\\u00A0%% KORTING"
+        },
+        {
+          "key": "profile_style_custom",
+          "loc_text": "\\n- Schrijf de analyse met de volgende persoonlijke focus van de gebruiker: \\\"%1"
+        },
+        {
+          "key": "paywall_instead_per_month",
+          "loc_text": "Bespaar %1$d%% t.o.v. maandplan"
+        }
+      ],
+      "xliffLost": [],
+      "translatedCount": 1085,
+      "problemCount": 60,
+      "status": "PROBLEME"
+    },
+    "pl": {
+      "xmlValid": true,
+      "xmlError": null,
+      "missing": [],
+      "untranslated": [
+        "ai_prompt_rerank_actions_header",
+        "consent_footer_link_impressum",
+        "ai_prompt_rerank_user_focus_header",
+        "label_record",
+        "label_premium",
+        "settings_account",
+        "json_key_trend",
+        "settings_premium_section",
+        "splash_start",
+        "ai_prompt_rerank_entries_header",
+        "settings_about_version",
+        "theme_one_dark"
+      ],
+      "fmtMismatch": [
+        {
+          "key": "dashboard_profile_focus_insight",
+          "de": [],
+          "loc": [
+            "%1$s"
+          ]
+        },
+        {
+          "key": "dashboard_profile_focus_summary",
+          "de": [],
+          "loc": [
+            "%1$s"
+          ]
+        },
+        {
+          "key": "ai_prompt_rerank_system",
+          "de": [],
+          "loc": [
+            "%1$s"
+          ]
+        },
+        {
+          "key": "ai_prompt_custom_schema",
+          "de": [],
+          "loc": [
+            "%1$s",
+            "%1$s"
+          ]
+        },
+        {
+          "key": "ai_prompt_custom_intro",
+          "de": [
+            "%1$s"
+          ],
+          "loc": [
+            "%%",
+            "%1$s"
+          ]
+        },
+        {
+          "key": "dashboard_profile_focus_entropy",
+          "de": [],
+          "loc": [
+            "%1$s"
+          ]
+        },
+        {
+          "key": "profile_style_custom",
+          "de": [
+            "%1$s"
+          ],
+          "loc": [
+            "%%",
+            "%1$s"
+          ]
+        },
+        {
+          "key": "dashboard_profile_focus_goals",
+          "de": [],
+          "loc": [
+            "%1$s"
+          ]
+        }
+      ],
+      "barePct": [
+        {
+          "key": "ai_limit_yearly",
+          "loc_text": "Subskrypcja roczna, %1$s/rok (oszczędzasz 37%%)"
+        },
+        {
+          "key": "ai_prompt_custom_intro",
+          "loc_text": "Jesteś osobistym asystentem analizy dziennika z konkretnym zadaniem do wykonania"
+        },
+        {
+          "key": "churn_discount_badge",
+          "loc_text": "%1$d%% OSZCZĘDNOŚCI"
+        },
+        {
+          "key": "profile_style_custom",
+          "loc_text": "\\n- Pisz analizę z następującym osobistym skupieniem użytkownika: \\\"%1$s\\\".\\n- Z"
+        },
+        {
+          "key": "paywall_instead_per_month",
+          "loc_text": "Oszczędź %1$d%% vs. plan miesięczny"
+        }
+      ],
+      "xliffLost": [],
+      "translatedCount": 1085,
+      "problemCount": 25,
+      "status": "PROBLEME"
+    },
+    "pt-rBR": {
+      "xmlValid": true,
+      "xmlError": null,
+      "missing": [],
+      "untranslated": [
+        "retro_photo_n",
+        "entry_cd_photo_page",
+        "label_premium",
+        "label_photo",
+        "label_original",
+        "retro_cd_photo",
+        "follow_up_tab_original",
+        "settings_premium_section",
+        "settings_export_photos",
+        "settings_about_version",
+        "settings_feedback"
+      ],
+      "fmtMismatch": [
+        {
+          "key": "legend_reflection_deep",
+          "de": [],
+          "loc": [
+            "%%"
+          ]
+        },
+        {
+          "key": "legend_high_focus",
+          "de": [],
+          "loc": [
+            "%%"
+          ]
+        },
+        {
+          "key": "legend_activity_high",
+          "de": [],
+          "loc": [
+            "%%"
+          ]
+        },
+        {
+          "key": "legend_activity_medium",
+          "de": [],
+          "loc": [
+            "%%"
+          ]
+        },
+        {
+          "key": "legend_activity_low",
+          "de": [],
+          "loc": [
+            "%%"
+          ]
+        },
+        {
+          "key": "legend_reflection_surface",
+          "de": [],
+          "loc": [
+            "%%"
+          ]
+        },
+        {
+          "key": "legend_reflection_aware",
+          "de": [],
+          "loc": [
+            "%%"
+          ]
+        },
+        {
+          "key": "legend_medium_burden",
+          "de": [],
+          "loc": [
+            "%%"
+          ]
+        },
+        {
+          "key": "legend_high_burden",
+          "de": [],
+          "loc": [
+            "%%"
+          ]
+        },
+        {
+          "key": "legend_medium_focus",
+          "de": [],
+          "loc": [
+            "%%"
+          ]
+        },
+        {
+          "key": "legend_blocked_range",
+          "de": [],
+          "loc": [
+            "%%"
+          ]
+        },
+        {
+          "key": "legend_low_focus",
+          "de": [],
+          "loc": [
+            "%%"
+          ]
+        },
+        {
+          "key": "legend_low_burden",
+          "de": [],
+          "loc": [
+            "%%"
+          ]
+        },
+        {
+          "key": "legend_progress_range",
+          "de": [],
+          "loc": [
+            "%%"
+          ]
+        },
+        {
+          "key": "legend_in_progress_range",
+          "de": [],
+          "loc": [
+            "%%"
+          ]
+        }
+      ],
+      "barePct": [
+        {
+          "key": "ai_limit_yearly",
+          "loc_text": "Assinatura anual, %1$s/ano (economize 37\\u00A0%%)"
+        },
+        {
+          "key": "churn_discount_badge",
+          "loc_text": "%1$d\\u00A0%% DE DESCONTO"
+        },
+        {
+          "key": "paywall_instead_per_month",
+          "loc_text": "Economize %1$d%% vs. plano mensal"
+        }
+      ],
+      "xliffLost": [],
+      "translatedCount": 1085,
+      "problemCount": 29,
+      "status": "PROBLEME"
+    },
+    "pt-rPT": {
+      "xmlValid": true,
+      "xmlError": null,
+      "missing": [],
+      "untranslated": [
+        "consent_footer_link_impressum",
+        "retro_photo_n",
+        "entry_cd_photo_page",
+        "label_premium",
+        "label_photo",
+        "label_original",
+        "retro_cd_photo",
+        "follow_up_tab_original",
+        "settings_premium_section",
+        "settings_export_photos",
+        "settings_about_version",
+        "settings_feedback"
+      ],
+      "fmtMismatch": [
+        {
+          "key": "legend_reflection_deep",
+          "de": [],
+          "loc": [
+            "%%"
+          ]
+        },
+        {
+          "key": "legend_high_focus",
+          "de": [],
+          "loc": [
+            "%%"
+          ]
+        },
+        {
+          "key": "legend_activity_high",
+          "de": [],
+          "loc": [
+            "%%"
+          ]
+        },
+        {
+          "key": "legend_activity_medium",
+          "de": [],
+          "loc": [
+            "%%"
+          ]
+        },
+        {
+          "key": "legend_activity_low",
+          "de": [],
+          "loc": [
+            "%%"
+          ]
+        },
+        {
+          "key": "legend_reflection_surface",
+          "de": [],
+          "loc": [
+            "%%"
+          ]
+        },
+        {
+          "key": "legend_reflection_aware",
+          "de": [],
+          "loc": [
+            "%%"
+          ]
+        },
+        {
+          "key": "legend_medium_burden",
+          "de": [],
+          "loc": [
+            "%%"
+          ]
+        },
+        {
+          "key": "legend_high_burden",
+          "de": [],
+          "loc": [
+            "%%"
+          ]
+        },
+        {
+          "key": "legend_medium_focus",
+          "de": [],
+          "loc": [
+            "%%"
+          ]
+        },
+        {
+          "key": "legend_blocked_range",
+          "de": [],
+          "loc": [
+            "%%"
+          ]
+        },
+        {
+          "key": "legend_low_focus",
+          "de": [],
+          "loc": [
+            "%%"
+          ]
+        },
+        {
+          "key": "legend_low_burden",
+          "de": [],
+          "loc": [
+            "%%"
+          ]
+        },
+        {
+          "key": "legend_progress_range",
+          "de": [],
+          "loc": [
+            "%%"
+          ]
+        },
+        {
+          "key": "legend_in_progress_range",
+          "de": [],
+          "loc": [
+            "%%"
+          ]
+        }
+      ],
+      "barePct": [
+        {
+          "key": "ai_limit_yearly",
+          "loc_text": "Subscrição anual, %1$s/ano (economize 37\\u00A0%%)"
+        },
+        {
+          "key": "churn_discount_badge",
+          "loc_text": "%1$d\\u00A0%% DE DESCONTO"
+        },
+        {
+          "key": "paywall_instead_per_month",
+          "loc_text": "Poupe %1$d%% vs. plano mensal"
+        }
+      ],
+      "xliffLost": [],
+      "translatedCount": 1085,
+      "problemCount": 30,
+      "status": "PROBLEME"
+    },
+    "ta": {
+      "xmlValid": true,
+      "xmlError": null,
+      "missing": [],
+      "untranslated": [
+        "json_key_item_explanation",
+        "json_key_progress",
+        "json_key_category_summary",
+        "ai_prompt_rerank_actions_header",
+        "json_key_heading_analysis",
+        "json_key_overall_analysis",
+        "json_key_top_actions",
+        "json_value_priority_high",
+        "ai_prompt_rerank_user_focus_header",
+        "json_key_item_priority",
+        "json_key_item_derivation",
+        "json_value_priority_low",
+        "json_key_category_name",
+        "json_key_category_color",
+        "json_key_item_title",
+        "label_premium",
+        "json_key_categories",
+        "json_value_priority_medium",
+        "json_key_derivation_summary",
+        "json_key_category_advices",
+        "json_key_item_reference",
+        "json_key_trend",
+        "settings_premium_section",
+        "json_key_heading_top5",
+        "json_key_derivation_date",
+        "json_key_category_entropy_level",
+        "json_key_category_icon",
+        "json_key_item_connection",
+        "json_key_item_description",
+        "ai_prompt_rerank_entries_header",
+        "settings_about_version",
+        "json_key_heading_results",
+        "json_key_overall_entropy"
+      ],
+      "fmtMismatch": [
+        {
+          "key": "ai_prompt_custom_intro",
+          "de": [
+            "%1$s"
+          ],
+          "loc": [
+            "%%",
+            "%%",
+            "%1$s"
+          ]
+        },
+        {
+          "key": "profile_style_custom",
+          "de": [
+            "%1$s"
+          ],
+          "loc": [
+            "%%",
+            "%1$s"
+          ]
+        }
+      ],
+      "barePct": [
+        {
+          "key": "ai_limit_yearly",
+          "loc_text": "ஆண்டு சந்தா, %1$s/ஆண்டு (37%% சேமிக்கவும்)"
+        },
+        {
+          "key": "ai_prompt_custom_intro",
+          "loc_text": "நீங்கள் ஒரு அறிவார்ந்த, கவனமுள்ள நாட்குறிப்பு பகுப்பாய்வாளர் மற்றும் பணி-செயலாக்"
+        },
+        {
+          "key": "churn_discount_badge",
+          "loc_text": "%1$d%% சேமிக்கவும்"
+        },
+        {
+          "key": "profile_style_custom",
+          "loc_text": "\\n- பயனரின் பின்வரும் தனிப்பட்ட கவனத்துடன் மீள்பார்வையை எழுதவும்: \\\"%1$s\\\"\\n- அன"
+        },
+        {
+          "key": "paywall_instead_per_month",
+          "loc_text": "மாதாந்திர திட்டத்தை விட %1$d%% சேமிப்பு"
+        }
+      ],
+      "xliffLost": [],
+      "translatedCount": 1085,
+      "problemCount": 40,
+      "status": "PROBLEME"
+    },
+    "te": {
+      "xmlValid": true,
+      "xmlError": null,
+      "missing": [],
+      "untranslated": [
+        "consent_footer_link_impressum",
+        "consent_info_system_backup_title",
+        "label_premium",
+        "settings_premium_section",
+        "settings_about_version"
+      ],
+      "fmtMismatch": [],
+      "barePct": [
+        {
+          "key": "ai_limit_yearly",
+          "loc_text": "వార్షిక సబ్‌స్క్రిప్షన్, %1$s/సంవత్సరం (37%% ఆదా)"
+        },
+        {
+          "key": "churn_discount_badge",
+          "loc_text": "%1$d%% ఆదా చేయండి"
+        },
+        {
+          "key": "paywall_instead_per_month",
+          "loc_text": "నెలవారీ ప్లాన్ కంటే %1$d%% ఆదా"
+        }
+      ],
+      "xliffLost": [],
+      "translatedCount": 1085,
+      "problemCount": 8,
+      "status": "PROBLEME"
+    },
+    "th": {
+      "xmlValid": true,
+      "xmlError": null,
+      "missing": [],
+      "untranslated": [
+        "ai_prompt_rerank_actions_header",
+        "ai_prompt_rerank_user_focus_header",
+        "label_premium",
+        "settings_premium_section",
+        "ai_prompt_rerank_entries_header",
+        "settings_about_version"
+      ],
+      "fmtMismatch": [
+        {
+          "key": "legend_reflection_deep",
+          "de": [],
+          "loc": [
+            "%%"
+          ]
+        },
+        {
+          "key": "legend_high_focus",
+          "de": [],
+          "loc": [
+            "%%"
+          ]
+        },
+        {
+          "key": "legend_activity_high",
+          "de": [],
+          "loc": [
+            "%%"
+          ]
+        },
+        {
+          "key": "legend_activity_medium",
+          "de": [],
+          "loc": [
+            "%%"
+          ]
+        },
+        {
+          "key": "legend_activity_low",
+          "de": [],
+          "loc": [
+            "%%"
+          ]
+        },
+        {
+          "key": "legend_reflection_surface",
+          "de": [],
+          "loc": [
+            "%%"
+          ]
+        },
+        {
+          "key": "legend_reflection_aware",
+          "de": [],
+          "loc": [
+            "%%"
+          ]
+        },
+        {
+          "key": "legend_medium_burden",
+          "de": [],
+          "loc": [
+            "%%"
+          ]
+        },
+        {
+          "key": "legend_high_burden",
+          "de": [],
+          "loc": [
+            "%%"
+          ]
+        },
+        {
+          "key": "legend_medium_focus",
+          "de": [],
+          "loc": [
+            "%%"
+          ]
+        },
+        {
+          "key": "legend_blocked_range",
+          "de": [],
+          "loc": [
+            "%%"
+          ]
+        },
+        {
+          "key": "legend_low_focus",
+          "de": [],
+          "loc": [
+            "%%"
+          ]
+        },
+        {
+          "key": "legend_low_burden",
+          "de": [],
+          "loc": [
+            "%%"
+          ]
+        },
+        {
+          "key": "legend_progress_range",
+          "de": [],
+          "loc": [
+            "%%"
+          ]
+        },
+        {
+          "key": "legend_in_progress_range",
+          "de": [],
+          "loc": [
+            "%%"
+          ]
+        }
+      ],
+      "barePct": [
+        {
+          "key": "ai_limit_yearly",
+          "loc_text": "รายปี %1$s ต่อปี (ประหยัด 37\\u00A0%%)"
+        },
+        {
+          "key": "churn_discount_badge",
+          "loc_text": "ประหยัด %1$d\\u00A0%%"
+        },
+        {
+          "key": "paywall_instead_per_month",
+          "loc_text": "ประหยัด %1$d%% เทียบกับแผนรายเดือน"
+        }
+      ],
+      "xliffLost": [],
+      "translatedCount": 1085,
+      "problemCount": 24,
+      "status": "PROBLEME"
+    },
+    "tr": {
+      "xmlValid": true,
+      "xmlError": null,
+      "missing": [],
+      "untranslated": [
+        "retro_cd_video",
+        "label_video",
+        "entry_camera",
+        "label_premium",
+        "settings_premium_section",
+        "settings_about_version"
+      ],
+      "fmtMismatch": [
+        {
+          "key": "legend_reflection_deep",
+          "de": [],
+          "loc": [
+            "%%"
+          ]
+        },
+        {
+          "key": "legend_high_focus",
+          "de": [],
+          "loc": [
+            "%%"
+          ]
+        },
+        {
+          "key": "legend_activity_high",
+          "de": [],
+          "loc": [
+            "%%"
+          ]
+        },
+        {
+          "key": "legend_activity_medium",
+          "de": [],
+          "loc": [
+            "%%"
+          ]
+        },
+        {
+          "key": "legend_activity_low",
+          "de": [],
+          "loc": [
+            "%%"
+          ]
+        },
+        {
+          "key": "legend_reflection_surface",
+          "de": [],
+          "loc": [
+            "%%"
+          ]
+        },
+        {
+          "key": "legend_reflection_aware",
+          "de": [],
+          "loc": [
+            "%%"
+          ]
+        },
+        {
+          "key": "legend_medium_burden",
+          "de": [],
+          "loc": [
+            "%%"
+          ]
+        },
+        {
+          "key": "legend_high_burden",
+          "de": [],
+          "loc": [
+            "%%"
+          ]
+        },
+        {
+          "key": "legend_medium_focus",
+          "de": [],
+          "loc": [
+            "%%"
+          ]
+        },
+        {
+          "key": "legend_blocked_range",
+          "de": [],
+          "loc": [
+            "%%"
+          ]
+        },
+        {
+          "key": "legend_low_focus",
+          "de": [],
+          "loc": [
+            "%%"
+          ]
+        },
+        {
+          "key": "legend_low_burden",
+          "de": [],
+          "loc": [
+            "%%"
+          ]
+        },
+        {
+          "key": "legend_progress_range",
+          "de": [],
+          "loc": [
+            "%%"
+          ]
+        },
+        {
+          "key": "legend_in_progress_range",
+          "de": [],
+          "loc": [
+            "%%"
+          ]
+        }
+      ],
+      "barePct": [
+        {
+          "key": "ai_limit_yearly",
+          "loc_text": "Yıllık abonelik, %1$s/yıl (37\\u00A0%% tasarruf)"
+        },
+        {
+          "key": "churn_discount_badge",
+          "loc_text": "%1$d\\u00A0%% TASARRUF"
+        },
+        {
+          "key": "paywall_instead_per_month",
+          "loc_text": "Aylık plana göre %1$d%% tasarruf"
+        }
+      ],
+      "xliffLost": [],
+      "translatedCount": 1085,
+      "problemCount": 24,
+      "status": "PROBLEME"
+    },
+    "uk": {
+      "xmlValid": true,
+      "xmlError": null,
+      "missing": [],
+      "untranslated": [
+        "json_key_trend",
+        "settings_about_version"
+      ],
+      "fmtMismatch": [
+        {
+          "key": "legend_reflection_deep",
+          "de": [],
+          "loc": [
+            "%%"
+          ]
+        },
+        {
+          "key": "legend_high_focus",
+          "de": [],
+          "loc": [
+            "%%"
+          ]
+        },
+        {
+          "key": "legend_activity_high",
+          "de": [],
+          "loc": [
+            "%%"
+          ]
+        },
+        {
+          "key": "legend_activity_medium",
+          "de": [],
+          "loc": [
+            "%%"
+          ]
+        },
+        {
+          "key": "legend_activity_low",
+          "de": [],
+          "loc": [
+            "%%"
+          ]
+        },
+        {
+          "key": "legend_reflection_surface",
+          "de": [],
+          "loc": [
+            "%%"
+          ]
+        },
+        {
+          "key": "legend_reflection_aware",
+          "de": [],
+          "loc": [
+            "%%"
+          ]
+        },
+        {
+          "key": "legend_medium_burden",
+          "de": [],
+          "loc": [
+            "%%"
+          ]
+        },
+        {
+          "key": "legend_high_burden",
+          "de": [],
+          "loc": [
+            "%%"
+          ]
+        },
+        {
+          "key": "legend_medium_focus",
+          "de": [],
+          "loc": [
+            "%%"
+          ]
+        },
+        {
+          "key": "legend_blocked_range",
+          "de": [],
+          "loc": [
+            "%%"
+          ]
+        },
+        {
+          "key": "legend_low_focus",
+          "de": [],
+          "loc": [
+            "%%"
+          ]
+        },
+        {
+          "key": "legend_low_burden",
+          "de": [],
+          "loc": [
+            "%%"
+          ]
+        },
+        {
+          "key": "legend_progress_range",
+          "de": [],
+          "loc": [
+            "%%"
+          ]
+        },
+        {
+          "key": "legend_in_progress_range",
+          "de": [],
+          "loc": [
+            "%%"
+          ]
+        }
+      ],
+      "barePct": [
+        {
+          "key": "ai_limit_yearly",
+          "loc_text": "Річна підписка, %1$s/рік (економія 37\\u00A0%%)"
+        },
+        {
+          "key": "churn_discount_badge",
+          "loc_text": "ЗНИЖКА %1$d\\u00A0%%"
+        },
+        {
+          "key": "paywall_instead_per_month",
+          "loc_text": "Заощаджуй %1$d%% порівняно з місячним планом"
+        }
+      ],
+      "xliffLost": [],
+      "translatedCount": 1085,
+      "problemCount": 20,
+      "status": "PROBLEME"
+    },
+    "ur": {
+      "xmlValid": true,
+      "xmlError": null,
+      "missing": [],
+      "untranslated": [
+        "json_key_item_explanation",
+        "json_key_progress",
+        "json_key_category_summary",
+        "json_key_heading_analysis",
+        "json_key_overall_analysis",
+        "json_key_top_actions",
+        "json_value_priority_high",
+        "json_key_item_priority",
+        "json_key_item_derivation",
+        "json_value_priority_low",
+        "json_key_category_name",
+        "json_key_category_color",
+        "json_key_item_title",
+        "json_key_categories",
+        "json_value_priority_medium",
+        "json_key_derivation_summary",
+        "json_key_category_advices",
+        "json_key_item_reference",
+        "json_key_trend",
+        "json_key_heading_top5",
+        "json_key_derivation_date",
+        "json_key_category_entropy_level",
+        "json_key_category_icon",
+        "json_key_item_connection",
+        "json_key_item_description",
+        "settings_about_version",
+        "json_key_heading_results",
+        "json_key_overall_entropy"
+      ],
+      "fmtMismatch": [],
+      "barePct": [
+        {
+          "key": "ai_limit_yearly",
+          "loc_text": "سالانہ سبسکرپشن، %1$s/سال (37%% بچائیں)"
+        },
+        {
+          "key": "churn_discount_badge",
+          "loc_text": "%1$d%% بچائیں"
+        },
+        {
+          "key": "paywall_instead_per_month",
+          "loc_text": "ماہانہ پلان کے مقابلے میں %1$d%% کی بچت"
+        }
+      ],
+      "xliffLost": [],
+      "translatedCount": 1085,
+      "problemCount": 31,
+      "status": "PROBLEME"
+    },
+    "zh-rCN": {
+      "xmlValid": true,
+      "xmlError": null,
+      "missing": [],
+      "untranslated": [
+        "settings_about_version"
+      ],
+      "fmtMismatch": [
+        {
+          "key": "legend_reflection_deep",
+          "de": [],
+          "loc": [
+            "%%"
+          ]
+        },
+        {
+          "key": "legend_high_focus",
+          "de": [],
+          "loc": [
+            "%%"
+          ]
+        },
+        {
+          "key": "legend_activity_high",
+          "de": [],
+          "loc": [
+            "%%"
+          ]
+        },
+        {
+          "key": "legend_activity_medium",
+          "de": [],
+          "loc": [
+            "%%"
+          ]
+        },
+        {
+          "key": "legend_activity_low",
+          "de": [],
+          "loc": [
+            "%%"
+          ]
+        },
+        {
+          "key": "legend_reflection_surface",
+          "de": [],
+          "loc": [
+            "%%"
+          ]
+        },
+        {
+          "key": "ai_prompt_custom_intro",
+          "de": [
+            "%1$s"
+          ],
+          "loc": [
+            "%%",
+            "%%",
+            "%1$s"
+          ]
+        },
+        {
+          "key": "legend_reflection_aware",
+          "de": [],
+          "loc": [
+            "%%"
+          ]
+        },
+        {
+          "key": "legend_medium_burden",
+          "de": [],
+          "loc": [
+            "%%"
+          ]
+        },
+        {
+          "key": "legend_high_burden",
+          "de": [],
+          "loc": [
+            "%%"
+          ]
+        },
+        {
+          "key": "legend_medium_focus",
+          "de": [],
+          "loc": [
+            "%%"
+          ]
+        },
+        {
+          "key": "legend_blocked_range",
+          "de": [],
+          "loc": [
+            "%%"
+          ]
+        },
+        {
+          "key": "legend_low_focus",
+          "de": [],
+          "loc": [
+            "%%"
+          ]
+        },
+        {
+          "key": "legend_low_burden",
+          "de": [],
+          "loc": [
+            "%%"
+          ]
+        },
+        {
+          "key": "legend_progress_range",
+          "de": [],
+          "loc": [
+            "%%"
+          ]
+        },
+        {
+          "key": "legend_in_progress_range",
+          "de": [],
+          "loc": [
+            "%%"
+          ]
+        }
+      ],
+      "barePct": [
+        {
+          "key": "ai_limit_yearly",
+          "loc_text": "年度订阅，每年 %1$s （省 37\\u00A0%%）"
+        },
+        {
+          "key": "ai_prompt_custom_intro",
+          "loc_text": "你是一位聪明、细心的日记分析师，同时也是任务执行者。\\n\\n按两步工作：\\n\\n第一步 — 吸收上下文：\\n首先完整阅读用户的所有日记条目。理解情境、规律、主题"
+        },
+        {
+          "key": "churn_discount_badge",
+          "loc_text": "省 %1$d\\u00A0%%"
+        },
+        {
+          "key": "paywall_instead_per_month",
+          "loc_text": "比月付计划省 %1$d%%"
+        }
+      ],
+      "xliffLost": [],
+      "translatedCount": 1085,
+      "problemCount": 21,
+      "status": "PROBLEME"
+    },
+    "zh-rTW": {
+      "xmlValid": true,
+      "xmlError": null,
+      "missing": [],
+      "untranslated": [
+        "settings_about_version"
+      ],
+      "fmtMismatch": [
+        {
+          "key": "legend_reflection_deep",
+          "de": [],
+          "loc": [
+            "%%"
+          ]
+        },
+        {
+          "key": "legend_high_focus",
+          "de": [],
+          "loc": [
+            "%%"
+          ]
+        },
+        {
+          "key": "legend_activity_high",
+          "de": [],
+          "loc": [
+            "%%"
+          ]
+        },
+        {
+          "key": "legend_activity_medium",
+          "de": [],
+          "loc": [
+            "%%"
+          ]
+        },
+        {
+          "key": "legend_activity_low",
+          "de": [],
+          "loc": [
+            "%%"
+          ]
+        },
+        {
+          "key": "legend_reflection_surface",
+          "de": [],
+          "loc": [
+            "%%"
+          ]
+        },
+        {
+          "key": "ai_prompt_custom_intro",
+          "de": [
+            "%1$s"
+          ],
+          "loc": [
+            "%%",
+            "%%",
+            "%1$s"
+          ]
+        },
+        {
+          "key": "legend_reflection_aware",
+          "de": [],
+          "loc": [
+            "%%"
+          ]
+        },
+        {
+          "key": "legend_medium_burden",
+          "de": [],
+          "loc": [
+            "%%"
+          ]
+        },
+        {
+          "key": "legend_high_burden",
+          "de": [],
+          "loc": [
+            "%%"
+          ]
+        },
+        {
+          "key": "legend_medium_focus",
+          "de": [],
+          "loc": [
+            "%%"
+          ]
+        },
+        {
+          "key": "legend_blocked_range",
+          "de": [],
+          "loc": [
+            "%%"
+          ]
+        },
+        {
+          "key": "legend_low_focus",
+          "de": [],
+          "loc": [
+            "%%"
+          ]
+        },
+        {
+          "key": "legend_low_burden",
+          "de": [],
+          "loc": [
+            "%%"
+          ]
+        },
+        {
+          "key": "legend_progress_range",
+          "de": [],
+          "loc": [
+            "%%"
+          ]
+        },
+        {
+          "key": "legend_in_progress_range",
+          "de": [],
+          "loc": [
+            "%%"
+          ]
+        }
+      ],
+      "barePct": [
+        {
+          "key": "ai_limit_yearly",
+          "loc_text": "年度訂閱，每年 %1$s (省 37\\u00A0%%)"
+        },
+        {
+          "key": "ai_prompt_custom_intro",
+          "loc_text": "你是一位聰明、細心的日記分析師，同時也是任務執行者。\\n\\n按兩步工作：\\n\\n第一步 — 吸收上下文：\\n首先完整閱讀使用者的所有日記條目。理解情境、規律、主"
+        },
+        {
+          "key": "churn_discount_badge",
+          "loc_text": "省 %1$d\\u00A0%%"
+        },
+        {
+          "key": "paywall_instead_per_month",
+          "loc_text": "比月付方案省 %1$d%%"
+        }
+      ],
+      "xliffLost": [],
+      "translatedCount": 1085,
+      "problemCount": 21,
+      "status": "PROBLEME"
+    }
+  },
+  "grandProblemCount": 654
+}

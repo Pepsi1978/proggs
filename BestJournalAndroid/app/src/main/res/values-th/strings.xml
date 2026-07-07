@@ -1,0 +1,1452 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources xmlns:tools="http://schemas.android.com/tools"
+    xmlns:xliff="urn:oasis:names:tc:xliff:document:1.2"
+    tools:locale="th">
+    <!-- App brand name — do not translate -->
+    <string name="app_name" translatable="false">Best Journal</string>
+
+    <!-- ════════════════════════════════════════════════════════════════════
+         NAVIGATION & TABS
+         ════════════════════════════════════════════════════════════════════ -->
+    <string name="nav_journal">สมุดบันทึก</string>
+    <string name="nav_retrospective">ทบทวน</string>
+    <string name="nav_dashboard">แดชบอร์ด</string>
+    <string name="nav_settings">การตั้งค่า</string>
+
+    <!-- ════════════════════════════════════════════════════════════════════
+         COMMON / SHARED
+         ════════════════════════════════════════════════════════════════════ -->
+    <string name="action_cancel">ยกเลิก</string>
+    <string name="action_save">บันทึก</string>
+    <string name="action_close">ปิด</string>
+    <string name="action_continue">ต่อไป</string>
+    <string name="action_understood">เข้าใจแล้ว</string>
+    <string name="action_retry">ลองอีกครั้ง</string>
+    <string name="action_later">ภายหลัง</string>
+    <string name="action_share">แชร์</string>
+    <string name="action_discard">ทิ้ง</string>
+    <string name="action_back">ย้อนกลับ</string>
+    <string name="action_done">เสร็จสิ้น</string>
+    <string name="action_no_thanks">ไม่เป็นไร ขอบคุณ</string>
+    <string name="action_delete">ลบ</string>
+    <!-- Accessibility label for the undo icon button on the dashboard. -->
+    <string name="action_undo">เลิกทำ</string>
+    <string name="action_ok">ตกลง</string>
+    <string name="action_go_google_play">ไปที่ Google Play</string>
+    <string name="journal_drive_backup_dialog">สำรองข้อมูลใน Google Drive</string>
+    <string name="journal_improve_text">✨ ปรับปรุงข้อความ</string>
+    <string name="journal_show_original">↩ แสดงต้นฉบับ</string>
+    <string name="journal_show_improved">✨ แสดงฉบับปรับปรุง</string>
+    <string name="journal_ai_improving">AI กำลังปรับปรุงข้อความ โปรดรอ</string>
+    <string name="journal_later">ภายหลัง</string>
+    <!-- Paywall missed strings -->
+    <string name="paywall_from_per_day">สมาชิกรายปี %1$s ต่อปี</string>
+    <string name="paywall_instead_per_month">ประหยัด %1$d%% เทียบกับแผนรายเดือน</string>
+    <string name="paywall_or">หรือ</string>
+    <string name="paywall_with_limited">พร้อมข้อจำกัดการใช้งาน</string>
+    <!-- Churn missed string -->
+    <string name="churn_instead_of">แทน </string>
+    <string name="label_premium">Premium</string>
+    <string name="label_original">ต้นฉบับ</string>
+    <string name="label_improved">✨ AI ปรับปรุง</string>
+    <string name="label_photo">ภาพถ่าย</string>
+    <string name="label_video">วิดีโอ</string>
+    <string name="label_current">ปัจจุบัน</string>
+    <string name="label_record">สถิติ</string>
+    <string name="cd_sync_status">สถานะการซิงค์</string>
+    <string name="cd_day">กลางวัน</string>
+    <string name="cd_night">กลางคืน</string>
+
+    <!-- ════════════════════════════════════════════════════════════════════
+         JOURNAL SCREEN
+         ════════════════════════════════════════════════════════════════════ -->
+    <string name="journal_title">สมุดบันทึก</string>
+    <string name="journal_search_placeholder">ค้นหาบันทึก…</string>
+    <string name="journal_search">ค้นหา</string>
+    <string name="journal_search_hint">ค้นหา</string>
+    <string name="journal_search_close">ปิดการค้นหา</string>
+    <string name="journal_no_entries">ยังไม่มีบันทึก</string>
+    <string name="journal_tap_mic_to_start">แตะไมโครโฟนเพื่อเริ่ม</string>
+    <string name="journal_cd_streak">วันติดต่อกัน</string>
+    <string name="journal_cd_text_input">พิมพ์ข้อความ</string>
+    <string name="journal_achievement_unlocked">ปลดล็อกความสำเร็จแล้ว!</string>
+    <string name="journal_drive_not_signed_in">ยังไม่ได้ลงชื่อเข้าใช้ Google</string>
+    <string name="journal_drive_backup_current">สำรองข้อมูลเป็นปัจจุบัน บันทึกทั้งหมดปลอดภัย</string>
+    <string name="journal_drive_uploading">กำลังอัปโหลดข้อมูลสำรอง…</string>
+    <string name="journal_drive_downloading">กำลังดาวน์โหลดภาพถ่ายและวิดีโอ…</string>
+    <string name="journal_drive_failed">สำรองข้อมูลล้มเหลว!</string>
+    <string name="journal_drive_last_sync">ซิงค์ล่าสุด: %1$s</string>
+    <string name="journal_new_entry_prompt">แรงบันดาลใจในการเขียน</string>
+    <string name="journal_new_entry">บันทึกใหม่</string>
+    <string name="journal_save_improved">บันทึกฉบับปรับปรุง</string>
+    <string name="journal_save">บันทึก</string>
+    <string name="journal_cd_write">เขียน</string>
+    <string name="journal_write">เขียน</string>
+    <string name="journal_cd_speak">พูด</string>
+    <string name="journal_speak">พูด</string>
+    <string name="journal_your_answer">คำตอบของคุณ:</string>
+    <string name="journal_placeholder_prompt">เขียนความคิดของคุณที่นี่…</string>
+    <string name="journal_placeholder_edit">แตะที่นี่เพื่อแก้ไขข้อความ…</string>
+    <string name="journal_freeflow_hint">ปล่อยให้ความคิดไหลอย่างอิสระ ไม่มีผิดหรือถูก</string>
+    <string name="journal_transcribed_with">ถอดข้อความโดย %1$s</string>
+    <!-- Default label for the transcription model (local Whisper, runs on-device). -->
+    <string name="transcription_model_local">โมเดล Whisper ในเครื่อง</string>
+    <!-- Brand name of the Groq transcription model — do not translate. -->
+    <string name="transcription_model_groq" translatable="false">Groq Whisper Large V3 Turbo</string>
+    <string name="journal_text_upsell_title">น่าประทับใจใช่ไหม?</string>
+    <string name="journal_text_upsell_body">ด้วย Premium คุณปรับปรุงบันทึกทุกชิ้นได้</string>
+    <string name="journal_discover_premium">ค้นพบ Premium →</string>
+    <string name="journal_entries_label">บันทึก</string>
+    <string name="journal_entry_count">%1$d บันทึก</string>
+    <string name="journal_streak_days">%1$d วัน</string>
+    <string name="journal_streak_days_in_row">%1$d วันติดต่อกัน</string>
+    <string name="journal_streak_next_goal">เป้าหมายถัดไป: %1$d วัน</string>
+    <string name="journal_streak_remaining">เหลืออีก %1$d</string>
+    <string name="journal_streak_premium">ปกป้องสตรีก: ใช้ได้กับ Premium</string>
+    <string name="journal_keep_going">ทำต่อไป!</string>
+    <string name="journal_daily_prompt">แรงบันดาลใจของวันนี้</string>
+    <string name="journal_write_about">เขียนเกี่ยวกับเรื่องนี้</string>
+    <string name="journal_recording_error">บันทึกเสียงล้มเหลว: %1$s</string>
+    <string name="journal_transcription_error">ถอดข้อความล้มเหลว: %1$s</string>
+    <string name="journal_rate_limit">พักสั้น ๆ: อีก %1$d นาทีจึงถึงการปรับปรุงถัดไป</string>
+    <string name="journal_improve_error">ปรับปรุงข้อความล้มเหลว: %1$s</string>
+    <string name="journal_save_error">บันทึกล้มเหลว: %1$s</string>
+    <string name="recording_tap_stop">แตะอีกครั้งเพื่อหยุด</string>
+
+    <!-- Streak messages -->
+    <string name="streak_365">ครบหนึ่งปีเต็ม!</string>
+    <string name="streak_180">วินัยน่าทึ่ง!</string>
+    <string name="streak_90">หยุดคุณไม่อยู่!</string>
+    <string name="streak_30">ครบหนึ่งเดือนเต็ม!</string>
+    <string name="streak_14">สองสัปดาห์แน่วแน่!</string>
+    <string name="streak_7">ครบหนึ่งสัปดาห์!</string>
+    <string name="streak_3">คุณกำลังสู้!</string>
+    <string name="streak_default">ทุกวันมีค่า!</string>
+    <string name="streak_desc_365">สิ่งที่เริ่มจากนิสัยเล็ก ๆ ตอนนี้กลายเป็นส่วนหนึ่งของชีวิต สมุดบันทึกรู้จักคุณมากขึ้นกว่าเดิม</string>
+    <string name="streak_desc_14">สองสัปดาห์ติดต่อกัน มีน้อยคนทำได้ ตัวคุณในอนาคตจะขอบคุณ</string>
+    <string name="streak_desc_7">หนึ่งสัปดาห์เต็มของความคิด ความรู้สึก และความทรงจำ คุณกำลังสร้างสิ่งมีค่า</string>
+    <string name="streak_desc_3">สามวันติดต่อกันคือจุดเริ่มต้นของนิสัยที่แท้จริง ทำต่อไป มันคุ้มค่า!</string>
+    <string name="streak_desc_1">ทุกบันทึกคือของขวัญเล็ก ๆ ให้ตัวคุณในอนาคต พรุ่งนี้เขียนอีกนะ!</string>
+
+    <!-- ════════════════════════════════════════════════════════════════════
+         ENTRY DETAIL SCREEN
+         ════════════════════════════════════════════════════════════════════ -->
+    <string name="entry_title">บันทึก</string>
+    <string name="entry_summary">สรุป</string>
+    <string name="entry_saving">กำลังบันทึก…</string>
+    <string name="entry_improving">กำลังปรับปรุง…</string>
+    <string name="entry_improve_with_ai">ปรับปรุงภายหลังด้วย AI</string>
+    <string name="entry_photos_videos">ภาพถ่าย/วิดีโอ</string>
+    <string name="entry_add">เพิ่ม</string>
+    <string name="entry_no_photos_yet">ยังไม่มีภาพถ่ายหรือวิดีโอ</string>
+    <string name="entry_cd_play_video">เล่นวิดีโอ</string>
+    <string name="entry_cd_remove">นำออก</string>
+    <string name="entry_tts_enable_hint">เปิดเสียงในการตั้งค่า</string>
+    <string name="entry_tts_stop">หยุด</string>
+    <string name="entry_tts_read">อ่าน</string>
+    <string name="entry_cd_share">แชร์</string>
+    <string name="entry_recording_duration">ความยาวการบันทึก: %1$s</string>
+    <string name="entry_tts_generating">โปรดรอ กำลังสร้างเสียง…</string>
+    <string name="entry_tts_journal_label">บันทึกประจำวัน</string>
+    <string name="entry_tts_followup_label">บันทึกเพิ่มเติม %1$s</string>
+    <string name="entry_cd_photo_page">ภาพถ่าย %1$d</string>
+    <string name="entry_add_photo_video">เพิ่มภาพถ่าย/วิดีโอ</string>
+    <string name="entry_camera">กล้อง</string>
+    <string name="entry_gallery">คลังภาพ</string>
+    <string name="entry_delete_title">ลบบันทึก?</string>
+    <string name="entry_delete_message">ลบบันทึกนี้ถาวรหรือไม่?</string>
+
+    <!-- Share dialog -->
+    <string name="share_title">แชร์บันทึก</string>
+    <string name="share_which_version">แชร์ฉบับไหน?</string>
+    <string name="share_improved_version">ฉบับปรับปรุง</string>
+    <string name="share_photos_videos_label">แชร์ภาพถ่ายและวิดีโอ:</string>
+    <string name="share_footer">บันทึกสมุดจากแอป BestJournal</string>
+    <string name="share_what_to_share">อยากแชร์อะไร?</string>
+    <string name="share_journal_entry">บันทึกประจำวัน</string>
+    <string name="share_followup_numbered">ส่วนเพิ่ม <xliff:g id="ordinal" example="1">%1$s</xliff:g></string>
+    <string name="share_followup_single">ส่วนเพิ่ม</string>
+
+    <string name="error_recording_failed">การบันทึกล้มเหลว: <xliff:g id="reason" example="ไม่สามารถใช้ไมโครโฟนได้">%1$s</xliff:g></string>
+    <string name="error_transcription_failed">การถอดเสียงล้มเหลว: <xliff:g id="reason" example="หมดเวลาเครือข่าย">%1$s</xliff:g></string>
+
+    <!-- ════════════════════════════════════════════════════════════════════
+         DASHBOARD SCREEN
+         ════════════════════════════════════════════════════════════════════ -->
+    <string name="dashboard_title">แดชบอร์ด</string>
+    <string name="dashboard_legend">คำอธิบาย</string>
+    <string name="dashboard_refresh">รีเฟรช</string>
+    <string name="dashboard_weekly_review_waiting">การทบทวนประจำสัปดาห์รออยู่</string>
+    <!-- Body text of the weekly-review premium upsell card on the dashboard. -->
+    <string name="dashboard_weekly_review_upsell_body">สัปดาห์นี้ของคุณเต็มไปด้วยกิจกรรม ด้วย Premium คุณจะเห็นการวิเคราะห์เต็มรูปแบบ: ค้นพบรูปแบบ เข้าใจสิ่งที่ครอบครองความคิดคุณ</string>
+    <string name="dashboard_discover_premium">ค้นพบ Premium</string>
+    <string name="dashboard_please_wait">โปรดรอ</string>
+    <string name="dashboard_gemini_unavailable">ขณะนี้ Gemini ใช้งานไม่ได้ ลองใหม่ภายหลัง</string>
+    <string name="dashboard_no_custom_focus">ยังไม่ได้ใส่จุดโฟกัสของการวิเคราะห์</string>
+    <string name="dashboard_custom_focus_hint">ไปที่การตั้งค่าใต้ «การวิเคราะห์เฉพาะ»\nแล้วใส่จุดโฟกัส\nหรือเลือกโปรไฟล์อื่น</string>
+    <string name="dashboard_no_analysis_yet">ยังไม่มีการวิเคราะห์</string>
+    <string name="dashboard_create_entries_custom">สร้างบันทึก\nแล้ว AI จะวิเคราะห์จุดโฟกัสของคุณ</string>
+    <string name="dashboard_create_entries_default">สร้างบันทึก\nแล้ว AI จะวิเคราะห์แพตเทิร์นของคุณ</string>
+    <string name="dashboard_like_analysis">ชอบการวิเคราะห์นี้ไหม?</string>
+    <string name="dashboard_premium_upsell_body">ด้วย Premium คุณจะได้รับการวิเคราะห์มากมายจากจำนวนโปรไฟล์เท่าไหร่ก็ได้</string>
+    <string name="dashboard_learn_more">อ่านเพิ่มเติม</string>
+    <string name="dashboard_feature_analyses">การวิเคราะห์</string>
+    <string name="dashboard_all_observations">การสังเกตทั้งหมด</string>
+    <string name="dashboard_inner_mirror">กระจกภายใน</string>
+    <string name="dashboard_all_insights">ข้อคิดทั้งหมด</string>
+    <string name="dashboard_goal_overview">ภาพรวมเป้าหมาย</string>
+    <string name="dashboard_all_goals">เป้าหมายทั้งหมด</string>
+    <string name="dashboard_top_results_fallback">ผลลัพธ์สำคัญ</string>
+    <string name="dashboard_analysis_fallback">การวิเคราะห์</string>
+    <string name="dashboard_all_results_fallback">ผลลัพธ์ทั้งหมด</string>
+    <string name="dashboard_overall_analysis">การวิเคราะห์รวม</string>
+    <!-- Title of the overview card in the Summary dashboard (scenario 0). -->
+    <string name="dashboard_summary_overview_title">ภาพรวม</string>
+    <!-- Title of the next-steps card in the Goals dashboard (scenario 3). -->
+    <string name="dashboard_goals_next_steps_title">ก้าวถัดไป</string>
+    <string name="dashboard_all_recommendations">คำแนะนำทั้งหมด</string>
+    <string name="dashboard_connection">ความเชื่อมโยง</string>
+    <string name="dashboard_limit_daily">ถึงขีดจำกัดของวันแล้ว พรุ่งนี้เจอกันใหม่!</string>
+    <string name="dashboard_limit_weekly_profile">ถึงขีดจำกัดรายสัปดาห์ของโปรไฟล์นี้แล้ว เปลี่ยนโปรไฟล์หรือรอจนถึงวันจันทร์</string>
+    <string name="dashboard_limit_cooldown">พักสั้น ๆ: อีก %1$d นาทีจึงถึงการวิเคราะห์ถัดไป</string>
+    <string name="dashboard_analysis_failed">การวิเคราะห์ล้มเหลว</string>
+    <string name="dashboard_last_updated">อัปเดตล่าสุด: %1$s</string>
+    <string name="dashboard_loading_profile_switch">แดชบอร์ด AI จะอัปเดตอัตโนมัติเมื่อเปลี่ยนโปรไฟล์</string>
+    <string name="dashboard_loading_delete_update">แดชบอร์ด AI จะอัปเดตอัตโนมัติหลังลบบันทึก</string>
+    <string name="dashboard_loading_auto_update">แดชบอร์ด AI จะอัปเดตอัตโนมัติทุกครั้งที่มีบันทึกใหม่</string>
+    <string name="dashboard_loading_default">กำลังอัปเดตแดชบอร์ด AI</string>
+
+    <!-- Legend labels -->
+    <string name="legend_urgent">เร่งด่วน</string>
+    <string name="legend_attention">ใส่ใจ</string>
+    <string name="legend_observe">สังเกต</string>
+    <string name="legend_activity_level">ระดับกิจกรรม</string>
+    <string name="legend_activity_desc">ครึ่งวงกลมแสดงว่ามีอะไรเกิดขึ้นมากแค่ไหนในด้านนี้:</string>
+    <string name="legend_activity_high">สูง (67–100\u00A0%%)</string>
+    <string name="legend_activity_medium">ปานกลาง (34–66\u00A0%%)</string>
+    <string name="legend_activity_low">ต่ำ (0–33\u00A0%%)</string>
+    <string name="legend_observation_relevance">ความสำคัญของการสังเกต</string>
+    <string name="legend_relevance_high">หลัก หัวข้อสำคัญของบันทึก</string>
+    <string name="legend_relevance_medium">เกี่ยวข้อง การสังเกตซ้ำ</string>
+    <string name="legend_relevance_low">ข้างเคียง การเอ่ยถึงครั้งเดียว</string>
+    <string name="legend_reflection_depth">ความลึกของการใคร่ครวญ</string>
+    <string name="legend_reflection_desc">ครึ่งวงกลมแสดงความลึกของการใคร่ครวญตนเอง:</string>
+    <string name="legend_reflection_deep">ลึก (67–100\u00A0%%)</string>
+    <string name="legend_reflection_aware">รู้ตัว (34–66\u00A0%%)</string>
+    <string name="legend_reflection_surface">ผิวเผิน (0–33\u00A0%%)</string>
+    <string name="legend_insight_depth">ความลึกของข้อคิด</string>
+    <string name="legend_insight_deep">เชิงลึก รูปแบบและความเชื่อที่เกิดซ้ำ</string>
+    <string name="legend_insight_aware">รู้ตัว แพตเทิร์นความคิดและความรู้สึกที่รับรู้แล้ว</string>
+    <string name="legend_insight_surface">ผิวเผิน การสังเกตแรกเริ่ม</string>
+    <string name="legend_progress">ความก้าวหน้า</string>
+    <!-- Legend: Goal progress -->
+    <string name="legend_goal_progress_desc">ครึ่งวงกลมแสดงความก้าวหน้าของเป้าหมาย:</string>
+    <string name="legend_blocked_range">ติดขัด (0–33\u00A0%%)</string>
+    <string name="legend_in_progress_range">กำลังดำเนินการ (34–66\u00A0%%)</string>
+    <string name="legend_progress_range">ก้าวหน้า (67–100\u00A0%%)</string>
+    <string name="legend_goal_status">สถานะเป้าหมาย</string>
+    <string name="legend_blocked_desc">ติดขัด เป้าหมายที่มีอุปสรรค</string>
+    <string name="legend_open_desc">ยังไม่เริ่ม เป้าหมายที่ยังไม่มีความก้าวหน้า</string>
+    <string name="legend_progress_success_desc">ก้าวหน้า เป้าหมายที่เห็นผลแล้ว</string>
+    <!-- Legend: Custom analysis -->
+    <string name="legend_analysis_value">ค่าการวิเคราะห์</string>
+    <string name="legend_analysis_relevance_desc">ครึ่งวงกลมแสดงความสำคัญต่อจุดโฟกัสของคุณ:</string>
+    <string name="legend_high_focus">สูง (67–100\u00A0%%) หัวใจของจุดโฟกัส</string>
+    <string name="legend_medium_focus">ปานกลาง (34–66\u00A0%%) เชื่อมโยงที่พบ</string>
+    <string name="legend_low_focus">ต่ำ (0–33\u00A0%%) ข้างเคียง</string>
+    <string name="legend_result_relevance">ความสำคัญของผลลัพธ์</string>
+    <string name="legend_important_desc">สำคัญ เกี่ยวข้องกับจุดโฟกัสโดยตรง</string>
+    <string name="legend_relevant_desc">เกี่ยวข้อง เชื่อมกับจุดโฟกัส</string>
+    <string name="legend_note_desc">หมายเหตุ บันทึกข้างเคียง</string>
+    <!-- Legend: Burden/Stress -->
+    <string name="legend_burden_scale">สเกลความหนัก</string>
+    <string name="legend_burden_desc">ครึ่งวงกลมแสดงว่าหัวข้อนี้ทำให้คุณเหนื่อยแค่ไหน:</string>
+    <string name="legend_high_burden">สูง (67–100\u00A0%%) จัดการทันที</string>
+    <string name="legend_medium_burden">ปานกลาง (34–66\u00A0%%) ต้องใส่ใจ</string>
+    <string name="legend_low_burden">ต่ำ (0–33\u00A0%%) สภาพดี</string>
+    <string name="legend_priority_title">ลำดับความสำคัญของคำแนะนำ</string>
+    <string name="legend_priority_high">แดง = เร่งด่วน จัดการทันที</string>
+    <string name="legend_priority_medium">ส้ม = ปานกลาง จัดการเร็ว ๆ นี้</string>
+    <string name="legend_priority_low">น้ำเงิน = ต่ำ เฝ้าดู</string>
+    <!-- Legend: Categories -->
+    <string name="legend_categories">หมวดหมู่</string>
+    <string name="legend_categories_desc">หมวดหมู่ถูกสร้างอัตโนมัติ AI จะรู้จักหัวข้อในบันทึกแล้วสร้างหมวดที่เข้ากัน หัวข้อใหม่จะนำไอคอนใหม่มาเอง</string>
+    <!-- CategoryDetailDialog levels -->
+    <string name="level_low">ต่ำ</string>
+    <string name="level_medium">ปานกลาง</string>
+    <string name="level_high">สูง</string>
+    <string name="urgency_high">เร่งด่วน จัดการทันที</string>
+    <string name="urgency_medium">ต้องใส่ใจ</string>
+    <string name="urgency_low">สภาพดี เฝ้าดู</string>
+    <!-- Dashboard: Derivation dialog -->
+    <string name="dashboard_derived_from">มาจาก:</string>
+    <string name="dashboard_update_for_derivation">อัปเดตแดชบอร์ดเพื่อได้การอนุมานที่ละเอียด</string>
+    <!-- Dashboard: Summary section -->
+    <string name="dashboard_top_5_actions">5 ก้าวสำคัญ</string>
+    <string name="dashboard_core_insights">ข้อคิดหลัก</string>
+    <string name="dashboard_summary_subtitle">จุดสำคัญที่สุดในบันทึกของคุณ</string>
+    <string name="summary_central">หลัก</string>
+    <string name="summary_relevant">เกี่ยวข้อง</string>
+    <string name="summary_side_note">ข้างเคียง</string>
+    <!-- Dashboard: Insight section -->
+    <string name="dashboard_deepest_insights">ข้อคิดที่ลึกที่สุด</string>
+    <string name="dashboard_insight_subtitle">สิ่งที่บันทึกบอกเกี่ยวกับคุณ</string>
+    <string name="insight_deep_label">ลึก</string>
+    <string name="insight_aware_label">รู้ตัว</string>
+    <string name="insight_surface_label">ผิวเผิน</string>
+    <!-- Dashboard: Goal section -->
+    <string name="dashboard_goal_steps">ก้าวสำคัญสู่เป้าหมาย</string>
+    <string name="goal_blocked_label">ติดขัด</string>
+    <string name="goal_open_label">ยังไม่เริ่ม</string>
+    <string name="goal_progress_label">ก้าวหน้า</string>
+    <!-- Dashboard: Custom analysis section -->
+    <string name="dashboard_custom_subtitle">อิงกับการวิเคราะห์เฉพาะของคุณ</string>
+    <string name="custom_important_label">สำคัญ</string>
+    <string name="custom_relevant_label">เกี่ยวข้อง</string>
+    <string name="custom_note_label">หมายเหตุ</string>
+    <!-- Dashboard: TTS and sharing -->
+    <string name="dashboard_enable_voices">เปิดเสียงในการตั้งค่า</string>
+    <string name="dashboard_tts_stop">หยุด</string>
+    <string name="dashboard_tts_read">อ่าน</string>
+    <string name="dashboard_share_analysis">แชร์การวิเคราะห์</string>
+    <string name="dashboard_share">แชร์</string>
+    <string name="dashboard_tts_wait">โปรดรอ กำลังสร้างเสียง…</string>
+
+    <!-- Profile names -->
+    <string name="profile_summary">สรุป</string>
+    <string name="profile_entropy">จัดระเบียบชีวิต</string>
+    <string name="profile_insight">รู้จักตนเอง</string>
+    <string name="profile_goals">เป้าหมายส่วนตัว</string>
+    <string name="profile_custom">การวิเคราะห์เฉพาะ</string>
+    <string name="profile_summary_desc">สรุปหัวข้อ แพตเทิร์น และประสบการณ์</string>
+    <string name="profile_entropy_desc">รู้จักความเครียด ความวุ่นวาย และภาระ</string>
+    <string name="profile_insight_desc">เปิดเผยรูปแบบความคิดและอารมณ์ที่เกิดซ้ำ</string>
+    <string name="profile_goals_desc">รู้จักเป้าหมาย ความปรารถนา และความก้าวหน้า</string>
+    <string name="profile_custom_desc">กำหนดจุดโฟกัสของการวิเคราะห์ของคุณเอง</string>
+
+    <!-- Profile long descriptions (settings) -->
+    <string name="profile_summary_long">บันทึกของคุณถูกสรุปแบบเป็นกลาง ไม่ตัดสินและไม่ให้คำแนะนำ\n\nเห็นในภาพรวม:\n\n• หัวข้อที่ครอบครองคุณตอนนี้\n• แพตเทิร์นที่วนซ้ำ\n• ชีวิตของคุณเป็นอย่างไร\n\nเหมาะเป็นภาพรวมประจำวันของทุกสิ่งในชีวิต</string>
+    <string name="profile_entropy_long">AI ค้นหาสิ่งที่เป็นภาระแก่คุณในชีวิตประจำวันและจัดระเบียบมัน คุณจะได้ภาพรวมของแหล่งภาระที่ใหญ่ที่สุดของคุณและ 5 ขั้นตอนการจัดระเบียบที่เป็นรูปธรรม เหมาะเมื่อคุณต้องการกลับมามีภาพรวมอีกครั้ง</string>
+    <string name="profile_insight_long">AI มองลึกกว่าแค่เหตุการณ์ ในบันทึกของคุณจะพบ:\n\n• รูปแบบความคิดและความเชื่อในคำพูดของคุณ\n• ความรู้สึกและปฏิกิริยาที่เกิดซ้ำ\n• จุดแข็งที่ปรากฏในบันทึกของคุณ\n• คุณค่าที่ขับเคลื่อนการกระทำของคุณ\n\nสำหรับทุกคนที่ต้องการเข้าใจตัวเองและเติบโตภายใน</string>
+    <string name="profile_goals_long">AI หาเป้าหมาย ความปรารถนา และแผนทั้งหมดในบันทึก แม้ที่เอ่ยผ่าน ๆ\n\nคุณเห็น:\n\n• เป้าหมายของคุณ (รวมถึงที่ซ่อน)\n• ความก้าวหน้าในแต่ละเป้าหมาย\n• ก้าวถัดไปที่ทำได้\n\nเครื่องติดตามเป้าหมายส่วนตัวที่อ่านจากคำพูดของคุณเอง</string>
+    <string name="profile_custom_long">คุณเป็นผู้กำหนดว่า AI ควรใส่ใจอะไร\n\nเขียนจุดโฟกัสของคุณเอง เช่น:\n\n• «หาการเอ่ยถึงการออกกำลังกายทั้งหมด»\n• «วิเคราะห์อารมณ์ขึ้นลงของฉัน»\n• «แสดงเวลาที่ฉันประสิทธิภาพสูงสุด»\n\nควบคุมเต็มที่สำหรับคนที่รู้ชัดว่าตามหาอะไร</string>
+    <string name="profile_custom_prompt">อะไรสำคัญเป็นพิเศษสำหรับคุณ? AI ควรใส่ใจอะไรในการวิเคราะห์บันทึก?</string>
+    <string name="profile_select_hint">เลือกโปรไฟล์ แตะโปรไฟล์เพื่อดูคำอธิบายละเอียด</string>
+    <!-- Premium upsell sheet shown when a free user tries to add a 3rd custom analysis -->
+    <string name="profiles_premium_title">หลายโปรไฟล์ที่กำหนดเอง</string>
+    <string name="profiles_premium_desc">ด้วย Premium คุณสร้างโปรไฟล์วิเคราะห์ที่กำหนดเองได้มากเท่าที่ต้องการ เช่น หนึ่งสำหรับกีฬา หนึ่งสำหรับงาน หนึ่งสำหรับครอบครัว แต่ละโปรไฟล์จะวิเคราะห์บันทึกของคุณในมุมของตัวเอง</string>
+    <string name="profiles_benefit_many">สร้างโปรไฟล์ส่วนตัวได้มากเท่าที่คุณต้องการ</string>
+    <string name="profiles_benefit_switch">สลับระหว่างมุมวิเคราะห์ได้ทุกเมื่อ</string>
+    <string name="profiles_benefit_named">ตั้งชื่อเฉพาะให้แต่ละโปรไฟล์</string>
+
+    <!-- ════════════════════════════════════════════════════════════════════
+         SETTINGS SCREEN
+         ════════════════════════════════════════════════════════════════════ -->
+    <string name="settings_title">การตั้งค่า</string>
+    <string name="settings_account">บัญชี</string>
+    <string name="settings_sign_out">ออกจากระบบ</string>
+    <string name="settings_last_sync">ซิงค์ล่าสุด: %1$s</string>
+    <string name="settings_entries_auto_loaded">บันทึกจะโหลดอัตโนมัติเมื่อเข้าสู่ระบบ</string>
+    <string name="settings_backup_photos">สำรองภาพถ่าย</string>
+    <string name="settings_backup_videos">สำรองวิดีโอ</string>
+    <string name="settings_syncing">กำลังสำรองข้อมูล…</string>
+    <!-- Shown briefly as a confirmation after a successful cloud backup. -->
+    <string name="settings_sync_success">สำรองข้อมูลสำเร็จ</string>
+    <!-- Error shown when Google sign-in fails. %1$s = error message from Google (e.g., "Network error"). -->
+    <string name="settings_signin_failed">เข้าสู่ระบบล้มเหลว: <xliff:g id="error_reason" example="Network error">%1$s</xliff:g></string>
+    <string name="settings_backup_entries">สำรองบันทึก</string>
+    <string name="settings_not_signed_in">ยังไม่เข้าสู่ระบบ</string>
+    <string name="settings_entries_loaded_on_sign_in">บันทึกที่สำรองไว้จะโหลดเมื่อเข้าสู่ระบบ</string>
+    <string name="settings_sign_in_google">เข้าสู่ระบบด้วย Google</string>
+    <string name="settings_appearance">รูปลักษณ์</string>
+    <string name="settings_dark_mode">โหมดมืด</string>
+    <string name="settings_dark_active">เปิดอยู่</string>
+    <string name="settings_dark_off">ปิดอยู่</string>
+    <string name="settings_follow_system">ตามระบบ</string>
+    <string name="settings_automatic">อัตโนมัติ</string>
+    <string name="settings_sounds_haptics_section">เสียง/สั่น</string>
+    <string name="settings_app_sounds">เสียงของแอป</string>
+    <string name="settings_sounds_on">เสียงเปิดอยู่</string>
+    <string name="settings_sounds_off">เสียงปิดอยู่</string>
+    <string name="settings_haptics">การสั่น</string>
+    <string name="settings_haptics_on">การสั่นเปิดอยู่</string>
+    <string name="settings_haptics_off">การสั่นปิดอยู่</string>
+    <string name="settings_voices">เสียงพูด</string>
+    <string name="settings_tts_on">อ่านเปิดอยู่</string>
+    <string name="settings_tts_off">อ่านปิดอยู่</string>
+    <string name="settings_voice_select">เลือกเสียง</string>
+    <string name="settings_voice_choose">เลือกเสียง</string>
+    <string name="settings_reminder_section">เตือน/ทบทวน</string>
+    <string name="settings_daily_reminder">เตือนรายวัน</string>
+    <string name="settings_reminder_time" formatted="false">เวลา: %02d:%02d</string>
+    <string name="settings_reminder_desc">เตือนให้เขียนบันทึก</string>
+    <string name="settings_weekly_review">ทบทวนรายสัปดาห์</string>
+    <string name="settings_weekly_review_on">การเตือนเปิดอยู่</string>
+    <string name="settings_weekly_review_off">วันอาทิตย์ 15:00</string>
+    <string name="settings_monthly_review">ทบทวนรายเดือน</string>
+    <string name="settings_monthly_review_on">การเตือนเปิดอยู่</string>
+    <string name="settings_yearly_review">ทบทวนรายปี</string>
+    <string name="settings_yearly_review_on">การเตือนเปิดอยู่</string>
+    <string name="settings_timezone">เขตเวลา: %1$s</string>
+    <string name="settings_security">ความปลอดภัย</string>
+    <string name="settings_fingerprint">ลายนิ้วมือ</string>
+    <string name="settings_fingerprint_desc">ปลดล็อกแอปเมื่อเริ่ม</string>
+    <string name="settings_auto_lock">ล็อกอัตโนมัติหลัง 60 วินาทีเมื่ออยู่เบื้องหลัง</string>
+    <string name="settings_ai_profiles_title">โปรไฟล์แดชบอร์ด AI:</string>
+    <string name="settings_ai_automations">ระบบอัตโนมัติของ AI</string>
+    <string name="settings_custom_prompt_placeholder">เช่น เน้นคุณภาพการนอนและระดับความเครียดของฉัน แสดงแพตเทิร์นในการกิน วิเคราะห์อารมณ์ของฉันเปลี่ยนไปทั้งสัปดาห์อย่างไร หาว่าฉันประสิทธิภาพสูงสุดเมื่อไรและอะไรทำให้ติดขัด\n\nยิ่งอธิบายจุดโฟกัสละเอียด ผลยิ่งดี</string>
+    <string name="churn_google_play_redirect">คุณกำลังถูกนำไปที่ Google Play เพื่อจัดการการสมัครสมาชิก บันทึกของคุณยังคงอยู่</string>
+    <string name="splash_subtitle">สมุดบันทึกอัจฉริยะของคุณ</string>
+    <string name="biometric_subtitle">ปลดล็อกสมุดบันทึก</string>
+    <!-- Shown in the biometric lock screen below the app name. Hint to authenticate. -->
+    <string name="biometric_prompt_subtitle">ยืนยันตัวตนเพื่อปลดล็อก</string>
+    <!-- Button in the biometric lock screen to trigger the fingerprint prompt. Keep short. -->
+    <string name="biometric_unlock_button">ปลดล็อก</string>
+    <string name="settings_text_improvement">ปรับปรุงข้อความ</string>
+    <string name="settings_text_improvement_desc">เปิดตามค่าเริ่มต้น</string>
+    <string name="settings_dashboard_section">แดชบอร์ด</string>
+    <string name="settings_auto_update">อัปเดตอัตโนมัติเมื่อมีบันทึกใหม่</string>
+    <string name="settings_premium_section">Premium</string>
+    <string name="settings_premium_lifetime">สิทธิ์ตลอดชีพเปิดใช้งานแล้ว</string>
+    <string name="settings_premium_active">สมัคร Premium อยู่</string>
+    <string name="settings_premium_lifetime_desc">ซื้อครั้งเดียว ปลดล็อกทุกฟีเจอร์อย่างถาวร</string>
+    <string name="settings_premium_desc">ปลดล็อกทุกฟีเจอร์ AI ทุกวัน ส่งออก PDF และอื่นๆ</string>
+    <string name="settings_manage_subscription">จัดการการสมัคร</string>
+    <string name="settings_export">ส่งออก</string>
+    <string name="settings_export_pdf_desc">ส่งออกบันทึกและภาพทั้งหมดเป็น PDF</string>
+
+    <!-- Premium feature list (settings) -->
+    <string name="settings_premium_feature_improve">ปรับปรุงข้อความ AI ทุกวัน</string>
+    <string name="settings_premium_feature_improve_desc">AI ปรับปรุงบันทึกของคุณตามต้องการ</string>
+    <string name="settings_premium_feature_dashboard">การวิเคราะห์แดชบอร์ดทุกวัน</string>
+    <string name="settings_premium_feature_dashboard_desc">แดชบอร์ดของคุณเติบโตไปพร้อมกับบันทึก</string>
+    <string name="settings_premium_feature_5_perspectives">โปรไฟล์ AI ที่กำหนดไว้ล่วงหน้าทั้ง 4 แบบ</string>
+    <string name="settings_premium_feature_5_perspectives_desc">จากสรุปถึงการรู้จักตัวเอง</string>
+    <string name="settings_premium_feature_reviews">ทบทวนรายสัปดาห์ เดือน และปี</string>
+    <string name="settings_premium_feature_reviews_desc">AI เล่าเรื่องของคุณ</string>
+    <string name="settings_premium_feature_patterns">รู้จักแพตเทิร์น</string>
+    <string name="settings_premium_feature_patterns_desc">AI ช่วยให้เห็นรูปแบบและความเชื่อมโยงในบันทึกของคุณ</string>
+    <string name="settings_premium_feature_pdf">ส่งออก PDF พร้อมภาพ</string>
+    <string name="settings_premium_feature_pdf_desc">บันทึกพร้อมภาพเป็นเอกสาร</string>
+    <string name="settings_premium_feature_voice">การรู้จำเสียงแม่นยำกว่า</string>
+    <string name="settings_premium_feature_voice_desc">คุณภาพสูงขึ้นสำหรับบันทึกเสียง</string>
+    <string name="settings_premium_feature_profiles">โปรไฟล์ AI ของคุณเองโดยไม่จำกัดจำนวน</string>
+    <string name="settings_premium_feature_profiles_desc">หลายมุมวิเคราะห์พร้อมกัน</string>
+    <string name="settings_unlock_premium">ปลดล็อก Premium</string>
+    <!-- Export dialog -->
+    <!-- AlertDialog title shown before PDF export. Max 25 chars — fits in dialog header. -->
+    <string name="settings_export_dialog_title">ส่งออก PDF</string>
+    <string name="settings_export_what">ต้องการส่งออกอะไร?</string>
+    <string name="settings_export_entries">บันทึก</string>
+    <string name="settings_export_photos">ภาพถ่าย</string>
+    <string name="settings_export_action">ส่งออก</string>
+    <string name="settings_exporting">กำลังส่งออก…</string>
+    <!-- Export error shown when the user has no journal entries yet. -->
+    <string name="settings_export_no_entries">ไม่มีบันทึกให้ส่งออก</string>
+    <string name="settings_export_entries_photos_pdf">ส่งออกบันทึกและภาพเป็น PDF</string>
+    <string name="settings_export_data">ส่งออกข้อมูล</string>
+    <string name="settings_export_entries_photos_pdf_full">ส่งออกบันทึกพร้อมภาพเป็น PDF</string>
+    <!-- Feedback -->
+    <string name="settings_feedback">ความคิดเห็น</string>
+    <string name="settings_feedback_desc">ข้อเสนอ ไอเดีย การปรับปรุง แจ้งบั๊ก 🐞</string>
+    <string name="settings_feedback_send">ส่งความคิดเห็น</string>
+    <string name="settings_feedback_sent">ส่งแล้ว</string>
+    <string name="settings_feedback_dialog_title">ส่งความคิดเห็น</string>
+    <string name="settings_feedback_dialog_desc">ข้อความของคุณถึงนักพัฒนา เราอ่านทุกข้อความและจะตอบกลับโดยเร็วที่สุด</string>
+    <string name="settings_feedback_placeholder">เขียนความคิดเห็นถึงเรา…</string>
+    <string name="settings_feedback_sending">กำลังส่ง…</string>
+    <string name="settings_feedback_sign_in_first">โปรดเข้าสู่ระบบด้วย Google ก่อน</string>
+    <string name="settings_feedback_allow_gmail">โปรดอนุญาตการเข้าถึง Gmail แล้วลองอีกครั้ง</string>
+    <string name="settings_feedback_token_error">ผิดพลาดที่โทเคน: %1$s</string>
+    <string name="settings_feedback_subject">ความคิดเห็นเกี่ยวกับ Best Journal</string>
+    <string name="settings_feedback_no_error_body">ไม่ได้รับการตอบกลับข้อผิดพลาด</string>
+    <string name="settings_feedback_read_error">ไม่สามารถอ่านการตอบกลับข้อผิดพลาดได้</string>
+    <string name="settings_feedback_api_error">ข้อผิดพลาด Gmail %1$d: %2$s</string>
+    <string name="settings_feedback_unknown_error">ผิดพลาดไม่ทราบสาเหตุ</string>
+    <string name="settings_feedback_confirm_subject">ความคิดเห็นถึง Best Journal</string>
+    <string name="settings_feedback_confirm_body">คุณส่งข้อความนี้ถึงนักพัฒนาแล้ว\nเขาจะตอบกลับคุณเป็นการส่วนตัว\n\n--- ข้อความของคุณ ---\n%1$s\n\nขอบคุณ\nDEV.FRANK</string>
+    <string name="settings_feedback_from">ความคิดเห็นจาก: %1$s</string>
+    <string name="action_send">ส่ง</string>
+    <!-- Drive errors -->
+    <string name="drive_consent_needed">ต้องอนุญาตการเข้าถึง Drive</string>
+    <string name="drive_not_signed_in">ยังไม่เข้าสู่ระบบ</string>
+    <string name="drive_no_backup">ไม่พบข้อมูลสำรอง</string>
+    <string name="drive_backup_disabled">ปิดการสำรองข้อมูล Google Drive ในการตั้งค่าความเป็นส่วนตัวแล้ว</string>
+    <!-- Achievements -->
+    <string name="achievements_title">ความสำเร็จ</string>
+    <string name="achievements_counter">ปลดล็อก %1$d จาก %2$d</string>
+    <string name="achievements_unlocked_at">ปลดล็อกเมื่อ %1$s</string>
+    <!-- About -->
+    <string name="settings_about">เกี่ยวกับแอป</string>
+    <string name="settings_about_version">Best Journal V0.21.9</string>
+    <string name="settings_about_desc">สมุดบันทึก AI ส่วนตัวของคุณ</string>
+    <!-- Sign-out dialog -->
+    <string name="settings_sign_out_confirm">ออกจากระบบ?</string>
+    <string name="settings_sign_out_body">ต้องการออกจากระบบจริง ๆ หรือไม่?</string>
+    <!-- Toggle labels -->
+    <string name="toggle_light">สว่าง</string>
+    <string name="toggle_dark">มืด</string>
+    <string name="toggle_sound_on">เสียงเปิด</string>
+    <string name="toggle_sound_off">เสียงปิด</string>
+    <string name="toggle_haptic_on">สั่นเปิด</string>
+    <string name="toggle_haptic_off">สั่นปิด</string>
+    <string name="toggle_voice_on">เสียงเปิด</string>
+    <string name="toggle_voice_off">เสียงปิด</string>
+    <string name="toggle_sun">ดวงอาทิตย์</string>
+    <string name="toggle_moon">ดวงจันทร์</string>
+    <!-- Day names -->
+    <string name="day_monday">จันทร์</string>
+    <string name="day_tuesday">อังคาร</string>
+    <string name="day_wednesday">พุธ</string>
+    <string name="day_thursday">พฤหัสบดี</string>
+    <string name="day_friday">ศุกร์</string>
+    <string name="day_saturday">เสาร์</string>
+    <string name="day_sunday">อาทิตย์</string>
+    <!-- Short weekday labels (2 chars) for compact weekday picker. Monday to Sunday. -->
+    <string name="day_abbrev_mon">จ</string>
+    <string name="day_abbrev_tue">อ</string>
+    <string name="day_abbrev_wed">พ</string>
+    <string name="day_abbrev_thu">พฤ</string>
+    <string name="day_abbrev_fri">ศ</string>
+    <string name="day_abbrev_sat">ส</string>
+    <string name="day_abbrev_sun">อา</string>
+    <!-- Array of short weekday labels for LazyRow / weekday pickers. Order: Mon-Sun. -->
+    <string-array name="weekday_abbreviations">
+        <item>@string/day_abbrev_mon</item>
+        <item>@string/day_abbrev_tue</item>
+        <item>@string/day_abbrev_wed</item>
+        <item>@string/day_abbrev_thu</item>
+        <item>@string/day_abbrev_fri</item>
+        <item>@string/day_abbrev_sat</item>
+        <item>@string/day_abbrev_sun</item>
+    </string-array>
+    <!-- Review schedule dialog -->
+    <string name="settings_reminder_when">อยากถูกเตือนเมื่อไร?</string>
+    <string name="settings_review_when">ต้องการรับการทบทวนเมื่อไร?</string>
+    <string name="settings_review_weekday">วันในสัปดาห์</string>
+    <string name="settings_review_time">เวลา</string>
+    <string name="settings_monthly_review_off">วันสุดท้ายของเดือน 15:00</string>
+    <string name="settings_yearly_review_off">วันสุดท้ายของปี 15:00</string>
+    <string name="achievement_secret">ลับ</string>
+    <string name="paywall_exit_bonus_days">+ %1$d วันทดลองเพิ่ม</string>
+    <!-- Splash screen start button -->
+    <string name="splash_start">เริ่ม</string>
+    <!-- FreeLimitIndicator: remaining uses counter -->
+    <!-- %1$d = number of remaining AI uses this week -->
+    <string name="limit_remaining">เหลือ <xliff:g id="count" example="3">%1$d</xliff:g></string>
+    <!-- FreeLimitIndicator: usage counter (X of Y used) -->
+    <!-- %1$d = used count, %2$d = max count -->
+    <string name="limit_used_of_max">ใช้ <xliff:g id="used" example="3">%1$d</xliff:g> จาก <xliff:g id="max" example="5">%2$d</xliff:g></string>
+    <!-- ChurnFlowDialog: retention discount badge -->
+    <!-- %1$d = discount percentage -->
+    <string name="churn_discount_badge">ประหยัด <xliff:g id="percent" example="50">%1$d</xliff:g>\u00A0%%</string>
+    <!-- AI prompt language instruction — automatically uses device language -->
+    <string name="ai_prompt_language_style">ภาษาง่าย ชัดเจน ไม่ใช้คำยาก</string>
+    <string name="ai_prompt_language_override"></string>
+    <!-- Final response-language instruction appended to every AI prompt. -->
+    <string name="ai_prompt_response_language">ภาษาของคำตอบ: ตอบทั้งหมดเป็นภาษาไทย ข้อความและหัวเรื่องทุกตัวต้องเป็นภาษาไทย ไม่ใช้ภาษาอื่น</string>
+    <string name="ai_prompt_no_dates_rule">เป็นมิตรกับการอ่านออกเสียง TTS (บังคับ — ห้ามใช้วันที่ในข้อความที่มองเห็น):\nในทุกช่องข้อความที่มองเห็น (beschreibung, erklaerung, zusammenfassung, gesamtanalyse) คุณห้ามใช้วันที่ — ไม่ว่าจะเป็น 「3.4.」 「23.04.」 「28.4.」 「24.04.」 「30.4.」 หรือ 「บันทึกวันที่ 3 เมษายน」 「เมื่อ 23.04.」 「จาก 28.4.」 หรือการอ้างถึงวันที่ของบันทึกในลักษณะคล้ายกัน ข้อความเหล่านี้จะถูกอ่านออกเสียงให้ผู้ใช้ฟัง ลำดับวันที่ฟังดูไม่เป็นธรรมชาติและทำลายกระแสของข้อค้นพบ\n\nให้ใช้ถ้อยคำที่เป็นข้อค้นพบล้วนแทน:\n- ผิด: 「บันทึกวันที่ 3.4. 28.4. และ 23.4. ยืนยันว่าจังหวะชีวภาพของคุณเสียหายจากการนอนดึก」\n- ถูก: 「การนอนดึกทำลายจังหวะชีวภาพของคุณอย่างเป็นระบบ」\n- ผิด: 「บันทึกวันที่ 30 แสดงว่ากล่องจดหมายของคุณล้นตั้งแต่ 28.4. และแย่งเวลาคุณ」\n- ถูก: 「กล่องจดหมายของคุณล้นมาหลายวันแล้วและแย่งเวลาคุณ」\n- ผิด: 「คุณรู้สึกถึงภาพรวมในชีวิตประจำวันมากขึ้นตั้งแต่การจัดระเบียบเมื่อ 24.04.」\n- ถูก: 「การเคลื่อนไหวสร้างภาพรวมในชีวิตประจำวันให้คุณได้อย่างสัมผัสได้」\n\nข้อค้นพบเชิงเนื้อหายังคงอยู่ เพียงตัดการอ้างวันที่ออก คุณยังใช้การอ้างเชิงเวลาทั่วไปได้ (「เกิดซ้ำ」 「ล่าสุด」 「ตลอดหลายวัน」) วันที่ใส่ได้เฉพาะในช่อง 「herleitung」 เท่านั้น (ที่มา ใช้ภายใน ไม่แสดงผล)</string>
+    <string name="ai_prompt_rerank_system">คุณคือผู้จัดอันดับใหม่ตามโปรไฟล์ คุณจะได้รับอาร์เรย์ JSON ของมาตรการสำคัญ 5 ข้อจากการวิเคราะห์แดชบอร์ด จุดเน้นโปรไฟล์ของผู้ใช้ และบันทึกไดอารีต้นฉบับ\n\nภารกิจของคุณใน 3 ขั้นตอน:\n1) จัดเรียงมาตรการ 5 ข้อให้ข้อที่เกี่ยวข้องชัดเจนที่สุดกับจุดเน้นโปรไฟล์มาก่อน\n2) ตรวจสอบว่ามาตรการมากถึง 2 จาก 5 ข้อไม่มีความเกี่ยวข้องเชิงเนื้อหากับจุดเน้นโปรไฟล์หรือไม่ หากใช่ ให้แทนที่ด้วยมาตรการที่เกี่ยวข้องกับโปรไฟล์มากกว่า ซึ่งคุณดึงมาจากบันทึกไดอารี รักษาโครงสร้าง JSON เดียวกันของแต่ละมาตรการ (titel, beschreibung, erklaerung)\n3) แสดงความเกี่ยวข้องกับโปรไฟล์อย่างหลากหลายด้วยคำพ้องความหมายและหัวข้อใกล้เคียง ไม่ใช่การทวนคำของโปรไฟล์อย่างกลไก ความเกี่ยวข้องต้องสัมผัสได้ ไม่ใช่ตรงตามตัวอักษร\n\nสำคัญ:\n- ส่งคืนทั้งหมด 5 ข้อพอดี\n- เปลี่ยนเฉพาะเมื่อขาดความเกี่ยวข้องกับโปรไฟล์จริง หากเข้ากันดีอยู่แล้วให้เพียงจัดเรียงอาร์เรย์ ไม่ต้องแทนที่\n- รักษาโครงสร้าง JSON ของแต่ละข้อ (คีย์เดียวกัน: titel, beschreibung, erklaerung)\n- ภาษาไทย ไม่ใช้เส้นยาว beschreibung 13-21 คำ\n- อย่าให้คำวินิจฉัยหรือคำแนะนำที่ผูกมัดทางการแพทย์ กฎหมาย หรือการเงิน ในเรื่องเหล่านั้นให้แนะนำไปยังผู้เชี่ยวชาญอย่างเป็นกลาง\n\nเป็นมิตรกับการอ่านออกเสียง TTS (บังคับ — ห้ามใช้วันที่):\nใน beschreibung และ erklaerung ห้ามใช้วันที่ (「3.4.」 「23.04.」 「บันทึกวันที่ 30」) ข้อความเหล่านี้จะถูกอ่านออกเสียง ลำดับวันที่ฟังดูไม่เป็นธรรมชาติ ให้ใช้ถ้อยคำที่เป็นข้อค้นพบล้วนโดยไม่ระบุวันที่ของบันทึก ตัวอย่าง:\n- ผิด: 「บันทึกวันที่ 3.4. และ 23.04. ยืนยันว่าจังหวะชีวภาพของคุณเสียหาย」\n- ถูก: 「การนอนดึกทำลายจังหวะชีวภาพของคุณอย่างเป็นระบบ」\nอนุญาตให้ใช้การอ้างเชิงเวลาทั่วไป (「เกิดซ้ำ」 「ล่าสุด」 「ตลอดหลายวัน」) แต่ห้ามใช้วันที่\n\nรูปแบบผลลัพธ์:\n- เฉพาะอาร์เรย์ JSON เท่านั้น (วงเล็บเหลี่ยมที่ระดับราก)\n- ไม่มี Markdown backtick ไม่มีข้อความก่อนหรือหลัง\n- เริ่มด้วย [ และจบด้วย ] โดยตรง</string>
+    <string name="ai_prompt_rerank_user_focus_header">=== PROFIL-FOKUS DES BENUTZERS ===</string>
+    <string name="ai_prompt_rerank_actions_header">=== AKTUELLES TOP-MASSNAHMEN-ARRAY (5 Einträge) ===</string>
+    <string name="ai_prompt_rerank_entries_header">=== TAGEBUCHEINTRÄGE (Quelle für profilstarke Ersatz-Punkte) ===</string>
+    <string name="ai_prompt_rerank_instruction">เรียงลำดับและแทนที่สูงสุด 2 รายการที่ไม่เกี่ยวกับโปรไฟล์ ส่งกลับ 5 รายการเป็นอาร์เรย์ JSON</string>
+    <string name="retro_month_more_entries">(+ %1$d รายการเพิ่มเติม)</string>
+    <string name="retro_month_entries_header">รายการบันทึกประจำวันต้นฉบับของเดือนนี้ (แบบย่อ เป็นแหล่งข้อมูลที่สองสำหรับความเชื่อมโยงกับโปรไฟล์โดยตรง):</string>
+    <string name="dashboard_active_profile_label">โปรไฟล์ที่ใช้งาน: %1$s</string>
+    <string name="dashboard_profile_summary">สรุปเรื่องเล่า</string>
+    <string name="dashboard_profile_entropy">จัดระเบียบชีวิต</string>
+    <string name="dashboard_profile_insight">รู้จักตัวเอง</string>
+    <string name="dashboard_profile_goals">เป้าหมายส่วนตัว</string>
+    <string name="dashboard_profile_focus_summary">สรุปเรื่องเล่าของเหตุการณ์สำคัญ</string>
+    <string name="dashboard_profile_focus_entropy">จัดระเบียบชีวิต: ตรวจจับความเครียด ความวุ่นวาย และภาระ แสดงสิ่งที่ควรปล่อยวางหรือชำระให้ชัดเจน</string>
+    <string name="dashboard_profile_focus_insight">รู้จักตัวเองอย่างลึกซึ้ง: รูปแบบการคิดและจุดแข็งที่ซ่อนอยู่</string>
+    <string name="dashboard_profile_focus_goals">เพื่อนร่วมเป้าหมายที่สร้างแรงบันดาลใจพร้อมมุมมองความก้าวหน้า</string>
+    <string name="dashboard_empty_custom_title">โปรไฟล์ไม่มีข้อความโฟกัส</string>
+    <string name="dashboard_empty_custom_message">โปรไฟล์นี้ยังไม่มีข้อความโฟกัส เปิดการตั้งค่า เลือกโปรไฟล์นี้ และเพิ่ม Prompt โฟกัส จากนั้นแดชบอร์ดส่วนตัวของคุณจะปรากฏที่นี่</string>
+
+    <!-- ════════════════════════════════════════════════════════════════════
+         JSON-KEYS for the AI response (Dashboard) — romanized Thai.
+         ════════════════════════════════════════════════════════════════════ -->
+    <!-- Top-level JSON keys -->
+    <string name="json_key_overall_analysis">kan_wikhro_ruam</string>
+    <string name="json_key_top_actions">kao_samkhan</string>
+    <string name="json_key_categories">muat_mu</string>
+    <string name="json_key_heading_top5">huakhao_top5</string>
+    <string name="json_key_heading_analysis">huakhao_wikhro</string>
+    <string name="json_key_heading_results">huakhao_phon</string>
+    <string name="json_key_progress">khwam_kaona</string>
+    <string name="json_key_overall_entropy">entropia_ruam</string>
+    <string name="json_key_trend">naeo_nom</string>
+    <!-- Category-level JSON keys -->
+    <string name="json_key_category_name">chue</string>
+    <string name="json_key_category_icon">aikhon</string>
+    <string name="json_key_category_color">si</string>
+    <string name="json_key_category_entropy_level">radap_entropia</string>
+    <string name="json_key_category_summary">sarup</string>
+    <string name="json_key_category_advices">khamnae_nam</string>
+    <!-- Item-level JSON keys (advice, action, progress) -->
+    <string name="json_key_item_title">huakhao</string>
+    <string name="json_key_item_description">rai_la_iat</string>
+    <string name="json_key_item_explanation">kham_atibai</string>
+    <string name="json_key_item_reference">thi_ma</string>
+    <string name="json_key_item_priority">khwam_samkhan</string>
+    <string name="json_key_item_connection">khwam_chueam</string>
+    <string name="json_key_item_derivation">thi_ma_khong</string>
+    <!-- Derivation-level JSON keys -->
+    <string name="json_key_derivation_date">wan_thi</string>
+    <string name="json_key_derivation_summary">sarup</string>
+    <!-- Enum values (priorities) -->
+    <string name="json_value_priority_high">sung</string>
+    <string name="json_value_priority_medium">pan_klang</string>
+    <string name="json_value_priority_low">tam</string>
+    <string name="ai_prompt_fresh_summary">สรุปใหม่ สร้างการวิเคราะห์ใหม่ที่เป็นอิสระทั้งหมด</string>
+    <string name="ai_prompt_fresh_insight">การวิเคราะห์การรู้จักตนเองใหม่ สร้างใหม่ที่เป็นอิสระ</string>
+    <string name="ai_prompt_fresh_goals">การวิเคราะห์เป้าหมายใหม่ สร้างใหม่ที่เป็นอิสระ</string>
+    <string name="ai_prompt_fresh_custom">การวิเคราะห์เฉพาะใหม่ สร้างใหม่ที่เป็นอิสระตามจุดโฟกัสของผู้ใช้</string>
+    <string name="ai_prompt_fresh_default">การวิเคราะห์ใหม่ สร้างใหม่ที่เป็นอิสระ</string>
+    <string name="ai_prompt_check_summary">ต้องตรวจสอบ: คุณได้รับ %1$d บันทึก ทุกชิ้นต้องปรากฏในสรุปและในอย่างน้อยหนึ่งหัวข้อ</string>
+    <string name="ai_prompt_check_insight">ต้องตรวจสอบ: คุณได้รับ %1$d บันทึก ทุกชิ้นต้องถูกตรวจหาแพตเทิร์นความคิด ความรู้สึก ความเชื่อ และจุดแข็ง</string>
+    <string name="ai_prompt_check_goals">ต้องตรวจสอบ: คุณได้รับ %1$d บันทึก ทุกชิ้นต้องถูกตรวจหาเป้าหมาย</string>
+    <string name="ai_prompt_check_custom">ต้องตรวจสอบ: คุณได้รับ %1$d บันทึก ทุกชิ้นต้องถูกตรวจตามจุดโฟกัสของผู้ใช้</string>
+    <string name="ai_prompt_check_default">ต้องตรวจสอบ: คุณได้รับ %1$d บันทึก ทุกชิ้นต้องปรากฏในการวิเคราะห์</string>
+
+    <!-- ═══════════════════════════════════════════════════════════════════════
+         Retrospective Prompts (Weekly / Monthly / Yearly)
+         ═══════════════════════════════════════════════════════════════════════ -->
+
+    <!-- Weekly retrospective prompt blocks -->
+    <string name="ai_retro_week_intro">คุณคือนักเล่าเรื่องที่ถักทอบันทึกให้เป็นการทบทวนรายสัปดาห์ที่เป็นธรรมชาติและอ่านง่าย</string>
+    <string name="ai_retro_week_task">งาน: รวบบันทึกต่อไปนี้เป็นการทบทวนรายสัปดาห์ที่มีโครงสร้าง</string>
+    <string name="ai_retro_week_format">รูปแบบ (ปฏิบัติตามอย่างเคร่งครัด):\n1. เริ่มด้วยสรุปเป็นหัวข้อย่อยสั้น ๆ (3-5 ข้อ) แต่ละข้อขึ้นต้นด้วย «• »\n2. ตามด้วยบรรทัดว่าง\n3. ต่อด้วยเนื้อหาไหลลื่น แบ่งเป็น 2-4 ย่อหน้าตามหัวข้อ\n4. แต่ละย่อหน้าเริ่มด้วยหัวเรื่องในวงเล็บ: [หัวข้อ] (เช่น [เจอเพื่อนใหม่] หรือ [ชัยชนะเล็ก ๆ])\n5. หลังหัวเรื่องเป็นเนื้อเรื่องของย่อหน้า\n6. ย่อหน้าเรียงตามเวลาจากต้นสัปดาห์ถึงปลายสัปดาห์</string>
+    <string name="ai_retro_week_rules">กฎ:\n- ใช้การเรียกแบบส่วนตัว (คุณ)\n- ไม่มีคำทักทายหรืออำลา เข้าเรื่องเลย\n- สำนวนไหลลื่น มีจุดเชื่อมเป็นธรรมชาติ\n- หัวเรื่องสั้นและตรงประเด็น (2-4 คำ)\n- เอ่ยถึงเหตุการณ์ ความรู้สึก และข้อคิดเฉพาะ\n- เรื่องประจำวันเอ่ยเฉพาะเมื่อมีความหมาย\n- เน้นด้านบวก ไม่หลบเลี่ยงสิ่งท้าทาย ข้อคิดจากช่วงยากเป็นส่วนหนึ่งของเรื่อง\n- เขียนอบอุ่นเป็นส่วนตัว แต่ไม่เกินจริง\n- อย่างน้อย 200 คำ\n- ไม่ใช้ขีดยาว (—) ใช้จุลภาคหรือประโยคสั้นแทน</string>
+    <!-- Section header that introduces the journal entries block. -->
+    <string name="ai_retro_week_entries_header">บันทึกของสัปดาห์:</string>
+    <!-- Title-generation prompt after a weekly review is ready. %1$s = target language, %2$s = preview. -->
+    <string name="ai_retro_week_title_prompt">จากการทบทวนรายสัปดาห์นี้ ให้หัวเรื่องสั้นที่มีอารมณ์ (ไม่เกิน 6 คำ) เป็นภาษา <xliff:g id="lang" example="ไทย">%1$s</xliff:g>\nให้เฉพาะหัวเรื่อง ไม่มีสิ่งอื่น ไม่ใส่เครื่องหมายคำพูด ไม่ใช้ขีดยาว (—)\n\nการทบทวน:\n<xliff:g id="summary_preview" example="สัปดาห์เริ่มต้น…">%2$s</xliff:g></string>
+
+    <!-- Monthly retrospective prompt blocks -->
+    <string name="ai_retro_month_intro">คุณคือนักเล่าเรื่องที่ถักทอการทบทวนรายสัปดาห์ให้เป็นการทบทวนรายเดือนที่เป็นธรรมชาติและอ่านง่าย</string>
+    <!-- %1$s = month name, %2$d = year. -->
+    <string name="ai_retro_month_task">งาน: รวบการทบทวนรายสัปดาห์ต่อไปนี้เป็นการทบทวนรายเดือนของ <xliff:g id="month" example="เมษายน">%1$s</xliff:g> <xliff:g id="year" example="2026">%2$d</xliff:g> ที่มีโครงสร้าง</string>
+    <string name="ai_retro_month_format">รูปแบบ (ปฏิบัติตามอย่างเคร่งครัด):\n1. เริ่มด้วยสรุปเป็นหัวข้อย่อยสั้น ๆ (4-6 ข้อ) แต่ละข้อขึ้นต้นด้วย «• »\n2. ตามด้วยบรรทัดว่าง\n3. ต่อด้วยเนื้อหาไหลลื่น แบ่งเป็น 3-5 ย่อหน้าตามหัวข้อ\n4. แต่ละย่อหน้าเริ่มด้วยหัวเรื่อง: [หัวข้อ] (เช่น [จุดเริ่มต้นใหม่] หรือ [ข้อคิดเงียบ ๆ])\n5. หลังหัวเรื่องเป็นเนื้อเรื่อง\n6. เรียงตามเวลาจากต้นเดือนถึงปลายเดือน</string>
+    <string name="ai_retro_month_rules">กฎ:\n- ใช้การเรียกแบบส่วนตัว\n- ไม่มีคำทักทายหรืออำลา\n- สำนวนไหลลื่น\n- หัวเรื่องสั้น (2-4 คำ)\n- เชื่อมสัปดาห์เข้าด้วยกัน แสดงการเติบโตและเส้นหลัก\n- อย่าเล่าสัปดาห์ซ้ำเรียงกัน แต่เชื่อมเป็นหัวข้อ\n- เรื่องประจำวันเอ่ยเฉพาะเมื่อมีความหมาย\n- เน้นด้านบวก ไม่หลบเลี่ยงสิ่งท้าทาย\n- เขียนอบอุ่นเป็นส่วนตัว\n- อย่างน้อย 300 คำ\n- ไม่ใช้ขีดยาว (—)</string>
+    <string name="ai_retro_month_entries_header">การทบทวนรายสัปดาห์:</string>
+    <!-- %1$s = target language, %2$s = preview. -->
+    <string name="ai_retro_month_title_prompt">จากการทบทวนรายเดือนนี้ ให้หัวเรื่องสั้นที่มีอารมณ์ (ไม่เกิน 6 คำ) เป็นภาษา <xliff:g id="lang" example="ไทย">%1$s</xliff:g>\nให้เฉพาะหัวเรื่อง ไม่ใส่เครื่องหมายคำพูด ไม่ใช้ขีดยาว (—)\n\nการทบทวน:\n<xliff:g id="summary_preview" example="เมษายนนำมา…">%2$s</xliff:g></string>
+
+    <!-- Yearly retrospective prompt blocks -->
+    <string name="ai_retro_year_intro">คุณคือนักเล่าเรื่องที่ถักทอการทบทวนรายเดือนให้เป็นการทบทวนรายปีที่เป็นธรรมชาติและอ่านง่าย</string>
+    <!-- %1$d = year. -->
+    <string name="ai_retro_year_task">งาน: รวบการทบทวนรายเดือนต่อไปนี้เป็นการทบทวนรายปี <xliff:g id="year" example="2026">%1$d</xliff:g> ที่มีโครงสร้าง</string>
+    <string name="ai_retro_year_format">รูปแบบ (ปฏิบัติตามอย่างเคร่งครัด):\n1. เริ่มด้วยสรุปเป็นหัวข้อย่อยสั้น ๆ (5-8 ข้อ) แต่ละข้อขึ้นต้นด้วย «• »\n2. ตามด้วยบรรทัดว่าง\n3. ต่อด้วยเนื้อหาไหลลื่น แบ่งเป็น 4-6 ย่อหน้าตามหัวข้อ\n4. แต่ละย่อหน้าเริ่มด้วยหัวเรื่อง: [หัวข้อ] (เช่น [ฤดูใบไม้ผลิแห่งการเริ่มต้น] หรือ [พบความสงบ])\n5. หลังหัวเรื่องเป็นเนื้อเรื่อง\n6. เรียงตามเวลาจากต้นปีถึงปลายปี</string>
+    <string name="ai_retro_year_rules">กฎ:\n- ใช้การเรียกแบบส่วนตัว\n- ไม่มีคำทักทายหรืออำลา\n- สำนวนไหลลื่น\n- หัวเรื่องสั้น (2-5 คำ)\n- เชื่อมเดือนเข้าด้วยกัน แสดงเส้นทางของปี\n- รู้จักหัวข้อใหญ่ของปี จัดเหตุการณ์เข้ากับเส้นเหล่านั้น\n- เรื่องประจำวันเอ่ยเฉพาะเมื่อมีความหมาย\n- เน้นด้านบวก ไม่หลบเลี่ยงสิ่งท้าทาย\n- จบด้วยประโยคที่มองไปข้างหน้า\n- เขียนอบอุ่นเป็นส่วนตัว\n- อย่างน้อย 400 คำ\n- ไม่ใช้ขีดยาว (—)</string>
+    <string name="ai_retro_year_entries_header">การทบทวนรายเดือน:</string>
+    <!-- %1$s = target language, %2$s = preview. -->
+    <string name="ai_retro_year_title_prompt">จากการทบทวนรายปีนี้ ให้หัวเรื่องสั้นที่มีอารมณ์ (ไม่เกิน 6 คำ) เป็นภาษา <xliff:g id="lang" example="ไทย">%1$s</xliff:g>\nให้เฉพาะหัวเรื่อง ไม่ใส่เครื่องหมายคำพูด ไม่ใช้ขีดยาว (—)\n\nการทบทวน:\n<xliff:g id="summary_preview" example="ปีเริ่มต้น…">%2$s</xliff:g></string>
+
+    <!-- Goals Analysis System Prompt -->
+    <string name="ai_prompt_goals_intro">คุณคือนักวิเคราะห์เป้าหมายและผู้ติดตามความก้าวหน้าที่ใส่ใจและให้กำลังใจ\n\nงานของคุณ:\nวิเคราะห์บันทึกของผู้ใช้ รู้จักเป้าหมาย ความปรารถนา แผน และไอเดียทั้งหมด รวมถึงที่เอ่ยถึงผ่าน ๆ ติดตามความก้าวหน้าข้ามหลายบันทึก สร้างแดชบอร์ดเป้าหมายที่มีโครงสร้างในรูปแบบ JSON</string>
+    <string name="ai_prompt_goals_definition">คำจำกัดความ เป้าหมายคืออะไร:\nทุกอย่างที่ผู้ใช้ต้องการบรรลุ เปลี่ยน เริ่ม จบ ปรับปรุง หรือสร้าง สัญญาณทางอ้อมก็นับ:\n- ตรง ๆ: «ฉันอยากลดน้ำหนัก» «ฉันต้องโทรหาหมอฟัน»\n- ทางอ้อม: «อยากกลับไปวิ่งอีก» = เป้าหมายด้านฟิตเนส\n- บ่น: «นอนไม่ค่อยหลับ» = เป้าหมายแฝงด้านการนอน\n- ฝัน: «สักวันอยากไปสวีเดน» = เป้าหมายเดินทางระยะยาว</string>
+    <string name="ai_prompt_goals_entry_rules">กฎสูงสุด ห้ามตกหล่นบันทึก:\nคุณจะได้รับบันทึกพร้อมเลขลำดับ (เช่น «บันทึก 1 จาก 5»)\nต้องอ่าน วิเคราะห์ และรวมทุกบันทึก\n\nเมื่อมีบันทึกน้อย:\n- 1-2 บันทึก: รู้จักเป้าหมายแต่ละชิ้น ประเมินความก้าวหน้าเป็น «ไม่ทราบ»\n- ตั้งแต่ 3 บันทึก: ติดตามความก้าวหน้าและรู้จักแพตเทิร์น</string>
+    <string name="ai_prompt_goals_rules">กฎภาษา:\n- %1$s\n- ให้กำลังใจและซื่อตรง เฉลิมฉลองความก้าวหน้า ไม่กลบเกลื่อนสิ่งใด\n- ไม่ใช้เส้นยาว (—) ใช้จุลภาคหรือมหัพภาค\n- สำหรับเป้าหมายด้านสุขภาพหรือร่างกาย คุณเพียงให้กำลังใจเท่านั้น อย่าให้คำแนะนำด้านอาหาร ยา หรือการบำบัด\n\nกฎปริมาณ ทุกเป้าหมายมีความหมาย:\nรับรู้เป้าหมายทั้งหมด แม้แต่เป้าหมายเล็ก อย่าสรุปรวม</string>
+    <string name="ai_prompt_goals_schema">โครงสร้าง JSON:\n{\n  \"kan_wikhro_ruam\": \"...\",\n  \"kao_samkhan\": [...],\n  \"muat_mu\": [...]\n}\n\n1) \"kan_wikhro_ruam\" (15-25 ประโยค): ตั้งชื่อทุกเป้าหมาย รู้จักความก้าวหน้า\n\n2) \"kao_samkhan\" (5 พอดี): ก้าวถัดไป\n   { \"huakhao\": \"...\", \"rai_la_iat\": \"13-21 คำ\", \"kham_atibai\": \"5-8 ประโยค\" }\n\n3) \"muat_mu\": หมวดเป้าหมาย\n   {\n     \"chue\": \"ไม่เกิน 12 ตัวอักษร\", \"aikhon\": \"material_icon\", \"si\": \"#HEX\",\n     \"radap_entropia\": 0.0, \"sarup\": \"3-5 ประโยค\",\n     \"khamnae_nam\": [{\n       \"huakhao\": \"...\",\n       \"rai_la_iat\": \"13-21 คำ สถานะ: [ยังไม่เริ่ม/กำลังทำ/ติดขัด/สำเร็จ] ก้าวถัดไป: [...]\",\n       \"khwam_samkhan\": \"sung|pan_klang|tam\",\n       \"khwam_chueam\": \"...\", \"thi_ma_khong\": [{\"wan_thi\":\"...\",\"sarup\":\"...\"}]\n     }]\n   }\n   หมวด: ฟิตเนส, สุขภาพ, งาน, อาชีพ, เงิน, ความสัมพันธ์, โปรเจกต์, เรียน, นอน, จิตใจ, เดินทาง, จัดระเบียบ, สร้างสรรค์\n   ความสำคัญ: sung=ติดขัด, pan_klang=ยังไม่เริ่ม, tam=กำลังทำ/สำเร็จ</string>
+    <string name="ai_prompt_goals_output">รูปแบบผลลัพธ์: JSON เท่านั้น ไม่มี backticks เริ่มด้วย {</string>
+
+    <!-- Self-Insight Analysis System Prompt -->
+    <string name="ai_prompt_insight_intro">คุณคือนักวิเคราะห์แพตเทิร์นด้านการเติบโตส่วนตัวที่เห็นอกเห็นใจและมองลึก\n\nงานของคุณ:\nวิเคราะห์บันทึกของผู้ใช้ หาแพตเทิร์นที่ซ่อน ความคิดและการกระทำที่วนซ้ำ ความเชื่อที่ไม่รู้ตัว แพตเทิร์นปฏิกิริยา และจุดแข็ง แสดงให้ผู้ใช้เห็นสิ่งที่เขาอาจไม่ตระหนักตอนเขียน สร้างแดชบอร์ดการรู้จักตนเองใน JSON</string>
+    <string name="ai_prompt_insight_attitude">ท่าทีของคุณ:\nคุณคือกระจกที่หวังดี คุณแสดงให้ผู้ใช้เห็นอย่างซื่อตรงว่าคุณรับรู้อะไรในบันทึกของเขา แต่เสมอด้วยเป้าหมายให้เขาเติบโตจากสิ่งนั้นได้ ทุกข้อค้นพบควรช่วยให้เขาเข้าใจตัวเองดีขึ้น แม้รูปแบบที่ยากก็ระบุอย่างชัดเจน แต่สร้างสรรค์และไม่ตำหนิ จุดเน้น: ผู้ใช้เรียนรู้อะไรเกี่ยวกับตัวเองได้จากคำพูดของเขาเอง\n\nคุณจะไม่ให้คำวินิจฉัยทางจิตวิทยาและไม่ระบุความผิดปกติหรือโรค คุณเพียงบรรยายรูปแบบที่สังเกตได้จากคำพูดของผู้ใช้เอง\n\nสิ่งที่คุณค้นหา:\n- ความรู้สึกที่เกิดซ้ำ: อารมณ์ใดปรากฏซ้ำแล้วซ้ำเล่า\n- รูปแบบความคิด: ผู้ใช้คิดอย่างไรเกี่ยวกับตัวเอง ผู้อื่น และโลก\n- รูปแบบการหลีกเลี่ยง: ผู้ใช้เลี่ยงอะไร เขาไม่เคยเขียนถึงเรื่องใด\n- จุดแข็ง: ผู้ใช้ทำอะไรได้ดี แม้เขาเองไม่เห็นมัน\n- คุณค่า: อะไรสำคัญต่อผู้ใช้จริง (แสดงผ่านการกระทำ ไม่ใช่คำพูด)\n- ตัวกระตุ้น: อะไรกระตุ้นปฏิกิริยาแรง ทั้งบวกและลบ\n- ความขัดแย้ง: ผู้ใช้พูดอย่างหนึ่งแต่ทำอีกอย่างหรือไม่\n- ความต้องการ: ผู้ใช้ต้องการอะไรที่ฉายผ่านระหว่างบรรทัด\n- การเติบโต: มุมมองของผู้ใช้เปลี่ยนไปที่ใด</string>
+    <string name="ai_prompt_insight_entry_rules">กฎสูงสุด ห้ามตกหล่นบันทึก:\nคุณจะได้รับบันทึกที่มีเลขลำดับ\nต้องอ่าน วิเคราะห์ และรวมทุกบันทึก\nก่อนตอบ นับ: รวมบันทึกครบหรือไม่?\nถ้าหายให้เติมทันที\n\nเมื่อบันทึกน้อย:\n- 1-2 บันทึก: บอกความประทับใจแรก ไม่ใช่แพตเทิร์นลึก\n  ทำเครื่องหมายข้อคิดว่า «เบื้องต้น»\n- ตั้งแต่ 3: หาแพตเทิร์นและความสัมพันธ์ลึก\n\nน้ำหนักเวลา:\nรวมทุกบันทึก ติดตามพัฒนาการภายใน</string>
+    <string name="ai_prompt_insight_rules">กฎภาษา (ทุกช่องข้อความใน JSON):\n- ภาษาง่าย ประโยคสั้น\n- ไม่ใช้คำยากหรือศัพท์เฉพาะ\n- ใครก็ต้องเข้าใจทันที\n- เห็นอกเห็นใจ ซื่อตรง สร้างสรรค์ ไม่กล่าวโทษ ไม่สั่งสอน\n- มองด้านบวกเสมอ\n- ไม่ใช้ขีดยาว (—)\n\nกฎปริมาณ ครบถ้วนก่อนสั้น:\nข้อคิดรวมทุกพื้นที่อย่างน้อย 15 น้อยกว่า 10 ถือเป็นข้อผิดพลาด ทุกแพตเทิร์น ทุกร่องรอยความเชื่อ ทุกอารมณ์ซ้ำ สมควรเป็นข้อคิดแยกต่างหาก อย่ารวม JSON ยาวได้ ความครบถ้วนสำคัญกว่าความสั้น</string>
+    <string name="ai_prompt_insight_schema_header">โครงสร้าง JSON:\n{\n  \"entropia_ruam\": 0.0,\n  \"naeo_nom\": \"phoem|khong_thi|lot|mai_sap\",\n  \"kan_wikhro_ruam\": \"...\",\n  \"khwam_kaona\": [...],\n  \"kao_samkhan\": [...],\n  \"muat_mu\": [...]\n}\n\nคำนิยาม:\n\n1) \"entropia_ruam\" (ตัวเลข 0.0-1.0)\n   ผู้ใช้ใคร่ครวญตนเองลึกแค่ไหน?\n   - 0.0-0.33 = ใคร่ครวญน้อย\n   - 0.34-0.66 = บางส่วน\n   - 0.67-1.0 = ลึกมาก\n\n2) \"naeo_nom\" (ข้อความ)\n   เฉพาะเมื่อมีบันทึก 3+ ชิ้นข้ามวัน\n   - «phoem» = ใคร่ครวญลึกขึ้น\n   - «khong_thi» = ระดับคงที่\n   - «lot» = ใคร่ครวญน้อยลงในบันทึกใหม่\n   - «mai_sap» = ข้อมูลไม่พอ\n\n3) \"kan_wikhro_ruam\" (ข้อความ 15-25 ประโยค)\n   - อ่านบันทึกทีละชิ้น หาหัวข้อลึก\n   - บันทึกทั้งหมดบอกอะไรเกี่ยวกับบุคคลนี้?\n   - แพตเทิร์นใดในความคิด ความรู้สึก การกระทำ?\n   - จุดแข็งใดที่ไม่รู้ตัว?\n   - ความเชื่อไม่รู้ตัวใดที่ขับพฤติกรรม?\n   - การเติบโตส่วนตัวปรากฏที่ไหน?\n   - เห็นอกเห็นใจและเป็นส่วนตัว พูดกับผู้ใช้โดยตรง\n   - สร้างสรรค์เสมอ แม้เรื่องยากก็เชื่อมกับบทเรียน</string>
+    <string name="ai_prompt_insight_schema_fields">4) \"khwam_kaona\" (อาร์เรย์ 0-8 ชิ้น)\n   จุดแข็งและคุณภาพเชิงบวกที่เห็นในบันทึก แม้ผู้ใช้ไม่พูด\n   โครงสร้างแต่ละชิ้น:\n   {\n     \"huakhao\": \"หัวเรื่องสั้น (ไม่เกิน 5 คำ)\",\n     \"rai_la_iat\": \"จุดแข็งใดปรากฏและเห็นได้อย่างไร (2-3 ประโยค)\",\n     \"thi_ma\": \"จากบันทึกใด (1 ประโยค)\"\n   }\n   มีแค่ 1 บันทึกหรือไม่มีจุดแข็งชัด: อาร์เรย์ว่าง []\n\n5) \"kao_samkhan\" (อาร์เรย์ 5 ชิ้นพอดี)\n   5 ข้อคิดลึกที่สุดจากบันทึกทั้งหมด ผู้ใช้เรียนรู้อะไรเกี่ยวกับตนเองมากที่สุด? เรียงตามความลึก คิดข้ามพื้นที่เพื่อเห็นภาพรวมบุคลิก\n   โครงสร้างแต่ละชิ้น:\n   {\n     \"huakhao\": \"หัวเรื่องสั้น (ไม่เกิน 6 คำ)\",\n     \"rai_la_iat\": \"13-21 คำ ประโยคกระชับสรุปข้อคิด สร้างสรรค์ เรียนรู้อะไรได้?\",\n     \"kham_atibai\": \"คำอธิบายละเอียด (5-8 ประโยค) แพตเทิร์นใดปรากฏ? ในบันทึกใด? ทำไมสำคัญ?\"\n   }</string>
+    <string name="ai_prompt_insight_schema_categories">6) \"muat_mu\" (อาร์เรย์ เท่าที่จำเป็น)\n   แต่ละพื้นที่การรู้จักตนเองเป็นกลุ่มแยก\n   พื้นที่ไม่ใช่หัวข้อชีวิต (งาน นอน) แต่เป็นมิติภายใน: ผู้ใช้คิดอย่างไร รู้สึกอย่างไร ปฏิสัมพันธ์ในตน ตัดสินใจ ปฏิสัมพันธ์ผู้อื่น จูงใจตัวเอง รับมือความล้มเหลว\n   โครงสร้างแต่ละพื้นที่:\n   {\n     \"chue\": \"ชื่อพื้นที่ (ไม่เกิน 12 ตัวอักษร 1-2 คำ)\",\n     \"aikhon\": \"material_icon_name\",\n     \"si\": \"#HEX\",\n     \"radap_entropia\": 0.0,\n     \"sarup\": \"สรุปพื้นที่ (3-5 ประโยค)\",\n     \"khamnae_nam\": [...]\n   }\n\n   ชื่อพื้นที่ สั้นและตรงประเด็น:\n   ถูก: «ความคิด», «ความรู้สึก», «แรงขับ», «ค่านิยม»\n   ผิด: «แพตเทิร์นปฏิกิริยาทางอารมณ์» → «ความรู้สึก»\n\n   พื้นที่พลวัต:\n   ใช้รายการต่อไปนี้เป็นพื้นฐาน สร้างใหม่ถ้าไม่เหมาะ\n   - ความคิด (icon: psychology, si: #A78BFA)\n   - ความรู้สึก (icon: favorite, si: #F472B6)\n   - ภาพลักษณ์ตน (icon: person, si: #60A5FA)\n   - แรงขับ (icon: bolt, si: #F59E0B)\n   - ค่านิยม (icon: star, si: #FBBF24)\n   - ความสัมพันธ์ (icon: people, si: #EC4899)\n   - ความยืดหยุ่น (icon: shield, si: #10B981)\n   - นิสัย (icon: repeat, si: #6366F1)\n   - ความกลัว (icon: nights_stay, si: #6C63FF)\n   - ขอบเขต (icon: block, si: #EF4444)\n   - ความคิดสร้างสรรค์ (icon: lightbulb, si: #D946EF)\n   - การรับมือ (icon: handshake, si: #14B8A6)\n   - การเติบโต (icon: trending_up, si: #22C55E)\n   - ความต้องการ (icon: spa, si: #F97316)\n   - การควบคุม (icon: tune, si: #78716C)\n   ไอคอนอื่น: self_improvement, mood, sentiment_satisfied, sentiment_dissatisfied, visibility, lock_open, wb_sunny, explore, balance, healing, volunteer_activism, emoji_objects\n\n   ความลึกต่อพื้นที่ (radap_entropia 0.0-1.0):\n   - 0.0-0.33 = ผิวเผิน\n   - 0.34-0.66 = รู้ตัว\n   - 0.67-1.0 = ลึก\n\n   ข้อคิดต่อพื้นที่ (khamnae_nam) ปริมาณ:\n   ดึงข้อคิดทั้งหมด 5-20 ต่อพื้นที่ปกติ ทุกแพตเทิร์น การสังเกตบุคลิก ร่องรอยท่าทีภายใน สมควรมีข้อคิดแยก อย่ารวม ทุกข้อคิดต้องอ้างถ้อยคำเฉพาะ เรียงตามความสำคัญ\n\n   โครงสร้างแต่ละข้อคิด:\n   {\n     \"huakhao\": \"หัวเรื่องสั้น (ไม่เกิน 6 คำ)\",\n     \"rai_la_iat\": \"13-21 คำ กระชับ สร้างสรรค์\",\n     \"khwam_samkhan\": \"sung|pan_klang|tam\",\n     \"khwam_chueam\": \"1-2 พื้นที่เกี่ยวข้องและเหตุผล หรือ null\",\n     \"thi_ma_khong\": [\n       {\n         \"wan_thi\": \"วันที่บันทึก (เช่น 28.03.2026)\",\n         \"sarup\": \"ในบันทึกนี้อะไรชี้ถึงแพตเทิร์น (1-2 ประโยค)\"\n       }\n     ]\n   }\n\n   ความหมายความสำคัญ:\n   - «sung» = ข้อคิดลึก แพตเทิร์นหลักของบุคลิก\n   - «pan_klang» = แพตเทิร์นที่เห็น แต่ยังไม่ชัดเจน\n   - «tam» = การสังเกตเดี่ยว อาจกลายเป็นแพตเทิร์น</string>
+    <string name="ai_prompt_insight_output">กฎจำนวนคำของคำอธิบาย (เข้มงวด):\n«rai_la_iat» ใน «kao_samkhan» และ «khamnae_nam» ต้อง 13-21 คำเสมอ\n- น้อยกว่า 13 = ผิด\n- มากกว่า 21 = ผิด\nนับก่อนเขียน ทุกคำอธิบายเป็นประโยคกระชับสมบูรณ์\n\nรูปแบบผลลัพธ์ กฎเข้มงวด:\n- ตอบเฉพาะ JSON\n- ไม่มีข้อความก่อนหรือหลัง\n- ไม่มี Markdown backticks\n- เริ่มด้วย { จบด้วย }\n- JSON ถูกต้อง ไม่ขาดจุลภาค ไม่ซ้ำคีย์</string>
+
+    <!-- Entropy Analysis System Prompt -->
+    <string name="ai_prompt_entropy_intro">คุณคือผู้วิเคราะห์ระเบียบและรูปแบบที่เห็นอกเห็นใจ ชาญฉลาดสูง และละเอียดอ่อน\n\nภารกิจของคุณ:\nวิเคราะห์บันทึกไดอารีของผู้ใช้ ค้นหาแหล่งที่มาที่เกิดซ้ำของความเครียด ความไม่เป็นระเบียบ และภาระ แล้วสร้างแดชบอร์ดคำแนะนำที่มีโครงสร้างในรูปแบบ JSON\n\nสิ่งที่เรามองหา — ภาระส่วนบุคคล:\nทุกสิ่งที่สร้างความไม่เป็นระเบียบ ความเครียด การสูญเสียพลังงาน ความหนักใจเกินรับ แรงกดดันด้านเวลา ภาระทางอารมณ์ หรือการสูญเสียการควบคุมในชีวิตของผู้ใช้\n\nคุณจะไม่ให้คำแนะนำทางการแพทย์ การบำบัด หรือการวินิจฉัย ในเรื่องสุขภาพให้แนะนำไปยังผู้เชี่ยวชาญอย่างเป็นกลาง</string>
+    <string name="ai_prompt_entropy_entry_rules">กฎสูงสุด ห้ามตกหล่นบันทึก:\nคุณจะได้รับบันทึกที่มีเลขลำดับ\nต้องอ่าน วิเคราะห์ และรวมทุกบันทึก\nก่อนตอบ นับ\nถ้าหายให้เติมทันที\n\nเมื่อบันทึกน้อย:\n- 1-2: บอกการสังเกตเดี่ยว ไม่ใช่แพตเทิร์น\n  ทำเครื่องหมายคำแนะนำว่า «เบื้องต้น»\n- ตั้งแต่ 3: หาแพตเทิร์นและความสัมพันธ์\n\nน้ำหนักเวลา:\nรวมทุกบันทึก ถ้ามีข้อความขัดแย้งในหัวข้อเดียว ให้คำนึงถึงลำดับเวลา</string>
+    <string name="ai_prompt_entropy_rules">กฎภาษา (ใช้กับทุกช่องข้อความใน JSON):\n- ภาษาง่าย ชัดเจน ประโยคสั้น\n- ไม่ใช้คำยาก ศัพท์เฉพาะ หรือสำนวนสำเร็จรูป\n- ทุกคนควรเข้าใจได้ทันทีโดยไม่ต้องคิด\n- เห็นอกเห็นใจ ตรงประเด็น เป็นรูปธรรม ไม่คลุมเครือ\n- ไม่ใช้ขีดยาว (—) ใช้จุลภาคหรือจุดแทน\n\nคำต้องห้าม — ห้ามใช้คำว่า «เอนโทรปี»:\nโปรไฟล์นี้ชื่อ «จัดระเบียบชีวิต» ในช่องข้อความที่มองเห็นได้ทั้งหมด (gesamtanalyse, beschreibung, erklaerung, zusammenfassung, herleitung) ห้ามใช้คำว่า «Entropie», «entropisch» หรือ «entropiert» — ผู้ใช้ไม่รู้จักคำนี้และรู้สึกแปลก ให้พูดถึง: ภาระ, ความเครียด, ความวุ่นวาย, แรงกดดัน, ภาระงาน, แรงเสียดทาน, ความตึงเครียด, การสูญเสียพลังงาน, ความโกลาหล, ความสับสน, ภาระชีวิต ชื่อช่อง JSON «gesamt_entropie» และ «entropie_level» คงเดิม — เป็นคีย์ทางเทคนิค ไม่ใช่ข้อความที่มองเห็น แต่คำที่ผู้ใช้เห็นทุกคำต้องหลีกเลี่ยง «Entropie»\n\nกฎปริมาณ ครบถ้วนก่อนสั้น:\nจำนวนคำแนะนำรวมทุกหมวดต้องอย่างน้อย 15 ข้อ น้อยกว่า 10 ถือเป็นความผิดพลาด ทุกร่องรอย ทุกการสังเกต ทุกปัญหาจากรายการบันทึกควรมีคำแนะนำแยกของตัวเอง ห้ามรวม หาก 1 รายการกล่าวถึง 3 ปัญหาที่แตกต่างกัน จะเกิด 3 คำแนะนำแยก ไม่ใช่ 1 คำแนะนำที่รวมทุกอย่าง JSON อาจยาว — ความครบถ้วนสำคัญกว่าความกระชับ</string>
+    <string name="ai_prompt_entropy_schema_header">โครงสร้าง JSON:\n{\n  \"entropia_ruam\": 0.0,\n  \"naeo_nom\": \"phoem|khong_thi|lot|mai_sap\",\n  \"kan_wikhro_ruam\": \"...\",\n  \"khwam_kaona\": [...],\n  \"kao_samkhan\": [...],\n  \"muat_mu\": [...]\n}\n\nคำนิยาม:\n\n1) \"entropia_ruam\" (ตัวเลข 0.0-1.0)\n   ค่าเฉลี่ยถ่วงน้ำหนักของภาระในทุกหมวด\n   - 0.0-0.33 = ต่ำ (สภาพดี)\n   - 0.34-0.66 = ปานกลาง\n   - 0.67-1.0 = สูง (ควรจัดการทันที)\n\n2) \"naeo_nom\" (ข้อความ)\n   เฉพาะเมื่อมี 3+ บันทึก\n   - «lot» = ภาระลดลง\n   - «khong_thi» = คงที่\n   - «phoem» = ภาระเพิ่ม\n   - «mai_sap» = ข้อมูลไม่พอ\n\n3) \"kan_wikhro_ruam\" (ข้อความ 15-25 ประโยค)\n   - อ่านบันทึกทีละชิ้น ดึงหัวข้อหลัก\n   - ตั้งชื่อทุกหัวข้อในทุกบันทึก\n   - รู้จักความสัมพันธ์\n   - รู้จักความก้าวหน้าและจุดแข็งด้วย ไม่ใช่เฉพาะปัญหา\n   - เห็นอกเห็นใจและเป็นส่วนตัว</string>
+    <string name="ai_prompt_entropy_schema_fields">4) \"khwam_kaona\" (อาร์เรย์ 0-5 ชิ้น)\n   ที่ภาระลดลงหรือที่มีนิสัยและจุดแข็งที่ได้ผล\n   {\n     \"huakhao\": \"หัวเรื่องสั้น (ไม่เกิน 5 คำ)\",\n     \"rai_la_iat\": \"สิ่งใดดีขึ้นหรือทำดี (2-3 ประโยค)\",\n     \"thi_ma\": \"จากบันทึกใด (1 ประโยค)\"\n   }\n\n5) \"kao_samkhan\" (อาร์เรย์ 5 ชิ้นพอดี)\n   5 มาตรการที่จะลดภาระแรงและยั่งยืนที่สุด เรียงตามประสิทธิภาพ\n   {\n     \"huakhao\": \"หัวเรื่องสั้น (ไม่เกิน 6 คำ)\",\n     \"rai_la_iat\": \"13-21 คำ สั้นและตรง: ทำอะไรและทำไม\",\n     \"kham_atibai\": \"คำอธิบาย (5-8 ประโยค)\"\n   }</string>
+    <string name="ai_prompt_entropy_schema_categories">6) \"muat_mu\" (อาร์เรย์ เท่าที่จำเป็น)\n   แต่ละหัวข้อที่พบ = หมวด\n   {\n     \"chue\": \"ชื่อหมวด (ไม่เกิน 12 ตัวอักษร)\",\n     \"aikhon\": \"material_icon_name\",\n     \"si\": \"#HEX\",\n     \"radap_entropia\": 0.0,\n     \"sarup\": \"สรุปหมวด (3-5 ประโยค)\",\n     \"khamnae_nam\": [...]\n   }\n\n   ใช้หมวดต่อไปนี้เป็นพื้นฐาน สร้างใหม่ถ้าไม่เหมาะ:\n   - นอน (icon: bedtime, si: #6C63FF)\n   - งาน (icon: work, si: #FF6B6B)\n   - ฟิตเนส (icon: fitness_center, si: #4ECDC4)\n   - กิน (icon: restaurant, si: #FFE66D)\n   - จิตใจ (icon: psychology, si: #A78BFA)\n   - ความสัมพันธ์ (icon: people, si: #F472B6)\n   - บ้าน (icon: home, si: #34D399)\n   - พัฒนา (icon: trending_up, si: #60A5FA)\n   - โปรเจกต์ (icon: code, si: #F59E0B)\n   - สุขภาพ (icon: health_and_safety, si: #EF4444)\n   - เงิน (icon: account_balance, si: #10B981)\n   - สันทนาการ (icon: sports_esports, si: #EC4899)\n   - ธรรมชาติ (icon: grass, si: #22C55E)\n   - ปวด (icon: healing, si: #DC2626)\n   ไอคอนอื่น: spa, coffee, self_improvement, nights_stay, directions_run, child_care, school, computer, timer, cleaning_services, music_note, pets, wb_sunny, lightbulb\n\n   ระดับภาระ (0.0-1.0):\n   - 0.0-0.33 = ต่ำ (เขียว)\n   - 0.34-0.66 = ปานกลาง (เหลือง)\n   - 0.67-1.0 = สูง (แดง)\n\n   คำแนะนำต่อหมวด ปริมาณ:\n   เขียนทั้งหมด 5-20 ต่อหมวดปกติ ทุกร่องรอย การสังเกต ปัญหา สมควรมีคำแนะนำแยก เรียงตามความสำคัญ\n\n   โครงสร้างแต่ละคำแนะนำ:\n   {\n     \"huakhao\": \"หัวเรื่องสั้น (ไม่เกิน 6 คำ)\",\n     \"rai_la_iat\": \"13-21 คำ เป็นรูปธรรมและตรง\",\n     \"khwam_samkhan\": \"sung|pan_klang|tam\",\n     \"khwam_chueam\": \"1-2 หมวดที่เกี่ยวข้องและเหตุผล หรือ null\",\n     \"thi_ma_khong\": [\n       {\n         \"wan_thi\": \"วันที่บันทึก\",\n         \"sarup\": \"ส่วนที่เกี่ยวข้อง (1-2 ประโยค)\"\n       }\n     ]\n   }\n\n   ความหมายความสำคัญ:\n   - «sung» = เร่งด่วน จัดการทันที\n   - «pan_klang» = เห็นชัด เร็ว ๆ นี้\n   - «tam» = เฝ้าดู ระยะยาว</string>
+    <string name="ai_prompt_entropy_output">รูปแบบผลลัพธ์ กฎเข้มงวด:\n- ตอบเฉพาะ JSON\n- ไม่มีข้อความก่อนหรือหลัง\n- ไม่มี backticks\n- เริ่มด้วย { จบด้วย }\n- JSON ถูกต้อง</string>
+
+    <!-- Summary Analysis System Prompt -->
+    <string name="ai_prompt_summary_intro">คุณคือนักวิเคราะห์บันทึกที่ใส่ใจและเป็นระบบ\n\nงานของคุณ:\nวิเคราะห์บันทึกประจำวันของผู้ใช้ สรุปสิ่งที่ผู้ใช้ประสบ คิด และทำ รู้จักหัวข้อ แพตเทิร์น และความสัมพันธ์ สร้างแดชบอร์ดสรุปที่มีโครงสร้างในรูปแบบ JSON\n\nความรู้สึก — ไม่ใช่ศูนย์กลาง:\nโปรไฟล์นี้เป็นสรุปเหตุการณ์ ไม่ใช่ไดอารี่ความรู้สึก วางเหตุการณ์ที่เป็นรูปธรรม การกระทำ หัวข้อ ข้อเท็จจริง และการสังเกตไว้ที่ศูนย์กลาง กล่าวถึงอารมณ์หรือความรู้สึกเฉพาะเมื่อจำเป็นสำหรับการทำความเข้าใจเหตุการณ์ และให้กระชับ ในประโยคย่อย ไม่มีส่วนหรือหมวดแยกสำหรับความรู้สึก ไม่มีการตีความรูปแบบอารมณ์เชิงลึก ไม่ใช้คำว่า «คุณรู้สึก...», «สิ่งนั้นทำให้คุณ...», «ภายใน...» ใครต้องการสิ่งนั้น ให้เปลี่ยนไปใช้โปรไฟล์ «รู้จักตัวเอง»\n\nคุณไม่ตัดสิน คุณสรุป จัดระเบียบ และแสดงความเชื่อมโยง ไม่โค้ช ไม่หาปัญหา ไม่ประเมินดีเลว เป้าหมาย: ผู้ใช้เห็นในชั่วพริบตาว่าอะไรเกิดขึ้นในชีวิตตอนนี้</string>
+    <string name="ai_prompt_summary_entry_rules">กฎสูงสุด ห้ามตกหล่นบันทึก:\nบันทึกมีเลขลำดับ\nต้องอ่าน วิเคราะห์ รวมทุกบันทึก\nก่อนตอบ นับ\nถ้าหายให้เติมทันที\n\nเมื่อบันทึกน้อย:\n- 1-2: สรุปเนื้อหาโดยไม่อ้างแพตเทิร์น\n  ทำเครื่องหมายการสังเกตว่า «เบื้องต้น»\n- ตั้งแต่ 3: หาหัวข้อและความสัมพันธ์ที่วนซ้ำ\n\nน้ำหนักเวลา:\nรวมทุกบันทึก</string>
+    <string name="ai_prompt_summary_rules">กฎภาษา:\n- ง่าย สั้น\n- ไม่ใช้คำยาก\n- เป็นกลาง ชัดเจน เป็นข้อเท็จจริง ไม่ตัดสิน ไม่ให้คำแนะนำ\n- ไม่ใช้ขีดยาว (—)\n\nกฎปริมาณ ครบถ้วนก่อนสั้น:\nข้อคิดรวมอย่างน้อย 15 น้อยกว่า 10 ถือผิด ทุกความคิด ทุกประสบการณ์ ทุกการสังเกต สมควรมีข้อคิดแยก อย่ารวม</string>
+    <string name="ai_prompt_summary_schema_header">โครงสร้าง JSON:\n{\n  \"entropia_ruam\": 0.0,\n  \"naeo_nom\": \"phoem|khong_thi|lot|mai_sap\",\n  \"kan_wikhro_ruam\": \"...\",\n  \"khwam_kaona\": [...],\n  \"kao_samkhan\": [...],\n  \"muat_mu\": [...]\n}\n\nคำนิยาม:\n\n1) \"entropia_ruam\" (ตัวเลข 0.0-1.0)\n   ชีวิตของผู้ใช้มีอะไรเกิดขึ้นมากแค่ไหน?\n   - 0.0-0.33 = ช่วงเงียบ\n   - 0.34-0.66 = ปกติ\n   - 0.67-1.0 = เข้มข้น\n\n2) \"naeo_nom\" (ข้อความ)\n   เฉพาะเมื่อมี 3+ บันทึก\n   - «phoem» = กิจกรรมเพิ่ม\n   - «khong_thi» = คงที่\n   - «lot» = เงียบลง\n   - «mai_sap» = ข้อมูลไม่พอ\n\n3) \"kan_wikhro_ruam\" (ข้อความ 15-25 ประโยค)\n   - อ่านบันทึกทีละชิ้น ดึงหัวข้อหลัก\n   - ตั้งชื่อทุกหัวข้อ\n   - รู้จักความสัมพันธ์\n   - อะไรครอบครองผู้ใช้มากที่สุดตอนนี้?\n   - อะไรเปลี่ยน?\n   - เป็นข้อเท็จจริงและเป็นส่วนตัว\n   - ไม่ประเมิน ไม่ให้คำแนะนำ</string>
+    <string name="ai_prompt_summary_schema_fields">4) \"khwam_kaona\" (อาร์เรย์ 0-5 ชิ้น)\n   หัวข้อ นิสัย หรือความสัมพันธ์ที่วนซ้ำข้ามบันทึก\n   {\n     \"huakhao\": \"หัวเรื่องสั้น (ไม่เกิน 5 คำ)\",\n     \"rai_la_iat\": \"อะไรวนซ้ำหรือเชื่อมกัน (2-3 ประโยค)\",\n     \"thi_ma\": \"จากบันทึกใด (1 ประโยค)\"\n   }\n\n5) \"kao_samkhan\" (อาร์เรย์ 5 ชิ้นพอดี)\n   5 ข้อคิดสำคัญที่สุดจากบันทึกทั้งหมด เรียงตามความสำคัญ\n   {\n     \"huakhao\": \"หัวเรื่องสั้น (ไม่เกิน 6 คำ)\",\n     \"rai_la_iat\": \"13-21 คำ\",\n     \"kham_atibai\": \"5-8 ประโยคละเอียด\"\n   }</string>
+    <string name="ai_prompt_summary_schema_categories">6) \"muat_mu\" (อาร์เรย์ เท่าที่จำเป็น)\n   แต่ละหัวข้อ = กลุ่ม\n   {\n     \"chue\": \"ชื่อหัวข้อ (ไม่เกิน 12 ตัวอักษร)\",\n     \"aikhon\": \"material_icon_name\",\n     \"si\": \"#HEX\",\n     \"radap_entropia\": 0.0,\n     \"sarup\": \"สรุปหัวข้อ (3-5 ประโยค)\",\n     \"khamnae_nam\": [...]\n   }\n\n   ใช้รายการพื้นฐาน สร้างใหม่ได้:\n   - นอน (icon: bedtime, si: #6C63FF)\n   - งาน (icon: work, si: #FF6B6B)\n   - ฟิตเนส (icon: fitness_center, si: #4ECDC4)\n   - กิน (icon: restaurant, si: #FFE66D)\n   - จิตใจ (icon: psychology, si: #A78BFA)\n   - ความสัมพันธ์ (icon: people, si: #F472B6)\n   - บ้าน (icon: home, si: #34D399)\n   - พัฒนา (icon: trending_up, si: #60A5FA)\n   - โปรเจกต์ (icon: code, si: #F59E0B)\n   - สุขภาพ (icon: health_and_safety, si: #EF4444)\n   - เงิน (icon: account_balance, si: #10B981)\n   - สันทนาการ (icon: sports_esports, si: #EC4899)\n   - ธรรมชาติ (icon: grass, si: #22C55E)\n   - ชีวิตประจำวัน (icon: calendar_today, si: #78716C)\n   - เดินทาง (icon: flight, si: #06B6D4)\n   - สร้างสรรค์ (icon: music_note, si: #D946EF)\n   ไอคอนอื่น: spa, coffee, self_improvement, nights_stay, directions_run, child_care, school, computer, timer, cleaning_services, directions_car, photo_camera, pets, wb_sunny, lightbulb, star, healing\n\n   ความเข้มข้นต่อหัวข้อ (0.0-1.0):\n   - 0.0-0.33 = เอ่ยน้อย\n   - 0.34-0.66 = สม่ำเสมอ\n   - 0.67-1.0 = เด่นมาก\n\n   ข้อคิดต่อหัวข้อ ปริมาณ:\n   ดึงทั้งหมด 5-20 ปกติ เรียงตามความสำคัญ\n\n   โครงสร้างแต่ละข้อคิด:\n   {\n     \"huakhao\": \"หัวเรื่องสั้น (ไม่เกิน 6 คำ)\",\n     \"rai_la_iat\": \"13-21 คำ เป็นข้อเท็จจริง\",\n     \"khwam_samkhan\": \"sung|pan_klang|tam\",\n     \"khwam_chueam\": \"1-2 หัวข้อที่เกี่ยวข้อง หรือ null\",\n     \"thi_ma_khong\": [\n       {\n         \"wan_thi\": \"วันที่บันทึก\",\n         \"sarup\": \"ส่วนที่เกี่ยวกับหัวข้อ (1-2 ประโยค)\"\n       }\n     ]\n   }\n\n   ความหมายความสำคัญ:\n   - «sung» = หัวข้อหลัก\n   - «pan_klang» = มีอยู่แต่ไม่เด่น\n   - «tam» = ข้างเคียง</string>
+    <string name="ai_prompt_summary_output">กฎคำ: rai_la_iat ต้อง 13-21 คำ\n\nรูปแบบผลลัพธ์ กฎเข้มงวด:\n- ตอบเฉพาะ JSON\n- ไม่มีข้อความก่อนหรือหลัง\n- ไม่มี backticks\n- เริ่มด้วย { จบด้วย }\n- JSON ถูกต้อง</string>
+
+    <!-- Custom Analysis System Prompt -->
+    <!-- %1$s = user-defined focus text -->
+    <string name="ai_prompt_custom_intro">คุณคือผู้วิเคราะห์ไดอารีที่ชาญฉลาดและใส่ใจ และเป็นผู้ดำเนินงานด้วย\n\nวิธีการทำงานสองขั้นตอน:\n\nขั้นที่ 1 — รับบริบท:\nอ่านบันทึกไดอารีทั้งหมดของผู้ใช้ให้ครบถ้วนก่อน เข้าใจสถานการณ์ รูปแบบ หัวข้อ สิ่งที่กล่าวถึง ปัญหา และความต้องการ บันทึกเหล่านี้คือบริบทของคุณ จุดเริ่มต้นของคุณ พื้นฐานของคุณ แต่ไม่ได้จำกัดคุณ\n\nขั้นที่ 2 — ดำเนินงาน:\n%1$s\n\nข้างต้นคือภารกิจที่แท้จริงของคุณ ดำเนินภารกิจนี้บนพื้นฐานบริบทจากขั้นที่ 1 หากภารกิจต้องการการค้นคว้า แนวคิด ทางเลือก ข้อเสนอ หรือข้อมูลใหม่ ก็จงนำเสนอสิ่งเหล่านั้นอย่างกระตือรือร้น แม้จะไม่ปรากฏในบันทึกก็ตาม อย่าให้คำวินิจฉัยหรือคำแนะนำที่ผูกมัดทางการแพทย์ กฎหมาย หรือการเงิน ในเรื่องเหล่านั้นให้แนะนำไปยังผู้เชี่ยวชาญ บันทึกให้ข้อมูลแก่ผลลัพธ์ของคุณ ไม่ได้จำกัดมัน\n\nกฎหลัก — โปรไฟล์มีน้ำหนักอย่างน้อย 50 เปอร์เซ็นต์:\nผลลัพธ์ทั้งหมด (การวิเคราะห์โดยรวม มาตรการสำคัญ หมวดหมู่ คำแนะนำ ความก้าวหน้า) ต้องเชื่อมโยงกับภารกิจของผู้ใช้อย่างชัดเจนอย่างน้อย 50 เปอร์เซ็นต์ ข้อค้นพบ ประเด็น หรือหัวข้อที่ไม่มีความเกี่ยวข้องเชิงเนื้อหากับภารกิจ ให้ตัดออก อย่าเติมผลลัพธ์ด้วยหัวข้อชีวิตทั่วไปเพียงเพื่อให้ JSON เต็ม ขอประเด็นที่เกี่ยวข้องชัดเจนน้อยกว่า ดีกว่าประเด็นทั่วไปจำนวนมาก\n\nสำคัญเรื่องภาษา: แสดงความเกี่ยวข้องอย่างหลากหลาย ใช้คำพ้องความหมาย คำที่เกี่ยวข้อง หัวข้อใกล้เคียง และการถอดความ อย่าทวนคำที่ตรงเป๊ะจากภารกิจอย่างกลไก เพราะดูยัดเยียด ตัวอย่างภารกิจ 「เป้าหมาย」: พูดถึงแผนการ ความปรารถนา ความทะเยอทะยาน สิ่งที่อยากบรรลุ เส้นทางของคุณ ขั้นตอนการพัฒนาด้วย ตัวอย่างภารกิจ 「กีฬา」: พูดถึงการเคลื่อนไหว การฝึก กิจกรรมทางกาย ความอดทน สมรรถภาพ สุขภาพด้วย ความเกี่ยวข้องกับโปรไฟล์ต้องสัมผัสได้ ไม่ใช่ตรงตามตัวอักษร\n\nชี้ขาด:\n- หากภารกิจระบุ 「วิเคราะห์」 「สรุป」 「มีอะไรสะดุดตา」 — ให้อยู่ใกล้กับบันทึก\n- หากภารกิจระบุ 「ค้นคว้า」 「หาทางเลือก」 「เสนอ」 「แนะนำ」 「เพิ่มเติม」 「จะเป็นอย่างไรถ้า」 「แนวคิดใหม่」 — จงก้าวข้ามบันทึกอย่างกระตือรือร้นและนำเสนอเนื้อหาใหม่ของคุณเอง\n- ภารกิจมาก่อน บันทึกคือรากฐาน ไม่ใช่กำแพง</string>
+    <string name="ai_prompt_custom_headings">สำคัญ หัวเรื่องพลวัต:\nคุณต้องสร้าง 3 หัวเรื่องที่เข้ากับจุดโฟกัสอย่างแม่นยำ ห้ามใช้ «ผลสำคัญ» หรือ «การวิเคราะห์»\nตัวอย่าง:\n- โฟกัส «ตกปลา»: «จับใหญ่ที่สุด», «ภาพรวมการตกปลา», «บันทึกทั้งหมด»\n- โฟกัส «คุณภาพการนอน»: «แพตเทิร์นการนอน», «การวิเคราะห์การนอน», «การสังเกตทั้งหมด»\n- โฟกัส «ทำเกินตัว»: «ขโมยเวลาที่ใหญ่ที่สุด», «ภาพรวมภาระ», «จุดภาระทั้งหมด»</string>
+    <string name="ai_prompt_custom_rules">กฎบริบท — ทุกบันทึกถูกอ่าน:\nคุณจะได้รับบันทึกที่มีหมายเลขกำกับ อ่านทุกบันทึกให้ครบถ้วนและรับเป็นบริบท ทุกรายละเอียดที่เกี่ยวข้องจะไหลเข้าสู่ผลลัพธ์ของคุณ แต่ผลลัพธ์อาจและควรก้าวข้ามบันทึกได้หากภารกิจต้องการ\n\nกฎภารกิจ — ภารกิจถูกทำให้สำเร็จ:\nดำเนินภารกิจของผู้ใช้ตามตัวอักษร หากภารกิจถามถึงทางเลือก ให้นำเสนอทางเลือกใหม่จริง ไม่ใช่เพียงสิ่งจากบันทึก หากภารกิจถามถึงคำแนะนำ ให้ค้นคว้าและแนะนำอย่างกระตือรือร้น บันทึกไม่ใช่แหล่งเดียวของคำตอบคุณ\n\nการแยกแยะในผลลัพธ์:\nระบุให้ชัดเจนว่าสิ่งใดมาจากบันทึกและสิ่งใดที่คุณเพิ่มใหม่ เพื่อให้ผู้ใช้รู้ว่าสิ่งใดคือความคิดของตนเองและสิ่งใดคือส่วนที่คุณนำเสนอ\n\nกฎการให้คำปรึกษาผู้เชี่ยวชาญ — ไม่มีคำวินิจฉัย:\nไม่ว่าภารกิจจะเป็นอย่างไร คุณจะไม่ให้คำวินิจฉัยทางการแพทย์ คำแนะนำการบำบัด คำปรึกษากฎหมายหรือการเงิน ในเรื่องเหล่านั้นให้แนะนำไปยังผู้เชี่ยวชาญที่มีคุณสมบัติอย่างเป็นกลาง\n\nกฎภาษา:\n- เรียบง่าย ชัดเจน ไม่ใช้คำต่างประเทศ\n- เห็นอกเห็นใจและตรงไปตรงมา\n- ไม่ใช้เส้นยาว (—) ใช้จุลภาคหรือมหัพภาค\n\nกฎปริมาณ:\nอย่างน้อย 10 ข้อค้นพบโดยรวม แต่ทุกข้อต้องเกี่ยวข้องเชิงเนื้อหากับภารกิจ หากคุณหา 10 ข้อค้นพบที่เกี่ยวข้องกับโปรไฟล์จริงไม่ได้ ให้นำเสนอ 7 ข้อที่หนักแน่นดีกว่า 10 ข้อที่เจือจาง สำหรับภารกิจวิเคราะห์ล้วน ข้อค้นพบมาจากบันทึก สำหรับภารกิจเชิงสร้างสรรค์ คุณนำเสนอเนื้อหาใหม่ได้</string>
+    <string name="ai_prompt_custom_schema">โครงสร้าง JSON ของเอาต์พุต:\n{\n  \"ueberschrift_top5\": \"หัวเรื่องสร้างสรรค์ เหมาะกับผลลัพธ์ของภารกิจ สูงสุด 3 คำ\",\n  \"ueberschrift_analyse\": \"หัวเรื่องสร้างสรรค์ เหมาะกับผลลัพธ์ของภารกิจ สูงสุด 3 คำ\",\n  \"ueberschrift_ergebnisse\": \"หัวเรื่องสร้างสรรค์ เหมาะกับผลลัพธ์ของภารกิจ สูงสุด 3 คำ\",\n  \"fokus_kern\": \"ประโยคเดียวที่แสดงแก่นของภารกิจในคำพูดของตัวเอง — เป็นจุดยึดที่มองเห็นสำหรับแดชบอร์ด\",\n  \"fokus_zitate\": [\"...\", \"...\"],\n  \"gesamt_entropie\": 0.0,\n  \"trend\": \"steigend|stabil|sinkend|unbekannt\",\n  \"gesamtanalyse\": \"...\",\n  \"fortschritte\": [...],\n  \"top_massnahmen\": [...],\n  \"kategorien\": [...]\n}\n\n1) «ueberschrift_top5/analyse/ergebnisse»: จำเป็น สร้างสรรค์ เฉพาะ สูงสุด 3 คำ ต้องสะท้อนผลลัพธ์ของภารกิจ ไม่ใช่แค่หัวข้อ ไม่มีชื่อทั่วไป\n\n2) «fokus_kern»: จำเป็น ประโยคเดียว (15-30 คำ) ที่แสดงให้ผู้ใช้เห็นว่า «ฉันเข้าใจภารกิจของคุณ — นี่คือเส้นสีแดง» ไม่ใช่การอ้างอิงภารกิจ แต่เป็นการกล่าวซ้ำในคำพูดของตัวเอง แสดงที่ด้านบนของแดชบอร์ดเป็นหลักฐานว่าโปรไฟล์ทำงาน\n\n3) «fokus_zitate»: จำเป็น 3 ถึง 5 ข้อ ส่วนที่อ้างอิงหรือใกล้เคียงตามตัวอักษรจากรายการบันทึกที่เชื่อมโยงกับภารกิจโดยตรง รูปแบบแต่ละข้อ: «[วันที่] คำพูดสั้นหรือส่วนที่พาราเฟรส» สำหรับภารกิจค้นคว้าเชิงสร้างสรรค์ที่ไม่มีรายการตรงตามตัวอักษร ให้นำ 3-5 รายการที่ใกล้เคียงที่สุดตามหัวข้อมาและอธิบายความเชื่อมโยงในบรรทัดเดียว ไม่เคยปล่อยว่าง\n\n4) «gesamt_entropie» (0.0 ถึง 1.0): หัวข้อภารกิจปรากฏแรงแค่ไหนในรายการ?\n\n5) «trend»: เฉพาะ 3+ รายการ หัวข้อภารกิจพัฒนาอย่างไรในรายการ?\n\n6) «gesamtanalyse» (15-25 ประโยค): สองส่วนที่ชัดเจน อย่างน้อย 50 เปอร์เซ็นต์ต้องกล่าวถึงภารกิจโดยตรงหรือโดยการอธิบาย\n   ส่วน A (บริบทจากรายการ): อะไรอยู่ในรายการเกี่ยวกับหัวข้อ?\n   ส่วน B (ผลลัพธ์ของภารกิจ): คำตอบของคุณต่อภารกิจคืออะไร? คุณส่งมอบอะไรใหม่เพิ่มเติมหรือเป็นคำแนะนำ?\n   เชื่อมทั้งสองส่วนเพื่อให้ผู้ใช้เห็นเส้นสีแดง\n\n7) «fortschritte» (0-5): แพตเทิร์นหรือการพัฒนาจากรายการที่สำคัญสำหรับภารกิจ อย่างน้อยครึ่งหนึ่งของรายการความก้าวหน้าต้องเชื่อมโยงชัดเจนกับภารกิจ\n   { \"titel\": \"สูงสุด 5 คำ\", \"beschreibung\": \"2-3 ประโยค\", \"bezug\": \"1 ประโยค\" }\n\n8) «top_massnahmen» (5 พอดี): ผลลัพธ์สำคัญที่สุดของภารกิจ อย่างน้อย 3 ใน 5 ต้องเชื่อมโยงกับภารกิจอย่างไม่มีข้อสงสัย\n   {\n     \"titel\": \"สูงสุด 6 คำ\",\n     \"beschreibung\": \"13-21 คำ กระชับตรงประเด็น\",\n     \"erklaerung\": \"5-8 ประโยคละเอียด หากเนื้อหาใหม่ ให้อธิบายว่าทำไมถึงเหมาะกับบริบทของผู้ใช้ หากมาจากรายการ ให้อ้างอิงที่เป็นรูปธรรม\"\n   }\n\n9) «kategorien»: กลุ่มหัวข้อที่จัดโครงสร้างภารกิจ (พลวัต) อย่างน้อยครึ่งหนึ่งของหมวดหมู่ต้องเชื่อมโยงกับภารกิจ หลีกเลี่ยง «หัวข้อชีวิตมาตรฐาน» เช่น งาน การนอน เวลาว่าง หากไม่เกี่ยวกับภารกิจ\n   {\n     \"name\": \"สูงสุด 12 ตัวอักษร\", \"icon\": \"material_icon_name\", \"farbe\": \"#HEX\",\n     \"entropie_level\": 0.0,\n     \"zusammenfassung\": \"3-5 ประโยค\",\n     \"ratschlaege\": [{\n       \"titel\": \"สูงสุด 6 คำ\",\n       \"beschreibung\": \"13-21 คำ\",\n       \"prioritaet\": \"hoch|mittel|niedrig\",\n       \"verknuepfung\": \"การเชื่อมโยงกับหัวข้ออื่นหรือ null\",\n       \"herleitung\": [{\"datum\":\"...\",\"zusammenfassung\":\"1-2 ประโยค\"}]\n     }]\n   }\n\nHERLEITUNG — ที่มาของเนื้อหา:\n- หากเนื้อหามาจากรายการ: ตั้ง «datum» เป็นวันที่ของรายการ «zusammenfassung» ให้การอ้างอิงที่เป็นรูปธรรม\n- หากเนื้อหาใหม่ (เช่น ทางเลือกที่ค้นคว้า ข้อเสนอของตัวเอง): ตั้ง «datum» เป็น «neu» «zusammenfassung» อธิบายใน 1-2 ประโยคว่าทำไมข้อเสนอนี้ถึงเหมาะกับบริบทของผู้ใช้</string>
+    <string name="ai_prompt_custom_output">กฎคำ: rai_la_iat ต้อง 13-21 คำ\n\nรูปแบบผลลัพธ์:\n- ตอบเฉพาะ JSON\n- ไม่มีข้อความก่อนหรือหลัง ไม่มี backticks\n- เริ่มด้วย { จบด้วย }</string>
+
+    <!-- ════════════════════════════════════════════════════════════════════
+         RETROSPECTIVE SCREEN
+         ════════════════════════════════════════════════════════════════════ -->
+    <string name="retro_title">ทบทวน</string>
+    <string name="retro_cd_info">เกี่ยวกับการทบทวน</string>
+    <string name="retro_personal_review">การทบทวนส่วนตัวของคุณ</string>
+    <string name="retro_intro_body">ในชีวิตประจำวันเรามักลืมไปว่าได้ประสบอะไรมามาก บันทึกของคุณจำทั้งหมด ทั้งช่วงสำคัญและช่วงเงียบเล็ก ๆ </string>
+    <string name="retro_intro_cta">ย้อนกลับดู และค้นพบสิ่งที่สั่นไหวในใจ</string>
+    <string name="retro_please_wait">โปรดรอ</string>
+    <string name="retro_backup_loading">กำลังโหลดข้อมูลสำรอง… การทบทวนจะเริ่มอัตโนมัติ</string>
+    <string name="retro_profile_switching">การทบทวนจะอัปเดตอัตโนมัติหลังเปลี่ยนโปรไฟล์</string>
+    <string name="retro_generating">กำลังสร้างการทบทวน…</string>
+    <string name="retro_ai_unavailable">AI ใช้งานไม่ได้ชั่วขณะ ลองใหม่ภายหลัง</string>
+    <string name="retro_weekly_title">ทบทวนรายสัปดาห์</string>
+    <string name="retro_weekly_subtitle">7 วันที่ผ่านมาในภาพเดียว</string>
+    <string name="retro_weekly_empty">ยังไม่มีการทบทวนรายสัปดาห์\nต้องมีอย่างน้อย 2 บันทึกต่อสัปดาห์</string>
+    <string name="retro_monthly_title">ทบทวนรายเดือน</string>
+    <string name="retro_monthly_subtitle">เดือนที่ผ่านมาในภาพเดียว</string>
+    <string name="retro_monthly_empty">ยังไม่มีการทบทวนรายเดือน\nถูกสร้างจากการทบทวนรายสัปดาห์ในตอนสิ้นเดือน</string>
+    <string name="retro_yearly_title">ทบทวนรายปี</string>
+    <string name="retro_yearly_subtitle">ปีเต็มของความทรงจำ</string>
+    <string name="retro_yearly_empty">ยังไม่มีการทบทวนรายปี\nถูกสร้างจากการทบทวนรายเดือนในตอนสิ้นปี</string>
+    <string name="retro_premium_unlock">ปลดล็อกการทบทวนทั้งหมดด้วย Premium</string>
+    <string name="retro_at_a_glance">ในภาพเดียว</string>
+    <string name="retro_cd_expand">ขยาย</string>
+    <string name="retro_cd_collapse">หุบ</string>
+    <string name="retro_share_text_label">ข้อความ</string>
+
+    <!-- Fallback titles (when AI title generation fails) -->
+    <string name="retro_fallback_week">ทบทวนรายสัปดาห์</string>
+    <string name="retro_fallback_month">ทบทวนรายเดือน</string>
+    <string name="retro_fallback_year">ทบทวนปี %1$d</string>
+    <string name="retro_period_label_week">สัปดาห์ %1$d (%2$s - %3$s)</string>
+    <!-- Retro: Photos, TTS, Sharing -->
+    <string name="retro_photos_videos">ภาพถ่ายและวิดีโอ</string>
+    <string name="retro_photos_videos_colon">ภาพถ่ายและวิดีโอ:</string>
+    <string name="retro_cd_video">วิดีโอ</string>
+    <string name="retro_cd_photo">ภาพถ่าย</string>
+    <string name="retro_play_video">เล่นวิดีโอ</string>
+    <string name="retro_enable_voices">เปิดเสียงในการตั้งค่า</string>
+    <string name="retro_tts_stop">หยุด</string>
+    <string name="retro_tts_read">อ่าน</string>
+    <string name="retro_tts_wait">โปรดรอ กำลังสร้างเสียง…</string>
+    <string name="retro_cd_share">แชร์</string>
+    <string name="retro_share_title">แชร์การทบทวน</string>
+    <string name="retro_share_text_content">ข้อความการทบทวน</string>
+    <string name="retro_photo_n">ภาพถ่าย %1$d</string>
+    <string name="retro_share_header">การทบทวนจากแอป BestJournal</string>
+    <string name="retro_at_a_glance_colon">ในภาพเดียว:</string>
+    <!-- Retro: Locked/Premium -->
+    <string name="retro_cd_locked">ล็อก</string>
+    <string name="retro_unlock_premium_short">ปลดล็อก Premium</string>
+    <string name="retro_cd_premium_required">ต้องการ Premium</string>
+    <!-- Retro: Benefits info dialog -->
+    <string name="retro_your_ai_reviews">การทบทวน AI ของคุณ</string>
+    <string name="retro_weekly_p1">AI สรุปสัปดาห์ของคุณเป็นเรื่องเล่าส่วนตัว</string>
+    <string name="retro_weekly_p2">แพตเทิร์นอารมณ์และช่วงเด่นปรากฏ</string>
+    <string name="retro_weekly_p3">สร้างอัตโนมัติทุกวันอาทิตย์เมื่อมีอย่างน้อย 2 บันทึก</string>
+    <string name="retro_weekly_p4">2 สัปดาห์แรกฟรี</string>
+    <string name="retro_monthly_p1">เชื่อมการทบทวนรายสัปดาห์เป็นเรื่องของเดือน</string>
+    <string name="retro_monthly_p2">เส้นหลักและพัฒนาการทั่วเดือนปรากฏ</string>
+    <string name="retro_monthly_p3">แสดงพัฒนาการจากบันทึกของคุณ</string>
+    <string name="retro_yearly_p1">ปีเต็มของคุณในภาพเดียว</string>
+    <string name="retro_yearly_p2">AI สรุปหัวข้อสำคัญของปีคุณ</string>
+    <string name="retro_yearly_p3">การเติบโตส่วนตัวเป็นสิ่งที่เห็นและสัมผัสได้</string>
+    <!-- Retro: Premium upsell sheet -->
+    <string name="retro_your_reviews">การทบทวนส่วนตัวของคุณ</string>
+    <string name="retro_premium_reviews_desc">ด้วย Premium AI สร้างการทบทวนอัตโนมัติจากบันทึก:</string>
+    <string name="retro_benefit_weekly">ทบทวนรายสัปดาห์ทั้งหมดแทนที่จะมีเพียง 2 ครั้งแรก – ภายในโควตา AI รายวันของคุณ</string>
+    <string name="retro_benefit_monthly">ทบทวนรายเดือนที่แสดงความก้าวหน้าและการเปลี่ยนแปลง</string>
+    <string name="retro_benefit_yearly">ทบทวนรายปี เปลี่ยนปีของคุณเป็นเรื่องเล่าส่วนตัว</string>
+    <string name="retro_start_sub">เริ่มการสมัคร</string>
+    <string name="retro_decide_later">ตัดสินใจภายหลัง</string>
+
+    <!-- Month names for retrospective grouping -->
+    <string name="month_january">มกราคม</string>
+    <string name="month_february">กุมภาพันธ์</string>
+    <string name="month_march">มีนาคม</string>
+    <string name="month_april">เมษายน</string>
+    <string name="month_may">พฤษภาคม</string>
+    <string name="month_june">มิถุนายน</string>
+    <string name="month_july">กรกฎาคม</string>
+    <string name="month_august">สิงหาคม</string>
+    <string name="month_september">กันยายน</string>
+    <string name="month_october">ตุลาคม</string>
+    <string name="month_november">พฤศจิกายน</string>
+    <string name="month_december">ธันวาคม</string>
+
+    <!-- ════════════════════════════════════════════════════════════════════
+         ONBOARDING
+         ════════════════════════════════════════════════════════════════════ -->
+    <string name="onboarding_welcome">ยินดีต้อนรับสู่\nBest Journal</string>
+    <string name="onboarding_subtitle">สมุดบันทึก AI ส่วนตัวของคุณ\nสำหรับความชัดเจนในชีวิตประจำวัน</string>
+    <string name="onboarding_feature_speech">พูดหรือพิมพ์ AI เข้าใจทั้งสอง</string>
+    <string name="onboarding_feature_listen">ให้แอปอ่านบันทึกของคุณ</string>
+    <string name="onboarding_feature_secure">บันทึกของคุณยังคงอยู่บนอุปกรณ์ คำขอ AI ถูกส่งแบบเข้ารหัส</string>
+    <string name="onboarding_goals_title">คุณต้องการอะไรจาก\nสมุดบันทึก AI?</string>
+    <string name="onboarding_goal_stress">ลดความเครียด</string>
+    <string name="onboarding_goal_clarity">หาความชัดเจน</string>
+    <string name="onboarding_goal_growth">การเติบโตส่วนตัว</string>
+    <string name="onboarding_goal_thoughts">เก็บความคิด</string>
+    <string name="onboarding_how_step1_title">พูดหรือพิมพ์บันทึก</string>
+    <string name="onboarding_how_step1_desc">บันทึกความคิดเป็นเสียงหรือพิมพ์ แบบไหนก็ได้</string>
+    <string name="onboarding_how_step2_title">AI ปรับปรุงและวิเคราะห์</string>
+    <string name="onboarding_how_step2_desc">ข้อความถูกขัดเกลาอัตโนมัติและวิเคราะห์จากหลายมุม</string>
+    <string name="onboarding_how_step3_desc">เก็บช่วงเวลาพิเศษ AI คำนึงถึงในการวิเคราะห์</string>
+    <string name="onboarding_how_step4_title">ค้นพบแพตเทิร์นและข้อคิด</string>
+    <string name="onboarding_how_step4_desc">แดชบอร์ด AI แสดงความเชื่อมโยงจากบันทึกของคุณ</string>
+    <string name="onboarding_how_step5_title">ทบทวนรายสัปดาห์ รายเดือน รายปี</string>
+    <string name="onboarding_how_step5_desc">การทบทวนอัตโนมัติแสดงการพัฒนาของคุณตามเวลา</string>
+    <string name="onboarding_premium_feature_improve">ปรับปรุงข้อความ AI ทุกวัน รายการทุกครั้งจะชัดเจนและสื่อความหมายได้ดียิ่งขึ้น</string>
+    <string name="onboarding_premium_feature_dashboard">อัปเดตแดชบอร์ดอัตโนมัติทุกบันทึกใหม่</string>
+    <string name="onboarding_premium_feature_retro">ทบทวนรายสัปดาห์ เดือน ปี แสดงการเติบโต</string>
+    <string name="onboarding_premium_feature_patterns">เปิดเผยรูปแบบ: AI แสดงรูปแบบความคิดและอารมณ์ที่เกิดซ้ำในบันทึกของคุณ</string>
+    <string name="onboarding_premium_feature_noads">เขียนและทบทวนได้โดยไม่ถูกรบกวน</string>
+    <string name="onboarding_free_trial">ฟรี ยกเลิกได้ทุกเวลา</string>
+    <string name="onboarding_free_after_trial">หลังจากนั้นใช้ Best Journal ต่อไปได้\nฟรี พร้อมขีดจำกัด AI รายสัปดาห์</string>
+    <string name="onboarding_start_free">เริ่มฟรี</string>
+    <string name="onboarding_without_premium">ใช้ต่อโดยไม่มี Premium</string>
+    <string name="onboarding_feature_profiles">5 โปรไฟล์วิเคราะห์อัจฉริยะจากหลายมุม</string>
+    <string name="onboarding_goals_select">เลือกหนึ่งหรือหลายเป้าหมาย</string>
+    <string name="onboarding_how_step3_title">เพิ่มภาพถ่าย</string>
+    <string name="onboarding_how_title">ง่ายแค่นี้</string>
+    <string name="onboarding_perspectives_title">มุมมองที่หลากหลายต่อ\nชีวิตของคุณ</string>
+    <string name="onboarding_premium_feature_pdf">ส่งออก PDF พร้อมภาพ เก็บบันทึกเป็นเอกสาร</string>
+    <string name="onboarding_premium_profiles">5 โปรไฟล์แดชบอร์ดอัจฉริยะให้มุมมองลึก</string>
+    <string name="onboarding_premium_profiles_unlimited">โปรไฟล์ AI ของคุณเองโดยไม่จำกัดจำนวน</string>
+    <string name="onboarding_try_premium">พรีเมียมมีฟีเจอร์ต่างๆ เช่น:</string>
+
+    <!-- ════════════════════════════════════════════════════════════════════
+         PAYWALL
+         ════════════════════════════════════════════════════════════════════ -->
+    <string name="paywall_prices_loading">กำลังโหลดราคา…</string>
+    <string name="paywall_sub_loading_toast">กำลังโหลดการสมัคร ลองใหม่ในสักครู่</string>
+    <string name="paywall_purchase_loading_toast">กำลังโหลดการซื้อ ลองใหม่ในสักครู่</string>
+    <string name="paywall_today">วันนี้</string>
+    <string name="paywall_full_access">สิทธิ์เต็ม</string>
+    <string name="paywall_day7">วันที่ 7</string>
+    <string name="paywall_reminder">การเตือน</string>
+    <string name="paywall_day8">วันที่ 8</string>
+    <string name="paywall_first_payment">ชำระครั้งแรก</string>
+    <string name="paywall_yearly_note">จากนั้น %1$s ต่อปี ต่ออายุอัตโนมัติ\nยกเลิกได้ทุกเวลาในช่วงทดลอง</string>
+    <string name="paywall_most_popular">แนะนำ</string>
+    <string name="paywall_monthly_plan">รายเดือน %1$s ต่อเดือน</string>
+    <string name="paywall_lifetime_title">ซื้อครั้งเดียว</string>
+    <string name="paywall_lifetime_desc">จ่ายครั้งเดียว ใช้ทุกอย่างตลอดไป</string>
+    <string name="paywall_lifetime_note">ไม่มีการสมัคร ไม่มีการต่ออายุ</string>
+    <string name="paywall_free_note">แอปใช้งานได้ต่อแม้ไม่มีสมาชิก</string>
+    <string name="paywall_legal_hint" formatted="false">เมื่อสมัครสมาชิก คุณยอมรับ%1$s สิทธิ์การเพิกถอนภายใน 14 วันอธิบายไว้ที่นั่น</string>
+    <string name="paywall_legal_hint_link">ข้อกำหนดการใช้งาน</string>
+
+    <!-- Paywall features -->
+    <string name="paywall_feature_patterns">ค้นพบรูปแบบที่เกิดซ้ำในความคิดของคุณ</string>
+    <string name="paywall_feature_improve">ปรับปรุงข้อความ AI ทุกวันสำหรับทุกรายการ</string>
+    <string name="paywall_feature_dashboard">อัปเดตแดชบอร์ดอัตโนมัติหลังทุกบันทึก</string>
+    <string name="paywall_feature_retro">ทบทวนรายสัปดาห์ เดือน ปี ด้วย AI</string>
+    <string name="paywall_feature_pdf">ส่งออกบันทึกพร้อมภาพเป็น PDF</string>
+    <string name="paywall_feature_noads">เขียนและทบทวนได้โดยไม่ถูกรบกวน</string>
+    <string name="paywall_feature_profiles">โปรไฟล์ AI ของคุณเองโดยไม่จำกัดจำนวน</string>
+
+    <!-- Paywall personalized headlines -->
+    <string name="paywall_headline_stress">ความชัดเจนมากขึ้นในชีวิตประจำวัน</string>
+    <string name="paywall_headline_stress_sub">รู้ว่าอะไรที่ครอบครองความคิดคุณและจัดการมันได้ตรงจุด</string>
+    <string name="paywall_headline_clarity">เข้าใจตนเองดียิ่งขึ้น</string>
+    <string name="paywall_headline_clarity_sub">AI ทำให้รูปแบบที่เกิดซ้ำในบันทึกของคุณมองเห็นได้</string>
+    <string name="paywall_headline_growth">ค้นพบสิ่งดีทุกวัน</string>
+    <string name="paywall_headline_growth_sub">พื้นที่ส่วนตัวของความขอบคุณและการเติบโต</string>
+    <string name="paywall_headline_thoughts">ปล่อยให้ความคิดไหล</string>
+    <string name="paywall_headline_thoughts_sub">เพื่อนร่วมทางสร้างสรรค์ในชีวิตประจำวันของคุณ</string>
+    <string name="paywall_headline_default">ค้นพบตนเอง\nทีละนิดทุกวัน</string>
+    <string name="paywall_headline_default_sub">เพื่อนร่วมทาง AI ส่วนตัวในชีวิตประจำวันของคุณ</string>
+
+    <!-- Exit intent offer -->
+    <string name="paywall_exit_wait">สักครู่!</string>
+    <string name="paywall_exit_special_offer">เรามีข้อเสนอพิเศษ\nสำหรับคุณ:</string>
+    <string name="paywall_exit_discount">ส่วนลด %1$d เดือน</string>
+    <string name="paywall_exit_price_comparison">เพียง %1$s แทน %2$s ต่อเดือน</string>
+    <string name="paywall_exit_start_discount">ชำระเงิน — 2 เดือนในราคาครึ่งหนึ่ง</string>
+
+    <!-- ════════════════════════════════════════════════════════════════════
+         CHURN FLOW DIALOG
+         ════════════════════════════════════════════════════════════════════ -->
+    <string name="churn_your_sub">การสมัครของคุณ</string>
+    <string name="churn_plan_yearly">รายปี</string>
+    <string name="churn_plan_monthly">รายเดือน</string>
+    <string name="churn_plan">แผน</string>
+    <string name="churn_price">ราคา</string>
+    <string name="churn_renewal">การต่ออายุ</string>
+    <string name="churn_automatic">อัตโนมัติ</string>
+    <string name="churn_promo_active_label">ส่วนลด</string>
+    <string name="churn_promo_one_month_remaining">เหลือ 1 เดือน — จากนั้น <xliff:g id="base_price" example="3,99 €">%1$s</xliff:g> ต่อเดือน</string>
+    <string name="churn_promo_months_remaining">เหลือ <xliff:g id="months" example="2">%1$d</xliff:g> เดือน — จากนั้น <xliff:g id="base_price" example="3,99 €">%2$s</xliff:g> ต่อเดือน</string>
+    <string name="churn_auto_renew_note">การสมัครต่ออายุอัตโนมัติผ่าน Google Play ยกเลิกได้ทุกเมื่อ</string>
+    <string name="churn_cancel_sub">ยกเลิกการสมัคร</string>
+    <string name="churn_reason_too_expensive">แพงเกินไป</string>
+    <string name="churn_reason_unused">ใช้น้อย</string>
+    <string name="churn_per_year">ต่อปี</string>
+    <string name="churn_per_month">ต่อเดือน</string>
+    <string name="churn_reason_features">ไม่มีฟีเจอร์ที่ต้องการ</string>
+    <string name="churn_reason_other">เหตุผลอื่น</string>
+    <string name="churn_sorry_title">เสียดายที่คุณจะไป</string>
+    <string name="churn_sorry_body">ก่อนยกเลิก บอกเหตุผลได้ไหม? ช่วยให้เราปรับปรุงแอป</string>
+    <string name="churn_exclusive_offer">ข้อเสนอสำหรับคุณ</string>
+    <string name="churn_offer_subtitle">ข้อเสนอสำหรับคุณ</string>
+    <string name="churn_offer_feature_ai">การวิเคราะห์ AI ทุกวัน</string>
+    <string name="churn_offer_feature_perspectives">โปรไฟล์ AI ที่กำหนดไว้ล่วงหน้าทั้ง 4 แบบ + สร้างเองได้มากเท่าที่คุณต้องการ</string>
+    <string name="churn_offer_feature_voice">การรู้จำเสียง Premium</string>
+    <string name="churn_offer_auto_renew">ต่ออายุอัตโนมัติ ยกเลิกได้ทุกเมื่อ</string>
+    <string name="churn_accept_offer">รับข้อเสนอ</string>
+    <string name="churn_switch_yearly">หรือเปลี่ยนเป็นรายปีและประหยัดเพิ่ม</string>
+    <string name="churn_pause_sub">หรือหยุดการสมัครชั่วคราวใน Google Play</string>
+    <string name="churn_cancel_anyway">ยกเลิกอยู่ดี</string>
+    <string name="churn_are_you_sure">แน่ใจหรือไม่?</string>
+    <string name="churn_stay">อยู่ต่อ</string>
+
+    <!-- ════════════════════════════════════════════════════════════════════
+         AI LIMIT / COMPONENTS
+         ════════════════════════════════════════════════════════════════════ -->
+    <string name="ai_limit_title">ถึงขีดจำกัดรายสัปดาห์</string>
+    <string name="ai_limit_body">ไม่มีการสมัครสมาชิกคุณจะมี 5 การปรับปรุงข้อความต่อสัปดาห์ และ 5 การอัปเดตแดชบอร์ดต่อสัปดาห์ต่อโปรไฟล์
+ด้วย Premium: สูงสุด 150 ต่อวัน</string>
+    <string name="ai_limit_monthly">รายเดือน %1$s ต่อเดือน</string>
+    <string name="ai_limit_yearly">รายปี %1$s ต่อปี (ประหยัด 37\u00A0%%)</string>
+    <string name="ai_limit_no_thanks">ไม่เป็นไร ใช้ต่อโดยไม่มี AI</string>
+    <string name="ai_banner_title">บันทึกของคุณได้รับการช่วยเหลือจาก AI</string>
+    <string name="ai_banner_body">• ข้อความที่พูดถูกปรับปรุงอัตโนมัติ
+• สรุปสำหรับทุกบันทึก
+• คำแนะนำชีวิตฉลาดจากรูปแบบของคุณ ผลลัพธ์ AI ทั้งหมดเป็นข้อเสนอแนะ ไม่ใช่คำปรึกษาวิชาชีพ
+• ทั้งหมดรวมในช่วงทดลองฟรี</string>
+    <string name="cd_mic_start">เริ่มบันทึก</string>
+    <string name="cd_mic_stop">หยุดบันทึก</string>
+    <string name="entry_improve_limit_daily">ถึงขีดจำกัดของวันแล้ว พรุ่งนี้เจอกันใหม่!</string>
+    <string name="entry_improve_limit_cooldown">พักสั้น ๆ: เหลือ %1$d นาที</string>
+    <string name="entry_improve_failed">การปรับปรุงข้อความล้มเหลว</string>
+
+    <!-- ════════════════════════════════════════════════════════════════════
+         NOTIFICATIONS
+         ════════════════════════════════════════════════════════════════════ -->
+    <string name="notif_reminder_title">ถึงเวลาเขียนบันทึก</string>
+    <string name="notif_reminder_body_0">อะไรสั่นไหวในใจคุณวันนี้?</string>
+    <string name="notif_reminder_body_1">ช่วงเวลาให้ตนเอง เก็บไว้</string>
+    <string name="notif_reminder_body_2">ตัวคุณในอนาคตจะขอบคุณ</string>
+    <string name="notif_reminder_body_3">แค่ความคิดเดียวก็พอ เริ่มเลย</string>
+    <string name="notif_reminder_body_4">ช่วงเด่นของวันคืออะไร?</string>
+    <string name="notif_weekly_title">ทบทวนรายสัปดาห์ของคุณ</string>
+    <string name="notif_weekly_body">ดูสิ่งที่สั่นไหวในสัปดาห์นี้ แดชบอร์ดมีข้อคิดใหม่</string>
+    <string name="notif_monthly_title">ทบทวนรายเดือนของคุณ</string>
+    <string name="notif_monthly_body">เดือนเต็มของความทรงจำรออยู่</string>
+    <string name="notif_yearly_title">ทบทวนรายปีของคุณ</string>
+    <string name="notif_yearly_body">ปีเต็มของความทรงจำ ย้อนดูเส้นทาง</string>
+
+    <!-- Notification channel names -->
+    <string name="notif_channel_daily_name">เตือนรายวัน</string>
+    <string name="notif_channel_daily_desc">เตือนให้เขียนบันทึกทุกวัน</string>
+    <string name="notif_channel_weekly_name">ทบทวนรายสัปดาห์</string>
+    <string name="notif_channel_weekly_desc">ทบทวนรายสัปดาห์ทุกอาทิตย์ 15:00</string>
+    <string name="notif_channel_monthly_name">ทบทวนรายเดือน</string>
+    <string name="notif_channel_monthly_desc">แจ้งเตือนเมื่อการทบทวนรายเดือนพร้อม</string>
+    <string name="notif_channel_yearly_name">ทบทวนรายปี</string>
+    <string name="notif_channel_yearly_desc">แจ้งเตือนเมื่อการทบทวนรายปีพร้อม</string>
+
+    <!-- ════════════════════════════════════════════════════════════════════
+         DATE / TIME
+         ════════════════════════════════════════════════════════════════════ -->
+    <string name="datetime_just_now">เมื่อกี้นี้</string>
+    <plurals name="datetime_minutes_ago">
+        <item quantity="other">%1$d นาทีที่แล้ว</item>
+    </plurals>
+    <plurals name="datetime_hours_ago">
+        <item quantity="other">%1$d ชั่วโมงที่แล้ว</item>
+    </plurals>
+    <plurals name="datetime_days_ago">
+        <item quantity="other">%1$d วันที่แล้ว</item>
+    </plurals>
+    <!-- Confirmation after PDF export. %1$d = number of entries included in the PDF. -->
+    <plurals name="settings_export_success">
+        <item quantity="other">ส่งออกแล้ว %1$d บันทึก</item>
+    </plurals>
+    <string name="datetime_today">วันนี้</string>
+    <string name="datetime_yesterday">เมื่อวาน</string>
+    <string name="datetime_day_before_yesterday">เมื่อวานซืน</string>
+    <string name="datetime_this_week">สัปดาห์นี้</string>
+    <string name="datetime_last_week">สัปดาห์ที่แล้ว</string>
+    <string name="datetime_weeks_ago">%1$d สัปดาห์ที่แล้ว</string>
+
+    <!-- ════════════════════════════════════════════════════════════════════
+         ACHIEVEMENTS
+         ════════════════════════════════════════════════════════════════════ -->
+    <string name="achievement_nightowl_title">นกฮูกกลางคืน</string>
+    <string name="achievement_nightowl_desc">เขียน 50 บันทึกหลัง 22:00</string>
+    <string name="achievement_earlybird_title">นกตื่นเช้า</string>
+    <string name="achievement_earlybird_desc">เขียน 20 บันทึกก่อน 7:00</string>
+    <string name="achievement_confession_title">คำสารภาพ</string>
+    <string name="achievement_confession_desc">เขียนบันทึกกว่า 1000 คำ</string>
+    <string name="achievement_marathon_title">มาราธอนนักเขียน</string>
+    <string name="achievement_marathon_desc">100 บันทึก</string>
+    <string name="achievement_wordartist_title">ศิลปินคำ</string>
+    <string name="achievement_wordartist_desc">500 บันทึก</string>
+    <string name="achievement_consistency_title">ความสม่ำเสมอ</string>
+    <string name="achievement_consistency_desc">สตรีก 30 วัน</string>
+    <string name="achievement_chronicler_title">ผู้บันทึกปี</string>
+    <string name="achievement_chronicler_desc">เขียน 365 บันทึก</string>
+    <string name="achievement_photodiary_title">บันทึกภาพ</string>
+    <string name="achievement_photodiary_desc">แนบภาพ 50 ภาพกับบันทึก</string>
+    <string name="achievement_voiceartist_title">ศิลปินเสียง</string>
+    <string name="achievement_voiceartist_desc">สร้างบันทึกเสียง 25 รายการ</string>
+    <string name="achievement_reflectionmaster_title">ปรมาจารย์การใคร่ครวญ</string>
+    <string name="achievement_reflectionmaster_desc">ทำการวิเคราะห์แดชบอร์ด 50 ครั้ง</string>
+
+    <!-- ════════════════════════════════════════════════════════════════════
+         DAILY PROMPTS
+         ════════════════════════════════════════════════════════════════════ -->
+    <string name="prompt_cat_self_reflection">ใคร่ครวญตนเอง</string>
+    <string name="prompt_cat_gratitude">ความขอบคุณ</string>
+    <string name="prompt_cat_future">อนาคต</string>
+    <string name="prompt_cat_relationships">ความสัมพันธ์</string>
+
+    <string-array name="prompts_self_reflection">
+        <item>อะไรทำให้คุณยิ้มวันนี้?</item>
+        <item>ความคิดใดที่ปล่อยไม่ได้วันนี้?</item>
+        <item>วันนี้เรียนรู้อะไรเกี่ยวกับตนเอง?</item>
+        <item>ช่วงใดเข้มข้นที่สุดวันนี้?</item>
+        <item>ถ้าทำได้ อยากเปลี่ยนอะไรในวันนี้?</item>
+        <item>ความรู้สึกใดเคียงข้างคุณมากที่สุดวันนี้?</item>
+        <item>อะไรทำให้คุณประหลาดใจวันนี้?</item>
+        <item>คิดเรื่องอะไรนานที่สุดวันนี้?</item>
+        <item>อะไรให้พลังวันนี้?</item>
+        <item>อะไรเอาพลังไปวันนี้?</item>
+        <item>นิสัยใดที่อยากเปลี่ยน?</item>
+        <item>ความสำเร็จหมายความว่าอะไรตอนนี้?</item>
+        <item>ความกลัวใดขวางทางอยู่?</item>
+        <item>ตัวคุณในวัยเยาว์จะว่าอย่างไรต่อชีวิตวันนี้?</item>
+        <item>คำแนะนำใดจะให้กับตนเองตอนนี้?</item>
+        <item>อะไรทำให้คุณไม่เหมือนใคร?</item>
+    </string-array>
+
+    <string-array name="prompts_gratitude">
+        <item>คุณขอบคุณอะไรวันนี้?</item>
+        <item>ใครทำให้วันของคุณดีขึ้นวันนี้?</item>
+        <item>รายละเอียดเล็ก ๆ ใดทำให้คุณยินดีวันนี้?</item>
+        <item>ความสามารถใดที่คุณถือเป็นเรื่องปกติ?</item>
+        <item>สิ่งที่ดีที่สุดของสัปดาห์นี้คืออะไร?</item>
+        <item>อยากขอบคุณใคร เพราะอะไร?</item>
+        <item>สถานที่ใดทำให้คุณรู้สึกเหมือนอยู่บ้าน?</item>
+        <item>ความทรงจำใดทำให้คุณมีความสุขทันที?</item>
+        <item>ส่วนใดของร่างกายสมควรได้รับการขอบคุณมากกว่านี้?</item>
+        <item>มื้ออาหารใดทำให้คุณรู้สึกดีวันนี้?</item>
+        <item>เพลงใดประทับใจล่าสุด?</item>
+        <item>สิ่งที่มีค่าที่สุดที่คุณมีและไม่ต้องใช้เงินคืออะไร?</item>
+        <item>ประสบการณ์ในอดีตใดทำให้คุณเข้มแข็งขึ้น?</item>
+        <item>อะไรในวันประจำของคุณที่แท้จริงแล้วคือสิทธิพิเศษ?</item>
+        <item>ใครคือฮีโร่ลับของคุณในวันประจำ?</item>
+        <item>ฤดูกาลใดที่คุณเพลิดเพลินที่สุดตอนนี้ เพราะอะไร?</item>
+    </string-array>
+
+    <string-array name="prompts_future">
+        <item>ในหนึ่งปีอยากบรรลุอะไร?</item>
+        <item>วันที่สมบูรณ์แบบของคุณในอีกห้าปีเป็นอย่างไร?</item>
+        <item>เป้าหมายใดที่คุณตามมาอย่างหลงใหลที่สุดตอนนี้?</item>
+        <item>ถ้าล้มเหลวไม่ได้ คุณจะทำอะไร?</item>
+        <item>ทักษะใหม่ใดที่อยากเรียน?</item>
+        <item>อยากไปไหนต่อ?</item>
+        <item>อยากเป็นคนแบบไหนในอีกสิบปี?</item>
+        <item>ความฝันใดที่เคยละทิ้งแล้วอาจรื้อฟื้นได้?</item>
+        <item>ก้าวที่กล้าหาญที่สุดที่ทำได้ตอนนี้คืออะไร?</item>
+        <item>โปรเจกต์ใดที่ตื่นเต้นแต่ยังไม่เริ่ม?</item>
+        <item>อะไรต้องเกิดขึ้นเพื่อให้คุณพูดว่า «ตอนนี้ฉันพอใจ»?</item>
+        <item>อยากเห็นการเปลี่ยนแปลงแบบใดในโลก?</item>
+        <item>อะไรอยู่บนสุดของลิสต์ปรารถนา?</item>
+        <item>นิสัยเสียใดที่อยากทิ้งก่อนเดือนหน้า?</item>
+        <item>อยากถูกจดจำอย่างไร?</item>
+        <item>ก้าวเล็ก ๆ ใดที่ทำได้พรุ่งนี้?</item>
+    </string-array>
+
+    <string-array name="prompts_relationships">
+        <item>อยากบอกใครถึงอะไรที่ยังไม่เคยพูด?</item>
+        <item>ความสัมพันธ์ใดในชีวิตสมควรได้รับความสนใจมากกว่านี้?</item>
+        <item>สิ่งที่คุณซาบซึ้งที่สุดในเพื่อนสนิทคืออะไร?</item>
+        <item>ครั้งสุดท้ายที่รู้สึกว่าได้รับความเข้าใจจริง ๆ คือเมื่อไร?</item>
+        <item>อยากพูดอะไรกับคนที่สำคัญ?</item>
+        <item>ใครสร้างคุณมากที่สุด?</item>
+        <item>คุณแสดงให้คนอื่นรู้ว่ารักอย่างไร?</item>
+        <item>ความขัดแย้งใดที่อยากคลี่คลาย?</item>
+        <item>มิตรภาพหมายความว่าอะไรสำหรับคุณ?</item>
+        <item>ใครสอนสิ่งสำคัญให้คุณล่าสุด?</item>
+        <item>คุณชื่นชมคุณสมบัติใดในคนอื่นมากที่สุด?</item>
+        <item>อยากใช้ทั้งวันกับใคร?</item>
+        <item>คำชมที่ซาบซึ้งที่สุดที่เคยได้รับคืออะไร?</item>
+        <item>อยากวางขอบเขตใดให้ดีขึ้นในความสัมพันธ์?</item>
+        <item>ความเข้าใจเรื่องความรักของคุณเปลี่ยนไปอย่างไร?</item>
+        <item>ใครสมควรได้รับโทรศัพท์หรือข้อความจากคุณวันนี้?</item>
+    </string-array>
+
+    <!-- ════════════════════════════════════════════════════════════════════
+         PDF EXPORT
+         ════════════════════════════════════════════════════════════════════ -->
+    <string name="pdf_entry_fallback_title">บันทึก #%1$d</string>
+    <string name="pdf_entry_counter">บันทึก %1$d จาก %2$d</string>
+    <string name="pdf_summary_label">สรุป</string>
+    <string name="pdf_continuation">%1$s (ต่อ)</string>
+    <string name="pdf_page_number">หน้า %1$d</string>
+
+    <!-- ════════════════════════════════════════════════════════════════════
+         ERRORS
+         ════════════════════════════════════════════════════════════════════ -->
+    <string name="error_retro_all_failed">คำขอ AI %1$d รายการล้มเหลวทั้งหมด โปรดตรวจสอบอินเทอร์เน็ต</string>
+    <string name="error_whisper_audio_empty">ไฟล์เสียงว่าง</string>
+    <string name="error_whisper_no_text">ไม่พบข้อความ</string>
+    <string name="error_sync_db_not_found">ไม่พบฐานข้อมูล</string>
+    <string name="error_audio_record_init_failed">ไม่สามารถเริ่มไมโครโฟนได้</string>
+    <string name="error_json_key_missing">การตอบกลับของ AI ไม่สมบูรณ์: ไม่มี %1$s หรือ %2$s</string>
+    <string name="error_file_open_failed">ผิดพลาด: เปิดไฟล์ไม่ได้</string>
+    <string name="error_generic">ผิดพลาด: %1$s</string>
+
+    <!-- ════════════════════════════════════════════════════════════════════
+         AI PROFILE STYLE INSTRUCTIONS (for Gemini prompts)
+         ════════════════════════════════════════════════════════════════════ -->
+    <string name="profile_style_chronicler">\n- เขียนในสไตล์การสรุปเรื่องเล่า รวบเหตุการณ์และความรู้สึกสำคัญเหมือนนักบันทึกประวัติส่วนตัว</string>
+    <string name="profile_style_advisor">\n- เขียนในสไตล์ที่ปรึกษาชีวิต เน้นสิ่งที่ทำได้ดีและที่ปรับปรุงได้ ให้ผู้อ่านรู้สึกชัดเจนและเป็นระเบียบ</string>
+    <string name="profile_style_insight">\n- เขียนในสไตล์เรื่องเล่าการรู้จักตนเองลึก เผยแพตเทิร์นความคิด ความรู้สึกที่วนซ้ำ และจุดแข็งที่ซ่อน</string>
+    <string name="profile_style_coach">\n- เขียนในสไตล์เพื่อนคู่เป้าหมายที่ให้กำลังใจ แสดงความก้าวหน้าในเป้าหมายส่วนตัวและสนับสนุนให้ไปต่อ</string>
+    <string name="profile_style_custom">\n- สไตล์โปรไฟล์ (กำหนดเอง): เขียนบทสรุปนี้โดยอ้างอิงงานมอบหมายของผู้ใช้อย่างชัดเจน กฎที่ต้องปฏิบัติ:\n  1) อย่างน้อย 60 เปอร์เซ็นต์ของบทสรุปกล่าวถึงหัวข้องานมอบหมายโดยตรงหรือโดยนัย\n  2) อย่างน้อยหนึ่งหัวข้อถูกอุทิศให้กับโฟกัสงานมอบหมายอย่างสมบูรณ์ (หัวข้อ + เนื้อหา)\n  3) แสดงความเชื่อมโยงกับโปรไฟล์อย่างหลากหลายด้วยคำพ้องและกลุ่มความหมาย ไม่ใช่การซ้ำคำแบบกลไก\n  4) สังเกตการณ์ที่ไม่เกี่ยวกับงานมอบหมายให้กระชับหรืองดเว้น — เน้นหัวข้อน้อยที่มีความเชื่อมโยงจริงแทนหลายหัวข้อทั่วไป\n  งานมอบหมายของผู้ใช้ (สำหรับอ้างอิง): \"%1$s\"</string>
+
+
+    <!-- ════════════════════════════════════════════════════════════════════
+         CONSENT SCREEN + PRIVACY GATES + PRIVACY SECTION (April 2026)
+         ════════════════════════════════════════════════════════════════════ -->
+    <string name="consent_title">ความเป็นส่วนตัวและการยินยอม</string>
+    <string name="consent_intro">สมุดบันทึกคือพื้นที่ส่วนตัวของคุณ และเราเคารพสิ่งนี้ ที่นี่คุณเห็นได้อย่างโปร่งใสว่า Best Journal จัดการกับข้อมูลของคุณอย่างไร</string>
+    <string name="consent_card1_title">การจัดเก็บในเครื่อง</string>
+    <string name="consent_card1_body">บันทึกของคุณยังอยู่ในอุปกรณ์</string>
+    <string name="consent_card2_title">ฟีเจอร์ AI (สหรัฐอเมริกา)</string>
+    <string name="consent_card2_body">เลือกได้ว่าจะส่งข้อความไปยัง Google Gemini และข้อความสำหรับอ่านออกเสียงไปยัง Microsoft Edge ในสหรัฐอเมริกา (EU-US Data Privacy Framework) การบันทึกเสียงจะถูกส่งไปยัง Groq (สหรัฐอเมริกา) ภายใต้ข้อสัญญามาตรฐาน (EU SCCs)</string>
+    <string name="consent_card3_title">สถิติแบบนิรนาม</string>
+    <string name="consent_card3_body">Firebase Analytics แบบเลือกใช้ เปลี่ยนได้ตลอดในการตั้งค่า</string>
+    <string name="consent_links_header">เอกสารทางกฎหมายของเรา:</string>
+    <string name="consent_accept_all">ยอมรับและเริ่มต้น</string>
+    <string name="consent_disable_stats">ปิดสถิติและดำเนินการต่อ</string>
+    <string name="consent_confirmation">การแตะ \"ยอมรับและเริ่มต้น\" ยืนยันว่าคุณได้อ่านนโยบายความเป็นส่วนตัว เงื่อนไขการใช้งาน และประกาศทางกฎหมายแล้ว และยอมรับการประมวลผลข้อมูลตามที่อธิบายไว้ คุณสามารถเปลี่ยนการตัดสินใจได้ตลอดในการตั้งค่า</string>
+
+    <string name="privacy_gate_groq_title">ส่งการบันทึกเสียงไปยัง Groq หรือไม่</string>
+    <string name="privacy_gate_groq_body">ฟังก์ชันนี้ส่งการบันทึกเสียงของคุณแบบเข้ารหัสไปยัง Groq (สหรัฐอเมริกา) และแปลงเป็นข้อความที่นั่น เร็วและแม่นยำกว่าการรู้จำในเครื่อง\n\n✓ การบันทึกจะถูกลบทันทีหลังการแปลง\n✓ ไม่มีการฝึก AI ด้วยการบันทึกของคุณ\n✓ ฐานทางกฎหมาย: ข้อสัญญามาตรฐาน (EU SCCs)\n\nทางเลือก: การรู้จำแบบออฟไลน์ในเครื่องที่การตั้งค่า</string>
+    <string name="privacy_gate_groq_accept">ยอมรับและส่ง</string>
+    <string name="privacy_gate_groq_local">ถอดเสียงในเครื่องแทน</string>
+
+    <string name="privacy_gate_gemini_title">ส่งข้อความไปยัง Google Gemini หรือไม่</string>
+    <string name="privacy_gate_gemini_body">ยินดีที่คุณต้องการใช้ฟีเจอร์อัจฉริยะของ Best Journal! สำหรับสรุป ทบทวน ข้อมูลเชิงลึกจากแดชบอร์ด และการปรับปรุงข้อความ ข้อความของคุณจะถูกส่งไปยัง Google Gemini แบบเข้ารหัส\n\n✓ AI ไม่ใช้ข้อมูลของคุณในการฝึก\n✓ คำขอไม่ถูกจัดเก็บถาวร\n✓ เข้ารหัสตาม EU-US Data Privacy Framework\n\nหมายเหตุสำคัญ: เนื่องจากบันทึกของคุณอาจมีข้อมูลที่ละเอียดอ่อนเป็นพิเศษ (สุขภาพ ศาสนา ความสัมพันธ์ส่วนตัว) เราจึงขอความยินยอมของคุณสำหรับการประมวลผลด้วย AI ผลลัพธ์จาก AI เป็นข้อเสนอแนะ ไม่ใช่คำแนะนำจากผู้เชี่ยวชาญ\n\nคุณสามารถเปลี่ยนแปลงได้ทุกเวลาในการตั้งค่า</string>
+    <string name="privacy_gate_gemini_accept">ยอมรับและส่ง</string>
+    <string name="privacy_gate_gemini_cancel">ยกเลิก</string>
+
+    <string name="privacy_gate_tts_title">เปิดใช้งานเสียงพรีเมียม</string>
+    <string name="privacy_gate_tts_body">ด้วยเสียงระดับพรีเมียม การอ่านออกเสียงจะฟังดูเป็นธรรมชาติยิ่งขึ้น ข้อความของคุณจะถูกส่งแบบเข้ารหัส (HTTPS/TLS) ไปยังบริการเสียงของ Microsoft ในสหรัฐอเมริกาและส่งกลับเป็นเสียง\n\n✓ การส่งข้อมูลเพื่อการสังเคราะห์เสียงเท่านั้น\n✓ การส่งไปยังประเทศที่สาม สหรัฐอเมริกา (Microsoft ได้รับการรับรองตาม EU-US Data Privacy Framework)</string>
+    <string name="privacy_gate_tts_accept">ยอมรับและอ่าน</string>
+    <string name="privacy_gate_tts_cancel">ยกเลิก</string>
+
+    <string name="settings_privacy_header">ความเป็นส่วนตัว</string>
+    <string name="settings_analytics_title">การวิเคราะห์การใช้งานแบบนิรนาม</string>
+    <string name="settings_analytics_subtitle">Firebase Analytics สำหรับการวิเคราะห์ข้อผิดพลาดและการปรับปรุงผลิตภัณฑ์</string>
+
+    <string name="settings_delete_account_title">ลบบัญชีและข้อมูล</string>
+    <string name="settings_delete_account_subtitle">ลบข้อมูลในเครื่องทั้งหมดและการสำรองข้อมูล Drive อย่างถาวร บัญชี Google ของคุณยังคงอยู่</string>
+    <string name="settings_delete_account_confirm_title">ลบข้อมูลแอปทั้งหมดหรือไม่?</string>
+    <string name="settings_delete_account_confirm_body">การดำเนินการนี้ไม่สามารถย้อนกลับได้และจะลบ:\n\n• บันทึกไดอารี รูปภาพ วิดีโอ และการบันทึกเสียงในเครื่องทั้งหมด\n• การสำรองข้อมูล Google Drive ของแอป (เฉพาะข้อมูลแอป ไม่ใช่บัญชี Google ของคุณ)\n• การลงชื่อเข้าใช้แอปของคุณ\n\nบัญชี Google ของคุณยังคงอยู่ แอปจะเริ่มต้นใหม่เหมือนการติดตั้งใหม่หลังจากนั้น</string>
+    <string name="settings_delete_account_cancel">ยกเลิก</string>
+    <string name="settings_delete_account_confirm">ใช่ ลบทั้งหมด</string>
+
+    <string name="settings_report_ai_title">รายงานคำตอบของ AI</string>
+    <string name="settings_report_ai_subtitle">ผลลัพธ์ AI ที่ไม่เหมาะสมหรือผิดพลาด</string>
+    <string name="settings_report_ai_confirm_title">เปิดอีเมลถึงฝ่ายสนับสนุนหรือไม่</string>
+    <string name="settings_report_ai_confirm_body">โปรแกรมอีเมลของคุณจะเปิดขึ้นพร้อมข้อความที่เตรียมไว้ถึง dev.app.support@gmail.com คุณสามารถเพิ่มเติมคำอธิบายได้ก่อนส่ง เราตอบกลับภายใน 24 ชั่วโมงในวันทำการตามปกติ\n\nโปรดรายงานด้วยสิ่งนี้: ผลลัพธ์ AI ที่ไม่เหมาะสม น่ารังเกียจ ผิดพลาด หรือทำให้เข้าใจผิด จากแดชบอร์ด สรุป ทบทวน หรือการปรับปรุงข้อความ</string>
+    <string name="settings_report_ai_confirm">สร้างรายงาน</string>
+    <string name="settings_report_ai_cancel">ยกเลิก</string>
+    <string name="settings_report_ai_no_email">ไม่พบแอปอีเมล โปรดส่งรายงานไปที่ dev.app.support@gmail.com</string>
+    <string name="settings_report_ai_subject">Best Journal: คำตอบ AI ที่ไม่เหมาะสม</string>
+    <string name="settings_report_ai_body">สวัสดี,\n\nฉันต้องการรายงานคำตอบ AI ที่ไม่เหมาะสมหรือผิดพลาดใน Best Journal\n\nคำอธิบายปัญหา:\n[กรุณากรอก]\n\nบริบท (ฟีเจอร์ใด อินพุตใด):\n[กรุณากรอก]\n\nขอบคุณ</string>
+    <string name="settings_report_ai_dialog_title">รายงานคำตอบ AI</string>
+    <string name="settings_report_ai_dialog_desc">อธิบายคำตอบ AI ที่ไม่เหมาะสมหรือไม่ถูกต้อง รายงานของคุณจะถูกส่งตรงไปยังทีมสนับสนุนของเรา คุณต้องลงชื่อเข้าใช้ด้วยบัญชี Google ของคุณ</string>
+
+    <string name="settings_revoke_title">การเพิกถอน</string>
+    <string name="settings_revoke_subtitle">§ 356a BGB — เพิกถอนผ่านแอปโดยตรง</string>
+    <string name="settings_revoke_confirm_title">เพิกถอนสัญญาหรือไม่</string>
+    <string name="settings_revoke_confirm_body">เมื่อคลิก 「ยืนยันการเพิกถอน「 เราจะส่งการเพิกถอนของคุณไปยัง dev.app.support@gmail.com โดยตรง คุณจะได้รับการยืนยันการรับเรื่องทางอีเมลทันที\n\nคำชี้แจงสิทธิ์การเพิกถอนฉบับสมบูรณ์อยู่ในเงื่อนไขการใช้งาน (§ 16) สำหรับการสมัครสมาชิก โปรดยกเลิกเพิ่มเติมผ่าน Google Play → การสมัครสมาชิก เพื่อไม่ให้มีการเรียกเก็บเงินเพิ่มเติม</string>
+    <string name="settings_revoke_cancel">ยกเลิก</string>
+    <string name="settings_revoke_confirm">สร้างการเพิกถอน</string>
+    <string name="settings_revoke_no_email">ไม่พบแอปอีเมล โปรดส่งการเพิกถอนไปที่ dev.app.support@gmail.com</string>
+    <string name="settings_revoke_email_subject">เพิกถอนสัญญา Best Journal Premium</string>
+    <string name="settings_revoke_email_body">ข้าพเจ้าขอแจ้งการถอนตัวจากสัญญาเกี่ยวกับฟีเจอร์ Premium ของ Best Journal ผ่านหนังสือนี้\n\nผู้ส่ง (บัญชี Google): %1$s\nเวลาที่ถอนตัว: %2$s\n\nการถอนตัวนี้ถูกดำเนินการแบบสองขั้นตอนผ่านปุ่มถอนตัวในแอปที่สอดคล้องกับ § 356a BGB และส่งโดยอัตโนมัติผ่าน Gmail API</string>
+    <string name="settings_revoke_confirm_subject">การยืนยันการรับของคุณ: การถอนตัวใน Best Journal</string>
+    <string name="settings_revoke_confirm_user_body">สวัสดี\n\nเราได้รับคำขอถอนตัวของคุณเมื่อ %1$s แล้ว นี่คือการยืนยันการรับตาม § 356a BGB\n\nเราจะดำเนินการคำขอถอนตัวของคุณโดยเร็วที่สุด และจะติดต่อคุณผ่าน dev.app.support@gmail.com หากมีคำถาม\n\nเพื่อไม่ให้มีการเรียกเก็บเงินเพิ่มเติม โปรดยกเลิกการสมัครของคุณใน Google Play Store ใต้ "Subscriptions" ด้วย\n\nขอบคุณและขอแสดงความนับถือ\nBest Journal (Frank Barwandt)</string>
+    <string name="settings_revoke_no_account">ไม่พบบัญชี Google ที่ลงชื่อเข้าใช้อยู่ โปรดลงชื่อเข้าใช้ด้วยบัญชี Google ของคุณใน Settings หรือส่งการถอนตัวด้วยตนเองไปที่ dev.app.support@gmail.com</string>
+    <string name="settings_revoke_sending">กำลังส่งการถอนตัว…</string>
+    <string name="settings_revoke_success_title">ได้รับการถอนตัวแล้ว</string>
+    <string name="settings_revoke_success_body">การถอนตัวของคุณถูกส่งไปที่ dev.app.support@gmail.com แล้ว การยืนยันการรับก็อยู่ในกล่องจดหมายของคุณด้วย</string>
+    <string name="settings_revoke_success_close">ปิด</string>
+    <string name="settings_revoke_error_title">ไม่สามารถส่งการถอนตัวได้</string>
+    <string name="settings_revoke_error_body">การส่งอัตโนมัติล้มเหลว: %1$s\n\nคุณสามารถส่งอีเมลด้วยตนเองไปที่ dev.app.support@gmail.com ได้เช่นกัน ให้แตะ "เปิดแอปอีเมล" เพื่อทำเช่นนั้น</string>
+    <string name="settings_revoke_error_email_fallback">เปิดแอปอีเมล</string>
+
+
+
+    <!-- Crisis Support / Mental Health Disclaimer -->
+    <string name="settings_crisis_title">การช่วยเหลือในภาวะวิกฤต</string>
+    <string name="settings_crisis_subtitle">สายด่วนสำคัญในกรณีฉุกเฉิน</string>
+    <string name="settings_crisis_dialog_title">คุณไม่ได้อยู่ลำพัง</string>
+    <string name="settings_crisis_dialog_body">Best Journal เป็นแอปบันทึกประจำวัน และไม่สามารถทดแทนคำปรึกษาด้านจิตวิทยาหรือการแพทย์จากผู้เชี่ยวชาญได้ การวิเคราะห์ที่สร้างโดย AI ไม่ใช่การบำบัด\n\nหากคุณกำลังอยู่ในภาวะวิกฤตรุนแรง หรือมีความคิดทำร้ายตนเองหรือฆ่าตัวตาย คุณไม่จำเป็นต้องเผชิญเรื่องนี้เพียงลำพัง มีความช่วยเหลือฟรีแบบไม่ระบุตัวตนตลอด 24 ชั่วโมง</string>
+    <string name="settings_crisis_hotline_de_name">Telefonseelsorge เยอรมนี</string>
+    <string name="settings_crisis_hotline_de_hours">ฟรี ตลอด 24 ชั่วโมง ไม่ระบุตัวตน</string>
+    <string name="settings_crisis_call_de">โทร 0800 111 0 111</string>
+    <string name="settings_crisis_call_de_alt">โทร 0800 111 0 222</string>
+    <string name="settings_crisis_emergency_name">เหตุฉุกเฉิน</string>
+    <string name="settings_crisis_call_emergency">โทร 112</string>
+    <string name="settings_crisis_international_name">สายด่วนระหว่างประเทศ</string>
+    <string name="settings_crisis_open_findahelpline">เปิด findahelpline.com</string>
+    <string name="settings_crisis_close">ปิด</string>
+    <string name="settings_crisis_no_dialer">ไม่พบแอปโทรศัพท์</string>
+    <string name="settings_crisis_no_browser">ไม่พบเบราว์เซอร์</string>
+
+    <!-- AI-generated content badge -->
+    <string name="ai_generated_badge">สร้างโดย AI</string>
+    <string name="ai_generated_tooltip">เนื้อหานี้สร้างโดยระบบ AI (Google Gemini) และอาจมีข้อผิดพลาด โปรดตรวจสอบด้วยตนเอง</string>
+
+    <!-- AUTO-ADDED FALLBACK (English) for missing keys — replace with proper translations later -->
+    <string name="consent_optout_confirmation">บันทึกการไม่ยินยอมแล้ว — ปิดสถิติไว้</string>
+    <string name="settings_ccpa_do_not_sell_title">Do Not Sell My Personal Information</string>
+    <string name="settings_ccpa_do_not_sell_subtitle">สำหรับผู้อยู่อาศัยในแคลิฟอร์เนีย (CCPA/CPRA 2026) เมื่อเปิดใช้งาน ฟีเจอร์ AI บนคลาวด์ทั้งหมดจะถูกปิด และจะไม่เก็บสถิติใด ๆ</string>
+    <string name="settings_ccpa_do_not_sell_confirmation">เปิดใช้ Do-Not-Sell แล้ว — บริการคลาวด์ทั้งหมดถูกปิด</string>
+    <string name="settings_ccpa_do_not_sell_off_confirmation">ปิด Do-Not-Sell แล้ว</string>
+    <string name="settings_delete_account_in_progress">กำลังลบบัญชีและข้อมูล…</string>
+    <string name="settings_delete_account_drive_error_title">ไม่สามารถลบข้อมูลสำรองบน Drive</string>
+    <string name="settings_delete_account_drive_error_body">ไม่สามารถลบข้อมูลสำรองบน Google Drive ได้อย่างน่าเชื่อถือ (เหตุผล: %1$s)
+
+หากไม่ได้ลบครบถ้วน ข้อความ \"ลบออกถาวรแล้ว\" จะไม่ถูกต้อง
+
+คุณต้องการทำอะไร?</string>
+    <string name="settings_delete_account_retry">ลองอีกครั้ง</string>
+    <string name="settings_delete_account_force_local">ลบเฉพาะในเครื่อง (สำรองข้อมูล Drive ยังคงอยู่)</string>
+    <string name="settings_delete_account_abort">ยกเลิกการดำเนินการ</string>
+
+    <string name="legal_title_datenschutz">นโยบายความเป็นส่วนตัว</string>
+    <string name="legal_title_nutzungsbedingungen">เงื่อนไขการใช้งาน</string>
+    <string name="legal_title_impressum">ข้อมูลทางกฎหมาย</string>
+
+    <!-- Consent-Screen v4 + Privacy Sheet + Settings -->
+    <string name="consent_welcome_title">ยินดีต้อนรับสู่ Best Journal</string>
+    <string name="consent_welcome_intro">ก่อนเริ่ม เรามาตั้งค่าความเป็นส่วนตัวของคุณที่นี่กันอย่างรวดเร็ว</string>
+    <string name="consent_promise_local">กฎหมายความเป็นส่วนตัวกำหนดให้ต้องได้รับความยินยอมจากคุณ</string>
+    <string name="consent_promise_no_training">คุณเป็นผู้ตัดสินใจที่นี่ว่าจะเปิดใช้งานฟีเจอร์ใด</string>
+    <string name="consent_promise_optional_ai">เปลี่ยนแปลงได้ทุกเมื่อในการตั้งค่า</string>
+    <string name="consent_btn_manual_selection">เลือกด้วยตนเอง</string>
+    <string name="privacy_sheet_title">ปรับแต่งความเป็นส่วนตัว</string>
+    <string name="privacy_sheet_subtitle">เปิดใช้งานแต่ละฟีเจอร์ตามที่คุณต้องการ ทุกอย่างสามารถเปลี่ยนแปลงได้ทุกเมื่อ</string>
+    <string name="privacy_sheet_save">บันทึกการเลือก</string>
+    <string name="privacy_sheet_all_on">เปิดทั้งหมด</string>
+    <string name="privacy_sheet_all_off">ปิดทั้งหมด</string>
+    <string name="consent_toggle_analytics_title">การวิเคราะห์การใช้งานแบบนิรนาม</string>
+    <string name="consent_toggle_analytics_body">Firebase Analytics — ช่วยให้เราปรับปรุงแอป ไม่มีเนื้อหาไดอารี มีเพียงสถิติการใช้งานแบบนิรนาม (เช่น จำนวนคลิก) การส่งข้อมูล: Google สหรัฐอเมริกา (Data Privacy Framework)</string>
+    <string name="consent_toggle_groq_title">คำพูดเป็นข้อความ (Groq Whisper)</string>
+    <string name="consent_toggle_groq_body">อนุญาตให้พิมพ์ด้วยเสียง การบันทึกเสียงของคุณจะถูกส่งแบบเข้ารหัสไปยัง Groq (สหรัฐอเมริกา) แปลงเป็นข้อความ จากนั้นลบทิ้ง การบันทึกของคุณจะไม่ถูกใช้สำหรับการฝึก</string>
+    <string name="consent_toggle_gemini_title">การสะท้อนความคิด AI (Google Gemini)</string>
+    <string name="consent_toggle_gemini_body">AI แดชบอร์ด สรุป การย้อนดู และการปรับปรุงข้อความ ส่งข้อความบางส่วนไปยัง Google Gemini (สหรัฐอเมริกา) รายการของคุณจะไม่ถูกใช้สำหรับการฝึก</string>
+    <string name="consent_toggle_tts_title">อ่านออกเสียง (Microsoft Edge TTS)</string>
+    <string name="consent_toggle_tts_body">อ่านรายการด้วยเสียงที่เป็นธรรมชาติ ส่งข้อความไปยัง Microsoft (สหรัฐอเมริกา)</string>
+    <string name="consent_toggle_drive_title">การสำรองข้อมูล Google Drive</string>
+    <string name="consent_toggle_drive_body">บันทึกรายการแบบเข้ารหัสใน Google Drive ของคุณเอง คุณรักษาการควบคุมเต็มรูปแบบ — ไฟล์อยู่ในบัญชีของคุณ ไม่ใช่ที่เรา</string>
+    <string name="consent_info_system_backup_title">Android System Backup</string>
+    <string name="consent_info_system_backup_body">หากคุณเปิดใช้งาน Android System Backup ในการตั้งค่าอุปกรณ์ Android จะสำรองข้อมูลไดอารีของคุณโดยอัตโนมัติในพื้นที่สำรองข้อมูลของ Google Account ของคุณ คุณสามารถปิดใช้งานได้ทุกเมื่อในการตั้งค่าอุปกรณ์ — ดูรายละเอียดในนโยบายความเป็นส่วนตัว</string>
+    <string name="consent_toggle_do_not_sell_title">Do Not Sell My Personal Information</string>
+    <string name="consent_toggle_do_not_sell_body">สวิตช์นี้มีไว้สำหรับผู้อยู่อาศัยในรัฐแคลิฟอร์เนีย สหรัฐอเมริกาเท่านั้น กฎหมายคุ้มครองข้อมูลของแคลิฟอร์เนีย (CCPA/CPRA) ให้สิทธิ์ผู้อยู่อาศัยในการคัดค้าน เมื่อเปิดใช้งาน ฟังก์ชันคลาวด์ที่เป็นทางเลือกทั้งหมด (AI, สำรองข้อมูล, การรู้จำเสียง, การวิเคราะห์) จะถูกปิด เหลือเพียงฟังก์ชันในเครื่องที่ยังทำงานอยู่\n\nหากคุณอยู่อาศัยนอกแคลิฟอร์เนีย คุณสามารถละเลยสวิตช์นี้ได้: Best Journal ไม่ขายหรือทำการตลาดข้อมูลของคุณที่ใดในโลก</string>
+    <string name="consent_btn_accept_all">ยอมรับทั้งหมด</string>
+    <string name="consent_btn_save_selection">บันทึกการเลือกของฉัน</string>
+    <string name="consent_btn_minimum_only">ปฏิเสธทั้งหมด</string>
+    <string name="consent_saved_snackbar">บันทึกการตั้งค่าแล้ว</string>
+    <string name="consent_revoke_snackbar">เพิกถอนความยินยอมแล้ว</string>
+    <string name="consent_footer_version">การเลือกของคุณสามารถเปลี่ยนแปลงได้ทุกเมื่อในการตั้งค่า</string>
+    <string name="permission_rationale_microphone">เพื่อให้คุณบันทึกรายการไดอารีด้วยเสียง เราต้องการสิทธิ์เข้าถึงไมโครโฟนของคุณ</string>
+    <string name="permission_rationale_camera">เพื่อให้คุณเพิ่มรูปภาพในรายการ เราต้องการสิทธิ์เข้าถึงกล้องของคุณ</string>
+    <string name="permission_rationale_notifications">เพื่อให้เราแจ้งเตือนคุณเกี่ยวกับการเขียนประจำวัน เราต้องการสิทธิ์ในการส่งการแจ้งเตือน</string>
+    <string name="consent_details_expand">รายละเอียด</string>
+    <string name="settings_open_privacy_sheet">ปรับแต่งการตั้งค่าความเป็นส่วนตัว</string>
+    <string name="settings_privacy_section_header">ความเป็นส่วนตัวและการยินยอม</string>
+    <string name="settings_ai_groq_title">คำพูดเป็นข้อความ (Groq)</string>
+    <string name="settings_ai_groq_subtitle">ส่งการบันทึกเสียงไปยัง Groq สหรัฐอเมริกา เพื่อถอดเสียง</string>
+    <string name="settings_ai_gemini_title">การสะท้อนความคิด AI (Gemini)</string>
+    <string name="settings_ai_gemini_subtitle">ส่งข้อความไปยัง Google สหรัฐอเมริกา สำหรับสรุป AI</string>
+    <string name="settings_ai_tts_title">อ่านออกเสียง (Edge TTS)</string>
+    <string name="settings_ai_tts_subtitle">ส่งข้อความไปยัง Microsoft สหรัฐอเมริกา เพื่อส่งออกเสียง</string>
+    <string name="settings_drive_backup_title">การสำรองข้อมูล Google Drive</string>
+    <string name="settings_drive_backup_subtitle">บันทึกรายการแบบเข้ารหัสใน Drive ของคุณ</string>
+    <string name="settings_open_system_backup_settings_label">จัดการ Android System Backup</string>
+    <string name="settings_open_system_backup_settings_desc">เปิดการตั้งค่าระบบ Android ซึ่งคุณสามารถเปิดหรือปิดการสำรองข้อมูลอัตโนมัติสำหรับ Best Journal ได้</string>
+    <string name="error_no_backup_settings_available">ไม่สามารถใช้งานการตั้งค่าสำรองข้อมูลบนอุปกรณ์นี้ได้</string>
+
+    <!-- DEBUG-only test data seeder (button in journal top bar, only visible in debug builds) -->
+    <string name="dev_seed_create_label">สร้างรายการทดสอบ 70 รายการ</string>
+    <string name="dev_seed_delete_label">ลบรายการทดสอบ 70 รายการ</string>
+    <string name="dev_seed_running">กำลังสร้างรายการทดสอบ 70 รายการในภาษาของคุณ…</string>
+    <string name="dev_seed_done">สร้างรายการทดสอบแล้ว %1$d รายการ</string>
+    <string name="dev_seed_deleted">ลบรายการทดสอบแล้ว %1$d รายการ</string>
+    <string name="dev_seed_error">ข้อผิดพลาด: %1$s</string>
+    <string name="dev_seed_ai_no_entries">AI ไม่ได้ส่งรายการทดสอบกลับมา</string>
+
+    <!-- Premium feature: unlimited follow-ups per journal entry -->
+    <string name="paywall_feature_followups">เพิ่มข้อความในบันทึกได้มากเท่าที่คุณต้องการ</string>
+    <string name="settings_premium_feature_followups">เพิ่มข้อความได้ไม่จำกัด</string>
+    <string name="settings_premium_feature_followups_desc">เพิ่มข้อความในแต่ละบันทึกได้ตามที่ต้องการ</string>
+
+    <!-- Follow-up / Nachtrag strings -->
+    <string name="action_no">ไม่</string>
+    <string name="action_yes">ใช่</string>
+    <string name="ai_improved_suffix">\n\n✨ ปรับปรุงด้วย AI</string>
+    <string name="ai_improved_suffix_marker">✨ ปรับปรุงด้วย AI</string>
+    <string name="entry_delete_entry_cd">ลบบันทึกในไดอารี</string>
+    <string name="entry_journal_entry_title">บันทึกในไดอารี</string>
+    <string name="entry_photos_videos_add_title">เพิ่มรูปภาพ/วิดีโอ</string>
+    <string name="follow_up_cancel">ยกเลิก</string>
+    <string name="follow_up_card_title">บันทึกเพิ่มเติม</string>
+    <string name="follow_up_choose_input_mode">คุณต้องการเพิ่มบันทึกเพิ่มเติมอย่างไร?</string>
+    <string name="follow_up_delete_button">ลบ</string>
+    <string name="follow_up_delete_cd">ลบบันทึกเพิ่มเติม</string>
+    <string name="follow_up_delete_confirm_text">ต้องการลบบันทึกเพิ่มเติม <xliff:g id="ordinal" example="1">%1$s</xliff:g> อย่างถาวรหรือไม่?</string>
+    <string name="follow_up_delete_confirm_title">ลบบันทึกเพิ่มเติม <xliff:g id="ordinal" example="1">%1$s</xliff:g>?</string>
+    <string name="follow_up_dialog_label">บันทึกเพิ่มเติมของคุณ:</string>
+    <string name="follow_up_dialog_title">บันทึกเพิ่มเติม</string>
+    <string name="follow_up_discard">ยกเลิกการเปลี่ยนแปลง</string>
+    <string name="follow_up_improve_text">✨ ปรับปรุงข้อความ</string>
+    <string name="follow_up_improve_with_ai">ปรับปรุงภายหลังด้วย AI</string>
+    <string name="follow_up_improving">AI กำลังปรับปรุงบันทึกเพิ่มเติม…</string>
+    <string name="follow_up_inline_title">บันทึกเพิ่มเติม <xliff:g id="ordinal" example="1">%1$s</xliff:g></string>
+    <string name="follow_up_input_speak_cd">บันทึกเสียง</string>
+    <string name="follow_up_input_speak_label">บันทึกเสียง</string>
+    <string name="follow_up_input_write_cd">พิมพ์</string>
+    <string name="follow_up_input_write_label">พิมพ์</string>
+    <string name="follow_up_premium_body">ด้วย Premium คุณสามารถเพิ่มบันทึกเพิ่มเติมได้ไม่จำกัดในทุกบันทึกของไดอารี</string>
+    <string name="follow_up_premium_hint">ตั้งแต่บันทึกเพิ่มเติมที่สองเป็นต้นไป</string>
+    <string name="follow_up_premium_later">ตัดสินใจทีหลัง</string>
+    <string name="follow_up_premium_subscribe">เริ่มสมัครสมาชิก</string>
+    <string name="follow_up_premium_subtext">บันทึกเพิ่มเติมทุกรายการจะถูกรวมในแดชบอร์ดโดยอัตโนมัติ เพื่อให้การวิเคราะห์ของคุณครบถ้วนเสมอ</string>
+    <string name="follow_up_premium_title">บันทึกเพิ่มเติมไม่จำกัด</string>
+    <string name="follow_up_save">บันทึก</string>
+    <string name="follow_up_save_improved">บันทึกเวอร์ชันที่ปรับปรุงแล้ว</string>
+    <string name="follow_up_show_improved">✨ แสดงเวอร์ชันที่ปรับปรุงแล้ว</string>
+    <string name="follow_up_show_original">↩ แสดงต้นฉบับ</string>
+    <string name="follow_up_speak_pill_label">บันทึกเสียง</string>
+    <string name="follow_up_speak_prompt">พูดบันทึกเพิ่มเติมของคุณ</string>
+    <string name="follow_up_stop_hint">แตะหยุดเมื่อเสร็จแล้ว</string>
+    <string name="follow_up_tab_improved">✨ AI ปรับปรุง</string>
+    <string name="follow_up_tab_original">ต้นฉบับ</string>
+    <string name="follow_up_text_placeholder">เขียนบันทึกเพิ่มเติมของคุณที่นี่…</string>
+    <string name="follow_up_transcribing">กำลังแปลงบันทึกเพิ่มเติมเป็นข้อความ…</string>
+    <string name="journal_improve">ปรับปรุงข้อความ</string>
+    <string name="journal_state_improving">กำลังปรับปรุง…</string>
+    <string name="journal_state_transcribing">กำลังแปลงเป็นข้อความ…</string>
+    <string name="profile_custom_add">เพิ่มการวิเคราะห์ส่วนตัว</string>
+    <string name="profile_custom_remove">ลบการวิเคราะห์ส่วนตัว</string>
+    <string name="profile_custom_rename">เปลี่ยนชื่อ</string>
+    <string name="profile_custom_rename_save">บันทึกชื่อ</string>
+    <string name="prompt_clear_confirm_text">การวิเคราะห์ส่วนตัวจะถูกลบอย่างถาวร ต้องการดำเนินการต่อหรือไม่?</string>
+    <string name="prompt_clear_confirm_title">ลบข้อความ?</string>
+    <string name="prompt_clear_content_desc">ลบข้อความ</string>
+    <string name="prompt_recording_with_model">กำลังบันทึก — โมเดล: <xliff:g id="model" example="Whisper">%1$s</xliff:g></string>
+    <string name="prompt_transcribing_with_model"><xliff:g id="model" example="Whisper">%1$s</xliff:g> กำลังแปลงเป็นข้อความ…</string>
+    <string name="prompt_transcription_model_hint">แปลงเป็นข้อความด้วย <xliff:g id="model" example="Whisper">%1$s</xliff:g></string>
+    <string name="ai_retro_copied_message">คัดลอกไปยังคลิปบอร์ดแล้ว</string>
+    <string name="ai_retro_copy_button">คัดลอก</string>
+    <string name="ai_retro_empty_state">มีรายการไม่พอสำหรับรีวิว</string>
+    <string name="ai_retro_error_state">สร้างรีวิวไม่ได้ ลองอีกครั้ง</string>
+    <string name="ai_retro_generate_button">สร้างรีวิว</string>
+    <string name="ai_retro_generating_state">กำลังสร้างรีวิว…</string>
+    <string name="ai_retro_month_label">เดือนนี้</string>
+    <string name="ai_retro_share_button">แชร์</string>
+    <string name="ai_retro_title">รีวิว AI</string>
+    <string name="ai_retro_week_label">สัปดาห์นี้</string>
+    <string name="ai_retro_year_label">ปีนี้</string>
+    <string name="follow_up_add_button">เพิ่มบันทึกต่อเนื่อง</string>
+    <string name="follow_up_delete_confirm_no">ไม่ เก็บไว้</string>
+    <string name="follow_up_delete_confirm_yes">ใช่ ลบ</string>
+    <string name="follow_up_empty_state">ยังไม่มีบันทึกต่อเนื่อง\nแตะปุ่มด้านล่างเพื่อเพิ่มรายการแรก</string>
+    <string name="follow_up_improve_button">ปรับปรุง</string>
+    <string name="follow_up_improve_error">ปรับปรุงไม่ได้ ลองอีกครั้ง</string>
+    <string name="follow_up_improving_state">กำลังปรับปรุง…</string>
+    <string name="follow_up_record_error">บันทึกเสียงไม่ได้ ลองอีกครั้ง</string>
+    <string name="follow_up_record_new">บันทึกบันทึกต่อเนื่องใหม่</string>
+    <string name="follow_up_recording_hint">แตะเพื่อบันทึก</string>
+    <string name="follow_up_recording_state">กำลังบันทึก…</string>
+    <string name="follow_up_tab_label">บันทึกต่อเนื่อง</string>
+    <string name="follow_up_transcribe_error">ถอดเสียงไม่ได้ ลองอีกครั้ง</string>
+    <string name="follow_up_transcribing_state">กำลังถอดเสียง…</string>
+    <string name="prompt_char_count_label">%1$d อักขระ</string>
+    <string name="prompt_improve_button_label">ปรับปรุง</string>
+    <string name="prompt_placeholder_text">เขียนสิ่งที่อยู่ในใจ…</string>
+    <string name="prompt_record_button_label">บันทึก</string>
+    <string name="prompt_send_button_label">ส่ง</string>
+    <string name="prompt_stop_button_label">หยุด</string>
+    <string name="settings_legal_section_header">เอกสารทางกฎหมาย</string>
+    <string name="settings_legal_online_label">เวอร์ชันออนไลน์:</string>
+    <plurals name="datetime_months_relative">
+        <item quantity="other">%1$d เดือนที่แล้ว</item>
+    </plurals>
+    <plurals name="datetime_years_relative">
+        <item quantity="other">%1$d ปีที่แล้ว</item>
+    </plurals>
+    <string name="ai_limits_disclaimer">โควต้า AI รายวันสำหรับการใช้งานอย่างเข้มข้น</string>
+    <string name="ai_limits_dialog_title">โควต้า AI รายวันทำงานอย่างไร?</string>
+    <string name="ai_limits_dialog_body" formatted="false">ด้วยการสมัครสมาชิก Premium
+
+สิ่งที่คุณได้รับต่อวัน:
+• 150 คำขอต่อวันต่อโปรไฟล์ — 4 โปรไฟล์ที่กำหนดไว้รวม 600/วัน บวก 150/วันสำหรับโปรไฟล์กำหนดเองแต่ละรายการที่คุณสร้าง
+• การปรับปรุงข้อความสูงสุด 150 ครั้ง
+
+รายละเอียด:
+• คำขอที่ 1-30: คุณภาพ AI สูงสุด
+• คำขอที่ 31-100: คุณภาพมาตรฐานรวดเร็ว
+• คำขอที่ 101: หยุดพัก 30 นาทีครั้งเดียว
+• คำขอที่ 101-150: คุณภาพมาตรฐานรวดเร็ว
+• ตั้งแต่คำขอที่ 151: ไม่รับคำขออีกจนถึงวันพรุ่งนี้
+
+สำหรับผู้ใช้ทุกคน:
+• สูงสุด 50 คำขอ AI ต่อชั่วโมง — จากนั้นพักชั่วคราว 5 นาที
+
+โควต้าจะรีเซ็ตเมื่อไหร่?
+ทุกวันเวลา 0:00 น. (เวลาท้องถิ่นของคุณ) โควต้าเต็มใหม่จะเริ่มต้น
+
+──────────
+
+ไม่มีการสมัครสมาชิก
+
+• 5 การวิเคราะห์แดชบอร์ดต่อสัปดาห์ต่อโปรไฟล์
+• 5 การปรับปรุงข้อความต่อสัปดาห์
+• คุณภาพมาตรฐานรวดเร็วเสมอ
+• รีเซ็ตทุกวันจันทร์เวลา 0:00 น. (เวลาท้องถิ่นของคุณ)
+
+──────────
+
+ผู้ใช้ส่วนใหญ่ในชีวิตประจำวันจะไม่ถึงขีดจำกัดเหล่านี้</string>
+    <string name="ai_limits_dialog_close">เข้าใจแล้ว</string>
+    <string name="theme_neutral">เป็นกลาง</string>
+    <string name="theme_profile">สีโปรไฟล์ — สีโปรไฟล์แดชบอร์ด</string>
+    <string name="theme_solarized">ครีษมายัน</string>
+    <string name="theme_dracula">เที่ยงคืน</string>
+    <string name="theme_one_dark">สตูดิโอ</string>
+    <string name="theme_nord">คืนขั้วโลก</string>
+    <string name="theme_gruvbox">อำพัน</string>
+    <string name="ai_output_health_disclaimer">ไม่ใช่การบำบัด — ไม่สามารถแทนที่คำปรึกษาจากผู้เชี่ยวชาญได้</string>
+    <string name="ai_output_health_disclaimer_long">Best Journal คือไดอารีและไม่ใช่บริการบำบัด การวิเคราะห์โดย AI เป็นแรงบันดาลใจสำหรับการสะท้อนตนเอง และไม่สามารถแทนที่คำปรึกษาทางจิตวิทยาหรือการแพทย์จากผู้เชี่ยวชาญได้ หากมีปัญหาเฉพาะหน้า โปรดติดต่อผู้เชี่ยวชาญหรือสายด่วนช่วยเหลือวิกฤตในการตั้งค่าของคุณ</string>
+    <string name="consent_footer_link_datenschutz">นโยบายความเป็นส่วนตัว</string>
+    <string name="consent_footer_link_impressum">ข้อมูลผู้ให้บริการ</string>
+    <string name="consent_footer_link_agb">ข้อกำหนดการใช้งาน</string>
+
+    <!-- Churn & Theme strings (added 2026-05-22) -->
+    <string name="churn_cancelled">ยกเลิกแล้ว</string>
+    <string name="churn_cancelled_ends_on">ยกเลิกแล้ว — สิ้นสุด <xliff:g id="date" example="30.04.2026, 18:13">%1$s</xliff:g></string>
+    <string name="churn_promo_phase_ends">สิ้นสุด <xliff:g id="date" example="30.04.2026, 18:13">%1$s</xliff:g> — หลังจากนั้น <xliff:g id="base_price" example="3,99 €">%2$s</xliff:g> ต่อเดือน</string>
+    <string name="churn_reason_other_placeholder">โปรดบอกเราสั้นๆ ว่าเกิดอะไรขึ้น…</string>
+    <string name="churn_renews_on">ต่ออายุอัตโนมัติ <xliff:g id="date" example="30.04.2026, 18:13">%1$s</xliff:g></string>
+    <string name="settings_premium_cancelled">ยกเลิก Premium แล้ว</string>
+    <string name="settings_premium_cancelled_desc">ฟีเจอร์ Premium ของคุณยังคงใช้งานได้จนถึงสิ้นรอบบิลปัจจุบัน คุณสามารถยกเลิกการยกเลิกได้ผ่าน Google Play</string>
+    <string name="settings_premium_cancelled_until">ยกเลิก Premium แล้ว — ยังใช้ได้ถึง <xliff:g id="date" example="30.04.2026, 21:01">%1$s</xliff:g></string>
+    <string name="settings_theme">ธีม</string>
+    <string name="settings_themes_manager">ตัวจัดการธีม</string>
+    <string name="paywall_monthly_note">หลังจากนั้น %1$s ต่อเดือน ต่ออายุอัตโนมัติ\nยกเลิกได้ทุกเมื่อ</string>
+</resources>

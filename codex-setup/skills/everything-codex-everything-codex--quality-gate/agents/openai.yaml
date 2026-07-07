@@ -1,0 +1,7 @@
+interface:
+  display_name: "quality-gate"
+  short_description: "quality-gate"
+  default_prompt: "Use $everything-codex-everything-codex--quality-gate for this task."
+
+policy:
+  allow_implicit_invocation: false

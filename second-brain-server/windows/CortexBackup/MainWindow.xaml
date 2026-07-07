@@ -1,0 +1,161 @@
+<Window x:Class="CortexBackup.MainWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="Cortex Backup" Height="560" Width="640"
+        WindowStartupLocation="CenterScreen" ResizeMode="CanMinimize"
+        Background="#13111C" FontFamily="Segoe UI" UseLayoutRounding="True">
+
+    <Window.Resources>
+        <!-- Großer Aktions-Knopf -->
+        <Style x:Key="BigBtn" TargetType="Button">
+            <Setter Property="Foreground" Value="White"/>
+            <Setter Property="FontSize" Value="15"/>
+            <Setter Property="FontWeight" Value="SemiBold"/>
+            <Setter Property="Cursor" Value="Hand"/>
+            <Setter Property="Height" Value="64"/>
+            <Setter Property="Margin" Value="0,0,0,0"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Button">
+                        <Border x:Name="b" CornerRadius="14" Background="{TemplateBinding Background}">
+                            <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="b" Property="Opacity" Value="0.88"/>
+                            </Trigger>
+                            <Trigger Property="IsEnabled" Value="False">
+                                <Setter TargetName="b" Property="Opacity" Value="0.4"/>
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+        <!-- Kleiner Sekundär-Knopf -->
+        <Style x:Key="MiniBtn" TargetType="Button">
+            <Setter Property="Foreground" Value="White"/>
+            <Setter Property="FontSize" Value="13"/>
+            <Setter Property="Cursor" Value="Hand"/>
+            <Setter Property="Height" Value="38"/>
+            <Setter Property="Padding" Value="14,0"/>
+            <Setter Property="Background" Value="#2A2440"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Button">
+                        <Border x:Name="b" CornerRadius="10" Background="{TemplateBinding Background}" Padding="{TemplateBinding Padding}">
+                            <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="b" Property="Background" Value="#363052"/>
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+    </Window.Resources>
+
+    <Grid Margin="24">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="*"/>
+            <RowDefinition Height="Auto"/>
+        </Grid.RowDefinitions>
+
+        <!-- Kopf -->
+        <StackPanel Grid.Row="0" Orientation="Horizontal" Margin="0,0,0,14">
+            <Border Width="44" Height="44" CornerRadius="12" Margin="0,0,14,0">
+                <Border.Background>
+                    <LinearGradientBrush StartPoint="0,0" EndPoint="0,1">
+                        <GradientStop Color="#7C3AED" Offset="0"/>
+                        <GradientStop Color="#2563EB" Offset="1"/>
+                    </LinearGradientBrush>
+                </Border.Background>
+                <TextBlock Text="&#x2193;" Foreground="White" FontSize="24" FontWeight="Bold"
+                           HorizontalAlignment="Center" VerticalAlignment="Center"/>
+            </Border>
+            <StackPanel VerticalAlignment="Center">
+                <TextBlock Text="Cortex Backup" Foreground="White" FontSize="22" FontWeight="Bold"/>
+                <TextBlock Text="Komplett-Sicherung des zweiten Gehirns auf diesen PC" Foreground="#9B93B5" FontSize="12"/>
+            </StackPanel>
+        </StackPanel>
+
+        <!-- Status -->
+        <Border Grid.Row="1" Background="#1C1830" CornerRadius="12" Padding="14,12" Margin="0,0,0,16">
+            <StackPanel>
+                <TextBlock x:Name="ServerInfo" Foreground="#C9C2DD" FontSize="12.5" Text="Server: (nicht eingerichtet)"/>
+                <TextBlock x:Name="LastBackup" Foreground="#9B93B5" FontSize="12" Margin="0,3,0,0" Text="Letztes Backup: —"/>
+            </StackPanel>
+        </Border>
+
+        <!-- Backup-Ordner mit Durchsuchen -->
+        <StackPanel Grid.Row="2" Margin="0,0,0,16">
+            <TextBlock Text="Backup-Ordner (wohin gespeichert wird)" Foreground="#9B93B5" FontSize="12" Margin="0,0,0,6"/>
+            <Grid>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="Auto"/>
+                </Grid.ColumnDefinitions>
+                <Border Grid.Column="0" Background="#1C1830" CornerRadius="10" Padding="12,0" Height="40">
+                    <TextBlock x:Name="DestBox" Foreground="White" FontSize="13" VerticalAlignment="Center"
+                               TextTrimming="CharacterEllipsis" Text="C:\CortexBackup"/>
+                </Border>
+                <Button Grid.Column="1" Style="{StaticResource MiniBtn}" Margin="8,0,0,0" Height="40"
+                        Click="OnBrowse" Content="Durchsuchen…"/>
+            </Grid>
+        </StackPanel>
+
+        <!-- Drei Hauptknöpfe -->
+        <Grid Grid.Row="3" Margin="0,0,0,16">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="*"/>
+                <ColumnDefinition Width="12"/>
+                <ColumnDefinition Width="*"/>
+                <ColumnDefinition Width="12"/>
+                <ColumnDefinition Width="*"/>
+            </Grid.ColumnDefinitions>
+            <Button x:Name="BackupBtn" Grid.Column="0" Style="{StaticResource BigBtn}" Click="OnBackup">
+                <Button.Background>
+                    <LinearGradientBrush StartPoint="0,0" EndPoint="0,1">
+                        <GradientStop Color="#7C3AED" Offset="0"/>
+                        <GradientStop Color="#2563EB" Offset="1"/>
+                    </LinearGradientBrush>
+                </Button.Background>
+                <StackPanel HorizontalAlignment="Center">
+                    <TextBlock Text="&#x1F512;" FontSize="18" HorizontalAlignment="Center"/>
+                    <TextBlock Text="Backup jetzt" HorizontalAlignment="Center" Margin="0,2,0,0"/>
+                </StackPanel>
+            </Button>
+            <Button x:Name="RestoreBtn" Grid.Column="2" Style="{StaticResource BigBtn}" Background="#2A2440" Click="OnRestore">
+                <StackPanel HorizontalAlignment="Center">
+                    <TextBlock Text="&#x267B;" FontSize="18" HorizontalAlignment="Center"/>
+                    <TextBlock Text="Wiederherstellen" HorizontalAlignment="Center" Margin="0,2,0,0"/>
+                </StackPanel>
+            </Button>
+            <Button x:Name="SetupBtn" Grid.Column="4" Style="{StaticResource BigBtn}" Background="#2A2440" Click="OnSetup">
+                <StackPanel HorizontalAlignment="Center">
+                    <TextBlock Text="&#x2699;" FontSize="18" HorizontalAlignment="Center"/>
+                    <TextBlock Text="Einrichtung" HorizontalAlignment="Center" Margin="0,2,0,0"/>
+                </StackPanel>
+            </Button>
+        </Grid>
+
+        <!-- Log -->
+        <Border Grid.Row="4" Background="#0E0C16" CornerRadius="12" Padding="2">
+            <ScrollViewer x:Name="LogScroll" VerticalScrollBarVisibility="Auto">
+                <TextBox x:Name="LogBox" Background="Transparent" Foreground="#B7E3C8" BorderThickness="0"
+                         FontFamily="Consolas" FontSize="12" IsReadOnly="True" TextWrapping="Wrap"
+                         Padding="12" Text="Bereit. Tippe auf Backup jetzt."/>
+            </ScrollViewer>
+        </Border>
+
+        <!-- Fuß -->
+        <TextBlock Grid.Row="5" x:Name="FootVer" Foreground="#5C5476" FontSize="11" Margin="0,10,0,0"
+                   Text="Cortex Backup 1.0.0"/>
+    </Grid>
+</Window>

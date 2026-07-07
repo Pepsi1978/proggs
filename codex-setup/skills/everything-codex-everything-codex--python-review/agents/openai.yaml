@@ -1,0 +1,7 @@
+interface:
+  display_name: "python-review"
+  short_description: "Comprehensive Python code review for PEP 8 compliance, type"
+  default_prompt: "Use $everything-codex-everything-codex--python-review for this task."
+
+policy:
+  allow_implicit_invocation: false

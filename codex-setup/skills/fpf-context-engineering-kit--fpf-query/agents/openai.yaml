@@ -1,0 +1,7 @@
+interface:
+  display_name: "fpf:query"
+  short_description: "Search the FPF knowledge base and display hypothesis details"
+  default_prompt: "Use $fpf-context-engineering-kit--fpf-query for this task."
+
+policy:
+  allow_implicit_invocation: false

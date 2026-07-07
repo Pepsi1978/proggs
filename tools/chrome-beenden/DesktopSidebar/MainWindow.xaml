@@ -1,0 +1,209 @@
+<Window x:Class="DesktopSidebar.MainWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="Chrome-Shutdown-Sidebar"
+        Width="92" Height="300"
+        WindowStyle="None"
+        ResizeMode="NoResize"
+        AllowsTransparency="True"
+        Background="Transparent"
+        ShowInTaskbar="False"
+        Topmost="True"
+        WindowStartupLocation="Manual"
+        UseLayoutRounding="True"
+        TextOptions.TextFormattingMode="Display"
+        FontFamily="Segoe UI Variable, Segoe UI">
+
+    <Window.Resources>
+        <!-- Symbol-Font: Windows 11 (Segoe Fluent Icons) mit Fallback auf Windows 10 (Segoe MDL2 Assets) -->
+        <FontFamily x:Key="IconFont">Segoe Fluent Icons, Segoe MDL2 Assets</FontFamily>
+
+        <!-- Premium Icon-Button: runder Glas-Knopf, nur Symbol, mit Hover-Scale -->
+        <Style x:Key="IconButton" TargetType="Button">
+            <Setter Property="Cursor" Value="Hand"/>
+            <Setter Property="SnapsToDevicePixels" Value="True"/>
+            <Setter Property="Width" Value="64"/>
+            <Setter Property="Height" Value="64"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Button">
+                        <Grid>
+                            <Border x:Name="Bg"
+                                    CornerRadius="22"
+                                    Background="{TemplateBinding Background}"
+                                    BorderBrush="#33FFFFFF"
+                                    BorderThickness="1"
+                                    RenderTransformOrigin="0.5,0.5">
+                                <Border.RenderTransform>
+                                    <ScaleTransform x:Name="Scale" ScaleX="1" ScaleY="1"/>
+                                </Border.RenderTransform>
+                                <Grid>
+                                    <!-- Glanz-Verlauf oben fuer den Glas-Effekt -->
+                                    <Border CornerRadius="22" Margin="1" IsHitTestVisible="False">
+                                        <Border.Background>
+                                            <LinearGradientBrush StartPoint="0,0" EndPoint="0,1">
+                                                <GradientStop Offset="0"    Color="#48FFFFFF"/>
+                                                <GradientStop Offset="0.45" Color="#0FFFFFFF"/>
+                                                <GradientStop Offset="1"    Color="#22000000"/>
+                                            </LinearGradientBrush>
+                                        </Border.Background>
+                                    </Border>
+                                    <TextBlock x:Name="Glyph"
+                                               FontFamily="{StaticResource IconFont}"
+                                               Text="{TemplateBinding Tag}"
+                                               FontSize="27"
+                                               Foreground="#FFFFFF"
+                                               HorizontalAlignment="Center"
+                                               VerticalAlignment="Center"/>
+                                </Grid>
+                            </Border>
+                        </Grid>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Trigger.EnterActions>
+                                    <BeginStoryboard>
+                                        <Storyboard>
+                                            <DoubleAnimation Storyboard.TargetName="Scale" Storyboard.TargetProperty="ScaleX" To="1.09" Duration="0:0:0.16"/>
+                                            <DoubleAnimation Storyboard.TargetName="Scale" Storyboard.TargetProperty="ScaleY" To="1.09" Duration="0:0:0.16"/>
+                                        </Storyboard>
+                                    </BeginStoryboard>
+                                </Trigger.EnterActions>
+                                <Trigger.ExitActions>
+                                    <BeginStoryboard>
+                                        <Storyboard>
+                                            <DoubleAnimation Storyboard.TargetName="Scale" Storyboard.TargetProperty="ScaleX" To="1" Duration="0:0:0.18"/>
+                                            <DoubleAnimation Storyboard.TargetName="Scale" Storyboard.TargetProperty="ScaleY" To="1" Duration="0:0:0.18"/>
+                                        </Storyboard>
+                                    </BeginStoryboard>
+                                </Trigger.ExitActions>
+                                <Setter TargetName="Bg" Property="BorderBrush" Value="#80FFFFFF"/>
+                            </Trigger>
+                            <Trigger Property="IsPressed" Value="True">
+                                <Setter TargetName="Bg" Property="Opacity" Value="0.82"/>
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+    </Window.Resources>
+
+    <Grid>
+        <!-- Dezenter Rand-Indikator: zeigt am Desktop, wo die eingeklappte Sidebar liegt.
+             Faehrt NICHT mit; der RootBorder legt sich beim Ausfahren darueber. -->
+        <Border x:Name="EdgeIndicator"
+                Width="4" Height="62"
+                CornerRadius="2,0,0,2"
+                HorizontalAlignment="Right" VerticalAlignment="Center"
+                Visibility="Collapsed">
+            <Border.Background>
+                <LinearGradientBrush StartPoint="0,0" EndPoint="0,1">
+                    <GradientStop Offset="0" Color="#7A3E82F7"/>
+                    <GradientStop Offset="1" Color="#7AE5413E"/>
+                </LinearGradientBrush>
+            </Border.Background>
+            <Border.Effect>
+                <DropShadowEffect Color="#000000" BlurRadius="7" ShadowDepth="0" Opacity="0.55"/>
+            </Border.Effect>
+        </Border>
+
+        <!-- Der gesamte sichtbare Inhalt liegt im RootBorder. SlideTransform faehrt ihn rein/raus. -->
+        <Border x:Name="RootBorder"
+                CornerRadius="26,0,0,26"
+                Margin="0"
+                Height="188" VerticalAlignment="Center"
+                Cursor="SizeNS"
+                ToolTip="Zum Verschieben hoch/runter ziehen"
+                BorderBrush="#2EFFFFFF"
+                BorderThickness="1,1,0,1">
+            <Border.Background>
+                <LinearGradientBrush StartPoint="0,0" EndPoint="0,1">
+                    <GradientStop Offset="0" Color="#F221222B"/>
+                    <GradientStop Offset="1" Color="#F2111218"/>
+                </LinearGradientBrush>
+            </Border.Background>
+            <Border.RenderTransform>
+                <TranslateTransform x:Name="SlideTransform" X="132"/>
+            </Border.RenderTransform>
+            <Border.Effect>
+                <DropShadowEffect Color="#000000" BlurRadius="26" ShadowDepth="0" Opacity="0.5"/>
+            </Border.Effect>
+
+            <Grid>
+                <!-- Die zwei Symbol-Buttons, vertikal zentriert -->
+                <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center" Margin="0,0,2,0">
+                    <!-- Neustart (blau) -->
+                    <Button x:Name="RestartButton"
+                            Style="{StaticResource IconButton}"
+                            Tag="&#xE777;"
+                            Click="RestartButton_Click">
+                        <Button.Background>
+                            <LinearGradientBrush StartPoint="0,0" EndPoint="0,1">
+                                <GradientStop Offset="0" Color="#FF3E82F7"/>
+                                <GradientStop Offset="1" Color="#FF1E5FD8"/>
+                            </LinearGradientBrush>
+                        </Button.Background>
+                        <Button.Effect>
+                            <DropShadowEffect Color="#3E82F7" BlurRadius="22" ShadowDepth="0" Opacity="0.55"/>
+                        </Button.Effect>
+                    </Button>
+
+                    <!-- Herunterfahren (rot) -->
+                    <Button x:Name="ShutdownButton"
+                            Style="{StaticResource IconButton}"
+                            Tag="&#xE7E8;"
+                            Margin="0,20,0,0"
+                            Click="ShutdownButton_Click">
+                        <Button.Background>
+                            <LinearGradientBrush StartPoint="0,0" EndPoint="0,1">
+                                <GradientStop Offset="0" Color="#FFF1595D"/>
+                                <GradientStop Offset="1" Color="#FFCF2E32"/>
+                            </LinearGradientBrush>
+                        </Button.Background>
+                        <Button.Effect>
+                            <DropShadowEffect Color="#E5413E" BlurRadius="22" ShadowDepth="0" Opacity="0.55"/>
+                        </Button.Effect>
+                    </Button>
+                </StackPanel>
+
+                <!-- Countdown-Overlay (liegt ueber allem, normal unsichtbar) -->
+                <Border x:Name="CountdownOverlay"
+                        CornerRadius="25,0,0,25"
+                        Background="#F00C0C12"
+                        Visibility="Collapsed">
+                    <StackPanel VerticalAlignment="Center" HorizontalAlignment="Center" Margin="6">
+                        <TextBlock x:Name="CountdownGlyph"
+                                   FontFamily="{StaticResource IconFont}" Text="&#xE777;"
+                                   FontSize="24" Foreground="#D8FFFFFF"
+                                   HorizontalAlignment="Center"/>
+                        <TextBlock x:Name="CountdownNumber" Text="3"
+                                   FontSize="48" FontWeight="Bold" Foreground="#FFFFFF"
+                                   HorizontalAlignment="Center" Margin="0,2,0,0"/>
+                        <Button x:Name="CancelButton"
+                                Width="42" Height="42" Margin="0,16,0,0"
+                                Cursor="Hand" Tag="&#xE711;"
+                                Click="CancelButton_Click">
+                            <Button.Template>
+                                <ControlTemplate TargetType="Button">
+                                    <Border x:Name="Cb" CornerRadius="21"
+                                            Background="#22FFFFFF"
+                                            BorderBrush="#44FFFFFF" BorderThickness="1">
+                                        <TextBlock FontFamily="{StaticResource IconFont}"
+                                                   Text="{TemplateBinding Tag}"
+                                                   FontSize="16" Foreground="#FFFFFF"
+                                                   HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                    </Border>
+                                    <ControlTemplate.Triggers>
+                                        <Trigger Property="IsMouseOver" Value="True">
+                                            <Setter TargetName="Cb" Property="Background" Value="#3DFFFFFF"/>
+                                        </Trigger>
+                                    </ControlTemplate.Triggers>
+                                </ControlTemplate>
+                            </Button.Template>
+                        </Button>
+                    </StackPanel>
+                </Border>
+            </Grid>
+        </Border>
+    </Grid>
+</Window>

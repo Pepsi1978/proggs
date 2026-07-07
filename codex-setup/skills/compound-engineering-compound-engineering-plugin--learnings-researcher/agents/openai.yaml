@@ -1,0 +1,7 @@
+interface:
+  display_name: "learnings-researcher"
+  short_description: "Searches docs/solutions/ for relevant past solutions by"
+  default_prompt: "Use $compound-engineering-compound-engineering-plugin--learnings-researcher for this task."
+
+policy:
+  allow_implicit_invocation: false

@@ -1,0 +1,7 @@
+interface:
+  display_name: "ruzzy"
+  short_description: "ruzzy skill"
+  default_prompt: "Use $testing-handbook-skills-trailofbits--ruzzy for this task."
+
+policy:
+  allow_implicit_invocation: false

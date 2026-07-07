@@ -1,0 +1,7 @@
+interface:
+  display_name: "git:attach-review-to-pr"
+  short_description: "Add line-specific review comments to pull requests using GitHub"
+  default_prompt: "Use $git-context-engineering-kit--git-attach-review-to-pr for this task."
+
+policy:
+  allow_implicit_invocation: false

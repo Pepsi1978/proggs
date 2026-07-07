@@ -1,0 +1,61 @@
+{
+ "sharedKeys": 1087,
+ "identicalBrPt": 611,
+ "identicalPct": 56.2,
+ "legalShared": 94,
+ "legalIdenticalBrPt": 33,
+ "legalIdenticalPct": 35.1,
+ "legalIdenticalKeys": [
+  "ai_improved_suffix_marker",
+  "churn_discount_badge",
+  "churn_instead_of",
+  "churn_offer_auto_renew",
+  "churn_promo_months_remaining",
+  "churn_promo_one_month_remaining",
+  "churn_switch_yearly",
+  "consent_footer_link_datenschutz",
+  "consent_toggle_do_not_sell_body",
+  "follow_up_premium_hint",
+  "follow_up_premium_title",
+  "journal_transcribed_with",
+  "onboarding_start_free",
+  "paywall_day7",
+  "paywall_exit_bonus_days",
+  "paywall_exit_discount",
+  "paywall_exit_price_comparison",
+  "paywall_feature_profiles",
+  "paywall_first_payment",
+  "paywall_from_per_day",
+  "paywall_headline_clarity_sub",
+  "paywall_reminder",
+  "paywall_with_limited",
+  "settings_auto_lock",
+  "settings_entries_auto_loaded",
+  "settings_legal_online_label",
+  "settings_premium_feature_profiles",
+  "settings_premium_lifetime",
+  "settings_revoke_subtitle",
+  "settings_unlock_premium",
+  "transcription_model_groq",
+  "urgency_high",
+  "legend_high_burden"
+ ],
+ "brMarkersInBr": {
+  "gerenciar": 3,
+  "excluir": 17,
+  "cancele": 4,
+  "time": 16,
+  "aplicativo": 9
+ },
+ "ptMarkersInPt": {
+  "gerir": 3,
+  "eliminar": 21,
+  "utilizador": 57
+ },
+ "ptMarkersInBr": {
+  "eliminar": 3
+ },
+ "brMarkersInPt": {
+  "time": 15
+ }
+}

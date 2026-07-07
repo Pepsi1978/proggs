@@ -1,0 +1,7 @@
+interface:
+  display_name: "semgrep-rule-variant-creator"
+  short_description: "Creates language variants of existing Semgrep rules"
+  default_prompt: "Use $semgrep-rule-variant-creator-trailofbits--semgrep-rule-variant-creator for this task."
+
+policy:
+  allow_implicit_invocation: false

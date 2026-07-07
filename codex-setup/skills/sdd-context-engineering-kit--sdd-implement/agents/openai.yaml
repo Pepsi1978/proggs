@@ -1,0 +1,7 @@
+interface:
+  display_name: "sdd:implement"
+  short_description: "Implement a task with automated LLM-as-Judge verification for"
+  default_prompt: "Use $sdd-context-engineering-kit--sdd-implement for this task."
+
+policy:
+  allow_implicit_invocation: false

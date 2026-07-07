@@ -1,0 +1,54 @@
+# rules-opencode — verkleinerte Regeln fuer OpenCode (Qdrant / zweites Gehirn)
+
+Dieser Ordner enthaelt **kompakte Fassungen** der Arbeitsregeln aus der Gehirn-Kategorie
+`Programmierung/Rules` (aktuell 15). Zweck: OpenCode (auf dem Qdrant-Server) laedt diese kleinen
+Versionen statt der grossen Originale — das spart Token. **Claude Code nutzt weiterhin die VOLLEN
+Regeln aus `~/.claude/rules/`** (diese hier ersetzen die nicht). Ausnahme: `anti-halluzination.md`
+ist eine NEUE, OpenCode-spezifische Regel ohne `~/.claude/rules/`-Original — ihre Vollfassung/Belege
+liegen in `best-practices/agents/anti-halluzination-regeln.md`.
+
+## Wie zurueckspeichern
+Jede Datei beginnt in der **ersten Zeile mit dem exakten Gehirn-Titel** (reiner Text, ohne `#`,
+ohne "(KRITISCH)"-Zusatz). Diese Zeile einfach markieren, kopieren und beim Speichern als Titel
+einfuegen — dann landet die kompakte Fassung unter demselben Titel + Kategorie
+`Programmierung/Rules` im Gehirn (ueberschreibt die grosse Version).
+
+## Mapping (Datei -> exakter Titel zum Kopieren)
+| Datei | Gehirn-Titel (1:1, erste Zeile der Datei) |
+|-------|--------------------------------------------|
+| observability-first.md | Observability-First: Sonden-, Logging- & Live-Monitoring-Standard |
+| known-bugs-before-coding.md | Bekannte Bugs ZUERST lesen, bevor an einer Technologie gearbeitet wird |
+| debugging-and-verification.md | Debugging & Verifikation: Systematisch statt Trial-and-Error |
+| parallel-sessions-git.md | Parallele Sessions — Commit & Push am geteilten main-Branch |
+| communication-and-language.md | Kommunikation, Sprache & Benutzer-Interaktion |
+| lossless-context-principle.md | Verlustfrei-Prinzip: Kontext reduzieren OHNE Funktionalitaet zu verlieren |
+| german-umlauts-always.md | Deutsche Umlaute immer verwenden |
+| research-persistence.md | Research-Persistenz: Recherchen in Best Practices & Bug-Almanache einarbeiten |
+| secrets-in-sk-folder.md | Secrets zentral im SK-Ordner (KRITISCH — Poka-Yoke Stufe 3) |
+| semicolon-task-separator.md | Semikolon-Trenner für mehrere Aufgaben in einem Prompt |
+| task-completion-summary.md | Pflicht-Schema am Ende jeder Aufgabe |
+| version-bump-visible-always.md | Versionszähler immer hochzählen — und SICHTBAR |
+| anti-halluzination.md | Anti-Halluzination: erst pruefen, dann behaupten — nichts erfinden |
+| projekt-wissen-aus-gehirn.md | Projekt-Wissen aus dem Gehirn zuerst lesen (Kategorie Projekte) |
+| commit-push-jede-aufgabe-vor-build.md | Commit & Push nach JEDER Aufgabe — immer VOR Build/Install/Deploy |
+
+Kategorie fuer alle 15: `Programmierung/Rules`.
+
+## BEWUSST AUSGESCHLOSSEN — NICHT wieder anlegen (Frank 2026-07-07)
+`commit-before-build.md` und `git-workflow.md` gehoeren **absichtlich NICHT** in diesen Ordner
+und **NICHT** ins Gehirn (`Programmierung/Rules`). Grund: ChatGPT 5.5 im High-Modus hat sehr gute
+eigene Regeln und erkennt Grenzfaelle selbst — diese beiden Regeln haben das OpenCode-System nur
+durcheinandergebracht. Sie wurden hier entfernt. **Diese zwei Dateien NIEMALS wieder in
+`rules-opencode/` erzeugen** und **NICHT** ins Gehirn hochladen. Zusaetzlich abgesichert durch die
+Blocklist `SKIP_RULE_FILES` in `cortex_sync.py` (das Sync-Skript ueberspringt sie hart). Claude Code
+selbst nutzt die Vollregeln in `~/.claude/rules/` weiterhin — betroffen ist NUR die OpenCode-Weitergabe.
+
+> Hinweis: `commit-push-jede-aufgabe-vor-build.md` ist eine OpenCode-spezifische Regel (kein
+> `~/.claude/rules/`-Original). Sie schaerft `commit-before-build.md` fuer OpenCode: gilt fuer JEDES
+> Modell und verlangt Commit+Push nach JEDER einzelnen Aufgabe (auch bei Multi-Task-Prompts).
+
+## Grundsatz der Verkleinerung
+Verkleinert heisst: alle Handlungsregeln, MUSS-/NIEMALS-Punkte und konkreten Befehle/Formate
+bleiben erhalten — nur Vorfall-Anekdoten, Quellenangaben (arXiv etc.), "Zusammenspiel mit anderen
+Regeln"-Tabellen, ausfuehrliche Code-Beispiele und Wiederholungen sind entfernt. Reicht eine Regel
+im Einzelfall inhaltlich nicht aus, gilt die Vollfassung in `~/.claude/rules/<gleicher-dateiname>`.

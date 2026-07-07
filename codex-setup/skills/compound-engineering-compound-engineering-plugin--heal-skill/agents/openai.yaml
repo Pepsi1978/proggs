@@ -1,0 +1,7 @@
+interface:
+  display_name: "heal-skill"
+  short_description: "Fix incorrect SKILL.md files when a skill has wrong"
+  default_prompt: "Use $compound-engineering-compound-engineering-plugin--heal-skill for this task."
+
+policy:
+  allow_implicit_invocation: false

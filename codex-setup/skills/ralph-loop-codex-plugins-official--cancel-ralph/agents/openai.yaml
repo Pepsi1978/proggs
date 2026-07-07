@@ -1,0 +1,7 @@
+interface:
+  display_name: "cancel-ralph"
+  short_description: "Cancel active Ralph Loop"
+  default_prompt: "Use $ralph-loop-codex-plugins-official--cancel-ralph for this task."
+
+policy:
+  allow_implicit_invocation: false

@@ -1,0 +1,7 @@
+interface:
+  display_name: "constant-time-testing"
+  short_description: "constant-time-testing skill"
+  default_prompt: "Use $testing-handbook-skills-trailofbits--constant-time-testing for this task."
+
+policy:
+  allow_implicit_invocation: false

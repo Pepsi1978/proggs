@@ -1,0 +1,7 @@
+interface:
+  display_name: "django-tdd"
+  short_description: "Django testing strategies with pytest-django, TDD methodology"
+  default_prompt: "Use $everything-codex-everything-codex--django-tdd for this task."
+
+policy:
+  allow_implicit_invocation: false

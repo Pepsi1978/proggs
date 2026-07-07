@@ -1,0 +1,7 @@
+interface:
+  display_name: "constant-time-analysis"
+  short_description: "Detects timing side-channel vulnerabilities in cryptographic"
+  default_prompt: "Use $constant-time-analysis-trailofbits--constant-time-analysis for this task."
+
+policy:
+  allow_implicit_invocation: false

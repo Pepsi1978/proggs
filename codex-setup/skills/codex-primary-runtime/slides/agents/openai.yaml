@@ -1,0 +1,7 @@
+interface:
+  display_name: "PowerPoint"
+  short_description: "Create and edit PowerPoint slide decks"
+  default_prompt: "Use $slides for this task."
+
+policy:
+  allow_implicit_invocation: true

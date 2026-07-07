@@ -1,0 +1,7 @@
+interface:
+  display_name: "kaizen:root-cause-tracing"
+  short_description: "errors occur deep in execution and you need to trace back to"
+  default_prompt: "Use $kaizen-context-engineering-kit--kaizen-root-cause-tracing for this task."
+
+policy:
+  allow_implicit_invocation: false

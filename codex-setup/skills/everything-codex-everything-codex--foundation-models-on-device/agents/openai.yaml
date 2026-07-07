@@ -1,0 +1,7 @@
+interface:
+  display_name: "foundation-models-on-device"
+  short_description: "Apple FoundationModels framework for on-device LLM — text"
+  default_prompt: "Use $everything-codex-everything-codex--foundation-models-on-device for this task."
+
+policy:
+  allow_implicit_invocation: false

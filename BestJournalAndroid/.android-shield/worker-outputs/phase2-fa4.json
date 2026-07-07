@@ -1,0 +1,13 @@
+{
+  "worker": "fa4",
+  "applied": [
+    {
+      "findingId": "A7",
+      "file": "app/src/main/java/com/bestjournal/app/ui/screens/dashboard/DashboardScreen.kt",
+      "change": "AiOutputDisclaimer() (KI-Disclaimer) am Ende des AdviceDerivationDialog-Contents (in der scrollbaren Column, vor confirmButton) eingefuegt, plus Spacer(12.dp). Aufruf-Stil 1:1 wie bestehende Verwendung in derselben Datei (Z.1455, voll-qualifiziert) und wie in RetrospectiveScreen/EntryDetailScreen. Kein Import noetig (voll-qualifizierter Aufruf).",
+      "lines": "2320-2321"
+    }
+  ],
+  "skipped": [],
+  "plugin_bugs_observed": []
+}

@@ -1,0 +1,7 @@
+interface:
+  display_name: "resilient-bugfixing"
+  short_description: "Apply durable bugfix discipline and safeguards"
+  default_prompt: "Use $resilient-bugfixing for this task."
+
+policy:
+  allow_implicit_invocation: true

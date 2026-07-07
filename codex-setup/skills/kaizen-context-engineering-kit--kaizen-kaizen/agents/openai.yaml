@@ -1,0 +1,7 @@
+interface:
+  display_name: "kaizen:kaizen"
+  short_description: "Code implementation and refactoring, architecturing or"
+  default_prompt: "Use $kaizen-context-engineering-kit--kaizen-kaizen for this task."
+
+policy:
+  allow_implicit_invocation: false

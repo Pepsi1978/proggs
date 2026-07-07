@@ -1,0 +1,61 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <OutputType>WinExe</OutputType>
+    <TargetFramework>$(DotNetTfm)-windows</TargetFramework>
+    <Nullable>enable</Nullable>
+    <UseWPF>true</UseWPF>
+    <UseWindowsForms>true</UseWindowsForms>
+    <ApplicationManifest>app.manifest</ApplicationManifest>
+    <!-- Per-Monitor DPI Awareness V2: bei aktivem UseWindowsForms muss
+         die High-DPI-Konfiguration ueber diese csproj-Property laufen, NICHT
+         ueber den Manifest-Block <dpiAwareness>. Sonst meldet der Compiler
+         WFAC010. WPF-Windows in derselben Application erben den Modus
+         automatisch ueber den Process-DPI-Awareness-Aufruf den der
+         WinForms-Startup-Pfad in App.OnStartup vor dem ersten WPF-Window
+         absetzt. -->
+    <ApplicationHighDpiMode>PerMonitorV2</ApplicationHighDpiMode>
+    <RootNamespace>TerminalVoiceOverlay</RootNamespace>
+    <AssemblyName>TerminalVoiceOverlay</AssemblyName>
+    <Product>Spracheingabe - Terminal</Product>
+    <!-- Sichtbare Version (Regel version-bump-visible-always): in den EXE-Datei-Eigenschaften
+         (Details -> Produktversion) pruefbar. Bei JEDER Aenderung hochzaehlen. -->
+    <Version>1.4.30</Version>
+    <InformationalVersion>1.4.30 (28.06.2026, 12.57 Uhr)</InformationalVersion>
+    <AssemblyTitle>Spracheingabe - Terminal</AssemblyTitle>
+    <Company>Voice Overlay</Company>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="NAudio" Version="$(NAudioVersion)" />
+    <PackageReference Include="Microsoft.Extensions.DependencyInjection" Version="$(MicrosoftPackagesVersion)" />
+    <PackageReference Include="Microsoft.Extensions.Logging" Version="$(MicrosoftPackagesVersion)" />
+    <PackageReference Include="Microsoft.EntityFrameworkCore.Sqlite" Version="$(MicrosoftPackagesVersion)" />
+    <PackageReference Include="Google.Apis.Drive.v3" Version="$(GoogleApisDriveVersion)" />
+    <PackageReference Include="Google.Apis.Auth" Version="$(GoogleApisAuthVersion)" />
+  </ItemGroup>
+
+  <!-- PromptBoard.Core und PromptBoard.Data leben jetzt als Subprojekte
+       direkt unter diesem Hauptprojekt. Das WPF-SDK wuerde sonst alle .cs-
+       Files in den Unterverzeichnissen automatisch als Quelle des Haupt-
+       Assemblies aufnehmen — und dieselben Typen kaemen ein zweites Mal
+       ueber die ProjectReferences rein, was zu CS0436-Warnungen und
+       moeglichen Laufzeit-Verwechslungen fuehren wuerde. Wir schliessen
+       die Subprojekt-Verzeichnisse darum explizit aus. -->
+  <ItemGroup>
+    <Compile Remove="PromptBoard.Core\**\*" />
+    <Compile Remove="PromptBoard.Data\**\*" />
+    <Page Remove="PromptBoard.Core\**\*" />
+    <Page Remove="PromptBoard.Data\**\*" />
+    <None Remove="PromptBoard.Core\**\*" />
+    <None Remove="PromptBoard.Data\**\*" />
+    <EmbeddedResource Remove="PromptBoard.Core\**\*" />
+    <EmbeddedResource Remove="PromptBoard.Data\**\*" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="PromptBoard.Core\PromptBoard.Core.csproj" />
+    <ProjectReference Include="PromptBoard.Data\PromptBoard.Data.csproj" />
+  </ItemGroup>
+
+</Project>

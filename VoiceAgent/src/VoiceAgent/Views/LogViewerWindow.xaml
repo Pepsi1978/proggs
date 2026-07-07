@@ -1,0 +1,26 @@
+<Window x:Class="VoiceAgent.Views.LogViewerWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="VoiceAgent — Live-Log (Sprach-Turns)" Height="600" Width="940"
+        Icon="/assets/voiceagent.ico"
+        WindowStartupLocation="CenterOwner" Background="{DynamicResource WindowBackground}">
+    <Grid Margin="10">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="*"/>
+        </Grid.RowDefinitions>
+
+        <StackPanel Grid.Row="0" Orientation="Horizontal" Margin="0,0,0,8">
+            <CheckBox x:Name="OnlyTurnsBox" Content="Nur Sprach-Turns" Foreground="{DynamicResource TextPrimary}"
+                      VerticalAlignment="Center" Margin="0,0,16,0" Click="OnlyTurns_Click"/>
+            <Button Content="Leeren" Padding="12,4" Click="Clear_Click"/>
+            <TextBlock Text="liest %LOCALAPPDATA%\VoiceAgent\logs\voiceagent.log live mit"
+                       Foreground="{DynamicResource TextMuted}" FontSize="11" VerticalAlignment="Center" Margin="16,0,0,0"/>
+        </StackPanel>
+
+        <TextBox x:Name="LogBox" Grid.Row="1" IsReadOnly="True"
+                 FontFamily="Cascadia Mono, Consolas" FontSize="12"
+                 Background="{DynamicResource LogBackground}" Foreground="{DynamicResource LogForeground}" TextWrapping="NoWrap"
+                 VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Auto"/>
+    </Grid>
+</Window>

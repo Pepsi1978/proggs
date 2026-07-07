@@ -1,0 +1,889 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>プライバシーポリシー | Best Journal</title>
+<style>
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "Hiragino Sans", "Hiragino Kaku Gothic ProN", "Noto Sans JP", Meiryo, sans-serif;
+    line-height: 1.75;
+    color: #1a1a1a;
+    max-width: 860px;
+    margin: 2rem auto;
+    padding: 0 1.25rem;
+    background: #ffffff;
+  }
+  h1 { font-size: 2rem; margin-bottom: 0.25rem; color: #111; }
+  h2 { font-size: 1.35rem; margin-top: 2.25rem; padding-bottom: 0.35rem; border-bottom: 2px solid #e5e7eb; color: #111; }
+  h3 { font-size: 1.1rem; margin-top: 1.5rem; color: #222; }
+  h4 { font-size: 1.0rem; margin-top: 1.2rem; color: #333; }
+  p, li { font-size: 1rem; }
+  ul, ol { padding-left: 1.25rem; }
+  table { border-collapse: collapse; width: 100%; margin: 1rem 0; font-size: 0.95rem; }
+  th, td { border: 1px solid #d1d5db; padding: 0.6rem 0.75rem; text-align: left; vertical-align: top; }
+  th { background: #f3f4f6; font-weight: 600; }
+  code { background: #f3f4f6; padding: 0.1rem 0.35rem; border-radius: 3px; font-size: 0.92em; }
+  a { color: #2563eb; text-decoration: none; word-break: break-all; }
+  a:hover { text-decoration: underline; }
+  blockquote { border-left: 4px solid #d97706; background: #fef3c7; padding: 0.75rem 1rem; margin: 1rem 0; font-style: normal; }
+  hr { border: none; border-top: 1px solid #e5e7eb; margin: 2.5rem 0; }
+  .footer { color: #6b7280; font-size: 0.9rem; margin-top: 3rem; text-align: center; }
+</style>
+</head>
+<body>
+
+<h1>Best Journal プライバシーポリシー</h1>
+<p><strong>バージョン：</strong> 2026年4月20日<br />
+<strong>アプリ：</strong> Best Journal（Android）<br />
+<strong>開発者：</strong> Frank Barwandt</p>
+<hr />
+<h2>1. GDPRにおける個人情報取扱事業者（データコントローラー）</h2>
+<p>Best Journal アプリにおける個人データの処理について責任を負うデータコントローラーは以下のとおりです：</p>
+<p><strong>Frank Barwandt</strong><br />
+c/o Impressumservice Dein-Impressum<br />
+Stettiner Straße 41<br />
+35410 Hungen<br />
+ドイツ</p>
+<p>メールアドレス：dev.app.support@gmail.com</p>
+<p>データ保護責任者の選任は法的に義務付けられていません（GDPR第37条、BDSG第38条）。</p>
+<hr />
+<h2>2. 概要：アプリはどのようなデータを処理しますか？</h2>
+<p>Best Journal は日記アプリです。デフォルトの状態では、データは<strong>お使いのデバイス上にローカルに</strong>保存されます。日記の記録は保護されたSQLiteデータベースに保存され、以下のオプション機能のいずれかを積極的に利用する場合にのみデバイス外に送信されます：</p>
+<ul>
+<li>音声録音のクラウド文字起こし（Groq）</li>
+<li>クラウドバックアップ（Google Drive）</li>
+<li>AI機能（Firebase AI / Google Gemini）</li>
+<li>テキスト読み上げ（Microsoft Edge TTS）</li>
+<li>サインイン（Google サインイン / Firebase Authentication）</li>
+<li>利用状況分析（Firebase Analytics、オプトイン制）</li>
+</ul>
+<p>アプリが処理するデータカテゴリ：</p>
+<table>
+<thead>
+<tr>
+<th>データカテゴリ</th>
+<th>保存場所</th>
+<th>目的</th>
+<th>任意？</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>日記の記録（テキスト、音声、画像）</td>
+<td>お使いのデバイス上にローカルに</td>
+<td>中核機能</td>
+<td>中核機能</td>
+</tr>
+<tr>
+<td>設定と環境設定</td>
+<td>お使いのデバイス上にローカルに</td>
+<td>アプリの設定</td>
+<td>中核機能</td>
+</tr>
+<tr>
+<td>音声録音（クラウド文字起こし）</td>
+<td>Groq, Inc.（米国）</td>
+<td>音声テキスト変換</td>
+<td><strong>任意</strong></td>
+</tr>
+<tr>
+<td>日記データ（バックアップ）</td>
+<td>Google Drive（アプリデータフォルダ）</td>
+<td>復元、デバイス移行</td>
+<td><strong>任意</strong></td>
+</tr>
+<tr>
+<td>テキストスニペット（読み上げ）</td>
+<td>Microsoft Bing Speech（米国）</td>
+<td>テキスト読み上げ</td>
+<td><strong>任意</strong></td>
+</tr>
+<tr>
+<td>AIリクエスト（手動および自動）</td>
+<td>Firebase AI / Google Gemini（米国）</td>
+<td>ダッシュボード、週次・月次・年次レビュー</td>
+<td><strong>任意</strong></td>
+</tr>
+<tr>
+<td>メールアドレス、サインインID</td>
+<td>Google / Firebase Authentication</td>
+<td>アカウント管理</td>
+<td><strong>任意</strong></td>
+</tr>
+<tr>
+<td>端末情報、IPアドレス、広告ID</td>
+<td>Firebase Analytics</td>
+<td>利用状況統計</td>
+<td><strong>オプトイン</strong></td>
+</tr>
+<tr>
+<td>購入データ</td>
+<td>Google Play Billing</td>
+<td>アプリ内購入</td>
+<td>購入時のみ</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h2>3. アプリのパーミッションとその利用目的</h2>
+<p>アプリは以下のAndroidパーミッションを要求します。各パーミッションは<strong>記載された機能にのみ</strong>使用され、Androidシステム設定でいつでも取り消すことができます。</p>
+<h3>3.1 インターネット（<code>INTERNET</code>）およびネットワーク状態（<code>ACCESS_NETWORK_STATE</code>）</h3>
+<p><strong>目的：</strong> クラウド文字起こし（Groq）、クラウドバックアップ（Google Drive）、AI機能、アプリ内購入、Firebaseサービス。<br />
+<strong>備考：</strong> アプリはインターネットなしで動作しますが、クラウドおよびオンラインAI機能は無効になります。ローカル音声認識（5.2参照）もオフラインで動作します。</p>
+<h3>3.2 マイク（<code>RECORD_AUDIO</code>）</h3>
+<p><strong>目的：</strong> 日記記録のための音声録音（口述、ボイスメモ）。<br />
+<strong>処理：</strong> 録音はデフォルトでデバイス上に<strong>ローカルに</strong>保存されます。文字起こしについては、<strong>ローカル</strong>認識（5.2参照）と<strong>クラウド文字起こし</strong>（5.1参照）を選択できます。<br />
+<strong>法的根拠：</strong> 同意（GDPR第6条第1項（a））。</p>
+<h3>3.3 カメラ（<code>CAMERA</code>）</h3>
+<p><strong>目的：</strong> 日記記録への写真・動画の添付。<br />
+<strong>処理：</strong> 写真と動画はローカルにのみ保存されます（アプリプライベートフォルダ <code>filesDir/photos/</code>）。自動的にアップロードされることはありません。Google Driveバックアップが有効な場合、バックアップの一部としてDriveアプリデータフォルダに暗号化されて転送されます。</p>
+<h3>3.4 おおよその位置情報（<code>ACCESS_COARSE_LOCATION</code>）</h3>
+<p><strong>目的：</strong> 設定のオプションデザイン機能「<strong>日の出／日の入り</strong>」専用（ダークモードが地域の日照に合わせて変化します）。<br />
+<strong>処理：</strong> 位置情報はトグルを有効にしたときに<strong>一度だけ</strong>取得され、アプリ設定にローカルに保存されます。外部サービスに送信されることは<strong>一切</strong>ありません。日の出・日の入り時刻はデバイス上で完全に計算されます。</p>
+<h3>3.5 通知（<code>POST_NOTIFICATIONS</code>）</h3>
+<p><strong>目的：</strong> 記録を書くためのリマインダー（リマインダーを有効にした場合）。<br />
+<strong>処理：</strong> お使いのデバイス上でローカルに生成されます。</p>
+<h3>3.6 再起動後の自動起動（<code>RECEIVE_BOOT_COMPLETED</code>）</h3>
+<p><strong>目的：</strong> デバイス再起動後のスケジュールされたリマインダーの再有効化。<br />
+<strong>処理：</strong> ローカルのみ、データ送信なし。</p>
+<hr />
+<h2>3a. 対象範囲と国際的な提供</h2>
+<p>このアプリはGoogle Playストアで<strong>27言語</strong>（英語、ドイツ語、フランス語、スペイン語、イタリア語、オランダ語、ポーランド語、ポルトガル語〔ブラジルおよびポルトガル〕、ウクライナ語、トルコ語、アラビア語、ヒンディー語、ベンガル語、グジャラート語、カンナダ語、マラヤーラム語、マラーティー語、タミル語、テルグ語、ウルドゥー語、インドネシア語、タイ語、日本語、韓国語、中国語〔簡体字および繁体字〕）で提供されています。言語はAndroidシステム言語（<code>Locale.getDefault()</code>）に基づいて自動的に選択され、タイムゾーンはAndroid設定（<code>TimeZone.getDefault()</code>）から取得されます。どちらも<strong>デバイス上のみで</strong>行われ、<strong>サーバーへの追加的な位置情報、言語、またはタイムゾーンの問い合わせは行われません</strong>。</p>
+<p>対応言語と対応国は継続的に追加されています。</p>
+<p>本プライバシーポリシーはお客様の居住国にかかわらず適用されます。<strong>欧州連合</strong>および<strong>EEA</strong>のユーザーにはGDPRが適用されます。それ以外のユーザーには、本書に記載された保護基準がデータコントローラーによる自主的なコミットメントとして任意に適用されます。特定の法域のユーザーには追加の権利があります（第8a条参照）。</p>
+<hr />
+<h2>4. ローカルデータの保存</h2>
+<p>すべての日記コンテンツ（テキスト、音声録音、画像、気分、タグ）は、お使いのデバイス上のみのローカルSQLiteデータベース（Android Room）に保存されます。</p>
+<ul>
+<li><strong>保存場所：</strong> 内部アプリストレージ（オペレーティングシステムによって保護されています）</li>
+<li><strong>アクセス：</strong> Best Journal アプリのみ</li>
+<li><strong>削除：</strong> アプリをアンインストールするか、「設定 → すべてのデータを削除」を使用してください</li>
+</ul>
+<h3>4.1 PDFエクスポート（ローカル）</h3>
+<p>アプリは、埋め込まれた写真を含む日記記録の<strong>PDFエクスポート</strong>機能を提供しています。変換処理は<strong>完全にお使いのデバイス上で</strong>行われます。PDFファイルはローカルのアプリフォルダまたはダウンロードフォルダに保存されます。エクスポート自体はいかなる第三者にもデータを送信<strong>しません</strong>。</p>
+<p>その後、Androidの共有メニューを通じて別のアプリやクラウドサービス（メール、WhatsApp、Google Driveなど）にPDFを共有する場合は、それはお客様ご自身の選択となります。受信したサービスは、その独自のプライバシーポリシーに基づいてデータを処理します。</p>
+<hr />
+<h2>5. オプションのクラウドサービスと第三者</h2>
+<p>以下のサービスは、<strong>お客様が積極的に使用または有効化した場合にのみ</strong>使用されます。アプリはこれらのサービスなしで完全に使用可能です。</p>
+<h3>5.1 Groq, Inc. | クラウド文字起こし（任意）</h3>
+<p><strong>提供者：</strong> Groq, Inc., 400 Castro Street, Mountain View, CA 94041, 米国<br />
+<strong>目的：</strong> 音声録音をテキストに変換すること（Whisper文字起こし）。<br />
+<strong>収集データ：</strong> 文字起こしのためにアップロードした音声ファイル。メタデータ：ファイルサイズ、形式、言語、IPアドレス。<br />
+<strong>転送：</strong> 設定で「<strong>クラウド文字起こし</strong>」を有効にするか、録音に対してクラウドオプションを明示的に選択した場合にのみ転送されます。デフォルトは<strong>デバイス上でのローカル文字起こし</strong>です（5.2参照）。<br />
+<strong>法的根拠：</strong> 同意（GDPR第6条第1項（a））。<br />
+<strong>国際転送：</strong> 処理は米国で行われます。Groqは<strong>EU-US Data Privacy Framework</strong>の下で自己認証しています。さらに、標準契約条項（GDPR第46条）が適用されます。<br />
+<strong>Groqでの保持：</strong> プロバイダーのポリシーに従い、リクエストはトレーニング目的で使用されず、処理後に削除されます。<br />
+<strong>撤回：</strong> アプリ設定で「<strong>ローカル文字起こし</strong>」に切り替えてください。その後、Groqに音声データは送信されません。<br />
+<strong>Groqプライバシーポリシー：</strong> https://groq.com/privacy-policy/</p>
+<blockquote>
+<p><strong>重要なお知らせ：</strong> 音声録音には特に機微な個人データが含まれる場合があります（GDPR第9条）。クラウド文字起こしは、録音を米国のGroqに転送することに同意する場合にのみ使用してください。ローカル文字起こしはよりプライバシーに配慮した代替手段です。</p>
+</blockquote>
+<h3>5.2 ローカル音声認識（デバイス上）</h3>
+<p>アプリには、オープンソースプロジェクト<strong>sherpa-onnx</strong>に基づく<strong>ローカルオフライン音声認識</strong>機能が含まれています。文字起こしはお使いのデバイス上で完全に行われます。<br />
+<strong>データ転送：</strong> なし。サーバーは関与しません。<br />
+<strong>前提条件：</strong> 言語モデルの一回限りのダウンロード（約100 MB）。</p>
+<h3>5.2a Microsoft Edge テキスト読み上げ（任意）</h3>
+<p><strong>提供者：</strong> Microsoft Corporation, One Microsoft Way, Redmond, WA 98052, 米国<br />
+<strong>サービス：</strong> Bing Speechサービス（エンドポイント：<code>speech.platform.bing.com</code>）<br />
+<strong>目的：</strong> テキストを自然な音声出力に変換すること（「読み上げ」）。例えば、記録や振り返りを聴くため。<br />
+<strong>転送フロー：</strong><br />
+1. 読み上げ機能を起動します（例：ダッシュボードまたは記録内）。<br />
+2. テキストは暗号化されたWebSocket接続を介して<strong>米国</strong>のMicrosoftサーバーに送信されます。<br />
+3. 生成された音声が返送され、お使いのデバイスでローカルに再生されます。<br />
+<strong>収集データ：</strong> サービスに送信されたテキスト、選択された音声、技術的なメタデータ（IPアドレス、タイムスタンプ）。<br />
+<strong>転送：</strong> 読み上げ機能を積極的に使用した場合にのみ転送されます。お客様のアクションなしにMicrosoftへの転送はありません。<br />
+<strong>法的根拠：</strong> 機能を積極的に起動することによる同意（GDPR第6条第1項（a））。<br />
+<strong>国際転送：</strong> 米国、<strong>EU-US Data Privacy Framework</strong>（Microsoftは認定済み）および<strong>EU標準契約条項</strong>（GDPR第46条）に基づきます。<br />
+<strong>撤回：</strong> 読み上げ機能を使用しないか、設定で無効にしてください。AndroidはネイティブのオンデバイスTTSも代替として提供しています。<br />
+<strong>Microsoftプライバシーポリシー：</strong> https://privacy.microsoft.com/en-us/privacystatement</p>
+<blockquote>
+<p><strong>備考：</strong> 読み上げ機能を通じて第三者の特に機微な個人データを送信しないでください。</p>
+</blockquote>
+<h3>5.3 Google Drive | クラウドバックアップ（任意）</h3>
+<p><strong>提供者：</strong> Google Ireland Limited, Gordon House, Barrow Street, Dublin 4, アイルランド<br />
+<strong>目的：</strong> 新しいデバイスへの復元またはアンインストール後の復元のために日記データを暗号化してバックアップすること。<br />
+<strong>収集データ：</strong> 日記データベース（記録、音声、画像、設定）の完全なバックアップとして単一ファイル。<br />
+<strong>保存場所：</strong> <strong>お客様個人のGoogle DriveアカウントのアプリデータフォルダR</strong>（スコープ：<code>DRIVE_APPDATA</code>）。このフォルダはGoogleによって保護され、Best Journalのみがアクセスできます。他のアプリや、通常のDrive UIを通じたお客様自身もアクセスできません。<br />
+<strong>有効化：</strong> 設定で「<strong>Google Driveバックアップ</strong>」を有効にし、明示的にアクセスを許可した場合にのみ有効化されます。<br />
+<strong>法的根拠：</strong> 同意（GDPR第6条第1項（a））。<br />
+<strong>撤回：</strong> アプリ設定でバックアップを無効にしてください。また、<strong>Googleアカウント → アカウントにアクセスできるアプリ</strong>で接続を完全に取り消すこともできます。<br />
+<strong>バックアップの削除：</strong> アプリ内の<strong>「設定 → バックアップ → クラウドバックアップを削除」</strong>から行えます。</p>
+<h4>5.3a Androidシステムバックアップ（自動）</h4>
+<p>アプリ内部のDriveバックアップに加えて、アプリは<strong>Androidシステムバックアップ</strong>（マニフェスト内の<code>allowBackup="true"</code>）をサポートしています。<strong>Android設定 → Google → バックアップ</strong>で自動バックアップを有効にしている場合、メインの日記データベース（<code>entropy_journal_db</code>）と通常のアプリ設定は自動的にGoogle Driveストレージに（暗号化、最大25 MB）バックアップされます。</p>
+<p><strong>除外されるもの：</strong> バックアップルール（<code>backup_rules.xml</code> / <code>data_extraction_rules.xml</code>）により、ダッシュボードデータベース、振り返りデータベース、暗号化された認証情報（Googleトークンを含むEncryptedSharedPreferences）はAndroidシステムバックアップから除外されます。これらの機微な項目はシステムバックアップには含まれません。</p>
+<p><strong>含まれるもの：</strong> 日記テキスト、気分タグ、通常のアプリ設定。写真と動画は25 MBのサイズ制限により、通常はAndroidシステムバックアップに含まれません。メディアについては、アプリの別途のGoogle Driveバックアップが必要です（5.3参照）。</p>
+<p><strong>無効化：</strong> Androidシステム設定の「Google → バックアップ」から行えます。<br />
+<strong>法的根拠：</strong> Googleアカウント設定による同意（GDPR第6条第1項（a））。</p>
+<h3>5.4 Google サインイン（任意）</h3>
+<p><strong>提供者：</strong> Google Ireland Limited<br />
+<strong>目的：</strong> Googleアカウントを使用した便利なサインイン（Android Credential Manager経由）。<br />
+<strong>収集データ：</strong> メールアドレス、GoogleアカウントID、公開名、プロフィール画像URL。<br />
+<strong>法的根拠：</strong> サインインする場合の契約の履行（GDPR第6条第1項（b））。<br />
+<strong>備考：</strong> アプリを使用するためにサインインは<strong>必須ではありません</strong>。</p>
+<h3>5.5 Firebase Authentication（任意）</h3>
+<p><strong>提供者：</strong> Google Ireland Limited<br />
+<strong>目的：</strong> ユーザーアカウント管理（GoogleサインインとアプリをリンクするFirebase Authentication）。<br />
+<strong>収集データ：</strong> メールアドレス、サインインID、IPアドレス、タイムスタンプ。<br />
+<strong>法的根拠：</strong> 契約の履行（GDPR第6条第1項（b））。</p>
+<h3>5.6 Firebase AI / Google Gemini | 手動および自動AI処理</h3>
+<p><strong>提供者：</strong> Google Ireland Limited / Google LLC<br />
+<strong>AIモデル：</strong> Google Gemini（Firebase AI Logic SDK）<br />
+<strong>サーバー所在地：</strong> 米国</p>
+<p>アプリは、<strong>手動で起動された</strong>機能と<strong>自動で起動された</strong>AI機能の両方にGoogle Geminiを使用します。どちらも米国のGoogleサーバーへのテキストスニペットの送信につながります。</p>
+<h4>5.6.1 手動で起動されるAI機能</h4>
+<p>お客様が積極的にAI機能を起動した場合（例：「テキストを改善」、「要約」、「フォローアップ質問」）：<br />
+1. 関連するテキストスニペットが<strong>米国</strong>のGoogle Geminiに送信されます。<br />
+2. 結果がお使いのデバイスに返送され、確認のために表示されます。</p>
+<h4>5.6.2 自動で起動されるAI機能</h4>
+<p>アプリは特定のイベントが発生した際に<strong>自動的に</strong>AIコンテンツを生成します。その際、関連する日記データが<strong>自動的に</strong>米国のGoogle Geminiに送信されます：</p>
+<table>
+<thead>
+<tr>
+<th>トリガー</th>
+<th>何が起こるか</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>新しい日記記録</strong></td>
+<td>ダッシュボードの更新。関連する記録が自動的にGeminiに送信され、新しいダッシュボードサマリーが生成されます（「設定 → AI自動化 → ダッシュボード自動更新」で有効にしている場合のみ）。</td>
+</tr>
+<tr>
+<td><strong>新しい音声文字起こし</strong>（テキスト自動改善がオンの場合）</td>
+<td>文字起こしされたテキストがGeminiによって文体的・文法的に自動的に磨かれます。</td>
+</tr>
+<tr>
+<td><strong>ダッシュボードのプロフィール切り替え</strong></td>
+<td>新しいプロフィールプロンプトでダッシュボードが再生成されます。</td>
+</tr>
+</tbody>
+</table>
+<p><strong>自動ではなく、お客様のアクションのみで実行されるもの：</strong><br />
+- <strong>週次、月次、年次レビュー</strong>はバックグラウンドで自動的に生成されることは<em>ありません</em>。各期間の終わりにローカル通知が届きます。レビューはアプリを開いてレビュービューに移動したときにのみ生成されます。お客様のアクションなしに転送は行われません。</p>
+<p><strong>収集データ：</strong> 日記記録のテキストスニペット（写真なし、音声録音なし）、期間、モデルパラメータ、技術的なメタデータ（IPアドレス、タイムスタンプ）。</p>
+<p><strong>初回利用確認（Pre-Usage-Gate）：</strong> AI機能（手動または自動）を初めて起動する際、データがデバイスから送信される前に、アプリが明示的な確認ダイアログを表示します。お客様が確認した後にのみ、Google Geminiへの送信が始まります。一度確認すると、その後の自動ダッシュボード更新とテキスト自動改善は再度確認なしに実行されます（アプリが毎回中断しないようにするため）。この同意はいつでも<strong>「設定 → プライバシー」</strong>で撤回できます。</p>
+<p><strong>AI自動機能の無効化：</strong><br />
+<strong>「設定 → AI自動化」</strong>で個別に無効化できます：<br />
+- ダッシュボードの自動更新（デフォルト：オン）<br />
+- 文字起こし後のテキスト自動改善（デフォルト：オフ）</p>
+<p><strong>「設定 → リマインダー」</strong>で週次・月次・年次レビューの通知を受け取るかどうかを設定できます（デフォルト：オン）。それとは独立して、レビューはお客様が開いたときにのみ生成されます。</p>
+<p>無効化後、その機能について<strong>Google Geminiへの転送は行われません</strong>。アプリは完全に使用可能です。AI生成のサマリーとレビューが利用できなくなるだけです。</p>
+<p><strong>法的根拠：</strong> 同意（GDPR第6条第1項（a））。同意はアプリの初回起動時に明確に表示される通知で取得され、手動および自動AI処理の両方をカバーします。設定でいつでも撤回できます（GDPR第7条第3項）。</p>
+<p><strong>国際転送：</strong> 処理は米国において、<strong>EU-US Data Privacy Framework</strong>（欧州委員会の十分性決定）および<strong>EU標準契約条項</strong>（GDPR第46条）に基づいて行われます。</p>
+<p><strong>Googleでの保持：</strong> Firebase AIポリシーに従い、リクエストはトレーニングに使用されず、処理後に削除されます。詳細：https://firebase.google.com/support/privacy</p>
+<blockquote>
+<p><strong>重要：</strong> 手動AI機能を通じて第三者の特に機微な個人データ（例：他者の健康データ、同意なしの第三者の名前）を送信しないでください。自動レビューについても同様：Google Geminiに転送したくないコンテンツを日記に書かないか、自動AI機能を無効にしてください。</p>
+</blockquote>
+<h3>5.7 Firebase Analytics（初回起動時のオプトイン）</h3>
+<p><strong>提供者：</strong> Google Ireland Limited / Google LLC<br />
+<strong>目的：</strong> エラー分析と製品改善のための匿名利用統計。<br />
+<strong>収集データ：</strong> デバイスタイプ、OSバージョン、アプリバージョン、利用頻度、おおよその地域（国）、Firebase Instance ID、<strong>IPアドレス（切り捨て）</strong>、<strong>Android広告ID（AAID）</strong>、イベントデータ（例：記録作成、ダッシュボード開く、プレミアム購入、TTSエラー）。</p>
+<p><strong>法的根拠：</strong> 同意（GDPR第6条第1項（a）、TDDDG第25条第1項）。</p>
+<p><strong>同意の仕組み：</strong><br />
+- <strong>アプリの初回起動</strong>時に、オンボーディングの前にプライバシー画面が表示されます。<br />
+- 「同意して始める」を選択した場合、匿名利用統計に同意したことになります。<br />
+- 「統計を無効にする」を選択した場合、Firebase Analyticsはオフのままとなります（技術的には <code>setAnalyticsCollectionEnabled(false)</code> を介して）。<br />
+- <strong>「設定 → プライバシー → 匿名統計」</strong>でいつでも決定を変更できます。</p>
+<p><strong>広告IDのリセット：</strong> Androidシステム設定の<strong>「設定 → プライバシー → 広告」</strong>から行えます。</p>
+<h3>5.8 Firebase App Check（Play Integrity）</h3>
+<p><strong>目的：</strong> 不正使用と自動リクエストからの保護。<br />
+<strong>収集データ：</strong> Google Playデバイス整合性トークン、アプリ署名。<br />
+<strong>法的根拠：</strong> 不正使用防止における正当な利益（GDPR第6条第1項（f））。<br />
+<strong>利益衡量：</strong> 自動攻撃からFirebaseエンドポイントを保護する正当な利益は、ユーザーへの最小限の影響を上回ります。整合性トークンはデバイス非依存であり、個人の特定を許可しません。技術的にプライバシーに配慮した代替手段はありません。<br />
+<strong>国際転送：</strong> EU-US Data Privacy Frameworkおよび標準契約条項（GDPR第46条）に基づいて米国で処理されます。</p>
+<h3>5.9 Firebase Remote Config</h3>
+<p><strong>目的：</strong> リモート設定（例：機能フラグ、テキスト）。<br />
+<strong>収集データ：</strong> 匿名化されたアプリインスタンスID、アプリバージョン。<br />
+<strong>法的根拠：</strong> 適切な運用における正当な利益（GDPR第6条第1項（f））。<br />
+<strong>利益衡量：</strong> スムーズなアプリ設定の正当な利益が優先されます。匿名化されたインスタンスIDのみが転送され、個人への追跡は不可能です。<br />
+<strong>国際転送：</strong> EU-US Data Privacy Frameworkおよび標準契約条項（GDPR第46条）に基づいて米国で処理されます。</p>
+<h3>5.9a フィードバック機能（Gmail API、任意）</h3>
+<p><strong>「設定 → フィードバックを送る」</strong>から、アプリに関するフィードバックを送信できます。</p>
+<p><strong>技術的なフロー：</strong><br />
+1. アプリにフィードバックを入力し、送信を確認します。<br />
+2. アプリはGoogleの権限「<strong>メールを送信する</strong>」（Gmail APIスコープ <code>https://www.googleapis.com/auth/gmail.send</code>）を一度だけ求めます。<br />
+3. お客様の同意後、Gmail APIを介して<strong>お客様自身のGoogleアカウントを通じて2通のメール</strong>が送信されます：<br />
+   - <strong>メール1（当社宛）：</strong> <code>dev.app.support@gmail.com</code>宛、フィードバックテキストと送信者としてのお客様のGoogleアカウントのメールアドレスが含まれます。<br />
+   - <strong>メール2（お客様自身宛）：</strong> 送信したフィードバックテキストを含む確認書、コピーとして。</p>
+<p><strong>誰が何を処理するか：</strong><br />
+- <strong>Google</strong>（Gmailインフラ）：両方のメールをメールサーバーを通じて転送します。<br />
+- <strong>当社</strong>（Frank Barwandt、連絡先は第1条参照）：最初のメールを <code>dev.app.support@gmail.com</code> の受信トレイで受け取り、フィードバックを処理するために保存します。</p>
+<p><strong>収集・送信されるデータ：</strong><br />
+- お客様のGoogleアカウントのメールアドレス（両方のメールの送信者として）<br />
+- お客様が入力したフィードバックテキスト<br />
+- 送信のタイムスタンプ</p>
+<p><strong>法的根拠：</strong><br />
+- 当社への送信：積極的な送信による同意（GDPR第6条第1項（a））。<br />
+- お客様のリクエストの処理：アプリ改善における正当な利益（GDPR第6条第1項（f））。</p>
+<p><strong>当社側での保持：</strong> フィードバックメールは当社の受信トレイに最大24ヶ月間保存され、その後削除されます。バグ修正や機能に直接関連する場合は、より長期間保持される場合があります。削除はメールでいつでも請求できます。</p>
+<p><strong>Gmailパーミッションの取り消し：</strong> <strong>https://myaccount.google.com/permissions</strong> → Best Journalを削除することで、Gmail送信アクセスをいつでも取り消せます。削除後、フィードバック機能は動作しなくなります。それ以外はアプリは完全に使用可能です。</p>
+<p><strong>代替手段：</strong> アプリのパーミッションなしに、<strong>dev.app.support@gmail.com</strong> に直接メールでご連絡いただくこともできます。</p>
+<h3>5.10 Google Play アプリ内レビュー API</h3>
+<p><strong>目的：</strong> Google Playストアでの評価ダイアログの表示。<br />
+<strong>収集データ：</strong> ダイアログを表示するための技術的なメタデータ（アプリバージョン、パッケージ名）。評価自体はアプリによって収集されません。<br />
+<strong>法的根拠：</strong> 正当な利益（GDPR第6条第1項（f））。<br />
+<strong>利益衡量：</strong> ユーザーフィードバックにおける正当な利益が優先されます。個人参照なしの技術的なメタデータのみが処理され、評価自体はお客様のGoogle Playアカウントでのみ行われます。<br />
+<strong>国際転送：</strong> EU-US Data Privacy Frameworkおよび標準契約条項（GDPR第46条）に基づいて米国で処理されます。</p>
+<p><strong>Googleサービスに関する詳細情報：</strong><br />
+- Googleプライバシーポリシー：https://policies.google.com/privacy<br />
+- Firebaseプライバシー：https://firebase.google.com/support/privacy<br />
+- Google Drive：https://policies.google.com/privacy#infocollect</p>
+<h3>5.11 国際転送（米国）</h3>
+<p>クラウドサービスが有効な場合（Groq、Firebase/Gemini、Google Drive、Microsoft Edge TTS）、データは米国で処理されます。転送は以下に基づきます：</p>
+<ul>
+<li><strong>EU-US Data Privacy Framework</strong>（2023年7月10日の欧州委員会の十分性決定）、Google/Firebase/GeminiおよびMicrosoftに対して</li>
+<li><strong>EU標準契約条項</strong>（GDPR第46条）、Groqに対して</li>
+</ul>
+<hr />
+<h2>6. アプリ内購入（Google Play Billing）</h2>
+<p>オプションのプレミアム機能については、アプリは支払い処理に<strong>Google Play Billing</strong>を使用します。</p>
+<ul>
+<li><strong>提供者：</strong> Google Ireland Limited</li>
+<li><strong>収集データ：</strong> トランザクションID、購入トークン、購入した製品、タイムスタンプ</li>
+<li><strong>支払いデータ：</strong> <strong>Googleのみ</strong>によって処理されます。クレジットカード番号、PayPal認証情報、銀行の詳細を当社は受け取りません。</li>
+<li><strong>法的根拠：</strong> 契約の履行（GDPR第6条第1項（b））</li>
+<li><strong>Google Playプライバシー：</strong> https://play.google.com/about/play-terms/</li>
+</ul>
+<hr />
+<h2>7. アカウントの削除とデータの削除</h2>
+<p>GDPR第17条およびGoogle Playポリシーに基づき、お客様はいつでもデータを削除する権利を有します。</p>
+<h3>7.1 アカウントとクラウドデータの削除（アプリ内）</h3>
+<p><strong>設定 → アカウント → アカウントを削除</strong></p>
+<p>以下が永久に削除されます：<br />
+- ローカル日記データベース（メインDB、ダッシュボードDB、レビューDB）<br />
+- 記録のローカル写真と動画<br />
+- 暗号化されたアプリ設定と保存されたGoogleトークン<br />
+- Firebase Authenticationアカウント（<code>FirebaseAuth.currentUser.delete()</code>）<br />
+- Google DriveのアプリデータバックアップR（Driveから削除）</p>
+<p>完了後、アプリは再起動し、新規インストールのように動作します。Androidシステムバックアップはこのアクションでは削除<strong>されません</strong>。<strong>myaccount.google.com → データとプライバシー → バックアップ</strong>のGoogleアカウントから別途削除できます。</p>
+<h3>7.2 ローカル日記データの削除</h3>
+<p><strong>設定 → データ → すべてのデータを削除</strong>または<strong>アプリのアンインストール</strong></p>
+<h3>7.3 Driveバックアップの手動削除</h3>
+<p>アプリをアンインストールしてもバックアップを保持したい場合は、<strong>「設定 → バックアップ → クラウドバックアップを削除」</strong>で別途削除できます。アプリをアンインストールした後は、<strong>myaccount.google.com → データとプライバシー → アカウントにアクセスできるサードパーティアプリ</strong>からGoogleアカウントのアプリデータフォルダを削除できます。</p>
+<h3>7.4 メールによる削除リクエスト</h3>
+<p>アプリにアクセスできなくなった場合：<strong>dev.app.support@gmail.com</strong>、件名：「Best Journal アカウント削除」。対応時間：30日以内。</p>
+<p>公開削除リクエストページも利用可能です：<br />
+<strong>https://pepsi1978.github.io/proggs/bestjournal/account-deletion.html</strong>（アプリ内削除フローの代替手段、Google Playが要求）。</p>
+<hr />
+<h2>8. GDPRに基づくお客様の権利</h2>
+<p>お客様はいつでも以下の権利を有します：</p>
+<table>
+<thead>
+<tr>
+<th>権利</th>
+<th>条文</th>
+<th>行使方法</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>アクセス（開示）</td>
+<td>GDPR第15条</td>
+<td>dev.app.support@gmail.com へのメール</td>
+</tr>
+<tr>
+<td>訂正</td>
+<td>GDPR第16条</td>
+<td>メールまたはアプリ内で直接</td>
+</tr>
+<tr>
+<td>消去（「忘れられる権利」）</td>
+<td>GDPR第17条</td>
+<td>アプリ内「データを削除」またはアンインストール</td>
+</tr>
+<tr>
+<td>処理の制限</td>
+<td>GDPR第18条</td>
+<td>dev.app.support@gmail.com へのメール</td>
+</tr>
+<tr>
+<td>データポータビリティ</td>
+<td>GDPR第20条</td>
+<td>アプリのエクスポート機能またはメール</td>
+</tr>
+<tr>
+<td>異議申し立て</td>
+<td>GDPR第21条</td>
+<td>dev.app.support@gmail.com へのメール</td>
+</tr>
+<tr>
+<td>同意の撤回</td>
+<td>GDPR第7条第3項</td>
+<td>アプリ設定の「プライバシー」から</td>
+</tr>
+<tr>
+<td>監督機関への苦情申し立て</td>
+<td>GDPR第77条</td>
+<td>以下を参照</td>
+</tr>
+</tbody>
+</table>
+<h3>管轄監督機関</h3>
+<p><strong>ドイツ / EU / EEA（主任監督機関）：</strong></p>
+<p>ヘッセン州データ保護・情報自由委員<br />
+Gustav-Stresemann-Ring 1, 65189 Wiesbaden, ドイツ<br />
+電話：+49 611 1408-0<br />
+メール：poststelle@datenschutz.hessen.de<br />
+ウェブサイト：https://datenschutz.hessen.de</p>
+<p>（データコントローラーがヘッセン州に所在するため管轄）</p>
+<p>EU/EEAユーザーはお住まいの国の監督機関に連絡することもできます。</p>
+<hr />
+<h2>8a. 国際ユーザー、現地法に基づく追加の権利</h2>
+<p>Best JournalはGoogle Playストアを通じて世界中で提供されています。上記GDPRに基づく権利はすべての国のユーザーに適用されます。特定の法域のユーザーは、以下に詳述する現地法に基づく<strong>追加の</strong>または<strong>異なる</strong>権利を有します。</p>
+<h3>8a.1 カリフォルニア州居住者の権利（CCPA / CPRA）</h3>
+<p>お客様がカリフォルニア州居住者の場合、カリフォルニア消費者プライバシー法（CCPA）（カリフォルニアプライバシー権法（CPRA）による改正）が以下の権利を付与します：</p>
+<ul>
+<li><strong>知る権利：</strong> 過去12ヶ月間に収集、使用、共有した個人情報とそのカテゴリ、情報源および第三者の種類。完全なデータカテゴリのリストについては第2条を参照してください。</li>
+<li><strong>削除する権利：</strong> 個人情報の削除（第7条参照）。</li>
+<li><strong>訂正する権利：</strong> 不正確な個人情報の訂正。</li>
+<li><strong>販売または共有のオプトアウトの権利：</strong> 当社はCCPAの意味において個人情報を<strong>販売または共有しません</strong>。クロスコンテクスト行動広告は行われません。販売または共有は行われませんが、<strong>透明性の措置として「個人情報の販売または共有をしないでください」トグルを</strong>設定 → プライバシー → カリフォルニアプライバシー選択に設けています。有効化すると、すべてのオプションクラウドの同意（Groq、Gemini、Edge TTS、Google Drive）が取り消され、<code>setAnalyticsCollectionEnabled(false)</code>を介してFirebase Analyticsが無効になります。このトグルはen-USロケールのユーザーに自動的に表示されます。</li>
+<li><strong>機微な個人情報（SPI）の使用を制限する権利：</strong> 日記コンテンツにはSPI（例：健康情報、宗教的信念、性的指向）が含まれる場合があります。クラウドAI機能（第5.6条参照）とクラウド文字起こし（第5.1条参照）を無効にすることで、そのような情報の使用を制限できます。すべての日記コンテンツはデフォルトでデバイス上にローカルに保存されます。</li>
+<li><strong>差別されない権利：</strong> 権利を行使したことを理由に差別されることはありません。</li>
+<li><strong>グローバルプライバシーコントロール（GPC）：</strong> 分析処理に対する有効なオプトアウトリクエストとしてGPCブラウザシグナルを尊重します。</li>
+</ul>
+<p><strong>権利の行使：</strong> dev.app.support@gmail.com に件名「CCPA Request」でメールをお送りください。または、アプリ内でアカウントを直接削除してください（設定 → アカウント → アカウントを削除）。45日以内に対応し、通知の上で45日間延長する場合があります（Cal. Civ. Code § 1798.130）。</p>
+<p><strong>個人情報を販売しないでください：</strong> 個人情報の販売は行いません。分析の無効化（第5.7条参照）は、データ処理に対するオプトアウトとして利用できます。</p>
+<p><strong>ビジネス目的で開示された個人情報のカテゴリ</strong>（CCPA § 1798.140）：<br />
+- 識別子（メール、Firebase Instance ID、広告ID）、コアサービスに必要なGoogle、Groq、Microsoftに対して。<br />
+- 商業情報（購入履歴）、Play BillingのためにGoogleに対して。<br />
+- インターネットまたは電子ネットワーク活動（アプリ使用イベント）、Firebase Analytics（オプトインのみ）のためにGoogleに対して。<br />
+- 音声録音、文字起こし（オプトインのみ）のためにGroqに対して。<br />
+- 推論（AI生成テキストサマリー）、ダッシュボードとレビュー（オプトインのみ）のためにGoogle Geminiで処理。</p>
+<p><strong>認定代理人：</strong> 代理でリクエストを提出するための認定代理人を指定できます。お客様が署名した書面による承認を提供してください。</p>
+<h3>8a.2 その他の米国州居住者の権利</h3>
+<p>以下の州のいずれかの居住者の場合、州のデータ保護法に基づいてカリフォルニア州居住者と同等の権利を有します：</p>
+<table>
+<thead>
+<tr>
+<th>州</th>
+<th>法律</th>
+<th>施行</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>バージニア州</td>
+<td>VCDPA</td>
+<td>2023年</td>
+</tr>
+<tr>
+<td>コロラド州</td>
+<td>CPA</td>
+<td>2023年</td>
+</tr>
+<tr>
+<td>コネチカット州</td>
+<td>CTDPA</td>
+<td>2023年</td>
+</tr>
+<tr>
+<td>ユタ州</td>
+<td>UCPA</td>
+<td>2023年</td>
+</tr>
+<tr>
+<td>オレゴン州</td>
+<td>OCPA</td>
+<td>2024年</td>
+</tr>
+<tr>
+<td>モンタナ州</td>
+<td>MCDPA</td>
+<td>2024年</td>
+</tr>
+<tr>
+<td>テキサス州</td>
+<td>TDPSA</td>
+<td>2024年（最低閾値なし）</td>
+</tr>
+<tr>
+<td>アイオワ州</td>
+<td>ICDPA</td>
+<td>2025年</td>
+</tr>
+<tr>
+<td>デラウェア州</td>
+<td>DPDPA</td>
+<td>2025年</td>
+</tr>
+<tr>
+<td>ニュージャージー州</td>
+<td>NJDPA</td>
+<td>2025年</td>
+</tr>
+<tr>
+<td>ニューハンプシャー州</td>
+<td>NHPPA</td>
+<td>2025年</td>
+</tr>
+<tr>
+<td>ロードアイランド州</td>
+<td>RIDTPPA</td>
+<td>2026年</td>
+</tr>
+<tr>
+<td>インディアナ州</td>
+<td>ICDPA</td>
+<td>2026年</td>
+</tr>
+<tr>
+<td>ケンタッキー州</td>
+<td>KCDPA</td>
+<td>2026年</td>
+</tr>
+<tr>
+<td>ミネソタ州</td>
+<td>MCDPA</td>
+<td>施行中</td>
+</tr>
+<tr>
+<td>テネシー州</td>
+<td>TIPA</td>
+<td>施行中</td>
+</tr>
+<tr>
+<td>ネブラスカ州</td>
+<td>NDPA</td>
+<td>施行中</td>
+</tr>
+<tr>
+<td>メリーランド州</td>
+<td>MODPA</td>
+<td>施行中</td>
+</tr>
+</tbody>
+</table>
+<p>お客様の権利には、アクセス、削除、訂正、データポータビリティ、ターゲット広告のオプトアウト、プロファイリングのオプトアウトが含まれます。テキサス州居住者については、最低閾値が適用されないため、GPCシグナルを尊重します。デラウェア州とロードアイランド州の居住者については、リクエストに応じて第三者受取人の（カテゴリだけでなく）名前を提供できます。行使するには、dev.app.support@gmail.com にメールをお送りください。</p>
+<h4>メリーランド州（MODPA）およびワシントン州（MHMDA）— 消費者健康データ</h4>
+<p>精神的または身体的健康情報を明らかにする日記の記録は、メリーランドオンラインデータプライバシー法（2026年4月1日施行）およびワシントン州マイヘルスマイデータ法（施行中）の下での<strong>「消費者健康データ」</strong>に該当する可能性があります。MODPAに従ってデータ最小化を適用します：アプリはお客様が積極的に使用する機能に厳密に必要なもののみを処理します。クラウドAIとクラウド文字起こしは厳密にオプトイン制であり、クロスコンテクスト行動広告は行われません。ワシントン州居住者はMHMDAに基づく<strong>私訴権</strong>を有します。権利を行使するには、dev.app.support@gmail.com に件名「MODPA Request」または「MHMDA Request」でメールをお送りください。</p>
+<h3>8a.3 イリノイ州居住者の権利（BIPA）</h3>
+<p>イリノイ州生体情報プライバシー法（BIPA）は声紋を含む生体情報識別子を保護します。透明性を確保するため以下を開示します：</p>
+<ul>
+<li><strong>クラウド文字起こし</strong>（第5.1条）のために送信された<strong>音声録音</strong>は、音声テキスト変換専用のWhisperモデルを使用してGroqが処理します。当社の知る限り、Groq Whisperは声紋（音声から個人を識別するための生体テンプレート）を作成<strong>しません</strong>。文字起こし（音声からテキスト）のみが実行されます。これが変更される場合は、本通知を更新し、声紋処理の前に書面による同意を取得します。</li>
+<li><strong>デバイスの生体認証アプリロック</strong>（指紋、顔認証）は、デバイスのセキュアハードウェアエンクレーブ内のAndroidオペレーティングシステムによって完全に処理されます。当社が生体データを受け取ることはありません。</li>
+<li><strong>保持ポリシー：</strong> Groqに転送された音声録音は文字起こし後に保持されません（Groqのポリシーによる）。お使いのデバイス上のローカル音声録音は、お客様が削除するまで、またはBIPAが要求する最大3年間保持されます。</li>
+</ul>
+<p>イリノイ州居住者で、クラウド文字起こしを完全にオプトアウトしたい場合は、設定で「ローカル文字起こし」に切り替えてください（第5.1条参照）。</p>
+<h3>8a.5 カナダ居住者の権利（PIPEDA）</h3>
+<p>個人情報保護および電子文書法（PIPEDA）に基づき、カナダユーザーはアクセスと訂正の権利を有します。行使するには、dev.app.support@gmail.com にメールをお送りください。</p>
+<p>カナダプライバシーコミッショナーオフィスに苦情を申し立てることもできます：https://www.priv.gc.ca</p>
+<h3>8a.6 ケベック州居住者の権利（法律25）</h3>
+<p>お客様がケベック州居住者の場合、民間部門における個人情報の保護に関する法律（法律25、CQLR c. P-39.1）に基づき、以下の権利を有します：</p>
+<ul>
+<li>個人情報への<strong>アクセス権</strong></li>
+<li><strong>訂正権</strong></li>
+<li>オンラインで入手可能な個人情報の<strong>削除およびインデックス削除権</strong></li>
+<li><strong>データポータビリティ権</strong></li>
+<li>お客様に重大な影響を与える可能性のある<strong>自動化された決定について通知を受ける権利</strong>（当社はそのような決定を行いません、第12条参照）</li>
+</ul>
+<p>ケベック外（米国）への転送については、プライバシー影響評価を実施し、契約上の保護に依拠しています。ケベック州情報アクセス委員会（CAI）に苦情を申し立てることができます：https://www.cai.gouv.qc.ca</p>
+<h3>8a.7 オーストラリア居住者の権利（プライバシー法1988年、オーストラリアプライバシー原則）</h3>
+<p>オーストラリアプライバシー法1988年およびオーストラリアプライバシー原則（APPs）に基づき、オーストラリアユーザーは以下の権利を有します：</p>
+<ul>
+<li><strong>APP 12：個人情報へのアクセス</strong></li>
+<li><strong>APP 13：個人情報の訂正</strong></li>
+<li><strong>APP 8（海外開示）：</strong> お客様のデータは米国（Groq、Google/Gemini、Microsoft）およびアイルランド（Google）に転送されます。契約上の保護措置を通じて同等の保護を確保するための合理的な措置を講じています。クラウド機能を使用することで、本情報に基づく海外開示に同意したことになります。</li>
+</ul>
+<p>注：プライバシー法はGDPRと同等の一般的な削除権を提供していません。ただし、削除リクエストに自主的に対応します（第7条参照）。</p>
+<p>オーストラリア情報コミッショナーオフィス（OAIC）に苦情を申し立てることができます：https://www.oaic.gov.au</p>
+<h3>8a.8 ニュージーランド居住者の権利（プライバシー法2020年）</h3>
+<p>ニュージーランドプライバシー法2020年に基づき、アクセス（IPP 6）と訂正（IPP 7）の権利を有します。プライバシーコミッショナーに苦情を申し立てることができます：https://www.privacy.org.nz</p>
+<p>プライバシー改正法2025年（IPP 3A、2026年5月1日施行）に続き、AIサービス（Google Gemini、Groq Whisper、Microsoft Edge TTS）がお客様の入力を処理して結果を返す場合があり、これは間接的な収集を構成する可能性があることをお知らせします。本通知は必要なIPP 3A開示として機能します。</p>
+<h3>8a.9 ブラジル居住者の権利（LGPD）</h3>
+<p>一般個人データ保護法（LGPD、法律番号13.709/2018）に基づき、ブラジルユーザーはアクセス、訂正、匿名化、ブロックまたは削除、データポータビリティ、異議申し立ての権利を有します。これらはGDPRの権利と同等に処理されます。</p>
+<p>監督機関：国家個人データ保護局（ANPD）：https://www.gov.br/anpd/pt-br</p>
+<h3>8a.10 日本居住者の権利（個人情報の保護に関する法律・APPI）</h3>
+
+<p>個人情報の保護に関する法律（APPI）および個人情報保護委員会（PPC）が公表したガイドライン（2022年4月改正・2026年版ガイドライン含む）に基づき、日本のユーザーに以下を詳しく開示します。</p>
+
+<h4>個人情報取扱事業者（データコントローラー）</h4>
+<p>Frank Barwandt（第1条参照）は個人情報の保護に関する法律（APPI）上の個人情報取扱事業者です。日本居住のユーザーから取得した個人情報の取り扱いについて、APPIに定める義務を遵守します。</p>
+
+<h4>個人情報の利用目的（APPI第17条・第18条）</h4>
+<p>当社が取り扱う個人情報の利用目的は以下のとおりです。利用目的の達成に必要な範囲でのみ個人情報を取り扱います：</p>
+<table>
+<thead>
+<tr>
+<th>個人情報の種類</th>
+<th>利用目的</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>日記の記録（テキスト、音声、画像、気分、タグ）</td>
+<td>アプリの中核機能（日記の記録・閲覧・管理）の提供のため。デバイス上にのみ保存。</td>
+</tr>
+<tr>
+<td>音声録音ファイル（クラウド文字起こし利用時）</td>
+<td>Groqによる音声テキスト変換（Whisper文字起こし）サービス提供のため</td>
+</tr>
+<tr>
+<td>日記テキストスニペット（AI機能利用時）</td>
+<td>Google GeminiによるAIダッシュボード・レビュー・テキスト改善機能提供のため</td>
+</tr>
+<tr>
+<td>テキスト（読み上げ機能利用時）</td>
+<td>Microsoft Edge TTSによるテキスト音声変換サービス提供のため</td>
+</tr>
+<tr>
+<td>メールアドレス・GoogleアカウントID・表示名</td>
+<td>Googleサインインおよび Firebase Authenticationによるアカウント管理のため</td>
+</tr>
+<tr>
+<td>端末情報・IPアドレス・Android広告ID（AAID）</td>
+<td>Firebase Analyticsによるアプリ品質改善・エラー分析のための匿名利用統計収集のため（オプトイン時のみ）</td>
+</tr>
+<tr>
+<td>購入データ（トランザクションID等）</td>
+<td>Google Play Billingによるアプリ内課金処理・プレミアム機能の提供のため</td>
+</tr>
+<tr>
+<td>フィードバックテキスト・メールアドレス（フィードバック送信時）</td>
+<td>アプリの品質改善・バグ修正のためのユーザーフィードバック処理のため</td>
+</tr>
+</tbody>
+</table>
+
+<h4>外国にある第三者への提供（APPI第24条・第28条）</h4>
+<p>本アプリのクラウド機能をご利用いただいた場合、以下の外国にある第三者に個人情報が提供されます。</p>
+
+<blockquote>
+<p><strong>重要なお知らせ（APPI第28条）：</strong> 米国は個人情報保護委員会（PPC）が定める「個人の権利利益の保護に関する体制が我が国と同等の水準にある」とされる外国（いわゆるホワイトリスト国）に含まれていません。したがって、米国所在の第三者への個人情報の提供は、<strong>お客様の事前の明示的な同意</strong>に基づいて行われます（APPI第28条第1項）。各クラウド機能の初回利用前に同意確認ダイアログが表示されます。</p>
+</blockquote>
+
+<p>各提供先の詳細：</p>
+<table>
+<thead>
+<tr>
+<th>提供先</th>
+<th>所在国・地域</th>
+<th>提供される個人情報</th>
+<th>利用目的</th>
+<th>プライバシーポリシー</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Groq, Inc.</td>
+<td>米国（ホワイトリスト外）</td>
+<td>音声録音ファイル、IPアドレス、メタデータ</td>
+<td>音声テキスト変換（Whisper）</td>
+<td>https://groq.com/privacy-policy/</td>
+</tr>
+<tr>
+<td>Google LLC（Firebase AI / Gemini）</td>
+<td>米国（ホワイトリスト外）</td>
+<td>日記テキストスニペット、IPアドレス、タイムスタンプ</td>
+<td>AIダッシュボード・週次/月次/年次レビュー・テキスト改善</td>
+<td>https://policies.google.com/privacy</td>
+</tr>
+<tr>
+<td>Microsoft Corporation（Edge TTS）</td>
+<td>米国（ホワイトリスト外）</td>
+<td>読み上げ対象テキスト、IPアドレス、タイムスタンプ</td>
+<td>テキスト音声変換（読み上げ機能）</td>
+<td>https://privacy.microsoft.com/</td>
+</tr>
+<tr>
+<td>Google Ireland Limited（Google Drive）</td>
+<td>アイルランド（EU/EEA）</td>
+<td>日記データベースの暗号化バックアップファイル</td>
+<td>クラウドバックアップ・デバイス移行</td>
+<td>https://policies.google.com/privacy</td>
+</tr>
+<tr>
+<td>Google Ireland Limited（Firebase Analytics）</td>
+<td>アイルランド（EU/EEA）および米国</td>
+<td>端末情報、アプリバージョン、匿名イベントデータ、AAID（切り捨てIPアドレス）</td>
+<td>匿名利用統計・エラー分析（オプトイン時のみ）</td>
+<td>https://firebase.google.com/support/privacy</td>
+</tr>
+</tbody>
+</table>
+
+<p>上記の各クラウド機能はすべて任意です。機能を使用しない場合、個人情報が外国へ提供されることはありません。また、同意を撤回した場合は、以後の個人情報の提供は停止されます。</p>
+
+<h4>個人情報の安全管理措置（APPI第23条）</h4>
+<p>当社は、保有する個人情報の漏えい、滅失または毀損の防止その他の安全管理のために、以下の技術的・組織的措置を講じています（詳細は第9条参照）：</p>
+<ul>
+<li>ローカルデータベースはAndroidサンドボックス機構により保護</li>
+<li>全ネットワーク通信はTLS 1.2以上で暗号化</li>
+<li>認証情報はAndroid Keystoreにより暗号化して保存</li>
+<li>Google DriveバックアップはアプリデータフォルダのみR（他のアプリはアクセス不可）</li>
+<li>Firebase App Checkによる不正アクセス防止</li>
+</ul>
+
+<h4>保有個人データに関するお客様の権利（APPI第32条〜第39条）</h4>
+<p>日本居住者のお客様は、当社が保有する個人情報について以下の権利を有します：</p>
+<ul>
+<li><strong>利用目的の通知請求権（APPI第32条）：</strong> 保有個人データの利用目的の通知を請求できます。</li>
+<li><strong>開示請求権（APPI第33条）：</strong> 当社が保有するお客様の保有個人データの開示を請求できます。</li>
+<li><strong>訂正・追加・削除請求権（APPI第34条）：</strong> 内容が事実でない場合、訂正・追加・削除を請求できます。</li>
+<li><strong>利用停止・消去請求権（APPI第35条第1項）：</strong> 利用目的の範囲を超えて取り扱われている場合、または不正な手段で取得された場合、利用停止または消去を請求できます。</li>
+<li><strong>第三者提供停止請求権（APPI第35条第3項）：</strong> 法に違反して第三者に提供されている場合、停止を請求できます。</li>
+<li><strong>開示等の請求に関する手続き：</strong> 本人確認のうえ対応いたします。手数料は原則無料です。</li>
+</ul>
+
+<h4>権利の行使方法</h4>
+<p>以下のいずれかの方法で権利を行使できます：</p>
+<ul>
+<li><strong>アプリ内：</strong> 「設定 → アカウント」から多くの操作が可能です</li>
+<li><strong>メール：</strong> dev.app.support@gmail.com（件名：「個人情報に関するお問い合わせ」または「APPI Request」）</li>
+<li><strong>削除リクエストページ：</strong> https://pepsi1978.github.io/proggs/bestjournal/account-deletion.html</li>
+</ul>
+<p>対応期間：原則として30日以内（複雑な場合は延長し、その旨をお知らせします）。</p>
+
+<h4>個人情報保護委員会（PPC）への苦情申し立て</h4>
+<p>個人情報の取り扱いに関するご不満・苦情がある場合は、個人情報保護委員会（PPC）にお申し立ていただくこともできます：</p>
+<p>個人情報保護委員会<br />
+ウェブサイト：https://www.ppc.go.jp<br />
+電話（代表）：03-6457-9849（平日9:30〜17:30）<br />
+〒105-0001 東京都港区虎ノ門1-23-10 虎ノ門1丁目タワー</p>
+
+<h4>危機支援のご案内（日本）</h4>
+<p>本アプリはメンタルヘルス医療機器ではありませんが、緊急時や精神的な危機状態にある場合は、以下の日本の支援機関にご連絡ください：</p>
+<ul>
+<li><strong>いのちの電話（全国共通、ナビダイヤル）：</strong> 0570-783-556</li>
+<li><strong>よりそいホットライン（24時間、無料）：</strong> 0120-279-338</li>
+<li><strong>こころの健康相談統一ダイヤル：</strong> 0570-064-556</li>
+<li><strong>緊急の場合：</strong> 119（救急・消防）または 110（警察）</li>
+<li><strong>国際ディレクトリ：</strong> <a href="https://findahelpline.com">findahelpline.com</a></li>
+</ul>
+
+<h4>個人情報の第三者提供に関する記録の開示（APPI第29条・第30条）</h4>
+<p>当社は、お客様の個人情報を第三者（上記クラウドサービス提供者）に提供した場合、APPI第29条に基づき記録を作成し、保管します。お客様は当該記録の開示を請求できます（APPI第33条第5項）。</p>
+
+<h4>匿名加工情報・仮名加工情報（APPI第41条・第43条）</h4>
+<p>当社は現時点で、お客様の個人情報から匿名加工情報または仮名加工情報を作成していません。将来的に作成する場合は、APPIの定める基準に従い適切な加工を行うとともに、本プライバシーポリシーを更新してお知らせします。また、仮名加工情報を作成した場合は、当該情報について識別行為の禁止等のAPPIの規律を遵守します。</p>
+
+<h4>個人関連情報の取り扱い</h4>
+<p>Firebase Analyticsがオプトインにより有効化された場合、クッキー等に相当する端末識別子（Android広告ID）が収集されます。これはAPPIの個人関連情報に該当する可能性があります。当社は、当該情報を個人データと照合することはありません。</p>
+
+<h3>8a.11 南アフリカ居住者の権利（POPIA）</h3>
+<p>個人情報保護法（POPIA）に基づき、南アフリカユーザーはアクセス、訂正、異議申し立ての権利を有します。規制機関：情報規制機関、https://inforegulator.org.za</p>
+<h3>8a.12 メキシコ居住者の権利（LFPDPPP、2026年3月改正）</h3>
+<p>個人データ保護法（LFPDPPP）に基づき、メキシコユーザーはARCO権（アクセス、訂正、取り消し、異議申し立て）を有します。2026年3月改正に続き、<strong>簡易プライバシー通知</strong>（Aviso de Privacidad Simplificado）を提供します—本プライバシーポリシーのスペイン語要約がこの要件を満たします。管轄機関は2026年3月のINAI解散後のメキシコ連邦政府の法定後継機関です。現在の指定と連絡先情報は公式政府ポータル <a href="https://www.gob.mx">www.gob.mx</a> で確認できます。</p>
+<h3>8a.13 チリ居住者の権利（LPPD、2026年12月より完全施行）</h3>
+<p>2026年12月より、チリの新しいデータ保護法（LPPD）が適用されます。チリユーザーはアクセス、訂正、削除、ポータビリティ、異議申し立ての権利を得ます。新しい監督機関は年間収益の2〜4%の罰金を課す場合があります。法律が完全に施行された後、本プライバシーポリシーのチリ固有の部分を相応に拡大します。</p>
+<h3>8a.14 子どものプライバシー（オーストラリア子どもオンラインプライバシーコード、2026年12月10日予定）</h3>
+<p>オーストラリアOAICは、2026年12月10日までに登録されなければならない子どもオンラインプライバシーコードを策定中です。このコードは「子どもがアクセスする可能性が高いオンラインサービス」に適用され、年齢確認、プライバシーバイデフォルト、同意なしの直接マーケティング禁止などの義務が導入されます。Best Journalは13歳以上のユーザーを対象としています。コードが最終決定された後、年齢確認と保護者同意フローを見直します。</p>
+<h3>8a.15 その他の法域</h3>
+<p>特定の名称が挙げられていない法域のユーザーには、上記のGDPR準拠の権利が自主的なコミットメントとして適用されます。また、現地法に基づく義務的な権利も適用されます。質問または現地の権利行使については、dev.app.support@gmail.com にメールをお送りください。</p>
+<hr />
+<h2>9. データセキュリティ</h2>
+<ul>
+<li>保護されたアプリストレージ内のローカルデータベース（Androidサンドボックス）</li>
+<li>すべてのネットワーク接続における暗号化された送信（HTTPS/TLS 1.2以上）</li>
+<li>Google Driveバックアップは保護されたアプリデータフォルダのみに保存（他のアプリはアクセス不可）</li>
+<li>不正使用防止のためのFirebase App Check</li>
+<li>機密データのローカル暗号化（AndroidX Security Crypto）</li>
+<li>暗号化されていない認証情報の非保存</li>
+<li>Google Playストアを通じた自動セキュリティアップデート</li>
+</ul>
+<h3>9.1 生体認証アプリロック（任意）</h3>
+<p>オプションとして、<strong>生体認証</strong>（指紋、顔認証）または<strong>デバイスPIN</strong>（AndroidX Biometric Library）でアプリを保護できます。</p>
+<p><strong>重要：</strong> 生体データ（例：指紋パターンや顔の特徴）は、お使いのデバイスの<strong>セキュアハードウェアエンクレーブ</strong>内のAndroidオペレーティングシステムによって<strong>のみ</strong>処理されます（Trusted Execution Environment / Secure Element）。デバイスから外に出ることはなく、アプリからはアクセスできません。アプリは「認証成功」または「認証失敗」という結果のみを受け取り、生体情報そのものは受け取りません。</p>
+<p><strong>法的根拠：</strong> ロックを有効にすることによる同意（GDPR第6条第1項（a））。<br />
+<strong>撤回：</strong> アプリ設定でロックを無効にするか、Androidシステム設定で生体認証を削除してください。</p>
+<hr />
+<h2>10. 子どもと未成年者</h2>
+<p>このアプリは<strong>13歳以上</strong>のユーザーを対象としています。16歳未満の未成年者がサインインを使用するかクラウドサービス（Groq、Drive、AI）を有効にする場合は、法定後見人の同意が必要です（GDPR第8条）。アプリは13歳未満の子どものデータを故意に収集しません（COPPA準拠、15 U.S.C. §§ 6501-6506）。</p>
+<hr />
+<h2>11. 保持期間</h2>
+<table>
+<thead>
+<tr>
+<th>データ</th>
+<th>期間</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>ローカル日記記録</td>
+<td>お客様による削除またはアンインストールまで</td>
+</tr>
+<tr>
+<td>Google Driveバックアップ</td>
+<td>お客様による削除またはDriveアクセスの取り消しまで</td>
+</tr>
+<tr>
+<td>Androidシステムバックアップ</td>
+<td>Googleポリシーによる（通常、システムバックアップの無効化まで）</td>
+</tr>
+<tr>
+<td>Microsoft Edge TTS</td>
+<td>処理後に削除（Microsoftポリシーによる）</td>
+</tr>
+<tr>
+<td>Groq文字起こしリクエスト</td>
+<td>処理後に削除（Groqポリシーによる）</td>
+</tr>
+<tr>
+<td>Firebase Analytics</td>
+<td>14ヶ月（Googleデフォルト）、その後自動削除</td>
+</tr>
+<tr>
+<td>Firebase Authentication</td>
+<td>アカウント削除まで</td>
+</tr>
+<tr>
+<td>AIリクエスト（Firebase AI）</td>
+<td>Googleポリシーによる永続的な保存なし</td>
+</tr>
+<tr>
+<td>購入データ</td>
+<td>法定保持期間による（最大10年、ドイツ税法§ 147 AO）</td>
+</tr>
+<tr>
+<td>フィードバックメール</td>
+<td>当社の受信トレイに最大24ヶ月、その後削除</td>
+</tr>
+<tr>
+<td>サーバーログ（IPアドレス）</td>
+<td>最大30日、その後自動削除</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h2>12. 自動化された意思決定なし</h2>
+<p>お客様に法的効力を持つまたは重大な影響を与えるGDPR第22条の意味における<strong>自動化された意思決定は行われません</strong>。AI機能はテキストまたはサマリーを生成するのみであり、お客様に法的拘束力はありません。</p>
+<hr />
+<h2>12a. AIシステムに関する通知（AIアクト第50条、カリフォルニア州SB 243）</h2>
+<p>このアプリはお客様の入力を処理するためにAIシステムを使用します：</p>
+<ul>
+<li><strong>Google Gemini</strong>（Firebase AI）：AI搭載のテキスト分析、サマリー、ダッシュボード、レビューおよび文体テキスト改善</li>
+<li><strong>Groq Whisper</strong>：音声テキスト変換文字起こし</li>
+<li><strong>Microsoft Edge テキスト読み上げ</strong>：テキスト読み上げ</li>
+</ul>
+<p>規則（EU）2024/1689（AIアクト、2026年8月2日より適用）第50条に基づき、上記の機能が人工知能に基づくことをお知らせします。AIシステムは<strong>不正確、不完全、または誤解を招く出力</strong>（「ハルシネーション」）を生成する可能性があります。重要な記述は独立して確認し、健康、法律、または財務上の懸念については資格のある専門家にご相談ください。アプリ内では、AI生成コンテンツに「AI生成」バッジを出力の直接隣に表示します（ダッシュボードサマリー、週次・月次・年次レビュー、AI改善済み記録テキスト）。</p>
+<p>AIの出力は<strong>拘束力のある記述ではありません</strong>。お客様自身の振り返りをサポートするための提案とサマリーです。<strong>Best JournalはカリフォルニアSB 243の下での「コンパニオンチャットボット」ではありません</strong>：AIは社会的関係をシミュレートせず、感情的なニーズに直接対応するように設計されていません。お客様自身が書いた記録のサマリーと分析を生成するだけです。それでも、予防措置として脆弱なユーザーへの配慮から、アプリ内（設定 → 危機サポート）に危機的状況の支援リソースを提供し、以下の免責事項でそれらを案内しています。</p>
+
+<h2>12b. メンタルヘルス免責事項</h2>
+<p>Best Journalはデジタル日記であり、<strong>医療製品ではありません</strong>。AI生成の分析とレビューは<strong>心理的、精神科的、または治療的なアドバイスではなく</strong>、資格のある専門家に取って代わるものではありません。急性の危機状態にある場合は、直ちに専門的な支援を求めてください：</p>
+<ul>
+<li><strong>緊急（ドイツ/EU）：</strong> 112 — <strong>米国/カナダ：</strong> 988 Suicide &amp; Crisis Lifeline — <strong>英国：</strong> 116 123（サマリタンズ）</li>
+<li><strong>Telefonseelsorge ドイツ（無料、24時間、匿名）：</strong> 0800 111 0 111 または 0800 111 0 222</li>
+<li><strong>いのちの電話（日本）：</strong> 0570-783-556</li>
+<li><strong>よりそいホットライン（日本、24時間、無料）：</strong> 0120-279-338</li>
+<li><strong>国際ディレクトリ：</strong> <a href="https://findahelpline.com">findahelpline.com</a></li>
+</ul>
+<p>これらの番号はアプリ内の「設定 → 危機サポート」から直接発信することもできます。</p>
+<hr />
+<h2>13. 個人データ提供の義務</h2>
+<p>お客様は個人データを当社に提供する義務はありません。アプリはサインインなし、クラウドサービスなし、分析なしで完全に使用できます。オプションのクラウド機能なしでは、対応する利便性機能（クラウド文字起こし、クラウドバックアップ、クロスデバイス利用、AI機能）のみが利用できなくなります。</p>
+<hr />
+<h2>14. 本プライバシーポリシーの変更</h2>
+<p>このプライバシーポリシーはアプリの変更または法的状況の変化に応じて更新される場合があります。最新バージョンは常にアプリ内の<strong>設定 → プライバシー</strong>およびGoogle Playストアで確認できます。重要な変更についてはアプリ内でお知らせします。</p>
+<p><strong>最終更新：</strong> 2026年4月20日</p>
+<hr />
+<h2>15. お問い合わせ</h2>
+<p>プライバシーに関するご質問または権利の行使については：</p>
+<p><strong>メール：</strong> dev.app.support@gmail.com<br />
+<strong>郵便住所：</strong> 第1条参照（データコントローラー）</p>
+
+<hr>
+<p class="footer">&copy; 2026 Frank Barwandt &middot; Best Journal</p>
+
+</body>
+</html>

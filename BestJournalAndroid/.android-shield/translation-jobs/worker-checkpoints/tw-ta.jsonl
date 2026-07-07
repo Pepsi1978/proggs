@@ -1,0 +1,5 @@
+{"ts":"2026-06-10","lang":"ta","step":"start","note":"35 strings + 2 plurals; 34 in place, paywall_monthly_note NEW; plurals German-stale"}
+{"ts":"2026-06-10","lang":"ta","step":"translated","note":"Tamil via ta-data.json (neengal register, native words for content, English/brand terms kept, Arabic numerals)"}
+{"ts":"2026-06-10","lang":"ta","step":"applied","applied_count":37,"inserted_new":["paywall_monthly_note"],"plurals_replaced":["datetime_months_relative","datetime_years_relative"]}
+{"ts":"2026-06-10","lang":"ta","step":"verified","post_verification":"PASS","checks":["xml-valid","no-identical-to-de","format-args-parity","no-bare-percent","no-tamil-digits","plurals-one+other-not-german","native-digit-validator-exit0"]}
+{"ts":"2026-06-10","lang":"ta","step":"done","note":"prompt_clear_confirm_text corrected to Individuelle Analyse + irreversible deletion; legal 1:1 (§356a, do_not_sell no year, Google-Konto bleibt)"}

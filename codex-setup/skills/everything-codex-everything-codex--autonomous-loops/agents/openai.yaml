@@ -1,0 +1,7 @@
+interface:
+  display_name: "autonomous-loops"
+  short_description: "Patterns and architectures for autonomous Codex loops — from"
+  default_prompt: "Use $everything-codex-everything-codex--autonomous-loops for this task."
+
+policy:
+  allow_implicit_invocation: false

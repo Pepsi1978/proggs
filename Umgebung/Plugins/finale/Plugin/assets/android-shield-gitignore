@@ -1,0 +1,15 @@
+# Auto-generiert vom finale-Plugin (FIN-031, BUG #4 Frank 2026-05-22)
+# Diese Datei verhindert dass Python-Cache + temporaere Plugin-Artefakte ins Repo
+# kommen.
+
+# Python bytecode cache (entsteht durch Plugin-Helferskripte)
+__pycache__/
+*.pyc
+*.pyo
+
+# Temporaere Worker-Inputs/Outputs (cross-lingual-matrix etc.)
+*.tmp
+*.lock
+
+# Lokale Test-Scripte die das Plugin manchmal anlegt
+write_findings.py

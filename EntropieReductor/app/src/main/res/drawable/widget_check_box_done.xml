@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Haekchen-Feld (erledigt) — kurz sichtbar zwischen Tap und Verschwinden der Aufgabe
+  (Frank-Wunsch 2026-05-31). Gefuelltes Quadrat (weiss-Basis, wird zur Laufzeit gruen
+  getoent = CosmosColors.Success) mit runden Ecken; darueber das weisse Haekchen-Icon.
+-->
+<shape xmlns:android="http://schemas.android.com/apk/res/android"
+    android:shape="rectangle">
+    <solid android:color="#FFFFFFFF" />
+    <corners android:radius="8dp" />
+</shape>

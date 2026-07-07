@@ -1,0 +1,7 @@
+interface:
+  display_name: "kotlin-coroutines-flows"
+  short_description: "Kotlin Coroutines and Flow patterns for Android and KMP —"
+  default_prompt: "Use $everything-codex-everything-codex--kotlin-coroutines-flows for this task."
+
+policy:
+  allow_implicit_invocation: false

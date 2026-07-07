@@ -1,0 +1,31 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>$(DotNetTfm)</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\PromptBoard.Core\PromptBoard.Core.csproj" />
+  </ItemGroup>
+
+  <!-- System.Linq wird in den Repository-Files dieses Projekts explizit
+       per "using System.Linq;" eingebunden. Vorher kam das aus der
+       Directory.Build.props in ~/proggs/PromptBoard/ — die wurde beim
+       Move ins Voice-Overlay-Verzeichnis entfernt, weil sie sonst im
+       WPF-Hauptprojekt System.Drawing-Konflikte ausloeste. Die SDK-
+       Variante <Using Include="System.Linq" /> hat hier nicht gegriffen,
+       deshalb der explizite using-pro-Datei-Pfad. -->
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.EntityFrameworkCore" Version="$(MicrosoftPackagesVersion)" />
+    <PackageReference Include="Microsoft.EntityFrameworkCore.Sqlite" Version="$(MicrosoftPackagesVersion)" />
+    <PackageReference Include="Microsoft.EntityFrameworkCore.Design" Version="$(MicrosoftPackagesVersion)">
+      <PrivateAssets>all</PrivateAssets>
+      <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+    </PackageReference>
+    <PackageReference Include="Microsoft.Extensions.Logging.Abstractions" Version="$(MicrosoftPackagesVersion)" />
+  </ItemGroup>
+
+</Project>

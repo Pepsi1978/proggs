@@ -1,0 +1,36 @@
+{
+	"manifest_version": 3,
+	"name": "Prompt Board",
+	"version": "0.5.1",
+	"description": "Prompt-Board als Seitenpanel. Klick auf das Symbol oeffnet/schliesst das Panel, ein Klick auf einen Prompt fuegt ihn ins zuletzt benutzte Textfeld ein.",
+	"key": "MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEA0+RTEe89x9K+bCvGNK0QBdUUiXApvI3Fm6AiDvt5rjQfOqk8fxUMbJa7N/rXU5rOKulInQlyUrkg85Gf75V2ZuDL5W8m0Sr42sT/RQVtatecN030LFBtaJECSZ2rxCEsDk70ECu6FAKaoaEFIANNotLRtPD+jNKUMzfhyvJXEXKKjYGwWK9Oqo7xpzAYTShPBupEw1I6tvvqSC0jGdFnPaMQZu3KF+HbS5N4E3cF2NF9THDWrQ8sll171AsLuX+x3M4ipSycw7kebDeDZtZFxj71e8dKgmgtDnrtY5MbpCKG+SuQRhFdCkFq5qroonK9hesC+/mF3I/GSsN3N2BL/wIDAQAB",
+	"permissions": ["sidePanel", "storage", "scripting"],
+	"host_permissions": ["http://*/*", "https://*/*"],
+	"action": {
+		"default_title": "Prompt Board (Klick zum Oeffnen/Schliessen)",
+		"default_icon": {
+			"16": "icons/icon16.png",
+			"48": "icons/icon48.png",
+			"128": "icons/icon128.png"
+		}
+	},
+	"icons": {
+		"16": "icons/icon16.png",
+		"48": "icons/icon48.png",
+		"128": "icons/icon128.png"
+	},
+	"background": {
+		"service_worker": "background.js"
+	},
+	"side_panel": {
+		"default_path": "sidepanel.html"
+	},
+	"content_scripts": [
+		{
+			"matches": ["<all_urls>"],
+			"all_frames": true,
+			"run_at": "document_idle",
+			"js": ["content.js"]
+		}
+	]
+}

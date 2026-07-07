@@ -1,0 +1,3 @@
+{"ts": "2026-06-10T23:27:26", "stage": "start", "strings": 35, "plurals": 2}
+{"ts": "2026-06-10T23:27:26", "stage": "written", "applied": 34, "inserted": ["paywall_monthly_note"], "plurals": ["datetime_months_relative", "datetime_years_relative"]}
+{"ts": "2026-06-10T23:28:44", "stage": "done", "result": "PASS", "replaced": 34, "inserted": 1, "plurals": 2}

@@ -1,0 +1,31 @@
+{
+  "version": 1,
+  "source_cli": "Codex",
+  "description": "Implemented Codex intelligence suggestions for this workspace.",
+  "entries": [
+    {
+      "id": "intel-self-improve-a1-a2-b1-2026-04-22",
+      "summary": "Codify A1/A2/B1 as permanent self-improve guardrails",
+      "proposal_text": "Add a repo validator for SKILL frontmatter and heredoc anti-patterns, block Bash Python heredocs on Windows, and keep the session scorer bound to the active launcher.",
+      "context_for_other_clis": "This came from the 2026-04-22 self-improve run after repeated loader blindness and missing session score telemetry.",
+      "why_it_was_implemented": "The three issues break discoverability, one-off command reliability, and longitudinal self-observation.",
+      "how_it_was_implemented": "Added validate-codex-setup.mjs, expanded the self-improve workflow to require it, patched bash-guard.ps1, patched session-scorer.ts for modern transcripts, and wired Microsoft.PowerShell_profile.ps1 to run the scorer after Codex exits.",
+      "resilience_summary": "The fix uses defense in depth: static validation, runtime blocking, session-end scoring, and local skill deployment.",
+      "future_failure_review": "Without these guards, a long description can hide a skill again, Windows one-offs can fail silently, and trend analysis goes blind because session-scores.jsonl never appears.",
+      "status": "implemented",
+      "created_at": "2026-04-22T13:16:25.2386268+02:00"
+    },
+    {
+      "id": "intel-codex-claude-delta-bridge-2026-05-15",
+      "summary": "Port Claude Code setup intelligence into Codex bridge tooling",
+      "proposal_text": "Give Codex the same setup-delta intelligence as Claude Code by adapting Claude's bridge registry and audit scripts into codex-setup.",
+      "context_for_other_clis": "The user asked to port the Claude Code setup folder into Codex terms so Codex gains the same intelligence instead of merely referencing Claude Code.",
+      "why_it_was_implemented": "The Codex setup had a whiteboard and self-improve base but could not actually inspect Claude setup deltas; without this, future Claude improvements would remain invisible or require manual copying.",
+      "how_it_was_implemented": "Added Codex bridge registry helper, Claude/Gemini delta bridge metadata, real audit scripts, bootstrap/report scripts, README documentation, validator checks, and ledger entries.",
+      "resilience_summary": "The port is additive, keeps Claude/Gemini read-only, classifies REPLACE separately, validates required bridge files, and exposes bootstrap-report output for future sessions.",
+      "future_failure_review": "If a future edit deletes bridge files, changes registry paths, or reintroduces Claude target paths, validate-codex-setup and audit smoke tests should fail before commit.",
+      "status": "implemented",
+      "created_at": "2026-05-15T21:43:40.6602184+02:00"
+    }
+  ]
+}

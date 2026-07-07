@@ -1,0 +1,7 @@
+interface:
+  display_name: "sadd:do-and-judge"
+  short_description: "Execute a task with sub-agent implementation and LLM-as-a-judge"
+  default_prompt: "Use $sadd-context-engineering-kit--sadd-do-and-judge for this task."
+
+policy:
+  allow_implicit_invocation: false

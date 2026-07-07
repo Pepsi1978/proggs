@@ -1,0 +1,115 @@
+{
+  "$schema": "https://opencode.ai/config.json",
+
+  // Punkt 1 — globale Regel-Datei IMMER zuverlaessig laden:
+  // Auch wenn ein Projekt (z. B. ~/proggs) eine eigene AGENTS.md hat oder nach /new,
+  // wird die globale Regel-Datei ueber instructions zusaetzlich geladen.
+  // Quelle: best-practices/opencode/agents-md-memory.md (instructions-Feld).
+  // Direktive #3 wird bewusst NICHT hier geladen (waere sonst IMMER im Kontext).
+  // Stattdessen laedt der Skill "resilient-bugfixing" den Volltext on-demand —
+  // nur wenn wirklich ein Bug bearbeitet wird (token-sparend, Frank-Wunsch 2026-06-18).
+  "instructions": ["~/.config/opencode/AGENTS.md"],
+
+  // Punkt 2 — Kontext-Kompaktierung entschaerfen (gegen "nach Compress wieder Englisch"):
+  // prune entfernt alte Tool-Ausgaben, reserved haelt mehr Puffer frei -> spaeter + seltener komprimiert.
+  // Quelle: best-practices/opencode/token-effizienz.md (Hebel G) + Almanach §34/§35.
+  "compaction": { "auto": true, "prune": true, "reserved": 15000 },
+
+  // Punkt 2 — saubere Shell fuers Bash-Tool unter Windows.
+  "shell": "pwsh",
+
+  // Punkt 4 — autonom arbeiten, ohne staendige Nachfragen (Franks bypassPermissions-Aequivalent).
+  // ROOT CAUSE der Nachfragen: OpenCode-Defaults sind groesstenteils "allow", ABER
+  // doom_loop/external_directory stehen auf "ask" und .env-Reads auf "deny" (Almanach §40).
+  // Mit Wildcard "*":"allow" wird JEDES Tool ohne Rueckfrage erlaubt (letzte passende Regel
+  // gewinnt; Keys MUESSEN lowercase sein — PascalCase wird STILL ignoriert, Almanach §18).
+  // ACHTUNG: erlaubt damit auch .env-Reads und externe Verzeichnisse — bewusst gewollt.
+  "permission": {
+    "*": "allow"
+  },
+
+  // Punkt 5 — IMMER im Build-Modus starten (voller Zugriff), nie im Plan-Agent.
+  // Der Plan-Agent ist NICHT hart read-only, sondern fragt nur (edit:ask/bash:ask, Almanach §44)
+  // -> daher die "soll ich den Plan umsetzen?"-Rueckfragen. build = Primary mit vollem Zugriff.
+  // Umschalten in der TUI weiterhin per Tab (agent_cycle); dies setzt nur den Start-Default.
+  "default_agent": "build",
+
+  // Punkt 6 — Plugins (extern, Quellcode vor Install geprueft 2026-06-19):
+  //  - @mohak34/opencode-notifier (v0.2.8, MIT): Ton + System-Notification bei
+  //    permission / complete / error. Nutzt node-notifier; bringt Default-Sounds mit
+  //    (funktioniert sofort). Eigene WAV pro Event spaeter in
+  //    ~/.config/opencode/opencode-notifier.json (Events: permission/complete/error).
+  //  - @plannotator/opencode (v0.20.3 — >=0.20.0 PFLICHT, sonst Bun-Import-Bug auf
+  //    Node-Host, Almanach §55c): Plan-Annotation. workflow:"manual" -> submit_plan wird
+  //    NICHT registriert, nur per /plannotator-annotate|review|last auf Abruf. KEIN
+  //    Plan-Zwang bei normalen Anfragen (Frank-Wunsch). Slash-Commands kommen mit dem Paket.
+  //  Eintrag-Form: String ODER [name, options]; { } NICHT als eigenes Array-Item (Plannotator-Doku).
+  "plugin": [
+    "@mohak34/opencode-notifier@latest",
+    ["@plannotator/opencode@latest", { "workflow": "manual" }]
+  ],
+
+  // Punkt 7 — Web-Recherche laeuft ueber die API-Pipeline, NICHT ueber einen Firecrawl-MCP.
+  //  Firecrawl-MCP am 2026-06-26 entfernt (Frank: alles ueber API, genau wie in Claude Code).
+  //  Recherche-Weg: der research-Skill / der researcher-Agent ruft per Bash
+  //    ~/proggs/mm-research.py "<thema>" [n]                 (Engine A: Firecrawl-API + MiniMax M3)
+  //    ~/proggs/or-research.py "<thema>" minimax/minimax-m3:online  (Engine B: MiniMax M3 + OpenRouter-Websuche)
+  //  Auch gezielte Einzel-Nachsuchen laufen so (NIE ueber ein firecrawl_*-Tool — gibt es hier nicht mehr).
+  //  Spart zudem das MCP-Tool-Schema (~15-25k Tok/Prompt, Almanach §8). Keys in
+  //  ~/SK/OpenCode/ (firecrawl-api-key.txt, go-api-key.txt) + ~/SK/ClaudeCodeOpenRouter/openrouter.key.
+  "mcp": {
+    // Punkt 8 — Franks "zweites Gehirn" (selbst gehosteter Memory-Server) als Remote-MCP.
+    // Laeuft auf dem Hostinger-VPS, erreichbar NUR ueber den WireGuard-Tunnel (10.8.0.1:8001).
+    // Kein OAuth/Header noetig: der Tunnel IST der private Kanal (bugs/server/wireguard.md §2).
+    // Werkzeuge erscheinen als second-brain_remember / _recall / _list_memories / _brain_health.
+    // Quelle/Bau: ~/proggs/second-brain-server/ (compose-Service sb-mcp, FastMCP Streamable-HTTP).
+    "second-brain": {
+      "type": "remote",
+      "url": "http://10.8.0.1:8001/mcp",
+      "enabled": true
+    }
+  },
+
+  // Punkt 3 — Stealth-Modell "Owl Alpha" sichtbar machen.
+  // ROOT CAUSE: owl-alpha hat in models.dev status:"alpha". OpenCode blendet
+  // alpha/deprecated-Modelle aus dem Picker aus. Ein Eintrag unter
+  // provider.openrouter.models wird mit models.dev gemergt -> erbt status:alpha
+  // -> bleibt unsichtbar. LOESUNG: eigener Provider-Name ("owl"), den models.dev
+  // NICHT kennt -> kein Merge, kein Status-Filter. Nutzt dieselbe OpenRouter-API.
+  // Waehlbar als:  owl/openrouter/owl-alpha
+  // Key kommt aus User-Env-Var OPENROUTER_API_KEY (aus auth.json gesetzt).
+  // ACHTUNG: Owl Alpha loggt Prompts/Completions (Training) -> NICHT fuer
+  // sensible/private App-Daten (Entropie Reductor, BestJournal-Nutzerdaten).
+  "provider": {
+    "owl": {
+      "npm": "@openrouter/ai-sdk-provider",
+      "name": "OpenRouter Owl (Stealth)",
+      "options": {
+        "baseURL": "https://openrouter.ai/api/v1",
+        "apiKey": "{env:OPENROUTER_API_KEY}"
+      },
+      "models": {
+        "openrouter/owl-alpha": {
+          "name": "Owl Alpha (1M, gratis)",
+          "limit": { "context": 1048576, "output": 262144 }
+        }
+      }
+    },
+
+    // MiniMax M3 als Researcher-Modell ueber den EINGEBAUTEN OpenCode-Go-Provider.
+    // MiniMax laeuft im Go ueber das ANTHROPIC-Schema (.../zen/go/v1/messages) -> Thinking ist
+    // dort NATIV aktiv (kein Pflicht-Schalter; Thinking-Bloecke kommen automatisch).
+    // Bewusst KEIN npm/baseURL/apiKey: nur MERGE mit dem eingebauten Provider, der Key kommt
+    // aus auth.json -> vermeidet den Custom-Provider-Key-Verlust-Bug (anomalyco/opencode #21737).
+    // options.thinking.budgetTokens steuert nur das Denk-Budget (Anthropic-Stil-Key;
+    // dokumentiert in opencode.ai/docs/models, NICHT in docs/config).
+    // Ansteuern als Modell:  opencode-go/minimax-m3
+    "opencode-go": {
+      "models": {
+        "minimax-m3": {
+          "options": { "thinking": { "type": "enabled", "budgetTokens": 16000 } }
+        }
+      }
+    }
+  }
+}

@@ -1,0 +1,7 @@
+interface:
+  display_name: "update-docs"
+  short_description: "update-docs"
+  default_prompt: "Use $everything-codex-everything-codex--update-docs for this task."
+
+policy:
+  allow_implicit_invocation: false

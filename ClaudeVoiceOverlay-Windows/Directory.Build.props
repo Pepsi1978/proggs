@@ -1,0 +1,27 @@
+<Project>
+
+  <!--
+    Zentrale Versions-Properties fuer das gesamte ClaudeVoiceOverlay (Haupt-App + Subprojekte).
+    MSBuild importiert diese Datei automatisch vor JEDEM .csproj im Verzeichnisbaum
+    (Haupt-Overlay, PromptBoard.Core, PromptBoard.Data) — die Properties sind also ueberall da.
+
+    Naechster Versionssprung = HIER eine Zeile aendern statt in 3 .csproj.
+    Regel-Hintergrund: version-bump-visible-always + Wartbarkeit.
+
+    Hinweis: Das Haupt-Overlay haengt im eigenen .csproj '-windows' an $(DotNetTfm) an
+    (WPF/WinForms brauchen das), die Subprojekte (reine Libraries) nutzen $(DotNetTfm) pur.
+  -->
+  <PropertyGroup>
+    <!-- .NET-Hauptversion (ohne -windows-Suffix). -->
+    <DotNetTfm>net10.0</DotNetTfm>
+
+    <!-- Microsoft.Extensions.* + Microsoft.EntityFrameworkCore.* (synchron mit .NET 10 versioniert). -->
+    <MicrosoftPackagesVersion>10.0.9</MicrosoftPackagesVersion>
+
+    <!-- Drittanbieter-Pakete. -->
+    <NAudioVersion>2.3.0</NAudioVersion>
+    <GoogleApisDriveVersion>1.74.0.4135</GoogleApisDriveVersion>
+    <GoogleApisAuthVersion>1.75.0</GoogleApisAuthVersion>
+  </PropertyGroup>
+
+</Project>

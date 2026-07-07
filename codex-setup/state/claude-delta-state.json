@@ -1,0 +1,26 @@
+{
+  "version": 1,
+  "bridge_id": "claude-delta",
+  "bridge_registry_path": "codex-setup/bridges/bridge-registry.json",
+  "scope": "claude-code-environment-only",
+  "tracked_paths": [
+    "claude-code-setup/**",
+    "CLAUDE.md",
+    "claude-code-setup/state/implemented-intelligence-suggestions.json"
+  ],
+  "tracked_git_paths": [
+    "claude-code-setup",
+    "CLAUDE.md"
+  ],
+  "replace_requires_confirmation": true,
+  "additive_bias": true,
+  "last_reviewed_commit": "b047be783c888b76b1eb6c199eff77b29a94a201",
+  "last_applied_commit": null,
+  "last_reviewed_at": "2026-05-15T19:45:37.076Z",
+  "last_applied_at": null,
+  "notes": "Tracks only Claude Code programming-environment deltas for Codex.",
+  "last_checked_commit": "b047be783c888b76b1eb6c199eff77b29a94a201",
+  "last_checked_date": "2026-05-15T19:45:37.076Z",
+  "initialized": true,
+  "note": "Initialized baseline after Codex-native delta bridge port on 2026-05-15. Use --all to inspect historical deltas."
+}

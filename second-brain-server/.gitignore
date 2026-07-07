@@ -1,0 +1,10 @@
+# Secrets und Daten NIEMALS ins Repo (bleiben auf dem Server; .env-Backup in ~/SK/second-brain/)
+.env
+*.env
+qdrant-data/
+*-data/
+*-storage/
+*-logs/
+brain-logs/
+__pycache__/
+*.pyc

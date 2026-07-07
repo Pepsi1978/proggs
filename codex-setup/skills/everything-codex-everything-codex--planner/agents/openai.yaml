@@ -1,0 +1,7 @@
+interface:
+  display_name: "planner"
+  short_description: "Expert planning specialist for complex features and refactoring"
+  default_prompt: "Use $everything-codex-everything-codex--planner for this task."
+
+policy:
+  allow_implicit_invocation: false

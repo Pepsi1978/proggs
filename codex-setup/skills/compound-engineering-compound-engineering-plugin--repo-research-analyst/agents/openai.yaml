@@ -1,0 +1,7 @@
+interface:
+  display_name: "repo-research-analyst"
+  short_description: "Conducts thorough research on repository structure"
+  default_prompt: "Use $compound-engineering-compound-engineering-plugin--repo-research-analyst for this task."
+
+policy:
+  allow_implicit_invocation: false

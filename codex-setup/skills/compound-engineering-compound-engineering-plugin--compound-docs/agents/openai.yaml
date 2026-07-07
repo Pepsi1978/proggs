@@ -1,0 +1,7 @@
+interface:
+  display_name: "compound-docs"
+  short_description: "Capture solved problems as categorized documentation with YAML"
+  default_prompt: "Use $compound-engineering-compound-engineering-plugin--compound-docs for this task."
+
+policy:
+  allow_implicit_invocation: false

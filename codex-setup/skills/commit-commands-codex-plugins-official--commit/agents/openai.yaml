@@ -1,0 +1,7 @@
+interface:
+  display_name: "commit"
+  short_description: "Create a git commit from the current staged and unstaged changes"
+  default_prompt: "Use $commit-commands-codex-plugins-official--commit for this task."
+
+policy:
+  allow_implicit_invocation: true

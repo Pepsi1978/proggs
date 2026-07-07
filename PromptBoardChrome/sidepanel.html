@@ -1,0 +1,50 @@
+<!DOCTYPE html>
+<html lang="de">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <link rel="stylesheet" href="sidepanel.css" />
+    <title>Prompt Board</title>
+  </head>
+  <body>
+    <header class="pb-header">
+      <svg class="pb-logo" viewBox="0 0 24 24" width="22" height="22" aria-hidden="true">
+        <rect x="2" y="2" width="20" height="20" rx="5" fill="#7c5ce7" />
+        <rect x="6" y="7" width="12" height="2.3" rx="1.15" fill="#fff" />
+        <rect x="6" y="11" width="12" height="2.3" rx="1.15" fill="#fff" />
+        <rect x="6" y="15" width="7" height="2.3" rx="1.15" fill="#fff" />
+      </svg>
+      <h1>Prompt Board</h1>
+      <button id="editToggle" class="pb-edit-toggle" title="Prompts bearbeiten">Bearbeiten</button>
+    </header>
+
+    <div id="hint" class="pb-hint" hidden></div>
+
+    <main id="list" class="pb-list"></main>
+
+    <section id="editArea" class="pb-edit" hidden>
+      <h2>Neuen Prompt hinzufügen</h2>
+      <input id="newLabel" type="text" maxlength="40" placeholder="Kurzname (z.B. Zusammenfassen)" />
+      <textarea id="newText" rows="3" placeholder="Prompt-Text, der eingefügt wird …"></textarea>
+      <button id="addBtn" class="pb-primary">Hinzufügen</button>
+    </section>
+
+    <footer class="pb-footer">
+      <span class="pb-footer-text">
+        Klick auf einen Prompt fügt ihn in das zuletzt benutzte Textfeld der Seite ein.
+      </span>
+      <button
+        id="reloadBtn"
+        class="pb-reload"
+        title="Erweiterung aktualisieren &amp; Seite neu laden"
+        aria-label="Aktualisieren"
+      >
+        ↻
+      </button>
+    </footer>
+
+    <div class="pb-version" id="version"></div>
+
+    <script src="sidepanel.js"></script>
+  </body>
+</html>

@@ -1,0 +1,7 @@
+interface:
+  display_name: "file-todos"
+  short_description: "managing the file-based todo tracking system in the todos/"
+  default_prompt: "Use $compound-engineering-compound-engineering-plugin--file-todos for this task."
+
+policy:
+  allow_implicit_invocation: false

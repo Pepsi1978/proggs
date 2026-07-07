@@ -1,0 +1,7 @@
+interface:
+  display_name: "test-cards"
+  short_description: "Display Stripe test card numbers for various testing scenarios"
+  default_prompt: "Use $stripe-codex-plugins-official--test-cards for this task."
+
+policy:
+  allow_implicit_invocation: false

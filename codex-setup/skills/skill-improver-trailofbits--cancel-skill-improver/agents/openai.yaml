@@ -1,0 +1,7 @@
+interface:
+  display_name: "cancel-skill-improver"
+  short_description: "Stops, cancels, or aborts the active skill improvement loop"
+  default_prompt: "Use $skill-improver-trailofbits--cancel-skill-improver for this task."
+
+policy:
+  allow_implicit_invocation: false

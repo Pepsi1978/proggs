@@ -1,0 +1,7 @@
+interface:
+  display_name: "customaize-agent:context-engineering"
+  short_description: "Understand the components, mechanics, and constraints of"
+  default_prompt: "Use $customaize-agent-context-engineering-kit--customaize-agent-context-engineering for this task."
+
+policy:
+  allow_implicit_invocation: false

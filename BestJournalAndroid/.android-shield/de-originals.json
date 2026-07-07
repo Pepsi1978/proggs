@@ -1,0 +1,15 @@
+{
+  "ai_banner_body": "• Diktierte Texte werden automatisch verbessert\\n• Zusammenfassungen für jeden Eintrag\\n• Intelligente Lebensratschläge aus deinen Mustern. Alle KI-Ausgaben sind Anregungen, keine professionelle Beratung.\\n• Alles in deiner kostenlosen Testphase enthalten",
+  "ai_limits_dialog_body": "MIT PREMIUM-ABO\\n\\nPro Tag stehen dir zur Verfügung:\\n• 150 Anfragen pro Tag und Profil — für die 4 vordefinierten zusammen 600/Tag, plus 150/Tag für jedes eigene Profil das du erstellst.\\n• Bis zu 150 Text-Verbesserungen\\n\\nWie das im Detail abläuft:\\n• Anfragen 1 bis 30: in höchster KI-Qualität\\n• Anfragen 31 bis 100: in schneller Standard-Qualität\\n• Bei der 101. Anfrage: einmalige 30-Min-Pause\\n• Anfragen 101 bis 150: schnelle Standard-Qualität\\n• Ab Anfrage 151: keine weiteren Anfragen bis morgen\\n\\nAußerdem gilt für alle Nutzer:\\n• Höchstens 50 KI-Anfragen pro Stunde — danach 5-Min-Pause\\n\\nWann werden die Kontingente zurückgesetzt?\\nJeden Tag um 0:00 Uhr (deine Lokalzeit) startet ein neues volles Kontingent.\\n\\n──────────\\n\\nOHNE ABO\\n\\n• 5 Dashboard-Analysen pro Woche pro Profil\\n• 5 Text-Verbesserungen pro Woche\\n• Immer in schneller Standard-Qualität\\n• Zurückgesetzt jeden Montag um 0:00 Uhr (deine Lokalzeit)\\n\\n──────────\\n\\nDie meisten Nutzer im Alltag werden diese Grenzen nicht erreichen.",
+  "ai_limits_disclaimer": "KI-Tageskontingent für intensive Nutzung.",
+  "churn_cancel_sub": "Abo kündigen",
+  "churn_offer_feature_perspectives": "Alle KI-Profile (4 vordefiniert + unbegrenzt eigene)",
+  "onboarding_perspectives_title": "Verschiedene Blickwinkel auf\\ndein Leben",
+  "paywall_headline_stress": "Mehr Klarheit im Alltag",
+  "paywall_headline_stress_sub": "Erkenne was dich täglich beschäftigt und bringe es auf den Punkt.",
+  "retro_benefit_weekly": "Unbegrenzte Wochenrückblicke, nicht nur die ersten 2 Wochen",
+  "settings_premium_feature_5_perspectives": "Alle KI-Profile (4 vordefiniert + unbegrenzt eigene)",
+  "settings_premium_feature_dashboard_desc": "Dein Dashboard wächst mit deinen Einträgen.",
+  "settings_premium_feature_improve_desc": "KI verbessert deine Einträge auf Wunsch.",
+  "settings_premium_feature_patterns_desc": "Die KI kann Muster und Zusammenhänge in deinen Einträgen sichtbar machen"
+}

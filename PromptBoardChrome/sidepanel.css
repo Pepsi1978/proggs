@@ -1,0 +1,306 @@
+:root {
+	--pb-bg: #ffffff;
+	--pb-fg: #1f2230;
+	--pb-muted: #6b7280;
+	--pb-border: #e5e7eb;
+	--pb-accent: #7c5ce7;
+	--pb-accent-fg: #ffffff;
+	--pb-row: #f7f7fb;
+	--pb-row-hover: #efecfb;
+	--pb-error: #c0392b;
+	--pb-ok: #1d8a4a;
+}
+
+@media (prefers-color-scheme: dark) {
+	:root {
+		--pb-bg: #1b1d27;
+		--pb-fg: #ececf1;
+		--pb-muted: #9aa0ad;
+		--pb-border: #2e3140;
+		--pb-accent: #8a74f0;
+		--pb-accent-fg: #ffffff;
+		--pb-row: #252836;
+		--pb-row-hover: #2f3346;
+		--pb-error: #ff7b6b;
+		--pb-ok: #57d98a;
+	}
+}
+
+* {
+	box-sizing: border-box;
+}
+
+html,
+body {
+	margin: 0;
+	padding: 0;
+}
+
+body {
+	font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+	font-size: 14px;
+	color: var(--pb-fg);
+	background: var(--pb-bg);
+	display: flex;
+	flex-direction: column;
+	min-height: 100vh;
+}
+
+.pb-header {
+	display: flex;
+	align-items: center;
+	gap: 8px;
+	padding: 12px 14px;
+	border-bottom: 1px solid var(--pb-border);
+	position: sticky;
+	top: 0;
+	background: var(--pb-bg);
+	z-index: 2;
+}
+
+.pb-logo {
+	flex: 0 0 auto;
+}
+
+.pb-header h1 {
+	font-size: 15px;
+	font-weight: 600;
+	margin: 0;
+	flex: 1 1 auto;
+}
+
+.pb-edit-toggle {
+	border: 1px solid var(--pb-border);
+	background: transparent;
+	color: var(--pb-muted);
+	font-size: 12px;
+	padding: 4px 10px;
+	border-radius: 8px;
+	cursor: pointer;
+}
+
+.pb-edit-toggle:hover {
+	background: var(--pb-row-hover);
+	color: var(--pb-fg);
+}
+
+.pb-hint {
+	margin: 10px 14px 0;
+	padding: 8px 10px;
+	border-radius: 8px;
+	font-size: 12.5px;
+	background: var(--pb-row);
+	color: var(--pb-ok);
+}
+
+.pb-hint.pb-error {
+	color: var(--pb-error);
+}
+
+.pb-list {
+	flex: 1 1 auto;
+	padding: 12px 14px;
+	display: flex;
+	flex-direction: column;
+	gap: 8px;
+}
+
+.pb-row {
+	display: flex;
+	align-items: stretch;
+	gap: 6px;
+}
+
+.pb-prompt {
+	flex: 1 1 auto;
+	text-align: left;
+	border: 1px solid var(--pb-border);
+	background: var(--pb-row);
+	color: var(--pb-fg);
+	padding: 10px 12px;
+	border-radius: 10px;
+	cursor: pointer;
+	font-size: 13.5px;
+	line-height: 1.3;
+	transition:
+		background 0.12s ease,
+		transform 0.05s ease;
+}
+
+.pb-prompt:hover {
+	background: var(--pb-row-hover);
+}
+
+.pb-prompt:active {
+	transform: scale(0.99);
+}
+
+/* Wird beim Umsortieren per Rechts-Drag gezogen. */
+.pb-row.pb-dragging {
+	opacity: 0.55;
+}
+
+.pb-row.pb-dragging .pb-prompt {
+	cursor: grabbing;
+	border-color: var(--pb-accent);
+}
+
+.pb-del {
+	flex: 0 0 auto;
+	width: 36px;
+	border: 1px solid var(--pb-border);
+	background: transparent;
+	color: var(--pb-error);
+	border-radius: 10px;
+	cursor: pointer;
+	font-size: 14px;
+}
+
+.pb-del:hover {
+	background: var(--pb-row-hover);
+}
+
+.pb-edit {
+	border-top: 1px solid var(--pb-border);
+	padding: 12px 14px;
+	display: flex;
+	flex-direction: column;
+	gap: 8px;
+}
+
+.pb-edit h2 {
+	font-size: 13px;
+	font-weight: 600;
+	margin: 0 0 2px;
+	color: var(--pb-muted);
+}
+
+.pb-edit input,
+.pb-edit textarea {
+	width: 100%;
+	border: 1px solid var(--pb-border);
+	background: var(--pb-bg);
+	color: var(--pb-fg);
+	border-radius: 8px;
+	padding: 8px 10px;
+	font: inherit;
+	resize: vertical;
+}
+
+.pb-edit input:focus,
+.pb-edit textarea:focus {
+	outline: 2px solid var(--pb-accent);
+	outline-offset: -1px;
+}
+
+.pb-primary {
+	border: none;
+	background: var(--pb-accent);
+	color: var(--pb-accent-fg);
+	padding: 9px 12px;
+	border-radius: 9px;
+	font-weight: 600;
+	cursor: pointer;
+}
+
+.pb-primary:hover {
+	filter: brightness(1.06);
+}
+
+/* Editable prompt card (shown in edit mode instead of the plain button). */
+.pb-edit-card {
+	border: 1px solid var(--pb-border);
+	background: var(--pb-row);
+	border-radius: 10px;
+	padding: 8px;
+	display: flex;
+	flex-direction: column;
+	gap: 6px;
+}
+
+.pb-edit-card-head {
+	display: flex;
+	gap: 6px;
+}
+
+.pb-edit-label {
+	flex: 1 1 auto;
+	border: 1px solid var(--pb-border);
+	background: var(--pb-bg);
+	color: var(--pb-fg);
+	border-radius: 8px;
+	padding: 7px 9px;
+	font: inherit;
+	font-weight: 600;
+}
+
+.pb-edit-text {
+	width: 100%;
+	border: 1px solid var(--pb-border);
+	background: var(--pb-bg);
+	color: var(--pb-fg);
+	border-radius: 8px;
+	padding: 7px 9px;
+	font: inherit;
+	resize: vertical;
+}
+
+.pb-edit-label:focus,
+.pb-edit-text:focus {
+	outline: 2px solid var(--pb-accent);
+	outline-offset: -1px;
+}
+
+.pb-edit-card .pb-del {
+	width: auto;
+	padding: 0 12px;
+	font-size: 12px;
+	white-space: nowrap;
+}
+
+.pb-footer {
+	display: flex;
+	align-items: center;
+	gap: 10px;
+	padding: 10px 14px 14px;
+	font-size: 11.5px;
+	color: var(--pb-muted);
+	border-top: 1px solid var(--pb-border);
+}
+
+/* Versions-Stempel ganz unten */
+.pb-version {
+	padding: 0 14px 12px;
+	font-size: 10.5px;
+	color: var(--pb-muted);
+	opacity: 0.8;
+	text-align: right;
+}
+
+.pb-footer-text {
+	flex: 1 1 auto;
+}
+
+.pb-reload {
+	flex: 0 0 auto;
+	width: 34px;
+	height: 34px;
+	border-radius: 50%;
+	border: 1px solid var(--pb-border);
+	background: var(--pb-row);
+	color: var(--pb-fg);
+	font-size: 18px;
+	line-height: 1;
+	cursor: pointer;
+	transition:
+		background 0.12s ease,
+		transform 0.4s ease;
+}
+
+.pb-reload:hover {
+	background: var(--pb-row-hover);
+}
+
+.pb-reload:active {
+	transform: rotate(360deg);
+}

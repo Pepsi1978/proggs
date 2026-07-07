@@ -1,0 +1,7 @@
+interface:
+  display_name: "new-sdk-app"
+  short_description: "Create and setup a new Codex Agent SDK application"
+  default_prompt: "Use $agent-sdk-dev-codex-plugins-official--new-sdk-app for this task."
+
+policy:
+  allow_implicit_invocation: false

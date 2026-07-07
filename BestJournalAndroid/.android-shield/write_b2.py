@@ -1,0 +1,226 @@
+#!/usr/bin/env python3
+# -*- coding: utf-8 -*-
+import json, os
+
+findings = [
+    {
+        "findingId": "S2-001",
+        "riskLevel": "🟨",
+        "category": "UWG §5 — Leistungsversprechen",
+        "key": "settings_custom_prompt_placeholder",
+        "line": 468,
+        "currentText": "Je gründlicher du beschreibst was dein Fokus ist, desto besser werden die Ergebnisse.",
+        "problem": "Impliziert garantiert bessere KI-Ergebnisse durch Formulierungsaufwand. Nicht messbar belegbar; Ergebnisqualität hängt von LLM-Inferenz ab, die außerhalb der Kontrolle des Entwicklers liegt.",
+        "suggestedFixes": [
+            {
+                "text": "Je konkreter du deinen Fokus beschreibst, desto gezielter können die KI-Vorschläge sein.",
+                "rationale": "Formulierung mit 'können' statt garantiertem Erfolg; sachlich korrekt."
+            }
+        ],
+        "invasivityLevel": "text-only"
+    },
+    {
+        "findingId": "S2-002",
+        "riskLevel": "🟥",
+        "category": "DSGVO Art. 6/9 — Einwilligungstext unvollständig (besondere Datenkategorien)",
+        "key": "consent_card2_body",
+        "line": 616,
+        "currentText": "Optional werden Texte an Google Gemini und Vorlese-Texte an Microsoft Edge in den USA gesendet (EU-US Data Privacy Framework). Sprachaufnahmen gehen an Groq (USA) mit Standardvertragsklauseln (EU SCCs).",
+        "problem": "Unterschiedliche Rechtsgrundlagen (EU-US DPF vs. SCCs) werden ohne klare Dienstleister-Zuordnung vermischt. Für besondere Datenkategorien (Art. 9 DSGVO — Gesundheits-/Stimmungsdaten im Tagebuch) fehlt der explizite Hinweis auf Art. 9 Abs. 2 lit. a als Rechtsgrundlage. Zu kurz für eine informierte Einwilligung gem. Art. 7 i.V.m. Art. 13 DSGVO.",
+        "suggestedFixes": [
+            {
+                "text": "Optional: Texte an Google Gemini (USA, EU-US Data Privacy Framework) und Microsoft Edge TTS (USA, EU-US Data Privacy Framework) sowie Sprachaufnahmen an Groq (USA, EU-Standardvertragsklauseln). Da Tagebucheinträge besonders sensible Daten sein können (Art. 9 DSGVO), erfolgt die KI-Verarbeitung nur mit deiner ausdrücklichen Zustimmung.",
+                "rationale": "Klare Zuordnung Dienst→Rechtsgrundlage; expliziter Art.-9-Hinweis für besondere Datenkategorien."
+            }
+        ],
+        "invasivityLevel": "text-only"
+    },
+    {
+        "findingId": "S2-003",
+        "riskLevel": "🟥",
+        "category": "HWG §3 — implizites Heilversprechen",
+        "key": "settings_premium_feature_5_perspectives_desc",
+        "line": 498,
+        "currentText": "Von Klarheit bis Selbsterkenntnis",
+        "problem": "Die Formulierung suggeriert messbare psychologische Wirkungen ('Klarheit', 'Selbsterkenntnis') als versprochenes Ergebnis eines Premium-Features. Im Kontext eines KI-Tagebuchs kann dies als implizites Heilversprechen i.S.d. HWG §3 interpretiert werden, da Tagebuchführung oft im Kontext psychischer Gesundheit vermarktet wird. Kein Disclaimer vorhanden.",
+        "suggestedFixes": [
+            {
+                "text": "Verschiedene Analyse-Perspektiven für dein Tagebuch",
+                "rationale": "Beschreibt neutral die Funktion ohne psychologisches Wirkungsversprechen."
+            }
+        ],
+        "invasivityLevel": "text-only"
+    },
+    {
+        "findingId": "S2-004",
+        "riskLevel": "🟧",
+        "category": "HWG §3 — implizites Heilversprechen",
+        "key": "settings_premium_feature_reviews_desc",
+        "line": 500,
+        "currentText": "Die KI erzählt deine Geschichte",
+        "problem": "Metaphorische Formulierung, die bei einer App mit psychologischem Selbstreflexions-Kontext (Stress, Stimmung) als implizites therapeutisches Versprechen ausgelegt werden kann. Die KI als Erzähler der persönlichen Geschichte impliziert Verarbeitungs- und Heilungsnutzen.",
+        "suggestedFixes": [
+            {
+                "text": "Die KI fasst deine Einträge in einem strukturierten Rückblick zusammen",
+                "rationale": "Sachlich beschreibend, kein therapeutisches Versprechen."
+            }
+        ],
+        "invasivityLevel": "text-only"
+    },
+    {
+        "findingId": "S2-005",
+        "riskLevel": "🟧",
+        "category": "UWG §5 — irreführende Leistungsaussage",
+        "key": "settings_premium_feature_voice_desc",
+        "line": 506,
+        "currentText": "Höhere Qualität für deine Spracheinträge",
+        "problem": "'Höhere Qualität' ist ein relativer Komparativ ohne messbares Bezugsobjekt. Irreführend gem. UWG §5 Abs. 1, da unklar ist, womit verglichen wird (kostenlosem Tier? Gerätesystem?). Der Nutzer kann die Aussage nicht überprüfen.",
+        "suggestedFixes": [
+            {
+                "text": "Cloud-Spracherkennung mit Groq Whisper für genauere Transkription",
+                "rationale": "Konkrete technische Beschreibung ohne relativen, nicht belegbaren Qualitätsbegriff."
+            }
+        ],
+        "invasivityLevel": "text-only"
+    },
+    {
+        "findingId": "S2-006",
+        "riskLevel": "🟥",
+        "category": "DSGVO Art. 13 Abs. 2 lit. a — Aufbewahrungsdauer / Drittlandübermittlung",
+        "key": "privacy_gate_gemini_body",
+        "line": 627,
+        "currentText": "Anfragen werden sofort nach Verarbeitung gelöscht",
+        "problem": "Die Behauptung 'sofort nach Verarbeitung gelöscht' ist eine Zusicherung über Googles Datenverarbeitungspraktiken, die der App-Entwickler alleine nicht garantieren kann. Ohne zitierbaren Beleg (Google-Datenschutzrichtlinie oder Data Processing Agreement) ist dies nach Art. 13 Abs. 2 lit. a DSGVO unvollständig und potenziell irreführend. Ein Link zur Google-Datenschutzinformation fehlt.",
+        "suggestedFixes": [
+            {
+                "text": "Anfragen werden nach Verarbeitung gelöscht (siehe Googles Datenschutzrichtlinie: policies.google.com/privacy). Die KI-Ausgaben sind Vorschläge, keine professionelle Beratung.",
+                "rationale": "Aussage durch Quellenangabe belegbar; Art.-13-Konformität verbessert."
+            }
+        ],
+        "invasivityLevel": "text-only"
+    },
+    {
+        "findingId": "S2-007",
+        "riskLevel": "🟧",
+        "category": "DSGVO Art. 13 — Drittlandübermittlung unvollständig",
+        "key": "consent_toggle_tts_body",
+        "line": 679,
+        "currentText": "Liest Einträge mit natürlicher Stimme vor. Sendet den Text an Microsoft (USA).",
+        "problem": "Fehlende Angabe der Rechtsgrundlage für die Drittlandübermittlung an Microsoft (USA). Kein Hinweis auf EU-US Data Privacy Framework oder SCCs. Im Vergleich zu den Groq- und Gemini-Toggles deutlich weniger Transparenz — inkonsistenter Consent-Standard.",
+        "suggestedFixes": [
+            {
+                "text": "Liest Einträge mit natürlicher Stimme vor. Sendet den Text verschlüsselt an Microsoft (USA, EU-US Data Privacy Framework). Kein Training mit deinen Daten.",
+                "rationale": "Angleichung an Detailtiefe der anderen Toggles; Rechtsgrundlage explizit genannt."
+            }
+        ],
+        "invasivityLevel": "text-only"
+    },
+    {
+        "findingId": "S2-008",
+        "riskLevel": "🟨",
+        "category": "Abo-Transparenz §312j BGB — unklare Wiederherstellbarkeit",
+        "key": "settings_premium_cancelled_desc",
+        "line": 485,
+        "currentText": "Du kannst die Kündigung jederzeit über Google Play rückgängig machen.",
+        "problem": "'Jederzeit rückgängig machen' ist eine Aussage, die Google Play nicht universell garantiert — dies hängt vom Abrechnungszyklus und Abo-Modell ab. Falsche Erwartung beim Nutzer möglich; potenzielle Fehlinformation gem. §312j BGB i.V.m. UWG §5.",
+        "suggestedFixes": [
+            {
+                "text": "Falls du die Kündigung rückgängig machen möchtest, ist das unter Umständen bis zum nächsten Abrechnungsdatum über Google Play → Abonnements möglich.",
+                "rationale": "Einschränkende Formulierung verhindert falsche Erwartung; sachlich korrekt."
+            }
+        ],
+        "invasivityLevel": "text-only"
+    },
+    {
+        "findingId": "S2-009",
+        "riskLevel": "🟨",
+        "category": "DSGVO Art. 17 — Löschrecht-Kommunikation unvollständig",
+        "key": "settings_delete_account_force_local",
+        "line": 745,
+        "currentText": "Nur lokal löschen (Drive-Backup bleibt vorerst)",
+        "problem": "'Vorerst' ist zeitlich unbestimmt. Wenn das Recht auf Löschung (Art. 17 DSGVO) geltend gemacht wird und das Drive-Backup nicht gelöscht wird, fehlt eine klare Handlungsanweisung für den Nutzer. Dieser weiß nicht, wie er das Drive-Backup selbst entfernen kann.",
+        "suggestedFixes": [
+            {
+                "text": "Nur lokal löschen (Drive-Backup muss manuell über Google Drive entfernt werden)",
+                "rationale": "Klare Handlungsanweisung statt unbestimmter Zeitangabe; DSGVO Art. 17 erfordert vollständige Löschung."
+            }
+        ],
+        "invasivityLevel": "text-only"
+    },
+    {
+        "findingId": "S2-010",
+        "riskLevel": "🟧",
+        "category": "HWG §3 — Disclaimer nur kontextuell, nicht near-Output",
+        "key": "settings_crisis_dialog_body",
+        "line": 773,
+        "currentText": "Best Journal ist ein Tagebuch und ersetzt keine professionelle psychologische oder medizinische Beratung. KI-generierte Analysen sind keine Therapie.",
+        "problem": "Der Text ist inhaltlich korrekt und zu begrüßen. JEDOCH: Der Disclaimer erscheint nur in der gesondert aufzurufenden Krisenhilfe-Sektion. An den Stellen, wo KI-Analysen tatsächlich präsentiert werden (Dashboard, Rückblicke, Zusammenfassungen), ist kein kontextueller Disclaimer sichtbar. HWG §3 und Branchenstandard erfordern den Disclaimer near dem Wirkungsversprechen.",
+        "suggestedFixes": [
+            {
+                "text": "Zusätzlich eine kompakte Kurzversion direkt unter KI-Analysen einblenden: 'KI-Analyse — kein Ersatz für professionelle Beratung.' (als eigener String, z.B. ai_disclaimer_short)",
+                "rationale": "Kontextueller Disclaimer zum Zeitpunkt der KI-Ausgabe entspricht HWG §3 und Branchenstandard für Gesundheits-Apps."
+            }
+        ],
+        "invasivityLevel": "text-only"
+    },
+    {
+        "findingId": "S2-011",
+        "riskLevel": "🟨",
+        "category": "Abo-Transparenz §312j BGB / Widerrufsrecht §356a BGB — Rechtsvermischung",
+        "key": "settings_revoke_confirm_body",
+        "line": 752,
+        "currentText": "Abos bitte zusätzlich über Google Play → Abonnements kündigen, damit keine weiteren Abrechnungen stattfinden.",
+        "problem": "Der Widerrufsbutton nach §356a BGB und die Abo-Kündigung über Google Play sind zwei verschiedene Rechtsakte (Widerruf = ex tunc; Kündigung = ex nunc). Der Text vermischt beide ohne Erläuterung. Verbraucher könnten annehmen, der Widerruf alleine beende auch die Abrechnung — was nicht der Fall ist.",
+        "suggestedFixes": [
+            {
+                "text": "Hinweis: Der Widerruf ist eine eigenständige Rechtserklärung und beendet nicht automatisch die Abrechnung über Google Play. Um künftige Abrechnungen zu verhindern, kündige bitte dein Abo separat über Google Play → Abonnements.",
+                "rationale": "Klare Trennung der Rechtsakte; verhindert falsche Erwartungshaltung bei Verbrauchern."
+            }
+        ],
+        "invasivityLevel": "text-only"
+    },
+    {
+        "findingId": "S2-012",
+        "riskLevel": "🟧",
+        "category": "DSGVO Art. 13 — Transparenz Feedback-Datenverarbeitungsweg",
+        "key": "settings_feedback_dialog_desc",
+        "line": 529,
+        "currentText": "Deine Nachricht an die Entwickler — wir lesen alles und antworten persönlich!",
+        "problem": "Beim Feedback-Formular wird nicht kommuniziert, dass die Nachricht über die Gmail-API des eingeloggten Google-Kontos des Nutzers versendet wird und eine Kopie in dessen Postausgang landet. Diese implizite Nutzung eines Drittanbieter-APIs unter Verwendung der Nutzerdaten ist gem. Art. 13 DSGVO transparent zu machen.",
+        "suggestedFixes": [
+            {
+                "text": "Deine Nachricht an die Entwickler. Sie wird über dein Google-Konto per Gmail gesendet — eine Kopie landet in deinem Postausgang. Wir antworten persönlich!",
+                "rationale": "Transparenz über Datenverarbeitungsweg gem. Art. 13 DSGVO; keine Überraschung für den Nutzer."
+            }
+        ],
+        "invasivityLevel": "text-only"
+    }
+]
+
+result = {
+    "bucket": 2,
+    "lineRange": "400-785",
+    "stringsReviewed": 157,
+    "coverageConfirmed": True,
+    "findings": findings,
+    "plugin_bugs_observed": []
+}
+
+output_dir = "C:/Users/barwa/proggs/BestJournalAndroid/.android-shield"
+os.makedirs(output_dir, exist_ok=True)
+output_path = output_dir + "/recht-frag-strings-b2.json"
+tmp_path = output_path + ".tmp"
+
+with open(tmp_path, "w", encoding="utf-8") as f:
+    json.dump(result, f, ensure_ascii=False, indent=2)
+    f.write("\n")
+
+os.replace(tmp_path, output_path)
+print("OK: " + output_path)
+print("Findings total: " + str(len(findings)))
+riskCounts = {}
+for fi in findings:
+    r = fi["riskLevel"]
+    riskCounts[r] = riskCounts.get(r, 0) + 1
+for r, c in sorted(riskCounts.items()):
+    print(r + ": " + str(c))

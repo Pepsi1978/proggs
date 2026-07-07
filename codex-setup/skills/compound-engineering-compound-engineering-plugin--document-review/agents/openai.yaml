@@ -1,0 +1,7 @@
+interface:
+  display_name: "document-review"
+  short_description: "should be used to refine brainstorm or plan documents before"
+  default_prompt: "Use $compound-engineering-compound-engineering-plugin--document-review for this task."
+
+policy:
+  allow_implicit_invocation: false

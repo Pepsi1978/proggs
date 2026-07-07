@@ -1,0 +1,7 @@
+interface:
+  display_name: "ce:work"
+  short_description: "Execute work plans efficiently while maintaining quality and"
+  default_prompt: "Use $compound-engineering-compound-engineering-plugin--ce-work for this task."
+
+policy:
+  allow_implicit_invocation: false

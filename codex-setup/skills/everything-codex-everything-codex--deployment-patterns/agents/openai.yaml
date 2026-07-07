@@ -1,0 +1,7 @@
+interface:
+  display_name: "deployment-patterns"
+  short_description: "Deployment workflows, CI/CD pipeline patterns, Docker"
+  default_prompt: "Use $everything-codex-everything-codex--deployment-patterns for this task."
+
+policy:
+  allow_implicit_invocation: false

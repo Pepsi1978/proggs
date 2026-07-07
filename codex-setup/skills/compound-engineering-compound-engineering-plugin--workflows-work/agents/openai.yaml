@@ -1,0 +1,7 @@
+interface:
+  display_name: "workflows:work"
+  short_description: "[DEPRECATED] Use /ce:work instead — renamed for clarity"
+  default_prompt: "Use $compound-engineering-compound-engineering-plugin--workflows-work for this task."
+
+policy:
+  allow_implicit_invocation: false

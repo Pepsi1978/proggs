@@ -1,0 +1,7 @@
+interface:
+  display_name: "help"
+  short_description: "Get help with the hookify plugin"
+  default_prompt: "Use $hookify-codex-plugins-official--help for this task."
+
+policy:
+  allow_implicit_invocation: false

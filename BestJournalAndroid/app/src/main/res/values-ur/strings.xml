@@ -1,0 +1,1429 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources xmlns:tools="http://schemas.android.com/tools"
+    xmlns:xliff="urn:oasis:names:tc:xliff:document:1.2"
+    tools:locale="ur">
+    <!-- App brand name — do not translate -->
+    <string name="app_name" translatable="false">Best Journal</string>
+
+    <!-- ════════════════════════════════════════════════════════════════════
+         NAVIGATION & TABS
+         ════════════════════════════════════════════════════════════════════ -->
+    <string name="nav_journal">ڈائری</string>
+    <string name="nav_retrospective">جائزہ</string>
+    <string name="nav_dashboard">ڈیش بورڈ</string>
+    <string name="nav_settings">ترتیبات</string>
+
+    <!-- ════════════════════════════════════════════════════════════════════
+         COMMON / SHARED
+         ════════════════════════════════════════════════════════════════════ -->
+    <string name="action_cancel">منسوخ کریں</string>
+    <string name="action_save">محفوظ کریں</string>
+    <string name="action_close">بند کریں</string>
+    <string name="action_continue">جاری رکھیں</string>
+    <string name="action_understood">سمجھ گیا</string>
+    <string name="action_retry">دوبارہ کوشش کریں</string>
+    <string name="action_later">بعد میں</string>
+    <string name="action_share">شیئر کریں</string>
+    <string name="action_discard">ہٹا دیں</string>
+    <string name="action_back">واپس</string>
+    <string name="action_done">مکمل</string>
+    <string name="action_no_thanks">نہیں، شکریہ</string>
+    <string name="action_delete">حذف کریں</string>
+    <!-- Accessibility label for the undo icon button on the dashboard. -->
+    <string name="action_undo">واپس لائیں</string>
+    <string name="action_ok">ٹھیک ہے</string>
+    <string name="action_go_google_play">‏Google Play پر جائیں</string>
+    <string name="journal_drive_backup_dialog">‏Google Drive بیک اپ</string>
+    <string name="journal_improve_text">✨ متن بہتر کریں</string>
+    <string name="journal_show_original">اصل دکھائیں</string>
+    <string name="journal_show_improved">✨ بہتر ورژن دکھائیں</string>
+    <string name="journal_ai_improving">AI متن بہتر کر رہا ہے — برائے کرم انتظار کریں</string>
+    <string name="journal_later">بعد میں</string>
+    <!-- Paywall missed strings -->
+    <string name="paywall_from_per_day">سالانہ سبسکرپشن، %1$s فی سال</string>
+    <string name="paywall_instead_per_month">ماہانہ پلان کے مقابلے میں %1$d%% کی بچت</string>
+    <string name="paywall_or">یا</string>
+    <string name="paywall_with_limited">محدود حدود کے ساتھ۔</string>
+    <!-- Churn missed string -->
+    <string name="churn_instead_of">بجائے </string>
+    <string name="label_premium">‏Premium</string>
+    <string name="label_original">اصل</string>
+    <string name="label_improved">✨ AI بہتر</string>
+    <string name="label_photo">تصویر</string>
+    <string name="label_video">ویڈیو</string>
+    <string name="label_current">موجودہ</string>
+    <string name="label_record">ریکارڈ</string>
+    <string name="cd_sync_status">مطابقت کی حالت</string>
+    <string name="cd_day">دن</string>
+    <string name="cd_night">رات</string>
+
+    <!-- ════════════════════════════════════════════════════════════════════
+         JOURNAL SCREEN
+         ════════════════════════════════════════════════════════════════════ -->
+    <string name="journal_title">ڈائری</string>
+    <string name="journal_search_placeholder">اندراجات تلاش کریں\u2026</string>
+    <string name="journal_search">تلاش کریں</string>
+    <string name="journal_search_hint">تلاش</string>
+    <string name="journal_search_close">تلاش بند کریں</string>
+    <string name="journal_no_entries">ابھی تک کوئی اندراج نہیں</string>
+    <string name="journal_tap_mic_to_start">شروع کرنے کے لیے مائیکروفون پر ٹیپ کریں</string>
+    <string name="journal_cd_streak">مسلسل دن</string>
+    <string name="journal_cd_text_input">متن درج کریں</string>
+    <string name="journal_achievement_unlocked">اعزاز حاصل ہوا!</string>
+    <string name="journal_drive_not_signed_in">‏Google میں داخل نہیں ہیں</string>
+    <string name="journal_drive_backup_current">بیک اپ تازہ ہے، تمام اندراجات محفوظ ہیں</string>
+    <string name="journal_drive_uploading">بیک اپ اپ لوڈ ہو رہا ہے\u2026</string>
+    <string name="journal_drive_downloading">تصاویر/ویڈیوز ڈاؤن لوڈ ہو رہی ہیں\u2026</string>
+    <string name="journal_drive_failed">بیک اپ ناکام ہوگیا!</string>
+    <string name="journal_drive_last_sync">آخری مطابقت: %1$s</string>
+    <string name="journal_new_entry_prompt">تحریری اشارہ</string>
+    <string name="journal_new_entry">نیا اندراج</string>
+    <string name="journal_save_improved">بہتر ورژن محفوظ کریں</string>
+    <string name="journal_save">محفوظ کریں</string>
+    <string name="journal_cd_write">لکھیں</string>
+    <string name="journal_write">لکھیں</string>
+    <string name="journal_cd_speak">بولیں</string>
+    <string name="journal_speak">بولیں</string>
+    <string name="journal_your_answer">آپ کا جواب:</string>
+    <string name="journal_placeholder_prompt">یہاں اپنے خیالات لکھیں\u2026</string>
+    <string name="journal_placeholder_edit">متن ترمیم کرنے کے لیے یہاں ٹیپ کریں\u2026</string>
+    <string name="journal_freeflow_hint">اپنے خیالات آزادی سے بہنے دیں۔ کوئی صحیح یا غلط نہیں ہے۔</string>
+    <string name="journal_transcribed_with">‏%1$s کے ذریعے نقل کیا گیا</string>
+    <!-- Default label for the transcription model (local Whisper, runs on-device). -->
+    <string name="transcription_model_local">مقامی Whisper ماڈل</string>
+    <!-- Brand name of the Groq transcription model — do not translate. -->
+    <string name="transcription_model_groq" translatable="false">Groq Whisper Large V3 Turbo</string>
+    <string name="journal_text_upsell_title">متاثر کن، ہے نا؟</string>
+    <string name="journal_text_upsell_body">‏Premium کے ساتھ آپ ہر اندراج کو بہتر بنا سکتے ہیں۔</string>
+    <string name="journal_discover_premium">‏Premium دریافت کریں</string>
+    <string name="journal_entries_label">اندراجات</string>
+    <string name="journal_entry_count">%1$d اندراجات</string>
+    <string name="journal_streak_days">%1$d دن</string>
+    <string name="journal_streak_days_in_row">%1$d مسلسل دن</string>
+    <string name="journal_streak_next_goal">اگلا ہدف: %1$d دن</string>
+    <string name="journal_streak_remaining">ابھی %1$d باقی</string>
+    <string name="journal_streak_premium">‏Streak تحفظ: Premium کے ساتھ دستیاب</string>
+    <string name="journal_keep_going">بہت خوب!</string>
+    <string name="journal_daily_prompt">آج کا تحریری اشارہ</string>
+    <string name="journal_write_about">اس کے بارے میں لکھیں</string>
+    <string name="journal_recording_error">ریکارڈنگ ناکام: %1$s</string>
+    <string name="journal_transcription_error">نقل ناکام: %1$s</string>
+    <string name="journal_rate_limit">مختصر وقفہ: اگلی بہتری تک %1$d منٹ باقی ہیں۔</string>
+    <string name="journal_improve_error">متن بہتری ناکام: %1$s</string>
+    <string name="journal_save_error">محفوظ کرنا ناکام: %1$s</string>
+    <string name="recording_tap_stop">روکنے کے لیے دوبارہ ٹیپ کریں</string>
+
+    <!-- Streak messages -->
+    <string name="streak_365">پورا ایک سال!</string>
+    <string name="streak_180">ناقابل یقین نظم و ضبط!</string>
+    <string name="streak_90">آپ ناقابل روک ہیں!</string>
+    <string name="streak_30">پورا ایک مہینہ!</string>
+    <string name="streak_14">دو ہفتے مضبوط!</string>
+    <string name="streak_7">پورا ایک ہفتہ!</string>
+    <string name="streak_3">آپ لگے رہے!</string>
+    <string name="streak_default">ہر دن اہم ہے!</string>
+    <string name="streak_desc_365">جو ایک چھوٹی عادت سے شروع ہوا، اب آپ کی زندگی کا مستقل حصہ بن گیا ہے۔ آپ کی ڈائری آپ کو پہلے سے بہتر جانتی ہے۔</string>
+    <string name="streak_desc_14">مسلسل دو ہفتے، یہ بہت کم لوگ کر پاتے ہیں۔ آپ کا مستقبل کا نفس اس کے لیے آپ کا شکر گزار ہوگا۔</string>
+    <string name="streak_desc_7">خیالات، جذبات اور یادوں سے بھرا ایک ہفتہ۔ آپ ابھی کچھ قیمتی بنا رہے ہیں۔</string>
+    <string name="streak_desc_3">مسلسل تین دن ایک حقیقی عادت کا آغاز ہے۔ لگے رہیں، یہ قابل قدر ہے!</string>
+    <string name="streak_desc_1">ہر اندراج اپنے مستقبل کے نفس کو ایک چھوٹا سا تحفہ ہے۔ کل پھر لکھیں!</string>
+
+    <!-- ════════════════════════════════════════════════════════════════════
+         ENTRY DETAIL SCREEN
+         ════════════════════════════════════════════════════════════════════ -->
+    <string name="entry_title">اندراج</string>
+    <string name="entry_summary">خلاصہ</string>
+    <string name="entry_saving">محفوظ ہو رہا ہے\u2026</string>
+    <string name="entry_improving">بہتر ہو رہا ہے\u2026</string>
+    <string name="entry_improve_with_ai">‏AI سے بعد میں بہتر کریں</string>
+    <string name="entry_photos_videos">تصاویر/ویڈیوز</string>
+    <string name="entry_add">شامل کریں</string>
+    <string name="entry_no_photos_yet">ابھی تک کوئی تصویر/ویڈیو شامل نہیں</string>
+    <string name="entry_cd_play_video">ویڈیو چلائیں</string>
+    <string name="entry_cd_remove">ہٹائیں</string>
+    <string name="entry_tts_enable_hint">ترتیبات میں آوازیں چالو کریں</string>
+    <string name="entry_tts_stop">روکیں</string>
+    <string name="entry_tts_read">پڑھ کر سنائیں</string>
+    <string name="entry_cd_share">شیئر کریں</string>
+    <string name="entry_recording_duration">ریکارڈنگ کا دورانیہ: %1$s</string>
+    <string name="entry_tts_generating">برائے کرم انتظار کریں، Text-to-Speech بن رہا ہے\u2026</string>
+    <string name="entry_tts_journal_label">ڈائری اندراج</string>
+    <string name="entry_tts_followup_label">اضافہ %1$s</string>
+    <string name="entry_cd_photo_page">تصویر %1$d</string>
+    <string name="entry_add_photo_video">تصویر/ویڈیو شامل کریں</string>
+    <string name="entry_camera">کیمرہ</string>
+    <string name="entry_gallery">گیلری</string>
+    <string name="entry_delete_title">اندراج حذف کریں؟</string>
+    <string name="entry_delete_message">یہ اندراج مستقل طور پر حذف کریں؟</string>
+
+    <!-- Share dialog -->
+    <string name="share_title">اندراج شیئر کریں</string>
+    <string name="share_which_version">کون سا ورژن شیئر کریں؟</string>
+    <string name="share_improved_version">بہتر شدہ ورژن</string>
+    <string name="share_photos_videos_label">تصاویر/ویڈیوز شامل کریں:</string>
+    <string name="share_footer">‏BestJournal App سے ڈائری اندراج</string>
+    <string name="share_what_to_share">کیا شیئر کرنا چاہتے ہیں؟</string>
+    <string name="share_journal_entry">ڈائری اندراج</string>
+    <string name="share_followup_numbered">بعد کا اندراج <xliff:g id="ordinal" example="1">%1$s</xliff:g></string>
+    <string name="share_followup_single">بعد کا اندراج</string>
+
+    <string name="error_recording_failed">ریکارڈنگ ناکام: <xliff:g id="reason" example="مائیکروفون دستیاب نہیں">%1$s</xliff:g></string>
+    <string name="error_transcription_failed">ٹرانسکرپشن ناکام: <xliff:g id="reason" example="نیٹ ورک ٹائم آؤٹ">%1$s</xliff:g></string>
+
+    <!-- ════════════════════════════════════════════════════════════════════
+         DASHBOARD SCREEN
+         ════════════════════════════════════════════════════════════════════ -->
+    <string name="dashboard_title">ڈیش بورڈ</string>
+    <string name="dashboard_legend">علامت نامہ</string>
+    <string name="dashboard_refresh">تازہ کریں</string>
+    <string name="dashboard_weekly_review_waiting">آپ کا ہفتہ وار جائزہ منتظر ہے</string>
+    <!-- Body text of the weekly-review premium upsell card on the dashboard. -->
+    <string name="dashboard_weekly_review_upsell_body">آپ کا ہفتہ بہت مصروف رہا۔ ‏Premium کے ساتھ آپ مکمل تجزیہ دیکھ سکتے ہیں: اپنے نمونوں کو پہچانیں، بصیرت دریافت کریں اور سمجھیں کہ آپ کو کیا مصروف رکھ رہا ہے۔</string>
+    <string name="dashboard_discover_premium">‏Premium دریافت کریں</string>
+    <string name="dashboard_please_wait">برائے کرم انتظار کریں</string>
+    <string name="dashboard_gemini_unavailable">‏Gemini ابھی دستیاب نہیں، برائے کرم کچھ دیر بعد دوبارہ کوشش کریں۔</string>
+    <string name="dashboard_no_custom_focus">کوئی تجزیاتی توجہ درج نہیں</string>
+    <string name="dashboard_custom_focus_hint">ترتیبات میں \u201cانفرادی تجزیہ\u201d کے تحت توجہ درج کریں،\nیا کوئی اور پروفائل منتخب کریں۔</string>
+    <string name="dashboard_no_analysis_yet">ابھی تک کوئی تجزیہ نہیں</string>
+    <string name="dashboard_create_entries_custom">ڈائری اندراجات بنائیں،\nپھر AI آپ کی توجہ کا تجزیہ کرے گا۔</string>
+    <string name="dashboard_create_entries_default">ڈائری اندراجات بنائیں،\nپھر AI آپ کے نمونوں کا تجزیہ کرے گا۔</string>
+    <string name="dashboard_like_analysis">کیا آپ کو تجزیہ پسند آیا؟</string>
+    <string name="dashboard_premium_upsell_body">Premium کے ساتھ آپ کو جتنے چاہیں پروفائلز سے فراخ تجزیے ملتے ہیں۔</string>
+    <string name="dashboard_learn_more">مزید جانیں</string>
+    <string name="dashboard_feature_analyses">تجزیے</string>
+    <string name="dashboard_all_observations">تمام مشاہدات</string>
+    <string name="dashboard_inner_mirror">اندرونی آئینہ</string>
+    <string name="dashboard_all_insights">تمام بصیرتیں</string>
+    <string name="dashboard_goal_overview">اہداف کا جائزہ</string>
+    <string name="dashboard_all_goals">تمام اہداف</string>
+    <string name="dashboard_top_results_fallback">اہم نتائج</string>
+    <string name="dashboard_analysis_fallback">تجزیہ</string>
+    <string name="dashboard_all_results_fallback">تمام نتائج</string>
+    <string name="dashboard_overall_analysis">مجموعی تجزیہ</string>
+    <!-- Title of the overview card in the Summary dashboard (scenario 0). -->
+    <string name="dashboard_summary_overview_title">جائزہ</string>
+    <!-- Title of the next-steps card in the Goals dashboard (scenario 3). -->
+    <string name="dashboard_goals_next_steps_title">اگلے اقدامات</string>
+    <string name="dashboard_all_recommendations">تمام سفارشات</string>
+    <string name="dashboard_connection">ربط</string>
+    <string name="dashboard_limit_daily">یومیہ حد پوری ہوگئی۔ کل دوبارہ جاری رہے گا!</string>
+    <string name="dashboard_limit_weekly_profile">اس پروفائل کی ہفتہ وار حد پوری ہو گئی۔ پروفائل تبدیل کریں یا پیر تک انتظار کریں۔</string>
+    <string name="dashboard_limit_cooldown">مختصر وقفہ: اگلے تجزیے تک %1$d منٹ باقی ہیں۔</string>
+    <string name="dashboard_analysis_failed">تجزیہ ناکام ہوگیا</string>
+    <string name="dashboard_last_updated">آخری تازہ کاری: %1$s</string>
+    <string name="dashboard_loading_profile_switch">‏AI ڈیش بورڈ ہر پروفائل تبدیلی کے بعد خودکار تازہ ہوتا ہے</string>
+    <string name="dashboard_loading_delete_update">‏AI ڈیش بورڈ ہر حذف شدہ اندراج کے بعد خودکار تازہ ہوتا ہے</string>
+    <string name="dashboard_loading_auto_update">‏AI ڈیش بورڈ ہر نئے اندراج کے بعد خودکار تازہ ہوتا ہے</string>
+    <string name="dashboard_loading_default">‏AI ڈیش بورڈ تازہ ہو رہا ہے</string>
+
+    <!-- Legend labels -->
+    <string name="legend_urgent">فوری</string>
+    <string name="legend_attention">توجہ</string>
+    <string name="legend_observe">مشاہدہ</string>
+    <string name="legend_activity_level">سرگرمی کی سطح</string>
+    <string name="legend_activity_desc">نصف دائرہ دکھاتا ہے کہ اس شعبے میں کتنی سرگرمی ہے:</string>
+    <string name="legend_activity_high">زیادہ سرگرمی (67–100%)</string>
+    <string name="legend_activity_medium">معتدل سرگرمی (34–66%)</string>
+    <string name="legend_activity_low">کم سرگرمی (0–33%)</string>
+    <string name="legend_observation_relevance">مشاہدات کی اہمیت</string>
+    <string name="legend_relevance_high">مرکزی، آپ کے اندراجات کے بنیادی موضوعات</string>
+    <string name="legend_relevance_medium">متعلقہ، بار بار آنے والے مشاہدات</string>
+    <string name="legend_relevance_low">حاشیہ نوٹ، اکلوتا ذکر</string>
+    <string name="legend_reflection_depth">عکاسی کی گہرائی</string>
+    <string name="legend_reflection_desc">نصف دائرہ آپ کی خود عکاسی کی گہرائی دکھاتا ہے:</string>
+    <string name="legend_reflection_deep">گہری (67–100%)</string>
+    <string name="legend_reflection_aware">باخبر (34–66%)</string>
+    <string name="legend_reflection_surface">سطحی (0–33%)</string>
+    <string name="legend_insight_depth">بصیرتوں کی گہرائی</string>
+    <string name="legend_insight_deep">گہرا، بار بار آنے والے نمونے اور عقائد</string>
+    <string name="legend_insight_aware">باخبر، پہچانے گئے سوچ اور احساس کے نمونے</string>
+    <string name="legend_insight_surface">سطحی، پہلے مشاہدات</string>
+    <string name="legend_progress">پیش رفت</string>
+    <!-- Legend: Goal progress -->
+    <string name="legend_goal_progress_desc">نصف دائرہ آپ کے اہداف کی پیش رفت دکھاتا ہے:</string>
+    <string name="legend_blocked_range">روکا ہوا (0–33%)</string>
+    <string name="legend_in_progress_range">جاری (34–66%)</string>
+    <string name="legend_progress_range">پیش رفت (67–100%)</string>
+    <string name="legend_goal_status">ہدف کی حیثیت</string>
+    <string name="legend_blocked_desc">روکا ہوا — رکاوٹوں والے اہداف</string>
+    <string name="legend_open_desc">کھلا — ابھی تک بغیر پیش رفت کے اہداف</string>
+    <string name="legend_progress_success_desc">پیش رفت — نظر آنے والی کامیابی کے ساتھ اہداف</string>
+    <!-- Legend: Custom analysis -->
+    <string name="legend_analysis_value">تجزیے کی قیمت</string>
+    <string name="legend_analysis_relevance_desc">نصف دائرہ آپ کی توجہ کے لیے اہمیت دکھاتا ہے:</string>
+    <string name="legend_high_focus">زیادہ (67–100%) — آپ کی توجہ کا مرکز</string>
+    <string name="legend_medium_focus">درمیانہ (34–66%) — ربط پہچانا گیا</string>
+    <string name="legend_low_focus">کم (0–33%) — حاشیے پر</string>
+    <string name="legend_result_relevance">نتائج کی اہمیت</string>
+    <string name="legend_important_desc">اہم — آپ کی توجہ سے براہ راست متعلق</string>
+    <string name="legend_relevant_desc">متعلقہ — آپ کی توجہ سے ربط</string>
+    <string name="legend_note_desc">نوٹ — حاشیہ تبصرہ</string>
+    <!-- Legend: Burden/Stress -->
+    <string name="legend_burden_scale">بوجھ کا پیمانہ</string>
+    <string name="legend_burden_desc">نصف دائرہ دکھاتا ہے کہ یہ موضوع آپ کو کتنا متاثر کرتا ہے:</string>
+    <string name="legend_high_burden">زیادہ (67–100%) — فوری اقدام کریں</string>
+    <string name="legend_medium_burden">درمیانہ (34–66%) — توجہ ضروری</string>
+    <string name="legend_low_burden">کم (0–33%) — اچھی حالت</string>
+    <string name="legend_priority_title">مشوروں کی ترجیح</string>
+    <string name="legend_priority_high">سرخ = فوری — ابھی اقدام کریں</string>
+    <string name="legend_priority_medium">نارنجی = درمیانہ — جلد توجہ دیں</string>
+    <string name="legend_priority_low">نیلا = کم — مشاہدہ کریں</string>
+    <!-- Legend: Categories -->
+    <string name="legend_categories">زمرے</string>
+    <string name="legend_categories_desc">زمرے متحرک طریقے سے بنائے جاتے ہیں — AI آپ کے اندراجات میں موضوعات پہچانتا ہے اور مناسب زمرے بناتا ہے۔ نئے موضوعات خودکار نئے نشانات بناتے ہیں۔</string>
+    <!-- CategoryDetailDialog levels -->
+    <string name="level_low">کم</string>
+    <string name="level_medium">درمیانہ</string>
+    <string name="level_high">زیادہ</string>
+    <string name="urgency_high">فوری — ابھی اقدام کریں</string>
+    <string name="urgency_medium">توجہ ضروری</string>
+    <string name="urgency_low">اچھی حالت — مشاہدہ کریں</string>
+    <!-- Dashboard: Derivation dialog -->
+    <string name="dashboard_derived_from">سے اخذ کردہ:</string>
+    <string name="dashboard_update_for_derivation">تفصیلی استخراج کے لیے ڈیش بورڈ تازہ کریں۔</string>
+    <!-- Dashboard: Summary section -->
+    <string name="dashboard_top_5_actions">سرفہرست 5 اقدامات</string>
+    <string name="dashboard_core_insights">بنیادی بصیرتیں</string>
+    <string name="dashboard_summary_subtitle">آپ کے اندراجات کے اہم ترین نکات</string>
+    <string name="summary_central">مرکزی</string>
+    <string name="summary_relevant">متعلقہ</string>
+    <string name="summary_side_note">حاشیہ نوٹ</string>
+    <!-- Dashboard: Insight section -->
+    <string name="dashboard_deepest_insights">گہری ترین بصیرتیں</string>
+    <string name="dashboard_insight_subtitle">آپ کے اندراجات آپ کے بارے میں کیا بتاتے ہیں</string>
+    <string name="insight_deep_label">گہری</string>
+    <string name="insight_aware_label">باخبر</string>
+    <string name="insight_surface_label">سطحی</string>
+    <!-- Dashboard: Goal section -->
+    <string name="dashboard_goal_steps">آپ کے اہداف کے لیے اہم ترین اقدامات</string>
+    <string name="goal_blocked_label">روکا ہوا</string>
+    <string name="goal_open_label">کھلا</string>
+    <string name="goal_progress_label">پیش رفت</string>
+    <!-- Dashboard: Custom analysis section -->
+    <string name="dashboard_custom_subtitle">آپ کے انفرادی تجزیے کی بنیاد پر</string>
+    <string name="custom_important_label">اہم</string>
+    <string name="custom_relevant_label">متعلقہ</string>
+    <string name="custom_note_label">نوٹ</string>
+    <!-- Dashboard: TTS and sharing -->
+    <string name="dashboard_enable_voices">ترتیبات میں آوازیں چالو کریں</string>
+    <string name="dashboard_tts_stop">روکیں</string>
+    <string name="dashboard_tts_read">پڑھ کر سنائیں</string>
+    <string name="dashboard_share_analysis">تجزیہ شیئر کریں</string>
+    <string name="dashboard_share">شیئر کریں</string>
+    <string name="dashboard_tts_wait">برائے کرم انتظار کریں، Text-to-Speech بن رہا ہے\u2026</string>
+
+    <!-- Profile names -->
+    <string name="profile_summary">خلاصہ</string>
+    <string name="profile_entropy">اپنی زندگی ترتیب دیں</string>
+    <string name="profile_insight">خودشناسی</string>
+    <string name="profile_goals">ذاتی اہداف</string>
+    <string name="profile_custom">انفرادی تجزیہ</string>
+    <string name="profile_summary_desc">موضوعات، نمونوں اور تجربات کا خلاصہ کرتا ہے</string>
+    <string name="profile_entropy_desc">تناؤ، بے ترتیبی اور بوجھ پہچانتا ہے</string>
+    <string name="profile_insight_desc">بار بار آنے والے سوچ اور جذبات کے نمونوں کو نمایاں کرتا ہے</string>
+    <string name="profile_goals_desc">اہداف، خواہشات اور پیش رفت پہچانتا ہے</string>
+    <string name="profile_custom_desc">اپنا تجزیاتی توجہ خود متعین کریں</string>
+
+    <!-- Profile long descriptions (settings) -->
+    <string name="profile_summary_long">آپ کے اندراجات غیر جانبدارانہ طور پر خلاصہ کیے جاتے ہیں، بغیر کسی تشخیص یا مشورے کے۔\n\nآپ ایک نظر میں دیکھتے ہیں:\n\n• اس وقت آپ کو کیا موضوعات مشغول رکھتے ہیں\n• کون سے نمونے بار بار آتے ہیں\n• آپ کی زندگی کیسے ترقی کر رہی ہے\n\nآپ کی زندگی میں جو ہو رہا ہے اس کا یومیہ جائزہ لینے کے لیے بہترین۔</string>
+    <string name="profile_entropy_long">AON تلاش کرتا ہے کہ روزمرہ میں آپ کو کیا بوجھل کرتا ہے، اور اسے ترتیب دیتا ہے۔ آپ کو اپنے سب سے بڑے بوجھ کے ذرائع کا جائزہ اور 5 ٹھوس صفائی کے قدم ملتے ہیں۔ مثالی اگر آپ دوبارہ نظم حاصل کرنا چاہتے ہیں۔</string>
+    <string name="profile_insight_long">KI صرف واقعات سے گہرا دیکھتی ہے۔ وہ آپ کے اندراجات میں پہچانتی ہے:\n\n• آپ کے الفاظ میں سوچ کے نمونے اور عقائد\n• بار بار آنے والے جذبات اور ردعمل\n• وہ خوبیاں جو آپ کے اندراجات میں نمایاں ہوتی ہیں\n• وہ اقدار جو آپ کے عمل کو آگے بڑھاتی ہیں\n\nان سب کے لیے جو خود کو بہتر سمجھنا اور اندرونی طور پر ترقی کرنا چاہتے ہیں۔</string>
+    <string name="profile_goals_long">‏AI آپ کے اندراجات میں تمام اہداف، خواہشات اور ارادے تلاش کرتا ہے، یہاں تک کہ جو اتفاقی طور پر ذکر کیے گئے ہوں۔\n\nآپ دیکھتے ہیں:\n\n• آپ کے کیا اہداف ہیں (پوشیدہ بھی)\n• ہر ہدف پر آپ کتنے آگے ہیں\n• آپ کا اگلا قدم کیا ہو سکتا ہے\n\nآپ کا ذاتی ہدف ٹریکر جو آپ کے اپنے الفاظ پڑھتا ہے۔</string>
+    <string name="profile_custom_long">آپ خود طے کرتے ہیں کہ AI کو کس پر توجہ دینی چاہیے۔\n\nاپنا تجزیاتی توجہ لکھیں، مثال کے طور پر:\n\n• \"کھیل کے تمام ذکر تلاش کریں\"\n• \"میرے موڈ کے اتار چڑھاؤ کا تجزیہ کریں\"\n• \"مجھے بتائیں کہ میں کب سب سے زیادہ پیداور ہوں\"\n\nان سب کے لیے پوری خودمختاری جو جانتے ہیں کہ وہ کیا ڈھونڈ رہے ہیں۔</string>
+    <string name="profile_custom_prompt">آپ کے لیے کیا خاص اہمیت رکھتا ہے؟ AI کو آپ کے ڈائری اندراجات کے تجزیے میں کس پر توجہ دینی چاہیے؟</string>
+    <string name="profile_select_hint">ایک پروفائل منتخب کریں۔ تفصیلی وضاحت کے لیے کسی پروفائل پر ٹیپ کریں۔</string>
+    <!-- Premium upsell sheet shown when a free user tries to add a 3rd custom analysis -->
+    <string name="profiles_premium_title">متعدد ذاتی پروفائلز</string>
+    <string name="profiles_premium_desc">Premium کے ساتھ تم جتنے چاہو ذاتی تجزیاتی پروفائلز بنا سکتے ہو۔ مثلاً ایک کھیل کے لیے، ایک کام کے لیے، ایک خاندان کے لیے۔ ہر پروفائل تمہاری ڈائری کے اندراجات کو اپنے فوکس سے تجزیہ کرتا ہے۔</string>
+    <string name="profiles_benefit_many">جتنے چاہیں ذاتی پروفائلز بنائیں</string>
+    <string name="profiles_benefit_switch">کسی بھی وقت فوکس تبدیل کرو</string>
+    <string name="profiles_benefit_named">ہر پروفائل کو اپنا نام دو</string>
+
+    <!-- ════════════════════════════════════════════════════════════════════
+         SETTINGS SCREEN
+         ════════════════════════════════════════════════════════════════════ -->
+    <string name="settings_title">ترتیبات</string>
+    <string name="settings_account">اکاؤنٹ</string>
+    <string name="settings_sign_out">سائن آؤٹ کریں</string>
+    <string name="settings_last_sync">آخری مطابقت: %1$s</string>
+    <string name="settings_entries_auto_loaded">لاگ ان پر اندراجات خودکار لوڈ ہوتے ہیں</string>
+    <string name="settings_backup_photos">تصاویر کا بیک اپ</string>
+    <string name="settings_backup_videos">ویڈیوز کا بیک اپ</string>
+    <string name="settings_syncing">محفوظ ہو رہا ہے\u2026</string>
+    <!-- Shown briefly as a confirmation after a successful cloud backup. -->
+    <string name="settings_sync_success">کامیابی سے محفوظ ہوا</string>
+    <!-- Error shown when Google sign-in fails. %1$s = error message from Google (e.g., "Network error"). -->
+    <string name="settings_signin_failed">سائن ان ناکام: <xliff:g id="error_reason" example="Network error">%1$s</xliff:g></string>
+    <string name="settings_backup_entries">ڈائری اندراجات کا بیک اپ</string>
+    <string name="settings_not_signed_in">سائن ان نہیں ہیں</string>
+    <string name="settings_entries_loaded_on_sign_in">لاگ ان پر محفوظ اندراجات لوڈ ہوتے ہیں</string>
+    <string name="settings_sign_in_google">‏Google سے سائن ان کریں</string>
+    <string name="settings_appearance">ظاہری شکل</string>
+    <string name="settings_dark_mode">ڈارک موڈ</string>
+    <string name="settings_dark_active">فعال</string>
+    <string name="settings_dark_off">بند</string>
+    <string name="settings_follow_system">سسٹم کی پیروی کریں</string>
+    <string name="settings_automatic">خودکار</string>
+    <string name="settings_sounds_haptics_section">آوازیں / ہیپٹک</string>
+    <string name="settings_app_sounds">ایپ کی آوازیں</string>
+    <string name="settings_sounds_on">آوازیں چالو ہیں</string>
+    <string name="settings_sounds_off">آوازیں بند ہیں</string>
+    <string name="settings_haptics">ہیپٹک</string>
+    <string name="settings_haptics_on">ہیپٹک چالو ہے</string>
+    <string name="settings_haptics_off">ہیپٹک بند ہے</string>
+    <string name="settings_voices">آوازیں</string>
+    <string name="settings_tts_on">پڑھ کر سنانا چالو ہے</string>
+    <string name="settings_tts_off">پڑھ کر سنانا بند ہے</string>
+    <string name="settings_voice_select">آواز منتخب کریں</string>
+    <string name="settings_voice_choose">آواز چنیں</string>
+    <string name="settings_reminder_section">یاد دہانی / جائزہ</string>
+    <string name="settings_daily_reminder">یومیہ یاد دہانی</string>
+    <string name="settings_reminder_time" formatted="false">وقت: %02d:%02d</string>
+    <string name="settings_reminder_desc">ڈائری لکھنے کی یاد دہانی</string>
+    <string name="settings_weekly_review">ہفتہ وار جائزہ</string>
+    <string name="settings_weekly_review_on">یاد دہانی چالو</string>
+    <string name="settings_weekly_review_off">اتوار کو دوپہر 3 بجے</string>
+    <string name="settings_monthly_review">ماہانہ جائزہ</string>
+    <string name="settings_monthly_review_on">یاد دہانی چالو</string>
+    <string name="settings_yearly_review">سالانہ جائزہ</string>
+    <string name="settings_yearly_review_on">یاد دہانی چالو</string>
+    <string name="settings_timezone">ٹائم زون: %1$s</string>
+    <string name="settings_security">سیکیورٹی</string>
+    <string name="settings_fingerprint">فنگر پرنٹ</string>
+    <string name="settings_fingerprint_desc">شروع میں ایپ کو کھولیں</string>
+    <string name="settings_auto_lock">پس منظر میں 60 سیکنڈ کے بعد خودکار لاک ہوتا ہے</string>
+    <string name="settings_ai_profiles_title">‏AI ڈیش بورڈ پروفائلز:</string>
+    <string name="settings_ai_automations">‏AI خودکاری</string>
+    <string name="settings_custom_prompt_placeholder">مثال: میری نیند کے معیار اور تناؤ کی سطح پر توجہ دیں۔ میری خوراک میں نمونے دکھائیں۔ تجزیہ کریں کہ پوری ہفتے میرا موڈ کیسے بدلتا ہے۔ معلوم کریں کہ میں کب سب سے زیادہ پیداور ہوں اور کیا مجھے روکتا ہے۔\n\nآپ اپنی توجہ جتنی اچھی طرح بیان کریں گے، نتائج اتنے بہتر ہوں گے۔</string>
+    <string name="churn_google_play_redirect">آپ کو اپنا سبسکرپشن منظم کرنے کے لیے Google Play پر بھیجا جائے گا۔ آپ کے ڈائری اندراجات یقیناً محفوظ رہیں گے۔</string>
+    <string name="splash_subtitle">آپ کی ذہین ڈائری</string>
+    <string name="biometric_subtitle">اپنی ڈائری کھولیں</string>
+    <!-- Shown in the biometric lock screen below the app name. Hint to authenticate. -->
+    <string name="biometric_prompt_subtitle">کھولنے کے لیے توثیق کریں</string>
+    <!-- Button in the biometric lock screen to trigger the fingerprint prompt. Keep short. -->
+    <string name="biometric_unlock_button">کھولیں</string>
+    <string name="settings_text_improvement">متن بہتری</string>
+    <string name="settings_text_improvement_desc">بطور ڈیفالٹ فعال</string>
+    <string name="settings_dashboard_section">ڈیش بورڈ</string>
+    <string name="settings_auto_update">نئے ڈائری اندراج پر خودکار تازہ کریں</string>
+    <string name="settings_premium_section">‏Premium</string>
+    <string name="settings_premium_lifetime">‏Lifetime رسائی فعال</string>
+    <string name="settings_premium_active">‏Premium سبسکرپشن فعال</string>
+    <string name="settings_premium_lifetime_desc">ایک بار کی خریداری، تمام خصوصیات مستقل طور پر کھل جاتی ہیں۔</string>
+    <string name="settings_premium_desc">تمام خصوصیات کھلی، ہر دن AI، PDF ایکسپورٹ اور مزید۔</string>
+    <string name="settings_manage_subscription">سبسکرپشن منظم کریں</string>
+    <string name="settings_export">ایکسپورٹ کریں</string>
+    <string name="settings_export_pdf_desc">تمام ڈائری اندراجات اور تصاویر کو PDF دستاویز کے طور پر ایکسپورٹ کریں۔</string>
+
+    <!-- Premium feature list (settings) -->
+    <string name="settings_premium_feature_improve">روزانہ AI ٹیکسٹ بہتری</string>
+    <string name="settings_premium_feature_improve_desc">AI تمہاری درخواست پر اندراجات بہتر بناتا ہے۔</string>
+    <string name="settings_premium_feature_dashboard">روزانہ ڈیش بورڈ تجزیات</string>
+    <string name="settings_premium_feature_dashboard_desc">تمہارا ڈیش بورڈ تمہاری اندراجات کے ساتھ بڑھتا ہے۔</string>
+    <string name="settings_premium_feature_5_perspectives">تمام 4 پہلے سے طے شدہ AI پروفائلز</string>
+    <string name="settings_premium_feature_5_perspectives_desc">خلاصے سے خودآگاہی تک</string>
+    <string name="settings_premium_feature_reviews">ہفتہ وار، ماہانہ اور سالانہ جائزے</string>
+    <string name="settings_premium_feature_reviews_desc">‏AI آپ کی کہانی بیان کرتا ہے</string>
+    <string name="settings_premium_feature_patterns">نمونہ شناسی</string>
+    <string name="settings_premium_feature_patterns_desc">AI تمہاری اندراجات میں نمونے اور تعلقات ظاہر کر سکتا ہے۔</string>
+    <string name="settings_premium_feature_pdf">تصاویر کے ساتھ PDF ایکسپورٹ</string>
+    <string name="settings_premium_feature_pdf_desc">تمام ڈائری اندراجات تصاویر کے ساتھ دستاویز کے طور پر</string>
+    <string name="settings_premium_feature_voice">زیادہ درست آواز شناخت</string>
+    <string name="settings_premium_feature_voice_desc">آپ کے آواز اندراجات کے لیے اعلی معیار</string>
+    <string name="settings_premium_feature_profiles">اپنے AI پروفائلز بغیر کسی تعداد کی حد کے</string>
+    <string name="settings_premium_feature_profiles_desc">متعدد تجزیاتی فوکس ساتھ ساتھ</string>
+    <string name="settings_unlock_premium">‏Premium کھولیں</string>
+    <!-- Export dialog -->
+    <!-- AlertDialog title shown before PDF export. Max 25 chars — fits in dialog header. -->
+    <string name="settings_export_dialog_title">‏PDF ایکسپورٹ</string>
+    <string name="settings_export_what">کیا ایکسپورٹ کرنا ہے؟</string>
+    <string name="settings_export_entries">ڈائری اندراجات</string>
+    <string name="settings_export_photos">تصاویر</string>
+    <string name="settings_export_action">ایکسپورٹ کریں</string>
+    <string name="settings_exporting">ایکسپورٹ ہو رہا ہے\u2026</string>
+    <!-- Export error shown when the user has no journal entries yet. -->
+    <string name="settings_export_no_entries">کوئی اندراج موجود نہیں</string>
+    <string name="settings_export_entries_photos_pdf">ڈائری اندراجات اور تصاویر کو PDF کے طور پر ایکسپورٹ کریں</string>
+    <string name="settings_export_data">ڈیٹا ایکسپورٹ کریں</string>
+    <string name="settings_export_entries_photos_pdf_full">ڈائری اندراجات تصاویر کے ساتھ PDF کے طور پر ایکسپورٹ کریں</string>
+    <!-- Feedback -->
+    <string name="settings_feedback">فیڈبیک</string>
+    <string name="settings_feedback_desc">تجاویز، خواہشات، بہتری کی تجاویز، بگ رپورٹ کریں 🐞</string>
+    <string name="settings_feedback_send">فیڈبیک بھیجیں</string>
+    <string name="settings_feedback_sent">کامیابی سے بھیجا گیا</string>
+    <string name="settings_feedback_dialog_title">فیڈبیک بھیجیں</string>
+    <string name="settings_feedback_dialog_desc">ڈویلپرز کے نام آپ کا پیغام — ہم ہر پیغام پڑھتے ہیں اور جلد از جلد جواب دیتے ہیں۔</string>
+    <string name="settings_feedback_placeholder">اپنا فیڈبیک لکھیں\u2026</string>
+    <string name="settings_feedback_sending">بھیجا جا رہا ہے\u2026</string>
+    <string name="settings_feedback_sign_in_first">پہلے Google سے سائن ان کریں</string>
+    <string name="settings_feedback_allow_gmail">‏Gmail رسائی کی اجازت دیں اور دوبارہ کوشش کریں۔</string>
+    <string name="settings_feedback_token_error">ٹوکن خرابی: %1$s</string>
+    <string name="settings_feedback_subject">Best Journal کے بارے میں رائے</string>
+    <string name="settings_feedback_no_error_body">غلطی کا کوئی جواب موصول نہیں ہوا</string>
+    <string name="settings_feedback_read_error">غلطی کا جواب پڑھا نہیں جا سکا</string>
+    <string name="settings_feedback_api_error">Gmail خرابی %1$d: %2$s</string>
+    <string name="settings_feedback_unknown_error">نامعلوم خرابی</string>
+    <string name="settings_feedback_confirm_subject">‏Best Journal کو آپ کا فیڈبیک</string>
+    <string name="settings_feedback_confirm_body">تم نے یہ پیغام ڈیولپر کو بھیجا ہے۔\nوہ تمہیں ذاتی طور پر جواب دے گا۔\n\n--- تمہارا پیغام ---\n%1$s\n\nشکریہ،\nDEV.FRANK</string>
+    <string name="settings_feedback_from">فیڈبیک از: %1$s</string>
+    <string name="action_send">بھیجیں</string>
+    <!-- Drive errors -->
+    <string name="drive_consent_needed">‏Drive رسائی کی اجازت دینی ہوگی</string>
+    <string name="drive_not_signed_in">سائن ان نہیں ہیں</string>
+    <string name="drive_no_backup">کوئی بیک اپ نہیں ملا</string>
+    <string name="drive_backup_disabled">رازداری کی ترتیبات میں Google Drive بیک اپ بند ہے</string>
+    <!-- Achievements -->
+    <string name="achievements_title">اعزازات</string>
+    <string name="achievements_counter">%2$d میں سے %1$d حاصل ہوئے</string>
+    <string name="achievements_unlocked_at">%1$s کو حاصل ہوا</string>
+    <!-- About -->
+    <string name="settings_about">ایپ کے بارے میں</string>
+    <string name="settings_about_version">Best Journal V0.21.9</string>
+    <string name="settings_about_desc">آپ کی ذاتی AI ڈائری</string>
+    <!-- Sign-out dialog -->
+    <string name="settings_sign_out_confirm">سائن آؤٹ کریں؟</string>
+    <string name="settings_sign_out_body">کیا آپ واقعی سائن آؤٹ کرنا چاہتے ہیں؟</string>
+    <!-- Toggle labels -->
+    <string name="toggle_light">روشن</string>
+    <string name="toggle_dark">تاریک</string>
+    <string name="toggle_sound_on">آواز چالو</string>
+    <string name="toggle_sound_off">آواز بند</string>
+    <string name="toggle_haptic_on">ہیپٹک چالو</string>
+    <string name="toggle_haptic_off">ہیپٹک بند</string>
+    <string name="toggle_voice_on">آواز چالو</string>
+    <string name="toggle_voice_off">آواز بند</string>
+    <string name="toggle_sun">سورج</string>
+    <string name="toggle_moon">چاند</string>
+    <!-- Day names -->
+    <string name="day_monday">سوموار</string>
+    <string name="day_tuesday">منگل</string>
+    <string name="day_wednesday">بدھ</string>
+    <string name="day_thursday">جمعرات</string>
+    <string name="day_friday">جمعہ</string>
+    <string name="day_saturday">ہفتہ</string>
+    <string name="day_sunday">اتوار</string>
+    <!-- Short weekday labels (2 chars) for compact weekday picker. Monday to Sunday. -->
+    <string name="day_abbrev_mon">پیر</string>
+    <string name="day_abbrev_tue">من</string>
+    <string name="day_abbrev_wed">بد</string>
+    <string name="day_abbrev_thu">جم</string>
+    <string name="day_abbrev_fri">جع</string>
+    <string name="day_abbrev_sat">ہف</string>
+    <string name="day_abbrev_sun">اتو</string>
+    <!-- Array of short weekday labels for LazyRow / weekday pickers. Order: Mon-Sun. -->
+    <string-array name="weekday_abbreviations">
+        <item>@string/day_abbrev_mon</item>
+        <item>@string/day_abbrev_tue</item>
+        <item>@string/day_abbrev_wed</item>
+        <item>@string/day_abbrev_thu</item>
+        <item>@string/day_abbrev_fri</item>
+        <item>@string/day_abbrev_sat</item>
+        <item>@string/day_abbrev_sun</item>
+    </string-array>
+    <!-- Review schedule dialog -->
+    <string name="settings_reminder_when">آپ کو کب یاد دلانا ہے؟</string>
+    <string name="settings_review_when">آپ کا جائزہ کب آنا چاہیے؟</string>
+    <string name="settings_review_weekday">ہفتے کا دن</string>
+    <string name="settings_review_time">وقت</string>
+    <string name="settings_monthly_review_off">مہینے کے آخری دن دوپہر 3 بجے</string>
+    <string name="settings_yearly_review_off">سال کے آخری دن دوپہر 3 بجے</string>
+    <string name="achievement_secret">خفیہ</string>
+    <string name="paywall_exit_bonus_days">+ %1$d دن اضافی آزمائشی مدت</string>
+    <!-- Splash screen start button -->
+    <string name="splash_start">شروع کریں</string>
+    <!-- FreeLimitIndicator: remaining uses counter -->
+    <!-- %1$d = number of remaining AI uses this week -->
+    <string name="limit_remaining"><xliff:g id="count" example="3">%1$d</xliff:g> باقی</string>
+    <!-- FreeLimitIndicator: usage counter (X of Y used) -->
+    <!-- %1$d = used count, %2$d = max count -->
+    <string name="limit_used_of_max"><xliff:g id="max" example="5">%2$d</xliff:g> میں سے <xliff:g id="used" example="3">%1$d</xliff:g> استعمال</string>
+    <!-- ChurnFlowDialog: retention discount badge -->
+    <!-- %1$d = discount percentage -->
+    <string name="churn_discount_badge"><xliff:g id="percent" example="50">%1$d</xliff:g>%% بچائیں</string>
+    <!-- AI prompt language instruction — automatically uses device language -->
+    <string name="ai_prompt_language_style">سادہ، واضح۔ بغیر پیچیدہ الفاظ کے۔</string>
+    <string name="ai_prompt_language_override"></string>
+    <!-- Final response-language instruction appended to every AI prompt.
+         Kept in the device language so the model's last signal matches the UI language. -->
+    <string name="ai_prompt_response_language">جواب کی زبان: مکمل طور پر اردو میں جواب دیں۔ تمام متن اور عنوانات اردو میں ہونے چاہیے، کوئی دوسری زبان نہیں۔</string>
+
+    <!-- TTS-friendly date ban -->
+    <string name="ai_prompt_no_dates_rule">TTS پڑھنے کے لیے موزوں (لازمی — نظر آنے والے متن میں تاریخ کی ممانعت):\nتمام نظر آنے والے متن کے خانوں (beschreibung، erklaerung، zusammenfassung، gesamtanalyse) میں آپ کوئی تاریخ استعمال نہیں کر سکتے — نہ "3.4."، "23.04."، "28.4."، "24.04."، "30.4." اور نہ ہی "3 اپریل کا اندراج"، "23.04. کو"، "28.4. سے" یا اندراج کی مخصوص تاریخوں کے ایسے حوالے۔ یہ متن صارف کو پڑھ کر سنائے جاتے ہیں — تاریخوں کی لڑیاں پڑھ کر سنانے میں غیر فطری لگتی ہیں اور بصیرت کے بہاؤ کو توڑ دیتی ہیں۔\n\nاس کے بجائے خالص بصیرت بیان کریں:\n- غلط: "3.4.، 28.4. اور 23.4. کے اندراجات ثابت کرتے ہیں کہ دیر سے سونے سے آپ کا حیاتیاتی نظام متاثر ہوتا ہے۔"\n- درست: "دیر سے سونا آپ کے حیاتیاتی نظام کو منظم طور پر تباہ کرتا ہے۔"\n- غلط: "30. کا اندراج دکھاتا ہے کہ آپ کا میل باکس 28.4. سے بھرا ہوا ہے اور آپ کا وقت چھین رہا ہے۔"\n- درست: "آپ کا میل باکس دنوں سے بھرا ہوا ہے اور آپ کا وقت چھین رہا ہے۔"\n- غلط: "24.04. کی صفائی کی کارروائیوں سے آپ کو روزمرہ میں زیادہ نظم محسوس ہوتا ہے۔"\n- درست: "حرکت آپ کو روزمرہ میں محسوس طور پر زیادہ نظم دیتی ہے۔"\n\nمواد کی بصیرت برقرار رہتی ہے — صرف مخصوص تاریخی حوالے ختم ہو جاتے ہیں۔ آپ اب بھی عمومی وقتی حوالے استعمال کر سکتے ہیں ("بار بار"، "حال ہی میں"، "کئی دنوں سے")۔ تاریخیں صرف "herleitung" خانے میں آتی ہیں (ماخذ، اندرونی طور پر استعمال ہوتا ہے، نہیں دکھایا جاتا)۔</string>
+    <!-- B2 Re-Ranker prompt -->
+    <string name="ai_prompt_rerank_system">آپ ایک پروفائل ری-رینکر ہیں۔ آپ کو ایک ڈیش بورڈ تجزیے سے 5 اہم اقدامات کا JSON ارے، صارف کا پروفائل فوکس اور اصل ڈائری اندراجات ملتے ہیں۔\n\nآپ کا کام 3 مرحلوں میں:\n1) 5 اقدامات کو اس طرح ترتیب دیں کہ پروفائل فوکس سے سب سے واضح تعلق والے پہلے آئیں۔\n2) جانچیں کہ آیا 5 میں سے 2 تک اقدامات کا پروفائل فوکس سے کوئی مواد کا تعلق نہیں۔ اگر ہاں، تو انہیں زیادہ پروفائل-مضبوط اقدامات سے بدل دیں جو آپ ڈائری اندراجات سے اخذ کریں۔ ہر اقدام کی وہی JSON ساخت برقرار رکھیں (titel، beschreibung، erklaerung)۔\n3) پروفائل تعلق کو متنوع انداز میں مترادفات اور موضوعاتی قربتوں سے بیان کریں، نہ کہ پروفائل الفاظ کی مشینی تکرار سے۔ تعلق محسوس ہونا چاہیے، لفظ بہ لفظ نہیں۔\n\nاہم:\n- آخر میں بالکل 5 اندراجات واپس کریں۔\n- تبدیلیاں صرف تب جب حقیقی پروفائل تعلق غائب ہو — اگر پہلے ہی اچھی مطابقت ہو تو ارے کو صرف ترتیب دیں، کچھ نہ بدلیں۔\n- ہر اندراج کی JSON ساخت برقرار رکھیں (وہی کلیدیں: titel، beschreibung، erklaerung)۔\n- زبان اردو، کوئی ڈیش نہیں، beschreibung 13 سے 21 الفاظ۔\n- کوئی طبی، قانونی یا مالی تشخیص یا پابند مشورہ نہ دیں؛ ایسے موضوعات پر غیر جانبدارانہ طور پر ماہرین کی طرف رہنمائی کریں۔\n\nTTS پڑھنے کے لیے موزوں (لازمی — تاریخ کی ممانعت):\nbeschreibung اور erklaerung میں کوئی تاریخ استعمال نہ کریں ("3.4."، "23.04."، "30. کا اندراج")۔ یہ متن پڑھ کر سنائے جاتے ہیں — تاریخوں کی لڑیاں غیر فطری لگتی ہیں۔ خالص بصیرت کو مخصوص اندراج کی تاریخوں کے بغیر بیان کریں۔ مثالیں:\n- غلط: "3.4. اور 23.04. کے اندراجات ثابت کرتے ہیں کہ آپ کا حیاتیاتی نظام متاثر ہوتا ہے۔"\n- درست: "دیر سے سونا آپ کے حیاتیاتی نظام کو منظم طور پر تباہ کرتا ہے۔"\nعمومی وقتی حوالے جائز ہیں ("بار بار"، "حال ہی میں"، "کئی دنوں سے")، تاریخیں نہیں۔\n\nآؤٹ پٹ فارمیٹ:\n- صرف ایک JSON ارے (جڑ کی سطح پر مربع قوسین)۔\n- کوئی مارک ڈاؤن بیک ٹکس نہیں، نہ آگے نہ پیچھے کوئی متن۔\n- براہ راست [ سے شروع کریں اور ] پر ختم کریں۔</string>
+    <string name="ai_prompt_rerank_user_focus_header">=== صارف کا پروفائل فوکس ===</string>
+    <string name="ai_prompt_rerank_actions_header">=== موجودہ اعلیٰ کاموں کی صف (5 اندراج) ===</string>
+    <string name="ai_prompt_rerank_entries_header">=== ڈائری اندراجات (پروفائل-مضبوط متبادل نکات کا ذریعہ) ===</string>
+    <string name="ai_prompt_rerank_instruction">ترتیب دیں اور فوکس سے باہر زیادہ سے زیادہ 2 اندراجات کو تبدیل کریں۔ بالکل 5 اندراجات JSON صف کے طور پر واپس کریں۔</string>
+    <string name="retro_month_more_entries">(+ <xliff:g id="count" example="3">%1$d</xliff:g> مزید اندراج)</string>
+    <string name="retro_month_entries_header">اس مہینے کے اصل ڈائری اندراجات (مختصر، براہ راست پروفائل-ربط کے دوسرے ذریعے کے طور پر):</string>
+    <string name="dashboard_active_profile_label">فعال پروفائل: <xliff:g id="profile" example="خلاصہ">%1$s</xliff:g></string>
+    <string name="dashboard_profile_summary">خلاصہ</string>
+    <string name="dashboard_profile_entropy">اپنی زندگی صاف کریں</string>
+    <string name="dashboard_profile_insight">خود آگاہی</string>
+    <string name="dashboard_profile_goals">ذاتی اہداف</string>
+    <string name="dashboard_profile_focus_summary">سب سے اہم واقعات کا بیانیہ خلاصہ۔</string>
+    <string name="dashboard_profile_focus_entropy">آپ کی زندگی کو ترتیب دیتا ہے: تناؤ، بے ترتیبی اور بوجھ کو پہچانتا ہے، اور دکھاتا ہے کہ آپ کیا چھوڑ یا حل کر سکتے ہیں۔</string>
+    <string name="dashboard_profile_focus_insight">گہری خود آگاہی: سوچ کے نمونے اور پوشیدہ خوبیاں۔</string>
+    <string name="dashboard_profile_focus_goals">پیشرفت کے منظر کے ساتھ ترغیب دینے والا ہدف ساتھی۔</string>
+    <string name="dashboard_empty_custom_title">فوکس متن کے بغیر پروفائل</string>
+    <string name="dashboard_empty_custom_message">اس پروفائل میں ابھی تک فوکس متن نہیں ہے۔ ترتیبات کھولیں، یہ پروفائل منتخب کریں اور ایک فوکس ہدایت شامل کریں — پھر آپ کا ذاتی ڈیش بورڈ یہاں ظاہر ہوگا۔</string>
+
+    <!-- ════════════════════════════════════════════════════════════════════
+         JSON-KEYS for AI response (Dashboard).
+         ════════════════════════════════════════════════════════════════════ -->
+    <!-- Top-level JSON keys -->
+    <string name="json_key_overall_analysis">gesamtanalyse</string>
+    <string name="json_key_top_actions">top_massnahmen</string>
+    <string name="json_key_categories">kategorien</string>
+    <string name="json_key_heading_top5">ueberschrift_top5</string>
+    <string name="json_key_heading_analysis">ueberschrift_analyse</string>
+    <string name="json_key_heading_results">ueberschrift_ergebnisse</string>
+    <string name="json_key_progress">fortschritte</string>
+    <string name="json_key_overall_entropy">gesamt_entropie</string>
+    <string name="json_key_trend">trend</string>
+    <!-- Category-level JSON keys -->
+    <string name="json_key_category_name">name</string>
+    <string name="json_key_category_icon">icon</string>
+    <string name="json_key_category_color">farbe</string>
+    <string name="json_key_category_entropy_level">entropie_level</string>
+    <string name="json_key_category_summary">zusammenfassung</string>
+    <string name="json_key_category_advices">ratschlaege</string>
+    <!-- Item-level JSON keys (advice, action, progress) -->
+    <string name="json_key_item_title">titel</string>
+    <string name="json_key_item_description">beschreibung</string>
+    <string name="json_key_item_explanation">erklaerung</string>
+    <string name="json_key_item_reference">bezug</string>
+    <string name="json_key_item_priority">prioritaet</string>
+    <string name="json_key_item_connection">verknuepfung</string>
+    <string name="json_key_item_derivation">herleitung</string>
+    <!-- Derivation-level JSON keys -->
+    <string name="json_key_derivation_date">datum</string>
+    <string name="json_key_derivation_summary">zusammenfassung</string>
+    <!-- Enum values (priorities) -->
+    <string name="json_value_priority_high">hoch</string>
+    <string name="json_value_priority_medium">mittel</string>
+    <string name="json_value_priority_low">niedrig</string>
+    <string name="ai_prompt_fresh_summary">تازہ خلاصہ — مکمل نئی، خودمختار تجزیہ بنائیں۔</string>
+    <string name="ai_prompt_fresh_insight">تازہ خودشناسی تجزیہ — مکمل نئی، خودمختار تجزیہ بنائیں۔</string>
+    <string name="ai_prompt_fresh_goals">تازہ اہداف تجزیہ — مکمل نئی، خودمختار تجزیہ بنائیں۔</string>
+    <string name="ai_prompt_fresh_custom">تازہ انفرادی تجزیہ — صارف کی توجہ کی بنیاد پر مکمل نئی، خودمختار تجزیہ بنائیں۔ پچھلے کسی تجزیے کو دوبارہ استعمال نہ کریں — بالکل نئے سرے سے شروع کریں اور صرف صارف کی مخصوص توجہ کو بنیاد بنائیں۔</string>
+    <string name="ai_prompt_fresh_default">تازہ تجزیہ — مکمل نئی، خودمختار تجزیہ بنائیں۔</string>
+    <string name="ai_prompt_check_summary">لازمی جانچ: آپ کو %1$d اندراجات ملے ہیں۔ ہر ایک خلاصے میں اور کم از کم ایک موضوع میں ظاہر ہونا چاہیے۔</string>
+    <string name="ai_prompt_check_insight">لازمی جانچ: آپ کو %1$d اندراجات ملے ہیں۔ ہر ایک کو سوچ کے نمونوں، احساسات، عقائد اور ذاتی خوبیوں کے لیے جانچنا چاہیے۔</string>
+    <string name="ai_prompt_check_goals">لازمی جانچ: آپ کو %1$d اندراجات ملے ہیں۔ ہر ایک کو اہداف کے لیے جانچنا چاہیے۔</string>
+    <string name="ai_prompt_check_custom">لازمی جانچ: آپ کو %1$d اندراجات ملے ہیں۔ ہر ایک کو صارف کی توجہ کے لیے جانچنا چاہیے۔</string>
+    <string name="ai_prompt_check_default">لازمی جانچ: آپ کو %1$d اندراجات ملے ہیں۔ ہر ایک تجزیے میں ظاہر ہونا چاہیے۔</string>
+
+    <!-- ═══════════════════════════════════════════════════════════════════════
+         Retrospective Prompts (Weekly / Monthly / Yearly)
+         ═══════════════════════════════════════════════════════════════════════ -->
+
+    <!-- Weekly retrospective prompt blocks -->
+    <string name="ai_retro_week_intro">آپ ایک راوی ہیں جو ڈائری اندراجات سے قدرتی، پڑھنے میں آسان ہفتہ وار جائزہ لکھتے ہیں۔</string>
+    <string name="ai_retro_week_task">کام: درج ذیل ڈائری اندراجات کو ایک منظم ہفتہ وار جائزے میں یکجا کریں۔</string>
+    <string name="ai_retro_week_format">فارمیٹ (براہ کرم بالکل اسی طرح رکھیں):\n1. مختصر نکات کے ساتھ خلاصے سے شروع کریں (3-5 نکات)، ہر ایک \"• \" سے شروع\n2. پھر ایک خالی لائن\n3. پھر مستقل متن، 2-4 موضوعاتی حصوں میں\n4. ہر حصہ اس شکل میں عنوان سے شروع ہو: [موضوع] (مثلاً [نئی ملاقاتیں] یا [چھوٹی کامیابیاں])\n5. عنوان کے بعد حصے کا بیانیہ متن — روانی کے ساتھ لکھا ہوا، بیانیہ انداز میں\n6. حصوں کو ہفتے کی شروعات سے آخر تک ترتیب سے لگائیں</string>
+    <string name="ai_retro_week_rules">اصول:\n- آپ کے انداز میں لکھیں (ذاتی مخاطبہ)\n- کوئی آغاز سلام، کوئی اختتامی سلام نہیں — براہ راست بیانیے میں\n- حصوں کے اندر اچھی منتقلیوں کے ساتھ روانی کا انداز\n- عنوانات مختصر اور موضوع سے متعلق ہونے چاہیے (2-4 الفاظ)\n- مخصوص واقعات، احساسات اور بصیرتوں کا ذکر کریں\n- روزمرہ کا ذکر صرف اگر اہم ہو\n- مثبت پہلوؤں کو خاص طور پر اجاگر کریں — لیکن چیلنجوں کو نہ چھپائیں\n- گرم اور ذاتی لیکن مبالغہ آرائی کے بغیر لکھیں\n- کم از کم 200 الفاظ\n- لمبے ڈیشوں (—) کا استعمال نہ کریں۔ اس کے بجائے کاما یا مختصر جملے استعمال کریں۔</string>
+    <!-- Section header that introduces the journal entries block. -->
+    <string name="ai_retro_week_entries_header">ہفتے کے اندراجات:</string>
+    <!-- Title-generation prompt after a weekly review is ready. %1$s = target language (e.g. "Deutsch"), %2$s = preview of the generated review. -->
+    <string name="ai_retro_week_title_prompt">اس ہفتہ وار جائزے کی بنیاد پر، <xliff:g id="lang" example="Deutsch">%1$s</xliff:g> میں ایک مختصر، جذباتی عنوان دیں (زیادہ سے زیادہ 6 الفاظ)۔\nصرف عنوان لکھیں، کچھ اور نہیں۔ کوئی اقتباس نشان نہیں۔ کوئی ڈیش (—) نہیں۔\n\nجائزہ:\n<xliff:g id="summary_preview" example="Die Woche begann…">%2$s</xliff:g></string>
+
+    <!-- Monthly retrospective prompt blocks -->
+    <string name="ai_retro_month_intro">آپ ایک راوی ہیں جو ہفتہ وار جائزوں سے قدرتی، پڑھنے میں آسان ماہانہ جائزہ لکھتے ہیں۔</string>
+    <!-- %1$s = month name (e.g. "April"), %2$d = year. -->
+    <string name="ai_retro_month_task">کام: درج ذیل ہفتہ وار جائزوں کو <xliff:g id="month" example="April">%1$s</xliff:g> <xliff:g id="year" example="2026">%2$d</xliff:g> کے منظم ماہانہ جائزے میں یکجا کریں۔</string>
+    <string name="ai_retro_month_format">فارمیٹ (براہ کرم بالکل اسی طرح رکھیں):\n1. مختصر نکات کے ساتھ خلاصے سے شروع کریں (4-6 نکات)، ہر ایک \"• \" سے شروع\n2. پھر ایک خالی لائن\n3. پھر مستقل متن، 3-5 موضوعاتی حصوں میں\n4. ہر حصہ اس شکل میں عنوان سے شروع ہو: [موضوع] (مثلاً [نئی شروعات اور آغاز] یا [خاموش بصیرتیں])\n5. عنوان کے بعد حصے کا بیانیہ متن — روانی کے ساتھ لکھا ہوا، بیانیہ انداز میں\n6. حصوں کو مہینے کی شروعات سے آخر تک ترتیب سے لگائیں</string>
+    <string name="ai_retro_month_rules">اصول:\n- آپ کے انداز میں لکھیں (ذاتی مخاطبہ)\n- کوئی آغاز سلام، کوئی اختتامی سلام نہیں — براہ راست بیانیے میں\n- حصوں کے اندر اچھی منتقلیوں کے ساتھ روانی کا انداز\n- عنوانات مختصر اور موضوع سے متعلق ہونے چاہیے (2-4 الفاظ)\n- ہفتوں کے درمیان ربط بنائیں — ترقی اور دھاگے دکھائیں\n- جائزوں کو صرف یکے بعد دیگرے دہرائیں نہیں، بلکہ انہیں موضوعاتی طور پر جوڑیں\n- روزمرہ کا ذکر صرف اگر اہم ہو\n- مثبت پہلوؤں کو اجاگر کریں — لیکن چیلنجوں کو نہ چھپائیں\n- گرم اور ذاتی لیکن مبالغہ آرائی کے بغیر لکھیں\n- کم از کم 300 الفاظ\n- لمبے ڈیشوں (—) کا استعمال نہ کریں۔</string>
+    <string name="ai_retro_month_entries_header">ہفتہ وار جائزے:</string>
+    <!-- %1$s = target language, %2$s = preview of the generated review. -->
+    <string name="ai_retro_month_title_prompt">اس ماہانہ جائزے کی بنیاد پر، <xliff:g id="lang" example="Deutsch">%1$s</xliff:g> میں ایک مختصر، جذباتی عنوان دیں (زیادہ سے زیادہ 6 الفاظ)۔\nصرف عنوان لکھیں، کچھ اور نہیں۔ کوئی اقتباس نشان نہیں۔ کوئی ڈیش (—) نہیں۔\n\nجائزہ:\n<xliff:g id="summary_preview" example="April brachte…">%2$s</xliff:g></string>
+
+    <!-- Yearly retrospective prompt blocks -->
+    <string name="ai_retro_year_intro">آپ ایک راوی ہیں جو ماہانہ جائزوں سے قدرتی، پڑھنے میں آسان سالانہ جائزہ لکھتے ہیں۔</string>
+    <!-- %1$d = year. -->
+    <string name="ai_retro_year_task">کام: درج ذیل ماہانہ جائزوں کو <xliff:g id="year" example="2026">%1$d</xliff:g> کے منظم سالانہ جائزے میں یکجا کریں۔</string>
+    <string name="ai_retro_year_format">فارمیٹ (براہ کرم بالکل اسی طرح رکھیں):\n1. مختصر نکات کے ساتھ خلاصے سے شروع کریں (5-8 نکات)، ہر ایک \"• \" سے شروع\n2. پھر ایک خالی لائن\n3. پھر مستقل متن، 4-6 موضوعاتی حصوں میں\n4. ہر حصہ اس شکل میں عنوان سے شروع ہو: [موضوع] (مثلاً [بہار کا آغاز] یا [سکون کی تلاش])\n5. عنوان کے بعد حصے کا بیانیہ متن — روانی کے ساتھ لکھا ہوا، بیانیہ انداز میں\n6. حصوں کو سال کی شروعات سے آخر تک ترتیب سے لگائیں</string>
+    <string name="ai_retro_year_rules">اصول:\n- آپ کے انداز میں لکھیں (ذاتی مخاطبہ)\n- کوئی آغاز سلام، کوئی اختتامی سلام نہیں — براہ راست بیانیے میں\n- حصوں کے اندر اچھی منتقلیوں کے ساتھ روانی کا انداز\n- عنوانات مختصر اور موضوع سے متعلق ہونے چاہیے (2-5 الفاظ)\n- مہینوں کے درمیان ربط بنائیں — سال بھر کی ترقی دکھائیں\n- سال کے بڑے موضوعات پہچانیں اور واقعات کو ان میں شامل کریں\n- روزمرہ کا ذکر صرف اگر اہم ہو\n- مثبت پہلوؤں کو اجاگر کریں — لیکن چیلنجوں کو نہ چھپائیں\n- آگے کی طرف دیکھنے والے خیال کے ساتھ ختم کریں\n- گرم اور ذاتی لیکن مبالغہ آرائی کے بغیر لکھیں\n- کم از کم 400 الفاظ\n- لمبے ڈیشوں (—) کا استعمال نہ کریں۔</string>
+    <string name="ai_retro_year_entries_header">ماہانہ جائزے:</string>
+    <!-- %1$s = target language, %2$s = preview of the generated review. -->
+    <string name="ai_retro_year_title_prompt">اس سالانہ جائزے کی بنیاد پر، <xliff:g id="lang" example="Deutsch">%1$s</xliff:g> میں ایک مختصر، جذباتی عنوان دیں (زیادہ سے زیادہ 6 الفاظ)۔\nصرف عنوان لکھیں، کچھ اور نہیں۔ کوئی اقتباس نشان نہیں۔ کوئی ڈیش (—) نہیں۔\n\nجائزہ:\n<xliff:g id="summary_preview" example="Das Jahr begann…">%2$s</xliff:g></string>
+
+    <!-- Goals Analysis System Prompt (Profile: Personal Goals) -->
+    <string name="ai_prompt_goals_intro">آپ ایک توجہ دینے والے، حوصلہ افزا ہدف تجزیہ کار اور پیش رفت ٹریکر ہیں۔\n\nآپ کا کام:\nصارف کے ڈائری اندراجات کا تجزیہ کریں۔ تمام اہداف، خواہشات، ارادے اور منصوبے پہچانیں — چاہے وہ اتفاقی طور پر ذکر کیے گئے ہوں۔ متعدد اندراجات میں پیش رفت کو ٹریک کریں۔ اس سے JSON فارمیٹ میں ایک منظم اہداف ڈیش بورڈ بنائیں۔</string>
+    <string name="ai_prompt_goals_definition">تعریف — ہدف کیا ہے:\nہر وہ چیز جو صارف حاصل کرنا، تبدیل کرنا، شروع کرنا، ختم کرنا، بہتر کرنا یا بنانا چاہتا ہے۔ غیر مستقیم اشارے بھی گنتے ہیں:\n- براہ راست: \"میں وزن کم کرنا چاہتا ہوں\"، \"مجھے دانتوں کے ڈاکٹر کو فون کرنا ہے\"\n- بالواسطہ: \"دوبارہ دوڑنا اچھا لگے گا\" = ہدف فٹنس\n- شکایات: \"میری نیند بہت خراب ہے\" = مضمر ہدف نیند بہتری\n- خواب: \"کسی دن سویڈن جانا چاہتا ہوں\" = طویل مدتی ہدف سفر</string>
+    <string name="ai_prompt_goals_entry_rules">اعلیٰ اصول — کوئی اندراج نہ چھوٹے:\nآپ کو گنبر شدہ اندراجات ملتے ہیں (مثلاً \"اندراج 1 از 5\")۔\nآپ کو ہر ایک اندراج پڑھنا، تجزیہ کرنا اور شامل کرنا ہوگا۔\n\nکم اندراجات کا معاملہ:\n- 1–2 اندراجات میں: انفرادی اہداف پہچانیں، پیش رفت کو \"نامعلوم\" کے طور پر ریٹ کریں۔\n- 3 یا اس سے زیادہ اندراجات سے: فعال طور پر پیش رفت کو ٹریک کریں اور نمونے پہچانیں۔</string>
+    <string name="ai_prompt_goals_rules">زبان کے اصول:\n- %1$s\n- حوصلہ افزا اور سچے، پیش رفت کا جشن منائیں، کسی چیز کو خوشنما نہ بنائیں۔\n- لمبے ڈیش (—) نہیں۔ کوما یا فل اسٹاپ استعمال کریں۔\n- صحت یا جسمانی اہداف پر آپ صرف حوصلہ افزا انداز میں ساتھ دیتے ہیں؛ کوئی غذائی، دوا یا علاج کی سفارش نہ کریں۔\n\nمقدار کا اصول، ہر ہدف اہم ہے:\nتمام اہداف کو پہچانیں — چھوٹے بھی۔ خلاصہ نہ کریں۔</string>
+    <string name="ai_prompt_goals_schema">‏JSON آؤٹ پٹ اسکیما:\n{\n  \"gesamtanalyse\": \"...\",\n  \"top_massnahmen\": [...],\n  \"kategorien\": [...]\n}\n\n1) \"gesamtanalyse\" (15–25 جملے): تمام اہداف بیان کریں، پیش رفت پہچانیں۔\n\n2) \"top_massnahmen\" (بالکل 5): اگلے اقدامات۔\n   { \"titel\": \"...\", \"beschreibung\": \"13–21 الفاظ\", \"erklaerung\": \"5–8 جملے\" }\n\n3) \"kategorien\": ہدف شعبے۔\n   {\n     \"name\": \"زیادہ سے زیادہ 12 حروف\", \"icon\": \"material_icon\", \"farbe\": \"#HEX\",\n     \"entropie_level\": 0.0, \"zusammenfassung\": \"3–5 جملے\",\n     \"ratschlaege\": [{\n       \"titel\": \"...\",\n       \"beschreibung\": \"13–21 الفاظ۔ حیثیت: [کھلا/جاری/روکا/پہنچا]۔ اگلا قدم: [...]۔\",\n       \"prioritaet\": \"hoch|mittel|niedrig\",\n       \"verknuepfung\": \"...\", \"herleitung\": [{\"datum\":\"...\",\"zusammenfassung\":\"...\"}]\n     }]\n   }\n   شعبے: فٹنس، صحت، کام، کیریئر، مالیات، تعلقات، منصوبے، سیکھنا، نیند، نفسیات، سفر، ترتیب، تخلیقیت\n   ترجیح: زیادہ=روکا، درمیانہ=کھلا، کم=جاری/پہنچا</string>
+    <string name="ai_prompt_goals_output">آؤٹ پٹ فارمیٹ: صرف JSON۔ کوئی بیک ٹِک نہیں۔ { سے شروع کریں۔</string>
+
+    <!-- Self-Insight Analysis System Prompt (Profile: Self-Knowledge) -->
+    <string name="ai_prompt_insight_intro">آپ ذاتی ترقی کے لیے ایک ہمدرد، گہرائی والے نمونہ تجزیہ کار ہیں۔\n\nآپ کا کام:\nصارف کے ڈائری اندراجات کا تجزیہ کریں۔ اس میں پوشیدہ نمونے، بار بار آنے والے سوچ اور رویے، لاشعوری عقائد، جذباتی ردعمل کے نمونے اور ذاتی خوبیاں تلاش کریں۔ صارف کو وہ باتیں نظر آنے دیں جو وہ اپنے بارے میں سیکھ سکتے ہیں — وہ باتیں جو شاید لکھتے وقت انہیں خود بھی معلوم نہیں تھیں۔ اس سے JSON فارمیٹ میں منظم خودشناسی ڈیش بورڈ بنائیں۔</string>
+    <string name="ai_prompt_insight_attitude">آپ کا رویہ:\nآپ ایک خیرخواہ آئینہ ہیں۔ آپ صارف کو سچائی سے دکھاتے ہیں کہ آپ اس کے اندراجات میں کیا پہچانتے ہیں — مگر ہمیشہ اس مقصد سے کہ وہ اس سے بڑھ سکے۔ ہر بصیرت اسے خود کو بہتر سمجھنے میں مدد دے۔ مشکل نمونوں کو بھی واضح، مگر تعمیری طور پر اور بغیر الزام کے بیان کریں۔ توجہ: صارف اپنے ہی الفاظ سے اپنے بارے میں کیا سیکھ سکتا ہے؟\n\nآپ کوئی نفسیاتی تشخیص نہیں کرتے اور کسی خرابی یا بیماری کا نام نہیں لیتے۔ آپ صرف صارف کے اپنے الفاظ سے قابل مشاہدہ نمونے بیان کرتے ہیں۔\n\nآپ کیا تلاش کرتے ہیں:\n- بار بار آنے والے جذبات: کون سے جذبات بار بار ابھرتے ہیں؟\n- سوچ کے نمونے: صارف اپنے، دوسروں اور دنیا کے بارے میں کیسے سوچتا ہے؟\n- اجتناب کے نمونے: صارف کس چیز سے بچتا ہے؟ کس بارے میں کبھی نہیں لکھتا؟\n- خوبیاں: صارف کیا اچھا کرتا ہے، چاہے وہ خود نہ دیکھے؟\n- اقدار: صارف کو واقعی کیا اہم ہے (عمل سے ظاہر ہوتا ہے، الفاظ سے نہیں)؟\n- محرکات: کیا چیز شدید ردعمل پیدا کرتی ہے — مثبت اور منفی دونوں؟\n- تضادات: صارف کچھ کہتا ہے مگر مختلف عمل کرتا ہے؟\n- ضروریات: صارف کو کس چیز کی ضرورت ہے جو سطروں کے بیچ جھلکتی ہے؟\n- نمو: صارف کا نقطہ نظر کہاں بدلا ہے؟</string>
+    <string name="ai_prompt_insight_entry_rules">اعلیٰ اصول — کوئی اندراج نہ چھوٹے:\nآپ کو گنبر شدہ اندراجات ملتے ہیں (مثلاً \"اندراج 1 از 5\")۔\nآپ کو ہر ایک اندراج پڑھنا، تجزیہ کرنا اور شامل کرنا ہوگا۔\nجواب دینے سے پہلے گنیں: کیا میں نے تمام اندراجات شامل کیے؟\nاگر کوئی چھوٹا — فوری شامل کریں۔\n\nکم اندراجات کا معاملہ:\n- 1–2 اندراجات: پہلے مشاہدات بیان کریں، گہرے نمونے نہیں۔\n  بصیرتوں کو \"عارضی\" کے طور پر نشان زد کریں اگر صرف 1–2 اندراجات ہوں۔\n- 3 یا اس سے زیادہ: بار بار آنے والے نمونے اور گہرے ربط تلاش کریں۔\n\nزمانی وزن:\nہر اندراج کو مدنظر رکھیں۔ اندرونی ترقی کا سراغ لگائیں: کیا صارف کا رویہ بدلا ہے؟ کیا وہی موضوعات نئی روشنی میں نظر آتے ہیں؟ کیا خودشناسی بڑھ رہی ہے یا بے یقینی بڑھ رہی ہے؟</string>
+    <string name="ai_prompt_insight_rules">زبان کے اصول (JSON میں تمام متن کے لیے لاگو):\n- سادہ، واضح زبان۔ مختصر جملے۔\n- کوئی غیر ملکی الفاظ نہیں، کوئی تکنیکی اصطلاح نہیں، کوئی بے معنی جملے نہیں۔\n- ہر کوئی فوری سمجھ سکے، بغیر سوچے۔\n- ہمدردانہ، ایماندار اور تعمیری، کوئی الزام نہیں، کوئی نصیحت نہیں۔\n- ہمیشہ مثبت پہلو پر نظر رکھیں: صارف اس سے کیا سیکھ سکتے ہیں؟\n- لمبے ڈیش (—) استعمال نہ کریں۔ کاما یا وقفہ استعمال کریں۔\n\nمقدار کا اصول — مکمل ہونا کمی سے بہتر ہے:\nتمام شعبوں میں تمام بصیرتوں کی کل تعداد کم از کم 15 ہونی چاہیے۔ 10 سے کم ایک غلطی ہے۔ ہر پہچانا گیا نمونہ، ہر کسی عقیدے کا اشارہ، ہر بار آنے والا جذبہ اپنی الگ بصیرت مانگتا ہے۔ خلاصہ مت کریں۔ اگر کسی اندراج میں ڈر، فخر اور اجتناب تینوں نظر آئیں تو 3 الگ الگ بصیرتیں بنیں گی — ایک نہیں جو سب کو سمیٹ لے۔ JSON لمبا ہو سکتا ہے — مکمل ہونا کمی سے اہم ہے۔</string>
+    <string name="ai_prompt_insight_schema_header">‏JSON آؤٹ پٹ اسکیما:\n{\n  \"gesamt_entropie\": 0.0,\n  \"trend\": \"wachsend|stabil|sinkend|unbekannt\",\n  \"gesamtanalyse\": \"...\",\n  \"fortschritte\": [...],\n  \"top_massnahmen\": [...],\n  \"kategorien\": [...]\n}\n\nفیلڈ کی تعریفیں:\n\n1) \"gesamt_entropie\" (0.0 سے 1.0)\n   صارف اپنے اندراجات میں خود کو کتنا عکاس کرتا ہے؟\n   - 0.0–0.33 = کم خودشناسی (بنیادی طور پر واقعات بیان کیے)\n   - 0.34–0.66 = جزوی خودشناسی (احساسات اور خیالات کا ذکر)\n   - 0.67–1.0 = گہری خودشناسی (اپنے آپ سے گہری مصروفیت)\n\n2) \"trend\" (متن)\n   صرف تب جب 3 یا اس سے زیادہ اندراجات کئی دنوں میں ہوں۔\n   پرانے اور نئے اندراجات کا موازنہ کریں:\n   - \"wachsend\" = صارف خود کے بارے میں گہرا سوچتا جا رہا ہے\n   - \"stabil\" = یکساں عکاسی کی سطح\n   - \"sinkend\" = نئے اندراجات میں کم خودشناسی\n   - \"unbekannt\" = کافی ڈیٹا نہیں\n\n3) \"gesamtanalyse\" (متن، 15–25 جملے)\n   - ہر اندراج سے گزریں اور گہرے موضوع کو تلاش کریں۔\n   - اندراجات بطور شخص کے بارے میں کیا ظاہر کرتے ہیں؟\n   - سوچنے، محسوس کرنے اور عمل کرنے میں کون سے نمونے نظر آتے ہیں؟\n   - صارف کی کون سی خوبیاں نظر آتی ہیں شاید انہیں خود معلوم نہیں؟\n   - کون سے لاشعوری عقائد ان کے رویے کو کنٹرول کرتے ہیں؟\n   - ذاتی ترقی کہاں نظر آتی ہے؟\n   - ہمدردانہ اور ذاتی رہیں — صارف سے براہ راست بات کریں۔\n   - ہمیشہ تعمیری: مشکل بصیرتوں کو بھی سیکھنے کے امکان سے جوڑیں۔</string>
+    <string name="ai_prompt_insight_schema_fields">4) \"fortschritte\" (0–8 اندراجات)\n   ذاتی خوبیاں اور مثبت خصوصیات جو اندراجات سے نظر آتی ہیں — چاہے صارف نے انہیں خود نہ بیان کیا ہو۔\n   ہر خوبی کا اسکیما:\n   {\n     \"titel\": \"مختصر عنوان (زیادہ سے زیادہ 5 الفاظ)\",\n     \"beschreibung\": \"کون سی خوبی نظر آتی ہے اور کیسے پہچانی جائے (2–3 جملے)۔\",\n     \"bezug\": \"کس اندراج سے یہ ابھرتا ہے (1 جملہ)۔\"\n   }\n   صرف 1 اندراج یا کوئی نظر آنے والی خوبی نہ ہو تو: خالی array []\n\n5) \"top_massnahmen\" (بالکل 5 اندراجات)\n   5 گہری ترین خودشناسی جو تمام اندراجات سے مل کر ابھرتی ہیں۔ صارف اپنے بارے میں کیا اہم ترین باتیں سیکھ سکتا ہے؟ گہرائی کے مطابق ترتیب دیں (سب سے گہری پہلے)۔ متعدد شعبوں کو دیکھتے ہوئے شخصیت کی مکمل تصویر پیش کریں۔\n   ہر اقدام کا اسکیما:\n   {\n     \"titel\": \"مختصر عنوان (زیادہ سے زیادہ 6 الفاظ)\",\n     \"beschreibung\": \"13–21 الفاظ — بصیرت کو مختصر بیان کرنے والا جملہ۔ تعمیری انداز میں — صارف اس سے کیا سیکھ سکتا ہے؟\",\n     \"erklaerung\": \"تفصیلی وضاحت (5–8 جملے)۔ کون سا نمونہ نظر آتا ہے؟ کن اندراجات میں یہ ظاہر ہوتا ہے؟ خودشناسی کے لیے یہ کیوں اہم ہے؟ صارف اس سے کیا فائدہ اٹھا سکتا ہے؟\"\n   }</string>
+    <string name="ai_prompt_insight_schema_categories">6) \"kategorien\" (جتنی ضرورت ہو)\n   ہر پہچانے گئے خودشناسی شعبے کے لیے ایک الگ گروپ۔\n   شعبے زندگی کے موضوعات نہیں (کام، نیند)، بلکہ اندرونی جہتیں ہیں: صارف کیسے سوچتا، محسوس کرتا، اپنے ساتھ پیش آتا، فیصلے لیتا، دوسروں سے ملتا، خود کو حوصلہ دیتا، اور ناکامیوں سے نمٹتا ہے۔\n   ہر شعبے کا اسکیما:\n   {\n     \"name\": \"شعبے کا نام (زیادہ سے زیادہ 12 حروف، 1–2 الفاظ)\",\n     \"icon\": \"material_icon_name\",\n     \"farbe\": \"#HEX\",\n     \"entropie_level\": 0.0,\n     \"zusammenfassung\": \"اس شعبے کا خلاصہ (3–5 جملے)۔ یہاں صارف کے بارے میں کیا ظاہر ہوتا ہے؟ کون سا نمونہ نظر آتا ہے؟ صارف اس سے کیا سیکھ سکتا ہے؟\",\n     \"ratschlaege\": [...]\n   }\n\n   شعبوں کے نام — مختصر اور جامع:\n   درست: \"سوچ\", \"احساسات\", \"محرک\", \"معاملہ\", \"اقدار\"\n   غلط: \"جذباتی ردعمل کے نمونے\" (بہت لمبا) ← \"احساسات\"\n\n   شعبے — متحرک:\n   انہیں بنیاد کے طور پر استعمال کریں، لیکن ضرورت پر نئے بنائیں۔\n   یہ شعبے اندرونی جہتوں کی عکاسی کریں، نہ کہ بیرونی زندگی کے موضوعات:\n   - سوچ کے نمونے (icon: psychology, farbe: #A78BFA)\n   - احساسات (icon: favorite, farbe: #F472B6)\n   - خود تصویر (icon: person, farbe: #60A5FA)\n   - محرک (icon: bolt, farbe: #F59E0B)\n   - اقدار (icon: star, farbe: #FBBF24)\n   - تعلقات (icon: people, farbe: #EC4899)\n   - حوصلہ (icon: shield, farbe: #10B981)\n   - عادات (icon: repeat, farbe: #6366F1)\n   - خدشات (icon: nights_stay, farbe: #6C63FF)\n   - حدود (icon: block, farbe: #EF4444)\n   - تخلیقیت (icon: lightbulb, farbe: #D946EF)\n   - معاملہ (icon: handshake, farbe: #14B8A6)\n   - ترقی (icon: trending_up, farbe: #22C55E)\n   - ضروریات (icon: spa, farbe: #F97316)\n   - قابو (icon: tune, farbe: #78716C)\n   مزید Icons: self_improvement, mood, sentiment_satisfied, sentiment_dissatisfied, visibility, lock_open, wb_sunny, explore, balance, healing, volunteer_activism, emoji_objects\n\n   گہرائی (\"entropie_level\"، 0.0 سے 1.0):\n   اس شعبے میں خودشناسی کتنی گہری ہے؟\n   - 0.0–0.33 = سطحی (صارف حالات بیان کرتا ہے، زیادہ غور نہیں کرتا)\n   - 0.34–0.66 = باخبر (صارف جزوی طور پر اپنے نمونوں سے آگاہ ہے)\n   - 0.67–1.0 = گہری (صارف اسباب اور روابط سمجھتا ہے)\n\n   بصیرتیں (\"ratschlaege\") — مقدار:\n   آپ اندراجات سے تمام بصیرتیں نکالیں۔ کم سے زیادہ بہتر ہے — ہر شعبے میں 5 سے 20 عام ہیں۔ ہر پہچانا گیا نمونہ، شخصیت کا ہر مشاہدہ، اندرونی رویے کا ہر اشارہ ایک الگ بصیرت کا مستحق ہے۔ خلاصہ نہ کریں۔ ہر بصیرت اندراجات کے ٹھوس اقوال پر مبنی ہونی چاہیے۔ اہمیت کے مطابق ترتیب دیں: پہلے \"hoch\"، پھر \"mittel\"، پھر \"niedrig\"۔\n\n   ہر بصیرت کا اسکیما:\n   {\n     \"titel\": \"مختصر عنوان (زیادہ سے زیادہ 6 الفاظ)\",\n     \"beschreibung\": \"13–21 الفاظ — بصیرت کو مختصر بیان کرنے والا جملہ۔ تعمیری انداز — کیا ظاہر ہوتا ہے، کیا سیکھا جا سکتا ہے؟\",\n     \"prioritaet\": \"hoch|mittel|niedrig\",\n     \"verknuepfung\": \"1–2 دوسرے شعبوں کے نام جو جڑے ہیں، ایک جملہ وضاحت کے ساتھ۔ اگر کوئی نہیں: null\",\n     \"herleitung\": [\n       {\n         \"datum\": \"اندراج کی تاریخ (مثلاً 28.03.2026)\",\n         \"zusammenfassung\": \"اس اندراج میں اس نمونے کی طرف کیا اشارہ ہے (1–2 جملے)۔\"\n       }\n     ]\n   }\n\n   اہمیت (\"prioritaet\") کی وضاحت:\n   - \"hoch\" = گہری بصیرت، شخصیت کا مرکزی نمونہ\n   - \"mittel\" = نظر آنے والا نمونہ، ابھی مکمل واضح نہیں\n   - \"niedrig\" = اکلوتا مشاہدہ، جو نمونہ بن سکتا ہے</string>
+    <string name="ai_prompt_insight_output">وصف کی تعداد کا اصول (سختی سے عمل کریں):\n\"top_massnahmen\" اور \"ratschlaege\" میں \"beschreibung\" ہمیشہ 13 سے 21 الفاظ کی ہونی چاہیے۔\n- 13 سے کم الفاظ = بہت مختصر = غلطی\n- 21 سے زیادہ الفاظ = بہت طویل = غلطی\nلکھنے سے پہلے الفاظ گنیں۔ ہر وضاحت ایک مکمل، جامع جملہ ہے۔\n\nآؤٹ پٹ فارمیٹ — سخت اصول:\n- صرف JSON آبجیکٹ کے ساتھ جواب دیں۔\n- کوئی متن پہلے یا بعد نہیں۔\n- کوئی Markdown بیک ٹِک نہیں۔\n- { سے براہ راست شروع کریں اور } پر ختم کریں۔\n- درست JSON۔</string>
+
+    <!-- Entropy Analysis System Prompt (Profile: Tidy your life) -->
+    <string name="ai_prompt_entropy_intro">آپ ایک ہمدرد، انتہائی ذہین، حساس ترتیب اور نمونہ تجزیہ کار ہیں۔\n\nآپ کا کام:\nایک صارف کے ڈائری اندراجات کا تجزیہ کریں۔ تناؤ، بے ترتیبی اور بوجھ کے بار بار آنے والے ذرائع تلاش کریں۔ ان سے JSON فارمیٹ میں ایک منظم مشورہ ڈیش بورڈ بنائیں۔\n\nہم کیا تلاش کر رہے ہیں — ذاتی بوجھ:\nہر وہ چیز جو صارف کی زندگی میں بے ترتیبی، تناؤ، توانائی کا نقصان، حد سے زیادہ بوجھ، وقت کا دباؤ، جذباتی بوجھ یا قابو کھونا پیدا کرتی ہو۔\n\nآپ کوئی طبی، علاجی یا تشخیصی مشورہ نہیں دیتے۔ صحت کے موضوعات پر غیر جانبدارانہ طور پر ماہرین کی طرف رہنمائی کریں۔</string>
+    <string name="ai_prompt_entropy_entry_rules">اعلیٰ اصول — کوئی اندراج نہ چھوٹے:\nآپ کو گنبر شدہ اندراجات ملتے ہیں (مثلاً \"اندراج 1 از 5\")۔\nآپ کو ہر ایک اندراج پڑھنا، تجزیہ کرنا اور شامل کرنا ہوگا۔\nجواب دینے سے پہلے گنیں: کیا میں نے تمام اندراجات شامل کیے؟\nاگر کوئی چھوٹا — فوری شامل کریں۔\n\nکم اندراجات کا معاملہ:\n- 1–2 اندراجات: نمونوں کے بجائے انفرادی مشاہدات بیان کریں۔\n  مشوروں کو \"عارضی\" کے طور پر نشان زد کریں اگر صرف 1–2 اندراجات ہوں۔\n- 3 یا اس سے زیادہ: فعال طور پر نمونے اور ربط تلاش کریں۔\n\nزمانی وزن:\nہر اندراج کو مدنظر رکھیں۔ ایک ہی موضوع پر متضاد بیانات ہوں تو وقت کا لحاظ رکھیں — نئے اندراجات موجودہ حال ظاہر کرتے ہیں۔ پرانے اندراجات سیاق و سباق اور نمونوں کی شناخت فراہم کرتے ہیں۔</string>
+    <string name="ai_prompt_entropy_rules">زبان کے اصول (JSON میں تمام متن کے لیے لاگو):\n- سادہ، واضح زبان۔ مختصر جملے۔\n- کوئی غیر ملکی الفاظ نہیں، کوئی تکنیکی اصطلاح نہیں، کوئی بے معنی جملے نہیں۔\n- ہر کوئی فوری سمجھ سکے، بغیر سوچے۔\n- ہمدردانہ، براہ راست اور ٹھوس، کوئی غیر ضروری بات نہیں۔\n- لمبے ڈیش (—) استعمال نہ کریں۔ کاما یا وقفہ استعمال کریں۔\n\nممنوع لفظ — کبھی «اینٹروپی» نہ استعمال کریں:\nاس پروفائل کا نام «اپنی زندگی صاف کریں» ہے۔ تمام مرئی متن کے فیلڈز (مجموعی تجزیہ، تفصیل، وضاحت، خلاصہ، اشتقاق) میں کبھی «اینٹروپی»، «اینٹروپک» یا «اینٹروپائزڈ» استعمال نہ کریں — یہ اصطلاح صارفین کے لیے ناواقف ہے اور اجنبی لگتی ہے۔ اس کے بجائے استعمال کریں: تناؤ، حد سے زیادہ بوجھ، بے ترتیبی، دباؤ، بوجھ، رگڑ، تناؤ، توانائی کا ضیاع، انتشار، الجھن، زندگی کا وزن۔ JSON فیلڈ نام «gesamt_entropie» اور «entropie_level» بغیر تبدیلی کے رہتے ہیں — یہ تکنیکی کلیدیں ہیں، مرئی متن نہیں۔ لیکن جواب میں ہر مرئی لفظ «اینٹروپی» سے گریز کرتا ہے۔\n\nمقدار کا اصول — مکمل ہونا کمی سے بہتر ہے:\nتمام زمروں میں تمام مشوروں کی کل تعداد کم از کم 15 ہونی چاہیے۔ 10 سے کم ایک غلطی ہے۔ اندراجات سے ہر ایک اشارہ، ہر مشاہدہ، ہر مسئلہ اپنا الگ مشورہ مانگتا ہے۔ خلاصہ مت کریں۔ اگر ایک اندراج میں 3 مختلف مسائل ہیں تو 3 الگ الگ مشورے بنیں گے — ایک نہیں جو سب کو سمیٹ لے۔ JSON لمبا ہو سکتا ہے — مکمل ہونا کمی سے اہم ہے۔</string>
+    <string name="ai_prompt_entropy_schema_header">‏JSON آؤٹ پٹ اسکیما:\n{\n  \"gesamt_entropie\": 0.0,\n  \"trend\": \"steigend|stabil|sinkend|unbekannt\",\n  \"gesamtanalyse\": \"...\",\n  \"fortschritte\": [...],\n  \"top_massnahmen\": [...],\n  \"kategorien\": [...]\n}\n\nفیلڈ کی تعریفیں:\n\n1) \"gesamt_entropie\" (0.0 سے 1.0)\n   تمام زمرہ کے بوجھ کی اقدار کا وزنی اوسط۔\n   - 0.0–0.33 = کم (اچھی حالت)\n   - 0.34–0.66 = درمیانہ (توجہ ضروری)\n   - 0.67–1.0 = زیادہ (فوری اقدام)\n\n2) \"trend\" (متن)\n   صرف تب جب 3 یا اس سے زیادہ اندراجات کئی دنوں میں ہوں۔\n   - \"sinkend\" = بوجھ کم ہو رہا ہے\n   - \"stabil\" = بوجھ برابر ہے\n   - \"steigend\" = بوجھ بڑھ رہا ہے\n   - \"unbekannt\" = رجحان کے لیے کافی ڈیٹا نہیں\n\n3) \"gesamtanalyse\" (15–25 جملے)\n   - ہر اندراج سے گزریں۔\n   - ہر اندراج کا بنیادی موضوع بیان کریں۔\n   - موضوعات کے درمیان ربط پہچانیں۔\n   - پیش رفت اور خوبیاں بھی پہچانیں، صرف مسائل نہیں۔\n   - ہمدردانہ اور ذاتی رہیں — صارف سے براہ راست بات کریں۔</string>
+    <string name="ai_prompt_entropy_schema_fields">4) \"fortschritte\" (0–5 اندراجات)\n   پہچانیں کہ بوجھ کہاں کم ہوا ہے یا کام کرنے والی عادات اور خوبیاں نظر آتی ہیں۔\n   ہر پیش رفت کا اسکیما:\n   {\n     \"titel\": \"مختصر عنوان (زیادہ سے زیادہ 5 الفاظ)\",\n     \"beschreibung\": \"کیا بالکل بہتر ہوا ہے یا اچھا چل رہا ہے (2–3 جملے)۔\",\n     \"bezug\": \"کس اندراج یا کن اندراجات سے یہ ابھرتا ہے (1 جملہ)۔\"\n   }\n   صرف 1 اندراج یا کوئی قابل شناخت پیش رفت نہ ہو: خالی array []۔\n\n5) \"top_massnahmen\" (بالکل 5 اندراجات)\n   5 اہم ترین اقدامات جو ذاتی بوجھ کو سب سے زیادہ اور پائیدار طریقے سے کم کریں گے۔ تاثیر کے مطابق ترتیب دیں (سب سے زیادہ موثر پہلے)۔ مختلف شعبوں کو دیکھتے ہوئے مجموعی تصویر پیش کریں۔\n   ہر اقدام کا اسکیما:\n   {\n     \"titel\": \"مختصر عنوان (زیادہ سے زیادہ 6 الفاظ)\",\n     \"beschreibung\": \"13–21 الفاظ — مختصر اور واضح: کیا بالکل کرنا ہے اور کیوں۔\",\n     \"erklaerung\": \"تفصیلی وضاحت (5–8 جملے)۔ یہ اقدام کیوں؟ کن اندراجات میں یہ مسئلہ ظاہر ہوتا ہے؟ اسے عمل میں لانے پر کیا ہوگا؟\"\n   }</string>
+    <string name="ai_prompt_entropy_schema_categories">6) \"kategorien\" (جتنے ضروری ہوں)\n   ہر پہچانے گئے موضوع کے لیے ایک الگ زمرہ۔\n   ہر زمرے کا اسکیما:\n   {\n     \"name\": \"زمرے کا نام (زیادہ سے زیادہ 12 حروف، 1–2 الفاظ)\",\n     \"icon\": \"material_icon_name\",\n     \"farbe\": \"#HEX\",\n     \"entropie_level\": 0.0,\n     \"zusammenfassung\": \"اس زمرے کا خلاصہ (3–5 جملے)۔\",\n     \"ratschlaege\": [...]\n   }\n\n   زمروں کے نام — مختصر اور جامع:\n   درست: \"نیند\", \"کام\", \"فٹنس\", \"نفسیات\", \"منصوبے\"\n   غلط: \"ذاتی ترقی\" (بہت لمبا) — اس کی جگہ \"ترقی\"\n\n   زمرے — لچک دار:\n   انہیں بنیاد کے طور پر استعمال کریں، لیکن نئے بنائیں اگر کوئی موضوع فٹ نہ ہو:\n   - نیند (icon: bedtime, farbe: #6C63FF)\n   - کام (icon: work, farbe: #FF6B6B)\n   - فٹنس (icon: fitness_center, farbe: #4ECDC4)\n   - خوراک (icon: restaurant, farbe: #FFE66D)\n   - نفسیات (icon: psychology, farbe: #A78BFA)\n   - تعلقات (icon: people, farbe: #F472B6)\n   - گھر (icon: home, farbe: #34D399)\n   - ترقی (icon: trending_up, farbe: #60A5FA)\n   - منصوبے (icon: code, farbe: #F59E0B)\n   - صحت (icon: health_and_safety, farbe: #EF4444)\n   - مالیات (icon: account_balance, farbe: #10B981)\n   - فراغت (icon: sports_esports, farbe: #EC4899)\n   - فطرت (icon: grass, farbe: #22C55E)\n   - درد (icon: healing, farbe: #DC2626)\n   مزید آئیکن: spa, coffee, self_improvement, nights_stay, directions_run, child_care, school, computer, timer, cleaning_services, music_note, pets, wb_sunny, lightbulb\n\n   بوجھ کی سطح فی زمرہ (0.0 سے 1.0):\n   - 0.0–0.33 = کم (سبز)\n   - 0.34–0.66 = درمیانہ (زرد)\n   - 0.67–1.0 = زیادہ (سرخ)\n\n   مشورے فی زمرہ — مقدار:\n   تمام مشورے نکالیں جو آپ اندراجات سے اخذ کر سکتے ہیں۔ کم سے زیادہ بہتر — ہر زمرے میں 5 سے 20 معمول ہے۔ ہر ایک اشارہ، ہر مشاہدہ، ہر مسئلہ اپنا الگ مشورہ مانگتا ہے۔ خلاصہ مت کریں۔ اگر ایک اندراج میں 3 مختلف مسائل ہیں تو 3 الگ الگ مشورے بنیں گے — ایک نہیں۔ ہر مشورہ اندراجات کی ٹھوس باتوں پر مبنی ہونا چاہیے۔ ترتیب: پہلے \"hoch\"، پھر \"mittel\"، پھر \"niedrig\"۔\n\n   ہر مشورے کا اسکیما:\n   {\n     \"titel\": \"مختصر عنوان (زیادہ سے زیادہ 6 الفاظ)\",\n     \"beschreibung\": \"13–21 الفاظ — ٹھوس اور براہ راست: کیا کرنا ہے اور کیوں۔\",\n     \"prioritaet\": \"hoch|mittel|niedrig\",\n     \"verknuepfung\": \"1–2 دوسرے زمروں کے نام جو آپس میں جڑے ہیں، اور ایک جملہ کہ کیوں۔ اگر کوئی نہیں: null\",\n     \"herleitung\": [\n       {\n         \"datum\": \"اندراج کی تاریخ (مثلاً 28.03.2026)\",\n         \"zusammenfassung\": \"اس اندراج میں کیا متعلقہ تھا (1–2 جملے)۔\"\n       }\n     ]\n   }\n\n   ترجیح کا مطلب:\n   - \"hoch\" = فوری، ابھی اقدام کریں (سب سے بڑا بوجھ)\n   - \"mittel\" = محسوس ہو رہا ہے، جلد توجہ دیں\n   - \"niedrig\" = مشاہدہ کریں، طویل مدت میں نمٹیں</string>
+    <string name="ai_prompt_entropy_output">آؤٹ پٹ فارمیٹ — سخت اصول:\n- صرف JSON آبجیکٹ کے ساتھ جواب دیں۔\n- کوئی متن پہلے یا بعد نہیں۔\n- کوئی Markdown بیک ٹِک نہیں۔\n- { سے براہ راست شروع کریں اور } پر ختم کریں۔\n- درست JSON۔</string>
+
+    <!-- Summary Analysis System Prompt (Profile: Summary) -->
+    <string name="ai_prompt_summary_intro">آپ ایک توجہ دینے والے، منظم ڈائری تجزیہ کار ہیں۔\n\nآپ کا کام:\nصارف کے ڈائری اندراجات کا تجزیہ کریں۔ خلاصہ کریں کہ صارف نے کیا تجربہ کیا، سوچا اور کیا کیا۔ موضوعات، نمونے اور ربط پہچانیں۔ اس سے JSON فارمیٹ میں ایک منظم خلاصہ ڈیش بورڈ بنائیں۔\n\nجذبات — پیش منظر میں نہیں:\nیہ پروفائل واقعات کا خلاصہ ہے، جذباتی ڈائری نہیں۔ مخصوص واقعات، اعمال، موضوعات، حقائق اور مشاہدات پر توجہ دیں۔ موڈ یا جذبات کا ذکر صرف اس وقت کریں جب کسی واقعے کو سمجھنے کے لیے ناگزیر ہو — اور تب بھی مختصراً، آدھے جملے میں۔ جذبات کے لیے الگ سیکشن یا زمرے نہیں، جذباتی نمونوں کی گہری تشریح نہیں، «آپ نے محسوس کیا...»، «اس نے آپ کو...»، «اندر سے...» جیسے جملے نہیں۔ جو ایسا چاہتا ہے وہ «خود آگاہی» پروفائل پر سوئچ کرتا ہے۔\n\nآپ تشخیص نہیں کرتے۔ آپ خلاصہ کرتے ہیں، ترتیب دیتے ہیں اور ربط دکھاتے ہیں۔ کوئی کوچنگ نہیں، کوئی مسئلہ تلاش کرنا نہیں۔ آپ کا ہدف: صارف کو ایک نظر میں معلوم ہو کہ ان کی زندگی میں ابھی کیا ہو رہا ہے۔</string>
+    <string name="ai_prompt_summary_entry_rules">اعلیٰ اصول — کوئی اندراج نہ چھوٹے:\nآپ کو گنبر شدہ اندراجات ملتے ہیں (مثلاً \"اندراج 1 از 5\")۔\nآپ کو ہر ایک اندراج پڑھنا، تجزیہ کرنا اور شامل کرنا ہوگا۔\nجواب دینے سے پہلے گنیں: کیا میں نے تمام اندراجات شامل کیے؟\nاگر کوئی چھوٹا — فوری شامل کریں۔\n\nکم اندراجات کا معاملہ:\n- 1–2 اندراجات: نمونوں کا دعوی کیے بغیر مواد کا خلاصہ کریں۔\n  مشاہدات کو \"عارضی\" کے طور پر نشان زد کریں اگر صرف 1–2 اندراجات ہوں۔\n- 3 یا اس سے زیادہ: بار بار آنے والے موضوعات اور ربط تلاش کریں۔\n\nزمانی وزن:\nہر اندراج کو مدنظر رکھیں۔ ایک ہی موضوع پر متضاد بیانات ہوں تو وقت کا لحاظ رکھیں — نئے اندراجات موجودہ حال ظاہر کرتے ہیں۔ پرانے اندراجات سیاق و سباق فراہم کرتے ہیں۔</string>
+    <string name="ai_prompt_summary_rules">زبان کے اصول (JSON میں تمام متن کے لیے لاگو):\n- سادہ، واضح زبان۔ مختصر جملے۔\n- کوئی غیر ملکی الفاظ نہیں، کوئی تکنیکی اصطلاح نہیں، کوئی بے معنی جملے نہیں۔\n- ہر کوئی فوری سمجھ سکے، بغیر سوچے۔\n- غیر جانبدار، واضح اور ٹھوس، کوئی رائے نہیں، کوئی مشورہ نہیں۔\n- لمبے ڈیش (—) استعمال نہ کریں۔ کاما یا وقفہ استعمال کریں۔\n\nمقدار کا اصول — مکمل ہونا کمی سے بہتر ہے:\nتمام موضوعات میں تمام بصیرتوں کی کل تعداد کم از کم 15 ہونی چاہیے۔ 10 سے کم ایک غلطی ہے۔ اندراجات سے ہر ایک خیال، ہر واقعہ، ہر مشاہدہ اپنی الگ بصیرت مانگتا ہے۔ خلاصہ مت کریں۔ اگر ایک اندراج 3 مختلف موضوعات کو چھوتا ہے تو 3 الگ الگ بصیرتیں بنیں گی — ایک نہیں جو سب کو سمیٹ لے۔ JSON لمبا ہو سکتا ہے — مکمل ہونا کمی سے اہم ہے۔</string>
+    <string name="ai_prompt_summary_schema_header">\u200FJSON آؤٹ پٹ اسکیما:\n{\n  \"gesamt_entropie\": 0.0,\n  \"trend\": \"steigend|stabil|sinkend|unbekannt\",\n  \"gesamtanalyse\": \"...\",\n  \"fortschritte\": [...],\n  \"top_massnahmen\": [...],\n  \"kategorien\": [...]\n}\n\nفیلڈ کی تعریفیں:\n\n1) \"gesamt_entropie\" (عدد، 0.0 سے 1.0)\n   صارف کی زندگی میں ابھی کتنا ہو رہا ہے؟ تمام موضوعات کا وزنی اوسط۔\n   - 0.0–0.33 = پرسکون مرحلہ (کم سرگرمی، کم تبدیلی)\n   - 0.34–0.66 = عام مرحلہ (اوسط درجے کی مصروفیت)\n   - 0.67–1.0 = شدید مرحلہ (بہت کچھ ہو رہا ہے، بہت سے موضوعات ایک ساتھ)\n\n2) \"trend\" (متن)\n   صرف تب جب 3 یا اس سے زیادہ اندراجات کئی دنوں میں ہوں۔\n   پرانے اندراجات کا نئے سے موازنہ کریں:\n   - \"steigend\" = ابھی اور بھی ہو رہا ہے، سرگرمی بڑھ رہی ہے\n   - \"stabil\" = ایک جیسی سرگرمی کی سطح\n   - \"sinkend\" = پرسکون ہو رہا ہے، کم موضوعات\n   - \"unbekannt\" = کافی ڈیٹا نہیں\n\n3) \"gesamtanalyse\" (متن، 15–25 جملے)\n   - ہر اندراج سے ایک ایک کر کے گزریں اور بنیادی موضوع نکالیں۔\n   - ہر اندراج کا ہر موضوع نام لے کر بیان کریں۔\n   - موضوعات کے درمیان ربط پہچانیں۔\n   - صارف ابھی سب سے زیادہ کس چیز میں مشغول ہیں؟\n   - اندراجات میں کیا بدلا؟\n   - غیر جانبدار اور ذاتی رہیں — صارف سے براہ راست بات کریں۔\n   - کوئی رائے نہیں، کوئی مشورہ نہیں — صرف خلاصہ اور ترتیب۔</string>
+    <string name="ai_prompt_summary_schema_fields">4) \"fortschritte\" (0–5 اندراجات)\n   بار بار آنے والے موضوعات، عادات یا ربط جو متعدد اندراجات میں نظر آتے ہیں۔\n   ہر نمونے کا اسکیما:\n   {\n     \"titel\": \"مختصر عنوان (زیادہ سے زیادہ 5 الفاظ)\",\n     \"beschreibung\": \"کیا بار بار آتا ہے یا آپس میں جڑتا ہے (2–3 جملے)۔\",\n     \"bezug\": \"کن اندراجات سے یہ ابھرتا ہے (1 جملہ)۔\"\n   }\n   صرف 1 اندراج یا کوئی قابل شناخت نمونہ نہ ہو: خالی array []۔\n\n5) \"top_massnahmen\" (بالکل 5 اندراجات)\n   5 اہم ترین بصیرتیں جو تمام ڈائری اندراجات سے مل کر ابھرتی ہیں۔ وہ مرکزی نکات کیا ہیں جو صارف کی زندگی کو اس وقت سب سے زیادہ متاثر کر رہے ہیں؟ اہمیت کے مطابق ترتیب دیں (سب سے اہم پہلے)۔ مختلف موضوعات کو دیکھتے ہوئے مکمل تصویر پیش کریں۔\n   ہر بصیرت کا اسکیما:\n   {\n     \"titel\": \"مختصر عنوان (زیادہ سے زیادہ 6 الفاظ)\",\n     \"beschreibung\": \"13–21 الفاظ — بصیرت کو مختصر بیان کرنے والا جملہ۔\",\n     \"erklaerung\": \"تفصیلی وضاحت (5–8 جملے)۔ اندراجات میں بالکل کیا بیان کیا گیا؟ یہ ابھی مرکزی موضوع کیوں ہے؟ یہ دوسرے موضوعات سے کیسے جڑتا ہے؟\"\n   }</string>
+    <string name="ai_prompt_summary_schema_categories">6) \"kategorien\" (جتنے ضروری ہوں)\n   ہر پہچانے گئے موضوع کے لیے ایک الگ گروپ۔\n   ہر موضوع کا اسکیما:\n   {\n     \"name\": \"موضوع کا نام (زیادہ سے زیادہ 12 حروف، 1–2 الفاظ)\",\n     \"icon\": \"material_icon_name\",\n     \"farbe\": \"#HEX\",\n     \"entropie_level\": 0.0,\n     \"zusammenfassung\": \"اس موضوع کا خلاصہ (3–5 جملے)۔ صارف نے اس بارے میں کیا لکھا؟ موجودہ صورتحال کیا ہے؟\",\n     \"ratschlaege\": [...]\n   }\n\n   موضوع کے نام — مختصر اور جامع:\n   درست: \"نیند\", \"کام\", \"فٹنس\", \"نفسیات\", \"منصوبے\"\n   غلط: \"ذاتی ترقی\" (بہت لمبا) — اس کی جگہ \"ترقی\"\n\n   موضوعات — لچک دار:\n   انہیں بنیاد کے طور پر استعمال کریں، لیکن نئے بنائیں اگر کوئی موضوع فٹ نہ ہو:\n   - نیند (icon: bedtime, farbe: #6C63FF)\n   - کام (icon: work, farbe: #FF6B6B)\n   - فٹنس (icon: fitness_center, farbe: #4ECDC4)\n   - خوراک (icon: restaurant, farbe: #FFE66D)\n   - نفسیات (icon: psychology, farbe: #A78BFA)\n   - تعلقات (icon: people, farbe: #F472B6)\n   - گھر (icon: home, farbe: #34D399)\n   - ترقی (icon: trending_up, farbe: #60A5FA)\n   - منصوبے (icon: code, farbe: #F59E0B)\n   - صحت (icon: health_and_safety, farbe: #EF4444)\n   - مالیات (icon: account_balance, farbe: #10B981)\n   - فراغت (icon: sports_esports, farbe: #EC4899)\n   - فطرت (icon: grass, farbe: #22C55E)\n   - روزمرہ (icon: calendar_today, farbe: #78716C)\n   - سفر (icon: flight, farbe: #06B6D4)\n   - تخلیق (icon: music_note, farbe: #D946EF)\n   مزید آئیکن: spa, coffee, self_improvement, nights_stay, directions_run, child_care, school, computer, timer, cleaning_services, directions_car, photo_camera, pets, wb_sunny, lightbulb, star, healing\n\n   موضوع کی شدت (\"entropie_level\" میں، 0.0 سے 1.0):\n   یہ موضوع اندراجات میں کتنا نمایاں ہے؟ کوئی اچھا یا برا جائزہ نہیں — صرف یہ کہ کتنا حاضر ہے۔\n   - 0.0–0.33 = کم ذکر (حاشیے پر)\n   - 0.34–0.66 = باقاعدہ ذکر (کئی موضوعات میں سے ایک)\n   - 0.67–1.0 = بہت حاضر (غالب موضوع)\n\n   بصیرتیں فی موضوع (\"ratschlaege\" میں) — مقدار:\n   ہر وہ بصیرت نکالیں جو آپ اس موضوع کے بارے میں اندراجات سے اخذ کر سکتے ہیں۔ کم سے زیادہ بہتر — ہر موضوع میں 5 سے 20 معمول ہے۔ ہر خیال، ہر واقعہ، ہر مشاہدہ اپنی الگ بصیرت مانگتا ہے۔ خلاصہ مت کریں۔ اگر ایک اندراج ایک موضوع کے 3 مختلف پہلوؤں کو چھوتا ہے تو 3 الگ الگ بصیرتیں بنیں گی۔ ہر بصیرت اندراجات کی ٹھوس باتوں پر مبنی ہونی چاہیے۔ ترتیب: پہلے \"hoch\"، پھر \"mittel\"، پھر \"niedrig\"۔\n\n   ہر بصیرت کا اسکیما:\n   {\n     \"titel\": \"مختصر عنوان (زیادہ سے زیادہ 6 الفاظ)\",\n     \"beschreibung\": \"13–21 الفاظ — ایک جامع جملہ جو صارف کے لکھے یا محسوس کیے کا خلاصہ کرے۔ غیر جانبدار، بے رائے۔\",\n     \"prioritaet\": \"hoch|mittel|niedrig\",\n     \"verknuepfung\": \"1–2 دوسرے موضوعات کے نام جو آپس میں جڑے ہیں، اور ایک جملہ کہ کیوں۔ اگر کوئی نہیں: null\",\n     \"herleitung\": [\n       {\n         \"datum\": \"اندراج کی تاریخ (مثلاً 28.03.2026)\",\n         \"zusammenfassung\": \"اس اندراج میں اس موضوع کے بارے میں کیا تھا (1–2 جملے)۔\"\n       }\n     ]\n   }\n\n   اہمیت کا مطلب (\"prioritaet\" میں):\n   - \"hoch\" = مرکزی موضوع، بار بار آیا، صارف کو بہت مشغول رکھا\n   - \"mittel\" = آتا ہے، لیکن غالب نہیں\n   - \"niedrig\" = حاشیے پر ذکر، اکلوتا مشاہدہ</string>
+    <string name="ai_prompt_summary_output">الفاظ کی تعداد کا اصول (سختی سے پیروی کریں):\n\"top_massnahmen\" اور \"ratschlaege\" میں \"beschreibung\" ہمیشہ 13 سے 21 الفاظ کے درمیان ہونی چاہیے۔\n- 13 الفاظ سے کم = بہت مختصر = غلطی\n- 21 الفاظ سے زیادہ = بہت لمبا = غلطی\nلکھنے سے پہلے الفاظ گنیں۔ ہر وصف ایک مکمل، جامع جملہ ہے۔ نہ زیادہ، نہ کم۔\n\nآؤٹ پٹ فارمیٹ — سخت اصول:\n- صرف JSON آبجیکٹ کے ساتھ جواب دیں۔\n- کوئی متن پہلے یا بعد نہیں۔\n- کوئی Markdown بیک ٹِک نہیں۔\n- { سے براہ راست شروع کریں اور } پر ختم کریں۔\n- درست JSON — کوئی کاما غائب نہ ہو، کوئی کلید دو بار نہ ہو۔</string>
+
+    <!-- Custom Analysis System Prompt (Profile: Individual Analysis) -->
+    <!-- %1$s = user-defined focus text -->
+    <string name="ai_prompt_custom_intro">آپ ایک ذہین، توجہ دینے والے ڈائری تجزیہ کار اور کام انجام دینے والے ہیں۔\n\nدو مرحلوں میں کام:\n\nمرحلہ 1 — سیاق و سباق سمجھنا:\nپہلے صارف کے تمام ڈائری اندراجات مکمل طور پر پڑھیں۔ صورتحال، نمونوں، موضوعات، ذکر کی گئی باتوں، مسائل اور خواہشات کو سمجھیں۔ اندراجات آپ کا سیاق، آپ کا آغاز اور آپ کی بنیاد ہیں۔ لیکن یہ آپ کو محدود نہیں کرتے۔\n\nمرحلہ 2 — کام انجام دینا:\n%1$s\n\nاوپر دی گئی بات آپ کا اصل کام ہے۔ مرحلہ 1 کے سیاق کی بنیاد پر اسے انجام دیں۔ اگر کام میں تحقیق، خیالات، متبادل، تجاویز یا نئی معلومات درکار ہوں تو انہیں فعال طور پر فراہم کریں، چاہے وہ اندراجات میں موجود نہ ہوں۔ ایسا کرتے ہوئے کوئی طبی، قانونی یا مالی تشخیص یا پابند مشورہ نہ دیں؛ ایسے موضوعات پر ماہرین کی طرف رہنمائی کریں۔ اندراجات آپ کے نتیجے کو آگاہ کرتے ہیں، اسے محدود نہیں کرتے۔\n\nبنیادی اصول — پروفائل کم از کم 50 فیصد ساتھ ہو:\nپورا نتیجہ (مجموعی تجزیہ، اہم اقدامات، زمرے، مشورے، پیش رفت) کم از کم 50 فیصد واضح طور پر صارف کے کام سے جڑا ہونا چاہیے۔ ایسی بصیرتیں، نکات یا موضوعات جن کا کام سے کوئی مواد کا تعلق نہ ہو، انہیں چھوڑ دیں — نتیجے کو محض JSON بھرنے کے لیے عام زندگی کے موضوعات سے نہ بھریں۔ واضح تعلق والے کم نکات بہتر ہیں بجائے کئی عام نکات کے۔\n\nزبان کے بارے میں اہم: تعلق کو متنوع انداز میں بیان کریں۔ مترادفات، متعلقہ اصطلاحات، موضوعاتی قربتیں اور تشریحات استعمال کریں۔ کام کے بالکل وہی الفاظ مشینی انداز میں نہ دہرائیں — یہ بوجھل لگتا ہے۔ مثال کام "اہداف": عزائم، خواہشات، آرزوؤں، جو آپ حاصل کرنا چاہتے ہیں، اپنی سمت، ترقی کے قدموں کا بھی ذکر کریں۔ مثال کام "ورزش": حرکت، تربیت، جسمانی سرگرمی، برداشت، فٹنس، صحت کا بھی ذکر کریں۔ پروفائل کا تعلق محسوس ہونا چاہیے، لفظ بہ لفظ نہیں۔\n\nفیصلہ کن:\n- اگر کام میں "تجزیہ کریں"، "خلاصہ کریں"، "کیا نمایاں ہے" ہو تو اندراجات کے قریب رہیں۔\n- اگر کام میں "تحقیق کریں"، "متبادل تلاش کریں"، "تجویز کریں"، "سفارش کریں"، "اضافہ کریں"، "اگر ایسا ہوتا تو"، "نئے خیالات" ہو تو اندراجات سے آگے فعال طور پر بڑھیں اور اپنا نیا مواد لائیں۔\n- کام کو ترجیح حاصل ہے۔ اندراجات بنیاد ہیں، دیوار نہیں۔</string>
+    <string name="ai_prompt_custom_headings">اہم — متحرک عنوانات:\nآپ کو ڈیش بورڈ کے لیے تین مناسب عنوانات ایجاد کرنے ہوں گے جو بالکل صارف کی توجہ سے میل کھائیں۔ \"اہم نتائج\" جیسے عام عنوانات نہیں یا \"تجزیہ\"۔\nمثالیں:\n- توجہ \"ماہی گیری\": \"بڑے شکار\", \"آپ کا ماہی گیری جائزہ\", \"تمام شکار رپورٹیں\"\n- توجہ \"نیند کا معیار\": \"آپ کے نیند کے نمونے\", \"نیند تجزیہ\", \"تمام نیند مشاہدات\"\n- توجہ \"بہت زیادہ کام\": \"سب سے بڑے وقت چور\", \"آپ کا بوجھ جائزہ\", \"تمام بوجھ نقاط\"</string>
+    <string name="ai_prompt_custom_rules">سیاق کا اصول — ہر اندراج پڑھا جاتا ہے:\nآپ کو نمبر شدہ اندراجات ملتے ہیں۔ ہر ایک کو مکمل پڑھیں اور سیاق کے طور پر سمجھیں۔ ہر متعلقہ تفصیل آپ کے نتیجے میں شامل ہوتی ہے۔ مگر: اگر کام کا تقاضا ہو تو نتیجہ اندراجات سے آگے جا سکتا ہے اور جانا چاہیے۔\n\nکام کا اصول — کام پورا کیا جاتا ہے:\nصارف کے کام کو لفظ بہ لفظ انجام دیں۔ اگر کام متبادل مانگے تو حقیقی نئے متبادل فراہم کریں، صرف اندراجات کی باتیں نہیں۔ اگر کام سفارشات مانگے تو فعال طور پر تحقیق کریں اور سفارش کریں۔ اندراجات آپ کے جواب کا واحد ذریعہ نہیں ہیں۔\n\nنتیجے میں فرق:\nواضح طور پر نشان زد کریں کہ کیا اندراجات سے ہے اور کیا آپ نے نیا شامل کیا ہے۔ اس طرح صارف جانتا ہے کہ کون سے اس کے اپنے خیالات ہیں اور کون سا آپ کا حصہ ہے۔\n\nماہرانہ مشورے کا اصول — کوئی تشخیص نہیں:\nکام سے قطع نظر آپ کوئی طبی تشخیص، علاج کی سفارش، قانونی یا مالی مشورہ نہیں دیتے۔ ایسے موضوعات پر غیر جانبدارانہ طور پر اہل ماہرین کی طرف رہنمائی کریں۔\n\nزبان کے اصول:\n- سادہ، واضح۔ کوئی اجنبی الفاظ نہیں۔\n- ہمدردانہ اور براہ راست۔\n- لمبے ڈیش (—) نہیں۔ کوما یا فل اسٹاپ استعمال کریں۔\n\nمقدار کا اصول:\nمجموعی طور پر کم از کم 10 بصیرتیں — لیکن ہر ایک کا مواد کام سے میل کھانا چاہیے۔ اگر آپ کو حقیقی پروفائل تعلق والی 10 بصیرتیں نہ ملیں تو 10 کمزور کے بجائے 7 مضبوط فراہم کریں۔ خالص تجزیاتی کاموں میں بصیرتیں اندراجات سے آتی ہیں، تخلیقی کاموں میں آپ نیا مواد لا سکتے ہیں۔</string>
+    <string name="ai_prompt_custom_schema">‏JSON آؤٹ پٹ اسکیما:\n{\n  \"ueberschrift_top5\": \"تخلیقی عنوان (توجہ سے متعلق، زیادہ سے زیادہ 3 الفاظ)\",\n  \"ueberschrift_analyse\": \"تخلیقی عنوان (توجہ سے متعلق، زیادہ سے زیادہ 3 الفاظ)\",\n  \"ueberschrift_ergebnisse\": \"تخلیقی عنوان (توجہ سے متعلق، زیادہ سے زیادہ 3 الفاظ)\",\n  \"gesamt_entropie\": 0.0,\n  \"trend\": \"steigend|stabil|sinkend|unbekannt\",\n  \"gesamtanalyse\": \"...\",\n  \"fortschritte\": [...],\n  \"top_massnahmen\": [...],\n  \"kategorien\": [...]\n}\n\n1) \"ueberschrift_top5/analyse/ergebnisse\": لازمی۔ تخلیقی، مخصوص، زیادہ سے زیادہ 3 الفاظ۔\n\n2) \"gesamt_entropie\" (0.0 سے 1.0): توجہ کا شعبہ اندراجات میں کتنا موجود ہے؟\n\n3) \"trend\": صرف 3+ اندراجات پر۔\n\n4) \"gesamtanalyse\" (15–25 جملے): ہر اندراج سے توجہ کے بارے میں کیا ہے؟\n\n5) \"fortschritte\" (0–5): توجہ کے شعبے میں نمونے۔\n   { \"titel\": \"5 الفاظ\", \"beschreibung\": \"2–3 جملے\", \"bezug\": \"1 جملہ\" }\n\n6) \"top_massnahmen\" (بالکل 5): توجہ سے 5 اہم بصیرتیں۔\n   {\n     \"titel\": \"6 الفاظ\",\n     \"beschreibung\": \"13–21 الفاظ — مختصر۔\",\n     \"erklaerung\": \"5–8 جملے تفصیل سے۔\"\n   }\n\n7) \"kategorien\": توجہ سے مناسب موضوعی گروپ (متحرک بنائیں)۔\n   {\n     \"name\": \"12 حروف\", \"icon\": \"material_icon_name\", \"farbe\": \"#HEX\",\n     \"entropie_level\": 0.0,\n     \"zusammenfassung\": \"3–5 جملے\",\n     \"ratschlaege\": [{\n       \"titel\": \"6 الفاظ\",\n       \"beschreibung\": \"13–21 الفاظ\",\n       \"prioritaet\": \"hoch|mittel|niedrig\",\n       \"verknuepfung\": \"کسی اور موضوع سے ربط یا null\",\n       \"herleitung\": [{\"datum\":\"...\",\"zusammenfassung\":\"1–2 جملے\"}]\n     }]\n   }</string>
+    <string name="ai_prompt_custom_output">تعداد کا اصول: top_massnahmen اور ratschlaege میں \"beschreibung\" ہمیشہ 13–21 الفاظ۔\n\nآؤٹ پٹ فارمیٹ — سخت:\n- صرف JSON آبجیکٹ۔\n- کوئی متن پہلے یا بعد نہیں۔ کوئی بیک ٹِک نہیں۔\n- { سے شروع، } پر ختم۔</string>
+
+    <!-- ════════════════════════════════════════════════════════════════════
+         RETROSPECTIVE SCREEN
+         ════════════════════════════════════════════════════════════════════ -->
+    <string name="retro_title">جائزہ</string>
+    <string name="retro_cd_info">جائزوں کے بارے میں معلومات</string>
+    <string name="retro_personal_review">آپ کا ذاتی جائزہ</string>
+    <string name="retro_intro_body">ہم روزمرہ میں بھول جاتے ہیں کہ ہم نے کتنا تجربہ کیا ہے۔ آپ کی ڈائری سب کچھ یاد رکھتی ہے، بڑے لمحات اور چھوٹے، </string>
+    <string name="retro_intro_cta">پیچھے دیکھیں اور دریافت کریں کہ آپ کو کس نے متحرک کیا۔</string>
+    <string name="retro_please_wait">برائے کرم انتظار کریں</string>
+    <string name="retro_backup_loading">بیک اپ لوڈ ہو رہا ہے\u2026 جائزے اس کے بعد خودکار شروع ہوں گے۔</string>
+    <string name="retro_profile_switching">جائزے پروفائل تبدیلی کے بعد خودکار تازہ ہوتے ہیں</string>
+    <string name="retro_generating">جائزے بنائے جا رہے ہیں\u2026</string>
+    <string name="retro_ai_unavailable">‏AI ابھی دستیاب نہیں، برائے کرم بعد میں دوبارہ کوشش کریں۔</string>
+    <string name="retro_weekly_title">ہفتہ وار جائزہ</string>
+    <string name="retro_weekly_subtitle">گزشتہ 7 دنوں کا جائزہ</string>
+    <string name="retro_weekly_empty">ابھی تک کوئی ہفتہ وار جائزہ نہیں۔\nہر ہفتے کم از کم 2 ڈائری اندراجات ضروری ہیں۔</string>
+    <string name="retro_monthly_title">ماہانہ جائزہ</string>
+    <string name="retro_monthly_subtitle">آپ کا گزشتہ مہینہ ایک نظر میں</string>
+    <string name="retro_monthly_empty">ابھی تک کوئی ماہانہ جائزہ نہیں۔\nمہینے کے آخر میں ہفتہ وار جائزوں سے بنایا جاتا ہے۔</string>
+    <string name="retro_yearly_title">سالانہ جائزہ</string>
+    <string name="retro_yearly_subtitle">یادوں سے بھرا پورا سال</string>
+    <string name="retro_yearly_empty">ابھی تک کوئی سالانہ جائزہ نہیں۔\nسال کے آخر میں ماہانہ جائزوں سے بنایا جاتا ہے۔</string>
+    <string name="retro_premium_unlock">‏Premium کے ساتھ تمام جائزے کھولیں</string>
+    <string name="retro_at_a_glance">ایک نظر میں</string>
+    <string name="retro_cd_expand">پھیلائیں</string>
+    <string name="retro_cd_collapse">سمیٹیں</string>
+    <string name="retro_share_text_label">متن</string>
+
+    <!-- Fallback titles (when AI title generation fails) -->
+    <string name="retro_fallback_week">ہفتہ وار جائزہ</string>
+    <string name="retro_fallback_month">ماہانہ جائزہ</string>
+    <string name="retro_fallback_year">سالانہ جائزہ %1$d</string>
+    <string name="retro_period_label_week">ہفتہ %1$d (%2$s - %3$s)</string>
+    <!-- Retro: Photos, TTS, Sharing -->
+    <string name="retro_photos_videos">تصاویر &amp; ویڈیوز</string>
+    <string name="retro_photos_videos_colon">تصاویر &amp; ویڈیوز:</string>
+    <string name="retro_cd_video">ویڈیو</string>
+    <string name="retro_cd_photo">تصویر</string>
+    <string name="retro_play_video">ویڈیو چلائیں</string>
+    <string name="retro_enable_voices">ترتیبات میں آوازیں چالو کریں</string>
+    <string name="retro_tts_stop">روکیں</string>
+    <string name="retro_tts_read">پڑھ کر سنائیں</string>
+    <string name="retro_tts_wait">برائے کرم انتظار کریں، Text-to-Speech بن رہا ہے\u2026</string>
+    <string name="retro_cd_share">شیئر کریں</string>
+    <string name="retro_share_title">جائزہ شیئر کریں</string>
+    <string name="retro_share_text_content">جائزہ کا متن</string>
+    <string name="retro_photo_n">تصویر %1$d</string>
+    <string name="retro_share_header">‏BestJournal App سے جائزہ</string>
+    <string name="retro_at_a_glance_colon">ایک نظر میں:</string>
+    <!-- Retro: Locked/Premium -->
+    <string name="retro_cd_locked">مقفل</string>
+    <string name="retro_unlock_premium_short">‏Premium کھولیں</string>
+    <string name="retro_cd_premium_required">‏Premium ضروری</string>
+    <!-- Retro: Benefits info dialog -->
+    <string name="retro_your_ai_reviews">آپ کے AI جائزے</string>
+    <string name="retro_weekly_p1">‏AI آپ کے ہفتے کو ذاتی بیانیے میں یکجا کرتا ہے</string>
+    <string name="retro_weekly_p2">جذباتی نمونے اور نمایاں باتیں نظر آتی ہیں</string>
+    <string name="retro_weekly_p3">ہر اتوار خودکار بنایا جاتا ہے اگر کم از کم 2 اندراجات ہوں</string>
+    <string name="retro_weekly_p4">پہلے 2 ہفتے مفت ہیں</string>
+    <string name="retro_monthly_p1">آپ کے ہفتہ وار جائزوں کو ماہانہ بیانیے میں جوڑتا ہے</string>
+    <string name="retro_monthly_p2">مہینے بھر کے دھاگے اور ترقی نظر آتی ہے</string>
+    <string name="retro_monthly_p3">آپ کے اندراجات سے پیشرفت ظاہر کرتا ہے</string>
+    <string name="retro_yearly_p1">ایک نظر میں آپ کا پورا سال</string>
+    <string name="retro_yearly_p2">KI آپ کے سال کے بڑے موضوعات کا خلاصہ پیش کرتی ہے</string>
+    <string name="retro_yearly_p3">ذاتی ترقی نظر آتی اور محسوس ہوتی ہے</string>
+    <!-- Retro: Premium upsell sheet -->
+    <string name="retro_your_reviews">آپ کے ذاتی جائزے</string>
+    <string name="retro_premium_reviews_desc">‏Premium کے ساتھ AI خودکار آپ کے ڈائری اندراجات سے جائزے بناتا ہے:</string>
+    <string name="retro_benefit_weekly">صرف پہلے 2 کے بجائے تمام ہفتہ وار جائزے – آپ کے AI روزانہ کوٹے کے دائرے میں</string>
+    <string name="retro_benefit_monthly">ماہانہ جائزے جو آپ کی پیش رفت اور تبدیلیاں نظر آنے دیتے ہیں</string>
+    <string name="retro_benefit_yearly">سالانہ جائزے، آپ کا پورا سال ذاتی بیانیے کے طور پر</string>
+    <string name="retro_start_sub">سبسکرپشن شروع کریں</string>
+    <string name="retro_decide_later">بعد میں فیصلہ کریں</string>
+
+    <!-- Month names for retrospective grouping -->
+    <string name="month_january">جنوری</string>
+    <string name="month_february">فروری</string>
+    <string name="month_march">مارچ</string>
+    <string name="month_april">اپریل</string>
+    <string name="month_may">مئی</string>
+    <string name="month_june">جون</string>
+    <string name="month_july">جولائی</string>
+    <string name="month_august">اگست</string>
+    <string name="month_september">ستمبر</string>
+    <string name="month_october">اکتوبر</string>
+    <string name="month_november">نومبر</string>
+    <string name="month_december">دسمبر</string>
+
+    <!-- ════════════════════════════════════════════════════════════════════
+         ONBOARDING
+         ════════════════════════════════════════════════════════════════════ -->
+    <string name="onboarding_welcome">‏Best Journal میں خوش آمدید</string>
+    <string name="onboarding_subtitle">آپ کی ذاتی ‏KI ڈائری\nروزمرہ زندگی میں مزید وضاحت کے لیے</string>
+    <string name="onboarding_feature_speech">بولیں یا لکھیں، AI دونوں سمجھتا ہے</string>
+    <string name="onboarding_feature_listen">اپنے اندراجات بآوازِ بلند سنیں</string>
+    <string name="onboarding_feature_secure">آپ کے اندراجات آلے پر رہتے ہیں؛ AI درخواستیں خفیہ طور پر منتقل کی جاتی ہیں</string>
+    <string name="onboarding_goals_title">آپ AI ڈائری سے\nکیا حاصل کرنا چاہتے ہیں؟</string>
+    <string name="onboarding_goal_stress">تناؤ کم کریں</string>
+    <string name="onboarding_goal_clarity">وضاحت پائیں</string>
+    <string name="onboarding_goal_growth">ذاتی ترقی</string>
+    <string name="onboarding_goal_thoughts">اپنے خیالات محفوظ کریں</string>
+    <string name="onboarding_how_step1_title">اپنا اندراج بولیں یا ٹائپ کریں</string>
+    <string name="onboarding_how_step1_desc">اپنے خیالات آواز پیغام کے طور پر ریکارڈ کریں یا ٹائپ کریں، جیسے آپ چاہیں۔</string>
+    <string name="onboarding_how_step2_title">‏AI بہتر بناتا اور تجزیہ کرتا ہے</string>
+    <string name="onboarding_how_step2_desc">آپ کا متن خودکار بہتر کیا جاتا ہے اور مختلف نقطہ نظر سے تجزیہ کیا جاتا ہے۔</string>
+    <string name="onboarding_how_step3_desc">خاص لمحات محفوظ کریں، AI انہیں تجزیے میں شامل کرتا ہے۔</string>
+    <string name="onboarding_how_step4_title">نمونے اور بصیرتیں دریافت کریں</string>
+    <string name="onboarding_how_step4_desc">KI ڈیش بورڈ آپ کے اندراجات سے تعلقات ظاہر کرتا ہے۔</string>
+    <string name="onboarding_how_step5_title">ہفتہ وار، ماہانہ اور سالانہ جائزہ</string>
+    <string name="onboarding_how_step5_desc">خودکار جائزے دکھاتے ہیں کہ آپ وقت کے ساتھ کیسے ترقی کرتے ہیں۔</string>
+    <string name="onboarding_premium_feature_improve">روزانہ AI ٹیکسٹ بہتری، ہر اندراج زیادہ واضح اور اظہار خیال بن جاتا ہے</string>
+    <string name="onboarding_premium_feature_dashboard">ہر نئے اندراج پر خودکار ڈیش بورڈ اپ ڈیٹ</string>
+    <string name="onboarding_premium_feature_retro">ہفتہ وار، ماہانہ اور سالانہ جائزے آپ کی ترقی دکھاتے ہیں</string>
+    <string name="onboarding_premium_feature_patterns">نمونے نمایاں کریں: ‏KI آپ کے اندراجات میں بار بار آنے والے سوچ اور جذبات کے نمونے دکھاتی ہے</string>
+    <string name="onboarding_premium_feature_noads">بلا خلل لکھیں اور غور کریں</string>
+    <string name="onboarding_free_trial">مفت، کسی بھی وقت منسوخ کریں</string>
+    <string name="onboarding_free_after_trial">اس کے بعد آپ Best Journal استعمال کرتے رہیں،\nہر ہفتے محدود AI کالز کے ساتھ مفت۔</string>
+    <string name="onboarding_start_free">مفت شروع کریں</string>
+    <string name="onboarding_without_premium">‏Premium کے بغیر جاری رکھیں</string>
+    <string name="onboarding_feature_profiles">مختلف نقطہ نظر کے لیے 5 ذہین تجزیاتی پروفائلز</string>
+    <string name="onboarding_goals_select">ایک یا زیادہ اہداف منتخب کریں</string>
+    <string name="onboarding_how_step3_title">تصاویر شامل کریں</string>
+    <string name="onboarding_how_title">یہ کتنا آسان ہے</string>
+    <string name="onboarding_perspectives_title">تمہاری زندگی پر\nمختلف نقطہ نظر</string>
+    <string name="onboarding_premium_feature_pdf">تصاویر کے ساتھ PDF ایکسپورٹ، اپنے اندراجات دستاویز کے طور پر محفوظ کریں</string>
+    <string name="onboarding_premium_profiles">آپ کی زندگی میں گہری بصیرت کے لیے 5 ذہین ڈیش بورڈ پروفائلز</string>
+    <string name="onboarding_premium_profiles_unlimited">اپنے AI پروفائلز بغیر کسی تعداد کی حد کے</string>
+    <string name="onboarding_try_premium">‏Premium دیگر چیزوں کے علاوہ فراہم کرتا ہے:</string>
+
+    <!-- ════════════════════════════════════════════════════════════════════
+         PAYWALL
+         ════════════════════════════════════════════════════════════════════ -->
+    <string name="paywall_prices_loading">قیمتیں لوڈ ہو رہی ہیں\u2026</string>
+    <string name="paywall_sub_loading_toast">سبسکرپشن لوڈ ہو رہی ہے، برائے کرم کچھ دیر بعد دوبارہ کوشش کریں۔</string>
+    <string name="paywall_purchase_loading_toast">خرید کا عمل لوڈ ہو رہا ہے، برائے کرم کچھ دیر بعد دوبارہ کوشش کریں۔</string>
+    <string name="paywall_today">آج</string>
+    <string name="paywall_full_access">مکمل رسائی</string>
+    <string name="paywall_day7">دن 7</string>
+    <string name="paywall_reminder">یاد دہانی</string>
+    <string name="paywall_day8">دن 8</string>
+    <string name="paywall_first_payment">پہلی ادائیگی</string>
+    <string name="paywall_yearly_note">بعد میں %1$s سالانہ، خودکار تجدید\nآزمائشی مدت میں کسی بھی وقت منسوخ کریں</string>
+    <string name="paywall_most_popular">تجویز کردہ</string>
+    <string name="paywall_monthly_plan">ماہانہ پلان، %1$s فی ماہ</string>
+    <string name="paywall_lifetime_title">یک مشت خرید</string>
+    <string name="paywall_lifetime_desc">ایک بار ادائیگی کریں، ہر چیز مستقل طور پر استعمال کریں</string>
+    <string name="paywall_lifetime_note">کوئی سبسکرپشن نہیں، کوئی تجدید نہیں</string>
+    <string name="paywall_free_note">یہ ایپ سبسکرپشن کے بغیر بھی کام کرتی رہے گی۔</string>
+    <string name="paywall_legal_hint" formatted="false">سبسکرائب کرنے سے تم %1$s قبول کرتے ہو۔ تمہارا 14 دن کا معاہدہ منسوخی کا حق وہاں بیان کیا گیا ہے۔</string>
+    <string name="paywall_legal_hint_link">استعمال کی شرائط</string>
+
+    <!-- Paywall features -->
+    <string name="paywall_feature_patterns">اپنی سوچ میں بار بار آنے والے نمونوں کو پہچانیں</string>
+    <string name="paywall_feature_improve">ہر اندراج کے لیے روزانہ AI ٹیکسٹ بہتری</string>
+    <string name="paywall_feature_dashboard">ہر اندراج کے بعد خودکار ڈیش بورڈ اپ ڈیٹ</string>
+    <string name="paywall_feature_retro">‏AI کے ساتھ ہفتہ وار، ماہانہ اور سالانہ جائزے</string>
+    <string name="paywall_feature_pdf">ڈائری اندراجات تصاویر کے ساتھ PDF کے طور پر ایکسپورٹ کریں</string>
+    <string name="paywall_feature_noads">بلا خلل لکھیں اور غور کریں</string>
+    <string name="paywall_feature_profiles">اپنے AI پروفائلز بغیر کسی تعداد کی حد کے</string>
+
+    <!-- Paywall personalized headlines -->
+    <string name="paywall_headline_stress">روزمرہ میں زیادہ وضاحت</string>
+    <string name="paywall_headline_stress_sub">پہچانو کہ تمہیں روزانہ کیا مشغول رکھتا ہے اور اسے نقطے پر لاؤ۔</string>
+    <string name="paywall_headline_clarity">خود کو بہتر سمجھیں</string>
+    <string name="paywall_headline_clarity_sub">AI آپ کے اندراجات میں بار بار آنے والے نمونوں کو ظاہر کرتا ہے</string>
+    <string name="paywall_headline_growth">ہر دن میں اچھائی دریافت کریں</string>
+    <string name="paywall_headline_growth_sub">شکرگزاری اور ترقی کے لیے آپ کی ذاتی جگہ</string>
+    <string name="paywall_headline_thoughts">اپنے خیالات بہنے دیں</string>
+    <string name="paywall_headline_thoughts_sub">آپ کا روزمرہ کا تخلیقی ساتھی</string>
+    <string name="paywall_headline_default">ہر دن خود کو تھوڑا اور دریافت کریں</string>
+    <string name="paywall_headline_default_sub">آپ کا روزمرہ کا ذاتی AI ساتھی</string>
+
+    <!-- Exit intent offer -->
+    <string name="paywall_exit_wait">ذرا رکیں!</string>
+    <string name="paywall_exit_special_offer">ہمارے پاس آپ کے لیے\nایک خاص پیشکش ہے:</string>
+    <string name="paywall_exit_discount">%1$d مہینوں کے لیے چھوٹ</string>
+    <string name="paywall_exit_price_comparison">صرف %1$s بجائے %2$s فی ماہ</string>
+    <string name="paywall_exit_start_discount">ادائیگی کے ساتھ — 2 ماہ آدھی قیمت پر</string>
+
+    <!-- ════════════════════════════════════════════════════════════════════
+         CHURN FLOW DIALOG
+         ════════════════════════════════════════════════════════════════════ -->
+    <string name="churn_your_sub">آپ کی سبسکرپشن</string>
+    <string name="churn_plan_yearly">سالانہ پلان</string>
+    <string name="churn_plan_monthly">ماہانہ پلان</string>
+    <string name="churn_plan">پلان</string>
+    <string name="churn_price">قیمت</string>
+    <string name="churn_renewal">تجدید</string>
+    <string name="churn_automatic">خودکار</string>
+    <string name="churn_promo_active_label">رعایتی پیشکش</string>
+    <string name="churn_promo_one_month_remaining">1 مہینہ باقی — پھر <xliff:g id="base_price" example="3,99 €">%1$s</xliff:g> ماہانہ</string>
+    <string name="churn_promo_months_remaining"><xliff:g id="months" example="2">%1$d</xliff:g> مہینے باقی — پھر <xliff:g id="base_price" example="3,99 €">%2$s</xliff:g> ماہانہ</string>
+    <string name="churn_auto_renew_note">آپ کی سبسکرپشن Google Play کے ذریعے خودکار تجدید ہوتی ہے۔ منسوخی کسی بھی وقت ممکن ہے۔</string>
+    <string name="churn_cancel_sub">سبسکرپشن منسوخ کریں</string>
+    <string name="churn_reason_too_expensive">بہت مہنگا</string>
+    <string name="churn_reason_unused">بہت کم استعمال</string>
+    <string name="churn_per_year">فی سال</string>
+    <string name="churn_per_month">فی ماہ</string>
+    <string name="churn_reason_features">مجھے جن فیچرز کی ضرورت ہے وہ نہیں ہیں</string>
+    <string name="churn_reason_other">کوئی اور وجہ</string>
+    <string name="churn_sorry_title">افسوس کہ آپ جا رہے ہیں</string>
+    <string name="churn_sorry_body">منسوخی سے پہلے، کیا آپ ہمیں بتائیں گے کیوں؟ اس سے ہمیں ایپ بہتر کرنے میں مدد ملتی ہے۔</string>
+    <string name="churn_exclusive_offer">آپ کے لیے خصوصی پیشکش</string>
+    <string name="churn_offer_subtitle">تمہارے لیے ہماری پیشکش</string>
+    <string name="churn_offer_feature_ai">روزانہ AI تجزیات</string>
+    <string name="churn_offer_feature_perspectives">تمام 4 پہلے سے طے شدہ AI پروفائلز + جتنے اپنے بنانا چاہیں</string>
+    <string name="churn_offer_feature_voice">‏Premium آواز شناخت</string>
+    <string name="churn_offer_auto_renew">خودکار تجدید، کسی بھی وقت منسوخ کریں</string>
+    <string name="churn_accept_offer">پیشکش قبول کریں</string>
+    <string name="churn_switch_yearly">یا سالانہ پلان پر جائیں اور مزید بچائیں</string>
+    <string name="churn_pause_sub">‏Google Play پر سبسکرپشن روکیں</string>
+    <string name="churn_cancel_anyway">پھر بھی منسوخ کریں</string>
+    <string name="churn_are_you_sure">کیا آپ کو یقین ہے؟</string>
+    <string name="churn_stay">پھر بھی رہنا چاہتا ہوں</string>
+
+    <!-- ════════════════════════════════════════════════════════════════════
+         AI LIMIT / COMPONENTS
+         ════════════════════════════════════════════════════════════════════ -->
+    <string name="ai_limit_title">آپ کی ہفتہ وار حد پوری ہوگئی</string>
+    <string name="ai_limit_body">سبسکرپشن کے بغیر آپ کے پاس فی ہفتہ 5 متن بہتری اور فی پروفائل فی ہفتہ 5 ڈیش بورڈ اپ ڈیٹ ہیں۔
+Premium کے ساتھ: روزانہ 150 تک۔</string>
+    <string name="ai_limit_monthly">ماہانہ سبسکرپشن، %1$s/ماہ</string>
+    <string name="ai_limit_yearly">سالانہ سبسکرپشن، %1$s/سال (37%% بچائیں)</string>
+    <string name="ai_limit_no_thanks">نہیں شکریہ، AI کے بغیر جاری رکھیں</string>
+    <string name="ai_banner_title">آپ کی ڈائری AI سے معاونت یافتہ ہے</string>
+    <string name="ai_banner_body">• بولے گئے متن خودکار بہتر کیے جاتے ہیں\n• ہر اندراج کے لیے خلاصے\n• تمہارے نمونوں سے ذہین زندگی کی تجاویز۔ تمام AI آؤٹ پٹ تجاویز ہیں، نہ کہ پیشہ ورانہ مشورہ۔\n• سب تمہاری مفت آزمائشی مدت میں شامل ہے</string>
+    <string name="cd_mic_start">ریکارڈنگ شروع کریں</string>
+    <string name="cd_mic_stop">ریکارڈنگ روکیں</string>
+    <string name="entry_improve_limit_daily">یومیہ حد پوری ہوگئی۔ کل دوبارہ جاری!</string>
+    <string name="entry_improve_limit_cooldown">مختصر وقفہ: ابھی %1$d منٹ باقی ہیں۔</string>
+    <string name="entry_improve_failed">متن بہتری ناکام ہوگئی</string>
+
+    <!-- ════════════════════════════════════════════════════════════════════
+         NOTIFICATIONS
+         ════════════════════════════════════════════════════════════════════ -->
+    <string name="notif_reminder_title">اپنی ڈائری کا وقت</string>
+    <string name="notif_reminder_body_0">آج آپ کو کیا مشغول کر رہا ہے؟</string>
+    <string name="notif_reminder_body_1">آپ کے لیے ایک لمحہ، اسے محفوظ کریں</string>
+    <string name="notif_reminder_body_2">آپ کا مستقبل کا نفس آپ کا شکر گزار ہوگا</string>
+    <string name="notif_reminder_body_3">صرف ایک خیال کافی ہے، شروع کریں</string>
+    <string name="notif_reminder_body_4">آج آپ کا اہم ترین لمحہ کیا تھا؟</string>
+    <string name="notif_weekly_title">آپ کا ہفتہ وار جائزہ</string>
+    <string name="notif_weekly_body">دیکھیں کہ اس ہفتے آپ کو کیا نے متحرک کیا، آپ کے ڈیش بورڈ میں نئی بصیرتیں ہیں۔</string>
+    <string name="notif_monthly_title">آپ کا ماہانہ جائزہ</string>
+    <string name="notif_monthly_body">یادوں سے بھرا پورا مہینہ آپ کا انتظار کر رہا ہے۔</string>
+    <string name="notif_yearly_title">آپ کا سالانہ جائزہ</string>
+    <string name="notif_yearly_body">یادوں سے بھرا پورا سال، اپنے سفر پر نظر ڈالیں۔</string>
+
+    <!-- Notification channel names -->
+    <string name="notif_channel_daily_name">یومیہ یاد دہانی</string>
+    <string name="notif_channel_daily_desc">ڈائری لکھنے کی روزانہ یاد دہانی</string>
+    <string name="notif_channel_weekly_name">ہفتہ وار جائزہ</string>
+    <string name="notif_channel_weekly_desc">ہر اتوار دوپہر 3 بجے آپ کا ہفتہ وار جائزہ</string>
+    <string name="notif_channel_monthly_name">ماہانہ جائزہ</string>
+    <string name="notif_channel_monthly_desc">جب آپ کا ماہانہ جائزہ تیار ہو اطلاع</string>
+    <string name="notif_channel_yearly_name">سالانہ جائزہ</string>
+    <string name="notif_channel_yearly_desc">جب آپ کا سالانہ جائزہ تیار ہو اطلاع</string>
+
+    <!-- ════════════════════════════════════════════════════════════════════
+         DATE / TIME
+         ════════════════════════════════════════════════════════════════════ -->
+    <string name="datetime_just_now">ابھی ابھی</string>
+    <plurals name="datetime_minutes_ago">
+        <item quantity="one">%1$d منٹ پہلے</item>
+        <item quantity="other">%1$d منٹ پہلے</item>
+    </plurals>
+    <plurals name="datetime_hours_ago">
+        <item quantity="one">%1$d گھنٹہ پہلے</item>
+        <item quantity="other">%1$d گھنٹے پہلے</item>
+    </plurals>
+    <plurals name="datetime_days_ago">
+        <item quantity="one">%1$d دن پہلے</item>
+        <item quantity="other">%1$d دن پہلے</item>
+    </plurals>
+    <!-- Confirmation after PDF export. %1$d = number of entries included in the PDF. -->
+    <plurals name="settings_export_success">
+        <item quantity="one">%1$d اندراج ایکسپورٹ ہوا</item>
+        <item quantity="other">%1$d اندراجات ایکسپورٹ ہوئے</item>
+    </plurals>
+    <string name="datetime_today">آج</string>
+    <string name="datetime_yesterday">کل</string>
+    <string name="datetime_day_before_yesterday">پرسوں</string>
+    <string name="datetime_this_week">اس ہفتے</string>
+    <string name="datetime_last_week">گزشتہ ہفتہ</string>
+    <string name="datetime_weeks_ago">%1$d ہفتے پہلے</string>
+
+    <!-- ════════════════════════════════════════════════════════════════════
+         ACHIEVEMENTS
+         ════════════════════════════════════════════════════════════════════ -->
+    <string name="achievement_nightowl_title">رات کا پرندہ</string>
+    <string name="achievement_nightowl_desc">رات 10 بجے کے بعد 50 اندراجات لکھے</string>
+    <string name="achievement_earlybird_title">صبح سویرے اٹھنے والا</string>
+    <string name="achievement_earlybird_desc">صبح 7 بجے سے پہلے 20 اندراجات لکھے</string>
+    <string name="achievement_confession_title">اعتراف</string>
+    <string name="achievement_confession_desc">1,000 سے زیادہ الفاظ کا ایک اندراج لکھا</string>
+    <string name="achievement_marathon_title">میراتھن لکھاری</string>
+    <string name="achievement_marathon_desc">100 ڈائری اندراجات لکھے</string>
+    <string name="achievement_wordartist_title">الفاظ کا فنکار</string>
+    <string name="achievement_wordartist_desc">500 ڈائری اندراجات لکھے</string>
+    <string name="achievement_consistency_title">ثابت قدمی</string>
+    <string name="achievement_consistency_desc">30 دن کی streak حاصل کی</string>
+    <string name="achievement_chronicler_title">سالانہ مورخ</string>
+    <string name="achievement_chronicler_desc">365 اندراجات لکھے</string>
+    <string name="achievement_photodiary_title">فوٹو ڈائری</string>
+    <string name="achievement_photodiary_desc">اندراجات کے ساتھ 50 تصاویر منسلک کیں</string>
+    <string name="achievement_voiceartist_title">آواز کا فنکار</string>
+    <string name="achievement_voiceartist_desc">25 آواز اندراجات بنائے</string>
+    <string name="achievement_reflectionmaster_title">عکاسی کا ماہر</string>
+    <string name="achievement_reflectionmaster_desc">50 ڈیش بورڈ تجزیے کیے</string>
+
+    <!-- ════════════════════════════════════════════════════════════════════
+         DAILY PROMPTS
+         ════════════════════════════════════════════════════════════════════ -->
+    <string name="prompt_cat_self_reflection">خود عکاسی</string>
+    <string name="prompt_cat_gratitude">شکرگزاری</string>
+    <string name="prompt_cat_future">مستقبل</string>
+    <string name="prompt_cat_relationships">تعلقات</string>
+
+    <string-array name="prompts_self_reflection">
+        <item>آج آپ کو کس چیز نے مسکراہٹ دی؟</item>
+        <item>کون سا خیال تھا جسے آپ آج چھوڑ نہیں سکے؟</item>
+        <item>آج آپ نے اپنے بارے میں کیا سیکھا؟</item>
+        <item>آج کا سب سے شدید لمحہ کون سا تھا؟</item>
+        <item>اگر آپ سکتے تو آج کیا مختلف کرتے؟</item>
+        <item>آج کون سا احساس سب سے زیادہ آپ کے ساتھ رہا؟</item>
+        <item>آج آپ کو کس چیز نے حیران کیا؟</item>
+        <item>آج آپ نے سب سے زیادہ کس بارے میں سوچا؟</item>
+        <item>آج کس چیز نے آپ کو توانائی دی؟</item>
+        <item>آج کس چیز نے آپ کی توانائی چھینی؟</item>
+        <item>کون سی عادت آپ بدلنا چاہتے ہیں؟</item>
+        <item>ابھی آپ کے لیے کامیابی کا کیا مطلب ہے؟</item>
+        <item>کون سا خوف اس وقت آپ کی راہ میں ہے؟</item>
+        <item>آپ کا چھوٹا نفس آپ کی آج کی زندگی کے بارے میں کیا کہے گا؟</item>
+        <item>ابھی آپ خود کو کیا مشورہ دیتے ہیں؟</item>
+        <item>کیا چیز آپ کو منفرد بناتی ہے؟</item>
+    </string-array>
+
+    <string-array name="prompts_gratitude">
+        <item>آج آپ کس چیز کے لیے شکر گزار ہیں؟</item>
+        <item>کس شخص نے آج آپ کا دن بہتر بنایا؟</item>
+        <item>کس چھوٹی سی بات نے آج آپ کو خوش کیا؟</item>
+        <item>کون سی صلاحیت آپ کے پاس ہے جسے آپ اکثر معمولی سمجھتے ہیں؟</item>
+        <item>اس ہفتے آپ کے ساتھ سب سے اچھی کیا بات ہوئی؟</item>
+        <item>آپ کسے شکریہ کہنا چاہیں گے، اور کیوں؟</item>
+        <item>کون سی جگہ آپ کو گھر جیسا احساس دیتی ہے؟</item>
+        <item>کون سی یاد آپ کو فوری خوش کرتی ہے؟</item>
+        <item>آپ کے جسم کا کون سا حصہ زیادہ تعریف کا مستحق ہے؟</item>
+        <item>کس کھانے نے آج آپ کو واقعی اچھا محسوس کرایا؟</item>
+        <item>کس موسیقی نے آپ کو آخری بار متاثر کیا؟</item>
+        <item>آپ کی سب سے قیمتی چیز کیا ہے جو پیسوں سے نہیں خریدی جا سکتی؟</item>
+        <item>ماضی کا کون سا تجربہ آپ کو مضبوط بناتا ہے؟</item>
+        <item>آپ کی روزمرہ زندگی میں کیا دراصل ایک سہولت ہے؟</item>
+        <item>آپ کے روزمرہ کا پوشیدہ ہیرو کون ہے؟</item>
+        <item>آپ ابھی کون سا موسم سب سے زیادہ انجوائے کر رہے ہیں، اور کیوں؟</item>
+    </string-array>
+
+    <string-array name="prompts_future">
+        <item>ایک سال میں آپ کیا حاصل کرنا چاہتے ہیں؟</item>
+        <item>پانچ سال میں آپ کا بہترین دن کیسا لگتا ہے؟</item>
+        <item>ابھی آپ کس ہدف کے پیچھے سب سے جوش سے ہیں؟</item>
+        <item>اگر آپ جانتے کہ ناکام نہیں ہوں گے تو کیا کرتے؟</item>
+        <item>کون سی نئی صلاحیت آپ سیکھنا چاہتے ہیں؟</item>
+        <item>آپ اگلا سفر کہاں کرنا چاہتے ہیں؟</item>
+        <item>دس سال میں آپ کس قسم کے انسان بننا چاہتے ہیں؟</item>
+        <item>کون سا خواب آپ نے چھوڑ دیا جو آپ دوبارہ زندہ کر سکتے ہیں؟</item>
+        <item>ابھی آپ جو سب سے جرات مندانہ قدم اٹھا سکتے ہیں وہ کیا ہے؟</item>
+        <item>کون سا منصوبہ آپ کو مشتعل کرتا ہے جو آپ نے ابھی تک شروع نہیں کیا؟</item>
+        <item>کیا ہونا چاہیے کہ آپ کہیں: اب میں مطمئن ہوں؟</item>
+        <item>دنیا میں کون سی تبدیلی آپ دیکھنا چاہتے ہیں؟</item>
+        <item>آپ کی bucket list میں سب سے اوپر کیا ہے؟</item>
+        <item>اگلے مہینے تک آپ کون سی بری عادت چھوڑنا چاہتے ہیں؟</item>
+        <item>آپ کیسے یاد رکھے جانا چاہتے ہیں؟</item>
+        <item>ایک چھوٹا قدم کیا ہے جو آپ کل اٹھا سکتے ہیں؟</item>
+    </string-array>
+
+    <string-array name="prompts_relationships">
+        <item>آپ کسی کو کیا کہنا چاہتے ہیں جو ابھی تک نہیں کہا؟</item>
+        <item>آپ کی زندگی میں کون سا رشتہ زیادہ توجہ کا مستحق ہے؟</item>
+        <item>آپ اپنے بہترین دوست میں کیا سب سے زیادہ پسند کرتے ہیں؟</item>
+        <item>آپ نے آخری بار کب واقعی سمجھا ہوا محسوس کیا؟</item>
+        <item>کسی اہم شخص کو آپ کیا کہنا چاہیں گے؟</item>
+        <item>کس انسان نے آپ کی زندگی کو سب سے زیادہ متاثر کیا؟</item>
+        <item>آپ دوسروں کو کیسے دکھاتے ہیں کہ آپ ان سے محبت کرتے ہیں؟</item>
+        <item>کون سا تنازعہ آپ حل کرنا چاہتے ہیں؟</item>
+        <item>دوستی آپ کے لیے کیا معنی رکھتی ہے؟</item>
+        <item>کس نے آپ کو حال ہی میں کوئی اہم بات سکھائی؟</item>
+        <item>دوسروں میں کون سی خوبی آپ سب سے زیادہ پسند کرتے ہیں؟</item>
+        <item>آپ پورا دن کس کے ساتھ گزارنا چاہیں گے؟</item>
+        <item>آپ کو ملنے والی سب سے خوبصورت تعریف کیا تھی؟</item>
+        <item>رشتوں میں آپ کون سی حدیں بہتر طور پر قائم کرنا چاہتے ہیں؟</item>
+        <item>وقت کے ساتھ آپ کا محبت کا تصور کیسے بدلا ہے؟</item>
+        <item>آج کس کو آپ کی طرف سے فون یا پیغام ملنا چاہیے؟</item>
+    </string-array>
+
+    <!-- ════════════════════════════════════════════════════════════════════
+         PDF EXPORT
+         ════════════════════════════════════════════════════════════════════ -->
+    <string name="pdf_entry_fallback_title">اندراج #%1$d</string>
+    <string name="pdf_entry_counter">اندراج %1$d از %2$d</string>
+    <string name="pdf_summary_label">خلاصہ</string>
+    <string name="pdf_continuation">%1$s (جاری)</string>
+    <string name="pdf_page_number">صفحہ %1$d</string>
+
+    <!-- ════════════════════════════════════════════════════════════════════
+         ERRORS
+         ════════════════════════════════════════════════════════════════════ -->
+    <string name="error_retro_all_failed">تمام %1$d AI درخواستیں ناکام ہوئیں۔ برائے کرم انٹرنیٹ کنکشن چیک کریں۔</string>
+    <string name="error_whisper_audio_empty">آڈیو فائل خالی ہے</string>
+    <string name="error_whisper_no_text">کوئی متن شناخت نہیں ہوا</string>
+    <string name="error_sync_db_not_found">ڈیٹا بیس نہیں ملا</string>
+    <string name="error_audio_record_init_failed">مائیکروفون شروع نہیں ہو سکا</string>
+    <string name="error_json_key_missing">AI جواب نامکمل ہے: %1$s یا %2$s موجود نہیں</string>
+    <string name="error_file_open_failed">خرابی: فائل نہیں کھل سکی</string>
+    <string name="error_generic">خرابی: %1$s</string>
+
+    <!-- ════════════════════════════════════════════════════════════════════
+         AI PROFILE STYLE INSTRUCTIONS (for Gemini prompts)
+         ════════════════════════════════════════════════════════════════════ -->
+    <string name="profile_style_chronicler">\n- خلاصہ بیانیے کے انداز میں لکھیں، اہم ترین واقعات اور احساسات کا خلاصہ کریں، جیسے ایک ذاتی مورخ</string>
+    <string name="profile_style_advisor">\n- زندگی کے مشیر کے انداز میں لکھیں، اجاگر کریں کہ کیا اچھا ہوا، کیا بہتر ہو سکتا ہے، اور قاری کو وضاحت اور ترتیب کا احساس دیں</string>
+    <string name="profile_style_insight">\n- گہرے خودشناسی بیانیے کے انداز میں لکھیں، سوچ کے نمونے، بار بار آنے والے احساسات اور پوشیدہ خوبیاں آشکار کریں</string>
+    <string name="profile_style_coach">\n- حوصلہ افزا ہدف ساتھی کے انداز میں لکھیں، ذاتی اہداف پر پیش رفت دکھائیں اور آگے بڑھنے کی ترغیب دیں</string>
+    <string name="profile_style_custom">\n- جائزہ صارف کی اس ذاتی توجہ کے ساتھ لکھیں: \"%1$s\"</string>
+
+
+    <!-- ════════════════════════════════════════════════════════════════════
+         CONSENT SCREEN + PRIVACY GATES + PRIVACY SECTION (April 2026)
+         ════════════════════════════════════════════════════════════════════ -->
+    <string name="consent_title">رازداری اور رضامندی</string>
+    <string name="consent_intro">آپ کی ڈائری ایک ذاتی جگہ ہے، اور ہم اس کا احترام کرتے ہیں۔ یہاں آپ شفاف طریقے سے دیکھ سکتے ہیں کہ Best Journal آپ کے ڈیٹا کے ساتھ کیسے پیش آتا ہے۔</string>
+    <string name="consent_card1_title">مقامی ذخیرہ</string>
+    <string name="consent_card1_body">آپ کی اندراجات آپ کے آلے پر رہتی ہیں۔</string>
+    <string name="consent_card2_title">AI خصوصیات (امریکہ)</string>
+    <string name="consent_card2_body">اختیاری طور پر متن Google Gemini اور پڑھنے کے متن Microsoft Edge کو امریکہ میں بھیجے جاتے ہیں (EU-US Data Privacy Framework)۔ آواز کی ریکارڈنگ معیاری معاہدہ شرائط (EU SCCs) کے تحت Groq (امریکہ) کو بھیجی جاتی ہے۔</string>
+    <string name="consent_card3_title">تخلصی اعداد و شمار</string>
+    <string name="consent_card3_body">Firebase Analytics، اختیاری، ترتیبات میں کسی بھی وقت تبدیل کر سکتے ہیں۔</string>
+    <string name="consent_links_header">ہماری قانونی دستاویزات:</string>
+    <string name="consent_footer_link_datenschutz">رازداری</string>
+    <string name="consent_footer_link_impressum">قانونی نوٹس</string>
+    <string name="consent_footer_link_agb">استعمال کی شرائط</string>
+    <string name="consent_accept_all">اتفاق اور شروع کریں</string>
+    <string name="consent_disable_stats">شماریات بند کر کے جاری رکھیں</string>
+    <string name="consent_confirmation">\"اتفاق اور شروع کریں\" پر ٹیپ کرنے سے آپ تصدیق کرتے ہیں کہ آپ نے رازداری پالیسی، استعمال کی شرائط اور قانونی نوٹس پڑھ لیا ہے اور بیان کردہ ڈیٹا پروسیسنگ پر رضامند ہیں۔ آپ اپنا فیصلہ ترتیبات میں کسی بھی وقت تبدیل کر سکتے ہیں۔</string>
+
+    <string name="privacy_gate_groq_title">آواز کی ریکارڈنگ Groq کو بھیجیں؟</string>
+    <string name="privacy_gate_groq_body">یہ خصوصیت آپ کی صوتی ریکارڈنگ کو خفیہ طور پر Groq (امریکہ) کو بھیجتی ہے اور وہاں اسے متن میں بدلتی ہے — مقامی شناخت سے تیز اور درست۔\n\n✓ ریکارڈنگ تبدیلی کے فوراً بعد حذف کر دی جاتی ہے\n✓ آپ کی ریکارڈنگ سے کوئی AI تربیت نہیں\n✓ قانونی بنیاد: معیاری معاہدہ شقیں (EU SCCs)\n\nمتبادل: ترتیبات میں مقامی آف لائن شناخت۔</string>
+    <string name="privacy_gate_groq_accept">اتفاق اور بھیجیں</string>
+    <string name="privacy_gate_groq_local">اس کے بجائے مقامی طور پر ٹرانسکرائب کریں</string>
+
+    <string name="privacy_gate_gemini_title">متن Google Gemini کو بھیجیں؟</string>
+    <string name="privacy_gate_gemini_body">اچھا لگا کہ آپ ‏Best Journal کی ذہین خصوصیات استعمال کرنا چاہتے ہیں! خلاصوں، جائزوں، ڈیش بورڈ بصیرت اور متن کی بہتری کے لیے آپ کے متن خفیہ طور پر Google Gemini کو بھیجے جاتے ہیں۔\n\n✓ آپ کے ڈیٹا سے کوئی AI تربیت نہیں\n✓ درخواستیں مستقل طور پر محفوظ نہیں کی جاتیں\n✓ EU-US Data Privacy Framework کے مطابق خفیہ\n\nاہم نوٹ: چونکہ آپ کے ڈائری اندراجات خاص طور پر حساس ڈیٹا پر مشتمل ہو سکتے ہیں (صحت، مذہب، ذاتی تعلقات — DSGVO Art. 9)، اس لیے ہم یہاں AI پروسیسنگ کے لیے آپ کی واضح رضامندی مانگتے ہیں۔ AI کے نتائج تجاویز ہیں، پیشہ ورانہ مشورہ نہیں اور کسی ماہر کا متبادل نہیں۔\n\nآپ اسے کسی بھی وقت ترتیبات میں تبدیل کر سکتے ہیں۔</string>
+    <string name="privacy_gate_gemini_accept">اتفاق اور بھیجیں</string>
+    <string name="privacy_gate_gemini_cancel">منسوخ</string>
+
+    <string name="privacy_gate_tts_title">Premium آوازیں فعال کریں</string>
+    <string name="privacy_gate_tts_body">Premium آوازوں کے ساتھ پڑھ کر سنانا زیادہ فطری لگتا ہے۔ آپ کا متن خفیہ طور پر (HTTPS/TLS) امریکہ میں ایک Microsoft تقریر سروس کو بھیجا جاتا ہے اور آڈیو کے طور پر واپس کیا جاتا ہے۔\n\n✓ منتقلی صرف تقریر کی ترکیب کے لیے\n✓ تیسرے ملک امریکہ کو منتقلی (Microsoft کو EU-US Data Privacy Framework کے تحت تصدیق حاصل ہے)</string>
+    <string name="privacy_gate_tts_accept">اتفاق اور پڑھیں</string>
+    <string name="privacy_gate_tts_cancel">منسوخ</string>
+
+    <string name="settings_privacy_header">رازداری</string>
+    <string name="settings_analytics_title">تخلصی استعمال کا تجزیہ</string>
+    <string name="settings_analytics_subtitle">نقص کے تجزیہ اور پروڈکٹ کی بہتری کے لیے Firebase Analytics</string>
+
+    <string name="settings_delete_account_title">اکاؤنٹ اور ڈیٹا حذف کریں</string>
+    <string name="settings_delete_account_subtitle">تمام مقامی ڈیٹا اور Drive بیک اپ کو ناقابل واپسی طور پر ہٹاتا ہے۔ آپ کا Google اکاؤنٹ بذات خود برقرار رہتا ہے۔</string>
+    <string name="settings_delete_account_confirm_title">تمام ایپ ڈیٹا حذف کریں؟</string>
+    <string name="settings_delete_account_confirm_body">یہ عمل ناقابل واپسی ہے اور حذف کرتا ہے:\n\n• تمام مقامی ڈائری اندراجات، تصاویر، ویڈیوز اور آڈیو ریکارڈنگز\n• ایپ کا Google Drive بیک اپ (صرف ایپ کا ڈیٹا، آپ کا Google اکاؤنٹ نہیں)\n• آپ کا ایپ لاگ ان\n\nآپ کا Google اکاؤنٹ بذات خود برقرار رہتا ہے۔ ایپ اس کے بعد ایک تازہ تنصیب کے طور پر دوبارہ شروع ہوتی ہے۔</string>
+    <string name="settings_delete_account_cancel">منسوخ</string>
+    <string name="settings_delete_account_confirm">ہاں، سب کچھ حذف کریں</string>
+
+    <string name="settings_report_ai_title">AI جواب کی رپورٹ کریں</string>
+    <string name="settings_report_ai_subtitle">نامناسب یا غلط AI آؤٹ پٹ</string>
+    <string name="settings_report_ai_confirm_title">سپورٹ کو ای میل کھولیں؟</string>
+    <string name="settings_report_ai_confirm_body">آپ کا ای میل پروگرام dev.app.support@gmail.com کے نام ایک تیار شدہ پیغام کے ساتھ کھلتا ہے۔ بھیجنے سے پہلے آپ تفصیل میں اضافہ کر سکتے ہیں۔ ہم عام طور پر کام کے دنوں میں 24 گھنٹوں کے اندر جواب دیتے ہیں۔\n\nبراہ کرم اس کے ذریعے رپورٹ کریں: ڈیش بورڈ، خلاصوں، جائزوں یا متن کی بہتری سے نامناسب، قابل اعتراض، غلط یا گمراہ کن AI نتائج۔</string>
+    <string name="settings_report_ai_confirm">رپورٹ بنائیں</string>
+    <string name="settings_report_ai_cancel">منسوخ</string>
+    <string name="settings_report_ai_no_email">ای میل ایپ نہیں ملی۔ براہ کرم رپورٹ dev.app.support@gmail.com کو بھیجیں۔</string>
+    <string name="settings_report_ai_subject">Best Journal: نامناسب AI جواب</string>
+    <string name="settings_report_ai_body">سلام،\n\nمیں Best Journal میں ایک نامناسب یا غلط AI جواب کی رپورٹ کرنا چاہتا ہوں۔\n\nمسئلے کی تفصیل:\n[براہ کرم بھریں]\n\nسیاق و سباق (کون سی خصوصیت، کون سا ان پٹ):\n[براہ کرم بھریں]\n\nشکریہ۔</string>
+    <string name="settings_report_ai_dialog_title">AI جواب کی رپورٹ کریں</string>
+    <string name="settings_report_ai_dialog_desc">نامناسب یا غلط AI جواب کی وضاحت کریں۔ آپ کی رپورٹ براہ راست ہماری سپورٹ ٹیم کو بھیجی جاتی ہے۔ آپ کا اپنے Google اکاؤنٹ سے سائن ان ہونا ضروری ہے۔</string>
+
+    <string name="settings_revoke_title">معاہدے کی منسوخی</string>
+    <string name="settings_revoke_subtitle">§ 356a BGB — ایپ کے ذریعے براہ راست دستبرداری</string>
+    <string name="settings_revoke_confirm_title">معاہدہ منسوخ کریں؟</string>
+    <string name="settings_revoke_confirm_body">"دستبرداری کی تصدیق" پر کلک کرنے سے ہم آپ کی دستبرداری براہ راست dev.app.support@gmail.com کو بھیجتے ہیں۔ آپ کو فوراً ای میل کے ذریعے وصولی کی تصدیق ملتی ہے۔\n\nمکمل دستبرداری ہدایت آپ کو استعمال کی شرائط (§ 16) میں ملے گی۔ سبسکرپشنز کو براہ کرم اضافی طور پر Google Play → سبسکرپشنز کے ذریعے منسوخ کریں، تاکہ مزید کوئی بل نہ بنے۔</string>
+    <string name="settings_revoke_cancel">منسوخ</string>
+    <string name="settings_revoke_confirm">منسوخی بنائیں</string>
+    <string name="settings_revoke_no_email">ای میل ایپ نہیں ملی۔ براہ کرم منسوخی dev.app.support@gmail.com کو بھیجیں۔</string>
+    <string name="settings_revoke_email_subject">Best Journal Premium معاہدے کی منسوخی</string>
+    <string name="settings_revoke_email_body">اس کے ذریعے میں Best Journal کی Premium خصوصیات سے متعلق اپنے معاہدے سے دستبرداری کی اطلاع دیتا ہوں۔\n\nبھیجنے والا (Google اکاؤنٹ): %1$s\nدستبرداری کا وقت: %2$s\n\nیہ دستبرداری ایپ میں موجود § 356a BGB کے مطابق دو مرحلہ وار دستبرداری کے بٹن کے ذریعے شروع کی گئی اور Gmail API کے ذریعے خودکار طور پر بھیجی گئی۔</string>
+    <string name="settings_revoke_confirm_subject">آپ کی وصولی کی تصدیق: Best Journal میں دستبرداری</string>
+    <string name="settings_revoke_confirm_user_body">سلام،\n\nہمیں %1$s کی آپ کی دستبرداری موصول ہو گئی ہے۔ یہ § 356a BGB کے مطابق آپ کی وصولی کی تصدیق ہے۔\n\nہم آپ کی دستبرداری کو جلد از جلد پراسیس کریں گے، اور اگر کوئی سوال ہوا تو dev.app.support@gmail.com کے ذریعے آپ سے رابطہ کریں گے۔\n\nمزید بلنگ روکنے کے لیے، براہ کرم Google Play Store میں "Subscriptions" کے تحت اپنی سبسکرپشن بھی منسوخ کریں۔\n\nشکریہ اور نیک تمنائیں\nBest Journal (Frank Barwandt)</string>
+    <string name="settings_revoke_no_account">سائن اِن شدہ Google اکاؤنٹ کا پتہ نہیں ملا۔ براہ کرم Settings میں اپنے Google اکاؤنٹ سے سائن اِن کریں یا دستبرداری کو dev.app.support@gmail.com پر دستی طور پر بھیجیں۔</string>
+    <string name="settings_revoke_sending">دستبرداری بھیجی جا رہی ہے…</string>
+    <string name="settings_revoke_success_title">دستبرداری موصول ہو گئی</string>
+    <string name="settings_revoke_success_body">آپ کی دستبرداری dev.app.support@gmail.com پر بھیج دی گئی ہے۔ وصولی کی تصدیق بھی آپ کے اِن باکس میں موجود ہے۔</string>
+    <string name="settings_revoke_success_close">بند کریں</string>
+    <string name="settings_revoke_error_title">دستبرداری نہیں بھیجی جا سکی</string>
+    <string name="settings_revoke_error_body">خودکار ارسال ناکام رہا: %1$s\n\nمتبادل کے طور پر آپ dev.app.support@gmail.com پر دستی ای میل بھیج سکتے ہیں۔ اس کے لیے "ای میل ایپ کھولیں" پر ٹیپ کریں۔</string>
+    <string name="settings_revoke_error_email_fallback">ای میل ایپ کھولیں</string>
+
+
+
+    <!-- Crisis Support / Mental Health Disclaimer -->
+    <string name="settings_crisis_title">بحران میں مدد</string>
+    <string name="settings_crisis_subtitle">ہنگامی صورتحال کے لیے اہم ہیلپ لائنز</string>
+    <string name="settings_crisis_dialog_title">آپ اکیلے نہیں ہیں</string>
+    <string name="settings_crisis_dialog_body">Best Journal ایک جرنل ایپ ہے اور یہ پیشہ ورانہ نفسیاتی یا طبی مدد کا متبادل نہیں ہے۔ AI سے تیار کردہ تجزیے علاج نہیں ہیں۔\n\nاگر آپ شدید بحران میں ہیں یا خود کو نقصان پہنچانے یا خودکشی کے خیالات آ رہے ہیں، تو آپ کو یہ سب اکیلے نہیں جھیلنا چاہیے۔ مفت، گمنام مدد 24/7 دستیاب ہے۔</string>
+    <string name="settings_crisis_hotline_de_name">Telefonseelsorge جرمنی</string>
+    <string name="settings_crisis_hotline_de_hours">مفت، 24/7، گمنام</string>
+    <string name="settings_crisis_call_de">0800 111 0 111 پر کال کریں</string>
+    <string name="settings_crisis_call_de_alt">0800 111 0 222 پر کال کریں</string>
+    <string name="settings_crisis_emergency_name">ہنگامی مدد</string>
+    <string name="settings_crisis_call_emergency">112 پر کال کریں</string>
+    <string name="settings_crisis_international_name">بین الاقوامی ہیلپ لائنز</string>
+    <string name="settings_crisis_open_findahelpline">findahelpline.com کھولیں</string>
+    <string name="settings_crisis_close">بند کریں</string>
+    <string name="settings_crisis_no_dialer">فون ایپ نہیں ملی۔</string>
+    <string name="settings_crisis_no_browser">براؤزر نہیں ملا۔</string>
+
+    <!-- AI-generated content badge -->
+    <string name="ai_generated_badge">AI سے تیار کردہ</string>
+    <string name="ai_generated_tooltip">یہ مواد AI سسٹم (Google Gemini) نے تیار کیا ہے اور اس میں غلطیاں ہو سکتی ہیں۔ براہِ کرم خود تصدیق کریں۔</string>
+
+    <!-- AUTO-ADDED FALLBACK (English) for missing keys — replace with proper translations later -->
+    <string name="consent_optout_confirmation">آپٹ آؤٹ محفوظ ہو گیا — شماریات بند ہیں۔</string>
+    <string name="settings_ccpa_do_not_sell_title">Do Not Sell My Personal Information</string>
+    <string name="settings_ccpa_do_not_sell_subtitle">کیلیفورنیا کے رہائشیوں کے لیے (CCPA/CPRA 2026)۔ فعال ہونے پر تمام کلاؤڈ AI خصوصیات بند کر دی جاتی ہیں اور کوئی شماریات جمع نہیں کی جاتیں۔</string>
+    <string name="settings_ccpa_do_not_sell_confirmation">Do-Not-Sell فعال ہے — تمام کلاؤڈ خدمات بند ہیں۔</string>
+    <string name="settings_ccpa_do_not_sell_off_confirmation">Do-Not-Sell غیر فعال ہو گیا۔</string>
+    <string name="settings_delete_account_in_progress">اکاؤنٹ اور ڈیٹا حذف کیا جا رہا ہے…</string>
+    <string name="settings_delete_account_drive_error_title">Drive بیک اپ حذف نہیں ہو سکا</string>
+    <string name="settings_delete_account_drive_error_body">Google Drive بیک اپ کو قابلِ اعتماد طریقے سے حذف نہیں کیا جا سکا (وجہ: %1$s)۔
+
+مکمل حذف کے بغیر \"مستقل طور پر حذف ہو گیا\" کا پیغام درست نہیں ہو گا۔
+
+آپ کیا کرنا چاہتے ہیں؟</string>
+    <string name="settings_delete_account_retry">دوبارہ کوشش کریں</string>
+    <string name="settings_delete_account_force_local">صرف مقامی طور پر حذف کریں (‏Drive بیک اپ محفوظ رہے گا)</string>
+    <string name="settings_delete_account_abort">عمل منسوخ کریں</string>
+
+    <string name="legal_title_datenschutz">رازداری کی پالیسی</string>
+    <string name="legal_title_nutzungsbedingungen">استعمال کی شرائط</string>
+    <string name="legal_title_impressum">قانونی معلومات</string>
+
+    <!-- Consent-Screen v4 + Privacy Sheet + Settings -->
+    <string name="consent_welcome_title">Best Journal میں خوش آمدید</string>
+    <string name="consent_welcome_intro">شروع کرنے سے پہلے، آئیے یہاں جلدی سے آپ کی پرائیویسی ترجیحات سیٹ کریں۔</string>
+    <string name="consent_promise_local">پرائیویسی قوانین آپ کی رضامندی کا تقاضا کرتے ہیں۔</string>
+    <string name="consent_promise_no_training">کون سے فیچرز فعال ہوں گے، آپ یہاں فیصلہ کرتے ہیں۔</string>
+    <string name="consent_promise_optional_ai">ترتیبات میں کسی بھی وقت تبدیل کیا جا سکتا ہے۔</string>
+    <string name="consent_btn_manual_selection">دستی انتخاب</string>
+    <string name="privacy_sheet_title">پرائیویسی کو حسب ضرورت بنائیں</string>
+    <string name="privacy_sheet_subtitle">اپنی سہولت کے مطابق انفرادی فیچرز کو فعال کریں۔ سب کچھ کسی بھی وقت تبدیل کیا جا سکتا ہے۔</string>
+    <string name="privacy_sheet_save">انتخاب محفوظ کریں</string>
+    <string name="privacy_sheet_all_on">سب آن</string>
+    <string name="privacy_sheet_all_off">سب آف</string>
+    <string name="consent_toggle_analytics_title">تخلصی استعمال کا تجزیہ</string>
+    <string name="consent_toggle_analytics_body">Firebase Analytics — ایپ کو بہتر بنانے میں ہماری مدد کرتا ہے۔ کوئی ڈائری مواد نہیں، صرف تخلصی استعمال کے اعداد و شمار (مثلاً کلک کی تعداد)۔ ڈیٹا کی منتقلی: Google امریکہ (Data Privacy Framework)۔</string>
+    <string name="consent_toggle_groq_title">تقریر سے متن (Groq Whisper)</string>
+    <string name="consent_toggle_groq_body">اندراجات کو املا کرنے کی اجازت دیتا ہے۔ آپ کی آواز کی ریکارڈنگ خفیہ کردہ شکل میں Groq (USA) کو بھیجی جاتی ہے، متن میں تبدیل کی جاتی ہے، پھر حذف کر دی جاتی ہے۔ آپ کی ریکارڈنگز تربیت کے لیے استعمال نہیں ہوتیں۔</string>
+    <string name="consent_toggle_gemini_title">AI عکس (Google Gemini)</string>
+    <string name="consent_toggle_gemini_body">ڈیش بورڈ AI، خلاصے، جائزے اور متن کی بہتری۔ متن کے ٹکڑے Google Gemini (USA) کو بھیجتا ہے۔ آپ کے اندراجات تربیت کے لیے استعمال نہیں ہوتے۔</string>
+    <string name="consent_toggle_tts_title">بلند آواز سے پڑھنا (Microsoft Edge TTS)</string>
+    <string name="consent_toggle_tts_body">قدرتی آواز میں اندراجات پڑھتا ہے۔ متن کو Microsoft (USA) کو بھیجتا ہے۔</string>
+    <string name="consent_toggle_drive_title">Google Drive بیک اپ</string>
+    <string name="consent_toggle_drive_body">اندراجات کو خفیہ کردہ شکل میں آپ کے اپنے Google Drive میں محفوظ کرتا ہے۔ آپ مکمل کنٹرول برقرار رکھتے ہیں — فائل آپ کے اکاؤنٹ میں ہے، ہمارے پاس نہیں۔</string>
+    <string name="consent_toggle_do_not_sell_title">Do Not Sell My Personal Information</string>
+    <string name="consent_toggle_do_not_sell_body">یہ سوئچ صرف امریکی ریاست کیلیفورنیا کے باشندوں کے لیے ہے۔ کیلیفورنیا کا ڈیٹا تحفظ قانون (CCPA/CPRA) باشندوں کو اعتراض کا حق دیتا ہے۔ فعال کرنے پر تمام اختیاری کلاؤڈ فیچرز (AI، بیک اپ، تقریر کی شناخت، تجزیہ) غیر فعال ہو جاتے ہیں — صرف مقامی فیچرز فعال رہتے ہیں۔\n\nاگر آپ کیلیفورنیا سے باہر رہتے ہیں تو آپ اس سوئچ کو نظر انداز کر سکتے ہیں: ‏Best Journal آپ کا ڈیٹا دنیا میں کہیں بھی نہ بیچتا ہے نہ اس کی تشہیر کرتا ہے۔</string>
+    <string name="consent_btn_accept_all">سب قبول کریں</string>
+    <string name="consent_btn_save_selection">میرا انتخاب محفوظ کریں</string>
+    <string name="consent_btn_minimum_only">سب مسترد کریں</string>
+    <string name="consent_saved_snackbar">ترتیب محفوظ ہو گئی</string>
+    <string name="consent_revoke_snackbar">رضامندی واپس لے لی گئی</string>
+    <string name="consent_footer_version">آپ کا انتخاب ترتیبات میں کسی بھی وقت تبدیل کیا جا سکتا ہے۔</string>
+    <string name="consent_details_expand">تفصیلات</string>
+    <string name="settings_open_privacy_sheet">پرائیویسی ترتیبات کو حسب ضرورت بنائیں</string>
+    <string name="settings_privacy_section_header">پرائیویسی اور رضامندیاں</string>
+    <string name="settings_ai_groq_title">تقریر سے متن (Groq)</string>
+    <string name="settings_ai_groq_subtitle">نقل کے لیے Groq USA کو آواز کی ریکارڈنگ بھیجیں</string>
+    <string name="settings_ai_gemini_title">AI عکس (Gemini)</string>
+    <string name="settings_ai_gemini_subtitle">AI خلاصوں کے لیے Google USA کو متن بھیجیں</string>
+    <string name="settings_ai_tts_title">بلند آواز سے پڑھنا (Edge TTS)</string>
+    <string name="settings_ai_tts_subtitle">آواز کی آؤٹ پٹ کے لیے Microsoft USA کو متن بھیجیں</string>
+    <string name="settings_drive_backup_title">Google Drive بیک اپ</string>
+    <string name="settings_drive_backup_subtitle">اپنے Drive میں خفیہ کردہ اندراجات محفوظ کریں</string>
+    <string name="permission_rationale_microphone">تاکہ تم اپنے ڈائری اندراجات آواز سے بول کر لکھ سکو، ہمیں تمہارے مائیکروفون تک رسائی درکار ہے۔</string>
+    <string name="permission_rationale_camera">تاکہ تم اپنے اندراجات میں تصاویر شامل کر سکو، ہمیں تمہارے کیمرے تک رسائی درکار ہے۔</string>
+    <string name="permission_rationale_notifications">تاکہ ہم تمہیں روزانہ لکھنے کی یاد دلا سکیں، ہمیں اطلاعات کی اجازت درکار ہے۔</string>
+    <string name="consent_info_system_backup_title">Android سسٹم بیک اپ</string>
+    <string name="consent_info_system_backup_body">اگر تم نے اپنی ڈیوائس کی ترتیبات میں Android سسٹم بیک اپ فعال کر رکھا ہے تو Android تمہاری ڈائری کا ڈیٹا خودکار طور پر تمہارے Google اکاؤنٹ کے بیک اپ حصے میں محفوظ کرتا ہے۔ تم اسے اپنی ڈیوائس ترتیبات میں کسی بھی وقت غیر فعال کر سکتے ہو — تفصیل کے لیے رازداری کی پالیسی دیکھیں۔</string>
+    <string name="settings_open_system_backup_settings_label">Android سسٹم بیک اپ منظم کریں</string>
+    <string name="settings_open_system_backup_settings_desc">Android سسٹم ترتیبات کھولتا ہے جہاں تم Best Journal کے لیے خودکار بیک اپ آن یا آف کر سکتے ہو۔</string>
+    <string name="error_no_backup_settings_available">اس ڈیوائس پر بیک اپ ترتیبات دستیاب نہیں ہیں۔</string>
+
+    <!-- DEBUG-only test data seeder (button in journal top bar, only visible in debug builds) -->
+    <string name="dev_seed_create_label">70 ٹیسٹ اندراجات بنائیں</string>
+    <string name="dev_seed_delete_label">70 ٹیسٹ اندراجات حذف کریں</string>
+    <string name="dev_seed_running">آپ کی زبان میں 70 ٹیسٹ اندراجات بنائے جا رہے ہیں…</string>
+    <string name="dev_seed_done">%1$d ٹیسٹ اندراجات بنائے گئے</string>
+    <string name="dev_seed_deleted">%1$d ٹیسٹ اندراجات حذف کیے گئے</string>
+    <string name="dev_seed_error">خرابی: %1$s</string>
+    <string name="dev_seed_ai_no_entries">AI نے کوئی ٹیسٹ اندراج واپس نہیں کیا</string>
+
+    <!-- Premium feature: unlimited follow-ups per journal entry -->
+    <string name="paywall_feature_followups">جتنے چاہیں ڈائری اندراجات میں اضافے کریں</string>
+    <string name="settings_premium_feature_followups">لامحدود اضافے</string>
+    <string name="settings_premium_feature_followups_desc">فی اندراج جتنے چاہیں اضافے</string>
+
+    <!-- Follow-up / Nachtrag strings -->
+    <string name="action_no">نہیں</string>
+    <string name="action_yes">ہاں</string>
+    <string name="ai_improved_suffix">\n\n✨ AI سے بہتر کیا گیا</string>
+    <string name="ai_improved_suffix_marker">✨ AI سے بہتر کیا گیا</string>
+    <string name="entry_delete_entry_cd">ڈائری اندراج حذف کریں</string>
+    <string name="entry_journal_entry_title">ڈائری اندراج</string>
+    <string name="entry_photos_videos_add_title">تصاویر/ویڈیوز شامل کریں</string>
+    <string name="follow_up_cancel">منسوخ کریں</string>
+    <string name="follow_up_card_title">اضافی نوٹ</string>
+    <string name="follow_up_choose_input_mode">آپ اضافی نوٹ کیسے شامل کرنا چاہتے ہیں؟</string>
+    <string name="follow_up_delete_button">حذف کریں</string>
+    <string name="follow_up_delete_cd">اضافی نوٹ حذف کریں</string>
+    <string name="follow_up_delete_confirm_text">کیا آپ واقعی اضافی نوٹ <xliff:g id="ordinal" example="1">%1$s</xliff:g> کو ہمیشہ کے لیے حذف کرنا چاہتے ہیں؟</string>
+    <string name="follow_up_delete_confirm_title">اضافی نوٹ <xliff:g id="ordinal" example="1">%1$s</xliff:g> حذف کریں؟</string>
+    <string name="follow_up_dialog_label">آپ کا اضافی نوٹ:</string>
+    <string name="follow_up_dialog_title">اضافی نوٹ</string>
+    <string name="follow_up_discard">ضائع کریں</string>
+    <string name="follow_up_improve_text">✨ متن بہتر کریں</string>
+    <string name="follow_up_improve_with_ai">AI سے بعد میں بہتر کریں</string>
+    <string name="follow_up_improving">AI اضافی نوٹ بہتر کر رہا ہے…</string>
+    <string name="follow_up_inline_title">اضافی نوٹ <xliff:g id="ordinal" example="1">%1$s</xliff:g></string>
+    <string name="follow_up_input_speak_cd">بول کر لکھیں</string>
+    <string name="follow_up_input_speak_label">بول کر لکھیں</string>
+    <string name="follow_up_input_write_cd">لکھیں</string>
+    <string name="follow_up_input_write_label">لکھیں</string>
+    <string name="follow_up_premium_body">Premium کے ساتھ آپ اپنی ہر ڈائری اندراج میں جتنے چاہیں اضافی نوٹ شامل کر سکتے ہیں۔</string>
+    <string name="follow_up_premium_hint">دوسرے اضافی نوٹ سے</string>
+    <string name="follow_up_premium_later">بعد میں فیصلہ کریں</string>
+    <string name="follow_up_premium_subscribe">سبسکرپشن شروع کریں</string>
+    <string name="follow_up_premium_subtext">ہر اضافی نوٹ خودبخود ڈیش بورڈ میں شامل ہو جاتا ہے تاکہ آپ کا تجزیہ ہمیشہ مکمل رہے۔</string>
+    <string name="follow_up_premium_title">لامحدود اضافی نوٹ</string>
+    <string name="follow_up_save">محفوظ کریں</string>
+    <string name="follow_up_save_improved">بہتر کردہ ورژن محفوظ کریں</string>
+    <string name="follow_up_show_improved">✨ بہتر کردہ ورژن دکھائیں</string>
+    <string name="follow_up_show_original">↩ اصل دکھائیں</string>
+    <string name="follow_up_speak_pill_label">بول کر لکھیں</string>
+    <string name="follow_up_speak_prompt">اپنا اضافی نوٹ بول کر لکھوائیں۔</string>
+    <string name="follow_up_stop_hint">فارغ ہونے پر Stop دبائیں۔</string>
+    <string name="follow_up_tab_improved">✨ AI بہتر</string>
+    <string name="follow_up_tab_original">اصل</string>
+    <string name="follow_up_text_placeholder">اپنا اضافی نوٹ یہاں لکھیں…</string>
+    <string name="follow_up_transcribing">اضافی نوٹ تحریر میں تبدیل ہو رہا ہے…</string>
+    <string name="journal_improve">متن بہتر کریں</string>
+    <string name="journal_state_improving">بہتر ہو رہا ہے…</string>
+    <string name="journal_state_transcribing">تحریر میں تبدیل ہو رہا ہے…</string>
+    <string name="profile_custom_add">ذاتی تجزیہ شامل کریں</string>
+    <string name="profile_custom_remove">ذاتی تجزیہ ہٹائیں</string>
+    <string name="profile_custom_rename">نام تبدیل کریں</string>
+    <string name="profile_custom_rename_save">نام محفوظ کریں</string>
+    <string name="prompt_clear_confirm_text">ذاتی تجزیہ ہمیشہ کے لیے حذف ہو جائے گا۔ کیا آپ واقعی جاری رکھنا چاہتے ہیں؟</string>
+    <string name="prompt_clear_confirm_title">متن حذف کریں؟</string>
+    <string name="prompt_clear_content_desc">متن حذف کریں</string>
+    <string name="prompt_recording_with_model">ریکارڈنگ جاری ہے — ماڈل: <xliff:g id="model" example="Whisper">%1$s</xliff:g></string>
+    <string name="prompt_transcribing_with_model"><xliff:g id="model" example="Whisper">%1$s</xliff:g> تحریر میں تبدیل کر رہا ہے…</string>
+    <string name="prompt_transcription_model_hint"><xliff:g id="model" example="Whisper">%1$s</xliff:g> سے تحریر میں تبدیل کیا گیا</string>
+    <string name="ai_retro_copied_message">کلپ بورڈ میں کاپی ہو گیا</string>
+    <string name="ai_retro_copy_button">کاپی کریں</string>
+    <string name="ai_retro_empty_state">جائزے کے لیے کافی اندراجات نہیں ہیں۔</string>
+    <string name="ai_retro_error_state">جائزہ نہیں بنایا جا سکا۔ دوبارہ کوشش کریں۔</string>
+    <string name="ai_retro_generate_button">جائزہ بنائیں</string>
+    <string name="ai_retro_generating_state">جائزہ بنایا جا رہا ہے…</string>
+    <string name="ai_retro_month_label">یہ مہینہ</string>
+    <string name="ai_retro_share_button">شیئر کریں</string>
+    <string name="ai_retro_title">AI جائزہ</string>
+    <string name="ai_retro_week_label">یہ ہفتہ</string>
+    <string name="ai_retro_year_label">یہ سال</string>
+    <string name="follow_up_add_button">فالو اپ شامل کریں</string>
+    <string name="follow_up_delete_confirm_no">نہیں، رکھیں</string>
+    <string name="follow_up_delete_confirm_yes">ہاں، حذف کریں</string>
+    <string name="follow_up_empty_state">ابھی کوئی فالو اپ نہیں ہے۔\nپہلا شامل کرنے کے لیے نیچے بٹن پر ٹیپ کریں۔</string>
+    <string name="follow_up_improve_button">بہتر بنائیں</string>
+    <string name="follow_up_improve_error">بہتر نہیں کیا جا سکا۔ دوبارہ کوشش کریں۔</string>
+    <string name="follow_up_improving_state">بہتر بنایا جا رہا ہے…</string>
+    <string name="follow_up_record_error">ریکارڈ نہیں کیا جا سکا۔ دوبارہ کوشش کریں۔</string>
+    <string name="follow_up_record_new">نیا فالو اپ ریکارڈ کریں</string>
+    <string name="follow_up_recording_hint">ریکارڈ کرنے کے لیے ٹیپ کریں</string>
+    <string name="follow_up_recording_state">ریکارڈ ہو رہا ہے…</string>
+    <string name="follow_up_tab_label">فالو اپس</string>
+    <string name="follow_up_transcribe_error">متن میں تبدیل نہیں کیا جا سکا۔ دوبارہ کوشش کریں۔</string>
+    <string name="follow_up_transcribing_state">متن میں تبدیل کیا جا رہا ہے…</string>
+    <string name="prompt_char_count_label">%1$d حروف</string>
+    <string name="prompt_improve_button_label">بہتر بنائیں</string>
+    <string name="prompt_placeholder_text">اپنے ذہن کی بات لکھیں…</string>
+    <string name="prompt_record_button_label">ریکارڈ</string>
+    <string name="prompt_send_button_label">بھیجیں</string>
+    <string name="prompt_stop_button_label">روکیں</string>
+    <string name="settings_legal_section_header">قانونی دستاویزات</string>
+    <string name="settings_legal_online_label">آن لائن ورژن:</string>
+    <plurals name="datetime_months_relative">
+        <item quantity="one">%1$d مہینہ پہلے</item>
+        <item quantity="other">%1$d مہینے پہلے</item>
+    </plurals>
+    <plurals name="datetime_years_relative">
+        <item quantity="one">%1$d سال پہلے</item>
+        <item quantity="other">%1$d سال پہلے</item>
+    </plurals>
+    <string name="ai_limits_disclaimer">بھاری استعمال کے لیے AI روزانہ کوٹہ۔</string>
+    <string name="ai_limits_dialog_title">روزانہ AI کوٹہ کیسے کام کرتا ہے؟</string>
+    <string name="ai_limits_dialog_body" formatted="false">پریمیم سبسکرپشن کے ساتھ\n\nفی دن تمہارے لیے دستیاب:\n• فی دن فی پروفائل 150 درخواستیں — 4 پہلے سے طے شدہ پروفائلز کے لیے مجموعاً 600/دن، نیز ہر اپنے بنائے پروفائل کے لیے 150/دن اضافی۔\n• 150 تک متن بہتری\n\nیہ تفصیل میں کیسے کام کرتا ہے:\n• درخواستیں 1 سے 30: سب سے اعلیٰ AI معیار میں\n• درخواستیں 31 سے 100: تیز معیاری معیار میں\n• 101 ویں درخواست پر: ایک بار 30 منٹ کا وقفہ\n• درخواستیں 101 سے 150: تیز معیاری معیار\n• درخواست 151 کے بعد: کل تک کوئی مزید درخواست نہیں\n\nنیز تمام صارفین کے لیے:\n• فی گھنٹہ زیادہ سے زیادہ 50 AI درخواستیں — پھر 5 منٹ کا وقفہ\n\nکوٹے کب دوبارہ ترتیب ہوتے ہیں؟\nہر روز رات 12:00 بجے (تمہارا مقامی وقت) ایک نیا مکمل کوٹہ شروع ہوتا ہے۔\n\n──────────\n\nسبسکرپشن کے بغیر\n\n• فی ہفتہ فی پروفائل 5 ڈیش بورڈ تجزیے\n• فی ہفتہ 5 متن بہتری\n• ہمیشہ تیز معیاری معیار میں\n• ہر پیر رات 12:00 بجے (تمہارا مقامی وقت) دوبارہ ترتیب\n\n──────────\n\nروزمرہ استعمال میں اکثر صارفین ان حدوں تک نہیں پہنچتے۔</string>
+    <string name="ai_limits_dialog_close">سمجھ گئے</string>
+    <string name="theme_neutral">غیر جانبدار</string>
+    <string name="theme_profile">پروفائل رنگ — ڈیش بورڈ پروفائل کا رنگ</string>
+    <string name="theme_solarized">انقلاب شمس</string>
+    <string name="theme_dracula">آدھی رات</string>
+    <string name="theme_one_dark">کارگاہ</string>
+    <string name="theme_nord">قطبی رات</string>
+    <string name="theme_gruvbox">عنبر</string>
+    <string name="ai_output_health_disclaimer">کوئی علاج نہیں — پیشہ ورانہ مشورے کا متبادل نہیں۔</string>
+    <string name="ai_output_health_disclaimer_long">Best Journal ایک ڈائری ہے نہ کہ علاج کی سہولت۔ AI تجزیے خود غوری کی تجاویز ہیں اور پیشہ ورانہ نفسیاتی یا طبی مشورے کا متبادل نہیں۔ اگر تم کسی فوری مسئلے سے گزر رہے ہو تو اپنی ترتیبات میں موجود کسی ماہر یا بحران امداد سے رابطہ کرو۔</string>
+
+    <!-- Churn / Subscription cancellation strings -->
+    <string name="churn_cancelled">منسوخ</string>
+    <string name="churn_cancelled_ends_on">منسوخ — <xliff:g id="date" example="30.04.2026, 18:13">%1$s</xliff:g> کو ختم ہو گا</string>
+    <string name="churn_promo_phase_ends"><xliff:g id="date" example="30.04.2026, 18:13">%1$s</xliff:g> کو ختم — پھر <xliff:g id="base_price" example="3,99 €">%2$s</xliff:g> ماہانہ</string>
+    <string name="churn_reason_other_placeholder">براہ کرم ہمیں مختصراً بتائیں کیا ہو رہا ہے…</string>
+    <string name="churn_renews_on"><xliff:g id="date" example="30.04.2026, 18:13">%1$s</xliff:g> کو خودکار تجدید ہو گی</string>
+    <string name="settings_premium_cancelled">Premium سبسکرپشن منسوخ</string>
+    <string name="settings_premium_cancelled_desc">آپ کی ‏Premium خصوصیات بلنگ مدت کے اختتام تک دستیاب رہیں گی۔ آپ ‏Google Play کے ذریعے منسوخی کو واپس لے سکتے ہیں۔</string>
+    <string name="settings_premium_cancelled_until">Premium سبسکرپشن منسوخ — <xliff:g id="date" example="30.04.2026, 21:01">%1$s</xliff:g> تک ساری رہے گی</string>
+    <string name="settings_theme">تھیم</string>
+    <string name="settings_themes_manager">تھیمز مینیجر</string>
+    <string name="paywall_monthly_note">اس کے بعد %1$s فی ماہ، خودکار طور پر تجدید ہوتا ہے\nکسی بھی وقت منسوخ کیا جا سکتا ہے</string>
+</resources>

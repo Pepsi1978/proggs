@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Pille-Hintergrund fuer Status-Indikator + Bucket-Header. Form ist Pille
+  (rounded corners full radius). Farbe wird zur Laufzeit per setInt
+  setColorFilter / setColorFilter ueberschrieben.
+-->
+<shape xmlns:android="http://schemas.android.com/apk/res/android"
+    android:shape="rectangle">
+    <solid android:color="#2A1F44" />
+    <corners android:radius="50dp" />
+</shape>

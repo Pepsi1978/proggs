@@ -1,0 +1,7 @@
+interface:
+  display_name: "sdd:plan"
+  short_description: "Refine, parallelize, and verify a draft task specification into"
+  default_prompt: "Use $sdd-context-engineering-kit--sdd-plan for this task."
+
+policy:
+  allow_implicit_invocation: false

@@ -1,0 +1,39 @@
+#!/bin/bash
+# Post-merge hook: Restore platform-specific .mcp.json after git pull
+# Prevents cross-platform MCP config corruption (macOS paths on Windows or vice versa)
+# Reference: claude-code-setup/environment-fixes.md (2026-03-24)
+#
+# Installation: cp claude-code-setup/hooks/post-merge .git/hooks/post-merge && chmod +x .git/hooks/post-merge
+
+REPO_DIR="$(git rev-parse --show-toplevel)"
+MCP_FILE="$REPO_DIR/.mcp.json"
+
+# Detect platform and select correct reference file
+if [[ "$OS" == "Windows_NT" ]] || [[ "$(uname -s)" == MINGW* ]] || [[ "$(uname -s)" == MSYS* ]]; then
+    REFERENCE="$REPO_DIR/claude-code-setup/mcp-windows.json"
+    PLATFORM="Windows"
+elif [[ "$(uname -s)" == "Darwin" ]]; then
+    REFERENCE="$REPO_DIR/claude-code-setup/mcp-macos.json"
+    PLATFORM="macOS"
+else
+    # Linux/other — no reference file, skip silently
+    exit 0
+fi
+
+# Only restore if the reference file exists
+if [[ ! -f "$REFERENCE" ]]; then
+    echo "[post-merge] WARNING: Reference file missing: $REFERENCE"
+    exit 0
+fi
+
+# Check if .mcp.json was changed in the merge
+if git diff-tree -r --name-only ORIG_HEAD HEAD 2>/dev/null | grep -q '\.mcp\.json'; then
+    # .mcp.json was changed by the pull — restore platform-specific version
+    cp "$REFERENCE" "$MCP_FILE"
+    echo "[post-merge] Restored .mcp.json for $PLATFORM (was overwritten by pull)"
+else
+    # .mcp.json not changed — no action needed
+    :
+fi
+
+exit 0

@@ -1,0 +1,29 @@
+{
+ "br": {
+  "entry_cd_photo_page": "Foto %1$d",
+  "follow_up_tab_original": "Original",
+  "label_original": "Original",
+  "label_photo": "Foto",
+  "label_premium": "Premium",
+  "retro_cd_photo": "Foto",
+  "retro_photo_n": "Foto %1$d",
+  "settings_about_version": "Best Journal V0.21.9",
+  "settings_export_photos": "Fotos",
+  "settings_feedback": "Feedback",
+  "settings_premium_section": "Premium"
+ },
+ "pt": {
+  "consent_footer_link_impressum": "Impressum",
+  "entry_cd_photo_page": "Foto %1$d",
+  "follow_up_tab_original": "Original",
+  "label_original": "Original",
+  "label_photo": "Foto",
+  "label_premium": "Premium",
+  "retro_cd_photo": "Foto",
+  "retro_photo_n": "Foto %1$d",
+  "settings_about_version": "Best Journal V0.21.9",
+  "settings_export_photos": "Fotos",
+  "settings_feedback": "Feedback",
+  "settings_premium_section": "Premium"
+ }
+}

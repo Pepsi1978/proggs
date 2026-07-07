@@ -1,0 +1,7 @@
+interface:
+  display_name: "trailofbits-burp-search"
+  short_description: "Searches Burp Suite project files for security analysis"
+  default_prompt: "Use $burpsuite-project-parser-trailofbits--trailofbits-burp-search for this task."
+
+policy:
+  allow_implicit_invocation: false

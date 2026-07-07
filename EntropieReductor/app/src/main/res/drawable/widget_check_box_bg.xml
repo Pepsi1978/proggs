@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Haekchen-Feld (offen) in der Widget-Aufgaben-Karte (Frank-Wunsch 2026-05-31).
+  Weisse Fuellflaeche (gleiche Hintergrundfarbe wie die KI-/Prio-Perlen) + graue
+  Umrandung, damit klar als antippbares Haekchenfeld erkennbar. Feste Farben (KEIN
+  Laufzeit-Tint), weil Fuellung und Umrandung unterschiedliche Farben brauchen — auf
+  dem farbigen Prioritaets-Karten-Hintergrund in beiden Themes gut sichtbar.
+-->
+<shape xmlns:android="http://schemas.android.com/apk/res/android"
+    android:shape="rectangle">
+    <solid android:color="#FFFFFFFF" />
+    <corners android:radius="8dp" />
+    <stroke
+        android:width="2dp"
+        android:color="#FF475569" />
+</shape>

@@ -1,0 +1,7 @@
+interface:
+  display_name: "ralphinho-rfc-pipeline"
+  short_description: "RFC-driven multi-agent DAG execution pattern with quality"
+  default_prompt: "Use $everything-codex-everything-codex--ralphinho-rfc-pipeline for this task."
+
+policy:
+  allow_implicit_invocation: false

@@ -1,0 +1,7 @@
+interface:
+  display_name: "customaize-agent:apply-anthropic-skill-best-practices"
+  short_description: "Comprehensive guide for skill development based on Anthropic's"
+  default_prompt: "Use $customaize-agent-context-engineering-kit--customaize-agent-apply-anthropic-skill-best-practices for this task."
+
+policy:
+  allow_implicit_invocation: false

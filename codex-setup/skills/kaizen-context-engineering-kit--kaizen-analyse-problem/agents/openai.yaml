@@ -1,0 +1,7 @@
+interface:
+  display_name: "kaizen:analyse-problem"
+  short_description: "Comprehensive A3 one-page problem analysis with root cause and"
+  default_prompt: "Use $kaizen-context-engineering-kit--kaizen-analyse-problem for this task."
+
+policy:
+  allow_implicit_invocation: false

@@ -1,0 +1,112 @@
+{
+  "app": {
+    "applicationId": "com.bestjournal.app",
+    "versionName": "0.21.9",
+    "versionCode": 290,
+    "minSdk": 26,
+    "targetSdk": 36
+  },
+  "permissions": [
+    {
+      "name": "android.permission.INTERNET",
+      "purpose": "Netzwerkzugriff für Firebase, Google Drive Backup, Retrofit-API-Aufrufe"
+    },
+    {
+      "name": "android.permission.ACCESS_NETWORK_STATE",
+      "purpose": "Netzwerkstatus prüfen (Online/Offline-Erkennung)"
+    },
+    {
+      "name": "android.permission.RECORD_AUDIO",
+      "purpose": "Sprachaufnahme via Sherpa-ONNX/Whisper für Sprach-zu-Text-Tagebucheinträge"
+    },
+    {
+      "name": "android.permission.CAMERA",
+      "purpose": "Fotos für Tagebucheinträge aufnehmen (hardware.camera als required=false markiert)"
+    },
+    {
+      "name": "android.permission.ACCESS_COARSE_LOCATION",
+      "purpose": "Ungefährer Standort — vermutlich für Eintrags-Geolokalisierung; kein FINE_LOCATION vorhanden"
+    },
+    {
+      "name": "android.permission.POST_NOTIFICATIONS",
+      "purpose": "Tägliche Schreib-Erinnerungen, wöchentliche/monatliche/jährliche Review-Benachrichtigungen"
+    },
+    {
+      "name": "android.permission.RECEIVE_BOOT_COMPLETED",
+      "purpose": "Erinnerungs-Alarme nach Geräterestart via BootReminderReceiver neu planen"
+    }
+  ],
+  "key_dependencies": [
+    "Jetpack Compose BOM",
+    "Hilt (DI)",
+    "Room (lokale DB)",
+    "Retrofit + OkHttp + Moshi (Netzwerk)",
+    "Firebase BOM: AI Logic, AppCheck PlayIntegrity, Remote Config, Analytics, Cloud Functions",
+    "Google Play Billing",
+    "Google Play In-App Review",
+    "Google Drive API + Credentials + Google Sign-In",
+    "Sherpa-ONNX 1.12.34 (lokales Whisper STT, AAR)",
+    "Coil (Bildladen incl. Video)",
+    "Lottie (Animationen)",
+    "Security Crypto + Biometric",
+    "Coroutines",
+    "JUnit5 + MockK (Tests)"
+  ],
+  "screens": [
+    "SplashScreen",
+    "OnboardingScreen",
+    "ConsentScreen",
+    "LegalDocumentScreen (Datenschutz/Nutzungsbedingungen/Impressum)",
+    "JournalScreen",
+    "PaywallScreen",
+    "DashboardScreen",
+    "RetrospectiveScreen",
+    "EntryDetailScreen",
+    "SettingsScreen"
+  ],
+  "navigation_routes": [
+    "splash",
+    "consent",
+    "legal/datenschutz",
+    "legal/nutzungsbedingungen",
+    "legal/impressum",
+    "onboarding",
+    "main (enthält bottom-nav: Journal, Dashboard, Retrospective, Settings)"
+  ],
+  "version_label_drift": {
+    "values (DE/Standard)": "V0.21.9",
+    "values-en": "V0.16.4",
+    "values-es": "V0.16.4",
+    "values-fr": "V0.16.4",
+    "values-it": "V0.16.4",
+    "values-nl": "V0.16.4",
+    "values-pl": "V0.16.4",
+    "values-ru": "V0.16.4",
+    "values-uk": "V0.16.4",
+    "values-tr": "V0.16.4",
+    "values-ar": "V0.16.4",
+    "values-hi": "V0.16.4",
+    "values-bn": "V0.16.4",
+    "values-mr": "V0.16.4",
+    "values-gu": "V0.16.4",
+    "values-kn": "V0.16.4",
+    "values-ml": "V0.16.4",
+    "values-te": "V0.16.4",
+    "values-ta": "V0.16.4",
+    "values-ur": "V0.16.4",
+    "values-in": "V0.16.4",
+    "values-ko": "V0.16.4",
+    "values-ja": "V0.16.4",
+    "values-zh-rCN": "V0.16.4",
+    "values-zh-rTW": "V0.16.4",
+    "values-th": "V0.16.4",
+    "values-pt-rBR": "V0.16.4",
+    "values-pt-rPT": "V0.16.4"
+  },
+  "plugin_bugs_observed": [
+    "Versions-Label-Drift: settings_about_version in 27 Sprachdateien zeigt V0.16.4 statt V0.21.9 — nur values/strings.xml (DE) ist aktuell. Alle lokalisierten Versionen veraltet um 5 Minor-Versionen.",
+    "Kein FINE_LOCATION: Nur ACCESS_COARSE_LOCATION vorhanden — falls Eintrags-Standort präzise sein soll, fehlt die Fine-Permission.",
+    "isMinifyEnabled = false in Release-Build: R8/ProGuard deaktiviert (intentional/deferred, Kommentar PS-001 vorhanden), aber sicherheitsrelevant für Produktionsrelease.",
+    "BootReminderReceiver ist android:exported=true — nötig für BOOT_COMPLETED, aber Angriffsfläche wenn kein Intent-Filter-Check im Code."
+  ]
+}

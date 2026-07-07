@@ -1,0 +1,7 @@
+interface:
+  display_name: "harness-optimizer"
+  short_description: "Analyze and improve the local agent harness configuration for"
+  default_prompt: "Use $everything-codex-everything-codex--harness-optimizer for this task."
+
+policy:
+  allow_implicit_invocation: false

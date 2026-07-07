@@ -1,0 +1,7 @@
+interface:
+  display_name: "using-superpowers"
+  short_description: "starting any conversation - establishes how to find and use"
+  default_prompt: "Use $superpowers-codex-plugins-official--using-superpowers for this task."
+
+policy:
+  allow_implicit_invocation: false

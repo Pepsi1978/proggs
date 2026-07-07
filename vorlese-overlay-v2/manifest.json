@@ -1,0 +1,88 @@
+{
+	"manifest_version": 3,
+	"name": "Vorlese-Overlay",
+	"version": "0.11.1",
+	"version_name": "0.11.1 (05.07.2026, 20:29 Uhr)",
+	"description": "Markierten Text auf jeder Webseite vorlesen — Edge TTS (kostenlos) oder Google Chirp 3 HD.",
+	"default_locale": "de",
+	"action": {
+		"default_title": "Vorlese-Overlay",
+		"default_icon": {
+			"16": "icons/icon16.png",
+			"48": "icons/icon48.png",
+			"128": "icons/icon128.png"
+		}
+	},
+	"icons": {
+		"16": "icons/icon16.png",
+		"48": "icons/icon48.png",
+		"128": "icons/icon128.png"
+	},
+	"key": "MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAmSnwK50UdE1Y1GbtG+0dfqno3pqlNrRUsE0itzxXwTEUDLdaRxos7VLCeURv7FnYJNrpGDyBfHwRyVnYH7ir+xU4S/dQ69bvluPHHea9KC31AdV0+plYLKVfJupGIsOgkg/qVvGLxOU5m1yLB9OU1yXlTOTdgPt2sdNx2zft403d+p9j0Y95KTLARnJtFtMC9in+8MP31LMvi/BAqJmsxZHXGkwJohE1WxpBZY5kGCQLhiPsdfjxzFze3ppP/7QtmOkW4Bi6k/+3JJPQPQYOXofejd26rIxAm5fa+iSrwjl3ir25v1/mRDXcPnSQDafKDA+RMiBexCJgapsezyx/hwIDAQAB",
+	"permissions": [
+		"storage",
+		"offscreen",
+		"activeTab",
+		"scripting",
+		"sidePanel",
+		"declarativeNetRequestWithHostAccess",
+		"downloads",
+		"contextMenus"
+	],
+	"side_panel": {
+		"default_path": "sidepanel/sidepanel.html"
+	},
+	"host_permissions": [
+		"https://texttospeech.googleapis.com/*",
+		"https://speech.platform.bing.com/*",
+		"wss://speech.platform.bing.com/*"
+	],
+	"declarative_net_request": {
+		"rule_resources": [
+			{
+				"id": "edge_ua",
+				"enabled": true,
+				"path": "rules/edge-ua.json"
+			}
+		]
+	},
+	"background": {
+		"service_worker": "background/service-worker.js",
+		"type": "module"
+	},
+	"content_scripts": [
+		{
+			"matches": ["http://*/*", "https://*/*"],
+			"js": [
+				"diag/diag-content.js",
+				"settings/settings.js",
+				"content/overlay.js",
+				"diag/selftest.js"
+			],
+			"run_at": "document_idle",
+			"all_frames": false
+		}
+	],
+	"web_accessible_resources": [
+		{
+			"resources": ["content/overlay.css", "icons/*"],
+			"matches": ["<all_urls>"]
+		}
+	],
+	"commands": {
+		"speak-selection": {
+			"suggested_key": {
+				"default": "Ctrl+Shift+S",
+				"mac": "Command+Shift+S"
+			},
+			"description": "Markierten Text vorlesen"
+		},
+		"pause-resume": {
+			"suggested_key": {
+				"default": "Ctrl+Shift+P",
+				"mac": "Command+Shift+P"
+			},
+			"description": "Wiedergabe pausieren / fortsetzen"
+		}
+	}
+}

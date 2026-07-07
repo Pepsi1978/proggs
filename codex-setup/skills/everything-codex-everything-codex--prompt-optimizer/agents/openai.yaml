@@ -1,0 +1,7 @@
+interface:
+  display_name: "prompt-optimizer"
+  short_description: "prompt-optimizer skill"
+  default_prompt: "Use $everything-codex-everything-codex--prompt-optimizer for this task."
+
+policy:
+  allow_implicit_invocation: false

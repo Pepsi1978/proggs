@@ -1,0 +1,7 @@
+interface:
+  display_name: "git:compare-worktrees"
+  short_description: "Compare files and directories between git worktrees or worktree"
+  default_prompt: "Use $git-context-engineering-kit--git-compare-worktrees for this task."
+
+policy:
+  allow_implicit_invocation: false

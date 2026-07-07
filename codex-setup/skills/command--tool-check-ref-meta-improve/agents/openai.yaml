@@ -1,0 +1,7 @@
+interface:
+  display_name: "command--tool-check-ref-meta-improve"
+  short_description: "tool-check-ref:meta-improve"
+  default_prompt: "Use $command--tool-check-ref-meta-improve for this task."
+
+policy:
+  allow_implicit_invocation: false

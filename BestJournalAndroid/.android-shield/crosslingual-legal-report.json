@@ -1,0 +1,118 @@
+{
+  "criticalKeys": 16,
+  "anomalies": {
+    "paywall_legal_hint": [
+      "zh-rCN:zu-kurz(0.35)",
+      "zh-rTW:zu-kurz(0.35)"
+    ],
+    "paywall_legal_hint_link": [
+      "ja:zu-kurz(0.21)",
+      "ko:zu-kurz(0.21)",
+      "zh-rCN:zu-kurz(0.21)",
+      "zh-rTW:zu-kurz(0.21)"
+    ],
+    "churn_auto_renew_note": [
+      "gu:zu-kurz(0.14)",
+      "zh-rCN:zu-kurz(0.32)",
+      "zh-rTW:zu-kurz(0.32)"
+    ],
+    "settings_delete_account_confirm": [],
+    "settings_delete_account_confirm_body": [
+      "zh-rCN:zu-kurz(0.29)",
+      "zh-rTW:zu-kurz(0.30)"
+    ],
+    "ai_output_health_disclaimer": [
+      "zh-rCN:zu-kurz(0.29)",
+      "zh-rTW:zu-kurz(0.31)"
+    ],
+    "ai_output_health_disclaimer_long": [
+      "zh-rCN:zu-kurz(0.31)",
+      "zh-rTW:zu-kurz(0.32)"
+    ],
+    "permission_rationale_camera": [
+      "ja:zu-kurz(0.30)",
+      "zh-rCN:zu-kurz(0.30)",
+      "zh-rTW:zu-kurz(0.26)"
+    ],
+    "permission_rationale_microphone": [
+      "ja:zu-kurz(0.28)",
+      "ko:zu-kurz(0.35)",
+      "zh-rCN:zu-kurz(0.26)",
+      "zh-rTW:zu-kurz(0.27)"
+    ],
+    "permission_rationale_notifications": [
+      "ja:zu-kurz(0.24)",
+      "ko:zu-kurz(0.27)",
+      "zh-rCN:zu-kurz(0.22)",
+      "zh-rTW:zu-kurz(0.21)"
+    ],
+    "consent_btn_accept_all": [
+      "ja:zu-kurz(0.31)",
+      "ko:zu-kurz(0.31)",
+      "zh-rCN:zu-kurz(0.25)",
+      "zh-rTW:zu-kurz(0.25)"
+    ],
+    "consent_btn_minimum_only": [
+      "zh-rCN:zu-kurz(0.31)",
+      "zh-rTW:zu-kurz(0.31)"
+    ],
+    "consent_accept_all": [
+      "ja:zu-kurz(0.27)",
+      "ko:zu-kurz(0.35)",
+      "zh-rCN:zu-kurz(0.19)",
+      "zh-rTW:zu-kurz(0.19)"
+    ],
+    "ai_limit_title": [
+      "gu:zu-kurz(0.03)",
+      "zh-rCN:zu-kurz(0.21)",
+      "zh-rTW:zu-kurz(0.21)"
+    ],
+    "ai_limit_body": [],
+    "ai_limits_disclaimer": [
+      "zh-rTW:zu-kurz(0.34)"
+    ]
+  },
+  "deepTexts": {
+    "paywall_legal_hint": {
+      "de": "Mit dem Abo akzeptierst du die %1$s. Dein 14-tägiges Widerrufsrecht ist dort beschrieben.",
+      "en": "By subscribing you accept the %1$s. Your 14-day right of withdrawal is described there.",
+      "fr": "En t\\'abonnant, tu acceptes les %1$s. Ton droit de rétractation de 14 jours y est décrit.",
+      "es": "Al suscribirte aceptas las %1$s. Tu derecho de desistimiento de 14 días se describe allí.",
+      "it": "Con l\\'abbonamento accetti le %1$s. Il tuo diritto di recesso di 14 giorni è descritto lì.",
+      "nl": "Met het abonnement ga je akkoord met de %1$s. Je herroepingsrecht van 14 dagen staat daar beschreven.",
+      "pt-rBR": "Ao assinar, você aceita os %1$s. Seu direito de arrependimento de 14 dias está descrito lá.",
+      "pt-rPT": "Ao subscrever, aceitas os %1$s. O teu direito de rescisão de 14 dias está descrito aí."
+    },
+    "settings_delete_account_confirm_body": {
+      "de": "Dieser Vorgang ist unwiderruflich und löscht:\\n\\n• Alle lokalen Tagebucheinträge, Fotos, Videos und Audio-Aufnahmen\\n• Das Google-Drive-Backup der App (nur die App-Daten, nicht dein Google-Konto)\\n• Deine App-Anmeldung\\n\\nDein Google-Konto selbst bleibt bestehen. Die App startet danach neu als frische Installation.",
+      "en": "This action cannot be undone and will delete:\\n\\n• All local journal entries, photos, videos and audio recordings\\n• The app\\'s Google Drive backup (only the app\\'s data, not your Google account)\\n• Your app sign-in\\n\\nYour Google account itself remains. The app will restart as a fresh installation.",
+      "fr": "Cette action est irréversible et supprime\\u00A0:\\n\\n• Toutes les entrées, photos et vidéos locales\\n• Ton compte Firebase\\n• La sauvegarde Google Drive de l\\'application\\n\\nL\\'application redémarrera comme une nouvelle installation.",
+      "es": "Esta acción es irreversible y eliminará:\\n\\n• Todas las entradas, fotos y videos locales\\n• Tu cuenta de Firebase\\n• La copia de seguridad de la app en Google Drive\\n\\nLa aplicación se reiniciará como una instalación nueva.",
+      "it": "Questa azione è irreversibile ed elimina:\\n\\n• Tutte le voci, foto e video locali\\n• Il tuo account Firebase\\n• Il backup dell\\'app su Google Drive\\n\\nL\\'app si riavvierà come nuova installazione.",
+      "nl": "Deze actie is onomkeerbaar en verwijdert:\\n\\n• Alle lokale dagboekinvoer, foto\\'s en video\\'s\\n• Je Firebase-account\\n• De Google Drive-back-up van de app\\n\\nDe app start daarna opnieuw op als verse installatie.",
+      "pt-rBR": "Esta ação é irreversível e exclui:\\n\\n• Todas as entradas, fotos e vídeos locais\\n• Sua conta do Firebase\\n• O backup do aplicativo no Google Drive\\n\\nO aplicativo reiniciará como uma nova instalação.",
+      "pt-rPT": "Esta ação é irreversível e elimina:\\n\\n• Todas as entradas, fotografias e vídeos locais\\n• A tua conta Firebase\\n• A cópia de segurança da aplicação no Google Drive\\n\\nA aplicação reinicia como uma nova instalação."
+    },
+    "ai_output_health_disclaimer": {
+      "de": "Keine Therapie — ersetzt keine professionelle Beratung.",
+      "en": "Not therapy — no substitute for professional advice.",
+      "fr": "Pas une thérapie — ne remplace pas un avis professionnel.",
+      "es": "No es terapia — no sustituye el asesoramiento profesional.",
+      "it": "Non è terapia — non sostituisce una consulenza professionale.",
+      "nl": "Geen therapie — vervangt geen professioneel advies.",
+      "pt-rBR": "Não é terapia — não substitui aconselhamento profissional.",
+      "pt-rPT": "Não é terapia — não substitui aconselhamento profissional."
+    },
+    "churn_auto_renew_note": {
+      "de": "Dein Abo verlängert sich automatisch über Google Play. Die Kündigung ist jederzeit möglich.",
+      "en": "Your subscription renews automatically via Google Play. You can cancel at any time.",
+      "fr": "Ton abonnement se renouvelle automatiquement via Google Play. Résiliable à tout moment.",
+      "es": "Tu suscripción se renueva automáticamente por Google Play. Puedes cancelarla cuando quieras.",
+      "it": "Il tuo abbonamento si rinnova in automatico tramite Google Play. Puoi disdire in qualsiasi momento.",
+      "nl": "Je abonnement wordt automatisch verlengd via Google Play. Op elk moment opzegbaar.",
+      "pt-rBR": "Sua assinatura se renova automaticamente pelo Google Play. Você pode cancelar a qualquer momento.",
+      "pt-rPT": "A tua subscrição se renova automaticamente pelo Google Play. Podes cancelar a qualquer momento."
+    }
+  },
+  "totalAnomalies": 40
+}

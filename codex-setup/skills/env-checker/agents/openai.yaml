@@ -1,0 +1,7 @@
+interface:
+  display_name: "env-checker"
+  short_description: "Check installed tools, hooks, and environment health"
+  default_prompt: "Use $env-checker for this task."
+
+policy:
+  allow_implicit_invocation: true

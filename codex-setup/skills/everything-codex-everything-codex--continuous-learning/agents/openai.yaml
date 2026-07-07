@@ -1,0 +1,7 @@
+interface:
+  display_name: "continuous-learning"
+  short_description: "Automatically extract reusable patterns from Codex sessions and"
+  default_prompt: "Use $everything-codex-everything-codex--continuous-learning for this task."
+
+policy:
+  allow_implicit_invocation: false

@@ -1,0 +1,7 @@
+interface:
+  display_name: "data-migration-expert"
+  short_description: "Validates data migrations, backfills, and production data"
+  default_prompt: "Use $compound-engineering-compound-engineering-plugin--data-migration-expert for this task."
+
+policy:
+  allow_implicit_invocation: false

@@ -1,0 +1,7 @@
+interface:
+  display_name: "springboot-verification"
+  short_description: "Verification loop for Spring Boot projects: build, static"
+  default_prompt: "Use $everything-codex-everything-codex--springboot-verification for this task."
+
+policy:
+  allow_implicit_invocation: false

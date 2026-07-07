@@ -1,0 +1,7 @@
+interface:
+  display_name: "command--hook-forge-references-sh-template"
+  short_description: "hook-forge:references:sh-template"
+  default_prompt: "Use $command--hook-forge-references-sh-template for this task."
+
+policy:
+  allow_implicit_invocation: false

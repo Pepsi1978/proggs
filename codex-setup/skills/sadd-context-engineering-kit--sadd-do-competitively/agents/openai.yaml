@@ -1,0 +1,7 @@
+interface:
+  display_name: "sadd:do-competitively"
+  short_description: "Execute tasks through competitive multi-agent generation"
+  default_prompt: "Use $sadd-context-engineering-kit--sadd-do-competitively for this task."
+
+policy:
+  allow_implicit_invocation: false

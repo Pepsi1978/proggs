@@ -1,0 +1,74 @@
+{
+	"manifest_version": 3,
+	"name": "Overlays (Voice + Tools)",
+	"version": "0.6.7",
+	"version_name": "0.6.7 (05.07.2026, 20:29 Uhr)",
+	"description": "Universelles Overlay fuer mehrere Webseiten. Spracheingabe (Whisper), Prompt-Builder und Tools. Buttons pro Seite ueber eine zentrale Registry konfigurierbar.",
+	"permissions": ["storage", "clipboardRead", "clipboardWrite", "sidePanel"],
+	"host_permissions": [
+		"https://api.groq.com/*",
+		"https://generativelanguage.googleapis.com/*",
+		"https://raw.githubusercontent.com/*"
+	],
+	"background": {
+		"service_worker": "background.js"
+	},
+	"options_page": "options.html",
+	"icons": {
+		"16": "icons/icon16.png",
+		"48": "icons/icon48.png",
+		"128": "icons/icon128.png"
+	},
+	"action": {
+		"default_title": "Overlays — Einstellungen (Seitenleiste)",
+		"default_icon": {
+			"16": "icons/icon16.png",
+			"48": "icons/icon48.png",
+			"128": "icons/icon128.png"
+		}
+	},
+	"side_panel": {
+		"default_path": "options.html"
+	},
+	"content_scripts": [
+		{
+			"matches": [
+				"https://chatgpt.com/*",
+				"https://chat.openai.com/*",
+				"https://translate.google.com/*",
+				"https://www.translate.google.com/*",
+				"https://translate.google.de/*",
+				"https://www.translate.google.de/*",
+				"https://claude.ai/*",
+				"https://www.claude.ai/*",
+				"https://gemini.google.com/*",
+				"https://grok.com/*",
+				"https://www.grok.com/*",
+				"https://aistudio.google.com/*",
+				"https://www.aistudio.google.com/*",
+				"https://platform.openai.com/chat/*",
+				"https://chat.mistral.ai/*",
+				"https://arena.ai/*",
+				"https://web.arena.ai/*",
+				"https://chat.lmsys.org/*",
+				"https://arena.lmsys.org/*",
+				"https://notebooklm.google.com/*",
+				"https://10.8.0.1/*"
+			],
+			"css": ["src/overlay.css"],
+			"js": [
+				"src/storage.js",
+				"src/toast.js",
+				"src/icons.js",
+				"src/editable.js",
+				"src/stt.js",
+				"src/gemini.js",
+				"src/actions.js",
+				"src/ui.js",
+				"src/registry.js",
+				"src/content.js"
+			],
+			"run_at": "document_idle"
+		}
+	]
+}

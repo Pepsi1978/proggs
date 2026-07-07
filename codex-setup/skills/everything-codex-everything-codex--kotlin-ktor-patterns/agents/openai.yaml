@@ -1,0 +1,7 @@
+interface:
+  display_name: "kotlin-ktor-patterns"
+  short_description: "Ktor server patterns including routing DSL, plugins"
+  default_prompt: "Use $everything-codex-everything-codex--kotlin-ktor-patterns for this task."
+
+policy:
+  allow_implicit_invocation: false

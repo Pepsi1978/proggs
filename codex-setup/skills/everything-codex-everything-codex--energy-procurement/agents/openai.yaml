@@ -1,0 +1,7 @@
+interface:
+  display_name: "energy-procurement"
+  short_description: "energy-procurement skill"
+  default_prompt: "Use $everything-codex-everything-codex--energy-procurement for this task."
+
+policy:
+  allow_implicit_invocation: false

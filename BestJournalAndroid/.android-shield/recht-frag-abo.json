@@ -1,0 +1,82 @@
+{
+  "findings": [
+    {
+      "findingId": "A1",
+      "riskLevel": "🟨",
+      "category": "Abo-Transparenz",
+      "file": "app/src/main/res/values/strings.xml:1472",
+      "problem": "paywall_subscribe_button lautet schlicht \"Abonnieren\" — kein Zahlungspflichtig-Hinweis. Nach §312j BGB muss jeder kaufauslösende Button eindeutig als zahlungspflichtig gekennzeichnet sein. paywall_exit_start_discount (Zeile 1152) und paywall_consent_dialog_confirm (Zeile 1107) sind korrekt. Der primäre Subscribe-Button auf dem Hauptpaywall-Screen ist es nicht.",
+      "suggestedFix": "paywall_subscribe_button ändern zu \"Zahlungspflichtig abonnieren\" oder \"Jetzt zahlungspflichtig bestellen\".",
+      "invasivityLevel": "text-only",
+      "impact": "Pflichtverstoß §312j BGB (Buttonlösung) — kann zur Anfechtbarkeit der Kaufvereinbarung führen."
+    },
+    {
+      "findingId": "A2",
+      "riskLevel": "🟨",
+      "category": "Abo-Transparenz",
+      "file": "app/src/main/res/values/strings.xml:215+1041",
+      "problem": "follow_up_premium_subscribe (\"Abo starten\", Zeile 215) und retro_start_sub (\"Abo starten\", Zeile 1041) sind sekundäre Einstiegspunkte (Follow-up-Screen, Retrospektiv-Screen) ohne Zahlungspflichtig-Label. §312j BGB gilt für jeden Bestellbutton, nicht nur den primären Paywall-Button.",
+      "suggestedFix": "Beide Strings auf \"Zahlungspflichtig abonnieren\" oder \"Jetzt Abo starten (zahlungspflichtig)\" ändern.",
+      "invasivityLevel": "text-only",
+      "impact": "Gleiche Pflichtlage wie A1 — alle Kaufbuttons müssen klar als zahlungspflichtig gekennzeichnet sein."
+    },
+    {
+      "findingId": "A3",
+      "riskLevel": "🟩",
+      "category": "Abo-Transparenz",
+      "file": "app/src/main/res/values/strings.xml (paywall_abo-Block)",
+      "problem": "Positive Bewertung: Preisangabe (ab 3,99 EUR/Monat), Auto-Verlängerungshinweis (churn_auto_renew_note), Kündigungshinweis, 14-Tage-Widerrufsverzicht (§356 BGB), Widerrufsbutton (§356a BGB), Lifetime-Klarstellung (\"Kein Abo\") und korrektes Exit-Discount-Label sind alle vorhanden.",
+      "suggestedFix": "Kein Fix nötig. Vollständigkeit in diesen Bereichen bestätigt.",
+      "invasivityLevel": "text-only",
+      "impact": "Kein Risiko. Abo-Pflichtangaben für Trial, Renewal, Preis, Kündigung und Widerruf vollständig."
+    },
+    {
+      "findingId": "B1",
+      "riskLevel": "🟧",
+      "category": "Data-Safety",
+      "file": "play-store-metadata/data-safety-checklist.md",
+      "problem": "Data-Safety-Checkliste (Stand 23.04.2026) ist als lokales Markdown vorhanden und vollständig ausgearbeitet (Audio, App-Activity, Device-IDs, Crash-Logs, Files/Docs, Personal-Info, Health-Declaration). Kein Nachweis, dass die Deklaration bereits in der Play Console eingetragen wurde. Besonders kritisch: moodTag-Stimmungsdaten (health-inferred, Art.9 DSGVO) und ACCESS_COARSE_LOCATION müssen explizit deklariert sein.",
+      "suggestedFix": "Play Console > App-Inhalt > Datensicherheit: alle 7 Kategorien aus data-safety-checklist.md eintragen. Standort als \"Approximate location — App functionality\" deklarieren. moodTag unter \"Personal info\" oder \"Health and fitness\" (je nach Google-Kategorie-Mapping) erfassen.",
+      "invasivityLevel": "function-required",
+      "impact": "App-Ablehnung bei Submit ohne vollständige Data-Safety-Deklaration (Google Play Policy 2024+). Kein Code-Eingriff, nur Play-Console-Aktion."
+    },
+    {
+      "findingId": "C1",
+      "riskLevel": "🟧",
+      "category": "Play-Policy",
+      "file": "app/src/main/res/values/strings.xml:1487-1498 + ConsentScreen.kt:365-372",
+      "problem": "Gemischtes Routing: DE/EN/KO verlinken auf externe GitHub-Pages-URLs (3 Sprachen extern). Die übrigen 24 Sprachen (ar, bn, es, fr, gu, hi, id, it, ja, kn, ml, mr, nl, pl, pt-BR, pt-PT, ta, te, th, tr, uk, ur, zh-CN, zh-TW) erhalten ausschließlich die lokalen assets/legal/-Dateien. Die 23 nicht per Commit-#945 aktualisierten Sprach-Assets haben keinen Art.9/Churn-Abschnitt — diese Lücke existiert bereits im lokalen Asset, nicht durch das Routing.",
+      "suggestedFix": "Kurzfristig (vor Submit): lokale Assets für 24 Sprachen sind laut roentgen-frag-legal.json vollständig (IMPRINT, PRIVACY, TERMS vorhanden) — Submit-Blocker nur wenn Art.9-Lücke für Nicht-DE/EN/KO-Nutzer behördlich relevant wird. Mittelfristig: Art.9/Churn-Abschnitt in die 23 verbleibenden Sprachassets nachziehen (analog Commit #945).",
+      "invasivityLevel": "function-required",
+      "impact": "24 Sprachen sehen lokale (ggf. veraltete) Rechtstexte ohne Art.9-Abschnitt. Bei behördlicher Prüfung (DSGVO Art.13) für Nicht-DE/EN/KO-Nutzer problematisch."
+    },
+    {
+      "findingId": "D1",
+      "riskLevel": "🟨",
+      "category": "Version",
+      "file": "app/src/main/res/values-*/strings.xml (26 Dateien)",
+      "problem": "settings_about_version zeigt in allen 26 lokalisierten Sprachdateien V0.16.4 statt V0.21.9 (nur values/strings.xml DE/Standard ist aktuell). 5 Minor-Versionen Drift. Kein Play-Policy-Risiko, aber Vertrauens- und Support-Problem.",
+      "suggestedFix": "Python-Batch: alle values-*/strings.xml mit re.sub(r'V0\\.16\\.4', 'V0.21.9', content) patchen. Einzeilig, kein Code-Eingriff, alle 26 Dateien in einem Lauf.",
+      "invasivityLevel": "text-only",
+      "impact": "Kosmetisch/Vertrauen. Nutzer im Ausland sehen falsche Versionsnummer in den App-Einstellungen. Kein Play-Store-Risiko."
+    }
+  ],
+  "external_link_routing": "gemischt — DE/EN/KO: extern via GitHub Pages (strings.xml:1490-1498: legal_url_datenschutz_de/en/ko, legal_url_agb_de/en/ko, legal_url_impressum_de/en/ko; ConsentScreen.kt:365-372 ruft onOpenDocument(LegalDocument.*) auf, AppNavGraph.kt:85-87 routet zu LegalDocumentScreen); alle anderen 24 Sprachen: in-app via assets/legal/<lang>/ (LegalDocumentScreen.kt liest lokale HTML-Assets, kein github.io-Link für diese Sprachen). Belegstelle: roentgen-frag-legal.json external_legal_url.note + strings.xml:1487-1498.",
+  "plugin_bugs_observed": [
+    {
+      "bug": "Windows cp1252 UnicodeEncodeError bei Python-Ausgabe mit Sonderzeichen",
+      "severity": "hoch",
+      "fix_applied": "sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding='utf-8') — bekannter Bug aus bug-cases.jsonl, 100% Match, sofort angewendet.",
+      "note": "Systemisch bestätigt: alle drei Vorgänger-Worker hatten denselben Fehler."
+    },
+    {
+      "bug": "Bash unexpected EOF bei verschachteltem Python-Inline-Skript in bash -c mit einfachen Anführungszeichen",
+      "severity": "mittel",
+      "fix_applied": "Python-Code als separate Skriptdatei schreiben und python3 datei.py aufrufen statt -c Inline.",
+      "note": "Bekannter Fehler, bug-cases.jsonl 100% Match. Root Cause: einfache Anführungszeichen im Python-String-Literal beenden den bash -c Einzelquote-Block."
+    },
+    {
+      "observation": "pt-BR PRIVACY.html enthält Art.9/LGPD-Doppelreferenz (Art.11 LGPD + Art.9 RGPD) — vermutlich undokumentierter vierter Empfänger von Commit #945. Commit-Doku sollte pt-BR ergänzen."
+    }
+  ]
+}

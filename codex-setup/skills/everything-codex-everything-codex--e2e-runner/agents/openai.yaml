@@ -1,0 +1,7 @@
+interface:
+  display_name: "e2e-runner"
+  short_description: "End-to-end testing specialist using Vercel Agent Browser"
+  default_prompt: "Use $everything-codex-everything-codex--e2e-runner for this task."
+
+policy:
+  allow_implicit_invocation: false

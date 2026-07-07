@@ -1,0 +1,565 @@
+{
+  "findings": [
+    {
+      "key": "paywall_from_per_day",
+      "line": 43,
+      "text": "Jahresabo, %1$s pro Jahr",
+      "category": "subscription",
+      "risk": "HOCH",
+      "rationale": "Preis-/Abostring. Key-Name 'from_per_day' passt NICHT zum Text 'pro Jahr' (Verwechslungsgefahr). Auto-Renewal-Hinweis, Laufzeit und Kuendigung fehlen im Wortlaut — Pflichtangaben fuer Abos (UWG/Para 312 BGB/Play-Billing)."
+    },
+    {
+      "key": "follow_up_premium_title",
+      "line": 212,
+      "text": "Unbegrenzte Nachtraege",
+      "category": "subscription",
+      "risk": "HOCH",
+      "rationale": "'Unbegrenzte Nachtraege' — harte Unbegrenztheitsaussage. Muss im Code wirklich kein Cap haben (UWG §5)."
+    },
+    {
+      "key": "onboarding_free_trial",
+      "line": 1081,
+      "text": "Kostenlos, jederzeit kuendbar",
+      "category": "subscription",
+      "risk": "HOCH",
+      "rationale": "'Kostenlos, jederzeit kuendbar' im Onboarding OHNE Preis-/Laufzeit-/Verlaengerungsangabe an dieser Stelle. Abo-Recht (312j BGB Button-Loesung, Google-Play-Policy): vor Trial-Start muessen Folgepreis, Verlaengerungsintervall und Zahlungspflicht klar genannt sein. 'Kostenlos' ohne Hinweis auf anschliessende Zahlungspflicht ist abmahngefaehrdet."
+    },
+    {
+      "key": "onboarding_start_free",
+      "line": 1083,
+      "text": "Kostenlos starten",
+      "category": "subscription",
+      "risk": "HOCH",
+      "rationale": "CTA-Button 'Kostenlos starten' (312j Abs.3 BGB Button-Loesung). Wenn er ein kostenpflichtiges Trial-Abo startet, muss die Beschriftung die Zahlungspflicht erkennen lassen. 'Kostenlos starten' allein kann gegen die Button-Loesung verstossen. Pruefen was der Button ausloest."
+    },
+    {
+      "key": "dashboard_premium_upsell_body",
+      "line": 252,
+      "text": "Mit Premium bekommst du grosszuegige Analysen aus beliebig vielen Profilen.",
+      "category": "subscription",
+      "risk": "MITTEL",
+      "rationale": "'grosszuegige Analysen' (vage) + 'beliebig vielen Profilen' (Unbegrenztheit). Muss tatsaechlich unbegrenzt sein, sonst UWG §5."
+    },
+    {
+      "key": "paywall_instead_per_month",
+      "line": 44,
+      "text": "Spare %1$d%% gegenueber dem Monatsabo",
+      "category": "subscription",
+      "risk": "MITTEL",
+      "rationale": "Preisvorteils-Werbung mit Prozent. Ersparnis muss korrekt/nachpruefbar sein (UWG §5). Prozent-Escape korrekt."
+    },
+    {
+      "key": "follow_up_premium_body",
+      "line": 213,
+      "text": "Mit Premium kannst du zu jedem Tagebucheintrag so viele Nachtraege hinzufuegen wie du moechtest.",
+      "category": "subscription",
+      "risk": "MITTEL",
+      "rationale": "'so viele wie du moechtest' = unbegrenzt. Konsistenz mit Title und Code-Realitaet pruefen."
+    },
+    {
+      "key": "settings_premium_lifetime",
+      "line": 479,
+      "text": "Lifetime-Zugang aktiv",
+      "category": "subscription",
+      "risk": "MITTEL",
+      "rationale": "'Lifetime' = lebenslang. Rechtlich heikel (App-Lebensdauer vs. Nutzer-Lebensdauer). Muss klar definiert sein."
+    },
+    {
+      "key": "settings_premium_lifetime_desc",
+      "line": 484,
+      "text": "Einmalkauf, alle Features dauerhaft freigeschaltet.",
+      "category": "subscription",
+      "risk": "MITTEL",
+      "rationale": "'dauerhaft' Lifetime-Versprechen — kann irrefuehren wenn App eingestellt wird; praezisieren."
+    },
+    {
+      "key": "settings_unlock_premium",
+      "line": 507,
+      "text": "Premium freischalten",
+      "category": "subscription",
+      "risk": "MITTEL",
+      "rationale": "Abo-CTA. In Zeilen 501-1000 fehlen an dieser CTA die Abo-Pflichtangaben (Preis, Laufzeit, automatische Verlaengerung, Kuendigungsweg). Pruefen, ob sie an der Paywall (anderer Zeilenbereich) vollstaendig stehen - sonst UWG/Play-Billing-Verstoss."
+    },
+    {
+      "key": "paywall_exit_bonus_days",
+      "line": 604,
+      "text": "+ %1$d Tage extra Testzeit",
+      "category": "subscription",
+      "risk": "MITTEL",
+      "rationale": "Exit-Bonus verlaengert die Testphase. Trial-/Auto-Renewal-Pflichtangaben muessen klar bleiben (wann beginnt die kostenpflichtige Verlaengerung, wie kuendigen). Dark-Pattern-Risiko, wenn die verlaengerte Testzeit den Auto-Start des Abos verschleiert."
+    },
+    {
+      "key": "churn_discount_badge",
+      "line": 799,
+      "text": "%1$d%% SPAREN",
+      "category": "subscription",
+      "risk": "MITTEL",
+      "rationale": "Rabatt-/Retention-Badge in einem Churn-Flow (Kuendigungs-Abfangen). Prozent-Versprechen muss zutreffen und Bezugspreis nachvollziehbar sein (UWG 5 Preisangaben). Churn-Dialog mit Rabatt ist Dark-Pattern-sensibel - Kuendigung darf nicht erschwert werden."
+    },
+    {
+      "key": "onboarding_try_premium",
+      "line": 1092,
+      "text": "8 Tage gratis, danach ab 3,99 EUR/Monat",
+      "category": "subscription",
+      "risk": "MITTEL",
+      "rationale": "Trial+Preis '8 Tage gratis, danach ab 3,99 EUR/Monat'. Positiv: Preis + Trialdauer. Aber 'ab 3,99' (Ab-Preis) + fehlende Verlaengerungs-/Kuendigungsangabe an dieser Stelle. Konsistenz 8 Tage vs. Tag-7/Tag-8-Logik pruefen."
+    },
+    {
+      "key": "paywall_first_payment",
+      "line": 1107,
+      "text": "Erste Zahlung",
+      "category": "subscription",
+      "risk": "MITTEL",
+      "rationale": "Teil der Trial-Timeline (Heute/Tag 7 Erinnerung/Tag 8 Erste Zahlung). Belegt automatische Umwandlung Trial->Bezahlabo an Tag 8. Zulaessig WENN vorher klar; in Kombination mit 'Kostenlos starten' muss Zahlungspflicht VOR Klick erkennbar sein. Timeline selbst transparent (positiv), abhaengig vom Button-Wording."
+    },
+    {
+      "key": "paywall_legal_hint",
+      "line": 1115,
+      "text": "Mit dem Abo akzeptierst du die %1$s. Dein 14-taegiges Widerrufsrecht ist dort beschrieben.",
+      "category": "subscription",
+      "risk": "MITTEL",
+      "rationale": "Widerrufs-/AGB-Hinweis. Positiv: nennt 14-taegiges Widerrufsrecht + verlinkt Nutzungsbedingungen. ABER bei sofortiger Bereitstellung digitaler Inhalte muss der Verbraucher dem Verlust des Widerrufsrechts ausdruecklich zustimmen (356 Abs.5 BGB) - siehe Kommentar paywall_purchase_loading_toast (Sofort-Verzichts-Dialog, line 1100). Pruefen ob Verzicht korrekt eingeholt wird; sonst Widerspruch '14 Tage Widerruf' vs. Sofort-Freischaltung."
+    },
+    {
+      "key": "paywall_exit_discount",
+      "line": 1142,
+      "text": "Rabatt fuer %1$d Monate",
+      "category": "subscription",
+      "risk": "MITTEL",
+      "rationale": "Exit-Intent-Rabatt (UWG 5/PreisangabenVO). Bei Rabattwerbung muessen Referenzpreis + Geltungsdauer klar sein. Pruefen dass urspruenglicher Preis + Rabatthoehe transparent (vgl. paywall_exit_price_comparison)."
+    },
+    {
+      "key": "paywall_exit_price_comparison",
+      "line": 1143,
+      "text": "Nur %1$s statt %2$s pro Monat",
+      "category": "subscription",
+      "risk": "MITTEL",
+      "rationale": "Streichpreis-Werbung 'Nur X statt Y' (PreisangabenVO/UWG 5). Der durchgestrichene Referenzpreis muss tatsaechlich der zuvor/regulaer geforderte Preis sein. Irrefuehrungsrisiko bei Schein-Streichpreisen. Verifizieren."
+    },
+    {
+      "key": "ai_limit_yearly",
+      "line": 1193,
+      "text": "Jahresabo, %1$s/Jahr (spare 37%%)",
+      "category": "subscription",
+      "risk": "MITTEL",
+      "rationale": "Ersparnis-Claim 'spare 37 Prozent' (UWG 5/PreisangabenVO). Prozent muss rechnerisch gegen Monatspreis x12 stimmen. Pruefen dass 37 Prozent aus tatsaechlichen Preisen folgt - sonst irrefuehrend. %% korrekt escaped."
+    },
+    {
+      "key": "paywall_with_limited",
+      "line": 46,
+      "text": "mit eingeschraenkten Limits.",
+      "category": "subscription",
+      "risk": "NIEDRIG",
+      "rationale": "Fragment zur Free-Variante. Kontext pruefen ob Limits konkret benannt."
+    },
+    {
+      "key": "churn_instead_of",
+      "line": 48,
+      "text": "statt ",
+      "category": "subscription",
+      "risk": "NIEDRIG",
+      "rationale": "Preis-Fragment (Streichpreis). Streichpreise brauchen klaren Bezugspreis (UWG §5). Fragment."
+    },
+    {
+      "key": "follow_up_premium_hint",
+      "line": 188,
+      "text": "ab dem zweiten Nachtrag",
+      "category": "subscription",
+      "risk": "NIEDRIG",
+      "rationale": "Definiert Free-Limit (1 Nachtrag gratis, ab 2. Premium). Gut fuer Transparenz."
+    },
+    {
+      "key": "settings_premium_cancelled_until",
+      "line": 482,
+      "text": "Premium-Abo gekuendigt — laeuft noch bis %1$s",
+      "category": "subscription",
+      "risk": "NIEDRIG",
+      "rationale": "Restlaufzeit nach Kuendigung — transparent, positiv (Verbraucherrecht)."
+    },
+    {
+      "key": "settings_premium_cancelled_desc",
+      "line": 483,
+      "text": "Deine Premium-Funktionen bleiben bis zum Ende des Abrechnungszeitraums verfuegbar. Du kannst die Kuendigung ueber Google Play rueckgaengig machen.",
+      "category": "subscription",
+      "risk": "NIEDRIG",
+      "rationale": "Korrekte Kuendigungs-/Reaktivierungs-Info via Google Play — entspricht Play-Billing."
+    },
+    {
+      "key": "churn_google_play_redirect",
+      "line": 467,
+      "text": "Du wirst zu Google Play weitergeleitet, um dein Abo zu verwalten. Deine Tagebucheintraege bleiben natuerlich erhalten.",
+      "category": "subscription",
+      "risk": "NIEDRIG",
+      "rationale": "Klarstellung Datenerhalt bei Abo-Verwaltung — transparent."
+    },
+    {
+      "key": "follow_up_premium_later",
+      "line": 216,
+      "text": "Spaeter entscheiden",
+      "category": "subscription",
+      "risk": "NIEDRIG",
+      "rationale": "Opt-out-Button am Paywall — kein Dark Pattern, gut."
+    },
+    {
+      "key": "settings_premium_feature_improve_desc",
+      "line": 492,
+      "text": "KI verbessert deine Eintraege auf Wunsch.",
+      "category": "subscription",
+      "risk": "NIEDRIG",
+      "rationale": "Premium-Feature-Beschreibung. 'auf Wunsch' relativiert gut — unkritisch."
+    },
+    {
+      "key": "retro_premium_unlock",
+      "line": 989,
+      "text": "Mit Premium alle Rueckblicke freischalten",
+      "category": "subscription",
+      "risk": "NIEDRIG",
+      "rationale": "Paywall-Hinweis. Bestaetigt, dass Rueckblicke (Wochen/Monats/Jahres) Premium-gated sind. Konsistenz-Check ggue. Werbeaussagen, die 'Rueckblicke' evtl. als kostenlos darstellen."
+    },
+    {
+      "key": "settings_revoke_subtitle",
+      "line": 747,
+      "text": "356a BGB - Widerruf direkt per App",
+      "category": "subscription",
+      "risk": "NIEDRIG",
+      "rationale": "In-App-Widerrufsbutton (Pflicht ab 19.06.2026). Positiv-Fund. Hinweis 'Abos zusaetzlich ueber Google Play kuendigen' (settings_revoke_confirm_body, Z.749) ist korrekt - Widerruf des Vertrags ungleich Abo-Kuendigung. Gut umgesetzt."
+    },
+    {
+      "key": "onboarding_free_after_trial",
+      "line": 1082,
+      "text": "Danach nutzt du Best Journal weiter, kostenlos mit begrenzten KI-Aufrufen pro Woche.",
+      "category": "subscription",
+      "risk": "NIEDRIG",
+      "rationale": "Transparenz: nach Trial kostenlose Weiternutzung mit Limit. Positiv (entschaerft 'kostenlos starten'). Sicherstellen dass Trial NICHT automatisch in Bezahlabo uebergeht ohne aktive Zustimmung (sonst Widerspruch zu paywall_first_payment/Tag-8)."
+    },
+    {
+      "key": "paywall_yearly_note",
+      "line": 1108,
+      "text": "Danach %1$s pro Jahr, verlaengert sich automatisch / In der Testphase jederzeit kuendbar",
+      "category": "subscription",
+      "risk": "NIEDRIG",
+      "rationale": "Korrekte Abo-Pflichtangabe: Preis + 'verlaengert sich automatisch' + 'jederzeit kuendbar'. Positiv-Fund. Platzhalter %1$s muss zur Laufzeit gefuellt werden."
+    },
+    {
+      "key": "paywall_monthly_plan",
+      "line": 1110,
+      "text": "Monatsabo, %1$s pro Monat",
+      "category": "subscription",
+      "risk": "NIEDRIG",
+      "rationale": "Preisangabe Monatsabo mit Platzhalter. Pruefen dass Verlaengerungs-/Kuendigungshinweis in der Naehe steht (paywall_yearly_note deckt nur Jahr ab; fuer Monat fehlt evtl. expliziter Auto-Renewal-Hinweis)."
+    },
+    {
+      "key": "paywall_day7",
+      "line": 1104,
+      "text": "Tag 7",
+      "category": "subscription",
+      "risk": "NIEDRIG",
+      "rationale": "Trial-Timeline-Label. Positiv: Erinnerung an Tag 7 vor Abbuchung ist verbraucherfreundlich/Play-konform. Kontext."
+    },
+    {
+      "key": "paywall_reminder",
+      "line": 1105,
+      "text": "Erinnerung",
+      "category": "subscription",
+      "risk": "NIEDRIG",
+      "rationale": "Trial-Timeline: Erinnerung vor erster Zahlung. Positiv. Kontext-Fund."
+    },
+    {
+      "key": "paywall_exit_start_discount",
+      "line": 1144,
+      "text": "Zahlungspflichtig - 2 Monate zum halben Preis",
+      "category": "subscription",
+      "risk": "NIEDRIG",
+      "rationale": "CTA mit 'Zahlungspflichtig'-Praefix. Positiv-Fund: erfuellt Button-Loesung (312j BGB) vorbildlich. Kontrast zu 'Kostenlos starten' (1083) ohne diesen Hinweis - Inkonsistenz dokumentieren."
+    },
+    {
+      "key": "churn_auto_renew_note",
+      "line": 1163,
+      "text": "Dein Abo verlaengert sich automatisch ueber Google Play. Die Kuendigung ist jederzeit moeglich.",
+      "category": "subscription",
+      "risk": "NIEDRIG",
+      "rationale": "Korrekte Auto-Renewal- + Kuendigungs-Info. Positiv-Fund."
+    },
+    {
+      "key": "churn_offer_auto_renew",
+      "line": 1179,
+      "text": "Verlaengert sich automatisch, jederzeit kuendbar",
+      "category": "subscription",
+      "risk": "NIEDRIG",
+      "rationale": "Korrekte Pflichtangabe im Retention-Angebot. Positiv."
+    },
+    {
+      "key": "churn_promo_one_month_remaining",
+      "line": 1158,
+      "text": "Noch 1 Monat - danach %1$s pro Monat",
+      "category": "subscription",
+      "risk": "NIEDRIG",
+      "rationale": "Promo-Restlaufzeit + Folgepreis transparent (xliff:g). Positiv."
+    },
+    {
+      "key": "churn_promo_months_remaining",
+      "line": 1159,
+      "text": "Noch %1$d Monate - danach %2$s pro Monat",
+      "category": "subscription",
+      "risk": "NIEDRIG",
+      "rationale": "Promo-Restlaufzeit + Folgepreis (2 Platzhalter, xliff:g). Positiv-transparent."
+    },
+    {
+      "key": "churn_promo_phase_ends",
+      "line": 1160,
+      "text": "Endet am %1$s - danach %2$s pro Monat",
+      "category": "subscription",
+      "risk": "NIEDRIG",
+      "rationale": "Promo-Enddatum + Folgepreis transparent. Positiv."
+    },
+    {
+      "key": "churn_pause_sub",
+      "line": 1182,
+      "text": "Oder Abo bei Google Play pausieren",
+      "category": "subscription",
+      "risk": "NIEDRIG",
+      "rationale": "Verweist korrekt auf Google-Play-Abo-Verwaltung (Pause). Positiv."
+    },
+    {
+      "key": "churn_cancel_sub",
+      "line": 1164,
+      "text": "Abo kuendigen",
+      "category": "subscription",
+      "risk": "NIEDRIG",
+      "rationale": "Kuendigungs-Aktion vorhanden (Kuendigungsbutton-Pflicht 312k BGB ueber Google Play erfuellt). Positiv."
+    },
+    {
+      "key": "churn_switch_yearly",
+      "line": 1181,
+      "text": "Oder zum Jahresabo wechseln und noch mehr sparen",
+      "category": "subscription",
+      "risk": "NIEDRIG",
+      "rationale": "Spar-Aussage ohne konkrete Zahl. Milde Werbung; pruefen dass Jahresabo tatsaechlich guenstiger ist."
+    },
+    {
+      "key": "paywall_free_note",
+      "line": 1114,
+      "text": "Die App funktioniert auch ohne Abo weiter.",
+      "category": "subscription",
+      "risk": "NIEDRIG",
+      "rationale": "Transparenz: App ohne Abo nutzbar. Positiv-Fund (ehrliche Free-Tier-Kommunikation)."
+    }
+  ],
+  "paywallDeep": {
+    "worker": "w5-paywall",
+    "plans": [
+      {
+        "productId": "bestjournal_ai_monthly",
+        "type": "monthly",
+        "priceSource": "playBilling",
+        "trial": "Play offer (base plan 'monthly'); promo offer 'monthly-50-off-first' (50% first phase) + retention base plan 'retention-monthly-75' (2,99 EUR). Hardcoded fallback MONTHLY_PRICE_DISPLAY='3,99 EUR' exists in Constants but UI shows ellipsis not fallback."
+      },
+      {
+        "productId": "bestjournal_ai_yearly",
+        "type": "yearly",
+        "priceSource": "playBilling",
+        "trial": "Free trial via Play base plan 'yearly' offer (UI timeline Today/Day7-reminder/Day8-first-payment). Retention base plan 'retention-yearly-75' (22,49 EUR). Hardcoded fallback '29,99 EUR' unused in UI."
+      },
+      {
+        "productId": "bestjournal_lifetime",
+        "type": "lifetime",
+        "priceSource": "playBilling",
+        "trial": "none (INAPP one-time, oneTimePurchaseOfferDetails.formattedPrice). Fallback '79,99 EUR' unused in UI."
+      }
+    ],
+    "paywallEntryPoints": [
+      {
+        "from": "AI limit reached (Journal)",
+        "file": "JournalScreen.kt",
+        "line": 723
+      },
+      {
+        "from": "First text improvement upsell",
+        "file": "JournalScreen.kt",
+        "line": 714
+      },
+      {
+        "from": "Streak freeze",
+        "file": "JournalScreen.kt",
+        "line": 1560
+      },
+      {
+        "from": "Weekly review locked",
+        "file": "DashboardScreen.kt",
+        "line": 433
+      },
+      {
+        "from": "First analysis upsell",
+        "file": "DashboardScreen.kt",
+        "line": 748
+      },
+      {
+        "from": "Free limit reached",
+        "file": "DashboardScreen.kt",
+        "line": 790
+      },
+      {
+        "from": "Nachtrag (follow-up) upsell",
+        "file": "EntryDetailScreen.kt",
+        "line": 1473
+      },
+      {
+        "from": "Retrospective review locked",
+        "file": "RetrospectiveScreen.kt",
+        "line": 253
+      },
+      {
+        "from": "Custom analyses limit",
+        "file": "SettingsScreen.kt",
+        "line": 2583
+      },
+      {
+        "from": "Settings premium tap",
+        "file": "SettingsScreen.kt",
+        "line": 2955
+      },
+      {
+        "from": "PDF export gated",
+        "file": "SettingsScreen.kt",
+        "line": 3107
+      },
+      {
+        "from": "Churn switch-to-yearly redirect",
+        "file": "SettingsScreen.kt",
+        "line": 2800
+      },
+      {
+        "from": "NavGraph paywall route (multiple sources via ?source=)",
+        "file": "AppNavGraph.kt",
+        "line": 281
+      }
+    ],
+    "mandatoryDisclosures": {
+      "priceShown": true,
+      "autoRenewalHint": "paywall_yearly_note (strings.xml:1108) 1:1 = 'Danach %1$s pro Jahr, verlaengert sich automatisch\\nIn der Testphase jederzeit kuendbar' shown PaywallScreen.kt:461-466. Lifetime: paywall_lifetime_note (strings.xml:1113) = 'Kein Abo, keine Verlaengerung' PaywallScreen.kt:625-629. Churn: churn_auto_renew_note (strings.xml:1163) = 'Dein Abo verlaengert sich automatisch ueber Google Play. Die Kuendigung ist jederzeit moeglich.'",
+      "cancellationPath": "Cancellation delegated to https://play.google.com/store/account/subscriptions via ChurnFlowDialog.kt:228/261 (correct, policy-compliant venue). No in-app self-cancel claim.",
+      "withdrawalLink": "paywall_legal_hint (strings.xml:1115) 1:1 = 'Mit dem Abo akzeptierst du die %1$s. Dein 14-taegiges Widerrufsrecht ist dort beschrieben.' + link word 'Nutzungsbedingungen' (paywall_legal_hint_link strings.xml:1116). Rendered as clickable underlined Terms link via onOpenTerms at bottom of main paywall PaywallScreen.kt:645-680. PRESENT on the single main paywall screen (all entry points route to same PaywallScreen).",
+      "gaps": [
+        "Auto-renewal hint sits ONLY in paywall_yearly_note (tied to the yearly trial CTA). The MONTHLY plan button (paywall_monthly_plan 'Monatsabo, %1$s pro Monat', PaywallScreen.kt:537) has no inline auto-renewal text next to it; the renewal disclosure relies on the yearly note + the Terms link being read. Recommend explicit per-plan recurring-billing line for monthly.",
+        "Withdrawal/Terms link is a single-tap optional link (TextButton), not inline visible text; the para-312j 'Zahlungspflichtig bestellen' confirmation is handled by the Google Play sheet (acceptable), but the withdrawal info is one tap away rather than on-screen.",
+        "No explicit 'no commitment / billed via Google Play account' line for the lifetime one-time purchase beyond 'Kein Abo, keine Verlaengerung' (adequate but minimal)."
+      ]
+    },
+    "subscriptionStates": [
+      {
+        "state": "Free",
+        "uiBehavior": "SubscriptionState.Free - limited tier; paywall entry points active; AI daily limits TRIAL tier.",
+        "gap": ""
+      },
+      {
+        "state": "Subscribed (active)",
+        "uiBehavior": "SubscriptionState.Subscribed - full access; paywall auto-dismisses (PaywallScreen.kt:109-113); churn dialog reachable from Settings.",
+        "gap": ""
+      },
+      {
+        "state": "Canceled-but-active (autoRenewing=false, not yet expired)",
+        "uiBehavior": "Still Subscribed; churn dialog shows churn_cancelled_ends_on '%1$s' (strings.xml:1162) with expiry date from cloud.",
+        "gap": "Handled in churn overview only; main app still treats as Subscribed (correct)."
+      },
+      {
+        "state": "Expired",
+        "uiBehavior": "SubscriptionStatusService maps SUBSCRIPTION_STATE_EXPIRED + FunctionsException NOT_FOUND -> FetchResult.NotFound -> _subscriptionState=Free, clears last-known token/productId (BillingManager.kt:450-456).",
+        "gap": ""
+      },
+      {
+        "state": "Grace period / On-hold / Paused",
+        "uiBehavior": "NOT modeled as distinct states. SubscriptionState sealed has only Free/Subscribed. Pause is offered (churn_pause_sub -> Play), but app has no GRACE/ON_HOLD branch.",
+        "gap": "POSSIBLE GAP: during Play 'grace period' (payment failed, access should continue) or 'paused', the binary Free/Subscribed model + verify-before-downgrade may drop premium access early or not reflect paused state. Cloud function only special-cases EXPIRED; other non-active states fall through to Found(parsed) or Error. Worth a targeted review of how grace/on-hold purchaseToken responses set _subscriptionState."
+      }
+    ],
+    "churnFlow": {
+      "steps": [
+        "Step 0: Subscription overview ('Dein Abo' - plan, price, renewal/expiry, auto-renew note) -> button 'Abo kuendigen' (churn_cancel_sub) -> step 1",
+        "Step 1: Reason selection (Zu teuer / Nutze es zu selten / Nicht die Features die ich brauche / Anderer Grund + free text) -> step 2 (or step 3 if already on retention plan)",
+        "Step 2: Retention offer - 25% off ('Angebot annehmen'), or 'Oder zum Jahresabo wechseln', or 'Oder Abo bei Google Play pausieren'; opt-out 'Trotzdem kuendigen' -> step 3",
+        "Step 3: 'Bist du sicher?' confirmation - PRIMARY animated button 'Doch lieber bleiben' (stay) vs subdued grey 0.6-alpha TextButton 'Zu Google Play' (real cancel) -> opens play.google.com/store/account/subscriptions + onCancelConfirmed()"
+      ],
+      "darkPatternRisk": "MITTEL",
+      "quotes": [
+        "churn_sorry_title (strings.xml:1172): 'Schade, dass du gehst'",
+        "churn_sorry_body (1173): 'Bevor du kuendigst, wuerdest du uns verraten warum? Das hilft uns, die App zu verbessern.'",
+        "churn_cancel_anyway (1183): 'Trotzdem kuendigen'",
+        "churn_are_you_sure (1184): 'Bist du sicher?'",
+        "churn_stay (1185): 'Doch lieber bleiben'  [rendered as PRIMARY pulsing button at step 3]",
+        "action_go_google_play (35): 'Zu Google Play'  [rendered as subdued grey TextButton alpha 0.6 - code comment ChurnFlowDialog.kt:1087: 'Subdued grey link ... so it does not compete visually with the primary Bleiben-Button']",
+        "churn_google_play_redirect (467): 'Du wirst zu Google Play weitergeleitet, um dein Abo zu verwalten. Deine Tagebucheintraege bleiben natuerlich erhalten.'"
+      ],
+      "rationale": "Up to 4 steps to reach cancellation, with a reason-survey gate (step 1) and a retention offer (step 2) before the user can confirm. At the final confirmation the cancel action is deliberately visually de-emphasised (grey, 0.6 alpha, plain text) while 'Doch lieber bleiben' is a bold animated primary button - code comment explicitly states the intent. This combination (interstitial steps + confirmshaming title 'Schade, dass du gehst' + asymmetric visual weighting of the cancel CTA) matches recognised dark-pattern criteria under EU UCPD / para-4a UWG and the EU Digital Fairness scrutiny of cancellation flows. Risk is MITTEL (not HOCH) because: (a) the cancel option is always present, clearly labelled ('Zu Google Play'), and reachable on every step; (b) the actual cancellation is delegated to the genuine Google Play subscriptions page (no in-app dark dead-end); (c) Google Play already provides a one-tap cancel independent of this flow. Recommend: give the cancel CTA equal visual weight at step 3, and consider making the reason-survey step skippable, to stay clearly on the safe side."
+    },
+    "restorePurchases": {
+      "present": true,
+      "reachableFrom": "Automatic only: billingManager.restorePurchases() (querySubscriptions + queryInAppPurchases) on app launch (MainActivity.kt:211) + refreshSubscriptionStatus() on Settings open. SettingsViewModel.restorePurchases() (line 133) exists but is NOT wired to any UI button. No explicit user-triggered 'Restore Purchases' control."
+    },
+    "freeVsPremium": [
+      {
+        "feature": "Journal entries (write/voice/store)",
+        "tier": "free",
+        "limit": "Unlimited (MAX_ENTRIES_FREE_ANALYSIS=Int.MAX_VALUE)"
+      },
+      {
+        "feature": "App usable without subscription",
+        "tier": "free",
+        "limit": "Yes - paywall_free_note: 'Die App funktioniert auch ohne Abo weiter.' + paywall_with_limited: 'mit eingeschraenkten Limits.'"
+      },
+      {
+        "feature": "AI dashboard updates / analysis",
+        "tier": "limited",
+        "limit": "Free: FREE_WEEKLY_DASHBOARD_LIMIT=5/week. AI daily-quota tiers apply (trial tier: 20 premium-model then lite then cooldown/hard)."
+      },
+      {
+        "feature": "AI text improvement",
+        "tier": "limited",
+        "limit": "Free: FREE_WEEKLY_TEXT_LIMIT=5/week; premium: unlimited (paywall_feature_improve)"
+      },
+      {
+        "feature": "Weekly/monthly/yearly reviews (retrospectives)",
+        "tier": "limited",
+        "limit": "Free: most-recent FREE_WEEKLY_REVIEW_COUNT=2 reviews; premium: 'Alle Rueckblicke KI generiert' (paywall_feature_retro)"
+      },
+      {
+        "feature": "Custom AI profiles / scenarios",
+        "tier": "premium",
+        "limit": "Premium: 'Unbegrenzte individuelle KI-Profile' (paywall_feature_profiles). Free: limited count (custom_analyses_limit paywall trigger)."
+      },
+      {
+        "feature": "Follow-ups (Nachtraege) per entry",
+        "tier": "premium",
+        "limit": "Premium: 'Unbegrenzte Nachtraege' (paywall_feature_followups); free gated (nachtrag_upsell trigger)"
+      },
+      {
+        "feature": "PDF export with photos",
+        "tier": "premium",
+        "limit": "Premium only (paywall_feature_pdf; pdf_export paywall trigger SettingsScreen.kt:3107)"
+      },
+      {
+        "feature": "Ad-free",
+        "tier": "premium",
+        "limit": "paywall_feature_noads 'ohne Werbung' - NOTE: no ad SDK observed in this layer; verify whether free tier actually shows ads, else 'ohne Werbung' is a hollow benefit claim (UWG para-5 risk if no ads exist anywhere)."
+      },
+      {
+        "feature": "Pattern recognition",
+        "tier": "premium",
+        "limit": "paywall_feature_patterns 'Erkenne wiederkehrende Muster'"
+      }
+    ],
+    "purchaseErrorPaths": "PaywallViewModel.launchPurchaseFlow returns false if ProductDetails not loaded yet OR promo requested-but-unavailable; UI then shows Toast (paywall_sub_loading_toast / paywall_purchase_loading_toast) - no dead-end (PaywallScreen.kt:149-157, 322-329). 'Prices loading' spinner (paywall_prices_loading) while Play responds; prices show ellipsis until loaded (PaywallScreen.kt:128-130,297-315). BillingManager.onPurchasesUpdated (line 1280) handles ONLY OK+PURCHASED; USER_CANCELED/ERROR/ITEM_ALREADY_OWNED are logged (Log.d) but BillingManager exposes NO error StateFlow - user-facing feedback for a failed/canceled purchase relies on Google Play's own sheet messaging. acknowledgePurchase: 3 retries + PREF_PENDING_ACK_TOKEN recovery on next launch (prevents auto-refund money-loss). isPurchaseInFlight guard prevents double-tap dialogs.",
+    "criticalObservations": [
+      "Prices are sourced LIVE from Google Play formattedPrice (BillingManager.kt:1033,1066); hardcoded EUR fallbacks in Constants (MONTHLY/YEARLY/LIFETIME_PRICE_DISPLAY, RETENTION_*_PRICE) are explicitly labelled fallbacks AND are NOT shown on the main paywall (UI uses ellipsis when unloaded, PaywallScreen.kt:128). LOW pricing-misrepresentation risk on the paywall. HOWEVER: audit whether Settings subscription overview / any other screen ever renders the hardcoded RETENTION_MONTHLY_PRICE='2,99 EUR' / RETENTION_YEARLY_PRICE='22,49 EUR' constants directly (these could diverge from live Play prices per region/currency).",
+      "DARK PATTERN (MITTEL): cancellation flow visually de-emphasises the cancel CTA at the final step (grey 0.6-alpha 'Zu Google Play' vs bold animated 'Doch lieber bleiben') and gates cancel behind a reason survey + retention offer. Code comment ChurnFlowDialog.kt:1087 documents the intentional visual de-prioritisation. Recommend equal visual weight + skippable survey.",
+      "SUBSCRIPTION-STATE GAP: SubscriptionState is binary (Free/Subscribed). Google Play GRACE_PERIOD / ON_HOLD / PAUSED states are not modelled as distinct feature-access decisions; only EXPIRED is special-cased server-side. Risk that a user in Play grace period (payment retry window, should keep access) is downgraded to Free, or a paused sub is mis-shown. Targeted review recommended.",
+      "AUTO-RENEWAL DISCLOSURE is tied to the yearly note; the MONTHLY plan button has no adjacent recurring-billing line. Add an explicit per-plan auto-renewal/recurring line for the monthly subscription to meet Play + consumer-law clarity expectations on every plan.",
+      "'ohne Werbung' (paywall_feature_noads) is listed as a premium benefit but no ad SDK was observed in this paywall/billing layer - if the free tier shows no ads anywhere, advertising 'ad-free' as a paid benefit is a hollow/misleading claim (UWG para-5). Cross-check with the app-wide feature inventory.",
+      "Withdrawal right (para-355 BGB, 14 days) IS disclosed and reachable pre-purchase via the Terms link (paywall_legal_hint + onOpenTerms), and para-312j 'pay now' confirmation is handled by the Google Play sheet - the previously-noted gap is closed (D1-Fix 2026-05-31). Good."
+    ],
+    "plugin_bugs_observed": [
+      "FIN-037 self-observation: The scope prompt lists 'BillingManager.kt (~part of Bucket K3, Datei ist mittelgross - voll lesbar)' but the file is 75 KB (~19k tokens) - borderline against the FIN-048 token budget. I read it via targeted Grep + Read ranges instead of a full read; suggest the bucket sizing note be corrected so future workers don't full-read it.",
+      "Worker-output schema lacks a dedicated field for 'pricing constants that COULD be shown but were not verified on every screen' - I had to fold the RETENTION_*_PRICE divergence risk into criticalObservations. A 'crossScreenVerificationNeeded' array would let the orchestrator route a precise follow-up (e.g. to the Settings-screen worker) instead of relying on prose.",
+      "ChurnFlowDialog.kt (50 KB) and PaywallScreen.kt (49 KB) sit just under the 100 KB Grep-only threshold but are still large; reading them in 200-230 line ranges worked, but the threshold guidance ('>100KB -> only ranges') could be lowered to ~40KB for Compose screen files, which are token-dense (deep indentation)."
+    ]
+  }
+}

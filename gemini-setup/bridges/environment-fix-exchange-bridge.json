@@ -1,0 +1,63 @@
+{
+	"_DEPRECATED": "2026-03-25: Replaced by Universal Mirror Bridge (mirror-ledger.md + export/import agents). Kept for reference.",
+	"version": 1,
+	"bridge_name": "environment-fix-exchange",
+	"source_label": "CLI Environment Fixes",
+	"language": "de",
+	"scope": "programming-environment-only",
+	"entry_schema": [
+		"id",
+		"source_cli",
+		"category",
+		"summary",
+		"context_for_other_clis",
+		"symptom_before_fix",
+		"root_cause",
+		"what_was_fixed",
+		"why_it_was_fixed",
+		"exact_error_text",
+		"root_cause_why_chain",
+		"related_error_sources_checked",
+		"wrong_pattern_example",
+		"right_pattern_example",
+		"avoidance_rule",
+		"resilience_summary",
+		"fix_induced_failure_review",
+		"verification",
+		"portability_notes",
+		"portable_to",
+		"artifacts",
+		"created_at",
+		"status"
+	],
+	"requires_full_context": true,
+	"requires_resilient_bugfix_fields": true,
+	"bridge_registry": {
+		"registry_path": "gemini-setup/bridges/bridge-registry.json",
+		"registry_github_url": "https://github.com/Pepsi1978/proggs/blob/main/gemini-setup/bridges/bridge-registry.json",
+		"bridge_id": "environment-fix-exchange"
+	},
+	"write_scope": [
+		"gemini-setup/ only"
+	],
+	"read_only_consumers": [
+		"Codex CLI",
+		"Gemini CLI",
+		"other CLI environments"
+	],
+	"trigger_phrases": [
+		"logge diesen Umgebungsfix",
+		"welche Fehler hast du in deiner Umgebung gefixt",
+		"warum hast du diesen Umgebungsfehler gefixt",
+		"was kann Codex von deinen Fixes lernen",
+		"was kann Gemini CLI von deinen Fixes lernen",
+		"trage diesen Fix in das Fix-Log ein",
+		"dokumentiere diesen Fehler"
+	],
+	"reference_implementation": [
+		"gemini-setup/environment-fixes.md",
+		"gemini-setup/scripts/register-environment-fix.mjs",
+		"gemini-setup/scripts/register-environment-fix.sh"
+	]
+}
+

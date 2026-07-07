@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">VoiceKey</string>
+    <string name="a11y_description">Not-Aus für den Sprachassistenten: drückt auf Kommando den echten Beenden-Knopf der ChatGPT-Voice-Oberfläche, damit der Assistent wirklich aufhört zuzuhören. Der Dienst liest keine Inhalte mit und wird nur aktiv, wenn du in VoiceKey auf „Voice beenden" tippst.</string>
+</resources>

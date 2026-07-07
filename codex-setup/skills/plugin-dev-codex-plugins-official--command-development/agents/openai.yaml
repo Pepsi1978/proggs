@@ -1,0 +1,7 @@
+interface:
+  display_name: "command-development"
+  short_description: "the user asks to \"create a slash command\", \"add a command\""
+  default_prompt: "Use $plugin-dev-codex-plugins-official--command-development for this task."
+
+policy:
+  allow_implicit_invocation: false

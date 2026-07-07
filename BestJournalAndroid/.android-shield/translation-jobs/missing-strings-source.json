@@ -1,0 +1,17 @@
+{
+  "generatedAt": "2026-05-22",
+  "source_locale": "de",
+  "missing_strings_with_de_source": {
+    "churn_cancelled": "Gekündigt",
+    "churn_cancelled_ends_on": "Gekündigt — endet am <xliff:g id=\"date\" example=\"30.04.2026, 18:13\">%1$s</xliff:g>",
+    "churn_promo_phase_ends": "Endet am <xliff:g id=\"date\" example=\"30.04.2026, 18:13\">%1$s</xliff:g> — danach <xliff:g id=\"base_price\" example=\"3,99 €\">%2$s</xliff:g> pro Monat",
+    "churn_reason_other_placeholder": "Bitte sag uns kurz, was los ist…",
+    "churn_renews_on": "Verlängert sich am <xliff:g id=\"date\" example=\"30.04.2026, 18:13\">%1$s</xliff:g>",
+    "retro_month_more_entries": "(+ %1$d weitere Einträge)",
+    "settings_premium_cancelled": "Premium-Abo gekündigt",
+    "settings_premium_cancelled_desc": "Deine Premium-Funktionen bleiben bis zum Ende des Abrechnungszeitraums verfügbar. Du kannst die Kündigung jederzeit über Google Play rückgängig machen.",
+    "settings_premium_cancelled_until": "Premium-Abo gekündigt — läuft noch bis <xliff:g id=\"date\" example=\"30.04.2026, 21:01\">%1$s</xliff:g>",
+    "settings_theme": "Theme",
+    "settings_themes_manager": "Themes Manager"
+  }
+}

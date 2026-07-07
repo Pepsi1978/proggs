@@ -1,0 +1,7 @@
+interface:
+  display_name: "data-integrity-guardian"
+  short_description: "Reviews database migrations, data models, and persistent data"
+  default_prompt: "Use $compound-engineering-compound-engineering-plugin--data-integrity-guardian for this task."
+
+policy:
+  allow_implicit_invocation: false

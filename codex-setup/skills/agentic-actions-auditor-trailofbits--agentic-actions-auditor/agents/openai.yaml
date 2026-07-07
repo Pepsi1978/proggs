@@ -1,0 +1,7 @@
+interface:
+  display_name: "agentic-actions-auditor"
+  short_description: "Audits GitHub Actions workflows for security vulnerabilities in"
+  default_prompt: "Use $agentic-actions-auditor-trailofbits--agentic-actions-auditor for this task."
+
+policy:
+  allow_implicit_invocation: false

@@ -1,0 +1,7 @@
+interface:
+  display_name: "skill-development"
+  short_description: "the user wants to \"create a skill\", \"add a skill to plugin\""
+  default_prompt: "Use $plugin-dev-codex-plugins-official--skill-development for this task."
+
+policy:
+  allow_implicit_invocation: false

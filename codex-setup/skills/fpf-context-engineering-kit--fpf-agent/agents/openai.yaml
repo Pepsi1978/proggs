@@ -1,0 +1,7 @@
+interface:
+  display_name: "fpf-agent"
+  short_description: "First Principles Framework reasoning specialist that executes"
+  default_prompt: "Use $fpf-context-engineering-kit--fpf-agent for this task."
+
+policy:
+  allow_implicit_invocation: false

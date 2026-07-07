@@ -1,0 +1,1634 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources xmlns:tools="http://schemas.android.com/tools"
+    xmlns:xliff="urn:oasis:names:tc:xliff:document:1.2"
+    tools:locale="mr">
+    <!-- App brand name — do not translate -->
+    <string name="app_name" translatable="false">Best Journal</string>
+
+    <!-- ════════════════════════════════════════════════════════════════════
+         NAVIGATION & TABS
+         ════════════════════════════════════════════════════════════════════ -->
+    <string name="nav_journal">दैनंदिनी</string>
+    <string name="nav_retrospective">आढावा</string>
+    <string name="nav_dashboard">डॅशबोर्ड</string>
+    <string name="nav_settings">सेटिंग्ज</string>
+
+    <!-- ════════════════════════════════════════════════════════════════════
+         COMMON / SHARED
+         ════════════════════════════════════════════════════════════════════ -->
+    <string name="action_cancel">रद्द करा</string>
+    <string name="action_save">जतन करा</string>
+    <string name="action_close">बंद करा</string>
+    <string name="action_continue">पुढे</string>
+    <string name="action_understood">समजले</string>
+    <string name="action_retry">पुन्हा प्रयत्न करा</string>
+    <string name="action_later">नंतर</string>
+    <string name="action_share">शेअर करा</string>
+    <string name="action_discard">सोडून द्या</string>
+    <string name="action_back">मागे</string>
+    <string name="action_done">झाले</string>
+    <string name="action_no_thanks">नको, धन्यवाद</string>
+    <string name="action_delete">हटवा</string>
+    <!-- Accessibility label for the undo icon button on the dashboard. -->
+    <string name="action_undo">पूर्ववत करा</string>
+    <string name="action_ok">ठीक आहे</string>
+    <string name="action_go_google_play">Google Play वर जा</string>
+    <string name="journal_drive_backup_dialog">Google Drive बॅकअप</string>
+    <string name="journal_improve_text">✨ मजकूर सुधारा</string>
+    <string name="journal_show_original">↩ मूळ दाखवा</string>
+    <string name="journal_show_improved">✨ सुधारित आवृत्ती दाखवा</string>
+    <string name="journal_ai_improving">AI मजकूर सुधारत आहे — कृपया थांबा</string>
+    <string name="journal_later">नंतर</string>
+    <!-- Paywall missed strings -->
+    <string name="paywall_from_per_day">वार्षिक वर्गणी, %1$s प्रति वर्ष</string>
+    <string name="paywall_instead_per_month">मासिक योजनेपेक्षा %1$d%% बचत</string>
+    <string name="paywall_or">किंवा</string>
+    <string name="paywall_with_limited">मर्यादित वापरासह.</string>
+    <!-- Churn missed string -->
+    <string name="churn_instead_of">ऐवजी </string>
+    <string name="label_premium">Premium</string>
+    <string name="label_original">मूळ</string>
+    <string name="label_improved">✨ AI सुधारित</string>
+    <string name="label_photo">फोटो</string>
+    <string name="label_video">व्हिडिओ</string>
+    <string name="label_current">सद्य</string>
+    <string name="label_record">विक्रम</string>
+    <string name="cd_sync_status">Sync स्थिती</string>
+    <string name="cd_day">दिवस</string>
+    <string name="cd_night">रात्र</string>
+
+    <!-- ════════════════════════════════════════════════════════════════════
+         JOURNAL SCREEN
+         ════════════════════════════════════════════════════════════════════ -->
+    <string name="journal_title">दैनंदिनी</string>
+    <string name="journal_search_placeholder">नोंदी शोधा\u2026</string>
+    <string name="journal_search">शोधा</string>
+    <string name="journal_search_hint">शोध</string>
+    <string name="journal_search_close">शोध बंद करा</string>
+    <string name="journal_no_entries">अजून कोणत्याही नोंदी नाहीत</string>
+    <string name="journal_tap_mic_to_start">सुरू करण्यासाठी मायक्रोफोनवर टॅप करा</string>
+    <string name="journal_cd_streak">सलग दिवस</string>
+    <string name="journal_cd_text_input">मजकूर प्रविष्ट करा</string>
+    <string name="journal_achievement_unlocked">Achievement अनलॉक झाले!</string>
+    <string name="journal_drive_not_signed_in">Google मध्ये साइन इन नाही</string>
+    <string name="journal_drive_backup_current">बॅकअप अद्ययावत, सर्व नोंदी सुरक्षित</string>
+    <string name="journal_drive_uploading">बॅकअप अपलोड होत आहे\u2026</string>
+    <string name="journal_drive_downloading">फोटो/व्हिडिओ डाउनलोड होत आहेत\u2026</string>
+    <string name="journal_drive_failed">बॅकअप अयशस्वी!</string>
+    <string name="journal_drive_last_sync">शेवटची Sync: %1$s</string>
+    <string name="journal_new_entry_prompt">लेखन प्रेरणा</string>
+    <string name="journal_new_entry">नवीन नोंद</string>
+    <string name="journal_save_improved">सुधारित जतन करा</string>
+    <string name="journal_save">जतन करा</string>
+    <string name="journal_cd_write">लिहा</string>
+    <string name="journal_write">लिहा</string>
+    <string name="journal_cd_speak">बोला</string>
+    <string name="journal_speak">बोला</string>
+    <string name="journal_your_answer">तुमचे उत्तर:</string>
+    <string name="journal_placeholder_prompt">इथे तुमचे विचार लिहा\u2026</string>
+    <string name="journal_placeholder_edit">मजकूर संपादित करण्यासाठी इथे टॅप करा\u2026</string>
+    <string name="journal_freeflow_hint">तुमचे विचार मुक्तपणे वाहू द्या. बरोबर किंवा चुकीचे असे काही नसते.</string>
+    <string name="journal_transcribed_with">%1$s द्वारे लिप्यंतरित</string>
+    <!-- Default label for the transcription model (local Whisper, runs on-device). -->
+    <string name="transcription_model_local">स्थानिक Whisper मॉडेल</string>
+    <!-- Brand name of the Groq transcription model — do not translate. -->
+    <string name="transcription_model_groq" translatable="false">Groq Whisper Large V3 Turbo</string>
+    <string name="journal_text_upsell_title">प्रभावशाली, नाही का?</string>
+    <string name="journal_text_upsell_body">Premium सह तुम्ही प्रत्येक नोंद सुधारू शकता.</string>
+    <string name="journal_discover_premium">Premium शोधा →</string>
+    <string name="journal_entries_label">नोंदी</string>
+    <string name="journal_entry_count">%1$d नोंदी</string>
+    <string name="journal_streak_days">%1$d दिवस</string>
+    <string name="journal_streak_days_in_row">%1$d सलग दिवस</string>
+    <string name="journal_streak_next_goal">पुढचे लक्ष्य: %1$d दिवस</string>
+    <string name="journal_streak_remaining">आणखी %1$d</string>
+    <string name="journal_streak_premium">Streak संरक्षण: Premium सह उपलब्ध</string>
+    <string name="journal_keep_going">असेच चालू ठेवा!</string>
+    <string name="journal_daily_prompt">आजचा लेखन प्रेरणा</string>
+    <string name="journal_write_about">याबद्दल लिहा</string>
+    <string name="journal_recording_error">रेकॉर्डिंग अयशस्वी: %1$s</string>
+    <string name="journal_transcription_error">लिप्यंतरण अयशस्वी: %1$s</string>
+    <string name="journal_rate_limit">थोडी विश्रांती: पुढील सुधारणेसाठी आणखी %1$d मिनिटे.</string>
+    <string name="journal_improve_error">मजकूर सुधारणे अयशस्वी: %1$s</string>
+    <string name="journal_save_error">जतन अयशस्वी: %1$s</string>
+    <string name="recording_tap_stop">थांबवण्यासाठी पुन्हा टॅप करा</string>
+
+    <!-- Streak messages -->
+    <string name="streak_365">संपूर्ण एक वर्ष!</string>
+    <string name="streak_180">अविश्वसनीय शिस्त!</string>
+    <string name="streak_90">तुम्ही थांबत नाही!</string>
+    <string name="streak_30">पूर्ण एक महिना!</string>
+    <string name="streak_14">दोन आठवडे मजबूत!</string>
+    <string name="streak_7">पूर्ण एक आठवडा!</string>
+    <string name="streak_3">तुम्ही सातत्य राखत आहात!</string>
+    <string name="streak_default">प्रत्येक दिवस महत्त्वाचा!</string>
+    <string name="streak_desc_365">एक छोटी सवय म्हणून सुरू झालेले आता तुमच्या जीवनाचा अविभाज्य भाग बनले आहे. तुमची दैनंदिनी तुम्हाला पूर्वीपेक्षा जास्त ओळखते.</string>
+    <string name="streak_desc_14">सलग दोन आठवडे — हे फार कमी जण करतात. तुमचे भविष्यातील स्वतःला याबद्दल आभारी असतील.</string>
+    <string name="streak_desc_7">विचार, भावना आणि आठवणींनी भरलेला एक आठवडा. तुम्ही आत्ता काहीतरी मौल्यवान घडवत आहात.</string>
+    <string name="streak_desc_3">सलग तीन दिवस ही खऱ्या सवयीची सुरुवात आहे. सातत्य ठेवा, हे फायद्याचे आहे!</string>
+    <string name="streak_desc_1">प्रत्येक नोंद म्हणजे तुमच्या भावी स्वतःला एक छोटी भेट. उद्या पुन्हा लिहा!</string>
+
+    <!-- ════════════════════════════════════════════════════════════════════
+         ENTRY DETAIL SCREEN
+         ════════════════════════════════════════════════════════════════════ -->
+    <string name="entry_title">नोंद</string>
+    <string name="entry_summary">सारांश</string>
+    <string name="entry_saving">जतन होत आहे\u2026</string>
+    <string name="entry_improving">सुधारत आहे\u2026</string>
+    <string name="entry_improve_with_ai">AI सह नंतर सुधारा</string>
+    <string name="entry_photos_videos">फोटो/व्हिडिओ</string>
+    <string name="entry_add">जोडा</string>
+    <string name="entry_no_photos_yet">अजून कोणतेही फोटो/व्हिडिओ जोडलेले नाहीत</string>
+    <string name="entry_cd_play_video">व्हिडिओ प्ले करा</string>
+    <string name="entry_cd_remove">काढा</string>
+    <string name="entry_tts_enable_hint">सेटिंग्जमध्ये आवाज सक्षम करा</string>
+    <string name="entry_tts_stop">थांबवा</string>
+    <string name="entry_tts_read">वाचा</string>
+    <string name="entry_cd_share">शेअर करा</string>
+    <string name="entry_recording_duration">रेकॉर्डिंग वेळ: %1$s</string>
+    <string name="entry_tts_generating">कृपया थांबा, Text-to-Speech तयार होत आहे\u2026</string>
+    <string name="entry_tts_journal_label">डायरी नोंद</string>
+    <string name="entry_tts_followup_label">अनुपूरक %1$s</string>
+    <string name="entry_cd_photo_page">फोटो %1$d</string>
+    <string name="entry_add_photo_video">फोटो/व्हिडिओ जोडा</string>
+    <string name="entry_camera">कॅमेरा</string>
+    <string name="entry_gallery">गॅलरी</string>
+    <string name="entry_delete_title">नोंद हटवायची का?</string>
+    <string name="entry_delete_message">ही नोंद कायमची हटवायची का?</string>
+
+    <!-- Share dialog -->
+    <string name="share_title">नोंद शेअर करा</string>
+    <string name="share_which_version">कोणती आवृत्ती शेअर करायची?</string>
+    <string name="share_improved_version">सुधारित आवृत्ती</string>
+    <string name="share_photos_videos_label">फोटो/व्हिडिओ शेअर करा:</string>
+    <string name="share_footer">BestJournal App मधील दैनंदिनी नोंद</string>
+    <string name="share_what_to_share">काय शेअर करायचे आहे?</string>
+    <string name="share_journal_entry">दैनंदिनी नोंद</string>
+    <string name="share_followup_numbered">नंतरची नोंद <xliff:g id="ordinal" example="1">%1$s</xliff:g></string>
+    <string name="share_followup_single">नंतरची नोंद</string>
+
+    <string name="error_recording_failed">रेकॉर्डिंग अयशस्वी: <xliff:g id="reason" example="मायक्रोफोन उपलब्ध नाही">%1$s</xliff:g></string>
+    <string name="error_transcription_failed">ट्रान्सक्रिप्शन अयशस्वी: <xliff:g id="reason" example="नेटवर्क कालबाह्य">%1$s</xliff:g></string>
+
+    <!-- ════════════════════════════════════════════════════════════════════
+         DASHBOARD SCREEN
+         ════════════════════════════════════════════════════════════════════ -->
+    <string name="dashboard_title">डॅशबोर्ड</string>
+    <string name="dashboard_legend">आख्यायिका</string>
+    <string name="dashboard_refresh">ताजे करा</string>
+    <string name="dashboard_weekly_review_waiting">तुमचा साप्ताहिक आढावा वाट पाहत आहे</string>
+    <!-- Body text of the weekly-review premium upsell card on the dashboard. -->
+    <string name="dashboard_weekly_review_upsell_body">तुमचा हा आठवडा खूप व्यस्त होता. Premium सोबत तुम्ही पूर्ण विश्लेषण पाहू शकता: नमुने ओळखा, अंतर्दृष्टी शोधा आणि तुम्हाला काय व्यापवत आहे ते समजून घ्या.</string>
+    <string name="dashboard_discover_premium">Premium शोधा</string>
+    <string name="dashboard_please_wait">कृपया थांबा</string>
+    <string name="dashboard_gemini_unavailable">Gemini सध्या उपलब्ध नाही, कृपया लवकरच पुन्हा प्रयत्न करा.</string>
+    <string name="dashboard_no_custom_focus">कोणताही विश्लेषण फोकस प्रविष्ट केला नाही</string>
+    <string name="dashboard_custom_focus_hint">सेटिंग्जमध्ये \u201cवैयक्तिक विश्लेषण\u201d अंतर्गत फोकस प्रविष्ट करा,\nकिंवा वेगळे प्रोफाइल निवडा.</string>
+    <string name="dashboard_no_analysis_yet">अजून कोणतेही विश्लेषण नाही</string>
+    <string name="dashboard_create_entries_custom">दैनंदिनी नोंदी तयार करा,\nमग AI तुमचा फोकस विश्लेषण करेल.</string>
+    <string name="dashboard_create_entries_default">दैनंदिनी नोंदी तयार करा,\nमग AI तुमचे नमुने विश्लेषण करेल.</string>
+    <string name="dashboard_like_analysis">विश्लेषण आवडले का?</string>
+    <string name="dashboard_premium_upsell_body">Premium सह तुला हव्या तितक्या प्रोफाईलमधून भरपूर विश्लेषणे मिळतात.</string>
+    <string name="dashboard_learn_more">अधिक जाणून घ्या</string>
+    <string name="dashboard_feature_analyses">विश्लेषणे</string>
+    <string name="dashboard_all_observations">सर्व निरीक्षणे</string>
+    <string name="dashboard_inner_mirror">अंतर्गत आरसा</string>
+    <string name="dashboard_all_insights">सर्व अंतर्दृष्टी</string>
+    <string name="dashboard_goal_overview">लक्ष्य आढावा</string>
+    <string name="dashboard_all_goals">सर्व लक्ष्ये</string>
+    <string name="dashboard_top_results_fallback">महत्त्वाचे परिणाम</string>
+    <string name="dashboard_analysis_fallback">विश्लेषण</string>
+    <string name="dashboard_all_results_fallback">सर्व परिणाम</string>
+    <string name="dashboard_overall_analysis">एकूण विश्लेषण</string>
+    <!-- Title of the overview card in the Summary dashboard (scenario 0). -->
+    <string name="dashboard_summary_overview_title">आढावा</string>
+    <!-- Title of the next-steps card in the Goals dashboard (scenario 3). -->
+    <string name="dashboard_goals_next_steps_title">पुढील पावले</string>
+    <string name="dashboard_all_recommendations">सर्व शिफारसी</string>
+    <string name="dashboard_connection">संबंध</string>
+    <string name="dashboard_limit_daily">दैनंदिन मर्यादा गाठली. उद्या पुन्हा!</string>
+    <string name="dashboard_limit_weekly_profile">या प्रोफाइलची साप्ताहिक मर्यादा संपली. प्रोफाइल बदला किंवा सोमवारपर्यंत थांबा.</string>
+    <string name="dashboard_limit_cooldown">थोडी विश्रांती: पुढील विश्लेषणासाठी आणखी %1$d मिनिटे.</string>
+    <string name="dashboard_analysis_failed">विश्लेषण अयशस्वी</string>
+    <string name="dashboard_last_updated">%1$s रोजी शेवटचे अद्यतनित</string>
+    <string name="dashboard_loading_profile_switch">प्रत्येक प्रोफाइल बदलानंतर AI डॅशबोर्ड आपोआप अद्यतनित होतो</string>
+    <string name="dashboard_loading_delete_update">प्रत्येक हटवलेल्या नोंदीनंतर AI डॅशबोर्ड आपोआप अद्यतनित होतो</string>
+    <string name="dashboard_loading_auto_update">प्रत्येक नवीन नोंदीनंतर AI डॅशबोर्ड आपोआप अद्यतनित होतो</string>
+    <string name="dashboard_loading_default">AI डॅशबोर्ड अद्यतनित होत आहे</string>
+
+    <!-- Legend labels -->
+    <string name="legend_urgent">तातडीचे</string>
+    <string name="legend_attention">लक्ष द्या</string>
+    <string name="legend_observe">निरीक्षण करा</string>
+    <string name="legend_activity_level">क्रियाकलाप पातळी</string>
+    <string name="legend_activity_desc">या क्षेत्रात किती घडत आहे हे अर्धवर्तुळ दाखवते:</string>
+    <string name="legend_activity_high">जास्त क्रियाकलाप (67–100%)</string>
+    <string name="legend_activity_medium">मध्यम क्रियाकलाप (34–66%)</string>
+    <string name="legend_activity_low">कमी क्रियाकलाप (0–33%)</string>
+    <string name="legend_observation_relevance">निरीक्षणांची प्रासंगिकता</string>
+    <string name="legend_relevance_high">केंद्रीय, तुमच्या नोंदींचे मुख्य विषय</string>
+    <string name="legend_relevance_medium">संबंधित, वारंवार येणारी निरीक्षणे</string>
+    <string name="legend_relevance_low">टीप, एकवेळची उल्लेखे</string>
+    <string name="legend_reflection_depth">चिंतनाची खोली</string>
+    <string name="legend_reflection_desc">तुमच्या आत्म-चिंतनाची खोली अर्धवर्तुळ दाखवते:</string>
+    <string name="legend_reflection_deep">सखोल (67–100%)</string>
+    <string name="legend_reflection_aware">जागरूक (34–66%)</string>
+    <string name="legend_reflection_surface">पृष्ठभाग (0–33%)</string>
+    <string name="legend_insight_depth">अंतर्दृष्टीची खोली</string>
+    <string name="legend_insight_deep">सखोल, वारंवार येणारे नमुने आणि विश्वास</string>
+    <string name="legend_insight_aware">जागरूक, ओळखले गेलेले विचार आणि भावनांचे नमुने</string>
+    <string name="legend_insight_surface">पृष्ठभाग, पहिली निरीक्षणे</string>
+    <string name="legend_progress">प्रगती</string>
+    <!-- Legend: Goal progress -->
+    <string name="legend_goal_progress_desc">तुमच्या लक्ष्यांची प्रगती अर्धवर्तुळ दाखवते:</string>
+    <string name="legend_blocked_range">अडकलेले (0–33%)</string>
+    <string name="legend_in_progress_range">प्रगतीत (34–66%)</string>
+    <string name="legend_progress_range">प्रगती (67–100%)</string>
+    <string name="legend_goal_status">लक्ष्याची स्थिती</string>
+    <string name="legend_blocked_desc">अडकलेले — अडथळे असलेली लक्ष्ये</string>
+    <string name="legend_open_desc">खुले — अजून प्रगती नसलेली लक्ष्ये</string>
+    <string name="legend_progress_success_desc">प्रगती — दृश्यमान यश असलेली लक्ष्ये</string>
+    <!-- Legend: Custom analysis -->
+    <string name="legend_analysis_value">विश्लेषण मूल्य</string>
+    <string name="legend_analysis_relevance_desc">तुमच्या फोकससाठी प्रासंगिकता अर्धवर्तुळ दाखवते:</string>
+    <string name="legend_high_focus">उच्च (67–100%) — तुमच्या फोकसचे केंद्र</string>
+    <string name="legend_medium_focus">मध्यम (34–66%) — संबंध आढळला</string>
+    <string name="legend_low_focus">कमी (0–33%) — काठावर</string>
+    <string name="legend_result_relevance">परिणामांची प्रासंगिकता</string>
+    <string name="legend_important_desc">महत्त्वाचे — तुमच्या फोकससाठी थेट संबंधित</string>
+    <string name="legend_relevant_desc">संबंधित — तुमच्या फोकसशी जोडलेले</string>
+    <string name="legend_note_desc">टीप — किरकोळ टिप्पणी</string>
+    <!-- Legend: Burden/Stress -->
+    <string name="legend_burden_scale">ताण मापन</string>
+    <string name="legend_burden_desc">हा विषय तुम्हाला किती ताण देतो हे अर्धवर्तुळ दाखवते:</string>
+    <string name="legend_high_burden">उच्च (67–100%) — तातडीने कृती करा</string>
+    <string name="legend_medium_burden">मध्यम (34–66%) — लक्ष आवश्यक</string>
+    <string name="legend_low_burden">कमी (0–33%) — चांगली स्थिती</string>
+    <string name="legend_priority_title">सल्ल्यांची प्राधान्यक्रम</string>
+    <string name="legend_priority_high">लाल = तातडीचे — तातडीने कृती करा</string>
+    <string name="legend_priority_medium">नारंगी = मध्यम — लवकरच करा</string>
+    <string name="legend_priority_low">निळा = कमी — निरीक्षण करा</string>
+    <!-- Legend: Categories -->
+    <string name="legend_categories">श्रेण्या</string>
+    <string name="legend_categories_desc">श्रेण्या गतिशीलपणे तयार होतात — AI तुमच्या नोंदींमध्ये विषय ओळखतो आणि योग्य श्रेण्या तयार करतो. नवीन विषयांमुळे आपोआप नवीन चिन्हे तयार होतात.</string>
+    <!-- CategoryDetailDialog levels -->
+    <string name="level_low">कमी</string>
+    <string name="level_medium">मध्यम</string>
+    <string name="level_high">उच्च</string>
+    <string name="urgency_high">तातडीचे — तातडीने कृती करा</string>
+    <string name="urgency_medium">लक्ष आवश्यक</string>
+    <string name="urgency_low">चांगली स्थिती — निरीक्षण करा</string>
+    <!-- Dashboard: Derivation dialog -->
+    <string name="dashboard_derived_from">यावरून काढलेले:</string>
+    <string name="dashboard_update_for_derivation">सविस्तर विश्लेषणासाठी डॅशबोर्ड अद्यतनित करा.</string>
+    <!-- Dashboard: Summary section -->
+    <string name="dashboard_top_5_actions">शीर्ष 5 उपाय</string>
+    <string name="dashboard_core_insights">मुख्य अंतर्दृष्टी</string>
+    <string name="dashboard_summary_subtitle">तुमच्या नोंदींमधील महत्त्वाचे मुद्दे</string>
+    <string name="summary_central">केंद्रीय</string>
+    <string name="summary_relevant">संबंधित</string>
+    <string name="summary_side_note">टीप</string>
+    <!-- Dashboard: Insight section -->
+    <string name="dashboard_deepest_insights">सखोल अंतर्दृष्टी</string>
+    <string name="dashboard_insight_subtitle">तुमच्या नोंदी तुमच्याबद्दल काय सांगतात</string>
+    <string name="insight_deep_label">सखोल</string>
+    <string name="insight_aware_label">जागरूक</string>
+    <string name="insight_surface_label">पृष्ठभाग</string>
+    <!-- Dashboard: Goal section -->
+    <string name="dashboard_goal_steps">तुमच्या लक्ष्यांसाठी महत्त्वाची पावले</string>
+    <string name="goal_blocked_label">अडकलेले</string>
+    <string name="goal_open_label">खुले</string>
+    <string name="goal_progress_label">प्रगती</string>
+    <!-- Dashboard: Custom analysis section -->
+    <string name="dashboard_custom_subtitle">तुमच्या वैयक्तिक विश्लेषणावर आधारित</string>
+    <string name="custom_important_label">महत्त्वाचे</string>
+    <string name="custom_relevant_label">संबंधित</string>
+    <string name="custom_note_label">टीप</string>
+    <!-- Dashboard: TTS and sharing -->
+    <string name="dashboard_enable_voices">सेटिंग्जमध्ये आवाज सक्षम करा</string>
+    <string name="dashboard_tts_stop">थांबवा</string>
+    <string name="dashboard_tts_read">वाचा</string>
+    <string name="dashboard_share_analysis">विश्लेषण शेअर करा</string>
+    <string name="dashboard_share">शेअर करा</string>
+    <string name="dashboard_tts_wait">कृपया थांबा, Text-to-Speech तयार होत आहे\u2026</string>
+
+    <!-- Profile names -->
+    <string name="profile_summary">सारांश</string>
+    <string name="profile_entropy">आयुष्य व्यवस्थित करा</string>
+    <string name="profile_insight">आत्म-ज्ञान</string>
+    <string name="profile_goals">वैयक्तिक लक्ष्ये</string>
+    <string name="profile_custom">वैयक्तिक विश्लेषण</string>
+    <string name="profile_summary_desc">विषय, नमुने आणि अनुभव एकत्र करते</string>
+    <string name="profile_entropy_desc">ताण, अव्यवस्था आणि भार ओळखते</string>
+    <string name="profile_insight_desc">वारंवार येणारे विचार आणि भावनांचे नमुने दृश्यमान करते</string>
+    <string name="profile_goals_desc">लक्ष्ये, इच्छा आणि प्रगती ओळखते</string>
+    <string name="profile_custom_desc">स्वतःचा विश्लेषण फोकस सेट करा</string>
+
+    <!-- Profile long descriptions (settings) -->
+    <string name="profile_summary_long">तुमच्या नोंदी तटस्थपणे सारांशित केल्या जातात, कोणतेही मूल्यमापन किंवा सल्ला नाही.\n\nतुम्हाला एका नजरेत दिसते:\n\n• सध्या कोणते विषय तुम्हाला व्यापत आहेत\n• कोणते नमुने वारंवार येतात\n• तुमचे जीवन कसे विकसित होत आहे\n\nतुमच्या जीवनात काय घडत आहे याचा दैनंदिन आढावा म्हणून योग्य.</string>
+    <string name="profile_entropy_long">रोजच्या जीवनात तुम्हाला कशाचे ओझे वाटते ते AI शोधते आणि त्याचे वर्गीकरण करते. तुम्हाला तुमच्या सर्वांत मोठ्या ओझ्याच्या स्रोतांचा आढावा आणि 5 ठोस आवराआवरीचे टप्पे मिळतात. पुन्हा आढावा मिळवायचा असेल तर हे उत्तम आहे.</string>
+    <string name="profile_insight_long">AI फक्त घटनांपलीकडे जाते. ती तुमच्या नोंदींमध्ये हे ओळखते:\n\n• तुमच्या शब्दांमधील विचारांचे नमुने आणि विश्वास\n• वारंवार येणार्या भावना आणि प्रतिक्रिया\n• तुमच्या नोंदींमध्ये दिसणार्या शक्ती\n• तुमच्या कृतींना चालना देणारी मूल्ये\n\nजे स्वतःला अधिक चांगल्याप्रकारे समजून घेउ इच्छितात आणि आतून वाढू इच्छितात त्यांच्यासाठी.</string>
+    <string name="profile_goals_long">AI तुमच्या नोंदींमध्ये सर्व लक्ष्ये, इच्छा आणि योजना शोधतो, अगदी ओझरत्या उल्लेखलेल्यासुद्धा.\n\nतुम्हाला दिसते:\n\n• तुमची कोणती लक्ष्ये आहेत (लपलेली सुद्धा)\n• प्रत्येक लक्ष्यावर किती प्रगती झाली\n• तुमचा पुढील टप्पा काय असू शकतो\n\nतुमचा स्वतःच्या शब्दांतून वाचणारा वैयक्तिक लक्ष्य ट्रॅकर.</string>
+    <string name="profile_custom_long">तुम्ही स्वतः ठरवता AI ने काय पहावे.\n\nतुमचा स्वतःचा विश्लेषण फोकस लिहा, उदाहरणार्थ:\n\n• \u201cखेळाचे सर्व उल्लेख शोधा\u201d\n• \u201cमाझ्या मनस्थितीतील बदल विश्लेषण करा\u201d\n• \u201cमी सर्वात उत्पादक कधी असतो ते दाखव\u201d\n\nज्यांना नेमके काय शोधायचे आहे ते माहीत आहे त्यांच्यासाठी पूर्ण नियंत्रण.</string>
+    <string name="profile_custom_prompt">तुम्हाला काय महत्त्वाचे वाटते? तुमच्या दैनंदिनी नोंदींच्या विश्लेषणात AI ने कशावर लक्ष केंद्रित करावे?</string>
+    <string name="profile_select_hint">एक प्रोफाइल निवडा. सविस्तर स्पष्टीकरणासाठी प्रोफाइलवर टॅप करा.</string>
+    <!-- Premium upsell sheet shown when a free user tries to add a 3rd custom analysis -->
+    <string name="profiles_premium_title">अनेक सानुकूल प्रोफाइल</string>
+    <string name="profiles_premium_desc">Premium सह तू हव्या तितक्या सानुकूल विश्लेषण प्रोफाइल बनवू शकतोस. उदाहरणार्थ एक खेळासाठी, एक कामासाठी, एक कुटुंबासाठी. प्रत्येक प्रोफाइल तुझ्या डायरी नोंदींचे स्वतःच्या फोकसने विश्लेषण करते.</string>
+    <string name="profiles_benefit_many">हव्या तितक्या वैयक्तिक प्रोफाईल तयार कर</string>
+    <string name="profiles_benefit_switch">कधीही फोकसमध्ये बदल कर</string>
+    <string name="profiles_benefit_named">प्रत्येक प्रोफाइलला स्वतःचे नाव दे</string>
+
+    <!-- ════════════════════════════════════════════════════════════════════
+         SETTINGS SCREEN
+         ════════════════════════════════════════════════════════════════════ -->
+    <string name="settings_title">सेटिंग्ज</string>
+    <string name="settings_account">खाते</string>
+    <string name="settings_sign_out">साइन आउट</string>
+    <string name="settings_last_sync">शेवटची Sync: %1$s</string>
+    <string name="settings_entries_auto_loaded">साइन इन केल्यावर नोंदी आपोआप लोड होतात</string>
+    <string name="settings_backup_photos">फोटो बॅकअप करा</string>
+    <string name="settings_backup_videos">व्हिडिओ बॅकअप करा</string>
+    <string name="settings_syncing">बॅकअप होत आहे\u2026</string>
+    <!-- Shown briefly as a confirmation after a successful cloud backup. -->
+    <string name="settings_sync_success">यशस्वीरित्या बॅकअप झाले</string>
+    <!-- Error shown when Google sign-in fails. %1$s = error message from Google (e.g., "Network error"). -->
+    <string name="settings_signin_failed">साइन इन अयशस्वी: <xliff:g id="error_reason" example="Network error">%1$s</xliff:g></string>
+    <string name="settings_backup_entries">दैनंदिनी नोंदी बॅकअप करा</string>
+    <string name="settings_not_signed_in">साइन इन नाही</string>
+    <string name="settings_entries_loaded_on_sign_in">साइन इन केल्यावर बॅकअप नोंदी लोड होतात</string>
+    <string name="settings_sign_in_google">Google ने साइन इन करा</string>
+    <string name="settings_appearance">देखावा</string>
+    <string name="settings_dark_mode">डार्क मोड</string>
+    <string name="settings_dark_active">सक्रिय</string>
+    <string name="settings_dark_off">बंद</string>
+    <string name="settings_follow_system">सिस्टम फॉलो करा</string>
+    <string name="settings_automatic">आपोआप</string>
+    <string name="settings_sounds_haptics_section">आवाज / हॅप्टिक्स</string>
+    <string name="settings_app_sounds">App आवाज</string>
+    <string name="settings_sounds_on">आवाज चालू आहे</string>
+    <string name="settings_sounds_off">आवाज बंद आहे</string>
+    <string name="settings_haptics">हॅप्टिक्स</string>
+    <string name="settings_haptics_on">हॅप्टिक्स चालू आहे</string>
+    <string name="settings_haptics_off">हॅप्टिक्स बंद आहे</string>
+    <string name="settings_voices">आवाज</string>
+    <string name="settings_tts_on">वाचन चालू आहे</string>
+    <string name="settings_tts_off">वाचन बंद आहे</string>
+    <string name="settings_voice_select">आवाज निवडा</string>
+    <string name="settings_voice_choose">आवाज निवडा</string>
+    <string name="settings_reminder_section">स्मरणपत्र / आढावा</string>
+    <string name="settings_daily_reminder">दैनंदिन स्मरणपत्र</string>
+    <string name="settings_reminder_time" formatted="false">वेळ: %02d:%02d</string>
+    <string name="settings_reminder_desc">दैनंदिनी लिहिण्याची आठवण करून देते</string>
+    <string name="settings_weekly_review">साप्ताहिक आढावा</string>
+    <string name="settings_weekly_review_on">स्मरणपत्र चालू</string>
+    <string name="settings_weekly_review_off">रविवारी दुपारी 3:00 वाजता</string>
+    <string name="settings_monthly_review">मासिक आढावा</string>
+    <string name="settings_monthly_review_on">स्मरणपत्र चालू</string>
+    <string name="settings_yearly_review">वार्षिक आढावा</string>
+    <string name="settings_yearly_review_on">स्मरणपत्र चालू</string>
+    <string name="settings_timezone">वेळ क्षेत्र: %1$s</string>
+    <string name="settings_security">सुरक्षा</string>
+    <string name="settings_fingerprint">बोटांचा ठसा</string>
+    <string name="settings_fingerprint_desc">सुरू होताना App अनलॉक करा</string>
+    <string name="settings_auto_lock">पार्श्वभूमीत 60 सेकंदांनंतर आपोआप लॉक होते</string>
+    <string name="settings_ai_profiles_title">AI डॅशबोर्ड प्रोफाइल:</string>
+    <string name="settings_ai_automations">AI स्वयंचलन</string>
+    <string name="settings_custom_prompt_placeholder">उदा. माझ्या झोपेची गुणवत्ता आणि ताण पातळीवर लक्ष केंद्रित करा. माझ्या आहारातील नमुने दाखवा. आठवड्यात माझी मनस्थिती कशी बदलते याचे विश्लेषण करा. मी सर्वात उत्पादक कधी असतो आणि मला काय अडवते ते शोधा.\n\nतुमचा फोकस जितका सविस्तर तितके परिणाम चांगले.</string>
+    <string name="churn_google_play_redirect">तुमचे सदस्यत्व व्यवस्थापित करण्यासाठी तुम्हाला Google Play वर पाठवले जाईल. तुमच्या दैनंदिनी नोंदी अर्थातच सुरक्षित राहतील.</string>
+    <string name="splash_subtitle">तुमची बुद्धिमान दैनंदिनी</string>
+    <string name="biometric_subtitle">तुमची दैनंदिनी अनलॉक करा</string>
+    <!-- Shown in the biometric lock screen below the app name. Hint to authenticate. -->
+    <string name="biometric_prompt_subtitle">अनलॉक करण्यासाठी प्रमाणीकरण करा</string>
+    <!-- Button in the biometric lock screen to trigger the fingerprint prompt. Keep short. -->
+    <string name="biometric_unlock_button">अनलॉक</string>
+    <string name="settings_text_improvement">मजकूर सुधारणे</string>
+    <string name="settings_text_improvement_desc">डीफॉल्टनुसार सक्षम करा</string>
+    <string name="settings_dashboard_section">डॅशबोर्ड</string>
+    <string name="settings_auto_update">नवीन नोंदीवर आपोआप अद्यतनित करा</string>
+    <string name="settings_premium_section">Premium</string>
+    <string name="settings_premium_lifetime">Lifetime प्रवेश सक्रिय</string>
+    <string name="settings_premium_active">Premium सदस्यत्व सक्रिय</string>
+    <string name="settings_premium_lifetime_desc">एकदा खरेदी, सर्व वैशिष्ट्ये कायमस्वरूपी अनलॉक.</string>
+    <string name="settings_premium_desc">सर्व वैशिष्ट्ये अनलॉक, दररोज AI, PDF निर्यात आणि बरेच काही.</string>
+    <string name="settings_manage_subscription">सदस्यत्व व्यवस्थापित करा</string>
+    <string name="settings_export">निर्यात करा</string>
+    <string name="settings_export_pdf_desc">सर्व दैनंदिनी नोंदी आणि फोटो PDF दस्तऐवज म्हणून निर्यात करा.</string>
+
+    <!-- Premium feature list (settings) -->
+    <string name="settings_premium_feature_improve">दररोज AI मजकूर सुधारणा</string>
+    <string name="settings_premium_feature_improve_desc">AI तुमच्या विनंतीनुसार नोंदी सुधारतो.</string>
+    <string name="settings_premium_feature_dashboard">दररोज डॅशबोर्ड विश्लेषण</string>
+    <string name="settings_premium_feature_dashboard_desc">तुमचा डॅशबोर्ड तुमच्या नोंदींसोबत वाढतो.</string>
+    <string name="settings_premium_feature_5_perspectives">सर्व 4 पूर्वनिर्धारित AI प्रोफाइल</string>
+    <string name="settings_premium_feature_5_perspectives_desc">सारांशापासून आत्मज्ञानापर्यंत</string>
+    <string name="settings_premium_feature_reviews">साप्ताहिक, मासिक आणि वार्षिक आढावे</string>
+    <string name="settings_premium_feature_reviews_desc">AI तुमची गोष्ट सांगतो</string>
+    <string name="settings_premium_feature_patterns">नमुना ओळख</string>
+    <string name="settings_premium_feature_patterns_desc">AI तुमच्या नोंदींमधील नमुने आणि संबंध दृश्यमान करू शकतो</string>
+    <string name="settings_premium_feature_pdf">फोटोसह PDF निर्यात</string>
+    <string name="settings_premium_feature_pdf_desc">सर्व दैनंदिनी नोंदी फोटोसह दस्तऐवज म्हणून</string>
+    <string name="settings_premium_feature_voice">अधिक अचूक वाक् ओळख</string>
+    <string name="settings_premium_feature_voice_desc">तुमच्या वाक् नोंदींसाठी उच्च गुणवत्ता</string>
+    <string name="settings_premium_feature_profiles">संख्या-मर्यादेविना स्वतःचे AI प्रोफाइल</string>
+    <string name="settings_premium_feature_profiles_desc">अनेक विश्लेषण फोकस एकत्र</string>
+    <string name="settings_unlock_premium">Premium अनलॉक करा</string>
+    <!-- Export dialog -->
+    <!-- AlertDialog title shown before PDF export. Max 25 chars — fits in dialog header. -->
+    <string name="settings_export_dialog_title">PDF निर्यात</string>
+    <string name="settings_export_what">काय निर्यात करायचे?</string>
+    <string name="settings_export_entries">दैनंदिनी नोंदी</string>
+    <string name="settings_export_photos">फोटो</string>
+    <string name="settings_export_action">निर्यात करा</string>
+    <string name="settings_exporting">निर्यात होत आहे\u2026</string>
+    <!-- Export error shown when the user has no journal entries yet. -->
+    <string name="settings_export_no_entries">कोणत्याही नोंदी उपलब्ध नाहीत</string>
+    <string name="settings_export_entries_photos_pdf">दैनंदिनी नोंदी आणि फोटो PDF म्हणून निर्यात करा</string>
+    <string name="settings_export_data">डेटा निर्यात करा</string>
+    <string name="settings_export_entries_photos_pdf_full">फोटोसह दैनंदिनी नोंदी PDF म्हणून निर्यात करा</string>
+    <!-- Feedback -->
+    <string name="settings_feedback">अभिप्राय</string>
+    <string name="settings_feedback_desc">सूचना, इच्छा, सुधारणा, बग नोंदवा 🐞</string>
+    <string name="settings_feedback_send">अभिप्राय पाठवा</string>
+    <string name="settings_feedback_sent">यशस्वीरित्या पाठवले</string>
+    <string name="settings_feedback_dialog_title">अभिप्राय पाठवा</string>
+    <string name="settings_feedback_dialog_desc">विकासकांना तुमचा संदेश — आम्ही प्रत्येक संदेश वाचतो आणि शक्य तितक्या लवकर उत्तर देतो.</string>
+    <string name="settings_feedback_placeholder">आम्हाला तुमचा अभिप्राय लिहा\u2026</string>
+    <string name="settings_feedback_sending">पाठवत आहे\u2026</string>
+    <string name="settings_feedback_sign_in_first">कृपया प्रथम Google ने साइन इन करा</string>
+    <string name="settings_feedback_allow_gmail">कृपया Gmail प्रवेश द्या आणि पुन्हा प्रयत्न करा.</string>
+    <string name="settings_feedback_token_error">Token त्रुटी: %1$s</string>
+    <string name="settings_feedback_subject">Best Journal बद्दल अभिप्राय</string>
+    <string name="settings_feedback_no_error_body">त्रुटी प्रतिसाद मिळाला नाही</string>
+    <string name="settings_feedback_read_error">त्रुटी प्रतिसाद वाचता आला नाही</string>
+    <string name="settings_feedback_api_error">Gmail त्रुटी %1$d: %2$s</string>
+    <string name="settings_feedback_unknown_error">अज्ञात त्रुटी</string>
+    <string name="settings_feedback_confirm_subject">Best Journal ला तुमचा अभिप्राय</string>
+    <string name="settings_feedback_confirm_body">हा संदेश तू विकसकाला पाठवलास.\nतो तुला वैयक्तिकरीत्या उत्तर देईल.\n\n--- तुझा संदेश ---\n%1$s\n\nधन्यवाद,\nDEV.FRANK</string>
+    <string name="settings_feedback_from">अभिप्राय: %1$s</string>
+    <string name="action_send">पाठवा</string>
+    <!-- Drive errors -->
+    <string name="drive_consent_needed">Drive प्रवेश मंजूर करणे आवश्यक आहे</string>
+    <string name="drive_not_signed_in">साइन इन नाही</string>
+    <string name="drive_no_backup">कोणताही बॅकअप आढळला नाही</string>
+    <string name="drive_backup_disabled">गोपनीयता सेटिंग्जमध्ये Google Drive बॅकअप बंद आहे</string>
+    <!-- Achievements -->
+    <string name="achievements_title">Achievements</string>
+    <string name="achievements_counter">%1$d पैकी %2$d अनलॉक</string>
+    <string name="achievements_unlocked_at">%1$s रोजी अनलॉक</string>
+    <!-- About -->
+    <string name="settings_about">App बद्दल</string>
+    <string name="settings_about_version">Best Journal V0.21.9</string>
+    <string name="settings_about_desc">तुमची वैयक्तिक AI दैनंदिनी</string>
+    <!-- Sign-out dialog -->
+    <string name="settings_sign_out_confirm">साइन आउट करायचे का?</string>
+    <string name="settings_sign_out_body">तुम्हाला खरोखर साइन आउट करायचे आहे का?</string>
+    <!-- Toggle labels -->
+    <string name="toggle_light">उजळ</string>
+    <string name="toggle_dark">गडद</string>
+    <string name="toggle_sound_on">आवाज चालू</string>
+    <string name="toggle_sound_off">आवाज बंद</string>
+    <string name="toggle_haptic_on">हॅप्टिक चालू</string>
+    <string name="toggle_haptic_off">हॅप्टिक बंद</string>
+    <string name="toggle_voice_on">आवाज चालू</string>
+    <string name="toggle_voice_off">आवाज बंद</string>
+    <string name="toggle_sun">सूर्य</string>
+    <string name="toggle_moon">चंद्र</string>
+    <!-- Day names -->
+    <string name="day_monday">सोमवार</string>
+    <string name="day_tuesday">मंगळवार</string>
+    <string name="day_wednesday">बुधवार</string>
+    <string name="day_thursday">गुरुवार</string>
+    <string name="day_friday">शुक्रवार</string>
+    <string name="day_saturday">शनिवार</string>
+    <string name="day_sunday">रविवार</string>
+    <!-- Short weekday labels (2 chars) for compact weekday picker. Monday to Sunday. -->
+    <string name="day_abbrev_mon">सो</string>
+    <string name="day_abbrev_tue">मं</string>
+    <string name="day_abbrev_wed">बु</string>
+    <string name="day_abbrev_thu">गु</string>
+    <string name="day_abbrev_fri">शु</string>
+    <string name="day_abbrev_sat">श</string>
+    <string name="day_abbrev_sun">र</string>
+    <!-- Array of short weekday labels for LazyRow / weekday pickers. Order: Mon-Sun. -->
+    <string-array name="weekday_abbreviations">
+        <item>@string/day_abbrev_mon</item>
+        <item>@string/day_abbrev_tue</item>
+        <item>@string/day_abbrev_wed</item>
+        <item>@string/day_abbrev_thu</item>
+        <item>@string/day_abbrev_fri</item>
+        <item>@string/day_abbrev_sat</item>
+        <item>@string/day_abbrev_sun</item>
+    </string-array>
+    <!-- Review schedule dialog -->
+    <string name="settings_reminder_when">तुम्हाला केव्हा स्मरण करून द्यायचे?</string>
+    <string name="settings_review_when">तुमचा आढावा कधी यावा?</string>
+    <string name="settings_review_weekday">आठवड्याचा दिवस</string>
+    <string name="settings_review_time">वेळ</string>
+    <string name="settings_monthly_review_off">महिन्याच्या शेवटच्या दिवशी दुपारी 3:00 वाजता</string>
+    <string name="settings_yearly_review_off">वर्षाच्या शेवटच्या दिवशी दुपारी 3:00 वाजता</string>
+    <string name="achievement_secret">गुप्त</string>
+    <string name="paywall_exit_bonus_days">+ %1$d दिवस अतिरिक्त चाचणी वेळ</string>
+    <!-- Splash screen start button -->
+    <string name="splash_start">सुरू करा</string>
+    <!-- FreeLimitIndicator: remaining uses counter -->
+    <!-- %1$d = number of remaining AI uses this week -->
+    <string name="limit_remaining"><xliff:g id="count" example="3">%1$d</xliff:g> शिल्लक</string>
+    <!-- FreeLimitIndicator: usage counter (X of Y used) -->
+    <!-- %1$d = used count, %2$d = max count -->
+    <string name="limit_used_of_max"><xliff:g id="used" example="3">%1$d</xliff:g> पैकी <xliff:g id="max" example="5">%2$d</xliff:g> वापरले</string>
+    <!-- ChurnFlowDialog: retention discount badge -->
+    <!-- %1$d = discount percentage -->
+    <string name="churn_discount_badge"><xliff:g id="percent" example="50">%1$d</xliff:g>%% बचत</string>
+    <!-- AI prompt language instruction — automatically uses device language -->
+    <string name="ai_prompt_language_style">सोपे, स्पष्ट. कोणते परदेशी शब्द नाहीत.</string>
+    <string name="ai_prompt_language_override"></string>
+    <!-- Final response-language instruction appended to every AI prompt. -->
+    <string name="ai_prompt_response_language">उत्तराची भाषा: पूर्णपणे मराठीत उत्तर द्या. सर्व मजकूर आणि शीर्षके मराठीत असणे आवश्यक आहे, इतर कोणतीही भाषा नाही.</string>
+    <string name="ai_prompt_no_dates_rule">TTS-वाचनास अनुकूल (अनिवार्य — दृश्य मजकुरात तारीख-बंदी):
+सर्व दृश्य मजकूर-क्षेत्रांत (वर्णन, स्पष्टीकरण, सारांश, समग्र विश्लेषण) तुम्ही कोणत्याही तारखा वापरू नका — \"3.4.\", \"23.04.\", \"28.4.\", \"24.04.\", \"30.4.\" किंवा \"3 एप्रिलची नोंद\", \"23.04. रोजी\", \"28.4. ची\" अशा ठरावीक नोंद-तारखांचे संदर्भही नकोत. हे मजकूर वापरकर्त्याला वाचून दाखवले जातात — वाचून दाखवताना तारखांची मालिका अनैसर्गिक वाटते आणि निष्कर्षाचा प्रवाह तोडते.
+
+त्याऐवजी फक्त शुद्ध निष्कर्ष मांडा:
+- चूक: \"3.4., 28.4. आणि 23.4. च्या नोंदी दर्शवतात की उशिरा झोपल्याने तुमची जैविक लय बिघडते.\"
+- बरोबर: \"उशिरा झोपणे तुमची जैविक लय पद्धतशीरपणे बिघडवते.\"
+- चूक: \"30 तारखेची नोंद दर्शवते की तुमचा इनबॉक्स 28.4. पासून भरून वाहत आहे आणि तुमचा वेळ खातो.\"
+- बरोबर: \"तुमचा इनबॉक्स कित्येक दिवसांपासून भरून वाहत आहे आणि तुमचा वेळ खातो.\"
+- चूक: \"24.04. च्या आवराआवरीनंतर तुम्हाला रोजच्या जीवनात अधिक स्पष्टता जाणवते.\"
+- बरोबर: \"हालचालीमुळे तुम्हाला रोजच्या जीवनात स्पष्टपणे अधिक स्पष्टता मिळते.\"
+
+आशयात्मक निष्कर्ष राहतो — फक्त ठरावीक तारीख-संदर्भ वगळले जातात. तुम्ही सामान्य कालिक संदर्भ वापरू शकता (\"पुनरावृत्त\", \"अलीकडे\", \"कित्येक दिवसांत\"). तारखा फक्त \"herleitung\" क्षेत्रात असाव्यात (स्रोत-नोंद, अंतर्गत वापरली जाते, दाखवली जात नाही).</string>
+    <string name="ai_prompt_rerank_system">तुम्ही एक प्रोफाइल री-रँकर आहात. तुम्हाला डॅशबोर्ड-विश्लेषणातील 5 मुख्य उपायांचा JSON अ‍ॅरे, वापरकर्त्याचा प्रोफाइल-केंद्रबिंदू आणि मूळ दैनंदिनी नोंदी मिळतात.
+
+तुमचे कार्य 3 टप्प्यांत:
+1) 5 उपाय अशा क्रमाने लावा की प्रोफाइल-केंद्रबिंदूशी सर्वांत स्पष्ट संबंध असलेले प्रथम येतील.
+2) 5 पैकी जास्तीत जास्त 2 उपायांचा प्रोफाइल-केंद्रबिंदूशी आशयात्मक संबंध नाही का ते तपासा. असे असल्यास, दैनंदिनी नोंदींवरून काढलेल्या अधिक प्रोफाइल-संबंधित उपायांनी ते बदला. प्रत्येक उपायाची तीच JSON रचना पाळा (titel, beschreibung, erklaerung).
+3) प्रोफाइलचा संबंध समानार्थी शब्द आणि विषयात्मक जवळिकीने विविध प्रकारे व्यक्त करा, प्रोफाइल-शब्दांच्या यांत्रिक पुनरावृत्तीने नव्हे. संबंध जाणवला पाहिजे, शब्दशः नको.
+
+महत्त्वाचे:
+- शेवटी नेमक्या 5 नोंदी परत द्या.
+- खरा प्रोफाइल-संबंध नसेल तरच बदल करा — आधीच चांगली जुळणी असल्यास अ‍ॅरे फक्त क्रमाने लावा, काहीही बदलू नका.
+- प्रत्येक नोंदीची JSON रचना कायम ठेवा (तेच की: titel, beschreibung, erklaerung).
+- भाषा मराठी, डॅश नकोत, beschreibung 13-21 शब्द.
+- कोणतेही वैद्यकीय, कायदेशीर किंवा आर्थिक निदान अथवा बंधनकारक सल्ले देऊ नका; अशा विषयांसाठी तटस्थपणे तज्ज्ञ व्यक्तींकडे संदर्भ द्या.
+
+TTS-वाचनास अनुकूल (अनिवार्य — तारीख-बंदी):
+beschreibung आणि erklaerung मध्ये कोणत्याही तारखा वापरू नका (\"3.4.\", \"23.04.\", \"30 तारखेची नोंद\"). हे मजकूर वाचून दाखवले जातात — तारखांची मालिका अनैसर्गिक वाटते. ठरावीक नोंद-तारखांविना शुद्ध निष्कर्ष मांडा. उदाहरणे:
+- चूक: \"3.4. आणि 23.04. च्या नोंदी दर्शवतात की तुमची जैविक लय बिघडते.\"
+- बरोबर: \"उशिरा झोपणे तुमची जैविक लय पद्धतशीरपणे बिघडवते.\"
+सामान्य कालिक संदर्भ चालतात (\"पुनरावृत्त\", \"अलीकडे\", \"कित्येक दिवसांत\"), तारखा चालत नाहीत.
+
+आउटपुट स्वरूप:
+- फक्त एक JSON अ‍ॅरे (मुळाच्या पातळीवर चौकोनी कंस).
+- Markdown बॅकटिक नकोत, आधी/नंतर मजकूर नको.
+- थेट [ ने सुरुवात करा आणि ] ने समाप्त करा.</string>
+    <string name="ai_prompt_rerank_user_focus_header">कोअर फोकस:</string>
+    <string name="ai_prompt_rerank_actions_header">विश्लेषण करण्यासाठी कृती:</string>
+    <string name="ai_prompt_rerank_entries_header">क्रमवारी लावण्यासाठी नोंदी:</string>
+    <string name="ai_prompt_rerank_instruction">फक्त JSON अॅरे परत करा जसे: [0, 2, 1] — संबंधिततेनुसार सर्वात जास्त ते सर्वात कमी क्रमवारी लावलेल्या इंडेक्ससह. कोणताही अतिरिक्त मजकूर नाही.</string>
+    <string name="retro_month_more_entries">आणि %1$d अधिक नोंदी</string>
+    <string name="retro_month_entries_header">या महिन्यातील नोंदी</string>
+    <string name="dashboard_active_profile_label">सक्रिय प्रोफाइल: %1$s</string>
+    <string name="dashboard_profile_summary">प्रोफाइल सारांश</string>
+    <string name="dashboard_profile_entropy">प्रोफाइल एंट्रॉपी</string>
+    <string name="dashboard_profile_insight">प्रोफाइल अंतर्दृष्टी</string>
+    <string name="dashboard_profile_goals">प्रोफाइल उद्दिष्टे</string>
+    <string name="dashboard_profile_focus_summary">फोकस सारांश</string>
+    <string name="dashboard_profile_focus_entropy">फोकस एंट्रॉपी</string>
+    <string name="dashboard_profile_focus_insight">फोकस अंतर्दृष्टी</string>
+    <string name="dashboard_profile_focus_goals">फोकस उद्दिष्टे</string>
+    <string name="dashboard_empty_custom_title">कोणतेही कस्टम डेटा नाही</string>
+    <string name="dashboard_empty_custom_message">तुमचे कस्टम प्रोफाइल कॉन्फिगर करा आणि नोंदी जोडण्यास सुरुवात करा.</string>
+
+    <!-- ════════════════════════════════════════════════════════════════════
+         JSON-KEYS for AI response (Dashboard).
+         ════════════════════════════════════════════════════════════════════ -->
+    <!-- Top-level JSON keys -->
+    <string name="json_key_overall_analysis">samagra_vishleshan</string>
+    <string name="json_key_top_actions">mukhya_kadam</string>
+    <string name="json_key_categories">shreniyaan</string>
+    <string name="json_key_heading_top5">shirshak_top5</string>
+    <string name="json_key_heading_analysis">shirshak_vishleshan</string>
+    <string name="json_key_heading_results">shirshak_natije</string>
+    <string name="json_key_progress">pragati</string>
+    <string name="json_key_overall_entropy">samagra_entropy</string>
+    <string name="json_key_trend">rujhan</string>
+    <!-- Category-level JSON keys -->
+    <string name="json_key_category_name">naam</string>
+    <string name="json_key_category_icon">aikan</string>
+    <string name="json_key_category_color">rang</string>
+    <string name="json_key_category_entropy_level">entropy_star</string>
+    <string name="json_key_category_summary">saaraansh</string>
+    <string name="json_key_category_advices">sujhaav</string>
+    <!-- Item-level JSON keys (advice, action, progress) -->
+    <string name="json_key_item_title">shirshak</string>
+    <string name="json_key_item_description">vivaran</string>
+    <string name="json_key_item_explanation">vyaakhya</string>
+    <string name="json_key_item_reference">sandarbh</string>
+    <string name="json_key_item_priority">prathamikta</string>
+    <string name="json_key_item_connection">sambandh</string>
+    <string name="json_key_item_derivation">vyutpatti</string>
+    <!-- Derivation-level JSON keys -->
+    <string name="json_key_derivation_date">tareekh</string>
+    <string name="json_key_derivation_summary">saaraansh</string>
+    <!-- Enum values (priorities) -->
+    <string name="json_value_priority_high">uchch</string>
+    <string name="json_value_priority_medium">madhyam</string>
+    <string name="json_value_priority_low">kam</string>
+    <string name="ai_prompt_fresh_summary">नवीन सारांश — एक संपूर्ण नवीन, स्वतंत्र विश्लेषण तयार करा.</string>
+    <string name="ai_prompt_fresh_insight">नवीन आत्म-ज्ञान विश्लेषण — एक संपूर्ण नवीन, स्वतंत्र विश्लेषण तयार करा.</string>
+    <string name="ai_prompt_fresh_goals">नवीन लक्ष्य विश्लेषण — एक संपूर्ण नवीन, स्वतंत्र विश्लेषण तयार करा.</string>
+    <string name="ai_prompt_fresh_custom">नवीन वैयक्तिक विश्लेषण — वापरकर्त्याच्या फोकसवर आधारित एक संपूर्ण नवीन, स्वतंत्र विश्लेषण तयार करा.</string>
+    <string name="ai_prompt_fresh_default">नवीन विश्लेषण — एक संपूर्ण नवीन, स्वतंत्र विश्लेषण तयार करा.</string>
+    <string name="ai_prompt_check_summary">अनिवार्य तपासणी: तुम्हाला %1$d नोंदी मिळाल्या आहेत. प्रत्येक नोंद सारांशात आणि किमान एका विषयात असणे आवश्यक आहे.</string>
+    <string name="ai_prompt_check_insight">अनिवार्य तपासणी: तुम्हाला %1$d नोंदी मिळाल्या आहेत. विचारांचे नमुने, भावना, विश्वास आणि वैयक्तिक शक्तींसाठी प्रत्येक नोंद तपासणे आवश्यक आहे.</string>
+    <string name="ai_prompt_check_goals">अनिवार्य तपासणी: तुम्हाला %1$d नोंदी मिळाल्या आहेत. लक्ष्यांसाठी प्रत्येक नोंद तपासणे आवश्यक आहे.</string>
+    <string name="ai_prompt_check_custom">अनिवार्य तपासणी: तुम्हाला %1$d नोंदी मिळाल्या आहेत. वापरकर्त्याच्या फोकससाठी प्रत्येक नोंद तपासणे आवश्यक आहे.</string>
+    <string name="ai_prompt_check_default">अनिवार्य तपासणी: तुम्हाला %1$d नोंदी मिळाल्या आहेत. प्रत्येक नोंद विश्लेषणात असणे आवश्यक आहे.</string>
+
+    <!-- ═══════════════════════════════════════════════════════════════════════
+         Retrospective Prompts (Weekly / Monthly / Yearly)
+         ═══════════════════════════════════════════════════════════════════════ -->
+
+    <!-- Weekly retrospective prompt blocks -->
+    <string name="ai_retro_week_intro">तुम्ही एक कथाकार आहात जो दैनंदिनी नोंदींमधून नैसर्गिक, सहज वाचता येण्याजोगा साप्ताहिक आढावा लिहितो.</string>
+    <string name="ai_retro_week_task">कार्य: खालील दैनंदिनी नोंदींचा एक संरचित साप्ताहिक आढावा तयार करा.</string>
+    <string name="ai_retro_week_format">स्वरूप (कृपया तंतोतंत पाळा):\n1. 3-5 छोट्या मुद्द्यांचा सारांश सुरू करा, प्रत्येकाच्या सुरुवातीला \"• \"\n2. मग एक रिकामी ओळ\n3. मग 2-4 विषयानुसार विभागांमध्ये मजकूर\n4. प्रत्येक विभाग या स्वरूपात शीर्षकाने सुरू होतो: [विषय] (उदा. [नवीन ओळखी] किंवा [छोट्या विजय])\n5. शीर्षकानंतर विभागाचा कथन मजकूर\n6. विभाग आठवड्याच्या सुरुवातीपासून शेवटापर्यंत कालानुक्रमे</string>
+    <string name="ai_retro_week_rules">नियम:\n- तुम्ही स्वरूपात लिहा (वैयक्तिक संबोधनाचे भाषिक समतुल्य)\n- कोणतेही संबोधन नाही, कोणता अभिवादन नाही — थेट कथनात\n- विभागांमध्ये चांगल्या संक्रमणांसह प्रवाही शैली\n- शीर्षके लहान आणि विषयानुरूप असावीत (2-4 शब्द)\n- ठोस घटना, भावना आणि अंतर्दृष्टींचा उल्लेख करा\n- दैनंदिन गोष्टींचा उल्लेख फक्त महत्त्वाचे असेल तेव्हाच\n- सकारात्मक गोष्टी ठळक करा — पण आव्हाने लपवू नका. कठीण क्षणांमधून मिळालेल्या अंतर्दृष्टी महत्त्वाच्या आहेत\n- उबदार आणि वैयक्तिक, पण अतिशयोक्ती नाही\n- किमान 200 शब्द\n- दीर्घ डॅश (—) वापरू नका. त्याऐवजी स्वल्पविराम किंवा छोटी वाक्ये वापरा.</string>
+    <!-- Section header that introduces the journal entries block. -->
+    <string name="ai_retro_week_entries_header">आठवड्याच्या नोंदी:</string>
+    <!-- Title-generation prompt after a weekly review is ready. %1$s = target language, %2$s = preview of the generated review. -->
+    <string name="ai_retro_week_title_prompt">या साप्ताहिक आढाव्याच्या आधारावर, <xliff:g id="lang" example="Deutsch">%1$s</xliff:g> मध्ये एक छोटा, भावनिक शीर्षक (जास्तीत जास्त 6 शब्द) द्या.\nफक्त शीर्षक द्या, बाकी काही नाही. कोणते अवतरण चिन्ह नाही. डॅश (—) नाही.\n\nआढावा:\n<xliff:g id="summary_preview" example="Die Woche begann…">%2$s</xliff:g></string>
+
+    <!-- Monthly retrospective prompt blocks -->
+    <string name="ai_retro_month_intro">तुम्ही एक कथाकार आहात जो साप्ताहिक आढाव्यांमधून नैसर्गिक, सहज वाचता येण्याजोगा मासिक आढावा लिहितो.</string>
+    <!-- %1$s = month name, %2$d = year. -->
+    <string name="ai_retro_month_task">कार्य: खालील साप्ताहिक आढाव्यांचा <xliff:g id="month" example="April">%1$s</xliff:g> <xliff:g id="year" example="2026">%2$d</xliff:g> साठी एक संरचित मासिक आढावा तयार करा.</string>
+    <string name="ai_retro_month_format">स्वरूप (कृपया तंतोतंत पाळा):\n1. 4-6 छोट्या मुद्द्यांचा सारांश सुरू करा, प्रत्येकाच्या सुरुवातीला \"• \"\n2. मग एक रिकामी ओळ\n3. मग 3-5 विषयानुसार विभागांमध्ये मजकूर\n4. प्रत्येक विभाग या स्वरूपात शीर्षकाने सुरू होतो: [विषय] (उदा. [नवीन सुरुवात] किंवा [शांत अंतर्दृष्टी])\n5. शीर्षकानंतर विभागाचा कथन मजकूर\n6. विभाग महिन्याच्या सुरुवातीपासून शेवटापर्यंत कालानुक्रमे</string>
+    <string name="ai_retro_month_rules">नियम:\n- तुम्ही स्वरूपात लिहा (वैयक्तिक संबोधनाचे भाषिक समतुल्य)\n- कोणतेही संबोधन नाही, कोणता अभिवादन नाही — थेट कथनात\n- विभागांमध्ये चांगल्या संक्रमणांसह प्रवाही शैली\n- शीर्षके लहान आणि विषयानुरूप असावीत (2-4 शब्द)\n- आठवड्यांमधील संबंध दाखवा — विकास आणि धागे दाखवा\n- आढावे एकामागून एक फक्त पुनरावृत्ती नाही, विषयानुसार जोडा\n- दैनंदिन गोष्टींचा उल्लेख फक्त महत्त्वाचे असेल तेव्हाच\n- सकारात्मक गोष्टी ठळक करा — पण आव्हाने लपवू नका\n- उबदार आणि वैयक्तिक, पण अतिशयोक्ती नाही\n- किमान 300 शब्द\n- दीर्घ डॅश (—) वापरू नका. त्याऐवजी स्वल्पविराम किंवा छोटी वाक्ये वापरा.</string>
+    <string name="ai_retro_month_entries_header">साप्ताहिक आढावे:</string>
+    <!-- %1$s = target language, %2$s = preview of the generated review. -->
+    <string name="ai_retro_month_title_prompt">या मासिक आढाव्याच्या आधारावर, <xliff:g id="lang" example="Deutsch">%1$s</xliff:g> मध्ये एक छोटा, भावनिक शीर्षक (जास्तीत जास्त 6 शब्द) द्या.\nफक्त शीर्षक द्या, बाकी काही नाही. कोणते अवतरण चिन्ह नाही. डॅश (—) नाही.\n\nआढावा:\n<xliff:g id="summary_preview" example="April brachte…">%2$s</xliff:g></string>
+
+    <!-- Yearly retrospective prompt blocks -->
+    <string name="ai_retro_year_intro">तुम्ही एक कथाकार आहात जो मासिक आढाव्यांमधून नैसर्गिक, सहज वाचता येण्याजोगा वार्षिक आढावा लिहितो.</string>
+    <!-- %1$d = year. -->
+    <string name="ai_retro_year_task">कार्य: खालील मासिक आढाव्यांचा <xliff:g id="year" example="2026">%1$d</xliff:g> साठी एक संरचित वार्षिक आढावा तयार करा.</string>
+    <string name="ai_retro_year_format">स्वरूप (कृपया तंतोतंत पाळा):\n1. 5-8 छोट्या मुद्द्यांचा सारांश सुरू करा, प्रत्येकाच्या सुरुवातीला \"• \"\n2. मग एक रिकामी ओळ\n3. मग 4-6 विषयानुसार विभागांमध्ये मजकूर\n4. प्रत्येक विभाग या स्वरूपात शीर्षकाने सुरू होतो: [विषय] (उदा. [नवीन सुरुवातीचा वसंत] किंवा [शांतता शोधणे])\n5. शीर्षकानंतर विभागाचा कथन मजकूर\n6. विभाग वर्षाच्या सुरुवातीपासून शेवटापर्यंत कालानुक्रमे</string>
+    <string name="ai_retro_year_rules">नियम:\n- तुम्ही स्वरूपात लिहा (वैयक्तिक संबोधनाचे भाषिक समतुल्य)\n- कोणतेही संबोधन नाही, कोणता अभिवादन नाही — थेट कथनात\n- विभागांमध्ये चांगल्या संक्रमणांसह प्रवाही शैली\n- शीर्षके लहान आणि विषयानुरूप असावीत (2-5 शब्द)\n- महिन्यांमधील संबंध दाखवा — वर्षभरातील विकास दाखवा\n- वर्षातील मोठ्या विषयांना ओळखा आणि त्यांत घटना सामावा\n- दैनंदिन गोष्टींचा उल्लेख फक्त महत्त्वाचे असेल तेव्हाच\n- सकारात्मक गोष्टी ठळक करा — पण आव्हाने लपवू नका\n- भविष्याकडे पाहणाऱ्या विचाराने समाप्त करा\n- उबदार आणि वैयक्तिक, पण अतिशयोक्ती नाही\n- किमान 400 शब्द\n- दीर्घ डॅश (—) वापरू नका. त्याऐवजी स्वल्पविराम किंवा छोटी वाक्ये वापरा.</string>
+    <string name="ai_retro_year_entries_header">मासिक आढावे:</string>
+    <!-- %1$s = target language, %2$s = preview of the generated review. -->
+    <string name="ai_retro_year_title_prompt">या वार्षिक आढाव्याच्या आधारावर, <xliff:g id="lang" example="Deutsch">%1$s</xliff:g> मध्ये एक छोटा, भावनिक शीर्षक (जास्तीत जास्त 6 शब्द) द्या.\nफक्त शीर्षक द्या, बाकी काही नाही. कोणते अवतरण चिन्ह नाही. डॅश (—) नाही.\n\nआढावा:\n<xliff:g id="summary_preview" example="Das Jahr begann…">%2$s</xliff:g></string>
+
+    <!-- Goals Analysis System Prompt (Profile: Personal Goals) -->
+    <string name="ai_prompt_goals_intro">तुम्ही एक लक्षपूर्वक, प्रेरणादायी लक्ष्य विश्लेषक आणि प्रगती ट्रॅकर आहात.\n\nतुमचे कार्य:\nवापरकर्त्याच्या दैनंदिनी नोंदींचे विश्लेषण करा. सर्व लक्ष्ये, इच्छा, योजना आणि उद्दिष्टे ओळखा — अगदी ओझरते उल्लेखलेले सुद्धा. अनेक नोंदींमध्ये प्रगती मागोवा घ्या. JSON स्वरूपात एक संरचित लक्ष्य डॅशबोर्ड तयार करा.</string>
+    <string name="ai_prompt_goals_definition">व्याख्या — लक्ष्य म्हणजे काय:\nवापरकर्त्याला जे साध्य करायचे, बदलायचे, सुरू करायचे, संपवायचे, सुधारायचे किंवा उभारायचे आहे ते सर्व. अप्रत्यक्ष संकेत सुद्धा मोजतात:\n- थेट: \"मला वजन कमी करायचे आहे\", \"मला दंतवैद्याला फोन करायचा आहे\"\n- अप्रत्यक्ष: \"पुन्हा एकदा धावणे छान होईल\" = फिटनेस लक्ष्य\n- तक्रारी: \"माझी झोप इतकी वाईट आहे\" = झोप सुधारण्याचे अंतर्निहित लक्ष्य\n- स्वप्ने: \"कधीतरी स्वीडनला जायचे\" = दीर्घकालीन प्रवास लक्ष्य</string>
+    <string name="ai_prompt_goals_entry_rules">सर्वोच्च नियम — कोणतीही नोंद वगळू नका:\nतुम्हाला क्रमांकित नोंदी मिळतात (उदा. \"नोंद 1 पैकी 5\").\nतुम्हाला प्रत्येक नोंद वाचणे, विश्लेषण करणे आणि समाविष्ट करणे आवश्यक आहे.\n\nकमी नोंदींसाठी:\n- 1-2 नोंदी: वैयक्तिक लक्ष्ये ओळखा, प्रगती \"अज्ञात\" म्हणून मूल्यांकन करा.\n- 3+ नोंदी: सक्रियपणे प्रगती मागोवा घ्या आणि नमुने ओळखा.</string>
+    <string name="ai_prompt_goals_rules">भाषा-नियम:
+- %1$s
+- प्रेरणादायी आणि प्रामाणिक, प्रगती साजरी करा, काहीही गोंडस बनवू नका.
+- लांब डॅश (—) नकोत. स्वल्पविराम किंवा पूर्णविराम वापरा.
+- आरोग्य किंवा शरीराशी संबंधित उद्दिष्टांत फक्त प्रेरणा द्या; कोणतेही आहार, औषध किंवा उपचार-शिफारशी देऊ नका.
+
+प्रमाण-नियम, प्रत्येक उद्दिष्ट मोजले जाते:
+सर्व उद्दिष्टे ओळखा — अगदी लहानसुद्धा. सारांश करू नका.</string>
+    <string name="ai_prompt_goals_schema">JSON आउटपुट स्कीमा:\n{\n  \"एकूण_विश्लेषण\": \"...\",\n  \"शीर्ष_उपाय\": [...],\n  \"श्रेण्या\": [...]\n}\n\n1) \"एकूण_विश्लेषण\" (15-25 वाक्ये): सर्व लक्ष्ये नाव घ्या, प्रगती ओळखा.\n\n2) \"शीर्ष_उपाय\" (नेमके 5): पुढील पावले.\n   { \"शीर्षक\": \"...\", \"वर्णन\": \"13-21 शब्द\", \"स्पष्टीकरण\": \"5-8 वाक्ये\" }\n\n3) \"श्रेण्या\": लक्ष्य क्षेत्रे.\n   {\n     \"नाव\": \"जास्तीत जास्त 12 अक्षरे\", \"चिन्ह\": \"material_icon\", \"रंग\": \"#HEX\",\n     \"एन्ट्रोपी_स्तर\": 0.0, \"सारांश\": \"3-5 वाक्ये\",\n     \"सल्ले\": [{\n       \"शीर्षक\": \"...\",\n       \"वर्णन\": \"13-21 शब्द. स्थिती: [खुले/प्रगतीत/अडकलेले/साध्य]. पुढील पाऊल: [...].\",\n       \"प्राधान्य\": \"उच्च|मध्यम|कमी\",\n       \"संबंध\": \"...\", \"व्युत्पत्ती\": [{\"तारीख\":\"...\",\"सारांश\":\"...\"}]\n     }]\n   }\n   क्षेत्रे: फिटनेस, आरोग्य, काम, करिअर, वित्त, नाती, प्रकल्प, शिक्षण, झोप, मानसिक स्वास्थ्य, प्रवास, व्यवस्था, सर्जनशीलता\n   प्राधान्य: उच्च=अडकलेले, मध्यम=खुले, कमी=प्रगतीत/साध्य</string>
+    <string name="ai_prompt_goals_output">आउटपुट स्वरूप: फक्त JSON. कोणते बॅकटिक्स नाही. { ने सुरू करा.</string>
+
+    <!-- Self-Insight Analysis System Prompt (Profile: Self-Knowledge) -->
+    <string name="ai_prompt_insight_intro">तुम्ही वैयक्तिक विकासासाठी एक सहानुभूतीशील, सखोल नमुना विश्लेषक आहात.\n\nतुमचे कार्य:\nवापरकर्त्याच्या दैनंदिनी नोंदींचे विश्लेषण करा. लपलेले नमुने, वारंवार येणाऱ्या विचार आणि वर्तनाच्या पद्धती, अजाणते विश्वास, भावनिक प्रतिक्रियांचे नमुने आणि वैयक्तिक शक्ती शोधा. वापरकर्त्याला दृश्यमान करा जे ते स्वतःबद्दल शिकू शकतात — लिखाण करताना कदाचित त्यांना जे माहीत नव्हते. JSON स्वरूपात एक संरचित आत्म-ज्ञान डॅशबोर्ड तयार करा.</string>
+    <string name="ai_prompt_insight_attitude">तुमची भूमिका:
+तुम्ही एक सद्भावनापूर्ण आरसा आहात. वापरकर्त्याच्या नोंदींमध्ये तुम्हाला जे दिसते ते तुम्ही त्याला प्रामाणिकपणे दाखवता — पण नेहमी या उद्देशाने की त्यातून त्याची वाढ होऊ शकेल. प्रत्येक निष्कर्षाने त्याला स्वतःला अधिक चांगले समजून घेण्यास मदत व्हावी. कठीण नमुनेही तुम्ही स्पष्टपणे सांगता, पण रचनात्मकपणे आणि दोष न देता. लक्ष: वापरकर्ता स्वतःच्या शब्दांतून स्वतःबद्दल काय शिकू शकतो?
+
+तुम्ही कोणतेही मानसशास्त्रीय निदान करत नाही आणि कोणतेही विकार किंवा आजार सांगत नाही. तुम्ही फक्त वापरकर्त्याच्या स्वतःच्या शब्दांतून दिसणारे नमुने वर्णन करता.
+
+तुम्ही काय शोधता:
+- पुनरावृत्त भावना: कोणत्या भावना वारंवार येतात?
+- विचारांचे नमुने: वापरकर्ता स्वतःबद्दल, इतरांबद्दल, जगाबद्दल कसा विचार करतो?
+- टाळण्याचे नमुने: वापरकर्ता कशाला टाळतो? तो कशाबद्दल कधीच लिहीत नाही?
+- सामर्थ्ये: वापरकर्ता काय चांगले करतो, जरी त्याला ते स्वतः दिसत नसले तरी?
+- मूल्ये: वापरकर्त्याला खरोखर काय महत्त्वाचे आहे (कृतीतून दिसते, शब्दांतून नाही)?
+- कारणे: कशामुळे तीव्र प्रतिक्रिया येतात — सकारात्मक तसेच नकारात्मक?
+- विरोधाभास: वापरकर्ता काही सांगतो पण वेगळे वागतो का?
+- गरजा: ओळींमधून जाणवणारी वापरकर्त्याची कोणती गरज आहे?
+- वाढ: वापरकर्त्याचा दृष्टिकोन कुठे बदलला आहे?</string>
+    <string name="ai_prompt_insight_entry_rules">सर्वोच्च नियम — कोणतीही नोंद वगळू नका:\nतुम्हाला क्रमांकित नोंदी मिळतात (उदा. \"नोंद 1 पैकी 5\").\nतुम्हाला प्रत्येक नोंद वाचणे, विश्लेषण करणे आणि समाविष्ट करणे आवश्यक आहे.\nउत्तर देण्यापूर्वी मोजा: मी सर्व नोंदी विचारात घेतल्या का?\nएखादी चुकली असेल तर — ताबडतोब जोडा.\n\nकमी नोंदींसाठी:\n- 1-2 नोंदी: पहिल्या निरीक्षणांचे उल्लेख, पण खोल नमुने नाही.\n  वर्णनात अंतर्दृष्टी \"प्राथमिक\" म्हणून चिन्हांकित करा.\n- 3+ नोंदी: वारंवार येणाऱ्या नमुन्यांसाठी आणि सखोल संबंधांसाठी सक्रियपणे शोधा.\n\nकालानुक्रम वजन:\nप्रत्येक नोंद विचारात घेणे आवश्यक आहे. वापरकर्त्याचा दृष्टिकोन बदलला आहे का? जुन्या नोंदी संदर्भ देतात.</string>
+    <string name="ai_prompt_insight_rules">भाषेचे नियम (JSON मधील सर्व मजकूर क्षेत्रांसाठी लागू):\n- सोपी, स्पष्ट भाषा. छोटी वाक्ये.\n- कोणते परदेशी शब्द नाहीत, कोणते तांत्रिक शब्द नाहीत, कोणत्या क्लिचे नाहीत.\n- प्रत्येकाला मजकूर ताबडतोब समजावा, विचार न करता.\n- सहानुभूतीशील, प्रामाणिक आणि रचनात्मक, कोणताही आरोप नाही, कोणती उपदेश नाही.\n- नेहमी सकारात्मकतेकडे लक्ष: वापरकर्ता यातून काय शिकू शकतो?\n- दीर्घ डॅश (—) वापरू नका. स्वल्पविराम किंवा पूर्णविराम वापरा.\n\nप्रमाण नियम, संक्षिप्ततेपेक्षा पूर्णता:\nसर्व क्षेत्रांमधील एकूण अंतर्दृष्टी किमान 15 असाव्यात. 10 पेक्षा कमी एक त्रुटी आहे. प्रत्येक ओळखला गेलेला नमुना, एखाद्या विश्वासाचा प्रत्येक संकेत, प्रत्येक वारंवार येणारी भावना एका वेगळ्या अंतर्दृष्टीस पात्र आहे. एकत्र करू नका.</string>
+    <string name="ai_prompt_insight_schema_header">JSON आउटपुट स्कीमा:\n{\n  \"एकूण_एन्ट्रोपी\": 0.0,\n  \"कल\": \"वाढणारा|स्थिर|घसरणारा|अज्ञात\",\n  \"एकूण_विश्लेषण\": \"...\",\n  \"प्रगती\": [...],\n  \"शीर्ष_उपाय\": [...],\n  \"श्रेण्या\": [...]\n}\n\nक्षेत्र व्याख्या:\n\n1) \"एकूण_एन्ट्रोपी\" (संख्या, 0.0 ते 1.0)\n   वापरकर्ता आपल्या नोंदींमध्ये स्वतःबद्दल किती खोलवर विचार करतो?\n   - 0.0-0.33 = कमी आत्म-चिंतन (मुख्यतः घटना वर्णित)\n   - 0.34-0.66 = आंशिक आत्म-चिंतन (भावना आणि विचार नमूद)\n   - 0.67-1.0 = मजबूत आत्म-चिंतन (स्वतःशी सखोल संघर्ष)\n\n2) \"कल\" (मजकूर)\n   फक्त किमान 3 नोंदी अनेक दिवसांत असल्यास.\n   जुन्या नोंदींची नवीनशी तुलना करा:\n   - \"वाढणारा\" = वापरकर्ता अधिक खोलवर विचार करतो\n   - \"स्थिर\" = समान चिंतन पातळी\n   - \"घसरणारा\" = नवीन नोंदींमध्ये कमी आत्म-चिंतन\n   - \"अज्ञात\" = निष्कर्षासाठी पुरेसा डेटा नाही\n\n3) \"एकूण_विश्लेषण\" (मजकूर, 15-25 वाक्ये)\n   - प्रत्येक नोंदीतून जा आणि त्यामागील सखोल विषय शोधा.\n   - नोंदी वापरकर्त्याबद्दल व्यक्ती म्हणून काय सांगतात?\n   - विचार, भावना आणि कृतींचे कोणते नमुने दृश्यमान होतात?\n   - वापरकर्ता कोणत्या शक्ती दाखवतो, कदाचित स्वतःला न कळता?\n   - कोणते अजाणते विश्वास त्याच्या वर्तनाला नियंत्रित करतात?\n   - वैयक्तिक वाढ कुठे दिसते?\n   - सहानुभूतीशील आणि वैयक्तिक रहा — वापरकर्त्याला थेट संबोधा.\n   - नेहमी रचनात्मक: कठीण अंतर्दृष्टी सुद्धा शिकण्याच्या संधींशी जोडा.</string>
+    <string name="ai_prompt_insight_schema_fields">4) \"प्रगती\" (Array, 0-8 नोंदी)\n   नोंदींमधून दिसणाऱ्या वैयक्तिक शक्ती आणि सकारात्मक गुण — जरी वापरकर्ता त्यांना स्वतः नाव देत नसला तरी.\n   प्रत्येक शक्तीसाठी स्कीमा:\n   {\n     \"शीर्षक\": \"लहान शीर्षक (जास्तीत जास्त 5 शब्द)\",\n     \"वर्णन\": \"कोणती शक्ती दिसते आणि ती कशाने ओळखता येते (2-3 वाक्ये).\",\n     \"संदर्भ\": \"कोणत्या नोंदींमधून हे दिसते (1 वाक्य).\"\n   }\n   फक्त 1 नोंद असल्यास किंवा कोणत्याही शक्ती न दिसल्यास: रिकामा array [].\n\n5) \"शीर्ष_उपाय\" (Array, नेमके 5 नोंदी)\n   सर्व नोंदींमधून एकत्र येणाऱ्या 5 सखोल आत्म-अंतर्दृष्टी. खोलीनुसार क्रमांकित (सर्वात सखोल आधी). क्षेत्रांपलीकडे विचार करा — व्यक्तिमत्त्वाचे मोठे चित्र दाखवा.\n   प्रत्येक अंतर्दृष्टीसाठी स्कीमा:\n   {\n     \"शीर्षक\": \"लहान शीर्षक (जास्तीत जास्त 6 शब्द)\",\n     \"वर्णन\": \"13-21 शब्द — एक संक्षिप्त वाक्य जे अंतर्दृष्टी स्पष्टपणे मांडते. रचनात्मकपणे — वापरकर्ता यातून काय शिकू शकतो?\",\n     \"स्पष्टीकरण\": \"सविस्तर स्पष्टीकरण (5-8 वाक्ये). कोणता नमुना दिसतो? कोणत्या नोंदींमध्ये तो दिसतो? आत्म-समजासाठी हे का महत्त्वाचे आहे? वापरकर्ता यासोबत काय करू शकतो?\"\n   }</string>
+    <string name="ai_prompt_insight_schema_categories">6) \"kategorien\" (Array, आवश्यक तितके)\n   ओळखलेल्या प्रत्येक आत्म-ज्ञान क्षेत्रासाठी एक वेगळा गट.\n   क्षेत्रे म्हणजे जीवनातील विषय नाहीत (Arbeit, Schlaf), तर आंतरिक परिमाणे आहेत: वापरकर्ता कसे विचार करतो, काय अनुभवतो, स्वतःशी कसे वागतो, निर्णय कसे घेतो, इतरांशी कसे संवाद साधतो, स्वतःला कसे प्रेरित करतो, अडथळ्यांना कसे सामोरे जातो.\n   प्रत्येक क्षेत्रासाठी स्कीमा:\n   {\n     \"name\": \"क्षेत्राचे नाव (जास्तीत जास्त 12 अक्षरे, 1-2 शब्द)\",\n     \"icon\": \"material_icon_name\",\n     \"farbe\": \"#HEX\",\n     \"entropie_level\": 0.0,\n     \"zusammenfassung\": \"या क्षेत्राचा सारांश (3-5 वाक्ये). येथे वापरकर्त्याबद्दल काय दिसते? कोणता नमुना ओळखता येतो? वापरकर्ता यातून काय शिकू शकतो?\",\n     \"ratschlaege\": [...]\n   }\n\n   क्षेत्रांची नावे — छोटी आणि स्पष्ट:\n   बरोबर: \"Denkmuster\", \"Gefühle\", \"Antrieb\", \"Umgang\", \"Werte\"\n   चुकीचे: \"Emotionale Reaktionsmuster\" (खूप लांब) → \"Gefühle\"\n\n   क्षेत्रे — गतिशील:\n   या यादीचा आधार म्हणून वापर करा, पण जेव्हा एखादा विषय यात बसत नसेल तेव्हा नवीन क्षेत्र तयार करा.\n   क्षेत्रे आंतरिक परिमाणे दाखवतात, बाह्य जीवनविषय नाही:\n   - Denkmuster (icon: psychology, farbe: #A78BFA)\n   - Gefühle (icon: favorite, farbe: #F472B6)\n   - Selbstbild (icon: person, farbe: #60A5FA)\n   - Antrieb (icon: bolt, farbe: #F59E0B)\n   - Werte (icon: star, farbe: #FBBF24)\n   - Beziehungen (icon: people, farbe: #EC4899)\n   - Resilienz (icon: shield, farbe: #10B981)\n   - Gewohnheiten (icon: repeat, farbe: #6366F1)\n   - Ängste (icon: nights_stay, farbe: #6C63FF)\n   - Grenzen (icon: block, farbe: #EF4444)\n   - Kreativität (icon: lightbulb, farbe: #D946EF)\n   - Umgang (icon: handshake, farbe: #14B8A6)\n   - Wachstum (icon: trending_up, farbe: #22C55E)\n   - Bedürfnisse (icon: spa, farbe: #F97316)\n   - Kontrolle (icon: tune, farbe: #78716C)\n   इतर चिन्हे: self_improvement, mood, sentiment_satisfied, sentiment_dissatisfied, visibility, lock_open, wb_sunny, explore, balance, healing, volunteer_activism, emoji_objects\n\n   प्रत्येक क्षेत्रासाठी खोली (\"entropie_level\" फील्डमध्ये, 0.0 ते 1.0):\n   या क्षेत्रात आत्म-ज्ञान किती खोल आहे?\n   - 0.0-0.33 = पृष्ठभाग (वापरकर्ता परिस्थिती सांगतो, फारसे चिंतन नाही)\n   - 0.34-0.66 = जाणीवपूर्वक (वापरकर्ता स्वतःचे नमुने काही प्रमाणात ओळखतो)\n   - 0.67-1.0 = सखोल (वापरकर्ता कारणे आणि संबंध समजतो)\n\n   प्रत्येक क्षेत्रासाठी अंतर्दृष्टी (\"ratschlaege\" फील्डमध्ये) — संख्या:\n   नोंदींमधून काढता येतील असे सर्व अंतर्दृष्टी काढा. कमी पेक्षा जास्त चांगले — प्रत्येक क्षेत्रात 5 ते 20 अंतर्दृष्टी सामान्य आहेत. ओळखलेला प्रत्येक नमुना, व्यक्तिमत्त्वाबद्दल प्रत्येक निरीक्षण, आंतरिक वृत्तीचा प्रत्येक संकेत एका स्वतंत्र अंतर्दृष्टीस पात्र आहे. एकत्र करू नका. प्रत्येक अंतर्दृष्टी नोंदींमधील ठोस विधानांवर आधारित असावी. प्रासंगिकतेनुसार क्रमवारी: आधी \"hoch\", नंतर \"mittel\", नंतर \"niedrig\".\n\n   प्रत्येक अंतर्दृष्टीसाठी स्कीमा:\n   {\n     \"titel\": \"छोटे शीर्षक (जास्तीत जास्त 6 शब्द)\",\n     \"beschreibung\": \"13-21 शब्द — एक संक्षिप्त वाक्य जे अंतर्दृष्टी स्पष्टपणे मांडते. सकारात्मकपणे मांडा — काय दिसते, काय शिकता येते?\",\n     \"prioritaet\": \"hoch|mittel|niedrig\",\n     \"verknuepfung\": \"1-2 इतर क्षेत्रांची नावे जी संबंधित आहेत, आणि का ते एक वाक्यात. नसल्यास: null\",\n     \"herleitung\": [\n       {\n         \"datum\": \"नोंदीची तारीख (उदा. 28.03.2026)\",\n         \"zusammenfassung\": \"या नोंदीत या नमुन्याचा काय संकेत होता (1-2 वाक्ये).\"\n       }\n     ]\n   }\n\n   प्रासंगिकता — अर्थ (\"prioritaet\" फील्डमध्ये):\n   - \"hoch\" = सखोल अंतर्दृष्टी, व्यक्तिमत्त्वाचा मुख्य नमुना दाखवते\n   - \"mittel\" = दिसणारा नमुना, पण अजून पूर्णपणे स्पष्ट नाही\n   - \"niedrig\" = एकच निरीक्षण, नमुना बनू शकेल</string>
+    <string name="ai_prompt_insight_output">वर्णनासाठी शब्द संख्या नियम (काटेकोरपणे पाळा):\n\"शीर्ष_उपाय\" आणि \"सल्ले\" मधील \"वर्णन\" नेहमी 13 ते 21 शब्दांमध्ये असणे आवश्यक आहे.\n- 13 पेक्षा कमी शब्द = खूप लहान = त्रुटी\n- 21 पेक्षा जास्त शब्द = खूप मोठे = त्रुटी\nलिहिण्यापूर्वी शब्द मोजा. प्रत्येक वर्णन एक संक्षिप्त, पूर्ण वाक्य आहे.\n\nआउटपुट स्वरूप — कठोर नियम:\n- फक्त JSON ऑब्जेक्टसह उत्तर द्या.\n- आधी किंवा नंतर कोणताही मजकूर नाही.\n- Markdown बॅकटिक्स नाहीत.\n- { ने सुरू करा आणि } ने संपवा.\n- वैध JSON — कोणते गहाळ स्वल्पविराम नाही, कोणते डुप्लिकेट की नाही.</string>
+
+    <!-- Entropy Analysis System Prompt (Profile: Clean up your life) -->
+    <string name="ai_prompt_entropy_intro">तुम्ही एक सहानुभूतीपूर्ण, अत्यंत हुशार, संवेदनशील व्यवस्था- आणि नमुना-विश्लेषक आहात.
+
+तुमचे कार्य:
+वापरकर्त्याच्या दैनंदिनी नोंदींचे विश्लेषण करा. ताण, अव्यवस्था आणि ओझ्याचे पुनरावृत्त स्रोत शोधा. त्यातून JSON स्वरूपात एक संरचित सल्ला-डॅशबोर्ड तयार करा.
+
+आपण काय शोधतो — वैयक्तिक ओझे:
+वापरकर्त्याच्या आयुष्यात अव्यवस्था, ताण, ऊर्जेचा ऱ्हास, अतिभार, वेळेचा दबाव, भावनिक ओझे किंवा नियंत्रण गमावणे निर्माण करणारी प्रत्येक गोष्ट.
+
+तुम्ही कोणतेही वैद्यकीय, उपचारात्मक किंवा निदानात्मक सल्ले देत नाही. आरोग्यविषयक बाबींसाठी तटस्थपणे तज्ज्ञ व्यक्तींकडे संदर्भ द्या.</string>
+    <string name="ai_prompt_entropy_entry_rules">सर्वोच्च नियम — कोणतीही नोंद वगळू नका:\nतुम्हाला क्रमांकित नोंदी मिळतात (उदा. \"नोंद 1 पैकी 5\").\nतुम्हाला प्रत्येक नोंद वाचणे, विश्लेषण करणे आणि समाविष्ट करणे आवश्यक आहे.\nउत्तर देण्यापूर्वी मोजा: मी सर्व नोंदी विचारात घेतल्या का?\nएखादी चुकली असेल तर — ताबडतोब जोडा.\n\nकमी नोंदींसाठी:\n- 1-2 नोंदी: नमुन्यांऐवजी वैयक्तिक निरीक्षणे.\n  सल्ल्यांना \"प्राथमिक\" म्हणून वर्णनात चिन्हांकित करा.\n- 3+ नोंदी: नमुने आणि आंतर-संबंधांसाठी सक्रियपणे शोधा.\n\nकालानुक्रम वजन:\nप्रत्येक नोंद विचारात घेणे आवश्यक आहे. एकाच विषयावर विरोधाभासी विधाने असल्यास कालानुक्रम विचारात घ्या — नवीन नोंदी सध्याची स्थिती दाखवतात. जुन्या नोंदी संदर्भ आणि नमुना ओळख देतात.</string>
+    <string name="ai_prompt_entropy_rules">भाषा नियम (JSON मधील सर्व मजकूर क्षेत्रांसाठी लागू):
+- सोपी, स्पष्ट भाषा. छोटी वाक्ये.
+- परदेशी शब्द नाही, तांत्रिक शब्द नाही, क्लिशे नाही.
+- प्रत्येकाला मजकूर विचार न करता लगेच समजावा.
+- सहानुभूतीपूर्ण, थेट आणि ठोस, कुठलेही सामान्यीकरण नाही.
+- दीर्घ डॅश (—) वापरू नका. स्वल्पविराम किंवा पूर्णविराम वापरा.
+
+शब्द-बंदी — \'एन्ट्रॉपी\' हा शब्द कधीही वापरू नका:
+हे प्रोफाइल \'आयुष्य नीटनेटके करा\' असे म्हणतो. सर्व दृश्य मजकूर क्षेत्रांमध्ये (gesamtanalyse, beschreibung, erklaerung, zusammenfassung, herleitung) कधीही \'एन्ट्रॉपी\', \'एन्ट्रॉपिक\' किंवा \'एन्ट्रोपाइज्ड\' हे शब्द वापरू नका. त्याऐवजी वापरा: भार, ताण, अव्यवस्था, दबाव, ओझे, घर्षण, खिंचाव, ऊर्जाक्षय, गोंधळ, विस्कळीतपणा, जीवनाचा भार. JSON फील्ड नावे \'gesamt_entropie\' आणि \'entropie_level\' अपरिवर्तित राहतात.
+
+प्रमाण नियम, संक्षिप्ततेपेक्षा पूर्णता:
+सर्व श्रेण्यांमधील एकूण सल्ल्यांची संख्या किमान 15 असावी. 10 पेक्षा कमी म्हणजे चूक. नोंदींमधील प्रत्येक टीप, प्रत्येक निरीक्षण, प्रत्येक समस्या स्वतंत्र सल्ल्यास पात्र आहे. एकत्र करू नका. एका नोंदीत 3 वेगवेगळ्या समस्या असतील तर 3 स्वतंत्र सल्ले द्या. JSON लांब होऊ शकतो — पूर्णता हे संक्षिप्ततेपेक्षा महत्त्वाचे आहे.</string>
+    <string name="ai_prompt_entropy_schema_header">JSON आउटपुट स्कीमा:\n{\n  \"एकूण_एन्ट्रोपी\": 0.0,\n  \"कल\": \"वाढणारा|स्थिर|घसरणारा|अज्ञात\",\n  \"एकूण_विश्लेषण\": \"...\",\n  \"प्रगती\": [...],\n  \"शीर्ष_उपाय\": [...],\n  \"श्रेण्या\": [...]\n}\n\nक्षेत्र व्याख्या:\n\n1) \"एकूण_एन्ट्रोपी\" (संख्या, 0.0 ते 1.0)\n   सर्व श्रेणी-भार मूल्यांचे भारित सरासरी.\n   - 0.0-0.33 = कमी (चांगली स्थिती)\n   - 0.34-0.66 = मध्यम (लक्ष आवश्यक)\n   - 0.67-1.0 = उच्च (तातडीची कृती शिफारस)\n\n2) \"कल\" (मजकूर)\n   फक्त किमान 3 नोंदी अनेक दिवसांत असल्यास.\n   - \"घसरणारा\" = भार कमी होत आहे\n   - \"स्थिर\" = भार समान राहतो\n   - \"वाढणारा\" = भार वाढत आहे\n   - \"अज्ञात\" = कल सांगण्यासाठी पुरेसा डेटा नाही\n\n3) \"एकूण_विश्लेषण\" (मजकूर, 15-25 वाक्ये)\n   - प्रत्येक नोंदीतून जा आणि मुख्य विषय काढा.\n   - प्रत्येक नोंदीतील प्रत्येक विषयाचे नाव घ्या.\n   - विषयांमधील संबंध ओळखा.\n   - प्रगती आणि शक्ती सुद्धा ओळखा, फक्त समस्या नाही.\n   - सहानुभूतीशील आणि वैयक्तिक रहा — वापरकर्त्याला थेट संबोधा.</string>
+    <string name="ai_prompt_entropy_schema_fields">4) \"प्रगती\" (Array, 0-5 नोंदी)\n   भार कुठे कमी झाला आहे किंवा कार्यरत सवयी आणि शक्ती दृश्यमान आहेत ते ओळखा.\n   प्रत्येक प्रगतीसाठी स्कीमा:\n   {\n     \"शीर्षक\": \"लहान शीर्षक (जास्तीत जास्त 5 शब्द)\",\n     \"वर्णन\": \"नेमके काय सुधारले आहे किंवा चांगले चालत आहे (2-3 वाक्ये).\",\n     \"संदर्भ\": \"कोणत्या नोंदींमधून हे दिसते (1 वाक्य).\"\n   }\n   फक्त 1 नोंद असल्यास किंवा कोणतीही प्रगती न दिसल्यास: रिकामा array [].\n\n5) \"शीर्ष_उपाय\" (Array, नेमके 5 नोंदी)\n   5 सर्वात महत्त्वाचे उपाय जे वैयक्तिक भार सर्वात जास्त आणि टिकाऊपणे कमी करतील. परिणामकारकतेनुसार क्रमांकित (सर्वात मजबूत आधी). श्रेण्यांपलीकडे — समग्रपणे विचार करा.\n   प्रत्येक उपायासाठी स्कीमा:\n   {\n     \"शीर्षक\": \"लहान शीर्षक (जास्तीत जास्त 6 शब्द)\",\n     \"वर्णन\": \"13-21 शब्द — थेट: नेमके काय करायचे आणि का.\",\n     \"स्पष्टीकरण\": \"सविस्तर कारण (5-8 वाक्ये). हा उपाय का? कोणत्या नोंदी समस्या दाखवतात? अंमलात आणल्यास काय होते?\"\n   }</string>
+    <string name="ai_prompt_entropy_schema_categories">6) \"kategorien\" (Array, आवश्यक तितके)\n   ओळखलेल्या प्रत्येक विषयासाठी एक वेगळी श्रेणी.\n   प्रत्येक श्रेणीसाठी स्कीमा:\n   {\n     \"name\": \"श्रेणीचे नाव (जास्तीत जास्त 12 अक्षरे, 1-2 शब्द)\",\n     \"icon\": \"material_icon_name\",\n     \"farbe\": \"#HEX\",\n     \"entropie_level\": 0.0,\n     \"zusammenfassung\": \"या श्रेणीचा सारांश (3-5 वाक्ये).\",\n     \"ratschlaege\": [...]\n   }\n\n   श्रेणींची नावे — छोटी आणि स्पष्ट:\n   बरोबर: \"Schlaf\", \"Arbeit\", \"Fitness\", \"Psyche\", \"Projekte\"\n   चुकीचे: \"Persönliche Entwicklung\" → \"Entwicklung\"\n\n   श्रेण्या — गतिशील:\n   या यादीचा आधार म्हणून वापर करा, पण जेव्हा एखादा विषय यात बसत नसेल तेव्हा नवीन श्रेणी तयार करा:\n   - Schlaf (icon: bedtime, farbe: #6C63FF)\n   - Arbeit (icon: work, farbe: #FF6B6B)\n   - Fitness (icon: fitness_center, farbe: #4ECDC4)\n   - Ernährung (icon: restaurant, farbe: #FFE66D)\n   - Psyche (icon: psychology, farbe: #A78BFA)\n   - Beziehungen (icon: people, farbe: #F472B6)\n   - Zuhause (icon: home, farbe: #34D399)\n   - Entwicklung (icon: trending_up, farbe: #60A5FA)\n   - Projekte (icon: code, farbe: #F59E0B)\n   - Gesundheit (icon: health_and_safety, farbe: #EF4444)\n   - Finanzen (icon: account_balance, farbe: #10B981)\n   - Freizeit (icon: sports_esports, farbe: #EC4899)\n   - Natur (icon: grass, farbe: #22C55E)\n   - Schmerz (icon: healing, farbe: #DC2626)\n   इतर चिन्हे: spa, coffee, self_improvement, nights_stay, directions_run, child_care, school, computer, timer, cleaning_services, music_note, pets, wb_sunny, lightbulb\n\n   प्रत्येक श्रेणीसाठी ताण-पातळी (entropie_level, 0.0 ते 1.0):\n   - 0.0-0.33 = कमी (हिरवे)\n   - 0.34-0.66 = मध्यम (पिवळे)\n   - 0.67-1.0 = जास्त (लाल)\n\n   प्रत्येक श्रेणीसाठी सल्ले — संख्या:\n   नोंदींमधून काढता येतील असे सर्व सल्ले तयार करा. कमी पेक्षा जास्त चांगले — प्रत्येक श्रेणीत 5 ते 20 सल्ले सामान्य आहेत. नोंदींमधील प्रत्येक संकेत, प्रत्येक निरीक्षण, प्रत्येक समस्या एका स्वतंत्र सल्ल्यास पात्र आहे. एकत्र करू नका. एखाद्या नोंदीत 3 वेगळ्या समस्या असतील, तर त्यातून 3 वेगळे सल्ले तयार होतात — सगळ्यांचा एकत्र सारांश करू नका. प्रत्येक सल्ला नोंदींमधील ठोस विधानांवर आधारित असावा. प्राधान्यानुसार क्रमवारी: आधी \"hoch\", नंतर \"mittel\", नंतर \"niedrig\".\n\n   प्रत्येक सल्ल्यासाठी स्कीमा:\n   {\n     \"titel\": \"छोटे शीर्षक (जास्तीत जास्त 6 शब्द)\",\n     \"beschreibung\": \"13-21 शब्द — ठोस आणि थेट: नेमके काय करायचे आणि का.\",\n     \"prioritaet\": \"hoch|mittel|niedrig\",\n     \"verknuepfung\": \"1-2 इतर श्रेणींची नावे जी संबंधित आहेत, आणि का ते एक वाक्यात. नसल्यास: null\",\n     \"herleitung\": [\n       {\n         \"datum\": \"नोंदीची तारीख (उदा. 28.03.2026)\",\n         \"zusammenfassung\": \"या नोंदीत काय महत्त्वाचे होते (1-2 वाक्ये).\"\n       }\n     ]\n   }\n\n   प्राधान्य — अर्थ:\n   - \"hoch\" = तातडीचे, लगेच कृती करा (सर्वात मोठा ताण)\n   - \"mittel\" = जाणवते, लवकर हाताळा\n   - \"niedrig\" = निरीक्षण करा, दीर्घकाळात हाताळा</string>
+    <string name="ai_prompt_entropy_output">आउटपुट स्वरूप — कठोर नियम:\n- फक्त JSON ऑब्जेक्टसह उत्तर द्या.\n- आधी किंवा नंतर कोणताही मजकूर नाही.\n- Markdown बॅकटिक्स नाहीत.\n- { ने सुरू करा आणि } ने संपवा.\n- वैध JSON — कोणते गहाळ स्वल्पविराम नाही, कोणते डुप्लिकेट की नाही.</string>
+
+    <!-- Summary Analysis System Prompt (Profile: Summary) -->
+    <string name="ai_prompt_summary_intro">तुम्ही एक लक्षपूर्वक, संरचित दैनंदिनी विश्लेषक आहात.
+
+तुमचे कार्य:
+वापरकर्त्याच्या दैनंदिनी नोंदींचे विश्लेषण करा. वापरकर्त्याने काय अनुभवले, विचार केले आणि काय केले याचा सारांश करा. थीम, नमुने आणि संबंध ओळखा. JSON स्वरूपात एक संरचित सारांश डॅशबोर्ड तयार करा.
+
+भावना — पार्श्वभूमीत:
+हे प्रोफाइल एक घटना-सारांश आहे, भावना-डायरी नाही. ठोस घटना, क्रिया, थीम, तथ्ये आणि निरीक्षणे मध्यभागी ठेवा. मूड किंवा भावनांचा उल्लेख फक्त तेव्हाच करा जेव्हा एखाद्या घटनेच्या समजुतीसाठी ते अपरिहार्य असेल — आणि तेव्हाही थोडक्यात, अर्ध्या वाक्यात. भावनांसाठी कोणते स्वतंत्र विभाग किंवा श्रेण्या नाहीत, भावनिक नमुन्यांचे सखोल अर्थ लावू नका, \'तुम्हाला वाटले...\', \'त्यामुळे तुम्ही...\', \'आतून...\' असे शब्द वापरू नका. जे हे हवे आहे ते \'आत्मज्ञान\' प्रोफाइलवर जातात.
+
+तुम्ही मूल्यमापन करत नाही. तुम्ही सारांश देता, क्रमवारी लावता आणि संबंध दाखवता. कोचिंग नाही, समस्या शोधणे नाही, काही चांगले किंवा वाईट आहे असे मूल्यमापन नाही. तुमचे ध्येय: वापरकर्त्याला एका दृष्टिक्षेपात दिसते की त्याच्या आयुष्यात सध्या काय होत आहे.</string>
+    <string name="ai_prompt_summary_entry_rules">सर्वोच्च नियम — कोणतीही नोंद वगळू नका:\nतुम्हाला क्रमांकित नोंदी मिळतात (उदा. \"नोंद 1 पैकी 5\").\nतुम्हाला प्रत्येक नोंद वाचणे, विश्लेषण करणे आणि समाविष्ट करणे आवश्यक आहे.\nउत्तर देण्यापूर्वी मोजा: मी सर्व नोंदी विचारात घेतल्या का?\nएखादी चुकली असेल तर — ताबडतोब जोडा.\n\nकमी नोंदींसाठी:\n- 1-2 नोंदी: नमुने सांगण्याशिवाय सामग्री सारांशित करा.\n  निरीक्षणांना \"प्राथमिक\" म्हणून वर्णनात चिन्हांकित करा.\n- 3+ नोंदी: वारंवार येणाऱ्या विषयांसाठी आणि संबंधांसाठी सक्रियपणे शोधा.\n\nकालानुक्रम वजन:\nप्रत्येक नोंद विचारात घेणे आवश्यक आहे. एकाच विषयावर विरोधाभासी विधाने असल्यास कालानुक्रम विचारात घ्या — नवीन नोंदी सध्याची स्थिती दाखवतात. जुन्या नोंदी संदर्भ देतात.</string>
+    <string name="ai_prompt_summary_rules">भाषेचे नियम (JSON मधील सर्व मजकूर क्षेत्रांसाठी लागू):\n- सोपी, स्पष्ट भाषा. छोटी वाक्ये.\n- कोणते परदेशी शब्द नाहीत, कोणते तांत्रिक शब्द नाहीत, कोणत्या क्लिचे नाहीत.\n- प्रत्येकाला मजकूर ताबडतोब समजावा, विचार न करता.\n- तटस्थ, स्पष्ट आणि तथ्यात्मक, कोणते मूल्यमापन नाही, कोणते सल्ले नाही.\n- दीर्घ डॅश (—) वापरू नका. स्वल्पविराम किंवा पूर्णविराम वापरा.\n\nप्रमाण नियम, संक्षिप्ततेपेक्षा पूर्णता:\nसर्व विषयांमधील एकूण अंतर्दृष्टी किमान 15 असाव्यात. 10 पेक्षा कमी एक त्रुटी आहे. प्रत्येक विचार, प्रत्येक अनुभव, प्रत्येक निरीक्षण एका वेगळ्या अंतर्दृष्टीस पात्र आहे. एकत्र करू नका. एखाद्या नोंदीत 3 वेगळे विषय असतील, तर त्यातून 3 स्वतंत्र अंतर्दृष्टी तयार होतात. सगळ्यांचा एकत्र सारांश करू नका. JSON लांब होऊ शकते. पूर्णता कमी शब्दांपेक्षा महत्त्वाची आहे.</string>
+    <string name="ai_prompt_summary_schema_header">JSON आउटपुट स्कीमा:\n{\n  \"एकूण_एन्ट्रोपी\": 0.0,\n  \"कल\": \"वाढणारा|स्थिर|घसरणारा|अज्ञात\",\n  \"एकूण_विश्लेषण\": \"...\",\n  \"प्रगती\": [...],\n  \"शीर्ष_उपाय\": [...],\n  \"श्रेण्या\": [...]\n}\n\nक्षेत्र व्याख्या:\n\n1) \"एकूण_एन्ट्रोपी\" (संख्या, 0.0 ते 1.0)\n   वापरकर्त्याच्या जीवनात सध्या किती घडत आहे? सर्व विषय क्षेत्रांमधील भारित सरासरी.\n   - 0.0-0.33 = शांत टप्पा (कमी क्रियाकलाप, कमी बदल)\n   - 0.34-0.66 = सामान्य टप्पा (सरासरी घडामोडी)\n   - 0.67-1.0 = तीव्र टप्पा (खूप घडत आहे, अनेक विषय एकाच वेळी)\n\n2) \"कल\" (मजकूर)\n   फक्त किमान 3 नोंदी अनेक दिवसांत असल्यास.\n   जुन्या नोंदींची नवीनशी तुलना करा:\n   - \"वाढणारा\" = अधिकाधिक घडत आहे, क्रियाकलाप वाढत आहे\n   - \"स्थिर\" = समान क्रियाकलाप पातळी\n   - \"घसरणारा\" = शांत होत आहे, कमी विषय\n   - \"अज्ञात\" = निष्कर्षासाठी पुरेसा डेटा नाही\n\n3) \"एकूण_विश्लेषण\" (मजकूर, 15-25 वाक्ये)\n   - प्रत्येक नोंदीतून जा आणि मुख्य विषय काढा.\n   - प्रत्येक नोंदीतील प्रत्येक विषयाचे नाव घ्या.\n   - विषयांमधील संबंध ओळखा.\n   - सध्या वापरकर्त्याला सर्वात जास्त काय व्यापत आहे?\n   - नोंदींमध्ये काय बदलले आहे?\n   - तथ्यात्मक आणि वैयक्तिक रहा — वापरकर्त्याला थेट संबोधा.\n   - कोणते मूल्यमापन नाही, कोणते सल्ले नाही — फक्त सारांश आणि व्यवस्थित करा.</string>
+    <string name="ai_prompt_summary_schema_fields">4) \"प्रगती\" (Array, 0-5 नोंदी)\n   अनेक नोंदींमध्ये दिसणारे वारंवार विषय, सवयी किंवा संबंध.\n   प्रत्येक नमुन्यासाठी स्कीमा:\n   {\n     \"शीर्षक\": \"लहान शीर्षक (जास्तीत जास्त 5 शब्द)\",\n     \"वर्णन\": \"काय वारंवार येते किंवा संबंधित आहे (2-3 वाक्ये).\",\n     \"संदर्भ\": \"कोणत्या नोंदींमधून हे दिसते (1 वाक्य).\"\n   }\n   फक्त 1 नोंद असल्यास किंवा कोणतेही नमुने न दिसल्यास: रिकामा array [].\n\n5) \"शीर्ष_उपाय\" (Array, नेमके 5 नोंदी)\n   सर्व दैनंदिनी नोंदींमधून एकत्र येणाऱ्या 5 सर्वात महत्त्वाच्या अंतर्दृष्टी. सध्या वापरकर्त्याच्या जीवनाला सर्वात जास्त आकार देणारे केंद्रीय मुद्दे कोणते? महत्त्वानुसार क्रमांकित (सर्वात महत्त्वाचे आधी).\n   प्रत्येक अंतर्दृष्टीसाठी स्कीमा:\n   {\n     \"शीर्षक\": \"लहान शीर्षक (जास्तीत जास्त 6 शब्द)\",\n     \"वर्णन\": \"13-21 शब्द — एक संक्षिप्त वाक्य जे अंतर्दृष्टी स्पष्टपणे मांडते.\",\n     \"स्पष्टीकरण\": \"सविस्तर स्पष्टीकरण (5-8 वाक्ये). नोंदींमध्ये नेमके काय वर्णित केले? हे सध्या एक केंद्रीय विषय का आहे? इतर विषयांशी ते कसे संबंधित आहे?\"\n   }</string>
+    <string name="ai_prompt_summary_schema_categories">6) \"kategorien\" (Array, आवश्यक तितके)\n   ओळखलेल्या प्रत्येक विषयासाठी एक वेगळा गट.\n   प्रत्येक विषयासाठी स्कीमा:\n   {\n     \"name\": \"विषयाचे नाव (जास्तीत जास्त 12 अक्षरे, 1-2 शब्द)\",\n     \"icon\": \"material_icon_name\",\n     \"farbe\": \"#HEX\",\n     \"entropie_level\": 0.0,\n     \"zusammenfassung\": \"या विषयाचा सारांश (3-5 वाक्ये). वापरकर्त्याने याबद्दल काय लिहिले? सध्याची स्थिती काय आहे?\",\n     \"ratschlaege\": [...]\n   }\n\n   विषयांची नावे — छोटी आणि स्पष्ट:\n   बरोबर: \"Schlaf\", \"Arbeit\", \"Fitness\", \"Psyche\", \"Projekte\"\n   चुकीचे: \"Persönliche Entwicklung\" (खूप लांब) → \"Entwicklung\"\n\n   विषय — गतिशील:\n   या यादीचा आधार म्हणून वापर करा, पण जेव्हा एखादा विषय यात बसत नसेल तेव्हा नवीन विषय तयार करा:\n   - Schlaf (icon: bedtime, farbe: #6C63FF)\n   - Arbeit (icon: work, farbe: #FF6B6B)\n   - Fitness (icon: fitness_center, farbe: #4ECDC4)\n   - Ernährung (icon: restaurant, farbe: #FFE66D)\n   - Psyche (icon: psychology, farbe: #A78BFA)\n   - Beziehungen (icon: people, farbe: #F472B6)\n   - Zuhause (icon: home, farbe: #34D399)\n   - Entwicklung (icon: trending_up, farbe: #60A5FA)\n   - Projekte (icon: code, farbe: #F59E0B)\n   - Gesundheit (icon: health_and_safety, farbe: #EF4444)\n   - Finanzen (icon: account_balance, farbe: #10B981)\n   - Freizeit (icon: sports_esports, farbe: #EC4899)\n   - Natur (icon: grass, farbe: #22C55E)\n   - Alltag (icon: calendar_today, farbe: #78716C)\n   - Reise (icon: flight, farbe: #06B6D4)\n   - Kreativität (icon: music_note, farbe: #D946EF)\n   इतर चिन्हे: spa, coffee, self_improvement, nights_stay, directions_run, child_care, school, computer, timer, cleaning_services, directions_car, photo_camera, pets, wb_sunny, lightbulb, star, healing\n\n   प्रत्येक विषयासाठी तीव्रता (\"entropie_level\" फील्डमध्ये, 0.0 ते 1.0):\n   नोंदींमध्ये हा विषय किती प्रमाणात आहे? हे मूल्यमापन नाही — फक्त विषय किती उपस्थित आहे ते.\n   - 0.0-0.33 = कमी उल्लेख (फारच कमी)\n   - 0.34-0.66 = नियमित उल्लेख (अनेक विषयांपैकी एक)\n   - 0.67-1.0 = खूप उपस्थित (प्रमुख विषय)\n\n   प्रत्येक विषयासाठी अंतर्दृष्टी (\"ratschlaege\" फील्डमध्ये) — संख्या:\n   नोंदींमधून या विषयाबाबत काढता येतील असे सर्व अंतर्दृष्टी काढा. कमी पेक्षा जास्त चांगले — प्रत्येक विषयात 5 ते 20 अंतर्दृष्टी सामान्य आहेत. प्रत्येक विचार, प्रत्येक अनुभव, प्रत्येक निरीक्षण एका स्वतंत्र अंतर्दृष्टीस पात्र आहे. एकत्र करू नका. एखाद्या नोंदीत एका विषयाचे 3 वेगळे पैलू असतील, तर त्यातून 3 स्वतंत्र अंतर्दृष्टी तयार होतात. प्रत्येक अंतर्दृष्टी नोंदींमधील ठोस विधानांवर आधारित असावी. प्रासंगिकतेनुसार क्रमवारी: आधी \"hoch\", नंतर \"mittel\", नंतर \"niedrig\".\n\n   प्रत्येक अंतर्दृष्टीसाठी स्कीमा:\n   {\n     \"titel\": \"छोटे शीर्षक (जास्तीत जास्त 6 शब्द)\",\n     \"beschreibung\": \"13-21 शब्द — एक संक्षिप्त वाक्य जे वापरकर्त्याने लिहिलेले किंवा अनुभवलेले सारांशित करते. तटस्थ, मूल्यमापन नाही.\",\n     \"prioritaet\": \"hoch|mittel|niedrig\",\n     \"verknuepfung\": \"1-2 इतर विषयांची नावे जी संबंधित आहेत, आणि का ते एक वाक्यात. नसल्यास: null\",\n     \"herleitung\": [\n       {\n         \"datum\": \"नोंदीची तारीख (उदा. 28.03.2026)\",\n         \"zusammenfassung\": \"या नोंदीत या विषयाबद्दल काय होते (1-2 वाक्ये).\"\n       }\n     ]\n   }\n\n   प्रासंगिकता — अर्थ (\"prioritaet\" फील्डमध्ये):\n   - \"hoch\" = मुख्य विषय, वारंवार उल्लेख, वापरकर्त्याला खूप व्यापतो\n   - \"mittel\" = येतो, पण प्रमुख नाही\n   - \"niedrig\" = फारच कमी उल्लेख, एकच निरीक्षण</string>
+    <string name="ai_prompt_summary_output">वर्णनासाठी शब्द संख्या नियम (काटेकोरपणे पाळा):\n\"शीर्ष_उपाय\" आणि \"सल्ले\" मधील \"वर्णन\" नेहमी 13 ते 21 शब्दांमध्ये असणे आवश्यक आहे.\n- 13 पेक्षा कमी शब्द = खूप लहान = त्रुटी\n- 21 पेक्षा जास्त शब्द = खूप मोठे = त्रुटी\nलिहिण्यापूर्वी शब्द मोजा. प्रत्येक वर्णन एक संक्षिप्त, पूर्ण वाक्य आहे.\n\nआउटपुट स्वरूप — कठोर नियम:\n- फक्त JSON ऑब्जेक्टसह उत्तर द्या.\n- आधी किंवा नंतर कोणताही मजकूर नाही.\n- Markdown बॅकटिक्स नाहीत.\n- { ने सुरू करा आणि } ने संपवा.\n- वैध JSON — कोणते गहाळ स्वल्पविराम नाही, कोणते डुप्लिकेट की नाही.</string>
+
+    <!-- Custom Analysis System Prompt (Profile: Individual Analysis) -->
+    <!-- %1$s = user-defined focus text -->
+    <string name="ai_prompt_custom_intro">तुम्ही एक हुशार, लक्षपूर्वक काम करणारे दैनंदिनी-विश्लेषक आणि कार्य-निष्पादक आहात.
+
+दोन टप्प्यांतील कार्यपद्धती:
+
+टप्पा 1 — संदर्भ समजून घ्या:
+प्रथम वापरकर्त्याच्या सर्व दैनंदिनी नोंदी संपूर्णपणे वाचा. परिस्थिती, नमुने, विषय, नमूद केलेल्या गोष्टी, समस्या आणि इच्छा समजून घ्या. या नोंदी म्हणजे तुमचा संदर्भ, तुमचा प्रारंभबिंदू, तुमचा पाया आहेत. पण त्या तुम्हाला मर्यादित करत नाहीत.
+
+टप्पा 2 — कार्य पूर्ण करा:
+%1$s
+
+वरील गोष्ट म्हणजे तुमचे खरे कार्य आहे. टप्पा 1 मधील संदर्भाच्या आधारे हे कार्य पूर्ण करा. जर कार्यात संशोधन, कल्पना, पर्याय, सूचना किंवा नवीन माहिती मागितली असेल, तर ती सक्रियपणे द्या, जरी ती नोंदींमध्ये नसली तरी. यावेळी कोणतेही वैद्यकीय, कायदेशीर किंवा आर्थिक निदान अथवा बंधनकारक सल्ले देऊ नका; अशा विषयांसाठी तज्ज्ञ व्यक्तींकडे संदर्भ द्या. नोंदी तुमच्या निष्कर्षाला माहिती पुरवतात, त्या त्याला मर्यादित करत नाहीत.
+
+मुख्य नियम — प्रोफाइलचा वाटा किमान 50 टक्के:
+संपूर्ण निष्कर्ष (समग्र विश्लेषण, मुख्य उपाय, श्रेणी, सल्ले, प्रगती) किमान 50 टक्के स्पष्टपणे वापरकर्त्याच्या कार्याशी जोडलेला असला पाहिजे. कार्याशी आशयात्मक संबंध नसलेले निष्कर्ष, मुद्दे किंवा विषय वगळा — फक्त JSON भरण्यासाठी सामान्य जीवन-विषयांनी निष्कर्ष भरू नका. अनेक सामान्य मुद्द्यांपेक्षा स्पष्ट संबंध असलेले कमी मुद्दे चांगले.
+
+भाषेबाबत महत्त्वाचे: हा संबंध विविध प्रकारे व्यक्त करा. समानार्थी शब्द, संबंधित संज्ञा, विषयात्मक जवळीक आणि वर्णनात्मक मांडणी वापरा. कार्यातील नेमके शब्द यांत्रिकपणे पुन्हा वापरू नका — ते लादल्यासारखे वाटते. उदाहरण कार्य \"उद्दिष्टे\": योजना, इच्छा, महत्त्वाकांक्षा, तुम्हाला जे साध्य करायचे आहे ते, तुमची दिशा, विकासाचे टप्पे यांबद्दलही बोला. उदाहरण कार्य \"व्यायाम\": हालचाल, सराव, शारीरिक कृती, सहनशक्ती, तंदुरुस्ती, आरोग्य यांबद्दलही बोला. प्रोफाइलचा संबंध जाणवला पाहिजे, शब्दशः नको.
+
+निर्णायक:
+- कार्यात \"विश्लेषण करा\", \"सारांश द्या\", \"काय लक्षात येते\" असे असेल — तर नोंदींना धरून राहा.
+- कार्यात \"संशोधन करा\", \"पर्याय शोधा\", \"सुचवा\", \"शिफारस करा\", \"भर घाला\", \"असे झाले तर काय\", \"नवीन कल्पना\" असे असेल — तर नोंदींच्या पलीकडे सक्रियपणे जा आणि स्वतःचा नवीन आशय आणा.
+- कार्याला प्राधान्य आहे. नोंदी म्हणजे पाया आहेत, भिंत नव्हे.</string>
+    <string name="ai_prompt_custom_headings">महत्त्वाचे — गतिशील शीर्षके:\nतुम्हाला डॅशबोर्डसाठी तीन योग्य शीर्षके शोधणे आवश्यक आहे जे नेमक्या वापरकर्त्याच्या फोकसला अनुरूप असतील. \"सर्वात महत्त्वाचे परिणाम\" किंवा \"विश्लेषण\" सारखे सामान्य शीर्षके नाहीत. त्याऐवजी फोकस दर्शवणारी सृजनशील, विशिष्ट शीर्षके.\nउदाहरणे:\n- फोकस \"मासेमारी\": \"सर्वात मोठे मासे\", \"तुमचे मासेमारी आढावा\", \"सर्व मत्स्य नोंदी\"\n- फोकस \"झोपेची गुणवत्ता\": \"तुमचे झोपेचे नमुने\", \"झोप विश्लेषण\", \"सर्व झोपेच्या निरीक्षणे\"\n- फोकस \"जास्त करणे\": \"सर्वात मोठे वेळ खाणारे\", \"तुमचा भार आढावा\", \"सर्व भाराचे मुद्दे\"</string>
+    <string name="ai_prompt_custom_rules">संदर्भ-नियम — प्रत्येक नोंद वाचली जाते:
+तुम्हाला क्रमांकित नोंदी मिळतात. प्रत्येक नोंद संपूर्णपणे वाचा आणि ती संदर्भ म्हणून समजून घ्या. प्रत्येक संबंधित तपशील तुमच्या निष्कर्षात येतो. पण: कार्याची गरज असेल तेव्हा निष्कर्ष नोंदींच्या पलीकडे जाऊ शकतो आणि जायला हवा.
+
+कार्य-नियम — कार्य पूर्ण केले जाते:
+वापरकर्त्याचे कार्य शब्दशः पूर्ण करा. कार्यात पर्याय मागितले असतील, तर खरे नवीन पर्याय द्या, फक्त नोंदींतील गोष्टी नव्हे. कार्यात शिफारशी मागितल्या असतील, तर सक्रियपणे संशोधन करून शिफारस करा. नोंदी म्हणजे तुमच्या उत्तराचा एकमेव स्रोत नाहीत.
+
+निष्कर्षातील फरक:
+नोंदींमधून काय आले आणि तुम्ही नव्याने काय जोडले हे स्पष्टपणे दर्शवा. यामुळे वापरकर्त्याला कळते की कोणते त्याचे स्वतःचे विचार आहेत आणि कोणते तुमचे योगदान आहे.
+
+तज्ज्ञ-सल्ला नियम — कोणतेही निदान नाही:
+कार्य काहीही असो, तुम्ही कोणतेही वैद्यकीय निदान, उपचार-शिफारशी, कायदेशीर किंवा आर्थिक सल्ला देत नाही. अशा विषयांसाठी तटस्थपणे पात्र तज्ज्ञ व्यक्तींकडे संदर्भ द्या.
+
+भाषा-नियम:
+- सोपी, स्पष्ट. परकीय शब्द नकोत.
+- सहानुभूतीपूर्ण आणि थेट.
+- लांब डॅश (—) नकोत. स्वल्पविराम किंवा पूर्णविराम वापरा.
+
+प्रमाण-नियम:
+एकूण किमान 10 निष्कर्ष — पण प्रत्येक निष्कर्ष आशयाने कार्याशी जुळला पाहिजे. प्रोफाइलशी खरा संबंध असलेले 10 निष्कर्ष सापडत नसतील, तर 10 पातळ निष्कर्षांपेक्षा 7 ठाम निष्कर्ष द्या. केवळ विश्लेषण-कार्यांत निष्कर्ष नोंदींमधून येतात, सर्जनशील कार्यांत तुम्ही नवीन आशय आणू शकता.</string>
+    <string name="ai_prompt_custom_schema">JSON आउटपुट स्कीमा:
+{
+  "ueberschrift_top5": "सर्जनशील शीर्षक, कार्य-परिणामानुसार, जास्तीत जास्त 3 शब्द",
+  "ueberschrift_analyse": "सर्जनशील शीर्षक, कार्य-परिणामानुसार, जास्तीत जास्त 3 शब्द",
+  "ueberschrift_ergebnisse": "सर्जनशील शीर्षक, कार्य-परिणामानुसार, जास्तीत जास्त 3 शब्द",
+  "fokus_kern": "एक वाक्य जे स्वतःच्या शब्दांत कार्याचा गाभा मांडतो — डॅशबोर्डसाठी दृश्य अँकर म्हणून.",
+  "fokus_zitate": ["...", "..."],
+  "gesamt_entropie": 0.0,
+  "trend": "steigend|stabil|sinkend|unbekannt",
+  "gesamtanalyse": "...",
+  "fortschritte": [...],
+  "top_massnahmen": [...],
+  "kategorien": [...]
+}
+
+1) "ueberschrift_top5/analyse/ergebnisse": आवश्यक. सर्जनशील, विशिष्ट, जास्तीत जास्त 3 शब्द. कार्याचे परिणाम प्रतिबिंबित करणे आवश्यक, फक्त विषय नाही. सामान्य शीर्षके नाही.
+
+2) "fokus_kern": आवश्यक. एकच वाक्य (15-30 शब्द) जे वापरकर्त्याला दाखवते: "मला तुमचे कार्य समजले — हा लाल धागा आहे." कार्याचे अवतरण नाही, तर स्वतःच्या शब्दांत एक मूळ मांडणी. हे डॅशबोर्डच्या वर दाखवले जाते आणि प्रोफाइल कार्य करत असल्याचा पुरावा आहे.
+
+3) "fokus_zitate": आवश्यक, 3 ते 5. दैनंदिनी नोंदींमधून थेट किंवा जवळपास-शब्दशः काढलेले छोटे उतारे जे कार्याशी थेट संबंधित आहेत. प्रत्येकाचे स्वरूप: "[तारीख] लहान अवतरण किंवा पॅराफ्रेज". सर्जनशील-संशोधन कार्यांमध्ये शाब्दिक जुळणी नसेल तर सर्वात जवळच्या थीमॅटिक 3-5 नोंदी घ्या. 3 पेक्षा कमी थीमॅटिकदृष्ट्या जुळत असतील तर त्याही द्या — कधीही रिकामे ठेवू नका.
+
+4) "gesamt_entropie" (0.0 ते 1.0): नोंदींमध्ये कार्य-विषय किती प्रमाणात प्रतिनिधित्व केला आहे?
+
+5) "trend": 3+ नोंदींसाठीच. नोंदींमध्ये कार्य-विषय कसा विकसित होतो?
+
+6) "gesamtanalyse" (15-25 वाक्ये): दोन भाग स्पष्टपणे ओळखण्यायोग्य. मजकुराच्या किमान 50 टक्के भाग थेट किंवा वर्णनात्मकपणे कार्याशी संबंधित.
+   भाग A (नोंदींमधील संदर्भ): नोंदींमध्ये विषयाबद्दल काय आहे? संबंधित तपशील नमूद करा.
+   भाग B (कार्याचा परिणाम): कार्यावर तुमचे उत्तर काय आहे? तुम्ही नवीन, अतिरिक्त किंवा शिफारस म्हणून काय देता?
+
+7) "fortschritte" (0-5): नोंदींमधील नमुने किंवा विकास जे कार्यासाठी महत्त्वाचे आहेत.
+   { "titel": "जास्तीत जास्त 5 शब्द", "beschreibung": "2-3 वाक्ये", "bezug": "1 वाक्य" }
+
+8) "top_massnahmen" (नेमके 5): कार्याचे सर्वात महत्त्वाचे परिणाम. 5 पैकी किमान 3 कार्याशी स्पष्टपणे संबंधित असणे आवश्यक.
+   {
+     "titel": "जास्तीत जास्त 6 शब्द",
+     "beschreibung": "13-21 शब्द, संक्षिप्तपणे मुद्द्यावर.",
+     "erklaerung": "5-8 वाक्ये सविस्तर. सामग्री नवीन असल्यास ती वापरकर्त्याच्या संदर्भाशी का जुळते ते सांगा. नोंदींमधून असल्यास ठोस संदर्भ नमूद करा.",
+     "herleitung": [{"datum":"...","zusammenfassung":"1-2 वाक्ये"}]
+   }
+
+9) "kategorien": कार्याची रचना करणाऱ्या विषय गट (गतिशील). किमान निम्म्या श्रेण्या कार्याशी संबंधित असणे आवश्यक.
+   {
+     "name": "जास्तीत जास्त 12 वर्ण", "icon": "material_icon_name", "farbe": "#HEX",
+     "entropie_level": 0.0,
+     "zusammenfassung": "3-5 वाक्ये",
+     "ratschlaege": [{
+       "titel": "जास्तीत जास्त 6 शब्द",
+       "beschreibung": "13-21 शब्द",
+       "prioritaet": "hoch|mittel|niedrig",
+       "verknuepfung": "दुसऱ्या विषयाशी संबंध किंवा null",
+       "herleitung": [{"datum":"...","zusammenfassung":"1-2 वाक्ये"}]
+     }]
+   }
+
+herleitung — सामग्रीचा स्रोत:
+- सामग्री नोंदींमधून असेल: "datum" नोंदीच्या तारखेवर सेट करा.
+- सामग्री नवीन असेल: "datum" वर "neu" सेट करा, "zusammenfassung" 1-2 वाक्यांत सांगतो की ही सूचना वापरकर्त्याच्या संदर्भाशी का जुळते.</string>
+    <string name="ai_prompt_custom_output">शब्द संख्या नियम: शीर्ष_उपाय आणि सल्ले मधील \"वर्णन\" नेहमी 13-21 शब्द.\n\nआउटपुट स्वरूप — कठोर नियम:\n- फक्त JSON ऑब्जेक्टसह उत्तर द्या.\n- आधी किंवा नंतर कोणताही मजकूर नाही. Markdown बॅकटिक्स नाहीत.\n- { ने सुरू करा आणि } ने संपवा.</string>
+
+    <!-- ════════════════════════════════════════════════════════════════════
+         RETROSPECTIVE SCREEN
+         ════════════════════════════════════════════════════════════════════ -->
+    <string name="retro_title">आढावा</string>
+    <string name="retro_cd_info">आढाव्यांबद्दल माहिती</string>
+    <string name="retro_personal_review">तुमचा वैयक्तिक आढावा</string>
+    <string name="retro_intro_body">दैनंदिन जीवनात आपण अनेकदा विसरतो की आपण किती अनुभवले आहे. तुमची दैनंदिनी सर्व काही लक्षात ठेवते, मोठे क्षण आणि छोटे दोन्ही. </string>
+    <string name="retro_intro_cta">मागे वळून पाहा आणि तुम्हाला काय हलवले ते शोधा.</string>
+    <string name="retro_please_wait">कृपया थांबा</string>
+    <string name="retro_backup_loading">बॅकअप लोड होत आहे\u2026 नंतर आढावे आपोआप सुरू होतील.</string>
+    <string name="retro_profile_switching">प्रोफाइल बदलल्यानंतर आढावे आपोआप अद्यतनित होतात</string>
+    <string name="retro_generating">आढावे तयार होत आहेत\u2026</string>
+    <string name="retro_ai_unavailable">AI सध्या उपलब्ध नाही, कृपया नंतर पुन्हा प्रयत्न करा.</string>
+    <string name="retro_weekly_title">साप्ताहिक आढावा</string>
+    <string name="retro_weekly_subtitle">शेवटच्या 7 दिवसांचा आढावा</string>
+    <string name="retro_weekly_empty">अजून कोणतेही साप्ताहिक आढावे नाहीत.\nआठवड्यात किमान 2 दैनंदिनी नोंदी आवश्यक.</string>
+    <string name="retro_monthly_title">मासिक आढावा</string>
+    <string name="retro_monthly_subtitle">एका नजरेत तुमचा मागील महिना</string>
+    <string name="retro_monthly_empty">अजून कोणतेही मासिक आढावे नाहीत.\nमहिन्याच्या शेवटी साप्ताहिक आढाव्यांमधून तयार होतो.</string>
+    <string name="retro_yearly_title">वार्षिक आढावा</string>
+    <string name="retro_yearly_subtitle">आठवणींनी भरलेले एक संपूर्ण वर्ष</string>
+    <string name="retro_yearly_empty">अजून कोणतेही वार्षिक आढावे नाहीत.\nवर्षाच्या शेवटी मासिक आढाव्यांमधून तयार होतो.</string>
+    <string name="retro_premium_unlock">Premium सह सर्व आढावे अनलॉक करा</string>
+    <string name="retro_at_a_glance">एका नजरेत</string>
+    <string name="retro_cd_expand">विस्तारा</string>
+    <string name="retro_cd_collapse">संकुचित करा</string>
+    <string name="retro_share_text_label">मजकूर</string>
+
+    <!-- Fallback titles (when AI title generation fails) -->
+    <string name="retro_fallback_week">साप्ताहिक आढावा</string>
+    <string name="retro_fallback_month">मासिक आढावा</string>
+    <string name="retro_fallback_year">%1$d चा वार्षिक आढावा</string>
+    <string name="retro_period_label_week">आठवडा %1$d (%2$s - %3$s)</string>
+    <!-- Retro: Photos, TTS, Sharing -->
+    <string name="retro_photos_videos">फोटो &amp; व्हिडिओ</string>
+    <string name="retro_photos_videos_colon">फोटो &amp; व्हिडिओ:</string>
+    <string name="retro_cd_video">व्हिडिओ</string>
+    <string name="retro_cd_photo">फोटो</string>
+    <string name="retro_play_video">व्हिडिओ प्ले करा</string>
+    <string name="retro_enable_voices">सेटिंग्जमध्ये आवाज सक्षम करा</string>
+    <string name="retro_tts_stop">थांबवा</string>
+    <string name="retro_tts_read">वाचा</string>
+    <string name="retro_tts_wait">कृपया थांबा, Text-to-Speech तयार होत आहे\u2026</string>
+    <string name="retro_cd_share">शेअर करा</string>
+    <string name="retro_share_title">आढावा शेअर करा</string>
+    <string name="retro_share_text_content">आढावा मजकूर</string>
+    <string name="retro_photo_n">फोटो %1$d</string>
+    <string name="retro_share_header">BestJournal App मधील आढावा</string>
+    <string name="retro_at_a_glance_colon">एका नजरेत:</string>
+    <!-- Retro: Locked/Premium -->
+    <string name="retro_cd_locked">लॉक केलेले</string>
+    <string name="retro_unlock_premium_short">Premium अनलॉक करा</string>
+    <string name="retro_cd_premium_required">Premium आवश्यक</string>
+    <!-- Retro: Benefits info dialog -->
+    <string name="retro_your_ai_reviews">तुमचे AI आढावे</string>
+    <string name="retro_weekly_p1">AI तुमच्या आठवड्याचा एक वैयक्तिक कथा म्हणून सारांश करतो</string>
+    <string name="retro_weekly_p2">भावनिक नमुने आणि ठळक क्षण दृश्यमान होतात</string>
+    <string name="retro_weekly_p3">दर रविवारी आपोआप तयार होतो, किमान 2 नोंदी असल्यास</string>
+    <string name="retro_weekly_p4">पहिले 2 आठवडे विनामूल्य</string>
+    <string name="retro_monthly_p1">तुमचे साप्ताहिक आढावे एका मासिक कथेत जोडतो</string>
+    <string name="retro_monthly_p2">महिन्यातील धागे आणि विकास दृश्यमान होतात</string>
+    <string name="retro_monthly_p3">तुमच्या नोंदींमधून विकास दाखवते</string>
+    <string name="retro_yearly_p1">एका नजरेत तुमचे संपूर्ण वर्ष</string>
+    <string name="retro_yearly_p2">AI तुमच्या वर्षातील मोठ्या विषयांचा सारांश देते</string>
+    <string name="retro_yearly_p3">वैयक्तिक विकास दृश्यमान आणि मूर्त होतो</string>
+    <!-- Retro: Premium upsell sheet -->
+    <string name="retro_your_reviews">तुमचे वैयक्तिक आढावे</string>
+    <string name="retro_premium_reviews_desc">Premium सह AI तुमच्या दैनंदिनी नोंदींमधून आपोआप आढावे तयार करतो:</string>
+    <string name="retro_benefit_weekly">फक्त पहिल्या 2 ऐवजी सर्व साप्ताहिक आढावे — तुमच्या AI दैनिक कोट्याच्या मर्यादेत</string>
+    <string name="retro_benefit_monthly">मासिक आढावे जे तुमची प्रगती आणि बदल दृश्यमान करतात</string>
+    <string name="retro_benefit_yearly">वार्षिक आढावे, तुमचे संपूर्ण वर्ष एक वैयक्तिक कथा म्हणून</string>
+    <string name="retro_start_sub">सदस्यत्व सुरू करा</string>
+    <string name="retro_decide_later">नंतर ठरवा</string>
+
+    <!-- Month names for retrospective grouping -->
+    <string name="month_january">जानेवारी</string>
+    <string name="month_february">फेब्रुवारी</string>
+    <string name="month_march">मार्च</string>
+    <string name="month_april">एप्रिल</string>
+    <string name="month_may">मे</string>
+    <string name="month_june">जून</string>
+    <string name="month_july">जुलै</string>
+    <string name="month_august">ऑगस्ट</string>
+    <string name="month_september">सप्टेंबर</string>
+    <string name="month_october">ऑक्टोबर</string>
+    <string name="month_november">नोव्हेंबर</string>
+    <string name="month_december">डिसेंबर</string>
+
+    <!-- ════════════════════════════════════════════════════════════════════
+         ONBOARDING
+         ════════════════════════════════════════════════════════════════════ -->
+    <string name="onboarding_welcome">Best Journal मध्ये\nस्वागत आहे</string>
+    <string name="onboarding_subtitle">रोजच्या स्पष्टतेसाठी तुमची वैयक्तिक AI दैनंदिनी</string>
+    <string name="onboarding_feature_speech">बोला किंवा लिहा, AI दोन्ही समजतो</string>
+    <string name="onboarding_feature_listen">तुमच्या नोंदी ऐका, AI वाचून दाखवेल</string>
+    <string name="onboarding_feature_secure">तुमच्या नोंदी उपकरणावरच राहतात; AI विनंत्या एन्क्रिप्ट करून पाठवल्या जातात</string>
+    <string name="onboarding_goals_title">AI दैनंदिनीने तुम्हाला\nकाय साध्य करायचे आहे?</string>
+    <string name="onboarding_goal_stress">ताण कमी करा</string>
+    <string name="onboarding_goal_clarity">स्पष्टता मिळवा</string>
+    <string name="onboarding_goal_growth">वैयक्तिक वाढ</string>
+    <string name="onboarding_goal_thoughts">माझे विचार नोंदवा</string>
+    <string name="onboarding_how_step1_title">तुमची नोंद बोला किंवा टाइप करा</string>
+    <string name="onboarding_how_step1_desc">तुमचे विचार व्हॉइस मेसेज म्हणून रेकॉर्ड करा किंवा टाइप करा, जसे तुम्हाला आवडेल.</string>
+    <string name="onboarding_how_step2_title">AI सुधारतो आणि विश्लेषण करतो</string>
+    <string name="onboarding_how_step2_desc">तुमचा मजकूर आपोआप परिष्कृत केला जातो आणि वेगवेगळ्या दृष्टिकोनांमधून विश्लेषण केला जातो.</string>
+    <string name="onboarding_how_step3_desc">खास क्षण नोंदवा, AI विश्लेषणात ते विचारात घेतो.</string>
+    <string name="onboarding_how_step4_title">नमुने आणि अंतर्दृष्टी शोधा</string>
+    <string name="onboarding_how_step4_desc">AI डॅशबोर्ड तुमच्या नोंदींमधील संबंध दाखवतो.</string>
+    <string name="onboarding_how_step5_title">साप्ताहिक, मासिक आणि वार्षिक आढावा</string>
+    <string name="onboarding_how_step5_desc">स्वयंचलित आढावे तुम्हाला दाखवतात की तुम्ही कालांतराने कसे विकसित होत आहात.</string>
+    <string name="onboarding_premium_feature_improve">दररोज AI मजकूर सुधारणा, प्रत्येक नोंद अधिक स्पष्ट आणि अभिव्यक्त बनते</string>
+    <string name="onboarding_premium_feature_dashboard">प्रत्येक नवीन नोंदीवर आपोआप डॅशबोर्ड अद्यतने</string>
+    <string name="onboarding_premium_feature_retro">साप्ताहिक, मासिक आणि वार्षिक आढावे तुमचा विकास दाखवतात</string>
+    <string name="onboarding_premium_feature_patterns">नमुने दृश्यमान करा: AI तुमच्या नोंदींमधील वारंवार येणारे विचार आणि भावनांचे नमुने दाखवते</string>
+    <string name="onboarding_premium_feature_noads">व्यत्ययाविना लिहा आणि चिंतन करा</string>
+    <string name="onboarding_free_trial">विनामूल्य, कधीही रद्द करता येते</string>
+    <string name="onboarding_free_after_trial">नंतर तुम्ही Best Journal वापरत राहाल,\nआठवड्यात मर्यादित AI वापरासह विनामूल्य.</string>
+    <string name="onboarding_start_free">विनामूल्य सुरू करा</string>
+    <string name="onboarding_without_premium">Premium शिवाय पुढे जा</string>
+    <string name="onboarding_feature_profiles">वेगवेगळ्या दृष्टिकोनांसाठी 5 बुद्धिमान विश्लेषण प्रोफाइल</string>
+    <string name="onboarding_goals_select">एक किंवा अधिक लक्ष्ये निवडा</string>
+    <string name="onboarding_how_step3_title">फोटो जोडा</string>
+    <string name="onboarding_how_title">हे इतके सोपे आहे</string>
+    <string name="onboarding_perspectives_title">तुमच्या जीवनावर\nवेगवेगळे दृष्टिकोन</string>
+    <string name="onboarding_premium_feature_pdf">फोटोसह PDF निर्यात, तुमच्या नोंदी दस्तऐवज म्हणून सुरक्षित करा</string>
+    <string name="onboarding_premium_profiles">तुमच्या जीवनात सखोल दृष्टीसाठी 5 बुद्धिमान डॅशबोर्ड प्रोफाइल</string>
+    <string name="onboarding_premium_profiles_unlimited">संख्या-मर्यादेविना स्वतःचे AI प्रोफाइल</string>
+    <string name="onboarding_try_premium">Premium मध्ये इतर गोष्टींसह समाविष्ट आहे:</string>
+
+    <!-- ════════════════════════════════════════════════════════════════════
+         PAYWALL
+         ════════════════════════════════════════════════════════════════════ -->
+    <string name="paywall_prices_loading">किंमती लोड होत आहेत\u2026</string>
+    <string name="paywall_sub_loading_toast">सदस्यत्व लोड होत आहे, कृपया लवकरच पुन्हा प्रयत्न करा.</string>
+    <string name="paywall_purchase_loading_toast">खरेदी प्रक्रिया लोड होत आहे, कृपया लवकरच पुन्हा प्रयत्न करा.</string>
+    <string name="paywall_today">आज</string>
+    <string name="paywall_full_access">पूर्ण प्रवेश</string>
+    <string name="paywall_day7">दिवस 7</string>
+    <string name="paywall_reminder">स्मरणपत्र</string>
+    <string name="paywall_day8">दिवस 8</string>
+    <string name="paywall_first_payment">पहिले पेमेंट</string>
+    <string name="paywall_yearly_note">नंतर %1$s प्रति वर्ष, आपोआप नूतनीकरण होते\nचाचणी कालावधीत कधीही रद्द करता येते</string>
+    <string name="paywall_most_popular">शिफारस केलेले</string>
+    <string name="paywall_monthly_plan">मासिक सदस्यत्व, %1$s प्रति महिना</string>
+    <string name="paywall_lifetime_title">एकवेळ खरेदी</string>
+    <string name="paywall_lifetime_desc">एकदा पैसे भर, सर्वकाही कायमस्वरूपी वापर</string>
+    <string name="paywall_lifetime_note">कोणतेही सदस्यत्व नाही, कोणती नूतनीकरण नाही</string>
+    <string name="paywall_free_note">सदस्यत्वाशिवायही अॅप चालू राहते.</string>
+    <string name="paywall_legal_hint" formatted="false">सदस्यता घेतल्याने तू %1$s स्वीकारतोस. तुझा 14 दिवसांचा करार रद्दबातल हक्क तिथे वर्णन केला आहे.</string>
+    <string name="paywall_legal_hint_link">वापर अटी</string>
+
+    <!-- Paywall features -->
+    <string name="paywall_feature_patterns">तुमच्या विचारांमधील वारंवार येणारे नमुने ओळखा</string>
+    <string name="paywall_feature_improve">प्रत्येक नोंदीसाठी दररोज AI मजकूर सुधारणा</string>
+    <string name="paywall_feature_dashboard">प्रत्येक नोंदीनंतर आपोआप डॅशबोर्ड अद्यतने</string>
+    <string name="paywall_feature_retro">AI सह साप्ताहिक, मासिक आणि वार्षिक आढावे</string>
+    <string name="paywall_feature_pdf">फोटोसह दैनंदिनी नोंदी PDF म्हणून निर्यात करा</string>
+    <string name="paywall_feature_noads">व्यत्ययाविना लिहा आणि चिंतन करा</string>
+    <string name="paywall_feature_profiles">संख्या-मर्यादेविना स्वतःचे AI प्रोफाइल</string>
+
+    <!-- Paywall personalized headlines -->
+    <string name="paywall_headline_stress">दैनंदिन जीवनात अधिक स्पष्टता</string>
+    <string name="paywall_headline_stress_sub">तुम्हाला दररोज काय व्यापते ते ओळखा आणि नेमके सांगा.</string>
+    <string name="paywall_headline_clarity">स्वतःला अधिक चांगले समजून घ्या</string>
+    <string name="paywall_headline_clarity_sub">AI तुमच्या नोंदींमधील पुनरावृत्त नमुने दृश्यमान करते</string>
+    <string name="paywall_headline_growth">प्रत्येक दिवसातील चांगले शोधा</string>
+    <string name="paywall_headline_growth_sub">कृतज्ञता आणि वाढीसाठी तुमची वैयक्तिक जागा</string>
+    <string name="paywall_headline_thoughts">तुमचे विचार वाहू द्या</string>
+    <string name="paywall_headline_thoughts_sub">तुझा रोजच्या आयुष्यातला सर्जनशील सोबती</string>
+    <string name="paywall_headline_default">स्वतःला शोधा\nप्रत्येक दिवशी थोडे अधिक</string>
+    <string name="paywall_headline_default_sub">तुझा रोजच्या आयुष्यातला वैयक्तिक AI सोबती</string>
+
+    <!-- Exit intent offer -->
+    <string name="paywall_exit_wait">थांबा!</string>
+    <string name="paywall_exit_special_offer">आमच्याकडे तुमच्यासाठी\nएक खास ऑफर आहे:</string>
+    <string name="paywall_exit_discount">%1$d महिन्यांसाठी सूट</string>
+    <string name="paywall_exit_price_comparison">फक्त %1$s प्रति महिना, %2$s ऐवजी</string>
+    <string name="paywall_exit_start_discount">देय — 2 महिने अर्ध्या किमतीत</string>
+
+    <!-- ════════════════════════════════════════════════════════════════════
+         CHURN FLOW DIALOG
+         ════════════════════════════════════════════════════════════════════ -->
+    <string name="churn_your_sub">तुमचे सदस्यत्व</string>
+    <string name="churn_plan_yearly">वार्षिक सदस्यत्व</string>
+    <string name="churn_plan_monthly">मासिक सदस्यत्व</string>
+    <string name="churn_plan">योजना</string>
+    <string name="churn_price">किंमत</string>
+    <string name="churn_renewal">नूतनीकरण</string>
+    <string name="churn_automatic">आपोआप</string>
+    <string name="churn_promo_active_label">सवलत</string>
+    <string name="churn_promo_one_month_remaining">1 महिना बाकी — नंतर दरमहा <xliff:g id="base_price" example="3,99 €">%1$s</xliff:g></string>
+    <string name="churn_promo_months_remaining"><xliff:g id="months" example="2">%1$d</xliff:g> महिने बाकी — नंतर दरमहा <xliff:g id="base_price" example="3,99 €">%2$s</xliff:g></string>
+    <string name="churn_auto_renew_note">तुमचे सदस्यत्व Google Play द्वारे आपोआप नूतनीकरण होते. रद्द करणे कधीही शक्य आहे.</string>
+    <string name="churn_cancel_sub">सदस्यत्व रद्द करा</string>
+    <string name="churn_reason_too_expensive">खूप महाग</string>
+    <string name="churn_reason_unused">खूप कमी वापरतो</string>
+    <string name="churn_per_year">प्रति वर्ष</string>
+    <string name="churn_per_month">प्रति महिना</string>
+    <string name="churn_reason_features">मला हवी ती वैशिष्ट्ये नाहीत</string>
+    <string name="churn_reason_other">इतर कारण</string>
+    <string name="churn_sorry_title">तुम्ही जात आहात, हे वाईट वाटले</string>
+    <string name="churn_sorry_body">रद्द करण्यापूर्वी, तुम्ही आम्हाला का सांगाल? हे आम्हाला App सुधारण्यास मदत करते.</string>
+    <string name="churn_exclusive_offer">तुमच्यासाठी ऑफर</string>
+    <string name="churn_offer_subtitle">तुमच्यासाठी आमची ऑफर</string>
+    <string name="churn_offer_feature_ai">दररोज AI विश्लेषण</string>
+    <string name="churn_offer_feature_perspectives">सर्व 4 पूर्वनिर्धारित AI प्रोफाइल + तुम्हाला हवे तितके स्वतःचे</string>
+    <string name="churn_offer_feature_voice">Premium वाक् ओळख</string>
+    <string name="churn_offer_auto_renew">आपोआप नूतनीकरण होते, कधीही रद्द करता येते</string>
+    <string name="churn_accept_offer">ऑफर स्वीकारा</string>
+    <string name="churn_switch_yearly">किंवा वार्षिक सदस्यत्वावर स्विच करा आणि अधिक बचत करा</string>
+    <string name="churn_pause_sub">किंवा Google Play वर सदस्यत्व थांबवा</string>
+    <string name="churn_cancel_anyway">तरीही रद्द करा</string>
+    <string name="churn_are_you_sure">तुम्हाला खात्री आहे का?</string>
+    <string name="churn_stay">राहणे पसंत करतो</string>
+
+    <!-- ════════════════════════════════════════════════════════════════════
+         AI LIMIT / COMPONENTS
+         ════════════════════════════════════════════════════════════════════ -->
+    <string name="ai_limit_title">तुमची साप्ताहिक मर्यादा संपली</string>
+    <string name="ai_limit_body">सबस्क्रिप्शनशिवाय तुम्हाला आठवड्याला 5 मजकूर सुधारणा आणि प्रत्येक प्रोफाइलसाठी आठवड्याला 5 डॅशबोर्ड अपडेट मिळतात.
+Premium सह: दररोज 150 पर्यंत.</string>
+    <string name="ai_limit_monthly">मासिक सदस्यत्व, %1$s/महिना</string>
+    <string name="ai_limit_yearly">वार्षिक सदस्यत्व, %1$s/वर्ष (37%% बचत)</string>
+    <string name="ai_limit_no_thanks">नको, AI शिवाय पुढे जा</string>
+    <string name="ai_banner_title">तुमची दैनंदिनी AI द्वारे समर्थित आहे</string>
+    <string name="ai_banner_body">• सांगितलेले मजकूर आपोआप सुधारले जातात\n• प्रत्येक नोंदीसाठी सारांश\n• तुमच्या नमुन्यांमधून बुद्धिमान जीवन सल्ले. सर्व AI आउटपुट सूचना आहेत, व्यावसायिक सल्ला नाही.\n• सर्व तुमच्या विनामूल्य चाचणी काळात समाविष्ट</string>
+    <string name="cd_mic_start">रेकॉर्डिंग सुरू करा</string>
+    <string name="cd_mic_stop">रेकॉर्डिंग थांबवा</string>
+    <string name="entry_improve_limit_daily">दैनंदिन मर्यादा गाठली. उद्या पुन्हा!</string>
+    <string name="entry_improve_limit_cooldown">थोडी विश्रांती: आणखी %1$d मिनिटे.</string>
+    <string name="entry_improve_failed">मजकूर सुधारणे अयशस्वी</string>
+
+    <!-- ════════════════════════════════════════════════════════════════════
+         NOTIFICATIONS
+         ════════════════════════════════════════════════════════════════════ -->
+    <string name="notif_reminder_title">तुमच्या दैनंदिनीची वेळ</string>
+    <string name="notif_reminder_body_0">आज तुम्हाला काय हलवत आहे?</string>
+    <string name="notif_reminder_body_1">तुमच्यासाठी एक क्षण, तो नोंदवा</string>
+    <string name="notif_reminder_body_2">तुमचे भावी स्वतःला याबद्दल आभारी असतील</string>
+    <string name="notif_reminder_body_3">फक्त एक विचार पुरे, सुरू करा</string>
+    <string name="notif_reminder_body_4">आज तुमचे सर्वात महत्त्वाचे काय होते?</string>
+    <string name="notif_weekly_title">तुमचा साप्ताहिक आढावा</string>
+    <string name="notif_weekly_body">या आठवड्यात तुम्हाला काय हलवले ते पाहा, तुमच्या डॅशबोर्डमध्ये नवीन अंतर्दृष्टी आहेत.</string>
+    <string name="notif_monthly_title">तुमचा मासिक आढावा</string>
+    <string name="notif_monthly_body">आठवणींनी भरलेला एक पूर्ण महिना तुमची वाट पाहत आहे.</string>
+    <string name="notif_yearly_title">तुमचा वार्षिक आढावा</string>
+    <string name="notif_yearly_body">आठवणींनी भरलेले एक संपूर्ण वर्ष, तुमच्या प्रवासाकडे मागे वळून पाहा.</string>
+
+    <!-- Notification channel names -->
+    <string name="notif_channel_daily_name">दैनंदिन स्मरणपत्र</string>
+    <string name="notif_channel_daily_desc">दैनंदिनी लिहिण्याची दररोज आठवण करून देते</string>
+    <string name="notif_channel_weekly_name">साप्ताहिक आढावा</string>
+    <string name="notif_channel_weekly_desc">दर रविवारी दुपारी 3:00 वाजता तुमचा साप्ताहिक आढावा</string>
+    <string name="notif_channel_monthly_name">मासिक आढावा</string>
+    <string name="notif_channel_monthly_desc">तुमचा मासिक आढावा तयार झाल्यावर सूचना</string>
+    <string name="notif_channel_yearly_name">वार्षिक आढावा</string>
+    <string name="notif_channel_yearly_desc">तुमचा वार्षिक आढावा तयार झाल्यावर सूचना</string>
+
+    <!-- ════════════════════════════════════════════════════════════════════
+         DATE / TIME
+         ════════════════════════════════════════════════════════════════════ -->
+    <string name="datetime_just_now">आत्ताच</string>
+    <plurals name="datetime_minutes_ago">
+        <item quantity="one">%1$d मिनिटापूर्वी</item>
+        <item quantity="other">%1$d मिनिटांपूर्वी</item>
+    </plurals>
+    <plurals name="datetime_hours_ago">
+        <item quantity="one">%1$d तासापूर्वी</item>
+        <item quantity="other">%1$d तासांपूर्वी</item>
+    </plurals>
+    <plurals name="datetime_days_ago">
+        <item quantity="one">%1$d दिवसापूर्वी</item>
+        <item quantity="other">%1$d दिवसांपूर्वी</item>
+    </plurals>
+    <!-- Confirmation after PDF export. %1$d = number of entries included in the PDF. -->
+    <plurals name="settings_export_success">
+        <item quantity="one">%1$d नोंद निर्यात झाली</item>
+        <item quantity="other">%1$d नोंदी निर्यात झाल्या</item>
+    </plurals>
+    <string name="datetime_today">आज</string>
+    <string name="datetime_yesterday">काल</string>
+    <string name="datetime_day_before_yesterday">परवा</string>
+    <string name="datetime_this_week">या आठवड्यात</string>
+    <string name="datetime_last_week">मागील आठवडा</string>
+    <string name="datetime_weeks_ago">%1$d आठवड्यांपूर्वी</string>
+
+    <!-- ════════════════════════════════════════════════════════════════════
+         ACHIEVEMENTS
+         ════════════════════════════════════════════════════════════════════ -->
+    <string name="achievement_nightowl_title">रात्रपाखरू</string>
+    <string name="achievement_nightowl_desc">रात्री 10 नंतर 50 नोंदी लिहिल्या</string>
+    <string name="achievement_earlybird_title">पहाटेचा पक्षी</string>
+    <string name="achievement_earlybird_desc">सकाळी 7 पूर्वी 20 नोंदी लिहिल्या</string>
+    <string name="achievement_confession_title">कबुलीजबाब</string>
+    <string name="achievement_confession_desc">1,000 पेक्षा जास्त शब्दांची नोंद लिहिली</string>
+    <string name="achievement_marathon_title">मॅरेथॉन लेखक</string>
+    <string name="achievement_marathon_desc">100 दैनंदिनी नोंदी लिहिल्या</string>
+    <string name="achievement_wordartist_title">शब्दकलाकार</string>
+    <string name="achievement_wordartist_desc">500 दैनंदिनी नोंदी लिहिल्या</string>
+    <string name="achievement_consistency_title">सातत्य</string>
+    <string name="achievement_consistency_desc">30 दिवसांचा Streak मिळवला</string>
+    <string name="achievement_chronicler_title">वर्षाचा इतिहासकार</string>
+    <string name="achievement_chronicler_desc">365 नोंदी लिहिल्या</string>
+    <string name="achievement_photodiary_title">फोटो दैनंदिनी</string>
+    <string name="achievement_photodiary_desc">नोंदींसाठी 50 फोटो जोडले</string>
+    <string name="achievement_voiceartist_title">वाक् कलाकार</string>
+    <string name="achievement_voiceartist_desc">25 वाक् नोंदी तयार केल्या</string>
+    <string name="achievement_reflectionmaster_title">चिंतन मास्टर</string>
+    <string name="achievement_reflectionmaster_desc">50 डॅशबोर्ड विश्लेषणे केली</string>
+
+    <!-- ════════════════════════════════════════════════════════════════════
+         DAILY PROMPTS
+         ════════════════════════════════════════════════════════════════════ -->
+    <string name="prompt_cat_self_reflection">आत्म-चिंतन</string>
+    <string name="prompt_cat_gratitude">कृतज्ञता</string>
+    <string name="prompt_cat_future">भविष्य</string>
+    <string name="prompt_cat_relationships">नाती</string>
+
+    <string-array name="prompts_self_reflection">
+        <item>आज तुम्हाला काय हसवले?</item>
+        <item>आज कोणता विचार तुम्ही सोडू शकला नाहीत?</item>
+        <item>आज तुम्ही स्वतःबद्दल काय शिकलात?</item>
+        <item>आज कोणता क्षण सर्वात तीव्र होता?</item>
+        <item>आज तुम्ही शक्य असते तर काय वेगळे केले असते?</item>
+        <item>आज कोणती भावना तुमच्यासोबत सर्वात जास्त होती?</item>
+        <item>आज तुम्हाला काय आश्चर्यचकित केले?</item>
+        <item>आज तुम्ही सर्वात जास्त वेळ कशाबद्दल विचार केला?</item>
+        <item>आज तुम्हाला ऊर्जा कशाने दिली?</item>
+        <item>आज तुमची ऊर्जा कशाने घेतली?</item>
+        <item>तुम्हाला कोणती सवय बदलायची आहे?</item>
+        <item>सध्या यश तुमच्यासाठी काय आहे?</item>
+        <item>सध्या कोणती भीती तुमच्या मार्गात आहे?</item>
+        <item>तुमचे लहानपणीचे स्वतः तुमच्या आजच्या जीवनाबद्दल काय म्हणेल?</item>
+        <item>सध्या तुम्ही स्वतःला कोणता सल्ला देता?</item>
+        <item>तुम्हाला वेगळे काय बनवते?</item>
+    </string-array>
+
+    <string-array name="prompts_gratitude">
+        <item>आज तुम्ही कशाबद्दल कृतज्ञ आहात?</item>
+        <item>आज कोणत्या व्यक्तीने तुमचा दिवस समृद्ध केला?</item>
+        <item>आज कोणत्या छोट्या गोष्टीने तुम्हाला आनंद दिला?</item>
+        <item>तुमच्याकडे कोणती क्षमता आहे जी तुम्ही गृहीत धरता?</item>
+        <item>या आठवड्यात तुमच्यासाठी सर्वोत्तम काय घडले?</item>
+        <item>तुम्ही कोणाचे आभार मानाल, आणि कशाबद्दल?</item>
+        <item>कोणती जागा तुम्हाला घराची भावना देते?</item>
+        <item>कोणती आठवण तुम्हाला ताबडतोब आनंद देते?</item>
+        <item>तुमच्या शरीराचे कोणते भाग अधिक कौतुकास पात्र आहेत?</item>
+        <item>आज कोणत्या अन्नाने तुम्हाला खरोखर बरे वाटले?</item>
+        <item>कोणत्या संगीताने तुम्हाला अलीकडे स्पर्श केला?</item>
+        <item>तुमच्याकडे सर्वात मौल्यवान काय आहे जे पैशाने मिळत नाही?</item>
+        <item>भूतकाळातील कोणत्या अनुभवाने तुम्हाला अधिक मजबूत बनवले?</item>
+        <item>तुमच्या दैनंदिन जीवनातील काय गोष्ट खरोखर एक सुविधा आहे?</item>
+        <item>दैनंदिन जीवनात तुमचा गुप्त नायक कोण आहे?</item>
+        <item>तुम्ही सध्या कोणती ऋतू सर्वात जास्त उपभोगत आहात, आणि का?</item>
+    </string-array>
+
+    <string-array name="prompts_future">
+        <item>एका वर्षात तुम्हाला काय साध्य करायचे आहे?</item>
+        <item>पाच वर्षांत तुमचा परिपूर्ण दिवस कसा दिसतो?</item>
+        <item>सध्या तुम्ही कोणत्या लक्ष्याचा सर्वात उत्कटतेने पाठलाग करत आहात?</item>
+        <item>तुम्ही अयशस्वी होऊ शकत नाही हे माहीत असते तर तुम्ही काय केले असते?</item>
+        <item>तुम्हाला कोणती नवीन कौशल्य शिकायची आहे?</item>
+        <item>तुम्ही पुढे कुठे प्रवास करायचा आहे?</item>
+        <item>दहा वर्षांत तुम्हाला कोणती व्यक्ती व्हायचे आहे?</item>
+        <item>तुम्ही कोणते स्वप्न सोडले आहे जे तुम्ही पुन्हा जागवू शकता?</item>
+        <item>तुम्ही आत्ता घेऊ शकणारे सर्वात धाडसाचे पाऊल कोणते?</item>
+        <item>कोणता प्रकल्प तुम्हाला उत्साहित करतो जो तुम्ही अजून सुरू केला नाही?</item>
+        <item>काय घडायला हवे की तुम्ही म्हणाल: आता मी समाधानी आहे?</item>
+        <item>जगात तुम्हाला कोणता बदल बघायला आवडेल?</item>
+        <item>तुमच्या Bucket List मध्ये सर्वात वर काय आहे?</item>
+        <item>पुढील महिन्यापर्यंत तुम्हाला कोणती वाईट सवय सोडायची आहे?</item>
+        <item>तुम्हाला कशाने आठवले जायचे आहे?</item>
+        <item>उद्या तुम्ही घेऊ शकणारे एक छोटे पाऊल कोणते?</item>
+    </string-array>
+
+    <string-array name="prompts_relationships">
+        <item>तुम्ही कोणाला काहीतरी सांगायला आवडेल जे तुम्ही अजून सांगितले नाही?</item>
+        <item>तुमच्या जीवनातील कोणते नाते अधिक लक्ष देण्यास पात्र आहे?</item>
+        <item>तुम्ही तुमच्या सर्वात जवळच्या मित्राबद्दल काय सर्वात जास्त कौतुक करता?</item>
+        <item>तुम्हाला शेवटचे खरोखर समजले गेल्यासारखे केव्हा वाटले?</item>
+        <item>तुम्ही एखाद्या महत्त्वाच्या व्यक्तीला काय सांगाल?</item>
+        <item>कोणत्या व्यक्तीने तुमच्या जीवनावर सर्वाधिक प्रभाव टाकला?</item>
+        <item>तुम्ही इतरांना हे कसे दाखवता की तुम्ही त्यांच्यावर प्रेम करता?</item>
+        <item>तुम्हाला कोणता संघर्ष सोडवायचा आहे?</item>
+        <item>मैत्री म्हणजे तुमच्यासाठी काय?</item>
+        <item>अलीकडे कोणी तुम्हाला काही महत्त्वाचे शिकवले?</item>
+        <item>इतरांमध्ये तुम्हाला कोणता गुण सर्वात जास्त आवडतो?</item>
+        <item>तुम्ही एका संपूर्ण दिवसात कोणाबरोबर वेळ घालवाल?</item>
+        <item>तुम्हाला मिळालेली सर्वात सुंदर तारीफ कोणती?</item>
+        <item>नात्यांमध्ये तुम्हाला कोणत्या मर्यादा अधिक चांगल्याप्रकारे सेट करायच्या आहेत?</item>
+        <item>कालांतराने प्रेमाबद्दलची तुमची कल्पना कशी बदलली?</item>
+        <item>आज कोणाला तुमच्याकडून फोन किंवा संदेशाची गरज आहे?</item>
+    </string-array>
+
+    <!-- ════════════════════════════════════════════════════════════════════
+         PDF EXPORT
+         ════════════════════════════════════════════════════════════════════ -->
+    <string name="pdf_entry_fallback_title">नोंद #%1$d</string>
+    <string name="pdf_entry_counter">नोंद %1$d पैकी %2$d</string>
+    <string name="pdf_summary_label">सारांश</string>
+    <string name="pdf_continuation">%1$s (पुढे चालू)</string>
+    <string name="pdf_page_number">पृष्ठ %1$d</string>
+
+    <!-- ════════════════════════════════════════════════════════════════════
+         ERRORS
+         ════════════════════════════════════════════════════════════════════ -->
+    <string name="error_retro_all_failed">सर्व %1$d AI विनंत्या अयशस्वी. कृपया इंटरनेट कनेक्शन तपासा.</string>
+    <string name="error_whisper_audio_empty">ऑडिओ फाइल रिकामी आहे</string>
+    <string name="error_whisper_no_text">कोणताही मजकूर ओळखला नाही</string>
+    <string name="error_sync_db_not_found">डेटाबेस आढळला नाही</string>
+    <string name="error_audio_record_init_failed">मायक्रोफोन सुरू करता आला नाही</string>
+    <string name="error_json_key_missing">AI प्रतिसाद अपूर्ण आहे: %1$s किंवा %2$s गहाळ आहे</string>
+    <string name="error_file_open_failed">त्रुटी: फाइल उघडता आली नाही</string>
+    <string name="error_generic">त्रुटी: %1$s</string>
+
+    <!-- ════════════════════════════════════════════════════════════════════
+         AI PROFILE STYLE INSTRUCTIONS (for Gemini prompts)
+         ════════════════════════════════════════════════════════════════════ -->
+    <string name="profile_style_chronicler">\n- एका सारांशात्मक कथनाच्या शैलीत लिहा, सर्वात महत्त्वाच्या घटना आणि भावना एकत्र करा, जसे एक वैयक्तिक इतिहासकार</string>
+    <string name="profile_style_advisor">\n- जीवन सल्लागाराच्या शैलीत लिहा, काय चांगले गेले, काय सुधारता येईल याचे ठळकीकरण करा, आणि वाचकाला स्पष्टता आणि व्यवस्थेची भावना द्या</string>
+    <string name="profile_style_insight">\n- एका सखोल आत्म-ज्ञान कथनाच्या शैलीत लिहा, विचारांचे नमुने, वारंवार येणाऱ्या भावना आणि लपलेल्या शक्ती उघड करा</string>
+    <string name="profile_style_coach">\n- एका प्रेरणादायी लक्ष्य साथीदाराच्या शैलीत लिहा, वैयक्तिक लक्ष्यांमधील प्रगती दाखवा आणि पुढे जाण्यास प्रोत्साहित करा</string>
+    <string name="profile_style_custom">
+- प्रोफाइल शैली (Custom): वापरकर्त्याच्या कार्याशी स्पष्ट संबंधासह हा आढावा लिहा. अनिवार्य नियम:
+  1) आढाव्याच्या किमान 60 टक्के थेट किंवा वर्णनात्मकपणे कार्य-विषयाशी संबंधित.
+  2) किमान एक थीमॅटिक विभाग पूर्णपणे कार्य-फोकसला समर्पित (शीर्षक + मजकूर).
+  3) प्रोफाइल संबंध विविधतेने व्यक्त करा, समानार्थी शब्द आणि थीमॅटिक शेजारी वापरा, यांत्रिक शब्द पुनरावृत्ती नाही.
+  4) कार्याशी संबंध नसलेल्या निरीक्षणांना थोडक्यात ठेवा — खऱ्या संबंधासह कमी विभाग, अनेक सामान्यांपेक्षा चांगले.
+  वापरकर्त्याचे कार्य (मार्गदर्शनासाठी): &quot;%1$s&quot;</string>
+
+
+    <!-- ════════════════════════════════════════════════════════════════════
+         CONSENT SCREEN + PRIVACY GATES + PRIVACY SECTION (April 2026)
+         ════════════════════════════════════════════════════════════════════ -->
+    <string name="consent_title">गोपनीयता आणि संमती</string>
+    <string name="consent_intro">तुमची डायरी ही एक वैयक्तिक जागा आहे आणि आम्ही त्याचा आदर करतो. येथे तुम्ही पारदर्शकपणे पाहू शकता की Best Journal तुमचा डेटा कसा हाताळते.</string>
+    <string name="consent_card1_title">स्थानिक संचय</string>
+    <string name="consent_card1_body">तुमच्या नोंदी तुमच्या उपकरणावर राहतात.</string>
+    <string name="consent_card2_title">AI वैशिष्ट्ये (USA)</string>
+    <string name="consent_card2_body">पर्यायाने मजकूर Google Gemini ला आणि मोठ्याने वाचायचे मजकूर Microsoft Edge ला USA मध्ये पाठवले जातात (EU-US Data Privacy Framework). आवाज रेकॉर्डिंग मानक करार कलमांखाली (EU SCCs) Groq (USA) ला पाठवली जातात.</string>
+    <string name="consent_card3_title">छद्मनामी आकडेवारी</string>
+    <string name="consent_card3_body">Firebase Analytics, पर्यायी, सेटिंग्जमध्ये कधीही बदलता येते.</string>
+    <string name="consent_links_header">आमची कायदेशीर कागदपत्रे:</string>
+    <string name="consent_accept_all">सहमत आणि सुरू करा</string>
+    <string name="consent_disable_stats">आकडेवारी बंद करून सुरू ठेवा</string>
+    <string name="consent_confirmation">\"सहमत आणि सुरू करा\" टॅप करून तुम्ही गोपनीयता धोरण, वापराच्या अटी आणि कायदेशीर सूचना वाचल्याची आणि वर्णन केलेल्या डेटा प्रक्रियेला सहमत असल्याची पुष्टी करता. तुमचा निर्णय सेटिंग्जमध्ये कधीही बदलू शकता.</string>
+
+    <string name="privacy_gate_groq_title">आवाज रेकॉर्डिंग Groq ला पाठवायचे का?</string>
+    <string name="privacy_gate_groq_body">हे कार्य तुमचे वाणी-रेकॉर्डिंग एन्क्रिप्ट करून Groq (USA) कडे पाठवते आणि तिथे ते मजकुरात रूपांतरित करते — स्थानिक ओळखीपेक्षा जलद आणि अधिक अचूक.
+
+✓ रूपांतरानंतर रेकॉर्डिंग तत्काळ हटवले जाते
+✓ तुमच्या रेकॉर्डिंगसह कोणतेही AI प्रशिक्षण नाही
+✓ कायदेशीर आधार: मानक करार-कलमे (EU SCCs)
+
+पर्याय: सेटिंग्जमधील स्थानिक ऑफलाइन ओळख.</string>
+    <string name="privacy_gate_groq_accept">सहमत आणि पाठवा</string>
+    <string name="privacy_gate_groq_local">त्याऐवजी स्थानिकरित्या ट्रान्सक्राइब करा</string>
+
+    <string name="privacy_gate_gemini_title">मजकूर Google Gemini ला पाठवायचे का?</string>
+    <string name="privacy_gate_gemini_body">छान, तुम्ही Best Journal च्या स्मार्ट वैशिष्ट्यांचा वापर करू इच्छिता! सारांश, आढावे, डॅशबोर्ड अंतर्दृष्टी आणि मजकूर सुधारणांसाठी तुमचे मजकूर एन्क्रिप्टेड स्वरूपात Google Gemini ला पाठवले जातात.\n\n✓ तुमच्या डेटाने AI प्रशिक्षण नाही\n✓ विनंत्या कायमस्वरूपी संग्रहित केल्या जात नाहीत\n✓ EU-US Data Privacy Framework नुसार एन्क्रिप्टेड\n\nमहत्त्वाची सूचना: तुमच्या दैनंदिनी नोंदींमध्ये विशेषतः संवेदनशील डेटा असू शकतो (आरोग्य, धर्म, वैयक्तिक नाते — Art. 9 GDPR), म्हणून आम्ही AI प्रक्रियेसाठी तुमची स्पष्ट संमती मागत आहोत. AI आउटपुट हे सूचना आहेत, व्यावसायिक सल्ला नाही आणि ते तज्ञांची जागा घेत नाहीत.\n\nतुम्ही हे कधीही सेटिंग्जमध्ये बदलू शकता.</string>
+    <string name="privacy_gate_gemini_accept">सहमत आणि पाठवा</string>
+    <string name="privacy_gate_gemini_cancel">रद्द करा</string>
+
+    <string name="privacy_gate_tts_title">प्रीमियम आवाज सक्रिय करा</string>
+    <string name="privacy_gate_tts_body">प्रीमियम आवाजांसह वाचन अधिक नैसर्गिक वाटते. तुमचा मजकूर एन्क्रिप्ट करून (HTTPS/TLS) अमेरिकेतील Microsoft वाणी-सेवेकडे पाठवला जातो आणि ऑडिओ म्हणून परत मिळतो.
+
+✓ हस्तांतरण फक्त वाणी-संश्लेषणासाठी
+✓ तृतीय-देश हस्तांतरण USA (Microsoft EU-US Data Privacy Framework नुसार प्रमाणित आहे)</string>
+    <string name="privacy_gate_tts_accept">सहमत आणि वाचा</string>
+    <string name="privacy_gate_tts_cancel">रद्द करा</string>
+
+    <string name="settings_privacy_header">गोपनीयता</string>
+    <string name="settings_analytics_title">छद्मनामी वापर-विश्लेषण</string>
+    <string name="settings_analytics_subtitle">त्रुटी विश्लेषण आणि उत्पादन सुधारणेसाठी Firebase Analytics</string>
+
+    <string name="settings_delete_account_title">खाते आणि डेटा हटवा</string>
+    <string name="settings_delete_account_subtitle">सर्व स्थानिक डेटा आणि Drive बॅकअप अपरिवर्तनीयपणे काढून टाकते. तुमचे Google खाते स्वतः कायम राहते.</string>
+    <string name="settings_delete_account_confirm_title">सर्व अॅप डेटा हटवायचा का?</string>
+    <string name="settings_delete_account_confirm_body">ही क्रिया अपरिवर्तनीय आहे आणि हे हटवते:
+
+• सर्व स्थानिक दैनंदिनी नोंदी, फोटो, व्हिडिओ आणि ऑडिओ-रेकॉर्डिंग
+• अ‍ॅपचा Google Drive बॅकअप (फक्त अ‍ॅप-डेटा, तुमचे Google खाते नव्हे)
+• तुमचे अ‍ॅप-लॉगिन
+
+तुमचे Google खाते स्वतः कायम राहते. त्यानंतर अ‍ॅप नव्या इन्स्टॉलेशनप्रमाणे नव्याने सुरू होते.</string>
+    <string name="settings_delete_account_cancel">रद्द करा</string>
+    <string name="settings_delete_account_confirm">होय, सर्व हटवा</string>
+
+    <string name="settings_report_ai_title">AI उत्तराचा अहवाल द्या</string>
+    <string name="settings_report_ai_subtitle">अयोग्य किंवा चुकीचे AI आउटपुट</string>
+    <string name="settings_report_ai_confirm_title">सपोर्टला ईमेल उघडायचा का?</string>
+    <string name="settings_report_ai_confirm_body">dev.app.support@gmail.com ला तयार केलेल्या संदेशासह तुमचा ई-मेल प्रोग्राम उघडतो. पाठवण्यापूर्वी तुम्ही वर्णनात भर घालू शकता. आम्ही सहसा कामकाजाच्या दिवशी 24 तासांच्या आत उत्तर देतो.
+
+कृपया याद्वारे कळवा: डॅशबोर्ड, सारांश, आढावे किंवा मजकूर-सुधारणेतील अयोग्य, आक्षेपार्ह, चुकीचे किंवा दिशाभूल करणारे AI आउटपुट.</string>
+    <string name="settings_report_ai_confirm">अहवाल तयार करा</string>
+    <string name="settings_report_ai_cancel">रद्द करा</string>
+    <string name="settings_report_ai_no_email">कोणतेही ईमेल अॅप सापडले नाही. कृपया अहवाल dev.app.support@gmail.com वर पाठवा.</string>
+    <string name="settings_report_ai_subject">Best Journal: अयोग्य AI उत्तर</string>
+    <string name="settings_report_ai_body">नमस्कार,\n\nमला Best Journal मधील एक अयोग्य किंवा चुकीचे AI उत्तर कळवायचे आहे.\n\nसमस्येचे वर्णन:\n[कृपया भरा]\n\nसंदर्भ (कोणते वैशिष्ट्य, कोणते इनपुट):\n[कृपया भरा]\n\nधन्यवाद.</string>
+    <string name="settings_report_ai_dialog_title">AI प्रतिसाद नोंदवा</string>
+    <string name="settings_report_ai_dialog_desc">अयोग्य किंवा चुकीच्या AI प्रतिसादाचे वर्णन करा. तुमचा अहवाल थेट आमच्या सपोर्ट टीमला पाठवला जातो. तुम्ही तुमच्या Google खात्याने साइन इन केलेले असले पाहिजे.</string>
+
+    <string name="settings_revoke_title">करार रद्दबातल</string>
+    <string name="settings_revoke_subtitle">§ 356a BGB — थेट अ‍ॅपद्वारे रद्द करा</string>
+    <string name="settings_revoke_confirm_title">करार रद्द करायचा?</string>
+    <string name="settings_revoke_confirm_body">\"रद्द करणे निश्चित करा\" वर क्लिक केल्यावर आम्ही तुमचा रद्दबातल थेट dev.app.support@gmail.com ला पाठवतो. तुम्हाला ई-मेलद्वारे तत्काळ पोचपावती मिळते.
+
+संपूर्ण रद्दबातल-सूचना तुम्हाला वापराच्या अटींमध्ये (§ 16) सापडेल. पुढील कोणतीही आकारणी होऊ नये म्हणून वर्गण्या कृपया Google Play → वर्गण्या द्वारेही रद्द करा.</string>
+    <string name="settings_revoke_cancel">रद्द करा</string>
+    <string name="settings_revoke_confirm">रद्दबातल तयार करा</string>
+    <string name="settings_revoke_no_email">कोणतेही ईमेल अॅप सापडले नाही. कृपया रद्दबातल dev.app.support@gmail.com वर पाठवा.</string>
+    <string name="settings_revoke_email_subject">Best Journal Premium करार रद्दबातल</string>
+    <string name="settings_revoke_email_body">याद्वारे मी Best Journal च्या Premium वैशिष्ट्यांबाबतच्या माझ्या करारातून माघार घेत असल्याची सूचना देत आहे.\n\nपाठवणारा (Google खाते): %1$s\nमाघारीची वेळ: %2$s\n\nही माघार अॅपमधील § 356a BGB-सुसंगत दोन-टप्प्यातील माघार बटणाद्वारे सुरू करण्यात आली आणि Gmail API मार्फत आपोआप पाठवण्यात आली.</string>
+    <string name="settings_revoke_confirm_subject">तुमची प्राप्ती-पुष्टी: Best Journal मधील माघार</string>
+    <string name="settings_revoke_confirm_user_body">नमस्कार,\n\n%1$s रोजीची तुमची माघार आम्हाला प्राप्त झाली आहे. ही § 356a BGB नुसार तुमची प्राप्ती-पुष्टी आहे.\n\nआम्ही तुमची माघार शक्य तितक्या लवकर प्रक्रिया करू आणि काही प्रश्न असल्यास dev.app.support@gmail.com वर तुमच्याशी संपर्क करू.\n\nपुढील बिलिंग थांबवण्यासाठी, कृपया Google Play Store मधील "Subscriptions" अंतर्गत तुमची सदस्यताही रद्द करा.\n\nधन्यवाद आणि शुभेच्छा\nBest Journal (Frank Barwandt)</string>
+    <string name="settings_revoke_no_account">साइन-इन केलेला Google खात्याचा पत्ता सापडला नाही. कृपया Settings मध्ये तुमच्या Google खात्याने साइन इन करा किंवा माघार dev.app.support@gmail.com वर हाताने पाठवा.</string>
+    <string name="settings_revoke_sending">माघार पाठवली जात आहे…</string>
+    <string name="settings_revoke_success_title">माघार प्राप्त झाली</string>
+    <string name="settings_revoke_success_body">तुमची माघार dev.app.support@gmail.com वर पाठवण्यात आली आहे. प्राप्ती-पुष्टीही तुमच्या इनबॉक्समध्ये आहे.</string>
+    <string name="settings_revoke_success_close">बंद करा</string>
+    <string name="settings_revoke_error_title">माघार पाठवता आली नाही</string>
+    <string name="settings_revoke_error_body">स्वयंचलित पाठवणे अयशस्वी झाले: %1$s\n\nपर्यायाने तुम्ही dev.app.support@gmail.com वर हाताने ई-मेल पाठवू शकता. त्यासाठी "ई-मेल अॅप उघडा" वर टॅप करा.</string>
+    <string name="settings_revoke_error_email_fallback">ई-मेल अॅप उघडा</string>
+
+
+
+    <!-- Crisis Support / Mental Health Disclaimer -->
+    <string name="settings_crisis_title">संकटातील मदत</string>
+    <string name="settings_crisis_subtitle">आपत्कालीन परिस्थितीसाठी महत्त्वाच्या हेल्पलाईन्स</string>
+    <string name="settings_crisis_dialog_title">तुम्ही एकटे नाही</string>
+    <string name="settings_crisis_dialog_body">Best Journal हे जर्नल अॅप आहे आणि ते व्यावसायिक मानसशास्त्रीय किंवा वैद्यकीय मदतीची जागा घेऊ शकत नाही. AI ने तयार केलेली विश्लेषणे थेरपी नाहीत.\n\nतुम्ही तीव्र संकटात असाल किंवा स्वतःला इजा करण्याचे किंवा आत्महत्येचे विचार येत असतील, तर तुम्हाला हे एकट्याने पेलावे लागणार नाही. मोफत, गोपनीय मदत 24/7 उपलब्ध आहे.</string>
+    <string name="settings_crisis_hotline_de_name">Telefonseelsorge जर्मनी</string>
+    <string name="settings_crisis_hotline_de_hours">मोफत, 24/7, गोपनीय</string>
+    <string name="settings_crisis_call_de">0800 111 0 111 वर कॉल करा</string>
+    <string name="settings_crisis_call_de_alt">0800 111 0 222 वर कॉल करा</string>
+    <string name="settings_crisis_emergency_name">आपत्कालीन मदत</string>
+    <string name="settings_crisis_call_emergency">112 वर कॉल करा</string>
+    <string name="settings_crisis_international_name">आंतरराष्ट्रीय हेल्पलाईन्स</string>
+    <string name="settings_crisis_open_findahelpline">findahelpline.com उघडा</string>
+    <string name="settings_crisis_close">बंद करा</string>
+    <string name="settings_crisis_no_dialer">फोन अॅप सापडले नाही.</string>
+    <string name="settings_crisis_no_browser">ब्राउझर सापडला नाही.</string>
+
+    <!-- AI-generated content badge -->
+    <string name="ai_generated_badge">AI-निर्मित</string>
+    <string name="ai_generated_tooltip">ही सामग्री AI प्रणाली (Google Gemini) ने तयार केली आहे आणि यात चुका असू शकतात. कृपया स्वतः पडताळून पाहा.</string>
+
+    <!-- AUTO-ADDED FALLBACK (English) for missing keys — replace with proper translations later -->
+    <string name="consent_optout_confirmation">ऑप्ट-आउट जतन केले — आकडेवारी बंद आहे.</string>
+    <string name="settings_ccpa_do_not_sell_title">Do Not Sell My Personal Information</string>
+    <string name="settings_ccpa_do_not_sell_subtitle">कॅलिफोर्नियाच्या रहिवाशांसाठी (CCPA/CPRA 2026). सक्रिय असताना सर्व क्लाउड AI वैशिष्ट्ये बंद होतात आणि कोणतीही आकडेवारी गोळा केली जात नाही.</string>
+    <string name="settings_ccpa_do_not_sell_confirmation">Do-Not-Sell चालू — सर्व क्लाउड सेवा बंद आहेत.</string>
+    <string name="settings_ccpa_do_not_sell_off_confirmation">Do-Not-Sell बंद केले.</string>
+    <string name="settings_delete_account_in_progress">खाते आणि डेटा हटवत आहोत…</string>
+    <string name="settings_delete_account_drive_error_title">Drive बॅकअप हटवता आले नाही</string>
+    <string name="settings_delete_account_drive_error_body">Google Drive बॅकअप विश्वासार्हरित्या काढता आले नाही (कारण: %1$s).
+
+पूर्ण हटवल्याशिवाय \"कायमचे हटवले\" हा संदेश अचूक ठरणार नाही.
+
+तुम्हाला काय करायचे आहे?</string>
+    <string name="settings_delete_account_retry">पुन्हा प्रयत्न करा</string>
+    <string name="settings_delete_account_force_local">फक्त स्थानिक हटवा (Drive बॅकअप राहील)</string>
+    <string name="settings_delete_account_abort">क्रिया रद्द करा</string>
+
+    <string name="legal_title_datenschutz">गोपनीयता धोरण</string>
+    <string name="legal_title_nutzungsbedingungen">वापराच्या अटी</string>
+    <string name="legal_title_impressum">कायदेशीर माहिती</string>
+
+    <!-- Consent-Screen v4 + Privacy Sheet + Settings -->
+    <string name="consent_welcome_title">Best Journal मध्ये आपले स्वागत आहे</string>
+    <string name="consent_welcome_intro">सुरू करण्यापूर्वी, येथे तुमची गोपनीयता प्राधान्ये पटकन सेट करूया.</string>
+    <string name="consent_promise_local">गोपनीयता कायद्यांना तुमची संमती आवश्यक आहे.</string>
+    <string name="consent_promise_no_training">कोणती वैशिष्ट्ये सक्रिय असतील ते तुम्ही येथे ठरवता.</string>
+    <string name="consent_promise_optional_ai">सेटिंग्जमध्ये कधीही बदलता येते.</string>
+    <string name="consent_btn_manual_selection">मॅन्युअल निवड</string>
+    <string name="privacy_sheet_title">गोपनीयता सानुकूलित करा</string>
+    <string name="privacy_sheet_subtitle">तुम्हाला सोयीस्कर वाटेल अशा पद्धतीने वैयक्तिक वैशिष्ट्ये सक्षम करा. सर्वकाही कधीही बदलता येते.</string>
+    <string name="privacy_sheet_save">निवड जतन करा</string>
+    <string name="privacy_sheet_all_on">सर्व चालू</string>
+    <string name="privacy_sheet_all_off">सर्व बंद</string>
+    <string name="consent_toggle_analytics_title">छद्मनामी वापर-विश्लेषण</string>
+    <string name="consent_toggle_analytics_body">Firebase Analytics — अ‍ॅप सुधारण्यास आम्हाला मदत करते. कोणताही दैनंदिनी मजकूर नाही, फक्त छद्मनामी वापर-आकडेवारी (उदा. क्लिक-संख्या). डेटा-हस्तांतरण: Google USA (Data Privacy Framework).</string>
+    <string name="consent_toggle_groq_title">भाषण-ते-मजकूर (Groq Whisper)</string>
+    <string name="consent_toggle_groq_body">नोंदी श्रुतलेखन करण्यास परवानगी देते. तुमचे ध्वनी रेकॉर्डिंग एन्क्रिप्टेड स्वरूपात Groq (USA) ला पाठवले जाते, मजकुरात रूपांतरित केले जाते आणि नंतर हटवले जाते. तुमची रेकॉर्डिंग्ज प्रशिक्षणासाठी वापरली जात नाहीत.</string>
+    <string name="consent_toggle_gemini_title">AI प्रतिबिंब (Google Gemini)</string>
+    <string name="consent_toggle_gemini_body">डॅशबोर्ड AI, सारांश, पुनरावलोकन आणि मजकूर सुधारणा. मजकूर तुकडे Google Gemini (USA) ला पाठवते. तुमच्या नोंदी प्रशिक्षणासाठी वापरल्या जात नाहीत.</string>
+    <string name="consent_toggle_tts_title">मोठ्याने वाचन (Microsoft Edge TTS)</string>
+    <string name="consent_toggle_tts_body">नैसर्गिक आवाजात नोंदी वाचते. मजकूर Microsoft (USA) ला पाठवते.</string>
+    <string name="consent_toggle_drive_title">Google Drive बॅकअप</string>
+    <string name="consent_toggle_drive_body">नोंदी एन्क्रिप्टेड स्वरूपात तुमच्या स्वतःच्या Google Drive मध्ये जतन करते. तुम्ही पूर्ण नियंत्रण ठेवता — फाइल तुमच्या खात्यात असते, आमच्याकडे नाही.</string>
+    <string name="consent_toggle_do_not_sell_title">Do Not Sell My Personal Information</string>
+    <string name="consent_toggle_do_not_sell_body">हे बटण फक्त अमेरिकेच्या कॅलिफोर्निया राज्यातील रहिवाशांसाठी आहे. कॅलिफोर्नियाचा गोपनीयता कायदा (CCPA/CPRA) रहिवाशांना विरोध करण्याचा हक्क देतो. सक्रिय केल्यास सर्व ऐच्छिक क्लाउड-कार्ये (AI, बॅकअप, वाणी-ओळख, विश्लेषण) निष्क्रिय होतात — फक्त स्थानिक कार्ये सक्रिय राहतात.
+
+तुम्ही कॅलिफोर्नियाबाहेर राहत असाल, तर तुम्ही हे बटण दुर्लक्षित करू शकता: Best Journal तुमचा डेटा जगात कुठेही विकत किंवा विपणन करत नाही.</string>
+    <string name="consent_btn_accept_all">सर्व स्वीकारा</string>
+    <string name="consent_btn_save_selection">माझी निवड जतन करा</string>
+    <string name="consent_btn_minimum_only">सर्व नाकारा</string>
+    <string name="consent_saved_snackbar">सेटिंग जतन केली</string>
+    <string name="consent_revoke_snackbar">संमती मागे घेतली</string>
+    <string name="consent_footer_version">तुमची निवड सेटिंग्जमध्ये कधीही बदलता येते.</string>
+    <string name="consent_details_expand">तपशील</string>
+    <string name="settings_open_privacy_sheet">गोपनीयता सेटिंग्ज सानुकूलित करा</string>
+    <string name="settings_privacy_section_header">गोपनीयता आणि संमती</string>
+    <string name="settings_ai_groq_title">भाषण-ते-मजकूर (Groq)</string>
+    <string name="settings_ai_groq_subtitle">ट्रान्सक्रिप्शनसाठी ध्वनी रेकॉर्डिंग Groq USA ला पाठवा</string>
+    <string name="settings_ai_gemini_title">AI प्रतिबिंब (Gemini)</string>
+    <string name="settings_ai_gemini_subtitle">AI सारांशांसाठी मजकूर Google USA ला पाठवा</string>
+    <string name="settings_ai_tts_title">मोठ्याने वाचन (Edge TTS)</string>
+    <string name="settings_ai_tts_subtitle">ध्वनी आउटपुटसाठी मजकूर Microsoft USA ला पाठवा</string>
+    <string name="settings_drive_backup_title">Google Drive बॅकअप</string>
+    <string name="settings_drive_backup_subtitle">तुमच्या Drive मध्ये एन्क्रिप्टेड नोंदी जतन करा</string>
+
+    <!-- DEBUG-only test data seeder (button in journal top bar, only visible in debug builds) -->
+    <string name="dev_seed_create_label">70 चाचणी नोंदी तयार करा</string>
+    <string name="dev_seed_delete_label">70 चाचणी नोंदी हटवा</string>
+    <string name="dev_seed_running">तुमच्या भाषेत 70 चाचणी नोंदी तयार करत आहे…</string>
+    <string name="dev_seed_done">%1$d चाचणी नोंदी तयार केल्या</string>
+    <string name="dev_seed_deleted">%1$d चाचणी नोंदी हटवल्या</string>
+    <string name="dev_seed_error">त्रुटी: %1$s</string>
+    <string name="dev_seed_ai_no_entries">AI ने चाचणी नोंदी परत दिल्या नाहीत</string>
+
+    <!-- Premium feature: unlimited follow-ups per journal entry -->
+    <string name="paywall_feature_followups">तुम्हाला हवे तितके डायरी नोंदींमध्ये अतिरिक्त नोंदी</string>
+    <string name="settings_premium_feature_followups">अमर्यादित अतिरिक्त नोंदी</string>
+    <string name="settings_premium_feature_followups_desc">प्रत्येक नोंदीत हव्या तितक्या अतिरिक्त नोंदी</string>
+
+    <!-- Follow-up feature strings -->
+    <string name="action_no">नाही</string>
+    <string name="action_yes">हो</string>
+    <string name="ai_improved_suffix"> (AI द्वारे सुधारित)</string>
+    <string name="ai_improved_suffix_marker">✨ AI ने सुधारले</string>
+    <string name="entry_delete_entry_cd">नोंद हटवा</string>
+    <string name="entry_journal_entry_title">डायरी नोंद</string>
+    <string name="entry_photos_videos_add_title">फोटो आणि व्हिडिओ जोडा</string>
+    <string name="follow_up_cancel">रद्द करा</string>
+    <string name="follow_up_card_title">अतिरिक्त नोंद</string>
+    <string name="follow_up_choose_input_mode">इनपुट पद्धत निवडा</string>
+    <string name="follow_up_delete_button">नोंद हटवा</string>
+    <string name="follow_up_delete_cd">नोंद हटवा</string>
+    <string name="follow_up_delete_confirm_text">तुम्हाला खरोखरच "<xliff:g id="title" example="माझी नोंद">%1$s</xliff:g>" हटवायची आहे का? ही क्रिया पूर्ववत होऊ शकत नाही.</string>
+    <string name="follow_up_delete_confirm_title">"<xliff:g id="title" example="माझी नोंद">%1$s</xliff:g>" हटवायची?</string>
+    <string name="follow_up_dialog_label">नोंद लिहा</string>
+    <string name="follow_up_dialog_title">अतिरिक्त नोंद जोडा</string>
+    <string name="follow_up_discard">सोडून द्या</string>
+    <string name="follow_up_improve_text">मजकूर सुधारा</string>
+    <string name="follow_up_improve_with_ai">AI ने सुधारा</string>
+    <string name="follow_up_improving">सुधारत आहे…</string>
+    <string name="follow_up_inline_title"><xliff:g id="index" example="1">%1$s</xliff:g>. अतिरिक्त नोंद</string>
+    <string name="follow_up_input_speak_cd">बोलून लिहा</string>
+    <string name="follow_up_input_speak_label">बोला</string>
+    <string name="follow_up_input_write_cd">टाइप करून लिहा</string>
+    <string name="follow_up_input_write_label">टाइप करा</string>
+    <string name="follow_up_premium_body">Premium सह प्रत्येक डायरी नोंदीत अमर्यादित अतिरिक्त नोंदी जोडा.</string>
+    <string name="follow_up_premium_hint">आणखी नोंदी हव्या आहेत?</string>
+    <string name="follow_up_premium_later">नंतर</string>
+    <string name="follow_up_premium_subscribe">Premium घ्या</string>
+    <string name="follow_up_premium_subtext">Premium प्लानसह अमर्यादित अतिरिक्त नोंदी अनलॉक करा.</string>
+    <string name="follow_up_premium_title">Premium वैशिष्ट्य</string>
+    <string name="follow_up_save">जतन करा</string>
+    <string name="follow_up_save_improved">सुधारित जतन करा</string>
+    <string name="follow_up_show_improved">सुधारित दाखवा</string>
+    <string name="follow_up_show_original">↩ मूळ दाखवा</string>
+    <string name="follow_up_speak_pill_label">बोला</string>
+    <string name="follow_up_speak_prompt">आता बोला…</string>
+    <string name="follow_up_stop_hint">थांबण्यासाठी टॅप करा</string>
+    <string name="follow_up_tab_improved">✨ AI सुधारित</string>
+    <string name="follow_up_tab_original">मूळ</string>
+    <string name="follow_up_text_placeholder">येथे तुमची नोंद लिहा…</string>
+    <string name="follow_up_transcribing">ट्रान्सक्राइब होत आहे…</string>
+    <string name="journal_improve">सुधारा</string>
+    <string name="journal_state_improving">सुधारत आहे…</string>
+    <string name="journal_state_transcribing">ट्रान्सक्राइब होत आहे…</string>
+    <string name="profile_custom_add">प्रोफाइल जोडा</string>
+    <string name="profile_custom_remove">प्रोफाइल हटवा</string>
+    <string name="profile_custom_rename">प्रोफाइलचे नाव बदला</string>
+    <string name="profile_custom_rename_save">जतन करा</string>
+    <string name="prompt_clear_confirm_text">तुम्हाला खरोखरच हा प्रॉम्प्ट साफ करायचा आहे का?</string>
+    <string name="prompt_clear_confirm_title">प्रॉम्प्ट साफ करायचा?</string>
+    <string name="prompt_clear_content_desc">प्रॉम्प्ट साफ करा</string>
+    <string name="prompt_recording_with_model"><xliff:g id="model" example="Whisper">%1$s</xliff:g> ने रेकॉर्ड होत आहे…</string>
+    <string name="prompt_transcribing_with_model"><xliff:g id="model" example="Whisper">%1$s</xliff:g> ने ट्रान्सक्राइब होत आहे…</string>
+    <string name="prompt_transcription_model_hint"><xliff:g id="model" example="Whisper">%1$s</xliff:g> वापरून</string>
+    <string name="ai_retro_copied_message">क्लिपबोर्डवर कॉपी झाले</string>
+    <string name="ai_retro_copy_button">कॉपी करा</string>
+    <string name="ai_retro_empty_state">पुनरावलोकनासाठी पुरेशा नोंदी नाहीत.</string>
+    <string name="ai_retro_error_state">पुनरावलोकन तयार करता आले नाही. पुन्हा प्रयत्न करा.</string>
+    <string name="ai_retro_generate_button">पुनरावलोकन तयार करा</string>
+    <string name="ai_retro_generating_state">पुनरावलोकन तयार होत आहे…</string>
+    <string name="ai_retro_month_label">हा महिना</string>
+    <string name="ai_retro_share_button">शेअर करा</string>
+    <string name="ai_retro_title">AI पुनरावलोकन</string>
+    <string name="ai_retro_week_label">हा आठवडा</string>
+    <string name="ai_retro_year_label">हे वर्ष</string>
+    <string name="follow_up_add_button">फॉलो-अप जोडा</string>
+    <string name="follow_up_delete_confirm_no">नाही, ठेवून द्या</string>
+    <string name="follow_up_delete_confirm_yes">हो, हटवा</string>
+    <string name="follow_up_empty_state">अजून कोणतेही फॉलो-अप नाहीत.\nपहिले जोडण्यासाठी खालील बटणावर टॅप करा.</string>
+    <string name="follow_up_improve_button">सुधारा</string>
+    <string name="follow_up_improve_error">सुधारता आले नाही. पुन्हा प्रयत्न करा.</string>
+    <string name="follow_up_improving_state">सुधारत आहे…</string>
+    <string name="follow_up_record_error">रेकॉर्ड करता आले नाही. पुन्हा प्रयत्न करा.</string>
+    <string name="follow_up_record_new">नवा फॉलो-अप रेकॉर्ड करा</string>
+    <string name="follow_up_recording_hint">रेकॉर्ड करण्यासाठी टॅप करा</string>
+    <string name="follow_up_recording_state">रेकॉर्ड होत आहे…</string>
+    <string name="follow_up_tab_label">फॉलो-अप</string>
+    <string name="follow_up_transcribe_error">लिप्यंतर करता आले नाही. पुन्हा प्रयत्न करा.</string>
+    <string name="follow_up_transcribing_state">लिप्यंतर होत आहे…</string>
+    <string name="prompt_char_count_label">%1$d अक्षरे</string>
+    <string name="prompt_improve_button_label">सुधारा</string>
+    <string name="prompt_placeholder_text">तुमच्या मनातले लिहा…</string>
+    <string name="prompt_record_button_label">रेकॉर्ड</string>
+    <string name="prompt_send_button_label">पाठवा</string>
+    <string name="prompt_stop_button_label">थांबवा</string>
+    <string name="settings_legal_section_header">कायदेशीर दस्तऐवज</string>
+    <string name="settings_legal_online_label">ऑनलाइन आवृत्ती:</string>
+    <plurals name="datetime_months_relative">
+        <item quantity="one">%1$d महिन्यापूर्वी</item>
+        <item quantity="other">%1$d महिन्यांपूर्वी</item>
+    </plurals>
+    <plurals name="datetime_years_relative">
+        <item quantity="one">%1$d वर्षापूर्वी</item>
+        <item quantity="other">%1$d वर्षांपूर्वी</item>
+    </plurals>
+    <string name="ai_limits_disclaimer">सखोल वापरासाठी AI दैनंदिन कोटा.</string>
+    <string name="ai_limits_dialog_title">दैनंदिन AI कोटा कसा काम करतो?</string>
+    <string name="ai_limits_dialog_body" formatted="false">PREMIUM सदस्यतेसह\n\nदररोज उपलब्ध:\n• दररोज प्रति प्रोफाइल 150 विनंत्या — 4 पूर्वनिर्धारितांसाठी एकत्र 600/दिवस, आणि तुम्ही तयार केलेल्या प्रत्येक स्वतःच्या प्रोफाइलसाठी 150/दिवस.\n• 150 पर्यंत मजकूर सुधारणा\n\nतपशीलवार प्रक्रिया:\n• विनंत्या 1 ते 30: सर्वोच्च AI गुणवत्ता\n• विनंत्या 31 ते 100: जलद मानक गुणवत्ता\n• 101व्या विनंतीवर: एकदाचा 30 मिनिटांचा विराम\n• विनंत्या 101 ते 150: जलद मानक गुणवत्ता\n• 151व्या विनंतीपासून: उद्यापर्यंत आणखी विनंत्या नाही\n\nसर्व वापरकर्त्यांना लागू:\n• प्रति तास जास्तीत जास्त 50 AI विनंत्या — नंतर 5 मिनिटांचा विराम\n\nकोटा कधी रीसेट होतो?\nदररोज 0:00 वाजता (तुमच्या स्थानिक वेळेनुसार) नवीन पूर्ण कोटा सुरू होतो.\n\n──────────\n\nसदस्यतेशिवाय\n\n• दर आठवड्याला प्रति प्रोफाइल 5 डॅशबोर्ड विश्लेषणे\n• दर आठवड्याला 5 मजकूर सुधारणा\n• नेहमी जलद मानक गुणवत्तेत\n• दर सोमवारी 0:00 वाजता (तुमच्या स्थानिक वेळेनुसार) रीसेट\n\n──────────\n\nदैनंदिन वापरातील बहुतेक वापरकर्त्यांना हे मर्यादा कधीही लागणार नाहीत.</string>
+    <string name="ai_limits_dialog_close">समजले</string>
+    <string name="theme_neutral">तटस्थ</string>
+    <string name="theme_profile">प्रोफाइल रंग — डॅशबोर्ड प्रोफाइलचा रंग</string>
+    <string name="theme_solarized">अयनांत</string>
+    <string name="theme_dracula">मध्यरात्र</string>
+    <string name="theme_one_dark">कार्यशाळा</string>
+    <string name="theme_nord">ध्रुवीय रात्र</string>
+    <string name="theme_gruvbox">अंबर</string>
+
+    <!-- Permission rationale -->
+    <string name="permission_rationale_microphone">तुम्ही तुमच्या डायरी नोंदी आवाजाने लिहू शकण्यासाठी आम्हाला मायक्रोफोनचा अ‍ॅक्सेस आवश्यक आहे.</string>
+    <string name="permission_rationale_camera">तुम्ही तुमच्या नोंदींमध्ये फोटो जोडू शकण्यासाठी आम्हाला कॅमेऱ्याचा अ‍ॅक्सेस आवश्यक आहे.</string>
+    <string name="permission_rationale_notifications">तुम्हाला दैनंदिन लेखनाची आठवण करून देण्यासाठी आम्हाला सूचनांची परवानगी आवश्यक आहे.</string>
+
+    <!-- System backup consent -->
+    <string name="consent_info_system_backup_title">Android सिस्टम बॅकअप</string>
+    <string name="consent_info_system_backup_body">तुम्ही डिव्हाइस सेटिंग्जमध्ये Android सिस्टम बॅकअप सक्रिय केल्यास, Android तुमचा डायरी डेटा तुमच्या Google खात्याच्या बॅकअप क्षेत्रात आपोआप सुरक्षित करतो. तुम्ही हे डिव्हाइस सेटिंग्जमध्ये कधीही बंद करू शकता — तपशीलांसाठी गोपनीयता धोरण पहा.</string>
+    <string name="settings_open_system_backup_settings_label">Android सिस्टम बॅकअप व्यवस्थापित करा</string>
+    <string name="settings_open_system_backup_settings_desc">Android सिस्टम सेटिंग्ज उघडतो, जिथे तुम्ही Best Journal साठी आपोआप बॅकअप चालू किंवा बंद करू शकता.</string>
+    <string name="error_no_backup_settings_available">या डिव्हाइसवर बॅकअप सेटिंग्ज उपलब्ध नाहीत.</string>
+
+    <!-- Consent footer links -->
+    <string name="consent_footer_link_datenschutz">गोपनीयता</string>
+    <string name="consent_footer_link_impressum">कायदेशीर माहिती</string>
+    <string name="consent_footer_link_agb">वापर अटी</string>
+
+    <!-- AI health disclaimer -->
+    <string name="ai_output_health_disclaimer">थेरपी नाही — व्यावसायिक सल्ल्याची जागा घेत नाही.</string>
+    <string name="ai_output_health_disclaimer_long">Best Journal एक डायरी आहे, थेरपी सेवा नाही. AI विश्लेषण स्वयंचिंतनासाठी सूचना आहेत आणि व्यावसायिक मनोवैज्ञानिक किंवा वैद्यकीय सल्ल्याची जागा घेत नाहीत. तातडीच्या समस्यांसाठी एखाद्या तज्ञाशी किंवा तुमच्या सेटिंग्जमधील संकट सहाय्याशी संपर्क साधा.</string>
+    <string name="churn_cancelled">रद्द केले</string>
+    <string name="churn_cancelled_ends_on">रद्द केले — <xliff:g id="date" example="30.04.2026, 18:13">%1$s</xliff:g> रोजी संपते</string>
+    <string name="churn_promo_phase_ends"><xliff:g id="date" example="30.04.2026, 18:13">%1$s</xliff:g> रोजी संपते — त्यानंतर दरमहा <xliff:g id="base_price" example="3,99 €">%2$s</xliff:g></string>
+    <string name="churn_reason_other_placeholder">कृपया आम्हाला थोडक्यात सांगा काय झाले…</string>
+    <string name="churn_renews_on"><xliff:g id="date" example="30.04.2026, 18:13">%1$s</xliff:g> रोजी नूतनीकरण होते</string>
+    <string name="settings_premium_cancelled">प्रीमियम सदस्यता रद्द केली</string>
+    <string name="settings_premium_cancelled_desc">तुमची Premium वैशिष्ट्ये बिलिंग कालावधी संपेपर्यंत उपलब्ध राहतील. तुम्ही Google Play द्वारे रद्दीकरण मागे घेउ शकता.</string>
+    <string name="settings_premium_cancelled_until">प्रीमियम सदस्यता रद्द केली — <xliff:g id="date" example="30.04.2026, 21:01">%1$s</xliff:g> पर्यंत उपलब्ध</string>
+    <string name="settings_theme">थीम</string>
+    <string name="settings_themes_manager">थीम्स व्यवस्थापक</string>
+    <string name="paywall_monthly_note">त्यानंतर %1$s प्रति महिना, आपोआप नूतनीकरण होते\nकधीही रद्द करता येते</string>
+</resources>

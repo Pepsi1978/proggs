@@ -1,0 +1,7 @@
+interface:
+  display_name: "nemo"
+  short_description: "Nemo orchestrator for universal knowledge work where Codex"
+  default_prompt: "Use $nemo for this task."
+
+policy:
+  allow_implicit_invocation: false

@@ -1,0 +1,329 @@
+#!/bin/bash
+# Gemini CLI Setup — macOS
+# Kopiert alle Konfigurationsdateien aus dem Repo an die richtigen Stellen nach git pull.
+# Ueberschreibt alles ausser MEMORY.md (hat maschinenspezifischen Inhalt).
+
+set -e
+
+# ─── Farben ───────────────────────────────────────────────────────────────────
+GREEN='\033[0;32m'
+YELLOW='\033[1;33m'
+RED='\033[0;31m'
+BOLD='\033[1m'
+RESET='\033[0m'
+
+ok()   { echo -e "${GREEN}  ✔  $1${RESET}"; }
+warn() { echo -e "${YELLOW}  ⚠  $1${RESET}"; }
+err()  { echo -e "${RED}  ✘  $1${RESET}"; }
+step() { echo -e "\n${BOLD}[$1]${RESET} $2"; }
+
+SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
+
+echo ""
+echo -e "${BOLD}╔══════════════════════════════════════════════╗${RESET}"
+echo -e "${BOLD}║   Gemini CLI Setup — macOS (vollständig)    ║${RESET}"
+echo -e "${BOLD}╚══════════════════════════════════════════════╝${RESET}"
+echo ""
+
+# ─── Schritt 1: Verzeichnisse anlegen ─────────────────────────────────────────
+step "1/11" "Verzeichnisse anlegen"
+mkdir -p \
+    ~/.Gemini/rules \
+    ~/.Gemini/agents \
+    ~/.Gemini/commands/self-improve-ref \
+    ~/.Gemini/commands/tool-check-ref \
+    ~/.Gemini/hooks/prompt-injection-defender/prompt-injection-defender \
+    ~/.Gemini/skills/auto-verify-iterate \
+    ~/.Gemini/skills/cross-platform \
+    ~/.Gemini/skills/undo-changes \
+    ~/.Gemini/agent-memory/shared
+ok "Alle Verzeichnisse erstellt"
+
+# ─── Schritt 2: settings.json kopieren ────────────────────────────────────────
+step "2/11" "settings.json kopieren"
+cp "$SCRIPT_DIR/settings.json" ~/.Gemini/settings.json
+ok "settings.json → ~/.Gemini/settings.json"
+
+# ─── Schritt 3: macOS-Hooks in settings.json einmergen ────────────────────────
+step "3/11" "macOS-Hooks in settings.json einmergen (hooks-macos.json)"
+
+# Bevorzuge python3 (auf macOS immer vorhanden), Fallback: jq
+if command -v python3 &>/dev/null; then
+    python3 - "$SCRIPT_DIR/hooks-macos.json" ~/.Gemini/settings.json <<'PYEOF'
+import json, sys
+
+hooks_src  = sys.argv[1]
+settings_f = sys.argv[2]
+
+with open(hooks_src,  "r", encoding="utf-8") as f:
+    macos_hooks = json.load(f).get("hooks", {})
+
+with open(settings_f, "r", encoding="utf-8") as f:
+    settings = json.load(f)
+
+settings["hooks"] = macos_hooks
+
+with open(settings_f, "w", encoding="utf-8") as f:
+    json.dump(settings, f, indent="\t", ensure_ascii=False)
+    f.write("\n")
+PYEOF
+    ok "Hooks aus hooks-macos.json via python3 eingemergt"
+elif command -v jq &>/dev/null; then
+    HOOKS=$(jq '.hooks' "$SCRIPT_DIR/hooks-macos.json")
+    TMP=$(mktemp)
+    jq --argjson h "$HOOKS" '.hooks = $h' ~/.Gemini/settings.json > "$TMP"
+    mv "$TMP" ~/.Gemini/settings.json
+    ok "Hooks aus hooks-macos.json via jq eingemergt"
+else
+    warn "Weder python3 noch jq gefunden."
+    warn "Bitte hooks-macos.json manuell in ~/.Gemini/settings.json unter 'hooks' eintragen."
+    warn "Alternativ: brew install jq"
+fi
+
+# ─── Schritt 4: Shell-Hooks (.sh) kopieren und ausführbar machen ──────────────
+step "4/11" "Shell-Hooks (.sh) nach ~/.Gemini/hooks/ kopieren"
+
+# Copy ALL .sh hooks (no hardcoded list — future-proof)
+SH_COUNT=0
+for hook in "$SCRIPT_DIR/hooks/"*.sh; do
+    [ -f "$hook" ] || continue
+    cp "$hook" ~/.Gemini/hooks/
+    chmod +x ~/.Gemini/hooks/"$(basename "$hook")"
+    SH_COUNT=$((SH_COUNT + 1))
+done
+ok "$SH_COUNT Shell-Hooks kopiert"
+
+# Also copy .ps1 hooks as reference (for cross-platform parity checks)
+PS1_COUNT=0
+for hook in "$SCRIPT_DIR/hooks/"*.ps1; do
+    [ -f "$hook" ] || continue
+    cp "$hook" ~/.Gemini/hooks/
+    PS1_COUNT=$((PS1_COUNT + 1))
+done
+ok "$PS1_COUNT PowerShell-Hooks als Referenz kopiert"
+
+# ─── Schritt 5: TypeScript-Hooks kopieren und ausführbar machen ───────────────
+step "5/11" "TypeScript-Hooks (.ts) nach ~/.Gemini/hooks/ kopieren"
+
+TS_HOOKS=(
+    session-autopsy.ts
+    session-scorer.ts
+)
+
+for hook in "${TS_HOOKS[@]}"; do
+    SRC="$SCRIPT_DIR/hooks/$hook"
+    if [ -f "$SRC" ]; then
+        cp "$SRC" ~/.Gemini/hooks/
+        chmod +x ~/.Gemini/hooks/"$hook"
+        ok "$hook"
+    else
+        warn "$hook nicht gefunden — übersprungen"
+    fi
+done
+
+# ─── Schritt 6: prompt-injection-defender kopieren ────────────────────────────
+step "6/11" "prompt-injection-defender nach ~/.Gemini/hooks/ kopieren"
+
+PID_SRC="$SCRIPT_DIR/hooks/prompt-injection-defender"
+PID_DST=~/.Gemini/hooks/prompt-injection-defender
+
+# Dateien im Wurzelverzeichnis (patterns.yaml, post-tool-defender.py)
+for f in "$PID_SRC"/patterns.yaml "$PID_SRC"/post-tool-defender.py; do
+    if [ -f "$f" ]; then
+        cp "$f" "$PID_DST/"
+        ok "$(basename "$f")"
+    else
+        warn "$(basename "$f") nicht gefunden — übersprungen"
+    fi
+done
+
+# Inneres Unterverzeichnis prompt-injection-defender/
+INNER_SRC="$PID_SRC/prompt-injection-defender"
+INNER_DST="$PID_DST/prompt-injection-defender"
+if [ -d "$INNER_SRC" ]; then
+    cp -r "$INNER_SRC/." "$INNER_DST/"
+    ok "prompt-injection-defender/ (inner dir)"
+else
+    warn "Inneres prompt-injection-defender/ nicht gefunden — übersprungen"
+fi
+
+# ─── Schritt 7: Agents kopieren ───────────────────────────────────────────────
+step "7/11" "Agents nach ~/.Gemini/agents/ kopieren"
+cp "$SCRIPT_DIR/agents/"*.md ~/.Gemini/agents/
+ok "$(ls "$SCRIPT_DIR/agents/"*.md | wc -l | tr -d ' ') Agent-Dateien kopiert"
+
+# ─── Schritt 8: Commands kopieren (inkl. Unterverzeichnisse) ──────────────────
+step "8/11" "Commands nach ~/.Gemini/commands/ kopieren"
+cp "$SCRIPT_DIR/commands/"*.md ~/.Gemini/commands/
+
+# Unterverzeichnisse self-improve-ref/ und tool-check-ref/
+for subdir in self-improve-ref tool-check-ref; do
+    SRC_DIR="$SCRIPT_DIR/commands/$subdir"
+    DST_DIR=~/.Gemini/commands/$subdir
+    if [ -d "$SRC_DIR" ]; then
+        cp -r "$SRC_DIR/." "$DST_DIR/"
+        ok "$subdir/"
+    else
+        warn "$subdir/ nicht gefunden — übersprungen"
+    fi
+done
+ok "Commands kopiert"
+
+# ─── Schritt 9: Skills kopieren (Verzeichnisse + Standalone-Dateien) ──────────
+step "9/11" "Skills nach ~/.Gemini/skills/ kopieren"
+
+# Verzeichnis-basierte Skills
+for skill_dir in auto-verify-iterate cross-platform undo-changes; do
+    SRC_DIR="$SCRIPT_DIR/skills/$skill_dir"
+    DST_DIR=~/.Gemini/skills/$skill_dir
+    if [ -d "$SRC_DIR" ]; then
+        cp -r "$SRC_DIR/." "$DST_DIR/"
+        ok "$skill_dir/"
+    else
+        warn "$skill_dir/ nicht gefunden — übersprungen"
+    fi
+done
+
+# Standalone .md Skills
+for skill_md in "$SCRIPT_DIR/skills/"*.md; do
+    [ -f "$skill_md" ] || continue
+    cp "$skill_md" ~/.Gemini/skills/
+    ok "$(basename "$skill_md")"
+done
+
+# ─── Schritt 10: Rules kopieren ───────────────────────────────────────────────
+step "10/11" "Rules nach ~/.Gemini/rules/ kopieren"
+cp "$SCRIPT_DIR/rules/"*.md ~/.Gemini/rules/
+ok "$(ls "$SCRIPT_DIR/rules/"*.md | wc -l | tr -d ' ') Rule-Dateien kopiert"
+
+# ─── Schritt 11: Weitere Dateien und Git-Konfiguration ────────────────────────
+step "11/11" "Gemini.md, .gitignore_global, Git-Konfiguration"
+
+cp "$SCRIPT_DIR/Gemini.md" ~/Gemini.md
+ok "Gemini.md → ~/Gemini.md"
+
+cp "$SCRIPT_DIR/.gitignore_global" ~/.gitignore_global
+ok ".gitignore_global → ~/.gitignore_global"
+
+# Git-Konfiguration setzen
+git config --global init.defaultBranch     main
+git config --global pull.rebase            true
+git config --global push.autoSetupRemote   true
+git config --global core.excludesFile      ~/.gitignore_global
+ok "Git-Konfiguration gesetzt (defaultBranch, pull.rebase, push.autoSetupRemote, core.excludesFile)"
+
+# ─── agent-memory/shared/MEMORY.md — nur anlegen, NIEMALS überschreiben ───────
+MEMORY_FILE=~/.Gemini/agent-memory/shared/MEMORY.md
+if [ ! -f "$MEMORY_FILE" ]; then
+    # Repo-Vorlage vorhanden? Dann einmalig kopieren.
+    MEMORY_SRC="$SCRIPT_DIR/agent-memory/shared/MEMORY.md"
+    if [ -f "$MEMORY_SRC" ]; then
+        cp "$MEMORY_SRC" "$MEMORY_FILE"
+        ok "MEMORY.md erstmalig angelegt (aus Repo-Vorlage)"
+    else
+        # Leere Datei mit Stub-Inhalt erstellen
+        cat > "$MEMORY_FILE" <<'EOF'
+# Shared Knowledge Hub — Zentrales Whiteboard
+
+Das zentrale Nervensystem des Gemini CLI Systems. JEDE Komponente die hier arbeitet
+(Agents, Skills, Hooks, Plugins) MUSS hier lesen und schreiben.
+EOF
+        ok "MEMORY.md erstmalig mit Stub-Inhalt angelegt"
+    fi
+else
+    warn "MEMORY.md existiert bereits — wird NICHT überschrieben (maschinenspezifischer Inhalt)"
+fi
+
+# ─── Optional: apple-platform-build-tools Plugin installieren ─────────────────
+echo ""
+echo -e "${BOLD}[Optional] apple-platform-build-tools Plugin${RESET}"
+if command -v Gemini &>/dev/null; then
+    echo -e "   Installiere apple-platform-build-tools aus dem Anthropic Marketplace..."
+    if Gemini mcp add apple-platform-build-tools 2>/dev/null || \
+       Gemini plugin install kylehughes/apple-platform-build-tools-gemini-setup-plugin 2>/dev/null; then
+        ok "apple-platform-build-tools installiert"
+    else
+        warn "Plugin konnte nicht automatisch installiert werden."
+        warn "Manuell installieren: Gemini plugin install kylehughes/apple-platform-build-tools-gemini-setup-plugin"
+    fi
+else
+    warn "Gemini CLI nicht gefunden — Plugin muss manuell installiert werden."
+    warn "Befehl: Gemini plugin install kylehughes/apple-platform-build-tools-gemini-setup-plugin"
+fi
+
+# ─── Schritt 12: Git pre-push Hook installieren (auto fetch+rebase) ───────────
+step "12" "Git pre-push Hook installieren"
+
+REPO_DIR="$(cd "$SCRIPT_DIR/.." && pwd)"
+GIT_HOOKS_DIR="$REPO_DIR/.git/hooks"
+if [ -d "$GIT_HOOKS_DIR" ]; then
+    cat > "$GIT_HOOKS_DIR/pre-push" <<'PREPUSH'
+#!/bin/sh
+# Pre-push hook: automatic fetch + rebase BEFORE push
+# Prevents push rejections when other CLIs (Codex, Gemini) pushed in the meantime
+# Installed by setup-macos.sh — reinstall after every clone
+
+REMOTE="$1"
+if [ "$REMOTE" = "origin" ] || [ -z "$REMOTE" ]; then
+    if git fetch origin 2>/dev/null; then
+        REMOTE_MAIN=$(git rev-parse origin/main 2>/dev/null) || true
+        BASE=$(git merge-base HEAD origin/main 2>/dev/null) || true
+        if [ -n "$REMOTE_MAIN" ] && [ -n "$BASE" ] && [ "$BASE" != "$REMOTE_MAIN" ]; then
+            echo "[pre-push] Behind origin/main — rebasing..."
+            DIRTY=0
+            if ! git diff --quiet 2>/dev/null || ! git diff --cached --quiet 2>/dev/null; then
+                git stash --quiet 2>/dev/null
+                DIRTY=1
+            fi
+            if git rebase origin/main --quiet 2>/dev/null; then
+                echo "[pre-push] Rebase successful."
+            else
+                echo "[pre-push] ERROR: Rebase conflict! Push aborted."
+                echo "[pre-push] Fix: git rebase --abort && git fetch origin && git rebase origin/main"
+                git rebase --abort 2>/dev/null
+                [ "$DIRTY" -eq 1 ] && git stash pop --quiet 2>/dev/null
+                exit 1
+            fi
+            [ "$DIRTY" -eq 1 ] && git stash pop --quiet 2>/dev/null
+        fi
+    fi
+fi
+# Git LFS pre-push check
+command -v git-lfs >/dev/null 2>&1 || { printf >&2 "\n%s\n\n" "This repository is configured for Git LFS but 'git-lfs' was not found on your path."; exit 2; }
+git lfs pre-push "$@"
+PREPUSH
+    chmod +x "$GIT_HOOKS_DIR/pre-push"
+    ok "Git pre-push Hook installiert (auto fetch+rebase + LFS)"
+else
+    warn ".git/hooks nicht gefunden — pre-push Hook nicht installiert"
+fi
+
+# ─── Zusammenfassung ──────────────────────────────────────────────────────────
+echo ""
+echo -e "${BOLD}╔══════════════════════════════════════════════╗${RESET}"
+echo -e "${BOLD}║             Setup abgeschlossen!             ║${RESET}"
+echo -e "${BOLD}╚══════════════════════════════════════════════╝${RESET}"
+echo ""
+echo -e "${GREEN}Was wurde kopiert:${RESET}"
+echo "  • settings.json          → ~/.Gemini/settings.json (mit macOS-Hooks)"
+echo "  • $SH_COUNT Shell-Hooks (.sh)     → ~/.Gemini/hooks/ (chmod +x)"
+echo "  • $PS1_COUNT PowerShell-Hooks (.ps1) → ~/.Gemini/hooks/ (Referenz)"
+echo "  • ${#TS_HOOKS[@]} TypeScript-Hooks (.ts)→ ~/.Gemini/hooks/ (chmod +x)"
+echo "  • prompt-injection-defender → ~/.Gemini/hooks/prompt-injection-defender/"
+echo "  • Agents                 → ~/.Gemini/agents/"
+echo "  • Commands (+ Subdirs)   → ~/.Gemini/commands/"
+echo "  • Skills (dirs + .md)    → ~/.Gemini/skills/"
+echo "  • Rules                  → ~/.Gemini/rules/"
+echo "  • Gemini.md              → ~/Gemini.md"
+echo "  • .gitignore_global      → ~/.gitignore_global"
+echo "  • Git-Konfiguration      gesetzt"
+echo "  • agent-memory/shared/   angelegt (MEMORY.md nur wenn neu)"
+echo ""
+echo -e "${YELLOW}Nächste Schritte:${RESET}"
+echo "  1. Dev-Tools installieren:    brew install swift-format swiftlint golangci-lint"
+echo "  2. Shell-Tools installieren:  brew install fzf eza bat fd tmux htop wget jq"
+echo "  3. Bun installieren (für TS-Hooks): curl -fsSL https://bun.sh/install | bash"
+echo "  4. Gemini CLI starten und /self-improve ausführen (vollständige Umgebungsprüfung)"
+echo "  5. Parry-Daemon starten:      parry serve"
+echo ""
+

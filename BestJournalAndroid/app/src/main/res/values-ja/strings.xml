@@ -1,0 +1,1463 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources xmlns:tools="http://schemas.android.com/tools"
+    xmlns:xliff="urn:oasis:names:tc:xliff:document:1.2"
+    tools:locale="ja">
+    <!-- App brand name — do not translate -->
+    <string name="app_name" translatable="false">Best Journal</string>
+
+    <!-- ════════════════════════════════════════════════════════════════════
+         NAVIGATION & TABS
+         ════════════════════════════════════════════════════════════════════ -->
+    <string name="nav_journal">日記</string>
+    <string name="nav_retrospective">振り返り</string>
+    <string name="nav_dashboard">ダッシュボード</string>
+    <string name="nav_settings">設定</string>
+
+    <!-- ════════════════════════════════════════════════════════════════════
+         COMMON / SHARED
+         ════════════════════════════════════════════════════════════════════ -->
+    <string name="action_cancel">キャンセル</string>
+    <string name="action_save">保存</string>
+    <string name="action_close">閉じる</string>
+    <string name="action_continue">続ける</string>
+    <string name="action_understood">わかりました</string>
+    <string name="action_retry">再試行</string>
+    <string name="action_later">後で</string>
+    <string name="action_share">共有</string>
+    <string name="action_discard">破棄</string>
+    <string name="action_back">戻る</string>
+    <string name="action_done">完了</string>
+    <string name="action_no_thanks">いいえ、結構です</string>
+    <string name="action_delete">削除</string>
+    <!-- Accessibility label for the undo icon button on the dashboard. -->
+    <string name="action_undo">元に戻す</string>
+    <string name="action_ok">OK</string>
+    <string name="action_go_google_play">Google Playへ</string>
+    <string name="journal_drive_backup_dialog">Google Driveのバックアップ</string>
+    <string name="journal_improve_text">✨ 文章を改善</string>
+    <string name="journal_show_original">↩ 元の文章を表示</string>
+    <string name="journal_show_improved">✨ 改善版を表示</string>
+    <string name="journal_ai_improving">AIが文章を改善しています。少々お待ちください</string>
+    <string name="journal_later">後で</string>
+    <!-- Paywall missed strings -->
+    <string name="paywall_from_per_day">年間プラン、年額%1$s</string>
+    <string name="paywall_instead_per_month">月額プランより%1$d%%お得</string>
+    <string name="paywall_or">または</string>
+    <string name="paywall_with_limited">制限付きで。</string>
+    <!-- Churn missed string -->
+    <string name="churn_instead_of">の代わりに </string>
+    <string name="label_premium">プレミアム</string>
+    <string name="label_original">元の文章</string>
+    <string name="label_improved">✨ AI 改善</string>
+    <string name="label_photo">写真</string>
+    <string name="label_video">動画</string>
+    <string name="label_current">現在</string>
+    <string name="label_record">記録</string>
+    <string name="cd_sync_status">同期ステータス</string>
+    <string name="cd_day">昼</string>
+    <string name="cd_night">夜</string>
+
+    <!-- ════════════════════════════════════════════════════════════════════
+         JOURNAL SCREEN
+         ════════════════════════════════════════════════════════════════════ -->
+    <string name="journal_title">日記</string>
+    <string name="journal_search_placeholder">記録を検索…</string>
+    <string name="journal_search">検索</string>
+    <string name="journal_search_hint">検索</string>
+    <string name="journal_search_close">検索を閉じる</string>
+    <string name="journal_no_entries">まだ記録がありません</string>
+    <string name="journal_tap_mic_to_start">マイクをタップして開始</string>
+    <string name="journal_cd_streak">連続日数</string>
+    <string name="journal_cd_text_input">文字入力</string>
+    <string name="journal_achievement_unlocked">達成を獲得しました！</string>
+    <string name="journal_drive_not_signed_in">Googleにログインしていません</string>
+    <string name="journal_drive_backup_current">バックアップは最新です。すべての記録が保存されています</string>
+    <string name="journal_drive_uploading">バックアップをアップロード中…</string>
+    <string name="journal_drive_downloading">写真と動画をダウンロード中…</string>
+    <string name="journal_drive_failed">バックアップに失敗しました！</string>
+    <string name="journal_drive_last_sync">最終同期：%1$s</string>
+    <string name="journal_new_entry_prompt">書き出しのヒント</string>
+    <string name="journal_new_entry">新しい記録</string>
+    <string name="journal_save_improved">改善版を保存</string>
+    <string name="journal_save">保存</string>
+    <string name="journal_cd_write">書く</string>
+    <string name="journal_write">書く</string>
+    <string name="journal_cd_speak">話す</string>
+    <string name="journal_speak">話す</string>
+    <string name="journal_your_answer">あなたの答え：</string>
+    <string name="journal_placeholder_prompt">ここに考えを書いてください…</string>
+    <string name="journal_placeholder_edit">ここをタップして文章を編集…</string>
+    <string name="journal_freeflow_hint">思いつくままに書いてみてください。正解も不正解もありません。</string>
+    <string name="journal_transcribed_with">%1$sで文字起こし</string>
+    <!-- Default label for the transcription model (local Whisper, runs on-device). -->
+    <string name="transcription_model_local">ローカルのWhisperモデル</string>
+    <!-- Brand name of the Groq transcription model — do not translate. -->
+    <string name="transcription_model_groq" translatable="false">Groq Whisper Large V3 Turbo</string>
+    <string name="journal_text_upsell_title">すごいですよね？</string>
+    <string name="journal_text_upsell_body">プレミアムなら、どの記録も改善できます。</string>
+    <string name="journal_discover_premium">プレミアムを見る →</string>
+    <string name="journal_entries_label">記録</string>
+    <string name="journal_entry_count">%1$d件の記録</string>
+    <string name="journal_streak_days">%1$d日</string>
+    <string name="journal_streak_days_in_row">%1$d日連続</string>
+    <string name="journal_streak_next_goal">次の目標：%1$d日</string>
+    <string name="journal_streak_remaining">あと%1$d</string>
+    <string name="journal_streak_premium">連続記録の保護：プレミアムで利用できます</string>
+    <string name="journal_keep_going">この調子！</string>
+    <string name="journal_daily_prompt">今日のヒント</string>
+    <string name="journal_write_about">これについて書く</string>
+    <string name="journal_recording_error">録音に失敗しました： %1$s</string>
+    <string name="journal_transcription_error">文字起こしに失敗しました： %1$s</string>
+    <string name="journal_rate_limit">少し休憩です。次の改善まであと%1$d分。</string>
+    <string name="journal_improve_error">文章の改善に失敗しました： %1$s</string>
+    <string name="journal_save_error">保存できませんでした： %1$s</string>
+    <string name="recording_tap_stop">もう一度タップして停止</string>
+
+    <!-- Streak messages -->
+    <string name="streak_365">まるまる1年！</string>
+    <string name="streak_180">驚くほどの継続力！</string>
+    <string name="streak_90">止められません！</string>
+    <string name="streak_30">まるまる1か月！</string>
+    <string name="streak_14">強い2週間！</string>
+    <string name="streak_7">まるまる1週間！</string>
+    <string name="streak_3">続けています！</string>
+    <string name="streak_default">毎日が大切です！</string>
+    <string name="streak_desc_365">小さな習慣として始めたことが、今では生活の一部になっています。日記は以前よりずっとあなたのことを知っています。</string>
+    <string name="streak_desc_14">2週間続くことは、多くの人にはできません。未来のあなたが感謝するはずです。</string>
+    <string name="streak_desc_7">考え、気持ち、思い出にあふれた1週間。大切なものを築いています。</string>
+    <string name="streak_desc_3">3日連続は本物の習慣の始まりです。続ける価値があります。</string>
+    <string name="streak_desc_1">1つひとつの記録は、未来のあなたへの小さな贈り物。明日も書きましょう！</string>
+
+    <!-- ════════════════════════════════════════════════════════════════════
+         ENTRY DETAIL SCREEN
+         ════════════════════════════════════════════════════════════════════ -->
+    <string name="entry_title">記録</string>
+    <string name="entry_summary">要約</string>
+    <string name="entry_saving">保存中…</string>
+    <string name="entry_improving">改善中…</string>
+    <string name="entry_improve_with_ai">あとからAIで改善</string>
+    <string name="entry_photos_videos">写真・動画</string>
+    <string name="entry_add">追加</string>
+    <string name="entry_no_photos_yet">写真や動画はまだ追加されていません</string>
+    <string name="entry_cd_play_video">動画を再生</string>
+    <string name="entry_cd_remove">削除</string>
+    <string name="entry_tts_enable_hint">設定で音声をオンにしてください</string>
+    <string name="entry_tts_stop">停止</string>
+    <string name="entry_tts_read">読み上げ</string>
+    <string name="entry_cd_share">共有</string>
+    <string name="entry_recording_duration">録音時間：%1$s</string>
+    <string name="entry_tts_generating">音声を生成しています。少々お待ちください…</string>
+    <string name="entry_tts_journal_label">日記のエントリー</string>
+    <string name="entry_tts_followup_label">追記 %1$s</string>
+    <string name="entry_cd_photo_page">写真%1$d</string>
+    <string name="entry_add_photo_video">写真・動画を追加</string>
+    <string name="entry_camera">カメラ</string>
+    <string name="entry_gallery">ギャラリー</string>
+    <string name="entry_delete_title">記録を削除しますか？</string>
+    <string name="entry_delete_message">この記録を完全に削除しますか？</string>
+
+    <!-- Share dialog -->
+    <string name="share_title">記録を共有</string>
+    <string name="share_which_version">どちらの版を共有しますか？</string>
+    <string name="share_improved_version">改善版</string>
+    <string name="share_photos_videos_label">写真・動画も送る：</string>
+    <string name="share_footer">BestJournalアプリの日記</string>
+    <string name="share_what_to_share">何を共有しますか？</string>
+    <string name="share_journal_entry">日記の記録</string>
+    <string name="share_followup_numbered">追記<xliff:g id="ordinal" example="1">%1$s</xliff:g></string>
+    <string name="share_followup_single">追記</string>
+
+    <string name="error_recording_failed">録音に失敗しました：<xliff:g id="reason" example="マイクが使用できません">%1$s</xliff:g></string>
+    <string name="error_transcription_failed">文字起こしに失敗しました：<xliff:g id="reason" example="ネットワークタイムアウト">%1$s</xliff:g></string>
+
+    <!-- ════════════════════════════════════════════════════════════════════
+         DASHBOARD SCREEN
+         ════════════════════════════════════════════════════════════════════ -->
+    <string name="dashboard_title">ダッシュボード</string>
+    <string name="dashboard_legend">凡例</string>
+    <string name="dashboard_refresh">更新</string>
+    <string name="dashboard_weekly_review_waiting">今週の振り返りが届いています</string>
+    <!-- Body text of the weekly-review premium upsell card on the dashboard. -->
+    <string name="dashboard_weekly_review_upsell_body">充実した1週間でしたね。プレミアムなら詳しい分析を確認できます。パターンを見つけ、気づきを発見し、自分の関心事を理解しましょう。</string>
+    <string name="dashboard_discover_premium">プレミアムを見る</string>
+    <string name="dashboard_please_wait">少々お待ちください</string>
+    <string name="dashboard_gemini_unavailable">Geminiは現在利用できません。しばらくしてからお試しください。</string>
+    <string name="dashboard_no_custom_focus">分析のフォーカスが未入力です</string>
+    <string name="dashboard_custom_focus_hint">設定の「カスタム分析」で\nフォーカスを入力するか、\n別のプロフィールを選んでください。</string>
+    <string name="dashboard_no_analysis_yet">まだ分析はありません</string>
+    <string name="dashboard_create_entries_custom">記録を作成してください。\nAIがあなたのフォーカスを分析します。</string>
+    <string name="dashboard_create_entries_default">記録を作成してください。\nAIがあなたのパターンを分析します。</string>
+    <string name="dashboard_like_analysis">分析は気に入りましたか？</string>
+    <string name="dashboard_premium_upsell_body">Premiumなら、好きなだけプロフィールから豊富な分析が得られます。</string>
+    <string name="dashboard_learn_more">もっと見る</string>
+    <string name="dashboard_feature_analyses">分析</string>
+    <string name="dashboard_all_observations">すべての観察</string>
+    <string name="dashboard_inner_mirror">内なる鏡</string>
+    <string name="dashboard_all_insights">すべての気づき</string>
+    <string name="dashboard_goal_overview">目標の一覧</string>
+    <string name="dashboard_all_goals">すべての目標</string>
+    <string name="dashboard_top_results_fallback">主な結果</string>
+    <string name="dashboard_analysis_fallback">分析</string>
+    <string name="dashboard_all_results_fallback">すべての結果</string>
+    <string name="dashboard_overall_analysis">全体分析</string>
+    <!-- Title of the overview card in the Summary dashboard (scenario 0). -->
+    <string name="dashboard_summary_overview_title">概要</string>
+    <!-- Title of the next-steps card in the Goals dashboard (scenario 3). -->
+    <string name="dashboard_goals_next_steps_title">次のステップ</string>
+    <string name="dashboard_all_recommendations">すべての提案</string>
+    <string name="dashboard_connection">関連</string>
+    <string name="dashboard_limit_daily">今日の上限に達しました。明日続きをどうぞ！</string>
+    <string name="dashboard_limit_weekly_profile">このプロフィールの週間制限に達しました。プロフィールを切り替えるか、月曜日までお待ちください。</string>
+    <string name="dashboard_limit_cooldown">少し休憩です。次の分析まであと%1$d分。</string>
+    <string name="dashboard_analysis_failed">分析に失敗しました</string>
+    <string name="dashboard_last_updated">最終更新：%1$s</string>
+    <string name="dashboard_loading_profile_switch">プロフィール変更後、AIダッシュボードは自動で更新されます</string>
+    <string name="dashboard_loading_delete_update">記録を削除すると、AIダッシュボードは自動で更新されます</string>
+    <string name="dashboard_loading_auto_update">新しい記録ごとに、AIダッシュボードは自動で更新されます</string>
+    <string name="dashboard_loading_default">AIダッシュボードを更新しています</string>
+
+    <!-- Legend labels -->
+    <string name="legend_urgent">緊急</string>
+    <string name="legend_attention">注意</string>
+    <string name="legend_observe">観察</string>
+    <string name="legend_activity_level">活動レベル</string>
+    <string name="legend_activity_desc">半円はこの領域でどれだけ動きがあるかを示します：</string>
+    <string name="legend_activity_high">活発（67–100\u00A0%%）</string>
+    <string name="legend_activity_medium">標準的（34–66\u00A0%%）</string>
+    <string name="legend_activity_low">少なめ（0–33\u00A0%%）</string>
+    <string name="legend_observation_relevance">観察の重要度</string>
+    <string name="legend_relevance_high">中心。記録の主要テーマです</string>
+    <string name="legend_relevance_medium">重要。繰り返し現れる観察です</string>
+    <string name="legend_relevance_low">補足。単発の言及です</string>
+    <string name="legend_reflection_depth">内省の深さ</string>
+    <string name="legend_reflection_desc">半円は内省の深さを示します：</string>
+    <string name="legend_reflection_deep">深い（67–100\u00A0%%）</string>
+    <string name="legend_reflection_aware">自覚的（34–66\u00A0%%）</string>
+    <string name="legend_reflection_surface">表面的（0–33\u00A0%%）</string>
+    <string name="legend_insight_depth">気づきの深さ</string>
+    <string name="legend_insight_deep">深い洞察、繰り返しのパターンと信念</string>
+    <string name="legend_insight_aware">自覚的。認識された思考と感情のパターン</string>
+    <string name="legend_insight_surface">表面的。最初の観察</string>
+    <string name="legend_progress">進捗</string>
+    <!-- Legend: Goal progress -->
+    <string name="legend_goal_progress_desc">半円は目標の進み具合を示します：</string>
+    <string name="legend_blocked_range">停滞（0–33\u00A0%%）</string>
+    <string name="legend_in_progress_range">進行中（34–66\u00A0%%）</string>
+    <string name="legend_progress_range">進展（67–100\u00A0%%）</string>
+    <string name="legend_goal_status">目標の状態</string>
+    <string name="legend_blocked_desc">停滞 — 障害のある目標</string>
+    <string name="legend_open_desc">未着手 — まだ進展のない目標</string>
+    <string name="legend_progress_success_desc">進展 — 目に見える成果のある目標</string>
+    <!-- Legend: Custom analysis -->
+    <string name="legend_analysis_value">分析値</string>
+    <string name="legend_analysis_relevance_desc">半円はフォーカスに対する重要度を示します：</string>
+    <string name="legend_high_focus">高（67–100\u00A0%%） — フォーカスの中心</string>
+    <string name="legend_medium_focus">中（34–66\u00A0%%） — 関連を確認</string>
+    <string name="legend_low_focus">低（0–33\u00A0%%） — 周辺</string>
+    <string name="legend_result_relevance">結果の重要度</string>
+    <string name="legend_important_desc">重要 — フォーカスと直接関連</string>
+    <string name="legend_relevant_desc">関連 — フォーカスとのつながりあり</string>
+    <string name="legend_note_desc">メモ — 補足的な記述</string>
+    <!-- Legend: Burden/Stress -->
+    <string name="legend_burden_scale">負担の目安</string>
+    <string name="legend_burden_desc">半円はこのテーマがどれだけ負担かを示します：</string>
+    <string name="legend_high_burden">高（67–100\u00A0%%） — すぐ対処</string>
+    <string name="legend_medium_burden">中（34–66\u00A0%%） — 注意が必要</string>
+    <string name="legend_low_burden">低（0–33\u00A0%%） — 良好</string>
+    <string name="legend_priority_title">提案の優先度</string>
+    <string name="legend_priority_high">赤 = 緊急 — すぐ対処</string>
+    <string name="legend_priority_medium">オレンジ = 中 — 近いうちに対応</string>
+    <string name="legend_priority_low">青 = 低 — 観察</string>
+    <!-- Legend: Categories -->
+    <string name="legend_categories">カテゴリー</string>
+    <string name="legend_categories_desc">カテゴリーは自動で作られます。AIが記録からテーマを読み取り、合うカテゴリーを作ります。新しいテーマには新しいアイコンが割り当てられます。</string>
+    <!-- CategoryDetailDialog levels -->
+    <string name="level_low">低</string>
+    <string name="level_medium">中</string>
+    <string name="level_high">高</string>
+    <string name="urgency_high">緊急 — すぐ対処</string>
+    <string name="urgency_medium">注意が必要</string>
+    <string name="urgency_low">良好 — 観察</string>
+    <!-- Dashboard: Derivation dialog -->
+    <string name="dashboard_derived_from">導出元：</string>
+    <string name="dashboard_update_for_derivation">詳しい導出を見るにはダッシュボードを更新してください。</string>
+    <!-- Dashboard: Summary section -->
+    <string name="dashboard_top_5_actions">トップ5の行動</string>
+    <string name="dashboard_core_insights">主要な気づき</string>
+    <string name="dashboard_summary_subtitle">記録の重要なポイント</string>
+    <string name="summary_central">中心</string>
+    <string name="summary_relevant">関連</string>
+    <string name="summary_side_note">補足</string>
+    <!-- Dashboard: Insight section -->
+    <string name="dashboard_deepest_insights">最も深い気づき</string>
+    <string name="dashboard_insight_subtitle">記録があなたについて語ること</string>
+    <string name="insight_deep_label">深い</string>
+    <string name="insight_aware_label">自覚的</string>
+    <string name="insight_surface_label">表面</string>
+    <!-- Dashboard: Goal section -->
+    <string name="dashboard_goal_steps">目標達成の重要なステップ</string>
+    <string name="goal_blocked_label">停滞</string>
+    <string name="goal_open_label">未着手</string>
+    <string name="goal_progress_label">進展</string>
+    <!-- Dashboard: Custom analysis section -->
+    <string name="dashboard_custom_subtitle">あなたのカスタム分析に基づく</string>
+    <string name="custom_important_label">重要</string>
+    <string name="custom_relevant_label">関連</string>
+    <string name="custom_note_label">メモ</string>
+    <!-- Dashboard: TTS and sharing -->
+    <string name="dashboard_enable_voices">設定で音声をオンにしてください</string>
+    <string name="dashboard_tts_stop">停止</string>
+    <string name="dashboard_tts_read">読み上げ</string>
+    <string name="dashboard_share_analysis">分析を共有</string>
+    <string name="dashboard_share">共有</string>
+    <string name="dashboard_tts_wait">音声を生成しています。少々お待ちください…</string>
+
+    <!-- Profile names -->
+    <string name="profile_summary">まとめ</string>
+    <string name="profile_entropy">暮らしを整える</string>
+    <string name="profile_insight">自己認識</string>
+    <string name="profile_goals">個人の目標</string>
+    <string name="profile_custom">カスタム分析</string>
+    <string name="profile_summary_desc">テーマ、パターン、体験をまとめます</string>
+    <string name="profile_entropy_desc">ストレス、混乱、負担を見つけます</string>
+    <string name="profile_insight_desc">繰り返す思考と感情のパターンを可視化します</string>
+    <string name="profile_goals_desc">目標、願い、進捗を認識します</string>
+    <string name="profile_custom_desc">自分の分析フォーカスを設定します</string>
+
+    <!-- Profile long descriptions (settings) -->
+    <string name="profile_summary_long">記録は評価やアドバイスなしに中立にまとめられます。\n\n一目でわかります：\n\n• 今あなたを占めているテーマ\n• 繰り返されるパターン\n• 生活がどう進んでいるか\n\n日々の全体を見渡す手段として最適です。</string>
+    <string name="profile_entropy_long">AIが、あなたを日常で悩ませているものを見つけ、整理します。最も大きな負担の原因の一覧と、5つの具体的な片づけステップが手に入ります。見通しを取り戻したいときに最適です。</string>
+    <string name="profile_insight_long">AIは出来事の表面だけでなく、深く読み込みます。あなたの記録から：\n\n• 言葉の中にある思考パターンと信念\n• 繰り返す感情と反応\n• 記録に現れる強み\n• 行動を導く価値観\n\n自分をより深く理解し、内面的に成長したいすべての人へ。</string>
+    <string name="profile_goals_long">AIは、さりげない言及も含め、記録の中のすべての目標、願い、計画を見つけます。\n\n見えるようになります：\n\n• 持っている目標（隠れているものも）\n• 各目標の進み具合\n• 次の一歩になりそうなこと\n\nあなた自身の言葉から読み取る、個人の目標トラッカーです。</string>
+    <string name="profile_custom_long">AIが何に注目するかを自分で決められます。\n\n自分の分析フォーカスを書いてください。例：\n\n•「スポーツに関するすべての言及を見つける」\n•「気分の変化を分析する」\n•「最も生産的な時間を教えて」\n\n目的がはっきりしている方に、完全な自由度を。</string>
+    <string name="profile_custom_prompt">あなたにとって特に大切なことは何ですか？ 記録を分析するとき、AIは何に注目すべきですか？</string>
+    <string name="profile_select_hint">プロフィールを選んでください。詳しい説明を見るにはプロフィールをタップしてください。</string>
+    <!-- Premium upsell sheet shown when a free user tries to add a 3rd custom analysis -->
+    <string name="profiles_premium_title">複数のカスタムプロフィール</string>
+    <string name="profiles_premium_desc">Premiumなら、好きなだけカスタム分析プロフィールを作れます。例えばスポーツ用、仕事用、家族用など。それぞれのプロフィールが独自の視点で日記を分析します。</string>
+    <string name="profiles_benefit_many">好きなだけカスタムプロフィールを作成</string>
+    <string name="profiles_benefit_switch">いつでもフォーカスを切り替え</string>
+    <string name="profiles_benefit_named">プロフィールごとに好きな名前を設定</string>
+
+    <!-- ════════════════════════════════════════════════════════════════════
+         SETTINGS SCREEN
+         ════════════════════════════════════════════════════════════════════ -->
+    <string name="settings_title">設定</string>
+    <string name="settings_account">アカウント</string>
+    <string name="settings_sign_out">ログアウト</string>
+    <string name="settings_last_sync">最終同期：%1$s</string>
+    <string name="settings_entries_auto_loaded">ログイン時に記録が自動で読み込まれます</string>
+    <string name="settings_backup_photos">写真をバックアップ</string>
+    <string name="settings_backup_videos">動画をバックアップ</string>
+    <string name="settings_syncing">バックアップ中…</string>
+    <!-- Shown briefly as a confirmation after a successful cloud backup. -->
+    <string name="settings_sync_success">バックアップ完了</string>
+    <!-- Error shown when Google sign-in fails. %1$s = error message from Google (e.g., "Network error"). -->
+    <string name="settings_signin_failed">ログインに失敗しました： <xliff:g id="error_reason" example="Network error">%1$s</xliff:g></string>
+    <string name="settings_backup_entries">記録をバックアップ</string>
+    <string name="settings_not_signed_in">ログインしていません</string>
+    <string name="settings_entries_loaded_on_sign_in">保存済みの記録はログイン時に読み込まれます</string>
+    <string name="settings_sign_in_google">Googleでログイン</string>
+    <string name="settings_appearance">表示</string>
+    <string name="settings_dark_mode">ダークモード</string>
+    <string name="settings_dark_active">有効</string>
+    <string name="settings_dark_off">オフ</string>
+    <string name="settings_follow_system">システムに従う</string>
+    <string name="settings_automatic">自動</string>
+    <string name="settings_sounds_haptics_section">音と振動</string>
+    <string name="settings_app_sounds">アプリの音</string>
+    <string name="settings_sounds_on">音はオンです</string>
+    <string name="settings_sounds_off">音はオフです</string>
+    <string name="settings_haptics">振動</string>
+    <string name="settings_haptics_on">振動はオンです</string>
+    <string name="settings_haptics_off">振動はオフです</string>
+    <string name="settings_voices">音声</string>
+    <string name="settings_tts_on">読み上げはオンです</string>
+    <string name="settings_tts_off">読み上げはオフです</string>
+    <string name="settings_voice_select">音声を選ぶ</string>
+    <string name="settings_voice_choose">音声を選ぶ</string>
+    <string name="settings_reminder_section">リマインダーと振り返り</string>
+    <string name="settings_daily_reminder">毎日のリマインダー</string>
+    <string name="settings_reminder_time" formatted="false">時刻：%02d:%02d</string>
+    <string name="settings_reminder_desc">日記を書くよう促します</string>
+    <string name="settings_weekly_review">週の振り返り</string>
+    <string name="settings_weekly_review_on">リマインダー有効</string>
+    <string name="settings_weekly_review_off">日曜15:00</string>
+    <string name="settings_monthly_review">月の振り返り</string>
+    <string name="settings_monthly_review_on">リマインダー有効</string>
+    <string name="settings_yearly_review">年の振り返り</string>
+    <string name="settings_yearly_review_on">リマインダー有効</string>
+    <string name="settings_timezone">タイムゾーン： %1$s</string>
+    <string name="settings_security">セキュリティー</string>
+    <string name="settings_fingerprint">指紋</string>
+    <string name="settings_fingerprint_desc">起動時にアプリを解除</string>
+    <string name="settings_auto_lock">バックグラウンドで60秒後に自動ロック</string>
+    <string name="settings_ai_profiles_title">AIダッシュボードのプロフィール：</string>
+    <string name="settings_ai_automations">AIの自動化</string>
+    <string name="settings_custom_prompt_placeholder">例：睡眠の質とストレスの程度に注目して。食事のパターンを示して。1週間で気分がどう変わるか分析して。最も生産的な時間と、妨げになっているものを教えて。\n\nフォーカスを具体的に書くほど、結果はより良くなります。</string>
+    <string name="churn_google_play_redirect">サブスクの管理のためGoogle Playへ移動します。日記の記録はもちろん残ります。</string>
+    <string name="splash_subtitle">あなたのスマートな日記</string>
+    <string name="biometric_subtitle">日記のロックを解除</string>
+    <!-- Shown in the biometric lock screen below the app name. Hint to authenticate. -->
+    <string name="biometric_prompt_subtitle">ロック解除のため認証してください</string>
+    <!-- Button in the biometric lock screen to trigger the fingerprint prompt. Keep short. -->
+    <string name="biometric_unlock_button">ロック解除</string>
+    <string name="settings_text_improvement">文章の改善</string>
+    <string name="settings_text_improvement_desc">標準でオン</string>
+    <string name="settings_dashboard_section">ダッシュボード</string>
+    <string name="settings_auto_update">新しい記録ごとに自動更新</string>
+    <string name="settings_premium_section">プレミアム</string>
+    <string name="settings_premium_lifetime">永久アクセス有効</string>
+    <string name="settings_premium_active">プレミアム契約中</string>
+    <string name="settings_premium_lifetime_desc">一括購入で、すべての機能を継続的に利用可能。</string>
+    <string name="settings_premium_desc">すべての機能が利用可能、毎日AI、PDFエクスポートなど。</string>
+    <string name="settings_manage_subscription">サブスクを管理</string>
+    <string name="settings_export">書き出し</string>
+    <string name="settings_export_pdf_desc">すべての記録と写真をPDFとして書き出します。</string>
+
+    <!-- Premium feature list (settings) -->
+    <string name="settings_premium_feature_improve">毎日のAIテキスト改善</string>
+    <string name="settings_premium_feature_improve_desc">AIがご希望に応じて日記の記録を改善します。</string>
+    <string name="settings_premium_feature_dashboard">毎日のダッシュボード分析</string>
+    <string name="settings_premium_feature_dashboard_desc">ダッシュボードがあなたの記録とともに進化します。</string>
+    <string name="settings_premium_feature_5_perspectives">あらかじめ用意された4つのAIプロフィール</string>
+    <string name="settings_premium_feature_5_perspectives_desc">要約から自己理解まで</string>
+    <string name="settings_premium_feature_reviews">週・月・年の振り返り</string>
+    <string name="settings_premium_feature_reviews_desc">AIがあなたの物語を語ります</string>
+    <string name="settings_premium_feature_patterns">パターン認識</string>
+    <string name="settings_premium_feature_patterns_desc">AIがあなたの記録の中にあるパターンやつながりを見える化します。</string>
+    <string name="settings_premium_feature_pdf">写真つきPDF出力</string>
+    <string name="settings_premium_feature_pdf_desc">写真つきの記録を文書として</string>
+    <string name="settings_premium_feature_voice">より正確な音声認識</string>
+    <string name="settings_premium_feature_voice_desc">音声記録の品質が向上</string>
+    <string name="settings_premium_feature_profiles">件数制限のないオリジナルAIプロフィール</string>
+    <string name="settings_premium_feature_profiles_desc">複数の分析視点を並行して</string>
+    <string name="settings_unlock_premium">プレミアムを解除</string>
+    <!-- Export dialog -->
+    <!-- AlertDialog title shown before PDF export. Max 25 chars — fits in dialog header. -->
+    <string name="settings_export_dialog_title">PDF出力</string>
+    <string name="settings_export_what">何を書き出しますか？</string>
+    <string name="settings_export_entries">日記の記録</string>
+    <string name="settings_export_photos">写真</string>
+    <string name="settings_export_action">書き出す</string>
+    <string name="settings_exporting">書き出し中…</string>
+    <!-- Export error shown when the user has no journal entries yet. -->
+    <string name="settings_export_no_entries">記録がありません</string>
+    <string name="settings_export_entries_photos_pdf">記録と写真をPDFとして書き出す</string>
+    <string name="settings_export_data">データを書き出す</string>
+    <string name="settings_export_entries_photos_pdf_full">記録と写真をPDFとして書き出す</string>
+    <!-- Feedback -->
+    <string name="settings_feedback">フィードバック</string>
+    <string name="settings_feedback_desc">ご提案、ご要望、改善案、不具合の報告 🐞</string>
+    <string name="settings_feedback_send">フィードバックを送信</string>
+    <string name="settings_feedback_sent">送信完了</string>
+    <string name="settings_feedback_dialog_title">フィードバックを送信</string>
+    <string name="settings_feedback_dialog_desc">開発者へのあなたのメッセージです。いただいたメッセージはすべて読み、できるだけ早くお返事します。</string>
+    <string name="settings_feedback_placeholder">フィードバックをお書きください…</string>
+    <string name="settings_feedback_sending">送信中…</string>
+    <string name="settings_feedback_sign_in_first">先にGoogleでログインしてください</string>
+    <string name="settings_feedback_allow_gmail">Gmailへのアクセスを許可して、もう一度お試しください。</string>
+    <string name="settings_feedback_token_error">トークンエラー： %1$s</string>
+    <string name="settings_feedback_subject">Best Journalへのフィードバック</string>
+    <string name="settings_feedback_no_error_body">エラー応答を受信できませんでした</string>
+    <string name="settings_feedback_read_error">エラー応答を読み取れませんでした</string>
+    <string name="settings_feedback_api_error">Gmailエラー %1$d: %2$s</string>
+    <string name="settings_feedback_unknown_error">不明なエラー</string>
+    <string name="settings_feedback_confirm_subject">Best Journalへのフィードバック</string>
+    <string name="settings_feedback_confirm_body">このメッセージを開発者に送信しました。\n開発者から個別に返信します。\n\n--- あなたのメッセージ ---\n%1$s\n\nよろしくお願いします、\nDEV.FRANK</string>
+    <string name="settings_feedback_from">フィードバック送信元：%1$s</string>
+    <string name="action_send">送信</string>
+    <!-- Drive errors -->
+    <string name="drive_consent_needed">Driveへのアクセスを許可してください</string>
+    <string name="drive_not_signed_in">ログインしていません</string>
+    <string name="drive_no_backup">バックアップが見つかりません</string>
+    <string name="drive_backup_disabled">Google Driveバックアップはプライバシー設定で無効になっています</string>
+    <!-- Achievements -->
+    <string name="achievements_title">達成</string>
+    <string name="achievements_counter">%1$d / %2$d 獲得</string>
+    <string name="achievements_unlocked_at">%1$s に獲得</string>
+    <!-- About -->
+    <string name="settings_about">アプリについて</string>
+    <string name="settings_about_version">Best Journal V0.21.9</string>
+    <string name="settings_about_desc">あなたのAI日記</string>
+    <!-- Sign-out dialog -->
+    <string name="settings_sign_out_confirm">ログアウトしますか？</string>
+    <string name="settings_sign_out_body">本当にログアウトしてもよろしいですか？</string>
+    <!-- Toggle labels -->
+    <string name="toggle_light">ライト</string>
+    <string name="toggle_dark">ダーク</string>
+    <string name="toggle_sound_on">音オン</string>
+    <string name="toggle_sound_off">音オフ</string>
+    <string name="toggle_haptic_on">振動オン</string>
+    <string name="toggle_haptic_off">振動オフ</string>
+    <string name="toggle_voice_on">音声オン</string>
+    <string name="toggle_voice_off">音声オフ</string>
+    <string name="toggle_sun">太陽</string>
+    <string name="toggle_moon">月</string>
+    <!-- Day names -->
+    <string name="day_monday">月曜日</string>
+    <string name="day_tuesday">火曜日</string>
+    <string name="day_wednesday">水曜日</string>
+    <string name="day_thursday">木曜日</string>
+    <string name="day_friday">金曜日</string>
+    <string name="day_saturday">土曜日</string>
+    <string name="day_sunday">日曜日</string>
+    <!-- Short weekday labels (2 chars) for compact weekday picker. Monday to Sunday. -->
+    <string name="day_abbrev_mon">月</string>
+    <string name="day_abbrev_tue">火</string>
+    <string name="day_abbrev_wed">水</string>
+    <string name="day_abbrev_thu">木</string>
+    <string name="day_abbrev_fri">金</string>
+    <string name="day_abbrev_sat">土</string>
+    <string name="day_abbrev_sun">日</string>
+    <!-- Array of short weekday labels for LazyRow / weekday pickers. Order: Mon-Sun. -->
+    <string-array name="weekday_abbreviations">
+        <item>@string/day_abbrev_mon</item>
+        <item>@string/day_abbrev_tue</item>
+        <item>@string/day_abbrev_wed</item>
+        <item>@string/day_abbrev_thu</item>
+        <item>@string/day_abbrev_fri</item>
+        <item>@string/day_abbrev_sat</item>
+        <item>@string/day_abbrev_sun</item>
+    </string-array>
+    <!-- Review schedule dialog -->
+    <string name="settings_reminder_when">いつ知らせますか？</string>
+    <string name="settings_review_when">振り返りをいつ受け取りますか？</string>
+    <string name="settings_review_weekday">曜日</string>
+    <string name="settings_review_time">時刻</string>
+    <string name="settings_monthly_review_off">月末の15:00</string>
+    <string name="settings_yearly_review_off">年末の15:00</string>
+    <string name="achievement_secret">秘密</string>
+    <string name="paywall_exit_bonus_days">+ %1$d日分の追加お試し期間</string>
+    <!-- Splash screen start button -->
+    <string name="splash_start">スタート</string>
+    <!-- FreeLimitIndicator: remaining uses counter -->
+    <!-- %1$d = number of remaining AI uses this week -->
+    <string name="limit_remaining">残り<xliff:g id="count" example="3">%1$d</xliff:g>回</string>
+    <!-- FreeLimitIndicator: usage counter (X of Y used) -->
+    <!-- %1$d = used count, %2$d = max count -->
+    <string name="limit_used_of_max"><xliff:g id="max" example="5">%2$d</xliff:g>回中<xliff:g id="used" example="3">%1$d</xliff:g>回使用</string>
+    <!-- ChurnFlowDialog: retention discount badge -->
+    <!-- %1$d = discount percentage -->
+    <string name="churn_discount_badge"><xliff:g id="percent" example="50">%1$d</xliff:g>\u00A0%%オフ</string>
+    <!-- AI prompt language instruction — automatically uses device language -->
+    <string name="ai_prompt_language_style">シンプルで明快に。難しい言葉は使わないでください。</string>
+    <string name="ai_prompt_language_override"></string>
+    <!-- Final response-language instruction appended to every AI prompt. -->
+    <string name="ai_prompt_response_language">回答の言語：必ず日本語で回答してください。すべての文章と見出しは日本語で、他の言語は使わないでください。</string>
+    <string name="ai_prompt_no_dates_rule">TTSで読み上げやすく(必須 — 表示テキストでの日付禁止):\nすべての表示テキスト欄(説明、解説、要約、総合分析)で、日付を使ってはいけません。「3.4.」「23.04.」「28.4.」「24.04.」「30.4.」も、「4月3日のエントリー」「23.04.に」「28.4.の」のような具体的なエントリー日付への言及もです。これらのテキストはユーザーに読み上げられます。日付の連なりは読み上げると不自然に聞こえ、発見の流れを断ち切ります。\n\n代わりに純粋な発見を表現してください:\n- 誤: 「3.4.、28.4.、23.4.のエントリーが、遅い就寝時間で体内リズムが乱れていることを示している。」\n- 正: 「遅い就寝時間が体内リズムを体系的に壊している。」\n- 誤: 「30日のエントリーが、28.4.以降あなたの受信箱があふれ、時間を奪っていることを示している。」\n- 正: 「あなたの受信箱は何日もあふれ続け、時間を奪っている。」\n- 誤: 「24.04.の片づけ以降、日常でより見通しが立っていると感じる。」\n- 正: 「体を動かすことで、日常に明らかに見通しが生まれている。」\n\n内容としての発見は残ります。具体的な日付への言及だけが省かれます。一般的な時間的表現(「繰り返し」「最近」「数日にわたって」)は引き続き使えます。日付は「herleitung」欄にのみ入れてください(出所であり、内部で使われ、表示されません)。</string>
+    <string name="ai_prompt_rerank_system">あなたはプロフィール・リランカーです。ダッシュボード分析からの最重要対策5件のJSON配列、ユーザーのプロフィールの焦点、そして元の日記エントリーを受け取ります。\n\nあなたの任務は3つのステップです:\n1) プロフィールの焦点と最も明確につながる対策が先に来るよう、5件の対策を並べ替えてください。\n2) 5件のうち最大2件が、プロフィールの焦点と内容的なつながりを持たないかどうか確認してください。そうである場合は、日記エントリーから導き出した、よりプロフィールに合う対策に置き換えます。各対策の同じJSON構造(titel、beschreibung、erklaerung)を守ってください。\n3) プロフィールとのつながりは、プロフィールの言葉を機械的に繰り返すのではなく、同義語やテーマ的に近い概念を使って多彩に表現してください。つながりは字句どおりではなく、感じ取れるものでなければなりません。\n\n重要:\n- 最後にちょうど5件を返してください。\n- 変更は本当にプロフィールとのつながりが欠けている場合のみ。すでに適合が良い場合は配列を並べ替えるだけで、何も置き換えないこと。\n- 各項目のJSON構造(同じキー: titel、beschreibung、erklaerung)を保ってください。\n- 言語は日本語、ダッシュは使わない、beschreibungは13〜21語。\n- 医学的、法律的、財務的な診断や確定的な助言は行わないこと。そうしたテーマでは中立的に専門家を案内してください。\n\nTTSで読み上げやすく(必須 — 日付禁止):\nbeschreibungとerklaerungでは日付を使わないこと(「3.4.」「23.04.」「30日のエントリー」)。これらのテキストは読み上げられます。日付の連なりは不自然に聞こえます。具体的なエントリー日付なしで、純粋な発見を表現してください。例:\n- 誤: 「3.4.と23.04.のエントリーが、あなたの体内リズムが乱れていることを示している。」\n- 正: 「遅い就寝時間が体内リズムを体系的に壊している。」\n一般的な時間的表現(「繰り返し」「最近」「数日にわたって」)は許されますが、日付は許されません。\n\n出力形式:\n- JSON配列のみ(ルートレベルは角かっこ)。\n- Markdownのバッククォートは使わず、前後にテキストを付けない。\n- [ で始め、] で終えてください。</string>
+    <string name="ai_prompt_rerank_user_focus_header">=== ユーザープロフィールの焦点 ===</string>
+    <string name="ai_prompt_rerank_actions_header">=== 現在の優先行動配列（5件） ===</string>
+    <string name="ai_prompt_rerank_entries_header">=== 日記の記録（プロフィールに合う代替候補のソース） ===</string>
+    <string name="ai_prompt_rerank_instruction">プロフィールと合わない最大2件を並べ替えて置き換えてください。ちょうど5件をJSON配列として返してください。</string>
+    <string name="retro_month_more_entries">（+ %1$d件追加）</string>
+    <string name="retro_month_entries_header">今月のオリジナル日記記録（要約、プロフィール直接参照のための第2ソースとして）：</string>
+    <string name="dashboard_active_profile_label">有効なプロフィール：%1$s</string>
+    <string name="dashboard_profile_summary">要約</string>
+    <string name="dashboard_profile_entropy">エントロピー</string>
+    <string name="dashboard_profile_insight">インサイト</string>
+    <string name="dashboard_profile_goals">目標</string>
+    <string name="dashboard_profile_focus_summary">出来事と瞬間の簡潔な要約</string>
+    <string name="dashboard_profile_focus_entropy">ストレスと負担パターンのクラシックなエントロピー分析</string>
+    <string name="dashboard_profile_focus_insight">深い自己認識とパターンの認識</string>
+    <string name="dashboard_profile_focus_goals">個人の目標と進捗の追跡</string>
+    <string name="dashboard_empty_custom_title">カスタムプロフィール未設定</string>
+    <string name="dashboard_empty_custom_message">設定に移動して「カスタム」プロフィールの焦点を入力してください。焦点を設定すると、AIの分析がそれに合わせてパーソナライズされます。</string>
+
+    <!-- ════════════════════════════════════════════════════════════════════
+         JSON-KEYS für die KI-Antwort (Dashboard).
+         ════════════════════════════════════════════════════════════════════ -->
+    <!-- Top-level JSON keys -->
+    <string name="json_key_overall_analysis">zentai_bunseki</string>
+    <string name="json_key_top_actions">jouyo_koudou</string>
+    <string name="json_key_categories">kategori</string>
+    <string name="json_key_heading_top5">midashi_top5</string>
+    <string name="json_key_heading_analysis">midashi_bunseki</string>
+    <string name="json_key_heading_results">midashi_kekka</string>
+    <string name="json_key_progress">shinchoku</string>
+    <string name="json_key_overall_entropy">zentai_entoropi</string>
+    <string name="json_key_trend">keikou</string>
+    <!-- Category-level JSON keys -->
+    <string name="json_key_category_name">namae</string>
+    <string name="json_key_category_icon">aikon</string>
+    <string name="json_key_category_color">iro</string>
+    <string name="json_key_category_entropy_level">entoropi_reberu</string>
+    <string name="json_key_category_summary">youyaku</string>
+    <string name="json_key_category_advices">adobaisu</string>
+    <!-- Item-level JSON keys (advice, action, progress) -->
+    <string name="json_key_item_title">midashi</string>
+    <string name="json_key_item_description">setsumei</string>
+    <string name="json_key_item_explanation">shousetsu</string>
+    <string name="json_key_item_reference">sansho</string>
+    <string name="json_key_item_priority">yuusen</string>
+    <string name="json_key_item_connection">tsunagari</string>
+    <string name="json_key_item_derivation">dashutsu</string>
+    <!-- Derivation-level JSON keys -->
+    <string name="json_key_derivation_date">hizuke</string>
+    <string name="json_key_derivation_summary">youyaku</string>
+    <!-- Enum values (priorities) -->
+    <string name="json_value_priority_high">takai</string>
+    <string name="json_value_priority_medium">chuu</string>
+    <string name="json_value_priority_low">hikui</string>
+    <string name="ai_prompt_fresh_summary">新しいまとめ — まったく新しい独立した分析を作成してください。</string>
+    <string name="ai_prompt_fresh_insight">新しい自己認識分析 — まったく新しい独立した分析を作成してください。</string>
+    <string name="ai_prompt_fresh_goals">新しい目標分析 — まったく新しい独立した分析を作成してください。</string>
+    <string name="ai_prompt_fresh_custom">新しいカスタム分析 — ユーザーのフォーカスに基づき、まったく新しい独立した分析を作成してください。</string>
+    <string name="ai_prompt_fresh_default">新しい分析 — まったく新しい独立した分析を作成してください。</string>
+    <string name="ai_prompt_check_summary">必須チェック： %1$d件の記録を受け取りました。各記録はまとめと少なくとも1つのテーマに現れる必要があります。</string>
+    <string name="ai_prompt_check_insight">必須チェック： %1$d件の記録を受け取りました。各記録は思考パターン、感情、信念、強みの観点で調べる必要があります。</string>
+    <string name="ai_prompt_check_goals">必須チェック： %1$d件の記録を受け取りました。各記録は目標の観点で調べる必要があります。</string>
+    <string name="ai_prompt_check_custom">必須チェック： %1$d件の記録を受け取りました。各記録はユーザーのフォーカスに沿って調べる必要があります。</string>
+    <string name="ai_prompt_check_default">必須チェック： %1$d件の記録を受け取りました。各記録は分析に現れる必要があります。</string>
+
+    <!-- ═══════════════════════════════════════════════════════════════════════
+         Retrospective Prompts (Weekly / Monthly / Yearly Rückblicke)
+         ═══════════════════════════════════════════════════════════════════════ -->
+
+    <!-- Weekly retrospective prompt blocks -->
+    <string name="ai_retro_week_intro">あなたは、日記の記録から自然で読みやすい週の振り返りを書く語り手です。</string>
+    <string name="ai_retro_week_task">タスク： 以下の日記の記録を構造化された週の振り返りにまとめてください。</string>
+    <string name="ai_retro_week_format">フォーマット（厳密に従ってください）:\n1. 短い箇条書きのまとめ（3-5個）で始める。各行の先頭は「• 」\n2. 続いて空行\n3. そのあと本文。2-4の主題セクションに分ける\n4. 各セクションは角括弧の見出しで始める： [テーマ](例：[新しい出会い] や [小さな勝利])\n5. 見出しのあとに本文が続く\n6. セクションは週の始まりから終わりへ時系列に並べる</string>
+    <string name="ai_retro_week_rules">ルール：\n- その言語にふさわしい親しみのある二人称で書く\n- あいさつや締めの言葉は不要。すぐに語り始める\n- セクション内は流れのある文体で、自然なつなぎを\n- 見出しは短くテーマ的に（2-4語）\n- 具体的な出来事、感情、気づきを挙げる\n- ありふれたことは意味のある場合にのみ触れる\n- 前向きな点は際立たせつつ、難しさも隠さない。難しい時間からの学びも含める\n- 温かく、個人的に、大げさにならずに\n- 最小200語\n- 長いダッシュ（—）は使わない。読点や短い文を使う。</string>
+    <!-- Section header that introduces the journal entries block. -->
+    <string name="ai_retro_week_entries_header">今週の記録：</string>
+    <!-- Title-generation prompt after a weekly review is ready. %1$s = target language, %2$s = preview. -->
+    <string name="ai_retro_week_title_prompt">この週の振り返りをもとに、短く感情のこもった見出し（6語以内）を<xliff:g id="lang" example="日本語">%1$s</xliff:g>で付けてください。\n見出しのみ、それ以外は何も書かないでください。引用符なし。長いダッシュ（—）なし。\n\n振り返り：\n<xliff:g id="summary_preview" example="週が始まり…">%2$s</xliff:g></string>
+
+    <!-- Monthly retrospective prompt blocks -->
+    <string name="ai_retro_month_intro">あなたは、週の振り返りから自然で読みやすい月の振り返りを書く語り手です。</string>
+    <!-- %1$s = month name, %2$d = year. -->
+    <string name="ai_retro_month_task">タスク： 以下の週の振り返りを、<xliff:g id="month" example="4月">%1$s</xliff:g>(<xliff:g id="year" example="2026">%2$d</xliff:g>年)の構造化された月の振り返りにまとめてください。</string>
+    <string name="ai_retro_month_format">フォーマット（厳密に従ってください）:\n1. 短い箇条書きのまとめ（4-6個）で始める。各行の先頭は「• 」\n2. 続いて空行\n3. そのあと本文。3-5の主題セクションに分ける\n4. 各セクションは角括弧の見出しで始める： [テーマ](例：[新たな出発] や [静かな気づき])\n5. 見出しのあとに本文が続く\n6. セクションは月の始まりから終わりへ時系列に並べる</string>
+    <string name="ai_retro_month_rules">ルール：\n- その言語にふさわしい親しみのある二人称で書く\n- あいさつや締めの言葉は不要。すぐに語り始める\n- セクション内は流れのある文体で、自然なつなぎを\n- 見出しは短くテーマ的に（2-4語）\n- 週と週を結びつけ、流れと太い線を示す\n- 振り返りを順番に繰り返さず、主題でつなぐ\n- ありふれたことは意味のある場合にのみ触れる\n- 前向きな点は際立たせつつ、難しさも隠さない\n- 温かく、個人的に、大げさにならずに\n- 最小300語\n- 長いダッシュ（—）は使わない。読点や短い文を使う。</string>
+    <string name="ai_retro_month_entries_header">週ごとの振り返り：</string>
+    <!-- %1$s = target language, %2$s = preview. -->
+    <string name="ai_retro_month_title_prompt">この月の振り返りをもとに、短く感情のこもった見出し（6語以内）を<xliff:g id="lang" example="日本語">%1$s</xliff:g>で付けてください。\n見出しのみ、それ以外は何も書かないでください。引用符なし。長いダッシュ（—）なし。\n\n振り返り：\n<xliff:g id="summary_preview" example="4月は…">%2$s</xliff:g></string>
+
+    <!-- Yearly retrospective prompt blocks -->
+    <string name="ai_retro_year_intro">あなたは、月の振り返りから自然で読みやすい年の振り返りを書く語り手です。</string>
+    <!-- %1$d = year. -->
+    <string name="ai_retro_year_task">タスク： 以下の月の振り返りを、<xliff:g id="year" example="2026">%1$d</xliff:g>年の構造化された年の振り返りにまとめてください。</string>
+    <string name="ai_retro_year_format">フォーマット（厳密に従ってください）:\n1. 短い箇条書きのまとめ（5-8個）で始める。各行の先頭は「• 」\n2. 続いて空行\n3. そのあと本文。4-6の主題セクションに分ける\n4. 各セクションは角括弧の見出しで始める： [テーマ](例：[出発の春] や [静けさを見つけて])\n5. 見出しのあとに本文が続く\n6. セクションは年の始まりから終わりへ時系列に並べる</string>
+    <string name="ai_retro_year_rules">ルール：\n- その言語にふさわしい親しみのある二人称で書く\n- あいさつや締めの言葉は不要。すぐに語り始める\n- セクション内は流れのある文体で、自然なつなぎを\n- 見出しは短くテーマ的に（2-5語）\n- 月と月を結びつけ、1年の歩みを示す\n- 1年の大きなテーマを見つけ、出来事をその線に沿わせる\n- ありふれたことは意味のある場合にのみ触れる\n- 前向きな点は際立たせつつ、難しさも隠さない\n- 前を向く言葉で締めくくる\n- 温かく、個人的に、大げさにならずに\n- 最小400語\n- 長いダッシュ（—）は使わない。読点や短い文を使う。</string>
+    <string name="ai_retro_year_entries_header">月ごとの振り返り：</string>
+    <!-- %1$s = target language, %2$s = preview. -->
+    <string name="ai_retro_year_title_prompt">この年の振り返りをもとに、短く感情のこもった見出し（6語以内）を<xliff:g id="lang" example="日本語">%1$s</xliff:g>で付けてください。\n見出しのみ、それ以外は何も書かないでください。引用符なし。長いダッシュ（—）なし。\n\n振り返り：\n<xliff:g id="summary_preview" example="1年が始まり…">%2$s</xliff:g></string>
+
+    <!-- Goals Analysis System Prompt (Profile: Persönliche Ziele) -->
+    <string name="ai_prompt_goals_intro">あなたは、ていねいで励ましのある目標アナリスト兼、進捗トラッカーです。\n\nあなたの仕事：\nユーザーの日記の記録を分析してください。さりげない言及を含め、目標、願い、計画、意図をすべて認識してください。複数の記録にわたって進捗を追い、JSON形式の構造化された目標パネルを作成してください。</string>
+    <string name="ai_prompt_goals_definition">定義 — 目標とは：\nユーザーが達成したい、変えたい、始めたい、終えたい、改善したい、築きたいと思うすべてのこと。間接的な手がかりも数に入ります：\n- 直接：「やせたい」「歯医者に電話しなければ」\n- 間接：「また走りに行けたら良い」=フィットネスの目標\n- 不満：「眠りが悪い」=睡眠改善の暗黙の目標\n- 夢：「いつかスウェーデンに行きたい」=長期の旅行目標</string>
+    <string name="ai_prompt_goals_entry_rules">最上位のルール — どの記録も欠かしてはいけません：\n番号付きの記録を受け取ります（例：「記録1/5」）。\nすべての記録を読み、分析し、取り入れなければなりません。\n\n少数の記録のとき：\n- 1-2件：個別の目標を認識し、進捗は「不明」と評価。\n- 3件以上：進捗を積極的に追い、パターンを認識。</string>
+    <string name="ai_prompt_goals_rules">言葉のルール:\n- %1$s\n- やる気を引き出し、率直に。進歩を称え、何もごまかさない。\n- 長いダッシュ(—)は使わない。読点や句点を使う。\n- 健康や身体に関する目標では、やる気を支えるだけにとどめ、食事・薬・治療の推奨は行わない。\n\n分量のルール、すべての目標が大切:\nすべての目標を認識してください。小さなものも含めて。まとめないこと。</string>
+    <string name="ai_prompt_goals_schema">JSON出力のスキーマ:\n{\n  \"zentai_bunseki\": \"...\",\n  \"jouyo_koudou\": [...],\n  \"kategori\": [...]\n}\n\n1) \"zentai_bunseki\" (15-25文): すべての目標を名指し、進捗を認識。\n\n2) \"jouyo_koudou\" (ちょうど5件): 次のステップ。\n   { \"midashi\": \"...\", \"setsumei\": \"13-21語\", \"shousetsu\": \"5-8文\" }\n\n3) \"kategori\": 目標の領域。\n   {\n     \"namae\": \"最大12字\", \"aikon\": \"material_icon\", \"iro\": \"#HEX\",\n     \"entoropi_reberu\": 0.0, \"youyaku\": \"3-5文\",\n     \"adobaisu\": [{\n       \"midashi\": \"...\",\n       \"setsumei\": \"13-21語。ステータス: [未着手/進行中/停滞/達成]。次のステップ: [...]。\",\n       \"yuusen\": \"takai|chuu|hikui\",\n       \"tsunagari\": \"...\", \"dashutsu\": [{\"hizuke\":\"...\",\"youyaku\":\"...\"}]\n     }]\n   }\n   領域: フィットネス、健康、仕事、キャリア、お金、人間関係、プロジェクト、学習、睡眠、こころ、旅、整理、創造\n   優先度: takai=停滞、chuu=未着手、hikui=進行中/達成</string>
+    <string name="ai_prompt_goals_output">出力形式: JSONのみ。バッククオートなし。{ で始めてください。</string>
+
+    <!-- Self-Insight Analysis System Prompt (Profile: Selbsterkenntnis) -->
+    <string name="ai_prompt_insight_intro">あなたは、人の成長のための共感的で深いパターンアナリストです。\n\nあなたの仕事：\nユーザーの日記の記録を分析してください。そこに潜むパターン、繰り返し現れる思考と行動、無意識の信念、感情反応のパターン、個人の強みを見つけてください。本人が書いているときに気づけなかったことも、学びとして見えるようにしてください。JSON形式の構造化された自己認識パネルを作成してください。</string>
+    <string name="ai_prompt_insight_attitude">あなたの姿勢:\nあなたは好意的な鏡です。エントリーから読み取ったことをユーザーに率直に示します。ただし常に、ユーザーがそこから成長できることを目的とします。どの発見も、ユーザーが自分自身をよりよく理解する助けになるべきです。難しいパターンもはっきり名指ししますが、建設的に、非難なしで伝えます。焦点: ユーザーは自分自身の言葉から、自分について何を学べるか。\n\nあなたは心理学的な診断を行わず、障害や病気を名指ししません。ユーザー自身の言葉から観察できるパターンだけを記述します。\n\nあなたが探すもの:\n- 繰り返される感情: どの感情が何度も現れるか。\n- 思考パターン: ユーザーは自分、他者、世界についてどう考えているか。\n- 回避のパターン: ユーザーは何を避けているか。何について決して書かないか。\n- 強み: ユーザーが自分では気づいていなくても、うまくできていることは何か。\n- 価値観: ユーザーにとって本当に大切なものは何か(言葉ではなく行動に表れる)。\n- きっかけ: 何が強い反応を引き起こすか。良い面でも悪い面でも。\n- 矛盾: ユーザーが何かを言いながら、別の行動をしていないか。\n- ニーズ: 行間からにじみ出る、ユーザーが必要としているものは何か。\n- 成長: ユーザーの見方はどこで変わったか。</string>
+    <string name="ai_prompt_insight_entry_rules">最上位のルール — どの記録も欠かしてはいけません：\n番号付きの記録を受け取ります（例：「記録1/5」）。\nすべての記録を読み、分析し、取り入れなければなりません。\n答える前に数えてください： すべての記録を考慮したか。\n欠けているならすぐに追加してください。\n\n少数の記録のとき：\n- 1-2件：最初の観察を挙げ、深いパターンは挙げない。\n  気づきは説明で「暫定」と示す。\n- 3件以上：繰り返すパターンと深いつながりを積極的に探す。\n\n時間の重み：\n各記録を考慮してください。内面の成長を追ってください： 姿勢は変わったか。同じテーマが新しい光で戻ってくるか。自信は育っているか、不安は強まっているか。</string>
+    <string name="ai_prompt_insight_rules">言語のルール（JSONのすべての文字列フィールドに適用）:\n- シンプルで明快な言葉。短い文。\n- 難しい言葉、専門用語、決まり文句は使わない。\n- 誰もが考え込まず、すぐに理解できるように。\n- 共感的、誠実、建設的。責めず、説教せず。\n- つねに前向きに： ユーザーは何を学べるか。\n- 長いダッシュ（—）は使わない。読点や句点を使う。\n\n量のルール、完全さが短さに勝る：\nすべての領域にわたる気づきの合計は最低15。10未満は誤り。認識したどのパターンも、信念の兆しも、繰り返す感情も、それぞれ独立した気づきに値する。まとめない。1件の記録に恐れ・誇り・回避があれば、3つの別々の気づきになる。すべてをまとめた1つではない。JSONは長くなってよい。完全さが短さより大切。</string>
+    <string name="ai_prompt_insight_schema_header">JSON出力のスキーマ:\n{\n  \"zentai_entoropi\": 0.0,\n  \"keikou\": \"joushou|antei|teitei|fumei\",\n  \"zentai_bunseki\": \"...\",\n  \"shinchoku\": [...],\n  \"jouyo_koudou\": [...],\n  \"kategori\": [...]\n}\n\nフィールド定義:\n\n1) \"zentai_entoropi\" (数値、0.0-1.0)\n   ユーザーは記録でどれだけ自分を省みているか。\n   - 0.0-0.33 = 内省が少ない(出来事の記述が主)\n   - 0.34-0.66 = 部分的に内省(感情や思考に触れる)\n   - 0.67-1.0 = 強い内省(自分との深い対話)\n\n2) \"keikou\" (テキスト)\n   数日にわたって3件以上の記録があるときのみ。\n   古いものと新しいものを比べる:\n   - 「joushou」= 内省が深まっている\n   - 「antei」= 内省の度合いが一定\n   - 「teitei」= 新しいほうが内省が減っている\n   - 「fumei」= データが足りない\n\n3) \"zentai_bunseki\" (テキスト、15-25文)\n   - 記録を1件ずつたどり、より深いテーマを見つける。\n   - 記録はユーザーについて何を語っているか。\n   - 思考・感情・行動のどんなパターンが見えてくるか。\n   - 本人が気づかない強みは何か。\n   - どんな無意識の信念が行動を導くか。\n   - 個人の成長はどこに見えるか。\n   - 共感的で個人的に、直接ユーザーに語りかける。\n   - つねに建設的に: むずかしい気づきも学びに結びつける。</string>
+    <string name="ai_prompt_insight_schema_fields">4) \"shinchoku\" (配列、0-8件)\n   本人が名指ししなくても、記録に見える個人の強みとよい資質。\n   強みごとのスキーマ:\n   {\n     \"midashi\": \"短い見出し(最大5語)\",\n     \"setsumei\": \"どの強みが見え、何でそれが分かるか(2-3文)。\",\n     \"sansho\": \"どの記録から読み取れるか(1文)。\"\n   }\n   記録が1件のみ、または見える強みがない: 空配列 []。\n\n5) \"jouyo_koudou\" (配列、ちょうど5件)\n   すべての記録の総体から浮かぶ、最も深い5つの気づき。ユーザーが自分について学べる最も重要なことは何か。深さで並べる(最も深いものを最初に)。領域を横断して人格の全体像を見せる。\n   気づきごとのスキーマ:\n   {\n     \"midashi\": \"短い見出し(最大6語)\",\n     \"setsumei\": \"13-21語。気づきを端的に表す1文。建設的に、ユーザーは何を学べるか。\",\n     \"shousetsu\": \"詳しい説明(5-8文)。どんなパターンが現れるか。どの記録で見えるか。自己理解にとってなぜ大切か。ユーザーはそれをどう生かせるか。\"\n   }</string>
+    <string name="ai_prompt_insight_schema_categories">6) \"kategori\" (配列、必要な数だけ)\n   認識したそれぞれの自己認識の領域に、1つのグループ。\n   領域は生活のテーマ(仕事、睡眠)では「ない」。内面の次元: ユーザーがどう考え、感じ、自分とどう付き合い、決め、他者と関わり、自分を動かし、つまずきにどう向き合うか。\n   領域ごとのスキーマ:\n   {\n     \"namae\": \"領域名(最大12字、1-2語)\",\n     \"aikon\": \"material_icon_name\",\n     \"iro\": \"#HEX\",\n     \"entoropi_reberu\": 0.0,\n     \"youyaku\": \"この領域の要約(3-5文)。ユーザーについて何を示すか。どんなパターンが見えるか。学べることは何か。\",\n     \"adobaisu\": [...]\n   }\n\n   領域名 — 短く的確に:\n   よい: 「思考」「感情」「原動力」「対処」「価値」\n   悪い: 「感情反応のパターン」(長すぎ)→「感情」\n\n   領域 — 動的:\n   ベースとして使い、テーマが合わなければ新しく作る。\n   領域は外のテーマではなく、内面の次元を表します:\n   - 思考 (icon: psychology, iro: #A78BFA)\n   - 感情 (icon: favorite, iro: #F472B6)\n   - 自己像 (icon: person, iro: #60A5FA)\n   - 原動力 (icon: bolt, iro: #F59E0B)\n   - 価値 (icon: star, iro: #FBBF24)\n   - 人間関係 (icon: people, iro: #EC4899)\n   - 回復力 (icon: shield, iro: #10B981)\n   - 習慣 (icon: repeat, iro: #6366F1)\n   - 恐れ (icon: nights_stay, iro: #6C63FF)\n   - 境界 (icon: block, iro: #EF4444)\n   - 創造 (icon: lightbulb, iro: #D946EF)\n   - 対処 (icon: handshake, iro: #14B8A6)\n   - 成長 (icon: trending_up, iro: #22C55E)\n   - 必要 (icon: spa, iro: #F97316)\n   - 制御 (icon: tune, iro: #78716C)\n   ほかのアイコン: self_improvement, mood, sentiment_satisfied, sentiment_dissatisfied, visibility, lock_open, wb_sunny, explore, balance, healing, volunteer_activism, emoji_objects\n\n   領域ごとの深さ(\"entoropi_reberu\" 項目、0.0-1.0):\n   この領域で自己認識はどれだけ深く進んでいるか。\n   - 0.0-0.33 = 表面(状況を述べ、内省は少ない)\n   - 0.34-0.66 = 自覚的(自分のパターンに一部気づく)\n   - 0.67-1.0 = 深い(原因とつながりを理解)\n\n   領域ごとの気づき(\"adobaisu\" 項目) — 量:\n   記録から引き出せる気づきを「すべて」抽出する。少ないより多めが良い。領域ごとに5-20が通常。認識したパターン、人格の観察、内面の姿勢の兆しは、それぞれ独立した気づきに値する。まとめない。各気づきは記録の「具体的な」言葉に基づく必要がある。重要度で並べる: 「takai」が先、次に「chuu」、最後に「hikui」。\n\n   気づきごとのスキーマ:\n   {\n     \"midashi\": \"短い見出し(最大6語)\",\n     \"setsumei\": \"13-21語。気づきを端的に表す1文。建設的に、何が現れ、何を学べるか。\",\n     \"yuusen\": \"takai|chuu|hikui\",\n     \"tsunagari\": \"関連する別の領域名1-2と、その理由を1文。なければ: null\",\n     \"dashutsu\": [\n       {\n         \"hizuke\": \"記録の日付(例: 28.03.2026)\",\n         \"youyaku\": \"その記録のどの部分がこのパターンを示すか(1-2文)。\"\n       }\n     ]\n   }\n\n   重要度の意味(\"yuusen\" 項目):\n   - 「takai」= 深い気づき。人格の中心的パターン\n   - 「chuu」= 見えるパターン。まだ完全には明確でない\n   - 「hikui」= 単独の観察。パターンになる可能性</string>
+    <string name="ai_prompt_insight_output">説明の語数ルール(厳守):\n「jouyo_koudou」と「adobaisu」の「setsumei」は、いつも13-21語の間。\n- 13語未満 = 短すぎ = 誤り\n- 21語超 = 長すぎ = 誤り\n書く前に語数を数える。各説明はひとつの引き締まった完結した文。多くも少なくもなく。\n\n出力形式 — 厳格なルール:\n- JSONオブジェクトだけで答える。\n- 前後にテキストを置かない。\n- Markdownのバッククオートは使わない。\n- { で始め、} で終わる。\n- 有効なJSON。欠けたカンマや重複キーはなし。</string>
+
+    <!-- Entropy Analysis System Prompt (Profile: Räume dein Leben auf) -->
+    <string name="ai_prompt_entropy_intro">あなたは共感的で、きわめて知的で、思いやりのある秩序とパターンのアナリストです。\n\nあなたの任務:\nユーザーの日記エントリーを分析してください。ストレス、混乱、負担の繰り返される原因を見つけます。それをもとに、構造化された助言ダッシュボードをJSON形式で作成してください。\n\n私たちが探すもの — 個人的な負担:\nユーザーの生活の中で、混乱、ストレス、エネルギーの消耗、過負荷、時間的プレッシャー、感情的な負担、コントロールの喪失を生むものすべて。\n\nあなたは医学的、治療的、診断的な助言は行いません。健康に関するテーマでは中立的に専門家を案内してください。</string>
+    <string name="ai_prompt_entropy_entry_rules">最上位のルール — どの記録も欠かしてはいけません：\n番号付きの記録を受け取ります（例：「記録1/5」）。\nすべての記録を読み、分析し、取り入れなければなりません。\n答える前に数えてください： すべての記録を考慮したか。\n欠けているならすぐに追加してください。\n\n少数の記録のとき：\n- 1-2件：個別の観察を挙げ、パターンは挙げない。\n  アドバイスは説明で「暫定」と示す。\n- 3件以上：パターンと横のつながりを積極的に探す。\n\n時間の重み：\n各記録を考慮してください。同じテーマでの矛盾は時系列で読む。新しいほうが今の状態を示す。古いほうが文脈とパターン認識を与える。</string>
+    <string name="ai_prompt_entropy_rules">言語のルール（JSONのすべての文字列フィールドに適用）：\n- シンプルで明快な言葉。短い文。\n- 難しい言葉、専門用語、決まり文句は使わない。\n- 誰もがすぐに理解できるように。\n- 共感的、直接、具体的に。一般論を避ける。\n- 長いダッシュ（—）は使わない。読点や句点を使う。\n\nエントロピー（Entropie）という単語の禁止：「エントロピー」はユーザーには見えない技術用語です。見出し、箇条書き、説明、要約文に「エントロピー」という言葉を使ってはいけません。JSONフィールド名（\"gesamt_entropie\"、\"entropie_level\"）は変えずにそのままにしてください。\n\n量のルール、完全さが短さに勝る：\nすべてのカテゴリーにわたるアドバイスの合計は最低15件。10件未満は誤り。どの手がかりも、観察も、問題も、独自のアドバイスに値する。まとめない。1件の記録に3つの問題があれば、3つの別々のアドバイスになる。すべてをまとめた1つではない。JSONは長くなってよい。完全さが短さより大切。</string>
+    <string name="ai_prompt_entropy_schema_header">JSON出力のスキーマ:\n{\n  \"zentai_entoropi\": 0.0,\n  \"keikou\": \"joushou|antei|teitei|fumei\",\n  \"zentai_bunseki\": \"...\",\n  \"shinchoku\": [...],\n  \"jouyo_koudou\": [...],\n  \"kategori\": [...]\n}\n\nフィールド定義:\n\n1) \"zentai_entoropi\" (数値、0.0-1.0)\n   カテゴリーの負担レベルの加重平均。\n   - 0.0-0.33 = 低い(良い状態)\n   - 0.34-0.66 = 中くらい(注意が必要)\n   - 0.67-1.0 = 高い(すぐ行動を勧める)\n\n2) \"keikou\" (テキスト)\n   数日にわたって3件以上の記録があるときのみ。\n   - 「teitei」= 負担が減っている\n   - 「antei」= 負担は同じ\n   - 「joushou」= 負担が増えている\n   - 「fumei」= データが足りない\n\n3) \"zentai_bunseki\" (テキスト、15-25文)\n   - 記録を1件ずつたどり、主要なテーマを抽出する。\n   - 各記録のどのテーマも名前で挙げる。\n   - テーマ間のつながりを認識する。\n   - 問題だけでなく、進歩や強みも認識する。\n   - 共感的で個人的に、直接ユーザーに語りかける。</string>
+    <string name="ai_prompt_entropy_schema_fields">4) \"shinchoku\" (配列、0-5件)\n   負担が「減った」部分や、働いている習慣・強みが見える部分を認識する。\n   進歩ごとのスキーマ:\n   {\n     \"midashi\": \"短い見出し(最大5語)\",\n     \"setsumei\": \"何が改善したか、何がうまく行っているか(2-3文)。\",\n     \"sansho\": \"どの記録から読み取れるか(1文)。\"\n   }\n   記録が1件のみ、または見える進歩がない: 空配列 []。\n\n5) \"jouyo_koudou\" (配列、ちょうど5件)\n   個人の負担を最も強く、最も長く下げる5つの最重要行動。効果の強い順に(最強を先頭に)。カテゴリーを横断して全体として考える。\n   行動ごとのスキーマ:\n   {\n     \"midashi\": \"短い見出し(最大6語)\",\n     \"setsumei\": \"13-21語。短く効く: 何をすべきか、なぜか。\",\n     \"shousetsu\": \"詳しい理由(5-8文)。なぜこの行動か。どの記録が問題を示すか。実行するとどうなるか。\"\n   }</string>
+    <string name="ai_prompt_entropy_schema_categories">6) \"kategori\" (配列、必要な数だけ)\n   認識したそれぞれのテーマに、1つのカテゴリー。\n   カテゴリーごとのスキーマ:\n   {\n     \"namae\": \"カテゴリー名(最大12字、1-2語)\",\n     \"aikon\": \"material_icon_name\",\n     \"iro\": \"#HEX\",\n     \"entoropi_reberu\": 0.0,\n     \"youyaku\": \"このカテゴリーの要約(3-5文)。\",\n     \"adobaisu\": [...]\n   }\n\n   カテゴリー名 — 短く的確に:\n   よい: 「睡眠」「仕事」「運動」「こころ」「制作」\n   悪い: 「個人の成長」→「成長」\n\n   カテゴリー — 動的:\n   ベースとして使い、テーマが合わなければ新しく作る:\n   - 睡眠 (icon: bedtime, iro: #6C63FF)\n   - 仕事 (icon: work, iro: #FF6B6B)\n   - 運動 (icon: fitness_center, iro: #4ECDC4)\n   - 食事 (icon: restaurant, iro: #FFE66D)\n   - こころ (icon: psychology, iro: #A78BFA)\n   - 人間関係 (icon: people, iro: #F472B6)\n   - 家 (icon: home, iro: #34D399)\n   - 成長 (icon: trending_up, iro: #60A5FA)\n   - 制作 (icon: code, iro: #F59E0B)\n   - 健康 (icon: health_and_safety, iro: #EF4444)\n   - お金 (icon: account_balance, iro: #10B981)\n   - 余暇 (icon: sports_esports, iro: #EC4899)\n   - 自然 (icon: grass, iro: #22C55E)\n   - 痛み (icon: healing, iro: #DC2626)\n   ほかのアイコン: spa, coffee, self_improvement, nights_stay, directions_run, child_care, school, computer, timer, cleaning_services, music_note, pets, wb_sunny, lightbulb\n\n   カテゴリーごとの負担レベル(0.0-1.0):\n   - 0.0-0.33 = 低い(緑)\n   - 0.34-0.66 = 中(黄色)\n   - 0.67-1.0 = 高い(赤)\n\n   カテゴリーごとのアドバイス — 量:\n   記録から引き出せるアドバイスを「すべて」作る。少ないより多めが良い。カテゴリーごとに5-20が通常。どの手がかりも、観察も、問題も、独自のアドバイスに値する。まとめない。1件の記録に3つの問題があれば、3つの別々のアドバイスになる。各アドバイスは記録の「具体的な」言葉に基づく必要がある。優先度で並べる: 「takai」が先、次に「chuu」、最後に「hikui」。\n\n   アドバイスごとのスキーマ:\n   {\n     \"midashi\": \"短い見出し(最大6語)\",\n     \"setsumei\": \"13-21語。具体的かつ直接的に: 何を、なぜ。\",\n     \"yuusen\": \"takai|chuu|hikui\",\n     \"tsunagari\": \"関連する別のカテゴリー名1-2と、その理由を1文。なければ: null\",\n     \"dashutsu\": [\n       {\n         \"hizuke\": \"記録の日付(例: 28.03.2026)\",\n         \"youyaku\": \"その記録で関連した内容(1-2文)。\"\n       }\n     ]\n   }\n\n   優先度の意味:\n   - 「takai」= 緊急、すぐ対処(最大の負担源)\n   - 「chuu」= 感じ取れる、近いうちに対処\n   - 「hikui」= 観察し、長期で対処</string>
+    <string name="ai_prompt_entropy_output">出力形式 — 厳格なルール:\n- JSONオブジェクトだけで答える。\n- 前後にテキストを置かない。\n- Markdownのバッククオートは使わない。\n- { で始め、} で終わる。\n- 有効なJSON。欠けたカンマや重複キーはなし。</string>
+
+    <!-- Summary Analysis System Prompt (Profile: Zusammenfassung) -->
+    <string name="ai_prompt_summary_intro">あなたは、ていねいで整理された日記アナリストです。\n\nあなたの仕事：\nユーザーの日記の記録を分析してください。体験し、考え、行ったことを要約してください。テーマ、パターン、つながりを認識してください。JSON形式の構造化された要約パネルを作成してください。\n\n感情について：このプロフィールは出来事の要約であり、感情日記ではありません。感情は、出来事を理解するうえで欠かせない場合のみ短く触れてください。それ以外は省いてください。\n\n評価はしません。要約し、整理し、つながりを示します。コーチングはしません、問題探しもしません、良し悪しの判断もしません。目的：ユーザーが一目で今の生活を見渡せることです。</string>
+    <string name="ai_prompt_summary_entry_rules">最上位のルール — どの記録も欠かしてはいけません：\n番号付きの記録を受け取ります（例：「記録1/5」）。\nすべての記録を読み、分析し、取り入れなければなりません。\n答える前に数えてください： すべての記録を考慮したか。\n欠けているならすぐに追加してください。\n\n少数の記録のとき：\n- 1-2件：内容をまとめ、パターンを主張しない。\n  観察は説明で「暫定」と示す。\n- 3件以上：くり返すテーマとつながりを積極的に探す。\n\n時間の重み：\n各記録を考慮してください。同じテーマでの矛盾は時系列で読む。新しいほうが今の状態を示す。古いほうが文脈を与える。</string>
+    <string name="ai_prompt_summary_rules">言語のルール（JSONのすべての文字列フィールドに適用）:\n- シンプルで明快な言葉。短い文。\n- 難しい言葉、専門用語、決まり文句は使わない。\n- 誰もがすぐに理解できるように。\n- 中立、明快、事実ベース。評価なし、助言なし。\n- 長いダッシュ（—）は使わない。読点や句点を使う。\n\n量のルール、完全さが短さに勝る：\nすべてのテーマにわたる気づきの合計は最低15。10未満は誤り。どの思考も、体験も、観察も、独自の気づきに値する。まとめない。1件の記録に3つのテーマがあれば、3つの別々の気づきになる。JSONは長くなってよい。完全さが短さより大切。</string>
+    <string name="ai_prompt_summary_schema_header">JSON出力のスキーマ:\n{\n  \"zentai_entoropi\": 0.0,\n  \"keikou\": \"joushou|antei|teitei|fumei\",\n  \"zentai_bunseki\": \"...\",\n  \"shinchoku\": [...],\n  \"jouyo_koudou\": [...],\n  \"kategori\": [...]\n}\n\nフィールド定義:\n\n1) \"zentai_entoropi\" (数値、0.0-1.0)\n   今のユーザーの生活にどれくらい起きているか。すべてのテーマの加重平均。\n   - 0.0-0.33 = 静かな時期(動きが少なく、変化も少ない)\n   - 0.34-0.66 = 通常の時期(中くらいの動き)\n   - 0.67-1.0 = 濃い時期(同時にテーマが多い)\n\n2) \"keikou\" (テキスト)\n   数日にわたって3件以上の記録があるときのみ。\n   古いものと新しいものを比べる:\n   - 「joushou」= だんだん増えている、動きが増す\n   - 「antei」= 似たレベル\n   - 「teitei」= 落ち着き、テーマが減る\n   - 「fumei」= データが足りない\n\n3) \"zentai_bunseki\" (テキスト、15-25文)\n   - 記録を1件ずつたどり、主要なテーマを抽出する。\n   - 各記録のどのテーマも名前で挙げる。\n   - テーマ間のつながりを認識する。\n   - 今ユーザーを最も占めているのは何か。\n   - 記録のあいだで何が変わったか。\n   - 事実に基づき、個人的に、直接ユーザーに語りかける。\n   - 評価や助言はせず、要約と整理のみ。</string>
+    <string name="ai_prompt_summary_schema_fields">4) \"shinchoku\" (配列、0-5件)\n   複数の記録にわたって見える、くり返すテーマ、習慣、つながり。\n   パターンごとのスキーマ:\n   {\n     \"midashi\": \"短い見出し(最大5語)\",\n     \"setsumei\": \"何がくり返されるか、何がつながるか(2-3文)。\",\n     \"sansho\": \"どの記録から読み取れるか(1文)。\"\n   }\n   記録が1件のみ、または見えるパターンがない: 空配列 []。\n\n5) \"jouyo_koudou\" (配列、ちょうど5件)\n   すべての記録の総体から浮かぶ、最も重要な5つの気づき。今のユーザーの生活を最も形作る中心は何か。重要さで並べる(最も大きなものを先頭に)。テーマを横断して全体を見せる。\n   気づきごとのスキーマ:\n   {\n     \"midashi\": \"短い見出し(最大6語)\",\n     \"setsumei\": \"13-21語。気づきを端的に表す1文。\",\n     \"shousetsu\": \"詳しい説明(5-8文)。正確に何が述べられたか。なぜ中心的なテーマなのか。他のテーマとどうつながるか。\"\n   }</string>
+    <string name="ai_prompt_summary_schema_categories">6) \"kategori\" (配列、必要な数だけ)\n   認識したそれぞれのテーマに、1つのグループ。\n   テーマごとのスキーマ:\n   {\n     \"namae\": \"テーマ名(最大12字、1-2語)\",\n     \"aikon\": \"material_icon_name\",\n     \"iro\": \"#HEX\",\n     \"entoropi_reberu\": 0.0,\n     \"youyaku\": \"このテーマの要約(3-5文)。ユーザーは何を書いたか。現状はどうか。\",\n     \"adobaisu\": [...]\n   }\n\n   テーマ名 — 短く的確に:\n   よい: 「睡眠」「仕事」「運動」「こころ」「制作」\n   悪い: 「個人の成長」(長すぎ)→「成長」\n\n   テーマ — 動的:\n   ベースとして使い、テーマが合わなければ新しく作る:\n   - 睡眠 (icon: bedtime, iro: #6C63FF)\n   - 仕事 (icon: work, iro: #FF6B6B)\n   - 運動 (icon: fitness_center, iro: #4ECDC4)\n   - 食事 (icon: restaurant, iro: #FFE66D)\n   - こころ (icon: psychology, iro: #A78BFA)\n   - 人間関係 (icon: people, iro: #F472B6)\n   - 家 (icon: home, iro: #34D399)\n   - 成長 (icon: trending_up, iro: #60A5FA)\n   - 制作 (icon: code, iro: #F59E0B)\n   - 健康 (icon: health_and_safety, iro: #EF4444)\n   - お金 (icon: account_balance, iro: #10B981)\n   - 余暇 (icon: sports_esports, iro: #EC4899)\n   - 自然 (icon: grass, iro: #22C55E)\n   - 日常 (icon: calendar_today, iro: #78716C)\n   - 旅 (icon: flight, iro: #06B6D4)\n   - 創造 (icon: music_note, iro: #D946EF)\n   ほかのアイコン: spa, coffee, self_improvement, nights_stay, directions_run, child_care, school, computer, timer, cleaning_services, directions_car, photo_camera, pets, wb_sunny, lightbulb, star, healing\n\n   テーマごとの強さ(\"entoropi_reberu\" 項目、0.0-1.0):\n   そのテーマが記録にどれくらい現れているか。良し悪しの判断ではなく、出現度だけ。\n   - 0.0-0.33 = ほとんど触れていない(端)\n   - 0.34-0.66 = 定期的に触れている(いくつかの1つ)\n   - 0.67-1.0 = とても目立つ(中心テーマ)\n\n   テーマごとの気づき(\"adobaisu\" 項目) — 量:\n   このテーマについて記録から引き出せる気づきを「すべて」抽出する。少ないより多めが良い。テーマごとに5-20が通常。どの思考も、体験も、観察も、独自の気づきに値する。まとめない。1件の記録に1つのテーマの3つの面があれば、3つの気づきになる。各気づきは「具体的な」言葉に基づく。重要度で並べる: 「takai」が先、次に「chuu」、最後に「hikui」。\n\n   気づきごとのスキーマ:\n   {\n     \"midashi\": \"短い見出し(最大6語)\",\n     \"setsumei\": \"13-21語。ユーザーが書いたこと・体験したことを端的にまとめる1文。事実ベースで、評価なし。\",\n     \"yuusen\": \"takai|chuu|hikui\",\n     \"tsunagari\": \"関連する別のテーマ名1-2と、その理由を1文。なければ: null\",\n     \"dashutsu\": [\n       {\n         \"hizuke\": \"記録の日付(例: 28.03.2026)\",\n         \"youyaku\": \"その記録でテーマに触れた内容(1-2文)。\"\n       }\n     ]\n   }\n\n   重要度の意味(\"yuusen\" 項目):\n   - 「takai」= 中心テーマ。頻繁に触れ、大きく占める\n   - 「chuu」= 現れるが中心ではない\n   - 「hikui」= 端、単独の観察</string>
+    <string name="ai_prompt_summary_output">説明の語数ルール(厳守):\n「jouyo_koudou」と「adobaisu」の「setsumei」は、いつも13-21語の間。\n- 13語未満 = 短すぎ = 誤り\n- 21語超 = 長すぎ = 誤り\n書く前に語数を数える。各説明はひとつの引き締まった完結した文。多くも少なくもなく。\n\n出力形式 — 厳格なルール:\n- JSONオブジェクトだけで答える。\n- 前後にテキストを置かない。\n- Markdownのバッククオートは使わない。\n- { で始め、} で終わる。\n- 有効なJSON。欠けたカンマや重複キーはなし。</string>
+
+    <!-- Custom Analysis System Prompt (Profile: Individuelle Analyse) -->
+    <!-- %1$s = user-defined focus text -->
+    <string name="ai_prompt_custom_intro">あなたは知的で注意深い日記アナリストであり、タスク実行者でもあります。\n\n2つのステップで作業します:\n\nステップ1 — コンテキストを把握する:\nまずユーザーのすべての日記エントリーを最後まで読んでください。状況、パターン、テーマ、書かれている事柄、問題、願いを理解します。エントリーはあなたのコンテキスト、出発点、土台です。ただしあなたを制限するものではありません。\n\nステップ2 — タスクを実行する:\n%1$s\n\n上記があなたの本来の任務です。ステップ1のコンテキストをもとにこの任務を実行してください。任務が調査、アイデア、代替案、提案、新しい情報を求める場合は、エントリーに出てこなくてもそれらを積極的に提供してください。その際、医学的、法律的、財務的な診断や確定的な助言は行わず、そうしたテーマでは専門家を案内してください。エントリーはあなたのアウトプットに情報を与えますが、それを制限するものではありません。\n\n基本ルール — プロフィールが少なくとも50パーセントを占める:\nアウトプット全体(総合分析、最重要の対策、カテゴリー、助言、進捗)は、少なくとも50パーセントがユーザーの任務とはっきり結びついていなければなりません。任務と内容的なつながりがない発見、項目、テーマは省いてください。JSONを埋めるためだけに一般的な人生のテーマでアウトプットを水増ししないこと。つながりの薄い項目を多く出すより、明確なつながりのある項目を少なく出す方がよいです。\n\n言葉づかいについて重要なこと: つながりを多彩に表現してください。同義語、関連する言葉、テーマ的に近い概念、言い換えを使ってください。任務の言葉をそのまま機械的に繰り返さないこと。押しつけがましく見えます。任務が「目標」の例: 計画、願い、抱負、達成したいこと、進む方向、成長のステップとしても表現します。任務が「運動」の例: 体を動かすこと、トレーニング、身体活動、持久力、フィットネス、健康としても表現します。プロフィールとのつながりは字句どおりではなく、感じ取れるものでなければなりません。\n\n決定的なこと:\n- 任務に「分析して」「まとめて」「何が目立つか」とある場合は、エントリーに寄り添ってください。\n- 任務に「調査して」「代替案を見つけて」「提案して」「勧めて」「補って」「もし〜ならどうか」「新しいアイデア」とある場合は、エントリーを超えて積極的に独自の新しい内容を取り入れてください。\n- 任務が優先されます。エントリーは土台であって、壁ではありません。</string>
+    <string name="ai_prompt_custom_headings">大切 — 動的な見出し：\nフォーカスに「ぴったり」合う見出しを3つ、自分で考えてください。「主な結果」や「分析」のような一般的な題はだめ。フォーカスを映す独創的で具体的な見出しにします。\n例：\n- フォーカス「釣り」: 「一番の釣果」「釣りの全体像」「すべての記録」\n- フォーカス「睡眠の質」: 「あなたの睡眠パターン」「睡眠の分析」「すべての観察」\n- フォーカス「詰め込みすぎ」: 「最大の時間泥棒」「負担の全体像」「すべての負担点」</string>
+    <string name="ai_prompt_custom_rules">コンテキストのルール — すべてのエントリーを読む:\n番号付きのエントリーを受け取ります。一つひとつを最後まで読み、コンテキストとして把握してください。関連するすべての細部がアウトプットに反映されます。ただし任務が求める場合、アウトプットはエントリーを超えてよく、また超えるべきです。\n\n任務のルール — 任務を遂行する:\nユーザーの任務を文字どおり遂行してください。任務が代替案を求めるなら、エントリーにあるものだけでなく、本当に新しい代替案を提供します。任務が推薦を求めるなら、積極的に調査して推薦します。エントリーはあなたの回答の唯一の情報源ではありません。\n\nアウトプットでの区別:\nエントリーから来たものと、あなたが新たに加えたものをはっきり示してください。そうすればユーザーは、どれが自分自身の考えで、どれがあなたの貢献かが分かります。\n\n専門相談のルール — 診断は行わない:\n任務にかかわらず、医学的診断、治療の推奨、法律・財務の助言は行いません。そうしたテーマでは中立的に有資格の専門家を案内してください。\n\n言葉のルール:\n- 簡潔で明確に。難しい外来語は使わない。\n- 共感的かつ率直に。\n- 長いダッシュ(—)は使わない。読点や句点を使う。\n\n分量のルール:\n全体で少なくとも10個の発見を。ただし一つひとつが内容的に任務に合っていなければなりません。プロフィールと本当につながる発見が10個見つからない場合は、水増しした10個より、しっかりした7個を出す方がよいです。純粋な分析の任務では発見はエントリーから生まれ、創造的な任務では新しい内容を取り入れてかまいません。</string>
+    <string name="ai_prompt_custom_schema">JSON出力のスキーマ：\n{\n  \"ueberschrift_top5\": \"トップ5の独創的な見出し（課題に合う、最大3語）\",\n  \"ueberschrift_analyse\": \"全体像の独創的な見出し（課題に合う、最大3語）\",\n  \"ueberschrift_ergebnisse\": \"全結果の独創的な見出し（課題に合う、最大3語）\",\n  \"fokus_kern\": \"課題の核心を1文で（課題は何か、なぜ重要か）\",\n  \"fokus_zitate\": [\"記録から課題に関連する引用または要約\", \"...もっとあれば\"],\n  \"gesamt_entropie\": 0.0,\n  \"trend\": \"steigend|stabil|sinkend|unbekannt\",\n  \"gesamtanalyse\": \"...\",\n  \"fortschritte\": [...],\n  \"top_massnahmen\": [...],\n  \"kategorien\": [...]\n}\n\n1) \"ueberschrift_top5/analyse/ergebnisse\"：必須。独創的で具体的、最大3語。課題に合う見出し。一般的な題はなし。\n\n2) \"fokus_kern\"：課題の中心を1文でまとめる。\n\n3) \"fokus_zitate\"：記録から課題に関連する部分を引用または要約した配列。\n\n4) \"gesamt_entropie\" (0.0-1.0)：課題領域が記録にどれくらい現れているか。\n\n5) \"trend\"：3件以上の記録があるときのみ。課題領域が変化しているか。steigend（増加）、stabil（安定）、sinkend（減少）、unbekannt（不明）のいずれか。\n\n6) \"gesamtanalyse\" (15-25文)：記録は課題領域について何を語るか。各記録の関連する細部をすべて挙げる。\n\n7) \"fortschritte\" (0-5件)：課題領域のパターンや流れ。\n   { \"titel\": \"最大5語\", \"beschreibung\": \"2-3文\", \"bezug\": \"1文\" }\n\n8) \"top_massnahmen\" (ちょうど5件)：課題領域についての最重要の気づき。\n   {\n     \"titel\": \"最大6語\",\n     \"beschreibung\": \"13-21語。引き締まった言い切り。\",\n     \"erklaerung\": \"5-8文の詳しい説明。\"\n   }\n\n9) \"kategorien\"：課題に合う主題グループ（動的に作る）。\n   {\n     \"name\": \"最大12字\", \"icon\": \"material_icon_name\", \"farbe\": \"#HEX\",\n     \"entropie_level\": 0.0,\n     \"zusammenfassung\": \"3-5文\",\n     \"ratschlaege\": [{\n       \"titel\": \"最大6語\",\n       \"beschreibung\": \"13-21語\",\n       \"prioritaet\": \"hoch|mittel|niedrig\",\n       \"verknuepfung\": \"他テーマとのつながり、またはnull\",\n       \"herleitung\": [{\"datum\": \"...\", \"zusammenfassung\": \"1-2文\"}]\n     }]\n   }\n\n新規追加内容の\"herleitung\"について：記録にもとづかない新規提案の場合は、\"datum\"を\"neu\"（新規）とし、\"zusammenfassung\"でその理由を説明してください。</string>
+    <string name="ai_prompt_custom_output">語数ルール: jouyo_koudou と adobaisu の「setsumei」は、いつも13-21語。\n\n出力形式 — 厳格なルール:\n- JSONオブジェクトだけで答える。\n- 前後にテキストを置かない。バッククオートは使わない。\n- { で始め、} で終わる。</string>
+
+    <!-- ════════════════════════════════════════════════════════════════════
+         RETROSPECTIVE SCREEN
+         ════════════════════════════════════════════════════════════════════ -->
+    <string name="retro_title">振り返り</string>
+    <string name="retro_cd_info">振り返りについて</string>
+    <string name="retro_personal_review">あなただけの振り返り</string>
+    <string name="retro_intro_body">毎日を過ごしていると、どれだけ多くを経験したかを忘れてしまいがちです。日記は全部を覚えています。大きな瞬間も、静かで小さな瞬間も。 </string>
+    <string name="retro_intro_cta">ふり返って、心を動かしたものを見つけてください。</string>
+    <string name="retro_please_wait">少々お待ちください</string>
+    <string name="retro_backup_loading">バックアップを読み込み中… そのあと振り返りが自動で始まります。</string>
+    <string name="retro_profile_switching">プロフィール変更後、振り返りは自動で更新されます</string>
+    <string name="retro_generating">振り返りを作成中…</string>
+    <string name="retro_ai_unavailable">AIは現在利用できません。しばらくしてからお試しください。</string>
+    <string name="retro_weekly_title">週の振り返り</string>
+    <string name="retro_weekly_subtitle">直近7日間を一目で</string>
+    <string name="retro_weekly_empty">週の振り返りはまだありません。\n1週間に少なくとも2件の記録が必要です。</string>
+    <string name="retro_monthly_title">月の振り返り</string>
+    <string name="retro_monthly_subtitle">先月を一目で</string>
+    <string name="retro_monthly_empty">月の振り返りはまだありません。\n月末に週の振り返りから作られます。</string>
+    <string name="retro_yearly_title">年の振り返り</string>
+    <string name="retro_yearly_subtitle">1年分の思い出</string>
+    <string name="retro_yearly_empty">年の振り返りはまだありません。\n年末に月の振り返りから作られます。</string>
+    <string name="retro_premium_unlock">プレミアムですべての振り返りを解除</string>
+    <string name="retro_at_a_glance">一目で</string>
+    <string name="retro_cd_expand">開く</string>
+    <string name="retro_cd_collapse">閉じる</string>
+    <string name="retro_share_text_label">テキスト</string>
+
+    <!-- Fallback titles (when AI title generation fails) -->
+    <string name="retro_fallback_week">週の振り返り</string>
+    <string name="retro_fallback_month">月の振り返り</string>
+    <string name="retro_fallback_year">%1$d年の振り返り</string>
+    <string name="retro_period_label_week">第%1$d週（%2$s - %3$s）</string>
+    <!-- Retro: Photos, TTS, Sharing -->
+    <string name="retro_photos_videos">写真と動画</string>
+    <string name="retro_photos_videos_colon">写真と動画：</string>
+    <string name="retro_cd_video">動画</string>
+    <string name="retro_cd_photo">写真</string>
+    <string name="retro_play_video">動画を再生</string>
+    <string name="retro_enable_voices">設定で音声をオンにしてください</string>
+    <string name="retro_tts_stop">停止</string>
+    <string name="retro_tts_read">読み上げ</string>
+    <string name="retro_tts_wait">音声を生成しています。少々お待ちください…</string>
+    <string name="retro_cd_share">共有</string>
+    <string name="retro_share_title">振り返りを共有</string>
+    <string name="retro_share_text_content">振り返りの本文</string>
+    <string name="retro_photo_n">写真%1$d</string>
+    <string name="retro_share_header">BestJournalアプリの振り返り</string>
+    <string name="retro_at_a_glance_colon">一目で：</string>
+    <!-- Retro: Locked/Premium -->
+    <string name="retro_cd_locked">ロック中</string>
+    <string name="retro_unlock_premium_short">プレミアムを解除</string>
+    <string name="retro_cd_premium_required">プレミアムが必要</string>
+    <!-- Retro: Benefits info dialog -->
+    <string name="retro_your_ai_reviews">あなたのAI振り返り</string>
+    <string name="retro_weekly_p1">AIがあなたの1週間を個人的な物語にまとめます</string>
+    <string name="retro_weekly_p2">感情のパターンやハイライトが見えるようになります</string>
+    <string name="retro_weekly_p3">2件以上の記録があれば毎週日曜に自動で作成</string>
+    <string name="retro_weekly_p4">最初の2週間は無料</string>
+    <string name="retro_monthly_p1">週の振り返りを月の物語につなぎます</string>
+    <string name="retro_monthly_p2">月を通した太い線や変化が見えるようになります</string>
+    <string name="retro_monthly_p3">あなたの記録からの成長を表示します</string>
+    <string name="retro_yearly_p1">1年を一目で</string>
+    <string name="retro_yearly_p2">AIがあなたの1年の主要テーマを要約します</string>
+    <string name="retro_yearly_p3">個人の成長が見え、手に取れるようになります</string>
+    <!-- Retro: Premium upsell sheet -->
+    <string name="retro_your_reviews">あなただけの振り返り</string>
+    <string name="retro_premium_reviews_desc">プレミアムなら、日記の記録から自動で振り返りを作ります：</string>
+    <string name="retro_benefit_weekly">最初の2件だけでなく、すべての週間振り返り（AIの1日あたりの利用枠の範囲内で）</string>
+    <string name="retro_benefit_monthly">進捗と変化を見せる月の振り返り</string>
+    <string name="retro_benefit_yearly">1年を個人の物語として見せる年の振り返り</string>
+    <string name="retro_start_sub">サブスクを開始</string>
+    <string name="retro_decide_later">あとで決める</string>
+
+    <!-- Month names for retrospective grouping -->
+    <string name="month_january">1月</string>
+    <string name="month_february">2月</string>
+    <string name="month_march">3月</string>
+    <string name="month_april">4月</string>
+    <string name="month_may">5月</string>
+    <string name="month_june">6月</string>
+    <string name="month_july">7月</string>
+    <string name="month_august">8月</string>
+    <string name="month_september">9月</string>
+    <string name="month_october">10月</string>
+    <string name="month_november">11月</string>
+    <string name="month_december">12月</string>
+
+    <!-- ════════════════════════════════════════════════════════════════════
+         ONBOARDING
+         ════════════════════════════════════════════════════════════════════ -->
+    <string name="onboarding_welcome">Best Journalへ\nようこそ</string>
+    <string name="onboarding_subtitle">日常の明確さのための\nあなたのパーソナルAI日記</string>
+    <string name="onboarding_feature_speech">話しても書いても、AIはどちらも分かります</string>
+    <string name="onboarding_feature_listen">日記を読み上げてもらえます</string>
+    <string name="onboarding_feature_secure">あなたのエントリーは端末に残り、AIへのリクエストは暗号化して送信されます</string>
+    <string name="onboarding_goals_title">AI日記で\n何を叶えたいですか？</string>
+    <string name="onboarding_goal_stress">ストレスを減らす</string>
+    <string name="onboarding_goal_clarity">明晰さを得る</string>
+    <string name="onboarding_goal_growth">個人の成長</string>
+    <string name="onboarding_goal_thoughts">考えを残す</string>
+    <string name="onboarding_how_step1_title">話すか書くか、思いを記録</string>
+    <string name="onboarding_how_step1_desc">好きな方法で、声で録るか、入力してください。</string>
+    <string name="onboarding_how_step2_title">AIが整え、分析します</string>
+    <string name="onboarding_how_step2_desc">文章は自動で洗練され、複数の視点から分析されます。</string>
+    <string name="onboarding_how_step3_desc">特別な瞬間を残すと、AIが分析に取り入れます。</string>
+    <string name="onboarding_how_step4_title">パターンと気づきを見つける</string>
+    <string name="onboarding_how_step4_desc">AIダッシュボードであなたの記録のつながりを確認できます。</string>
+    <string name="onboarding_how_step5_title">週・月・年の振り返り</string>
+    <string name="onboarding_how_step5_desc">自動の振り返りが、時間の中でのあなたの歩みを見せます。</string>
+    <string name="onboarding_premium_feature_improve">毎日のAIテキスト改善で、すべての記録がより明確で表現豊かに。</string>
+    <string name="onboarding_premium_feature_dashboard">新しい記録ごとにダッシュボードを自動更新</string>
+    <string name="onboarding_premium_feature_retro">週・月・年の振り返りがあなたの歩みを示します</string>
+    <string name="onboarding_premium_feature_patterns">パターンを可視化：AIがあなたの記録の繰り返す思考・感情パターンを表示します</string>
+    <string name="onboarding_premium_feature_noads">邪魔されずに書いて振り返る</string>
+    <string name="onboarding_free_trial">無料、いつでもキャンセル可能</string>
+    <string name="onboarding_free_after_trial">そのあとも Best Journal を使い続けられます。\n無料で、週ごとにAI呼び出しの回数に上限があります。</string>
+    <string name="onboarding_start_free">無料で始める</string>
+    <string name="onboarding_without_premium">プレミアムなしで続ける</string>
+    <string name="onboarding_feature_profiles">さまざまな視点のための5つの分析プロフィール</string>
+    <string name="onboarding_goals_select">1つ以上の目標を選んでください</string>
+    <string name="onboarding_how_step3_title">写真を追加</string>
+    <string name="onboarding_how_title">とても簡単です</string>
+    <string name="onboarding_perspectives_title">人生へのさまざまな\n視点</string>
+    <string name="onboarding_premium_feature_pdf">写真つきPDF出力で、記録を文書として保存</string>
+    <string name="onboarding_premium_profiles">人生を深く見る5つの知的ダッシュボードプロフィール</string>
+    <string name="onboarding_premium_profiles_unlimited">件数制限のないオリジナルAIプロフィール</string>
+    <string name="onboarding_try_premium">プレミアムでできること（一例）：</string>
+
+    <!-- ════════════════════════════════════════════════════════════════════
+         PAYWALL
+         ════════════════════════════════════════════════════════════════════ -->
+    <string name="paywall_prices_loading">価格を読み込み中…</string>
+    <string name="paywall_sub_loading_toast">サブスクを読み込み中です。少し待ってお試しください。</string>
+    <string name="paywall_purchase_loading_toast">購入を読み込み中です。少し待ってお試しください。</string>
+    <string name="paywall_today">今日</string>
+    <string name="paywall_full_access">フルアクセス</string>
+    <string name="paywall_day7">7日目</string>
+    <string name="paywall_reminder">リマインダー</string>
+    <string name="paywall_day8">8日目</string>
+    <string name="paywall_first_payment">最初の支払い</string>
+    <string name="paywall_yearly_note">その後%1$sを年額で、自動更新\n試用期間中はいつでもキャンセル可能</string>
+    <string name="paywall_most_popular">おすすめ</string>
+    <string name="paywall_monthly_plan">月額プラン、月%1$s</string>
+    <string name="paywall_lifetime_title">買い切り</string>
+    <string name="paywall_lifetime_desc">一度の支払いですべてを継続的に利用</string>
+    <string name="paywall_lifetime_note">サブスクなし、更新なし</string>
+    <string name="paywall_free_note">アプリはサブスクリプションなしでも引き続きご利用いただけます。</string>
+    <string name="paywall_legal_hint" formatted="false">定期購入すると%1$sに同意したことになります。14日間の契約解除権はそちらに記載されています。</string>
+    <string name="paywall_legal_hint_link">利用規約</string>
+
+    <!-- Paywall features -->
+    <string name="paywall_feature_patterns">思考の繰り返しパターンを見つける</string>
+    <string name="paywall_feature_improve">毎日のAIテキスト改善をすべての記録に</string>
+    <string name="paywall_feature_dashboard">記録ごとにダッシュボードを自動更新</string>
+    <string name="paywall_feature_retro">AIによる週・月・年の振り返り</string>
+    <string name="paywall_feature_pdf">記録と写真をPDFで書き出し</string>
+    <string name="paywall_feature_noads">邪魔されずに書いて振り返る</string>
+    <string name="paywall_feature_profiles">件数制限のないオリジナルAIプロフィール</string>
+
+    <!-- Paywall personalized headlines -->
+    <string name="paywall_headline_stress">日常にもっと明瞭さを</string>
+    <string name="paywall_headline_stress_sub">毎日気になっていることを整理して、すっきり言語化しましょう。</string>
+    <string name="paywall_headline_clarity">自分をより深く理解する</string>
+    <string name="paywall_headline_clarity_sub">AIが、あなたのエントリーの中の繰り返されるパターンを見えるようにします</string>
+    <string name="paywall_headline_growth">毎日の中の良いものを見つけて</string>
+    <string name="paywall_headline_growth_sub">感謝と成長のための、あなただけの場</string>
+    <string name="paywall_headline_thoughts">思いを自由に流して</string>
+    <string name="paywall_headline_thoughts_sub">毎日に寄り添うクリエイティブなパートナー</string>
+    <string name="paywall_headline_default">自分を見つけよう\n毎日少しずつ</string>
+    <string name="paywall_headline_default_sub">毎日に寄り添う、あなただけのAIパートナー</string>
+
+    <!-- Exit intent offer -->
+    <string name="paywall_exit_wait">少しだけ待って！</string>
+    <string name="paywall_exit_special_offer">特別なお知らせが\nあります：</string>
+    <string name="paywall_exit_discount">%1$dか月の割引</string>
+    <string name="paywall_exit_price_comparison">月%2$sが、%1$sに</string>
+    <string name="paywall_exit_start_discount">有料 — 2ヶ月間半額でスタート</string>
+
+    <!-- ════════════════════════════════════════════════════════════════════
+         CHURN FLOW DIALOG
+         ════════════════════════════════════════════════════════════════════ -->
+    <string name="churn_your_sub">あなたのサブスク</string>
+    <string name="churn_plan_yearly">年額プラン</string>
+    <string name="churn_plan_monthly">月額プラン</string>
+    <string name="churn_plan">プラン</string>
+    <string name="churn_price">価格</string>
+    <string name="churn_renewal">更新</string>
+    <string name="churn_automatic">自動</string>
+    <string name="churn_promo_active_label">割引キャンペーン</string>
+    <string name="churn_promo_one_month_remaining">残り1ヶ月 — その後は月額<xliff:g id="base_price" example="3,99 €">%1$s</xliff:g></string>
+    <string name="churn_promo_months_remaining">残り<xliff:g id="months" example="2">%1$d</xliff:g>ヶ月 — その後は月額<xliff:g id="base_price" example="3,99 €">%2$s</xliff:g></string>
+    <string name="churn_auto_renew_note">サブスクはGoogle Playで自動更新されます。いつでも解約できます。</string>
+    <string name="churn_cancel_sub">サブスクを解約</string>
+    <string name="churn_reason_too_expensive">高すぎる</string>
+    <string name="churn_reason_unused">あまり使わない</string>
+    <string name="churn_per_year">年あたり</string>
+    <string name="churn_per_month">月あたり</string>
+    <string name="churn_reason_features">必要な機能がない</string>
+    <string name="churn_reason_other">別の理由</string>
+    <string name="churn_sorry_title">お別れは残念です</string>
+    <string name="churn_sorry_body">解約の前に、理由を教えてもらえますか？ アプリを良くするのに役立ちます。</string>
+    <string name="churn_exclusive_offer">あなたへの特別オファー</string>
+    <string name="churn_offer_subtitle">あなたへのご提案</string>
+    <string name="churn_offer_feature_ai">毎日のAI分析</string>
+    <string name="churn_offer_feature_perspectives">あらかじめ用意された4つのAIプロフィール + 必要なだけのオリジナル</string>
+    <string name="churn_offer_feature_voice">プレミアム音声認識</string>
+    <string name="churn_offer_auto_renew">自動更新、いつでも解約可能</string>
+    <string name="churn_accept_offer">ご提案を受ける</string>
+    <string name="churn_switch_yearly">または年額プランに切り替えてさらに節約</string>
+    <string name="churn_pause_sub">またはGoogle Playでサブスクを一時停止</string>
+    <string name="churn_cancel_anyway">それでも解約</string>
+    <string name="churn_are_you_sure">よろしいですか？</string>
+    <string name="churn_stay">やっぱり続ける</string>
+
+    <!-- ════════════════════════════════════════════════════════════════════
+         AI LIMIT / COMPONENTS
+         ════════════════════════════════════════════════════════════════════ -->
+    <string name="ai_limit_title">今週の上限に達しました</string>
+    <string name="ai_limit_body">サブスクリプションなしでは、週に5 件のテキスト改善と、プロフィールごとに週5 件のダッシュボード更新が利用できます。
+Premiumでは：1日最大150件。</string>
+    <string name="ai_limit_monthly">月額プラン、月%1$s</string>
+    <string name="ai_limit_yearly">年額プラン、年%1$s(37\u00A0%%お得)</string>
+    <string name="ai_limit_no_thanks">いいえ、AIなしで続ける</string>
+    <string name="ai_banner_title">あなたの日記はAIがサポート</string>
+    <string name="ai_banner_body">• ディクテーションしたテキストを自動改善
+• 各記録の要約
+• あなたのパターンからのインサイト。すべてのAI出力はあくまで参考であり、専門的なアドバイスの代替にはなりません。
+• 無料体験期間中はすべてが含まれます</string>
+    <string name="cd_mic_start">録音開始</string>
+    <string name="cd_mic_stop">録音停止</string>
+    <string name="entry_improve_limit_daily">今日の上限に達しました。明日続きをどうぞ！</string>
+    <string name="entry_improve_limit_cooldown">少し休憩です。あと%1$d分。</string>
+    <string name="entry_improve_failed">文章の改善に失敗しました</string>
+
+    <!-- ════════════════════════════════════════════════════════════════════
+         NOTIFICATIONS
+         ════════════════════════════════════════════════════════════════════ -->
+    <string name="notif_reminder_title">日記の時間です</string>
+    <string name="notif_reminder_body_0">今日はあなたを動かしたものは？</string>
+    <string name="notif_reminder_body_1">自分のための時間、残しておきましょう</string>
+    <string name="notif_reminder_body_2">未来のあなたが感謝します</string>
+    <string name="notif_reminder_body_3">ひとつの思いで十分、始めましょう</string>
+    <string name="notif_reminder_body_4">今日のハイライトは何？</string>
+    <string name="notif_weekly_title">あなたの週の振り返り</string>
+    <string name="notif_weekly_body">今週あなたを動かしたものを見てください。ダッシュボードに新しい気づきがあります。</string>
+    <string name="notif_monthly_title">あなたの月の振り返り</string>
+    <string name="notif_monthly_body">1か月分の思い出があなたを待っています。</string>
+    <string name="notif_yearly_title">あなたの年の振り返り</string>
+    <string name="notif_yearly_body">1年分の思い出、あなたの歩みをふり返ってください。</string>
+
+    <!-- Notification channel names -->
+    <string name="notif_channel_daily_name">毎日のリマインダー</string>
+    <string name="notif_channel_daily_desc">毎日、日記を書くよう促します</string>
+    <string name="notif_channel_weekly_name">週の振り返り</string>
+    <string name="notif_channel_weekly_desc">週の振り返り、毎週日曜15:00</string>
+    <string name="notif_channel_monthly_name">月の振り返り</string>
+    <string name="notif_channel_monthly_desc">月の振り返りができたらお知らせ</string>
+    <string name="notif_channel_yearly_name">年の振り返り</string>
+    <string name="notif_channel_yearly_desc">年の振り返りができたらお知らせ</string>
+
+    <!-- ════════════════════════════════════════════════════════════════════
+         DATE / TIME
+         ════════════════════════════════════════════════════════════════════ -->
+    <string name="datetime_just_now">たった今</string>
+    <plurals name="datetime_minutes_ago">
+        <item quantity="other">%1$d分前</item>
+    </plurals>
+    <plurals name="datetime_hours_ago">
+        <item quantity="other">%1$d時間前</item>
+    </plurals>
+    <plurals name="datetime_days_ago">
+        <item quantity="other">%1$d日前</item>
+    </plurals>
+    <!-- Confirmation after PDF export. %1$d = number of entries included in the PDF. -->
+    <plurals name="settings_export_success">
+        <item quantity="other">%1$d件の記録を書き出しました</item>
+    </plurals>
+    <string name="datetime_today">今日</string>
+    <string name="datetime_yesterday">昨日</string>
+    <string name="datetime_day_before_yesterday">一昨日</string>
+    <string name="datetime_this_week">今週</string>
+    <string name="datetime_last_week">先週</string>
+    <string name="datetime_weeks_ago">%1$d週間前</string>
+
+    <!-- ════════════════════════════════════════════════════════════════════
+         ACHIEVEMENTS
+         ════════════════════════════════════════════════════════════════════ -->
+    <string name="achievement_nightowl_title">夜型</string>
+    <string name="achievement_nightowl_desc">22:00以降に50件の記録</string>
+    <string name="achievement_earlybird_title">早起き</string>
+    <string name="achievement_earlybird_desc">7:00より前に20件の記録</string>
+    <string name="achievement_confession_title">告白</string>
+    <string name="achievement_confession_desc">1000字を超える記録</string>
+    <string name="achievement_marathon_title">書く人のマラソン</string>
+    <string name="achievement_marathon_desc">日記100件</string>
+    <string name="achievement_wordartist_title">言葉の達人</string>
+    <string name="achievement_wordartist_desc">日記500件</string>
+    <string name="achievement_consistency_title">継続</string>
+    <string name="achievement_consistency_desc">30日連続を達成</string>
+    <string name="achievement_chronicler_title">年の記録者</string>
+    <string name="achievement_chronicler_desc">365件の記録</string>
+    <string name="achievement_photodiary_title">写真日記</string>
+    <string name="achievement_photodiary_desc">記録に50枚の写真</string>
+    <string name="achievement_voiceartist_title">声の達人</string>
+    <string name="achievement_voiceartist_desc">25件の音声記録</string>
+    <string name="achievement_reflectionmaster_title">内省の達人</string>
+    <string name="achievement_reflectionmaster_desc">ダッシュボード分析を50回</string>
+
+    <!-- ════════════════════════════════════════════════════════════════════
+         DAILY PROMPTS
+         ════════════════════════════════════════════════════════════════════ -->
+    <string name="prompt_cat_self_reflection">自己内省</string>
+    <string name="prompt_cat_gratitude">感謝</string>
+    <string name="prompt_cat_future">未来</string>
+    <string name="prompt_cat_relationships">人間関係</string>
+
+    <string-array name="prompts_self_reflection">
+        <item>今日、何があなたを微笑ませましたか？</item>
+        <item>今日、どの考えが離れませんでしたか？</item>
+        <item>今日、自分について何を学びましたか？</item>
+        <item>今日、もっとも強く心に残った瞬間は？</item>
+        <item>できるなら、今日どこを変えたいですか？</item>
+        <item>今日、もっとも寄り添った気持ちは？</item>
+        <item>今日、何に驚きましたか？</item>
+        <item>今日、もっとも長く考えたことは？</item>
+        <item>今日、何があなたにエネルギーを与えましたか？</item>
+        <item>今日、何があなたからエネルギーを奪いましたか？</item>
+        <item>変えたい習慣はありますか？</item>
+        <item>今のあなたにとって、成功とは何ですか？</item>
+        <item>今、行く手を阻む怖れは何ですか？</item>
+        <item>若い頃のあなたは、今の暮らしをどう言うでしょう？</item>
+        <item>今、自分に贈るアドバイスは？</item>
+        <item>あなたをあなたらしくしているものは？</item>
+    </string-array>
+
+    <string-array name="prompts_gratitude">
+        <item>今日、何に感謝していますか？</item>
+        <item>今日、誰があなたの1日を明るくしましたか？</item>
+        <item>今日、どの小さなことが嬉しかったですか？</item>
+        <item>当たり前に感じているあなたの力は？</item>
+        <item>今週、一番うれしかったことは？</item>
+        <item>誰に、何を感謝したいですか？</item>
+        <item>家のように感じる場所はありますか？</item>
+        <item>すぐに笑顔になる思い出は？</item>
+        <item>もっと大切にしたい、自分の体の部分は？</item>
+        <item>今日、心地よかった食事は？</item>
+        <item>最近、心に響いた音楽は？</item>
+        <item>お金のかからない、あなたの宝物は？</item>
+        <item>あなたを強くした、過去の経験は？</item>
+        <item>当たり前の毎日の中の、実は特別なことは？</item>
+        <item>毎日の静かな英雄は？</item>
+        <item>今、いちばん味わっている季節は、なぜですか？</item>
+    </string-array>
+
+    <string-array name="prompts_future">
+        <item>1年後に、達成していたいことは？</item>
+        <item>5年後の、あなたの完ぺきな1日は？</item>
+        <item>今、いちばん情熱を注ぐ目標は？</item>
+        <item>失敗しないとわかったら、何をしますか？</item>
+        <item>学びたい新しい力は？</item>
+        <item>次に行きたい旅先は？</item>
+        <item>10年後、どんな人でありたいですか？</item>
+        <item>もう一度よみがえらせたい夢は？</item>
+        <item>今できる、いちばん勇気ある一歩は？</item>
+        <item>まだ始めていない、わくわくする計画は？</item>
+        <item>「今、満足だ」と言うために必要なことは？</item>
+        <item>世界に見たい変化は？</item>
+        <item>夢リストのいちばん上は？</item>
+        <item>来月までにやめたい悪い習慣は？</item>
+        <item>どう覚えられたいですか？</item>
+        <item>明日できる小さな一歩は？</item>
+    </string-array>
+
+    <string-array name="prompts_relationships">
+        <item>まだ伝えていないことを、誰に伝えたいですか？</item>
+        <item>もっと大切にしたい関係は？</item>
+        <item>親友のどこが好きですか？</item>
+        <item>最近、心から理解されたと感じたのはいつですか？</item>
+        <item>大切な人に、何を伝えたいですか？</item>
+        <item>人生を一番形作ったのは誰ですか？</item>
+        <item>愛情をどう相手に示していますか？</item>
+        <item>解決したい衝突はありますか？</item>
+        <item>あなたにとって友情とは？</item>
+        <item>最近、大切なことを教えてくれたのは誰ですか？</item>
+        <item>他の人のどんな性質をいちばん尊敬しますか？</item>
+        <item>丸1日を誰と過ごしたいですか？</item>
+        <item>受けたいちばんの褒め言葉は？</item>
+        <item>関係の中で、もっと上手に引きたい線は？</item>
+        <item>愛への考え方は、時と共にどう変わりましたか？</item>
+        <item>今日、あなたから電話やメッセージをもらうべき人は？</item>
+    </string-array>
+
+    <!-- ════════════════════════════════════════════════════════════════════
+         PDF EXPORT
+         ════════════════════════════════════════════════════════════════════ -->
+    <string name="pdf_entry_fallback_title">記録 #%1$d</string>
+    <string name="pdf_entry_counter">記録 %1$d / %2$d</string>
+    <string name="pdf_summary_label">要約</string>
+    <string name="pdf_continuation">%1$s (続き)</string>
+    <string name="pdf_page_number">%1$dページ</string>
+
+    <!-- ════════════════════════════════════════════════════════════════════
+         ERRORS
+         ════════════════════════════════════════════════════════════════════ -->
+    <string name="error_retro_all_failed">%1$d件のAIリクエストに失敗しました。インターネット接続をご確認ください。</string>
+    <string name="error_whisper_audio_empty">音声ファイルが空です</string>
+    <string name="error_whisper_no_text">テキストを認識できません</string>
+    <string name="error_sync_db_not_found">データベースが見つかりません</string>
+    <string name="error_audio_record_init_failed">マイクを開始できませんでした</string>
+    <string name="error_json_key_missing">AI応答が不完全です：%1$s または %2$s がありません</string>
+    <string name="error_file_open_failed">エラー： ファイルを開けませんでした</string>
+    <string name="error_generic">エラー： %1$s</string>
+
+    <!-- ════════════════════════════════════════════════════════════════════
+         AI PROFILE STYLE INSTRUCTIONS (for Gemini prompts)
+         ════════════════════════════════════════════════════════════════════ -->
+    <string name="profile_style_chronicler">\n- 個人の記録係のように、主な出来事と感情を集める、まとめ語りの文体で書いてください</string>
+    <string name="profile_style_advisor">\n- ライフアドバイザーの文体で書いてください。何がうまくいき、何を改善できるかを示し、読者に明晰さと秩序を感じさせてください</string>
+    <string name="profile_style_insight">\n- 深い自己認識の語りの文体で書いてください。思考のパターン、くり返す感情、隠れた強みを明らかにしてください</string>
+    <string name="profile_style_coach">\n- 背を押す目標の伴走者の文体で書いてください。個人の目標での進捗を示し、続けるよう励ましてください</string>
+    <string name="profile_style_custom">\n- プロフィールスタイル（カスタム）：ユーザーの課題と明確なつながりを持たせて、この振り返りを書いてください。必須ルール：\n  1) 振り返り全体の少なくとも60パーセントは、直接的または間接的に課題のテーマを扱うこと。\n  2) 少なくとも1つのテーマ的な節を、課題のフォーカスにまるごと充てること（見出し＋本文）。\n  3) プロフィールとのつながりは、同義語やテーマの周辺語を使って多様に表現すること。機械的な語の繰り返しはしない。\n  4) 課題と関係のない観察は短くまとめるか、省くこと。少なくても本当のつながりのある節のほうが、多くても一般的な節よりよい。\n  ユーザーの課題（方向の参考として）：\"%1$s\"</string>
+
+
+    <!-- ════════════════════════════════════════════════════════════════════
+         CONSENT SCREEN + PRIVACY GATES + PRIVACY SECTION (April 2026)
+         ════════════════════════════════════════════════════════════════════ -->
+    <string name="consent_title">プライバシーと同意</string>
+    <string name="consent_intro">日記はあなたの個人的な空間です。私たちはそれを尊重します。Best Journalがあなたのデータをどのように扱うかを、ここで透明に確認できます。</string>
+    <string name="consent_card1_title">ローカル保存</string>
+    <string name="consent_card1_body">入力内容はデバイスに保存されます。</string>
+    <string name="consent_card2_title">AI機能（米国）</string>
+    <string name="consent_card2_body">任意でテキストはGoogle Geminiへ、読み上げ用テキストはMicrosoft Edgeへ米国に送信されます（EU-US Data Privacy Framework）。音声録音は標準契約条項（EU SCCs）に基づきGroq（米国）に送信されます。</string>
+    <string name="consent_card3_title">仮名化された統計</string>
+    <string name="consent_card3_body">Firebase Analytics、任意、設定からいつでも変更できます。</string>
+    <string name="consent_links_header">当社の法的文書：</string>
+    <string name="consent_accept_all">同意して始める</string>
+    <string name="consent_disable_stats">統計を無効にして続ける</string>
+    <string name="consent_confirmation">「同意して始める」をタップすると、プライバシーポリシー、利用規約、特定商取引法表記を読み、記載されたデータ処理に同意したことになります。設定からいつでも変更できます。</string>
+
+    <string name="privacy_gate_groq_title">音声録音をGroqに送信しますか？</string>
+    <string name="privacy_gate_groq_body">この機能は、あなたの音声録音を暗号化してGroq(アメリカ)に送り、そこでテキストに変換します。ローカルの認識より速く、正確です。\n\n✓ 録音は変換後すぐに削除されます\n✓ あなたの録音でAIの学習は行いません\n✓ 法的根拠: 標準契約条項(EU SCCs)\n\n代替手段: 設定でローカルのオフライン認識を選べます。</string>
+    <string name="privacy_gate_groq_accept">同意して送信</string>
+    <string name="privacy_gate_groq_local">ローカルで文字起こしする</string>
+
+    <string name="privacy_gate_gemini_title">テキストをGoogle Geminiに送信しますか？</string>
+    <string name="privacy_gate_gemini_body">Best Journalのスマート機能をご利用いただきありがとうございます！要約、振り返り、ダッシュボードの洞察、テキスト改善のため、あなたのテキストは暗号化されてGoogle Geminiに送信されます。\n\n✓ あなたのデータはAIのトレーニングに使用されません\n✓ リクエストは恒久的に保存されません\n✓ EU-US データプライバシーフレームワークに基づく暗号化\n\n重要なお知らせ：日記には特に繊細なデータ（健康、宗教、個人的な関係など — GDPRの第9条）が含まれる場合があります。そのため、AI処理への明示的な同意をお願いしています。AIの出力はあくまで提案であり、専門的なアドバイスや専門家の代替にはなりません。\n\n設定からいつでも変更できます。</string>
+    <string name="privacy_gate_gemini_accept">同意して送信</string>
+    <string name="privacy_gate_gemini_cancel">キャンセル</string>
+
+    <string name="privacy_gate_tts_title">プレミアム音声を有効にする</string>
+    <string name="privacy_gate_tts_body">プレミアム音声を使うと、読み上げがより自然に聞こえます。あなたのテキストは暗号化(HTTPS/TLS)してアメリカのMicrosoft音声サービスに送られ、音声として返されます。\n\n✓ 送信は音声合成のためだけに行われます\n✓ 第三国アメリカへの移転(MicrosoftはEU-US Data Privacy Frameworkの認証を取得しています)</string>
+    <string name="privacy_gate_tts_accept">同意して読み上げ</string>
+    <string name="privacy_gate_tts_cancel">キャンセル</string>
+
+    <string name="settings_privacy_header">プライバシー</string>
+    <string name="settings_analytics_title">仮名化された利用分析</string>
+    <string name="settings_analytics_subtitle">エラー分析と製品改善のためのFirebase Analytics</string>
+
+    <string name="settings_delete_account_title">アカウントとデータを削除</string>
+    <string name="settings_delete_account_subtitle">すべてのローカルデータとDriveバックアップを元に戻せない形で削除します。Googleアカウント自体は残ります。</string>
+    <string name="settings_delete_account_confirm_title">すべてのアプリデータを削除しますか？</string>
+    <string name="settings_delete_account_confirm_body">この操作は元に戻せず、以下を削除します:\n\n• すべてのローカル日記エントリー、写真、動画、音声録音\n• アプリのGoogle Driveバックアップ(アプリのデータのみで、あなたのGoogleアカウントは対象外)\n• アプリへのログイン\n\nGoogleアカウント自体は残ります。アプリはその後、新規インストールとして再起動します。</string>
+    <string name="settings_delete_account_cancel">キャンセル</string>
+    <string name="settings_delete_account_confirm">はい、すべて削除</string>
+
+    <string name="settings_report_ai_title">AI応答を報告</string>
+    <string name="settings_report_ai_subtitle">不適切または誤ったAI出力</string>
+    <string name="settings_report_ai_confirm_title">サポートへのメールを開きますか？</string>
+    <string name="settings_report_ai_confirm_body">あなたのメールソフトが開き、dev.app.support@gmail.com 宛ての下書きメッセージが用意されます。送信する前に説明を補うことができます。通常、営業日の24時間以内に返信します。\n\nダッシュボード、要約、振り返り、文章改善から生じた、不適切、不快、誤った、または誤解を招くAIの出力を、これでご報告ください。</string>
+    <string name="settings_report_ai_confirm">報告を作成</string>
+    <string name="settings_report_ai_cancel">キャンセル</string>
+    <string name="settings_report_ai_no_email">メールアプリが見つかりません。dev.app.support@gmail.com に報告を送信してください。</string>
+    <string name="settings_report_ai_subject">Best Journal:不適切なAI応答</string>
+    <string name="settings_report_ai_body">こんにちは、\n\nBest Journalで不適切または誤ったAI応答を報告したいです。\n\n問題の説明：\n[記入してください]\n\nコンテキスト（どの機能、どの入力）:\n[記入してください]\n\nありがとうございます。</string>
+    <string name="settings_report_ai_dialog_title">AI応答を報告</string>
+    <string name="settings_report_ai_dialog_desc">不適切または誤ったAI応答について説明してください。報告は直接サポートチームに送信されます。Googleアカウントでサインインしている必要があります。</string>
+
+    <string name="settings_revoke_title">契約解除</string>
+    <string name="settings_revoke_subtitle">ドイツ民法 § 356a — アプリから直接、契約解除</string>
+    <string name="settings_revoke_confirm_title">契約を解除しますか？</string>
+    <string name="settings_revoke_confirm_body">「契約解除を確定」をクリックすると、あなたの契約解除を dev.app.support@gmail.com に直接送信します。すぐにメールで受領確認が届きます。\n\n契約解除に関する完全な説明は、利用規約(§ 16)に記載されています。サブスクリプションはさらにGoogle Play → 定期購入から解約し、これ以上の請求が発生しないようにしてください。</string>
+    <string name="settings_revoke_cancel">キャンセル</string>
+    <string name="settings_revoke_confirm">解除通知を作成</string>
+    <string name="settings_revoke_no_email">メールアプリが見つかりません。dev.app.support@gmail.com に解除通知を送信してください。</string>
+    <string name="settings_revoke_email_subject">Best Journal プレミアム契約解除</string>
+    <string name="settings_revoke_email_body">本通知により、Best Journal の Premium 機能に関する契約の撤回を通知します。\n\n送信者（Google アカウント）：%1$s\n撤回時刻：%2$s\n\nこの撤回は、アプリ内の § 356a BGB 準拠の二段階撤回ボタンによって開始され、Gmail API を介して自動送信されました。</string>
+    <string name="settings_revoke_confirm_subject">受領確認：Best Journal での撤回</string>
+    <string name="settings_revoke_confirm_user_body">こんにちは。\n\n%1$s の撤回を受領しました。これは § 356a BGB に基づく受領確認です。\n\n撤回はできるだけ早く処理し、確認が必要な場合は dev.app.support@gmail.com からご連絡します。\n\n今後の請求を止めるため、Google Play ストアの「定期購入」でも解約してください。\n\nありがとうございます\nBest Journal (Frank Barwandt)</string>
+    <string name="settings_revoke_no_account">ログイン中の Google アカウントのアドレスが見つかりませんでした。設定で Google アカウントにログインするか、撤回を dev.app.support@gmail.com 宛てに手動で送信してください。</string>
+    <string name="settings_revoke_sending">撤回を送信中…</string>
+    <string name="settings_revoke_success_title">撤回を受領しました</string>
+    <string name="settings_revoke_success_body">撤回は dev.app.support@gmail.com へ送信されました。受領確認も受信トレイに届いています。</string>
+    <string name="settings_revoke_success_close">閉じる</string>
+    <string name="settings_revoke_error_title">撤回を送信できませんでした</string>
+    <string name="settings_revoke_error_body">自動送信に失敗しました：%1$s\n\n代わりに dev.app.support@gmail.com 宛てに手動でメールを送れます。その場合は「メールアプリを開く」をタップしてください。</string>
+    <string name="settings_revoke_error_email_fallback">メールアプリを開く</string>
+
+
+
+    <!-- Crisis Support / Mental Health Disclaimer -->
+    <string name="settings_crisis_title">危機サポート</string>
+    <string name="settings_crisis_subtitle">緊急時の大切な相談窓口</string>
+    <string name="settings_crisis_dialog_title">あなたはひとりじゃない</string>
+    <string name="settings_crisis_dialog_body">Best Journal は日記アプリであり、専門的な心理的・医療的支援の代わりにはなりません。AI が生成した分析は治療ではありません。\n\n深刻な危機の中にいるときや、自傷・自殺について考えているときは、ひとりで抱え込む必要はありません。無料で匿名の支援を24時間受けられます。</string>
+    <string name="settings_crisis_hotline_de_name">Telefonseelsorge ドイツ</string>
+    <string name="settings_crisis_hotline_de_hours">無料・24時間・匿名</string>
+    <string name="settings_crisis_call_de">0800 111 0 111 に電話</string>
+    <string name="settings_crisis_call_de_alt">0800 111 0 222 に電話</string>
+    <string name="settings_crisis_emergency_name">緊急通報</string>
+    <string name="settings_crisis_call_emergency">112 に電話</string>
+    <string name="settings_crisis_international_name">海外の相談窓口</string>
+    <string name="settings_crisis_open_findahelpline">findahelpline.com を開く</string>
+    <string name="settings_crisis_close">閉じる</string>
+    <string name="settings_crisis_no_dialer">電話アプリが見つかりません。</string>
+    <string name="settings_crisis_no_browser">ブラウザが見つかりません。</string>
+
+    <!-- AI-generated content badge -->
+    <string name="ai_generated_badge">AI生成</string>
+    <string name="ai_generated_tooltip">このコンテンツは AI システム（Google Gemini）によって作成されており、誤りを含む場合があります。ご自身で確認してください。</string>
+
+    <!-- AUTO-ADDED FALLBACK (English) for missing keys — replace with proper translations later -->
+    <string name="consent_optout_confirmation">オプトアウトを保存しました。統計は無効です。</string>
+    <string name="settings_ccpa_do_not_sell_title">Do Not Sell My Personal Information</string>
+    <string name="settings_ccpa_do_not_sell_subtitle">カリフォルニア州の方向け（CCPA/CPRA 2026）。有効にすると、クラウドAI機能がすべて無効になり、統計も収集されません。</string>
+    <string name="settings_ccpa_do_not_sell_confirmation">Do-Not-Sellを有効にしました。すべてのクラウドサービスが無効です。</string>
+    <string name="settings_ccpa_do_not_sell_off_confirmation">Do-Not-Sellを無効にしました。</string>
+    <string name="settings_delete_account_in_progress">アカウントとデータを削除しています…</string>
+    <string name="settings_delete_account_drive_error_title">Driveバックアップを削除できませんでした</string>
+    <string name="settings_delete_account_drive_error_body">Google Driveのバックアップを確実に削除できませんでした（理由：%1$s）。
+
+完全に削除されないと「完全に削除しました」という表示は正確ではありません。
+
+どうしますか？</string>
+    <string name="settings_delete_account_retry">もう一度試す</string>
+    <string name="settings_delete_account_force_local">ローカルのみ削除（Driveバックアップは保持）</string>
+    <string name="settings_delete_account_abort">操作を中止</string>
+
+    <string name="legal_title_datenschutz">プライバシーポリシー</string>
+    <string name="legal_title_nutzungsbedingungen">利用規約</string>
+    <string name="legal_title_impressum">法的情報</string>
+
+    <!-- Consent-Screen v4 + Privacy Sheet + Settings -->
+    <string name="consent_welcome_title">Best Journalへようこそ</string>
+    <string name="consent_welcome_intro">始める前に、ここでプライバシー設定をすばやく決めましょう。</string>
+    <string name="consent_promise_local">プライバシー法があなたの同意を必要としています。</string>
+    <string name="consent_promise_no_training">どの機能を有効にするかはここで決められます。</string>
+    <string name="consent_promise_optional_ai">いつでも設定から変更できます。</string>
+    <string name="consent_btn_manual_selection">手動で選択</string>
+    <string name="privacy_sheet_title">プライバシーをカスタマイズ</string>
+    <string name="privacy_sheet_subtitle">お好みに合わせて個別の機能を有効にできます。すべていつでも変更可能です。</string>
+    <string name="privacy_sheet_save">選択を保存</string>
+    <string name="privacy_sheet_all_on">すべてオン</string>
+    <string name="privacy_sheet_all_off">すべてオフ</string>
+    <string name="consent_toggle_analytics_title">仮名化された利用分析</string>
+    <string name="consent_toggle_analytics_body">Firebase Analytics — アプリの改善に役立ちます。日記の内容は含まれず、仮名化された利用統計(例: クリック数)のみです。データ送信先: Googleアメリカ(Data Privacy Framework)。</string>
+    <string name="consent_toggle_groq_title">音声からテキスト（Groq Whisper）</string>
+    <string name="consent_toggle_groq_body">エントリーの口述入力を可能にします。音声録音は暗号化されてGroq（米国）に送信され、テキストに変換された後削除されます。あなたの録音は学習には使用されません。</string>
+    <string name="consent_toggle_gemini_title">AI振り返り（Google Gemini）</string>
+    <string name="consent_toggle_gemini_body">ダッシュボードAI、要約、振り返り、テキスト改善を行います。テキストの抜粋をGoogle Gemini（米国）に送信します。あなたのエントリーは学習には使用されません。</string>
+    <string name="consent_toggle_tts_title">読み上げ（Microsoft Edge TTS）</string>
+    <string name="consent_toggle_tts_body">自然な音声でエントリーを読み上げます。テキストをMicrosoft（米国）に送信します。</string>
+    <string name="consent_toggle_drive_title">Google Driveバックアップ</string>
+    <string name="consent_toggle_drive_body">エントリーを暗号化してあなた自身のGoogle Driveに保存します。あなたが完全に管理できます — ファイルはあなたのアカウントにあり、私たちの元にはありません。</string>
+    <string name="consent_toggle_do_not_sell_title">Do Not Sell My Personal Information</string>
+    <string name="consent_toggle_do_not_sell_body">このスイッチは、アメリカ・カリフォルニア州の住民のためだけのものです。カリフォルニア州のプライバシー法(CCPA/CPRA)は住民に拒否権を認めています。有効にすると、すべての任意のクラウド機能(AI、バックアップ、音声認識、分析)が無効になり、ローカル機能のみが有効なまま残ります。\n\nカリフォルニア州の外にお住まいなら、このスイッチは無視してかまいません。Best Journalは、世界のどこでもあなたのデータを販売したり売り込んだりしません。</string>
+    <string name="consent_btn_accept_all">すべて承認</string>
+    <string name="consent_btn_save_selection">選択を保存</string>
+    <string name="consent_btn_minimum_only">すべて拒否</string>
+    <string name="consent_saved_snackbar">設定を保存しました</string>
+    <string name="consent_revoke_snackbar">同意を取り消しました</string>
+    <string name="consent_footer_version">選択はいつでも設定から変更できます。</string>
+    <string name="consent_details_expand">詳細</string>
+    <string name="settings_open_privacy_sheet">プライバシー設定をカスタマイズ</string>
+    <string name="settings_privacy_section_header">プライバシーと同意</string>
+    <string name="settings_ai_groq_title">音声からテキスト（Groq）</string>
+    <string name="settings_ai_groq_subtitle">音声録音をGroq米国に送信して文字起こし</string>
+    <string name="settings_ai_gemini_title">AI振り返り（Gemini）</string>
+    <string name="settings_ai_gemini_subtitle">AI要約のためにテキストをGoogle米国に送信</string>
+    <string name="settings_ai_tts_title">読み上げ（Edge TTS）</string>
+    <string name="settings_ai_tts_subtitle">音声出力のためにテキストをMicrosoft米国に送信</string>
+    <string name="settings_drive_backup_title">Google Driveバックアップ</string>
+    <string name="settings_drive_backup_subtitle">エントリーを暗号化してDriveに保存</string>
+
+    <!-- DEBUG-only test data seeder (button in journal top bar, only visible in debug builds) -->
+    <string name="dev_seed_create_label">70件のテストエントリを作成</string>
+    <string name="dev_seed_delete_label">70件のテストエントリを削除</string>
+    <string name="dev_seed_running">お使いの言語で70件のテストエントリを作成しています…</string>
+    <string name="dev_seed_done">%1$d件のテストエントリを作成しました</string>
+    <string name="dev_seed_deleted">%1$d件のテストエントリを削除しました</string>
+    <string name="dev_seed_error">エラー：%1$s</string>
+    <string name="dev_seed_ai_no_entries">AIがテスト用エントリを返しませんでした</string>
+
+    <!-- Premium feature: unlimited follow-ups per journal entry -->
+    <string name="paywall_feature_followups">日記エントリーに好きなだけ追記</string>
+    <string name="settings_premium_feature_followups">無制限の追記</string>
+    <string name="settings_premium_feature_followups_desc">エントリーごとに好きなだけ追記できます</string>
+
+    <!-- ════════════════════════════════════════════════════════════════════
+         MISSING KEYS — added 2026-04-28
+         ════════════════════════════════════════════════════════════════════ -->
+    <string name="action_no">いいえ</string>
+    <string name="action_yes">はい</string>
+    <string name="ai_improved_suffix">\n\n✨ AI改善済み</string>
+    <string name="ai_improved_suffix_marker">✨ AI改善済み</string>
+    <string name="entry_delete_entry_cd">日記エントリーを削除</string>
+    <string name="entry_journal_entry_title">日記エントリー</string>
+    <string name="entry_photos_videos_add_title">写真・動画を追加</string>
+    <string name="follow_up_cancel">キャンセル</string>
+    <string name="follow_up_card_title">追記</string>
+    <string name="follow_up_choose_input_mode">追記をどのように追加しますか？</string>
+    <string name="follow_up_delete_button">削除</string>
+    <string name="follow_up_delete_cd">追記を削除</string>
+    <string name="follow_up_delete_confirm_text">追記 <xliff:g id="ordinal" example="1">%1$s</xliff:g> を本当に削除しますか？この操作は元に戻せません。</string>
+    <string name="follow_up_delete_confirm_title">追記 <xliff:g id="ordinal" example="1">%1$s</xliff:g> を削除しますか？</string>
+    <string name="follow_up_dialog_label">あなたの追記：</string>
+    <string name="follow_up_dialog_title">追記</string>
+    <string name="follow_up_discard">破棄</string>
+    <string name="follow_up_improve_text">✨ 文章を改善</string>
+    <string name="follow_up_improve_with_ai">AIで後から改善する</string>
+    <string name="follow_up_improving">AIが追記を改善しています…</string>
+    <string name="follow_up_inline_title">追記 <xliff:g id="ordinal" example="1">%1$s</xliff:g></string>
+    <string name="follow_up_input_speak_cd">音声入力</string>
+    <string name="follow_up_input_speak_label">音声入力</string>
+    <string name="follow_up_input_write_cd">テキスト入力</string>
+    <string name="follow_up_input_write_label">テキスト入力</string>
+    <string name="follow_up_premium_body">プレミアムに登録すると、すべての日記エントリーに追記を何件でも追加できます。</string>
+    <string name="follow_up_premium_hint">2件目の追記から</string>
+    <string name="follow_up_premium_later">後で決める</string>
+    <string name="follow_up_premium_subscribe">登録する</string>
+    <string name="follow_up_premium_subtext">追記はすべて自動的にダッシュボードに反映されるため、分析が常に最新の状態に保たれます。</string>
+    <string name="follow_up_premium_title">追記無制限</string>
+    <string name="follow_up_save">保存</string>
+    <string name="follow_up_save_improved">改善版を保存</string>
+    <string name="follow_up_show_improved">✨ 改善版を表示</string>
+    <string name="follow_up_show_original">↩ 元の文章を表示</string>
+    <string name="follow_up_speak_pill_label">音声入力</string>
+    <string name="follow_up_speak_prompt">追記を声で入力してください。</string>
+    <string name="follow_up_stop_hint">完了したらStopをタップしてください。</string>
+    <string name="follow_up_tab_improved">✨ AI 改善</string>
+    <string name="follow_up_tab_original">オリジナル</string>
+    <string name="follow_up_text_placeholder">追記をここに書いてください…</string>
+    <string name="follow_up_transcribing">追記を文字起こし中…</string>
+    <string name="journal_improve">文章を改善</string>
+    <string name="journal_state_improving">改善中…</string>
+    <string name="journal_state_transcribing">文字起こし中…</string>
+    <string name="profile_custom_add">カスタム分析を追加</string>
+    <string name="profile_custom_remove">カスタム分析を削除</string>
+    <string name="profile_custom_rename">名前を変更</string>
+    <string name="profile_custom_rename_save">名前を保存</string>
+    <string name="prompt_clear_confirm_text">このカスタム分析は元に戻せない形で削除されます。本当に続けますか？</string>
+    <string name="prompt_clear_confirm_title">テキストを削除しますか？</string>
+    <string name="prompt_clear_content_desc">テキストを削除</string>
+    <string name="prompt_recording_with_model">録音中 — モデル：%1$s</string>
+    <string name="prompt_transcribing_with_model">%1$s が文字起こし中…</string>
+    <string name="prompt_transcription_model_hint">%1$s で文字起こし済み</string>
+    <string name="ai_retro_copied_message">クリップボードにコピーしました</string>
+    <string name="ai_retro_copy_button">コピー</string>
+    <string name="ai_retro_empty_state">レビューに十分なエントリがありません。</string>
+    <string name="ai_retro_error_state">レビューを作成できませんでした。もう一度お試しください。</string>
+    <string name="ai_retro_generate_button">レビューを作成</string>
+    <string name="ai_retro_generating_state">レビューを作成中…</string>
+    <string name="ai_retro_month_label">今月</string>
+    <string name="ai_retro_share_button">共有</string>
+    <string name="ai_retro_title">AIレビュー</string>
+    <string name="ai_retro_week_label">今週</string>
+    <string name="ai_retro_year_label">今年</string>
+    <string name="follow_up_add_button">フォローアップを追加</string>
+    <string name="follow_up_delete_confirm_no">いいえ、残す</string>
+    <string name="follow_up_delete_confirm_yes">はい、削除</string>
+    <string name="follow_up_empty_state">フォローアップはまだありません。\n下のボタンをタップして最初のものを追加してください。</string>
+    <string name="follow_up_improve_button">改善</string>
+    <string name="follow_up_improve_error">改善できませんでした。もう一度お試しください。</string>
+    <string name="follow_up_improving_state">改善中…</string>
+    <string name="follow_up_record_error">録音できませんでした。もう一度お試しください。</string>
+    <string name="follow_up_record_new">新しいフォローアップを録音</string>
+    <string name="follow_up_recording_hint">タップして録音</string>
+    <string name="follow_up_recording_state">録音中…</string>
+    <string name="follow_up_tab_label">フォローアップ</string>
+    <string name="follow_up_transcribe_error">文字起こしできませんでした。もう一度お試しください。</string>
+    <string name="follow_up_transcribing_state">文字起こし中…</string>
+    <string name="prompt_char_count_label">%1$d文字</string>
+    <string name="prompt_improve_button_label">改善</string>
+    <string name="prompt_placeholder_text">今考えていることを書いてください…</string>
+    <string name="prompt_record_button_label">録音</string>
+    <string name="prompt_send_button_label">送信</string>
+    <string name="prompt_stop_button_label">停止</string>
+    <string name="settings_legal_section_header">法的文書</string>
+    <string name="settings_legal_online_label">オンライン版：</string>
+    <plurals name="datetime_months_relative">
+        <item quantity="other">%1$dか月前</item>
+    </plurals>
+    <plurals name="datetime_years_relative">
+        <item quantity="other">%1$d年前</item>
+    </plurals>
+    <string name="ai_limits_disclaimer">集中的なご利用向けのAI日次クォータです。</string>
+    <string name="ai_limits_dialog_title">日次AIクォータの仕組みは？</string>
+    <string name="ai_limits_dialog_body" formatted="false">PREMIUMプランご利用の場合
+
+1日あたりの利用可能数：
+• プロフィールごとに最大150回のAIリクエスト — 4種類のプリセット合計で600回/日、オリジナルプロフィールはそれぞれ追加で150回/日。
+• 最大150回のテキスト改善
+
+詳細な仕組み：
+• リクエスト1〜30回目：最高品質のAI
+• リクエスト31〜100回目：高速スタンダード品質
+• 101回目のリクエスト：1回限りの30分休止
+• リクエスト101〜150回目：高速スタンダード品質
+• 151回目以降：翌日まで新たなリクエスト不可
+
+また、すべてのユーザー共通：
+• 1時間あたり最大50回のAIリクエスト — その後5分間の休止
+
+クォータはいつリセットされますか？
+毎日0時（あなたの現地時刻）に新しいフルクォータが開始されます。
+
+──────────
+
+プランなしの場合
+
+• プロフィールごとに週5回のダッシュボード分析
+• 週5回のテキスト改善
+• 常に高速スタンダード品質
+• 毎週月曜日0時（あなたの現地時刻）にリセット
+
+──────────
+
+ほとんどの方は日常的なご利用でこれらの上限に達することはないでしょう。</string>
+    <string name="ai_limits_dialog_close">了解しました</string>
+    <string name="theme_neutral">ニュートラル</string>
+    <string name="theme_profile">プロフィールカラー — ダッシュボードプロフィールの色</string>
+    <string name="theme_solarized">夏至</string>
+    <string name="theme_dracula">真夜中</string>
+    <string name="theme_one_dark">アトリエ</string>
+    <string name="theme_nord">極夜</string>
+    <string name="theme_gruvbox">琥珀</string>
+
+    <!-- Permission rationales -->
+    <string name="permission_rationale_microphone">音声で日記を入力するには、マイクへのアクセスが必要です。</string>
+    <string name="permission_rationale_camera">記録に写真を追加するには、カメラへのアクセスが必要です。</string>
+    <string name="permission_rationale_notifications">毎日の記録をお知らせするには、通知の許可が必要です。</string>
+
+    <!-- System backup info -->
+    <string name="consent_info_system_backup_title">Androidシステムバックアップ</string>
+    <string name="consent_info_system_backup_body">Androidシステムバックアップをデバイス設定で有効にしている場合、AndroidはあなたのGoogleアカウントのバックアップ領域に日記データを自動的にバックアップします。デバイス設定でいつでも無効にできます — 詳細はプライバシーポリシーをご覧ください。</string>
+    <string name="settings_open_system_backup_settings_label">Androidシステムバックアップを管理</string>
+    <string name="settings_open_system_backup_settings_desc">Best JournalのAndroid自動バックアップをオン・オフできるAndroidシステム設定を開きます。</string>
+    <string name="error_no_backup_settings_available">このデバイスではバックアップ設定を利用できません。</string>
+
+    <!-- Legal footer links -->
+    <string name="consent_footer_link_datenschutz">プライバシーポリシー</string>
+    <string name="consent_footer_link_impressum">運営者情報</string>
+    <string name="consent_footer_link_agb">利用規約</string>
+
+    <!-- AI health disclaimers -->
+    <string name="ai_output_health_disclaimer">本サービスはセラピーではなく、専門的なカウンセリングの代替にはなりません。</string>
+    <string name="ai_output_health_disclaimer_long">Best Journalは日記アプリであり、セラピーサービスではありません。AIによる分析は自己省察のための参考情報であり、専門的な心理的・医療的アドバイスの代替にはなりません。深刻な問題を抱えている場合は、専門家または設定内の危機サポートにご連絡ください。</string>
+
+
+    <!-- Churn & Theme strings (added 2026-05-22) -->
+    <string name="churn_cancelled">解約済み</string>
+    <string name="churn_cancelled_ends_on">解約済み — <xliff:g id="date" example="30.04.2026, 18:13">%1$s</xliff:g> まで有効</string>
+    <string name="churn_promo_phase_ends"><xliff:g id="date" example="30.04.2026, 18:13">%1$s</xliff:g> に終了 — その後は月額 <xliff:g id="base_price" example="3,99 €">%2$s</xliff:g></string>
+    <string name="churn_reason_other_placeholder">少し教えてください…</string>
+    <string name="churn_renews_on"><xliff:g id="date" example="30.04.2026, 18:13">%1$s</xliff:g> に自動更新</string>
+    <string name="settings_premium_cancelled">プレミアム解約済み</string>
+    <string name="settings_premium_cancelled_desc">プレミアム機能は請求期間の終了まで引き続きご利用いただけます。キャンセルはGoogle Playから取り消せます。</string>
+    <string name="settings_premium_cancelled_until">プレミアム解約済み — <xliff:g id="date" example="30.04.2026, 21:01">%1$s</xliff:g> まで有効</string>
+    <string name="settings_theme">テーマ</string>
+    <string name="settings_themes_manager">テーママネージャー</string>
+    <string name="paywall_monthly_note">その後は月額%1$s、自動更新されます\nいつでも解約可能</string>
+</resources>

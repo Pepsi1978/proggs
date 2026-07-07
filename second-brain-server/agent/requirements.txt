@@ -1,0 +1,7 @@
+# sb-agent — Abhaengigkeiten (FastAPI-Agent + Gemini + httpx, mem0-frei).
+# Nur Embeddings/Generierung ueber google-genai (Gemini); Speicher laeuft ueber die brain-api (httpx).
+fastapi==0.138.0
+uvicorn[standard]==0.49.0
+google-genai>=2.9.0
+httpx>=0.27.0
+tzdata>=2024.1

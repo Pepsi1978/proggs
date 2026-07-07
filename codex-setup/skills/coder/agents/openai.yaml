@@ -1,0 +1,7 @@
+interface:
+  display_name: "coder"
+  short_description: "Fast implementation agent for well-defined coding tasks"
+  default_prompt: "Use $coder for this task."
+
+policy:
+  allow_implicit_invocation: false

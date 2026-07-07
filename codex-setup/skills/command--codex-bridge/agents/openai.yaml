@@ -1,0 +1,7 @@
+interface:
+  display_name: "command--codex-bridge"
+  short_description: "codex-bridge"
+  default_prompt: "Use $command--codex-bridge for this task."
+
+policy:
+  allow_implicit_invocation: false

@@ -1,0 +1,7 @@
+interface:
+  display_name: "fpf:reset"
+  short_description: "Reset the FPF reasoning cycle to start fresh"
+  default_prompt: "Use $fpf-context-engineering-kit--fpf-reset for this task."
+
+policy:
+  allow_implicit_invocation: false

@@ -1,0 +1,7 @@
+interface:
+  display_name: "ce:review"
+  short_description: "Perform exhaustive code reviews using multi-agent analysis"
+  default_prompt: "Use $compound-engineering-compound-engineering-plugin--ce-review for this task."
+
+policy:
+  allow_implicit_invocation: false

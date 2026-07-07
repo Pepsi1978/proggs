@@ -1,0 +1,33 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Aufgaben-Widget v2 (Frank-Wunsch 2026-05-11).
+
+  Scrollbare Aufgaben-Liste die den Tagesplan-Inhalt 1:1 wiederspiegelt.
+  Die Resize-Grenzen sind so gewaehlt dass Frank das Widget vom kleinen
+  3x3-Format bis zum (fast) Fullscreen-Format auf einem Galaxy S23 Ultra
+  oder Fold 6 vergroessern kann.
+
+  - targetCellWidth/Height = 4/6: Standard-Groesse beim Hinzufuegen
+  - minResize: ein Minimum, das immer noch lesbar bleibt (eine Karte)
+  - maxResize: gross genug fuer Fullscreen auf 5"-Devices (420x900dp)
+  - resizeMode horizontal|vertical: Frank kann in beide Richtungen ziehen
+  - updatePeriodMillis: System-Refresh alle 30 Min (Mindestwert in Android)
+    — zusaetzlich triggert die App nach jedem Bucket-Wechsel manuell
+    EntropyReducerWidget().updateAll(context).
+-->
+<appwidget-provider xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:initialLayout="@layout/widget_root"
+    android:minWidth="180dp"
+    android:minHeight="180dp"
+    android:targetCellWidth="4"
+    android:targetCellHeight="6"
+    android:resizeMode="horizontal|vertical"
+    android:minResizeWidth="180dp"
+    android:minResizeHeight="120dp"
+    android:maxResizeWidth="420dp"
+    android:maxResizeHeight="900dp"
+    android:updatePeriodMillis="1800000"
+    android:widgetCategory="home_screen"
+    android:description="@string/widget_description"
+    tools:targetApi="31" />

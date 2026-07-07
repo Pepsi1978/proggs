@@ -1,0 +1,7 @@
+interface:
+  display_name: "hook-forge"
+  short_description: "Create or rewrite resilient Codex hooks"
+  default_prompt: "Use $hook-forge for this task."
+
+policy:
+  allow_implicit_invocation: true

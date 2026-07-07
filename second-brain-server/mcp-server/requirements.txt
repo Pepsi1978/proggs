@@ -1,0 +1,7 @@
+# MCP Python SDK (FastMCP) — 1.27+/1.x (Maintenance-Linie): schliesst CVE-2025-66416
+# (DNS-Rebinding-Schutz greift erst ab 1.23.0; Anker 1.12.4 lag davor) + bringt RFC-8707-OAuth-
+# Resource-Validation/Idle-Timeout (1.27.0). v1.x BEHAELT die FastMCP-API (host/port im Konstruktor);
+# erst 2.x benennt FastMCP->MCPServer um + verschiebt host/port nach run() -> bewusst <2 pinnen
+# (Reproduzierbarkeit/Umzug). Siehe bugs/claude-tooling/mcp-server.md §3.13.
+mcp>=1.27,<2
+httpx>=0.27,<0.29

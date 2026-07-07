@@ -1,0 +1,7 @@
+interface:
+  display_name: "agent-browser"
+  short_description: "Browser automation using Vercel's agent-browser CLI"
+  default_prompt: "Use $compound-engineering-compound-engineering-plugin--agent-browser for this task."
+
+policy:
+  allow_implicit_invocation: true

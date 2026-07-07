@@ -1,0 +1,7 @@
+interface:
+  display_name: "rclone"
+  short_description: "Upload, sync, and manage files across cloud storage providers"
+  default_prompt: "Use $compound-engineering-compound-engineering-plugin--rclone for this task."
+
+policy:
+  allow_implicit_invocation: false

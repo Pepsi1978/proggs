@@ -1,0 +1,7 @@
+interface:
+  display_name: "workflows:brainstorm"
+  short_description: "[DEPRECATED] Use /ce:brainstorm instead — renamed for clarity"
+  default_prompt: "Use $compound-engineering-compound-engineering-plugin--workflows-brainstorm for this task."
+
+policy:
+  allow_implicit_invocation: false

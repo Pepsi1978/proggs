@@ -1,0 +1,14 @@
+# Laufzeit-Logs (Observability) — gehoeren nie ins Repo
+logs/
+*.log
+
+# Sicherheitsnetz: niemals Schluessel/Secrets ins Repo
+# (echte Schluessel liegen in ~/SK/ClaudeCodeOpenRouter/, ausserhalb des Repos)
+*.key
+openrouter.key
+.env
+*.secret
+
+# Lokale, maschinenspezifische Laufzeitkopien
+config.local.json
+last-model.txt

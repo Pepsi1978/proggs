@@ -1,0 +1,7 @@
+interface:
+  display_name: "audit-context-building"
+  short_description: "Enables ultra-granular, line-by-line code analysis to build"
+  default_prompt: "Use $audit-context-building-trailofbits--audit-context-building for this task."
+
+policy:
+  allow_implicit_invocation: false

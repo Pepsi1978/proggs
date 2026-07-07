@@ -1,0 +1,7 @@
+interface:
+  display_name: "export"
+  short_description: "Write cross-CLI changes into the mirror ledger"
+  default_prompt: "Use $export for this task."
+
+policy:
+  allow_implicit_invocation: true

@@ -1,0 +1,7 @@
+interface:
+  display_name: "git:merge-worktree"
+  short_description: "Merge changes from worktrees into current branch with selective"
+  default_prompt: "Use $git-context-engineering-kit--git-merge-worktree for this task."
+
+policy:
+  allow_implicit_invocation: false

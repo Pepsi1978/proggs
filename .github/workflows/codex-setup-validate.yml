@@ -1,0 +1,35 @@
+name: Codex Setup Validate
+
+on:
+  push:
+    paths:
+      - "codex-setup/**"
+      - "AGENTS.md"
+  pull_request:
+    paths:
+      - "codex-setup/**"
+      - "AGENTS.md"
+
+jobs:
+  validate-codex-setup:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+
+      - name: Validate Whiteboard Directive
+        run: node codex-setup/scripts/whiteboard-bridge.mjs print-directive --workspace "$GITHUB_WORKSPACE"
+
+      - name: Validate Self-Improve Repo Source
+        run: test -f codex-setup/skills/self-improve/SKILL.md
+
+      - name: Validate Claude Delta Audit Script
+        run: node codex-setup/scripts/audit-claude-delta.mjs
+
+      - name: Validate Gemini Delta Audit Script
+        run: node codex-setup/scripts/audit-gemini-delta.mjs

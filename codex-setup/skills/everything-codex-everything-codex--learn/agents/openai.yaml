@@ -1,0 +1,7 @@
+interface:
+  display_name: "learn"
+  short_description: "learn skill"
+  default_prompt: "Use $everything-codex-everything-codex--learn for this task."
+
+policy:
+  allow_implicit_invocation: false

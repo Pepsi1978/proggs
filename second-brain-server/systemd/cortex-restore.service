@@ -1,0 +1,8 @@
+[Unit]
+Description=Cortex: Google Drive -> Gedanken (Z) Notfall-Wiederherstellung (additiv)
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+ExecStart=/opt/second-brain/scripts/gedanken-gdrive-restore.sh

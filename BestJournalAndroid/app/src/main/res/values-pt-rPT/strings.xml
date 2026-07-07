@@ -1,0 +1,1429 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources xmlns:tools="http://schemas.android.com/tools"
+    xmlns:xliff="urn:oasis:names:tc:xliff:document:1.2"
+    tools:locale="pt-PT">
+    <!-- App brand name — do not translate -->
+    <string name="app_name" translatable="false">Best Journal</string>
+
+    <!-- ════════════════════════════════════════════════════════════════════
+         NAVIGATION & TABS
+         ════════════════════════════════════════════════════════════════════ -->
+    <string name="nav_journal">Diário</string>
+    <string name="nav_retrospective">Retrospetiva</string>
+    <string name="nav_dashboard">Painel</string>
+    <string name="nav_settings">Definições</string>
+
+    <!-- ════════════════════════════════════════════════════════════════════
+         COMMON / SHARED
+         ════════════════════════════════════════════════════════════════════ -->
+    <string name="action_cancel">Cancelar</string>
+    <string name="action_save">Guardar</string>
+    <string name="action_close">Fechar</string>
+    <string name="action_continue">Continuar</string>
+    <string name="action_understood">Entendi</string>
+    <string name="action_retry">Tentar de novo</string>
+    <string name="action_later">Mais tarde</string>
+    <string name="action_share">Partilhar</string>
+    <string name="action_discard">Descartar</string>
+    <string name="action_back">Voltar</string>
+    <string name="action_done">Pronto</string>
+    <string name="action_no_thanks">Não, obrigado</string>
+    <string name="action_delete">Eliminar</string>
+    <!-- Accessibility label for the undo icon button on the dashboard. -->
+    <string name="action_undo">Desfazer</string>
+    <string name="action_ok">OK</string>
+    <string name="action_go_google_play">Ir para Google Play</string>
+    <string name="journal_drive_backup_dialog">Backup no Google Drive</string>
+    <string name="journal_improve_text">✨ Melhorar texto</string>
+    <string name="journal_show_original">↩ Mostrar original</string>
+    <string name="journal_show_improved">✨ Mostrar versão melhorada</string>
+    <string name="journal_ai_improving">A IA está a melhorar o texto, aguarda um instante</string>
+    <string name="journal_later">Mais tarde</string>
+    <!-- Paywall missed strings -->
+    <string name="paywall_from_per_day">Subscrição anual, %1$s por ano</string>
+    <string name="paywall_instead_per_month">Poupe %1$d%% vs. plano mensal</string>
+    <string name="paywall_or">ou</string>
+    <string name="paywall_with_limited">com limites reduzidos.</string>
+    <!-- Churn missed string -->
+    <string name="churn_instead_of">em vez de </string>
+    <string name="label_premium">Premium</string>
+    <string name="label_original">Original</string>
+    <string name="label_improved">✨ IA Melhorado</string>
+    <string name="label_photo">Foto</string>
+    <string name="label_video">Vídeo</string>
+    <string name="label_current">Atual</string>
+    <string name="label_record">Recorde</string>
+    <string name="cd_sync_status">Status da sincronização</string>
+    <string name="cd_day">Dia</string>
+    <string name="cd_night">Noite</string>
+
+    <!-- ════════════════════════════════════════════════════════════════════
+         JOURNAL SCREEN
+         ════════════════════════════════════════════════════════════════════ -->
+    <string name="journal_title">Diário</string>
+    <string name="journal_search_placeholder">Pesquisar nas entradas…</string>
+    <string name="journal_search">Pesquisar</string>
+    <string name="journal_search_hint">Pesquisa</string>
+    <string name="journal_search_close">Fechar pesquisa</string>
+    <string name="journal_no_entries">Ainda não há entradas</string>
+    <string name="journal_tap_mic_to_start">Toca no microfone para começar</string>
+    <string name="journal_cd_streak">Dias seguidos</string>
+    <string name="journal_cd_text_input">Digitar texto</string>
+    <string name="journal_achievement_unlocked">Conquista desbloqueada!</string>
+    <string name="journal_drive_not_signed_in">Não iniciaste sessão na Google</string>
+    <string name="journal_drive_backup_current">Backup em dia, todas as tuas entradas estão guardadas</string>
+    <string name="journal_drive_uploading">A enviar o backup…</string>
+    <string name="journal_drive_downloading">A transferir fotos/vídeos…</string>
+    <string name="journal_drive_failed">O backup falhou!</string>
+    <string name="journal_drive_last_sync">Última sincronização: %1$s</string>
+    <string name="journal_new_entry_prompt">Inspiração para escrever</string>
+    <string name="journal_new_entry">Nova entrada</string>
+    <string name="journal_save_improved">Guardar versão melhorada</string>
+    <string name="journal_save">Guardar</string>
+    <string name="journal_cd_write">Escrever</string>
+    <string name="journal_write">Escrever</string>
+    <string name="journal_cd_speak">Falar</string>
+    <string name="journal_speak">Falar</string>
+    <string name="journal_your_answer">A tua resposta:</string>
+    <string name="journal_placeholder_prompt">Escreve os teus pensamentos aqui…</string>
+    <string name="journal_placeholder_edit">Toca aqui para editar o texto…</string>
+    <string name="journal_freeflow_hint">Deixa os teus pensamentos fluírem. Não existe certo nem errado.</string>
+    <string name="journal_transcribed_with">Transcrito com %1$s</string>
+    <!-- Default label for the transcription model (local Whisper, runs on-device). -->
+    <string name="transcription_model_local">Modelo Whisper local</string>
+    <!-- Brand name of the Groq transcription model — do not translate. -->
+    <string name="transcription_model_groq" translatable="false">Groq Whisper Large V3 Turbo</string>
+    <string name="journal_text_upsell_title">Impressionante, não é?</string>
+    <string name="journal_text_upsell_body">Com o Premium podes melhorar cada entrada.</string>
+    <string name="journal_discover_premium">Descobrir Premium →</string>
+    <string name="journal_entries_label">Entradas</string>
+    <string name="journal_entry_count">%1$d entradas</string>
+    <string name="journal_streak_days">%1$d dias</string>
+    <string name="journal_streak_days_in_row">%1$d dias seguidos</string>
+    <string name="journal_streak_next_goal">Próxima meta: %1$d dias</string>
+    <string name="journal_streak_remaining">faltam %1$d</string>
+    <string name="journal_streak_premium">Proteção da sequência: disponível com Premium</string>
+    <string name="journal_keep_going">Continua assim!</string>
+    <string name="journal_daily_prompt">Inspiração do dia</string>
+    <string name="journal_write_about">Escrever sobre isso</string>
+    <string name="journal_recording_error">A gravação falhou: %1$s</string>
+    <string name="journal_transcription_error">A transcrição falhou: %1$s</string>
+    <string name="journal_rate_limit">Pausa curta: faltam %1$d minutos para a próxima melhoria.</string>
+    <string name="journal_improve_error">A melhoria do texto falhou: %1$s</string>
+    <string name="journal_save_error">Não foi possível guardar: %1$s</string>
+    <string name="recording_tap_stop">Toca de novo para parar</string>
+
+    <!-- Streak messages -->
+    <string name="streak_365">Um ano inteiro!</string>
+    <string name="streak_180">Disciplina incrível!</string>
+    <string name="streak_90">És imparável!</string>
+    <string name="streak_30">Um mês inteiro!</string>
+    <string name="streak_14">Duas semanas firme!</string>
+    <string name="streak_7">Uma semana inteira!</string>
+    <string name="streak_3">Estás firme!</string>
+    <string name="streak_default">Cada dia conta!</string>
+    <string name="streak_desc_365">O que começou como um pequeno hábito agora faz parte da tua vida. O teu diário conhece-te como nunca.</string>
+    <string name="streak_desc_14">Duas semanas seguidas, poucos conseguem isso. O teu eu do futuro vai agradecer.</string>
+    <string name="streak_desc_7">Uma semana cheia de pensamentos, sentimentos e memórias. Estás a construir algo valioso.</string>
+    <string name="streak_desc_3">Três dias seguidos são o começo de um hábito a sério. Continua, vale a pena.</string>
+    <string name="streak_desc_1">Cada entrada é um pequeno presente para o teu eu do futuro. Escreve de novo amanhã!</string>
+
+    <!-- ════════════════════════════════════════════════════════════════════
+         ENTRY DETAIL SCREEN
+         ════════════════════════════════════════════════════════════════════ -->
+    <string name="entry_title">Entrada</string>
+    <string name="entry_summary">Resumo</string>
+    <string name="entry_saving">A guardar…</string>
+    <string name="entry_improving">A melhorar…</string>
+    <string name="entry_improve_with_ai">Melhorar depois com IA</string>
+    <string name="entry_photos_videos">Fotos/Vídeos</string>
+    <string name="entry_add">Adicionar</string>
+    <string name="entry_no_photos_yet">Nenhuma foto/vídeo adicionada ainda</string>
+    <string name="entry_cd_play_video">Reproduzir vídeo</string>
+    <string name="entry_cd_remove">Remover</string>
+    <string name="entry_tts_enable_hint">Ative as vozes nas definições</string>
+    <string name="entry_tts_stop">Parar</string>
+    <string name="entry_tts_read">Ler em voz alta</string>
+    <string name="entry_cd_share">Partilhar</string>
+    <string name="entry_recording_duration">Duração da gravação: %1$s</string>
+    <string name="entry_tts_generating">Aguarda, a voz está a ser gerada…</string>
+    <string name="entry_tts_journal_label">Entrada do diário</string>
+    <string name="entry_tts_followup_label">Apontamento %1$s</string>
+    <string name="entry_cd_photo_page">Foto %1$d</string>
+    <string name="entry_add_photo_video">Adicionar foto/vídeo</string>
+    <string name="entry_camera">Câmara</string>
+    <string name="entry_gallery">Galeria</string>
+    <string name="entry_delete_title">Eliminar a entrada?</string>
+    <string name="entry_delete_message">Eliminar esta entrada de forma permanente?</string>
+
+    <!-- Share dialog -->
+    <string name="share_title">Partilhar entrada</string>
+    <string name="share_which_version">Qual versão partilhar?</string>
+    <string name="share_improved_version">Versão melhorada</string>
+    <string name="share_photos_videos_label">Incluir fotos/vídeos:</string>
+    <string name="share_footer">Entrada de diário do app BestJournal</string>
+    <string name="share_what_to_share">O que queres partilhar?</string>
+    <string name="share_journal_entry">Entrada do diário</string>
+    <string name="share_followup_numbered">Acrescento <xliff:g id="ordinal" example="1">%1$s</xliff:g></string>
+    <string name="share_followup_single">Acrescento</string>
+
+    <string name="error_recording_failed">Falha na gravação: <xliff:g id="reason" example="Microfone indisponível">%1$s</xliff:g></string>
+    <string name="error_transcription_failed">Falha na transcrição: <xliff:g id="reason" example="Tempo de espera de rede excedido">%1$s</xliff:g></string>
+
+    <!-- ════════════════════════════════════════════════════════════════════
+         DASHBOARD SCREEN
+         ════════════════════════════════════════════════════════════════════ -->
+    <string name="dashboard_title">Painel</string>
+    <string name="dashboard_legend">Legenda</string>
+    <string name="dashboard_refresh">Atualizar</string>
+    <string name="dashboard_weekly_review_waiting">A tua retrospetiva semanal espera por ti</string>
+    <!-- Body text of the weekly-review premium upsell card on the dashboard. -->
+    <string name="dashboard_weekly_review_upsell_body">Tiveste uma semana agitada. Com o Premium vês a análise completa: reconhece padrões, descobre perspetivas e compreende o que te ocupa a mente.</string>
+    <string name="dashboard_discover_premium">Descobrir Premium</string>
+    <string name="dashboard_please_wait">Aguarda um instante</string>
+    <string name="dashboard_gemini_unavailable">O Gemini não está disponível agora, tente de novo num instante.</string>
+    <string name="dashboard_no_custom_focus">Nenhum foco de análise informado</string>
+    <string name="dashboard_custom_focus_hint">Nas definições, em\n«Análise personalizada», informe um foco,\nou escolha outro perfil.</string>
+    <string name="dashboard_no_analysis_yet">Ainda sem análise</string>
+    <string name="dashboard_create_entries_custom">Cria entradas de diário,\ndepois a IA analisa o teu foco.</string>
+    <string name="dashboard_create_entries_default">Cria entradas de diário,\ndepois a IA analisa seus padrões.</string>
+    <string name="dashboard_like_analysis">Gostou da análise?</string>
+    <string name="dashboard_premium_upsell_body">Com o Premium recebes análises generosas de quantos perfis quiseres.</string>
+    <string name="dashboard_learn_more">Saber mais</string>
+    <string name="dashboard_feature_analyses">Análises</string>
+    <string name="dashboard_all_observations">Todas as observações</string>
+    <string name="dashboard_inner_mirror">Espelho interior</string>
+    <string name="dashboard_all_insights">Todas as ideias</string>
+    <string name="dashboard_goal_overview">Visão geral das metas</string>
+    <string name="dashboard_all_goals">Todas as metas</string>
+    <string name="dashboard_top_results_fallback">Principais resultados</string>
+    <string name="dashboard_analysis_fallback">Análise</string>
+    <string name="dashboard_all_results_fallback">Todos os resultados</string>
+    <string name="dashboard_overall_analysis">Análise geral</string>
+    <!-- Title of the overview card in the Summary dashboard (scenario 0). -->
+    <string name="dashboard_summary_overview_title">Visão geral</string>
+    <!-- Title of the next-steps card in the Goals dashboard (scenario 3). -->
+    <string name="dashboard_goals_next_steps_title">Próximos passos</string>
+    <string name="dashboard_all_recommendations">Todas as recomendações</string>
+    <string name="dashboard_connection">Conexão</string>
+    <string name="dashboard_limit_daily">Atingiste o limite diário. Amanhã há mais!</string>
+    <string name="dashboard_limit_weekly_profile">Limite semanal deste perfil atingido. Muda de perfil ou aguarda até segunda-feira.</string>
+    <string name="dashboard_limit_cooldown">Pausa curta: faltam %1$d minutos para a próxima análise.</string>
+    <string name="dashboard_analysis_failed">A análise falhou</string>
+    <string name="dashboard_last_updated">Última atualização em %1$s</string>
+    <string name="dashboard_loading_profile_switch">O painel de IA é atualizado automaticamente a cada troca de perfil</string>
+    <string name="dashboard_loading_delete_update">O painel de IA é atualizado automaticamente quando uma entrada é eliminada</string>
+    <string name="dashboard_loading_auto_update">O painel de IA é atualizado automaticamente a cada nova entrada</string>
+    <string name="dashboard_loading_default">O painel de IA está a ser atualizado</string>
+
+    <!-- Legend labels -->
+    <string name="legend_urgent">Urgente</string>
+    <string name="legend_attention">Atenção</string>
+    <string name="legend_observe">Observar</string>
+    <string name="legend_activity_level">Nível de atividade</string>
+    <string name="legend_activity_desc">O semicírculo mostra quanto acontece nesta área:</string>
+    <string name="legend_activity_high">Muita atividade (67–100\u00A0%%)</string>
+    <string name="legend_activity_medium">Atividade moderada (34–66\u00A0%%)</string>
+    <string name="legend_activity_low">Pouca atividade (0–33\u00A0%%)</string>
+    <string name="legend_observation_relevance">Relevância das observações</string>
+    <string name="legend_relevance_high">Central, temas-chave das tuas entradas</string>
+    <string name="legend_relevance_medium">Relevante, observações recorrentes</string>
+    <string name="legend_relevance_low">Nota marginal, menções isoladas</string>
+    <string name="legend_reflection_depth">Profundidade da reflexão</string>
+    <string name="legend_reflection_desc">O semicírculo mostra a profundidade da sua autorreflexão:</string>
+    <string name="legend_reflection_deep">Profunda (67–100\u00A0%%)</string>
+    <string name="legend_reflection_aware">Consciente (34–66\u00A0%%)</string>
+    <string name="legend_reflection_surface">Superficial (0–33\u00A0%%)</string>
+    <string name="legend_insight_depth">Profundidade das ideias</string>
+    <string name="legend_insight_deep">Profundo, padrões e crenças recorrentes</string>
+    <string name="legend_insight_aware">Consciente, padrões de pensamento e emoção reconhecidos</string>
+    <string name="legend_insight_surface">Superficial, primeiras observações</string>
+    <string name="legend_progress">Progresso</string>
+    <!-- Legend: Goal progress -->
+    <string name="legend_goal_progress_desc">O semicírculo mostra o progresso das tuas metas:</string>
+    <string name="legend_blocked_range">Bloqueado (0–33\u00A0%%)</string>
+    <string name="legend_in_progress_range">Em andamento (34–66\u00A0%%)</string>
+    <string name="legend_progress_range">Progresso (67–100\u00A0%%)</string>
+    <string name="legend_goal_status">Status das metas</string>
+    <string name="legend_blocked_desc">Bloqueado — metas com obstáculos</string>
+    <string name="legend_open_desc">Em aberto — metas ainda sem progresso</string>
+    <string name="legend_progress_success_desc">Progresso — metas com sucesso visível</string>
+    <!-- Legend: Custom analysis -->
+    <string name="legend_analysis_value">Valor da análise</string>
+    <string name="legend_analysis_relevance_desc">O semicírculo mostra a relevância para o teu foco:</string>
+    <string name="legend_high_focus">Alta (67–100\u00A0%%) — núcleo do teu foco</string>
+    <string name="legend_medium_focus">Média (34–66\u00A0%%) — conexão detectada</string>
+    <string name="legend_low_focus">Baixa (0–33\u00A0%%) — na borda</string>
+    <string name="legend_result_relevance">Relevância dos resultados</string>
+    <string name="legend_important_desc">Importante — diretamente relevante para o teu foco</string>
+    <string name="legend_relevant_desc">Relevante — ligado ao teu foco</string>
+    <string name="legend_note_desc">Nota — comentário marginal</string>
+    <!-- Legend: Burden/Stress -->
+    <string name="legend_burden_scale">Escala de carga</string>
+    <string name="legend_burden_desc">O semicírculo mostra o quanto este tema pesa em ti:</string>
+    <string name="legend_high_burden">Alta (67–100\u00A0%%) — agir agora</string>
+    <string name="legend_medium_burden">Média (34–66\u00A0%%) — requer atenção</string>
+    <string name="legend_low_burden">Baixa (0–33\u00A0%%) — bom estado</string>
+    <string name="legend_priority_title">Prioridade dos conselhos</string>
+    <string name="legend_priority_high">Vermelho = urgente — agir agora</string>
+    <string name="legend_priority_medium">Laranja = média — tratar em breve</string>
+    <string name="legend_priority_low">Azul = baixa — observar</string>
+    <!-- Legend: Categories -->
+    <string name="legend_categories">Categorias</string>
+    <string name="legend_categories_desc">As categorias são criadas de forma dinâmica. A IA reconhece temas nas tuas entradas e cria categorias adequadas. Temas novos geram automaticamente novos símbolos.</string>
+    <!-- CategoryDetailDialog levels -->
+    <string name="level_low">Baixa</string>
+    <string name="level_medium">Média</string>
+    <string name="level_high">Alta</string>
+    <string name="urgency_high">Urgente — agir agora</string>
+    <string name="urgency_medium">Requer atenção</string>
+    <string name="urgency_low">Bom estado — observar</string>
+    <!-- Dashboard: Derivation dialog -->
+    <string name="dashboard_derived_from">Derivado de:</string>
+    <string name="dashboard_update_for_derivation">Atualize o painel para obter uma derivação detalhada.</string>
+    <!-- Dashboard: Summary section -->
+    <string name="dashboard_top_5_actions">Top 5 de ações</string>
+    <string name="dashboard_core_insights">Ideias-chave</string>
+    <string name="dashboard_summary_subtitle">O mais importante das tuas entradas</string>
+    <string name="summary_central">Central</string>
+    <string name="summary_relevant">Relevante</string>
+    <string name="summary_side_note">Nota marginal</string>
+    <!-- Dashboard: Insight section -->
+    <string name="dashboard_deepest_insights">Ideias mais profundas</string>
+    <string name="dashboard_insight_subtitle">O que as tuas entradas revelam sobre ti</string>
+    <string name="insight_deep_label">Profundo</string>
+    <string name="insight_aware_label">Consciente</string>
+    <string name="insight_surface_label">Superficial</string>
+    <!-- Dashboard: Goal section -->
+    <string name="dashboard_goal_steps">Os passos-chave para as tuas metas</string>
+    <string name="goal_blocked_label">Bloqueado</string>
+    <string name="goal_open_label">Em aberto</string>
+    <string name="goal_progress_label">Progresso</string>
+    <!-- Dashboard: Custom analysis section -->
+    <string name="dashboard_custom_subtitle">Baseado na sua análise personalizada</string>
+    <string name="custom_important_label">Importante</string>
+    <string name="custom_relevant_label">Relevante</string>
+    <string name="custom_note_label">Nota</string>
+    <!-- Dashboard: TTS and sharing -->
+    <string name="dashboard_enable_voices">Ative as vozes nas definições</string>
+    <string name="dashboard_tts_stop">Parar</string>
+    <string name="dashboard_tts_read">Ler em voz alta</string>
+    <string name="dashboard_share_analysis">Partilhar análise</string>
+    <string name="dashboard_share">Partilhar</string>
+    <string name="dashboard_tts_wait">Aguarda, a voz está a ser gerada…</string>
+
+    <!-- Profile names -->
+    <string name="profile_summary">Resumo</string>
+    <string name="profile_entropy">Organize a tua vida</string>
+    <string name="profile_insight">Autoconhecimento</string>
+    <string name="profile_goals">Metas pessoais</string>
+    <string name="profile_custom">Análise personalizada</string>
+    <string name="profile_summary_desc">Resume temas, padrões e vivências</string>
+    <string name="profile_entropy_desc">Detecta stress, desordem e carga</string>
+    <string name="profile_insight_desc">Torna visíveis os padrões recorrentes de pensamento e de sentimento</string>
+    <string name="profile_goals_desc">Reconhece metas, desejos e progressos</string>
+    <string name="profile_custom_desc">Defina seu próprio foco de análise</string>
+
+    <!-- Profile long descriptions (settings) -->
+    <string name="profile_summary_long">As tuas entradas são resumidas de forma neutra, sem julgamento nem conselho.\n\nDe um relance vês:\n\n• quais temas estão te a ocupar agora\n• quais padrões se repetem\n• como a tua vida está a desenvolver-se\n\nIdeal como visão diária de tudo o que está a acontecer na tua vida.</string>
+    <string name="profile_entropy_long">A IA encontra o que te sobrecarrega no dia a dia e organiza-o. Recebes uma visão geral das tuas maiores fontes de sobrecarga e 5 passos concretos de arrumação. Ideal quando queres recuperar o controlo.</string>
+    <string name="profile_insight_long">A IA vai mais fundo do que apenas os acontecimentos. Reconhece nas tuas entradas:\n\n• Padrões de pensamento e crenças presentes nas tuas palavras\n• Sentimentos e reações recorrentes\n• Pontos fortes que se tornam visíveis nas tuas entradas\n• Valores que orientam as tuas ações\n\nPara quem quer compreender-se melhor e crescer interiormente.</string>
+    <string name="profile_goals_long">A IA encontra todas as metas, desejos e planos nas tuas entradas, mesmo os mencionados de passagem.\n\nVocê vê:\n\n• quais metas tens (até as ocultas)\n• o quanto já avançaste em cada uma\n• qual pode ser o teu próximo passo\n\nSeu rastreador pessoal de metas, que lê nas tuas próprias palavras.</string>
+    <string name="profile_custom_long">Decides no que a IA deve se concentrar.\n\nEscreva seu próprio foco de análise, por exemplo:\n\n• «Encontra todas as menções a esporte»\n• «Analisa as minhas oscilações de humor»\n• «Me mostra quando sou mais produtivo»\n\nControle total para quem sabe exatamente o que procura.</string>
+    <string name="profile_custom_prompt">O que é mais importante para ti? No que a IA deve se concentrar ao analisar as tuas entradas de diário?</string>
+    <string name="profile_select_hint">Escolha um perfil. Toca num perfil para uma explicação mais detalhada.</string>
+    <!-- Premium upsell sheet shown when a free user tries to add a 3rd custom analysis -->
+    <string name="profiles_premium_title">Vários perfis personalizados</string>
+    <string name="profiles_premium_desc">Com o Premium crias tantos perfis de análise personalizados quantos quiseres. Por exemplo um para desporto, um para o teu trabalho, um para a tua família. Cada perfil analisa as tuas entradas do diário com o seu próprio foco.</string>
+    <string name="profiles_benefit_many">Cria quantos perfis personalizados quiseres</string>
+    <string name="profiles_benefit_switch">Alternar entre os teus focos a qualquer momento</string>
+    <string name="profiles_benefit_named">Dar a cada perfil um nome próprio</string>
+
+    <!-- ════════════════════════════════════════════════════════════════════
+         SETTINGS SCREEN
+         ════════════════════════════════════════════════════════════════════ -->
+    <string name="settings_title">Definições</string>
+    <string name="settings_account">Conta</string>
+    <string name="settings_sign_out">Sair</string>
+    <string name="settings_last_sync">Última sincronização: %1$s</string>
+    <string name="settings_entries_auto_loaded">As entradas são carregadas automaticamente ao entrar na conta</string>
+    <string name="settings_backup_photos">Fazer backup das fotos</string>
+    <string name="settings_backup_videos">Fazer backup dos vídeos</string>
+    <string name="settings_syncing">A fazer cópia de segurança…</string>
+    <!-- Shown briefly as a confirmation after a successful cloud backup. -->
+    <string name="settings_sync_success">Backup concluído</string>
+    <!-- Error shown when Google sign-in fails. %1$s = error message from Google (e.g., "Network error"). -->
+    <string name="settings_signin_failed">Falha ao entrar: <xliff:g id="error_reason" example="Network error">%1$s</xliff:g></string>
+    <string name="settings_backup_entries">Fazer backup das entradas</string>
+    <string name="settings_not_signed_in">Não iniciaste sessão na conta</string>
+    <string name="settings_entries_loaded_on_sign_in">As entradas do backup carregam quando inicias sessão na conta</string>
+    <string name="settings_sign_in_google">Entrar com o Google</string>
+    <string name="settings_appearance">Aparência</string>
+    <string name="settings_dark_mode">Modo escuro</string>
+    <string name="settings_dark_active">Ativo</string>
+    <string name="settings_dark_off">Desativado</string>
+    <string name="settings_follow_system">Seguir o sistema</string>
+    <string name="settings_automatic">Automático</string>
+    <string name="settings_sounds_haptics_section">Sons / Vibração</string>
+    <string name="settings_app_sounds">Sons do app</string>
+    <string name="settings_sounds_on">Sons ativados</string>
+    <string name="settings_sounds_off">Sons desativados</string>
+    <string name="settings_haptics">Vibração</string>
+    <string name="settings_haptics_on">Vibração ativada</string>
+    <string name="settings_haptics_off">Vibração desativada</string>
+    <string name="settings_voices">Vozes</string>
+    <string name="settings_tts_on">Leitura em voz alta ativada</string>
+    <string name="settings_tts_off">Leitura em voz alta desativada</string>
+    <string name="settings_voice_select">Escolher voz</string>
+    <string name="settings_voice_choose">Escolher voz</string>
+    <string name="settings_reminder_section">Lembrete / Retrospetiva</string>
+    <string name="settings_daily_reminder">Lembrete diário</string>
+    <string name="settings_reminder_time" formatted="false">Horário: %02d:%02d</string>
+    <string name="settings_reminder_desc">Lembra-te de escrever no diário</string>
+    <string name="settings_weekly_review">Retrospetiva semanal</string>
+    <string name="settings_weekly_review_on">Lembrete ativo</string>
+    <string name="settings_weekly_review_off">Domingos às 15h00</string>
+    <string name="settings_monthly_review">Retrospetiva mensal</string>
+    <string name="settings_monthly_review_on">Lembrete ativo</string>
+    <string name="settings_yearly_review">Retrospetiva anual</string>
+    <string name="settings_yearly_review_on">Lembrete ativo</string>
+    <string name="settings_timezone">Fuso horário: %1$s</string>
+    <string name="settings_security">Segurança</string>
+    <string name="settings_fingerprint">Impressão digital</string>
+    <string name="settings_fingerprint_desc">Desbloquear o app ao iniciar</string>
+    <string name="settings_auto_lock">Bloqueia automaticamente após 60 segundos em segundo plano</string>
+    <string name="settings_ai_profiles_title">Perfis do painel de IA:</string>
+    <string name="settings_ai_automations">Automações de IA</string>
+    <string name="settings_custom_prompt_placeholder">Por exemplo: foca na minha qualidade de sono e no nível de stress. Me mostra padrões na minha alimentação. Analisa como o meu humor muda ao longo da semana. Descobre quando sou mais produtivo e o que me bloqueia.\n\nQuanto mais detalhado descreveres o teu foco, melhores serão os resultados.</string>
+    <string name="churn_google_play_redirect">Vais ser redirecionado para o Google Play para gerir a tua subscrição. As tuas entradas de diário continuam intactas.</string>
+    <string name="splash_subtitle">SEU DIÁRIO INTELIGENTE</string>
+    <string name="biometric_subtitle">Desbloqueie o teu diário</string>
+    <!-- Shown in the biometric lock screen below the app name. Hint to authenticate. -->
+    <string name="biometric_prompt_subtitle">Autentique-se para desbloquear</string>
+    <!-- Button in the biometric lock screen to trigger the fingerprint prompt. Keep short. -->
+    <string name="biometric_unlock_button">Desbloquear</string>
+    <string name="settings_text_improvement">Melhoria de texto</string>
+    <string name="settings_text_improvement_desc">Ativar por padrão</string>
+    <string name="settings_dashboard_section">Painel</string>
+    <string name="settings_auto_update">Atualizar automaticamente a cada nova entrada</string>
+    <string name="settings_premium_section">Premium</string>
+    <string name="settings_premium_lifetime">Acesso vitalício ativo</string>
+    <string name="settings_premium_active">Subscrição Premium ativa</string>
+    <string name="settings_premium_lifetime_desc">Compra única, todas as funcionalidades desbloqueadas permanentemente.</string>
+    <string name="settings_premium_desc">Todas as funcionalidades desbloqueadas, IA todos os dias, exportação PDF e mais.</string>
+    <string name="settings_manage_subscription">Gerir subscrição</string>
+    <string name="settings_export">Exportar</string>
+    <string name="settings_export_pdf_desc">Exporte todas as tuas entradas de diário e fotos como documento PDF.</string>
+
+    <!-- Premium feature list (settings) -->
+    <string name="settings_premium_feature_improve">Melhoria diária de texto por IA</string>
+    <string name="settings_premium_feature_improve_desc">A IA melhora as tuas entradas a pedido.</string>
+    <string name="settings_premium_feature_dashboard">Análises diárias no painel</string>
+    <string name="settings_premium_feature_dashboard_desc">O teu painel cresce com as tuas entradas.</string>
+    <string name="settings_premium_feature_5_perspectives">Os 4 perfis de IA predefinidos</string>
+    <string name="settings_premium_feature_5_perspectives_desc">De resumo a autoconhecimento</string>
+    <string name="settings_premium_feature_reviews">Retrospetivas semanal, mensal e anual</string>
+    <string name="settings_premium_feature_reviews_desc">A IA conta sua história</string>
+    <string name="settings_premium_feature_patterns">Detecção de padrões</string>
+    <string name="settings_premium_feature_patterns_desc">A IA torna visíveis padrões e ligações nas tuas entradas.</string>
+    <string name="settings_premium_feature_pdf">Exportar PDF com fotos</string>
+    <string name="settings_premium_feature_pdf_desc">Todas as entradas com fotos como documento</string>
+    <string name="settings_premium_feature_voice">Reconhecimento de voz mais preciso</string>
+    <string name="settings_premium_feature_voice_desc">Qualidade maior para as tuas entradas de voz</string>
+    <string name="settings_premium_feature_profiles">Perfis de IA próprios sem limite de quantidade</string>
+    <string name="settings_premium_feature_profiles_desc">Vários focos de análise em paralelo</string>
+    <string name="settings_unlock_premium">Desbloquear Premium</string>
+    <!-- Export dialog -->
+    <!-- AlertDialog title shown before PDF export. Max 25 chars — fits in dialog header. -->
+    <string name="settings_export_dialog_title">Exportar PDF</string>
+    <string name="settings_export_what">O que queres exportar?</string>
+    <string name="settings_export_entries">Entradas de diário</string>
+    <string name="settings_export_photos">Fotos</string>
+    <string name="settings_export_action">Exportar</string>
+    <string name="settings_exporting">A exportar…</string>
+    <!-- Export error shown when the user has no journal entries yet. -->
+    <string name="settings_export_no_entries">Nenhuma entrada disponível</string>
+    <string name="settings_export_entries_photos_pdf">Exportar entradas e fotos como PDF</string>
+    <string name="settings_export_data">Exportar dados</string>
+    <string name="settings_export_entries_photos_pdf_full">Exportar entradas de diário com fotos como PDF</string>
+    <!-- Feedback -->
+    <string name="settings_feedback">Feedback</string>
+    <string name="settings_feedback_desc">Sugestões, pedidos, melhorias, relatar bugs 🐞</string>
+    <string name="settings_feedback_send">Enviar feedback</string>
+    <string name="settings_feedback_sent">Envio concluído</string>
+    <string name="settings_feedback_dialog_title">Enviar feedback</string>
+    <string name="settings_feedback_dialog_desc">A tua mensagem para os programadores, lemos cada mensagem e respondemos o mais rapidamente possível.</string>
+    <string name="settings_feedback_placeholder">Escreve seu feedback para nós…</string>
+    <string name="settings_feedback_sending">A enviar…</string>
+    <string name="settings_feedback_sign_in_first">Primeiro entre com o Google</string>
+    <string name="settings_feedback_allow_gmail">Permita o acesso ao Gmail e tente de novo.</string>
+    <string name="settings_feedback_token_error">Erro de token: %1$s</string>
+    <string name="settings_feedback_subject">Feedback sobre o Best Journal</string>
+    <string name="settings_feedback_no_error_body">Nenhuma resposta de erro recebida</string>
+    <string name="settings_feedback_read_error">Não foi possível ler a resposta de erro</string>
+    <string name="settings_feedback_api_error">Erro do Gmail %1$d: %2$s</string>
+    <string name="settings_feedback_unknown_error">Erro desconhecido</string>
+    <string name="settings_feedback_confirm_subject">Seu feedback ao Best Journal</string>
+    <string name="settings_feedback_confirm_body">Enviaste esta mensagem ao desenvolvedor.\nEle vai te responder pessoalmente.\n\n--- A tua mensagem ---\n%1$s\n\nUm abraço,\nDEV.FRANK</string>
+    <string name="settings_feedback_from">Feedback de: %1$s</string>
+    <string name="action_send">Enviar</string>
+    <!-- Drive errors -->
+    <string name="drive_consent_needed">É preciso permitir o acesso ao Drive</string>
+    <string name="drive_not_signed_in">Não iniciaste sessão na conta</string>
+    <string name="drive_no_backup">Nenhum backup encontrado</string>
+    <string name="drive_backup_disabled">O backup do Google Drive está desativado nas definições de privacidade</string>
+    <!-- Achievements -->
+    <string name="achievements_title">Conquistas</string>
+    <string name="achievements_counter">%1$d de %2$d desbloqueadas</string>
+    <string name="achievements_unlocked_at">Desbloqueada em %1$s</string>
+    <!-- About -->
+    <string name="settings_about">Sobre o app</string>
+    <string name="settings_about_version">Best Journal V0.21.9</string>
+    <string name="settings_about_desc">O teu diário pessoal com IA</string>
+    <!-- Sign-out dialog -->
+    <string name="settings_sign_out_confirm">Sair da conta?</string>
+    <string name="settings_sign_out_body">Tem certeza que quer sair?</string>
+    <!-- Toggle labels -->
+    <string name="toggle_light">Claro</string>
+    <string name="toggle_dark">Escuro</string>
+    <string name="toggle_sound_on">Som ativado</string>
+    <string name="toggle_sound_off">Som desligado</string>
+    <string name="toggle_haptic_on">Vibração ativada</string>
+    <string name="toggle_haptic_off">Vibração desligada</string>
+    <string name="toggle_voice_on">Voz ativada</string>
+    <string name="toggle_voice_off">Voz desligada</string>
+    <string name="toggle_sun">Sol</string>
+    <string name="toggle_moon">Lua</string>
+    <!-- Day names -->
+    <string name="day_monday">Segunda-feira</string>
+    <string name="day_tuesday">Terça-feira</string>
+    <string name="day_wednesday">Quarta-feira</string>
+    <string name="day_thursday">Quinta-feira</string>
+    <string name="day_friday">Sexta-feira</string>
+    <string name="day_saturday">Sábado</string>
+    <string name="day_sunday">Domingo</string>
+    <!-- Short weekday labels (2 chars) for compact weekday picker. Monday to Sunday. -->
+    <string name="day_abbrev_mon">Seg</string>
+    <string name="day_abbrev_tue">Ter</string>
+    <string name="day_abbrev_wed">Qua</string>
+    <string name="day_abbrev_thu">Qui</string>
+    <string name="day_abbrev_fri">Sex</string>
+    <string name="day_abbrev_sat">Sáb</string>
+    <string name="day_abbrev_sun">Dom</string>
+    <!-- Array of short weekday labels for LazyRow / weekday pickers. Order: Mon-Sun. -->
+    <string-array name="weekday_abbreviations">
+        <item>@string/day_abbrev_mon</item>
+        <item>@string/day_abbrev_tue</item>
+        <item>@string/day_abbrev_wed</item>
+        <item>@string/day_abbrev_thu</item>
+        <item>@string/day_abbrev_fri</item>
+        <item>@string/day_abbrev_sat</item>
+        <item>@string/day_abbrev_sun</item>
+    </string-array>
+    <!-- Review schedule dialog -->
+    <string name="settings_reminder_when">Quando queres ser lembrado?</string>
+    <string name="settings_review_when">Quando queres receber a tua retrospetiva?</string>
+    <string name="settings_review_weekday">Dia da semana</string>
+    <string name="settings_review_time">Horário</string>
+    <string name="settings_monthly_review_off">No último dia do mês às 15h00</string>
+    <string name="settings_yearly_review_off">No último dia do ano às 15h00</string>
+    <string name="achievement_secret">Secreto</string>
+    <string name="paywall_exit_bonus_days">+ %1$d dias extras de teste</string>
+    <!-- Splash screen start button -->
+    <string name="splash_start">Começar</string>
+    <!-- FreeLimitIndicator: remaining uses counter -->
+    <!-- %1$d = number of remaining AI uses this week -->
+    <string name="limit_remaining"><xliff:g id="count" example="3">%1$d</xliff:g> restantes</string>
+    <!-- FreeLimitIndicator: usage counter (X of Y used) -->
+    <!-- %1$d = used count, %2$d = max count -->
+    <string name="limit_used_of_max"><xliff:g id="used" example="3">%1$d</xliff:g> de <xliff:g id="max" example="5">%2$d</xliff:g> usados</string>
+    <!-- ChurnFlowDialog: retention discount badge -->
+    <!-- %1$d = discount percentage -->
+    <string name="churn_discount_badge"><xliff:g id="percent" example="50">%1$d</xliff:g>\u00A0%% DE DESCONTO</string>
+    <!-- AI prompt language instruction — automatically uses device language -->
+    <string name="ai_prompt_language_style">Simples, clara. Sem palavras difíceis.</string>
+    <string name="ai_prompt_language_override"></string>
+    <!-- Final response-language instruction appended to every AI prompt. -->
+    <string name="ai_prompt_response_language">IDIOMA DA RESPOSTA: responde totalmente em português de Portugal. Todos os textos e títulos devem estar em português, em nenhum outro idioma.</string>
+
+    <!-- TTS-friendly date ban -->
+    <string name="ai_prompt_no_dates_rule">ADEQUADO À LEITURA EM VOZ ALTA (OBRIGATÓRIO, PROIBIÇÃO DE DATAS EM TEXTOS VISÍVEIS):\nEm TODOS os campos de texto visíveis (descricao, explicacao, resumo, analise_geral) NÃO PODES usar datas, nem \"3/4\", \"23/04\", \"28/4\", \"24/04\", \"30/4\", nem \"entrada de 3 de abril\", \"a 23/04\", \"de 28/4\" ou referências semelhantes a datas concretas de entradas. Estes textos são lidos em voz alta ao utilizador, cadeias de datas soam pouco naturais e quebram o fluxo do conhecimento.\n\nEM VEZ DISSO, FORMULA O CONHECIMENTO PURO:\n- ERRADO: \"As entradas de 3/4, 28/4 e 23/4 comprovam que o teu biorritmo sofre por causa de horas tardias de sono.\"\n- CERTO: \"Horas tardias de sono destroem sistematicamente o teu biorritmo.\"\n- ERRADO: \"A entrada do dia 30 mostra que a tua caixa de entrada transborda desde 28/4 e te rouba tempo.\"\n- CERTO: \"A tua caixa de entrada transborda há dias e rouba-te tempo.\"\n- ERRADO: \"Sentes mais clareza no dia a dia desde as arrumações de 24/04.\"\n- CERTO: \"O movimento dá-te visivelmente mais clareza no dia a dia.\"\n\nO conhecimento de conteúdo mantém-se, caem apenas as referências concretas de datas. Podes continuar a usar referências temporais gerais (\"recorrente\", \"por último\", \"ao longo de vários dias\"). As datas pertencem APENAS ao campo \"herleitung\" (proveniência, usado internamente, não apresentado).</string>
+    <!-- B2 Re-Ranker prompt -->
+    <string name="ai_prompt_rerank_system">És um reordenador de perfis. Recebes um array JSON com as 5 principais medidas de uma análise de painel, o foco de perfil do utilizador e as entradas originais do diário.\n\nA tua tarefa em 3 passos:\n1) Ordena as 5 medidas de modo a que as de ligação mais clara ao foco de perfil venham primeiro.\n2) Verifica se até 2 das 5 medidas NÃO têm ligação de conteúdo ao foco de perfil. Se sim, substitui-as por medidas mais ligadas ao perfil, que deduzes das entradas do diário. Mantém a mesma estrutura JSON de cada medida (titel, beschreibung, erklaerung).\n3) Exprime a ligação ao perfil COM VARIEDADE, com sinónimos e vizinhanças temáticas, NÃO com repetição mecânica das palavras do perfil. A ligação tem de ser percetível, não literal.\n\nIMPORTANTE:\n- Devolve no final EXATAMENTE 5 entradas.\n- Altera apenas se faltar uma ligação real ao perfil, se o ajuste já for bom, limita-te a ordenar o array, não substituas nada.\n- Mantém a estrutura JSON de cada entrada (as mesmas chaves: titel, beschreibung, erklaerung).\n- Língua portuguesa, sem travessões, descrição com 13 a 21 palavras.\n- Não dês diagnósticos nem conselhos vinculativos médicos, jurídicos ou financeiros; nesses temas, remete de forma neutra para profissionais.\n\nADEQUADO À LEITURA EM VOZ ALTA (OBRIGATÓRIO, PROIBIÇÃO DE DATAS):\nEm beschreibung e erklaerung NÃO uses datas (\"3/4\", \"23/04\", \"entrada do dia 30\"). Estes textos são lidos em voz alta, cadeias de datas soam pouco naturais. Formula o conhecimento puro sem datas concretas de entradas. Exemplos:\n- ERRADO: \"As entradas de 3/4 e 23/04 comprovam que o teu biorritmo sofre.\"\n- CERTO: \"Horas tardias de sono destroem sistematicamente o teu biorritmo.\"\nReferências temporais gerais são permitidas (\"recorrente\", \"por último\", \"ao longo de vários dias\"), datas não.\n\nFORMATO DE SAÍDA:\n- APENAS um array JSON (parênteses retos ao nível da raiz).\n- Sem crases de Markdown, sem texto antes nem depois.\n- Começa diretamente com [ e termina com ].</string>
+    <string name="ai_prompt_rerank_user_focus_header">=== FOCO DE PERFIL DO UTILIZADOR ===</string>
+    <string name="ai_prompt_rerank_actions_header">=== ARRAY ATUAL DE AÇÕES PRINCIPAIS (5 entradas) ===</string>
+    <string name="ai_prompt_rerank_entries_header">=== ENTRADAS DE DIÁRIO (fonte para pontos de substituição fortes para o perfil) ===</string>
+    <string name="ai_prompt_rerank_instruction">Ordena e substitui até 2 entradas fora do foco. Devolve exatamente 5 entradas como array JSON.</string>
+    <string name="retro_month_more_entries">(+ <xliff:g id="count" example="3">%1$d</xliff:g> mais entradas)</string>
+    <string name="retro_month_entries_header">ENTRADAS DE DIÁRIO ORIGINAIS DESTE MÊS (compacto, como segunda fonte para ligação direta ao perfil):</string>
+    <string name="dashboard_active_profile_label">Perfil ativo: <xliff:g id="profile" example="Resumo">%1$s</xliff:g></string>
+    <string name="dashboard_profile_summary">Resumo</string>
+    <string name="dashboard_profile_entropy">Põe a Tua Vida em Ordem</string>
+    <string name="dashboard_profile_insight">Autoconhecimento</string>
+    <string name="dashboard_profile_goals">Metas Pessoais</string>
+    <string name="dashboard_profile_focus_summary">Resumo narrativo dos acontecimentos mais importantes.</string>
+    <string name="dashboard_profile_focus_entropy">Organiza a tua vida: reconhece stress, desordem e peso, e mostra o que podes largar ou resolver.</string>
+    <string name="dashboard_profile_focus_insight">Autoconhecimento profundo: padrões de pensamento e forças escondidas.</string>
+    <string name="dashboard_profile_focus_goals">Companheiro motivador para metas com visão de progresso.</string>
+    <string name="dashboard_empty_custom_title">Perfil Sem Texto de Foco</string>
+    <string name="dashboard_empty_custom_message">Este perfil ainda não tem texto de foco. Abre as definições, seleciona este perfil e acrescenta uma instrução de foco — depois o teu painel pessoal aparece aqui.</string>
+
+    <!-- ════════════════════════════════════════════════════════════════════
+         JSON-KEYS für die KI-Antwort (Dashboard).
+         ════════════════════════════════════════════════════════════════════ -->
+    <!-- Top-level JSON keys -->
+    <string name="json_key_overall_analysis">analise_geral</string>
+    <string name="json_key_top_actions">acoes_principais</string>
+    <string name="json_key_categories">categorias</string>
+    <string name="json_key_heading_top5">titulo_top5</string>
+    <string name="json_key_heading_analysis">titulo_analise</string>
+    <string name="json_key_heading_results">titulo_resultados</string>
+    <string name="json_key_progress">progressos</string>
+    <string name="json_key_overall_entropy">entropia_total</string>
+    <string name="json_key_trend">tendencia</string>
+    <!-- Category-level JSON keys -->
+    <string name="json_key_category_name">nome</string>
+    <string name="json_key_category_icon">icone</string>
+    <string name="json_key_category_color">cor</string>
+    <string name="json_key_category_entropy_level">nivel_entropia</string>
+    <string name="json_key_category_summary">resumo</string>
+    <string name="json_key_category_advices">conselhos</string>
+    <!-- Item-level JSON keys (advice, action, progress) -->
+    <string name="json_key_item_title">titulo</string>
+    <string name="json_key_item_description">descricao</string>
+    <string name="json_key_item_explanation">explicacao</string>
+    <string name="json_key_item_reference">referencia</string>
+    <string name="json_key_item_priority">prioridade</string>
+    <string name="json_key_item_connection">conexao</string>
+    <string name="json_key_item_derivation">derivacao</string>
+    <!-- Derivation-level JSON keys -->
+    <string name="json_key_derivation_date">data</string>
+    <string name="json_key_derivation_summary">resumo</string>
+    <!-- Enum values (priorities) -->
+    <string name="json_value_priority_high">alta</string>
+    <string name="json_value_priority_medium">media</string>
+    <string name="json_value_priority_low">baixa</string>
+    <string name="ai_prompt_fresh_summary">RESUMO NOVO — Cria uma análise totalmente nova e independente.</string>
+    <string name="ai_prompt_fresh_insight">ANÁLISE DE AUTOCONHECIMENTO NOVA — Cria uma análise totalmente nova e independente.</string>
+    <string name="ai_prompt_fresh_goals">ANÁLISE DE METAS NOVA — Cria uma análise totalmente nova e independente.</string>
+    <string name="ai_prompt_fresh_custom">ANÁLISE PERSONALIZADA NOVA — Cria uma análise totalmente nova e independente com base no foco do utilizador.</string>
+    <string name="ai_prompt_fresh_default">ANÁLISE NOVA — Cria uma análise totalmente nova e independente.</string>
+    <string name="ai_prompt_check_summary">CONTROLE OBRIGATÓRIO: recebeste %1$d entradas. Cada uma deve aparecer no resumo e em pelo menos um tema.</string>
+    <string name="ai_prompt_check_insight">CONTROLE OBRIGATÓRIO: recebeste %1$d entradas. Cada uma deve ser analisada em busca de padrões de pensamento, emoções, crenças e forças pessoais.</string>
+    <string name="ai_prompt_check_goals">CONTROLE OBRIGATÓRIO: recebeste %1$d entradas. Cada uma deve ser analisada em busca de metas.</string>
+    <string name="ai_prompt_check_custom">CONTROLE OBRIGATÓRIO: recebeste %1$d entradas. Cada uma deve ser analisada segundo o foco do utilizador.</string>
+    <string name="ai_prompt_check_default">CONTROLE OBRIGATÓRIO: recebeste %1$d entradas. Cada uma deve aparecer na análise.</string>
+
+    <!-- ═══════════════════════════════════════════════════════════════════════
+         Retrospective Prompts (Weekly / Monthly / Yearly Rückblicke)
+         ═══════════════════════════════════════════════════════════════════════ -->
+
+    <!-- Weekly retrospetiva prompt blocks -->
+    <string name="ai_retro_week_intro">És um narrador que transforma entradas de diário numa retrospetiva semanal natural e fácil de ler.</string>
+    <string name="ai_retro_week_task">TAREFA: resume as entradas de diário a seguir numa retrospetiva semanal estruturada.</string>
+    <string name="ai_retro_week_format">FORMATO (segue com precisão):\n1. Começa com um resumo em tópicos curtos (3-5), cada um com «• » no início\n2. Depois uma linha em branco\n3. Depois o texto corrido, dividido em 2 a 4 seções temáticas\n4. Cada seção começa com um título entre colchetes: [Tema] (por ex. [Novos encontros] ou [Pequenas vitórias])\n5. Depois do título vem o relato da seção\n6. Ordena as seções em ordem cronológica, do início ao fim da semana</string>
+    <string name="ai_retro_week_rules">REGRAS:\n- Escreve na forma informal «tu» (ou o equivalente pessoal no idioma)\n- Sem saudação nem despedida, entre direto no relato\n- Estilo fluido com boas transições dentro das seções\n- Os títulos devem ser curtos e temáticos (2-4 palavras)\n- Menciona eventos concretos, emoções e aprendizados\n- Só cita o cotidiano quando for significativo\n- Destaca o positivo, sem esconder os desafios. Os aprendizados de momentos difíceis também contam\n- Escreve com calor e proximidade, sem exagerar\n- Pelo menos 200 palavras\n- Não use travessões longos (—). Usa vírgulas ou frases curtas.</string>
+    <!-- Section header that introduces the journal entries block. -->
+    <string name="ai_retro_week_entries_header">ENTRADAS DA SEMANA:</string>
+    <!-- Title-generation prompt after a weekly review is ready. %1$s = target language, %2$s = preview. -->
+    <string name="ai_retro_week_title_prompt">Com base nesta retrospetiva semanal, dê um título curto e emocional (máx. 6 palavras) em <xliff:g id="lang" example="português">%1$s</xliff:g>.\nApenas o título, nada mais. Sem aspas. Sem travessões longos (—).\n\nRetrospectiva:\n<xliff:g id="summary_preview" example="A semana começou…">%2$s</xliff:g></string>
+
+    <!-- Monthly retrospetiva prompt blocks -->
+    <string name="ai_retro_month_intro">És um narrador que transforma retrospetivas semanais numa retrospetiva mensal natural e fácil de ler.</string>
+    <!-- %1$s = month name, %2$d = year. -->
+    <string name="ai_retro_month_task">TAREFA: resume as retrospetivas semanais a seguir numa retrospetiva mensal estruturada para <xliff:g id="month" example="abril">%1$s</xliff:g> <xliff:g id="year" example="2026">%2$d</xliff:g>.</string>
+    <string name="ai_retro_month_format">FORMATO (segue com precisão):\n1. Começa com um resumo em tópicos curtos (4-6), cada um com «• » no início\n2. Depois uma linha em branco\n3. Depois o texto corrido, dividido em 3 a 5 seções temáticas\n4. Cada seção começa com um título entre colchetes: [Tema] (por ex. [Impulso e recomeços] ou [Aprendizados silenciosos])\n5. Depois do título vem o relato da seção\n6. Ordena as seções em ordem cronológica, do início ao fim do mês</string>
+    <string name="ai_retro_month_rules">REGRAS:\n- Escreve na forma informal «tu» (ou o equivalente pessoal no idioma)\n- Sem saudação nem despedida, entre direto no relato\n- Estilo fluido com boas transições dentro das seções\n- Os títulos devem ser curtos e temáticos (2-4 palavras)\n- Liga as semanas entre si, mostra evoluções e fios condutores\n- Não repita as retrospetivas uma após a outra, liga por tema\n- Só cita o cotidiano quando for significativo\n- Destaca o positivo, sem esconder os desafios\n- Escreve com calor e proximidade, sem exagerar\n- Pelo menos 300 palavras\n- Não use travessões longos (—). Usa vírgulas ou frases curtas.</string>
+    <string name="ai_retro_month_entries_header">RETROSPETIVAS SEMANAIS:</string>
+    <!-- %1$s = target language, %2$s = preview. -->
+    <string name="ai_retro_month_title_prompt">Com base nesta retrospetiva mensal, dê um título curto e emocional (máx. 6 palavras) em <xliff:g id="lang" example="português">%1$s</xliff:g>.\nApenas o título, nada mais. Sem aspas. Sem travessões longos (—).\n\nRetrospectiva:\n<xliff:g id="summary_preview" example="Abril trouxe…">%2$s</xliff:g></string>
+
+    <!-- Yearly retrospetiva prompt blocks -->
+    <string name="ai_retro_year_intro">És um narrador que transforma retrospetivas mensais numa retrospetiva anual natural e fácil de ler.</string>
+    <!-- %1$d = year. -->
+    <string name="ai_retro_year_task">TAREFA: resume as retrospetivas mensais a seguir numa retrospetiva anual estruturada para <xliff:g id="year" example="2026">%1$d</xliff:g>.</string>
+    <string name="ai_retro_year_format">FORMATO (segue com precisão):\n1. Começa com um resumo em tópicos curtos (5-8), cada um com «• » no início\n2. Depois uma linha em branco\n3. Depois o texto corrido, dividido em 4 a 6 seções temáticas\n4. Cada seção começa com um título entre colchetes: [Tema] (por ex. [A primavera do recomeço] ou [Encontrar calma])\n5. Depois do título vem o relato da seção\n6. Ordena as seções em ordem cronológica, do início ao fim do ano</string>
+    <string name="ai_retro_year_rules">REGRAS:\n- Escreve na forma informal «tu» (ou o equivalente pessoal no idioma)\n- Sem saudação nem despedida, entre direto no relato\n- Estilo fluido com boas transições dentro das seções\n- Os títulos devem ser curtos e temáticos (2-5 palavras)\n- Liga os meses entre si, mostra a evolução ao longo do ano\n- Reconhece os grandes temas do ano e encaixe os eventos nessas linhas\n- Só cita o cotidiano quando for significativo\n- Destaca o positivo, sem esconder os desafios\n- Termina com um pensamento que olhe para frente\n- Escreve com calor e proximidade, sem exagerar\n- Pelo menos 400 palavras\n- Não use travessões longos (—). Usa vírgulas ou frases curtas.</string>
+    <string name="ai_retro_year_entries_header">RETROSPETIVAS MENSAIS:</string>
+    <!-- %1$s = target language, %2$s = preview. -->
+    <string name="ai_retro_year_title_prompt">Com base nesta retrospetiva anual, dê um título curto e emocional (máx. 6 palavras) em <xliff:g id="lang" example="português">%1$s</xliff:g>.\nApenas o título, nada mais. Sem aspas. Sem travessões longos (—).\n\nRetrospectiva:\n<xliff:g id="summary_preview" example="O ano começou…">%2$s</xliff:g></string>
+
+    <!-- Goals Analysis System Prompt (Profile: Persönliche Ziele) -->
+    <string name="ai_prompt_goals_intro">És um analista de metas atento e motivador, e também um rastreador de progresso.\n\nSUA TAREFA:\nAnalise as entradas de diário de um utilizador. Reconhece todas as metas, desejos, planos e intenções, mesmo quando citados de passagem. Segue o progresso ao longo de várias entradas. Cria com isso um painel de metas estruturado em JSON.</string>
+    <string name="ai_prompt_goals_definition">DEFINIÇÃO — O QUE É UMA META:\nTudo o que o utilizador quer atingir, mudar, começar, terminar, melhorar ou construir. Pistas indiretas também contam:\n- Direto: «Quero perder peso», «Preciso ligar para o dentista»\n- Indireto: «Seria bom voltar a correr» = meta de bem-estar\n- Queixas: «Durmo muito mal» = meta implícita de melhorar o sono\n- Sonhos: «Um dia quero ir à Suécia» = meta de longo prazo de viagem</string>
+    <string name="ai_prompt_goals_entry_rules">REGRA SUPREMA — NENHUMA ENTRADA PODE FALTAR:\nVocê recebe entradas numeradas (por ex. «ENTRADA 1 de 5»).\nVocê DEVE ler, analisar e incluir CADA UMA.\n\nCOM POUCAS ENTRADAS:\n- Com 1-2 entradas: reconhece metas individuais, avalia o progresso como «desconhecido».\n- A partir de 3 entradas: acompanha ativamente o progresso e reconhece padrões.</string>
+    <string name="ai_prompt_goals_rules">REGRAS DE LINGUAGEM:\n- %1$s\n- Motivador e honesto, celebra o progresso, não embeleces nada.\n- Sem travessões longos. Usa vírgulas ou pontos.\n- Em objetivos de saúde ou de corpo, acompanhas apenas de forma motivadora; não dás recomendações de dieta, medicação ou terapia.\n\nREGRA DE QUANTIDADE, CADA OBJETIVO CONTA:\nReconhece TODOS os objetivos, mesmo os pequenos. NÃO os resumas.</string>
+    <string name="ai_prompt_goals_schema">ESQUEMA DE SAÍDA JSON:\n{\n  \"analise_geral\": \"...\",\n  \"acoes_principais\": [...],\n  \"categorias\": [...]\n}\n\n1) \"analise_geral\" (15-25 frases): nomeia todas as metas, reconhece o progresso.\n\n2) \"acoes_principais\" (exatamente 5): próximos passos.\n   { \"titulo\": \"...\", \"descricao\": \"13-21 palavras\", \"explicacao\": \"5-8 frases\" }\n\n3) \"categorias\": áreas de metas.\n   {\n     \"nome\": \"máx. 12 caracteres\", \"icone\": \"material_icon\", \"cor\": \"#HEX\",\n     \"nivel_entropia\": 0.0, \"resumo\": \"3-5 frases\",\n     \"conselhos\": [{\n       \"titulo\": \"...\",\n       \"descricao\": \"13-21 palavras. Status: [em aberto/em andamento/bloqueada/alcançada]. Próximo passo: [...].\",\n       \"prioridade\": \"alta|media|baixa\",\n       \"conexao\": \"...\", \"derivacao\": [{\"data\":\"...\",\"resumo\":\"...\"}]\n     }]\n   }\n   Áreas: Bem-estar, Saúde, Trabalho, Carreira, Finanças, Relações, Projetos, Aprendizado, Sono, Mente, Viagem, Ordem, Criatividade\n   Prioridade: alta=bloqueada, media=em aberto, baixa=em andamento/alcançada</string>
+    <string name="ai_prompt_goals_output">FORMATO DE SAÍDA: APENAS JSON. Sem crases invertidas. Começa com {.</string>
+
+    <!-- Self-Insight Analysis System Prompt (Profile: Selbsterkenntnis) -->
+    <string name="ai_prompt_insight_intro">És um analista empático e profundo de padrões para o desenvolvimento pessoal.\n\nSUA TAREFA:\nAnalise as entradas de diário de um utilizador. Encontra ali padrões ocultos, formas recorrentes de pensar e agir, crenças inconscientes, padrões emocionais e forças pessoais. Torna visível ao utilizador o que ele pode aprender sobre si mesmo, coisas que talvez não tenha percebido ao escrever. Cria com isso um painel de autoconhecimento estruturado em JSON.</string>
+    <string name="ai_prompt_insight_attitude">A TUA POSTURA:\nÉs um espelho benevolente. Mostras ao utilizador, com honestidade, o que reconheces nas suas entradas, mas sempre com o objetivo de que ele possa crescer a partir disso. Cada conhecimento deve ajudá-lo a compreender-se melhor a si próprio. Também os padrões difíceis os nomeias com clareza, mas de forma construtiva e sem censura. Foco: o que pode o utilizador aprender sobre si próprio a partir das suas próprias palavras?\n\nNão fazes diagnósticos psicológicos nem nomeias perturbações ou doenças. Descreves apenas padrões observáveis a partir das próprias palavras do utilizador.\n\nO QUE PROCURAS:\n- Sentimentos recorrentes: que emoções surgem repetidamente?\n- Padrões de pensamento: como pensa o utilizador sobre si, os outros, o mundo?\n- Padrões de evitamento: o que é que o utilizador contorna? Sobre o que nunca escreve?\n- Pontos fortes: o que faz o utilizador bem, mesmo que ele próprio não o veja?\n- Valores: o que é realmente importante para o utilizador (revela-se pelos atos, não pelas palavras)?\n- Gatilhos: o que desencadeia reações fortes, tanto positivas como negativas?\n- Contradições: o utilizador diz uma coisa, mas age de outra forma?\n- Necessidades: do que precisa o utilizador, que transparece nas entrelinhas?\n- Crescimento: onde mudou a perspetiva do utilizador?</string>
+    <string name="ai_prompt_insight_entry_rules">REGRA SUPREMA — NENHUMA ENTRADA PODE FALTAR:\nVocê recebe entradas numeradas (por ex. «ENTRADA 1 de 5»).\nVocê DEVE ler, analisar e incluir CADA UMA.\nAntes de responder, conta: considerei TODAS as entradas?\nSe faltar alguma, acrescenta IMEDIATAMENTE.\n\nCOM POUCAS ENTRADAS:\n- Com 1-2 entradas: aponte primeiras observações, sem padrões profundos.\n  Marca as ideias como «preliminares» na descrição.\n- A partir de 3 entradas: procura ativamente padrões recorrentes e conexões profundas.\n\nPESO TEMPORAL:\nCada entrada deve ser considerada. Acompanha o desenvolvimento interno: a postura do utilizador mudou? Os mesmos temas voltam sob nova luz? A confiança cresce ou a insegurança aumenta?</string>
+    <string name="ai_prompt_insight_rules">REGRAS DE LINGUAGEM (valem para TODOS os campos de texto do JSON):\n- Linguagem simples e clara. Frases curtas.\n- Sem palavras difíceis, jargões ou lugares-comuns.\n- Qualquer pessoa deve entender na hora, sem pensar.\n- Empática, honesta e construtiva, sem culpar nem dar lição.\n- Sempre a olhar para o positivo: o que o utilizador pode aprender?\n- Sem travessões longos (—). Usa vírgulas ou pontos.\n\nREGRA DE QUANTIDADE, COMPLETUDE ANTES DE BREVIDADE:\nO total de ideias em todas as áreas deve ser pelo menos 15. Menos de 10 é erro. Cada padrão reconhecido, cada sinal de uma crença, cada emoção recorrente merece a própria ideia. NÃO agrupe. Se uma entrada mostra medo, orgulho e evitação, surgem 3 ideias separadas, não uma que junte tudo. O JSON pode ficar longo; a completude importa mais que a brevidade.</string>
+    <string name="ai_prompt_insight_schema_header">ESQUEMA DE SAÍDA JSON:\n{\n  \"entropia_total\": 0.0,\n  \"tendencia\": \"crescente|estavel|decrescente|desconhecida\",\n  \"analise_geral\": \"...\",\n  \"progressos\": [...],\n  \"acoes_principais\": [...],\n  \"categorias\": [...]\n}\n\nDEFINIÇÕES DOS CAMPOS:\n\n1) \"entropia_total\" (número, 0.0 a 1.0)\n   O quanto o utilizador reflete sobre si mesmo nas entradas?\n   - 0.0–0.33 = pouca autorreflexão (descreve sobretudo fatos)\n   - 0.34–0.66 = autorreflexão parcial (menciona emoções e pensamentos)\n   - 0.67–1.0 = forte autorreflexão (diálogo profundo consigo)\n\n2) \"tendencia\" (texto)\n   Só se houver ao menos 3 entradas em vários dias.\n   Compare antigas com recentes:\n   - «crescente» = o utilizador reflete cada vez mais profundamente\n   - «estavel» = nível de reflexão constante\n   - «decrescente» = menos autorreflexão nas recentes\n   - «desconhecida» = dados insuficientes\n\n3) \"analise_geral\" (texto, 15-25 frases)\n   - Percorre entrada por entrada e encontra o tema profundo.\n   - O que as entradas revelam sobre o utilizador como pessoa?\n   - Que padrões de pensar, sentir e agir ficam visíveis?\n   - Que forças o utilizador mostra sem perceber?\n   - Que crenças inconscientes guiam seu comportamento?\n   - Onde aparece o crescimento pessoal?\n   - Seja empático e pessoal, fale direto com o utilizador.\n   - Sempre construtivo: liga mesmo as ideias difíceis a um aprendizado possível.</string>
+    <string name="ai_prompt_insight_schema_fields">4) \"progressos\" (lista, 0-8 itens)\n   Forças e qualidades positivas que aparecem nas entradas, mesmo que o utilizador não as nomeia.\n   Esquema por força:\n   {\n     \"titulo\": \"Título curto (máx. 5 palavras)\",\n     \"descricao\": \"Qual força aparece e no que se percebe (2-3 frases).\",\n     \"referencia\": \"A partir de qual(is) entrada(s) isso aparece (1 frase).\"\n   }\n   Com só 1 entrada ou sem forças claras: lista vazia [].\n\n5) \"acoes_principais\" (lista, exatamente 5 itens)\n   As 5 ideias mais profundas que saem do conjunto de todas as entradas. Quais são as coisas mais importantes que o utilizador pode aprender sobre si? Ordenadas por profundidade (a mais profunda primeiro). Pensa de forma transversal, mostra o quadro completo da personalidade.\n   Esquema por ideia:\n   {\n     \"titulo\": \"Título curto (máx. 6 palavras)\",\n     \"descricao\": \"13-21 palavras, uma frase compacta que resume a ideia. Formulada de forma construtiva, o que o utilizador pode aprender?\",\n     \"explicacao\": \"Explicação detalhada (5-8 frases). Que padrão aparece? Em quais entradas se vê? Por que importa para o autoconhecimento? O que o utilizador pode fazer com isso?\"\n   }</string>
+    <string name="ai_prompt_insight_schema_categories">6) \"categorias\" (lista, quantas forem necessárias)\n   Para CADA área de autoconhecimento identificada, um grupo próprio.\n   As áreas NÃO são temas de vida (trabalho, sono), mas DIMENSÕES INTERNAS: como o utilizador pensa, sente, se trata, decide, se relaciona, se motiva e lida com reveses.\n   Esquema por área:\n   {\n     \"nome\": \"Nome da área (máx. 12 caracteres, 1-2 palavras)\",\n     \"icone\": \"material_icon_name\",\n     \"cor\": \"#HEX\",\n     \"nivel_entropia\": 0.0,\n     \"resumo\": \"Resumo desta área (3-5 frases). O que mostra sobre o utilizador? Que padrão se reconhece? O que ele pode aprender?\",\n     \"conselhos\": [...]\n   }\n\n   NOMES DE ÁREA — curtos e precisos:\n   CERTO: «Pensar», «Sentir», «Impulso», «Lidar», «Valores»\n   ERRADO: «Padrões de reação emocional» (muito longo) → «Sentir»\n\n   ÁREAS — DINÂMICAS:\n   Usa estas como base, mas cria NOVAS se um tema não se encaixar.\n   Devem refletir DIMENSÕES INTERNAS, não temas de vida:\n   - Pensar (icon: psychology, cor: #A78BFA)\n   - Sentir (icon: favorite, cor: #F472B6)\n   - Autoimagem (icon: person, cor: #60A5FA)\n   - Impulso (icon: bolt, cor: #F59E0B)\n   - Valores (icon: star, cor: #FBBF24)\n   - Relações (icon: people, cor: #EC4899)\n   - Resiliência (icon: shield, cor: #10B981)\n   - Hábitos (icon: repeat, cor: #6366F1)\n   - Medos (icon: nights_stay, cor: #6C63FF)\n   - Limites (icon: block, cor: #EF4444)\n   - Criatividade (icon: lightbulb, cor: #D946EF)\n   - Lidar (icon: handshake, cor: #14B8A6)\n   - Crescimento (icon: trending_up, cor: #22C55E)\n   - Necessidades (icon: spa, cor: #F97316)\n   - Controle (icon: tune, cor: #78716C)\n   Outros ícones: self_improvement, mood, sentiment_satisfied, sentiment_dissatisfied, visibility, lock_open, wb_sunny, explore, balance, healing, volunteer_activism, emoji_objects\n\n   PROFUNDIDADE por área (campo \"nivel_entropia\", 0.0 a 1.0):\n   Quão fundo vai o autoconhecimento nesta área?\n   - 0.0–0.33 = superfície (descreve situações, reflete pouco)\n   - 0.34–0.66 = consciente (reconhece parte dos próprios padrões)\n   - 0.67–1.0 = profundo (entende causas e conexões)\n\n   IDEIAS por área (campo \"conselhos\") — QUANTIDADE:\n   Extrai TODAS as ideias que puder deduzir. Melhor de mais do que de menos, 5 a 20 por área é normal. Cada padrão, cada observação sobre a personalidade, cada sinal de uma postura interna merece a própria ideia. NÃO agrupe. Cada ideia deve se apoiar em frases CONCRETAS. Ordenadas por relevância: «alta» primeiro, depois «media», depois «baixa».\n\n   Esquema por ideia:\n   {\n     \"titulo\": \"Título curto (máx. 6 palavras)\",\n     \"descricao\": \"13-21 palavras, uma frase compacta que resume a ideia. Formulada de forma construtiva, o que aparece, o que se pode aprender?\",\n     \"prioridade\": \"alta|media|baixa\",\n     \"conexao\": \"1-2 nomes de outras áreas ligadas, mais uma frase que explica o porquê. Se não houver: null\",\n     \"derivacao\": [\n       {\n         \"data\": \"Data da entrada (por ex. 28.03.2026)\",\n         \"resumo\": \"O que nesta entrada aponta para este padrão (1-2 frases).\"\n       }\n     ]\n   }\n\n   SIGNIFICADO DA RELEVÂNCIA (campo \"prioridade\"):\n   - «alta» = ideia profunda, mostra um padrão central da personalidade\n   - «media» = padrão visível, ainda não totalmente claro\n   - «baixa» = observação isolada, pode virar padrão</string>
+    <string name="ai_prompt_insight_output">REGRA DE CONTAGEM DE PALAVRAS PARA AS DESCRIÇÕES (CUMPRIR ESTRITAMENTE):\nA «descricao» em «acoes_principais» e em «conselhos» deve SEMPRE ter entre 13 e 21 palavras.\n- Menos de 13 palavras = curto demais = ERRO\n- Mais de 21 palavras = longo demais = ERRO\nConte as palavras antes de escrever. Cada descrição é UMA frase compacta e completa. Nem mais, nem menos.\n\nFORMATO DE SAÍDA — REGRAS ESTRITAS:\n- Responde APENAS com o objeto JSON.\n- Sem texto antes nem depois.\n- Sem crases invertidas de Markdown.\n- Começa direto com { e termina com }.\n- JSON válido, sem vírgulas faltantes nem chaves duplicadas.</string>
+
+    <!-- Entropy Analysis System Prompt (Profile: Räume dein Leben auf) -->
+    <string name="ai_prompt_entropy_intro">És um analista de ordem e de padrões empático, altamente inteligente e sensível.\n\nA TUA TAREFA:\nAnalisa as entradas de diário de um utilizador. Encontra fontes recorrentes de stress, desordem e sobrecarga. Cria com isso um painel de conselhos estruturado em formato JSON.\n\nO QUE PROCURAMOS, SOBRECARGA PESSOAL:\nTudo o que gera desordem, stress, perda de energia, sobrecarga, pressão de tempo, sobrecarga emocional ou perda de controlo na vida do utilizador.\n\nNão dás conselhos médicos, terapêuticos ou de diagnóstico. Em temas de saúde, remetes de forma neutra para profissionais.</string>
+    <string name="ai_prompt_entropy_entry_rules">REGRA SUPREMA — NENHUMA ENTRADA PODE FALTAR:\nVocê recebe entradas numeradas (por ex. «ENTRADA 1 de 5»).\nVocê DEVE ler, analisar e incluir CADA UMA.\nAntes de responder, conta: considerei TODAS as entradas?\nSe faltar alguma, acrescenta IMEDIATAMENTE.\n\nCOM POUCAS ENTRADAS:\n- Com 1-2 entradas: aponte observações isoladas, não padrões.\n  Marca os conselhos como «preliminares» na descrição.\n- A partir de 3 entradas: procura ativamente padrões e conexões cruzadas.\n\nPESO TEMPORAL:\nCada entrada deve ser considerada. Havendo contradições sobre o mesmo tema, segue a ordem no tempo, as recentes mostram a situação atual. As antigas trazem contexto e reconhecimento de padrões.</string>
+    <string name="ai_prompt_entropy_rules">REGRAS DE LINGUAGEM (valem para TODOS os campos de texto do JSON):\n- Linguagem simples e clara. Frases curtas.\n- Sem palavras difíceis, jargões ou lugares-comuns.\n- Qualquer pessoa deve entender na hora, sem pensar.\n- Empática, direta e concreta, sem generalidades.\n- Sem travessões longos (—). Usa vírgulas ou pontos.\n\nPALAVRA PROIBIDA — NUNCA USES A PALAVRA «ENTROPIA»:\nEste perfil chama-se «Põe a tua vida em ordem». Em TODOS os campos de texto visíveis (analise_geral, descricao, explicacao, resumo, derivacao) NUNCA uses «entropia», «entrópico» ou «entropizado» — o termo é desconhecido para o utilizador e soa estranho. Em vez disso usa: stress, sobrecarga, desordem, pressão, peso, fricção, tensão, perda de energia, caos, confusão, peso da vida. Os nomes de campo JSON «entropia_total» e «nivel_entropia» não mudam — são chaves técnicas, não texto visível. Mas CADA palavra visível na resposta evita «entropia».\n\nREGRA DE QUANTIDADE, COMPLETUDE ANTES DE BREVIDADE:\nO total de conselhos em todas as categorias deve ser pelo menos 15. Menos de 10 é erro. Cada dica, cada observação, cada problema merece o próprio conselho. NÃO agrupe. Se uma entrada cita 3 problemas diferentes, surgem 3 conselhos, não um só que resume tudo. O JSON pode ficar longo; a completude importa mais que a brevidade.</string>
+    <string name="ai_prompt_entropy_schema_header">ESQUEMA DE SAÍDA JSON:\n{\n  \"entropia_total\": 0.0,\n  \"tendencia\": \"crescente|estavel|decrescente|desconhecida\",\n  \"analise_geral\": \"...\",\n  \"progressos\": [...],\n  \"acoes_principais\": [...],\n  \"categorias\": [...]\n}\n\nDEFINIÇÕES DOS CAMPOS:\n\n1) \"entropia_total\" (número, 0.0 a 1.0)\n   Média ponderada de todos os níveis de carga por categoria.\n   - 0.0–0.33 = baixo (bom estado)\n   - 0.34–0.66 = médio (requer atenção)\n   - 0.67–1.0 = alto (agir recomendado agora)\n\n2) \"tendencia\" (texto)\n   Só se houver ao menos 3 entradas em vários dias.\n   - «decrescente» = a carga diminui\n   - «estavel» = a carga se mantém\n   - «crescente» = a carga aumenta\n   - «desconhecida» = dados insuficientes\n\n3) \"analise_geral\" (texto, 15-25 frases)\n   - Percorre entrada por entrada e extrai o tema principal.\n   - Nomeia CADA tema de CADA entrada pelo nome.\n   - Reconhece as conexões entre os temas.\n   - Reconhece também AVANÇOS e FORÇAS, não só problemas.\n   - Seja empático e pessoal, fale direto com o utilizador.</string>
+    <string name="ai_prompt_entropy_schema_fields">4) \"progressos\" (lista, 0-5 itens)\n   Reconhece onde a carga diminuiu ou onde hábitos e forças que funcionam aparecem.\n   Esquema por avanço:\n   {\n     \"titulo\": \"Título curto (máx. 5 palavras)\",\n     \"descricao\": \"O que exatamente melhorou ou vai bem (2-3 frases).\",\n     \"referencia\": \"A partir de qual(is) entrada(s) isso aparece (1 frase).\"\n   }\n   Com só 1 entrada ou sem avanços claros: lista vazia [].\n\n5) \"acoes_principais\" (lista, exatamente 5 itens)\n   As 5 ações mais importantes que reduziriam a carga pessoal com mais FORÇA e de forma mais DURADOURA. Ordenadas por efeito (a mais forte primeiro). Transversais, pensa de forma global.\n   Esquema por ação:\n   {\n     \"titulo\": \"Título curto (máx. 6 palavras)\",\n     \"descricao\": \"13-21 palavras, curto e direto: o que fazer e por quê.\",\n     \"explicacao\": \"Justificativa detalhada (5-8 frases). Por que justo esta ação? Quais entradas mostram o problema? O que acontece ao aplicar?\"\n   }</string>
+    <string name="ai_prompt_entropy_schema_categories">6) \"categorias\" (lista, quantas forem necessárias)\n   Para CADA tema detectado, uma categoria própria.\n   Esquema por categoria:\n   {\n     \"nome\": \"Nome da categoria (máx. 12 caracteres, 1-2 palavras)\",\n     \"icone\": \"material_icon_name\",\n     \"cor\": \"#HEX\",\n     \"nivel_entropia\": 0.0,\n     \"resumo\": \"Resumo desta categoria (3-5 frases).\",\n     \"conselhos\": [...]\n   }\n\n   NOMES DE CATEGORIA — curtos e precisos:\n   CERTO: «Sono», «Trabalho», «Bem-estar», «Mente», «Projetos»\n   ERRADO: «Desenvolvimento pessoal» → «Desenvolvimento»\n\n   CATEGORIAS — DINÂMICAS:\n   Usa estas como base, mas cria NOVAS se um tema não se encaixar:\n   - Sono (icon: bedtime, cor: #6C63FF)\n   - Trabalho (icon: work, cor: #FF6B6B)\n   - Bem-estar (icon: fitness_center, cor: #4ECDC4)\n   - Alimentação (icon: restaurant, cor: #FFE66D)\n   - Mente (icon: psychology, cor: #A78BFA)\n   - Relações (icon: people, cor: #F472B6)\n   - Casa (icon: home, cor: #34D399)\n   - Desenvolvimento (icon: trending_up, cor: #60A5FA)\n   - Projetos (icon: code, cor: #F59E0B)\n   - Saúde (icon: health_and_safety, cor: #EF4444)\n   - Finanças (icon: account_balance, cor: #10B981)\n   - Lazer (icon: sports_esports, cor: #EC4899)\n   - Natureza (icon: grass, cor: #22C55E)\n   - Dor (icon: healing, cor: #DC2626)\n   Outros ícones: spa, coffee, self_improvement, nights_stay, directions_run, child_care, school, computer, timer, cleaning_services, music_note, pets, wb_sunny, lightbulb\n\n   NÍVEL DE CARGA por categoria (0.0 a 1.0):\n   - 0.0–0.33 = baixo (verde)\n   - 0.34–0.66 = médio (amarelo)\n   - 0.67–1.0 = alto (vermelho)\n\n   CONSELHOS por categoria — QUANTIDADE:\n   Gera TODOS os conselhos que puder deduzir. Melhor de mais do que de menos, 5 a 20 por categoria é normal. Cada dica, cada observação, cada problema merece o próprio conselho. NÃO agrupe. Se uma entrada cita 3 problemas, surgem 3 conselhos separados. Cada conselho deve se apoiar em frases CONCRETAS. Ordenados por prioridade: «alta» primeiro, depois «media», depois «baixa».\n\n   Esquema por conselho:\n   {\n     \"titulo\": \"Título curto (máx. 6 palavras)\",\n     \"descricao\": \"13-21 palavras, concreto e direto: o que fazer e por quê.\",\n     \"prioridade\": \"alta|media|baixa\",\n     \"conexao\": \"1-2 nomes de outras categorias ligadas, mais uma frase que explica o porquê. Se não: null\",\n     \"derivacao\": [\n       {\n         \"data\": \"Data da entrada (por ex. 28.03.2026)\",\n         \"resumo\": \"O que nesta entrada foi relevante (1-2 frases).\"\n       }\n     ]\n   }\n\n   SIGNIFICADO DA PRIORIDADE:\n   - «alta» = urgente, agir agora (maior fonte de carga)\n   - «media» = perceptível, tratar em breve\n   - «baixa» = observar, trabalhar a longo prazo</string>
+    <string name="ai_prompt_entropy_output">FORMATO DE SAÍDA — REGRAS ESTRITAS:\n- Responde APENAS com o objeto JSON.\n- Sem texto antes nem depois.\n- Sem crases invertidas de Markdown.\n- Começa direto com { e termina com }.\n- JSON válido, sem vírgulas faltantes nem chaves duplicadas.</string>
+
+    <!-- Summary Analysis System Prompt (Profile: Zusammenfassung) -->
+    <string name="ai_prompt_summary_intro">És um analista de diário atento e organizado.\n\nSUA TAREFA:\nAnalise as entradas de diário de um utilizador. Resume o que ele viveu, pensou e fez. Reconhece temas, padrões e conexões. Cria com isso um painel de resumo estruturado em JSON.\n\nEMOÇÕES — NÃO EM PRIMEIRO PLANO:\nEste perfil é um resumo de acontecimentos, não um diário emocional. Foca em eventos concretos, ações, temas, factos e observações. Refere humores ou emoções APENAS quando essenciais para perceber um acontecimento — e nesse caso de forma breve, em meia frase. NADA de secções ou categorias próprias para emoções, NADA de interpretação profunda de padrões emocionais, NADA de frases como «Sentiste-te...», «Isso deixou-te...», «Por dentro...». Quem quiser isso muda para o perfil «Autoconhecimento».\n\nVOCÊ NÃO JULGA. Resumes, ordena e mostra conexões. Sem coaching, sem caça a problemas, sem julgamento de bom ou ruim. Sua meta: o utilizador vê de um relance o que está a acontecer na vida dele.</string>
+    <string name="ai_prompt_summary_entry_rules">REGRA SUPREMA — NENHUMA ENTRADA PODE FALTAR:\nVocê recebe entradas numeradas (por ex. «ENTRADA 1 de 5»).\nVocê DEVE ler, analisar e incluir CADA UMA.\nAntes de responder, conta: considerei TODAS as entradas?\nSe faltar alguma, acrescenta IMEDIATAMENTE.\n\nCOM POUCAS ENTRADAS:\n- Com 1-2 entradas: resume o conteúdo sem afirmar padrões.\n  Marca as observações como «preliminares» na descrição.\n- A partir de 3 entradas: procura ativamente temas e conexões recorrentes.\n\nPESO TEMPORAL:\nCada entrada deve ser considerada. Havendo contradições sobre o mesmo tema, segue a ordem no tempo, as recentes mostram a situação atual. As antigas trazem contexto.</string>
+    <string name="ai_prompt_summary_rules">REGRAS DE LINGUAGEM (valem para TODOS os campos de texto do JSON):\n- Linguagem simples e clara. Frases curtas.\n- Sem palavras difíceis, jargões ou lugares-comuns.\n- Qualquer pessoa deve entender na hora, sem pensar.\n- Neutra, clara e objetiva, sem julgamentos, sem conselhos.\n- Sem travessões longos (—). Usa vírgulas ou pontos.\n\nREGRA DE QUANTIDADE, COMPLETUDE ANTES DE BREVIDADE:\nO total de ideias em todos os temas deve ser pelo menos 15. Menos de 10 é erro. Cada pensamento, cada vivência, cada observação merece a própria ideia. NÃO agrupe. Se uma entrada toca 3 temas, surgem 3 ideias separadas, não uma que junte tudo. O JSON pode ficar longo; a completude importa mais que a brevidade.</string>
+    <string name="ai_prompt_summary_schema_header">ESQUEMA DE SAÍDA JSON:\n{\n  \"entropia_total\": 0.0,\n  \"tendencia\": \"crescente|estavel|decrescente|desconhecida\",\n  \"analise_geral\": \"...\",\n  \"progressos\": [...],\n  \"acoes_principais\": [...],\n  \"categorias\": [...]\n}\n\nDEFINIÇÕES DOS CAMPOS:\n\n1) \"entropia_total\" (número, 0.0 a 1.0)\n   Quanto acontece agora na vida do utilizador? Média ponderada em todos os temas.\n   - 0.0–0.33 = fase calma (pouca atividade, poucas mudanças)\n   - 0.34–0.66 = fase normal (atividade média)\n   - 0.67–1.0 = fase intensa (muitos temas ao mesmo tempo)\n\n2) \"tendencia\" (texto)\n   Só se houver ao menos 3 entradas em vários dias.\n   Compare antigas com recentes:\n   - «crescente» = acontece cada vez mais, a atividade sobe\n   - «estavel» = nível parecido\n   - «decrescente» = vai a acalmar, menos temas\n   - «desconhecida» = dados insuficientes\n\n3) \"analise_geral\" (texto, 15-25 frases)\n   - Percorre entrada por entrada e extrai o tema principal.\n   - Nomeia CADA tema de CADA entrada pelo nome.\n   - Reconhece as conexões entre os temas.\n   - O que mais ocupa o utilizador agora?\n   - O que mudou entre as entradas?\n   - Seja objetivo e pessoal, fale direto com o utilizador.\n   - Sem julgamentos nem conselhos, só resumir e ordenar.</string>
+    <string name="ai_prompt_summary_schema_fields">4) \"progressos\" (lista, 0-5 itens)\n   Temas, hábitos ou conexões recorrentes visíveis ao longo de várias entradas.\n   Esquema por padrão:\n   {\n     \"titulo\": \"Título curto (máx. 5 palavras)\",\n     \"descricao\": \"O que se repete ou se conecta (2-3 frases).\",\n     \"referencia\": \"A partir de quais entradas isso aparece (1 frase).\"\n   }\n   Com só 1 entrada ou sem padrões claros: lista vazia [].\n\n5) \"acoes_principais\" (lista, exatamente 5 itens)\n   As 5 ideias mais importantes do conjunto de todas as entradas. Quais são os pontos centrais que mais marcam agora a vida do utilizador? Ordenadas por importância (a maior primeiro). Pensa de forma transversal, mostra o quadro completo.\n   Esquema por ideia:\n   {\n     \"titulo\": \"Título curto (máx. 6 palavras)\",\n     \"descricao\": \"13-21 palavras, uma frase compacta que resume a ideia.\",\n     \"explicacao\": \"Explicação detalhada (5-8 frases). O que foi descrito com exatidão? Por que é um tema central? Como se liga aos outros?\"\n   }</string>
+    <string name="ai_prompt_summary_schema_categories">6) \"categorias\" (lista, quantas forem necessárias)\n   Para CADA tema detectado, um grupo próprio.\n   Esquema por tema:\n   {\n     \"nome\": \"Nome do tema (máx. 12 caracteres, 1-2 palavras)\",\n     \"icone\": \"material_icon_name\",\n     \"cor\": \"#HEX\",\n     \"nivel_entropia\": 0.0,\n     \"resumo\": \"Resumo deste tema (3-5 frases). O que o utilizador escreveu? Qual é o status?\",\n     \"conselhos\": [...]\n   }\n\n   NOMES DE TEMAS — curtos e precisos:\n   CERTO: «Sono», «Trabalho», «Bem-estar», «Mente», «Projetos»\n   ERRADO: «Desenvolvimento pessoal» (muito longo) → «Desenvolvimento»\n\n   TEMAS — DINÂMICOS:\n   Usa estes como base, mas cria NOVOS se um tema não se encaixar:\n   - Sono (icon: bedtime, cor: #6C63FF)\n   - Trabalho (icon: work, cor: #FF6B6B)\n   - Bem-estar (icon: fitness_center, cor: #4ECDC4)\n   - Alimentação (icon: restaurant, cor: #FFE66D)\n   - Mente (icon: psychology, cor: #A78BFA)\n   - Relações (icon: people, cor: #F472B6)\n   - Casa (icon: home, cor: #34D399)\n   - Desenvolvimento (icon: trending_up, cor: #60A5FA)\n   - Projetos (icon: code, cor: #F59E0B)\n   - Saúde (icon: health_and_safety, cor: #EF4444)\n   - Finanças (icon: account_balance, cor: #10B981)\n   - Lazer (icon: sports_esports, cor: #EC4899)\n   - Natureza (icon: grass, cor: #22C55E)\n   - Cotidiano (icon: calendar_today, cor: #78716C)\n   - Viagem (icon: flight, cor: #06B6D4)\n   - Criatividade (icon: music_note, cor: #D946EF)\n   Outros ícones: spa, coffee, self_improvement, nights_stay, directions_run, child_care, school, computer, timer, cleaning_services, directions_car, photo_camera, pets, wb_sunny, lightbulb, star, healing\n\n   INTENSIDADE por tema (campo \"nivel_entropia\", 0.0 a 1.0):\n   Quão presente está o tema nas entradas? Sem julgamento bom/ruim, só presença.\n   - 0.0–0.33 = pouco citado (na borda)\n   - 0.34–0.66 = citado regularmente (um tema entre outros)\n   - 0.67–1.0 = muito presente (tema dominante)\n\n   IDEIAS por tema (campo \"conselhos\") — QUANTIDADE:\n   Extrai TODAS as ideias que puder deduzir sobre este tema. Melhor de mais do que de menos, 5 a 20 por tema é normal. Cada pensamento, cada vivência, cada observação merece a própria ideia. NÃO agrupe. Se uma entrada toca 3 aspectos de um tema, surgem 3 ideias. Cada ideia deve se apoiar em frases CONCRETAS. Ordenadas por relevância: «alta» primeiro, depois «media», depois «baixa».\n\n   Esquema por ideia:\n   {\n     \"titulo\": \"Título curto (máx. 6 palavras)\",\n     \"descricao\": \"13-21 palavras, uma frase compacta que resume o que o utilizador escreveu ou viveu. Objetiva, sem julgamento.\",\n     \"prioridade\": \"alta|media|baixa\",\n     \"conexao\": \"1-2 nomes de outros temas ligados, mais uma frase que explica o porquê. Se não: null\",\n     \"derivacao\": [\n       {\n         \"data\": \"Data da entrada (por ex. 28.03.2026)\",\n         \"resumo\": \"O que nesta entrada se referia ao tema (1-2 frases).\"\n       }\n     ]\n   }\n\n   SIGNIFICADO DA RELEVÂNCIA (campo \"prioridade\"):\n   - «alta» = tema central, citado com frequência, ocupa muito o utilizador\n   - «media» = aparece, mas não domina\n   - «baixa» = na borda, observação isolada</string>
+    <string name="ai_prompt_summary_output">REGRA DE CONTAGEM DE PALAVRAS PARA AS DESCRIÇÕES (CUMPRIR ESTRITAMENTE):\nA «descricao» em «acoes_principais» e em «conselhos» deve SEMPRE ter entre 13 e 21 palavras.\n- Menos de 13 palavras = curto demais = ERRO\n- Mais de 21 palavras = longo demais = ERRO\nConte as palavras antes de escrever. Cada descrição é UMA frase compacta e completa. Nem mais, nem menos.\n\nFORMATO DE SAÍDA — REGRAS ESTRITAS:\n- Responde APENAS com o objeto JSON.\n- Sem texto antes nem depois.\n- Sem crases invertidas de Markdown.\n- Começa direto com { e termina com }.\n- JSON válido, sem vírgulas faltantes nem chaves duplicadas.</string>
+
+    <!-- Custom Analysis System Prompt (Profile: Individuelle Analyse) -->
+    <!-- %1$s = user-defined focus text -->
+    <string name="ai_prompt_custom_intro">És um analista de diário inteligente e atento E um executor de tarefas.\n\nMÉTODO EM DOIS PASSOS:\n\nPASSO 1, APREENDER O CONTEXTO:\nLê primeiro TODAS as entradas do diário do utilizador na íntegra. Compreende a situação, os padrões, os temas, as coisas mencionadas, os problemas, os desejos. As entradas são o teu CONTEXTO, o teu ponto de partida, a tua base. Mas não te limitam.\n\nPASSO 2, EXECUTAR A TAREFA:\n%1$s\n\nO que está acima é o teu verdadeiro ENCARGO. Executa-o com base no contexto do Passo 1. Se o encargo pedir pesquisa, ideias, alternativas, sugestões ou novas informações, então fornece-as ATIVAMENTE, mesmo que não constem das entradas. Não dês diagnósticos nem conselhos vinculativos médicos, jurídicos ou financeiros; nesses temas, remete para profissionais qualificados. As entradas informam o teu resultado, não o limitam.\n\nREGRA CENTRAL, O PERFIL PESA NO MÍNIMO 50 POR CENTO:\nTodo o resultado (análise geral, principais medidas, categorias, conselhos, progressos) TEM de estar, em pelo menos 50 por cento, claramente ligado ao encargo do utilizador. Conhecimentos, pontos ou temas SEM relação de conteúdo com o encargo, omite-os, não enchas o resultado com temas gerais de vida só para o JSON ficar cheio. Antes menos pontos com ligação clara do que muitos genéricos.\n\nImportante quanto à linguagem: Exprime a ligação COM VARIEDADE. Usa sinónimos, termos relacionados, vizinhanças temáticas e paráfrases. NÃO repitas mecanicamente as palavras exatas do encargo, isso soa insistente. Exemplo de encargo \"Objetivos\": fala também de propósitos, desejos, ambições, aquilo que queres alcançar, o teu rumo, passos de desenvolvimento. Exemplo de encargo \"Desporto\": fala também de movimento, treino, atividade física, resistência, forma física, saúde. A ligação ao perfil tem de ser PERCETÍVEL, não literal.\n\nDECISIVO:\n- Se o encargo disser \"analisa\", \"resume\", \"o que se nota\", mantém-te próximo das entradas.\n- Se o encargo disser \"pesquisa\", \"encontra alternativas\", \"sugere\", \"recomenda\", \"complementa\", \"e se\", \"novas ideias\", vai ATIVAMENTE além das entradas e traz conteúdos próprios e novos.\n- O encargo tem prioridade. As entradas são o alicerce, não a parede.</string>
+    <string name="ai_prompt_custom_headings">IMPORTANTE — TÍTULOS DINÂMICOS:\nVocê DEVE inventar três títulos apropriados para o painel, que combinem EXATAMENTE com o foco do utilizador. NADA de títulos genéricos como «Resultados principais» ou «Análise». Usa títulos criativos e específicos que reflitam o foco.\nExemplos:\n- Foco «Pesca»: «As maiores fisgadas», «Panorama da pesca», «Todos os relatos»\n- Foco «Qualidade do sono»: «Seus padrões de sono», «Análise do sono», «Todas as observações»\n- Foco «Se sobrecarregar»: «Os maiores ladrões de tempo», «Panorama de carga», «Todos os pontos de carga»</string>
+    <string name="ai_prompt_custom_rules">REGRA DE CONTEXTO, CADA ENTRADA É LIDA:\nRecebes entradas numeradas. Lê CADA UMA na íntegra e apreende-as como contexto. Cada detalhe relevante entra no teu resultado. Mas: o resultado pode e deve ir além das entradas, se o encargo o exigir.\n\nREGRA DO ENCARGO, O ENCARGO É CUMPRIDO:\nExecuta o encargo do utilizador à letra. Se o encargo pedir alternativas, fornece alternativas novas e reais, não apenas coisas das entradas. Se o encargo pedir recomendações, pesquisa e recomenda ativamente. As entradas NÃO são a única fonte da tua resposta.\n\nDISTINÇÃO NO RESULTADO:\nAssinala claramente o que vem das entradas e o que acrescentas de novo. Assim o utilizador sabe quais são os seus próprios pensamentos e qual é o teu contributo.\n\nREGRA DE ACONSELHAMENTO ESPECIALIZADO, SEM DIAGNÓSTICOS:\nINDEPENDENTEMENTE do encargo, não dás diagnósticos médicos, recomendações de terapia, aconselhamento jurídico ou financeiro. Nesses temas, remete de forma neutra para profissionais qualificados.\n\nREGRAS DE LINGUAGEM:\n- Simples, clara. Sem palavras estrangeiras.\n- Empática e direta.\n- Sem travessões longos. Usa vírgulas ou pontos.\n\nREGRA DE QUANTIDADE:\nNo mínimo 10 conhecimentos no total, mas cada um tem de se adequar ao encargo em termos de conteúdo. Se não encontrares 10 conhecimentos com ligação real ao perfil, fornece antes 7 fortes em vez de 10 diluídos. Em encargos puramente de análise, os conhecimentos vêm das entradas; em encargos criativos, podes trazer conteúdos novos.</string>
+
+    <string name="ai_prompt_custom_schema">ESQUEMA DE SAÍDA JSON:\n{\n  \"titulo_top5\": \"Título criativo, adequado ao resultado da tarefa, máx. 3 palavras\",\n  \"titulo_analise\": \"Título criativo, adequado ao resultado da tarefa, máx. 3 palavras\",\n  \"titulo_resultados\": \"Título criativo, adequado ao resultado da tarefa, máx. 3 palavras\",\n  \"fokus_kern\": \"Uma frase que devolve o núcleo da tarefa nas tuas próprias palavras — como âncora visível para o painel.\",\n  \"fokus_zitate\": [\"...\", \"...\"],\n  \"entropia_total\": 0.0,\n  \"tendencia\": \"crescente|estavel|decrescente|desconhecida\",\n  \"analise_geral\": \"...\",\n  \"progressos\": [...],\n  \"acoes_principais\": [...],\n  \"categorias\": [...]\n}\n\n1) \"titulo_top5/analise/resultados\": OBRIGATÓRIO. Criativo, específico, máx. 3 palavras. DEVE refletir o RESULTADO da tarefa, não só o tema. NADA de títulos genéricos.\n\n2) \"fokus_kern\": OBRIGATÓRIO. Uma única frase (15-30 palavras) que mostra ao utilizador: «Percebi a tua tarefa — ESTE é o fio condutor.» Não cita a tarefa, é uma formulação tua em palavras próprias. Aparece no topo do painel e é a prova de que o perfil pegou.\n\n3) \"fokus_zitate\": OBRIGATÓRIO, 3 a 5 unidades. Trechos curtos, literais ou quase-literais, retirados das entradas, ligados diretamente à tarefa. Formato cada um: «[Data] citação curta ou trecho parafraseado». Se em tarefas criativas-de-pesquisa não houver coincidências literais, escolhe as 3-5 entradas com maior proximidade temática e descreve a ligação numa linha. Se menos de 3 entradas encaixarem tematicamente, devolve na mesma pelo menos essas e acrescenta um aviso «(proximidade temática)» — nunca deixar vazio.\n\n4) \"entropia_total\" (0.0 a 1.0): o quanto a área da tarefa está presente nas entradas?\n\n5) \"tendencia\": só com 3+ entradas. Como evolui a área da tarefa nas entradas?\n\n6) \"analise_geral\" (15-25 frases): duas partes claramente reconhecíveis. PELO MENOS 50 por cento do texto trata direta ou indiretamente a tarefa.\n   Parte A (contexto das entradas): O que dizem as entradas sobre o tema? Nomeia detalhes relevantes.\n   Parte B (resultado da tarefa): Qual é a tua resposta à tarefa? O que entregas de novo, adicional ou como recomendação?\n   Liga as duas partes para que o utilizador veja o fio condutor.\n\n7) \"progressos\" (0-5): padrões ou evoluções nas entradas, relevantes para a tarefa. Pelo menos metade dos progressos tem de pertencer claramente à tarefa.\n   { \"titulo\": \"máx. 5 palavras\", \"descricao\": \"2-3 frases\", \"referencia\": \"1 frase\" }\n\n8) \"acoes_principais\" (exatamente 5): os RESULTADOS mais importantes da tarefa. PELO MENOS 3 de 5 têm de pertencer inequivocamente à tarefa. Podem ser novos sugestões, alternativas, recomendações ou ideias que o utilizador NÃO mencionou nas entradas, se a tarefa o exigir. Em tarefas puramente analíticas vêm das entradas.\n   {\n     \"titulo\": \"máx. 6 palavras\",\n     \"descricao\": \"13-21 palavras, compacto e direto.\",\n     \"explicacao\": \"5-8 frases detalhadas. Se o conteúdo for novo, fundamenta porque encaixa no contexto do utilizador. Se vier das entradas, indica o vínculo concreto.\"\n   }\n\n9) \"categorias\": grupos de temas que estruturam a tarefa (dinamicamente). PELO MENOS metade das categorias tem de encaixar no conteúdo da tarefa. Evita «temas de vida padrão» como trabalho, sono, lazer se não pertencerem à tarefa.\n   {\n     \"nome\": \"máx. 12 caracteres\", \"icone\": \"material_icon_name\", \"cor\": \"#HEX\",\n     \"nivel_entropia\": 0.0,\n     \"resumo\": \"3-5 frases\",\n     \"conselhos\": [{\n       \"titulo\": \"máx. 6 palavras\",\n       \"descricao\": \"13-21 palavras\",\n       \"prioridade\": \"alta|media|baixa\",\n       \"conexao\": \"ligação com outro tema ou null\",\n       \"derivacao\": [{\"data\":\"...\",\"resumo\":\"1-2 frases\"}]\n     }]\n   }\n\nDERIVAÇÃO — ORIGEM DO CONTEÚDO:\n- Se o conteúdo vier de uma entrada: «data» recebe a data da entrada, «resumo» dá o vínculo concreto.\n- Se o conteúdo for novo (por ex. uma alternativa pesquisada, uma sugestão tua): «data» recebe «novo», «resumo» explica em 1-2 frases porque encaixa no contexto do utilizador.</string>
+    <string name="ai_prompt_custom_output">REGRA DE CONTAGEM DE PALAVRAS: «descricao» em acoes_principais e conselhos SEMPRE 13-21 palavras.\n\nFORMATO DE SAÍDA — REGRAS ESTRITAS:\n- Responde APENAS com o objeto JSON.\n- Sem texto antes nem depois. Sem crases invertidas.\n- Começa direto com { e termina com }.</string>
+
+    <!-- ════════════════════════════════════════════════════════════════════
+         RETROSPECTIVE SCREEN
+         ════════════════════════════════════════════════════════════════════ -->
+    <string name="retro_title">Retrospetiva</string>
+    <string name="retro_cd_info">Sobre as retrospetivas</string>
+    <string name="retro_personal_review">A tua retrospetiva pessoal</string>
+    <string name="retro_intro_body">Às vezes nós esquece, no dia a dia, o quanto viveu. O teu diário lembra de tudo, dos grandes momentos aos pequenos instantes silenciosos. </string>
+    <string name="retro_intro_cta">Olhe para trás e descobre o que te moveu.</string>
+    <string name="retro_please_wait">Aguarda um instante</string>
+    <string name="retro_backup_loading">A carregar o backup… As retrospetivas começam automaticamente depois.</string>
+    <string name="retro_profile_switching">As retrospetivas são atualizadas automaticamente quando o perfil muda</string>
+    <string name="retro_generating">A criar retrospetivas…</string>
+    <string name="retro_ai_unavailable">A IA não está disponível agora, tente de novo mais tarde.</string>
+    <string name="retro_weekly_title">Retrospetiva semanal</string>
+    <string name="retro_weekly_subtitle">Os últimos 7 dias de um relance</string>
+    <string name="retro_weekly_empty">Ainda não há retrospetivas semanais.\nSão necessárias pelo menos 2 entradas por semana.</string>
+    <string name="retro_monthly_title">Retrospetiva mensal</string>
+    <string name="retro_monthly_subtitle">Seu último mês de um relance</string>
+    <string name="retro_monthly_empty">Ainda não há retrospetivas mensais.\nSão criadas a partir das semanais, no fim do mês.</string>
+    <string name="retro_yearly_title">Retrospetiva anual</string>
+    <string name="retro_yearly_subtitle">Um ano inteiro de memórias</string>
+    <string name="retro_yearly_empty">Ainda não há retrospetivas anuais.\nSão criadas a partir das mensais, no fim do ano.</string>
+    <string name="retro_premium_unlock">Desbloqueie todas as retrospetivas com o Premium</string>
+    <string name="retro_at_a_glance">De um relance</string>
+    <string name="retro_cd_expand">Expandir</string>
+    <string name="retro_cd_collapse">Recolher</string>
+    <string name="retro_share_text_label">Texto</string>
+
+    <!-- Fallback titles (when AI title generation fails) -->
+    <string name="retro_fallback_week">Retrospetiva semanal</string>
+    <string name="retro_fallback_month">Retrospetiva mensal</string>
+    <string name="retro_fallback_year">Retrospetiva %1$d</string>
+    <string name="retro_period_label_week">Semana %1$d (%2$s - %3$s)</string>
+    <!-- Retro: Photos, TTS, Sharing -->
+    <string name="retro_photos_videos">Fotos e vídeos</string>
+    <string name="retro_photos_videos_colon">Fotos e vídeos:</string>
+    <string name="retro_cd_video">Vídeo</string>
+    <string name="retro_cd_photo">Foto</string>
+    <string name="retro_play_video">Reproduzir vídeo</string>
+    <string name="retro_enable_voices">Ative as vozes nas definições</string>
+    <string name="retro_tts_stop">Parar</string>
+    <string name="retro_tts_read">Ler em voz alta</string>
+    <string name="retro_tts_wait">Aguarda, a voz está a ser gerada…</string>
+    <string name="retro_cd_share">Partilhar</string>
+    <string name="retro_share_title">Partilhar retrospetiva</string>
+    <string name="retro_share_text_content">Texto da retrospetiva</string>
+    <string name="retro_photo_n">Foto %1$d</string>
+    <string name="retro_share_header">Retrospetiva do app BestJournal</string>
+    <string name="retro_at_a_glance_colon">De um relance:</string>
+    <!-- Retro: Locked/Premium -->
+    <string name="retro_cd_locked">Bloqueado</string>
+    <string name="retro_unlock_premium_short">Desbloquear Premium</string>
+    <string name="retro_cd_premium_required">Premium necessário</string>
+    <!-- Retro: Benefits info dialog -->
+    <string name="retro_your_ai_reviews">Suas retrospetivas com IA</string>
+    <string name="retro_weekly_p1">A IA condensa a tua semana num relato pessoal</string>
+    <string name="retro_weekly_p2">Padrões emocionais e momentos marcantes ficam visíveis</string>
+    <string name="retro_weekly_p3">Criada todo domingo automaticamente, se tiveres pelo menos 2 entradas</string>
+    <string name="retro_weekly_p4">As primeiras 2 semanas são gratuitas</string>
+    <string name="retro_monthly_p1">Liga suas retrospetivas semanais num relato mensal</string>
+    <string name="retro_monthly_p2">Os fios condutores e as evoluções do mês ficam visíveis</string>
+    <string name="retro_monthly_p3">Mostra desenvolvimentos nas tuas entradas</string>
+    <string name="retro_yearly_p1">Seu ano inteiro de um relance</string>
+    <string name="retro_yearly_p2">A IA resume os grandes temas do teu ano</string>
+    <string name="retro_yearly_p3">O desenvolvimento pessoal fica visível e palpável</string>
+    <!-- Retro: Premium upsell sheet -->
+    <string name="retro_your_reviews">Suas retrospetivas pessoais</string>
+    <string name="retro_premium_reviews_desc">Com o Premium, a IA cria retrospetivas automaticamente a partir das tuas entradas de diário:</string>
+    <string name="retro_benefit_weekly">Todas as retrospetivas semanais em vez de apenas as 2 primeiras, dentro da tua quota diária de IA</string>
+    <string name="retro_benefit_monthly">Retrospetivas mensais que tornam seus avanços e mudanças visíveis</string>
+    <string name="retro_benefit_yearly">Retrospetivas anuais, seu ano inteiro como um relato pessoal</string>
+    <string name="retro_start_sub">Iniciar subscrição</string>
+    <string name="retro_decide_later">Decidir depois</string>
+
+    <!-- Month names for retrospetiva grouping -->
+    <string name="month_january">Janeiro</string>
+    <string name="month_february">Fevereiro</string>
+    <string name="month_march">Março</string>
+    <string name="month_april">Abril</string>
+    <string name="month_may">Maio</string>
+    <string name="month_june">Junho</string>
+    <string name="month_july">Julho</string>
+    <string name="month_august">Agosto</string>
+    <string name="month_september">Setembro</string>
+    <string name="month_october">Outubro</string>
+    <string name="month_november">Novembro</string>
+    <string name="month_december">Dezembro</string>
+
+    <!-- ════════════════════════════════════════════════════════════════════
+         ONBOARDING
+         ════════════════════════════════════════════════════════════════════ -->
+    <string name="onboarding_welcome">Bem-vindo ao\nBest Journal</string>
+    <string name="onboarding_subtitle">O teu diário pessoal com IA\npara mais clareza no dia a dia</string>
+    <string name="onboarding_feature_speech">Fale ou escreve, a IA entende os dois</string>
+    <string name="onboarding_feature_listen">Ouve as tuas entradas lidas em voz alta</string>
+    <string name="onboarding_feature_secure">As tuas entradas ficam no dispositivo; os pedidos de IA são transmitidos cifrados</string>
+    <string name="onboarding_goals_title">O que queres alcançar\ncom o diário de IA?</string>
+    <string name="onboarding_goal_stress">Reduzir o stress</string>
+    <string name="onboarding_goal_clarity">Encontrar clareza</string>
+    <string name="onboarding_goal_growth">Crescimento pessoal</string>
+    <string name="onboarding_goal_thoughts">Registrar meus pensamentos</string>
+    <string name="onboarding_how_step1_title">Fale ou digite sua entrada</string>
+    <string name="onboarding_how_step1_desc">Grave os teus pensamentos como áudio ou digite, como preferir.</string>
+    <string name="onboarding_how_step2_title">A IA melhora e analisa</string>
+    <string name="onboarding_how_step2_desc">Seu texto é refinado automaticamente e analisado de várias perspectivas.</string>
+    <string name="onboarding_how_step3_desc">Guarda momentos especiais, a IA leva em conta na análise.</string>
+    <string name="onboarding_how_step4_title">Descobre padrões e ideias</string>
+    <string name="onboarding_how_step4_desc">O dashboard de IA mostra-te ligações entre as tuas entradas.</string>
+    <string name="onboarding_how_step5_title">Retrospetiva semanal, mensal e anual</string>
+    <string name="onboarding_how_step5_desc">Retrospetivas automáticas mostram como evoluis com o tempo.</string>
+    <string name="onboarding_premium_feature_improve">Melhoria de texto por IA todos os dias, cada entrada fica mais clara e expressiva</string>
+    <string name="onboarding_premium_feature_dashboard">Atualizações automáticas do painel a cada nova entrada</string>
+    <string name="onboarding_premium_feature_retro">Retrospetivas semanais, mensais e anuais mostram sua evolução</string>
+    <string name="onboarding_premium_feature_patterns">Tornar os padrões visíveis: a IA mostra padrões recorrentes de pensamento e de sentimento nas tuas entradas</string>
+    <string name="onboarding_premium_feature_noads">Escrever e refletir sem interrupções</string>
+    <string name="onboarding_free_trial">Gratuito, cancelável a qualquer momento</string>
+    <string name="onboarding_free_after_trial">Depois continuas a usar o Best Journal,\ngratuito, com um número limitado de chamadas de IA por semana.</string>
+    <string name="onboarding_start_free">Começar grátis</string>
+    <string name="onboarding_without_premium">Continuar sem Premium</string>
+    <string name="onboarding_feature_profiles">5 perfis de análise inteligentes para diferentes perspectivas</string>
+    <string name="onboarding_goals_select">Escolha uma ou mais metas</string>
+    <string name="onboarding_how_step3_title">Adicione fotos</string>
+    <string name="onboarding_how_title">É bem simples</string>
+    <string name="onboarding_perspectives_title">Diferentes perspectivas sobre\na tua vida</string>
+    <string name="onboarding_premium_feature_pdf">Exportar PDF com fotos, salve as tuas entradas como documento</string>
+    <string name="onboarding_premium_profiles">5 perfis inteligentes de painel para uma visão profunda da tua vida</string>
+    <string name="onboarding_premium_profiles_unlimited">Perfis de IA próprios sem limite de quantidade</string>
+    <string name="onboarding_try_premium">O Premium oferece, entre outras coisas:</string>
+
+    <!-- ════════════════════════════════════════════════════════════════════
+         PAYWALL
+         ════════════════════════════════════════════════════════════════════ -->
+    <string name="paywall_prices_loading">A carregar preços…</string>
+    <string name="paywall_sub_loading_toast">A subscrição está a carregar, tente de novo num instante.</string>
+    <string name="paywall_purchase_loading_toast">A compra está a carregar, tente de novo num instante.</string>
+    <string name="paywall_today">Hoje</string>
+    <string name="paywall_full_access">Acesso completo</string>
+    <string name="paywall_day7">Dia 7</string>
+    <string name="paywall_reminder">Lembrete</string>
+    <string name="paywall_day8">Dia 8</string>
+    <string name="paywall_first_payment">Primeiro pagamento</string>
+    <string name="paywall_yearly_note">Depois %1$s por ano, renova-se automaticamente\nPodes cancelar a qualquer momento durante o período de teste</string>
+    <string name="paywall_most_popular">Recomendado</string>
+    <string name="paywall_monthly_plan">Subscrição mensal, %1$s por mês</string>
+    <string name="paywall_lifetime_title">Compra única</string>
+    <string name="paywall_lifetime_desc">Paga uma vez, utiliza tudo permanentemente</string>
+    <string name="paywall_lifetime_note">Sem subscrição, sem renovação</string>
+    <string name="paywall_free_note">A aplicação continua a funcionar sem subscrição.</string>
+    <string name="paywall_legal_hint" formatted="false">Ao subscrever, aceitas os %1$s. O teu direito de rescisão de 14 dias está descrito aí.</string>
+    <string name="paywall_legal_hint_link">Termos de Utilização</string>
+
+    <!-- Paywall features -->
+    <string name="paywall_feature_patterns">Reconhece padrões recorrentes no teu pensamento</string>
+    <string name="paywall_feature_improve">Melhoria de texto por IA todos os dias para cada entrada</string>
+    <string name="paywall_feature_dashboard">Atualizações automáticas do painel após cada entrada</string>
+    <string name="paywall_feature_retro">Retrospetivas semanal, mensal e anual com IA</string>
+    <string name="paywall_feature_pdf">Exporte as tuas entradas com fotos em PDF</string>
+    <string name="paywall_feature_noads">Escrever e refletir sem interrupções</string>
+    <string name="paywall_feature_profiles">Perfis de IA próprios sem limite de quantidade</string>
+
+    <!-- Paywall personalized headlines -->
+    <string name="paywall_headline_stress">Mais clareza no dia a dia</string>
+    <string name="paywall_headline_stress_sub">Reconhece o que te ocupa diariamente e coloca-o em palavras.</string>
+    <string name="paywall_headline_clarity">Entenda-se melhor</string>
+    <string name="paywall_headline_clarity_sub">A IA torna visíveis os padrões recorrentes nas tuas entradas</string>
+    <string name="paywall_headline_growth">Descobre o que há de bom em cada dia</string>
+    <string name="paywall_headline_growth_sub">Seu espaço pessoal de gratidão e crescimento</string>
+    <string name="paywall_headline_thoughts">Deixa os teus pensamentos fluírem</string>
+    <string name="paywall_headline_thoughts_sub">O teu companheiro criativo no dia a dia</string>
+    <string name="paywall_headline_default">Descobre quem és\nUm pouco mais a cada dia</string>
+    <string name="paywall_headline_default_sub">O teu companheiro pessoal de IA no dia a dia</string>
+
+    <!-- Exit intent offer -->
+    <string name="paywall_exit_wait">Espere um instante!</string>
+    <string name="paywall_exit_special_offer">Temos uma oferta\nespecial para ti:</string>
+    <string name="paywall_exit_discount">Desconto por %1$d meses</string>
+    <string name="paywall_exit_price_comparison">Só %1$s em vez de %2$s por mês</string>
+    <string name="paywall_exit_start_discount">Com obrigação de pagamento — 2 meses a metade do preço</string>
+
+    <!-- ════════════════════════════════════════════════════════════════════
+         CHURN FLOW DIALOG
+         ════════════════════════════════════════════════════════════════════ -->
+    <string name="churn_your_sub">A tua subscrição</string>
+    <string name="churn_plan_yearly">Subscrição anual</string>
+    <string name="churn_plan_monthly">Subscrição mensal</string>
+    <string name="churn_plan">Plano</string>
+    <string name="churn_price">Preço</string>
+    <string name="churn_renewal">Renovação</string>
+    <string name="churn_automatic">Automática</string>
+    <string name="churn_promo_active_label">Oferta de desconto</string>
+    <string name="churn_promo_one_month_remaining">Falta 1 mês — depois <xliff:g id="base_price" example="3,99 €">%1$s</xliff:g> por mês</string>
+    <string name="churn_promo_months_remaining">Faltam <xliff:g id="months" example="2">%1$d</xliff:g> meses — depois <xliff:g id="base_price" example="3,99 €">%2$s</xliff:g> por mês</string>
+    <string name="churn_auto_renew_note">A tua subscrição se renova automaticamente pelo Google Play. Podes cancelar a qualquer momento.</string>
+    <string name="churn_cancel_sub">Cancelar subscrição</string>
+    <string name="churn_reason_too_expensive">Muito caro</string>
+    <string name="churn_reason_unused">Uso muito pouco</string>
+    <string name="churn_per_year">por ano</string>
+    <string name="churn_per_month">por mês</string>
+    <string name="churn_reason_features">Não tem os recursos de que preciso</string>
+    <string name="churn_reason_other">Outro motivo</string>
+    <string name="churn_sorry_title">Que pena que estás a sair</string>
+    <string name="churn_sorry_body">Antes de cancelar, podes contar por quê? Isso ajuda nós a melhorar o app.</string>
+    <string name="churn_exclusive_offer">Oferta para ti</string>
+    <string name="churn_offer_subtitle">A nossa oferta para ti</string>
+    <string name="churn_offer_feature_ai">Análises de IA todos os dias</string>
+    <string name="churn_offer_feature_perspectives">Os 4 perfis de IA predefinidos + tantos próprios quantos precisares</string>
+    <string name="churn_offer_feature_voice">Reconhecimento de voz Premium</string>
+    <string name="churn_offer_auto_renew">Se renova automaticamente, cancelável a qualquer momento</string>
+    <string name="churn_accept_offer">Aceitar a oferta</string>
+    <string name="churn_switch_yearly">Ou mude para o plano anual e economize ainda mais</string>
+    <string name="churn_pause_sub">Ou pause a subscrição no Google Play</string>
+    <string name="churn_cancel_anyway">Cancelar mesmo assim</string>
+    <string name="churn_are_you_sure">Tem certeza?</string>
+    <string name="churn_stay">Prefiro ficar</string>
+
+    <!-- ════════════════════════════════════════════════════════════════════
+         AI LIMIT / COMPONENTS
+         ════════════════════════════════════════════════════════════════════ -->
+    <string name="ai_limit_title">Atingiste o limite semanal</string>
+    <string name="ai_limit_body">Sem subscrição tens 5 melhorias de texto por semana e 5 atualizações do painel por semana por perfil.
+Com Premium: até 150 por dia.</string>
+    <string name="ai_limit_monthly">Subscrição mensal, %1$s/mês</string>
+    <string name="ai_limit_yearly">Subscrição anual, %1$s/ano (economize 37\u00A0%%)</string>
+    <string name="ai_limit_no_thanks">Não, obrigado, continuar sem IA</string>
+    <string name="ai_banner_title">O teu diário conta com o apoio da IA</string>
+    <string name="ai_banner_body">• Os textos ditados são melhorados automaticamente\n• Resumos para cada entrada\n• Conselhos de vida inteligentes a partir dos teus padrões\n• Tudo incluído no teu período de teste gratuito.\n• Todas as saídas de IA são sugestões, não aconselhamento profissional.</string>
+    <string name="cd_mic_start">Iniciar gravação</string>
+    <string name="cd_mic_stop">Parar gravação</string>
+    <string name="entry_improve_limit_daily">Atingiste o limite diário. Amanhã há mais!</string>
+    <string name="entry_improve_limit_cooldown">Pausa curta: faltam %1$d minutos.</string>
+    <string name="entry_improve_failed">A melhoria do texto falhou</string>
+
+    <!-- ════════════════════════════════════════════════════════════════════
+         NOTIFICATIONS
+         ════════════════════════════════════════════════════════════════════ -->
+    <string name="notif_reminder_title">Hora do teu diário</string>
+    <string name="notif_reminder_body_0">O que te move hoje?</string>
+    <string name="notif_reminder_body_1">Um momento para ti, guarda-o</string>
+    <string name="notif_reminder_body_2">O teu eu do futuro vai agradecer</string>
+    <string name="notif_reminder_body_3">Basta um pensamento, vá em frente</string>
+    <string name="notif_reminder_body_4">Qual foi seu destaca hoje?</string>
+    <string name="notif_weekly_title">A tua retrospetiva semanal</string>
+    <string name="notif_weekly_body">Vê o que te moveu esta semana, o teu painel tem ideias novas.</string>
+    <string name="notif_monthly_title">A tua retrospetiva mensal</string>
+    <string name="notif_monthly_body">Um mês inteiro de memórias te espera.</string>
+    <string name="notif_yearly_title">A tua retrospetiva anual</string>
+    <string name="notif_yearly_body">Um ano inteiro de memórias, olhe para trás no teu caminho.</string>
+
+    <!-- Notification channel names -->
+    <string name="notif_channel_daily_name">Lembrete diário</string>
+    <string name="notif_channel_daily_desc">Lembra-te todos os dias de escrever no diário</string>
+    <string name="notif_channel_weekly_name">Retrospetiva semanal</string>
+    <string name="notif_channel_weekly_desc">A tua retrospetiva semanal todo domingo às 15h00</string>
+    <string name="notif_channel_monthly_name">Retrospetiva mensal</string>
+    <string name="notif_channel_monthly_desc">Notificação quando a tua retrospetiva mensal está pronta</string>
+    <string name="notif_channel_yearly_name">Retrospetiva anual</string>
+    <string name="notif_channel_yearly_desc">Notificação quando a tua retrospetiva anual está pronta</string>
+
+    <!-- ════════════════════════════════════════════════════════════════════
+         DATE / TIME
+         ════════════════════════════════════════════════════════════════════ -->
+    <string name="datetime_just_now">agora mesmo</string>
+    <plurals name="datetime_minutes_ago">
+        <item quantity="one">há %1$d minuto</item>
+        <item quantity="other">há %1$d minutos</item>
+    </plurals>
+    <plurals name="datetime_hours_ago">
+        <item quantity="one">há %1$d hora</item>
+        <item quantity="other">há %1$d horas</item>
+    </plurals>
+    <plurals name="datetime_days_ago">
+        <item quantity="one">há %1$d dia</item>
+        <item quantity="other">há %1$d dias</item>
+    </plurals>
+    <!-- Confirmation after PDF export. %1$d = number of entries included in the PDF. -->
+    <plurals name="settings_export_success">
+        <item quantity="one">%1$d entrada exportada</item>
+        <item quantity="other">%1$d entradas exportadas</item>
+    </plurals>
+    <string name="datetime_today">Hoje</string>
+    <string name="datetime_yesterday">Ontem</string>
+    <string name="datetime_day_before_yesterday">Anteontem</string>
+    <string name="datetime_this_week">Esta semana</string>
+    <string name="datetime_last_week">Semana passada</string>
+    <string name="datetime_weeks_ago">Há %1$d semanas</string>
+
+    <!-- ════════════════════════════════════════════════════════════════════
+         ACHIEVEMENTS
+         ════════════════════════════════════════════════════════════════════ -->
+    <string name="achievement_nightowl_title">Coruja da noite</string>
+    <string name="achievement_nightowl_desc">50 entradas escritas depois das 22h</string>
+    <string name="achievement_earlybird_title">Madrugador</string>
+    <string name="achievement_earlybird_desc">20 entradas escritas antes das 7h</string>
+    <string name="achievement_confession_title">Confissão</string>
+    <string name="achievement_confession_desc">Uma entrada com mais de 1000 palavras escrita</string>
+    <string name="achievement_marathon_title">Maratonista da escrita</string>
+    <string name="achievement_marathon_desc">100 entradas de diário escritas</string>
+    <string name="achievement_wordartist_title">Artista das palavras</string>
+    <string name="achievement_wordartist_desc">500 entradas de diário escritas</string>
+    <string name="achievement_consistency_title">Constância</string>
+    <string name="achievement_consistency_desc">Sequência de 30 dias alcançada</string>
+    <string name="achievement_chronicler_title">Cronista do ano</string>
+    <string name="achievement_chronicler_desc">365 entradas escritas</string>
+    <string name="achievement_photodiary_title">Diário fotográfico</string>
+    <string name="achievement_photodiary_desc">50 fotos anexadas a entradas</string>
+    <string name="achievement_voiceartist_title">Artista da voz</string>
+    <string name="achievement_voiceartist_desc">25 entradas de voz criadas</string>
+    <string name="achievement_reflectionmaster_title">Mestre da reflexão</string>
+    <string name="achievement_reflectionmaster_desc">50 análises de painel realizadas</string>
+
+    <!-- ════════════════════════════════════════════════════════════════════
+         DAILY PROMPTS
+         ════════════════════════════════════════════════════════════════════ -->
+    <string name="prompt_cat_self_reflection">Autorreflexão</string>
+    <string name="prompt_cat_gratitude">Gratidão</string>
+    <string name="prompt_cat_future">Futuro</string>
+    <string name="prompt_cat_relationships">Relações</string>
+
+    <string-array name="prompts_self_reflection">
+        <item>O que te fez sorrir hoje?</item>
+        <item>Qual pensamento não conseguiste soltar hoje?</item>
+        <item>O que aprendeste sobre si mesmo hoje?</item>
+        <item>Qual foi o momento mais intenso de hoje?</item>
+        <item>O que farias diferente hoje, se pudesse?</item>
+        <item>Qual emoção mais te acompanhou hoje?</item>
+        <item>O que te surpreendeu hoje?</item>
+        <item>Sobre o que pensaste por mais tempo hoje?</item>
+        <item>O que te deu energia hoje?</item>
+        <item>O que te tirou energia hoje?</item>
+        <item>Qual hábito gostarias de mudar?</item>
+        <item>O que significa sucesso para ti agora?</item>
+        <item>Que medo está no teu caminho agora?</item>
+        <item>O que o teu eu mais jovem diria da vida que levas hoje?</item>
+        <item>Que conselho darias a si mesmo agora?</item>
+        <item>O que te faz único?</item>
+    </string-array>
+
+    <string-array name="prompts_gratitude">
+        <item>Pelo que és grato hoje?</item>
+        <item>Qual pessoa alegrou seu dia hoje?</item>
+        <item>Qual pequeno detalhe te deixou feliz hoje?</item>
+        <item>Que habilidade tens, mas considera óbvia?</item>
+        <item>Qual é a melhor coisa que te aconteceu esta semana?</item>
+        <item>A quem gostarias de agradecer, e por quê?</item>
+        <item>Que lugar te dá sensação de lar?</item>
+        <item>Qual memória te deixa feliz na hora?</item>
+        <item>Que parte do seu corpo merece mais reconhecimento?</item>
+        <item>Que comida te fez muito bem hoje?</item>
+        <item>Qual música te tocou ultimamente?</item>
+        <item>Qual é a coisa mais valiosa que tens e que não custa dinheiro?</item>
+        <item>Que experiência do passado te deixou mais forte?</item>
+        <item>O que no seu dia a dia é, na verdade, um privilégio?</item>
+        <item>Quem é seu herói secreto do dia a dia?</item>
+        <item>Qual estação mais aprecias agora, e por quê?</item>
+    </string-array>
+
+    <string-array name="prompts_future">
+        <item>O que gostarias de ter conquistado daqui a um ano?</item>
+        <item>Como é seu dia perfeito daqui a cinco anos?</item>
+        <item>Qual meta persegues com mais paixão agora?</item>
+        <item>O que farias se soubesse que não pode falhar?</item>
+        <item>Qual nova habilidade gostarias de aprender?</item>
+        <item>Para onde gostarias de viajar em seguida?</item>
+        <item>Que tipo de pessoa queres ser daqui a dez anos?</item>
+        <item>Que sonho abandonaste e poderia retomar?</item>
+        <item>Qual é o passo mais corajoso que poderias dar agora?</item>
+        <item>Qual projeto te empolga e ainda não começaste?</item>
+        <item>O que precisa acontecer para dizeres: agora estou satisfeito?</item>
+        <item>Que mudança gostarias de ver no mundo?</item>
+        <item>O que está no topo da sua lista de sonhos?</item>
+        <item>Que hábito ruim gostarias de largar até o próximo mês?</item>
+        <item>Como gostarias de ser lembrado?</item>
+        <item>Qual é um pequeno passo que podes dar amanhã?</item>
+    </string-array>
+
+    <string-array name="prompts_relationships">
+        <item>A quem dirias algo que ainda não disse?</item>
+        <item>Qual relação da tua vida merece mais atenção?</item>
+        <item>O que mais valorizas no teu melhor amigo?</item>
+        <item>Quando foi a última vez que te sentiste realmente compreendido?</item>
+        <item>O que dirias a uma pessoa importante para ti?</item>
+        <item>Qual pessoa marcou mais a tua vida?</item>
+        <item>Como mostras aos outros que ama eles?</item>
+        <item>Qual conflito gostarias de resolver?</item>
+        <item>O que amizade significa para ti?</item>
+        <item>Quem te ensinou algo importante recentemente?</item>
+        <item>Qual qualidade mais admiras nos outros?</item>
+        <item>Com quem gostarias de passar um dia inteiro?</item>
+        <item>Qual é o melhor elogio que já recebeste?</item>
+        <item>Que limites gostarias de colocar melhor nas tuas relações?</item>
+        <item>Como sua ideia de amor mudou com o tempo?</item>
+        <item>Quem merece hoje uma ligação ou uma mensagem sua?</item>
+    </string-array>
+
+    <!-- ════════════════════════════════════════════════════════════════════
+         PDF EXPORT
+         ════════════════════════════════════════════════════════════════════ -->
+    <string name="pdf_entry_fallback_title">Entrada #%1$d</string>
+    <string name="pdf_entry_counter">Entrada %1$d de %2$d</string>
+    <string name="pdf_summary_label">RESUMO</string>
+    <string name="pdf_continuation">%1$s (continuação)</string>
+    <string name="pdf_page_number">Página %1$d</string>
+
+    <!-- ════════════════════════════════════════════════════════════════════
+         ERRORS
+         ════════════════════════════════════════════════════════════════════ -->
+    <string name="error_retro_all_failed">%1$d solicitações à IA falharam. Verifica sua conexão com a internet.</string>
+    <string name="error_whisper_audio_empty">O ficheiro de áudio está vazio</string>
+    <string name="error_whisper_no_text">Nenhum texto detectado</string>
+    <string name="error_sync_db_not_found">Banco de dados não encontrado</string>
+    <string name="error_audio_record_init_failed">Não foi possível iniciar o microfone</string>
+    <string name="error_json_key_missing">Resposta da IA incompleta: falta %1$s ou %2$s</string>
+    <string name="error_file_open_failed">Erro: não foi possível abrir o ficheiro</string>
+    <string name="error_generic">Erro: %1$s</string>
+
+    <!-- ════════════════════════════════════════════════════════════════════
+         AI PROFILE STYLE INSTRUCTIONS (for Gemini prompts)
+         ════════════════════════════════════════════════════════════════════ -->
+    <string name="profile_style_chronicler">\n- Escreve no estilo de um relato-resumo, que reúne os principais eventos e emoções, como um cronista pessoal</string>
+    <string name="profile_style_advisor">\n- Escreve no estilo de um conselheiro de vida, destaca o que deu certo, o que pode melhorar, e passe ao leitor a sensação de clareza e ordem</string>
+    <string name="profile_style_insight">\n- Escreve no estilo de um relato de autoconhecimento profundo, revele padrões de pensamento, emoções recorrentes e forças escondidas</string>
+    <string name="profile_style_coach">\n- Escreve no estilo de um acompanhante motivador de metas, mostra progressos em metas pessoais e incentive a continuar</string>
+    <string name="profile_style_custom">\n- ESTILO DE PERFIL (Custom): Redige esta retrospetiva com ligação clara à tarefa do utilizador. REGRAS OBRIGATÓRIAS:\n  1) PELO MENOS 60 por cento da retrospetiva trata direta ou indiretamente o tema da tarefa.\n  2) PELO MENOS UMA secção temática é completamente dedicada ao foco da tarefa (título + texto).\n  3) Expressa a ligação ao perfil de forma VARIADA com sinónimos e campos temáticos, NÃO repetindo mecanicamente as palavras.\n  4) As observações sem ligação à tarefa devem ser mantidas breves ou descartadas — melhor menos secções com ligação real do que muitas genéricas.\n  Tarefa do utilizador (para orientação): \"%1$s\"</string>
+
+
+    <!-- ════════════════════════════════════════════════════════════════════
+         CONSENT SCREEN + PRIVACY GATES + PRIVACY SECTION (April 2026)
+         ════════════════════════════════════════════════════════════════════ -->
+    <string name="consent_title">Privacidade e consentimento</string>
+    <string name="consent_intro">O teu diário é um espaço pessoal e respeitamos isso. Aqui vês de forma transparente como o Best Journal trata os teus dados.</string>
+    <string name="consent_card1_title">Armazenamento local</string>
+    <string name="consent_card1_body">As tuas entradas ficam no teu dispositivo.</string>
+    <string name="consent_card2_title">Funções de IA (EUA)</string>
+    <string name="consent_card2_body">Opcionalmente, os textos são enviados ao Google Gemini e os textos para leitura em voz alta à Microsoft Edge nos EUA (EU-US Data Privacy Framework). As gravações de voz são enviadas à Groq (EUA) com cláusulas contratuais-tipo (EU SCCs).</string>
+    <string name="consent_card3_title">Estatísticas pseudonimizadas</string>
+    <string name="consent_card3_body">Firebase Analytics, opcional, podes alterar a qualquer momento nas definições.</string>
+    <string name="consent_links_header">Os nossos documentos legais:</string>
+    <string name="consent_accept_all">Aceitar e começar</string>
+    <string name="consent_disable_stats">Desativar estatísticas e continuar</string>
+    <string name="consent_confirmation">Ao tocar em «Aceitar e começar» confirmas ter lido a política de privacidade, os termos de utilização e a informação legal, e aceitas o tratamento de dados descrito. Podes alterar a tua decisão a qualquer momento nas definições.</string>
+
+    <string name="privacy_gate_groq_title">Enviar a gravação de voz ao Groq?</string>
+    <string name="privacy_gate_groq_body">Esta função envia a tua gravação de voz cifrada para o Groq (EUA), onde é convertida em texto, mais rápido e mais preciso do que o reconhecimento local.\n\n✓ A gravação é eliminada imediatamente após a conversão\n✓ Sem treino de IA com as tuas gravações\n✓ Base jurídica: cláusulas contratuais-tipo (CCT da UE)\n\nAlternativa: reconhecimento local offline nas definições.</string>
+    <string name="privacy_gate_groq_accept">Aceitar e enviar</string>
+    <string name="privacy_gate_groq_local">Transcrever localmente</string>
+
+    <string name="privacy_gate_gemini_title">Enviar o texto ao Google Gemini?</string>
+    <string name="privacy_gate_gemini_body">Que bom que queres usar as funcionalidades inteligentes do Best Journal! Para resumos, retrospetivas, perspetivas do dashboard e melhorias de texto, os teus textos são enviados de forma encriptada para o Google Gemini.\n\n✓ Sem treino de IA com os teus dados\n✓ Os pedidos não são armazenados permanentemente\n✓ Encriptado segundo o EU-US Data Privacy Framework\n\nNota importante: como as tuas entradas de diário podem conter dados especialmente sensíveis (saúde, religião, relações pessoais — art. 9.º RGPD), pedimos aqui o teu consentimento expresso para o tratamento por IA. Os resultados da IA são sugestões, não aconselhamento profissional, e não substituem um especialista.\n\nPodes alterar isto a qualquer momento nas definições.</string>
+    <string name="privacy_gate_gemini_accept">Aceitar e enviar</string>
+    <string name="privacy_gate_gemini_cancel">Cancelar</string>
+
+    <string name="privacy_gate_tts_title">Ativar vozes Premium</string>
+    <string name="privacy_gate_tts_body">Com as vozes Premium, a leitura em voz alta soa mais natural. O teu texto é enviado cifrado (HTTPS/TLS) para um serviço de voz da Microsoft nos EUA e devolvido como áudio.\n\n✓ Transmissão exclusivamente para síntese de voz\n✓ Transferência para país terceiro EUA (a Microsoft está certificada ao abrigo do EU-US Data Privacy Framework)</string>
+    <string name="privacy_gate_tts_accept">Aceitar e ler</string>
+    <string name="privacy_gate_tts_cancel">Cancelar</string>
+
+    <string name="settings_privacy_header">Privacidade</string>
+    <string name="settings_analytics_title">Análise de utilização pseudonimizada</string>
+    <string name="settings_analytics_subtitle">Firebase Analytics para análise de erros e melhoria do produto</string>
+
+    <string name="settings_delete_account_title">Eliminar conta e dados</string>
+    <string name="settings_delete_account_subtitle">Remove de forma irreversível todos os dados locais e a cópia de segurança do Drive. A tua conta Google em si permanece.</string>
+    <string name="settings_delete_account_confirm_title">Eliminar todos os dados da app?</string>
+    <string name="settings_delete_account_confirm_body">Esta operação é irreversível e elimina:\n\n• Todas as entradas de diário, fotografias, vídeos e gravações de áudio locais\n• A cópia de segurança da aplicação no Google Drive (apenas os dados da app, não a tua conta Google)\n• O teu início de sessão na app\n\nA tua conta Google em si permanece. A aplicação reinicia depois como uma nova instalação.</string>
+    <string name="settings_delete_account_cancel">Cancelar</string>
+    <string name="settings_delete_account_confirm">Sim, eliminar tudo</string>
+
+    <string name="settings_report_ai_title">Reportar resposta da IA</string>
+    <string name="settings_report_ai_subtitle">Resultado da IA inadequado ou incorreto</string>
+    <string name="settings_report_ai_confirm_title">Abrir e-mail para o suporte?</string>
+    <string name="settings_report_ai_confirm_body">Abre-se a tua aplicação de e-mail com uma mensagem preparada para dev.app.support@gmail.com. Podes ainda completar a descrição antes de enviar. Respondemos em regra no prazo de 24 horas em dias úteis.\n\nComunica desta forma: resultados de IA inadequados, ofensivos, falsos ou enganadores do painel, dos resumos, das retrospetivas ou da melhoria de texto.</string>
+    <string name="settings_report_ai_confirm">Criar reporte</string>
+    <string name="settings_report_ai_cancel">Cancelar</string>
+    <string name="settings_report_ai_no_email">Não foi encontrada uma aplicação de e-mail. Envia o reporte para dev.app.support@gmail.com.</string>
+    <string name="settings_report_ai_subject">Best Journal: resposta de IA inadequada</string>
+    <string name="settings_report_ai_body">Olá,\n\ngostaria de reportar uma resposta de IA inadequada ou incorreta no Best Journal.\n\nDescrição do problema:\n[Preencher]\n\nContexto (que função, que entrada):\n[Preencher]\n\nObrigado.</string>
+    <string name="settings_report_ai_dialog_title">Comunicar resposta da IA</string>
+    <string name="settings_report_ai_dialog_desc">Descreva a resposta inadequada ou incorreta da IA. A sua comunicação é enviada diretamente para a nossa equipa de apoio. Tem de ter sessão iniciada com a sua conta Google.</string>
+
+    <string name="settings_revoke_title">Direito de rescisão</string>
+    <string name="settings_revoke_subtitle">§ 356a BGB, resolução diretamente pela app</string>
+    <string name="settings_revoke_confirm_title">Resolver o contrato?</string>
+    <string name="settings_revoke_confirm_body">Ao tocares em \u201eConfirmar resolução\u201c, enviamos a tua resolução diretamente para dev.app.support@gmail.com. Recebes de imediato um comprovativo de receção por e-mail.\n\nEncontras a informação completa sobre o direito de livre resolução nos termos de utilização (§ 16). Para subscrições, cancela também em Google Play, Subscrições, para que não haja mais cobranças.</string>
+    <string name="settings_revoke_cancel">Cancelar</string>
+    <string name="settings_revoke_confirm">Criar pedido</string>
+    <string name="settings_revoke_no_email">Não foi encontrada uma aplicação de e-mail. Envia o pedido para dev.app.support@gmail.com.</string>
+    <string name="settings_revoke_email_subject">Rescisão contrato Premium Best Journal</string>
+    <string name="settings_revoke_email_body">Pela presente notifico a minha livre resolução do contrato relativo às funcionalidades Premium do Best Journal.\n\nRemetente (conta Google): %1$s\nMomento da resolução: %2$s\n\nEsta resolução foi acionada em duas etapas através do botão de resolução da aplicação, em conformidade com o § 356a BGB, e enviada automaticamente através da API do Gmail.</string>
+    <string name="settings_revoke_confirm_subject">O teu comprovativo de receção: resolução na Best Journal</string>
+    <string name="settings_revoke_confirm_user_body">Olá,\n\nrecebemos a tua resolução de %1$s. Este é o teu comprovativo de receção ao abrigo do § 356a BGB.\n\nProcessaremos a tua resolução o mais rapidamente possível e contactaremos-te através de dev.app.support@gmail.com se houver dúvidas.\n\nPara evitar novas cobranças, cancela também a tua subscrição na Google Play Store em "Subscrições".\n\nObrigado e cumprimentos\nBest Journal (Frank Barwandt)</string>
+    <string name="settings_revoke_no_account">Não foi encontrado nenhum endereço de conta Google com sessão iniciada. Inicia sessão com a tua conta Google nas Definições ou envia a resolução manualmente para dev.app.support@gmail.com.</string>
+    <string name="settings_revoke_sending">A enviar resolução…</string>
+    <string name="settings_revoke_success_title">Resolução recebida</string>
+    <string name="settings_revoke_success_body">A tua resolução foi enviada para dev.app.support@gmail.com. O comprovativo de receção também está na tua caixa de entrada.</string>
+    <string name="settings_revoke_success_close">Fechar</string>
+    <string name="settings_revoke_error_title">Não foi possível enviar a resolução</string>
+    <string name="settings_revoke_error_body">O envio automático falhou: %1$s\n\nEm alternativa, podes enviar um e-mail manual para dev.app.support@gmail.com. Toca em "Abrir app de e-mail" para isso.</string>
+    <string name="settings_revoke_error_email_fallback">Abrir app de e-mail</string>
+
+
+
+    <!-- Crisis Support / Mental Health Disclaimer -->
+    <string name="settings_crisis_title">Apoio em crise</string>
+    <string name="settings_crisis_subtitle">Linhas de ajuda importantes para emergências</string>
+    <string name="settings_crisis_dialog_title">Não estás só</string>
+    <string name="settings_crisis_dialog_body">Best Journal é uma app de diário e não substitui apoio psicológico ou médico profissional. As análises geradas por IA não são terapia.\n\nSe estiveres numa crise aguda ou tiveres pensamentos de autoagressão ou suicídio: não tens de passar por isto só. Existe ajuda gratuita, anónima e disponível 24/7.</string>
+    <string name="settings_crisis_hotline_de_name">Telefonseelsorge Alemanha</string>
+    <string name="settings_crisis_hotline_de_hours">Gratuito, 24/7, anónimo</string>
+    <string name="settings_crisis_call_de">Ligar para 0800 111 0 111</string>
+    <string name="settings_crisis_call_de_alt">Ligar para 0800 111 0 222</string>
+    <string name="settings_crisis_emergency_name">Emergência</string>
+    <string name="settings_crisis_call_emergency">Ligar 112</string>
+    <string name="settings_crisis_international_name">Linhas de ajuda internacionais</string>
+    <string name="settings_crisis_open_findahelpline">Abrir findahelpline.com</string>
+    <string name="settings_crisis_close">Fechar</string>
+    <string name="settings_crisis_no_dialer">Nenhuma aplicação de telefone encontrada.</string>
+    <string name="settings_crisis_no_browser">Nenhum navegador encontrado.</string>
+
+    <!-- AI-generated content badge -->
+    <string name="ai_generated_badge">Gerado por IA</string>
+    <string name="ai_generated_tooltip">Este conteúdo foi criado por um sistema de IA (Google Gemini) e pode conter erros. Verifica de forma independente.</string>
+
+    <!-- AUTO-ADDED FALLBACK (English) for missing keys — replace with proper translations later -->
+    <string name="consent_optout_confirmation">Opt-Out guardado — as estatísticas estão desativadas.</string>
+    <string name="settings_ccpa_do_not_sell_title">Do Not Sell My Personal Information</string>
+    <string name="settings_ccpa_do_not_sell_subtitle">Para residentes da Califórnia (CCPA/CPRA 2026). Quando ativado, todas as funcionalidades de IA na nuvem são desativadas e nenhuma estatística é recolhida.</string>
+    <string name="settings_ccpa_do_not_sell_confirmation">Do-Not-Sell ativado — todos os serviços na nuvem estão desativados.</string>
+    <string name="settings_ccpa_do_not_sell_off_confirmation">Do-Not-Sell desativado.</string>
+    <string name="settings_delete_account_in_progress">A eliminar conta e dados…</string>
+    <string name="settings_delete_account_drive_error_title">Não foi possível eliminar a cópia de segurança do Drive</string>
+    <string name="settings_delete_account_drive_error_body">A cópia de segurança do Google Drive não pôde ser removida de forma fiável (motivo: %1$s).
+
+Sem uma eliminação completa, a mensagem «removido definitivamente» não seria exata.
+
+O que queres fazer?</string>
+    <string name="settings_delete_account_retry">Tentar novamente</string>
+    <string name="settings_delete_account_force_local">Eliminar apenas localmente (o backup do Drive é mantido)</string>
+    <string name="settings_delete_account_abort">Cancelar operação</string>
+
+    <string name="legal_title_datenschutz">Política de Privacidade</string>
+    <string name="legal_title_nutzungsbedingungen">Termos de Utilização</string>
+    <string name="legal_title_impressum">Aviso Legal</string>
+
+    <!-- Consent-Screen v4 + Privacy Sheet + Settings -->
+    <string name="consent_welcome_title">Bem-vindo ao Best Journal</string>
+    <string name="consent_welcome_intro">Antes de começares, vamos definir rapidamente aqui as tuas preferências de privacidade.</string>
+    <string name="consent_promise_local">As leis de privacidade exigem o teu consentimento.</string>
+    <string name="consent_promise_no_training">Decides aqui quais as funções ativas.</string>
+    <string name="consent_promise_optional_ai">Alterável a qualquer momento nas Definições.</string>
+    <string name="consent_btn_manual_selection">Seleção manual</string>
+    <string name="privacy_sheet_title">Personalizar privacidade</string>
+    <string name="privacy_sheet_subtitle">Ativa funções individuais da forma que melhor te convier. Tudo pode ser alterado a qualquer momento.</string>
+    <string name="privacy_sheet_save">Guardar seleção</string>
+    <string name="privacy_sheet_all_on">Ativar tudo</string>
+    <string name="privacy_sheet_all_off">Desativar tudo</string>
+    <string name="consent_toggle_analytics_title">Análise de utilização pseudonimizada</string>
+    <string name="consent_toggle_analytics_body">Firebase Analytics, ajuda-nos a melhorar a aplicação. Sem conteúdos do diário, apenas estatísticas de utilização pseudonimizadas (por exemplo, número de cliques). Transferência de dados: Google EUA (Data Privacy Framework).</string>
+    <string name="consent_toggle_groq_title">Voz para texto (Groq Whisper)</string>
+    <string name="consent_toggle_groq_body">Permite ditar entradas. A tua gravação de voz é enviada encriptada para o Groq (EUA), convertida em texto e depois eliminada. As tuas gravações NÃO são utilizadas para treino.</string>
+    <string name="consent_toggle_gemini_title">Reflexões com IA (Google Gemini)</string>
+    <string name="consent_toggle_gemini_body">IA do painel, resumos, retrospetivas e melhoria de texto. Envia excertos de texto para o Google Gemini (EUA). As tuas entradas NÃO são utilizadas para treino.</string>
+    <string name="consent_toggle_tts_title">Leitura em voz alta (Microsoft Edge TTS)</string>
+    <string name="consent_toggle_tts_body">Lê as entradas com voz natural. Envia o texto para a Microsoft (EUA).</string>
+    <string name="consent_toggle_drive_title">Cópia de segurança no Google Drive</string>
+    <string name="consent_toggle_drive_body">Guarda as entradas encriptadas no teu próprio Google Drive. Mantens o controlo total — o ficheiro fica na tua conta, não connosco.</string>
+    <string name="consent_toggle_do_not_sell_title">Do Not Sell My Personal Information</string>
+    <string name="consent_toggle_do_not_sell_body">Este interruptor destina-se apenas a residentes do estado norte-americano da Califórnia. A lei de proteção de dados da Califórnia (CCPA/CPRA) concede aos residentes um direito de oposição. Ao ativá-lo, todas as funções opcionais na cloud (IA, cópia de segurança, reconhecimento de voz, análise) são desativadas, apenas as funções locais permanecem ativas.\n\nSe vives fora da Califórnia, podes ignorar este interruptor: o Best Journal não vende nem comercializa os teus dados em parte alguma do mundo.</string>
+    <string name="consent_btn_accept_all">Aceitar tudo</string>
+    <string name="consent_btn_save_selection">Guardar a minha seleção</string>
+    <string name="consent_btn_minimum_only">Recusar tudo</string>
+    <string name="consent_saved_snackbar">Definição guardada</string>
+    <string name="consent_revoke_snackbar">Consentimento revogado</string>
+    <string name="consent_footer_version">A tua seleção pode ser alterada a qualquer momento nas Definições.</string>
+    <string name="consent_details_expand">Detalhes</string>
+    <string name="settings_open_privacy_sheet">Personalizar definições de privacidade</string>
+    <string name="settings_privacy_section_header">Privacidade &amp; Consentimentos</string>
+    <string name="settings_ai_groq_title">Voz para texto (Groq)</string>
+    <string name="settings_ai_groq_subtitle">Enviar gravações de voz para o Groq EUA para transcrição</string>
+    <string name="settings_ai_gemini_title">Reflexões com IA (Gemini)</string>
+    <string name="settings_ai_gemini_subtitle">Enviar textos para o Google EUA para resumos com IA</string>
+    <string name="settings_ai_tts_title">Leitura em voz alta (Edge TTS)</string>
+    <string name="settings_ai_tts_subtitle">Enviar textos para a Microsoft EUA para síntese de voz</string>
+    <string name="settings_drive_backup_title">Cópia de segurança no Google Drive</string>
+    <string name="settings_drive_backup_subtitle">Guardar entradas encriptadas no teu Drive</string>
+
+    <!-- DEBUG-only test data seeder (button in journal top bar, only visible in debug builds) -->
+    <string name="dev_seed_create_label">Gerar 70 entradas de teste</string>
+    <string name="dev_seed_delete_label">Eliminar 70 entradas de teste</string>
+    <string name="dev_seed_running">A gerar 70 entradas de teste no seu idioma…</string>
+    <string name="dev_seed_done">%1$d entradas de teste criadas</string>
+    <string name="dev_seed_deleted">%1$d entradas de teste eliminadas</string>
+    <string name="dev_seed_error">Erro: %1$s</string>
+    <string name="dev_seed_ai_no_entries">A IA não devolveu entradas de teste</string>
+
+    <!-- Premium feature: unlimited follow-ups per journal entry -->
+    <string name="paywall_feature_followups">Tantos complementos quantos quiseres nas entradas</string>
+    <string name="settings_premium_feature_followups">Complementos ilimitados</string>
+    <string name="settings_premium_feature_followups_desc">Tantos complementos por entrada quantos quiseres</string>
+
+    <!-- Follow-up / Nachtrag strings -->
+    <string name="action_no">Não</string>
+    <string name="action_yes">Sim</string>
+    <string name="ai_improved_suffix">\n\n✨ Melhorado com IA</string>
+    <string name="ai_improved_suffix_marker">✨ Melhorado com IA</string>
+    <string name="entry_delete_entry_cd">Eliminar entrada do diário</string>
+    <string name="entry_journal_entry_title">Entrada do diário</string>
+    <string name="entry_photos_videos_add_title">Adicionar fotos/vídeos</string>
+    <string name="follow_up_cancel">Cancelar</string>
+    <string name="follow_up_card_title">Complemento</string>
+    <string name="follow_up_choose_input_mode">Como queres adicionar o complemento?</string>
+    <string name="follow_up_delete_button">Eliminar</string>
+    <string name="follow_up_delete_cd">Eliminar complemento</string>
+    <string name="follow_up_delete_confirm_text">Tens a certeza de que queres eliminar permanentemente o complemento <xliff:g id="ordinal" example="1">%1$s</xliff:g>?</string>
+    <string name="follow_up_delete_confirm_title">Eliminar complemento <xliff:g id="ordinal" example="1">%1$s</xliff:g>?</string>
+    <string name="follow_up_dialog_label">O teu complemento:</string>
+    <string name="follow_up_dialog_title">Complemento</string>
+    <string name="follow_up_discard">Descartar</string>
+    <string name="follow_up_improve_text">✨ Melhorar texto</string>
+    <string name="follow_up_improve_with_ai">Melhorar depois com IA</string>
+    <string name="follow_up_improving">A IA está a melhorar o complemento…</string>
+    <string name="follow_up_inline_title">Complemento <xliff:g id="ordinal" example="1">%1$s</xliff:g></string>
+    <string name="follow_up_input_speak_cd">Gravar voz</string>
+    <string name="follow_up_input_speak_label">Gravar voz</string>
+    <string name="follow_up_input_write_cd">Escrever</string>
+    <string name="follow_up_input_write_label">Escrever</string>
+    <string name="follow_up_premium_body">Com o Premium podes adicionar tantos complementos quantos quiseres a cada entrada do teu diário.</string>
+    <string name="follow_up_premium_hint">a partir do segundo complemento</string>
+    <string name="follow_up_premium_later">Decidir mais tarde</string>
+    <string name="follow_up_premium_subscribe">Iniciar subscrição</string>
+    <string name="follow_up_premium_subtext">Cada complemento é incluído automaticamente no painel para que a tua análise fique sempre completa.</string>
+    <string name="follow_up_premium_title">Complementos ilimitados</string>
+    <string name="follow_up_save">Guardar</string>
+    <string name="follow_up_save_improved">Guardar versão melhorada</string>
+    <string name="follow_up_show_improved">✨ Mostrar versão melhorada</string>
+    <string name="follow_up_show_original">↩ Mostrar original</string>
+    <string name="follow_up_speak_pill_label">Gravar voz</string>
+    <string name="follow_up_speak_prompt">Fala o teu complemento.</string>
+    <string name="follow_up_stop_hint">Toca em Parar quando terminares.</string>
+    <string name="follow_up_tab_improved">✨ IA Melhorado</string>
+    <string name="follow_up_tab_original">Original</string>
+    <string name="follow_up_text_placeholder">Escreve o teu complemento aqui…</string>
+    <string name="follow_up_transcribing">A transcrever o complemento…</string>
+    <string name="journal_improve">Melhorar texto</string>
+    <string name="journal_state_improving">A melhorar…</string>
+    <string name="journal_state_transcribing">A transcrever…</string>
+    <string name="profile_custom_add">Adicionar análise individual</string>
+    <string name="profile_custom_remove">Remover análise individual</string>
+    <string name="profile_custom_rename">Mudar o nome</string>
+    <string name="profile_custom_rename_save">Guardar nome</string>
+    <string name="prompt_clear_confirm_text">A análise individual será eliminada permanentemente. Tens a certeza de que queres continuar?</string>
+    <string name="prompt_clear_confirm_title">Eliminar texto?</string>
+    <string name="prompt_clear_content_desc">Eliminar texto</string>
+    <string name="prompt_recording_with_model">A gravar — Modelo: <xliff:g id="model" example="Whisper">%1$s</xliff:g></string>
+    <string name="prompt_transcribing_with_model"><xliff:g id="model" example="Whisper">%1$s</xliff:g> a transcrever…</string>
+    <string name="prompt_transcription_model_hint">Transcrito com <xliff:g id="model" example="Whisper">%1$s</xliff:g></string>
+    <string name="ai_retro_copied_message">Copiado para a área de transferência</string>
+    <string name="ai_retro_copy_button">Copiar</string>
+    <string name="ai_retro_empty_state">Não há entradas suficientes para uma retrospetiva.</string>
+    <string name="ai_retro_error_state">Não foi possível criar a retrospetiva. Tenta novamente.</string>
+    <string name="ai_retro_generate_button">Criar retrospetiva</string>
+    <string name="ai_retro_generating_state">A criar retrospetiva…</string>
+    <string name="ai_retro_month_label">Este mês</string>
+    <string name="ai_retro_share_button">Partilhar</string>
+    <string name="ai_retro_title">Retrospetiva com IA</string>
+    <string name="ai_retro_week_label">Esta semana</string>
+    <string name="ai_retro_year_label">Este ano</string>
+    <string name="follow_up_add_button">Adicionar seguimento</string>
+    <string name="follow_up_delete_confirm_no">Não, manter</string>
+    <string name="follow_up_delete_confirm_yes">Sim, eliminar</string>
+    <string name="follow_up_empty_state">Ainda não há seguimentos.\nToca no botão abaixo para adicionar o primeiro.</string>
+    <string name="follow_up_improve_button">Melhorar</string>
+    <string name="follow_up_improve_error">Não foi possível melhorar. Tenta novamente.</string>
+    <string name="follow_up_improving_state">A melhorar…</string>
+    <string name="follow_up_record_error">Não foi possível gravar. Tenta novamente.</string>
+    <string name="follow_up_record_new">Gravar novo seguimento</string>
+    <string name="follow_up_recording_hint">Toca para gravar</string>
+    <string name="follow_up_recording_state">A gravar…</string>
+    <string name="follow_up_tab_label">Seguimentos</string>
+    <string name="follow_up_transcribe_error">Não foi possível transcrever. Tenta novamente.</string>
+    <string name="follow_up_transcribing_state">A transcrever…</string>
+    <string name="prompt_char_count_label">%1$d caracteres</string>
+    <string name="prompt_improve_button_label">Melhorar</string>
+    <string name="prompt_placeholder_text">Escreve o que te vai na cabeça…</string>
+    <string name="prompt_record_button_label">Gravar</string>
+    <string name="prompt_send_button_label">Enviar</string>
+    <string name="prompt_stop_button_label">Parar</string>
+    <string name="settings_legal_section_header">Documentos legais</string>
+    <string name="settings_legal_online_label">Versão online:</string>
+    <plurals name="datetime_months_relative">
+        <item quantity="one">há %1$d mês</item>
+        <item quantity="other">há %1$d meses</item>
+    </plurals>
+    <plurals name="datetime_years_relative">
+        <item quantity="one">há %1$d ano</item>
+        <item quantity="other">há %1$d anos</item>
+    </plurals>
+    <string name="ai_limits_disclaimer">Quota diária de IA para utilização intensiva.</string>
+    <string name="ai_limits_dialog_title">Como funciona a quota diária de IA?</string>
+    <string name="ai_limits_dialog_body" formatted="false">COM SUBSCRICAO PREMIUM\n\nPor dia, tens disponível:\n• 150 pedidos por dia por perfil — nos 4 predefinidos, 600/dia no total, mais 150/dia por cada perfil próprio que criares.\n• Até 150 melhorias de texto\n\nComo funciona em detalhe:\n• Pedidos 1 a 30: na mais alta qualidade de IA\n• Pedidos 31 a 100: na qualidade padrão rápida\n• No 101.º pedido: pausa única de 30 min\n• Pedidos 101 a 150: qualidade padrão rápida\n• A partir do 151.º: sem mais pedidos até amanhã\n\nAlém disso, para todos os utilizadores:\n• No máximo 50 pedidos de IA por hora — depois pausa de 5 min\n\nQuando são repostas as quotas?\nTodos os dias à meia-noite (hora local) começa uma nova quota completa.\n\n──────────\n\nSEM SUBSCRICAO\n\n• 5 análises de dashboard por semana por perfil\n• 5 melhorias de texto por semana\n• Sempre na qualidade padrão rápida\n• Reposta todas as segundas-feiras à meia-noite (hora local)\n\n──────────\n\nA maioria dos utilizadores não chegará a estes limites no dia a dia.</string>
+    <string name="ai_limits_dialog_close">Compreendido</string>
+    <string name="theme_neutral">Neutro</string>
+    <string name="theme_profile">Cor do perfil — cor do perfil do dashboard</string>
+    <string name="theme_solarized">Solstício</string>
+    <string name="theme_dracula">Meia-noite</string>
+    <string name="theme_one_dark">Ateliê</string>
+    <string name="theme_nord">Noite Polar</string>
+    <string name="theme_gruvbox">Âmbar</string>
+
+    <string name="permission_rationale_microphone">Para poderes ditar as tuas entradas do diário por voz, precisamos de acesso ao teu microfone.</string>
+    <string name="permission_rationale_camera">Para poderes adicionar fotografias às tuas entradas, precisamos de acesso à tua câmara.</string>
+    <string name="permission_rationale_notifications">Para te podermos lembrar da tua escrita diária, precisamos de permissão para enviar notificações.</string>
+    <string name="consent_info_system_backup_title">Cópia de segurança do sistema Android</string>
+    <string name="consent_info_system_backup_body">Se tiveres a cópia de segurança do sistema Android ativada nas definições do dispositivo, o Android faz cópias de segurança automáticas dos dados do teu diário na área de backup da tua conta Google. Podes desativar isso a qualquer momento nas definições do dispositivo — consulta a política de privacidade para mais detalhes.</string>
+    <string name="settings_open_system_backup_settings_label">Gerir cópia de segurança do sistema Android</string>
+    <string name="settings_open_system_backup_settings_desc">Abre as definições do sistema Android onde podes ativar ou desativar a cópia de segurança automática do Best Journal.</string>
+    <string name="error_no_backup_settings_available">Definições de backup não disponíveis neste dispositivo.</string>
+    <string name="consent_footer_link_datenschutz">Privacidade</string>
+    <string name="consent_footer_link_impressum">Aviso Legal</string>
+    <string name="consent_footer_link_agb">Termos de Utilização</string>
+    <string name="ai_output_health_disclaimer">Não é terapia — não substitui aconselhamento profissional.</string>
+    <string name="ai_output_health_disclaimer_long">O Best Journal é um diário e não um serviço de terapia. As análises de IA são sugestões para a autorreflexão e não substituem aconselhamento psicológico ou médico profissional. Em caso de problemas urgentes, contacta um profissional de saúde ou a linha de apoio em crise nas tuas definições.</string>
+
+    <string name="churn_cancelled">Cancelado</string>
+    <string name="churn_cancelled_ends_on">Cancelado — termina em <xliff:g id="date" example="30.04.2026, 18:13">%1$s</xliff:g></string>
+    <string name="churn_promo_phase_ends">Termina em <xliff:g id="date" example="30.04.2026, 18:13">%1$s</xliff:g> — depois <xliff:g id="base_price" example="3,99 €">%2$s</xliff:g> por mês</string>
+    <string name="churn_reason_other_placeholder">Diz-nos brevemente o que se passa…</string>
+    <string name="churn_renews_on">Renova em <xliff:g id="date" example="30.04.2026, 18:13">%1$s</xliff:g></string>
+    <string name="settings_premium_cancelled">Subscrição Premium cancelada</string>
+    <string name="settings_premium_cancelled_desc">As tuas funcionalidades Premium ficam disponíveis até ao fim do período de faturação. Podes cancelar a rescisão através do Google Play.</string>
+    <string name="settings_premium_cancelled_until">Subscrição Premium cancelada — válida até <xliff:g id="date" example="30.04.2026, 21:01">%1$s</xliff:g></string>
+    <string name="settings_theme">Tema</string>
+    <string name="settings_themes_manager">Gestor de Temas</string>
+    <string name="paywall_monthly_note">Depois %1$s por mês, renova-se automaticamente\nCancelável a qualquer momento</string>
+</resources>

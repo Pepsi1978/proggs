@@ -1,0 +1,7 @@
+interface:
+  display_name: "kaizen:why"
+  short_description: "Iterative Five Whys root cause analysis drilling from symptoms"
+  default_prompt: "Use $kaizen-context-engineering-kit--kaizen-why for this task."
+
+policy:
+  allow_implicit_invocation: false

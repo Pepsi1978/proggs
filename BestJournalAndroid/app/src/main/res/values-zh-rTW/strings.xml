@@ -1,0 +1,1433 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources xmlns:tools="http://schemas.android.com/tools"
+    xmlns:xliff="urn:oasis:names:tc:xliff:document:1.2"
+    tools:locale="zh-TW">
+    <!-- App brand name — do not translate -->
+    <string name="app_name" translatable="false">Best Journal</string>
+
+    <!-- ════════════════════════════════════════════════════════════════════
+         NAVIGATION & TABS
+         ════════════════════════════════════════════════════════════════════ -->
+    <string name="nav_journal">日記</string>
+    <string name="nav_retrospective">回顧</string>
+    <string name="nav_dashboard">面板</string>
+    <string name="nav_settings">設定</string>
+
+    <!-- ════════════════════════════════════════════════════════════════════
+         COMMON / SHARED
+         ════════════════════════════════════════════════════════════════════ -->
+    <string name="action_cancel">取消</string>
+    <string name="action_save">儲存</string>
+    <string name="action_close">關閉</string>
+    <string name="action_continue">繼續</string>
+    <string name="action_understood">知道了</string>
+    <string name="action_retry">重試</string>
+    <string name="action_later">稍後</string>
+    <string name="action_share">分享</string>
+    <string name="action_discard">放棄</string>
+    <string name="action_back">返回</string>
+    <string name="action_done">完成</string>
+    <string name="action_no_thanks">不用了，謝謝</string>
+    <string name="action_delete">刪除</string>
+    <!-- Accessibility label for the undo icon button on the dashboard. -->
+    <string name="action_undo">撤銷</string>
+    <string name="action_ok">確定</string>
+    <string name="action_go_google_play">去 Google Play</string>
+    <string name="journal_drive_backup_dialog">Google Drive 備份</string>
+    <string name="journal_improve_text">✨ 潤色文字</string>
+    <string name="journal_show_original">↩ 檢視原文</string>
+    <string name="journal_show_improved">✨ 檢視潤色版</string>
+    <string name="journal_ai_improving">AI 正在潤色文字，請稍候</string>
+    <string name="journal_later">稍後</string>
+    <!-- Paywall missed strings -->
+    <string name="paywall_from_per_day">年度訂閱，每年 %1$s</string>
+    <string name="paywall_instead_per_month">比月付方案省 %1$d%%</string>
+    <string name="paywall_or">或</string>
+    <string name="paywall_with_limited">有使用上限。</string>
+    <!-- Churn missed string -->
+    <string name="churn_instead_of">而不是 </string>
+    <string name="label_premium">高階版</string>
+    <string name="label_original">原文</string>
+    <string name="label_improved">✨ AI 優化</string>
+    <string name="label_photo">照片</string>
+    <string name="label_video">影片</string>
+    <string name="label_current">當前</string>
+    <string name="label_record">記錄</string>
+    <string name="cd_sync_status">同步狀態</string>
+    <string name="cd_day">白天</string>
+    <string name="cd_night">夜晚</string>
+
+    <!-- ════════════════════════════════════════════════════════════════════
+         JOURNAL SCREEN
+         ════════════════════════════════════════════════════════════════════ -->
+    <string name="journal_title">日記</string>
+    <string name="journal_search_placeholder">搜尋條目…</string>
+    <string name="journal_search">搜尋</string>
+    <string name="journal_search_hint">搜尋</string>
+    <string name="journal_search_close">關閉搜尋</string>
+    <string name="journal_no_entries">還沒有條目</string>
+    <string name="journal_tap_mic_to_start">點一下麥克風開始</string>
+    <string name="journal_cd_streak">連續天數</string>
+    <string name="journal_cd_text_input">輸入文字</string>
+    <string name="journal_achievement_unlocked">成就已解鎖！</string>
+    <string name="journal_drive_not_signed_in">還沒登入 Google</string>
+    <string name="journal_drive_backup_current">備份是最新的，所有條目都安全</string>
+    <string name="journal_drive_uploading">正在上傳備份…</string>
+    <string name="journal_drive_downloading">正在下載照片和影片…</string>
+    <string name="journal_drive_failed">備份失敗！</string>
+    <string name="journal_drive_last_sync">上次同步：%1$s</string>
+    <string name="journal_new_entry_prompt">寫作引子</string>
+    <string name="journal_new_entry">新條目</string>
+    <string name="journal_save_improved">儲存潤色版</string>
+    <string name="journal_save">儲存</string>
+    <string name="journal_cd_write">寫</string>
+    <string name="journal_write">寫</string>
+    <string name="journal_cd_speak">說</string>
+    <string name="journal_speak">說</string>
+    <string name="journal_your_answer">你的回答：</string>
+    <string name="journal_placeholder_prompt">把想法寫在這裡…</string>
+    <string name="journal_placeholder_edit">點這裡編輯文字…</string>
+    <string name="journal_freeflow_hint">讓想法自由流動。沒有對錯。</string>
+    <string name="journal_transcribed_with">由 %1$s 轉寫</string>
+    <!-- Default label for the transcription model (local Whisper, runs on-device). -->
+    <string name="transcription_model_local">本地 Whisper 模型</string>
+    <!-- Brand name of the Groq transcription model — do not translate. -->
+    <string name="transcription_model_groq" translatable="false">Groq Whisper Large V3 Turbo</string>
+    <string name="journal_text_upsell_title">是不是很驚豔？</string>
+    <string name="journal_text_upsell_body">有高階版，你可以潤色每一條。</string>
+    <string name="journal_discover_premium">瞭解高階版 →</string>
+    <string name="journal_entries_label">條目</string>
+    <string name="journal_entry_count">%1$d 條</string>
+    <string name="journal_streak_days">%1$d 天</string>
+    <string name="journal_streak_days_in_row">連續 %1$d 天</string>
+    <string name="journal_streak_next_goal">下一個目標：%1$d 天</string>
+    <string name="journal_streak_remaining">還差 %1$d</string>
+    <string name="journal_streak_premium">連續記錄保護：高階版可用</string>
+    <string name="journal_keep_going">繼續保持！</string>
+    <string name="journal_daily_prompt">今日引子</string>
+    <string name="journal_write_about">就這個寫</string>
+    <string name="journal_recording_error">錄音失敗：%1$s</string>
+    <string name="journal_transcription_error">轉寫失敗：%1$s</string>
+    <string name="journal_rate_limit">小歇一下：距離下一次潤色還有 %1$d 分鐘。</string>
+    <string name="journal_improve_error">潤色失敗：%1$s</string>
+    <string name="journal_save_error">儲存失敗：%1$s</string>
+    <string name="recording_tap_stop">再點一下停止</string>
+
+    <!-- Streak messages -->
+    <string name="streak_365">整整一年！</string>
+    <string name="streak_180">自律得驚人！</string>
+    <string name="streak_90">擋不住的你！</string>
+    <string name="streak_30">整整一個月！</string>
+    <string name="streak_14">兩週的韌勁！</string>
+    <string name="streak_7">整整一週！</string>
+    <string name="streak_3">你在堅持！</string>
+    <string name="streak_default">每一天都重要！</string>
+    <string name="streak_desc_365">從一個小習慣開始，現在已是生活的一部分。日記比以前更瞭解你了。</string>
+    <string name="streak_desc_14">連續兩週，很多人做不到。未來的你會感謝你。</string>
+    <string name="streak_desc_7">一整週的思緒、心情和記憶。你在搭建很珍貴的東西。</string>
+    <string name="streak_desc_3">連續三天是真正習慣的起點。繼續下去，值得。</string>
+    <string name="streak_desc_1">每條記錄都是送給未來的你的小禮物。明天再寫！</string>
+
+    <!-- ════════════════════════════════════════════════════════════════════
+         ENTRY DETAIL SCREEN
+         ════════════════════════════════════════════════════════════════════ -->
+    <string name="entry_title">條目</string>
+    <string name="entry_summary">摘要</string>
+    <string name="entry_saving">儲存中…</string>
+    <string name="entry_improving">潤色中…</string>
+    <string name="entry_improve_with_ai">稍後用 AI 潤色</string>
+    <string name="entry_photos_videos">照片/影片</string>
+    <string name="entry_add">新增</string>
+    <string name="entry_no_photos_yet">還沒有照片或影片</string>
+    <string name="entry_cd_play_video">播放影片</string>
+    <string name="entry_cd_remove">刪除</string>
+    <string name="entry_tts_enable_hint">在設定裡開啟聲音</string>
+    <string name="entry_tts_stop">停止</string>
+    <string name="entry_tts_read">朗讀</string>
+    <string name="entry_cd_share">分享</string>
+    <string name="entry_recording_duration">錄音時長：%1$s</string>
+    <string name="entry_tts_generating">請稍候，聲音正在生成…</string>
+    <string name="entry_tts_journal_label">日記項目</string>
+    <string name="entry_tts_followup_label">補充 %1$s</string>
+    <string name="entry_cd_photo_page">照片 %1$d</string>
+    <string name="entry_add_photo_video">新增照片/影片</string>
+    <string name="entry_camera">相機</string>
+    <string name="entry_gallery">相簿</string>
+    <string name="entry_delete_title">刪除條目？</string>
+    <string name="entry_delete_message">永久刪除這條嗎？</string>
+
+    <!-- Share dialog -->
+    <string name="share_title">分享條目</string>
+    <string name="share_which_version">分享哪個版本？</string>
+    <string name="share_improved_version">潤色版</string>
+    <string name="share_photos_videos_label">帶上照片和影片：</string>
+    <string name="share_footer">來自 BestJournal 應用的日記條目</string>
+    <string name="share_what_to_share">想分享什麼？</string>
+    <string name="share_journal_entry">日記條目</string>
+    <string name="share_followup_numbered">補充<xliff:g id="ordinal" example="1">%1$s</xliff:g></string>
+    <string name="share_followup_single">補充</string>
+
+    <string name="error_recording_failed">錄音失敗：<xliff:g id="reason" example="麥克風無法使用">%1$s</xliff:g></string>
+    <string name="error_transcription_failed">轉錄失敗：<xliff:g id="reason" example="網路逾時">%1$s</xliff:g></string>
+
+    <!-- ════════════════════════════════════════════════════════════════════
+         DASHBOARD SCREEN
+         ════════════════════════════════════════════════════════════════════ -->
+    <string name="dashboard_title">面板</string>
+    <string name="dashboard_legend">圖例</string>
+    <string name="dashboard_refresh">重新整理</string>
+    <string name="dashboard_weekly_review_waiting">你的每週回顧在等你</string>
+    <!-- Body text of the weekly-review premium upsell card on the dashboard. -->
+    <string name="dashboard_weekly_review_upsell_body">你這週過得充實。升級 Premium 即可查看完整分析：發掘規律、獲得洞察，了解自己真正在意的事。</string>
+    <string name="dashboard_discover_premium">瞭解高階版</string>
+    <string name="dashboard_please_wait">請稍候</string>
+    <string name="dashboard_gemini_unavailable">Gemini 暫時無法使用，請稍後再試。</string>
+    <string name="dashboard_no_custom_focus">還沒填寫分析焦點</string>
+    <string name="dashboard_custom_focus_hint">在設定的「自定義分析」裡\n填一個焦點，\n或選擇其他模板。</string>
+    <string name="dashboard_no_analysis_yet">還沒有分析</string>
+    <string name="dashboard_create_entries_custom">寫幾條日記，\nAI 會分析你的焦點。</string>
+    <string name="dashboard_create_entries_default">寫幾條日記，\nAI 會分析你的規律。</string>
+    <string name="dashboard_like_analysis">喜歡這份分析嗎？</string>
+    <string name="dashboard_premium_upsell_body">使用 Premium，你可以從任意數量的檔案中獲得豐富的分析。</string>
+    <string name="dashboard_learn_more">瞭解更多</string>
+    <string name="dashboard_feature_analyses">分析</string>
+    <string name="dashboard_all_observations">所有觀察</string>
+    <string name="dashboard_inner_mirror">內心之鏡</string>
+    <string name="dashboard_all_insights">所有洞見</string>
+    <string name="dashboard_goal_overview">目標概覽</string>
+    <string name="dashboard_all_goals">所有目標</string>
+    <string name="dashboard_top_results_fallback">主要結果</string>
+    <string name="dashboard_analysis_fallback">分析</string>
+    <string name="dashboard_all_results_fallback">所有結果</string>
+    <string name="dashboard_overall_analysis">整體分析</string>
+    <!-- Title of the overview card in the Summary dashboard (scenario 0). -->
+    <string name="dashboard_summary_overview_title">概覽</string>
+    <!-- Title of the next-steps card in the Goals dashboard (scenario 3). -->
+    <string name="dashboard_goals_next_steps_title">下一步</string>
+    <string name="dashboard_all_recommendations">所有建議</string>
+    <string name="dashboard_connection">關聯</string>
+    <string name="dashboard_limit_daily">今日上限已達到。明天繼續！</string>
+    <string name="dashboard_limit_weekly_profile">此設定檔的每週限額已達到。請切換設定檔或等到星期一。</string>
+    <string name="dashboard_limit_cooldown">小歇一下：距離下一次分析還有 %1$d 分鐘。</string>
+    <string name="dashboard_analysis_failed">分析失敗</string>
+    <string name="dashboard_last_updated">最近更新：%1$s</string>
+    <string name="dashboard_loading_profile_switch">每次切換模板後，AI 面板會自動重新整理</string>
+    <string name="dashboard_loading_delete_update">刪除條目後，AI 面板會自動重新整理</string>
+    <string name="dashboard_loading_auto_update">每次新增條目後，AI 面板會自動重新整理</string>
+    <string name="dashboard_loading_default">AI 面板正在重新整理</string>
+
+    <!-- Legend labels -->
+    <string name="legend_urgent">緊急</string>
+    <string name="legend_attention">注意</string>
+    <string name="legend_observe">觀察</string>
+    <string name="legend_activity_level">活躍度</string>
+    <string name="legend_activity_desc">半圓顯示這一領域發生了多少事：</string>
+    <string name="legend_activity_high">高（67–100\u00A0%%）</string>
+    <string name="legend_activity_medium">中等（34–66\u00A0%%）</string>
+    <string name="legend_activity_low">較低（0–33\u00A0%%）</string>
+    <string name="legend_observation_relevance">觀察的重要度</string>
+    <string name="legend_relevance_high">核心，條目的主要主題</string>
+    <string name="legend_relevance_medium">相關，反覆出現的觀察</string>
+    <string name="legend_relevance_low">邊角，單次提及</string>
+    <string name="legend_reflection_depth">反思的深度</string>
+    <string name="legend_reflection_desc">半圓顯示你自我反思的深度：</string>
+    <string name="legend_reflection_deep">深（67–100\u00A0%%）</string>
+    <string name="legend_reflection_aware">自覺（34–66\u00A0%%）</string>
+    <string name="legend_reflection_surface">淺（0–33\u00A0%%）</string>
+    <string name="legend_insight_depth">洞見的深度</string>
+    <string name="legend_insight_deep">深入洞察，揭示反覆出現的模式與信念</string>
+    <string name="legend_insight_aware">自覺，被識別的思維與情感規律</string>
+    <string name="legend_insight_surface">淺，初步的觀察</string>
+    <string name="legend_progress">進展</string>
+    <!-- Legend: Goal progress -->
+    <string name="legend_goal_progress_desc">半圓顯示目標的進展情況：</string>
+    <string name="legend_blocked_range">受阻（0–33\u00A0%%）</string>
+    <string name="legend_in_progress_range">進行中（34–66\u00A0%%）</string>
+    <string name="legend_progress_range">有進展（67–100\u00A0%%）</string>
+    <string name="legend_goal_status">目標狀態</string>
+    <string name="legend_blocked_desc">受阻 — 有阻礙的目標</string>
+    <string name="legend_open_desc">待開始 — 還沒有進展的目標</string>
+    <string name="legend_progress_success_desc">有進展 — 有可見成果的目標</string>
+    <!-- Legend: Custom analysis -->
+    <string name="legend_analysis_value">分析值</string>
+    <string name="legend_analysis_relevance_desc">半圓顯示對你的焦點的重要度：</string>
+    <string name="legend_high_focus">高（67–100\u00A0%%） — 焦點的核心</string>
+    <string name="legend_medium_focus">中（34–66\u00A0%%） — 已識別關聯</string>
+    <string name="legend_low_focus">低（0–33\u00A0%%） — 邊緣</string>
+    <string name="legend_result_relevance">結果的重要度</string>
+    <string name="legend_important_desc">重要 — 與焦點直接相關</string>
+    <string name="legend_relevant_desc">相關 — 與焦點有關聯</string>
+    <string name="legend_note_desc">備註 — 邊角說明</string>
+    <!-- Legend: Burden/Stress -->
+    <string name="legend_burden_scale">負擔刻度</string>
+    <string name="legend_burden_desc">半圓顯示這個主題讓你有多累：</string>
+    <string name="legend_high_burden">高（67–100\u00A0%%） — 立刻處理</string>
+    <string name="legend_medium_burden">中（34–66\u00A0%%） — 需要留意</string>
+    <string name="legend_low_burden">低（0–33\u00A0%%） — 狀態良好</string>
+    <string name="legend_priority_title">建議的優先度</string>
+    <string name="legend_priority_high">紅 = 緊急 — 立刻處理</string>
+    <string name="legend_priority_medium">橙 = 中等 — 儘快處理</string>
+    <string name="legend_priority_low">藍 = 低 — 觀察</string>
+    <!-- Legend: Categories -->
+    <string name="legend_categories">分類</string>
+    <string name="legend_categories_desc">分類是自動生成的，AI 會識別條目中的主題並建立對應的分類。新主題會自動產生新圖示。</string>
+    <!-- CategoryDetailDialog levels -->
+    <string name="level_low">低</string>
+    <string name="level_medium">中</string>
+    <string name="level_high">高</string>
+    <string name="urgency_high">緊急 — 立刻處理</string>
+    <string name="urgency_medium">需要留意</string>
+    <string name="urgency_low">狀態良好 — 觀察</string>
+    <!-- Dashboard: Derivation dialog -->
+    <string name="dashboard_derived_from">來自：</string>
+    <string name="dashboard_update_for_derivation">重新整理面板以獲得詳細的推導。</string>
+    <!-- Dashboard: Summary section -->
+    <string name="dashboard_top_5_actions">前 5 個行動</string>
+    <string name="dashboard_core_insights">核心洞見</string>
+    <string name="dashboard_summary_subtitle">條目裡最重要的點</string>
+    <string name="summary_central">核心</string>
+    <string name="summary_relevant">相關</string>
+    <string name="summary_side_note">邊角</string>
+    <!-- Dashboard: Insight section -->
+    <string name="dashboard_deepest_insights">最深的洞見</string>
+    <string name="dashboard_insight_subtitle">條目透露的關於你的事</string>
+    <string name="insight_deep_label">深</string>
+    <string name="insight_aware_label">自覺</string>
+    <string name="insight_surface_label">淺</string>
+    <!-- Dashboard: Goal section -->
+    <string name="dashboard_goal_steps">通向目標的關鍵步驟</string>
+    <string name="goal_blocked_label">受阻</string>
+    <string name="goal_open_label">待開始</string>
+    <string name="goal_progress_label">有進展</string>
+    <!-- Dashboard: Custom analysis section -->
+    <string name="dashboard_custom_subtitle">基於你的自定義分析</string>
+    <string name="custom_important_label">重要</string>
+    <string name="custom_relevant_label">相關</string>
+    <string name="custom_note_label">備註</string>
+    <!-- Dashboard: TTS and sharing -->
+    <string name="dashboard_enable_voices">在設定裡開啟聲音</string>
+    <string name="dashboard_tts_stop">停止</string>
+    <string name="dashboard_tts_read">朗讀</string>
+    <string name="dashboard_share_analysis">分享分析</string>
+    <string name="dashboard_share">分享</string>
+    <string name="dashboard_tts_wait">請稍候，聲音正在生成…</string>
+
+    <!-- Profile names -->
+    <string name="profile_summary">摘要</string>
+    <string name="profile_entropy">整理你的生活</string>
+    <string name="profile_insight">自我認識</string>
+    <string name="profile_goals">個人目標</string>
+    <string name="profile_custom">自定義分析</string>
+    <string name="profile_summary_desc">彙總主題、規律與經歷</string>
+    <string name="profile_entropy_desc">識別壓力、混亂與負擔</string>
+    <string name="profile_insight_desc">呈現反覆出現的思考與情感模式</string>
+    <string name="profile_goals_desc">識別目標、願望與進展</string>
+    <string name="profile_custom_desc">設定自己的分析焦點</string>
+
+    <!-- Profile long descriptions (settings) -->
+    <string name="profile_summary_long">你的條目會被中立地彙總，不做評判也不給建議。\n\n一眼就能看到：\n\n• 最近你在想什麼\n• 哪些規律在重複\n• 生活如何展開\n\n作為每日的全景，很合適。</string>
+    <string name="profile_entropy_long">AI 會找出日常中讓你負擔的事物，並把它們整理好。你會得到一份最大負擔來源的總覽，以及 5 個具體的整理步驟。當你想重新找回掌握感時，這最理想。</string>
+    <string name="profile_insight_long">AI 不只關注事件本身，更深入解讀你的日記：\n\n• 字裡行間的思維模式與信念\n• 反覆出現的情感與反應\n• 條目中浮現的個人優勢\n• 驅動你行動的核心價值\n\n適合希望更了解自己、追求內在成長的你。</string>
+    <string name="profile_goals_long">AI 會找出條目裡的所有目標、願望與計劃，哪怕只是順口一提。\n\n你會看到：\n\n• 你有哪些目標（包括隱藏的）\n• 每個目標現在到了哪一步\n• 下一步可以是什麼\n\n它是從你自己的話裡讀取的個人目標追蹤器。</string>
+    <string name="profile_custom_long">由你決定 AI 關注什麼。\n\n寫下自己的分析焦點，例如：\n\n•「找出所有關於運動的提及」\n•「分析我的情緒起伏」\n•「告訴我我在哪些時候最有效率」\n\n給很清楚自己在找什麼的人完全的掌控。</string>
+    <string name="profile_custom_prompt">對你特別重要的是什麼？分析你的條目時 AI 該關注什麼？</string>
+    <string name="profile_select_hint">選一個模板。點一下模板檢視更多說明。</string>
+    <!-- Premium upsell sheet shown when a free user tries to add a 3rd custom analysis -->
+    <string name="profiles_premium_title">多個自訂檔案</string>
+    <string name="profiles_premium_desc">用 Premium 你可以建立任意多個自訂分析檔案。例如一個用於運動，一個用於工作，一個用於家庭。每個檔案都以自己的重點來分析你的日記。</string>
+    <string name="profiles_benefit_many">隨意建立任意數量的自訂檔案</string>
+    <string name="profiles_benefit_switch">隨時在你的重點之間切換</string>
+    <string name="profiles_benefit_named">為每個檔案取自己的名字</string>
+
+    <!-- ════════════════════════════════════════════════════════════════════
+         SETTINGS SCREEN
+         ════════════════════════════════════════════════════════════════════ -->
+    <string name="settings_title">設定</string>
+    <string name="settings_account">賬號</string>
+    <string name="settings_sign_out">退出登入</string>
+    <string name="settings_last_sync">上次同步：%1$s</string>
+    <string name="settings_entries_auto_loaded">登入後條目會自動載入</string>
+    <string name="settings_backup_photos">備份照片</string>
+    <string name="settings_backup_videos">備份影片</string>
+    <string name="settings_syncing">正在備份…</string>
+    <!-- Shown briefly as a confirmation after a successful cloud backup. -->
+    <string name="settings_sync_success">備份完成</string>
+    <!-- Error shown when Google sign-in fails. %1$s = error message from Google (e.g., "Network error"). -->
+    <string name="settings_signin_failed">登入失敗：<xliff:g id="error_reason" example="Network error">%1$s</xliff:g></string>
+    <string name="settings_backup_entries">備份日記條目</string>
+    <string name="settings_not_signed_in">未登入</string>
+    <string name="settings_entries_loaded_on_sign_in">已備份的條目會在登入時載入</string>
+    <string name="settings_sign_in_google">用 Google 登入</string>
+    <string name="settings_appearance">外觀</string>
+    <string name="settings_dark_mode">深色模式</string>
+    <string name="settings_dark_active">已開啟</string>
+    <string name="settings_dark_off">已關閉</string>
+    <string name="settings_follow_system">跟隨系統</string>
+    <string name="settings_automatic">自動</string>
+    <string name="settings_sounds_haptics_section">聲音/觸感</string>
+    <string name="settings_app_sounds">應用聲音</string>
+    <string name="settings_sounds_on">聲音已開</string>
+    <string name="settings_sounds_off">聲音已關</string>
+    <string name="settings_haptics">觸感反饋</string>
+    <string name="settings_haptics_on">觸感反饋已開</string>
+    <string name="settings_haptics_off">觸感反饋已關</string>
+    <string name="settings_voices">聲音</string>
+    <string name="settings_tts_on">朗讀已開</string>
+    <string name="settings_tts_off">朗讀已關</string>
+    <string name="settings_voice_select">選擇聲音</string>
+    <string name="settings_voice_choose">選擇聲音</string>
+    <string name="settings_reminder_section">提醒/回顧</string>
+    <string name="settings_daily_reminder">每日提醒</string>
+    <string name="settings_reminder_time" formatted="false">時間：%02d:%02d</string>
+    <string name="settings_reminder_desc">提醒你寫日記</string>
+    <string name="settings_weekly_review">每週回顧</string>
+    <string name="settings_weekly_review_on">提醒已開</string>
+    <string name="settings_weekly_review_off">週日 15:00</string>
+    <string name="settings_monthly_review">每月回顧</string>
+    <string name="settings_monthly_review_on">提醒已開</string>
+    <string name="settings_yearly_review">每年回顧</string>
+    <string name="settings_yearly_review_on">提醒已開</string>
+    <string name="settings_timezone">時區：%1$s</string>
+    <string name="settings_security">安全</string>
+    <string name="settings_fingerprint">指紋</string>
+    <string name="settings_fingerprint_desc">啟動時解鎖應用</string>
+    <string name="settings_auto_lock">後臺 60 秒後自動鎖定</string>
+    <string name="settings_ai_profiles_title">AI 面板模板：</string>
+    <string name="settings_ai_automations">AI 自動化</string>
+    <string name="settings_custom_prompt_placeholder">例如：關注我的睡眠質量和壓力水平。告訴我飲食中的規律。分析一週裡我的心情如何變化。找出我什麼時候最有效率、什麼讓我停滯。\n\n焦點寫得越詳細，結果越好。</string>
+    <string name="churn_google_play_redirect">現在跳轉到 Google Play 管理訂閱。你的日記條目當然會保留。</string>
+    <string name="splash_subtitle">你的智慧日記</string>
+    <string name="biometric_subtitle">解鎖你的日記</string>
+    <!-- Shown in the biometric lock screen below the app name. Hint to authenticate. -->
+    <string name="biometric_prompt_subtitle">驗證身份以解鎖</string>
+    <!-- Button in the biometric lock screen to trigger the fingerprint prompt. Keep short. -->
+    <string name="biometric_unlock_button">解鎖</string>
+    <string name="settings_text_improvement">文字潤色</string>
+    <string name="settings_text_improvement_desc">預設開啟</string>
+    <string name="settings_dashboard_section">面板</string>
+    <string name="settings_auto_update">每次新增條目時自動重新整理</string>
+    <string name="settings_premium_section">高階版</string>
+    <string name="settings_premium_lifetime">終身訪問已啟用</string>
+    <string name="settings_premium_active">高階版訂閱中</string>
+    <string name="settings_premium_lifetime_desc">一次性購買，所有功能持續解鎖。</string>
+    <string name="settings_premium_desc">解鎖所有功能，每天 AI、PDF 匯出等。</string>
+    <string name="settings_manage_subscription">管理訂閱</string>
+    <string name="settings_export">匯出</string>
+    <string name="settings_export_pdf_desc">把所有日記條目和照片匯出為 PDF 文件。</string>
+
+    <!-- Premium feature list (settings) -->
+    <string name="settings_premium_feature_improve">每日 AI 文字改善</string>
+    <string name="settings_premium_feature_improve_desc">AI 可依你的要求潤色每一則日記。</string>
+    <string name="settings_premium_feature_dashboard">每日儀表板分析</string>
+    <string name="settings_premium_feature_dashboard_desc">你的儀表板會隨著你的日記一起成長。</string>
+    <string name="settings_premium_feature_5_perspectives">全部 4 個預設 AI 設定檔</string>
+    <string name="settings_premium_feature_5_perspectives_desc">從摘要到自我認識</string>
+    <string name="settings_premium_feature_reviews">每週、每月、每年的回顧</string>
+    <string name="settings_premium_feature_reviews_desc">AI 講述你的故事</string>
+    <string name="settings_premium_feature_patterns">規律識別</string>
+    <string name="settings_premium_feature_patterns_desc">AI 能從你的日記中找出規律與關聯。</string>
+    <string name="settings_premium_feature_pdf">帶照片的 PDF 匯出</string>
+    <string name="settings_premium_feature_pdf_desc">把帶圖片的條目匯出成文件</string>
+    <string name="settings_premium_feature_voice">更準的語音識別</string>
+    <string name="settings_premium_feature_voice_desc">語音條目質量更高</string>
+    <string name="settings_premium_feature_profiles">自訂 AI 設定檔，沒有數量上限</string>
+    <string name="settings_premium_feature_profiles_desc">多個分析重點並排進行</string>
+    <string name="settings_unlock_premium">解鎖高階版</string>
+    <!-- Export dialog -->
+    <!-- AlertDialog title shown before PDF export. Max 25 chars — fits in dialog header. -->
+    <string name="settings_export_dialog_title">PDF 匯出</string>
+    <string name="settings_export_what">要匯出什麼？</string>
+    <string name="settings_export_entries">日記條目</string>
+    <string name="settings_export_photos">照片</string>
+    <string name="settings_export_action">匯出</string>
+    <string name="settings_exporting">正在匯出…</string>
+    <!-- Export error shown when the user has no journal entries yet. -->
+    <string name="settings_export_no_entries">沒有可匯出的條目</string>
+    <string name="settings_export_entries_photos_pdf">把條目和照片匯出為 PDF</string>
+    <string name="settings_export_data">匯出資料</string>
+    <string name="settings_export_entries_photos_pdf_full">把帶照片的日記條目匯出為 PDF</string>
+    <!-- Feedback -->
+    <string name="settings_feedback">反饋</string>
+    <string name="settings_feedback_desc">建議、想法、改進、報告問題 🐞</string>
+    <string name="settings_feedback_send">傳送反饋</string>
+    <string name="settings_feedback_sent">已傳送</string>
+    <string name="settings_feedback_dialog_title">傳送反饋</string>
+    <string name="settings_feedback_dialog_desc">你給開發者的留言 — 我們會閱讀每一則訊息，並盡快回覆你。</string>
+    <string name="settings_feedback_placeholder">把你的反饋寫給我們…</string>
+    <string name="settings_feedback_sending">正在傳送…</string>
+    <string name="settings_feedback_sign_in_first">請先用 Google 登入</string>
+    <string name="settings_feedback_allow_gmail">請允許訪問 Gmail 後再試。</string>
+    <string name="settings_feedback_token_error">令牌錯誤：%1$s</string>
+    <string name="settings_feedback_subject">Best Journal 意見回饋</string>
+    <string name="settings_feedback_no_error_body">未收到錯誤回應</string>
+    <string name="settings_feedback_read_error">無法讀取錯誤回應</string>
+    <string name="settings_feedback_api_error">Gmail 錯誤 %1$d：%2$s</string>
+    <string name="settings_feedback_unknown_error">未知錯誤</string>
+    <string name="settings_feedback_confirm_subject">你對 Best Journal 的反饋</string>
+    <string name="settings_feedback_confirm_body">你已將這則訊息傳送給開發者。\n開發者會親自回覆你。\n\n--- 你的訊息 ---\n%1$s\n\n謝謝，\nDEV.FRANK</string>
+    <string name="settings_feedback_from">反饋來自：%1$s</string>
+    <string name="action_send">傳送</string>
+    <!-- Drive errors -->
+    <string name="drive_consent_needed">需要授權 Drive 訪問</string>
+    <string name="drive_not_signed_in">未登入</string>
+    <string name="drive_no_backup">沒有找到備份</string>
+    <string name="drive_backup_disabled">Google Drive 備份已在隱私設定中關閉</string>
+    <!-- Achievements -->
+    <string name="achievements_title">成就</string>
+    <string name="achievements_counter">已解鎖 %1$d / %2$d</string>
+    <string name="achievements_unlocked_at">解鎖於 %1$s</string>
+    <!-- About -->
+    <string name="settings_about">關於應用</string>
+    <string name="settings_about_version">Best Journal V0.21.9</string>
+    <string name="settings_about_desc">你的個人 AI 日記</string>
+    <!-- Sign-out dialog -->
+    <string name="settings_sign_out_confirm">要退出登入嗎？</string>
+    <string name="settings_sign_out_body">確認要退出登入嗎？</string>
+    <!-- Toggle labels -->
+    <string name="toggle_light">淺色</string>
+    <string name="toggle_dark">深色</string>
+    <string name="toggle_sound_on">聲音開</string>
+    <string name="toggle_sound_off">聲音關</string>
+    <string name="toggle_haptic_on">觸感開</string>
+    <string name="toggle_haptic_off">觸感關</string>
+    <string name="toggle_voice_on">聲音開</string>
+    <string name="toggle_voice_off">聲音關</string>
+    <string name="toggle_sun">太陽</string>
+    <string name="toggle_moon">月亮</string>
+    <!-- Day names -->
+    <string name="day_monday">星期一</string>
+    <string name="day_tuesday">星期二</string>
+    <string name="day_wednesday">星期三</string>
+    <string name="day_thursday">星期四</string>
+    <string name="day_friday">星期五</string>
+    <string name="day_saturday">星期六</string>
+    <string name="day_sunday">星期日</string>
+    <!-- Short weekday labels (2 chars) for compact weekday picker. Monday to Sunday. -->
+    <string name="day_abbrev_mon">一</string>
+    <string name="day_abbrev_tue">二</string>
+    <string name="day_abbrev_wed">三</string>
+    <string name="day_abbrev_thu">四</string>
+    <string name="day_abbrev_fri">五</string>
+    <string name="day_abbrev_sat">六</string>
+    <string name="day_abbrev_sun">日</string>
+    <!-- Array of short weekday labels for LazyRow / weekday pickers. Order: Mon-Sun. -->
+    <string-array name="weekday_abbreviations">
+        <item>@string/day_abbrev_mon</item>
+        <item>@string/day_abbrev_tue</item>
+        <item>@string/day_abbrev_wed</item>
+        <item>@string/day_abbrev_thu</item>
+        <item>@string/day_abbrev_fri</item>
+        <item>@string/day_abbrev_sat</item>
+        <item>@string/day_abbrev_sun</item>
+    </string-array>
+    <!-- Review schedule dialog -->
+    <string name="settings_reminder_when">什麼時候提醒你？</string>
+    <string name="settings_review_when">什麼時候收到回顧？</string>
+    <string name="settings_review_weekday">星期</string>
+    <string name="settings_review_time">時間</string>
+    <string name="settings_monthly_review_off">每月最後一天 15:00</string>
+    <string name="settings_yearly_review_off">每年最後一天 15:00</string>
+    <string name="achievement_secret">神秘</string>
+    <string name="paywall_exit_bonus_days">+ %1$d 天額外試用</string>
+    <!-- Splash screen start button -->
+    <string name="splash_start">開始</string>
+    <!-- FreeLimitIndicator: remaining uses counter -->
+    <!-- %1$d = number of remaining AI uses this week -->
+    <string name="limit_remaining">剩餘 <xliff:g id="count" example="3">%1$d</xliff:g></string>
+    <!-- FreeLimitIndicator: usage counter (X of Y used) -->
+    <!-- %1$d = used count, %2$d = max count -->
+    <string name="limit_used_of_max">已用 <xliff:g id="used" example="3">%1$d</xliff:g>/<xliff:g id="max" example="5">%2$d</xliff:g></string>
+    <!-- ChurnFlowDialog: retention discount badge -->
+    <!-- %1$d = discount percentage -->
+    <string name="churn_discount_badge">省 <xliff:g id="percent" example="50">%1$d</xliff:g>\u00A0%%</string>
+    <!-- AI prompt language instruction — automatically uses device language -->
+    <string name="ai_prompt_language_style">簡單清晰。不用生僻詞。</string>
+    <string name="ai_prompt_language_override"></string>
+    <!-- Final response-language instruction appended to every AI prompt. -->
+    <string name="ai_prompt_response_language">回覆語言：請全部用繁體中文（台灣）回覆。所有文字和標題都用繁體中文，不用其他語言。</string>
+
+    <!-- TTS-friendly date ban -->
+    <string name="ai_prompt_no_dates_rule">朗讀友善（必須 — 可見文字中禁止日期）：\n在所有可見的文字欄位（描述、說明、摘要、整體分析）裡，你不准使用任何日期 — 既不能用「3.4.」「23.04.」「28.4.」「24.04.」「30.4.」，也不能用「4 月 3 日的條目」「在 23.04.」「來自 28.4.」或類似指向具體條目日期的說法。這些文字會朗讀給使用者聽 — 一串日期念起來不自然，會打斷洞見的流暢感。\n\n請改成只表達純粹的洞見：\n- 錯誤：「3.4.、28.4. 和 23.4. 的條目證明，晚睡讓你的生理節律受損。」\n- 正確：「晚睡正在系統性地破壞你的生理節律。」\n- 錯誤：「30 日的條目顯示，你的信箱自 28.4. 起就爆滿並偷走你的時間。」\n- 正確：「你的信箱已連日爆滿，正在偷走你的時間。」\n- 錯誤：「自 24.04. 的整理行動以來，你在日常中更有掌握感。」\n- 正確：「活動讓你在日常中明顯更有掌握感。」\n\n內容上的洞見保留 — 只是去掉具體的日期指涉。你仍可使用一般性的時間表述（「反覆地」「最近」「連續好幾天」）。日期只屬於「herleitung」（來源）欄位（內部使用，不會顯示）。</string>
+    <!-- B2 Re-Ranker prompt -->
+    <string name="ai_prompt_rerank_system">你是一位設定檔重排器。你會收到一個來自儀表板分析的 5 條首要行動 JSON 陣列、使用者的設定檔焦點，以及原始日記條目。\n\n你的任務分為 3 步：\n1）將這 5 條行動排序，使與設定檔焦點關聯最清楚的排在最前面。\n2）檢查這 5 條中是否有最多 2 條與設定檔焦點在內容上毫無關聯。若有，就用你從日記條目推導出、設定檔關聯更強的行動取代它們。維持每條行動相同的 JSON 結構（titel、beschreibung、erklaerung）。\n3）以多樣的方式表達設定檔關聯，運用同義詞與主題上的鄰近概念，而非機械式重複設定檔的字眼。關聯要讓人感受得到，而非字面照搬。\n\n重要：\n- 最後請正好回傳 5 條。\n- 只在真正缺乏設定檔關聯時才更動 — 若契合度已佳，就只排序、不取代。\n- 保留每條的 JSON 結構（相同鍵：titel、beschreibung、erklaerung）。\n- 語言用德文，不用破折號，beschreibung 為 13 至 21 個字。\n- 不給任何醫療、法律或財務的診斷或具約束力的建議；遇到這類主題時請中立地轉介給專業人士。\n\n朗讀友善（必須 — 禁止日期）：\n在 beschreibung 和 erklaerung 裡不准使用日期（「3.4.」「23.04.」「30 日的條目」）。這些文字會被朗讀 — 一串日期念起來不自然。請只表達純粹的洞見，不帶具體條目日期。例如：\n- 錯誤：「3.4. 和 23.04. 的條目證明你的生理節律受損。」\n- 正確：「晚睡正在系統性地破壞你的生理節律。」\n一般性的時間表述是允許的（「反覆地」「最近」「連續好幾天」），日期則不行。\n\n輸出格式：\n- 只回傳一個 JSON 陣列（根層級為方括號）。\n- 不要 Markdown 反引號，前後不要任何文字。\n- 直接以 [ 開頭、以 ] 結尾。</string>
+    <string name="ai_prompt_rerank_user_focus_header">=== 使用者的檔案焦點 ===</string>
+    <string name="ai_prompt_rerank_actions_header">=== 當前最優行動陣列（5 條） ===</string>
+    <string name="ai_prompt_rerank_entries_header">=== 日記條目（用於強檔案替換點的來源） ===</string>
+    <string name="ai_prompt_rerank_instruction">排序並替換最多 2 條偏離焦點的記錄。回傳恰好 5 條作為 JSON 陣列。</string>
+    <string name="retro_month_more_entries">（再 <xliff:g id="count" example="3">%1$d</xliff:g> 條）</string>
+    <string name="retro_month_entries_header">本月原始日記條目（緊湊形式，作為直接檔案關聯的第二來源）：</string>
+    <string name="dashboard_active_profile_label">當前檔案：<xliff:g id="profile" example="摘要">%1$s</xliff:g></string>
+    <string name="dashboard_profile_summary">摘要</string>
+    <string name="dashboard_profile_entropy">清理你的生活</string>
+    <string name="dashboard_profile_insight">自我認識</string>
+    <string name="dashboard_profile_goals">個人目標</string>
+    <string name="dashboard_profile_focus_summary">最重要事件的敘述性摘要。</string>
+    <string name="dashboard_profile_focus_entropy">整理你的生活：辨識壓力、混亂和負擔，並指出可以放下或解決的部分。</string>
+    <string name="dashboard_profile_focus_insight">深度自我認識：思維模式和隱藏的優點。</string>
+    <string name="dashboard_profile_focus_goals">激勵型目標夥伴，附帶進度檢視。</string>
+    <string name="dashboard_empty_custom_title">沒有焦點文字的檔案</string>
+    <string name="dashboard_empty_custom_message">這個檔案還沒有焦點文字。打開設定，選擇此檔案，並新增一條焦點提示 — 然後你的個人儀表板就會出現在這裡。</string>
+
+    <!-- ════════════════════════════════════════════════════════════════════
+         JSON-KEYS für die KI-Antwort (Dashboard).
+         ════════════════════════════════════════════════════════════════════ -->
+    <!-- Top-level JSON keys -->
+    <string name="json_key_overall_analysis">zhengti_fenxi</string>
+    <string name="json_key_top_actions">zhongyao_xingdong</string>
+    <string name="json_key_categories">fenlei</string>
+    <string name="json_key_heading_top5">biaoti_qian5</string>
+    <string name="json_key_heading_analysis">biaoti_fenxi</string>
+    <string name="json_key_heading_results">biaoti_jieguo</string>
+    <string name="json_key_progress">jinzhan</string>
+    <string name="json_key_overall_entropy">zhengti_shang</string>
+    <string name="json_key_trend">qushi</string>
+    <!-- Category-level JSON keys -->
+    <string name="json_key_category_name">mingcheng</string>
+    <string name="json_key_category_icon">tubiao</string>
+    <string name="json_key_category_color">yanse</string>
+    <string name="json_key_category_entropy_level">shang_shuiping</string>
+    <string name="json_key_category_summary">zhaiyao</string>
+    <string name="json_key_category_advices">jianyi</string>
+    <!-- Item-level JSON keys (advice, action, progress) -->
+    <string name="json_key_item_title">biaoti</string>
+    <string name="json_key_item_description">miaoshu</string>
+    <string name="json_key_item_explanation">jieshi</string>
+    <string name="json_key_item_reference">laiyuan</string>
+    <string name="json_key_item_priority">youxianji</string>
+    <string name="json_key_item_connection">guanlian</string>
+    <string name="json_key_item_derivation">tuidao</string>
+    <!-- Derivation-level JSON keys -->
+    <string name="json_key_derivation_date">riqi</string>
+    <string name="json_key_derivation_summary">zhaiyao</string>
+    <!-- Enum values (priorities) -->
+    <string name="json_value_priority_high">gao</string>
+    <string name="json_value_priority_medium">zhong</string>
+    <string name="json_value_priority_low">di</string>
+    <string name="ai_prompt_fresh_summary">全新摘要 — 請生成一份完全獨立的新分析。</string>
+    <string name="ai_prompt_fresh_insight">全新自我認識分析 — 請生成一份完全獨立的新分析。</string>
+    <string name="ai_prompt_fresh_goals">全新目標分析 — 請生成一份完全獨立的新分析。</string>
+    <string name="ai_prompt_fresh_custom">全新自定義分析 — 根據使用者的焦點生成一份完全獨立的新分析。</string>
+    <string name="ai_prompt_fresh_default">全新分析 — 請生成一份完全獨立的新分析。</string>
+    <string name="ai_prompt_check_summary">必檢：你收到了 %1$d 條記錄。每條都必須出現在摘要和至少一個主題裡。</string>
+    <string name="ai_prompt_check_insight">必檢：你收到了 %1$d 條記錄。每條都必須從思維規律、情緒、信念和個人優點的角度考察。</string>
+    <string name="ai_prompt_check_goals">必檢：你收到了 %1$d 條記錄。每條都必須從目標的角度考察。</string>
+    <string name="ai_prompt_check_custom">必檢：你收到了 %1$d 條記錄。每條都必須按使用者焦點考察。</string>
+    <string name="ai_prompt_check_default">必檢：你收到了 %1$d 條記錄。每條都必須出現在分析裡。</string>
+
+    <!-- ═══════════════════════════════════════════════════════════════════════
+         Retrospective Prompts (Weekly / Monthly / Yearly Rückblicke)
+         ═══════════════════════════════════════════════════════════════════════ -->
+
+    <!-- Weekly retrospective prompt blocks -->
+    <string name="ai_retro_week_intro">你是一位講述者，把日記條目編織成自然、好讀的每週回顧。</string>
+    <string name="ai_retro_week_task">任務：把下面的日記條目彙總成一份結構清晰的每週回顧。</string>
+    <string name="ai_retro_week_format">格式（嚴格遵守）:\n1. 先用 3-5 條短要點開頭，每行以「• 」開始\n2. 接著一行空行\n3. 然後連貫的正文，分成 2-4 個主題段落\n4. 每段以方括號標題開頭：[主題](如 [新相遇] 或 [小勝利])\n5. 標題之後是該段的敘述\n6. 段落按時間順序從一週的開始到結束排列</string>
+    <string name="ai_retro_week_rules">規則：\n- 使用貼近讀者的第二人稱「你」(或該語言裡的親切人稱)\n- 不要稱呼語或結束語，直接進入敘述\n- 段落之內行文流暢，過渡自然\n- 標題要短且切題（2-4 個字詞）\n- 提到具體的事件、情緒和體會\n- 只在有意義時才提及日常\n- 突出積極面，也不迴避挑戰。難時刻裡的體會也屬於故事\n- 寫得溫暖而親切，不要誇大\n- 至少 200 字\n- 不要使用長破折號（—）。用逗號或短句代替。</string>
+    <!-- Section header that introduces the journal entries block. -->
+    <string name="ai_retro_week_entries_header">本週條目：</string>
+    <!-- Title-generation prompt after a weekly review is ready. %1$s = target language, %2$s = preview. -->
+    <string name="ai_retro_week_title_prompt">基於這份每週回顧，用<xliff:g id="lang" example="繁體中文">%1$s</xliff:g>給一個簡短、有情感的標題（不超過 6 個字詞）。\n只給標題，不要其它內容。不要引號。不要長破折號（—）。\n\n回顧：\n<xliff:g id="summary_preview" example="這一週開始於…">%2$s</xliff:g></string>
+
+    <!-- Monthly retrospective prompt blocks -->
+    <string name="ai_retro_month_intro">你是一位講述者，把每週回顧編織成自然、好讀的每月回顧。</string>
+    <!-- %1$s = month name, %2$d = year. -->
+    <string name="ai_retro_month_task">任務：把下面的每週回顧彙總成 <xliff:g id="month" example="四月">%1$s</xliff:g> <xliff:g id="year" example="2026">%2$d</xliff:g> 的結構清晰的每月回顧。</string>
+    <string name="ai_retro_month_format">格式（嚴格遵守）:\n1. 先用 4-6 條短要點開頭，每行以「• 」開始\n2. 接著一行空行\n3. 然後連貫的正文，分成 3-5 個主題段落\n4. 每段以方括號標題開頭：[主題](如 [新開始] 或 [悄悄的體悟])\n5. 標題之後是該段的敘述\n6. 段落按時間順序從月初到月末排列</string>
+    <string name="ai_retro_month_rules">規則：\n- 使用貼近讀者的第二人稱「你」\n- 不要稱呼語或結束語，直接進入敘述\n- 段落之內行文流暢，過渡自然\n- 標題要短且切題（2-4 個字詞）\n- 把不同的周串起來，呈現變化與主線\n- 不要按順序重複一週又一週，而要按主題連線\n- 只在有意義時才提及日常\n- 突出積極面，也不迴避挑戰\n- 寫得溫暖而親切，不要誇大\n- 至少 300 字\n- 不要使用長破折號（—）。用逗號或短句代替。</string>
+    <string name="ai_retro_month_entries_header">每週回顧：</string>
+    <!-- %1$s = target language, %2$s = preview. -->
+    <string name="ai_retro_month_title_prompt">基於這份每月回顧，用<xliff:g id="lang" example="繁體中文">%1$s</xliff:g>給一個簡短、有情感的標題（不超過 6 個字詞）。\n只給標題，不要其它內容。不要引號。不要長破折號（—）。\n\n回顧：\n<xliff:g id="summary_preview" example="四月帶來…">%2$s</xliff:g></string>
+
+    <!-- Yearly retrospective prompt blocks -->
+    <string name="ai_retro_year_intro">你是一位講述者，把每月回顧編織成自然、好讀的每年回顧。</string>
+    <!-- %1$d = year. -->
+    <string name="ai_retro_year_task">任務：把下面的每月回顧彙總成 <xliff:g id="year" example="2026">%1$d</xliff:g> 年的結構清晰的每年回顧。</string>
+    <string name="ai_retro_year_format">格式（嚴格遵守）:\n1. 先用 5-8 條短要點開頭，每行以「• 」開始\n2. 接著一行空行\n3. 然後連貫的正文，分成 4-6 個主題段落\n4. 每段以方括號標題開頭：[主題](如 [出發的春天] 或 [尋回平靜])\n5. 標題之後是該段的敘述\n6. 段落按時間順序從年初到年末排列</string>
+    <string name="ai_retro_year_rules">規則：\n- 使用貼近讀者的第二人稱「你」\n- 不要稱呼語或結束語，直接進入敘述\n- 段落之內行文流暢，過渡自然\n- 標題要短且切題（2-5 個字詞）\n- 把不同的月份串起來，呈現一年的軌跡\n- 發現全年的大主題，把事件放進這些主線\n- 只在有意義時才提及日常\n- 突出積極面，也不迴避挑戰\n- 以向前看的一句話收尾\n- 寫得溫暖而親切，不要誇大\n- 至少 400 字\n- 不要使用長破折號（—）。用逗號或短句代替。</string>
+    <string name="ai_retro_year_entries_header">每月回顧：</string>
+    <!-- %1$s = target language, %2$s = preview. -->
+    <string name="ai_retro_year_title_prompt">基於這份每年回顧，用<xliff:g id="lang" example="繁體中文">%1$s</xliff:g>給一個簡短、有情感的標題（不超過 6 個字詞）。\n只給標題，不要其它內容。不要引號。不要長破折號（—）。\n\n回顧：\n<xliff:g id="summary_preview" example="這一年開始於…">%2$s</xliff:g></string>
+
+    <!-- Goals Analysis System Prompt (Profile: Persönliche Ziele) -->
+    <string name="ai_prompt_goals_intro">你是一位細心且鼓勵人的目標分析師兼進度追蹤者。\n\n你的任務：\n分析使用者的日記條目。識別所有目標、願望、計劃和想法，包括只是順口一提的。跨多條記錄追蹤進展，生成一份 JSON 格式、結構清晰的目標面板。</string>
+    <string name="ai_prompt_goals_definition">定義 — 什麼算目標：\n一切使用者想達成、想改變、想開始、想結束、想改進或想搭建的東西。間接線索也算在內：\n- 直接：「我想減肥」「我得給牙醫打電話」\n- 間接：「要是能再去跑步就好了」= 體能目標\n- 抱怨：「我睡得很差」= 改善睡眠的隱性目標\n- 夢想：「總有一天我想去瑞典」= 長期旅行目標</string>
+    <string name="ai_prompt_goals_entry_rules">最高規則 — 不能漏掉任何一條：\n你會收到編號的記錄（如「記錄 1/5」）。\n必須讀、分析並納入每一條。\n\n只有少量記錄時：\n- 1-2 條：識別單個目標，進展評估為「未知」。\n- 3 條及以上：主動追蹤進展並識別規律。</string>
+    <string name="ai_prompt_goals_rules">語言規則：\n- %1$s\n- 鼓勵且誠實，慶祝進步，不粉飾任何事。\n- 不要長破折號（—）。用逗號或句號。\n- 遇到健康或身體目標時，你只做激勵性的陪伴；不給飲食、藥物或治療建議。\n\n數量規則，每個目標都算：\n辨識出所有目標 — 連小的也要。不要合併總結。</string>
+    <string name="ai_prompt_goals_schema">JSON 輸出結構:\n{\n  \"zhengti_fenxi\": \"...\",\n  \"zhongyao_xingdong\": [...],\n  \"fenlei\": [...]\n}\n\n1) \"zhengti_fenxi\"(15-25 句): 點名每一個目標,識別進展。\n\n2) \"zhongyao_xingdong\"(正好 5 個): 下一步。\n   { \"biaoti\": \"...\", \"miaoshu\": \"13-21 個字詞\", \"jieshi\": \"5-8 句\" }\n\n3) \"fenlei\": 目標領域。\n   {\n     \"mingcheng\": \"最多 12 字\", \"tubiao\": \"material_icon\", \"yanse\": \"#HEX\",\n     \"shang_shuiping\": 0.0, \"zhaiyao\": \"3-5 句\",\n     \"jianyi\": [{\n       \"biaoti\": \"...\",\n       \"miaoshu\": \"13-21 個字詞。狀態: [未開始/進行中/受阻/已達成]。下一步: [...]。\",\n       \"youxianji\": \"gao|zhong|di\",\n       \"guanlian\": \"...\", \"tuidao\": [{\"riqi\":\"...\",\"zhaiyao\":\"...\"}]\n     }]\n   }\n   領域: 體能、健康、工作、職業、財務、關係、專案、學習、睡眠、心理、旅行、整理、創作\n   優先度: gao=受阻、zhong=未開始、di=進行中/已達成</string>
+    <string name="ai_prompt_goals_output">輸出格式: 僅 JSON。不要反引號。以 { 開頭。</string>
+
+    <!-- Self-Insight Analysis System Prompt (Profile: Selbsterkenntnis) -->
+    <string name="ai_prompt_insight_intro">你是一位富有同理心、目光深遠的個人成長規律分析師。\n\n你的任務：\n分析使用者的日記條目。找出隱藏的規律、反覆出現的思考與行為、無意識的信念、情緒的反應規律和個人優點。把使用者在寫作時未必察覺的、關於他自己的學習呈現出來。生成一份 JSON 格式、結構清晰的自我認識面板。</string>
+    <string name="ai_prompt_insight_attitude">你的姿態：\n你是一面善意的鏡子。你誠實地讓使用者看見你在他條目裡讀到的東西 — 但始終以幫助他從中成長為目標。每一條洞見都應幫助他更瞭解自己。即使是困難的模式，你也清楚指出，但要有建設性、不帶責備。重點：使用者能從自己的文字裡學到關於自己的什麼？\n\n你不下任何心理診斷，也不指稱任何障礙或疾病。你只描述從使用者自己文字中可觀察到的模式。\n\n你要找的是：\n- 反覆出現的情緒：哪些情緒一再浮現？\n- 思考模式：使用者如何看待自己、他人、世界？\n- 迴避模式：使用者迴避什麼？他從不寫到什麼？\n- 強項：使用者擅長什麼，即使他自己沒看見？\n- 價值觀：什麼對使用者真正重要（從行動而非言語顯現）？\n- 觸發點：什麼會引發強烈反應 — 不論正面或負面？\n- 矛盾：使用者說一套，做的卻是另一套？\n- 需求：在字裡行間透出、使用者所需要的是什麼？\n- 成長：使用者的看法在哪裡改變了？</string>
+    <string name="ai_prompt_insight_entry_rules">最高規則 — 不能漏掉任何一條：\n你會收到編號的記錄（如「記錄 1/5」）。\n必須讀、分析並納入每一條。\n回答前先數一遍：我是否納入了所有記錄？\n漏掉的就立刻補上。\n\n只有少量記錄時：\n- 1-2 條：只說第一印象，不談深層規律。\n  在描述裡把洞見標為「初步」。\n- 3 條及以上：主動尋找反覆出現的規律與深層聯絡。\n\n時間權重：\n每條都要納入。追蹤內在發展：姿態變了嗎？同樣的主題是否在新的光線下回來？自信在成長，還是不安在增加？</string>
+    <string name="ai_prompt_insight_rules">語言規則（適用於 JSON 裡所有文字欄位）:\n- 語言簡單清晰，句子短。\n- 不用生僻詞、行話或套話。\n- 誰都能馬上看懂，不用琢磨。\n- 同理、誠實、有建設性，不指責，不說教。\n- 永遠看向積極面：使用者能學到什麼？\n- 不要長破折號（—）。用逗號或句號。\n\n數量規則 — 完整優先於簡短：\n所有領域的洞見總數至少 15。少於 10 就是錯誤。每一條發現的規律、每一處信念的線索、每一種反覆出現的情緒都值得一條獨立的洞見。不要合併。如果一條記錄顯示害怕、驕傲、迴避，就要寫出 3 條不同的洞見，而不是把它們合成一條。JSON 可以長，完整比簡短更重要。</string>
+    <string name="ai_prompt_insight_schema_header">JSON 輸出結構:\n{\n  \"zhengti_shang\": 0.0,\n  \"qushi\": \"shangsheng|wen|xiajiang|weizhi\",\n  \"zhengti_fenxi\": \"...\",\n  \"jinzhan\": [...],\n  \"zhongyao_xingdong\": [...],\n  \"fenlei\": [...]\n}\n\n欄位說明:\n\n1) \"zhengti_shang\"(數字,0.0-1.0)\n   使用者在條目裡對自己反思得有多深?\n   - 0.0-0.33 = 反思很少(主要描述事件)\n   - 0.34-0.66 = 有一定反思(提到情緒與想法)\n   - 0.67-1.0 = 反思很深(與自己有深入對話)\n\n2) \"qushi\"(文字)\n   只有在多天裡有至少 3 條記錄時才填。\n   對比舊的與新的:\n   - 「shangsheng」= 反思越來越深\n   - 「wen」= 反思深度保持\n   - 「xiajiang」= 較新的條目裡反思變少\n   - 「weizhi」= 資料不足\n\n3) \"zhengti_fenxi\"(文字,15-25 句)\n   - 逐條去讀,找出背後更深的主題。\n   - 條目作為整體,告訴我們這個人是怎樣的?\n   - 思考、感受和行動裡出現了哪些規律?\n   - 使用者展現出哪些自己沒意識到的優點?\n   - 哪些無意識的信念在推動他的行為?\n   - 個人成長在哪裡顯現?\n   - 同理而親切,直接對使用者說。\n   - 永遠建設性: 把難的洞見也連線到可能的學習。</string>
+    <string name="ai_prompt_insight_schema_fields">4) \"jinzhan\"(陣列,0-8 條)\n   從條目裡看得到的個人優點與正面品質,即使使用者自己沒說出來。\n   每條結構:\n   {\n     \"biaoti\": \"短標題(最多 5 個字詞)\",\n     \"miaoshu\": \"哪個優點在顯現、從哪裡看得出(2-3 句)。\",\n     \"laiyuan\": \"來自哪一條或哪幾條(1 句)。\"\n   }\n   只有 1 條記錄或沒有明顯優點時: 空陣列 []。\n\n5) \"zhongyao_xingdong\"(陣列,正好 5 條)\n   從所有條目整體中浮出的 5 條最深的洞見。使用者能從自己身上學到的最重要的事是什麼?按深度排序(最深的在前)。跨領域思考,呈現性格的整體圖景。\n   每條結構:\n   {\n     \"biaoti\": \"短標題(最多 6 個字詞)\",\n     \"miaoshu\": \"13-21 個字詞,用一句緊湊的話說出這條洞見。以建設性方式表達,使用者能從中學到什麼?\",\n     \"jieshi\": \"詳細說明(5-8 句)。哪種規律在顯現?在哪些條目裡看得見?為什麼它對自我理解重要?使用者可以拿它做什麼?\"\n   }</string>
+    <string name="ai_prompt_insight_schema_categories">6) \"fenlei\"(陣列,需要多少就有多少)\n   每一個識別到的自我認識領域 = 一個獨立分組。\n   領域不是生活主題(工作、睡眠),而是內在維度: 使用者如何思考、感受、與自己相處、做決定、與人相處、激勵自己、面對挫折。\n   每個領域的結構:\n   {\n     \"mingcheng\": \"領域名(最多 12 字,1-2 個字詞)\",\n     \"tubiao\": \"material_icon_name\",\n     \"yanse\": \"#HEX\",\n     \"shang_shuiping\": 0.0,\n     \"zhaiyao\": \"這個領域的小結(3-5 句)。它關於使用者說了什麼?有哪種規律?能學到什麼?\",\n     \"jianyi\": [...]\n   }\n\n   領域名 — 短而準:\n   對: 「思考」、「情緒」、「動力」、「應對」、「價值」\n   錯: 「情緒反應規律」(太長)→「情緒」\n\n   領域 — 動態:\n   把下面作為基礎,主題不合時就新建。\n   領域要反映內在維度,不是外在主題:\n   - 思考 (icon: psychology, yanse: #A78BFA)\n   - 情緒 (icon: favorite, yanse: #F472B6)\n   - 自我像 (icon: person, yanse: #60A5FA)\n   - 動力 (icon: bolt, yanse: #F59E0B)\n   - 價值 (icon: star, yanse: #FBBF24)\n   - 關係 (icon: people, yanse: #EC4899)\n   - 韌性 (icon: shield, yanse: #10B981)\n   - 習慣 (icon: repeat, yanse: #6366F1)\n   - 恐懼 (icon: nights_stay, yanse: #6C63FF)\n   - 界限 (icon: block, yanse: #EF4444)\n   - 創造 (icon: lightbulb, yanse: #D946EF)\n   - 應對 (icon: handshake, yanse: #14B8A6)\n   - 成長 (icon: trending_up, yanse: #22C55E)\n   - 需要 (icon: spa, yanse: #F97316)\n   - 掌控 (icon: tune, yanse: #78716C)\n   其他圖示: self_improvement, mood, sentiment_satisfied, sentiment_dissatisfied, visibility, lock_open, wb_sunny, explore, balance, healing, volunteer_activism, emoji_objects\n\n   領域的深度(欄位 \"shang_shuiping\",0.0-1.0):\n   這個領域裡,自我認識走多深?\n   - 0.0-0.33 = 表面(描述情境,少反思)\n   - 0.34-0.66 = 自覺(部分識別出自己的規律)\n   - 0.67-1.0 = 深入(理解原因與聯絡)\n\n   領域裡的洞見(欄位 \"jianyi\")— 數量:\n   把條目裡能引出的洞見全部取出。寧多勿少,每個領域 5-20 條是常態。每一條識別到的規律、每一處對性格的觀察、每一個內在姿態的線索都值得單獨一條。不要合併。每條都必須基於條目裡的具體表達。按重要度排序: 先「gao」,再「zhong」,再「di」。\n\n   每條結構:\n   {\n     \"biaoti\": \"短標題(最多 6 個字詞)\",\n     \"miaoshu\": \"13-21 個字詞,一句緊湊的話。建設性,什麼在顯現,能學到什麼?\",\n     \"youxianji\": \"gao|zhong|di\",\n     \"guanlian\": \"1-2 個相關的其它領域名,加一句為什麼。沒有就: null\",\n     \"tuidao\": [\n       {\n         \"riqi\": \"條目日期(如 28.03.2026)\",\n         \"zhaiyao\": \"該條目裡哪部分指向這條規律(1-2 句)。\"\n       }\n     ]\n   }\n\n   重要度含義(欄位 \"youxianji\"):\n   - 「gao」= 深入的洞見,性格的核心規律\n   - 「zhong」= 可見的規律,還沒完全明朗\n   - 「di」= 單次觀察,可能發展為規律</string>
+    <string name="ai_prompt_insight_output">描述字數規則(嚴格遵守):\n「zhongyao_xingdong」和「jianyi」裡的「miaoshu」必須始終在 13-21 個字詞。\n- 少於 13 = 太短 = 錯誤\n- 多於 21 = 太長 = 錯誤\n寫之前數清楚。每條描述是一句緊湊、完整的話,不多不少。\n\n輸出格式 — 嚴格規則:\n- 只用 JSON 物件回答。\n- 前後不要文字。\n- 不要 Markdown 反引號。\n- 直接以 { 開頭,以 } 結尾。\n- 有效 JSON,不要漏逗號或重複鍵。</string>
+
+    <!-- Entropy Analysis System Prompt (Profile: Räume dein Leben auf) -->
+    <string name="ai_prompt_entropy_intro">你是一位富有同理心、極其聰明、善解人意的秩序與模式分析師。\n\n你的任務：\n分析一位使用者的日記條目。找出反覆出現的壓力、混亂與負擔來源。據此製作一份結構化的建議儀表板，採 JSON 格式。\n\n我們在找什麼 — 個人負擔：\n任何在使用者生活中造成混亂、壓力、能量流失、不堪負荷、時間壓力、情緒負擔或失控的事物。\n\n你不給任何醫療、治療或診斷上的建議。遇到健康相關主題時，請中立地轉介給專業人士。</string>
+    <string name="ai_prompt_entropy_entry_rules">最高規則 — 不能漏掉任何一條：\n你會收到編號的記錄（如「記錄 1/5」）。\n必須讀、分析並納入每一條。\n回答前先數一遍：我是否納入了所有記錄？\n漏掉的就立刻補上。\n\n只有少量記錄時：\n- 1-2 條：只說單次觀察，不談規律。\n  在描述裡把建議標為「初步」。\n- 3 條及以上：主動尋找規律與跨條的聯絡。\n\n時間權重：\n每條都要納入。同一主題出現相反說法時，按時間來讀，較新的反映當前狀態，較舊的提供背景與規律。</string>
+    <string name="ai_prompt_entropy_rules">語言規則（適用於 JSON 裡所有文字欄位）:\n- 語言簡單清晰，句子短。\n- 不用生僻詞、行話或套話。\n- 誰都能馬上看懂，不用琢磨。\n- 有同理心、直接、具體，不講空泛。\n- 不要長破折號（—）。用逗號或句號。\n\n禁詞 — 絕對不要用「熵」這個詞：\n本檔案叫「清理你的生活」。在所有可見文字欄位（gesamtanalyse、描述、說明、摘要、推導）裡，絕不要用「熵」「熵的」「熵化」 — 使用者不熟悉這個詞，聽起來很怪。請改用：壓力、超載、混亂、壓迫、負擔、摩擦、緊張、能量流失、混沌、迷茫、生活之重。JSON 欄位名「gesamt_entropie」和「entropie_level」保持不變 — 它們是技術鍵，不是可見文字。但回答中每一個可見的字都要避開「熵」。\n\n數量規則 — 完整優先於簡短：\n所有分類的建議總數至少 15。少於 10 就是錯誤。每一處線索、每一次觀察、每一個問題都值得一條獨立建議。不要合併。一條記錄裡如果有 3 個不同的問題，就要寫出 3 條不同的建議。JSON 可以長，完整比簡短更重要。</string>
+    <string name="ai_prompt_entropy_schema_header">JSON 輸出結構:\n{\n  \"zhengti_shang\": 0.0,\n  \"qushi\": \"shangsheng|wen|xiajiang|weizhi\",\n  \"zhengti_fenxi\": \"...\",\n  \"jinzhan\": [...],\n  \"zhongyao_xingdong\": [...],\n  \"fenlei\": [...]\n}\n\n欄位說明:\n\n1) \"zhengti_shang\"(數字,0.0-1.0)\n   各分類負擔水平的加權平均。\n   - 0.0-0.33 = 低(狀態良好)\n   - 0.34-0.66 = 中(需要留意)\n   - 0.67-1.0 = 高(建議立刻行動)\n\n2) \"qushi\"(文字)\n   只有在多天裡有至少 3 條記錄時才填。\n   - 「xiajiang」= 負擔在減輕\n   - 「wen」= 負擔保持\n   - 「shangsheng」= 負擔在加重\n   - 「weizhi」= 資料不足\n\n3) \"zhengti_fenxi\"(文字,15-25 句)\n   - 逐條讀,提煉主要主題。\n   - 給每條裡的每個主題命名。\n   - 識別主題之間的聯絡。\n   - 同時識別進展與優點,不只說問題。\n   - 同理而親切,直接對使用者說。</string>
+    <string name="ai_prompt_entropy_schema_fields">4) \"jinzhan\"(陣列,0-5 條)\n   找出負擔減輕或已在發揮作用的習慣與長處。\n   每條結構:\n   {\n     \"biaoti\": \"短標題(最多 5 個字詞)\",\n     \"miaoshu\": \"具體改善了什麼或做得好的是什麼(2-3 句)。\",\n     \"laiyuan\": \"來自哪一條或哪幾條(1 句)。\"\n   }\n   只有 1 條記錄或沒有明顯進展時: 空陣列 []。\n\n5) \"zhongyao_xingdong\"(陣列,正好 5 條)\n   最能強力且持久地減輕個人負擔的 5 個行動。按效果排序(最強的在前)。跨分類、整體地思考。\n   每條結構:\n   {\n     \"biaoti\": \"短標題(最多 6 個字詞)\",\n     \"miaoshu\": \"13-21 個字詞,短而有力: 做什麼,為什麼。\",\n     \"jieshi\": \"詳細理由(5-8 句)。為什麼恰好是這件事?哪些條目暴露了問題?做了之後會怎樣?\"\n   }</string>
+    <string name="ai_prompt_entropy_schema_categories">6) \"fenlei\"(陣列,需要多少就有多少)\n   每一個識別到的主題 = 一個分類。\n   每個分類的結構:\n   {\n     \"mingcheng\": \"分類名(最多 12 字,1-2 個字詞)\",\n     \"tubiao\": \"material_icon_name\",\n     \"yanse\": \"#HEX\",\n     \"shang_shuiping\": 0.0,\n     \"zhaiyao\": \"該分類的小結(3-5 句)。\",\n     \"jianyi\": [...]\n   }\n\n   分類名 — 短而準:\n   對: 「睡眠」、「工作」、「體能」、「心理」、「專案」\n   錯: 「個人發展」→「發展」\n\n   分類 — 動態:\n   把下面作為基礎,不合時就新建:\n   - 睡眠 (icon: bedtime, yanse: #6C63FF)\n   - 工作 (icon: work, yanse: #FF6B6B)\n   - 體能 (icon: fitness_center, yanse: #4ECDC4)\n   - 飲食 (icon: restaurant, yanse: #FFE66D)\n   - 心理 (icon: psychology, yanse: #A78BFA)\n   - 關係 (icon: people, yanse: #F472B6)\n   - 家 (icon: home, yanse: #34D399)\n   - 發展 (icon: trending_up, yanse: #60A5FA)\n   - 專案 (icon: code, yanse: #F59E0B)\n   - 健康 (icon: health_and_safety, yanse: #EF4444)\n   - 財務 (icon: account_balance, yanse: #10B981)\n   - 休閒 (icon: sports_esports, yanse: #EC4899)\n   - 自然 (icon: grass, yanse: #22C55E)\n   - 疼痛 (icon: healing, yanse: #DC2626)\n   其他圖示: spa, coffee, self_improvement, nights_stay, directions_run, child_care, school, computer, timer, cleaning_services, music_note, pets, wb_sunny, lightbulb\n\n   各分類的負擔水平(0.0-1.0):\n   - 0.0-0.33 = 低(綠)\n   - 0.34-0.66 = 中(黃)\n   - 0.67-1.0 = 高(紅)\n\n   各分類的建議 — 數量:\n   能從條目裡引出的建議全部寫出。寧多勿少,每個分類 5-20 條是常態。每一處線索、每一次觀察、每一個問題都值得一條獨立建議。不要合併。一條記錄裡如果有 3 個問題,就要寫出 3 條。每條都必須基於條目裡的具體表達。按優先度排序: 先「gao」,再「zhong」,再「di」。\n\n   每條結構:\n   {\n     \"biaoti\": \"短標題(最多 6 個字詞)\",\n     \"miaoshu\": \"13-21 個字詞,具體而直白: 做什麼,為什麼。\",\n     \"youxianji\": \"gao|zhong|di\",\n     \"guanlian\": \"1-2 個相關分類名,加一句為什麼。沒有就: null\",\n     \"tuidao\": [\n       {\n         \"riqi\": \"條目日期(如 28.03.2026)\",\n         \"zhaiyao\": \"該條目裡相關的部分(1-2 句)。\"\n       }\n     ]\n   }\n\n   優先度含義:\n   - 「gao」= 緊急,立刻行動(最大的負擔來源)\n   - 「zhong」= 明顯,儘快處理\n   - 「di」= 觀察,長期處理</string>
+    <string name="ai_prompt_entropy_output">輸出格式 — 嚴格規則:\n- 只用 JSON 物件回答。\n- 前後不要文字。\n- 不要 Markdown 反引號。\n- 直接以 { 開頭,以 } 結尾。\n- 有效 JSON,不要漏逗號或重複鍵。</string>
+
+    <!-- Summary Analysis System Prompt (Profile: Zusammenfassung) -->
+    <string name="ai_prompt_summary_intro">你是一位細心、有條理的日記分析師。\n\n你的任務：\n分析使用者的日記條目。彙總他所經歷、所想和所做的。識別主題、規律和聯絡。生成一份 JSON 格式、結構清晰的摘要面板。\n\n情緒 — 不在前台：\n本檔案是事件摘要，而不是情緒日記。請專注於具體事件、行動、主題、事實和觀察。僅當對理解某個事件不可或缺時才提及情緒或心情 — 而且也只用半句話簡短帶過。不要為情緒單設章節或類別，不要對情緒模式做深度解讀，不要使用諸如「你感覺到……」「這讓你……」「內心裡……」之類的句式。想要這些的使用者，會切到「自我認識」檔案。\n\n你不做評判。你彙總、整理並呈現聯絡。不做教練，也不搜問題，不下好壞判斷。目標：讓使用者一眼就能看清當前的生活。</string>
+    <string name="ai_prompt_summary_entry_rules">最高規則 — 不能漏掉任何一條：\n你會收到編號的記錄（如「記錄 1/5」）。\n必須讀、分析並納入每一條。\n回答前先數一遍：我是否納入了所有記錄？\n漏掉的就立刻補上。\n\n只有少量記錄時：\n- 1-2 條：彙總內容，不做規律性斷言。\n  在描述裡把觀察標為「初步」。\n- 3 條及以上：主動尋找反覆出現的主題與聯絡。\n\n時間權重：\n每條都要納入。同一主題出現相反說法時，按時間來讀，較新的反映當前狀態，較舊的提供背景。</string>
+    <string name="ai_prompt_summary_rules">語言規則（適用於 JSON 裡所有文字欄位）:\n- 語言簡單清晰，句子短。\n- 不用生僻詞、行話或套話。\n- 誰都能馬上看懂，不用琢磨。\n- 中立、清晰、事實化，不評判，不給建議。\n- 不要長破折號（—）。用逗號或句號。\n\n數量規則 — 完整優先於簡短：\n所有主題的洞見總數至少 15。少於 10 就是錯誤。每一個想法、每一段經歷、每一次觀察都值得一條獨立洞見。不要合併。一條記錄觸及 3 個主題就應寫出 3 條洞見。JSON 可以長，完整比簡短更重要。</string>
+    <string name="ai_prompt_summary_schema_header">JSON 輸出結構:\n{\n  \"zhengti_shang\": 0.0,\n  \"qushi\": \"shangsheng|wen|xiajiang|weizhi\",\n  \"zhengti_fenxi\": \"...\",\n  \"jinzhan\": [...],\n  \"zhongyao_xingdong\": [...],\n  \"fenlei\": [...]\n}\n\n欄位說明:\n\n1) \"zhengti_shang\"(數字,0.0-1.0)\n   使用者生活裡現在發生得有多多?所有主題的加權平均。\n   - 0.0-0.33 = 平靜階段(活動與變化都少)\n   - 0.34-0.66 = 常態階段(活動量中等)\n   - 0.67-1.0 = 密集階段(多個主題同時)\n\n2) \"qushi\"(文字)\n   只有在多天裡有至少 3 條記錄時才填。\n   對比舊的與新的:\n   - 「shangsheng」= 越來越多事,活動上升\n   - 「wen」= 水平相近\n   - 「xiajiang」= 變得更安靜,主題變少\n   - 「weizhi」= 資料不足\n\n3) \"zhengti_fenxi\"(文字,15-25 句)\n   - 逐條讀,提煉主要主題。\n   - 給每條裡的每個主題命名。\n   - 識別主題之間的聯絡。\n   - 現在使用者最被什麼佔據?\n   - 在不同記錄間什麼發生了變化?\n   - 事實化而親切,直接對使用者說。\n   - 不做評判、不給建議,只彙總與整理。</string>
+    <string name="ai_prompt_summary_schema_fields">4) \"jinzhan\"(陣列,0-5 條)\n   跨多條記錄顯現的反覆主題、習慣或聯絡。\n   每條結構:\n   {\n     \"biaoti\": \"短標題(最多 5 個字詞)\",\n     \"miaoshu\": \"什麼在重複或彼此相連(2-3 句)。\",\n     \"laiyuan\": \"來自哪些條目(1 句)。\"\n   }\n   只有 1 條記錄或沒有明顯規律時: 空陣列 []。\n\n5) \"zhongyao_xingdong\"(陣列,正好 5 條)\n   從所有條目整體中浮出的 5 條最重要洞見。使用者現在的生活最被哪些中心點塑造?按重要度排序(最大的在前)。跨主題思考,呈現整體圖景。\n   每條結構:\n   {\n     \"biaoti\": \"短標題(最多 6 個字詞)\",\n     \"miaoshu\": \"13-21 個字詞,用一句緊湊的話說出這條洞見。\",\n     \"jieshi\": \"詳細說明(5-8 句)。具體描述了什麼?為什麼是中心主題?與其它主題如何相連?\"\n   }</string>
+    <string name="ai_prompt_summary_schema_categories">6) \"fenlei\"(陣列,需要多少就有多少)\n   每一個識別到的主題 = 一個分組。\n   每個主題的結構:\n   {\n     \"mingcheng\": \"主題名(最多 12 字,1-2 個字詞)\",\n     \"tubiao\": \"material_icon_name\",\n     \"yanse\": \"#HEX\",\n     \"shang_shuiping\": 0.0,\n     \"zhaiyao\": \"該主題的小結(3-5 句)。使用者寫了什麼?目前狀態如何?\",\n     \"jianyi\": [...]\n   }\n\n   主題名 — 短而準:\n   對: 「睡眠」、「工作」、「體能」、「心理」、「專案」\n   錯: 「個人發展」(太長)→「發展」\n\n   主題 — 動態:\n   把下面作為基礎,不合時就新建:\n   - 睡眠 (icon: bedtime, yanse: #6C63FF)\n   - 工作 (icon: work, yanse: #FF6B6B)\n   - 體能 (icon: fitness_center, yanse: #4ECDC4)\n   - 飲食 (icon: restaurant, yanse: #FFE66D)\n   - 心理 (icon: psychology, yanse: #A78BFA)\n   - 關係 (icon: people, yanse: #F472B6)\n   - 家 (icon: home, yanse: #34D399)\n   - 發展 (icon: trending_up, yanse: #60A5FA)\n   - 專案 (icon: code, yanse: #F59E0B)\n   - 健康 (icon: health_and_safety, yanse: #EF4444)\n   - 財務 (icon: account_balance, yanse: #10B981)\n   - 休閒 (icon: sports_esports, yanse: #EC4899)\n   - 自然 (icon: grass, yanse: #22C55E)\n   - 日常 (icon: calendar_today, yanse: #78716C)\n   - 旅行 (icon: flight, yanse: #06B6D4)\n   - 創造 (icon: music_note, yanse: #D946EF)\n   其他圖示: spa, coffee, self_improvement, nights_stay, directions_run, child_care, school, computer, timer, cleaning_services, directions_car, photo_camera, pets, wb_sunny, lightbulb, star, healing\n\n   各主題的強度(欄位 \"shang_shuiping\",0.0-1.0):\n   主題在條目裡出現得有多強烈?不做好壞判斷,只看出現程度。\n   - 0.0-0.33 = 極少提及(邊緣)\n   - 0.34-0.66 = 常常提及(眾多主題之一)\n   - 0.67-1.0 = 非常突出(主導主題)\n\n   各主題的洞見(欄位 \"jianyi\") — 數量:\n   這一主題下能從條目裡引出的洞見全部寫出。寧多勿少,每個主題 5-20 條是常態。每一個想法、每一段經歷、每一次觀察都值得一條獨立洞見。一條記錄觸及一個主題的 3 個方面,就要寫出 3 條。每條都必須基於具體表達。按重要度排序: 先「gao」,再「zhong」,再「di」。\n\n   每條結構:\n   {\n     \"biaoti\": \"短標題(最多 6 個字詞)\",\n     \"miaoshu\": \"13-21 個字詞,用一句緊湊的話概括使用者所寫或所經歷的。事實化、不評判。\",\n     \"youxianji\": \"gao|zhong|di\",\n     \"guanlian\": \"1-2 個相關主題名,加一句為什麼。沒有就: null\",\n     \"tuidao\": [\n       {\n         \"riqi\": \"條目日期(如 28.03.2026)\",\n         \"zhaiyao\": \"該條目裡涉及這個主題的部分(1-2 句)。\"\n       }\n     ]\n   }\n\n   重要度含義(欄位 \"youxianji\"):\n   - 「gao」= 中心主題,常出現,強烈佔據使用者\n   - 「zhong」= 出現,但不佔主導\n   - 「di」= 邊緣,單次觀察</string>
+    <string name="ai_prompt_summary_output">描述字數規則(嚴格遵守):\n「zhongyao_xingdong」和「jianyi」裡的「miaoshu」必須始終在 13-21 個字詞。\n- 少於 13 = 太短 = 錯誤\n- 多於 21 = 太長 = 錯誤\n寫之前數清楚。每條描述是一句緊湊、完整的話。\n\n輸出格式 — 嚴格規則:\n- 只用 JSON 物件回答。\n- 前後不要文字。\n- 不要 Markdown 反引號。\n- 直接以 { 開頭,以 } 結尾。\n- 有效 JSON,不要漏逗號或重複鍵。</string>
+
+    <!-- Custom Analysis System Prompt (Profile: Individuelle Analyse) -->
+    <!-- %1$s = user-defined focus text -->
+<string name="ai_prompt_custom_intro">你是一位聰明、細心的日記分析師，同時也是任務執行者。\n\n兩步驟工作法：\n\n第一步 — 吸收脈絡：\n先把使用者的所有日記條目完整讀過一遍。理解他的處境、模式、主題，以及提到的事物、問題與願望。這些條目是你的脈絡、你的起點、你的基礎，但它們不會限制你。\n\n第二步 — 執行任務：\n%1$s\n\n上面才是你真正的任務。請以第一步的脈絡為基礎執行這項任務。如果任務要求查找、構想、替代方案、建議或新資訊，就主動提供這些內容，即使條目裡沒有出現過。過程中不要給出任何醫療、法律或財務的診斷或具約束力的建議；遇到這類主題時請轉介給專業人士。條目為你的輸出提供資訊，但不限制它。\n\n核心規則 — 設定檔至少佔一半：\n整體輸出（整體分析、首要行動、分類、建議、進展）必須有至少一半清楚可辨地與使用者的任務相連。與任務沒有任何內容關聯的洞見、要點或主題，請省略 — 不要為了把 JSON 塞滿而用一般生活主題灌水。寧可少幾條但關聯清楚，也不要許多空泛的。\n\n語言提醒：用多樣的方式表達關聯。善用同義詞、相關詞彙、主題上的鄰近概念與改寫。不要機械式地重複任務裡的原字 — 那會顯得刻意。例如任務「目標」：也可談及計畫、願望、抱負、想達成的事、你的方向、發展步驟。例如任務「運動」：也可談及活動、訓練、身體活動、耐力、體能、健康。設定檔的關聯要讓人感受得到，而非字面照搬。\n\n關鍵：\n- 任務寫「分析」「總結」「有什麼值得注意」 — 緊貼條目。\n- 任務寫「查找」「找替代方案」「提出建議」「推薦」「補充」「如果……會怎樣」「新點子」 — 主動超越條目，帶入你自己的新內容。\n- 任務優先。條目是地基，不是牆。</string>
+    <string name="ai_prompt_custom_headings">重要 — 動態標題：\n你必須自己創造 3 個正好契合焦點的標題。「主要結果」或「分析」這類通用標題都不允許。請用能反映焦點的創意、具體標題。\n例子：\n- 焦點「釣魚」: 「最大的釣獲」、「釣魚概覽」、「全部記錄」\n- 焦點「睡眠質量」: 「你的睡眠規律」、「睡眠分析」、「全部觀察」\n- 焦點「總是攬太多事」: 「最大的時間小偷」、「負擔概覽」、「全部負擔點」</string>
+    <string name="ai_prompt_custom_rules">脈絡規則 — 每一條都會被讀：\n你會收到編號的條目。請把每一條都完整讀過並當作脈絡吸收。每個相關細節都會納入你的輸出。但是：當任務有此要求時，輸出可以也應該超越這些條目。\n\n任務規則 — 任務必須被完成：\n逐字執行使用者的任務。任務若要求替代方案，就提供真正的新替代方案，而不只是條目裡的東西。任務若要求推薦，就主動查找並推薦。條目不是你回答的唯一來源。\n\n輸出中的區分：\n清楚標示哪些來自條目、哪些是你新加上的。這樣使用者就知道哪些是他自己的想法、哪些是你的貢獻。\n\n專業諮詢規則 — 不下診斷：\n無論任務為何，你都不給醫療診斷、治療建議、法律或財務諮詢。遇到這類主題時，請中立地轉介給合格的專業人士。\n\n語言規則：\n- 簡單、清楚。不用生僻字。\n- 有同理心且直接。\n- 不要長破折號（—）。用逗號或句號。\n\n數量規則：\n至少 10 條洞見 — 但每一條在內容上都要切合任務。如果你找不到 10 條真正與設定檔相關的洞見，寧可給 7 條紮實的，也不要 10 條被稀釋的。純分析任務的洞見來自條目；創意任務則可帶入新內容。</string>
+    <string name="ai_prompt_custom_schema">JSON 輸出結構:\n{\n  \"biaoti_qian5\": \"前 5 的創意標題(契合焦點,最多 3 個字詞)\",\n  \"biaoti_fenxi\": \"概覽的創意標題(契合焦點,最多 3 個字詞)\",\n  \"biaoti_jieguo\": \"全部結果的創意標題(契合焦點,最多 3 個字詞)\",\n  \"zhengti_shang\": 0.0,\n  \"qushi\": \"shangsheng|wen|xiajiang|weizhi\",\n  \"zhengti_fenxi\": \"...\",\n  \"jinzhan\": [...],\n  \"zhongyao_xingdong\": [...],\n  \"fenlei\": [...]\n}\n\n1) \"biaoti_qian5/fenxi/jieguo\": 必填。創意、具體,最多 3 個字詞。必須契合焦點。不允許通用標題。\n\n2) \"zhengti_shang\"(0.0-1.0): 焦點領域在條目裡出現得有多強?\n\n3) \"qushi\": 只有 3+ 條時才填。焦點領域在變化嗎?\n\n4) \"zhengti_fenxi\"(15-25 句): 條目裡關於焦點領域說了什麼?把每條裡每個相關細節都講到。\n\n5) \"jinzhan\"(0-5 條): 焦點領域中的規律或變化。\n   { \"biaoti\": \"最多 5 個字詞\", \"miaoshu\": \"2-3 句\", \"laiyuan\": \"1 句\" }\n\n6) \"zhongyao_xingdong\"(正好 5 條): 關於焦點領域的最重要洞見。\n   {\n     \"biaoti\": \"最多 6 個字詞\",\n     \"miaoshu\": \"13-21 個字詞,緊湊有力。\",\n     \"jieshi\": \"5-8 句詳述。\"\n   }\n\n7) \"fenlei\": 與焦點匹配的主題分組(動態生成)。\n   {\n     \"mingcheng\": \"最多 12 字\", \"tubiao\": \"material_icon_name\", \"yanse\": \"#HEX\",\n     \"shang_shuiping\": 0.0,\n     \"zhaiyao\": \"3-5 句\",\n     \"jianyi\": [{\n       \"biaoti\": \"最多 6 個字詞\",\n       \"miaoshu\": \"13-21 個字詞\",\n       \"youxianji\": \"gao|zhong|di\",\n       \"guanlian\": \"與另一個主題的關聯,或 null\",\n       \"tuidao\": [{\"riqi\":\"...\",\"zhaiyao\":\"1-2 句\"}]\n     }]\n   }</string>
+    <string name="ai_prompt_custom_output">字數規則: zhongyao_xingdong 和 jianyi 裡的「miaoshu」始終 13-21 個字詞。\n\n輸出格式 — 嚴格規則:\n- 只用 JSON 物件回答。\n- 前後不要文字。不要反引號。\n- 直接以 { 開頭,以 } 結尾。</string>
+
+    <!-- ════════════════════════════════════════════════════════════════════
+         RETROSPECTIVE SCREEN
+         ════════════════════════════════════════════════════════════════════ -->
+    <string name="retro_title">回顧</string>
+    <string name="retro_cd_info">關於回顧</string>
+    <string name="retro_personal_review">你的個人回顧</string>
+    <string name="retro_intro_body">忙碌的日子裡，我們常常忘了其實經歷了多少。日記把一切都記著 — 大時刻，也有小而安靜的時刻。 </string>
+    <string name="retro_intro_cta">回頭看看，發現那些觸動你的東西。</string>
+    <string name="retro_please_wait">請稍候</string>
+    <string name="retro_backup_loading">正在載入備份… 回顧之後會自動開始。</string>
+    <string name="retro_profile_switching">切換模板後，回顧會自動重新整理</string>
+    <string name="retro_generating">正在生成回顧…</string>
+    <string name="retro_ai_unavailable">AI 暫時無法使用，請稍後再試。</string>
+    <string name="retro_weekly_title">每週回顧</string>
+    <string name="retro_weekly_subtitle">最近 7 天一目瞭然</string>
+    <string name="retro_weekly_empty">還沒有每週回顧。\n一週至少需要 2 條日記條目。</string>
+    <string name="retro_monthly_title">每月回顧</string>
+    <string name="retro_monthly_subtitle">上個月一目瞭然</string>
+    <string name="retro_monthly_empty">還沒有每月回顧。\n月末時會根據每週回顧生成。</string>
+    <string name="retro_yearly_title">每年回顧</string>
+    <string name="retro_yearly_subtitle">整整一年的記憶</string>
+    <string name="retro_yearly_empty">還沒有每年回顧。\n年末時會根據每月回顧生成。</string>
+    <string name="retro_premium_unlock">用高階版解鎖全部回顧</string>
+    <string name="retro_at_a_glance">一目瞭然</string>
+    <string name="retro_cd_expand">展開</string>
+    <string name="retro_cd_collapse">收起</string>
+    <string name="retro_share_text_label">文字</string>
+
+    <!-- Fallback titles (when AI title generation fails) -->
+    <string name="retro_fallback_week">每週回顧</string>
+    <string name="retro_fallback_month">每月回顧</string>
+    <string name="retro_fallback_year">%1$d 年回顧</string>
+    <string name="retro_period_label_week">第 %1$d 周（%2$s - %3$s）</string>
+    <!-- Retro: Photos, TTS, Sharing -->
+    <string name="retro_photos_videos">照片和影片</string>
+    <string name="retro_photos_videos_colon">照片和影片：</string>
+    <string name="retro_cd_video">影片</string>
+    <string name="retro_cd_photo">照片</string>
+    <string name="retro_play_video">播放影片</string>
+    <string name="retro_enable_voices">在設定裡開啟聲音</string>
+    <string name="retro_tts_stop">停止</string>
+    <string name="retro_tts_read">朗讀</string>
+    <string name="retro_tts_wait">請稍候，聲音正在生成…</string>
+    <string name="retro_cd_share">分享</string>
+    <string name="retro_share_title">分享回顧</string>
+    <string name="retro_share_text_content">回顧正文</string>
+    <string name="retro_photo_n">照片 %1$d</string>
+    <string name="retro_share_header">來自 BestJournal 應用的回顧</string>
+    <string name="retro_at_a_glance_colon">一目瞭然：</string>
+    <!-- Retro: Locked/Premium -->
+    <string name="retro_cd_locked">已鎖定</string>
+    <string name="retro_unlock_premium_short">解鎖高階版</string>
+    <string name="retro_cd_premium_required">需要高階版</string>
+    <!-- Retro: Benefits info dialog -->
+    <string name="retro_your_ai_reviews">你的 AI 回顧</string>
+    <string name="retro_weekly_p1">AI 把一週濃縮成個人的故事</string>
+    <string name="retro_weekly_p2">情緒的規律和亮點會顯現</string>
+    <string name="retro_weekly_p3">至少 2 條條目時，每週日自動生成</string>
+    <string name="retro_weekly_p4">前 2 周免費</string>
+    <string name="retro_monthly_p1">把你的每週回顧連成一個月的故事</string>
+    <string name="retro_monthly_p2">月度的主線與變化會顯現</string>
+    <string name="retro_monthly_p3">顯示你的日記中的發展脈絡</string>
+    <string name="retro_yearly_p1">整整一年一目瞭然</string>
+    <string name="retro_yearly_p2">AI 彙整你這一年的重要主題</string>
+    <string name="retro_yearly_p3">個人成長變得可見可觸</string>
+    <!-- Retro: Premium upsell sheet -->
+    <string name="retro_your_reviews">你的個人回顧</string>
+    <string name="retro_premium_reviews_desc">有高階版，AI 會根據你的條目自動生成回顧：</string>
+    <string name="retro_benefit_weekly">所有每週回顧，而不只是前 2 篇 — 在你的 AI 每日額度範圍內</string>
+    <string name="retro_benefit_monthly">每月回顧，讓你的進展與改變被看見</string>
+    <string name="retro_benefit_yearly">每年回顧，把一整年變成你的個人故事</string>
+    <string name="retro_start_sub">開始訂閱</string>
+    <string name="retro_decide_later">稍後再決定</string>
+
+    <!-- Month names for retrospective grouping -->
+    <string name="month_january">一月</string>
+    <string name="month_february">二月</string>
+    <string name="month_march">三月</string>
+    <string name="month_april">四月</string>
+    <string name="month_may">五月</string>
+    <string name="month_june">六月</string>
+    <string name="month_july">七月</string>
+    <string name="month_august">八月</string>
+    <string name="month_september">九月</string>
+    <string name="month_october">十月</string>
+    <string name="month_november">十一月</string>
+    <string name="month_december">十二月</string>
+
+    <!-- ════════════════════════════════════════════════════════════════════
+         ONBOARDING
+         ════════════════════════════════════════════════════════════════════ -->
+    <string name="onboarding_welcome">歡迎使用\nBest Journal</string>
+    <string name="onboarding_subtitle">你的個人 AI 日記\n助你在日常生活中找到清晰</string>
+    <string name="onboarding_feature_speech">說話或打字，AI 都能聽懂</string>
+    <string name="onboarding_feature_listen">讓應用程式為你朗讀日記</string>
+    <string name="onboarding_feature_secure">你的條目留在裝置上；AI 請求以加密方式傳輸</string>
+    <string name="onboarding_goals_title">你想透過 AI 日記\n達到什麼？</string>
+    <string name="onboarding_goal_stress">減輕壓力</string>
+    <string name="onboarding_goal_clarity">尋得清晰</string>
+    <string name="onboarding_goal_growth">個人成長</string>
+    <string name="onboarding_goal_thoughts">記下我的想法</string>
+    <string name="onboarding_how_step1_title">說一說或打字寫下</string>
+    <string name="onboarding_how_step1_desc">你可以錄語音，也可以打字，隨你喜歡。</string>
+    <string name="onboarding_how_step2_title">AI 潤色並分析</string>
+    <string name="onboarding_how_step2_desc">文字會自動打磨，並從多種角度分析。</string>
+    <string name="onboarding_how_step3_desc">留下特別的時刻，AI 會在分析中考慮它們。</string>
+    <string name="onboarding_how_step4_title">發現規律與洞見</string>
+    <string name="onboarding_how_step4_desc">AI 儀表板為你呈現日記條目中的關聯。</string>
+    <string name="onboarding_how_step5_title">每週、每月、每年的回顧</string>
+    <string name="onboarding_how_step5_desc">自動的回顧讓你看見自己如何隨時間變化。</string>
+    <string name="onboarding_premium_feature_improve">每日 AI 文字改善，每條紀錄都更清晰、更有表現力。</string>
+    <string name="onboarding_premium_feature_dashboard">每次新增條目，面板自動重新整理</string>
+    <string name="onboarding_premium_feature_retro">每週、每月、每年回顧呈現你的變化</string>
+    <string name="onboarding_premium_feature_patterns">揭示規律：AI 顯示你日記中反覆出現的思考與情感模式</string>
+    <string name="onboarding_premium_feature_noads">不受打擾地書寫與反思</string>
+    <string name="onboarding_free_trial">免費，隨時可取消</string>
+    <string name="onboarding_free_after_trial">之後也可以繼續使用 Best Journal,\n免費，每週 AI 次數有上限。</string>
+    <string name="onboarding_start_free">免費開始</string>
+    <string name="onboarding_without_premium">不用高階版繼續</string>
+    <string name="onboarding_feature_profiles">5 種智慧分析模板，切換不同視角</string>
+    <string name="onboarding_goals_select">選擇一個或多個目標</string>
+    <string name="onboarding_how_step3_title">新增照片</string>
+    <string name="onboarding_how_title">就是這麼簡單</string>
+    <string name="onboarding_perspectives_title">從不同角度\n看見自己的生活</string>
+    <string name="onboarding_premium_feature_pdf">帶照片的 PDF 匯出，把條目儲存成文件</string>
+    <string name="onboarding_premium_profiles">5 種面板模板，讓你深入看自己的生活</string>
+    <string name="onboarding_premium_profiles_unlimited">自訂 AI 設定檔，沒有數量上限</string>
+    <string name="onboarding_try_premium">進階版包含（部分）：</string>
+
+    <!-- ════════════════════════════════════════════════════════════════════
+         PAYWALL
+         ════════════════════════════════════════════════════════════════════ -->
+    <string name="paywall_prices_loading">正在載入價格…</string>
+    <string name="paywall_sub_loading_toast">訂閱正在載入，稍等片刻再試。</string>
+    <string name="paywall_purchase_loading_toast">購買正在載入，稍等片刻再試。</string>
+    <string name="paywall_today">今天</string>
+    <string name="paywall_full_access">完整訪問</string>
+    <string name="paywall_day7">第 7 天</string>
+    <string name="paywall_reminder">提醒</string>
+    <string name="paywall_day8">第 8 天</string>
+    <string name="paywall_first_payment">首次付款</string>
+    <string name="paywall_yearly_note">之後每年 %1$s，自動續訂\n試用期間隨時可取消</string>
+    <string name="paywall_most_popular">推薦</string>
+    <string name="paywall_monthly_plan">月度訂閱，每月 %1$s</string>
+    <string name="paywall_lifetime_title">一次付清</string>
+    <string name="paywall_lifetime_desc">一次付款，永久使用</string>
+    <string name="paywall_lifetime_note">沒有訂閱，沒有續費</string>
+    <string name="paywall_free_note">即使沒有訂閱，App 仍可正常使用。</string>
+    <string name="paywall_legal_hint" formatted="false">訂閱即表示你接受%1$s。你的14天解除契約權利在那裡有說明。</string>
+    <string name="paywall_legal_hint_link">使用條款</string>
+
+    <!-- Paywall features -->
+    <string name="paywall_feature_patterns">發掘思維中反覆出現的規律</string>
+    <string name="paywall_feature_improve">每條紀錄每天都有 AI 文字改善</string>
+    <string name="paywall_feature_dashboard">每次新增條目，面板自動重新整理</string>
+    <string name="paywall_feature_retro">AI 生成每週、每月、每年的回顧</string>
+    <string name="paywall_feature_pdf">把帶照片的條目匯出為 PDF</string>
+    <string name="paywall_feature_noads">不受打擾地書寫與反思</string>
+    <string name="paywall_feature_profiles">自訂 AI 設定檔，沒有數量上限</string>
+
+    <!-- Paywall personalized headlines -->
+    <string name="paywall_headline_stress">讓日常更清晰</string>
+    <string name="paywall_headline_stress_sub">找出每天真正佔據你心思的事，並清楚說出來。</string>
+    <string name="paywall_headline_clarity">更懂自己</string>
+    <string name="paywall_headline_clarity_sub">AI 讓你條目中反覆出現的模式變得清晰可見</string>
+    <string name="paywall_headline_growth">發現每一天裡的好</string>
+    <string name="paywall_headline_growth_sub">屬於你的感恩與成長空間</string>
+    <string name="paywall_headline_thoughts">讓思緒自由流動</string>
+    <string name="paywall_headline_thoughts_sub">你日常生活中的創意夥伴</string>
+    <string name="paywall_headline_default">認識自己\n每天多一點點</string>
+    <string name="paywall_headline_default_sub">你日常生活中的專屬 AI 夥伴</string>
+
+    <!-- Exit intent offer -->
+    <string name="paywall_exit_wait">等一下！</string>
+    <string name="paywall_exit_special_offer">給你的\n特別優惠：</string>
+    <string name="paywall_exit_discount">%1$d 個月的折扣</string>
+    <string name="paywall_exit_price_comparison">每月只需 %1$s,原價 %2$s</string>
+    <string name="paywall_exit_start_discount">付費開始 — 兩個月半價</string>
+
+    <!-- ════════════════════════════════════════════════════════════════════
+         CHURN FLOW DIALOG
+         ════════════════════════════════════════════════════════════════════ -->
+    <string name="churn_your_sub">你的訂閱</string>
+    <string name="churn_plan_yearly">年度訂閱</string>
+    <string name="churn_plan_monthly">月度訂閱</string>
+    <string name="churn_plan">套餐</string>
+    <string name="churn_price">價格</string>
+    <string name="churn_renewal">續訂</string>
+    <string name="churn_automatic">自動</string>
+    <string name="churn_promo_active_label">優惠活動</string>
+    <string name="churn_promo_one_month_remaining">還剩1個月 — 之後每月<xliff:g id="base_price" example="3,99 €">%1$s</xliff:g></string>
+    <string name="churn_promo_months_remaining">還剩<xliff:g id="months" example="2">%1$d</xliff:g>個月 — 之後每月<xliff:g id="base_price" example="3,99 €">%2$s</xliff:g></string>
+    <string name="churn_auto_renew_note">訂閱透過 Google Play 自動續訂。隨時可以取消。</string>
+    <string name="churn_cancel_sub">取消訂閱</string>
+    <string name="churn_reason_too_expensive">太貴</string>
+    <string name="churn_reason_unused">用得不多</string>
+    <string name="churn_per_year">每年</string>
+    <string name="churn_per_month">每月</string>
+    <string name="churn_reason_features">沒有我需要的功能</string>
+    <string name="churn_reason_other">其他原因</string>
+    <string name="churn_sorry_title">捨不得你離開</string>
+    <string name="churn_sorry_body">取消前能告訴我們原因嗎？這能幫我們把應用做得更好。</string>
+    <string name="churn_exclusive_offer">專屬優惠</string>
+    <string name="churn_offer_subtitle">專屬於你的優惠</string>
+    <string name="churn_offer_feature_ai">每日 AI 分析</string>
+    <string name="churn_offer_feature_perspectives">全部 4 個預設 AI 設定檔 + 你需要多少自訂就有多少</string>
+    <string name="churn_offer_feature_voice">高階版語音識別</string>
+    <string name="churn_offer_auto_renew">自動續訂，隨時可取消</string>
+    <string name="churn_accept_offer">接受優惠</string>
+    <string name="churn_switch_yearly">或改成年度訂閱，更省</string>
+    <string name="churn_pause_sub">或在 Google Play 暫停訂閱</string>
+    <string name="churn_cancel_anyway">仍然取消</string>
+    <string name="churn_are_you_sure">確定嗎？</string>
+    <string name="churn_stay">還是留下來</string>
+
+    <!-- ════════════════════════════════════════════════════════════════════
+         AI LIMIT / COMPONENTS
+         ════════════════════════════════════════════════════════════════════ -->
+    <string name="ai_limit_title">本週上限已到</string>
+    <string name="ai_limit_body">無訂閱時，每週有 5 次文字改善，每個設定檔每週有 5 次儀表板更新。
+訂閱 Premium：每天最多 150 次。</string>
+    <string name="ai_limit_monthly">月度訂閱，每月 %1$s</string>
+    <string name="ai_limit_yearly">年度訂閱，每年 %1$s (省 37\u00A0%%)</string>
+    <string name="ai_limit_no_thanks">不用了，繼續不用 AI</string>
+    <string name="ai_banner_title">日記由 AI 協助</string>
+    <string name="ai_banner_body">• 語音輸入的文字會自動潤色\n• 每則日記自動生成摘要\n• 根據你的規律提供智慧生活建議。所有 AI 輸出僅供參考，非專業建議。\n• 免費試用期間全部包含</string>
+    <string name="cd_mic_start">開始錄音</string>
+    <string name="cd_mic_stop">停止錄音</string>
+    <string name="entry_improve_limit_daily">今日上限已到。明天繼續！</string>
+    <string name="entry_improve_limit_cooldown">小歇一下：還有 %1$d 分鐘。</string>
+    <string name="entry_improve_failed">文字潤色失敗</string>
+
+    <!-- ════════════════════════════════════════════════════════════════════
+         NOTIFICATIONS
+         ════════════════════════════════════════════════════════════════════ -->
+    <string name="notif_reminder_title">該寫日記了</string>
+    <string name="notif_reminder_body_0">今天有什麼在觸動你？</string>
+    <string name="notif_reminder_body_1">給自己的一小段時間，留住它</string>
+    <string name="notif_reminder_body_2">未來的你會感謝</string>
+    <string name="notif_reminder_body_3">一個念頭就夠，開始吧</string>
+    <string name="notif_reminder_body_4">今天的高光時刻是什麼？</string>
+    <string name="notif_weekly_title">你的每週回顧</string>
+    <string name="notif_weekly_body">看看這一週的觸動，面板有新的洞見。</string>
+    <string name="notif_monthly_title">你的每月回顧</string>
+    <string name="notif_monthly_body">一整月的記憶在等你。</string>
+    <string name="notif_yearly_title">你的每年回顧</string>
+    <string name="notif_yearly_body">一整年的記憶，回頭看看你走過的路。</string>
+
+    <!-- Notification channel names -->
+    <string name="notif_channel_daily_name">每日提醒</string>
+    <string name="notif_channel_daily_desc">每天提醒你寫日記</string>
+    <string name="notif_channel_weekly_name">每週回顧</string>
+    <string name="notif_channel_weekly_desc">每週日 15:00 的每週回顧</string>
+    <string name="notif_channel_monthly_name">每月回顧</string>
+    <string name="notif_channel_monthly_desc">每月回顧準備好時通知</string>
+    <string name="notif_channel_yearly_name">每年回顧</string>
+    <string name="notif_channel_yearly_desc">每年回顧準備好時通知</string>
+
+    <!-- ════════════════════════════════════════════════════════════════════
+         DATE / TIME
+         ════════════════════════════════════════════════════════════════════ -->
+    <string name="datetime_just_now">剛剛</string>
+    <plurals name="datetime_minutes_ago">
+        <item quantity="other">%1$d 分鐘前</item>
+    </plurals>
+    <plurals name="datetime_hours_ago">
+        <item quantity="other">%1$d 小時前</item>
+    </plurals>
+    <plurals name="datetime_days_ago">
+        <item quantity="other">%1$d 天前</item>
+    </plurals>
+    <!-- Confirmation after PDF export. %1$d = number of entries included in the PDF. -->
+    <plurals name="settings_export_success">
+        <item quantity="other">已匯出 %1$d 條</item>
+    </plurals>
+    <string name="datetime_today">今天</string>
+    <string name="datetime_yesterday">昨天</string>
+    <string name="datetime_day_before_yesterday">前天</string>
+    <string name="datetime_this_week">本週</string>
+    <string name="datetime_last_week">上週</string>
+    <string name="datetime_weeks_ago">%1$d 周前</string>
+
+    <!-- ════════════════════════════════════════════════════════════════════
+         ACHIEVEMENTS
+         ════════════════════════════════════════════════════════════════════ -->
+    <string name="achievement_nightowl_title">夜貓子</string>
+    <string name="achievement_nightowl_desc">22 點後寫了 50 條</string>
+    <string name="achievement_earlybird_title">早起鳥</string>
+    <string name="achievement_earlybird_desc">7 點前寫了 20 條</string>
+    <string name="achievement_confession_title">心聲</string>
+    <string name="achievement_confession_desc">寫了超過 1000 字的條目</string>
+    <string name="achievement_marathon_title">寫作馬拉松</string>
+    <string name="achievement_marathon_desc">100 條日記</string>
+    <string name="achievement_wordartist_title">文字高手</string>
+    <string name="achievement_wordartist_desc">500 條日記</string>
+    <string name="achievement_consistency_title">堅持</string>
+    <string name="achievement_consistency_desc">達成 30 天連續</string>
+    <string name="achievement_chronicler_title">年度記錄者</string>
+    <string name="achievement_chronicler_desc">寫了 365 條</string>
+    <string name="achievement_photodiary_title">照片日記</string>
+    <string name="achievement_photodiary_desc">條目裡附了 50 張照片</string>
+    <string name="achievement_voiceartist_title">語音高手</string>
+    <string name="achievement_voiceartist_desc">建立 25 條語音條目</string>
+    <string name="achievement_reflectionmaster_title">反思達人</string>
+    <string name="achievement_reflectionmaster_desc">完成 50 次面板分析</string>
+
+    <!-- ════════════════════════════════════════════════════════════════════
+         DAILY PROMPTS
+         ════════════════════════════════════════════════════════════════════ -->
+    <string name="prompt_cat_self_reflection">自我反思</string>
+    <string name="prompt_cat_gratitude">感恩</string>
+    <string name="prompt_cat_future">未來</string>
+    <string name="prompt_cat_relationships">關係</string>
+
+    <string-array name="prompts_self_reflection">
+        <item>今天什麼讓你會心一笑？</item>
+        <item>今天什麼想法一直放不下？</item>
+        <item>今天關於自己，學到了什麼？</item>
+        <item>今天哪個時刻最強烈？</item>
+        <item>如果可以，今天你想怎麼不同地過？</item>
+        <item>今天陪伴你最多的是哪種情緒？</item>
+        <item>今天什麼讓你驚訝？</item>
+        <item>今天你想得最久的是什麼？</item>
+        <item>今天什麼給了你能量？</item>
+        <item>今天什麼耗走了你的能量？</item>
+        <item>你想改變哪種習慣？</item>
+        <item>成功此刻對你意味著什麼？</item>
+        <item>現在哪種恐懼擋在你前面？</item>
+        <item>年輕時的你會怎麼看今天的生活？</item>
+        <item>此刻你想給自己什麼建議？</item>
+        <item>是什麼讓你獨一無二？</item>
+    </string-array>
+
+    <string-array name="prompts_gratitude">
+        <item>今天你為什麼而感謝？</item>
+        <item>今天誰讓你的一天變得更好？</item>
+        <item>今天哪個小細節讓你開心？</item>
+        <item>你的哪個本事是你當作理所當然的？</item>
+        <item>這周最棒的是什麼？</item>
+        <item>你想對誰說聲謝謝，為什麼？</item>
+        <item>哪個地方給你回家的感覺？</item>
+        <item>哪段回憶會讓你立刻開心？</item>
+        <item>你身體的哪個部分值得更多感謝？</item>
+        <item>今天哪頓飯讓你舒服了？</item>
+        <item>最近哪首音樂觸動了你？</item>
+        <item>你最寶貴卻不花錢的是什麼？</item>
+        <item>過去哪段經歷讓你更強？</item>
+        <item>日常裡什麼其實是一種幸運？</item>
+        <item>平凡日子裡你的秘密英雄是誰？</item>
+        <item>現在你最享受的季節是哪個，為什麼？</item>
+    </string-array>
+
+    <string-array name="prompts_future">
+        <item>一年之後，你想做到什麼？</item>
+        <item>五年後，你完美的一天是什麼樣？</item>
+        <item>你現在最熱切追求的目標是什麼？</item>
+        <item>如果保證不會失敗，你會做什麼？</item>
+        <item>你想學的新本事是什麼？</item>
+        <item>下一趟想去哪裡？</item>
+        <item>十年後你想成為什麼樣的人？</item>
+        <item>你放下的哪個夢想可以重新拾起？</item>
+        <item>現在能邁出的最勇敢的一步是什麼？</item>
+        <item>讓你興奮、卻還沒開始的專案是什麼？</item>
+        <item>要發生什麼，你才會說「我滿足了」?</item>
+        <item>你想在世界裡看到哪種改變？</item>
+        <item>你願望清單的第一條是什麼？</item>
+        <item>到下個月，你想擺脫哪個壞習慣？</item>
+        <item>你希望別人怎麼記得你？</item>
+        <item>明天可以邁出的一小步是什麼？</item>
+    </string-array>
+
+    <string-array name="prompts_relationships">
+        <item>你想對誰說一件至今沒說的事？</item>
+        <item>你生活裡的哪段關係值得更多心思？</item>
+        <item>最好朋友身上你最欣賞什麼？</item>
+        <item>上一次真正被理解是什麼時候？</item>
+        <item>你想對一個重要的人說什麼？</item>
+        <item>哪個人塑造了你最多？</item>
+        <item>你如何讓別人知道你愛他們？</item>
+        <item>你想解開的是哪個衝突？</item>
+        <item>友誼對你意味著什麼？</item>
+        <item>最近誰教給你重要的東西？</item>
+        <item>你最欣賞別人的哪種品質？</item>
+        <item>你想和誰一起度過一整天？</item>
+        <item>你聽過最打動你的誇讚是什麼？</item>
+        <item>在關係中，你想更好地守住哪些界限？</item>
+        <item>你對愛的理解這些年怎樣變化？</item>
+        <item>今天誰值得你的一通電話或一條訊息？</item>
+    </string-array>
+
+    <!-- ════════════════════════════════════════════════════════════════════
+         PDF EXPORT
+         ════════════════════════════════════════════════════════════════════ -->
+    <string name="pdf_entry_fallback_title">條目 #%1$d</string>
+    <string name="pdf_entry_counter">條目 %1$d / %2$d</string>
+    <string name="pdf_summary_label">摘要</string>
+    <string name="pdf_continuation">%1$s (續)</string>
+    <string name="pdf_page_number">第 %1$d 頁</string>
+
+    <!-- ════════════════════════════════════════════════════════════════════
+         ERRORS
+         ════════════════════════════════════════════════════════════════════ -->
+    <string name="error_retro_all_failed">%1$d 次 AI 請求失敗。請檢查網路連線。</string>
+    <string name="error_whisper_audio_empty">音訊檔案為空</string>
+    <string name="error_whisper_no_text">未識別到文字</string>
+    <string name="error_sync_db_not_found">找不到資料庫</string>
+    <string name="error_audio_record_init_failed">無法啟動麥克風</string>
+    <string name="error_json_key_missing">AI 回應不完整：缺少 %1$s 或 %2$s</string>
+    <string name="error_file_open_failed">錯誤：打不開檔案</string>
+    <string name="error_generic">錯誤：%1$s</string>
+
+    <!-- ════════════════════════════════════════════════════════════════════
+         AI PROFILE STYLE INSTRUCTIONS (for Gemini prompts)
+         ════════════════════════════════════════════════════════════════════ -->
+    <string name="profile_style_chronicler">\n- 用總結性敘述的風格，像一位個人的記事者那樣收集主要事件與情感</string>
+    <string name="profile_style_advisor">\n- 用生活顧問的風格，突出做得好的地方與可以改進的地方，讓讀者感到清晰與有序</string>
+    <string name="profile_style_insight">\n- 用深度自我認識敘述的風格，揭示思維規律、反覆出現的情緒與隱藏的長處</string>
+    <string name="profile_style_coach">\n- 用激勵式的目標夥伴風格，呈現個人目標的進展並鼓勵繼續</string>
+    <string name="profile_style_custom">\n- 根據使用者的以下個人焦點撰寫回顧：\"%1$s\"</string>
+
+
+    <!-- ════════════════════════════════════════════════════════════════════
+         CONSENT SCREEN + PRIVACY GATES + PRIVACY SECTION (April 2026)
+         ════════════════════════════════════════════════════════════════════ -->
+    <string name="consent_title">隱私與同意</string>
+    <string name="consent_intro">你的日記是一個私人空間，我們尊重這一點。在這裡你可以透明地看到 Best Journal 如何處理你的資料。</string>
+    <string name="consent_card1_title">本機儲存</string>
+    <string name="consent_card1_body">你的記錄會保留在你的裝置上。</string>
+    <string name="consent_card2_title">AI 功能（美國）</string>
+    <string name="consent_card2_body">選用時，文字會傳送到位於美國的 Google Gemini,朗讀文字則傳送到 Microsoft Edge(EU-US Data Privacy Framework)。語音錄音依據標準合約條款（EU SCCs）傳送到 Groq(美國)。</string>
+    <string name="consent_card3_title">匿名統計</string>
+    <string name="consent_card3_body">Firebase Analytics,選用，可隨時在設定中變更。</string>
+    <string name="consent_links_header">我們的法律文件：</string>
+    <string name="consent_accept_all">同意並開始</string>
+    <string name="consent_disable_stats">關閉統計並繼續</string>
+    <string name="consent_confirmation">點選「同意並開始」表示你已閱讀隱私權政策、使用條款和法律聲明，並同意所述的資料處理。你可以隨時在設定中變更決定。</string>
+
+    <string name="privacy_gate_groq_title">將語音錄音傳送到 Groq?</string>
+    <string name="privacy_gate_groq_body">此功能會將你的語音錄音加密傳送到 Groq（美國），並在那裡轉換為文字 — 比本機辨識更快、更準確。\n\n✓ 錄音在轉換後立即刪除\n✓ 不會用你的錄音訓練 AI\n✓ 法律依據：標準契約條款（EU SCCs）\n\n替代方案：在設定中使用本機離線辨識。</string>
+    <string name="privacy_gate_groq_accept">同意並傳送</string>
+    <string name="privacy_gate_groq_local">改為本機轉錄</string>
+
+    <string name="privacy_gate_gemini_title">將文字傳送到 Google Gemini?</string>
+    <string name="privacy_gate_gemini_body">很高興你想使用 Best Journal 的智慧功能！為了提供摘要、回顧、儀表板洞察與文字改善，你的內容將以加密方式傳送至 Google Gemini。\n\n✓ 不使用你的資料進行 AI 訓練\n✓ 請求不會永久儲存\n✓ 依據歐美資料隱私框架加密\n\n重要提醒：由於你的日記條目可能包含特別敏感的資訊（健康、宗教、個人關係），在此我們需要你明確同意 AI 處理。AI 輸出僅供參考，並非專業建議，無法取代專業人士。\n\n你可以隨時在設定中變更此選項。</string>
+    <string name="privacy_gate_gemini_accept">同意並傳送</string>
+    <string name="privacy_gate_gemini_cancel">取消</string>
+
+    <string name="privacy_gate_tts_title">啟用進階版語音</string>
+    <string name="privacy_gate_tts_body">使用進階版語音會讓朗讀聽起來更自然。你的文字會加密（HTTPS/TLS）傳送到位於美國的 Microsoft 語音服務，並以音訊形式回傳。\n\n✓ 傳輸僅用於語音合成\n✓ 第三國傳輸至美國（Microsoft 已通過 EU-US Data Privacy Framework 認證）</string>
+    <string name="privacy_gate_tts_accept">同意並朗讀</string>
+    <string name="privacy_gate_tts_cancel">取消</string>
+
+    <string name="settings_privacy_header">隱私</string>
+    <string name="settings_analytics_title">匿名使用分析</string>
+    <string name="settings_analytics_subtitle">用於錯誤分析與產品改善的 Firebase Analytics</string>
+
+    <string name="settings_delete_account_title">刪除帳號與資料</string>
+    <string name="settings_delete_account_subtitle">不可復原地移除所有本機資料與雲端硬碟備份。你的 Google 帳號本身將保留。</string>
+    <string name="settings_delete_account_confirm_title">刪除所有 App 資料？</string>
+    <string name="settings_delete_account_confirm_body">此操作不可復原，會刪除：\n\n• 所有本機日記條目、照片、影片與語音錄音\n• 應用程式的 Google 雲端硬碟備份（僅限應用程式資料，不含你的 Google 帳號）\n• 你的應用程式登入\n\n你的 Google 帳號本身將保留。應用程式之後會以全新安裝的狀態重新開始。</string>
+    <string name="settings_delete_account_cancel">取消</string>
+    <string name="settings_delete_account_confirm">是的，全部刪除</string>
+
+    <string name="settings_report_ai_title">檢舉 AI 回覆</string>
+    <string name="settings_report_ai_subtitle">不當或錯誤的 AI 輸出</string>
+    <string name="settings_report_ai_confirm_title">開啟支援郵件？</string>
+    <string name="settings_report_ai_confirm_body">你的電子郵件程式會開啟一封寄給 dev.app.support@gmail.com 的預填訊息。你可以在寄出前再補充說明。我們通常會在工作日的 24 小時內回覆。\n\n請以此回報：來自儀表板、摘要、回顧或文字潤飾的不當、令人反感、錯誤或誤導的 AI 輸出。</string>
+    <string name="settings_report_ai_confirm">建立檢舉</string>
+    <string name="settings_report_ai_cancel">取消</string>
+    <string name="settings_report_ai_no_email">找不到郵件應用程式。請將檢舉寄到 dev.app.support@gmail.com。</string>
+    <string name="settings_report_ai_subject">Best Journal:不當 AI 回覆</string>
+    <string name="settings_report_ai_body">你好，\n\n我想檢舉 Best Journal 中的一則不當或錯誤的 AI 回覆。\n\n問題描述：\n[請填寫]\n\n情境（哪個功能、哪項輸入）:\n[請填寫]\n\n謝謝。</string>
+    <string name="settings_report_ai_dialog_title">檢舉AI回應</string>
+    <string name="settings_report_ai_dialog_desc">描述不當或錯誤的AI回應。您的檢舉會直接傳送給我們的支援團隊。您必須使用Google帳戶登入。</string>
+
+    <string name="settings_revoke_title">解除契約</string>
+    <string name="settings_revoke_subtitle">德國民法典第 356a 條 — 直接透過應用程式撤回</string>
+    <string name="settings_revoke_confirm_title">撤回合約？</string>
+    <string name="settings_revoke_confirm_body">只要點選「確認撤回」，我們就會將你的撤回直接寄送到 dev.app.support@gmail.com。你會立即收到一封電子郵件的收件確認。\n\n完整的撤回須知請見使用條款（第 16 條）。訂閱請另外透過 Google Play → 訂閱項目取消，以免再產生任何扣款。</string>
+    <string name="settings_revoke_cancel">取消</string>
+    <string name="settings_revoke_confirm">建立解除</string>
+    <string name="settings_revoke_no_email">找不到郵件應用程式。請將解除通知寄到 dev.app.support@gmail.com。</string>
+    <string name="settings_revoke_email_subject">Best Journal Premium 契約解除</string>
+    <string name="settings_revoke_email_body">本人特此撤銷我就 Best Journal Premium 功能訂立的契約。\n\n寄件人（Google 帳戶）：%1$s\n撤銷時間：%2$s\n\n本次撤銷透過應用程式內符合 § 356a BGB 的兩步式撤銷按鈕觸發，並經由 Gmail API 自動寄出。</string>
+    <string name="settings_revoke_confirm_subject">你的收訖確認：Best Journal 撤銷</string>
+    <string name="settings_revoke_confirm_user_body">你好，\n\n我們已收到你在 %1$s 提交的撤銷。這是你依 § 356a BGB 取得的收訖確認。\n\n我們會盡快處理你的撤銷；如有疑問，將透過 dev.app.support@gmail.com 與你聯絡。\n\n為避免後續繼續扣款，請也在 Google Play 商店的「訂閱」中取消你的訂閱。\n\n謝謝，敬祝安好\nBest Journal (Frank Barwandt)</string>
+    <string name="settings_revoke_no_account">未找到已登入的 Google 帳戶地址。請在設定中登入你的 Google 帳戶，或將撤銷郵件手動寄到 dev.app.support@gmail.com。</string>
+    <string name="settings_revoke_sending">正在傳送撤銷…</string>
+    <string name="settings_revoke_success_title">已收到撤銷</string>
+    <string name="settings_revoke_success_body">你的撤銷已傳送至 dev.app.support@gmail.com。收訖確認郵件也已寄到你的收件匣。</string>
+    <string name="settings_revoke_success_close">關閉</string>
+    <string name="settings_revoke_error_title">無法傳送撤銷</string>
+    <string name="settings_revoke_error_body">自動傳送失敗：%1$s\n\n你也可以手動將郵件寄到 dev.app.support@gmail.com。為此請點選「打開郵件應用」。</string>
+    <string name="settings_revoke_error_email_fallback">打開郵件應用</string>
+
+
+
+    <!-- Crisis Support / Mental Health Disclaimer -->
+    <string name="settings_crisis_title">危機支援</string>
+    <string name="settings_crisis_subtitle">緊急情況下的重要求助專線</string>
+    <string name="settings_crisis_dialog_title">你並不孤單</string>
+    <string name="settings_crisis_dialog_body">Best Journal 是一款日記 App，不能取代專業的心理或醫療協助。AI 產生的分析不是治療。\n\n如果你正處於嚴重危機中，或有自傷或自殺的想法：你不必獨自承受這一切。全天候都有免費、匿名的幫助可供使用。</string>
+    <string name="settings_crisis_hotline_de_name">Telefonseelsorge 德國</string>
+    <string name="settings_crisis_hotline_de_hours">免費、24/7、匿名</string>
+    <string name="settings_crisis_call_de">撥打 0800 111 0 111</string>
+    <string name="settings_crisis_call_de_alt">撥打 0800 111 0 222</string>
+    <string name="settings_crisis_emergency_name">緊急求助</string>
+    <string name="settings_crisis_call_emergency">撥打 112</string>
+    <string name="settings_crisis_international_name">國際求助專線</string>
+    <string name="settings_crisis_open_findahelpline">開啟 findahelpline.com</string>
+    <string name="settings_crisis_close">關閉</string>
+    <string name="settings_crisis_no_dialer">找不到電話 App。</string>
+    <string name="settings_crisis_no_browser">找不到瀏覽器。</string>
+
+    <!-- AI-generated content badge -->
+    <string name="ai_generated_badge">AI 產生</string>
+    <string name="ai_generated_tooltip">此內容由 AI 系統（Google Gemini）產生，可能包含錯誤。請自行查證。</string>
+
+    <!-- AUTO-ADDED FALLBACK (English) for missing keys — replace with proper translations later -->
+    <string name="consent_optout_confirmation">已儲存退出選項——統計已停用。</string>
+    <string name="settings_ccpa_do_not_sell_title">Do Not Sell My Personal Information</string>
+    <string name="settings_ccpa_do_not_sell_subtitle">適用於加州居民（CCPA/CPRA 2026）。啟用後，所有雲端AI功能皆會停用，且不會收集任何統計資料。</string>
+    <string name="settings_ccpa_do_not_sell_confirmation">Do-Not-Sell已啟用——所有雲端服務皆已停用。</string>
+    <string name="settings_ccpa_do_not_sell_off_confirmation">Do-Not-Sell已停用。</string>
+    <string name="settings_delete_account_in_progress">正在刪除帳戶與資料…</string>
+    <string name="settings_delete_account_drive_error_title">無法刪除雲端硬碟備份</string>
+    <string name="settings_delete_account_drive_error_body">Google 雲端硬碟備份無法可靠地刪除（原因： %1$s）。
+
+若未完全刪除，\"已永久刪除\"的提示就不準確。
+
+你想怎麼做？</string>
+    <string name="settings_delete_account_retry">再試一次</string>
+    <string name="settings_delete_account_force_local">僅在本機刪除（保留 Drive 備份）</string>
+    <string name="settings_delete_account_abort">取消操作</string>
+
+    <string name="legal_title_datenschutz">隱私政策</string>
+    <string name="legal_title_nutzungsbedingungen">使用條款</string>
+    <string name="legal_title_impressum">法律資訊</string>
+
+    <!-- Consent-Screen v4 + Privacy Sheet + Settings -->
+    <string name="consent_welcome_title">歡迎使用 Best Journal</string>
+    <string name="consent_welcome_intro">開始前，我們先在這裡快速設定你的隱私偏好。</string>
+    <string name="consent_promise_local">隱私法規要求取得你的同意。</string>
+    <string name="consent_promise_no_training">你在這裡決定哪些功能處於啟用狀態。</string>
+    <string name="consent_promise_optional_ai">可隨時在「設定」中變更。</string>
+    <string name="consent_btn_manual_selection">手動選擇</string>
+    <string name="privacy_sheet_title">自訂隱私</string>
+    <string name="privacy_sheet_subtitle">按照適合你的方式個別啟用功能。所有設定都可隨時變更。</string>
+    <string name="privacy_sheet_save">儲存選擇</string>
+    <string name="privacy_sheet_all_on">全部開啟</string>
+    <string name="privacy_sheet_all_off">全部關閉</string>
+    <string name="consent_toggle_analytics_title">匿名使用分析</string>
+    <string name="consent_toggle_analytics_body">Firebase Analytics — 協助我們改善應用程式。不含任何日記內容，僅匿名的使用統計（例如點擊次數）。資料傳輸：Google 美國（Data Privacy Framework）。</string>
+    <string name="consent_toggle_groq_title">語音轉文字（Groq Whisper）</string>
+    <string name="consent_toggle_groq_body">支援口述項目。你的語音錄音會加密傳送至 Groq（美國），轉換為文字後刪除。你的錄音不會用於訓練。</string>
+    <string name="consent_toggle_gemini_title">AI 反思（Google Gemini）</string>
+    <string name="consent_toggle_gemini_body">儀表板 AI、摘要、回顧和文字改善。將文字片段傳送至 Google Gemini（美國）。你的項目不會用於訓練。</string>
+    <string name="consent_toggle_tts_title">朗讀（Microsoft Edge TTS）</string>
+    <string name="consent_toggle_tts_body">以自然聲音朗讀項目。將文字傳送至 Microsoft（美國）。</string>
+    <string name="consent_toggle_drive_title">Google 雲端硬碟備份</string>
+    <string name="consent_toggle_drive_body">將項目加密儲存到你自己的 Google 雲端硬碟。你保有完全控制權 — 檔案在你的帳戶中，不在我們這裡。</string>
+    <string name="consent_toggle_do_not_sell_title">Do Not Sell My Personal Information</string>
+    <string name="consent_toggle_do_not_sell_body">此開關僅供美國加州居民使用。加州隱私法（CCPA/CPRA）賦予居民拒絕權。啟用時，所有選用的雲端功能（AI、備份、語音辨識、分析）都會停用 — 僅保留本機功能。\n\n若你不住在加州，可以忽略此開關：Best Journal 不會在世界任何地方販售或行銷你的資料。</string>
+    <string name="consent_btn_accept_all">全部接受</string>
+    <string name="consent_btn_save_selection">儲存我的選擇</string>
+    <string name="consent_btn_minimum_only">全部拒絕</string>
+    <string name="consent_saved_snackbar">設定已儲存</string>
+    <string name="consent_revoke_snackbar">已撤回同意</string>
+    <string name="consent_footer_version">你的選擇可隨時在「設定」中變更。</string>
+    <string name="consent_details_expand">詳細資訊</string>
+    <string name="settings_open_privacy_sheet">自訂隱私設定</string>
+    <string name="settings_privacy_section_header">隱私與同意</string>
+    <string name="settings_ai_groq_title">語音轉文字（Groq）</string>
+    <string name="settings_ai_groq_subtitle">將語音錄音傳送至 Groq 美國進行轉錄</string>
+    <string name="settings_ai_gemini_title">AI 反思（Gemini）</string>
+    <string name="settings_ai_gemini_subtitle">將文字傳送至 Google 美國以產生 AI 摘要</string>
+    <string name="settings_ai_tts_title">朗讀（Edge TTS）</string>
+    <string name="settings_ai_tts_subtitle">將文字傳送至 Microsoft 美國以進行語音輸出</string>
+    <string name="settings_drive_backup_title">Google 雲端硬碟備份</string>
+    <string name="settings_drive_backup_subtitle">將項目加密儲存到你的雲端硬碟</string>
+
+    <!-- DEBUG-only test data seeder (button in journal top bar, only visible in debug builds) -->
+    <string name="dev_seed_create_label">產生70筆測試項目</string>
+    <string name="dev_seed_delete_label">刪除70筆測試項目</string>
+    <string name="dev_seed_running">正在以您的語言產生70筆測試項目…</string>
+    <string name="dev_seed_done">已建立%1$d筆測試項目</string>
+    <string name="dev_seed_deleted">已刪除%1$d筆測試項目</string>
+    <string name="dev_seed_error">錯誤：%1$s</string>
+    <string name="dev_seed_ai_no_entries">AI 未傳回測試項目</string>
+
+    <!-- Premium feature: unlimited follow-ups per journal entry -->
+    <string name="paywall_feature_followups">每篇日記，想補充多少就補充多少</string>
+    <string name="settings_premium_feature_followups">無限補充</string>
+    <string name="settings_premium_feature_followups_desc">每篇日記想加多少補充就加多少</string>
+
+    <!-- ════════════════════════════════════════════════════════════════════
+         MISSING KEYS — added 2026-04-28
+         ════════════════════════════════════════════════════════════════════ -->
+    <string name="action_no">否</string>
+    <string name="action_yes">是</string>
+    <string name="ai_improved_suffix">\n\n✨ AI 已優化</string>
+    <string name="ai_improved_suffix_marker">✨ AI 已優化</string>
+    <string name="entry_delete_entry_cd">刪除日記條目</string>
+    <string name="entry_journal_entry_title">日記條目</string>
+    <string name="entry_photos_videos_add_title">新增照片／影片</string>
+    <string name="follow_up_cancel">取消</string>
+    <string name="follow_up_card_title">補充</string>
+    <string name="follow_up_choose_input_mode">你想如何新增補充？</string>
+    <string name="follow_up_delete_button">刪除</string>
+    <string name="follow_up_delete_cd">刪除補充</string>
+    <string name="follow_up_delete_confirm_text">確定要永久刪除第 <xliff:g id="ordinal" example="1">%1$s</xliff:g> 條補充嗎？</string>
+    <string name="follow_up_delete_confirm_title">刪除第 <xliff:g id="ordinal" example="1">%1$s</xliff:g> 條補充？</string>
+    <string name="follow_up_dialog_label">你的補充：</string>
+    <string name="follow_up_dialog_title">補充</string>
+    <string name="follow_up_discard">放棄</string>
+    <string name="follow_up_improve_text">✨ 潤色文字</string>
+    <string name="follow_up_improve_with_ai">用 AI 事後潤色</string>
+    <string name="follow_up_improving">AI 正在潤色補充內容…</string>
+    <string name="follow_up_inline_title">補充 <xliff:g id="ordinal" example="1">%1$s</xliff:g></string>
+    <string name="follow_up_input_speak_cd">語音輸入</string>
+    <string name="follow_up_input_speak_label">語音輸入</string>
+    <string name="follow_up_input_write_cd">文字輸入</string>
+    <string name="follow_up_input_write_label">文字輸入</string>
+    <string name="follow_up_premium_body">訂閱進階版後，你可以為每篇日記新增任意數量的補充。</string>
+    <string name="follow_up_premium_hint">從第二條補充開始</string>
+    <string name="follow_up_premium_later">稍後再說</string>
+    <string name="follow_up_premium_subscribe">開始訂閱</string>
+    <string name="follow_up_premium_subtext">每條補充都會自動同步到面板，讓你的分析隨時保持完整。</string>
+    <string name="follow_up_premium_title">無限補充</string>
+    <string name="follow_up_save">儲存</string>
+    <string name="follow_up_save_improved">儲存優化版</string>
+    <string name="follow_up_show_improved">✨ 檢視優化版</string>
+    <string name="follow_up_show_original">↩ 檢視原文</string>
+    <string name="follow_up_speak_pill_label">語音輸入</string>
+    <string name="follow_up_speak_prompt">請說出你的補充內容。</string>
+    <string name="follow_up_stop_hint">完成後請點選停止。</string>
+    <string name="follow_up_tab_improved">✨ AI 優化</string>
+    <string name="follow_up_tab_original">原文</string>
+    <string name="follow_up_text_placeholder">在此寫下你的補充…</string>
+    <string name="follow_up_transcribing">正在轉錄補充內容…</string>
+    <string name="journal_improve">潤色文字</string>
+    <string name="journal_state_improving">優化中…</string>
+    <string name="journal_state_transcribing">轉錄中…</string>
+    <string name="profile_custom_add">新增自訂分析</string>
+    <string name="profile_custom_remove">刪除自訂分析</string>
+    <string name="profile_custom_rename">重新命名</string>
+    <string name="profile_custom_rename_save">儲存名稱</string>
+    <string name="prompt_clear_confirm_text">此自訂分析將被永久刪除。確定要繼續嗎？</string>
+    <string name="prompt_clear_confirm_title">刪除文字？</string>
+    <string name="prompt_clear_content_desc">刪除文字</string>
+    <string name="prompt_recording_with_model">錄音中 — 模型：%1$s</string>
+    <string name="prompt_transcribing_with_model">%1$s 轉錄中…</string>
+    <string name="prompt_transcription_model_hint">已用 %1$s 轉錄</string>
+    <string name="ai_retro_copied_message">已複製到剪貼簿</string>
+    <string name="ai_retro_copy_button">複製</string>
+    <string name="ai_retro_empty_state">項目不足，無法產生回顧。</string>
+    <string name="ai_retro_error_state">無法建立回顧。請再試一次。</string>
+    <string name="ai_retro_generate_button">建立回顧</string>
+    <string name="ai_retro_generating_state">正在建立回顧…</string>
+    <string name="ai_retro_month_label">本月</string>
+    <string name="ai_retro_share_button">分享</string>
+    <string name="ai_retro_title">AI 回顧</string>
+    <string name="ai_retro_week_label">本週</string>
+    <string name="ai_retro_year_label">今年</string>
+    <string name="follow_up_add_button">新增後續</string>
+    <string name="follow_up_delete_confirm_no">不，保留</string>
+    <string name="follow_up_delete_confirm_yes">是，刪除</string>
+    <string name="follow_up_empty_state">目前還沒有後續內容。\n點按下方按鈕新增第一則。</string>
+    <string name="follow_up_improve_button">改善</string>
+    <string name="follow_up_improve_error">無法改善。請再試一次。</string>
+    <string name="follow_up_improving_state">正在改善…</string>
+    <string name="follow_up_record_error">無法錄音。請再試一次。</string>
+    <string name="follow_up_record_new">錄製新後續</string>
+    <string name="follow_up_recording_hint">點按錄音</string>
+    <string name="follow_up_recording_state">正在錄音…</string>
+    <string name="follow_up_tab_label">後續</string>
+    <string name="follow_up_transcribe_error">無法轉寫。請再試一次。</string>
+    <string name="follow_up_transcribing_state">正在轉寫…</string>
+    <string name="prompt_char_count_label">%1$d 個字元</string>
+    <string name="prompt_improve_button_label">改善</string>
+    <string name="prompt_placeholder_text">寫下你此刻的想法…</string>
+    <string name="prompt_record_button_label">錄音</string>
+    <string name="prompt_send_button_label">傳送</string>
+    <string name="prompt_stop_button_label">停止</string>
+    <string name="settings_legal_section_header">法律文件</string>
+    <string name="settings_legal_online_label">線上版本：</string>
+        <plurals name="datetime_months_relative">
+        <item quantity="other">%1$d 個月前</item>
+    </plurals>
+        <plurals name="datetime_years_relative">
+        <item quantity="other">%1$d 年前</item>
+    </plurals>
+    <string name="ai_limits_disclaimer">密集使用的每日 AI 配額。</string>
+    <string name="ai_limits_dialog_title">AI 每日配額是如何運作的？</string>
+    <string name="ai_limits_dialog_body" formatted="false">有訂閱 PREMIUM\n\n每天可使用：\n• 每個 AI 設定檔每天 150 次請求 — 4 個預設設定檔合計 600 次／天，加上每個自訂設定檔各 150 次／天。\n• 最多 150 次文字潤色\n\n詳細說明：\n• 第 1〜30 次請求：最高 AI 品質\n• 第 31〜100 次請求：快速標準品質\n• 第 101 次請求：一次性暫停 30 分鐘\n• 第 101〜150 次請求：快速標準品質\n• 第 151 次起：今日不再接受請求\n\n所有使用者均適用：\n• 每小時最多 50 次 AI 請求——之後暫停 5 分鐘\n\n配額何時重置？\n每天 0:00（你的當地時間）開始新的完整配額。\n\n──────────\n\n無訂閱\n\n• 每個設定檔每週 5 次儀表板分析\n• 每週 5 次文字潤色\n• 始終為快速標準品質\n• 每週一 0:00（你的當地時間）重置\n\n──────────\n\n大多數日常使用者不會達到這些上限。</string>
+    <string name="ai_limits_dialog_close">明白了</string>
+    <string name="theme_neutral">中性</string>
+    <string name="theme_profile">設定檔顏色——儀表板設定檔的顏色</string>
+    <string name="theme_solarized">夏至</string>
+    <string name="theme_dracula">子夜</string>
+    <string name="theme_one_dark">工房</string>
+    <string name="theme_nord">極夜</string>
+    <string name="theme_gruvbox">琥珀</string>
+
+    <!-- Permission rationale strings -->
+    <string name="permission_rationale_microphone">為了讓你能以語音方式記錄日記，我們需要存取你的麥克風。</string>
+    <string name="permission_rationale_camera">為了讓你能為日記新增照片，我們需要存取你的相機。</string>
+    <string name="permission_rationale_notifications">為了能提醒你每天記錄，我們需要傳送通知的權限。</string>
+
+    <!-- System backup consent -->
+    <string name="consent_info_system_backup_title">Android 系統備份</string>
+    <string name="consent_info_system_backup_body">若你已在裝置設定中啟用 Android 系統備份，Android 會自動將你的日記資料備份至 Google 帳號的備份空間。你可以隨時在裝置設定中停用此功能 — 詳情請參閱隱私政策。</string>
+    <string name="settings_open_system_backup_settings_label">管理 Android 系統備份</string>
+    <string name="settings_open_system_backup_settings_desc">開啟 Android 系統設定，你可以在此為 Best Journal 開啟或關閉自動備份。</string>
+    <string name="error_no_backup_settings_available">此裝置不支援備份設定。</string>
+
+    <!-- Consent footer links -->
+    <string name="consent_footer_link_datenschutz">隱私政策</string>
+    <string name="consent_footer_link_impressum">法律聲明</string>
+    <string name="consent_footer_link_agb">使用條款</string>
+
+    <!-- AI health disclaimer -->
+    <string name="ai_output_health_disclaimer">非心理治療 — 不能取代專業諮詢。</string>
+    <string name="ai_output_health_disclaimer_long">Best Journal 是一款日記應用程式，並非心理治療服務。AI 分析僅供自我反思參考，不能取代專業心理或醫療建議。若你有急迫需求，請聯繫專業人士或你設定中的危機求助資源。</string>
+
+
+    <!-- Churn & Theme strings (added 2026-05-22) -->
+    <string name="churn_cancelled">已取消</string>
+    <string name="churn_cancelled_ends_on">已取消 — 到期時間：<xliff:g id="date" example="30.04.2026, 18:13">%1$s</xliff:g></string>
+    <string name="churn_promo_phase_ends">優惠於 <xliff:g id="date" example="30.04.2026, 18:13">%1$s</xliff:g> 結束 — 之後每月 <xliff:g id="base_price" example="3,99 €">%2$s</xliff:g></string>
+    <string name="churn_reason_other_placeholder">請簡單告訴我們發生了什麼…</string>
+    <string name="churn_renews_on">將於 <xliff:g id="date" example="30.04.2026, 18:13">%1$s</xliff:g> 自動續訂</string>
+    <string name="settings_premium_cancelled">高階版訂閱已取消</string>
+    <string name="settings_premium_cancelled_desc">你的 Premium 功能將持續到目前計費週期結束。你可以在 Google Play 撤銷取消。</string>
+    <string name="settings_premium_cancelled_until">高階版訂閱已取消 — 有效期至 <xliff:g id="date" example="30.04.2026, 21:01">%1$s</xliff:g></string>
+    <string name="settings_theme">主題</string>
+    <string name="settings_themes_manager">主題管理員</string>
+    <string name="paywall_monthly_note">之後每月 %1$s，自動續訂\n隨時可取消</string>
+</resources>

@@ -1,0 +1,112 @@
+{
+	"lang": "kn",
+	"language_name": "Kannada",
+	"target_file": "app/src/main/res/values-kn/strings.xml",
+	"applied": {
+		"kn": [
+			"ai_limits_dialog_body",
+			"ai_prompt_custom_intro",
+			"ai_prompt_custom_rules",
+			"ai_prompt_entropy_intro",
+			"ai_prompt_goals_rules",
+			"ai_prompt_insight_attitude",
+			"ai_prompt_no_dates_rule",
+			"ai_prompt_rerank_system",
+			"churn_offer_feature_perspectives",
+			"consent_card3_title",
+			"consent_toggle_analytics_body",
+			"consent_toggle_analytics_title",
+			"consent_toggle_do_not_sell_body",
+			"onboarding_feature_secure",
+			"onboarding_premium_feature_noads",
+			"paywall_feature_noads",
+			"paywall_feature_profiles",
+			"paywall_from_per_day",
+			"paywall_headline_clarity_sub",
+			"privacy_gate_groq_body",
+			"privacy_gate_tts_body",
+			"privacy_gate_tts_title",
+			"profile_entropy_long",
+			"retro_benefit_weekly",
+			"settings_analytics_title",
+			"settings_delete_account_confirm_body",
+			"settings_delete_account_subtitle",
+			"settings_feedback_dialog_desc",
+			"settings_premium_feature_5_perspectives",
+			"settings_premium_feature_profiles",
+			"settings_report_ai_confirm_body",
+			"settings_revoke_confirm_body",
+			"settings_revoke_confirm_title",
+			"settings_revoke_subtitle",
+			"datetime_months_relative",
+			"datetime_years_relative"
+		]
+	},
+	"inserted_new": {
+		"kn": ["paywall_monthly_note"]
+	},
+	"skipped_already_present": {
+		"kn": []
+	},
+	"counts": {
+		"strings_target": 35,
+		"plurals_target": 2,
+		"strings_replaced": 33,
+		"strings_inserted_new": 1,
+		"plurals_replaced": 2,
+		"total_entries_written": 37
+	},
+	"validations_performed": {
+		"kn": [
+			"xml-parse-ok",
+			"all-35-strings-present",
+			"all-2-plurals-present",
+			"none-identical-to-de",
+			"format-args-identical-to-de",
+			"no-naked-percent",
+			"ai_limits_dialog_body-150-count=4",
+			"ai_limits-numbers-present-600-30-101-151-50-5",
+			"no-telugu-chars-U0C00-U0C7F",
+			"kannada-range-U0C80-U0CFF-dominant",
+			"zwnj-U200C-preserved-225",
+			"native-digits-validator-exit0-arabic-only",
+			"delete_account-google-konto-bleibt",
+			"revoke-356a-bgb",
+			"do_not_sell-no-year"
+		]
+	},
+	"key_notes": [
+		"ai_limits_dialog_body: vollstaendige DE-Struktur nachgebildet, 150 jetzt 4x (war 3x): 150 pro Profil/Tag, 600/Tag fuer die 4 vordefinierten, 150/Tag pro eigenem Profil, bis zu 150 Text-Verbesserungen.",
+		"paywall_monthly_note war NICHT vorhanden -> neu eingefuegt (%1$s exakt, \\n erhalten).",
+		"Beide Plurals waren deutsch-stale (vor %1$d Monat/Jahr) -> durch Kannada ersetzt (%1$d ತಿಂಗಳ/ವರ್ಷ ಹಿಂದೆ).",
+		"Mehrere Bestands-Werte waren veraltet ggü. aktuellem DE und wurden korrigiert: privacy_gate_tts_title (jetzt 'Premium-Stimmen aktivieren'), settings_revoke_confirm_title ('Vertrag widerrufen?'), settings_revoke_subtitle ('§ 356a BGB ...'), consent_toggle_do_not_sell_body (CCPA/CPRA ohne Jahr).",
+		"Register: hoeflich (ನೀವು/neevu). Arabische Ziffern. Tech-Begriffe als englische Lehnwoerter in Kannada-Schrift (AI, Google, Microsoft, Firebase Analytics, Groq).",
+		"ZWNJ (U+200C) bei Konsonant-Cluster-Grenzen beibehalten wie im Bestand (z.B. ಎನ್‌ಕ್ರಿಪ್ಟ್, ಪ್ರೊಫೈಲ್‌ಗಳು, ‌ಗೆ)."
+	],
+	"worker_overload": false,
+	"plugin_bugs_observed": [
+		{
+			"symptom": "job-plan.json kn: Feld 'count' ist 37, aber das 'strings'-Array enthaelt 35 Eintraege (+2 plurals = 37). Gleiches Muster bei en/es (count 37, 35 strings). 'count' = strings+plurals, nicht = len(strings).",
+			"evidence": "kn strings list len=35, plurals len=2, count=37; en/es identisch",
+			"suggestion": "Im Orchestrator dokumentieren/oder count konsistent als len(strings)+len(plurals) definieren, damit Worker nicht faelschlich 37 Strings suchen."
+		},
+		{
+			"symptom": "Mehrere Bestands-Strings in values-kn waren bereits vorhanden, aber inhaltlich gegenueber dem aktuellen DE veraltet (z.B. privacy_gate_tts_title, settings_revoke_*). Ein reiner 'skip if present'-Ansatz (FIN-040 3.1) haette diese stale-Werte stehen lassen.",
+			"evidence": "privacy_gate_tts_title alt='Microsoft ಗೆ ಪಠ್ಯ ಕಳುಹಿಸುವುದೇ?' vs DE neu='Premium-Stimmen aktivieren'",
+			"suggestion": "Bei Phase-3-Delta-Jobs MUSS ueberschrieben (replace) statt nur eingefuegt werden — Pre-Check-skip nur fuer echte Duplikate, nicht fuer geplante Updates. Worker hat hier bewusst replace gemacht."
+		}
+	],
+	"checklist": {
+		"PYTHONIOENCODING_utf8": true,
+		"target_xml_python_only_no_read_tool": true,
+		"single_language": true,
+		"pre_check_per_key": true,
+		"rfind_insert_for_new": true,
+		"uebersetzung_skill_invoked": true,
+		"iso_android_mapping": "kn -> values-kn (kein Sonderfall)",
+		"apostrophe_validator": "n/a (Kannada, keine romanische Sprache)",
+		"format_percent_check": true,
+		"post_check_keys_present_none_identical_xml_valid": true,
+		"native_digits_validator_run": true
+	}
+}

@@ -1,0 +1,7 @@
+interface:
+  display_name: "codex-in-chrome-troubleshooting"
+  short_description: "Diagnose and fix Codex in Chrome MCP extension connectivity"
+  default_prompt: "Use $codex-in-chrome-troubleshooting-trailofbits--codex-in-chrome-troubleshooting for this task."
+
+policy:
+  allow_implicit_invocation: false

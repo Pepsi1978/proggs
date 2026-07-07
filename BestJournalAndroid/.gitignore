@@ -1,0 +1,22 @@
+# Keystores und Secrets — alle Secrets leben in $HOME/SK/BestJournalAndroid/
+# Build-Skript kopiert sie von dort an die erwarteten Pfade (syncSecrets-Task).
+# Keine Ausnahmen — NIEMALS google-services.json oder Keystores im Repo zulassen.
+local.properties
+*.jks
+*.keystore
+debug-shared.keystore
+release.keystore
+google-services.json
+
+# Build-Outputs
+/app/build/
+/build/
+.gradle/
+local.properties
+.externalNativeBuild/
+.cxx/
+
+# IDE
+.idea/
+*.iml
+.DS_Store

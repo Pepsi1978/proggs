@@ -1,0 +1,7 @@
+interface:
+  display_name: "code-review"
+  short_description: "code-review"
+  default_prompt: "Use $everything-codex-everything-codex--code-review for this task."
+
+policy:
+  allow_implicit_invocation: false

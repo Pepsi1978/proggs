@@ -1,0 +1,37 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+    Lint-Baseline fuer bekannte False-Positives.
+
+    Eintrag 1+2: TrustAllX509TrustManager
+        Quelle: com.google.http-client:google-http-client:1.45.0 (Bibliotheks-JAR).
+        Die Library liefert MockHttpTransport im Production-JAR mit — das ist eine
+        Test-Hilfe fuer Library-Konsumenten. In unserem Code wird der MockHttpTransport
+        NIRGENDWO verkabelt (verifiziert per Grep auf MockHttpTransport, TrustAllManager,
+        com.google.api.client.testing).
+
+        Strategie: Nur die zwei spezifischen JAR-Pfad-Eintraege baselinen — KEIN globales
+        disable. Falls jemals jemand TrustAllX509TrustManager in unserem Kotlin-Code
+        einfuehrt, wird Lint das WEITERHIN flaggen weil die Datei nicht mit diesem JAR-Pfad
+        matcht. Bei Library-Upgrade (1.45.0 → 1.46.0) matcht der Hash-Pfad nicht mehr —
+        dadurch erscheinen die Warnings wieder und erzwingen ein bewusstes Re-Evaluieren.
+
+        Audit-Datum: 2026-05-10. Wenn diese Datei verschwindet oder die Library upgegraded
+        wird, neuen Audit fahren bevor erneut baselined wird.
+-->
+<issues format="6" by="lint">
+
+    <issue
+        id="TrustAllX509TrustManager"
+        message="`checkClientTrusted` is empty, which could cause insecure network traffic due to trusting arbitrary TLS/SSL certificates presented by peers">
+        <location
+            file="C:\Users\barwa\.gradle\caches\modules-2\files-2.1\com.google.http-client\google-http-client\1.45.0\63eb7643e01797d6aa67c75ae31ffcc6c365db18\google-http-client-1.45.0.jar"/>
+    </issue>
+
+    <issue
+        id="TrustAllX509TrustManager"
+        message="`checkServerTrusted` is empty, which could cause insecure network traffic due to trusting arbitrary TLS/SSL certificates presented by peers">
+        <location
+            file="C:\Users\barwa\.gradle\caches\modules-2\files-2.1\com.google.http-client\google-http-client\1.45.0\63eb7643e01797d6aa67c75ae31ffcc6c365db18\google-http-client-1.45.0.jar"/>
+    </issue>
+
+</issues>

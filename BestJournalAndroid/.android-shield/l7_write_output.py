@@ -1,0 +1,166 @@
+# -*- coding: utf-8 -*-
+"""Write final L7 audit output atomically to worker-outputs/phase1b-xling-L7.json."""
+import json, os, tempfile
+
+base = os.path.expanduser('~/proggs/BestJournalAndroid/.android-shield')
+out_dir = os.path.join(base, 'worker-outputs')
+out_path = os.path.join(out_dir, 'phase1b-xling-L7.json')
+
+report = {
+    "worker": "L7",
+    "phase": "1b-cross-lingual-legal",
+    "languages": ["nl", "pl", "uk", "in"],
+    "date": "2026-06-10",
+    "auditOnly": True,
+    "wroteAppFile": False,
+
+    "formatMismatchAnalysis": [
+        {
+            "key": "ai_prompt_custom_schema", "lang": "nl",
+            "deText": "JSON-AUSGABE-SCHEMA: {... fokus_kern: 'Ein Satz ... als sichtbarer Anker', fokus_zitate:[...], gesamt_entropie:0.0, top_massnahmen:[...], kategorien:[...]} (4463 Zeichen, KEINE Format-Argumente)",
+            "locText": "JSON-UITVOERSCHEMA: {... fokus_kern: '1 zin (15-30 woorden): wat is de kern van de opdracht %1$s?' ... erklaerung: 'Waarom past dit bij de opdracht %1$s?' ...} (1549 Zeichen, 2x %1$s)",
+            "rootCause": "Hypothese (b) BESTAETIGT: Die nl-Uebersetzung basiert auf einer AELTEREN, KUERZEREN DE-Schema-Version, die einen Auftrags-Platzhalter %1$s im Schema-Beschreibungstext hatte. Das aktuelle DE-Original (4463 Zeichen) wurde komplett neu geschrieben (fokus_kern/fokus_zitate-Struktur) und enthaelt KEINE Argumente mehr. Die Uebersetzung wurde nie re-synchronisiert. KEIN Crash (String-Argument %1$s), aber getString() ohne Args liefert literal '%1$s' an Gemini UND die gesamte Schema-Struktur ist veraltet (anderes Feld-Set).",
+            "severity": "hoch",
+            "suggestedFix": "nl-Wert komplett aus dem AKTUELLEN DE-Schema (4463 Zeichen) neu uebersetzen — nicht nur das %1$s entfernen. Die beiden %1$s in 'kern van de opdracht %1$s' und 'past dit bij de opdracht %1$s' durch die DE-aequivalente Formulierung ('Kern des Auftrags' / 'passend zum Auftrag') ersetzen UND die veraltete Feldstruktur an das neue Schema (fokus_kern, fokus_zitate, gesamtanalyse 15-25 Saetze, top_massnahmen genau 5, kategorien mit ratschlaege/herleitung) angleichen."
+        },
+        {
+            "key": "ai_prompt_custom_schema", "lang": "pl",
+            "deText": "JSON-AUSGABE-SCHEMA: {... fokus_kern, fokus_zitate, gesamtanalyse, top_massnahmen, kategorien ...} (4463 Zeichen, KEINE Format-Argumente)",
+            "locText": "SCHEMAT WYJSCIA JSON: {... fokus_kern: '1 zdanie (15-30 slow): jaka jest istota zadania %1$s?' ... erklaerung: 'Dlaczego to pasuje do zadania %1$s?' ...} (1520 Zeichen, 2x %1$s)",
+            "rootCause": "Identisch zu nl: pl basiert auf derselben AELTEREN, KUERZEREN DE-Schema-Version mit %1$s-Auftrags-Platzhalter. Aktuelles DE (4463 Zeichen) wurde neu geschrieben ohne Argumente; pl (1520 Zeichen) blieb auf dem alten Stand mit veraltetem Feld-Set (NISKI/SREDNI/WYSOKI-Strings statt 0.0-Floats, kein fokus_kern/fokus_zitate-Konzept).",
+            "severity": "hoch",
+            "suggestedFix": "pl-Wert komplett aus dem AKTUELLEN DE-Schema neu uebersetzen. Beide %1$s ('istota zadania %1$s', 'pasuje do zadania %1$s') durch die DE-aequivalente statische Formulierung ersetzen und die Schema-Struktur an das neue DE angleichen (fokus_kern als Satz, fokus_zitate 3-5, gesamt_entropie 0.0-1.0 Float, top_massnahmen genau 5 mit titel/beschreibung/erklaerung)."
+        },
+        {
+            "key": "ai_prompt_rerank_system", "lang": "pl",
+            "deText": "Du bist ein Profil-Re-Ranker. ... (1864 Zeichen, detaillierte 3-Schritt-Anleitung, TTS-Datums-Verbot, JSON-Array-Ausgabeformat, KEINE Format-Argumente)",
+            "locText": "Jestes asystentem optymalizacji. ... sprawdzic, czy dzialania pasuja do profilu uzytkownika (%1$s) ... (356 Zeichen, stark gekuerzt, 1x %1$s)",
+            "rootCause": "Hypothese (b) BESTAETIGT: pl (356 Zeichen) ist eine viel aeltere, kuerzere DE-Version, die den Profil-Fokus per %1$s injizierte ('profilu uzytkownika (%1$s)'). Das aktuelle DE (1864 Zeichen) wurde komplett ueberarbeitet — der Profil-Fokus wird jetzt ueber einen separaten Header (ai_prompt_rerank_user_focus_header) eingespeist statt inline per Argument. Die pl-Uebersetzung blieb auf der alten Inline-%1$s-Logik.",
+            "severity": "hoch",
+            "suggestedFix": "pl-Wert komplett aus dem AKTUELLEN DE (1864 Zeichen) neu uebersetzen: 3-Schritt-Anleitung (sortieren / bis zu 2 ersetzen / variantenreichen Bezug), TTS-Datums-Verbot, 'GENAU 5 Eintraege', JSON-Array-Ausgabeformat. Das %1$s entfernen — der Profil-Fokus kommt jetzt aus dem separaten Header, NICHT mehr inline."
+        },
+        {
+            "key": "dashboard_profile_focus_summary", "lang": "pl",
+            "deText": "Erzaehlende Zusammenfassung der wichtigsten Ereignisse. (54 Zeichen, statische Feature-Beschreibung, KEINE Argumente)",
+            "locText": "Twoje podsumowanie skupia sie na: %1$s (38 Zeichen, Satz-Template mit %1$s)",
+            "rootCause": "Strukturelle Divergenz: Das aktuelle DE ist eine STATISCHE Feature-BESCHREIBUNG ('Erzaehlende Zusammenfassung...'). Die pl-Uebersetzung ist ein voellig anderes Satz-TEMPLATE ('Dein Zusammenfassung fokussiert sich auf: %1$s'), das offensichtlich aus einer aelteren DE-Variante stammt, die zur Laufzeit ein Fokus-Thema einsetzte. DE wurde zu einer reinen Beschreibung umgebaut, pl blieb Template.",
+            "severity": "mittel",
+            "suggestedFix": "pl-Wert durch die statische DE-aequivalente Beschreibung ersetzen (z.B. 'Narracyjne podsumowanie najwazniejszych wydarzen.') und das %1$s ENTFERNEN — dieser String ist ein UI-Label/Beschreibung, kein Template. Sonst zeigt das Dashboard literal '%1$s'."
+        },
+        {
+            "key": "dashboard_profile_focus_entropy", "lang": "pl",
+            "deText": "Sortiert dein Leben: erkennt Stress, Unordnung und Belastung und zeigt was du loslassen oder klaeren kannst. (107 Zeichen, statische Beschreibung)",
+            "locText": "Twoja analiza porzadku skupia sie na: %1$s (42 Zeichen, Template mit %1$s)",
+            "rootCause": "Identisch: DE = statische Beschreibung, pl = altes Fokus-Template 'Deine Ordnungs-Analyse fokussiert sich auf: %1$s'. Aus aelterer DE-Variante.",
+            "severity": "mittel",
+            "suggestedFix": "pl durch statische DE-aequivalente Beschreibung ersetzen ('Porzadkuje twoje zycie: rozpoznaje stres, chaos i obciazenie...') und %1$s entfernen."
+        },
+        {
+            "key": "dashboard_profile_focus_goals", "lang": "pl",
+            "deText": "Motivierender Ziel-Begleiter mit Fortschritts-Sicht. (52 Zeichen, statische Beschreibung)",
+            "locText": "Twoje cele skupiaja sie na: %1$s (32 Zeichen, Template mit %1$s)",
+            "rootCause": "Identisch: DE = statische Beschreibung, pl = altes Template 'Deine Ziele fokussieren sich auf: %1$s'.",
+            "severity": "mittel",
+            "suggestedFix": "pl durch statische Beschreibung ersetzen ('Motywujacy towarzysz celow z widokiem postepu.') und %1$s entfernen."
+        },
+        {
+            "key": "dashboard_profile_focus_insight", "lang": "pl",
+            "deText": "Tiefgruendige Selbsterkenntnis: Denkmuster und verborgene Staerken. (65 Zeichen, statische Beschreibung)",
+            "locText": "Twoje samopoznanie skupia sie na: %1$s (38 Zeichen, Template mit %1$s)",
+            "rootCause": "Identisch: DE = statische Beschreibung, pl = altes Template 'Deine Selbsterkenntnis fokussiert sich auf: %1$s'.",
+            "severity": "mittel",
+            "suggestedFix": "pl durch statische Beschreibung ersetzen ('Glebokie samopoznanie: wzorce myslenia i ukryte mocne strony.') und %1$s entfernen."
+        }
+    ],
+
+    "formatMismatchVerdict": {
+        "summary": "Alle 7 maschinell gemeldeten Mismatches BESTAETIGT als ECHT. Einheitliche Root Cause = veraltete Uebersetzungsbasis (Hypothese b), NICHT ein falsch uebersetzter Platzhalter-Beschreibungstext (Hypothese a). Das aktuelle DE wurde fuer all diese Keys neu geschrieben und die Format-Argumente entfernt; nl/pl wurden nie re-synchronisiert.",
+        "consequence": "Es sind alles KI-Prompt-/Dashboard-Strings -> getString() OHNE Argumente liefert das literale '%1$s' an Gemini bzw. ins UI-Label. KEIN Crash (alle %1$s, kein %1$d in diesen Keys). Qualitaetsschaden: Gemini sieht '%1$s' und bei den ai_prompt_*-Keys zusaetzlich eine VERALTETE Schema-/Prompt-Struktur (groesseres Problem als das %1$s selbst).",
+        "severityBreakdown": "hoch: ai_prompt_custom_schema (nl+pl), ai_prompt_rerank_system (pl) — veraltete Prompt-Logik + literal %1$s an die KI. mittel: 4x dashboard_profile_focus_* (pl) — UI-Label zeigt literal '%1$s'."
+    },
+
+    "perLanguage": {
+        "nl": {
+            "keyCount": 1087, "missingKeys": ["dev_seed_add_action","dev_seed_cancel_action","dev_seed_delete_all_action","dev_seed_dialog_message","dev_seed_dialog_title"],
+            "missingNote": "Alle 5 fehlenden Keys sind dev_seed_* (Entwickler-Test-Tooling, nicht in der Release-UI sichtbar) — in ALLEN 4 Sprachen gleich, sehr wahrscheinlich als untranslatable/dev-only gewollt. KEIN Release-Blocker. dev_seed_delete_all_action ist zwar in der Legal-Keys-Liste, aber als reines Debug-Tool rechtlich irrelevant.",
+            "legalKeysVerdict": "Alle rechtskritischen Keys sauber uebersetzt. 14-Tage-Widerruf korrekt ('herroepingsrecht van 14 dagen'). Auto-Renewal/Kuendigung-via-Google-Play korrekt. Krisendisclaimer + Loeschdialog vollstaendig.",
+            "fluency": "Fluentes Niederlaendisch durchgehend (Stichprobe: 'onomkeerbaar', 'ontvangstbevestiging', 'Schrijfmarathonloper').",
+            "issues": [
+                {"key":"ai_prompt_custom_schema","severity":"hoch","type":"formatArgMismatch+veraltetes-Schema","detail":"siehe formatMismatchAnalysis"},
+                {"keys":["ai_prompt_rerank_actions_header","ai_prompt_rerank_entries_header","ai_prompt_rerank_user_focus_header"],"severity":"niedrig","type":"untranslated-German","detail":"3 Rerank-Prompt-Header sind unuebersetztes Deutsch ('=== AKTUELLES TOP-MASSNAHMEN-ARRAY ===' etc.). Interne Prompt-Geruest-Strings, fuer den Nutzer unsichtbar, Gemini versteht Deutsch — daher niedrig. uk hat sie korrekt uebersetzt, nl/pl/in nicht. Konsistenz-Fix empfohlen."}
+            ],
+            "identicalToDe": {"count":39,"legit":36,"realIssue":3,"explanation":"36/39 legitim identisch: Monate (April/Juli/Juni/November/Oktober/September = NL-Schreibweise identisch), Marken/Lehnworte (Premium/Dashboard/Video/Feedback/Foto/Start), JSON-Keys (trend/datum/titel — MUESSEN identisch bleiben sonst bricht das KI-JSON-Parsing), zufaellige echte NL-Treffer (Automatisch/Stoppen/Nacht/Geheim/Details/Relevant/Analyse/Dringend sind korrektes Niederlaendisch), Eigenname Atelier, Versionsstring 'Best Journal V0.21.9'. 3 echte Probleme = die ai_prompt_rerank_*-Header (siehe issues)."}
+        },
+        "pl": {
+            "keyCount": 1087, "missingKeys": ["dev_seed_add_action","dev_seed_cancel_action","dev_seed_delete_all_action","dev_seed_dialog_message","dev_seed_dialog_title"],
+            "missingNote": "Wie nl: 5x dev_seed_* (Debug-Tooling), kein Release-Blocker.",
+            "legalKeysVerdict": "Alle rechtskritischen Keys sauber. 14-Tage-Widerruf korrekt ('14-dniowe prawo odstapienia od umowy'). Auto-Renewal/Kuendigung korrekt. Krisendisclaimer vollstaendig (354 Zeichen, sogar leicht laenger als DE).",
+            "fluency": "Fluentes Polnisch mit korrekten Diakritika (715/1087 Strings mit l/z/z/a/e/c/n/o/s). Stichprobe: 'Menedzer motywow', 'Glebia refleksji' — natuerlich.",
+            "issues": [
+                {"key":"ai_prompt_custom_schema","severity":"hoch","type":"formatArgMismatch+veraltetes-Schema","detail":"siehe formatMismatchAnalysis (2x %1$s)"},
+                {"key":"ai_prompt_rerank_system","severity":"hoch","type":"formatArgMismatch+veraltete-Prompt-Logik","detail":"siehe formatMismatchAnalysis (1x %1$s, 356 vs 1864 Zeichen)"},
+                {"keys":["dashboard_profile_focus_summary","dashboard_profile_focus_entropy","dashboard_profile_focus_goals","dashboard_profile_focus_insight"],"severity":"mittel","type":"formatArgMismatch-UI-Label","detail":"4 Dashboard-Profil-Beschreibungen sind alte '...fokussiert sich auf: %1$s'-Templates statt statischer DE-Beschreibungen -> UI zeigt literal '%1$s'. siehe formatMismatchAnalysis"},
+                {"keys":["ai_prompt_rerank_actions_header","ai_prompt_rerank_entries_header","ai_prompt_rerank_user_focus_header"],"severity":"niedrig","type":"untranslated-German","detail":"3 Rerank-Header unuebersetzt deutsch (wie nl/in)."},
+                {"key":"settings_revoke_subtitle","severity":"niedrig","type":"legal-localization","detail":"DE='§ 356a BGB — Widerruf direkt per App' (deutsche Norm). pl='Zakup Premium' (Premium-Kauf). Der § 356a BGB-Verweis wurde gestrichen — vertretbar, da die deutsche Norm fuer den polnischen Markt nicht gilt und der Widerrufsmechanismus im Body (settings_revoke_email_body) vollstaendig uebersetzt ist. Inhaltlicher Untertitel-Wechsel, aber kein rechtlicher Verlust."}
+            ],
+            "identicalToDe": {"count":12,"legit":9,"realIssue":3,"explanation":"9/12 legitim: JSON-Keys (trend), Marken (Premium/Atelier/Start/Best Journal V0.21.9), echte PL-Treffer (Konto=PL 'Konto', Rekord=PL 'rekord'), Impressum (im PL-Rechtskontext als deutsches Lehnwort gaengig, akzeptabel). 3 echte Probleme = ai_prompt_rerank_*-Header (untranslated German)."}
+        },
+        "uk": {
+            "keyCount": 1087, "missingKeys": ["dev_seed_add_action","dev_seed_cancel_action","dev_seed_delete_all_action","dev_seed_dialog_message","dev_seed_dialog_title"],
+            "missingNote": "Wie andere: 5x dev_seed_* (Debug), kein Blocker.",
+            "legalKeysVerdict": "Alle rechtskritischen Keys sauber. 14-Tage-Widerruf korrekt ('14-denne pravo na vidklykannya'). Auto-Renewal/Kuendigung korrekt. uk hat KEINE format-Mismatches und nur 2 identicalToDe — die SAUBERSTE der 4 Sprachen. uk hat sogar die ai_prompt_rerank_*-Header korrekt uebersetzt (im Gegensatz zu nl/pl/in).",
+            "fluency": "Sauberes Ukrainisch. KRITISCH BESTAETIGT: 0 Strings mit Russland-spezifischen Buchstaben (y/e/hard-sign/yo) — KEIN Russisch-Mix. 736/1087 Strings mit ukrainisch-spezifischen Buchstaben (i/yi/ye/g). Stichprobe: 'Litopysets roku', 'rozpiznavayte zakonomirnosti' — fluentes Ukrainisch.",
+            "issues": [],
+            "identicalToDe": {"count":2,"legit":2,"realIssue":0,"explanation":"Beide legitim: json_key_trend (JSON-Feldname, MUSS identisch bleiben), settings_about_version ('Best Journal V0.21.9' Marke+Version). Keine Probleme."}
+        },
+        "in": {
+            "keyCount": 1087, "missingKeys": ["dev_seed_add_action","dev_seed_cancel_action","dev_seed_delete_all_action","dev_seed_dialog_message","dev_seed_dialog_title"],
+            "missingNote": "Wie andere: 5x dev_seed_* (Debug), kein Blocker. (values-in = ISO 'id' Indonesisch).",
+            "legalKeysVerdict": "Alle rechtskritischen Keys sauber. 14-Tage-Widerruf korrekt ('pembatalan kontrak 14 hari'). Auto-Renewal/Kuendigung via Google Play korrekt. Krisendisclaimer + Loeschdialog vollstaendig.",
+            "fluency": "Fluentes Indonesisch. Nur 2 deutsche Umlaute in der GANZEN Datei — und das sind exakt die 2 unuebersetzten ai_prompt_rerank_*-Header. Sonst sauber ('kenali pola, temukan', 'Seniman suara').",
+            "issues": [
+                {"keys":["ai_prompt_rerank_actions_header","ai_prompt_rerank_entries_header","ai_prompt_rerank_user_focus_header"],"severity":"niedrig","type":"untranslated-German","detail":"3 Rerank-Header unuebersetzt deutsch (wie nl/pl). Einzige deutschen Leaks im in-File. uk hat sie uebersetzt — in nicht."}
+            ],
+            "identicalToDe": {"count":19,"legit":16,"realIssue":3,"explanation":"16/19 legitim: Monate (April/Juli/Juni/November/Oktober/September — von Indonesisch oft uebernommen), Marken/Lehnworte (Premium/Video/Foto/Kamera — Kamera=ID 'Kamera'), JSON-/UI-Labels (entry_cd_photo_page 'Foto %1$d', retro_cd_photo/video, label_photo), Versionsstring. 3 echte Probleme = ai_prompt_rerank_*-Header."}
+        }
+    },
+
+    "numbersCheck": {
+        "key": "ai_limits_dialog_body",
+        "mandatedNumbers": ["150","600","30","101","151","50","5"],
+        "result": "PASS in allen 4 Sprachen — alle Pflichtzahlen vorhanden UND die volle Sequenz (150/4->600, 150 pro eigenem Profil, bis 150 Text-Verbesserungen; Tier 1-30 / 31-100 / 101 30-Min-Pause / 101-150 / ab 151; 50/Stunde -> 5-Min-Pause; Free: 5 Analysen + 5 Verbesserungen/Woche) ist in nl/pl/uk/in strukturell identisch zum DE.",
+        "onlyDifference": "0:00 vs 00:00 (kosmetisch, gleiche Bedeutung); pl/uk schreiben 'um Mitternacht/opivnochi' statt literal 0:00 — semantisch korrekt, kein quantitativer Unterschied.",
+        "verdict": "Der wichtigste Rechts-Zahlen-String ist 100% getreu in allen 4 Sprachen."
+    },
+
+    "top3": [
+        "1. (hoch) ai_prompt_custom_schema in BEIDEN nl+pl: veraltetes KI-Schema (1520 vs 4463 Zeichen, anderes Feld-Set) MIT 2x literal %1$s an Gemini. Komplett aus aktuellem DE neu uebersetzen — nicht nur %1$s entfernen.",
+        "2. (hoch) ai_prompt_rerank_system pl: 356 vs 1864 Zeichen, veraltete Inline-%1$s-Profil-Logik. Aus aktuellem DE neu uebersetzen, %1$s entfernen (Fokus kommt jetzt aus separatem Header).",
+        "3. (mittel) 4x dashboard_profile_focus_* pl: alte '...fokussiert sich auf: %1$s'-Templates -> Dashboard-UI zeigt literal '%1$s'. Durch statische DE-Beschreibungen ersetzen."
+    ],
+
+    "overallVerdict": "uk = sauberste Sprache (0 Mismatch, 0 Russisch-Mix, 2 legit-identische, Rerank-Header korrekt uebersetzt). nl/pl/in solide bei allen rechtskritischen Keys (14-Tage-Widerruf, Auto-Renewal, Loeschung, Krisendisclaimer alle korrekt). Hauptproblem ist NICHT Rechts-Substanz sondern KI-PROMPT-DRIFT: 7 Keys (nl+pl) basieren auf veralteter DE-Basis mit %1$s. Die 3 ai_prompt_rerank_*-Header sind in nl/pl/in unuebersetzt deutsch (niedrig). Der kritische Zahlen-String ai_limits_dialog_body ist in allen 4 Sprachen 100% korrekt.",
+
+    "selfObservations": [
+        "FIN-037 #1: Die maschinell gemeldeten formatArgMismatch waren ALLE echt, aber die wahre Schwere lag NICHT im %1$s selbst, sondern in der dahinterstehenden veralteten Prompt-/Schema-Struktur (1520 vs 4463 Zeichen). Ein reiner '%1$s entfernen'-Fix waere unzureichend — er wuerde den Format-Crash-Verdacht beruhigen, aber den Qualitaetsschaden (veraltetes KI-Schema) NICHT beheben. Lehre: Format-Mismatch kann ein Symptom fuer Versions-Drift einer ganzen Uebersetzung sein.",
+        "FIN-037 #2: Die ⚠NUMS-Heuristik (Zahlen-Set-Vergleich) erzeugte viele Fehlalarme durch \\u00A0 (geschuetztes Leerzeichen vor %%), xliff example-Attribute (example=\"50\"/\"3,99 €\") und Unicode-Bullets/Em-Dashes. Der gezielte ai_limits-Sequenz-Check war aussagekraeftiger als der grobe Set-Vergleich. Lehre: Fuer Zahlen-Checks die XLIFF-<g>-Beispielwerte und NBSP/Bullets vorher herausfiltern.",
+        "FIN-037 #3: identicalToDe ist stark sprachabhaengig irrefuehrend: nl teilt 39 Strings mit DE, aber 36 davon sind LEGITIM (germanisch-naher Wortschatz: Automatisch/Stoppen/Nacht/Geheim + Monate + JSON-Keys). Ein blindes 'identisch = unuebersetzt' haette 36 Fehlalarme erzeugt. Die 3 ECHTEN Faelle (Rerank-Header) fielen erst durch den Umlaut-Scan (in: nur 2 Umlaute = genau diese Header) zweifelsfrei auf — Cross-Check ueber mehrere Signale schlaegt Einzelheuristik."
+    ],
+
+    "plugin_bugs_observed": [
+        "Die cross-lingual-matrix formatArgMismatch-Erkennung ist KORREKT und wertvoll (alle 7 Treffer echt), aber sie meldet nur 'de:[] vs loc:[%1$s]' ohne Hinweis auf die DAHINTERLIEGENDE strukturelle Divergenz (Laengen-Delta 1520 vs 4463 Zeichen). Vorschlag: bei formatArgMismatch zusaetzlich das Laengen-Verhaeltnis loc/de melden — ein Wert <0.4 signalisiert 'veraltete/abgeschnittene Uebersetzungsbasis' statt blossem Platzhalter-Fehler.",
+        "Die identicalToDe-Liste enthaelt JSON-Feldnamen (trend, datum, titel) und Marken (Premium, Dashboard), die per Definition identisch bleiben MUESSEN. Vorschlag: eine doNotTranslate-Allowlist (json_key_*, label_premium, brand-Strings, settings_about_version, month_* fuer germanische Sprachen) herausfiltern, damit identicalToDe nur die ECHT verdaechtigen Faelle zeigt (haette nl von 39 auf ~3 reduziert)."
+    ]
+}
+
+# atomic write
+tmp_fd, tmp_path = tempfile.mkstemp(dir=out_dir, suffix='.tmp')
+with os.fdopen(tmp_fd, 'w', encoding='utf-8') as f:
+    json.dump(report, f, ensure_ascii=False, indent=1)
+os.replace(tmp_path, out_path)
+
+# validate
+with open(out_path, 'r', encoding='utf-8') as f:
+    json.load(f)
+print("OK wrote + validated:", out_path)
+print("size:", os.path.getsize(out_path), "bytes")

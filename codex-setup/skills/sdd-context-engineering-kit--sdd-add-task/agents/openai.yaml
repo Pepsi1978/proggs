@@ -1,0 +1,7 @@
+interface:
+  display_name: "sdd:add-task"
+  short_description: "creates draft task file in .specs/tasks/draft/ with original"
+  default_prompt: "Use $sdd-context-engineering-kit--sdd-add-task for this task."
+
+policy:
+  allow_implicit_invocation: false

@@ -1,0 +1,54 @@
+# Keystore-Sync — gemeinsamer Debug-Keystore über alle Rechner
+
+**Ziel:** Auf Windows **und** macOS dieselbe Debug-Signatur, damit jede App auf beiden
+Rechnern gebaut und über bestehende Installationen hinweg aufs Handy gebracht werden kann.
+
+## Das Prinzip
+
+Alle Android-Apps nutzen **einen gemeinsamen Debug-Keystore** (`debug-shared.keystore`,
+SHA256 beginnt mit `012d8ce4…`). Dieser ist identisch mit dem ursprünglichen
+Windows-Standard-Debug-Keystore — deshalb mussten die meisten Apps **nicht** neu signiert
+werden.
+
+- Der Keystore liegt **nie im Git** (nur Build-Dateien sind versioniert).
+- Quelle der Wahrheit pro Rechner: `~/SK/<App>/`
+- Transport/Backup zwischen Rechnern: **Laufwerk Y** (`\\10.8.0.1\daten\Keystore`,
+  über WireGuard), auf macOS gemountet als `/Volumes/daten`.
+
+## Ordnerstruktur auf Y (`Y:\Keystore\`)
+
+| Ordner | Inhalt |
+|--------|--------|
+| `<App>/` | `debug-shared.keystore` (gemeinsam) + app-spezifische Secrets |
+| `BestJournalAndroid/` | zusätzlich `release.keystore` + `keystore.properties` (**kritisch, unwiederbringbar**) |
+| `_GEMEINSAM/` | der eine gemeinsame Debug-Keystore (Referenz) |
+| `_WindowsStandard/` | Kopie des Windows-Standard-Debug-Keystores |
+| `_backup-alte-einzelschluessel/` | die früheren App-eigenen Debug-Keystores (vor der Vereinheitlichung) |
+
+## Welche App nutzt welche Datei
+
+| App | Keystore-Datei in `~/SK/<App>/` | Code-Änderung nötig war |
+|-----|----------------------------------|--------------------------|
+| BestJournalAndroid | `debug-shared.keystore` | nein |
+| BestJournalFrank | `debug-shared.keystore` | nein |
+| EntropieReductor | `entropiereductor.debug.keystore` | nein (nur Datei-Inhalt) |
+| CortexAndroid | `debug-shared.keystore` | **ja** (Debug-Signing ergänzt) |
+| NEMS | `debug-shared.keystore` | **ja** (Debug-Signing ergänzt) |
+| VoiceKey | `debug-shared.keystore` | nein (Datei fehlte nur) |
+
+## Auf macOS einrichten
+
+```bash
+# 1. Y mounten (Finder: smb://10.8.0.1/daten) — oder:
+mkdir -p /Volumes/daten && mount_smbfs //10.8.0.1/daten /Volumes/daten
+# 2. Skript ausführen:
+bash ~/proggs/keystore-sync/setup-keystores-macos.sh
+```
+
+## Wichtig: einmalige Neuinstallation auf den Handys
+
+Zwei Apps hatten vorher einen **anderen** Debug-Schlüssel und wurden umgestellt:
+**BestJournalAndroid-Testversion** und **EntropieReductor**. Kommt beim Installieren
+`INSTALL_FAILED_UPDATE_INCOMPATIBLE` / „Signatures do not match", die App auf dem Gerät
+**einmal deinstallieren** und neu installieren. Daten kommen über Geräte-Sync (EntropieReductor)
+bzw. Backup (BestJournal) zurück. Der **Release-/Play-Store-Schlüssel ist nicht betroffen.**

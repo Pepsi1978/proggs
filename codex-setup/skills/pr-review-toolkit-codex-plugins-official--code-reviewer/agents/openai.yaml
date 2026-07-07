@@ -1,0 +1,7 @@
+interface:
+  display_name: "code-reviewer"
+  short_description: "Use before commits or PRs to review recent changes for bugs"
+  default_prompt: "Use $pr-review-toolkit-codex-plugins-official--code-reviewer for this task."
+
+policy:
+  allow_implicit_invocation: false

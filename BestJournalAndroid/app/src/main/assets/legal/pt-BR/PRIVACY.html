@@ -1,0 +1,938 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Política de Privacidade | Best Journal</title>
+<style>
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+    line-height: 1.65;
+    color: #1a1a1a;
+    max-width: 860px;
+    margin: 2rem auto;
+    padding: 0 1.25rem;
+    background: #ffffff;
+  }
+  h1 { font-size: 2rem; margin-bottom: 0.25rem; color: #111; }
+  h2 { font-size: 1.35rem; margin-top: 2.25rem; padding-bottom: 0.35rem; border-bottom: 2px solid #e5e7eb; color: #111; }
+  h3 { font-size: 1.1rem; margin-top: 1.5rem; color: #222; }
+  h4 { font-size: 1.0rem; margin-top: 1.2rem; color: #333; }
+  p, li { font-size: 1rem; }
+  ul, ol { padding-left: 1.25rem; }
+  table { border-collapse: collapse; width: 100%; margin: 1rem 0; font-size: 0.95rem; }
+  th, td { border: 1px solid #d1d5db; padding: 0.6rem 0.75rem; text-align: left; vertical-align: top; }
+  th { background: #f3f4f6; font-weight: 600; }
+  code { background: #f3f4f6; padding: 0.1rem 0.35rem; border-radius: 3px; font-size: 0.92em; }
+  a { color: #2563eb; text-decoration: none; word-break: break-all; }
+  a:hover { text-decoration: underline; }
+  blockquote { border-left: 4px solid #d97706; background: #fef3c7; padding: 0.75rem 1rem; margin: 1rem 0; font-style: normal; }
+  hr { border: none; border-top: 1px solid #e5e7eb; margin: 2.5rem 0; }
+  .footer { color: #6b7280; font-size: 0.9rem; margin-top: 3rem; text-align: center; }
+</style>
+</head>
+<body>
+
+<h1>Política de Privacidade do Best Journal</h1>
+<p><strong>Versão:</strong> 20 de abril de 2026<br />
+<strong>Aplicativo:</strong> Best Journal (Android)<br />
+<strong>Desenvolvedor:</strong> Frank Barwandt</p>
+<hr />
+
+<h2>1. Controlador de Dados (LGPD / RGPD)</h2>
+<p>O controlador responsável pelo tratamento de dados pessoais no aplicativo Best Journal é:</p>
+<p><strong>Frank Barwandt</strong><br />
+c/o Impressumservice Dein-Impressum<br />
+Stettiner Straße 41<br />
+35410 Hungen<br />
+Alemanha</p>
+<p>E-mail: dev.app.support@gmail.com</p>
+<p>Nos termos da Lei Geral de Proteção de Dados (LGPD, Lei n.º 13.709/2018) e do Regulamento Geral sobre a Proteção de Dados da UE (RGPD, Regulamento (UE) 2016/679), o controlador (responsável pelo tratamento) é a pessoa acima identificada. A nomeação formal de um Encarregado de Proteção de Dados (DPO) não é legalmente exigida para uma atividade de tratamento de dados deste porte (Art. 37 do RGPD, § 38 da BDSG alemã). No entanto, para questões relacionadas à privacidade, incluindo os direitos dos titulares nos termos do Art. 18 da LGPD, o titular poderá entrar em contato diretamente com o controlador pelo e-mail acima.</p>
+<hr />
+
+<h2>2. Visão geral: quais dados o aplicativo trata?</h2>
+<p>O Best Journal é um aplicativo de diário. Por padrão, todos os dados ficam <strong>armazenados localmente no seu dispositivo</strong>. As entradas do diário são salvas em um banco de dados SQLite protegido e só saem do dispositivo se você utilizar ativamente um dos seguintes recursos opcionais:</p>
+<ul>
+<li>Transcrição em nuvem (Groq) para gravações de voz</li>
+<li>Backup em nuvem (Google Drive)</li>
+<li>Recursos de inteligência artificial (Firebase AI / Google Gemini)</li>
+<li>Texto para fala (Microsoft Edge TTS)</li>
+<li>Login (Google Sign-In / Firebase Authentication)</li>
+<li>Análise de uso (Firebase Analytics, apenas com opt-in)</li>
+</ul>
+<p>Categorias de dados tratados pelo aplicativo:</p>
+<table>
+<thead>
+<tr>
+<th>Categoria de dados</th>
+<th>Onde é armazenada</th>
+<th>Finalidade</th>
+<th>Opcional?</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Entradas do diário (texto, áudio, imagens)</td>
+<td>Localmente no seu dispositivo</td>
+<td>Função principal</td>
+<td>Essencial</td>
+</tr>
+<tr>
+<td>Configurações e preferências</td>
+<td>Localmente no seu dispositivo</td>
+<td>Configuração do aplicativo</td>
+<td>Essencial</td>
+</tr>
+<tr>
+<td>Gravações de voz (transcrição em nuvem)</td>
+<td>Groq, Inc. (EUA)</td>
+<td>Transcrição de fala para texto</td>
+<td><strong>Opcional</strong></td>
+</tr>
+<tr>
+<td>Dados do diário (backup)</td>
+<td>Google Drive (pasta de dados do aplicativo)</td>
+<td>Restauração e migração de dispositivo</td>
+<td><strong>Opcional</strong></td>
+</tr>
+<tr>
+<td>Trechos de texto (leitura em voz alta)</td>
+<td>Microsoft Bing Speech (EUA)</td>
+<td>Texto para fala</td>
+<td><strong>Opcional</strong></td>
+</tr>
+<tr>
+<td>Solicitações de IA (manuais e automáticas)</td>
+<td>Firebase AI / Google Gemini (EUA)</td>
+<td>Painel, revisões semanais/mensais/anuais</td>
+<td><strong>Opcional</strong></td>
+</tr>
+<tr>
+<td>Endereço de e-mail, ID de login</td>
+<td>Google / Firebase Authentication</td>
+<td>Conta de usuário</td>
+<td><strong>Opcional</strong></td>
+</tr>
+<tr>
+<td>Informações do dispositivo, endereço IP, ID de publicidade</td>
+<td>Firebase Analytics</td>
+<td>Estatísticas de uso</td>
+<td><strong>Apenas com opt-in</strong></td>
+</tr>
+<tr>
+<td>Dados de compra</td>
+<td>Google Play Billing</td>
+<td>Compras no aplicativo</td>
+<td>Apenas em caso de compra</td>
+</tr>
+</tbody>
+</table>
+<hr />
+
+<h2>3. Permissões do aplicativo e suas finalidades</h2>
+<p>O aplicativo solicita as seguintes permissões do Android. Cada permissão é utilizada <strong>exclusivamente para a função indicada</strong> e pode ser revogada a qualquer momento nas configurações do sistema Android.</p>
+<h3>3.1 Internet (<code>INTERNET</code>) e estado da rede (<code>ACCESS_NETWORK_STATE</code>)</h3>
+<p><strong>Finalidade:</strong> Transcrição em nuvem (Groq), backup em nuvem (Google Drive), recursos de IA, compras no aplicativo, serviços Firebase.<br />
+<strong>Observação:</strong> O aplicativo funciona sem internet; apenas os recursos de nuvem e IA online ficam desativados. O reconhecimento de fala local (ver 5.2) também funciona offline.</p>
+<h3>3.2 Microfone (<code>RECORD_AUDIO</code>)</h3>
+<p><strong>Finalidade:</strong> Gravações de voz para entradas do diário (ditado, notas de voz).<br />
+<strong>Tratamento:</strong> As gravações são armazenadas <strong>localmente</strong> no seu dispositivo por padrão. Para transcrição, você pode escolher entre reconhecimento <strong>local</strong> (ver 5.2) e <strong>transcrição em nuvem</strong> (ver 5.1).<br />
+<strong>Base legal (LGPD):</strong> Consentimento do titular (Art. 7.º, I, da LGPD).<br />
+<strong>Base legal (RGPD):</strong> Consentimento (Art. 6.º, n.º 1, al. a), do RGPD).</p>
+<h3>3.3 Câmera (<code>CAMERA</code>)</h3>
+<p><strong>Finalidade:</strong> Anexos de fotos e vídeos às entradas do diário.<br />
+<strong>Tratamento:</strong> Fotos e vídeos são armazenados apenas localmente (pasta privada do aplicativo: <code>filesDir/photos/</code>) e não são enviados automaticamente. Com o backup do Google Drive ativado, são transferidos de forma criptografada para a pasta de dados do aplicativo no Drive como parte do backup.</p>
+<h3>3.4 Localização aproximada (<code>ACCESS_COARSE_LOCATION</code>)</h3>
+<p><strong>Finalidade:</strong> Exclusivamente para o recurso opcional de design <strong>"Nascer/Pôr do Sol"</strong> nas configurações (modo escuro baseado na posição do sol local).<br />
+<strong>Tratamento:</strong> A localização é determinada <strong>uma única vez</strong> quando o recurso é ativado, armazenada localmente nas configurações do aplicativo e <strong>nunca</strong> transmitida a serviços externos. Os horários de nascer e pôr do sol são calculados inteiramente no seu dispositivo.</p>
+<h3>3.5 Notificações (<code>POST_NOTIFICATIONS</code>)</h3>
+<p><strong>Finalidade:</strong> Lembretes para escrever entradas (se você ativar os lembretes).<br />
+<strong>Tratamento:</strong> Gerados localmente no seu dispositivo.</p>
+<h3>3.6 Inicialização automática após reinicialização (<code>RECEIVE_BOOT_COMPLETED</code>)</h3>
+<p><strong>Finalidade:</strong> Reativação dos lembretes agendados após reinicialização do dispositivo.<br />
+<strong>Tratamento:</strong> Apenas localmente, sem transmissão de dados.</p>
+<hr />
+
+<h2>3a. Abrangência e disponibilidade internacional</h2>
+<p>O aplicativo está disponível em <strong>27 idiomas</strong> (inglês, alemão, francês, espanhol, italiano, holandês, polonês, português [Brasil e Portugal], ucraniano, turco, árabe, hindi, bengali, gujarati, kannada, malaiala, marathi, tamil, telugu, urdu, indonésio, tailandês, japonês, coreano e chinês [simplificado e tradicional]) na Google Play Store. O idioma é escolhido automaticamente com base no idioma do sistema Android (<code>Locale.getDefault()</code>), e o fuso horário a partir das configurações do Android (<code>TimeZone.getDefault()</code>). Ambos ocorrem <strong>apenas no dispositivo</strong>, <strong>sem consulta adicional de localização, idioma ou fuso horário a qualquer servidor</strong>.</p>
+<p>Novos idiomas e países são adicionados continuamente.</p>
+<p>Esta Política de Privacidade aplica-se independentemente do seu país de residência. Para usuários no <strong>Brasil</strong>, aplica-se a LGPD (Lei n.º 13.709/2018) — veja a Seção 8a.9 para seus direitos específicos. Para usuários na <strong>União Europeia</strong> e no <strong>EEE</strong>, aplica-se o RGPD. Para usuários em outros países, os padrões de proteção aqui estabelecidos aplicam-se voluntariamente como compromisso do controlador.</p>
+<hr />
+
+<h2>4. Armazenamento local de dados</h2>
+<p>Todo o conteúdo do diário (textos, gravações de voz, imagens, humores, etiquetas) é armazenado em um banco de dados SQLite local (Android Room) exclusivamente no seu dispositivo.</p>
+<ul>
+<li><strong>Local de armazenamento:</strong> Armazenamento interno do aplicativo (protegido pelo sistema operacional)</li>
+<li><strong>Acesso:</strong> Apenas o aplicativo Best Journal</li>
+<li><strong>Exclusão:</strong> Desinstale o aplicativo ou use "Configurações → Excluir todos os dados"</li>
+</ul>
+<h3>4.1 Exportação em PDF (local)</h3>
+<p>O aplicativo oferece uma <strong>exportação em PDF</strong> das entradas do diário, incluindo fotos incorporadas. A conversão ocorre <strong>inteiramente no seu dispositivo</strong>. O arquivo PDF é salvo na pasta local do aplicativo ou na pasta Downloads. A exportação em si <strong>não</strong> transmite dados a terceiros.</p>
+<p>Se você posteriormente compartilhar o PDF por meio do menu de compartilhamento do Android com outro aplicativo ou serviço de nuvem (por exemplo, e-mail, WhatsApp, Google Drive), isso é uma escolha sua. O serviço receptor então trata os dados conforme sua própria política de privacidade.</p>
+<hr />
+
+<h2>5. Serviços de nuvem opcionais e terceiros</h2>
+<p>Os serviços a seguir são utilizados <strong>apenas se você os ativar ou utilizar ativamente</strong>. O aplicativo é totalmente utilizável sem esses serviços.</p>
+
+<h3>5.1 Groq, Inc. | Transcrição em nuvem (opcional)</h3>
+<p><strong>Fornecedor:</strong> Groq, Inc., 400 Castro Street, Mountain View, CA 94041, EUA<br />
+<strong>Finalidade:</strong> Conversão das suas gravações de voz em texto (transcrição Whisper).<br />
+<strong>Dados coletados:</strong> O arquivo de áudio que você envia para transcrição. Metadados: tamanho do arquivo, formato, idioma, endereço IP.<br />
+<strong>Transferência:</strong> Apenas quando você ativa a <strong>"Transcrição em nuvem"</strong> nas configurações ou escolhe explicitamente a opção de nuvem para uma gravação. O padrão é a <strong>transcrição local no dispositivo</strong> (ver 5.2).<br />
+<strong>Base legal (LGPD):</strong> Consentimento do titular (Art. 7.º, I, e Art. 11, I, da LGPD — dados pessoais sensíveis contidos em gravações de voz).<br />
+<strong>Base legal (RGPD):</strong> Consentimento (Art. 6.º, n.º 1, al. a), do RGPD).<br />
+<strong>Transferência internacional:</strong> O tratamento ocorre nos EUA. A Groq é autocertificada no âmbito do <strong>EU-US Data Privacy Framework</strong>. Adicionalmente, aplicam-se Cláusulas Contratuais Padrão (Art. 46 do RGPD). Para titulares brasileiros, a transferência baseia-se no consentimento expresso do titular (Art. 33, VIII, da LGPD).<br />
+<strong>Retenção na Groq:</strong> As solicitações não são utilizadas para treinamento e são excluídas após o processamento, conforme a política do fornecedor.<br />
+<strong>Retirada do consentimento:</strong> Mude para <strong>"Transcrição local"</strong> nas configurações do aplicativo. Após isso, nenhum dado de áudio é enviado à Groq.<br />
+<strong>Política de Privacidade da Groq:</strong> https://groq.com/privacy-policy/</p>
+<blockquote>
+<p><strong>Nota importante:</strong> Gravações de voz podem conter dados pessoais sensíveis (Art. 11 da LGPD; Art. 9.º do RGPD). Utilize a transcrição em nuvem apenas se concordar com a transferência da sua gravação à Groq nos EUA. A transcrição local é a alternativa mais privada.</p>
+</blockquote>
+
+<h3>5.2 Reconhecimento de fala local (no dispositivo)</h3>
+<p>O aplicativo inclui <strong>reconhecimento de fala offline local</strong> baseado no projeto de código aberto <strong>sherpa-onnx</strong>. A transcrição ocorre inteiramente no seu dispositivo.<br />
+<strong>Transmissão de dados:</strong> Nenhuma. Nenhum servidor é envolvido.<br />
+<strong>Pré-requisito:</strong> Download único do modelo de idioma (~100 MB).</p>
+
+<h3>5.2a Microsoft Edge Text-to-Speech (opcional)</h3>
+<p><strong>Fornecedor:</strong> Microsoft Corporation, One Microsoft Way, Redmond, WA 98052, EUA<br />
+<strong>Serviço:</strong> Bing Speech Service (endpoint: <code>speech.platform.bing.com</code>)<br />
+<strong>Finalidade:</strong> Conversão de texto em saída de fala natural ("leitura em voz alta"), por exemplo para ouvir suas entradas ou retrospectivas.<br />
+<strong>Fluxo de transferência:</strong><br />
+1. Você aciona a função de leitura em voz alta (por exemplo no painel ou em uma entrada).<br />
+2. O texto é transmitido por uma conexão WebSocket criptografada para servidores Microsoft nos <strong>EUA</strong>.<br />
+3. O áudio gerado é retornado e reproduzido localmente no seu dispositivo.<br />
+<strong>Dados coletados:</strong> O texto enviado ao serviço, a voz selecionada, metadados técnicos (endereço IP, data e hora).<br />
+<strong>Transferência:</strong> Apenas quando você usa ativamente a função de leitura em voz alta. Nenhuma transferência à Microsoft sem a sua ação.<br />
+<strong>Base legal (LGPD):</strong> Consentimento do titular (Art. 7.º, I, da LGPD), expresso ao acionar o recurso.<br />
+<strong>Base legal (RGPD):</strong> Consentimento (Art. 6.º, n.º 1, al. a), do RGPD).<br />
+<strong>Transferência internacional:</strong> EUA, com base no <strong>EU-US Data Privacy Framework</strong> (Microsoft é certificada) e nas <strong>Cláusulas Contratuais Padrão da UE</strong> (Art. 46 do RGPD). Para titulares brasileiros: transferência com base no consentimento expresso (Art. 33, VIII, da LGPD).<br />
+<strong>Retirada do consentimento:</strong> Simplesmente não use a função de leitura em voz alta, ou desative-a nas configurações. O Android também oferece um TTS nativo no dispositivo como alternativa.<br />
+<strong>Política de Privacidade da Microsoft:</strong> https://privacy.microsoft.com/en-us/privacystatement</p>
+<blockquote>
+<p><strong>Observação:</strong> Não envie dados pessoais sensíveis de terceiros por meio da função de leitura em voz alta.</p>
+</blockquote>
+
+<h3>5.3 Google Drive | Backup em nuvem (opcional)</h3>
+<p><strong>Fornecedor:</strong> Google Ireland Limited, Gordon House, Barrow Street, Dublin 4, Irlanda<br />
+<strong>Finalidade:</strong> Backup criptografado dos seus dados do diário para restauração em um novo dispositivo ou após desinstalação.<br />
+<strong>Dados coletados:</strong> Backup completo do banco de dados do diário (entradas, áudio, imagens, configurações) como um único arquivo.<br />
+<strong>Local de armazenamento:</strong> <strong>Pasta de dados do aplicativo na sua conta pessoal do Google Drive</strong> (escopo: <code>DRIVE_APPDATA</code>). Esta pasta é protegida pelo Google e acessível apenas ao Best Journal. Outros aplicativos e até mesmo você pela interface normal do Drive não podem acessá-la.<br />
+<strong>Ativação:</strong> Apenas quando você ativa o <strong>"Backup no Google Drive"</strong> nas configurações e concede acesso explicitamente.<br />
+<strong>Base legal (LGPD):</strong> Consentimento do titular (Art. 7.º, I, da LGPD).<br />
+<strong>Base legal (RGPD):</strong> Consentimento (Art. 6.º, n.º 1, al. a), do RGPD).<br />
+<strong>Retirada do consentimento:</strong> Desative o backup nas configurações do aplicativo. Adicionalmente, você pode revogar a conexão em <strong>Conta Google → Aplicativos com acesso à sua conta</strong>.<br />
+<strong>Exclusão do backup:</strong> Em <strong>"Configurações → Backup → Excluir backup na nuvem"</strong> no aplicativo.</p>
+
+<h4>5.3a Backup do sistema Android (automático)</h4>
+<p>Além do backup interno do aplicativo no Drive, o aplicativo suporta o <strong>backup do sistema Android</strong> (<code>allowBackup="true"</code> no manifesto). Se você tiver o backup automático ativado em <strong>Configurações do Android → Google → Backup</strong>, o banco de dados principal do diário (<code>entropy_journal_db</code>) e as configurações normais do aplicativo são automaticamente copiados para o seu Google Drive (criptografados, máx. 25 MB).</p>
+<p><strong>O que é excluído:</strong> As regras de backup (<code>backup_rules.xml</code> / <code>data_extraction_rules.xml</code>) excluem o banco de dados do painel, o banco de dados de retrospectivas e as credenciais criptografadas (EncryptedSharedPreferences com tokens Google) do backup do sistema Android. Esses itens sensíveis nunca são incluídos no backup do sistema.</p>
+<p><strong>O que é incluído:</strong> Textos do diário, etiquetas de humor e configurações normais do aplicativo. Fotos e vídeos geralmente não são capturados pelo backup do sistema Android devido ao limite de tamanho de 25 MB. Para mídia, utilize o backup separado do Google Drive no aplicativo (5.3).</p>
+<p><strong>Desativação:</strong> Nas configurações do sistema Android em "Google → Backup".<br />
+<strong>Base legal:</strong> Consentimento por meio das configurações da conta Google (Art. 7.º, I, da LGPD; Art. 6.º, n.º 1, al. a), do RGPD).</p>
+
+<h3>5.4 Google Sign-In (opcional)</h3>
+<p><strong>Fornecedor:</strong> Google Ireland Limited<br />
+<strong>Finalidade:</strong> Login conveniente com sua conta Google (via Android Credential Manager).<br />
+<strong>Dados coletados:</strong> Endereço de e-mail, ID da conta Google, nome público, URL da foto de perfil.<br />
+<strong>Base legal (LGPD):</strong> Execução de contrato ou consentimento (Art. 7.º, V e I, da LGPD) se você fizer login.<br />
+<strong>Base legal (RGPD):</strong> Execução de contrato (Art. 6.º, n.º 1, al. b), do RGPD).<br />
+<strong>Observação:</strong> O login <strong>não é obrigatório</strong> para usar o aplicativo.</p>
+
+<h3>5.5 Firebase Authentication (opcional)</h3>
+<p><strong>Fornecedor:</strong> Google Ireland Limited<br />
+<strong>Finalidade:</strong> Gerenciamento de conta de usuário (vincula o Google Sign-In ao aplicativo).<br />
+<strong>Dados coletados:</strong> Endereço de e-mail, ID de login, endereço IP, data e hora.<br />
+<strong>Base legal (LGPD):</strong> Execução de contrato (Art. 7.º, V, da LGPD).<br />
+<strong>Base legal (RGPD):</strong> Execução de contrato (Art. 6.º, n.º 1, al. b), do RGPD).</p>
+
+<h3>5.6 Firebase AI / Google Gemini | Tratamento de IA manual e automático</h3>
+<p><strong>Fornecedor:</strong> Google Ireland Limited / Google LLC<br />
+<strong>Modelo de IA:</strong> Google Gemini (Firebase AI Logic SDK)<br />
+<strong>Local do servidor:</strong> EUA</p>
+<p>O aplicativo usa o Google Gemini para recursos de IA <strong>acionados manualmente</strong> e <strong>acionados automaticamente</strong>. Ambos resultam na transmissão de trechos de texto para servidores Google nos EUA.</p>
+
+<h4>5.6.1 Recursos de IA acionados manualmente</h4>
+<p>Quando você inicia ativamente uma função de IA (por exemplo, "Melhorar texto", "Resumir", "Pergunta de acompanhamento"):<br />
+1. O trecho de texto relevante é transmitido ao Google Gemini nos <strong>EUA</strong>.<br />
+2. O resultado é retornado ao seu dispositivo e apresentado para revisão.</p>
+
+<h4>5.6.2 Recursos de IA acionados automaticamente</h4>
+<p>O aplicativo gera conteúdo de IA <strong>automaticamente</strong> quando determinados eventos ocorrem. Os dados relevantes do diário são então <strong>automaticamente</strong> enviados ao Google Gemini nos EUA:</p>
+<table>
+<thead>
+<tr>
+<th>Gatilho</th>
+<th>O que acontece</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>Nova entrada no diário</strong></td>
+<td>Atualização do painel: as entradas relevantes são automaticamente enviadas ao Gemini para gerar um novo resumo do painel (apenas se ativado em "Configurações → Automação de IA → Atualização automática do painel")</td>
+</tr>
+<tr>
+<td><strong>Nova transcrição de voz</strong> (se a melhoria automática de texto estiver ativada)</td>
+<td>O texto transcrito é automaticamente refinado no estilo e na gramática pelo Gemini</td>
+</tr>
+<tr>
+<td><strong>Alteração de perfil no painel</strong></td>
+<td>O painel é regenerado com o novo prompt de perfil</td>
+</tr>
+</tbody>
+</table>
+<p><strong>Não automático, apenas com a sua ação:</strong><br />
+- As <strong>revisões semanais, mensais e anuais</strong> não são geradas automaticamente em segundo plano. Ao final de cada período, você recebe uma notificação local. A revisão é gerada apenas quando você abre o aplicativo e navega até a visualização da revisão. Sem a sua ação, nenhuma transferência ocorre.</p>
+<p><strong>Dados coletados:</strong> Trechos de texto das suas entradas do diário (nunca fotos, nunca gravações de voz), intervalo de tempo, parâmetros do modelo, metadados técnicos (endereço IP, data e hora).</p>
+<p><strong>Desativação dos recursos automáticos de IA:</strong><br />
+Em <strong>"Configurações → Automação de IA"</strong> você pode desativar individualmente:<br />
+- Atualização automática do painel (padrão: ativada)<br />
+- Melhoria automática de texto após transcrição (padrão: desativada)</p>
+<p>Em <strong>"Configurações → Lembretes"</strong> você controla se recebe notificações para revisões semanais/mensais/anuais (padrão: ativadas). Independentemente disso, a revisão só é gerada quando você a abre.</p>
+<p>Após a desativação, <strong>nenhuma transferência ao Google Gemini ocorre</strong> para aquela função. O aplicativo permanece totalmente utilizável. Você apenas perde os resumos e revisões gerados por IA.</p>
+<p><strong>Base legal (LGPD):</strong> Consentimento do titular (Art. 7.º, I, da LGPD). O consentimento é obtido no primeiro lançamento do aplicativo com um aviso claramente visível e abrange tanto o tratamento de IA manual quanto o automático. Pode ser retirado a qualquer momento nas configurações (Art. 8.º, § 5.º, da LGPD).</p>
+<p><strong>Base legal (RGPD):</strong> Consentimento (Art. 6.º, n.º 1, al. a), do RGPD). Pode ser retirado a qualquer momento (Art. 7.º, n.º 3, do RGPD).</p>
+<p><strong>Transferência internacional:</strong> O tratamento ocorre nos EUA com base no <strong>EU-US Data Privacy Framework</strong> (decisão de adequação da Comissão Europeia) e nas <strong>Cláusulas Contratuais Padrão da UE</strong> (Art. 46 do RGPD). Para titulares brasileiros: transferência com base no consentimento expresso do titular (Art. 33, VIII, da LGPD).</p>
+<p><strong>Retenção no Google:</strong> De acordo com as políticas do Firebase AI, as solicitações não são utilizadas para treinamento e são excluídas após o processamento. Detalhes:<br />
+https://firebase.google.com/support/privacy</p>
+<blockquote>
+<p><strong>Importante:</strong> Não envie dados pessoais sensíveis de terceiros (por exemplo, dados de saúde de outras pessoas, nomes de terceiros sem o consentimento deles) por meio dos recursos manuais de IA. Para revisões automáticas também: não escreva no seu diário conteúdo que você não queira transferir ao Google Gemini, ou desative os recursos automáticos de IA.</p>
+</blockquote>
+
+<h3>5.7 Firebase Analytics (opt-in no primeiro lançamento)</h3>
+<p><strong>Fornecedor:</strong> Google Ireland Limited / Google LLC<br />
+<strong>Finalidade:</strong> Estatísticas de uso anônimas para análise de erros e melhoria do produto.<br />
+<strong>Dados coletados:</strong> Tipo de dispositivo, versão do SO, versão do aplicativo, frequência de uso, região aproximada (país), Firebase Instance ID, <strong>endereço IP (truncado)</strong>, <strong>ID de publicidade Android (AAID)</strong>, dados de eventos (por exemplo, entrada criada, painel aberto, compra premium, erro de TTS).</p>
+<p><strong>Base legal (LGPD):</strong> Consentimento do titular (Art. 7.º, I, da LGPD).<br />
+<strong>Base legal (RGPD):</strong> Consentimento (Art. 6.º, n.º 1, al. a), do RGPD; § 25, n.º 1, da TDDDG alemã).</p>
+<p><strong>Como funciona o consentimento:</strong><br />
+- No <strong>primeiro lançamento do aplicativo</strong>, uma tela de privacidade é exibida antes da integração.<br />
+- Se você escolher "Aceitar e começar", você consente com as estatísticas de uso anônimas.<br />
+- Se você escolher "Desativar estatísticas", o Firebase Analytics permanece desativado, tecnicamente via <code>setAnalyticsCollectionEnabled(false)</code>.<br />
+- Você pode alterar sua decisão a qualquer momento em <strong>"Configurações → Privacidade → Estatísticas anônimas"</strong>.</p>
+<p><strong>Redefinir ID de publicidade:</strong> Nas configurações do sistema Android em <strong>"Configurações → Privacidade → Anúncios"</strong>.</p>
+
+<h3>5.8 Firebase App Check (Play Integrity)</h3>
+<p><strong>Finalidade:</strong> Proteção contra abuso e solicitações automatizadas.<br />
+<strong>Dados coletados:</strong> Token de integridade do dispositivo Google Play, assinatura do aplicativo.<br />
+<strong>Base legal (LGPD):</strong> Legítimo interesse do controlador na proteção dos endpoints (Art. 7.º, IX, da LGPD).<br />
+<strong>Base legal (RGPD):</strong> Interesse legítimo na proteção contra abusos (Art. 6.º, n.º 1, al. f), do RGPD).<br />
+<strong>Justificativa:</strong> O interesse legítimo em proteger os endpoints do Firebase de ataques automatizados supera o impacto mínimo sobre o usuário, pois o token de integridade é independente do dispositivo e não permite identificação pessoal. Não existe alternativa tecnicamente mais privada disponível.<br />
+<strong>Transferência internacional:</strong> Tratamento nos EUA com base no EU-US Data Privacy Framework e Cláusulas Contratuais Padrão (Art. 46 do RGPD).</p>
+
+<h3>5.9 Firebase Remote Config</h3>
+<p><strong>Finalidade:</strong> Configuração remota (por exemplo, sinalizadores de recursos, textos).<br />
+<strong>Dados coletados:</strong> ID de instância do aplicativo anonimizado, versão do aplicativo.<br />
+<strong>Base legal (LGPD):</strong> Legítimo interesse do controlador no funcionamento adequado do aplicativo (Art. 7.º, IX, da LGPD).<br />
+<strong>Base legal (RGPD):</strong> Interesse legítimo no funcionamento adequado (Art. 6.º, n.º 1, al. f), do RGPD).<br />
+<strong>Justificativa:</strong> O interesse legítimo na configuração fluida do aplicativo prevalece, pois apenas IDs de instância anonimizados são transferidos e não é possível identificar indivíduos.<br />
+<strong>Transferência internacional:</strong> Tratamento nos EUA com base no EU-US Data Privacy Framework e Cláusulas Contratuais Padrão (Art. 46 do RGPD).</p>
+
+<h3>5.9a Recurso de feedback (Gmail API, opcional)</h3>
+<p>Em <strong>"Configurações → Enviar feedback"</strong>, você pode nos enviar feedback sobre o aplicativo.</p>
+<p><strong>Fluxo técnico:</strong><br />
+1. Você insere seu feedback no aplicativo e confirma o envio.<br />
+2. O aplicativo solicita uma vez a permissão Google <strong>"Enviar e-mail"</strong> (escopo da Gmail API: <code>https://www.googleapis.com/auth/gmail.send</code>).<br />
+3. Após o seu consentimento, <strong>dois e-mails são enviados pela sua própria conta Google</strong> via Gmail API:<br />
+   - <strong>E-mail 1 para nós:</strong> <code>dev.app.support@gmail.com</code>, contendo o seu texto de feedback e o seu endereço de e-mail da conta Google como remetente.<br />
+   - <strong>E-mail 2 para você:</strong> Confirmação com o texto de feedback que você enviou, para que você tenha uma cópia.</p>
+<p><strong>Quem trata o quê:</strong><br />
+- <strong>Google</strong> (infraestrutura do Gmail): transporta ambos os e-mails por seus servidores de e-mail.<br />
+- <strong>Nós</strong> (Frank Barwandt, dados de contato na Seção 1): recebemos o primeiro e-mail em nossa caixa de entrada <code>dev.app.support@gmail.com</code> e o armazenamos para processar seu feedback.</p>
+<p><strong>Dados coletados/transmitidos:</strong><br />
+- Seu endereço de e-mail da conta Google (como remetente de ambos os e-mails)<br />
+- O texto de feedback que você inseriu<br />
+- Data e hora do envio</p>
+<p><strong>Base legal (LGPD):</strong><br />
+- Para transmissão a nós: Consentimento do titular (Art. 7.º, I, da LGPD) ao enviar ativamente.<br />
+- Para tratamento do seu pedido: Legítimo interesse em melhorar o aplicativo (Art. 7.º, IX, da LGPD).</p>
+<p><strong>Retenção no nosso lado:</strong> Seu e-mail de feedback permanece em nossa caixa de entrada por no máximo 24 meses, depois é excluído. Se diretamente relacionado a uma correção de bug ou recurso, a retenção pode ser mais longa. Você pode solicitar a exclusão por e-mail a qualquer momento.</p>
+<p><strong>Revogação da permissão do Gmail:</strong> Você pode revogar o acesso de envio do Gmail a qualquer momento em <strong>https://myaccount.google.com/permissions</strong> → remova Best Journal. Após a remoção, o recurso de feedback não funciona mais. O restante do aplicativo permanece totalmente utilizável.</p>
+<p><strong>Alternativa:</strong> Você também pode nos contatar diretamente por e-mail em <strong>dev.app.support@gmail.com</strong>, sem nenhuma permissão do aplicativo.</p>
+
+<h3>5.10 Google Play In-App Review API</h3>
+<p><strong>Finalidade:</strong> Exibição do diálogo de avaliação na Google Play Store.<br />
+<strong>Dados coletados:</strong> Metadados técnicos (versão do aplicativo, nome do pacote) para exibir o diálogo. A avaliação em si não é coletada pelo aplicativo.<br />
+<strong>Base legal (LGPD):</strong> Legítimo interesse do controlador em obter feedback dos usuários (Art. 7.º, IX, da LGPD).<br />
+<strong>Base legal (RGPD):</strong> Interesse legítimo (Art. 6.º, n.º 1, al. f), do RGPD).<br />
+<strong>Justificativa:</strong> O interesse legítimo em feedback dos usuários prevalece, pois apenas metadados técnicos sem referência pessoal são tratados e a avaliação ocorre exclusivamente na sua conta do Google Play.<br />
+<strong>Transferência internacional:</strong> Tratamento nos EUA com base no EU-US Data Privacy Framework e Cláusulas Contratuais Padrão (Art. 46 do RGPD).</p>
+<p><strong>Mais informações sobre os serviços Google:</strong><br />
+- Política de Privacidade do Google: https://policies.google.com/privacy<br />
+- Privacidade do Firebase: https://firebase.google.com/support/privacy<br />
+- Google Drive: https://policies.google.com/privacy#infocollect</p>
+
+<h3>5.11 Transferência internacional (EUA)</h3>
+<p>Quando os serviços de nuvem estão ativos (Groq, Firebase/Gemini, Google Drive, Microsoft Edge TTS), os dados são tratados nos EUA. A transferência baseia-se em:</p>
+<ul>
+<li><strong>EU-US Data Privacy Framework</strong> (decisão de adequação da Comissão Europeia de 10 de julho de 2023), para Google/Firebase/Gemini e Microsoft</li>
+<li><strong>Cláusulas Contratuais Padrão da UE</strong> (Art. 46 do RGPD), para Groq</li>
+<li><strong>Para titulares de dados brasileiros:</strong> A transferência internacional de dados pessoais para os EUA baseia-se no consentimento expresso do titular (Art. 33, VIII, da LGPD). Ao ativar os serviços de nuvem, você consente expressamente com a transferência dos seus dados para os EUA. Este consentimento pode ser revogado desativando os serviços correspondentes (ver Seções 5.1, 5.3, 5.6, 5.2a).</li>
+<li><strong>Cláusulas-Padrão Contratuais aprovadas pela ANPD (Art. 33 e 35 da LGPD):</strong> Em conformidade com a Resolução CD/ANPD n.º 19/2024 (em vigor desde 23 de agosto de 2025), aplicamos cláusulas contratuais padrão aprovadas pela Autoridade Nacional de Proteção de Dados (ANPD) para transferências internacionais a países sem decisão de adequação. Os contratos de tratamento de dados (Data Processing Addendum) celebrados com o <strong>Google LLC / Google Ireland Limited</strong>, a <strong>Microsoft Corporation</strong> e a <strong>Groq, Inc.</strong> abrangem cláusulas equivalentes aos requisitos da ANPD, garantindo nível de proteção adequado nos termos da LGPD. Esta salvaguarda complementa o consentimento expresso do titular como base legal para a transferência (Art. 33, VIII, da LGPD).</li>
+</ul>
+<hr />
+
+<h2>6. Compras no aplicativo (Google Play Billing)</h2>
+<p>Para recursos Premium opcionais, o aplicativo usa o <strong>Google Play Billing</strong> para processamento de pagamentos.</p>
+<ul>
+<li><strong>Fornecedor:</strong> Google Ireland Limited</li>
+<li><strong>Dados coletados:</strong> ID da transação, token de compra, produto adquirido, data e hora</li>
+<li><strong>Dados de pagamento:</strong> Tratados <strong>exclusivamente pelo Google</strong>. Não recebemos números de cartão de crédito, credenciais do PayPal ou dados bancários.</li>
+<li><strong>Base legal (LGPD):</strong> Execução de contrato (Art. 7.º, V, da LGPD)</li>
+<li><strong>Base legal (RGPD):</strong> Execução de contrato (Art. 6.º, n.º 1, al. b), do RGPD)</li>
+<li><strong>Privacidade do Google Play:</strong> https://play.google.com/about/play-terms/</li>
+</ul>
+<hr />
+
+<h2>7. Exclusão de conta e de dados</h2>
+<p>Nos termos do Art. 18 da LGPD (direitos dos titulares) e das políticas da Google Play, você tem o direito de ter seus dados excluídos a qualquer momento.</p>
+<h3>7.1 Excluir conta e dados na nuvem (no aplicativo)</h3>
+<p><strong>Configurações → Conta → Excluir conta</strong></p>
+<p>O seguinte é removido permanentemente:<br />
+- Bancos de dados locais do diário (BD principal, BD do painel, BD de revisão)<br />
+- Fotos e vídeos locais das entradas<br />
+- Configurações criptografadas do aplicativo e tokens Google armazenados<br />
+- Conta do Firebase Authentication (<code>FirebaseAuth.currentUser.delete()</code>)<br />
+- Backup de dados do aplicativo no Google Drive (removido do Drive)</p>
+<p>Após a conclusão, o aplicativo é reiniciado e se comporta como uma instalação nova. O backup do sistema Android <strong>não</strong> é excluído por esta ação. Você pode removê-lo separadamente na sua conta Google em <strong>myaccount.google.com → Dados e privacidade → Backups</strong>.</p>
+<h3>7.2 Excluir dados locais do diário</h3>
+<p><strong>Configurações → Dados → Excluir todos os dados</strong> ou <strong>desinstale o aplicativo</strong></p>
+<h3>7.3 Excluir backup do Drive manualmente</h3>
+<p>Se você deseja manter o backup mesmo após desinstalar o aplicativo, pode excluí-lo separadamente em <strong>"Configurações → Backup → Excluir backup na nuvem"</strong>. Após desinstalar o aplicativo, você pode remover a pasta de dados do aplicativo da sua conta Google em <strong>myaccount.google.com → Dados e privacidade → Aplicativos de terceiros com acesso à conta</strong>.</p>
+<h3>7.4 Solicitar exclusão por e-mail</h3>
+<p>Se você não tiver mais acesso ao aplicativo: <strong>dev.app.support@gmail.com</strong>, assunto: "Exclusão de conta Best Journal". Prazo de resposta: 30 dias.</p>
+<p>Uma página pública de solicitação de exclusão também está disponível em <strong>https://pepsi1978.github.io/proggs/bestjournal/account-deletion.html</strong> (alternativa ao fluxo de exclusão no aplicativo, exigido pelo Google Play).</p>
+<hr />
+
+<h2>8. Seus direitos nos termos do RGPD (usuários da UE/EEE)</h2>
+<p>Usuários na União Europeia e no EEE têm os seguintes direitos a qualquer momento:</p>
+<table>
+<thead>
+<tr>
+<th>Direito</th>
+<th>Artigo</th>
+<th>Como exercer</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Acesso</td>
+<td>Art. 15.º do RGPD</td>
+<td>E-mail para dev.app.support@gmail.com</td>
+</tr>
+<tr>
+<td>Retificação</td>
+<td>Art. 16.º do RGPD</td>
+<td>E-mail ou diretamente no aplicativo</td>
+</tr>
+<tr>
+<td>Apagamento ("direito ao esquecimento")</td>
+<td>Art. 17.º do RGPD</td>
+<td>No aplicativo em "Excluir dados" ou desinstale</td>
+</tr>
+<tr>
+<td>Limitação do tratamento</td>
+<td>Art. 18.º do RGPD</td>
+<td>E-mail para dev.app.support@gmail.com</td>
+</tr>
+<tr>
+<td>Portabilidade dos dados</td>
+<td>Art. 20.º do RGPD</td>
+<td>Função de exportação no aplicativo ou e-mail</td>
+</tr>
+<tr>
+<td>Oposição</td>
+<td>Art. 21.º do RGPD</td>
+<td>E-mail para dev.app.support@gmail.com</td>
+</tr>
+<tr>
+<td>Retirada do consentimento</td>
+<td>Art. 7.º, n.º 3, do RGPD</td>
+<td>Nas configurações do aplicativo em "Privacidade"</td>
+</tr>
+<tr>
+<td>Apresentar reclamação a uma autoridade de controlo</td>
+<td>Art. 77.º do RGPD</td>
+<td>Ver abaixo</td>
+</tr>
+</tbody>
+</table>
+<h3>Autoridades de controlo competentes</h3>
+<p><strong>Alemanha / UE / EEE (autoridade de controlo principal):</strong></p>
+<p>O Comissário para a Proteção de Dados e Liberdade de Informação de Hessen<br />
+Gustav-Stresemann-Ring 1, 65189 Wiesbaden, Alemanha<br />
+Telefone: +49 611 1408-0<br />
+E-mail: poststelle@datenschutz.hessen.de<br />
+Website: https://datenschutz.hessen.de</p>
+<p>(Competente porque o controlador está sediado em Hessen.)</p>
+<p>Os usuários da UE/EEE também podem contactar a autoridade de controlo do seu país de residência.</p>
+<hr />
+
+<h2>8a. Usuários internacionais, direitos adicionais previstos na legislação local</h2>
+<p>O Best Journal é oferecido mundialmente pela Google Play Store. Os direitos acima nos termos do RGPD aplicam-se a usuários de todos os países. Usuários de jurisdições específicas têm direitos <strong>adicionais</strong> ou <strong>diferentes</strong> previstos na legislação local, detalhados a seguir.</p>
+
+<h3>8a.1 Direitos dos residentes da Califórnia (CCPA / CPRA)</h3>
+<p>Se você for residente da Califórnia, o California Consumer Privacy Act (CCPA), alterado pelo California Privacy Rights Act (CPRA), lhe confere os seguintes direitos:</p>
+<ul>
+<li><strong>Direito de saber:</strong> Quais informações pessoais coletamos, usamos e compartilhamos nos últimos 12 meses, incluindo categorias de fontes e terceiros. Consulte a Seção 2 para a lista completa de categorias de dados.</li>
+<li><strong>Direito de exclusão:</strong> Exclusão das suas informações pessoais (ver Seção 7).</li>
+<li><strong>Direito de correção:</strong> Correção de informações pessoais imprecisas.</li>
+<li><strong>Direito de opt-out de venda ou compartilhamento:</strong> Nós <strong>não vendemos nem compartilhamos</strong> suas informações pessoais no sentido do CCPA. Não ocorre publicidade comportamental contextual cruzada. Embora não haja venda ou compartilhamento, <strong>como medida de transparência, disponibilizamos um botão "Não Venda ou Compartilhe Minhas Informações Pessoais"</strong> em Configurações → Privacidade → Opções de Privacidade da Califórnia. Ativá-lo revoga todos os consentimentos opcionais de nuvem (Groq, Gemini, Edge TTS, Google Drive) e desativa o Firebase Analytics via <code>setAnalyticsCollectionEnabled(false)</code>. Este botão é exibido automaticamente para usuários com localidade en-US.</li>
+<li><strong>Direito de limitar o uso de informações pessoais sensíveis (SPI):</strong> O conteúdo do diário pode conter SPI (por exemplo, informações de saúde, crenças religiosas, orientação sexual). Você pode limitar nosso uso dessas informações desativando os recursos de IA em nuvem (ver Seção 5.6) e a transcrição em nuvem (ver Seção 5.1). Todo o conteúdo do diário permanece local no seu dispositivo por padrão.</li>
+<li><strong>Direito de não discriminação:</strong> Não discriminamos você pelo exercício dos seus direitos.</li>
+<li><strong>Global Privacy Control (GPC):</strong> Respeitamos os sinais GPC do navegador como uma solicitação válida de opt-out para qualquer tratamento analítico.</li>
+</ul>
+<p><strong>Exercer seus direitos:</strong> E-mail dev.app.support@gmail.com com assunto "Solicitação CCPA". Alternativamente, exclua sua conta diretamente no aplicativo (Configurações → Conta → Excluir conta). Respondemos em 45 dias e podemos prorrogar por mais 45 dias com aviso (Cal. Civ. Code § 1798.130).</p>
+<p><strong>Não Venda Minhas Informações Pessoais:</strong> Não vendemos informações pessoais. Desativar as análises (ver Seção 5.7) está disponível como opt-out para o tratamento de dados.</p>
+<p><strong>Categorias de informações pessoais divulgadas para fins comerciais</strong> (CCPA § 1798.140):<br />
+- Identificadores (e-mail, Firebase Instance ID, ID de publicidade), para Google, Groq, Microsoft conforme necessário para os serviços principais.<br />
+- Informações comerciais (histórico de compras), para Google para o Play Billing.<br />
+- Atividade na internet ou rede eletrônica (eventos de uso do aplicativo), para Google para o Firebase Analytics (apenas com opt-in).<br />
+- Gravações de áudio, para Groq para transcrição (apenas com opt-in).<br />
+- Inferências (resumos de texto gerados por IA), tratados pelo Google Gemini para painel e revisões (apenas com opt-in).</p>
+<p><strong>Agente autorizado:</strong> Você pode designar um agente autorizado para enviar solicitações em seu nome. Forneça autorização por escrito assinada por você.</p>
+
+<h3>8a.2 Direitos dos residentes de outros estados dos EUA</h3>
+<p>Se você for residente de um dos seguintes estados, tem direitos comparáveis aos dos residentes da Califórnia, conforme as leis estaduais de proteção de dados:</p>
+<table>
+<thead>
+<tr>
+<th>Estado</th>
+<th>Lei</th>
+<th>Vigência</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Virgínia</td>
+<td>VCDPA</td>
+<td>2023</td>
+</tr>
+<tr>
+<td>Colorado</td>
+<td>CPA</td>
+<td>2023</td>
+</tr>
+<tr>
+<td>Connecticut</td>
+<td>CTDPA</td>
+<td>2023</td>
+</tr>
+<tr>
+<td>Utah</td>
+<td>UCPA</td>
+<td>2023</td>
+</tr>
+<tr>
+<td>Oregon</td>
+<td>OCPA</td>
+<td>2024</td>
+</tr>
+<tr>
+<td>Montana</td>
+<td>MCDPA</td>
+<td>2024</td>
+</tr>
+<tr>
+<td>Texas</td>
+<td>TDPSA</td>
+<td>2024 (sem limiar mínimo)</td>
+</tr>
+<tr>
+<td>Iowa</td>
+<td>ICDPA</td>
+<td>2025</td>
+</tr>
+<tr>
+<td>Delaware</td>
+<td>DPDPA</td>
+<td>2025</td>
+</tr>
+<tr>
+<td>Nova Jersey</td>
+<td>NJDPA</td>
+<td>2025</td>
+</tr>
+<tr>
+<td>New Hampshire</td>
+<td>NHPPA</td>
+<td>2025</td>
+</tr>
+<tr>
+<td>Rhode Island</td>
+<td>RIDTPPA</td>
+<td>2026</td>
+</tr>
+<tr>
+<td>Indiana</td>
+<td>ICDPA</td>
+<td>2026</td>
+</tr>
+<tr>
+<td>Kentucky</td>
+<td>KCDPA</td>
+<td>2026</td>
+</tr>
+<tr>
+<td>Minnesota</td>
+<td>MCDPA</td>
+<td>Em vigor</td>
+</tr>
+<tr>
+<td>Tennessee</td>
+<td>TIPA</td>
+<td>Em vigor</td>
+</tr>
+<tr>
+<td>Nebraska</td>
+<td>NDPA</td>
+<td>Em vigor</td>
+</tr>
+<tr>
+<td>Maryland</td>
+<td>MODPA</td>
+<td>Em vigor</td>
+</tr>
+</tbody>
+</table>
+<p>Seus direitos incluem acesso, exclusão, correção, portabilidade de dados, opt-out de publicidade direcionada e opt-out de criação de perfis. Para residentes do Texas, respeitamos os sinais GPC, pois não há limiar mínimo aplicável. Para residentes de Delaware e Rhode Island, mediante solicitação podemos fornecer os nomes (não apenas as categorias) dos destinatários terceiros. Para exercer seus direitos, envie e-mail para dev.app.support@gmail.com.</p>
+
+<h3>8a.3 Direitos dos residentes de Illinois (BIPA)</h3>
+<p>O Illinois Biometric Information Privacy Act (BIPA) protege identificadores biométricos, incluindo impressões vocais. Queremos ser transparentes:</p>
+<ul>
+<li><strong>Gravações de voz</strong> enviadas para transcrição em nuvem (Seção 5.1) são tratadas pela Groq usando o modelo Whisper apenas para conversão de fala em texto. Até onde sabemos, o Groq Whisper <strong>não</strong> cria uma impressão vocal (um modelo biométrico usado para identificar um indivíduo pela voz). Apenas a transcrição (fala para texto) é realizada. Se isso mudar, atualizaremos este aviso e obteremos consentimento por escrito antes de qualquer tratamento de impressão vocal.</li>
+<li><strong>Bloqueio biométrico do aplicativo</strong> (impressão digital, reconhecimento facial) é gerenciado inteiramente pelo sistema operacional Android no enclave de hardware seguro do dispositivo. Nunca recebemos dados biométricos.</li>
+<li><strong>Política de retenção:</strong> Gravações de voz transferidas à Groq não são retidas após a transcrição (conforme a política da Groq). Gravações de voz locais no seu dispositivo são retidas apenas até você as excluir, ou por no máximo 3 anos, conforme exigido pelo BIPA.</li>
+</ul>
+<p>Se você for residente de Illinois e quiser desativar completamente a transcrição em nuvem, mude para "Transcrição local" nas configurações (Seção 5.1).</p>
+
+<h3>8a.5 Direitos dos residentes do Canadá (PIPEDA)</h3>
+<p>Nos termos da Personal Information Protection and Electronic Documents Act (PIPEDA), os usuários canadenses têm direito de acesso e correção. Para exercer seus direitos, envie e-mail para dev.app.support@gmail.com.</p>
+<p>Você também pode apresentar uma reclamação ao Office of the Privacy Commissioner of Canada:<br />
+https://www.priv.gc.ca</p>
+
+<h3>8a.6 Direitos dos residentes de Quebec (Lei 25)</h3>
+<p>Se você for residente do Quebec, nos termos da Lei relativa à proteção de informações pessoais no setor privado (Lei 25, CQLR c. P-39.1), você tem os seguintes direitos:</p>
+<ul>
+<li><strong>Direito de acesso</strong> às suas informações pessoais</li>
+<li><strong>Direito de retificação</strong></li>
+<li><strong>Direito de exclusão e desindexação</strong> de informações pessoais disponíveis on-line</li>
+<li><strong>Direito à portabilidade de dados</strong></li>
+<li><strong>Direito de ser informado sobre decisões automatizadas</strong> que possam afetá-lo significativamente (não tomamos tais decisões, ver Seção 12)</li>
+</ul>
+<p>Para transferências fora do Quebec (para os EUA), conduzimos uma Avaliação de Impacto sobre a Privacidade e nos baseamos em proteções contratuais. Você pode apresentar uma reclamação à Commission d'accès à l'information du Québec (CAI): https://www.cai.gouv.qc.ca</p>
+
+<h3>8a.7 Direitos dos residentes da Austrália (Privacy Act 1988, Australian Privacy Principles)</h3>
+<p>Nos termos da Australian Privacy Act 1988 e dos Australian Privacy Principles (APPs), os usuários australianos têm os seguintes direitos:</p>
+<ul>
+<li><strong>APP 12: Acesso a informações pessoais</strong></li>
+<li><strong>APP 13: Correção de informações pessoais</strong></li>
+<li><strong>APP 8 (Divulgação no exterior):</strong> Seus dados são transferidos para os EUA (Groq, Google/Gemini, Microsoft) e Irlanda (Google). Tomamos medidas razoáveis para garantir proteção comparável por meio de salvaguardas contratuais. Ao usar os recursos de nuvem, você consente com a divulgação no exterior com base nesta informação.</li>
+</ul>
+<p>Observação: A Privacy Act não prevê um direito geral de exclusão equivalente ao RGPD. No entanto, atendemos voluntariamente a solicitações de exclusão (ver Seção 7).</p>
+<p>Apresente uma reclamação ao Office of the Australian Information Commissioner (OAIC):<br />
+https://www.oaic.gov.au</p>
+
+<h3>8a.8 Direitos dos residentes da Nova Zelândia (Privacy Act 2020)</h3>
+<p>Nos termos da New Zealand Privacy Act 2020, você tem direitos de acesso (IPP 6) e correção (IPP 7). Você pode apresentar uma reclamação ao Privacy Commissioner:<br />
+https://www.privacy.org.nz</p>
+<p>Após o Privacy Amendment Act 2025 (IPP 3A, em vigor a partir de 1.º de maio de 2026), informamos que os serviços de IA (Google Gemini, Groq Whisper, Microsoft Edge TTS) podem tratar seus dados de entrada e retornar resultados, o que pode constituir coleta indireta. Este aviso serve como a divulgação exigida pelo IPP 3A.</p>
+
+<h3>8a.9 Direitos dos residentes do Brasil (LGPD)</h3>
+<p>Nos termos da Lei Geral de Proteção de Dados (LGPD, Lei n.º 13.709/2018), os titulares de dados brasileiros têm os direitos abaixo, que podem ser exercidos mediante solicitação ao controlador pelo e-mail <strong>dev.app.support@gmail.com</strong>.</p>
+
+<h4>Identificação do Controlador</h4>
+<p><strong>Controlador:</strong> Frank Barwandt<br />
+c/o Impressumservice Dein-Impressum, Stettiner Straße 41, 35410 Hungen, Alemanha<br />
+<strong>Canal de contato para o titular:</strong> dev.app.support@gmail.com</p>
+
+<h4>Bases Legais para o Tratamento (Art. 7.º e Art. 11 da LGPD)</h4>
+<p>Todo tratamento de dados pessoais realizado pelo Best Journal possui uma base legal específica prevista na LGPD:</p>
+<table>
+<thead>
+<tr>
+<th>Tipo de dado tratado</th>
+<th>Base legal LGPD</th>
+<th>Artigo</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Entradas do diário (armazenadas localmente)</td>
+<td>Consentimento / exercício regular de direito</td>
+<td>Art. 7.º, I e VI</td>
+</tr>
+<tr>
+<td>Dados de saúde e vida privada em entradas do diário (dados pessoais sensíveis)</td>
+<td>Consentimento específico e destacado do titular</td>
+<td>Art. 11, I</td>
+</tr>
+<tr>
+<td>Gravações de voz enviadas à Groq (transcrição em nuvem)</td>
+<td>Consentimento do titular (opt-in ativo)</td>
+<td>Art. 7.º, I; Art. 11, I</td>
+</tr>
+<tr>
+<td>Dados de backup no Google Drive</td>
+<td>Consentimento do titular</td>
+<td>Art. 7.º, I</td>
+</tr>
+<tr>
+<td>Texto enviado ao Google Gemini (IA)</td>
+<td>Consentimento do titular (opt-in ativo)</td>
+<td>Art. 7.º, I</td>
+</tr>
+<tr>
+<td>Dados de autenticação (Firebase)</td>
+<td>Execução de contrato</td>
+<td>Art. 7.º, V</td>
+</tr>
+<tr>
+<td>Estatísticas de uso (Firebase Analytics)</td>
+<td>Consentimento do titular (opt-in ativo)</td>
+<td>Art. 7.º, I</td>
+</tr>
+<tr>
+<td>Firebase App Check (token de integridade)</td>
+<td>Legítimo interesse do controlador</td>
+<td>Art. 7.º, IX</td>
+</tr>
+<tr>
+<td>Dados de compra (Google Play)</td>
+<td>Execução de contrato</td>
+<td>Art. 7.º, V</td>
+</tr>
+</tbody>
+</table>
+
+<h4>Dados Pessoais Sensíveis (Art. 11 da LGPD)</h4>
+<p>Como aplicativo de diário, o Best Journal pode armazenar dados que, pelo seu conteúdo, constituem dados pessoais sensíveis nos termos do Art. 5.º, II, da LGPD — por exemplo, informações sobre saúde física ou mental, vida sexual, convicções religiosas ou filosóficas, opiniões políticas, origem racial ou étnica, escrita pelo próprio titular em suas entradas. Estes dados ficam armazenados <strong>exclusivamente no dispositivo do titular</strong> e só são transferidos a terceiros (Google Gemini, Groq) mediante <strong>consentimento específico e destacado</strong> do titular, obtido no momento da ativação de cada serviço (Art. 11, I, da LGPD). O titular pode revogar este consentimento a qualquer momento, conforme descrito nas seções correspondentes.</p>
+
+<h4>Direitos dos Titulares (Art. 18 da LGPD)</h4>
+<table>
+<thead>
+<tr>
+<th>Direito</th>
+<th>Art. LGPD</th>
+<th>Como exercer</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Confirmação da existência de tratamento</td>
+<td>Art. 18, I</td>
+<td>E-mail para dev.app.support@gmail.com</td>
+</tr>
+<tr>
+<td>Acesso aos dados</td>
+<td>Art. 18, II</td>
+<td>E-mail para dev.app.support@gmail.com</td>
+</tr>
+<tr>
+<td>Correção de dados incompletos, inexatos ou desatualizados</td>
+<td>Art. 18, III</td>
+<td>E-mail ou diretamente no aplicativo</td>
+</tr>
+<tr>
+<td>Anonimização, bloqueio ou eliminação de dados desnecessários ou excessivos</td>
+<td>Art. 18, IV</td>
+<td>E-mail ou "Configurações → Excluir todos os dados"</td>
+</tr>
+<tr>
+<td>Portabilidade dos dados a outro fornecedor de serviço</td>
+<td>Art. 18, V</td>
+<td>Função de exportação no aplicativo ou e-mail</td>
+</tr>
+<tr>
+<td>Eliminação dos dados pessoais tratados com base no consentimento</td>
+<td>Art. 18, VI</td>
+<td>Configurações → Conta → Excluir conta; ou e-mail</td>
+</tr>
+<tr>
+<td>Informação sobre compartilhamento de dados com entidades públicas e privadas</td>
+<td>Art. 18, VII</td>
+<td>E-mail para dev.app.support@gmail.com; ver Seção 5</td>
+</tr>
+<tr>
+<td>Informação sobre a possibilidade de não fornecer consentimento e consequências da negativa</td>
+<td>Art. 18, VIII</td>
+<td>Ver Seção 13 desta Política</td>
+</tr>
+<tr>
+<td>Revogação do consentimento</td>
+<td>Art. 18, IX; Art. 8.º, § 5.º</td>
+<td>Configurações → Privacidade; ou e-mail</td>
+</tr>
+<tr>
+<td>Oposição ao tratamento realizado sem consentimento, quando em desconformidade com a LGPD</td>
+<td>Art. 18, § 2.º</td>
+<td>E-mail para dev.app.support@gmail.com</td>
+</tr>
+<tr>
+<td>Revisão de decisões automatizadas com efeito sobre o titular</td>
+<td>Art. 20</td>
+<td>Não aplicável — não realizamos decisões automatizadas com efeito sobre o titular (ver Seção 12)</td>
+</tr>
+<tr>
+<td>Apresentar petição à ANPD</td>
+<td>Art. 18, § 1.º</td>
+<td>Ver abaixo — Autoridade Nacional de Proteção de Dados</td>
+</tr>
+</tbody>
+</table>
+<p><strong>Prazo de resposta:</strong> O controlador responderá às solicitações dos titulares em até 15 (quinze) dias úteis, nos termos da LGPD.</p>
+
+<h4>Transferência Internacional de Dados (Art. 33 da LGPD)</h4>
+<p>Os dados pessoais de titulares brasileiros que utilizam serviços de nuvem são transferidos para os EUA (Groq, Google/Firebase, Microsoft). Esta transferência internacional baseia-se no <strong>consentimento específico e destacado do titular</strong> (Art. 33, VIII, da LGPD), obtido no momento da ativação de cada serviço de nuvem. O titular pode revogar este consentimento a qualquer momento desativando os serviços correspondentes nas configurações do aplicativo, e a transferência cessará imediatamente para novos dados.</p>
+<p>Adicionalmente, os operadores internacionais (Google LLC, Microsoft Corporation, Groq Inc.) adotam salvaguardas contratuais equivalentes às Cláusulas Contratuais Padrão da UE, que também beneficiam os titulares brasileiros ao garantir nível de proteção adequado nos países destinatários.</p>
+<p><strong>Cláusulas-Padrão Contratuais aprovadas pela ANPD (vigentes desde 23.08.2025):</strong> Em conformidade com a Resolução CD/ANPD nº 19/2024 e o Regulamento de Transferência Internacional de Dados Pessoais publicado em 23 de agosto de 2025, as transferências para os Estados Unidos da América (Google LLC, Microsoft Corporation, Groq Inc.) são adicionalmente protegidas pelas <strong>Cláusulas-Padrão Contratuais aprovadas pela Autoridade Nacional de Proteção de Dados</strong> (Art. 33, II, da LGPD). Estas cláusulas estão incorporadas aos contratos de processamento de dados (Data Processing Addendum) celebrados com cada um dos operadores internacionais. Caso a ANPD revogue, suspenda ou modifique o regulamento aplicável, atualizaremos esta política de privacidade e adotaremos os mecanismos de transferência exigidos pela autoridade.</p>
+
+<h4>Autoridade Nacional de Proteção de Dados (ANPD)</h4>
+<p>Os titulares de dados brasileiros têm o direito de apresentar petição à ANPD sempre que considerarem que o tratamento de seus dados viola a LGPD (Art. 18, § 1.º, da LGPD):</p>
+<p><strong>Autoridade Nacional de Proteção de Dados (ANPD)</strong><br />
+Setor Comercial Sul — Quadra 9, Lote C, Torre C, 9.º andar<br />
+Ed. Parque Cidade Corporate, Brasília-DF, CEP 70308-200<br />
+Website: <a href="https://www.gov.br/anpd/pt-br">https://www.gov.br/anpd/pt-br</a></p>
+
+<h3>8a.10 Direitos dos residentes do Japão (APPI)</h3>
+<p>Nos termos da Lei sobre a Proteção de Informações Pessoais (APPI), os usuários japoneses têm o direito de divulgação, correção, suspensão de uso e exclusão. Para transferências transfronteiriças para os EUA, informamos que os EUA não constam na lista de jurisdições reconhecidas pela PPC como de nível de proteção equivalente; as transferências baseiam-se no consentimento e em salvaguardas contratuais com o destinatário. Você pode contactar a Personal Information Protection Commission (PPC): https://www.ppc.go.jp</p>
+
+<h3>8a.11 Direitos dos residentes da África do Sul (POPIA)</h3>
+<p>Nos termos da Protection of Personal Information Act (POPIA), os usuários sul-africanos têm direitos de acesso, correção e oposição. Autoridade reguladora: Information Regulator, https://inforegulator.org.za</p>
+
+<h3>8a.12 Direitos dos residentes do México (LFPDPPP, reforma de março de 2026)</h3>
+<p>Nos termos da Ley Federal de Protección de Datos Personales en Posesión de los Particulares (LFPDPPP), os usuários mexicanos têm os direitos ARCO: Acceso, Rectificación, Cancelación, Oposición. Após a reforma de março de 2026, disponibilizamos um <strong>Aviso de Privacidade Simplificado</strong> — o resumo em espanhol desta Política de Privacidade satisfaz este requisito. A autoridade competente é a <strong>Secretaría Anti-Corrupción y Buen Gobierno (SABG)</strong>, sucessora do INAI.</p>
+
+<h3>8a.13 Direitos dos residentes do Chile (LPPD, totalmente em vigor em dezembro de 2026)</h3>
+<p>A partir de dezembro de 2026, a nova lei de proteção de dados do Chile (LPPD) será aplicada. Os usuários chilenos terão então direitos de acesso, retificação, exclusão, portabilidade e oposição. A nova autoridade supervisora poderá impor multas de 2 a 4% da receita anual. Quando a lei estiver totalmente em vigor, ampliaremos as partes específicas do Chile desta Política de Privacidade.</p>
+
+<h3>8a.14 Privacidade de crianças (Código de Privacidade Online de Crianças da Austrália, previsto para 10.12.2026)</h3>
+<p>O OAIC australiano está a finalizar um Código de Privacidade Online de Crianças que deve ser registado até 10 de dezembro de 2026. O Código aplica-se a "serviços on-line provavelmente acessados por crianças" e introduz obrigações como verificação de idade, privacidade por padrão e sem marketing direto sem consentimento. O Best Journal destina-se a usuários com 13 anos ou mais; quando o Código for finalizado, revisaremos nossos fluxos de verificação de idade e consentimento dos pais.</p>
+
+<h3>8a.15 Outras jurisdições</h3>
+<p>Para usuários de jurisdições não especificamente nomeadas, os direitos compatíveis com o RGPD acima aplicam-se como compromisso voluntário, bem como quaisquer direitos obrigatórios previstos na legislação local. Para dúvidas ou para exercer direitos locais, envie e-mail para dev.app.support@gmail.com.</p>
+<hr />
+
+<h2>9. Segurança dos dados</h2>
+<ul>
+<li>Banco de dados local em armazenamento protegido do aplicativo (sandboxing do Android)</li>
+<li>Transmissão criptografada (HTTPS/TLS 1.2+) em todas as conexões de rede</li>
+<li>Backup do Google Drive apenas na pasta protegida de dados do aplicativo (sem acesso por outros aplicativos)</li>
+<li>Firebase App Check para proteção contra abusos</li>
+<li>Criptografia local de dados sensíveis (AndroidX Security Crypto)</li>
+<li>Sem armazenamento de credenciais não criptografadas</li>
+<li>Atualizações de segurança automáticas via Google Play Store</li>
+</ul>
+<h3>9.1 Bloqueio biométrico do aplicativo (opcional)</h3>
+<p>Você pode opcionalmente proteger o aplicativo com <strong>autenticação biométrica</strong> (impressão digital, reconhecimento facial) ou com um <strong>PIN do dispositivo</strong> (AndroidX Biometric Library).</p>
+<p><strong>Importante:</strong> Os dados biométricos (por exemplo, padrões de impressão digital ou características faciais) são tratados <strong>exclusivamente pelo sistema operacional Android no enclave de hardware seguro</strong> do seu dispositivo (Trusted Execution Environment / Secure Element). Eles nunca saem do seu dispositivo e não são acessíveis ao aplicativo. O aplicativo recebe apenas um resultado de "autenticação bem-sucedida" ou "autenticação falhou", nunca a característica biométrica em si.</p>
+<p><strong>Base legal (LGPD):</strong> Consentimento do titular ao ativar o bloqueio (Art. 7.º, I; Art. 11, I, da LGPD).<br />
+<strong>Base legal (RGPD):</strong> Consentimento (Art. 6.º, n.º 1, al. a), do RGPD).<br />
+<strong>Revogação:</strong> Desative o bloqueio nas configurações do aplicativo, ou remova seus dados biométricos nas configurações do sistema Android.</p>
+<hr />
+
+<h2>10. Crianças e menores de idade</h2>
+<p>O aplicativo destina-se a usuários com <strong>13 anos ou mais</strong>. Para menores de 16 anos, o consentimento de um representante legal é exigido (Art. 8.º do RGPD) caso o login seja usado ou serviços de nuvem (Groq, Drive, IA) sejam ativados. No Brasil, o tratamento de dados pessoais de crianças e adolescentes deve observar o Art. 14 da LGPD, que exige o consentimento específico e destacado de pelo menos um dos pais ou responsável legal para crianças com menos de 14 anos. O aplicativo não coleta intencionalmente dados de crianças com menos de 13 anos (conformidade com o COPPA, 15 U.S.C. §§ 6501-6506).</p>
+<hr />
+
+<h2>11. Períodos de retenção</h2>
+<table>
+<thead>
+<tr>
+<th>Dado</th>
+<th>Duração</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Entradas locais do diário</td>
+<td>Até a exclusão pelo titular ou desinstalação do aplicativo</td>
+</tr>
+<tr>
+<td>Backup do Google Drive</td>
+<td>Até a exclusão pelo titular ou revogação do acesso ao Drive</td>
+</tr>
+<tr>
+<td>Backup do sistema Android</td>
+<td>Conforme as políticas do Google (tipicamente até a desativação do backup do sistema)</td>
+</tr>
+<tr>
+<td>Microsoft Edge TTS</td>
+<td>Excluído após o processamento (conforme a política da Microsoft)</td>
+</tr>
+<tr>
+<td>Solicitações de transcrição Groq</td>
+<td>Excluídas após o processamento (conforme a política da Groq)</td>
+</tr>
+<tr>
+<td>Firebase Analytics</td>
+<td>14 meses (padrão do Google), depois exclusão automática</td>
+</tr>
+<tr>
+<td>Firebase Authentication</td>
+<td>Até a exclusão da conta</td>
+</tr>
+<tr>
+<td>Solicitações de IA (Firebase AI)</td>
+<td>Não armazenadas permanentemente, conforme as políticas do Google</td>
+</tr>
+<tr>
+<td>Dados de compra</td>
+<td>Conforme os períodos de retenção legais (até 10 anos, § 147 AO — direito tributário alemão)</td>
+</tr>
+<tr>
+<td>E-mails de feedback</td>
+<td>Máx. 24 meses em nossa caixa de entrada, depois exclusão</td>
+</tr>
+<tr>
+<td>Logs de servidor (endereços IP)</td>
+<td>Máx. 30 dias, depois exclusão automática</td>
+</tr>
+</tbody>
+</table>
+<hr />
+
+<h2>12. Ausência de decisões automatizadas</h2>
+<p>Não há <strong>decisão automatizada</strong> nos termos do Art. 22.º do RGPD ou do Art. 20 da LGPD que produza efeitos jurídicos sobre você ou que o afete significativamente de forma negativa. Os recursos de IA apenas geram textos ou resumos que não são vinculativos para você e que você pode revisar e ignorar a qualquer momento.</p>
+<hr />
+
+<h2>12a. Aviso sobre sistemas de inteligência artificial (Art. 50 da Lei IA da UE; California SB 243)</h2>
+<p>Este aplicativo usa sistemas de IA para tratar suas entradas:</p>
+<ul>
+<li><strong>Google Gemini</strong> (Firebase AI): análise de texto com suporte de IA, resumos, painel, revisões e melhoria estilística de texto</li>
+<li><strong>Groq Whisper</strong>: transcrição de fala para texto</li>
+<li><strong>Microsoft Edge Text-to-Speech</strong>: leitura de texto em voz alta</li>
+</ul>
+<p>Nos termos do Art. 50 do Regulamento (UE) 2024/1689 (Lei IA da UE, aplicável a partir de 02 de agosto de 2026), informamos que os recursos listados acima baseiam-se em inteligência artificial. Os sistemas de IA podem produzir <strong>resultados imprecisos, incompletos ou enganosos</strong> ("alucinações"). Verifique declarações importantes de forma independente e consulte profissionais qualificados para questões de saúde, jurídicas ou financeiras. No aplicativo, rotulamos o conteúdo gerado por IA com um selo "Gerado por IA" diretamente na saída (resumo do painel, revisões semanais/mensais).</p>
+<p>As saídas de IA <strong>não são declarações vinculativas</strong>. São sugestões e resumos para apoiar sua própria reflexão. <strong>O Best Journal não é um "chatbot companheiro" nos termos do California SB 243</strong>: a IA não simula uma relação social e não foi concebida para atender diretamente a necessidades emocionais. Ela apenas produz resumos e análises das entradas que você mesmo escreveu. No entanto, como precaução e em consideração aos usuários vulneráveis, disponibilizamos recursos de crise no aplicativo (Configurações → Suporte em Crise) e os referenciamos no aviso abaixo.</p>
+
+<h2>12b. Aviso sobre saúde mental</h2>
+<p>O Best Journal é um diário digital e <strong>não é um produto médico</strong>. As análises e revisões geradas por IA <strong>não constituem aconselhamento psicológico, psiquiátrico ou terapêutico</strong> e não substituem um profissional qualificado. Se você estiver em crise aguda, entre em contato com ajuda profissional imediatamente:</p>
+<ul>
+<li><strong>Brasil — CVV (Centro de Valorização da Vida):</strong> 188 (24h, gratuito) ou <a href="https://cvv.org.br">cvv.org.br</a></li>
+<li><strong>Brasil — SAMU:</strong> 192 &nbsp;|&nbsp; <strong>Emergência geral:</strong> 190</li>
+<li><strong>EUA/Canadá:</strong> 988 Suicide &amp; Crisis Lifeline</li><li><strong>Emergência (Alemanha/UE):</strong> 112</li>
+<li><strong>Diretório internacional:</strong> <a href="https://findahelpline.com">findahelpline.com</a></li>
+</ul>
+<p>Esses números também podem ser discados diretamente no aplicativo em "Configurações → Suporte em Crise".</p>
+<hr />
+
+<h2>13. Obrigação de fornecer dados pessoais</h2>
+<p>Você não é obrigado a nos fornecer dados pessoais. O aplicativo é totalmente utilizável sem login, sem serviços de nuvem e sem análises. Sem os recursos opcionais de nuvem, você apenas perde as funções de conveniência correspondentes (transcrição em nuvem, backup em nuvem, uso em vários dispositivos, recursos de IA). A recusa em fornecer dados para os recursos opcionais não acarreta nenhuma desvantagem no uso das funções essenciais do aplicativo (Art. 18, VIII, da LGPD).</p>
+<hr />
+
+<h2>14. Alterações a esta Política de Privacidade</h2>
+<p>Esta Política de Privacidade pode ser atualizada quando o aplicativo mudar ou a situação legal mudar. A versão atual está sempre disponível no aplicativo em <strong>Configurações → Privacidade</strong> e na Google Play Store. Você será informado no aplicativo sobre alterações relevantes.</p>
+<p><strong>Última atualização:</strong> 20 de abril de 2026</p>
+<hr />
+
+<h2>15. Contato</h2>
+<p>Para dúvidas sobre privacidade ou para exercer seus direitos:</p>
+<p><strong>E-mail:</strong> dev.app.support@gmail.com<br />
+<strong>Endereço postal:</strong> Ver Seção 1 (Controlador de Dados)</p>
+
+<hr>
+<p class="footer">&copy; 2026 Frank Barwandt &middot; Best Journal</p>
+
+</body>
+</html>

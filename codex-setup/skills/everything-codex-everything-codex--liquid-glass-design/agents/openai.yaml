@@ -1,0 +1,7 @@
+interface:
+  display_name: "liquid-glass-design"
+  short_description: "iOS 26 Liquid Glass design system — dynamic glass material with"
+  default_prompt: "Use $everything-codex-everything-codex--liquid-glass-design for this task."
+
+policy:
+  allow_implicit_invocation: false

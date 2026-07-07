@@ -1,0 +1,7 @@
+interface:
+  display_name: "quality-gate"
+  short_description: "Run the tester, reviewer, and optimizer gate"
+  default_prompt: "Use $quality-gate for this task."
+
+policy:
+  allow_implicit_invocation: true

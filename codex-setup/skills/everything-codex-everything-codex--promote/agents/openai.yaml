@@ -1,0 +1,7 @@
+interface:
+  display_name: "promote"
+  short_description: "Promote project-scoped instincts to global scope"
+  default_prompt: "Use $everything-codex-everything-codex--promote for this task."
+
+policy:
+  allow_implicit_invocation: false

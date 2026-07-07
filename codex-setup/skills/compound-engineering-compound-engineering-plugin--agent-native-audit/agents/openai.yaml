@@ -1,0 +1,7 @@
+interface:
+  display_name: "agent-native-audit"
+  short_description: "Run comprehensive agent-native architecture review with scored"
+  default_prompt: "Use $compound-engineering-compound-engineering-plugin--agent-native-audit for this task."
+
+policy:
+  allow_implicit_invocation: false

@@ -1,0 +1,7 @@
+interface:
+  display_name: "mem-search"
+  short_description: "Search Codex memory observations and timelines"
+  default_prompt: "Use $codex-mem-thedotmack--mem-search for this task."
+
+policy:
+  allow_implicit_invocation: true

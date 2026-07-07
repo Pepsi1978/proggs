@@ -1,0 +1,42 @@
+{
+  "_DEPRECATED": "2026-03-25: Replaced by Universal Mirror Bridge. Kept as Codex-native audit metadata.",
+  "version": 1,
+  "bridge_name": "gemini-delta",
+  "source_label": "Gemini CLI",
+  "source_resolved_as": "Gemini CLI",
+  "language": "de",
+  "tracked_paths": [
+    "gemini-setup/**"
+  ],
+  "target_scope": "setup-and-programming-environment-only",
+  "include_fixed_errors": true,
+  "include_bugfix_logic": true,
+  "read_only_sources": [
+    "gemini-setup/**",
+    "gemini-setup/shared/MEMORY.md"
+  ],
+  "classifications": [
+    "ADD",
+    "ADAPT",
+    "REPLACE"
+  ],
+  "proposal_only": true,
+  "replacement_requires_confirmation": true,
+  "additive_bias": true,
+  "trigger_phrases": [
+    "starte die Gemini-Delta-Prüfung",
+    "was wurde bei Gemini CLI erneuert",
+    "welche Verbesserungen gibt es bei Gemini CLI",
+    "was kann Codex von Gemini CLI lernen"
+  ],
+  "reference_implementation": [
+    "codex-setup/scripts/audit-gemini-delta.mjs",
+    "codex-setup/scripts/audit-gemini-delta.sh"
+  ],
+  "bridge_registry": {
+    "registry_path": "codex-setup/bridges/bridge-registry.json",
+    "registry_github_url": "https://github.com/Pepsi1978/proggs/blob/main/codex-setup/bridges/bridge-registry.json",
+    "bridge_id": "gemini-delta"
+  },
+  "state_file": "codex-setup/state/gemini-delta-state.json"
+}

@@ -1,0 +1,257 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Entropie Reductor — Datenschutz / Privacy</title>
+<meta name="description" content="Datenschutzhinweise zur App Entropie Reductor. Privater Gebrauch durch den Entwickler. Privacy notice for Entropie Reductor — private use only.">
+<style>
+  body {
+    font-family: system-ui, -apple-system, "Segoe UI", sans-serif;
+    background: #f4f4f6;
+    color: #1d1d1f;
+    line-height: 1.6;
+    max-width: 720px;
+    margin: 3rem auto;
+    padding: 2rem 1.5rem 4rem;
+  }
+  h1 {
+    font-size: 2rem;
+    margin-bottom: 0.25rem;
+  }
+  .lead {
+    color: #555;
+    margin-bottom: 1rem;
+    font-size: 1.05rem;
+  }
+  .lang-switch {
+    margin: 0 0 2rem;
+    display: flex;
+    gap: 0.5rem;
+  }
+  .lang-switch button {
+    padding: 0.5rem 1rem;
+    border: 1px solid #d8d8db;
+    background: #fff;
+    color: #2c2c2e;
+    border-radius: 999px;
+    font: inherit;
+    font-size: 0.9rem;
+    cursor: pointer;
+  }
+  .lang-switch button.active {
+    background: #4b5fff;
+    color: #fff;
+    border-color: #4b5fff;
+  }
+  h2 {
+    font-size: 1.25rem;
+    margin: 2rem 0 0.75rem;
+    color: #1d1d1f;
+  }
+  p, li {
+    color: #2c2c2e;
+  }
+  ul {
+    padding-left: 1.25rem;
+  }
+  .notice {
+    background: #fff;
+    border-left: 4px solid #4b5fff;
+    padding: 1rem 1.25rem;
+    margin: 1.5rem 0;
+    border-radius: 4px;
+    font-weight: 500;
+  }
+  .meta {
+    margin-top: 3rem;
+    padding-top: 1.5rem;
+    border-top: 1px solid #d8d8db;
+    color: #6b6b70;
+    font-size: 0.9rem;
+  }
+  a {
+    color: #4b5fff;
+    text-decoration: none;
+  }
+  a:hover {
+    text-decoration: underline;
+  }
+  [hidden] {
+    display: none;
+  }
+</style>
+</head>
+<body>
+
+<h1>Entropie Reductor</h1>
+<p class="lead">Datenschutzhinweise &middot; Privacy notice &middot; Stand / Updated: 7. Mai 2026 / 7 May 2026</p>
+
+<div class="lang-switch" role="tablist" aria-label="Sprache / Language">
+  <button id="btn-de" type="button" class="active" onclick="showLang('de')" role="tab" aria-selected="true">Deutsch</button>
+  <button id="btn-en" type="button" onclick="showLang('en')" role="tab" aria-selected="false">English</button>
+</div>
+
+<!-- =========================== DEUTSCH =========================== -->
+<section id="de-content">
+
+<div class="notice">
+  Die App <strong>Entropie Reductor</strong> wird ausschliesslich von Frank Barwandt
+  fuer seinen rein privaten persoenlichen Gebrauch entwickelt und genutzt.
+  Es gibt keine weiteren Nutzer, keine Veroeffentlichung im Play Store
+  und keine Bereitstellung an Dritte.
+</div>
+
+<h2>Wer betreibt die App</h2>
+<p>
+  Frank Barwandt &middot; privater Entwickler &middot;
+  Erreichbar unter <a href="mailto:barwandt@gmail.com">barwandt@gmail.com</a>.
+</p>
+
+<h2>Welche Daten verarbeitet werden</h2>
+<p>
+  Die App speichert ausschliesslich auf dem privaten Android-Geraet des Entwicklers
+  folgende Inhalte:
+</p>
+<ul>
+  <li>Selbst gesprochene oder getippte Notizen zur persoenlichen Entropie-Reduktion</li>
+  <li>Biomarker-Daten (Recovery, HRV, Schlaf, Strain) aus dem eigenen Whoop-Account</li>
+  <li>Schichtcodes aus dem eigenen Google Calendar (Ganztagestermine)</li>
+  <li>Lokale Einstellungen, eigene Prompts und Memory-Eintraege der App</li>
+</ul>
+
+<h2>An welche Dienste werden Daten weitergegeben</h2>
+<p>
+  Damit die App ihre Funktion erfuellen kann, werden Inhalte gezielt an drei
+  Anbieter geschickt &mdash; ausschliesslich nach deren jeweiligen Nutzungsbedingungen
+  und Datenschutzbestimmungen:
+</p>
+<ul>
+  <li><strong>Groq</strong> &mdash; zur Transkription von Sprachaufnahmen (Whisper API)</li>
+  <li><strong>Google</strong> &mdash; fuer KI-Verarbeitung (Gemini), Sprachausgabe (Cloud TTS) und Kalender-Lesezugriff</li>
+  <li><strong>Whoop</strong> &mdash; fuer den Lesezugriff auf die eigenen Biomarker</li>
+</ul>
+<p>
+  Es findet keine Weitergabe an weitere Dritte statt. Die App nutzt keine Werbung,
+  kein Analytics, kein Crash-Reporting an Dritte.
+</p>
+
+<h2>Speicherort der Daten</h2>
+<p>
+  Alle App-Daten liegen lokal auf dem privaten Android-Geraet des Entwicklers.
+  Optional besteht ein verschluesseltes Backup im persoenlichen Google-Drive-Ordner
+  des Entwicklers. Es gibt keinen Server der App, keine Cloud-Datenbank und
+  keine Synchronisation mit anderen Personen.
+</p>
+
+<h2>Warum diese Seite existiert</h2>
+<p>
+  Diese Seite dient ausschliesslich der formalen Anforderung der Whoop-Developer-API
+  und der Google-Cloud-OAuth-Konfiguration, eine Datenschutz-URL hinterlegen zu muessen.
+  Die App selbst ist nicht oeffentlich, hat keine Nutzergemeinschaft und sammelt keine
+  Daten anderer Personen.
+</p>
+
+</section>
+
+<!-- =========================== ENGLISH =========================== -->
+<section id="en-content" hidden>
+
+<div class="notice">
+  The <strong>Entropie Reductor</strong> app is developed and used exclusively by
+  Frank Barwandt for his personal private use. There are no other users,
+  no Play Store release and no distribution to third parties.
+</div>
+
+<h2>Who operates the app</h2>
+<p>
+  Frank Barwandt &middot; private developer &middot;
+  Reachable at <a href="mailto:barwandt@gmail.com">barwandt@gmail.com</a>.
+</p>
+
+<h2>What data is processed</h2>
+<p>
+  The app stores the following content exclusively on the developer's private
+  Android device:
+</p>
+<ul>
+  <li>Self-spoken or typed notes about personal entropy reduction</li>
+  <li>Biomarker data (Recovery, HRV, Sleep, Strain) from the developer's own Whoop account</li>
+  <li>Shift codes from the developer's own Google Calendar (all-day events)</li>
+  <li>Local settings, custom prompts and memory entries inside the app</li>
+</ul>
+
+<h2>Which services receive data</h2>
+<p>
+  To make the app work, content is sent specifically to three providers
+  &mdash; strictly under their respective terms of service and privacy policies:
+</p>
+<ul>
+  <li><strong>Groq</strong> &mdash; for transcribing voice recordings (Whisper API)</li>
+  <li><strong>Google</strong> &mdash; for AI processing (Gemini), text-to-speech (Cloud TTS) and read-only Calendar access</li>
+  <li><strong>Whoop</strong> &mdash; for read-only access to the developer's own biomarker data</li>
+</ul>
+<p>
+  No further sharing with third parties takes place. The app contains no
+  advertising, no analytics and no third-party crash reporting.
+</p>
+
+<h2>Where data is stored</h2>
+<p>
+  All app data is stored locally on the developer's private Android device.
+  Optionally, an encrypted backup exists in the developer's personal Google Drive
+  folder. There is no app server, no cloud database and no synchronization with
+  other people.
+</p>
+
+<h2>Why this page exists</h2>
+<p>
+  This page exists solely to satisfy the formal requirement of the Whoop Developer
+  API and the Google Cloud OAuth configuration to provide a privacy URL.
+  The app itself is not public, has no user community and does not collect data
+  of other people.
+</p>
+
+</section>
+
+<p class="meta">
+  &copy; 2026 Frank Barwandt &middot; Entropie Reductor &middot;
+  nur fuer den privaten Gebrauch / personal use only
+</p>
+
+<script>
+  function showLang(code) {
+    var de = document.getElementById('de-content');
+    var en = document.getElementById('en-content');
+    var btnDe = document.getElementById('btn-de');
+    var btnEn = document.getElementById('btn-en');
+    if (code === 'en') {
+      de.hidden = true;
+      en.hidden = false;
+      btnDe.classList.remove('active');
+      btnEn.classList.add('active');
+      btnDe.setAttribute('aria-selected', 'false');
+      btnEn.setAttribute('aria-selected', 'true');
+      document.documentElement.setAttribute('lang', 'en');
+    } else {
+      de.hidden = false;
+      en.hidden = true;
+      btnDe.classList.add('active');
+      btnEn.classList.remove('active');
+      btnDe.setAttribute('aria-selected', 'true');
+      btnEn.setAttribute('aria-selected', 'false');
+      document.documentElement.setAttribute('lang', 'de');
+    }
+  }
+
+  // Bei englischer Browser-Sprache automatisch Englisch zeigen
+  (function autoLang() {
+    var nav = (navigator.language || navigator.userLanguage || 'de').toLowerCase();
+    if (nav.startsWith('en')) {
+      showLang('en');
+    }
+  })();
+</script>
+
+</body>
+</html>

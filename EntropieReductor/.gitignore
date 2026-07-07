@@ -1,0 +1,15 @@
+*.iml
+.gradle
+/local.properties
+/.idea
+.DS_Store
+/build
+/captures
+.externalNativeBuild
+.cxx
+local.properties
+*.keystore
+*.jks
+google-services.json
+# /app/schemas entfernt 2026-07-03 (#47447): Room-Schema-JSONs MUESSEN versioniert werden —
+# sie sind die Grundlage fuer AutoMigrations + MigrationTestHelper (Best Practice room 1/3).

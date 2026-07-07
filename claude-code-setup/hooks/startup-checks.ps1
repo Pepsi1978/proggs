@@ -1,0 +1,285 @@
+# startup-checks.ps1 — Consolidated SessionStart Health Checks
+# Event: SessionStart
+# Type: command
+# Platform: Windows (PowerShell 7+)
+#
+# CONSOLIDATION (2026-04-12): Vereint 6 einfache SessionStart-Hooks in einer Datei:
+#   1. disk-guard        — Speicherplatz pruefen
+#   2. path-health-check — PATH auf Orphans und Ghost-Eintraege pruefen
+#   3. doctor-lite       — Cloud-MCP, .mcp.json, sequential-thinking
+#   4. semantic-search    — Code-Search MCP installiert?
+#   5. mcp-auth-check    — MCP-Server-Authentifizierung pruefen
+#   6. mirror-check      — Mirror-Ledger ausstehende Eintraege
+#
+# Jede Pruefung ist eine eigenstaendige Funktion die unabhaengig von den anderen laeuft.
+# Wenn eine Pruefung fehlschlaegt, laufen die restlichen trotzdem weiter.
+#
+# ROBUSTNESS: Non-critical hook. Jeder Fehler → weitermachen. Am Ende immer exit 0.
+
+$ErrorActionPreference = 'SilentlyContinue'
+try { . "$PSScriptRoot/hook-log.ps1" } catch { }
+try { . "$PSScriptRoot/whiteboard-insert.ps1" } catch { }
+
+$warnings = @()
+$okChecks = @()
+
+# ============================================================
+# CHECK 1: Speicherplatz (ehemals disk-guard.ps1)
+# ============================================================
+function Check-DiskSpace {
+    try {
+        $drive = Get-PSDrive C -ErrorAction Stop
+        $freeGB = [math]::Round($drive.Free / 1GB, 1)
+        $usagePct = [math]::Round(($drive.Used / ($drive.Free + $drive.Used)) * 100, 0)
+
+        if ($usagePct -ge 95) {
+            $script:warnings += "Speicherplatz KRITISCH: ${usagePct}% belegt, nur ${freeGB}GB frei!"
+            # Cooldown 2026-05-10: gestufte Eskalation gegen Spam (war: 30 Eintraege/Woche)
+            #   95-96% → max 1 Eintrag pro Tag
+            #   97-98% → max 1 Eintrag pro 4h
+            #   99%+ → bei jedem Lauf
+            $cooldownFile = Join-Path $env:USERPROFILE ".claude\.disk-warn-last"
+            $shouldLog = $true
+            if ($usagePct -lt 99 -and (Test-Path $cooldownFile)) {
+                try {
+                    $lastWrite = Get-Item $cooldownFile -ErrorAction Stop
+                    $hoursSince = ((Get-Date) - $lastWrite.LastWriteTime).TotalHours
+                    if ($usagePct -le 96 -and $hoursSince -lt 24) { $shouldLog = $false }
+                    elseif ($usagePct -le 98 -and $hoursSince -lt 4) { $shouldLog = $false }
+                } catch { }
+            }
+            if ($shouldLog) {
+                try {
+                    $entry = "### $(Get-Date -Format 'yyyy-MM-dd HH:mm') — Hook: startup-checks.ps1 — Speicherplatz KRITISCH bei ${usagePct}%"
+                    Insert-WhiteboardEntry -Section "Offene Fehler & Probleme" -Entry $entry
+                    Set-Content -Path $cooldownFile -Value $usagePct -ErrorAction SilentlyContinue
+                } catch { }
+            }
+        } elseif ($usagePct -ge 90) {
+            $script:warnings += "Speicherplatz bei ${usagePct}% — ${freeGB}GB frei (Achtung)"
+        } else {
+            $script:okChecks += "Disk: ${freeGB}GB frei (${usagePct}%)"
+        }
+    } catch {
+        $script:warnings += "Disk-Check fehlgeschlagen: $_"
+    }
+}
+
+# ============================================================
+# CHECK 2: PATH-Gesundheit (ehemals path-health-check.ps1)
+# ============================================================
+function Check-PathHealth {
+    $issues = @()
+    $machinePath = [Environment]::GetEnvironmentVariable('Path', 'Machine')
+    $userPath = [Environment]::GetEnvironmentVariable('Path', 'User')
+    $persistentDirs = (($machinePath + ';' + $userPath) -split ';') | Where-Object { $_ -ne '' }
+
+    foreach ($dir in $persistentDirs) {
+        $dirOk = try { Test-Path $dir -ErrorAction Stop } catch { $false }
+        if ($dirOk -and $dir -match 'Python.*Scripts') {
+            $pipPath = Join-Path $dir 'pip.exe'
+            if (Test-Path $pipPath) {
+                $parentDir = Split-Path $dir -Parent
+                $pythonPath = Join-Path $parentDir 'python.exe'
+                if (-not (Test-Path $pythonPath)) {
+                    $issues += "ORPHANED PYTHON: $dir hat pip.exe aber kein python.exe"
+                }
+            }
+        }
+    }
+
+    foreach ($dir in $persistentDirs) {
+        if ($dir -and $dir -notmatch '^\$|^%') {
+            $exists = try { Test-Path $dir -ErrorAction Stop } catch { $true }
+            if (-not $exists -and $dir -match 'Python|node|npm|cargo|rustup|Go\\|gradle|Kotlin|Android|bun') {
+                $issues += "GHOST-PATH: $dir existiert nicht mehr"
+            }
+        }
+    }
+
+    if ($issues.Count -gt 0) {
+        foreach ($issue in $issues) {
+            $script:warnings += "PATH: $issue"
+        }
+    } else {
+        $script:okChecks += "PATH: OK"
+    }
+}
+
+# ============================================================
+# CHECK 2b: Python-Stub-Shadowing (WindowsApps App-Ausfuehrungsalias)
+# ============================================================
+# Root Cause (2026-05-26): Windows legt in %LOCALAPPDATA%\Microsoft\WindowsApps
+# 0-Byte-Reparse-Point-Stubs fuer python.exe/python3.exe/pythonw.exe/py.exe an
+# (App-Ausfuehrungsalias). Stehen sie im PATH VOR dem echten Python, faengt der Stub
+# jeden python-Aufruf ab und gibt nur "Python wurde nicht gefunden" aus — Hooks die
+# python/python3 aufrufen (SessionStart, UserPromptSubmit, Stop) schlagen dann fehl.
+# Poka-Yoke Stufe 3: Tote Stubs bei jedem Start automatisch entfernen — ABER nur wenn
+# ein ECHTES Python anderswo existiert (Graceful Degradation: nie das einzige Python loeschen).
+function Check-PythonStub {
+    try {
+        $waDir = Join-Path $env:LOCALAPPDATA 'Microsoft\WindowsApps'
+        if (-not (Test-Path $waDir)) { return }
+
+        # Gibt es ein ECHTES Python (ausserhalb WindowsApps, >0 Bytes)?
+        $realPython = $null
+        foreach ($cmd in @('python', 'python3')) {
+            $resolved = Get-Command $cmd -All -ErrorAction SilentlyContinue |
+                Where-Object {
+                    $_.Source -and $_.Source -notmatch 'WindowsApps' -and
+                    (Test-Path $_.Source) -and ((Get-Item $_.Source -ErrorAction SilentlyContinue).Length -gt 0)
+                } | Select-Object -First 1
+            if ($resolved) { $realPython = $resolved.Source; break }
+        }
+        if (-not $realPython) {
+            # Kein echtes Python gefunden — Stubs NICHT entfernen (Graceful Degradation)
+            return
+        }
+
+        $healed = @()
+        foreach ($stub in @('python.exe', 'python3.exe', 'pythonw.exe', 'py.exe')) {
+            $p = Join-Path $waDir $stub
+            if (Test-Path $p) {
+                $item = Get-Item $p -ErrorAction SilentlyContinue
+                $isDeadStub = $item -and ($item.Length -eq 0) -and
+                    ($item.Attributes -band [IO.FileAttributes]::ReparsePoint)
+                if ($isDeadStub) {
+                    try { Remove-Item $p -Force -ErrorAction Stop; $healed += $stub } catch { }
+                }
+            }
+        }
+
+        if ($healed.Count -gt 0) {
+            $script:warnings += "Python-Stub geheilt: $($healed -join ', ') aus WindowsApps entfernt (ueberschatteten echtes Python). python-aufrufende Hooks funktionieren wieder."
+            try {
+                $entry = "### $(Get-Date -Format 'yyyy-MM-dd HH:mm') — Hook: startup-checks.ps1 — Python-Stub-Shadowing automatisch geheilt: $($healed -join ', ') aus WindowsApps entfernt (echtes Python: $realPython)"
+                Insert-WhiteboardEntry -Section "Offene Fehler & Probleme" -Entry $entry
+            } catch { }
+        }
+    } catch {
+        $script:warnings += "Python-Stub-Check fehlgeschlagen: $_"
+    }
+}
+
+# ============================================================
+# CHECK 3: Doctor-Lite (ehemals doctor-lite.ps1)
+# ============================================================
+function Check-DoctorLite {
+    $localWarnings = 0
+    $claudeJson = "$env:USERPROFILE\.claude.json"
+    if (Test-Path $claudeJson) {
+        $raw = Get-Content $claudeJson -Raw -ErrorAction SilentlyContinue
+
+        # Cloud MCP connectors active but not blocked?
+        $flagActive = $raw -match '"tengu_claudeai_mcp_connectors":\s*true'
+        $hasBlocker = $raw -match '"disabledMcpjsonServers":\s*\[' -and $raw -match '"claude\.ai'
+        if ($flagActive -and -not $hasBlocker) {
+            $script:warnings += "Cloud-MCP-Connectoren aktiv und NICHT blockiert (~21K Token)"
+            $localWarnings++
+        }
+
+        # sequential-thinking sneaked back?
+        if ($raw -match '"sequential-thinking"') {
+            $script:warnings += "sequential-thinking MCP-Server ist wieder konfiguriert (redundant)"
+            $localWarnings++
+        }
+    }
+
+    # Check .mcp.json for macOS paths on Windows
+    $mcpJson = "$env:USERPROFILE\.mcp.json"
+    if (Test-Path $mcpJson) {
+        $macosServers = @()
+        $serverName = ""
+        foreach ($line in (Get-Content $mcpJson)) {
+            if ($line -match '"(\w[\w-]+)":\s*\{') { $serverName = $Matches[1] }
+            if ($serverName -ne "code-search" -and $line -match '/opt/homebrew/') {
+                $macosServers += $serverName
+            }
+        }
+        if ($macosServers.Count -gt 0) {
+            $script:warnings += ".mcp.json: macOS-Pfade auf Windows: $($macosServers -join ', ')"
+            $localWarnings++
+        }
+    }
+
+    if ($localWarnings -eq 0) {
+        $script:okChecks += "Doctor-Lite: OK"
+    }
+}
+
+# ============================================================
+# CHECK 4: Semantic Search (ehemals semantic-search-check.ps1)
+# ============================================================
+function Check-SemanticSearch {
+    $mcpDir = Join-Path $env:USERPROFILE "proggs\mcp-code-search"
+    if (-not (Test-Path $mcpDir)) {
+        $script:okChecks += "Semantic-Search: Nicht installiert (optional)"
+        return
+    }
+    $nodeModules = Join-Path $mcpDir "node_modules"
+    if (-not (Test-Path $nodeModules)) {
+        $script:warnings += "Semantic-Search: node_modules fehlen. Fix: cd ~/proggs/mcp-code-search && bun install"
+        return
+    }
+    $script:okChecks += "Semantic-Search: OK"
+}
+
+# ============================================================
+# CHECK 5: MCP-Auth (DISABLED 2026-04-12)
+# ============================================================
+# REMOVED: "claude mcp list" spawns orphan MCP server processes on every call.
+# This was a root cause of the process leak and session destruction bug.
+# The check provided minimal value (just showing auth status) while actively
+# making the system worse by spawning 2-5 orphan node.exe processes per session start.
+# See observation #4072: "MCP Server Duplication Root Cause: claude mcp list Spawns Orphans"
+function Check-McpAuth {
+    $script:okChecks += "MCP-Auth: Pruefung deaktiviert (spawnte Orphans)"
+}
+
+# ============================================================
+# CHECK 6: Mirror-Ledger (ehemals mirror-check.ps1)
+# ============================================================
+function Check-MirrorLedger {
+    $ledger = Join-Path $env:USERPROFILE "proggs\claude-code-setup\mirror-ledger.md"
+    if (-not (Test-Path $ledger)) { return }
+
+    $pattern = "APPLIED: windows/claude-code=PENDING"
+    $count = (Select-String -Pattern ([regex]::Escape($pattern)) -Path $ledger -SimpleMatch -ErrorAction SilentlyContinue | Measure-Object).Count
+    if ($null -eq $count) { $count = 0 }
+
+    if ($count -gt 0) {
+        $script:warnings += "Mirror-Bridge: $count ausstehende Eintraege von anderen Plattformen"
+    }
+}
+
+# ============================================================
+# MAIN: Alle Checks ausfuehren
+# ============================================================
+
+# Reihenfolge: Schnelle lokale Checks zuerst, langsamer externer Check (MCP-Auth) zuletzt.
+# So bekommt der Benutzer die lokalen Ergebnisse sofort, auch wenn MCP-Auth haengt.
+Check-DiskSpace
+Check-PathHealth
+Check-PythonStub
+Check-DoctorLite
+Check-SemanticSearch
+Check-MirrorLedger
+Check-McpAuth  # LETZTER Check — ruft claude mcp list auf (kann bis zu 5s dauern)
+
+# ============================================================
+# OUTPUT: Kompakte Zusammenfassung
+# ============================================================
+
+if ($warnings.Count -gt 0) {
+    Write-Output "Startup-Checks: $($warnings.Count) Problem(e):"
+    foreach ($w in $warnings) {
+        Write-Output "  ! $w"
+    }
+}
+
+# Show OK summary only if no warnings (keep output clean)
+if ($warnings.Count -eq 0 -and $okChecks.Count -gt 0) {
+    Write-Output "Startup-Checks: Alle OK ($($okChecks.Count) Pruefungen bestanden)"
+}
+
+exit 0

@@ -1,0 +1,5 @@
+{"stage": "start", "detail": {"hi": "C:\\Users\\barwa/proggs/BestJournalAndroid\\app/src/main/res/values-hi/strings.xml", "mr": "C:\\Users\\barwa/proggs/BestJournalAndroid\\app/src/main/res/values-mr/strings.xml"}}
+{"stage": "hi_extracted", "detail": {"count": 27}}
+{"stage": "replaced", "detail": {"applied": 27, "noop": 0, "not_found": []}}
+{"stage": "written_atomic", "detail": {"file": "C:\\Users\\barwa/proggs/BestJournalAndroid\\app/src/main/res/values-mr/strings.xml"}}
+{"stage": "validated", "detail": {"xmlValid": true, "err": null}}

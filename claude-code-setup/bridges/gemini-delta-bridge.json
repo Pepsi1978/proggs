@@ -1,0 +1,189 @@
+{
+	"_DEPRECATED": "2026-03-25: Replaced by Universal Mirror Bridge (mirror-ledger.md + export/import agents). Kept for reference.",
+	"version": 1,
+	"bridge_name": "gemini-delta",
+	"source_label": "Gemini CLI",
+	"source_resolved_as": "Gemini CLI",
+	"language": "de",
+	"tracked_paths": [
+		"Gemini-Setup/**"
+	],
+	"target_scope": "setup-and-programming-environment-only",
+	"include_fixed_errors": true,
+	"include_bugfix_logic": true,
+	"include_implemented_intelligence_suggestions": true,
+	"read_only_sources": [
+		"Gemini-Setup/**",
+		"Gemini-Setup/agent-memory/shared/MEMORY.md",
+		"Gemini-Setup/rules/global.md",
+		"Gemini-Setup/state/implemented-intelligence-suggestions.json"
+	],
+	"classifications": [
+		"ADD",
+		"ADAPT",
+		"REPLACE"
+	],
+	"proposal_only": true,
+	"replacement_requires_confirmation": true,
+	"additive_bias": true,
+	"report_groups": [
+		{
+			"code": "A",
+			"title": "Regeln und Prompts"
+		},
+		{
+			"code": "B",
+			"title": "Agents, Skills und Arbeitsprozesse"
+		},
+		{
+			"code": "C",
+			"title": "Skripte, Memory-Muster und Validierung"
+		},
+		{
+			"code": "D",
+			"title": "Runtime und Konfiguration"
+		},
+		{
+			"code": "E",
+			"title": "Fehlerfixes aus dem Whiteboard"
+		}
+	],
+	"trigger_phrases": [
+		"starte die Bruecke zu Gemini CLI",
+		"was hat Gemini CLI verbessert",
+		"hol dir die neuesten Informationen von Gemini",
+		"welche Verbesserungen gibt es bei Gemini",
+		"welche Regeln sind bei Gemini neuer",
+		"welche Fehler hat Gemini gefixt",
+		"was kann Claude Code von Gemini lernen",
+		"Gemini-Delta pruefen",
+		"synchronisiere mit Gemini",
+		"was wurde bei Gemini erneuert",
+		"welche Agenten oder Arbeitsprozesse sind bei Gemini neuer"
+	],
+	"reference_implementation": [
+		"claude-code-setup/scripts/audit-gemini-delta.mjs",
+		"claude-code-setup/scripts/audit-gemini-delta.sh"
+	],
+	"bridge_registry": {
+		"registry_path": "claude-code-setup/bridges/bridge-registry.json",
+		"registry_github_url": "https://github.com/Pepsi1978/proggs/blob/main/claude-code-setup/bridges/bridge-registry.json",
+		"bridge_id": "gemini-delta",
+		"peer_expected_registries": {
+			"Gemini CLI": {
+				"repo_path": "Gemini-Setup/bridges/bridge-registry.json",
+				"github_url": "https://github.com/Pepsi1978/proggs/blob/main/Gemini-Setup/bridges/bridge-registry.json",
+				"status": "awaiting-foreign-registration"
+			},
+			"Codex": {
+				"repo_path": "codex-setup/bridges/bridge-registry.json",
+				"github_url": "https://github.com/Pepsi1978/proggs/blob/main/codex-setup/bridges/bridge-registry.json",
+				"status": "registered"
+			}
+		},
+		"peer_adoption_note": "Gemini CLI und Codex sollen ihre exakten Bridge- und Ledger-Adressen in eigenen bridge-registry.json Dateien veroeffentlichen."
+	},
+	"state_file": "claude-code-setup/state/gemini-delta-state.json",
+	"exchange_ledgers": {
+		"environment_fixes": {
+			"claude_code": "claude-code-setup/environment-fixes.md",
+			"gemini_read_only_sources": [
+				"Gemini-Setup/agent-memory/shared/MEMORY.md",
+				"Gemini-Setup/rules/global.md"
+			],
+			"codex_read_only_source": "codex-setup/state/environment-fixes.json"
+		},
+		"implemented_intelligence_suggestions": {
+			"claude_code": {
+				"repo_path": "claude-code-setup/state/implemented-intelligence-suggestions.json",
+				"github_url": "https://github.com/Pepsi1978/proggs/blob/main/claude-code-setup/state/implemented-intelligence-suggestions.json"
+			},
+			"gemini_expected": {
+				"repo_path": "Gemini-Setup/state/implemented-intelligence-suggestions.json",
+				"github_url": "https://github.com/Pepsi1978/proggs/blob/main/Gemini-Setup/state/implemented-intelligence-suggestions.json",
+				"status": "awaiting-foreign-registration"
+			},
+			"codex_read_only": {
+				"repo_path": "codex-setup/state/implemented-intelligence-suggestions.json",
+				"github_url": "https://github.com/Pepsi1978/proggs/blob/main/codex-setup/state/implemented-intelligence-suggestions.json",
+				"status": "registered"
+			}
+		},
+		"bootstrap_setup": {
+			"claude_code": {
+				"repo_scripts": [
+					"claude-code-setup/scripts/bootstrap-claude-code-setup.sh",
+					"claude-code-setup/scripts/bootstrap-claude-code-setup.ps1"
+				],
+				"github_urls": [
+					"https://github.com/Pepsi1978/proggs/blob/main/claude-code-setup/scripts/bootstrap-claude-code-setup.sh",
+					"https://github.com/Pepsi1978/proggs/blob/main/claude-code-setup/scripts/bootstrap-claude-code-setup.ps1"
+				]
+			},
+			"gemini_expected": {
+				"repo_scripts": [
+					"Gemini-Setup/scripts/bootstrap-gemini-setup.sh",
+					"Gemini-Setup/scripts/bootstrap-gemini-setup.ps1"
+				],
+				"github_urls": [
+					"https://github.com/Pepsi1978/proggs/blob/main/Gemini-Setup/scripts/bootstrap-gemini-setup.sh",
+					"https://github.com/Pepsi1978/proggs/blob/main/Gemini-Setup/scripts/bootstrap-gemini-setup.ps1"
+				],
+				"status": "awaiting-foreign-registration"
+			},
+			"codex_read_only": {
+				"repo_scripts": [
+					"codex-setup/scripts/bootstrap-codex-setup.sh",
+					"codex-setup/scripts/bootstrap-codex-setup.ps1"
+				],
+				"github_urls": [
+					"https://github.com/Pepsi1978/proggs/blob/main/codex-setup/scripts/bootstrap-codex-setup.sh",
+					"https://github.com/Pepsi1978/proggs/blob/main/codex-setup/scripts/bootstrap-codex-setup.ps1"
+				],
+				"status": "registered"
+			},
+			"adoption_note": "Gemini CLI soll fuer frische Rechner eigene Bootstrap-Skripte veroeffentlichen und deren Adressen sowohl in der Registry als auch in der Delta-Bruecke mitfuehren."
+		},
+		"bootstrap_report": {
+			"claude_code": {
+				"repo_scripts": [
+					"claude-code-setup/scripts/bootstrap-report.mjs",
+					"claude-code-setup/scripts/bootstrap-report.sh",
+					"claude-code-setup/scripts/bootstrap-report.ps1"
+				],
+				"github_urls": [
+					"https://github.com/Pepsi1978/proggs/blob/main/claude-code-setup/scripts/bootstrap-report.mjs",
+					"https://github.com/Pepsi1978/proggs/blob/main/claude-code-setup/scripts/bootstrap-report.sh",
+					"https://github.com/Pepsi1978/proggs/blob/main/claude-code-setup/scripts/bootstrap-report.ps1"
+				]
+			},
+			"gemini_expected": {
+				"repo_scripts": [
+					"Gemini-Setup/scripts/bootstrap-report.mjs",
+					"Gemini-Setup/scripts/bootstrap-report.sh",
+					"Gemini-Setup/scripts/bootstrap-report.ps1"
+				],
+				"github_urls": [
+					"https://github.com/Pepsi1978/proggs/blob/main/Gemini-Setup/scripts/bootstrap-report.mjs",
+					"https://github.com/Pepsi1978/proggs/blob/main/Gemini-Setup/scripts/bootstrap-report.sh",
+					"https://github.com/Pepsi1978/proggs/blob/main/Gemini-Setup/scripts/bootstrap-report.ps1"
+				],
+				"status": "awaiting-foreign-registration"
+			},
+			"codex_read_only": {
+				"repo_scripts": [
+					"codex-setup/scripts/bootstrap-report.mjs",
+					"codex-setup/scripts/bootstrap-report.sh",
+					"codex-setup/scripts/bootstrap-report.ps1"
+				],
+				"github_urls": [
+					"https://github.com/Pepsi1978/proggs/blob/main/codex-setup/scripts/bootstrap-report.mjs",
+					"https://github.com/Pepsi1978/proggs/blob/main/codex-setup/scripts/bootstrap-report.sh",
+					"https://github.com/Pepsi1978/proggs/blob/main/codex-setup/scripts/bootstrap-report.ps1"
+				],
+				"status": "registered"
+			},
+			"adoption_note": "Gemini CLI soll zusaetzlich einen Bootstrap-Report veroeffentlichen, der Bootstrap-, Ledger- und Bridge-Adressen gesammelt ausgibt."
+		}
+	}
+}

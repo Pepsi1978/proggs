@@ -1,0 +1,7 @@
+interface:
+  display_name: "multi-plan"
+  short_description: "multi-plan"
+  default_prompt: "Use $everything-codex-everything-codex--multi-plan for this task."
+
+policy:
+  allow_implicit_invocation: false

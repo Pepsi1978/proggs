@@ -1,0 +1,10 @@
+# nsmb.conf — SMB-Client-Haertung fuer die Gehirn-Laufwerke (Direktive #3, 2026-06-29)
+# Zweck: Nach einem kurzen WireGuard-Aussetzer (z.B. Telekom-IP-Wechsel) soll ein toter
+# Mount NICHT ewig haengen und den Finder einfrieren, sondern zeitnah aufgeben -> dann
+# baut wg-drive-mount.sh ihn per Stale-Erkennung sofort neu auf.
+# Trade-off: soft mounts brechen einen laufenden Zugriff nach max_resp_timeout ab. Mit 30s
+# werden kurze Wackler ueberbrueckt; ein echter Tunnel-Verlust gibt nach 30s sauber auf.
+[default]
+soft=yes
+notify_off=yes
+max_resp_timeout=30

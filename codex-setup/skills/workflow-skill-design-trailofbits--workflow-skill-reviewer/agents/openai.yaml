@@ -1,0 +1,7 @@
+interface:
+  display_name: "workflow-skill-reviewer"
+  short_description: "Reviews workflow-based Codex skills for structural quality"
+  default_prompt: "Use $workflow-skill-design-trailofbits--workflow-skill-reviewer for this task."
+
+policy:
+  allow_implicit_invocation: false

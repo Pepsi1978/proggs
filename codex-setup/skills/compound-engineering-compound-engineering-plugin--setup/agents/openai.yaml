@@ -1,0 +1,7 @@
+interface:
+  display_name: "setup"
+  short_description: "Configure which review agents run for your project"
+  default_prompt: "Use $compound-engineering-compound-engineering-plugin--setup for this task."
+
+policy:
+  allow_implicit_invocation: false

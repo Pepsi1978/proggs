@@ -1,0 +1,7 @@
+interface:
+  display_name: "build-error-resolver"
+  short_description: "Build and TypeScript error resolution specialist"
+  default_prompt: "Use $everything-codex-everything-codex--build-error-resolver for this task."
+
+policy:
+  allow_implicit_invocation: true

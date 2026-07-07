@@ -1,0 +1,7 @@
+interface:
+  display_name: "code-review"
+  short_description: "Code review a pull request"
+  default_prompt: "Use $code-review-codex-plugins-official--code-review for this task."
+
+policy:
+  allow_implicit_invocation: true

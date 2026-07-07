@@ -1,0 +1,106 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Loop-Vorlage in der Widget-ListView (Frank-Wunsch 2026-05-31, Folge-Iteration).
+  Sieht jetzt 1:1 wie die normale Aufgaben-Karte aus (widget_item_task): voller
+  Verlaufs-Hintergrund nach Prioritaet, Wiederhol-Icon + Titel in Zeile 1, darunter
+  Prio-Perle + Bucket-Perle. Tap auf die Karte oeffnet die App; Tap auf die Prio-Perle
+  oeffnet die App und klappt direkt den Schieberegler dieser Vorlage auf.
+
+  Abstand wie bei der Aufgaben-Karte als paddingTop auf transparentem Wrapper
+  (sonst kappt die RemoteViews-ListView die Karte unten).
+-->
+<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:paddingTop="8dp">
+
+    <FrameLayout
+        android:id="@+id/loop_card_root"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:background="@drawable/bg_widget_task_gradient"
+        android:padding="14dp">
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical">
+
+            <!-- ZEILE 1: Wiederhol-Icon + Titel -->
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="horizontal"
+                android:gravity="center_vertical">
+
+                <ImageView
+                    android:id="@+id/loop_icon"
+                    android:layout_width="26dp"
+                    android:layout_height="26dp"
+                    android:src="@drawable/ic_widget_loop"
+                    android:contentDescription="Wiederkehrend" />
+
+                <ImageView
+                    android:layout_width="12dp"
+                    android:layout_height="1dp" />
+
+                <TextView
+                    android:id="@+id/loop_title"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:textSize="16sp"
+                    android:textStyle="bold"
+                    android:textColor="#EAE6FF"
+                    android:maxLines="1"
+                    android:ellipsize="end"
+                    android:text="Wiederkehrende Aufgabe" />
+            </LinearLayout>
+
+            <ImageView
+                android:layout_width="1dp"
+                android:layout_height="8dp" />
+
+            <!-- ZEILE 2: rechtsbuendig — Prioritaet-Perle + Tag-Perle -->
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="horizontal"
+                android:gravity="center_vertical">
+
+                <ImageView
+                    android:layout_width="0dp"
+                    android:layout_height="1dp"
+                    android:layout_weight="1" />
+
+                <!-- Prioritaet-Perle: Tap oeffnet App + Schieberegler dieser Vorlage -->
+                <TextView
+                    android:id="@+id/loop_prio_pill"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:paddingHorizontal="10dp"
+                    android:paddingVertical="6dp"
+                    android:background="@drawable/widget_pill_bg"
+                    android:textSize="12sp"
+                    android:textColor="#A499D9"
+                    android:text="Priorität 50" />
+
+                <ImageView
+                    android:layout_width="8dp"
+                    android:layout_height="1dp" />
+
+                <!-- Tag-Perle: "KI" oder gewaehlter Tag; Tap oeffnet App + Tag-Auswahl -->
+                <TextView
+                    android:id="@+id/loop_bucket_pill"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:paddingHorizontal="12dp"
+                    android:paddingVertical="6dp"
+                    android:background="@drawable/widget_pill_bg"
+                    android:textSize="12sp"
+                    android:textColor="#A499D9"
+                    android:text="KI" />
+            </LinearLayout>
+        </LinearLayout>
+    </FrameLayout>
+</FrameLayout>

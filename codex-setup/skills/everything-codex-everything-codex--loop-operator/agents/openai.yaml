@@ -1,0 +1,7 @@
+interface:
+  display_name: "loop-operator"
+  short_description: "Operate autonomous agent loops, monitor progress, and intervene"
+  default_prompt: "Use $everything-codex-everything-codex--loop-operator for this task."
+
+policy:
+  allow_implicit_invocation: false

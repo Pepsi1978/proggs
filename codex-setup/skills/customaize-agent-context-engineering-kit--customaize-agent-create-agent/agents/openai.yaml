@@ -1,0 +1,7 @@
+interface:
+  display_name: "customaize-agent:create-agent"
+  short_description: "Comprehensive guide for creating Codex agents with proper"
+  default_prompt: "Use $customaize-agent-context-engineering-kit--customaize-agent-create-agent for this task."
+
+policy:
+  allow_implicit_invocation: false

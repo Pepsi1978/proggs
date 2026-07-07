@@ -1,0 +1,173 @@
+{
+  "scope": "Markenrecht + Cross-Lingual + AI-Act + Account-Loeschung",
+  "markenrecht": [
+    {
+      "marke": "Gemini",
+      "issue": "Inkonsistente Benennung: dashboard_gemini_unavailable (DE) nennt nur 'Gemini' ohne 'Google'. settings_ai_gemini_title (DE+EN) ebenso. Korrekte Vollform 'Google Gemini' nur in consent_toggle_gemini_title, privacy_gate_gemini_body und ai_generated_tooltip. EN-Version von dashboard_gemini_unavailable umgeht das Problem durch generisches 'The AI'.",
+      "severity": "NIEDRIG",
+      "evidence": "values/strings.xml Z.245: 'Gemini ist gerade nicht erreichbar'. Z.710: 'KI-Reflexionen (Gemini)'. EN Z.234: 'The AI is currently unavailable' — Inkonsistenz DE vs EN."
+    },
+    {
+      "marke": "Google Drive",
+      "issue": "Marke korrekt in allen geprueften Sprachen beibehalten (AR, RU-Ordner, ZH-CN). Keine Transliteration oder Uebersetzung festgestellt.",
+      "severity": "KEIN BEFUND",
+      "evidence": "values-ar/strings.xml: 'Google Drive' beibehalten. Alle geprueften Locales korrekt."
+    },
+    {
+      "marke": "Microsoft Edge",
+      "issue": "Vollstaendig und korrekt als 'Microsoft Edge TTS' in Einwilligungstexten genannt.",
+      "severity": "KEIN BEFUND",
+      "evidence": "values/strings.xml Z.616, Z.678: 'Microsoft Edge' korrekt."
+    },
+    {
+      "marke": "Groq",
+      "issue": "Korrekt als Eigenname 'Groq' mit translatable=false-Kommentar versehen. Kontextgebung durch '(USA)' und SCCs vorhanden.",
+      "severity": "KEIN BEFUND",
+      "evidence": "values/strings.xml Z.94-95, Z.674-675: korrekt benannt."
+    },
+    {
+      "marke": "Whisper",
+      "issue": "'Groq Whisper' als Marken-Kombi korrekt. 'Lokales Whisper-Modell' fuer on-device model ohne OpenAI-Attribution. Nominative Nutzung fuer Technologiebeschreibung rechtlich ueblich akzeptabel.",
+      "severity": "NIEDRIG",
+      "evidence": "values/strings.xml Z.93: 'Lokales Whisper-Modell' ohne OpenAI-Nennung."
+    },
+    {
+      "marke": "Firebase",
+      "issue": "Als 'Firebase Analytics' korrekt mit Google-Kontext. Kein Abmahnrisiko.",
+      "severity": "KEIN BEFUND",
+      "evidence": "values/strings.xml Z.618, Z.673, Z.732: korrekt."
+    }
+  ],
+  "crossLingual": {
+    "deKeyCount": 1117,
+    "perLanguage": {
+      "en": 1106,
+      "es": 1106,
+      "fr": 1106,
+      "it": 1106,
+      "nl": 1106,
+      "tr": 1106,
+      "ar": 1106,
+      "ru": 1106,
+      "zh-rCN": 1106,
+      "hi": 1106,
+      "ja": 1106,
+      "ko": 1106,
+      "pt-rBR": 1106,
+      "pt-rPT": 1106,
+      "pl": 1106,
+      "uk": 1106,
+      "ur": 1106,
+      "bn": 1106,
+      "gu": 1106,
+      "kn": 1106,
+      "ml": 1106,
+      "mr": 1106,
+      "ta": 1106,
+      "te": 1106,
+      "th": 1106,
+      "in": 1106,
+      "zh-rTW": 1106
+    },
+    "delta11Explained": "Alle 11 fehlenden Keys in Fremdsprachen sind translatable=false (URLs + Copyright) — korrekt, kein Befund.",
+    "criticalBug": {
+      "issue": "values-ru/ enthaelt UKRAINISCHEN Text — identisch mit values-uk/. Russischsprachige Nutzer sehen ukrainische UI.",
+      "severity": "KRITISCH",
+      "affectedLocale": "values-ru/",
+      "evidence": "action_cancel='Скасувати' (ukrainisch, russisch waere 'Отменить'). action_delete='Видалити' (ukrainisch, russisch waere 'Удалить'). Alle 1106 Strings betroffen."
+    },
+    "languagesWithFewerKeys": [],
+    "untranslatedLeakage": [
+      {
+        "lang": "nl",
+        "key": "ai_prompt_rerank_entries_header",
+        "germanWordsFound": [
+          "TAGEBUCHEINTRAEGE",
+          "Quelle fuer profilstarke Ersatz-Punkte"
+        ],
+        "severity": "MITTEL",
+        "note": "KI-System-Prompt mit deutschem Text wird an Google Gemini gesendet — reduziert KI-Qualitaet fuer NL-Nutzer."
+      },
+      {
+        "lang": "ar",
+        "key": "ai_prompt_rerank_entries_header",
+        "germanWordsFound": [
+          "TAGEBUCHEINTRAEGE"
+        ],
+        "severity": "MITTEL",
+        "note": "Gleicher AI-Prompt-Leak wie NL."
+      },
+      {
+        "lang": "hi",
+        "key": "ai_prompt_rerank_entries_header",
+        "germanWordsFound": [
+          "TAGEBUCHEINTRAEGE"
+        ],
+        "severity": "MITTEL",
+        "note": "Gleicher AI-Prompt-Leak wie NL."
+      },
+      {
+        "lang": "pl",
+        "key": "ai_prompt_rerank_entries_header",
+        "germanWordsFound": [
+          "TAGEBUCHEINTRAEGE"
+        ],
+        "severity": "MITTEL",
+        "note": "Gleicher AI-Prompt-Leak wie NL."
+      },
+      {
+        "lang": "ta",
+        "key": "ai_prompt_rerank_entries_header",
+        "germanWordsFound": [
+          "TAGEBUCHEINTRAEGE"
+        ],
+        "severity": "MITTEL",
+        "note": "Gleicher AI-Prompt-Leak."
+      },
+      {
+        "lang": "th",
+        "key": "ai_prompt_rerank_entries_header",
+        "germanWordsFound": [
+          "TAGEBUCHEINTRAEGE"
+        ],
+        "severity": "MITTEL",
+        "note": "Gleicher AI-Prompt-Leak."
+      },
+      {
+        "lang": "in",
+        "key": "ai_prompt_rerank_entries_header",
+        "germanWordsFound": [
+          "TAGEBUCHEINTRAEGE"
+        ],
+        "severity": "MITTEL",
+        "note": "Gleicher AI-Prompt-Leak (Indonesisch)."
+      }
+    ],
+    "verdict": "luecken — KRITISCHER BUG: values-ru enthaelt Ukrainisch statt Russisch (alle 1106 Strings). 7 Sprachen mit deutschem AI-Prompt-Header-Leak (ai_prompt_rerank_entries_header). Alle 11 fehlenden DE-Keys sind translatable=false — korrekt so."
+  },
+  "aiActLabeling": {
+    "present": true,
+    "marker": "ai_improved_suffix_marker (Zeichen: Sternchen-KI-verbessert), ai_generated_badge, ai_generated_tooltip",
+    "coverage": "Vollstaendig implementiert und in alle 27 Sprachen uebersetzt. EN: 'AI-generated', FR: 'Genere par IA', AR: arabisch, ZH-CN: 'AI sheng cheng', HI: 'AI-janit', TR: 'YZ ile olusturuldu'. ai_generated_tooltip nennt explizit 'Google Gemini' als Quelle und weist auf Fehlermoeglichkeit hin.",
+    "verdict": "KONFORM — Art. 50(4) EU AI Act: KI-Ausgaben sind als solche gekennzeichnet, alle Sprachen abgedeckt."
+  },
+  "accountDeletion": {
+    "inApp": true,
+    "deletesDriveBackup": true,
+    "webLink": false,
+    "evidence": "In-App: settings_delete_account_title vorhanden, vollstaendiger Flow mit Bestaetigung. SettingsViewModel.deleteAccount() ruft driveBackupManager.deleteAllAppData() VOR signOut() auf — korrekte Reihenfolge. Drive-Backup-Loeschung mit Fehlerbehandlung (Retry / Force-Local-Option). KEIN dedizierter Web-Link fuer Account-Deletion gefunden. Kein ACTION_DELETE_DATA Intent-Filter im Manifest. Kein github.io/.../delete URL in strings.xml.",
+    "verdict": "TEILS KONFORM — In-App-Loeschung inkl. Drive-Backup vollstaendig implementiert. Web-Loeschungs-URL fehlt (Play Data Deletion Policy Pflicht bei Apps mit Remote-Daten/Firebase-Account)."
+  },
+  "topRisks": [
+    "KRITISCH: values-ru/ enthaelt vollstaendig Ukrainisch statt Russisch — alle 1106 Strings falsch. Russischsprachige Nutzer sehen ukrainische UI (Скасувати statt Отменить etc.).",
+    "HOCH: Kein Web-Link fuer Account-/Datenlöschungsanfragen. Play Data Deletion Policy erfordert URL in Play-Console Data-Safety-Sektion bei Apps mit Firebase-Account.",
+    "MITTEL: ai_prompt_rerank_entries_header in 7 Sprachen (NL, AR, HI, PL, TA, TH, IN) enthaelt deutschen Text 'TAGEBUCHEINTRAEGE' — reduziert KI-Antwortqualitaet fuer diese Nutzergruppen.",
+    "NIEDRIG: 'Gemini' ohne 'Google'-Praefix in dashboard_gemini_unavailable (DE) und settings_ai_gemini_title (DE+EN) — inkonsistent mit Google-Markenrichtlinien.",
+    "NIEDRIG: 'Lokales Whisper-Modell' ohne OpenAI-Attribution — nominative Nutzung, geringes Risiko."
+  ],
+  "plugin_bugs_observed": [
+    "PYTHONIOENCODING=utf-8 war bei einem Python subprocess-Aufruf nicht gesetzt — fuehrte zu UnicodeEncodeError cp1252. Geloest durch direktes Bash-grep statt Python-subprocess.",
+    "Heredoc mit eingebetteten Single-Quotes in Python-Code verursacht Bash-EOF-Fehler — geloest durch Auslagerung in separate .py-Datei (Write-Tool).",
+    "FIN-048 eingehalten: Keine vollstaendigen strings.xml-Dateien per Read-Tool geladen, nur gezieltes grep."
+  ]
+}

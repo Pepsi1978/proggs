@@ -1,0 +1,130 @@
+<!doctype html>
+<html lang="de">
+	<head>
+		<meta charset="utf-8" />
+		<meta name="viewport" content="width=device-width, initial-scale=1" />
+		<title>Overlays — Einstellungen</title>
+		<style>
+			body {
+				font: 13px/1.45 system-ui, -apple-system, Segoe UI, Roboto, Arial;
+				background: #0f172a;
+				color: #e2e8f0;
+				margin: 0;
+				padding: 14px;
+				box-sizing: border-box;
+			}
+			/* Passt sich der Seitenleisten-Breite an (Side Panel bestimmt die Breite). */
+			.wrap { max-width: 420px; margin: 0 auto; }
+			h1 { font-size: 16px; margin: 0 0 2px; }
+			p.sub { color: #94a3b8; margin: 0 0 14px; font-size: 12px; }
+			.card {
+				background: #1e293b;
+				border: 1px solid #334155;
+				border-radius: 10px;
+				padding: 12px;
+				margin-bottom: 10px;
+			}
+			label { display: block; font-weight: 600; margin-bottom: 6px; }
+			.hint { color: #94a3b8; font-size: 12px; margin: 2px 0 10px; }
+			input[type="text"], input[type="password"], select {
+				width: 100%;
+				box-sizing: border-box;
+				padding: 10px 12px;
+				border-radius: 8px;
+				border: 1px solid #475569;
+				background: #0f172a;
+				color: #e2e8f0;
+				font-size: 14px;
+			}
+			.row { display: flex; gap: 10px; align-items: center; margin-top: 8px; }
+			button {
+				background: #2563eb;
+				color: #fff;
+				border: 0;
+				border-radius: 8px;
+				padding: 10px 18px;
+				font-size: 14px;
+				font-weight: 600;
+				cursor: pointer;
+			}
+			button:hover { background: #1d4ed8; }
+			button.secondary { background: #334155; }
+			button.secondary:hover { background: #475569; }
+			#updstatus { font-weight: 600; }
+			.toggle { display: flex; align-items: center; gap: 10px; }
+			#status { margin-top: 12px; min-height: 18px; color: #4ade80; font-weight: 600; }
+			#logBox {
+				margin-top: 8px;
+				max-height: 220px;
+				overflow: auto;
+				white-space: pre-wrap;
+				font: 11px/1.35 ui-monospace, SFMono-Regular, Consolas, monospace;
+				color: #cbd5e1;
+				background: #0f172a;
+				border: 1px solid #334155;
+				border-radius: 8px;
+				padding: 8px;
+			}
+			a { color: #60a5fa; }
+		</style>
+	</head>
+	<body>
+		<div class="wrap">
+			<h1>Overlays — Einstellungen</h1>
+			<p class="sub">Die API-Keys werden nur lokal im Browser gespeichert (chrome.storage), nie hochgeladen.</p>
+
+			<div class="card">
+				<label class="toggle"><input type="checkbox" id="currentSiteEnabled" /> Overlay auf dieser Webseite aktiv</label>
+				<div class="hint" id="currentSiteHint">Aktive Seite wird ermittelt…</div>
+			</div>
+
+			<div class="card">
+				<label for="groqKey">Groq API-Key (Whisper Spracheingabe)</label>
+				<div class="hint">Kostenlos auf <a href="https://console.groq.com/keys" target="_blank">console.groq.com</a>. Noetig fuer den Mic-Button.</div>
+				<input type="password" id="groqKey" placeholder="gsk_..." autocomplete="off" />
+			</div>
+
+			<div class="card">
+				<label for="geminiKey">Gemini API-Key (Prompt-Builder, Korrektur)</label>
+				<div class="hint">Kostenlos auf <a href="https://aistudio.google.com/apikey" target="_blank">aistudio.google.com/apikey</a>. Nur fuer ChatGPT-Seite noetig.</div>
+				<input type="password" id="geminiKey" placeholder="AIza..." autocomplete="off" />
+			</div>
+
+			<div class="card">
+				<label for="geminiModel">Gemini-Modell (optional)</label>
+				<div class="hint">Leer lassen — die Erweiterung waehlt automatisch ein fuer deinen Key gueltiges Modell. Nur ausfuellen, wenn du ein bestimmtes Modell erzwingen willst.</div>
+				<input type="text" id="geminiModel" placeholder="(automatisch)" />
+			</div>
+
+			<div class="row">
+				<button id="save">Speichern</button>
+				<span id="status"></span>
+			</div>
+
+			<div class="card">
+				<label class="toggle"><input type="checkbox" id="ovDraggable" /> Overlay verschiebbar</label>
+				<div class="hint">Wenn aktiviert, kannst du das Overlay mit der linken oder rechten Maustaste an eine beliebige Stelle ziehen — es bleibt, wo du es loslaesst. Haekchen wieder entfernen: das Overlay springt an seinen Standardort zurueck.</div>
+			</div>
+
+			<div class="card" style="margin-top:6px">
+				<label>Aktualisieren</label>
+				<div class="hint">Installiert: <b id="ver">…</b></div>
+				<div class="row">
+					<button id="reload">Erweiterung neu laden</button>
+				</div>
+				<div class="hint" style="margin-top:8px">Startet die Erweiterung mit dem neuesten lokalen Code (ersetzt das ↻ in chrome://extensions) und laedt die offene Seite automatisch neu — kein F5 noetig.</div>
+			</div>
+
+			<div class="card">
+				<label>Fehlerprotokoll</label>
+				<div class="hint">Nur Warnungen und Fehler werden intern gespeichert. Normale Bestätigungen bleiben unsichtbar.</div>
+				<div class="row">
+					<button id="refreshLog" class="secondary">Log anzeigen</button>
+					<button id="clearLog" class="secondary">Log leeren</button>
+				</div>
+				<pre id="logBox">Noch nicht geladen.</pre>
+			</div>
+		</div>
+		<script src="options.js"></script>
+	</body>
+</html>

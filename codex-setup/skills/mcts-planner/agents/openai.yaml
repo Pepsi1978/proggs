@@ -1,0 +1,7 @@
+interface:
+  display_name: "mcts-planner"
+  short_description: "Nutze diesen Agenten bei komplexen Aufgaben (>3 Dateien"
+  default_prompt: "Use $mcts-planner for this task."
+
+policy:
+  allow_implicit_invocation: false

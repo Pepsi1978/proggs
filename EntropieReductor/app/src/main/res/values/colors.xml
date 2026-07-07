@@ -1,0 +1,32 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Neon Cosmos Palette (siehe Spec §3) -->
+    <color name="cosmos_bg_dark">#FF0A0E1A</color>
+    <color name="cosmos_bg_dark_mid">#FF0F1729</color>
+    <color name="cosmos_bg_light">#FFF8FAFC</color>
+    <color name="cosmos_bg_light_mid">#FFE0E7FF</color>
+
+    <color name="accent_primary">#FF22D3EE</color>
+    <color name="accent_secondary">#FFA78BFA</color>
+    <color name="success_low_entropy">#FF34D399</color>
+    <color name="warning_high_entropy">#FFFBBF24</color>
+    <color name="critical_entropy">#FFF87171</color>
+
+    <color name="text_primary_dark">#FFF8FAFC</color>
+    <color name="text_secondary_dark">#FF94A3B8</color>
+    <color name="text_primary_light">#FF0F172A</color>
+    <color name="text_secondary_light">#FF475569</color>
+
+    <color name="status_red">#FFF87171</color>
+    <color name="status_yellow">#FFFBBF24</color>
+    <color name="status_lightgreen">#FF86EFAC</color>
+    <color name="status_green">#FF22C55E</color>
+
+    <color name="cat_physical">#FFF87171</color>
+    <color name="cat_mental">#FFA78BFA</color>
+    <color name="cat_temporal">#FFFBBF24</color>
+    <color name="cat_emotional">#FFF472B6</color>
+    <color name="cat_health">#FF34D399</color>
+    <color name="cat_environment">#FF22D3EE</color>
+    <color name="cat_other">#FF94A3B8</color>
+</resources>

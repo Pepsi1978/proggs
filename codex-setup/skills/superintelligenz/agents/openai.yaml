@@ -1,0 +1,7 @@
+interface:
+  display_name: "superintelligenz"
+  short_description: "Apply the top-level superintelligence directive"
+  default_prompt: "Use $superintelligenz for this task."
+
+policy:
+  allow_implicit_invocation: false

@@ -1,0 +1,8 @@
+# Parry Prompt-Injection-Scanner — lokale Guard-Datenbank, gehört nicht ins Repo
+.parry-guard.redb
+
+# macOS
+.DS_Store
+
+# Von Chrome beim Laden der entpackten Erweiterung erzeugt
+_metadata/

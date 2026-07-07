@@ -1,0 +1,1709 @@
+{
+  "formatVersion": 1,
+  "database": {
+    "version": 17,
+    "identityHash": "266aceed176a88a1e338870ca30a2ed8",
+    "entities": [
+      {
+        "tableName": "entropy_entries",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`id` TEXT NOT NULL, `rawTranscript` TEXT NOT NULL, `title` TEXT NOT NULL, `description` TEXT NOT NULL, `category` TEXT NOT NULL, `severity` INTEGER NOT NULL, `priorityScore` REAL NOT NULL, `priorityReason` TEXT NOT NULL, `status` TEXT NOT NULL, `timeBucket` TEXT NOT NULL, `estimatedDurationMinutes` INTEGER, `createdAt` INTEGER NOT NULL, `updatedAt` INTEGER NOT NULL, `resolvedAt` INTEGER, `tags` TEXT NOT NULL, `aiNotes` TEXT, `source` TEXT NOT NULL, `biomarkerSnapshotId` TEXT, `manualBucket` TEXT, `manualBucketSetAt` INTEGER, PRIMARY KEY(`id`))",
+        "fields": [
+          {
+            "fieldPath": "id",
+            "columnName": "id",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "rawTranscript",
+            "columnName": "rawTranscript",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "title",
+            "columnName": "title",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "description",
+            "columnName": "description",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "category",
+            "columnName": "category",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "severity",
+            "columnName": "severity",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "priorityScore",
+            "columnName": "priorityScore",
+            "affinity": "REAL",
+            "notNull": true
+          },
+          {
+            "fieldPath": "priorityReason",
+            "columnName": "priorityReason",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "status",
+            "columnName": "status",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "timeBucket",
+            "columnName": "timeBucket",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "estimatedDurationMinutes",
+            "columnName": "estimatedDurationMinutes",
+            "affinity": "INTEGER"
+          },
+          {
+            "fieldPath": "createdAt",
+            "columnName": "createdAt",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "updatedAt",
+            "columnName": "updatedAt",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "resolvedAt",
+            "columnName": "resolvedAt",
+            "affinity": "INTEGER"
+          },
+          {
+            "fieldPath": "tags",
+            "columnName": "tags",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "aiNotes",
+            "columnName": "aiNotes",
+            "affinity": "TEXT"
+          },
+          {
+            "fieldPath": "source",
+            "columnName": "source",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "biomarkerSnapshotId",
+            "columnName": "biomarkerSnapshotId",
+            "affinity": "TEXT"
+          },
+          {
+            "fieldPath": "manualBucket",
+            "columnName": "manualBucket",
+            "affinity": "TEXT"
+          },
+          {
+            "fieldPath": "manualBucketSetAt",
+            "columnName": "manualBucketSetAt",
+            "affinity": "INTEGER"
+          }
+        ],
+        "primaryKey": {
+          "autoGenerate": false,
+          "columnNames": [
+            "id"
+          ]
+        },
+        "indices": [
+          {
+            "name": "index_entropy_entries_status",
+            "unique": false,
+            "columnNames": [
+              "status"
+            ],
+            "orders": [],
+            "createSql": "CREATE INDEX IF NOT EXISTS `index_entropy_entries_status` ON `${TABLE_NAME}` (`status`)"
+          },
+          {
+            "name": "index_entropy_entries_timeBucket",
+            "unique": false,
+            "columnNames": [
+              "timeBucket"
+            ],
+            "orders": [],
+            "createSql": "CREATE INDEX IF NOT EXISTS `index_entropy_entries_timeBucket` ON `${TABLE_NAME}` (`timeBucket`)"
+          },
+          {
+            "name": "index_entropy_entries_category",
+            "unique": false,
+            "columnNames": [
+              "category"
+            ],
+            "orders": [],
+            "createSql": "CREATE INDEX IF NOT EXISTS `index_entropy_entries_category` ON `${TABLE_NAME}` (`category`)"
+          },
+          {
+            "name": "index_entropy_entries_resolvedAt",
+            "unique": false,
+            "columnNames": [
+              "resolvedAt"
+            ],
+            "orders": [],
+            "createSql": "CREATE INDEX IF NOT EXISTS `index_entropy_entries_resolvedAt` ON `${TABLE_NAME}` (`resolvedAt`)"
+          },
+          {
+            "name": "index_entropy_entries_priorityScore",
+            "unique": false,
+            "columnNames": [
+              "priorityScore"
+            ],
+            "orders": [],
+            "createSql": "CREATE INDEX IF NOT EXISTS `index_entropy_entries_priorityScore` ON `${TABLE_NAME}` (`priorityScore`)"
+          },
+          {
+            "name": "index_entropy_entries_status_timeBucket",
+            "unique": false,
+            "columnNames": [
+              "status",
+              "timeBucket"
+            ],
+            "orders": [],
+            "createSql": "CREATE INDEX IF NOT EXISTS `index_entropy_entries_status_timeBucket` ON `${TABLE_NAME}` (`status`, `timeBucket`)"
+          },
+          {
+            "name": "index_entropy_entries_status_resolvedAt",
+            "unique": false,
+            "columnNames": [
+              "status",
+              "resolvedAt"
+            ],
+            "orders": [],
+            "createSql": "CREATE INDEX IF NOT EXISTS `index_entropy_entries_status_resolvedAt` ON `${TABLE_NAME}` (`status`, `resolvedAt`)"
+          }
+        ]
+      },
+      {
+        "tableName": "saved_prompts",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`id` TEXT NOT NULL, `name` TEXT NOT NULL, `content` TEXT NOT NULL, `isActive` INTEGER NOT NULL, `createdAt` INTEGER NOT NULL, `updatedAt` INTEGER NOT NULL, PRIMARY KEY(`id`))",
+        "fields": [
+          {
+            "fieldPath": "id",
+            "columnName": "id",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "name",
+            "columnName": "name",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "content",
+            "columnName": "content",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "isActive",
+            "columnName": "isActive",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "createdAt",
+            "columnName": "createdAt",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "updatedAt",
+            "columnName": "updatedAt",
+            "affinity": "INTEGER",
+            "notNull": true
+          }
+        ],
+        "primaryKey": {
+          "autoGenerate": false,
+          "columnNames": [
+            "id"
+          ]
+        }
+      },
+      {
+        "tableName": "biomarker_snapshots",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`id` TEXT NOT NULL, `capturedAt` INTEGER NOT NULL, `recoveryScore` INTEGER, `hrvMs` REAL, `restingHeartRate` INTEGER, `sleepPerformance` INTEGER, `sleepTotalMinutes` INTEGER, `sleepRemMinutes` INTEGER, `sleepDeepMinutes` INTEGER, `sleepLightMinutes` INTEGER, `sleepAwakeMinutes` INTEGER, `sleepDisturbances` INTEGER, `dayStrain` REAL, `dayKilojoules` REAL, `createdAt` INTEGER NOT NULL, `respiratoryRate` REAL, `sleepConsistencyPercent` INTEGER, `sleepEfficiencyPercent` INTEGER, `sleepNeedMinutes` INTEGER, `sleepDebtMinutes` INTEGER, `spo2Percent` REAL, `skinTempCelsius` REAL, `averageHeartRate` INTEGER, `maxHeartRate` INTEGER, `sleepCycleCount` INTEGER, PRIMARY KEY(`id`))",
+        "fields": [
+          {
+            "fieldPath": "id",
+            "columnName": "id",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "capturedAt",
+            "columnName": "capturedAt",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "recoveryScore",
+            "columnName": "recoveryScore",
+            "affinity": "INTEGER"
+          },
+          {
+            "fieldPath": "hrvMs",
+            "columnName": "hrvMs",
+            "affinity": "REAL"
+          },
+          {
+            "fieldPath": "restingHeartRate",
+            "columnName": "restingHeartRate",
+            "affinity": "INTEGER"
+          },
+          {
+            "fieldPath": "sleepPerformance",
+            "columnName": "sleepPerformance",
+            "affinity": "INTEGER"
+          },
+          {
+            "fieldPath": "sleepTotalMinutes",
+            "columnName": "sleepTotalMinutes",
+            "affinity": "INTEGER"
+          },
+          {
+            "fieldPath": "sleepRemMinutes",
+            "columnName": "sleepRemMinutes",
+            "affinity": "INTEGER"
+          },
+          {
+            "fieldPath": "sleepDeepMinutes",
+            "columnName": "sleepDeepMinutes",
+            "affinity": "INTEGER"
+          },
+          {
+            "fieldPath": "sleepLightMinutes",
+            "columnName": "sleepLightMinutes",
+            "affinity": "INTEGER"
+          },
+          {
+            "fieldPath": "sleepAwakeMinutes",
+            "columnName": "sleepAwakeMinutes",
+            "affinity": "INTEGER"
+          },
+          {
+            "fieldPath": "sleepDisturbances",
+            "columnName": "sleepDisturbances",
+            "affinity": "INTEGER"
+          },
+          {
+            "fieldPath": "dayStrain",
+            "columnName": "dayStrain",
+            "affinity": "REAL"
+          },
+          {
+            "fieldPath": "dayKilojoules",
+            "columnName": "dayKilojoules",
+            "affinity": "REAL"
+          },
+          {
+            "fieldPath": "createdAt",
+            "columnName": "createdAt",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "respiratoryRate",
+            "columnName": "respiratoryRate",
+            "affinity": "REAL"
+          },
+          {
+            "fieldPath": "sleepConsistencyPercent",
+            "columnName": "sleepConsistencyPercent",
+            "affinity": "INTEGER"
+          },
+          {
+            "fieldPath": "sleepEfficiencyPercent",
+            "columnName": "sleepEfficiencyPercent",
+            "affinity": "INTEGER"
+          },
+          {
+            "fieldPath": "sleepNeedMinutes",
+            "columnName": "sleepNeedMinutes",
+            "affinity": "INTEGER"
+          },
+          {
+            "fieldPath": "sleepDebtMinutes",
+            "columnName": "sleepDebtMinutes",
+            "affinity": "INTEGER"
+          },
+          {
+            "fieldPath": "spo2Percent",
+            "columnName": "spo2Percent",
+            "affinity": "REAL"
+          },
+          {
+            "fieldPath": "skinTempCelsius",
+            "columnName": "skinTempCelsius",
+            "affinity": "REAL"
+          },
+          {
+            "fieldPath": "averageHeartRate",
+            "columnName": "averageHeartRate",
+            "affinity": "INTEGER"
+          },
+          {
+            "fieldPath": "maxHeartRate",
+            "columnName": "maxHeartRate",
+            "affinity": "INTEGER"
+          },
+          {
+            "fieldPath": "sleepCycleCount",
+            "columnName": "sleepCycleCount",
+            "affinity": "INTEGER"
+          }
+        ],
+        "primaryKey": {
+          "autoGenerate": false,
+          "columnNames": [
+            "id"
+          ]
+        },
+        "indices": [
+          {
+            "name": "index_biomarker_snapshots_capturedAt",
+            "unique": false,
+            "columnNames": [
+              "capturedAt"
+            ],
+            "orders": [],
+            "createSql": "CREATE INDEX IF NOT EXISTS `index_biomarker_snapshots_capturedAt` ON `${TABLE_NAME}` (`capturedAt`)"
+          }
+        ]
+      },
+      {
+        "tableName": "supplement_logs",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`id` TEXT NOT NULL, `timestamp` INTEGER NOT NULL, `stackType` TEXT NOT NULL, `notes` TEXT, `skippedItems` TEXT NOT NULL, PRIMARY KEY(`id`))",
+        "fields": [
+          {
+            "fieldPath": "id",
+            "columnName": "id",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "timestamp",
+            "columnName": "timestamp",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "stackType",
+            "columnName": "stackType",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "notes",
+            "columnName": "notes",
+            "affinity": "TEXT"
+          },
+          {
+            "fieldPath": "skippedItems",
+            "columnName": "skippedItems",
+            "affinity": "TEXT",
+            "notNull": true
+          }
+        ],
+        "primaryKey": {
+          "autoGenerate": false,
+          "columnNames": [
+            "id"
+          ]
+        }
+      },
+      {
+        "tableName": "calendar_cache",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`date` TEXT NOT NULL, `shiftCode` TEXT NOT NULL, `rawCalendarText` TEXT NOT NULL, `workWindowStart` TEXT, `workWindowEnd` TEXT, `sleepWindowStart` TEXT, `sleepWindowEnd` TEXT, `availableMinutesEstimate` INTEGER NOT NULL, `syncedAt` INTEGER NOT NULL, PRIMARY KEY(`date`))",
+        "fields": [
+          {
+            "fieldPath": "date",
+            "columnName": "date",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "shiftCode",
+            "columnName": "shiftCode",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "rawCalendarText",
+            "columnName": "rawCalendarText",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "workWindowStart",
+            "columnName": "workWindowStart",
+            "affinity": "TEXT"
+          },
+          {
+            "fieldPath": "workWindowEnd",
+            "columnName": "workWindowEnd",
+            "affinity": "TEXT"
+          },
+          {
+            "fieldPath": "sleepWindowStart",
+            "columnName": "sleepWindowStart",
+            "affinity": "TEXT"
+          },
+          {
+            "fieldPath": "sleepWindowEnd",
+            "columnName": "sleepWindowEnd",
+            "affinity": "TEXT"
+          },
+          {
+            "fieldPath": "availableMinutesEstimate",
+            "columnName": "availableMinutesEstimate",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "syncedAt",
+            "columnName": "syncedAt",
+            "affinity": "INTEGER",
+            "notNull": true
+          }
+        ],
+        "primaryKey": {
+          "autoGenerate": false,
+          "columnNames": [
+            "date"
+          ]
+        }
+      },
+      {
+        "tableName": "calendar_events",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`id` TEXT NOT NULL, `date` TEXT NOT NULL, `summary` TEXT NOT NULL, `description` TEXT, `location` TEXT, `startMs` INTEGER NOT NULL, `endMs` INTEGER NOT NULL, `allDay` INTEGER NOT NULL, `syncedAt` INTEGER NOT NULL, PRIMARY KEY(`id`))",
+        "fields": [
+          {
+            "fieldPath": "id",
+            "columnName": "id",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "date",
+            "columnName": "date",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "summary",
+            "columnName": "summary",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "description",
+            "columnName": "description",
+            "affinity": "TEXT"
+          },
+          {
+            "fieldPath": "location",
+            "columnName": "location",
+            "affinity": "TEXT"
+          },
+          {
+            "fieldPath": "startMs",
+            "columnName": "startMs",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "endMs",
+            "columnName": "endMs",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "allDay",
+            "columnName": "allDay",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "syncedAt",
+            "columnName": "syncedAt",
+            "affinity": "INTEGER",
+            "notNull": true
+          }
+        ],
+        "primaryKey": {
+          "autoGenerate": false,
+          "columnNames": [
+            "id"
+          ]
+        }
+      },
+      {
+        "tableName": "ki_triggers",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`id` TEXT NOT NULL, `name` TEXT NOT NULL, `condition` TEXT NOT NULL, `proposedAction` TEXT NOT NULL, `isActive` INTEGER NOT NULL, `createdAt` INTEGER NOT NULL, `proposedAt` INTEGER NOT NULL, `approvedAt` INTEGER, `triggerCount` INTEGER NOT NULL, `lastTriggeredAt` INTEGER, PRIMARY KEY(`id`))",
+        "fields": [
+          {
+            "fieldPath": "id",
+            "columnName": "id",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "name",
+            "columnName": "name",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "condition",
+            "columnName": "condition",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "proposedAction",
+            "columnName": "proposedAction",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "isActive",
+            "columnName": "isActive",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "createdAt",
+            "columnName": "createdAt",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "proposedAt",
+            "columnName": "proposedAt",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "approvedAt",
+            "columnName": "approvedAt",
+            "affinity": "INTEGER"
+          },
+          {
+            "fieldPath": "triggerCount",
+            "columnName": "triggerCount",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "lastTriggeredAt",
+            "columnName": "lastTriggeredAt",
+            "affinity": "INTEGER"
+          }
+        ],
+        "primaryKey": {
+          "autoGenerate": false,
+          "columnNames": [
+            "id"
+          ]
+        }
+      },
+      {
+        "tableName": "genie_codex_versions",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`id` TEXT NOT NULL, `content` TEXT NOT NULL, `createdAt` INTEGER NOT NULL, `basedOnEntryIds` TEXT NOT NULL, `basedOnInsightIds` TEXT NOT NULL, `basedOnMemoryIds` TEXT NOT NULL, PRIMARY KEY(`id`))",
+        "fields": [
+          {
+            "fieldPath": "id",
+            "columnName": "id",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "content",
+            "columnName": "content",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "createdAt",
+            "columnName": "createdAt",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "basedOnEntryIds",
+            "columnName": "basedOnEntryIds",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "basedOnInsightIds",
+            "columnName": "basedOnInsightIds",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "basedOnMemoryIds",
+            "columnName": "basedOnMemoryIds",
+            "affinity": "TEXT",
+            "notNull": true
+          }
+        ],
+        "primaryKey": {
+          "autoGenerate": false,
+          "columnNames": [
+            "id"
+          ]
+        }
+      },
+      {
+        "tableName": "whoop_workouts",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`id` TEXT NOT NULL, `dateKey` TEXT NOT NULL, `startMs` INTEGER NOT NULL, `endMs` INTEGER NOT NULL, `sportId` INTEGER, `sportName` TEXT, `strain` REAL, `kilojoule` REAL, `averageHeartRate` INTEGER, `maxHeartRate` INTEGER, `percentRecorded` REAL, `distanceMeter` REAL, `altitudeGainMeter` REAL, `zoneZeroMilli` INTEGER, `zoneOneMilli` INTEGER, `zoneTwoMilli` INTEGER, `zoneThreeMilli` INTEGER, `zoneFourMilli` INTEGER, `zoneFiveMilli` INTEGER, `createdAt` INTEGER NOT NULL, PRIMARY KEY(`id`))",
+        "fields": [
+          {
+            "fieldPath": "id",
+            "columnName": "id",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "dateKey",
+            "columnName": "dateKey",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "startMs",
+            "columnName": "startMs",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "endMs",
+            "columnName": "endMs",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "sportId",
+            "columnName": "sportId",
+            "affinity": "INTEGER"
+          },
+          {
+            "fieldPath": "sportName",
+            "columnName": "sportName",
+            "affinity": "TEXT"
+          },
+          {
+            "fieldPath": "strain",
+            "columnName": "strain",
+            "affinity": "REAL"
+          },
+          {
+            "fieldPath": "kilojoule",
+            "columnName": "kilojoule",
+            "affinity": "REAL"
+          },
+          {
+            "fieldPath": "averageHeartRate",
+            "columnName": "averageHeartRate",
+            "affinity": "INTEGER"
+          },
+          {
+            "fieldPath": "maxHeartRate",
+            "columnName": "maxHeartRate",
+            "affinity": "INTEGER"
+          },
+          {
+            "fieldPath": "percentRecorded",
+            "columnName": "percentRecorded",
+            "affinity": "REAL"
+          },
+          {
+            "fieldPath": "distanceMeter",
+            "columnName": "distanceMeter",
+            "affinity": "REAL"
+          },
+          {
+            "fieldPath": "altitudeGainMeter",
+            "columnName": "altitudeGainMeter",
+            "affinity": "REAL"
+          },
+          {
+            "fieldPath": "zoneZeroMilli",
+            "columnName": "zoneZeroMilli",
+            "affinity": "INTEGER"
+          },
+          {
+            "fieldPath": "zoneOneMilli",
+            "columnName": "zoneOneMilli",
+            "affinity": "INTEGER"
+          },
+          {
+            "fieldPath": "zoneTwoMilli",
+            "columnName": "zoneTwoMilli",
+            "affinity": "INTEGER"
+          },
+          {
+            "fieldPath": "zoneThreeMilli",
+            "columnName": "zoneThreeMilli",
+            "affinity": "INTEGER"
+          },
+          {
+            "fieldPath": "zoneFourMilli",
+            "columnName": "zoneFourMilli",
+            "affinity": "INTEGER"
+          },
+          {
+            "fieldPath": "zoneFiveMilli",
+            "columnName": "zoneFiveMilli",
+            "affinity": "INTEGER"
+          },
+          {
+            "fieldPath": "createdAt",
+            "columnName": "createdAt",
+            "affinity": "INTEGER",
+            "notNull": true
+          }
+        ],
+        "primaryKey": {
+          "autoGenerate": false,
+          "columnNames": [
+            "id"
+          ]
+        },
+        "indices": [
+          {
+            "name": "index_whoop_workouts_startMs",
+            "unique": false,
+            "columnNames": [
+              "startMs"
+            ],
+            "orders": [],
+            "createSql": "CREATE INDEX IF NOT EXISTS `index_whoop_workouts_startMs` ON `${TABLE_NAME}` (`startMs`)"
+          },
+          {
+            "name": "index_whoop_workouts_dateKey",
+            "unique": false,
+            "columnNames": [
+              "dateKey"
+            ],
+            "orders": [],
+            "createSql": "CREATE INDEX IF NOT EXISTS `index_whoop_workouts_dateKey` ON `${TABLE_NAME}` (`dateKey`)"
+          }
+        ]
+      },
+      {
+        "tableName": "amazfit_daily",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`date` TEXT NOT NULL, `capturedAt` INTEGER NOT NULL, `paiScore` INTEGER, `bioChargeScore` INTEGER, `skinTempCelsius` REAL, `spo2Percent` REAL, `stressScore` INTEGER, `respiratoryRate` REAL, `steps` INTEGER, `distanceMeters` REAL, `activeCalories` REAL, `activeMinutes` INTEGER, `restingHeartRate` INTEGER, `averageHeartRate` INTEGER, `hrvMs` REAL, `sleepTotalMinutes` INTEGER, `sleepDeepMinutes` INTEGER, `sleepLightMinutes` INTEGER, `sleepWakeMinutes` INTEGER, `sleepRemMinutes` INTEGER, `sleepScore` INTEGER, `createdAt` INTEGER NOT NULL, PRIMARY KEY(`date`))",
+        "fields": [
+          {
+            "fieldPath": "date",
+            "columnName": "date",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "capturedAt",
+            "columnName": "capturedAt",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "paiScore",
+            "columnName": "paiScore",
+            "affinity": "INTEGER"
+          },
+          {
+            "fieldPath": "bioChargeScore",
+            "columnName": "bioChargeScore",
+            "affinity": "INTEGER"
+          },
+          {
+            "fieldPath": "skinTempCelsius",
+            "columnName": "skinTempCelsius",
+            "affinity": "REAL"
+          },
+          {
+            "fieldPath": "spo2Percent",
+            "columnName": "spo2Percent",
+            "affinity": "REAL"
+          },
+          {
+            "fieldPath": "stressScore",
+            "columnName": "stressScore",
+            "affinity": "INTEGER"
+          },
+          {
+            "fieldPath": "respiratoryRate",
+            "columnName": "respiratoryRate",
+            "affinity": "REAL"
+          },
+          {
+            "fieldPath": "steps",
+            "columnName": "steps",
+            "affinity": "INTEGER"
+          },
+          {
+            "fieldPath": "distanceMeters",
+            "columnName": "distanceMeters",
+            "affinity": "REAL"
+          },
+          {
+            "fieldPath": "activeCalories",
+            "columnName": "activeCalories",
+            "affinity": "REAL"
+          },
+          {
+            "fieldPath": "activeMinutes",
+            "columnName": "activeMinutes",
+            "affinity": "INTEGER"
+          },
+          {
+            "fieldPath": "restingHeartRate",
+            "columnName": "restingHeartRate",
+            "affinity": "INTEGER"
+          },
+          {
+            "fieldPath": "averageHeartRate",
+            "columnName": "averageHeartRate",
+            "affinity": "INTEGER"
+          },
+          {
+            "fieldPath": "hrvMs",
+            "columnName": "hrvMs",
+            "affinity": "REAL"
+          },
+          {
+            "fieldPath": "sleepTotalMinutes",
+            "columnName": "sleepTotalMinutes",
+            "affinity": "INTEGER"
+          },
+          {
+            "fieldPath": "sleepDeepMinutes",
+            "columnName": "sleepDeepMinutes",
+            "affinity": "INTEGER"
+          },
+          {
+            "fieldPath": "sleepLightMinutes",
+            "columnName": "sleepLightMinutes",
+            "affinity": "INTEGER"
+          },
+          {
+            "fieldPath": "sleepWakeMinutes",
+            "columnName": "sleepWakeMinutes",
+            "affinity": "INTEGER"
+          },
+          {
+            "fieldPath": "sleepRemMinutes",
+            "columnName": "sleepRemMinutes",
+            "affinity": "INTEGER"
+          },
+          {
+            "fieldPath": "sleepScore",
+            "columnName": "sleepScore",
+            "affinity": "INTEGER"
+          },
+          {
+            "fieldPath": "createdAt",
+            "columnName": "createdAt",
+            "affinity": "INTEGER",
+            "notNull": true
+          }
+        ],
+        "primaryKey": {
+          "autoGenerate": false,
+          "columnNames": [
+            "date"
+          ]
+        },
+        "indices": [
+          {
+            "name": "index_amazfit_daily_capturedAt",
+            "unique": false,
+            "columnNames": [
+              "capturedAt"
+            ],
+            "orders": [],
+            "createSql": "CREATE INDEX IF NOT EXISTS `index_amazfit_daily_capturedAt` ON `${TABLE_NAME}` (`capturedAt`)"
+          }
+        ]
+      },
+      {
+        "tableName": "amazfit_workouts",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`trackId` TEXT NOT NULL, `dateKey` TEXT NOT NULL, `startMs` INTEGER NOT NULL, `endMs` INTEGER NOT NULL, `durationSeconds` INTEGER, `sportType` INTEGER, `sportName` TEXT, `distanceMeters` REAL, `avgPaceSecPerKm` REAL, `maxPaceSecPerKm` REAL, `avgSpeedKmh` REAL, `maxSpeedKmh` REAL, `calories` REAL, `avgHeartRate` INTEGER, `maxHeartRate` INTEGER, `gpsTrackJson` TEXT, `heartRateSeriesJson` TEXT, `paceSeriesJson` TEXT, `splitsJson` TEXT, `altitudeGainMeters` REAL, `altitudeLossMeters` REAL, `trainingEffectAerobic` REAL, `trainingEffectAnaerobic` REAL, `vo2Max` REAL, `cadence` INTEGER, `strideLengthCm` INTEGER, `recoveryTimeHours` INTEGER, `skinTempCelsius` REAL, `swolf` INTEGER, `poolLaps` INTEGER, `poolLengthMeters` REAL, `source` TEXT, `city` TEXT, `paceStreamJson` TEXT, `createdAt` INTEGER NOT NULL, PRIMARY KEY(`trackId`))",
+        "fields": [
+          {
+            "fieldPath": "trackId",
+            "columnName": "trackId",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "dateKey",
+            "columnName": "dateKey",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "startMs",
+            "columnName": "startMs",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "endMs",
+            "columnName": "endMs",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "durationSeconds",
+            "columnName": "durationSeconds",
+            "affinity": "INTEGER"
+          },
+          {
+            "fieldPath": "sportType",
+            "columnName": "sportType",
+            "affinity": "INTEGER"
+          },
+          {
+            "fieldPath": "sportName",
+            "columnName": "sportName",
+            "affinity": "TEXT"
+          },
+          {
+            "fieldPath": "distanceMeters",
+            "columnName": "distanceMeters",
+            "affinity": "REAL"
+          },
+          {
+            "fieldPath": "avgPaceSecPerKm",
+            "columnName": "avgPaceSecPerKm",
+            "affinity": "REAL"
+          },
+          {
+            "fieldPath": "maxPaceSecPerKm",
+            "columnName": "maxPaceSecPerKm",
+            "affinity": "REAL"
+          },
+          {
+            "fieldPath": "avgSpeedKmh",
+            "columnName": "avgSpeedKmh",
+            "affinity": "REAL"
+          },
+          {
+            "fieldPath": "maxSpeedKmh",
+            "columnName": "maxSpeedKmh",
+            "affinity": "REAL"
+          },
+          {
+            "fieldPath": "calories",
+            "columnName": "calories",
+            "affinity": "REAL"
+          },
+          {
+            "fieldPath": "avgHeartRate",
+            "columnName": "avgHeartRate",
+            "affinity": "INTEGER"
+          },
+          {
+            "fieldPath": "maxHeartRate",
+            "columnName": "maxHeartRate",
+            "affinity": "INTEGER"
+          },
+          {
+            "fieldPath": "gpsTrackJson",
+            "columnName": "gpsTrackJson",
+            "affinity": "TEXT"
+          },
+          {
+            "fieldPath": "heartRateSeriesJson",
+            "columnName": "heartRateSeriesJson",
+            "affinity": "TEXT"
+          },
+          {
+            "fieldPath": "paceSeriesJson",
+            "columnName": "paceSeriesJson",
+            "affinity": "TEXT"
+          },
+          {
+            "fieldPath": "splitsJson",
+            "columnName": "splitsJson",
+            "affinity": "TEXT"
+          },
+          {
+            "fieldPath": "altitudeGainMeters",
+            "columnName": "altitudeGainMeters",
+            "affinity": "REAL"
+          },
+          {
+            "fieldPath": "altitudeLossMeters",
+            "columnName": "altitudeLossMeters",
+            "affinity": "REAL"
+          },
+          {
+            "fieldPath": "trainingEffectAerobic",
+            "columnName": "trainingEffectAerobic",
+            "affinity": "REAL"
+          },
+          {
+            "fieldPath": "trainingEffectAnaerobic",
+            "columnName": "trainingEffectAnaerobic",
+            "affinity": "REAL"
+          },
+          {
+            "fieldPath": "vo2Max",
+            "columnName": "vo2Max",
+            "affinity": "REAL"
+          },
+          {
+            "fieldPath": "cadence",
+            "columnName": "cadence",
+            "affinity": "INTEGER"
+          },
+          {
+            "fieldPath": "strideLengthCm",
+            "columnName": "strideLengthCm",
+            "affinity": "INTEGER"
+          },
+          {
+            "fieldPath": "recoveryTimeHours",
+            "columnName": "recoveryTimeHours",
+            "affinity": "INTEGER"
+          },
+          {
+            "fieldPath": "skinTempCelsius",
+            "columnName": "skinTempCelsius",
+            "affinity": "REAL"
+          },
+          {
+            "fieldPath": "swolf",
+            "columnName": "swolf",
+            "affinity": "INTEGER"
+          },
+          {
+            "fieldPath": "poolLaps",
+            "columnName": "poolLaps",
+            "affinity": "INTEGER"
+          },
+          {
+            "fieldPath": "poolLengthMeters",
+            "columnName": "poolLengthMeters",
+            "affinity": "REAL"
+          },
+          {
+            "fieldPath": "source",
+            "columnName": "source",
+            "affinity": "TEXT"
+          },
+          {
+            "fieldPath": "city",
+            "columnName": "city",
+            "affinity": "TEXT"
+          },
+          {
+            "fieldPath": "paceStreamJson",
+            "columnName": "paceStreamJson",
+            "affinity": "TEXT"
+          },
+          {
+            "fieldPath": "createdAt",
+            "columnName": "createdAt",
+            "affinity": "INTEGER",
+            "notNull": true
+          }
+        ],
+        "primaryKey": {
+          "autoGenerate": false,
+          "columnNames": [
+            "trackId"
+          ]
+        },
+        "indices": [
+          {
+            "name": "index_amazfit_workouts_startMs",
+            "unique": false,
+            "columnNames": [
+              "startMs"
+            ],
+            "orders": [],
+            "createSql": "CREATE INDEX IF NOT EXISTS `index_amazfit_workouts_startMs` ON `${TABLE_NAME}` (`startMs`)"
+          },
+          {
+            "name": "index_amazfit_workouts_dateKey",
+            "unique": false,
+            "columnNames": [
+              "dateKey"
+            ],
+            "orders": [],
+            "createSql": "CREATE INDEX IF NOT EXISTS `index_amazfit_workouts_dateKey` ON `${TABLE_NAME}` (`dateKey`)"
+          }
+        ]
+      },
+      {
+        "tableName": "oura_daily_readiness",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`day` TEXT NOT NULL, `capturedAt` INTEGER NOT NULL, `score` INTEGER, `temperatureDeviation` REAL, `temperatureTrendDeviation` REAL, `activityBalance` INTEGER, `bodyTemperature` INTEGER, `hrvBalance` INTEGER, `previousDayActivity` INTEGER, `previousNight` INTEGER, `recoveryIndex` INTEGER, `restingHeartRate` INTEGER, `sleepBalance` INTEGER, `createdAt` INTEGER NOT NULL, PRIMARY KEY(`day`))",
+        "fields": [
+          {
+            "fieldPath": "day",
+            "columnName": "day",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "capturedAt",
+            "columnName": "capturedAt",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "score",
+            "columnName": "score",
+            "affinity": "INTEGER"
+          },
+          {
+            "fieldPath": "temperatureDeviation",
+            "columnName": "temperatureDeviation",
+            "affinity": "REAL"
+          },
+          {
+            "fieldPath": "temperatureTrendDeviation",
+            "columnName": "temperatureTrendDeviation",
+            "affinity": "REAL"
+          },
+          {
+            "fieldPath": "activityBalance",
+            "columnName": "activityBalance",
+            "affinity": "INTEGER"
+          },
+          {
+            "fieldPath": "bodyTemperature",
+            "columnName": "bodyTemperature",
+            "affinity": "INTEGER"
+          },
+          {
+            "fieldPath": "hrvBalance",
+            "columnName": "hrvBalance",
+            "affinity": "INTEGER"
+          },
+          {
+            "fieldPath": "previousDayActivity",
+            "columnName": "previousDayActivity",
+            "affinity": "INTEGER"
+          },
+          {
+            "fieldPath": "previousNight",
+            "columnName": "previousNight",
+            "affinity": "INTEGER"
+          },
+          {
+            "fieldPath": "recoveryIndex",
+            "columnName": "recoveryIndex",
+            "affinity": "INTEGER"
+          },
+          {
+            "fieldPath": "restingHeartRate",
+            "columnName": "restingHeartRate",
+            "affinity": "INTEGER"
+          },
+          {
+            "fieldPath": "sleepBalance",
+            "columnName": "sleepBalance",
+            "affinity": "INTEGER"
+          },
+          {
+            "fieldPath": "createdAt",
+            "columnName": "createdAt",
+            "affinity": "INTEGER",
+            "notNull": true
+          }
+        ],
+        "primaryKey": {
+          "autoGenerate": false,
+          "columnNames": [
+            "day"
+          ]
+        }
+      },
+      {
+        "tableName": "oura_daily_sleep",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`day` TEXT NOT NULL, `capturedAt` INTEGER NOT NULL, `score` INTEGER, `deepSleepScore` INTEGER, `efficiencyScore` INTEGER, `latencyScore` INTEGER, `remSleepScore` INTEGER, `restfulnessScore` INTEGER, `timingScore` INTEGER, `totalSleepScore` INTEGER, `createdAt` INTEGER NOT NULL, PRIMARY KEY(`day`))",
+        "fields": [
+          {
+            "fieldPath": "day",
+            "columnName": "day",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "capturedAt",
+            "columnName": "capturedAt",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "score",
+            "columnName": "score",
+            "affinity": "INTEGER"
+          },
+          {
+            "fieldPath": "deepSleepScore",
+            "columnName": "deepSleepScore",
+            "affinity": "INTEGER"
+          },
+          {
+            "fieldPath": "efficiencyScore",
+            "columnName": "efficiencyScore",
+            "affinity": "INTEGER"
+          },
+          {
+            "fieldPath": "latencyScore",
+            "columnName": "latencyScore",
+            "affinity": "INTEGER"
+          },
+          {
+            "fieldPath": "remSleepScore",
+            "columnName": "remSleepScore",
+            "affinity": "INTEGER"
+          },
+          {
+            "fieldPath": "restfulnessScore",
+            "columnName": "restfulnessScore",
+            "affinity": "INTEGER"
+          },
+          {
+            "fieldPath": "timingScore",
+            "columnName": "timingScore",
+            "affinity": "INTEGER"
+          },
+          {
+            "fieldPath": "totalSleepScore",
+            "columnName": "totalSleepScore",
+            "affinity": "INTEGER"
+          },
+          {
+            "fieldPath": "createdAt",
+            "columnName": "createdAt",
+            "affinity": "INTEGER",
+            "notNull": true
+          }
+        ],
+        "primaryKey": {
+          "autoGenerate": false,
+          "columnNames": [
+            "day"
+          ]
+        }
+      },
+      {
+        "tableName": "oura_daily_activity",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`day` TEXT NOT NULL, `capturedAt` INTEGER NOT NULL, `score` INTEGER, `activeCalories` INTEGER, `totalCalories` INTEGER, `targetCalories` INTEGER, `steps` INTEGER, `walkingDistanceMeters` INTEGER, `highActivitySeconds` INTEGER, `mediumActivitySeconds` INTEGER, `lowActivitySeconds` INTEGER, `nonWearSeconds` INTEGER, `restingSeconds` INTEGER, `sedentarySeconds` INTEGER, `inactivityAlerts` INTEGER, `createdAt` INTEGER NOT NULL, PRIMARY KEY(`day`))",
+        "fields": [
+          {
+            "fieldPath": "day",
+            "columnName": "day",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "capturedAt",
+            "columnName": "capturedAt",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "score",
+            "columnName": "score",
+            "affinity": "INTEGER"
+          },
+          {
+            "fieldPath": "activeCalories",
+            "columnName": "activeCalories",
+            "affinity": "INTEGER"
+          },
+          {
+            "fieldPath": "totalCalories",
+            "columnName": "totalCalories",
+            "affinity": "INTEGER"
+          },
+          {
+            "fieldPath": "targetCalories",
+            "columnName": "targetCalories",
+            "affinity": "INTEGER"
+          },
+          {
+            "fieldPath": "steps",
+            "columnName": "steps",
+            "affinity": "INTEGER"
+          },
+          {
+            "fieldPath": "walkingDistanceMeters",
+            "columnName": "walkingDistanceMeters",
+            "affinity": "INTEGER"
+          },
+          {
+            "fieldPath": "highActivitySeconds",
+            "columnName": "highActivitySeconds",
+            "affinity": "INTEGER"
+          },
+          {
+            "fieldPath": "mediumActivitySeconds",
+            "columnName": "mediumActivitySeconds",
+            "affinity": "INTEGER"
+          },
+          {
+            "fieldPath": "lowActivitySeconds",
+            "columnName": "lowActivitySeconds",
+            "affinity": "INTEGER"
+          },
+          {
+            "fieldPath": "nonWearSeconds",
+            "columnName": "nonWearSeconds",
+            "affinity": "INTEGER"
+          },
+          {
+            "fieldPath": "restingSeconds",
+            "columnName": "restingSeconds",
+            "affinity": "INTEGER"
+          },
+          {
+            "fieldPath": "sedentarySeconds",
+            "columnName": "sedentarySeconds",
+            "affinity": "INTEGER"
+          },
+          {
+            "fieldPath": "inactivityAlerts",
+            "columnName": "inactivityAlerts",
+            "affinity": "INTEGER"
+          },
+          {
+            "fieldPath": "createdAt",
+            "columnName": "createdAt",
+            "affinity": "INTEGER",
+            "notNull": true
+          }
+        ],
+        "primaryKey": {
+          "autoGenerate": false,
+          "columnNames": [
+            "day"
+          ]
+        }
+      },
+      {
+        "tableName": "oura_daily_resilience",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`day` TEXT NOT NULL, `capturedAt` INTEGER NOT NULL, `level` TEXT, `sleepRecovery` REAL, `daytimeRecovery` REAL, `stress` REAL, `createdAt` INTEGER NOT NULL, PRIMARY KEY(`day`))",
+        "fields": [
+          {
+            "fieldPath": "day",
+            "columnName": "day",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "capturedAt",
+            "columnName": "capturedAt",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "level",
+            "columnName": "level",
+            "affinity": "TEXT"
+          },
+          {
+            "fieldPath": "sleepRecovery",
+            "columnName": "sleepRecovery",
+            "affinity": "REAL"
+          },
+          {
+            "fieldPath": "daytimeRecovery",
+            "columnName": "daytimeRecovery",
+            "affinity": "REAL"
+          },
+          {
+            "fieldPath": "stress",
+            "columnName": "stress",
+            "affinity": "REAL"
+          },
+          {
+            "fieldPath": "createdAt",
+            "columnName": "createdAt",
+            "affinity": "INTEGER",
+            "notNull": true
+          }
+        ],
+        "primaryKey": {
+          "autoGenerate": false,
+          "columnNames": [
+            "day"
+          ]
+        }
+      },
+      {
+        "tableName": "oura_sleep_detail",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`id` TEXT NOT NULL, `day` TEXT NOT NULL, `capturedAt` INTEGER NOT NULL, `bedtimeStart` TEXT, `bedtimeEnd` TEXT, `type` TEXT, `totalSleepSeconds` INTEGER, `timeInBedSeconds` INTEGER, `awakeSeconds` INTEGER, `lightSeconds` INTEGER, `deepSeconds` INTEGER, `remSeconds` INTEGER, `efficiency` INTEGER, `latencySeconds` INTEGER, `restlessPeriods` INTEGER, `averageBreath` REAL, `averageHeartRate` REAL, `averageHrv` INTEGER, `lowestHeartRate` INTEGER, `sleepPhase5Min` TEXT, `createdAt` INTEGER NOT NULL, PRIMARY KEY(`id`))",
+        "fields": [
+          {
+            "fieldPath": "id",
+            "columnName": "id",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "day",
+            "columnName": "day",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "capturedAt",
+            "columnName": "capturedAt",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "bedtimeStart",
+            "columnName": "bedtimeStart",
+            "affinity": "TEXT"
+          },
+          {
+            "fieldPath": "bedtimeEnd",
+            "columnName": "bedtimeEnd",
+            "affinity": "TEXT"
+          },
+          {
+            "fieldPath": "type",
+            "columnName": "type",
+            "affinity": "TEXT"
+          },
+          {
+            "fieldPath": "totalSleepSeconds",
+            "columnName": "totalSleepSeconds",
+            "affinity": "INTEGER"
+          },
+          {
+            "fieldPath": "timeInBedSeconds",
+            "columnName": "timeInBedSeconds",
+            "affinity": "INTEGER"
+          },
+          {
+            "fieldPath": "awakeSeconds",
+            "columnName": "awakeSeconds",
+            "affinity": "INTEGER"
+          },
+          {
+            "fieldPath": "lightSeconds",
+            "columnName": "lightSeconds",
+            "affinity": "INTEGER"
+          },
+          {
+            "fieldPath": "deepSeconds",
+            "columnName": "deepSeconds",
+            "affinity": "INTEGER"
+          },
+          {
+            "fieldPath": "remSeconds",
+            "columnName": "remSeconds",
+            "affinity": "INTEGER"
+          },
+          {
+            "fieldPath": "efficiency",
+            "columnName": "efficiency",
+            "affinity": "INTEGER"
+          },
+          {
+            "fieldPath": "latencySeconds",
+            "columnName": "latencySeconds",
+            "affinity": "INTEGER"
+          },
+          {
+            "fieldPath": "restlessPeriods",
+            "columnName": "restlessPeriods",
+            "affinity": "INTEGER"
+          },
+          {
+            "fieldPath": "averageBreath",
+            "columnName": "averageBreath",
+            "affinity": "REAL"
+          },
+          {
+            "fieldPath": "averageHeartRate",
+            "columnName": "averageHeartRate",
+            "affinity": "REAL"
+          },
+          {
+            "fieldPath": "averageHrv",
+            "columnName": "averageHrv",
+            "affinity": "INTEGER"
+          },
+          {
+            "fieldPath": "lowestHeartRate",
+            "columnName": "lowestHeartRate",
+            "affinity": "INTEGER"
+          },
+          {
+            "fieldPath": "sleepPhase5Min",
+            "columnName": "sleepPhase5Min",
+            "affinity": "TEXT"
+          },
+          {
+            "fieldPath": "createdAt",
+            "columnName": "createdAt",
+            "affinity": "INTEGER",
+            "notNull": true
+          }
+        ],
+        "primaryKey": {
+          "autoGenerate": false,
+          "columnNames": [
+            "id"
+          ]
+        },
+        "indices": [
+          {
+            "name": "index_oura_sleep_detail_day",
+            "unique": false,
+            "columnNames": [
+              "day"
+            ],
+            "orders": [],
+            "createSql": "CREATE INDEX IF NOT EXISTS `index_oura_sleep_detail_day` ON `${TABLE_NAME}` (`day`)"
+          }
+        ]
+      },
+      {
+        "tableName": "oura_personal_info",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`id` INTEGER NOT NULL, `ouraUserId` TEXT, `age` INTEGER, `weightKg` REAL, `heightMeters` REAL, `biologicalSex` TEXT, `email` TEXT, `capturedAt` INTEGER NOT NULL, PRIMARY KEY(`id`))",
+        "fields": [
+          {
+            "fieldPath": "id",
+            "columnName": "id",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "ouraUserId",
+            "columnName": "ouraUserId",
+            "affinity": "TEXT"
+          },
+          {
+            "fieldPath": "age",
+            "columnName": "age",
+            "affinity": "INTEGER"
+          },
+          {
+            "fieldPath": "weightKg",
+            "columnName": "weightKg",
+            "affinity": "REAL"
+          },
+          {
+            "fieldPath": "heightMeters",
+            "columnName": "heightMeters",
+            "affinity": "REAL"
+          },
+          {
+            "fieldPath": "biologicalSex",
+            "columnName": "biologicalSex",
+            "affinity": "TEXT"
+          },
+          {
+            "fieldPath": "email",
+            "columnName": "email",
+            "affinity": "TEXT"
+          },
+          {
+            "fieldPath": "capturedAt",
+            "columnName": "capturedAt",
+            "affinity": "INTEGER",
+            "notNull": true
+          }
+        ],
+        "primaryKey": {
+          "autoGenerate": false,
+          "columnNames": [
+            "id"
+          ]
+        }
+      },
+      {
+        "tableName": "hc_value_cache",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`metric` TEXT NOT NULL, `timestampMs` INTEGER NOT NULL, `value` REAL NOT NULL, `createdAt` INTEGER NOT NULL, PRIMARY KEY(`metric`, `timestampMs`))",
+        "fields": [
+          {
+            "fieldPath": "metric",
+            "columnName": "metric",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "timestampMs",
+            "columnName": "timestampMs",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "value",
+            "columnName": "value",
+            "affinity": "REAL",
+            "notNull": true
+          },
+          {
+            "fieldPath": "createdAt",
+            "columnName": "createdAt",
+            "affinity": "INTEGER",
+            "notNull": true
+          }
+        ],
+        "primaryKey": {
+          "autoGenerate": false,
+          "columnNames": [
+            "metric",
+            "timestampMs"
+          ]
+        },
+        "indices": [
+          {
+            "name": "index_hc_value_cache_metric",
+            "unique": false,
+            "columnNames": [
+              "metric"
+            ],
+            "orders": [],
+            "createSql": "CREATE INDEX IF NOT EXISTS `index_hc_value_cache_metric` ON `${TABLE_NAME}` (`metric`)"
+          }
+        ]
+      }
+    ],
+    "setupQueries": [
+      "CREATE TABLE IF NOT EXISTS room_master_table (id INTEGER PRIMARY KEY,identity_hash TEXT)",
+      "INSERT OR REPLACE INTO room_master_table (id,identity_hash) VALUES(42, '266aceed176a88a1e338870ca30a2ed8')"
+    ]
+  }
+}

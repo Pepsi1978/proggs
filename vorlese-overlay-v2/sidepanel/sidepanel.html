@@ -1,0 +1,130 @@
+<!DOCTYPE html>
+<html lang="de">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <link rel="stylesheet" href="sidepanel.css" />
+    <title>Vorlesen — Einstellungen</title>
+  </head>
+  <body>
+    <header class="sp-header">
+      <svg class="sp-logo" viewBox="0 0 24 24" width="20" height="20" aria-hidden="true">
+        <rect x="1" y="1" width="22" height="22" rx="6" fill="#f97316" />
+        <path
+          fill="#fff"
+          transform="translate(2.5 2.5) scale(0.79)"
+          d="M3 9v6h4l5 5V4L7 9H3zm13.5 3a4.5 4.5 0 0 0-2.5-4.03v8.06A4.5 4.5 0 0 0 16.5 12zM14 3.23v2.06a7 7 0 0 1 0 13.42v2.06a9 9 0 0 0 0-17.54z"
+        />
+      </svg>
+      <h1>Vorlesen — Einstellungen</h1>
+    </header>
+
+    <main class="sp-body">
+      <!-- Aktuelle Webseite -->
+      <section class="sp-section sp-page-toggle">
+        <label class="sp-check-row">
+          <input type="checkbox" class="sp-check" id="page-enabled" />
+          <span>Overlay auf dieser Webseite aktiv</span>
+        </label>
+        <p class="sp-help" id="page-enabled-help">Aktive Seite wird ermittelt…</p>
+      </section>
+
+      <!-- Aktive Engine -->
+      <section class="sp-section">
+        <span class="sp-label">Aktive Stimme (nutzt der Lautsprecher)</span>
+        <div class="sp-engine-switch">
+          <button class="sp-engine-opt" type="button" data-engine="edge">Edge TTS</button>
+          <button class="sp-engine-opt" type="button" data-engine="google">Google Chirp 3 HD</button>
+        </div>
+      </section>
+
+      <!-- Reiter -->
+      <div class="sp-tabs">
+        <button class="sp-tab" type="button" data-tab="edge">Edge TTS</button>
+        <button class="sp-tab" type="button" data-tab="google">Google Chirp 3 HD</button>
+      </div>
+
+      <!-- Edge-Seite -->
+      <div class="sp-tabpage" data-page="edge">
+        <section class="sp-section">
+          <span class="sp-label">Stimme</span>
+          <div class="sp-row">
+            <select class="sp-select" id="edge-voice"></select>
+            <button class="sp-star" type="button" id="edge-star" title="Diese Stimme mit Stern markieren">☆</button>
+          </div>
+        </section>
+        <section class="sp-section">
+          <span class="sp-label">Vorlese-Tempo</span>
+          <div class="sp-row">
+            <input class="sp-range" type="range" min="0.5" max="2" step="0.1" id="edge-rate" />
+            <span class="sp-range-val" id="edge-rate-val"></span>
+          </div>
+        </section>
+        <section class="sp-section">
+          <span class="sp-label">Tonhöhe (Halbtöne)</span>
+          <div class="sp-row">
+            <input class="sp-range" type="range" min="-50" max="50" step="1" id="edge-pitch" />
+            <span class="sp-range-val" id="edge-pitch-val"></span>
+          </div>
+        </section>
+        <button class="sp-test" type="button" id="edge-test">Test — Beispielsatz vorlesen</button>
+        <div class="sp-status" id="edge-status"></div>
+      </div>
+
+      <!-- Google-Seite -->
+      <div class="sp-tabpage" data-page="google">
+        <section class="sp-section">
+          <span class="sp-label">Google-Cloud-API-Key</span>
+          <input class="sp-input" type="password" autocomplete="off" spellcheck="false" placeholder="AIza…" id="google-key" />
+          <p class="sp-help">
+            Eigener Google-Cloud-Key mit aktivierter Text-to-Speech-API. Der Gemini-Key
+            funktioniert hier <b>nicht</b>.
+          </p>
+        </section>
+        <section class="sp-section">
+          <span class="sp-label">Stimme</span>
+          <div class="sp-row">
+            <select class="sp-select" id="google-voice" disabled></select>
+            <button class="sp-star" type="button" id="google-star" title="Diese Stimme mit Stern markieren">☆</button>
+          </div>
+        </section>
+        <section class="sp-section">
+          <span class="sp-label">Vorlese-Tempo</span>
+          <div class="sp-row">
+            <input class="sp-range" type="range" min="0.5" max="2" step="0.1" id="google-rate" />
+            <span class="sp-range-val" id="google-rate-val"></span>
+          </div>
+        </section>
+        <button class="sp-test" type="button" id="google-test">Test — Beispielsatz vorlesen</button>
+        <div class="sp-status" id="google-status"></div>
+      </div>
+
+      <!-- Overlay verschiebbar -->
+      <section class="sp-section">
+        <label class="sp-check-row">
+          <input type="checkbox" class="sp-check" id="draggable" />
+          <span>Overlay verschiebbar</span>
+        </label>
+        <p class="sp-help">
+          Wenn aktiviert, kannst du das Overlay mit der linken oder rechten Maustaste an
+          eine beliebige Stelle ziehen — es bleibt, wo du es loslässt. Häkchen wieder
+          entfernen: das Overlay springt an seinen Standardort zurück (angedockt).
+        </p>
+      </section>
+
+      <!-- Aktualisieren -->
+      <section class="sp-section">
+        <button class="sp-reload" type="button" id="reload">Auf neue Version aktualisieren</button>
+        <p class="sp-help">Installiert: <b id="version">…</b></p>
+        <p class="sp-help">
+          Lädt die Erweiterung mit der neuesten Version neu. API-Key, Stimme und Position
+          bleiben erhalten. Nutze das nach einem Update — NICHT die Erweiterung entfernen
+          und neu hinzufügen, das würde die Einstellungen löschen.
+        </p>
+      </section>
+    </main>
+
+    <script src="../settings/settings.js"></script>
+    <script src="sidepanel.js"></script>
+  </body>
+</html>

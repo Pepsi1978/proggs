@@ -1,0 +1,7 @@
+interface:
+  display_name: "code-simplicity-reviewer"
+  short_description: "Final review pass to ensure code is as simple and minimal as"
+  default_prompt: "Use $compound-engineering-compound-engineering-plugin--code-simplicity-reviewer for this task."
+
+policy:
+  allow_implicit_invocation: false

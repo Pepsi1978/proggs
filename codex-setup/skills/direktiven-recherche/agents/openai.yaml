@@ -1,0 +1,7 @@
+interface:
+  display_name: "direktiven-recherche"
+  short_description: "Research new directive ideas against current rules"
+  default_prompt: "Use $direktiven-recherche for this task."
+
+policy:
+  allow_implicit_invocation: false

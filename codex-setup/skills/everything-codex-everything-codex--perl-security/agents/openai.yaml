@@ -1,0 +1,7 @@
+interface:
+  display_name: "perl-security"
+  short_description: "Comprehensive Perl security covering taint mode, input"
+  default_prompt: "Use $everything-codex-everything-codex--perl-security for this task."
+
+policy:
+  allow_implicit_invocation: false

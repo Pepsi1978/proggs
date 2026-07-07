@@ -1,0 +1,7 @@
+interface:
+  display_name: "semgrep-rule-creator"
+  short_description: "Creates custom Semgrep rules for detecting security"
+  default_prompt: "Use $semgrep-rule-creator-trailofbits--semgrep-rule-creator for this task."
+
+policy:
+  allow_implicit_invocation: false

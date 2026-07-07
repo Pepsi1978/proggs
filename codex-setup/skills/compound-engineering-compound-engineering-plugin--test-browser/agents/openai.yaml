@@ -1,0 +1,7 @@
+interface:
+  display_name: "test-browser"
+  short_description: "Run browser tests on pages affected by current PR or branch"
+  default_prompt: "Use $compound-engineering-compound-engineering-plugin--test-browser for this task."
+
+policy:
+  allow_implicit_invocation: false

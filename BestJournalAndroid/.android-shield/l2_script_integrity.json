@@ -1,0 +1,5239 @@
+{
+ "bn": {
+  "totalStrings": 1087,
+  "totalPlurals": 12,
+  "totalArrays": 71,
+  "replacementChar": [],
+  "emptyStrings": [
+   "ai_prompt_language_override"
+  ],
+  "noTargetScript": [
+   {
+    "key": "app_name",
+    "val": "Best Journal"
+   },
+   {
+    "key": "label_premium",
+    "val": "Premium"
+   },
+   {
+    "key": "transcription_model_groq",
+    "val": "Groq Whisper Large V3 Turbo"
+   },
+   {
+    "key": "settings_premium_section",
+    "val": "Premium"
+   },
+   {
+    "key": "settings_about_version",
+    "val": "Best Journal V0.21.9"
+   },
+   {
+    "key": "json_key_overall_analysis",
+    "val": "samagrik_bishleshon"
+   },
+   {
+    "key": "json_key_top_actions",
+    "val": "mukhya_podokkhep"
+   },
+   {
+    "key": "json_key_categories",
+    "val": "bibhagsomuho"
+   },
+   {
+    "key": "json_key_heading_top5",
+    "val": "shirshok_top5"
+   },
+   {
+    "key": "json_key_heading_analysis",
+    "val": "shirshok_bishleshon"
+   },
+   {
+    "key": "json_key_heading_results",
+    "val": "shirshok_folafol"
+   },
+   {
+    "key": "json_key_progress",
+    "val": "ogrogoti"
+   },
+   {
+    "key": "json_key_overall_entropy",
+    "val": "samagrik_entropy"
+   },
+   {
+    "key": "json_key_trend",
+    "val": "probonota"
+   },
+   {
+    "key": "json_key_category_name",
+    "val": "naam"
+   },
+   {
+    "key": "json_key_category_icon",
+    "val": "aikon"
+   },
+   {
+    "key": "json_key_category_color",
+    "val": "rong"
+   },
+   {
+    "key": "json_key_category_entropy_level",
+    "val": "entropy_star"
+   },
+   {
+    "key": "json_key_category_summary",
+    "val": "shongkhep"
+   },
+   {
+    "key": "json_key_category_advices",
+    "val": "poramarshyo"
+   },
+   {
+    "key": "json_key_item_title",
+    "val": "shirshok"
+   },
+   {
+    "key": "json_key_item_description",
+    "val": "biboron"
+   },
+   {
+    "key": "json_key_item_explanation",
+    "val": "byakhya"
+   },
+   {
+    "key": "json_key_item_reference",
+    "val": "sutra"
+   },
+   {
+    "key": "json_key_item_priority",
+    "val": "ogrodhikar"
+   },
+   {
+    "key": "json_key_item_connection",
+    "val": "shongjog"
+   },
+   {
+    "key": "json_key_item_derivation",
+    "val": "utpotti"
+   },
+   {
+    "key": "json_key_derivation_date",
+    "val": "tarikh"
+   },
+   {
+    "key": "json_key_derivation_summary",
+    "val": "shongkhep"
+   },
+   {
+    "key": "json_value_priority_high",
+    "val": "uchcho"
+   },
+   {
+    "key": "json_value_priority_medium",
+    "val": "majhari"
+   },
+   {
+    "key": "json_value_priority_low",
+    "val": "nimno"
+   },
+   {
+    "key": "settings_ccpa_do_not_sell_title",
+    "val": "Do Not Sell My Personal Information"
+   },
+   {
+    "key": "consent_toggle_do_not_sell_title",
+    "val": "Do Not Sell My Personal Information"
+   },
+   {
+    "key": "datetime_months_relative[one]",
+    "val": "vor %1$d Monat"
+   },
+   {
+    "key": "datetime_months_relative[other]",
+    "val": "vor %1$d Monaten"
+   },
+   {
+    "key": "datetime_years_relative[one]",
+    "val": "vor %1$d Jahr"
+   },
+   {
+    "key": "datetime_years_relative[other]",
+    "val": "vor %1$d Jahren"
+   },
+   {
+    "key": "weekday_abbreviations[0]",
+    "val": "@string/day_abbrev_mon"
+   },
+   {
+    "key": "weekday_abbreviations[1]",
+    "val": "@string/day_abbrev_tue"
+   },
+   {
+    "key": "weekday_abbreviations[2]",
+    "val": "@string/day_abbrev_wed"
+   },
+   {
+    "key": "weekday_abbreviations[3]",
+    "val": "@string/day_abbrev_thu"
+   },
+   {
+    "key": "weekday_abbreviations[4]",
+    "val": "@string/day_abbrev_fri"
+   },
+   {
+    "key": "weekday_abbreviations[5]",
+    "val": "@string/day_abbrev_sat"
+   },
+   {
+    "key": "weekday_abbreviations[6]",
+    "val": "@string/day_abbrev_sun"
+   }
+  ],
+  "latinFragments": [
+   {
+    "key": "transcription_model_local",
+    "tokens": [
+     "Whisper"
+    ],
+    "val": "লোকাল Whisper মডেল"
+   },
+   {
+    "key": "journal_streak_premium",
+    "tokens": [
+     "Streak"
+    ],
+    "val": "Streak সুরক্ষা: Premium এ পাওয়া যায়"
+   },
+   {
+    "key": "share_followup_numbered",
+    "tokens": [
+     "ns",
+     "id",
+     "ordinal",
+     "example",
+     "ns"
+    ],
+    "val": "পরবর্তী সংযোজন <ns0:g id=\"ordinal\" example=\"1\">%1$s</ns0:g>"
+   },
+   {
+    "key": "error_recording_failed",
+    "tokens": [
+     "ns",
+     "id",
+     "reason",
+     "example",
+     "ns"
+    ],
+    "val": "রেকর্ডিং ব্যর্থ হয়েছে: <ns0:g id=\"reason\" example=\"মাইক্রোফোন অনুপলব্ধ\">%1$s</ns0:g>"
+   },
+   {
+    "key": "error_transcription_failed",
+    "tokens": [
+     "ns",
+     "id",
+     "reason",
+     "example",
+     "ns"
+    ],
+    "val": "ট্রান্সক্রিপশন ব্যর্থ হয়েছে: <ns0:g id=\"reason\" example=\"নেটওয়ার্ক টাইমআউট\">%1$s</ns0:g>"
+   },
+   {
+    "key": "settings_signin_failed",
+    "tokens": [
+     "ns",
+     "id",
+     "error",
+     "reason",
+     "example",
+     "Network",
+     "error",
+     "ns"
+    ],
+    "val": "সাইন ইন ব্যর্থ হয়েছে: <ns0:g id=\"error_reason\" example=\"Network error\">%1$s</ns0:g>"
+   },
+   {
+    "key": "settings_premium_lifetime",
+    "tokens": [
+     "Lifetime"
+    ],
+    "val": "Lifetime অ্যাক্সেস সক্রিয়"
+   },
+   {
+    "key": "settings_feedback_subject",
+    "tokens": [
+     "Best",
+     "Journal"
+    ],
+    "val": "Best Journal সম্পর্কে মতামত"
+   },
+   {
+    "key": "settings_feedback_api_error",
+    "tokens": [
+     "Gmail"
+    ],
+    "val": "Gmail ত্রুটি %1$d: %2$s"
+   },
+   {
+    "key": "settings_feedback_confirm_subject",
+    "tokens": [
+     "Best",
+     "Journal"
+    ],
+    "val": "Best Journal এ তোমার ফিডব্যাক"
+   },
+   {
+    "key": "settings_feedback_confirm_body",
+    "tokens": [
+     "nDEV",
+     "FRANK"
+    ],
+    "val": "এই বার্তাটি তুমি ডেভেলপারকে পাঠিয়েছ।\\nসে তোমাকে ব্যক্তিগতভাবে উত্তর দেবে।\\n\\n--- তোমার বা"
+   },
+   {
+    "key": "limit_remaining",
+    "tokens": [
+     "ns",
+     "id",
+     "count",
+     "example",
+     "ns"
+    ],
+    "val": "<ns0:g id=\"count\" example=\"3\">%1$d</ns0:g> বাকি"
+   },
+   {
+    "key": "limit_used_of_max",
+    "tokens": [
+     "ns",
+     "id",
+     "max",
+     "example",
+     "ns",
+     "ns",
+     "id",
+     "used",
+     "example",
+     "ns"
+    ],
+    "val": "<ns0:g id=\"max\" example=\"5\">%2$d</ns0:g> এর মধ্যে <ns0:g id=\"used\" example=\"3\">%1$d</ns0:g"
+   },
+   {
+    "key": "churn_discount_badge",
+    "tokens": [
+     "ns",
+     "id",
+     "percent",
+     "example",
+     "ns"
+    ],
+    "val": "<ns0:g id=\"percent\" example=\"50\">%1$d</ns0:g>%% সাশ্রয়"
+   },
+   {
+    "key": "ai_prompt_no_dates_rule",
+    "tokens": [
+     "herleitung"
+    ],
+    "val": "TTS-উপযোগী (বাধ্যতামূলক — দৃশ্যমান টেক্সটে তারিখ নিষিদ্ধ):\\nসব দৃশ্যমান টেক্সট ফিল্ডে (বিব"
+   },
+   {
+    "key": "ai_prompt_rerank_system",
+    "tokens": [
+     "titel",
+     "beschreibung",
+     "erklaerung",
+     "titel",
+     "beschreibung",
+     "erklaerung",
+     "beschreibung",
+     "nTTS",
+     "nbeschreibung",
+     "erklaerung",
+     "markdown"
+    ],
+    "val": "তুমি একজন প্রোফাইল রি-র‍্যাঙ্কার। তুমি ড্যাশবোর্ড-বিশ্লেষণ থেকে 5টি শীর্ষ পদক্ষেপের JSON অ"
+   },
+   {
+    "key": "retro_month_more_entries",
+    "tokens": [
+     "ns",
+     "id",
+     "count",
+     "example",
+     "ns"
+    ],
+    "val": "(+ <ns0:g id=\"count\" example=\"3\">%1$d</ns0:g> আরও এন্ট্রি)"
+   },
+   {
+    "key": "dashboard_active_profile_label",
+    "tokens": [
+     "ns",
+     "id",
+     "profile",
+     "example",
+     "ns"
+    ],
+    "val": "সক্রিয় প্রোফাইল: <ns0:g id=\"profile\" example=\"সারসংক্ষেপ\">%1$s</ns0:g>"
+   },
+   {
+    "key": "ai_retro_week_title_prompt",
+    "tokens": [
+     "ns",
+     "id",
+     "lang",
+     "example",
+     "Deutsch",
+     "ns",
+     "ns",
+     "id",
+     "summary",
+     "preview",
+     "example",
+     "Die",
+     "Woche",
+     "begann",
+     "ns"
+    ],
+    "val": "এই সাপ্তাহিক পর্যালোচনার ভিত্তিতে, <ns0:g id=\"lang\" example=\"Deutsch\">%1$s</ns0:g> ভাষায় "
+   },
+   {
+    "key": "ai_retro_month_task",
+    "tokens": [
+     "ns",
+     "id",
+     "month",
+     "example",
+     "April",
+     "ns",
+     "ns",
+     "id",
+     "year",
+     "example",
+     "ns"
+    ],
+    "val": "কাজ: নিচের সাপ্তাহিক পর্যালোচনাগুলি <ns0:g id=\"month\" example=\"April\">%1$s</ns0:g> <ns0:g "
+   },
+   {
+    "key": "ai_retro_month_title_prompt",
+    "tokens": [
+     "ns",
+     "id",
+     "lang",
+     "example",
+     "Deutsch",
+     "ns",
+     "ns",
+     "id",
+     "summary",
+     "preview",
+     "example",
+     "April",
+     "brachte",
+     "ns"
+    ],
+    "val": "এই মাসিক পর্যালোচনার ভিত্তিতে, <ns0:g id=\"lang\" example=\"Deutsch\">%1$s</ns0:g> ভাষায় একটি"
+   },
+   {
+    "key": "ai_retro_year_task",
+    "tokens": [
+     "ns",
+     "id",
+     "year",
+     "example",
+     "ns"
+    ],
+    "val": "কাজ: নিচের মাসিক পর্যালোচনাগুলি <ns0:g id=\"year\" example=\"2026\">%1$d</ns0:g> এর একটি সুগঠি"
+   },
+   {
+    "key": "ai_retro_year_title_prompt",
+    "tokens": [
+     "ns",
+     "id",
+     "lang",
+     "example",
+     "Deutsch",
+     "ns",
+     "ns",
+     "id",
+     "summary",
+     "preview",
+     "example",
+     "Das",
+     "Jahr",
+     "begann",
+     "ns"
+    ],
+    "val": "এই বার্ষিক পর্যালোচনার ভিত্তিতে, <ns0:g id=\"lang\" example=\"Deutsch\">%1$s</ns0:g> ভাষায় এক"
+   },
+   {
+    "key": "ai_prompt_goals_schema",
+    "tokens": [
+     "samagrik",
+     "bishleshon",
+     "mukhya",
+     "podokkhep",
+     "bibhagsomuho",
+     "samagrik",
+     "bishleshon",
+     "mukhya",
+     "podokkhep",
+     "shirshok",
+     "biboron",
+     "byakhya",
+     "bibhagsomuho",
+     "naam",
+     "aikon",
+     "material",
+     "icon",
+     "rong",
+     "HEX",
+     "entropy",
+     "star",
+     "shongkhep",
+     "poramarshyo",
+     "shirshok",
+     "biboron",
+     "ogrodhikar",
+     "uchcho",
+     "majhari",
+     "nimno",
+     "shongjog",
+     "utpotti",
+     "tarikh",
+     "shongkhep",
+     "uchcho",
+     "majhari",
+     "nimno"
+    ],
+    "val": "JSON-আউটপুট-স্কিমা:\\n{\\n  \\\"samagrik_bishleshon\\\": \\\"...\\\",\\n  \\\"mukhya_podokkhep\\\": [...]"
+   },
+   {
+    "key": "ai_prompt_insight_schema_header",
+    "tokens": [
+     "samagrik",
+     "entropy",
+     "probonota",
+     "wachsend",
+     "stabil",
+     "sinkend",
+     "unbekannt",
+     "samagrik",
+     "bishleshon",
+     "ogrogoti",
+     "mukhya",
+     "podokkhep",
+     "bibhagsomuho",
+     "samagrik",
+     "entropy",
+     "probonota",
+     "wachsend",
+     "stabil",
+     "sinkend",
+     "unbekannt",
+     "samagrik",
+     "bishleshon"
+    ],
+    "val": "JSON-আউটপুট-স্কিমা:\\n{\\n  \\\"samagrik_entropy\\\": 0.0,\\n  \\\"probonota\\\": \\\"wachsend|stabil|s"
+   },
+   {
+    "key": "ai_prompt_insight_schema_fields",
+    "tokens": [
+     "ogrogoti",
+     "shirshok",
+     "biboron",
+     "sutra",
+     "mukhya",
+     "podokkhep",
+     "shirshok",
+     "biboron",
+     "byakhya"
+    ],
+    "val": "4) \\\"ogrogoti\\\" (অ্যারে, 0–8 টি)\\n   লেখা থেকে দৃশ্যমান ব্যক্তিগত শক্তি ও ইতিবাচক গুণ — এম"
+   },
+   {
+    "key": "ai_prompt_insight_schema_categories",
+    "tokens": [
+     "bibhagsomuho",
+     "naam",
+     "aikon",
+     "material",
+     "icon",
+     "name",
+     "rong",
+     "HEX",
+     "entropy",
+     "star",
+     "shongkhep",
+     "poramarshyo",
+     "icon",
+     "psychology",
+     "rong",
+     "BFA",
+     "icon",
+     "favorite",
+     "rong",
+     "icon",
+     "person",
+     "rong",
+     "FA",
+     "icon",
+     "bolt",
+     "rong",
+     "icon",
+     "star",
+     "rong",
+     "FBBF",
+     "icon",
+     "people",
+     "rong",
+     "EC",
+     "icon",
+     "shield",
+     "rong",
+     "icon",
+     "repeat",
+     "rong",
+     "icon",
+     "nights",
+     "stay",
+     "rong",
+     "FF",
+     "icon",
+     "block",
+     "rong",
+     "EF",
+     "icon",
+     "lightbulb",
+     "rong",
+     "EF",
+     "icon",
+     "handshake",
+     "rong",
+     "icon",
+     "trending",
+     "up",
+     "rong",
+     "icon",
+     "spa",
+     "rong",
+     "icon",
+     "tune",
+     "rong",
+     "self",
+     "improvement",
+     "mood",
+     "sentiment",
+     "satisfied",
+     "sentiment",
+     "dissatisfied",
+     "visibility",
+     "lock",
+     "open",
+     "wb",
+     "sunny",
+     "explore",
+     "balance",
+     "healing",
+     "volunteer",
+     "activism",
+     "emoji",
+     "objects",
+     "entropy",
+     "star",
+     "poramarshyo",
+     "uchcho",
+     "majhari",
+     "nimno",
+     "shirshok",
+     "biboron",
+     "ogrodhikar",
+     "uchcho",
+     "majhari",
+     "nimno",
+     "shongjog",
+     "null",
+     "utpotti",
+     "tarikh",
+     "shongkhep",
+     "ogrodhikar",
+     "uchcho",
+     "majhari",
+     "nimno"
+    ],
+    "val": "6) \\\"bibhagsomuho\\\" (অ্যারে, যতটা প্রয়োজন)\\n   প্রতিটি চিনতে পারা আত্ম-উপলব্ধি ক্ষেত্রের "
+   },
+   {
+    "key": "ai_prompt_insight_output",
+    "tokens": [
+     "mukhya",
+     "podokkhep",
+     "poramarshyo",
+     "biboron"
+    ],
+    "val": "বিবরণের জন্য শব্দ-সংখ্যা নিয়ম (কঠোরভাবে পালন করো):\\n\\\"mukhya_podokkhep\\\" আর \\\"poramarshyo"
+   },
+   {
+    "key": "ai_prompt_entropy_rules",
+    "tokens": [
+     "gesamt",
+     "entropie",
+     "entropie",
+     "level"
+    ],
+    "val": "ভাষার নিয়ম (JSON এর সব টেক্সট ফিল্ডের জন্য প্রযোজ্য):\\n- সহজ, স্পষ্ট ভাষা। ছোট বাক্য।\\n- "
+   },
+   {
+    "key": "ai_prompt_entropy_schema_header",
+    "tokens": [
+     "samagrik",
+     "entropy",
+     "probonota",
+     "steigend",
+     "stabil",
+     "sinkend",
+     "unbekannt",
+     "samagrik",
+     "bishleshon",
+     "ogrogoti",
+     "mukhya",
+     "podokkhep",
+     "bibhagsomuho",
+     "samagrik",
+     "entropy",
+     "probonota",
+     "sinkend",
+     "stabil",
+     "steigend",
+     "unbekannt",
+     "samagrik",
+     "bishleshon"
+    ],
+    "val": "JSON-আউটপুট-স্কিমা:\\n{\\n  \\\"samagrik_entropy\\\": 0.0,\\n  \\\"probonota\\\": \\\"steigend|stabil|s"
+   },
+   {
+    "key": "ai_prompt_entropy_schema_fields",
+    "tokens": [
+     "ogrogoti",
+     "shirshok",
+     "biboron",
+     "sutra",
+     "mukhya",
+     "podokkhep",
+     "shirshok",
+     "biboron",
+     "byakhya"
+    ],
+    "val": "4) \\\"ogrogoti\\\" (অ্যারে, 0–5 টি)\\n   চিনতে পারো যেখানে ভার হ্রাস পেয়েছে বা যেখানে কার্যকর"
+   },
+   {
+    "key": "ai_prompt_entropy_schema_categories",
+    "tokens": [
+     "bibhagsomuho",
+     "naam",
+     "aikon",
+     "material",
+     "icon",
+     "name",
+     "rong",
+     "HEX",
+     "entropy",
+     "star",
+     "shongkhep",
+     "poramarshyo",
+     "icon",
+     "bedtime",
+     "rong",
+     "FF",
+     "icon",
+     "work",
+     "rong",
+     "FF",
+     "icon",
+     "fitness",
+     "center",
+     "rong",
+     "ECDC",
+     "icon",
+     "restaurant",
+     "rong",
+     "FFE",
+     "icon",
+     "psychology",
+     "rong",
+     "BFA",
+     "icon",
+     "people",
+     "rong",
+     "icon",
+     "home",
+     "rong",
+     "icon",
+     "trending",
+     "up",
+     "rong",
+     "FA",
+     "icon",
+     "code",
+     "rong",
+     "icon",
+     "health",
+     "and",
+     "safety",
+     "rong",
+     "EF",
+     "icon",
+     "account",
+     "balance",
+     "rong",
+     "icon",
+     "sports",
+     "esports",
+     "rong",
+     "EC",
+     "icon",
+     "grass",
+     "rong",
+     "icon",
+     "healing",
+     "rong",
+     "DC",
+     "spa",
+     "coffee",
+     "self",
+     "improvement",
+     "nights",
+     "stay",
+     "directions",
+     "run",
+     "child",
+     "care",
+     "school",
+     "computer",
+     "timer",
+     "cleaning",
+     "services",
+     "music",
+     "note",
+     "pets",
+     "wb",
+     "sunny",
+     "lightbulb",
+     "uchcho",
+     "majhari",
+     "nimno",
+     "shirshok",
+     "biboron",
+     "ogrodhikar",
+     "uchcho",
+     "majhari",
+     "nimno",
+     "shongjog",
+     "null",
+     "utpotti",
+     "tarikh",
+     "shongkhep",
+     "uchcho",
+     "majhari",
+     "nimno"
+    ],
+    "val": "6) \\\"bibhagsomuho\\\" (অ্যারে, যতটা প্রয়োজন)\\n   প্রতিটি চিনতে পারা বিষয়ের জন্য নিজস্ব বিভ"
+   },
+   {
+    "key": "ai_prompt_summary_schema_header",
+    "tokens": [
+     "samagrik",
+     "entropy",
+     "probonota",
+     "steigend",
+     "stabil",
+     "sinkend",
+     "unbekannt",
+     "samagrik",
+     "bishleshon",
+     "ogrogoti",
+     "mukhya",
+     "podokkhep",
+     "bibhagsomuho",
+     "samagrik",
+     "entropy",
+     "probonota",
+     "steigend",
+     "stabil",
+     "sinkend",
+     "unbekannt",
+     "samagrik",
+     "bishleshon"
+    ],
+    "val": "JSON-আউটপুট-স্কিমা:\\n{\\n  \\\"samagrik_entropy\\\": 0.0,\\n  \\\"probonota\\\": \\\"steigend|stabil|s"
+   },
+   {
+    "key": "ai_prompt_summary_schema_fields",
+    "tokens": [
+     "ogrogoti",
+     "shirshok",
+     "biboron",
+     "sutra",
+     "mukhya",
+     "podokkhep",
+     "shirshok",
+     "biboron",
+     "byakhya"
+    ],
+    "val": "4) \\\"ogrogoti\\\" (অ্যারে, 0–5 টি)\\n   বারবার আসা বিষয়, অভ্যাস বা সম্পর্ক যা একাধিক লেখা জু"
+   },
+   {
+    "key": "ai_prompt_summary_schema_categories",
+    "tokens": [
+     "bibhagsomuho",
+     "naam",
+     "aikon",
+     "material",
+     "icon",
+     "name",
+     "rong",
+     "HEX",
+     "entropy",
+     "star",
+     "shongkhep",
+     "poramarshyo",
+     "icon",
+     "bedtime",
+     "rong",
+     "FF",
+     "icon",
+     "work",
+     "rong",
+     "FF",
+     "icon",
+     "fitness",
+     "center",
+     "rong",
+     "ECDC",
+     "icon",
+     "restaurant",
+     "rong",
+     "FFE",
+     "icon",
+     "psychology",
+     "rong",
+     "BFA",
+     "icon",
+     "people",
+     "rong",
+     "icon",
+     "home",
+     "rong",
+     "icon",
+     "trending",
+     "up",
+     "rong",
+     "FA",
+     "icon",
+     "code",
+     "rong",
+     "icon",
+     "health",
+     "and",
+     "safety",
+     "rong",
+     "EF",
+     "icon",
+     "account",
+     "balance",
+     "rong",
+     "icon",
+     "sports",
+     "esports",
+     "rong",
+     "EC",
+     "icon",
+     "grass",
+     "rong",
+     "icon",
+     "calendar",
+     "today",
+     "rong",
+     "icon",
+     "flight",
+     "rong",
+     "icon",
+     "music",
+     "note",
+     "rong",
+     "EF",
+     "spa",
+     "coffee",
+     "self",
+     "improvement",
+     "nights",
+     "stay",
+     "directions",
+     "run",
+     "child",
+     "care",
+     "school",
+     "computer",
+     "timer",
+     "cleaning",
+     "services",
+     "directions",
+     "car",
+     "photo",
+     "camera",
+     "pets",
+     "wb",
+     "sunny",
+     "lightbulb",
+     "star",
+     "healing",
+     "entropy",
+     "star",
+     "poramarshyo",
+     "uchcho",
+     "majhari",
+     "nimno",
+     "shirshok",
+     "biboron",
+     "ogrodhikar",
+     "uchcho",
+     "majhari",
+     "nimno",
+     "shongjog",
+     "null",
+     "utpotti",
+     "tarikh",
+     "shongkhep",
+     "ogrodhikar",
+     "uchcho",
+     "majhari",
+     "nimno"
+    ],
+    "val": "6) \\\"bibhagsomuho\\\" (অ্যারে, যতটা প্রয়োজন)\\n   প্রতিটি চিনতে পারা বিষয়ের জন্য নিজস্ব গোষ"
+   },
+   {
+    "key": "ai_prompt_summary_output",
+    "tokens": [
+     "mukhya",
+     "podokkhep",
+     "poramarshyo",
+     "biboron"
+    ],
+    "val": "বিবরণের জন্য শব্দ-সংখ্যা নিয়ম (কঠোরভাবে পালন করো):\\n\\\"mukhya_podokkhep\\\" আর \\\"poramarshyo"
+   },
+   {
+    "key": "ai_prompt_custom_schema",
+    "tokens": [
+     "shirshok",
+     "top",
+     "shirshok",
+     "bishleshon",
+     "shirshok",
+     "folafol",
+     "samagrik",
+     "entropy",
+     "probonota",
+     "steigend",
+     "stabil",
+     "sinkend",
+     "unbekannt",
+     "samagrik",
+     "bishleshon",
+     "ogrogoti",
+     "mukhya",
+     "podokkhep",
+     "bibhagsomuho",
+     "shirshok",
+     "top",
+     "bishleshon",
+     "folafol",
+     "samagrik",
+     "entropy",
+     "probonota",
+     "samagrik",
+     "bishleshon",
+     "ogrogoti",
+     "shirshok",
+     "biboron",
+     "sutra",
+     "mukhya",
+     "podokkhep",
+     "shirshok",
+     "biboron",
+     "byakhya",
+     "bibhagsomuho",
+     "naam",
+     "aikon",
+     "material",
+     "icon",
+     "name",
+     "rong",
+     "HEX",
+     "entropy",
+     "star",
+     "shongkhep",
+     "poramarshyo",
+     "shirshok",
+     "biboron",
+     "ogrodhikar",
+     "uchcho",
+     "majhari",
+     "nimno",
+     "shongjog",
+     "null",
+     "utpotti",
+     "tarikh",
+     "shongkhep"
+    ],
+    "val": "JSON-আউটপুট-স্কিমা:\\n{\\n  \\\"shirshok_top5\\\": \\\"টপ 5 এর জন্য সৃজনশীল শিরোনাম (ফোকাসের সাথে "
+   },
+   {
+    "key": "ai_prompt_custom_output",
+    "tokens": [
+     "mukhya",
+     "podokkhep",
+     "poramarshyo",
+     "biboron"
+    ],
+    "val": "শব্দ-সংখ্যা নিয়ম: mukhya_podokkhep আর poramarshyo এর \\\"biboron\\\" সর্বদা 13–21 শব্দ।\\n\\nআউ"
+   },
+   {
+    "key": "retro_photos_videos",
+    "tokens": [
+     "amp"
+    ],
+    "val": "ছবি &amp; ভিডিও"
+   },
+   {
+    "key": "retro_photos_videos_colon",
+    "tokens": [
+     "amp"
+    ],
+    "val": "ছবি &amp; ভিডিও:"
+   },
+   {
+    "key": "onboarding_welcome",
+    "tokens": [
+     "Best",
+     "Journal"
+    ],
+    "val": "Best Journal এ\\nস্বাগতম"
+   },
+   {
+    "key": "onboarding_how_step4_desc",
+    "tokens": [
+     "Dashboard"
+    ],
+    "val": "KI-Dashboard তোমার এন্ট্রি থেকে যোগসূত্রগুলো দেখায়।"
+   },
+   {
+    "key": "onboarding_free_after_trial",
+    "tokens": [
+     "Best",
+     "Journal"
+    ],
+    "val": "তারপর তুমি Best Journal ব্যবহার করতে পারো,\\nবিনামূল্যে সপ্তাহে সীমিত এআই-কল সহ।"
+   },
+   {
+    "key": "churn_promo_one_month_remaining",
+    "tokens": [
+     "ns",
+     "id",
+     "base",
+     "price",
+     "example",
+     "ns"
+    ],
+    "val": "1 মাস বাকি — এরপর <ns0:g id=\"base_price\" example=\"3,99 €\">%1$s</ns0:g> প্রতি মাসে"
+   },
+   {
+    "key": "churn_promo_months_remaining",
+    "tokens": [
+     "ns",
+     "id",
+     "months",
+     "example",
+     "ns",
+     "ns",
+     "id",
+     "base",
+     "price",
+     "example",
+     "ns"
+    ],
+    "val": "<ns0:g id=\"months\" example=\"2\">%1$d</ns0:g> মাস বাকি — এরপর <ns0:g id=\"base_price\" example"
+   },
+   {
+    "key": "achievement_consistency_desc",
+    "tokens": [
+     "streak"
+    ],
+    "val": "30-দিনের streak অর্জন"
+   },
+   {
+    "key": "consent_intro",
+    "tokens": [
+     "Best",
+     "Journal"
+    ],
+    "val": "তোমার ডায়েরি একটি ব্যক্তিগত জায়গা, এবং আমরা সেটাকে সম্মান করি। এখানে তুমি স্বচ্ছভাবে দেখ"
+   },
+   {
+    "key": "consent_card2_title",
+    "tokens": [
+     "USA"
+    ],
+    "val": "AI ফিচার (USA)"
+   },
+   {
+    "key": "consent_card2_body",
+    "tokens": [
+     "Microsoft",
+     "Edge",
+     "USA",
+     "EU",
+     "US",
+     "Data",
+     "Privacy",
+     "Framework",
+     "Standard",
+     "Contractual",
+     "Clauses",
+     "EU",
+     "SCCs",
+     "USA"
+    ],
+    "val": "ঐচ্ছিকভাবে টেক্সট Google Gemini-তে এবং জোরে পড়ার টেক্সট Microsoft Edge-এ USA-তে পাঠানো হয"
+   },
+   {
+    "key": "consent_card3_body",
+    "tokens": [
+     "Firebase",
+     "Analytics"
+    ],
+    "val": "Firebase Analytics, ঐচ্ছিক, সেটিংস থেকে যেকোনো সময় পরিবর্তন করা যায়।"
+   },
+   {
+    "key": "privacy_gate_groq_body",
+    "tokens": [
+     "Inc",
+     "Mountain",
+     "View",
+     "USA",
+     "Settings"
+    ],
+    "val": "ক্লাউড ট্রান্সক্রিপশনের জন্য তোমার ভয়েস রেকর্ডিং এনক্রিপ্টেড অবস্থায় Groq, Inc.-এ (Mount"
+   },
+   {
+    "key": "privacy_gate_gemini_body",
+    "tokens": [
+     "Best",
+     "Journal",
+     "Dashboard",
+     "EU",
+     "US",
+     "Data",
+     "Privacy",
+     "Framework",
+     "Art",
+     "Settings"
+    ],
+    "val": "Best Journal-এর বুদ্ধিমান ফিচারগুলো ব্যবহার করতে চাও, ভালো লাগল! সারসংক্ষেপ, পর্যালোচনা, D"
+   },
+   {
+    "key": "privacy_gate_tts_title",
+    "tokens": [
+     "Microsoft"
+    ],
+    "val": "Microsoft-এ টেক্সট পাঠাবে?"
+   },
+   {
+    "key": "privacy_gate_tts_body",
+    "tokens": [
+     "Microsoft",
+     "Bing",
+     "Speech",
+     "USA",
+     "EU",
+     "US",
+     "Data",
+     "Privacy",
+     "Framework",
+     "Standard",
+     "Contractual",
+     "Clauses"
+    ],
+    "val": "পাঠ করে শোনানোর জন্য টেক্সট এনক্রিপ্টেড অবস্থায় Microsoft Bing Speech-এ (USA) পাঠানো হয় "
+   },
+   {
+    "key": "settings_analytics_subtitle",
+    "tokens": [
+     "Firebase",
+     "Analytics"
+    ],
+    "val": "ত্রুটি বিশ্লেষণ ও পণ্য উন্নতির জন্য Firebase Analytics"
+   },
+   {
+    "key": "settings_delete_account_confirm_body",
+    "tokens": [
+     "Firebase"
+    ],
+    "val": "এই ক্রিয়া ফিরিয়ে আনা যাবে না এবং এগুলো মুছে ফেলবে:\\n\\n• সব স্থানীয় ডায়েরি এন্ট্রি, ছবি"
+   },
+   {
+    "key": "settings_report_ai_confirm_title",
+    "tokens": [
+     "Support"
+    ],
+    "val": "Support-কে ইমেইল খুলবে?"
+   },
+   {
+    "key": "settings_report_ai_confirm_body",
+    "tokens": [
+     "dev",
+     "app",
+     "support",
+     "gmail",
+     "com"
+    ],
+    "val": "তোমার ইমেইল অ্যাপ dev.app.support@gmail.com-এ একটি প্রস্তুত বার্তা নিয়ে খুলবে। পাঠানোর আগ"
+   },
+   {
+    "key": "settings_report_ai_no_email",
+    "tokens": [
+     "dev",
+     "app",
+     "support",
+     "gmail",
+     "com"
+    ],
+    "val": "কোনো ইমেইল অ্যাপ পাওয়া যায়নি। অনুগ্রহ করে রিপোর্ট dev.app.support@gmail.com-এ পাঠাও।"
+   },
+   {
+    "key": "settings_report_ai_subject",
+    "tokens": [
+     "Best",
+     "Journal"
+    ],
+    "val": "Best Journal: অনুপযুক্ত AI উত্তর"
+   },
+   {
+    "key": "settings_report_ai_body",
+    "tokens": [
+     "Best",
+     "Journal"
+    ],
+    "val": "নমস্কার,\\n\\nআমি Best Journal-এ একটি অনুপযুক্ত বা ভুল AI উত্তর রিপোর্ট করতে চাই।\\n\\nসমস্যার"
+   },
+   {
+    "key": "settings_revoke_confirm_title",
+    "tokens": [
+     "Support"
+    ],
+    "val": "Support-কে ইমেইল খুলবে?"
+   },
+   {
+    "key": "settings_revoke_confirm_body",
+    "tokens": [
+     "dev",
+     "app",
+     "support",
+     "gmail",
+     "com",
+     "Play",
+     "Subscriptions"
+    ],
+    "val": "তোমার ইমেইল অ্যাপ dev.app.support@gmail.com-এ একটি প্রস্তুত বার্তা নিয়ে খুলবে। আমরা কর্মদ"
+   },
+   {
+    "key": "settings_revoke_no_email",
+    "tokens": [
+     "dev",
+     "app",
+     "support",
+     "gmail",
+     "com"
+    ],
+    "val": "কোনো ইমেইল অ্যাপ পাওয়া যায়নি। অনুগ্রহ করে প্রত্যাহার dev.app.support@gmail.com-এ পাঠাও।"
+   },
+   {
+    "key": "settings_revoke_email_subject",
+    "tokens": [
+     "Best",
+     "Journal"
+    ],
+    "val": "Best Journal Premium চুক্তি প্রত্যাহার"
+   },
+   {
+    "key": "settings_revoke_email_body",
+    "tokens": [
+     "Best",
+     "Journal",
+     "BGB",
+     "Gmail"
+    ],
+    "val": "এর মাধ্যমে আমি Best Journal-এর Premium ফিচার সম্পর্কিত চুক্তি থেকে প্রত্যাহারের নোটিশ দিচ্"
+   },
+   {
+    "key": "settings_revoke_confirm_subject",
+    "tokens": [
+     "Best",
+     "Journal"
+    ],
+    "val": "তোমার গ্রহণ-নিশ্চিতকরণ: Best Journal-এ প্রত্যাহার"
+   },
+   {
+    "key": "settings_revoke_confirm_user_body",
+    "tokens": [
+     "BGB",
+     "dev",
+     "app",
+     "support",
+     "gmail",
+     "com",
+     "Play",
+     "Store",
+     "Subscriptions",
+     "nBest",
+     "Journal",
+     "Frank",
+     "Barwandt"
+    ],
+    "val": "নমস্কার,\\n\\nআমরা %1$s-এর তোমার প্রত্যাহার পেয়েছি। এটি § 356a BGB অনুযায়ী তোমার গ্রহণ-নিশ"
+   },
+   {
+    "key": "settings_revoke_no_account",
+    "tokens": [
+     "Settings",
+     "dev",
+     "app",
+     "support",
+     "gmail",
+     "com"
+    ],
+    "val": "কোনো সাইন-ইন করা Google অ্যাকাউন্টের ঠিকানা পাওয়া যায়নি। অনুগ্রহ করে Settings-এ তোমার Go"
+   },
+   {
+    "key": "settings_revoke_success_body",
+    "tokens": [
+     "dev",
+     "app",
+     "support",
+     "gmail",
+     "com"
+    ],
+    "val": "তোমার প্রত্যাহার dev.app.support@gmail.com-এ পাঠানো হয়েছে। গ্রহণ-নিশ্চিতকরণও তোমার ইনবক্স"
+   },
+   {
+    "key": "settings_revoke_error_body",
+    "tokens": [
+     "dev",
+     "app",
+     "support",
+     "gmail",
+     "com"
+    ],
+    "val": "স্বয়ংক্রিয় পাঠানো ব্যর্থ হয়েছে: %1$s\\n\\nবিকল্প হিসেবে তুমি dev.app.support@gmail.com-এ "
+   },
+   {
+    "key": "settings_crisis_dialog_body",
+    "tokens": [
+     "Best",
+     "Journal"
+    ],
+    "val": "Best Journal একটি জার্নাল অ্যাপ এবং এটি পেশাদার মানসিক বা চিকিৎসা সহায়তার বিকল্প নয়। AI-"
+   },
+   {
+    "key": "settings_crisis_hotline_de_name",
+    "tokens": [
+     "Telefonseelsorge"
+    ],
+    "val": "Telefonseelsorge জার্মানি"
+   },
+   {
+    "key": "settings_crisis_open_findahelpline",
+    "tokens": [
+     "findahelpline",
+     "com"
+    ],
+    "val": "findahelpline.com খোলো"
+   },
+   {
+    "key": "settings_ccpa_do_not_sell_subtitle",
+    "tokens": [
+     "CCPA",
+     "CPRA"
+    ],
+    "val": "ক্যালিফোর্নিয়ার বাসিন্দাদের জন্য (CCPA/CPRA 2026)। সক্রিয় হলে সমস্ত ক্লাউড AI বৈশিষ্ট্য "
+   },
+   {
+    "key": "settings_ccpa_do_not_sell_confirmation",
+    "tokens": [
+     "Do",
+     "Not",
+     "Sell"
+    ],
+    "val": "Do-Not-Sell চালু — সমস্ত ক্লাউড পরিষেবা বন্ধ।"
+   },
+   {
+    "key": "settings_ccpa_do_not_sell_off_confirmation",
+    "tokens": [
+     "Do",
+     "Not",
+     "Sell"
+    ],
+    "val": "Do-Not-Sell বন্ধ করা হয়েছে।"
+   },
+   {
+    "key": "consent_welcome_title",
+    "tokens": [
+     "Best",
+     "Journal"
+    ],
+    "val": "Best Journal-এ স্বাগতম"
+   },
+   {
+    "key": "consent_toggle_analytics_body",
+    "tokens": [
+     "Firebase",
+     "Analytics",
+     "USA",
+     "Data",
+     "Privacy",
+     "Framework"
+    ],
+    "val": "Firebase Analytics — অ্যাপ উন্নত করতে আমাদের সাহায্য করে। কোনো ব্যক্তিগত বিষয়বস্তু নেই, শ"
+   },
+   {
+    "key": "consent_toggle_groq_title",
+    "tokens": [
+     "Whisper"
+    ],
+    "val": "বাক থেকে টেক্সট (Groq Whisper)"
+   },
+   {
+    "key": "consent_toggle_groq_body",
+    "tokens": [
+     "USA"
+    ],
+    "val": "এন্ট্রি ডিক্টেট করার অনুমতি দেয়। আপনার ভয়েস রেকর্ডিং এনক্রিপ্টেড অবস্থায় Groq (USA)-এ প"
+   },
+   {
+    "key": "consent_toggle_gemini_body",
+    "tokens": [
+     "USA"
+    ],
+    "val": "ড্যাশবোর্ড AI, সারাংশ, পর্যালোচনা এবং টেক্সট উন্নতি। টেক্সট অংশ Google Gemini (USA)-এ পাঠা"
+   },
+   {
+    "key": "consent_toggle_tts_title",
+    "tokens": [
+     "Microsoft",
+     "Edge"
+    ],
+    "val": "জোরে পড়া (Microsoft Edge TTS)"
+   },
+   {
+    "key": "consent_toggle_tts_body",
+    "tokens": [
+     "Microsoft",
+     "USA"
+    ],
+    "val": "প্রাকৃতিক কণ্ঠে এন্ট্রি পড়ে। টেক্সট Microsoft (USA)-এ পাঠায়।"
+   },
+   {
+    "key": "consent_toggle_do_not_sell_body",
+    "tokens": [
+     "CCPA",
+     "CPRA"
+    ],
+    "val": "ক্যালিফোর্নিয়া অপ্ট-আউট (CCPA/CPRA 2026)। সক্রিয় হলে, সমস্ত ঐচ্ছিক ডেটা প্রক্রিয়াকরণ নি"
+   },
+   {
+    "key": "consent_info_system_backup_body",
+    "tokens": [
+     "Best",
+     "Journal"
+    ],
+    "val": "Android স্বয়ংক্রিয়ভাবে অ্যাপের ডেটা Google-এর সার্ভারে ব্যাকআপ করতে পারে, যদি তুমি Googl"
+   },
+   {
+    "key": "settings_ai_groq_subtitle",
+    "tokens": [
+     "USA"
+    ],
+    "val": "প্রতিলিপির জন্য Groq USA-এ ভয়েস রেকর্ডিং পাঠান"
+   },
+   {
+    "key": "settings_ai_gemini_subtitle",
+    "tokens": [
+     "USA"
+    ],
+    "val": "AI সারাংশের জন্য Google USA-এ টেক্সট পাঠান"
+   },
+   {
+    "key": "settings_ai_tts_title",
+    "tokens": [
+     "Edge"
+    ],
+    "val": "জোরে পড়া (Edge TTS)"
+   },
+   {
+    "key": "settings_ai_tts_subtitle",
+    "tokens": [
+     "Microsoft",
+     "USA"
+    ],
+    "val": "বাক আউটপুটের জন্য Microsoft USA-এ টেক্সট পাঠান"
+   },
+   {
+    "key": "follow_up_delete_confirm_title",
+    "tokens": [
+     "ns",
+     "id",
+     "title",
+     "example",
+     "Nachtrag",
+     "ns"
+    ],
+    "val": "<ns0:g id=\"title\" example=\"Nachtrag 1\">%1$s</ns0:g> মুছে ফেলবে?"
+   },
+   {
+    "key": "follow_up_delete_confirm_text",
+    "tokens": [
+     "ns",
+     "id",
+     "title",
+     "example",
+     "Nachtrag",
+     "ns"
+    ],
+    "val": "<ns0:g id=\"title\" example=\"Nachtrag 1\">%1$s</ns0:g> মুছে ফেলা হবে। এটি আর ফেরানো যাবে না।"
+   },
+   {
+    "key": "follow_up_inline_title",
+    "tokens": [
+     "ns",
+     "id",
+     "number",
+     "example",
+     "ns"
+    ],
+    "val": "সংযোজন <ns0:g id=\"number\" example=\"1\">%1$s</ns0:g>"
+   },
+   {
+    "key": "prompt_recording_with_model",
+    "tokens": [
+     "ns",
+     "id",
+     "model",
+     "example",
+     "Whisper",
+     "ns"
+    ],
+    "val": "রেকর্ড হচ্ছে (<ns0:g id=\"model\" example=\"Whisper\">%1$s</ns0:g>)…"
+   },
+   {
+    "key": "prompt_transcribing_with_model",
+    "tokens": [
+     "ns",
+     "id",
+     "model",
+     "example",
+     "Whisper",
+     "ns"
+    ],
+    "val": "<ns0:g id=\"model\" example=\"Whisper\">%1$s</ns0:g> দিয়ে লেখায় রূপান্তর হচ্ছে…"
+   },
+   {
+    "key": "prompt_transcription_model_hint",
+    "tokens": [
+     "ns",
+     "id",
+     "model",
+     "example",
+     "Whisper",
+     "ns"
+    ],
+    "val": "মডেল: <ns0:g id=\"model\" example=\"Whisper\">%1$s</ns0:g>"
+   },
+   {
+    "key": "ai_output_health_disclaimer_long",
+    "tokens": [
+     "Best",
+     "Journal"
+    ],
+    "val": "Best Journal একটি ডায়েরি, কোনো থেরাপি সেবা নয়। এআই বিশ্লেষণ স্ব-প্রতিফলনের জন্য পরামর্শ,"
+   },
+   {
+    "key": "churn_cancelled_ends_on",
+    "tokens": [
+     "ns",
+     "id",
+     "date",
+     "example",
+     "ns"
+    ],
+    "val": "বাতিল — <ns0:g id=\"date\" example=\"30.04.2026, 18:13\">%1$s</ns0:g> তারিখে শেষ হবে"
+   },
+   {
+    "key": "churn_promo_phase_ends",
+    "tokens": [
+     "ns",
+     "id",
+     "date",
+     "example",
+     "ns",
+     "ns",
+     "id",
+     "base",
+     "price",
+     "example",
+     "ns"
+    ],
+    "val": "<ns0:g id=\"date\" example=\"30.04.2026, 18:13\">%1$s</ns0:g> তারিখে শেষ — এরপর মাসে <ns0:g id"
+   },
+   {
+    "key": "churn_renews_on",
+    "tokens": [
+     "ns",
+     "id",
+     "date",
+     "example",
+     "ns"
+    ],
+    "val": "<ns0:g id=\"date\" example=\"30.04.2026, 18:13\">%1$s</ns0:g> তারিখে নবায়ন হবে"
+   },
+   {
+    "key": "settings_premium_cancelled_desc",
+    "tokens": [
+     "Play"
+    ],
+    "val": "তোমার Premium সুবিধাগুলো বিলিং পিরিয়ড শেষ হওয়া পর্যন্ত পাওয়া যাবে। Google Play-এর মাধ্যমে "
+   },
+   {
+    "key": "settings_premium_cancelled_until",
+    "tokens": [
+     "ns",
+     "id",
+     "date",
+     "example",
+     "ns"
+    ],
+    "val": "প্রিমিয়াম সাবস্ক্রিপশন বাতিল — <ns0:g id=\"date\" example=\"30.04.2026, 21:01\">%1$s</ns0:g> "
+   }
+  ],
+  "controlChars": [],
+  "halantDangling": []
+ },
+ "hi": {
+  "totalStrings": 1087,
+  "totalPlurals": 12,
+  "totalArrays": 71,
+  "replacementChar": [],
+  "emptyStrings": [
+   "ai_prompt_language_override"
+  ],
+  "noTargetScript": [
+   {
+    "key": "app_name",
+    "val": "Best Journal"
+   },
+   {
+    "key": "label_premium",
+    "val": "Premium"
+   },
+   {
+    "key": "transcription_model_groq",
+    "val": "Groq Whisper Large V3 Turbo"
+   },
+   {
+    "key": "settings_premium_section",
+    "val": "Premium"
+   },
+   {
+    "key": "settings_about_version",
+    "val": "Best Journal V0.21.9"
+   },
+   {
+    "key": "ai_prompt_rerank_user_focus_header",
+    "val": "=== PROFIL-FOKUS DES BENUTZERS ==="
+   },
+   {
+    "key": "ai_prompt_rerank_actions_header",
+    "val": "=== AKTUELLES TOP-MASSNAHMEN-ARRAY (5 Einträge) ==="
+   },
+   {
+    "key": "ai_prompt_rerank_entries_header",
+    "val": "=== TAGEBUCHEINTRÄGE (Quelle für profilstarke Ersatz-Punkte) ==="
+   },
+   {
+    "key": "json_key_overall_analysis",
+    "val": "samagra_vishleshan"
+   },
+   {
+    "key": "json_key_top_actions",
+    "val": "mukhya_kadam"
+   },
+   {
+    "key": "json_key_categories",
+    "val": "shreniyaan"
+   },
+   {
+    "key": "json_key_heading_top5",
+    "val": "shirshak_top5"
+   },
+   {
+    "key": "json_key_heading_analysis",
+    "val": "shirshak_vishleshan"
+   },
+   {
+    "key": "json_key_heading_results",
+    "val": "shirshak_natije"
+   },
+   {
+    "key": "json_key_progress",
+    "val": "pragati"
+   },
+   {
+    "key": "json_key_overall_entropy",
+    "val": "samagra_entropy"
+   },
+   {
+    "key": "json_key_trend",
+    "val": "rujhan"
+   },
+   {
+    "key": "json_key_category_name",
+    "val": "naam"
+   },
+   {
+    "key": "json_key_category_icon",
+    "val": "aikan"
+   },
+   {
+    "key": "json_key_category_color",
+    "val": "rang"
+   },
+   {
+    "key": "json_key_category_entropy_level",
+    "val": "entropy_star"
+   },
+   {
+    "key": "json_key_category_summary",
+    "val": "saaraansh"
+   },
+   {
+    "key": "json_key_category_advices",
+    "val": "sujhaav"
+   },
+   {
+    "key": "json_key_item_title",
+    "val": "shirshak"
+   },
+   {
+    "key": "json_key_item_description",
+    "val": "vivaran"
+   },
+   {
+    "key": "json_key_item_explanation",
+    "val": "vyaakhya"
+   },
+   {
+    "key": "json_key_item_reference",
+    "val": "sandarbh"
+   },
+   {
+    "key": "json_key_item_priority",
+    "val": "prathamikta"
+   },
+   {
+    "key": "json_key_item_connection",
+    "val": "sambandh"
+   },
+   {
+    "key": "json_key_item_derivation",
+    "val": "vyutpatti"
+   },
+   {
+    "key": "json_key_derivation_date",
+    "val": "tareekh"
+   },
+   {
+    "key": "json_key_derivation_summary",
+    "val": "saaraansh"
+   },
+   {
+    "key": "json_value_priority_high",
+    "val": "uchch"
+   },
+   {
+    "key": "json_value_priority_medium",
+    "val": "madhyam"
+   },
+   {
+    "key": "json_value_priority_low",
+    "val": "kam"
+   },
+   {
+    "key": "settings_ccpa_do_not_sell_title",
+    "val": "Do Not Sell My Personal Information"
+   },
+   {
+    "key": "consent_toggle_do_not_sell_title",
+    "val": "Do Not Sell My Personal Information"
+   },
+   {
+    "key": "consent_footer_link_impressum",
+    "val": "Impressum"
+   },
+   {
+    "key": "datetime_months_relative[one]",
+    "val": "vor %1$d Monat"
+   },
+   {
+    "key": "datetime_months_relative[other]",
+    "val": "vor %1$d Monaten"
+   },
+   {
+    "key": "datetime_years_relative[one]",
+    "val": "vor %1$d Jahr"
+   },
+   {
+    "key": "datetime_years_relative[other]",
+    "val": "vor %1$d Jahren"
+   },
+   {
+    "key": "weekday_abbreviations[0]",
+    "val": "@string/day_abbrev_mon"
+   },
+   {
+    "key": "weekday_abbreviations[1]",
+    "val": "@string/day_abbrev_tue"
+   },
+   {
+    "key": "weekday_abbreviations[2]",
+    "val": "@string/day_abbrev_wed"
+   },
+   {
+    "key": "weekday_abbreviations[3]",
+    "val": "@string/day_abbrev_thu"
+   },
+   {
+    "key": "weekday_abbreviations[4]",
+    "val": "@string/day_abbrev_fri"
+   },
+   {
+    "key": "weekday_abbreviations[5]",
+    "val": "@string/day_abbrev_sat"
+   },
+   {
+    "key": "weekday_abbreviations[6]",
+    "val": "@string/day_abbrev_sun"
+   }
+  ],
+  "latinFragments": [
+   {
+    "key": "action_go_google_play",
+    "tokens": [
+     "Play"
+    ],
+    "val": "Google Play पर जाएं"
+   },
+   {
+    "key": "transcription_model_local",
+    "tokens": [
+     "Whisper"
+    ],
+    "val": "लोकल Whisper मॉडल"
+   },
+   {
+    "key": "share_followup_numbered",
+    "tokens": [
+     "ns",
+     "id",
+     "ordinal",
+     "example",
+     "ns"
+    ],
+    "val": "फ़ॉलो-अप <ns0:g id=\"ordinal\" example=\"1\">%1$s</ns0:g>"
+   },
+   {
+    "key": "error_recording_failed",
+    "tokens": [
+     "ns",
+     "id",
+     "reason",
+     "example",
+     "ns"
+    ],
+    "val": "रिकॉर्डिंग विफल: <ns0:g id=\"reason\" example=\"माइक्रोफ़ोन उपलब्ध नहीं\">%1$s</ns0:g>"
+   },
+   {
+    "key": "error_transcription_failed",
+    "tokens": [
+     "ns",
+     "id",
+     "reason",
+     "example",
+     "ns"
+    ],
+    "val": "ट्रांसक्रिप्शन विफल: <ns0:g id=\"reason\" example=\"नेटवर्क टाइमआउट\">%1$s</ns0:g>"
+   },
+   {
+    "key": "dashboard_weekly_review_upsell_body",
+    "tokens": [
+     "analysis",
+     "patterns",
+     "insights"
+    ],
+    "val": "आपका यह हफ्ता काफी व्यस्त रहा। Premium के साथ आप पूरी analysis देख सकते हैं: patterns पहचा"
+   },
+   {
+    "key": "legend_insight_deep",
+    "tokens": [
+     "patterns"
+    ],
+    "val": "गहरे, बार-बार आने वाले patterns और विश्वास"
+   },
+   {
+    "key": "profile_insight_desc",
+    "tokens": [
+     "patterns"
+    ],
+    "val": "बार-बार आने वाले सोच और भावना के patterns को सामने लाता है"
+   },
+   {
+    "key": "profile_entropy_long",
+    "tokens": [
+     "entries",
+     "analysis",
+     "tips"
+    ],
+    "val": "KI आपकी entries में तनाव, बोझ और अव्यवस्था को खोजती है।\\n\\nआपको मिलेगा:\\n\\n• आपकी सबसे बड़"
+   },
+   {
+    "key": "profile_insight_long",
+    "tokens": [
+     "events",
+     "entries",
+     "patterns",
+     "entries"
+    ],
+    "val": "KI सिर्फ events से आगे जाती है। वह आपकी entries में देखती है:\\n\\n• आपके शब्दों में सोच के "
+   },
+   {
+    "key": "settings_signin_failed",
+    "tokens": [
+     "ns",
+     "id",
+     "error",
+     "reason",
+     "example",
+     "Network",
+     "error",
+     "ns"
+    ],
+    "val": "साइन-इन विफल: <ns0:g id=\"error_reason\" example=\"Network error\">%1$s</ns0:g>"
+   },
+   {
+    "key": "churn_google_play_redirect",
+    "tokens": [
+     "Play"
+    ],
+    "val": "अब आप सदस्यता प्रबंधन के लिए Google Play पर जा रहे हैं। आपकी डायरी एंट्री बेशक सुरक्षित रह"
+   },
+   {
+    "key": "settings_premium_feature_5_perspectives_desc",
+    "tokens": [
+     "Summary",
+     "self",
+     "knowledge"
+    ],
+    "val": "Summary से self-knowledge तक"
+   },
+   {
+    "key": "settings_feedback_allow_gmail",
+    "tokens": [
+     "Gmail"
+    ],
+    "val": "कृपया Gmail एक्सेस दें और फिर कोशिश करें।"
+   },
+   {
+    "key": "settings_feedback_subject",
+    "tokens": [
+     "Best",
+     "Journal"
+    ],
+    "val": "Best Journal पर फ़ीडबैक"
+   },
+   {
+    "key": "settings_feedback_api_error",
+    "tokens": [
+     "Gmail"
+    ],
+    "val": "Gmail त्रुटि %1$d: %2$s"
+   },
+   {
+    "key": "settings_feedback_confirm_subject",
+    "tokens": [
+     "Best",
+     "Journal"
+    ],
+    "val": "Best Journal के लिए आपका फीडबैक"
+   },
+   {
+    "key": "settings_feedback_confirm_body",
+    "tokens": [
+     "nDEV",
+     "FRANK"
+    ],
+    "val": "यह संदेश तुमने डेवलपर को भेजा है।\\nवह तुम्हें खुद जवाब देगा।\\n\\n--- तुम्हारा संदेश ---\\n%1"
+   },
+   {
+    "key": "limit_remaining",
+    "tokens": [
+     "ns",
+     "id",
+     "count",
+     "example",
+     "ns"
+    ],
+    "val": "<ns0:g id=\"count\" example=\"3\">%1$d</ns0:g> बाकी"
+   },
+   {
+    "key": "limit_used_of_max",
+    "tokens": [
+     "ns",
+     "id",
+     "max",
+     "example",
+     "ns",
+     "ns",
+     "id",
+     "used",
+     "example",
+     "ns"
+    ],
+    "val": "<ns0:g id=\"max\" example=\"5\">%2$d</ns0:g> में से <ns0:g id=\"used\" example=\"3\">%1$d</ns0:g> "
+   },
+   {
+    "key": "churn_discount_badge",
+    "tokens": [
+     "ns",
+     "id",
+     "percent",
+     "example",
+     "ns"
+    ],
+    "val": "<ns0:g id=\"percent\" example=\"50\">%1$d</ns0:g>\\u00A0%% बचाएं"
+   },
+   {
+    "key": "ai_retro_week_title_prompt",
+    "tokens": [
+     "ns",
+     "id",
+     "lang",
+     "example",
+     "ns",
+     "ns",
+     "id",
+     "summary",
+     "preview",
+     "example",
+     "ns"
+    ],
+    "val": "इस हफ्तावार समीक्षा के आधार पर <ns0:g id=\"lang\" example=\"हिंदी\">%1$s</ns0:g> में छोटा, भाव"
+   },
+   {
+    "key": "ai_retro_month_task",
+    "tokens": [
+     "ns",
+     "id",
+     "month",
+     "example",
+     "ns",
+     "ns",
+     "id",
+     "year",
+     "example",
+     "ns"
+    ],
+    "val": "कार्य: नीचे दी गई हफ्तावार समीक्षाओं को <ns0:g id=\"month\" example=\"अप्रैल\">%1$s</ns0:g> <n"
+   },
+   {
+    "key": "ai_retro_month_title_prompt",
+    "tokens": [
+     "ns",
+     "id",
+     "lang",
+     "example",
+     "ns",
+     "ns",
+     "id",
+     "summary",
+     "preview",
+     "example",
+     "ns"
+    ],
+    "val": "इस माहवार समीक्षा के आधार पर <ns0:g id=\"lang\" example=\"हिंदी\">%1$s</ns0:g> में छोटा, भावना"
+   },
+   {
+    "key": "ai_retro_year_task",
+    "tokens": [
+     "ns",
+     "id",
+     "year",
+     "example",
+     "ns"
+    ],
+    "val": "कार्य: नीचे दी गई माहवार समीक्षाओं को <ns0:g id=\"year\" example=\"2026\">%1$d</ns0:g> की एक स"
+   },
+   {
+    "key": "ai_retro_year_title_prompt",
+    "tokens": [
+     "ns",
+     "id",
+     "lang",
+     "example",
+     "ns",
+     "ns",
+     "id",
+     "summary",
+     "preview",
+     "example",
+     "ns"
+    ],
+    "val": "इस सालाना समीक्षा के आधार पर <ns0:g id=\"lang\" example=\"हिंदी\">%1$s</ns0:g> में छोटा, भावना"
+   },
+   {
+    "key": "ai_prompt_goals_schema",
+    "tokens": [
+     "samagra",
+     "vishleshan",
+     "mukhya",
+     "kadam",
+     "shreniyaan",
+     "samagra",
+     "vishleshan",
+     "mukhya",
+     "kadam",
+     "shirshak",
+     "vivaran",
+     "vyaakhya",
+     "shreniyaan",
+     "naam",
+     "aikan",
+     "material",
+     "icon",
+     "rang",
+     "HEX",
+     "entropy",
+     "star",
+     "saaraansh",
+     "sujhaav",
+     "shirshak",
+     "vivaran",
+     "prathamikta",
+     "uchch",
+     "madhyam",
+     "kam",
+     "sambandh",
+     "vyutpatti",
+     "tareekh",
+     "saaraansh",
+     "uchch",
+     "madhyam",
+     "kam"
+    ],
+    "val": "JSON आउटपुट ढांचा:\\n{\\n  \\\"samagra_vishleshan\\\": \\\"...\\\",\\n  \\\"mukhya_kadam\\\": [...],\\n  \\"
+   },
+   {
+    "key": "ai_prompt_goals_output",
+    "tokens": [
+     "backticks"
+    ],
+    "val": "आउटपुट फ़ॉर्मेट: सिर्फ़ JSON। कोई backticks नहीं। { से शुरू।"
+   },
+   {
+    "key": "ai_prompt_insight_schema_header",
+    "tokens": [
+     "samagra",
+     "entropy",
+     "rujhan",
+     "badhta",
+     "sthir",
+     "ghata",
+     "agyaat",
+     "samagra",
+     "vishleshan",
+     "pragati",
+     "mukhya",
+     "kadam",
+     "shreniyaan",
+     "samagra",
+     "entropy",
+     "rujhan",
+     "badhta",
+     "sthir",
+     "ghata",
+     "agyaat",
+     "samagra",
+     "vishleshan"
+    ],
+    "val": "JSON आउटपुट ढांचा:\\n{\\n  \\\"samagra_entropy\\\": 0.0,\\n  \\\"rujhan\\\": \\\"badhta|sthir|ghata|agy"
+   },
+   {
+    "key": "ai_prompt_insight_schema_fields",
+    "tokens": [
+     "pragati",
+     "shirshak",
+     "vivaran",
+     "sandarbh",
+     "mukhya",
+     "kadam",
+     "shirshak",
+     "vivaran",
+     "vyaakhya"
+    ],
+    "val": "4) \\\"pragati\\\" (ऐरे, 0-8 आइटम)\\n   व्यक्तिगत ख़ूबियां और सकारात्मक गुण जो एंट्री से साफ़ द"
+   },
+   {
+    "key": "ai_prompt_insight_schema_categories",
+    "tokens": [
+     "shreniyaan",
+     "naam",
+     "aikan",
+     "material",
+     "icon",
+     "name",
+     "rang",
+     "HEX",
+     "entropy",
+     "star",
+     "saaraansh",
+     "sujhaav",
+     "icon",
+     "psychology",
+     "rang",
+     "BFA",
+     "icon",
+     "favorite",
+     "rang",
+     "icon",
+     "person",
+     "rang",
+     "FA",
+     "icon",
+     "bolt",
+     "rang",
+     "icon",
+     "star",
+     "rang",
+     "FBBF",
+     "icon",
+     "people",
+     "rang",
+     "EC",
+     "icon",
+     "shield",
+     "rang",
+     "icon",
+     "repeat",
+     "rang",
+     "icon",
+     "nights",
+     "stay",
+     "rang",
+     "FF",
+     "icon",
+     "block",
+     "rang",
+     "EF",
+     "icon",
+     "lightbulb",
+     "rang",
+     "EF",
+     "icon",
+     "handshake",
+     "rang",
+     "icon",
+     "trending",
+     "up",
+     "rang",
+     "icon",
+     "spa",
+     "rang",
+     "icon",
+     "tune",
+     "rang",
+     "self",
+     "improvement",
+     "mood",
+     "sentiment",
+     "satisfied",
+     "sentiment",
+     "dissatisfied",
+     "visibility",
+     "lock",
+     "open",
+     "wb",
+     "sunny",
+     "explore",
+     "balance",
+     "healing",
+     "volunteer",
+     "activism",
+     "emoji",
+     "objects",
+     "entropy",
+     "star",
+     "sujhaav",
+     "uchch",
+     "madhyam",
+     "kam",
+     "shirshak",
+     "vivaran",
+     "prathamikta",
+     "uchch",
+     "madhyam",
+     "kam",
+     "sambandh",
+     "null",
+     "vyutpatti",
+     "tareekh",
+     "saaraansh",
+     "prathamikta",
+     "uchch",
+     "madhyam",
+     "kam"
+    ],
+    "val": "6) \\\"shreniyaan\\\" (ऐरे, ज़रूरत के मुताबिक)\\n   हर पहचाने गए आत्म-ज्ञान क्षेत्र के लिए एक अ"
+   },
+   {
+    "key": "ai_prompt_insight_output",
+    "tokens": [
+     "mukhya",
+     "kadam",
+     "sujhaav",
+     "vivaran",
+     "backticks",
+     "key"
+    ],
+    "val": "विवरण के लिए शब्द संख्या नियम (सख़्ती से):\\n\\\"mukhya_kadam\\\" और \\\"sujhaav\\\" के \\\"vivaran\\\""
+   },
+   {
+    "key": "ai_prompt_entropy_rules",
+    "tokens": [
+     "nJSON",
+     "shirshak",
+     "vivaran",
+     "saaraansh",
+     "vyaakhya",
+     "mustawa",
+     "entropia",
+     "samagra",
+     "entropy"
+    ],
+    "val": "भाषा के नियम (JSON के सभी टेक्स्ट फ़ील्ड पर):\\n- सरल, स्पष्ट भाषा। छोटे वाक्य।\\n- कोई कठिन"
+   },
+   {
+    "key": "ai_prompt_entropy_schema_header",
+    "tokens": [
+     "samagra",
+     "entropy",
+     "rujhan",
+     "badhta",
+     "sthir",
+     "ghata",
+     "agyaat",
+     "samagra",
+     "vishleshan",
+     "pragati",
+     "mukhya",
+     "kadam",
+     "shreniyaan",
+     "samagra",
+     "entropy",
+     "rujhan",
+     "ghata",
+     "sthir",
+     "badhta",
+     "agyaat",
+     "samagra",
+     "vishleshan"
+    ],
+    "val": "JSON आउटपुट ढांचा:\\n{\\n  \\\"samagra_entropy\\\": 0.0,\\n  \\\"rujhan\\\": \\\"badhta|sthir|ghata|agy"
+   },
+   {
+    "key": "ai_prompt_entropy_schema_fields",
+    "tokens": [
+     "pragati",
+     "shirshak",
+     "vivaran",
+     "sandarbh",
+     "mukhya",
+     "kadam",
+     "shirshak",
+     "vivaran",
+     "vyaakhya"
+    ],
+    "val": "4) \\\"pragati\\\" (ऐरे, 0-5 आइटम)\\n   पहचानें कहां बोझ कम हुआ या कहां काम करने वाली अच्छी आदत"
+   },
+   {
+    "key": "ai_prompt_entropy_schema_categories",
+    "tokens": [
+     "shreniyaan",
+     "naam",
+     "aikan",
+     "material",
+     "icon",
+     "name",
+     "rang",
+     "HEX",
+     "entropy",
+     "star",
+     "saaraansh",
+     "sujhaav",
+     "icon",
+     "bedtime",
+     "rang",
+     "FF",
+     "icon",
+     "work",
+     "rang",
+     "FF",
+     "icon",
+     "fitness",
+     "center",
+     "rang",
+     "ECDC",
+     "icon",
+     "restaurant",
+     "rang",
+     "FFE",
+     "icon",
+     "psychology",
+     "rang",
+     "BFA",
+     "icon",
+     "people",
+     "rang",
+     "icon",
+     "home",
+     "rang",
+     "icon",
+     "trending",
+     "up",
+     "rang",
+     "FA",
+     "icon",
+     "code",
+     "rang",
+     "icon",
+     "health",
+     "and",
+     "safety",
+     "rang",
+     "EF",
+     "icon",
+     "account",
+     "balance",
+     "rang",
+     "icon",
+     "sports",
+     "esports",
+     "rang",
+     "EC",
+     "icon",
+     "grass",
+     "rang",
+     "icon",
+     "healing",
+     "rang",
+     "DC",
+     "spa",
+     "coffee",
+     "self",
+     "improvement",
+     "nights",
+     "stay",
+     "directions",
+     "run",
+     "child",
+     "care",
+     "school",
+     "computer",
+     "timer",
+     "cleaning",
+     "services",
+     "music",
+     "note",
+     "pets",
+     "wb",
+     "sunny",
+     "lightbulb",
+     "uchch",
+     "madhyam",
+     "kam",
+     "shirshak",
+     "vivaran",
+     "prathamikta",
+     "uchch",
+     "madhyam",
+     "kam",
+     "sambandh",
+     "null",
+     "vyutpatti",
+     "tareekh",
+     "saaraansh",
+     "uchch",
+     "madhyam",
+     "kam"
+    ],
+    "val": "6) \\\"shreniyaan\\\" (ऐरे, ज़रूरत के मुताबिक)\\n   हर पहचाने विषय के लिए एक श्रेणी।\\n   हर श्र"
+   },
+   {
+    "key": "ai_prompt_entropy_output",
+    "tokens": [
+     "backticks",
+     "key"
+    ],
+    "val": "आउटपुट फ़ॉर्मेट, सख़्त नियम:\\n- सिर्फ़ JSON ऑब्जेक्ट से जवाब।\\n- पहले-बाद कोई टेक्स्ट नहीं"
+   },
+   {
+    "key": "ai_prompt_summary_schema_header",
+    "tokens": [
+     "samagra",
+     "entropy",
+     "rujhan",
+     "badhta",
+     "sthir",
+     "ghata",
+     "agyaat",
+     "samagra",
+     "vishleshan",
+     "pragati",
+     "mukhya",
+     "kadam",
+     "shreniyaan",
+     "samagra",
+     "entropy",
+     "entropy",
+     "rujhan",
+     "badhta",
+     "sthir",
+     "ghata",
+     "agyaat",
+     "samagra",
+     "vishleshan"
+    ],
+    "val": "JSON आउटपुट ढांचा:\\n{\\n  \\\"samagra_entropy\\\": 0.0,\\n  \\\"rujhan\\\": \\\"badhta|sthir|ghata|agy"
+   },
+   {
+    "key": "ai_prompt_summary_schema_fields",
+    "tokens": [
+     "pragati",
+     "shirshak",
+     "vivaran",
+     "sandarbh",
+     "mukhya",
+     "kadam",
+     "shirshak",
+     "vivaran",
+     "vyaakhya"
+    ],
+    "val": "4) \\\"pragati\\\" (ऐरे, 0-5 आइटम)\\n   दोहराए जाने वाले विषय, आदतें या जुड़ाव जो कई एंट्री में"
+   },
+   {
+    "key": "ai_prompt_summary_schema_categories",
+    "tokens": [
+     "shreniyaan",
+     "naam",
+     "aikan",
+     "material",
+     "icon",
+     "name",
+     "rang",
+     "HEX",
+     "entropy",
+     "star",
+     "saaraansh",
+     "sujhaav",
+     "icon",
+     "bedtime",
+     "rang",
+     "FF",
+     "icon",
+     "work",
+     "rang",
+     "FF",
+     "icon",
+     "fitness",
+     "center",
+     "rang",
+     "ECDC",
+     "icon",
+     "restaurant",
+     "rang",
+     "FFE",
+     "icon",
+     "psychology",
+     "rang",
+     "BFA",
+     "icon",
+     "people",
+     "rang",
+     "icon",
+     "home",
+     "rang",
+     "icon",
+     "trending",
+     "up",
+     "rang",
+     "FA",
+     "icon",
+     "code",
+     "rang",
+     "icon",
+     "health",
+     "and",
+     "safety",
+     "rang",
+     "EF",
+     "icon",
+     "account",
+     "balance",
+     "rang",
+     "icon",
+     "sports",
+     "esports",
+     "rang",
+     "EC",
+     "icon",
+     "grass",
+     "rang",
+     "icon",
+     "calendar",
+     "today",
+     "rang",
+     "icon",
+     "flight",
+     "rang",
+     "icon",
+     "music",
+     "note",
+     "rang",
+     "EF",
+     "spa",
+     "coffee",
+     "self",
+     "improvement",
+     "nights",
+     "stay",
+     "directions",
+     "run",
+     "child",
+     "care",
+     "school",
+     "computer",
+     "timer",
+     "cleaning",
+     "services",
+     "directions",
+     "car",
+     "photo",
+     "camera",
+     "pets",
+     "wb",
+     "sunny",
+     "lightbulb",
+     "star",
+     "healing",
+     "entropie",
+     "level",
+     "sujhaav",
+     "hoch",
+     "mittel",
+     "niedrig",
+     "shirshak",
+     "vivaran",
+     "prathamikta",
+     "uchch",
+     "madhyam",
+     "kam",
+     "sambandh",
+     "null",
+     "vyutpatti",
+     "tareekh",
+     "saaraansh",
+     "prathamikta",
+     "hoch",
+     "mittel",
+     "niedrig"
+    ],
+    "val": "6) \\\"shreniyaan\\\" (ऐरे, ज़रूरत के मुताबिक)\\n   हर पहचाने विषय के लिए समूह।\\n   हर विषय का "
+   },
+   {
+    "key": "ai_prompt_summary_output",
+    "tokens": [
+     "top",
+     "massnahmen",
+     "ratschlaege",
+     "beschreibung",
+     "backticks",
+     "key"
+    ],
+    "val": "विवरण के लिए शब्द संख्या नियम (सख़्ती से):\\n\\\"top_massnahmen\\\" और \\\"ratschlaege\\\" के \\\"bes"
+   },
+   {
+    "key": "ai_prompt_custom_rules",
+    "tokens": [
+     "mukhya",
+     "kadam",
+     "shreniyaan"
+    ],
+    "val": "काम का नियम (सबसे पहले):\\nहर एंट्री को पढ़ें और फोकस के लिहाज़ से जाँचें। कोई एंट्री छोड़ी"
+   },
+   {
+    "key": "ai_prompt_custom_schema",
+    "tokens": [
+     "ueberschrift",
+     "top",
+     "ueberschrift",
+     "analyse",
+     "ueberschrift",
+     "ergebnisse",
+     "samagra",
+     "entropy",
+     "rujhan",
+     "badhta",
+     "sthir",
+     "ghata",
+     "agyaat",
+     "samagra",
+     "vishleshan",
+     "pragati",
+     "mukhya",
+     "kadam",
+     "shreniyaan",
+     "ueberschrift",
+     "top",
+     "analyse",
+     "ergebnisse",
+     "samagra",
+     "entropy",
+     "rujhan",
+     "samagra",
+     "vishleshan",
+     "pragati",
+     "shirshak",
+     "vivaran",
+     "sandarbh",
+     "mukhya",
+     "kadam",
+     "shirshak",
+     "vivaran",
+     "vyaakhya",
+     "shreniyaan",
+     "naam",
+     "aikan",
+     "material",
+     "icon",
+     "name",
+     "rang",
+     "HEX",
+     "entropy",
+     "star",
+     "saaraansh",
+     "sujhaav",
+     "shirshak",
+     "vivaran",
+     "prathamikta",
+     "uchch",
+     "madhyam",
+     "kam",
+     "sambandh",
+     "null",
+     "vyutpatti",
+     "tareekh",
+     "saaraansh",
+     "fokus",
+     "kern",
+     "fokus",
+     "zitate",
+     "nasa",
+     "ih",
+     "herleitung",
+     "herleitung",
+     "tasjilat",
+     "mudaf"
+    ],
+    "val": "JSON आउटपुट ढांचा:\\n{\\n  \\\"ueberschrift_top5\\\": \\\"टॉप 5 के लिए रचनात्मक शीर्षक (फोकस अनुकू"
+   },
+   {
+    "key": "ai_prompt_custom_output",
+    "tokens": [
+     "top",
+     "massnahmen",
+     "ratschlaege",
+     "vivaran",
+     "backticks"
+    ],
+    "val": "शब्द संख्या नियम: top_massnahmen और ratschlaege में \\\"vivaran\\\" फ़ील्ड में हमेशा 13-21 शब्"
+   },
+   {
+    "key": "retro_monthly_p3",
+    "tokens": [
+     "entries"
+    ],
+    "val": "आपकी entries में विकास दिखाता है"
+   },
+   {
+    "key": "retro_yearly_p2",
+    "tokens": [
+     "summarize"
+    ],
+    "val": "KI आपके साल के बड़े विषयों को summarize करती है"
+   },
+   {
+    "key": "onboarding_welcome",
+    "tokens": [
+     "Best",
+     "Journal"
+    ],
+    "val": "Best Journal में\\nस्वागत है"
+   },
+   {
+    "key": "onboarding_subtitle",
+    "tokens": [
+     "personal",
+     "diary",
+     "clarity"
+    ],
+    "val": "आपकी personal KI diary\\nरोज़मर्रा में ज़्यादा clarity के लिए"
+   },
+   {
+    "key": "onboarding_how_step4_desc",
+    "tokens": [
+     "dashboard",
+     "entries",
+     "connections"
+    ],
+    "val": "KI dashboard आपकी entries के बीच connections दिखाता है।"
+   },
+   {
+    "key": "onboarding_premium_feature_patterns",
+    "tokens": [
+     "Patterns",
+     "visible",
+     "entries",
+     "patterns"
+    ],
+    "val": "Patterns visible करें: KI आपकी entries में बार-बार आने वाले सोच और भावना के patterns दिखात"
+   },
+   {
+    "key": "onboarding_free_trial",
+    "tokens": [
+     "Free",
+     "cancel"
+    ],
+    "val": "Free, जब चाहें cancel करें"
+   },
+   {
+    "key": "onboarding_free_after_trial",
+    "tokens": [
+     "Best",
+     "Journal"
+    ],
+    "val": "उसके बाद आप Best Journal मुफ़्त में चलाते हैं,\\nहफ्तावार AI सीमा के साथ।"
+   },
+   {
+    "key": "onboarding_try_premium",
+    "tokens": [
+     "free"
+    ],
+    "val": "8 दिन free, फिर 3.99 €/महीने से"
+   },
+   {
+    "key": "paywall_yearly_note",
+    "tokens": [
+     "renew",
+     "nTrial",
+     "cancel"
+    ],
+    "val": "इसके बाद %1$s प्रति वर्ष, अपने आप renew होता है\\nTrial के दौरान जब चाहें cancel करें"
+   },
+   {
+    "key": "paywall_free_note",
+    "tokens": [
+     "subscription"
+    ],
+    "val": "App बिना subscription के भी काम करती रहती है।"
+   },
+   {
+    "key": "paywall_feature_patterns",
+    "tokens": [
+     "patterns"
+    ],
+    "val": "अपनी सोच में बार-बार आने वाले patterns पहचानें"
+   },
+   {
+    "key": "churn_promo_one_month_remaining",
+    "tokens": [
+     "ns",
+     "id",
+     "base",
+     "price",
+     "example",
+     "ns"
+    ],
+    "val": "1 महीना बचा — फिर <ns0:g id=\"base_price\" example=\"3,99 €\">%1$s</ns0:g> प्रति माह"
+   },
+   {
+    "key": "churn_promo_months_remaining",
+    "tokens": [
+     "ns",
+     "id",
+     "months",
+     "example",
+     "ns",
+     "ns",
+     "id",
+     "base",
+     "price",
+     "example",
+     "ns"
+    ],
+    "val": "<ns0:g id=\"months\" example=\"2\">%1$d</ns0:g> महीने बचे — फिर <ns0:g id=\"base_price\" example"
+   },
+   {
+    "key": "churn_auto_renew_note",
+    "tokens": [
+     "Play"
+    ],
+    "val": "आपकी सदस्यता Google Play से अपने आप नवीकृत होती है। कभी भी रद्द कर सकते हैं।"
+   },
+   {
+    "key": "churn_exclusive_offer",
+    "tokens": [
+     "offer"
+    ],
+    "val": "आपके लिए offer"
+   },
+   {
+    "key": "churn_pause_sub",
+    "tokens": [
+     "Play"
+    ],
+    "val": "या Google Play से सदस्यता रोकें"
+   },
+   {
+    "key": "consent_intro",
+    "tokens": [
+     "Best",
+     "Journal"
+    ],
+    "val": "आपकी डायरी एक निजी जगह है, और हम इसका सम्मान करते हैं। यहाँ आप पारदर्शी तरीके से देख सकते "
+   },
+   {
+    "key": "consent_card2_title",
+    "tokens": [
+     "USA"
+    ],
+    "val": "AI फ़ीचर्स (USA)"
+   },
+   {
+    "key": "consent_card2_body",
+    "tokens": [
+     "Microsoft",
+     "Edge",
+     "USA",
+     "EU",
+     "US",
+     "Data",
+     "Privacy",
+     "Framework",
+     "Standard",
+     "Contractual",
+     "Clauses",
+     "EU",
+     "SCCs",
+     "USA"
+    ],
+    "val": "वैकल्पिक रूप से टेक्स्ट Google Gemini को और टेक्स्ट-टू-स्पीच के टेक्स्ट Microsoft Edge को "
+   },
+   {
+    "key": "consent_card3_body",
+    "tokens": [
+     "Firebase",
+     "Analytics",
+     "Settings"
+    ],
+    "val": "Firebase Analytics, वैकल्पिक, Settings में कभी भी बदल सकते हैं।"
+   },
+   {
+    "key": "consent_confirmation",
+    "tokens": [
+     "Privacy",
+     "Policy",
+     "Terms",
+     "of",
+     "Use",
+     "Imprint",
+     "Settings"
+    ],
+    "val": "\\\"सहमत हूँ और शुरू करें\\\" पर टैप करके आप पुष्टि करते हैं कि आपने Privacy Policy, Terms of "
+   },
+   {
+    "key": "privacy_gate_groq_body",
+    "tokens": [
+     "Inc",
+     "Mountain",
+     "View",
+     "USA",
+     "Settings"
+    ],
+    "val": "क्लाउड ट्रांसक्रिप्शन के लिए आपकी वॉयस रिकॉर्डिंग एन्क्रिप्टेड रूप में Groq, Inc. (Mountai"
+   },
+   {
+    "key": "privacy_gate_gemini_body",
+    "tokens": [
+     "Best",
+     "Journal",
+     "smart",
+     "Summaries",
+     "reviews",
+     "dashboard",
+     "insights",
+     "text",
+     "improvements",
+     "texts",
+     "encrypted",
+     "data",
+     "training",
+     "Requests",
+     "store",
+     "EU",
+     "US",
+     "Data",
+     "Privacy",
+     "Framework",
+     "encrypted",
+     "diary",
+     "entries",
+     "data",
+     "Art",
+     "processing",
+     "results",
+     "professional",
+     "Settings"
+    ],
+    "val": "अच्छा लगा कि आप Best Journal की smart सुविधाओं का उपयोग करना चाहते हैं! Summaries, reviews"
+   },
+   {
+    "key": "privacy_gate_tts_title",
+    "tokens": [
+     "Microsoft"
+    ],
+    "val": "टेक्स्ट Microsoft को भेजें?"
+   },
+   {
+    "key": "privacy_gate_tts_body",
+    "tokens": [
+     "Microsoft",
+     "Bing",
+     "Speech",
+     "USA",
+     "EU",
+     "US",
+     "Data",
+     "Privacy",
+     "Framework",
+     "Standard",
+     "Contractual",
+     "Clauses"
+    ],
+    "val": "पढ़कर सुनाने के लिए टेक्स्ट एन्क्रिप्टेड रूप में Microsoft Bing Speech (USA) को भेजा जाता "
+   },
+   {
+    "key": "settings_analytics_subtitle",
+    "tokens": [
+     "Firebase",
+     "Analytics"
+    ],
+    "val": "त्रुटि विश्लेषण और उत्पाद सुधार के लिए Firebase Analytics"
+   },
+   {
+    "key": "settings_delete_account_confirm_body",
+    "tokens": [
+     "Firebase"
+    ],
+    "val": "यह क्रिया अपरिवर्तनीय है और ये डिलीट करती है:\\n\\n• सभी लोकल डायरी एंट्रीज़, फ़ोटो और वीडिय"
+   },
+   {
+    "key": "settings_report_ai_confirm_title",
+    "tokens": [
+     "Support"
+    ],
+    "val": "Support को ईमेल खोलें?"
+   },
+   {
+    "key": "settings_report_ai_confirm_body",
+    "tokens": [
+     "dev",
+     "app",
+     "support",
+     "gmail",
+     "com",
+     "Dashboard",
+     "Retrospectives",
+     "Text",
+     "Improvement"
+    ],
+    "val": "आपका ईमेल ऐप dev.app.support@gmail.com को तैयार संदेश के साथ खुलेगा। भेजने से पहले आप विवर"
+   },
+   {
+    "key": "settings_report_ai_no_email",
+    "tokens": [
+     "dev",
+     "app",
+     "support",
+     "gmail",
+     "com"
+    ],
+    "val": "कोई ईमेल ऐप नहीं मिला। कृपया रिपोर्ट dev.app.support@gmail.com पर भेजें।"
+   },
+   {
+    "key": "settings_report_ai_subject",
+    "tokens": [
+     "Best",
+     "Journal"
+    ],
+    "val": "Best Journal: अनुचित AI जवाब"
+   },
+   {
+    "key": "settings_report_ai_body",
+    "tokens": [
+     "Best",
+     "Journal"
+    ],
+    "val": "नमस्ते,\\n\\nमैं Best Journal में एक अनुचित या गलत AI जवाब की रिपोर्ट करना चाहता हूँ।\\n\\nसमस"
+   },
+   {
+    "key": "settings_revoke_confirm_title",
+    "tokens": [
+     "Support"
+    ],
+    "val": "Support को ईमेल खोलें?"
+   },
+   {
+    "key": "settings_revoke_confirm_body",
+    "tokens": [
+     "dev",
+     "app",
+     "support",
+     "gmail",
+     "com",
+     "Terms",
+     "of",
+     "Use",
+     "Subscriptions",
+     "Play",
+     "Subscriptions"
+    ],
+    "val": "आपका ईमेल ऐप dev.app.support@gmail.com को तैयार संदेश के साथ खुलेगा। हम कार्यदिवसों में 24"
+   },
+   {
+    "key": "settings_revoke_no_email",
+    "tokens": [
+     "dev",
+     "app",
+     "support",
+     "gmail",
+     "com"
+    ],
+    "val": "कोई ईमेल ऐप नहीं मिला। कृपया रद्द अनुरोध dev.app.support@gmail.com पर भेजें।"
+   },
+   {
+    "key": "settings_revoke_email_subject",
+    "tokens": [
+     "Best",
+     "Journal"
+    ],
+    "val": "Best Journal Premium अनुबंध रद्द"
+   },
+   {
+    "key": "settings_revoke_email_body",
+    "tokens": [
+     "Best",
+     "Journal",
+     "BGB",
+     "Gmail"
+    ],
+    "val": "इसके द्वारा मैं Best Journal की Premium सुविधाओं से संबंधित अपने अनुबंध की वापसी की सूचना "
+   },
+   {
+    "key": "settings_revoke_confirm_subject",
+    "tokens": [
+     "Best",
+     "Journal"
+    ],
+    "val": "आपकी प्राप्ति-पुष्टि: Best Journal में वापसी"
+   },
+   {
+    "key": "settings_revoke_confirm_user_body",
+    "tokens": [
+     "BGB",
+     "dev",
+     "app",
+     "support",
+     "gmail",
+     "com",
+     "Play",
+     "Store",
+     "Subscriptions",
+     "nBest",
+     "Journal",
+     "Frank",
+     "Barwandt"
+    ],
+    "val": "नमस्ते,\\n\\nहमें %1$s की आपकी वापसी मिल गई है। यह § 356a BGB के तहत आपकी प्राप्ति-पुष्टि है"
+   },
+   {
+    "key": "settings_revoke_no_account",
+    "tokens": [
+     "Settings",
+     "dev",
+     "app",
+     "support",
+     "gmail",
+     "com"
+    ],
+    "val": "किसी साइन-इन किए हुए Google खाते का पता नहीं मिला। कृपया Settings में अपने Google खाते से "
+   },
+   {
+    "key": "settings_revoke_success_body",
+    "tokens": [
+     "dev",
+     "app",
+     "support",
+     "gmail",
+     "com"
+    ],
+    "val": "आपकी वापसी dev.app.support@gmail.com पर भेज दी गई है। प्राप्ति-पुष्टि भी आपके इनबॉक्स में "
+   },
+   {
+    "key": "settings_revoke_error_body",
+    "tokens": [
+     "dev",
+     "app",
+     "support",
+     "gmail",
+     "com"
+    ],
+    "val": "स्वचालित भेजना विफल रहा: %1$s\\n\\nवैकल्पिक रूप से आप dev.app.support@gmail.com पर मैन्युअल "
+   },
+   {
+    "key": "settings_crisis_dialog_body",
+    "tokens": [
+     "Best",
+     "Journal"
+    ],
+    "val": "Best Journal एक जर्नल ऐप है और यह पेशेवर मनोवैज्ञानिक या चिकित्सीय सहायता का विकल्प नहीं ह"
+   },
+   {
+    "key": "settings_crisis_hotline_de_name",
+    "tokens": [
+     "Telefonseelsorge"
+    ],
+    "val": "Telefonseelsorge जर्मनी"
+   },
+   {
+    "key": "settings_crisis_open_findahelpline",
+    "tokens": [
+     "findahelpline",
+     "com"
+    ],
+    "val": "findahelpline.com खोलें"
+   },
+   {
+    "key": "settings_ccpa_do_not_sell_subtitle",
+    "tokens": [
+     "CCPA",
+     "CPRA"
+    ],
+    "val": "कैलिफ़ोर्निया के निवासियों के लिए (CCPA/CPRA 2026). सक्रिय होने पर, सभी क्लाउड AI सुविधाएँ"
+   },
+   {
+    "key": "settings_ccpa_do_not_sell_confirmation",
+    "tokens": [
+     "Do",
+     "Not",
+     "Sell"
+    ],
+    "val": "Do-Not-Sell सक्रिय — सभी क्लाउड सेवाएँ बंद हैं."
+   },
+   {
+    "key": "settings_ccpa_do_not_sell_off_confirmation",
+    "tokens": [
+     "Do",
+     "Not",
+     "Sell"
+    ],
+    "val": "Do-Not-Sell बंद कर दिया गया."
+   },
+   {
+    "key": "settings_delete_account_force_local",
+    "tokens": [
+     "locally",
+     "delete",
+     "backup"
+    ],
+    "val": "केवल locally delete करें (Drive backup बना रहेगा)"
+   },
+   {
+    "key": "consent_welcome_title",
+    "tokens": [
+     "Best",
+     "Journal"
+    ],
+    "val": "Best Journal में आपका स्वागत है"
+   },
+   {
+    "key": "consent_toggle_analytics_body",
+    "tokens": [
+     "Firebase",
+     "Analytics",
+     "USA",
+     "Data",
+     "Privacy",
+     "Framework"
+    ],
+    "val": "Firebase Analytics — ऐप को बेहतर बनाने में हमारी मदद करता है। कोई व्यक्तिगत सामग्री नहीं, "
+   },
+   {
+    "key": "consent_toggle_groq_title",
+    "tokens": [
+     "Whisper"
+    ],
+    "val": "वाक्-से-पाठ (Groq Whisper)"
+   },
+   {
+    "key": "consent_toggle_groq_body",
+    "tokens": [
+     "USA"
+    ],
+    "val": "प्रविष्टियाँ लिखवाने की अनुमति देता है। आपकी आवाज़ रिकॉर्डिंग एन्क्रिप्टेड रूप से Groq (US"
+   },
+   {
+    "key": "consent_toggle_gemini_body",
+    "tokens": [
+     "USA"
+    ],
+    "val": "डैशबोर्ड AI, सारांश, समीक्षाएँ और पाठ सुधार। पाठ के अंश Google Gemini (USA) को भेजता है। आ"
+   },
+   {
+    "key": "consent_toggle_tts_title",
+    "tokens": [
+     "Microsoft",
+     "Edge"
+    ],
+    "val": "ज़ोर से पढ़ना (Microsoft Edge TTS)"
+   },
+   {
+    "key": "consent_toggle_tts_body",
+    "tokens": [
+     "Microsoft",
+     "USA"
+    ],
+    "val": "प्रविष्टियाँ प्राकृतिक आवाज़ में पढ़ता है। पाठ Microsoft (USA) को भेजता है।"
+   },
+   {
+    "key": "consent_toggle_do_not_sell_body",
+    "tokens": [
+     "CCPA",
+     "CPRA"
+    ],
+    "val": "कैलिफ़ोर्निया ऑप्ट-आउट (CCPA/CPRA 2026)। सक्रिय होने पर, सभी वैकल्पिक डेटा प्रसंस्करण निष्"
+   },
+   {
+    "key": "settings_ai_groq_subtitle",
+    "tokens": [
+     "USA"
+    ],
+    "val": "ट्रांसक्रिप्शन के लिए आवाज़ रिकॉर्डिंग्स Groq USA को भेजें"
+   },
+   {
+    "key": "settings_ai_gemini_subtitle",
+    "tokens": [
+     "USA"
+    ],
+    "val": "AI सारांशों के लिए पाठ Google USA को भेजें"
+   },
+   {
+    "key": "settings_ai_tts_title",
+    "tokens": [
+     "Edge"
+    ],
+    "val": "ज़ोर से पढ़ना (Edge TTS)"
+   },
+   {
+    "key": "settings_ai_tts_subtitle",
+    "tokens": [
+     "Microsoft",
+     "USA"
+    ],
+    "val": "वाक् आउटपुट के लिए पाठ Microsoft USA को भेजें"
+   },
+   {
+    "key": "follow_up_delete_confirm_text",
+    "tokens": [
+     "ns",
+     "id",
+     "title",
+     "example",
+     "ns"
+    ],
+    "val": "क्या आप वाकई \"<ns0:g id=\"title\" example=\"मेरा नोट\">%1$s</ns0:g>\" हटाना चाहते हैं? यह क्रिय"
+   },
+   {
+    "key": "follow_up_delete_confirm_title",
+    "tokens": [
+     "ns",
+     "id",
+     "title",
+     "example",
+     "ns"
+    ],
+    "val": "\"<ns0:g id=\"title\" example=\"मेरा नोट\">%1$s</ns0:g>\" हटाएं?"
+   },
+   {
+    "key": "follow_up_inline_title",
+    "tokens": [
+     "ns",
+     "id",
+     "index",
+     "example",
+     "ns"
+    ],
+    "val": "<ns0:g id=\"index\" example=\"1\">%1$s</ns0:g>. अतिरिक्त नोट"
+   },
+   {
+    "key": "prompt_recording_with_model",
+    "tokens": [
+     "ns",
+     "id",
+     "model",
+     "example",
+     "Whisper",
+     "ns"
+    ],
+    "val": "<ns0:g id=\"model\" example=\"Whisper\">%1$s</ns0:g> से रिकॉर्ड हो रहा है…"
+   },
+   {
+    "key": "prompt_transcribing_with_model",
+    "tokens": [
+     "ns",
+     "id",
+     "model",
+     "example",
+     "Whisper",
+     "ns"
+    ],
+    "val": "<ns0:g id=\"model\" example=\"Whisper\">%1$s</ns0:g> से ट्रांसक्राइब हो रहा है…"
+   },
+   {
+    "key": "prompt_transcription_model_hint",
+    "tokens": [
+     "ns",
+     "id",
+     "model",
+     "example",
+     "Whisper",
+     "ns"
+    ],
+    "val": "<ns0:g id=\"model\" example=\"Whisper\">%1$s</ns0:g> का उपयोग करके"
+   },
+   {
+    "key": "settings_open_system_backup_settings_desc",
+    "tokens": [
+     "Best",
+     "Journal"
+    ],
+    "val": "Android सिस्टम सेटिंग खोलता है, जहाँ तुम Best Journal के लिए ऑटोमेटिक बैकअप चालू या बंद कर"
+   },
+   {
+    "key": "ai_output_health_disclaimer_long",
+    "tokens": [
+     "Best",
+     "Journal"
+    ],
+    "val": "Best Journal एक डायरी है, थेरेपी का विकल्प नहीं। AI विश्लेषण स्व-चिंतन के लिए सुझाव हैं और"
+   },
+   {
+    "key": "churn_cancelled_ends_on",
+    "tokens": [
+     "ns",
+     "id",
+     "date",
+     "example",
+     "ns"
+    ],
+    "val": "रद्द किया गया — <ns0:g id=\"date\" example=\"30.04.2026, 18:13\">%1$s</ns0:g> को समाप्त होगा"
+   },
+   {
+    "key": "churn_promo_phase_ends",
+    "tokens": [
+     "ns",
+     "id",
+     "date",
+     "example",
+     "ns",
+     "ns",
+     "id",
+     "base",
+     "price",
+     "example",
+     "ns"
+    ],
+    "val": "<ns0:g id=\"date\" example=\"30.04.2026, 18:13\">%1$s</ns0:g> को समाप्त — इसके बाद <ns0:g id=\""
+   },
+   {
+    "key": "churn_renews_on",
+    "tokens": [
+     "ns",
+     "id",
+     "date",
+     "example",
+     "ns"
+    ],
+    "val": "<ns0:g id=\"date\" example=\"30.04.2026, 18:13\">%1$s</ns0:g> को नवीनीकृत होगा"
+   },
+   {
+    "key": "settings_premium_cancelled_desc",
+    "tokens": [
+     "billing",
+     "period",
+     "Play",
+     "cancellation"
+    ],
+    "val": "आपकी Premium सुविधाएं billing period के अंत तक उपलब्ध रहेंगी। आप Google Play के ज़रिए canc"
+   },
+   {
+    "key": "settings_premium_cancelled_until",
+    "tokens": [
+     "ns",
+     "id",
+     "date",
+     "example",
+     "ns"
+    ],
+    "val": "प्रीमियम सदस्यता रद्द की गई — <ns0:g id=\"date\" example=\"30.04.2026, 21:01\">%1$s</ns0:g> तक"
+   }
+  ],
+  "controlChars": [],
+  "halantDangling": []
+ },
+ "mr": {
+  "totalStrings": 1087,
+  "totalPlurals": 12,
+  "totalArrays": 71,
+  "replacementChar": [],
+  "emptyStrings": [
+   "ai_prompt_language_override"
+  ],
+  "noTargetScript": [
+   {
+    "key": "app_name",
+    "val": "Best Journal"
+   },
+   {
+    "key": "label_premium",
+    "val": "Premium"
+   },
+   {
+    "key": "transcription_model_groq",
+    "val": "Groq Whisper Large V3 Turbo"
+   },
+   {
+    "key": "settings_premium_section",
+    "val": "Premium"
+   },
+   {
+    "key": "achievements_title",
+    "val": "Achievements"
+   },
+   {
+    "key": "settings_about_version",
+    "val": "Best Journal V0.21.9"
+   },
+   {
+    "key": "settings_ccpa_do_not_sell_title",
+    "val": "Do Not Sell My Personal Information"
+   },
+   {
+    "key": "consent_toggle_do_not_sell_title",
+    "val": "Do Not Sell My Personal Information"
+   },
+   {
+    "key": "datetime_months_relative[one]",
+    "val": "vor %1$d Monat"
+   },
+   {
+    "key": "datetime_months_relative[other]",
+    "val": "vor %1$d Monaten"
+   },
+   {
+    "key": "datetime_years_relative[one]",
+    "val": "vor %1$d Jahr"
+   },
+   {
+    "key": "datetime_years_relative[other]",
+    "val": "vor %1$d Jahren"
+   },
+   {
+    "key": "weekday_abbreviations[0]",
+    "val": "@string/day_abbrev_mon"
+   },
+   {
+    "key": "weekday_abbreviations[1]",
+    "val": "@string/day_abbrev_tue"
+   },
+   {
+    "key": "weekday_abbreviations[2]",
+    "val": "@string/day_abbrev_wed"
+   },
+   {
+    "key": "weekday_abbreviations[3]",
+    "val": "@string/day_abbrev_thu"
+   },
+   {
+    "key": "weekday_abbreviations[4]",
+    "val": "@string/day_abbrev_fri"
+   },
+   {
+    "key": "weekday_abbreviations[5]",
+    "val": "@string/day_abbrev_sat"
+   },
+   {
+    "key": "weekday_abbreviations[6]",
+    "val": "@string/day_abbrev_sun"
+   }
+  ],
+  "latinFragments": [
+   {
+    "key": "action_go_google_play",
+    "tokens": [
+     "Play"
+    ],
+    "val": "Google Play वर जा"
+   },
+   {
+    "key": "cd_sync_status",
+    "tokens": [
+     "Sync"
+    ],
+    "val": "Sync स्थिती"
+   },
+   {
+    "key": "journal_achievement_unlocked",
+    "tokens": [
+     "Achievement"
+    ],
+    "val": "Achievement अनलॉक झाले!"
+   },
+   {
+    "key": "journal_drive_last_sync",
+    "tokens": [
+     "Sync"
+    ],
+    "val": "शेवटची Sync: %1$s"
+   },
+   {
+    "key": "transcription_model_local",
+    "tokens": [
+     "Whisper"
+    ],
+    "val": "स्थानिक Whisper मॉडेल"
+   },
+   {
+    "key": "journal_streak_premium",
+    "tokens": [
+     "Streak"
+    ],
+    "val": "Streak संरक्षण: Premium सह उपलब्ध"
+   },
+   {
+    "key": "entry_tts_generating",
+    "tokens": [
+     "Text",
+     "to",
+     "Speech"
+    ],
+    "val": "कृपया थांबा, Text-to-Speech तयार होत आहे\\u2026"
+   },
+   {
+    "key": "share_followup_numbered",
+    "tokens": [
+     "ns",
+     "id",
+     "ordinal",
+     "example",
+     "ns"
+    ],
+    "val": "नंतरची नोंद <ns0:g id=\"ordinal\" example=\"1\">%1$s</ns0:g>"
+   },
+   {
+    "key": "error_recording_failed",
+    "tokens": [
+     "ns",
+     "id",
+     "reason",
+     "example",
+     "ns"
+    ],
+    "val": "रेकॉर्डिंग अयशस्वी: <ns0:g id=\"reason\" example=\"मायक्रोफोन उपलब्ध नाही\">%1$s</ns0:g>"
+   },
+   {
+    "key": "error_transcription_failed",
+    "tokens": [
+     "ns",
+     "id",
+     "reason",
+     "example",
+     "ns"
+    ],
+    "val": "ट्रान्सक्रिप्शन अयशस्वी: <ns0:g id=\"reason\" example=\"नेटवर्क कालबाह्य\">%1$s</ns0:g>"
+   },
+   {
+    "key": "dashboard_tts_wait",
+    "tokens": [
+     "Text",
+     "to",
+     "Speech"
+    ],
+    "val": "कृपया थांबा, Text-to-Speech तयार होत आहे\\u2026"
+   },
+   {
+    "key": "settings_last_sync",
+    "tokens": [
+     "Sync"
+    ],
+    "val": "शेवटची Sync: %1$s"
+   },
+   {
+    "key": "settings_signin_failed",
+    "tokens": [
+     "ns",
+     "id",
+     "error",
+     "reason",
+     "example",
+     "Network",
+     "error",
+     "ns"
+    ],
+    "val": "साइन इन अयशस्वी: <ns0:g id=\"error_reason\" example=\"Network error\">%1$s</ns0:g>"
+   },
+   {
+    "key": "churn_google_play_redirect",
+    "tokens": [
+     "Play"
+    ],
+    "val": "तुमचे सदस्यत्व व्यवस्थापित करण्यासाठी तुम्हाला Google Play वर पाठवले जाईल. तुमच्या दैनंदिन"
+   },
+   {
+    "key": "settings_premium_lifetime",
+    "tokens": [
+     "Lifetime"
+    ],
+    "val": "Lifetime प्रवेश सक्रिय"
+   },
+   {
+    "key": "settings_feedback_allow_gmail",
+    "tokens": [
+     "Gmail"
+    ],
+    "val": "कृपया Gmail प्रवेश द्या आणि पुन्हा प्रयत्न करा."
+   },
+   {
+    "key": "settings_feedback_token_error",
+    "tokens": [
+     "Token"
+    ],
+    "val": "Token त्रुटी: %1$s"
+   },
+   {
+    "key": "settings_feedback_subject",
+    "tokens": [
+     "Best",
+     "Journal"
+    ],
+    "val": "Best Journal बद्दल अभिप्राय"
+   },
+   {
+    "key": "settings_feedback_api_error",
+    "tokens": [
+     "Gmail"
+    ],
+    "val": "Gmail त्रुटी %1$d: %2$s"
+   },
+   {
+    "key": "settings_feedback_confirm_subject",
+    "tokens": [
+     "Best",
+     "Journal"
+    ],
+    "val": "Best Journal ला तुमचा अभिप्राय"
+   },
+   {
+    "key": "settings_feedback_confirm_body",
+    "tokens": [
+     "nDEV",
+     "FRANK"
+    ],
+    "val": "हा संदेश तू विकसकाला पाठवलास.\\nतो तुला वैयक्तिकरीत्या उत्तर देईल.\\n\\n--- तुझा संदेश ---\\n%"
+   },
+   {
+    "key": "limit_remaining",
+    "tokens": [
+     "ns",
+     "id",
+     "count",
+     "example",
+     "ns"
+    ],
+    "val": "<ns0:g id=\"count\" example=\"3\">%1$d</ns0:g> शिल्लक"
+   },
+   {
+    "key": "limit_used_of_max",
+    "tokens": [
+     "ns",
+     "id",
+     "used",
+     "example",
+     "ns",
+     "ns",
+     "id",
+     "max",
+     "example",
+     "ns"
+    ],
+    "val": "<ns0:g id=\"used\" example=\"3\">%1$d</ns0:g> पैकी <ns0:g id=\"max\" example=\"5\">%2$d</ns0:g> वा"
+   },
+   {
+    "key": "churn_discount_badge",
+    "tokens": [
+     "ns",
+     "id",
+     "percent",
+     "example",
+     "ns"
+    ],
+    "val": "<ns0:g id=\"percent\" example=\"50\">%1$d</ns0:g>%% बचत"
+   },
+   {
+    "key": "ai_prompt_rerank_system",
+    "tokens": [
+     "TEXT"
+    ],
+    "val": "तुम्ही एक विश्लेषक आहात जे नोंदी कोअर फोकस थीमशी संबंधिततेनुसार क्रमवारी लावतात. === TEXT "
+   },
+   {
+    "key": "ai_retro_week_title_prompt",
+    "tokens": [
+     "ns",
+     "id",
+     "lang",
+     "example",
+     "Deutsch",
+     "ns",
+     "ns",
+     "id",
+     "summary",
+     "preview",
+     "example",
+     "Die",
+     "Woche",
+     "begann",
+     "ns"
+    ],
+    "val": "या साप्ताहिक आढाव्याच्या आधारावर, <ns0:g id=\"lang\" example=\"Deutsch\">%1$s</ns0:g> मध्ये एक"
+   },
+   {
+    "key": "ai_retro_month_task",
+    "tokens": [
+     "ns",
+     "id",
+     "month",
+     "example",
+     "April",
+     "ns",
+     "ns",
+     "id",
+     "year",
+     "example",
+     "ns"
+    ],
+    "val": "कार्य: खालील साप्ताहिक आढाव्यांचा <ns0:g id=\"month\" example=\"April\">%1$s</ns0:g> <ns0:g id"
+   },
+   {
+    "key": "ai_retro_month_title_prompt",
+    "tokens": [
+     "ns",
+     "id",
+     "lang",
+     "example",
+     "Deutsch",
+     "ns",
+     "ns",
+     "id",
+     "summary",
+     "preview",
+     "example",
+     "April",
+     "brachte",
+     "ns"
+    ],
+    "val": "या मासिक आढाव्याच्या आधारावर, <ns0:g id=\"lang\" example=\"Deutsch\">%1$s</ns0:g> मध्ये एक छोट"
+   },
+   {
+    "key": "ai_retro_year_task",
+    "tokens": [
+     "ns",
+     "id",
+     "year",
+     "example",
+     "ns"
+    ],
+    "val": "कार्य: खालील मासिक आढाव्यांचा <ns0:g id=\"year\" example=\"2026\">%1$d</ns0:g> साठी एक संरचित "
+   },
+   {
+    "key": "ai_retro_year_title_prompt",
+    "tokens": [
+     "ns",
+     "id",
+     "lang",
+     "example",
+     "Deutsch",
+     "ns",
+     "ns",
+     "id",
+     "summary",
+     "preview",
+     "example",
+     "Das",
+     "Jahr",
+     "begann",
+     "ns"
+    ],
+    "val": "या वार्षिक आढाव्याच्या आधारावर, <ns0:g id=\"lang\" example=\"Deutsch\">%1$s</ns0:g> मध्ये एक छ"
+   },
+   {
+    "key": "ai_prompt_goals_schema",
+    "tokens": [
+     "material",
+     "icon",
+     "HEX"
+    ],
+    "val": "JSON आउटपुट स्कीमा:\\n{\\n  \\\"एकूण_विश्लेषण\\\": \\\"...\\\",\\n  \\\"शीर्ष_उपाय\\\": [...],\\n  \\\"श्रेण"
+   },
+   {
+    "key": "ai_prompt_insight_schema_fields",
+    "tokens": [
+     "Array",
+     "array",
+     "Array"
+    ],
+    "val": "4) \\\"प्रगती\\\" (Array, 0-8 नोंदी)\\n   नोंदींमधून दिसणाऱ्या वैयक्तिक शक्ती आणि सकारात्मक गुण"
+   },
+   {
+    "key": "ai_prompt_insight_schema_categories",
+    "tokens": [
+     "kategorien",
+     "Array",
+     "Arbeit",
+     "Schlaf",
+     "name",
+     "icon",
+     "material",
+     "icon",
+     "name",
+     "farbe",
+     "HEX",
+     "entropie",
+     "level",
+     "zusammenfassung",
+     "ratschlaege",
+     "Denkmuster",
+     "Gef",
+     "hle",
+     "Antrieb",
+     "Umgang",
+     "Werte",
+     "Emotionale",
+     "Reaktionsmuster",
+     "Gef",
+     "hle",
+     "Denkmuster",
+     "icon",
+     "psychology",
+     "farbe",
+     "BFA",
+     "Gef",
+     "hle",
+     "icon",
+     "favorite",
+     "farbe",
+     "Selbstbild",
+     "icon",
+     "person",
+     "farbe",
+     "FA",
+     "Antrieb",
+     "icon",
+     "bolt",
+     "farbe",
+     "Werte",
+     "icon",
+     "star",
+     "farbe",
+     "FBBF",
+     "Beziehungen",
+     "icon",
+     "people",
+     "farbe",
+     "EC",
+     "Resilienz",
+     "icon",
+     "shield",
+     "farbe",
+     "Gewohnheiten",
+     "icon",
+     "repeat",
+     "farbe",
+     "ngste",
+     "icon",
+     "nights",
+     "stay",
+     "farbe",
+     "FF",
+     "Grenzen",
+     "icon",
+     "block",
+     "farbe",
+     "EF",
+     "Kreativit",
+     "icon",
+     "lightbulb",
+     "farbe",
+     "EF",
+     "Umgang",
+     "icon",
+     "handshake",
+     "farbe",
+     "Wachstum",
+     "icon",
+     "trending",
+     "up",
+     "farbe",
+     "Bed",
+     "rfnisse",
+     "icon",
+     "spa",
+     "farbe",
+     "Kontrolle",
+     "icon",
+     "tune",
+     "farbe",
+     "self",
+     "improvement",
+     "mood",
+     "sentiment",
+     "satisfied",
+     "sentiment",
+     "dissatisfied",
+     "visibility",
+     "lock",
+     "open",
+     "wb",
+     "sunny",
+     "explore",
+     "balance",
+     "healing",
+     "volunteer",
+     "activism",
+     "emoji",
+     "objects",
+     "entropie",
+     "level",
+     "ratschlaege",
+     "hoch",
+     "mittel",
+     "niedrig",
+     "titel",
+     "beschreibung",
+     "prioritaet",
+     "hoch",
+     "mittel",
+     "niedrig",
+     "verknuepfung",
+     "null",
+     "herleitung",
+     "datum",
+     "zusammenfassung",
+     "prioritaet",
+     "hoch",
+     "mittel",
+     "niedrig"
+    ],
+    "val": "6) \\\"kategorien\\\" (Array, आवश्यक तितके)\\n   ओळखलेल्या प्रत्येक आत्म-ज्ञान क्षेत्रासाठी एक "
+   },
+   {
+    "key": "ai_prompt_entropy_rules",
+    "tokens": [
+     "gesamtanalyse",
+     "beschreibung",
+     "erklaerung",
+     "zusammenfassung",
+     "herleitung",
+     "gesamt",
+     "entropie",
+     "entropie",
+     "level"
+    ],
+    "val": "भाषा नियम (JSON मधील सर्व मजकूर क्षेत्रांसाठी लागू):\n- सोपी, स्पष्ट भाषा. छोटी वाक्ये.\n- प"
+   },
+   {
+    "key": "ai_prompt_entropy_schema_fields",
+    "tokens": [
+     "Array",
+     "array",
+     "Array"
+    ],
+    "val": "4) \\\"प्रगती\\\" (Array, 0-5 नोंदी)\\n   भार कुठे कमी झाला आहे किंवा कार्यरत सवयी आणि शक्ती दृ"
+   },
+   {
+    "key": "ai_prompt_entropy_schema_categories",
+    "tokens": [
+     "kategorien",
+     "Array",
+     "name",
+     "icon",
+     "material",
+     "icon",
+     "name",
+     "farbe",
+     "HEX",
+     "entropie",
+     "level",
+     "zusammenfassung",
+     "ratschlaege",
+     "Schlaf",
+     "Arbeit",
+     "Fitness",
+     "Psyche",
+     "Projekte",
+     "Pers",
+     "nliche",
+     "Entwicklung",
+     "Entwicklung",
+     "Schlaf",
+     "icon",
+     "bedtime",
+     "farbe",
+     "FF",
+     "Arbeit",
+     "icon",
+     "work",
+     "farbe",
+     "FF",
+     "Fitness",
+     "icon",
+     "fitness",
+     "center",
+     "farbe",
+     "ECDC",
+     "Ern",
+     "hrung",
+     "icon",
+     "restaurant",
+     "farbe",
+     "FFE",
+     "Psyche",
+     "icon",
+     "psychology",
+     "farbe",
+     "BFA",
+     "Beziehungen",
+     "icon",
+     "people",
+     "farbe",
+     "Zuhause",
+     "icon",
+     "home",
+     "farbe",
+     "Entwicklung",
+     "icon",
+     "trending",
+     "up",
+     "farbe",
+     "FA",
+     "Projekte",
+     "icon",
+     "code",
+     "farbe",
+     "Gesundheit",
+     "icon",
+     "health",
+     "and",
+     "safety",
+     "farbe",
+     "EF",
+     "Finanzen",
+     "icon",
+     "account",
+     "balance",
+     "farbe",
+     "Freizeit",
+     "icon",
+     "sports",
+     "esports",
+     "farbe",
+     "EC",
+     "Natur",
+     "icon",
+     "grass",
+     "farbe",
+     "Schmerz",
+     "icon",
+     "healing",
+     "farbe",
+     "DC",
+     "spa",
+     "coffee",
+     "self",
+     "improvement",
+     "nights",
+     "stay",
+     "directions",
+     "run",
+     "child",
+     "care",
+     "school",
+     "computer",
+     "timer",
+     "cleaning",
+     "services",
+     "music",
+     "note",
+     "pets",
+     "wb",
+     "sunny",
+     "lightbulb",
+     "entropie",
+     "level",
+     "hoch",
+     "mittel",
+     "niedrig",
+     "titel",
+     "beschreibung",
+     "prioritaet",
+     "hoch",
+     "mittel",
+     "niedrig",
+     "verknuepfung",
+     "null",
+     "herleitung",
+     "datum",
+     "zusammenfassung",
+     "hoch",
+     "mittel",
+     "niedrig"
+    ],
+    "val": "6) \\\"kategorien\\\" (Array, आवश्यक तितके)\\n   ओळखलेल्या प्रत्येक विषयासाठी एक वेगळी श्रेणी.\\"
+   },
+   {
+    "key": "ai_prompt_summary_schema_fields",
+    "tokens": [
+     "Array",
+     "array",
+     "Array"
+    ],
+    "val": "4) \\\"प्रगती\\\" (Array, 0-5 नोंदी)\\n   अनेक नोंदींमध्ये दिसणारे वारंवार विषय, सवयी किंवा संब"
+   },
+   {
+    "key": "ai_prompt_summary_schema_categories",
+    "tokens": [
+     "kategorien",
+     "Array",
+     "name",
+     "icon",
+     "material",
+     "icon",
+     "name",
+     "farbe",
+     "HEX",
+     "entropie",
+     "level",
+     "zusammenfassung",
+     "ratschlaege",
+     "Schlaf",
+     "Arbeit",
+     "Fitness",
+     "Psyche",
+     "Projekte",
+     "Pers",
+     "nliche",
+     "Entwicklung",
+     "Entwicklung",
+     "Schlaf",
+     "icon",
+     "bedtime",
+     "farbe",
+     "FF",
+     "Arbeit",
+     "icon",
+     "work",
+     "farbe",
+     "FF",
+     "Fitness",
+     "icon",
+     "fitness",
+     "center",
+     "farbe",
+     "ECDC",
+     "Ern",
+     "hrung",
+     "icon",
+     "restaurant",
+     "farbe",
+     "FFE",
+     "Psyche",
+     "icon",
+     "psychology",
+     "farbe",
+     "BFA",
+     "Beziehungen",
+     "icon",
+     "people",
+     "farbe",
+     "Zuhause",
+     "icon",
+     "home",
+     "farbe",
+     "Entwicklung",
+     "icon",
+     "trending",
+     "up",
+     "farbe",
+     "FA",
+     "Projekte",
+     "icon",
+     "code",
+     "farbe",
+     "Gesundheit",
+     "icon",
+     "health",
+     "and",
+     "safety",
+     "farbe",
+     "EF",
+     "Finanzen",
+     "icon",
+     "account",
+     "balance",
+     "farbe",
+     "Freizeit",
+     "icon",
+     "sports",
+     "esports",
+     "farbe",
+     "EC",
+     "Natur",
+     "icon",
+     "grass",
+     "farbe",
+     "Alltag",
+     "icon",
+     "calendar",
+     "today",
+     "farbe",
+     "Reise",
+     "icon",
+     "flight",
+     "farbe",
+     "Kreativit",
+     "icon",
+     "music",
+     "note",
+     "farbe",
+     "EF",
+     "spa",
+     "coffee",
+     "self",
+     "improvement",
+     "nights",
+     "stay",
+     "directions",
+     "run",
+     "child",
+     "care",
+     "school",
+     "computer",
+     "timer",
+     "cleaning",
+     "services",
+     "directions",
+     "car",
+     "photo",
+     "camera",
+     "pets",
+     "wb",
+     "sunny",
+     "lightbulb",
+     "star",
+     "healing",
+     "entropie",
+     "level",
+     "ratschlaege",
+     "hoch",
+     "mittel",
+     "niedrig",
+     "titel",
+     "beschreibung",
+     "prioritaet",
+     "hoch",
+     "mittel",
+     "niedrig",
+     "verknuepfung",
+     "null",
+     "herleitung",
+     "datum",
+     "zusammenfassung",
+     "prioritaet",
+     "hoch",
+     "mittel",
+     "niedrig"
+    ],
+    "val": "6) \\\"kategorien\\\" (Array, आवश्यक तितके)\\n   ओळखलेल्या प्रत्येक विषयासाठी एक वेगळा गट.\\n   "
+   },
+   {
+    "key": "ai_prompt_custom_schema",
+    "tokens": [
+     "ueberschrift",
+     "top",
+     "ueberschrift",
+     "analyse",
+     "ueberschrift",
+     "ergebnisse",
+     "fokus",
+     "kern",
+     "fokus",
+     "zitate",
+     "gesamt",
+     "entropie",
+     "trend",
+     "steigend",
+     "stabil",
+     "sinkend",
+     "unbekannt",
+     "gesamtanalyse",
+     "fortschritte",
+     "top",
+     "massnahmen",
+     "kategorien",
+     "ueberschrift",
+     "top",
+     "analyse",
+     "ergebnisse",
+     "fokus",
+     "kern",
+     "fokus",
+     "zitate",
+     "gesamt",
+     "entropie",
+     "trend",
+     "gesamtanalyse",
+     "fortschritte",
+     "titel",
+     "beschreibung",
+     "bezug",
+     "top",
+     "massnahmen",
+     "titel",
+     "beschreibung",
+     "erklaerung",
+     "herleitung",
+     "datum",
+     "zusammenfassung",
+     "kategorien",
+     "name",
+     "icon",
+     "material",
+     "icon",
+     "name",
+     "farbe",
+     "HEX",
+     "entropie",
+     "level",
+     "zusammenfassung",
+     "ratschlaege",
+     "titel",
+     "beschreibung",
+     "prioritaet",
+     "hoch",
+     "mittel",
+     "niedrig",
+     "verknuepfung",
+     "null",
+     "herleitung",
+     "datum",
+     "zusammenfassung",
+     "herleitung",
+     "datum",
+     "datum",
+     "neu",
+     "zusammenfassung"
+    ],
+    "val": "JSON आउटपुट स्कीमा:\n{\n  \"ueberschrift_top5\": \"सर्जनशील शीर्षक, कार्य-परिणामानुसार, जास्तीत"
+   },
+   {
+    "key": "retro_photos_videos",
+    "tokens": [
+     "amp"
+    ],
+    "val": "फोटो &amp; व्हिडिओ"
+   },
+   {
+    "key": "retro_photos_videos_colon",
+    "tokens": [
+     "amp"
+    ],
+    "val": "फोटो &amp; व्हिडिओ:"
+   },
+   {
+    "key": "retro_tts_wait",
+    "tokens": [
+     "Text",
+     "to",
+     "Speech"
+    ],
+    "val": "कृपया थांबा, Text-to-Speech तयार होत आहे\\u2026"
+   },
+   {
+    "key": "onboarding_welcome",
+    "tokens": [
+     "Best",
+     "Journal"
+    ],
+    "val": "Best Journal मध्ये\\nस्वागत आहे"
+   },
+   {
+    "key": "onboarding_free_after_trial",
+    "tokens": [
+     "Best",
+     "Journal"
+    ],
+    "val": "नंतर तुम्ही Best Journal वापरत राहाल,\\nआठवड्यात मर्यादित AI वापरासह विनामूल्य."
+   },
+   {
+    "key": "churn_promo_one_month_remaining",
+    "tokens": [
+     "ns",
+     "id",
+     "base",
+     "price",
+     "example",
+     "ns"
+    ],
+    "val": "1 महिना बाकी — नंतर दरमहा <ns0:g id=\"base_price\" example=\"3,99 €\">%1$s</ns0:g>"
+   },
+   {
+    "key": "churn_promo_months_remaining",
+    "tokens": [
+     "ns",
+     "id",
+     "months",
+     "example",
+     "ns",
+     "ns",
+     "id",
+     "base",
+     "price",
+     "example",
+     "ns"
+    ],
+    "val": "<ns0:g id=\"months\" example=\"2\">%1$d</ns0:g> महिने बाकी — नंतर दरमहा <ns0:g id=\"base_price\""
+   },
+   {
+    "key": "churn_auto_renew_note",
+    "tokens": [
+     "Play"
+    ],
+    "val": "तुमचे सदस्यत्व Google Play द्वारे आपोआप नूतनीकरण होते. रद्द करणे कधीही शक्य आहे."
+   },
+   {
+    "key": "churn_pause_sub",
+    "tokens": [
+     "Play"
+    ],
+    "val": "किंवा Google Play वर सदस्यत्व थांबवा"
+   },
+   {
+    "key": "achievement_consistency_desc",
+    "tokens": [
+     "Streak"
+    ],
+    "val": "30 दिवसांचा Streak मिळवला"
+   },
+   {
+    "key": "profile_style_custom",
+    "tokens": [
+     "Custom"
+    ],
+    "val": "- प्रोफाइल शैली (Custom): वापरकर्त्याच्या कार्याशी स्पष्ट संबंधासह हा आढावा लिहा. अनिवार्य"
+   },
+   {
+    "key": "consent_intro",
+    "tokens": [
+     "Best",
+     "Journal"
+    ],
+    "val": "तुमची डायरी ही एक वैयक्तिक जागा आहे आणि आम्ही त्याचा आदर करतो. येथे तुम्ही पारदर्शकपणे पाह"
+   },
+   {
+    "key": "consent_card2_title",
+    "tokens": [
+     "USA"
+    ],
+    "val": "AI वैशिष्ट्ये (USA)"
+   },
+   {
+    "key": "consent_card2_body",
+    "tokens": [
+     "Microsoft",
+     "Edge",
+     "USA",
+     "EU",
+     "US",
+     "Data",
+     "Privacy",
+     "Framework",
+     "EU",
+     "SCCs",
+     "USA"
+    ],
+    "val": "पर्यायाने मजकूर Google Gemini ला आणि मोठ्याने वाचायचे मजकूर Microsoft Edge ला USA मध्ये पा"
+   },
+   {
+    "key": "consent_card3_body",
+    "tokens": [
+     "Firebase",
+     "Analytics"
+    ],
+    "val": "Firebase Analytics, पर्यायी, सेटिंग्जमध्ये कधीही बदलता येते."
+   },
+   {
+    "key": "privacy_gate_groq_body",
+    "tokens": [
+     "Inc",
+     "Mountain",
+     "View",
+     "USA",
+     "Settings"
+    ],
+    "val": "क्लाउड ट्रान्सक्रिप्शनसाठी तुमचे आवाज रेकॉर्डिंग एन्क्रिप्ट करून Groq, Inc. (Mountain View"
+   },
+   {
+    "key": "privacy_gate_gemini_body",
+    "tokens": [
+     "Best",
+     "Journal",
+     "EU",
+     "US",
+     "Data",
+     "Privacy",
+     "Framework",
+     "Art",
+     "GDPR"
+    ],
+    "val": "छान, तुम्ही Best Journal च्या स्मार्ट वैशिष्ट्यांचा वापर करू इच्छिता! सारांश, आढावे, डॅशबो"
+   },
+   {
+    "key": "privacy_gate_tts_title",
+    "tokens": [
+     "Microsoft"
+    ],
+    "val": "मजकूर Microsoft ला पाठवायचे का?"
+   },
+   {
+    "key": "privacy_gate_tts_body",
+    "tokens": [
+     "Microsoft",
+     "Bing",
+     "Speech",
+     "USA",
+     "EU",
+     "US",
+     "Data",
+     "Privacy",
+     "Framework",
+     "Standard",
+     "Contractual",
+     "Clauses"
+    ],
+    "val": "वाचून दाखवण्यासाठी मजकूर एन्क्रिप्ट करून Microsoft Bing Speech (USA) ला पाठवला जातो आणि ऑड"
+   },
+   {
+    "key": "settings_analytics_subtitle",
+    "tokens": [
+     "Firebase",
+     "Analytics"
+    ],
+    "val": "त्रुटी विश्लेषण आणि उत्पादन सुधारणेसाठी Firebase Analytics"
+   },
+   {
+    "key": "settings_delete_account_confirm_body",
+    "tokens": [
+     "Firebase"
+    ],
+    "val": "ही क्रिया पूर्ववत करता येणार नाही आणि हे हटवते:\\n\\n• सर्व स्थानिक डायरी नोंदी, फोटो आणि व्"
+   },
+   {
+    "key": "settings_report_ai_confirm_body",
+    "tokens": [
+     "dev",
+     "app",
+     "support",
+     "gmail",
+     "com"
+    ],
+    "val": "तुमचे ईमेल अॅप dev.app.support@gmail.com ला तयार संदेशासह उघडेल. पाठवण्यापूर्वी तुम्ही वर्"
+   },
+   {
+    "key": "settings_report_ai_no_email",
+    "tokens": [
+     "dev",
+     "app",
+     "support",
+     "gmail",
+     "com"
+    ],
+    "val": "कोणतेही ईमेल अॅप सापडले नाही. कृपया अहवाल dev.app.support@gmail.com वर पाठवा."
+   },
+   {
+    "key": "settings_report_ai_subject",
+    "tokens": [
+     "Best",
+     "Journal"
+    ],
+    "val": "Best Journal: अयोग्य AI उत्तर"
+   },
+   {
+    "key": "settings_report_ai_body",
+    "tokens": [
+     "Best",
+     "Journal"
+    ],
+    "val": "नमस्कार,\\n\\nमला Best Journal मधील एक अयोग्य किंवा चुकीचे AI उत्तर कळवायचे आहे.\\n\\nसमस्येचे"
+   },
+   {
+    "key": "settings_revoke_confirm_body",
+    "tokens": [
+     "dev",
+     "app",
+     "support",
+     "gmail",
+     "com",
+     "Play",
+     "Subscriptions"
+    ],
+    "val": "तुमचे ईमेल अॅप dev.app.support@gmail.com ला तयार संदेशासह उघडेल. आम्ही कार्य दिवशी 24 तासा"
+   },
+   {
+    "key": "settings_revoke_no_email",
+    "tokens": [
+     "dev",
+     "app",
+     "support",
+     "gmail",
+     "com"
+    ],
+    "val": "कोणतेही ईमेल अॅप सापडले नाही. कृपया रद्दबातल dev.app.support@gmail.com वर पाठवा."
+   },
+   {
+    "key": "settings_revoke_email_subject",
+    "tokens": [
+     "Best",
+     "Journal"
+    ],
+    "val": "Best Journal Premium करार रद्दबातल"
+   },
+   {
+    "key": "settings_revoke_email_body",
+    "tokens": [
+     "Best",
+     "Journal",
+     "BGB",
+     "Gmail"
+    ],
+    "val": "याद्वारे मी Best Journal च्या Premium वैशिष्ट्यांबाबतच्या माझ्या करारातून माघार घेत असल्या"
+   },
+   {
+    "key": "settings_revoke_confirm_subject",
+    "tokens": [
+     "Best",
+     "Journal"
+    ],
+    "val": "तुमची प्राप्ती-पुष्टी: Best Journal मधील माघार"
+   },
+   {
+    "key": "settings_revoke_confirm_user_body",
+    "tokens": [
+     "BGB",
+     "dev",
+     "app",
+     "support",
+     "gmail",
+     "com",
+     "Play",
+     "Store",
+     "Subscriptions",
+     "nBest",
+     "Journal",
+     "Frank",
+     "Barwandt"
+    ],
+    "val": "नमस्कार,\\n\\n%1$s रोजीची तुमची माघार आम्हाला प्राप्त झाली आहे. ही § 356a BGB नुसार तुमची प्"
+   },
+   {
+    "key": "settings_revoke_no_account",
+    "tokens": [
+     "Settings",
+     "dev",
+     "app",
+     "support",
+     "gmail",
+     "com"
+    ],
+    "val": "साइन-इन केलेला Google खात्याचा पत्ता सापडला नाही. कृपया Settings मध्ये तुमच्या Google खात्"
+   },
+   {
+    "key": "settings_revoke_success_body",
+    "tokens": [
+     "dev",
+     "app",
+     "support",
+     "gmail",
+     "com"
+    ],
+    "val": "तुमची माघार dev.app.support@gmail.com वर पाठवण्यात आली आहे. प्राप्ती-पुष्टीही तुमच्या इनबॉ"
+   },
+   {
+    "key": "settings_revoke_error_body",
+    "tokens": [
+     "dev",
+     "app",
+     "support",
+     "gmail",
+     "com"
+    ],
+    "val": "स्वयंचलित पाठवणे अयशस्वी झाले: %1$s\\n\\nपर्यायाने तुम्ही dev.app.support@gmail.com वर हातान"
+   },
+   {
+    "key": "settings_crisis_dialog_body",
+    "tokens": [
+     "Best",
+     "Journal"
+    ],
+    "val": "Best Journal हे जर्नल अॅप आहे आणि ते व्यावसायिक मानसशास्त्रीय किंवा वैद्यकीय मदतीची जागा घ"
+   },
+   {
+    "key": "settings_crisis_hotline_de_name",
+    "tokens": [
+     "Telefonseelsorge"
+    ],
+    "val": "Telefonseelsorge जर्मनी"
+   },
+   {
+    "key": "settings_crisis_open_findahelpline",
+    "tokens": [
+     "findahelpline",
+     "com"
+    ],
+    "val": "findahelpline.com उघडा"
+   },
+   {
+    "key": "settings_ccpa_do_not_sell_subtitle",
+    "tokens": [
+     "CCPA",
+     "CPRA"
+    ],
+    "val": "कॅलिफोर्नियाच्या रहिवाशांसाठी (CCPA/CPRA 2026). सक्रिय असताना सर्व क्लाउड AI वैशिष्ट्ये बं"
+   },
+   {
+    "key": "settings_ccpa_do_not_sell_confirmation",
+    "tokens": [
+     "Do",
+     "Not",
+     "Sell"
+    ],
+    "val": "Do-Not-Sell चालू — सर्व क्लाउड सेवा बंद आहेत."
+   },
+   {
+    "key": "settings_ccpa_do_not_sell_off_confirmation",
+    "tokens": [
+     "Do",
+     "Not",
+     "Sell"
+    ],
+    "val": "Do-Not-Sell बंद केले."
+   },
+   {
+    "key": "consent_welcome_title",
+    "tokens": [
+     "Best",
+     "Journal"
+    ],
+    "val": "Best Journal मध्ये आपले स्वागत आहे"
+   },
+   {
+    "key": "consent_toggle_analytics_body",
+    "tokens": [
+     "Firebase",
+     "Analytics",
+     "USA",
+     "Data",
+     "Privacy",
+     "Framework"
+    ],
+    "val": "Firebase Analytics — अ‍ॅप सुधारण्यात आम्हाला मदत करते. कोणतीही वैयक्तिक सामग्री नाही, फक्त"
+   },
+   {
+    "key": "consent_toggle_groq_title",
+    "tokens": [
+     "Whisper"
+    ],
+    "val": "भाषण-ते-मजकूर (Groq Whisper)"
+   },
+   {
+    "key": "consent_toggle_groq_body",
+    "tokens": [
+     "USA"
+    ],
+    "val": "नोंदी श्रुतलेखन करण्यास परवानगी देते. तुमचे ध्वनी रेकॉर्डिंग एन्क्रिप्टेड स्वरूपात Groq (U"
+   },
+   {
+    "key": "consent_toggle_gemini_body",
+    "tokens": [
+     "USA"
+    ],
+    "val": "डॅशबोर्ड AI, सारांश, पुनरावलोकन आणि मजकूर सुधारणा. मजकूर तुकडे Google Gemini (USA) ला पाठव"
+   },
+   {
+    "key": "consent_toggle_tts_title",
+    "tokens": [
+     "Microsoft",
+     "Edge"
+    ],
+    "val": "मोठ्याने वाचन (Microsoft Edge TTS)"
+   },
+   {
+    "key": "consent_toggle_tts_body",
+    "tokens": [
+     "Microsoft",
+     "USA"
+    ],
+    "val": "नैसर्गिक आवाजात नोंदी वाचते. मजकूर Microsoft (USA) ला पाठवते."
+   },
+   {
+    "key": "consent_toggle_do_not_sell_body",
+    "tokens": [
+     "CCPA",
+     "CPRA"
+    ],
+    "val": "कॅलिफोर्निया ऑप्ट-आउट (CCPA/CPRA 2026). सक्रिय असताना, सर्व ऐच्छिक डेटा प्रक्रिया निष्क्रि"
+   },
+   {
+    "key": "settings_ai_groq_subtitle",
+    "tokens": [
+     "USA"
+    ],
+    "val": "ट्रान्सक्रिप्शनसाठी ध्वनी रेकॉर्डिंग Groq USA ला पाठवा"
+   },
+   {
+    "key": "settings_ai_gemini_subtitle",
+    "tokens": [
+     "USA"
+    ],
+    "val": "AI सारांशांसाठी मजकूर Google USA ला पाठवा"
+   },
+   {
+    "key": "settings_ai_tts_title",
+    "tokens": [
+     "Edge"
+    ],
+    "val": "मोठ्याने वाचन (Edge TTS)"
+   },
+   {
+    "key": "settings_ai_tts_subtitle",
+    "tokens": [
+     "Microsoft",
+     "USA"
+    ],
+    "val": "ध्वनी आउटपुटसाठी मजकूर Microsoft USA ला पाठवा"
+   },
+   {
+    "key": "follow_up_delete_confirm_text",
+    "tokens": [
+     "ns",
+     "id",
+     "title",
+     "example",
+     "ns"
+    ],
+    "val": "तुम्हाला खरोखरच \"<ns0:g id=\"title\" example=\"माझी नोंद\">%1$s</ns0:g>\" हटवायची आहे का? ही क्"
+   },
+   {
+    "key": "follow_up_delete_confirm_title",
+    "tokens": [
+     "ns",
+     "id",
+     "title",
+     "example",
+     "ns"
+    ],
+    "val": "\"<ns0:g id=\"title\" example=\"माझी नोंद\">%1$s</ns0:g>\" हटवायची?"
+   },
+   {
+    "key": "follow_up_inline_title",
+    "tokens": [
+     "ns",
+     "id",
+     "index",
+     "example",
+     "ns"
+    ],
+    "val": "<ns0:g id=\"index\" example=\"1\">%1$s</ns0:g>. अतिरिक्त नोंद"
+   },
+   {
+    "key": "prompt_recording_with_model",
+    "tokens": [
+     "ns",
+     "id",
+     "model",
+     "example",
+     "Whisper",
+     "ns"
+    ],
+    "val": "<ns0:g id=\"model\" example=\"Whisper\">%1$s</ns0:g> ने रेकॉर्ड होत आहे…"
+   },
+   {
+    "key": "prompt_transcribing_with_model",
+    "tokens": [
+     "ns",
+     "id",
+     "model",
+     "example",
+     "Whisper",
+     "ns"
+    ],
+    "val": "<ns0:g id=\"model\" example=\"Whisper\">%1$s</ns0:g> ने ट्रान्सक्राइब होत आहे…"
+   },
+   {
+    "key": "prompt_transcription_model_hint",
+    "tokens": [
+     "ns",
+     "id",
+     "model",
+     "example",
+     "Whisper",
+     "ns"
+    ],
+    "val": "<ns0:g id=\"model\" example=\"Whisper\">%1$s</ns0:g> वापरून"
+   },
+   {
+    "key": "settings_open_system_backup_settings_desc",
+    "tokens": [
+     "Best",
+     "Journal"
+    ],
+    "val": "Android सिस्टम सेटिंग्ज उघडतो, जिथे तुम्ही Best Journal साठी आपोआप बॅकअप चालू किंवा बंद कर"
+   },
+   {
+    "key": "ai_output_health_disclaimer_long",
+    "tokens": [
+     "Best",
+     "Journal"
+    ],
+    "val": "Best Journal एक डायरी आहे, थेरपी सेवा नाही. AI विश्लेषण स्वयंचिंतनासाठी सूचना आहेत आणि व्य"
+   },
+   {
+    "key": "churn_cancelled_ends_on",
+    "tokens": [
+     "ns",
+     "id",
+     "date",
+     "example",
+     "ns"
+    ],
+    "val": "रद्द केले — <ns0:g id=\"date\" example=\"30.04.2026, 18:13\">%1$s</ns0:g> रोजी संपते"
+   },
+   {
+    "key": "churn_promo_phase_ends",
+    "tokens": [
+     "ns",
+     "id",
+     "date",
+     "example",
+     "ns",
+     "ns",
+     "id",
+     "base",
+     "price",
+     "example",
+     "ns"
+    ],
+    "val": "<ns0:g id=\"date\" example=\"30.04.2026, 18:13\">%1$s</ns0:g> रोजी संपते — त्यानंतर दरमहा <ns0"
+   },
+   {
+    "key": "churn_renews_on",
+    "tokens": [
+     "ns",
+     "id",
+     "date",
+     "example",
+     "ns"
+    ],
+    "val": "<ns0:g id=\"date\" example=\"30.04.2026, 18:13\">%1$s</ns0:g> रोजी नूतनीकरण होते"
+   },
+   {
+    "key": "settings_premium_cancelled_desc",
+    "tokens": [
+     "Play"
+    ],
+    "val": "तुमची Premium वैशिष्ट्ये बिलिंग कालावधी संपेपर्यंत उपलब्ध राहतील. तुम्ही Google Play द्वार"
+   },
+   {
+    "key": "settings_premium_cancelled_until",
+    "tokens": [
+     "ns",
+     "id",
+     "date",
+     "example",
+     "ns"
+    ],
+    "val": "प्रीमियम सदस्यता रद्द केली — <ns0:g id=\"date\" example=\"30.04.2026, 21:01\">%1$s</ns0:g> पर्"
+   },
+   {
+    "key": "prompts_future[12]",
+    "tokens": [
+     "Bucket",
+     "List"
+    ],
+    "val": "तुमच्या Bucket List मध्ये सर्वात वर काय आहे?"
+   }
+  ],
+  "controlChars": [],
+  "halantDangling": []
+ }
+}

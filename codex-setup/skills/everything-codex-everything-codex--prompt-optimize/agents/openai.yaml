@@ -1,0 +1,7 @@
+interface:
+  display_name: "prompt-optimize"
+  short_description: "Analyze a draft prompt and output an optimized, ECC-enriched"
+  default_prompt: "Use $everything-codex-everything-codex--prompt-optimize for this task."
+
+policy:
+  allow_implicit_invocation: false

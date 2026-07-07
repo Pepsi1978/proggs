@@ -1,0 +1,24 @@
+{
+  "currentRun": "cbf88768-d203-4c24-93f2-257dfb81efbb",
+  "currentPhase": "phase5-done",
+  "startedAt": "2026-06-10T19:01:50Z",
+  "lastHeartbeat": "2026-06-10T23:23:55Z",
+  "mode": "default",
+  "status": "completed",
+  "appRoot": "C:\\Users\\barwa/proggs/BestJournalAndroid",
+  "trigger": "/finale:run — kompletter Play-Store-Rechtssicherheits-Vollscan",
+  "completedAt": "2026-06-10T23:23:55Z",
+  "summary": {
+    "openFindingsCount": 0,
+    "findingsTotal": 44,
+    "fixedThisRun": 40,
+    "manualPending": 1,
+    "acceptedDocumented": 4,
+    "languagesComplete": 26,
+    "translationUnitsApplied": 964,
+    "workersSpawned": 36,
+    "workerCrashes": 5,
+    "orchestratorResumes": 1,
+    "buildResult": "SUCCESS (assembleDebug 25s, v0.21.11/292)"
+  }
+}

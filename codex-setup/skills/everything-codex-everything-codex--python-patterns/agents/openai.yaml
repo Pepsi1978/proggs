@@ -1,0 +1,7 @@
+interface:
+  display_name: "python-patterns"
+  short_description: "Pythonic idioms, PEP 8 standards, type hints, and best"
+  default_prompt: "Use $everything-codex-everything-codex--python-patterns for this task."
+
+policy:
+  allow_implicit_invocation: false

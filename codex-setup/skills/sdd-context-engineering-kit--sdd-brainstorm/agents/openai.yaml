@@ -1,0 +1,7 @@
+interface:
+  display_name: "sdd:brainstorm"
+  short_description: "creating or developing, before writing code or implementation"
+  default_prompt: "Use $sdd-context-engineering-kit--sdd-brainstorm for this task."
+
+policy:
+  allow_implicit_invocation: false

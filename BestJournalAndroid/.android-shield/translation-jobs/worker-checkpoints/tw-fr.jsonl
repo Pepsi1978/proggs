@@ -1,0 +1,4 @@
+{"ts":"2026-06-10","lang":"fr","step":"pre-check-done","strings_present":35,"strings_new":["paywall_monthly_note"],"plurals_present":2,"note":"35/36 string keys vorhanden (replace), paywall_monthly_note NEU; 2 plurals stale-de (replace)"}
+{"ts":"2026-06-10","lang":"fr","step":"applied","applied_strings":34,"applied_plurals":2,"skipped":0,"note":"34 strings (33 replace + 1 NEW) + 2 plurals; job-plan count=36 = 34 strings + 2 plurals"}
+{"ts":"2026-06-10","lang":"fr","step":"nbsp-fix","note":"NBSP/NNBSP zunaechst als literale \\uXXXX-Escapes -> auf echte U+00A0/U+202F Zeichen korrigiert, fr-data.json neu geschrieben, re-applied"}
+{"ts":"2026-06-10","lang":"fr","step":"verified","xml_valid":true,"errors":0,"identical_de":0,"format_args_ok":true,"bare_percent":0,"apostrophes_unescaped":0,"note":"FIN-051c + FIN-044 + FIN-049 alle gruen"}

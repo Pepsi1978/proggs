@@ -1,0 +1,7 @@
+interface:
+  display_name: "nanoclaw-repl"
+  short_description: "Operate and extend NanoClaw v2, ECC's zero-dependency"
+  default_prompt: "Use $everything-codex-everything-codex--nanoclaw-repl for this task."
+
+policy:
+  allow_implicit_invocation: false

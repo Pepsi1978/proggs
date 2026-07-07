@@ -1,0 +1,280 @@
+{
+  "bucket": "3b",
+  "lineRange": "965-1150",
+  "stringsReviewed": 121,
+  "coverageConfirmed": true,
+  "findings": [
+    {
+      "findingId": "S3b-001",
+      "riskLevel": "🟥",
+      "category": "HWG §3 / UWG §5 — Wirkungsversprechen Onboarding-Untertitel",
+      "key": "onboarding_subtitle",
+      "line": 1062,
+      "currentText": "Dein persönliches KI-Tagebuch\nfür Klarheit und Veränderung",
+      "problem": "Verspricht konkrete Wirkungen (Klarheit, Veränderung) ohne Einschränkung. Nach HWG §3 unzulässig wenn eine gesundheitsbezogene Wirkung (emotionale Klarheit/mentale Gesundheit) suggeriert wird. Nach UWG §5 irreführend wenn das Ergebnis nicht garantierbar ist.",
+      "suggestedFixes": [
+        {
+          "text": "Dein persönliches KI-Tagebuch\nfür deine Gedanken und Reflexion",
+          "rationale": "Neutral, kein Wirkungsversprechen"
+        },
+        {
+          "text": "Dein persönliches KI-Tagebuch —\nSchreib, reflektiere, erinnere dich",
+          "rationale": "Beschreibt die Funktion, keine versprochene Wirkung"
+        }
+      ],
+      "invasivityLevel": "text-only"
+    },
+    {
+      "findingId": "S3b-002",
+      "riskLevel": "🟥",
+      "category": "UWG §5 — Übertriebenes Leistungsversprechen (verborgene Muster, Onboarding)",
+      "key": "onboarding_premium_feature_patterns",
+      "line": 1082,
+      "currentText": "Persönliche Muster erkennen, die KI findet verborgene Denk- und Gefühlsmuster",
+      "problem": "\"Verborgene Denk- und Gefühlsmuster\" impliziert psychologische Diagnose-Tiefe, die ein LLM-basiertes Tagebuch nicht liefern kann. Irreführend nach UWG §5 Abs. 1 als übertriebene Leistungsaussage, die als Kaufanreiz eingesetzt wird.",
+      "suggestedFixes": [
+        {
+          "text": "Persönliche Muster erkennen — die KI zeigt wiederkehrende Themen und Stimmungen in deinen Einträgen",
+          "rationale": "Beschreibt konkrete Funktion ohne Überversprechen"
+        },
+        {
+          "text": "Wiederkehrende Themen entdecken — die KI analysiert Stimmungen und Schwerpunkte deiner Einträge",
+          "rationale": "Sachlich korrekte Beschreibung der tatsächlichen Funktion"
+        }
+      ],
+      "invasivityLevel": "text-only"
+    },
+    {
+      "findingId": "S3b-003",
+      "riskLevel": "🟥",
+      "category": "UWG §5 — Übertriebenes Leistungsversprechen (verborgene Muster, Paywall)",
+      "key": "paywall_feature_patterns",
+      "line": 1127,
+      "currentText": "Verstehe verborgene Muster in deinem Denken",
+      "problem": "Gleiche Problematik wie S3b-002, hier als direkter Kaufanreiz in der Paywall. \"Verborgene Muster im Denken\" suggeriert tiefenpsychologische Analyse. UWG §5 Abs. 1 Nr. 1 (unwahre Angaben zu wesentlichen Merkmalen der Leistung). Höchste Relevanz da kaufentscheidend.",
+      "suggestedFixes": [
+        {
+          "text": "Erkenne wiederkehrende Themen und Stimmungen in deinen Einträgen",
+          "rationale": "Technisch korrekt, kein Überversprechen"
+        },
+        {
+          "text": "KI-Analyse: Stimmungsläufe und Themen über die Zeit",
+          "rationale": "Präzise Leistungsbeschreibung ohne Pseudopsychologie"
+        }
+      ],
+      "invasivityLevel": "text-only"
+    },
+    {
+      "findingId": "S3b-004",
+      "riskLevel": "🟥",
+      "category": "HWG §3 — Gesundheitswirkungsversprechen als Onboarding-Ziel",
+      "key": "onboarding_goal_stress",
+      "line": 1066,
+      "currentText": "Stress abbauen",
+      "problem": "Als auswählbares Onboarding-Ziel positioniert die App sich implizit als Stress-Behandlungsmittel. Kombiniert mit der danach personalisierten Paywall-Headline (paywall_headline_stress) entsteht ein HWG-relevantes Gesundheitsversprechen ohne Warnhinweis. HWG §3 Abs. 1 einschlägig.",
+      "suggestedFixes": [
+        {
+          "text": "Stress und Gedanken sortieren",
+          "rationale": "Suggeriert nur Ordnung, keine medizinische Wirkung"
+        },
+        {
+          "text": "Den Kopf freibekommen",
+          "rationale": "Umgangssprachlich, kein klinisches Versprechen"
+        }
+      ],
+      "invasivityLevel": "text-only"
+    },
+    {
+      "findingId": "S3b-005",
+      "riskLevel": "🟧",
+      "category": "§312j BGB — Abo-Transparenz: Trial-Ende und erste Zahlung unklar",
+      "key": "paywall_yearly_note",
+      "line": 1116,
+      "currentText": "Danach %1$s pro Jahr\nIn der Testphase jederzeit kündbar",
+      "problem": "\"Testphase jederzeit kündbar\" ist unvollständig: fehlt exakter Hinweis wann die Testphase endet und wann die erste Zahlung fällig wird. §312j BGB Abs. 3 verlangt klare Information über Verlängerungsbedingungen und Zahlungszeitpunkt vor Vertragsabschluss.",
+      "suggestedFixes": [
+        {
+          "text": "Danach %1$s/Jahr, automatische Verlängerung. Kündigung bis Tag 7 im Google Play Store, danach wird %1$s fällig.",
+          "rationale": "Enthält Kündigungsfrist, Verlängerungshinweis und Zahlungszeitpunkt"
+        },
+        {
+          "text": "Nach 8 Tagen: %1$s/Jahr, automatische Verlängerung — jederzeit im Google Play kündbar.",
+          "rationale": "Kompakt aber vollständig"
+        }
+      ],
+      "invasivityLevel": "text-only"
+    },
+    {
+      "findingId": "S3b-006",
+      "riskLevel": "🟧",
+      "category": "§312j BGB — Abo-Transparenz: fehlender Verlängerungshinweis im Onboarding-CTA",
+      "key": "onboarding_try_premium",
+      "line": 1095,
+      "currentText": "8 Tage gratis — danach ab 3,99 €/Monat",
+      "problem": "\"Ab 3,99 €\" ist irreführend wenn das Jahresabo günstiger ist. Fehlender Hinweis auf automatische Verlängerung nach §312j BGB, der bei Trial-Angeboten in der Werbebotschaft selbst erscheinen sollte.",
+      "suggestedFixes": [
+        {
+          "text": "8 Tage gratis testen — danach 3,99 €/Monat oder 29,99 €/Jahr (automatische Verlängerung, jederzeit kündbar)",
+          "rationale": "Alle relevanten Informationen, §312j-konform"
+        },
+        {
+          "text": "8 Tage gratis, danach Abo — Preise und Kündigung in der Paywall.",
+          "rationale": "Verweist auf ausführliche Preisinfo"
+        }
+      ],
+      "invasivityLevel": "text-only"
+    },
+    {
+      "findingId": "S3b-007",
+      "riskLevel": "🟧",
+      "category": "UWG §5 — Unvollständige Freiversion-Angabe (abrupter Satzabbruch)",
+      "key": "paywall_free_note",
+      "line": 1123,
+      "currentText": "Die App funktioniert auch ohne Abo,",
+      "problem": "Satz endet mit Komma — syntaktisch unvollständig. Unklar welche Einschränkungen ohne Abo bestehen. Nach UWG §5 Abs. 1 müssen wesentliche Einschränkungen transparent sein. Wahrscheinlich Fragmentierungsbug (zweiter Teil fehlt im Layout).",
+      "suggestedFixes": [
+        {
+          "text": "Die App funktioniert auch ohne Abo, mit begrenzten KI-Aufrufen pro Woche.",
+          "rationale": "Vervollständigt den Satz und benennt die wesentliche Einschränkung"
+        },
+        {
+          "text": "Ohne Abo: kostenlos mit begrenzten KI-Funktionen nutzbar.",
+          "rationale": "Klar und vollständig"
+        }
+      ],
+      "invasivityLevel": "text-only"
+    },
+    {
+      "findingId": "S3b-008",
+      "riskLevel": "🟧",
+      "category": "UWG §5 — Irreführende Kostenlos-Kommunikation",
+      "key": "onboarding_free_trial",
+      "line": 1084,
+      "currentText": "Kostenlos und unverbindlich",
+      "problem": "\"Unverbindlich\" bei einem Abo-Funnel ist missverständlich: nach §307 BGB / §312j BGB muss klar sein dass nach der Testphase eine kostenpflichtige Verlängerung folgt. \"Unverbindlich\" suggeriert keine Bindung, was bei automatischer Verlängerung ohne aktive Kündigung faktisch falsch ist.",
+      "suggestedFixes": [
+        {
+          "text": "8 Tage kostenlos testen",
+          "rationale": "Neutral, kein irreführendes \"unverbindlich\""
+        },
+        {
+          "text": "Kostenlos testen — jederzeit kündbar",
+          "rationale": "Kündbarkeit statt \"unverbindlich\", ehrlicher"
+        }
+      ],
+      "invasivityLevel": "text-only"
+    },
+    {
+      "findingId": "S3b-009",
+      "riskLevel": "🟧",
+      "category": "UWG §5 — Übertriebener Nutzen Retrospektive Monat",
+      "key": "retro_monthly_p3",
+      "line": 1031,
+      "currentText": "Zeigt Veränderungen die dir im Alltag nicht auffallen",
+      "problem": "Verspricht Aufdeckung verborgener persönlicher Veränderungen — übertrieben. Die KI zeigt nur was im Text steht und kann keine subjektive Alltagswahrnehmung übertreffen. Leichte UWG §5-Problematik bei Kaufentscheidungsrelevanz.",
+      "suggestedFixes": [
+        {
+          "text": "Fasst Entwicklungen aus deinen Einträgen über den Monat zusammen",
+          "rationale": "Technisch korrekte Beschreibung"
+        },
+        {
+          "text": "Gibt dir einen Überblick über Themen und Stimmungen des Monats",
+          "rationale": "Neutral, keine Überversprechen"
+        }
+      ],
+      "invasivityLevel": "text-only"
+    },
+    {
+      "findingId": "S3b-010",
+      "riskLevel": "🟧",
+      "category": "UWG §5 — Übertriebener Nutzen Dashboard Onboarding",
+      "key": "onboarding_how_step4_desc",
+      "line": 1076,
+      "currentText": "Das KI-Dashboard zeigt dir Zusammenhänge, die dir im Alltag verborgen bleiben.",
+      "problem": "Verspricht Aufdeckung von Zusammenhängen die dem Nutzer verborgen sind — setzt voraus dass die KI bessere Einsichten liefert als die eigene Selbstwahrnehmung. UWG §5-relevantes Überversprechen im Onboarding.",
+      "suggestedFixes": [
+        {
+          "text": "Das KI-Dashboard fasst Stimmungen und Themen aus deinen Einträgen übersichtlich zusammen.",
+          "rationale": "Beschreibt die Funktion ohne kognitive Überlegenheitsbehauptung"
+        },
+        {
+          "text": "Das KI-Dashboard gibt dir eine Übersicht über Muster in deinen Tagebucheinträgen.",
+          "rationale": "Sachlich korrekt"
+        }
+      ],
+      "invasivityLevel": "text-only"
+    },
+    {
+      "findingId": "S3b-011",
+      "riskLevel": "🟨",
+      "category": "§312j BGB — Fehlender Verlängerungshinweis bei Ersparnisangabe",
+      "key": "paywall_yearly_savings",
+      "line": 1119,
+      "currentText": "Spare %1$d%% gegenüber dem Monatsabo — Kündigung jederzeit möglich zum jeweiligen Vertragsende.",
+      "problem": "Positiv: Kündigungshinweis vorhanden. Fehlt: expliziter Hinweis auf automatische Verlängerung. §312j Abs. 3 BGB erfordert diesen Hinweis explizit vor Vertragsabschluss.",
+      "suggestedFixes": [
+        {
+          "text": "Spare %1$d%% gegenüber dem Monatsabo — automatische Verlängerung, Kündigung jederzeit im Google Play Store zum jeweiligen Vertragsende möglich.",
+          "rationale": "Ergänzt fehlenden Verlängerungshinweis"
+        }
+      ],
+      "invasivityLevel": "text-only"
+    },
+    {
+      "findingId": "S3b-012",
+      "riskLevel": "🟨",
+      "category": "UWG §5 — Superlativ-Aussage ohne Grundlage",
+      "key": "paywall_most_popular",
+      "line": 1117,
+      "currentText": "Beliebteste Wahl",
+      "problem": "\"Beliebteste Wahl\" ist eine Superlativaussage die eines belegbaren Grundes bedarf (UWG §5 Abs. 1 Nr. 2). Ohne messbare Daten (Verkaufszahlen, Nutzerbefragung) ist dieser Hinweis irreführend.",
+      "suggestedFixes": [
+        {
+          "text": "Empfohlene Wahl",
+          "rationale": "Subjektive Empfehlung statt Superlativ-Faktenbehauptung"
+        },
+        {
+          "text": "Bestes Preis-Leistungs-Verhältnis",
+          "rationale": "Beschreibt den Vorteil ohne Beliebtheitssuperlativ"
+        }
+      ],
+      "invasivityLevel": "text-only"
+    },
+    {
+      "findingId": "S3b-013",
+      "riskLevel": "🟨",
+      "category": "UWG §5 — Retroversprechen ohne Einschränkung",
+      "key": "retro_yearly_p2",
+      "line": 1033,
+      "currentText": "Die KI erkennt die großen Themen deines Jahres",
+      "problem": "Aussage impliziert sichere Erkennung großer Themen. Die KI kann aber nur Texte auswerten die tatsächlich eingegeben wurden. Ohne Nutzungseinschränkung leicht irreführend.",
+      "suggestedFixes": [
+        {
+          "text": "Die KI fasst die großen Themen deines Jahres aus deinen Einträgen zusammen",
+          "rationale": "Klärt dass Grundlage die eigenen Einträge sind"
+        }
+      ],
+      "invasivityLevel": "text-only"
+    },
+    {
+      "findingId": "S3b-014",
+      "riskLevel": "🟨",
+      "category": "DSGVO Art. 13 — Datenschutzhinweis beim Teilen von KI-Inhalten",
+      "key": "retro_share_header",
+      "line": 1017,
+      "currentText": "Rückblick von der BestJournal App",
+      "problem": "Beim Teilen von KI-generierten Rückblicken (die Tagebuchinhalte enthalten) fehlt ein Hinweis dass persönenbezogene Daten geteilt werden. DSGVO Art. 13 erfordert transparente Information. Risikoniveau niedrig da Teilen nutzerinitiiert ist, aber expliziter Hinweis wäre besser.",
+      "suggestedFixes": [
+        {
+          "text": "Mein persönlicher Rückblick — erstellt mit BestJournal",
+          "rationale": "Neutral, verdeutlicht persönlichen Charakter"
+        }
+      ],
+      "invasivityLevel": "text-only"
+    }
+  ],
+  "plugin_bugs_observed": [
+    "Zeile 976 (retro_intro_body) endet mit Leerzeichen und Komma — unvollständiger Satz, möglicher Template-Fragmentierungsbug",
+    "Zeile 1123 (paywall_free_note) endet syntaktisch mitten im Satz mit Komma — zweiter Teil fehlt möglicherweise im Layout-String-Verkettungs-Muster"
+  ]
+}

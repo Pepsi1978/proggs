@@ -1,0 +1,7 @@
+interface:
+  display_name: "second-opinion"
+  short_description: "Runs external LLM code reviews (OpenAI Codex or Google Gemini"
+  default_prompt: "Use $second-opinion-trailofbits--second-opinion for this task."
+
+policy:
+  allow_implicit_invocation: true

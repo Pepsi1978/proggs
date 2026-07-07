@@ -1,0 +1,7 @@
+interface:
+  display_name: "stripe-projects"
+  short_description: "stripe-projects skill"
+  default_prompt: "Use $stripe-codex-plugins-official--stripe-projects for this task."
+
+policy:
+  allow_implicit_invocation: false

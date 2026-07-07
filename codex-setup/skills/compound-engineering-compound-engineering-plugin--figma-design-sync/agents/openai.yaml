@@ -1,0 +1,7 @@
+interface:
+  display_name: "figma-design-sync"
+  short_description: "Detects and fixes visual differences between a web"
+  default_prompt: "Use $compound-engineering-compound-engineering-plugin--figma-design-sync for this task."
+
+policy:
+  allow_implicit_invocation: false

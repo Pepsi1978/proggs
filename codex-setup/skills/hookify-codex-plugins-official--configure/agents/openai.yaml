@@ -1,0 +1,7 @@
+interface:
+  display_name: "configure"
+  short_description: "Enable or disable hookify rules interactively"
+  default_prompt: "Use $hookify-codex-plugins-official--configure for this task."
+
+policy:
+  allow_implicit_invocation: false

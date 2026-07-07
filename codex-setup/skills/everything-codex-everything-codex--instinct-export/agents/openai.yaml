@@ -1,0 +1,7 @@
+interface:
+  display_name: "instinct-export"
+  short_description: "Export instincts from project/global scope to a file"
+  default_prompt: "Use $everything-codex-everything-codex--instinct-export for this task."
+
+policy:
+  allow_implicit_invocation: false

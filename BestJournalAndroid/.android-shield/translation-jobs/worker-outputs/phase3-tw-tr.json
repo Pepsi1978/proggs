@@ -1,0 +1,32 @@
+{
+  "worker": "tw-tr",
+  "lang": "tr",
+  "translated": 34,
+  "pluralsDone": 2,
+  "legendPercentFixed": 15,
+  "newKeys": [
+    "paywall_monthly_note"
+  ],
+  "verification": {
+    "xmlValid": true,
+    "allKeysPresent": true,
+    "noneIdenticalToDe": true,
+    "placeholdersMatch": true,
+    "legendSinglePercent": true,
+    "apostropheValidator": "OK: 0 unescaped",
+    "apostrophesAutoFixed": 9,
+    "errorCount": 0
+  },
+  "plugin_bugs_observed": [
+    {
+      "symptom": "Bestehende values-tr-Strings waren teils mit 'KI' statt dem Bestands-Term 'YZ' uebersetzt (z.B. profile_entropy_long, mehrere ai_prompt_*), parallel zu 55 'YZ'-Vorkommen — inkonsistente KI-Terminologie im selben File.",
+      "evidence": "grep: 55x 'YZ' vs. 'KI'-Substrings in profile_entropy_long/ai_prompt_*; job-plan flaggte genau diese Keys als delta",
+      "suggestion": "Beim Delta-Scan auch Terminologie-Konsistenz (KI->YZ) als Aenderungsgrund erfassen; Worker hat alle 34 jetzt auf 'YZ' vereinheitlicht."
+    },
+    {
+      "symptom": "Frische tr-Uebersetzungen enthielten 6 Strings mit nicht-escapten Apostrophen (Groq'a, ABD'nin, ABD'deki, 2'sinin, 23.04.'te etc.) — haetten den Android-Resource-Build gebrochen.",
+      "evidence": "Post-Verify meldete 6 UNESCAPED-apostrophe-Faelle; nach \\' -Escaping: offizieller check_apostrophes.py = 'OK: 0 unescaped'",
+      "suggestion": "tr gehoert wie fr/it in die Apostroph-Validator-Pflicht (FIN-044) — tuerkische Suffixe nach Eigennamen/Zahlen (Groq'a, ABD'nin) erzeugen genauso bare ' wie romanische l'/d'."
+    }
+  ]
+}

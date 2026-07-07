@@ -1,0 +1,3 @@
+{"ts":"2026-06-10","step":"pre-check-done","lang":"ml","existing_keys":33,"new_keys":["paywall_monthly_note"],"plurals_to_replace":["datetime_months_relative","datetime_years_relative"],"status":"starting-translation"}
+{"ts":"2026-06-10","step":"apply-done","lang":"ml","replaced":35,"inserted":["paywall_monthly_note"],"status":"verifying"}
+{"ts":"2026-06-10","step":"complete","lang":"ml","units_done":36,"verify":"PASS","output":"worker-outputs/phase3-tw-ml.json","status":"done"}

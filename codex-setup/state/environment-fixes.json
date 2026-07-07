@@ -1,0 +1,72 @@
+{
+  "version": 1,
+  "scope": "programming-environment-only",
+  "entries": [
+    {
+      "id": "envfix-codex-setup-bootstrap-2026-04-22",
+      "summary": "Repo-local codex-setup bootstrap for self-improve",
+      "context": "The self-improve skill was installed locally but could not run legitimately because the workspace had no codex-setup control plane.",
+      "symptom": "Stage 0 failed because codex-setup/ and codex-setup/agent-memory/shared/MEMORY.md were missing.",
+      "root_cause": "The workspace had a local deployed skill in ~/.codex/skills/self-improve but no repo-native Codex source-of-truth, whiteboard, state, or bridge helpers.",
+      "fixed_at": "2026-04-22T00:00:00+02:00",
+      "verification": "Created codex-setup, mirrored the self-improve skill into codex-setup/skills/self-improve, verified whiteboard-bridge print-directive and directive-token, and ran session-start-sync successfully.",
+      "portability_notes": "Other CLIs should bootstrap their own repo-local control plane before relying on locally deployed skills.",
+      "resilience_summary": "Added repo-native whiteboard, rules, state files, bridge registry, delta audit stubs, and ledger helper scripts so future runs no longer depend on claude-code-setup or hidden local state."
+    },
+    {
+      "id": "envfix-self-improve-hardening-2026-04-22",
+      "summary": "Hardening for self-improve loader, Windows heredoc guard, and session scorer runtime binding",
+      "context": "The A1/A2/B1 tranche from the 2026-04-22 self-improve review targeted three recurring environment failures in Codex.",
+      "symptom": "self-improve could disappear from loader visibility, Bash heredoc Python snippets stayed possible on Windows, and session-scores.jsonl was never produced by the active runtime.",
+      "root_cause": "The environment lacked a shared validator, the Windows Bash guard did not block Python heredocs, and the active Codex launch path no longer invoked a scorer that understood the current transcript location and schema.",
+      "fixed_at": "2026-04-22T13:16:19.8610291+02:00",
+      "verification": "Added the codex-setup validator, deployed the updated self-improve skill, blocked Python heredoc in bash-guard.ps1, rebound the session scorer via the PowerShell profile, manually created ~/.codex/session-scores.jsonl through the scorer, and reached clean validator status.",
+      "portability_notes": "Other CLIs should keep a repo-native validator plus an active-runtime scorer hook that is tested against the current transcript schema.",
+      "resilience_summary": "A1 adds loader-safe frontmatter checks, A2 blocks the Windows failure mode before execution, and B1 restores session score generation with a schema-tolerant scorer and active launcher binding."
+    },
+    {
+      "id": "envfix-codex-claude-delta-bridge-2026-05-15",
+      "summary": "Codex-native Claude/Gemini delta bridge port",
+      "context": "User requested porting Claude Code setup intelligence into codex-setup so Codex can inspect foreign setup deltas without depending on Claude control files.",
+      "symptom": "codex-setup/scripts/audit-claude-delta.mjs and audit-gemini-delta.mjs were stubs that only reported readiness and could not classify ADD/ADAPT/REPLACE candidates.",
+      "root_cause": "The initial Codex setup bootstrap created placeholder delta audit scripts but did not port Claude Code's bridge registry helper, real Git delta scanner, bridge metadata, or bootstrap report infrastructure.",
+      "fixed_at": "2026-05-15T21:43:40.6602184+02:00",
+      "verification": "node --check passed for bridge-registry.mjs, audit-claude-delta.mjs, audit-gemini-delta.mjs, and bootstrap-report.mjs; JSON bridge files parse; audit-claude-delta scan produces candidates; bootstrap-report emits Codex bridge metadata.",
+      "portability_notes": "Other CLI setups can copy the pattern: registry helper plus per-peer bridge JSON plus Git-based scanner, with foreign sources read-only and replacement candidates requiring confirmation.",
+      "resilience_summary": "Defense in depth: bridge registry is machine-readable, audit scripts classify risk, README documents commands, validate-codex-setup now checks bridge infrastructure, and ledgers record the environment fix."
+    },
+    {
+      "id": "envfix-codex-mem-worker-guard-hostname-2026-06-10",
+      "summary": "Fix codex-mem worker guard PowerShell Host variable collision",
+      "context": "User reported a previous CLI crash and asked to continue fixing broken skills and hooks. Hook logs showed repeated codex-mem-worker-guard shim failures on 2026-06-09.",
+      "symptom": "SessionStart log contained: codex-mem-worker-guard shim failed: Cannot overwrite variable Host because it is read-only or constant.",
+      "root_cause": "claude-mem-worker-guard.ps1 used a parameter named Host in Test-ServiceHealthy and Patch-PluginHooks. PowerShell reserves System.Management.Automation.Internal.Host.InternalHost as a read-only automatic variable, so binding -Host failed before the worker guard could run.",
+      "fixed_at": "2026-06-10T11:25:00+02:00",
+      "verification": "Parsed ~/.codex/config.toml with tomllib, confirmed all registered hook scripts exist, confirmed no remaining -Host parameter references in active and repo guard scripts, and prepared direct hook execution verification.",
+      "portability_notes": "PowerShell hook functions must avoid automatic variable names such as Host, Error, PID, HOME, and args. Mirror active hook fixes into codex-setup/hooks so restore/sync does not reintroduce the bug.",
+      "resilience_summary": "Renamed function parameters to HostName in both active and repo guard scripts, updated call sites, and hardened active hook commands with -NoProfile to reduce profile-output interference."
+    },
+    {
+      "id": "envfix-windows-path-key-2026-06-10",
+      "summary": "Fix Windows Codex shell PATH casing for command discovery",
+      "context": "During the hook and skill recovery run, node, where.exe, and rg were not discoverable by command name even though their directories existed in the process PATH.",
+      "symptom": "Commands failed with 'The term node/where.exe/rg is not recognized', while explicit paths such as C:/Program Files/nodejs/node.exe worked.",
+      "root_cause": "~/.codex/config.toml set shell_environment_policy.set.PATH on Windows. PowerShell command discovery in this Codex-launched process used the canonical Path variable; copying PATH into Path immediately restored node.exe and where.exe resolution.",
+      "fixed_at": "2026-06-10T11:32:00+02:00",
+      "verification": "~/.codex/config.toml now parses and contains shell_environment_policy.set.Path. In a process where Path was aligned to PATH, node v24.15.0, where.exe, and rg 15.1.0 resolved correctly. Existing running tool processes may need a fresh Codex start to inherit the fixed key.",
+      "portability_notes": "Windows restore code should write Path, while Unix restore code should keep PATH. The shared Python helper now supports a path key and replaces old casing case-insensitively.",
+      "resilience_summary": "Updated active config, Windows restore script, and the shared ensure-codex-git-lock-config helper so future restores do not recreate the uppercase-PATH failure mode."
+    },
+    {
+      "id": "envfix-skill-frontmatter-session-scorer-2026-06-10",
+      "summary": "Fix Codex skill frontmatter and active session scorer validation errors",
+      "context": "The Codex setup validator still reported 13 errors after hook repair during a full skills/hooks recovery run.",
+      "symptom": "Validator reported long or YAML-fragile local skill descriptions and an active session-scorer.ts that still referenced whiteboard-insert side effects.",
+      "root_cause": "Several deployed local skills had frontmatter descriptions over the validator limit or inline YAML-fragile ': ' text. The active session-scorer.ts had drifted behind the repo side-effect-free version.",
+      "fixed_at": "2026-06-10T11:40:00+02:00",
+      "verification": "validate-codex-setup.mjs now reports 543 repo skills, 555 local skills, 0 errors, 0 warnings. Select-String confirms the active session-scorer.ts no longer contains whiteboard-insert, Insert-WhiteboardEntry, or insertViaWhiteboardInsert.",
+      "portability_notes": "Keep Skill descriptions short, one-line, and quoted. Restore scripts must copy repo hook sources to the active runtime so validator state cannot drift.",
+      "resilience_summary": "Batch-normalized 11 local skill frontmatters, mirrored the four repo-backed skill sources, and redeployed the repo session-scorer.ts to the active hook directory."
+    }
+  ]
+}

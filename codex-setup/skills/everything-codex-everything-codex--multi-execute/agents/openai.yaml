@@ -1,0 +1,7 @@
+interface:
+  display_name: "multi-execute"
+  short_description: "multi-execute"
+  default_prompt: "Use $everything-codex-everything-codex--multi-execute for this task."
+
+policy:
+  allow_implicit_invocation: false

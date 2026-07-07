@@ -1,0 +1,928 @@
+{
+  "findings": [
+    {
+      "key": "dashboard_gemini_unavailable",
+      "line": 245,
+      "text": "Google Gemini ist gerade nicht erreichbar, bitte versuch es gleich nochmal.",
+      "category": "privacy-claim",
+      "risk": "HOCH",
+      "rationale": "UI bestaetigt: Tagebuchtexte gehen an Google Gemini (Cloud, US). Muss in Datenschutzerklaerung + Data Safety als Drittanbieter-Verarbeitung deklariert sein (Art. 9 sensible Daten)."
+    },
+    {
+      "key": "transcription_model_groq",
+      "line": 95,
+      "text": "whisper-large-v3-turbo",
+      "category": "privacy-claim",
+      "risk": "HOCH",
+      "rationale": "Belegt Groq-Cloud-Transkription (Drittanbieter, US). Sprachaufnahmen ggf. sensible Daten. Datenschutzerklaerung + Data Safety muss Groq als Empfaenger nennen."
+    },
+    {
+      "key": "consent_card1_body",
+      "line": 612,
+      "text": "Deine Eintraege bleiben auf deinem Geraet.",
+      "category": "privacy-claim",
+      "risk": "HOCH",
+      "rationale": "Absolute Lokal-Zusage 'bleiben auf deinem Geraet'. Widerspricht der Cloud-Realitaet: KI (Gemini), TTS (Edge), Spracherkennung (Groq) und optionales Drive-Backup senden Eintraege/Texte an US-Server. Ohne sofortiges 'sofern KI/Backup aktiv' im selben Sichtfeld irrefuehrend (UWG 5 / DSGVO Art.13). Karte 2 (Z.614) relativiert es zwar, aber Karte 1 steht plakativ allein."
+    },
+    {
+      "key": "privacy_gate_groq_body",
+      "line": 620,
+      "text": "schickt deine Sprachaufnahme verschluesselt an Groq (USA) ... Aufnahme wird nach der Umwandlung sofort geloescht / Kein KI-Training mit deinen Aufnahmen / Rechtsgrundlage: Standardvertragsklauseln (EU SCCs)",
+      "category": "privacy-claim",
+      "risk": "HOCH",
+      "rationale": "Konkrete Tatsachenbehauptungen ueber einen Drittanbieter: 'sofort geloescht', 'Kein KI-Training'. Muessen durch Groqs AGB/DPA tatsaechlich gedeckt sein - sonst irrefuehrend (UWG 5) UND DSGVO-Falschangabe. Verifizieren, dass Groqs Vertrag No-Training + sofortige Loeschung wirklich zusichert."
+    },
+    {
+      "key": "privacy_gate_gemini_body",
+      "line": 625,
+      "text": "verschluesselt an Google Gemini ... Kein KI-Training mit deinen Daten / Anfragen werden nicht dauerhaft gespeichert ... Die KI-Ausgaben sind Vorschlaege, keine professionelle Beratung und ersetzen keine Fachperson.",
+      "category": "privacy-claim",
+      "risk": "HOCH",
+      "rationale": "'Kein KI-Training' + 'nicht dauerhaft gespeichert' fuer Gemini. Bei der Gemini API gilt No-Training nur fuer den kostenpflichtigen/Cloud-Pfad; Free-Tier/AI-Studio-Daten KOENNEN zum Training genutzt werden. Wenn die App den falschen Endpunkt nutzt, ist die Zusage falsch (UWG/DSGVO). Positiv: Art.9-Hinweis + 'keine Fachperson' (HWG) ist vorbildlich."
+    },
+    {
+      "key": "onboarding_feature_secure__privacy",
+      "line": 1061,
+      "text": "Deine Daten sind lokal gespeichert, KI-Anfragen sind verschluesselt",
+      "category": "privacy-claim",
+      "risk": "HOCH",
+      "rationale": "Datenschutz-Doppelclaim (zusaetzlich zur marketing-Bewertung): 'lokal gespeichert' + 'verschluesselt'. DSGVO/UWG: beide technisch belegbar. Konflikt mit dokumentiertem Google-Drive-Backup (restoreFromDrive) - bei Cloud-Sicherung ist 'lokal gespeichert' unvollstaendig/irrefuehrend. 'KI-Anfragen verschluesselt' = Transportverschluesselung zu Gemini? Genau belegen. HOCH wegen Datenschutz-Relevanz + moeglichem Widerspruch zur Cloud-Backup-Funktion."
+    },
+    {
+      "key": "journal_drive_backup_current",
+      "line": 74,
+      "text": "Backup aktuell, alle Eintraege gesichert",
+      "category": "privacy-claim",
+      "risk": "MITTEL",
+      "rationale": "'alle Eintraege gesichert' — Vollstaendigkeitsversprechen. Bei Sync-Fehler/Teilbackup irrefuehrend; gegen Code-Realitaet (Drive-Sync) pruefen."
+    },
+    {
+      "key": "journal_transcribed_with",
+      "line": 91,
+      "text": "Transkribiert mit %1$s",
+      "category": "privacy-claim",
+      "risk": "MITTEL",
+      "rationale": "Zeigt Transkriptionsquelle (z.B. Groq Cloud). Audio geht an Cloud-Anbieter — muss in Datenschutz/Data-Safety deklariert sein."
+    },
+    {
+      "key": "entry_delete_message",
+      "line": 170,
+      "text": "Diesen Eintrag unwiderruflich loeschen?",
+      "category": "legal-text",
+      "risk": "MITTEL",
+      "rationale": "'unwiderruflich' — aber Memory dokumentiert dass Drive-Restore geloeschte Eintraege wiederbelebt. Aussage koennte technisch falsch sein (Loeschung nicht endgueltig). Pruefen."
+    },
+    {
+      "key": "consent_card3_title",
+      "line": 615,
+      "text": "Anonyme Statistiken",
+      "category": "privacy-claim",
+      "risk": "MITTEL",
+      "rationale": "'Anonyme Statistiken' (Firebase Analytics). Firebase nutzt eine pseudonyme App-Instance-ID/Geraetekennungen - datenschutzrechtlich i.d.R. NICHT vollstaendig 'anonym', sondern pseudonym. 'Anonym' kann irrefuehrend sein. Mehrfach verwendet (consent_toggle_analytics_*, settings_analytics_*)."
+    },
+    {
+      "key": "consent_toggle_analytics_body",
+      "line": 671,
+      "text": "Firebase Analytics - hilft uns die App zu verbessern. Keine persoenlichen Inhalte, nur anonyme Klick-Zahlen.",
+      "category": "privacy-claim",
+      "risk": "MITTEL",
+      "rationale": "'nur anonyme Klick-Zahlen' + 'Keine persoenlichen Inhalte'. Firebase erfasst Geraete-/Instanz-IDs (pseudonym). Aussage 'anonym' ist datenschutzrechtlich angreifbar; praeziser waere 'pseudonym/ohne Tagebuchinhalte'."
+    },
+    {
+      "key": "settings_analytics_title",
+      "line": 728,
+      "text": "Anonyme Statistik",
+      "category": "privacy-claim",
+      "risk": "MITTEL",
+      "rationale": "Gleiche 'anonym'-Problematik wie consent_card3 (Firebase = pseudonym). Konsistent verwendet, daher systematischer Fund."
+    },
+    {
+      "key": "consent_toggle_do_not_sell_body",
+      "line": 681,
+      "text": "Best Journal verkauft oder vermarktet deine Daten nirgendwo auf der Welt.",
+      "category": "privacy-claim",
+      "risk": "MITTEL",
+      "rationale": "Absolute weltweite Zusage 'verkauft nirgendwo auf der Welt'. Muss mit der tatsaechlichen Datenweitergabe (Firebase Analytics an Google, Werbe-IDs?) konsistent sein. Unter CCPA/CPRA gilt schon 'sharing' fuer Cross-Context-Werbung teils als 'sale'. Belastbarkeit pruefen."
+    },
+    {
+      "key": "privacy_gate_tts_body",
+      "line": 630,
+      "text": "Dein Text wird verschluesselt an Microsoft gesendet ... Kein KI-Training mit deinen Texten",
+      "category": "privacy-claim",
+      "risk": "MITTEL",
+      "rationale": "'Kein KI-Training' fuer Microsoft Edge TTS. Edge-TTS ist ein inoffizieller/oeffentlicher Endpunkt ohne formelles DPA - die No-Training-Zusage ist schwer belegbar. Verifizieren, welcher MS-Dienst genutzt wird und ob ein Vertrag besteht."
+    },
+    {
+      "key": "consent_toggle_drive_body",
+      "line": 679,
+      "text": "Sichert Eintraege verschluesselt in deinem eigenen Google Drive. Du behaeltst die volle Kontrolle - die Datei liegt in deinem Konto, nicht bei uns.",
+      "category": "privacy-claim",
+      "risk": "MITTEL",
+      "rationale": "'verschluesselt' + 'volle Kontrolle'. Pruefen, ob das Drive-Backup wirklich at-rest/Ende-zu-Ende verschluesselt ist oder nur via TLS uebertragen. 'verschluesselt' suggeriert mehr als Transportverschluesselung - Code-Abgleich noetig."
+    },
+    {
+      "key": "settings_delete_account_subtitle",
+      "line": 731,
+      "text": "Entfernt alle lokalen Daten und das Drive-Backup unwiderruflich.",
+      "category": "privacy-claim",
+      "risk": "MITTEL",
+      "rationale": "'unwiderruflich'-Loeschzusage (DSGVO Art.17). Positiv abgesichert durch settings_delete_account_drive_error_body (Z.740): 'Ohne vollstaendige Loeschung waere die Meldung unwiderruflich entfernt nicht korrekt' - ehrlicher Fehlerfall. Aber: Android System-Backup (Z.685) kann Daten dennoch in Google halten; 'unwiderruflich' nur korrekt, wenn auch dieses adressiert wird."
+    },
+    {
+      "key": "consent_confirmation",
+      "line": 652,
+      "text": "Mit Loslegen bestaetigst du, dass du die Datenschutzerklaerung, die Nutzungsbedingungen und das Impressum gelesen hast ...",
+      "category": "legal-text",
+      "risk": "MITTEL",
+      "rationale": "Inhaltlich solide Einwilligungs-Bestaetigung. ABER: typografische Anfuehrungszeichen gemischt - oeffnend deutsch tief, schliessend gerade. Inkonsistente Quotes; in Kotlin/XML Escaping-Risiko (vgl. MEMORY: deutsche Anfuehrungszeichen). Pruefen, ob in der XML korrekt als &quot; bzw. Literal vorliegt."
+    },
+    {
+      "key": "settings_entries_auto_loaded",
+      "line": 417,
+      "text": "Eintraege werden bei der Anmeldung automatisch geladen",
+      "category": "privacy-claim",
+      "risk": "NIEDRIG",
+      "rationale": "Cloud-Sync-Verhalten (Drive). Datenfluss-Hinweis — transparent."
+    },
+    {
+      "key": "settings_auto_lock",
+      "line": 463,
+      "text": "Sperrt automatisch nach 60 Sekunden im Hintergrund",
+      "category": "privacy-claim",
+      "risk": "NIEDRIG",
+      "rationale": "Konkrete Sicherheitsangabe (60s). Muss mit tatsaechlichem Verhalten uebereinstimmen."
+    },
+    {
+      "key": "prompt_clear_confirm_text",
+      "line": 123,
+      "text": "Die Individuelle Analyse wird unwiderruflich geloescht. Moechtest du wirklich fortfahren?",
+      "category": "legal-text",
+      "risk": "NIEDRIG",
+      "rationale": "'unwiderruflich' Loeschbestaetigung. Pruefen ob wirklich nicht wiederherstellbar (Drive-Restore koennte reviven)."
+    },
+    {
+      "key": "follow_up_delete_confirm_text",
+      "line": 210,
+      "text": "Moechtest du Nachtrag %1$s wirklich unwiderruflich loeschen?",
+      "category": "legal-text",
+      "risk": "NIEDRIG",
+      "rationale": "'unwiderruflich' Loeschwarnung. Gleiche Pruefung (Drive-Restore?)."
+    },
+    {
+      "key": "ai_improved_suffix_marker",
+      "line": 178,
+      "text": "✨ KI-verbessert",
+      "category": "legal-text",
+      "risk": "NIEDRIG",
+      "rationale": "KI-Kennzeichnung gemaess EU AI Act Art. 50(4) — Pflichtkennzeichnung erfuellt, positiv."
+    },
+    {
+      "key": "permission_rationale_microphone",
+      "line": 696,
+      "text": "Damit du deine Tagebucheintraege per Sprache diktieren kannst, brauchen wir Zugriff auf dein Mikrofon.",
+      "category": "legal-text",
+      "risk": "NIEDRIG",
+      "rationale": "Permission-Begruendung (Play-Policy + DSGVO Art.13). Korrekt, zweckgebunden. Positiv-Fund. Gleiches fuer camera/notifications (Z.697/698)."
+    },
+    {
+      "key": "settings_delete_account_confirm_body",
+      "line": 733,
+      "text": "Dieser Vorgang ist unwiderruflich und loescht: ... Audio-Aufnahmen ... Das Google-Drive-Backup der App ... Dein Google-Konto selbst bleibt bestehen.",
+      "category": "legal-text",
+      "risk": "NIEDRIG",
+      "rationale": "Loesch-Bestaetigung (DSGVO Art.17/CCPA). Klar, vollstaendig, korrekt abgegrenzt (Konto bleibt). Positiv-Fund. Konsistenz mit System-Backup-Hinweis pruefen."
+    },
+    {
+      "key": "settings_revoke_email_body",
+      "line": 753,
+      "text": "Hiermit widerrufe ich den von mir abgeschlossenen Vertrag ueber die Premium-Funktionen ... zweistufig ueber den 356a-BGB-konformen Widerrufsbutton ...",
+      "category": "legal-text",
+      "risk": "NIEDRIG",
+      "rationale": "Automatisch versendeter Widerrufstext. Rechtlich vorbildlich (Eingangsbestaetigung Z.755 ist Pflicht nach 356a). Positiv-Fund."
+    },
+    {
+      "key": "settings_legal_section_header",
+      "line": 1469,
+      "text": "Rechtliche Dokumente",
+      "category": "legal-text",
+      "risk": "NIEDRIG",
+      "rationale": "Header Rechtsdokumente-Sektion. Positiv: Rechtsdokumente in Settings erreichbar."
+    },
+    {
+      "key": "settings_legal_online_label",
+      "line": 1471,
+      "text": "Online-Version:",
+      "category": "legal-text",
+      "risk": "NIEDRIG",
+      "rationale": "Label fuer Online-Rechtsdokumente. Positiv (Verfuegbarkeit)."
+    },
+    {
+      "key": "consent_footer_link_datenschutz",
+      "line": 1491,
+      "text": "Datenschutz",
+      "category": "legal-text",
+      "risk": "NIEDRIG",
+      "rationale": "Consent-Screen-Link Datenschutz. Positiv-Fund (Pflichtdokument verlinkt)."
+    },
+    {
+      "key": "consent_footer_link_impressum",
+      "line": 1492,
+      "text": "Impressum",
+      "category": "legal-text",
+      "risk": "NIEDRIG",
+      "rationale": "Consent-Screen-Link Impressum. Positiv (Impressumspflicht)."
+    },
+    {
+      "key": "consent_footer_link_agb",
+      "line": 1493,
+      "text": "Nutzungsbedingungen",
+      "category": "legal-text",
+      "risk": "NIEDRIG",
+      "rationale": "Consent-Screen-Link AGB. Positiv. Konsistent mit paywall_legal_hint_link (1116) ('Nutzungsbedingungen')."
+    },
+    {
+      "key": "dev_seed_delete_all_action",
+      "line": 1435,
+      "text": "Alle Eintraege loeschen",
+      "category": "legal-text",
+      "risk": "NIEDRIG",
+      "rationale": "DEBUG-only Loesch-Aktion (nur Debug-Builds sichtbar laut Kommentar). Keine 'unwiderruflich'-Warnung, aber Debug-Tool. Produktiver Loesch-/Account-Flow steht in diesem Bereich nicht - von anderem Worker/Code zu pruefen."
+    }
+  ],
+  "manifest": {
+    "permissions": [
+      {
+        "name": "android.permission.INTERNET",
+        "impliedFeature": "Netzwerkzugriff (Groq-Whisper-Cloud, Firebase AI/Gemini, Google Drive, Gmail-Versand, Bing-TTS)",
+        "runtimePermission": false
+      },
+      {
+        "name": "android.permission.ACCESS_NETWORK_STATE",
+        "impliedFeature": "Netzwerkstatus pruefen (online/offline fuer Sync/Cloud-Calls)",
+        "runtimePermission": false
+      },
+      {
+        "name": "android.permission.RECORD_AUDIO",
+        "impliedFeature": "Sprachaufnahme fuer Tagebuch-Diktat (lokales Sherpa-ONNX-Whisper + Groq-Cloud-Transkription)",
+        "runtimePermission": true
+      },
+      {
+        "name": "android.permission.CAMERA",
+        "impliedFeature": "Foto-Aufnahme fuer Tagebucheintraege (FileProvider photos/)",
+        "runtimePermission": true
+      },
+      {
+        "name": "android.permission.POST_NOTIFICATIONS",
+        "impliedFeature": "Erinnerungen/Reviews (taeglich, woechentlich, monatlich, jaehrlich)",
+        "runtimePermission": true
+      },
+      {
+        "name": "android.permission.RECEIVE_BOOT_COMPLETED",
+        "impliedFeature": "Reminder-Alarme nach Reboot/Zeitzonen-/Zeitwechsel neu setzen (BootReminderReceiver)",
+        "runtimePermission": false
+      }
+    ],
+    "usesFeatures": [
+      {
+        "name": "android.hardware.camera",
+        "required": false
+      },
+      {
+        "name": "android.hardware.camera.autofocus",
+        "required": false
+      },
+      {
+        "name": "android.hardware.microphone",
+        "required": false
+      }
+    ],
+    "queries": [
+      "com.google.android.gms (GMS-Verfuegbarkeitscheck)"
+    ],
+    "applicationName": ".BestJournalApp (Hilt @HiltAndroidApp)",
+    "activities": [
+      {
+        "name": ".MainActivity",
+        "exported": true,
+        "reason": "LAUNCHER, einzige Activity, Single-Activity-Compose-Architektur",
+        "intentFilter": "MAIN/LAUNCHER"
+      }
+    ],
+    "receivers": [
+      {
+        "name": ".util.ReminderReceiver",
+        "exported": false,
+        "purpose": "Taegliche Tagebuch-Erinnerung"
+      },
+      {
+        "name": ".util.WeeklyReviewReceiver",
+        "exported": false,
+        "purpose": "Woechentliche Review-Benachrichtigung"
+      },
+      {
+        "name": ".util.MonthlyReviewReceiver",
+        "exported": false,
+        "purpose": "Monatliche Review-Benachrichtigung"
+      },
+      {
+        "name": ".util.YearlyReviewReceiver",
+        "exported": false,
+        "purpose": "Jaehrliche Review-Benachrichtigung"
+      },
+      {
+        "name": ".util.BootReminderReceiver",
+        "exported": true,
+        "purpose": "Alarme nach BOOT_COMPLETED/TIMEZONE_CHANGED/TIME_SET neu planen",
+        "intentFilter": "BOOT_COMPLETED, TIMEZONE_CHANGED, TIME_SET",
+        "note": "exported=true ist fuer BOOT_COMPLETED systembedingt noetig; nimmt nur System-Broadcasts entgegen, geringes Risiko"
+      }
+    ],
+    "providers": [
+      {
+        "name": "androidx.core.content.FileProvider",
+        "authorities": "ApplicationId.fileprovider",
+        "exported": false,
+        "grantUriPermissions": true,
+        "exportedPaths": "files-path 'photos' zeigt auf photos/ (interner App-Speicher, Tagebuch-Fotos); via grantUriPermission temporaer fuer Kamera/Teilen freigegeben"
+      }
+    ],
+    "backup": {
+      "allowBackup": true,
+      "fullBackupContent": "@xml/backup_rules (API kleiner/gleich 30)",
+      "dataExtractionRules": "@xml/data_extraction_rules (API groesser/gleich 31, cloud-backup + device-transfer)",
+      "rulesSummary": "Eingeschlossen ins Cloud-Backup/Geraetetransfer: Tagebuch-DB entropy_journal_db (Eintraege) + Profil/Settings-SharedPreferences. Ausgeschlossen: dashboard_db, retrospective_db (regenerieren aus Eintraegen) UND entropy_journal_secure_prefs (verschluesselte Prefs mit Tokens/Keys).",
+      "sensitiveDataInBackup": "JA. Die kompletten Tagebuch-Eintraege (entropy_journal_db) sowie das Nutzerprofil wandern ins Google-Cloud-Backup. Das sind potenziell hoechst-sensible, ggf. Art.9-DSGVO-Daten (Gesundheit, Gefuehle, Stimmung). API-Keys/Tokens in entropy_journal_secure_prefs sind korrekt AUSGESCHLOSSEN.",
+      "dsgvoRisk": "MITTEL-HOCH: Tagebuchinhalte im Google-Auto-Backup koennen besondere Kategorien personenbezogener Daten enthalten. Muss in der Datenschutzerklaerung adressiert werden (Google als Auftragsverarbeiter des Backups, Speicherort, Verschluesselung). Empfehlung an Legal-Worker: pruefen ob Tagebuch-DB im Cloud-Backup gewuenscht/dokumentiert ist oder ob fuer Art.9-Daten ein Ausschluss sinnvoller waere."
+    },
+    "cleartextTraffic": false,
+    "networkSecurityConfig": "@xml/network_security_config: base-config cleartextTrafficPermitted=false, nur System-Trust-Anchors (kein User-CA, kein Cert-Pinning). Gut fuer DSGVO/Sicherheit.",
+    "enableOnBackInvokedCallback": true,
+    "supportsRtl": true,
+    "intentFilters": [
+      "MAIN/LAUNCHER (MainActivity)",
+      "BOOT_COMPLETED + TIMEZONE_CHANGED + TIME_SET (BootReminderReceiver)"
+    ]
+  },
+  "dependencies": {
+    "sdks": [
+      {
+        "lib": "com.google.firebase:firebase-analytics",
+        "capability": "Nutzungs-Analytics/Event-Tracking (onboarding, entry_created/improved/deleted, paywall_shown, cta_clicked, trial_started)",
+        "sendsDataToThirdParty": true,
+        "thirdParty": "Google (Firebase Analytics)",
+        "activelyUsed": true,
+        "note": "AnalyticsTracker.kt + EdgeTtsPlayer.kt feuern logEvent breitflaechig. ConsentViewModel existiert. Consent-Gating MUSS vom Legal-Worker geprueft werden (DSGVO Art.6/7, ePrivacy/TTDSG)."
+      },
+      {
+        "lib": "com.google.firebase:firebase-ai (Gemini)",
+        "capability": "KI-Textverbesserung/Analysen der Tagebuch-Eintraege via Google Gemini (Firebase AI Logic)",
+        "sendsDataToThirdParty": true,
+        "thirdParty": "Google (Firebase AI / Gemini-Cloud)",
+        "activelyUsed": true,
+        "note": "FirebaseAiService.kt aktiv. Tagebuchinhalte gehen zur KI-Verarbeitung an Google, Art.13/28-Pflicht (Auftragsverarbeiter, Drittlandtransfer USA)."
+      },
+      {
+        "lib": "com.google.firebase:firebase-functions",
+        "capability": "Cloud Functions Aufruf (SubscriptionStatusService, Abo-Status serverseitig pruefen)",
+        "sendsDataToThirdParty": true,
+        "thirdParty": "Google (Firebase Functions)",
+        "activelyUsed": true,
+        "note": "SubscriptionStatusService.kt importiert firebase."
+      },
+      {
+        "lib": "com.google.firebase:firebase-config (Remote Config)",
+        "capability": "Feature-Flags/Remote-Konfiguration",
+        "sendsDataToThirdParty": true,
+        "thirdParty": "Google (Firebase Remote Config)",
+        "activelyUsed": true,
+        "note": "In BestJournalApp.kt initialisiert (5 firebase-Imports)."
+      },
+      {
+        "lib": "com.google.firebase:firebase-appcheck-playintegrity",
+        "capability": "App-Attestierung (Schutz der Backend-Calls vor Missbrauch)",
+        "sendsDataToThirdParty": true,
+        "thirdParty": "Google (Play Integrity / App Check)",
+        "activelyUsed": true,
+        "note": "debug-Variante firebase-appcheck-debug separat. Play-Integrity-Token = geraetebezogen."
+      },
+      {
+        "lib": "com.android.billingclient:billing-ktx 7.1.1",
+        "capability": "In-App-Kauf / Abo (Paywall: Trial, Monthly, Yearly, Lifetime)",
+        "sendsDataToThirdParty": true,
+        "thirdParty": "Google Play Billing",
+        "activelyUsed": true,
+        "note": "BillingManager.kt aktiv. UWG/Paywall-relevant fuer Werbeaussagen-Check."
+      },
+      {
+        "lib": "com.google.android.play:review-ktx 2.0.2",
+        "capability": "In-App-Bewertungsdialog",
+        "sendsDataToThirdParty": true,
+        "thirdParty": "Google Play",
+        "activelyUsed": true,
+        "note": "Import in 1 Datei bestaetigt."
+      },
+      {
+        "lib": "com.google.apis:google-api-services-drive",
+        "capability": "Google-Drive-Backup/Restore der Tagebuchdaten",
+        "sendsDataToThirdParty": true,
+        "thirdParty": "Google Drive (Nutzer-eigener Speicher)",
+        "activelyUsed": true,
+        "note": "DriveBackupManager.kt + DriveRestoreManager.kt aktiv. Daten liegen im Drive des Nutzers. Auftragsverarbeitung Google."
+      },
+      {
+        "lib": "androidx.credentials + googleid + play-services-auth 21.3.0",
+        "capability": "Google-Sign-In via Credential Manager (Konto fuer Drive/Gmail/Abo-Status)",
+        "sendsDataToThirdParty": true,
+        "thirdParty": "Google Identity",
+        "activelyUsed": true,
+        "note": "ConsentViewModel + Drive/Gmail-Pfade nutzen das Konto."
+      },
+      {
+        "lib": "Retrofit 2.11.0 + OkHttp 4.12.0 + Moshi",
+        "capability": "REST-Client fuer Groq-Whisper-Cloud + Gmail-API + sonstige HTTP-Calls",
+        "sendsDataToThirdParty": true,
+        "thirdParty": "Groq (api.groq.com), Google Gmail API",
+        "activelyUsed": true,
+        "note": "GroqApi.kt (4 Imports), NetworkModule.kt, RevokeSender/FeedbackSender. okhttp-logging-interceptor enthalten. Legal-Worker: pruefen ob Logging in Release deaktiviert (Datenleck-Risiko)."
+      },
+      {
+        "lib": "Sherpa-ONNX 1.12.34 (lokale AAR)",
+        "capability": "LOKALE Whisper-Spracherkennung (on-device, KEIN Datenabfluss)",
+        "sendsDataToThirdParty": false,
+        "thirdParty": "-",
+        "activelyUsed": true,
+        "note": "LocalWhisperTranscriber.kt. Datenschutzfreundliche On-Device-Alternative zur Groq-Cloud. noCompress onnx/txt gesetzt."
+      },
+      {
+        "lib": "androidx.room 2.7.0",
+        "capability": "Lokale Datenbanken (entropy_journal_db, dashboard_db, retrospective_db)",
+        "sendsDataToThirdParty": false,
+        "thirdParty": "-",
+        "activelyUsed": true,
+        "note": "Room-DAO/Entities, ksp room.schemaLocation gesetzt."
+      },
+      {
+        "lib": "androidx.security:security-crypto 1.1.0-alpha06",
+        "capability": "EncryptedSharedPreferences (entropy_journal_secure_prefs, Tokens/Keys verschluesselt)",
+        "sendsDataToThirdParty": false,
+        "thirdParty": "-",
+        "activelyUsed": true,
+        "note": "DEPRECATED laut Android-Rules (Empfehlung DataStore+Tink), Hinweis fuer Best-Practices, kein Rechtsrisiko. Korrekt vom Backup ausgeschlossen."
+      },
+      {
+        "lib": "androidx.biometric 1.2.0-alpha05",
+        "capability": "Biometrischer App-Lock (Tagebuch hinter Fingerabdruck/Gesicht)",
+        "sendsDataToThirdParty": false,
+        "thirdParty": "-",
+        "activelyUsed": true,
+        "note": "App-Lock = positives Datenschutz-Feature."
+      },
+      {
+        "lib": "Microsoft Bing Edge TTS (kein Gradle-SDK, direkter WSS-Call)",
+        "capability": "Text-to-Speech (Vorlesen) ueber wss://speech.platform.bing.com",
+        "sendsDataToThirdParty": true,
+        "thirdParty": "Microsoft (Bing/Azure Edge TTS)",
+        "activelyUsed": true,
+        "note": "EdgeTtsPlayer.kt: Text (potenziell Tagebuchinhalt) wird zur Sprachsynthese an Microsoft-Server gesendet. NICHT als Gradle-Dependency sichtbar, in SDK-/Drittanbieter-Listen leicht uebersehen. Legal-Worker: in Datenschutzerklaerung als Microsoft-Datenfluss aufnehmen; pruefen ob inoffizieller Bing-Endpunkt AGB-konform ist."
+      },
+      {
+        "lib": "Coil 3.0.4 (coil-compose + coil-video)",
+        "capability": "Bild-/Video-Thumbnail-Laden (lokale Tagebuch-Fotos)",
+        "sendsDataToThirdParty": false,
+        "thirdParty": "-",
+        "activelyUsed": true,
+        "note": "Aktive Nutzung angenommen (Foto-Feature vorhanden); nicht per Import-Grep gegengeprueft."
+      },
+      {
+        "lib": "Lottie 6.6.4",
+        "capability": "Vektor-Animationen (UI)",
+        "sendsDataToThirdParty": false,
+        "thirdParty": "-",
+        "activelyUsed": "unbekannt",
+        "note": "Deklariert; keine Import-Stichprobe gemacht. Kein Rechtsrisiko."
+      },
+      {
+        "lib": "kotlinx-coroutines (core/android/play-services)",
+        "capability": "Async/Nebenlaeufigkeit",
+        "sendsDataToThirdParty": false,
+        "thirdParty": "-",
+        "activelyUsed": true,
+        "note": "Standard."
+      }
+    ],
+    "appId": "com.bestjournal.app (debug: com.bestjournal.app.debug)",
+    "namespace": "com.bestjournal.app",
+    "versionName": "0.21.10",
+    "versionCode": 291,
+    "minSdk": 26,
+    "targetSdk": 36,
+    "compileSdk": 36,
+    "r8Enabled": true,
+    "r8Details": "release: isMinifyEnabled=true, isShrinkResources=true, proguard-android-optimize + proguard-rules.pro; debug: minify=false, applicationIdSuffix .debug",
+    "javaTarget": "17",
+    "buildToolVersions": {
+      "agp": "8.7.3",
+      "kotlin": "2.1.0",
+      "ksp": "2.1.0-1.0.29",
+      "composeBom": "2025.01.01",
+      "firebaseBom": "34.11.0"
+    },
+    "secretsHandling": "Alle Secrets (google-services.json debug/release, Keystores, keystore.properties) liegen ausserhalb des Repos in HOME/SK/BestJournalAndroid/ und werden per syncSecretsFromSk-Task beim preBuild kopiert. Debug-Keystore-Passwort android steht im Build-Skript (Standard-Debug, unkritisch). Release-Signing aus SK/keystore.properties. KEINE echten Secrets im Repo. Konform mit secrets-in-sk-folder-Regel."
+  },
+  "externalEndpoints": [
+    {
+      "domain": "api.groq.com",
+      "purpose": "Whisper-Cloud-Transkription der Sprachaufnahmen (OpenAI-kompatible API), Tagebuch-Audio/Text geht an Groq Inc. (USA)",
+      "file": "util/Constants.kt:5, data/remote/groq/GroqApi.kt"
+    },
+    {
+      "domain": "speech.platform.bing.com (wss)",
+      "purpose": "Microsoft Bing/Edge Text-to-Speech (Vorlesen), Text geht zur Sprachsynthese an Microsoft",
+      "file": "util/EdgeTtsPlayer.kt:98"
+    },
+    {
+      "domain": "gmail.googleapis.com",
+      "purpose": "E-Mail-Versand ueber das Google-Konto des Nutzers: App-Feedback (FeedbackSender) und Konto-/Zugriffs-Widerruf-Nachricht (RevokeSender), Scope gmail.send",
+      "file": "data/remote/FeedbackSender.kt:19-20, data/remote/RevokeSender.kt:32-33"
+    },
+    {
+      "domain": "www.googleapis.com (Drive + Gmail-Scopes)",
+      "purpose": "Google-Drive-Backup/Restore + OAuth-Scope-URLs (gmail.send)",
+      "file": "data/remote/RevokeSender.kt:33, FeedbackSender.kt:20, DriveBackupManager/DriveRestoreManager"
+    },
+    {
+      "domain": "play.google.com/store/account/subscriptions",
+      "purpose": "Deep-Link zum Abo-Management des Nutzers (Kuendigungs-/Churn-Flow)",
+      "file": "ui/screens/settings/ChurnFlowDialog.kt:228/261, SettingsViewModel.kt:393"
+    },
+    {
+      "domain": "findahelpline.com",
+      "purpose": "Externer Link zu Krisen-/Hilfetelefonen (CrisisHelpDialog), Schutz-Feature, kein Datenabfluss von Nutzerdaten",
+      "file": "ui/components/CrisisHelpDialog.kt:133"
+    },
+    {
+      "domain": "www.w3.org/2001/10/synthesis",
+      "purpose": "KEIN Endpunkt, nur SSML-XML-Namespace im Edge-TTS-Request",
+      "file": "util/EdgeTtsPlayer.kt:159"
+    }
+  ],
+  "roomEntities": [
+    {
+      "entity": "JournalEntryEntity",
+      "table": "journal_entries",
+      "sensitiveFields": [
+        "rawText (raw diary text)",
+        "improvedText (AI-rewritten diary)",
+        "displayText",
+        "summary",
+        "title",
+        "followUpText",
+        "moodTag (mood/emotion)",
+        "adviceCategoryTags",
+        "audioDurationSeconds",
+        "isSynced(->Drive)"
+      ]
+    },
+    {
+      "entity": "EntryFollowUpEntity",
+      "table": "entry_follow_ups",
+      "sensitiveFields": [
+        "text (follow-up diary text)",
+        "rawText",
+        "improvedText (AI)",
+        "entryId(FK CASCADE)"
+      ]
+    },
+    {
+      "entity": "EntryPhotoEntity",
+      "table": "entry_photos",
+      "sensitiveFields": [
+        "filePath (path to user photo/video)",
+        "isVideo",
+        "entryId(FK CASCADE)"
+      ]
+    },
+    {
+      "entity": "RetrospectiveSummaryEntity",
+      "table": "retrospective_summaries",
+      "sensitiveFields": [
+        "title",
+        "summaryText (AI summary of personal diary periods)",
+        "periodLabel"
+      ]
+    },
+    {
+      "entity": "AdviceBlockEntity",
+      "table": "advice_blocks",
+      "sensitiveFields": [
+        "categorySummary",
+        "adviceJson (AI advice on personal life)",
+        "overallAnalysis (AI psych analysis)",
+        "topActionsJson",
+        "entropyLevel"
+      ]
+    }
+  ],
+  "diExternalServices": [
+    {
+      "service": "Groq API (Whisper transcription)",
+      "baseUrl": "https://api.groq.com/openai/v1/ (Constants.GROQ_BASE_URL)",
+      "module": "NetworkModule (Retrofit+OkHttp+Moshi)"
+    },
+    {
+      "service": "Firebase Analytics",
+      "baseUrl": "Firebase SDK",
+      "module": "FirebaseModule"
+    },
+    {
+      "service": "FirebaseAiService (Gemini via Firebase AI / Vertex)",
+      "baseUrl": "Firebase SDK (server-side Gemini)",
+      "module": "FirebaseModule"
+    },
+    {
+      "service": "Firebase Cloud Functions getSubscriptionStatus",
+      "baseUrl": "europe-west1 (Belgium, DSGVO)",
+      "module": "FirebaseModule (SubscriptionStatusService)"
+    },
+    {
+      "service": "Google Play Billing (BillingManager)",
+      "baseUrl": "Play Billing SDK",
+      "module": "FirebaseModule"
+    },
+    {
+      "service": "Google Drive backup (DriveBackupManager/DriveRestoreManager)",
+      "baseUrl": "Google Drive API",
+      "module": "used via SyncWithDriveUseCase / SettingsViewModel"
+    },
+    {
+      "service": "Google Credential Manager (sign-in)",
+      "baseUrl": "AndroidX Credentials",
+      "module": "AuthModule"
+    },
+    {
+      "service": "EncryptedSharedPreferences (secrets/prefs store)",
+      "baseUrl": "local (AES256_GCM)",
+      "module": "AppModule - NOTE: EncryptedSharedPreferences+MasterKeys is DEPRECATED API"
+    }
+  ],
+  "accountDeletion": {
+    "present": true,
+    "path": "Settings -> 'Konto löschen' -> deleteAccount(); confirm dialog -> progress dialog -> app restart",
+    "wording": "Title: 'Wirklich alle App-Daten löschen?' | Body: 'Dieser Vorgang ist unwiderruflich und löscht: Alle lokalen Tagebucheinträge, Fotos, Videos und Audio-Aufnahmen; Das Google-Drive-Backup der App (nur die App-Daten, nicht dein Google-Konto); Deine App-Anmeldung. Dein Google-Konto selbst bleibt bestehen. Die App startet danach neu als frische Installation.' | Confirm: 'Ja, alles löschen'",
+    "cloudDataCovered": "YES - DriveBackupManager.deleteAllAppData() runs FIRST and is VERIFIED (re-lists appDataFolder, fails loudly if files remain). On Drive-delete failure: honest error dialog ('Ohne vollständige Löschung wäre die Meldung „unwiderruflich entfernt\" nicht korrekt') with retry / local-only / abort options. Then wipes filesDir/photos, cacheDir (incl drive_merge_temp.db full DB copy), Room DBs, encrypted prefs, alarms via signOut().",
+    "gaps": [
+      "BootReminderReceiver/review-receivers manifest registration not seen in this audit (only ReminderReceiver exported=false found) - verify the 4 review receivers are declared or scheduled purely via explicit PendingIntent (latter does not require manifest entry).",
+      "Google Play Console also requires a web-based account-deletion URL (out of code scope - tracked separately)."
+    ]
+  },
+  "dataExport": {
+    "present": true,
+    "type": "PDF (journal entries + optional photos)",
+    "path": "Settings -> 'Daten exportieren' / 'PDF-Export' -> exportToPdf() -> PdfExporter.export()",
+    "premiumGated": true,
+    "note": "Art. 20 portability satisfied; PDF export is a premium feature (paywall_feature_pdf). No JSON export."
+  },
+  "assets": {
+    "localeFolders": 27,
+    "totalFiles": 81,
+    "sizeMatrix": {
+      "ar": {
+        "imprint": 4761,
+        "privacy": 7424,
+        "terms": 5984
+      },
+      "bn": {
+        "imprint": 5432,
+        "privacy": 9309,
+        "terms": 7894
+      },
+      "de": {
+        "privacy": 48991,
+        "imprint": 5273,
+        "terms": 17412
+      },
+      "en": {
+        "imprint": 5025,
+        "privacy": 54666,
+        "terms": 16487
+      },
+      "es": {
+        "imprint": 4133,
+        "privacy": 6215,
+        "terms": 5039
+      },
+      "fr": {
+        "imprint": 4140,
+        "privacy": 6370,
+        "terms": 5235
+      },
+      "gu": {
+        "imprint": 5238,
+        "privacy": 8867,
+        "terms": 7562
+      },
+      "hi": {
+        "imprint": 5377,
+        "privacy": 9374,
+        "terms": 7825
+      },
+      "id": {
+        "imprint": 4024,
+        "privacy": 5974,
+        "terms": 4964
+      },
+      "it": {
+        "imprint": 4108,
+        "privacy": 6145,
+        "terms": 4894
+      },
+      "ja": {
+        "imprint": 4725,
+        "privacy": 74204,
+        "terms": 6977
+      },
+      "kn": {
+        "imprint": 5433,
+        "privacy": 9329,
+        "terms": 8029
+      },
+      "ko": {
+        "imprint": 3933,
+        "privacy": 72107,
+        "terms": 4822
+      },
+      "ml": {
+        "imprint": 5577,
+        "privacy": 10210,
+        "terms": 8823
+      },
+      "mr": {
+        "imprint": 5289,
+        "privacy": 8921,
+        "terms": 7894
+      },
+      "nl": {
+        "imprint": 4008,
+        "privacy": 5999,
+        "terms": 4856
+      },
+      "pl": {
+        "imprint": 4017,
+        "privacy": 6010,
+        "terms": 4986
+      },
+      "pt-BR": {
+        "imprint": 3981,
+        "privacy": 67958,
+        "terms": 4900
+      },
+      "pt-PT": {
+        "imprint": 4061,
+        "privacy": 6201,
+        "terms": 4967
+      },
+      "ta": {
+        "imprint": 5805,
+        "privacy": 10214,
+        "terms": 9046
+      },
+      "te": {
+        "imprint": 5420,
+        "privacy": 9402,
+        "terms": 7913
+      },
+      "th": {
+        "imprint": 5334,
+        "privacy": 9599,
+        "terms": 7752
+      },
+      "tr": {
+        "imprint": 3917,
+        "privacy": 5813,
+        "terms": 4832
+      },
+      "uk": {
+        "imprint": 4910,
+        "privacy": 7666,
+        "terms": 6600
+      },
+      "ur": {
+        "imprint": 4524,
+        "privacy": 7281,
+        "terms": 6042
+      },
+      "zh-CN": {
+        "imprint": 3757,
+        "privacy": 5516,
+        "terms": 4380
+      },
+      "zh-TW": {
+        "imprint": 3751,
+        "privacy": 5636,
+        "terms": 4376
+      }
+    },
+    "fullVersions": [
+      "de",
+      "en",
+      "ko",
+      "ja",
+      "pt-BR"
+    ],
+    "fullVersionsNote": "User stated 3 full versions (de/en/ko). REALITY: 5 full standalone PRIVACY versions by byte-size: de(48991) en(54666) ko(72107) ja(74204) pt-BR(67958). ja+pt-BR have NO reference-link and are self-contained full policies. This EXCEEDS the stated baseline (more coverage, not a defect). The other 22 locales are genuine short summaries (5.5-10.2KB).",
+    "referenceArchitectureVerified": {
+      "fr": {
+        "hasReferenceLink": true,
+        "linkTarget": "file:///android_asset/legal/en/PRIVACY.html + de/DATENSCHUTZ.html",
+        "linkLanguage": "fr",
+        "clauseFound": true,
+        "clause": "'consulte la version complète en anglais ou en allemand'"
+      },
+      "ja": {
+        "hasReferenceLink": false,
+        "linkTarget": "(none - external regulator/helpline links)",
+        "isFullStandalone": true,
+        "clauseFound": false,
+        "note": "FULL 74KB policy, not a summary"
+      },
+      "ur": {
+        "hasReferenceLink": true,
+        "linkTarget": "en/PRIVACY + de/DATENSCHUTZ",
+        "linkLanguage": "ur",
+        "clauseFound": true,
+        "clause": "'مکمل انگریزی یا جرمن ورژن دیکھیں'"
+      },
+      "pt-BR": {
+        "hasReferenceLink": false,
+        "linkTarget": "(none - ANPD/CVV links)",
+        "isFullStandalone": true,
+        "clauseFound": false,
+        "note": "FULL 68KB policy, not a summary"
+      },
+      "zh-CN": {
+        "hasReferenceLink": true,
+        "linkTarget": "en/PRIVACY + de/DATENSCHUTZ",
+        "linkLanguage": "zh",
+        "clauseFound": true,
+        "clause": "'完整英文版或德文版'"
+      },
+      "gu": {
+        "hasReferenceLink": true,
+        "linkTarget": "en/PRIVACY + de/DATENSCHUTZ",
+        "linkLanguage": "gu",
+        "clauseFound": true,
+        "clause": "'અંગ્રેજી અથવા જર્મન સંપૂર્ણ સંસ્કરણ'"
+      }
+    },
+    "loaderLogic": {
+      "file": "ui/screens/consent/LegalDocumentScreen.kt (enum LegalDocument)",
+      "localeMapping": "4-tier: de->legal/de/<de-name>; en->legal/en/<en-name>; other UI lang->localized summary via summaryFolderFor(); else->en full fallback. Handles pt-BR/pt-PT, zh CN+SG->zh-CN HK/MO/TW->zh-TW, legacy in->id.",
+      "fallback": "onlyIfTranslated() gate + TRANSLATED_SUMMARIES set (25 entries) guarantees no blank WebView; unknown locale falls back to en full versions (Poka-Yoke)",
+      "security": "WebView JS disabled, defaultTextEncoding utf-8, only file:// loads in-WebView, external (mailto/https) open in system browser",
+      "reachableFrom": [
+        "ConsentScreen (onboarding, lines 365-372: Datenschutz/Nutzungsbedingungen/Impressum)",
+        "SettingsScreen (line 4059, footer order Datenschutz/Nutzungsbedingungen/Impressum)",
+        "routes legal/datenschutz, legal/nutzungsbedingungen, legal/impressum"
+      ],
+      "docMismatch": "Inline doc comment (lines 64-73) describes a 3-tier model (de+en full, rest summaries) but ja & pt-BR are actually full standalone docs loaded through the tier-3 path. Functionally correct (full file loads regardless); documentation is just slightly behind reality."
+    },
+    "deVollversionChecks": {
+      "datenschutz": {
+        "verantwortlicher": true,
+        "anschrift": true,
+        "zweck": true,
+        "rechtsgrundlagen": true,
+        "empfaenger": true,
+        "drittland": true,
+        "subprocessorsNamed": "Google, Gemini, Groq, Firebase all present",
+        "speicherdauer": true,
+        "betroffenenrechte": true,
+        "datenuebertragbarkeit_art20": true,
+        "beschwerderecht": true,
+        "kontakt": true
+      },
+      "impressum": {
+        "name": true,
+        "anschrift": true,
+        "email": true,
+        "ddg_para5": true
+      },
+      "nutzungsbedingungen": {
+        "widerrufsbelehrung": true,
+        "frist_14_tage": true,
+        "musterFormular": true,
+        "para_312g_bgb": true,
+        "digitaleInhalte_clause": true
+      }
+    },
+    "whisperFolder": {
+      "path": "assets/whisper/",
+      "files": [
+        "base-decoder.int8.onnx (~130 MB)",
+        "base-encoder.int8.onnx (~29 MB)",
+        "base-tokens.txt (~817 KB)"
+      ],
+      "purpose": "sherpa-onnx Whisper 'base' int8 model for on-device offline speech-to-text (privacy-preserving local transcription, no cloud)"
+    }
+  }
+}

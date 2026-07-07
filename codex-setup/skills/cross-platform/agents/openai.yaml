@@ -1,0 +1,7 @@
+interface:
+  display_name: "cross-platform"
+  short_description: "Use AUTOMATICALLY when developing or modifying code that exists"
+  default_prompt: "Use $cross-platform for this task."
+
+policy:
+  allow_implicit_invocation: false

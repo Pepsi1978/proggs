@@ -1,0 +1,205 @@
+using System;
+using System.Collections.Generic;
+using System.IO;
+using System.Linq;
+using System.Text;
+using System.Text.Json;
+using System.Threading;
+using System.Threading.Tasks;
+using Google.Apis.Auth.OAuth2;
+using Google.Apis.Auth.OAuth2.Flows;
+using Google.Apis.Auth.OAuth2.Responses;
+using Google.Apis.Drive.v3;
+using Google.Apis.Services;
+using Google.Apis.Util.Store;
+using Microsoft.Extensions.Logging;
+using DriveFile = Google.Apis.Drive.v3.Data.File;
+
+namespace ClaudeVoiceOverlay.Services;
+
+/// <summary>
+/// Synchronisiert die Prompt-Historie zwischen Mac, Windows und Cloud
+/// (Google Drive appDataFolder). Eigenstaendiger Service neben dem
+/// bestehenden GoogleDriveBackupService — beide nutzen denselben
+/// Secret-Store und denselben OAuth-Refresh-Token, schreiben aber in
+/// getrennte Dateien:
+/// <list type="bullet">
+///   <item>Backup: <c>promptboard-backup.json</c></item>
+///   <item>Diese Klasse: <c>prompt-history.json</c> + <c>archive-NNN.md</c></item>
+/// </list>
+/// Wir teilen den OAuth-Code nicht ueber eine gemeinsame Basisklasse,
+/// damit das Promptboard-Core-Interface unveraendert bleibt — der
+/// Standalone-Promptboard-App-Build zieht die alten Methoden weiter,
+/// ohne dass wir dort ein neues Interface implementieren muessen.
+/// </summary>
+public sealed class PromptHistoryDriveSync
+{
+    // Gleicher Dateiname wie das macOS-Claude-Overlay → geteilte History mit Mac-Claude.
+    private const string HistoryFileName = "prompt-history-claudecodex.json";
+    private const string AppDataFolderSpace = "appDataFolder";
+
+    private readonly PromptBoardSecretStore _secrets;
+    private readonly ILogger<PromptHistoryDriveSync>? _logger;
+
+    public PromptHistoryDriveSync(
+        PromptBoardSecretStore secrets,
+        ILogger<PromptHistoryDriveSync>? logger = null)
+    {
+        _secrets = secrets;
+        _logger = logger;
+    }
+
+    /// <summary>
+    /// Laedt den Inhalt der lokalen prompt-history.json zu Drive hoch und
+    /// raeumt etwaige Duplikate weg. Identisches Cleanup-Muster wie der
+    /// bestehende Backup-Service — in Drive bleibt immer genau eine
+    /// aktuelle Datei.
+    /// </summary>
+    public async Task UploadHistoryAsync(string localPath, CancellationToken ct = default)
+    {
+        if (!File.Exists(localPath)) return;
+        var bytes = await File.ReadAllBytesAsync(localPath, ct).ConfigureAwait(false);
+
+        var drive = await BuildDriveAsync(ct).ConfigureAwait(false);
+        var ids = await FindAllAsync(drive, HistoryFileName, ct).ConfigureAwait(false);
+
+        using var content = new MemoryStream(bytes);
+        if (ids.Count == 0)
+        {
+            var meta = new DriveFile
+            {
+                Name = HistoryFileName,
+                Parents = new[] { AppDataFolderSpace },
+            };
+            var create = drive.Files.Create(meta, content, "application/json");
+            create.Fields = "id";
+            await create.UploadAsync(ct).ConfigureAwait(false);
+        }
+        else
+        {
+            var keep = ids[0];
+            var update = drive.Files.Update(new DriveFile(), keep, content, "application/json");
+            update.Fields = "id";
+            await update.UploadAsync(ct).ConfigureAwait(false);
+
+            for (int i = 1; i < ids.Count; i++)
+            {
+                try { await drive.Files.Delete(ids[i]).ExecuteAsync(ct).ConfigureAwait(false); }
+                catch (Exception ex)
+                {
+                    _logger?.LogWarning(ex, "History dup-cleanup failed for {Id}", ids[i]);
+                }
+            }
+        }
+    }
+
+    /// <summary>
+    /// Holt die aktuellste prompt-history.json aus Drive. Liefert null
+    /// wenn keine vorhanden ist (z.B. erster Start auf einem neuen Geraet
+    /// und der andere Rechner hat noch nichts hochgeladen).
+    /// </summary>
+    public async Task<string?> DownloadHistoryAsync(CancellationToken ct = default)
+    {
+        var drive = await BuildDriveAsync(ct).ConfigureAwait(false);
+        var ids = await FindAllAsync(drive, HistoryFileName, ct).ConfigureAwait(false);
+        if (ids.Count == 0) return null;
+
+        using var buffer = new MemoryStream();
+        await drive.Files.Get(ids[0]).DownloadAsync(buffer, ct).ConfigureAwait(false);
+        return Encoding.UTF8.GetString(buffer.ToArray());
+    }
+
+    // ── Drive-Hilfsfunktionen (eigenstaendig, kein Re-Use aus dem Backup-Service) ──
+
+    private GoogleAuthorizationCodeFlow BuildFlow(string id, string secret) =>
+        new(new GoogleAuthorizationCodeFlow.Initializer
+        {
+            ClientSecrets = new ClientSecrets { ClientId = id, ClientSecret = secret },
+            Scopes = new[] { DriveService.Scope.DriveAppdata },
+            DataStore = new NullDataStore(),
+        });
+
+    private async Task<DriveService> BuildDriveAsync(CancellationToken ct)
+    {
+        var s = _secrets.Load();
+        if (string.IsNullOrWhiteSpace(s.GoogleClientId) ||
+            string.IsNullOrWhiteSpace(s.GoogleClientSecret) ||
+            string.IsNullOrWhiteSpace(s.GoogleOAuthRefreshToken))
+        {
+            throw new InvalidOperationException(
+                "Google Drive ist nicht verbunden. Verbindung im Settings-Dialog herstellen.");
+        }
+
+        var flow = BuildFlow(s.GoogleClientId!.Trim(), s.GoogleClientSecret!.Trim());
+        var token = new TokenResponse { RefreshToken = s.GoogleOAuthRefreshToken!.Trim() };
+        var cred = new UserCredential(flow, "promptboard-user", token);
+        await cred.RefreshTokenAsync(ct).ConfigureAwait(false);
+
+        return new DriveService(new BaseClientService.Initializer
+        {
+            HttpClientInitializer = cred,
+            ApplicationName = "PromptBoard",
+        });
+    }
+
+    private static async Task<List<string>> FindAllAsync(
+        DriveService drive, string fileName, CancellationToken ct)
+    {
+        var list = drive.Files.List();
+        list.Spaces = AppDataFolderSpace;
+        list.Q = $"name = '{fileName}' and trashed = false";
+        list.Fields = "files(id, modifiedTime)";
+        list.OrderBy = "modifiedTime desc";
+        list.PageSize = 100;
+        var result = await list.ExecuteAsync(ct).ConfigureAwait(false);
+        var ids = new List<string>();
+        if (result.Files != null)
+        {
+            foreach (var f in result.Files)
+            {
+                if (!string.IsNullOrEmpty(f.Id)) ids.Add(f.Id);
+            }
+        }
+        return ids;
+    }
+
+    /// <summary>
+    /// Mergt eine Cloud-Historie-JSON in die lokale Liste: Eintraege per
+    /// ID-Dedup zusammenfuehren, nach Timestamp absteigend sortieren. Das
+    /// Resultat ist die neue lokale Liste — der Aufrufer (PromptHistoryService)
+    /// kann sie schreiben und ggf. ueberzaehlige Eintraege archivieren.
+    /// </summary>
+    public static List<PromptHistoryEntry> MergeEntries(
+        IEnumerable<PromptHistoryEntry> local,
+        string cloudJson)
+    {
+        List<PromptHistoryEntry>? cloud = null;
+        try
+        {
+            cloud = JsonSerializer.Deserialize<List<PromptHistoryEntry>>(
+                cloudJson,
+                new JsonSerializerOptions { PropertyNamingPolicy = JsonNamingPolicy.CamelCase });
+        }
+        catch
+        {
+            // Kaputte Cloud-JSON darf den lokalen Stand nicht zerstoeren.
+            cloud = null;
+        }
+
+        var merged = new Dictionary<string, PromptHistoryEntry>(StringComparer.OrdinalIgnoreCase);
+        foreach (var e in local) if (e is not null && !string.IsNullOrEmpty(e.Id)) merged[e.Id] = e;
+        if (cloud is not null)
+        {
+            foreach (var e in cloud)
+            {
+                if (e is null || string.IsNullOrEmpty(e.Id)) continue;
+                // Cloud gewinnt nur wenn lokaler Eintrag fehlt — sonst
+                // bleibt der lokale (er kann frischen KI-Titel enthalten).
+                if (!merged.ContainsKey(e.Id)) merged[e.Id] = e;
+            }
+        }
+        return merged.Values
+            .OrderByDescending(e => e.Timestamp)
+            .ToList();
+    }
+}

@@ -1,0 +1,1007 @@
+[
+  {
+    "key": "retro_ai_unavailable",
+    "de": "Die KI ist gerade nicht erreichbar, bitte versuch es später nochmal.",
+    "gu_current": "AI ."
+  },
+  {
+    "key": "retro_weekly_title",
+    "de": "Wochenrückblick",
+    "gu_current": "."
+  },
+  {
+    "key": "retro_weekly_subtitle",
+    "de": "Die letzten 7 Tage im Überblick",
+    "gu_current": "."
+  },
+  {
+    "key": "retro_monthly_title",
+    "de": "Monatsrückblick",
+    "gu_current": "."
+  },
+  {
+    "key": "retro_monthly_subtitle",
+    "de": "Dein vergangener Monat auf einen Blick",
+    "gu_current": "."
+  },
+  {
+    "key": "retro_yearly_title",
+    "de": "Jahresrückblick",
+    "gu_current": "."
+  },
+  {
+    "key": "retro_yearly_subtitle",
+    "de": "Ein ganzes Jahr voller Erinnerungen",
+    "gu_current": "."
+  },
+  {
+    "key": "retro_premium_unlock",
+    "de": "Mit Premium alle Rückblicke freischalten",
+    "gu_current": "Premium .)."
+  },
+  {
+    "key": "retro_at_a_glance",
+    "de": "Auf einen Blick",
+    "gu_current": "."
+  },
+  {
+    "key": "retro_cd_expand",
+    "de": "Aufklappen",
+    "gu_current": "."
+  },
+  {
+    "key": "retro_cd_collapse",
+    "de": "Zuklappen",
+    "gu_current": "."
+  },
+  {
+    "key": "retro_share_text_label",
+    "de": "Text",
+    "gu_current": "."
+  },
+  {
+    "key": "retro_fallback_week",
+    "de": "Wochenrückblick",
+    "gu_current": "."
+  },
+  {
+    "key": "retro_fallback_month",
+    "de": "Monatsrückblick",
+    "gu_current": "."
+  },
+  {
+    "key": "retro_fallback_year",
+    "de": "Jahresrückblick %1$d",
+    "gu_current": ". %1$d"
+  },
+  {
+    "key": "retro_photos_videos",
+    "de": "Fotos & Videos",
+    "gu_current": ". & ."
+  },
+  {
+    "key": "retro_photos_videos_colon",
+    "de": "Fotos & Videos:",
+    "gu_current": ". & .:"
+  },
+  {
+    "key": "retro_cd_video",
+    "de": "Video",
+    "gu_current": "."
+  },
+  {
+    "key": "retro_cd_photo",
+    "de": "Foto",
+    "gu_current": "."
+  },
+  {
+    "key": "retro_play_video",
+    "de": "Video abspielen",
+    "gu_current": "."
+  },
+  {
+    "key": "retro_enable_voices",
+    "de": "Stimmen in den Einstellungen einschalten",
+    "gu_current": "."
+  },
+  {
+    "key": "retro_tts_stop",
+    "de": "Stoppen",
+    "gu_current": "."
+  },
+  {
+    "key": "retro_tts_read",
+    "de": "Vorlesen",
+    "gu_current": "."
+  },
+  {
+    "key": "retro_tts_wait",
+    "de": "Bitte warten, Text-to-Speech wird erzeugt…",
+    "gu_current": ".\\u2026"
+  },
+  {
+    "key": "retro_cd_share",
+    "de": "Teilen",
+    "gu_current": "."
+  },
+  {
+    "key": "retro_share_title",
+    "de": "Rückblick teilen",
+    "gu_current": "."
+  },
+  {
+    "key": "retro_share_text_content",
+    "de": "Rückblick-Text",
+    "gu_current": "."
+  },
+  {
+    "key": "retro_photo_n",
+    "de": "Foto %1$d",
+    "gu_current": ". %1$d"
+  },
+  {
+    "key": "retro_share_header",
+    "de": "Rückblick von der BestJournal App",
+    "gu_current": "."
+  },
+  {
+    "key": "retro_at_a_glance_colon",
+    "de": "Auf einen Blick:",
+    "gu_current": "."
+  },
+  {
+    "key": "retro_cd_locked",
+    "de": "Gesperrt",
+    "gu_current": "."
+  },
+  {
+    "key": "retro_unlock_premium_short",
+    "de": "Premium freischalten",
+    "gu_current": "Premium ."
+  },
+  {
+    "key": "retro_cd_premium_required",
+    "de": "Premium erforderlich",
+    "gu_current": "Premium ."
+  },
+  {
+    "key": "retro_your_ai_reviews",
+    "de": "Deine KI-Rückblicke",
+    "gu_current": "AI ."
+  },
+  {
+    "key": "retro_weekly_p1",
+    "de": "Die KI fasst deine Woche zu einer persönlichen Erzählung zusammen",
+    "gu_current": "AI ."
+  },
+  {
+    "key": "retro_weekly_p2",
+    "de": "Emotionale Muster und Highlights werden sichtbar",
+    "gu_current": "."
+  },
+  {
+    "key": "retro_weekly_p3",
+    "de": "Jeden Sonntag automatisch erstellt, wenn du mindestens 2 Einträge hast",
+    "gu_current": "."
+  },
+  {
+    "key": "retro_weekly_p4",
+    "de": "Die ersten 2 Wochen sind kostenlos",
+    "gu_current": ". 2 ."
+  },
+  {
+    "key": "retro_monthly_p1",
+    "de": "Verbindet deine Wochenrückblicke zu einer Monatserzählung",
+    "gu_current": "."
+  },
+  {
+    "key": "retro_monthly_p2",
+    "de": "Rote Fäden und Entwicklungen über den Monat werden sichtbar",
+    "gu_current": "."
+  },
+  {
+    "key": "retro_yearly_p1",
+    "de": "Dein ganzes Jahr auf einen Blick",
+    "gu_current": "."
+  },
+  {
+    "key": "retro_yearly_p3",
+    "de": "Persönliche Entwicklung wird sichtbar und greifbar",
+    "gu_current": "."
+  },
+  {
+    "key": "retro_your_reviews",
+    "de": "Deine persönlichen Rückblicke",
+    "gu_current": "."
+  },
+  {
+    "key": "retro_premium_reviews_desc",
+    "de": "Mit Premium erstellt die KI automatisch Rückblicke aus deinen Tagebucheinträgen:",
+    "gu_current": "Premium ."
+  },
+  {
+    "key": "retro_benefit_monthly",
+    "de": "Monatsrückblicke, die deine Fortschritte und Veränderungen sichtbar machen",
+    "gu_current": "."
+  },
+  {
+    "key": "retro_benefit_yearly",
+    "de": "Jahresrückblicke, dein ganzes Jahr als persönliche Erzählung",
+    "gu_current": "."
+  },
+  {
+    "key": "retro_start_sub",
+    "de": "Abo starten",
+    "gu_current": "."
+  },
+  {
+    "key": "retro_decide_later",
+    "de": "Später entscheiden",
+    "gu_current": "."
+  },
+  {
+    "key": "onboarding_feature_speech",
+    "de": "Sprich oder schreib, die KI versteht beides",
+    "gu_current": "♻ AI ♻"
+  },
+  {
+    "key": "onboarding_feature_secure",
+    "de": "Deine Daten sind lokal gespeichert, KI-Anfragen sind verschlüsselt",
+    "gu_current": "♻ ♻"
+  },
+  {
+    "key": "onboarding_goals_title",
+    "de": "Was möchtest du mit dem\\nKI-Tagebuch erreichen?",
+    "gu_current": "AI ♻ ♻?\\n"
+  },
+  {
+    "key": "onboarding_goal_stress",
+    "de": "Stress abbauen",
+    "gu_current": "♻"
+  },
+  {
+    "key": "onboarding_goal_clarity",
+    "de": "Klarheit finden",
+    "gu_current": "♻"
+  },
+  {
+    "key": "onboarding_goal_growth",
+    "de": "Persönliches Wachstum",
+    "gu_current": "♻"
+  },
+  {
+    "key": "onboarding_goal_thoughts",
+    "de": "Meine Gedanken festhalten",
+    "gu_current": "♻"
+  },
+  {
+    "key": "onboarding_how_step1_title",
+    "de": "Sprich oder tippe deinen Eintrag",
+    "gu_current": "♻"
+  },
+  {
+    "key": "onboarding_how_step1_desc",
+    "de": "Nimm deine Gedanken als Sprachnachricht auf oder tippe sie ein, ganz wie du möchtest.",
+    "gu_current": "♻"
+  },
+  {
+    "key": "onboarding_how_step2_title",
+    "de": "Die KI verbessert und analysiert",
+    "gu_current": "AI ♻"
+  },
+  {
+    "key": "onboarding_how_step2_desc",
+    "de": "Dein Text wird auf Wunsch verfeinert und aus verschiedenen Perspektiven analysiert.",
+    "gu_current": "♻"
+  },
+  {
+    "key": "onboarding_how_step3_desc",
+    "de": "Halte besondere Momente fest, lebendige Erinnerungen für später.",
+    "gu_current": "♻"
+  },
+  {
+    "key": "onboarding_how_step4_title",
+    "de": "Entdecke Muster und Einsichten",
+    "gu_current": "♻"
+  },
+  {
+    "key": "onboarding_how_step5_title",
+    "de": "Wochen-, Monats- und Jahresrückblick",
+    "gu_current": "♻"
+  },
+  {
+    "key": "onboarding_how_step5_desc",
+    "de": "Automatische Rückblicke zeigen dir, wie du dich über die Zeit entwickelst.",
+    "gu_current": "♻"
+  },
+  {
+    "key": "onboarding_premium_feature_dashboard",
+    "de": "Automatische Dashboard-Updates bei jedem neuen Eintrag",
+    "gu_current": "♻"
+  },
+  {
+    "key": "onboarding_premium_feature_retro",
+    "de": "Wochen-, Monats- und Jahresrückblicke zeigen deine Entwicklung",
+    "gu_current": "♻"
+  },
+  {
+    "key": "onboarding_premium_feature_noads",
+    "de": "Keine Werbung, ungestört schreiben und reflektieren",
+    "gu_current": "♻"
+  },
+  {
+    "key": "onboarding_start_free",
+    "de": "Kostenlos starten",
+    "gu_current": "♻"
+  },
+  {
+    "key": "onboarding_without_premium",
+    "de": "Ohne Premium fortfahren",
+    "gu_current": "Premium ♻"
+  },
+  {
+    "key": "onboarding_feature_profiles",
+    "de": "4 intelligente Analyse-Profile für verschiedene Perspektiven",
+    "gu_current": "5 ♻"
+  },
+  {
+    "key": "onboarding_goals_select",
+    "de": "Wähle ein oder mehrere Ziele",
+    "gu_current": "♻"
+  },
+  {
+    "key": "onboarding_how_step3_title",
+    "de": "Füge Fotos und Videos hinzu",
+    "gu_current": "♻"
+  },
+  {
+    "key": "onboarding_how_title",
+    "de": "So einfach geht es",
+    "gu_current": "♻"
+  },
+  {
+    "key": "onboarding_premium_feature_pdf",
+    "de": "PDF-Export mit Fotos, sichere deine Einträge als Dokument",
+    "gu_current": "PDF ♻"
+  },
+  {
+    "key": "onboarding_premium_profiles",
+    "de": "4 intelligente Dashboard-Profile für tiefe Einblicke in dein Leben",
+    "gu_current": "5 AI ♻"
+  },
+  {
+    "key": "paywall_prices_loading",
+    "de": "Preise werden geladen…",
+    "gu_current": "♻\\u2026"
+  },
+  {
+    "key": "paywall_sub_loading_toast",
+    "de": "Abo wird geladen, bitte versuche es gleich nochmal.",
+    "gu_current": "♻"
+  },
+  {
+    "key": "paywall_purchase_loading_toast",
+    "de": "Kaufvorgang wird geladen, bitte versuche es gleich nochmal.",
+    "gu_current": "♻"
+  },
+  {
+    "key": "paywall_today",
+    "de": "Heute",
+    "gu_current": "♻"
+  },
+  {
+    "key": "paywall_full_access",
+    "de": "Voller Zugang",
+    "gu_current": "♻"
+  },
+  {
+    "key": "paywall_day7",
+    "de": "Tag 7",
+    "gu_current": "♻ 7"
+  },
+  {
+    "key": "paywall_reminder",
+    "de": "Erinnerung",
+    "gu_current": "♻"
+  },
+  {
+    "key": "paywall_day8",
+    "de": "Tag 8",
+    "gu_current": "♻ 8"
+  },
+  {
+    "key": "paywall_first_payment",
+    "de": "Erste Zahlung",
+    "gu_current": "♻"
+  },
+  {
+    "key": "paywall_monthly_plan",
+    "de": "Monatsabo, %1$s pro Monat",
+    "gu_current": "♻, %1$s/♻"
+  },
+  {
+    "key": "paywall_lifetime_title",
+    "de": "Einmalkauf",
+    "gu_current": "♻"
+  },
+  {
+    "key": "paywall_lifetime_note",
+    "de": "Kein Abo, keine Verlängerung",
+    "gu_current": "♻"
+  },
+  {
+    "key": "paywall_feature_dashboard",
+    "de": "KI-Dashboard-Updates nach neuen Einträgen",
+    "gu_current": "♻"
+  },
+  {
+    "key": "paywall_feature_retro",
+    "de": "Alle Rückblicke KI generiert",
+    "gu_current": "♻"
+  },
+  {
+    "key": "paywall_feature_pdf",
+    "de": "Tagebucheinträge mit Fotos als PDF exportieren",
+    "gu_current": "PDF ♻"
+  },
+  {
+    "key": "paywall_feature_noads",
+    "de": "Spreche oder schreibe ungestört, ohne Werbung",
+    "gu_current": "♻"
+  },
+  {
+    "key": "paywall_headline_clarity",
+    "de": "Verstehe dich selbst besser",
+    "gu_current": "♻"
+  },
+  {
+    "key": "paywall_headline_clarity_sub",
+    "de": "Die KI erkennt Muster, die dir verborgen bleiben",
+    "gu_current": "AI ♻"
+  },
+  {
+    "key": "paywall_headline_growth",
+    "de": "Entdecke das Gute in jedem Tag",
+    "gu_current": "♻"
+  },
+  {
+    "key": "paywall_headline_growth_sub",
+    "de": "Dein persönlicher Raum für Dankbarkeit und Wachstum",
+    "gu_current": "♻"
+  },
+  {
+    "key": "paywall_headline_thoughts",
+    "de": "Lass deine Gedanken fließen",
+    "gu_current": "♻"
+  },
+  {
+    "key": "paywall_headline_default",
+    "de": "Entdecke dich selbst\\nJeden Tag ein Stück mehr",
+    "gu_current": "♻\\n♻"
+  },
+  {
+    "key": "paywall_exit_wait",
+    "de": "Warte kurz!",
+    "gu_current": "♻!"
+  },
+  {
+    "key": "paywall_exit_special_offer",
+    "de": "Wir haben ein besonderes\\nAngebot für dich:",
+    "gu_current": "♻\\n♻:"
+  },
+  {
+    "key": "paywall_exit_discount",
+    "de": "Rabatt für %1$d Monate",
+    "gu_current": "♻ %1$d ♻"
+  },
+  {
+    "key": "paywall_exit_price_comparison",
+    "de": "Nur %1$s statt %2$s pro Monat",
+    "gu_current": "♻ %1$s ♻ %2$s/♻"
+  },
+  {
+    "key": "churn_your_sub",
+    "de": "Dein Abo",
+    "gu_current": "♻"
+  },
+  {
+    "key": "churn_plan_yearly",
+    "de": "Jahresabo",
+    "gu_current": "♻"
+  },
+  {
+    "key": "churn_plan_monthly",
+    "de": "Monatsabo",
+    "gu_current": "♻"
+  },
+  {
+    "key": "churn_plan",
+    "de": "Tarif",
+    "gu_current": "♻"
+  },
+  {
+    "key": "churn_price",
+    "de": "Preis",
+    "gu_current": "♻"
+  },
+  {
+    "key": "churn_renewal",
+    "de": "Verlängerung",
+    "gu_current": "♻"
+  },
+  {
+    "key": "churn_automatic",
+    "de": "Automatisch",
+    "gu_current": "♻"
+  },
+  {
+    "key": "churn_auto_renew_note",
+    "de": "Dein Abo verlängert sich automatisch über Google Play. Die Kündigung ist jederzeit möglich.",
+    "gu_current": "Google Play ♻"
+  },
+  {
+    "key": "churn_reason_too_expensive",
+    "de": "Zu teuer",
+    "gu_current": "♻"
+  },
+  {
+    "key": "churn_reason_unused",
+    "de": "Nutze es zu selten",
+    "gu_current": "♻"
+  },
+  {
+    "key": "churn_per_year",
+    "de": "pro Jahr",
+    "gu_current": "/♻"
+  },
+  {
+    "key": "churn_per_month",
+    "de": "pro Monat",
+    "gu_current": "/♻"
+  },
+  {
+    "key": "churn_reason_features",
+    "de": "Nicht die Features die ich brauche",
+    "gu_current": "♻"
+  },
+  {
+    "key": "churn_reason_other",
+    "de": "Anderer Grund",
+    "gu_current": "♻"
+  },
+  {
+    "key": "churn_sorry_title",
+    "de": "Schade, dass du gehst",
+    "gu_current": "♻"
+  },
+  {
+    "key": "churn_sorry_body",
+    "de": "Bevor du kündigst, würdest du uns verraten warum? Das hilft uns, die App zu verbessern.",
+    "gu_current": "♻"
+  },
+  {
+    "key": "churn_offer_feature_voice",
+    "de": "Premium-Spracherkennung",
+    "gu_current": "Premium ♻"
+  },
+  {
+    "key": "churn_offer_auto_renew",
+    "de": "Verlängert sich automatisch, jederzeit kündbar",
+    "gu_current": "♻"
+  },
+  {
+    "key": "churn_accept_offer",
+    "de": "Angebot annehmen",
+    "gu_current": "♻"
+  },
+  {
+    "key": "churn_switch_yearly",
+    "de": "Oder zum Jahresabo wechseln und noch mehr sparen",
+    "gu_current": "♻"
+  },
+  {
+    "key": "churn_pause_sub",
+    "de": "Oder Abo bei Google Play pausieren",
+    "gu_current": "Google Play ♻"
+  },
+  {
+    "key": "churn_cancel_anyway",
+    "de": "Trotzdem kündigen",
+    "gu_current": "♻"
+  },
+  {
+    "key": "churn_are_you_sure",
+    "de": "Bist du sicher?",
+    "gu_current": "♻?"
+  },
+  {
+    "key": "churn_stay",
+    "de": "Doch lieber bleiben",
+    "gu_current": "♻"
+  },
+  {
+    "key": "ai_limit_title",
+    "de": "Dein Wochenlimit ist erreicht",
+    "gu_current": "♻"
+  },
+  {
+    "key": "ai_limit_monthly",
+    "de": "Monatsabo, %1$s/Monat",
+    "gu_current": "♻, %1$s/♻"
+  },
+  {
+    "key": "ai_limit_yearly",
+    "de": "Jahresabo, %1$s/Jahr (spare 37%%)",
+    "gu_current": "♻, %1$s/♻ (37%% ♻)"
+  },
+  {
+    "key": "ai_limit_no_thanks",
+    "de": "Nein danke, weiter ohne KI",
+    "gu_current": "♻ AI ♻"
+  },
+  {
+    "key": "ai_banner_title",
+    "de": "Dein Tagebuch wird von KI unterstützt",
+    "gu_current": "AI ♻"
+  },
+  {
+    "key": "cd_mic_start",
+    "de": "Aufnahme starten",
+    "gu_current": "♻"
+  },
+  {
+    "key": "cd_mic_stop",
+    "de": "Aufnahme stoppen",
+    "gu_current": "♻"
+  },
+  {
+    "key": "entry_improve_limit_daily",
+    "de": "Tageslimit erreicht. Morgen geht es weiter!",
+    "gu_current": "♻!"
+  },
+  {
+    "key": "entry_improve_limit_cooldown",
+    "de": "Kurze Pause: Noch %1$d Minuten.",
+    "gu_current": "♻ %1$d ♻."
+  },
+  {
+    "key": "entry_improve_failed",
+    "de": "Textverbesserung fehlgeschlagen",
+    "gu_current": "♻"
+  },
+  {
+    "key": "notif_reminder_title",
+    "de": "Zeit für dein Tagebuch",
+    "gu_current": "♻"
+  },
+  {
+    "key": "notif_reminder_body_0",
+    "de": "Was bewegt dich heute?",
+    "gu_current": "♻?"
+  },
+  {
+    "key": "notif_reminder_body_1",
+    "de": "Ein Moment für dich, halte ihn fest",
+    "gu_current": "♻"
+  },
+  {
+    "key": "notif_reminder_body_2",
+    "de": "Dein zukünftiges Ich wird dir danken",
+    "gu_current": "♻"
+  },
+  {
+    "key": "notif_reminder_body_3",
+    "de": "Nur ein Gedanke reicht, leg los",
+    "gu_current": "♻"
+  },
+  {
+    "key": "notif_reminder_body_4",
+    "de": "Was war heute dein Highlight?",
+    "gu_current": "♻?"
+  },
+  {
+    "key": "notif_weekly_title",
+    "de": "Dein Wochenrückblick",
+    "gu_current": "♻"
+  },
+  {
+    "key": "notif_weekly_body",
+    "de": "Schau dir an was dich diese Woche bewegt hat, dein Dashboard hat neue Einsichten.",
+    "gu_current": "♻ ♻"
+  },
+  {
+    "key": "notif_monthly_title",
+    "de": "Dein Monatsrückblick",
+    "gu_current": "♻"
+  },
+  {
+    "key": "notif_monthly_body",
+    "de": "Ein ganzer Monat voller Erinnerungen wartet auf dich.",
+    "gu_current": "♻"
+  },
+  {
+    "key": "notif_yearly_title",
+    "de": "Dein Jahresrückblick",
+    "gu_current": "♻"
+  },
+  {
+    "key": "notif_yearly_body",
+    "de": "Ein ganzes Jahr voller Erinnerungen, schau zurück auf deine Reise.",
+    "gu_current": "♻"
+  },
+  {
+    "key": "notif_channel_daily_name",
+    "de": "Tägliche Erinnerung",
+    "gu_current": "♻"
+  },
+  {
+    "key": "notif_channel_daily_desc",
+    "de": "Erinnert dich täglich ans Tagebuchschreiben",
+    "gu_current": "♻"
+  },
+  {
+    "key": "notif_channel_weekly_name",
+    "de": "Wöchentlicher Rückblick",
+    "gu_current": "♻"
+  },
+  {
+    "key": "notif_channel_weekly_desc",
+    "de": "Dein Wochenrückblick jeden Sonntag um 15:00 Uhr",
+    "gu_current": "♻ 15:00"
+  },
+  {
+    "key": "notif_channel_monthly_name",
+    "de": "Monatsrückblick",
+    "gu_current": "♻"
+  },
+  {
+    "key": "notif_channel_monthly_desc",
+    "de": "Benachrichtigung wenn dein Monatsrückblick fertig ist",
+    "gu_current": "♻"
+  },
+  {
+    "key": "notif_channel_yearly_name",
+    "de": "Jahresrückblick",
+    "gu_current": "♻"
+  },
+  {
+    "key": "notif_channel_yearly_desc",
+    "de": "Benachrichtigung wenn dein Jahresrückblick fertig ist",
+    "gu_current": "♻"
+  },
+  {
+    "key": "datetime_just_now",
+    "de": "gerade eben",
+    "gu_current": "♻"
+  },
+  {
+    "key": "datetime_today",
+    "de": "Heute",
+    "gu_current": "♻"
+  },
+  {
+    "key": "datetime_yesterday",
+    "de": "Gestern",
+    "gu_current": "♻"
+  },
+  {
+    "key": "datetime_day_before_yesterday",
+    "de": "Vorgestern",
+    "gu_current": "♻"
+  },
+  {
+    "key": "datetime_this_week",
+    "de": "Diese Woche",
+    "gu_current": "♻"
+  },
+  {
+    "key": "datetime_last_week",
+    "de": "Letzte Woche",
+    "gu_current": "♻"
+  },
+  {
+    "key": "datetime_weeks_ago",
+    "de": "Vor %1$d Wochen",
+    "gu_current": "%1$d ♻"
+  },
+  {
+    "key": "achievement_nightowl_title",
+    "de": "Nachtfalter",
+    "gu_current": "♻"
+  },
+  {
+    "key": "achievement_nightowl_desc",
+    "de": "50 Einträge nach 22 Uhr geschrieben",
+    "gu_current": "22 ♻ 50 ♻"
+  },
+  {
+    "key": "achievement_earlybird_title",
+    "de": "Frühaufsteher",
+    "gu_current": "♻"
+  },
+  {
+    "key": "achievement_earlybird_desc",
+    "de": "20 Einträge vor 7 Uhr geschrieben",
+    "gu_current": "7 ♻ 20 ♻"
+  },
+  {
+    "key": "achievement_confession_title",
+    "de": "Geständnis",
+    "gu_current": "♻"
+  },
+  {
+    "key": "achievement_confession_desc",
+    "de": "Einen Eintrag mit über 1.000 Wörtern verfasst",
+    "gu_current": "1,000 ♻"
+  },
+  {
+    "key": "achievement_marathon_title",
+    "de": "Marathonschreiber",
+    "gu_current": "♻"
+  },
+  {
+    "key": "achievement_marathon_desc",
+    "de": "100 Tagebucheinträge geschrieben",
+    "gu_current": "100 ♻"
+  },
+  {
+    "key": "achievement_wordartist_title",
+    "de": "Wortkünstler",
+    "gu_current": "♻"
+  },
+  {
+    "key": "achievement_wordartist_desc",
+    "de": "500 Tagebucheinträge geschrieben",
+    "gu_current": "500 ♻"
+  },
+  {
+    "key": "achievement_consistency_title",
+    "de": "Beständigkeit",
+    "gu_current": "♻"
+  },
+  {
+    "key": "achievement_consistency_desc",
+    "de": "30-Tage-Streak erreicht",
+    "gu_current": "30 ♻"
+  },
+  {
+    "key": "achievement_chronicler_title",
+    "de": "Jahreschronist",
+    "gu_current": "♻"
+  },
+  {
+    "key": "achievement_chronicler_desc",
+    "de": "365 Einträge geschrieben",
+    "gu_current": "365 ♻"
+  },
+  {
+    "key": "achievement_photodiary_title",
+    "de": "Fototagebuch",
+    "gu_current": "♻"
+  },
+  {
+    "key": "achievement_photodiary_desc",
+    "de": "50 Fotos an Einträge angehängt",
+    "gu_current": "50 ♻"
+  },
+  {
+    "key": "achievement_voiceartist_title",
+    "de": "Sprachkünstler",
+    "gu_current": "♻"
+  },
+  {
+    "key": "achievement_voiceartist_desc",
+    "de": "25 Spracheinträge erstellt",
+    "gu_current": "25 ♻"
+  },
+  {
+    "key": "achievement_reflectionmaster_title",
+    "de": "Reflexionsmeister",
+    "gu_current": "♻"
+  },
+  {
+    "key": "achievement_reflectionmaster_desc",
+    "de": "50 Dashboard-Analysen durchgeführt",
+    "gu_current": "50 ♻"
+  },
+  {
+    "key": "prompt_cat_self_reflection",
+    "de": "Selbstreflexion",
+    "gu_current": "♻"
+  },
+  {
+    "key": "prompt_cat_gratitude",
+    "de": "Dankbarkeit",
+    "gu_current": "♻"
+  },
+  {
+    "key": "prompt_cat_future",
+    "de": "Zukunft",
+    "gu_current": "♻"
+  },
+  {
+    "key": "prompt_cat_relationships",
+    "de": "Beziehungen",
+    "gu_current": "♻"
+  },
+  {
+    "key": "pdf_entry_fallback_title",
+    "de": "Eintrag #%1$d",
+    "gu_current": "♻ #%1$d"
+  },
+  {
+    "key": "pdf_entry_counter",
+    "de": "Eintrag %1$d von %2$d",
+    "gu_current": "♻ %1$d / %2$d"
+  },
+  {
+    "key": "pdf_summary_label",
+    "de": "ZUSAMMENFASSUNG",
+    "gu_current": "♻"
+  },
+  {
+    "key": "pdf_continuation",
+    "de": "%1$s (Fortsetzung)",
+    "gu_current": "%1$s (♻)"
+  },
+  {
+    "key": "pdf_page_number",
+    "de": "Seite %1$d",
+    "gu_current": "♻ %1$d"
+  },
+  {
+    "key": "error_retro_all_failed",
+    "de": "Alle %1$d KI-Anfragen fehlgeschlagen. Bitte Internetverbindung prüfen.",
+    "gu_current": "♻ %1$d AI ♻"
+  },
+  {
+    "key": "error_whisper_audio_empty",
+    "de": "Audio-Datei ist leer",
+    "gu_current": "♻"
+  },
+  {
+    "key": "error_whisper_no_text",
+    "de": "Kein Text erkannt",
+    "gu_current": "♻"
+  },
+  {
+    "key": "error_sync_db_not_found",
+    "de": "Datenbank nicht gefunden",
+    "gu_current": "♻"
+  },
+  {
+    "key": "error_file_open_failed",
+    "de": "Fehler: Datei konnte nicht geöffnet werden",
+    "gu_current": "♻"
+  },
+  {
+    "key": "error_generic",
+    "de": "Fehler: %1$s",
+    "gu_current": "♻: %1$s"
+  },
+  {
+    "key": "profile_style_chronicler",
+    "de": "\\n- Schreibe im Stil einer zusammenfassenden Erzählung, fasse die wichtigsten Ereignisse und Gefühle zusammen, wie ein persönlicher Chronist",
+    "gu_current": "\\n- ♻"
+  },
+  {
+    "key": "profile_style_advisor",
+    "de": "\\n- Schreibe im Stil eines Lebensberaters, hebe hervor was gut lief, was verbessert werden kann, und gib dem Leser das Gefühl von Klarheit und Ordnung",
+    "gu_current": "\\n- ♻"
+  },
+  {
+    "key": "profile_style_insight",
+    "de": "\\n- Schreibe im Stil einer tiefgründigen Selbsterkenntnis-Erzählung, decke Denkmuster, wiederkehrende Gefühle und verborgene Stärken auf",
+    "gu_current": "\\n- ♻"
+  },
+  {
+    "key": "profile_style_coach",
+    "de": "\\n- Schreibe im Stil eines motivierenden Ziel-Begleiters, zeige Fortschritte bei persönlichen Zielen auf und ermutige weiterzumachen",
+    "gu_current": "\\n- ♻"
+  },
+  {
+    "key": "profile_style_custom",
+    "de": "\\n- PROFIL-STIL (Custom): Schreibe diesen Rückblick mit klarem Bezug zum Benutzer-Auftrag. PFLICHT-REGELN:\\n  1) MINDESTENS 60 Prozent des Rückblicks behandelt direkt oder umschreibend das Auftrags-Thema.\\n  2) MINDESTENS EIN thematischer Abschnitt ist komplett dem Auftrags-Fokus gewidmet (Überschrift + Text).\\n  3) Drücke den Profil-Bezug VARIANTENREICH aus mit Synonymen und thematischen Nachbarschaften, NICHT mit mechanischer Wortwiederholung.\\n  4) Beobachtungen ohne Bezug zum Auftrag knapp halten oder ganz weglassen — lieber weniger Abschnitte mit echtem Bezug als viele generische.\\n  Benutzer-Auftrag (zur Orientierung): \\\"%1$s\\\"",
+    "gu_current": "\\n- ♻ \\\"%1$s\\\""
+  }
+]

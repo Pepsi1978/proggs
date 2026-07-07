@@ -1,0 +1,7 @@
+interface:
+  display_name: "reflexion:memorize"
+  short_description: "Curates insights from reflections and critiques into AGENTS.md"
+  default_prompt: "Use $reflexion-context-engineering-kit--reflexion-memorize for this task."
+
+policy:
+  allow_implicit_invocation: false

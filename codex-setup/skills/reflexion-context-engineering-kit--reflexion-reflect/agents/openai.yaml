@@ -1,0 +1,7 @@
+interface:
+  display_name: "reflexion:reflect"
+  short_description: "Reflect on previus response and output, based on"
+  default_prompt: "Use $reflexion-context-engineering-kit--reflexion-reflect for this task."
+
+policy:
+  allow_implicit_invocation: false

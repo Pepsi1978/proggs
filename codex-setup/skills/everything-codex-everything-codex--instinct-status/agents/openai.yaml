@@ -1,0 +1,7 @@
+interface:
+  display_name: "instinct-status"
+  short_description: "Show learned instincts (project + global) with confidence"
+  default_prompt: "Use $everything-codex-everything-codex--instinct-status for this task."
+
+policy:
+  allow_implicit_invocation: false

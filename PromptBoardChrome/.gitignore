@@ -1,0 +1,5 @@
+# Python bytecode cache. Must never live in the Chrome-loadable tree, since
+# Chrome rejects any file/dir starting with "_". Build tooling lives in .tools/
+# (dot-prefixed = ignored by Chrome), but we also keep caches out of git.
+__pycache__/
+*.pyc

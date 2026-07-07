@@ -1,0 +1,7 @@
+interface:
+  display_name: "design-implementation-reviewer"
+  short_description: "Visually compares live UI implementation against Figma designs"
+  default_prompt: "Use $compound-engineering-compound-engineering-plugin--design-implementation-reviewer for this task."
+
+policy:
+  allow_implicit_invocation: false

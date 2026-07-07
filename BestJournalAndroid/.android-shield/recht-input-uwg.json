@@ -1,0 +1,630 @@
+{
+  "findings": [
+    {
+      "key": "settings_premium_desc",
+      "line": 485,
+      "text": "Alle Features freigeschaltet, KI jeden Tag, PDF-Export und mehr.",
+      "category": "marketing-claim",
+      "risk": "HOCH",
+      "rationale": "'KI jeden Tag' = taegliches KI-Versprechen, muss exakt mit tatsaechlichem Tageslimit (dashboard_limit_daily existiert) uebereinstimmen. 'und mehr' vage Werbefloskel. UWG §5."
+    },
+    {
+      "key": "settings_premium_feature_5_perspectives",
+      "line": 495,
+      "text": "Alle KI-Profile (4 vordefiniert + unbegrenzt eigene)",
+      "category": "marketing-claim",
+      "risk": "HOCH",
+      "rationale": "'unbegrenzt eigene' Profile — harte Unbegrenztheitsaussage (UWG §5). Muss im Code ohne Cap sein."
+    },
+    {
+      "key": "settings_premium_feature_profiles",
+      "line": 505,
+      "text": "Unbegrenzte individuelle KI-Profile",
+      "category": "marketing-claim",
+      "risk": "HOCH",
+      "rationale": "'Unbegrenzt' ist eine absolute Zusage. Wenn die App durch das KI-Tageslimit/Wochenlimit faktisch begrenzt, ist 'unbegrenzt' irrefuehrend (UWG 5). Gegen Code-Realitaet pruefen: gibt es wirklich KEINE Obergrenze fuer die Anzahl Profile?"
+    },
+    {
+      "key": "ai_prompt_entropy_intro",
+      "line": 914,
+      "text": "Du bist ein empathischer, hochintelligenter Lebensberater und Muster-Analyst. ... Finde wiederkehrende Quellen von Stress, Unordnung und Belastung ... Schmerz, Schlafprobleme, emotionale Belastung ...",
+      "category": "ai-claim",
+      "risk": "HOCH",
+      "rationale": "System-Prompt laesst die KI als 'Lebensberater' agieren und aktiv 'Schmerz, Schlafprobleme, emotionale Belastung' analysieren + 'Ratschlaege' geben (prioritaet 'hoch=sofort handeln'). Gesundheitsnahe Beratung durch KI (HWG/SB-243-Grenzbereich). Risiko, dass Ausgaben wie medizinische/psychologische Empfehlungen wirken. Disclaimer (KI keine Therapie) MUSS an der Ausgabe sichtbar sein."
+    },
+    {
+      "key": "ai_prompt_no_dates_rule",
+      "line": 808,
+      "text": "... 'Eintrag vom 30. verbindet deine Borreliose direkt mit dem Mangel an Sport.' ... 'Deine Borreliose haengt direkt mit dem Bewegungsmangel zusammen.' ... 'Laufen ist der Schluessel zur mentalen Klarheit ...'",
+      "category": "ai-claim",
+      "risk": "HOCH",
+      "rationale": "System-Prompt-BEISPIELE stellen KAUSALE Gesundheitsaussagen als Vorbild hin: 'Borreliose haengt direkt mit Bewegungsmangel zusammen', 'Laufen ist der Schluessel zur mentalen Klarheit'. Das traniert die KI darauf, medizinische Kausalzusammenhaenge zu behaupten (HWG/Heilaussagen-Risiko). Auch wenn nur Stil-Beispiel: die Modell-Ausgabe kann solche Aussagen produzieren. Disclaimer zwingend an Ausgabe."
+    },
+    {
+      "key": "ai_prompt_custom_intro",
+      "line": 933,
+      "text": "Wenn der Auftrag Recherche, Ideen, Alternativen, Vorschlaege, Empfehlungen oder neue Informationen verlangt, dann liefere diese AKTIV, auch wenn sie in den Eintraegen nicht vorkommen.",
+      "category": "ai-claim",
+      "risk": "HOCH",
+      "rationale": "Custom-Profil laesst die KI frei recherchieren/empfehlen mit nutzerdefiniertem Fokus-Text (%1$s). Nutzer koennte als Fokus Gesundheits-/Rechts-/Finanzberatung eingeben -> KI gibt aktive Empfehlungen ueber die Tagebuchdaten hinaus. Unkontrollierter Beratungs-Output ohne fachlichen Disclaimer (HWG/Rechtsdienstleistung/Finanzberatung-Risiko). Braucht generellen 'keine Fachberatung'-Hinweis an JEDER KI-Ausgabe."
+    },
+    {
+      "key": "onboarding_feature_secure",
+      "line": 1061,
+      "text": "Deine Daten sind lokal gespeichert, KI-Anfragen sind verschluesselt",
+      "category": "marketing-claim",
+      "risk": "HOCH",
+      "rationale": "Doppel-Claim 'Daten lokal gespeichert' + 'KI-Anfragen verschluesselt'. Beide ueberpruefbare Tatsachenbehauptungen (UWG 5). App hat laut Memory Google-Drive-Backup + Gemini-Anfragen - 'lokal gespeichert' kann irrefuehrend sein wenn Cloud-Backup existiert. Gegen tatsaechliche Speicherung/Transportverschluesselung verifizieren."
+    },
+    {
+      "key": "retro_benefit_weekly",
+      "line": 1035,
+      "text": "Unbegrenzte Wochenrueckblicke, nicht nur die ersten 2 Wochen",
+      "category": "marketing-claim",
+      "risk": "HOCH",
+      "rationale": "'Unbegrenzt'-Absolutheitsclaim (UWG 5). Kollidiert potenziell mit KI-Tageskontingent (ai_limits_dialog_body: 150/Tag/Profil + Pausen). Pruefen ob Wochenrueckblicke wirklich ohne Limit erzeugbar sind. Irrefuehrungsrisiko."
+    },
+    {
+      "key": "paywall_feature_profiles",
+      "line": 1125,
+      "text": "Unbegrenzte individuelle KI-Profile",
+      "category": "marketing-claim",
+      "risk": "HOCH",
+      "rationale": "'Unbegrenzt'-Claim fuer KI-Profile (UWG 5). Spannung zum dokumentierten Tageskontingent (150/Tag pro Profil). Anzahl Profile evtl. unbegrenzt, Nutzung aber limitiert - Verbraucher koennte 'unbegrenzt' als unbegrenzte Nutzung missverstehen."
+    },
+    {
+      "key": "churn_offer_feature_perspectives",
+      "line": 1177,
+      "text": "Alle KI-Profile (4 vordefiniert + unbegrenzt eigene)",
+      "category": "marketing-claim",
+      "risk": "HOCH",
+      "rationale": "'unbegrenzt eigene' KI-Profile im Retention-Angebot (UWG 5). Gleiche Spannung zum Tageskontingent. Zahl '4 vordefiniert' muss mit tatsaechlicher Profil-Anzahl uebereinstimmen."
+    },
+    {
+      "key": "ai_limits_dialog_body",
+      "line": 1199,
+      "text": "150 Anfragen pro Tag und Profil; 4 vordefinierte zusammen 600/Tag; +150/Tag je eigenem Profil; 1-30 hoechste Qualitaet; 31-100 Standard; 30-Min-Pause bei 101; ab 151 Stopp bis morgen; max 50 Anfragen/Stunde -> 5-Min-Pause; OHNE ABO 5 Dashboard-Analysen/Woche/Profil + 5 Textverbesserungen/Woche; 'Die meisten Nutzer werden diese Grenzen nicht erreichen.'",
+      "category": "ai-claim",
+      "risk": "HOCH",
+      "rationale": "Sehr konkrete KI-Kontingent-/Drosselungs-Aussage (UWG 5) mit vielen ueberpruefbaren Zahlen (150/Tag/Profil, 600/Tag, Qualitaetsstufen 1-30/31-100, 30-Min-Pause bei 101, Stopp ab 151, 50/Stunde, 5-Min-Pause, Free 5/Woche). JEDE Zahl muss exakt der Code-Implementierung entsprechen - Abweichung = Irrefuehrung. Kritisch: Wechselwirkung mit 'Unbegrenzt'-Werbung. Satz 'Die meisten Nutzer werden diese Grenzen nicht erreichen' ist Verharmlosung - vertretbar, pruefen. Hauptrisiko: Konsistenz Code<->Text."
+    },
+    {
+      "key": "journal_text_upsell_body",
+      "line": 97,
+      "text": "Mit Premium kannst du jeden Eintrag verbessern.",
+      "category": "marketing-claim",
+      "risk": "MITTEL",
+      "rationale": "Absolutaussage 'jeden Eintrag' kollidiert mit Rate-Limit (journal_rate_limit Cooldown). 'jeden' suggeriert unbegrenzt — pruefen ob Premium wirklich ohne Limit."
+    },
+    {
+      "key": "journal_rate_limit",
+      "line": 111,
+      "text": "Kurze Pause: Noch %1$d Minuten bis zur naechsten Verbesserung.",
+      "category": "ai-claim",
+      "risk": "MITTEL",
+      "rationale": "Belegt KI-Rate-Limit. Muss gegen Marketing 'jeden Eintrag/taeglich' abgeglichen werden (UWG §5 Irrefuehrung ueber Leistungsumfang)."
+    },
+    {
+      "key": "dashboard_weekly_review_upsell_body",
+      "line": 242,
+      "text": "Du hattest eine bewegte Woche. Mit Premium siehst du die volle Analyse: erkenne Muster, entdecke Einsichten und verstehe, was dich beschaeftigt.",
+      "category": "marketing-claim",
+      "risk": "MITTEL",
+      "rationale": "Werbeversprechen 'volle Analyse/erkenne Muster/verstehe was dich beschaeftigt' — KI-Genauigkeitsversprechen. Disclaimer noetig dass KI-Analysen keine objektive Wahrheit/Diagnose sind."
+    },
+    {
+      "key": "dashboard_loading_auto_update",
+      "line": 277,
+      "text": "KI-Dashboard wird nach jedem neuen Tagebucheintrag automatisch aktualisiert",
+      "category": "ai-claim",
+      "risk": "MITTEL",
+      "rationale": "'nach jedem neuen Eintrag automatisch' kollidiert potenziell mit dashboard_limit_daily/weekly. Pruefen ob 'jedem' durch Limits eingeschraenkt."
+    },
+    {
+      "key": "settings_premium_feature_improve",
+      "line": 491,
+      "text": "Taegliche KI-Textverbesserung",
+      "category": "marketing-claim",
+      "risk": "MITTEL",
+      "rationale": "'Taeglich' Frequenzversprechen. Abgleich mit Rate-Limit noetig (journal_rate_limit Cooldown auch bei Premium?)."
+    },
+    {
+      "key": "settings_premium_feature_dashboard",
+      "line": 493,
+      "text": "Taegliche Dashboard-Analysen",
+      "category": "marketing-claim",
+      "risk": "MITTEL",
+      "rationale": "'Taegliche Analysen' vs. dashboard_limit_daily 'Tageslimit erreicht'. Muss konsistent sein."
+    },
+    {
+      "key": "streak_desc_365",
+      "line": 136,
+      "text": "Was als kleine Gewohnheit begann, ist jetzt ein fester Teil deines Lebens. Dein Tagebuch kennt dich besser als je zuvor.",
+      "category": "marketing-claim",
+      "risk": "MITTEL",
+      "rationale": "'Dein Tagebuch kennt dich besser als je zuvor' impliziert KI-Profilbildung/Personenanalyse. Grenzwertig: Datenschutz (Profiling sensibler Daten) + KI-Versprechen."
+    },
+    {
+      "key": "follow_up_premium_subtext",
+      "line": 214,
+      "text": "Jeder Nachtrag fliesst automatisch ins Dashboard ein, damit deine Analyse immer vollstaendig bleibt.",
+      "category": "marketing-claim",
+      "risk": "MITTEL",
+      "rationale": "'automatisch/immer vollstaendig' — Absolutaussage zur KI-Analyse. 'immer vollstaendig' starkes Versprechen, pruefen ob durch Limits eingeschraenkt."
+    },
+    {
+      "key": "settings_feedback_dialog_desc",
+      "line": 527,
+      "text": "Deine Nachricht an die Entwickler - wir lesen alles und antworten persoenlich!",
+      "category": "marketing-claim",
+      "risk": "MITTEL",
+      "rationale": "'wir lesen alles und antworten persoenlich' ist ein konkretes Leistungsversprechen. Wenn nicht jede Nachricht beantwortet wird, irrefuehrend. Verstaerkt durch 'wir antworten innerhalb von 24 Stunden an Werktagen' (settings_report_ai_confirm_body, Z.639) - eine Reaktionszeit-Zusage, die einhaltbar sein muss."
+    },
+    {
+      "key": "ai_prompt_insight_intro",
+      "line": 904,
+      "text": "Du bist ein einfuehlsamer, tiefgruendiger Muster-Analyst fuer persoenliche Entwicklung. ... unbewusste Ueberzeugungen, emotionale Reaktionsmuster ...",
+      "category": "ai-claim",
+      "risk": "MITTEL",
+      "rationale": "Psychotherapie-nahe Begriffe ('unbewusste Ueberzeugungen', 'emotionale Reaktionsmuster', 'wohlwollender Spiegel'). KI erstellt psychologisch anmutende Profile. HWG-Grenzbereich - als KI-Selbsterkenntnis vermarktet, aber Naehe zu Psychoanalyse dokumentieren."
+    },
+    {
+      "key": "ai_prompt_goals_definition",
+      "line": 897,
+      "text": "'Mein Schlaf ist so schlecht' = implizites Ziel Schlafverbesserung ... 'Ich will abnehmen' ...",
+      "category": "ai-claim",
+      "risk": "MITTEL",
+      "rationale": "Prompt leitet KI an, Gesundheits-/Koerperziele ('abnehmen', 'Schlafverbesserung') zu erkennen und zu verfolgen. Bewegt sich in Wellness-Beratung. Grenzbereich HWG; Ausgaben sollten keine konkreten medizinischen Empfehlungen geben."
+    },
+    {
+      "key": "paywall_feature_followups",
+      "line": 1420,
+      "text": "Unbegrenzte Nachtraege zu jedem Tagebucheintrag",
+      "category": "marketing-claim",
+      "risk": "MITTEL",
+      "rationale": "'Unbegrenzt'-Claim fuer Nachtraege (UWG 5). Nachtraege vermutlich nur Text (kein KI-Limit) -> MITTEL. Ueberpruefbare Absolutheitsbehauptung; bestaetigen dass keine Obergrenze existiert."
+    },
+    {
+      "key": "settings_premium_feature_followups_desc",
+      "line": 1422,
+      "text": "So viele Nachtraege pro Eintrag wie du moechtest",
+      "category": "marketing-claim",
+      "risk": "MITTEL",
+      "rationale": "Umschreibung von 'unbegrenzt'. Gleiche Absolutheitsbehauptung wie paywall_feature_followups (UWG 5). Wahrheit/Konsistenz pruefen."
+    },
+    {
+      "key": "onboarding_premium_feature_improve",
+      "line": 1076,
+      "text": "KI-Textverbesserung taeglich, jeder Eintrag wird klarer und ausdrucksstaerker",
+      "category": "marketing-claim",
+      "risk": "MITTEL",
+      "rationale": "Erfolgszusage 'jeder Eintrag wird klarer und ausdrucksstaerker' (UWG 5). 'jeder Eintrag' ist Allaussage; KI-Ergebnis nicht garantiert. 'taeglich' (Premium-Feature)."
+    },
+    {
+      "key": "onboarding_premium_feature_patterns",
+      "line": 1079,
+      "text": "Muster sichtbar machen: Die KI zeigt wiederkehrende Denk- und Gefuehlsmuster in deinen Eintraegen",
+      "category": "marketing-claim",
+      "risk": "MITTEL",
+      "rationale": "Funktionsversprechen 'KI zeigt Denk-/Gefuehlsmuster' (UWG 5 + HWG-Grenze, psychologie-naher Nutzen). Muss durch tatsaechliche Feature-Faehigkeit gedeckt sein."
+    },
+    {
+      "key": "paywall_feature_patterns",
+      "line": 1119,
+      "text": "Erkenne wiederkehrende Muster in deinem Denken",
+      "category": "marketing-claim",
+      "risk": "MITTEL",
+      "rationale": "Funktions-/Nutzenversprechen 'Muster in deinem Denken erkennen' (UWG 5 + HWG-Grenze). Verifikationspflicht wie patterns-Feature im Onboarding."
+    },
+    {
+      "key": "paywall_headline_clarity_sub",
+      "line": 1131,
+      "text": "Die KI erkennt Muster, die dir verborgen bleiben",
+      "category": "marketing-claim",
+      "risk": "MITTEL",
+      "rationale": "Starke Erfolgszusage 'KI erkennt Muster, die dir verborgen bleiben' (UWG 5). Behauptet ueber menschliche Selbstwahrnehmung hinausgehende Faehigkeit - schwer beweisbar. Pruefen ob abschwaechbar."
+    },
+    {
+      "key": "ai_limit_body",
+      "line": 1191,
+      "text": "Ohne Abo hast du 5 Textverbesserungen pro Woche und 5 Dashboard-Aktualisierungen pro Woche je Profil. Mit dem Premium-Abo: bis zu 150 pro Tag.",
+      "category": "ai-claim",
+      "risk": "MITTEL",
+      "rationale": "KI-Limit-Aussage mit Zahlen (5/Woche Free, 'bis zu 150 pro Tag' Premium). UWG 5: Zahlen muessen der tatsaechlichen Drosselung entsprechen. 'bis zu 150' korrekt relativiert. ABER kollidiert mit 'Unbegrenzt'-Claims (retro_benefit_weekly, paywall_feature_profiles) - interner Widerspruch. Konsistenzpruefung kritisch."
+    },
+    {
+      "key": "profile_style_advisor",
+      "line": 1414,
+      "text": "- Schreibe im Stil eines Lebensberaters, hebe hervor was gut lief, was verbessert werden kann, und gib dem Leser das Gefuehl von Klarheit und Ordnung",
+      "category": "ai-claim",
+      "risk": "MITTEL",
+      "rationale": "Gemini-System-Prompt: KI soll 'im Stil eines Lebensberaters' schreiben und Verbesserungen vorschlagen. HWG/Produkthaftungs-Naehe ('Lebensberater' + 'was verbessert werden kann' erzeugt beratende Ausgaben). KEINE medizinische Diagnose-Anweisung (positiv). MITTEL: ratgebende Ausgaben koennten ohne Disclaimer als professionelle Beratung missverstanden werden - Health-Disclaimer (1487/1488) entschaerft."
+    },
+    {
+      "key": "profile_style_insight",
+      "line": 1415,
+      "text": "- Schreibe im Stil einer tiefgruendigen Selbsterkenntnis-Erzaehlung, decke Denkmuster, wiederkehrende Gefuehle und verborgene Staerken auf",
+      "category": "ai-claim",
+      "risk": "MITTEL",
+      "rationale": "Gemini-System-Prompt: KI soll 'Denkmuster, wiederkehrende Gefuehle und verborgene Staerken aufdecken'. Psychologie-nahe Analyse-Anweisung (HWG-Grenze). Keine Diagnose, aber introspektive/psychologisierende Ausgaben. MITTEL - durch Disclaimer abgesichert; pruefen dass KI keine pathologisierenden Aussagen generiert."
+    },
+    {
+      "key": "profile_style_custom",
+      "line": 1417,
+      "text": "- PROFIL-STIL (Custom): Schreibe diesen Rueckblick mit klarem Bezug zum Benutzer-Auftrag ... Benutzer-Auftrag (zur Orientierung): %1$s",
+      "category": "ai-claim",
+      "risk": "MITTEL",
+      "rationale": "Gemini-System-Prompt mit eingebettetem frei waehlbarem Benutzer-Auftrag (%1$s). Produkthaftungs-/Inhalts-Risiko: Nutzer koennten ueber den Custom-Auftrag die KI zu medizinischen/therapeutischen Ratschlaegen anweisen - das Prompt enthaelt KEINE Schutz-/Verbots-Klausel gegen gesundheitsbezogene Ausgaben. Empfehlung: pruefen ob ein Guardrail (keine Diagnosen/med. Ratschlaege) fehlt. MITTEL."
+    },
+    {
+      "key": "journal_ai_improving",
+      "line": 40,
+      "text": "KI verbessert Text — bitte warten",
+      "category": "ai-claim",
+      "risk": "NIEDRIG",
+      "rationale": "KI-Verarbeitung von Nutzertext. Cloud-Verarbeitung (Gemini/Groq) impliziert; muss von AI-Transparenz (EU AI Act Art. 50) abgedeckt sein."
+    },
+    {
+      "key": "label_improved",
+      "line": 51,
+      "text": "✨ KI verbessert",
+      "category": "ai-claim",
+      "risk": "NIEDRIG",
+      "rationale": "KI-Kennzeichnung des verbesserten Texts — positiv fuer EU AI Act Art. 50(4) Transparenz."
+    },
+    {
+      "key": "legend_categories_desc",
+      "line": 334,
+      "text": "Kategorien werden dynamisch erstellt — die KI erkennt Themen in deinen Eintraegen und erstellt passende Kategorien. Neue Themen fuehren automatisch zu neuen Symbolen.",
+      "category": "ai-claim",
+      "risk": "NIEDRIG",
+      "rationale": "KI-Faehigkeitsbeschreibung 'erkennt Themen/automatisch'. Erklaert KI-Verhalten — eher unkritisch."
+    },
+    {
+      "key": "dashboard_loading_profile_switch",
+      "line": 275,
+      "text": "KI-Dashboard wird nach jedem Profilwechsel automatisch aktualisiert",
+      "category": "ai-claim",
+      "risk": "NIEDRIG",
+      "rationale": "'nach jedem Profilwechsel automatisch' — gleiche moegliche Limit-Kollision wie auto_update."
+    },
+    {
+      "key": "settings_premium_feature_reviews",
+      "line": 497,
+      "text": "Alle Rueckblicke ausfuehrlich mit KI erstellt",
+      "category": "ai-claim",
+      "risk": "NIEDRIG",
+      "rationale": "KI erstellt Rueckblicke. 'ausfuehrlich' Werbewort, eher unkritisch."
+    },
+    {
+      "key": "settings_premium_feature_reviews_desc",
+      "line": 498,
+      "text": "Die KI erzaehlt deine Geschichte",
+      "category": "ai-claim",
+      "risk": "NIEDRIG",
+      "rationale": "Emotionales KI-Versprechen 'erzaehlt deine Geschichte' — Marketing, niedrig."
+    },
+    {
+      "key": "settings_premium_feature_patterns_desc",
+      "line": 500,
+      "text": "Die KI kann Muster und Zusammenhaenge in deinen Eintraegen sichtbar machen",
+      "category": "ai-claim",
+      "risk": "NIEDRIG",
+      "rationale": "Vorsichtig formuliert ('kann ... sichtbar machen') — kein Garantieversprechen, gut."
+    },
+    {
+      "key": "journal_text_upsell_title",
+      "line": 96,
+      "text": "Beeindruckend, oder?",
+      "category": "marketing-claim",
+      "risk": "NIEDRIG",
+      "rationale": "Werblicher Aufhaenger vor Premium-Upsell. Subjektive Anpreisung — niedrig."
+    },
+    {
+      "key": "streak_90",
+      "line": 130,
+      "text": "Du bist unstoppbar!",
+      "category": "marketing-claim",
+      "risk": "NIEDRIG",
+      "rationale": "Gamification-Lob. Uebertreibung, klar als Motivationsspruch erkennbar — niedrig."
+    },
+    {
+      "key": "streak_180",
+      "line": 129,
+      "text": "Unglaubliche Disziplin!",
+      "category": "marketing-claim",
+      "risk": "NIEDRIG",
+      "rationale": "Gamification-Lob. Unkritisch."
+    },
+    {
+      "key": "splash_subtitle",
+      "line": 468,
+      "text": "DEIN INTELLIGENTES TAGEBUCH",
+      "category": "marketing-claim",
+      "risk": "NIEDRIG",
+      "rationale": "Claim 'INTELLIGENTES TAGEBUCH' — wirbt mit KI-Intelligenz. Tagline, niedrig, aber Teil der KI-Werbung."
+    },
+    {
+      "key": "settings_premium_feature_voice",
+      "line": 503,
+      "text": "Praezisere Spracherkennung",
+      "category": "marketing-claim",
+      "risk": "NIEDRIG",
+      "rationale": "Komparativ 'praeziser' impliziert messbar bessere Qualitaet ggue. der lokalen Erkennung. Belastbar nur wenn die Premium-Variante (Groq Whisper) tatsaechlich genauer ist. Grenzfall."
+    },
+    {
+      "key": "settings_premium_feature_voice_desc",
+      "line": 504,
+      "text": "Hoehere Qualitaet fuer deine Spracheintraege",
+      "category": "marketing-claim",
+      "risk": "NIEDRIG",
+      "rationale": "'Hoehere Qualitaet' ist ein Qualitaetsversprechen, subjektiv/unbelegt. Grenzfall fuer UWG 5 Abs.1."
+    },
+    {
+      "key": "ai_generated_tooltip",
+      "line": 785,
+      "text": "Dieser Inhalt wurde von einem KI-System (Google Gemini) erstellt und kann Fehler enthalten. Bitte eigenstaendig pruefen.",
+      "category": "ai-claim",
+      "risk": "NIEDRIG",
+      "rationale": "GUTE Praxis: KI-Kennzeichnung (AI Act Art.50, Pflicht ab 02.08.2026) + Fehlerhinweis. Positiv-Fund."
+    },
+    {
+      "key": "limit_used_of_max",
+      "line": 796,
+      "text": "%1$d von %2$d genutzt",
+      "category": "ai-claim",
+      "risk": "NIEDRIG",
+      "rationale": "KI-Nutzungslimit-Zaehler (X von Y). Bestaetigt, dass es ein begrenztes KI-Kontingent gibt. Direkt relevant fuer die 'unbegrenzt'-Pruefung anderer Marketing-Strings - ein Limit existiert also."
+    },
+    {
+      "key": "ai_prompt_goals_intro",
+      "line": 896,
+      "text": "Du bist ein aufmerksamer, motivierender Ziel-Analyst und Fortschritts-Tracker. ... Verfolge den Fortschritt ueber mehrere Eintraege hinweg.",
+      "category": "ai-claim",
+      "risk": "NIEDRIG",
+      "rationale": "KI-Rolle als 'Ziel-Analyst'. Unkritisch (kein Gesundheitsbezug), dokumentiert aber die KI-Faehigkeitszusage 'Fortschritts-Tracking' - muss mit Marketing uebereinstimmen."
+    },
+    {
+      "key": "ai_prompt_response_language",
+      "line": 805,
+      "text": "ANTWORTSPRACHE: Antworte vollstaendig auf Deutsch. ...",
+      "category": "ai-claim",
+      "risk": "NIEDRIG",
+      "rationale": "Sprach-Steuer-Prompt. Unkritisch, aber translatable (wird in 26 Sprachen lokalisiert) - bei Lokalisierung muss 'Deutsch' durch die jeweilige Zielsprache ersetzt werden, sonst antwortet die KI in falscher Sprache. Funktions-Hinweis."
+    },
+    {
+      "key": "onboarding_premium_feature_noads",
+      "line": 1080,
+      "text": "Keine Werbung, ungestoert schreiben und reflektieren",
+      "category": "marketing-claim",
+      "risk": "NIEDRIG",
+      "rationale": "'Keine Werbung'-Claim (UWG 5, ueberpruefbar). Muss stimmen dass Premium werbefrei ist. Leicht verifizierbar."
+    },
+    {
+      "key": "paywall_feature_noads",
+      "line": 1124,
+      "text": "Spreche oder schreibe ungestoert, ohne Werbung",
+      "category": "marketing-claim",
+      "risk": "NIEDRIG",
+      "rationale": "'ohne Werbung'-Claim (UWG 5). Verifikationspflicht wie onboarding_premium_feature_noads. Hinweis: 'Spreche' Imperativ-Tippfehler (-> other-Finding)."
+    },
+    {
+      "key": "onboarding_feature_speech",
+      "line": 1060,
+      "text": "Sprich oder schreib, die KI versteht beides",
+      "category": "marketing-claim",
+      "risk": "NIEDRIG",
+      "rationale": "Funktionsaussage 'die KI versteht beides' (UWG 5). Ueblich, leicht belegbar."
+    },
+    {
+      "key": "onboarding_feature_profiles",
+      "line": 1085,
+      "text": "4 intelligente Analyse-Profile fuer verschiedene Perspektiven",
+      "category": "marketing-claim",
+      "risk": "NIEDRIG",
+      "rationale": "Zahlenversprechen '4 Analyse-Profile' (UWG 5). Muss mit tatsaechlicher Profil-Anzahl uebereinstimmen (vgl. churn '4 vordefiniert'). Konsistenz pruefen."
+    },
+    {
+      "key": "onboarding_premium_profiles",
+      "line": 1091,
+      "text": "4 intelligente Dashboard-Profile fuer tiefe Einblicke in dein Leben",
+      "category": "marketing-claim",
+      "risk": "NIEDRIG",
+      "rationale": "Zahlenversprechen '4 Dashboard-Profile' + 'tiefe Einblicke' (UWG 5). Konsistenz mit anderen Profil-Zahlen pruefen."
+    },
+    {
+      "key": "onboarding_premium_feature_pdf",
+      "line": 1090,
+      "text": "PDF-Export mit Fotos, sichere deine Eintraege als Dokument",
+      "category": "marketing-claim",
+      "risk": "NIEDRIG",
+      "rationale": "Funktionsversprechen PDF-Export mit Fotos (UWG 5, leicht verifizierbar)."
+    },
+    {
+      "key": "retro_weekly_p3",
+      "line": 1024,
+      "text": "Jeden Sonntag automatisch erstellt, wenn du mindestens 2 Eintraege hast",
+      "category": "marketing-claim",
+      "risk": "NIEDRIG",
+      "rationale": "Konkrete Funktionszusage mit Bedingung (UWG 5). Positiv: Bedingung transparent. Pruefen dass Automatik so laeuft."
+    },
+    {
+      "key": "retro_premium_reviews_desc",
+      "line": 1034,
+      "text": "Mit Premium erstellt die KI automatisch Rueckblicke aus deinen Tagebucheintraegen:",
+      "category": "marketing-claim",
+      "risk": "NIEDRIG",
+      "rationale": "'automatisch'-Funktionszusage Premium-Rueckblicke (UWG 5). Verifizieren dass Automatik existiert."
+    },
+    {
+      "key": "ai_limits_disclaimer",
+      "line": 1197,
+      "text": "KI-Tageskontingent fuer intensive Nutzung.",
+      "category": "ai-claim",
+      "risk": "NIEDRIG",
+      "rationale": "Kurz-Disclaimer zum Tageskontingent. Positiv (Transparenz)."
+    },
+    {
+      "key": "ai_banner_title",
+      "line": 1202,
+      "text": "Dein Tagebuch wird von KI unterstuetzt",
+      "category": "ai-claim",
+      "risk": "NIEDRIG",
+      "rationale": "KI-Transparenzhinweis (positiv, AI-Act Art.50-Naehe - Offenlegung KI-Einsatz)."
+    },
+    {
+      "key": "profile_style_coach",
+      "line": 1416,
+      "text": "- Schreibe im Stil eines motivierenden Ziel-Begleiters, zeige Fortschritte bei persoenlichen Zielen auf und ermutige weiterzumachen",
+      "category": "ai-claim",
+      "risk": "NIEDRIG",
+      "rationale": "Gemini-System-Prompt: 'motivierender Ziel-Begleiter'. Coaching-Sprache, harmlos/motivierend, keine medizinisch-therapeutische Anweisung."
+    },
+    {
+      "key": "profile_style_chronicler",
+      "line": 1413,
+      "text": "- Schreibe im Stil einer zusammenfassenden Erzaehlung, fasse die wichtigsten Ereignisse und Gefuehle zusammen, wie ein persoenlicher Chronist",
+      "category": "ai-claim",
+      "risk": "NIEDRIG",
+      "rationale": "Gemini-System-Prompt: zusammenfassende Erzaehlung. Neutral, keine Beratungs-/Diagnose-Anweisung."
+    },
+    {
+      "key": "retro_weekly_p1",
+      "line": 1022,
+      "text": "Die KI fasst deine Woche zu einer persoenlichen Erzaehlung zusammen",
+      "category": "ai-claim",
+      "risk": "NIEDRIG",
+      "rationale": "KI-Funktionsbeschreibung (Zusammenfassung). Neutral."
+    },
+    {
+      "key": "retro_yearly_p2",
+      "line": 1030,
+      "text": "Die KI fasst die grossen Themen deines Jahres zusammen",
+      "category": "ai-claim",
+      "risk": "NIEDRIG",
+      "rationale": "KI-Funktionsbeschreibung Jahresrueckblick. Neutral."
+    }
+  ],
+  "freeVsPremium": [
+    {
+      "feature": "Journal entries (write/voice/store)",
+      "tier": "free",
+      "limit": "Unlimited (MAX_ENTRIES_FREE_ANALYSIS=Int.MAX_VALUE)"
+    },
+    {
+      "feature": "App usable without subscription",
+      "tier": "free",
+      "limit": "Yes - paywall_free_note: 'Die App funktioniert auch ohne Abo weiter.' + paywall_with_limited: 'mit eingeschraenkten Limits.'"
+    },
+    {
+      "feature": "AI dashboard updates / analysis",
+      "tier": "limited",
+      "limit": "Free: FREE_WEEKLY_DASHBOARD_LIMIT=5/week. AI daily-quota tiers apply (trial tier: 20 premium-model then lite then cooldown/hard)."
+    },
+    {
+      "feature": "AI text improvement",
+      "tier": "limited",
+      "limit": "Free: FREE_WEEKLY_TEXT_LIMIT=5/week; premium: unlimited (paywall_feature_improve)"
+    },
+    {
+      "feature": "Weekly/monthly/yearly reviews (retrospectives)",
+      "tier": "limited",
+      "limit": "Free: most-recent FREE_WEEKLY_REVIEW_COUNT=2 reviews; premium: 'Alle Rueckblicke KI generiert' (paywall_feature_retro)"
+    },
+    {
+      "feature": "Custom AI profiles / scenarios",
+      "tier": "premium",
+      "limit": "Premium: 'Unbegrenzte individuelle KI-Profile' (paywall_feature_profiles). Free: limited count (custom_analyses_limit paywall trigger)."
+    },
+    {
+      "feature": "Follow-ups (Nachtraege) per entry",
+      "tier": "premium",
+      "limit": "Premium: 'Unbegrenzte Nachtraege' (paywall_feature_followups); free gated (nachtrag_upsell trigger)"
+    },
+    {
+      "feature": "PDF export with photos",
+      "tier": "premium",
+      "limit": "Premium only (paywall_feature_pdf; pdf_export paywall trigger SettingsScreen.kt:3107)"
+    },
+    {
+      "feature": "Ad-free",
+      "tier": "premium",
+      "limit": "paywall_feature_noads 'ohne Werbung' - NOTE: no ad SDK observed in this layer; verify whether free tier actually shows ads, else 'ohne Werbung' is a hollow benefit claim (UWG para-5 risk if no ads exist anywhere)."
+    },
+    {
+      "feature": "Pattern recognition",
+      "tier": "premium",
+      "limit": "paywall_feature_patterns 'Erkenne wiederkehrende Muster'"
+    }
+  ],
+  "criticalObservations": [
+    "DSGVO-Datenfluesse an Dritte (Art.13/28 + Drittlandtransfer): (1) Groq/USA = Cloud-Whisper-Transkription von Sprache/Tagebuch, (2) Google Firebase AI/Gemini/USA = KI-Verarbeitung der Eintraege, (3) Microsoft Bing/Azure = Text-to-Speech, (4) Firebase Analytics/Google = Nutzungs-Tracking, (5) Google Drive/Gmail = Backup + E-Mail-Versand. ALLE muessen in der Datenschutzerklaerung als Empfaenger/Auftragsverarbeiter genannt sein.",
+    "Cloud-Backup enthaelt die komplette Tagebuch-DB (entropy_journal_db) + Profil = potenziell Art.9-DSGVO-Daten (Gesundheit/Stimmung) im Google-Auto-Backup. Secure-Prefs (Tokens) sind korrekt ausgeschlossen, aber die Inhalte selbst nicht. Legal-Worker: Backup-Strategie fuer besondere Datenkategorien bewerten.",
+    "Firebase Analytics feuert breitflaechig (Onboarding, Eintraege, Paywall, CTA-Klicks). Ein ConsentViewModel existiert. Ob Analytics WIRKLICH erst nach Einwilligung startet (setAnalyticsCollectionEnabled-Gating), MUSS vom Legal-/Consent-Worker an der Laufzeit-Logik verifiziert werden (ePrivacy/TTDSG-Einwilligung).",
+    "okhttp-logging-interceptor ist eingebunden. Legal/Security-Worker pruefen, ob HTTP-Bodies (mit Tagebuchinhalten/Tokens) in Release-Logs landen koennen (Datenleck-Risiko); in Release sollte das Level NONE sein.",
+    "Microsoft Bing Edge-TTS-Endpunkt ist KEINE Gradle-Dependency, sondern ein inoffizieller WSS-Call (speech.platform.bing.com). Hohes Risiko, dass dieser Drittanbieter-Datenfluss in SDK-Inventaren uebersehen wird; zusaetzlich AGB-/Nutzungsrechts-Frage des inoffiziellen Endpunkts.",
+    "Versionsstand 0.21.10 (versionCode 291), targetSdk 36/minSdk 26, R8 vollstaendig aktiv (Code+Resource-Shrinking) mit umfangreichen Keep-Regeln. Build-Toolchain bewusst auf AGP 8.7.3 / Kotlin 2.1.0 / Compose BOM 2025.01.01 (NICHT die in den Rules genannten 9.1/2.3, entspricht dem dokumentierten Projekt-Soll, kein Bug).",
+    "BootReminderReceiver ist exported=true (systembedingt fuer BOOT_COMPLETED noetig); MainActivity exported=true (LAUNCHER). Alle uebrigen Receiver und der FileProvider sind exported=false. Keine offene Angriffsflaeche erkennbar.",
+    "Prices are sourced LIVE from Google Play formattedPrice (BillingManager.kt:1033,1066); hardcoded EUR fallbacks in Constants (MONTHLY/YEARLY/LIFETIME_PRICE_DISPLAY, RETENTION_*_PRICE) are explicitly labelled fallbacks AND are NOT shown on the main paywall (UI uses ellipsis when unloaded, PaywallScreen.kt:128). LOW pricing-misrepresentation risk on the paywall. HOWEVER: audit whether Settings subscription overview / any other screen ever renders the hardcoded RETENTION_MONTHLY_PRICE='2,99 EUR' / RETENTION_YEARLY_PRICE='22,49 EUR' constants directly (these could diverge from live Play prices per region/currency).",
+    "DARK PATTERN (MITTEL): cancellation flow visually de-emphasises the cancel CTA at the final step (grey 0.6-alpha 'Zu Google Play' vs bold animated 'Doch lieber bleiben') and gates cancel behind a reason survey + retention offer. Code comment ChurnFlowDialog.kt:1087 documents the intentional visual de-prioritisation. Recommend equal visual weight + skippable survey.",
+    "SUBSCRIPTION-STATE GAP: SubscriptionState is binary (Free/Subscribed). Google Play GRACE_PERIOD / ON_HOLD / PAUSED states are not modelled as distinct feature-access decisions; only EXPIRED is special-cased server-side. Risk that a user in Play grace period (payment retry window, should keep access) is downgraded to Free, or a paused sub is mis-shown. Targeted review recommended.",
+    "AUTO-RENEWAL DISCLOSURE is tied to the yearly note; the MONTHLY plan button has no adjacent recurring-billing line. Add an explicit per-plan auto-renewal/recurring line for the monthly subscription to meet Play + consumer-law clarity expectations on every plan.",
+    "'ohne Werbung' (paywall_feature_noads) is listed as a premium benefit but no ad SDK was observed in this paywall/billing layer - if the free tier shows no ads anywhere, advertising 'ad-free' as a paid benefit is a hollow/misleading claim (UWG para-5). Cross-check with the app-wide feature inventory.",
+    "Withdrawal right (para-355 BGB, 14 days) IS disclosed and reachable pre-purchase via the Terms link (paywall_legal_hint + onOpenTerms), and para-312j 'pay now' confirmation is handled by the Google Play sheet - the previously-noted gap is closed (D1-Fix 2026-05-31). Good.",
+    "ALL local user data is highly sensitive personal-diary content: raw + AI-improved diary text, mood tags, follow-ups, AI psychological entropy analysis & advice, photos AND videos (file paths), and AI period-summaries. This is GDPR Art.9-adjacent (mental-health/emotional data) - central to the rechtssicherheit audit.",
+    "Three separate Room DBs (AppDatabase, DashboardDatabase, RetrospectiveDatabase) - all local, no server copy of diary content; only subscription status goes to a Firebase Function (europe-west1).",
+    "Cloud AI processing of diary content: text is sent to Groq (api.groq.com, US-based) for transcription and to Firebase/Gemini for improve/summarize/analyze/retrospective. Each cloud service is gated by granular consent (ConsentScreen + per-use PrivacyGateDialog, default OFF). Marketing/privacy claims must match: Groq is a US processor; Gemini via Firebase AI.",
+    "Paywall is reachable from 5 screens with 10 distinct source values (limit_reached, weekly_review, first_analysis, free_limit, review_locked, custom_analyses_limit, churn_yearly_switch, settings_tap, pdf_export, nachtrag_upsell) - relevant for UWG/feature-claim mapping of which features are premium-gated.",
+    "Subscription cancellation has a dedicated multi-step ChurnFlowDialog with a retention offer (Overview->Reason->RetentionOffer->Confirm) - check it does not constitute a dark pattern / make cancellation harder than signup (EU UCPD, BGH).",
+    "CrisisHelpDialog provides emergency mental-health phone/web links - supports the sensitive-data classification and any 'this app is not medical advice' disclaimer obligations (AiLimitsDisclaimer present).",
+    "EncryptedSharedPreferences + MasterKeys (deprecated security-crypto API) is the secrets/prefs store - works but flagged for future migration to DataStore+Tink (Android rule).",
+    "POSITIVE: Debug-Test-Daten-Generator + 'Alle Einträge löschen' are DOUBLE-guarded by BuildConfig.DEBUG (JournalScreen.kt:183 + :334). Fake-data generator and bulk-delete cannot appear in a release build - NO Play-Store risk.",
+    "POSITIVE: Account deletion (DSGVO Art.17) is best-in-class: Drive cloud backup deleted FIRST + VERIFIED, honest error dialog never falsely claims 'unwiderruflich entfernt', wipes local photos/cache (incl full DB copy in drive_merge_temp.db)/Room/prefs/alarms.",
+    "POSITIVE: DE full legal docs are complete - DATENSCHUTZ has all DSGVO sections incl named subprocessors (Google/Gemini/Groq/Firebase) + Drittland/SCC; IMPRESSUM §5 DDG; NUTZUNGSBEDINGUNGEN §312g BGB Widerrufsbelehrung + Muster-Formular.",
+    "FACTUAL CORRECTION: 5 full PRIVACY versions exist (de/en/ko/ja/pt-BR), not 3 as stated. ja+pt-BR are self-contained full policies WITHOUT a reference link. This is MORE coverage, not less - the FIN-050 reference architecture is intact for the remaining 22 short summaries (all verified to carry working en+de links + native-language conflict clause).",
+    "MINOR DOC DRIFT: LegalDocumentScreen.kt comment (lines 64-73) still describes a 3-tier/summaries model; ja+pt-BR are full docs loaded via the summary path. Cosmetic only - loading works correctly. Could realign comment for accuracy.",
+    "FileProvider shares ONLY the photos/ dir (narrow, secure). PDF export is the only data-export path (Art.20) and is premium-gated; there is no JSON export."
+  ],
+  "screens": [
+    {
+      "name": "SplashScreen",
+      "purpose": "Branding splash; routes to Consent / Onboarding / Main based on first-run + consent-shown + onboarding-completed prefs."
+    },
+    {
+      "name": "ConsentScreen",
+      "purpose": "Granular DSGVO consent (analytics, Groq, Gemini, Edge-TTS toggles, default OFF) with links to legal docs; provable timestamp+policy-version persisted."
+    },
+    {
+      "name": "LegalDocumentScreen",
+      "purpose": "Renders one of three legal documents (privacy policy, terms, imprint) with back nav."
+    },
+    {
+      "name": "OnboardingScreen",
+      "purpose": "Goal-selection onboarding; saves goals to prefs for paywall personalization; marks onboarding completed."
+    },
+    {
+      "name": "RetrospectiveScreen",
+      "purpose": "Weekly/monthly/yearly AI-generated retrospectives with photo collage; review gated behind paywall (source=review_locked)."
+    },
+    {
+      "name": "DashboardScreen",
+      "purpose": "AI entropy analysis dashboard: category advice blocks, top-5 actions, scenario switching, manual refresh limit (3); paywall sources weekly_review/first_analysis/free_limit. OVERSIZE 193KB."
+    },
+    {
+      "name": "JournalScreen",
+      "purpose": "Core journal: voice recording -> Groq transcription -> Gemini text improvement -> save entry; entry list; streaks/achievements; opens EntryDetail and Paywall."
+    },
+    {
+      "name": "SettingsScreen",
+      "purpose": "Settings hub: profile/sign-in, theme, reminders, biometric lock, Drive backup (photos/videos), PDF export, custom analyses, consent revoke, subscription mgmt/churn, legal links, crisis help. OVERSIZE 289KB."
+    },
+    {
+      "name": "EntryDetailScreen",
+      "purpose": "View/edit a journal entry: original vs AI-improved text, photos, follow-ups (Nachtraege), re-improve/summarize/analyze AI actions, delete, share; paywall source nachtrag_upsell."
+    },
+    {
+      "name": "PaywallScreen",
+      "purpose": "Premium subscription paywall (monthly/yearly/lifetime via Google Play Billing); headline personalized by onboarding goal; source param tracks trigger origin for analytics."
+    }
+  ]
+}

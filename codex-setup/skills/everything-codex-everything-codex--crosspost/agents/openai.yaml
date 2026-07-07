@@ -1,0 +1,7 @@
+interface:
+  display_name: "crosspost"
+  short_description: "Multi-platform content distribution across X, LinkedIn"
+  default_prompt: "Use $everything-codex-everything-codex--crosspost for this task."
+
+policy:
+  allow_implicit_invocation: false

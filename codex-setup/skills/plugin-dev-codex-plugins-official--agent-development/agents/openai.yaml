@@ -1,0 +1,7 @@
+interface:
+  display_name: "agent-development"
+  short_description: "the user asks to \"create an agent\", \"add an agent\", \"write a"
+  default_prompt: "Use $plugin-dev-codex-plugins-official--agent-development for this task."
+
+policy:
+  allow_implicit_invocation: true

@@ -1,0 +1,199 @@
+{
+  "worker": "fa1",
+  "applied": [
+    {
+      "findingId": "B1",
+      "key": "retro_benefit_weekly",
+      "oldText": "Unbegrenzte Wochenrückblicke, nicht nur die ersten 2 Wochen",
+      "newText": "Alle Wochenrückblicke statt nur der ersten 2 – im Rahmen deines KI-Tageskontingents",
+      "line": 1035
+    },
+    {
+      "findingId": "B2",
+      "key": "settings_premium_feature_profiles",
+      "oldText": "Unbegrenzte individuelle KI-Profile",
+      "newText": "Eigene KI-Profile ohne Anzahllimit",
+      "line": 505
+    },
+    {
+      "findingId": "B2",
+      "key": "paywall_feature_profiles",
+      "oldText": "Unbegrenzte individuelle KI-Profile",
+      "newText": "Eigene KI-Profile ohne Anzahllimit",
+      "line": 1125
+    },
+    {
+      "findingId": "B3",
+      "key": "settings_premium_feature_5_perspectives",
+      "oldText": "Alle KI-Profile (4 vordefiniert + unbegrenzt eigene)",
+      "newText": "Alle 4 vordefinierten KI-Profile + so viele eigene wie du brauchst",
+      "line": 495
+    },
+    {
+      "findingId": "B3",
+      "key": "churn_offer_feature_perspectives",
+      "oldText": "Alle KI-Profile (4 vordefiniert + unbegrenzt eigene)",
+      "newText": "Alle 4 vordefinierten KI-Profile + so viele eigene wie du brauchst",
+      "line": 1177
+    },
+    {
+      "findingId": "B4+C3",
+      "key": "onboarding_feature_secure",
+      "oldText": "Deine Daten sind lokal gespeichert, KI-Anfragen sind verschlüsselt",
+      "newText": "Deine Einträge bleiben auf dem Gerät; KI-Anfragen werden verschlüsselt übertragen",
+      "line": 1061
+    },
+    {
+      "findingId": "A1",
+      "key": "ai_prompt_no_dates_rule",
+      "oldText": "Borreliose-/Laufen-Beispielpaare (medizinisch)",
+      "newText": "Postfach- + Bewegung/Überblick-Beispiele (neutral), Datums-Verbots-Funktion erhalten",
+      "line": 808
+    },
+    {
+      "findingId": "A2",
+      "key": "ai_prompt_entropy_intro",
+      "oldText": "Lebensberater; Schmerz, Schlafprobleme; kein Guardrail",
+      "newText": "Ordnungs- und Muster-Analyst; Überforderung, Zeitdruck; + Guardrail (keine med. Ratschläge)",
+      "line": 914
+    },
+    {
+      "findingId": "A3a+B8",
+      "key": "ai_prompt_custom_intro",
+      "oldText": "...Empfehlungen oder neue Informationen verlangt, dann liefere diese AKTIV...",
+      "newText": "...neue Informationen verlangt... Gib dabei KEINE medizinischen, rechtlichen oder finanziellen Diagnosen... (kombiniert A3a-Guardrail + B8-Fix)",
+      "line": 933
+    },
+    {
+      "findingId": "A3b",
+      "key": "ai_prompt_custom_rules",
+      "oldText": "(kein Fachberatungs-Block)",
+      "newText": "+ FACHBERATUNGS-REGEL — KEINE DIAGNOSEN (Auftrags-Regel im bestehenden Stil)",
+      "line": 935
+    },
+    {
+      "findingId": "A3c",
+      "key": "ai_prompt_rerank_system",
+      "oldText": "(kein Guardrail im WICHTIG-Block)",
+      "newText": "+ Bullet: KEINE med./rechtl./finanz. Diagnosen, Verweis auf Fachpersonen",
+      "line": 940
+    },
+    {
+      "findingId": "A4",
+      "key": "profile_entropy_long",
+      "oldText": "Die KI sucht gezielt nach Stress, Belastung und Unordnung... (Bullet-Liste)",
+      "newText": "Die KI findet, was dich im Alltag belastet... 5 konkrete Aufräum-Schritte...",
+      "line": 390
+    },
+    {
+      "findingId": "A5",
+      "key": "ai_prompt_goals_rules",
+      "oldText": "SPRACHREGELN ohne Gesundheits-Guardrail (%1$s erhalten)",
+      "newText": "+ Sprachregel: Bei Gesundheits-/Körperzielen nur motivierend, keine Diät-/Medikamenten-/Therapieempfehlungen",
+      "line": 899
+    },
+    {
+      "findingId": "A6",
+      "key": "ai_prompt_insight_attitude",
+      "oldText": "DEINE HALTUNG ohne Anti-Pathologisierungs-Guardrail",
+      "newText": "+ KEINE psychologischen Diagnosen, keine Störungen/Krankheiten benennen",
+      "line": 905
+    },
+    {
+      "findingId": "C1",
+      "key": "consent_toggle_analytics_body",
+      "oldText": "...Keine persönlichen Inhalte, nur anonyme Klick-Zahlen...",
+      "newText": "...Keine Tagebuchinhalte, nur pseudonyme Nutzungsstatistiken (z. B. Klick-Zahlen)...",
+      "line": 671
+    },
+    {
+      "findingId": "C2",
+      "key": "consent_toggle_analytics_title",
+      "oldText": "Anonyme Nutzungsanalyse",
+      "newText": "Pseudonyme Nutzungsanalyse",
+      "line": 670
+    },
+    {
+      "findingId": "C2",
+      "key": "settings_analytics_title",
+      "oldText": "Anonyme Statistik",
+      "newText": "Pseudonyme Nutzungsanalyse",
+      "line": 728
+    },
+    {
+      "findingId": "C4",
+      "key": "privacy_gate_tts_body",
+      "oldText": "...Kein KI-Training mit deinen Texten...verschlüsselt an Microsoft...",
+      "newText": "...HTTPS/TLS an Microsoft-Sprachdienst USA...ausschließlich zur Sprachsynthese...nach EU-US DPF zertifiziert",
+      "line": 630
+    },
+    {
+      "findingId": "B5+F2",
+      "key": "onboarding_premium_feature_noads",
+      "oldText": "Keine Werbung, ungestört schreiben und reflektieren",
+      "newText": "Ungestört schreiben und reflektieren",
+      "line": 1080
+    },
+    {
+      "findingId": "B5+F2",
+      "key": "paywall_feature_noads",
+      "oldText": "Spreche oder schreibe ungestört, ohne Werbung",
+      "newText": "Ungestört schreiben und reflektieren",
+      "line": 1124
+    },
+    {
+      "findingId": "B6",
+      "key": "paywall_headline_clarity_sub",
+      "oldText": "Die KI erkennt Muster, die dir verborgen bleiben",
+      "newText": "Die KI macht wiederkehrende Muster in deinen Einträgen sichtbar",
+      "line": 1131
+    },
+    {
+      "findingId": "B7",
+      "key": "settings_feedback_dialog_desc",
+      "oldText": "...wir lesen alles und antworten persönlich!",
+      "newText": "...wir lesen jede Nachricht und melden uns so schnell wie möglich.",
+      "line": 527
+    },
+    {
+      "findingId": "D1-string",
+      "key": "paywall_monthly_note",
+      "oldText": "(neu)",
+      "newText": "Verlängert sich automatisch monatlich, jederzeit kündbar (+ Kommentar)",
+      "line": 1493
+    },
+    {
+      "findingId": "D2-comment",
+      "key": "(XML comment ~Z1100)",
+      "oldText": "§ 356 Abs. 5 BGB Sofort-Verzichts-Dialog (M1 Audit v6...) — VOR launchPurchaseFlow",
+      "newText": "Kauf-Bestätigung läuft über das Google-Play-Sheet; Widerrufs-Hinweis via paywall_legal_hint (D1-Fix #1233)",
+      "line": 1100
+    },
+    {
+      "findingId": "X13",
+      "key": "dev_seed_dialog_title, dev_seed_dialog_message, dev_seed_add_action, dev_seed_delete_all_action, dev_seed_cancel_action",
+      "oldText": "(ohne translatable)",
+      "newText": "translatable=\"false\" ergänzt (alle 5)",
+      "line": 1432
+    }
+  ],
+  "skipped": [
+    {
+      "findingId": "A3a (standalone)",
+      "reason": "Mit B8 kombiniert — selber Key ai_prompt_custom_intro. B8-suggestedFix[0] enthält bereits den A3a-Guardrail; einmal angewendet statt doppelt (Konflikt-Auflösung, kein Datenverlust)."
+    }
+  ],
+  "validation": {
+    "xmlValid": true,
+    "umlautCheck": "passed",
+    "formatCheck": "passed"
+  },
+  "bundleBackupPath": ".android-shield/bundle-backups/2026-06-10T22-40-04-FA1_strings_de/app/src/main/res/values",
+  "warnings": [
+    "B7: Zweite 24-Std-Antwortzeit-Zusage in settings_report_ai_confirm_body (Z.639, 'Wir antworten innerhalb von 24 Stunden an Werktagen') NICHT geändert — Plan-instruction nennt nur suggestedFix[0] (Feedback-Dialog). Außerhalb des explizit beauftragten Scopes (FIN-012). Orchestrator/Recht-Worker sollten prüfen, ob diese harte 24-Std-Zusage separat entschärft werden soll.",
+    "C2: consent_card3_title (Z.615, 'Anonyme Statistiken') NICHT geändert — Plan-Key nennt nur Toggle-Titel ~Z670 + Settings-Titel ~Z728. Thematisch verwandt (Analytics-Consent-Card); falls Konsistenz gewünscht, separat beauftragen.",
+    "Krisen-Hotline-Strings (Z.770/772, 'anonyme Hilfe'/'anonym') bewusst NICHT geändert — dort ist 'anonym' inhaltlich korrekt (echte anonyme Krisenhilfe), kein Analytics-Bezug.",
+    "B7-Text behält den Em-Dash (—) aus dem Original/suggestedFromWorker bei (Frank-bestätigt)."
+  ],
+  "plugin_bugs_observed": []
+}

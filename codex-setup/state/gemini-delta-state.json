@@ -1,0 +1,25 @@
+{
+  "version": 1,
+  "bridge_id": "gemini-delta",
+  "bridge_registry_path": "codex-setup/bridges/bridge-registry.json",
+  "scope": "gemini-environment-only",
+  "tracked_paths": [
+    "gemini-setup/**",
+    "gemini-setup/shared/MEMORY.md",
+    "gemini-setup/state/implemented-intelligence-suggestions.json"
+  ],
+  "tracked_git_paths": [
+    "gemini-setup"
+  ],
+  "replace_requires_confirmation": true,
+  "additive_bias": true,
+  "last_reviewed_commit": "570f9a9fe0f30b5d06daee35361269685246d38f",
+  "last_applied_commit": null,
+  "last_reviewed_at": "2026-05-15T19:45:37.077Z",
+  "last_applied_at": null,
+  "notes": "Tracks only Gemini programming-environment deltas for Codex.",
+  "last_checked_commit": "570f9a9fe0f30b5d06daee35361269685246d38f",
+  "last_checked_date": "2026-05-15T19:45:37.077Z",
+  "initialized": true,
+  "note": "Initialized baseline after Codex-native delta bridge port on 2026-05-15. Use --all to inspect historical deltas."
+}

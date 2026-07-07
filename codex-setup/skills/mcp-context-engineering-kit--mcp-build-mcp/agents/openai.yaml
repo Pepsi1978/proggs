@@ -1,0 +1,7 @@
+interface:
+  display_name: "mcp:build-mcp"
+  short_description: "creating high-quality MCP (Model Context Protocol) servers that"
+  default_prompt: "Use $mcp-context-engineering-kit--mcp-build-mcp for this task."
+
+policy:
+  allow_implicit_invocation: false

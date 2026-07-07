@@ -1,0 +1,7 @@
+interface:
+  display_name: "cargo-fuzz"
+  short_description: "cargo-fuzz skill"
+  default_prompt: "Use $testing-handbook-skills-trailofbits--cargo-fuzz for this task."
+
+policy:
+  allow_implicit_invocation: false

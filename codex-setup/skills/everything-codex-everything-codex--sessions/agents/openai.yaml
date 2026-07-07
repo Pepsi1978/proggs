@@ -1,0 +1,7 @@
+interface:
+  display_name: "sessions"
+  short_description: "sessions"
+  default_prompt: "Use $everything-codex-everything-codex--sessions for this task."
+
+policy:
+  allow_implicit_invocation: false

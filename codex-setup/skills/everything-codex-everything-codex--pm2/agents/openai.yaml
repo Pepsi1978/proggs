@@ -1,0 +1,7 @@
+interface:
+  display_name: "pm2"
+  short_description: "pm2 skill"
+  default_prompt: "Use $everything-codex-everything-codex--pm2 for this task."
+
+policy:
+  allow_implicit_invocation: false

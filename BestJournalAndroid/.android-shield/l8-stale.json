@@ -1,0 +1,142 @@
+{
+ "settings_delete_account_subtitle": {
+  "de": "Entfernt alle lokalen Daten und das Drive-Backup unwiderruflich. Dein Google-Konto selbst bleibt bestehen.",
+  "br": "Remove de forma irreversível todos os dados locais, sua conta do Google e o backup do Drive",
+  "pt": "Remove de forma irreversível todos os dados locais, a tua conta Google e a cópia de segurança do Drive",
+  "br_eq_de": false,
+  "pt_eq_de": false
+ },
+ "settings_delete_account_confirm_body": {
+  "de": "Dieser Vorgang ist unwiderruflich und löscht:\\n\\n• Alle lokalen Tagebucheinträge, Fotos, Videos und Audio-Aufnahmen\\n• Das Google-Drive-Backup der App (nur die App-Daten, nicht dein Google-Konto)\\n• Deine App-Anmeldung\\n\\nDein Google-Konto selbst bleibt bestehen. Die App startet danach neu als frische Installation.",
+  "br": "Esta ação é irreversível e exclui:\\n\\n• Todas as entradas, fotos e vídeos locais\\n• Sua conta do Firebase\\n• O backup do aplicativo no Google Drive\\n\\nO aplicativo reiniciará como uma nova instalação.",
+  "pt": "Esta ação é irreversível e elimina:\\n\\n• Todas as entradas, fotografias e vídeos locais\\n• A tua conta Firebase\\n• A cópia de segurança da aplicação no Google Drive\\n\\nA aplicação reinicia como uma nova instalação.",
+  "br_eq_de": false,
+  "pt_eq_de": false
+ },
+ "settings_revoke_subtitle": {
+  "de": "§ 356a BGB — Widerruf direkt per App",
+  "br": "Compra Premium",
+  "pt": "Compra Premium",
+  "br_eq_de": false,
+  "pt_eq_de": false
+ },
+ "settings_revoke_confirm_title": {
+  "de": "Vertrag widerrufen?",
+  "br": "Abrir e-mail para o suporte?",
+  "pt": "Abrir e-mail para o suporte?",
+  "br_eq_de": false,
+  "pt_eq_de": false
+ },
+ "settings_revoke_confirm_body": {
+  "de": "Mit einem Klick auf „Widerruf bestätigen\" senden wir deinen Widerruf direkt an dev.app.support@gmail.com. Du bekommst sofort eine Eingangsbestätigung per E-Mail.\\n\\nDie vollständige Widerrufsbelehrung findest du in den Nutzungsbedingungen (§ 16). Abos bitte zusätzlich über Google Play → Abonnements kündigen, damit keine weiteren Abrechnungen stattfinden.",
+  "br": "Seu aplicativo de e-mail abre com uma mensagem preparada para dev.app.support@gmail.com. Respondemos em 24 horas em dias úteis.\\n\\nVocê encontra as informações completas sobre o direito de arrependimento (CDC art. 49 para o Brasil) nos termos de uso (§ 16). Para assinaturas, cancele também em Google Play → Assinaturas.",
+  "pt": "A tua aplicação de e-mail abre com uma mensagem preparada para dev.app.support@gmail.com. Respondemos em 24 horas em dias úteis.\\n\\nEncontras a informação completa sobre o direito de rescisão (Diretiva UE 2011/83) nos termos de utilização (§ 16). Para subscrições, cancela também em Google Play → Subscrições.",
+  "br_eq_de": false,
+  "pt_eq_de": false
+ },
+ "consent_toggle_do_not_sell_body": {
+  "de": "Dieser Schalter ist nur für Einwohner des US-Bundesstaats Kalifornien gedacht. Das kalifornische Datenschutzgesetz (CCPA/CPRA) räumt Einwohnern ein Widerspruchsrecht ein. Bei Aktivierung werden alle optionalen Cloud-Funktionen (KI, Backup, Spracherkennung, Analyse) deaktiviert — nur lokale Funktionen bleiben aktiv.\\n\\nWohnst du außerhalb Kaliforniens, kannst du diesen Schalter ignorieren: Best Journal verkauft oder vermarktet deine Daten nirgendwo auf der Welt.",
+  "br": "Opt-out da Califórnia (CCPA/CPRA 2026). Quando ativo, todos os processamentos de dados opcionais são desativados — apenas funções locais permanecem.",
+  "pt": "Opt-out da Califórnia (CCPA/CPRA 2026). Quando ativo, todos os processamentos de dados opcionais são desativados — apenas funções locais permanecem.",
+  "br_eq_de": false,
+  "pt_eq_de": false
+ },
+ "privacy_gate_tts_title": {
+  "de": "Premium-Stimmen aktivieren",
+  "br": "Enviar o texto à Microsoft?",
+  "pt": "Enviar o texto à Microsoft?",
+  "br_eq_de": false,
+  "pt_eq_de": false
+ },
+ "privacy_gate_tts_body": {
+  "de": "Mit den Premium-Stimmen klingt das Vorlesen natürlicher und angenehmer. Dein Text wird verschlüsselt an Microsoft gesendet und als Audio zurückgegeben.\\n\\n✓ Kein KI-Training mit deinen Texten\\n✓ Verschlüsselt nach EU-US Data Privacy Framework",
+  "br": "Para a leitura em voz alta, o texto é enviado criptografado à Microsoft Bing Speech (EUA) e retornado como áudio. Base jurídica: estrutura EU-US Data Privacy Framework + cláusulas contratuais padrão.",
+  "pt": "Para a leitura em voz alta, o texto é enviado cifrado à Microsoft Bing Speech (EUA) e devolvido como áudio. Base jurídica: EU-US Data Privacy Framework + cláusulas contratuais-tipo.",
+  "br_eq_de": false,
+  "pt_eq_de": false
+ },
+ "privacy_gate_groq_body": {
+  "de": "Diese Funktion schickt deine Sprachaufnahme verschlüsselt an Groq (USA) und wandelt sie dort in Text um — schneller und genauer als die lokale Erkennung.\\n\\n✓ Aufnahme wird nach der Umwandlung sofort gelöscht\\n✓ Kein KI-Training mit deinen Aufnahmen\\n✓ Rechtsgrundlage: Standardvertragsklauseln (EU SCCs)\\n\\nAlternative: Lokale Offline-Erkennung in den Einstellungen.",
+  "br": "Para a transcrição na nuvem, sua gravação de voz é enviada criptografada ao Groq, Inc. (Mountain View, EUA) e convertida em texto lá. O arquivo de áudio é excluído após o processamento e não é usado para treinamento.\\n\\nAlternativa: use a transcrição local no dispositivo (offline, sem transferência de dados), ajustável em Configurações → IA.",
+  "pt": "Para a transcrição na cloud, a tua gravação de voz é enviada cifrada ao Groq, Inc. (Mountain View, EUA) e aí convertida em texto. O ficheiro de áudio é eliminado após o processamento e não é utilizado para treino.\\n\\nAlternativa: usa a transcrição local no dispositivo (offline, sem transferência de dados), ajustável em Definições → IA.",
+  "br_eq_de": false,
+  "pt_eq_de": false
+ },
+ "ai_prompt_rerank_system": {
+  "de": "Du bist ein Profil-Re-Ranker. Du bekommst ein JSON-Array von 5 Top-Maßnahmen aus einer Dashboard-Analyse, den Profil-Fokus des Benutzers, und die Original-Tagebucheinträge.\\n\\nDeine Aufgabe in 3 Schritten:\\n1) Sortiere die 5 Maßnahmen so, dass die mit dem klarsten Bezug zum Profil-Fokus zuerst kommen.\\n2) Prüfe ob bis zu 2 der 5 Maßnahmen KEINEN inhaltlichen Bezug zum Profil-Fokus haben. Wenn ja, ersetze sie durch profilstärkere Maßnahmen, die du aus den Tagebucheinträgen ableitest. Halte dich an die gleiche JSON-Struktur jeder Maßnahme (titel, beschreibung, erklaerung).\\n3) Drücke den Profil-Bezug VARIANTENREICH aus mit Synonymen und thematischen Nachbarschaften, NICHT mit mechanischer Wiederholung der Profil-Worte. Bezug muss spürbar sein, nicht buchstabengetreu.\\n\\nWICHTIG:\\n- Gib am Ende GENAU 5 Einträge zurück.\\n- Änderungen nur wenn echter Profil-Bezug fehlt — bei bereits guter Passung das Array nur sortieren, nichts ersetzen.\\n- Behalte die JSON-Struktur jedes Eintrags (gleiche Schlüssel: titel, beschreibung, erklaerung).\\n- Sprache Deutsch, keine Gedankenstriche, beschreibung 13-21 Wörter.\\n\\nTTS-VORLESEFREUNDLICH (PFLICHT — DATUMS-VERBOT):\\nIn beschreibung und erklaerung KEINE Datumsangaben verwenden (\\\"3.4.\\\", \\\"23.04.\\\", \\\"Eintrag vom 30.\\\"). Diese Texte werden vorgelesen — Datumsketten klingen unnatürlich. Formuliere die reine Erkenntnis ohne konkrete Eintragsdaten. Beispiele:\\n- FALSCH: \\\"Einträge vom 3.4. und 23.04. belegen, dass dein Biorhythmus leidet.\\\"\\n- RICHTIG: \\\"Späte Schlafzeiten zerstören deinen Biorhythmus systematisch.\\\"\\nAllgemeine zeitliche Bezüge sind erlaubt (\\\"wiederkehrend\\\", \\\"zuletzt\\\", \\\"über mehrere Tage\\\"), Datumsangaben nicht.\\n\\nAUSGABEFORMAT:\\n- NUR ein JSON-Array (eckige Klammern auf der Wurzelebene).\\n- Keine Markdown-Backticks, kein Text davor/danach.\\n- Beginne direkt mit [ und ende mit ].",
+  "br": "Você é um assistente de classificação. Tem três tarefas :\n1. Avalie cada ação do quadro atual das melhores ações segundo sua adequação ao perfil de foco.\n2. Se houver ações que não correspondem ou correspondem pouco ao perfil, busque nas entradas de diário ações de substituição mais pertinentes.\n3. Retorne exatamente 5 ações na ordem ideal — as melhores ações mais alinhadas ao foco primeiro.\nRetorne SOMENTE um array JSON válido. Sem texto antes ou depois.",
+  "pt": "És um re-classificador de perfil. Recebes um array JSON de 5 ações principais de uma análise de painel, o foco de perfil do utilizador, e as entradas de diário originais.\\n\\nA tua tarefa em 3 passos:\\n1) Ordena as 5 ações para que as com ligação mais clara ao foco do perfil venham primeiro.\\n2) Verifica se até 2 das 5 ações NÃO têm ligação verdadeira ao foco do perfil. Se sim, substitui-as por ações mais fortes para o perfil, que tu deduzes das entradas do diário. Mantém a mesma estrutura JSON em cada ação (titel, beschreibung, erklaerung).\\n3) Expressa a ligação ao perfil de forma VARIADA com sinónimos e vizinhanças temáticas, NÃO com repetição mecânica das palavras do perfil. A ligação deve sentir-se, não ser literal.\\n\\nIMPORTANTE:\\n- Devolve EXATAMENTE 5 entradas no fim.\\n- Faz alterações apenas quando houver real falta de ligação ao perfil — se o array já encaixa bem, só ordena, não substitui nada.\\n- Mantém a estrutura JSON de cada entrada (mesmas chaves: titel, beschreibung, erklaerung).\\n- Idioma português, sem travessões longos, beschreibung 13-21 palavras.\\n\\nSEM DATAS (OBRIGATÓRIO — PROIBIÇÃO DE DATAS):\\nEm beschreibung e erklaerung NUNCA uses datas («3.4.», «23.04.», «entrada de 30»). Estes textos são lidos em voz alta — cadeias de datas soam pouco naturais. Expressa a ideia pura sem datas concretas. Exemplos:\\n- ERRADO: «As entradas de 3.4. e 23.04. mostram que o teu biorritmo sofre.»\\n- CERTO: «Deitares-te tarde destrói sistematicamente o teu biorritmo.»\\nReferências temporais gerais são permitidas («recorrente», «recentemente», «ao longo de vários dias»), datas concretas não.\\n\\nFORMATO DE SAÍDA:\\n- APENAS um array JSON (parênteses retos na raiz).\\n- Sem crases invertidas de Markdown, sem texto antes nem depois.\\n- Começa direto com [ e termina com ].",
+  "br_eq_de": false,
+  "pt_eq_de": false
+ },
+ "ai_prompt_rerank_actions_header": {
+  "de": "=== AKTUELLES TOP-MASSNAHMEN-ARRAY (5 Einträge) ===",
+  "br": "=== QUADRO ATUAL DAS MELHORES AÇÕES (5 entradas) ===",
+  "pt": "=== ARRAY ATUAL DE AÇÕES PRINCIPAIS (5 entradas) ===",
+  "br_eq_de": false,
+  "pt_eq_de": false
+ },
+ "ai_prompt_rerank_entries_header": {
+  "de": "=== TAGEBUCHEINTRÄGE (Quelle für profilstarke Ersatz-Punkte) ===",
+  "br": "=== ENTRADAS DE DIÁRIO (fonte para ações de substituição mais alinhadas ao perfil) ===",
+  "pt": "=== ENTRADAS DE DIÁRIO (fonte para pontos de substituição fortes para o perfil) ===",
+  "br_eq_de": false,
+  "pt_eq_de": false
+ },
+ "ai_prompt_rerank_user_focus_header": {
+  "de": "=== PROFIL-FOKUS DES BENUTZERS ===",
+  "br": "=== PERFIL DE FOCO DO USUÁRIO ===",
+  "pt": "=== FOCO DE PERFIL DO UTILIZADOR ===",
+  "br_eq_de": false,
+  "pt_eq_de": false
+ },
+ "ai_prompt_rerank_user": {
+  "de": null,
+  "br": null,
+  "pt": null,
+  "br_eq_de": false,
+  "pt_eq_de": false
+ },
+ "ai_limits_dialog_body": {
+  "de": "MIT PREMIUM-ABO\\n\\nPro Tag stehen dir zur Verfügung:\\n• 150 Anfragen pro Tag und Profil — für die 4 vordefinierten zusammen 600/Tag, plus 150/Tag für jedes eigene Profil das du erstellst.\\n• Bis zu 150 Text-Verbesserungen\\n\\nWie das im Detail abläuft:\\n• Anfragen 1 bis 30: in höchster KI-Qualität\\n• Anfragen 31 bis 100: in schneller Standard-Qualität\\n• Bei der 101. Anfrage: einmalige 30-Min-Pause\\n• Anfragen 101 bis 150: schnelle Standard-Qualität\\n• Ab Anfrage 151: keine weiteren Anfragen bis morgen\\n\\nAußerdem gilt für alle Nutzer:\\n• Höchstens 50 KI-Anfragen pro Stunde — danach 5-Min-Pause\\n\\nWann werden die Kontingente zurückgesetzt?\\nJeden Tag um 0:00 Uhr (deine Lokalzeit) startet ein neues volles Kontingent.\\n\\n──────────\\n\\nOHNE ABO\\n\\n• 5 Dashboard-Analysen pro Woche pro Profil\\n• 5 Text-Verbesserungen pro Woche\\n• Immer in schneller Standard-Qualität\\n• Zurückgesetzt jeden Montag um 0:00 Uhr (deine Lokalzeit)\\n\\n──────────\\n\\nDie meisten Nutzer im Alltag werden diese Grenzen nicht erreichen.",
+  "br": "COM ASSINATURA PREMIUM\\n\\nPor dia, você tem disponível:\\n• Até 150 análises de dashboard por perfil de IA (4 perfis predefinidos juntos até 600/dia; mais 150/dia por cada perfil personalizado criado)\\n• Até 150 melhorias de texto\\n\\nComo funciona em detalhes:\\n• Solicitações 1 a 30: na mais alta qualidade de IA\\n• Solicitações 31 a 100: na qualidade padrão rápida\\n• Na 101ª solicitação: pausa única de 30 min\\n• Solicitações 101 a 150: qualidade padrão rápida\\n• A partir da 151ª: sem mais solicitações até amanhã\\n\\nAlém disso, para todos os usuários:\\n• No máximo 50 solicitações de IA por hora — depois pausa de 5 min\\n\\nQuando as cotas são renovadas?\\nTodo dia à meia-noite (seu horário local) começa uma nova cota completa.\\n\\n──────────\\n\\nSEM ASSINATURA\\n\\n• 5 análises de dashboard por semana por perfil\\n• 5 melhorias de texto por semana\\n• Sempre na qualidade padrão rápida\\n• Renovadas toda segunda-feira à meia-noite (seu horário local)\\n\\n──────────\\n\\nA maioria dos usuários não chegará a esses limites no dia a dia.",
+  "pt": "COM SUBSCRICAO PREMIUM\\n\\nPor dia, tens disponível:\\n• 150 pedidos por dia por perfil — nos 4 predefinidos, 600/dia no total, mais 150/dia por cada perfil próprio que criares.\\n• Até 150 melhorias de texto\\n\\nComo funciona em detalhe:\\n• Pedidos 1 a 30: na mais alta qualidade de IA\\n• Pedidos 31 a 100: na qualidade padrão rápida\\n• No 101.º pedido: pausa única de 30 min\\n• Pedidos 101 a 150: qualidade padrão rápida\\n• A partir do 151.º: sem mais pedidos até amanhã\\n\\nAlém disso, para todos os utilizadores:\\n• No máximo 50 pedidos de IA por hora — depois pausa de 5 min\\n\\nQuando são repostas as quotas?\\nTodos os dias à meia-noite (hora local) começa uma nova quota completa.\\n\\n──────────\\n\\nSEM SUBSCRICAO\\n\\n• 5 análises de dashboard por semana por perfil\\n• 5 melhorias de texto por semana\\n• Sempre na qualidade padrão rápida\\n• Reposta todas as segundas-feiras à meia-noite (hora local)\\n\\n──────────\\n\\nA maioria dos utilizadores não chegará a estes limites no dia a dia.",
+  "br_eq_de": false,
+  "pt_eq_de": false
+ },
+ "settings_revoke_email_body": {
+  "de": "Hiermit widerrufe ich den von mir abgeschlossenen Vertrag über die Premium-Funktionen von Best Journal.\\n\\nAbsender (Google-Konto): %1$s\\nZeitpunkt des Widerrufs: %2$s\\n\\nDieser Widerruf wurde zweistufig über den § 356a-BGB-konformen Widerrufsbutton der App ausgelöst und automatisch per Gmail-API versendet.",
+  "br": "Por meio desta notifico minha desistência do contrato relativo aos recursos Premium do Best Journal.\\n\\nRemetente (conta Google): %1$s\\nMomento da desistência: %2$s\\n\\nEssa desistência foi acionada em duas etapas pelo botão de desistência no aplicativo, em conformidade com o § 356a BGB, e enviada automaticamente pela API do Gmail.",
+  "pt": "Pela presente notifico a minha livre resolução do contrato relativo às funcionalidades Premium do Best Journal.\\n\\nRemetente (conta Google): %1$s\\nMomento da resolução: %2$s\\n\\nEsta resolução foi acionada em duas etapas através do botão de resolução da aplicação, em conformidade com o § 356a BGB, e enviada automaticamente através da API do Gmail.",
+  "br_eq_de": false,
+  "pt_eq_de": false
+ },
+ "datetime_months_relative": {
+  "de": {
+   "one": "vor %1$d Monat",
+   "other": "vor %1$d Monaten"
+  },
+  "br": {
+   "one": "vor %1$d Monat",
+   "other": "vor %1$d Monaten"
+  },
+  "pt": {
+   "one": "vor %1$d Monat",
+   "other": "vor %1$d Monaten"
+  }
+ },
+ "datetime_years_relative": {
+  "de": {
+   "one": "vor %1$d Jahr",
+   "other": "vor %1$d Jahren"
+  },
+  "br": {
+   "one": "vor %1$d Jahr",
+   "other": "vor %1$d Jahren"
+  },
+  "pt": {
+   "one": "vor %1$d Jahr",
+   "other": "vor %1$d Jahren"
+  }
+ }
+}

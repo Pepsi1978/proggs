@@ -1,0 +1,7 @@
+interface:
+  display_name: "clickhouse-io"
+  short_description: "ClickHouse database patterns, query optimization, analytics"
+  default_prompt: "Use $everything-codex-everything-codex--clickhouse-io for this task."
+
+policy:
+  allow_implicit_invocation: false

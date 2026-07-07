@@ -1,0 +1,7 @@
+interface:
+  display_name: "mcp:setup-arxiv-mcp"
+  short_description: "setup arXiv paper search MCP server using Docker MCP"
+  default_prompt: "Use $mcp-context-engineering-kit--mcp-setup-arxiv-mcp for this task."
+
+policy:
+  allow_implicit_invocation: false

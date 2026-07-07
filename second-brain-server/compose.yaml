@@ -1,0 +1,283 @@
+# Second Brain — Docker-Compose-Stack (Hostinger VPS, Franks selbst gehostetes Gehirn)
+# Doku/Plan: best-practices/second-brain/UMSETZUNGSPLAN.md
+# Sicherheitsprinzip: ALLE Dienste nur an 127.0.0.1 (kein offener Port ausser SSH;
+# der externe Zugang kommt spaeter ueber Reverse-Proxy/VPN).
+#
+# Stack:  brain-api (1:1-Speicher, Ordner brain-api)  ->  Qdrant (Such-Schrank)
+#         Nur Gemini-Embeddings (Cloud) zum Wiederfinden — KEIN LLM/mem0 mehr (Text 1:1 rein/raus).
+#         (Ollama/BGE-M3 wurde am 2026-06-22 entfernt: Datenabfluss ist egal -> Cloud-KI
+#          ist schneller/besser und entlastet den kleinen 8-GB-Server.)
+
+# Docker-Log-Rotation (Tiefen-Debugging Performance 2026-07-02, bugs/server/docker.md §6):
+# der json-file-Default rotiert NICHT — ohne Limits wachsen /var/lib/docker/containers/*-json.log
+# unbegrenzt, bis die Root-Disk voll ist (dann sterben Container UND Host-Dienste). 10 MB x 3 je
+# Dienst reicht fuer Tage an JSON-Logs; die App-Logs liegen zusaetzlich rotierend in den
+# jeweiligen Log-Dateien (brain-logs/, agent logs/). Greift je Container ab der NAECHSTEN
+# Neu-Erstellung (compose up -d --build beim Deploy).
+x-sb-logging: &sb-logging
+  driver: json-file
+  options:
+    max-size: "10m"
+    max-file: "3"
+
+services:
+  qdrant:
+    image: qdrant/qdrant:v1.18.2     # gepinnt: Reproduzierbarkeit + Security (1.18.1/1.18.2 buendelt Snapshot-Upload-Auth #9031, gRPC-Auth #8676, Snapshot-Restore-von-URL abschaltbar #8628, TLS-Deps #8619). Siehe bugs/server/qdrant.md §6.
+    container_name: sb-qdrant
+    logging: *sb-logging
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:6333:6333"        # REST-API — NUR lokal erreichbar
+      - "127.0.0.1:6334:6334"        # gRPC    — NUR lokal erreichbar
+    volumes:
+      - ./qdrant-data:/qdrant/storage
+    environment:
+      QDRANT__SERVICE__API_KEY: ${QDRANT_API_KEY}   # aus .env (NICHT im Repo)
+      QDRANT__TELEMETRY_DISABLED: "true"
+    deploy:
+      resources:
+        limits:
+          memory: 2G                 # harte Obergrenze (RAM-Schutz, OOM-Vermeidung)
+          cpus: "1.5"
+        reservations:
+          memory: 512M               # weiche Garantie
+          cpus: "0.5"
+    # Healthcheck bewusst extern (curl vom Host) statt Container-intern —
+    # das Qdrant-Image bringt keine garantierte Shell/curl mit.
+
+  brain-api:
+    build: ./brain-api              # schlanker FastAPI-1:1-Speicher (Text 1:1 rein/raus, keine KI im Speicher)
+    container_name: sb-brain-api
+    logging: *sb-logging
+    restart: unless-stopped
+    depends_on:
+      - qdrant
+    ports:
+      # An die WireGuard-IP gebunden -> NUR ueber den VPN-Tunnel erreichbar, NIE oeffentlich.
+      # Bewusst NICHT 0.0.0.0 (Docker-UFW-Falle: published 0.0.0.0-Ports umgehen UFW).
+      # Boot-Reihenfolge: docker.service startet nach wg-quick@wg0 (systemd-drop-in auf dem Server),
+      # zusaetzlich restart:unless-stopped als Selbstheilung, falls wg0 spaeter kommt.
+      - "10.8.0.1:8000:8000"
+    env_file:
+      - .env                          # GEMINI_API_KEY / QDRANT_API_KEY / SB_API_KEY (NICHT im Repo)
+    environment:
+      QDRANT_HOST: qdrant             # Service-Name im Compose-Netz (DNS-aufloesbar)
+      QDRANT_PORT: "6333"
+      SB_COLLECTION: brain            # frische Collection fuer den 1:1-Speicher (alt: second_brain unter mem0)
+      SB_EMBED_DIMS: "1536"           # gemini-embedding-001 @ 1536 (MUSS zur Qdrant-Collection passen)
+      GEMINI_EMBED_MODEL: gemini-embedding-001   # nur Embeddings; KEIN LLM mehr beim Speichern (1:1)
+      SB_LOG_PATH: /app/logs/brain-api.jsonl
+    volumes:
+      - ./brain-logs:/app/logs        # Logs persistent + vom Host tailbar (Observability-First)
+      - ./brain-data:/app/data        # Papierkorb (trash.json) persistent — Host-Ordner muss uid 10001 gehoeren (bugs/server/docker.md §4)
+    deploy:
+      resources:
+        limits:
+          memory: 1G                 # schlank: keine lokalen Modelle (Embeddings/LLM in der Cloud), Speicher 1:1
+          cpus: "1.0"
+        reservations:
+          memory: 256M
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request,sys; sys.exit(0 if urllib.request.urlopen('http://127.0.0.1:8000/health',timeout=5).status==200 else 1)"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+  mcp:
+    build: ./mcp-server             # MCP-Server: macht das Gehirn als MCP-Werkzeuge verfuegbar
+    container_name: sb-mcp          # (remember / recall / list_memories / brain_health)
+    logging: *sb-logging
+    restart: unless-stopped
+    depends_on:
+      - brain-api
+    ports:
+      # An die WireGuard-IP gebunden -> NUR ueber den VPN-Tunnel erreichbar (wie brain-api).
+      # Bewusst NICHT 0.0.0.0 auf dem HOST (Docker-UFW-Falle). host=0.0.0.0 gilt nur INNERHALB
+      # des Containers; Docker published den Port ausschliesslich an 10.8.0.1.
+      - "10.8.0.1:8001:8001"
+    env_file:
+      - .env                        # SB_API_KEY (Bearer fuer die brain-api)
+    environment:
+      BRAIN_URL: http://brain-api:8000  # interner Compose-DNS-Name des Gehirns
+      SB_USER_ID: frank
+      MCP_HOST: "0.0.0.0"               # im Container; deaktiviert DNS-Rebinding-Schutz -> 10.8.0.1 erreichbar
+      MCP_PORT: "8001"
+    deploy:
+      resources:
+        limits:
+          memory: 256M
+          cpus: "0.5"
+        reservations:
+          memory: 64M
+    healthcheck:
+      # Schlanker TCP-Port-Check (der /mcp-Endpoint braucht einen MCP-Handshake — kein simpler GET).
+      test: ["CMD", "python", "-c", "import socket,sys; s=socket.socket(); s.settimeout(3); sys.exit(s.connect_ex(('127.0.0.1',8001)))"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 20s
+
+  agent:
+    build: ./agent                  # Bibliothekar-Agent (Schicht 3, Speicher-Seite): Text rein/raus, einordnen + 1:1-Speichern + Logbuch
+    container_name: sb-agent
+    logging: *sb-logging
+    restart: unless-stopped
+    depends_on:
+      - brain-api
+    ports:
+      # An die WireGuard-IP gebunden -> NUR ueber den VPN-Tunnel erreichbar (wie brain-api/mcp).
+      - "10.8.0.1:8002:8002"
+    env_file:
+      - .env                        # GEMINI_API_KEY / SB_API_KEY / OPENCODE_API_KEY / TAVILY_API_KEY (Internet-Suche) — NICHT im Repo
+    environment:
+      BRAIN_URL: http://brain-api:8000     # interner Compose-DNS-Name des Gehirns
+      SB_USER_ID: frank
+      AGENT_MODEL: gemini-3.1-flash-lite   # Env-Default; aktive Wahl per Dashboard (auch minimax/minimax-m3)
+      # OPENCODE_API_KEY kommt aus .env via env_file (OpenCode Zen Go fuer minimax/minimax-m3, Anthropic
+      # /messages-Schema). OPENCODE_GO_URL/OPENCODE_ANTHROPIC_VERSION haben Code-Defaults — nur bei Bedarf setzen.
+      AGENT_SESSION_TIMEOUT_MIN: "30"      # 30 min Inaktivitaet -> Logbuch
+      AGENT_LOGBOOK_DIR: /logbook
+      AGENT_TZ: Europe/Berlin
+      AGENT_LOG_PATH: /app/logs/agent.jsonl
+      AGENT_DATA_DIR: /app/data            # persistente, vom Dashboard editierbare Einstellungen
+      AGENT_EVAL_LOGS_DIR: /eval-logs      # Eval-Check-Logs auf Z (Backup + 14-Tage-Retention)
+    volumes:
+      # Logbuch-.txt landet auf der Samba-Platte Gedanken (= Franks Z:). Ordner gehoert frank (uid 1000),
+      # der Container laeuft als uid 1000 -> Dateien gehoeren frank, sauber ueber Samba verwaltbar.
+      - /srv/samba/gedanken/Logbuch:/logbook
+      # Eval-Check-Logs (Markdown) auf der Samba-Platte Z -> automatisch im Backup, 14 Tage Retention.
+      # Bind-Mount-uid == Container-uid 1000 (docker.md §4): Host-Ordner muss frank (1000) gehoeren -> chown beim Deploy.
+      - /srv/samba/gedanken/Eval-Logs:/eval-logs
+      # System-Prompt (prompt.txt) + Modell-Wahl (config.json) — ueberleben Neustart/Rebuild.
+      # Host-Ordner muss uid 1000 gehoeren (chown beim Deploy), da der Container als uid 1000 schreibt.
+      - ./agent-data:/app/data
+      # Forensisches Voll-Log (AGENT_LOG_PATH=/app/logs/agent.jsonl): ALLE _log-Eintraege, Fehler,
+      # checkpoints — mehr als die Turn-Ebene. OHNE dieses Volume ging es bei JEDEM Rebuild verloren
+      # (nur ~274 Zeilen ab dem letzten Build; die Star-Trek-Evidenz war nur durch Glueck noch da).
+      # Bind-Mount-uid == Container-uid 1000 (docker.md §4): Host-Ordner muss frank (1000) gehoeren -> chown beim Deploy.
+      - ./agent-logs:/app/logs
+    deploy:
+      resources:
+        limits:
+          memory: 512M
+          cpus: "1.0"
+        reservations:
+          memory: 128M
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request,sys; sys.exit(0 if urllib.request.urlopen('http://127.0.0.1:8002/health',timeout=5).status==200 else 1)"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 30s
+
+  librarian:
+    build: ./librarian              # Nachtschicht-Bibliothekar (Sleep-Time-Agent): raeumt nachts auf, schreibt NUR Vorschlaege
+    container_name: sb-librarian
+    logging: *sb-logging
+    restart: unless-stopped
+    depends_on:
+      - brain-api
+    ports:
+      # An die WireGuard-IP gebunden -> NUR ueber den VPN-Tunnel erreichbar (wie brain-api/agent).
+      - "10.8.0.1:8004:8004"
+    env_file:
+      - .env                        # GEMINI_API_KEY / SB_API_KEY / OPENCODE_API_KEY (NICHT im Repo)
+    environment:
+      BRAIN_URL: http://brain-api:8000   # interner Compose-DNS-Name des Gehirns
+      AGENT_URL: http://agent:8002       # LLM-Durchgriff fuer Codex/GPT (agent /llm, 0.52.0)
+      SB_USER_ID: frank
+      LIB_TZ: Europe/Berlin
+      LIB_DATA_DIR: /app/data            # Config + State + Tages-Reports (persistent)
+      LIB_LOG_PATH: /app/logs/librarian.jsonl
+      LIB_BACKUP_STATUS: /gedanken/.gdrive-backup-status.json   # Host-Backup-Status (nur lesen)
+    volumes:
+      # Config/State/Reports ueberleben Neustart/Rebuild. Host-Ordner muss uid 1000 gehoeren
+      # (chown beim Deploy — Container laeuft als uid 1000, bugs/server/docker.md §4).
+      - ./librarian-data:/app/data
+      - ./librarian-logs:/app/logs
+      # Z-Wurzel NUR LESEN: Backup-Statusdatei checken, bevor der Nachtlauf startet.
+      - /srv/samba/gedanken:/gedanken:ro
+    deploy:
+      resources:
+        limits:
+          memory: 512M
+          cpus: "1.0"
+        reservations:
+          memory: 128M
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request,sys; sys.exit(0 if urllib.request.urlopen('http://127.0.0.1:8004/health',timeout=5).status==200 else 1)"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 30s
+
+  dashboard:
+    build: ./dashboard              # privates Web-Cockpit: Uebersicht (Gedaechtnis-Spektrum + Server-Stats), Gehirn-Browser; Dark/Light
+    container_name: sb-dashboard
+    logging: *sb-logging
+    restart: unless-stopped
+    depends_on:
+      - brain-api
+    ports:
+      - "10.8.0.1:8003:8003"        # nur ueber WireGuard erreichbar (privat)
+    env_file:
+      - .env                        # SB_API_KEY (intern) + GROQ_API_KEY (Mikrofon-STT, NICHT im Repo)
+    environment:
+      BRAIN_URL: http://brain-api:8000
+      AGENT_URL: http://agent:8002
+      LIBRARIAN_URL: http://librarian:8004   # Nachtschicht-Bibliothekar (Proxy /api/lib/*)
+      SB_USER_ID: frank
+      DASH_HOSTFS: /hostfs
+      DASH_LOGBOOK_DIR: /logbook        # Logbuch-.txt-Protokolle anzeigen (gleicher Ordner wie der agent schreibt)
+      DASH_BACKUP_DIR: /control         # Steuer-Verzeichnis (dashboard-schreibbar): Backup-Status lesen + Trigger-/Login-Flags schreiben
+      DASH_BACKUP_ROOT: /gedanken       # komplettes Z-Backup (read-only) -> Inhalts-Liste "was liegt im Drive-Backup"
+      DASH_FEATURES_FILE: /app/data/features.json  # bearbeitbare System-Info-Chronik persistent speichern
+      # GROQ_API_KEY kommt aus .env via env_file (Groq whisper-large-v3-turbo fuer den Mikrofon-Button).
+    volumes:
+      - /opt/second-brain:/hostfs:ro   # NUR fuer die Speicherplatz-Anzeige (read-only; kein Host-Root)
+      - /srv/samba/gedanken/Logbuch:/logbook:ro   # Logbuch-Protokolle nur LESEN (Anzeige im Einstellungen-Tab)
+      - /srv/samba/gedanken:/gedanken:ro          # komplettes Z-Backup nur LESEN -> Inhalts-Liste (Qdrant-Snapshots, Logbuch, Eval-Logs, kuenftige Ordner)
+      - /opt/second-brain/backup-control:/control # Steuer-Verzeichnis (dashboard-uid beschreibbar): Status lesen + Trigger-/Login-Flags schreiben; Host-systemd fuehrt aus
+      - ./dashboard-data:/app/data      # Dashboard uid 10002 muss schreiben koennen: bearbeitbare System-Info-Chronik
+    deploy:
+      resources:
+        limits:
+          memory: 256M
+          cpus: "0.5"
+        reservations:
+          memory: 64M
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request,sys; sys.exit(0 if urllib.request.urlopen('http://127.0.0.1:8003/api/health',timeout=5).status==200 else 1)"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 25s
+
+  caddy:
+    image: caddy:2.11.4-alpine   # gepinnt (Reproduzierbarkeit, bugs/server/docker.md §10). HTTPS-Proxy fuers Cockpit.
+    container_name: sb-caddy
+    logging: *sb-logging
+    restart: unless-stopped
+    depends_on:
+      - dashboard
+    ports:
+      # An die WireGuard-IP gebunden -> https://10.8.0.1 NUR ueber den VPN-Tunnel, NIE oeffentlich.
+      # Genau wie alle anderen Dienste (bewusst NICHT 0.0.0.0). Gibt dem Cockpit den "secure context"
+      # fuers Mikrofon (getUserMedia), ohne den Server nach aussen zu oeffnen.
+      - "10.8.0.1:443:443"
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data          # interne CA + Cert PERSISTENT (sonst neue CA je Restart, reverse-proxy-tls.md §1.2)
+      - caddy_config:/config
+    deploy:
+      resources:
+        limits:
+          memory: 128M
+          cpus: "0.5"
+        reservations:
+          memory: 32M
+
+volumes:
+  caddy_data:
+  caddy_config:

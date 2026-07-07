@@ -1,0 +1,7 @@
+interface:
+  display_name: "best-practices-researcher"
+  short_description: "Researches and synthesizes external best practices"
+  default_prompt: "Use $compound-engineering-compound-engineering-plugin--best-practices-researcher for this task."
+
+policy:
+  allow_implicit_invocation: true

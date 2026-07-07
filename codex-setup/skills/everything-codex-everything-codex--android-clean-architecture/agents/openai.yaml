@@ -1,0 +1,7 @@
+interface:
+  display_name: "android-clean-architecture"
+  short_description: "Clean Architecture patterns for Android and Kotlin"
+  default_prompt: "Use $everything-codex-everything-codex--android-clean-architecture for this task."
+
+policy:
+  allow_implicit_invocation: false

@@ -1,0 +1,7 @@
+interface:
+  display_name: "go-build-resolver"
+  short_description: "Go build, vet, and compilation error resolution specialist"
+  default_prompt: "Use $everything-codex-everything-codex--go-build-resolver for this task."
+
+policy:
+  allow_implicit_invocation: false

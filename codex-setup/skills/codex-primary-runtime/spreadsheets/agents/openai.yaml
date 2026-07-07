@@ -1,0 +1,7 @@
+interface:
+  display_name: "Excel"
+  short_description: "Create and edit spreadsheets with formulas and charts"
+  default_prompt: "Use $spreadsheets for this task."
+
+policy:
+  allow_implicit_invocation: true

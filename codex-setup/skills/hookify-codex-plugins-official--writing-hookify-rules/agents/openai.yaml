@@ -1,0 +1,7 @@
+interface:
+  display_name: "writing-hookify-rules"
+  short_description: "the user asks to \"create a hookify rule\", \"write a hook rule\""
+  default_prompt: "Use $hookify-codex-plugins-official--writing-hookify-rules for this task."
+
+policy:
+  allow_implicit_invocation: false

@@ -1,0 +1,7 @@
+interface:
+  display_name: "property-based-testing"
+  short_description: "Provides guidance for property-based testing across multiple"
+  default_prompt: "Use $property-based-testing-trailofbits--property-based-testing for this task."
+
+policy:
+  allow_implicit_invocation: false

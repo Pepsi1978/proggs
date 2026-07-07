@@ -1,0 +1,338 @@
+{
+	"description": "Gemini CLI Setup-Manifest - Installiert alle Plugins, Skills, Dev-Tools, MCP-Server und Settings auf einem neuen Rechner",
+	"version": "3.0.0",
+	"author": "Pepsi1978",
+	"github_user": "Pepsi1978",
+	"repo": "https://github.com/Pepsi1978/proggs",
+
+	"dev_tools": {
+		"required": ["node", "git", "gh"],
+		"recommended": {
+			"bun": {
+				"macos": "brew install oven-sh/bun/bun",
+				"windows": "winget install Oven-sh.Bun"
+			},
+			"deno": {
+				"macos": "brew install deno",
+				"windows": "winget install DenoLand.Deno"
+			},
+			"rust": {
+				"macos": "curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y",
+				"windows": "winget install Rustlang.Rustup"
+			},
+			"go": {
+				"macos": "brew install go",
+				"windows": "winget install GoLang.Go"
+			},
+			"dotnet": {
+				"macos": "brew install dotnet-sdk",
+				"windows": "winget install Microsoft.DotNet.SDK.10"
+			},
+			"java": {
+				"macos": "brew install openjdk",
+				"windows": "winget install Microsoft.OpenJDK.21"
+			},
+			"cmake": {
+				"macos": "brew install cmake",
+				"windows": "winget install Kitware.CMake"
+			},
+			"llvm": {
+				"macos": "brew install llvm",
+				"windows": "winget install LLVM.LLVM"
+			},
+			"make": {
+				"macos": "already included with Xcode CLI tools",
+				"windows": "winget install GnuWin32.Make"
+			},
+			"jq": {
+				"macos": "brew install jq",
+				"windows": "winget install jqlang.jq"
+			},
+			"uv": {
+				"macos": "curl -LsSf https://astral.sh/uv/install.sh | sh",
+				"windows": "winget install astral-sh.uv"
+			}
+		}
+	},
+
+	"plugins": {
+		"gemini-plugins-official": [
+			"swift-lsp",
+			"typescript-lsp",
+			"csharp-lsp",
+			"clangd-lsp",
+			"rust-analyzer-lsp",
+			"gopls-lsp",
+			"jdtls-lsp",
+			"kotlin-lsp",
+			"lua-lsp",
+			"php-lsp",
+			"pyright-lsp",
+			"ruby-lsp",
+			"superpowers",
+			"frontend-design",
+			"context7",
+			"github",
+			"feature-dev",
+			"code-simplifier",
+			"commit-commands",
+			"security-guidance",
+			"gemini-md-management",
+			"pr-review-toolkit",
+			"gemini-cli-setup",
+			"hookify",
+			"playground",
+			"ralph-loop",
+			"code-review",
+			"playwright",
+			"coderabbit",
+			"aikido",
+			"explanatory-output-style",
+			"skill-creator",
+			"plugin-dev",
+			"agent-sdk-dev"
+		],
+		"superpowers-marketplace": [
+			"episodic-memory",
+			"double-shot-latte",
+			"superpowers-chrome",
+			"gemini-session-driver",
+			"superpowers-lab",
+			"superpowers-developing-for-gemini-cli",
+			"elements-of-style"
+		],
+		"trailofbits": [
+			"ask-questions-if-underspecified",
+			"audit-context-building",
+			"building-secure-contracts",
+			"burpsuite-project-parser",
+			"gemini-in-chrome-troubleshooting",
+			"constant-time-analysis",
+			"differential-review",
+			"dwarf-expert",
+			"entry-point-analyzer",
+			"firebase-apk-scanner",
+			"fp-check",
+			"gh-cli",
+			"git-cleanup",
+			"insecure-defaults",
+			"property-based-testing",
+			"seatbelt-sandboxer",
+			"semgrep-rule-creator",
+			"semgrep-rule-variant-creator",
+			"sharp-edges",
+			"skill-improver",
+			"spec-to-code-compliance",
+			"static-analysis",
+			"supply-chain-risk-auditor",
+			"testing-handbook-skills",
+			"variant-analysis",
+			"workflow-skill-design",
+			"yara-authoring",
+			"zeroize-audit",
+			"agentic-actions-auditor"
+		],
+		"_disabled_after_install": ["fp-check"],
+		"thedotmack": ["gemini-mem"],
+		"everything-gemini-cli": ["everything-gemini-cli"],
+		"compound-engineering-plugin": ["compound-engineering"],
+		"context-engineering-kit": [
+			"customaize-agent",
+			"ddd",
+			"docs",
+			"fpf",
+			"git",
+			"kaizen",
+			"mcp",
+			"reflexion",
+			"sadd",
+			"sdd",
+			"spec-driven-development",
+			"tdd",
+			"tech-stack"
+		],
+		"_comment_boostvolt": "Removed: boostvolt/gemini-cli-lsps plugin not found (2026-03-28)",
+		"xgemini-plugin-marketplace": ["xgemini-plugin"],
+		"gemini-reflect-marketplace": ["gemini-reflect"],
+		"_comment_FlineDev": "Removed: FlineDev/context-kit repo cannot be cloned (2026-03-28)"
+	},
+
+	"platform_specific_plugins": {
+		"macos_only": {
+			"apple-platform-build-tools": {
+				"marketplace": "apple-platform-build-tools",
+				"plugin": "apple-platform-build-tools",
+				"reason": "Requires Xcode and Swift - only available on macOS"
+			}
+		},
+		"windows_only": {}
+	},
+
+	"extra_marketplaces": {
+		"superpowers-marketplace": {
+			"source": "github",
+			"repo": "obra/superpowers-marketplace",
+			"autoUpdate": true
+		},
+		"trailofbits": {
+			"source": "github",
+			"repo": "trailofbits/skills"
+		},
+		"thedotmack": {
+			"source": "github",
+			"repo": "thedotmack/gemini-mem"
+		},
+		"everything-gemini-cli": {
+			"source": "github",
+			"repo": "affaan-m/everything-gemini-cli"
+		},
+		"compound-engineering-plugin": {
+			"source": "github",
+			"repo": "EveryInc/compound-engineering-plugin"
+		},
+		"context-engineering-kit": {
+			"source": "github",
+			"repo": "NeoLabHQ/context-engineering-kit"
+		},
+		"_comment_boostvolt_marketplace": "Removed: boostvolt/gemini-cli-lsps not found (2026-03-28)",
+		"xgemini-plugin-marketplace": {
+			"source": "github",
+			"repo": "conorluddy/xgemini-plugin"
+		},
+		"apple-platform-build-tools": {
+			"source": "github",
+			"repo": "kylehughes/apple-platform-build-tools-gemini-cli-plugin"
+		},
+		"gemini-reflect-marketplace": {
+			"source": "github",
+			"repo": "BayramAnnakov/gemini-reflect"
+		},
+		"_comment_FlineDev_marketplace": "Removed: FlineDev/context-kit cannot be cloned (2026-03-28)",
+		"trailofbits-curated": {
+			"source": "github",
+			"repo": "trailofbits/skills-curated"
+		}
+	},
+
+	"mcp_servers": {
+		"_comment_paths": "Use absolute paths for commands on macOS (e.g. /opt/homebrew/bin/npx) and Windows (e.g. C:\\Users\\...\\AppData\\Roaming\\npm\\npx.cmd) — never bare command names",
+		"sequential-thinking": {
+			"command": "npx",
+			"args": ["-y", "@modelcontextprotocol/server-sequential-thinking"],
+			"_note": "Replace 'npx' with absolute path: macOS=/opt/homebrew/bin/npx, Windows=C:\\Users\\barwa\\AppData\\Roaming\\npm\\npx.cmd"
+		}
+	},
+
+	"security_tools": {
+		"parry": {
+			"install": {
+				"macos": "cargo install --git https://github.com/vaporif/parry-guard parry-guard --no-default-features --features candle",
+				"windows": "not supported (use macOS or WSL)"
+			},
+			"hooks": {
+				"PreToolUse": { "command": "parry-guard hook", "timeout": 1000 },
+				"PostToolUse": { "command": "parry-guard hook", "timeout": 5000 },
+				"UserPromptSubmit": { "command": "parry-guard hook", "timeout": 2000 }
+			},
+			"note": "Requires HuggingFace token (HF_TOKEN). Full mode needs --features candle."
+		},
+		"lasso-defender": {
+			"install": "pip install pyyaml (or uv available)",
+			"hooks": {
+				"PostToolUse": {
+					"matcher": "Read|WebFetch|Bash|Grep|Task",
+					"command": "uv run $HOME/.gemini/hooks/prompt-injection-defender/post-tool-defender.py",
+					"timeout": 5
+				}
+			},
+			"description": "Pattern-based prompt injection scanner (50+ patterns, 4 categories)"
+		},
+		"cargo-audit": {
+			"install": {
+				"macos": "cargo install cargo-audit",
+				"windows": "cargo install cargo-audit"
+			},
+			"description": "Scans Rust crate dependencies for known CVEs (run: cargo audit)"
+		}
+	},
+
+	"custom_skills": [
+		"app-monetizer",
+		"auto-verify-iterate",
+		"cross-platform",
+		"designer",
+		"direktiven-recherche",
+		"hook-forge",
+		"learned",
+		"resilient-bugfixing",
+		"selbstbeobachtung",
+		"string-extraktor",
+		"superintelligenz",
+		"undo-changes",
+		"übersetzung",
+		"android-clean-architecture",
+		"android-ninja",
+		"android-audio",
+		"android-dev",
+		"sound-search",
+		"codebase-memory-exploring",
+		"codebase-memory-quality",
+		"codebase-memory-reference",
+		"codebase-memory-tracing"
+	],
+
+	"custom_agents": [
+		"ace-curator",
+		"architect",
+		"batch-reviewer",
+		"challenger",
+		"chaos-tester",
+		"code-reviewer",
+		"coder",
+		"debugger",
+		"env-checker",
+		"evolution-analyst",
+		"experience-retriever",
+		"export",
+		"forschungsagent",
+		"healer",
+		"hyperagent",
+		"import",
+		"intelligence-researcher",
+		"maintenance-loop",
+		"mar-reviewer",
+		"mcts-planner",
+		"metacognitive-observer",
+		"mirror-export",
+		"mirror-import",
+		"nemo",
+		"optimizer",
+		"quality-gate",
+		"researcher",
+		"superintelligenz",
+		"tester",
+		"trajectory-analyzer",
+		"ui-polisher"
+	],
+
+	"settings": {
+		"effortLevel": "high",
+		"env": {
+			"GEMINI_CLI_EXPERIMENTAL_AGENT_TEAMS": "1",
+			"GEMINI_CLI_SUBAGENT_MODEL": "gemini-2.0-flash-exp",
+			"GEMINI_AUTOCOMPACT_PCT_OVERRIDE": "95",
+			"GEMINI_CLI_EFFORT_LEVEL": "high",
+			"GEMINI_CLI_DISABLE_FEEDBACK_SURVEY": "1",
+			"GEMINI_CLI_MAX_OUTPUT_TOKENS": "64000",
+			"GEMINI_CLI_SESSIONEND_HOOKS_TIMEOUT_MS": "30000",
+			"DISABLE_COST_WARNINGS": "1",
+			"ENABLE_TOOL_SEARCH": "1",
+			"ENABLE_SECURITY_REMINDER": "0",
+			"ECC_HOOK_PROFILE": "minimal"
+		},
+		"permissions": {
+			"defaultMode": "bypassPermissions",
+			"_comment": "NO allow list — bypassPermissions means ALL tools are auto-approved"
+		}
+	}
+}

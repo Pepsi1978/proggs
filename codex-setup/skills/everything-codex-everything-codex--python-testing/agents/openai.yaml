@@ -1,0 +1,7 @@
+interface:
+  display_name: "python-testing"
+  short_description: "Python testing strategies using pytest, TDD methodology"
+  default_prompt: "Use $everything-codex-everything-codex--python-testing for this task."
+
+policy:
+  allow_implicit_invocation: false

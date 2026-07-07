@@ -1,0 +1,7 @@
+interface:
+  display_name: "test-coverage"
+  short_description: "test-coverage"
+  default_prompt: "Use $everything-codex-everything-codex--test-coverage for this task."
+
+policy:
+  allow_implicit_invocation: false

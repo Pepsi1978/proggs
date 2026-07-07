@@ -1,0 +1,7 @@
+interface:
+  display_name: "dhh-rails-reviewer"
+  short_description: "Brutally honest Rails code review from DHH's perspective"
+  default_prompt: "Use $compound-engineering-compound-engineering-plugin--dhh-rails-reviewer for this task."
+
+policy:
+  allow_implicit_invocation: false

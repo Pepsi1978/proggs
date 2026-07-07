@@ -1,0 +1,45 @@
+{
+	"Name": "TVO Auto-Enter",
+	"Version": "1.0.8",
+	"Author": "Frank / TerminalVoiceOverlay",
+	"Description": "Spiegelt den orange/grau Auto-Enter-Status des Terminal Voice Overlays auf eine Stream-Deck-Taste. Tastendruck schaltet beidseitig synchron um.",
+	"Icon": "icons/plugin-category",
+	"Category": "TVO",
+	"CategoryIcon": "icons/plugin-category",
+	"CodePath": "plugin.html",
+	"PropertyInspectorPath": "inspector.html",
+	"OS": [
+		{
+			"Platform": "windows",
+			"MinimumVersion": "10"
+		}
+	],
+	"SDKVersion": 2,
+	"Software": {
+		"MinimumVersion": "5.0"
+	},
+	"Actions": [
+		{
+			"Name": "Auto-Enter Toggle",
+			"UUID": "com.tvo.autoenter.toggle",
+			"Icon": "icons/action-off",
+			"Tooltip": "Spiegelt den Auto-Enter-Status (orange = an, grau = aus). Druecken schaltet um.",
+			"PropertyInspectorPath": "inspector.html",
+			"DisableAutomaticStates": true,
+			"States": [
+				{
+					"Image": "icons/action-off",
+					"TitleAlignment": "bottom",
+					"FontSize": "10",
+					"Title": "Auto-Enter"
+				},
+				{
+					"Image": "icons/action-on",
+					"TitleAlignment": "bottom",
+					"FontSize": "10",
+					"Title": "Auto-Enter"
+				}
+			]
+		}
+	]
+}

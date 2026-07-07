@@ -1,0 +1,8 @@
+{
+	"_DEPRECATED": "2026-03-25: Never populated. Replaced by mirror-ledger.md (type: directive/whiteboard). Intelligence suggestions are now tracked as ledger entries.",
+	"version": 1,
+	"source_cli": "Gemini CLI",
+	"description": "DEPRECATED — see mirror-ledger.md",
+	"entries": []
+}
+

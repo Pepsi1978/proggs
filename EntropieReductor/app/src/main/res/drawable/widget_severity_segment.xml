@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Severity-Bar-Segment: rounded corners, Farbe wird zur Laufzeit gesetzt.
+-->
+<shape xmlns:android="http://schemas.android.com/apk/res/android"
+    android:shape="rectangle">
+    <solid android:color="#2A1F44" />
+    <corners android:radius="2dp" />
+</shape>

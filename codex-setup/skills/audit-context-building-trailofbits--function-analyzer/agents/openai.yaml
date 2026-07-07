@@ -1,0 +1,7 @@
+interface:
+  display_name: "function-analyzer"
+  short_description: "Performs ultra-granular per-function deep analysis for security"
+  default_prompt: "Use $audit-context-building-trailofbits--function-analyzer for this task."
+
+policy:
+  allow_implicit_invocation: false

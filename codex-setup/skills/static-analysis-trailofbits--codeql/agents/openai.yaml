@@ -1,0 +1,7 @@
+interface:
+  display_name: "codeql"
+  short_description: "codeql skill"
+  default_prompt: "Use $static-analysis-trailofbits--codeql for this task."
+
+policy:
+  allow_implicit_invocation: false

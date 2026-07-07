@@ -1,0 +1,7 @@
+interface:
+  display_name: "schema-drift-detector"
+  short_description: "Detects unrelated schema.rb changes in PRs by cross-referencing"
+  default_prompt: "Use $compound-engineering-compound-engineering-plugin--schema-drift-detector for this task."
+
+policy:
+  allow_implicit_invocation: false

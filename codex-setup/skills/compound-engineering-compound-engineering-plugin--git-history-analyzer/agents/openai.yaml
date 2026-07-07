@@ -1,0 +1,7 @@
+interface:
+  display_name: "git-history-analyzer"
+  short_description: "Performs archaeological analysis of git history to trace code"
+  default_prompt: "Use $compound-engineering-compound-engineering-plugin--git-history-analyzer for this task."
+
+policy:
+  allow_implicit_invocation: false

@@ -1,0 +1,9 @@
+[Unit]
+Description=Cortex: Dashboard-Button "Jetzt sichern" -> Backup ausloesen
+
+[Path]
+PathModified=/opt/second-brain/backup-control/.backup-trigger
+Unit=cortex-backup.service
+
+[Install]
+WantedBy=multi-user.target

@@ -1,0 +1,7 @@
+interface:
+  display_name: "autofix"
+  short_description: "Auto-fix CodeRabbit review comments - get CodeRabbit review"
+  default_prompt: "Use $coderabbit-codex-plugins-official--autofix for this task."
+
+policy:
+  allow_implicit_invocation: false

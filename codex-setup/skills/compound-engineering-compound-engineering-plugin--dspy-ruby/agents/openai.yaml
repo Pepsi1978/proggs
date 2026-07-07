@@ -1,0 +1,7 @@
+interface:
+  display_name: "dspy-ruby"
+  short_description: "Build type-safe LLM applications with DSPy.rb — Ruby's"
+  default_prompt: "Use $compound-engineering-compound-engineering-plugin--dspy-ruby for this task."
+
+policy:
+  allow_implicit_invocation: false

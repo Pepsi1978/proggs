@@ -1,0 +1,922 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Privacy Policy | Best Journal</title>
+<style>
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+    line-height: 1.65;
+    color: #1a1a1a;
+    max-width: 860px;
+    margin: 2rem auto;
+    padding: 0 1.25rem;
+    background: #ffffff;
+  }
+  h1 { font-size: 2rem; margin-bottom: 0.25rem; color: #111; }
+  h2 { font-size: 1.35rem; margin-top: 2.25rem; padding-bottom: 0.35rem; border-bottom: 2px solid #e5e7eb; color: #111; }
+  h3 { font-size: 1.1rem; margin-top: 1.5rem; color: #222; }
+  h4 { font-size: 1.0rem; margin-top: 1.2rem; color: #333; }
+  p, li { font-size: 1rem; }
+  ul, ol { padding-left: 1.25rem; }
+  table { border-collapse: collapse; width: 100%; margin: 1rem 0; font-size: 0.95rem; }
+  th, td { border: 1px solid #d1d5db; padding: 0.6rem 0.75rem; text-align: left; vertical-align: top; }
+  th { background: #f3f4f6; font-weight: 600; }
+  code { background: #f3f4f6; padding: 0.1rem 0.35rem; border-radius: 3px; font-size: 0.92em; }
+  a { color: #2563eb; text-decoration: none; word-break: break-all; }
+  a:hover { text-decoration: underline; }
+  blockquote { border-left: 4px solid #d97706; background: #fef3c7; padding: 0.75rem 1rem; margin: 1rem 0; font-style: normal; }
+  hr { border: none; border-top: 1px solid #e5e7eb; margin: 2.5rem 0; }
+  .footer { color: #6b7280; font-size: 0.9rem; margin-top: 3rem; text-align: center; }
+</style>
+</head>
+<body>
+
+<h1>Privacy Policy for Best Journal</h1>
+<p><strong>Version:</strong> 20 April 2026<br />
+<strong>App:</strong> Best Journal (Android)<br />
+<strong>Developer:</strong> Frank Barwandt</p>
+<hr />
+<h2>1. Data Controller under the GDPR</h2>
+<p>The controller responsible for personal data processing in the Best Journal app is:</p>
+<p><strong>Frank Barwandt</strong><br />
+c/o Impressumservice Dein-Impressum<br />
+Stettiner Straße 41<br />
+35410 Hungen<br />
+Germany</p>
+<p>E-Mail: dev.app.support@gmail.com</p>
+<p>A Data Protection Officer is not legally required (Art. 37 GDPR, § 38 BDSG).</p>
+<hr />
+<h2>2. Overview: What data does the app process?</h2>
+<p>Best Journal is a diary app. The default state is <strong>local on your device</strong>. Journal<br />
+entries are stored in a protected SQLite database and only leave your device if you<br />
+actively use one of the following optional features:</p>
+<ul>
+<li>Cloud transcription (Groq) for voice recordings</li>
+<li>Cloud backup (Google Drive)</li>
+<li>AI features (Firebase AI / Google Gemini)</li>
+<li>Text-to-speech (Microsoft Edge TTS)</li>
+<li>Sign-in (Google Sign-In / Firebase Authentication)</li>
+<li>Usage analytics (Firebase Analytics, opt-in only)</li>
+</ul>
+<p>Data categories processed by the app:</p>
+<table>
+<thead>
+<tr>
+<th>Data category</th>
+<th>Stored where</th>
+<th>Purpose</th>
+<th>Optional?</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Journal entries (text, audio, images)</td>
+<td>Locally on your device</td>
+<td>Core function</td>
+<td>Core</td>
+</tr>
+<tr>
+<td>Settings and preferences</td>
+<td>Locally on your device</td>
+<td>App configuration</td>
+<td>Core</td>
+</tr>
+<tr>
+<td>Voice recordings (cloud transcription)</td>
+<td>Groq, Inc. (USA)</td>
+<td>Speech to text</td>
+<td><strong>Optional</strong></td>
+</tr>
+<tr>
+<td>Journal data (backup)</td>
+<td>Google Drive (app data folder)</td>
+<td>Restore, device migration</td>
+<td><strong>Optional</strong></td>
+</tr>
+<tr>
+<td>Text snippets (read aloud)</td>
+<td>Microsoft Bing Speech (USA)</td>
+<td>Text to speech</td>
+<td><strong>Optional</strong></td>
+</tr>
+<tr>
+<td>AI requests (manual and automatic)</td>
+<td>Firebase AI / Google Gemini (USA)</td>
+<td>Dashboard, weekly/monthly/yearly reviews</td>
+<td><strong>Optional</strong></td>
+</tr>
+<tr>
+<td>Email address, sign-in ID</td>
+<td>Google / Firebase Authentication</td>
+<td>Account</td>
+<td><strong>Optional</strong></td>
+</tr>
+<tr>
+<td>Device info, IP address, advertising ID</td>
+<td>Firebase Analytics</td>
+<td>Usage statistics</td>
+<td><strong>Opt-in</strong></td>
+</tr>
+<tr>
+<td>Purchase data</td>
+<td>Google Play Billing</td>
+<td>In-app purchases</td>
+<td>Only on purchase</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h2>3. App permissions and their use</h2>
+<p>The app requests the following Android permissions. Each permission is used <strong>only for<br />
+the stated function</strong> and can be revoked at any time in Android system settings.</p>
+<h3>3.1 Internet (<code>INTERNET</code>) and network state (<code>ACCESS_NETWORK_STATE</code>)</h3>
+<p><strong>Purpose:</strong> Cloud transcription (Groq), cloud backup (Google Drive), AI features,<br />
+in-app purchases, Firebase services.<br />
+<strong>Note:</strong> The app works without internet, only cloud and online AI features are<br />
+disabled. Local speech recognition (see 5.2) works offline as well.</p>
+<h3>3.2 Microphone (<code>RECORD_AUDIO</code>)</h3>
+<p><strong>Purpose:</strong> Voice recordings for journal entries (dictation, voice notes).<br />
+<strong>Processing:</strong> Recordings are stored <strong>locally</strong> on your device by default. For<br />
+transcription, you can choose between <strong>local</strong> recognition (see 5.2) and <strong>cloud<br />
+transcription</strong> (see 5.1).<br />
+<strong>Legal basis:</strong> Consent (Art. 6(1)(a) GDPR).</p>
+<h3>3.3 Camera (<code>CAMERA</code>)</h3>
+<p><strong>Purpose:</strong> Photo and video attachments for journal entries.<br />
+<strong>Processing:</strong> Photos and videos are stored locally only (app-private folder<br />
+<code>filesDir/photos/</code>) and are not uploaded automatically. With Google Drive backup<br />
+active, they are transferred encrypted to the Drive app data folder as part of the<br />
+backup.</p>
+<h3>3.4 Approximate location (<code>ACCESS_COARSE_LOCATION</code>)</h3>
+<p><strong>Purpose:</strong> Exclusively for the optional design feature <strong>"Sunrise/Sunset"</strong> in<br />
+settings (dark mode follows the local sun position).<br />
+<strong>Processing:</strong> Location is determined <strong>once</strong> when the toggle is enabled, stored<br />
+locally in app settings, and <strong>never</strong> transmitted to external services. Sunrise and<br />
+sunset times are calculated entirely on your device.</p>
+<h3>3.5 Notifications (<code>POST_NOTIFICATIONS</code>)</h3>
+<p><strong>Purpose:</strong> Reminders to write entries (if you enable reminders).<br />
+<strong>Processing:</strong> Generated locally on your device only.</p>
+<h3>3.6 Autostart after reboot (<code>RECEIVE_BOOT_COMPLETED</code>)</h3>
+<p><strong>Purpose:</strong> Re-activation of scheduled reminders after a device restart.<br />
+<strong>Processing:</strong> Locally only, no data transmission.</p>
+<hr />
+<h2>3a. Scope and international availability</h2>
+<p>The app is available in <strong>27 languages</strong> (English, German, French, Spanish,<br />
+Italian, Dutch, Polish, Portuguese [Brazil and Portugal], Ukrainian, Turkish, Arabic,<br />
+Hindi, Bengali, Gujarati, Kannada, Malayalam, Marathi, Tamil, Telugu, Urdu, Indonesian,<br />
+Thai, Japanese, Korean, Chinese [Simplified and Traditional]) in the Google Play Store. The<br />
+language is chosen automatically based on your Android system language<br />
+(<code>Locale.getDefault()</code>), and the timezone from Android settings (<code>TimeZone.getDefault()</code>).<br />
+Both happen <strong>on the device only</strong>, <strong>no additional location, language, or timezone<br />
+query is made to any server</strong>.</p>
+<p>Additional languages and countries are added continuously.</p>
+<p>This Privacy Policy applies regardless of your country of residence. For users in<br />
+the <strong>European Union</strong> and the <strong>EEA</strong>, the GDPR applies. For users outside, the<br />
+protection standards stated here apply voluntarily as a self-commitment by the<br />
+controller. Users in specific jurisdictions have additional rights (see Section 8a).</p>
+<hr />
+<h2>4. Local data storage</h2>
+<p>All journal content (texts, voice recordings, images, moods, tags) is stored in a<br />
+local SQLite database (Android Room) exclusively on your device.</p>
+<ul>
+<li><strong>Storage location:</strong> Internal app storage (protected by the operating system)</li>
+<li><strong>Access:</strong> Best Journal app only</li>
+<li><strong>Deletion:</strong> Uninstall the app or use "Settings → Delete all data"</li>
+</ul>
+<h3>4.1 PDF export (local)</h3>
+<p>The app offers a <strong>PDF export</strong> for journal entries including embedded photos.<br />
+Conversion happens <strong>entirely on your device</strong>. The PDF file is stored in the local<br />
+app or Downloads folder. The export itself does <strong>not</strong> transmit data to any third<br />
+party.</p>
+<p>If you later share the PDF through the Android share menu with another app or a<br />
+cloud service (for example email, WhatsApp, Google Drive), that is your own choice.<br />
+The receiving service then processes the data under its own privacy policy.</p>
+<hr />
+<h2>5. Optional cloud services and third parties</h2>
+<p>The following services are used <strong>only if you actively use or enable them</strong>. The app<br />
+is fully usable without these services.</p>
+<h3>5.1 Groq, Inc. | Cloud transcription (optional)</h3>
+<p><strong>Provider:</strong> Groq, Inc., 400 Castro Street, Mountain View, CA 94041, USA<br />
+<strong>Purpose:</strong> Converting your voice recordings into text (Whisper transcription).<br />
+<strong>Data collected:</strong> The audio file you upload for transcription. Metadata: file size,<br />
+format, language, IP address.<br />
+<strong>Transfer:</strong> Only when you enable <strong>"Cloud transcription"</strong> in settings or<br />
+explicitly choose the cloud option for a recording. Default is <strong>local on-device<br />
+transcription</strong> (see 5.2).<br />
+<strong>Legal basis:</strong> Consent (Art. 6(1)(a) GDPR).<br />
+<strong>International transfer:</strong> Processing takes place in the USA. Groq is self-certified<br />
+under the <strong>EU-US Data Privacy Framework</strong>. Additionally, Standard Contractual Clauses<br />
+(Art. 46 GDPR) apply.<br />
+<strong>Retention at Groq:</strong> Requests are not used for training purposes and are deleted<br />
+after processing, per the provider's policy.<br />
+<strong>Withdrawal:</strong> Switch to <strong>"Local transcription"</strong> in app settings. No audio data is<br />
+sent to Groq after that.<br />
+<strong>Groq Privacy Policy:</strong> https://groq.com/privacy-policy/</p>
+<blockquote>
+<p><strong>Important note:</strong> Voice recordings may contain particularly sensitive personal<br />
+data (Art. 9 GDPR). Use cloud transcription only if you agree to the transfer of<br />
+your recording to Groq in the USA. Local transcription is the more privacy-friendly<br />
+alternative.</p>
+</blockquote>
+<h3>5.2 Local speech recognition (on-device)</h3>
+<p>The app includes <strong>local offline speech recognition</strong> based on the open-source<br />
+project <strong>sherpa-onnx</strong>. Transcription happens entirely on your device.<br />
+<strong>Data transmission:</strong> None. No server is involved.<br />
+<strong>Prerequisite:</strong> One-time download of the language model (~100 MB).</p>
+<h3>5.2a Microsoft Edge Text-to-Speech (optional)</h3>
+<p><strong>Provider:</strong> Microsoft Corporation, One Microsoft Way, Redmond, WA 98052, USA<br />
+<strong>Service:</strong> Bing Speech Service (endpoint: <code>speech.platform.bing.com</code>)<br />
+<strong>Purpose:</strong> Converting text to natural speech output ("read aloud"), for example<br />
+to listen to your entries or retrospectives.<br />
+<strong>Transfer flow:</strong><br />
+1. You trigger the read-aloud function (for example on the dashboard or in an entry).<br />
+2. The text is transmitted over an encrypted WebSocket connection to Microsoft servers<br />
+   in the <strong>USA</strong>.<br />
+3. The generated audio is returned and played back locally on your device.<br />
+<strong>Data collected:</strong> The text sent to the service, selected voice, technical metadata<br />
+(IP address, timestamp).<br />
+<strong>Transfer:</strong> Only when you actively use the read-aloud function. No transfer to<br />
+Microsoft without your action.<br />
+<strong>Legal basis:</strong> Consent (Art. 6(1)(a) GDPR) by actively triggering the feature.<br />
+<strong>International transfer:</strong> USA, based on the <strong>EU-US Data Privacy Framework</strong><br />
+(Microsoft is certified) and on <strong>EU Standard Contractual Clauses</strong> (Art. 46 GDPR).<br />
+<strong>Withdrawal:</strong> Simply do not use the read-aloud function, or disable it in settings.<br />
+Android also offers a native on-device TTS as an alternative.<br />
+<strong>Microsoft Privacy Policy:</strong> https://privacy.microsoft.com/en-us/privacystatement</p>
+<blockquote>
+<p><strong>Note:</strong> Do not send particularly sensitive personal data of third parties through<br />
+the read-aloud function.</p>
+</blockquote>
+<h3>5.3 Google Drive | Cloud backup (optional)</h3>
+<p><strong>Provider:</strong> Google Ireland Limited, Gordon House, Barrow Street, Dublin 4, Ireland<br />
+<strong>Purpose:</strong> Encrypted backup of your journal data for restoration on a new device or<br />
+after uninstallation.<br />
+<strong>Data collected:</strong> Complete backup of your journal database (entries, audio, images,<br />
+settings) as a single file.<br />
+<strong>Storage location:</strong> <strong>App data folder in your personal Google Drive account</strong> (scope:<br />
+<code>DRIVE_APPDATA</code>). This folder is protected by Google and accessible only to Best Journal.<br />
+Other apps and even you via the normal Drive UI cannot access it.<br />
+<strong>Activation:</strong> Only when you enable <strong>"Google Drive Backup"</strong> in settings and<br />
+explicitly grant access.<br />
+<strong>Legal basis:</strong> Consent (Art. 6(1)(a) GDPR).<br />
+<strong>Withdrawal:</strong> Disable the backup in app settings. Additionally, you can revoke the<br />
+connection entirely at <strong>Google Account → Apps with access to your account</strong>.<br />
+<strong>Deleting the backup:</strong> Via <strong>"Settings → Backup → Delete cloud backup"</strong> in the app.</p>
+<h4>5.3a Android system backup (automatic)</h4>
+<p>In addition to the app-internal Drive backup, the app supports the <strong>Android system<br />
+backup</strong> (<code>allowBackup="true"</code> in the manifest). If you have automatic backup enabled<br />
+under <strong>Android Settings → Google → Backup</strong>, the main journal database<br />
+(<code>entropy_journal_db</code>) and normal app settings are automatically backed up to your<br />
+Google Drive storage (encrypted, max. 25 MB).</p>
+<p><strong>What is excluded:</strong> The backup rules (<code>backup_rules.xml</code> / <code>data_extraction_rules.xml</code>)<br />
+exclude the dashboard database, the retrospective database, and encrypted credentials<br />
+(EncryptedSharedPreferences with Google tokens) from the Android system backup.<br />
+These sensitive items never end up in the system backup.</p>
+<p><strong>What is included:</strong> Journal texts, mood tags, and normal app settings. Photos and<br />
+videos are usually not captured by the Android system backup due to the 25 MB size<br />
+limit. For media, you need the separate Google Drive backup from the app (5.3).</p>
+<p><strong>Deactivation:</strong> In Android system settings under "Google → Backup".<br />
+<strong>Legal basis:</strong> Consent through Google account settings (Art. 6(1)(a) GDPR).</p>
+<h3>5.4 Google Sign-In (optional)</h3>
+<p><strong>Provider:</strong> Google Ireland Limited<br />
+<strong>Purpose:</strong> Convenient sign-in with your Google account (via Android Credential Manager).<br />
+<strong>Data collected:</strong> Email address, Google account ID, public name, profile picture URL.<br />
+<strong>Legal basis:</strong> Contract performance (Art. 6(1)(b) GDPR) if you sign in.<br />
+<strong>Note:</strong> Sign-in is <strong>not required</strong> to use the app.</p>
+<h3>5.5 Firebase Authentication (optional)</h3>
+<p><strong>Provider:</strong> Google Ireland Limited<br />
+<strong>Purpose:</strong> User account management (links Google Sign-In with the app).<br />
+<strong>Data collected:</strong> Email address, sign-in ID, IP address, timestamp.<br />
+<strong>Legal basis:</strong> Contract performance (Art. 6(1)(b) GDPR).</p>
+<h3>5.6 Firebase AI / Google Gemini | Manual and automatic AI processing</h3>
+<p><strong>Provider:</strong> Google Ireland Limited / Google LLC<br />
+<strong>AI model:</strong> Google Gemini (Firebase AI Logic SDK)<br />
+<strong>Server location:</strong> USA</p>
+<p>The app uses Google Gemini for both <strong>manually triggered</strong> and <strong>automatically<br />
+triggered</strong> AI features. Both lead to the transmission of text snippets to Google<br />
+servers in the USA.</p>
+<h4>5.6.1 Manually triggered AI features</h4>
+<p>When you actively start an AI function (for example "Improve text", "Summarize",<br />
+"Follow-up question"):<br />
+1. The relevant text snippet is transmitted to Google Gemini in the <strong>USA</strong>.<br />
+2. The result is returned to your device and shown to you for review.</p>
+<h4>5.6.2 Automatically triggered AI features</h4>
+<p>The app generates <strong>automatic</strong> AI content when certain events happen. Relevant<br />
+journal data is then <strong>automatically</strong> sent to Google Gemini in the USA:</p>
+<table>
+<thead>
+<tr>
+<th>Trigger</th>
+<th>What happens</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>New journal entry</strong></td>
+<td>Dashboard refresh, relevant entries are automatically sent to Gemini to generate a new dashboard summary (only if enabled in "Settings → AI automation → Auto dashboard update")</td>
+</tr>
+<tr>
+<td><strong>New voice transcription</strong> (if auto text improvement is on)</td>
+<td>The transcribed text is automatically polished stylistically and grammatically by Gemini</td>
+</tr>
+<tr>
+<td><strong>Profile switch in dashboard</strong></td>
+<td>Dashboard is regenerated with the new profile prompt</td>
+</tr>
+</tbody>
+</table>
+<p><strong>Not automatic, only on your action:</strong><br />
+- <strong>Weekly, monthly, and yearly reviews</strong> are <em>not</em> generated automatically in the<br />
+  background. At the end of each period you get a local notification. The review is<br />
+  generated only when you open the app and go to the review view. Without your action,<br />
+  no transfer happens.</p>
+<p><strong>Data collected:</strong> Text snippets of your journal entries (never photos, never voice<br />
+recordings), time range, model parameters, technical metadata (IP address, timestamp).</p>
+<p><strong>Disabling automatic AI features:</strong><br />
+Under <strong>"Settings → AI automation"</strong> you can individually disable:<br />
+- Automatic dashboard refresh (default: on)<br />
+- Automatic text improvement after transcription (default: off)</p>
+<p>Under <strong>"Settings → Reminders"</strong> you control whether you receive notifications for<br />
+weekly/monthly/yearly reviews (default: on). Independent of that, the review is only<br />
+generated when you open it.</p>
+<p>After disabling, <strong>no transfer to Google Gemini happens</strong> for that function. The app<br />
+remains fully usable. You just lose the AI-generated summaries and reviews.</p>
+<p><strong>Legal basis:</strong> Consent (Art. 6(1)(a) GDPR). Consent is obtained on first app launch<br />
+with a clearly visible notice and covers both manual and automatic AI processing. It<br />
+can be withdrawn at any time in settings (Art. 7(3) GDPR).</p>
+<p><strong>International transfer:</strong> Processing takes place in the USA based on the <strong>EU-US<br />
+Data Privacy Framework</strong> (adequacy decision by the European Commission) and on <strong>EU<br />
+Standard Contractual Clauses</strong> (Art. 46 GDPR).</p>
+<p><strong>Retention at Google:</strong> According to Firebase AI policies, requests are not used for<br />
+training and are deleted after processing. Details:<br />
+https://firebase.google.com/support/privacy</p>
+<blockquote>
+<p><strong>Important:</strong> Do not send particularly sensitive personal data of third parties<br />
+(for example health data of others, names of third parties without their consent)<br />
+through manual AI features. For automatic reviews as well: do not write content in<br />
+your journal that you do not want transferred to Google Gemini, or disable automatic<br />
+AI features.</p>
+</blockquote>
+<h3>5.7 Firebase Analytics (opt-in on first launch)</h3>
+<p><strong>Provider:</strong> Google Ireland Limited / Google LLC<br />
+<strong>Purpose:</strong> Anonymous usage statistics for error analysis and product improvement.<br />
+<strong>Data collected:</strong> Device type, OS version, app version, usage frequency, approximate<br />
+region (country), Firebase Instance ID, <strong>IP address (truncated)</strong>, <strong>Android<br />
+advertising ID (AAID)</strong>, event data (for example entry created, dashboard opened,<br />
+premium purchase, TTS error).</p>
+<p><strong>Legal basis:</strong> Consent (Art. 6(1)(a) GDPR, § 25(1) TDDDG).</p>
+<p><strong>How consent works:</strong><br />
+- On <strong>first app launch</strong>, a privacy screen appears before onboarding.<br />
+- If you choose "Agree and get started", you consent to anonymous usage statistics.<br />
+- If you choose "Disable statistics", Firebase Analytics stays off, technically via<br />
+<code>setAnalyticsCollectionEnabled(false)</code>.<br />
+- You can change your decision at any time under <strong>"Settings → Privacy → Anonymous<br />
+  statistics"</strong>.</p>
+<p><strong>Reset advertising ID:</strong> In Android system settings under <strong>"Settings → Privacy →<br />
+Ads"</strong>.</p>
+<h3>5.8 Firebase App Check (Play Integrity)</h3>
+<p><strong>Purpose:</strong> Protection against abuse and automated requests.<br />
+<strong>Data collected:</strong> Google Play device integrity token, app signature.<br />
+<strong>Legal basis:</strong> Legitimate interest in abuse protection (Art. 6(1)(f) GDPR).<br />
+<strong>Balancing:</strong> The legitimate interest in protecting Firebase endpoints from automated<br />
+attacks outweighs the minimal impact on the user, as the integrity token is<br />
+device-independent and allows no personal identification. No privacy-friendlier<br />
+alternative is technically available.<br />
+<strong>International transfer:</strong> Processing in the USA based on the EU-US Data Privacy<br />
+Framework and Standard Contractual Clauses (Art. 46 GDPR).</p>
+<h3>5.9 Firebase Remote Config</h3>
+<p><strong>Purpose:</strong> Remote configuration (for example feature flags, texts).<br />
+<strong>Data collected:</strong> Anonymized app instance ID, app version.<br />
+<strong>Legal basis:</strong> Legitimate interest in proper operation (Art. 6(1)(f) GDPR).<br />
+<strong>Balancing:</strong> The legitimate interest in smooth app configuration prevails, as only<br />
+anonymized instance IDs are transferred and no tracing to individuals is possible.<br />
+<strong>International transfer:</strong> Processing in the USA based on the EU-US Data Privacy<br />
+Framework and Standard Contractual Clauses (Art. 46 GDPR).</p>
+<h3>5.9a Feedback feature (Gmail API, optional)</h3>
+<p>Under <strong>"Settings → Send feedback"</strong>, you can send us feedback about the app.</p>
+<p><strong>Technical flow:</strong><br />
+1. You enter your feedback in the app and confirm sending.<br />
+2. The app asks once for the Google permission <strong>"Send email"</strong> (Gmail API scope<br />
+<code>https://www.googleapis.com/auth/gmail.send</code>).<br />
+3. After your consent, <strong>two emails are sent through your own Google account</strong> via<br />
+   the Gmail API:<br />
+   - <strong>Email 1 to us:</strong> <code>dev.app.support@gmail.com</code>, contains your feedback text and<br />
+     your Google account email address as sender.<br />
+   - <strong>Email 2 to yourself:</strong> Confirmation with the feedback text you submitted, so<br />
+     you have a copy.</p>
+<p><strong>Who processes what:</strong><br />
+- <strong>Google</strong> (Gmail infrastructure): transports both emails through its mail servers.<br />
+- <strong>Us</strong> (Frank Barwandt, contact details in Section 1): receive the first email in<br />
+  our <code>dev.app.support@gmail.com</code> inbox and store it to process your feedback.</p>
+<p><strong>Data collected/transmitted:</strong><br />
+- Your Google account email address (as sender of both emails)<br />
+- The feedback text you entered<br />
+- Timestamp of sending</p>
+<p><strong>Legal basis:</strong><br />
+- For transmission to us: Consent (Art. 6(1)(a) GDPR) by actively sending.<br />
+- For processing your request: Legitimate interest in improving the app (Art. 6(1)(f)<br />
+  GDPR).</p>
+<p><strong>Retention at our side:</strong> Your feedback email stays in our inbox for a maximum of<br />
+24 months, then it is deleted. If directly related to a bug fix or feature, retention<br />
+can be longer. You can request deletion by email at any time.</p>
+<p><strong>Revoking Gmail permission:</strong> You can revoke Gmail Send access at any time at<br />
+<strong>https://myaccount.google.com/permissions</strong> → remove Best Journal. After removal,<br />
+the feedback feature no longer works. Otherwise the app is fully usable.</p>
+<p><strong>Alternative:</strong> You can also reach us directly by email at <strong>dev.app.support@gmail.com</strong>,<br />
+without any app permissions.</p>
+<h3>5.10 Google Play In-App Review API</h3>
+<p><strong>Purpose:</strong> Showing the rating dialog in the Google Play Store.<br />
+<strong>Data collected:</strong> Technical metadata (app version, package name) to show the dialog.<br />
+The rating itself is not collected by the app.<br />
+<strong>Legal basis:</strong> Legitimate interest (Art. 6(1)(f) GDPR).<br />
+<strong>Balancing:</strong> The legitimate interest in user feedback prevails, as only technical<br />
+metadata without personal reference is processed and the rating itself takes place<br />
+exclusively in your Google Play account.<br />
+<strong>International transfer:</strong> Processing in the USA based on the EU-US Data Privacy<br />
+Framework and Standard Contractual Clauses (Art. 46 GDPR).</p>
+<p><strong>More information on Google services:</strong><br />
+- Google Privacy Policy: https://policies.google.com/privacy<br />
+- Firebase Privacy: https://firebase.google.com/support/privacy<br />
+- Google Drive: https://policies.google.com/privacy#infocollect</p>
+<h3>5.11 International transfer (USA)</h3>
+<p>When cloud services are active (Groq, Firebase/Gemini, Google Drive, Microsoft<br />
+Edge TTS), data is processed in the USA. The transfer is based on:</p>
+<ul>
+<li><strong>EU-US Data Privacy Framework</strong> (adequacy decision of the European Commission of<br />
+  10 July 2023), for Google/Firebase/Gemini and Microsoft</li>
+<li><strong>EU Standard Contractual Clauses</strong> (Art. 46 GDPR), for Groq</li>
+</ul>
+<hr />
+<h2>6. In-app purchases (Google Play Billing)</h2>
+<p>For optional Premium features, the app uses <strong>Google Play Billing</strong> for payment<br />
+processing.</p>
+<ul>
+<li><strong>Provider:</strong> Google Ireland Limited</li>
+<li><strong>Data collected:</strong> Transaction ID, purchase token, purchased product, timestamp</li>
+<li><strong>Payment data:</strong> Processed <strong>exclusively by Google</strong>. We do not receive credit<br />
+  card numbers, PayPal credentials, or bank details.</li>
+<li><strong>Legal basis:</strong> Contract performance (Art. 6(1)(b) GDPR)</li>
+<li><strong>Google Play Privacy:</strong> https://play.google.com/about/play-terms/</li>
+</ul>
+<hr />
+<h2>7. Account deletion and data deletion</h2>
+<p>Under Art. 17 GDPR and Google Play policies, you have the right to have your data<br />
+deleted at any time.</p>
+<h3>7.1 Delete account and cloud data (in the app)</h3>
+<p><strong>Settings → Account → Delete account</strong></p>
+<p>The following is permanently removed:<br />
+- Local journal databases (main DB, dashboard DB, review DB)<br />
+- Local photos and videos of entries<br />
+- Encrypted app settings and stored Google tokens<br />
+- Firebase Authentication account (<code>FirebaseAuth.currentUser.delete()</code>)<br />
+- Google Drive app data backup (removed from Drive)</p>
+<p>After completion, the app restarts and behaves like a fresh installation. The<br />
+Android system backup is <strong>not</strong> deleted by this action. You can remove it<br />
+separately in your Google account at<br />
+<strong>myaccount.google.com → Data &amp; privacy → Backups</strong>.</p>
+<h3>7.2 Delete local journal data</h3>
+<p><strong>Settings → Data → Delete all data</strong> or <strong>uninstall the app</strong></p>
+<h3>7.3 Delete Drive backup manually</h3>
+<p>If you want the backup to persist even after uninstalling the app, you can delete<br />
+it separately under <strong>"Settings → Backup → Delete cloud backup"</strong>. After uninstalling<br />
+the app, you can remove the app data folder from your Google account at<br />
+<strong>myaccount.google.com → Data &amp; privacy → Third-party apps with account access</strong>.</p>
+<h3>7.4 Request deletion by email</h3>
+<p>If you can no longer access the app: <strong>dev.app.support@gmail.com</strong>, subject:<br />
+"Best Journal account deletion". Response time: 30 days.</p>
+<p>A public deletion request page is also available at<br />
+<strong>https://pepsi1978.github.io/bestjournal-deletion/</strong> (alternative to the in-app<br />
+deletion flow, required by Google Play).</p>
+<hr />
+<h2>8. Your rights under the GDPR</h2>
+<p>You have the following rights at all times:</p>
+<table>
+<thead>
+<tr>
+<th>Right</th>
+<th>Article</th>
+<th>How to exercise</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Access</td>
+<td>Art. 15 GDPR</td>
+<td>Email to dev.app.support@gmail.com</td>
+</tr>
+<tr>
+<td>Rectification</td>
+<td>Art. 16 GDPR</td>
+<td>Email or directly in the app</td>
+</tr>
+<tr>
+<td>Erasure ("right to be forgotten")</td>
+<td>Art. 17 GDPR</td>
+<td>In the app under "Delete data" or uninstall</td>
+</tr>
+<tr>
+<td>Restriction of processing</td>
+<td>Art. 18 GDPR</td>
+<td>Email to dev.app.support@gmail.com</td>
+</tr>
+<tr>
+<td>Data portability</td>
+<td>Art. 20 GDPR</td>
+<td>Export function in the app or email</td>
+</tr>
+<tr>
+<td>Objection</td>
+<td>Art. 21 GDPR</td>
+<td>Email to dev.app.support@gmail.com</td>
+</tr>
+<tr>
+<td>Withdrawal of consent</td>
+<td>Art. 7(3) GDPR</td>
+<td>In app settings under "Privacy"</td>
+</tr>
+<tr>
+<td>Lodge a complaint with a supervisory authority</td>
+<td>Art. 77 GDPR</td>
+<td>See below</td>
+</tr>
+</tbody>
+</table>
+<h3>Competent supervisory authorities</h3>
+<p><strong>Germany / EU / EEA (lead supervisory authority):</strong></p>
+<p>The Hessian Commissioner for Data Protection and Freedom of Information<br />
+Gustav-Stresemann-Ring 1, 65189 Wiesbaden, Germany<br />
+Phone: +49 611 1408-0<br />
+Email: poststelle@datenschutz.hessen.de<br />
+Website: https://datenschutz.hessen.de</p>
+<p>(Competent because the controller is based in Hesse.)</p>
+<p>EU/EEA users can also contact the supervisory authority of their country of residence.</p>
+<hr />
+<h2>8a. International users, additional rights under local law</h2>
+<p>Best Journal is offered worldwide through the Google Play Store. The rights above<br />
+under the GDPR apply to users in all countries. Users from specific jurisdictions<br />
+have <strong>additional</strong> or <strong>different</strong> rights under local law, detailed below.</p>
+<h3>8a.1 Rights of California residents (CCPA / CPRA)</h3>
+<p>If you are a California resident, the California Consumer Privacy Act (CCPA), as<br />
+amended by the California Privacy Rights Act (CPRA), grants you the following rights:</p>
+<ul>
+<li><strong>Right to know:</strong> What personal information we collected, used, and shared in the<br />
+  past 12 months, along with categories of sources and third parties. See Section 2<br />
+  for the complete list of data categories.</li>
+<li><strong>Right to delete:</strong> Deletion of your personal information (see Section 7).</li>
+<li><strong>Right to correct:</strong> Correction of inaccurate personal information.</li>
+<li><strong>Right to opt out of sale or sharing:</strong> We do <strong>not sell or share</strong> your personal<br />
+  information in the meaning of the CCPA. No cross-context behavioral advertising<br />
+  takes place. Because there is no sale or sharing, there is no "Do Not Sell or<br />
+  Share My Personal Information" link needed, but you may still opt out of any<br />
+  analytics data processing under Section 5.7.</li>
+<li><strong>Right to limit the use of sensitive personal information (SPI):</strong> Journal content<br />
+  may contain SPI (for example, health information, religious beliefs, sexual<br />
+  orientation). You can limit our use of such information by disabling cloud AI<br />
+  features (see Section 5.6) and cloud transcription (see Section 5.1). All journal<br />
+  content remains local on your device by default.</li>
+<li><strong>Right to non-discrimination:</strong> We do not discriminate against you for exercising<br />
+  your rights.</li>
+<li><strong>Global Privacy Control (GPC):</strong> We honor GPC browser signals as a valid opt-out<br />
+  request for any analytics processing.</li>
+</ul>
+<p><strong>Exercise your rights:</strong> Email dev.app.support@gmail.com with subject "CCPA Request".<br />
+Alternatively, delete your account directly in the app (Settings → Account → Delete<br />
+account). We respond within 45 days and may extend by 45 days with notice (Cal. Civ.<br />
+Code § 1798.130).</p>
+<p><strong>Do Not Sell My Personal Information:</strong> We do not sell personal information.<br />
+Disabling analytics (see Section 5.7) is available as an opt-out for data processing.</p>
+<p><strong>Categories of personal information disclosed for a business purpose</strong> (CCPA § 1798.140):<br />
+- Identifiers (email, Firebase Instance ID, advertising ID) ,  to Google, Groq,<br />
+  Microsoft as required for core services.<br />
+- Commercial information (purchase history) ,  to Google for Play Billing.<br />
+- Internet or electronic network activity (app usage events) ,  to Google for Firebase<br />
+  Analytics (opt-in only).<br />
+- Audio recordings ,  to Groq for transcription (opt-in only).<br />
+- Inferences (AI-generated text summaries) ,  processed by Google Gemini for dashboard<br />
+  and reviews (opt-in only).</p>
+<p><strong>Authorized agent:</strong> You may designate an authorized agent to submit requests on<br />
+your behalf. Provide written authorization signed by you.</p>
+<h3>8a.2 Rights of other US state residents</h3>
+<p>If you are a resident of one of the following states, you have comparable rights to<br />
+California residents under state data protection laws:</p>
+<table>
+<thead>
+<tr>
+<th>State</th>
+<th>Law</th>
+<th>Effective</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Virginia</td>
+<td>VCDPA</td>
+<td>2023</td>
+</tr>
+<tr>
+<td>Colorado</td>
+<td>CPA</td>
+<td>2023</td>
+</tr>
+<tr>
+<td>Connecticut</td>
+<td>CTDPA</td>
+<td>2023</td>
+</tr>
+<tr>
+<td>Utah</td>
+<td>UCPA</td>
+<td>2023</td>
+</tr>
+<tr>
+<td>Oregon</td>
+<td>OCPA</td>
+<td>2024</td>
+</tr>
+<tr>
+<td>Montana</td>
+<td>MCDPA</td>
+<td>2024</td>
+</tr>
+<tr>
+<td>Texas</td>
+<td>TDPSA</td>
+<td>2024 (no minimum threshold)</td>
+</tr>
+<tr>
+<td>Iowa</td>
+<td>ICDPA</td>
+<td>2025</td>
+</tr>
+<tr>
+<td>Delaware</td>
+<td>DPDPA</td>
+<td>2025</td>
+</tr>
+<tr>
+<td>New Jersey</td>
+<td>NJDPA</td>
+<td>2025</td>
+</tr>
+<tr>
+<td>New Hampshire</td>
+<td>NHPPA</td>
+<td>2025</td>
+</tr>
+<tr>
+<td>Rhode Island</td>
+<td>RIDTPPA</td>
+<td>2026</td>
+</tr>
+<tr>
+<td>Indiana</td>
+<td>ICDPA</td>
+<td>2026</td>
+</tr>
+<tr>
+<td>Kentucky</td>
+<td>KCDPA</td>
+<td>2026</td>
+</tr>
+<tr>
+<td>Minnesota</td>
+<td>MCDPA</td>
+<td>In force</td>
+</tr>
+<tr>
+<td>Tennessee</td>
+<td>TIPA</td>
+<td>In force</td>
+</tr>
+<tr>
+<td>Nebraska</td>
+<td>NDPA</td>
+<td>In force</td>
+</tr>
+<tr>
+<td>Maryland</td>
+<td>MODPA</td>
+<td>In force</td>
+</tr>
+</tbody>
+</table>
+<p>Your rights include access, deletion, correction, data portability, opt-out of<br />
+targeted advertising, and opt-out of profiling. For Texas residents, we honor GPC<br />
+signals as no minimum threshold applies to us. For Delaware and Rhode Island<br />
+residents, on request we can provide the names (not just categories) of third-party<br />
+recipients. To exercise, email dev.app.support@gmail.com.</p>
+<h3>8a.3 Rights of Illinois residents (BIPA)</h3>
+<p>The Illinois Biometric Information Privacy Act (BIPA) protects biometric identifiers<br />
+including voiceprints. We want to be transparent:</p>
+<ul>
+<li><strong>Voice recordings</strong> sent for cloud transcription (Section 5.1) are processed by<br />
+  Groq using the Whisper model for speech-to-text only. To our knowledge, Groq<br />
+  Whisper does <strong>not</strong> create a voiceprint (a biometric template used to identify<br />
+  an individual from their voice). Only transcription (speech to text) is performed.<br />
+  If this changes, we will update this notice and obtain written consent before any<br />
+  voiceprint processing.</li>
+<li><strong>Device biometric app lock</strong> (fingerprint, face unlock) is handled entirely by<br />
+  the Android operating system in the device's secure hardware enclave. We never<br />
+  receive biometric data.</li>
+<li><strong>Retention policy:</strong> Voice recordings transferred to Groq are not retained after<br />
+  transcription (per Groq's policy). Local voice recordings on your device are<br />
+  retained only until you delete them, or up to 3 years at most as required under<br />
+  BIPA.</li>
+</ul>
+<p>If you are an Illinois resident and want to opt out of cloud transcription entirely,<br />
+switch to "Local transcription" in settings (Section 5.1).</p>
+<h3>8a.5 Rights of Canadian residents (PIPEDA)</h3>
+<p>Under the Personal Information Protection and Electronic Documents Act (PIPEDA),<br />
+Canadian users have the right of access and correction. To exercise, email<br />
+dev.app.support@gmail.com.</p>
+<p>You may also file a complaint with the Office of the Privacy Commissioner of Canada:<br />
+https://www.priv.gc.ca</p>
+<h3>8a.6 Rights of Quebec residents (Law 25)</h3>
+<p>If you are a Quebec resident, under the Act respecting the protection of personal<br />
+information in the private sector (Law 25, CQLR c. P-39.1), you have these rights:</p>
+<ul>
+<li><strong>Right of access</strong> to your personal information</li>
+<li><strong>Right of rectification</strong></li>
+<li><strong>Right to deletion and de-indexation</strong> of online-available personal information</li>
+<li><strong>Right to data portability</strong></li>
+<li><strong>Right to be informed about automated decisions</strong> that could significantly affect<br />
+  you (we do not make such decisions, see Section 12)</li>
+</ul>
+<p>For transfers outside Quebec (to the USA), we have conducted a Privacy Impact<br />
+Assessment and rely on contractual protections. You may file a complaint with the<br />
+Commission d'accès à l'information du Québec (CAI): https://www.cai.gouv.qc.ca</p>
+<h3>8a.7 Rights of Australian residents (Privacy Act 1988, Australian Privacy Principles)</h3>
+<p>Under the Australian Privacy Act 1988 and the Australian Privacy Principles (APPs),<br />
+Australian users have these rights:</p>
+<ul>
+<li><strong>APP 12: Access to personal information</strong></li>
+<li><strong>APP 13: Correction of personal information</strong></li>
+<li><strong>APP 8 (Overseas Disclosure):</strong> Your data is transferred to the USA (Groq,<br />
+  Google/Gemini, Microsoft) and Ireland (Google). We take reasonable steps to ensure<br />
+  comparable protection through contractual safeguards. By using the cloud features,<br />
+  you consent to the overseas disclosure on the basis of this information.</li>
+</ul>
+<p>Note: The Privacy Act does not provide a general right of deletion equivalent to the<br />
+GDPR. However, we voluntarily honor deletion requests (see Section 7).</p>
+<p>Lodge a complaint with the Office of the Australian Information Commissioner (OAIC):<br />
+https://www.oaic.gov.au</p>
+<h3>8a.8 Rights of New Zealand residents (Privacy Act 2020)</h3>
+<p>Under the New Zealand Privacy Act 2020, you have rights of access (IPP 6) and<br />
+correction (IPP 7). You can lodge a complaint with the Privacy Commissioner:<br />
+https://www.privacy.org.nz</p>
+<p>Following the Privacy Amendment Act 2025 (IPP 3A, effective 1 May 2026), we inform<br />
+you that AI services (Google Gemini, Groq Whisper, Microsoft Edge TTS) may process<br />
+your inputs and return results, which can constitute indirect collection. This<br />
+notice serves as the required IPP 3A disclosure.</p>
+<h3>8a.9 Rights of Brazilian residents (LGPD)</h3>
+<p>Under the Lei Geral de Proteção de Dados (LGPD, Law No. 13.709/2018), Brazilian<br />
+users have rights of access, rectification, anonymization, blocking or deletion,<br />
+data portability, and objection. These are handled equivalently to GDPR rights.</p>
+<p>Supervisory authority: Autoridade Nacional de Proteção de Dados (ANPD):<br />
+https://www.gov.br/anpd/pt-br</p>
+<h3>8a.10 Rights of Japanese residents (APPI)</h3>
+<p>Under the Act on the Protection of Personal Information (APPI), Japanese users have<br />
+the right to disclosure, correction, suspension of use, and deletion. For<br />
+cross-border transfers to the USA, we inform you that the USA is not on the PPC<br />
+whitelist of jurisdictions with equivalent protection; transfers are based on your<br />
+consent and on contractual safeguards with the recipient. You can contact the<br />
+Personal Information Protection Commission (PPC): https://www.ppc.go.jp</p>
+<h3>8a.11 Rights of South African residents (POPIA)</h3>
+<p>Under the Protection of Personal Information Act (POPIA), South African users have<br />
+rights of access, correction, and objection. Regulator: Information Regulator,<br />
+https://inforegulator.org.za</p>
+<h3>8a.12 Other jurisdictions</h3>
+<p>For users from jurisdictions not specifically named, the GDPR-compliant rights above<br />
+apply as a voluntary self-commitment, as well as any mandatory rights under local<br />
+law. For questions or to exercise local rights, email dev.app.support@gmail.com.</p>
+<hr />
+<h2>9. Data security</h2>
+<ul>
+<li>Local database in protected app storage (Android sandboxing)</li>
+<li>Encrypted transmission (HTTPS/TLS 1.2+) on all network connections</li>
+<li>Google Drive backup only in the protected app data folder (no access by other apps)</li>
+<li>Firebase App Check for abuse protection</li>
+<li>Local encryption of sensitive data (AndroidX Security Crypto)</li>
+<li>No storage of unencrypted credentials</li>
+<li>Automatic security updates via the Google Play Store</li>
+</ul>
+<h3>9.1 Biometric app lock (optional)</h3>
+<p>You can optionally protect the app with <strong>biometric authentication</strong> (fingerprint,<br />
+face unlock) or with a <strong>device PIN</strong> (AndroidX Biometric Library).</p>
+<p><strong>Important:</strong> Biometric data (for example fingerprint patterns or face features) is<br />
+processed <strong>exclusively by the Android operating system in the secured hardware<br />
+enclave</strong> of your device (Trusted Execution Environment / Secure Element). It never<br />
+leaves your device and is not accessible to the app. The app only receives a result<br />
+of "authentication successful" or "authentication failed", never the biometric<br />
+feature itself.</p>
+<p><strong>Legal basis:</strong> Consent by enabling the lock (Art. 6(1)(a) GDPR).<br />
+<strong>Withdrawal:</strong> Disable the lock in app settings, or remove your biometrics in Android<br />
+system settings.</p>
+<hr />
+<h2>10. Children and minors</h2>
+<p>The app is intended for users <strong>aged 13 and older</strong>. For minors under 16, consent by<br />
+a legal guardian is required (Art. 8 GDPR) if sign-in is used or cloud services<br />
+(Groq, Drive, AI) are activated. The app does not knowingly collect data from<br />
+children under 13 (COPPA compliance, 15 U.S.C. §§ 6501-6506).</p>
+<hr />
+<h2>11. Retention periods</h2>
+<table>
+<thead>
+<tr>
+<th>Data</th>
+<th>Duration</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Local journal entries</td>
+<td>Until deletion by you or uninstall</td>
+</tr>
+<tr>
+<td>Google Drive backup</td>
+<td>Until deletion by you or revocation of Drive access</td>
+</tr>
+<tr>
+<td>Android system backup</td>
+<td>Per Google policies (typically until deactivation of system backup)</td>
+</tr>
+<tr>
+<td>Microsoft Edge TTS</td>
+<td>Deleted after processing (per Microsoft policy)</td>
+</tr>
+<tr>
+<td>Groq transcription requests</td>
+<td>Deleted after processing (per Groq policy)</td>
+</tr>
+<tr>
+<td>Firebase Analytics</td>
+<td>14 months (Google default), then automatic deletion</td>
+</tr>
+<tr>
+<td>Firebase Authentication</td>
+<td>Until account deletion</td>
+</tr>
+<tr>
+<td>AI requests (Firebase AI)</td>
+<td>Not stored permanently per Google policies</td>
+</tr>
+<tr>
+<td>Purchase data</td>
+<td>Per statutory retention periods (up to 10 years, § 147 AO German tax law)</td>
+</tr>
+<tr>
+<td>Feedback emails</td>
+<td>Max. 24 months in our inbox, then deletion</td>
+</tr>
+<tr>
+<td>Server logs (IP addresses)</td>
+<td>Max. 30 days, then automatic deletion</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h2>12. No automated decision-making</h2>
+<p>There is <strong>no automated decision-making</strong> in the meaning of Art. 22 GDPR that has<br />
+legal effect on you or significantly affects you. AI features only generate texts or<br />
+summaries that are not legally binding for you.</p>
+<hr />
+<h2>12a. Notice on AI systems (Art. 50 AI Act)</h2>
+<p>This app uses AI systems to process your input:</p>
+<ul>
+<li><strong>Google Gemini</strong> (Firebase AI): AI-powered text analysis, summaries, dashboard,<br />
+  reviews, text recognition (OCR)</li>
+<li><strong>Groq Whisper</strong>: Speech-to-text transcription</li>
+<li><strong>Microsoft Edge Text-to-Speech</strong>: Text-to-speech read-aloud</li>
+</ul>
+<p>Pursuant to Art. 50 of Regulation (EU) 2024/1689 (AI Act), we inform you that the<br />
+features listed above are based on artificial intelligence. AI systems can produce<br />
+<strong>inaccurate, incomplete, or misleading outputs</strong> ("hallucinations"). Verify<br />
+important statements independently and consult qualified professionals for health,<br />
+legal, or financial concerns.</p>
+<p>AI outputs are <strong>not binding statements</strong>. They are suggestions and summaries to<br />
+support your own reflection.</p>
+<hr />
+<h2>13. Obligation to provide personal data</h2>
+<p>You are not obliged to provide us with personal data. The app is fully usable without<br />
+sign-in, without cloud services, and without analytics. Without the optional cloud<br />
+features, you only miss the corresponding convenience functions (cloud transcription,<br />
+cloud backup, cross-device usage, AI features).</p>
+<hr />
+<h2>14. Changes to this Privacy Policy</h2>
+<p>This Privacy Policy may be updated when the app changes or the legal situation<br />
+changes. The current version is always available in the app under<br />
+<strong>Settings → Privacy</strong> and in the Google Play Store. You will be informed in the app<br />
+of material changes.</p>
+<p><strong>Last updated:</strong> 20 April 2026</p>
+<hr />
+<h2>15. Contact</h2>
+<p>For questions about privacy or to exercise your rights:</p>
+<p><strong>Email:</strong> dev.app.support@gmail.com<br />
+<strong>Postal address:</strong> See Section 1 (Data Controller)</p>
+
+<hr>
+<p class="footer">&copy; 2026 Frank Barwandt &middot; Best Journal</p>
+
+</body>
+</html>

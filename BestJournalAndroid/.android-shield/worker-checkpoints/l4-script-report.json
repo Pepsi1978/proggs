@@ -1,0 +1,2798 @@
+{
+ "ta": {
+  "totalStrings": 1087,
+  "fffdReplacementChar": [],
+  "emptyStrings": [
+   "ai_prompt_language_override"
+  ],
+  "lowScriptRatio": [
+   {
+    "key": "app_name",
+    "ratio": 0.0,
+    "letters": 11,
+    "target": 0,
+    "value": "Best Journal"
+   },
+   {
+    "key": "label_premium",
+    "ratio": 0.0,
+    "letters": 7,
+    "target": 0,
+    "value": "Premium"
+   },
+   {
+    "key": "transcription_model_groq",
+    "ratio": 0.0,
+    "letters": 22,
+    "target": 0,
+    "value": "Groq Whisper Large V3 Turbo"
+   },
+   {
+    "key": "settings_premium_section",
+    "ratio": 0.0,
+    "letters": 7,
+    "target": 0,
+    "value": "Premium"
+   },
+   {
+    "key": "settings_about_version",
+    "ratio": 0.0,
+    "letters": 12,
+    "target": 0,
+    "value": "Best Journal V0.21.9"
+   },
+   {
+    "key": "ai_prompt_rerank_user_focus_header",
+    "ratio": 0.0,
+    "letters": 23,
+    "target": 0,
+    "value": "=== PROFIL-FOKUS DES BENUTZERS ==="
+   },
+   {
+    "key": "ai_prompt_rerank_actions_header",
+    "ratio": 0.0,
+    "letters": 34,
+    "target": 0,
+    "value": "=== AKTUELLES TOP-MASSNAHMEN-ARRAY (5 Einträge) ==="
+   },
+   {
+    "key": "ai_prompt_rerank_entries_header",
+    "ratio": 0.0,
+    "letters": 47,
+    "target": 0,
+    "value": "=== TAGEBUCHEINTRÄGE (Quelle für profilstarke Ersatz-Punkte) ==="
+   },
+   {
+    "key": "settings_ccpa_do_not_sell_title",
+    "ratio": 0.0,
+    "letters": 30,
+    "target": 0,
+    "value": "Do Not Sell My Personal Information"
+   },
+   {
+    "key": "consent_toggle_do_not_sell_title",
+    "ratio": 0.0,
+    "letters": 30,
+    "target": 0,
+    "value": "Do Not Sell My Personal Information"
+   }
+  ],
+  "noTargetScriptButHasText": [
+   {
+    "key": "app_name",
+    "value": "Best Journal"
+   },
+   {
+    "key": "label_premium",
+    "value": "Premium"
+   },
+   {
+    "key": "transcription_model_groq",
+    "value": "Groq Whisper Large V3 Turbo"
+   },
+   {
+    "key": "settings_premium_section",
+    "value": "Premium"
+   },
+   {
+    "key": "settings_about_version",
+    "value": "Best Journal V0.21.9"
+   },
+   {
+    "key": "ai_prompt_rerank_user_focus_header",
+    "value": "=== PROFIL-FOKUS DES BENUTZERS ==="
+   },
+   {
+    "key": "ai_prompt_rerank_actions_header",
+    "value": "=== AKTUELLES TOP-MASSNAHMEN-ARRAY (5 Einträge) ==="
+   },
+   {
+    "key": "ai_prompt_rerank_entries_header",
+    "value": "=== TAGEBUCHEINTRÄGE (Quelle für profilstarke Ersatz-Punkte) ==="
+   },
+   {
+    "key": "settings_ccpa_do_not_sell_title",
+    "value": "Do Not Sell My Personal Information"
+   },
+   {
+    "key": "consent_toggle_do_not_sell_title",
+    "value": "Do Not Sell My Personal Information"
+   }
+  ],
+  "latinIslands": [
+   {
+    "key": "transcription_model_local",
+    "latinWords": [
+     "Whisper"
+    ],
+    "value": "உள்ளூர் Whisper மாதிரி"
+   },
+   {
+    "key": "transcription_model_groq",
+    "latinWords": [
+     "Whisper",
+     "Large",
+     "Turbo"
+    ],
+    "value": "Groq Whisper Large V3 Turbo"
+   },
+   {
+    "key": "journal_streak_premium",
+    "latinWords": [
+     "Streak"
+    ],
+    "value": "Streak பாதுகாப்பு: Premium-ல் கிடைக்கும்"
+   },
+   {
+    "key": "entry_tts_generating",
+    "latinWords": [
+     "Text",
+     "Speech"
+    ],
+    "value": "காத்திருங்கள், Text-to-Speech உருவாக்கப்படுகிறது\\u2026"
+   },
+   {
+    "key": "dashboard_tts_wait",
+    "latinWords": [
+     "Text",
+     "Speech"
+    ],
+    "value": "காத்திருங்கள், Text-to-Speech உருவாக்கப்படுகிறது\\u2026"
+   },
+   {
+    "key": "settings_feedback_allow_gmail",
+    "latinWords": [
+     "Gmail"
+    ],
+    "value": "Gmail அணுகலை அனுமதித்து மீண்டும் முயற்சிக்கவும்."
+   },
+   {
+    "key": "settings_feedback_token_error",
+    "latinWords": [
+     "Token"
+    ],
+    "value": "Token பிழை: %1$s"
+   },
+   {
+    "key": "settings_feedback_subject",
+    "latinWords": [
+     "Best"
+    ],
+    "value": "Best Journal பற்றிய கருத்து"
+   },
+   {
+    "key": "settings_feedback_api_error",
+    "latinWords": [
+     "Gmail"
+    ],
+    "value": "Gmail பிழை %1$d: %2$s"
+   },
+   {
+    "key": "settings_feedback_confirm_subject",
+    "latinWords": [
+     "Best"
+    ],
+    "value": "Best Journal-க்கு உங்கள் கருத்து"
+   },
+   {
+    "key": "settings_feedback_confirm_body",
+    "latinWords": [
+     "DEV",
+     "FRANK"
+    ],
+    "value": "இந்தச் செய்தியை நீ டெவலப்பருக்கு அனுப்பினாய்.\\nஅவன் உனக்கு தனிப்பட்ட முறையில் பதிலளிப்பான்.\\n\\n--- உன் செய்தி ---\\n%1$s\\"
+   },
+   {
+    "key": "settings_about_version",
+    "latinWords": [
+     "Best"
+    ],
+    "value": "Best Journal V0.21.9"
+   },
+   {
+    "key": "ai_prompt_no_dates_rule",
+    "latinWords": [
+     "beschreibung",
+     "erklaerung",
+     "zusammenfassung",
+     "gesamtanalyse",
+     "herleitung"
+    ],
+    "value": "குரல் வாசிப்பு நட்பு (கட்டாயம் — தேதி தடை):\\nஅனைத்து தெரியும் உரை வயல்களிலும் (beschreibung, erklaerung, zusammenfassung"
+   },
+   {
+    "key": "ai_prompt_rerank_system",
+    "latinWords": [
+     "JSON",
+     "JSON",
+     "titel",
+     "beschreibung",
+     "erklaerung",
+     "JSON",
+     "titel",
+     "beschreibung"
+    ],
+    "value": "நீங்கள் ஒரு சுயவிவர மறு-வரிசைப்படுத்தி. நீங்கள் டாஷ்போர்டு பகுப்பாய்விலிருந்து 5 முக்கிய நடவடிக்கைகளின் JSON அரேயை, பயனர"
+   },
+   {
+    "key": "ai_prompt_rerank_instruction",
+    "latinWords": [
+     "JSON"
+    ],
+    "value": "வரிசைப்படுத்தவும் மற்றும் சுயவிவரம் தொடர்பில்லாத 2 வரை உள்ளீடுகளை மாற்றவும். சரியாக 5 உள்ளீடுகளை JSON அரேயாக திருப்பி அன"
+   },
+   {
+    "key": "ai_prompt_goals_intro",
+    "latinWords": [
+     "JSON"
+    ],
+    "value": "நீங்கள் ஒரு கவனமுள்ள, ஊக்கமளிக்கும் இலக்கு பகுப்பாய்வாளர் மற்றும் முன்னேற்ற கண்காணிப்பாளர்.\\n\\nஉங்கள் பணி:\\nஒரு பயனரின் "
+   },
+   {
+    "key": "ai_prompt_goals_schema",
+    "latinWords": [
+     "JSON",
+     "gesamtanalyse",
+     "top",
+     "massnahmen",
+     "kategorien",
+     "gesamtanalyse",
+     "top",
+     "massnahmen"
+    ],
+    "value": "JSON வெளியீட்டு திட்டம்:\\n{\\n  \\\"gesamtanalyse\\\": \\\"...\\\",\\n  \\\"top_massnahmen\\\": [...],\\n  \\\"kategorien\\\": [...]\\n}\\n\\n"
+   },
+   {
+    "key": "ai_prompt_goals_output",
+    "latinWords": [
+     "JSON",
+     "Backticks"
+    ],
+    "value": "வெளியீட்டு வடிவம்: JSON மட்டும். Backticks வேண்டாம். { இல் தொடங்கவும்."
+   },
+   {
+    "key": "ai_prompt_insight_intro",
+    "latinWords": [
+     "JSON"
+    ],
+    "value": "நீங்கள் தனிப்பட்ட வளர்ச்சிக்கான ஒரு அக்கறையுள்ள, ஆழமான வடிவ பகுப்பாய்வாளர்.\\n\\nஉங்கள் பணி:\\nஒரு பயனரின் நாட்குறிப்பு பதி"
+   },
+   {
+    "key": "ai_prompt_insight_rules",
+    "latinWords": [
+     "JSON",
+     "JSON"
+    ],
+    "value": "மொழி விதிகள் (JSON-ல் உள்ள அனைத்து உரை புலங்களுக்கும் பொருந்தும்):\\n- எளிமையான, தெளிவான மொழி. குறுகிய வாக்கியங்கள்.\\n- வ"
+   },
+   {
+    "key": "ai_prompt_insight_schema_header",
+    "latinWords": [
+     "JSON",
+     "gesamt",
+     "entropie",
+     "trend",
+     "wachsend",
+     "stabil",
+     "sinkend",
+     "unbekannt"
+    ],
+    "value": "JSON வெளியீட்டு திட்டம்:\\n{\\n  \\\"gesamt_entropie\\\": 0.0,\\n  \\\"trend\\\": \\\"wachsend|stabil|sinkend|unbekannt\\\",\\n  \\\"gesam"
+   },
+   {
+    "key": "ai_prompt_insight_schema_fields",
+    "latinWords": [
+     "fortschritte",
+     "titel",
+     "beschreibung",
+     "bezug",
+     "top",
+     "massnahmen",
+     "titel",
+     "beschreibung"
+    ],
+    "value": "4) \\\"fortschritte\\\" (வரிசை, 0-8 உள்ளீடுகள்)\\n   பதிவுகளிலிருந்து தெரியும் தனிப்பட்ட பலங்கள் மற்றும் நேர்மறை குணங்கள் — ப"
+   },
+   {
+    "key": "ai_prompt_insight_schema_categories",
+    "latinWords": [
+     "kategorien",
+     "name",
+     "icon",
+     "material",
+     "icon",
+     "name",
+     "farbe",
+     "HEX"
+    ],
+    "value": "6) \\\"kategorien\\\" (வரிசை, தேவைப்படும் அளவு)\\n   கண்டறிந்த ஒவ்வொரு சுய அறிவு பகுதிக்கும் தனி குழு.\\n   பகுதிகள் வாழ்க்கை "
+   },
+   {
+    "key": "ai_prompt_insight_output",
+    "latinWords": [
+     "top",
+     "massnahmen",
+     "ratschlaege",
+     "beschreibung",
+     "JSON",
+     "Markdown",
+     "backticks",
+     "JSON"
+    ],
+    "value": "விளக்கங்களுக்கான வார்த்தை எண்ணிக்கை விதி (கண்டிப்பாக பின்பற்றவும்):\\n\\\"top_massnahmen\\\" மற்றும் \\\"ratschlaege\\\" இல் \\\"be"
+   },
+   {
+    "key": "ai_prompt_entropy_intro",
+    "latinWords": [
+     "JSON"
+    ],
+    "value": "நீங்கள் ஒரு அக்கறையுள்ள, மிகவும் அறிவார்ந்த வாழ்க்கை ஆலோசகர் மற்றும் வடிவ பகுப்பாய்வாளர்.\\n\\nஉங்கள் பணி:\\nஒரு பயனரின் நா"
+   },
+   {
+    "key": "ai_prompt_entropy_rules",
+    "latinWords": [
+     "JSON",
+     "JSON",
+     "gesamt",
+     "entropie",
+     "entropie",
+     "level",
+     "JSON"
+    ],
+    "value": "மொழி விதிகள் (JSON-ல் உள்ள அனைத்து உரை புலங்களுக்கும்):\\n- எளிமையான, தெளிவான மொழி. குறுகிய வாக்கியங்கள்.\\n- வெளிநாட்டு வ"
+   },
+   {
+    "key": "ai_prompt_entropy_schema_header",
+    "latinWords": [
+     "JSON",
+     "gesamt",
+     "entropie",
+     "trend",
+     "steigend",
+     "stabil",
+     "sinkend",
+     "unbekannt"
+    ],
+    "value": "JSON வெளியீட்டு திட்டம்:\\n{\\n  \\\"gesamt_entropie\\\": 0.0,\\n  \\\"trend\\\": \\\"steigend|stabil|sinkend|unbekannt\\\",\\n  \\\"gesam"
+   },
+   {
+    "key": "ai_prompt_entropy_schema_fields",
+    "latinWords": [
+     "fortschritte",
+     "titel",
+     "beschreibung",
+     "bezug",
+     "top",
+     "massnahmen",
+     "titel",
+     "beschreibung"
+    ],
+    "value": "4) \\\"fortschritte\\\" (வரிசை, 0-5 உள்ளீடுகள்)\\n   சுமை குறைந்த இடங்கள் அல்லது நன்றாக செயல்படும் பழக்கங்கள்.\\n   ஒவ்வொரு மு"
+   },
+   {
+    "key": "ai_prompt_entropy_schema_categories",
+    "latinWords": [
+     "kategorien",
+     "name",
+     "icon",
+     "material",
+     "icon",
+     "name",
+     "farbe",
+     "HEX"
+    ],
+    "value": "6) \\\"kategorien\\\" (வரிசை, தேவைப்படும் அளவு)\\n   கண்டறிந்த ஒவ்வொரு தலைப்பிற்கும் தனி வகை.\\n   ஒவ்வொரு வகையின் திட்டம்:\\n "
+   },
+   {
+    "key": "ai_prompt_entropy_output",
+    "latinWords": [
+     "JSON",
+     "Backticks",
+     "JSON"
+    ],
+    "value": "வெளியீட்டு வடிவம்:\\n- JSON பொருளுடன் மட்டும் பதிலளிக்கவும்.\\n- அதற்கு முன்னோ பின்னோ உரை வேண்டாம்.\\n- Backticks வேண்டாம்."
+   },
+   {
+    "key": "ai_prompt_summary_intro",
+    "latinWords": [
+     "JSON"
+    ],
+    "value": "நீங்கள் ஒரு கவனமுள்ள, கட்டமைக்கப்பட்ட நாட்குறிப்பு பகுப்பாய்வாளர்.\\n\\nஉங்கள் பணி:\\nஒரு பயனரின் நாட்குறிப்பு பதிவுகளை பகு"
+   },
+   {
+    "key": "ai_prompt_summary_rules",
+    "latinWords": [
+     "JSON",
+     "JSON"
+    ],
+    "value": "மொழி விதிகள் (JSON-ல் உள்ள அனைத்து உரை புலங்களுக்கும் பொருந்தும்):\\n- எளிமையான, தெளிவான மொழி. குறுகிய வாக்கியங்கள்.\\n- வ"
+   },
+   {
+    "key": "ai_prompt_summary_schema_header",
+    "latinWords": [
+     "JSON",
+     "gesamt",
+     "entropie",
+     "trend",
+     "steigend",
+     "stabil",
+     "sinkend",
+     "unbekannt"
+    ],
+    "value": "JSON வெளியீட்டு திட்டம்:\\n{\\n  \\\"gesamt_entropie\\\": 0.0,\\n  \\\"trend\\\": \\\"steigend|stabil|sinkend|unbekannt\\\",\\n  \\\"gesam"
+   },
+   {
+    "key": "ai_prompt_summary_schema_fields",
+    "latinWords": [
+     "fortschritte",
+     "titel",
+     "beschreibung",
+     "bezug",
+     "top",
+     "massnahmen",
+     "titel",
+     "beschreibung"
+    ],
+    "value": "4) \\\"fortschritte\\\" (வரிசை, 0-5 உள்ளீடுகள்)\\n   திரும்பி வரும் தலைப்புகள், பழக்கங்கள் அல்லது பல பதிவுகளில் தெரியும் தொடர"
+   },
+   {
+    "key": "ai_prompt_summary_schema_categories",
+    "latinWords": [
+     "kategorien",
+     "name",
+     "icon",
+     "material",
+     "icon",
+     "name",
+     "farbe",
+     "HEX"
+    ],
+    "value": "6) \\\"kategorien\\\" (வரிசை, தேவைப்படும் அளவு)\\n   கண்டறிந்த ஒவ்வொரு தலைப்பிற்கும் தனி குழு.\\n   ஒவ்வொரு தலைப்பின் திட்டம்:"
+   },
+   {
+    "key": "ai_prompt_summary_output",
+    "latinWords": [
+     "top",
+     "massnahmen",
+     "ratschlaege",
+     "beschreibung",
+     "JSON",
+     "Markdown",
+     "backticks",
+     "JSON"
+    ],
+    "value": "விளக்கங்களுக்கான வார்த்தை எண்ணிக்கை விதி (கண்டிப்பாக பின்பற்றவும்):\\n\\\"top_massnahmen\\\" மற்றும் \\\"ratschlaege\\\" இல் \\\"be"
+   },
+   {
+    "key": "ai_prompt_custom_schema",
+    "latinWords": [
+     "JSON",
+     "ueberschrift",
+     "top",
+     "ueberschrift",
+     "analyse",
+     "ueberschrift",
+     "ergebnisse",
+     "gesamt"
+    ],
+    "value": "JSON வெளியீட்டு திட்டம்:\\n{\\n  \\\"ueberschrift_top5\\\": \\\"முதல் 5க்கான படைப்பாற்றல் தலைப்பு (கவனத்திற்கு பொருத்தமானது, அதி"
+   },
+   {
+    "key": "ai_prompt_custom_output",
+    "latinWords": [
+     "top",
+     "massnahmen",
+     "ratschlaege",
+     "beschreibung",
+     "JSON",
+     "Backticks"
+    ],
+    "value": "வார்த்தை எண்ணிக்கை விதி: top_massnahmen மற்றும் ratschlaege இல் \\\"beschreibung\\\" எப்போதும் 13-21 வார்த்தைகள்.\\n\\nவெளியீட"
+   },
+   {
+    "key": "retro_tts_wait",
+    "latinWords": [
+     "Text",
+     "Speech"
+    ],
+    "value": "காத்திருங்கள், Text-to-Speech உருவாக்கப்படுகிறது\\u2026"
+   },
+   {
+    "key": "onboarding_welcome",
+    "latinWords": [
+     "Best"
+    ],
+    "value": "Best Journal-க்கு\\nவரவேற்கிறோம்"
+   },
+   {
+    "key": "onboarding_how_step4_desc",
+    "latinWords": [
+     "Dashboard"
+    ],
+    "value": "KI Dashboard உங்கள் பதிவுகளிலிருந்து தொடர்புகளை காட்டுகிறது."
+   },
+   {
+    "key": "onboarding_free_after_trial",
+    "latinWords": [
+     "Best"
+    ],
+    "value": "பிறகு Best Journal-ஐ தொடர்ந்து பயன்படுத்தலாம்,\\nவாரத்திற்கு வரையறுக்கப்பட்ட KI அழைப்புகளுடன் இலவசமாக."
+   },
+   {
+    "key": "consent_intro",
+    "latinWords": [
+     "Best"
+    ],
+    "value": "உங்கள் நாட்குறிப்பு ஒரு தனிப்பட்ட இடம், அதை நாங்கள் மதிக்கிறோம். Best Journal உங்கள் தரவை எப்படிக் கையாள்கிறது என்பதை இங"
+   },
+   {
+    "key": "consent_card2_title",
+    "latinWords": [
+     "USA"
+    ],
+    "value": "AI அம்சங்கள் (USA)"
+   },
+   {
+    "key": "consent_card2_body",
+    "latinWords": [
+     "Microsoft",
+     "Edge",
+     "USA",
+     "Data",
+     "Privacy",
+     "Framework",
+     "Standard",
+     "Contractual"
+    ],
+    "value": "விருப்பப்படி உரைகள் Google Gemini-க்கும், உரக்கப் படிக்கும் உரைகள் Microsoft Edge-க்கும் USA-வில் அனுப்பப்படும் (EU-US D"
+   },
+   {
+    "key": "consent_card3_body",
+    "latinWords": [
+     "Firebase",
+     "Analytics"
+    ],
+    "value": "Firebase Analytics, விருப்பத்தேர்வு, அமைப்புகளில் எப்போது வேண்டுமானாலும் மாற்றலாம்."
+   },
+   {
+    "key": "privacy_gate_groq_body",
+    "latinWords": [
+     "Inc",
+     "Mountain",
+     "View",
+     "USA",
+     "Settings"
+    ],
+    "value": "கிளவுட் டிரான்ஸ்கிரிப்ஷனுக்காக உங்கள் குரல் பதிவு குறியாக்கப்பட்டு Groq, Inc.-க்கு (Mountain View, USA) அனுப்பப்பட்டு அங"
+   },
+   {
+    "key": "privacy_gate_gemini_body",
+    "latinWords": [
+     "Best",
+     "Dashboard",
+     "Data",
+     "Privacy",
+     "Framework",
+     "Art"
+    ],
+    "value": "Best Journal-இன் நுண்ணறிவு அம்சங்களை பயன்படுத்த விரும்புவதற்கு நன்றி! சுருக்கங்கள், பின்னோக்குப் பார்வைகள், Dashboard நு"
+   },
+   {
+    "key": "privacy_gate_tts_title",
+    "latinWords": [
+     "Microsoft"
+    ],
+    "value": "Microsoft-க்கு உரையை அனுப்பவா?"
+   },
+   {
+    "key": "privacy_gate_tts_body",
+    "latinWords": [
+     "Microsoft",
+     "Bing",
+     "Speech",
+     "USA",
+     "Data",
+     "Privacy",
+     "Framework",
+     "Standard"
+    ],
+    "value": "வாசித்துக் காட்ட, உரை குறியாக்கப்பட்டு Microsoft Bing Speech-க்கு (USA) அனுப்பப்பட்டு ஆடியோவாகத் திரும்பி வரும். சட்ட அட"
+   },
+   {
+    "key": "settings_analytics_subtitle",
+    "latinWords": [
+     "Firebase",
+     "Analytics"
+    ],
+    "value": "பிழை பகுப்பாய்வு மற்றும் தயாரிப்பு மேம்பாட்டிற்கான Firebase Analytics"
+   },
+   {
+    "key": "settings_delete_account_confirm_body",
+    "latinWords": [
+     "Firebase"
+    ],
+    "value": "இந்தச் செயலை மீட்க முடியாது மற்றும் நீக்குவது:\\n\\n• அனைத்து உள்ளமை நாட்குறிப்புப் பதிவுகள், புகைப்படங்கள் மற்றும் வீடியோ"
+   },
+   {
+    "key": "settings_report_ai_confirm_title",
+    "latinWords": [
+     "Support"
+    ],
+    "value": "Support-க்கு மின்னஞ்சலைத் திறக்கவா?"
+   },
+   {
+    "key": "settings_report_ai_confirm_body",
+    "latinWords": [
+     "dev",
+     "app",
+     "support",
+     "gmail",
+     "com"
+    ],
+    "value": "உங்கள் மின்னஞ்சல் பயன்பாடு dev.app.support@gmail.com-க்கு தயார் செய்யப்பட்ட செய்தியுடன் திறக்கும். அனுப்புவதற்கு முன் வி"
+   },
+   {
+    "key": "settings_report_ai_no_email",
+    "latinWords": [
+     "dev",
+     "app",
+     "support",
+     "gmail",
+     "com"
+    ],
+    "value": "மின்னஞ்சல் பயன்பாடு கிடைக்கவில்லை. தயவுசெய்து புகாரை dev.app.support@gmail.com-க்கு அனுப்பவும்."
+   },
+   {
+    "key": "settings_report_ai_subject",
+    "latinWords": [
+     "Best"
+    ],
+    "value": "Best Journal: தகாத AI பதில்"
+   },
+   {
+    "key": "settings_report_ai_body",
+    "latinWords": [
+     "Best"
+    ],
+    "value": "வணக்கம்,\\n\\nBest Journal-ல் ஒரு தகாத அல்லது தவறான AI பதிலைப் புகாரளிக்க விரும்புகிறேன்.\\n\\nபிரச்சனையின் விளக்கம்:\\n[தயவு"
+   },
+   {
+    "key": "settings_revoke_confirm_title",
+    "latinWords": [
+     "Support"
+    ],
+    "value": "Support-க்கு மின்னஞ்சலைத் திறக்கவா?"
+   },
+   {
+    "key": "settings_revoke_confirm_body",
+    "latinWords": [
+     "dev",
+     "app",
+     "support",
+     "gmail",
+     "com",
+     "Subscriptions"
+    ],
+    "value": "உங்கள் மின்னஞ்சல் பயன்பாடு dev.app.support@gmail.com-க்கு தயார் செய்யப்பட்ட செய்தியுடன் திறக்கும். வேலை நாட்களில் 24 மணி"
+   },
+   {
+    "key": "settings_revoke_no_email",
+    "latinWords": [
+     "dev",
+     "app",
+     "support",
+     "gmail",
+     "com"
+    ],
+    "value": "மின்னஞ்சல் பயன்பாடு கிடைக்கவில்லை. தயவுசெய்து ரத்தை dev.app.support@gmail.com-க்கு அனுப்பவும்."
+   },
+   {
+    "key": "settings_revoke_email_subject",
+    "latinWords": [
+     "Best"
+    ],
+    "value": "Best Journal Premium ஒப்பந்த ரத்து"
+   },
+   {
+    "key": "settings_revoke_email_body",
+    "latinWords": [
+     "Best",
+     "BGB",
+     "Gmail",
+     "API"
+    ],
+    "value": "இதன் மூலம் Best Journal-ன் Premium அம்சங்கள் தொடர்பான ஒப்பந்தத்தை நான் திரும்பப் பெறுவதை அறிவிக்கிறேன்.\\n\\nஅனுப்புநர் (G"
+   },
+   {
+    "key": "settings_revoke_confirm_subject",
+    "latinWords": [
+     "Best"
+    ],
+    "value": "உங்கள் பெறல் உறுதி: Best Journal இல் திரும்பப் பெறல்"
+   },
+   {
+    "key": "settings_revoke_confirm_user_body",
+    "latinWords": [
+     "BGB",
+     "dev",
+     "app",
+     "support",
+     "gmail",
+     "com",
+     "Store",
+     "Subscriptions"
+    ],
+    "value": "வணக்கம்,\\n\\n%1$s அன்று செய்யப்பட்ட உங்கள் திரும்பப் பெறலை நாங்கள் பெற்றுள்ளோம். இது § 356a BGB படி உங்கள் பெறல் உறுதிப்ப"
+   },
+   {
+    "key": "settings_revoke_no_account",
+    "latinWords": [
+     "Settings",
+     "dev",
+     "app",
+     "support",
+     "gmail",
+     "com"
+    ],
+    "value": "உள்நுழைந்த Google கணக்கு முகவரி எதுவும் கிடைக்கவில்லை. தயவுசெய்து Settings இல் உங்கள் Google கணக்கில் உள்நுழையவும் அல்லத"
+   },
+   {
+    "key": "settings_revoke_success_body",
+    "latinWords": [
+     "dev",
+     "app",
+     "support",
+     "gmail",
+     "com"
+    ],
+    "value": "உங்கள் திரும்பப் பெறல் dev.app.support@gmail.com க்கு அனுப்பப்பட்டது. பெறல் உறுதிப்படுத்தலும் உங்கள் இன்பாக்ஸில் உள்ளது."
+   },
+   {
+    "key": "settings_revoke_error_body",
+    "latinWords": [
+     "dev",
+     "app",
+     "support",
+     "gmail",
+     "com"
+    ],
+    "value": "தானியங்கி அனுப்பல் தோல்வியடைந்தது: %1$s\\n\\nமாற்றாக நீங்கள் dev.app.support@gmail.com க்கு கையால் ஒரு மின்னஞ்சலை அனுப்பலா"
+   },
+   {
+    "key": "settings_crisis_dialog_body",
+    "latinWords": [
+     "Best"
+    ],
+    "value": "Best Journal ஒரு நாட்குறிப்பு ஆப். இது தொழில்முறை உளவியல் அல்லது மருத்துவ உதவிக்கு மாற்றாகாது. AI உருவாக்கும் பகுப்பாய்வ"
+   },
+   {
+    "key": "settings_crisis_hotline_de_name",
+    "latinWords": [
+     "Telefonseelsorge"
+    ],
+    "value": "Telefonseelsorge ஜெர்மனி"
+   },
+   {
+    "key": "settings_crisis_open_findahelpline",
+    "latinWords": [
+     "findahelpline",
+     "com"
+    ],
+    "value": "findahelpline.com ஐ திறக்கவும்"
+   },
+   {
+    "key": "settings_ccpa_do_not_sell_title",
+    "latinWords": [
+     "Not",
+     "Sell",
+     "Personal",
+     "Information"
+    ],
+    "value": "Do Not Sell My Personal Information"
+   },
+   {
+    "key": "settings_ccpa_do_not_sell_subtitle",
+    "latinWords": [
+     "CCPA",
+     "CPRA"
+    ],
+    "value": "கலிபோர்னியா குடியிருப்பாளர்களுக்கு (CCPA/CPRA 2026). இயக்கப்பட்டால், அனைத்து கிளவுட் AI அம்சங்களும் முடக்கப்படும், எந்த "
+   },
+   {
+    "key": "settings_ccpa_do_not_sell_confirmation",
+    "latinWords": [
+     "Not",
+     "Sell"
+    ],
+    "value": "Do-Not-Sell இயக்கப்பட்டது — அனைத்து கிளவுட் சேவைகளும் முடக்கப்பட்டுள்ளன."
+   },
+   {
+    "key": "settings_ccpa_do_not_sell_off_confirmation",
+    "latinWords": [
+     "Not",
+     "Sell"
+    ],
+    "value": "Do-Not-Sell முடக்கப்பட்டது."
+   },
+   {
+    "key": "consent_welcome_title",
+    "latinWords": [
+     "Best"
+    ],
+    "value": "Best Journal‌க்கு வரவேற்கிறோம்"
+   },
+   {
+    "key": "consent_toggle_analytics_body",
+    "latinWords": [
+     "Firebase",
+     "Analytics",
+     "USA",
+     "Data",
+     "Privacy",
+     "Framework"
+    ],
+    "value": "Firebase Analytics — பயன்பாட்டை மேம்படுத்த எங்களுக்கு உதவுகிறது. தனிப்பட்ட உள்ளடக்கம் இல்லை, அநாமதேய தொடுதல் எண்ணிக்கை ம"
+   },
+   {
+    "key": "consent_toggle_groq_title",
+    "latinWords": [
+     "Whisper"
+    ],
+    "value": "பேச்சு முதல் உரை (Groq Whisper)"
+   },
+   {
+    "key": "consent_toggle_groq_body",
+    "latinWords": [
+     "USA"
+    ],
+    "value": "உள்ளீடுகளைச் சொல்ல அனுமதிக்கிறது. உங்கள் குரல் பதிவு குறியாக்கம் செய்யப்பட்டு Groq (USA)‌க்கு அனுப்பப்பட்டு, உரையாக மாற்"
+   },
+   {
+    "key": "consent_toggle_gemini_body",
+    "latinWords": [
+     "USA"
+    ],
+    "value": "டாஷ்போர்டு AI, சுருக்கங்கள், மறுபரிசீலனைகள் மற்றும் உரை மேம்படுத்தல். உரை பகுதிகளை Google Gemini (USA)‌க்கு அனுப்புகிறது"
+   },
+   {
+    "key": "consent_toggle_tts_title",
+    "latinWords": [
+     "Microsoft",
+     "Edge"
+    ],
+    "value": "உரக்க வாசிப்பு (Microsoft Edge TTS)"
+   },
+   {
+    "key": "consent_toggle_tts_body",
+    "latinWords": [
+     "Microsoft",
+     "USA"
+    ],
+    "value": "இயற்கையான குரலில் உள்ளீடுகளைப் படிக்கிறது. உரையை Microsoft (USA)‌க்கு அனுப்புகிறது."
+   },
+   {
+    "key": "consent_toggle_do_not_sell_title",
+    "latinWords": [
+     "Not",
+     "Sell",
+     "Personal",
+     "Information"
+    ],
+    "value": "Do Not Sell My Personal Information"
+   },
+   {
+    "key": "consent_toggle_do_not_sell_body",
+    "latinWords": [
+     "CCPA",
+     "CPRA"
+    ],
+    "value": "கலிபோர்னியா விலகல் (CCPA/CPRA 2026). செயல்படுத்தும்போது, அனைத்து விருப்பத்தேர்வு தரவு செயலாக்கமும் முடக்கப்படுகிறது — உள"
+   },
+   {
+    "key": "settings_ai_groq_subtitle",
+    "latinWords": [
+     "USA"
+    ],
+    "value": "படியெடுத்தலுக்காக Groq USA‌க்கு குரல் பதிவுகளை அனுப்பவும்"
+   },
+   {
+    "key": "settings_ai_gemini_subtitle",
+    "latinWords": [
+     "USA"
+    ],
+    "value": "AI சுருக்கங்களுக்காக Google USA‌க்கு உரைகளை அனுப்பவும்"
+   },
+   {
+    "key": "settings_ai_tts_title",
+    "latinWords": [
+     "Edge"
+    ],
+    "value": "உரக்க வாசிப்பு (Edge TTS)"
+   },
+   {
+    "key": "settings_ai_tts_subtitle",
+    "latinWords": [
+     "Microsoft",
+     "USA"
+    ],
+    "value": "குரல் வெளியீட்டிற்காக Microsoft USA‌க்கு உரைகளை அனுப்பவும்"
+   },
+   {
+    "key": "ai_limits_dialog_body",
+    "latinWords": [
+     "PREMIUM"
+    ],
+    "value": "PREMIUM சந்தாவுடன்\\n\\nதினசரி கிடைப்பவை:\\n• ஒவ்வொரு சுயவிவரத்திற்கும் 150 கோரிக்கைகள் — 4 முன்வரையறை சுயவிவரங்களுக்கு சேர"
+   },
+   {
+    "key": "consent_info_system_backup_title",
+    "latinWords": [
+     "Android"
+    ],
+    "value": "Android கணினி காப்புப்பிரதி"
+   },
+   {
+    "key": "consent_info_system_backup_body",
+    "latinWords": [
+     "Android",
+     "Android"
+    ],
+    "value": "சாதன அமைப்புகளில் Android கணினி காப்புப்பிரதியை இயக்கியிருந்தால், Android உன் நாட்குறிப்பு தரவை Google கணக்கின் காப்பு ப"
+   },
+   {
+    "key": "settings_open_system_backup_settings_label",
+    "latinWords": [
+     "Android"
+    ],
+    "value": "Android கணினி காப்புப்பிரதி நிர்வகி"
+   },
+   {
+    "key": "settings_open_system_backup_settings_desc",
+    "latinWords": [
+     "Best",
+     "Android"
+    ],
+    "value": "Best Journal-க்கான தானியங்கி காப்புப்பிரதியை இயக்க அல்லது முடக்க Android கணினி அமைப்புகளைத் திறக்கும்."
+   },
+   {
+    "key": "ai_output_health_disclaimer_long",
+    "latinWords": [
+     "Best"
+    ],
+    "value": "Best Journal ஒரு நாட்குறிப்பு, சிகிச்சை சேவை அல்ல. KI பகுப்பாய்வுகள் சுய சிந்தனைக்கான தூண்டுதல்களே, தொழில்முறை உளவியல் அ"
+   }
+  ]
+ },
+ "te": {
+  "totalStrings": 1087,
+  "fffdReplacementChar": [],
+  "emptyStrings": [
+   "ai_prompt_language_override"
+  ],
+  "lowScriptRatio": [
+   {
+    "key": "app_name",
+    "ratio": 0.0,
+    "letters": 11,
+    "target": 0,
+    "value": "Best Journal"
+   },
+   {
+    "key": "label_premium",
+    "ratio": 0.0,
+    "letters": 7,
+    "target": 0,
+    "value": "Premium"
+   },
+   {
+    "key": "transcription_model_groq",
+    "ratio": 0.0,
+    "letters": 22,
+    "target": 0,
+    "value": "Groq Whisper Large V3 Turbo"
+   },
+   {
+    "key": "settings_premium_section",
+    "ratio": 0.0,
+    "letters": 7,
+    "target": 0,
+    "value": "Premium"
+   },
+   {
+    "key": "settings_about_version",
+    "ratio": 0.0,
+    "letters": 12,
+    "target": 0,
+    "value": "Best Journal V0.21.9"
+   },
+   {
+    "key": "settings_crisis_hotline_de_name",
+    "ratio": 0.27,
+    "letters": 22,
+    "target": 6,
+    "value": "Telefonseelsorge జర్మనీ"
+   },
+   {
+    "key": "settings_ccpa_do_not_sell_title",
+    "ratio": 0.0,
+    "letters": 30,
+    "target": 0,
+    "value": "Do Not Sell My Personal Information"
+   },
+   {
+    "key": "consent_toggle_do_not_sell_title",
+    "ratio": 0.0,
+    "letters": 30,
+    "target": 0,
+    "value": "Do Not Sell My Personal Information"
+   },
+   {
+    "key": "consent_info_system_backup_title",
+    "ratio": 0.0,
+    "letters": 19,
+    "target": 0,
+    "value": "Android System-Backup"
+   },
+   {
+    "key": "consent_footer_link_impressum",
+    "ratio": 0.0,
+    "letters": 9,
+    "target": 0,
+    "value": "Impressum"
+   }
+  ],
+  "noTargetScriptButHasText": [
+   {
+    "key": "app_name",
+    "value": "Best Journal"
+   },
+   {
+    "key": "label_premium",
+    "value": "Premium"
+   },
+   {
+    "key": "transcription_model_groq",
+    "value": "Groq Whisper Large V3 Turbo"
+   },
+   {
+    "key": "settings_premium_section",
+    "value": "Premium"
+   },
+   {
+    "key": "settings_about_version",
+    "value": "Best Journal V0.21.9"
+   },
+   {
+    "key": "settings_ccpa_do_not_sell_title",
+    "value": "Do Not Sell My Personal Information"
+   },
+   {
+    "key": "consent_toggle_do_not_sell_title",
+    "value": "Do Not Sell My Personal Information"
+   },
+   {
+    "key": "consent_info_system_backup_title",
+    "value": "Android System-Backup"
+   },
+   {
+    "key": "consent_footer_link_impressum",
+    "value": "Impressum"
+   }
+  ],
+  "latinIslands": [
+   {
+    "key": "cd_sync_status",
+    "latinWords": [
+     "Sync"
+    ],
+    "value": "Sync స్థితి"
+   },
+   {
+    "key": "transcription_model_local",
+    "latinWords": [
+     "Whisper"
+    ],
+    "value": "స్థానిక Whisper మోడల్"
+   },
+   {
+    "key": "transcription_model_groq",
+    "latinWords": [
+     "Whisper",
+     "Large",
+     "Turbo"
+    ],
+    "value": "Groq Whisper Large V3 Turbo"
+   },
+   {
+    "key": "entry_tts_generating",
+    "latinWords": [
+     "Text",
+     "Speech"
+    ],
+    "value": "దయచేసి వేచి ఉండండి, Text-to-Speech సృష్టించబడుతోంది…"
+   },
+   {
+    "key": "dashboard_tts_wait",
+    "latinWords": [
+     "Text",
+     "Speech"
+    ],
+    "value": "దయచేసి వేచి ఉండండి, Text-to-Speech సృష్టించబడుతోంది…"
+   },
+   {
+    "key": "settings_feedback_allow_gmail",
+    "latinWords": [
+     "Gmail"
+    ],
+    "value": "దయచేసి Gmail ప్రవేశాన్ని అనుమతించండి మరియు మళ్లీ ప్రయత్నించండి."
+   },
+   {
+    "key": "settings_feedback_subject",
+    "latinWords": [
+     "Best"
+    ],
+    "value": "Best Journal పై అభిప్రాయం"
+   },
+   {
+    "key": "settings_feedback_api_error",
+    "latinWords": [
+     "Gmail"
+    ],
+    "value": "Gmail లోపం %1$d: %2$s"
+   },
+   {
+    "key": "settings_feedback_confirm_subject",
+    "latinWords": [
+     "Best"
+    ],
+    "value": "Best Journal కి మీ ఫీడ్‌బ్యాక్"
+   },
+   {
+    "key": "settings_feedback_confirm_body",
+    "latinWords": [
+     "DEV",
+     "FRANK"
+    ],
+    "value": "ఈ సందేశాన్ని నువ్వు డెవలపర్‌కి పంపావు.\\nఅతను నీకు వ్యక్తిగతంగా బదులిస్తాడు.\\n\\n--- నీ సందేశం ---\\n%1$s\\n\\nధన్యవాదాలు,\\nD"
+   },
+   {
+    "key": "settings_about_version",
+    "latinWords": [
+     "Best"
+    ],
+    "value": "Best Journal V0.21.9"
+   },
+   {
+    "key": "ai_prompt_no_dates_rule",
+    "latinWords": [
+     "ALL",
+     "herleitung"
+    ],
+    "value": "TTS చదవడానికి అనుకూలం (తప్పనిసరి — కనిపించే వచనాలలో తేదీ నిషేధం):\\nALL కనిపించే వచన ఫీల్డ్‌లలో (వివరణ, వివరించు, సారాంశం"
+   },
+   {
+    "key": "ai_prompt_rerank_system",
+    "latinWords": [
+     "JSON",
+     "JSON",
+     "titel",
+     "beschreibung",
+     "erklaerung",
+     "JSON",
+     "titel",
+     "beschreibung"
+    ],
+    "value": "మీరు ప్రొఫైల్ పున:క్రమబద్ధీకరణ నిపుణుడు. మీరు డ్యాష్‌బోర్డ్ విశ్లేషణ నుండి 5 ముఖ్య చర్యల JSON అర్రే, వినియోగదారు ప్రొఫైల"
+   },
+   {
+    "key": "ai_prompt_rerank_instruction",
+    "latinWords": [
+     "JSON"
+    ],
+    "value": "2 వరకు ప్రొఫైల్ సంబంధం లేని నమోదులను క్రమబద్ధీకరించి భర్తీ చేయండి. ఖచ్చితంగా 5 నమోదులను JSON అర్రేగా తిరిగి ఇవ్వండి."
+   },
+   {
+    "key": "ai_prompt_goals_intro",
+    "latinWords": [
+     "JSON"
+    ],
+    "value": "మీరు దృష్టిగల, ప్రేరేపించే లక్ష్య విశ్లేషకుడు మరియు ప్రగతి ట్రాకర్.\\n\\nమీ కార్యం:\\nవినియోగదారు డైరీ నమోదులను విశ్లేషించం"
+   },
+   {
+    "key": "ai_prompt_goals_schema",
+    "latinWords": [
+     "JSON",
+     "material",
+     "icon",
+     "HEX"
+    ],
+    "value": "JSON అవుట్‌పుట్ స్కీమా:\\n{\\n  \\\"మొత్తం_విశ్లేషణ\\\": \\\"...\\\",\\n  \\\"ముఖ్య_చర్యలు\\\": [...],\\n  \\\"వర్గాలు\\\": [...]\\n}\\n\\n1) \\"
+   },
+   {
+    "key": "ai_prompt_goals_output",
+    "latinWords": [
+     "JSON"
+    ],
+    "value": "అవుట్‌పుట్ ఫార్మాట్: కేవలం JSON. బ్యాక్‌టిక్‌లు లేవు. { తో ప్రారంభించండి."
+   },
+   {
+    "key": "ai_prompt_insight_intro",
+    "latinWords": [
+     "JSON"
+    ],
+    "value": "మీరు వ్యక్తిగత అభివృద్ధి కోసం సానుభూతి, లోతైన పర్యాయక్రమ విశ్లేషకుడు.\\n\\nమీ కార్యం:\\nవినియోగదారు డైరీ నమోదులను విశ్లేషిం"
+   },
+   {
+    "key": "ai_prompt_insight_rules",
+    "latinWords": [
+     "JSON",
+     "JSON"
+    ],
+    "value": "భాషా నియమాలు (JSON లోని అన్ని టెక్స్ట్ ఫీల్డ్‌లకి):\\n- సరళ, స్పష్ట భాష. చిన్న వాక్యాలు.\\n- విదేశీ పదాలు లేవు, సాంకేతిక ప"
+   },
+   {
+    "key": "ai_prompt_insight_schema_header",
+    "latinWords": [
+     "JSON"
+    ],
+    "value": "JSON అవుట్‌పుట్ స్కీమా:\\n{\\n  \\\"మొత్తం_ఎంట్రోపీ\\\": 0.0,\\n  \\\"ధోరణి\\\": \\\"పెరుగుతోంది|స్థిరం|తగ్గుతోంది|తెలియదు\\\",\\n  \\\"మొ"
+   },
+   {
+    "key": "ai_prompt_insight_schema_categories",
+    "latinWords": [
+     "material",
+     "icon",
+     "name",
+     "HEX",
+     "icon",
+     "psychology",
+     "farbe",
+     "BFA"
+    ],
+    "value": "6) \\\"వర్గాలు\\\" (అర్రే, అవసరమైనంత)\\n   ప్రతి గుర్తించిన స్వీయ-అవగాహన ప్రాంతానికి ప్రత్యేక సమూహం.\\n   ప్రాంతాలు జీవిత విషయ"
+   },
+   {
+    "key": "ai_prompt_insight_output",
+    "latinWords": [
+     "JSON",
+     "Markdown",
+     "JSON"
+    ],
+    "value": "వివరణల కోసం పద గణన నియమం (కఠినంగా అనుసరించండి):\\n\\\"ముఖ్య_చర్యలు\\\" మరియు \\\"సలహాలు\\\" లోని \\\"వివరణ\\\" ఎల్లప్పుడూ 13 మరియు 21"
+   },
+   {
+    "key": "ai_prompt_entropy_intro",
+    "latinWords": [
+     "JSON"
+    ],
+    "value": "మీరు సానుభూతిగల, అత్యంత తెలివైన జీవిత సలహాదారు మరియు పర్యాయక్రమ విశ్లేషకుడు.\\n\\nమీ కార్యం:\\nవినియోగదారు డైరీ నమోదులను వి"
+   },
+   {
+    "key": "ai_prompt_entropy_rules",
+    "latinWords": [
+     "JSON",
+     "gesamtanalyse",
+     "beschreibung",
+     "erklaerung",
+     "zusammenfassung",
+     "herleitung",
+     "JSON",
+     "gesamt"
+    ],
+    "value": "భాషా నియమాలు (JSON లోని అన్ని టెక్స్ట్ ఫీల్డ్‌లకి):\\n- సరళ, స్పష్ట భాష. చిన్న వాక్యాలు.\\n- విదేశీ పదాలు లేవు, సాంకేతిక ప"
+   },
+   {
+    "key": "ai_prompt_entropy_schema_header",
+    "latinWords": [
+     "JSON"
+    ],
+    "value": "JSON అవుట్‌పుట్ స్కీమా:\\n{\\n  \\\"మొత్తం_ఎంట్రోపీ\\\": 0.0,\\n  \\\"ధోరణి\\\": \\\"పెరుగుతోంది|స్థిరం|తగ్గుతోంది|తెలియదు\\\",\\n  \\\"మొ"
+   },
+   {
+    "key": "ai_prompt_entropy_schema_categories",
+    "latinWords": [
+     "material",
+     "icon",
+     "name",
+     "HEX",
+     "icon",
+     "bedtime",
+     "farbe",
+     "icon"
+    ],
+    "value": "6) \\\"వర్గాలు\\\" (అర్రే, అవసరమైనంత)\\n   ప్రతి గుర్తించిన విషయానికి ప్రత్యేక వర్గం.\\n   ప్రతి వర్గానికి స్కీమా:\\n   {\\n    "
+   },
+   {
+    "key": "ai_prompt_entropy_output",
+    "latinWords": [
+     "JSON",
+     "Markdown",
+     "JSON"
+    ],
+    "value": "అవుట్‌పుట్ ఫార్మాట్ — కఠిన నియమాలు:\\n- కేవలం JSON ఆబ్జెక్ట్‌తో సమాధానం ఇవ్వండి.\\n- ముందు లేదా తర్వాత ఏ టెక్స్ట్ లేదు.\\n-"
+   },
+   {
+    "key": "ai_prompt_summary_intro",
+    "latinWords": [
+     "JSON"
+    ],
+    "value": "మీరు దృష్టిగల, నిర్మాణాత్మక డైరీ విశ్లేషకుడు.\\n\\nమీ కార్యం:\\nవినియోగదారు డైరీ నమోదులను విశ్లేషించండి. వినియోగదారు ఏమి అన"
+   },
+   {
+    "key": "ai_prompt_summary_rules",
+    "latinWords": [
+     "JSON",
+     "JSON"
+    ],
+    "value": "భాషా నియమాలు (JSON లోని అన్ని టెక్స్ట్ ఫీల్డ్‌లకి):\\n- సరళ, స్పష్ట భాష. చిన్న వాక్యాలు.\\n- విదేశీ పదాలు లేవు, సాంకేతిక ప"
+   },
+   {
+    "key": "ai_prompt_summary_schema_header",
+    "latinWords": [
+     "JSON"
+    ],
+    "value": "JSON అవుట్‌పుట్ స్కీమా:\\n{\\n  \\\"మొత్తం_ఎంట్రోపీ\\\": 0.0,\\n  \\\"ధోరణి\\\": \\\"పెరుగుతోంది|స్థిరం|తగ్గుతోంది|తెలియదు\\\",\\n  \\\"మొ"
+   },
+   {
+    "key": "ai_prompt_summary_schema_categories",
+    "latinWords": [
+     "material",
+     "icon",
+     "name",
+     "HEX",
+     "icon",
+     "bedtime",
+     "farbe",
+     "icon"
+    ],
+    "value": "6) \\\"వర్గాలు\\\" (అర్రే, అవసరమైనంత)\\n   ప్రతి గుర్తించిన విషయానికి ప్రత్యేక సమూహం.\\n   ప్రతి విషయానికి స్కీమా:\\n   {\\n    "
+   },
+   {
+    "key": "ai_prompt_summary_output",
+    "latinWords": [
+     "JSON",
+     "Markdown",
+     "JSON"
+    ],
+    "value": "వివరణల కోసం పద గణన నియమం (కఠినంగా అనుసరించండి):\\n\\\"ముఖ్య_చర్యలు\\\" మరియు \\\"సలహాలు\\\" లోని \\\"వివరణ\\\" ఎల్లప్పుడూ 13 మరియు 21"
+   },
+   {
+    "key": "ai_prompt_custom_intro",
+    "latinWords": [
+     "gesamtanalyse",
+     "top",
+     "massnahmen",
+     "kategorien",
+     "ratschlaege",
+     "fortschritte"
+    ],
+    "value": "మీరు తెలివైన, దృష్టిగల డైరీ విశ్లేషకుడు మరియు పని అమలు చేసేవారు.\\n\\nరెండు దశలలో పని చేయండి:\\n\\nదశ 1 — సందర్భం గ్రహించండి"
+   },
+   {
+    "key": "ai_prompt_custom_schema",
+    "latinWords": [
+     "JSON",
+     "fokus",
+     "kern",
+     "fokus",
+     "zitate",
+     "herleitung",
+     "material",
+     "icon"
+    ],
+    "value": "JSON అవుట్‌పుట్ స్కీమా:\\n{\\n  \\\"శీర్షిక_టాప్5\\\": \\\"టాప్ 5 కోసం సృజనాత్మక శీర్షిక (ఫోకస్‌కి తగినది, గరిష్ఠం 3 పదాలు)\\\",\\n"
+   },
+   {
+    "key": "ai_prompt_custom_output",
+    "latinWords": [
+     "JSON"
+    ],
+    "value": "పద గణన నియమం: ముఖ్య_చర్యలు మరియు సలహాలు లోని \\\"వివరణ\\\" ఎల్లప్పుడూ 13–21 పదాలు.\\n\\nఅవుట్‌పుట్ ఫార్మాట్ — కఠిన నియమాలు:\\n-"
+   },
+   {
+    "key": "retro_tts_wait",
+    "latinWords": [
+     "Text",
+     "Speech"
+    ],
+    "value": "దయచేసి వేచి ఉండండి, Text-to-Speech సృష్టించబడుతోంది…"
+   },
+   {
+    "key": "onboarding_welcome",
+    "latinWords": [
+     "Best"
+    ],
+    "value": "Best Journal కి\\nస్వాగతం"
+   },
+   {
+    "key": "onboarding_free_after_trial",
+    "latinWords": [
+     "Best"
+    ],
+    "value": "తర్వాత మీరు Best Journal ని కొనసాగిస్తారు,\\nవారానికి పరిమిత AI కాల్‌లతో ఉచితంగా."
+   },
+   {
+    "key": "consent_intro",
+    "latinWords": [
+     "Best"
+    ],
+    "value": "మీ డైరీ ఒక వ్యక్తిగత స్థలం, దీన్ని మేము గౌరవిస్తాము. Best Journal మీ డేటాను ఎలా నిర్వహిస్తుందో ఇక్కడ పారదర్శకంగా చూడవచ్చ"
+   },
+   {
+    "key": "consent_card2_title",
+    "latinWords": [
+     "USA"
+    ],
+    "value": "AI ఫీచర్లు (USA)"
+   },
+   {
+    "key": "consent_card2_body",
+    "latinWords": [
+     "Microsoft",
+     "Edge",
+     "USA",
+     "Data",
+     "Privacy",
+     "Framework",
+     "Standard",
+     "Contractual"
+    ],
+    "value": "ఐచ్ఛికంగా టెక్స్ట్‌లు Google Gemini కి మరియు చదివే టెక్స్ట్‌లు Microsoft Edge కి USA లో పంపబడతాయి (EU-US Data Privacy Fr"
+   },
+   {
+    "key": "consent_card3_body",
+    "latinWords": [
+     "Firebase",
+     "Analytics"
+    ],
+    "value": "Firebase Analytics, ఐచ్ఛికం, సెట్టింగ్స్‌లో ఎప్పుడైనా మార్చవచ్చు."
+   },
+   {
+    "key": "privacy_gate_groq_body",
+    "latinWords": [
+     "Inc",
+     "Mountain",
+     "View",
+     "USA",
+     "Settings"
+    ],
+    "value": "క్లౌడ్ ట్రాన్స్‌క్రిప్షన్ కోసం మీ వాయిస్ రికార్డింగ్ ఎన్‌క్రిప్ట్ చేయబడి Groq, Inc.-కి (Mountain View, USA) పంపబడి అక్కడ"
+   },
+   {
+    "key": "privacy_gate_gemini_body",
+    "latinWords": [
+     "Best",
+     "Data",
+     "Privacy",
+     "Framework",
+     "Art"
+    ],
+    "value": "Best Journal యొక్క తెలివైన ఫీచర్లు ఉపయోగించాలని కోరుకుంటున్నందుకు ధన్యవాదాలు! సారాంశాలు, సమీక్షలు, డ్యాష్‌బోర్డ్ అంతర్దృ"
+   },
+   {
+    "key": "privacy_gate_tts_title",
+    "latinWords": [
+     "Microsoft"
+    ],
+    "value": "Microsoft-కి టెక్స్ట్ పంపాలా?"
+   },
+   {
+    "key": "privacy_gate_tts_body",
+    "latinWords": [
+     "Microsoft",
+     "Bing",
+     "Speech",
+     "USA",
+     "Data",
+     "Privacy",
+     "Framework",
+     "Standard"
+    ],
+    "value": "చదివి వినిపించడానికి టెక్స్ట్ ఎన్‌క్రిప్ట్ చేయబడి Microsoft Bing Speech-కి (USA) పంపబడి ఆడియోగా తిరిగి ఇవ్వబడుతుంది. చట్"
+   },
+   {
+    "key": "settings_analytics_subtitle",
+    "latinWords": [
+     "Firebase",
+     "Analytics"
+    ],
+    "value": "లోప విశ్లేషణ మరియు ఉత్పత్తి మెరుగుదల కోసం Firebase Analytics"
+   },
+   {
+    "key": "settings_delete_account_confirm_body",
+    "latinWords": [
+     "Firebase"
+    ],
+    "value": "ఈ చర్య తిరిగి పొందలేనిది మరియు వీటిని తొలగిస్తుంది:\\n\\n• అన్ని స్థానిక డైరీ ఎంట్రీలు, ఫోటోలు మరియు వీడియోలు\\n• మీ Fireba"
+   },
+   {
+    "key": "settings_report_ai_confirm_title",
+    "latinWords": [
+     "Support"
+    ],
+    "value": "Support-కి ఇమెయిల్ తెరవాలా?"
+   },
+   {
+    "key": "settings_report_ai_confirm_body",
+    "latinWords": [
+     "dev",
+     "app",
+     "support",
+     "gmail",
+     "com"
+    ],
+    "value": "మీ ఇమెయిల్ యాప్ dev.app.support@gmail.com-కి సిద్ధమైన సందేశంతో తెరవబడుతుంది. పంపే ముందు మీరు వివరణను జోడించవచ్చు. మేము ప"
+   },
+   {
+    "key": "settings_report_ai_no_email",
+    "latinWords": [
+     "dev",
+     "app",
+     "support",
+     "gmail",
+     "com"
+    ],
+    "value": "ఇమెయిల్ యాప్ కనుగొనబడలేదు. దయచేసి నివేదికను dev.app.support@gmail.com-కి పంపండి."
+   },
+   {
+    "key": "settings_report_ai_subject",
+    "latinWords": [
+     "Best"
+    ],
+    "value": "Best Journal: అనుచిత AI ప్రతిస్పందన"
+   },
+   {
+    "key": "settings_report_ai_body",
+    "latinWords": [
+     "Best"
+    ],
+    "value": "నమస్కారం,\\n\\nనేను Best Journal లో ఒక అనుచిత లేదా తప్పు AI ప్రతిస్పందనను నివేదించాలనుకుంటున్నాను.\\n\\nసమస్య వివరణ:\\n[దయచేస"
+   },
+   {
+    "key": "settings_revoke_confirm_title",
+    "latinWords": [
+     "Support"
+    ],
+    "value": "Support-కి ఇమెయిల్ తెరవాలా?"
+   },
+   {
+    "key": "settings_revoke_confirm_body",
+    "latinWords": [
+     "dev",
+     "app",
+     "support",
+     "gmail",
+     "com",
+     "Subscriptions"
+    ],
+    "value": "మీ ఇమెయిల్ యాప్ dev.app.support@gmail.com-కి సిద్ధమైన సందేశంతో తెరవబడుతుంది. మేము పని దినాల్లో 24 గంటల లోపు ప్రతిస్పందిస"
+   },
+   {
+    "key": "settings_revoke_no_email",
+    "latinWords": [
+     "dev",
+     "app",
+     "support",
+     "gmail",
+     "com"
+    ],
+    "value": "ఇమెయిల్ యాప్ కనుగొనబడలేదు. దయచేసి ఉపసంహరణను dev.app.support@gmail.com-కి పంపండి."
+   },
+   {
+    "key": "settings_revoke_email_subject",
+    "latinWords": [
+     "Best"
+    ],
+    "value": "Best Journal Premium ఒప్పందం ఉపసంహరణ"
+   },
+   {
+    "key": "settings_revoke_email_body",
+    "latinWords": [
+     "Best",
+     "BGB",
+     "Gmail",
+     "API"
+    ],
+    "value": "దీని ద్వారా Best Journal యొక్క Premium ఫీచర్లకు సంబంధించిన నా ఒప్పందాన్ని ఉపసంహరిస్తున్నానని తెలియజేస్తున్నాను.\\n\\nపంపిన"
+   },
+   {
+    "key": "settings_revoke_confirm_subject",
+    "latinWords": [
+     "Best"
+    ],
+    "value": "మీ స్వీకరణ నిర్ధారణ: Best Journal లో ఉపసంహరణ"
+   },
+   {
+    "key": "settings_revoke_confirm_user_body",
+    "latinWords": [
+     "BGB",
+     "dev",
+     "app",
+     "support",
+     "gmail",
+     "com",
+     "Store",
+     "Subscriptions"
+    ],
+    "value": "నమస్కారం,\\n\\n%1$s నాటి మీ ఉపసంహరణ మాకు అందింది. ఇది § 356a BGB ప్రకారం మీ స్వీకరణ నిర్ధారణ.\\n\\nమీ ఉపసంహరణను వీలైనంత త్వర"
+   },
+   {
+    "key": "settings_revoke_no_account",
+    "latinWords": [
+     "Settings",
+     "dev",
+     "app",
+     "support",
+     "gmail",
+     "com"
+    ],
+    "value": "సైన్-ఇన్ చేసిన Google ఖాతా చిరునామా కనబడలేదు. దయచేసి Settings లో మీ Google ఖాతాతో సైన్ ఇన్ చేయండి లేదా ఉపసంహరణను dev.app"
+   },
+   {
+    "key": "settings_revoke_success_body",
+    "latinWords": [
+     "dev",
+     "app",
+     "support",
+     "gmail",
+     "com"
+    ],
+    "value": "మీ ఉపసంహరణ dev.app.support@gmail.com కు పంపబడింది. స్వీకరణ నిర్ధారణ కూడా మీ ఇన్‌బాక్స్‌లో ఉంది."
+   },
+   {
+    "key": "settings_revoke_error_body",
+    "latinWords": [
+     "dev",
+     "app",
+     "support",
+     "gmail",
+     "com"
+    ],
+    "value": "స్వయంచాలక పంపింపు విఫలమైంది: %1$s\\n\\nప్రత్యామ్నాయంగా మీరు dev.app.support@gmail.com కు చేతితో ఈమెయిల్ పంపవచ్చు. అందుకు \""
+   },
+   {
+    "key": "settings_crisis_dialog_body",
+    "latinWords": [
+     "Best"
+    ],
+    "value": "Best Journal ఒక జర్నల్ యాప్. ఇది నిపుణుల మానసిక లేదా వైద్య సహాయానికి ప్రత్యామ్నాయం కాదు. AI రూపొందించిన విశ్లేషణలు థెరపీ"
+   },
+   {
+    "key": "settings_crisis_hotline_de_name",
+    "latinWords": [
+     "Telefonseelsorge"
+    ],
+    "value": "Telefonseelsorge జర్మనీ"
+   },
+   {
+    "key": "settings_crisis_open_findahelpline",
+    "latinWords": [
+     "findahelpline",
+     "com"
+    ],
+    "value": "findahelpline.com తెరవండి"
+   },
+   {
+    "key": "settings_ccpa_do_not_sell_title",
+    "latinWords": [
+     "Not",
+     "Sell",
+     "Personal",
+     "Information"
+    ],
+    "value": "Do Not Sell My Personal Information"
+   },
+   {
+    "key": "settings_ccpa_do_not_sell_subtitle",
+    "latinWords": [
+     "CCPA",
+     "CPRA"
+    ],
+    "value": "కాలిఫోర్నియా నివాసితులకు (CCPA/CPRA 2026). ఆన్ చేస్తే అన్ని క్లౌడ్ AI ఫీచర్లు ఆఫ్ అవుతాయి మరియు ఎలాంటి గణాంకాలు సేకరించబ"
+   },
+   {
+    "key": "settings_ccpa_do_not_sell_confirmation",
+    "latinWords": [
+     "Not",
+     "Sell"
+    ],
+    "value": "Do-Not-Sell ఆన్ — అన్ని క్లౌడ్ సేవలు ఆఫ్‌లో ఉన్నాయి."
+   },
+   {
+    "key": "settings_ccpa_do_not_sell_off_confirmation",
+    "latinWords": [
+     "Not",
+     "Sell"
+    ],
+    "value": "Do-Not-Sell ఆఫ్ చేశాం."
+   },
+   {
+    "key": "consent_welcome_title",
+    "latinWords": [
+     "Best"
+    ],
+    "value": "Best Journal‌కు స్వాగతం"
+   },
+   {
+    "key": "consent_toggle_analytics_body",
+    "latinWords": [
+     "Firebase",
+     "Analytics",
+     "USA",
+     "Data",
+     "Privacy",
+     "Framework"
+    ],
+    "value": "Firebase Analytics — యాప్‌ను మెరుగుపరచడంలో మాకు సహాయపడుతుంది. వ్యక్తిగత కంటెంట్ లేదు, కేవలం అనామక ట్యాప్ గణనలు. డేటా బది"
+   },
+   {
+    "key": "consent_toggle_groq_title",
+    "latinWords": [
+     "Whisper"
+    ],
+    "value": "స్పీచ్-టు-టెక్స్ట్ (Groq Whisper)"
+   },
+   {
+    "key": "consent_toggle_groq_body",
+    "latinWords": [
+     "USA"
+    ],
+    "value": "ఎంట్రీలను డిక్టేట్ చేయడానికి అనుమతిస్తుంది. మీ వాయిస్ రికార్డింగ్ ఎన్క్రిప్ట్ చేయబడి Groq (USA)‌కు పంపబడుతుంది, టెక్స్ట్"
+   },
+   {
+    "key": "consent_toggle_gemini_body",
+    "latinWords": [
+     "USA"
+    ],
+    "value": "డాష్‌బోర్డ్ AI, సారాంశాలు, రెట్రోస్పెక్టివ్‌లు మరియు టెక్స్ట్ మెరుగుదల. టెక్స్ట్ భాగాలను Google Gemini (USA)‌కు పంపుతుంద"
+   },
+   {
+    "key": "consent_toggle_tts_title",
+    "latinWords": [
+     "Microsoft",
+     "Edge"
+    ],
+    "value": "పెద్దగా చదవడం (Microsoft Edge TTS)"
+   },
+   {
+    "key": "consent_toggle_tts_body",
+    "latinWords": [
+     "Microsoft",
+     "USA"
+    ],
+    "value": "సహజ స్వరంతో ఎంట్రీలను చదువుతుంది. టెక్స్ట్‌ను Microsoft (USA)‌కు పంపుతుంది."
+   },
+   {
+    "key": "consent_toggle_do_not_sell_title",
+    "latinWords": [
+     "Not",
+     "Sell",
+     "Personal",
+     "Information"
+    ],
+    "value": "Do Not Sell My Personal Information"
+   },
+   {
+    "key": "consent_toggle_do_not_sell_body",
+    "latinWords": [
+     "CCPA",
+     "CPRA"
+    ],
+    "value": "కాలిఫోర్నియా ఆప్ట్-అవుట్ (CCPA/CPRA 2026). యాక్టివ్‌గా ఉన్నప్పుడు, అన్ని ఐచ్ఛిక డేటా ప్రాసెసింగ్‌లు నిష్క్రియం చేయబడతాయి"
+   },
+   {
+    "key": "settings_ai_groq_subtitle",
+    "latinWords": [
+     "USA"
+    ],
+    "value": "ట్రాన్స్‌క్రిప్షన్ కోసం వాయిస్ రికార్డింగ్‌లను Groq USA‌కు పంపండి"
+   },
+   {
+    "key": "settings_ai_gemini_subtitle",
+    "latinWords": [
+     "USA"
+    ],
+    "value": "AI సారాంశాల కోసం Google USA‌కు టెక్స్ట్‌లను పంపండి"
+   },
+   {
+    "key": "settings_ai_tts_title",
+    "latinWords": [
+     "Edge"
+    ],
+    "value": "పెద్దగా చదవడం (Edge TTS)"
+   },
+   {
+    "key": "settings_ai_tts_subtitle",
+    "latinWords": [
+     "Microsoft",
+     "USA"
+    ],
+    "value": "వాయిస్ అవుట్‌పుట్ కోసం Microsoft USA‌కు టెక్స్ట్‌లను పంపండి"
+   },
+   {
+    "key": "ai_limits_dialog_body",
+    "latinWords": [
+     "PREMIUM"
+    ],
+    "value": "PREMIUM సభ్యత్వంతో\\n\\nరోజుకు అందుబాటులో ఉంటుంది:\\n• రోజుకు ప్రతి ప్రొఫైల్‌కు 150 అభ్యర్థనలు — 4 ముందే నిర్వచించిన ప్రొఫై"
+   },
+   {
+    "key": "consent_info_system_backup_title",
+    "latinWords": [
+     "Android",
+     "System",
+     "Backup"
+    ],
+    "value": "Android System-Backup"
+   },
+   {
+    "key": "consent_info_system_backup_body",
+    "latinWords": [
+     "Android",
+     "System",
+     "Backup",
+     "Android"
+    ],
+    "value": "నీవు పరికర సెట్టింగ్‌లలో Android System-Backup ప్రారంభించి ఉంటే, Android నీ డైరీ డేటాను నీ Google ఖాతాలోని బ్యాకప్ విభాగ"
+   },
+   {
+    "key": "settings_open_system_backup_settings_label",
+    "latinWords": [
+     "Android",
+     "System",
+     "Backup"
+    ],
+    "value": "Android System-Backup నిర్వహించు"
+   },
+   {
+    "key": "settings_open_system_backup_settings_desc",
+    "latinWords": [
+     "Best",
+     "Backup",
+     "Android"
+    ],
+    "value": "Best Journal కోసం స్వయంచాలక Backup ఆన్ లేదా ఆఫ్ చేయగల Android సిస్టమ్ సెట్టింగ్‌లను తెరుస్తుంది."
+   },
+   {
+    "key": "error_no_backup_settings_available",
+    "latinWords": [
+     "Backup"
+    ],
+    "value": "ఈ పరికరంలో Backup సెట్టింగ్‌లు అందుబాటులో లేవు."
+   },
+   {
+    "key": "ai_output_health_disclaimer_long",
+    "latinWords": [
+     "Best"
+    ],
+    "value": "Best Journal ఒక డైరీ మాత్రమే — చికిత్సా సేవ కాదు. AI విశ్లేషణలు స్వీయపరిశీలనకు సూచనలు మాత్రమే మరియు నిపుణుల మానసిక లేదా "
+   }
+  ]
+ },
+ "th": {
+  "totalStrings": 1087,
+  "fffdReplacementChar": [],
+  "emptyStrings": [
+   "ai_prompt_language_override"
+  ],
+  "lowScriptRatio": [
+   {
+    "key": "app_name",
+    "ratio": 0.0,
+    "letters": 11,
+    "target": 0,
+    "value": "Best Journal"
+   },
+   {
+    "key": "label_premium",
+    "ratio": 0.0,
+    "letters": 7,
+    "target": 0,
+    "value": "Premium"
+   },
+   {
+    "key": "transcription_model_groq",
+    "ratio": 0.0,
+    "letters": 22,
+    "target": 0,
+    "value": "Groq Whisper Large V3 Turbo"
+   },
+   {
+    "key": "settings_premium_section",
+    "ratio": 0.0,
+    "letters": 7,
+    "target": 0,
+    "value": "Premium"
+   },
+   {
+    "key": "settings_about_version",
+    "ratio": 0.0,
+    "letters": 12,
+    "target": 0,
+    "value": "Best Journal V0.21.9"
+   },
+   {
+    "key": "ai_prompt_rerank_user_focus_header",
+    "ratio": 0.0,
+    "letters": 23,
+    "target": 0,
+    "value": "=== PROFIL-FOKUS DES BENUTZERS ==="
+   },
+   {
+    "key": "ai_prompt_rerank_actions_header",
+    "ratio": 0.0,
+    "letters": 34,
+    "target": 0,
+    "value": "=== AKTUELLES TOP-MASSNAHMEN-ARRAY (5 Einträge) ==="
+   },
+   {
+    "key": "ai_prompt_rerank_entries_header",
+    "ratio": 0.0,
+    "letters": 47,
+    "target": 0,
+    "value": "=== TAGEBUCHEINTRÄGE (Quelle für profilstarke Ersatz-Punkte) ==="
+   },
+   {
+    "key": "settings_crisis_open_findahelpline",
+    "ratio": 0.2,
+    "letters": 20,
+    "target": 4,
+    "value": "เปิด findahelpline.com"
+   },
+   {
+    "key": "settings_ccpa_do_not_sell_title",
+    "ratio": 0.0,
+    "letters": 30,
+    "target": 0,
+    "value": "Do Not Sell My Personal Information"
+   },
+   {
+    "key": "consent_info_system_backup_title",
+    "ratio": 0.0,
+    "letters": 19,
+    "target": 0,
+    "value": "Android System Backup"
+   },
+   {
+    "key": "consent_toggle_do_not_sell_title",
+    "ratio": 0.0,
+    "letters": 30,
+    "target": 0,
+    "value": "Do Not Sell My Personal Information"
+   },
+   {
+    "key": "settings_open_system_backup_settings_label",
+    "ratio": 0.24,
+    "letters": 25,
+    "target": 6,
+    "value": "จัดการ Android System Backup"
+   }
+  ],
+  "noTargetScriptButHasText": [
+   {
+    "key": "app_name",
+    "value": "Best Journal"
+   },
+   {
+    "key": "label_premium",
+    "value": "Premium"
+   },
+   {
+    "key": "transcription_model_groq",
+    "value": "Groq Whisper Large V3 Turbo"
+   },
+   {
+    "key": "settings_premium_section",
+    "value": "Premium"
+   },
+   {
+    "key": "settings_about_version",
+    "value": "Best Journal V0.21.9"
+   },
+   {
+    "key": "ai_prompt_rerank_user_focus_header",
+    "value": "=== PROFIL-FOKUS DES BENUTZERS ==="
+   },
+   {
+    "key": "ai_prompt_rerank_actions_header",
+    "value": "=== AKTUELLES TOP-MASSNAHMEN-ARRAY (5 Einträge) ==="
+   },
+   {
+    "key": "ai_prompt_rerank_entries_header",
+    "value": "=== TAGEBUCHEINTRÄGE (Quelle für profilstarke Ersatz-Punkte) ==="
+   },
+   {
+    "key": "settings_ccpa_do_not_sell_title",
+    "value": "Do Not Sell My Personal Information"
+   },
+   {
+    "key": "consent_info_system_backup_title",
+    "value": "Android System Backup"
+   },
+   {
+    "key": "consent_toggle_do_not_sell_title",
+    "value": "Do Not Sell My Personal Information"
+   }
+  ],
+  "latinIslands": [
+   {
+    "key": "transcription_model_local",
+    "latinWords": [
+     "Whisper"
+    ],
+    "value": "โมเดล Whisper ในเครื่อง"
+   },
+   {
+    "key": "transcription_model_groq",
+    "latinWords": [
+     "Whisper",
+     "Large",
+     "Turbo"
+    ],
+    "value": "Groq Whisper Large V3 Turbo"
+   },
+   {
+    "key": "settings_feedback_allow_gmail",
+    "latinWords": [
+     "Gmail"
+    ],
+    "value": "โปรดอนุญาตการเข้าถึง Gmail แล้วลองอีกครั้ง"
+   },
+   {
+    "key": "settings_feedback_subject",
+    "latinWords": [
+     "Best"
+    ],
+    "value": "ความคิดเห็นเกี่ยวกับ Best Journal"
+   },
+   {
+    "key": "settings_feedback_api_error",
+    "latinWords": [
+     "Gmail"
+    ],
+    "value": "ข้อผิดพลาด Gmail %1$d: %2$s"
+   },
+   {
+    "key": "settings_feedback_confirm_subject",
+    "latinWords": [
+     "Best"
+    ],
+    "value": "ความคิดเห็นถึง Best Journal"
+   },
+   {
+    "key": "settings_feedback_confirm_body",
+    "latinWords": [
+     "DEV",
+     "FRANK"
+    ],
+    "value": "คุณส่งข้อความนี้ถึงนักพัฒนาแล้ว\\nเขาจะตอบกลับคุณเป็นการส่วนตัว\\n\\n--- ข้อความของคุณ ---\\n%1$s\\n\\nขอบคุณ\\nDEV.FRANK"
+   },
+   {
+    "key": "settings_about_version",
+    "latinWords": [
+     "Best"
+    ],
+    "value": "Best Journal V0.21.9"
+   },
+   {
+    "key": "ai_prompt_no_dates_rule",
+    "latinWords": [
+     "beschreibung",
+     "erklaerung",
+     "zusammenfassung",
+     "gesamtanalyse",
+     "Eintrag",
+     "vom",
+     "April",
+     "vom"
+    ],
+    "value": "TTS-อ่านออกเสียง (บังคับ — ห้ามใส่วันที่ในข้อความที่แสดงผล):\\nในช่องข้อความที่มองเห็นได้ทั้งหมด (beschreibung, erklaerun"
+   },
+   {
+    "key": "ai_prompt_rerank_system",
+    "latinWords": [
+     "JSON",
+     "JSON",
+     "titel",
+     "beschreibung",
+     "erklaerung",
+     "JSON",
+     "titel",
+     "beschreibung"
+    ],
+    "value": "คุณคือผู้จัดลำดับโปรไฟล์ใหม่ คุณได้รับอาร์เรย์ JSON ของมาตรการ 5 อันดับสูงสุดจากการวิเคราะห์แดชบอร์ด โฟกัสโปรไฟล์ของผู้ใ"
+   },
+   {
+    "key": "ai_prompt_rerank_instruction",
+    "latinWords": [
+     "JSON"
+    ],
+    "value": "เรียงลำดับและแทนที่สูงสุด 2 รายการที่ไม่เกี่ยวกับโปรไฟล์ ส่งกลับ 5 รายการเป็นอาร์เรย์ JSON"
+   },
+   {
+    "key": "dashboard_empty_custom_message",
+    "latinWords": [
+     "Prompt"
+    ],
+    "value": "โปรไฟล์นี้ยังไม่มีข้อความโฟกัส เปิดการตั้งค่า เลือกโปรไฟล์นี้ และเพิ่ม Prompt โฟกัส จากนั้นแดชบอร์ดส่วนตัวของคุณจะปรากฏท"
+   },
+   {
+    "key": "ai_prompt_goals_intro",
+    "latinWords": [
+     "JSON"
+    ],
+    "value": "คุณคือนักวิเคราะห์เป้าหมายและผู้ติดตามความก้าวหน้าที่ใส่ใจและให้กำลังใจ\\n\\nงานของคุณ:\\nวิเคราะห์บันทึกของผู้ใช้ รู้จักเป"
+   },
+   {
+    "key": "ai_prompt_goals_schema",
+    "latinWords": [
+     "JSON",
+     "kan",
+     "wikhro",
+     "ruam",
+     "kao",
+     "samkhan",
+     "muat",
+     "kan"
+    ],
+    "value": "โครงสร้าง JSON:\\n{\\n  \\\"kan_wikhro_ruam\\\": \\\"...\\\",\\n  \\\"kao_samkhan\\\": [...],\\n  \\\"muat_mu\\\": [...]\\n}\\n\\n1) \\\"kan_wikh"
+   },
+   {
+    "key": "ai_prompt_goals_output",
+    "latinWords": [
+     "JSON",
+     "backticks"
+    ],
+    "value": "รูปแบบผลลัพธ์: JSON เท่านั้น ไม่มี backticks เริ่มด้วย {"
+   },
+   {
+    "key": "ai_prompt_insight_intro",
+    "latinWords": [
+     "JSON"
+    ],
+    "value": "คุณคือนักวิเคราะห์แพตเทิร์นด้านการเติบโตส่วนตัวที่เห็นอกเห็นใจและมองลึก\\n\\nงานของคุณ:\\nวิเคราะห์บันทึกของผู้ใช้ หาแพตเทิ"
+   },
+   {
+    "key": "ai_prompt_insight_rules",
+    "latinWords": [
+     "JSON",
+     "JSON"
+    ],
+    "value": "กฎภาษา (ทุกช่องข้อความใน JSON):\\n- ภาษาง่าย ประโยคสั้น\\n- ไม่ใช้คำยากหรือศัพท์เฉพาะ\\n- ใครก็ต้องเข้าใจทันที\\n- เห็นอกเห็"
+   },
+   {
+    "key": "ai_prompt_insight_schema_header",
+    "latinWords": [
+     "JSON",
+     "entropia",
+     "ruam",
+     "naeo",
+     "nom",
+     "phoem",
+     "khong",
+     "thi"
+    ],
+    "value": "โครงสร้าง JSON:\\n{\\n  \\\"entropia_ruam\\\": 0.0,\\n  \\\"naeo_nom\\\": \\\"phoem|khong_thi|lot|mai_sap\\\",\\n  \\\"kan_wikhro_ruam\\\": "
+   },
+   {
+    "key": "ai_prompt_insight_schema_fields",
+    "latinWords": [
+     "khwam",
+     "kaona",
+     "huakhao",
+     "rai",
+     "iat",
+     "thi",
+     "kao",
+     "samkhan"
+    ],
+    "value": "4) \\\"khwam_kaona\\\" (อาร์เรย์ 0-8 ชิ้น)\\n   จุดแข็งและคุณภาพเชิงบวกที่เห็นในบันทึก แม้ผู้ใช้ไม่พูด\\n   โครงสร้างแต่ละชิ้น"
+   },
+   {
+    "key": "ai_prompt_insight_schema_categories",
+    "latinWords": [
+     "muat",
+     "chue",
+     "aikhon",
+     "material",
+     "icon",
+     "name",
+     "HEX",
+     "radap"
+    ],
+    "value": "6) \\\"muat_mu\\\" (อาร์เรย์ เท่าที่จำเป็น)\\n   แต่ละพื้นที่การรู้จักตนเองเป็นกลุ่มแยก\\n   พื้นที่ไม่ใช่หัวข้อชีวิต (งาน นอน"
+   },
+   {
+    "key": "ai_prompt_insight_output",
+    "latinWords": [
+     "rai",
+     "iat",
+     "kao",
+     "samkhan",
+     "khamnae",
+     "nam",
+     "JSON",
+     "Markdown"
+    ],
+    "value": "กฎจำนวนคำของคำอธิบาย (เข้มงวด):\\n«rai_la_iat» ใน «kao_samkhan» และ «khamnae_nam» ต้อง 13-21 คำเสมอ\\n- น้อยกว่า 13 = ผิด\\"
+   },
+   {
+    "key": "ai_prompt_entropy_intro",
+    "latinWords": [
+     "JSON"
+    ],
+    "value": "คุณคือที่ปรึกษาชีวิตและนักวิเคราะห์แพตเทิร์นที่เห็นอกเห็นใจและฉลาดมาก\\n\\nงานของคุณ:\\nวิเคราะห์บันทึกของผู้ใช้ หาแหล่งควา"
+   },
+   {
+    "key": "ai_prompt_entropy_rules",
+    "latinWords": [
+     "JSON",
+     "gesamtanalyse",
+     "beschreibung",
+     "erklaerung",
+     "zusammenfassung",
+     "herleitung",
+     "entropisch",
+     "entropiert"
+    ],
+    "value": "กฎภาษา (ใช้กับทุกช่องข้อความใน JSON):\\n- ภาษาง่าย ชัดเจน ประโยคสั้น\\n- ไม่ใช้คำยาก ศัพท์เฉพาะ หรือสำนวนสำเร็จรูป\\n- ทุกค"
+   },
+   {
+    "key": "ai_prompt_entropy_schema_header",
+    "latinWords": [
+     "JSON",
+     "entropia",
+     "ruam",
+     "naeo",
+     "nom",
+     "phoem",
+     "khong",
+     "thi"
+    ],
+    "value": "โครงสร้าง JSON:\\n{\\n  \\\"entropia_ruam\\\": 0.0,\\n  \\\"naeo_nom\\\": \\\"phoem|khong_thi|lot|mai_sap\\\",\\n  \\\"kan_wikhro_ruam\\\": "
+   },
+   {
+    "key": "ai_prompt_entropy_schema_fields",
+    "latinWords": [
+     "khwam",
+     "kaona",
+     "huakhao",
+     "rai",
+     "iat",
+     "thi",
+     "kao",
+     "samkhan"
+    ],
+    "value": "4) \\\"khwam_kaona\\\" (อาร์เรย์ 0-5 ชิ้น)\\n   ที่ภาระลดลงหรือที่มีนิสัยและจุดแข็งที่ได้ผล\\n   {\\n     \\\"huakhao\\\": \\\"หัวเรื"
+   },
+   {
+    "key": "ai_prompt_entropy_schema_categories",
+    "latinWords": [
+     "muat",
+     "chue",
+     "aikhon",
+     "material",
+     "icon",
+     "name",
+     "HEX",
+     "radap"
+    ],
+    "value": "6) \\\"muat_mu\\\" (อาร์เรย์ เท่าที่จำเป็น)\\n   แต่ละหัวข้อที่พบ = หมวด\\n   {\\n     \\\"chue\\\": \\\"ชื่อหมวด (ไม่เกิน 12 ตัวอักษ"
+   },
+   {
+    "key": "ai_prompt_entropy_output",
+    "latinWords": [
+     "JSON",
+     "backticks",
+     "JSON"
+    ],
+    "value": "รูปแบบผลลัพธ์ กฎเข้มงวด:\\n- ตอบเฉพาะ JSON\\n- ไม่มีข้อความก่อนหรือหลัง\\n- ไม่มี backticks\\n- เริ่มด้วย { จบด้วย }\\n- JSON"
+   },
+   {
+    "key": "ai_prompt_summary_intro",
+    "latinWords": [
+     "JSON"
+    ],
+    "value": "คุณคือนักวิเคราะห์บันทึกที่ใส่ใจและเป็นระบบ\\n\\nงานของคุณ:\\nวิเคราะห์บันทึกประจำวันของผู้ใช้ สรุปสิ่งที่ผู้ใช้ประสบ คิด แ"
+   },
+   {
+    "key": "ai_prompt_summary_schema_header",
+    "latinWords": [
+     "JSON",
+     "entropia",
+     "ruam",
+     "naeo",
+     "nom",
+     "phoem",
+     "khong",
+     "thi"
+    ],
+    "value": "โครงสร้าง JSON:\\n{\\n  \\\"entropia_ruam\\\": 0.0,\\n  \\\"naeo_nom\\\": \\\"phoem|khong_thi|lot|mai_sap\\\",\\n  \\\"kan_wikhro_ruam\\\": "
+   },
+   {
+    "key": "ai_prompt_summary_schema_fields",
+    "latinWords": [
+     "khwam",
+     "kaona",
+     "huakhao",
+     "rai",
+     "iat",
+     "thi",
+     "kao",
+     "samkhan"
+    ],
+    "value": "4) \\\"khwam_kaona\\\" (อาร์เรย์ 0-5 ชิ้น)\\n   หัวข้อ นิสัย หรือความสัมพันธ์ที่วนซ้ำข้ามบันทึก\\n   {\\n     \\\"huakhao\\\": \\\"หั"
+   },
+   {
+    "key": "ai_prompt_summary_schema_categories",
+    "latinWords": [
+     "muat",
+     "chue",
+     "aikhon",
+     "material",
+     "icon",
+     "name",
+     "HEX",
+     "radap"
+    ],
+    "value": "6) \\\"muat_mu\\\" (อาร์เรย์ เท่าที่จำเป็น)\\n   แต่ละหัวข้อ = กลุ่ม\\n   {\\n     \\\"chue\\\": \\\"ชื่อหัวข้อ (ไม่เกิน 12 ตัวอักษร)"
+   },
+   {
+    "key": "ai_prompt_summary_output",
+    "latinWords": [
+     "rai",
+     "iat",
+     "JSON",
+     "backticks",
+     "JSON"
+    ],
+    "value": "กฎคำ: rai_la_iat ต้อง 13-21 คำ\\n\\nรูปแบบผลลัพธ์ กฎเข้มงวด:\\n- ตอบเฉพาะ JSON\\n- ไม่มีข้อความก่อนหรือหลัง\\n- ไม่มี backtic"
+   },
+   {
+    "key": "ai_prompt_custom_intro",
+    "latinWords": [
+     "JSON"
+    ],
+    "value": "คุณคือนักวิเคราะห์บันทึกที่ฉลาดและใส่ใจ และผู้ดำเนินงานตามภารกิจ\\n\\nวิธีทำงาน 2 ขั้นตอน:\\n\\nขั้นตอนที่ 1 — รับบริบท:\\nอ่"
+   },
+   {
+    "key": "ai_prompt_custom_schema",
+    "latinWords": [
+     "JSON",
+     "ueberschrift",
+     "top",
+     "ueberschrift",
+     "analyse",
+     "ueberschrift",
+     "ergebnisse",
+     "fokus"
+    ],
+    "value": "โครงสร้าง JSON ของเอาต์พุต:\\n{\\n  \\\"ueberschrift_top5\\\": \\\"หัวเรื่องสร้างสรรค์ เหมาะกับผลลัพธ์ของภารกิจ สูงสุด 3 คำ\\\",\\n"
+   },
+   {
+    "key": "ai_prompt_custom_output",
+    "latinWords": [
+     "rai",
+     "iat",
+     "JSON",
+     "backticks"
+    ],
+    "value": "กฎคำ: rai_la_iat ต้อง 13-21 คำ\\n\\nรูปแบบผลลัพธ์:\\n- ตอบเฉพาะ JSON\\n- ไม่มีข้อความก่อนหรือหลัง ไม่มี backticks\\n- เริ่มด้"
+   },
+   {
+    "key": "onboarding_welcome",
+    "latinWords": [
+     "Best"
+    ],
+    "value": "ยินดีต้อนรับสู่\\nBest Journal"
+   },
+   {
+    "key": "onboarding_free_after_trial",
+    "latinWords": [
+     "Best"
+    ],
+    "value": "หลังจากนั้นใช้ Best Journal ต่อไปได้\\nฟรี พร้อมขีดจำกัด AI รายสัปดาห์"
+   },
+   {
+    "key": "consent_intro",
+    "latinWords": [
+     "Best"
+    ],
+    "value": "สมุดบันทึกคือพื้นที่ส่วนตัวของคุณ และเราเคารพสิ่งนี้ ที่นี่คุณเห็นได้อย่างโปร่งใสว่า Best Journal จัดการกับข้อมูลของคุณอ"
+   },
+   {
+    "key": "consent_card2_body",
+    "latinWords": [
+     "Microsoft",
+     "Edge",
+     "Data",
+     "Privacy",
+     "Framework",
+     "SCCs"
+    ],
+    "value": "เลือกได้ว่าจะส่งข้อความไปยัง Google Gemini และข้อความสำหรับอ่านออกเสียงไปยัง Microsoft Edge ในสหรัฐอเมริกา (EU-US Data P"
+   },
+   {
+    "key": "consent_card3_body",
+    "latinWords": [
+     "Firebase",
+     "Analytics"
+    ],
+    "value": "Firebase Analytics แบบเลือกใช้ เปลี่ยนได้ตลอดในการตั้งค่า"
+   },
+   {
+    "key": "privacy_gate_groq_body",
+    "latinWords": [
+     "Inc"
+    ],
+    "value": "สำหรับการถอดเสียงบนคลาวด์ การบันทึกเสียงของคุณจะถูกส่งแบบเข้ารหัสไปยัง Groq, Inc. (เมาน์เทนวิว สหรัฐอเมริกา) และแปลงเป็น"
+   },
+   {
+    "key": "privacy_gate_gemini_body",
+    "latinWords": [
+     "Best",
+     "Data",
+     "Privacy",
+     "Framework"
+    ],
+    "value": "ยินดีที่คุณต้องการใช้ฟีเจอร์อัจฉริยะของ Best Journal! สำหรับสรุป ทบทวน ข้อมูลเชิงลึกจากแดชบอร์ด และการปรับปรุงข้อความ ข้"
+   },
+   {
+    "key": "privacy_gate_tts_title",
+    "latinWords": [
+     "Microsoft"
+    ],
+    "value": "ส่งข้อความไปยัง Microsoft หรือไม่"
+   },
+   {
+    "key": "privacy_gate_tts_body",
+    "latinWords": [
+     "Microsoft",
+     "Bing",
+     "Speech",
+     "Data",
+     "Privacy",
+     "Framework"
+    ],
+    "value": "สำหรับการอ่านออกเสียง ข้อความจะถูกส่งแบบเข้ารหัสไปยัง Microsoft Bing Speech (สหรัฐอเมริกา) และส่งกลับเป็นเสียง ฐานทางกฎห"
+   },
+   {
+    "key": "settings_analytics_subtitle",
+    "latinWords": [
+     "Firebase",
+     "Analytics"
+    ],
+    "value": "Firebase Analytics สำหรับการวิเคราะห์ข้อผิดพลาดและการปรับปรุงผลิตภัณฑ์"
+   },
+   {
+    "key": "settings_delete_account_confirm_body",
+    "latinWords": [
+     "Firebase"
+    ],
+    "value": "การกระทำนี้ย้อนกลับไม่ได้ และจะลบ:\\n\\n• บันทึกไดอารี่ ภาพถ่าย และวิดีโอในเครื่องทั้งหมด\\n• บัญชี Firebase ของคุณ\\n• ข้อม"
+   },
+   {
+    "key": "settings_report_ai_confirm_body",
+    "latinWords": [
+     "dev",
+     "app",
+     "support",
+     "gmail",
+     "com"
+    ],
+    "value": "แอปอีเมลจะเปิดพร้อมข้อความที่เตรียมไว้ถึง dev.app.support@gmail.com คุณสามารถเพิ่มคำอธิบายก่อนส่งได้ เราตอบกลับภายใน 24 "
+   },
+   {
+    "key": "settings_report_ai_no_email",
+    "latinWords": [
+     "dev",
+     "app",
+     "support",
+     "gmail",
+     "com"
+    ],
+    "value": "ไม่พบแอปอีเมล โปรดส่งรายงานไปที่ dev.app.support@gmail.com"
+   },
+   {
+    "key": "settings_report_ai_subject",
+    "latinWords": [
+     "Best"
+    ],
+    "value": "Best Journal: คำตอบ AI ที่ไม่เหมาะสม"
+   },
+   {
+    "key": "settings_report_ai_body",
+    "latinWords": [
+     "Best"
+    ],
+    "value": "สวัสดี,\\n\\nฉันต้องการรายงานคำตอบ AI ที่ไม่เหมาะสมหรือผิดพลาดใน Best Journal\\n\\nคำอธิบายปัญหา:\\n[กรุณากรอก]\\n\\nบริบท (ฟีเ"
+   },
+   {
+    "key": "settings_revoke_confirm_body",
+    "latinWords": [
+     "dev",
+     "app",
+     "support",
+     "gmail",
+     "com"
+    ],
+    "value": "แอปอีเมลจะเปิดพร้อมข้อความที่เตรียมไว้ถึง dev.app.support@gmail.com เราตอบกลับภายใน 24 ชั่วโมงในวันทำการ\\n\\nข้อมูลฉบับเต"
+   },
+   {
+    "key": "settings_revoke_no_email",
+    "latinWords": [
+     "dev",
+     "app",
+     "support",
+     "gmail",
+     "com"
+    ],
+    "value": "ไม่พบแอปอีเมล โปรดส่งการเพิกถอนไปที่ dev.app.support@gmail.com"
+   },
+   {
+    "key": "settings_revoke_email_subject",
+    "latinWords": [
+     "Best"
+    ],
+    "value": "เพิกถอนสัญญา Best Journal Premium"
+   },
+   {
+    "key": "settings_revoke_email_body",
+    "latinWords": [
+     "Best",
+     "BGB",
+     "Gmail",
+     "API"
+    ],
+    "value": "ข้าพเจ้าขอแจ้งการถอนตัวจากสัญญาเกี่ยวกับฟีเจอร์ Premium ของ Best Journal ผ่านหนังสือนี้\\n\\nผู้ส่ง (บัญชี Google): %1$s\\n"
+   },
+   {
+    "key": "settings_revoke_confirm_subject",
+    "latinWords": [
+     "Best"
+    ],
+    "value": "การยืนยันการรับของคุณ: การถอนตัวใน Best Journal"
+   },
+   {
+    "key": "settings_revoke_confirm_user_body",
+    "latinWords": [
+     "BGB",
+     "dev",
+     "app",
+     "support",
+     "gmail",
+     "com",
+     "Store",
+     "Subscriptions"
+    ],
+    "value": "สวัสดี\\n\\nเราได้รับคำขอถอนตัวของคุณเมื่อ %1$s แล้ว นี่คือการยืนยันการรับตาม § 356a BGB\\n\\nเราจะดำเนินการคำขอถอนตัวของคุณ"
+   },
+   {
+    "key": "settings_revoke_no_account",
+    "latinWords": [
+     "Settings",
+     "dev",
+     "app",
+     "support",
+     "gmail",
+     "com"
+    ],
+    "value": "ไม่พบบัญชี Google ที่ลงชื่อเข้าใช้อยู่ โปรดลงชื่อเข้าใช้ด้วยบัญชี Google ของคุณใน Settings หรือส่งการถอนตัวด้วยตนเองไปที"
+   },
+   {
+    "key": "settings_revoke_success_body",
+    "latinWords": [
+     "dev",
+     "app",
+     "support",
+     "gmail",
+     "com"
+    ],
+    "value": "การถอนตัวของคุณถูกส่งไปที่ dev.app.support@gmail.com แล้ว การยืนยันการรับก็อยู่ในกล่องจดหมายของคุณด้วย"
+   },
+   {
+    "key": "settings_revoke_error_body",
+    "latinWords": [
+     "dev",
+     "app",
+     "support",
+     "gmail",
+     "com"
+    ],
+    "value": "การส่งอัตโนมัติล้มเหลว: %1$s\\n\\nคุณสามารถส่งอีเมลด้วยตนเองไปที่ dev.app.support@gmail.com ได้เช่นกัน ให้แตะ \"เปิดแอปอีเม"
+   },
+   {
+    "key": "settings_crisis_dialog_body",
+    "latinWords": [
+     "Best"
+    ],
+    "value": "Best Journal เป็นแอปบันทึกประจำวัน และไม่สามารถทดแทนคำปรึกษาด้านจิตวิทยาหรือการแพทย์จากผู้เชี่ยวชาญได้ การวิเคราะห์ที่สร"
+   },
+   {
+    "key": "settings_crisis_hotline_de_name",
+    "latinWords": [
+     "Telefonseelsorge"
+    ],
+    "value": "Telefonseelsorge เยอรมนี"
+   },
+   {
+    "key": "settings_crisis_open_findahelpline",
+    "latinWords": [
+     "findahelpline",
+     "com"
+    ],
+    "value": "เปิด findahelpline.com"
+   },
+   {
+    "key": "settings_ccpa_do_not_sell_title",
+    "latinWords": [
+     "Not",
+     "Sell",
+     "Personal",
+     "Information"
+    ],
+    "value": "Do Not Sell My Personal Information"
+   },
+   {
+    "key": "settings_ccpa_do_not_sell_subtitle",
+    "latinWords": [
+     "CCPA",
+     "CPRA"
+    ],
+    "value": "สำหรับผู้อยู่อาศัยในแคลิฟอร์เนีย (CCPA/CPRA 2026) เมื่อเปิดใช้งาน ฟีเจอร์ AI บนคลาวด์ทั้งหมดจะถูกปิด และจะไม่เก็บสถิติใด"
+   },
+   {
+    "key": "settings_ccpa_do_not_sell_confirmation",
+    "latinWords": [
+     "Not",
+     "Sell"
+    ],
+    "value": "เปิดใช้ Do-Not-Sell แล้ว — บริการคลาวด์ทั้งหมดถูกปิด"
+   },
+   {
+    "key": "settings_ccpa_do_not_sell_off_confirmation",
+    "latinWords": [
+     "Not",
+     "Sell"
+    ],
+    "value": "ปิด Do-Not-Sell แล้ว"
+   },
+   {
+    "key": "consent_welcome_title",
+    "latinWords": [
+     "Best"
+    ],
+    "value": "ยินดีต้อนรับสู่ Best Journal"
+   },
+   {
+    "key": "consent_toggle_analytics_body",
+    "latinWords": [
+     "Firebase",
+     "Analytics",
+     "Data",
+     "Privacy",
+     "Framework"
+    ],
+    "value": "Firebase Analytics — ช่วยให้เราปรับปรุงแอปได้ดีขึ้น ไม่มีเนื้อหาส่วนตัว มีเพียงจำนวนการแตะแบบไม่ระบุตัวตน การถ่ายโอนข้อม"
+   },
+   {
+    "key": "consent_toggle_groq_title",
+    "latinWords": [
+     "Whisper"
+    ],
+    "value": "คำพูดเป็นข้อความ (Groq Whisper)"
+   },
+   {
+    "key": "consent_toggle_tts_title",
+    "latinWords": [
+     "Microsoft",
+     "Edge"
+    ],
+    "value": "อ่านออกเสียง (Microsoft Edge TTS)"
+   },
+   {
+    "key": "consent_toggle_tts_body",
+    "latinWords": [
+     "Microsoft"
+    ],
+    "value": "อ่านรายการด้วยเสียงที่เป็นธรรมชาติ ส่งข้อความไปยัง Microsoft (สหรัฐอเมริกา)"
+   },
+   {
+    "key": "consent_info_system_backup_title",
+    "latinWords": [
+     "Android",
+     "System",
+     "Backup"
+    ],
+    "value": "Android System Backup"
+   },
+   {
+    "key": "consent_info_system_backup_body",
+    "latinWords": [
+     "Android",
+     "System",
+     "Backup",
+     "Android",
+     "Account"
+    ],
+    "value": "หากคุณเปิดใช้งาน Android System Backup ในการตั้งค่าอุปกรณ์ Android จะสำรองข้อมูลไดอารีของคุณโดยอัตโนมัติในพื้นที่สำรองข้"
+   },
+   {
+    "key": "consent_toggle_do_not_sell_title",
+    "latinWords": [
+     "Not",
+     "Sell",
+     "Personal",
+     "Information"
+    ],
+    "value": "Do Not Sell My Personal Information"
+   },
+   {
+    "key": "consent_toggle_do_not_sell_body",
+    "latinWords": [
+     "CCPA",
+     "CPRA"
+    ],
+    "value": "การเลือกไม่เข้าร่วมของแคลิฟอร์เนีย (CCPA/CPRA 2026) เมื่อเปิดใช้งาน การประมวลผลข้อมูลเสริมทั้งหมดจะถูกปิดใช้งาน — เหลือเ"
+   },
+   {
+    "key": "settings_ai_tts_title",
+    "latinWords": [
+     "Edge"
+    ],
+    "value": "อ่านออกเสียง (Edge TTS)"
+   },
+   {
+    "key": "settings_ai_tts_subtitle",
+    "latinWords": [
+     "Microsoft"
+    ],
+    "value": "ส่งข้อความไปยัง Microsoft สหรัฐอเมริกา เพื่อส่งออกเสียง"
+   },
+   {
+    "key": "settings_open_system_backup_settings_label",
+    "latinWords": [
+     "Android",
+     "System",
+     "Backup"
+    ],
+    "value": "จัดการ Android System Backup"
+   },
+   {
+    "key": "settings_open_system_backup_settings_desc",
+    "latinWords": [
+     "Android",
+     "Best"
+    ],
+    "value": "เปิดการตั้งค่าระบบ Android ซึ่งคุณสามารถเปิดหรือปิดการสำรองข้อมูลอัตโนมัติสำหรับ Best Journal ได้"
+   },
+   {
+    "key": "ai_output_health_disclaimer_long",
+    "latinWords": [
+     "Best"
+    ],
+    "value": "Best Journal คือไดอารีและไม่ใช่บริการบำบัด การวิเคราะห์โดย AI เป็นแรงบันดาลใจสำหรับการสะท้อนตนเอง และไม่สามารถแทนที่คำปร"
+   }
+  ]
+ }
+}

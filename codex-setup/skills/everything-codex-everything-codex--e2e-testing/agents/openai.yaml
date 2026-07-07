@@ -1,0 +1,7 @@
+interface:
+  display_name: "e2e-testing"
+  short_description: "Playwright E2E testing patterns, Page Object Model"
+  default_prompt: "Use $everything-codex-everything-codex--e2e-testing for this task."
+
+policy:
+  allow_implicit_invocation: false

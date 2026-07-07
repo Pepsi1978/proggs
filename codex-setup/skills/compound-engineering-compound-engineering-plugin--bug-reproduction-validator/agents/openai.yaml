@@ -1,0 +1,7 @@
+interface:
+  display_name: "bug-reproduction-validator"
+  short_description: "Systematically reproduces and validates bug reports to confirm"
+  default_prompt: "Use $compound-engineering-compound-engineering-plugin--bug-reproduction-validator for this task."
+
+policy:
+  allow_implicit_invocation: true

@@ -1,0 +1,7 @@
+interface:
+  display_name: "perl-patterns"
+  short_description: "Modern Perl 5.36+ idioms, best practices, and conventions for"
+  default_prompt: "Use $everything-codex-everything-codex--perl-patterns for this task."
+
+policy:
+  allow_implicit_invocation: false

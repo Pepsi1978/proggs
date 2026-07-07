@@ -1,0 +1,189 @@
+{
+  "bucket": 1,
+  "lineRange": "1-400",
+  "stringsReviewed": 187,
+  "coverageConfirmed": true,
+  "findings": [
+    {
+      "findingId": "S1-001",
+      "riskLevel": "🟧",
+      "category": "HWG",
+      "key": "profile_entropy_long",
+      "line": 390,
+      "currentText": "Tipps, die dir sofort helfen können",
+      "problem": "Im Kontext des Entropie-Profils (Stress, Belastung) wirkt 'sofort helfen können' wie ein Handlungsversprechen mit Gesundheitsbezug. Bei einem KI-Tool, das explizit Stress/Belastung analysiert, grenzt das an eine implizite Heilwirkungsaussage nach HWG §3. Risiko bei Aufsichtsbehörden oder App-Store-Review.",
+      "suggestedFixes": [
+        {
+          "text": "Anregungen, die du direkt umsetzen kannst",
+          "rationale": "Neutrale Formulierung ohne Heilwirkungsversprechen; 'Anregungen' statt 'Tipps' reduziert Heilmittelassoziation."
+        },
+        {
+          "text": "Konkrete Impulse, die du sofort angehen kannst",
+          "rationale": "Betont Selbstwirksamkeit des Nutzers, nicht Wirkung der App."
+        }
+      ],
+      "invasivityLevel": "text-only"
+    },
+    {
+      "findingId": "S1-002",
+      "riskLevel": "🟧",
+      "category": "HWG",
+      "key": "profile_entropy_long",
+      "line": 390,
+      "currentText": "Ideal wenn du das Gefühl hast, dass gerade alles zu viel wird.",
+      "problem": "Das Profil richtet sich explizit an Personen in Überlastungszuständen. In Verbindung mit S1-001 entsteht ein Therapie-/Handlungsrahmen, der den HWG-Anwendungsbereich berührt. Kumulativwirkung: App als Mittel bei psychischer Überlastung positioniert.",
+      "suggestedFixes": [
+        {
+          "text": "Für alle, die Ordnung in ihre Gedanken und Aufgaben bringen möchten.",
+          "rationale": "Beschreibt Nutzerziel (Ordnung), keine Therapiesituation; entfernt klinischen Subtext."
+        }
+      ],
+      "invasivityLevel": "text-only"
+    },
+    {
+      "findingId": "S1-003",
+      "riskLevel": "🟥",
+      "category": "UWG",
+      "key": "profile_insight_long",
+      "line": 391,
+      "currentText": "Persönliche Stärken, die dir nicht bewusst sind",
+      "problem": "Eine KI-App kann keine 'unbewussten Stärken' objektiv ermitteln — das ist eine starke Leistungsbehauptung, die technisch nicht gedeckt ist (UWG §5 Abs. 1: Irreführung über Wirkung/Eigenschaft). Die KI analysiert nur den Freitext, den der Nutzer selbst schreibt; sie kann keine latenten Persönlichkeitsmerkmale identifizieren. Höchstes Risiko im Bucket.",
+      "suggestedFixes": [
+        {
+          "text": "Muster in deinen Einträgen, die auf persönliche Stärken hindeuten können",
+          "rationale": "Konditionalsatz + 'hindeuten' statt Behauptung; macht klar, dass es sich um Textmuster handelt, nicht um psychologische Diagnose."
+        },
+        {
+          "text": "Wiederkehrende Themen, die auf deine Stärken hinweisen",
+          "rationale": "Beschreibt nur Textanalyse, keine Persönlichkeitsdiagnostik."
+        }
+      ],
+      "invasivityLevel": "text-only"
+    },
+    {
+      "findingId": "S1-004",
+      "riskLevel": "🟧",
+      "category": "UWG",
+      "key": "profile_insight_desc",
+      "line": 384,
+      "currentText": "Deckt verborgene Denk- und Gefühlsmuster auf",
+      "problem": "'Verborgene' Muster suggeriert Zugang zu unbewusstem psychologischen Material — das ist irreführend nach UWG §5, da eine KI nur explizit geschriebenen Text analysiert. Kumulativwirkung mit S1-003.",
+      "suggestedFixes": [
+        {
+          "text": "Erkennt wiederkehrende Denk- und Gefühlsmuster in deinen Einträgen",
+          "rationale": "'Wiederkehrend' statt 'verborgen' — technisch korrekt; beschreibt Mustererkennung im Text."
+        }
+      ],
+      "invasivityLevel": "text-only"
+    },
+    {
+      "findingId": "S1-005",
+      "riskLevel": "🟧",
+      "category": "UWG",
+      "key": "dashboard_weekly_review_upsell_body",
+      "line": 242,
+      "currentText": "erkenne Muster, entdecke Einsichten und verstehe, was dich wirklich bewegt.",
+      "problem": "'was dich wirklich bewegt' ist eine tiefenpsychologische Versprechen-Formulierung. Im Kontext einer Analyse-App könnte dies als Zusicherung einer psychologischen Tiefenanalyse ausgelegt werden, die technisch nicht garantiert werden kann (UWG §5 — Irreführung über Leistungsumfang).",
+      "suggestedFixes": [
+        {
+          "text": "erkenne Muster, entdecke Einsichten und sieh, welche Themen dich beschäftigen.",
+          "rationale": "'beschäftigen' statt 'bewegt' — beschreibt Textinhalt, verspricht keine tiefenpsychologische Erkenntnis."
+        }
+      ],
+      "invasivityLevel": "text-only"
+    },
+    {
+      "findingId": "S1-006",
+      "riskLevel": "🟧",
+      "category": "UWG",
+      "key": "legend_insight_deep",
+      "line": 299,
+      "currentText": "Tiefgehend, Verborgene Muster und Überzeugungen",
+      "problem": "Legende-Text verspricht Erkennung von 'Überzeugungen' — eine psychologisch-therapeutische Kategorie. Technisch analysiert die KI nur Texte; Überzeugungen zu 'erkennen' überschreitet den belegbaren Leistungsumfang (UWG §5).",
+      "suggestedFixes": [
+        {
+          "text": "Tiefgehend — Wiederkehrende Themen und stark betonte Aussagen",
+          "rationale": "Beschreibt Textmerkmale (Häufigkeit, Betonung) statt psychologischer Kategorien."
+        }
+      ],
+      "invasivityLevel": "text-only"
+    },
+    {
+      "findingId": "S1-007",
+      "riskLevel": "🟨",
+      "category": "Abo-Transparenz",
+      "key": "follow_up_premium_subscribe",
+      "line": 215,
+      "currentText": "Abo starten",
+      "problem": "Button-Text ohne explizite Zahlungspflicht-Kennzeichnung. Nach §312j BGB Abs. 3 muss ein Bestellbutton bei Verbraucherverträgen die Formulierung 'zahlungspflichtig bestellen' oder gleichwertige Deutlichkeit enthalten. Hängt vom UI-Kontext ab, aber der String allein genügt nicht.",
+      "suggestedFixes": [
+        {
+          "text": "Kostenpflichtig abonnieren",
+          "rationale": "Klare Zahlungspflicht; von deutschen Gerichten als ausreichend anerkannt."
+        },
+        {
+          "text": "Jetzt abonnieren (zahlungspflichtig)",
+          "rationale": "Erfüllt §312j BGB wörtlich; breiter abgesichert."
+        }
+      ],
+      "invasivityLevel": "text-only"
+    },
+    {
+      "findingId": "S1-008",
+      "riskLevel": "🟨",
+      "category": "Abo-Transparenz",
+      "key": "journal_discover_premium",
+      "line": 98,
+      "currentText": "Premium entdecken →",
+      "problem": "CTA-Button der zur Paywall führt. Falls er direkt in einen Kaufvorgang mündet, muss der erste transaktionsfähige Button nach §312j BGB eindeutig zahlungspflichtig sein. Risiko abhängig von nachfolgendem Screen — präventive Anpassung empfohlen.",
+      "suggestedFixes": [
+        {
+          "text": "Premium ansehen →",
+          "rationale": "Macht klar, dass Info folgt, kein Kauf ausgelöst wird; reduziert Verwechslungsrisiko."
+        }
+      ],
+      "invasivityLevel": "text-only"
+    },
+    {
+      "findingId": "S1-009",
+      "riskLevel": "🟧",
+      "category": "Markenrecht",
+      "key": "dashboard_gemini_unavailable",
+      "line": 245,
+      "currentText": "Gemini ist gerade nicht erreichbar, bitte versuch es gleich nochmal.",
+      "problem": "'Gemini' ist eine eingetragene Marke von Google LLC. Direkte Nennung in Nutzersichtbaren Fehlermeldungen ohne Trademark-Attributierung kann als nicht-lizenzierte Markennutzung ausgelegt werden. Zudem informiert der String Nutzer darüber, dass Daten an Google gesendet werden — ohne expliziten DSGVO-Hinweis an dieser Stelle.",
+      "suggestedFixes": [
+        {
+          "text": "KI-Analyse ist gerade nicht erreichbar, bitte versuch es gleich nochmal.",
+          "rationale": "Marken-neutral; verbirgt Drittanbieter in der Fehlermeldung; empfohlener Standard."
+        },
+        {
+          "text": "Google Gemini™ ist gerade nicht erreichbar, bitte versuch es gleich nochmal.",
+          "rationale": "Falls Google Gemini als Feature beworben wird: Trademark-Symbol + vollständiger Markenname erforderlich."
+        }
+      ],
+      "invasivityLevel": "text-only"
+    },
+    {
+      "findingId": "S1-010",
+      "riskLevel": "🟨",
+      "category": "Pflichthinweis",
+      "key": "ai_improved_suffix_marker",
+      "line": 178,
+      "currentText": "✨ KI-verbessert",
+      "problem": "Positiv: EU-AI-Act-Kommentar (Zeilen 175-177) zeigt, dass Art. 50(4) Kennzeichnungspflicht bewusst umgesetzt wurde. Marker ist vorhanden. Hinweis: Das Emoji-Symbol allein (✨) ist kein Pflichthinweis-Text — 'KI-verbessert' muss im Volltext sichtbar bleiben und darf nicht durch das Emoji ersetzt werden.",
+      "suggestedFixes": [
+        {
+          "text": "✨ KI-verbessert",
+          "rationale": "Aktueller Text ist ausreichend, solange der Textanteil 'KI-verbessert' immer sichtbar ist und nicht wegfällt."
+        }
+      ],
+      "invasivityLevel": "text-only"
+    }
+  ],
+  "plugin_bugs_observed": [
+    "Worker erhält keinen Hinweis, ob eine Vorgänger-Bucket-Analyse existiert — Doppelbefunde über Bucket-Grenzen sind nicht ausschließbar, wenn benachbarte Buckets denselben Kontext-String teilen.",
+    "Das Schema enthält kein Pflichtfeld für 'confidenceLevel' — rechtliche Risikobewertungen ohne Konfidenzstufe erschweren die spätere Triage (z.B. 'abhängig von UI-Kontext' vs. 'string allein ausreichend').",
+    "Kein definiertes Feld für 'affectedLanguages' — mehrsprachige Apps (26 Sprachen) sollten im Finding angeben, ob das Problem nur im deutschen Original oder in allen Übersetzungen besteht."
+  ]
+}

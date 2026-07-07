@@ -1,0 +1,144 @@
+{
+ "gu": {
+  "legalKeysCheckedAsString": 94,
+  "issues": [
+   {
+    "key": "ai_prompt_insight_intro",
+    "sev": "low",
+    "issue": "no gu-script (408 latin letters) - transliteration or brand-only",
+    "sample": "Tame EK SAANVEDANAASHEEL, GAHAANAA NAMUNAAO-VISHLESHHAK CHO "
+   },
+   {
+    "key": "ai_prompt_insight_intro",
+    "sev": "low",
+    "issue": "no gu-script (408 latin letters) - transliteration or brand-only",
+    "sample": "Tame EK SAANVEDANAASHEEL, GAHAANAA NAMUNAAO-VISHLESHHAK CHO "
+   },
+   {
+    "key": "ai_prompt_no_dates_rule",
+    "sev": "medium",
+    "issue": "number mismatch de=['04', '04', '04', '04', '23', '23', '23', '24', '24', '28', '28', '28', '3', '3', '3', '30', '30', '4', '4', '4', '4', '4', '4', '4'] gu=['04', '04', '04', '23', '23', '23', '24', '28', '28', '28', '3', '3', '3', '30', '4', '4', '4', '4', '4', '4']",
+    "deSample": "TTS-VORLESEFREUNDLICH (PFLICHT — DATUMS-VERBOT IN SICHTBAREN TEXTEN):\\nIn ALLEN sichtbaren",
+    "tgtSample": "TTS-મૈત્રીપૂર્ણ (ફરજિયાત — દૃશ્યમાન ટેક્સ્ટમાં તારીખ પ્રતિબંધ):\\nબધા દૃશ્યમાન ટેક્સ્ટ ફીલ્"
+   },
+   {
+    "key": "consent_footer_link_impressum",
+    "sev": "low",
+    "issue": "identical to DE (untranslated?)",
+    "sample": "Impressum"
+   },
+   {
+    "key": "dev_seed_delete_all_action",
+    "sev": "high",
+    "issue": "MISSING in target"
+   },
+   {
+    "key": "follow_up_delete_confirm_text",
+    "sev": "medium",
+    "issue": "number mismatch de=['0', '0', '0', '1', '1', '1', '2'] gu=['0', '0', '0', '1', '1', '2']",
+    "deSample": "Möchtest du Nachtrag <ns0:g xmlns:ns0=\"urn:oasis:names:tc:xliff:document:1.2\" id=\"ordinal\"",
+    "tgtSample": "શું તમે ખરેખર \"<ns0:g xmlns:ns0=\"urn:oasis:names:tc:xliff:document:1.2\" id=\"title\" example"
+   },
+   {
+    "key": "settings_revoke_subtitle",
+    "sev": "medium",
+    "issue": "number mismatch de=['356'] gu=[]",
+    "deSample": "§ 356a BGB — Widerruf direkt per App",
+    "tgtSample": "Premium ખરીદી"
+   },
+   {
+    "key": "transcription_model_groq",
+    "sev": "low",
+    "issue": "no gu-script (22 latin letters) - transliteration or brand-only",
+    "sample": "Groq Whisper Large V3 Turbo"
+   }
+  ]
+ },
+ "kn": {
+  "legalKeysCheckedAsString": 94,
+  "issues": [
+   {
+    "key": "ai_limits_dialog_body",
+    "sev": "medium",
+    "issue": "number mismatch de=['0', '0', '00', '00', '1', '100', '101', '101', '150', '150', '150', '150', '151', '30', '30', '31', '4', '5', '5', '5', '50', '600'] kn=['0', '0', '00', '00', '1', '100', '101', '101', '150', '150', '150', '151', '30', '30', '31', '4', '5', '5', '5', '50', '600']",
+    "deSample": "MIT PREMIUM-ABO\\n\\nPro Tag stehen dir zur Verfügung:\\n• 150 Anfragen pro Tag und Profil — ",
+    "tgtSample": "ಪ್ರೀಮಿಯಂ ಚಂದಾದೊಂದಿಗೆ\\n\\nಪ್ರತಿ ದಿನ ನಿಮಗೆ ಲಭ್ಯ:\\n• ಪ್ರತಿ AI ಪ್ರೊಫೈಲ್‌ಗೆ 150 ಡ್ಯಾಶ್‌ಬೋರ್ಡ್ ವಿ"
+   },
+   {
+    "key": "ai_prompt_no_dates_rule",
+    "sev": "medium",
+    "issue": "number mismatch de=['04', '04', '04', '04', '23', '23', '23', '24', '24', '28', '28', '28', '3', '3', '3', '30', '30', '4', '4', '4', '4', '4', '4', '4'] kn=['04', '04', '04', '23', '23', '23', '24', '28', '28', '28', '3', '3', '3', '30', '4', '4', '4', '4', '4', '4']",
+    "deSample": "TTS-VORLESEFREUNDLICH (PFLICHT — DATUMS-VERBOT IN SICHTBAREN TEXTEN):\\nIn ALLEN sichtbaren",
+    "tgtSample": "TTS-ಸ್ನೇಹಿ (ಕಡ್ಡಾಯ — ಗೋಚರ ಪಠ್ಯದಲ್ಲಿ ದಿನಾಂಕ ನಿಷೇಧ):\\nಎಲ್ಲಾ ಗೋಚರ ಪಠ್ಯ ಕ್ಷೇತ್ರಗಳಲ್ಲಿ (ವಿವರಣೆ,"
+   },
+   {
+    "key": "dev_seed_delete_all_action",
+    "sev": "high",
+    "issue": "MISSING in target"
+   },
+   {
+    "key": "follow_up_delete_confirm_text",
+    "sev": "medium",
+    "issue": "number mismatch de=['0', '0', '0', '1', '1', '1', '2'] kn=['0', '0', '0', '1', '1', '2']",
+    "deSample": "Möchtest du Nachtrag <ns0:g xmlns:ns0=\"urn:oasis:names:tc:xliff:document:1.2\" id=\"ordinal\"",
+    "tgtSample": "ನೀವು ನಿಜವಾಗಿಯೂ \"<ns0:g xmlns:ns0=\"urn:oasis:names:tc:xliff:document:1.2\" id=\"title\" exampl"
+   },
+   {
+    "key": "privacy_gate_gemini_body",
+    "sev": "medium",
+    "issue": "number mismatch de=['9'] kn=['200', '200']",
+    "deSample": "Schön, dass du die intelligenten Funktionen von Best Journal nutzen möchtest! Für Zusammen",
+    "tgtSample": "Best Journal ನ ಬುದ್ಧಿವಂತ ಸೌಲಭ್ಯಗಳನ್ನು ನೀವು ಬಳಸಲು ಬಯಸಿದ್ದೀರಿ ಎಂದು ಸಂತೋಷ! ಸಾರಾಂಶಗಳು, ಹಿಂದಿನ "
+   },
+   {
+    "key": "settings_revoke_subtitle",
+    "sev": "medium",
+    "issue": "number mismatch de=['356'] kn=[]",
+    "deSample": "§ 356a BGB — Widerruf direkt per App",
+    "tgtSample": "Premium ಖರೀದಿ"
+   },
+   {
+    "key": "transcription_model_groq",
+    "sev": "low",
+    "issue": "no kn-script (22 latin letters) - transliteration or brand-only",
+    "sample": "Groq Whisper Large V3 Turbo"
+   }
+  ]
+ },
+ "ml": {
+  "legalKeysCheckedAsString": 94,
+  "issues": [
+   {
+    "key": "ai_prompt_no_dates_rule",
+    "sev": "medium",
+    "issue": "number mismatch de=['04', '04', '04', '04', '23', '23', '23', '24', '24', '28', '28', '28', '3', '3', '3', '30', '30', '4', '4', '4', '4', '4', '4', '4'] ml=['04', '04', '04', '23', '23', '23', '24', '28', '28', '28', '3', '3', '3', '30', '4', '4', '4', '4', '4', '4']",
+    "deSample": "TTS-VORLESEFREUNDLICH (PFLICHT — DATUMS-VERBOT IN SICHTBAREN TEXTEN):\\nIn ALLEN sichtbaren",
+    "tgtSample": "TTS-സൗഹൃദം (നിർബന്ധം — ദൃശ്യമായ ടെക്സ്റ്റിൽ തീയതി നിരോധനം):\\nഎല്ലാ ദൃശ്യമായ ടെക്സ്റ്റ് ഫീൽ"
+   },
+   {
+    "key": "consent_footer_link_impressum",
+    "sev": "low",
+    "issue": "identical to DE (untranslated?)",
+    "sample": "Impressum"
+   },
+   {
+    "key": "dev_seed_delete_all_action",
+    "sev": "high",
+    "issue": "MISSING in target"
+   },
+   {
+    "key": "settings_revoke_subtitle",
+    "sev": "medium",
+    "issue": "number mismatch de=['356'] ml=[]",
+    "deSample": "§ 356a BGB — Widerruf direkt per App",
+    "tgtSample": "Premium വാങ്ങൽ"
+   },
+   {
+    "key": "transcription_model_groq",
+    "sev": "low",
+    "issue": "no ml-script (22 latin letters) - transliteration or brand-only",
+    "sample": "Groq Whisper Large V3 Turbo"
+   }
+  ]
+ }
+}

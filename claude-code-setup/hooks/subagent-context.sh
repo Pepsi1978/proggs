@@ -1,0 +1,62 @@
+#!/bin/bash
+# SubagentStart Hook: Inject global project rules into every subagent
+# This ensures all subagents know the core rules even without conversation history
+#
+# DESIGN: Output MUST be valid JSON on stdout. Any error -> empty output + exit 0.
+# v2 (2026-05-24): JSON wird aus literalem Text via jq (Fallback python3) erzeugt statt
+# manuell zusammengebaut -> robust gegen Anfuehrungszeichen/Sonderzeichen im Text (Direktive #3,
+# Vorsorge). Die .ps1 ist durch ConvertTo-Json bereits abgesichert.
+
+# Literaler Kontext-Text — KEIN manuelles JSON-Escaping noetig (jq/python uebernehmen das korrekt)
+CONTEXT_TEXT=$(cat <<'TEXT'
+## ⚡ OBERSTE DIREKTIVE: SUPERINTELLIGENZ
+Diese Programmierumgebung hat EIN oberstes Ziel: Die intelligenteste Programmierumgebung der Welt werden. Nicht Nr. 2 — Nr. 1.
+- Exponentielle Intelligenzsteigerung in jeder Session (Compound Intelligence Effect)
+- Proaktive Intelligenz-Vorschlaege: '💡 Intelligenz-Vorschlag: [Was] — Soll ich das umsetzen?'
+- Erkenntnisse ins Whiteboard zurueckschreiben
+- 8 Dimensionen steigern: Wissensbreite, Wissenstiefe, Geschwindigkeit, Qualitaet, Autonomie, Voraussicht, Kreativitaet, Meta-Intelligenz
+
+## Globale Projekt-Regeln (automatisch injiziert)
+
+### Repository
+- EINZIGES Repo: Pepsi1978/proggs — NIEMALS neue Repos erstellen
+- Lokaler Pfad: ~/proggs/ — GitHub: https://github.com/Pepsi1978/proggs
+- Jeder Push geht ausschliesslich nach Pepsi1978/proggs
+
+### Sprachen & Plattformen
+- Bevorzugt: Swift, C#, Kotlin, TypeScript, Rust, Go (in dieser Reihenfolge)
+- KEIN Python fuer GUIs oder Desktop-Apps
+- Cross-Platform: macOS (Swift/AppKit) + Windows (C#/WPF) + Android (Kotlin/Compose)
+
+### Commits & Kommunikation
+- Commit-Format: #NNN - Beschreibung (fortlaufend nummeriert, Englisch)
+- Kommunikation mit Benutzer auf Deutsch, Code auf Englisch
+- Committen und Pushen immer direkt — nicht vorher fragen
+- Letzter Satz IMMER: 'Committed und gepusht.' / 'Committed.' / 'Ich habe weder committed noch gepusht.'
+
+### Qualitaet
+- UI muss aussehen wie gekaufte Software — poliert, professionell
+- Nach jedem Feature: quality-gate Agent starten (tester + code-reviewer + optimizer)
+- Bei Fehlern selbststaendig debuggen und fixen
+
+### Such-Reflex: VOR jeder Code-Suche 1 Satz innehalten
+Frage dich: Kenne ich den exakten Namen/String? -> Grep/Glob. Nur das Konzept, oder WELCHE Datei betroffen ist? -> semantische Suche (code-search MCP).
+- Multi-Task-Start: erst semantisch orientieren (welche Dateien?), dann Grep fuer die genaue Zeile
+- Nach 2-3 erfolglosen Greps -> semantisch; Datei >500 Zeilen NICHT per Agent editieren
+
+### Kontext-Schutz (NICHT crashen — du hast KEIN Auto-Compact und kein Tacho fuer deinen Tank)
+- Grosse Dateien NIE komplett ins Kontext lesen: per Python (open/read/write) bearbeiten ODER Grep mit head_limit + Read nur mit Ranges (offset/limit). Das Read-Tool blockt eh bei 256 KB/Aufruf.
+- Grep breit zuerst mit output_mode count/files_with_matches, DANN gezielt content nur fuer relevante Treffer (verlustfrei: erst alle finden, dann gezielt lesen)
+- Grosse Zwischenergebnisse SOFORT in eine Datei schreiben, im Kontext nur Pfad + Kurz-Summary behalten
+- Engen Scope halten; bei Annaeherung ans Limit Teilstand in Datei sichern + sauber beenden (der Orchestrator setzt mit Folge-Worker fort). Voller Regeltext: ~/.claude/rules/subagent-crash-proofing.md
+TEXT
+)
+
+# Robuste JSON-Erzeugung: jq bevorzugt, python3 als Fallback (beide escapen " + Sonderzeichen korrekt).
+# Ohne beide: kein Output -> Claude faehrt ohne injizierten Kontext fort (Graceful Degradation).
+if command -v jq > /dev/null 2>&1; then
+    jq -cn --arg ctx "$CONTEXT_TEXT" '{hookSpecificOutput: {hookEventName: "SubagentStart", additionalContext: $ctx}}'
+elif command -v python3 > /dev/null 2>&1; then
+    printf '%s' "$CONTEXT_TEXT" | python3 -c "import json,sys; print(json.dumps({'hookSpecificOutput': {'hookEventName': 'SubagentStart', 'additionalContext': sys.stdin.read()}}, ensure_ascii=False))"
+fi
+exit 0

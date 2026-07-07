@@ -1,0 +1,7 @@
+interface:
+  display_name: "explain-error"
+  short_description: "Explain Stripe error codes and provide solutions with code"
+  default_prompt: "Use $stripe-codex-plugins-official--explain-error for this task."
+
+policy:
+  allow_implicit_invocation: false

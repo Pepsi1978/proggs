@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+    Google Auto Backup rules (Android 11 and below, API <= 30).
+
+    Only the journal entries database (entropy_journal_db) and SharedPreferences
+    (profile + settings) are backed up. Dashboard and retrospective databases are
+    excluded so they regenerate from journal entries after restore, using the
+    profile's prompt configuration.
+-->
+<full-backup-content>
+    <exclude domain="database" path="dashboard_db" />
+    <exclude domain="database" path="dashboard_db-journal" />
+    <exclude domain="database" path="dashboard_db-wal" />
+    <exclude domain="database" path="dashboard_db-shm" />
+    <exclude domain="database" path="retrospective_db" />
+    <exclude domain="database" path="retrospective_db-journal" />
+    <exclude domain="database" path="retrospective_db-wal" />
+    <exclude domain="database" path="retrospective_db-shm" />
+    <exclude domain="sharedpref" path="entropy_journal_secure_prefs.xml" />
+    <exclude domain="sharedpref" path="entropy_journal_secure_prefs" />
+</full-backup-content>

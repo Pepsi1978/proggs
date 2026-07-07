@@ -1,0 +1,1465 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources xmlns:tools="http://schemas.android.com/tools"
+    xmlns:xliff="urn:oasis:names:tc:xliff:document:1.2"
+    tools:locale="uk">
+    <!-- App brand name — do not translate -->
+    <string name="app_name" translatable="false">Best Journal</string>
+
+    <!-- ════════════════════════════════════════════════════════════════════
+         NAVIGATION & TABS
+         ════════════════════════════════════════════════════════════════════ -->
+    <string name="nav_journal">Щоденник</string>
+    <string name="nav_retrospective">Підсумки</string>
+    <string name="nav_dashboard">Панель</string>
+    <string name="nav_settings">Налаштування</string>
+
+    <!-- ════════════════════════════════════════════════════════════════════
+         COMMON / SHARED
+         ════════════════════════════════════════════════════════════════════ -->
+    <string name="action_cancel">Скасувати</string>
+    <string name="action_save">Зберегти</string>
+    <string name="action_close">Закрити</string>
+    <string name="action_continue">Далі</string>
+    <string name="action_understood">Зрозуміло</string>
+    <string name="action_retry">Спробувати ще раз</string>
+    <string name="action_later">Пізніше</string>
+    <string name="action_share">Поділитися</string>
+    <string name="action_discard">Відхилити</string>
+    <string name="action_back">Назад</string>
+    <string name="action_done">Готово</string>
+    <string name="action_no_thanks">Ні, дякую</string>
+    <string name="action_delete">Видалити</string>
+    <!-- Accessibility label for the undo icon button on the dashboard. -->
+    <string name="action_undo">Скасувати</string>
+    <string name="action_ok">Гаразд</string>
+    <string name="action_go_google_play">До Google Play</string>
+    <string name="journal_drive_backup_dialog">Резервна копія Google Drive</string>
+    <string name="journal_improve_text">✨ Покращити текст</string>
+    <string name="journal_show_original">↩ Показати оригінал</string>
+    <string name="journal_show_improved">✨ Показати покращену версію</string>
+    <string name="journal_ai_improving">ШІ покращує текст, зачекайте мить</string>
+    <string name="journal_later">Пізніше</string>
+    <!-- Paywall missed strings -->
+    <string name="paywall_from_per_day">Річна підписка, %1$s на рік</string>
+    <string name="paywall_instead_per_month">Заощаджуй %1$d%% порівняно з місячним планом</string>
+    <string name="paywall_or">або</string>
+    <string name="paywall_with_limited">з обмеженими лімітами.</string>
+    <!-- Churn missed string -->
+    <string name="churn_instead_of">замість </string>
+    <string name="label_premium">Преміум</string>
+    <string name="label_original">Оригінал</string>
+    <string name="label_improved">✨ ШІ Покращено</string>
+    <string name="label_photo">Фото</string>
+    <string name="label_video">Відео</string>
+    <string name="label_current">Поточний</string>
+    <string name="label_record">Рекорд</string>
+    <string name="cd_sync_status">Стан синхронізації</string>
+    <string name="cd_day">День</string>
+    <string name="cd_night">Ніч</string>
+
+    <!-- ════════════════════════════════════════════════════════════════════
+         JOURNAL SCREEN
+         ════════════════════════════════════════════════════════════════════ -->
+    <string name="journal_title">Щоденник</string>
+    <string name="journal_search_placeholder">Пошук у записах…</string>
+    <string name="journal_search">Пошук</string>
+    <string name="journal_search_hint">Пошук</string>
+    <string name="journal_search_close">Закрити пошук</string>
+    <string name="journal_no_entries">Записів поки немає</string>
+    <string name="journal_tap_mic_to_start">Торкніться мікрофона, щоб почати</string>
+    <string name="journal_cd_streak">Днів поспіль</string>
+    <string name="journal_cd_text_input">Ввести текст</string>
+    <string name="journal_achievement_unlocked">Досягнення відкрито!</string>
+    <string name="journal_drive_not_signed_in">Не виконано вхід у Google</string>
+    <string name="journal_drive_backup_current">Копія актуальна, усі записи збережено</string>
+    <string name="journal_drive_uploading">Завантаження копії…</string>
+    <string name="journal_drive_downloading">Завантаження фото та відео…</string>
+    <string name="journal_drive_failed">Не вдалося створити копію!</string>
+    <string name="journal_drive_last_sync">Остання синхронізація: %1$s</string>
+    <string name="journal_new_entry_prompt">Підказка для запису</string>
+    <string name="journal_new_entry">Новий запис</string>
+    <string name="journal_save_improved">Зберегти покращену версію</string>
+    <string name="journal_save">Зберегти</string>
+    <string name="journal_cd_write">Писати</string>
+    <string name="journal_write">Писати</string>
+    <string name="journal_cd_speak">Говорити</string>
+    <string name="journal_speak">Говорити</string>
+    <string name="journal_your_answer">Ваша відповідь:</string>
+    <string name="journal_placeholder_prompt">Запишіть тут свої думки…</string>
+    <string name="journal_placeholder_edit">Торкніться тут, щоб відредагувати текст…</string>
+    <string name="journal_freeflow_hint">Дайте думкам плинути вільно. Немає правильних або неправильних відповідей.</string>
+    <string name="journal_transcribed_with">Розшифровано за допомогою %1$s</string>
+    <!-- Default label for the transcription model (local Whisper, runs on-device). -->
+    <string name="transcription_model_local">Локальна модель Whisper</string>
+    <!-- Brand name of the Groq transcription model — do not translate. -->
+    <string name="transcription_model_groq" translatable="false">Groq Whisper Large V3 Turbo</string>
+    <string name="journal_text_upsell_title">Вражає, правда?</string>
+    <string name="journal_text_upsell_body">З Преміум можна покращити кожен запис.</string>
+    <string name="journal_discover_premium">Дізнатися про Преміум →</string>
+    <string name="journal_entries_label">Записи</string>
+    <string name="journal_entry_count">Записів: %1$d</string>
+    <string name="journal_streak_days">Днів: %1$d</string>
+    <string name="journal_streak_days_in_row">%1$d днів поспіль</string>
+    <string name="journal_streak_next_goal">Наступна мета: %1$d днів</string>
+    <string name="journal_streak_remaining">залишилося %1$d</string>
+    <string name="journal_streak_premium">Захист серії: доступний з Преміум</string>
+    <string name="journal_keep_going">Так тримати!</string>
+    <string name="journal_daily_prompt">Підказка дня</string>
+    <string name="journal_write_about">Написати про це</string>
+    <string name="journal_recording_error">Не вдалося записати: %1$s</string>
+    <string name="journal_transcription_error">Не вдалося розшифрувати: %1$s</string>
+    <string name="journal_rate_limit">Коротка пауза: залишилося %1$d хв до наступного покращення.</string>
+    <string name="journal_improve_error">Не вдалося покращити текст: %1$s</string>
+    <string name="journal_save_error">Не вдалося зберегти: %1$s</string>
+    <string name="recording_tap_stop">Торкніться ще раз, щоб зупинити</string>
+
+    <!-- Streak messages -->
+    <string name="streak_365">Цілий рік!</string>
+    <string name="streak_180">Неймовірна дисципліна!</string>
+    <string name="streak_90">Вас не зупинити!</string>
+    <string name="streak_30">Цілий місяць!</string>
+    <string name="streak_14">Два сильних тижні!</string>
+    <string name="streak_7">Цілий тиждень!</string>
+    <string name="streak_3">Ви тримаєтеся!</string>
+    <string name="streak_default">Кожен день важливий!</string>
+    <string name="streak_desc_365">Те, що починалося як маленька звичка, тепер міцна частина вашого життя. Щоденник знає вас як ніколи.</string>
+    <string name="streak_desc_14">Два тижні поспіль, таке мало кому вдається. Ваше майбутнє «я» подякує вам.</string>
+    <string name="streak_desc_7">Цілий тиждень думок, почуттів і спогадів. Ви створюєте щось цінне.</string>
+    <string name="streak_desc_3">Три дні поспіль — це початок справжньої звички. Продовжуйте, воно того варте.</string>
+    <string name="streak_desc_1">Кожен запис — маленький подарунок вашому майбутньому «я». Напишіть і завтра!</string>
+
+    <!-- ════════════════════════════════════════════════════════════════════
+         ENTRY DETAIL SCREEN
+         ════════════════════════════════════════════════════════════════════ -->
+    <string name="entry_title">Запис</string>
+    <string name="entry_summary">Коротко</string>
+    <string name="entry_saving">Збереження…</string>
+    <string name="entry_improving">Покращення…</string>
+    <string name="entry_improve_with_ai">Покращити пізніше з ШІ</string>
+    <string name="entry_photos_videos">Фото та відео</string>
+    <string name="entry_add">Додати</string>
+    <string name="entry_no_photos_yet">Поки немає фото та відео</string>
+    <string name="entry_cd_play_video">Відтворити відео</string>
+    <string name="entry_cd_remove">Прибрати</string>
+    <string name="entry_tts_enable_hint">Увімкніть голоси в налаштуваннях</string>
+    <string name="entry_tts_stop">Зупинити</string>
+    <string name="entry_tts_read">Прочитати</string>
+    <string name="entry_cd_share">Поділитися</string>
+    <string name="entry_recording_duration">Тривалість запису: %1$s</string>
+    <string name="entry_tts_generating">Зачекайте, голос генерується…</string>
+    <string name="entry_tts_journal_label">Запис у щоденнику</string>
+    <string name="entry_tts_followup_label">Доповнення %1$s</string>
+    <string name="entry_cd_photo_page">Фото %1$d</string>
+    <string name="entry_add_photo_video">Додати фото або відео</string>
+    <string name="entry_camera">Камера</string>
+    <string name="entry_gallery">Галерея</string>
+    <string name="entry_delete_title">Видалити запис?</string>
+    <string name="entry_delete_message">Видалити цей запис назавжди?</string>
+
+    <!-- Share dialog -->
+    <string name="share_title">Поділитися записом</string>
+    <string name="share_which_version">Якою версією поділитися?</string>
+    <string name="share_improved_version">Покращена версія</string>
+    <string name="share_photos_videos_label">Додати фото та відео:</string>
+    <string name="share_footer">Запис щоденника з додатка BestJournal</string>
+    <string name="share_what_to_share">Чим хочеш поділитися?</string>
+    <string name="share_journal_entry">Запис щоденника</string>
+    <string name="share_followup_numbered">Доповнення <xliff:g id="ordinal" example="1">%1$s</xliff:g></string>
+    <string name="share_followup_single">Доповнення</string>
+
+    <string name="error_recording_failed">Помилка запису: <xliff:g id="reason" example="Мікрофон недоступний">%1$s</xliff:g></string>
+    <string name="error_transcription_failed">Помилка транскрипції: <xliff:g id="reason" example="Час очікування мережі">%1$s</xliff:g></string>
+
+    <!-- ════════════════════════════════════════════════════════════════════
+         DASHBOARD SCREEN
+         ════════════════════════════════════════════════════════════════════ -->
+    <string name="dashboard_title">Панель</string>
+    <string name="dashboard_legend">Легенда</string>
+    <string name="dashboard_refresh">Оновити</string>
+    <string name="dashboard_weekly_review_waiting">Ваш підсумок тижня чекає</string>
+    <!-- Body text of the weekly-review premium upsell card on the dashboard. -->
+    <string name="dashboard_weekly_review_upsell_body">У вас був насичений тиждень. З Premium ви бачите повний аналіз: розпізнавайте закономірності, відкривайте інсайти та розумійте, що вас хвилює.</string>
+    <string name="dashboard_discover_premium">Дізнатися про Преміум</string>
+    <string name="dashboard_please_wait">Зачекайте</string>
+    <string name="dashboard_gemini_unavailable">Gemini зараз недоступний, спробуйте за мить.</string>
+    <string name="dashboard_no_custom_focus">Тему аналізу не вказано</string>
+    <string name="dashboard_custom_focus_hint">У налаштуваннях у розділі\n«Власний аналіз» укажіть тему,\nабо виберіть інший профіль.</string>
+    <string name="dashboard_no_analysis_yet">Аналізу поки немає</string>
+    <string name="dashboard_create_entries_custom">Створюйте записи щоденника,\nпотім ШІ проаналізує вашу тему.</string>
+    <string name="dashboard_create_entries_default">Створюйте записи щоденника,\nпотім ШІ проаналізує ваші закономірності.</string>
+    <string name="dashboard_like_analysis">Подобається аналіз?</string>
+    <string name="dashboard_premium_upsell_body">З Premium ти отримуєш щедрі аналізи з будь-якої кількості профілів.</string>
+    <string name="dashboard_learn_more">Дізнатися більше</string>
+    <string name="dashboard_feature_analyses">Аналізи</string>
+    <string name="dashboard_all_observations">Усі спостереження</string>
+    <string name="dashboard_inner_mirror">Внутрішнє дзеркало</string>
+    <string name="dashboard_all_insights">Усі осяяння</string>
+    <string name="dashboard_goal_overview">Огляд цілей</string>
+    <string name="dashboard_all_goals">Усі цілі</string>
+    <string name="dashboard_top_results_fallback">Головні результати</string>
+    <string name="dashboard_analysis_fallback">Аналіз</string>
+    <string name="dashboard_all_results_fallback">Усі результати</string>
+    <string name="dashboard_overall_analysis">Загальний аналіз</string>
+    <!-- Title of the overview card in the Summary dashboard (scenario 0). -->
+    <string name="dashboard_summary_overview_title">Огляд</string>
+    <!-- Title of the next-steps card in the Goals dashboard (scenario 3). -->
+    <string name="dashboard_goals_next_steps_title">Наступні кроки</string>
+    <string name="dashboard_all_recommendations">Усі рекомендації</string>
+    <string name="dashboard_connection">Зв\'язок</string>
+    <string name="dashboard_limit_daily">Денний ліміт досягнуто. Завтра продовжимо!</string>
+    <string name="dashboard_limit_weekly_profile">Тижневий ліміт для цього профілю вичерпано. Змініть профіль або зачекайте до понеділка.</string>
+    <string name="dashboard_limit_cooldown">Коротка пауза: залишилося %1$d хв до наступного аналізу.</string>
+    <string name="dashboard_analysis_failed">Аналіз не вдався</string>
+    <string name="dashboard_last_updated">Останнє оновлення: %1$s</string>
+    <string name="dashboard_loading_profile_switch">Панель ШІ автоматично оновлюється після кожної зміни профілю</string>
+    <string name="dashboard_loading_delete_update">Панель ШІ автоматично оновлюється після видалення запису</string>
+    <string name="dashboard_loading_auto_update">Панель ШІ автоматично оновлюється після кожного нового запису</string>
+    <string name="dashboard_loading_default">Панель ШІ оновлюється</string>
+
+    <!-- Legend labels -->
+    <string name="legend_urgent">Терміново</string>
+    <string name="legend_attention">Увага</string>
+    <string name="legend_observe">Спостерігати</string>
+    <string name="legend_activity_level">Рівень активності</string>
+    <string name="legend_activity_desc">Півколо показує, скільки відбувається в цій сфері:</string>
+    <string name="legend_activity_high">Висока активність (67–100\u00A0%%)</string>
+    <string name="legend_activity_medium">Помірна активність (34–66\u00A0%%)</string>
+    <string name="legend_activity_low">Низька активність (0–33\u00A0%%)</string>
+    <string name="legend_observation_relevance">Важливість спостережень</string>
+    <string name="legend_relevance_high">Головне, ключові теми ваших записів</string>
+    <string name="legend_relevance_medium">Важливе, повторювані спостереження</string>
+    <string name="legend_relevance_low">Примітка, поодинокі згадки</string>
+    <string name="legend_reflection_depth">Глибина рефлексії</string>
+    <string name="legend_reflection_desc">Півколо показує глибину вашого самоаналізу:</string>
+    <string name="legend_reflection_deep">Глибока (67–100\u00A0%%)</string>
+    <string name="legend_reflection_aware">Усвідомлена (34–66\u00A0%%)</string>
+    <string name="legend_reflection_surface">Поверхнева (0–33\u00A0%%)</string>
+    <string name="legend_insight_depth">Глибина осяянь</string>
+    <string name="legend_insight_deep">Глибокий аналіз, повторювані закономірності та переконання</string>
+    <string name="legend_insight_aware">Усвідомлена, розпізнані закономірності мислення та почуттів</string>
+    <string name="legend_insight_surface">Поверхнева, перші спостереження</string>
+    <string name="legend_progress">Поступ</string>
+    <!-- Legend: Goal progress -->
+    <string name="legend_goal_progress_desc">Півколо показує поступ ваших цілей:</string>
+    <string name="legend_blocked_range">Заблоковано (0–33\u00A0%%)</string>
+    <string name="legend_in_progress_range">У роботі (34–66\u00A0%%)</string>
+    <string name="legend_progress_range">Поступ (67–100\u00A0%%)</string>
+    <string name="legend_goal_status">Стан цілей</string>
+    <string name="legend_blocked_desc">Заблоковано — цілі з перешкодами</string>
+    <string name="legend_open_desc">Відкрито — цілі поки без поступу</string>
+    <string name="legend_progress_success_desc">Поступ — цілі з видимим успіхом</string>
+    <!-- Legend: Custom analysis -->
+    <string name="legend_analysis_value">Значення аналізу</string>
+    <string name="legend_analysis_relevance_desc">Півколо показує значення для вашої теми:</string>
+    <string name="legend_high_focus">Високе (67–100\u00A0%%) — ядро теми</string>
+    <string name="legend_medium_focus">Середнє (34–66\u00A0%%) — зв\'язок розпізнано</string>
+    <string name="legend_low_focus">Низьке (0–33\u00A0%%) — на периферії</string>
+    <string name="legend_result_relevance">Важливість результатів</string>
+    <string name="legend_important_desc">Важливо — безпосередньо стосується теми</string>
+    <string name="legend_relevant_desc">Доречно — зв\'язок із вашою темою</string>
+    <string name="legend_note_desc">Примітка — на полях</string>
+    <!-- Legend: Burden/Stress -->
+    <string name="legend_burden_scale">Шкала навантаження</string>
+    <string name="legend_burden_desc">Півколо показує, наскільки ця тема вас обтяжує:</string>
+    <string name="legend_high_burden">Високе (67–100\u00A0%%) — діяти зараз</string>
+    <string name="legend_medium_burden">Середнє (34–66\u00A0%%) — потрібна увага</string>
+    <string name="legend_low_burden">Низьке (0–33\u00A0%%) — добрий стан</string>
+    <string name="legend_priority_title">Пріоритет порад</string>
+    <string name="legend_priority_high">Червоний = терміново — діяти зараз</string>
+    <string name="legend_priority_medium">Помаранчевий = середньо — братися незабаром</string>
+    <string name="legend_priority_low">Синій = низько — спостерігати</string>
+    <!-- Legend: Categories -->
+    <string name="legend_categories">Категорії</string>
+    <string name="legend_categories_desc">Категорії створюються динамічно, ШІ розпізнає теми у записах і створює відповідні категорії. Нові теми автоматично отримують нові значки.</string>
+    <!-- CategoryDetailDialog levels -->
+    <string name="level_low">Низький</string>
+    <string name="level_medium">Середній</string>
+    <string name="level_high">Високий</string>
+    <string name="urgency_high">Терміново — діяти зараз</string>
+    <string name="urgency_medium">Потрібна увага</string>
+    <string name="urgency_low">Добрий стан — спостерігати</string>
+    <!-- Dashboard: Derivation dialog -->
+    <string name="dashboard_derived_from">Виведено з:</string>
+    <string name="dashboard_update_for_derivation">Оновіть панель для детального виведення.</string>
+    <!-- Dashboard: Summary section -->
+    <string name="dashboard_top_5_actions">Топ-5 дій</string>
+    <string name="dashboard_core_insights">Ключові висновки</string>
+    <string name="dashboard_summary_subtitle">Найважливіше з ваших записів</string>
+    <string name="summary_central">Центральне</string>
+    <string name="summary_relevant">Доречне</string>
+    <string name="summary_side_note">Примітка</string>
+    <!-- Dashboard: Insight section -->
+    <string name="dashboard_deepest_insights">Найглибші осяяння</string>
+    <string name="dashboard_insight_subtitle">Що ваші записи розповідають про вас</string>
+    <string name="insight_deep_label">Глибоко</string>
+    <string name="insight_aware_label">Усвідомлено</string>
+    <string name="insight_surface_label">Поверхня</string>
+    <!-- Dashboard: Goal section -->
+    <string name="dashboard_goal_steps">Ключові кроки до ваших цілей</string>
+    <string name="goal_blocked_label">Заблоковано</string>
+    <string name="goal_open_label">Відкрито</string>
+    <string name="goal_progress_label">Поступ</string>
+    <!-- Dashboard: Custom analysis section -->
+    <string name="dashboard_custom_subtitle">На основі вашого власного аналізу</string>
+    <string name="custom_important_label">Важливо</string>
+    <string name="custom_relevant_label">Доречно</string>
+    <string name="custom_note_label">Примітка</string>
+    <!-- Dashboard: TTS and sharing -->
+    <string name="dashboard_enable_voices">Увімкніть голоси в налаштуваннях</string>
+    <string name="dashboard_tts_stop">Зупинити</string>
+    <string name="dashboard_tts_read">Прочитати</string>
+    <string name="dashboard_share_analysis">Поділитися аналізом</string>
+    <string name="dashboard_share">Поділитися</string>
+    <string name="dashboard_tts_wait">Зачекайте, голос генерується…</string>
+
+    <!-- Profile names -->
+    <string name="profile_summary">Коротко</string>
+    <string name="profile_entropy">Наведіть лад у житті</string>
+    <string name="profile_insight">Самопізнання</string>
+    <string name="profile_goals">Особисті цілі</string>
+    <string name="profile_custom">Власний аналіз</string>
+    <string name="profile_summary_desc">Збирає теми, закономірності й переживання</string>
+    <string name="profile_entropy_desc">Виявляє стрес, безлад і навантаження</string>
+    <string name="profile_insight_desc">Робить видимими повторювані патерни мислення та відчуттів</string>
+    <string name="profile_goals_desc">Визначає цілі, бажання та поступ</string>
+    <string name="profile_custom_desc">Задайте власну тему аналізу</string>
+
+    <!-- Profile long descriptions (settings) -->
+    <string name="profile_summary_long">Ваші записи підсумовуються нейтрально, без оцінок і порад.\n\nВи одразу бачите:\n\n• які теми вас зараз займають\n• які закономірності повторюються\n• як розвивається ваше життя\n\nЧудовий щоденний огляд усього, що відбувається у вашому житті.</string>
+    <string name="profile_entropy_long">ШІ знаходить те, що навантажує тебе в побуті, і впорядковує це. Ти отримуєш огляд найбільших джерел навантаження і 5 конкретних кроків прибирання. Ідеально, коли ти хочеш повернути собі огляд.</string>
+    <string name="profile_insight_long">Штучний інтелект дивиться глибше, ніж просто на події. Він розпізнає у ваших записах:
+
+• Патерни мислення та переконання у ваших словах
+• Повторювані почуття та реакції
+• Сильні сторони, що стають видимими у ваших записах
+• Цінності, що керують вашими діями
+
+Для тих, хто хоче краще зрозуміти себе та зростати внутрішньо.</string>
+    <string name="profile_goals_long">ШІ знаходить у ваших записах усі цілі, бажання та плани, навіть згадані побіжно.\n\nВи бачите:\n\n• які у вас цілі (зокрема й приховані)\n• наскільки далеко ви просунулися у кожній\n• яким може бути ваш наступний крок\n\nВаш особистий трекер цілей, що читає вашими ж словами.</string>
+    <string name="profile_custom_long">Ви самі вирішуєте, на чому ШІ має зосередитися.\n\nНапишіть власну тему аналізу, наприклад:\n\n• «Знайди всі згадки про спорт»\n• «Проаналізуй мої перепади настрою»\n• «Покажи, коли я найпродуктивніший»\n\nПовний контроль для тих, хто точно знає, що шукає.</string>
+    <string name="profile_custom_prompt">Що для вас особливо важливо? На чому ШІ має зосередитися при аналізі ваших записів?</string>
+    <string name="profile_select_hint">Виберіть профіль. Торкніться профілю, щоб отримати докладніше пояснення.</string>
+    <!-- Premium upsell sheet shown when a free user tries to add a 3rd custom analysis -->
+    <string name="profiles_premium_title">Кілька власних профілів</string>
+    <string name="profiles_premium_desc">Із Premium ти створюєш стільки власних профілів аналізу, скільки хочеш. Наприклад, один для спорту, один для роботи, один для сім’ї. Кожен профіль аналізує твої записи щоденника зі своїм фокусом.</string>
+    <string name="profiles_benefit_many">Створюй будь-яку кількість індивідуальних профілів</string>
+    <string name="profiles_benefit_switch">Перемикайся між фокусами будь-коли</string>
+    <string name="profiles_benefit_named">Давай кожному профілю свою назву</string>
+
+    <!-- ════════════════════════════════════════════════════════════════════
+         SETTINGS SCREEN
+         ════════════════════════════════════════════════════════════════════ -->
+    <string name="settings_title">Налаштування</string>
+    <string name="settings_account">Акаунт</string>
+    <string name="settings_sign_out">Вийти</string>
+    <string name="settings_last_sync">Остання синхронізація: %1$s</string>
+    <string name="settings_entries_auto_loaded">Записи завантажуються автоматично при вході</string>
+    <string name="settings_backup_photos">Резервна копія фото</string>
+    <string name="settings_backup_videos">Резервна копія відео</string>
+    <string name="settings_syncing">Створення копії…</string>
+    <!-- Shown briefly as a confirmation after a successful cloud backup. -->
+    <string name="settings_sync_success">Копію створено</string>
+    <!-- Error shown when Google sign-in fails. %1$s = error message from Google (e.g., "Network error"). -->
+    <string name="settings_signin_failed">Не вдалося увійти: <xliff:g id="error_reason" example="Network error">%1$s</xliff:g></string>
+    <string name="settings_backup_entries">Резервна копія записів</string>
+    <string name="settings_not_signed_in">Вхід не виконано</string>
+    <string name="settings_entries_loaded_on_sign_in">Збережені записи завантажаться при вході</string>
+    <string name="settings_sign_in_google">Увійти через Google</string>
+    <string name="settings_appearance">Оформлення</string>
+    <string name="settings_dark_mode">Темний режим</string>
+    <string name="settings_dark_active">Активний</string>
+    <string name="settings_dark_off">Вимкнено</string>
+    <string name="settings_follow_system">Як у системі</string>
+    <string name="settings_automatic">Автоматично</string>
+    <string name="settings_sounds_haptics_section">Звук і вібрація</string>
+    <string name="settings_app_sounds">Звуки застосунку</string>
+    <string name="settings_sounds_on">Звуки увімкнено</string>
+    <string name="settings_sounds_off">Звуки вимкнено</string>
+    <string name="settings_haptics">Вібрація</string>
+    <string name="settings_haptics_on">Вібрація увімкнена</string>
+    <string name="settings_haptics_off">Вібрація вимкнена</string>
+    <string name="settings_voices">Голоси</string>
+    <string name="settings_tts_on">Читання вголос увімкнено</string>
+    <string name="settings_tts_off">Читання вголос вимкнено</string>
+    <string name="settings_voice_select">Вибрати голос</string>
+    <string name="settings_voice_choose">Вибрати голос</string>
+    <string name="settings_reminder_section">Нагадування та підсумки</string>
+    <string name="settings_daily_reminder">Щоденне нагадування</string>
+    <string name="settings_reminder_time" formatted="false">Час: %02d:%02d</string>
+    <string name="settings_reminder_desc">Нагадує писати у щоденник</string>
+    <string name="settings_weekly_review">Підсумки тижня</string>
+    <string name="settings_weekly_review_on">Нагадування активне</string>
+    <string name="settings_weekly_review_off">У неділю о 15:00</string>
+    <string name="settings_monthly_review">Підсумки місяця</string>
+    <string name="settings_monthly_review_on">Нагадування активне</string>
+    <string name="settings_yearly_review">Підсумки року</string>
+    <string name="settings_yearly_review_on">Нагадування активне</string>
+    <string name="settings_timezone">Часовий пояс: %1$s</string>
+    <string name="settings_security">Безпека</string>
+    <string name="settings_fingerprint">Відбиток пальця</string>
+    <string name="settings_fingerprint_desc">Розблоковувати застосунок при запуску</string>
+    <string name="settings_auto_lock">Автоматично блокується за 60 секунд у фоні</string>
+    <string name="settings_ai_profiles_title">Профілі панелі ШІ:</string>
+    <string name="settings_ai_automations">Автоматизації ШІ</string>
+    <string name="settings_custom_prompt_placeholder">Наприклад: зосередься на моїй якості сну та рівні стресу. Покажи закономірності у харчуванні. Проаналізуй, як мій настрій змінюється протягом тижня. З\'ясуй, коли я найпродуктивніший і що мене блокує.\n\nЧим детальніше опишете тему, тим кращими будуть результати.</string>
+    <string name="churn_google_play_redirect">Вас буде переспрямовано до Google Play для керування підпискою. Ваші записи, звісно, збережуться.</string>
+    <string name="splash_subtitle">ВАШ РОЗУМНИЙ ЩОДЕННИК</string>
+    <string name="biometric_subtitle">Розблокуйте свій щоденник</string>
+    <!-- Shown in the biometric lock screen below the app name. Hint to authenticate. -->
+    <string name="biometric_prompt_subtitle">Підтвердьте, щоб розблокувати</string>
+    <!-- Button in the biometric lock screen to trigger the fingerprint prompt. Keep short. -->
+    <string name="biometric_unlock_button">Розблокувати</string>
+    <string name="settings_text_improvement">Покращення тексту</string>
+    <string name="settings_text_improvement_desc">Увімкнути за замовчуванням</string>
+    <string name="settings_dashboard_section">Панель</string>
+    <string name="settings_auto_update">Оновлювати автоматично після кожного нового запису</string>
+    <string name="settings_premium_section">Преміум</string>
+    <string name="settings_premium_lifetime">Довічний доступ активний</string>
+    <string name="settings_premium_active">Підписка Преміум активна</string>
+    <string name="settings_premium_lifetime_desc">Одноразова покупка, усі функції розблоковано назавжди.</string>
+    <string name="settings_premium_desc">Усі функції розблоковано, ШІ щодня, експорт PDF та інше.</string>
+    <string name="settings_manage_subscription">Керувати підпискою</string>
+    <string name="settings_export">Експорт</string>
+    <string name="settings_export_pdf_desc">Експортуйте всі записи та фото як PDF-документ.</string>
+
+    <!-- Premium feature list (settings) -->
+    <string name="settings_premium_feature_improve">Щоденне покращення тексту ШІ</string>
+    <string name="settings_premium_feature_improve_desc">ШІ вдосконалює твої записи на прохання.</string>
+    <string name="settings_premium_feature_dashboard">Щоденні аналізи панелі</string>
+    <string name="settings_premium_feature_dashboard_desc">Твій дашборд зростає разом із твоїми записами.</string>
+    <string name="settings_premium_feature_5_perspectives">Усі 4 попередньо визначені профілі ШІ</string>
+    <string name="settings_premium_feature_5_perspectives_desc">Від підсумку до самопізнання</string>
+    <string name="settings_premium_feature_reviews">Підсумки тижня, місяця і року</string>
+    <string name="settings_premium_feature_reviews_desc">ШІ розповідає вашу історію</string>
+    <string name="settings_premium_feature_patterns">Розпізнавання закономірностей</string>
+    <string name="settings_premium_feature_patterns_desc">ШІ може виявляти закономірності та зв\'язки у твоїх записах.</string>
+    <string name="settings_premium_feature_pdf">Експорт у PDF з фото</string>
+    <string name="settings_premium_feature_pdf_desc">Усі записи з фото як документ</string>
+    <string name="settings_premium_feature_voice">Точніше розпізнавання мови</string>
+    <string name="settings_premium_feature_voice_desc">Вища якість голосових записів</string>
+    <string name="settings_premium_feature_profiles">Власні профілі ШІ без обмеження кількості</string>
+    <string name="settings_premium_feature_profiles_desc">Кілька напрямків аналізу поруч</string>
+    <string name="settings_unlock_premium">Відкрити Преміум</string>
+    <!-- Export dialog -->
+    <!-- AlertDialog title shown before PDF export. Max 25 chars — fits in dialog header. -->
+    <string name="settings_export_dialog_title">Експорт у PDF</string>
+    <string name="settings_export_what">Що експортувати?</string>
+    <string name="settings_export_entries">Записи щоденника</string>
+    <string name="settings_export_photos">Фото</string>
+    <string name="settings_export_action">Експортувати</string>
+    <string name="settings_exporting">Триває експорт…</string>
+    <!-- Export error shown when the user has no journal entries yet. -->
+    <string name="settings_export_no_entries">Записів немає</string>
+    <string name="settings_export_entries_photos_pdf">Експортувати записи та фото у PDF</string>
+    <string name="settings_export_data">Експорт даних</string>
+    <string name="settings_export_entries_photos_pdf_full">Експортувати записи з фото у PDF</string>
+    <!-- Feedback -->
+    <string name="settings_feedback">Відгук</string>
+    <string name="settings_feedback_desc">Побажання, ідеї, покращення, повідомлення про помилки 🐞</string>
+    <string name="settings_feedback_send">Надіслати відгук</string>
+    <string name="settings_feedback_sent">Надіслано</string>
+    <string name="settings_feedback_dialog_title">Надіслати відгук</string>
+    <string name="settings_feedback_dialog_desc">Твоє повідомлення розробникам — ми читаємо кожне повідомлення і відповідаємо якомога швидше.</string>
+    <string name="settings_feedback_placeholder">Напишіть нам свій відгук…</string>
+    <string name="settings_feedback_sending">Надсилання…</string>
+    <string name="settings_feedback_sign_in_first">Спершу увійдіть через Google</string>
+    <string name="settings_feedback_allow_gmail">Дозвольте доступ до Gmail і спробуйте знову.</string>
+    <string name="settings_feedback_token_error">Помилка токена: %1$s</string>
+    <string name="settings_feedback_subject">Відгук про Best Journal</string>
+    <string name="settings_feedback_no_error_body">Відповідь про помилку не отримано</string>
+    <string name="settings_feedback_read_error">Не вдалося прочитати відповідь про помилку</string>
+    <string name="settings_feedback_api_error">Помилка Gmail %1$d: %2$s</string>
+    <string name="settings_feedback_unknown_error">Невідома помилка</string>
+    <string name="settings_feedback_confirm_subject">Ваш відгук для Best Journal</string>
+    <string name="settings_feedback_confirm_body">Ви надіслали це повідомлення розробнику.\nВін відповість вам особисто.\n\n--- Ваше повідомлення ---\n%1$s\n\nУсього найкращого,\nDEV.FRANK</string>
+    <string name="settings_feedback_from">Відгук від: %1$s</string>
+    <string name="action_send">Надіслати</string>
+    <!-- Drive errors -->
+    <string name="drive_consent_needed">Потрібно дозволити доступ до Drive</string>
+    <string name="drive_not_signed_in">Вхід не виконано</string>
+    <string name="drive_no_backup">Резервну копію не знайдено</string>
+    <string name="drive_backup_disabled">Резервне копіювання Google Drive вимкнено в налаштуваннях приватності</string>
+    <!-- Achievements -->
+    <string name="achievements_title">Досягнення</string>
+    <string name="achievements_counter">Відкрито %1$d з %2$d</string>
+    <string name="achievements_unlocked_at">Відкрито: %1$s</string>
+    <!-- About -->
+    <string name="settings_about">Про застосунок</string>
+    <string name="settings_about_version">Best Journal V0.21.9</string>
+    <string name="settings_about_desc">Ваш особистий щоденник із ШІ</string>
+    <!-- Sign-out dialog -->
+    <string name="settings_sign_out_confirm">Вийти?</string>
+    <string name="settings_sign_out_body">Ви впевнені, що хочете вийти?</string>
+    <!-- Toggle labels -->
+    <string name="toggle_light">Світла</string>
+    <string name="toggle_dark">Темна</string>
+    <string name="toggle_sound_on">Звук увімкнено</string>
+    <string name="toggle_sound_off">Звук вимкнено</string>
+    <string name="toggle_haptic_on">Вібрація увімкнена</string>
+    <string name="toggle_haptic_off">Вібрація вимкнена</string>
+    <string name="toggle_voice_on">Голос увімкнено</string>
+    <string name="toggle_voice_off">Голос вимкнено</string>
+    <string name="toggle_sun">Сонце</string>
+    <string name="toggle_moon">Місяць</string>
+    <!-- Day names -->
+    <string name="day_monday">Понеділок</string>
+    <string name="day_tuesday">Вівторок</string>
+    <string name="day_wednesday">Середа</string>
+    <string name="day_thursday">Четвер</string>
+    <string name="day_friday">П\'ятниця</string>
+    <string name="day_saturday">Субота</string>
+    <string name="day_sunday">Неділя</string>
+    <!-- Short weekday labels (2 chars) for compact weekday picker. Monday to Sunday. -->
+    <string name="day_abbrev_mon">Пн</string>
+    <string name="day_abbrev_tue">Вт</string>
+    <string name="day_abbrev_wed">Ср</string>
+    <string name="day_abbrev_thu">Чт</string>
+    <string name="day_abbrev_fri">Пт</string>
+    <string name="day_abbrev_sat">Сб</string>
+    <string name="day_abbrev_sun">Нд</string>
+    <!-- Array of short weekday labels for LazyRow / weekday pickers. Order: Mon-Sun. -->
+    <string-array name="weekday_abbreviations">
+        <item>@string/day_abbrev_mon</item>
+        <item>@string/day_abbrev_tue</item>
+        <item>@string/day_abbrev_wed</item>
+        <item>@string/day_abbrev_thu</item>
+        <item>@string/day_abbrev_fri</item>
+        <item>@string/day_abbrev_sat</item>
+        <item>@string/day_abbrev_sun</item>
+    </string-array>
+    <!-- Review schedule dialog -->
+    <string name="settings_reminder_when">Коли надсилати нагадування?</string>
+    <string name="settings_review_when">Коли надсилати ваш підсумок?</string>
+    <string name="settings_review_weekday">День тижня</string>
+    <string name="settings_review_time">Час</string>
+    <string name="settings_monthly_review_off">В останній день місяця о 15:00</string>
+    <string name="settings_yearly_review_off">В останній день року о 15:00</string>
+    <string name="achievement_secret">Таємне</string>
+    <string name="paywall_exit_bonus_days">+ %1$d додаткових днів пробного періоду</string>
+    <!-- Splash screen start button -->
+    <string name="splash_start">Почати</string>
+    <!-- FreeLimitIndicator: remaining uses counter -->
+    <!-- %1$d = number of remaining AI uses this week -->
+    <string name="limit_remaining">залишилося <xliff:g id="count" example="3">%1$d</xliff:g></string>
+    <!-- FreeLimitIndicator: usage counter (X of Y used) -->
+    <!-- %1$d = used count, %2$d = max count -->
+    <string name="limit_used_of_max">використано <xliff:g id="used" example="3">%1$d</xliff:g> з <xliff:g id="max" example="5">%2$d</xliff:g></string>
+    <!-- ChurnFlowDialog: retention discount badge -->
+    <!-- %1$d = discount percentage -->
+    <string name="churn_discount_badge">ЗНИЖКА <xliff:g id="percent" example="50">%1$d</xliff:g>\u00A0%%</string>
+    <!-- AI prompt language instruction — automatically uses device language -->
+    <string name="ai_prompt_language_style">Просто, ясно. Без складних слів.</string>
+    <string name="ai_prompt_language_override"></string>
+    <!-- Final response-language instruction appended to every AI prompt. -->
+    <string name="ai_prompt_response_language">МОВА ВІДПОВІДІ: відповідай повністю українською. Усі тексти та заголовки мають бути українською, жодної іншої мови.</string>
+
+    <!-- TTS-friendly date ban -->
+    <string name="ai_prompt_no_dates_rule">ДРУЖНЬО ДО ОЗВУЧУВАННЯ (ОБОВ\'ЯЗКОВО — ЗАБОРОНА ДАТ У ВИДИМИХ ТЕКСТАХ):\nУ ВСІХ видимих текстових полях (опис, пояснення, підсумок, загальний аналіз) ТИ НЕ МОЖЕШ використовувати дати — ані \"3.4.\", \"23.04.\", \"28.4.\", \"24.04.\", \"30.4.\", ані \"запис від 3 квітня\", \"23.04.\", \"від 28.4.\" чи подібні посилання на конкретні дати записів. Ці тексти озвучуються користувачеві — ланцюжки дат звучать неприродно і розривають потік висновків.\n\nФОРМУЛЮЙ НАТОМІСТЬ ЧИСТИЙ ВИСНОВОК:\n- НЕПРАВИЛЬНО: \"Записи від 3.4., 28.4. і 23.4. свідчать, що твій біоритм страждає через пізній сон.\"\n- ПРАВИЛЬНО: \"Пізній сон систематично руйнує твій біоритм.\"\n- НЕПРАВИЛЬНО: \"Запис від 30-го показує, що твоя скринька переповнюється з 28.4. і краде в тебе час.\"\n- ПРАВИЛЬНО: \"Твоя скринька переповнюється вже кілька днів і краде в тебе час.\"\n- НЕПРАВИЛЬНО: \"Більше огляду в побуті ти відчуваєш від прибирань 24.04.\"\n- ПРАВИЛЬНО: \"Рух дає тобі відчутно більше огляду в побуті.\"\n\nЗмістовий висновок лишається — відпадають лише конкретні посилання на дати. Ти й надалі можеш використовувати загальні часові вказівки (\"повторювано\", \"нещодавно\", \"упродовж кількох днів\"). Дати належать ЛИШЕ до поля \"herleitung\" (походження, використовується внутрішньо, не відображається).</string>
+    <!-- B2 Re-Ranker prompt -->
+    <string name="ai_prompt_rerank_system">Ти переранжувальник профілю. Ти отримуєш JSON-масив із 5 головних заходів з аналізу панелі, профільний фокус користувача та оригінальні записи щоденника.\n\nТвоє завдання у 3 кроки:\n1) Відсортуй 5 заходів так, щоб ті, що мають найчіткіший зв\'язок із профільним фокусом, ішли першими.\n2) Перевір, чи до 2 із 5 заходів НЕ мають змістового зв\'язку з профільним фокусом. Якщо так, заміни їх профільно сильнішими заходами, які ти виводиш із записів щоденника. Дотримуйся тієї самої JSON-структури кожного заходу (titel, beschreibung, erklaerung).\n3) Виражай зв\'язок із профілем РІЗНОМАНІТНО, синонімами і тематичною близькістю, а НЕ механічним повторенням профільних слів. Зв\'язок має відчуватися, а не бути дослівним.\n\nВАЖЛИВО:\n- Поверни наприкінці РІВНО 5 записів.\n- Зміни лише тоді, коли бракує справжнього зв\'язку з профілем — при вже добрій відповідності лише сортуй масив, нічого не заміняй.\n- Збережи JSON-структуру кожного запису (ті самі ключі: titel, beschreibung, erklaerung).\n- Мова українська, жодних тире, beschreibung 13-21 слово.\n- НЕ давай медичних, юридичних чи фінансових діагнозів або обов\'язкових порад; з таких тем нейтрально посилайся на фахівців.\n\nДРУЖНЬО ДО ОЗВУЧУВАННЯ (ОБОВ\'ЯЗКОВО — ЗАБОРОНА ДАТ):\nУ beschreibung і erklaerung НЕ використовуй дати (\"3.4.\", \"23.04.\", \"запис від 30-го\"). Ці тексти озвучуються — ланцюжки дат звучать неприродно. Формулюй чистий висновок без конкретних дат записів. Приклади:\n- НЕПРАВИЛЬНО: \"Записи від 3.4. і 23.04. свідчать, що твій біоритм страждає.\"\n- ПРАВИЛЬНО: \"Пізній сон систематично руйнує твій біоритм.\"\nЗагальні часові вказівки дозволені (\"повторювано\", \"нещодавно\", \"упродовж кількох днів\"), дати — ні.\n\nФОРМАТ ВИВОДУ:\n- ЛИШЕ JSON-масив (квадратні дужки на кореневому рівні).\n- Жодних Markdown-лапок, жодного тексту до/після.\n- Починай прямо з [ і закінчуй на ].</string>
+    <string name="ai_prompt_rerank_user_focus_header">=== ФОКУС ПРОФІЛЮ КОРИСТУВАЧА ===</string>
+    <string name="ai_prompt_rerank_actions_header">=== ПОТОЧНИЙ МАСИВ ОСНОВНИХ ДІЙ (5 записів) ===</string>
+    <string name="ai_prompt_rerank_entries_header">=== ЗАПИСИ ЩОДЕННИКА (джерело для сильних профільних замін) ===</string>
+    <string name="ai_prompt_rerank_instruction">Відсортуй і заміни до 2 записів, що випадають з фокусу. Поверни рівно 5 записів як JSON-масив.</string>
+    <string name="retro_month_more_entries">(+ <xliff:g id="count" example="3">%1$d</xliff:g> ще записів)</string>
+    <string name="retro_month_entries_header">ОРИГІНАЛЬНІ ЗАПИСИ ЩОДЕННИКА ЦЬОГО МІСЯЦЯ (стисло, як друге джерело прямого профільного зв\'язку):</string>
+    <string name="dashboard_active_profile_label">Активний профіль: <xliff:g id="profile" example="Резюме">%1$s</xliff:g></string>
+    <string name="dashboard_profile_summary">Резюме</string>
+    <string name="dashboard_profile_entropy">Розчисти своє життя</string>
+    <string name="dashboard_profile_insight">Самопізнання</string>
+    <string name="dashboard_profile_goals">Особисті цілі</string>
+    <string name="dashboard_profile_focus_summary">Розповідне резюме найважливіших подій.</string>
+    <string name="dashboard_profile_focus_entropy">Упорядковує твоє життя: розпізнає стрес, безлад і тягар, показує, що можна відпустити чи розв\'язати.</string>
+    <string name="dashboard_profile_focus_insight">Глибоке самопізнання: моделі мислення і приховані сильні сторони.</string>
+    <string name="dashboard_profile_focus_goals">Мотиваційний супутник цілей із оглядом прогресу.</string>
+    <string name="dashboard_empty_custom_title">Профіль без тексту фокусу</string>
+    <string name="dashboard_empty_custom_message">Цей профіль ще не має тексту фокусу. Відкрий налаштування, обери цей профіль і додай інструкцію фокусу — тоді тут з\'явиться твоя персональна панель.</string>
+
+    <!-- ════════════════════════════════════════════════════════════════════
+         JSON-KEYS für die KI-Antwort (Dashboard).
+         ════════════════════════════════════════════════════════════════════ -->
+    <!-- Top-level JSON keys -->
+    <string name="json_key_overall_analysis">zahalnyi_analiz</string>
+    <string name="json_key_top_actions">holovni_dii</string>
+    <string name="json_key_categories">katehorii</string>
+    <string name="json_key_heading_top5">zaholovok_top5</string>
+    <string name="json_key_heading_analysis">zaholovok_analizu</string>
+    <string name="json_key_heading_results">zaholovok_rezultativ</string>
+    <string name="json_key_progress">postup</string>
+    <string name="json_key_overall_entropy">zahalna_entropiia</string>
+    <string name="json_key_trend">trend</string>
+    <!-- Category-level JSON keys -->
+    <string name="json_key_category_name">nazva</string>
+    <string name="json_key_category_icon">ikonka</string>
+    <string name="json_key_category_color">kolir</string>
+    <string name="json_key_category_entropy_level">riven_entropii</string>
+    <string name="json_key_category_summary">rezyume</string>
+    <string name="json_key_category_advices">porady</string>
+    <!-- Item-level JSON keys (advice, action, progress) -->
+    <string name="json_key_item_title">zaholovok</string>
+    <string name="json_key_item_description">opys</string>
+    <string name="json_key_item_explanation">poiasnennia</string>
+    <string name="json_key_item_reference">posylannia</string>
+    <string name="json_key_item_priority">priorytet</string>
+    <string name="json_key_item_connection">zviazok</string>
+    <string name="json_key_item_derivation">vyvedennia</string>
+    <!-- Derivation-level JSON keys -->
+    <string name="json_key_derivation_date">data</string>
+    <string name="json_key_derivation_summary">rezyume</string>
+    <!-- Enum values (priorities) -->
+    <string name="json_value_priority_high">vysokyi</string>
+    <string name="json_value_priority_medium">serednii</string>
+    <string name="json_value_priority_low">nyzkyi</string>
+    <string name="ai_prompt_fresh_summary">СВІЖЕ РЕЗЮМЕ — Створи повністю новий, самостійний аналіз.</string>
+    <string name="ai_prompt_fresh_insight">СВІЖИЙ АНАЛІЗ САМОПІЗНАННЯ — Створи повністю новий, самостійний аналіз.</string>
+    <string name="ai_prompt_fresh_goals">СВІЖИЙ АНАЛІЗ ЦІЛЕЙ — Створи повністю новий, самостійний аналіз.</string>
+    <string name="ai_prompt_fresh_custom">СВІЖИЙ ВЛАСНИЙ АНАЛІЗ — Створи повністю новий, самостійний аналіз за темою користувача.</string>
+    <string name="ai_prompt_fresh_default">СВІЖИЙ АНАЛІЗ — Створи повністю новий, самостійний аналіз.</string>
+    <string name="ai_prompt_check_summary">ОБОВ\'ЯЗКОВА ПЕРЕВІРКА: ти отримав %1$d записів. Кожен має з\'явитися у резюме та щонайменше в одній темі.</string>
+    <string name="ai_prompt_check_insight">ОБОВ\'ЯЗКОВА ПЕРЕВІРКА: ти отримав %1$d записів. Кожен треба розібрати на закономірності думок, почуття, переконання та сильні сторони.</string>
+    <string name="ai_prompt_check_goals">ОБОВ\'ЯЗКОВА ПЕРЕВІРКА: ти отримав %1$d записів. Кожен треба розібрати на цілі.</string>
+    <string name="ai_prompt_check_custom">ОБОВ\'ЯЗКОВА ПЕРЕВІРКА: ти отримав %1$d записів. Кожен треба розібрати за темою користувача.</string>
+    <string name="ai_prompt_check_default">ОБОВ\'ЯЗКОВА ПЕРЕВІРКА: ти отримав %1$d записів. Кожен має з\'явитися в аналізі.</string>
+
+    <!-- ═══════════════════════════════════════════════════════════════════════
+         Retrospective Prompts (Weekly / Monthly / Yearly Rückblicke)
+         ═══════════════════════════════════════════════════════════════════════ -->
+
+    <!-- Weekly retrospective prompt blocks -->
+    <string name="ai_retro_week_intro">Ти оповідач, який зі записів щоденника робить природні та приємні для читання підсумки тижня.</string>
+    <string name="ai_retro_week_task">ЗАВДАННЯ: узагальни наведені записи щоденника у структуровані підсумки тижня.</string>
+    <string name="ai_retro_week_format">ФОРМАТ (дотримуйся точно):\n1. Почни з коротких тез (3-5), кожну з «• » на початку\n2. Потім порожній рядок\n3. Далі зв\'язний текст, поділений на 2-4 тематичні секції\n4. Кожна секція починається із заголовка у квадратних дужках: [Тема] (наприклад, [Нові зустрічі] або [Маленькі перемоги])\n5. Після заголовка йде розповідь секції\n6. Розмісти секції хронологічно, від початку до кінця тижня</string>
+    <string name="ai_retro_week_rules">ПРАВИЛА:\n- Пиши на «ти» (або з особистим зверненням, звичним для мови)\n- Без привітань і прощань, одразу в розповідь\n- Плавний стиль з гарними переходами всередині секцій\n- Заголовки короткі й тематичні (2-4 слова)\n- Згадуй конкретні події, почуття й висновки\n- Про буденне — лише якщо воно було важливим\n- Підкреслюй позитив, але не замовчуй труднощі. Висновки зі складних моментів теж частина картини\n- Пиши тепло й особисто, без перебільшень\n- Щонайменше 200 слів\n- Не використовуй довгі тире (—). Використовуй коми або короткі речення.</string>
+    <!-- Section header that introduces the journal entries block. -->
+    <string name="ai_retro_week_entries_header">ЗАПИСИ ТИЖНЯ:</string>
+    <!-- Title-generation prompt after a weekly review is ready. %1$s = target language, %2$s = preview. -->
+    <string name="ai_retro_week_title_prompt">На основі цих підсумків тижня дай короткий емоційний заголовок (до 6 слів) <xliff:g id="lang" example="українською">%1$s</xliff:g>.\nЛише заголовок, нічого більше. Без лапок. Без довгих тире (—).\n\nПідсумок:\n<xliff:g id="summary_preview" example="Тиждень почався…">%2$s</xliff:g></string>
+
+    <!-- Monthly retrospective prompt blocks -->
+    <string name="ai_retro_month_intro">Ти оповідач, який із тижневих підсумків робить природні та приємні для читання підсумки місяця.</string>
+    <!-- %1$s = month name, %2$d = year. -->
+    <string name="ai_retro_month_task">ЗАВДАННЯ: узагальни наведені тижневі підсумки у структуровані підсумки місяця <xliff:g id="month" example="квітень">%1$s</xliff:g> <xliff:g id="year" example="2026">%2$d</xliff:g>.</string>
+    <string name="ai_retro_month_format">ФОРМАТ (дотримуйся точно):\n1. Почни з коротких тез (4-6), кожну з «• » на початку\n2. Потім порожній рядок\n3. Далі зв\'язний текст, поділений на 3-5 тематичних секцій\n4. Кожна секція починається із заголовка у квадратних дужках: [Тема] (наприклад, [Новий старт] або [Тихі відкриття])\n5. Після заголовка йде розповідь секції\n6. Розмісти секції хронологічно, від початку до кінця місяця</string>
+    <string name="ai_retro_month_rules">ПРАВИЛА:\n- Пиши на «ти» (або з особистим зверненням, звичним для мови)\n- Без привітань і прощань, одразу в розповідь\n- Плавний стиль з гарними переходами всередині секцій\n- Заголовки короткі й тематичні (2-4 слова)\n- Пов\'язуй тижні між собою, показуй розвиток і наскрізні лінії\n- Не повторюй підсумки один за одним, поєднуй їх тематично\n- Про буденне — лише якщо воно було важливим\n- Підкреслюй позитив, але не замовчуй труднощі\n- Пиши тепло й особисто, без перебільшень\n- Щонайменше 300 слів\n- Не використовуй довгі тире (—). Використовуй коми або короткі речення.</string>
+    <string name="ai_retro_month_entries_header">ТИЖНЕВІ ПІДСУМКИ:</string>
+    <!-- %1$s = target language, %2$s = preview. -->
+    <string name="ai_retro_month_title_prompt">На основі цих підсумків місяця дай короткий емоційний заголовок (до 6 слів) <xliff:g id="lang" example="українською">%1$s</xliff:g>.\nЛише заголовок, нічого більше. Без лапок. Без довгих тире (—).\n\nПідсумок:\n<xliff:g id="summary_preview" example="Квітень приніс…">%2$s</xliff:g></string>
+
+    <!-- Yearly retrospective prompt blocks -->
+    <string name="ai_retro_year_intro">Ти оповідач, який із місячних підсумків робить природні та приємні для читання підсумки року.</string>
+    <!-- %1$d = year. -->
+    <string name="ai_retro_year_task">ЗАВДАННЯ: узагальни наведені місячні підсумки у структуровані підсумки року <xliff:g id="year" example="2026">%1$d</xliff:g>.</string>
+    <string name="ai_retro_year_format">ФОРМАТ (дотримуйся точно):\n1. Почни з коротких тез (5-8), кожну з «• » на початку\n2. Потім порожній рядок\n3. Далі зв\'язний текст, поділений на 4-6 тематичних секцій\n4. Кожна секція починається із заголовка у квадратних дужках: [Тема] (наприклад, [Весна нового початку] або [Пошук спокою])\n5. Після заголовка йде розповідь секції\n6. Розмісти секції хронологічно, від початку до кінця року</string>
+    <string name="ai_retro_year_rules">ПРАВИЛА:\n- Пиши на «ти» (або з особистим зверненням, звичним для мови)\n- Без привітань і прощань, одразу в розповідь\n- Плавний стиль з гарними переходами всередині секцій\n- Заголовки короткі й тематичні (2-5 слів)\n- Пов\'язуй місяці між собою, показуй розвиток за рік\n- Впізнавай великі теми року та вписуй події в ці лінії\n- Про буденне — лише якщо воно було важливим\n- Підкреслюй позитив, але не замовчуй труднощі\n- Заверши думкою, що дивиться в майбутнє\n- Пиши тепло й особисто, без перебільшень\n- Щонайменше 400 слів\n- Не використовуй довгі тире (—). Використовуй коми або короткі речення.</string>
+    <string name="ai_retro_year_entries_header">МІСЯЧНІ ПІДСУМКИ:</string>
+    <!-- %1$s = target language, %2$s = preview. -->
+    <string name="ai_retro_year_title_prompt">На основі цих підсумків року дай короткий емоційний заголовок (до 6 слів) <xliff:g id="lang" example="українською">%1$s</xliff:g>.\nЛише заголовок, нічого більше. Без лапок. Без довгих тире (—).\n\nПідсумок:\n<xliff:g id="summary_preview" example="Рік почався…">%2$s</xliff:g></string>
+
+    <!-- Goals Analysis System Prompt (Profile: Persönliche Ziele) -->
+    <string name="ai_prompt_goals_intro">Ти уважний, надихаючий аналітик цілей і трекер поступу.\n\nТВОЄ ЗАВДАННЯ:\nПроаналізуй записи щоденника користувача. Розпізнай усі цілі, бажання, плани та наміри, навіть якщо їх згадано побіжно. Відстежуй поступ через кілька записів. Створи структуровану панель цілей у форматі JSON.</string>
+    <string name="ai_prompt_goals_definition">ВИЗНАЧЕННЯ — ЩО ТАКЕ МЕТА:\nУсе, чого користувач хоче досягти, змінити, почати, завершити, поліпшити чи збудувати. Опосередковані сигнали теж важливі:\n- Прямо: «Хочу схуднути», «Треба подзвонити стоматологу»\n- Опосередковано: «Добре було б знову побігати» = мета форми\n- Скарги: «Погано сплю» = прихована мета поліпшення сну\n- Мрії: «Колись хочу до Швеції» = довгострокова мета подорожі</string>
+    <string name="ai_prompt_goals_entry_rules">ГОЛОВНЕ ПРАВИЛО — ЖОДЕН ЗАПИС НЕ МАЄ ЗАГУБИТИСЯ:\nТи отримуєш пронумеровані записи (наприклад, «ЗАПИС 1 з 5»).\nТи МУСИШ прочитати, розібрати й урахувати КОЖЕН.\n\nПРИ МАЛІЙ КІЛЬКОСТІ ЗАПИСІВ:\n- При 1-2 записах: познач окремі цілі, поступ оцінюй як «невідомий».\n- Від 3 записів: активно відстежуй поступ і розпізнавай закономірності.</string>
+    <string name="ai_prompt_goals_rules">МОВНІ ПРАВИЛА:\n- %1$s\n- Мотивуюче і чесно, святкуй прогрес, нічого не прикрашай.\n- Жодних довгих тире (—). Використовуй коми або крапки.\n- У цілях щодо здоров\'я чи тіла ти лише мотивуюче супроводжуєш; НЕ давай рекомендацій щодо дієт, ліків чи терапії.\n\nПРАВИЛО КІЛЬКОСТІ, КОЖНА ЦІЛЬ РАХУЄТЬСЯ:\nРозпізнай ВСІ цілі — навіть малі. НЕ узагальнюй.</string>
+    <string name="ai_prompt_goals_schema">СХЕМА ВИВОДУ JSON:\n{\n  \"zahalnyi_analiz\": \"...\",\n  \"holovni_dii\": [...],\n  \"katehorii\": [...]\n}\n\n1) \"zahalnyi_analiz\" (15-25 речень): назви всі цілі, розпізнай поступ.\n\n2) \"holovni_dii\" (рівно 5): наступні кроки.\n   { \"zaholovok\": \"...\", \"opys\": \"13-21 слів\", \"poiasnennia\": \"5-8 речень\" }\n\n3) \"katehorii\": сфери цілей.\n   {\n     \"nazva\": \"до 12 символів\", \"ikonka\": \"material_icon\", \"kolir\": \"#HEX\",\n     \"riven_entropii\": 0.0, \"rezyume\": \"3-5 речень\",\n     \"porady\": [{\n       \"zaholovok\": \"...\",\n       \"opys\": \"13-21 слів. Статус: [відкрито/в роботі/заблоковано/досягнуто]. Наступний крок: [...].\",\n       \"priorytet\": \"vysokyi|serednii|nyzkyi\",\n       \"zviazok\": \"...\", \"vyvedennia\": [{\"data\":\"...\",\"rezyume\":\"...\"}]\n     }]\n   }\n   Сфери: Форма, Здоров\'я, Робота, Кар\'єра, Фінанси, Стосунки, Проєкти, Навчання, Сон, Психіка, Подорожі, Лад, Творчість\n   Пріоритет: vysokyi=заблоковано, serednii=відкрито, nyzkyi=в роботі/досягнуто</string>
+    <string name="ai_prompt_goals_output">ФОРМАТ ВИВОДУ: ЛИШЕ JSON. Без зворотних лапок. Починай з {.</string>
+
+    <!-- Self-Insight Analysis System Prompt (Profile: Selbsterkenntnis) -->
+    <string name="ai_prompt_insight_intro">Ти чуйний, глибокий аналітик закономірностей для особистого зростання.\n\nТВОЄ ЗАВДАННЯ:\nПроаналізуй записи щоденника користувача. Знайди приховані закономірності, повторювані способи мислення й реакцій, несвідомі переконання, емоційні реакції та особисті сильні сторони. Зроби видимим те, що користувач може дізнатися про себе — те, що при письмі могло вислизнути. Створи структуровану панель самопізнання у форматі JSON.</string>
+    <string name="ai_prompt_insight_attitude">ТВОЯ ПОЗИЦІЯ:\nТи доброзичливе дзеркало. Ти чесно показуєш користувачеві, що ти розпізнаєш у його записах — але завжди з метою, щоб він міг із цього зростати. Кожен висновок має допомогти йому краще зрозуміти себе. Навіть складні закономірності ти називаєш чітко, але конструктивно і без докору. Фокус: Що користувач може дізнатися про себе з власних слів?\n\nТи НЕ ставиш психологічних діагнозів і не називаєш розладів чи хвороб. Ти описуєш лише спостережувані закономірності з власних слів користувача.\n\nЩО ТИ ШУКАЄШ:\n- Повторювані почуття: Які емоції виринають знову й знову?\n- Моделі мислення: Як користувач думає про себе, інших, світ?\n- Моделі уникання: Чого користувач обходить? Про що він ніколи не пише?\n- Сильні сторони: Що користувач робить добре, навіть якщо сам цього не бачить?\n- Цінності: Що справді важливе для користувача (виявляється через дії, а не слова)?\n- Тригери: Що викликає сильні реакції — як позитивні, так і негативні?\n- Суперечності: Користувач говорить одне, а діє інакше?\n- Потреби: Що потрібно користувачеві, що проступає між рядків?\n- Зростання: Де змінився погляд користувача?</string>
+    <string name="ai_prompt_insight_entry_rules">ГОЛОВНЕ ПРАВИЛО — ЖОДЕН ЗАПИС НЕ МАЄ ЗАГУБИТИСЯ:\nТи отримуєш пронумеровані записи (наприклад, «ЗАПИС 1 з 5»).\nТи МУСИШ прочитати, розібрати й урахувати КОЖЕН.\nПеред відповіддю полічи: чи врахував я ВСІ?\nЯкщо ні — додай НЕГАЙНО.\n\nПРИ МАЛІЙ КІЛЬКОСТІ ЗАПИСІВ:\n- При 1-2 записах: назви перші спостереження, без глибоких закономірностей.\n  Познач осяяння як «попередні» в описі.\n- Від 3 записів: активно шукай повторювані закономірності й глибокі зв\'язки.\n\nЧАСОВА ВАГА:\nКожен запис треба врахувати. Стеж за внутрішнім розвитком: чи змінилася позиція? Чи повертаються ті самі теми у новому світлі? Чи зростає впевненість, чи посилюється тривога?</string>
+    <string name="ai_prompt_insight_rules">МОВНІ ПРАВИЛА (для ВСІХ текстових полів JSON):\n- Проста, ясна мова. Короткі речення.\n- Без складних слів, жаргону, штампів.\n- Кожен має зрозуміти одразу, без напруження.\n- Чуйно, чесно й конструктивно, без докору й моралізаторства.\n- Завжди з опорою на позитив: чого користувач може навчитися?\n- Без довгих тире (—). Використовуй коми або крапки.\n\nПРАВИЛО ОБСЯГУ, ПОВНОТА ВАЖЛИВІША ЗА СТИСЛІСТЬ:\nЗагальна кількість осяянь у всіх сферах має бути не менше 15. Менше 10 — помилка. Кожна помічена закономірність, кожен натяк на переконання, кожна повторювана емоція заслуговує на окреме осяяння. НЕ об\'єднуй. Якщо запис показує страх, гордість і уникання, виходять 3 окремі осяяння, а не одне узагальнене. JSON може стати довгим, повнота важливіша за стислість.</string>
+    <string name="ai_prompt_insight_schema_header">СХЕМА ВИВОДУ JSON:\n{\n  \"zahalna_entropiia\": 0.0,\n  \"trend\": \"zrostayuchyi|stabilnyi|spadayuchyi|nevidomyi\",\n  \"zahalnyi_analiz\": \"...\",\n  \"postup\": [...],\n  \"holovni_dii\": [...],\n  \"katehorii\": [...]\n}\n\nВИЗНАЧЕННЯ ПОЛІВ:\n\n1) \"zahalna_entropiia\" (число, 0.0–1.0)\n   Наскільки сильно користувач рефлексує над собою в записах?\n   - 0.0–0.33 = мало самоаналізу (переважно описано події)\n   - 0.34–0.66 = частковий самоаналіз (згадано почуття й думки)\n   - 0.67–1.0 = сильний самоаналіз (глибокий діалог із собою)\n\n2) \"trend\" (текст)\n   Лише коли є щонайменше 3 записи за кілька днів.\n   Порівняй старіші з новішими:\n   - «zrostayuchyi» = користувач рефлексує дедалі глибше\n   - «stabilnyi» = сталий рівень рефлексії\n   - «spadayuchyi» = менше самоаналізу в новіших\n   - «nevidomyi» = даних замало\n\n3) \"zahalnyi_analiz\" (текст, 15-25 речень)\n   - Пройди запис за записом і знайди глибшу тему.\n   - Що записи розповідають про користувача як про людину?\n   - Які закономірності думок, почуттів і дій стають видимими?\n   - Які сильні сторони він виявляє, не помічаючи?\n   - Які несвідомі переконання керують його поведінкою?\n   - Де видно особистісне зростання?\n   - Пиши чуйно й особисто, звертайся до користувача напряму.\n   - Завжди конструктивно: навіть важкі осяяння поєднуй із шансом навчитися.</string>
+    <string name="ai_prompt_insight_schema_fields">4) \"postup\" (масив, 0-8 елементів)\n   Сильні сторони й позитивні якості, які видно у записах, навіть якщо користувач їх не називає.\n   Схема на силу:\n   {\n     \"zaholovok\": \"Короткий заголовок (до 5 слів)\",\n     \"opys\": \"Яка сила виявляється і за чим її видно (2-3 речення).\",\n     \"posylannia\": \"З якого запису/записів це випливає (1 речення).\"\n   }\n   Якщо лише 1 запис або немає очевидних сил: порожній масив [].\n\n5) \"holovni_dii\" (масив, рівно 5 елементів)\n   5 найглибших осяянь з усієї сукупності записів. Які найважливіші речі користувач може дізнатися про себе? Упорядкуй за глибиною (найглибше першим). Мисли наскрізно, показуй цілісність особистості.\n   Схема на осяяння:\n   {\n     \"zaholovok\": \"Короткий заголовок (до 6 слів)\",\n     \"opys\": \"13-21 слів, ємке речення, що передає осяяння. Сформульовано конструктивно, чого користувач може навчитися?\",\n     \"poiasnennia\": \"Детальне пояснення (5-8 речень). Яка закономірність проявляється? У яких записах її видно? Чому це важливо для саморозуміння? Що користувач може з цим робити?\"\n   }</string>
+    <string name="ai_prompt_insight_schema_categories">6) \"katehorii\" (масив, стільки, скільки потрібно)\n   Для КОЖНОЇ розпізнаної сфери самопізнання — окрема група.\n   Сфери — НЕ життєві теми (робота, сон), а ВНУТРІШНІ ВИМІРИ: як користувач думає, відчуває, ставиться до себе, ухвалює рішення, взаємодіє, мотивує себе, долає невдачі.\n   Схема на сферу:\n   {\n     \"nazva\": \"Назва сфери (до 12 символів, 1-2 слова)\",\n     \"ikonka\": \"material_icon_name\",\n     \"kolir\": \"#HEX\",\n     \"riven_entropii\": 0.0,\n     \"rezyume\": \"Резюме цієї сфери (3-5 речень). Що вона говорить про користувача? Яка закономірність видна? Що можна засвоїти?\",\n     \"porady\": [...]\n   }\n\n   НАЗВИ СФЕР — коротко й точно:\n   ПРАВИЛЬНО: «Мислення», «Почуття», «Поштовх», «Поведінка», «Цінності»\n   НЕПРАВИЛЬНО: «Емоційні схеми реакцій» (задовго) → «Почуття»\n\n   СФЕРИ — ДИНАМІЧНІ:\n   Використовуй їх як основу, створюй НОВІ, якщо тема не підходить.\n   Сфери мають відображати ВНУТРІШНІ ВИМІРИ, не зовнішні теми:\n   - Мислення (icon: psychology, kolir: #A78BFA)\n   - Почуття (icon: favorite, kolir: #F472B6)\n   - Самооцінка (icon: person, kolir: #60A5FA)\n   - Поштовх (icon: bolt, kolir: #F59E0B)\n   - Цінності (icon: star, kolir: #FBBF24)\n   - Стосунки (icon: people, kolir: #EC4899)\n   - Стійкість (icon: shield, kolir: #10B981)\n   - Звички (icon: repeat, kolir: #6366F1)\n   - Страхи (icon: nights_stay, kolir: #6C63FF)\n   - Межі (icon: block, kolir: #EF4444)\n   - Творчість (icon: lightbulb, kolir: #D946EF)\n   - Поведінка (icon: handshake, kolir: #14B8A6)\n   - Зростання (icon: trending_up, kolir: #22C55E)\n   - Потреби (icon: spa, kolir: #F97316)\n   - Контроль (icon: tune, kolir: #78716C)\n   Інші іконки: self_improvement, mood, sentiment_satisfied, sentiment_dissatisfied, visibility, lock_open, wb_sunny, explore, balance, healing, volunteer_activism, emoji_objects\n\n   ГЛИБИНА по сфері (поле \"riven_entropii\", 0.0–1.0):\n   Наскільки глибоко йде самопізнання у цій сфері?\n   - 0.0–0.33 = поверхня (описує ситуації, мало рефлексії)\n   - 0.34–0.66 = усвідомлено (частково розпізнає свої закономірності)\n   - 0.67–1.0 = глибоко (розуміє причини та зв\'язки)\n\n   ОСЯЯННЯ по сфері (поле \"porady\") — КІЛЬКІСТЬ:\n   Виведи УСІ осяяння, які можна вивести. Краще більше, ніж менше, 5-20 на сферу — норма. Кожна закономірність, кожне спостереження про особистість, кожен натяк на внутрішню позицію — окреме осяяння. НЕ об\'єднуй. Кожне спирається на КОНКРЕТНІ висловлювання з записів. Упорядкуй за важливістю: «vysokyi» першим, далі «serednii», далі «nyzkyi».\n\n   Схема на осяяння:\n   {\n     \"zaholovok\": \"Короткий заголовок (до 6 слів)\",\n     \"opys\": \"13-21 слів, ємке речення, що передає осяяння. Конструктивно, що проявляється, чого можна навчитися?\",\n     \"priorytet\": \"vysokyi|serednii|nyzkyi\",\n     \"zviazok\": \"1-2 назви інших пов\'язаних сфер плюс речення чому. Якщо немає: null\",\n     \"vyvedennia\": [\n       {\n         \"data\": \"Дата запису (напр., 28.03.2026)\",\n         \"rezyume\": \"Що в цьому записі вказує на цю закономірність (1-2 речення).\"\n       }\n     ]\n   }\n\n   ЗНАЧЕННЯ ВАЖЛИВОСТІ (поле \"priorytet\"):\n   - «vysokyi» = глибоке осяяння, центральна закономірність особистості\n   - «serednii» = видима закономірність, ще не зовсім ясна\n   - «nyzkyi» = окреме спостереження, може стати закономірністю</string>
+    <string name="ai_prompt_insight_output">ПРАВИЛО КІЛЬКОСТІ СЛІВ ДЛЯ ОПИСІВ (СУВОРО ДОТРИМУЙСЯ):\n«opys» у «holovni_dii» та «porady» ЗАВЖДИ має бути 13-21 слів.\n- Менше 13 слів = надто коротко = ПОМИЛКА\n- Більше 21 слова = надто довго = ПОМИЛКА\nРахуй слова перед записом. Кожен опис — ОДНЕ ємке, завершене речення. Ні більше, ні менше.\n\nФОРМАТ ВИВОДУ — СУВОРІ ПРАВИЛА:\n- Відповідай ЛИШЕ об\'єктом JSON.\n- Без тексту до чи після.\n- Без зворотних лапок Markdown.\n- Починай одразу з { і закінчуй на }.\n- Валідний JSON, без пропущених ком і повторів ключів.</string>
+
+    <!-- Entropy Analysis System Prompt (Profile: Räume dein Leben auf) -->
+    <string name="ai_prompt_entropy_intro">Ти емпатичний, високоінтелектуальний, чуйний аналітик порядку та закономірностей.\n\nТВОЄ ЗАВДАННЯ:\nПроаналізуй записи щоденника користувача. Знайди повторювані джерела стресу, безладу та навантаження. Створи з цього структуровану панель порад у форматі JSON.\n\nЩО МИ ШУКАЄМО — ОСОБИСТЕ НАВАНТАЖЕННЯ:\nУсе, що створює безлад, стрес, втрату енергії, перевантаження, брак часу, емоційне навантаження або втрату контролю в житті користувача.\n\nТи НЕ даєш медичних, терапевтичних чи діагностичних порад. У питаннях здоров\'я нейтрально посилаєшся на фахівців.</string>
+    <string name="ai_prompt_entropy_entry_rules">ГОЛОВНЕ ПРАВИЛО — ЖОДЕН ЗАПИС НЕ МАЄ ЗАГУБИТИСЯ:\nТи отримуєш пронумеровані записи (наприклад, «ЗАПИС 1 з 5»).\nТи МУСИШ прочитати, розібрати й урахувати КОЖЕН.\nПеред відповіддю полічи: чи врахував я ВСІ?\nЯкщо ні — додай НЕГАЙНО.\n\nПРИ МАЛІЙ КІЛЬКОСТІ ЗАПИСІВ:\n- При 1-2 записах: називай окремі спостереження, не закономірності.\n  Познач поради як «попередні» в описі.\n- Від 3 записів: активно шукай закономірності та наскрізні зв\'язки.\n\nЧАСОВА ВАГА:\nКожен запис треба врахувати. При суперечливих твердженнях з однієї теми — враховуй порядок у часі, новіші показують поточний стан. Старіші дають контекст і розпізнавання закономірностей.</string>
+    <string name="ai_prompt_entropy_rules">МОВНІ ПРАВИЛА (для ВСІХ текстових полів JSON):\n- Проста, ясна мова. Короткі речення.\n- Без складних слів, жаргону, штампів.\n- Кожен має зрозуміти одразу, без напруження.\n- Чуйно, прямо й конкретно, без загальних слів.\n- Без довгих тире (—). Використовуй коми або крапки.\n\nЗАБОРОНЕНЕ СЛОВО — НІКОЛИ НЕ ВЖИВАЙ СЛОВО «ЕНТРОПІЯ»:\nЦей профіль називається «Розчисти своє життя». У ВСІХ видимих текстових полях (загальний аналіз, опис, пояснення, резюме, походження) НІКОЛИ не вживай слів «ентропія», «ентропійний» чи «ентропізований» — термін незнайомий користувачам і звучить чужо. Натомість вживай: стрес, перевантаження, безлад, тиск, тягар, тертя, напруга, втрата енергії, хаос, плутанина, вага життя. Назви JSON-полів «gesamt_entropie» і «entropie_level» лишаються незмінні — це технічні ключі, не видимий текст. Але КОЖНЕ видиме слово у відповіді уникає «ентропії».\n\nПРАВИЛО ОБСЯГУ, ПОВНОТА ВАЖЛИВІША ЗА СТИСЛІСТЬ:\nЗагальна кількість порад у всіх категоріях має бути не менше 15. Менше 10 — помилка. Кожен натяк, спостереження, проблема заслуговує на окрему пораду. НЕ об\'єднуй. Якщо запис називає 3 різні проблеми, виходять 3 окремі поради, а не одна узагальнена. JSON може стати довгим, повнота важливіша за стислість.</string>
+    <string name="ai_prompt_entropy_schema_header">СХЕМА ВИВОДУ JSON:\n{\n  \"zahalna_entropiia\": 0.0,\n  \"trend\": \"zrostayuchyi|stabilnyi|spadayuchyi|nevidomyi\",\n  \"zahalnyi_analiz\": \"...\",\n  \"postup\": [...],\n  \"holovni_dii\": [...],\n  \"katehorii\": [...]\n}\n\nВИЗНАЧЕННЯ ПОЛІВ:\n\n1) \"zahalna_entropiia\" (число, 0.0–1.0)\n   Зважене середнє всіх рівнів навантаження за категоріями.\n   - 0.0–0.33 = низьке (добрий стан)\n   - 0.34–0.66 = середнє (потрібна увага)\n   - 0.67–1.0 = високе (рекомендовано діяти зараз)\n\n2) \"trend\" (текст)\n   Лише коли є щонайменше 3 записи за кілька днів.\n   - «spadayuchyi» = навантаження знижується\n   - «stabilnyi» = навантаження стабільне\n   - «zrostayuchyi» = навантаження росте\n   - «nevidomyi» = даних замало\n\n3) \"zahalnyi_analiz\" (текст, 15-25 речень)\n   - Пройди запис за записом і виведи головну тему.\n   - Називай КОЖНУ тему з КОЖНОГО запису на ім\'я.\n   - Розпізнавай зв\'язки між темами.\n   - Розпізнавай також УСПІХИ й СИЛИ, не лише проблеми.\n   - Пиши чуйно й особисто, звертайся до користувача напряму.</string>
+    <string name="ai_prompt_entropy_schema_fields">4) \"postup\" (масив, 0-5 елементів)\n   Розпізнай, де навантаження ЗМЕНШИЛОСЯ або де видно робочі звички та сильні сторони.\n   Схема на успіх:\n   {\n     \"zaholovok\": \"Короткий заголовок (до 5 слів)\",\n     \"opys\": \"Що саме поліпшилося або йде добре (2-3 речення).\",\n     \"posylannia\": \"З якого запису/записів це випливає (1 речення).\"\n   }\n   Якщо лише 1 запис або немає очевидних успіхів: порожній масив [].\n\n5) \"holovni_dii\" (масив, рівно 5 елементів)\n   5 найважливіших дій, які НАЙСИЛЬНІШЕ та НАЙСТАЛІШЕ знизять особисте навантаження. Упорядкуй за ефектом (найсильніше першим). Крізь категорії, мисли цілісно.\n   Схема на дію:\n   {\n     \"zaholovok\": \"Короткий заголовок (до 6 слів)\",\n     \"opys\": \"13-21 слів, коротко й влучно: що робити і чому.\",\n     \"poiasnennia\": \"Детальне обґрунтування (5-8 речень). Чому саме ця дія? Які записи показують проблему? Що станеться, якщо застосувати?\"\n   }</string>
+    <string name="ai_prompt_entropy_schema_categories">6) \"katehorii\" (масив, стільки, скільки потрібно)\n   Для КОЖНОЇ розпізнаної теми — окрема категорія.\n   Схема на категорію:\n   {\n     \"nazva\": \"Назва категорії (до 12 символів, 1-2 слова)\",\n     \"ikonka\": \"material_icon_name\",\n     \"kolir\": \"#HEX\",\n     \"riven_entropii\": 0.0,\n     \"rezyume\": \"Резюме цієї категорії (3-5 речень).\",\n     \"porady\": [...]\n   }\n\n   НАЗВИ КАТЕГОРІЙ — коротко й точно:\n   ПРАВИЛЬНО: «Сон», «Робота», «Форма», «Психіка», «Проєкти»\n   НЕПРАВИЛЬНО: «Особистий розвиток» → «Розвиток»\n\n   КАТЕГОРІЇ — ДИНАМІЧНІ:\n   Використовуй їх як основу, створюй НОВІ, якщо тема не підходить:\n   - Сон (icon: bedtime, kolir: #6C63FF)\n   - Робота (icon: work, kolir: #FF6B6B)\n   - Форма (icon: fitness_center, kolir: #4ECDC4)\n   - Харчування (icon: restaurant, kolir: #FFE66D)\n   - Психіка (icon: psychology, kolir: #A78BFA)\n   - Стосунки (icon: people, kolir: #F472B6)\n   - Дім (icon: home, kolir: #34D399)\n   - Розвиток (icon: trending_up, kolir: #60A5FA)\n   - Проєкти (icon: code, kolir: #F59E0B)\n   - Здоров\'я (icon: health_and_safety, kolir: #EF4444)\n   - Фінанси (icon: account_balance, kolir: #10B981)\n   - Дозвілля (icon: sports_esports, kolir: #EC4899)\n   - Природа (icon: grass, kolir: #22C55E)\n   - Біль (icon: healing, kolir: #DC2626)\n   Інші іконки: spa, coffee, self_improvement, nights_stay, directions_run, child_care, school, computer, timer, cleaning_services, music_note, pets, wb_sunny, lightbulb\n\n   РІВЕНЬ НАВАНТАЖЕННЯ по категорії (0.0–1.0):\n   - 0.0–0.33 = низький (зелений)\n   - 0.34–0.66 = середній (жовтий)\n   - 0.67–1.0 = високий (червоний)\n\n   ПОРАДИ по категорії — КІЛЬКІСТЬ:\n   Створи УСІ поради, які можна вивести. Краще більше, ніж менше, 5-20 на категорію — норма. Кожен натяк, спостереження, проблема — окрема порада. НЕ об\'єднуй. Якщо запис називає 3 проблеми, виходять 3 окремі поради. Кожна спирається на КОНКРЕТНІ висловлювання. Упорядкуй за пріоритетом: «vysokyi» першим, далі «serednii», далі «nyzkyi».\n\n   Схема на пораду:\n   {\n     \"zaholovok\": \"Короткий заголовок (до 6 слів)\",\n     \"opys\": \"13-21 слів, конкретно й по суті: що робити і чому.\",\n     \"priorytet\": \"vysokyi|serednii|nyzkyi\",\n     \"zviazok\": \"1-2 назви інших пов\'язаних категорій плюс речення чому. Якщо немає: null\",\n     \"vyvedennia\": [\n       {\n         \"data\": \"Дата запису (напр., 28.03.2026)\",\n         \"rezyume\": \"Що в цьому записі було важливим (1-2 речення).\"\n       }\n     ]\n   }\n\n   ЗНАЧЕННЯ ПРІОРИТЕТУ:\n   - «vysokyi» = терміново, діяти зараз (найбільше джерело навантаження)\n   - «serednii» = помітно, братися незабаром\n   - «nyzkyi» = спостерігати, працювати у довгій перспективі</string>
+    <string name="ai_prompt_entropy_output">ФОРМАТ ВИВОДУ — СУВОРІ ПРАВИЛА:\n- Відповідай ЛИШЕ об\'єктом JSON.\n- Без тексту до чи після.\n- Без зворотних лапок Markdown.\n- Починай одразу з { і закінчуй на }.\n- Валідний JSON, без пропущених ком і повторів ключів.</string>
+
+    <!-- Summary Analysis System Prompt (Profile: Zusammenfassung) -->
+    <string name="ai_prompt_summary_intro">Ти уважний, зібраний аналітик щоденника.\n\nТВОЄ ЗАВДАННЯ:\nПроаналізуй записи щоденника користувача. Узагальни, що він пережив, подумав і зробив. Розпізнай теми, закономірності й зв\'язки. Створи структуровану панель резюме у форматі JSON.\n\nЕМОЦІЇ — НЕ НА ПЕРЕДНЬОМУ ПЛАНІ:\nЦей профіль — резюме подій, а не емоційний щоденник. Зосередься на конкретних подіях, діях, темах, фактах і спостереженнях. Згадуй настрої чи емоції ЛИШЕ коли це необхідно для розуміння події — і тоді коротко, у пів речення. ЖОДНИХ окремих розділів чи категорій для емоцій, ЖОДНОГО глибокого тлумачення емоційних патернів, ЖОДНИХ фраз на кшталт «Ти відчував...», «Це зробило тебе...», «Усередині...». Хто хоче таке, перемикається на профіль «Самопізнання».\n\nТИ НЕ ОЦІНЮЄШ. Ти узагальнюєш, упорядковуєш і показуєш зв\'язки. Без коучингу, без полювання на проблеми, без суджень про добре чи погане. Мета: користувач бачить одним поглядом, що відбувається у його житті.</string>
+    <string name="ai_prompt_summary_entry_rules">ГОЛОВНЕ ПРАВИЛО — ЖОДЕН ЗАПИС НЕ МАЄ ЗАГУБИТИСЯ:\nТи отримуєш пронумеровані записи (наприклад, «ЗАПИС 1 з 5»).\nТи МУСИШ прочитати, розібрати й урахувати КОЖЕН.\nПеред відповіддю полічи: чи врахував я ВСІ?\nЯкщо ні — додай НЕГАЙНО.\n\nПРИ МАЛІЙ КІЛЬКОСТІ ЗАПИСІВ:\n- При 1-2 записах: узагальни зміст, не стверджуючи закономірностей.\n  Познач спостереження як «попередні» в описі.\n- Від 3 записів: активно шукай повторювані теми та зв\'язки.\n\nЧАСОВА ВАГА:\nКожен запис треба врахувати. При суперечливих твердженнях з однієї теми — враховуй порядок у часі, новіші показують поточний стан. Старіші дають контекст.</string>
+    <string name="ai_prompt_summary_rules">МОВНІ ПРАВИЛА (для ВСІХ текстових полів JSON):\n- Проста, ясна мова. Короткі речення.\n- Без складних слів, жаргону, штампів.\n- Кожен має зрозуміти одразу, без напруження.\n- Нейтрально, ясно й по суті, без оцінок і порад.\n- Без довгих тире (—). Використовуй коми або крапки.\n\nПРАВИЛО ОБСЯГУ, ПОВНОТА ВАЖЛИВІША ЗА СТИСЛІСТЬ:\nЗагальна кількість осяянь у всіх темах має бути не менше 15. Менше 10 — помилка. Кожна думка, переживання, спостереження заслуговує на окреме осяяння. НЕ об\'єднуй. Якщо запис зачіпає 3 теми, виходять 3 окремі осяяння. JSON може стати довгим, повнота важливіша за стислість.</string>
+    <string name="ai_prompt_summary_schema_header">СХЕМА ВИВОДУ JSON:\n{\n  \"zahalna_entropiia\": 0.0,\n  \"trend\": \"zrostayuchyi|stabilnyi|spadayuchyi|nevidomyi\",\n  \"zahalnyi_analiz\": \"...\",\n  \"postup\": [...],\n  \"holovni_dii\": [...],\n  \"katehorii\": [...]\n}\n\nВИЗНАЧЕННЯ ПОЛІВ:\n\n1) \"zahalna_entropiia\" (число, 0.0–1.0)\n   Скільки зараз відбувається у житті користувача? Зважене середнє по всіх темах.\n   - 0.0–0.33 = спокійна фаза (мало активності, мало змін)\n   - 0.34–0.66 = звичайна фаза (середня активність)\n   - 0.67–1.0 = насичена фаза (багато тем одночасно)\n\n2) \"trend\" (текст)\n   Лише коли є щонайменше 3 записи за кілька днів.\n   Порівняй старіші з новішими:\n   - «zrostayuchyi» = відбувається дедалі більше, активність росте\n   - «stabilnyi» = подібний рівень\n   - «spadayuchyi» = спокійніше, менше тем\n   - «nevidomyi» = даних замало\n\n3) \"zahalnyi_analiz\" (текст, 15-25 речень)\n   - Пройди запис за записом і виведи головну тему.\n   - Називай КОЖНУ тему з КОЖНОГО запису на ім\'я.\n   - Розпізнавай зв\'язки між темами.\n   - Що зараз найбільше займає користувача?\n   - Що змінилося між записами?\n   - Пиши по суті й особисто, звертайся до користувача напряму.\n   - Без оцінок і порад, лише узагальнення й упорядкування.</string>
+    <string name="ai_prompt_summary_schema_fields">4) \"postup\" (масив, 0-5 елементів)\n   Повторювані теми, звички або зв\'язки, видимі у кількох записах.\n   Схема на закономірність:\n   {\n     \"zaholovok\": \"Короткий заголовок (до 5 слів)\",\n     \"opys\": \"Що повторюється або зв\'язується (2-3 речення).\",\n     \"posylannia\": \"З яких записів це випливає (1 речення).\"\n   }\n   Якщо лише 1 запис або немає очевидних закономірностей: порожній масив [].\n\n5) \"holovni_dii\" (масив, рівно 5 елементів)\n   5 найважливіших осяянь з усієї сукупності записів. Які центральні пункти найсильніше визначають зараз життя користувача? Упорядкуй за важливістю (найважливіше першим). Мисли наскрізно, показуй ціле.\n   Схема на осяяння:\n   {\n     \"zaholovok\": \"Короткий заголовок (до 6 слів)\",\n     \"opys\": \"13-21 слів, ємке речення, що передає осяяння.\",\n     \"poiasnennia\": \"Детальне пояснення (5-8 речень). Що саме описано? Чому це центральна тема? Як пов\'язано з іншими?\"\n   }</string>
+    <string name="ai_prompt_summary_schema_categories">6) \"katehorii\" (масив, стільки, скільки потрібно)\n   Для КОЖНОЇ розпізнаної теми — окрема група.\n   Схема на тему:\n   {\n     \"nazva\": \"Назва теми (до 12 символів, 1-2 слова)\",\n     \"ikonka\": \"material_icon_name\",\n     \"kolir\": \"#HEX\",\n     \"riven_entropii\": 0.0,\n     \"rezyume\": \"Резюме цієї теми (3-5 речень). Що написав користувач? Який стан?\",\n     \"porady\": [...]\n   }\n\n   НАЗВИ ТЕМ — коротко й точно:\n   ПРАВИЛЬНО: «Сон», «Робота», «Форма», «Психіка», «Проєкти»\n   НЕПРАВИЛЬНО: «Особистий розвиток» (задовго) → «Розвиток»\n\n   ТЕМИ — ДИНАМІЧНІ:\n   Використовуй їх як основу, створюй НОВІ, якщо тема не підходить:\n   - Сон (icon: bedtime, kolir: #6C63FF)\n   - Робота (icon: work, kolir: #FF6B6B)\n   - Форма (icon: fitness_center, kolir: #4ECDC4)\n   - Харчування (icon: restaurant, kolir: #FFE66D)\n   - Психіка (icon: psychology, kolir: #A78BFA)\n   - Стосунки (icon: people, kolir: #F472B6)\n   - Дім (icon: home, kolir: #34D399)\n   - Розвиток (icon: trending_up, kolir: #60A5FA)\n   - Проєкти (icon: code, kolir: #F59E0B)\n   - Здоров\'я (icon: health_and_safety, kolir: #EF4444)\n   - Фінанси (icon: account_balance, kolir: #10B981)\n   - Дозвілля (icon: sports_esports, kolir: #EC4899)\n   - Природа (icon: grass, kolir: #22C55E)\n   - Побут (icon: calendar_today, kolir: #78716C)\n   - Подорожі (icon: flight, kolir: #06B6D4)\n   - Творчість (icon: music_note, kolir: #D946EF)\n   Інші іконки: spa, coffee, self_improvement, nights_stay, directions_run, child_care, school, computer, timer, cleaning_services, directions_car, photo_camera, pets, wb_sunny, lightbulb, star, healing\n\n   ІНТЕНСИВНІСТЬ по темі (поле \"riven_entropii\", 0.0–1.0):\n   Наскільки тема присутня у записах? Без оцінки «добре/погано», лише присутність.\n   - 0.0–0.33 = згадується мало (на полях)\n   - 0.34–0.66 = згадується регулярно (одна з багатьох)\n   - 0.67–1.0 = дуже присутня (домінантна)\n\n   ОСЯЯННЯ по темі (поле \"porady\") — КІЛЬКІСТЬ:\n   Виведи УСІ осяяння, які можна вивести для цієї теми. Краще більше, ніж менше, 5-20 на тему — норма. Кожна думка, переживання, спостереження — окреме осяяння. НЕ об\'єднуй. Якщо запис зачіпає 3 аспекти теми, виходять 3 осяяння. Кожне спирається на КОНКРЕТНІ висловлювання. Упорядкуй за важливістю: «vysokyi» першим, далі «serednii», далі «nyzkyi».\n\n   Схема на осяяння:\n   {\n     \"zaholovok\": \"Короткий заголовок (до 6 слів)\",\n     \"opys\": \"13-21 слів, ємке речення, що узагальнює, що користувач написав або пережив. По суті, без оцінок.\",\n     \"priorytet\": \"vysokyi|serednii|nyzkyi\",\n     \"zviazok\": \"1-2 назви інших пов\'язаних тем плюс речення чому. Якщо немає: null\",\n     \"vyvedennia\": [\n       {\n         \"data\": \"Дата запису (напр., 28.03.2026)\",\n         \"rezyume\": \"Що в цьому записі стосувалося теми (1-2 речення).\"\n       }\n     ]\n   }\n\n   ЗНАЧЕННЯ ВАЖЛИВОСТІ (поле \"priorytet\"):\n   - «vysokyi» = центральна тема, згадується часто, сильно займає\n   - «serednii» = трапляється, але не домінує\n   - «nyzkyi» = на полях, окреме спостереження</string>
+    <string name="ai_prompt_summary_output">ПРАВИЛО КІЛЬКОСТІ СЛІВ ДЛЯ ОПИСІВ (СУВОРО ДОТРИМУЙСЯ):\n«opys» у «holovni_dii» та «porady» ЗАВЖДИ має бути 13-21 слів.\n- Менше 13 слів = надто коротко = ПОМИЛКА\n- Більше 21 слова = надто довго = ПОМИЛКА\nРахуй слова перед записом. Кожен опис — ОДНЕ ємке, завершене речення. Ні більше, ні менше.\n\nФОРМАТ ВИВОДУ — СУВОРІ ПРАВИЛА:\n- Відповідай ЛИШЕ об\'єктом JSON.\n- Без тексту до чи після.\n- Без зворотних лапок Markdown.\n- Починай одразу з { і закінчуй на }.\n- Валідний JSON, без пропущених ком і повторів ключів.</string>
+
+    <!-- Custom Analysis System Prompt (Profile: Individuelle Analyse) -->
+    <!-- %1$s = user-defined focus text -->
+    <string name="ai_prompt_custom_intro">Ти розумний, уважний аналітик щоденника І виконавець завдань.\n\nСПОСІБ РОБОТИ У ДВА КРОКИ:\n\nКРОК 1 — СПРИЙНЯТИ КОНТЕКСТ:\nСпершу прочитай ВСІ записи щоденника користувача повністю. Зрозумій ситуацію, закономірності, теми, згадані речі, проблеми, бажання. Записи — це твій КОНТЕКСТ, твоя відправна точка, твоя основа. Але вони тебе не обмежують.\n\nКРОК 2 — ВИКОНАТИ ЗАВДАННЯ:\n%1$s\n\nНаведене вище — це твоє справжнє ЗАВДАННЯ. Виконай це завдання на основі контексту з кроку 1. Якщо завдання вимагає дослідження, ідей, альтернатив, пропозицій чи нової інформації, тоді надавай їх АКТИВНО, навіть якщо вони не трапляються в записах. При цьому НЕ давай медичних, юридичних чи фінансових діагнозів або обов\'язкових порад; з таких тем посилайся на фахівців. Записи живлять твою відповідь, вони її не обмежують.\n\nКЛЮЧОВЕ ПРАВИЛО — ПРОФІЛЬ НЕСЕ ЩОНАЙМЕНШЕ 50 ВІДСОТКІВ:\nУвесь результат (загальний аналіз, головні заходи, категорії, поради, прогрес) МУСИТЬ щонайменше на 50 відсотків чітко пов\'язуватися із завданням користувача. Висновки, пункти чи теми, які НЕ мають змістового зв\'язку із завданням, пропускай — не наповнюй результат загальними життєвими темами лише заради повноти JSON. Краще менше пунктів із чітким зв\'язком, ніж багато загальних.\n\nВажливо щодо мови: Виражай зв\'язок РІЗНОМАНІТНО. Використовуй синоніми, споріднені поняття, тематичну близькість та перефразування. НЕ повторюй механічно точні слова із завдання — це виглядає нав\'язливо. Приклад завдання \"Цілі\": говори також про наміри, бажання, амбіції, те, чого ти хочеш досягти, твій курс, кроки розвитку. Приклад завдання \"Спорт\": говори також про рух, тренування, фізичну активність, витривалість, фітнес, здоров\'я. Зв\'язок із профілем має ВІДЧУВАТИСЯ, а не бути дослівним.\n\nВИРІШАЛЬНЕ:\n- Якщо в завданні \"проаналізуй\", \"підсумуй\", \"що впадає в око\" — тримайся близько до записів.\n- Якщо в завданні \"досліди\", \"знайди альтернативи\", \"запропонуй\", \"порекомендуй\", \"доповни\", \"що було б, якби\", \"нові ідеї\" — АКТИВНО виходь за межі записів і додавай власний, новий зміст.\n- Завдання має пріоритет. Записи — це фундамент, а не стіна.</string>
+    <string name="ai_prompt_custom_headings">ВАЖЛИВО — ДИНАМІЧНІ ЗАГОЛОВКИ:\nТи МУСИШ вигадати три відповідні заголовки для панелі, що ТОЧНО відповідають темі. ЖОДНИХ загальних назв на кшталт «Головні результати» чи «Аналіз». Використовуй творчі, конкретні заголовки, що відображають тему.\nПриклади:\n- Тема «Риболовля»: «Найбільші улови», «Рибний огляд», «Усі звіти»\n- Тема «Якість сну»: «Твої закономірності сну», «Аналіз сну», «Усі спостереження»\n- Тема «Перевантаження»: «Найбільші пожирачі часу», «Огляд навантаження», «Усі точки навантаження»</string>
+    <string name="ai_prompt_custom_rules">ПРАВИЛО КОНТЕКСТУ — КОЖЕН ЗАПИС ПРОЧИТАНО:\nТи отримуєш пронумеровані записи. Прочитай КОЖЕН ОКРЕМО повністю і сприйми їх як контекст. Кожна доречна деталь входить у твій результат. Але: результат може і повинен виходити за межі записів, якщо цього вимагає завдання.\n\nПРАВИЛО ЗАВДАННЯ — ЗАВДАННЯ ВИКОНУЄТЬСЯ:\nВиконуй завдання користувача дослівно. Якщо завдання просить альтернативи, надавай справжні нові альтернативи, а не лише речі з записів. Якщо завдання просить рекомендації, активно досліджуй і рекомендуй. Записи — НЕ єдине джерело твоєї відповіді.\n\nРОЗРІЗНЕННЯ В РЕЗУЛЬТАТІ:\nЧітко познач, що походить із записів, а що ти додаєш заново. Так користувач знатиме, що є його власними думками, а що — твоїм внеском.\n\nПРАВИЛО ФАХОВОЇ КОНСУЛЬТАЦІЇ — ЖОДНИХ ДІАГНОЗІВ:\nНЕЗАЛЕЖНО від завдання ти НЕ даєш медичних діагнозів, терапевтичних рекомендацій, юридичних чи фінансових порад. З таких тем нейтрально посилайся на кваліфікованих фахівців.\n\nМОВНІ ПРАВИЛА:\n- Просто, ясно. Жодних іншомовних слів.\n- Емпатично і прямо.\n- Жодних довгих тире (—). Використовуй коми або крапки.\n\nПРАВИЛО КІЛЬКОСТІ:\nЩонайменше 10 висновків загалом — але кожен окремо має змістово відповідати завданню. Якщо ти не знаходиш 10 висновків зі справжнім зв\'язком із профілем, краще надай 7 сильних, ніж 10 розмитих. У суто аналітичних завданнях висновки походять із записів, у творчих завданнях ти можеш додавати новий зміст.</string>
+    <string name="ai_prompt_custom_schema">СХЕМА ВИВОДУ JSON:\n{\n  \"zaholovok_top5\": \"Творчий заголовок для Топ-5 (за темою, до 3 слів)\",\n  \"zaholovok_analizu\": \"Творчий заголовок для огляду (за темою, до 3 слів)\",\n  \"zaholovok_rezultativ\": \"Творчий заголовок для всіх результатів (за темою, до 3 слів)\",\n  \"zahalna_entropiia\": 0.0,\n  \"trend\": \"zrostayuchyi|stabilnyi|spadayuchyi|nevidomyi\",\n  \"zahalnyi_analiz\": \"...\",\n  \"postup\": [...],\n  \"holovni_dii\": [...],\n  \"katehorii\": [...]\n}\n\n1) \"zaholovok_top5/analizu/rezultativ\": ОБОВ\'ЯЗКОВО. Творчо, конкретно, до 3 слів. МАЄ відповідати темі. БЕЗ загальних назв.\n\n2) \"zahalna_entropiia\" (0.0–1.0): наскільки сильно тема присутня у записах?\n\n3) \"trend\": лише при 3+ записах. Чи змінюється тема?\n\n4) \"zahalnyi_analiz\" (15-25 речень): що записи говорять про тему? Називай КОЖНУ важливу деталь з КОЖНОГО запису.\n\n5) \"postup\" (0-5): закономірності або розвиток у темі.\n   { \"zaholovok\": \"до 5 слів\", \"opys\": \"2-3 речення\", \"posylannia\": \"1 речення\" }\n\n6) \"holovni_dii\" (рівно 5): найважливіші осяяння за темою.\n   {\n     \"zaholovok\": \"до 6 слів\",\n     \"opys\": \"13-21 слів, ємко й влучно.\",\n     \"poiasnennia\": \"5-8 детальних речень.\"\n   }\n\n7) \"katehorii\": тематичні групи, що підходять до теми (створюй динамічно).\n   {\n     \"nazva\": \"до 12 символів\", \"ikonka\": \"material_icon_name\", \"kolir\": \"#HEX\",\n     \"riven_entropii\": 0.0,\n     \"rezyume\": \"3-5 речень\",\n     \"porady\": [{\n       \"zaholovok\": \"до 6 слів\",\n       \"opys\": \"13-21 слів\",\n       \"priorytet\": \"vysokyi|serednii|nyzkyi\",\n       \"zviazok\": \"зв\'язок з іншою темою або null\",\n       \"vyvedennia\": [{\"data\":\"...\",\"rezyume\":\"1-2 речення\"}]\n     }]\n   }</string>
+    <string name="ai_prompt_custom_output">ПРАВИЛО КІЛЬКОСТІ СЛІВ: «opys» у holovni_dii та porady ЗАВЖДИ 13-21 слів.\n\nФОРМАТ ВИВОДУ — СУВОРІ ПРАВИЛА:\n- Відповідай ЛИШЕ об\'єктом JSON.\n- Без тексту до чи після. Без зворотних лапок.\n- Починай одразу з { і закінчуй на }.</string>
+
+    <!-- ════════════════════════════════════════════════════════════════════
+         RETROSPECTIVE SCREEN
+         ════════════════════════════════════════════════════════════════════ -->
+    <string name="retro_title">Підсумки</string>
+    <string name="retro_cd_info">Про підсумки</string>
+    <string name="retro_personal_review">Ваші особисті підсумки</string>
+    <string name="retro_intro_body">Іноді в буднях ми забуваємо, скільки насправді пережили. Щоденник пам\'ятає все — великі моменти і маленькі, тихі. </string>
+    <string name="retro_intro_cta">Озирніться й відкрийте, що вас зачепило.</string>
+    <string name="retro_please_wait">Зачекайте</string>
+    <string name="retro_backup_loading">Завантаження копії… Підсумки запустяться автоматично після цього.</string>
+    <string name="retro_profile_switching">Підсумки оновлюються автоматично після зміни профілю</string>
+    <string name="retro_generating">Створення підсумків…</string>
+    <string name="retro_ai_unavailable">ШІ зараз недоступний, спробуйте пізніше.</string>
+    <string name="retro_weekly_title">Підсумки тижня</string>
+    <string name="retro_weekly_subtitle">Останні 7 днів одним поглядом</string>
+    <string name="retro_weekly_empty">Ще немає підсумків тижня.\nПотрібно щонайменше 2 записи на тиждень.</string>
+    <string name="retro_monthly_title">Підсумки місяця</string>
+    <string name="retro_monthly_subtitle">Попередній місяць одним поглядом</string>
+    <string name="retro_monthly_empty">Ще немає підсумків місяця.\nСтворюються з тижневих у кінці місяця.</string>
+    <string name="retro_yearly_title">Підсумки року</string>
+    <string name="retro_yearly_subtitle">Цілий рік спогадів</string>
+    <string name="retro_yearly_empty">Ще немає підсумків року.\nСтворюються з місячних у кінці року.</string>
+    <string name="retro_premium_unlock">Відкрийте всі підсумки з Преміум</string>
+    <string name="retro_at_a_glance">Коротко</string>
+    <string name="retro_cd_expand">Розгорнути</string>
+    <string name="retro_cd_collapse">Згорнути</string>
+    <string name="retro_share_text_label">Текст</string>
+
+    <!-- Fallback titles (when AI title generation fails) -->
+    <string name="retro_fallback_week">Підсумки тижня</string>
+    <string name="retro_fallback_month">Підсумки місяця</string>
+    <string name="retro_fallback_year">Підсумки %1$d</string>
+    <string name="retro_period_label_week">Тиждень %1$d (%2$s - %3$s)</string>
+    <!-- Retro: Photos, TTS, Sharing -->
+    <string name="retro_photos_videos">Фото та відео</string>
+    <string name="retro_photos_videos_colon">Фото та відео:</string>
+    <string name="retro_cd_video">Відео</string>
+    <string name="retro_cd_photo">Фото</string>
+    <string name="retro_play_video">Відтворити відео</string>
+    <string name="retro_enable_voices">Увімкніть голоси в налаштуваннях</string>
+    <string name="retro_tts_stop">Зупинити</string>
+    <string name="retro_tts_read">Прочитати</string>
+    <string name="retro_tts_wait">Зачекайте, голос генерується…</string>
+    <string name="retro_cd_share">Поділитися</string>
+    <string name="retro_share_title">Поділитися підсумками</string>
+    <string name="retro_share_text_content">Текст підсумків</string>
+    <string name="retro_photo_n">Фото %1$d</string>
+    <string name="retro_share_header">Підсумки з додатка BestJournal</string>
+    <string name="retro_at_a_glance_colon">Коротко:</string>
+    <!-- Retro: Locked/Premium -->
+    <string name="retro_cd_locked">Заблоковано</string>
+    <string name="retro_unlock_premium_short">Відкрити Преміум</string>
+    <string name="retro_cd_premium_required">Потрібен Преміум</string>
+    <!-- Retro: Benefits info dialog -->
+    <string name="retro_your_ai_reviews">Ваші підсумки з ШІ</string>
+    <string name="retro_weekly_p1">ШІ стискає ваш тиждень в особисту розповідь</string>
+    <string name="retro_weekly_p2">Емоційні закономірності та ключові моменти стають видимими</string>
+    <string name="retro_weekly_p3">Створюються щонеділі автоматично, якщо у вас не менше 2 записів</string>
+    <string name="retro_weekly_p4">Перші 2 тижні безкоштовно</string>
+    <string name="retro_monthly_p1">Пов\'язує ваші тижневі підсумки в розповідь місяця</string>
+    <string name="retro_monthly_p2">Наскрізні лінії та розвиток місяця стають видимими</string>
+    <string name="retro_monthly_p3">Відображає тенденції з ваших записів</string>
+    <string name="retro_yearly_p1">Ваш цілий рік одним поглядом</string>
+    <string name="retro_yearly_p2">ШІ підсумовує головні теми вашого року</string>
+    <string name="retro_yearly_p3">Особистісне зростання стає видимим і відчутним</string>
+    <!-- Retro: Premium upsell sheet -->
+    <string name="retro_your_reviews">Ваші особисті підсумки</string>
+    <string name="retro_premium_reviews_desc">З Преміум ШІ автоматично створює підсумки з ваших записів:</string>
+    <string name="retro_benefit_weekly">Усі тижневі огляди, а не лише перші 2 — у межах твого денного ліміту ШІ</string>
+    <string name="retro_benefit_monthly">Підсумки місяця, що показують ваш поступ і зміни</string>
+    <string name="retro_benefit_yearly">Підсумки року, цілий ваш рік як особиста розповідь</string>
+    <string name="retro_start_sub">Оформити підписку</string>
+    <string name="retro_decide_later">Вирішити пізніше</string>
+
+    <!-- Month names for retrospective grouping -->
+    <string name="month_january">Січень</string>
+    <string name="month_february">Лютий</string>
+    <string name="month_march">Березень</string>
+    <string name="month_april">Квітень</string>
+    <string name="month_may">Травень</string>
+    <string name="month_june">Червень</string>
+    <string name="month_july">Липень</string>
+    <string name="month_august">Серпень</string>
+    <string name="month_september">Вересень</string>
+    <string name="month_october">Жовтень</string>
+    <string name="month_november">Листопад</string>
+    <string name="month_december">Грудень</string>
+
+    <!-- ════════════════════════════════════════════════════════════════════
+         ONBOARDING
+         ════════════════════════════════════════════════════════════════════ -->
+    <string name="onboarding_welcome">Ласкаво просимо до\nBest Journal</string>
+    <string name="onboarding_subtitle">Ваш особистий ШІ-щоденник
+для більшої ясності в повсякденному житті</string>
+    <string name="onboarding_feature_speech">Говоріть або пишіть, ШІ розуміє і те, і інше</string>
+    <string name="onboarding_feature_listen">Слухайте свої записи, озвучені голосом</string>
+    <string name="onboarding_feature_secure">Твої записи лишаються на пристрої; запити до ШІ передаються в зашифрованому вигляді</string>
+    <string name="onboarding_goals_title">Чого ви хочете досягти\nзі щоденником ШІ?</string>
+    <string name="onboarding_goal_stress">Зменшити стрес</string>
+    <string name="onboarding_goal_clarity">Знайти ясність</string>
+    <string name="onboarding_goal_growth">Особистісне зростання</string>
+    <string name="onboarding_goal_thoughts">Фіксувати свої думки</string>
+    <string name="onboarding_how_step1_title">Говоріть або вводьте запис</string>
+    <string name="onboarding_how_step1_desc">Записуйте думки голосом або вводьте — як зручніше.</string>
+    <string name="onboarding_how_step2_title">ШІ покращує й аналізує</string>
+    <string name="onboarding_how_step2_desc">Текст автоматично доопрацьовується і аналізується з різних точок зору.</string>
+    <string name="onboarding_how_step3_desc">Фіксуйте особливі моменти, ШІ врахує їх в аналізі.</string>
+    <string name="onboarding_how_step4_title">Відкрийте закономірності й осяяння</string>
+    <string name="onboarding_how_step4_desc">Панель ШІ показує вам взаємозв\'язки з ваших записів.</string>
+    <string name="onboarding_how_step5_title">Підсумки тижня, місяця і року</string>
+    <string name="onboarding_how_step5_desc">Автоматичні підсумки показують, як ви розвиваєтеся з часом.</string>
+    <string name="onboarding_premium_feature_improve">Щоденне покращення тексту ШІ, кожен запис стає чіткішим і виразнішим</string>
+    <string name="onboarding_premium_feature_dashboard">Автоматичне оновлення панелі при кожному новому записі</string>
+    <string name="onboarding_premium_feature_retro">Підсумки тижня, місяця і року показують ваш розвиток</string>
+    <string name="onboarding_premium_feature_patterns">Зробити закономірності видимими: ШІ показує повторювані патерни мислення та відчуттів у ваших записах</string>
+    <string name="onboarding_premium_feature_noads">Писати й рефлексувати без перешкод</string>
+    <string name="onboarding_free_trial">Безкоштовно, скасуйте будь-коли</string>
+    <string name="onboarding_free_after_trial">Потім ви продовжуєте користуватися Best Journal,\nбезкоштовно з обмеженою кількістю звернень до ШІ на тиждень.</string>
+    <string name="onboarding_start_free">Почати безкоштовно</string>
+    <string name="onboarding_without_premium">Продовжити без Преміум</string>
+    <string name="onboarding_feature_profiles">5 розумних профілів аналізу для різних точок зору</string>
+    <string name="onboarding_goals_select">Виберіть одну або кілька цілей</string>
+    <string name="onboarding_how_step3_title">Додайте фото</string>
+    <string name="onboarding_how_title">Усе дуже просто</string>
+    <string name="onboarding_perspectives_title">Різні точки зору на\nтвоє життя</string>
+    <string name="onboarding_premium_feature_pdf">Експорт у PDF з фото, збережіть записи як документ</string>
+    <string name="onboarding_premium_profiles">5 розумних профілів панелі для глибокого погляду на життя</string>
+    <string name="onboarding_premium_profiles_unlimited">Власні профілі ШІ без обмеження кількості</string>
+    <string name="onboarding_try_premium">Преміум пропонує, зокрема:</string>
+
+    <!-- ════════════════════════════════════════════════════════════════════
+         PAYWALL
+         ════════════════════════════════════════════════════════════════════ -->
+    <string name="paywall_prices_loading">Завантаження цін…</string>
+    <string name="paywall_sub_loading_toast">Підписка завантажується, спробуйте ще раз за мить.</string>
+    <string name="paywall_purchase_loading_toast">Покупка завантажується, спробуйте ще раз за мить.</string>
+    <string name="paywall_today">Сьогодні</string>
+    <string name="paywall_full_access">Повний доступ</string>
+    <string name="paywall_day7">День 7</string>
+    <string name="paywall_reminder">Нагадування</string>
+    <string name="paywall_day8">День 8</string>
+    <string name="paywall_first_payment">Перший платіж</string>
+    <string name="paywall_yearly_note">Далі %1$s на рік, продовжується автоматично
+У тестовий період можна скасувати будь-коли</string>
+    <string name="paywall_most_popular">Рекомендовано</string>
+    <string name="paywall_monthly_plan">Місячна підписка, %1$s на місяць</string>
+    <string name="paywall_lifetime_title">Разова покупка</string>
+    <string name="paywall_lifetime_desc">Оплати один раз, користуйся завжди</string>
+    <string name="paywall_lifetime_note">Без підписки, без продовжень</string>
+    <string name="paywall_free_note">Застосунок працює і без підписки.</string>
+    <string name="paywall_legal_hint" formatted="false">Підписуючись, ти приймаєш %1$s. Твоє 14-денне право на відкликання описане там.</string>
+    <string name="paywall_legal_hint_link">Умови використання</string>
+
+    <!-- Paywall features -->
+    <string name="paywall_feature_patterns">Розпізнавайте повторювані закономірності у вашому мисленні</string>
+    <string name="paywall_feature_improve">Щоденне покращення тексту ШІ для кожного запису</string>
+    <string name="paywall_feature_dashboard">Автоматичне оновлення панелі після кожного запису</string>
+    <string name="paywall_feature_retro">Підсумки тижня, місяця і року з ШІ</string>
+    <string name="paywall_feature_pdf">Експорт записів з фото у PDF</string>
+    <string name="paywall_feature_noads">Писати й рефлексувати без перешкод</string>
+    <string name="paywall_feature_profiles">Власні профілі ШІ без обмеження кількості</string>
+
+    <!-- Paywall personalized headlines -->
+    <string name="paywall_headline_stress">Більше ясності у повсякденні</string>
+    <string name="paywall_headline_stress_sub">Розпізнай, що тебе щодня займає, і сформулюй це чітко.</string>
+    <string name="paywall_headline_clarity">Зрозумійте себе краще</string>
+    <string name="paywall_headline_clarity_sub">ШІ робить видимими повторювані закономірності у твоїх записах</string>
+    <string name="paywall_headline_growth">Відкрийте добре в кожному дні</string>
+    <string name="paywall_headline_growth_sub">Ваш особистий простір вдячності й зростання</string>
+    <string name="paywall_headline_thoughts">Нехай думки пливуть</string>
+    <string name="paywall_headline_thoughts_sub">Твій творчий супутник у повсякденні</string>
+    <string name="paywall_headline_default">Відкривайте себе\nЩодня трохи більше</string>
+    <string name="paywall_headline_default_sub">Твій особистий ШІ-супутник у повсякденні</string>
+
+    <!-- Exit intent offer -->
+    <string name="paywall_exit_wait">Зачекайте мить!</string>
+    <string name="paywall_exit_special_offer">У нас особлива\nпропозиція для вас:</string>
+    <string name="paywall_exit_discount">Знижка на %1$d місяців</string>
+    <string name="paywall_exit_price_comparison">Лише %1$s замість %2$s на місяць</string>
+    <string name="paywall_exit_start_discount">Платна підписка — 2 місяці за половину ціни</string>
+
+    <!-- ════════════════════════════════════════════════════════════════════
+         CHURN FLOW DIALOG
+         ════════════════════════════════════════════════════════════════════ -->
+    <string name="churn_your_sub">Ваша підписка</string>
+    <string name="churn_plan_yearly">Річна підписка</string>
+    <string name="churn_plan_monthly">Місячна підписка</string>
+    <string name="churn_plan">Тариф</string>
+    <string name="churn_price">Ціна</string>
+    <string name="churn_renewal">Продовження</string>
+    <string name="churn_automatic">Автоматичне</string>
+    <string name="churn_promo_active_label">Знижка</string>
+    <string name="churn_promo_one_month_remaining">Ще 1 місяць — потім <xliff:g id="base_price" example="3,99 €">%1$s</xliff:g> на місяць</string>
+    <string name="churn_promo_months_remaining">Ще <xliff:g id="months" example="2">%1$d</xliff:g> міс. — потім <xliff:g id="base_price" example="3,99 €">%2$s</xliff:g> на місяць</string>
+    <string name="churn_auto_renew_note">Підписка автоматично продовжується через Google Play. Скасування в будь-який момент.</string>
+    <string name="churn_cancel_sub">Скасувати підписку</string>
+    <string name="churn_reason_too_expensive">Занадто дорого</string>
+    <string name="churn_reason_unused">Використовую занадто рідко</string>
+    <string name="churn_per_year">на рік</string>
+    <string name="churn_per_month">на місяць</string>
+    <string name="churn_reason_features">Немає потрібних функцій</string>
+    <string name="churn_reason_other">Інша причина</string>
+    <string name="churn_sorry_title">Шкода, що ви йдете</string>
+    <string name="churn_sorry_body">Перед скасуванням поділіться причиною? Це допомагає нам покращувати додаток.</string>
+    <string name="churn_exclusive_offer">Пропозиція для вас</string>
+    <string name="churn_offer_subtitle">Наша пропозиція для тебе</string>
+    <string name="churn_offer_feature_ai">Щоденні аналізи ШІ</string>
+    <string name="churn_offer_feature_perspectives">Усі 4 попередньо визначені профілі ШІ + стільки власних, скільки тобі потрібно</string>
+    <string name="churn_offer_feature_voice">Преміум-розпізнавання мови</string>
+    <string name="churn_offer_auto_renew">Автоматично продовжується, скасування будь-коли</string>
+    <string name="churn_accept_offer">Прийняти пропозицію</string>
+    <string name="churn_switch_yearly">Або перейдіть на річну й економте ще більше</string>
+    <string name="churn_pause_sub">Або призупиніть підписку в Google Play</string>
+    <string name="churn_cancel_anyway">Усе одно скасувати</string>
+    <string name="churn_are_you_sure">Ви впевнені?</string>
+    <string name="churn_stay">Краще залишуся</string>
+
+    <!-- ════════════════════════════════════════════════════════════════════
+         AI LIMIT / COMPONENTS
+         ════════════════════════════════════════════════════════════════════ -->
+    <string name="ai_limit_title">Ваш тижневий ліміт досягнуто</string>
+    <string name="ai_limit_body">Без підписки у вас є 5 покращень тексту на тиждень і 5 оновлень панелі на тиждень для кожного профілю.
+З Premium: до 150 на день.</string>
+    <string name="ai_limit_monthly">Місячна підписка, %1$s/міс.</string>
+    <string name="ai_limit_yearly">Річна підписка, %1$s/рік (економія 37\u00A0%%)</string>
+    <string name="ai_limit_no_thanks">Ні, дякую, далі без ШІ</string>
+    <string name="ai_banner_title">Ваш щоденник підтримується ШІ</string>
+    <string name="ai_banner_body">• Надиктовані тексти покращуються автоматично\n• Короткі описи для кожного запису\n• Розумні підказки для рефлексії на основі твоїх закономірностей. Усі результати ШІ є пропозиціями, а не професійною консультацією.\n• Усе включено у безкоштовний пробний період</string>
+    <string name="cd_mic_start">Почати запис</string>
+    <string name="cd_mic_stop">Зупинити запис</string>
+    <string name="entry_improve_limit_daily">Денний ліміт досягнуто. Завтра продовжимо!</string>
+    <string name="entry_improve_limit_cooldown">Коротка пауза: залишилося %1$d хв.</string>
+    <string name="entry_improve_failed">Не вдалося покращити текст</string>
+
+    <!-- ════════════════════════════════════════════════════════════════════
+         NOTIFICATIONS
+         ════════════════════════════════════════════════════════════════════ -->
+    <string name="notif_reminder_title">Час для щоденника</string>
+    <string name="notif_reminder_body_0">Що вас сьогодні хвилює?</string>
+    <string name="notif_reminder_body_1">Момент для вас, збережіть його</string>
+    <string name="notif_reminder_body_2">Ваше майбутнє «я» подякує</string>
+    <string name="notif_reminder_body_3">Достатньо однієї думки, починайте</string>
+    <string name="notif_reminder_body_4">Що було сьогодні головним?</string>
+    <string name="notif_weekly_title">Ваші підсумки тижня</string>
+    <string name="notif_weekly_body">Подивіться, що зачепило вас цього тижня, на панелі нові висновки.</string>
+    <string name="notif_monthly_title">Ваші підсумки місяця</string>
+    <string name="notif_monthly_body">Цілий місяць спогадів чекає на вас.</string>
+    <string name="notif_yearly_title">Ваші підсумки року</string>
+    <string name="notif_yearly_body">Цілий рік спогадів, озирніться на свій шлях.</string>
+
+    <!-- Notification channel names -->
+    <string name="notif_channel_daily_name">Щоденне нагадування</string>
+    <string name="notif_channel_daily_desc">Нагадує щодня писати у щоденник</string>
+    <string name="notif_channel_weekly_name">Підсумки тижня</string>
+    <string name="notif_channel_weekly_desc">Підсумки тижня щонеділі о 15:00</string>
+    <string name="notif_channel_monthly_name">Підсумки місяця</string>
+    <string name="notif_channel_monthly_desc">Сповіщення, коли готові підсумки місяця</string>
+    <string name="notif_channel_yearly_name">Підсумки року</string>
+    <string name="notif_channel_yearly_desc">Сповіщення, коли готові підсумки року</string>
+
+    <!-- ════════════════════════════════════════════════════════════════════
+         DATE / TIME
+         ════════════════════════════════════════════════════════════════════ -->
+    <string name="datetime_just_now">щойно</string>
+    <plurals name="datetime_minutes_ago">
+        <item quantity="one">%1$d хвилину тому</item>
+        <item quantity="few">%1$d хвилини тому</item>
+        <item quantity="many">%1$d хвилин тому</item>
+        <item quantity="other">%1$d хвилини тому</item>
+    </plurals>
+    <plurals name="datetime_hours_ago">
+        <item quantity="one">%1$d годину тому</item>
+        <item quantity="few">%1$d години тому</item>
+        <item quantity="many">%1$d годин тому</item>
+        <item quantity="other">%1$d години тому</item>
+    </plurals>
+    <plurals name="datetime_days_ago">
+        <item quantity="one">%1$d день тому</item>
+        <item quantity="few">%1$d дні тому</item>
+        <item quantity="many">%1$d днів тому</item>
+        <item quantity="other">%1$d дня тому</item>
+    </plurals>
+    <!-- Confirmation after PDF export. %1$d = number of entries included in the PDF. -->
+    <plurals name="settings_export_success">
+        <item quantity="one">Експортовано %1$d запис</item>
+        <item quantity="few">Експортовано %1$d записи</item>
+        <item quantity="many">Експортовано %1$d записів</item>
+        <item quantity="other">Експортовано %1$d записи</item>
+    </plurals>
+    <string name="datetime_today">Сьогодні</string>
+    <string name="datetime_yesterday">Учора</string>
+    <string name="datetime_day_before_yesterday">Позавчора</string>
+    <string name="datetime_this_week">Цього тижня</string>
+    <string name="datetime_last_week">Минулого тижня</string>
+    <string name="datetime_weeks_ago">%1$d тиж. тому</string>
+
+    <!-- ════════════════════════════════════════════════════════════════════
+         ACHIEVEMENTS
+         ════════════════════════════════════════════════════════════════════ -->
+    <string name="achievement_nightowl_title">Нічна сова</string>
+    <string name="achievement_nightowl_desc">50 записів після 22:00</string>
+    <string name="achievement_earlybird_title">Рання пташка</string>
+    <string name="achievement_earlybird_desc">20 записів до 7:00</string>
+    <string name="achievement_confession_title">Сповідь</string>
+    <string name="achievement_confession_desc">Запис обсягом понад 1000 слів</string>
+    <string name="achievement_marathon_title">Марафонець письма</string>
+    <string name="achievement_marathon_desc">100 записів у щоденнику</string>
+    <string name="achievement_wordartist_title">Майстер слова</string>
+    <string name="achievement_wordartist_desc">500 записів у щоденнику</string>
+    <string name="achievement_consistency_title">Наполегливість</string>
+    <string name="achievement_consistency_desc">Серія 30 днів досягнута</string>
+    <string name="achievement_chronicler_title">Літописець року</string>
+    <string name="achievement_chronicler_desc">365 записів</string>
+    <string name="achievement_photodiary_title">Фотощоденник</string>
+    <string name="achievement_photodiary_desc">50 фото в записах</string>
+    <string name="achievement_voiceartist_title">Майстер голосу</string>
+    <string name="achievement_voiceartist_desc">25 голосових записів</string>
+    <string name="achievement_reflectionmaster_title">Майстер рефлексії</string>
+    <string name="achievement_reflectionmaster_desc">50 аналізів панелі</string>
+
+    <!-- ════════════════════════════════════════════════════════════════════
+         DAILY PROMPTS
+         ════════════════════════════════════════════════════════════════════ -->
+    <string name="prompt_cat_self_reflection">Самоаналіз</string>
+    <string name="prompt_cat_gratitude">Вдячність</string>
+    <string name="prompt_cat_future">Майбутнє</string>
+    <string name="prompt_cat_relationships">Стосунки</string>
+
+    <string-array name="prompts_self_reflection">
+        <item>Що сьогодні змусило вас усміхнутися?</item>
+        <item>Яку думку сьогодні не вдавалося відпустити?</item>
+        <item>Що ви сьогодні дізналися про себе?</item>
+        <item>Який момент був сьогодні найяскравішим?</item>
+        <item>Що б ви сьогодні зробили інакше, якби могли?</item>
+        <item>Яке почуття найбільше супроводжувало вас сьогодні?</item>
+        <item>Що вас сьогодні здивувало?</item>
+        <item>Над чим ви сьогодні думали найдовше?</item>
+        <item>Що сьогодні додало вам енергії?</item>
+        <item>Що сьогодні забрало у вас енергію?</item>
+        <item>Яку звичку ви хотіли б змінити?</item>
+        <item>Що для вас зараз означає успіх?</item>
+        <item>Який страх зараз стоїть вам на шляху?</item>
+        <item>Що ваше молодше «я» сказало б про ваше сьогоднішнє життя?</item>
+        <item>Яку пораду ви дали б самому собі зараз?</item>
+        <item>Що робить вас унікальним?</item>
+    </string-array>
+
+    <string-array name="prompts_gratitude">
+        <item>За що ви сьогодні вдячні?</item>
+        <item>Хто сьогодні зробив ваш день кращим?</item>
+        <item>Яка дрібничка вас сьогодні потішила?</item>
+        <item>Яка здібність у вас є, яку ви вважаєте чимось само собою зрозумілим?</item>
+        <item>Що найкраще сталося з вами цього тижня?</item>
+        <item>Кому б ви хотіли сказати дякую, і за що?</item>
+        <item>Яке місце дає вам відчуття дому?</item>
+        <item>Який спогад одразу робить вас щасливим?</item>
+        <item>Яка частина вашого тіла заслуговує більшого визнання?</item>
+        <item>Яка їжа сьогодні вам справді пішла на користь?</item>
+        <item>Яка музика зачепила вас нещодавно?</item>
+        <item>Що найцінніше у вас є, що не коштує грошей?</item>
+        <item>Який досвід минулого зробив вас сильнішим?</item>
+        <item>Що у вашому побуті насправді є привілеєм?</item>
+        <item>Хто ваш тихий герой буднів?</item>
+        <item>Яку пору року ви зараз любите найбільше, і чому?</item>
+    </string-array>
+
+    <string-array name="prompts_future">
+        <item>Чого ви хотіли б досягти за рік?</item>
+        <item>Як виглядає ваш ідеальний день за п\'ять років?</item>
+        <item>До якої мети ви зараз прагнете з найбільшою пристрастю?</item>
+        <item>Що б ви зробили, якби знали, що не можете зазнати невдачі?</item>
+        <item>Яке нове вміння ви хотіли б опанувати?</item>
+        <item>Куди ви хотіли б поїхати наступним?</item>
+        <item>Якою людиною ви хочете бути за десять років?</item>
+        <item>Яку мрію ви залишили і могли б оживити?</item>
+        <item>Який найсміливіший крок ви могли б зробити зараз?</item>
+        <item>Який проєкт вас надихає, а ви його ще не почали?</item>
+        <item>Що має статися, щоб ви сказали: тепер я задоволений?</item>
+        <item>Яку зміну ви хотіли б побачити у світі?</item>
+        <item>Що стоїть на вершині вашого списку мрій?</item>
+        <item>Від якої поганої звички ви хотіли б позбутися до наступного місяця?</item>
+        <item>Яким ви хотіли б, щоб вас пам\'ятали?</item>
+        <item>Який маленький крок ви можете зробити завтра?</item>
+    </string-array>
+
+    <string-array name="prompts_relationships">
+        <item>Кому ви хотіли б сказати те, чого ще не сказали?</item>
+        <item>Які стосунки у вашому житті заслуговують більше уваги?</item>
+        <item>Що ви цінуєте у своєму найкращому другові найбільше?</item>
+        <item>Коли ви востаннє відчували себе справді зрозумілим?</item>
+        <item>Що б ви сказали близькій вам людині?</item>
+        <item>Яка людина найсильніше сформувала ваше життя?</item>
+        <item>Як ви показуєте іншим, що любите їх?</item>
+        <item>Який конфлікт ви хотіли б розв\'язати?</item>
+        <item>Що для вас означає дружба?</item>
+        <item>Хто нещодавно навчив вас чогось важливого?</item>
+        <item>Яку якість ви найбільше цінуєте в інших?</item>
+        <item>З ким ви хотіли б провести цілий день?</item>
+        <item>Який найпрекрасніший комплімент ви коли-небудь чули?</item>
+        <item>Які межі ви хотіли б краще ставити у стосунках?</item>
+        <item>Як ваше уявлення про кохання змінилося з часом?</item>
+        <item>Хто заслуговує сьогодні на ваш дзвінок або повідомлення?</item>
+    </string-array>
+
+    <!-- ════════════════════════════════════════════════════════════════════
+         PDF EXPORT
+         ════════════════════════════════════════════════════════════════════ -->
+    <string name="pdf_entry_fallback_title">Запис #%1$d</string>
+    <string name="pdf_entry_counter">Запис %1$d з %2$d</string>
+    <string name="pdf_summary_label">КОРОТКО</string>
+    <string name="pdf_continuation">%1$s (продовження)</string>
+    <string name="pdf_page_number">Сторінка %1$d</string>
+
+    <!-- ════════════════════════════════════════════════════════════════════
+         ERRORS
+         ════════════════════════════════════════════════════════════════════ -->
+    <string name="error_retro_all_failed">%1$d запитів до ШІ не виконано. Перевірте підключення до інтернету.</string>
+    <string name="error_whisper_audio_empty">Аудіофайл порожній</string>
+    <string name="error_whisper_no_text">Текст не розпізнано</string>
+    <string name="error_sync_db_not_found">Базу даних не знайдено</string>
+    <string name="error_audio_record_init_failed">Не вдалося запустити мікрофон</string>
+    <string name="error_json_key_missing">Відповідь ШІ неповна: відсутній %1$s або %2$s</string>
+    <string name="error_file_open_failed">Помилка: не вдалося відкрити файл</string>
+    <string name="error_generic">Помилка: %1$s</string>
+
+    <!-- ════════════════════════════════════════════════════════════════════
+         AI PROFILE STYLE INSTRUCTIONS (for Gemini prompts)
+         ════════════════════════════════════════════════════════════════════ -->
+    <string name="profile_style_chronicler">\n- Пиши в стилі узагальнюючої розповіді, збирай головні події та почуття як особистий літописець</string>
+    <string name="profile_style_advisor">\n- Пиши в стилі життєвого порадника, підкреслюй, що вдалося, що можна покращити, і давай читачеві відчуття ясності й ладу</string>
+    <string name="profile_style_insight">\n- Пиши в стилі глибокої розповіді про самопізнання, розкривай закономірності мислення, повторювані почуття й приховані сильні сторони</string>
+    <string name="profile_style_coach">\n- Пиши в стилі мотивуючого супутника цілей, показуй поступ у особистих цілях і підбадьорюй продовжувати</string>
+    <string name="profile_style_custom">\n- Напиши підсумки з такою особистою темою користувача: \"%1$s\"</string>
+
+
+    <!-- ════════════════════════════════════════════════════════════════════
+         CONSENT SCREEN + PRIVACY GATES + PRIVACY SECTION (April 2026)
+         ════════════════════════════════════════════════════════════════════ -->
+    <string name="consent_title">Конфіденційність і згода</string>
+    <string name="consent_intro">Ваш щоденник — це особистий простір, і ми це поважаємо. Тут Ви прозоро бачите, як Best Journal поводиться з Вашими даними.</string>
+    <string name="consent_card1_title">Локальне зберігання</string>
+    <string name="consent_card1_body">Ваші записи залишаються на Вашому пристрої.</string>
+    <string name="consent_card2_title">Функції ШІ (США)</string>
+    <string name="consent_card2_body">За бажанням тексти надсилаються до Google Gemini, а тексти для озвучення — до Microsoft Edge у США (EU-US Data Privacy Framework). Голосові записи надсилаються до Groq (США) на підставі стандартних договірних положень (EU SCCs).</string>
+    <string name="consent_card3_title">Псевдонімна статистика</string>
+    <string name="consent_card3_body">Firebase Analytics, за бажанням, можна змінити будь-коли в налаштуваннях.</string>
+    <string name="consent_links_header">Наші правові документи:</string>
+    <string name="consent_accept_all">Погоджуюсь і починаю</string>
+    <string name="consent_disable_stats">Вимкнути статистику та продовжити</string>
+    <string name="consent_confirmation">Натискаючи «Погоджуюсь і починаю», Ви підтверджуєте, що ознайомилися з політикою конфіденційності, умовами використання та правовою інформацією, і погоджуєтесь з описаною обробкою даних. Ви можете змінити своє рішення будь-коли в налаштуваннях.</string>
+
+    <string name="privacy_gate_groq_title">Надіслати голосовий запис до Groq?</string>
+    <string name="privacy_gate_groq_body">Ця функція надсилає твій звукозапис у зашифрованому вигляді до Groq (США) і перетворює його там на текст — швидше й точніше, ніж локальне розпізнавання.\n\n✓ Запис видаляється одразу після перетворення\n✓ Жодного навчання ШІ на твоїх записах\n✓ Правова підстава: Стандартні договірні положення (EU SCCs)\n\nАльтернатива: Локальне офлайн-розпізнавання в налаштуваннях.</string>
+    <string name="privacy_gate_groq_accept">Погоджуюсь і надсилаю</string>
+    <string name="privacy_gate_groq_local">Транскрибувати локально</string>
+
+    <string name="privacy_gate_gemini_title">Надіслати текст до Google Gemini?</string>
+    <string name="privacy_gate_gemini_body">Раді, що ви хочете скористатися інтелектуальними функціями Best Journal! Для підсумків, ретроспектив, інсайтів панелі та покращення тексту ваші тексти надсилаються в зашифрованому вигляді до Google Gemini.
+
+✓ Ваші дані не використовуються для навчання ШІ
+✓ Запити не зберігаються постійно
+✓ Зашифровано відповідно до EU-US Data Privacy Framework
+
+Важливо: оскільки ваші записи щоденника можуть містити особливо чутливі дані (здоров\'я, релігія, особисті стосунки — ст. 9 GDPR), ми просимо вашої явної згоди на обробку за допомогою ШІ. Результати ШІ є пропозиціями, а не фаховою порадою та не замінюють спеціаліста.
+
+Ви можете змінити це будь-коли в налаштуваннях.</string>
+    <string name="privacy_gate_gemini_accept">Погоджуюсь і надсилаю</string>
+    <string name="privacy_gate_gemini_cancel">Скасувати</string>
+
+    <string name="privacy_gate_tts_title">Увімкнути преміум-голоси</string>
+    <string name="privacy_gate_tts_body">З преміум-голосами озвучування звучить природніше. Твій текст надсилається в зашифрованому вигляді (HTTPS/TLS) до мовленнєвого сервісу Microsoft у США і повертається як аудіо.\n\n✓ Передача виключно для синтезу мовлення\n✓ Передача до третьої країни США (Microsoft сертифіковано за EU-US Data Privacy Framework)</string>
+    <string name="privacy_gate_tts_accept">Погоджуюсь і озвучити</string>
+    <string name="privacy_gate_tts_cancel">Скасувати</string>
+
+    <string name="settings_privacy_header">Конфіденційність</string>
+    <string name="settings_analytics_title">Псевдонімний аналіз використання</string>
+    <string name="settings_analytics_subtitle">Firebase Analytics для аналізу помилок і покращення продукту</string>
+
+    <string name="settings_delete_account_title">Видалити все</string>
+    <string name="settings_delete_account_subtitle">Незворотно видаляє всі локальні дані та резервну копію в Диску. Твій акаунт Google залишається.</string>
+    <string name="settings_delete_account_confirm_title">Видалити всі дані застосунку?</string>
+    <string name="settings_delete_account_confirm_body">Ця дія є незворотною і видаляє:\n\n• Усі локальні записи щоденника, фото, відео та аудіозаписи\n• Резервну копію застосунку в Google Диску (лише дані застосунку, не твій акаунт Google)\n• Твій вхід у застосунок\n\nТвій акаунт Google залишається. Після цього застосунок запускається наново, як свіже встановлення.</string>
+    <string name="settings_delete_account_cancel">Скасувати</string>
+    <string name="settings_delete_account_confirm">Так, видалити все</string>
+
+    <string name="settings_report_ai_title">Поскаржитись на відповідь ШІ</string>
+    <string name="settings_report_ai_subtitle">Недоречна або помилкова відповідь ШІ</string>
+    <string name="settings_report_ai_confirm_title">Відкрити електронний лист до підтримки?</string>
+    <string name="settings_report_ai_confirm_body">Відкриється твоя поштова програма з підготовленим повідомленням на dev.app.support@gmail.com. Ти можеш ще доповнити опис, перш ніж надіслати. Зазвичай ми відповідаємо протягом 24 годин у робочі дні.\n\nПовідомляй цим про: недоречні, образливі, хибні чи оманливі результати ШІ з панелі, підсумків, оглядів або покращення тексту.</string>
+    <string name="settings_report_ai_confirm">Створити скаргу</string>
+    <string name="settings_report_ai_cancel">Скасувати</string>
+    <string name="settings_report_ai_no_email">Поштовий застосунок не знайдено. Надішліть скаргу на dev.app.support@gmail.com.</string>
+    <string name="settings_report_ai_subject">Best Journal: недоречна відповідь ШІ</string>
+    <string name="settings_report_ai_body">Доброго дня,\n\nхочу повідомити про недоречну або помилкову відповідь ШІ в Best Journal.\n\nОпис проблеми:\n[Заповнити]\n\nКонтекст (яка функція, який ввід):\n[Заповнити]\n\nДякую.</string>
+    <string name="settings_report_ai_dialog_title">Повідомити про відповідь ШІ</string>
+    <string name="settings_report_ai_dialog_desc">Опишіть неприйнятну або неправильну відповідь ШІ. Ваше повідомлення буде надіслано безпосередньо нашій службі підтримки. Ви повинні бути в обліковому записі Google.</string>
+
+    <string name="settings_revoke_title">Відкликання</string>
+    <string name="settings_revoke_subtitle">§ 356a BGB — відмова прямо через застосунок</string>
+    <string name="settings_revoke_confirm_title">Відмовитися від договору?</string>
+    <string name="settings_revoke_confirm_body">Натиснувши „Підтвердити відмову", ми надсилаємо твою відмову прямо на dev.app.support@gmail.com. Ти одразу отримуєш підтвердження надходження електронною поштою.\n\nПовну інструкцію щодо права на відмову ти знайдеш в Умовах використання (§ 16). Підписки додатково скасовуй через Google Play → Підписки, щоб не відбувалося подальших списань.</string>
+    <string name="settings_revoke_cancel">Скасувати</string>
+    <string name="settings_revoke_confirm">Створити відкликання</string>
+    <string name="settings_revoke_no_email">Поштовий застосунок не знайдено. Надішліть відкликання на dev.app.support@gmail.com.</string>
+    <string name="settings_revoke_email_subject">Відкликання контракту Premium Best Journal</string>
+    <string name="settings_revoke_email_body">Цим повідомляю про відкликання мого договору щодо функцій Premium у Best Journal.\n\nВідправник (обліковий запис Google): %1$s\nЧас відкликання: %2$s\n\nЦе відкликання було ініційовано у два етапи через кнопку відкликання в застосунку, що відповідає § 356a BGB, і автоматично надіслано через Gmail API.</string>
+    <string name="settings_revoke_confirm_subject">Ваше підтвердження отримання: відкликання в Best Journal</string>
+    <string name="settings_revoke_confirm_user_body">Вітаємо,\n\nми отримали ваше відкликання від %1$s. Це ваше підтвердження отримання відповідно до § 356a BGB.\n\nМи опрацюємо ваше відкликання якнайшвидше і зв’яжемося з вами через dev.app.support@gmail.com, якщо виникнуть запитання.\n\nЩоб припинити подальші списання, будь ласка, також скасуйте підписку в Google Play Store у розділі «Підписки».\n\nДякуємо та з повагою\nBest Journal (Frank Barwandt)</string>
+    <string name="settings_revoke_no_account">Не знайдено жодної адреси увійшовшого облікового запису Google. Будь ласка, увійдіть у свій Google-акаунт у Налаштуваннях або надішліть відкликання вручну на dev.app.support@gmail.com.</string>
+    <string name="settings_revoke_sending">Надсилання відкликання…</string>
+    <string name="settings_revoke_success_title">Відкликання отримано</string>
+    <string name="settings_revoke_success_body">Ваше відкликання надіслано на dev.app.support@gmail.com. Підтвердження отримання також є у вашій поштовій скриньці.</string>
+    <string name="settings_revoke_success_close">Закрити</string>
+    <string name="settings_revoke_error_title">Не вдалося надіслати відкликання</string>
+    <string name="settings_revoke_error_body">Автоматичне надсилання не вдалося: %1$s\n\nВи також можете надіслати ручний електронний лист на dev.app.support@gmail.com. Для цього натисніть «Відкрити поштову програму».</string>
+    <string name="settings_revoke_error_email_fallback">Відкрити поштову програму</string>
+
+
+
+    <!-- Crisis Support / Mental Health Disclaimer -->
+    <string name="settings_crisis_title">Кризова допомога</string>
+    <string name="settings_crisis_subtitle">Важливі гарячі лінії на випадок невідкладної ситуації</string>
+    <string name="settings_crisis_dialog_title">Ви не самі</string>
+    <string name="settings_crisis_dialog_body">Best Journal — це застосунок-щоденник і він не замінює професійну психологічну чи медичну допомогу. Аналізи, згенеровані ШІ, не є терапією.\n\nЯкщо ви перебуваєте в гострій кризі або маєте думки про самоушкодження чи самогубство: ви не повинні залишатися з цим наодинці. Безкоштовна, анонімна допомога доступна цілодобово.</string>
+    <string name="settings_crisis_hotline_de_name">Telefonseelsorge Німеччина</string>
+    <string name="settings_crisis_hotline_de_hours">Безкоштовно, 24/7, анонімно</string>
+    <string name="settings_crisis_call_de">Зателефонувати за номером 0800 111 0 111</string>
+    <string name="settings_crisis_call_de_alt">Зателефонувати за номером 0800 111 0 222</string>
+    <string name="settings_crisis_emergency_name">Екстрена допомога</string>
+    <string name="settings_crisis_call_emergency">Зателефонувати 112</string>
+    <string name="settings_crisis_international_name">Міжнародні гарячі лінії</string>
+    <string name="settings_crisis_open_findahelpline">Відкрити findahelpline.com</string>
+    <string name="settings_crisis_close">Закрити</string>
+    <string name="settings_crisis_no_dialer">Не знайдено застосунку для дзвінків.</string>
+    <string name="settings_crisis_no_browser">Не знайдено браузера.</string>
+
+    <!-- AI-generated content badge -->
+    <string name="ai_generated_badge">Створено ШІ</string>
+    <string name="ai_generated_tooltip">Цей вміст створено системою ШІ (Google Gemini), і він може містити помилки. Будь ласка, перевірте його самостійно.</string>
+
+    <!-- AUTO-ADDED FALLBACK (English) for missing keys — replace with proper translations later -->
+    <string name="consent_optout_confirmation">Відмову збережено — статистику вимкнено.</string>
+    <string name="settings_ccpa_do_not_sell_title">Do Not Sell My Personal Information</string>
+    <string name="settings_ccpa_do_not_sell_subtitle">Для мешканців Каліфорнії (CCPA/CPRA 2026). Коли активовано, усі хмарні функції ШІ вимкнено й жодну статистику не збирається.</string>
+    <string name="settings_ccpa_do_not_sell_confirmation">Do-Not-Sell увімкнено — усі хмарні сервіси вимкнено.</string>
+    <string name="settings_ccpa_do_not_sell_off_confirmation">Do-Not-Sell вимкнено.</string>
+    <string name="settings_delete_account_in_progress">Видалення облікового запису й даних…</string>
+    <string name="settings_delete_account_drive_error_title">Не вдалося видалити резервну копію Drive</string>
+    <string name="settings_delete_account_drive_error_body">Резервну копію в Google Drive не вдалося надійно видалити (причина: %1$s).
+
+Без повного видалення повідомлення «остаточно видалено» було б некоректним.
+
+Що ти хочеш зробити?</string>
+    <string name="settings_delete_account_retry">Спробувати ще раз</string>
+    <string name="settings_delete_account_force_local">Видалити лише локально (резервна копія Drive залишається)</string>
+    <string name="settings_delete_account_abort">Скасувати операцію</string>
+
+    <string name="legal_title_datenschutz">Політика конфіденційності</string>
+    <string name="legal_title_nutzungsbedingungen">Умови використання</string>
+    <string name="legal_title_impressum">Правова інформація</string>
+
+    <!-- Consent-Screen v4 + Privacy Sheet + Settings -->
+    <string name="consent_welcome_title">Ласкаво просимо до Best Journal</string>
+    <string name="consent_welcome_intro">Перш ніж почати, швидко налаштуймо тут ваші параметри конфіденційності.</string>
+    <string name="consent_promise_local">Закони про конфіденційність вимагають вашої згоди.</string>
+    <string name="consent_promise_no_training">Ви тут вирішуєте, які функції активні.</string>
+    <string name="consent_promise_optional_ai">Можна змінити будь-коли в Налаштуваннях.</string>
+    <string name="consent_btn_manual_selection">Вибір вручну</string>
+    <string name="privacy_sheet_title">Налаштувати конфіденційність</string>
+    <string name="privacy_sheet_subtitle">Увімкніть окремі функції так, як вам зручно. Усе можна змінити будь-коли.</string>
+    <string name="privacy_sheet_save">Зберегти вибір</string>
+    <string name="privacy_sheet_all_on">Увімкнути все</string>
+    <string name="privacy_sheet_all_off">Вимкнути все</string>
+    <string name="consent_toggle_analytics_title">Псевдонімний аналіз використання</string>
+    <string name="consent_toggle_analytics_body">Firebase Analytics — допомагає нам покращувати застосунок. Жодного вмісту щоденника, лише псевдонімна статистика використання (напр. кількість натискань). Передача даних: Google США (Data Privacy Framework).</string>
+    <string name="consent_toggle_groq_title">Мовлення в текст (Groq Whisper)</string>
+    <string name="consent_toggle_groq_body">Дозволяє диктувати записи. Ваш голосовий запис надсилається зашифрованим до Groq (США), перетворюється на текст, а потім видаляється. Ваші записи НЕ використовуються для навчання.</string>
+    <string name="consent_toggle_gemini_title">Роздуми від ШІ (Google Gemini)</string>
+    <string name="consent_toggle_gemini_body">ШІ панелі, підсумки, огляди та покращення тексту. Надсилає фрагменти тексту до Google Gemini (США). Ваші записи НЕ використовуються для навчання.</string>
+    <string name="consent_toggle_tts_title">Читання вголос (Microsoft Edge TTS)</string>
+    <string name="consent_toggle_tts_body">Читає записи природним голосом. Надсилає текст до Microsoft (США).</string>
+    <string name="consent_toggle_drive_title">Резервна копія Google Drive</string>
+    <string name="consent_toggle_drive_body">Зберігає записи зашифрованими у вашому власному Google Drive. Ви зберігаєте повний контроль — файл знаходиться у вашому обліковому записі, не в нас.</string>
+    <string name="consent_toggle_do_not_sell_title">Do Not Sell My Personal Information</string>
+    <string name="consent_toggle_do_not_sell_body">Цей перемикач призначений лише для мешканців штату Каліфорнія (США). Каліфорнійський закон про захист даних (CCPA/CPRA) надає мешканцям право на заперечення. Під час активації всі необов\'язкові хмарні функції (ШІ, резервна копія, розпізнавання мовлення, аналіз) вимикаються — активними лишаються тільки локальні функції.\n\nЯкщо ти живеш за межами Каліфорнії, можеш ігнорувати цей перемикач: Best Journal ніде у світі не продає і не комерціалізує твої дані.</string>
+    <string name="consent_btn_accept_all">Прийняти все</string>
+    <string name="consent_btn_save_selection">Зберегти мій вибір</string>
+    <string name="consent_btn_minimum_only">Відхилити все</string>
+    <string name="consent_saved_snackbar">Налаштування збережено</string>
+    <string name="consent_revoke_snackbar">Згоду відкликано</string>
+    <string name="consent_footer_version">Ваш вибір можна змінити будь-коли в Налаштуваннях.</string>
+    <string name="consent_details_expand">Докладніше</string>
+    <string name="settings_open_privacy_sheet">Налаштувати параметри конфіденційності</string>
+    <string name="settings_privacy_section_header">Конфіденційність і згоди</string>
+    <string name="settings_ai_groq_title">Мовлення в текст (Groq)</string>
+    <string name="settings_ai_groq_subtitle">Надсилати голосові записи до Groq США для транскрипції</string>
+    <string name="settings_ai_gemini_title">Роздуми від ШІ (Gemini)</string>
+    <string name="settings_ai_gemini_subtitle">Надсилати тексти до Google США для підсумків ШІ</string>
+    <string name="settings_ai_tts_title">Читання вголос (Edge TTS)</string>
+    <string name="settings_ai_tts_subtitle">Надсилати тексти до Microsoft США для голосового відтворення</string>
+    <string name="settings_drive_backup_title">Резервна копія Google Drive</string>
+    <string name="settings_drive_backup_subtitle">Зберігати записи зашифрованими у вашому Drive</string>
+
+    <!-- DEBUG-only test data seeder (button in journal top bar, only visible in debug builds) -->
+    <string name="dev_seed_create_label">Створити 70 тестових записів</string>
+    <string name="dev_seed_delete_label">Видалити 70 тестових записів</string>
+    <string name="dev_seed_running">Створення 70 тестових записів вашою мовою…</string>
+    <string name="dev_seed_done">Створено %1$d тестових записів</string>
+    <string name="dev_seed_deleted">Видалено %1$d тестових записів</string>
+    <string name="dev_seed_error">Помилка: %1$s</string>
+    <string name="dev_seed_ai_no_entries">ШІ не повернув тестових записів</string>
+
+    <!-- Premium feature: unlimited follow-ups per journal entry -->
+    <string name="paywall_feature_followups">Стільки доповнень до записів щоденника, скільки забажаєте</string>
+    <string name="settings_premium_feature_followups">Необмежені доповнення</string>
+    <string name="settings_premium_feature_followups_desc">Стільки доповнень на запис, скільки забажаєш</string>
+
+    <!-- ════════════════════════════════════════════════════════════════════
+         MISSING KEYS — added 2026-04-28
+         ════════════════════════════════════════════════════════════════════ -->
+    <string name="action_no">Ні</string>
+    <string name="action_yes">Так</string>
+    <string name="ai_improved_suffix">\n\n✨ Покращено ШІ</string>
+    <string name="ai_improved_suffix_marker">✨ Покращено ШІ</string>
+    <string name="entry_delete_entry_cd">Видалити запис щоденника</string>
+    <string name="entry_journal_entry_title">Запис щоденника</string>
+    <string name="entry_photos_videos_add_title">Додати фото/відео</string>
+    <string name="follow_up_cancel">Скасувати</string>
+    <string name="follow_up_card_title">Доповнення</string>
+    <string name="follow_up_choose_input_mode">Як ти хочеш додати доповнення?</string>
+    <string name="follow_up_delete_button">Видалити</string>
+    <string name="follow_up_delete_cd">Видалити доповнення</string>
+    <string name="follow_up_delete_confirm_text">Справді видалити доповнення <xliff:g id="ordinal" example="1">%1$s</xliff:g> назавжди?</string>
+    <string name="follow_up_delete_confirm_title">Видалити доповнення <xliff:g id="ordinal" example="1">%1$s</xliff:g>?</string>
+    <string name="follow_up_dialog_label">Твоє доповнення:</string>
+    <string name="follow_up_dialog_title">Доповнення</string>
+    <string name="follow_up_discard">Відхилити</string>
+    <string name="follow_up_improve_text">✨ Покращити текст</string>
+    <string name="follow_up_improve_with_ai">Покращити пізніше за допомогою ШІ</string>
+    <string name="follow_up_improving">ШІ покращує доповнення…</string>
+    <string name="follow_up_inline_title">Доповнення <xliff:g id="ordinal" example="1">%1$s</xliff:g></string>
+    <string name="follow_up_input_speak_cd">Надиктувати</string>
+    <string name="follow_up_input_speak_label">Надиктувати</string>
+    <string name="follow_up_input_write_cd">Написати</string>
+    <string name="follow_up_input_write_label">Написати</string>
+    <string name="follow_up_premium_body">З Premium ти можеш додавати скільки завгодно доповнень до кожного запису щоденника.</string>
+    <string name="follow_up_premium_hint">починаючи з другого доповнення</string>
+    <string name="follow_up_premium_later">Вирішити пізніше</string>
+    <string name="follow_up_premium_subscribe">Оформити підписку</string>
+    <string name="follow_up_premium_subtext">Кожне доповнення автоматично потрапляє до Панелі, щоб твій аналіз завжди був повним.</string>
+    <string name="follow_up_premium_title">Необмежені доповнення</string>
+    <string name="follow_up_save">Зберегти</string>
+    <string name="follow_up_save_improved">Зберегти покращену версію</string>
+    <string name="follow_up_show_improved">✨ Показати покращену версію</string>
+    <string name="follow_up_show_original">↩ Показати оригінал</string>
+    <string name="follow_up_speak_pill_label">Надиктувати</string>
+    <string name="follow_up_speak_prompt">Надиктуй своє доповнення.</string>
+    <string name="follow_up_stop_hint">Натисни Стоп, коли закінчиш.</string>
+    <string name="follow_up_tab_improved">✨ ШІ Покращено</string>
+    <string name="follow_up_tab_original">Оригінал</string>
+    <string name="follow_up_text_placeholder">Напиши тут своє доповнення…</string>
+    <string name="follow_up_transcribing">Транскрибування доповнення…</string>
+    <string name="journal_improve">Покращити текст</string>
+    <string name="journal_state_improving">Покращення…</string>
+    <string name="journal_state_transcribing">Транскрибування…</string>
+    <string name="profile_custom_add">Додати індивідуальний аналіз</string>
+    <string name="profile_custom_remove">Видалити індивідуальний аналіз</string>
+    <string name="profile_custom_rename">Перейменувати</string>
+    <string name="profile_custom_rename_save">Зберегти назву</string>
+    <string name="prompt_clear_confirm_text">Індивідуальний аналіз буде видалено назавжди. Ти справді хочеш продовжити?</string>
+    <string name="prompt_clear_confirm_title">Видалити текст?</string>
+    <string name="prompt_clear_content_desc">Видалити текст</string>
+    <string name="prompt_recording_with_model">Запис — Модель: %1$s</string>
+    <string name="prompt_transcribing_with_model">%1$s транскрибує…</string>
+    <string name="prompt_transcription_model_hint">Транскрибовано за допомогою %1$s</string>
+    <string name="ai_retro_copied_message">Скопійовано в буфер обміну</string>
+    <string name="ai_retro_copy_button">Копіювати</string>
+    <string name="ai_retro_empty_state">Недостатньо записів для огляду.</string>
+    <string name="ai_retro_error_state">Не вдалося створити огляд. Спробуй ще раз.</string>
+    <string name="ai_retro_generate_button">Створити огляд</string>
+    <string name="ai_retro_generating_state">Створення огляду…</string>
+    <string name="ai_retro_month_label">Цей місяць</string>
+    <string name="ai_retro_share_button">Поділитися</string>
+    <string name="ai_retro_title">Огляд ШІ</string>
+    <string name="ai_retro_week_label">Цей тиждень</string>
+    <string name="ai_retro_year_label">Цей рік</string>
+    <string name="follow_up_add_button">Додати продовження</string>
+    <string name="follow_up_delete_confirm_no">Ні, залишити</string>
+    <string name="follow_up_delete_confirm_yes">Так, видалити</string>
+    <string name="follow_up_empty_state">Поки що немає продовжень.\nНатисни кнопку нижче, щоб додати перше.</string>
+    <string name="follow_up_improve_button">Покращити</string>
+    <string name="follow_up_improve_error">Не вдалося покращити. Спробуй ще раз.</string>
+    <string name="follow_up_improving_state">Покращення…</string>
+    <string name="follow_up_record_error">Не вдалося записати. Спробуй ще раз.</string>
+    <string name="follow_up_record_new">Записати нове продовження</string>
+    <string name="follow_up_recording_hint">Натисни, щоб записати</string>
+    <string name="follow_up_recording_state">Запис…</string>
+    <string name="follow_up_tab_label">Продовження</string>
+    <string name="follow_up_transcribe_error">Не вдалося транскрибувати. Спробуй ще раз.</string>
+    <string name="follow_up_transcribing_state">Транскрибування…</string>
+    <string name="prompt_char_count_label">%1$d символів</string>
+    <string name="prompt_improve_button_label">Покращити</string>
+    <string name="prompt_placeholder_text">Напиши, що в тебе на думці…</string>
+    <string name="prompt_record_button_label">Записати</string>
+    <string name="prompt_send_button_label">Надіслати</string>
+    <string name="prompt_stop_button_label">Стоп</string>
+    <string name="settings_legal_section_header">Юридичні документи</string>
+    <string name="settings_legal_online_label">Онлайн-версія:</string>
+        <plurals name="datetime_months_relative">
+        <item quantity="one">%1$d місяць тому</item>
+        <item quantity="few">%1$d місяці тому</item>
+        <item quantity="many">%1$d місяців тому</item>
+        <item quantity="other">%1$d місяця тому</item>
+    </plurals>
+        <plurals name="datetime_years_relative">
+        <item quantity="one">%1$d рік тому</item>
+        <item quantity="few">%1$d роки тому</item>
+        <item quantity="many">%1$d років тому</item>
+        <item quantity="other">%1$d року тому</item>
+    </plurals>
+    <string name="ai_limits_disclaimer">Денний ліміт ШІ для інтенсивного використання.</string>
+    <string name="ai_limits_dialog_title">Як працює денний ліміт ШІ?</string>
+    <string name="ai_limits_dialog_body" formatted="false">З ПІДПИСКОЮ PREMIUM\n\nКожного дня тобі доступно:\n• 150 запитів на день на профіль — для 4 готових разом 600/день, плюс 150/день для кожного власного профілю, який ти створюєш.\n• До 150 покращень тексту\n\nЯк це працює детально:\n• Запити 1–30: у найвищій якості ШІ\n• Запити 31–100: у швидкій стандартній якості\n• На 101-му запиті: одноразова пауза 30 хв\n• Запити 101–150: швидка стандартна якість\n• З 151-го запиту: нових запитів до завтра немає\n\nТакож для всіх користувачів:\n• Не більше 50 запитів ШІ на годину — потім пауза 5 хв\n\nКоли скидаються ліміти?\nКожного дня опівночі (за місцевим часом) починається новий повний ліміт.\n\n──────────\n\nБЕЗ ПІДПИСКИ\n\n• 5 аналізів дашборда на тиждень на профіль\n• 5 покращень тексту на тиждень\n• Завжди у швидкій стандартній якості\n• Скидання щопонеділка опівночі (за місцевим часом)\n\n──────────\n\nБільшість користувачів у повсякденному житті не досягнуть цих меж.</string>
+    <string name="ai_limits_dialog_close">Зрозуміло</string>
+    <string name="theme_neutral">Нейтральний</string>
+    <string name="theme_profile">Колір профілю — колір профілю дашборда</string>
+    <string name="theme_solarized">Сонцестояння</string>
+    <string name="theme_dracula">Північ</string>
+    <string name="theme_one_dark">Ательє</string>
+    <string name="theme_nord">Полярна ніч</string>
+    <string name="theme_gruvbox">Бурштин</string>
+
+    <!-- Permission rationale -->
+    <string name="permission_rationale_microphone">Щоб ти міг диктувати записи голосом, нам потрібен доступ до мікрофона.</string>
+    <string name="permission_rationale_camera">Щоб ти міг додавати фото до своїх записів, нам потрібен доступ до камери.</string>
+    <string name="permission_rationale_notifications">Щоб ми могли нагадувати тобі про щоденний запис, нам потрібен дозвіл на сповіщення.</string>
+
+    <!-- System backup consent -->
+    <string name="consent_info_system_backup_title">Системне резервне копіювання Android</string>
+    <string name="consent_info_system_backup_body">Якщо ти увімкнув системне резервне копіювання Android у налаштуваннях пристрою, Android автоматично зберігає дані твого щоденника в область резервного копіювання твого облікового запису Google. Ти можеш вимкнути це в налаштуваннях пристрою будь-коли — деталі в Політиці конфіденційності.</string>
+    <string name="settings_open_system_backup_settings_label">Керування системним резервним копіюванням Android</string>
+    <string name="settings_open_system_backup_settings_desc">Відкриває системні налаштування Android, де ти можеш увімкнути або вимкнути автоматичне резервне копіювання для Best Journal.</string>
+    <string name="error_no_backup_settings_available">Налаштування резервного копіювання недоступні на цьому пристрої.</string>
+
+    <!-- Consent footer links -->
+    <string name="consent_footer_link_datenschutz">Конфіденційність</string>
+    <string name="consent_footer_link_impressum">Вихідні дані</string>
+    <string name="consent_footer_link_agb">Умови використання</string>
+
+    <!-- AI health disclaimer -->
+    <string name="ai_output_health_disclaimer">Не терапія — не замінює професійної консультації.</string>
+    <string name="ai_output_health_disclaimer_long">Best Journal — це щоденник, а не терапевтичний сервіс. Аналізи ШІ є пропозиціями для саморефлексії і не замінюють професійної психологічної або медичної консультації. При гострих проблемах звернись до фахівця або скористайся кризовою допомогою в налаштуваннях.</string>
+    <string name="churn_cancelled">Скасовано</string>
+    <string name="churn_cancelled_ends_on">Скасовано — завершується <xliff:g id="date" example="30.04.2026, 18:13">%1$s</xliff:g></string>
+    <string name="churn_promo_phase_ends">Завершується <xliff:g id="date" example="30.04.2026, 18:13">%1$s</xliff:g> — потім <xliff:g id="base_price" example="3,99 €">%2$s</xliff:g> на місяць</string>
+    <string name="churn_reason_other_placeholder">Розкажи нам коротко, що відбувається…</string>
+    <string name="churn_renews_on">Поновлюється <xliff:g id="date" example="30.04.2026, 18:13">%1$s</xliff:g></string>
+    <string name="settings_premium_cancelled">Підписку Premium скасовано</string>
+    <string name="settings_premium_cancelled_desc">Ваші функції Premium залишаться доступними до кінця розрахункового періоду. Ви можете скасувати відмову через Google Play.</string>
+    <string name="settings_premium_cancelled_until">Підписку Premium скасовано — дійсна до <xliff:g id="date" example="30.04.2026, 21:01">%1$s</xliff:g></string>
+    <string name="settings_theme">Тема</string>
+    <string name="settings_themes_manager">Менеджер тем</string>
+    <string name="paywall_monthly_note">Потім %1$s на місяць, продовжується автоматично\nМожна скасувати будь-коли</string>
+</resources>

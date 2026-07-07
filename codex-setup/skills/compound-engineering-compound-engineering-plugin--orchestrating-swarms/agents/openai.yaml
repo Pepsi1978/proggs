@@ -1,0 +1,7 @@
+interface:
+  display_name: "orchestrating-swarms"
+  short_description: "orchestrating multi-agent swarms using Codex's TeammateTool and"
+  default_prompt: "Use $compound-engineering-compound-engineering-plugin--orchestrating-swarms for this task."
+
+policy:
+  allow_implicit_invocation: false

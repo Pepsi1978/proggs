@@ -1,0 +1,7 @@
+interface:
+  display_name: "atheris"
+  short_description: "atheris skill"
+  default_prompt: "Use $testing-handbook-skills-trailofbits--atheris for this task."
+
+policy:
+  allow_implicit_invocation: false

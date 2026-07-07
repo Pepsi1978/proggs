@@ -1,0 +1,7 @@
+interface:
+  display_name: "customs-trade-compliance"
+  short_description: "customs-trade-compliance skill"
+  default_prompt: "Use $everything-codex-everything-codex--customs-trade-compliance for this task."
+
+policy:
+  allow_implicit_invocation: false

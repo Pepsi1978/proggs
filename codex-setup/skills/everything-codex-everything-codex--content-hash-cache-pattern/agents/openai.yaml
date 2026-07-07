@@ -1,0 +1,7 @@
+interface:
+  display_name: "content-hash-cache-pattern"
+  short_description: "Cache expensive file processing results using SHA-256 content"
+  default_prompt: "Use $everything-codex-everything-codex--content-hash-cache-pattern for this task."
+
+policy:
+  allow_implicit_invocation: false

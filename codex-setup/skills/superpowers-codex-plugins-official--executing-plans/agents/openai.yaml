@@ -1,0 +1,7 @@
+interface:
+  display_name: "executing-plans"
+  short_description: "you have a written implementation plan to execute in a separate"
+  default_prompt: "Use $superpowers-codex-plugins-official--executing-plans for this task."
+
+policy:
+  allow_implicit_invocation: false

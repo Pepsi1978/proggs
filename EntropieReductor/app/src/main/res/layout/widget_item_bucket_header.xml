@@ -1,0 +1,79 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Sektions-Header in der ListView (Heute / Morgen / Freiblock / Spaeter / Loop /
+  Erledigt). 1:1 zur App-AccordionHeaderRow (Frank-Wunsch 2026-05-31): volle Breite,
+  Icon-Kaestchen + grosses Label + farbige Count-Pille + Chevron. Der ganze Header ist
+  antippbar (Akkordeon): Klick klappt diese Sektion auf und alle anderen zu.
+  Hintergrund-Toenung der offenen Sektion + alle Akzentfarben werden im Code gesetzt.
+-->
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:id="@+id/bucket_header_root"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:orientation="horizontal"
+    android:gravity="center_vertical"
+    android:layout_marginTop="6dp"
+    android:paddingHorizontal="8dp"
+    android:paddingVertical="8dp">
+
+    <!-- Icon-Kaestchen -->
+    <FrameLayout
+        android:id="@+id/bucket_icon_box"
+        android:layout_width="28dp"
+        android:layout_height="28dp"
+        android:background="@drawable/widget_icon_box_bg">
+
+        <ImageView
+            android:id="@+id/bucket_icon"
+            android:layout_width="16dp"
+            android:layout_height="16dp"
+            android:layout_gravity="center"
+            android:src="@drawable/ic_widget_bucket_today"
+            android:contentDescription="Bereich" />
+    </FrameLayout>
+
+    <ImageView
+        android:layout_width="10dp"
+        android:layout_height="1dp" />
+
+    <!-- Grosses Label (Grossbuchstaben) -->
+    <TextView
+        android:id="@+id/bucket_label"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:textSize="15sp"
+        android:textStyle="bold"
+        android:textColor="#EAE6FF"
+        android:text="HEUTE" />
+
+    <!-- Schiebt Count-Pille + Chevron nach rechts -->
+    <ImageView
+        android:layout_width="0dp"
+        android:layout_height="1dp"
+        android:layout_weight="1" />
+
+    <!-- Farbige Count-Pille -->
+    <TextView
+        android:id="@+id/bucket_count"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:paddingHorizontal="10dp"
+        android:paddingVertical="3dp"
+        android:background="@drawable/widget_pill_bg"
+        android:textSize="12sp"
+        android:textStyle="bold"
+        android:textColor="#F472B6"
+        android:text="0" />
+
+    <ImageView
+        android:layout_width="8dp"
+        android:layout_height="1dp" />
+
+    <!-- Auf/Zu-Pfeil -->
+    <ImageView
+        android:id="@+id/bucket_chevron"
+        android:layout_width="22dp"
+        android:layout_height="22dp"
+        android:src="@drawable/ic_widget_chevron_down"
+        android:contentDescription="Aufklappen/Zuklappen" />
+</LinearLayout>

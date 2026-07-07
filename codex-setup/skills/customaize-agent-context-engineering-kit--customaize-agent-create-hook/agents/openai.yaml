@@ -1,0 +1,7 @@
+interface:
+  display_name: "customaize-agent:create-hook"
+  short_description: "Create and configure git hooks with intelligent project"
+  default_prompt: "Use $customaize-agent-context-engineering-kit--customaize-agent-create-hook for this task."
+
+policy:
+  allow_implicit_invocation: false

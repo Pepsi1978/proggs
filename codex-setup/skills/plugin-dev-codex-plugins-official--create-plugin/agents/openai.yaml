@@ -1,0 +1,7 @@
+interface:
+  display_name: "create-plugin"
+  short_description: "Guided end-to-end plugin creation workflow with component"
+  default_prompt: "Use $plugin-dev-codex-plugins-official--create-plugin for this task."
+
+policy:
+  allow_implicit_invocation: true

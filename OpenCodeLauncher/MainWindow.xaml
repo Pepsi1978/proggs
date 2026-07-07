@@ -1,0 +1,654 @@
+<Window x:Class="OpenCodeLauncher.MainWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:shell="clr-namespace:System.Windows.Shell;assembly=PresentationFramework"
+        xmlns:local="clr-namespace:OpenCodeLauncher"
+        xmlns:vm="clr-namespace:OpenCodeLauncher.ViewModels"
+        xmlns:m="clr-namespace:OpenCodeLauncher.Models"
+        Title="OpenCode Launcher"
+        Height="860" Width="1360"
+        MinHeight="600" MinWidth="960"
+        WindowStartupLocation="CenterScreen"
+        Background="{DynamicResource WindowBg}"
+        WindowStyle="None"
+        ResizeMode="CanResize"
+        AllowsTransparency="False"
+        UseLayoutRounding="True"
+        SnapsToDevicePixels="True"
+        TextElement.Foreground="{DynamicResource TextBrush}"
+        TextOptions.TextFormattingMode="Display"
+        TextOptions.TextRenderingMode="ClearType"
+        FontFamily="Segoe UI Variable Text, Segoe UI, sans-serif"
+        FontSize="14">
+    <shell:WindowChrome.WindowChrome>
+        <shell:WindowChrome CaptionHeight="0"
+                            ResizeBorderThickness="6"
+                            GlassFrameThickness="0"
+                            CornerRadius="8"
+                            UseAeroCaptionButtons="False"/>
+    </shell:WindowChrome.WindowChrome>
+
+    <Window.Resources>
+        <BooleanToVisibilityConverter x:Key="BoolToVisibility"/>
+        <local:ReferenceEqualsConverter x:Key="ReferenceEqualsConverter"/>
+
+        <Style x:Key="Card" TargetType="Border">
+            <Setter Property="Background" Value="{DynamicResource PanelBg}"/>
+            <Setter Property="CornerRadius" Value="16"/>
+            <Setter Property="BorderBrush" Value="{DynamicResource GlassBorderBrush}"/>
+            <Setter Property="BorderThickness" Value="1"/>
+            <Setter Property="Padding" Value="16"/>
+            <Setter Property="Effect">
+                <Setter.Value>
+                    <DropShadowEffect BlurRadius="30" ShadowDepth="10" Opacity="0.28" Color="#000000"/>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+        <Style x:Key="AccentBtn" TargetType="Button">
+            <Setter Property="Background" Value="{DynamicResource AccentGradientBrush}"/>
+            <Setter Property="Foreground" Value="White"/>
+            <Setter Property="BorderThickness" Value="0"/>
+            <Setter Property="Padding" Value="24,10"/>
+            <Setter Property="Cursor" Value="Hand"/>
+            <Setter Property="FontWeight" Value="SemiBold"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Button">
+                        <Border x:Name="bd" Background="{TemplateBinding Background}" CornerRadius="12" Padding="{TemplateBinding Padding}"
+                                BorderBrush="{DynamicResource AccentLineBrush}" BorderThickness="1">
+                            <Border.Effect>
+                                <DropShadowEffect BlurRadius="26" ShadowDepth="8" Opacity="0.58" Color="#7C6CF5"/>
+                            </Border.Effect>
+                            <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="bd" Property="Background" Value="{DynamicResource AccentHoverBrush}"/>
+                            </Trigger>
+                            <Trigger Property="IsPressed" Value="True">
+                                <Setter TargetName="bd" Property="Background" Value="{DynamicResource AccentPressedBrush}"/>
+                            </Trigger>
+                            <Trigger Property="IsEnabled" Value="False">
+                                <Setter TargetName="bd" Property="Background" Value="{DynamicResource SurfaceBg}"/>
+                                <Setter Property="Foreground" Value="{DynamicResource DimBrush}"/>
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+        <!-- Sekundärer Button (Umriss) -->
+        <Style x:Key="GhostBtn" TargetType="Button">
+            <Setter Property="Background" Value="{DynamicResource SurfaceBg}"/>
+            <Setter Property="Foreground" Value="{DynamicResource TextBrush}"/>
+            <Setter Property="BorderThickness" Value="0"/>
+            <Setter Property="Padding" Value="12,7"/>
+            <Setter Property="Cursor" Value="Hand"/>
+            <Setter Property="FontWeight" Value="SemiBold"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Button">
+                        <Border x:Name="bd" Background="{TemplateBinding Background}" CornerRadius="9"
+                                BorderBrush="{DynamicResource GlassBorderBrush}" BorderThickness="1"
+                                Padding="{TemplateBinding Padding}">
+                            <Border.Effect>
+                                <DropShadowEffect BlurRadius="10" ShadowDepth="0" Opacity="0.14" Color="#FFFFFF"/>
+                            </Border.Effect>
+                            <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="bd" Property="Background" Value="{DynamicResource HoverBg}"/>
+                            </Trigger>
+                            <Trigger Property="IsPressed" Value="True">
+                                <Setter TargetName="bd" Property="Background" Value="{DynamicResource SurfaceBg}"/>
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+        <!-- Fenster-Buttons (min/max/close/theme) -->
+        <Style x:Key="WindowBtn" TargetType="Button">
+            <Setter Property="Background" Value="Transparent"/>
+            <Setter Property="Foreground" Value="{DynamicResource MutedBrush}"/>
+            <Setter Property="BorderThickness" Value="0"/>
+            <Setter Property="Cursor" Value="Hand"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Button">
+                        <Border x:Name="bd" Background="{TemplateBinding Background}" CornerRadius="7">
+                            <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="bd" Property="Background" Value="{DynamicResource HoverBg}"/>
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+        <!-- Close-Button: rot beim Hover -->
+        <Style x:Key="CloseBtn" TargetType="Button" BasedOn="{StaticResource WindowBtn}">
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Button">
+                        <Border x:Name="bd" Background="{TemplateBinding Background}" CornerRadius="7">
+                            <ContentPresenter x:Name="cp" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="bd" Property="Background" Value="{DynamicResource CloseHoverBg}"/>
+                                <Setter Property="Foreground" Value="White"/>
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+        <!-- Theme-Umschalter (Akzent-getönt) -->
+        <Style x:Key="ThemeBtn" TargetType="Button" BasedOn="{StaticResource WindowBtn}">
+            <Setter Property="Foreground" Value="{DynamicResource AccentBrush}"/>
+            <Setter Property="Background" Value="{DynamicResource AccentSoftBg}"/>
+            <Setter Property="FontFamily" Value="Segoe Fluent Icons, Segoe MDL2 Assets"/>
+            <Setter Property="FontSize" Value="17"/>
+        </Style>
+
+        <Style x:Key="RoundedTextBox" TargetType="TextBox">
+            <Setter Property="Background" Value="{DynamicResource SurfaceBg}"/>
+            <Setter Property="Foreground" Value="{DynamicResource TextBrush}"/>
+            <Setter Property="CaretBrush" Value="{DynamicResource TextBrush}"/>
+            <Setter Property="BorderBrush" Value="{DynamicResource BorderBrushStrong}"/>
+            <Setter Property="BorderThickness" Value="1"/>
+            <Setter Property="Padding" Value="11,8"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="TextBox">
+                        <Border Background="{TemplateBinding Background}" BorderBrush="{TemplateBinding BorderBrush}" BorderThickness="{TemplateBinding BorderThickness}" CornerRadius="9">
+                            <ScrollViewer x:Name="PART_ContentHost" Margin="{TemplateBinding Padding}"/>
+                        </Border>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+        <Style x:Key="ModelItem" TargetType="ListBoxItem">
+            <Setter Property="Padding" Value="10,9"/>
+            <Setter Property="Margin" Value="0,2"/>
+            <Setter Property="Foreground" Value="{DynamicResource TextBrush}"/>
+            <Setter Property="Cursor" Value="Hand"/>
+            <Setter Property="HorizontalContentAlignment" Value="Stretch"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="ListBoxItem">
+                        <Border x:Name="bd" Background="{DynamicResource SurfaceBg}" CornerRadius="10" Padding="{TemplateBinding Padding}" BorderThickness="1" BorderBrush="{DynamicResource BorderBrushSoft}">
+                            <ContentPresenter/>
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="bd" Property="Background" Value="{DynamicResource HoverBg}"/>
+                            </Trigger>
+                            <Trigger Property="IsSelected" Value="True">
+                                <Setter TargetName="bd" Property="BorderBrush" Value="{DynamicResource SelectedBorderBrush}"/>
+                                <Setter TargetName="bd" Property="Background" Value="{DynamicResource SelectedBg}"/>
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+        <Style x:Key="ModelListItem" TargetType="ListBoxItem" BasedOn="{StaticResource ModelItem}">
+            <Setter Property="IsSelected">
+                <Setter.Value>
+                    <MultiBinding Converter="{StaticResource ReferenceEqualsConverter}" Mode="OneWay">
+                        <Binding/>
+                        <Binding Path="DataContext.SelectedModel" RelativeSource="{RelativeSource AncestorType=Window}"/>
+                    </MultiBinding>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+        <!-- Status-Pill (Provider-Tabelle) -->
+        <Style x:Key="StatusPill" TargetType="Border">
+            <Setter Property="CornerRadius" Value="8"/>
+            <Setter Property="Padding" Value="9,4"/>
+            <Setter Property="HorizontalAlignment" Value="Center"/>
+            <Setter Property="Background" Value="{DynamicResource StatusOkBg}"/>
+            <Setter Property="BorderBrush" Value="{DynamicResource StatusOkFg}"/>
+            <Setter Property="BorderThickness" Value="1"/>
+            <Style.Triggers>
+                <DataTrigger Binding="{Binding StatusText}" Value="eingeschränkt">
+                    <Setter Property="Background" Value="{DynamicResource StatusWarnBg}"/>
+                </DataTrigger>
+                <DataTrigger Binding="{Binding StatusText}" Value="gestört">
+                    <Setter Property="Background" Value="{DynamicResource StatusBadBg}"/>
+                </DataTrigger>
+            </Style.Triggers>
+        </Style>
+        <Style x:Key="StatusText" TargetType="TextBlock">
+            <Setter Property="FontWeight" Value="SemiBold"/>
+            <Setter Property="FontSize" Value="12"/>
+            <Setter Property="VerticalAlignment" Value="Center"/>
+            <Setter Property="Foreground" Value="{DynamicResource StatusOkFg}"/>
+            <Style.Triggers>
+                <DataTrigger Binding="{Binding StatusText}" Value="eingeschränkt">
+                    <Setter Property="Foreground" Value="{DynamicResource StatusWarnFg}"/>
+                </DataTrigger>
+                <DataTrigger Binding="{Binding StatusText}" Value="gestört">
+                    <Setter Property="Foreground" Value="{DynamicResource StatusBadFg}"/>
+                </DataTrigger>
+            </Style.Triggers>
+        </Style>
+        <Style x:Key="StatusDot" TargetType="Ellipse">
+            <Setter Property="Width" Value="7"/>
+            <Setter Property="Height" Value="7"/>
+            <Setter Property="VerticalAlignment" Value="Center"/>
+            <Setter Property="Margin" Value="0,0,6,0"/>
+            <Setter Property="Fill" Value="{DynamicResource StatusOkFg}"/>
+            <Style.Triggers>
+                <DataTrigger Binding="{Binding StatusText}" Value="eingeschränkt">
+                    <Setter Property="Fill" Value="{DynamicResource StatusWarnFg}"/>
+                </DataTrigger>
+                <DataTrigger Binding="{Binding StatusText}" Value="gestört">
+                    <Setter Property="Fill" Value="{DynamicResource StatusBadFg}"/>
+                </DataTrigger>
+            </Style.Triggers>
+        </Style>
+
+        <Style TargetType="DataGrid">
+            <Setter Property="Background" Value="Transparent"/>
+            <Setter Property="RowBackground" Value="Transparent"/>
+            <Setter Property="AlternatingRowBackground" Value="Transparent"/>
+            <Setter Property="Foreground" Value="{DynamicResource TextBrush}"/>
+            <Setter Property="BorderThickness" Value="0"/>
+            <Setter Property="HorizontalGridLinesBrush" Value="{DynamicResource GridLineBrush}"/>
+            <Setter Property="VerticalGridLinesBrush" Value="{DynamicResource BorderBrushSoft}"/>
+            <Setter Property="RowHeight" Value="44"/>
+            <Setter Property="ColumnHeaderHeight" Value="38"/>
+            <Setter Property="HeadersVisibility" Value="Column"/>
+            <Setter Property="GridLinesVisibility" Value="Horizontal"/>
+            <Setter Property="CanUserSortColumns" Value="True"/>
+            <Setter Property="CanUserResizeColumns" Value="False"/>
+        </Style>
+        <Style TargetType="DataGridColumnHeader">
+            <Setter Property="Background" Value="{DynamicResource TableHeaderBg}"/>
+            <Setter Property="Foreground" Value="{DynamicResource MutedBrush}"/>
+            <Setter Property="Padding" Value="12,0"/>
+            <Setter Property="FontWeight" Value="SemiBold"/>
+            <Setter Property="FontSize" Value="11"/>
+            <Setter Property="HorizontalContentAlignment" Value="Center"/>
+            <Setter Property="BorderBrush" Value="{DynamicResource BorderBrushSoft}"/>
+            <Setter Property="BorderThickness" Value="0,0,1,1"/>
+            <Setter Property="SeparatorBrush" Value="{DynamicResource AccentLineBrush}"/>
+            <Setter Property="SeparatorVisibility" Value="Visible"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="DataGridColumnHeader">
+                        <Border Background="{TemplateBinding Background}"
+                                BorderBrush="{TemplateBinding BorderBrush}"
+                                BorderThickness="{TemplateBinding BorderThickness}">
+                            <Grid>
+                                <ContentPresenter HorizontalAlignment="{TemplateBinding HorizontalContentAlignment}"
+                                                  VerticalAlignment="Center"
+                                                  Margin="{TemplateBinding Padding}"/>
+                                <Thumb x:Name="ProviderColumnResizeThumb"
+                                       Width="6"
+                                       HorizontalAlignment="Right"
+                                       Cursor="SizeWE"
+                                       Background="Transparent"
+                                       Loaded="ProviderColumnResizeThumb_Loaded">
+                                    <Thumb.Template>
+                                        <ControlTemplate TargetType="Thumb">
+                                            <Border Background="Transparent"/>
+                                        </ControlTemplate>
+                                    </Thumb.Template>
+                                </Thumb>
+                            </Grid>
+                        </Border>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+        <Style TargetType="DataGridCell">
+            <Setter Property="Padding" Value="12,0"/>
+            <Setter Property="BorderBrush" Value="{DynamicResource BorderBrushSoft}"/>
+            <Setter Property="BorderThickness" Value="0,0,1,0"/>
+            <Setter Property="Foreground" Value="{DynamicResource TextBrush}"/>
+            <Setter Property="HorizontalContentAlignment" Value="Center"/>
+            <Setter Property="FocusVisualStyle" Value="{x:Null}"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="DataGridCell">
+                        <Border Background="Transparent"
+                                BorderBrush="{TemplateBinding BorderBrush}"
+                                BorderThickness="{TemplateBinding BorderThickness}"
+                                Padding="{TemplateBinding Padding}">
+                            <ContentPresenter HorizontalAlignment="{TemplateBinding HorizontalContentAlignment}" VerticalAlignment="Center"/>
+                        </Border>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+        <Style TargetType="DataGridRow">
+            <Setter Property="Cursor" Value="Hand"/>
+            <Setter Property="Background" Value="Transparent"/>
+            <Style.Triggers>
+                <Trigger Property="IsMouseOver" Value="True">
+                    <Setter Property="Background" Value="{DynamicResource HoverBg}"/>
+                </Trigger>
+                <Trigger Property="IsSelected" Value="True">
+                    <Setter Property="Background" Value="{DynamicResource RowSelectedBg}"/>
+                </Trigger>
+            </Style.Triggers>
+        </Style>
+    </Window.Resources>
+
+    <Border Background="{DynamicResource WindowBg}" BorderBrush="{DynamicResource GlassBorderBrush}" BorderThickness="1" CornerRadius="8" ClipToBounds="True">
+            <Grid>
+            <Grid.RowDefinitions>
+                <RowDefinition Height="Auto"/>
+                <RowDefinition Height="*"/>
+                <RowDefinition Height="Auto"/>
+            </Grid.RowDefinitions>
+
+            <!-- Titelleiste (dragbar) -->
+            <Grid Grid.Row="0" Height="58" Background="{DynamicResource TitleBarBg}" MouseLeftButtonDown="TitleBar_MouseDown">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="Auto"/>
+                </Grid.ColumnDefinitions>
+                <StackPanel Orientation="Horizontal" VerticalAlignment="Center" Margin="18,0,0,0">
+                    <Border Width="32" Height="32" CornerRadius="10" Background="{DynamicResource AccentSoftBg}"
+                            BorderBrush="{DynamicResource AccentLineBrush}" BorderThickness="1" Margin="0,0,12,0">
+                        <Border.Effect>
+                            <DropShadowEffect BlurRadius="18" ShadowDepth="0" Opacity="0.8" Color="#7C6CF5"/>
+                        </Border.Effect>
+                        <TextBlock Text="✦" Foreground="{DynamicResource AccentBrush}" FontSize="17" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                    </Border>
+                    <TextBlock Text="OpenCode Launcher" Foreground="{DynamicResource TextBrush}" FontSize="15" FontWeight="SemiBold" VerticalAlignment="Center"/>
+                    <Border Margin="12,0,0,0" CornerRadius="8" Padding="9,3" Background="{DynamicResource SurfaceBg}" BorderBrush="{DynamicResource BorderBrushSoft}" BorderThickness="1" VerticalAlignment="Center">
+                        <TextBlock Text="{Binding Version}" Foreground="{DynamicResource DimBrush}" FontSize="12"/>
+                    </Border>
+                </StackPanel>
+                <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center" Margin="0,0,10,0">
+                    <Button x:Name="ThemeBtn" Style="{StaticResource ThemeBtn}" Width="42" Height="33" Content="&#xE706;" Margin="0,0,8,0" ToolTip="Design wechseln" Click="ThemeBtn_Click"/>
+                    <Button x:Name="MinBtn" Style="{StaticResource WindowBtn}" Width="40" Height="32" Content="—" FontSize="16" Click="MinBtn_Click"/>
+                    <Button x:Name="MaxBtn" Style="{StaticResource WindowBtn}" Width="40" Height="32" Content="▢" FontSize="13" Click="MaxBtn_Click"/>
+                    <Button x:Name="CloseBtn" Style="{StaticResource CloseBtn}" Width="40" Height="32" Content="✕" FontSize="14" Click="CloseBtn_Click"/>
+                </StackPanel>
+            </Grid>
+
+            <!-- Hauptbereich -->
+            <Grid Grid.Row="1" Margin="16">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition x:Name="ModelColumn" Width="328" MinWidth="240" MaxWidth="760"/>
+                    <ColumnDefinition Width="16"/>
+                    <ColumnDefinition Width="*"/>
+                </Grid.ColumnDefinitions>
+
+                <!-- Linke Spalte: Modelle (Drag&Drop) -->
+                <Border Grid.Column="0" Style="{StaticResource Card}" Padding="0">
+                    <Grid Margin="12,16,12,0">
+                        <Grid.RowDefinitions>
+                            <RowDefinition Height="Auto"/>
+                            <RowDefinition Height="*"/>
+                            <RowDefinition Height="Auto"/>
+                        </Grid.RowDefinitions>
+                        <DockPanel Grid.Row="0" Margin="4,0,4,12">
+                            <TextBlock Text="MODELLE" FontSize="12" FontWeight="Bold" Foreground="{DynamicResource MutedBrush}" VerticalAlignment="Center"/>
+                            <Button Style="{StaticResource GhostBtn}" Content="+ Hinzufügen" DockPanel.Dock="Right" Margin="8,0,0,0" Padding="11,6" FontSize="12"
+                                    Command="{Binding AddModelCommand}"/>
+                        </DockPanel>
+                        <ScrollViewer x:Name="ModelScrollViewer"
+                                      Grid.Row="1"
+                                      VerticalScrollBarVisibility="Hidden"
+                                      HorizontalScrollBarVisibility="Disabled"
+                                      PreviewMouseWheel="ModelScrollViewer_PreviewMouseWheel">
+                            <ItemsControl x:Name="ModelGroupsList" ItemsSource="{Binding ModelGroups}">
+                                <ItemsControl.ItemTemplate>
+                                    <DataTemplate DataType="m:ModelGroupEntry">
+                                        <Border Background="{DynamicResource SurfaceBg}" BorderBrush="{DynamicResource BorderBrushSoft}" BorderThickness="1" CornerRadius="13" Margin="0,0,0,9" Padding="8"
+                                                AllowDrop="True"
+                                                DragEnter="ModelGroup_DragEnter" DragOver="ModelGroup_DragOver" Drop="ModelGroup_Drop">
+                                            <StackPanel>
+                                                <Grid Margin="0,0,0,6" Background="Transparent" Cursor="Hand"
+                                                      PreviewMouseLeftButtonDown="ModelGroupHeader_PreviewMouseLeftButtonDown"
+                                                      PreviewMouseMove="ModelGroupHeader_PreviewMouseMove"
+                                                      MouseLeftButtonUp="ModelGroupHeader_MouseLeftButtonUp">
+                                                    <Grid.ColumnDefinitions>
+                                                        <ColumnDefinition Width="Auto"/>
+                                                        <ColumnDefinition Width="*"/>
+                                                        <ColumnDefinition Width="Auto"/>
+                                                        <ColumnDefinition Width="Auto"/>
+                                                    </Grid.ColumnDefinitions>
+                                                    <TextBlock Text="⠿" Foreground="{DynamicResource DimBrush}" FontSize="13" Margin="2,0,8,0" VerticalAlignment="Center" Cursor="SizeAll" TextOptions.TextFormattingMode="Ideal"/>
+                                                    <TextBlock Grid.Column="1" Text="{Binding Title}" Foreground="{DynamicResource TextBrush}" FontSize="13" FontWeight="SemiBold" VerticalAlignment="Center"/>
+                                                    <Border Grid.Column="2" CornerRadius="20" Padding="7,1" Margin="0,0,8,0" Background="{DynamicResource ChipBg}" VerticalAlignment="Center">
+                                                        <TextBlock Text="{Binding Models.Count, Mode=OneWay}" Foreground="{DynamicResource MutedBrush}" FontSize="11" FontWeight="SemiBold"/>
+                                                    </Border>
+                                                    <TextBlock Grid.Column="3" Text="▾" Foreground="{DynamicResource AccentBrush}" FontSize="11" VerticalAlignment="Center" Margin="0,0,4,0"/>
+                                                </Grid>
+
+                                                <ListBox Style="{x:Null}"
+                                                          Background="Transparent" BorderThickness="0"
+                                                          ItemsSource="{Binding Models}"
+                                                          ItemContainerStyle="{StaticResource ModelListItem}"
+                                                         AllowDrop="True"
+                                                         Visibility="{Binding IsExpanded, Converter={StaticResource BoolToVisibility}}"
+                                                         PreviewMouseLeftButtonDown="ModelList_PreviewMouseLeftButtonDown"
+                                                         PreviewMouseMove="ModelList_PreviewMouseMove"
+                                                         DragEnter="ModelList_DragEnter" DragOver="ModelList_DragOver" Drop="ModelList_Drop"
+                                                         ScrollViewer.HorizontalScrollBarVisibility="Disabled">
+                                                    <ListBox.ItemTemplate>
+                                                        <DataTemplate DataType="m:ModelEntry">
+                                                            <Grid>
+                                                                <Grid.ColumnDefinitions>
+                                                                    <ColumnDefinition Width="Auto"/>
+                                                                    <ColumnDefinition Width="*"/>
+                                                                </Grid.ColumnDefinitions>
+                                                                <TextBlock Text="⠿" Foreground="{DynamicResource DimBrush}" FontSize="13" Margin="0,0,9,0" VerticalAlignment="Top" Cursor="SizeAll"/>
+                                                                <StackPanel Grid.Column="1">
+                                                                    <TextBlock Text="{Binding DisplayName}" FontWeight="SemiBold" Foreground="{DynamicResource TextBrush}"/>
+                                                                    <TextBlock Text="{Binding ModelString}" FontSize="11" Foreground="{DynamicResource DimBrush}" FontFamily="Cascadia Code, Consolas, monospace" Margin="0,2,0,0"/>
+                                                                </StackPanel>
+                                                            </Grid>
+                                                        </DataTemplate>
+                                                    </ListBox.ItemTemplate>
+                                                </ListBox>
+                                            </StackPanel>
+                                        </Border>
+                                    </DataTemplate>
+                                </ItemsControl.ItemTemplate>
+                            </ItemsControl>
+                        </ScrollViewer>
+                        <DockPanel Grid.Row="2" Margin="4,10,4,14">
+                            <Button Style="{StaticResource GhostBtn}" Content="Entfernen" DockPanel.Dock="Right" Padding="11,6" FontSize="12"
+                                    Command="{Binding RemoveModelCommand}"/>
+                            <TextBlock Text="Ziehen zum Sortieren" FontSize="11" Foreground="{DynamicResource DimBrush}" VerticalAlignment="Center"/>
+                        </DockPanel>
+                    </Grid>
+                </Border>
+
+                <GridSplitter Grid.Column="1"
+                              Width="10"
+                              HorizontalAlignment="Stretch"
+                              VerticalAlignment="Stretch"
+                              ResizeDirection="Columns"
+                              ResizeBehavior="PreviousAndNext"
+                              DragCompleted="ModelSplitter_DragCompleted"
+                              Background="Transparent"
+                              Cursor="SizeWE">
+                    <GridSplitter.Template>
+                        <ControlTemplate TargetType="GridSplitter">
+                            <Grid Background="Transparent">
+                                <Border x:Name="GripLine"
+                                        Width="1"
+                                        HorizontalAlignment="Center"
+                                        Background="{DynamicResource BorderBrushStrong}"
+                                        Opacity="0.62"/>
+                            </Grid>
+                            <ControlTemplate.Triggers>
+                                <Trigger Property="IsMouseOver" Value="True">
+                                    <Setter TargetName="GripLine" Property="Width" Value="2"/>
+                                    <Setter TargetName="GripLine" Property="Opacity" Value="0.95"/>
+                                </Trigger>
+                            </ControlTemplate.Triggers>
+                        </ControlTemplate>
+                    </GridSplitter.Template>
+                </GridSplitter>
+
+                <!-- Rechte Spalte: Provider + Thinking -->
+                <Grid Grid.Column="2">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*" MinWidth="540"/>
+                        <ColumnDefinition Width="14"/>
+                        <ColumnDefinition Width="210" MinWidth="190" MaxWidth="260"/>
+                    </Grid.ColumnDefinitions>
+
+                <Border Grid.Column="0" Style="{StaticResource Card}" Padding="0">
+                    <Grid Margin="14,15,14,6">
+                        <Grid.RowDefinitions>
+                            <RowDefinition Height="Auto"/>
+                            <RowDefinition Height="*"/>
+                        </Grid.RowDefinitions>
+                        <DockPanel Grid.Row="0" Margin="4,0,4,12" LastChildFill="False">
+                            <TextBlock VerticalAlignment="Center">
+                                <Run Text="PROVIDER " FontSize="12" FontWeight="Bold" Foreground="{DynamicResource MutedBrush}"/>
+                                <Run Text="{Binding SelectedModel.DisplayName, FallbackValue='—', Mode=OneWay}" FontSize="15" FontWeight="Bold" Foreground="{DynamicResource AccentBrush}"/>
+                            </TextBlock>
+                            <Button Style="{StaticResource GhostBtn}" Content="Aktualisieren" DockPanel.Dock="Right" Padding="10,6" FontSize="12" MinWidth="0"
+                                    Command="{Binding RefreshCommand}"/>
+                        </DockPanel>
+                        <DataGrid x:Name="ProviderGrid" Grid.Row="1"
+                                  ItemsSource="{Binding Providers}" SelectedItem="{Binding SelectedProvider}"
+                                  AutoGenerateColumns="False" IsReadOnly="True" SelectionMode="Single"
+                                  HeadersVisibility="Column" CanUserSortColumns="True"
+                                  CanUserResizeColumns="False"
+                                  ColumnWidth="Auto" RowHeaderWidth="0"
+                                  ScrollViewer.VerticalScrollBarVisibility="Hidden"
+                                  ScrollViewer.HorizontalScrollBarVisibility="Disabled">
+                            <DataGrid.Columns>
+                                <DataGridTextColumn Header="Provider" Binding="{Binding ProviderName}" Width="280" SortMemberPath="ProviderName">
+                                    <DataGridTextColumn.ElementStyle>
+                                        <Style TargetType="TextBlock">
+                                            <Setter Property="FontWeight" Value="SemiBold"/>
+                                            <Setter Property="VerticalAlignment" Value="Center"/>
+                                            <Setter Property="TextAlignment" Value="Center"/>
+                                        </Style>
+                                    </DataGridTextColumn.ElementStyle>
+                                </DataGridTextColumn>
+                                <DataGridTextColumn Header="Input $/1M" Binding="{Binding InputPerMillion, StringFormat={}{0:0.####}}" Width="150" MinWidth="90"/>
+                                <DataGridTextColumn Header="Output $/1M" Binding="{Binding OutputPerMillion, StringFormat={}{0:0.####}}" Width="150" MinWidth="90"/>
+                                <DataGridTextColumn Header="Cache $/1M" Binding="{Binding CacheReadText}" Width="150" MinWidth="90"/>
+                                <DataGridTextColumn Header="Kontext" Binding="{Binding ContextLength, StringFormat=N0}" Width="140" MinWidth="90"/>
+                                <DataGridTextColumn Header="Throughput" Binding="{Binding ThroughputText}" Width="140" MinWidth="100"/>
+                                <DataGridTemplateColumn Header="Status" Width="*" MinWidth="150">
+                                    <DataGridTemplateColumn.CellStyle>
+                                        <Style TargetType="DataGridCell">
+                                            <Setter Property="Padding" Value="12,0"/>
+                                            <Setter Property="BorderThickness" Value="0"/>
+                                            <Setter Property="Foreground" Value="{DynamicResource TextBrush}"/>
+                                            <Setter Property="HorizontalContentAlignment" Value="Center"/>
+                                            <Setter Property="FocusVisualStyle" Value="{x:Null}"/>
+                                            <Setter Property="Template">
+                                                <Setter.Value>
+                                                    <ControlTemplate TargetType="DataGridCell">
+                                                        <Border Background="Transparent" Padding="{TemplateBinding Padding}">
+                                                            <ContentPresenter HorizontalAlignment="{TemplateBinding HorizontalContentAlignment}" VerticalAlignment="Center"/>
+                                                        </Border>
+                                                    </ControlTemplate>
+                                                </Setter.Value>
+                                            </Setter>
+                                        </Style>
+                                    </DataGridTemplateColumn.CellStyle>
+                                    <DataGridTemplateColumn.CellTemplate>
+                                        <DataTemplate>
+                                            <Border Style="{StaticResource StatusPill}">
+                                                <StackPanel Orientation="Horizontal">
+                                                    <Ellipse Style="{StaticResource StatusDot}"/>
+                                                    <TextBlock Text="{Binding StatusText}" Style="{StaticResource StatusText}"/>
+                                                </StackPanel>
+                                            </Border>
+                                        </DataTemplate>
+                                    </DataGridTemplateColumn.CellTemplate>
+                                </DataGridTemplateColumn>
+                            </DataGrid.Columns>
+                        </DataGrid>
+                    </Grid>
+                </Border>
+
+                <Border Grid.Column="2" Style="{StaticResource Card}" Padding="0">
+                    <Grid Margin="12,15,12,12">
+                        <Grid.RowDefinitions>
+                            <RowDefinition Height="Auto"/>
+                            <RowDefinition Height="*"/>
+                        </Grid.RowDefinitions>
+                        <StackPanel Grid.Row="0" Margin="4,0,4,12">
+                            <TextBlock Text="{Binding ThinkingTitle}" FontSize="12" FontWeight="Bold" Foreground="{DynamicResource MutedBrush}"/>
+                            <TextBlock Text="{Binding ThinkingSubtitle}" FontSize="11" Foreground="{DynamicResource DimBrush}" Margin="0,3,0,0"/>
+                        </StackPanel>
+
+                        <Border Grid.Row="1" Background="{DynamicResource SurfaceBg}" BorderBrush="{DynamicResource BorderBrushSoft}" BorderThickness="1" CornerRadius="13" Padding="8">
+                            <Grid>
+                                <ListBox Style="{x:Null}"
+                                         Background="Transparent" BorderThickness="0"
+                                         ItemsSource="{Binding ThinkingOptions}"
+                                         SelectedItem="{Binding SelectedThinkingOption, Mode=TwoWay}"
+                                         ItemContainerStyle="{StaticResource ModelItem}"
+                                         ScrollViewer.HorizontalScrollBarVisibility="Disabled"
+                                         Visibility="{Binding HasThinkingOptions, Converter={StaticResource BoolToVisibility}}">
+                                    <ListBox.ItemTemplate>
+                                        <DataTemplate DataType="m:ThinkingOptionEntry">
+                                            <StackPanel>
+                                                <TextBlock Text="{Binding DisplayName}" FontWeight="SemiBold" Foreground="{DynamicResource TextBrush}"/>
+                                                <TextBlock Text="{Binding Description}" FontSize="11" Foreground="{DynamicResource DimBrush}" Margin="0,2,0,0"/>
+                                            </StackPanel>
+                                        </DataTemplate>
+                                    </ListBox.ItemTemplate>
+                                </ListBox>
+
+                                <StackPanel VerticalAlignment="Center" Margin="10" Visibility="{Binding HasNoThinkingOptions, Converter={StaticResource BoolToVisibility}}">
+                                    <TextBlock Text="—" FontSize="30" Foreground="{DynamicResource DimBrush}" HorizontalAlignment="Center" Margin="0,0,0,8"/>
+                                    <TextBlock Text="{Binding ThinkingEmptyText}" Foreground="{DynamicResource DimBrush}" TextAlignment="Center" TextWrapping="Wrap"/>
+                                </StackPanel>
+                            </Grid>
+                        </Border>
+                    </Grid>
+                </Border>
+                </Grid>
+            </Grid>
+
+            <!-- Fußleiste: Arbeitsverzeichnis + Start + Version -->
+            <Border Grid.Row="2" Background="{DynamicResource TitleBarBg}" BorderBrush="{DynamicResource BorderBrushSoft}" BorderThickness="0,1,0,0" Padding="16,14" CornerRadius="0,0,8,8">
+                <Grid>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="Auto"/>
+                        <ColumnDefinition Width="*"/>
+                        <ColumnDefinition Width="Auto"/>
+                        <ColumnDefinition Width="Auto"/>
+                        <ColumnDefinition Width="Auto"/>
+                        <ColumnDefinition Width="Auto"/>
+                        <ColumnDefinition Width="Auto"/>
+                    </Grid.ColumnDefinitions>
+                    <TextBlock Grid.Column="0" Text="Arbeitsverzeichnis" Foreground="{DynamicResource MutedBrush}" VerticalAlignment="Center" Margin="0,0,10,0"/>
+                    <TextBox Grid.Column="1" x:Name="WorkDirBox" Style="{StaticResource RoundedTextBox}" Text="{Binding WorkDir, UpdateSourceTrigger=PropertyChanged}" Margin="0,0,8,0"/>
+                    <Button Grid.Column="2" Style="{StaticResource GhostBtn}" Content="…" Margin="0,0,8,0" Padding="14,6" Click="BrowseWorkDir_Click"/>
+                    <Button Grid.Column="3" Style="{StaticResource GhostBtn}" Content="Fehlerdetails" Padding="12,7" Margin="0,0,8,0" IsEnabled="{Binding HasLastError}"
+                            Command="{Binding ShowLastErrorCommand}"/>
+                    <Button Grid.Column="4" Style="{StaticResource GhostBtn}" Content="Logs" Padding="12,7" Margin="0,0,8,0"
+                            Command="{Binding OpenLogFolderCommand}"/>
+                    <TextBlock Grid.Column="5" x:Name="StatusBlock" Text="{Binding StatusText}" Foreground="{DynamicResource DimBrush}" VerticalAlignment="Center" Margin="0,0,16,0" TextTrimming="CharacterEllipsis" MaxWidth="360"/>
+                    <Button Grid.Column="6" Style="{StaticResource AccentBtn}" Content="▶ Start" Padding="26,10" FontSize="14"
+                            Command="{Binding StartCommand}"/>
+                </Grid>
+            </Border>
+            </Grid>
+    </Border>
+</Window>

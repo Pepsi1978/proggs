@@ -1,0 +1,275 @@
+<?xml version="1.0" encoding="utf-8"?>
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools">
+
+    <!-- Aufnahme + Internet + Vibration -->
+    <uses-permission android:name="android.permission.RECORD_AUDIO" />
+    <uses-permission android:name="android.permission.INTERNET" />
+    <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
+    <uses-permission android:name="android.permission.VIBRATE" />
+
+    <!-- Frank-Wunsch 2026-05-24: Tagebuch-Bruecke. Liest die Eintraege aus
+         BestJournal Frank ueber dessen JournalExportProvider. -->
+    <uses-permission android:name="com.entropyjournal.permission.READ_JOURNAL" />
+
+    <!-- Android 11+ Package-Visibility: ohne diese Eintraege ist der Provider
+         von BestJournal Frank fuer uns unsichtbar (resolveContentProvider == null). -->
+    <queries>
+        <provider android:authorities="com.entropyjournal.journalexport" />
+        <provider android:authorities="com.entropyjournal.debug.journalexport" />
+    </queries>
+
+    <!-- Foreground Service fuer stabile Aufnahme bei Bildschirm-Aus -->
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_MICROPHONE" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_MEDIA_PLAYBACK" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_SPECIAL_USE" />
+    <!-- Frank-Wunsch 2026-05-16: Polar-Bulk-Importer laeuft als Foreground-
+         Worker mit Notification damit Android den Import nicht killt waehrend
+         die App im Hintergrund ist. Ohne diese Permission wirft Android 14+
+         ForegroundServiceStartNotAllowedException (errorType 20 im Logcat). -->
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_DATA_SYNC" />
+
+    <!-- Notifications -->
+    <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
+
+    <!-- WorkManager / Hintergrund-Sync -->
+    <uses-permission android:name="android.permission.WAKE_LOCK" />
+
+    <!-- Health Connect (Frank-Wunsch 2026-05-10): Gewicht + Koerperfett + Magermasse
+         aus Zepp-Bridge lesen. Alle drei muessen im Manifest deklariert sein —
+         sonst weist Android den Permission-Request stillschweigend zurueck und
+         die Permission-Activity finished sofort ohne Dialog. -->
+    <uses-permission android:name="android.permission.health.READ_WEIGHT" />
+    <uses-permission android:name="android.permission.health.READ_BODY_FAT" />
+    <uses-permission android:name="android.permission.health.READ_LEAN_BODY_MASS" />
+    <uses-permission android:name="android.permission.health.READ_BODY_WATER_MASS" />
+    <uses-permission android:name="android.permission.health.READ_BONE_MASS" />
+    <uses-permission android:name="android.permission.health.READ_HEIGHT" />
+    <uses-permission android:name="android.permission.health.READ_BASAL_METABOLIC_RATE" />
+    <!-- Frank-Wunsch 2026-05-10 (dritte Iteration): ALLE Health-Connect-READ-
+         Permissions prophylaktisch deklarieren, damit zukuenftige Plugins ohne
+         erneuten Permission-Dialog auskommen. Was Frank in HC erlaubt, kann
+         spaeter beliebig genutzt werden. Unbekannte Eintraege werden von der
+         Plattform stillschweigend ignoriert (z.B. auf Geraeten ohne Health Connect). -->
+    <!-- Activity -->
+    <uses-permission android:name="android.permission.health.READ_ACTIVE_CALORIES_BURNED" />
+    <uses-permission android:name="android.permission.health.READ_DISTANCE" />
+    <uses-permission android:name="android.permission.health.READ_ELEVATION_GAINED" />
+    <uses-permission android:name="android.permission.health.READ_EXERCISE" />
+    <uses-permission android:name="android.permission.health.READ_EXERCISE_ROUTES" />
+    <uses-permission android:name="android.permission.health.READ_FLOORS_CLIMBED" />
+    <uses-permission android:name="android.permission.health.READ_POWER" />
+    <uses-permission android:name="android.permission.health.READ_SPEED" />
+    <uses-permission android:name="android.permission.health.READ_STEPS" />
+    <uses-permission android:name="android.permission.health.READ_TOTAL_CALORIES_BURNED" />
+    <uses-permission android:name="android.permission.health.READ_VO2_MAX" />
+    <uses-permission android:name="android.permission.health.READ_WHEELCHAIR_PUSHES" />
+    <!-- Heart & Vitals -->
+    <uses-permission android:name="android.permission.health.READ_BLOOD_GLUCOSE" />
+    <uses-permission android:name="android.permission.health.READ_BLOOD_PRESSURE" />
+    <uses-permission android:name="android.permission.health.READ_BODY_TEMPERATURE" />
+    <uses-permission android:name="android.permission.health.READ_BASAL_BODY_TEMPERATURE" />
+    <uses-permission android:name="android.permission.health.READ_HEART_RATE" />
+    <uses-permission android:name="android.permission.health.READ_HEART_RATE_VARIABILITY" />
+    <uses-permission android:name="android.permission.health.READ_OXYGEN_SATURATION" />
+    <uses-permission android:name="android.permission.health.READ_RESPIRATORY_RATE" />
+    <uses-permission android:name="android.permission.health.READ_RESTING_HEART_RATE" />
+    <uses-permission android:name="android.permission.health.READ_SKIN_TEMPERATURE" />
+    <!-- Sleep -->
+    <uses-permission android:name="android.permission.health.READ_SLEEP" />
+    <!-- Nutrition -->
+    <uses-permission android:name="android.permission.health.READ_HYDRATION" />
+    <uses-permission android:name="android.permission.health.READ_NUTRITION" />
+    <!-- Cycle Tracking -->
+    <uses-permission android:name="android.permission.health.READ_CERVICAL_MUCUS" />
+    <uses-permission android:name="android.permission.health.READ_INTERMENSTRUAL_BLEEDING" />
+    <uses-permission android:name="android.permission.health.READ_MENSTRUATION" />
+    <uses-permission android:name="android.permission.health.READ_OVULATION_TEST" />
+    <uses-permission android:name="android.permission.health.READ_SEXUAL_ACTIVITY" />
+    <!-- Background-Read fuer zukuenftige Hintergrund-Worker -->
+    <uses-permission android:name="android.permission.health.READ_HEALTH_DATA_IN_BACKGROUND" />
+    <!-- Frank-Befund 2026-05-10: Ohne diese Permission liest die App nur die
+         letzten 30 Tage (Health-Connect-Default). Frank's Smart-Scale-Eintraege
+         sind aber teils 3-4 Monate alt. READ_HEALTH_DATA_HISTORY hebt das
+         30-Tage-Limit auf — die App liest dann den vollen 365-Tage-Bereich
+         der von TimeRangeFilter.between() angefragt wird. -->
+    <uses-permission android:name="android.permission.health.READ_HEALTH_DATA_HISTORY" />
+
+    <!-- Sichtbarkeit von Health Connect ab Android 14 (Pflicht-Query) -->
+    <queries>
+        <package android:name="com.google.android.apps.healthdata" />
+    </queries>
+
+    <application
+        android:name=".EntropyReducerApp"
+        android:allowBackup="false"
+        android:largeHeap="true"
+        android:dataExtractionRules="@xml/data_extraction_rules"
+        android:enableOnBackInvokedCallback="true"
+        android:fullBackupContent="@xml/backup_rules"
+        android:icon="@mipmap/ic_launcher"
+        android:label="@string/app_name"
+        android:networkSecurityConfig="@xml/network_security_config"
+        android:roundIcon="@mipmap/ic_launcher_round"
+        android:supportsRtl="true"
+        android:theme="@style/Theme.EntropieReductor"
+        android:usesCleartextTraffic="false"
+        tools:targetApi="35">
+
+        <!-- Google-Maps-API-Key (Frank-Wunsch 2026-05-17) — Wert kommt aus
+             ~/SK/EntropieReductor/maps-api-key.txt ueber den manifestPlaceholder
+             mapsApiKey in app/build.gradle.kts. Wird fuer die Satelliten-Karte
+             im Trainings-Detail-Screen genutzt. Bei leerem Key rendert die Karte
+             einen grauen Hintergrund + "For development purposes only"-Wasserzeichen. -->
+        <meta-data
+            android:name="com.google.android.geo.API_KEY"
+            android:value="${mapsApiKey}" />
+
+        <activity
+            android:name=".presentation.MainActivity"
+            android:exported="true"
+            android:launchMode="singleTop"
+            android:theme="@style/Theme.EntropieReductor"
+            android:windowSoftInputMode="adjustResize"
+            android:configChanges="orientation|screenSize|screenLayout|keyboardHidden|smallestScreenSize|uiMode|density|fontScale|locale|layoutDirection|navigation|keyboard|touchscreen|mcc|mnc">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity>
+
+        <!-- Share-Sheet-Empfaenger (Stufe 4 §17) — transparent, ohne UI -->
+        <activity
+            android:name=".presentation.share.ShareReceiverActivity"
+            android:exported="true"
+            android:theme="@android:style/Theme.NoDisplay"
+            android:excludeFromRecents="true"
+            android:noHistory="true"
+            android:taskAffinity="">
+            <intent-filter>
+                <action android:name="android.intent.action.SEND" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <data android:mimeType="text/plain" />
+            </intent-filter>
+        </activity>
+
+        <!-- AppAuth Redirect Activity (OAuth fuer Whoop + Google Calendar).
+             Frank-Wunsch 2026-05-16: gleiche Activity nimmt beide Redirect-URIs
+             entgegen — wir unterscheiden anhand des Pfades (oauth/whoop/callback,
+             oauth/google/callback). Manifest braucht KEIN
+             extra Filter weil das Scheme `de.frank.entropyreducer` schon alle
+             Pfade matcht. -->
+        <activity
+            android:name="net.openid.appauth.RedirectUriReceiverActivity"
+            android:exported="true"
+            tools:node="replace">
+            <intent-filter>
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+                <data android:scheme="${appAuthRedirectScheme}" />
+            </intent-filter>
+        </activity>
+
+        <!-- Stufe 4: Home-Screen-Widget (klassisch, ohne Glance — 2026-05-11).
+             Nach 11 gescheiterten Glance-Iterationen den Scrollbar zu
+             verstecken wurde das Widget mit klassischem AppWidgetProvider
+             neu gebaut. ListView hat android:scrollbars="none" → Balken weg. -->
+        <receiver
+            android:name=".presentation.widget.EntropyReducerWidgetReceiver"
+            android:exported="true"
+            android:label="@string/app_name">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+            </intent-filter>
+            <meta-data
+                android:name="android.appwidget.provider"
+                android:resource="@xml/entropy_reducer_widget_info" />
+        </receiver>
+
+        <!-- RemoteViewsService fuer die scrollable ListView im Widget.
+             Liefert pro Position die Item-RemoteViews (Bucket-Header oder
+             Aufgaben-Karte). Permission BIND_REMOTEVIEWS damit der
+             Widget-Host (Launcher) den Service binden darf. -->
+        <service
+            android:name=".presentation.widget.EntropyReducerRemoteViewsService"
+            android:permission="android.permission.BIND_REMOTEVIEWS"
+            android:exported="false" />
+
+        <service
+            android:name="com.wireguard.android.backend.GoBackend$VpnService"
+            android:permission="android.permission.BIND_VPN_SERVICE"
+            android:foregroundServiceType="specialUse"
+            android:exported="false">
+            <intent-filter>
+                <action android:name="android.net.VpnService" />
+            </intent-filter>
+            <meta-data
+                android:name="android.net.VpnService.SUPPORTS_ALWAYS_ON"
+                android:value="false" />
+        </service>
+
+        <!-- Empfaengt Taps auf Widget-Aufgaben (Frank-Wunsch 2026-05-31): Haekchen
+             hakt direkt ab (ACTION_COMPLETE), andere Taps oeffnen die App. Wird nur
+             ueber das interne PendingIntent-Template getriggert → exported=false. -->
+        <receiver
+            android:name=".presentation.widget.WidgetActionReceiver"
+            android:exported="false" />
+
+        <!-- Foreground Service fuer Audio-Aufnahme -->
+        <service
+            android:name=".data.audio.RecordingService"
+            android:enabled="true"
+            android:exported="false"
+            android:foregroundServiceType="microphone" />
+
+        <!-- Foreground-Service fuer TTS-Vorlesen bei Bildschirm-Aus / App im Hintergrund. -->
+        <service
+            android:name=".data.tts.TtsPlaybackService"
+            android:enabled="true"
+            android:exported="false"
+            android:foregroundServiceType="mediaPlayback" />
+
+        <!-- WorkManager SystemForegroundService — Frank-Bugfix 2026-05-16:
+             Android 14+ wirft IllegalArgumentException wenn ein Worker mit
+             ForegroundServiceType DATA_SYNC startet aber das Service-Element
+             keinen passenden Typ hat. tools:replace ueberschreibt den
+             Default aus dem AndroidManifest der work-runtime-Library. -->
+        <service
+            android:name="androidx.work.impl.foreground.SystemForegroundService"
+            android:foregroundServiceType="dataSync|microphone"
+            tools:node="merge"
+            tools:replace="android:foregroundServiceType" />
+
+        <!-- Health Connect Privacy-Policy-Activity (Pflicht von Google ab Android 14)
+             Wird angezeigt wenn der Benutzer auf "Datenschutzerklaerung" im Health-Connect-
+             Permission-Dialog tippt. Frank-Wunsch 2026-05-10. -->
+        <activity
+            android:name=".presentation.health.HealthConnectPrivacyActivity"
+            android:exported="true"
+            android:theme="@style/Theme.EntropieReductor">
+            <intent-filter>
+                <action android:name="androidx.health.ACTION_SHOW_PERMISSIONS_RATIONALE" />
+            </intent-filter>
+            <intent-filter>
+                <action android:name="android.intent.action.VIEW_PERMISSION_USAGE" />
+                <category android:name="android.intent.category.HEALTH_PERMISSIONS" />
+            </intent-filter>
+        </activity>
+
+        <!-- WorkManager Hilt-Initialisierung -->
+        <provider
+            android:name="androidx.startup.InitializationProvider"
+            android:authorities="${applicationId}.androidx-startup"
+            android:exported="false"
+            tools:node="merge">
+            <meta-data
+                android:name="androidx.work.WorkManagerInitializer"
+                android:value="androidx.startup"
+                tools:node="remove" />
+        </provider>
+
+    </application>
+
+</manifest>

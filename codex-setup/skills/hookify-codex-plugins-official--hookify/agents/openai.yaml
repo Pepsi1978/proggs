@@ -1,0 +1,7 @@
+interface:
+  display_name: "hookify"
+  short_description: "Generate protective hooks from conversation patterns"
+  default_prompt: "Use $hookify-codex-plugins-official--hookify for this task."
+
+policy:
+  allow_implicit_invocation: true

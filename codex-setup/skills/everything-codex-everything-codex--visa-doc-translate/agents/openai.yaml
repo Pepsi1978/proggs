@@ -1,0 +1,7 @@
+interface:
+  display_name: "visa-doc-translate"
+  short_description: "Translate visa application documents (images) to English and"
+  default_prompt: "Use $everything-codex-everything-codex--visa-doc-translate for this task."
+
+policy:
+  allow_implicit_invocation: false

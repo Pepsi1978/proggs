@@ -1,0 +1,34 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <OutputType>WinExe</OutputType>
+    <TargetFramework>net10.0-windows</TargetFramework>
+    <Nullable>enable</Nullable>
+    <LangVersion>latest</LangVersion>
+    <ImplicitUsings>enable</ImplicitUsings>
+
+    <!-- WPF fuer das Overlay, WinForms nur fuer System.Windows.Forms.Screen (Multi-Monitor-Bounds) -->
+    <UseWPF>true</UseWPF>
+    <UseWindowsForms>true</UseWindowsForms>
+
+    <!-- Per-Monitor-DPI laut Bug-Almanach desktop/dotnet-csharp.md (§3.1) -->
+    <ApplicationManifest>app.manifest</ApplicationManifest>
+
+    <!-- Deployment: self-contained Single-File. KEIN Trimming (Almanach §1.5: WPF + Trimming = kaputt) -->
+    <RuntimeIdentifier>win-x64</RuntimeIdentifier>
+    <SelfContained>true</SelfContained>
+    <PublishSingleFile>true</PublishSingleFile>
+    <PublishTrimmed>false</PublishTrimmed>
+    <EnableCompressionInSingleFile>true</EnableCompressionInSingleFile>
+    <IncludeNativeLibrariesForSelfExtract>false</IncludeNativeLibrariesForSelfExtract>
+
+    <AssemblyName>DesktopSidebar</AssemblyName>
+    <Product>Chrome-Shutdown-Sidebar</Product>
+
+    <!-- WFO0003: WinForms-DPI-Hinweis. Bewusst ignoriert — dies ist eine WPF-App,
+         die PerMonitorV2 ueber das Manifest setzt (Almanach §3.1); WinForms wird nur
+         fuer Screen.PrimaryScreen.Bounds genutzt. -->
+    <NoWarn>$(NoWarn);WFO0003</NoWarn>
+  </PropertyGroup>
+
+</Project>

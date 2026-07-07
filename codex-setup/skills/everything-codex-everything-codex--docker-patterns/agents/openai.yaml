@@ -1,0 +1,7 @@
+interface:
+  display_name: "docker-patterns"
+  short_description: "Docker and Docker Compose patterns for local development"
+  default_prompt: "Use $everything-codex-everything-codex--docker-patterns for this task."
+
+policy:
+  allow_implicit_invocation: false

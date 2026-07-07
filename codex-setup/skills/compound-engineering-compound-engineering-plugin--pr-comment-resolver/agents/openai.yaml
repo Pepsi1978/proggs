@@ -1,0 +1,7 @@
+interface:
+  display_name: "pr-comment-resolver"
+  short_description: "Addresses PR review comments by implementing requested changes"
+  default_prompt: "Use $compound-engineering-compound-engineering-plugin--pr-comment-resolver for this task."
+
+policy:
+  allow_implicit_invocation: false

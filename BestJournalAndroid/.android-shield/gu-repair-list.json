@@ -1,0 +1,1322 @@
+[
+  {
+    "key": "label_premium",
+    "de": "Premium",
+    "gu_current": "Premium"
+  },
+  {
+    "key": "settings_premium_section",
+    "de": "Premium",
+    "gu_current": "Premium"
+  },
+  {
+    "key": "settings_export",
+    "de": "Exportieren",
+    "gu_current": "Export"
+  },
+  {
+    "key": "settings_export_dialog_title",
+    "de": "PDF-Export",
+    "gu_current": "PDF Export"
+  },
+  {
+    "key": "settings_export_action",
+    "de": "Exportieren",
+    "gu_current": "Export"
+  },
+  {
+    "key": "achievements_title",
+    "de": "Achievements",
+    "gu_current": "Achievements"
+  },
+  {
+    "key": "settings_about_version",
+    "de": "Best Journal V0.21.9",
+    "gu_current": "Best Journal V0.21.9"
+  },
+  {
+    "key": "consent_toggle_do_not_sell_title",
+    "de": "Datenschutz-Wahlrechte (Kalifornien)",
+    "gu_current": "Do Not Sell My Personal Information"
+  },
+  {
+    "key": "consent_info_system_backup_title",
+    "de": "Android System-Backup",
+    "gu_current": "Android System-Backup"
+  },
+  {
+    "key": "settings_ccpa_do_not_sell_title",
+    "de": "Datenschutz-Wahlrechte (Kalifornien)",
+    "gu_current": "Do Not Sell My Personal Information"
+  },
+  {
+    "key": "json_key_overall_analysis",
+    "de": "gesamtanalyse",
+    "gu_current": "gesamtanalyse"
+  },
+  {
+    "key": "json_key_top_actions",
+    "de": "top_massnahmen",
+    "gu_current": "top_massnahmen"
+  },
+  {
+    "key": "json_key_categories",
+    "de": "kategorien",
+    "gu_current": "kategorien"
+  },
+  {
+    "key": "json_key_heading_top5",
+    "de": "ueberschrift_top5",
+    "gu_current": "ueberschrift_top5"
+  },
+  {
+    "key": "json_key_heading_analysis",
+    "de": "ueberschrift_analyse",
+    "gu_current": "ueberschrift_analyse"
+  },
+  {
+    "key": "json_key_heading_results",
+    "de": "ueberschrift_ergebnisse",
+    "gu_current": "ueberschrift_ergebnisse"
+  },
+  {
+    "key": "json_key_progress",
+    "de": "fortschritte",
+    "gu_current": "fortschritte"
+  },
+  {
+    "key": "json_key_overall_entropy",
+    "de": "gesamt_entropie",
+    "gu_current": "gesamt_entropie"
+  },
+  {
+    "key": "json_key_trend",
+    "de": "trend",
+    "gu_current": "trend"
+  },
+  {
+    "key": "json_key_category_name",
+    "de": "name",
+    "gu_current": "name"
+  },
+  {
+    "key": "json_key_category_icon",
+    "de": "icon",
+    "gu_current": "icon"
+  },
+  {
+    "key": "json_key_category_color",
+    "de": "farbe",
+    "gu_current": "farbe"
+  },
+  {
+    "key": "json_key_category_entropy_level",
+    "de": "entropie_level",
+    "gu_current": "entropie_level"
+  },
+  {
+    "key": "json_key_category_summary",
+    "de": "zusammenfassung",
+    "gu_current": "zusammenfassung"
+  },
+  {
+    "key": "json_key_category_advices",
+    "de": "ratschlaege",
+    "gu_current": "ratschlaege"
+  },
+  {
+    "key": "json_key_item_title",
+    "de": "titel",
+    "gu_current": "titel"
+  },
+  {
+    "key": "json_key_item_description",
+    "de": "beschreibung",
+    "gu_current": "beschreibung"
+  },
+  {
+    "key": "json_key_item_explanation",
+    "de": "erklaerung",
+    "gu_current": "erklaerung"
+  },
+  {
+    "key": "json_key_item_reference",
+    "de": "bezug",
+    "gu_current": "bezug"
+  },
+  {
+    "key": "json_key_item_priority",
+    "de": "prioritaet",
+    "gu_current": "prioritaet"
+  },
+  {
+    "key": "json_key_item_connection",
+    "de": "verknuepfung",
+    "gu_current": "verknuepfung"
+  },
+  {
+    "key": "json_key_item_derivation",
+    "de": "herleitung",
+    "gu_current": "herleitung"
+  },
+  {
+    "key": "json_key_derivation_date",
+    "de": "datum",
+    "gu_current": "datum"
+  },
+  {
+    "key": "json_key_derivation_summary",
+    "de": "zusammenfassung",
+    "gu_current": "zusammenfassung"
+  },
+  {
+    "key": "json_value_priority_high",
+    "de": "hoch",
+    "gu_current": "hoch"
+  },
+  {
+    "key": "json_value_priority_medium",
+    "de": "mittel",
+    "gu_current": "mittel"
+  },
+  {
+    "key": "json_value_priority_low",
+    "de": "niedrig",
+    "gu_current": "niedrig"
+  },
+  {
+    "key": "ai_retro_month_format",
+    "de": "FORMAT (bitte genau einhalten):\\n1. Beginne mit einer Zusammenfassung als kurze Stichpunkte (4-6 Punkte), jeweils mit \\\"• \\\" am Anfang\\n2. Dann eine Leerzeile\\n3. Dann der Fließtext, aufgeteilt in 3-5 thematische Abschnitte\\n4. Jeder Abschnitt beginnt mit einer Überschrift in der Form: [Thema] (z.B. [Aufbruch und Neustart] oder [Stille Erkenntnisse])\\n5. Nach der Überschrift folgt der erzählende Text des Abschnitts\\n6. Die Abschnitte chronologisch vom Monatsanfang bis Monatsende ordnen",
+    "gu_current": "FORMAT (KRPAYAA SARVAR PAALO):\\n1. CHHOTA STICHPUNKTE (4-6 MUDDA) SATHE SARANSH THI SHURU KARO, PRATYEK \\\"• \\\" SATHE\\n2. PACHHI KHAALI LINE\\n3. PACHHI PRAAVAAH LEKHAN, 3-5 VISHAY ANUSAAR VIBHAGMAA\\n4. PRATYEK VIBHAG SHIRSHAK SATHE SHURU THAY: [Vishay] (DAAKLAA TARIKE [Aarambh ane Navo Prabhat] KE [Shaant Taransheelata])\\n5. SHIRSHAK PACHHI VIBHAGNO KATHANAATMAK TEXT AAVe CHHE\\n6. VIBHAGO MASAANAA AARAMBHTHHI ANTE KAALAKRAMI PRAMANE GOOTHAVVO"
+  },
+  {
+    "key": "ai_retro_month_rules",
+    "de": "REGELN:\\n- Schreibe in der Du-Form (bzw. dem sprachlichen Äquivalent einer persönlichen Anrede)\\n- Keine Anrede, keine Grußformel — direkt in die Erzählung\\n- Fließender Stil mit guten Übergängen innerhalb der Abschnitte\\n- Die Überschriften sollen kurz und thematisch passend sein (2-4 Wörter)\\n- Ziehe Verbindungen zwischen den Wochen — zeige Entwicklungen und rote Fäden\\n- Wiederhole nicht einfach die Rückblicke nacheinander, sondern verbinde sie thematisch\\n- Alltägliches nur erwähnen, wenn es bedeutsam war\\n- Hebe Positives besonders hervor — aber verschweige Herausforderungen nicht\\n- Schreibe warm und persönlich, aber nicht übertrieben\\n- Mindestens 300 Wörter\\n- Verwende keine langen Gedankenstriche (—). Nutze stattdessen Kommas oder kurze Sätze.",
+    "gu_current": "NIYAMO:\\n- POLITE AAMANTRAAN RUPNII BHAASHAAMAA LIKHHO (KE VYAKTIGAT AAMANTRAAN NII BHAASHAAKIIY SAMTU)\\n- KONO AAMANTRAAN, KONO ABHIVADAN — SEEDHA KATHANAATMAKMAA\\n- VIBHAGO VAHCCHE SARAAA AAKAR-PARIVARTAN SATHE PRAVAAHEEY SHAILI\\n- SHIRSHAKO CHHOTA ane VISHAY ANUSAAR HOVA JOIE (2-4 SHABDO)\\n- SAPTAAAHONO VAHCCHE SAMBANDHO JODO — VIKASH ane LAALO DHAAAGAO BATAVO\\n- PRACHALLIT SAAGAANAA KRAM PRAMANE NA DOHARAAVO, BADLAE THENEE VISHAYAANUSAAR JODO\\n- ROJ-BHARANEE VAATONE UCHAARVO JYAARE MAHATTVAPOORN HOY\\n- SAKARAATMAKNEE VISHESH BHAABHENEE UJAGAR KARO — PARAN PADKAARO CHHUPAVO NAHEEI\\n- GARMU ane VYAKTIGAT LIKHHO, PARAN VADHU PADO NAHEEI\\n- NYANAA 300 SHABDO\\n- LAAMBA VIRAMCHIHNA (—) VAAPARO NAHEEI. BADLAE ALPAVISHRAM KE CHHOTA VAAKYO VAAPARO."
+  },
+  {
+    "key": "ai_retro_year_format",
+    "de": "FORMAT (bitte genau einhalten):\\n1. Beginne mit einer Zusammenfassung als kurze Stichpunkte (5-8 Punkte), jeweils mit \\\"• \\\" am Anfang\\n2. Dann eine Leerzeile\\n3. Dann der Fließtext, aufgeteilt in 4-6 thematische Abschnitte\\n4. Jeder Abschnitt beginnt mit einer Überschrift in der Form: [Thema] (z.B. [Der Frühling des Aufbruchs] oder [Ruhe finden])\\n5. Nach der Überschrift folgt der erzählende Text des Abschnitts\\n6. Die Abschnitte chronologisch vom Jahresanfang bis Jahresende ordnen",
+    "gu_current": "FORMAT (KRPAYAA SARVAR PAALO):\\n1. CHHOTA STICHPUNKTE (5-8 MUDDA) SATHE SARANSH THI SHURU KARO, PRATYEK \\\"• \\\" SATHE\\n2. PACHHI KHAALI LINE\\n3. PACHHI PRAAVAAH LEKHAN, 4-6 VISHAY ANUSAAR VIBHAGMAA\\n4. PRATYEK VIBHAG SHIRSHAK SATHE SHURU THAY: [Vishay] (DAAKLAA TARIKE [Vasantna Aarambh] KE [Shanti Shodhvu])\\n5. SHIRSHAK PACHHI VIBHAGNO KATHANAATMAK TEXT AAVe CHHE\\n6. VIBHAGO VARHSNAA AARAMBHTHHI ANTE KAALAKRAMI PRAMANE GOOTHAVVO"
+  },
+  {
+    "key": "ai_retro_year_rules",
+    "de": "REGELN:\\n- Schreibe in der Du-Form (bzw. dem sprachlichen Äquivalent einer persönlichen Anrede)\\n- Keine Anrede, keine Grußformel — direkt in die Erzählung\\n- Fließender Stil mit guten Übergängen innerhalb der Abschnitte\\n- Die Überschriften sollen kurz und thematisch passend sein (2-5 Wörter)\\n- Ziehe Verbindungen zwischen den Monaten — zeige Entwicklungen über das Jahr\\n- Erkenne die großen Themen des Jahres und ordne Ereignisse in diese Linien ein\\n- Alltägliches nur erwähnen, wenn es bedeutsam war\\n- Hebe Positives besonders hervor — aber verschweige Herausforderungen nicht\\n- Schließe mit einem Gedanken der nach vorne blickt\\n- Schreibe warm und persönlich, aber nicht übertrieben\\n- Mindestens 400 Wörter\\n- Verwende keine langen Gedankenstriche (—). Nutze stattdessen Kommas oder kurze Sätze.",
+    "gu_current": "NIYAMO:\\n- POLITE AAMANTRAAN RUPNII BHAASHAAMAA LIKHHO (KE VYAKTIGAT AAMANTRAAN NII BHAASHAAKIIY SAMTU)\\n- KONO AAMANTRAAN, KONO ABHIVADAN — SEEDHA KATHANAATMAKMAA\\n- VIBHAGO VAHCCHE SARAAA AAKAR-PARIVARTAN SATHE PRAVAAHEEY SHAILI\\n- SHIRSHAKO CHHOTA ane VISHAY ANUSAAR HOVA JOIE (2-5 SHABDO)\\n- MAAHINO VAHCCHE SAMBANDHO JODO — VARSH PARYANT VIKASH BATAVO\\n- VARSHNAA MOTA VISHAYO OLAKHHO ane GHATAAO AA DHAARAAMO MAA GOOTHHAVO\\n- ROJ-BHARANEE VAATONE UCHAARVO JYAARE MAHATTVAPOORN HOY\\n- SAKARAATMAKNEE VISHESH BHAABHENEE UJAGAR KARO — PARAN PADKAARO CHHUPAVO NAHEEI\\n- AGAL JOTAA VICHAAR SATHE POOROO KARO\\n- GARMU ane VYAKTIGAT LIKHHO, PARAN VADHU PADO NAHEEI\\n- NYANAA 400 SHABDO\\n- LAAMBA VIRAMCHIHNA (—) VAAPARO NAHEEI. BADLAE ALPAVISHRAM KE CHHOTA VAAKYO VAAPARO."
+  },
+  {
+    "key": "ai_prompt_insight_intro",
+    "de": "Du bist ein einfühlsamer, tiefgründiger Muster-Analyst für persönliche Entwicklung.\\n\\nDEINE AUFGABE:\\nAnalysiere die Tagebucheinträge eines Nutzers. Finde darin verborgene Muster, wiederkehrende Denk- und Verhaltensweisen, unbewusste Überzeugungen, emotionale Reaktionsmuster und persönliche Stärken. Mache dem Nutzer sichtbar, was er über sich selbst lernen kann — Dinge, die ihm beim Schreiben vielleicht nicht bewusst waren. Erstelle daraus ein strukturiertes Selbsterkenntnis-Dashboard im JSON-Format.",
+    "gu_current": "Tame EK SAANVEDANAASHEEL, GAHAANAA NAMUNAAO-VISHLESHHAK CHO VYAKTIGAT VIKASH MAATE.\\n\\nTHAMAARU KAAM:\\nUser NA Diary-Nondho VISHLESHIT KARO. TEYAAMAA CHHUPAAYELA NAMUNAAO SHHOODHO: VARAAVAR VICHHAAR ane VARTANIKK-REET, BEHAANMAANAA VISHVAAS, BHAAVANAATMAK PRATIKRIYAA NAMUNAAO ane VYAKTIGAT SHAKTIYO. User NE DIKHAVO SHO POTAANEE JAATE VISHE SHIKHI SHAKE CHHE — JE LIKHAAN VAKHATE KHAYAAL NAHI AAVYUU HOY TEVI VAATO. JSON FORMAT MAA SVAATANTRYA-TARANSHEELATA DASHBOARD TAIYAAR KARO."
+  },
+  {
+    "key": "ai_prompt_insight_entry_rules",
+    "de": "OBERSTE REGEL — KEIN EINTRAG DARF FEHLEN:\\nDu erhältst nummerierte Einträge (z.B. \\\"EINTRAG 1 von 5\\\").\\nDu MUSST JEDEN EINZELNEN Eintrag lesen, analysieren und einbeziehen.\\nBevor du antwortest, zähle: Habe ich ALLE Einträge berücksichtigt?\\nWenn einer fehlt — ergänze ihn SOFORT.\\n\\nUMGANG MIT WENIGEN EINTRÄGEN:\\n- Bei 1–2 Einträgen: Benenne erste Beobachtungen, aber keine tiefen Muster.\\n  Kennzeichne Erkenntnisse als \\\"vorläufig\\\" in der Beschreibung.\\n- Ab 3 Einträgen: Suche aktiv nach wiederkehrenden Mustern und tieferen Zusammenhängen.\\n\\nZEITLICHE GEWICHTUNG:\\nJeder Eintrag muss berücksichtigt werden. Verfolge die innere Entwicklung: Hat sich die Haltung des Nutzers verändert? Tauchen gleiche Themen in neuem Licht auf? Wächst Selbstbewusstsein oder nimmt Unsicherheit zu?",
+    "gu_current": "SARAUTHEE UPARNAA NIYAM — KONO NONDH CHOOTATO NAHI:\\nTamane SANKHYAANK NONDHO MAALE CHHE (DAAKLAA TARIKE \\\"NONDH 1 OF 5\\\").\\nTAMAE PRATYEK NONDH VAANCHAVOO, VISHLESHHAN KARAVOO ane SAMAAVESH KARAVOO JOIE.\\nJAWAB AAPTAA PAHELA GANTRUU: SHOO MAE SARAVE NONDHO DHYAANMAA LAADHA CHHE?\\nKONO CHHEETO HOY — TOJ SAMAAVESH KARO.\\n\\nOCHCHHAA NONDHO SATHE KALAVAA:\\n- 1-2 NONDHO HOY TOJ: GAHAAN NAMUNAAO BADAle PRATHAM AVLOKAN BATAVO.\\n  TARANSHEELATAAO MAATRE \\\"PRARAMBHIK\\\" TAREKE DARSHAAVO.\\n- 3+ NONDHO HOY TOJ: VARAAVAR NAMUNAAO ane GAHAAN SAMBANDH SAKRIYAPANE SHHOODHO.\\n\\nSAMAY PRAMANE MAHATTVA:\\nPRATYEK NONDH DHYAANMAA LAVOO. ANTARIK VIKASH CHHODO: USER NI DRISHTIKON BADALEE? SAME VISHAYO NAVAA PRAKAASHE AAAVYAA? AATMAVISHVAAS VADHYO KE ASURAKSHAATABODHH VADHYO?"
+  },
+  {
+    "key": "ai_prompt_insight_schema_header",
+    "de": "JSON-AUSGABE-SCHEMA:\\n{\\n  \\\"gesamt_entropie\\\": 0.0,\\n  \\\"trend\\\": \\\"wachsend|stabil|sinkend|unbekannt\\\",\\n  \\\"gesamtanalyse\\\": \\\"...\\\",\\n  \\\"fortschritte\\\": [...],\\n  \\\"top_massnahmen\\\": [...],\\n  \\\"kategorien\\\": [...]\\n}\\n\\nFELD-DEFINITIONEN:\\n\\n1) \\\"gesamt_entropie\\\" (Zahl, 0.0 bis 1.0)\\n   Wie stark reflektiert der Nutzer über sich selbst in seinen Einträgen?\\n   - 0.0–0.33 = Wenig Selbstreflexion (hauptsächlich Ereignisse beschrieben)\\n   - 0.34–0.66 = Teilweise Selbstreflexion (Gefühle und Gedanken erwähnt)\\n   - 0.67–1.0 = Starke Selbstreflexion (tiefe Auseinandersetzung mit sich selbst)\\n\\n2) \\\"trend\\\" (Text)\\n   Nur wenn mindestens 3 Einträge über mehrere Tage vorliegen.\\n   Vergleiche ältere mit neueren Einträgen:\\n   - \\\"wachsend\\\" = Der Nutzer reflektiert immer tiefer über sich\\n   - \\\"stabil\\\" = Gleichbleibendes Reflexionsniveau\\n   - \\\"sinkend\\\" = Weniger Selbstreflexion in neueren Einträgen\\n   - \\\"unbekannt\\\" = Zu wenig Daten für eine Aussage\\n\\n3) \\\"gesamtanalyse\\\" (Text, 15–25 Sätze)\\n   - Gehe Eintrag für Eintrag durch und finde das tiefere Thema dahinter.\\n   - Was verraten die Einträge über den Nutzer als Person?\\n   - Welche Muster im Denken, Fühlen und Handeln werden sichtbar?\\n   - Welche Stärken zeigt der Nutzer, ohne es vielleicht selbst zu merken?\\n   - Welche unbewussten Überzeugungen steuern sein Verhalten?\\n   - Wo zeigt sich persönliches Wachstum?\\n   - Sei einfühlsam und persönlich — sprich den Nutzer direkt an.\\n   - Immer konstruktiv: Auch schwierige Erkenntnisse mit Lernpotenzial verbinden.",
+    "gu_current": "JSON-OUTPUT-SCHEMA:\\n{\\n  \\\"gesamt_entropie\\\": 0.0,\\n  \\\"trend\\\": \\\"wachsend|stabil|sinkend|unbekannt\\\",\\n  \\\"gesamtanalyse\\\": \\\"...\\\",\\n  \\\"fortschritte\\\": [...],\\n  \\\"top_massnahmen\\\": [...],\\n  \\\"kategorien\\\": [...]\\n}\\n\\nFIELD VYAAKHYAAO:\\n\\n1) \\\"gesamt_entropie\\\" (AAAKDA, 0.0-1.0)\\n   NONDHAMAA USER KETLEE REETHNEE POTAANEE JAATE VISHE VICHARSHAN KARE CHHE?\\n   - 0.0-0.33 = OCHU SVAAVLOKAN (MUKHYATAVE GHATAAO BAATAVYAA)\\n   - 0.34-0.66 = AANSHETIK SVAAVLOKAN (BHAAVANO ane VICHAAR ULLEKHHAA)\\n   - 0.67-1.0 = MAZABOOT SVAAVLOKAN (POTAANEE SATHE GAHAAN SAMSKAR)\\n\\n2) \\\"trend\\\" (TEXT)\\n   MAATR JAYDAARE NYANAA 3 NONDHO BAHU DIVAS UPAR HOYA TOJ.\\n   PURAANAA SATHE NAVAA NONDHO SARAAKHAVO:\\n   - \\\"wachsend\\\" = User VADHARE GAHAAN REETHNEE VICHARSHAN KARE CHHE\\n   - \\\"stabil\\\" = SAME SVAAVLOKAN STAR\\n   - \\\"sinkend\\\" = NAVAA NONDHO MAA OCHU SVAAVLOKAN\\n   - \\\"unbekannt\\\" = TATHYO MAATE PURATAA AAKADAA NATHI\\n\\n3) \\\"gesamtanalyse\\\" (TEXT, 15-25 VAAKYO)\\n   - PRATYEK NONDH PARMANE JA ane PACHHAL GAHAANO VISHAY SHHOODHO.\\n   - NONDHO USER VISHE EK VYAKTI TAREKE SHHU DARSHAAVE CHHE?\\n   - VICHAAR, ANUBHAV ane KARNI MAA KYA NAMUNAAO DRISHHYAMAAN CHHE?\\n   - USER POTANE J KHAYAAL AAAVYAA VINAA KEVAREE SHAKTIYO DARSHAAVE CHHE?\\n   - KEVALEE BEHAANMAANAA MAANYATAAO VYAVHAAR CHHALAAVE CHHE?\\n   - VYAKTIGAT VIKASH KYA DIKHAAY CHHE?\\n   - SAANVEDANAASHEEL ane VYAKTIGAT — User NE SEEDHA SAMBODHO.\\n   - SADAA RACHNAATMAK: MUSHKEL TARANSHEELATAAO PAN SHIKHHANAA SAMBHAVANO SATHE JODO."
+  },
+  {
+    "key": "ai_prompt_insight_schema_fields",
+    "de": "4) \\\"fortschritte\\\" (Array, 0–8 Einträge)\\n   Persönliche Stärken und positive Eigenschaften die aus den Einträgen sichtbar werden — auch wenn der Nutzer sie selbst nicht benennt.\\n   Schema pro Stärke:\\n   {\\n     \\\"titel\\\": \\\"Kurzer Titel (max. 5 Wörter)\\\",\\n     \\\"beschreibung\\\": \\\"Welche Stärke sichtbar wird und woran man sie erkennt (2–3 Sätze).\\\",\\n     \\\"bezug\\\": \\\"Aus welchem Eintrag/welchen Einträgen das hervorgeht (1 Satz).\\\"\\n   }\\n   Bei nur 1 Eintrag oder keinen erkennbaren Stärken: leeres Array [].\\n\\n5) \\\"top_massnahmen\\\" (Array, genau 5 Einträge)\\n   Die 5 tiefsten Selbsterkenntnisse die aus allen Einträgen zusammen hervorgehen. Was sind die wichtigsten Dinge, die der Nutzer über sich selbst erfahren kann? Sortiert nach Tiefe (tiefste Erkenntnis zuerst). Bereichsübergreifend denken — das große Bild der Persönlichkeit zeigen.\\n   Schema pro Erkenntnis:\\n   {\\n     \\\"titel\\\": \\\"Kurzer Titel (max. 6 Wörter)\\\",\\n     \\\"beschreibung\\\": \\\"13–21 Wörter — ein kompakter Satz der die Erkenntnis auf den Punkt bringt. Konstruktiv formuliert — was kann der Nutzer daraus lernen?\\\",\\n     \\\"erklaerung\\\": \\\"Ausführliche Erklärung (5–8 Sätze). Welches Muster zeigt sich? In welchen Einträgen wird es sichtbar? Warum ist das wichtig für das Selbstverständnis? Was kann der Nutzer damit anfangen?\\\"\\n   }",
+    "gu_current": "4) \\\"fortschritte\\\" (ARRAY, 0-8 NONDHO)\\n   VYAKTIGAT SHAKTIYO ane SAKARAATMAK VISHESHATAAO JE NONDHAMAA THHI DIKHAAY CHHE — BHAALE User POTEI NAAMDAVE NAHI.\\n   PRATYEK SHAKTI NUU SCHEMA:\\n   {\\n     \\\"titel\\\": \\\"CHHOTO SHIRSHAK (max. 5 SHABDO)\\\",\\n     \\\"beschreibung\\\": \\\"KAI SHAKTI DIKHAAY CHHE ane KAINE JOATAA (2-3 VAAKYO).\\\",\\n     \\\"bezug\\\": \\\"KYA NONDHMAA THHI DIKHAAY CHHE (1 VAAKYA).\\\"\\n   }\\n   MAATR 1 NONDH HOY KE KONO SHAKTI NA DIKHAAY TOJ: KHAALI ARRAY [].\\n\\n5) \\\"top_massnahmen\\\" (ARRAY, SARVAR 5 NONDHO)\\n   SARAVE NONDHOMAATHHI SARAKAARI 5 GAHAAN SVAATANTRYA-TARANSHEELATAAO. USER POTAANEE JAATE VISHE SARAUTHEE MAHATTVAPOORN SHHU JAANEE SHAKE? GAHAANATA PRAMANE GOOTHAVIO (SARAUTHEE GAHAAN PAHELA). SARAVE KSHETRO PAAR VICHAARVU — VYAKTITVAANUU MOTU CHITRA BATAVO.\\n   PRATYEK TARANSHEELATA NUU SCHEMA:\\n   {\\n     \\\"titel\\\": \\\"CHHOTO SHIRSHAK (max. 6 SHABDO)\\\",\\n     \\\"beschreibung\\\": \\\"13-21 SHABDO — COMPACT VAAKYA JE TARANSHEELATA MUDDA PAR LAAVE. RACHNAATMAK — SHO SHIKHI SHAKAY?\\\",\\n     \\\"erklaerung\\\": \\\"VISTAR VYAAKHYAAN (5-8 VAAKYO). KYU NAMUNAAO DIKHAAY CHHE? KYA NONDHAMAA DIKHAAY CHHE? POTAANAA AATMABODH MAATE KEMA MAHATTVAPOORN? USER SHO KAREE SHAKE?\\\"\\n   }"
+  },
+  {
+    "key": "ai_prompt_insight_schema_categories",
+    "de": "6) \\\"kategorien\\\" (Array, so viele wie nötig)\\n   Für JEDEN erkannten Selbsterkenntnis-Bereich eine eigene Gruppe.\\n   Bereiche sind NICHT Lebensthemen (Arbeit, Schlaf), sondern INNERE DIMENSIONEN: Wie der Nutzer denkt, fühlt, mit sich umgeht, Entscheidungen trifft, mit anderen interagiert, sich motiviert, mit Rückschlägen umgeht.\\n   Schema pro Bereich:\\n   {\\n     \\\"name\\\": \\\"Bereichsname (max. 12 Zeichen, 1–2 Wörter)\\\",\\n     \\\"icon\\\": \\\"material_icon_name\\\",\\n     \\\"farbe\\\": \\\"#HEX\\\",\\n     \\\"entropie_level\\\": 0.0,\\n     \\\"zusammenfassung\\\": \\\"Zusammenfassung dieses Bereichs (3–5 Sätze). Was zeigt sich hier über den Nutzer? Welches Muster ist erkennbar? Was kann der Nutzer daraus lernen?\\\",\\n     \\\"ratschlaege\\\": [...]\\n   }\\n\\n   BEREICHSNAMEN — kurz und prägnant:\\n   RICHTIG: \\\"Denkmuster\\\", \\\"Gefühle\\\", \\\"Antrieb\\\", \\\"Umgang\\\", \\\"Werte\\\"\\n   FALSCH: \\\"Emotionale Reaktionsmuster\\\" (zu lang) → \\\"Gefühle\\\"\\n\\n   BEREICHE — DYNAMISCH:\\n   Nutze diese als Basis, aber erstelle NEUE wenn ein Thema nicht passt.\\n   Die Bereiche sollen INNERE DIMENSIONEN abbilden, nicht äußere Lebensthemen:\\n   - Denkmuster (icon: psychology, farbe: #A78BFA)\\n   - Gefühle (icon: favorite, farbe: #F472B6)\\n   - Selbstbild (icon: person, farbe: #60A5FA)\\n   - Antrieb (icon: bolt, farbe: #F59E0B)\\n   - Werte (icon: star, farbe: #FBBF24)\\n   - Beziehungen (icon: people, farbe: #EC4899)\\n   - Resilienz (icon: shield, farbe: #10B981)\\n   - Gewohnheiten (icon: repeat, farbe: #6366F1)\\n   - Ängste (icon: nights_stay, farbe: #6C63FF)\\n   - Grenzen (icon: block, farbe: #EF4444)\\n   - Kreativität (icon: lightbulb, farbe: #D946EF)\\n   - Umgang (icon: handshake, farbe: #14B8A6)\\n   - Wachstum (icon: trending_up, farbe: #22C55E)\\n   - Bedürfnisse (icon: spa, farbe: #F97316)\\n   - Kontrolle (icon: tune, farbe: #78716C)\\n   Weitere Icons: self_improvement, mood, sentiment_satisfied, sentiment_dissatisfied, visibility, lock_open, wb_sunny, explore, balance, healing, volunteer_activism, emoji_objects\\n\\n   TIEFE pro Bereich (im Feld \\\"entropie_level\\\", 0.0 bis 1.0):\\n   Wie tief geht die Selbsterkenntnis in diesem Bereich?\\n   - 0.0–0.33 = Oberfläche (Nutzer beschreibt Situationen, reflektiert wenig)\\n   - 0.34–0.66 = Bewusst (Nutzer erkennt eigene Muster teilweise)\\n   - 0.67–1.0 = Tiefgehend (Nutzer versteht Ursachen und Zusammenhänge)\\n\\n   ERKENNTNISSE pro Bereich (im Feld \\\"ratschlaege\\\") — MENGE:\\n   Extrahiere ALLE Erkenntnisse die du aus den Einträgen ableiten kannst. Lieber zu viele als zu wenige — 5 bis 20 pro Bereich sind normal. Jedes erkannte Muster, jede Beobachtung über die Persönlichkeit, jeder Hinweis auf eine innere Haltung verdient eine eigene Erkenntnis. Fasse NICHT zusammen. Jede Erkenntnis muss sich auf KONKRETE Aussagen aus den Einträgen beziehen. Sortiert nach Relevanz: \\\"hoch\\\" zuerst, dann \\\"mittel\\\", dann \\\"niedrig\\\".\\n\\n   Schema pro Erkenntnis:\\n   {\\n     \\\"titel\\\": \\\"Kurzer Titel (max. 6 Wörter)\\\",\\n     \\\"beschreibung\\\": \\\"13–21 Wörter — ein kompakter Satz der die Erkenntnis auf den Punkt bringt. Konstruktiv formuliert — was zeigt sich, was kann man lernen?\\\",\\n     \\\"prioritaet\\\": \\\"hoch|mittel|niedrig\\\",\\n     \\\"verknuepfung\\\": \\\"1–2 andere Bereichsnamen die zusammenhängen, plus ein Satz warum. Falls keine: null\\\",\\n     \\\"herleitung\\\": [\\n       {\\n         \\\"datum\\\": \\\"Datum des Eintrags (z.B. 28.03.2026)\\\",\\n         \\\"zusammenfassung\\\": \\\"Was in diesem Eintrag auf dieses Muster hinweist (1–2 Sätze).\\\"\\n       }\\n     ]\\n   }\\n\\n   RELEVANZ-BEDEUTUNG (im Feld \\\"prioritaet\\\"):\\n   - \\\"hoch\\\" = Tiefe Erkenntnis, zeigt ein zentrales Muster der Persönlichkeit\\n   - \\\"mittel\\\" = Sichtbares Muster, aber noch nicht vollständig klar\\n   - \\\"niedrig\\\" = Einzelbeobachtung, könnte ein Muster werden",
+    "gu_current": "6) \\\"kategorien\\\" (ARRAY, JAROOR HOYA TETLAA)\\n   PRATYEK OLAKHELO SVAATANTRYA-KSHETRA MAATE ALAG VISHAYJOTH.\\n   KSHETRO JEEVAN-VISHAYO NATHI (KAAM, SUVAANAVOO), PARAN ANTARIK MAATRAAO CHHE: User KEVAREE REETHNEE VINCHARE, ANUBHAVE, POTAANEE JAATE SATHE KATHARVE, NISHCHAY KARE, ANYA SATHE SAPTAVE, PRERIT THAY, PADKAARO SATHE KATHARVE.\\n   PRATYEK KSHETRA NUU SCHEMA:\\n   {\\n     \\\"name\\\": \\\"KSHETRA-NAAM (max. 12 AKSHAR, 1-2 SHABDO)\\\",\\n     \\\"icon\\\": \\\"material_icon_name\\\",\\n     \\\"farbe\\\": \\\"#HEX\\\",\\n     \\\"entropie_level\\\": 0.0,\\n     \\\"zusammenfassung\\\": \\\"AA KSHETRENI SARANSH (3-5 VAAKYO). YAHAAN SHO DIKHAAY CHHE? KYU NAMUNAAO DHYAANAKARSHHAK CHHE?\\\",\\n     \\\"ratschlaege\\\": [...]\\n   }\\n\\n   KSHETRA NAAM — CHHOTO ane MUDDA UPAR:\\n   SAACHO: \\\"Denkmuster\\\", \\\"Gefühle\\\", \\\"Antrieb\\\", \\\"Umgang\\\", \\\"Werte\\\"\\n   GALAT: \\\"Emotionale Reaktionsmuster\\\" (VADHAARE LAMBU) → \\\"Gefühle\\\"\\n\\n   KSHETRO — DINAMIK:\\n   NIYAM TARIKE VAAPARO, PARAN NAVIINAA BANAVO JAYARE VISHAY BAESATO NAHI.\\n   KSHETRO ANTARIK MAATRAAO DARSHAVAA JOIE, BAAHYAA JEEVAN-VISHAYO NAHI:\\n   - Denkmuster (icon: psychology, farbe: #A78BFA)\\n   - Gefühle (icon: favorite, farbe: #F472B6)\\n   - Selbstbild (icon: person, farbe: #60A5FA)\\n   - Antrieb (icon: bolt, farbe: #F59E0B)\\n   - Werte (icon: star, farbe: #FBBF24)\\n   - Beziehungen (icon: people, farbe: #EC4899)\\n   - Resilienz (icon: shield, farbe: #10B981)\\n   - Gewohnheiten (icon: repeat, farbe: #6366F1)\\n   - Ängste (icon: nights_stay, farbe: #6C63FF)\\n   - Grenzen (icon: block, farbe: #EF4444)\\n   - Kreativität (icon: lightbulb, farbe: #D946EF)\\n   - Umgang (icon: handshake, farbe: #14B8A6)\\n   - Wachstum (icon: trending_up, farbe: #22C55E)\\n   - Bedürfnisse (icon: spa, farbe: #F97316)\\n   - Kontrolle (icon: tune, farbe: #78716C)\\n   Vadhare Icons: self_improvement, mood, sentiment_satisfied, sentiment_dissatisfied, visibility, lock.\\n\\n   GAHAANATA PRATYEK KSHETRA (FIELD \\\"entropie_level\\\", 0.0-1.0):\\n   AA KSHETRA MAA SVAATANTRYA-TARANSHEELATA KETLEE GAHAAN CHHE?\\n   - 0.0-0.33 = UPAR-UPAR (User GHATAAO BAATAAVE, OCHHU VICHARSHAN)\\n   - 0.34-0.66 = JAAGRUT (User POTAANAA NAMUNAAO AANSHETIK REETHNEE OLAAKHE CHHE)\\n   - 0.67-1.0 = GAHAAN (User KAARAAN ane SAMBANDHO SAMAJE CHHE)\\n\\n   TARANSHEELATAAO PRATYEK KSHETRA (FIELD \\\"ratschlaege\\\") — SAANKHYAA:\\n   SARAVE TARANSHEELATAAO KAADHHO JE NONDHAMAA THHI FALAAVE. VADHARE OCHHHAA KARTA SARAAA — 5-20 PRATYEK KSHETRA SAMAANYA. PRATYEK OLAKHELO NAMUNAAO, VYAKTITVA VISHE AVLOKAN, ANTARIK VALAN NI KONO SUCHANA NE ALAG TARANSHEELATA MAALE. BHERLAA NAHI. PRATYEK TARANSHEELATA NONDH NI MAULIK VAATO SATHE SAMBANDH RAKHAVOO JOIE. PRAMUKHATAA PRAMANE GOOTHAVIO: \\\"hoch\\\" PAHELA, PACHHI \\\"mittel\\\", PACHHI \\\"niedrig\\\".\\n\\n   PRATYEK TARANSHEELATA NUU SCHEMA:\\n   {\\n     \\\"titel\\\": \\\"CHHOTO SHIRSHAK (max. 6 SHABDO)\\\",\\n     \\\"beschreibung\\\": \\\"13-21 SHABDO — COMPACT VAAKYA JE TARANSHEELATA MUDDA PAR LAAVE. RACHNAATMAK — SHO DIKHAAY, SHO SHIKHI SHAKAY?\\\",\\n     \\\"prioritaet\\\": \\\"hoch|mittel|niedrig\\\",\\n     \\\"verknuepfung\\\": \\\"1-2 ANYA KSHETRA-NAAMO JE JODAAYELA HOY, KEMA MAATE 1 VAAKYA. NAHI TOJ: null\\\",\\n     \\\"herleitung\\\": [\\n       {\\n         \\\"datum\\\": \\\"NONDH NI TITHI (DAAKLAA: 28.03.2026)\\\",\\n         \\\"zusammenfassung\\\": \\\"AA NONDHMAA KYA NAMUNAAO UPAR ISHAAROO KARAVAAMAA AAVYO (1-2 VAAKYO).\\\"\\n       }\\n     ]\\n   }\\n\\n   PRAMUKHATAA-ARTTH (FIELD \\\"prioritaet\\\"):\\n   - \\\"hoch\\\" = GAHAAN TARANSHEELATA, VYAKTITVAANAA KENDRIIY NAMUNAAO DARSHAAVE CHHE\\n   - \\\"mittel\\\" = DRISHHYAMAAN NAMUNAAO, PARAN POORI SPASHTATAA NATHI\\n   - \\\"niedrig\\\" = AAKAL-AVLOKAN, NAMUNAAO BANI SHAKE CHHE"
+  },
+  {
+    "key": "ai_prompt_insight_output",
+    "de": "WORTANZAHL-REGEL FÜR BESCHREIBUNGEN (STRENG EINHALTEN):\\nDie \\\"beschreibung\\\" in \\\"top_massnahmen\\\" und in \\\"ratschlaege\\\" muss IMMER zwischen 13 und 21 Wörter lang sein.\\n- Weniger als 13 Wörter = zu kurz = FEHLER\\n- Mehr als 21 Wörter = zu lang = FEHLER\\nZähle die Wörter bevor du sie schreibst. Jede Beschreibung ist EIN kompakter, vollständiger Satz. Nicht mehr, nicht weniger.\\n\\nAUSGABEFORMAT — STRENGE REGELN:\\n- Antworte NUR mit dem JSON-Objekt.\\n- Kein Text davor oder danach.\\n- Keine Markdown-Backticks.\\n- Beginne direkt mit { und ende mit }.\\n- Valides JSON — keine fehlenden Kommas, keine doppelten Schlüssel.",
+    "gu_current": "SHABDO SAANKHYAA-NIYAM VARNANAO MAATE (SAKHAT PALAVO):\\n\\\"beschreibung\\\" \\\"top_massnahmen\\\" ane \\\"ratschlaege\\\" MAA SADAA 13-21 SHABDO NI VAHCCHE HOVU JOIE.\\n- 13 THHI OCHCHHAA SHABDO = TOO CHOOTTAA = GHALTI\\n- 21 THHI VADHARE SHABDO = TOO LAAMBAA = GHALTI\\nLIKHHTAA PAHELA SHABDO GANSO. PRATYEK VARNAN 1 COMPACT, POORNO VAAKYA CHHE.\\n\\nOUTPUT FORMAT — SAKHAT NIYAMO:\\n- MAATR JSON OBJECT SATHE JAWAB AAPAO.\\n- PAHELA KE PACHHAL KONO TEXT NAHI.\\n- MARKDOWN BACKTICKS NAHI.\\n- SEEDHA { THI SHARU KARO ane } SATHE PURO KARO.\\n- VALID JSON — KONO CHHEETO COMMA NAHI, KONO BEVO CHAAVI NAHI."
+  },
+  {
+    "key": "ai_prompt_entropy_entry_rules",
+    "de": "OBERSTE REGEL — KEIN EINTRAG DARF FEHLEN:\\nDu erhältst nummerierte Einträge (z.B. \\\"EINTRAG 1 von 5\\\").\\nDu MUSST JEDEN EINZELNEN Eintrag lesen, analysieren und einbeziehen.\\nBevor du antwortest, zähle: Habe ich ALLE Einträge berücksichtigt?\\nWenn einer fehlt — ergänze ihn SOFORT.\\n\\nUMGANG MIT WENIGEN EINTRÄGEN:\\n- Bei 1–2 Einträgen: Benenne Einzelbeobachtungen statt Muster.\\n  Kennzeichne Ratschläge als \\\"vorläufig\\\" in der Beschreibung.\\n- Ab 3 Einträgen: Suche aktiv nach Mustern und Querverbindungen.\\n\\nZEITLICHE GEWICHTUNG:\\nJeder Eintrag muss berücksichtigt werden. Bei widersprüchlichen Aussagen zum selben Thema beachte den zeitlichen Verlauf — neuere Einträge zeigen den aktuellen Stand. Ältere Einträge liefern Kontext und Mustererkennung.",
+    "gu_current": "SARAUTHEE UPARNAA NIYAM — KONO NONDH CHOOTATO NAHI:\\nTamane SANKHYAANK NONDHO MAALE CHHE (DAAKLAA TARIKE \\\"NONDH 1 OF 5\\\").\\nTAMAE PRATYEK NONDH VAANCHAVOO, VISHLESHHAN KARAVOO ane SAMAAVESH KARAVOO JOIE.\\nJAWAB AAPTAA PAHELA GANTRUU: SHOO MAE SARAVE NONDHO DHYAANMAA LAADHA CHHE?\\nKONO CHHEETO HOY — TOJ SAMAAVESH KARO.\\n\\nOCHCHHAA NONDHO SATHE KALAVAA:\\n- 1-2 NONDHO HOY TOJ: PATTERN BATAVAA NA BADale EKAL AVLOKAN BATAVO.\\n  RATSCHLAEGE MAA \\\"PRARAMBHIK\\\" TAREKE DARSHAAVO.\\n- 3+ NONDHO HOY TOJ: SAKRIYAPANE NAMUNAAO ane PARASPAR SAMBANDH SHHOODHO.\\n\\nSAMAY PRAMANE MAHATTVA:\\nPRATYEK NONDH DHYAANMAA LAVOO. SAME VISHAY PAR VIRODHAABHAASI VAATO HOY TOJ SAMAY PRAMANE SHHHOODHO — NAVINAATAM NONDH VARSHAMAAN DARASHAAVE CHHE. PURAANAA NONDHO SANDARBH ane NAMUNAANO AADHAR CHHE."
+  },
+  {
+    "key": "ai_prompt_entropy_schema_header",
+    "de": "JSON-AUSGABE-SCHEMA:\\n{\\n  \\\"gesamt_entropie\\\": 0.0,\\n  \\\"trend\\\": \\\"steigend|stabil|sinkend|unbekannt\\\",\\n  \\\"gesamtanalyse\\\": \\\"...\\\",\\n  \\\"fortschritte\\\": [...],\\n  \\\"top_massnahmen\\\": [...],\\n  \\\"kategorien\\\": [...]\\n}\\n\\nFELD-DEFINITIONEN:\\n\\n1) \\\"gesamt_entropie\\\" (Zahl, 0.0 bis 1.0)\\n   Gewichteter Durchschnitt aller Kategorie-Belastungswerte.\\n   - 0.0–0.33 = Niedrig (guter Zustand)\\n   - 0.34–0.66 = Mittel (Aufmerksamkeit nötig)\\n   - 0.67–1.0 = Hoch (sofortiges Handeln empfohlen)\\n\\n2) \\\"trend\\\" (Text)\\n   Nur wenn mindestens 3 Einträge über mehrere Tage vorliegen.\\n   - \\\"sinkend\\\" = Belastung nimmt ab\\n   - \\\"stabil\\\" = Belastung bleibt gleich\\n   - \\\"steigend\\\" = Belastung nimmt zu\\n   - \\\"unbekannt\\\" = Zu wenig Daten für Trendaussage\\n\\n3) \\\"gesamtanalyse\\\" (Text, 15–25 Sätze)\\n   - Gehe Eintrag für Eintrag durch und extrahiere das Hauptthema.\\n   - Benenne JEDES Thema aus JEDEM Eintrag namentlich.\\n   - Erkenne Zusammenhänge zwischen den Themen.\\n   - Erkenne auch FORTSCHRITTE und STÄRKEN, nicht nur Probleme.\\n   - Sei empathisch und persönlich — sprich den Nutzer direkt an.",
+    "gu_current": "JSON-OUTPUT-SCHEMA:\\n{\\n  \\\"gesamt_entropie\\\": 0.0,\\n  \\\"trend\\\": \\\"steigend|stabil|sinkend|unbekannt\\\",\\n  \\\"gesamtanalyse\\\": \\\"...\\\",\\n  \\\"fortschritte\\\": [...],\\n  \\\"top_massnahmen\\\": [...],\\n  \\\"kategorien\\\": [...]\\n}\\n\\nFIELD VYAAKHYAAO:\\n\\n1) \\\"gesamt_entropie\\\" (AAAKDA, 0.0-1.0)\\n   SARAVE KATEGOREE BHAARAN MULYO NO VAAZANDAR SARAASARI.\\n   - 0.0-0.33 = OCHU (SAAROO PARINAAMA)\\n   - 0.34-0.66 = MADHYAM (DHYAAN JAROOREE)\\n   - 0.67-1.0 = VADHARE (TURANT KARAVAAI JOIE)\\n\\n2) \\\"trend\\\" (TEXT)\\n   MAATR JAYDAARE NYANAA 3 NONDHO BAHU DIVAS UPAR HOYA TOJ.\\n   - \\\"sinkend\\\" = BHAARAN GHATE CHHE\\n   - \\\"stabil\\\" = BHAARAN SAME RAHE CHHE\\n   - \\\"steigend\\\" = BHAARAN VADHE CHHE\\n   - \\\"unbekannt\\\" = TREND BATAAVAVAA PURATAA AAKADAA NATHI\\n\\n3) \\\"gesamtanalyse\\\" (TEXT, 15-25 VAAKYO)\\n   - NONDH PRAMANE JA ane MUKHYA VISHAY KAADHHO.\\n   - PRATYEK NONDHMAA THHI PRATYEK VISHAY NAMDAVOO.\\n   - VISHAYO VAHCCHE SAMBANDHO SHHOODHO.\\n   - PRAGATI ane SHAKTI PAN SHHOODHO, MAATR SAMASYA NAHI.\\n   - SAANVEDANAASHEEL ane VYAKTIGAT — User NE SEEDHA SAMBODHO."
+  },
+  {
+    "key": "ai_prompt_entropy_schema_fields",
+    "de": "4) \\\"fortschritte\\\" (Array, 0–5 Einträge)\\n   Erkenne, wo sich Belastung REDUZIERT hat oder wo funktionierende Gewohnheiten und Stärken sichtbar sind.\\n   Schema pro Fortschritt:\\n   {\\n     \\\"titel\\\": \\\"Kurzer Titel (max. 5 Wörter)\\\",\\n     \\\"beschreibung\\\": \\\"Was genau sich verbessert hat oder gut läuft (2–3 Sätze).\\\",\\n     \\\"bezug\\\": \\\"Aus welchem Eintrag/welchen Einträgen das hervorgeht (1 Satz).\\\"\\n   }\\n   Bei nur 1 Eintrag oder keinen erkennbaren Fortschritten: leeres Array [].\\n\\n5) \\\"top_massnahmen\\\" (Array, genau 5 Einträge)\\n   Die 5 wichtigsten Maßnahmen, die die persönliche Belastung am STÄRKSTEN und NACHHALTIGSTEN senken würden. Sortiert nach Wirksamkeit (stärkste zuerst). Kategorieübergreifend — ganzheitlich denken.\\n   Schema pro Maßnahme:\\n   {\\n     \\\"titel\\\": \\\"Kurzer Titel (max. 6 Wörter)\\\",\\n     \\\"beschreibung\\\": \\\"13–21 Wörter — kurz und knackig: was genau tun und warum.\\\",\\n     \\\"erklaerung\\\": \\\"Ausführliche Begründung (5–8 Sätze). Warum gerade diese Maßnahme? Welche Einträge zeigen das Problem? Was passiert, wenn man es umsetzt?\\\"\\n   }",
+    "gu_current": "4) \\\"fortschritte\\\" (ARRAY, 0-5 NONDHO)\\n   OLAKHO JE BHAARNO GHATAADO KAYO CHHE KE SAAREE AADAT ane SHAKTI DARSHAAY CHHE.\\n   PRATYEK PRAGATI NUU SCHEMA:\\n   {\\n     \\\"titel\\\": \\\"CHHOTO SHIRSHAK (max. 5 SHABDO)\\\",\\n     \\\"beschreibung\\\": \\\"SHO SAARO THAYUU KE SAARI CHHE (2-3 VAAKYO).\\\",\\n     \\\"bezug\\\": \\\"KYA NONDHMAA THHI DIKHAAY CHHE (1 VAAKYA).\\\"\\n   }\\n   MAATR 1 NONDH HOY KE PRAGATI NA DIKHAAY TOJ: KHAALI ARRAY [].\\n\\n5) \\\"top_massnahmen\\\" (ARRAY, SARVAR 5 NONDHO)\\n   VYAKTIGAT BHAARAN SARAUTHEE VADHARE ane TIKAU RITE GHATAADANAAREE 5 SARAUTHEE MAHATTVAPOORN KARAVAAI. ASSARKAARAK PRAMANE GOOTHAVIO (SARVAATHEE MAZABOOT PAHELA). SARAVE KATEGOREE PAAR VINCHAARVU — SARVANGEEN REETHNEE SOCHHVU.\\n   PRATYEK KARAVAAI NUU SCHEMA:\\n   {\\n     \\\"titel\\\": \\\"CHHOTO SHIRSHAK (max. 6 SHABDO)\\\",\\n     \\\"beschreibung\\\": \\\"13-21 SHABDO — COMPACT ane MUDDA UPAR: SHO KARAVUU ane KEMA.\\\",\\n     \\\"erklaerung\\\": \\\"VISTAR KAARAA (5-8 VAAKYO). KEMA AA KARAVAAI? KYA NONDHO SAMASYA DARSHAAVE? LAGDU TOJI SHO THASHE?\\\"\\n   }"
+  },
+  {
+    "key": "ai_prompt_entropy_schema_categories",
+    "de": "6) \\\"kategorien\\\" (Array, so viele wie nötig)\\n   Für JEDES erkannte Thema eine eigene Kategorie.\\n   Schema pro Kategorie:\\n   {\\n     \\\"name\\\": \\\"Kategoriename (max. 12 Zeichen, 1–2 Wörter)\\\",\\n     \\\"icon\\\": \\\"material_icon_name\\\",\\n     \\\"farbe\\\": \\\"#HEX\\\",\\n     \\\"entropie_level\\\": 0.0,\\n     \\\"zusammenfassung\\\": \\\"Zusammenfassung dieser Kategorie (3–5 Sätze).\\\",\\n     \\\"ratschlaege\\\": [...]\\n   }\\n\\n   KATEGORIENAMEN — kurz und prägnant:\\n   RICHTIG: \\\"Schlaf\\\", \\\"Arbeit\\\", \\\"Fitness\\\", \\\"Psyche\\\", \\\"Projekte\\\"\\n   FALSCH: \\\"Persönliche Entwicklung\\\" → \\\"Entwicklung\\\"\\n\\n   KATEGORIEN — DYNAMISCH:\\n   Nutze diese als Basis, aber erstelle NEUE wenn ein Thema nicht passt:\\n   - Schlaf (icon: bedtime, farbe: #6C63FF)\\n   - Arbeit (icon: work, farbe: #FF6B6B)\\n   - Fitness (icon: fitness_center, farbe: #4ECDC4)\\n   - Ernährung (icon: restaurant, farbe: #FFE66D)\\n   - Psyche (icon: psychology, farbe: #A78BFA)\\n   - Beziehungen (icon: people, farbe: #F472B6)\\n   - Zuhause (icon: home, farbe: #34D399)\\n   - Entwicklung (icon: trending_up, farbe: #60A5FA)\\n   - Projekte (icon: code, farbe: #F59E0B)\\n   - Gesundheit (icon: health_and_safety, farbe: #EF4444)\\n   - Finanzen (icon: account_balance, farbe: #10B981)\\n   - Freizeit (icon: sports_esports, farbe: #EC4899)\\n   - Natur (icon: grass, farbe: #22C55E)\\n   - Schmerz (icon: healing, farbe: #DC2626)\\n   Weitere Icons: spa, coffee, self_improvement, nights_stay, directions_run, child_care, school, computer, timer, cleaning_services, music_note, pets, wb_sunny, lightbulb\\n\\n   BELASTUNGS-LEVEL pro Kategorie (0.0 bis 1.0):\\n   - 0.0–0.33 = Niedrig (grün)\\n   - 0.34–0.66 = Mittel (gelb)\\n   - 0.67–1.0 = Hoch (rot)\\n\\n   RATSCHLÄGE pro Kategorie — MENGE:\\n   Generiere ALLE Ratschläge die du aus den Einträgen ableiten kannst. Lieber zu viele als zu wenige — 5 bis 20 pro Kategorie sind normal. Jeder einzelne Hinweis, jede Beobachtung, jedes Problem aus den Einträgen verdient einen eigenen Ratschlag. Fasse NICHT zusammen. Wenn ein Eintrag 3 verschiedene Probleme nennt, entstehen daraus 3 separate Ratschläge — nicht einer der alles zusammenfasst. Jeder Ratschlag muss sich auf KONKRETE Aussagen aus den Einträgen beziehen. Sortiert nach Priorität: \\\"hoch\\\" zuerst, dann \\\"mittel\\\", dann \\\"niedrig\\\".\\n\\n   Schema pro Ratschlag:\\n   {\\n     \\\"titel\\\": \\\"Kurzer Titel (max. 6 Wörter)\\\",\\n     \\\"beschreibung\\\": \\\"13–21 Wörter — konkret und direkt: was genau tun und warum.\\\",\\n     \\\"prioritaet\\\": \\\"hoch|mittel|niedrig\\\",\\n     \\\"verknuepfung\\\": \\\"1–2 andere Kategorienamen die zusammenhängen, plus ein Satz warum. Falls keine: null\\\",\\n     \\\"herleitung\\\": [\\n       {\\n         \\\"datum\\\": \\\"Datum des Eintrags (z.B. 28.03.2026)\\\",\\n         \\\"zusammenfassung\\\": \\\"Was in diesem Eintrag relevant war (1–2 Sätze).\\\"\\n       }\\n     ]\\n   }\\n\\n   PRIORITÄT-BEDEUTUNG:\\n   - \\\"hoch\\\" = Dringend, sofort handeln (größte Belastungsquelle)\\n   - \\\"mittel\\\" = Spürbar, bald angehen\\n   - \\\"niedrig\\\" = Beobachten, langfristig bearbeiten",
+    "gu_current": "6) \\\"kategorien\\\" (ARRAY, JAROOR HOYA TETLAA)\\n   PRATYEK OLAKHELO VISHAY MAATE ALAG KATEGOREE.\\n   PRATYEK KATEGOREE NUU SCHEMA:\\n   {\\n     \\\"name\\\": \\\"KATEGOREE-NAAM (max. 12 AKSHAR, 1-2 SHABDO)\\\",\\n     \\\"icon\\\": \\\"material_icon_name\\\",\\n     \\\"farbe\\\": \\\"#HEX\\\",\\n     \\\"entropie_level\\\": 0.0,\\n     \\\"zusammenfassung\\\": \\\"AA KATEGOREENI SARANSH (3-5 VAAKYO).\\\",\\n     \\\"ratschlaege\\\": [...]\\n   }\\n\\n   KATEGOREE NAAM — CHHOTO ane MUDDA UPAR:\\n   SAACHO: \\\"Schlaf\\\", \\\"Arbeit\\\", \\\"Fitness\\\", \\\"Psyche\\\", \\\"Projekte\\\"\\n   GALAT: \\\"Persönliche Entwicklung\\\" → \\\"Entwicklung\\\"\\n\\n   KATEGOREE — DINAMIK:\\n   AAP NIYAM TARIKE VAAPARO, PARAN NAVUu BANAVO JAYARE VISHAY BAESATO NAHI:\\n   - Schlaf (icon: bedtime, farbe: #6C63FF)\\n   - Arbeit (icon: work, farbe: #FF6B6B)\\n   - Fitness (icon: fitness_center, farbe: #4ECDC4)\\n   - Ernährung (icon: restaurant, farbe: #FFE66D)\\n   - Psyche (icon: psychology, farbe: #A78BFA)\\n   - Beziehungen (icon: people, farbe: #F472B6)\\n   - Zuhause (icon: home, farbe: #34D399)\\n   - Entwicklung (icon: trending_up, farbe: #60A5FA)\\n   - Projekte (icon: code, farbe: #F59E0B)\\n   - Gesundheit (icon: health_and_safety, farbe: #EF4444)\\n   - Finanzen (icon: account_balance, farbe: #10B981)\\n   - Freizeit (icon: sports_esports, farbe: #EC4899)\\n   - Natur (icon: grass, farbe: #22C55E)\\n   - Schmerz (icon: healing, farbe: #DC2626)\\n   Vadhare Icons: spa, coffee, self_improvement, nights_stay, directions_run, child_care, school, co2.\\n\\n   BHAARAN-LEVEL PRATYEK KATEGOREE (0.0-1.0):\\n   - 0.0-0.33 = OCHU (LILO)\\n   - 0.34-0.66 = MADHYAM (PEELO)\\n   - 0.67-1.0 = VADHARE (LAALO)\\n\\n   RATSCHLAEGE PRATYEK KATEGOREE — SAANKHYAA:\\n   SARAVE RATSCHLAEGE BANAVO JE NONDHAMAA THHI FALAAVE. VADHARE SAARAAA OCHHA KARTA — 5-20 PRATYEK KATEGOREE SAMAANYA CHHE. PRATYEK SUCHANA, AVLOKAN, SAMASYA NE ALAG RATSCHLAG MAALE. BHERLAA NAHI. PRATYEK RATSCHLAG NONDH NI MAULIK VAATO SATHE SAMBANDH RAKHAVOO JOIE. PRATHAMIKTA PRAMANE GOOTHAVIO: \\\"hoch\\\" PAHELA, PACHHI \\\"mittel\\\", PACHHI \\\"niedrig\\\".\\n\\n   PRATYEK RATSCHLAG NUU SCHEMA:\\n   {\\n     \\\"titel\\\": \\\"CHHOTO SHIRSHAK (max. 6 SHABDO)\\\",\\n     \\\"beschreibung\\\": \\\"13-21 SHABDO — SPASHT ane SEEDHA: SHO KARAVUU ane KEMA.\\\",\\n     \\\"prioritaet\\\": \\\"hoch|mittel|niedrig\\\",\\n     \\\"verknuepfung\\\": \\\"1-2 ANYA KATEGOREE NAAM JE JODAAYELA HOY, KEMA MAATE 1 VAAKYA. NAHI TOJ: null\\\",\\n     \\\"herleitung\\\": [\\n       {\\n         \\\"datum\\\": \\\"NONDH NI TITHI (DAAKLAA: 28.03.2026)\\\",\\n         \\\"zusammenfassung\\\": \\\"AA NONDHMAA SHO RELEVANT HATUU (1-2 VAAKYO).\\\"\\n       }\\n     ]\\n   }\\n\\n   PRATHAMIKTA-ARTTH:\\n   - \\\"hoch\\\" = TATKAL, TURANT KARAVAAI (SARAUTHEE MOTU BHAARAN STROT)\\n   - \\\"mittel\\\" = ANUBHAVSHEYL, TVARIT KARAVAAI\\n   - \\\"niedrig\\\" = NIHAALO, LAAMBAGAALAMAA KAAMO"
+  },
+  {
+    "key": "ai_prompt_entropy_output",
+    "de": "AUSGABEFORMAT — STRENGE REGELN:\\n- Antworte NUR mit dem JSON-Objekt.\\n- Kein Text davor oder danach.\\n- Keine Markdown-Backticks.\\n- Beginne direkt mit { und ende mit }.\\n- Valides JSON — keine fehlenden Kommas, keine doppelten Schlüssel.",
+    "gu_current": "OUTPUT FORMAT — SAKHAT NIYAMO:\\n- MAATR JSON OBJECT SATHE JAWAB AAPAO.\\n- PAHELA KE PACHHAL KONO TEXT NAHI.\\n- MARKDOWN BACKTICKS NAHI.\\n- SEEDHA { THI SHARU KARO ane } SATHE PURO KARO.\\n- VALID JSON — KONO CHHEETO COMMA NAHI, KONO BEVO CHAAVI NAHI."
+  },
+  {
+    "key": "ai_prompt_summary_entry_rules",
+    "de": "OBERSTE REGEL — KEIN EINTRAG DARF FEHLEN:\\nDu erhältst nummerierte Einträge (z.B. \\\"EINTRAG 1 von 5\\\").\\nDu MUSST JEDEN EINZELNEN Eintrag lesen, analysieren und einbeziehen.\\nBevor du antwortest, zähle: Habe ich ALLE Einträge berücksichtigt?\\nWenn einer fehlt — ergänze ihn SOFORT.\\n\\nUMGANG MIT WENIGEN EINTRÄGEN:\\n- Bei 1–2 Einträgen: Fasse die Inhalte zusammen ohne Muster zu behaupten.\\n  Kennzeichne Beobachtungen als \\\"vorläufig\\\" in der Beschreibung.\\n- Ab 3 Einträgen: Suche aktiv nach wiederkehrenden Themen und Zusammenhängen.\\n\\nZEITLICHE GEWICHTUNG:\\nJeder Eintrag muss berücksichtigt werden. Bei widersprüchlichen Aussagen zum selben Thema beachte den zeitlichen Verlauf — neuere Einträge zeigen den aktuellen Stand. Ältere Einträge liefern Kontext.",
+    "gu_current": "SARAUTHEE UPARNAA NIYAM — KONO NONDH CHOOTATO NAHI:\\nTamane SANKHYAANK NONDHO MAALE CHHE (DAAKLAA TARIKE \\\"NONDH 1 OF 5\\\").\\nTAMAE PRATYEK NONDH VAANCHAVOO, VISHLESHHAN KARAVOO ane SAMAAVESH KARAVOO JOIE.\\nJAWAB AAPTAA PAHELA GANTRUU: SHOO MAE SARAVE NONDHO DHYAANMAA LAADHA CHHE?\\nKONO CHHEETO HOY — TOJ SAMAAVESH KARO.\\n\\nOCHCHHAA NONDHO SATHE KALAVAA:\\n- 1-2 NONDHO HOY TOJ: NAMUNAAO MAANYAA VINAA SARANSH KARO.\\n  AVLOKAN MAATRE \\\"PRARAMBHIK\\\" TAREKE DARSHAAVO.\\n- 3+ NONDHO HOY TOJ: VARAAVAR VISHAYO ane SAMBANDHO SAKRIYAPANE SHHOODHO.\\n\\nSAMAY PRAMANE MAHATTVA:\\nPRATYEK NONDH DHYAANMAA LAVOO. SAME VISHAY PAR VIRODHAABHAASI VAATO HOY TOJ SAMAY PRAMANE SHHHOODHO — NAVINAATAM NONDH VARSHAMAAN DARASHAAVE CHHE. PURAANAA NONDHO SANDARBH CHHE."
+  },
+  {
+    "key": "ai_prompt_summary_rules",
+    "de": "SPRACHREGELN (gelten für ALLE Textfelder im JSON):\\n- Einfache, klare Sprache. Kurze Sätze.\\n- Keine Fremdwörter, keine Fachbegriffe, keine Floskeln.\\n- Jeder soll den Text sofort verstehen, ohne nachzudenken.\\n- Neutral, klar und sachlich, keine Bewertungen, keine Ratschläge.\\n- Keine langen Gedankenstriche (—). Nutze Kommas oder Punkte.\\n\\nMENGEN-REGEL, VOLLSTÄNDIGKEIT VOR KÜRZE:\\nDie Gesamtzahl aller Erkenntnisse über alle Themen hinweg soll mindestens 15 betragen. Weniger als 10 ist ein Fehler. Jeder einzelne Gedanke, jedes Erlebnis, jede Beobachtung aus den Einträgen verdient eine eigene Erkenntnis. Fasse NICHT zusammen. Wenn ein Eintrag 3 verschiedene Themen anspricht, entstehen daraus 3 separate Erkenntnisse — nicht eine die alles zusammenfasst. Das JSON darf lang werden — Vollständigkeit ist wichtiger als Kürze.",
+    "gu_current": "BHAASHAA NIYAMO (JSON MAA SARAVE TEXT FIELDS MAATE LAAGU):\\n- SARAL, SPASHT BHAASHAA. CHHOTA VAAKYO.\\n- KUNU PARADESHEEY SHABDA, PARIBHAASHIK SHABDA, THOTHA SHABDO NAHI.\\n- DAREKNAA VAANCHVAA JATAA J SAMAJVAA AAVSHE.\\n- SHUNT, SPASHT ane TATVIK, KUNO MULYANKAN, KUNO SALAAH.\\n- LAAMBA VIRAMCHIHNA (—) NAHI. ALPAVISHRAM KE CHHOTA VAAKYO VAAPARO.\\n\\nSAANKHYAA-NIYAM, POORNATA SANCHIPTATA PAHELA:\\nSARAVE VISHAYO MAA KULSHAAS TARANSHEELATAAO NYANAA 15 HAVAA JOIE. 10 THHI OCHHE = GHALTI. NONDHAMAA THHI PRATYEK VICHAAR, ANUBHAV, AVLOKAN NE ALAG TARANSHEELATA MAALE. BHERLAA NAHI. NONDH 3 ALAAG VISHAYO BAABAT BOLE TOJ 3 ALAG TARANSHEELATAAO BANE. JSON LAMBU THOI SAKE — POORNATA SANCHHIPTATA KARTA MAHATTVAPOORN CHHE."
+  },
+  {
+    "key": "ai_prompt_summary_schema_header",
+    "de": "JSON-AUSGABE-SCHEMA:\\n{\\n  \\\"gesamt_entropie\\\": 0.0,\\n  \\\"trend\\\": \\\"steigend|stabil|sinkend|unbekannt\\\",\\n  \\\"gesamtanalyse\\\": \\\"...\\\",\\n  \\\"fortschritte\\\": [...],\\n  \\\"top_massnahmen\\\": [...],\\n  \\\"kategorien\\\": [...]\\n}\\n\\nFELD-DEFINITIONEN:\\n\\n1) \\\"gesamt_entropie\\\" (Zahl, 0.0 bis 1.0)\\n   Wie viel passiert gerade im Leben des Nutzers? Gewichteter Durchschnitt über alle Themenbereiche.\\n   - 0.0–0.33 = Ruhige Phase (wenig Aktivität, wenig Veränderung)\\n   - 0.34–0.66 = Normale Phase (durchschnittlich viel los)\\n   - 0.67–1.0 = Intensive Phase (viel los, viele Themen gleichzeitig)\\n\\n2) \\\"trend\\\" (Text)\\n   Nur wenn mindestens 3 Einträge über mehrere Tage vorliegen.\\n   Vergleiche ältere mit neueren Einträgen:\\n   - \\\"steigend\\\" = Es passiert immer mehr, Aktivität nimmt zu\\n   - \\\"stabil\\\" = Ähnliches Aktivitätsniveau\\n   - \\\"sinkend\\\" = Es wird ruhiger, weniger Themen\\n   - \\\"unbekannt\\\" = Zu wenig Daten für eine Aussage\\n\\n3) \\\"gesamtanalyse\\\" (Text, 15–25 Sätze)\\n   - Gehe Eintrag für Eintrag durch und extrahiere das Hauptthema.\\n   - Benenne JEDES Thema aus JEDEM Eintrag namentlich.\\n   - Erkenne Zusammenhänge zwischen den Themen.\\n   - Was beschäftigt den Nutzer gerade am meisten?\\n   - Was hat sich über die Einträge hinweg verändert?\\n   - Sei sachlich und persönlich — sprich den Nutzer direkt an.\\n   - Keine Bewertungen, keine Ratschläge — nur zusammenfassen und ordnen.",
+    "gu_current": "JSON-OUTPUT-SCHEMA:\\n{\\n  \\\"gesamt_entropie\\\": 0.0,\\n  \\\"trend\\\": \\\"steigend|stabil|sinkend|unbekannt\\\",\\n  \\\"gesamtanalyse\\\": \\\"...\\\",\\n  \\\"fortschritte\\\": [...],\\n  \\\"top_massnahmen\\\": [...],\\n  \\\"kategorien\\\": [...]\\n}\\n\\nFIELD VYAAKHYAAO:\\n\\n1) \\\"gesamt_entropie\\\" (AAAKDA, 0.0-1.0)\\n   USER NA JEEVNMA VARSHAMAAN KITAL KHAAD CHHE? SARAVE VISHAYO PAR VAAZANDAR SARAASARI.\\n   - 0.0-0.33 = SHANT TABAQQO (OCHU KARYAKRAM, OCHU PARIVARTAN)\\n   - 0.34-0.66 = SAMAANYA TABAQQO (SARAASARI PRASTUTI)\\n   - 0.67-1.0 = TEEVRA TABAQQO (GHANU CHHAD, BAHU VISHAYO EKLAA SAMAAYE)\\n\\n2) \\\"trend\\\" (TEXT)\\n   MAATR JAYDAARE NYANAA 3 NONDHO BAHU DIVAS UPAR HOYA TOJ.\\n   PURAANAA SATHE NAVAA NONDHO SARAAKHAVO:\\n   - \\\"steigend\\\" = VADHARE THAAI RAHYU CHHE, KARYAKRAM VADHE CHHE\\n   - \\\"stabil\\\" = SAME KARYAKRAM STAR\\n   - \\\"sinkend\\\" = SHAANT THAAI RAHYU CHHE, OCHA VISHAYO\\n   - \\\"unbekannt\\\" = TATHYO MAATE PURATAA AAKADAA NATHI\\n\\n3) \\\"gesamtanalyse\\\" (TEXT, 15-25 VAAKYO)\\n   - PRATYEK NONDH PRAMANE JA ane MUKHYA VISHAY SHHOODHO.\\n   - PRATYEK NONDH MAATHHI PRATYEK VISHAY NAMDAVOO.\\n   - VISHAYO VAHCCHE SAMBANDHO OLAKHHO.\\n   - VARSHAMAAN USER NE SHO VADHARE SPARSHE CHHE?\\n   - NONDHO DARMIYAAN SHO BAADLAAYUU?\\n   - SHUNT ane VYAKTIGAT — User NE SEEDHA SAMBODHO.\\n   - KONO MULYANKAN NAHI, KONO SALAAH NAHI — MAATR SARANSH ane GODHATIYA KARO."
+  },
+  {
+    "key": "ai_prompt_summary_schema_fields",
+    "de": "4) \\\"fortschritte\\\" (Array, 0–5 Einträge)\\n   Wiederkehrende Themen, Gewohnheiten oder Zusammenhänge die über mehrere Einträge hinweg sichtbar werden.\\n   Schema pro Muster:\\n   {\\n     \\\"titel\\\": \\\"Kurzer Titel (max. 5 Wörter)\\\",\\n     \\\"beschreibung\\\": \\\"Was sich wiederholt oder zusammenhängt (2–3 Sätze).\\\",\\n     \\\"bezug\\\": \\\"Aus welchen Einträgen das hervorgeht (1 Satz).\\\"\\n   }\\n   Bei nur 1 Eintrag oder keinen erkennbaren Mustern: leeres Array [].\\n\\n5) \\\"top_massnahmen\\\" (Array, genau 5 Einträge)\\n   Die 5 wichtigsten Erkenntnisse aus allen Tagebucheinträgen zusammen. Was sind die zentralen Punkte, die das Leben des Nutzers gerade am stärksten prägen? Sortiert nach Bedeutung (wichtigste zuerst). Themenübergreifend denken — das große Bild zeigen.\\n   Schema pro Erkenntnis:\\n   {\\n     \\\"titel\\\": \\\"Kurzer Titel (max. 6 Wörter)\\\",\\n     \\\"beschreibung\\\": \\\"13–21 Wörter — ein kompakter Satz der die Erkenntnis auf den Punkt bringt.\\\",\\n     \\\"erklaerung\\\": \\\"Ausführliche Erklärung (5–8 Sätze). Was genau wurde in den Einträgen beschrieben? Warum ist das gerade ein zentrales Thema? Wie hängt es mit anderen Themen zusammen?\\\"\\n   }",
+    "gu_current": "4) \\\"fortschritte\\\" (ARRAY, 0-5 NONDHO)\\n   VARAAVAR AAVTAA VISHAYO, AADAT KE SAMBANDHO JE BAHU NONDHO MAA DIKHAAY.\\n   PRATYEK NAMUNAAO NUU SCHEMA:\\n   {\\n     \\\"titel\\\": \\\"CHHOTO SHIRSHAK (max. 5 SHABDO)\\\",\\n     \\\"beschreibung\\\": \\\"SHO VARAAVAR AAVe KE JODAAY CHHE (2-3 VAAKYO).\\\",\\n     \\\"bezug\\\": \\\"KYA NONDHAMAA THHI DIKHAAY CHHE (1 VAAKYA).\\\"\\n   }\\n   MAATR 1 NONDH HOY KE NAMUNAAO NA DIKHAAY TOJ: KHAALI ARRAY [].\\n\\n5) \\\"top_massnahmen\\\" (ARRAY, SARVAR 5 NONDHO)\\n   SARAVE DIARY-NONDHAMAA THHI 5 SARAUTHEE MAHATTVAPOORN TARANSHEELATAAO. VARSHAMAAN USER NUU JEEVAN SARAUTHEE VADHARE RASHPU SHO CHHE? PRAMUKHATAA PRAMANE GOOTHAVIO (SARAUTHEE MAHATTVAPOORN PAHELA). SARAVE VISHAYO PAAR VICHAARVU — MOTU CHITRA BATAVO.\\n   PRATYEK TARANSHEELATA NUU SCHEMA:\\n   {\\n     \\\"titel\\\": \\\"CHHOTO SHIRSHAK (max. 6 SHABDO)\\\",\\n     \\\"beschreibung\\\": \\\"13-21 SHABDO — COMPACT VAAKYA JE TARANSHEELATA MUDDA PAR LAAVE.\\\",\\n     \\\"erklaerung\\\": \\\"VISTAR VYAAKHYAAN (5-8 VAAKYO). NONDHAMAA SHUU BAATAVAYUU HATUU? KEMA AA VARSHAMAAN KENDRIIY VISHAY CHHE? ANYA VISHAYO SATHE KEVAREE REETHNEE JODAAY CHHE?\\\"\\n   }"
+  },
+  {
+    "key": "ai_prompt_summary_schema_categories",
+    "de": "6) \\\"kategorien\\\" (Array, so viele wie nötig)\\n   Für JEDES erkannte Thema eine eigene Gruppe.\\n   Schema pro Thema:\\n   {\\n     \\\"name\\\": \\\"Themenname (max. 12 Zeichen, 1–2 Wörter)\\\",\\n     \\\"icon\\\": \\\"material_icon_name\\\",\\n     \\\"farbe\\\": \\\"#HEX\\\",\\n     \\\"entropie_level\\\": 0.0,\\n     \\\"zusammenfassung\\\": \\\"Zusammenfassung dieses Themas (3–5 Sätze). Was hat der Nutzer dazu geschrieben? Was ist der aktuelle Stand?\\\",\\n     \\\"ratschlaege\\\": [...]\\n   }\\n\\n   THEMENNAMEN — kurz und prägnant:\\n   RICHTIG: \\\"Schlaf\\\", \\\"Arbeit\\\", \\\"Fitness\\\", \\\"Psyche\\\", \\\"Projekte\\\"\\n   FALSCH: \\\"Persönliche Entwicklung\\\" (zu lang) → \\\"Entwicklung\\\"\\n\\n   THEMEN — DYNAMISCH:\\n   Nutze diese als Basis, aber erstelle NEUE wenn ein Thema nicht passt:\\n   - Schlaf (icon: bedtime, farbe: #6C63FF)\\n   - Arbeit (icon: work, farbe: #FF6B6B)\\n   - Fitness (icon: fitness_center, farbe: #4ECDC4)\\n   - Ernährung (icon: restaurant, farbe: #FFE66D)\\n   - Psyche (icon: psychology, farbe: #A78BFA)\\n   - Beziehungen (icon: people, farbe: #F472B6)\\n   - Zuhause (icon: home, farbe: #34D399)\\n   - Entwicklung (icon: trending_up, farbe: #60A5FA)\\n   - Projekte (icon: code, farbe: #F59E0B)\\n   - Gesundheit (icon: health_and_safety, farbe: #EF4444)\\n   - Finanzen (icon: account_balance, farbe: #10B981)\\n   - Freizeit (icon: sports_esports, farbe: #EC4899)\\n   - Natur (icon: grass, farbe: #22C55E)\\n   - Alltag (icon: calendar_today, farbe: #78716C)\\n   - Reise (icon: flight, farbe: #06B6D4)\\n   - Kreativität (icon: music_note, farbe: #D946EF)\\n   Weitere Icons: spa, coffee, self_improvement, nights_stay, directions_run, child_care, school, computer, timer, cleaning_services, directions_car, photo_camera, pets, wb_sunny, lightbulb, star, healing\\n\\n   INTENSITÄT pro Thema (im Feld \\\"entropie_level\\\", 0.0 bis 1.0):\\n   Wie stark ist dieses Thema in den Einträgen vertreten? Keine Bewertung ob gut oder schlecht — nur wie präsent das Thema ist.\\n   - 0.0–0.33 = Wenig erwähnt (am Rande)\\n   - 0.34–0.66 = Regelmäßig erwähnt (ein Thema unter vielen)\\n   - 0.67–1.0 = Sehr präsent (dominierendes Thema)\\n\\n   ERKENNTNISSE pro Thema (im Feld \\\"ratschlaege\\\") — MENGE:\\n   Extrahiere ALLE Erkenntnisse die du aus den Einträgen zu diesem Thema ableiten kannst. Lieber zu viele als zu wenige — 5 bis 20 pro Thema sind normal. Jeder einzelne Gedanke, jedes Erlebnis, jede Beobachtung verdient eine eigene Erkenntnis. Fasse NICHT zusammen. Wenn ein Eintrag 3 verschiedene Aspekte zu einem Thema nennt, entstehen daraus 3 separate Erkenntnisse. Jede Erkenntnis muss sich auf KONKRETE Aussagen aus den Einträgen beziehen. Sortiert nach Relevanz: \\\"hoch\\\" zuerst, dann \\\"mittel\\\", dann \\\"niedrig\\\".\\n\\n   Schema pro Erkenntnis:\\n   {\\n     \\\"titel\\\": \\\"Kurzer Titel (max. 6 Wörter)\\\",\\n     \\\"beschreibung\\\": \\\"13–21 Wörter — ein kompakter Satz der zusammenfasst was der Nutzer geschrieben oder erlebt hat. Sachlich, nicht wertend.\\\",\\n     \\\"prioritaet\\\": \\\"hoch|mittel|niedrig\\\",\\n     \\\"verknuepfung\\\": \\\"1–2 andere Themennamen die zusammenhängen, plus ein Satz warum. Falls keine: null\\\",\\n     \\\"herleitung\\\": [\\n       {\\n         \\\"datum\\\": \\\"Datum des Eintrags (z.B. 28.03.2026)\\\",\\n         \\\"zusammenfassung\\\": \\\"Was in diesem Eintrag zu diesem Thema stand (1–2 Sätze).\\\"\\n       }\\n     ]\\n   }\\n\\n   RELEVANZ-BEDEUTUNG (im Feld \\\"prioritaet\\\"):\\n   - \\\"hoch\\\" = Zentrales Thema, häufig erwähnt, beschäftigt den Nutzer stark\\n   - \\\"mittel\\\" = Kommt vor, ist aber nicht dominant\\n   - \\\"niedrig\\\" = Am Rande erwähnt, Einzelbeobachtung",
+    "gu_current": "6) \\\"kategorien\\\" (ARRAY, JAROOR HOYA TETLAA)\\n   PRATYEK OLAKHELO VISHAY MAATE ALAG VISHAYJOTH.\\n   PRATYEK VISHAY NUU SCHEMA:\\n   {\\n     \\\"name\\\": \\\"VISHAY-NAAM (max. 12 AKSHAR, 1-2 SHABDO)\\\",\\n     \\\"icon\\\": \\\"material_icon_name\\\",\\n     \\\"farbe\\\": \\\"#HEX\\\",\\n     \\\"entropie_level\\\": 0.0,\\n     \\\"zusammenfassung\\\": \\\"AA VISHAYNII SARANSH (3-5 VAAKYO). USER E YAHAAN VISHE SHO LIKHHHYU? VARSHAMAAN PARISTAHTHI SHHU CHHE?\\\",\\n     \\\"ratschlaege\\\": [...]\\n   }\\n\\n   VISHAY-NAAMO — CHHOTO ane MUDDA UPAR:\\n   SAACHO: \\\"Schlaf\\\", \\\"Arbeit\\\", \\\"Fitness\\\", \\\"Psyche\\\", \\\"Projekte\\\"\\n   GALAT: \\\"Persönliche Entwicklung\\\" (TOO LAMBU) → \\\"Entwicklung\\\"\\n\\n   VISHAYO — DINAMIK:\\n   NIYAM TARIKE VAAPARO, PARAN NAVIINAA BANAVO JAYARE VISHAY BAESATO NAHI:\\n   - Schlaf (icon: bedtime, farbe: #6C63FF)\\n   - Arbeit (icon: work, farbe: #FF6B6B)\\n   - Fitness (icon: fitness_center, farbe: #4ECDC4)\\n   - Ernährung (icon: restaurant, farbe: #FFE66D)\\n   - Psyche (icon: psychology, farbe: #A78BFA)\\n   - Beziehungen (icon: people, farbe: #F472B6)\\n   - Zuhause (icon: home, farbe: #34D399)\\n   - Entwicklung (icon: trending_up, farbe: #60A5FA)\\n   - Projekte (icon: code, farbe: #F59E0B)\\n   - Gesundheit (icon: health_and_safety, farbe: #EF4444)\\n   - Finanzen (icon: account_balance, farbe: #10B981)\\n   - Freizeit (icon: sports_esports, farbe: #EC4899)\\n   - Natur (icon: grass, farbe: #22C55E)\\n   - Alltag (icon: calendar_today, farbe: #78716C)\\n   - Reise (icon: flight, farbe: #06B6D4)\\n   - Kreativität (icon: music_note, farbe: #D946EF)\\n   Vadhare Icons: spa, coffee, self_improvement, nights_stay, directions_run, child_care, school, co2.\\n\\n   VISHAY MAA TARAAASHTTAA (FIELD \\\"entropie_level\\\", 0.0-1.0):\\n   AA VISHAY NONDHAMAA KETALO PRASTUT CHHE? MULYANKAN NAHI — MAATR KETALO HAAJAR CHHE.\\n   - 0.0-0.33 = OCHU ULLEKHHAYUU (HAULAAK ULLEKHA)\\n   - 0.34-0.66 = NIYAMIT ULLEKHHAYUU (ANEK VISHAYONE PEKI EK)\\n   - 0.67-1.0 = GHANU HAAJAR (PRADHAAN VISHAY)\\n\\n   TARANSHEELATAAO PRATYEK VISHAY (FIELD \\\"ratschlaege\\\") — SAANKHYAA:\\n   SARAVE TARANSHEELATAAO KAADHHO JE NONDHAMAA THHI FALAAVE. VADHARE OCHHHAA KARTA SARAAA — 5-20 PRATYEK VISHAY SAMAANYA. PRATYEK VICHAAR, ANUBHAV, AVLOKAN NE ALAG TARANSHEELATA MAALE. BHERLAA NAHI. PRATYEK TARANSHEELATA NONDH NI MAULIK VAATO SATHE SAMBANDH RAKHAVOO JOIE. PRAMUKHATAA PRAMANE GOOTHAVIO: \\\"hoch\\\" PAHELA, PACHHI \\\"mittel\\\", PACHHI \\\"niedrig\\\".\\n\\n   PRATYEK TARANSHEELATA NUU SCHEMA:\\n   {\\n     \\\"titel\\\": \\\"CHHOTO SHIRSHAK (max. 6 SHABDO)\\\",\\n     \\\"beschreibung\\\": \\\"13-21 SHABDO — COMPACT VAAKYA JE SARANSH KARE USER E SHO LIKHHHYU KE ANUBHAVYUU. SHUNT, MULYANKAN NAHI.\\\",\\n     \\\"prioritaet\\\": \\\"hoch|mittel|niedrig\\\",\\n     \\\"verknuepfung\\\": \\\"1-2 ANYA VISHAY-NAAMO JE JODAAYELA HOY, KEMA MAATE 1 VAAKYA. NAHI TOJ: null\\\",\\n     \\\"herleitung\\\": [\\n       {\\n         \\\"datum\\\": \\\"NONDH NI TITHI (DAAKLAA: 28.03.2026)\\\",\\n         \\\"zusammenfassung\\\": \\\"AA NONDHMAA VISHAY VISHE SHO LIKHHHYU HATUU (1-2 VAAKYO).\\\"\\n       }\\n     ]\\n   }\\n\\n   PRAMUKHATAA-ARTTH (FIELD \\\"prioritaet\\\"):\\n   - \\\"hoch\\\" = KENDRIIY VISHAY, VARAAVAR ULLEKHHAYUU, USER NE GHANU SPARSHE CHHE\\n   - \\\"mittel\\\" = AAVSHE CHHE, PARAN PRADHAAB NAHI\\n   - \\\"niedrig\\\" = HAULAAK ULLEKHHAYUU, AAKAL-AVLOKAN"
+  },
+  {
+    "key": "ai_prompt_summary_output",
+    "de": "WORTANZAHL-REGEL FÜR BESCHREIBUNGEN (STRENG EINHALTEN):\\nDie \\\"beschreibung\\\" in \\\"top_massnahmen\\\" und in \\\"ratschlaege\\\" muss IMMER zwischen 13 und 21 Wörter lang sein.\\n- Weniger als 13 Wörter = zu kurz = FEHLER\\n- Mehr als 21 Wörter = zu lang = FEHLER\\nZähle die Wörter bevor du sie schreibst. Jede Beschreibung ist EIN kompakter, vollständiger Satz. Nicht mehr, nicht weniger.\\n\\nAUSGABEFORMAT — STRENGE REGELN:\\n- Antworte NUR mit dem JSON-Objekt.\\n- Kein Text davor oder danach.\\n- Keine Markdown-Backticks.\\n- Beginne direkt mit { und ende mit }.\\n- Valides JSON — keine fehlenden Kommas, keine doppelten Schlüssel.",
+    "gu_current": "SHABDO SAANKHYAA-NIYAM VARNANAO MAATE (SAKHAT PALAVO):\\n\\\"beschreibung\\\" \\\"top_massnahmen\\\" ane \\\"ratschlaege\\\" MAA SADAA 13-21 SHABDO NI VAHCCHE HOVU JOIE.\\n- 13 THHI OCHCHHAA SHABDO = TOO CHOOTTAA = GHALTI\\n- 21 THHI VADHARE SHABDO = TOO LAAMBAA = GHALTI\\nLIKHHTAA PAHELA SHABDO GANSO. PRATYEK VARNAN 1 COMPACT, POORNO VAAKYA CHHE.\\n\\nOUTPUT FORMAT — SAKHAT NIYAMO:\\n- MAATR JSON OBJECT SATHE JAWAB AAPAO.\\n- PAHELA KE PACHHAL KONO TEXT NAHI.\\n- MARKDOWN BACKTICKS NAHI.\\n- SEEDHA { THI SHARU KARO ane } SATHE PURO KARO.\\n- VALID JSON — KONO CHHEETO COMMA NAHI, KONO BEVO CHAAVI NAHI."
+  },
+  {
+    "key": "ai_prompt_custom_rules",
+    "de": "KONTEXT-REGEL — JEDER EINTRAG WIRD GELESEN:\\nDu erhältst nummerierte Einträge. Lies JEDEN EINZELNEN vollständig und nimm sie als Kontext auf. Jedes relevante Detail fließt in deinen Output ein. Aber: Der Output darf und soll über die Einträge hinausgehen, wenn der Auftrag das verlangt.\\n\\nAUFTRAGS-REGEL — DER AUFTRAG WIRD ERFÜLLT:\\nFühre den Auftrag des Nutzers wörtlich aus. Fragt der Auftrag nach Alternativen, liefere echte neue Alternativen, nicht nur Dinge aus den Einträgen. Fragt der Auftrag nach Empfehlungen, recherchiere und empfehle aktiv. Die Einträge sind NICHT die einzige Quelle deiner Antwort.\\n\\nUNTERSCHEIDUNG IM OUTPUT:\\nKennzeichne klar, was aus den Einträgen stammt und was du neu hinzufügst. So weiß der Nutzer, was seine eigenen Gedanken sind und was dein Beitrag ist.\\n\\nSPRACHREGELN:\\n- Einfach, klar. Keine Fremdwörter.\\n- Empathisch und direkt.\\n- Keine langen Gedankenstriche (—). Nutze Kommas oder Punkte.\\n\\nMENGEN-REGEL:\\nMindestens 10 Erkenntnisse insgesamt — aber jede einzelne muss inhaltlich zum Auftrag passen. Wenn du keine 10 Erkenntnisse mit echtem Profil-Bezug findest, liefere lieber 7 starke statt 10 verwässerte. Bei reinen Analyse-Aufträgen stammen die Erkenntnisse aus den Einträgen, bei kreativen Aufträgen darfst du neue Inhalte einbringen.",
+    "gu_current": "SARAUTHEE UPARNAA NIYAM — KONO NONDH CHOOTATO NAHI:\\nTamane SANKHYAANK NONDHO MAALE CHHE. Tame PRATYEK EK NONDH VAANCHAVOO, VISHLESHHAN KARAVOO ane SAMAAVESH KARAVOO JOIE.\\n\\nBHAASHAA NIYAMO:\\n- SARAL, SPASHT. KUNO PARADESHEEY SHABDA, VISHISHHTA PARIBHAASHAA NAHI.\\n- SAANVEDANAASHEEL ane SEEDHAA.\\n- LAAMBA VIRAMCHIHNA (—) NAHI. ALPAVISHRAM KE BINDU VAAPARO.\\n\\nSAANKHYA-NIYAM:\\nKULSHAAS NYANAA 10 TARANSHEELATAAO. PRATYEK PEHLU NE POTAANI TARANSHEELATA MALE."
+  },
+  {
+    "key": "ai_prompt_custom_schema",
+    "de": "JSON-AUSGABE-SCHEMA:\\n{\\n  \\\"ueberschrift_top5\\\": \\\"Kreative Überschrift, passend zum Auftrags-Ergebnis, max 3 Wörter\\\",\\n  \\\"ueberschrift_analyse\\\": \\\"Kreative Überschrift, passend zum Auftrags-Ergebnis, max 3 Wörter\\\",\\n  \\\"ueberschrift_ergebnisse\\\": \\\"Kreative Überschrift, passend zum Auftrags-Ergebnis, max 3 Wörter\\\",\\n  \\\"fokus_kern\\\": \\\"Ein Satz, der den Kern des Auftrags in eigenen Worten wiedergibt — als sichtbarer Anker für das Dashboard.\\\",\\n  \\\"fokus_zitate\\\": [\\\"...\\\", \\\"...\\\"],\\n  \\\"gesamt_entropie\\\": 0.0,\\n  \\\"trend\\\": \\\"steigend|stabil|sinkend|unbekannt\\\",\\n  \\\"gesamtanalyse\\\": \\\"...\\\",\\n  \\\"fortschritte\\\": [...],\\n  \\\"top_massnahmen\\\": [...],\\n  \\\"kategorien\\\": [...]\\n}\\n\\n1) \\\"ueberschrift_top5/analyse/ergebnisse\\\": PFLICHT. Kreativ, spezifisch, max 3 Wörter. MUSS das ERGEBNIS des Auftrags widerspiegeln, nicht nur das Thema. KEINE generischen Titel.\\n\\n2) \\\"fokus_kern\\\": PFLICHT. Ein einzelner Satz (15–30 Wörter), der dem Nutzer zeigt: \\\"Ich habe deinen Auftrag verstanden — DAS ist der rote Faden.\\\" Kein Zitat des Auftrags, sondern eine eigene Formulierung in deinen Worten. Das wird oben im Dashboard angezeigt und ist der Beweis, dass das Profil greift.\\n\\n3) \\\"fokus_zitate\\\": PFLICHT, 3 bis 5 Stück. Kurze, wörtlich oder fast-wörtlich entnommene Stellen aus den Tagebucheinträgen, die direkt zum Auftrag passen. Format jeweils: \\\"[Datum] kurzes Zitat oder paraphrasierte Stelle\\\". Wenn es bei kreativ-recherchierenden Aufträgen keine wörtlichen Treffer gibt, nimm die 3–5 Einträge mit der größten thematischen Nähe und beschreibe in einer Zeile den Bezug. Wenn weniger als 3 Einträge thematisch passen, gib trotzdem mindestens diese aus und ergänze ggf. einen Hinweis \\\"(thematische Nähe)\\\" — niemals leer lassen.\\n\\n4) \\\"gesamt_entropie\\\" (0.0 bis 1.0): Wie stark ist das Auftrags-Thema in den Einträgen vertreten?\\n\\n5) \\\"trend\\\": Nur bei 3+ Einträgen. Wie entwickelt sich das Auftrags-Thema in den Einträgen?\\n\\n6) \\\"gesamtanalyse\\\" (15–25 Sätze): Zwei Teile klar erkennbar. MINDESTENS 50 Prozent des Texts behandeln direkt oder umschreibend den Auftrag.\\n   Teil A (Kontext aus den Einträgen): Was steht in den Einträgen zum Thema? Benenne relevante Details.\\n   Teil B (Ergebnis des Auftrags): Was ist deine Antwort auf den Auftrag? Was lieferst du neu, zusätzlich oder als Empfehlung?\\n   Verknüpfe beide Teile, damit der Nutzer den roten Faden sieht.\\n\\n7) \\\"fortschritte\\\" (0–5): Muster oder Entwicklungen aus den Einträgen, die für den Auftrag wichtig sind. Mindestens die Hälfte der Fortschritts-Einträge muss klar zum Auftrag gehören.\\n   { \\\"titel\\\": \\\"max 5 Wörter\\\", \\\"beschreibung\\\": \\\"2–3 Sätze\\\", \\\"bezug\\\": \\\"1 Satz\\\" }\\n\\n8) \\\"top_massnahmen\\\" (genau 5): Die wichtigsten ERGEBNISSE des Auftrags. MINDESTENS 3 von 5 müssen unmissverständlich zum Auftrag gehören. Das können neue Vorschläge, Alternativen, Empfehlungen oder Erkenntnisse sein, die der Nutzer in den Einträgen NICHT erwähnt hat, wenn der Auftrag das verlangt. Bei reinen Analyse-Aufträgen stammen sie aus den Einträgen.\\n   {\\n     \\\"titel\\\": \\\"max 6 Wörter\\\",\\n     \\\"beschreibung\\\": \\\"13–21 Wörter, kompakt auf den Punkt.\\\",\\n     \\\"erklaerung\\\": \\\"5–8 Sätze ausführlich. Wenn der Inhalt neu ist, begründe, warum er zum Kontext des Nutzers passt. Wenn der Inhalt aus den Einträgen stammt, nenne den konkreten Bezug.\\\"\\n   }\\n\\n9) \\\"kategorien\\\": Themengruppen, die den Auftrag strukturieren (dynamisch). MINDESTENS die Hälfte der Kategorien muss inhaltlich zum Auftrag gehören. Verzichte auf \\\"Standard-Lebensthemen\\\" wie Arbeit, Schlaf, Freizeit, wenn sie nicht zum Auftrag passen.\\n   {\\n     \\\"name\\\": \\\"max 12 Zeichen\\\", \\\"icon\\\": \\\"material_icon_name\\\", \\\"farbe\\\": \\\"#HEX\\\",\\n     \\\"entropie_level\\\": 0.0,\\n     \\\"zusammenfassung\\\": \\\"3–5 Sätze\\\",\\n     \\\"ratschlaege\\\": [{\\n       \\\"titel\\\": \\\"max 6 Wörter\\\",\\n       \\\"beschreibung\\\": \\\"13–21 Wörter\\\",\\n       \\\"prioritaet\\\": \\\"hoch|mittel|niedrig\\\",\\n       \\\"verknuepfung\\\": \\\"Verbindung zu anderem Thema oder null\\\",\\n       \\\"herleitung\\\": [{\\\"datum\\\":\\\"...\\\",\\\"zusammenfassung\\\":\\\"1–2 Sätze\\\"}]\\n     }]\\n   }\\n\\nHERLEITUNG — HERKUNFT DES INHALTS:\\n- Stammt der Inhalt aus einem Eintrag: \\\"datum\\\" auf das Eintragsdatum setzen, \\\"zusammenfassung\\\" gibt den konkreten Bezug.\\n- Ist der Inhalt neu (z.B. eine recherchierte Alternative, ein eigener Vorschlag): \\\"datum\\\" auf \\\"neu\\\" setzen, \\\"zusammenfassung\\\" erklärt in 1–2 Sätzen, warum dieser Vorschlag zum Nutzer-Kontext passt.",
+    "gu_current": "JSON-OUTPUT-SCHEMA:\\n{\\n  \\\"ueberschrift_top5\\\": \\\"Fokus-RELATED SARJANASHEOL SHIRSHAK (max 3 SHABDO)\\\",\\n  \\\"ueberschrift_analyse\\\": \\\"Fokus-RELATED SARJANASHEOL SHIRSHAK (max 3 SHABDO)\\\",\\n  \\\"ueberschrift_ergebnisse\\\": \\\"Fokus-RELATED SARJANASHEOL SHIRSHAK (max 3 SHABDO)\\\",\\n  \\\"gesamt_entropie\\\": 0.0,\\n  \\\"trend\\\": \\\"steigend|stabil|sinkend|unbekannt\\\",\\n  \\\"gesamtanalyse\\\": \\\"...\\\"\\,\\n  \\\"fortschritte\\\": [...],\\n  \\\"top_massnahmen\\\": [...],\\n  \\\"kategorien\\\": [...]\\n}\\n\\n1) \\\"ueberschrift_top5/analyse/ergebnisse\\\": AVASHYAK. SARJANASHEOL, SPASHT, MAX 3 SHABDO. FOKUS-RELATED HOVU JOIE. KONO SAMANYA SHIRSHAK NAHI.\\n\\n2) \\\"gesamt_entropie\\\" (0.0-1.0): FOKUS-KSHETRA NONDHAMAA KITLO PRASTUT CHHE?\\n\\n3) \\\"trend\\\": MAATR 3+ NONDH HOYA TOJ. FOKUS-KSHETRA BADLAAY CHHE?\\n\\n4) \\\"gesamtanalyse\\\" (15-25 VAAKYO): NONDHO FOKUS-KSHETRA VISHE SHO KAHE CHHE? PRATYEK NONDHMAA THHI SARAVE RELEVANT TATVON BATAVO.\\n\\n5) \\\"fortschritte\\\" (0-5): FOKUS-KSHETRA MAA NAMUNAAO KE VIKASH.\\n   { \\\"titel\\\": \\\"max 5 SHABDO\\\", \\\"beschreibung\\\": \\\"2-3 VAAKYO\\\", \\\"bezug\\\": \\\"1 VAAKYA\\\" }\\n\\n6) \\\"top_massnahmen\\\" (SARVAR 5): FOKUS-KSHETRA VISHE SARAUTHEE MAHATTVAPOORN TARANSHEELATAAO.\\n   {\\n     \\\"titel\\\": \\\"max 6 SHABDO\\\",\\n     \\\"beschreibung\\\": \\\"13-21 SHABDO — COMPACT ane MUDDA UPAR.\\\",\\n     \\\"erklaerung\\\": \\\"5-8 VAAKYO VISTARATHEE.\\\"\\n   }\\n\\n7) \\\"kategorien\\\": FOKUS-RELATED VISHAYAJOTH (DINAMIK BANAVO).\\n   {\\n     \\\"name\\\": \\\"max 12 AKSHAR\\\", \\\"icon\\\": \\\"material_icon_name\\\", \\\"farbe\\\": \\\"#HEX\\\",\\n     \\\"entropie_level\\\": 0.0,\\n     \\\"zusammenfassung\\\": \\\"3-5 VAAKYO\\\",\\n     \\\"ratschlaege\\\": [{\\n       \\\"titel\\\": \\\"max 6 SHABDO\\\",\\n       \\\"beschreibung\\\": \\\"13-21 SHABDO\\\",\\n       \\\"prioritaet\\\": \\\"hoch|mittel|niedrig\\\",\\n       \\\"verknuepfung\\\": \\\"ANYA VISHAY SAMBANDH KE null\\\",\\n       \\\"herleitung\\\": [{\\\"datum\\\":\\\"...\\\",\\\"zusammenfassung\\\":\\\"1-2 VAAKYO\\\"}]\\n     }]\\n   }"
+  },
+  {
+    "key": "ai_prompt_custom_output",
+    "de": "WORTANZAHL-REGEL: \\\"beschreibung\\\" in top_massnahmen und ratschlaege IMMER 13–21 Wörter.\\n\\nAUSGABEFORMAT — STRENGE REGELN:\\n- Antworte NUR mit dem JSON-Objekt.\\n- Kein Text davor oder danach. Keine Backticks.\\n- Beginne direkt mit { und ende mit }.",
+    "gu_current": "SHABDONI SANKHYA-NIYAM: top_massnahmen ane ratschlaege MAA \\\"beschreibung\\\" SARAVE 13-21 SHABDO.\\n\\nOUTPUT FORMAT — SAKHAT NIYAMO:\\n- MAATR JSON OBJECT SATHE JAWAB AAPAO.\\n- PAHELA KE PACHHAL KONO TEXT NAHI. BACKTICKS NAHI.\\n- SEEDHA { THI SHARU KARO ane } SATHE PURO KARO."
+  },
+  {
+    "key": "retro_ai_unavailable",
+    "de": "Die KI ist gerade nicht erreichbar, bitte versuch es später nochmal.",
+    "gu_current": "AI ."
+  },
+  {
+    "key": "retro_weekly_title",
+    "de": "Wochenrückblick",
+    "gu_current": "."
+  },
+  {
+    "key": "retro_weekly_subtitle",
+    "de": "Die letzten 7 Tage im Überblick",
+    "gu_current": "."
+  },
+  {
+    "key": "retro_monthly_title",
+    "de": "Monatsrückblick",
+    "gu_current": "."
+  },
+  {
+    "key": "retro_monthly_subtitle",
+    "de": "Dein vergangener Monat auf einen Blick",
+    "gu_current": "."
+  },
+  {
+    "key": "retro_yearly_title",
+    "de": "Jahresrückblick",
+    "gu_current": "."
+  },
+  {
+    "key": "retro_yearly_subtitle",
+    "de": "Ein ganzes Jahr voller Erinnerungen",
+    "gu_current": "."
+  },
+  {
+    "key": "retro_premium_unlock",
+    "de": "Mit Premium alle Rückblicke freischalten",
+    "gu_current": "Premium .)."
+  },
+  {
+    "key": "retro_at_a_glance",
+    "de": "Auf einen Blick",
+    "gu_current": "."
+  },
+  {
+    "key": "retro_cd_expand",
+    "de": "Aufklappen",
+    "gu_current": "."
+  },
+  {
+    "key": "retro_cd_collapse",
+    "de": "Zuklappen",
+    "gu_current": "."
+  },
+  {
+    "key": "retro_share_text_label",
+    "de": "Text",
+    "gu_current": "."
+  },
+  {
+    "key": "retro_fallback_week",
+    "de": "Wochenrückblick",
+    "gu_current": "."
+  },
+  {
+    "key": "retro_fallback_month",
+    "de": "Monatsrückblick",
+    "gu_current": "."
+  },
+  {
+    "key": "retro_fallback_year",
+    "de": "Jahresrückblick %1$d",
+    "gu_current": ". %1$d"
+  },
+  {
+    "key": "retro_period_label_week",
+    "de": "Woche %1$d (%2$s - %3$s)",
+    "gu_current": ". %1$d (%2$s - %3$s)"
+  },
+  {
+    "key": "retro_photos_videos",
+    "de": "Fotos & Videos",
+    "gu_current": ". & ."
+  },
+  {
+    "key": "retro_photos_videos_colon",
+    "de": "Fotos & Videos:",
+    "gu_current": ". & .:"
+  },
+  {
+    "key": "retro_cd_video",
+    "de": "Video",
+    "gu_current": "."
+  },
+  {
+    "key": "retro_cd_photo",
+    "de": "Foto",
+    "gu_current": "."
+  },
+  {
+    "key": "retro_play_video",
+    "de": "Video abspielen",
+    "gu_current": "."
+  },
+  {
+    "key": "retro_enable_voices",
+    "de": "Stimmen in den Einstellungen einschalten",
+    "gu_current": "."
+  },
+  {
+    "key": "retro_tts_stop",
+    "de": "Stoppen",
+    "gu_current": "."
+  },
+  {
+    "key": "retro_tts_read",
+    "de": "Vorlesen",
+    "gu_current": "."
+  },
+  {
+    "key": "retro_tts_wait",
+    "de": "Bitte warten, Text-to-Speech wird erzeugt…",
+    "gu_current": ".\\u2026"
+  },
+  {
+    "key": "retro_cd_share",
+    "de": "Teilen",
+    "gu_current": "."
+  },
+  {
+    "key": "retro_share_title",
+    "de": "Rückblick teilen",
+    "gu_current": "."
+  },
+  {
+    "key": "retro_share_text_content",
+    "de": "Rückblick-Text",
+    "gu_current": "."
+  },
+  {
+    "key": "retro_photo_n",
+    "de": "Foto %1$d",
+    "gu_current": ". %1$d"
+  },
+  {
+    "key": "retro_share_header",
+    "de": "Rückblick von der BestJournal App",
+    "gu_current": "."
+  },
+  {
+    "key": "retro_at_a_glance_colon",
+    "de": "Auf einen Blick:",
+    "gu_current": "."
+  },
+  {
+    "key": "retro_cd_locked",
+    "de": "Gesperrt",
+    "gu_current": "."
+  },
+  {
+    "key": "retro_unlock_premium_short",
+    "de": "Premium freischalten",
+    "gu_current": "Premium ."
+  },
+  {
+    "key": "retro_cd_premium_required",
+    "de": "Premium erforderlich",
+    "gu_current": "Premium ."
+  },
+  {
+    "key": "retro_your_ai_reviews",
+    "de": "Deine KI-Rückblicke",
+    "gu_current": "AI ."
+  },
+  {
+    "key": "retro_weekly_p1",
+    "de": "Die KI fasst deine Woche zu einer persönlichen Erzählung zusammen",
+    "gu_current": "AI ."
+  },
+  {
+    "key": "retro_weekly_p2",
+    "de": "Emotionale Muster und Highlights werden sichtbar",
+    "gu_current": "."
+  },
+  {
+    "key": "retro_weekly_p3",
+    "de": "Jeden Sonntag automatisch erstellt, wenn du mindestens 2 Einträge hast",
+    "gu_current": "."
+  },
+  {
+    "key": "retro_weekly_p4",
+    "de": "Die ersten 2 Wochen sind kostenlos",
+    "gu_current": ". 2 ."
+  },
+  {
+    "key": "retro_monthly_p1",
+    "de": "Verbindet deine Wochenrückblicke zu einer Monatserzählung",
+    "gu_current": "."
+  },
+  {
+    "key": "retro_monthly_p2",
+    "de": "Rote Fäden und Entwicklungen über den Monat werden sichtbar",
+    "gu_current": "."
+  },
+  {
+    "key": "retro_yearly_p1",
+    "de": "Dein ganzes Jahr auf einen Blick",
+    "gu_current": "."
+  },
+  {
+    "key": "retro_yearly_p3",
+    "de": "Persönliche Entwicklung wird sichtbar und greifbar",
+    "gu_current": "."
+  },
+  {
+    "key": "retro_your_reviews",
+    "de": "Deine persönlichen Rückblicke",
+    "gu_current": "."
+  },
+  {
+    "key": "retro_premium_reviews_desc",
+    "de": "Mit Premium erstellt die KI automatisch Rückblicke aus deinen Tagebucheinträgen:",
+    "gu_current": "Premium ."
+  },
+  {
+    "key": "retro_benefit_monthly",
+    "de": "Monatsrückblicke, die deine Fortschritte und Veränderungen sichtbar machen",
+    "gu_current": "."
+  },
+  {
+    "key": "retro_benefit_yearly",
+    "de": "Jahresrückblicke, dein ganzes Jahr als persönliche Erzählung",
+    "gu_current": "."
+  },
+  {
+    "key": "retro_start_sub",
+    "de": "Abo starten",
+    "gu_current": "."
+  },
+  {
+    "key": "retro_decide_later",
+    "de": "Später entscheiden",
+    "gu_current": "."
+  },
+  {
+    "key": "onboarding_feature_speech",
+    "de": "Sprich oder schreib, die KI versteht beides",
+    "gu_current": "♻ AI ♻"
+  },
+  {
+    "key": "onboarding_feature_secure",
+    "de": "Deine Daten sind lokal gespeichert, KI-Anfragen sind verschlüsselt",
+    "gu_current": "♻ ♻"
+  },
+  {
+    "key": "onboarding_goals_title",
+    "de": "Was möchtest du mit dem\\nKI-Tagebuch erreichen?",
+    "gu_current": "AI ♻ ♻?\\n"
+  },
+  {
+    "key": "onboarding_goal_stress",
+    "de": "Stress abbauen",
+    "gu_current": "♻"
+  },
+  {
+    "key": "onboarding_goal_clarity",
+    "de": "Klarheit finden",
+    "gu_current": "♻"
+  },
+  {
+    "key": "onboarding_goal_growth",
+    "de": "Persönliches Wachstum",
+    "gu_current": "♻"
+  },
+  {
+    "key": "onboarding_goal_thoughts",
+    "de": "Meine Gedanken festhalten",
+    "gu_current": "♻"
+  },
+  {
+    "key": "onboarding_how_step1_title",
+    "de": "Sprich oder tippe deinen Eintrag",
+    "gu_current": "♻"
+  },
+  {
+    "key": "onboarding_how_step1_desc",
+    "de": "Nimm deine Gedanken als Sprachnachricht auf oder tippe sie ein, ganz wie du möchtest.",
+    "gu_current": "♻"
+  },
+  {
+    "key": "onboarding_how_step2_title",
+    "de": "Die KI verbessert und analysiert",
+    "gu_current": "AI ♻"
+  },
+  {
+    "key": "onboarding_how_step2_desc",
+    "de": "Dein Text wird auf Wunsch verfeinert und aus verschiedenen Perspektiven analysiert.",
+    "gu_current": "♻"
+  },
+  {
+    "key": "onboarding_how_step3_desc",
+    "de": "Halte besondere Momente fest, lebendige Erinnerungen für später.",
+    "gu_current": "♻"
+  },
+  {
+    "key": "onboarding_how_step4_title",
+    "de": "Entdecke Muster und Einsichten",
+    "gu_current": "♻"
+  },
+  {
+    "key": "onboarding_how_step5_title",
+    "de": "Wochen-, Monats- und Jahresrückblick",
+    "gu_current": "♻"
+  },
+  {
+    "key": "onboarding_how_step5_desc",
+    "de": "Automatische Rückblicke zeigen dir, wie du dich über die Zeit entwickelst.",
+    "gu_current": "♻"
+  },
+  {
+    "key": "onboarding_premium_feature_dashboard",
+    "de": "Automatische Dashboard-Updates bei jedem neuen Eintrag",
+    "gu_current": "♻"
+  },
+  {
+    "key": "onboarding_premium_feature_retro",
+    "de": "Wochen-, Monats- und Jahresrückblicke zeigen deine Entwicklung",
+    "gu_current": "♻"
+  },
+  {
+    "key": "onboarding_premium_feature_noads",
+    "de": "Keine Werbung, ungestört schreiben und reflektieren",
+    "gu_current": "♻"
+  },
+  {
+    "key": "onboarding_start_free",
+    "de": "Kostenlos starten",
+    "gu_current": "♻"
+  },
+  {
+    "key": "onboarding_without_premium",
+    "de": "Ohne Premium fortfahren",
+    "gu_current": "Premium ♻"
+  },
+  {
+    "key": "onboarding_feature_profiles",
+    "de": "4 intelligente Analyse-Profile für verschiedene Perspektiven",
+    "gu_current": "5 ♻"
+  },
+  {
+    "key": "onboarding_goals_select",
+    "de": "Wähle ein oder mehrere Ziele",
+    "gu_current": "♻"
+  },
+  {
+    "key": "onboarding_how_step3_title",
+    "de": "Füge Fotos und Videos hinzu",
+    "gu_current": "♻"
+  },
+  {
+    "key": "onboarding_how_title",
+    "de": "So einfach geht es",
+    "gu_current": "♻"
+  },
+  {
+    "key": "onboarding_premium_feature_pdf",
+    "de": "PDF-Export mit Fotos, sichere deine Einträge als Dokument",
+    "gu_current": "PDF ♻"
+  },
+  {
+    "key": "onboarding_premium_profiles",
+    "de": "4 intelligente Dashboard-Profile für tiefe Einblicke in dein Leben",
+    "gu_current": "5 AI ♻"
+  },
+  {
+    "key": "paywall_prices_loading",
+    "de": "Preise werden geladen…",
+    "gu_current": "♻\\u2026"
+  },
+  {
+    "key": "paywall_sub_loading_toast",
+    "de": "Abo wird geladen, bitte versuche es gleich nochmal.",
+    "gu_current": "♻"
+  },
+  {
+    "key": "paywall_purchase_loading_toast",
+    "de": "Kaufvorgang wird geladen, bitte versuche es gleich nochmal.",
+    "gu_current": "♻"
+  },
+  {
+    "key": "paywall_today",
+    "de": "Heute",
+    "gu_current": "♻"
+  },
+  {
+    "key": "paywall_full_access",
+    "de": "Voller Zugang",
+    "gu_current": "♻"
+  },
+  {
+    "key": "paywall_day7",
+    "de": "Tag 7",
+    "gu_current": "♻ 7"
+  },
+  {
+    "key": "paywall_reminder",
+    "de": "Erinnerung",
+    "gu_current": "♻"
+  },
+  {
+    "key": "paywall_day8",
+    "de": "Tag 8",
+    "gu_current": "♻ 8"
+  },
+  {
+    "key": "paywall_first_payment",
+    "de": "Erste Zahlung",
+    "gu_current": "♻"
+  },
+  {
+    "key": "paywall_monthly_plan",
+    "de": "Monatsabo, %1$s pro Monat",
+    "gu_current": "♻, %1$s/♻"
+  },
+  {
+    "key": "paywall_lifetime_title",
+    "de": "Einmalkauf",
+    "gu_current": "♻"
+  },
+  {
+    "key": "paywall_lifetime_note",
+    "de": "Kein Abo, keine Verlängerung",
+    "gu_current": "♻"
+  },
+  {
+    "key": "paywall_feature_dashboard",
+    "de": "KI-Dashboard-Updates nach neuen Einträgen",
+    "gu_current": "♻"
+  },
+  {
+    "key": "paywall_feature_retro",
+    "de": "Alle Rückblicke KI generiert",
+    "gu_current": "♻"
+  },
+  {
+    "key": "paywall_feature_pdf",
+    "de": "Tagebucheinträge mit Fotos als PDF exportieren",
+    "gu_current": "PDF ♻"
+  },
+  {
+    "key": "paywall_feature_noads",
+    "de": "Spreche oder schreibe ungestört, ohne Werbung",
+    "gu_current": "♻"
+  },
+  {
+    "key": "paywall_headline_clarity",
+    "de": "Verstehe dich selbst besser",
+    "gu_current": "♻"
+  },
+  {
+    "key": "paywall_headline_clarity_sub",
+    "de": "Die KI erkennt Muster, die dir verborgen bleiben",
+    "gu_current": "AI ♻"
+  },
+  {
+    "key": "paywall_headline_growth",
+    "de": "Entdecke das Gute in jedem Tag",
+    "gu_current": "♻"
+  },
+  {
+    "key": "paywall_headline_growth_sub",
+    "de": "Dein persönlicher Raum für Dankbarkeit und Wachstum",
+    "gu_current": "♻"
+  },
+  {
+    "key": "paywall_headline_thoughts",
+    "de": "Lass deine Gedanken fließen",
+    "gu_current": "♻"
+  },
+  {
+    "key": "paywall_headline_default",
+    "de": "Entdecke dich selbst\\nJeden Tag ein Stück mehr",
+    "gu_current": "♻\\n♻"
+  },
+  {
+    "key": "paywall_exit_wait",
+    "de": "Warte kurz!",
+    "gu_current": "♻!"
+  },
+  {
+    "key": "paywall_exit_special_offer",
+    "de": "Wir haben ein besonderes\\nAngebot für dich:",
+    "gu_current": "♻\\n♻:"
+  },
+  {
+    "key": "paywall_exit_discount",
+    "de": "Rabatt für %1$d Monate",
+    "gu_current": "♻ %1$d ♻"
+  },
+  {
+    "key": "paywall_exit_price_comparison",
+    "de": "Nur %1$s statt %2$s pro Monat",
+    "gu_current": "♻ %1$s ♻ %2$s/♻"
+  },
+  {
+    "key": "churn_your_sub",
+    "de": "Dein Abo",
+    "gu_current": "♻"
+  },
+  {
+    "key": "churn_plan_yearly",
+    "de": "Jahresabo",
+    "gu_current": "♻"
+  },
+  {
+    "key": "churn_plan_monthly",
+    "de": "Monatsabo",
+    "gu_current": "♻"
+  },
+  {
+    "key": "churn_plan",
+    "de": "Tarif",
+    "gu_current": "♻"
+  },
+  {
+    "key": "churn_price",
+    "de": "Preis",
+    "gu_current": "♻"
+  },
+  {
+    "key": "churn_renewal",
+    "de": "Verlängerung",
+    "gu_current": "♻"
+  },
+  {
+    "key": "churn_automatic",
+    "de": "Automatisch",
+    "gu_current": "♻"
+  },
+  {
+    "key": "churn_auto_renew_note",
+    "de": "Dein Abo verlängert sich automatisch über Google Play. Die Kündigung ist jederzeit möglich.",
+    "gu_current": "Google Play ♻"
+  },
+  {
+    "key": "churn_reason_too_expensive",
+    "de": "Zu teuer",
+    "gu_current": "♻"
+  },
+  {
+    "key": "churn_reason_unused",
+    "de": "Nutze es zu selten",
+    "gu_current": "♻"
+  },
+  {
+    "key": "churn_per_year",
+    "de": "pro Jahr",
+    "gu_current": "/♻"
+  },
+  {
+    "key": "churn_per_month",
+    "de": "pro Monat",
+    "gu_current": "/♻"
+  },
+  {
+    "key": "churn_reason_features",
+    "de": "Nicht die Features die ich brauche",
+    "gu_current": "♻"
+  },
+  {
+    "key": "churn_reason_other",
+    "de": "Anderer Grund",
+    "gu_current": "♻"
+  },
+  {
+    "key": "churn_sorry_title",
+    "de": "Schade, dass du gehst",
+    "gu_current": "♻"
+  },
+  {
+    "key": "churn_sorry_body",
+    "de": "Bevor du kündigst, würdest du uns verraten warum? Das hilft uns, die App zu verbessern.",
+    "gu_current": "♻"
+  },
+  {
+    "key": "churn_offer_feature_voice",
+    "de": "Premium-Spracherkennung",
+    "gu_current": "Premium ♻"
+  },
+  {
+    "key": "churn_offer_auto_renew",
+    "de": "Verlängert sich automatisch, jederzeit kündbar",
+    "gu_current": "♻"
+  },
+  {
+    "key": "churn_accept_offer",
+    "de": "Angebot annehmen",
+    "gu_current": "♻"
+  },
+  {
+    "key": "churn_switch_yearly",
+    "de": "Oder zum Jahresabo wechseln und noch mehr sparen",
+    "gu_current": "♻"
+  },
+  {
+    "key": "churn_pause_sub",
+    "de": "Oder Abo bei Google Play pausieren",
+    "gu_current": "Google Play ♻"
+  },
+  {
+    "key": "churn_cancel_anyway",
+    "de": "Trotzdem kündigen",
+    "gu_current": "♻"
+  },
+  {
+    "key": "churn_are_you_sure",
+    "de": "Bist du sicher?",
+    "gu_current": "♻?"
+  },
+  {
+    "key": "churn_stay",
+    "de": "Doch lieber bleiben",
+    "gu_current": "♻"
+  },
+  {
+    "key": "ai_limit_title",
+    "de": "Dein Wochenlimit ist erreicht",
+    "gu_current": "♻"
+  },
+  {
+    "key": "ai_limit_monthly",
+    "de": "Monatsabo, %1$s/Monat",
+    "gu_current": "♻, %1$s/♻"
+  },
+  {
+    "key": "ai_limit_yearly",
+    "de": "Jahresabo, %1$s/Jahr (spare 37%%)",
+    "gu_current": "♻, %1$s/♻ (37%% ♻)"
+  },
+  {
+    "key": "ai_limit_no_thanks",
+    "de": "Nein danke, weiter ohne KI",
+    "gu_current": "♻ AI ♻"
+  },
+  {
+    "key": "ai_banner_title",
+    "de": "Dein Tagebuch wird von KI unterstützt",
+    "gu_current": "AI ♻"
+  },
+  {
+    "key": "cd_mic_start",
+    "de": "Aufnahme starten",
+    "gu_current": "♻"
+  },
+  {
+    "key": "cd_mic_stop",
+    "de": "Aufnahme stoppen",
+    "gu_current": "♻"
+  },
+  {
+    "key": "entry_improve_limit_daily",
+    "de": "Tageslimit erreicht. Morgen geht es weiter!",
+    "gu_current": "♻!"
+  },
+  {
+    "key": "entry_improve_limit_cooldown",
+    "de": "Kurze Pause: Noch %1$d Minuten.",
+    "gu_current": "♻ %1$d ♻."
+  },
+  {
+    "key": "entry_improve_failed",
+    "de": "Textverbesserung fehlgeschlagen",
+    "gu_current": "♻"
+  },
+  {
+    "key": "notif_reminder_title",
+    "de": "Zeit für dein Tagebuch",
+    "gu_current": "♻"
+  },
+  {
+    "key": "notif_reminder_body_0",
+    "de": "Was bewegt dich heute?",
+    "gu_current": "♻?"
+  },
+  {
+    "key": "notif_reminder_body_1",
+    "de": "Ein Moment für dich, halte ihn fest",
+    "gu_current": "♻"
+  },
+  {
+    "key": "notif_reminder_body_2",
+    "de": "Dein zukünftiges Ich wird dir danken",
+    "gu_current": "♻"
+  },
+  {
+    "key": "notif_reminder_body_3",
+    "de": "Nur ein Gedanke reicht, leg los",
+    "gu_current": "♻"
+  },
+  {
+    "key": "notif_reminder_body_4",
+    "de": "Was war heute dein Highlight?",
+    "gu_current": "♻?"
+  },
+  {
+    "key": "notif_weekly_title",
+    "de": "Dein Wochenrückblick",
+    "gu_current": "♻"
+  },
+  {
+    "key": "notif_weekly_body",
+    "de": "Schau dir an was dich diese Woche bewegt hat, dein Dashboard hat neue Einsichten.",
+    "gu_current": "♻ ♻"
+  },
+  {
+    "key": "notif_monthly_title",
+    "de": "Dein Monatsrückblick",
+    "gu_current": "♻"
+  },
+  {
+    "key": "notif_monthly_body",
+    "de": "Ein ganzer Monat voller Erinnerungen wartet auf dich.",
+    "gu_current": "♻"
+  },
+  {
+    "key": "notif_yearly_title",
+    "de": "Dein Jahresrückblick",
+    "gu_current": "♻"
+  },
+  {
+    "key": "notif_yearly_body",
+    "de": "Ein ganzes Jahr voller Erinnerungen, schau zurück auf deine Reise.",
+    "gu_current": "♻"
+  },
+  {
+    "key": "notif_channel_daily_name",
+    "de": "Tägliche Erinnerung",
+    "gu_current": "♻"
+  },
+  {
+    "key": "notif_channel_daily_desc",
+    "de": "Erinnert dich täglich ans Tagebuchschreiben",
+    "gu_current": "♻"
+  },
+  {
+    "key": "notif_channel_weekly_name",
+    "de": "Wöchentlicher Rückblick",
+    "gu_current": "♻"
+  },
+  {
+    "key": "notif_channel_weekly_desc",
+    "de": "Dein Wochenrückblick jeden Sonntag um 15:00 Uhr",
+    "gu_current": "♻ 15:00"
+  },
+  {
+    "key": "notif_channel_monthly_name",
+    "de": "Monatsrückblick",
+    "gu_current": "♻"
+  },
+  {
+    "key": "notif_channel_monthly_desc",
+    "de": "Benachrichtigung wenn dein Monatsrückblick fertig ist",
+    "gu_current": "♻"
+  },
+  {
+    "key": "notif_channel_yearly_name",
+    "de": "Jahresrückblick",
+    "gu_current": "♻"
+  },
+  {
+    "key": "notif_channel_yearly_desc",
+    "de": "Benachrichtigung wenn dein Jahresrückblick fertig ist",
+    "gu_current": "♻"
+  },
+  {
+    "key": "datetime_just_now",
+    "de": "gerade eben",
+    "gu_current": "♻"
+  },
+  {
+    "key": "datetime_today",
+    "de": "Heute",
+    "gu_current": "♻"
+  },
+  {
+    "key": "datetime_yesterday",
+    "de": "Gestern",
+    "gu_current": "♻"
+  },
+  {
+    "key": "datetime_day_before_yesterday",
+    "de": "Vorgestern",
+    "gu_current": "♻"
+  },
+  {
+    "key": "datetime_this_week",
+    "de": "Diese Woche",
+    "gu_current": "♻"
+  },
+  {
+    "key": "datetime_last_week",
+    "de": "Letzte Woche",
+    "gu_current": "♻"
+  },
+  {
+    "key": "datetime_weeks_ago",
+    "de": "Vor %1$d Wochen",
+    "gu_current": "%1$d ♻"
+  },
+  {
+    "key": "achievement_nightowl_title",
+    "de": "Nachtfalter",
+    "gu_current": "♻"
+  },
+  {
+    "key": "achievement_nightowl_desc",
+    "de": "50 Einträge nach 22 Uhr geschrieben",
+    "gu_current": "22 ♻ 50 ♻"
+  },
+  {
+    "key": "achievement_earlybird_title",
+    "de": "Frühaufsteher",
+    "gu_current": "♻"
+  },
+  {
+    "key": "achievement_earlybird_desc",
+    "de": "20 Einträge vor 7 Uhr geschrieben",
+    "gu_current": "7 ♻ 20 ♻"
+  },
+  {
+    "key": "achievement_confession_title",
+    "de": "Geständnis",
+    "gu_current": "♻"
+  },
+  {
+    "key": "achievement_confession_desc",
+    "de": "Einen Eintrag mit über 1.000 Wörtern verfasst",
+    "gu_current": "1,000 ♻"
+  },
+  {
+    "key": "achievement_marathon_title",
+    "de": "Marathonschreiber",
+    "gu_current": "♻"
+  },
+  {
+    "key": "achievement_marathon_desc",
+    "de": "100 Tagebucheinträge geschrieben",
+    "gu_current": "100 ♻"
+  },
+  {
+    "key": "achievement_wordartist_title",
+    "de": "Wortkünstler",
+    "gu_current": "♻"
+  },
+  {
+    "key": "achievement_wordartist_desc",
+    "de": "500 Tagebucheinträge geschrieben",
+    "gu_current": "500 ♻"
+  },
+  {
+    "key": "achievement_consistency_title",
+    "de": "Beständigkeit",
+    "gu_current": "♻"
+  },
+  {
+    "key": "achievement_consistency_desc",
+    "de": "30-Tage-Streak erreicht",
+    "gu_current": "30 ♻"
+  },
+  {
+    "key": "achievement_chronicler_title",
+    "de": "Jahreschronist",
+    "gu_current": "♻"
+  },
+  {
+    "key": "achievement_chronicler_desc",
+    "de": "365 Einträge geschrieben",
+    "gu_current": "365 ♻"
+  },
+  {
+    "key": "achievement_photodiary_title",
+    "de": "Fototagebuch",
+    "gu_current": "♻"
+  },
+  {
+    "key": "achievement_photodiary_desc",
+    "de": "50 Fotos an Einträge angehängt",
+    "gu_current": "50 ♻"
+  },
+  {
+    "key": "achievement_voiceartist_title",
+    "de": "Sprachkünstler",
+    "gu_current": "♻"
+  },
+  {
+    "key": "achievement_voiceartist_desc",
+    "de": "25 Spracheinträge erstellt",
+    "gu_current": "25 ♻"
+  },
+  {
+    "key": "achievement_reflectionmaster_title",
+    "de": "Reflexionsmeister",
+    "gu_current": "♻"
+  },
+  {
+    "key": "achievement_reflectionmaster_desc",
+    "de": "50 Dashboard-Analysen durchgeführt",
+    "gu_current": "50 ♻"
+  },
+  {
+    "key": "prompt_cat_self_reflection",
+    "de": "Selbstreflexion",
+    "gu_current": "♻"
+  },
+  {
+    "key": "prompt_cat_gratitude",
+    "de": "Dankbarkeit",
+    "gu_current": "♻"
+  },
+  {
+    "key": "prompt_cat_future",
+    "de": "Zukunft",
+    "gu_current": "♻"
+  },
+  {
+    "key": "prompt_cat_relationships",
+    "de": "Beziehungen",
+    "gu_current": "♻"
+  },
+  {
+    "key": "pdf_entry_fallback_title",
+    "de": "Eintrag #%1$d",
+    "gu_current": "♻ #%1$d"
+  },
+  {
+    "key": "pdf_entry_counter",
+    "de": "Eintrag %1$d von %2$d",
+    "gu_current": "♻ %1$d / %2$d"
+  },
+  {
+    "key": "pdf_summary_label",
+    "de": "ZUSAMMENFASSUNG",
+    "gu_current": "♻"
+  },
+  {
+    "key": "pdf_continuation",
+    "de": "%1$s (Fortsetzung)",
+    "gu_current": "%1$s (♻)"
+  },
+  {
+    "key": "pdf_page_number",
+    "de": "Seite %1$d",
+    "gu_current": "♻ %1$d"
+  },
+  {
+    "key": "error_retro_all_failed",
+    "de": "Alle %1$d KI-Anfragen fehlgeschlagen. Bitte Internetverbindung prüfen.",
+    "gu_current": "♻ %1$d AI ♻"
+  },
+  {
+    "key": "error_whisper_audio_empty",
+    "de": "Audio-Datei ist leer",
+    "gu_current": "♻"
+  },
+  {
+    "key": "error_whisper_no_text",
+    "de": "Kein Text erkannt",
+    "gu_current": "♻"
+  },
+  {
+    "key": "error_sync_db_not_found",
+    "de": "Datenbank nicht gefunden",
+    "gu_current": "♻"
+  },
+  {
+    "key": "error_file_open_failed",
+    "de": "Fehler: Datei konnte nicht geöffnet werden",
+    "gu_current": "♻"
+  },
+  {
+    "key": "error_generic",
+    "de": "Fehler: %1$s",
+    "gu_current": "♻: %1$s"
+  },
+  {
+    "key": "profile_style_chronicler",
+    "de": "\\n- Schreibe im Stil einer zusammenfassenden Erzählung, fasse die wichtigsten Ereignisse und Gefühle zusammen, wie ein persönlicher Chronist",
+    "gu_current": "\\n- ♻"
+  },
+  {
+    "key": "profile_style_advisor",
+    "de": "\\n- Schreibe im Stil eines Lebensberaters, hebe hervor was gut lief, was verbessert werden kann, und gib dem Leser das Gefühl von Klarheit und Ordnung",
+    "gu_current": "\\n- ♻"
+  },
+  {
+    "key": "profile_style_insight",
+    "de": "\\n- Schreibe im Stil einer tiefgründigen Selbsterkenntnis-Erzählung, decke Denkmuster, wiederkehrende Gefühle und verborgene Stärken auf",
+    "gu_current": "\\n- ♻"
+  },
+  {
+    "key": "profile_style_coach",
+    "de": "\\n- Schreibe im Stil eines motivierenden Ziel-Begleiters, zeige Fortschritte bei persönlichen Zielen auf und ermutige weiterzumachen",
+    "gu_current": "\\n- ♻"
+  },
+  {
+    "key": "profile_style_custom",
+    "de": "\\n- PROFIL-STIL (Custom): Schreibe diesen Rückblick mit klarem Bezug zum Benutzer-Auftrag. PFLICHT-REGELN:\\n  1) MINDESTENS 60 Prozent des Rückblicks behandelt direkt oder umschreibend das Auftrags-Thema.\\n  2) MINDESTENS EIN thematischer Abschnitt ist komplett dem Auftrags-Fokus gewidmet (Überschrift + Text).\\n  3) Drücke den Profil-Bezug VARIANTENREICH aus mit Synonymen und thematischen Nachbarschaften, NICHT mit mechanischer Wortwiederholung.\\n  4) Beobachtungen ohne Bezug zum Auftrag knapp halten oder ganz weglassen — lieber weniger Abschnitte mit echtem Bezug als viele generische.\\n  Benutzer-Auftrag (zur Orientierung): \\\"%1$s\\\"",
+    "gu_current": "\\n- ♻ \\\"%1$s\\\""
+  },
+  {
+    "key": "consent_footer_link_impressum",
+    "de": "Impressum",
+    "gu_current": "Impressum"
+  }
+]

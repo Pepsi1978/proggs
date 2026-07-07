@@ -1,0 +1,7 @@
+interface:
+  display_name: "agent-native-reviewer"
+  short_description: "Reviews code to ensure agent-native parity — any action a user"
+  default_prompt: "Use $compound-engineering-compound-engineering-plugin--agent-native-reviewer for this task."
+
+policy:
+  allow_implicit_invocation: false

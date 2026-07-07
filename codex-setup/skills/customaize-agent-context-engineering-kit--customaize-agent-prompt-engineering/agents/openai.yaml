@@ -1,0 +1,7 @@
+interface:
+  display_name: "customaize-agent:prompt-engineering"
+  short_description: "you writing commands, hooks, skills for Agent, or prompts for"
+  default_prompt: "Use $customaize-agent-context-engineering-kit--customaize-agent-prompt-engineering for this task."
+
+policy:
+  allow_implicit_invocation: false

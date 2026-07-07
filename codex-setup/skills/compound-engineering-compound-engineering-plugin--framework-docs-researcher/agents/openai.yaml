@@ -1,0 +1,7 @@
+interface:
+  display_name: "framework-docs-researcher"
+  short_description: "Gathers comprehensive documentation and best practices for"
+  default_prompt: "Use $compound-engineering-compound-engineering-plugin--framework-docs-researcher for this task."
+
+policy:
+  allow_implicit_invocation: false

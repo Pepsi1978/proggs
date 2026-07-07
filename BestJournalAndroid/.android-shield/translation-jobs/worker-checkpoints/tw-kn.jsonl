@@ -1,0 +1,2 @@
+{"ts":"2026-06-10T23:10:00","step":"start","lang":"kn","note":"inspect done: 35 strings + 2 plurals; paywall_monthly_note FEHLT; ai_limits 150-count=3 muss 4 werden; plurals stale-DE","keys_done":[]}
+{"ts": "2026-06-10T23:20:00", "step": "done", "lang": "kn", "note": "35 strings + 2 plurals written; paywall_monthly_note neu; ai_limits 150x4; XML valide; verify+native-digits exit0", "keys_done": 37}

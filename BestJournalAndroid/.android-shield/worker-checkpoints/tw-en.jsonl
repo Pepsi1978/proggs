@@ -1,0 +1,3 @@
+{"ts":"2026-06-10","worker":"tw-en","phase":3,"step":"start","note":"read template+jobs+de-ref, pre-check done"}
+{"ts":"2026-06-10","worker":"tw-en","step":"applied","note":"ran apply script"}
+{"ts":"2026-06-10","worker":"tw-en","step":"verified","note":"PASS, 35 strings + 2 plurals, 150x4, legal intact"}

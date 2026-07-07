@@ -1,0 +1,88 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Widget-Header (Frank-Wunsch 2026-05-11). Visuell 1:1 zur Glance-Variante:
+  links Title+Counter (oeffnet App), rechts Heute-Pille (Status-Indikator,
+  oeffnet Widget-Settings) + Settings-Zahnrad (oeffnet Widget-Settings).
+-->
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:orientation="horizontal"
+    android:gravity="center_vertical">
+
+    <!-- Title-Block: Aufgaben + Counter — tapbar fuer ACTION_OPEN -->
+    <LinearLayout
+        android:id="@+id/header_title_block"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:layout_weight="1"
+        android:orientation="horizontal"
+        android:gravity="center_vertical">
+
+        <TextView
+            android:id="@+id/header_title"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:textSize="18sp"
+            android:textStyle="bold"
+            android:textColor="#EAE6FF"
+            android:text="Aufgaben" />
+
+        <TextView
+            android:id="@+id/header_counter"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="8dp"
+            android:textSize="12sp"
+            android:textColor="#A499D9"
+            android:text="0 offen" />
+    </LinearLayout>
+
+    <!-- Heute-Indikator (zeigt aktuellen Modus an, oeffnet Settings beim Tap) -->
+    <LinearLayout
+        android:id="@+id/header_today_pill"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:gravity="center_vertical"
+        android:paddingHorizontal="8dp"
+        android:paddingVertical="6dp"
+        android:background="@drawable/widget_pill_bg">
+
+        <ImageView
+            android:id="@+id/header_today_icon"
+            android:layout_width="14dp"
+            android:layout_height="14dp"
+            android:src="@drawable/ic_widget_check"
+            android:contentDescription="Filter-Modus" />
+
+        <TextView
+            android:id="@+id/header_today_label"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="4dp"
+            android:textSize="11sp"
+            android:textColor="#A499D9"
+            android:text="Alle" />
+    </LinearLayout>
+
+    <!-- 6dp Spacer -->
+    <ImageView
+        android:layout_width="6dp"
+        android:layout_height="1dp" />
+
+    <!-- Settings-Zahnrad (oeffnet Widget-Settings) -->
+    <FrameLayout
+        android:id="@+id/header_settings_btn"
+        android:layout_width="32dp"
+        android:layout_height="32dp"
+        android:background="@drawable/widget_circle_bg">
+
+        <ImageView
+            android:layout_width="18dp"
+            android:layout_height="18dp"
+            android:layout_gravity="center"
+            android:src="@drawable/ic_widget_settings"
+            android:contentDescription="Widget-Einstellungen" />
+    </FrameLayout>
+</LinearLayout>

@@ -1,0 +1,7 @@
+interface:
+  display_name: "database-reviewer"
+  short_description: "PostgreSQL database specialist for query optimization, schema"
+  default_prompt: "Use $everything-codex-everything-codex--database-reviewer for this task."
+
+policy:
+  allow_implicit_invocation: false

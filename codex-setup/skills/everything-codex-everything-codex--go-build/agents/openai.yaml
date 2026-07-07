@@ -1,0 +1,7 @@
+interface:
+  display_name: "go-build"
+  short_description: "Fix Go build errors, go vet warnings, and linter issues"
+  default_prompt: "Use $everything-codex-everything-codex--go-build for this task."
+
+policy:
+  allow_implicit_invocation: false

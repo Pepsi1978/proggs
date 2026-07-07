@@ -1,0 +1,7 @@
+interface:
+  display_name: "agent-harness-construction"
+  short_description: "Design and optimize AI agent action spaces, tool definitions"
+  default_prompt: "Use $everything-codex-everything-codex--agent-harness-construction for this task."
+
+policy:
+  allow_implicit_invocation: false

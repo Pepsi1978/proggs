@@ -1,0 +1,7 @@
+interface:
+  display_name: "codebase-memory-quality"
+  short_description: "codebase-memory-quality skill"
+  default_prompt: "Use $codebase-memory-quality for this task."
+
+policy:
+  allow_implicit_invocation: false

@@ -1,0 +1,501 @@
+<Window x:Class="VoiceAgent.Views.SettingsWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        mc:Ignorable="d"
+        Title="VoiceAgent — Einstellungen" Height="660" Width="860" MinHeight="520" MinWidth="720"
+        Icon="/assets/voiceagent.ico"
+        WindowStartupLocation="CenterOwner" Background="{DynamicResource WindowBackground}">
+    <Window.Resources>
+        <!-- ===== Eingabe-Grundstile (wie zuvor) ===== -->
+        <Style TargetType="TextBox">
+            <Setter Property="Background" Value="{DynamicResource InputBackground}"/>
+            <Setter Property="Foreground" Value="{DynamicResource TextPrimary}"/>
+            <Setter Property="CaretBrush" Value="{DynamicResource TextPrimary}"/>
+            <Setter Property="BorderBrush" Value="{DynamicResource InputBorder}"/>
+            <Setter Property="Padding" Value="8,6"/>
+            <Setter Property="Margin" Value="0,0,0,6"/>
+            <Setter Property="FontSize" Value="13"/>
+        </Style>
+        <Style TargetType="ComboBox">
+            <Setter Property="Padding" Value="8,5"/>
+            <Setter Property="Margin" Value="0,0,0,6"/>
+            <Setter Property="FontSize" Value="13"/>
+        </Style>
+        <Style TargetType="CheckBox">
+            <Setter Property="Foreground" Value="{DynamicResource TextPrimary}"/>
+            <Setter Property="FontSize" Value="13"/>
+        </Style>
+        <!-- Bereichs-Ueberschrift INNERHALB einer Kategorie -->
+        <Style x:Key="Section" TargetType="TextBlock">
+            <Setter Property="Foreground" Value="{DynamicResource TextPrimary}"/>
+            <Setter Property="FontSize" Value="14"/>
+            <Setter Property="FontWeight" Value="SemiBold"/>
+            <Setter Property="Margin" Value="0,18,0,8"/>
+        </Style>
+        <!-- erste Section in einem Tab: ohne grossen Abstand oben -->
+        <Style x:Key="SectionFirst" TargetType="TextBlock" BasedOn="{StaticResource Section}">
+            <Setter Property="Margin" Value="0,0,0,8"/>
+        </Style>
+        <Style x:Key="Label" TargetType="TextBlock">
+            <Setter Property="Foreground" Value="{DynamicResource TextMuted}"/>
+            <Setter Property="FontSize" Value="12"/>
+            <Setter Property="Margin" Value="0,4,0,2"/>
+            <Setter Property="TextWrapping" Value="Wrap"/>
+        </Style>
+
+        <!-- ===== Grosse Titelzeile pro Kategorie (im Inhaltsbereich oben) ===== -->
+        <Style x:Key="PageTitle" TargetType="TextBlock">
+            <Setter Property="Foreground" Value="{DynamicResource TextPrimary}"/>
+            <Setter Property="FontSize" Value="20"/>
+            <Setter Property="FontWeight" Value="SemiBold"/>
+            <Setter Property="Margin" Value="0,0,0,4"/>
+        </Style>
+        <Style x:Key="PageSubtitle" TargetType="TextBlock">
+            <Setter Property="Foreground" Value="{DynamicResource TextMuted}"/>
+            <Setter Property="FontSize" Value="12.5"/>
+            <Setter Property="Margin" Value="0,0,0,10"/>
+            <Setter Property="TextWrapping" Value="Wrap"/>
+        </Style>
+
+        <!-- ===== Sidebar-Tab (linke Spalte, anklickbare Kategorie) ===== -->
+        <Style x:Key="SideTab" TargetType="TabItem">
+            <Setter Property="Foreground" Value="{DynamicResource TextPrimary}"/>
+            <!-- Volle Sidebar-Breite, damit alle Reiter gleich breit + fest gestapelt bleiben. -->
+            <Setter Property="HorizontalAlignment" Value="Stretch"/>
+            <Setter Property="HorizontalContentAlignment" Value="Stretch"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="TabItem">
+                        <Border x:Name="Bd" Background="Transparent" CornerRadius="8" Margin="8,2" Padding="0">
+                            <Grid Height="42">
+                                <Border x:Name="Accent" Width="3" Height="20" HorizontalAlignment="Left"
+                                        Margin="2,0,0,0" CornerRadius="2"
+                                        Background="{DynamicResource AccentText}" Visibility="Collapsed"/>
+                                <ContentPresenter ContentSource="Header" VerticalAlignment="Center"
+                                                  Margin="14,0,10,0"/>
+                            </Grid>
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="Bd" Property="Background" Value="{DynamicResource ListItemHoverBackground}"/>
+                            </Trigger>
+                            <Trigger Property="IsSelected" Value="True">
+                                <Setter TargetName="Bd" Property="Background" Value="{DynamicResource ListItemSelectedBackground}"/>
+                                <Setter TargetName="Accent" Property="Visibility" Value="Visible"/>
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+        <!-- Header-Inhalt eines Sidebar-Tabs: Icon + Beschriftung -->
+        <Style x:Key="TabIcon" TargetType="TextBlock">
+            <Setter Property="FontSize" Value="17"/>
+            <Setter Property="Width" Value="26"/>
+            <Setter Property="VerticalAlignment" Value="Center"/>
+            <Setter Property="Foreground" Value="{DynamicResource TextPrimary}"/>
+        </Style>
+        <Style x:Key="TabText" TargetType="TextBlock">
+            <Setter Property="FontSize" Value="13.5"/>
+            <Setter Property="VerticalAlignment" Value="Center"/>
+            <Setter Property="Foreground" Value="{DynamicResource TextPrimary}"/>
+        </Style>
+
+        <!-- ===== TabControl als Sidebar-Layout (links Navigation, rechts Inhalt) ===== -->
+        <Style x:Key="SideTabControl" TargetType="TabControl">
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="TabControl">
+                        <Grid>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="200"/>
+                                <ColumnDefinition Width="*"/>
+                            </Grid.ColumnDefinitions>
+                            <!-- Linke Spalte: Navigation -->
+                            <Border Grid.Column="0" Background="{DynamicResource SidebarBackground}"
+                                    BorderBrush="{DynamicResource SidebarBorder}" BorderThickness="0,0,1,0">
+                                <StackPanel>
+                                    <TextBlock Text="EINSTELLUNGEN" FontSize="11" FontWeight="SemiBold"
+                                               Foreground="{DynamicResource TextFaint}" Margin="22,18,0,12"/>
+                                    <!-- StackPanel statt TabPanel: stures vertikales Stapeln, feste Reihenfolge
+                                         oben->unten. TabPanel ist fuer horizontale Tab-Reihen und verschiebt den
+                                         aktiven Reiter (laesst die anderen "springen") — bei einer Sidebar falsch. -->
+                                    <StackPanel IsItemsHost="True"/>
+                                </StackPanel>
+                            </Border>
+                            <!-- Rechte Spalte: Inhalt des gewaehlten Tabs -->
+                            <Border Grid.Column="1" Background="{DynamicResource WindowBackground}">
+                                <ContentPresenter ContentSource="SelectedContent"/>
+                            </Border>
+                        </Grid>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+    </Window.Resources>
+
+    <Grid>
+        <Grid.RowDefinitions>
+            <RowDefinition Height="*"/>
+            <RowDefinition Height="Auto"/>
+        </Grid.RowDefinitions>
+
+        <TabControl Grid.Row="0" Style="{StaticResource SideTabControl}" BorderThickness="0" Background="Transparent">
+
+            <!-- ============ 1. ALLGEMEIN ============ -->
+            <TabItem Style="{StaticResource SideTab}" IsSelected="True">
+                <TabItem.Header>
+                    <StackPanel Orientation="Horizontal">
+                        <TextBlock Text="🎛" Style="{StaticResource TabIcon}"/>
+                        <TextBlock Text="Allgemein" Style="{StaticResource TabText}"/>
+                    </StackPanel>
+                </TabItem.Header>
+                <ScrollViewer VerticalScrollBarVisibility="Auto" Padding="28,24,28,24">
+                    <StackPanel>
+                        <TextBlock Text="Allgemein" Style="{StaticResource PageTitle}"/>
+                        <TextBlock Text="Aussehen, Fenster-Verhalten und Windows-Start." Style="{StaticResource PageSubtitle}"/>
+
+                        <TextBlock Text="Erscheinungsbild" Style="{StaticResource SectionFirst}"/>
+                        <TextBlock Text="Helles oder dunkles Profil — oder automatisch nach dem Windows-Theme."
+                                   Style="{StaticResource Label}"/>
+                        <ComboBox x:Name="ThemeBox" SelectionChanged="ThemeBox_SelectionChanged" MaxWidth="360" HorizontalAlignment="Left"/>
+
+                        <TextBlock Text="Beim Minimieren" Style="{StaticResource Section}"/>
+                        <CheckBox x:Name="MinimizeToTrayBox" Margin="0,4,0,2"
+                                  Content="Nur als Symbol im Infobereich (Tray) zeigen — nicht in der Taskleiste"/>
+                        <TextBlock Text="Aus: klassisch in die Taskleiste. Ein: verschwindet aus der Taskleiste, Doppelklick aufs Tray-Symbol holt es zurück."
+                                   Style="{StaticResource Label}"/>
+
+                        <TextBlock Text="Beim Windows-Start" Style="{StaticResource Section}"/>
+                        <CheckBox x:Name="AutostartBox" Margin="0,4,0,2"
+                                  Content="Automatisch mit Windows starten — minimiert im Hintergrund (Infobereich/Tray)"/>
+                        <TextBlock Text="Die App startet dann unsichtbar als Tray-Symbol und läuft im Hintergrund. Doppelklick aufs Symbol holt das Fenster nach vorne."
+                                   Style="{StaticResource Label}"/>
+                    </StackPanel>
+                </ScrollViewer>
+            </TabItem>
+
+            <!-- ============ 2. GEHIRN (KI) ============ -->
+            <TabItem Style="{StaticResource SideTab}">
+                <TabItem.Header>
+                    <StackPanel Orientation="Horizontal">
+                        <TextBlock Text="🧠" Style="{StaticResource TabIcon}"/>
+                        <TextBlock Text="Gehirn" Style="{StaticResource TabText}"/>
+                    </StackPanel>
+                </TabItem.Header>
+                <ScrollViewer VerticalScrollBarVisibility="Auto" Padding="28,24,28,24">
+                    <StackPanel>
+                        <TextBlock Text="Gehirn (KI-Modell)" Style="{StaticResource PageTitle}"/>
+                        <TextBlock Text="Welches Modell antwortet und wie sich der Assistent verhält." Style="{StaticResource PageSubtitle}"/>
+
+                        <TextBlock Text="Anbieter (Sprechen — die gesprochene Antwort)" Style="{StaticResource SectionFirst}"/>
+                        <ComboBox x:Name="ProviderBox" MaxWidth="360" HorizontalAlignment="Left"
+                                  SelectionChanged="ProviderBox_SelectionChanged"/>
+                        <TextBlock Text="Modell-Bezeichnung (Liste passt sich dem Anbieter an)" Style="{StaticResource Label}"/>
+                        <ComboBox x:Name="ModelBox" IsEditable="True" MaxWidth="460" HorizontalAlignment="Left"/>
+
+                        <!-- Modelle pro Rolle: jede Aufgabe des Hauptagenten bekommt ihr eigenes Gehirn.
+                             Die Dropdowns zeigen die EFFEKTIV aufgeloesten Werte (Vorgaben), Frank stellt final ein. -->
+                        <TextBlock Text="Modelle pro Rolle" Style="{StaticResource Section}"/>
+                        <TextBlock Text="Für jede Aufgabe des Hauptagenten ein eigenes Gehirn. Verstehen braucht ein starkes Modell, Sprechen ein schnelles."
+                                   Style="{StaticResource Label}"/>
+                        <CheckBox x:Name="DeepUnderstandingBox" Content="Tiefes Verstehen (strukturierter Verstehens-Schritt vor jeder Antwort)"
+                                  Margin="0,6,0,4"/>
+                        <Grid Margin="0,6,0,0" MaxWidth="640" HorizontalAlignment="Left">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="200"/>
+                                <ColumnDefinition Width="130"/>
+                                <ColumnDefinition Width="*"/>
+                            </Grid.ColumnDefinitions>
+                            <Grid.RowDefinitions>
+                                <RowDefinition Height="Auto"/>
+                                <RowDefinition Height="Auto"/>
+                                <RowDefinition Height="Auto"/>
+                                <RowDefinition Height="Auto"/>
+                                <RowDefinition Height="Auto"/>
+                                <RowDefinition Height="Auto"/>
+                            </Grid.RowDefinitions>
+
+                            <TextBlock Grid.Row="0" Grid.Column="1" Text="Anbieter" FontSize="11.5"
+                                       Foreground="{DynamicResource TextMuted}" Margin="0,0,8,2"/>
+                            <TextBlock Grid.Row="0" Grid.Column="2" Text="Modell" FontSize="11.5"
+                                       Foreground="{DynamicResource TextMuted}" Margin="0,0,0,2"/>
+
+                            <TextBlock Grid.Row="1" Grid.Column="0" Text="Verstehen &amp; Orchestrieren" VerticalAlignment="Center" Margin="0,0,8,6"/>
+                            <ComboBox  Grid.Row="1" Grid.Column="1" x:Name="BrainProviderBox" Margin="0,0,8,6"/>
+                            <ComboBox  Grid.Row="1" Grid.Column="2" x:Name="BrainModelBox" IsEditable="True" Margin="0,0,0,6"/>
+
+                            <TextBlock Grid.Row="2" Grid.Column="0" Text="Agenten-Bau" VerticalAlignment="Center" Margin="0,0,8,6"/>
+                            <ComboBox  Grid.Row="2" Grid.Column="1" x:Name="BuilderProviderBox" Margin="0,0,8,6"/>
+                            <ComboBox  Grid.Row="2" Grid.Column="2" x:Name="BuilderModelBox" IsEditable="True" Margin="0,0,0,6"/>
+
+                            <TextBlock Grid.Row="3" Grid.Column="0" Text="Computer-Steuerung" VerticalAlignment="Center" Margin="0,0,8,6"/>
+                            <ComboBox  Grid.Row="3" Grid.Column="1" x:Name="CuProviderBox" Margin="0,0,8,6"/>
+                            <ComboBox  Grid.Row="3" Grid.Column="2" x:Name="CuModelBox" IsEditable="True" Margin="0,0,0,6"/>
+
+                            <TextBlock Grid.Row="4" Grid.Column="0" Text="Endpunkt-Check (FERTIG/WEITER)" VerticalAlignment="Center" Margin="0,0,8,6"/>
+                            <ComboBox  Grid.Row="4" Grid.Column="1" x:Name="EndpointProviderBox" Margin="0,0,8,6"/>
+                            <ComboBox  Grid.Row="4" Grid.Column="2" x:Name="EndpointModelBox" IsEditable="True" Margin="0,0,0,6"/>
+
+                            <TextBlock Grid.Row="5" Grid.Column="0" Text="Intent &amp; Helfer-Wahl" VerticalAlignment="Center" Margin="0,0,8,6"/>
+                            <ComboBox  Grid.Row="5" Grid.Column="1" x:Name="IntentProviderBox" Margin="0,0,8,6"/>
+                            <ComboBox  Grid.Row="5" Grid.Column="2" x:Name="IntentModelBox" IsEditable="True" Margin="0,0,0,6"/>
+                        </Grid>
+
+                        <!-- Codex (OpenAI über ChatGPT-Abo, Anmeldung per Gerätecode wie bei Hermes).
+                             Nur relevant, wenn oben als Anbieter "codex" gewählt ist. -->
+                        <TextBlock Text="Codex (ChatGPT-Abo per Gerätecode)" Style="{StaticResource Section}"/>
+                        <TextBlock Text="Nutzt dein ChatGPT-Abo statt eines API-Schlüssels. Einmal anmelden: Code im Browser bestätigen. Modelle z. B. gpt-5.5 (oben als Modell eintragen)."
+                                   Style="{StaticResource Label}"/>
+                        <StackPanel Orientation="Horizontal" Margin="0,4,0,0">
+                            <Button x:Name="CodexLoginButton" Content="Per Gerätecode anmelden"
+                                    Click="CodexLogin_Click" Padding="14,7" MinWidth="200"/>
+                            <Button x:Name="CodexLogoutButton" Content="Abmelden"
+                                    Click="CodexLogout_Click" Padding="14,7" Margin="10,0,0,0"/>
+                        </StackPanel>
+                        <TextBlock x:Name="CodexStatusText" TextWrapping="Wrap" Margin="0,8,0,0"
+                                   Foreground="{DynamicResource TextMuted}" FontSize="12.5"/>
+                        <TextBlock Text="Denk-Aufwand (Effort)" Style="{StaticResource Label}"/>
+                        <ComboBox x:Name="CodexEffortBox" MaxWidth="360" HorizontalAlignment="Left"/>
+
+                        <TextBlock Text="System-Prompt des Hauptagenten" Style="{StaticResource Section}"/>
+                        <TextBlock Text="Wie sich dein Assistent verhält. Leer lassen = eingebauter Standard."
+                                   Style="{StaticResource Label}"/>
+                        <TextBox x:Name="PromptBox" AcceptsReturn="True" TextWrapping="Wrap"
+                                 Height="190" VerticalScrollBarVisibility="Auto"/>
+                    </StackPanel>
+                </ScrollViewer>
+            </TabItem>
+
+            <!-- ============ AGENTEN (Platzhalter — Verwaltung folgt) ============ -->
+            <TabItem Style="{StaticResource SideTab}">
+                <TabItem.Header>
+                    <StackPanel Orientation="Horizontal">
+                        <TextBlock Text="🤖" Style="{StaticResource TabIcon}"/>
+                        <TextBlock Text="Agenten" Style="{StaticResource TabText}"/>
+                    </StackPanel>
+                </TabItem.Header>
+                <ScrollViewer VerticalScrollBarVisibility="Auto" Padding="28,24,28,24">
+                    <StackPanel>
+                        <TextBlock Text="Agenten" Style="{StaticResource PageTitle}"/>
+                        <TextBlock Text="Eigene Unteragenten, die der Hauptagent bei Bedarf selbst auswählt." Style="{StaticResource PageSubtitle}"/>
+                        <Border Background="{DynamicResource CardBackground}" BorderBrush="{DynamicResource CardBorder}"
+                                BorderThickness="1" CornerRadius="10" Padding="18" Margin="0,8,0,0">
+                            <StackPanel>
+                                <TextBlock Text="In Vorbereitung" FontWeight="SemiBold" FontSize="14"
+                                           Foreground="{DynamicResource TextPrimary}" Margin="0,0,0,6"/>
+                                <TextBlock TextWrapping="Wrap" Foreground="{DynamicResource TextMuted}" FontSize="12.5"
+                                           Text="Hier kannst du bald eigene Unteragenten anlegen und definieren — z. B. einen Recherche- oder Termin-Agenten. Der Hauptagent entscheidet dann selbst, wann er welchen Unteragenten einsetzt. Aktuell eingebaut: „Erinnerung“ und „Notiz“."/>
+                            </StackPanel>
+                        </Border>
+                    </StackPanel>
+                </ScrollViewer>
+            </TabItem>
+
+            <!-- ============ COMPUTER USE ============ -->
+            <TabItem Style="{StaticResource SideTab}">
+                <TabItem.Header>
+                    <StackPanel Orientation="Horizontal">
+                        <TextBlock Text="🖥" Style="{StaticResource TabIcon}"/>
+                        <TextBlock Text="Computer" Style="{StaticResource TabText}"/>
+                    </StackPanel>
+                </TabItem.Header>
+                <ScrollViewer VerticalScrollBarVisibility="Auto" Padding="28,24,28,24">
+                    <StackPanel>
+                        <TextBlock Text="Computer-Steuerung" Style="{StaticResource PageTitle}"/>
+                        <TextBlock Text="Lässt den Agenten auf Wunsch Dinge auf deinem PC erledigen — Programme öffnen, Befehle ausführen. Du bestimmst, wie viel er darf."
+                                   Style="{StaticResource PageSubtitle}"/>
+
+                        <TextBlock Text="Stufe" Style="{StaticResource SectionFirst}"/>
+                        <ComboBox x:Name="ComputerUseModeBox" MaxWidth="360" HorizontalAlignment="Left"/>
+
+                        <Border Background="{DynamicResource CardBackground}" BorderBrush="{DynamicResource CardBorder}"
+                                BorderThickness="1" CornerRadius="10" Padding="18" Margin="0,16,0,0">
+                            <StackPanel>
+                                <TextBlock Text="Was die Stufen bedeuten" FontWeight="SemiBold" FontSize="14"
+                                           Foreground="{DynamicResource TextPrimary}" Margin="0,0,0,8"/>
+                                <TextBlock TextWrapping="Wrap" Foreground="{DynamicResource TextMuted}" FontSize="12.5" Margin="0,0,0,6"
+                                           Text="• Aus — der Agent steuert deinen Rechner nicht. Sicherste Einstellung (Standard)."/>
+                                <TextBlock TextWrapping="Wrap" Foreground="{DynamicResource TextMuted}" FontSize="12.5" Margin="0,0,0,6"
+                                           Text="• Sicher — der Agent leitet einen Befehl ab und zeigt ihn dir. Heikle Befehle führt er erst aus, wenn du gesprochen „Ja“ sagst."/>
+                                <TextBlock TextWrapping="Wrap" Foreground="{DynamicResource TextMuted}" FontSize="12.5"
+                                           Text="• Vollzugriff — Befehle laufen direkt, ohne Rückfrage. Ausnahme: eine fest eingebaute Sperrliste für zerstörerische Befehle (z. B. Festplatte löschen) gilt IMMER und lässt sich nie umgehen."/>
+                            </StackPanel>
+                        </Border>
+                    </StackPanel>
+                </ScrollViewer>
+            </TabItem>
+
+            <!-- ============ 3. API-SCHLÜSSEL ============ -->
+            <TabItem Style="{StaticResource SideTab}">
+                <TabItem.Header>
+                    <StackPanel Orientation="Horizontal">
+                        <TextBlock Text="🔑" Style="{StaticResource TabIcon}"/>
+                        <TextBlock Text="API-Schlüssel" Style="{StaticResource TabText}"/>
+                    </StackPanel>
+                </TabItem.Header>
+                <ScrollViewer VerticalScrollBarVisibility="Auto" Padding="28,24,28,24">
+                    <StackPanel>
+                        <TextBlock Text="API-Schlüssel" Style="{StaticResource PageTitle}"/>
+                        <TextBlock Text="Werden sicher in ~/SK/VoiceAgent/keys.json gespeichert — nie im Projekt." Style="{StaticResource PageSubtitle}"/>
+
+                        <TextBlock Text="Groq (Transkription)" Style="{StaticResource Label}"/>
+                        <TextBox x:Name="GroqKeyBox"/>
+                        <TextBlock Text="Google Cloud (Sprachausgabe)" Style="{StaticResource Label}"/>
+                        <TextBox x:Name="GoogleKeyBox"/>
+                        <TextBlock Text="Gemini (Gehirn — Standard)" Style="{StaticResource Label}"/>
+                        <TextBox x:Name="GeminiKeyBox"/>
+                        <TextBlock Text="Claude (optional)" Style="{StaticResource Label}"/>
+                        <TextBox x:Name="ClaudeKeyBox"/>
+                        <TextBlock Text="OpenAI (optional)" Style="{StaticResource Label}"/>
+                        <TextBox x:Name="OpenAiKeyBox"/>
+                    </StackPanel>
+                </ScrollViewer>
+            </TabItem>
+
+            <!-- ============ 4. STIMME & SPRACHE ============ -->
+            <TabItem Style="{StaticResource SideTab}">
+                <TabItem.Header>
+                    <StackPanel Orientation="Horizontal">
+                        <TextBlock Text="🗣" Style="{StaticResource TabIcon}"/>
+                        <TextBlock Text="Stimme &amp; Sprache" Style="{StaticResource TabText}"/>
+                    </StackPanel>
+                </TabItem.Header>
+                <ScrollViewer VerticalScrollBarVisibility="Auto" Padding="28,24,28,24">
+                    <StackPanel>
+                        <TextBlock Text="Stimme &amp; Sprache" Style="{StaticResource PageTitle}"/>
+                        <TextBlock Text="Wie der Agent klingt und wie empfindlich er dir zuhört." Style="{StaticResource PageSubtitle}"/>
+
+                        <TextBlock Text="Sprachausgabe (Stimme)" Style="{StaticResource SectionFirst}"/>
+                        <TextBlock Text="Eine der 30 deutschen Chirp-3-HD-Stimmen" Style="{StaticResource Label}"/>
+                        <ComboBox x:Name="VoiceBox" MaxWidth="420" HorizontalAlignment="Left"/>
+                        <Button x:Name="PreviewButton" Content="Probehören" HorizontalAlignment="Left"
+                                Margin="0,8,0,0" Padding="14,6" Click="Preview_Click"/>
+
+                        <TextBlock Text="Spracherkennung (Empfindlichkeit)" Style="{StaticResource Section}"/>
+                        <CheckBox x:Name="SemanticEndpointBox" Margin="0,4,0,2"
+                                  Content="Gedankenpausen abwarten (semantischer Endpunkt-Check)"/>
+                        <CheckBox x:Name="IntentDetectionBox" Margin="0,4,0,8"
+                                  Content="Absicht erkennen (Aufgabe/Frage/Plauderei — für die Live-Sonde)"/>
+
+                        <TextBlock x:Name="SilenceThresholdLabel" Style="{StaticResource Label}"/>
+                        <Slider x:Name="SilenceThresholdSlider" Minimum="0.002" Maximum="0.05"
+                                TickFrequency="0.001" IsSnapToTickEnabled="True" ValueChanged="Slider_ValueChanged"/>
+
+                        <TextBlock x:Name="SilenceMsLabel" Style="{StaticResource Label}"/>
+                        <Slider x:Name="SilenceMsSlider" Minimum="500" Maximum="6000"
+                                TickFrequency="100" IsSnapToTickEnabled="True" ValueChanged="Slider_ValueChanged"/>
+
+                        <TextBlock x:Name="MinUtteranceLabel" Style="{StaticResource Label}"/>
+                        <Slider x:Name="MinUtteranceSlider" Minimum="100" Maximum="1500"
+                                TickFrequency="50" IsSnapToTickEnabled="True" ValueChanged="Slider_ValueChanged"/>
+
+                        <TextBlock x:Name="EndpointWaitLabel" Style="{StaticResource Label}"/>
+                        <Slider x:Name="EndpointWaitSlider" Minimum="1000" Maximum="10000"
+                                TickFrequency="250" IsSnapToTickEnabled="True" ValueChanged="Slider_ValueChanged"/>
+                    </StackPanel>
+                </ScrollViewer>
+            </TabItem>
+
+            <!-- ============ 5. WECKWORT ============ -->
+            <TabItem Style="{StaticResource SideTab}">
+                <TabItem.Header>
+                    <StackPanel Orientation="Horizontal">
+                        <TextBlock Text="👂" Style="{StaticResource TabIcon}"/>
+                        <TextBlock Text="Weckwort" Style="{StaticResource TabText}"/>
+                    </StackPanel>
+                </TabItem.Header>
+                <ScrollViewer VerticalScrollBarVisibility="Auto" Padding="28,24,28,24">
+                    <StackPanel>
+                        <TextBlock Text="Weckwort" Style="{StaticResource PageTitle}"/>
+                        <TextBlock Text="Wenn aktiv, ruht der Agent und reagiert erst, wenn das Weckwort fällt. Danach hört er eine Weile normal zu, dann ruht er wieder."
+                                   Style="{StaticResource PageSubtitle}"/>
+
+                        <CheckBox x:Name="WakeWordEnabledBox" Margin="0,4,0,8"
+                                  Content="Weckwort-Modus aktivieren"/>
+                        <TextBlock Text="Weckwort (englische Aussprache — das Modell ist englisch). Wähle einen Vorschlag ODER tippe ein eigenes Wort ein. Die Erkennung wird beim Speichern sofort darauf umgestellt."
+                                   Style="{StaticResource Label}"/>
+                        <ComboBox x:Name="WakeWordBox" IsEditable="True" MaxWidth="420" HorizontalAlignment="Left"/>
+                        <TextBlock Text="Tipp: Eigene Weckwörter funktionieren am besten mit englisch klingenden Wörtern (z. B. „Hey Buddy“). Umlaute/Sonderzeichen kennt das englische Modell nicht."
+                                   Style="{StaticResource Label}"/>
+
+                        <TextBlock Text="Töne" Style="{StaticResource Section}"/>
+                        <CheckBox x:Name="WakeChimeBox" Margin="0,4,0,6"
+                                  Content="Erkennungston beim Wecken (danach sofort sprechen)"/>
+                        <CheckBox x:Name="WakeSleepChimeBox" Margin="0,2,0,6"
+                                  Content="Abfallender Ton beim Einschlafen (wenn das Wachfenster nach Stille abläuft)"/>
+                        <TextBlock Text="Der abfallende Ton signalisiert dir hörbar: ab jetzt hört der Agent nicht mehr zu — du musst ihn erst wieder wecken."
+                                   Style="{StaticResource Label}"/>
+
+                        <TextBlock Text="Start-Ton (ich höre zu)" Style="{StaticResource Label}"/>
+                        <StackPanel Orientation="Horizontal">
+                            <ComboBox x:Name="StartSoundBox" Width="360" HorizontalAlignment="Left"/>
+                            <Button Content="▶ Anhören" Click="PreviewStartSound_Click" Padding="12,5" Margin="8,0,0,6"/>
+                        </StackPanel>
+                        <TextBlock Text="Stop-Ton (ich höre nicht mehr zu)" Style="{StaticResource Label}"/>
+                        <StackPanel Orientation="Horizontal">
+                            <ComboBox x:Name="StopSoundBox" Width="360" HorizontalAlignment="Left"/>
+                            <Button Content="▶ Anhören" Click="PreviewStopSound_Click" Padding="12,5" Margin="8,0,0,6"/>
+                        </StackPanel>
+                        <TextBlock Text="Melde-Ton (wenn der Agent von sich aus etwas sagt — z. B. Erinnerung)" Style="{StaticResource Label}"/>
+                        <StackPanel Orientation="Horizontal">
+                            <ComboBox x:Name="MessageSoundBox" Width="360" HorizontalAlignment="Left"/>
+                            <Button Content="▶ Anhören" Click="PreviewMessageSound_Click" Padding="12,5" Margin="8,0,0,6"/>
+                        </StackPanel>
+                        <TextBlock Text="Wähle aus je 30 kurzen Tönen. Mit „Anhören“ kannst du jeden Ton probehören, bevor du ihn übernimmst."
+                                   Style="{StaticResource Label}"/>
+
+                        <TextBlock Text="Wachfenster" Style="{StaticResource Section}"/>
+                        <TextBlock x:Name="WakeTimeoutLabel" Style="{StaticResource Label}"/>
+                        <Slider x:Name="WakeTimeoutSlider" Minimum="15000" Maximum="180000"
+                                TickFrequency="5000" IsSnapToTickEnabled="True" ValueChanged="Slider_ValueChanged"/>
+                    </StackPanel>
+                </ScrollViewer>
+            </TabItem>
+
+            <!-- ============ 6. ZEIT & FARBEN ============ -->
+            <TabItem Style="{StaticResource SideTab}">
+                <TabItem.Header>
+                    <StackPanel Orientation="Horizontal">
+                        <TextBlock Text="🎨" Style="{StaticResource TabIcon}"/>
+                        <TextBlock Text="Zeit &amp; Farben" Style="{StaticResource TabText}"/>
+                    </StackPanel>
+                </TabItem.Header>
+                <ScrollViewer VerticalScrollBarVisibility="Auto" Padding="28,24,28,24">
+                    <StackPanel>
+                        <TextBlock Text="Zeit &amp; Farben" Style="{StaticResource PageTitle}"/>
+                        <TextBlock Text="Zeitzone für Uhrzeit-Fragen und die Farben im Gespräch." Style="{StaticResource PageSubtitle}"/>
+
+                        <TextBlock Text="Zeitzone (für Uhrzeit-Fragen)" Style="{StaticResource SectionFirst}"/>
+                        <TextBlock Text="Der Agent kennt die echte Uhrzeit nur, wenn die Zeitzone stimmt. Standard: Systemzeit dieses PCs."
+                                   Style="{StaticResource Label}"/>
+                        <CheckBox x:Name="AutoTimeZoneBox" Margin="0,4,0,6"
+                                  Content="Automatisch (Systemzeit dieses PCs)" Click="AutoTimeZone_Click"/>
+                        <ComboBox x:Name="TimeZoneBox" MaxWidth="460" HorizontalAlignment="Left"/>
+
+                        <TextBlock Text="Farben im Gespräch" Style="{StaticResource Section}"/>
+                        <TextBlock Text="Deine Farbe (was du sagst)" Style="{StaticResource Label}"/>
+                        <ComboBox x:Name="UserColorBox" MaxWidth="360" HorizontalAlignment="Left"/>
+                        <TextBlock Text="Farbe des Agenten (Antworten)" Style="{StaticResource Label}"/>
+                        <ComboBox x:Name="AgentColorBox" MaxWidth="360" HorizontalAlignment="Left"/>
+                    </StackPanel>
+                </ScrollViewer>
+            </TabItem>
+
+        </TabControl>
+
+        <!-- ===== Untere Aktionsleiste ===== -->
+        <Border Grid.Row="1" Background="{DynamicResource SidebarBackground}"
+                BorderBrush="{DynamicResource SidebarBorder}" BorderThickness="0,1,0,0">
+            <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,12,24,12">
+                <Button Content="Abbrechen" Padding="18,7" Margin="0,0,10,0" Click="Cancel_Click"/>
+                <Button Content="Speichern" Padding="22,7" Click="Save_Click"
+                        Background="{DynamicResource AccentButtonBackground}"
+                        Foreground="{DynamicResource AccentButtonForeground}"/>
+            </StackPanel>
+        </Border>
+    </Grid>
+</Window>

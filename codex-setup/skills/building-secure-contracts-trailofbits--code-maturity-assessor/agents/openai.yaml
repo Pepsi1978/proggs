@@ -1,0 +1,7 @@
+interface:
+  display_name: "code-maturity-assessor"
+  short_description: "Systematic code maturity assessment using Trail of Bits'"
+  default_prompt: "Use $building-secure-contracts-trailofbits--code-maturity-assessor for this task."
+
+policy:
+  allow_implicit_invocation: false

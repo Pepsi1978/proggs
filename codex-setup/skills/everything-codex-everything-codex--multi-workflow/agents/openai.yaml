@@ -1,0 +1,7 @@
+interface:
+  display_name: "multi-workflow"
+  short_description: "multi-workflow"
+  default_prompt: "Use $everything-codex-everything-codex--multi-workflow for this task."
+
+policy:
+  allow_implicit_invocation: false

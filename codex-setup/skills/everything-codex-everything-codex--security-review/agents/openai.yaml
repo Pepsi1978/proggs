@@ -1,0 +1,7 @@
+interface:
+  display_name: "security-review"
+  short_description: "adding authentication, handling user input, working with"
+  default_prompt: "Use $everything-codex-everything-codex--security-review for this task."
+
+policy:
+  allow_implicit_invocation: false

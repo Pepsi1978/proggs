@@ -1,0 +1,7 @@
+interface:
+  display_name: "differential-review"
+  short_description: "differential-review skill"
+  default_prompt: "Use $differential-review-trailofbits--differential-review for this task."
+
+policy:
+  allow_implicit_invocation: false

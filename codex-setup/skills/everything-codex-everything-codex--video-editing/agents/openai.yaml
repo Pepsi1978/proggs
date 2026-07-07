@@ -1,0 +1,7 @@
+interface:
+  display_name: "video-editing"
+  short_description: "AI-assisted video editing workflows for cutting, structuring"
+  default_prompt: "Use $everything-codex-everything-codex--video-editing for this task."
+
+policy:
+  allow_implicit_invocation: false

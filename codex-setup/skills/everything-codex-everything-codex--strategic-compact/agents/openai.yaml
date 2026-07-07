@@ -1,0 +1,7 @@
+interface:
+  display_name: "strategic-compact"
+  short_description: "Suggests manual context compaction at logical intervals to"
+  default_prompt: "Use $everything-codex-everything-codex--strategic-compact for this task."
+
+policy:
+  allow_implicit_invocation: false

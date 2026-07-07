@@ -1,0 +1,26 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+    <key>CFBundleName</key>
+    <string>TerminalVoiceOverlay</string>
+    <key>CFBundleIdentifier</key>
+    <string>com.frank.TerminalVoiceOverlay</string>
+    <key>CFBundleVersion</key>
+    <string>1.18</string>
+    <key>CFBundleShortVersionString</key>
+    <string>1.19</string>
+    <key>CFBundlePackageType</key>
+    <string>APPL</string>
+    <key>CFBundleExecutable</key>
+    <string>TerminalVoiceOverlay</string>
+    <key>LSMinimumSystemVersion</key>
+    <string>13.0</string>
+    <key>LSUIElement</key>
+    <true/>
+    <key>NSMicrophoneUsageDescription</key>
+    <string>TerminalVoiceOverlay benötigt Zugriff auf das Mikrofon für Spracheingabe.</string>
+    <key>NSAppleEventsUsageDescription</key>
+    <string>TerminalVoiceOverlay benötigt Zugriff auf System Events für Tastatureingaben.</string>
+</dict>
+</plist>

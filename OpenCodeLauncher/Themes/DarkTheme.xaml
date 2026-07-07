@@ -1,0 +1,63 @@
+<ResourceDictionary xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+                    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+
+    <!-- ===== OpenCode Launcher · Dark (modernisiert) ===== -->
+    <!-- Gleiche Keys wie LightTheme.xaml. Alles via DynamicResource ansprechen. -->
+
+    <LinearGradientBrush x:Key="DesktopBg" StartPoint="0.5,0" EndPoint="0.5,1">
+        <GradientStop Color="#14101F" Offset="0"/>
+        <GradientStop Color="#0A0810" Offset="0.6"/>
+        <GradientStop Color="#07060C" Offset="1"/>
+    </LinearGradientBrush>
+
+    <SolidColorBrush x:Key="WindowBg"          Color="#8C12101C"/>
+    <SolidColorBrush x:Key="TitleBarBg"        Color="#00191826"/>
+    <SolidColorBrush x:Key="CardBg"            Color="#6B1E1B2E"/>
+    <SolidColorBrush x:Key="SurfaceBg"         Color="#0DFFFFFF"/>
+    <SolidColorBrush x:Key="HoverBg"           Color="#14FFFFFF"/>
+    <SolidColorBrush x:Key="ChipBg"            Color="#0FFFFFFF"/>
+
+    <SolidColorBrush x:Key="AuraOneBrush"       Color="#8C7C6CF5"/>
+    <SolidColorBrush x:Key="AuraTwoBrush"       Color="#6BB050F0"/>
+    <SolidColorBrush x:Key="AuraThreeBrush"     Color="#4D22C8EE"/>
+    <SolidColorBrush x:Key="GlassBorderBrush"   Color="#1CFFFFFF"/>
+    <SolidColorBrush x:Key="GlassBrightBrush"   Color="#24FFFFFF"/>
+    <SolidColorBrush x:Key="AccentGlowBrush"    Color="#B37C6CF5"/>
+    <SolidColorBrush x:Key="PanelBg"            Color="#6B1E1B2E"/>
+    <SolidColorBrush x:Key="TableHeaderBg"      Color="#B8181524"/>
+
+    <SolidColorBrush x:Key="BorderBrushSoft"   Color="#14FFFFFF"/>
+    <SolidColorBrush x:Key="BorderBrushStrong" Color="#1CFFFFFF"/>
+    <SolidColorBrush x:Key="GridLineBrush"     Color="#14FFFFFF"/>
+
+    <SolidColorBrush x:Key="TextBrush"         Color="#F1EFF9"/>
+    <SolidColorBrush x:Key="MutedBrush"        Color="#A3F1EFF9"/>
+    <SolidColorBrush x:Key="DimBrush"          Color="#6BF1EFF9"/>
+
+    <SolidColorBrush x:Key="AccentBrush"        Color="#A79CFF"/>
+    <LinearGradientBrush x:Key="AccentGradientBrush" StartPoint="0.5,0" EndPoint="0.5,1">
+        <GradientStop Color="#BDB6FF" Offset="0"/>
+        <GradientStop Color="#7C6CF5" Offset="1"/>
+    </LinearGradientBrush>
+    <SolidColorBrush x:Key="AccentHoverBrush"   Color="#B9B0FF"/>
+    <SolidColorBrush x:Key="AccentPressedBrush" Color="#6455E0"/>
+    <SolidColorBrush x:Key="AccentSoftBg"       Color="#387C6CF5"/>
+    <SolidColorBrush x:Key="AccentLineBrush"    Color="#7A7C6CF5"/>
+
+    <SolidColorBrush x:Key="SelectedBg"         Color="#427C6CF5"/>
+    <SolidColorBrush x:Key="SelectedBorderBrush" Color="#D6A79CFF"/>
+    <SolidColorBrush x:Key="RowSelectedBg"      Color="#297C6CF5"/>
+
+    <SolidColorBrush x:Key="StatusOkBg"    Color="#294ADE80"/>
+    <SolidColorBrush x:Key="StatusOkFg"    Color="#5BF0A0"/>
+    <SolidColorBrush x:Key="StatusWarnBg"  Color="#29FBBF24"/>
+    <SolidColorBrush x:Key="StatusWarnFg"  Color="#FBBF24"/>
+    <SolidColorBrush x:Key="StatusBadBg"   Color="#29F87171"/>
+    <SolidColorBrush x:Key="StatusBadFg"   Color="#FF8F8F"/>
+
+    <SolidColorBrush x:Key="CloseHoverBg"  Color="#E5484D"/>
+
+    <!-- 1 = OS-Titelleiste im Dark-Style (siehe MainWindow.xaml.cs) -->
+    <system:Int32 x:Key="ImmersiveDark" xmlns:system="clr-namespace:System;assembly=mscorlib">1</system:Int32>
+
+</ResourceDictionary>

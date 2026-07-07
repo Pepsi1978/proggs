@@ -1,0 +1,7 @@
+# brain-api — Abhaengigkeiten (1:1-Speicher, mem0-frei seit 2026-06-23).
+# mem0ai + fastembed sind RAUS (kein KI-Bibliothekar, keine hybride mem0-Suche mehr).
+# Direkt: qdrant-client (Speicher/Suche) + google-genai (Gemini-Embedding). Web-Schicht exakt gepinnt.
+fastapi==0.138.0
+uvicorn[standard]==0.49.0
+google-genai>=2.9.0
+qdrant-client>=1.18.0

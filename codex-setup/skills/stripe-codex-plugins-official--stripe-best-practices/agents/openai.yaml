@@ -1,0 +1,7 @@
+interface:
+  display_name: "stripe-best-practices"
+  short_description: "stripe-best-practices skill"
+  default_prompt: "Use $stripe-codex-plugins-official--stripe-best-practices for this task."
+
+policy:
+  allow_implicit_invocation: false

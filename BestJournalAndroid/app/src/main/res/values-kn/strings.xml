@@ -1,0 +1,1428 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources xmlns:tools="http://schemas.android.com/tools"
+    xmlns:xliff="urn:oasis:names:tc:xliff:document:1.2"
+    tools:locale="kn">
+    <!-- App brand name — do not translate -->
+    <string name="app_name" translatable="false">Best Journal</string>
+
+    <!-- ════════════════════════════════════════════════════════════════════
+         NAVIGATION & TABS
+         ════════════════════════════════════════════════════════════════════ -->
+    <string name="nav_journal">ಡೈರಿ</string>
+    <string name="nav_retrospective">ಅವಲೋಕನ</string>
+    <string name="nav_dashboard">ಡ್ಯಾಶ್‌ಬೋರ್ಡ್</string>
+    <string name="nav_settings">ಸೆಟ್ಟಿಂಗ್‌ಗಳು</string>
+
+    <!-- ════════════════════════════════════════════════════════════════════
+         COMMON / SHARED
+         ════════════════════════════════════════════════════════════════════ -->
+    <string name="action_cancel">ರದ್ದುಗೊಳಿಸಿ</string>
+    <string name="action_save">ಉಳಿಸಿ</string>
+    <string name="action_close">ಮುಚ್ಚಿ</string>
+    <string name="action_continue">ಮುಂದುವರಿಯಿರಿ</string>
+    <string name="action_understood">ಅರ್ಥವಾಯಿತು</string>
+    <string name="action_retry">ಮತ್ತೆ ಪ್ರಯತ್ನಿಸಿ</string>
+    <string name="action_later">ನಂತರ</string>
+    <string name="action_share">ಹಂಚಿಕೊಳ್ಳಿ</string>
+    <string name="action_discard">ತ್ಯಜಿಸಿ</string>
+    <string name="action_back">ಹಿಂದಕ್ಕೆ</string>
+    <string name="action_done">ಮುಗಿಯಿತು</string>
+    <string name="action_no_thanks">ಬೇಡ, ಧನ್ಯವಾದಗಳು</string>
+    <string name="action_delete">ಅಳಿಸಿ</string>
+    <!-- Accessibility label for the undo icon button on the dashboard. -->
+    <string name="action_undo">ರದ್ದುಮಾಡಿ</string>
+    <string name="action_ok">ಸರಿ</string>
+    <string name="action_go_google_play">Google Play ಗೆ ಹೋಗಿ</string>
+    <string name="journal_drive_backup_dialog">Google Drive ಬ್ಯಾಕಪ್</string>
+    <string name="journal_improve_text">✨ ಪಠ್ಯ ಸುಧಾರಿಸಿ</string>
+    <string name="journal_show_original">↩ ಮೂಲ ತೋರಿಸಿ</string>
+    <string name="journal_show_improved">✨ ಸುಧಾರಿತ ಆವೃತ್ತಿ ತೋರಿಸಿ</string>
+    <string name="journal_ai_improving">AI ಪಠ್ಯವನ್ನು ಸುಧಾರಿಸುತ್ತಿದೆ — ದಯವಿಟ್ಟು ಕಾಯಿರಿ</string>
+    <string name="journal_later">ನಂತರ</string>
+    <!-- Paywall missed strings -->
+    <string name="paywall_from_per_day">ವಾರ್ಷಿಕ ಚಂದಾ, ವರ್ಷಕ್ಕೆ %1$s</string>
+    <string name="paywall_instead_per_month">ಮಾಸಿಕ ಯೋಜನೆಗಿಂತ %1$d%% ಉಳಿತಾಯ</string>
+    <string name="paywall_or">ಅಥವಾ</string>
+    <string name="paywall_with_limited">ಸೀಮಿತ ಮಿತಿಗಳೊಂದಿಗೆ.</string>
+    <!-- Churn missed string -->
+    <string name="churn_instead_of">ಬದಲಿಗೆ </string>
+    <string name="label_premium">Premium</string>
+    <string name="label_original">ಮೂಲ</string>
+    <string name="label_improved">✨ AI ಸುಧಾರಿತ</string>
+    <string name="label_photo">ಫೋಟೋ</string>
+    <string name="label_video">ವೀಡಿಯೊ</string>
+    <string name="label_current">ಪ್ರಸ್ತುತ</string>
+    <string name="label_record">ದಾಖಲೆ</string>
+    <string name="cd_sync_status">Sync ಸ್ಥಿತಿ</string>
+    <string name="cd_day">ಹಗಲು</string>
+    <string name="cd_night">ರಾತ್ರಿ</string>
+
+    <!-- ════════════════════════════════════════════════════════════════════
+         JOURNAL SCREEN
+         ════════════════════════════════════════════════════════════════════ -->
+    <string name="journal_title">ಡೈರಿ</string>
+    <string name="journal_search_placeholder">ನಮೂದುಗಳನ್ನು ಹುಡುಕಿ…</string>
+    <string name="journal_search">ಹುಡುಕಿ</string>
+    <string name="journal_search_hint">ಹುಡುಕಾಟ</string>
+    <string name="journal_search_close">ಹುಡುಕಾಟ ಮುಚ್ಚಿ</string>
+    <string name="journal_no_entries">ಇನ್ನೂ ಯಾವುದೇ ನಮೂದುಗಳಿಲ್ಲ</string>
+    <string name="journal_tap_mic_to_start">ಪ್ರಾರಂಭಿಸಲು ಮೈಕ್ ಒತ್ತಿರಿ</string>
+    <string name="journal_cd_streak">ಸತತ ದಿನಗಳು</string>
+    <string name="journal_cd_text_input">ಪಠ್ಯ ನಮೂದಿಸಿ</string>
+    <string name="journal_achievement_unlocked">ಸಾಧನೆ ಅನ್‌ಲಾಕ್ ಆಯಿತು!</string>
+    <string name="journal_drive_not_signed_in">Google ನಲ್ಲಿ ಸೈನ್ ಇನ್ ಆಗಿಲ್ಲ</string>
+    <string name="journal_drive_backup_current">ಬ್ಯಾಕಪ್ ಪ್ರಸ್ತುತ, ಎಲ್ಲಾ ನಮೂದುಗಳು ಸುರಕ್ಷಿತ</string>
+    <string name="journal_drive_uploading">ಬ್ಯಾಕಪ್ ಅಪ್‌ಲೋಡ್ ಆಗುತ್ತಿದೆ…</string>
+    <string name="journal_drive_downloading">ಫೋಟೋಗಳು/ವೀಡಿಯೊಗಳು ಡೌನ್‌ಲೋಡ್ ಆಗುತ್ತಿವೆ…</string>
+    <string name="journal_drive_failed">ಬ್ಯಾಕಪ್ ವಿಫಲವಾಯಿತು!</string>
+    <string name="journal_drive_last_sync">ಕೊನೆಯ ಸಿಂಕ್: %1$s</string>
+    <string name="journal_new_entry_prompt">ಬರವಣಿಗೆ ಪ್ರೇರಣೆ</string>
+    <string name="journal_new_entry">ಹೊಸ ನಮೂದು</string>
+    <string name="journal_save_improved">ಸುಧಾರಿತ ಉಳಿಸಿ</string>
+    <string name="journal_save">ಉಳಿಸಿ</string>
+    <string name="journal_cd_write">ಬರೆಯಿರಿ</string>
+    <string name="journal_write">ಬರೆಯಿರಿ</string>
+    <string name="journal_cd_speak">ಮಾತನಾಡಿ</string>
+    <string name="journal_speak">ಮಾತನಾಡಿ</string>
+    <string name="journal_your_answer">ನಿಮ್ಮ ಉತ್ತರ:</string>
+    <string name="journal_placeholder_prompt">ನಿಮ್ಮ ಆಲೋಚನೆಗಳನ್ನು ಇಲ್ಲಿ ಬರೆಯಿರಿ…</string>
+    <string name="journal_placeholder_edit">ಪಠ್ಯ ಸಂಪಾದಿಸಲು ಇಲ್ಲಿ ಟ್ಯಾಪ್ ಮಾಡಿ…</string>
+    <string name="journal_freeflow_hint">ನಿಮ್ಮ ಆಲೋಚನೆಗಳನ್ನು ಮುಕ್ತವಾಗಿ ಹರಿಯಲು ಬಿಡಿ. ಸರಿ ಅಥವಾ ತಪ್ಪು ಇಲ್ಲ.</string>
+    <string name="journal_transcribed_with">%1$s ನೊಂದಿಗೆ ಲಿಪ್ಯಂತರಿಸಲಾಗಿದೆ</string>
+    <!-- Default label for the transcription model (local Whisper, runs on-device). -->
+    <string name="transcription_model_local">ಸ್ಥಳೀಯ Whisper ಮಾದರಿ</string>
+    <!-- Brand name of the Groq transcription model — do not translate. -->
+    <string name="transcription_model_groq" translatable="false">Groq Whisper Large V3 Turbo</string>
+    <string name="journal_text_upsell_title">ಅದ್ಭುತ, ಅಲ್ಲವೇ?</string>
+    <string name="journal_text_upsell_body">Premium ನೊಂದಿಗೆ ನೀವು ಪ್ರತಿ ನಮೂದನ್ನು ಸುಧಾರಿಸಬಹುದು.</string>
+    <string name="journal_discover_premium">Premium ಅನ್ವೇಷಿಸಿ →</string>
+    <string name="journal_entries_label">ನಮೂದುಗಳು</string>
+    <string name="journal_entry_count">%1$d ನಮೂದುಗಳು</string>
+    <string name="journal_streak_days">%1$d ದಿನಗಳು</string>
+    <string name="journal_streak_days_in_row">ಸತತ %1$d ದಿನಗಳು</string>
+    <string name="journal_streak_next_goal">ಮುಂದಿನ ಗುರಿ: %1$d ದಿನಗಳು</string>
+    <string name="journal_streak_remaining">ಇನ್ನೂ %1$d</string>
+    <string name="journal_streak_premium">ಸ್ಟ್ರೀಕ್ ರಕ್ಷಣೆ: Premium ಜೊತೆ ಲಭ್ಯ</string>
+    <string name="journal_keep_going">ಹೀಗೆಯೇ ಮುಂದುವರಿಯಿರಿ!</string>
+    <string name="journal_daily_prompt">ಇಂದಿನ ಬರವಣಿಗೆ ಪ್ರೇರಣೆ</string>
+    <string name="journal_write_about">ಅದರ ಬಗ್ಗೆ ಬರೆಯಿರಿ</string>
+    <string name="journal_recording_error">ರೆಕಾರ್ಡಿಂಗ್ ವಿಫಲ: %1$s</string>
+    <string name="journal_transcription_error">ಲಿಪ್ಯಂತರ ವಿಫಲ: %1$s</string>
+    <string name="journal_rate_limit">ಸಣ್ಣ ವಿರಾಮ: ಮುಂದಿನ ಸುಧಾರಣೆಗೆ ಇನ್ನೂ %1$d ನಿಮಿಷಗಳು.</string>
+    <string name="journal_improve_error">ಪಠ್ಯ ಸುಧಾರಣೆ ವಿಫಲ: %1$s</string>
+    <string name="journal_save_error">ಉಳಿಸಲು ವಿಫಲ: %1$s</string>
+    <string name="recording_tap_stop">ನಿಲ್ಲಿಸಲು ಮತ್ತೆ ಟ್ಯಾಪ್ ಮಾಡಿ</string>
+
+    <!-- Streak messages -->
+    <string name="streak_365">ಪೂರ್ಣ ಒಂದು ವರ್ಷ!</string>
+    <string name="streak_180">ಅದ್ಭುತ ಶಿಸ್ತು!</string>
+    <string name="streak_90">ನಿಮ್ಮನ್ನು ತಡೆಯಲು ಸಾಧ್ಯವಿಲ್ಲ!</string>
+    <string name="streak_30">ಪೂರ್ಣ ಒಂದು ತಿಂಗಳು!</string>
+    <string name="streak_14">ಎರಡು ವಾರಗಳು ಬಲವಾಗಿ!</string>
+    <string name="streak_7">ಪೂರ್ಣ ಒಂದು ವಾರ!</string>
+    <string name="streak_3">ನೀವು ಮುಂದುವರಿಯುತ್ತಿದ್ದೀರಿ!</string>
+    <string name="streak_default">ಪ್ರತಿ ದಿನವೂ ಮುಖ್ಯ!</string>
+    <string name="streak_desc_365">ಸಣ್ಣ ಅಭ್ಯಾಸವಾಗಿ ಪ್ರಾರಂಭವಾದದ್ದು ಈಗ ನಿಮ್ಮ ಜೀವನದ ಸ್ಥಿರ ಭಾಗವಾಗಿದೆ. ನಿಮ್ಮ ಡೈರಿಯು ಹಿಂದೆಂದಿಗಿಂತಲೂ ನಿಮ್ಮನ್ನು ಚೆನ್ನಾಗಿ ತಿಳಿದಿದೆ.</string>
+    <string name="streak_desc_14">ಸತತ ಎರಡು ವಾರಗಳು, ಇದನ್ನು ಬಹಳ ಕಡಿಮೆ ಜನರು ಸಾಧಿಸುತ್ತಾರೆ. ನಿಮ್ಮ ಭವಿಷ್ಯದ ಸ್ವತಃ ನಿಮಗೆ ಧನ್ಯವಾದ ಹೇಳುತ್ತದೆ.</string>
+    <string name="streak_desc_7">ಆಲೋಚನೆಗಳು, ಭಾವನೆಗಳು ಮತ್ತು ನೆನಪುಗಳಿಂದ ತುಂಬಿದ ಒಂದು ವಾರ. ನೀವು ಅಮೂಲ್ಯವಾದದ್ದನ್ನು ನಿರ್ಮಿಸುತ್ತಿದ್ದೀರಿ.</string>
+    <string name="streak_desc_3">ಸತತ ಮೂರು ದಿನಗಳು ನಿಜವಾದ ಅಭ್ಯಾಸದ ಆರಂಭ. ಮುಂದುವರಿಯಿರಿ, ಇದು ಯೋಗ್ಯವಾಗಿದೆ!</string>
+    <string name="streak_desc_1">ಪ್ರತಿ ನಮೂದು ನಿಮ್ಮ ಭವಿಷ್ಯದ ಸ್ವತಃಗೆ ಸಣ್ಣ ಉಡುಗೊರೆ. ನಾಳೆ ಮತ್ತೆ ಬರೆಯಿರಿ!</string>
+
+    <!-- ════════════════════════════════════════════════════════════════════
+         ENTRY DETAIL SCREEN
+         ════════════════════════════════════════════════════════════════════ -->
+    <string name="entry_title">ನಮೂದು</string>
+    <string name="entry_summary">ಸಾರಾಂಶ</string>
+    <string name="entry_saving">ಉಳಿಸಲಾಗುತ್ತಿದೆ…</string>
+    <string name="entry_improving">ಸುಧಾರಿಸಲಾಗುತ್ತಿದೆ…</string>
+    <string name="entry_improve_with_ai">AI ನೊಂದಿಗೆ ನಂತರ ಸುಧಾರಿಸಿ</string>
+    <string name="entry_photos_videos">ಫೋಟೋಗಳು/ವೀಡಿಯೊಗಳು</string>
+    <string name="entry_add">ಸೇರಿಸಿ</string>
+    <string name="entry_no_photos_yet">ಇನ್ನೂ ಯಾವುದೇ ಫೋಟೋಗಳು/ವೀಡಿಯೊಗಳು ಸೇರಿಸಿಲ್ಲ</string>
+    <string name="entry_cd_play_video">ವೀಡಿಯೊ ಪ್ಲೇ ಮಾಡಿ</string>
+    <string name="entry_cd_remove">ತೆಗೆದುಹಾಕಿ</string>
+    <string name="entry_tts_enable_hint">ಸೆಟ್ಟಿಂಗ್‌ಗಳಲ್ಲಿ ಧ್ವನಿಗಳನ್ನು ಆನ್ ಮಾಡಿ</string>
+    <string name="entry_tts_stop">ನಿಲ್ಲಿಸಿ</string>
+    <string name="entry_tts_read">ಓದಿ ಕೇಳಿಸಿ</string>
+    <string name="entry_cd_share">ಹಂಚಿಕೊಳ್ಳಿ</string>
+    <string name="entry_recording_duration">ರೆಕಾರ್ಡಿಂಗ್ ಅವಧಿ: %1$s</string>
+    <string name="entry_tts_generating">ದಯವಿಟ್ಟು ಕಾಯಿರಿ, Text-to-Speech ಸೃಷ್ಟಿಸಲಾಗುತ್ತಿದೆ…</string>
+    <string name="entry_tts_journal_label">ಡೈರಿ ನಮೂದು</string>
+    <string name="entry_tts_followup_label">ಪೂರಕ %1$s</string>
+    <string name="entry_cd_photo_page">ಫೋಟೋ %1$d</string>
+    <string name="entry_add_photo_video">ಫೋಟೋ/ವೀಡಿಯೊ ಸೇರಿಸಿ</string>
+    <string name="entry_camera">ಕ್ಯಾಮೆರಾ</string>
+    <string name="entry_gallery">ಗ್ಯಾಲರಿ</string>
+    <string name="entry_delete_title">ನಮೂದು ಅಳಿಸಬೇಕೆ?</string>
+    <string name="entry_delete_message">ಈ ನಮೂದನ್ನು ಶಾಶ್ವತವಾಗಿ ಅಳಿಸಬೇಕೆ?</string>
+
+    <!-- Share dialog -->
+    <string name="share_title">ನಮೂದು ಹಂಚಿಕೊಳ್ಳಿ</string>
+    <string name="share_which_version">ಯಾವ ಆವೃತ್ತಿಯನ್ನು ಹಂಚಿಕೊಳ್ಳಬೇಕು?</string>
+    <string name="share_improved_version">ಸುಧಾರಿತ ಆವೃತ್ತಿ</string>
+    <string name="share_photos_videos_label">ಫೋಟೋಗಳು/ವೀಡಿಯೊಗಳನ್ನು ಹಂಚಿಕೊಳ್ಳಿ:</string>
+    <string name="share_footer">BestJournal ಆಪ್‌ನಿಂದ ಡೈರಿ ನಮೂದು</string>
+    <string name="share_what_to_share">ಏನನ್ನು ಹಂಚಿಕೊಳ್ಳಬೇಕು?</string>
+    <string name="share_journal_entry">ಡೈರಿ ನಮೂದು</string>
+    <string name="share_followup_numbered">ಹೆಚ್ಚುವರಿ ನಮೂದು <xliff:g id="ordinal" example="1">%1$s</xliff:g></string>
+    <string name="share_followup_single">ಹೆಚ್ಚುವರಿ ನಮೂದು</string>
+
+    <string name="error_recording_failed">ರೆಕಾರ್ಡಿಂಗ್ ವಿಫಲವಾಗಿದೆ: <xliff:g id="reason" example="ಮೈಕ್ರೋಫೋನ್ ಲಭ್ಯವಿಲ್ಲ">%1$s</xliff:g></string>
+    <string name="error_transcription_failed">ಪ್ರತಿಲೇಖನ ವಿಫಲವಾಗಿದೆ: <xliff:g id="reason" example="ನೆಟ್ವರ್ಕ್ ಸಮಯಾವಧಿ ಮುಗಿದಿದೆ">%1$s</xliff:g></string>
+
+    <!-- ════════════════════════════════════════════════════════════════════
+         DASHBOARD SCREEN
+         ════════════════════════════════════════════════════════════════════ -->
+    <string name="dashboard_title">ಡ್ಯಾಶ್‌ಬೋರ್ಡ್</string>
+    <string name="dashboard_legend">ಕೀಲಿ</string>
+    <string name="dashboard_refresh">ರಿಫ್ರೆಶ್ ಮಾಡಿ</string>
+    <string name="dashboard_weekly_review_waiting">ನಿಮ್ಮ ವಾರದ ಅವಲೋಕನ ಕಾಯುತ್ತಿದೆ</string>
+    <!-- Body text of the weekly-review premium upsell card on the dashboard. -->
+    <string name="dashboard_weekly_review_upsell_body">ನಿಮ್ಮ ವಾರ ತುಂಬಾ ಚಟುವಟಿಕೆಯಿಂದ ಕೂಡಿತ್ತು. Premium ನೊಂದಿಗೆ ನೀವು ಸಂಪೂರ್ಣ ವಿಶ್ಲೇಷಣೆ ನೋಡಬಹುದು: ಮಾದರಿಗಳನ್ನು ಗುರುತಿಸಿ, ಒಳನೋಟಗಳನ್ನು ಕಂಡುಹಿಡಿಯಿರಿ ಮತ್ತು ನಿಮ್ಮನ್ನು ಯಾವುದು ಆಕ್ರಮಿಸಿದೆ ಎಂದು ಅರ್ಥಮಾಡಿಕೊಳ್ಳಿ.</string>
+    <string name="dashboard_discover_premium">Premium ಅನ್ವೇಷಿಸಿ</string>
+    <string name="dashboard_please_wait">ದಯವಿಟ್ಟು ಕಾಯಿರಿ</string>
+    <string name="dashboard_gemini_unavailable">Gemini ಈಗ ಲಭ್ಯವಿಲ್ಲ, ದಯವಿಟ್ಟು ಸ್ವಲ್ಪ ಸಮಯದಲ್ಲಿ ಮತ್ತೆ ಪ್ರಯತ್ನಿಸಿ.</string>
+    <string name="dashboard_no_custom_focus">ಯಾವುದೇ ವಿಶ್ಲೇಷಣಾ ಫೋಕಸ್ ನಮೂದಿಸಿಲ್ಲ</string>
+    <string name="dashboard_custom_focus_hint">ಸೆಟ್ಟಿಂಗ್‌ಗಳಲ್ಲಿ\n\u201eವೈಯಕ್ತಿಕ ವಿಶ್ಲೇಷಣೆ\u201c ಅಡಿಯಲ್ಲಿ ಫೋಕಸ್ ನಮೂದಿಸಿ,\nಅಥವಾ ಬೇರೆ ಪ್ರೊಫೈಲ್ ಆಯ್ಕೆಮಾಡಿ.</string>
+    <string name="dashboard_no_analysis_yet">ಇನ್ನೂ ಯಾವುದೇ ವಿಶ್ಲೇಷಣೆ ಇಲ್ಲ</string>
+    <string name="dashboard_create_entries_custom">ಡೈರಿ ನಮೂದುಗಳನ್ನು ರಚಿಸಿ,\nನಂತರ AI ನಿಮ್ಮ ಫೋಕಸ್ ಅನ್ನು ವಿಶ್ಲೇಷಿಸುತ್ತದೆ.</string>
+    <string name="dashboard_create_entries_default">ಡೈರಿ ನಮೂದುಗಳನ್ನು ರಚಿಸಿ,\nನಂತರ AI ನಿಮ್ಮ ಮಾದರಿಗಳನ್ನು ವಿಶ್ಲೇಷಿಸುತ್ತದೆ.</string>
+    <string name="dashboard_like_analysis">ವಿಶ್ಲೇಷಣೆ ಇಷ್ಟವಾಯಿತೆ?</string>
+    <string name="dashboard_premium_upsell_body">Premium ಜೊತೆ ನಿನಗೆ ಬೇಕಾದಷ್ಟು ಪ್ರೊಫೈಲ್‌ಗಳಿಂದ ವಿಸ್ತೃತ ವಿಶ್ಲೇಷಣೆಗಳು ಸಿಗುತ್ತವೆ.</string>
+    <string name="dashboard_learn_more">ಇನ್ನಷ್ಟು ತಿಳಿಯಿರಿ</string>
+    <string name="dashboard_feature_analyses">ವಿಶ್ಲೇಷಣೆಗಳು</string>
+    <string name="dashboard_all_observations">ಎಲ್ಲಾ ಅವಲೋಕನಗಳು</string>
+    <string name="dashboard_inner_mirror">ಆಂತರಿಕ ಕನ್ನಡಿ</string>
+    <string name="dashboard_all_insights">ಎಲ್ಲಾ ಒಳನೋಟಗಳು</string>
+    <string name="dashboard_goal_overview">ಗುರಿ ಅವಲೋಕನ</string>
+    <string name="dashboard_all_goals">ಎಲ್ಲಾ ಗುರಿಗಳು</string>
+    <string name="dashboard_top_results_fallback">ಪ್ರಮುಖ ಫಲಿತಾಂಶಗಳು</string>
+    <string name="dashboard_analysis_fallback">ವಿಶ್ಲೇಷಣೆ</string>
+    <string name="dashboard_all_results_fallback">ಎಲ್ಲಾ ಫಲಿತಾಂಶಗಳು</string>
+    <string name="dashboard_overall_analysis">ಒಟ್ಟಾರೆ ವಿಶ್ಲೇಷಣೆ</string>
+    <!-- Title of the overview card in the Summary dashboard (scenario 0). -->
+    <string name="dashboard_summary_overview_title">ಅವಲೋಕನ</string>
+    <!-- Title of the next-steps card in the Goals dashboard (scenario 3). -->
+    <string name="dashboard_goals_next_steps_title">ಮುಂದಿನ ಹೆಜ್ಜೆಗಳು</string>
+    <string name="dashboard_all_recommendations">ಎಲ್ಲಾ ಶಿಫಾರಸುಗಳು</string>
+    <string name="dashboard_connection">ಸಂಪರ್ಕ</string>
+    <string name="dashboard_limit_daily">ದೈನಂದಿನ ಮಿತಿ ತಲುಪಿದೆ. ನಾಳೆ ಮುಂದುವರಿಯುತ್ತದೆ!</string>
+    <string name="dashboard_limit_weekly_profile">ಈ ಪ್ರೊಫೈಲ್‌ಗೆ ವಾರದ ಮಿತಿ ತಲುಪಿದೆ. ಪ್ರೊಫೈಲ್ ಬದಲಿಸಿ ಅಥವಾ ಸೋಮವಾರದವರೆಗೆ ಕಾಯಿರಿ.</string>
+    <string name="dashboard_limit_cooldown">ಸಣ್ಣ ವಿರಾಮ: ಮುಂದಿನ ವಿಶ್ಲೇಷಣೆಗೆ ಇನ್ನೂ %1$d ನಿಮಿಷಗಳು.</string>
+    <string name="dashboard_analysis_failed">ವಿಶ್ಲೇಷಣೆ ವಿಫಲವಾಯಿತು</string>
+    <string name="dashboard_last_updated">ಕೊನೆಯ ಅಪ್‌ಡೇಟ್: %1$s</string>
+    <string name="dashboard_loading_profile_switch">ಪ್ರತಿ ಪ್ರೊಫೈಲ್ ಬದಲಾವಣೆಯ ನಂತರ AI ಡ್ಯಾಶ್‌ಬೋರ್ಡ್ ಸ್ವಯಂಚಾಲಿತವಾಗಿ ಅಪ್‌ಡೇಟ್ ಆಗುತ್ತದೆ</string>
+    <string name="dashboard_loading_delete_update">ಪ್ರತಿ ಅಳಿಸಿದ ಡೈರಿ ನಮೂದಿನ ನಂತರ AI ಡ್ಯಾಶ್‌ಬೋರ್ಡ್ ಸ್ವಯಂಚಾಲಿತವಾಗಿ ಅಪ್‌ಡೇಟ್ ಆಗುತ್ತದೆ</string>
+    <string name="dashboard_loading_auto_update">ಪ್ರತಿ ಹೊಸ ಡೈರಿ ನಮೂದಿನ ನಂತರ AI ಡ್ಯಾಶ್‌ಬೋರ್ಡ್ ಸ್ವಯಂಚಾಲಿತವಾಗಿ ಅಪ್‌ಡೇಟ್ ಆಗುತ್ತದೆ</string>
+    <string name="dashboard_loading_default">AI ಡ್ಯಾಶ್‌ಬೋರ್ಡ್ ಅಪ್‌ಡೇಟ್ ಆಗುತ್ತಿದೆ</string>
+
+    <!-- Legend labels -->
+    <string name="legend_urgent">ತುರ್ತು</string>
+    <string name="legend_attention">ಗಮನ</string>
+    <string name="legend_observe">ಗಮನಿಸಿ</string>
+    <string name="legend_activity_level">ಚಟುವಟಿಕೆ ಮಟ್ಟ</string>
+    <string name="legend_activity_desc">ಈ ಕ್ಷೇತ್ರದಲ್ಲಿ ಎಷ್ಟು ಸಂಭವಿಸುತ್ತಿದೆ ಎಂಬುದನ್ನು ಅರ್ಧವೃತ್ತ ತೋರಿಸುತ್ತದೆ:</string>
+    <string name="legend_activity_high">ಹೆಚ್ಚು ಚಟುವಟಿಕೆ (67–100%)</string>
+    <string name="legend_activity_medium">ಮಧ್ಯಮ ಚಟುವಟಿಕೆ (34–66%)</string>
+    <string name="legend_activity_low">ಕಡಿಮೆ ಚಟುವಟಿಕೆ (0–33%)</string>
+    <string name="legend_observation_relevance">ಅವಲೋಕನಗಳ ಪ್ರಸ್ತುತತೆ</string>
+    <string name="legend_relevance_high">ಕೇಂದ್ರಿತ, ನಿಮ್ಮ ನಮೂದುಗಳ ಪ್ರಮುಖ ವಿಷಯಗಳು</string>
+    <string name="legend_relevance_medium">ಪ್ರಸ್ತುತ, ಪುನರಾವರ್ತಿತ ಅವಲೋಕನಗಳು</string>
+    <string name="legend_relevance_low">ಅಂಚಿನ ಟಿಪ್ಪಣಿ, ಒಂದು ಬಾರಿಯ ಉಲ್ಲೇಖಗಳು</string>
+    <string name="legend_reflection_depth">ಪ್ರತಿಬಿಂಬ ಆಳ</string>
+    <string name="legend_reflection_desc">ನಿಮ್ಮ ಸ್ವಯಂ-ಪ್ರತಿಬಿಂಬದ ಆಳವನ್ನು ಅರ್ಧವೃತ್ತ ತೋರಿಸುತ್ತದೆ:</string>
+    <string name="legend_reflection_deep">ಆಳವಾದ (67–100%)</string>
+    <string name="legend_reflection_aware">ಜಾಗೃತ (34–66%)</string>
+    <string name="legend_reflection_surface">ಮೇಲ್ಮೈ (0–33%)</string>
+    <string name="legend_insight_depth">ಒಳನೋಟಗಳ ಆಳ</string>
+    <string name="legend_insight_deep">ಆಳವಾದ, ಮರುಕಳಿಸುವ ಮಾದರಿಗಳು ಮತ್ತು ನಂಬಿಕೆಗಳು</string>
+    <string name="legend_insight_aware">ಜಾಗೃತ, ಗುರುತಿಸಲಾದ ಆಲೋಚನೆ ಮತ್ತು ಭಾವನೆ ಮಾದರಿಗಳು</string>
+    <string name="legend_insight_surface">ಮೇಲ್ಮೈ, ಮೊದಲ ಅವಲೋಕನಗಳು</string>
+    <string name="legend_progress">ಪ್ರಗತಿ</string>
+    <!-- Legend: Goal progress -->
+    <string name="legend_goal_progress_desc">ನಿಮ್ಮ ಗುರಿಗಳ ಪ್ರಗತಿಯನ್ನು ಅರ್ಧವೃತ್ತ ತೋರಿಸುತ್ತದೆ:</string>
+    <string name="legend_blocked_range">ನಿರ್ಬಂಧಿತ (0–33%)</string>
+    <string name="legend_in_progress_range">ಕಾರ್ಯದಲ್ಲಿದೆ (34–66%)</string>
+    <string name="legend_progress_range">ಪ್ರಗತಿ (67–100%)</string>
+    <string name="legend_goal_status">ಗುರಿ ಸ್ಥಿತಿ</string>
+    <string name="legend_blocked_desc">ನಿರ್ಬಂಧಿತ — ಅಡೆತಡೆಗಳಿರುವ ಗುರಿಗಳು</string>
+    <string name="legend_open_desc">ತೆರೆದಿದೆ — ಇನ್ನೂ ಪ್ರಗತಿಯಿಲ್ಲದ ಗುರಿಗಳು</string>
+    <string name="legend_progress_success_desc">ಪ್ರಗತಿ — ಗೋಚರ ಯಶಸ್ಸಿನ ಗುರಿಗಳು</string>
+    <!-- Legend: Custom analysis -->
+    <string name="legend_analysis_value">ವಿಶ್ಲೇಷಣೆ ಮೌಲ್ಯ</string>
+    <string name="legend_analysis_relevance_desc">ನಿಮ್ಮ ಫೋಕಸ್‌ಗೆ ಪ್ರಸ್ತುತತೆಯನ್ನು ಅರ್ಧವೃತ್ತ ತೋರಿಸುತ್ತದೆ:</string>
+    <string name="legend_high_focus">ಹೆಚ್ಚು (67–100%) — ನಿಮ್ಮ ಫೋಕಸ್‌ನ ಕೇಂದ್ರ</string>
+    <string name="legend_medium_focus">ಮಧ್ಯಮ (34–66%) — ಸಂಪರ್ಕ ಗುರುತಿಸಲಾಗಿದೆ</string>
+    <string name="legend_low_focus">ಕಡಿಮೆ (0–33%) — ಅಂಚಿನಲ್ಲಿ</string>
+    <string name="legend_result_relevance">ಫಲಿತಾಂಶಗಳ ಪ್ರಸ್ತುತತೆ</string>
+    <string name="legend_important_desc">ಮುಖ್ಯ — ನಿಮ್ಮ ಫೋಕಸ್‌ಗೆ ನೇರವಾಗಿ ಪ್ರಸ್ತುತ</string>
+    <string name="legend_relevant_desc">ಪ್ರಸ್ತುತ — ನಿಮ್ಮ ಫೋಕಸ್‌ಗೆ ಸಂಪರ್ಕ</string>
+    <string name="legend_note_desc">ಟಿಪ್ಪಣಿ — ಅಂಚಿನ ಟಿಪ್ಪಣಿ</string>
+    <!-- Legend: Burden/Stress -->
+    <string name="legend_burden_scale">ಒತ್ತಡ ಪ್ರಮಾಣ</string>
+    <string name="legend_burden_desc">ಈ ವಿಷಯವು ನಿಮ್ಮನ್ನು ಎಷ್ಟು ಬಲವಾಗಿ ಒತ್ತಡಿಸುತ್ತಿದೆ ಎಂಬುದನ್ನು ಅರ್ಧವೃತ್ತ ತೋರಿಸುತ್ತದೆ:</string>
+    <string name="legend_high_burden">ಹೆಚ್ಚು (67–100%) — ತಕ್ಷಣ ಕಾರ್ಯನಿರ್ವಹಿಸಿ</string>
+    <string name="legend_medium_burden">ಮಧ್ಯಮ (34–66%) — ಗಮನ ಅಗತ್ಯ</string>
+    <string name="legend_low_burden">ಕಡಿಮೆ (0–33%) — ಉತ್ತಮ ಸ್ಥಿತಿ</string>
+    <string name="legend_priority_title">ಸಲಹೆಗಳ ಆದ್ಯತೆ</string>
+    <string name="legend_priority_high">ಕೆಂಪು = ತುರ್ತು — ತಕ್ಷಣ ಕಾರ್ಯನಿರ್ವಹಿಸಿ</string>
+    <string name="legend_priority_medium">ಕಿತ್ತಳೆ = ಮಧ್ಯಮ — ಶೀಘ್ರದಲ್ಲಿ ನಿಭಾಯಿಸಿ</string>
+    <string name="legend_priority_low">ನೀಲಿ = ಕಡಿಮೆ — ಗಮನಿಸಿ</string>
+    <!-- Legend: Categories -->
+    <string name="legend_categories">ವರ್ಗಗಳು</string>
+    <string name="legend_categories_desc">ವರ್ಗಗಳನ್ನು ಕ್ರಿಯಾತ್ಮಕವಾಗಿ ರಚಿಸಲಾಗುತ್ತದೆ — AI ನಿಮ್ಮ ನಮೂದುಗಳಲ್ಲಿ ವಿಷಯಗಳನ್ನು ಗುರುತಿಸಿ ಸೂಕ್ತ ವರ್ಗಗಳನ್ನು ರಚಿಸುತ್ತದೆ. ಹೊಸ ವಿಷಯಗಳು ಸ್ವಯಂಚಾಲಿತವಾಗಿ ಹೊಸ ಚಿಹ್ನೆಗಳಿಗೆ ಕಾರಣವಾಗುತ್ತವೆ.</string>
+    <!-- CategoryDetailDialog levels -->
+    <string name="level_low">ಕಡಿಮೆ</string>
+    <string name="level_medium">ಮಧ್ಯಮ</string>
+    <string name="level_high">ಹೆಚ್ಚು</string>
+    <string name="urgency_high">ತುರ್ತು — ತಕ್ಷಣ ಕಾರ್ಯನಿರ್ವಹಿಸಿ</string>
+    <string name="urgency_medium">ಗಮನ ಅಗತ್ಯ</string>
+    <string name="urgency_low">ಉತ್ತಮ ಸ್ಥಿತಿ — ಗಮನಿಸಿ</string>
+    <!-- Dashboard: Derivation dialog -->
+    <string name="dashboard_derived_from">ಇದರಿಂದ ಪಡೆಯಲಾಗಿದೆ:</string>
+    <string name="dashboard_update_for_derivation">ವಿವರವಾದ ಉಗಮಕ್ಕಾಗಿ ಡ್ಯಾಶ್‌ಬೋರ್ಡ್ ಅನ್ನು ಅಪ್‌ಡೇಟ್ ಮಾಡಿ.</string>
+    <!-- Dashboard: Summary section -->
+    <string name="dashboard_top_5_actions">ಟಾಪ್ 5 ಕ್ರಮಗಳು</string>
+    <string name="dashboard_core_insights">ಮುಖ್ಯ ಒಳನೋಟಗಳು</string>
+    <string name="dashboard_summary_subtitle">ನಿಮ್ಮ ನಮೂದುಗಳಿಂದ ಪ್ರಮುಖ ಅಂಶಗಳು</string>
+    <string name="summary_central">ಕೇಂದ್ರಿತ</string>
+    <string name="summary_relevant">ಪ್ರಸ್ತುತ</string>
+    <string name="summary_side_note">ಅಂಚಿನ ಟಿಪ್ಪಣಿ</string>
+    <!-- Dashboard: Insight section -->
+    <string name="dashboard_deepest_insights">ಆಳವಾದ ಒಳನೋಟಗಳು</string>
+    <string name="dashboard_insight_subtitle">ನಿಮ್ಮ ನಮೂದುಗಳು ನಿಮ್ಮ ಬಗ್ಗೆ ಏನು ಹೇಳುತ್ತವೆ</string>
+    <string name="insight_deep_label">ಆಳವಾದ</string>
+    <string name="insight_aware_label">ಜಾಗೃತ</string>
+    <string name="insight_surface_label">ಮೇಲ್ಮೈ</string>
+    <!-- Dashboard: Goal section -->
+    <string name="dashboard_goal_steps">ನಿಮ್ಮ ಗುರಿಗಳಿಗೆ ಪ್ರಮುಖ ಹೆಜ್ಜೆಗಳು</string>
+    <string name="goal_blocked_label">ನಿರ್ಬಂಧಿತ</string>
+    <string name="goal_open_label">ತೆರೆದಿದೆ</string>
+    <string name="goal_progress_label">ಪ್ರಗತಿ</string>
+    <!-- Dashboard: Custom analysis section -->
+    <string name="dashboard_custom_subtitle">ನಿಮ್ಮ ವೈಯಕ್ತಿಕ ವಿಶ್ಲೇಷಣೆ ಆಧಾರಿತ</string>
+    <string name="custom_important_label">ಮುಖ್ಯ</string>
+    <string name="custom_relevant_label">ಪ್ರಸ್ತುತ</string>
+    <string name="custom_note_label">ಟಿಪ್ಪಣಿ</string>
+    <!-- Dashboard: TTS and sharing -->
+    <string name="dashboard_enable_voices">ಸೆಟ್ಟಿಂಗ್‌ಗಳಲ್ಲಿ ಧ್ವನಿಗಳನ್ನು ಆನ್ ಮಾಡಿ</string>
+    <string name="dashboard_tts_stop">ನಿಲ್ಲಿಸಿ</string>
+    <string name="dashboard_tts_read">ಓದಿ ಕೇಳಿಸಿ</string>
+    <string name="dashboard_share_analysis">ವಿಶ್ಲೇಷಣೆ ಹಂಚಿಕೊಳ್ಳಿ</string>
+    <string name="dashboard_share">ಹಂಚಿಕೊಳ್ಳಿ</string>
+    <string name="dashboard_tts_wait">ದಯವಿಟ್ಟು ಕಾಯಿರಿ, Text-to-Speech ಸೃಷ್ಟಿಸಲಾಗುತ್ತಿದೆ…</string>
+
+    <!-- Profile names -->
+    <string name="profile_summary">ಸಾರಾಂಶ</string>
+    <string name="profile_entropy">ನಿಮ್ಮ ಜೀವನ ವ್ಯವಸ್ಥಿತಗೊಳಿಸಿ</string>
+    <string name="profile_insight">ಸ್ವಯಂ-ಅರಿವು</string>
+    <string name="profile_goals">ವೈಯಕ್ತಿಕ ಗುರಿಗಳು</string>
+    <string name="profile_custom">ವೈಯಕ್ತಿಕ ವಿಶ್ಲೇಷಣೆ</string>
+    <string name="profile_summary_desc">ವಿಷಯಗಳು, ಮಾದರಿಗಳು ಮತ್ತು ಅನುಭವಗಳನ್ನು ಸಾರಾಂಶಗೊಳಿಸುತ್ತದೆ</string>
+    <string name="profile_entropy_desc">ಒತ್ತಡ, ಅವ್ಯವಸ್ಥೆ ಮತ್ತು ಒತ್ತಡವನ್ನು ಗುರುತಿಸುತ್ತದೆ</string>
+    <string name="profile_insight_desc">ಮರುಕಳಿಸುವ ಚಿಂತನೆ ಮತ್ತು ಭಾವನಾ ಮಾದರಿಗಳನ್ನು ಗೋಚರವಾಗಿಸುತ್ತದೆ</string>
+    <string name="profile_goals_desc">ಗುರಿಗಳು, ಆಸೆಗಳು ಮತ್ತು ಪ್ರಗತಿಯನ್ನು ಗುರುತಿಸುತ್ತದೆ</string>
+    <string name="profile_custom_desc">ಸ್ವಂತ ವಿಶ್ಲೇಷಣಾ ಫೋಕಸ್ ಹೊಂದಿಸಿ</string>
+
+    <!-- Profile long descriptions (settings) -->
+    <string name="profile_summary_long">ನಿಮ್ಮ ನಮೂದುಗಳನ್ನು ತೀರ್ಪು ಅಥವಾ ಸಲಹೆಯಿಲ್ಲದೆ ತಟಸ್ಥವಾಗಿ ಸಾರಾಂಶಿಸಲಾಗುತ್ತದೆ.\n\nನೀವು ಒಂದೇ ನೋಟದಲ್ಲಿ ನೋಡುತ್ತೀರಿ:\n\n• ನಿಮ್ಮನ್ನು ಈಗ ಏನು ಕದಲಿಸುತ್ತಿದೆ\n• ಯಾವ ಮಾದರಿಗಳು ಪುನರಾವರ್ತನೆಯಾಗುತ್ತವೆ\n• ನಿಮ್ಮ ಜೀವನ ಹೇಗೆ ಬೆಳೆಯುತ್ತಿದೆ\n\nನಿಮ್ಮ ಜೀವನದಲ್ಲಿ ಸಂಭವಿಸುತ್ತಿರುವ ಎಲ್ಲದರ ದೈನಂದಿನ ಅವಲೋಕನಕ್ಕೆ ಪರಿಪೂರ್ಣ.</string>
+    <string name="profile_entropy_long">AI ನಿಮ್ಮನ್ನು ದೈನಂದಿನ ಜೀವನದಲ್ಲಿ ಏನು ಹೊರೆ ಮಾಡುತ್ತದೆ ಎಂದು ಕಂಡುಹಿಡಿದು ಅದನ್ನು ವಿಂಗಡಿಸುತ್ತದೆ. ನಿಮ್ಮ ಅತಿ ದೊಡ್ಡ ಹೊರೆಯ ಮೂಲಗಳ ಅವಲೋಕನ ಮತ್ತು 5 ನಿರ್ದಿಷ್ಟ ಸ್ವಚ್ಛಗೊಳಿಸುವ ಹಂತಗಳನ್ನು ನೀವು ಪಡೆಯುತ್ತೀರಿ. ನೀವು ಮತ್ತೆ ನಿಯಂತ್ರಣ ಪಡೆಯಲು ಬಯಸಿದರೆ ಸೂಕ್ತ.</string>
+    <string name="profile_insight_long">KI ಕೇವಲ ಘಟನೆಗಳನ್ನು ಮೀರಿ ಆಳವಾಗಿ ನೋಡುತ್ತದೆ. ನಿಮ್ಮ ಎಂಟ್ರಿಗಳಲ್ಲಿ ಇದು ಗುರುತಿಸುತ್ತದೆ:\n\n• ನಿಮ್ಮ ಮಾತುಗಳಲ್ಲಿ ಚಿಂತನಾ ಮಾದರಿಗಳು ಮತ್ತು ನಂಬಿಕೆಗಳು\n• ಮರುಕಳಿಸುವ ಭಾವನೆಗಳು ಮತ್ತು ಪ್ರತಿಕ್ರಿಯೆಗಳು\n• ನಿಮ್ಮ ಎಂಟ್ರಿಗಳಲ್ಲಿ ಗೋಚರವಾಗುವ ಶಕ್ತಿಗಳು\n• ನಿಮ್ಮ ಕ್ರಿಯೆಗಳನ್ನು ಮಾರ್ಗದರ್ಶಿಸುವ ಮೌಲ್ಯಗಳು\n\nತಮ್ಮನ್ನು ಚೆನ್ನಾಗಿ ಅರ್ಥಮಾಡಿಕೊಳ್ಳಲು ಮತ್ತು ಒಳಗಿನಿಂದ ಬೆಳೆಯಲು ಬಯಸುವ ಎಲ್ಲರಿಗೂ.</string>
+    <string name="profile_goals_long">AI ನಿಮ್ಮ ನಮೂದುಗಳಲ್ಲಿನ ಎಲ್ಲಾ ಗುರಿಗಳು, ಆಸೆಗಳು ಮತ್ತು ಯೋಜನೆಗಳನ್ನು ಹುಡುಕುತ್ತದೆ, ಆಕಸ್ಮಿಕವಾಗಿ ಉಲ್ಲೇಖಿಸಿದವುಗಳೂ ಸಹ.\n\nನೀವು ನೋಡುತ್ತೀರಿ:\n\n• ನೀವು ಯಾವ ಗುರಿಗಳನ್ನು ಹೊಂದಿದ್ದೀರಿ (ಗುಪ್ತವಾದವುಗಳೂ)\n• ಪ್ರತಿ ಗುರಿಯಲ್ಲಿ ನೀವು ಎಷ್ಟು ದೂರ ಇದ್ದೀರಿ\n• ನಿಮ್ಮ ಮುಂದಿನ ಹೆಜ್ಜೆ ಏನಿರಬಹುದು\n\nನಿಮ್ಮ ಸ್ವಂತ ಪದಗಳಿಂದ ಓದುವ ನಿಮ್ಮ ವೈಯಕ್ತಿಕ ಗುರಿ ಟ್ರ್ಯಾಕರ್.</string>
+    <string name="profile_custom_long">AI ಏನನ್ನು ಗಮನಿಸಬೇಕು ಎಂಬುದನ್ನು ನೀವೇ ನಿರ್ಧರಿಸುತ್ತೀರಿ.\n\nನಿಮ್ಮ ಸ್ವಂತ ವಿಶ್ಲೇಷಣಾ ಫೋಕಸ್ ಬರೆಯಿರಿ, ಉದಾಹರಣೆಗೆ:\n\n• „ಕ್ರೀಡೆಯ ಎಲ್ಲಾ ಉಲ್ಲೇಖಗಳನ್ನು ಹುಡುಕಿ"\n• „ನನ್ನ ಮನಸ್ಥಿತಿ ಏರಿಳಿತಗಳನ್ನು ವಿಶ್ಲೇಷಿಸಿ"\n• „ನಾನು ಯಾವಾಗ ಹೆಚ್ಚು ಉತ್ಪಾದಕ ಎಂದು ತೋರಿಸಿ"\n\nತಾವು ಏನನ್ನು ಹುಡುಕುತ್ತಿದ್ದಾರೆ ಎಂದು ನಿಖರವಾಗಿ ತಿಳಿದವರಿಗೆ ಪೂರ್ಣ ನಿಯಂತ್ರಣ.</string>
+    <string name="profile_custom_prompt">ನಿಮಗೆ ವಿಶೇಷವಾಗಿ ಏನು ಮುಖ್ಯ? ನಿಮ್ಮ ಡೈರಿ ನಮೂದುಗಳನ್ನು ವಿಶ್ಲೇಷಿಸುವಾಗ AI ಯಾವುದರ ಮೇಲೆ ಕೇಂದ್ರೀಕರಿಸಬೇಕು?</string>
+    <string name="profile_select_hint">ಪ್ರೊಫೈಲ್ ಆಯ್ಕೆಮಾಡಿ. ವಿವರವಾದ ವಿವರಣೆಗಾಗಿ ಪ್ರೊಫೈಲ್ ಮೇಲೆ ಟ್ಯಾಪ್ ಮಾಡಿ.</string>
+    <!-- Premium upsell sheet shown when a free user tries to add a 3rd custom analysis -->
+    <string name="profiles_premium_title">ಬಹು ಕಸ್ಟಮ್ ಪ್ರೊಫೈಲ್‌ಗಳು</string>
+    <string name="profiles_premium_desc">Premium ನೊಂದಿಗೆ ನೀನು ಬೇಕಾದಷ್ಟು ಕಸ್ಟಮ್ ವಿಶ್ಲೇಷಣಾ ಪ್ರೊಫೈಲ್‌ಗಳನ್ನು ರಚಿಸಬಹುದು. ಉದಾಹರಣೆಗೆ ಒಂದು ಕ್ರೀಡೆಗೆ, ಒಂದು ಕೆಲಸಕ್ಕೆ, ಒಂದು ಕುಟುಂಬಕ್ಕೆ. ಪ್ರತಿ ಪ್ರೊಫೈಲ್ ನಿನ್ನ ಡೈರಿ ನಮೂದುಗಳನ್ನು ತನ್ನದೇ ಗಮನದೊಂದಿಗೆ ವಿಶ್ಲೇಷಿಸುತ್ತದೆ.</string>
+    <string name="profiles_benefit_many">ಬೇಕಾದಷ್ಟು ಕಸ್ಟಮ್ ಪ್ರೊಫೈಲ್‌ಗಳನ್ನು ರಚಿಸು</string>
+    <string name="profiles_benefit_switch">ಯಾವಾಗ ಬೇಕಾದರೂ ಗಮನವನ್ನು ಬದಲಾಯಿಸು</string>
+    <string name="profiles_benefit_named">ಪ್ರತಿ ಪ್ರೊಫೈಲ್‌ಗೆ ತನ್ನದೇ ಹೆಸರು ಕೊಡು</string>
+
+    <!-- ════════════════════════════════════════════════════════════════════
+         SETTINGS SCREEN
+         ════════════════════════════════════════════════════════════════════ -->
+    <string name="settings_title">ಸೆಟ್ಟಿಂಗ್‌ಗಳು</string>
+    <string name="settings_account">ಖಾತೆ</string>
+    <string name="settings_sign_out">ಸೈನ್ ಔಟ್</string>
+    <string name="settings_last_sync">ಕೊನೆಯ ಸಿಂಕ್: %1$s</string>
+    <string name="settings_entries_auto_loaded">ಸೈನ್ ಇನ್ ಮಾಡಿದಾಗ ನಮೂದುಗಳು ಸ್ವಯಂಚಾಲಿತವಾಗಿ ಲೋಡ್ ಆಗುತ್ತವೆ</string>
+    <string name="settings_backup_photos">ಫೋಟೋಗಳನ್ನು ಬ್ಯಾಕಪ್ ಮಾಡಿ</string>
+    <string name="settings_backup_videos">ವೀಡಿಯೊಗಳನ್ನು ಬ್ಯಾಕಪ್ ಮಾಡಿ</string>
+    <string name="settings_syncing">ಬ್ಯಾಕಪ್ ಆಗುತ್ತಿದೆ…</string>
+    <!-- Shown briefly as a confirmation after a successful cloud backup. -->
+    <string name="settings_sync_success">ಯಶಸ್ವಿಯಾಗಿ ಬ್ಯಾಕಪ್ ಮಾಡಲಾಗಿದೆ</string>
+    <!-- Error shown when Google sign-in fails. %1$s = error message from Google (e.g., "Network error"). -->
+    <string name="settings_signin_failed">ಸೈನ್ ಇನ್ ವಿಫಲವಾಯಿತು: <xliff:g id="error_reason" example="Network error">%1$s</xliff:g></string>
+    <string name="settings_backup_entries">ಡೈರಿ ನಮೂದುಗಳನ್ನು ಬ್ಯಾಕಪ್ ಮಾಡಿ</string>
+    <string name="settings_not_signed_in">ಸೈನ್ ಇನ್ ಆಗಿಲ್ಲ</string>
+    <string name="settings_entries_loaded_on_sign_in">ಸೈನ್ ಇನ್ ಮಾಡಿದಾಗ ಬ್ಯಾಕಪ್ ಮಾಡಿದ ನಮೂದುಗಳು ಲೋಡ್ ಆಗುತ್ತವೆ</string>
+    <string name="settings_sign_in_google">Google ನೊಂದಿಗೆ ಸೈನ್ ಇನ್ ಮಾಡಿ</string>
+    <string name="settings_appearance">ಗೋಚರತೆ</string>
+    <string name="settings_dark_mode">ಡಾರ್ಕ್ ಮೋಡ್</string>
+    <string name="settings_dark_active">ಸಕ್ರಿಯ</string>
+    <string name="settings_dark_off">ಆಫ್</string>
+    <string name="settings_follow_system">ಸಿಸ್ಟಮ್ ಅನುಸರಿಸಿ</string>
+    <string name="settings_automatic">ಸ್ವಯಂಚಾಲಿತ</string>
+    <string name="settings_sounds_haptics_section">ಧ್ವನಿಗಳು / ಹ್ಯಾಪ್ಟಿಕ್</string>
+    <string name="settings_app_sounds">ಆಪ್ ಧ್ವನಿಗಳು</string>
+    <string name="settings_sounds_on">ಧ್ವನಿಗಳು ಆನ್ ಆಗಿವೆ</string>
+    <string name="settings_sounds_off">ಧ್ವನಿಗಳು ಆಫ್ ಆಗಿವೆ</string>
+    <string name="settings_haptics">ಹ್ಯಾಪ್ಟಿಕ್</string>
+    <string name="settings_haptics_on">ಹ್ಯಾಪ್ಟಿಕ್ ಆನ್ ಆಗಿದೆ</string>
+    <string name="settings_haptics_off">ಹ್ಯಾಪ್ಟಿಕ್ ಆಫ್ ಆಗಿದೆ</string>
+    <string name="settings_voices">ಧ್ವನಿಗಳು</string>
+    <string name="settings_tts_on">ಓದಿ ಕೇಳಿಸುವುದು ಆನ್ ಆಗಿದೆ</string>
+    <string name="settings_tts_off">ಓದಿ ಕೇಳಿಸುವುದು ಆಫ್ ಆಗಿದೆ</string>
+    <string name="settings_voice_select">ಧ್ವನಿ ಆಯ್ಕೆಮಾಡಿ</string>
+    <string name="settings_voice_choose">ಧ್ವನಿ ಆರಿಸಿ</string>
+    <string name="settings_reminder_section">ಜ್ಞಾಪನೆ / ಅವಲೋಕನ</string>
+    <string name="settings_daily_reminder">ದೈನಂದಿನ ಜ್ಞಾಪನೆ</string>
+    <string name="settings_reminder_time" formatted="false">ಸಮಯ: %02d:%02d ಗಂಟೆ</string>
+    <string name="settings_reminder_desc">ಡೈರಿ ಬರೆಯಲು ನಿಮಗೆ ನೆನಪಿಸುತ್ತದೆ</string>
+    <string name="settings_weekly_review">ವಾರದ ಅವಲೋಕನ</string>
+    <string name="settings_weekly_review_on">ಜ್ಞಾಪನೆ ಆನ್</string>
+    <string name="settings_weekly_review_off">ಭಾನುವಾರ 15:00 ಗಂಟೆಗೆ</string>
+    <string name="settings_monthly_review">ತಿಂಗಳ ಅವಲೋಕನ</string>
+    <string name="settings_monthly_review_on">ಜ್ಞಾಪನೆ ಆನ್</string>
+    <string name="settings_yearly_review">ವರ್ಷದ ಅವಲೋಕನ</string>
+    <string name="settings_yearly_review_on">ಜ್ಞಾಪನೆ ಆನ್</string>
+    <string name="settings_timezone">ಸಮಯ ವಲಯ: %1$s</string>
+    <string name="settings_security">ಸುರಕ್ಷತೆ</string>
+    <string name="settings_fingerprint">ಫಿಂಗರ್‌ಪ್ರಿಂಟ್</string>
+    <string name="settings_fingerprint_desc">ಪ್ರಾರಂಭದಲ್ಲಿ ಆಪ್ ಅನ್‌ಲಾಕ್ ಮಾಡಿ</string>
+    <string name="settings_auto_lock">ಹಿನ್ನೆಲೆಯಲ್ಲಿ 60 ಸೆಕೆಂಡುಗಳ ನಂತರ ಸ್ವಯಂಚಾಲಿತವಾಗಿ ಲಾಕ್ ಆಗುತ್ತದೆ</string>
+    <string name="settings_ai_profiles_title">AI ಡ್ಯಾಶ್‌ಬೋರ್ಡ್ ಪ್ರೊಫೈಲ್‌ಗಳು:</string>
+    <string name="settings_ai_automations">AI ಸ್ವಯಂಚಾಲನೆಗಳು</string>
+    <string name="settings_custom_prompt_placeholder">ಉದಾ. ನನ್ನ ನಿದ್ರೆ ಗುಣಮಟ್ಟ ಮತ್ತು ಒತ್ತಡ ಮಟ್ಟದ ಮೇಲೆ ಕೇಂದ್ರೀಕರಿಸಿ. ನನ್ನ ಆಹಾರದಲ್ಲಿ ಮಾದರಿಗಳನ್ನು ತೋರಿಸಿ. ನನ್ನ ಮನಸ್ಥಿತಿ ವಾರದಾದ್ಯಂತ ಹೇಗೆ ಬದಲಾಗುತ್ತದೆ ಎಂದು ವಿಶ್ಲೇಷಿಸಿ. ನಾನು ಯಾವಾಗ ಹೆಚ್ಚು ಉತ್ಪಾದಕ ಮತ್ತು ಯಾವುದು ನನ್ನನ್ನು ನಿರ್ಬಂಧಿಸುತ್ತದೆ ಎಂದು ಕಂಡುಹಿಡಿಯಿರಿ.\n\nನಿಮ್ಮ ಫೋಕಸ್ ಏನು ಎಂಬುದನ್ನು ನೀವು ಹೆಚ್ಚು ಸಂಪೂರ್ಣವಾಗಿ ವಿವರಿಸಿದರೆ, ಫಲಿತಾಂಶಗಳು ಉತ್ತಮವಾಗಿರುತ್ತವೆ.</string>
+    <string name="churn_google_play_redirect">ನಿಮ್ಮ ಚಂದಾದಾರಿಕೆ ನಿರ್ವಹಿಸಲು ನಿಮ್ಮನ್ನು Google Play ಗೆ ಮರುನಿರ್ದೇಶಿಸಲಾಗುತ್ತದೆ. ನಿಮ್ಮ ಡೈರಿ ನಮೂದುಗಳು ಸಹಜವಾಗಿ ಉಳಿಯುತ್ತವೆ.</string>
+    <string name="splash_subtitle">ನಿಮ್ಮ ಬುದ್ಧಿವಂತ ಡೈರಿ</string>
+    <string name="biometric_subtitle">ನಿಮ್ಮ ಡೈರಿಯನ್ನು ಅನ್‌ಲಾಕ್ ಮಾಡಿ</string>
+    <!-- Shown in the biometric lock screen below the app name. Hint to authenticate. -->
+    <string name="biometric_prompt_subtitle">ಅನ್‌ಲಾಕ್ ಮಾಡಲು ದೃಢೀಕರಿಸಿ</string>
+    <!-- Button in the biometric lock screen to trigger the fingerprint prompt. Keep short. -->
+    <string name="biometric_unlock_button">ಅನ್‌ಲಾಕ್</string>
+    <string name="settings_text_improvement">ಪಠ್ಯ ಸುಧಾರಣೆ</string>
+    <string name="settings_text_improvement_desc">ಡಿಫಾಲ್ಟ್ ಆಗಿ ಸಕ್ರಿಯಗೊಳಿಸಿ</string>
+    <string name="settings_dashboard_section">ಡ್ಯಾಶ್‌ಬೋರ್ಡ್</string>
+    <string name="settings_auto_update">ಹೊಸ ಡೈರಿ ನಮೂದಿಗೆ ಸ್ವಯಂಚಾಲಿತವಾಗಿ ಅಪ್‌ಡೇಟ್ ಮಾಡಿ</string>
+    <string name="settings_premium_section">Premium</string>
+    <string name="settings_premium_lifetime">ಜೀವಮಾನ ಪ್ರವೇಶ ಸಕ್ರಿಯ</string>
+    <string name="settings_premium_active">Premium ಚಂದಾದಾರಿಕೆ ಸಕ್ರಿಯ</string>
+    <string name="settings_premium_lifetime_desc">ಒಂದು ಬಾರಿ ಖರೀದಿ, ಎಲ್ಲ ವೈಶಿಷ್ಟ್ಯಗಳು ಶಾಶ್ವತವಾಗಿ ಅನ್‌ಲಾಕ್.</string>
+    <string name="settings_premium_desc">ಎಲ್ಲ ವೈಶಿಷ್ಟ್ಯಗಳು ಅನ್‌ಲಾಕ್, ಪ್ರತಿದಿನ AI, PDF ರಫ್ತು ಮತ್ತು ಇನ್ನಷ್ಟು.</string>
+    <string name="settings_manage_subscription">ಚಂದಾದಾರಿಕೆ ನಿರ್ವಹಿಸಿ</string>
+    <string name="settings_export">ರಫ್ತು ಮಾಡಿ</string>
+    <string name="settings_export_pdf_desc">ಎಲ್ಲಾ ಡೈರಿ ನಮೂದುಗಳು ಮತ್ತು ಫೋಟೋಗಳನ್ನು PDF ಡಾಕ್ಯುಮೆಂಟ್ ಆಗಿ ರಫ್ತು ಮಾಡಿ.</string>
+
+    <!-- Premium feature list (settings) -->
+    <string name="settings_premium_feature_improve">ದೈನಂದಿನ AI ಪಠ್ಯ ಸುಧಾರಣೆ</string>
+    <string name="settings_premium_feature_improve_desc">AI ನಿಮ್ಮ ನಮೂದುಗಳನ್ನು ಬಯಸಿದಾಗ ಸುಧಾರಿಸುತ್ತದೆ.</string>
+    <string name="settings_premium_feature_dashboard">ದೈನಂದಿನ ಡ್ಯಾಶ್‌ಬೋರ್ಡ್ ವಿಶ್ಲೇಷಣೆಗಳು</string>
+    <string name="settings_premium_feature_dashboard_desc">ನಿಮ್ಮ ಡ್ಯಾಶ್‌ಬೋರ್ಡ್ ನಿಮ್ಮ ನಮೂದುಗಳೊಂದಿಗೆ ಬೆಳೆಯುತ್ತದೆ.</string>
+    <string name="settings_premium_feature_5_perspectives">ಎಲ್ಲ 4 ಪೂರ್ವನಿರ್ಧಾರಿತ AI ಪ್ರೊಫೈಲ್‌ಗಳು</string>
+    <string name="settings_premium_feature_5_perspectives_desc">ಸಾರಾಂಶದಿಂದ ಆತ್ಮಜ್ಞಾನದವರೆಗೆ</string>
+    <string name="settings_premium_feature_reviews">ವಾರ, ತಿಂಗಳು ಮತ್ತು ವರ್ಷದ ಅವಲೋಕನಗಳು</string>
+    <string name="settings_premium_feature_reviews_desc">AI ನಿಮ್ಮ ಕಥೆಯನ್ನು ಹೇಳುತ್ತದೆ</string>
+    <string name="settings_premium_feature_patterns">ಮಾದರಿ ಗುರುತಿಸುವಿಕೆ</string>
+    <string name="settings_premium_feature_patterns_desc">AI ನಿಮ್ಮ ನಮೂದುಗಳಲ್ಲಿ ಮಾದರಿಗಳು ಮತ್ತು ಸಂಪರ್ಕಗಳನ್ನು ಗೋಚರಿಸಬಹುದು.</string>
+    <string name="settings_premium_feature_pdf">ಫೋಟೋಗಳೊಂದಿಗೆ PDF ರಫ್ತು</string>
+    <string name="settings_premium_feature_pdf_desc">ಎಲ್ಲಾ ಡೈರಿ ನಮೂದುಗಳು ಚಿತ್ರಗಳೊಂದಿಗೆ ಡಾಕ್ಯುಮೆಂಟ್ ಆಗಿ</string>
+    <string name="settings_premium_feature_voice">ನಿಖರ ಧ್ವನಿ ಗುರುತಿಸುವಿಕೆ</string>
+    <string name="settings_premium_feature_voice_desc">ನಿಮ್ಮ ಧ್ವನಿ ನಮೂದುಗಳಿಗೆ ಹೆಚ್ಚಿನ ಗುಣಮಟ್ಟ</string>
+    <string name="settings_premium_feature_profiles">ಸಂಖ್ಯಾ ಮಿತಿ ಇಲ್ಲದ ಸ್ವಂತ AI ಪ್ರೊಫೈಲ್‌ಗಳು</string>
+    <string name="settings_premium_feature_profiles_desc">ಬಹು ವಿಶ್ಲೇಷಣಾ ಗಮನಗಳು ಪಕ್ಕಪಕ್ಕ</string>
+    <string name="settings_unlock_premium">Premium ಅನ್‌ಲಾಕ್ ಮಾಡಿ</string>
+    <!-- Export dialog -->
+    <!-- AlertDialog title shown before PDF export. Max 25 chars — fits in dialog header. -->
+    <string name="settings_export_dialog_title">PDF ರಫ್ತು</string>
+    <string name="settings_export_what">ಏನನ್ನು ರಫ್ತು ಮಾಡಬೇಕು?</string>
+    <string name="settings_export_entries">ಡೈರಿ ನಮೂದುಗಳು</string>
+    <string name="settings_export_photos">ಫೋಟೋಗಳು</string>
+    <string name="settings_export_action">ರಫ್ತು ಮಾಡಿ</string>
+    <string name="settings_exporting">ರಫ್ತಾಗುತ್ತಿದೆ…</string>
+    <!-- Export error shown when the user has no journal entries yet. -->
+    <string name="settings_export_no_entries">ಯಾವುದೇ ನಮೂದುಗಳಿಲ್ಲ</string>
+    <string name="settings_export_entries_photos_pdf">ಡೈರಿ ನಮೂದುಗಳು ಮತ್ತು ಫೋಟೋಗಳನ್ನು PDF ಆಗಿ ರಫ್ತು ಮಾಡಿ</string>
+    <string name="settings_export_data">ಡೇಟಾ ರಫ್ತು ಮಾಡಿ</string>
+    <string name="settings_export_entries_photos_pdf_full">ಫೋಟೋಗಳೊಂದಿಗೆ ಡೈರಿ ನಮೂದುಗಳನ್ನು PDF ಆಗಿ ರಫ್ತು ಮಾಡಿ</string>
+    <!-- Feedback -->
+    <string name="settings_feedback">ಪ್ರತಿಕ್ರಿಯೆ</string>
+    <string name="settings_feedback_desc">ಸಲಹೆಗಳು, ಆಸೆಗಳು, ಸುಧಾರಣಾ ಸಲಹೆಗಳು, ಬಗ್‌ಗಳನ್ನು ವರದಿ ಮಾಡಿ 🐞</string>
+    <string name="settings_feedback_send">ಪ್ರತಿಕ್ರಿಯೆ ಕಳುಹಿಸಿ</string>
+    <string name="settings_feedback_sent">ಯಶಸ್ವಿಯಾಗಿ ಕಳುಹಿಸಲಾಗಿದೆ</string>
+    <string name="settings_feedback_dialog_title">ಪ್ರತಿಕ್ರಿಯೆ ಕಳುಹಿಸಿ</string>
+    <string name="settings_feedback_dialog_desc">ಡೆವಲಪರ್‌ಗಳಿಗೆ ನಿಮ್ಮ ಸಂದೇಶ — ನಾವು ಪ್ರತಿ ಸಂದೇಶವನ್ನೂ ಓದುತ್ತೇವೆ ಮತ್ತು ಸಾಧ್ಯವಾದಷ್ಟು ಬೇಗ ಪ್ರತಿಕ್ರಿಯಿಸುತ್ತೇವೆ.</string>
+    <string name="settings_feedback_placeholder">ನಿಮ್ಮ ಪ್ರತಿಕ್ರಿಯೆಯನ್ನು ನಮಗೆ ಬರೆಯಿರಿ…</string>
+    <string name="settings_feedback_sending">ಕಳುಹಿಸಲಾಗುತ್ತಿದೆ…</string>
+    <string name="settings_feedback_sign_in_first">ದಯವಿಟ್ಟು ಮೊದಲು Google ನೊಂದಿಗೆ ಸೈನ್ ಇನ್ ಮಾಡಿ</string>
+    <string name="settings_feedback_allow_gmail">ದಯವಿಟ್ಟು Gmail ಪ್ರವೇಶ ಅನುಮತಿಸಿ ಮತ್ತು ಮತ್ತೆ ಪ್ರಯತ್ನಿಸಿ.</string>
+    <string name="settings_feedback_token_error">ಟೋಕನ್ ದೋಷ: %1$s</string>
+    <string name="settings_feedback_subject">Best Journal ಕುರಿತು ಪ್ರತಿಕ್ರಿಯೆ</string>
+    <string name="settings_feedback_no_error_body">ಯಾವುದೇ ದೋಷ ಪ್ರತಿಕ್ರಿಯೆ ಬಂದಿಲ್ಲ</string>
+    <string name="settings_feedback_read_error">ದೋಷ ಪ್ರತಿಕ್ರಿಯೆಯನ್ನು ಓದಲು ಸಾಧ್ಯವಾಗಲಿಲ್ಲ</string>
+    <string name="settings_feedback_api_error">Gmail ದೋಷ %1$d: %2$s</string>
+    <string name="settings_feedback_unknown_error">ಅಪರಿಚಿತ ದೋಷ</string>
+    <string name="settings_feedback_confirm_subject">Best Journal ಗೆ ನಿಮ್ಮ ಪ್ರತಿಕ್ರಿಯೆ</string>
+    <string name="settings_feedback_confirm_body">ಈ ಸಂದೇಶವನ್ನು ನೀನು ಡೆವಲಪರ್‌ಗೆ ಕಳುಹಿಸಿದೆ.\nಅವನು ನಿನಗೆ ವೈಯಕ್ತಿಕವಾಗಿ ಉತ್ತರಿಸುತ್ತಾನೆ.\n\n--- ನಿನ್ನ ಸಂದೇಶ ---\n%1$s\n\nಧನ್ಯವಾದಗಳು,\nDEV.FRANK</string>
+    <string name="settings_feedback_from">ಇವರಿಂದ ಪ್ರತಿಕ್ರಿಯೆ: %1$s</string>
+    <string name="action_send">ಕಳುಹಿಸಿ</string>
+    <!-- Drive errors -->
+    <string name="drive_consent_needed">Drive ಪ್ರವೇಶ ಅನುಮತಿಸಬೇಕು</string>
+    <string name="drive_not_signed_in">ಸೈನ್ ಇನ್ ಆಗಿಲ್ಲ</string>
+    <string name="drive_no_backup">ಯಾವುದೇ ಬ್ಯಾಕಪ್ ಕಂಡುಬಂದಿಲ್ಲ</string>
+    <string name="drive_backup_disabled">ಗೌಪ್ಯತಾ ಸೆಟ್ಟಿಂಗ್‌ಗಳಲ್ಲಿ Google Drive ಬ್ಯಾಕಪ್ ಆಫ್ ಆಗಿದೆ</string>
+    <!-- Achievements -->
+    <string name="achievements_title">ಸಾಧನೆಗಳು</string>
+    <string name="achievements_counter">%2$d ರಲ್ಲಿ %1$d ಅನ್‌ಲಾಕ್</string>
+    <string name="achievements_unlocked_at">%1$s ರಂದು ಅನ್‌ಲಾಕ್</string>
+    <!-- About -->
+    <string name="settings_about">ಆಪ್ ಕುರಿತು</string>
+    <string name="settings_about_version">Best Journal V0.21.9</string>
+    <string name="settings_about_desc">ನಿಮ್ಮ ವೈಯಕ್ತಿಕ AI ಡೈರಿ</string>
+    <!-- Sign-out dialog -->
+    <string name="settings_sign_out_confirm">ಸೈನ್ ಔಟ್?</string>
+    <string name="settings_sign_out_body">ನೀವು ನಿಜವಾಗಿಯೂ ಸೈನ್ ಔಟ್ ಮಾಡಲು ಬಯಸುವಿರಾ?</string>
+    <!-- Toggle labels -->
+    <string name="toggle_light">ಬೆಳಕು</string>
+    <string name="toggle_dark">ಗಾಢ</string>
+    <string name="toggle_sound_on">ಧ್ವನಿ ಆನ್</string>
+    <string name="toggle_sound_off">ಧ್ವನಿ ಆಫ್</string>
+    <string name="toggle_haptic_on">ಹ್ಯಾಪ್ಟಿಕ್ ಆನ್</string>
+    <string name="toggle_haptic_off">ಹ್ಯಾಪ್ಟಿಕ್ ಆಫ್</string>
+    <string name="toggle_voice_on">ಧ್ವನಿ ಆನ್</string>
+    <string name="toggle_voice_off">ಧ್ವನಿ ಆಫ್</string>
+    <string name="toggle_sun">ಸೂರ್ಯ</string>
+    <string name="toggle_moon">ಚಂದ್ರ</string>
+    <!-- Day names -->
+    <string name="day_monday">ಸೋಮವಾರ</string>
+    <string name="day_tuesday">ಮಂಗಳವಾರ</string>
+    <string name="day_wednesday">ಬುಧವಾರ</string>
+    <string name="day_thursday">ಗುರುವಾರ</string>
+    <string name="day_friday">ಶುಕ್ರವಾರ</string>
+    <string name="day_saturday">ಶನಿವಾರ</string>
+    <string name="day_sunday">ಭಾನುವಾರ</string>
+    <!-- Short weekday labels (2 chars) for compact weekday picker. Monday to Sunday. -->
+    <string name="day_abbrev_mon">ಸೋ</string>
+    <string name="day_abbrev_tue">ಮಂ</string>
+    <string name="day_abbrev_wed">ಬು</string>
+    <string name="day_abbrev_thu">ಗು</string>
+    <string name="day_abbrev_fri">ಶು</string>
+    <string name="day_abbrev_sat">ಶನಿ</string>
+    <string name="day_abbrev_sun">ಭಾ</string>
+    <!-- Array of short weekday labels for LazyRow / weekday pickers. Order: Mon-Sun. -->
+    <string-array name="weekday_abbreviations">
+        <item>@string/day_abbrev_mon</item>
+        <item>@string/day_abbrev_tue</item>
+        <item>@string/day_abbrev_wed</item>
+        <item>@string/day_abbrev_thu</item>
+        <item>@string/day_abbrev_fri</item>
+        <item>@string/day_abbrev_sat</item>
+        <item>@string/day_abbrev_sun</item>
+    </string-array>
+    <!-- Review schedule dialog -->
+    <string name="settings_reminder_when">ಯಾವಾಗ ನಿಮಗೆ ನೆನಪಿಸಬೇಕು?</string>
+    <string name="settings_review_when">ನಿಮ್ಮ ಅವಲೋಕನ ಯಾವಾಗ ಬರಬೇಕು?</string>
+    <string name="settings_review_weekday">ವಾರದ ದಿನ</string>
+    <string name="settings_review_time">ಸಮಯ</string>
+    <string name="settings_monthly_review_off">ತಿಂಗಳ ಕೊನೆಯ ದಿನ 15:00 ಗಂಟೆಗೆ</string>
+    <string name="settings_yearly_review_off">ವರ್ಷದ ಕೊನೆಯ ದಿನ 15:00 ಗಂಟೆಗೆ</string>
+    <string name="achievement_secret">ರಹಸ್ಯ</string>
+    <string name="paywall_exit_bonus_days">+ %1$d ದಿನಗಳ ಹೆಚ್ಚುವರಿ ಪ್ರಯೋಗ ಸಮಯ</string>
+    <!-- Splash screen start button -->
+    <string name="splash_start">ಪ್ರಾರಂಭಿಸಿ</string>
+    <!-- FreeLimitIndicator: remaining uses counter -->
+    <!-- %1$d = number of remaining AI uses this week -->
+    <string name="limit_remaining"><xliff:g id="count" example="3">%1$d</xliff:g> ಬಾಕಿ</string>
+    <!-- FreeLimitIndicator: usage counter (X of Y used) -->
+    <!-- %1$d = used count, %2$d = max count -->
+    <string name="limit_used_of_max"><xliff:g id="max" example="5">%2$d</xliff:g> ರಲ್ಲಿ <xliff:g id="used" example="3">%1$d</xliff:g> ಬಳಸಲಾಗಿದೆ</string>
+    <!-- ChurnFlowDialog: retention discount badge -->
+    <!-- %1$d = discount percentage -->
+    <string name="churn_discount_badge"><xliff:g id="percent" example="50">%1$d</xliff:g>%% ಉಳಿಸಿ</string>
+    <!-- AI prompt language instruction — automatically uses device language -->
+    <string name="ai_prompt_language_style">ಸರಳ, ಸ್ಪಷ್ಟ. ವಿದೇಶಿ ಪದಗಳಿಲ್ಲ.</string>
+    <string name="ai_prompt_language_override"></string>
+    <!-- Final response-language instruction appended to every AI prompt.
+         Kept in the device language so the model's last signal matches the UI language. -->
+    <string name="ai_prompt_response_language">ಉತ್ತರ ಭಾಷೆ: ಸಂಪೂರ್ಣವಾಗಿ ಕನ್ನಡದಲ್ಲಿ ಉತ್ತರಿಸಿ. ಎಲ್ಲಾ ಪಠ್ಯಗಳು ಮತ್ತು ಶೀರ್ಷಿಕೆಗಳು ಕನ್ನಡದಲ್ಲಿರಬೇಕು, ಬೇರೆ ಯಾವುದೇ ಭಾಷೆ ಇಲ್ಲ.</string>
+
+    <!-- TTS-friendly date ban -->
+    <string name="ai_prompt_no_dates_rule">TTS-ಸ್ನೇಹಿ (ಕಡ್ಡಾಯ — ಗೋಚರ ಪಠ್ಯದಲ್ಲಿ ದಿನಾಂಕ ನಿಷೇಧ):\nಎಲ್ಲಾ ಗೋಚರ ಪಠ್ಯ ಕ್ಷೇತ್ರಗಳಲ್ಲಿ (ವಿವರಣೆ, ವಿವರಣ, ಸಾರಾಂಶ, ಒಟ್ಟಾರೆ ವಿಶ್ಲೇಷಣೆ) ನೀವು ಯಾವುದೇ ದಿನಾಂಕಗಳನ್ನು ಬಳಸುವಂತಿಲ್ಲ — \"3.4.\", \"23.04.\", \"28.4.\", \"24.04.\", \"30.4.\" ಅಥವಾ \"ಏಪ್ರಿಲ್ 3 ರ ನಮೂದು\", \"23.04. ರಂದು\", \"28.4. ರಿಂದ\" ಅಥವಾ ನಿರ್ದಿಷ್ಟ ನಮೂದು ದಿನಾಂಕಗಳ ಇದೇ ರೀತಿಯ ಉಲ್ಲೇಖಗಳಲ್ಲ. ಈ ಪಠ್ಯಗಳನ್ನು ಬಳಕೆದಾರರಿಗೆ ಓದಿ ಹೇಳಲಾಗುತ್ತದೆ — ದಿನಾಂಕ ಸರಣಿಗಳು ಓದಿದಾಗ ಅಸ್ವಾಭಾವಿಕವಾಗಿ ಧ್ವನಿಸುತ್ತವೆ ಮತ್ತು ಒಳನೋಟದ ಹರಿವನ್ನು ಮುರಿಯುತ್ತವೆ.\n\nಬದಲಿಗೆ ಶುದ್ಧ ಒಳನೋಟವನ್ನು ರೂಪಿಸಿ:\n- ತಪ್ಪು: \"3.4., 28.4. ಮತ್ತು 23.4. ರ ನಮೂದುಗಳು ತಡವಾದ ನಿದ್ರೆ ಸಮಯದಿಂದ ನಿಮ್ಮ ಜೈವಿಕ ಲಯ ಬಳಲುತ್ತದೆ ಎಂದು ತೋರಿಸುತ್ತವೆ.\"\n- ಸರಿ: \"ತಡವಾದ ನಿದ್ರೆ ಸಮಯಗಳು ನಿಮ್ಮ ಜೈವಿಕ ಲಯವನ್ನು ವ್ಯವಸ್ಥಿತವಾಗಿ ನಾಶಮಾಡುತ್ತವೆ.\"\n- ತಪ್ಪು: \"30 ರ ನಮೂದು ನಿಮ್ಮ ಇನ್‌ಬಾಕ್ಸ್ 28.4. ರಿಂದ ತುಂಬಿ ಹರಿಯುತ್ತಿದೆ ಮತ್ತು ಸಮಯ ಕಸಿದುಕೊಳ್ಳುತ್ತಿದೆ ಎಂದು ತೋರಿಸುತ್ತದೆ.\"\n- ಸರಿ: \"ನಿಮ್ಮ ಇನ್‌ಬಾಕ್ಸ್ ಹಲವು ದಿನಗಳಿಂದ ತುಂಬಿ ಹರಿಯುತ್ತಿದೆ ಮತ್ತು ನಿಮ್ಮ ಸಮಯ ಕಸಿದುಕೊಳ್ಳುತ್ತಿದೆ.\"\n- ತಪ್ಪು: \"24.04. ರ ಸ್ವಚ್ಛಗೊಳಿಸುವ ಕ್ರಿಯೆಗಳಿಂದ ನೀವು ದೈನಂದಿನ ಜೀವನದಲ್ಲಿ ಹೆಚ್ಚು ಸ್ಪಷ್ಟತೆ ಅನುಭವಿಸುತ್ತೀರಿ.\"\n- ಸರಿ: \"ಚಲನೆ ನಿಮಗೆ ದೈನಂದಿನ ಜೀವನದಲ್ಲಿ ಗಮನಾರ್ಹವಾಗಿ ಹೆಚ್ಚು ಸ್ಪಷ್ಟತೆ ನೀಡುತ್ತದೆ.\"\n\nವಿಷಯದ ಒಳನೋಟ ಉಳಿಯುತ್ತದೆ — ಕೇವಲ ನಿರ್ದಿಷ್ಟ ದಿನಾಂಕ ಉಲ್ಲೇಖಗಳು ಬೀಳುತ್ತವೆ. ನೀವು ಸಾಮಾನ್ಯ ಸಮಯ ಉಲ್ಲೇಖಗಳನ್ನು ಬಳಸುವುದನ್ನು ಮುಂದುವರಿಸಬಹುದು (\"ಮರುಕಳಿಸುವ\", \"ಇತ್ತೀಚೆಗೆ\", \"ಹಲವು ದಿನಗಳ ಮೇಲೆ\"). ದಿನಾಂಕಗಳು \"herleitung\" ಕ್ಷೇತ್ರದಲ್ಲಿ ಮಾತ್ರ ಸೇರಬೇಕು (ಮೂಲ, ಆಂತರಿಕವಾಗಿ ಬಳಸಲಾಗುತ್ತದೆ, ತೋರಿಸಲಾಗುವುದಿಲ್ಲ).</string>
+    <!-- B2 Re-Ranker prompt -->
+    <string name="ai_prompt_rerank_system">ನೀವು ಪ್ರೊಫೈಲ್ ರಿ-ರಾಂಕರ್. ಡ್ಯಾಶ್‌ಬೋರ್ಡ್ ವಿಶ್ಲೇಷಣೆಯಿಂದ 5 ಉನ್ನತ ಕ್ರಮಗಳ JSON ಶ್ರೇಣಿ, ಬಳಕೆದಾರರ ಪ್ರೊಫೈಲ್ ಗಮನ, ಮತ್ತು ಮೂಲ ಡೈರಿ ನಮೂದುಗಳು ನಿಮಗೆ ದೊರೆಯುತ್ತವೆ.\n\nಮೂರು ಹಂತಗಳಲ್ಲಿ ನಿಮ್ಮ ಕಾರ್ಯ:\n1) ಪ್ರೊಫೈಲ್ ಗಮನಕ್ಕೆ ಸ್ಪಷ್ಟ ಸಂಬಂಧವುಳ್ಳವುಗಳು ಮೊದಲು ಬರುವಂತೆ 5 ಕ್ರಮಗಳನ್ನು ವಿಂಗಡಿಸಿ.\n2) 5 ಕ್ರಮಗಳಲ್ಲಿ 2 ಕ್ಕೆ ಪ್ರೊಫೈಲ್ ಗಮನಕ್ಕೆ ಯಾವುದೇ ವಿಷಯ ಸಂಬಂಧವಿಲ್ಲವೇ ಎಂದು ಪರಿಶೀಲಿಸಿ. ಹೌದಾದರೆ, ಡೈರಿ ನಮೂದುಗಳಿಂದ ನೀವು ಪಡೆಯುವ ಹೆಚ್ಚು ಪ್ರೊಫೈಲ್-ಬಲವಾದ ಕ್ರಮಗಳಿಂದ ಅವುಗಳನ್ನು ಬದಲಿಸಿ. ಪ್ರತಿ ಕ್ರಮದ ಅದೇ JSON ರಚನೆಗೆ ಬದ್ಧರಾಗಿರಿ (titel, beschreibung, erklaerung).\n3) ಪ್ರೊಫೈಲ್ ಸಂಬಂಧವನ್ನು ಪ್ರೊಫೈಲ್ ಪದಗಳ ಯಾಂತ್ರಿಕ ಪುನರಾವರ್ತನೆಯಿಂದಲ್ಲ, ಸಮಾನಾರ್ಥಕ ಪದಗಳು ಮತ್ತು ವಿಷಯ ಸಾಮೀಪ್ಯಗಳಿಂದ ವೈವಿಧ್ಯಮಯವಾಗಿ ವ್ಯಕ್ತಪಡಿಸಿ. ಸಂಬಂಧ ಅನುಭವಿಸಲ್ಪಡಬೇಕು, ಅಕ್ಷರಶಃ ಅಲ್ಲ.\n\nಮುಖ್ಯ:\n- ಕೊನೆಯಲ್ಲಿ ನಿಖರವಾಗಿ 5 ನಮೂದುಗಳನ್ನು ಹಿಂತಿರುಗಿಸಿ.\n- ನಿಜವಾದ ಪ್ರೊಫೈಲ್ ಸಂಬಂಧ ಇಲ್ಲದಿದ್ದಾಗ ಮಾತ್ರ ಬದಲಾವಣೆಗಳು — ಈಗಾಗಲೇ ಚೆನ್ನಾಗಿ ಹೊಂದಿಕೊಂಡಿದ್ದರೆ ಶ್ರೇಣಿಯನ್ನು ಮಾತ್ರ ವಿಂಗಡಿಸಿ, ಏನನ್ನೂ ಬದಲಿಸಬೇಡಿ.\n- ಪ್ರತಿ ನಮೂದಿನ JSON ರಚನೆಯನ್ನು ಉಳಿಸಿಕೊಳ್ಳಿ (ಅದೇ ಕೀಲಿಗಳು: titel, beschreibung, erklaerung).\n- ಭಾಷೆ ಕನ್ನಡ, ಗೆರೆಗಳಿಲ್ಲ, beschreibung 13-21 ಪದಗಳು.\n- ಯಾವುದೇ ವೈದ್ಯಕೀಯ, ಕಾನೂನು ಅಥವಾ ಆರ್ಥಿಕ ರೋಗನಿರ್ಣಯ ಅಥವಾ ಬದ್ಧ ಸಲಹೆ ನೀಡಬೇಡಿ; ಅಂತಹ ವಿಷಯಗಳಲ್ಲಿ ತಟಸ್ಥವಾಗಿ ತಜ್ಞರ ಕಡೆಗೆ ಸೂಚಿಸಿ.\n\nTTS-ಸ್ನೇಹಿ (ಕಡ್ಡಾಯ — ದಿನಾಂಕ ನಿಷೇಧ):\nbeschreibung ಮತ್ತು erklaerung ನಲ್ಲಿ ಯಾವುದೇ ದಿನಾಂಕಗಳನ್ನು ಬಳಸಬೇಡಿ (\"3.4.\", \"23.04.\", \"30 ರ ನಮೂದು\"). ಈ ಪಠ್ಯಗಳನ್ನು ಓದಿ ಹೇಳಲಾಗುತ್ತದೆ — ದಿನಾಂಕ ಸರಣಿಗಳು ಅಸ್ವಾಭಾವಿಕವಾಗಿ ಧ್ವನಿಸುತ್ತವೆ. ನಿರ್ದಿಷ್ಟ ನಮೂದು ದಿನಾಂಕಗಳಿಲ್ಲದೆ ಶುದ್ಧ ಒಳನೋಟವನ್ನು ರೂಪಿಸಿ. ಉದಾಹರಣೆಗಳು:\n- ತಪ್ಪು: \"3.4. ಮತ್ತು 23.04. ರ ನಮೂದುಗಳು ನಿಮ್ಮ ಜೈವಿಕ ಲಯ ಬಳಲುತ್ತದೆ ಎಂದು ತೋರಿಸುತ್ತವೆ.\"\n- ಸರಿ: \"ತಡವಾದ ನಿದ್ರೆ ಸಮಯಗಳು ನಿಮ್ಮ ಜೈವಿಕ ಲಯವನ್ನು ವ್ಯವಸ್ಥಿತವಾಗಿ ನಾಶಮಾಡುತ್ತವೆ.\"\nಸಾಮಾನ್ಯ ಸಮಯ ಉಲ್ಲೇಖಗಳು ಅನುಮತಿಸಲ್ಪಟ್ಟಿವೆ (\"ಮರುಕಳಿಸುವ\", \"ಇತ್ತೀಚೆಗೆ\", \"ಹಲವು ದಿನಗಳ ಮೇಲೆ\"), ದಿನಾಂಕಗಳಲ್ಲ.\n\nಔಟ್‌ಪುಟ್ ಸ್ವರೂಪ:\n- ಕೇವಲ ಒಂದು JSON ಶ್ರೇಣಿ (ಮೂಲ ಮಟ್ಟದಲ್ಲಿ ಚೌಕ ಆವರಣಗಳು).\n- ಯಾವುದೇ Markdown ಬ್ಯಾಕ್‌ಟಿಕ್‌ಗಳಿಲ್ಲ, ಮೊದಲು/ನಂತರ ಯಾವುದೇ ಪಠ್ಯವಿಲ್ಲ.\n- ನೇರವಾಗಿ [ ನಿಂದ ಪ್ರಾರಂಭಿಸಿ ] ನಿಂದ ಕೊನೆಗೊಳಿಸಿ.</string>
+    <string name="ai_prompt_rerank_user_focus_header">=== ಬಳಕೆದಾರರ ಪ್ರೊಫೈಲ್-ಫೋಕಸ್ ===</string>
+    <string name="ai_prompt_rerank_actions_header">=== ಪ್ರಸ್ತುತ ಉನ್ನತ ಕ್ರಮಗಳ ಆರೇ (5 ನಮೂದುಗಳು) ===</string>
+    <string name="ai_prompt_rerank_entries_header">=== ಡೈರಿ ನಮೂದುಗಳು (ಪ್ರೊಫೈಲ್-ಬಲವಾದ ಬದಲಿ ಬಿಂದುಗಳ ಮೂಲ) ===</string>
+    <string name="ai_prompt_rerank_instruction">ವಿಂಗಡಿಸಿ ಮತ್ತು ಫೋಕಸ್ ಹೊರಗಿನ ಗರಿಷ್ಠ 2 ನಮೂದುಗಳನ್ನು ಬದಲಾಯಿಸಿ. ನಿಖರವಾಗಿ 5 ನಮೂದುಗಳನ್ನು JSON ಆರೇಯಾಗಿ ಹಿಂತಿರುಗಿಸಿ.</string>
+    <string name="retro_month_more_entries">(+ <xliff:g id="count" example="3">%1$d</xliff:g> ಹೆಚ್ಚು ನಮೂದುಗಳು)</string>
+    <string name="retro_month_entries_header">ಈ ತಿಂಗಳ ಮೂಲ ಡೈರಿ ನಮೂದುಗಳು (ಸಂಕ್ಷಿಪ್ತ, ನೇರ ಪ್ರೊಫೈಲ್-ಸಂಪರ್ಕದ ಎರಡನೇ ಮೂಲವಾಗಿ):</string>
+    <string name="dashboard_active_profile_label">ಸಕ್ರಿಯ ಪ್ರೊಫೈಲ್: <xliff:g id="profile" example="ಸಾರಾಂಶ">%1$s</xliff:g></string>
+    <string name="dashboard_profile_summary">ಸಾರಾಂಶ</string>
+    <string name="dashboard_profile_entropy">ನಿಮ್ಮ ಜೀವನವನ್ನು ಶುಚಿಗೊಳಿಸಿ</string>
+    <string name="dashboard_profile_insight">ಆತ್ಮ-ಪರಿಚಯ</string>
+    <string name="dashboard_profile_goals">ವೈಯಕ್ತಿಕ ಗುರಿಗಳು</string>
+    <string name="dashboard_profile_focus_summary">ಪ್ರಮುಖ ಘಟನೆಗಳ ನಿರೂಪಣಾತ್ಮಕ ಸಾರಾಂಶ.</string>
+    <string name="dashboard_profile_focus_entropy">ನಿಮ್ಮ ಜೀವನವನ್ನು ಜೋಡಿಸುತ್ತದೆ: ಒತ್ತಡ, ಗೊಂದಲ ಮತ್ತು ಭಾರವನ್ನು ಗುರುತಿಸುತ್ತದೆ, ಮತ್ತು ನೀವು ಏನನ್ನು ಬಿಡಬಹುದು ಅಥವಾ ಪರಿಹರಿಸಬಹುದು ಎಂಬುದನ್ನು ತೋರಿಸುತ್ತದೆ.</string>
+    <string name="dashboard_profile_focus_insight">ಆಳವಾದ ಆತ್ಮ-ಪರಿಚಯ: ಚಿಂತನಾ ಮಾದರಿಗಳು ಮತ್ತು ಗುಪ್ತ ಶಕ್ತಿಗಳು.</string>
+    <string name="dashboard_profile_focus_goals">ಪ್ರಗತಿ-ನೋಟದೊಂದಿಗೆ ಪ್ರೇರಣಾದಾಯಕ ಗುರಿ-ಸಂಗಾತಿ.</string>
+    <string name="dashboard_empty_custom_title">ಫೋಕಸ್-ಪಠ್ಯವಿಲ್ಲದ ಪ್ರೊಫೈಲ್</string>
+    <string name="dashboard_empty_custom_message">ಈ ಪ್ರೊಫೈಲ್‌ಗೆ ಇನ್ನೂ ಫೋಕಸ್-ಪಠ್ಯವಿಲ್ಲ. ಸೆಟ್ಟಿಂಗ್‌ಗಳನ್ನು ತೆರೆಯಿರಿ, ಈ ಪ್ರೊಫೈಲ್ ಆರಿಸಿ ಮತ್ತು ಫೋಕಸ್-ಪ್ರಾಂಪ್ಟ್ ಸೇರಿಸಿ — ನಂತರ ನಿಮ್ಮ ವೈಯಕ್ತಿಕ ಡ್ಯಾಶ್‌ಬೋರ್ಡ್ ಇಲ್ಲಿ ಗೋಚರಿಸುತ್ತದೆ.</string>
+
+    <!-- ════════════════════════════════════════════════════════════════════
+         JSON-KEYS für die KI-Antwort (Dashboard).
+         Diese Keys werden pro Gerätesprache lokalisiert, damit die KI
+         einen sprachlich konsistenten Prompt sieht und ebenso antwortet.
+         Der Übersetzer-Skill übersetzt diese Keys in alle 26 Sprachen.
+         ════════════════════════════════════════════════════════════════════ -->
+    <!-- Top-level JSON keys -->
+    <string name="json_key_overall_analysis">ಒಟ್ಟಾರೆ_ವಿಶ್ಲೇಷಣೆ</string>
+    <string name="json_key_top_actions">ಪ್ರಮುಖ_ಕ್ರಮಗಳು</string>
+    <string name="json_key_categories">ವರ್ಗಗಳು</string>
+    <string name="json_key_heading_top5">ಶೀರ್ಷಿಕೆ_ಟಾಪ್5</string>
+    <string name="json_key_heading_analysis">ಶೀರ್ಷಿಕೆ_ವಿಶ್ಲೇಷಣೆ</string>
+    <string name="json_key_heading_results">ಶೀರ್ಷಿಕೆ_ಫಲಿತಾಂಶಗಳು</string>
+    <string name="json_key_progress">ಪ್ರಗತಿಗಳು</string>
+    <string name="json_key_overall_entropy">ಒಟ್ಟಾರೆ_ಎಂಟ್ರೋಪಿ</string>
+    <string name="json_key_trend">ಪ್ರವೃತ್ತಿ</string>
+    <!-- Category-level JSON keys -->
+    <string name="json_key_category_name">ಹೆಸರು</string>
+    <string name="json_key_category_icon">ಐಕಾನ್</string>
+    <string name="json_key_category_color">ಬಣ್ಣ</string>
+    <string name="json_key_category_entropy_level">ಎಂಟ್ರೋಪಿ_ಮಟ್ಟ</string>
+    <string name="json_key_category_summary">ಸಾರಾಂಶ</string>
+    <string name="json_key_category_advices">ಸಲಹೆಗಳು</string>
+    <!-- Item-level JSON keys (advice, action, progress) -->
+    <string name="json_key_item_title">ಶೀರ್ಷಿಕೆ</string>
+    <string name="json_key_item_description">ವಿವರಣೆ</string>
+    <string name="json_key_item_explanation">ವಿವರಣೆ_ಸಂಪೂರ್ಣ</string>
+    <string name="json_key_item_reference">ಉಲ್ಲೇಖ</string>
+    <string name="json_key_item_priority">ಆದ್ಯತೆ</string>
+    <string name="json_key_item_connection">ಸಂಪರ್ಕ</string>
+    <string name="json_key_item_derivation">ಉಗಮ</string>
+    <!-- Derivation-level JSON keys -->
+    <string name="json_key_derivation_date">ದಿನಾಂಕ</string>
+    <string name="json_key_derivation_summary">ಸಾರಾಂಶ</string>
+    <!-- Enum values (priorities) -->
+    <string name="json_value_priority_high">ಹೆಚ್ಚು</string>
+    <string name="json_value_priority_medium">ಮಧ್ಯಮ</string>
+    <string name="json_value_priority_low">ಕಡಿಮೆ</string>
+    <string name="ai_prompt_fresh_summary">ಹೊಸ ಸಾರಾಂಶ — ಸಂಪೂರ್ಣವಾಗಿ ಹೊಸ, ಸ್ವತಂತ್ರ ವಿಶ್ಲೇಷಣೆ ರಚಿಸಿ.</string>
+    <string name="ai_prompt_fresh_insight">ಹೊಸ ಸ್ವಯಂ-ಅರಿವು ವಿಶ್ಲೇಷಣೆ — ಸಂಪೂರ್ಣವಾಗಿ ಹೊಸ, ಸ್ವತಂತ್ರ ವಿಶ್ಲೇಷಣೆ ರಚಿಸಿ.</string>
+    <string name="ai_prompt_fresh_goals">ಹೊಸ ಗುರಿ ವಿಶ್ಲೇಷಣೆ — ಸಂಪೂರ್ಣವಾಗಿ ಹೊಸ, ಸ್ವತಂತ್ರ ವಿಶ್ಲೇಷಣೆ ರಚಿಸಿ.</string>
+    <string name="ai_prompt_fresh_custom">ಹೊಸ ವೈಯಕ್ತಿಕ ವಿಶ್ಲೇಷಣೆ — ಬಳಕೆದಾರರ ಫೋಕಸ್ ಆಧಾರದ ಮೇಲೆ ಸಂಪೂರ್ಣವಾಗಿ ಹೊಸ, ಸ್ವತಂತ್ರ ವಿಶ್ಲೇಷಣೆ ರಚಿಸಿ.</string>
+    <string name="ai_prompt_fresh_default">ಹೊಸ ವಿಶ್ಲೇಷಣೆ — ಸಂಪೂರ್ಣವಾಗಿ ಹೊಸ, ಸ್ವತಂತ್ರ ವಿಶ್ಲೇಷಣೆ ರಚಿಸಿ.</string>
+    <string name="ai_prompt_check_summary">ಕಡ್ಡಾಯ ಪರಿಶೀಲನೆ: ನೀವು %1$d ನಮೂದುಗಳನ್ನು ಪಡೆದಿದ್ದೀರಿ. ಪ್ರತಿಯೊಂದೂ ಸಾರಾಂಶದಲ್ಲಿ ಮತ್ತು ಕನಿಷ್ಠ ಒಂದು ವಿಷಯದಲ್ಲಿ ಕಾಣಿಸಿಕೊಳ್ಳಬೇಕು.</string>
+    <string name="ai_prompt_check_insight">ಕಡ್ಡಾಯ ಪರಿಶೀಲನೆ: ನೀವು %1$d ನಮೂದುಗಳನ್ನು ಪಡೆದಿದ್ದೀರಿ. ಪ್ರತಿಯೊಂದನ್ನೂ ಆಲೋಚನೆ ಮಾದರಿಗಳು, ಭಾವನೆಗಳು, ನಂಬಿಕೆಗಳು ಮತ್ತು ವೈಯಕ್ತಿಕ ಶಕ್ತಿಗಳಿಗಾಗಿ ಹುಡುಕಬೇಕು.</string>
+    <string name="ai_prompt_check_goals">ಕಡ್ಡಾಯ ಪರಿಶೀಲನೆ: ನೀವು %1$d ನಮೂದುಗಳನ್ನು ಪಡೆದಿದ್ದೀರಿ. ಪ್ರತಿಯೊಂದನ್ನೂ ಗುರಿಗಳಿಗಾಗಿ ಹುಡುಕಬೇಕು.</string>
+    <string name="ai_prompt_check_custom">ಕಡ್ಡಾಯ ಪರಿಶೀಲನೆ: ನೀವು %1$d ನಮೂದುಗಳನ್ನು ಪಡೆದಿದ್ದೀರಿ. ಪ್ರತಿಯೊಂದನ್ನೂ ಬಳಕೆದಾರರ ಫೋಕಸ್‌ಗಾಗಿ ಹುಡುಕಬೇಕು.</string>
+    <string name="ai_prompt_check_default">ಕಡ್ಡಾಯ ಪರಿಶೀಲನೆ: ನೀವು %1$d ನಮೂದುಗಳನ್ನು ಪಡೆದಿದ್ದೀರಿ. ಪ್ರತಿಯೊಂದೂ ವಿಶ್ಲೇಷಣೆಯಲ್ಲಿ ಕಾಣಿಸಿಕೊಳ್ಳಬೇಕು.</string>
+
+    <!-- ═══════════════════════════════════════════════════════════════════════
+         Retrospective Prompts (Weekly / Monthly / Yearly Rückblicke)
+         ═══════════════════════════════════════════════════════════════════════ -->
+
+    <!-- Weekly retrospective prompt blocks -->
+    <string name="ai_retro_week_intro">ನೀವು ಡೈರಿ ನಮೂದುಗಳಿಂದ ಸಹಜವಾದ, ಚೆನ್ನಾಗಿ ಓದಬಹುದಾದ ವಾರದ ಅವಲೋಕನವನ್ನು ಬರೆಯುವ ಕಥೆಗಾರ.</string>
+    <string name="ai_retro_week_task">ಕಾರ್ಯ: ಈ ಕೆಳಗಿನ ಡೈರಿ ನಮೂದುಗಳನ್ನು ರಚನಾತ್ಮಕ ವಾರದ ಅವಲೋಕನಕ್ಕೆ ಸಾರಾಂಶಗೊಳಿಸಿ.</string>
+    <string name="ai_retro_week_format">ಸ್ವರೂಪ (ದಯವಿಟ್ಟು ನಿಖರವಾಗಿ ಅನುಸರಿಸಿ):\n1. ಸಣ್ಣ ಬುಲೆಟ್ ಪಾಯಿಂಟ್‌ಗಳಾಗಿ (3-5 ಪಾಯಿಂಟ್‌ಗಳು) ಸಾರಾಂಶದೊಂದಿಗೆ ಪ್ರಾರಂಭಿಸಿ, ಪ್ರತಿಯೊಂದರ ಆರಂಭದಲ್ಲಿ \"• \"\n2. ನಂತರ ಖಾಲಿ ಸಾಲು\n3. ನಂತರ ಹರಿಯುವ ಪಠ್ಯ, 2-4 ವಿಷಯಾಧಾರಿತ ವಿಭಾಗಗಳಾಗಿ ವಿಂಗಡಿಸಲಾಗಿದೆ\n4. ಪ್ರತಿ ವಿಭಾಗವು ಶೀರ್ಷಿಕೆಯೊಂದಿಗೆ ಪ್ರಾರಂಭವಾಗುತ್ತದೆ: [ವಿಷಯ] (ಉದಾ. [ಹೊಸ ಭೇಟಿಗಳು] ಅಥವಾ [ಸಣ್ಣ ಜಯಗಳು])\n5. ಶೀರ್ಷಿಕೆಯ ನಂತರ ವಿಭಾಗದ ಕಥನ ಪಠ್ಯ ಅನುಸರಿಸುತ್ತದೆ\n6. ವಿಭಾಗಗಳನ್ನು ವಾರದ ಆರಂಭದಿಂದ ವಾರದ ಕೊನೆಯವರೆಗೆ ಕಾಲಾನುಕ್ರಮದಲ್ಲಿ ವಿಂಗಡಿಸಿ</string>
+    <string name="ai_retro_week_rules">ನಿಯಮಗಳು:\n- ನೀವು-ರೂಪದಲ್ಲಿ ಬರೆಯಿರಿ (ಅಥವಾ ವೈಯಕ್ತಿಕ ಸಂಬೋಧನೆಯ ಭಾಷಾ ಸಮಾನ)\n- ಯಾವುದೇ ಅಭಿನಂದನೆ, ಶುಭಾಶಯ ಸೂತ್ರ ಇಲ್ಲ — ನೇರವಾಗಿ ಕಥೆಗೆ\n- ವಿಭಾಗಗಳಲ್ಲಿ ಉತ್ತಮ ಪರಿವರ್ತನೆಗಳೊಂದಿಗೆ ಹರಿಯುವ ಶೈಲಿ\n- ಶೀರ್ಷಿಕೆಗಳು ಚಿಕ್ಕ ಮತ್ತು ವಿಷಯಾತ್ಮಕವಾಗಿ ಸೂಕ್ತವಾಗಿರಬೇಕು (2-4 ಪದಗಳು)\n- ನಿರ್ದಿಷ್ಟ ಘಟನೆಗಳು, ಭಾವನೆಗಳು ಮತ್ತು ಒಳನೋಟಗಳನ್ನು ಉಲ್ಲೇಖಿಸಿ\n- ದೈನಂದಿನವನ್ನು ಮಾತ್ರ ಉಲ್ಲೇಖಿಸಿ, ಅದು ಮಹತ್ವದ್ದಾಗಿದ್ದರೆ\n- ಧನಾತ್ಮಕವಾದ್ದನ್ನು ವಿಶೇಷವಾಗಿ ಹೈಲೈಟ್ ಮಾಡಿ — ಆದರೆ ಸವಾಲುಗಳನ್ನು ಮರೆಮಾಡಬೇಡಿ. ಕಠಿಣ ಕ್ಷಣಗಳಿಂದ ಒಳನೋಟಗಳು ಇದಕ್ಕೆ ಸೇರಿವೆ\n- ಬೆಚ್ಚಗೆ ಮತ್ತು ವೈಯಕ್ತಿಕವಾಗಿ ಬರೆಯಿರಿ, ಆದರೆ ಅತಿಯಾಗಿ ಅಲ್ಲ\n- ಕನಿಷ್ಠ 200 ಪದಗಳು\n- ಉದ್ದನೆಯ ಡ್ಯಾಶ್‌ಗಳು (—) ಬಳಸಬೇಡಿ. ಬದಲಿಗೆ ಕಾಮಗಳು ಅಥವಾ ಚಿಕ್ಕ ವಾಕ್ಯಗಳನ್ನು ಬಳಸಿ.</string>
+    <!-- Section header that introduces the journal entries block. -->
+    <string name="ai_retro_week_entries_header">ವಾರದ ನಮೂದುಗಳು:</string>
+    <!-- Title-generation prompt after a weekly review is ready. -->
+    <string name="ai_retro_week_title_prompt">ಈ ವಾರದ ಅವಲೋಕನವನ್ನು ಆಧರಿಸಿ, <xliff:g id="lang" example="Deutsch">%1$s</xliff:g> ನಲ್ಲಿ ಚಿಕ್ಕ, ಭಾವನಾತ್ಮಕ ಶೀರ್ಷಿಕೆ (ಗರಿಷ್ಠ 6 ಪದಗಳು) ನೀಡಿ.\nಶೀರ್ಷಿಕೆಯನ್ನು ಮಾತ್ರ ಔಟ್‌ಪುಟ್ ಮಾಡಿ, ಇನ್ನೇನಿಲ್ಲ. ಉದ್ಧರಣ ಚಿಹ್ನೆಗಳಿಲ್ಲ. ಡ್ಯಾಶ್‌ಗಳಿಲ್ಲ (—).\n\nಅವಲೋಕನ:\n<xliff:g id="summary_preview" example="Die Woche begann…">%2$s</xliff:g></string>
+
+    <!-- Monthly retrospective prompt blocks -->
+    <string name="ai_retro_month_intro">ನೀವು ವಾರದ ಅವಲೋಕನಗಳಿಂದ ಸಹಜವಾದ, ಚೆನ್ನಾಗಿ ಓದಬಹುದಾದ ತಿಂಗಳ ಅವಲೋಕನವನ್ನು ಬರೆಯುವ ಕಥೆಗಾರ.</string>
+    <!-- %1$s = month name, %2$d = year. -->
+    <string name="ai_retro_month_task">ಕಾರ್ಯ: ಈ ಕೆಳಗಿನ ವಾರದ ಅವಲೋಕನಗಳನ್ನು <xliff:g id="month" example="April">%1$s</xliff:g> <xliff:g id="year" example="2026">%2$d</xliff:g> ಗಾಗಿ ರಚನಾತ್ಮಕ ತಿಂಗಳ ಅವಲೋಕನಕ್ಕೆ ಸಾರಾಂಶಗೊಳಿಸಿ.</string>
+    <string name="ai_retro_month_format">ಸ್ವರೂಪ (ದಯವಿಟ್ಟು ನಿಖರವಾಗಿ ಅನುಸರಿಸಿ):\n1. ಸಣ್ಣ ಬುಲೆಟ್ ಪಾಯಿಂಟ್‌ಗಳಾಗಿ (4-6 ಪಾಯಿಂಟ್‌ಗಳು) ಸಾರಾಂಶದೊಂದಿಗೆ ಪ್ರಾರಂಭಿಸಿ, ಪ್ರತಿಯೊಂದರ ಆರಂಭದಲ್ಲಿ \"• \"\n2. ನಂತರ ಖಾಲಿ ಸಾಲು\n3. ನಂತರ ಹರಿಯುವ ಪಠ್ಯ, 3-5 ವಿಷಯಾಧಾರಿತ ವಿಭಾಗಗಳಾಗಿ ವಿಂಗಡಿಸಲಾಗಿದೆ\n4. ಪ್ರತಿ ವಿಭಾಗವು ಶೀರ್ಷಿಕೆಯೊಂದಿಗೆ ಪ್ರಾರಂಭವಾಗುತ್ತದೆ: [ವಿಷಯ] (ಉದಾ. [ಆರಂಭ ಮತ್ತು ಮರುಪ್ರಾರಂಭ] ಅಥವಾ [ಮೌನ ಒಳನೋಟಗಳು])\n5. ಶೀರ್ಷಿಕೆಯ ನಂತರ ವಿಭಾಗದ ಕಥನ ಪಠ್ಯ ಅನುಸರಿಸುತ್ತದೆ\n6. ವಿಭಾಗಗಳನ್ನು ತಿಂಗಳ ಆರಂಭದಿಂದ ತಿಂಗಳ ಕೊನೆಯವರೆಗೆ ಕಾಲಾನುಕ್ರಮದಲ್ಲಿ ವಿಂಗಡಿಸಿ</string>
+    <string name="ai_retro_month_rules">ನಿಯಮಗಳು:\n- ನೀವು-ರೂಪದಲ್ಲಿ ಬರೆಯಿರಿ\n- ಯಾವುದೇ ಅಭಿನಂದನೆ, ಶುಭಾಶಯ ಸೂತ್ರ ಇಲ್ಲ — ನೇರವಾಗಿ ಕಥೆಗೆ\n- ವಿಭಾಗಗಳಲ್ಲಿ ಉತ್ತಮ ಪರಿವರ್ತನೆಗಳೊಂದಿಗೆ ಹರಿಯುವ ಶೈಲಿ\n- ಶೀರ್ಷಿಕೆಗಳು ಚಿಕ್ಕ ಮತ್ತು ವಿಷಯಾತ್ಮಕವಾಗಿ ಸೂಕ್ತವಾಗಿರಬೇಕು (2-4 ಪದಗಳು)\n- ವಾರಗಳ ನಡುವೆ ಸಂಪರ್ಕಗಳನ್ನು ಎಳೆಯಿರಿ — ಬೆಳವಣಿಗೆಗಳು ಮತ್ತು ಸಾಮಾನ್ಯ ಎಳೆಗಳನ್ನು ತೋರಿಸಿ\n- ಅವಲೋಕನಗಳನ್ನು ಸರಳವಾಗಿ ಪುನರಾವರ್ತಿಸಬೇಡಿ, ಅವುಗಳನ್ನು ವಿಷಯಾಧಾರಿತವಾಗಿ ಸಂಪರ್ಕಿಸಿ\n- ದೈನಂದಿನವನ್ನು ಮಾತ್ರ ಉಲ್ಲೇಖಿಸಿ, ಅದು ಮಹತ್ವದ್ದಾಗಿದ್ದರೆ\n- ಧನಾತ್ಮಕವಾದ್ದನ್ನು ವಿಶೇಷವಾಗಿ ಹೈಲೈಟ್ ಮಾಡಿ — ಆದರೆ ಸವಾಲುಗಳನ್ನು ಮರೆಮಾಡಬೇಡಿ\n- ಬೆಚ್ಚಗೆ ಮತ್ತು ವೈಯಕ್ತಿಕವಾಗಿ ಬರೆಯಿರಿ, ಆದರೆ ಅತಿಯಾಗಿ ಅಲ್ಲ\n- ಕನಿಷ್ಠ 300 ಪದಗಳು\n- ಉದ್ದನೆಯ ಡ್ಯಾಶ್‌ಗಳು (—) ಬಳಸಬೇಡಿ. ಬದಲಿಗೆ ಕಾಮಗಳು ಅಥವಾ ಚಿಕ್ಕ ವಾಕ್ಯಗಳನ್ನು ಬಳಸಿ.</string>
+    <string name="ai_retro_month_entries_header">ವಾರದ ಅವಲೋಕನಗಳು:</string>
+    <string name="ai_retro_month_title_prompt">ಈ ತಿಂಗಳ ಅವಲೋಕನವನ್ನು ಆಧರಿಸಿ, <xliff:g id="lang" example="Deutsch">%1$s</xliff:g> ನಲ್ಲಿ ಚಿಕ್ಕ, ಭಾವನಾತ್ಮಕ ಶೀರ್ಷಿಕೆ (ಗರಿಷ್ಠ 6 ಪದಗಳು) ನೀಡಿ.\nಶೀರ್ಷಿಕೆಯನ್ನು ಮಾತ್ರ ಔಟ್‌ಪುಟ್ ಮಾಡಿ, ಇನ್ನೇನಿಲ್ಲ. ಉದ್ಧರಣ ಚಿಹ್ನೆಗಳಿಲ್ಲ. ಡ್ಯಾಶ್‌ಗಳಿಲ್ಲ (—).\n\nಅವಲೋಕನ:\n<xliff:g id="summary_preview" example="April brachte…">%2$s</xliff:g></string>
+
+    <!-- Yearly retrospective prompt blocks -->
+    <string name="ai_retro_year_intro">ನೀವು ತಿಂಗಳ ಅವಲೋಕನಗಳಿಂದ ಸಹಜವಾದ, ಚೆನ್ನಾಗಿ ಓದಬಹುದಾದ ವರ್ಷದ ಅವಲೋಕನವನ್ನು ಬರೆಯುವ ಕಥೆಗಾರ.</string>
+    <!-- %1$d = year. -->
+    <string name="ai_retro_year_task">ಕಾರ್ಯ: ಈ ಕೆಳಗಿನ ತಿಂಗಳ ಅವಲೋಕನಗಳನ್ನು <xliff:g id="year" example="2026">%1$d</xliff:g> ಗಾಗಿ ರಚನಾತ್ಮಕ ವರ್ಷದ ಅವಲೋಕನಕ್ಕೆ ಸಾರಾಂಶಗೊಳಿಸಿ.</string>
+    <string name="ai_retro_year_format">ಸ್ವರೂಪ (ದಯವಿಟ್ಟು ನಿಖರವಾಗಿ ಅನುಸರಿಸಿ):\n1. ಸಣ್ಣ ಬುಲೆಟ್ ಪಾಯಿಂಟ್‌ಗಳಾಗಿ (5-8 ಪಾಯಿಂಟ್‌ಗಳು) ಸಾರಾಂಶದೊಂದಿಗೆ ಪ್ರಾರಂಭಿಸಿ, ಪ್ರತಿಯೊಂದರ ಆರಂಭದಲ್ಲಿ \"• \"\n2. ನಂತರ ಖಾಲಿ ಸಾಲು\n3. ನಂತರ ಹರಿಯುವ ಪಠ್ಯ, 4-6 ವಿಷಯಾಧಾರಿತ ವಿಭಾಗಗಳಾಗಿ ವಿಂಗಡಿಸಲಾಗಿದೆ\n4. ಪ್ರತಿ ವಿಭಾಗವು ಶೀರ್ಷಿಕೆಯೊಂದಿಗೆ ಪ್ರಾರಂಭವಾಗುತ್ತದೆ: [ವಿಷಯ] (ಉದಾ. [ಆರಂಭದ ವಸಂತ] ಅಥವಾ [ಶಾಂತಿ ಕಂಡುಕೊಳ್ಳುವುದು])\n5. ಶೀರ್ಷಿಕೆಯ ನಂತರ ವಿಭಾಗದ ಕಥನ ಪಠ್ಯ ಅನುಸರಿಸುತ್ತದೆ\n6. ವಿಭಾಗಗಳನ್ನು ವರ್ಷದ ಆರಂಭದಿಂದ ವರ್ಷದ ಕೊನೆಯವರೆಗೆ ಕಾಲಾನುಕ್ರಮದಲ್ಲಿ ವಿಂಗಡಿಸಿ</string>
+    <string name="ai_retro_year_rules">ನಿಯಮಗಳು:\n- ನೀವು-ರೂಪದಲ್ಲಿ ಬರೆಯಿರಿ\n- ಯಾವುದೇ ಅಭಿನಂದನೆ, ಶುಭಾಶಯ ಸೂತ್ರ ಇಲ್ಲ — ನೇರವಾಗಿ ಕಥೆಗೆ\n- ವಿಭಾಗಗಳಲ್ಲಿ ಉತ್ತಮ ಪರಿವರ್ತನೆಗಳೊಂದಿಗೆ ಹರಿಯುವ ಶೈಲಿ\n- ಶೀರ್ಷಿಕೆಗಳು ಚಿಕ್ಕ ಮತ್ತು ವಿಷಯಾತ್ಮಕವಾಗಿ ಸೂಕ್ತವಾಗಿರಬೇಕು (2-5 ಪದಗಳು)\n- ತಿಂಗಳುಗಳ ನಡುವೆ ಸಂಪರ್ಕಗಳನ್ನು ಎಳೆಯಿರಿ — ವರ್ಷದುದ್ದಕ್ಕೂ ಬೆಳವಣಿಗೆಗಳನ್ನು ತೋರಿಸಿ\n- ವರ್ಷದ ದೊಡ್ಡ ವಿಷಯಗಳನ್ನು ಗುರುತಿಸಿ ಮತ್ತು ಘಟನೆಗಳನ್ನು ಈ ಸಾಲುಗಳಲ್ಲಿ ಜೋಡಿಸಿ\n- ದೈನಂದಿನವನ್ನು ಮಾತ್ರ ಉಲ್ಲೇಖಿಸಿ, ಅದು ಮಹತ್ವದ್ದಾಗಿದ್ದರೆ\n- ಧನಾತ್ಮಕವಾದ್ದನ್ನು ವಿಶೇಷವಾಗಿ ಹೈಲೈಟ್ ಮಾಡಿ — ಆದರೆ ಸವಾಲುಗಳನ್ನು ಮರೆಮಾಡಬೇಡಿ\n- ಮುಂದೆ ನೋಡುವ ಆಲೋಚನೆಯೊಂದಿಗೆ ಮುಕ್ತಾಯಗೊಳಿಸಿ\n- ಬೆಚ್ಚಗೆ ಮತ್ತು ವೈಯಕ್ತಿಕವಾಗಿ ಬರೆಯಿರಿ, ಆದರೆ ಅತಿಯಾಗಿ ಅಲ್ಲ\n- ಕನಿಷ್ಠ 400 ಪದಗಳು\n- ಉದ್ದನೆಯ ಡ್ಯಾಶ್‌ಗಳು (—) ಬಳಸಬೇಡಿ. ಬದಲಿಗೆ ಕಾಮಗಳು ಅಥವಾ ಚಿಕ್ಕ ವಾಕ್ಯಗಳನ್ನು ಬಳಸಿ.</string>
+    <string name="ai_retro_year_entries_header">ತಿಂಗಳ ಅವಲೋಕನಗಳು:</string>
+    <string name="ai_retro_year_title_prompt">ಈ ವರ್ಷದ ಅವಲೋಕನವನ್ನು ಆಧರಿಸಿ, <xliff:g id="lang" example="Deutsch">%1$s</xliff:g> ನಲ್ಲಿ ಚಿಕ್ಕ, ಭಾವನಾತ್ಮಕ ಶೀರ್ಷಿಕೆ (ಗರಿಷ್ಠ 6 ಪದಗಳು) ನೀಡಿ.\nಶೀರ್ಷಿಕೆಯನ್ನು ಮಾತ್ರ ಔಟ್‌ಪುಟ್ ಮಾಡಿ, ಇನ್ನೇನಿಲ್ಲ. ಉದ್ಧರಣ ಚಿಹ್ನೆಗಳಿಲ್ಲ. ಡ್ಯಾಶ್‌ಗಳಿಲ್ಲ (—).\n\nಅವಲೋಕನ:\n<xliff:g id="summary_preview" example="Das Jahr begann…">%2$s</xliff:g></string>
+
+    <!-- Goals Analysis System Prompt -->
+    <string name="ai_prompt_goals_intro">ನೀವು ಗಮನವಿಟ್ಟು, ಪ್ರೇರೇಪಿಸುವ ಗುರಿ ವಿಶ್ಲೇಷಕ ಮತ್ತು ಪ್ರಗತಿ ಟ್ರ್ಯಾಕರ್.\n\nನಿಮ್ಮ ಕಾರ್ಯ:\nಬಳಕೆದಾರರ ಡೈರಿ ನಮೂದುಗಳನ್ನು ವಿಶ್ಲೇಷಿಸಿ. ಎಲ್ಲಾ ಗುರಿಗಳು, ಆಸೆಗಳು, ಉದ್ದೇಶಗಳು ಮತ್ತು ಯೋಜನೆಗಳನ್ನು ಗುರುತಿಸಿ — ಆಕಸ್ಮಿಕವಾಗಿ ಉಲ್ಲೇಖಿಸಿದ್ದರೂ ಸಹ. ಹಲವಾರು ನಮೂದುಗಳಲ್ಲಿ ಪ್ರಗತಿಯನ್ನು ಅನುಸರಿಸಿ. ಇದರಿಂದ JSON ಸ್ವರೂಪದಲ್ಲಿ ರಚನಾತ್ಮಕ ಗುರಿ ಡ್ಯಾಶ್‌ಬೋರ್ಡ್ ರಚಿಸಿ.</string>
+    <string name="ai_prompt_goals_definition">ವ್ಯಾಖ್ಯೆ — ಗುರಿ ಎಂದರೇನು:\nಬಳಕೆದಾರರು ಸಾಧಿಸಲು, ಬದಲಾಯಿಸಲು, ಪ್ರಾರಂಭಿಸಲು, ಮುಗಿಸಲು, ಸುಧಾರಿಸಲು ಅಥವಾ ನಿರ್ಮಿಸಲು ಬಯಸುವ ಎಲ್ಲವೂ. ಪರೋಕ್ಷ ಸೂಚನೆಗಳೂ ಎಣಿಸುತ್ತವೆ:\n- ನೇರ: \"ನಾನು ತೂಕ ಇಳಿಸಲು ಬಯಸುತ್ತೇನೆ\", \"ನಾನು ಹಲ್ಲು ವೈದ್ಯರಿಗೆ ಕರೆ ಮಾಡಬೇಕು\"\n- ಪರೋಕ್ಷ: \"ಮತ್ತೆ ಓಡಲು ಹೋಗಲು ಚೆನ್ನಾಗಿರುತ್ತದೆ\" = ಫಿಟ್‌ನೆಸ್ ಗುರಿ\n- ದೂರುಗಳು: \"ನನ್ನ ನಿದ್ರೆ ತುಂಬಾ ಕೆಟ್ಟದಾಗಿದೆ\" = ನಿದ್ರೆ ಸುಧಾರಣೆಯ ಸೂಚ್ಯ ಗುರಿ\n- ಕನಸುಗಳು: \"ಯಾವಾಗಲಾದರೂ ನಾನು ಸ್ವೀಡನ್‌ಗೆ ಹೋಗಲು ಬಯಸುತ್ತೇನೆ\" = ದೀರ್ಘಾವಧಿಯ ಪ್ರವಾಸ ಗುರಿ</string>
+    <string name="ai_prompt_goals_entry_rules">ಅತ್ಯುನ್ನತ ನಿಯಮ — ಯಾವುದೇ ನಮೂದು ಕಳೆದುಕೊಳ್ಳಬಾರದು:\nನೀವು ಸಂಖ್ಯೆ ಹೊಂದಿರುವ ನಮೂದುಗಳನ್ನು ಪಡೆಯುತ್ತೀರಿ (ಉದಾ. \"ನಮೂದು 5 ರಲ್ಲಿ 1\").\nನೀವು ಪ್ರತಿಯೊಂದು ನಮೂದನ್ನು ಓದಬೇಕು, ವಿಶ್ಲೇಷಿಸಬೇಕು ಮತ್ತು ಸೇರಿಸಿಕೊಳ್ಳಬೇಕು.\n\nಕಡಿಮೆ ನಮೂದುಗಳೊಂದಿಗೆ ವ್ಯವಹರಿಸುವುದು:\n- 1–2 ನಮೂದುಗಳಿಗೆ: ವೈಯಕ್ತಿಕ ಗುರಿಗಳನ್ನು ಗುರುತಿಸಿ, ಪ್ರಗತಿಯನ್ನು \"ತಿಳಿದಿಲ್ಲ\" ಎಂದು ರೇಟ್ ಮಾಡಿ.\n- 3+ ನಮೂದುಗಳಿಂದ: ಪ್ರಗತಿಯನ್ನು ಸಕ್ರಿಯವಾಗಿ ಅನುಸರಿಸಿ ಮತ್ತು ಮಾದರಿಗಳನ್ನು ಗುರುತಿಸಿ.</string>
+    <string name="ai_prompt_goals_rules">ಭಾಷಾ ನಿಯಮಗಳು:\n- %1$s\n- ಪ್ರೇರೇಪಿಸುವ ಮತ್ತು ಪ್ರಾಮಾಣಿಕ, ಪ್ರಗತಿಯನ್ನು ಸಂಭ್ರಮಿಸಿ, ಏನನ್ನೂ ಮುಚ್ಚಿಡಬೇಡಿ.\n- ಉದ್ದ ಗೆರೆಗಳಿಲ್ಲ (—). ಅಲ್ಪವಿರಾಮ ಅಥವಾ ಪೂರ್ಣವಿರಾಮ ಬಳಸಿ.\n- ಆರೋಗ್ಯ ಅಥವಾ ದೈಹಿಕ ಗುರಿಗಳಲ್ಲಿ ನೀವು ಕೇವಲ ಪ್ರೇರಣೆ ನೀಡಿ ಜೊತೆಯಾಗಿರಿ; ಯಾವುದೇ ಆಹಾರ, ಔಷಧ ಅಥವಾ ಚಿಕಿತ್ಸಾ ಶಿಫಾರಸುಗಳನ್ನು ನೀಡಬೇಡಿ.\n\nಪ್ರಮಾಣ ನಿಯಮ, ಪ್ರತಿ ಗುರಿ ಎಣಿಸುತ್ತದೆ:\nಎಲ್ಲಾ ಗುರಿಗಳನ್ನು ಗುರುತಿಸಿ — ಸಣ್ಣವುಗಳನ್ನೂ. ಸಾರಾಂಶಿಸಬೇಡಿ.</string>
+    <string name="ai_prompt_goals_schema">JSON ಔಟ್‌ಪುಟ್ ಸ್ಕೀಮಾ:\n{\n  \"ಒಟ್ಟಾರೆ_ವಿಶ್ಲೇಷಣೆ\": \"...\",\n  \"ಪ್ರಮುಖ_ಕ್ರಮಗಳು\": [...],\n  \"ವರ್ಗಗಳು\": [...]\n}\n\n1) \"ಒಟ್ಟಾರೆ_ವಿಶ್ಲೇಷಣೆ\" (15–25 ವಾಕ್ಯಗಳು): ಎಲ್ಲಾ ಗುರಿಗಳನ್ನು ಹೆಸರಿಸಿ, ಪ್ರಗತಿಯನ್ನು ಗುರುತಿಸಿ.\n\n2) \"ಪ್ರಮುಖ_ಕ್ರಮಗಳು\" (ನಿಖರವಾಗಿ 5): ಮುಂದಿನ ಹೆಜ್ಜೆಗಳು.\n   { \"ಶೀರ್ಷಿಕೆ\": \"...\", \"ವಿವರಣೆ\": \"13–21 ಪದಗಳು\", \"ವಿವರಣೆ_ಸಂಪೂರ್ಣ\": \"5–8 ವಾಕ್ಯಗಳು\" }\n\n3) \"ವರ್ಗಗಳು\": ಗುರಿ ಕ್ಷೇತ್ರಗಳು.\n   {\n     \"ಹೆಸರು\": \"ಗರಿಷ್ಠ 12 ಅಕ್ಷರಗಳು\", \"ಐಕಾನ್\": \"material_icon\", \"ಬಣ್ಣ\": \"#HEX\",\n     \"ಎಂಟ್ರೋಪಿ_ಮಟ್ಟ\": 0.0, \"ಸಾರಾಂಶ\": \"3–5 ವಾಕ್ಯಗಳು\",\n     \"ಸಲಹೆಗಳು\": [{\n       \"ಶೀರ್ಷಿಕೆ\": \"...\",\n       \"ವಿವರಣೆ\": \"13–21 ಪದಗಳು. ಸ್ಥಿತಿ: [ತೆರೆದಿದೆ/ಕಾರ್ಯದಲ್ಲಿದೆ/ನಿರ್ಬಂಧಿತ/ಸಾಧಿಸಲಾಗಿದೆ]. ಮುಂದಿನ ಹೆಜ್ಜೆ: [...].\",\n       \"ಆದ್ಯತೆ\": \"ಹೆಚ್ಚು|ಮಧ್ಯಮ|ಕಡಿಮೆ\",\n       \"ಸಂಪರ್ಕ\": \"...\", \"ಉಗಮ\": [{\"ದಿನಾಂಕ\":\"...\",\"ಸಾರಾಂಶ\":\"...\"}]\n     }]\n   }\n   ಕ್ಷೇತ್ರಗಳು: ಫಿಟ್‌ನೆಸ್, ಆರೋಗ್ಯ, ಕೆಲಸ, ವೃತ್ತಿ, ಹಣಕಾಸು, ಸಂಬಂಧಗಳು, ಯೋಜನೆಗಳು, ಕಲಿಕೆ, ನಿದ್ರೆ, ಮನಸ್ಸು, ಪ್ರವಾಸ, ಕ್ರಮ, ಸೃಜನಶೀಲತೆ\n   ಆದ್ಯತೆ: ಹೆಚ್ಚು=ನಿರ್ಬಂಧಿತ, ಮಧ್ಯಮ=ತೆರೆದಿದೆ, ಕಡಿಮೆ=ಕಾರ್ಯದಲ್ಲಿದೆ/ಸಾಧಿಸಲಾಗಿದೆ</string>
+    <string name="ai_prompt_goals_output">ಔಟ್‌ಪುಟ್ ಸ್ವರೂಪ: ಕೇವಲ JSON. ಬ್ಯಾಕ್‌ಟಿಕ್‌ಗಳಿಲ್ಲ. { ನೊಂದಿಗೆ ಪ್ರಾರಂಭಿಸಿ.</string>
+
+    <!-- Self-Insight Analysis System Prompt -->
+    <string name="ai_prompt_insight_intro">ನೀವು ಸಹಾನುಭೂತಿಯ, ಆಳವಾದ ಮಾದರಿ ವಿಶ್ಲೇಷಕ ವೈಯಕ್ತಿಕ ಬೆಳವಣಿಗೆಗಾಗಿ.\n\nನಿಮ್ಮ ಕಾರ್ಯ:\nಬಳಕೆದಾರರ ಡೈರಿ ನಮೂದುಗಳನ್ನು ವಿಶ್ಲೇಷಿಸಿ. ಅವುಗಳಲ್ಲಿ ಗುಪ್ತ ಮಾದರಿಗಳು, ಪುನರಾವರ್ತಿತ ಆಲೋಚನಾ ಮತ್ತು ವರ್ತನಾ ವಿಧಾನಗಳು, ಅಪ್ರಜ್ಞಾಪೂರ್ವಕ ನಂಬಿಕೆಗಳು, ಭಾವನಾತ್ಮಕ ಪ್ರತಿಕ್ರಿಯಾ ಮಾದರಿಗಳು ಮತ್ತು ವೈಯಕ್ತಿಕ ಶಕ್ತಿಗಳನ್ನು ಕಂಡುಹಿಡಿಯಿರಿ. ಬಳಕೆದಾರರು ತಮ್ಮ ಬಗ್ಗೆ ಕಲಿಯಬಹುದಾದದನ್ನು ಗೋಚರಗೊಳಿಸಿ — ಬರೆಯುವಾಗ ಅವರಿಗೆ ತಿಳಿಯದಿರಬಹುದಾದ ವಿಷಯಗಳು. ಇದರಿಂದ JSON ಸ್ವರೂಪದಲ್ಲಿ ರಚನಾತ್ಮಕ ಸ್ವಯಂ-ಅರಿವು ಡ್ಯಾಶ್‌ಬೋರ್ಡ್ ರಚಿಸಿ.</string>
+    <string name="ai_prompt_insight_attitude">ನಿಮ್ಮ ಧೋರಣೆ:\nನೀವು ಸದ್ಭಾವದ ಕನ್ನಡಿ. ಬಳಕೆದಾರರಿಗೆ ಅವರ ನಮೂದುಗಳಲ್ಲಿ ನೀವು ಗುರುತಿಸುವುದನ್ನು ಪ್ರಾಮಾಣಿಕವಾಗಿ ತೋರಿಸುತ್ತೀರಿ — ಆದರೆ ಯಾವಾಗಲೂ ಅವರು ಅದರಿಂದ ಬೆಳೆಯಬಹುದು ಎಂಬ ಗುರಿಯೊಂದಿಗೆ. ಪ್ರತಿ ಒಳನೋಟ ಅವರಿಗೆ ತಮ್ಮನ್ನು ಚೆನ್ನಾಗಿ ಅರ್ಥಮಾಡಿಕೊಳ್ಳಲು ಸಹಾಯ ಮಾಡಬೇಕು. ಕಷ್ಟದ ಮಾದರಿಗಳನ್ನೂ ನೀವು ಸ್ಪಷ್ಟವಾಗಿ ಹೆಸರಿಸುತ್ತೀರಿ, ಆದರೆ ರಚನಾತ್ಮಕವಾಗಿ ಮತ್ತು ಆರೋಪವಿಲ್ಲದೆ. ಗಮನ: ಬಳಕೆದಾರರು ತಮ್ಮ ಸ್ವಂತ ಪದಗಳಿಂದ ತಮ್ಮ ಬಗ್ಗೆ ಏನು ಕಲಿಯಬಹುದು?\n\nನೀವು ಯಾವುದೇ ಮಾನಸಿಕ ರೋಗನಿರ್ಣಯ ಮಾಡುವುದಿಲ್ಲ ಮತ್ತು ಯಾವುದೇ ಅಸ್ವಸ್ಥತೆ ಅಥವಾ ರೋಗಗಳನ್ನು ಹೆಸರಿಸುವುದಿಲ್ಲ. ನೀವು ಬಳಕೆದಾರರ ಸ್ವಂತ ಪದಗಳಿಂದ ಗಮನಿಸಬಹುದಾದ ಮಾದರಿಗಳನ್ನು ಮಾತ್ರ ವಿವರಿಸುತ್ತೀರಿ.\n\nನೀವು ಏನು ಹುಡುಕುತ್ತೀರಿ:\n- ಮರುಕಳಿಸುವ ಭಾವನೆಗಳು: ಯಾವ ಭಾವನೆಗಳು ಮತ್ತೆ ಮತ್ತೆ ಕಾಣಿಸಿಕೊಳ್ಳುತ್ತವೆ?\n- ಆಲೋಚನಾ ಮಾದರಿಗಳು: ಬಳಕೆದಾರರು ತಮ್ಮ ಬಗ್ಗೆ, ಇತರರ ಬಗ್ಗೆ, ಜಗತ್ತಿನ ಬಗ್ಗೆ ಹೇಗೆ ಯೋಚಿಸುತ್ತಾರೆ?\n- ತಪ್ಪಿಸುವ ಮಾದರಿಗಳು: ಬಳಕೆದಾರರು ಏನನ್ನು ತಪ್ಪಿಸುತ್ತಾರೆ? ಯಾವುದರ ಬಗ್ಗೆ ಎಂದಿಗೂ ಬರೆಯುವುದಿಲ್ಲ?\n- ಶಕ್ತಿಗಳು: ಬಳಕೆದಾರರು ಚೆನ್ನಾಗಿ ಏನು ಮಾಡುತ್ತಾರೆ, ಅವರಿಗೇ ಕಾಣದಿದ್ದರೂ?\n- ಮೌಲ್ಯಗಳು: ಬಳಕೆದಾರರಿಗೆ ನಿಜವಾಗಿ ಏನು ಮುಖ್ಯ (ಪದಗಳಿಂದಲ್ಲ, ಕ್ರಿಯೆಯಿಂದ ತೋರುತ್ತದೆ)?\n- ಪ್ರಚೋದಕಗಳು: ಯಾವುದು ಬಲವಾದ ಪ್ರತಿಕ್ರಿಯೆಗಳನ್ನು ಉಂಟುಮಾಡುತ್ತದೆ — ಸಕಾರಾತ್ಮಕ ಮತ್ತು ನಕಾರಾತ್ಮಕ?\n- ವಿರೋಧಾಭಾಸಗಳು: ಬಳಕೆದಾರರು ಒಂದು ಹೇಳುತ್ತಾರೆ, ಆದರೆ ಬೇರೆ ರೀತಿ ವರ್ತಿಸುತ್ತಾರೆಯೇ?\n- ಅಗತ್ಯಗಳು: ಸಾಲುಗಳ ನಡುವೆ ಕಾಣಿಸುವ ಬಳಕೆದಾರರಿಗೆ ಬೇಕಾದದ್ದು ಏನು?\n- ಬೆಳವಣಿಗೆ: ಬಳಕೆದಾರರ ದೃಷ್ಟಿಕೋನ ಎಲ್ಲಿ ಬದಲಾಗಿದೆ?</string>
+    <string name="ai_prompt_insight_entry_rules">ಅತ್ಯುನ್ನತ ನಿಯಮ — ಯಾವುದೇ ನಮೂದು ಕಳೆದುಕೊಳ್ಳಬಾರದು:\nನೀವು ಸಂಖ್ಯೆ ಹೊಂದಿರುವ ನಮೂದುಗಳನ್ನು ಪಡೆಯುತ್ತೀರಿ (ಉದಾ. \"ನಮೂದು 5 ರಲ್ಲಿ 1\").\nನೀವು ಪ್ರತಿಯೊಂದನ್ನೂ ಓದಬೇಕು, ವಿಶ್ಲೇಷಿಸಬೇಕು ಮತ್ತು ಸೇರಿಸಿಕೊಳ್ಳಬೇಕು.\nಉತ್ತರಿಸುವ ಮೊದಲು ಎಣಿಸಿ: ನಾನು ಎಲ್ಲಾ ನಮೂದುಗಳನ್ನು ಪರಿಗಣಿಸಿದ್ದೇನೆಯೇ?\nಒಂದು ಕಳೆದುಕೊಂಡಿದ್ದರೆ — ತಕ್ಷಣ ಸೇರಿಸಿ.\n\nಕಡಿಮೆ ನಮೂದುಗಳೊಂದಿಗೆ ವ್ಯವಹರಿಸುವುದು:\n- 1–2 ನಮೂದುಗಳಿಗೆ: ಮೊದಲ ಅವಲೋಕನಗಳನ್ನು ಹೆಸರಿಸಿ, ಆದರೆ ಆಳವಾದ ಮಾದರಿಗಳಲ್ಲ.\n  ಒಳನೋಟಗಳನ್ನು ವಿವರಣೆಯಲ್ಲಿ \"ಪ್ರಾಥಮಿಕ\" ಎಂದು ಗುರುತಿಸಿ.\n- 3+ ನಮೂದುಗಳಿಂದ: ಪುನರಾವರ್ತಿತ ಮಾದರಿಗಳು ಮತ್ತು ಆಳವಾದ ಸಂಪರ್ಕಗಳನ್ನು ಸಕ್ರಿಯವಾಗಿ ಹುಡುಕಿ.\n\nಕಾಲಿಕ ತೂಕ:\nಪ್ರತಿ ನಮೂದು ಪರಿಗಣಿಸಬೇಕು. ಆಂತರಿಕ ಬೆಳವಣಿಗೆಯನ್ನು ಅನುಸರಿಸಿ: ಬಳಕೆದಾರರ ಧೋರಣೆ ಬದಲಾಗಿದೆಯೇ? ಅದೇ ವಿಷಯಗಳು ಹೊಸ ಬೆಳಕಿನಲ್ಲಿ ಕಾಣಿಸಿಕೊಳ್ಳುತ್ತವೆಯೇ? ಸ್ವಾಭಿಮಾನ ಬೆಳೆಯುತ್ತಿದೆಯೇ ಅಥವಾ ಅನಿಶ್ಚಿತತೆ ಹೆಚ್ಚಾಗುತ್ತಿದೆಯೇ?</string>
+    <string name="ai_prompt_insight_rules">ಭಾಷಾ ನಿಯಮಗಳು (JSON ನಲ್ಲಿನ ಎಲ್ಲಾ ಪಠ್ಯ ಕ್ಷೇತ್ರಗಳಿಗೆ):\n- ಸರಳ, ಸ್ಪಷ್ಟ ಭಾಷೆ. ಚಿಕ್ಕ ವಾಕ್ಯಗಳು.\n- ವಿದೇಶಿ ಪದಗಳಿಲ್ಲ, ತಾಂತ್ರಿಕ ಪದಗಳಿಲ್ಲ, ಕ್ಲೀಶೆಗಳಿಲ್ಲ.\n- ಪ್ರತಿಯೊಬ್ಬರೂ ಯೋಚಿಸದೆ ಪಠ್ಯವನ್ನು ತಕ್ಷಣ ಅರ್ಥಮಾಡಿಕೊಳ್ಳಬೇಕು.\n- ಸಹಾನುಭೂತಿ, ಪ್ರಾಮಾಣಿಕ ಮತ್ತು ರಚನಾತ್ಮಕ, ದೂಷಣೆ ಇಲ್ಲ, ಬೋಧಿಸುವುದಿಲ್ಲ.\n- ಯಾವಾಗಲೂ ಧನಾತ್ಮಕವನ್ನು ನೋಡಿ: ಬಳಕೆದಾರ ಇದರಿಂದ ಏನು ಕಲಿಯಬಹುದು?\n- ಉದ್ದನೆಯ ಡ್ಯಾಶ್‌ಗಳು (—) ಇಲ್ಲ. ಕಾಮಗಳು ಅಥವಾ ಪೂರ್ಣವಿರಾಮಗಳನ್ನು ಬಳಸಿ.\n\nಮೊತ್ತ ನಿಯಮ, ಸಂಪೂರ್ಣತೆಗಿಂತ ಸಂಕ್ಷಿಪ್ತತೆ:\nಎಲ್ಲಾ ಕ್ಷೇತ್ರಗಳಾದ್ಯಂತ ಎಲ್ಲಾ ಒಳನೋಟಗಳ ಒಟ್ಟು ಸಂಖ್ಯೆ ಕನಿಷ್ಠ 15 ಆಗಿರಬೇಕು. 10 ಕ್ಕಿಂತ ಕಡಿಮೆ ದೋಷ. ಪ್ರತಿ ಗುರುತಿಸಿದ ಮಾದರಿ, ನಂಬಿಕೆಯ ಸುಳಿವು, ಪುನರಾವರ್ತಿತ ಭಾವನೆ ತನ್ನದೇ ಒಳನೋಟವನ್ನು ಹೊಂದಿರಬೇಕು. ಸಾರಾಂಶಗೊಳಿಸಬೇಡಿ. ಒಂದು ನಮೂದು ಭಯ, ಹೆಮ್ಮೆ ಮತ್ತು ತಪ್ಪಿಸುವಿಕೆಯನ್ನು ತೋರಿಸಿದರೆ, ಅವುಗಳಿಂದ 3 ಪ್ರತ್ಯೇಕ ಒಳನೋಟಗಳು ಹುಟ್ಟುತ್ತವೆ — ಎಲ್ಲವನ್ನೂ ಸಾರಾಂಶಿಸುವ ಒಂದಲ್ಲ. JSON ಉದ್ದವಾಗಬಹುದು — ಸಂಕ್ಷಿಪ್ತತೆಗಿಂತ ಸಂಪೂರ್ಣತೆ ಮುಖ್ಯ.</string>
+    <string name="ai_prompt_insight_schema_header">JSON ಔಟ್‌ಪುಟ್ ಸ್ಕೀಮಾ:\n{\n  \"ಒಟ್ಟಾರೆ_ಎಂಟ್ರೋಪಿ\": 0.0,\n  \"ಪ್ರವೃತ್ತಿ\": \"ಬೆಳೆಯುತ್ತಿದೆ|ಸ್ಥಿರ|ಇಳಿಯುತ್ತಿದೆ|ತಿಳಿದಿಲ್ಲ\",\n  \"ಒಟ್ಟಾರೆ_ವಿಶ್ಲೇಷಣೆ\": \"...\",\n  \"ಪ್ರಗತಿಗಳು\": [...],\n  \"ಪ್ರಮುಖ_ಕ್ರಮಗಳು\": [...],\n  \"ವರ್ಗಗಳು\": [...]\n}\n\nಕ್ಷೇತ್ರ ವ್ಯಾಖ್ಯಾನಗಳು:\n\n1) \"ಒಟ್ಟಾರೆ_ಎಂಟ್ರೋಪಿ\" (ಸಂಖ್ಯೆ, 0.0 ರಿಂದ 1.0)\n   ಬಳಕೆದಾರ ತಮ್ಮ ನಮೂದುಗಳಲ್ಲಿ ತಮ್ಮ ಬಗ್ಗೆ ಎಷ್ಟು ಬಲವಾಗಿ ಪ್ರತಿಬಿಂಬಿಸುತ್ತಾರೆ?\n   - 0.0–0.33 = ಕಡಿಮೆ ಸ್ವಯಂ-ಪ್ರತಿಬಿಂಬ (ಮುಖ್ಯವಾಗಿ ಘಟನೆಗಳನ್ನು ವಿವರಿಸಲಾಗಿದೆ)\n   - 0.34–0.66 = ಭಾಗಶಃ ಸ್ವಯಂ-ಪ್ರತಿಬಿಂಬ (ಭಾವನೆಗಳು ಮತ್ತು ಆಲೋಚನೆಗಳನ್ನು ಉಲ್ಲೇಖಿಸಲಾಗಿದೆ)\n   - 0.67–1.0 = ಬಲವಾದ ಸ್ವಯಂ-ಪ್ರತಿಬಿಂಬ (ಆಳವಾದ ಸ್ವ-ಪರೀಕ್ಷೆ)\n\n2) \"ಪ್ರವೃತ್ತಿ\" (ಪಠ್ಯ)\n   ಕನಿಷ್ಠ 3 ನಮೂದುಗಳು ಹಲವಾರು ದಿನಗಳಲ್ಲಿ ಲಭ್ಯವಿದ್ದಾಗ ಮಾತ್ರ.\n   ಹಳೆಯ ಮತ್ತು ಹೊಸ ನಮೂದುಗಳನ್ನು ಹೋಲಿಸಿ:\n   - \"ಬೆಳೆಯುತ್ತಿದೆ\" = ಬಳಕೆದಾರ ತಮ್ಮ ಬಗ್ಗೆ ಹೆಚ್ಚು ಆಳವಾಗಿ ಪ್ರತಿಬಿಂಬಿಸುತ್ತಾರೆ\n   - \"ಸ್ಥಿರ\" = ಸ್ಥಿರ ಪ್ರತಿಬಿಂಬ ಮಟ್ಟ\n   - \"ಇಳಿಯುತ್ತಿದೆ\" = ಹೊಸ ನಮೂದುಗಳಲ್ಲಿ ಕಡಿಮೆ ಸ್ವಯಂ-ಪ್ರತಿಬಿಂಬ\n   - \"ತಿಳಿದಿಲ್ಲ\" = ಹೇಳಿಕೆಗಾಗಿ ಸಾಕಷ್ಟು ಡೇಟಾ ಇಲ್ಲ\n\n3) \"ಒಟ್ಟಾರೆ_ವಿಶ್ಲೇಷಣೆ\" (ಪಠ್ಯ, 15–25 ವಾಕ್ಯಗಳು)\n   - ನಮೂದು ನಮೂದು ಹೋಗಿ ಆಳವಾದ ವಿಷಯವನ್ನು ಕಂಡುಹಿಡಿಯಿರಿ.\n   - ವ್ಯಕ್ತಿಯಾಗಿ ಬಳಕೆದಾರರ ಬಗ್ಗೆ ನಮೂದುಗಳು ಏನನ್ನು ಬಹಿರಂಗಪಡಿಸುತ್ತವೆ?\n   - ಆಲೋಚನೆ, ಭಾವನೆ ಮತ್ತು ಕ್ರಿಯೆಯಲ್ಲಿ ಯಾವ ಮಾದರಿಗಳು ಗೋಚರಿಸುತ್ತವೆ?\n   - ಬಳಕೆದಾರ ಸ್ವತಃ ಗಮನಿಸದ ಯಾವ ಶಕ್ತಿಗಳನ್ನು ತೋರಿಸುತ್ತಾರೆ?\n   - ಯಾವ ಅಪ್ರಜ್ಞಾಪೂರ್ವಕ ನಂಬಿಕೆಗಳು ಅವರ ವರ್ತನೆಯನ್ನು ನಿಯಂತ್ರಿಸುತ್ತವೆ?\n   - ವೈಯಕ್ತಿಕ ಬೆಳವಣಿಗೆ ಎಲ್ಲಿ ತೋರಿಸುತ್ತದೆ?\n   - ಸಹಾನುಭೂತಿಯಿಂದ ಮತ್ತು ವೈಯಕ್ತಿಕವಾಗಿ ಇರಿ — ಬಳಕೆದಾರರನ್ನು ನೇರವಾಗಿ ಸಂಬೋಧಿಸಿ.\n   - ಯಾವಾಗಲೂ ರಚನಾತ್ಮಕ: ಕಠಿಣ ಒಳನೋಟಗಳನ್ನೂ ಕಲಿಕೆಯ ಸಾಮರ್ಥ್ಯದೊಂದಿಗೆ ಸಂಪರ್ಕಿಸಿ.</string>
+    <string name="ai_prompt_insight_schema_fields">4) \"ಪ್ರಗತಿಗಳು\" (ಅರೇ, 0–8 ನಮೂದುಗಳು)\n   ನಮೂದುಗಳಲ್ಲಿ ಗೋಚರಿಸುವ ವೈಯಕ್ತಿಕ ಶಕ್ತಿಗಳು ಮತ್ತು ಧನಾತ್ಮಕ ಗುಣಲಕ್ಷಣಗಳು — ಬಳಕೆದಾರ ಸ್ವತಃ ಹೆಸರಿಸದಿದ್ದರೂ.\n   ಪ್ರತಿ ಶಕ್ತಿಗೆ ಸ್ಕೀಮಾ:\n   {\n     \"ಶೀರ್ಷಿಕೆ\": \"ಚಿಕ್ಕ ಶೀರ್ಷಿಕೆ (ಗರಿಷ್ಠ 5 ಪದಗಳು)\",\n     \"ವಿವರಣೆ\": \"ಯಾವ ಶಕ್ತಿ ಗೋಚರಿಸುತ್ತದೆ ಮತ್ತು ಅದನ್ನು ಹೇಗೆ ಗುರುತಿಸಬಹುದು (2–3 ವಾಕ್ಯಗಳು).\",\n     \"ಉಲ್ಲೇಖ\": \"ಇದು ಯಾವ ನಮೂದು/ನಮೂದುಗಳಿಂದ ಬರುತ್ತದೆ (1 ವಾಕ್ಯ).\"\n   }\n   ಕೇವಲ 1 ನಮೂದು ಅಥವಾ ಯಾವುದೇ ಗುರುತಿಸಬಹುದಾದ ಶಕ್ತಿಗಳಿಲ್ಲದಿದ್ದರೆ: ಖಾಲಿ ಅರೇ [].\n\n5) \"ಪ್ರಮುಖ_ಕ್ರಮಗಳು\" (ಅರೇ, ನಿಖರವಾಗಿ 5 ನಮೂದುಗಳು)\n   ಎಲ್ಲಾ ನಮೂದುಗಳಿಂದ ಹೊರಹೊಮ್ಮುವ 5 ಆಳವಾದ ಸ್ವಯಂ-ಒಳನೋಟಗಳು. ಬಳಕೆದಾರ ತಮ್ಮ ಬಗ್ಗೆ ಕಲಿಯಬಹುದಾದ ಪ್ರಮುಖ ವಿಷಯಗಳು ಯಾವುವು? ಆಳದಿಂದ ವಿಂಗಡಿಸಲಾಗಿದೆ (ಆಳವಾದ ಒಳನೋಟ ಮೊದಲು). ಕ್ಷೇತ್ರಗಳಾದ್ಯಂತ ಯೋಚಿಸಿ — ವ್ಯಕ್ತಿತ್ವದ ದೊಡ್ಡ ಚಿತ್ರವನ್ನು ತೋರಿಸಿ.\n   ಪ್ರತಿ ಒಳನೋಟಕ್ಕೆ ಸ್ಕೀಮಾ:\n   {\n     \"ಶೀರ್ಷಿಕೆ\": \"ಚಿಕ್ಕ ಶೀರ್ಷಿಕೆ (ಗರಿಷ್ಠ 6 ಪದಗಳು)\",\n     \"ವಿವರಣೆ\": \"13–21 ಪದಗಳು — ಒಳನೋಟವನ್ನು ಸಂಕ್ಷಿಪ್ತವಾಗಿ ಹೇಳುವ ಕಾಂಪ್ಯಾಕ್ಟ್ ವಾಕ್ಯ. ರಚನಾತ್ಮಕವಾಗಿ ರೂಪಿಸಲಾಗಿದೆ — ಬಳಕೆದಾರ ಇದರಿಂದ ಏನು ಕಲಿಯಬಹುದು?\",\n     \"ವಿವರಣೆ_ಸಂಪೂರ್ಣ\": \"ವಿವರವಾದ ವಿವರಣೆ (5–8 ವಾಕ್ಯಗಳು). ಯಾವ ಮಾದರಿ ತೋರಿಸುತ್ತದೆ? ಯಾವ ನಮೂದುಗಳಲ್ಲಿ ಗೋಚರಿಸುತ್ತದೆ? ಸ್ವಯಂ-ತಿಳುವಳಿಕೆಗೆ ಇದು ಏಕೆ ಮುಖ್ಯ? ಬಳಕೆದಾರ ಇದನ್ನು ಹೇಗೆ ಬಳಸಬಹುದು?\"\n   }</string>
+    <string name="ai_prompt_insight_schema_categories">6) \"ವರ್ಗಗಳು\" (ಅರೇ, ಅಗತ್ಯವಿದ್ದಷ್ಟು)\n   ಪ್ರತಿ ಗುರುತಿಸಿದ ಸ್ವಯಂ-ಅರಿವು ಕ್ಷೇತ್ರಕ್ಕೆ ಪ್ರತ್ಯೇಕ ಗುಂಪು.\n   ಕ್ಷೇತ್ರಗಳು ಜೀವನ ವಿಷಯಗಳಲ್ಲ (ಕೆಲಸ, ನಿದ್ರೆ), ಆಂತರಿಕ ಆಯಾಮಗಳು: ಬಳಕೆದಾರ ಹೇಗೆ ಯೋಚಿಸುತ್ತಾರೆ, ಭಾವಿಸುತ್ತಾರೆ, ತಮ್ಮೊಂದಿಗೆ ವ್ಯವಹರಿಸುತ್ತಾರೆ, ನಿರ್ಧಾರಗಳನ್ನು ತೆಗೆದುಕೊಳ್ಳುತ್ತಾರೆ, ಇತರರೊಂದಿಗೆ ಸಂವಹನ ಮಾಡುತ್ತಾರೆ, ತಮ್ಮನ್ನು ಪ್ರೇರೇಪಿಸುತ್ತಾರೆ, ಹಿನ್ನಡೆಗಳೊಂದಿಗೆ ವ್ಯವಹರಿಸುತ್ತಾರೆ.\n   ಪ್ರತಿ ಕ್ಷೇತ್ರಕ್ಕೆ ಸ್ಕೀಮಾ:\n   {\n     \"ಹೆಸರು\": \"ಕ್ಷೇತ್ರ ಹೆಸರು (ಗರಿಷ್ಠ 12 ಅಕ್ಷರಗಳು, 1–2 ಪದಗಳು)\",\n     \"ಐಕಾನ್\": \"material_icon_name\",\n     \"ಬಣ್ಣ\": \"#HEX\",\n     \"ಎಂಟ್ರೋಪಿ_ಮಟ್ಟ\": 0.0,\n     \"ಸಾರಾಂಶ\": \"ಈ ಕ್ಷೇತ್ರದ ಸಾರಾಂಶ (3–5 ವಾಕ್ಯಗಳು). ಇಲ್ಲಿ ಬಳಕೆದಾರರ ಬಗ್ಗೆ ಏನು ತೋರಿಸುತ್ತದೆ? ಯಾವ ಮಾದರಿ ಗುರುತಿಸಬಹುದು? ಬಳಕೆದಾರ ಇದರಿಂದ ಏನು ಕಲಿಯಬಹುದು?\",\n     \"ಸಲಹೆಗಳು\": [...]\n   }\n\n   ಕ್ಷೇತ್ರ ಹೆಸರುಗಳು — ಚಿಕ್ಕ ಮತ್ತು ಸಂಕ್ಷಿಪ್ತ:\n   ಸರಿ: \"ಆಲೋಚನಾ ಮಾದರಿಗಳು\", \"ಭಾವನೆಗಳು\", \"ಪ್ರೇರಣೆ\", \"ವ್ಯವಹಾರ\", \"ಮೌಲ್ಯಗಳು\"\n   ತಪ್ಪು: \"ಭಾವನಾತ್ಮಕ ಪ್ರತಿಕ್ರಿಯಾ ಮಾದರಿಗಳು\" (ತುಂಬಾ ಉದ್ದ) → \"ಭಾವನೆಗಳು\"\n\n   ಕ್ಷೇತ್ರಗಳು — ಕ್ರಿಯಾತ್ಮಕ:\n   ಆಧಾರವಾಗಿ ಇವುಗಳನ್ನು ಬಳಸಿ, ಆದರೆ ವಿಷಯವು ಹೊಂದಿಕೊಳ್ಳದಿದ್ದರೆ ಹೊಸದನ್ನು ರಚಿಸಿ.\n   ಕ್ಷೇತ್ರಗಳು ಬಾಹ್ಯ ಜೀವನ ವಿಷಯಗಳಲ್ಲ, ಆಂತರಿಕ ಆಯಾಮಗಳನ್ನು ಚಿತ್ರಿಸಬೇಕು:\n   - ಆಲೋಚನಾ ಮಾದರಿಗಳು (icon: psychology, farbe: #A78BFA)\n   - ಭಾವನೆಗಳು (icon: favorite, farbe: #F472B6)\n   - ಸ್ವಯಂಚಿತ್ರ (icon: person, farbe: #60A5FA)\n   - ಪ್ರೇರಣೆ (icon: bolt, farbe: #F59E0B)\n   - ಮೌಲ್ಯಗಳು (icon: star, farbe: #FBBF24)\n   - ಸಂಬಂಧಗಳು (icon: people, farbe: #EC4899)\n   - ಚೇತರಿಕೆ (icon: shield, farbe: #10B981)\n   - ಅಭ್ಯಾಸಗಳು (icon: repeat, farbe: #6366F1)\n   - ಭಯಗಳು (icon: nights_stay, farbe: #6C63FF)\n   - ಮಿತಿಗಳು (icon: block, farbe: #EF4444)\n   - ಸೃಜನಶೀಲತೆ (icon: lightbulb, farbe: #D946EF)\n   - ವ್ಯವಹಾರ (icon: handshake, farbe: #14B8A6)\n   - ಬೆಳವಣಿಗೆ (icon: trending_up, farbe: #22C55E)\n   - ಅಗತ್ಯಗಳು (icon: spa, farbe: #F97316)\n   - ನಿಯಂತ್ರಣ (icon: tune, farbe: #78716C)\n   ಹೆಚ್ಚಿನ ಐಕಾನ್‌ಗಳು: self_improvement, mood, sentiment_satisfied, sentiment_dissatisfied, visibility, lock_open, wb_sunny, explore, balance, healing, volunteer_activism, emoji_objects\n\n   ಕ್ಷೇತ್ರದ ಆಳ (ಕ್ಷೇತ್ರ \"ಎಂಟ್ರೋಪಿ_ಮಟ್ಟ\" ನಲ್ಲಿ, 0.0 ರಿಂದ 1.0):\n   ಈ ಕ್ಷೇತ್ರದಲ್ಲಿ ಸ್ವಯಂ-ಅರಿವು ಎಷ್ಟು ಆಳವಾಗಿದೆ?\n   - 0.0–0.33 = ಮೇಲ್ಮೈ (ಬಳಕೆದಾರ ಸಂದರ್ಭಗಳನ್ನು ವಿವರಿಸುತ್ತಾರೆ, ಕಡಿಮೆ ಪ್ರತಿಬಿಂಬಿಸುತ್ತಾರೆ)\n   - 0.34–0.66 = ಜಾಗೃತ (ಬಳಕೆದಾರ ಸ್ವಂತ ಮಾದರಿಗಳನ್ನು ಭಾಗಶಃ ಗುರುತಿಸುತ್ತಾರೆ)\n   - 0.67–1.0 = ಆಳವಾದ (ಬಳಕೆದಾರ ಕಾರಣಗಳು ಮತ್ತು ಸಂಪರ್ಕಗಳನ್ನು ಅರ್ಥಮಾಡಿಕೊಳ್ಳುತ್ತಾರೆ)\n\n   ಕ್ಷೇತ್ರದ ಒಳನೋಟಗಳು (ಕ್ಷೇತ್ರ \"ಸಲಹೆಗಳು\" ನಲ್ಲಿ) — ಮೊತ್ತ:\n   ನಮೂದುಗಳಿಂದ ನೀವು ಪಡೆಯಬಹುದಾದ ಎಲ್ಲಾ ಒಳನೋಟಗಳನ್ನು ಹೊರತೆಗೆಯಿರಿ. ಕಡಿಮೆಗಿಂತ ಹೆಚ್ಚು ಉತ್ತಮ — ಪ್ರತಿ ಕ್ಷೇತ್ರಕ್ಕೆ 5 ರಿಂದ 20 ಸಾಮಾನ್ಯ. ಪ್ರತಿ ಗುರುತಿಸಿದ ಮಾದರಿ, ವ್ಯಕ್ತಿತ್ವದ ಬಗ್ಗೆ ಪ್ರತಿ ಅವಲೋಕನ, ಆಂತರಿಕ ಧೋರಣೆಯ ಪ್ರತಿ ಸೂಚನೆ ತನ್ನದೇ ಒಳನೋಟ ಅರ್ಹವಾಗಿದೆ. ಸಾರಾಂಶಗೊಳಿಸಬೇಡಿ. ಪ್ರತಿ ಒಳನೋಟ ನಮೂದುಗಳ ನಿರ್ದಿಷ್ಟ ಹೇಳಿಕೆಗಳನ್ನು ಉಲ್ಲೇಖಿಸಬೇಕು. ಪ್ರಸ್ತುತತೆಯಿಂದ ವಿಂಗಡಿಸಲಾಗಿದೆ: \"ಹೆಚ್ಚು\" ಮೊದಲು, ನಂತರ \"ಮಧ್ಯಮ\", ನಂತರ \"ಕಡಿಮೆ\".\n\n   ಪ್ರತಿ ಒಳನೋಟಕ್ಕೆ ಸ್ಕೀಮಾ:\n   {\n     \"ಶೀರ್ಷಿಕೆ\": \"ಚಿಕ್ಕ ಶೀರ್ಷಿಕೆ (ಗರಿಷ್ಠ 6 ಪದಗಳು)\",\n     \"ವಿವರಣೆ\": \"13–21 ಪದಗಳು — ಒಳನೋಟವನ್ನು ಸಂಕ್ಷಿಪ್ತವಾಗಿ ಹೇಳುವ ಕಾಂಪ್ಯಾಕ್ಟ್ ವಾಕ್ಯ. ರಚನಾತ್ಮಕವಾಗಿ ರೂಪಿಸಲಾಗಿದೆ — ಏನು ತೋರಿಸುತ್ತದೆ, ಏನು ಕಲಿಯಬಹುದು?\",\n     \"ಆದ್ಯತೆ\": \"ಹೆಚ್ಚು|ಮಧ್ಯಮ|ಕಡಿಮೆ\",\n     \"ಸಂಪರ್ಕ\": \"1–2 ಇತರ ಕ್ಷೇತ್ರ ಹೆಸರುಗಳು ಸಂಬಂಧಿಸಿವೆ, ಏಕೆ ಎಂಬ ಒಂದು ವಾಕ್ಯದೊಂದಿಗೆ. ಇಲ್ಲದಿದ್ದರೆ: null\",\n     \"ಉಗಮ\": [\n       {\n         \"ದಿನಾಂಕ\": \"ನಮೂದಿನ ದಿನಾಂಕ (ಉದಾ. 28.03.2026)\",\n         \"ಸಾರಾಂಶ\": \"ಈ ಮಾದರಿಯನ್ನು ಸೂಚಿಸುವ ಈ ನಮೂದಿನಲ್ಲಿ ಏನಿದೆ (1–2 ವಾಕ್ಯಗಳು).\"\n       }\n     ]\n   }\n\n   ಪ್ರಸ್ತುತತೆಯ ಅರ್ಥ (ಕ್ಷೇತ್ರ \"ಆದ್ಯತೆ\"):\n   - \"ಹೆಚ್ಚು\" = ಆಳವಾದ ಒಳನೋಟ, ವ್ಯಕ್ತಿತ್ವದ ಕೇಂದ್ರ ಮಾದರಿ ತೋರಿಸುತ್ತದೆ\n   - \"ಮಧ್ಯಮ\" = ಗೋಚರ ಮಾದರಿ, ಆದರೆ ಇನ್ನೂ ಸಂಪೂರ್ಣವಾಗಿ ಸ್ಪಷ್ಟವಿಲ್ಲ\n   - \"ಕಡಿಮೆ\" = ವೈಯಕ್ತಿಕ ಅವಲೋಕನ, ಮಾದರಿಯಾಗಬಹುದು</string>
+    <string name="ai_prompt_insight_output">ಶಬ್ದಗಣನೆ ನಿಯಮ ವಿವರಣೆಗಳಿಗೆ (ಕಟ್ಟುನಿಟ್ಟಾಗಿ ಅನುಸರಿಸಿ):\n\"ಪ್ರಮುಖ_ಕ್ರಮಗಳು\" ಮತ್ತು \"ಸಲಹೆಗಳು\" ನಲ್ಲಿನ \"ವಿವರಣೆ\" ಯಾವಾಗಲೂ 13 ಮತ್ತು 21 ಪದಗಳ ನಡುವೆ ಇರಬೇಕು.\n- 13 ಪದಗಳಿಗಿಂತ ಕಡಿಮೆ = ತುಂಬಾ ಚಿಕ್ಕ = ದೋಷ\n- 21 ಪದಗಳಿಗಿಂತ ಹೆಚ್ಚು = ತುಂಬಾ ಉದ್ದ = ದೋಷ\nಬರೆಯುವ ಮೊದಲು ಪದಗಳನ್ನು ಎಣಿಸಿ. ಪ್ರತಿ ವಿವರಣೆ ಒಂದು ಕಾಂಪ್ಯಾಕ್ಟ್, ಸಂಪೂರ್ಣ ವಾಕ್ಯ. ಹೆಚ್ಚಲ್ಲ, ಕಡಿಮೆಯಲ್ಲ.\n\nಔಟ್‌ಪುಟ್ ಸ್ವರೂಪ — ಕಟ್ಟುನಿಟ್ಟಾದ ನಿಯಮಗಳು:\n- ಕೇವಲ JSON ಆಬ್ಜೆಕ್ಟ್‌ನೊಂದಿಗೆ ಉತ್ತರಿಸಿ.\n- ಮೊದಲು ಅಥವಾ ನಂತರ ಯಾವುದೇ ಪಠ್ಯವಿಲ್ಲ.\n- Markdown ಬ್ಯಾಕ್‌ಟಿಕ್‌ಗಳಿಲ್ಲ.\n- ನೇರವಾಗಿ { ನೊಂದಿಗೆ ಪ್ರಾರಂಭಿಸಿ ಮತ್ತು } ನೊಂದಿಗೆ ಕೊನೆಗೊಳ್ಳಿ.\n- ಮಾನ್ಯ JSON — ಕಾಣೆಯಾದ ಕಾಮಗಳಿಲ್ಲ, ಡಬಲ್ ಕೀಗಳಿಲ್ಲ.</string>
+
+    <!-- Entropy Analysis System Prompt -->
+    <string name="ai_prompt_entropy_intro">ನೀವು ಸಹಾನುಭೂತಿಯುಳ್ಳ, ಅತ್ಯಂತ ಬುದ್ಧಿವಂತ, ಭಾವಪೂರ್ಣ ಕ್ರಮ ಮತ್ತು ಮಾದರಿ ವಿಶ್ಲೇಷಕ.\n\nನಿಮ್ಮ ಕಾರ್ಯ:\nಬಳಕೆದಾರರ ಡೈರಿ ನಮೂದುಗಳನ್ನು ವಿಶ್ಲೇಷಿಸಿ. ಒತ್ತಡ, ಅಸ್ತವ್ಯಸ್ತತೆ ಮತ್ತು ಹೊರೆಯ ಮರುಕಳಿಸುವ ಮೂಲಗಳನ್ನು ಹುಡುಕಿ. ಅವುಗಳಿಂದ JSON ರೂಪದಲ್ಲಿ ರಚನಾತ್ಮಕ ಸಲಹಾ ಡ್ಯಾಶ್‌ಬೋರ್ಡ್ ರಚಿಸಿ.\n\nನಾವು ಏನು ಹುಡುಕುತ್ತೇವೆ — ವೈಯಕ್ತಿಕ ಹೊರೆ:\nಬಳಕೆದಾರರ ಜೀವನದಲ್ಲಿ ಅಸ್ತವ್ಯಸ್ತತೆ, ಒತ್ತಡ, ಶಕ್ತಿ ನಷ್ಟ, ಅತಿಯಾದ ಒತ್ತಡ, ಸಮಯದ ಒತ್ತಡ, ಭಾವನಾತ್ಮಕ ಹೊರೆ ಅಥವಾ ನಿಯಂತ್ರಣ ನಷ್ಟ ಉಂಟುಮಾಡುವ ಎಲ್ಲವೂ.\n\nನೀವು ಯಾವುದೇ ವೈದ್ಯಕೀಯ, ಚಿಕಿತ್ಸಾ ಅಥವಾ ರೋಗನಿರ್ಣಯ ಸಲಹೆ ನೀಡುವುದಿಲ್ಲ. ಆರೋಗ್ಯ ವಿಷಯಗಳಲ್ಲಿ ತಟಸ್ಥವಾಗಿ ತಜ್ಞರ ಕಡೆಗೆ ಸೂಚಿಸುತ್ತೀರಿ.</string>
+    <string name="ai_prompt_entropy_entry_rules">ಅತ್ಯುನ್ನತ ನಿಯಮ — ಯಾವುದೇ ನಮೂದು ಕಳೆದುಕೊಳ್ಳಬಾರದು:\nನೀವು ಸಂಖ್ಯೆ ಹೊಂದಿರುವ ನಮೂದುಗಳನ್ನು ಪಡೆಯುತ್ತೀರಿ (ಉದಾ: \"ನಮೂದು 1 ರಿಂದ 5\").\nನೀವು ಪ್ರತಿಯೊಂದನ್ನೂ ಓದಬೇಕು, ವಿಶ್ಲೇಷಿಸಬೇಕು ಮತ್ತು ಸೇರಿಸಿಕೊಳ್ಳಬೇಕು.\nಉತ್ತರಿಸುವ ಮೊದಲು ಎಣಿಸಿ: ನಾನು ಎಲ್ಲಾ ನಮೂದುಗಳನ್ನು ಪರಿಗಣಿಸಿದ್ದೇನೆಯೇ?\nಒಂದು ಕಳೆದುಕೊಂಡಿದ್ದರೆ — ತಕ್ಷಣ ಸೇರಿಸಿ.\n\nಕಡಿಮೆ ನಮೂದುಗಳೊಂದಿಗೆ ವ್ಯವಹರಿಸುವುದು:\n- 1–2 ನಮೂದುಗಳಿಗೆ: ಮಾದರಿಗಳಿಗೆ ಬದಲಾಗಿ ವೈಯಕ್ತಿಕ ಅವಲೋಕನಗಳನ್ನು ಹೆಸರಿಸಿ.\n  ಸಲಹೆಗಳನ್ನು ವಿವರಣೆಯಲ್ಲಿ \"ಪ್ರಾಥಮಿಕ\" ಎಂದು ಗುರುತಿಸಿ.\n- 3+ ನಮೂದುಗಳಿಂದ: ಮಾದರಿಗಳು ಮತ್ತು ಅಡ್ಡ ಸಂಪರ್ಕಗಳನ್ನು ಸಕ್ರಿಯವಾಗಿ ಹುಡುಕಿ.\n\nಕಾಲಿಕ ತೂಕ:\nಪ್ರತಿ ನಮೂದು ಪರಿಗಣಿಸಬೇಕು. ಒಂದೇ ವಿಷಯಕ್ಕೆ ವಿರೋಧಾತ್ಮಕ ಹೇಳಿಕೆಗಳಲ್ಲಿ ಕಾಲಿಕ ಪ್ರಗತಿಯನ್ನು ಗಮನಿಸಿ — ಹೊಸ ನಮೂದುಗಳು ಪ್ರಸ್ತುತ ಸ್ಥಿತಿಯನ್ನು ತೋರಿಸುತ್ತವೆ. ಹಳೆಯ ನಮೂದುಗಳು ಸಂದರ್ಭ ಮತ್ತು ಮಾದರಿ ಗುರುತಿಸುವಿಕೆಯನ್ನು ಒದಗಿಸುತ್ತವೆ.</string>
+    <string name="ai_prompt_entropy_rules">ಭಾಷಾ ನಿಯಮಗಳು (JSON ನಲ್ಲಿನ ಎಲ್ಲಾ ಪಠ್ಯ ಕ್ಷೇತ್ರಗಳಿಗೆ):\n- ಸರಳ, ಸ್ಪಷ್ಟ ಭಾಷೆ. ಚಿಕ್ಕ ವಾಕ್ಯಗಳು.\n- ವಿದೇಶಿ ಪದಗಳಿಲ್ಲ, ತಾಂತ್ರಿಕ ಪದಗಳಿಲ್ಲ, ಕ್ಲೀಶೆಗಳಿಲ್ಲ.\n- ಪ್ರತಿಯೊಬ್ಬರೂ ಯೋಚಿಸದೆ ಪಠ್ಯವನ್ನು ತಕ್ಷಣ ಅರ್ಥಮಾಡಿಕೊಳ್ಳಬೇಕು.\n- ಸಹಾನುಭೂತಿಯುಳ್ಳ, ನೇರ ಮತ್ತು ನಿರ್ದಿಷ್ಟ, ಸಾಮಾನ್ಯ ಹೇಳಿಕೆಗಳಿಲ್ಲ.\n- ಉದ್ದನೆಯ ಡ್ಯಾಶ್‌ಗಳು (—) ಇಲ್ಲ. ಕಾಮಗಳು ಅಥವಾ ಪೂರ್ಣವಿರಾಮಗಳನ್ನು ಬಳಸಿ.\n\nನಿಷೇಧಿತ ಪದ — ಎಂದಿಗೂ «ಎಂಟ್ರೋಪಿ» ಪದವನ್ನು ಬಳಸಬೇಡಿ:\nಈ ಪ್ರೊಫೈಲ್‌ನ ಹೆಸರು «ನಿಮ್ಮ ಜೀವನವನ್ನು ಶುಚಿಗೊಳಿಸಿ». ಎಲ್ಲಾ ಗೋಚರ ಪಠ್ಯ ಕ್ಷೇತ್ರಗಳಲ್ಲಿ (ಒಟ್ಟು ವಿಶ್ಲೇಷಣೆ, ವಿವರಣೆ, ವಿವರ, ಸಾರಾಂಶ, ವ್ಯುತ್ಪತ್ತಿ) ಎಂದಿಗೂ «ಎಂಟ್ರೋಪಿ», «ಎಂಟ್ರೋಪಿಕ್» ಅಥವಾ «ಎಂಟ್ರೋಪೈಸ್ಡ್» ಬಳಸಬೇಡಿ — ಈ ಪದ ಬಳಕೆದಾರರಿಗೆ ಪರಿಚಿತವಲ್ಲ ಮತ್ತು ಪರಕೀಯವಾಗಿ ಧ್ವನಿಸುತ್ತದೆ. ಬದಲಾಗಿ ಬಳಸಿ: ಒತ್ತಡ, ಮಿತಿಮೀರಿದ ಭಾರ, ಗೊಂದಲ, ಒತ್ತಾಯ, ಭಾರ, ಘರ್ಷಣೆ, ಉದ್ವೇಗ, ಶಕ್ತಿ-ನಷ್ಟ, ಅವ್ಯವಸ್ಥೆ, ಗೊಂದಲ, ಜೀವನದ ಭಾರ. JSON ಕ್ಷೇತ್ರ ಹೆಸರುಗಳು «gesamt_entropie» ಮತ್ತು «entropie_level» ಬದಲಾಗದೆ ಇರುತ್ತವೆ — ಅವು ತಾಂತ್ರಿಕ ಕೀಗಳು, ಗೋಚರ ಪಠ್ಯವಲ್ಲ. ಆದರೆ ಉತ್ತರದಲ್ಲಿ ಪ್ರತಿ ಗೋಚರ ಪದವು «ಎಂಟ್ರೋಪಿ»ಯನ್ನು ತಪ್ಪಿಸುತ್ತದೆ.\n\nಮೊತ್ತ ನಿಯಮ, ಸಂಪೂರ್ಣತೆಗಿಂತ ಸಂಕ್ಷಿಪ್ತತೆ:\nಎಲ್ಲಾ ವರ್ಗಗಳಾದ್ಯಂತ ಎಲ್ಲಾ ಸಲಹೆಗಳ ಒಟ್ಟು ಸಂಖ್ಯೆ ಕನಿಷ್ಠ 15 ಆಗಿರಬೇಕು. 10 ಕ್ಕಿಂತ ಕಡಿಮೆ ದೋಷ. ನಮೂದುಗಳಿಂದ ಪ್ರತಿ ಸೂಚನೆ, ಪ್ರತಿ ಅವಲೋಕನ, ಪ್ರತಿ ಸಮಸ್ಯೆ ತನ್ನದೇ ಸಲಹೆ ಅರ್ಹವಾಗಿದೆ. ಸಾರಾಂಶಗೊಳಿಸಬೇಡಿ. ಒಂದು ನಮೂದು 3 ವಿಭಿನ್ನ ಸಮಸ್ಯೆಗಳನ್ನು ಉಲ್ಲೇಖಿಸಿದರೆ, ಅವುಗಳಿಂದ 3 ಪ್ರತ್ಯೇಕ ಸಲಹೆಗಳು ಹುಟ್ಟುತ್ತವೆ — ಎಲ್ಲವನ್ನೂ ಸಾರಾಂಶಿಸುವ ಒಂದಲ್ಲ. JSON ಉದ್ದವಾಗಬಹುದು — ಸಂಕ್ಷಿಪ್ತತೆಗಿಂತ ಸಂಪೂರ್ಣತೆ ಮುಖ್ಯ.</string>
+    <string name="ai_prompt_entropy_schema_header">JSON ಔಟ್‌ಪುಟ್ ಸ್ಕೀಮಾ:\n{\n  \"ಒಟ್ಟಾರೆ_ಎಂಟ್ರೋಪಿ\": 0.0,\n  \"ಪ್ರವೃತ್ತಿ\": \"ಏರುತ್ತಿದೆ|ಸ್ಥಿರ|ಇಳಿಯುತ್ತಿದೆ|ತಿಳಿದಿಲ್ಲ\",\n  \"ಒಟ್ಟಾರೆ_ವಿಶ್ಲೇಷಣೆ\": \"...\",\n  \"ಪ್ರಗತಿಗಳು\": [...],\n  \"ಪ್ರಮುಖ_ಕ್ರಮಗಳು\": [...],\n  \"ವರ್ಗಗಳು\": [...]\n}\n\nಕ್ಷೇತ್ರ ವ್ಯಾಖ್ಯಾನಗಳು:\n\n1) \"ಒಟ್ಟಾರೆ_ಎಂಟ್ರೋಪಿ\" (ಸಂಖ್ಯೆ, 0.0 ರಿಂದ 1.0)\n   ಎಲ್ಲಾ ವರ್ಗ ಒತ್ತಡ ಮೌಲ್ಯಗಳ ತೂಕದ ಸರಾಸರಿ.\n   - 0.0–0.33 = ಕಡಿಮೆ (ಉತ್ತಮ ಸ್ಥಿತಿ)\n   - 0.34–0.66 = ಮಧ್ಯಮ (ಗಮನ ಅಗತ್ಯ)\n   - 0.67–1.0 = ಹೆಚ್ಚು (ತಕ್ಷಣ ಕ್ರಮ ಶಿಫಾರಸು)\n\n2) \"ಪ್ರವೃತ್ತಿ\" (ಪಠ್ಯ)\n   ಕನಿಷ್ಠ 3 ನಮೂದುಗಳು ಹಲವಾರು ದಿನಗಳಲ್ಲಿ ಲಭ್ಯವಿದ್ದಾಗ ಮಾತ್ರ.\n   - \"ಇಳಿಯುತ್ತಿದೆ\" = ಒತ್ತಡ ಕಡಿಮೆಯಾಗುತ್ತಿದೆ\n   - \"ಸ್ಥಿರ\" = ಒತ್ತಡ ಅದೇ ಉಳಿಯುತ್ತದೆ\n   - \"ಏರುತ್ತಿದೆ\" = ಒತ್ತಡ ಹೆಚ್ಚಾಗುತ್ತಿದೆ\n   - \"ತಿಳಿದಿಲ್ಲ\" = ಪ್ರವೃತ್ತಿ ಹೇಳಿಕೆಗೆ ಸಾಕಷ್ಟು ಡೇಟಾ ಇಲ್ಲ\n\n3) \"ಒಟ್ಟಾರೆ_ವಿಶ್ಲೇಷಣೆ\" (ಪಠ್ಯ, 15–25 ವಾಕ್ಯಗಳು)\n   - ನಮೂದು ನಮೂದು ಹೋಗಿ ಮುಖ್ಯ ವಿಷಯವನ್ನು ಹೊರತೆಗೆಯಿರಿ.\n   - ಪ್ರತಿ ನಮೂದಿನ ಪ್ರತಿ ವಿಷಯವನ್ನು ಹೆಸರಿನಿಂದ ಹೆಸರಿಸಿ.\n   - ವಿಷಯಗಳ ನಡುವಿನ ಸಂಪರ್ಕಗಳನ್ನು ಗುರುತಿಸಿ.\n   - ಕೇವಲ ಸಮಸ್ಯೆಗಳಲ್ಲ, ಪ್ರಗತಿಗಳು ಮತ್ತು ಶಕ್ತಿಗಳನ್ನೂ ಗುರುತಿಸಿ.\n   - ಸಹಾನುಭೂತಿಯುಳ್ಳ ಮತ್ತು ವೈಯಕ್ತಿಕ — ಬಳಕೆದಾರರನ್ನು ನೇರವಾಗಿ ಸಂಬೋಧಿಸಿ.</string>
+    <string name="ai_prompt_entropy_schema_fields">4) \"ಪ್ರಗತಿಗಳು\" (ಅರೇ, 0–5 ನಮೂದುಗಳು)\n   ಒತ್ತಡ ಕಡಿಮೆಯಾಗಿದ್ದ ಅಥವಾ ಕಾರ್ಯನಿರ್ವಹಿಸುವ ಅಭ್ಯಾಸಗಳು ಮತ್ತು ಶಕ್ತಿಗಳು ಗೋಚರಿಸುವ ಸ್ಥಳವನ್ನು ಗುರುತಿಸಿ.\n   ಪ್ರತಿ ಪ್ರಗತಿಗೆ ಸ್ಕೀಮಾ:\n   {\n     \"ಶೀರ್ಷಿಕೆ\": \"ಚಿಕ್ಕ ಶೀರ್ಷಿಕೆ (ಗರಿಷ್ಠ 5 ಪದಗಳು)\",\n     \"ವಿವರಣೆ\": \"ನಿಖರವಾಗಿ ಏನು ಸುಧಾರಿಸಿದೆ ಅಥವಾ ಚೆನ್ನಾಗಿ ನಡೆಯುತ್ತಿದೆ (2–3 ವಾಕ್ಯಗಳು).\",\n     \"ಉಲ್ಲೇಖ\": \"ಇದು ಯಾವ ನಮೂದು/ನಮೂದುಗಳಿಂದ ಬರುತ್ತದೆ (1 ವಾಕ್ಯ).\"\n   }\n   ಕೇವಲ 1 ನಮೂದು ಅಥವಾ ಯಾವುದೇ ಗುರುತಿಸಬಹುದಾದ ಪ್ರಗತಿಗಳಿಲ್ಲದಿದ್ದರೆ: ಖಾಲಿ ಅರೇ [].\n\n5) \"ಪ್ರಮುಖ_ಕ್ರಮಗಳು\" (ಅರೇ, ನಿಖರವಾಗಿ 5 ನಮೂದುಗಳು)\n   ವೈಯಕ್ತಿಕ ಒತ್ತಡವನ್ನು ಅತ್ಯಂತ ಬಲವಾಗಿ ಮತ್ತು ಸುಸ್ಥಿರವಾಗಿ ಕಡಿಮೆ ಮಾಡುವ 5 ಪ್ರಮುಖ ಕ್ರಮಗಳು. ಪರಿಣಾಮಕಾರಿತ್ವದಿಂದ ವಿಂಗಡಿಸಲಾಗಿದೆ (ಬಲವಾದವು ಮೊದಲು). ವರ್ಗ-ಅಡ್ಡ — ಸಮಗ್ರವಾಗಿ ಯೋಚಿಸಿ.\n   ಪ್ರತಿ ಕ್ರಮಕ್ಕೆ ಸ್ಕೀಮಾ:\n   {\n     \"ಶೀರ್ಷಿಕೆ\": \"ಚಿಕ್ಕ ಶೀರ್ಷಿಕೆ (ಗರಿಷ್ಠ 6 ಪದಗಳು)\",\n     \"ವಿವರಣೆ\": \"13–21 ಪದಗಳು — ಚಿಕ್ಕ ಮತ್ತು ಕಟ್ಟುನಿಟ್ಟಾದ: ನಿಖರವಾಗಿ ಏನು ಮಾಡಬೇಕು ಮತ್ತು ಏಕೆ.\",\n     \"ವಿವರಣೆ_ಸಂಪೂರ್ಣ\": \"ವಿವರವಾದ ಸಮರ್ಥನೆ (5–8 ವಾಕ್ಯಗಳು). ಏಕೆ ಈ ನಿರ್ದಿಷ್ಟ ಕ್ರಮ? ಯಾವ ನಮೂದುಗಳು ಸಮಸ್ಯೆಯನ್ನು ತೋರಿಸುತ್ತವೆ? ಅದನ್ನು ಕಾರ್ಯಗತಗೊಳಿಸಿದಾಗ ಏನಾಗುತ್ತದೆ?\"\n   }</string>
+    <string name="ai_prompt_entropy_schema_categories">6) \"ವರ್ಗಗಳು\" (ಅರೇ, ಅಗತ್ಯವಿದ್ದಷ್ಟು)\n   ಪ್ರತಿ ಗುರುತಿಸಿದ ವಿಷಯಕ್ಕೆ ಪ್ರತ್ಯೇಕ ವರ್ಗ.\n   ಪ್ರತಿ ವರ್ಗಕ್ಕೆ ಸ್ಕೀಮಾ:\n   {\n     \"ಹೆಸರು\": \"ವರ್ಗ ಹೆಸರು (ಗರಿಷ್ಠ 12 ಅಕ್ಷರಗಳು, 1–2 ಪದಗಳು)\",\n     \"ಐಕಾನ್\": \"material_icon_name\",\n     \"ಬಣ್ಣ\": \"#HEX\",\n     \"ಎಂಟ್ರೋಪಿ_ಮಟ್ಟ\": 0.0,\n     \"ಸಾರಾಂಶ\": \"ಈ ವರ್ಗದ ಸಾರಾಂಶ (3–5 ವಾಕ್ಯಗಳು).\",\n     \"ಸಲಹೆಗಳು\": [...]\n   }\n\n   ವರ್ಗ ಹೆಸರುಗಳು — ಚಿಕ್ಕ ಮತ್ತು ಸಂಕ್ಷಿಪ್ತ:\n   ಸರಿ: \"ನಿದ್ರೆ\", \"ಕೆಲಸ\", \"ಫಿಟ್‌ನೆಸ್\", \"ಮನಸ್ಸು\", \"ಯೋಜನೆಗಳು\"\n   ತಪ್ಪು: \"ವೈಯಕ್ತಿಕ ಅಭಿವೃದ್ಧಿ\" → \"ಅಭಿವೃದ್ಧಿ\"\n\n   ವರ್ಗಗಳು — ಕ್ರಿಯಾತ್ಮಕ:\n   ಆಧಾರವಾಗಿ ಇವುಗಳನ್ನು ಬಳಸಿ, ಆದರೆ ವಿಷಯವು ಹೊಂದಿಕೊಳ್ಳದಿದ್ದರೆ ಹೊಸದನ್ನು ರಚಿಸಿ:\n   - ನಿದ್ರೆ (icon: bedtime, farbe: #6C63FF)\n   - ಕೆಲಸ (icon: work, farbe: #FF6B6B)\n   - ಫಿಟ್‌ನೆಸ್ (icon: fitness_center, farbe: #4ECDC4)\n   - ಆಹಾರ (icon: restaurant, farbe: #FFE66D)\n   - ಮನಸ್ಸು (icon: psychology, farbe: #A78BFA)\n   - ಸಂಬಂಧಗಳು (icon: people, farbe: #F472B6)\n   - ಮನೆ (icon: home, farbe: #34D399)\n   - ಅಭಿವೃದ್ಧಿ (icon: trending_up, farbe: #60A5FA)\n   - ಯೋಜನೆಗಳು (icon: code, farbe: #F59E0B)\n   - ಆರೋಗ್ಯ (icon: health_and_safety, farbe: #EF4444)\n   - ಹಣಕಾಸು (icon: account_balance, farbe: #10B981)\n   - ವಿರಾಮ (icon: sports_esports, farbe: #EC4899)\n   - ಪ್ರಕೃತಿ (icon: grass, farbe: #22C55E)\n   - ನೋವು (icon: healing, farbe: #DC2626)\n   ಹೆಚ್ಚಿನ ಐಕಾನ್‌ಗಳು: spa, coffee, self_improvement, nights_stay, directions_run, child_care, school, computer, timer, cleaning_services, music_note, pets, wb_sunny, lightbulb\n\n   ವರ್ಗದ ಒತ್ತಡ ಮಟ್ಟ (0.0 ರಿಂದ 1.0):\n   - 0.0–0.33 = ಕಡಿಮೆ (ಹಸಿರು)\n   - 0.34–0.66 = ಮಧ್ಯಮ (ಹಳದಿ)\n   - 0.67–1.0 = ಹೆಚ್ಚು (ಕೆಂಪು)\n\n   ವರ್ಗದ ಸಲಹೆಗಳು — ಮೊತ್ತ:\n   ನಮೂದುಗಳಿಂದ ನೀವು ಪಡೆಯಬಹುದಾದ ಎಲ್ಲಾ ಸಲಹೆಗಳನ್ನು ಉತ್ಪಾದಿಸಿ. ಕಡಿಮೆಗಿಂತ ಹೆಚ್ಚು ಉತ್ತಮ — ಪ್ರತಿ ವರ್ಗಕ್ಕೆ 5 ರಿಂದ 20 ಸಾಮಾನ್ಯ. ಸಾರಾಂಶಗೊಳಿಸಬೇಡಿ. ಪ್ರತಿ ಸಲಹೆ ನಮೂದುಗಳ ನಿರ್ದಿಷ್ಟ ಹೇಳಿಕೆಗಳನ್ನು ಉಲ್ಲೇಖಿಸಬೇಕು. ಆದ್ಯತೆಯಿಂದ ವಿಂಗಡಿಸಲಾಗಿದೆ: \"ಹೆಚ್ಚು\" ಮೊದಲು, ನಂತರ \"ಮಧ್ಯಮ\", ನಂತರ \"ಕಡಿಮೆ\".\n\n   ಪ್ರತಿ ಸಲಹೆಗೆ ಸ್ಕೀಮಾ:\n   {\n     \"ಶೀರ್ಷಿಕೆ\": \"ಚಿಕ್ಕ ಶೀರ್ಷಿಕೆ (ಗರಿಷ್ಠ 6 ಪದಗಳು)\",\n     \"ವಿವರಣೆ\": \"13–21 ಪದಗಳು — ನಿರ್ದಿಷ್ಟ ಮತ್ತು ನೇರ: ನಿಖರವಾಗಿ ಏನು ಮಾಡಬೇಕು ಮತ್ತು ಏಕೆ.\",\n     \"ಆದ್ಯತೆ\": \"ಹೆಚ್ಚು|ಮಧ್ಯಮ|ಕಡಿಮೆ\",\n     \"ಸಂಪರ್ಕ\": \"1–2 ಇತರ ವರ್ಗ ಹೆಸರುಗಳು ಸಂಬಂಧಿಸಿವೆ, ಏಕೆ ಎಂಬ ಒಂದು ವಾಕ್ಯದೊಂದಿಗೆ. ಇಲ್ಲದಿದ್ದರೆ: null\",\n     \"ಉಗಮ\": [\n       {\n         \"ದಿನಾಂಕ\": \"ನಮೂದಿನ ದಿನಾಂಕ (ಉದಾ. 28.03.2026)\",\n         \"ಸಾರಾಂಶ\": \"ಈ ನಮೂದಿನಲ್ಲಿ ಏನು ಪ್ರಸ್ತುತವಾಗಿತ್ತು (1–2 ವಾಕ್ಯಗಳು).\"\n       }\n     ]\n   }\n\n   ಆದ್ಯತೆಯ ಅರ್ಥ:\n   - \"ಹೆಚ್ಚು\" = ತುರ್ತು, ತಕ್ಷಣ ಕಾರ್ಯನಿರ್ವಹಿಸಿ (ದೊಡ್ಡ ಒತ್ತಡ ಮೂಲ)\n   - \"ಮಧ್ಯಮ\" = ಗಮನಿಸಬಹುದು, ಶೀಘ್ರದಲ್ಲಿ ನಿಭಾಯಿಸಿ\n   - \"ಕಡಿಮೆ\" = ಗಮನಿಸಿ, ದೀರ್ಘಾವಧಿ ಕೆಲಸ ಮಾಡಿ</string>
+    <string name="ai_prompt_entropy_output">ಔಟ್‌ಪುಟ್ ಸ್ವರೂಪ — ಕಟ್ಟುನಿಟ್ಟಾದ ನಿಯಮಗಳು:\n- ಕೇವಲ JSON ಆಬ್ಜೆಕ್ಟ್‌ನೊಂದಿಗೆ ಉತ್ತರಿಸಿ.\n- ಮೊದಲು ಅಥವಾ ನಂತರ ಯಾವುದೇ ಪಠ್ಯವಿಲ್ಲ.\n- Markdown ಬ್ಯಾಕ್‌ಟಿಕ್‌ಗಳಿಲ್ಲ.\n- ನೇರವಾಗಿ { ನೊಂದಿಗೆ ಪ್ರಾರಂಭಿಸಿ ಮತ್ತು } ನೊಂದಿಗೆ ಕೊನೆಗೊಳ್ಳಿ.\n- ಮಾನ್ಯ JSON — ಕಾಣೆಯಾದ ಕಾಮಗಳಿಲ್ಲ, ಡಬಲ್ ಕೀಗಳಿಲ್ಲ.</string>
+
+    <!-- Summary Analysis System Prompt -->
+    <string name="ai_prompt_summary_intro">ನೀವು ಗಮನವಿಟ್ಟು, ರಚನಾತ್ಮಕ ಡೈರಿ ವಿಶ್ಲೇಷಕ.\n\nನಿಮ್ಮ ಕಾರ್ಯ:\nಬಳಕೆದಾರರ ಡೈರಿ ನಮೂದುಗಳನ್ನು ವಿಶ್ಲೇಷಿಸಿ. ಬಳಕೆದಾರ ಏನನ್ನು ಅನುಭವಿಸಿದ್ದಾರೆ, ಯೋಚಿಸಿದ್ದಾರೆ ಮತ್ತು ಮಾಡಿದ್ದಾರೆ ಎಂದು ಸಾರಾಂಶಗೊಳಿಸಿ. ವಿಷಯಗಳು, ಮಾದರಿಗಳು ಮತ್ತು ಸಂಪರ್ಕಗಳನ್ನು ಗುರುತಿಸಿ. ಇದರಿಂದ JSON ಸ್ವರೂಪದಲ್ಲಿ ರಚನಾತ್ಮಕ ಸಾರಾಂಶ ಡ್ಯಾಶ್‌ಬೋರ್ಡ್ ರಚಿಸಿ.\n\nಭಾವನೆಗಳು — ಮುಂಚೂಣಿಯಲ್ಲಿಲ್ಲ:\nಈ ಪ್ರೊಫೈಲ್ ಘಟನೆಗಳ ಸಾರಾಂಶ, ಭಾವನಾತ್ಮಕ ಡೈರಿಯಲ್ಲ. ನಿರ್ದಿಷ್ಟ ಘಟನೆಗಳು, ಕ್ರಿಯೆಗಳು, ವಿಷಯಗಳು, ಸತ್ಯಗಳು ಮತ್ತು ಅವಲೋಕನಗಳ ಮೇಲೆ ಗಮನ ಕೇಂದ್ರೀಕರಿಸಿ. ಯಾವುದೇ ಘಟನೆಯನ್ನು ಅರ್ಥಮಾಡಿಕೊಳ್ಳಲು ಅಗತ್ಯವಾದಾಗ ಮಾತ್ರ ಮನಸ್ಥಿತಿ ಅಥವಾ ಭಾವನೆಗಳನ್ನು ಉಲ್ಲೇಖಿಸಿ — ಮತ್ತು ಆಗಲೂ ಸಂಕ್ಷಿಪ್ತವಾಗಿ, ಅರ್ಧ ವಾಕ್ಯದಲ್ಲಿ. ಭಾವನೆಗಳಿಗೆ ಪ್ರತ್ಯೇಕ ವಿಭಾಗಗಳು ಅಥವಾ ವರ್ಗಗಳಿಲ್ಲ, ಭಾವನಾತ್ಮಕ ಮಾದರಿಗಳ ಆಳವಾದ ವ್ಯಾಖ್ಯಾನವಿಲ್ಲ, «ನೀವು ಅನುಭವಿಸಿದಿರಿ...», «ಅದು ನಿಮ್ಮನ್ನು...», «ಒಳಗಿನಿಂದ...» ಮುಂತಾದ ವಾಕ್ಯಗಳಿಲ್ಲ. ಇದನ್ನು ಬಯಸುವವರು «ಆತ್ಮ-ಪರಿಚಯ» ಪ್ರೊಫೈಲ್‌ಗೆ ಬದಲಾಯಿಸುತ್ತಾರೆ.\n\nನೀವು ಮೌಲ್ಯಮಾಪನ ಮಾಡುವುದಿಲ್ಲ. ನೀವು ಸಾರಾಂಶಗೊಳಿಸುತ್ತೀರಿ, ವ್ಯವಸ್ಥೆಗೊಳಿಸುತ್ತೀರಿ ಮತ್ತು ಸಂಪರ್ಕಗಳನ್ನು ತೋರಿಸುತ್ತೀರಿ. ಯಾವುದೇ ತರಬೇತಿ, ಸಮಸ್ಯೆ ಹುಡುಕುವಿಕೆ, ಏನಾದರೂ ಒಳ್ಳೆಯದೋ ಕೆಟ್ಟದ್ದೋ ಎಂಬ ಮೌಲ್ಯಮಾಪನವಿಲ್ಲ. ನಿಮ್ಮ ಗುರಿ: ಬಳಕೆದಾರ ತಮ್ಮ ಜೀವನದಲ್ಲಿ ಈಗ ಏನಾಗುತ್ತಿದೆ ಎಂದು ಒಂದೇ ನೋಟದಲ್ಲಿ ನೋಡುತ್ತಾರೆ.</string>
+    <string name="ai_prompt_summary_entry_rules">ಅತ್ಯುನ್ನತ ನಿಯಮ — ಯಾವುದೇ ನಮೂದು ಕಳೆದುಕೊಳ್ಳಬಾರದು:\nನೀವು ಸಂಖ್ಯೆ ಹೊಂದಿರುವ ನಮೂದುಗಳನ್ನು ಪಡೆಯುತ್ತೀರಿ (ಉದಾ: \"ನಮೂದು 1 ರಿಂದ 5\").\nನೀವು ಪ್ರತಿಯೊಂದನ್ನೂ ಓದಬೇಕು, ವಿಶ್ಲೇಷಿಸಬೇಕು ಮತ್ತು ಸೇರಿಸಿಕೊಳ್ಳಬೇಕು.\nಉತ್ತರಿಸುವ ಮೊದಲು ಎಣಿಸಿ: ನಾನು ಎಲ್ಲಾ ನಮೂದುಗಳನ್ನು ಪರಿಗಣಿಸಿದ್ದೇನೆಯೇ?\nಒಂದು ಕಳೆದುಕೊಂಡಿದ್ದರೆ — ತಕ್ಷಣ ಸೇರಿಸಿ.\n\nಕಡಿಮೆ ನಮೂದುಗಳೊಂದಿಗೆ ವ್ಯವಹರಿಸುವುದು:\n- 1–2 ನಮೂದುಗಳಿಗೆ: ಮಾದರಿಗಳನ್ನು ಪ್ರತಿಪಾದಿಸದೆ ವಿಷಯಗಳನ್ನು ಸಾರಾಂಶಗೊಳಿಸಿ.\n  ಅವಲೋಕನಗಳನ್ನು ವಿವರಣೆಯಲ್ಲಿ \"ಪ್ರಾಥಮಿಕ\" ಎಂದು ಗುರುತಿಸಿ.\n- 3+ ನಮೂದುಗಳಿಂದ: ಪುನರಾವರ್ತಿತ ವಿಷಯಗಳು ಮತ್ತು ಸಂಪರ್ಕಗಳನ್ನು ಸಕ್ರಿಯವಾಗಿ ಹುಡುಕಿ.\n\nಕಾಲಿಕ ತೂಕ:\nಪ್ರತಿ ನಮೂದು ಪರಿಗಣಿಸಬೇಕು. ಒಂದೇ ವಿಷಯಕ್ಕೆ ವಿರೋಧಾತ್ಮಕ ಹೇಳಿಕೆಗಳಲ್ಲಿ ಕಾಲಿಕ ಪ್ರಗತಿಯನ್ನು ಗಮನಿಸಿ — ಹೊಸ ನಮೂದುಗಳು ಪ್ರಸ್ತುತ ಸ್ಥಿತಿಯನ್ನು ತೋರಿಸುತ್ತವೆ. ಹಳೆಯ ನಮೂದುಗಳು ಸಂದರ್ಭವನ್ನು ಒದಗಿಸುತ್ತವೆ.</string>
+    <string name="ai_prompt_summary_rules">ಭಾಷಾ ನಿಯಮಗಳು (JSON ನಲ್ಲಿನ ಎಲ್ಲಾ ಪಠ್ಯ ಕ್ಷೇತ್ರಗಳಿಗೆ):\n- ಸರಳ, ಸ್ಪಷ್ಟ ಭಾಷೆ. ಚಿಕ್ಕ ವಾಕ್ಯಗಳು.\n- ವಿದೇಶಿ ಪದಗಳಿಲ್ಲ, ತಾಂತ್ರಿಕ ಪದಗಳಿಲ್ಲ, ಕ್ಲೀಶೆಗಳಿಲ್ಲ.\n- ಪ್ರತಿಯೊಬ್ಬರೂ ಯೋಚಿಸದೆ ಪಠ್ಯವನ್ನು ತಕ್ಷಣ ಅರ್ಥಮಾಡಿಕೊಳ್ಳಬೇಕು.\n- ತಟಸ್ಥ, ಸ್ಪಷ್ಟ ಮತ್ತು ವಾಸ್ತವಿಕ, ಮೌಲ್ಯಮಾಪನಗಳಿಲ್ಲ, ಸಲಹೆಗಳಿಲ್ಲ.\n- ಉದ್ದನೆಯ ಡ್ಯಾಶ್‌ಗಳು (—) ಇಲ್ಲ. ಕಾಮಗಳು ಅಥವಾ ಪೂರ್ಣವಿರಾಮಗಳನ್ನು ಬಳಸಿ.\n\nಮೊತ್ತ ನಿಯಮ, ಸಂಪೂರ್ಣತೆಗಿಂತ ಸಂಕ್ಷಿಪ್ತತೆ:\nಎಲ್ಲಾ ವಿಷಯಗಳಾದ್ಯಂತ ಎಲ್ಲಾ ಒಳನೋಟಗಳ ಒಟ್ಟು ಸಂಖ್ಯೆ ಕನಿಷ್ಠ 15 ಆಗಿರಬೇಕು. 10 ಕ್ಕಿಂತ ಕಡಿಮೆ ದೋಷ. ಪ್ರತಿ ಆಲೋಚನೆ, ಪ್ರತಿ ಅನುಭವ, ಪ್ರತಿ ಅವಲೋಕನ ತನ್ನದೇ ಒಳನೋಟ ಅರ್ಹವಾಗಿದೆ. ಸಾರಾಂಶಗೊಳಿಸಬೇಡಿ. ಒಂದು ನಮೂದು 3 ವಿಭಿನ್ನ ವಿಷಯಗಳನ್ನು ಸ್ಪರ್ಶಿಸಿದರೆ, ಅವುಗಳಿಂದ 3 ಪ್ರತ್ಯೇಕ ಒಳನೋಟಗಳು ಹುಟ್ಟುತ್ತವೆ. JSON ಉದ್ದವಾಗಬಹುದು — ಸಂಕ್ಷಿಪ್ತತೆಗಿಂತ ಸಂಪೂರ್ಣತೆ ಮುಖ್ಯ.</string>
+    <string name="ai_prompt_summary_schema_header">JSON ಔಟ್‌ಪುಟ್ ಸ್ಕೀಮಾ:\n{\n  \"ಒಟ್ಟಾರೆ_ಎಂಟ್ರೋಪಿ\": 0.0,\n  \"ಪ್ರವೃತ್ತಿ\": \"ಏರುತ್ತಿದೆ|ಸ್ಥಿರ|ಇಳಿಯುತ್ತಿದೆ|ತಿಳಿದಿಲ್ಲ\",\n  \"ಒಟ್ಟಾರೆ_ವಿಶ್ಲೇಷಣೆ\": \"...\",\n  \"ಪ್ರಗತಿಗಳು\": [...],\n  \"ಪ್ರಮುಖ_ಕ್ರಮಗಳು\": [...],\n  \"ವರ್ಗಗಳು\": [...]\n}\n\nಕ್ಷೇತ್ರ ವ್ಯಾಖ್ಯಾನಗಳು:\n\n1) \"ಒಟ್ಟಾರೆ_ಎಂಟ್ರೋಪಿ\" (ಸಂಖ್ಯೆ, 0.0 ರಿಂದ 1.0)\n   ಬಳಕೆದಾರರ ಜೀವನದಲ್ಲಿ ಈಗ ಎಷ್ಟು ನಡೆಯುತ್ತಿದೆ? ಎಲ್ಲಾ ವಿಷಯ ಕ್ಷೇತ್ರಗಳ ಮೇಲೆ ತೂಕದ ಸರಾಸರಿ.\n   - 0.0–0.33 = ಶಾಂತ ಹಂತ (ಕಡಿಮೆ ಚಟುವಟಿಕೆ, ಕಡಿಮೆ ಬದಲಾವಣೆ)\n   - 0.34–0.66 = ಸಾಮಾನ್ಯ ಹಂತ (ಸರಾಸರಿ ಬಿಡುವಿಲ್ಲ)\n   - 0.67–1.0 = ತೀವ್ರ ಹಂತ (ಬಹಳಷ್ಟು ನಡೆಯುತ್ತಿದೆ, ಹಲವು ವಿಷಯಗಳು ಏಕಕಾಲದಲ್ಲಿ)\n\n2) \"ಪ್ರವೃತ್ತಿ\" (ಪಠ್ಯ)\n   ಕನಿಷ್ಠ 3 ನಮೂದುಗಳು ಹಲವಾರು ದಿನಗಳಲ್ಲಿ ಲಭ್ಯವಿದ್ದಾಗ ಮಾತ್ರ.\n   ಹಳೆಯ ಮತ್ತು ಹೊಸ ನಮೂದುಗಳನ್ನು ಹೋಲಿಸಿ:\n   - \"ಏರುತ್ತಿದೆ\" = ಹೆಚ್ಚು ಹೆಚ್ಚು ನಡೆಯುತ್ತಿದೆ, ಚಟುವಟಿಕೆ ಹೆಚ್ಚಾಗುತ್ತಿದೆ\n   - \"ಸ್ಥಿರ\" = ಹೋಲಿಕೆಯ ಚಟುವಟಿಕೆ ಮಟ್ಟ\n   - \"ಇಳಿಯುತ್ತಿದೆ\" = ಶಾಂತವಾಗುತ್ತಿದೆ, ಕಡಿಮೆ ವಿಷಯಗಳು\n   - \"ತಿಳಿದಿಲ್ಲ\" = ಹೇಳಿಕೆಗೆ ಸಾಕಷ್ಟು ಡೇಟಾ ಇಲ್ಲ\n\n3) \"ಒಟ್ಟಾರೆ_ವಿಶ್ಲೇಷಣೆ\" (ಪಠ್ಯ, 15–25 ವಾಕ್ಯಗಳು)\n   - ನಮೂದು ನಮೂದು ಹೋಗಿ ಮುಖ್ಯ ವಿಷಯವನ್ನು ಹೊರತೆಗೆಯಿರಿ.\n   - ಪ್ರತಿ ನಮೂದಿನ ಪ್ರತಿ ವಿಷಯವನ್ನು ಹೆಸರಿನಿಂದ ಹೆಸರಿಸಿ.\n   - ವಿಷಯಗಳ ನಡುವಿನ ಸಂಪರ್ಕಗಳನ್ನು ಗುರುತಿಸಿ.\n   - ಬಳಕೆದಾರರನ್ನು ಈಗ ಹೆಚ್ಚು ಏನು ಕಾಡುತ್ತಿದೆ?\n   - ನಮೂದುಗಳ ಮೇಲೆ ಏನು ಬದಲಾಗಿದೆ?\n   - ವಾಸ್ತವಿಕ ಮತ್ತು ವೈಯಕ್ತಿಕ — ಬಳಕೆದಾರರನ್ನು ನೇರವಾಗಿ ಸಂಬೋಧಿಸಿ.\n   - ಮೌಲ್ಯಮಾಪನಗಳಿಲ್ಲ, ಸಲಹೆಗಳಿಲ್ಲ — ಕೇವಲ ಸಾರಾಂಶಗೊಳಿಸಿ ಮತ್ತು ವ್ಯವಸ್ಥೆಗೊಳಿಸಿ.</string>
+    <string name="ai_prompt_summary_schema_fields">4) \"ಪ್ರಗತಿಗಳು\" (ಅರೇ, 0–5 ನಮೂದುಗಳು)\n   ಹಲವಾರು ನಮೂದುಗಳಲ್ಲಿ ಗೋಚರಿಸುವ ಪುನರಾವರ್ತಿತ ವಿಷಯಗಳು, ಅಭ್ಯಾಸಗಳು ಅಥವಾ ಸಂಪರ್ಕಗಳು.\n   ಪ್ರತಿ ಮಾದರಿಗೆ ಸ್ಕೀಮಾ:\n   {\n     \"ಶೀರ್ಷಿಕೆ\": \"ಚಿಕ್ಕ ಶೀರ್ಷಿಕೆ (ಗರಿಷ್ಠ 5 ಪದಗಳು)\",\n     \"ವಿವರಣೆ\": \"ಏನು ಪುನರಾವರ್ತನೆಯಾಗುತ್ತದೆ ಅಥವಾ ಸಂಬಂಧಿಸಿದೆ (2–3 ವಾಕ್ಯಗಳು).\",\n     \"ಉಲ್ಲೇಖ\": \"ಇದು ಯಾವ ನಮೂದುಗಳಿಂದ ಬರುತ್ತದೆ (1 ವಾಕ್ಯ).\"\n   }\n   ಕೇವಲ 1 ನಮೂದು ಅಥವಾ ಯಾವುದೇ ಗುರುತಿಸಬಹುದಾದ ಮಾದರಿಗಳಿಲ್ಲದಿದ್ದರೆ: ಖಾಲಿ ಅರೇ [].\n\n5) \"ಪ್ರಮುಖ_ಕ್ರಮಗಳು\" (ಅರೇ, ನಿಖರವಾಗಿ 5 ನಮೂದುಗಳು)\n   ಎಲ್ಲಾ ಡೈರಿ ನಮೂದುಗಳಿಂದ 5 ಪ್ರಮುಖ ಒಳನೋಟಗಳು. ಬಳಕೆದಾರರ ಜೀವನವನ್ನು ಈಗ ಅತ್ಯಂತ ಬಲವಾಗಿ ರೂಪಿಸುವ ಕೇಂದ್ರ ಅಂಶಗಳು ಯಾವುವು? ಮಹತ್ವದಿಂದ ವಿಂಗಡಿಸಲಾಗಿದೆ (ಪ್ರಮುಖ ಮೊದಲು). ವಿಷಯಗಳಾದ್ಯಂತ ಯೋಚಿಸಿ — ದೊಡ್ಡ ಚಿತ್ರವನ್ನು ತೋರಿಸಿ.\n   ಪ್ರತಿ ಒಳನೋಟಕ್ಕೆ ಸ್ಕೀಮಾ:\n   {\n     \"ಶೀರ್ಷಿಕೆ\": \"ಚಿಕ್ಕ ಶೀರ್ಷಿಕೆ (ಗರಿಷ್ಠ 6 ಪದಗಳು)\",\n     \"ವಿವರಣೆ\": \"13–21 ಪದಗಳು — ಒಳನೋಟವನ್ನು ಸಂಕ್ಷಿಪ್ತವಾಗಿ ಹೇಳುವ ಕಾಂಪ್ಯಾಕ್ಟ್ ವಾಕ್ಯ.\",\n     \"ವಿವರಣೆ_ಸಂಪೂರ್ಣ\": \"ವಿವರವಾದ ವಿವರಣೆ (5–8 ವಾಕ್ಯಗಳು). ನಮೂದುಗಳಲ್ಲಿ ನಿಖರವಾಗಿ ಏನು ವಿವರಿಸಲಾಗಿದೆ? ಇದು ಈಗ ಏಕೆ ಕೇಂದ್ರ ವಿಷಯ? ಇತರ ವಿಷಯಗಳೊಂದಿಗೆ ಹೇಗೆ ಸಂಬಂಧಿಸಿದೆ?\"\n   }</string>
+    <string name="ai_prompt_summary_schema_categories">6) \"ವರ್ಗಗಳು\" (ಅರೇ, ಅಗತ್ಯವಿದ್ದಷ್ಟು)\n   ಪ್ರತಿ ಗುರುತಿಸಿದ ವಿಷಯಕ್ಕೆ ಪ್ರತ್ಯೇಕ ಗುಂಪು.\n   ಪ್ರತಿ ವಿಷಯಕ್ಕೆ ಸ್ಕೀಮಾ:\n   {\n     \"ಹೆಸರು\": \"ವಿಷಯ ಹೆಸರು (ಗರಿಷ್ಠ 12 ಅಕ್ಷರಗಳು, 1–2 ಪದಗಳು)\",\n     \"ಐಕಾನ್\": \"material_icon_name\",\n     \"ಬಣ್ಣ\": \"#HEX\",\n     \"ಎಂಟ್ರೋಪಿ_ಮಟ್ಟ\": 0.0,\n     \"ಸಾರಾಂಶ\": \"ಈ ವಿಷಯದ ಸಾರಾಂಶ (3–5 ವಾಕ್ಯಗಳು). ಬಳಕೆದಾರ ಈ ಬಗ್ಗೆ ಏನು ಬರೆದಿದ್ದಾರೆ? ಪ್ರಸ್ತುತ ಸ್ಥಿತಿ ಏನು?\",\n     \"ಸಲಹೆಗಳು\": [...]\n   }\n\n   ವಿಷಯ ಹೆಸರುಗಳು — ಚಿಕ್ಕ ಮತ್ತು ಸಂಕ್ಷಿಪ್ತ:\n   ಸರಿ: \"ನಿದ್ರೆ\", \"ಕೆಲಸ\", \"ಫಿಟ್‌ನೆಸ್\", \"ಮನಸ್ಸು\", \"ಯೋಜನೆಗಳು\"\n   ತಪ್ಪು: \"ವೈಯಕ್ತಿಕ ಅಭಿವೃದ್ಧಿ\" (ತುಂಬಾ ಉದ್ದ) → \"ಅಭಿವೃದ್ಧಿ\"\n\n   ವಿಷಯಗಳು — ಕ್ರಿಯಾತ್ಮಕ:\n   ಆಧಾರವಾಗಿ ಇವುಗಳನ್ನು ಬಳಸಿ, ಆದರೆ ವಿಷಯವು ಹೊಂದಿಕೊಳ್ಳದಿದ್ದರೆ ಹೊಸದನ್ನು ರಚಿಸಿ:\n   - ನಿದ್ರೆ (icon: bedtime, farbe: #6C63FF)\n   - ಕೆಲಸ (icon: work, farbe: #FF6B6B)\n   - ಫಿಟ್‌ನೆಸ್ (icon: fitness_center, farbe: #4ECDC4)\n   - ಆಹಾರ (icon: restaurant, farbe: #FFE66D)\n   - ಮನಸ್ಸು (icon: psychology, farbe: #A78BFA)\n   - ಸಂಬಂಧಗಳು (icon: people, farbe: #F472B6)\n   - ಮನೆ (icon: home, farbe: #34D399)\n   - ಅಭಿವೃದ್ಧಿ (icon: trending_up, farbe: #60A5FA)\n   - ಯೋಜನೆಗಳು (icon: code, farbe: #F59E0B)\n   - ಆರೋಗ್ಯ (icon: health_and_safety, farbe: #EF4444)\n   - ಹಣಕಾಸು (icon: account_balance, farbe: #10B981)\n   - ವಿರಾಮ (icon: sports_esports, farbe: #EC4899)\n   - ಪ್ರಕೃತಿ (icon: grass, farbe: #22C55E)\n   - ದೈನಂದಿನ (icon: calendar_today, farbe: #78716C)\n   - ಪ್ರವಾಸ (icon: flight, farbe: #06B6D4)\n   - ಸೃಜನಶೀಲತೆ (icon: music_note, farbe: #D946EF)\n   ಹೆಚ್ಚಿನ ಐಕಾನ್‌ಗಳು: spa, coffee, self_improvement, nights_stay, directions_run, child_care, school, computer, timer, cleaning_services, directions_car, photo_camera, pets, wb_sunny, lightbulb, star, healing\n\n   ವಿಷಯದ ತೀವ್ರತೆ (ಕ್ಷೇತ್ರ \"ಎಂಟ್ರೋಪಿ_ಮಟ್ಟ\" ನಲ್ಲಿ, 0.0 ರಿಂದ 1.0):\n   ಈ ವಿಷಯ ನಮೂದುಗಳಲ್ಲಿ ಎಷ್ಟು ಬಲವಾಗಿ ಪ್ರತಿನಿಧಿಸಲಾಗಿದೆ? ಒಳ್ಳೆಯದೋ ಕೆಟ್ಟದೋ ಎಂಬ ಮೌಲ್ಯಮಾಪನವಲ್ಲ — ವಿಷಯ ಎಷ್ಟು ಪ್ರಸ್ತುತವಾಗಿದೆ.\n   - 0.0–0.33 = ಕಡಿಮೆ ಉಲ್ಲೇಖಿಸಲಾಗಿದೆ (ಅಂಚಿನಲ್ಲಿ)\n   - 0.34–0.66 = ನಿಯಮಿತವಾಗಿ ಉಲ್ಲೇಖಿಸಲಾಗಿದೆ (ಹಲವು ವಿಷಯಗಳಲ್ಲಿ ಒಂದು)\n   - 0.67–1.0 = ಬಹಳ ಪ್ರಸ್ತುತ (ಪ್ರಭಾವಶಾಲಿ ವಿಷಯ)\n\n   ವಿಷಯದ ಒಳನೋಟಗಳು (ಕ್ಷೇತ್ರ \"ಸಲಹೆಗಳು\" ನಲ್ಲಿ) — ಮೊತ್ತ:\n   ಈ ವಿಷಯಕ್ಕೆ ನಮೂದುಗಳಿಂದ ನೀವು ಪಡೆಯಬಹುದಾದ ಎಲ್ಲಾ ಒಳನೋಟಗಳನ್ನು ಹೊರತೆಗೆಯಿರಿ. ಕಡಿಮೆಗಿಂತ ಹೆಚ್ಚು ಉತ್ತಮ — ಪ್ರತಿ ವಿಷಯಕ್ಕೆ 5 ರಿಂದ 20 ಸಾಮಾನ್ಯ. ಪ್ರತಿ ಆಲೋಚನೆ, ಪ್ರತಿ ಅನುಭವ, ಪ್ರತಿ ಅವಲೋಕನ ತನ್ನದೇ ಒಳನೋಟ ಅರ್ಹವಾಗಿದೆ. ಸಾರಾಂಶಗೊಳಿಸಬೇಡಿ. ಪ್ರತಿ ಒಳನೋಟ ನಮೂದುಗಳ ನಿರ್ದಿಷ್ಟ ಹೇಳಿಕೆಗಳನ್ನು ಉಲ್ಲೇಖಿಸಬೇಕು. ಪ್ರಸ್ತುತತೆಯಿಂದ ವಿಂಗಡಿಸಲಾಗಿದೆ: \"ಹೆಚ್ಚು\" ಮೊದಲು, ನಂತರ \"ಮಧ್ಯಮ\", ನಂತರ \"ಕಡಿಮೆ\".\n\n   ಪ್ರತಿ ಒಳನೋಟಕ್ಕೆ ಸ್ಕೀಮಾ:\n   {\n     \"ಶೀರ್ಷಿಕೆ\": \"ಚಿಕ್ಕ ಶೀರ್ಷಿಕೆ (ಗರಿಷ್ಠ 6 ಪದಗಳು)\",\n     \"ವಿವರಣೆ\": \"13–21 ಪದಗಳು — ಬಳಕೆದಾರ ಬರೆದದ್ದನ್ನು ಅಥವಾ ಅನುಭವಿಸಿದ್ದನ್ನು ಸಾರಾಂಶಿಸುವ ಕಾಂಪ್ಯಾಕ್ಟ್ ವಾಕ್ಯ. ವಾಸ್ತವಿಕ, ಮೌಲ್ಯಮಾಪನವಿಲ್ಲ.\",\n     \"ಆದ್ಯತೆ\": \"ಹೆಚ್ಚು|ಮಧ್ಯಮ|ಕಡಿಮೆ\",\n     \"ಸಂಪರ್ಕ\": \"1–2 ಇತರ ವಿಷಯ ಹೆಸರುಗಳು ಸಂಬಂಧಿಸಿವೆ, ಏಕೆ ಎಂಬ ಒಂದು ವಾಕ್ಯದೊಂದಿಗೆ. ಇಲ್ಲದಿದ್ದರೆ: null\",\n     \"ಉಗಮ\": [\n       {\n         \"ದಿನಾಂಕ\": \"ನಮೂದಿನ ದಿನಾಂಕ (ಉದಾ. 28.03.2026)\",\n         \"ಸಾರಾಂಶ\": \"ಈ ನಮೂದಿನಲ್ಲಿ ಈ ವಿಷಯದ ಬಗ್ಗೆ ಏನಿತ್ತು (1–2 ವಾಕ್ಯಗಳು).\"\n       }\n     ]\n   }\n\n   ಪ್ರಸ್ತುತತೆಯ ಅರ್ಥ (ಕ್ಷೇತ್ರ \"ಆದ್ಯತೆ\"):\n   - \"ಹೆಚ್ಚು\" = ಕೇಂದ್ರ ವಿಷಯ, ಆಗಾಗ್ಗೆ ಉಲ್ಲೇಖಿಸಲಾಗಿದೆ, ಬಳಕೆದಾರರನ್ನು ಬಲವಾಗಿ ಕಾಡುತ್ತದೆ\n   - \"ಮಧ್ಯಮ\" = ಕಾಣಿಸಿಕೊಳ್ಳುತ್ತದೆ, ಆದರೆ ಪ್ರಭಾವಶಾಲಿ ಅಲ್ಲ\n   - \"ಕಡಿಮೆ\" = ಅಂಚಿನಲ್ಲಿ ಉಲ್ಲೇಖಿಸಲಾಗಿದೆ, ವೈಯಕ್ತಿಕ ಅವಲೋಕನ</string>
+    <string name="ai_prompt_summary_output">ಶಬ್ದಗಣನೆ ನಿಯಮ ವಿವರಣೆಗಳಿಗೆ (ಕಟ್ಟುನಿಟ್ಟಾಗಿ ಅನುಸರಿಸಿ):\n\"ಪ್ರಮುಖ_ಕ್ರಮಗಳು\" ಮತ್ತು \"ಸಲಹೆಗಳು\" ನಲ್ಲಿನ \"ವಿವರಣೆ\" ಯಾವಾಗಲೂ 13 ಮತ್ತು 21 ಪದಗಳ ನಡುವೆ ಇರಬೇಕು.\n- 13 ಪದಗಳಿಗಿಂತ ಕಡಿಮೆ = ತುಂಬಾ ಚಿಕ್ಕ = ದೋಷ\n- 21 ಪದಗಳಿಗಿಂತ ಹೆಚ್ಚು = ತುಂಬಾ ಉದ್ದ = ದೋಷ\nಬರೆಯುವ ಮೊದಲು ಪದಗಳನ್ನು ಎಣಿಸಿ. ಪ್ರತಿ ವಿವರಣೆ ಒಂದು ಕಾಂಪ್ಯಾಕ್ಟ್, ಸಂಪೂರ್ಣ ವಾಕ್ಯ. ಹೆಚ್ಚಲ್ಲ, ಕಡಿಮೆಯಲ್ಲ.\n\nಔಟ್‌ಪುಟ್ ಸ್ವರೂಪ — ಕಟ್ಟುನಿಟ್ಟಾದ ನಿಯಮಗಳು:\n- ಕೇವಲ JSON ಆಬ್ಜೆಕ್ಟ್‌ನೊಂದಿಗೆ ಉತ್ತರಿಸಿ.\n- ಮೊದಲು ಅಥವಾ ನಂತರ ಯಾವುದೇ ಪಠ್ಯವಿಲ್ಲ.\n- Markdown ಬ್ಯಾಕ್‌ಟಿಕ್‌ಗಳಿಲ್ಲ.\n- ನೇರವಾಗಿ { ನೊಂದಿಗೆ ಪ್ರಾರಂಭಿಸಿ ಮತ್ತು } ನೊಂದಿಗೆ ಕೊನೆಗೊಳ್ಳಿ.\n- ಮಾನ್ಯ JSON — ಕಾಣೆಯಾದ ಕಾಮಗಳಿಲ್ಲ, ಡಬಲ್ ಕೀಗಳಿಲ್ಲ.</string>
+
+    <!-- Custom Analysis System Prompt -->
+    <string name="ai_prompt_custom_intro">ನೀವು ಬುದ್ಧಿವಂತ, ಗಮನವಿಟ್ಟ ಡೈರಿ ವಿಶ್ಲೇಷಕ ಮತ್ತು ಕಾರ್ಯ ನಿರ್ವಾಹಕ.\n\nಎರಡು ಹಂತಗಳ ಕೆಲಸದ ವಿಧಾನ:\n\nಹಂತ 1 — ಸಂದರ್ಭವನ್ನು ಗ್ರಹಿಸಿ:\nಮೊದಲು ಬಳಕೆದಾರರ ಎಲ್ಲಾ ಡೈರಿ ನಮೂದುಗಳನ್ನು ಸಂಪೂರ್ಣವಾಗಿ ಓದಿ. ಪರಿಸ್ಥಿತಿ, ಮಾದರಿಗಳು, ವಿಷಯಗಳು, ಹೇಳಲಾದ ಸಂಗತಿಗಳು, ಸಮಸ್ಯೆಗಳು, ಆಸೆಗಳನ್ನು ಅರ್ಥಮಾಡಿಕೊಳ್ಳಿ. ನಮೂದುಗಳು ನಿಮ್ಮ ಸಂದರ್ಭ, ನಿಮ್ಮ ಆರಂಭ ಬಿಂದು, ನಿಮ್ಮ ಆಧಾರ. ಆದರೆ ಅವು ನಿಮ್ಮನ್ನು ಮಿತಿಗೊಳಿಸುವುದಿಲ್ಲ.\n\nಹಂತ 2 — ಕಾರ್ಯವನ್ನು ನಿರ್ವಹಿಸಿ:\n%1$s\n\nಮೇಲಿನದು ನಿಮ್ಮ ನಿಜವಾದ ಕಾರ್ಯ. ಹಂತ 1 ರ ಸಂದರ್ಭದ ಆಧಾರದ ಮೇಲೆ ಈ ಕಾರ್ಯವನ್ನು ನಿರ್ವಹಿಸಿ. ಕಾರ್ಯವು ಸಂಶೋಧನೆ, ಆಲೋಚನೆಗಳು, ಪರ್ಯಾಯಗಳು, ಸಲಹೆಗಳು ಅಥವಾ ಹೊಸ ಮಾಹಿತಿಯನ್ನು ಕೇಳಿದರೆ, ನಮೂದುಗಳಲ್ಲಿ ಇಲ್ಲದಿದ್ದರೂ ಅವುಗಳನ್ನು ಸಕ್ರಿಯವಾಗಿ ಒದಗಿಸಿ. ಆದರೆ ಯಾವುದೇ ವೈದ್ಯಕೀಯ, ಕಾನೂನು ಅಥವಾ ಆರ್ಥಿಕ ರೋಗನಿರ್ಣಯ ಅಥವಾ ಬದ್ಧ ಸಲಹೆ ನೀಡಬೇಡಿ; ಅಂತಹ ವಿಷಯಗಳಲ್ಲಿ ತಜ್ಞರ ಕಡೆಗೆ ಸೂಚಿಸಿ. ನಮೂದುಗಳು ನಿಮ್ಮ ಔಟ್‌ಪುಟ್‌ಗೆ ಮಾಹಿತಿ ನೀಡುತ್ತವೆ, ಅದನ್ನು ಮಿತಿಗೊಳಿಸುವುದಿಲ್ಲ.\n\nಮುಖ್ಯ ನಿಯಮ — ಪ್ರೊಫೈಲ್ ಕನಿಷ್ಠ 50 ಪ್ರತಿಶತ ಹೊಂದಿರುತ್ತದೆ:\nಸಂಪೂರ್ಣ ಔಟ್‌ಪುಟ್ (ಒಟ್ಟಾರೆ ವಿಶ್ಲೇಷಣೆ, ಉನ್ನತ ಕ್ರಮಗಳು, ವರ್ಗಗಳು, ಸಲಹೆಗಳು, ಪ್ರಗತಿಗಳು) ಕನಿಷ್ಠ 50 ಪ್ರತಿಶತದಷ್ಟು ಬಳಕೆದಾರರ ಕಾರ್ಯದೊಂದಿಗೆ ಸ್ಪಷ್ಟವಾಗಿ ಸಂಬಂಧ ಹೊಂದಿರಬೇಕು. ಕಾರ್ಯಕ್ಕೆ ಯಾವುದೇ ವಿಷಯ ಸಂಬಂಧವಿಲ್ಲದ ಒಳನೋಟಗಳು, ಅಂಶಗಳು ಅಥವಾ ವಿಷಯಗಳನ್ನು ಬಿಟ್ಟುಬಿಡಿ — ಕೇವಲ JSON ತುಂಬಲು ಸಾಮಾನ್ಯ ಜೀವನ ವಿಷಯಗಳಿಂದ ಔಟ್‌ಪುಟ್ ತುಂಬಬೇಡಿ. ಹಲವು ಸಾಮಾನ್ಯ ಅಂಶಗಳಿಗಿಂತ ಸ್ಪಷ್ಟ ಸಂಬಂಧವುಳ್ಳ ಕಡಿಮೆ ಅಂಶಗಳು ಉತ್ತಮ.\n\nಭಾಷೆಯ ಬಗ್ಗೆ ಮುಖ್ಯ: ಸಂಬಂಧವನ್ನು ವೈವಿಧ್ಯಮಯವಾಗಿ ವ್ಯಕ್ತಪಡಿಸಿ. ಸಮಾನಾರ್ಥಕ ಪದಗಳು, ಸಂಬಂಧಿತ ಪದಗಳು, ವಿಷಯ ಸಾಮೀಪ್ಯ ಮತ್ತು ವಿವರಣೆಗಳನ್ನು ಬಳಸಿ. ಕಾರ್ಯದ ನಿಖರ ಪದಗಳನ್ನು ಯಾಂತ್ರಿಕವಾಗಿ ಪುನರಾವರ್ತಿಸಬೇಡಿ — ಅದು ಒತ್ತಾಯದಂತೆ ತೋರುತ್ತದೆ. ಉದಾಹರಣೆಗೆ ಕಾರ್ಯ \"ಗುರಿಗಳು\": ಯೋಜನೆಗಳು, ಆಸೆಗಳು, ಮಹತ್ವಾಕಾಂಕ್ಷೆಗಳು, ನೀವು ಸಾಧಿಸಲು ಬಯಸುವುದು, ನಿಮ್ಮ ದಿಕ್ಕು, ಬೆಳವಣಿಗೆಯ ಹಂತಗಳ ಬಗ್ಗೆಯೂ ಮಾತನಾಡಿ. ಉದಾಹರಣೆಗೆ ಕಾರ್ಯ \"ಕ್ರೀಡೆ\": ಚಲನೆ, ತರಬೇತಿ, ದೈಹಿಕ ಚಟುವಟಿಕೆ, ಸಹಿಷ್ಣುತೆ, ಫಿಟ್‌ನೆಸ್, ಆರೋಗ್ಯದ ಬಗ್ಗೆಯೂ ಮಾತನಾಡಿ. ಪ್ರೊಫೈಲ್ ಸಂಬಂಧ ಅನುಭವಿಸಲ್ಪಡಬೇಕು, ಅಕ್ಷರಶಃ ಅಲ್ಲ.\n\nನಿರ್ಣಾಯಕ:\n- ಕಾರ್ಯದಲ್ಲಿ \"ವಿಶ್ಲೇಷಿಸಿ\", \"ಸಾರಾಂಶಿಸಿ\", \"ಏನು ಗಮನಾರ್ಹ\" ಇದ್ದರೆ — ನಮೂದುಗಳಿಗೆ ಹತ್ತಿರವಾಗಿ ಇರಿ.\n- ಕಾರ್ಯದಲ್ಲಿ \"ಸಂಶೋಧಿಸಿ\", \"ಪರ್ಯಾಯಗಳನ್ನು ಹುಡುಕಿ\", \"ಸೂಚಿಸಿ\", \"ಶಿಫಾರಸು ಮಾಡಿ\", \"ಸೇರಿಸಿ\", \"ಏನಾದರೆ ಏನು\", \"ಹೊಸ ಆಲೋಚನೆಗಳು\" ಇದ್ದರೆ — ನಮೂದುಗಳನ್ನು ಮೀರಿ ಸಕ್ರಿಯವಾಗಿ ಹೋಗಿ ಮತ್ತು ಸ್ವಂತ, ಹೊಸ ವಿಷಯವನ್ನು ತನ್ನಿ.\n- ಕಾರ್ಯಕ್ಕೆ ಆದ್ಯತೆ. ನಮೂದುಗಳು ಅಡಿಪಾಯ, ಗೋಡೆ ಅಲ್ಲ.</string>
+    <string name="ai_prompt_custom_headings">ಮುಖ್ಯ — ಕ್ರಿಯಾತ್ಮಕ ಶೀರ್ಷಿಕೆಗಳು:\nಬಳಕೆದಾರ ಫೋಕಸ್‌ಗೆ ನಿಖರವಾಗಿ ಹೊಂದಿಕೊಳ್ಳುವ ಮೂರು ಸೂಕ್ತ ಶೀರ್ಷಿಕೆಗಳನ್ನು ಡ್ಯಾಶ್‌ಬೋರ್ಡ್‌ಗಾಗಿ ನೀವು ಕಂಡುಹಿಡಿಯಬೇಕು. \"ಪ್ರಮುಖ ಫಲಿತಾಂಶಗಳು\" ಅಥವಾ \"ವಿಶ್ಲೇಷಣೆ\" ನಂತಹ ಸಾಮಾನ್ಯ ಶೀರ್ಷಿಕೆಗಳಿಲ್ಲ. ಬದಲಿಗೆ ಫೋಕಸ್ ಅನ್ನು ಪ್ರತಿಬಿಂಬಿಸುವ ಸೃಜನಶೀಲ, ನಿರ್ದಿಷ್ಟ ಶೀರ್ಷಿಕೆಗಳು.\nಉದಾಹರಣೆಗಳು:\n- ಫೋಕಸ್ \"ಮೀನುಹಿಡಿಯುವುದು\": \"ದೊಡ್ಡ ಹಿಡಿತಗಳು\", \"ನಿಮ್ಮ ಮೀನು ಅವಲೋಕನ\", \"ಎಲ್ಲಾ ಹಿಡಿತ ವರದಿಗಳು\"\n- ಫೋಕಸ್ \"ನಿದ್ರೆ ಗುಣಮಟ್ಟ\": \"ನಿಮ್ಮ ನಿದ್ರೆ ಮಾದರಿಗಳು\", \"ನಿದ್ರೆ ವಿಶ್ಲೇಷಣೆ\", \"ಎಲ್ಲಾ ನಿದ್ರೆ ಅವಲೋಕನಗಳು\"\n- ಫೋಕಸ್ \"ತುಂಬಾ ಮಾಡುವುದು\": \"ದೊಡ್ಡ ಸಮಯ ಕಬಳಿಕೆ\", \"ನಿಮ್ಮ ಒತ್ತಡ ಅವಲೋಕನ\", \"ಎಲ್ಲಾ ಒತ್ತಡ ಬಿಂದುಗಳು\"</string>
+    <string name="ai_prompt_custom_rules">ಸಂದರ್ಭ ನಿಯಮ — ಪ್ರತಿ ನಮೂದನ್ನು ಓದಲಾಗುತ್ತದೆ:\nನಿಮಗೆ ಸಂಖ್ಯೆ ಹಾಕಿದ ನಮೂದುಗಳು ದೊರೆಯುತ್ತವೆ. ಪ್ರತಿಯೊಂದನ್ನೂ ಸಂಪೂರ್ಣವಾಗಿ ಓದಿ ಮತ್ತು ಅವುಗಳನ್ನು ಸಂದರ್ಭವಾಗಿ ಗ್ರಹಿಸಿ. ಪ್ರತಿ ಸಂಬಂಧಿತ ವಿವರ ನಿಮ್ಮ ಔಟ್‌ಪುಟ್‌ಗೆ ಸೇರುತ್ತದೆ. ಆದರೆ: ಕಾರ್ಯವು ಬಯಸಿದರೆ ಔಟ್‌ಪುಟ್ ನಮೂದುಗಳನ್ನು ಮೀರಿ ಹೋಗಬಹುದು ಮತ್ತು ಹೋಗಬೇಕು.\n\nಕಾರ್ಯ ನಿಯಮ — ಕಾರ್ಯವನ್ನು ಪೂರೈಸಲಾಗುತ್ತದೆ:\nಬಳಕೆದಾರರ ಕಾರ್ಯವನ್ನು ಅಕ್ಷರಶಃ ನಿರ್ವಹಿಸಿ. ಕಾರ್ಯವು ಪರ್ಯಾಯಗಳನ್ನು ಕೇಳಿದರೆ, ಕೇವಲ ನಮೂದುಗಳಿಂದಲ್ಲದೆ ನಿಜವಾದ ಹೊಸ ಪರ್ಯಾಯಗಳನ್ನು ಒದಗಿಸಿ. ಕಾರ್ಯವು ಶಿಫಾರಸುಗಳನ್ನು ಕೇಳಿದರೆ, ಸಕ್ರಿಯವಾಗಿ ಸಂಶೋಧಿಸಿ ಮತ್ತು ಶಿಫಾರಸು ಮಾಡಿ. ನಮೂದುಗಳು ನಿಮ್ಮ ಉತ್ತರದ ಏಕೈಕ ಮೂಲ ಅಲ್ಲ.\n\nಔಟ್‌ಪುಟ್‌ನಲ್ಲಿ ಪ್ರತ್ಯೇಕಿಸಿ:\nನಮೂದುಗಳಿಂದ ಬಂದದ್ದು ಮತ್ತು ನೀವು ಹೊಸದಾಗಿ ಸೇರಿಸಿದ್ದನ್ನು ಸ್ಪಷ್ಟವಾಗಿ ಗುರುತಿಸಿ. ಹೀಗೆ ಬಳಕೆದಾರರಿಗೆ ಯಾವುದು ಅವರ ಸ್ವಂತ ಆಲೋಚನೆಗಳು ಮತ್ತು ಯಾವುದು ನಿಮ್ಮ ಕೊಡುಗೆ ಎಂದು ತಿಳಿಯುತ್ತದೆ.\n\nತಜ್ಞ ಸಲಹೆ ನಿಯಮ — ಯಾವುದೇ ರೋಗನಿರ್ಣಯವಿಲ್ಲ:\nಕಾರ್ಯವನ್ನು ಲೆಕ್ಕಿಸದೆ ನೀವು ಯಾವುದೇ ವೈದ್ಯಕೀಯ ರೋಗನಿರ್ಣಯ, ಚಿಕಿತ್ಸಾ ಶಿಫಾರಸುಗಳು, ಕಾನೂನು ಅಥವಾ ಆರ್ಥಿಕ ಸಲಹೆ ನೀಡಬೇಡಿ. ಅಂತಹ ವಿಷಯಗಳಲ್ಲಿ ಅರ್ಹ ತಜ್ಞರ ಕಡೆಗೆ ತಟಸ್ಥವಾಗಿ ಸೂಚಿಸಿ.\n\nಭಾಷಾ ನಿಯಮಗಳು:\n- ಸರಳ, ಸ್ಪಷ್ಟ. ಯಾವುದೇ ವಿದೇಶಿ ಪದಗಳಿಲ್ಲ.\n- ಸಹಾನುಭೂತಿಯುಳ್ಳ ಮತ್ತು ನೇರ.\n- ಉದ್ದ ಗೆರೆಗಳಿಲ್ಲ (—). ಅಲ್ಪವಿರಾಮ ಅಥವಾ ಪೂರ್ಣವಿರಾಮ ಬಳಸಿ.\n\nಪ್ರಮಾಣ ನಿಯಮ:\nಒಟ್ಟಾರೆ ಕನಿಷ್ಠ 10 ಒಳನೋಟಗಳು — ಆದರೆ ಪ್ರತಿಯೊಂದೂ ವಿಷಯದ ಪ್ರಕಾರ ಕಾರ್ಯಕ್ಕೆ ಹೊಂದಿಕೊಳ್ಳಬೇಕು. ನಿಜವಾದ ಪ್ರೊಫೈಲ್ ಸಂಬಂಧವುಳ್ಳ 10 ಒಳನೋಟಗಳು ಸಿಗದಿದ್ದರೆ, 10 ದುರ್ಬಲ ಬದಲು 7 ಬಲವಾದವುಗಳನ್ನು ಒದಗಿಸಿ. ಶುದ್ಧ ವಿಶ್ಲೇಷಣಾ ಕಾರ್ಯಗಳಲ್ಲಿ ಒಳನೋಟಗಳು ನಮೂದುಗಳಿಂದ ಬರುತ್ತವೆ, ಸೃಜನಶೀಲ ಕಾರ್ಯಗಳಲ್ಲಿ ನೀವು ಹೊಸ ವಿಷಯವನ್ನು ತರಬಹುದು.</string>
+    <string name="ai_prompt_custom_schema">JSON ಔಟ್‌ಪುಟ್ ಸ್ಕೀಮಾ:\n{\n  \"ಶೀರ್ಷಿಕೆ_ಟಾಪ್5\": \"ಟಾಪ್ 5 ಗಾಗಿ ಸೃಜನಶೀಲ ಶೀರ್ಷಿಕೆ (ಫೋಕಸ್‌ಗೆ ಸೂಕ್ತ, ಗರಿಷ್ಠ 3 ಪದಗಳು)\",\n  \"ಶೀರ್ಷಿಕೆ_ವಿಶ್ಲೇಷಣೆ\": \"ಅವಲೋಕನಕ್ಕಾಗಿ ಸೃಜನಶೀಲ ಶೀರ್ಷಿಕೆ (ಫೋಕಸ್‌ಗೆ ಸೂಕ್ತ, ಗರಿಷ್ಠ 3 ಪದಗಳು)\",\n  \"ಶೀರ್ಷಿಕೆ_ಫಲಿತಾಂಶಗಳು\": \"ಎಲ್ಲಾ ಫಲಿತಾಂಶಗಳಿಗಾಗಿ ಸೃಜನಶೀಲ ಶೀರ್ಷಿಕೆ (ಫೋಕಸ್‌ಗೆ ಸೂಕ್ತ, ಗರಿಷ್ಠ 3 ಪದಗಳು)\",\n  \"ಒಟ್ಟಾರೆ_ಎಂಟ್ರೋಪಿ\": 0.0,\n  \"ಪ್ರವೃತ್ತಿ\": \"ಏರುತ್ತಿದೆ|ಸ್ಥಿರ|ಇಳಿಯುತ್ತಿದೆ|ತಿಳಿದಿಲ್ಲ\",\n  \"ಒಟ್ಟಾರೆ_ವಿಶ್ಲೇಷಣೆ\": \"...\",\n  \"ಪ್ರಗತಿಗಳು\": [...],\n  \"ಪ್ರಮುಖ_ಕ್ರಮಗಳು\": [...],\n  \"ವರ್ಗಗಳು\": [...]\n}\n\n1) \"ಶೀರ್ಷಿಕೆ_ಟಾಪ್5/ವಿಶ್ಲೇಷಣೆ/ಫಲಿತಾಂಶಗಳು\": ಕಡ್ಡಾಯ. ಸೃಜನಶೀಲ, ನಿರ್ದಿಷ್ಟ, ಗರಿಷ್ಠ 3 ಪದಗಳು. ಬಳಕೆದಾರ ಫೋಕಸ್‌ಗೆ ಹೊಂದಿಕೊಳ್ಳಬೇಕು. ಸಾಮಾನ್ಯ ಶೀರ್ಷಿಕೆಗಳಿಲ್ಲ.\n\n2) \"ಒಟ್ಟಾರೆ_ಎಂಟ್ರೋಪಿ\" (0.0 ರಿಂದ 1.0): ಫೋಕಸ್ ಕ್ಷೇತ್ರ ನಮೂದುಗಳಲ್ಲಿ ಎಷ್ಟು ಬಲವಾಗಿ ಪ್ರತಿನಿಧಿಸಲಾಗಿದೆ?\n\n3) \"ಪ್ರವೃತ್ತಿ\": 3+ ನಮೂದುಗಳಿಗೆ ಮಾತ್ರ. ಫೋಕಸ್ ಕ್ಷೇತ್ರ ಬದಲಾಗುತ್ತಿದೆಯೇ?\n\n4) \"ಒಟ್ಟಾರೆ_ವಿಶ್ಲೇಷಣೆ\" (15–25 ವಾಕ್ಯಗಳು): ಫೋಕಸ್ ಕ್ಷೇತ್ರಕ್ಕೆ ನಮೂದುಗಳು ಏನು ಹೇಳುತ್ತವೆ? ಪ್ರತಿ ನಮೂದಿನ ಪ್ರತಿ ಪ್ರಸ್ತುತ ವಿವರವನ್ನು ಹೆಸರಿಸಿ.\n\n5) \"ಪ್ರಗತಿಗಳು\" (0–5): ಫೋಕಸ್ ಕ್ಷೇತ್ರದಲ್ಲಿ ಮಾದರಿಗಳು ಅಥವಾ ಬೆಳವಣಿಗೆಗಳು.\n   { \"ಶೀರ್ಷಿಕೆ\": \"ಗರಿಷ್ಠ 5 ಪದಗಳು\", \"ವಿವರಣೆ\": \"2–3 ವಾಕ್ಯಗಳು\", \"ಉಲ್ಲೇಖ\": \"1 ವಾಕ್ಯ\" }\n\n6) \"ಪ್ರಮುಖ_ಕ್ರಮಗಳು\" (ನಿಖರವಾಗಿ 5): ಫೋಕಸ್ ಕ್ಷೇತ್ರಕ್ಕೆ ಪ್ರಮುಖ ಒಳನೋಟಗಳು.\n   {\n     \"ಶೀರ್ಷಿಕೆ\": \"ಗರಿಷ್ಠ 6 ಪದಗಳು\",\n     \"ವಿವರಣೆ\": \"13–21 ಪದಗಳು — ಕಾಂಪ್ಯಾಕ್ಟ್ ಆಗಿ ಪಾಯಿಂಟ್‌ಗೆ.\",\n     \"ವಿವರಣೆ_ಸಂಪೂರ್ಣ\": \"5–8 ವಾಕ್ಯಗಳು ವಿವರವಾಗಿ.\"\n   }\n\n7) \"ವರ್ಗಗಳು\": ಫೋಕಸ್‌ಗೆ ಹೊಂದಿಕೊಳ್ಳುವ ವಿಷಯ ಗುಂಪುಗಳು (ಕ್ರಿಯಾತ್ಮಕವಾಗಿ ರಚಿಸಿ).\n   {\n     \"ಹೆಸರು\": \"ಗರಿಷ್ಠ 12 ಅಕ್ಷರಗಳು\", \"ಐಕಾನ್\": \"material_icon_name\", \"ಬಣ್ಣ\": \"#HEX\",\n     \"ಎಂಟ್ರೋಪಿ_ಮಟ್ಟ\": 0.0,\n     \"ಸಾರಾಂಶ\": \"3–5 ವಾಕ್ಯಗಳು\",\n     \"ಸಲಹೆಗಳು\": [{\n       \"ಶೀರ್ಷಿಕೆ\": \"ಗರಿಷ್ಠ 6 ಪದಗಳು\",\n       \"ವಿವರಣೆ\": \"13–21 ಪದಗಳು\",\n       \"ಆದ್ಯತೆ\": \"ಹೆಚ್ಚು|ಮಧ್ಯಮ|ಕಡಿಮೆ\",\n       \"ಸಂಪರ್ಕ\": \"ಇತರ ವಿಷಯಕ್ಕೆ ಸಂಪರ್ಕ ಅಥವಾ null\",\n       \"ಉಗಮ\": [{\"ದಿನಾಂಕ\":\"...\",\"ಸಾರಾಂಶ\":\"1–2 ವಾಕ್ಯಗಳು\"}]\n     }]\n   }</string>
+    <string name="ai_prompt_custom_output">ಶಬ್ದಗಣನೆ ನಿಯಮ: ಪ್ರಮುಖ_ಕ್ರಮಗಳು ಮತ್ತು ಸಲಹೆಗಳು ನಲ್ಲಿನ \"ವಿವರಣೆ\" ಯಾವಾಗಲೂ 13–21 ಪದಗಳು.\n\nಔಟ್‌ಪುಟ್ ಸ್ವರೂಪ — ಕಟ್ಟುನಿಟ್ಟಾದ ನಿಯಮಗಳು:\n- ಕೇವಲ JSON ಆಬ್ಜೆಕ್ಟ್‌ನೊಂದಿಗೆ ಉತ್ತರಿಸಿ.\n- ಮೊದಲು ಅಥವಾ ನಂತರ ಯಾವುದೇ ಪಠ್ಯವಿಲ್ಲ. ಬ್ಯಾಕ್‌ಟಿಕ್‌ಗಳಿಲ್ಲ.\n- ನೇರವಾಗಿ { ನೊಂದಿಗೆ ಪ್ರಾರಂಭಿಸಿ ಮತ್ತು } ನೊಂದಿಗೆ ಕೊನೆಗೊಳ್ಳಿ.</string>
+
+    <!-- ════════════════════════════════════════════════════════════════════
+         RETROSPECTIVE SCREEN
+         ════════════════════════════════════════════════════════════════════ -->
+    <string name="retro_title">ಅವಲೋಕನ</string>
+    <string name="retro_cd_info">ಅವಲೋಕನಗಳ ಬಗ್ಗೆ ಮಾಹಿತಿ</string>
+    <string name="retro_personal_review">ನಿಮ್ಮ ವೈಯಕ್ತಿಕ ಅವಲೋಕನ</string>
+    <string name="retro_intro_body">ಕೆಲವೊಮ್ಮೆ ನಾವು ದೈನಂದಿನ ಜೀವನದಲ್ಲಿ ನಾವು ಎಷ್ಟು ಅನುಭವಿಸಿದ್ದೇವೆ ಎಂಬುದನ್ನು ಮರೆಯುತ್ತೇವೆ. ನಿಮ್ಮ ಡೈರಿ ಎಲ್ಲವನ್ನೂ ನೆನಪಿಸಿಕೊಳ್ಳುತ್ತದೆ, ದೊಡ್ಡ ಕ್ಷಣಗಳು ಮತ್ತು ಚಿಕ್ಕವುಗಳು, </string>
+    <string name="retro_intro_cta">ಹಿಂತಿರುಗಿ ನೋಡಿ ಮತ್ತು ನಿಮ್ಮನ್ನು ಏನು ಕದಲಿಸಿದೆ ಎಂದು ಕಂಡುಹಿಡಿಯಿರಿ.</string>
+    <string name="retro_please_wait">ದಯವಿಟ್ಟು ಕಾಯಿರಿ</string>
+    <string name="retro_backup_loading">ಬ್ಯಾಕಪ್ ಲೋಡ್ ಆಗುತ್ತಿದೆ… ನಂತರ ಅವಲೋಕನಗಳು ಸ್ವಯಂಚಾಲಿತವಾಗಿ ಪ್ರಾರಂಭವಾಗುತ್ತವೆ.</string>
+    <string name="retro_profile_switching">ಪ್ರೊಫೈಲ್ ಬದಲಾವಣೆಯ ನಂತರ ಅವಲೋಕನಗಳು ಸ್ವಯಂಚಾಲಿತವಾಗಿ ಅಪ್‌ಡೇಟ್ ಆಗುತ್ತವೆ</string>
+    <string name="retro_generating">ಅವಲೋಕನಗಳು ರಚಿಸಲ್ಪಡುತ್ತಿವೆ…</string>
+    <string name="retro_ai_unavailable">AI ಈಗ ಲಭ್ಯವಿಲ್ಲ, ದಯವಿಟ್ಟು ನಂತರ ಮತ್ತೆ ಪ್ರಯತ್ನಿಸಿ.</string>
+    <string name="retro_weekly_title">ವಾರದ ಅವಲೋಕನ</string>
+    <string name="retro_weekly_subtitle">ಕಳೆದ 7 ದಿನಗಳ ಅವಲೋಕನ</string>
+    <string name="retro_weekly_empty">ಇನ್ನೂ ಯಾವುದೇ ವಾರದ ಅವಲೋಕನಗಳಿಲ್ಲ.\nವಾರಕ್ಕೆ ಕನಿಷ್ಠ 2 ಡೈರಿ ನಮೂದುಗಳು ಅಗತ್ಯವಿದೆ.</string>
+    <string name="retro_monthly_title">ತಿಂಗಳ ಅವಲೋಕನ</string>
+    <string name="retro_monthly_subtitle">ನಿಮ್ಮ ಕಳೆದ ತಿಂಗಳು ಒಂದೇ ನೋಟದಲ್ಲಿ</string>
+    <string name="retro_monthly_empty">ಇನ್ನೂ ಯಾವುದೇ ತಿಂಗಳ ಅವಲೋಕನಗಳಿಲ್ಲ.\nತಿಂಗಳ ಕೊನೆಯಲ್ಲಿ ವಾರದ ಅವಲೋಕನಗಳಿಂದ ರಚಿಸಲಾಗುತ್ತದೆ.</string>
+    <string name="retro_yearly_title">ವರ್ಷದ ಅವಲೋಕನ</string>
+    <string name="retro_yearly_subtitle">ನೆನಪುಗಳಿಂದ ತುಂಬಿದ ಪೂರ್ಣ ವರ್ಷ</string>
+    <string name="retro_yearly_empty">ಇನ್ನೂ ಯಾವುದೇ ವರ್ಷದ ಅವಲೋಕನಗಳಿಲ್ಲ.\nವರ್ಷದ ಕೊನೆಯಲ್ಲಿ ತಿಂಗಳ ಅವಲೋಕನಗಳಿಂದ ರಚಿಸಲಾಗುತ್ತದೆ.</string>
+    <string name="retro_premium_unlock">Premium ನೊಂದಿಗೆ ಎಲ್ಲಾ ಅವಲೋಕನಗಳನ್ನು ಅನ್‌ಲಾಕ್ ಮಾಡಿ</string>
+    <string name="retro_at_a_glance">ಒಂದು ನೋಟದಲ್ಲಿ</string>
+    <string name="retro_cd_expand">ವಿಸ್ತರಿಸಿ</string>
+    <string name="retro_cd_collapse">ಮುಚ್ಚಿ</string>
+    <string name="retro_share_text_label">ಪಠ್ಯ</string>
+
+    <!-- Fallback titles (when AI title generation fails) -->
+    <string name="retro_fallback_week">ವಾರದ ಅವಲೋಕನ</string>
+    <string name="retro_fallback_month">ತಿಂಗಳ ಅವಲೋಕನ</string>
+    <string name="retro_fallback_year">ವರ್ಷದ ಅವಲೋಕನ %1$d</string>
+    <string name="retro_period_label_week">ವಾರ %1$d (%2$s - %3$s)</string>
+    <!-- Retro: Photos, TTS, Sharing -->
+    <string name="retro_photos_videos">ಫೋಟೋಗಳು &amp; ವೀಡಿಯೊಗಳು</string>
+    <string name="retro_photos_videos_colon">ಫೋಟೋಗಳು &amp; ವೀಡಿಯೊಗಳು:</string>
+    <string name="retro_cd_video">ವೀಡಿಯೊ</string>
+    <string name="retro_cd_photo">ಫೋಟೋ</string>
+    <string name="retro_play_video">ವೀಡಿಯೊ ಪ್ಲೇ ಮಾಡಿ</string>
+    <string name="retro_enable_voices">ಸೆಟ್ಟಿಂಗ್‌ಗಳಲ್ಲಿ ಧ್ವನಿಗಳನ್ನು ಆನ್ ಮಾಡಿ</string>
+    <string name="retro_tts_stop">ನಿಲ್ಲಿಸಿ</string>
+    <string name="retro_tts_read">ಓದಿ ಕೇಳಿಸಿ</string>
+    <string name="retro_tts_wait">ದಯವಿಟ್ಟು ಕಾಯಿರಿ, Text-to-Speech ಸೃಷ್ಟಿಸಲಾಗುತ್ತಿದೆ…</string>
+    <string name="retro_cd_share">ಹಂಚಿಕೊಳ್ಳಿ</string>
+    <string name="retro_share_title">ಅವಲೋಕನ ಹಂಚಿಕೊಳ್ಳಿ</string>
+    <string name="retro_share_text_content">ಅವಲೋಕನ ಪಠ್ಯ</string>
+    <string name="retro_photo_n">ಫೋಟೋ %1$d</string>
+    <string name="retro_share_header">BestJournal ಆಪ್‌ನಿಂದ ಅವಲೋಕನ</string>
+    <string name="retro_at_a_glance_colon">ಒಂದು ನೋಟದಲ್ಲಿ:</string>
+    <!-- Retro: Locked/Premium -->
+    <string name="retro_cd_locked">ಲಾಕ್ ಆಗಿದೆ</string>
+    <string name="retro_unlock_premium_short">Premium ಅನ್‌ಲಾಕ್ ಮಾಡಿ</string>
+    <string name="retro_cd_premium_required">Premium ಅಗತ್ಯ</string>
+    <!-- Retro: Benefits info dialog -->
+    <string name="retro_your_ai_reviews">ನಿಮ್ಮ AI ಅವಲೋಕನಗಳು</string>
+    <string name="retro_weekly_p1">AI ನಿಮ್ಮ ವಾರವನ್ನು ವೈಯಕ್ತಿಕ ಕಥನವಾಗಿ ಸಾರಾಂಶಗೊಳಿಸುತ್ತದೆ</string>
+    <string name="retro_weekly_p2">ಭಾವನಾತ್ಮಕ ಮಾದರಿಗಳು ಮತ್ತು ಹೈಲೈಟ್‌ಗಳು ಗೋಚರಿಸುತ್ತವೆ</string>
+    <string name="retro_weekly_p3">ನೀವು ಕನಿಷ್ಠ 2 ನಮೂದುಗಳನ್ನು ಹೊಂದಿದ್ದರೆ ಪ್ರತಿ ಭಾನುವಾರ ಸ್ವಯಂಚಾಲಿತವಾಗಿ ರಚಿಸಲಾಗುತ್ತದೆ</string>
+    <string name="retro_weekly_p4">ಮೊದಲ 2 ವಾರಗಳು ಉಚಿತ</string>
+    <string name="retro_monthly_p1">ನಿಮ್ಮ ವಾರದ ಅವಲೋಕನಗಳನ್ನು ತಿಂಗಳ ಕಥನಕ್ಕೆ ಸಂಪರ್ಕಿಸುತ್ತದೆ</string>
+    <string name="retro_monthly_p2">ತಿಂಗಳ ಮೇಲೆ ಸಾಮಾನ್ಯ ಎಳೆಗಳು ಮತ್ತು ಬೆಳವಣಿಗೆಗಳು ಗೋಚರಿಸುತ್ತವೆ</string>
+    <string name="retro_monthly_p3">ನಿಮ್ಮ ಎಂಟ್ರಿಗಳಿಂದ ಬೆಳವಣಿಗೆಗಳನ್ನು ತೋರಿಸುತ್ತದೆ</string>
+    <string name="retro_yearly_p1">ನಿಮ್ಮ ಪೂರ್ಣ ವರ್ಷ ಒಂದೇ ನೋಟದಲ್ಲಿ</string>
+    <string name="retro_yearly_p2">KI ನಿಮ್ಮ ವರ್ಷದ ದೊಡ್ಡ ವಿಷಯಗಳನ್ನು ಸಾರಾಂಶ ಮಾಡುತ್ತದೆ</string>
+    <string name="retro_yearly_p3">ವೈಯಕ್ತಿಕ ಬೆಳವಣಿಗೆ ಗೋಚರ ಮತ್ತು ಸ್ಪಷ್ಟವಾಗುತ್ತದೆ</string>
+    <!-- Retro: Premium upsell sheet -->
+    <string name="retro_your_reviews">ನಿಮ್ಮ ವೈಯಕ್ತಿಕ ಅವಲೋಕನಗಳು</string>
+    <string name="retro_premium_reviews_desc">Premium ನೊಂದಿಗೆ AI ನಿಮ್ಮ ಡೈರಿ ನಮೂದುಗಳಿಂದ ಸ್ವಯಂಚಾಲಿತವಾಗಿ ಅವಲೋಕನಗಳನ್ನು ರಚಿಸುತ್ತದೆ:</string>
+    <string name="retro_benefit_weekly">ಮೊದಲ 2 ಮಾತ್ರ ಅಲ್ಲ, ಎಲ್ಲಾ ವಾರದ ಅವಲೋಕನಗಳು – ನಿಮ್ಮ AI ದೈನಂದಿನ ಕೋಟಾದ ವ್ಯಾಪ್ತಿಯಲ್ಲಿ</string>
+    <string name="retro_benefit_monthly">ನಿಮ್ಮ ಪ್ರಗತಿ ಮತ್ತು ಬದಲಾವಣೆಗಳನ್ನು ಗೋಚರಗೊಳಿಸುವ ತಿಂಗಳ ಅವಲೋಕನಗಳು</string>
+    <string name="retro_benefit_yearly">ವರ್ಷದ ಅವಲೋಕನಗಳು, ನಿಮ್ಮ ಪೂರ್ಣ ವರ್ಷ ವೈಯಕ್ತಿಕ ಕಥನವಾಗಿ</string>
+    <string name="retro_start_sub">ಚಂದಾದಾರಿಕೆ ಪ್ರಾರಂಭಿಸಿ</string>
+    <string name="retro_decide_later">ನಂತರ ನಿರ್ಧರಿಸಿ</string>
+
+    <!-- Month names for retrospective grouping -->
+    <string name="month_january">ಜನವರಿ</string>
+    <string name="month_february">ಫೆಬ್ರವರಿ</string>
+    <string name="month_march">ಮಾರ್ಚ್</string>
+    <string name="month_april">ಏಪ್ರಿಲ್</string>
+    <string name="month_may">ಮೇ</string>
+    <string name="month_june">ಜೂನ್</string>
+    <string name="month_july">ಜುಲೈ</string>
+    <string name="month_august">ಆಗಸ್ಟ್</string>
+    <string name="month_september">ಸೆಪ್ಟೆಂಬರ್</string>
+    <string name="month_october">ಅಕ್ಟೋಬರ್</string>
+    <string name="month_november">ನವೆಂಬರ್</string>
+    <string name="month_december">ಡಿಸೆಂಬರ್</string>
+
+    <!-- ════════════════════════════════════════════════════════════════════
+         ONBOARDING
+         ════════════════════════════════════════════════════════════════════ -->
+    <string name="onboarding_welcome">Best Journal ಗೆ\nಸ್ವಾಗತ</string>
+    <string name="onboarding_subtitle">ನಿಮ್ಮ ವ್ಯಕ್ತಿಗತ KI ಡೈರಿ\nದೈನಂದಿನ ಜೀವನದಲ್ಲಿ ಹೆಚ್ಚಿನ ಸ್ಪಷ್ಟತೆಗಾಗಿ</string>
+    <string name="onboarding_feature_speech">ಮಾತನಾಡಿ ಅಥವಾ ಬರೆಯಿರಿ, AI ಎರಡನ್ನೂ ಅರ್ಥಮಾಡಿಕೊಳ್ಳುತ್ತದೆ</string>
+    <string name="onboarding_feature_listen">ನಿಮ್ಮ ನಮೂದುಗಳನ್ನು ಓದಿ ಕೇಳಿಸಿಕೊಳ್ಳಿ</string>
+    <string name="onboarding_feature_secure">ನಿಮ್ಮ ನಮೂದುಗಳು ಸಾಧನದಲ್ಲಿ ಉಳಿಯುತ್ತವೆ; AI ವಿನಂತಿಗಳು ಎನ್‌ಕ್ರಿಪ್ಟ್ ಆಗಿ ರವಾನೆಯಾಗುತ್ತವೆ</string>
+    <string name="onboarding_goals_title">AI ಡೈರಿಯಿಂದ ನೀವು ಏನನ್ನು\nಸಾಧಿಸಲು ಬಯಸುತ್ತೀರಿ?</string>
+    <string name="onboarding_goal_stress">ಒತ್ತಡ ಕಡಿಮೆ ಮಾಡಿ</string>
+    <string name="onboarding_goal_clarity">ಸ್ಪಷ್ಟತೆ ಹುಡುಕಿ</string>
+    <string name="onboarding_goal_growth">ವೈಯಕ್ತಿಕ ಬೆಳವಣಿಗೆ</string>
+    <string name="onboarding_goal_thoughts">ನನ್ನ ಆಲೋಚನೆಗಳನ್ನು ಹಿಡಿದಿಡಿ</string>
+    <string name="onboarding_how_step1_title">ನಿಮ್ಮ ನಮೂದನ್ನು ಮಾತನಾಡಿ ಅಥವಾ ಟೈಪ್ ಮಾಡಿ</string>
+    <string name="onboarding_how_step1_desc">ನಿಮ್ಮ ಆಲೋಚನೆಗಳನ್ನು ಧ್ವನಿ ಸಂದೇಶವಾಗಿ ರೆಕಾರ್ಡ್ ಮಾಡಿ ಅಥವಾ ಟೈಪ್ ಮಾಡಿ, ನೀವು ಇಚ್ಛಿಸುವಂತೆ.</string>
+    <string name="onboarding_how_step2_title">AI ಸುಧಾರಿಸುತ್ತದೆ ಮತ್ತು ವಿಶ್ಲೇಷಿಸುತ್ತದೆ</string>
+    <string name="onboarding_how_step2_desc">ನಿಮ್ಮ ಪಠ್ಯವನ್ನು ಸ್ವಯಂಚಾಲಿತವಾಗಿ ಪರಿಷ್ಕರಿಸಲಾಗುತ್ತದೆ ಮತ್ತು ವಿಭಿನ್ನ ದೃಷ್ಟಿಕೋನಗಳಿಂದ ವಿಶ್ಲೇಷಿಸಲಾಗುತ್ತದೆ.</string>
+    <string name="onboarding_how_step3_desc">ವಿಶೇಷ ಕ್ಷಣಗಳನ್ನು ಹಿಡಿದಿಡಿ, AI ಅವುಗಳನ್ನು ವಿಶ್ಲೇಷಣೆಯಲ್ಲಿ ಪರಿಗಣಿಸುತ್ತದೆ.</string>
+    <string name="onboarding_how_step4_title">ಮಾದರಿಗಳು ಮತ್ತು ಒಳನೋಟಗಳನ್ನು ಕಂಡುಹಿಡಿಯಿರಿ</string>
+    <string name="onboarding_how_step4_desc">KI Dashboard ನಿಮ್ಮ ಎಂಟ್ರಿಗಳಿಂದ ಸಂಬಂಧಗಳನ್ನು ತೋರಿಸುತ್ತದೆ.</string>
+    <string name="onboarding_how_step5_title">ವಾರ, ತಿಂಗಳ ಮತ್ತು ವರ್ಷದ ಅವಲೋಕನ</string>
+    <string name="onboarding_how_step5_desc">ಸ್ವಯಂಚಾಲಿತ ಅವಲೋಕನಗಳು ಸಮಯದೊಂದಿಗೆ ನೀವು ಹೇಗೆ ಅಭಿವೃದ್ಧಿಯಾಗುತ್ತೀರಿ ಎಂದು ತೋರಿಸುತ್ತವೆ.</string>
+    <string name="onboarding_premium_feature_improve">ದೈನಂದಿನ AI ಪಠ್ಯ ಸುಧಾರಣೆ, ಪ್ರತಿ ನಮೂದು ಹೆಚ್ಚು ಸ್ಪಷ್ಟ ಮತ್ತು ಅಭಿವ್ಯಕ್ತಿಶೀಲವಾಗುತ್ತದೆ</string>
+    <string name="onboarding_premium_feature_dashboard">ಪ್ರತಿ ಹೊಸ ನಮೂದಿಗೆ ಸ್ವಯಂಚಾಲಿತ ಡ್ಯಾಶ್‌ಬೋರ್ಡ್ ಅಪ್‌ಡೇಟ್‌ಗಳು</string>
+    <string name="onboarding_premium_feature_retro">ವಾರ, ತಿಂಗಳ ಮತ್ತು ವರ್ಷದ ಅವಲೋಕನಗಳು ನಿಮ್ಮ ಬೆಳವಣಿಗೆಯನ್ನು ತೋರಿಸುತ್ತವೆ</string>
+    <string name="onboarding_premium_feature_patterns">ಮಾದರಿಗಳನ್ನು ಗೋಚರಪಡಿಸಿ: KI ನಿಮ್ಮ ಎಂಟ್ರಿಗಳಲ್ಲಿ ಮರುಕಳಿಸುವ ಚಿಂತನೆ ಮತ್ತು ಭಾವನಾ ಮಾದರಿಗಳನ್ನು ತೋರಿಸುತ್ತದೆ</string>
+    <string name="onboarding_premium_feature_noads">ಅಡಚಣೆಯಿಲ್ಲದೆ ಬರೆಯಿರಿ ಮತ್ತು ಪ್ರತಿಬಿಂಬಿಸಿ</string>
+    <string name="onboarding_free_trial">ಉಚಿತ, ಯಾವಾಗ ಬೇಕಾದರೂ ರದ್ದು ಮಾಡಬಹುದು</string>
+    <string name="onboarding_free_after_trial">ನಂತರ ನೀವು Best Journal ಅನ್ನು ಮುಂದುವರಿಸುತ್ತೀರಿ,\nವಾರಕ್ಕೆ ಸೀಮಿತ AI ಕಾಲ್‌ಗಳೊಂದಿಗೆ ಉಚಿತವಾಗಿ.</string>
+    <string name="onboarding_start_free">ಉಚಿತವಾಗಿ ಪ್ರಾರಂಭಿಸಿ</string>
+    <string name="onboarding_without_premium">Premium ಇಲ್ಲದೆ ಮುಂದುವರಿಸಿ</string>
+    <string name="onboarding_feature_profiles">ವಿಭಿನ್ನ ದೃಷ್ಟಿಕೋನಗಳಿಗಾಗಿ 5 ಬುದ್ಧಿವಂತ ವಿಶ್ಲೇಷಣೆ ಪ್ರೊಫೈಲ್‌ಗಳು</string>
+    <string name="onboarding_goals_select">ಒಂದು ಅಥವಾ ಹೆಚ್ಚು ಗುರಿಗಳನ್ನು ಆಯ್ಕೆಮಾಡಿ</string>
+    <string name="onboarding_how_step3_title">ಫೋಟೋಗಳನ್ನು ಸೇರಿಸಿ</string>
+    <string name="onboarding_how_title">ಇದು ಇಷ್ಟು ಸರಳ</string>
+    <string name="onboarding_perspectives_title">ನಿಮ್ಮ ಜೀವನದ ಮೇಲೆ\nವಿವಿಧ ದೃಷ್ಟಿಕೋನಗಳು</string>
+    <string name="onboarding_premium_feature_pdf">ಫೋಟೋಗಳೊಂದಿಗೆ PDF ರಫ್ತು, ನಿಮ್ಮ ನಮೂದುಗಳನ್ನು ಡಾಕ್ಯುಮೆಂಟ್ ಆಗಿ ಉಳಿಸಿ</string>
+    <string name="onboarding_premium_profiles">ನಿಮ್ಮ ಜೀವನಕ್ಕೆ ಆಳವಾದ ಒಳನೋಟಗಳಿಗಾಗಿ 5 ಬುದ್ಧಿವಂತ ಡ್ಯಾಶ್‌ಬೋರ್ಡ್ ಪ್ರೊಫೈಲ್‌ಗಳು</string>
+    <string name="onboarding_premium_profiles_unlimited">ಸಂಖ್ಯಾ ಮಿತಿ ಇಲ್ಲದ ಸ್ವಂತ AI ಪ್ರೊಫೈಲ್‌ಗಳು</string>
+    <string name="onboarding_try_premium">Premium ಒದಗಿಸುವ ಸೌಲಭ್ಯಗಳಲ್ಲಿ ಕೆಲವು:</string>
+
+    <!-- ════════════════════════════════════════════════════════════════════
+         PAYWALL
+         ════════════════════════════════════════════════════════════════════ -->
+    <string name="paywall_prices_loading">ಬೆಲೆಗಳು ಲೋಡ್ ಆಗುತ್ತಿವೆ…</string>
+    <string name="paywall_sub_loading_toast">ಚಂದಾದಾರಿಕೆ ಲೋಡ್ ಆಗುತ್ತಿದೆ, ದಯವಿಟ್ಟು ಸ್ವಲ್ಪ ಸಮಯದಲ್ಲಿ ಮತ್ತೆ ಪ್ರಯತ್ನಿಸಿ.</string>
+    <string name="paywall_purchase_loading_toast">ಖರೀದಿ ಪ್ರಕ್ರಿಯೆ ಲೋಡ್ ಆಗುತ್ತಿದೆ, ದಯವಿಟ್ಟು ಸ್ವಲ್ಪ ಸಮಯದಲ್ಲಿ ಮತ್ತೆ ಪ್ರಯತ್ನಿಸಿ.</string>
+    <string name="paywall_today">ಇಂದು</string>
+    <string name="paywall_full_access">ಪೂರ್ಣ ಪ್ರವೇಶ</string>
+    <string name="paywall_day7">ದಿನ 7</string>
+    <string name="paywall_reminder">ಜ್ಞಾಪನೆ</string>
+    <string name="paywall_day8">ದಿನ 8</string>
+    <string name="paywall_first_payment">ಮೊದಲ ಪಾವತಿ</string>
+    <string name="paywall_yearly_note">ನಂತರ ವರ್ಷಕ್ಕೆ %1$s, ಸ್ವಯಂಚಾಲಿತವಾಗಿ ನವೀಕರಿಸಲ್ಪಡುತ್ತದೆ\nಪ್ರಯೋಗ ಅವಧಿಯಲ್ಲಿ ಯಾವಾಗ ಬೇಕಾದರೂ ರದ್ದು ಮಾಡಬಹುದು</string>
+    <string name="paywall_most_popular">ಶಿಫಾರಸು ಮಾಡಲಾಗಿದೆ</string> <!-- SHORTER: ಜನಪ್ರಿಯ -->
+    <string name="paywall_monthly_plan">ಮಾಸಿಕ ಚಂದಾದಾರಿಕೆ, ತಿಂಗಳಿಗೆ %1$s</string>
+    <string name="paywall_lifetime_title">ಒಂದು ಬಾರಿಯ ಖರೀದಿ</string>
+    <string name="paywall_lifetime_desc">ಒಮ್ಮೆ ಪಾವತಿಸು, ಎಲ್ಲವನ್ನೂ ಶಾಶ್ವತವಾಗಿ ಬಳಸು</string>
+    <string name="paywall_lifetime_note">ಚಂದಾದಾರಿಕೆ ಇಲ್ಲ, ನವೀಕರಣ ಇಲ್ಲ</string>
+    <string name="paywall_free_note">ಅಪ್ಲಿಕೇಶನ್ ಚಂದಾದಾರಿಕೆ ಇಲ್ಲದೆಯೂ ಕಾರ್ಯನಿರ್ವಹಿಸುತ್ತದೆ.</string>
+    <string name="paywall_legal_hint" formatted="false">ಚಂದಾದಾರಿಕೆಯಿಂದ ನೀನು %1$s ಒಪ್ಪುತ್ತೀಯ. ನಿನ್ನ 14-ದಿನಗಳ ಒಪ್ಪಂದ ರದ್ದು ಹಕ್ಕನ್ನು ಅಲ್ಲಿ ವಿವರಿಸಲಾಗಿದೆ.</string>
+    <string name="paywall_legal_hint_link">ಬಳಕೆ ನಿಯಮಗಳನ್ನು</string>
+
+    <!-- Paywall features -->
+    <string name="paywall_feature_patterns">ನಿಮ್ಮ ಚಿಂತನೆಯಲ್ಲಿ ಮರುಕಳಿಸುವ ಮಾದರಿಗಳನ್ನು ಗುರುತಿಸಿ</string>
+    <string name="paywall_feature_improve">ಪ್ರತಿ ನಮೂದಿಗೆ ದೈನಂದಿನ AI ಪಠ್ಯ ಸುಧಾರಣೆ</string>
+    <string name="paywall_feature_dashboard">ಪ್ರತಿ ನಮೂದಿನ ನಂತರ ಸ್ವಯಂಚಾಲಿತ ಡ್ಯಾಶ್‌ಬೋರ್ಡ್ ಅಪ್‌ಡೇಟ್‌ಗಳು</string>
+    <string name="paywall_feature_retro">AI ನೊಂದಿಗೆ ವಾರ, ತಿಂಗಳ ಮತ್ತು ವರ್ಷದ ಅವಲೋಕನಗಳು</string>
+    <string name="paywall_feature_pdf">ಫೋಟೋಗಳೊಂದಿಗೆ ಡೈರಿ ನಮೂದುಗಳನ್ನು PDF ಆಗಿ ರಫ್ತು ಮಾಡಿ</string>
+    <string name="paywall_feature_noads">ಅಡಚಣೆಯಿಲ್ಲದೆ ಬರೆಯಿರಿ ಮತ್ತು ಪ್ರತಿಬಿಂಬಿಸಿ</string>
+    <string name="paywall_feature_profiles">ಸಂಖ್ಯಾ ಮಿತಿ ಇಲ್ಲದ ಸ್ವಂತ AI ಪ್ರೊಫೈಲ್‌ಗಳು</string>
+
+    <!-- Paywall personalized headlines -->
+    <string name="paywall_headline_stress">ದೈನಂದಿನ ಜೀವನದಲ್ಲಿ ಹೆಚ್ಚು ಸ್ಪಷ್ಟತೆ</string>
+    <string name="paywall_headline_stress_sub">ಪ್ರತಿದಿನ ನಿಮ್ಮನ್ನು ಆಕ್ರಮಿಸಿಕೊಳ್ಳುವುದನ್ನು ಗುರುತಿಸಿ ಮತ್ತು ಅದನ್ನು ಸ್ಪಷ್ಟಪಡಿಸಿ.</string>
+    <string name="paywall_headline_clarity">ನಿಮ್ಮನ್ನು ಉತ್ತಮವಾಗಿ ಅರ್ಥಮಾಡಿಕೊಳ್ಳಿ</string>
+    <string name="paywall_headline_clarity_sub">AI ನಿಮ್ಮ ನಮೂದುಗಳಲ್ಲಿನ ಮರುಕಳಿಸುವ ಮಾದರಿಗಳನ್ನು ಗೋಚರಿಸುವಂತೆ ಮಾಡುತ್ತದೆ</string>
+    <string name="paywall_headline_growth">ಪ್ರತಿ ದಿನದಲ್ಲಿ ಒಳ್ಳೆಯದನ್ನು ಕಂಡುಹಿಡಿಯಿರಿ</string>
+    <string name="paywall_headline_growth_sub">ಕೃತಜ್ಞತೆ ಮತ್ತು ಬೆಳವಣಿಗೆಗಾಗಿ ನಿಮ್ಮ ವೈಯಕ್ತಿಕ ಜಾಗ</string>
+    <string name="paywall_headline_thoughts">ನಿಮ್ಮ ಆಲೋಚನೆಗಳನ್ನು ಹರಿಯಲು ಬಿಡಿ</string>
+    <string name="paywall_headline_thoughts_sub">ನಿನ್ನ ದೈನಂದಿನ ಜೀವನದಲ್ಲಿ ಸೃಜನಶೀಲ ಜೊತೆಗಾರ</string>
+    <string name="paywall_headline_default">ನಿಮ್ಮನ್ನು ಕಂಡುಹಿಡಿಯಿರಿ\nಪ್ರತಿ ದಿನ ಸ್ವಲ್ಪ ಹೆಚ್ಚು</string>
+    <string name="paywall_headline_default_sub">ನಿನ್ನ ದೈನಂದಿನ ಜೀವನದಲ್ಲಿ ವೈಯಕ್ತಿಕ AI ಜೊತೆಗಾರ</string>
+
+    <!-- Exit intent offer -->
+    <string name="paywall_exit_wait">ಸ್ವಲ್ಪ ಕಾಯಿರಿ!</string>
+    <string name="paywall_exit_special_offer">ನಮ್ಮಲ್ಲಿ ನಿಮಗಾಗಿ\nವಿಶೇಷ ಆಫರ್ ಇದೆ:</string>
+    <string name="paywall_exit_discount">%1$d ತಿಂಗಳಿಗೆ ರಿಯಾಯಿತಿ</string>
+    <string name="paywall_exit_price_comparison">ತಿಂಗಳಿಗೆ %2$s ಬದಲು ಕೇವಲ %1$s</string>
+    <string name="paywall_exit_start_discount">ಶುಲ್ಕ ಅನ್ವಯ — 2 ತಿಂಗಳು ಅರ್ಧ ಬೆಲೆಯಲ್ಲಿ</string>
+
+    <!-- ════════════════════════════════════════════════════════════════════
+         CHURN FLOW DIALOG
+         ════════════════════════════════════════════════════════════════════ -->
+    <string name="churn_your_sub">ನಿಮ್ಮ ಚಂದಾದಾರಿಕೆ</string>
+    <string name="churn_plan_yearly">ವಾರ್ಷಿಕ ಚಂದಾದಾರಿಕೆ</string>
+    <string name="churn_plan_monthly">ಮಾಸಿಕ ಚಂದಾದಾರಿಕೆ</string>
+    <string name="churn_plan">ಯೋಜನೆ</string>
+    <string name="churn_price">ಬೆಲೆ</string>
+    <string name="churn_renewal">ನವೀಕರಣ</string>
+    <string name="churn_automatic">ಸ್ವಯಂಚಾಲಿತ</string>
+    <string name="churn_promo_active_label">ರಿಯಾಯಿತಿ</string>
+    <string name="churn_promo_one_month_remaining">1 ತಿಂಗಳು ಬಾಕಿ — ನಂತರ ತಿಂಗಳಿಗೆ <xliff:g id="base_price" example="3,99 €">%1$s</xliff:g></string>
+    <string name="churn_promo_months_remaining"><xliff:g id="months" example="2">%1$d</xliff:g> ತಿಂಗಳು ಬಾಕಿ — ನಂತರ ತಿಂಗಳಿಗೆ <xliff:g id="base_price" example="3,99 €">%2$s</xliff:g></string>
+    <string name="churn_auto_renew_note">ನಿಮ್ಮ ಚಂದಾದಾರಿಕೆ Google Play ಮೂಲಕ ಸ್ವಯಂಚಾಲಿತವಾಗಿ ನವೀಕರಿಸುತ್ತದೆ. ಯಾವಾಗಲಾದರೂ ರದ್ದುಗೊಳಿಸಬಹುದು.</string>
+    <string name="churn_cancel_sub">ಚಂದಾದಾರಿಕೆ ರದ್ದುಗೊಳಿಸಿ</string>
+    <string name="churn_reason_too_expensive">ತುಂಬಾ ದುಬಾರಿ</string>
+    <string name="churn_reason_unused">ಬಹಳ ಕಡಿಮೆ ಬಳಸುತ್ತೇನೆ</string>
+    <string name="churn_per_year">ವರ್ಷಕ್ಕೆ</string>
+    <string name="churn_per_month">ತಿಂಗಳಿಗೆ</string>
+    <string name="churn_reason_features">ನನಗೆ ಬೇಕಾದ ವೈಶಿಷ್ಟ್ಯಗಳಲ್ಲ</string>
+    <string name="churn_reason_other">ಬೇರೆ ಕಾರಣ</string>
+    <string name="churn_sorry_title">ನೀವು ಹೋಗುತ್ತಿರುವುದು ವಿಷಾದನೀಯ</string>
+    <string name="churn_sorry_body">ರದ್ದುಗೊಳಿಸುವ ಮೊದಲು, ಏಕೆ ಎಂದು ನಮಗೆ ಹೇಳುವಿರಾ? ಆಪ್ ಅನ್ನು ಸುಧಾರಿಸಲು ಇದು ನಮಗೆ ಸಹಾಯ ಮಾಡುತ್ತದೆ.</string>
+    <string name="churn_exclusive_offer">ನಿಮಗಾಗಿ ಆಫರ್</string>
+    <string name="churn_offer_subtitle">ನಿಮಗಾಗಿ ನಮ್ಮ ಕೊಡುಗೆ</string>
+    <string name="churn_offer_feature_ai">ದೈನಂದಿನ AI ವಿಶ್ಲೇಷಣೆಗಳು</string>
+    <string name="churn_offer_feature_perspectives">ಎಲ್ಲ 4 ಪೂರ್ವನಿರ್ಧಾರಿತ AI ಪ್ರೊಫೈಲ್‌ಗಳು + ನಿಮಗೆ ಬೇಕಾದಷ್ಟು ಸ್ವಂತ</string>
+    <string name="churn_offer_feature_voice">Premium ಧ್ವನಿ ಗುರುತಿಸುವಿಕೆ</string>
+    <string name="churn_offer_auto_renew">ಸ್ವಯಂಚಾಲಿತವಾಗಿ ನವೀಕರಿಸುತ್ತದೆ, ಯಾವಾಗಲಾದರೂ ರದ್ದುಗೊಳಿಸಬಹುದು</string>
+    <string name="churn_accept_offer">ಆಫರ್ ಸ್ವೀಕರಿಸಿ</string>
+    <string name="churn_switch_yearly">ಅಥವಾ ವಾರ್ಷಿಕ ಚಂದಾದಾರಿಕೆಗೆ ಬದಲಾಯಿಸಿ ಮತ್ತು ಇನ್ನಷ್ಟು ಉಳಿಸಿ</string>
+    <string name="churn_pause_sub">ಅಥವಾ Google Play ನಲ್ಲಿ ಚಂದಾದಾರಿಕೆ ವಿರಾಮಗೊಳಿಸಿ</string>
+    <string name="churn_cancel_anyway">ಹೇಗಾದರೂ ರದ್ದುಗೊಳಿಸಿ</string>
+    <string name="churn_are_you_sure">ನಿಮಗೆ ಖಚಿತವೇ?</string>
+    <string name="churn_stay">ಇರುವುದು ಉತ್ತಮ</string>
+
+    <!-- ════════════════════════════════════════════════════════════════════
+         AI LIMIT / COMPONENTS
+         ════════════════════════════════════════════════════════════════════ -->
+    <string name="ai_limit_title">ನಿಮ್ಮ ವಾರದ ಮಿತಿ ತಲುಪಿದೆ</string>
+    <string name="ai_limit_body">ಚಂದಾದಾರಿಕೆ ಇಲ್ಲದೆ ನಿಮಗೆ ವಾರಕ್ಕೆ 5 ಪಠ್ಯ ಸುಧಾರಣೆಗಳು ಮತ್ತು ಪ್ರತಿ ಪ್ರೊಫೈಲ್‌ಗೆ ವಾರಕ್ಕೆ 5 ಡ್ಯಾಶ್‌ಬೋರ್ಡ್ ನವೀಕರಣಗಳು ಇವೆ.
+Premium ಜೊತೆ: ದಿನಕ್ಕೆ 150 ರವರೆಗೆ.</string>
+    <string name="ai_limit_monthly">ಮಾಸಿಕ ಚಂದಾದಾರಿಕೆ, ತಿಂಗಳಿಗೆ %1$s</string>
+    <string name="ai_limit_yearly">ವಾರ್ಷಿಕ ಚಂದಾದಾರಿಕೆ, ವರ್ಷಕ್ಕೆ %1$s (37%% ಉಳಿಸಿ)</string>
+    <string name="ai_limit_no_thanks">ಬೇಡ ಧನ್ಯವಾದಗಳು, AI ಇಲ್ಲದೆ ಮುಂದುವರಿಸಿ</string>
+    <string name="ai_banner_title">ನಿಮ್ಮ ಡೈರಿಗೆ AI ಬೆಂಬಲ ನೀಡುತ್ತದೆ</string>
+    <string name="ai_banner_body">• ಡಿಕ್ಟೇಟ್ ಮಾಡಿದ ಪಠ್ಯಗಳು ಸ್ವಯಂಚಾಲಿತವಾಗಿ ಸುಧಾರಿಸಲ್ಪಡುತ್ತವೆ\n• ಪ್ರತಿ ನಮೂದಿಗೆ ಸಾರಾಂಶಗಳು\n• ನಿಮ್ಮ ಮಾದರಿಗಳಿಂದ ಬುದ್ಧಿವಂತ ಜೀವನ ಸಲಹೆಗಳು. ಎಲ್ಲ AI ಫಲಿತಾಂಶಗಳು ಸೂಚನೆಗಳು ಮಾತ್ರ, ವೃತ್ತಿಪರ ಸಲಹೆ ಅಲ್ಲ.\n• ಎಲ್ಲವೂ ನಿಮ್ಮ ಉಚಿತ ಪ್ರಯೋಗ ಹಂತದಲ್ಲಿ ಸೇರಿವೆ</string>
+    <string name="cd_mic_start">ರೆಕಾರ್ಡಿಂಗ್ ಪ್ರಾರಂಭಿಸಿ</string>
+    <string name="cd_mic_stop">ರೆಕಾರ್ಡಿಂಗ್ ನಿಲ್ಲಿಸಿ</string>
+    <string name="entry_improve_limit_daily">ದೈನಂದಿನ ಮಿತಿ ತಲುಪಿದೆ. ನಾಳೆ ಮುಂದುವರಿಯುತ್ತದೆ!</string>
+    <string name="entry_improve_limit_cooldown">ಸಣ್ಣ ವಿರಾಮ: ಇನ್ನೂ %1$d ನಿಮಿಷಗಳು.</string>
+    <string name="entry_improve_failed">ಪಠ್ಯ ಸುಧಾರಣೆ ವಿಫಲವಾಯಿತು</string>
+
+    <!-- ════════════════════════════════════════════════════════════════════
+         NOTIFICATIONS
+         ════════════════════════════════════════════════════════════════════ -->
+    <string name="notif_reminder_title">ನಿಮ್ಮ ಡೈರಿಗೆ ಸಮಯ</string>
+    <string name="notif_reminder_body_0">ಇಂದು ನಿಮ್ಮನ್ನು ಏನು ಕದಲಿಸುತ್ತಿದೆ?</string>
+    <string name="notif_reminder_body_1">ನಿಮಗಾಗಿ ಒಂದು ಕ್ಷಣ, ಅದನ್ನು ಹಿಡಿದಿಡಿ</string>
+    <string name="notif_reminder_body_2">ನಿಮ್ಮ ಭವಿಷ್ಯದ ಸ್ವತಃ ನಿಮಗೆ ಧನ್ಯವಾದ ಹೇಳುತ್ತದೆ</string>
+    <string name="notif_reminder_body_3">ಒಂದು ಆಲೋಚನೆ ಸಾಕು, ಪ್ರಾರಂಭಿಸಿ</string>
+    <string name="notif_reminder_body_4">ಇಂದು ನಿಮ್ಮ ಹೈಲೈಟ್ ಏನಾಗಿತ್ತು?</string>
+    <string name="notif_weekly_title">ನಿಮ್ಮ ವಾರದ ಅವಲೋಕನ</string>
+    <string name="notif_weekly_body">ಈ ವಾರ ನಿಮ್ಮನ್ನು ಏನು ಕದಲಿಸಿತು ಎಂದು ನೋಡಿ, ನಿಮ್ಮ ಡ್ಯಾಶ್‌ಬೋರ್ಡ್‌ನಲ್ಲಿ ಹೊಸ ಒಳನೋಟಗಳಿವೆ.</string>
+    <string name="notif_monthly_title">ನಿಮ್ಮ ತಿಂಗಳ ಅವಲೋಕನ</string>
+    <string name="notif_monthly_body">ನೆನಪುಗಳಿಂದ ತುಂಬಿದ ಪೂರ್ಣ ತಿಂಗಳು ನಿಮಗಾಗಿ ಕಾಯುತ್ತಿದೆ.</string>
+    <string name="notif_yearly_title">ನಿಮ್ಮ ವರ್ಷದ ಅವಲೋಕನ</string>
+    <string name="notif_yearly_body">ನೆನಪುಗಳಿಂದ ತುಂಬಿದ ಪೂರ್ಣ ವರ್ಷ, ನಿಮ್ಮ ಪ್ರಯಾಣವನ್ನು ಹಿಂತಿರುಗಿ ನೋಡಿ.</string>
+
+    <!-- Notification channel names -->
+    <string name="notif_channel_daily_name">ದೈನಂದಿನ ಜ್ಞಾಪನೆ</string>
+    <string name="notif_channel_daily_desc">ಡೈರಿ ಬರೆಯಲು ನಿಮಗೆ ದೈನಂದಿನ ನೆನಪಿಸುತ್ತದೆ</string>
+    <string name="notif_channel_weekly_name">ವಾರದ ಅವಲೋಕನ</string>
+    <string name="notif_channel_weekly_desc">ಪ್ರತಿ ಭಾನುವಾರ 15:00 ಗಂಟೆಗೆ ನಿಮ್ಮ ವಾರದ ಅವಲೋಕನ</string>
+    <string name="notif_channel_monthly_name">ತಿಂಗಳ ಅವಲೋಕನ</string>
+    <string name="notif_channel_monthly_desc">ನಿಮ್ಮ ತಿಂಗಳ ಅವಲೋಕನ ಸಿದ್ಧವಾದಾಗ ಅಧಿಸೂಚನೆ</string>
+    <string name="notif_channel_yearly_name">ವರ್ಷದ ಅವಲೋಕನ</string>
+    <string name="notif_channel_yearly_desc">ನಿಮ್ಮ ವರ್ಷದ ಅವಲೋಕನ ಸಿದ್ಧವಾದಾಗ ಅಧಿಸೂಚನೆ</string>
+
+    <!-- ════════════════════════════════════════════════════════════════════
+         DATE / TIME
+         ════════════════════════════════════════════════════════════════════ -->
+    <string name="datetime_just_now">ಈಗಷ್ಟೇ</string>
+    <plurals name="datetime_minutes_ago">
+        <item quantity="one">%1$d ನಿಮಿಷದ ಹಿಂದೆ</item>
+        <item quantity="other">%1$d ನಿಮಿಷಗಳ ಹಿಂದೆ</item>
+    </plurals>
+    <plurals name="datetime_hours_ago">
+        <item quantity="one">%1$d ಗಂಟೆಯ ಹಿಂದೆ</item>
+        <item quantity="other">%1$d ಗಂಟೆಗಳ ಹಿಂದೆ</item>
+    </plurals>
+    <plurals name="datetime_days_ago">
+        <item quantity="one">%1$d ದಿನದ ಹಿಂದೆ</item>
+        <item quantity="other">%1$d ದಿನಗಳ ಹಿಂದೆ</item>
+    </plurals>
+    <!-- Confirmation after PDF export. -->
+    <plurals name="settings_export_success">
+        <item quantity="one">%1$d ನಮೂದು ರಫ್ತಾಗಿದೆ</item>
+        <item quantity="other">%1$d ನಮೂದುಗಳು ರಫ್ತಾಗಿವೆ</item>
+    </plurals>
+    <string name="datetime_today">ಇಂದು</string>
+    <string name="datetime_yesterday">ನಿನ್ನೆ</string>
+    <string name="datetime_day_before_yesterday">ಮೊನ್ನೆ</string>
+    <string name="datetime_this_week">ಈ ವಾರ</string>
+    <string name="datetime_last_week">ಕಳೆದ ವಾರ</string>
+    <string name="datetime_weeks_ago">%1$d ವಾರಗಳ ಹಿಂದೆ</string>
+
+    <!-- ════════════════════════════════════════════════════════════════════
+         ACHIEVEMENTS
+         ════════════════════════════════════════════════════════════════════ -->
+    <string name="achievement_nightowl_title">ರಾತ್ರಿ ಚಿಟ್ಟೆ</string>
+    <string name="achievement_nightowl_desc">22 ಗಂಟೆಯ ನಂತರ 50 ನಮೂದುಗಳು ಬರೆದಿದ್ದೀರಿ</string>
+    <string name="achievement_earlybird_title">ಬೆಳಗಿನ ಏಳುವವರು</string>
+    <string name="achievement_earlybird_desc">7 ಗಂಟೆಯ ಮೊದಲು 20 ನಮೂದುಗಳು ಬರೆದಿದ್ದೀರಿ</string>
+    <string name="achievement_confession_title">ತಪ್ಪೊಪ್ಪಿಗೆ</string>
+    <string name="achievement_confession_desc">1,000 ಕ್ಕಿಂತ ಹೆಚ್ಚು ಪದಗಳ ನಮೂದು ಬರೆದಿದ್ದೀರಿ</string>
+    <string name="achievement_marathon_title">ಮ್ಯಾರಥಾನ್ ಬರಹಗಾರ</string>
+    <string name="achievement_marathon_desc">100 ಡೈರಿ ನಮೂದುಗಳು ಬರೆದಿದ್ದೀರಿ</string>
+    <string name="achievement_wordartist_title">ಪದ ಕಲಾವಿದ</string>
+    <string name="achievement_wordartist_desc">500 ಡೈರಿ ನಮೂದುಗಳು ಬರೆದಿದ್ದೀರಿ</string>
+    <string name="achievement_consistency_title">ಸ್ಥಿರತೆ</string>
+    <string name="achievement_consistency_desc">30-ದಿನ ಸ್ಟ್ರೀಕ್ ಸಾಧಿಸಿದ್ದೀರಿ</string>
+    <string name="achievement_chronicler_title">ವರ್ಷದ ಕ್ರಾನಿಕಲ್ ಬರಹಗಾರ</string>
+    <string name="achievement_chronicler_desc">365 ನಮೂದುಗಳು ಬರೆದಿದ್ದೀರಿ</string>
+    <string name="achievement_photodiary_title">ಫೋಟೋ ಡೈರಿ</string>
+    <string name="achievement_photodiary_desc">ನಮೂದುಗಳಿಗೆ 50 ಫೋಟೋಗಳನ್ನು ಲಗತ್ತಿಸಿದ್ದೀರಿ</string>
+    <string name="achievement_voiceartist_title">ಧ್ವನಿ ಕಲಾವಿದ</string>
+    <string name="achievement_voiceartist_desc">25 ಧ್ವನಿ ನಮೂದುಗಳನ್ನು ರಚಿಸಿದ್ದೀರಿ</string>
+    <string name="achievement_reflectionmaster_title">ಪ್ರತಿಬಿಂಬ ಮಾಸ್ಟರ್</string>
+    <string name="achievement_reflectionmaster_desc">50 ಡ್ಯಾಶ್‌ಬೋರ್ಡ್ ವಿಶ್ಲೇಷಣೆಗಳನ್ನು ನಡೆಸಿದ್ದೀರಿ</string>
+
+    <!-- ════════════════════════════════════════════════════════════════════
+         DAILY PROMPTS
+         ════════════════════════════════════════════════════════════════════ -->
+    <string name="prompt_cat_self_reflection">ಸ್ವಯಂ ಪ್ರತಿಬಿಂಬ</string>
+    <string name="prompt_cat_gratitude">ಕೃತಜ್ಞತೆ</string>
+    <string name="prompt_cat_future">ಭವಿಷ್ಯ</string>
+    <string name="prompt_cat_relationships">ಸಂಬಂಧಗಳು</string>
+
+    <string-array name="prompts_self_reflection">
+        <item>ಇಂದು ನಿಮ್ಮನ್ನು ಏನು ನಗಿಸಿತು?</item>
+        <item>ಇಂದು ಯಾವ ಆಲೋಚನೆಯನ್ನು ನೀವು ಬಿಡಲು ಸಾಧ್ಯವಾಗಲಿಲ್ಲ?</item>
+        <item>ಇಂದು ನಿಮ್ಮ ಬಗ್ಗೆ ಏನು ಕಲಿತಿರಿ?</item>
+        <item>ಇಂದು ಯಾವ ಕ್ಷಣ ಅತ್ಯಂತ ತೀವ್ರವಾಗಿತ್ತು?</item>
+        <item>ನೀವು ಸಾಧ್ಯವಾದರೆ, ಇಂದು ಏನನ್ನು ಬೇರೆ ರೀತಿಯಲ್ಲಿ ಮಾಡುತ್ತೀರಿ?</item>
+        <item>ಇಂದು ಯಾವ ಭಾವನೆ ನಿಮ್ಮನ್ನು ಹೆಚ್ಚು ಜೊತೆಗಿತ್ತು?</item>
+        <item>ಇಂದು ನಿಮ್ಮನ್ನು ಏನು ಆಶ್ಚರ್ಯಗೊಳಿಸಿತು?</item>
+        <item>ಇಂದು ಯಾವುದರ ಬಗ್ಗೆ ಅತಿ ಹೆಚ್ಚು ಯೋಚಿಸಿದಿರಿ?</item>
+        <item>ಇಂದು ಏನು ನಿಮಗೆ ಶಕ್ತಿ ನೀಡಿತು?</item>
+        <item>ಇಂದು ಏನು ನಿಮ್ಮ ಶಕ್ತಿಯನ್ನು ಕಸಿಯಿತು?</item>
+        <item>ಯಾವ ಅಭ್ಯಾಸವನ್ನು ನೀವು ಬದಲಾಯಿಸಲು ಬಯಸುತ್ತೀರಿ?</item>
+        <item>ಈಗ ನಿಮಗೆ ಯಶಸ್ಸು ಎಂದರೇನು?</item>
+        <item>ಈಗ ಯಾವ ಭಯ ನಿಮ್ಮ ದಾರಿಯಲ್ಲಿ ಇದೆ?</item>
+        <item>ನಿಮ್ಮ ಇಂದಿನ ಜೀವನದ ಬಗ್ಗೆ ನಿಮ್ಮ ಚಿಕ್ಕ ಸ್ವತಃ ಏನು ಹೇಳುತ್ತಾರೆ?</item>
+        <item>ಈಗ ನಿಮಗೆ ನೀವೇ ಯಾವ ಸಲಹೆ ನೀಡುತ್ತೀರಿ?</item>
+        <item>ನಿಮ್ಮನ್ನು ವಿಶಿಷ್ಟಗೊಳಿಸುವುದು ಏನು?</item>
+    </string-array>
+
+    <string-array name="prompts_gratitude">
+        <item>ಇಂದು ಯಾವುದಕ್ಕಾಗಿ ನೀವು ಕೃತಜ್ಞರಾಗಿದ್ದೀರಿ?</item>
+        <item>ಯಾವ ವ್ಯಕ್ತಿ ಇಂದು ನಿಮ್ಮ ದಿನವನ್ನು ಸಮೃದ್ಧಗೊಳಿಸಿದರು?</item>
+        <item>ಇಂದು ಯಾವ ಚಿಕ್ಕ ವಿವರ ನಿಮ್ಮನ್ನು ಸಂತೋಷಗೊಳಿಸಿತು?</item>
+        <item>ನೀವು ಸಾಮಾನ್ಯವೆಂದು ಪರಿಗಣಿಸುವ ಯಾವ ಸಾಮರ್ಥ್ಯವನ್ನು ಹೊಂದಿದ್ದೀರಿ?</item>
+        <item>ಈ ವಾರ ನಿಮಗೆ ಸಂಭವಿಸಿದ ಉತ್ತಮವಾದದ್ದು ಏನು?</item>
+        <item>ಯಾರಿಗೆ ನೀವು ಧನ್ಯವಾದ ಹೇಳಲು ಬಯಸುತ್ತೀರಿ, ಮತ್ತು ಏನಕ್ಕಾಗಿ?</item>
+        <item>ಯಾವ ಸ್ಥಳ ನಿಮಗೆ ಮನೆಯ ಭಾವನೆ ನೀಡುತ್ತದೆ?</item>
+        <item>ಯಾವ ನೆನಪು ನಿಮ್ಮನ್ನು ತಕ್ಷಣ ಸಂತೋಷಗೊಳಿಸುತ್ತದೆ?</item>
+        <item>ನಿಮ್ಮ ದೇಹದಲ್ಲಿ ಏನು ಹೆಚ್ಚಿನ ಮೆಚ್ಚುಗೆ ಪಡೆಯಲು ಅರ್ಹವಾಗಿದೆ?</item>
+        <item>ಇಂದು ಯಾವ ಆಹಾರ ನಿಮಗೆ ತುಂಬಾ ಒಳ್ಳೆಯದಾಯಿತು?</item>
+        <item>ಇತ್ತೀಚೆಗೆ ಯಾವ ಸಂಗೀತ ನಿಮ್ಮನ್ನು ಸ್ಪರ್ಶಿಸಿತು?</item>
+        <item>ಹಣ ಖರ್ಚಾಗದ, ನೀವು ಹೊಂದಿರುವ ಅತ್ಯಂತ ಮೌಲ್ಯಯುತ ವಸ್ತು ಏನು?</item>
+        <item>ಹಿಂದಿನ ಯಾವ ಅನುಭವ ನಿಮ್ಮನ್ನು ಬಲಶಾಲಿಯಾಗಿಸಿತು?</item>
+        <item>ನಿಮ್ಮ ದೈನಂದಿನ ಜೀವನದಲ್ಲಿ ಏನು ವಾಸ್ತವವಾಗಿ ಒಂದು ಸವಲತ್ತು?</item>
+        <item>ದೈನಂದಿನ ಜೀವನದಲ್ಲಿ ನಿಮ್ಮ ಗುಪ್ತ ನಾಯಕ ಯಾರು?</item>
+        <item>ಈಗ ಯಾವ ಋತುವನ್ನು ಹೆಚ್ಚು ಆನಂದಿಸುತ್ತಿದ್ದೀರಿ, ಮತ್ತು ಏಕೆ?</item>
+    </string-array>
+
+    <string-array name="prompts_future">
+        <item>ಒಂದು ವರ್ಷದಲ್ಲಿ ನೀವು ಏನನ್ನು ಸಾಧಿಸಲು ಬಯಸುತ್ತೀರಿ?</item>
+        <item>ಐದು ವರ್ಷಗಳಲ್ಲಿ ನಿಮ್ಮ ಪರಿಪೂರ್ಣ ದಿನ ಹೇಗಿರುತ್ತದೆ?</item>
+        <item>ಈಗ ಯಾವ ಗುರಿಯನ್ನು ನೀವು ಅತ್ಯಂತ ಉತ್ಸಾಹದಿಂದ ಅನುಸರಿಸುತ್ತಿದ್ದೀರಿ?</item>
+        <item>ನೀವು ವಿಫಲರಾಗುವುದಿಲ್ಲ ಎಂದು ತಿಳಿದಿದ್ದರೆ, ನೀವು ಏನು ಮಾಡುತ್ತೀರಿ?</item>
+        <item>ಯಾವ ಹೊಸ ಸಾಮರ್ಥ್ಯವನ್ನು ನೀವು ಕಲಿಯಲು ಬಯಸುತ್ತೀರಿ?</item>
+        <item>ಮುಂದೆ ಎಲ್ಲಿಗೆ ಪ್ರಯಾಣಿಸಲು ಬಯಸುತ್ತೀರಿ?</item>
+        <item>ಹತ್ತು ವರ್ಷಗಳಲ್ಲಿ ನೀವು ಯಾವ ರೀತಿಯ ವ್ಯಕ್ತಿಯಾಗಲು ಬಯಸುತ್ತೀರಿ?</item>
+        <item>ನೀವು ಪುನರುಜ್ಜೀವಿಸಬಹುದಾದ ಯಾವ ಕನಸನ್ನು ಬಿಟ್ಟುಕೊಟ್ಟಿದ್ದೀರಿ?</item>
+        <item>ಈಗ ನೀವು ತೆಗೆದುಕೊಳ್ಳಬಹುದಾದ ಧೈರ್ಯದ ಹೆಜ್ಜೆ ಯಾವುದು?</item>
+        <item>ನೀವು ಇನ್ನೂ ಪ್ರಾರಂಭಿಸದ ಯಾವ ಯೋಜನೆ ನಿಮ್ಮನ್ನು ಉತ್ಸಾಹಗೊಳಿಸುತ್ತದೆ?</item>
+        <item>ಈಗ ನಾನು ಸಂತೋಷವಾಗಿದ್ದೇನೆ ಎಂದು ನೀವು ಹೇಳಲು ಏನು ಸಂಭವಿಸಬೇಕು?</item>
+        <item>ಜಗತ್ತಿನಲ್ಲಿ ಯಾವ ಬದಲಾವಣೆಯನ್ನು ನೀವು ನೋಡಲು ಬಯಸುತ್ತೀರಿ?</item>
+        <item>ನಿಮ್ಮ ಬಕೆಟ್ ಲಿಸ್ಟ್‌ನ ಅಗ್ರಸ್ಥಾನದಲ್ಲಿ ಏನಿದೆ?</item>
+        <item>ಮುಂದಿನ ತಿಂಗಳವರೆಗೆ ಯಾವ ಕೆಟ್ಟ ಅಭ್ಯಾಸವನ್ನು ಬಿಡಲು ಬಯಸುತ್ತೀರಿ?</item>
+        <item>ನೀವು ಹೇಗೆ ನೆನಪಿಸಿಕೊಳ್ಳಲು ಬಯಸುತ್ತೀರಿ?</item>
+        <item>ನಾಳೆ ನೀವು ತೆಗೆದುಕೊಳ್ಳಬಹುದಾದ ಚಿಕ್ಕ ಹೆಜ್ಜೆ ಯಾವುದು?</item>
+    </string-array>
+
+    <string-array name="prompts_relationships">
+        <item>ಯಾರಿಗೆ ನೀವು ಇನ್ನೂ ಹೇಳದಿರುವ ಏನಾದರೂ ಹೇಳಲು ಬಯಸುತ್ತೀರಿ?</item>
+        <item>ನಿಮ್ಮ ಜೀವನದಲ್ಲಿ ಯಾವ ಸಂಬಂಧಕ್ಕೆ ಹೆಚ್ಚು ಗಮನ ಅಗತ್ಯ?</item>
+        <item>ನಿಮ್ಮ ಉತ್ತಮ ಸ್ನೇಹಿತನಲ್ಲಿ ನೀವು ಏನನ್ನು ಹೆಚ್ಚು ಮೆಚ್ಚುತ್ತೀರಿ?</item>
+        <item>ಇತ್ತೀಚೆಗೆ ನೀವು ಯಾವಾಗ ನಿಜವಾಗಿಯೂ ಅರ್ಥಮಾಡಿಕೊಳ್ಳಲ್ಪಟ್ಟಿದ್ದಾಗಿ ಭಾವಿಸಿದಿರಿ?</item>
+        <item>ನಿಮಗೆ ಮುಖ್ಯವಾದ ವ್ಯಕ್ತಿಗೆ ನೀವು ಏನು ಹೇಳಲು ಬಯಸುತ್ತೀರಿ?</item>
+        <item>ಯಾವ ವ್ಯಕ್ತಿ ನಿಮ್ಮ ಜೀವನವನ್ನು ಅತ್ಯಂತ ಬಲವಾಗಿ ರೂಪಿಸಿದರು?</item>
+        <item>ನೀವು ಇತರರನ್ನು ಪ್ರೀತಿಸುತ್ತೀರಿ ಎಂದು ಹೇಗೆ ತೋರಿಸುತ್ತೀರಿ?</item>
+        <item>ಯಾವ ಸಂಘರ್ಷವನ್ನು ನೀವು ಪರಿಹರಿಸಲು ಬಯಸುತ್ತೀರಿ?</item>
+        <item>ನಿಮಗೆ ಸ್ನೇಹ ಎಂದರೇನು?</item>
+        <item>ಇತ್ತೀಚೆಗೆ ಯಾರು ನಿಮಗೆ ಮುಖ್ಯವಾದದನ್ನು ಕಲಿಸಿದರು?</item>
+        <item>ಇತರರಲ್ಲಿ ಯಾವ ಗುಣವನ್ನು ನೀವು ಹೆಚ್ಚು ಅಚ್ಚುಮೆಚ್ಚುತ್ತೀರಿ?</item>
+        <item>ಯಾರೊಂದಿಗೆ ಪೂರ್ಣ ದಿನ ಕಳೆಯಲು ಬಯಸುತ್ತೀರಿ?</item>
+        <item>ನೀವು ಎಂದಾದರೂ ಪಡೆದ ಅತ್ಯುತ್ತಮ ಅಭಿನಂದನೆ ಯಾವುದು?</item>
+        <item>ಸಂಬಂಧಗಳಲ್ಲಿ ನೀವು ಯಾವ ಮಿತಿಗಳನ್ನು ಉತ್ತಮವಾಗಿ ಹೊಂದಿಸಲು ಬಯಸುತ್ತೀರಿ?</item>
+        <item>ಸಮಯದೊಂದಿಗೆ ಪ್ರೀತಿಯ ಬಗ್ಗೆ ನಿಮ್ಮ ಕಲ್ಪನೆ ಹೇಗೆ ಬದಲಾಗಿದೆ?</item>
+        <item>ಇಂದು ಯಾರು ನಿಮ್ಮಿಂದ ಕರೆ ಅಥವಾ ಸಂದೇಶಕ್ಕೆ ಅರ್ಹರಾಗಿದ್ದಾರೆ?</item>
+    </string-array>
+
+    <!-- ════════════════════════════════════════════════════════════════════
+         PDF EXPORT
+         ════════════════════════════════════════════════════════════════════ -->
+    <string name="pdf_entry_fallback_title">ನಮೂದು #%1$d</string>
+    <string name="pdf_entry_counter">%2$d ರಲ್ಲಿ %1$d ನಮೂದು</string>
+    <string name="pdf_summary_label">ಸಾರಾಂಶ</string>
+    <string name="pdf_continuation">%1$s (ಮುಂದುವರಿಕೆ)</string>
+    <string name="pdf_page_number">ಪುಟ %1$d</string>
+
+    <!-- ════════════════════════════════════════════════════════════════════
+         ERRORS
+         ════════════════════════════════════════════════════════════════════ -->
+    <string name="error_retro_all_failed">ಎಲ್ಲಾ %1$d AI ವಿನಂತಿಗಳು ವಿಫಲವಾದವು. ದಯವಿಟ್ಟು ಇಂಟರ್ನೆಟ್ ಸಂಪರ್ಕವನ್ನು ಪರಿಶೀಲಿಸಿ.</string>
+    <string name="error_whisper_audio_empty">ಆಡಿಯೊ ಫೈಲ್ ಖಾಲಿ</string>
+    <string name="error_whisper_no_text">ಯಾವುದೇ ಪಠ್ಯ ಗುರುತಿಸಲಾಗಿಲ್ಲ</string>
+    <string name="error_sync_db_not_found">ಡೇಟಾಬೇಸ್ ಸಿಗಲಿಲ್ಲ</string>
+    <string name="error_audio_record_init_failed">ಮೈಕ್ರೋಫೋನ್ ಆರಂಭಿಸಲಾಗಲಿಲ್ಲ</string>
+    <string name="error_json_key_missing">AI ಪ್ರತಿಕ್ರಿಯೆ ಅಪೂರ್ಣವಾಗಿದೆ: %1$s ಅಥವಾ %2$s ಇಲ್ಲ</string>
+    <string name="error_file_open_failed">ದೋಷ: ಫೈಲ್ ತೆರೆಯಲಾಗಲಿಲ್ಲ</string>
+    <string name="error_generic">ದೋಷ: %1$s</string>
+
+    <!-- ════════════════════════════════════════════════════════════════════
+         AI PROFILE STYLE INSTRUCTIONS
+         ════════════════════════════════════════════════════════════════════ -->
+    <string name="profile_style_chronicler">\n- ಸಾರಾಂಶ ಕಥನ ಶೈಲಿಯಲ್ಲಿ ಬರೆಯಿರಿ, ವೈಯಕ್ತಿಕ ಕ್ರಾನಿಕಲ್ ಬರಹಗಾರನಂತೆ ಮುಖ್ಯ ಘಟನೆಗಳು ಮತ್ತು ಭಾವನೆಗಳನ್ನು ಸಾರಾಂಶಗೊಳಿಸಿ</string>
+    <string name="profile_style_advisor">\n- ಜೀವನ ಸಲಹೆಗಾರನ ಶೈಲಿಯಲ್ಲಿ ಬರೆಯಿರಿ, ಏನು ಚೆನ್ನಾಗಿ ನಡೆಯಿತು, ಏನು ಸುಧಾರಿಸಬಹುದು ಎಂದು ಹೈಲೈಟ್ ಮಾಡಿ, ಮತ್ತು ಓದುಗರಿಗೆ ಸ್ಪಷ್ಟತೆ ಮತ್ತು ಕ್ರಮದ ಭಾವನೆ ನೀಡಿ</string>
+    <string name="profile_style_insight">\n- ಆಳವಾದ ಸ್ವಯಂ-ಅರಿವು ಕಥನದ ಶೈಲಿಯಲ್ಲಿ ಬರೆಯಿರಿ, ಆಲೋಚನಾ ಮಾದರಿಗಳು, ಪುನರಾವರ್ತಿತ ಭಾವನೆಗಳು ಮತ್ತು ಗುಪ್ತ ಶಕ್ತಿಗಳನ್ನು ಬಹಿರಂಗಪಡಿಸಿ</string>
+    <string name="profile_style_coach">\n- ಪ್ರೇರೇಪಿಸುವ ಗುರಿ ಸಂಗಾತಿಯ ಶೈಲಿಯಲ್ಲಿ ಬರೆಯಿರಿ, ವೈಯಕ್ತಿಕ ಗುರಿಗಳ ಪ್ರಗತಿಯನ್ನು ತೋರಿಸಿ ಮತ್ತು ಮುಂದುವರಿಯಲು ಪ್ರೋತ್ಸಾಹಿಸಿ</string>
+    <string name="profile_style_custom">\n- ಕೆಳಗಿನ ಬಳಕೆದಾರರ ವೈಯಕ್ತಿಕ ಫೋಕಸ್‌ನೊಂದಿಗೆ ಅವಲೋಕನವನ್ನು ಬರೆಯಿರಿ: \"%1$s\"</string>
+
+
+    <!-- ════════════════════════════════════════════════════════════════════
+         CONSENT SCREEN + PRIVACY GATES + PRIVACY SECTION (April 2026)
+         ════════════════════════════════════════════════════════════════════ -->
+    <string name="consent_title">ಗೌಪ್ಯತೆ ಮತ್ತು ಸಮ್ಮತಿ</string>
+    <string name="consent_intro">ನಿಮ್ಮ ಡೈರಿ ವೈಯಕ್ತಿಕ ಜಾಗವಾಗಿದೆ ಮತ್ತು ಅದನ್ನು ನಾವು ಗೌರವಿಸುತ್ತೇವೆ. Best Journal ನಿಮ್ಮ ಡೇಟಾವನ್ನು ಹೇಗೆ ನಿರ್ವಹಿಸುತ್ತದೆ ಎಂಬುದನ್ನು ಇಲ್ಲಿ ಪಾರದರ್ಶಕವಾಗಿ ನೋಡಬಹುದು.</string>
+    <string name="consent_card1_title">ಸ್ಥಳೀಯ ಸಂಗ್ರಹ</string>
+    <string name="consent_card1_body">ನಿಮ್ಮ ಪ್ರವೇಶಗಳು ನಿಮ್ಮ ಸಾಧನದಲ್ಲೇ ಉಳಿಯುತ್ತವೆ.</string>
+    <string name="consent_card2_title">AI ವೈಶಿಷ್ಟ್ಯಗಳು (USA)</string>
+    <string name="consent_card2_body">ಐಚ್ಛಿಕವಾಗಿ ಪಠ್ಯಗಳು Google Gemini ಗೆ ಮತ್ತು ಧ್ವನಿ-ಓದುವ ಪಠ್ಯಗಳು Microsoft Edge ಗೆ USA ಗೆ ಕಳುಹಿಸಲಾಗುತ್ತವೆ (EU-US Data Privacy Framework). ಧ್ವನಿ ರೆಕಾರ್ಡಿಂಗ್‌ಗಳು Standard Contractual Clauses (EU SCCs) ಅಡಿಯಲ್ಲಿ Groq (USA) ಗೆ ಕಳುಹಿಸಲಾಗುತ್ತವೆ.</string>
+    <string name="consent_card3_title">ಗುಪ್ತನಾಮ ಅಂಕಿಅಂಶಗಳು</string>
+    <string name="consent_card3_body">Firebase Analytics, ಐಚ್ಛಿಕ, ಸೆಟ್ಟಿಂಗ್‌ಗಳಲ್ಲಿ ಯಾವಾಗ ಬೇಕಾದರೂ ಬದಲಾಯಿಸಬಹುದು.</string>
+    <string name="consent_links_header">ನಮ್ಮ ಕಾನೂನು ದಾಖಲೆಗಳು:</string>
+    <string name="consent_accept_all">ಒಪ್ಪಿ ಪ್ರಾರಂಭಿಸಿ</string>
+    <string name="consent_disable_stats">ಅಂಕಿಅಂಶಗಳನ್ನು ಆಫ್ ಮಾಡಿ ಮುಂದುವರಿಸಿ</string>
+    <string name="consent_confirmation">\"ಒಪ್ಪಿ ಪ್ರಾರಂಭಿಸಿ\" ಅನ್ನು ಟ್ಯಾಪ್ ಮಾಡುವ ಮೂಲಕ ನೀವು ಗೌಪ್ಯತೆ ನೀತಿ, ಬಳಕೆ ನಿಯಮಗಳು ಮತ್ತು ಕಾನೂನು ಸೂಚನೆಯನ್ನು ಓದಿದ್ದೀರಿ ಮತ್ತು ವಿವರಿಸಿದ ಡೇಟಾ ಸಂಸ್ಕರಣೆಗೆ ಒಪ್ಪುತ್ತೀರಿ ಎಂದು ದೃಢೀಕರಿಸುತ್ತೀರಿ. ನಿಮ್ಮ ನಿರ್ಧಾರವನ್ನು ಸೆಟ್ಟಿಂಗ್‌ಗಳಲ್ಲಿ ಯಾವಾಗ ಬೇಕಾದರೂ ಬದಲಾಯಿಸಬಹುದು.</string>
+
+    <string name="privacy_gate_groq_title">Groq ಗೆ ಧ್ವನಿ ರೆಕಾರ್ಡಿಂಗ್ ಕಳುಹಿಸುವುದೇ?</string>
+    <string name="privacy_gate_groq_body">ಈ ಕಾರ್ಯ ನಿಮ್ಮ ಧ್ವನಿ ರೆಕಾರ್ಡಿಂಗ್ ಅನ್ನು ಎನ್‌ಕ್ರಿಪ್ಟ್ ಆಗಿ Groq (USA) ಗೆ ಕಳುಹಿಸುತ್ತದೆ ಮತ್ತು ಅಲ್ಲಿ ಪಠ್ಯವಾಗಿ ಪರಿವರ್ತಿಸುತ್ತದೆ — ಸ್ಥಳೀಯ ಗುರುತಿಸುವಿಕೆಗಿಂತ ವೇಗ ಮತ್ತು ನಿಖರ.\n\n✓ ಪರಿವರ್ತನೆಯ ನಂತರ ರೆಕಾರ್ಡಿಂಗ್ ತಕ್ಷಣ ಅಳಿಸಲಾಗುತ್ತದೆ\n✓ ನಿಮ್ಮ ರೆಕಾರ್ಡಿಂಗ್‌ಗಳೊಂದಿಗೆ ಯಾವುದೇ AI ತರಬೇತಿ ಇಲ್ಲ\n✓ ಕಾನೂನು ಆಧಾರ: ಪ್ರಮಾಣಿತ ಒಪ್ಪಂದ ಷರತ್ತುಗಳು (EU SCCs)\n\nಪರ್ಯಾಯ: ಸೆಟ್ಟಿಂಗ್‌ಗಳಲ್ಲಿ ಸ್ಥಳೀಯ ಆಫ್‌ಲೈನ್ ಗುರುತಿಸುವಿಕೆ.</string>
+    <string name="privacy_gate_groq_accept">ಒಪ್ಪಿ ಕಳುಹಿಸಿ</string>
+    <string name="privacy_gate_groq_local">ಬದಲಿಗೆ ಸ್ಥಳೀಯವಾಗಿ ಪ್ರತಿಲೇಖಿಸಿ</string>
+
+    <string name="privacy_gate_gemini_title">Google Gemini ಗೆ ಪಠ್ಯ ಕಳುಹಿಸುವುದೇ?</string>
+    <string name="privacy_gate_gemini_body">Best Journal ನ ಬುದ್ಧಿವಂತ ಸೌಲಭ್ಯಗಳನ್ನು ನೀವು ಬಳಸಲು ಬಯಸಿದ್ದೀರಿ ಎಂದು ಸಂತೋಷ! ಸಾರಾಂಶಗಳು, ಹಿಂದಿನ ನೋಟಗಳು, Dashboard ಒಳನೋಟಗಳು ಮತ್ತು ಪಠ್ಯ ಸುಧಾರಣೆಗಳಿಗಾಗಿ ನಿಮ್ಮ ಪಠ್ಯಗಳನ್ನು ಎನ್ಕ್ರಿಪ್ಟ್ ಮಾಡಿ Google Gemini ಗೆ ಕಳುಹಿಸಲಾಗುತ್ತದೆ.\n\n✓ ನಿಮ್ಮ ಡೇಟಾದೊಂದಿಗೆ KI ತರಬೇತಿ ಇಲ್ಲ\n✓ ವಿನಂತಿಗಳನ್ನು ಶಾಶ್ವತವಾಗಿ ಸಂಗ್ರಹಿಸಲಾಗುವುದಿಲ್ಲ\n✓ EU-US Data Privacy Framework ಪ್ರಕಾರ ಎನ್ಕ್ರಿಪ್ಟ್ ಮಾಡಲಾಗಿದೆ\n\nಮುಖ್ಯ ಸೂಚನೆ: ನಿಮ್ಮ ಡೈರಿ ಎಂಟ್ರಿಗಳು ವಿಶೇಷವಾಗಿ ಸೂಕ್ಷ್ಮ ಡೇಟಾವನ್ನು ಒಳಗೊಂಡಿರಬಹುದು (ಆರೋಗ್ಯ, ಧರ್ಮ, ವ್ಯಕ್ತಿಗತ ಸಂಬಂಧಗಳು), ಆದ್ದರಿಂದ KI ಸಂಸ್ಕರಣೆಗೆ ನಿಮ್ಮ ಸ್ಪಷ್ಟ ಒಪ್ಪಿಗೆಯನ್ನು ಕೇಳುತ್ತಿದ್ದೇವೆ. KI ಔಟ್\u200cಪುಟ್\u200cಗಳು ಸಲಹೆಗಳಾಗಿವೆ, ವೃತ್ತಿಪರ ಸಲಹೆಯಲ್ಲ.\n\nನೀವು ಇದನ್ನು ಯಾವಾಗ ಬೇಕಾದರೂ Settings ನಲ್ಲಿ ಬದಲಾಯಿಸಬಹುದು.</string>
+    <string name="privacy_gate_gemini_accept">ಒಪ್ಪಿ ಕಳುಹಿಸಿ</string>
+    <string name="privacy_gate_gemini_cancel">ರದ್ದುಮಾಡಿ</string>
+
+    <string name="privacy_gate_tts_title">ಪ್ರೀಮಿಯಂ ಧ್ವನಿಗಳನ್ನು ಸಕ್ರಿಯಗೊಳಿಸಿ</string>
+    <string name="privacy_gate_tts_body">ಪ್ರೀಮಿಯಂ ಧ್ವನಿಗಳೊಂದಿಗೆ ಓದುವಿಕೆ ಹೆಚ್ಚು ಸ್ವಾಭಾವಿಕವಾಗಿ ಧ್ವನಿಸುತ್ತದೆ. ನಿಮ್ಮ ಪಠ್ಯ ಎನ್‌ಕ್ರಿಪ್ಟ್ ಆಗಿ (HTTPS/TLS) USA ನಲ್ಲಿನ Microsoft ಧ್ವನಿ ಸೇವೆಗೆ ಕಳುಹಿಸಲ್ಪಟ್ಟು ಆಡಿಯೋ ಆಗಿ ಹಿಂತಿರುಗಿಸಲಾಗುತ್ತದೆ.\n\n✓ ವರ್ಗಾವಣೆ ಕೇವಲ ಧ್ವನಿ ಸಂಶ್ಲೇಷಣೆಗೆ ಮಾತ್ರ\n✓ ಮೂರನೇ ದೇಶಕ್ಕೆ ವರ್ಗಾವಣೆ USA (Microsoft EU-US Data Privacy Framework ಪ್ರಕಾರ ಪ್ರಮಾಣೀಕೃತ)</string>
+    <string name="privacy_gate_tts_accept">ಒಪ್ಪಿ ಓದಿರಿ</string>
+    <string name="privacy_gate_tts_cancel">ರದ್ದುಮಾಡಿ</string>
+
+    <string name="settings_privacy_header">ಗೌಪ್ಯತೆ</string>
+    <string name="settings_analytics_title">ಗುಪ್ತನಾಮ ಬಳಕೆ ವಿಶ್ಲೇಷಣೆ</string>
+    <string name="settings_analytics_subtitle">ದೋಷ ವಿಶ್ಲೇಷಣೆ ಮತ್ತು ಉತ್ಪನ್ನ ಸುಧಾರಣೆಗಾಗಿ Firebase Analytics</string>
+
+    <string name="settings_delete_account_title">ಖಾತೆ ಮತ್ತು ಡೇಟಾ ಅಳಿಸಿ</string>
+    <string name="settings_delete_account_subtitle">ಎಲ್ಲಾ ಸ್ಥಳೀಯ ಡೇಟಾ ಮತ್ತು Drive ಬ್ಯಾಕಪ್ ಅನ್ನು ಶಾಶ್ವತವಾಗಿ ತೆಗೆದುಹಾಕುತ್ತದೆ. ನಿಮ್ಮ Google ಖಾತೆ ಸ್ವತಃ ಉಳಿಯುತ್ತದೆ.</string>
+    <string name="settings_delete_account_confirm_title">ಎಲ್ಲಾ ಅಪ್ ಡೇಟಾವನ್ನು ಅಳಿಸುವುದೇ?</string>
+    <string name="settings_delete_account_confirm_body">ಈ ಕ್ರಿಯೆಯನ್ನು ಹಿಂಪಡೆಯಲು ಸಾಧ್ಯವಿಲ್ಲ ಮತ್ತು ಇದನ್ನು ಅಳಿಸುತ್ತದೆ:\n\n• ಎಲ್ಲಾ ಸ್ಥಳೀಯ ಡೈರಿ ನಮೂದುಗಳು, ಫೋಟೋಗಳು, ವೀಡಿಯೊಗಳು ಮತ್ತು ಆಡಿಯೋ ರೆಕಾರ್ಡಿಂಗ್‌ಗಳು\n• ಆಪ್‌ನ Google Drive ಬ್ಯಾಕಪ್ (ಕೇವಲ ಆಪ್ ಡೇಟಾ, ನಿಮ್ಮ Google ಖಾತೆ ಅಲ್ಲ)\n• ನಿಮ್ಮ ಆಪ್ ಸೈನ್-ಇನ್\n\nನಿಮ್ಮ Google ಖಾತೆ ಸ್ವತಃ ಉಳಿಯುತ್ತದೆ. ಆಪ್ ನಂತರ ಹೊಸ ಸ್ಥಾಪನೆಯಂತೆ ಮರುಪ್ರಾರಂಭವಾಗುತ್ತದೆ.</string>
+    <string name="settings_delete_account_cancel">ರದ್ದುಮಾಡಿ</string>
+    <string name="settings_delete_account_confirm">ಹೌದು, ಎಲ್ಲವನ್ನೂ ಅಳಿಸಿ</string>
+
+    <string name="settings_report_ai_title">AI ಪ್ರತಿಕ್ರಿಯೆಯನ್ನು ವರದಿ ಮಾಡಿ</string>
+    <string name="settings_report_ai_subtitle">ಅಸಮರ್ಪಕ ಅಥವಾ ತಪ್ಪಾದ AI ಔಟ್‌ಪುಟ್</string>
+    <string name="settings_report_ai_confirm_title">Support ಗೆ ಇಮೇಲ್ ತೆರೆಯಿರಾ?</string>
+    <string name="settings_report_ai_confirm_body">ನಿಮ್ಮ ಇಮೇಲ್ ಪ್ರೋಗ್ರಾಂ dev.app.support@gmail.com ಗೆ ಸಿದ್ಧಪಡಿಸಿದ ಸಂದೇಶದೊಂದಿಗೆ ತೆರೆಯುತ್ತದೆ. ಕಳುಹಿಸುವ ಮೊದಲು ನೀವು ವಿವರಣೆಯನ್ನು ಇನ್ನೂ ಸೇರಿಸಬಹುದು. ನಾವು ಸಾಮಾನ್ಯವಾಗಿ ಕೆಲಸದ ದಿನಗಳಲ್ಲಿ 24 ಗಂಟೆಗಳ ಒಳಗೆ ಪ್ರತಿಕ್ರಿಯಿಸುತ್ತೇವೆ.\n\nಇದರೊಂದಿಗೆ ದಯವಿಟ್ಟು ವರದಿ ಮಾಡಿ: ಡ್ಯಾಶ್‌ಬೋರ್ಡ್, ಸಾರಾಂಶಗಳು, ಅವಲೋಕನಗಳು ಅಥವಾ ಪಠ್ಯ ಸುಧಾರಣೆಯಿಂದ ಬರುವ ಅನುಚಿತ, ಆಕ್ಷೇಪಾರ್ಹ, ತಪ್ಪಾದ ಅಥವಾ ದಾರಿತಪ್ಪಿಸುವ AI ಔಟ್‌ಪುಟ್‌ಗಳು.</string>
+    <string name="settings_report_ai_confirm">ವರದಿ ರಚಿಸಿ</string>
+    <string name="settings_report_ai_cancel">ರದ್ದುಮಾಡಿ</string>
+    <string name="settings_report_ai_no_email">ಇಮೇಲ್ ಆ್ಯಪ್ ಕಂಡುಬಂದಿಲ್ಲ. ದಯವಿಟ್ಟು ವರದಿಯನ್ನು dev.app.support@gmail.com ಗೆ ಕಳುಹಿಸಿ.</string>
+    <string name="settings_report_ai_subject">Best Journal: ಅಸಮರ್ಪಕ AI ಪ್ರತಿಕ್ರಿಯೆ</string>
+    <string name="settings_report_ai_body">ನಮಸ್ಕಾರ,\n\nನಾನು Best Journal ನಲ್ಲಿ ಅಸಮರ್ಪಕ ಅಥವಾ ತಪ್ಪಾದ AI ಪ್ರತಿಕ್ರಿಯೆಯನ್ನು ವರದಿ ಮಾಡಲು ಬಯಸುತ್ತೇನೆ.\n\nಸಮಸ್ಯೆಯ ವಿವರಣೆ:\n[ದಯವಿಟ್ಟು ಭರ್ತಿ ಮಾಡಿ]\n\nಸನ್ನಿವೇಶ (ಯಾವ ವೈಶಿಷ್ಟ್ಯ, ಯಾವ ಇನ್‌ಪುಟ್):\n[ದಯವಿಟ್ಟು ಭರ್ತಿ ಮಾಡಿ]\n\nಧನ್ಯವಾದಗಳು.</string>
+    <string name="settings_report_ai_dialog_title">AI ಪ್ರತಿಕ್ರಿಯೆಯನ್ನು ವರದಿ ಮಾಡಿ</string>
+    <string name="settings_report_ai_dialog_desc">ಸೂಕ್ತವಲ್ಲದ ಅಥವಾ ತಪ್ಪಾದ AI ಪ್ರತಿಕ್ರಿಯೆಯನ್ನು ವಿವರಿಸಿ. ನಿಮ್ಮ ವರದಿಯನ್ನು ನೇರವಾಗಿ ನಮ್ಮ ಬೆಂಬಲ ತಂಡಕ್ಕೆ ಕಳುಹಿಸಲಾಗುತ್ತದೆ. ನೀವು ನಿಮ್ಮ Google ಖಾತೆಯೊಂದಿಗೆ ಸೈನ್ ಇನ್ ಆಗಿರಬೇಕು.</string>
+
+    <string name="settings_revoke_title">ಒಪ್ಪಂದ ರದ್ದು</string>
+    <string name="settings_revoke_subtitle">§ 356a BGB — ಆಪ್ ಮೂಲಕ ನೇರ ಹಿಂಪಡೆಯುವಿಕೆ</string>
+    <string name="settings_revoke_confirm_title">ಒಪ್ಪಂದ ಹಿಂಪಡೆಯುವುದೇ?</string>
+    <string name="settings_revoke_confirm_body">„ಹಿಂಪಡೆಯುವಿಕೆ ದೃಢೀಕರಿಸಿ\" ಕ್ಲಿಕ್ ಮಾಡುವುದರಿಂದ ನಾವು ನಿಮ್ಮ ಹಿಂಪಡೆಯುವಿಕೆಯನ್ನು ನೇರವಾಗಿ dev.app.support@gmail.com ಗೆ ಕಳುಹಿಸುತ್ತೇವೆ. ನೀವು ತಕ್ಷಣ ಇಮೇಲ್ ಮೂಲಕ ಸ್ವೀಕೃತಿ ದೃಢೀಕರಣ ಪಡೆಯುತ್ತೀರಿ.\n\nಸಂಪೂರ್ಣ ಹಿಂಪಡೆಯುವಿಕೆ ಸೂಚನೆಯನ್ನು ನೀವು ಬಳಕೆ ನಿಯಮಗಳಲ್ಲಿ (§ 16) ಕಾಣಬಹುದು. ಯಾವುದೇ ಹೆಚ್ಚಿನ ಶುಲ್ಕ ವಿಧಿಸದಂತೆ ಚಂದಾಗಳನ್ನು ಹೆಚ್ಚುವರಿಯಾಗಿ Google Play → ಚಂದಾಗಳ ಮೂಲಕ ರದ್ದುಗೊಳಿಸಿ.</string>
+    <string name="settings_revoke_cancel">ರದ್ದುಮಾಡಿ</string>
+    <string name="settings_revoke_confirm">ರದ್ದು ರಚಿಸಿ</string>
+    <string name="settings_revoke_no_email">ಇಮೇಲ್ ಆ್ಯಪ್ ಕಂಡುಬಂದಿಲ್ಲ. ದಯವಿಟ್ಟು ರದ್ದನ್ನು dev.app.support@gmail.com ಗೆ ಕಳುಹಿಸಿ.</string>
+    <string name="settings_revoke_email_subject">Best Journal Premium ಒಪ್ಪಂದ ರದ್ದು</string>
+    <string name="settings_revoke_email_body">ಇದರ ಮೂಲಕ Best Journal ನ Premium ವೈಶಿಷ್ಟ್ಯಗಳಿಗೆ ಸಂಬಂಧಿಸಿದ ನನ್ನ ಒಪ್ಪಂದದಿಂದ ಹಿಂತೆಗೆದುಕೊಳ್ಳುವ ಕುರಿತು ತಿಳಿಸುತ್ತೇನೆ.\n\nಕಳುಹಿಸಿದವರು (Google ಖಾತೆ): %1$s\nಹಿಂತೆಗೆದುಕೊಳ್ಳುವ ಸಮಯ: %2$s\n\nಈ ಹಿಂತೆಗೆದುಕೊಳ್ಳುವಿಕೆ ಆ್ಯಪ್‌ನ § 356a BGB ಗೆ ಅನುಗುಣವಾದ ಎರಡು ಹಂತದ ಹಿಂತೆಗೆದುಕೊಳ್ಳುವ ಬಟನ್ ಮೂಲಕ ಪ್ರಾರಂಭಗೊಂಡು Gmail API ಮೂಲಕ ಸ್ವಯಂಚಾಲಿತವಾಗಿ ಕಳುಹಿಸಲಾಯಿತು.</string>
+    <string name="settings_revoke_confirm_subject">ನಿಮ್ಮ ಸ್ವೀಕೃತಿ ದೃಢೀಕರಣ: Best Journal ನಲ್ಲಿ ಹಿಂತೆಗೆದುಕೊಳ್ಳುವಿಕೆ</string>
+    <string name="settings_revoke_confirm_user_body">ನಮಸ್ಕಾರ,\n\n%1$sರ ನಿಮ್ಮ ಹಿಂತೆಗೆದುಕೊಳ್ಳುವಿಕೆ ನಮಗೆ ತಲುಪಿದೆ. ಇದು § 356a BGB ಪ್ರಕಾರ ನಿಮ್ಮ ಸ್ವೀಕೃತಿ ದೃಢೀಕರಣವಾಗಿದೆ.\n\nನಾವು ನಿಮ್ಮ ಹಿಂತೆಗೆದುಕೊಳ್ಳುವಿಕೆಯನ್ನು ಸಾಧ್ಯವಾದಷ್ಟು ಬೇಗ ಪ್ರಕ್ರಿಯೆಗೊಳಿಸುತ್ತೇವೆ ಮತ್ತು ಯಾವುದೇ ಪ್ರಶ್ನೆಗಳಿದ್ದರೆ dev.app.support@gmail.com ಮೂಲಕ ನಿಮ್ಮನ್ನು ಸಂಪರ್ಕಿಸುತ್ತೇವೆ.\n\nಮುಂದಿನ ಬಿಲ್ಲಿಂಗ್ ಆಗದಂತೆ, ದಯವಿಟ್ಟು Google Play Store ನಲ್ಲಿ "Subscriptions" ಅಡಿಯಲ್ಲಿ ನಿಮ್ಮ ಚಂದಾದಾರಿಕೆಯನ್ನು ಸಹ ರದ್ದುಮಾಡಿ.\n\nಧನ್ಯವಾದಗಳು ಮತ್ತು ಶುಭಾಶಯಗಳು\nBest Journal (Frank Barwandt)</string>
+    <string name="settings_revoke_no_account">ಸೈನ್ ಇನ್ ಆಗಿರುವ Google ಖಾತೆಯ ವಿಳಾಸ ಕಂಡುಬಂದಿಲ್ಲ. ದಯವಿಟ್ಟು Settings ನಲ್ಲಿ ನಿಮ್ಮ Google ಖಾತೆಯಿಂದ ಸೈನ್ ಇನ್ ಮಾಡಿ ಅಥವಾ ಹಿಂತೆಗೆದುಕೊಳ್ಳುವಿಕೆಯನ್ನು dev.app.support@gmail.com ಗೆ ಕೈಯಾರೆ ಕಳುಹಿಸಿ.</string>
+    <string name="settings_revoke_sending">ಹಿಂತೆಗೆದುಕೊಳ್ಳುವಿಕೆ ಕಳುಹಿಸಲಾಗುತ್ತಿದೆ…</string>
+    <string name="settings_revoke_success_title">ಹಿಂತೆಗೆದುಕೊಳ್ಳುವಿಕೆ ಸ್ವೀಕರಿಸಲಾಗಿದೆ</string>
+    <string name="settings_revoke_success_body">ನಿಮ್ಮ ಹಿಂತೆಗೆದುಕೊಳ್ಳುವಿಕೆಯನ್ನು dev.app.support@gmail.com ಗೆ ಕಳುಹಿಸಲಾಗಿದೆ. ಸ್ವೀಕೃತಿ ದೃಢೀಕರಣವೂ ನಿಮ್ಮ ಇನ್‌ಬಾಕ್ಸ್‌ನಲ್ಲಿ ಇದೆ.</string>
+    <string name="settings_revoke_success_close">ಮುಚ್ಚಿ</string>
+    <string name="settings_revoke_error_title">ಹಿಂತೆಗೆದುಕೊಳ್ಳುವಿಕೆಯನ್ನು ಕಳುಹಿಸಲಾಗಲಿಲ್ಲ</string>
+    <string name="settings_revoke_error_body">ಸ್ವಯಂಚಾಲಿತ ಕಳುಹಿಸುವಿಕೆ ವಿಫಲವಾಯಿತು: %1$s\n\nಪರ್ಯಾಯವಾಗಿ ನೀವು dev.app.support@gmail.com ಗೆ ಕೈಯಾರೆ ಇಮೇಲ್ ಕಳುಹಿಸಬಹುದು. ಅದಕ್ಕಾಗಿ "ಇಮೇಲ್ ಆಪ್ ತೆರೆಯಿರಿ" ಅನ್ನು ತಟ್ಟಿರಿ.</string>
+    <string name="settings_revoke_error_email_fallback">ಇಮೇಲ್ ಆಪ್ ತೆರೆಯಿರಿ</string>
+
+
+
+    <!-- Crisis Support / Mental Health Disclaimer -->
+    <string name="settings_crisis_title">ಸಂಕಟ ಸಹಾಯ</string>
+    <string name="settings_crisis_subtitle">ತುರ್ತು ಪರಿಸ್ಥಿತಿಗಳಿಗಾಗಿ ಪ್ರಮುಖ ಹೆಲ್ಪ್‌ಲೈನ್‌ಗಳು</string>
+    <string name="settings_crisis_dialog_title">ನೀವು ಒಬ್ಬರೇ ಇಲ್ಲ</string>
+    <string name="settings_crisis_dialog_body">Best Journal ಒಂದು ಜರ್ನಲ್ ಆಪ್ ಆಗಿದ್ದು, ಇದು ವೃತ್ತಿಪರ ಮನೋವೈಜ್ಞಾನಿಕ ಅಥವಾ ವೈದ್ಯಕೀಯ ಸಹಾಯಕ್ಕೆ ಬದಲಿಯಾಗುವುದಿಲ್ಲ. AI ರಚಿಸಿದ ವಿಶ್ಲೇಷಣೆಗಳು ಚಿಕಿತ್ಸೆ ಅಲ್ಲ.\n\nನೀವು ತೀವ್ರ ಸಂಕಟದಲ್ಲಿದ್ದರೆ ಅಥವಾ ಸ್ವಯಂಹಾನಿ ಅಥವಾ ಆತ್ಮಹತ್ಯೆಯ ಆಲೋಚನೆಗಳು ಬಂದರೆ, ಇದನ್ನು ನೀವು ಒಬ್ಬರೇ ಎದುರಿಸಬೇಕಾಗಿಲ್ಲ. ಉಚಿತ, ಗೌಪ್ಯ ಸಹಾಯ 24/7 ಲಭ್ಯವಿದೆ.</string>
+    <string name="settings_crisis_hotline_de_name">Telefonseelsorge ಜರ್ಮನಿ</string>
+    <string name="settings_crisis_hotline_de_hours">ಉಚಿತ, 24/7, ಗೌಪ್ಯ</string>
+    <string name="settings_crisis_call_de">0800 111 0 111 ಗೆ ಕರೆ ಮಾಡಿ</string>
+    <string name="settings_crisis_call_de_alt">0800 111 0 222 ಗೆ ಕರೆ ಮಾಡಿ</string>
+    <string name="settings_crisis_emergency_name">ತುರ್ತು ಸಹಾಯ</string>
+    <string name="settings_crisis_call_emergency">112 ಗೆ ಕರೆ ಮಾಡಿ</string>
+    <string name="settings_crisis_international_name">ಅಂತರರಾಷ್ಟ್ರೀಯ ಹೆಲ್ಪ್‌ಲೈನ್‌ಗಳು</string>
+    <string name="settings_crisis_open_findahelpline">findahelpline.com ತೆರೆಯಿರಿ</string>
+    <string name="settings_crisis_close">ಮುಚ್ಚಿ</string>
+    <string name="settings_crisis_no_dialer">ಫೋನ್ ಆಪ್ ಕಂಡುಬಂದಿಲ್ಲ.</string>
+    <string name="settings_crisis_no_browser">ಬ್ರೌಸರ್ ಕಂಡುಬಂದಿಲ್ಲ.</string>
+
+    <!-- AI-generated content badge -->
+    <string name="ai_generated_badge">AI ರಚಿಸಿದದು</string>
+    <string name="ai_generated_tooltip">ಈ ವಿಷಯವನ್ನು AI ವ್ಯವಸ್ಥೆ (Google Gemini) ರಚಿಸಿದೆ ಮತ್ತು ಇದರಲ್ಲಿ ದೋಷಗಳು ಇರಬಹುದು. ದಯವಿಟ್ಟು ನೀವು ಸ್ವತಃ ಪರಿಶೀಲಿಸಿ.</string>
+
+    <!-- AUTO-ADDED FALLBACK (English) for missing keys — replace with proper translations later -->
+    <string name="consent_optout_confirmation">ಆಪ್ಟ್-ಔಟ್ ಉಳಿಸಲಾಗಿದೆ — ಅಂಕಿಅಂಶಗಳು ನಿಷ್ಕ್ರಿಯವಾಗಿವೆ.</string>
+    <string name="settings_ccpa_do_not_sell_title">Do Not Sell My Personal Information</string>
+    <string name="settings_ccpa_do_not_sell_subtitle">ಕ್ಯಾಲಿಫೋರ್ನಿಯಾದ ನಿವಾಸಿಗಳಿಗೆ (CCPA/CPRA 2026). ಸಕ್ರಿಯವಾಗಿರುವಾಗ ಎಲ್ಲಾ ಕ್ಲೌಡ್ AI ವೈಶಿಷ್ಟ್ಯಗಳು ನಿಷ್ಕ್ರಿಯಗೊಳ್ಳುತ್ತವೆ ಮತ್ತು ಯಾವ ಅಂಕಿಅಂಶಗಳನ್ನೂ ಸಂಗ್ರಹಿಸಲಾಗುವುದಿಲ್ಲ.</string>
+    <string name="settings_ccpa_do_not_sell_confirmation">Do-Not-Sell ಸಕ್ರಿಯ — ಎಲ್ಲಾ ಕ್ಲೌಡ್ ಸೇವೆಗಳು ನಿಷ್ಕ್ರಿಯವಾಗಿವೆ.</string>
+    <string name="settings_ccpa_do_not_sell_off_confirmation">Do-Not-Sell ನಿಷ್ಕ್ರಿಯಗೊಳಿಸಲಾಗಿದೆ.</string>
+    <string name="settings_delete_account_in_progress">ಖಾತೆ ಮತ್ತು ಡೇಟಾವನ್ನು ಅಳಿಸಲಾಗುತ್ತಿದೆ…</string>
+    <string name="settings_delete_account_drive_error_title">Drive ಬ್ಯಾಕ್‌ಅಪ್ ಅಳಿಸಲಾಗಲಿಲ್ಲ</string>
+    <string name="settings_delete_account_drive_error_body">Google Drive ಬ್ಯಾಕ್‌ಅಪ್ ಅನ್ನು ವಿಶ್ವಾಸಾರ್ಹವಾಗಿ ತೆಗೆದುಹಾಕಲಾಗಲಿಲ್ಲ (ಕಾರಣ: %1$s).
+
+ಸಂಪೂರ್ಣ ಅಳಿಸುವಿಕೆಯಿಲ್ಲದೆ \"ಶಾಶ್ವತವಾಗಿ ಅಳಿಸಲಾಗಿದೆ\" ಎಂಬ ಸಂದೇಶ ಸರಿಯಲ್ಲ.
+
+ನೀವು ಏನು ಮಾಡಲು ಬಯಸುತ್ತೀರಿ?</string>
+    <string name="settings_delete_account_retry">ಮತ್ತೆ ಪ್ರಯತ್ನಿಸಿ</string>
+    <string name="settings_delete_account_force_local">ಸ್ಥಳೀಯವಾಗಿ ಮಾತ್ರ ಅಳಿಸಿ (Drive ಬ್ಯಾಕಪ್ ಉಳಿಯುತ್ತದೆ)</string>
+    <string name="settings_delete_account_abort">ಕ್ರಿಯೆಯನ್ನು ರದ್ದುಮಾಡಿ</string>
+
+    <string name="legal_title_datenschutz">ಗೌಪ್ಯತಾ ನೀತಿ</string>
+    <string name="legal_title_nutzungsbedingungen">ಬಳಕೆಯ ನಿಯಮಗಳು</string>
+    <string name="legal_title_impressum">ಕಾನೂನು ಮಾಹಿತಿ</string>
+
+    <!-- Consent-Screen v4 + Privacy Sheet + Settings -->
+    <string name="consent_welcome_title">Best Journal ಗೆ ಸ್ವಾಗತ</string>
+    <string name="consent_welcome_intro">ಪ್ರಾರಂಭಿಸುವ ಮೊದಲು, ಇಲ್ಲಿ ತ್ವರಿತವಾಗಿ ನಿಮ್ಮ ಗೌಪ್ಯತೆ ಆದ್ಯತೆಗಳನ್ನು ಹೊಂದಿಸೋಣ.</string>
+    <string name="consent_promise_local">ಗೌಪ್ಯತೆ ಕಾನೂನುಗಳಿಗೆ ನಿಮ್ಮ ಒಪ್ಪಿಗೆ ಅಗತ್ಯವಿದೆ.</string>
+    <string name="consent_promise_no_training">ಯಾವ ವೈಶಿಷ್ಟ್ಯಗಳು ಸಕ್ರಿಯವಾಗಿರುತ್ತವೆ ಎಂಬುದನ್ನು ನೀವು ಇಲ್ಲಿ ನಿರ್ಧರಿಸುತ್ತೀರಿ.</string>
+    <string name="consent_promise_optional_ai">ಸೆಟ್ಟಿಂಗ್‌ಗಳಲ್ಲಿ ಯಾವುದೇ ಸಮಯದಲ್ಲಿ ಬದಲಾಯಿಸಬಹುದು.</string>
+    <string name="consent_btn_manual_selection">ಹಸ್ತಚಾಲಿತ ಆಯ್ಕೆ</string>
+    <string name="privacy_sheet_title">ಗೌಪ್ಯತೆಯನ್ನು ಕಸ್ಟಮೈಸ್ ಮಾಡಿ</string>
+    <string name="privacy_sheet_subtitle">ನಿಮಗೆ ಅನುಕೂಲಕರವಾದ ರೀತಿಯಲ್ಲಿ ವೈಯಕ್ತಿಕ ವೈಶಿಷ್ಟ್ಯಗಳನ್ನು ಸಕ್ರಿಯಗೊಳಿಸಿ. ಎಲ್ಲವನ್ನೂ ಯಾವುದೇ ಸಮಯದಲ್ಲಿ ಬದಲಾಯಿಸಬಹುದು.</string>
+    <string name="privacy_sheet_save">ಆಯ್ಕೆಯನ್ನು ಉಳಿಸಿ</string>
+    <string name="privacy_sheet_all_on">ಎಲ್ಲವನ್ನೂ ಆನ್</string>
+    <string name="privacy_sheet_all_off">ಎಲ್ಲವನ್ನೂ ಆಫ್</string>
+    <string name="consent_toggle_analytics_title">ಗುಪ್ತನಾಮ ಬಳಕೆ ವಿಶ್ಲೇಷಣೆ</string>
+    <string name="consent_toggle_analytics_body">Firebase Analytics — ಆಪ್‌ನನ್ನು ಸುಧಾರಿಸಲು ನಮಗೆ ಸಹಾಯ ಮಾಡುತ್ತದೆ. ಯಾವುದೇ ಡೈರಿ ವಿಷಯಗಳಿಲ್ಲ, ಕೇವಲ ಗುಪ್ತನಾಮ ಬಳಕೆ ಅಂಕಿಅಂಶಗಳು (ಉದಾ. ಕ್ಲಿಕ್ ಸಂಖ್ಯೆಗಳು). ಡೇಟಾ ವರ್ಗಾವಣೆ: Google USA (Data Privacy Framework).</string>
+    <string name="consent_toggle_groq_title">ಭಾಷಣದಿಂದ ಪಠ್ಯ (Groq Whisper)</string>
+    <string name="consent_toggle_groq_body">ನಮೂದುಗಳನ್ನು ನಿರ್ದೇಶಿಸಲು ಅನುಮತಿಸುತ್ತದೆ. ನಿಮ್ಮ ಧ್ವನಿ ರೆಕಾರ್ಡಿಂಗ್ ಎನ್‌ಕ್ರಿಪ್ಟ್ ಮಾಡಿ Groq (USA) ಗೆ ಕಳುಹಿಸಲಾಗುತ್ತದೆ, ಪಠ್ಯವಾಗಿ ಪರಿವರ್ತಿಸಲಾಗುತ್ತದೆ ಮತ್ತು ನಂತರ ಅಳಿಸಲಾಗುತ್ತದೆ. ನಿಮ್ಮ ರೆಕಾರ್ಡಿಂಗ್‌ಗಳನ್ನು ತರಬೇತಿಗಾಗಿ ಬಳಸುವುದಿಲ್ಲ.</string>
+    <string name="consent_toggle_gemini_title">AI ಪ್ರತಿಬಿಂಬಗಳು (Google Gemini)</string>
+    <string name="consent_toggle_gemini_body">ಡ್ಯಾಶ್‌ಬೋರ್ಡ್ AI, ಸಾರಾಂಶಗಳು, ವಿಮರ್ಶೆಗಳು ಮತ್ತು ಪಠ್ಯ ಸುಧಾರಣೆ. ಪಠ್ಯದ ತುಣುಕುಗಳನ್ನು Google Gemini (USA) ಗೆ ಕಳುಹಿಸುತ್ತದೆ. ನಿಮ್ಮ ನಮೂದುಗಳನ್ನು ತರಬೇತಿಗಾಗಿ ಬಳಸುವುದಿಲ್ಲ.</string>
+    <string name="consent_toggle_tts_title">ಗಟ್ಟಿಯಾಗಿ ಓದುವುದು (Microsoft Edge TTS)</string>
+    <string name="consent_toggle_tts_body">ನೈಸರ್ಗಿಕ ಧ್ವನಿಯಲ್ಲಿ ನಮೂದುಗಳನ್ನು ಓದುತ್ತದೆ. ಪಠ್ಯವನ್ನು Microsoft (USA) ಗೆ ಕಳುಹಿಸುತ್ತದೆ.</string>
+    <string name="consent_toggle_drive_title">Google Drive ಬ್ಯಾಕಪ್</string>
+    <string name="consent_toggle_drive_body">ನಮೂದುಗಳನ್ನು ಎನ್‌ಕ್ರಿಪ್ಟ್ ಮಾಡಿ ನಿಮ್ಮ ಸ್ವಂತ Google Drive ನಲ್ಲಿ ಉಳಿಸುತ್ತದೆ. ನೀವು ಸಂಪೂರ್ಣ ನಿಯಂತ್ರಣವನ್ನು ಉಳಿಸಿಕೊಳ್ಳುತ್ತೀರಿ — ಫೈಲ್ ನಿಮ್ಮ ಖಾತೆಯಲ್ಲಿದೆ, ನಮ್ಮ ಬಳಿ ಇಲ್ಲ.</string>
+    <string name="consent_toggle_do_not_sell_title">Do Not Sell My Personal Information</string>
+    <string name="consent_toggle_do_not_sell_body">ಈ ಸ್ವಿಚ್ ಕೇವಲ ಯುಎಸ್ ಕ್ಯಾಲಿಫೋರ್ನಿಯಾ ರಾಜ್ಯದ ನಿವಾಸಿಗಳಿಗೆ ಮಾತ್ರ. ಕ್ಯಾಲಿಫೋರ್ನಿಯಾ ಗೌಪ್ಯತಾ ಕಾನೂನು (CCPA/CPRA) ನಿವಾಸಿಗಳಿಗೆ ವಿರೋಧ ಹಕ್ಕನ್ನು ನೀಡುತ್ತದೆ. ಸಕ್ರಿಯಗೊಳಿಸಿದಾಗ ಎಲ್ಲಾ ಐಚ್ಛಿಕ ಕ್ಲೌಡ್ ಕಾರ್ಯಗಳು (AI, ಬ್ಯಾಕಪ್, ಧ್ವನಿ ಗುರುತಿಸುವಿಕೆ, ವಿಶ್ಲೇಷಣೆ) ನಿಷ್ಕ್ರಿಯಗೊಳ್ಳುತ್ತವೆ — ಕೇವಲ ಸ್ಥಳೀಯ ಕಾರ್ಯಗಳು ಸಕ್ರಿಯವಾಗಿರುತ್ತವೆ.\n\nನೀವು ಕ್ಯಾಲಿಫೋರ್ನಿಯಾ ಹೊರಗೆ ವಾಸಿಸಿದರೆ, ಈ ಸ್ವಿಚ್ ಅನ್ನು ನಿರ್ಲಕ್ಷಿಸಬಹುದು: Best Journal ನಿಮ್ಮ ಡೇಟಾವನ್ನು ಜಗತ್ತಿನ ಯಾವ ಮೂಲೆಯಲ್ಲೂ ಮಾರಾಟ ಮಾಡುವುದಿಲ್ಲ ಅಥವಾ ಮಾರಾಟಗೊಳಿಸುವುದಿಲ್ಲ.</string>
+    <string name="consent_btn_accept_all">ಎಲ್ಲವನ್ನೂ ಸ್ವೀಕರಿಸಿ</string>
+    <string name="consent_btn_save_selection">ನನ್ನ ಆಯ್ಕೆಯನ್ನು ಉಳಿಸಿ</string>
+    <string name="consent_btn_minimum_only">ಎಲ್ಲವನ್ನೂ ನಿರಾಕರಿಸಿ</string>
+    <string name="consent_saved_snackbar">ಸೆಟ್ಟಿಂಗ್ ಉಳಿಸಲಾಗಿದೆ</string>
+    <string name="consent_revoke_snackbar">ಒಪ್ಪಿಗೆಯನ್ನು ಹಿಂತೆಗೆದುಕೊಳ್ಳಲಾಗಿದೆ</string>
+    <string name="consent_footer_version">ನಿಮ್ಮ ಆಯ್ಕೆಯನ್ನು ಸೆಟ್ಟಿಂಗ್‌ಗಳಲ್ಲಿ ಯಾವುದೇ ಸಮಯದಲ್ಲಿ ಬದಲಾಯಿಸಬಹುದು.</string>
+    <string name="consent_details_expand">ವಿವರಗಳು</string>
+    <string name="settings_open_privacy_sheet">ಗೌಪ್ಯತೆ ಸೆಟ್ಟಿಂಗ್‌ಗಳನ್ನು ಕಸ್ಟಮೈಸ್ ಮಾಡಿ</string>
+    <string name="settings_privacy_section_header">ಗೌಪ್ಯತೆ ಮತ್ತು ಒಪ್ಪಿಗೆಗಳು</string>
+    <string name="settings_ai_groq_title">ಭಾಷಣದಿಂದ ಪಠ್ಯ (Groq)</string>
+    <string name="settings_ai_groq_subtitle">ಲಿಪ್ಯಂತರಕ್ಕಾಗಿ Groq USA ಗೆ ಧ್ವನಿ ರೆಕಾರ್ಡಿಂಗ್‌ಗಳನ್ನು ಕಳುಹಿಸಿ</string>
+    <string name="settings_ai_gemini_title">AI ಪ್ರತಿಬಿಂಬಗಳು (Gemini)</string>
+    <string name="settings_ai_gemini_subtitle">AI ಸಾರಾಂಶಗಳಿಗಾಗಿ Google USA ಗೆ ಪಠ್ಯಗಳನ್ನು ಕಳುಹಿಸಿ</string>
+    <string name="settings_ai_tts_title">ಗಟ್ಟಿಯಾಗಿ ಓದುವುದು (Edge TTS)</string>
+    <string name="settings_ai_tts_subtitle">ಧ್ವನಿ ಔಟ್‌ಪುಟ್‌ಗಾಗಿ Microsoft USA ಗೆ ಪಠ್ಯಗಳನ್ನು ಕಳುಹಿಸಿ</string>
+    <string name="settings_drive_backup_title">Google Drive ಬ್ಯಾಕಪ್</string>
+    <string name="settings_drive_backup_subtitle">ನಿಮ್ಮ Drive ನಲ್ಲಿ ಎನ್‌ಕ್ರಿಪ್ಟ್ ಮಾಡಿದ ನಮೂದುಗಳನ್ನು ಉಳಿಸಿ</string>
+
+    <!-- DEBUG-only test data seeder (button in journal top bar, only visible in debug builds) -->
+    <string name="dev_seed_create_label">70 ಪರೀಕ್ಷಾ ನಮೂದುಗಳನ್ನು ರಚಿಸಿ</string>
+    <string name="dev_seed_delete_label">70 ಪರೀಕ್ಷಾ ನಮೂದುಗಳನ್ನು ಅಳಿಸಿ</string>
+    <string name="dev_seed_running">ನಿಮ್ಮ ಭಾಷೆಯಲ್ಲಿ 70 ಪರೀಕ್ಷಾ ನಮೂದುಗಳನ್ನು ರಚಿಸಲಾಗುತ್ತಿದೆ…</string>
+    <string name="dev_seed_done">%1$d ಪರೀಕ್ಷಾ ನಮೂದುಗಳನ್ನು ರಚಿಸಲಾಗಿದೆ</string>
+    <string name="dev_seed_deleted">%1$d ಪರೀಕ್ಷಾ ನಮೂದುಗಳನ್ನು ಅಳಿಸಲಾಗಿದೆ</string>
+    <string name="dev_seed_error">ದೋಷ: %1$s</string>
+    <string name="dev_seed_ai_no_entries">AI ಪರೀಕ್ಷಾ ದಾಖಲೆಗಳನ್ನು ಹಿಂತಿರುಗಿಸಲಿಲ್ಲ</string>
+
+    <!-- Premium feature: unlimited follow-ups per journal entry -->
+    <string name="paywall_feature_followups">ನಿಮಗೆ ಬೇಕಾದಷ್ಟು ಡೈರಿ ಟಿಪ್ಪಣಿಗಳನ್ನು ಸೇರಿಸಿ</string>
+    <string name="settings_premium_feature_followups">ಅನಿಯಮಿತ ಹೆಚ್ಚುವರಿ ಟಿಪ್ಪಣಿಗಳು</string>
+    <string name="settings_premium_feature_followups_desc">ಪ್ರತಿ ನಮೂದಿನಲ್ಲಿ ನಿಮಗೆ ಬೇಕಾದಷ್ಟು ಹೆಚ್ಚುವರಿ ಟಿಪ್ಪಣಿಗಳು</string>
+
+    <!-- Follow-up feature strings -->
+    <string name="action_no">ಇಲ್ಲ</string>
+    <string name="action_yes">ಹೌದು</string>
+    <string name="ai_improved_suffix"> (AI ಮೂಲಕ ಸುಧಾರಿಸಲಾಗಿದೆ)</string>
+    <string name="ai_improved_suffix_marker">✨ AI ಸುಧಾರಿಸಿದೆ</string>
+    <string name="entry_delete_entry_cd">ನಮೂದು ಅಳಿಸಿ</string>
+    <string name="entry_journal_entry_title">ಡೈರಿ ನಮೂದು</string>
+    <string name="entry_photos_videos_add_title">ಫೋಟೋ ಮತ್ತು ವೀಡಿಯೊ ಸೇರಿಸಿ</string>
+    <string name="follow_up_cancel">ರದ್ದುಮಾಡಿ</string>
+    <string name="follow_up_card_title">ಹೆಚ್ಚುವರಿ ಟಿಪ್ಪಣಿ</string>
+    <string name="follow_up_choose_input_mode">ಇನ್‌ಪುಟ್ ಪ್ರಕಾರ ಆಯ್ಕೆ ಮಾಡಿ</string>
+    <string name="follow_up_delete_button">ಟಿಪ್ಪಣಿ ಅಳಿಸಿ</string>
+    <string name="follow_up_delete_cd">ಟಿಪ್ಪಣಿ ಅಳಿಸಿ</string>
+    <string name="follow_up_delete_confirm_text">ನೀವು ನಿಜವಾಗಿಯೂ "<xliff:g id="title" example="ನನ್ನ ಟಿಪ್ಪಣಿ">%1$s</xliff:g>" ಅಳಿಸಲು ಬಯಸುವಿರಾ? ಈ ಕ್ರಿಯೆಯನ್ನು ರದ್ದುಗೊಳಿಸಲು ಸಾಧ್ಯವಿಲ್ಲ.</string>
+    <string name="follow_up_delete_confirm_title">"<xliff:g id="title" example="ನನ್ನ ಟಿಪ್ಪಣಿ">%1$s</xliff:g>" ಅಳಿಸಬೇಕೇ?</string>
+    <string name="follow_up_dialog_label">ಟಿಪ್ಪಣಿ ಬರೆಯಿರಿ</string>
+    <string name="follow_up_dialog_title">ಹೆಚ್ಚುವರಿ ಟಿಪ್ಪಣಿ ಸೇರಿಸಿ</string>
+    <string name="follow_up_discard">ತ್ಯಜಿಸಿ</string>
+    <string name="follow_up_improve_text">ಪಠ್ಯ ಸುಧಾರಿಸಿ</string>
+    <string name="follow_up_improve_with_ai">AI ಮೂಲಕ ಸುಧಾರಿಸಿ</string>
+    <string name="follow_up_improving">ಸುಧಾರಿಸಲಾಗುತ್ತಿದೆ…</string>
+    <string name="follow_up_inline_title"><xliff:g id="index" example="1">%1$s</xliff:g>. ಹೆಚ್ಚುವರಿ ಟಿಪ್ಪಣಿ</string>
+    <string name="follow_up_input_speak_cd">ಮಾತನಾಡಿ ಬರೆಯಿರಿ</string>
+    <string name="follow_up_input_speak_label">ಮಾತನಾಡಿ</string>
+    <string name="follow_up_input_write_cd">ಟೈಪ್ ಮಾಡಿ ಬರೆಯಿರಿ</string>
+    <string name="follow_up_input_write_label">ಟೈಪ್ ಮಾಡಿ</string>
+    <string name="follow_up_premium_body">Premium ನೊಂದಿಗೆ ಪ್ರತಿ ಡೈರಿ ನಮೂದಿನಲ್ಲಿ ಅನಿಯಮಿತ ಹೆಚ್ಚುವರಿ ಟಿಪ್ಪಣಿಗಳನ್ನು ಸೇರಿಸಿ.</string>
+    <string name="follow_up_premium_hint">ಹೆಚ್ಚು ಟಿಪ್ಪಣಿಗಳು ಬೇಕೇ?</string>
+    <string name="follow_up_premium_later">ನಂತರ</string>
+    <string name="follow_up_premium_subscribe">Premium ತೆಗೆದುಕೊಳ್ಳಿ</string>
+    <string name="follow_up_premium_subtext">Premium ಯೋಜನೆಯೊಂದಿಗೆ ಅನಿಯಮಿತ ಹೆಚ್ಚುವರಿ ಟಿಪ್ಪಣಿಗಳನ್ನು ಅನ್‌ಲಾಕ್ ಮಾಡಿ.</string>
+    <string name="follow_up_premium_title">Premium ವೈಶಿಷ್ಟ್ಯ</string>
+    <string name="follow_up_save">ಉಳಿಸಿ</string>
+    <string name="follow_up_save_improved">ಸುಧಾರಿಸಿದ್ದನ್ನು ಉಳಿಸಿ</string>
+    <string name="follow_up_show_improved">ಸುಧಾರಿಸಿದ್ದನ್ನು ತೋರಿಸಿ</string>
+    <string name="follow_up_show_original">↩ ಮೂಲ ತೋರಿಸಿ</string>
+    <string name="follow_up_speak_pill_label">ಮಾತನಾಡಿ</string>
+    <string name="follow_up_speak_prompt">ಈಗ ಮಾತನಾಡಿ…</string>
+    <string name="follow_up_stop_hint">ನಿಲ್ಲಿಸಲು ಟ್ಯಾಪ್ ಮಾಡಿ</string>
+    <string name="follow_up_tab_improved">✨ AI ಸುಧಾರಿತ</string>
+    <string name="follow_up_tab_original">ಮೂಲ</string>
+    <string name="follow_up_text_placeholder">ಇಲ್ಲಿ ನಿಮ್ಮ ಟಿಪ್ಪಣಿ ಬರೆಯಿರಿ…</string>
+    <string name="follow_up_transcribing">ಟ್ರಾನ್ಸ್‌ಕ್ರೈಬ್ ಆಗುತ್ತಿದೆ…</string>
+    <string name="journal_improve">ಸುಧಾರಿಸಿ</string>
+    <string name="journal_state_improving">ಸುಧಾರಿಸಲಾಗುತ್ತಿದೆ…</string>
+    <string name="journal_state_transcribing">ಟ್ರಾನ್ಸ್‌ಕ್ರೈಬ್ ಆಗುತ್ತಿದೆ…</string>
+    <string name="profile_custom_add">ಪ್ರೊಫೈಲ್ ಸೇರಿಸಿ</string>
+    <string name="profile_custom_remove">ಪ್ರೊಫೈಲ್ ತೆಗೆದುಹಾಕಿ</string>
+    <string name="profile_custom_rename">ಪ್ರೊಫೈಲ್ ಮರುನಾಮಕರಣ ಮಾಡಿ</string>
+    <string name="profile_custom_rename_save">ಉಳಿಸಿ</string>
+    <string name="prompt_clear_confirm_text">ನೀವು ನಿಜವಾಗಿಯೂ ಈ ಪ್ರಾಂಪ್ಟ್ ತೆರವುಗೊಳಿಸಲು ಬಯಸುವಿರಾ?</string>
+    <string name="prompt_clear_confirm_title">ಪ್ರಾಂಪ್ಟ್ ತೆರವುಗೊಳಿಸಬೇಕೇ?</string>
+    <string name="prompt_clear_content_desc">ಪ್ರಾಂಪ್ಟ್ ತೆರವುಗೊಳಿಸಿ</string>
+    <string name="prompt_recording_with_model"><xliff:g id="model" example="Whisper">%1$s</xliff:g> ಜೊತೆ ರೆಕಾರ್ಡ್ ಆಗುತ್ತಿದೆ…</string>
+    <string name="prompt_transcribing_with_model"><xliff:g id="model" example="Whisper">%1$s</xliff:g> ಜೊತೆ ಟ್ರಾನ್ಸ್‌ಕ್ರೈಬ್ ಆಗುತ್ತಿದೆ…</string>
+    <string name="prompt_transcription_model_hint"><xliff:g id="model" example="Whisper">%1$s</xliff:g> ಬಳಸಿ</string>
+    <string name="ai_retro_copied_message">ಕ್ಲಿಪ್‌ಬೋರ್ಡ್‌ಗೆ ನಕಲಿಸಲಾಗಿದೆ</string>
+    <string name="ai_retro_copy_button">ನಕಲಿಸಿ</string>
+    <string name="ai_retro_empty_state">ಪರಿಶೀಲನೆಗೆ ಸಾಕಷ್ಟು ದಾಖಲೆಗಳಿಲ್ಲ.</string>
+    <string name="ai_retro_error_state">ಪರಿಶೀಲನೆಯನ್ನು ರಚಿಸಲು ಸಾಧ್ಯವಾಗಲಿಲ್ಲ. ಮತ್ತೆ ಪ್ರಯತ್ನಿಸಿ.</string>
+    <string name="ai_retro_generate_button">ಪರಿಶೀಲನೆ ರಚಿಸಿ</string>
+    <string name="ai_retro_generating_state">ಪರಿಶೀಲನೆ ರಚಿಸಲಾಗುತ್ತಿದೆ…</string>
+    <string name="ai_retro_month_label">ಈ ತಿಂಗಳು</string>
+    <string name="ai_retro_share_button">ಹಂಚಿಕೊಳ್ಳಿ</string>
+    <string name="ai_retro_title">AI ಪರಿಶೀಲನೆ</string>
+    <string name="ai_retro_week_label">ಈ ವಾರ</string>
+    <string name="ai_retro_year_label">ಈ ವರ್ಷ</string>
+    <string name="follow_up_add_button">ಫಾಲೋ-ಅಪ್ ಸೇರಿಸಿ</string>
+    <string name="follow_up_delete_confirm_no">ಇಲ್ಲ, ಉಳಿಸಿ</string>
+    <string name="follow_up_delete_confirm_yes">ಹೌದು, ಅಳಿಸಿ</string>
+    <string name="follow_up_empty_state">ಇನ್ನೂ ಫಾಲೋ-ಅಪ್‌ಗಳಿಲ್ಲ.\nಮೊದಲದನ್ನು ಸೇರಿಸಲು ಕೆಳಗಿನ ಬಟನ್ ಒತ್ತಿ.</string>
+    <string name="follow_up_improve_button">ಸುಧಾರಿಸಿ</string>
+    <string name="follow_up_improve_error">ಸುಧಾರಿಸಲು ಸಾಧ್ಯವಾಗಲಿಲ್ಲ. ಮತ್ತೆ ಪ್ರಯತ್ನಿಸಿ.</string>
+    <string name="follow_up_improving_state">ಸುಧಾರಿಸಲಾಗುತ್ತಿದೆ…</string>
+    <string name="follow_up_record_error">ರೆಕಾರ್ಡ್ ಮಾಡಲು ಸಾಧ್ಯವಾಗಲಿಲ್ಲ. ಮತ್ತೆ ಪ್ರಯತ್ನಿಸಿ.</string>
+    <string name="follow_up_record_new">ಹೊಸ ಫಾಲೋ-ಅಪ್ ರೆಕಾರ್ಡ್ ಮಾಡಿ</string>
+    <string name="follow_up_recording_hint">ರೆಕಾರ್ಡ್ ಮಾಡಲು ಒತ್ತಿ</string>
+    <string name="follow_up_recording_state">ರೆಕಾರ್ಡ್ ಆಗುತ್ತಿದೆ…</string>
+    <string name="follow_up_tab_label">ಫಾಲೋ-ಅಪ್‌ಗಳು</string>
+    <string name="follow_up_transcribe_error">ಲಿಪ್ಯಂತರಿಸಲು ಸಾಧ್ಯವಾಗಲಿಲ್ಲ. ಮತ್ತೆ ಪ್ರಯತ್ನಿಸಿ.</string>
+    <string name="follow_up_transcribing_state">ಲಿಪ್ಯಂತರಿಸಲಾಗುತ್ತಿದೆ…</string>
+    <string name="prompt_char_count_label">%1$d ಅಕ್ಷರಗಳು</string>
+    <string name="prompt_improve_button_label">ಸುಧಾರಿಸಿ</string>
+    <string name="prompt_placeholder_text">ನಿಮ್ಮ ಮನಸ್ಸಿನಲ್ಲಿರುವುದನ್ನು ಬರೆಯಿರಿ…</string>
+    <string name="prompt_record_button_label">ರೆಕಾರ್ಡ್</string>
+    <string name="prompt_send_button_label">ಕಳುಹಿಸಿ</string>
+    <string name="prompt_stop_button_label">ನಿಲ್ಲಿಸಿ</string>
+    <string name="settings_legal_section_header">ಕಾನೂನು ದಾಖಲೆಗಳು</string>
+    <string name="settings_legal_online_label">ಆನ್‌ಲೈನ್ ಆವೃತ್ತಿ:</string>
+    <plurals name="datetime_months_relative">
+        <item quantity="one">%1$d ತಿಂಗಳ ಹಿಂದೆ</item>
+        <item quantity="other">%1$d ತಿಂಗಳ ಹಿಂದೆ</item>
+    </plurals>
+    <plurals name="datetime_years_relative">
+        <item quantity="one">%1$d ವರ್ಷದ ಹಿಂದೆ</item>
+        <item quantity="other">%1$d ವರ್ಷಗಳ ಹಿಂದೆ</item>
+    </plurals>
+    <string name="ai_limits_disclaimer">ತೀವ್ರ ಬಳಕೆಗಾಗಿ AI ದೈನಂದಿನ ಕೋಟಾ.</string>
+    <string name="ai_limits_dialog_title">ದೈನಂದಿನ AI ಕೋಟಾ ಹೇಗೆ ಕಾರ್ಯನಿರ್ವಹಿಸುತ್ತದೆ?</string>
+    <string name="ai_limits_dialog_body" formatted="false">ಪ್ರೀಮಿಯಂ ಚಂದಾದೊಂದಿಗೆ\n\nಪ್ರತಿ ದಿನ ನಿಮಗೆ ಲಭ್ಯ:\n• ಪ್ರತಿ ದಿನ ಪ್ರತಿ ಪ್ರೊಫೈಲ್‌ಗೆ 150 ವಿನಂತಿಗಳು — 4 ಪೂರ್ವನಿರ್ಧಾರಿತ ಪ್ರೊಫೈಲ್‌ಗಳಿಗೆ ಒಟ್ಟಿಗೆ 600/ದಿನ, ಜೊತೆಗೆ ನೀವು ರಚಿಸುವ ಪ್ರತಿ ಸ್ವಂತ ಪ್ರೊಫೈಲ್‌ಗೆ 150/ದಿನ.\n• ಗರಿಷ್ಠ 150 ಪಠ್ಯ ಸುಧಾರಣೆಗಳು\n\nಇದು ವಿವರವಾಗಿ ಹೇಗೆ ನಡೆಯುತ್ತದೆ:\n• ವಿನಂತಿ 1 ರಿಂದ 30: ಅತ್ಯುನ್ನತ AI ಗುಣಮಟ್ಟದಲ್ಲಿ\n• ವಿನಂತಿ 31 ರಿಂದ 100: ವೇಗದ ಪ್ರಮಾಣಿತ ಗುಣಮಟ್ಟದಲ್ಲಿ\n• 101ನೇ ವಿನಂತಿಯಲ್ಲಿ: ಒಂದು ಬಾರಿ 30-ನಿಮಿಷ ವಿರಾಮ\n• ವಿನಂತಿ 101 ರಿಂದ 150: ವೇಗದ ಪ್ರಮಾಣಿತ ಗುಣಮಟ್ಟ\n• ವಿನಂತಿ 151 ರಿಂದ: ನಾಳೆಯವರೆಗೆ ಹೆಚ್ಚಿನ ವಿನಂತಿಗಳಿಲ್ಲ\n\nಜೊತೆಗೆ ಎಲ್ಲಾ ಬಳಕೆದಾರರಿಗೆ ಅನ್ವಯಿಸುತ್ತದೆ:\n• ಗಂಟೆಗೆ ಗರಿಷ್ಠ 50 AI ವಿನಂತಿಗಳು — ನಂತರ 5-ನಿಮಿಷ ವಿರಾಮ\n\nಕೋಟಾಗಳು ಯಾವಾಗ ಮರುಹೊಂದಿಸಲ್ಪಡುತ್ತವೆ?\nಪ್ರತಿ ದಿನ 0:00 ಗಂಟೆಗೆ (ನಿಮ್ಮ ಸ್ಥಳೀಯ ಸಮಯ) ಹೊಸ ಪೂರ್ಣ ಕೋಟಾ ಪ್ರಾರಂಭವಾಗುತ್ತದೆ.\n\n──────────\n\nಚಂದಾ ಇಲ್ಲದೆ\n\n• ಪ್ರತಿ ಪ್ರೊಫೈಲ್‌ಗೆ ವಾರಕ್ಕೆ 5 ಡ್ಯಾಶ್‌ಬೋರ್ಡ್ ವಿಶ್ಲೇಷಣೆಗಳು\n• ವಾರಕ್ಕೆ 5 ಪಠ್ಯ ಸುಧಾರಣೆಗಳು\n• ಯಾವಾಗಲೂ ವೇಗದ ಪ್ರಮಾಣಿತ ಗುಣಮಟ್ಟದಲ್ಲಿ\n• ಪ್ರತಿ ಸೋಮವಾರ 0:00 ಗಂಟೆಗೆ ಮರುಹೊಂದಿಸಲ್ಪಡುತ್ತದೆ (ನಿಮ್ಮ ಸ್ಥಳೀಯ ಸಮಯ)\n\n──────────\n\nದೈನಂದಿನ ಬಳಕೆಯಲ್ಲಿ ಹೆಚ್ಚಿನ ಬಳಕೆದಾರರು ಈ ಮಿತಿಗಳನ್ನು ತಲುಪುವುದಿಲ್ಲ.</string>
+    <string name="ai_limits_dialog_close">ಅರ್ಥವಾಯಿತು</string>
+    <string name="theme_neutral">ತಟಸ್ಥ</string>
+    <string name="theme_profile">ಪ್ರೊಫೈಲ್ ಬಣ್ಣ — ಡ್ಯಾಶ್‌ಬೋರ್ಡ್ ಪ್ರೊಫೈಲ್‌ನ ಬಣ್ಣ</string>
+    <string name="theme_solarized">ಅಯನಾಂತ</string>
+    <string name="theme_dracula">ಮಧ್ಯರಾತ್ರಿ</string>
+    <string name="theme_one_dark">ಕಾರ್ಯಾಗಾರ</string>
+    <string name="theme_nord">ಧ್ರುವ ರಾತ್ರಿ</string>
+    <string name="theme_gruvbox">ಅಂಬರ್</string>
+
+    <string name="permission_rationale_microphone">ನಿಮ್ಮ ಡೈರಿ ನಮೂದುಗಳನ್ನು ಮಾತಿನ ಮೂಲಕ ದಾಖಲಿಸಲು ನಾವು ನಿಮ್ಮ ಮೈಕ್ರೊಫೋನ್ ಪ್ರವೇಶ ಬೇಕು.</string>
+    <string name="permission_rationale_camera">ನಿಮ್ಮ ನಮೂದುಗಳಿಗೆ ಫೋಟೋಗಳನ್ನು ಸೇರಿಸಲು ನಾವು ನಿಮ್ಮ ಕ್ಯಾಮೆರಾ ಪ್ರವೇಶ ಬೇಕು.</string>
+    <string name="permission_rationale_notifications">ನಿಮ್ಮ ದೈನಂದಿನ ಬರವಣಿಗೆಯ ಬಗ್ಗೆ ನಿಮ್ಮನ್ನು ನೆನಪಿಸಲು ನಾವು ಅಧಿಸೂಚನೆ ಅನುಮತಿ ಬೇಕು.</string>
+    <string name="consent_info_system_backup_title">Android ಸಿಸ್ಟಂ ಬ್ಯಾಕಪ್</string>
+    <string name="consent_info_system_backup_body">ನೀವು ಸಾಧನ ಸೆಟ್ಟಿಂಗ್‌ಗಳಲ್ಲಿ Android ಸಿಸ್ಟಂ ಬ್ಯಾಕಪ್ ಸಕ್ರಿಯಗೊಳಿಸಿದ್ದರೆ, Android ನಿಮ್ಮ ಡೈರಿ ಡೇಟಾವನ್ನು ಸ್ವಯಂಚಾಲಿತವಾಗಿ ನಿಮ್ಮ Google ಖಾತೆಯ ಬ್ಯಾಕಪ್ ಪ್ರದೇಶಕ್ಕೆ ಸಂರಕ್ಷಿಸುತ್ತದೆ. ನೀವು ಇದನ್ನು ನಿಮ್ಮ ಸಾಧನ ಸೆಟ್ಟಿಂಗ್‌ಗಳಲ್ಲಿ ಯಾವಾಗಲಾದರೂ ನಿಷ್ಕ್ರಿಯಗೊಳಿಸಬಹುದು — ವಿವರಗಳಿಗೆ ಗೌಪ್ಯತಾ ನೀತಿ ನೋಡಿ.</string>
+    <string name="settings_open_system_backup_settings_label">Android ಸಿಸ್ಟಂ ಬ್ಯಾಕಪ್ ನಿರ್ವಹಿಸಿ</string>
+    <string name="settings_open_system_backup_settings_desc">Android ಸಿಸ್ಟಂ ಸೆಟ್ಟಿಂಗ್‌ಗಳನ್ನು ತೆರೆಯುತ್ತದೆ, ಅಲ್ಲಿ ನೀವು Best Journal ಗಾಗಿ ಸ್ವಯಂಚಾಲಿತ ಬ್ಯಾಕಪ್ ಆನ್ ಅಥವಾ ಆಫ್ ಮಾಡಬಹುದು.</string>
+    <string name="error_no_backup_settings_available">ಈ ಸಾಧನದಲ್ಲಿ ಬ್ಯಾಕಪ್ ಸೆಟ್ಟಿಂಗ್‌ಗಳು ಲಭ್ಯವಿಲ್ಲ.</string>
+    <string name="consent_footer_link_datenschutz">ಗೌಪ್ಯತೆ</string>
+    <string name="consent_footer_link_impressum">ಇಂಪ್ರೆಸಮ್</string>
+    <string name="consent_footer_link_agb">ಬಳಕೆ ನಿಯಮಗಳು</string>
+    <string name="ai_output_health_disclaimer">ಚಿಕಿತ್ಸೆ ಅಲ್ಲ — ವೃತ್ತಿಪರ ಸಲಹೆಯನ್ನು ಬದಲಾಯಿಸುವುದಿಲ್ಲ.</string>
+    <string name="ai_output_health_disclaimer_long">Best Journal ಒಂದು ಡೈರಿ ಮತ್ತು ಚಿಕಿತ್ಸಾ ಸೇವೆ ಅಲ್ಲ. AI ವಿಶ್ಲೇಷಣೆಗಳು ಸ್ವಯಂ-ಪ್ರತಿಫಲನಕ್ಕಾಗಿ ಸೂಚನೆಗಳು ಮಾತ್ರ ಮತ್ತು ವೃತ್ತಿಪರ ಮಾನಸಿಕ ಅಥವಾ ವೈದ್ಯಕೀಯ ಸಲಹೆಯನ್ನು ಬದಲಾಯಿಸುವುದಿಲ್ಲ. ತೀವ್ರ ಸಮಸ್ಯೆಗಳ ಸಮಯದಲ್ಲಿ ತಜ್ಞರನ್ನು ಅಥವಾ ನಿಮ್ಮ ಸೆಟ್ಟಿಂಗ್‌ಗಳಲ್ಲಿನ ಬಿಕ್ಕಟ್ಟು ಸಹಾಯ ಸೇವೆಯನ್ನು ಸಂಪರ್ಕಿಸಿ.</string>
+    <string name="churn_cancelled">ರದ್ದುಗೊಳಿಸಲಾಗಿದೆ</string>
+    <string name="churn_cancelled_ends_on">ರದ್ದುಗೊಳಿಸಲಾಗಿದೆ — <xliff:g id="date" example="30.04.2026, 18:13">%1$s</xliff:g>-ರಂದು ಮುಕ್ತಾಯಗೊಳ್ಳುತ್ತದೆ</string>
+    <string name="churn_promo_phase_ends"><xliff:g id="date" example="30.04.2026, 18:13">%1$s</xliff:g>-ರಂದು ಮುಕ್ತಾಯಗೊಳ್ಳುತ್ತದೆ — ನಂತರ ತಿಂಗಳಿಗೆ <xliff:g id="base_price" example="3,99 €">%2$s</xliff:g></string>
+    <string name="churn_reason_other_placeholder">ದಯವಿಟ್ಟು ಏನು ನಡೆಯುತ್ತಿದೆ ಎಂದು ಸಂಕ್ಷಿಪ್ತವಾಗಿ ತಿಳಿಸಿ…</string>
+    <string name="churn_renews_on"><xliff:g id="date" example="30.04.2026, 18:13">%1$s</xliff:g>-ರಂದು ನವೀಕರಿಸಲಾಗುತ್ತದೆ</string>
+    <string name="settings_premium_cancelled">ಪ್ರೀಮಿಯಂ ಚಂದಾದಾರಿಕೆ ರದ್ದುಗೊಳಿಸಲಾಗಿದೆ</string>
+    <string name="settings_premium_cancelled_desc">ನಿಮ್ಮ Premium ಸೌಲಭ್ಯಗಳು ಬಿಲ್ಲಿಂಗ್ ಅವಧಿ ಮುಗಿಯುವವರೆಗೆ ಲಭ್ಯವಿರುತ್ತವೆ. Google Play ಮೂಲಕ ರದ್ದತಿಯನ್ನು ಹಿಂತೆಗೆದುಕೊಳ್ಳಬಹುದು.</string>
+    <string name="settings_premium_cancelled_until">ಪ್ರೀಮಿಯಂ ಚಂದಾದಾರಿಕೆ ರದ್ದುಗೊಳಿಸಲಾಗಿದೆ — <xliff:g id="date" example="30.04.2026, 21:01">%1$s</xliff:g> ವರೆಗೆ ಲಭ್ಯ</string>
+    <string name="settings_theme">ಥೀಮ್</string>
+    <string name="settings_themes_manager">ಥೀಮ್ಸ್ ಮ್ಯಾನೇಜರ್</string>
+    <string name="paywall_monthly_note">ನಂತರ ತಿಂಗಳಿಗೆ %1$s, ಸ್ವಯಂಚಾಲಿತವಾಗಿ ನವೀಕರಣಗೊಳ್ಳುತ್ತದೆ\nಯಾವಾಗ ಬೇಕಾದರೂ ರದ್ದುಗೊಳಿಸಬಹುದು</string>
+</resources>

@@ -1,0 +1,7 @@
+interface:
+  display_name: "kotlin-reviewer"
+  short_description: "Kotlin and Android/KMP code reviewer"
+  default_prompt: "Use $everything-codex-everything-codex--kotlin-reviewer for this task."
+
+policy:
+  allow_implicit_invocation: false

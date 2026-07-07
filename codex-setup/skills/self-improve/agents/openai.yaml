@@ -1,0 +1,7 @@
+interface:
+  display_name: "self-improve"
+  short_description: "Self-improve the Codex environment"
+  default_prompt: "Use $self-improve for this task."
+
+policy:
+  allow_implicit_invocation: true

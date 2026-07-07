@@ -1,0 +1,7 @@
+interface:
+  display_name: "supabase"
+  short_description: "doing ANY task involving Supabase"
+  default_prompt: "Use $supabase-codex-plugins-official--supabase for this task."
+
+policy:
+  allow_implicit_invocation: false

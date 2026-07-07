@@ -1,0 +1,7 @@
+interface:
+  display_name: "writing-plans"
+  short_description: "you have a spec or requirements for a multi-step task, before"
+  default_prompt: "Use $superpowers-codex-plugins-official--writing-plans for this task."
+
+policy:
+  allow_implicit_invocation: true

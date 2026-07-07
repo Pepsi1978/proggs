@@ -1,0 +1,63 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Widget-Root (klassisch, ohne Glance — Frank-Wunsch 2026-05-11).
+  Visuell 1:1 zur Glance-Variante. Scrollbar via android:scrollbars="none"
+  komplett deaktiviert (was bei Glance technisch nicht moeglich war).
+-->
+<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:id="@+id/widget_root"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent">
+
+    <!-- Hintergrund-Schicht: einfarbig, Alpha wird zur Laufzeit ueber setColorFilter
+         oder setInt setBackgroundColor (mit Alpha-ARGB) gesetzt. -->
+    <ImageView
+        android:id="@+id/widget_bg"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:contentDescription="@null"
+        android:background="#0E0B24" />
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:orientation="vertical"
+        android:padding="10dp">
+
+        <!-- Header -->
+        <include
+            android:id="@+id/widget_header"
+            layout="@layout/widget_header" />
+
+        <!-- ListView fuer Bucket-Headers und Aufgaben-Karten.
+             scrollbars=none → Scrollbar GARANTIERT weg.
+             divider=null → keine Trennlinien zwischen Items.
+             overScrollMode=never → kein Glow am Ende. -->
+        <ListView
+            android:id="@+id/widget_list"
+            android:layout_width="match_parent"
+            android:layout_height="0dp"
+            android:layout_weight="1"
+            android:layout_marginTop="8dp"
+            android:scrollbars="none"
+            android:divider="@null"
+            android:dividerHeight="0dp"
+            android:overScrollMode="never"
+            android:fadingEdge="none"
+            android:listSelector="@android:color/transparent"
+            android:cacheColorHint="@android:color/transparent" />
+
+        <!-- Empty-State: wird sichtbar wenn ListView leer ist -->
+        <TextView
+            android:id="@+id/widget_empty"
+            android:layout_width="match_parent"
+            android:layout_height="0dp"
+            android:layout_weight="1"
+            android:gravity="center"
+            android:padding="24dp"
+            android:textSize="14sp"
+            android:textColor="#A499D9"
+            android:text="Keine offenen Aufgaben.\nAntippen, um die App zu öffnen."
+            android:visibility="gone" />
+    </LinearLayout>
+</FrameLayout>

@@ -1,0 +1,7 @@
+interface:
+  display_name: "business-analyst"
+  short_description: "Use this agent when refining task descriptions and creating"
+  default_prompt: "Use $sdd-context-engineering-kit--business-analyst for this task."
+
+policy:
+  allow_implicit_invocation: false

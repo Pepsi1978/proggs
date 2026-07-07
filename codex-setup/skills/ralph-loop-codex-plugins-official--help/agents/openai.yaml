@@ -1,0 +1,7 @@
+interface:
+  display_name: "help"
+  short_description: "Explain Ralph Loop plugin and available commands"
+  default_prompt: "Use $ralph-loop-codex-plugins-official--help for this task."
+
+policy:
+  allow_implicit_invocation: false

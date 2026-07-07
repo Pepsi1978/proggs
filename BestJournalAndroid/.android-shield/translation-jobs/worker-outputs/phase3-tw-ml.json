@@ -1,0 +1,76 @@
+{
+	"lang": "ml",
+	"language_name": "Malayalam",
+	"phase": 3,
+	"app": "BestJournalAndroid",
+	"target_file": "app/src/main/res/values-ml/strings.xml",
+	"units_expected": 36,
+	"units_done": 36,
+	"applied": {
+		"ml": [
+			"ai_prompt_custom_intro",
+			"ai_prompt_custom_rules",
+			"ai_prompt_entropy_intro",
+			"ai_prompt_goals_rules",
+			"ai_prompt_insight_attitude",
+			"ai_prompt_no_dates_rule",
+			"ai_prompt_rerank_system",
+			"churn_offer_feature_perspectives",
+			"consent_card3_title",
+			"consent_toggle_analytics_body",
+			"consent_toggle_analytics_title",
+			"consent_toggle_do_not_sell_body",
+			"onboarding_feature_secure",
+			"onboarding_premium_feature_noads",
+			"paywall_feature_noads",
+			"paywall_feature_profiles",
+			"paywall_from_per_day",
+			"paywall_headline_clarity_sub",
+			"paywall_monthly_note",
+			"privacy_gate_groq_body",
+			"privacy_gate_tts_body",
+			"privacy_gate_tts_title",
+			"profile_entropy_long",
+			"retro_benefit_weekly",
+			"settings_analytics_title",
+			"settings_delete_account_confirm_body",
+			"settings_delete_account_subtitle",
+			"settings_feedback_dialog_desc",
+			"settings_premium_feature_5_perspectives",
+			"settings_premium_feature_profiles",
+			"settings_report_ai_confirm_body",
+			"settings_revoke_confirm_body",
+			"settings_revoke_confirm_title",
+			"settings_revoke_subtitle",
+			"datetime_months_relative",
+			"datetime_years_relative"
+		]
+	},
+	"replaced_existing": 35,
+	"inserted_new": ["paywall_monthly_note"],
+	"skipped_already_present": {},
+	"validations_performed": {
+		"ml": [
+			"post-verify-all-keys-present",
+			"post-verify-none-identical-to-de",
+			"post-verify-xml-valid-ElementTree",
+			"post-verify-format-args-match-de",
+			"post-verify-no-bare-percent",
+			"post-verify-no-malayalam-numerals",
+			"legal-1to1-delete_account-google-konto-bleibt",
+			"legal-1to1-revoke-356a-bgb",
+			"legal-1to1-do_not_sell-ccpa-cpra-no-year",
+			"placeholders-%1$s-%1$d-exact",
+			"newline-escapes-preserved"
+		]
+	},
+	"register": "polite (ningal / നിങ്ങൾ), Dravidian roots, Arabic numerals, simplified 1971 orthography, English tech terms preserved",
+	"worker_overload": false,
+	"plugin_bugs_observed": [
+		{
+			"symptom": "apply_ml.py crashed with re.PatternError: bad escape \\u at position 49 when translated values contained backslash escapes (e.g. \\u201e in settings_revoke_confirm_body)",
+			"evidence": "re.sub('...', repl_string, ...) interprets backslash sequences in the REPLACEMENT string as regex escapes; any \\u/\\n/\\g in a translation value triggers it",
+			"suggestion": "translation-worker.md insert pattern (FIN-040 3.2) should warn: when using re.sub to REPLACE existing elements, pass a lambda (lambda m: repl) or escape the replacement, never the raw value as a replacement string. Pure rfind-insert (the documented happy path) avoids this, but element REPLACEMENT (stale keys) needs re.sub and hits the trap."
+		}
+	]
+}

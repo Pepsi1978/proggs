@@ -1,0 +1,7 @@
+interface:
+  display_name: "sadd:do-in-steps"
+  short_description: "Execute complex tasks through sequential sub-agent"
+  default_prompt: "Use $sadd-context-engineering-kit--sadd-do-in-steps for this task."
+
+policy:
+  allow_implicit_invocation: false

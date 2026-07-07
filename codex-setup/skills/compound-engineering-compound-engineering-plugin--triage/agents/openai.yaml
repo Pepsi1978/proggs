@@ -1,0 +1,7 @@
+interface:
+  display_name: "triage"
+  short_description: "Triage and categorize findings for the CLI todo system"
+  default_prompt: "Use $compound-engineering-compound-engineering-plugin--triage for this task."
+
+policy:
+  allow_implicit_invocation: false

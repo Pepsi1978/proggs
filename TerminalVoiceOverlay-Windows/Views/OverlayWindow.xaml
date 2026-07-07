@@ -1,0 +1,583 @@
+<Window x:Class="TerminalVoiceOverlay.Views.OverlayWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="TerminalVoiceOverlay"
+        Width="96" Height="612"
+        WindowStyle="None"
+        AllowsTransparency="True"
+        Background="Transparent"
+        Topmost="True"
+        ShowInTaskbar="False"
+        ShowActivated="False"
+        ResizeMode="NoResize"
+        ToolTipService.InitialShowDelay="100"
+        ToolTipService.BetweenShowDelay="100"
+        ToolTipService.ShowDuration="8000">
+
+    <Window.Resources>
+        <!-- Global ToolTip style: links vom Button, abgerundete Ecken,
+             dunkler Hintergrund passend zum Overlay-Panel. Greift auf alle
+             String-ToolTips (ToolTip="…") in diesem Window. Placement=Left
+             sorgt dafuer, dass der Hilfetext nicht unter der Maus liegt;
+             HorizontalOffset=-8 gibt einen kleinen Luftspalt zum Button.
+             InitialShowDelay=200 bricht die WPF-Default-Latenz von 1000ms
+             auf einen wahrnehmungspsychologischen Sweet Spot — sofort genug
+             ohne nervoes zu wirken. ShowDuration=8000 gibt mehr Lesezeit
+             besonders fuer mehrzeilige Profil-Hinweise. -->
+        <Style TargetType="ToolTip">
+            <Setter Property="Background" Value="#FF1A1A1A"/>
+            <Setter Property="Foreground" Value="White"/>
+            <Setter Property="FontSize" Value="12"/>
+            <Setter Property="Padding" Value="10,6"/>
+            <Setter Property="BorderBrush" Value="#FF3A3A3A"/>
+            <Setter Property="BorderThickness" Value="1"/>
+            <Setter Property="HasDropShadow" Value="True"/>
+            <Setter Property="Placement" Value="Left"/>
+            <Setter Property="HorizontalOffset" Value="-8"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="ToolTip">
+                        <Border Background="{TemplateBinding Background}"
+                                BorderBrush="{TemplateBinding BorderBrush}"
+                                BorderThickness="{TemplateBinding BorderThickness}"
+                                CornerRadius="8"
+                                Padding="{TemplateBinding Padding}"
+                                SnapsToDevicePixels="True">
+                            <ContentPresenter HorizontalAlignment="Center"
+                                              VerticalAlignment="Center"/>
+                        </Border>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+        <!-- Circle button style: 40x40, CornerRadius=20 -->
+        <Style x:Key="CircleButton" TargetType="Button">
+            <Setter Property="Width" Value="40"/>
+            <Setter Property="Height" Value="40"/>
+            <Setter Property="Background" Value="#FF2D2D2D"/>
+            <Setter Property="Foreground" Value="White"/>
+            <Setter Property="FontSize" Value="16"/>
+            <Setter Property="Cursor" Value="Hand"/>
+            <Setter Property="BorderThickness" Value="0"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Button">
+                        <Border x:Name="BtnBorder"
+                                Background="{TemplateBinding Background}"
+                                CornerRadius="20"
+                                Width="{TemplateBinding Width}"
+                                Height="{TemplateBinding Height}">
+                            <ContentPresenter HorizontalAlignment="Center"
+                                              VerticalAlignment="Center"/>
+                        </Border>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+        <!-- Mic button style: 52x52, CornerRadius=10 (rounded square) -->
+        <Style x:Key="MicButton" TargetType="Button">
+            <Setter Property="Width" Value="52"/>
+            <Setter Property="Height" Value="52"/>
+            <Setter Property="Background" Value="#FF2D2D2D"/>
+            <Setter Property="Foreground" Value="White"/>
+            <Setter Property="FontSize" Value="20"/>
+            <Setter Property="Cursor" Value="Hand"/>
+            <Setter Property="BorderThickness" Value="0"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Button">
+                        <Border x:Name="BtnBorder"
+                                Background="{TemplateBinding Background}"
+                                CornerRadius="10"
+                                Width="{TemplateBinding Width}"
+                                Height="{TemplateBinding Height}">
+                            <ContentPresenter HorizontalAlignment="Center"
+                                              VerticalAlignment="Center"/>
+                        </Border>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+        <!-- Save button style: 40x40 rounded square (Viereck-Diskette),
+             CornerRadius=8. Sitzt im vertikalen Layout neben dem Enter-Button,
+             im horizontalen Layout unter dem Enter-Button. Merkt sich die
+             aktuelle Overlay-Position pro Orientierung (nur fuer die laufende
+             Session — nach Neustart gilt wieder die Standardposition). -->
+        <Style x:Key="SaveButton" TargetType="Button">
+            <!-- 28px im vertikalen Modus: passt mit 2px Margin in die 30px
+                 breite Profil-Spalte → Enter bleibt exakt auf der Achse der
+                 anderen runden Buttons. Im Horizontal-Modus setzt
+                 MakeEnterSaveGroup auf 40px hoch (dort ist Platz unter Enter). -->
+            <Setter Property="Width" Value="28"/>
+            <Setter Property="Height" Value="28"/>
+            <!-- Transparent: nur das Disketten-Symbol ist sichtbar, KEIN grauer
+                 Kasten (Frank-Wunsch 2026-05-25). Transparent bleibt klickbar —
+                 die volle 40x40-Flaeche ist weiterhin hit-testbar. Feedback beim
+                 Speichern laeuft ueber das Symbol selbst (gruenes Aufblitzen der
+                 Foreground-Farbe), nicht ueber einen Hintergrund-Kasten. -->
+            <Setter Property="Background" Value="Transparent"/>
+            <Setter Property="Foreground" Value="White"/>
+            <Setter Property="FontSize" Value="18"/>
+            <Setter Property="Cursor" Value="Hand"/>
+            <Setter Property="BorderThickness" Value="0"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Button">
+                        <Border x:Name="BtnBorder"
+                                Background="{TemplateBinding Background}"
+                                CornerRadius="8"
+                                Width="{TemplateBinding Width}"
+                                Height="{TemplateBinding Height}">
+                            <ContentPresenter HorizontalAlignment="Center"
+                                              VerticalAlignment="Center"/>
+                        </Border>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+        <!-- Profile button style: 24x32 numbered tile, CornerRadius=6.
+             Sits to the right of the mic stack. Three profiles toggle the
+             Gemini correction style (1=Standard, 2=Programmierung, 3=Meta). -->
+        <Style x:Key="ProfileButton" TargetType="Button">
+            <Setter Property="Width" Value="24"/>
+            <Setter Property="Height" Value="32"/>
+            <Setter Property="Background" Value="#FF2D2D2D"/>
+            <Setter Property="Foreground" Value="White"/>
+            <Setter Property="FontSize" Value="13"/>
+            <Setter Property="FontWeight" Value="Bold"/>
+            <Setter Property="Cursor" Value="Hand"/>
+            <Setter Property="BorderThickness" Value="0"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Button">
+                        <Border x:Name="BtnBorder"
+                                Background="{TemplateBinding Background}"
+                                CornerRadius="6"
+                                Width="{TemplateBinding Width}"
+                                Height="{TemplateBinding Height}">
+                            <ContentPresenter HorizontalAlignment="Center"
+                                              VerticalAlignment="Center"/>
+                        </Border>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+    </Window.Resources>
+
+    <!-- Outer pill: pure black 2px ring like a proper Windows app frame.
+         Each section paints its own opaque background; per-section colours
+         are kept VERY dim (variation only in the lower 5 bits of each
+         channel) so the panel reads as one cohesive dark surface and not
+         as a rainbow stripe. The colour signal lives on the buttons. -->
+    <Grid>
+    <!-- FullView: das komplette Overlay (Standard). CollapsedView: nur der
+         Mic-Button. Beide liegen oben-buendig im Grid; Auto-Hide schaltet
+         per Code zwischen ihnen um und passt Fensterhoehe + Top an, damit
+         der Mic an gleicher Bildschirmposition bleibt. -->
+    <Border x:Name="FullView" CornerRadius="36"
+            BorderBrush="#FF000000"
+            BorderThickness="2"
+            Width="96" Height="612">
+        <StackPanel>
+
+            <!-- Section 1: Stern (always-on prefix) + Orientierungs-Umschalter.
+                 Stern etwas kleiner (34 statt 40) und leicht nach links, daneben
+                 der neue ⇄-Button zum Drehen zwischen vertikal/horizontal. -->
+            <!-- Padding so gewaehlt, dass die Sektion exakt 63px hoch bleibt
+                 (21 + 34 Button-Reihe + 8), obwohl der Stern jetzt kleiner ist.
+                 Sonst waere der Gesamt-Inhalt kuerzer als die feste Fensterhoehe
+                 (612) → schwarze Luecke unten + verschobener Mic (Auto-Hide-Versatz). -->
+            <Border Background="#B31F1B15" CornerRadius="34,34,0,0" Padding="0,21,0,8">
+                <StackPanel x:Name="Section1Panel" Orientation="Horizontal" HorizontalAlignment="Center">
+                    <Button x:Name="UltrathinkButton"
+                            Style="{StaticResource CircleButton}"
+                            Width="34" Height="34"
+                            Click="BtnUltrathink_Click"
+                            ToolTip="Promptboard">
+                        <Viewbox Width="17" Height="17">
+                            <Path x:Name="UltrathinkStar" Fill="#8B7355"
+                                  Data="M12,1 L15.09,7.26 L22,8.27 L17,13.14 L18.18,20.02 L12,16.77 L5.82,20.02 L7,13.14 L2,8.27 L8.91,7.26 Z"/>
+                        </Viewbox>
+                    </Button>
+
+                    <Button x:Name="OrientationToggleButton"
+                            Style="{StaticResource CircleButton}"
+                            Width="34" Height="34"
+                            Margin="5,0,0,0"
+                            Click="BtnOrientationToggle_Click"
+                            ToolTip="Layout drehen (vertikal ↔ horizontal)">
+                        <TextBlock Text="&#x21C4;" FontSize="15" Foreground="White"/>
+                    </Button>
+                </StackPanel>
+            </Border>
+
+            <Border Background="#FF000000" Height="1"/>
+
+            <!-- Section 2: Mic + BTW + Profile-Spalte (voice input, warm
+                 yellow whisper to match the yellow button family). Layout:
+                 Grid mit zwei Spalten — links die zwei MicButtons (52px),
+                 rechts die drei Profile-Tiles (24px). Hoehe-symmetrisch:
+                 Mic-Stack = 52+8+52 = 112px, Profile-Stack = 32+8+32+8+32
+                 = 112px. -->
+            <Border Background="#B31F1C15" Padding="0,6,0,6">
+                <Grid HorizontalAlignment="Center">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="Auto"/>
+                        <ColumnDefinition Width="Auto"/>
+                    </Grid.ColumnDefinitions>
+
+                    <!-- Linke Spalte: die beiden Mics -->
+                    <StackPanel Grid.Column="0">
+                        <Button x:Name="MicButton"
+                                Style="{StaticResource MicButton}"
+                                Click="BtnMic_Click"
+                                ToolTip="Aufnahme">
+                            <Grid Width="48" Height="48">
+                                <!-- Dark icon for contrast on yellow background -->
+                                <Viewbox x:Name="MicIcon" Width="22" Height="22">
+                                    <Path Fill="#FF1A1A1A" Data="M12,14 C13.66,14 15,12.66 15,11 L15,5 C15,3.34 13.66,2 12,2 C10.34,2 9,3.34 9,5 L9,11 C9,12.66 10.34,14 12,14 Z M17.3,11 C17.3,14 14.76,16.1 12,16.1 C9.24,16.1 6.7,14 6.7,11 L5,11 C5,14.41 7.72,17.23 11,17.72 L11,21 L13,21 L13,17.72 C16.28,17.23 19,14.41 19,11 L17.3,11 Z"/>
+                                </Viewbox>
+                                <Canvas x:Name="WaveformCanvas"
+                                        Width="48" Height="48"
+                                        ClipToBounds="True"
+                                        Visibility="Collapsed"/>
+                            </Grid>
+                        </Button>
+
+                        <Button x:Name="BtwButton"
+                                Style="{StaticResource MicButton}"
+                                Margin="0,8,0,0"
+                                Click="BtnBtw_Click"
+                                ToolTip="Zwischenfrage">
+                            <!-- Dark text for contrast on yellow background -->
+                            <TextBlock Text="BTW" FontWeight="Bold" FontSize="13" Foreground="#FF1A1A1A"/>
+                        </Button>
+                    </StackPanel>
+
+                    <!-- Rechte Spalte: drei Profile-Tiles, mutually exclusive -->
+                    <StackPanel Grid.Column="1" Margin="6,0,0,0" VerticalAlignment="Center">
+                        <Button x:Name="Profile1Button"
+                                Style="{StaticResource ProfileButton}"
+                                Click="BtnProfile1_Click"
+                                PreviewMouseDown="BtnProfile1_PreviewMouseDown"
+                                ToolTip="Standard">
+                            <TextBlock Text="1" FontWeight="Bold" FontSize="13" Foreground="#FF1A1A1A"/>
+                        </Button>
+
+                        <Button x:Name="Profile2Button"
+                                Style="{StaticResource ProfileButton}"
+                                Margin="0,8,0,0"
+                                Click="BtnProfile2_Click"
+                                PreviewMouseDown="BtnProfile2_PreviewMouseDown"
+                                ToolTip="Programmierung">
+                            <TextBlock Text="2" FontWeight="Bold" FontSize="13" Foreground="#FF1A1A1A"/>
+                        </Button>
+
+                        <Button x:Name="Profile3Button"
+                                Style="{StaticResource ProfileButton}"
+                                Margin="0,8,0,0"
+                                Click="BtnProfile3_Click"
+                                PreviewMouseDown="BtnProfile3_PreviewMouseDown"
+                                ToolTip="Meta-Intelligenz">
+                            <TextBlock Text="3" FontWeight="Bold" FontSize="13" Foreground="#FF1A1A1A"/>
+                        </Button>
+                    </StackPanel>
+                </Grid>
+            </Border>
+
+            <Border Background="#FF000000" Height="1"/>
+
+            <!-- Section 3: W + G (LLM transforms) + Profile 4, 5
+                 Grid mit fester 52px-Spalte links (Mic-Achse) und Profile-
+                 Spalte rechts. Action-Buttons sind 40px breit, zentriert in
+                 der 52px-Spalte → Mitte bei x=33 wie die Mics. -->
+            <Border Background="#B319151F" Padding="0,6,0,6">
+                <Grid HorizontalAlignment="Center">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="52"/>
+                        <ColumnDefinition Width="Auto"/>
+                    </Grid.ColumnDefinitions>
+
+                    <StackPanel Grid.Column="0" HorizontalAlignment="Center">
+                        <Button x:Name="WButton"
+                                Style="{StaticResource CircleButton}"
+                                Click="BtnWhisperUndo_Click"
+                                ToolTip="Whisper">
+                            <TextBlock Text="W" FontWeight="Bold" FontSize="16" Foreground="White"/>
+                        </Button>
+
+                        <Button x:Name="GButton"
+                                Style="{StaticResource CircleButton}"
+                                Margin="0,8,0,0"
+                                Click="BtnGemini_Click"
+                                ToolTip="Gemini">
+                            <TextBlock Text="G" FontWeight="Bold" FontSize="16" Foreground="White"/>
+                        </Button>
+                    </StackPanel>
+
+                    <StackPanel Grid.Column="1" Margin="6,0,0,0" VerticalAlignment="Center">
+                        <Button x:Name="Profile4Button"
+                                Style="{StaticResource ProfileButton}"
+                                Click="BtnProfile4_Click"
+                                PreviewMouseDown="BtnProfile4_PreviewMouseDown"
+                                ToolTip="Profil 4 (frei belegbar)">
+                            <TextBlock Text="4" FontWeight="Bold" FontSize="13" Foreground="#FF1A1A1A"/>
+                        </Button>
+
+                        <Button x:Name="Profile5Button"
+                                Style="{StaticResource ProfileButton}"
+                                Margin="0,8,0,0"
+                                Click="BtnProfile5_Click"
+                                PreviewMouseDown="BtnProfile5_PreviewMouseDown"
+                                ToolTip="Profil 5 (frei belegbar)">
+                            <TextBlock Text="5" FontWeight="Bold" FontSize="13" Foreground="#FF1A1A1A"/>
+                        </Button>
+                    </StackPanel>
+                </Grid>
+            </Border>
+
+            <Border Background="#FF000000" Height="1"/>
+
+            <!-- Section 4: X (clear line) + Profile 6 -->
+            <Border Background="#B31F1515" Padding="0,6,0,6">
+                <Grid HorizontalAlignment="Center">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="52"/>
+                        <ColumnDefinition Width="Auto"/>
+                    </Grid.ColumnDefinitions>
+
+                    <Button x:Name="XButton"
+                            Grid.Column="0"
+                            Style="{StaticResource CircleButton}"
+                            HorizontalAlignment="Center"
+                            PreviewMouseLeftButtonDown="XButton_PreviewMouseLeftButtonDown"
+                            PreviewMouseLeftButtonUp="XButton_PreviewMouseLeftButtonUp"
+                            ToolTip="Zeile löschen — gedrückt halten löscht alle Zeilen hintereinander">
+                        <TextBlock Text="X" FontWeight="Bold" FontSize="16" Foreground="White"/>
+                    </Button>
+
+                    <Button x:Name="Profile6Button"
+                            Grid.Column="1"
+                            Style="{StaticResource ProfileButton}"
+                            VerticalAlignment="Center"
+                            Margin="6,0,0,0"
+                            Click="BtnProfile6_Click"
+                            PreviewMouseDown="BtnProfile6_PreviewMouseDown"
+                            ToolTip="Profil 6 (frei belegbar)">
+                        <TextBlock Text="6" FontWeight="Bold" FontSize="13" Foreground="#FF1A1A1A"/>
+                    </Button>
+                </Grid>
+            </Border>
+
+            <Border Background="#FF000000" Height="1"/>
+
+            <!-- Section 5: Copy + Paste (clipboard) + Profile 7, 8 -->
+            <Border Background="#B3151B1D" Padding="0,6,0,6">
+                <Grid HorizontalAlignment="Center">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="52"/>
+                        <ColumnDefinition Width="Auto"/>
+                    </Grid.ColumnDefinitions>
+
+                    <StackPanel Grid.Column="0" HorizontalAlignment="Center">
+                        <Button x:Name="CopyButton"
+                                Style="{StaticResource CircleButton}"
+                                Click="BtnCopy_Click"
+                                ToolTip="Text kopieren">
+                            <Viewbox Width="18" Height="18">
+                                <Path Fill="White" Data="M16,1H4C2.9,1,2,1.9,2,3v14h2V3h12V1z M19,5H8C6.9,5,6,5.9,6,7v14c0,1.1,0.9,2,2,2h11c1.1,0,2-0.9,2-2V7C21,5.9,20.1,5,19,5z M19,21H8V7h11V21z"/>
+                            </Viewbox>
+                        </Button>
+
+                        <Button x:Name="PasteButton"
+                                Style="{StaticResource CircleButton}"
+                                Margin="0,8,0,0"
+                                Click="BtnPaste_Click"
+                                ToolTip="Text einfügen">
+                            <Viewbox Width="18" Height="18">
+                                <Path Fill="White" Data="M19,2h-4.18C14.4,0.84,13.3,0,12,0S9.6,0.84,9.18,2H5C3.9,2,3,2.9,3,4v16c0,1.1,0.9,2,2,2h14c1.1,0,2-0.9,2-2V4C21,2.9,20.1,2,19,2z M12,2c0.55,0,1,0.45,1,1s-0.45,1-1,1s-1-0.45-1-1S11.45,2,12,2z M19,20H5V4h2v3h10V4h2V20z"/>
+                            </Viewbox>
+                        </Button>
+                    </StackPanel>
+
+                    <StackPanel Grid.Column="1" Margin="6,0,0,0" VerticalAlignment="Center">
+                        <Button x:Name="Profile7Button"
+                                Style="{StaticResource ProfileButton}"
+                                Click="BtnProfile7_Click"
+                                PreviewMouseDown="BtnProfile7_PreviewMouseDown"
+                                ToolTip="Profil 7 (frei belegbar)">
+                            <TextBlock Text="7" FontWeight="Bold" FontSize="13" Foreground="#FF1A1A1A"/>
+                        </Button>
+
+                        <Button x:Name="Profile8Button"
+                                Style="{StaticResource ProfileButton}"
+                                Margin="0,8,0,0"
+                                Click="BtnProfile8_Click"
+                                PreviewMouseDown="BtnProfile8_PreviewMouseDown"
+                                ToolTip="Profil 8 (frei belegbar)">
+                            <TextBlock Text="8" FontWeight="Bold" FontSize="13" Foreground="#FF1A1A1A"/>
+                        </Button>
+                    </StackPanel>
+                </Grid>
+            </Border>
+
+            <Border Background="#FF000000" Height="1"/>
+
+            <!-- Section 6: Screenshot + Insert (capture & file paste) + Profile 9, 10 -->
+            <Border Background="#B3151B15" Padding="0,6,0,6">
+                <Grid HorizontalAlignment="Center">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="52"/>
+                        <ColumnDefinition Width="Auto"/>
+                    </Grid.ColumnDefinitions>
+
+                    <StackPanel Grid.Column="0" HorizontalAlignment="Center">
+                        <Button x:Name="ScreenshotButton"
+                                Style="{StaticResource CircleButton}"
+                                Click="BtnScreenshot_Click"
+                                ToolTip="Screenshot">
+                            <Viewbox Width="18" Height="18">
+                                <Path Fill="White" Data="M9,2 L7.17,4 L4,4 C2.9,4 2,4.9 2,6 L2,18 C2,19.1 2.9,20 4,20 L20,20 C21.1,20 22,19.1 22,18 L22,6 C22,4.9 21.1,4 20,4 L16.83,4 L15,2 Z M12,17 C9.24,17 7,14.76 7,12 C7,9.24 9.24,7 12,7 C14.76,7 17,9.24 17,12 C17,14.76 14.76,17 12,17 Z M12,9 C10.34,9 9,10.34 9,12 C9,13.66 10.34,15 12,15 C13.66,15 15,13.66 15,12 C15,10.34 13.66,9 12,9 Z"/>
+                            </Viewbox>
+                        </Button>
+
+                        <Button x:Name="InsertScreenshotButton"
+                                Style="{StaticResource CircleButton}"
+                                Margin="0,8,0,0"
+                                Click="BtnInsertScreenshot_Click"
+                                ToolTip="Screenshots einfügen">
+                            <!-- Segoe MDL2 Assets Attach glyph (E723) — vertical
+                                 paperclip pre-centred in its glyph cell, so no
+                                 SVG bounds-box hassle. Native Windows icon font,
+                                 always available on Win10/11, renders cleanly at
+                                 every DPI. -->
+                            <TextBlock Text="&#xE723;"
+                                       FontFamily="Segoe MDL2 Assets"
+                                       FontSize="20"
+                                       Foreground="White"
+                                       HorizontalAlignment="Center"
+                                       VerticalAlignment="Center"/>
+                        </Button>
+                    </StackPanel>
+
+                    <StackPanel Grid.Column="1" Margin="6,0,0,0" VerticalAlignment="Center">
+                        <Button x:Name="Profile9Button"
+                                Style="{StaticResource ProfileButton}"
+                                Click="BtnProfile9_Click"
+                                PreviewMouseDown="BtnProfile9_PreviewMouseDown"
+                                ToolTip="Profil 9 (frei belegbar)">
+                            <TextBlock Text="9" FontWeight="Bold" FontSize="13" Foreground="#FF1A1A1A"/>
+                        </Button>
+
+                        <Button x:Name="Profile10Button"
+                                Style="{StaticResource ProfileButton}"
+                                Margin="0,8,0,0"
+                                Click="BtnProfile10_Click"
+                                PreviewMouseDown="BtnProfile10_PreviewMouseDown"
+                                ToolTip="Profil 10 (frei belegbar)">
+                            <TextBlock Text="10" FontWeight="Bold" FontSize="11" Foreground="#FF1A1A1A"/>
+                        </Button>
+                    </StackPanel>
+                </Grid>
+            </Border>
+
+            <Border Background="#FF000000" Height="1"/>
+
+            <!-- Section 7: Enter (confirm, neutral) + Speichern-Diskette.
+                 Gleiche Grid-Struktur wie Section 4 (X + Profil-Kachel): Enter
+                 sitzt zentriert in der 52px-Spalte → exakt auf der Achse der
+                 anderen runden Buttons. Die Diskette sitzt rechts daneben in der
+                 Auto-Spalte (wie die Profil-Kacheln), damit Enter NICHT nach
+                 aussen wandert (Frank-Wunsch 2026-05-25). Diskette 28px + 2px
+                 Margin = 30px Spaltenbreite — identisch zu den Profil-Spalten,
+                 daher exakt dieselbe Enter-Achse. -->
+            <Border Background="#B31A1A1A" CornerRadius="0,0,34,34" Padding="0,6,0,17">
+                <Grid HorizontalAlignment="Center">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="52"/>
+                        <ColumnDefinition Width="Auto"/>
+                    </Grid.ColumnDefinitions>
+
+                    <Button x:Name="EnterButton"
+                            Grid.Column="0"
+                            Style="{StaticResource CircleButton}"
+                            HorizontalAlignment="Center"
+                            Click="BtnAutoEnter_Click"
+                            ToolTip="Auto-Enter">
+                        <TextBlock Text="&#x23CE;" FontSize="18" Foreground="White"/>
+                    </Button>
+
+                    <Button x:Name="SaveButton"
+                            Grid.Column="1"
+                            Style="{StaticResource SaveButton}"
+                            VerticalAlignment="Center"
+                            Margin="2,0,0,0"
+                            Click="BtnSavePosition_Click"
+                            ToolTip="Position dieser Ausrichtung merken (gilt bis zum Neustart)">
+                        <TextBlock x:Name="SaveIcon"
+                                   Text="&#xE74E;"
+                                   FontFamily="Segoe MDL2 Assets"
+                                   FontSize="16"
+                                   Foreground="White"
+                                   HorizontalAlignment="Center"
+                                   VerticalAlignment="Center"/>
+                    </Button>
+                </Grid>
+            </Border>
+
+        </StackPanel>
+    </Border>
+
+    <!-- HorizontalView: horizontale Leiste (rechts→links). Wird zur Laufzeit
+         durch Umhaengen DERSELBEN Button-Instanzen (kein Duplikat) befuellt;
+         HBar ist eine horizontale StackPanel. Nur im Horizontal-Modus sichtbar.
+         Die vertikale FullView bleibt davon voellig unberuehrt (Fallback). -->
+    <Border x:Name="HorizontalView"
+            CornerRadius="36"
+            Background="#B31A1A1A"
+            BorderBrush="#FF000000"
+            BorderThickness="2"
+            VerticalAlignment="Top"
+            HorizontalAlignment="Left"
+            Visibility="Collapsed">
+        <!-- Kein Padding: die farbigen Gruppen fuellen die volle Leistenhoehe
+             (Headroom fuer die Hover-Vergroesserung steckt im Gruppen-Padding). -->
+        <StackPanel x:Name="HBar" Orientation="Horizontal" VerticalAlignment="Stretch"/>
+    </Border>
+
+    <!-- CollapsedView: kompakte Mic-Pille (nur sichtbar im eingeklappten
+         Zustand). Gleiche Breite wie das volle Overlay (96), Hoehe 64 — so
+         bleibt die horizontale Position identisch und nur die Hoehe/Top
+         aendern sich beim Ein-/Ausklappen. -->
+    <!-- Eingeklappt: ein ECHTER Kreis (84x84, CornerRadius=Haelfte) mit dem
+         52px-Mic-Button zentriert drin → rundum ~16px Luft, der Kreis umschliesst
+         den Mic klar (statt dass der Button herausquillt). Zentriert im 96x96-
+         Fenster → Mic bleibt exakt bei (48,48). Frueher 64x64 → Kreis zu klein,
+         Mic quoll heraus (Frank-Wunsch 2026-05-25: schoener grosser runder Kreis). -->
+    <Border x:Name="CollapsedView"
+            Width="84" Height="84"
+            CornerRadius="42"
+            Background="#B31A1A1A"
+            BorderBrush="#FF000000"
+            BorderThickness="2"
+            HorizontalAlignment="Center"
+            VerticalAlignment="Center"
+            Visibility="Collapsed">
+        <Button x:Name="CollapsedMicButton"
+                Style="{StaticResource MicButton}"
+                HorizontalAlignment="Center"
+                VerticalAlignment="Center"
+                Click="CollapsedMicButton_Click"
+                Background="#FFF9A825"
+                ToolTip="Aufnahme">
+            <Viewbox Width="22" Height="22">
+                <Path Fill="#FF1A1A1A" Data="M12,14 C13.66,14 15,12.66 15,11 L15,5 C15,3.34 13.66,2 12,2 C10.34,2 9,3.34 9,5 L9,11 C9,12.66 10.34,14 12,14 Z M17.3,11 C17.3,14 14.76,16.1 12,16.1 C9.24,16.1 6.7,14 6.7,11 L5,11 C5,14.41 7.72,17.23 11,17.72 L11,21 L13,21 L13,17.72 C16.28,17.23 19,14.41 19,11 L17.3,11 Z"/>
+            </Viewbox>
+        </Button>
+    </Border>
+    </Grid>
+</Window>

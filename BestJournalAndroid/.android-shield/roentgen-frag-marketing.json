@@ -1,0 +1,98 @@
+{
+	"scan_method": "orchestrator-direct-grep (Worker A crashed, Bug #3)",
+	"marketing_claims": [
+		{
+			"key": "profile_entropy_desc",
+			"value": "Erkennt Stress, Unordnung und Belastung",
+			"file": "values/strings.xml",
+			"line": 383,
+			"risk": "none",
+			"why": "Beschreibung einer Analysefunktion, kein Heilversprechen"
+		},
+		{
+			"key": "onboarding_goal_stress",
+			"value": "Stress abbauen",
+			"file": "values/strings.xml",
+			"line": 1066,
+			"risk": "low-UWG",
+			"why": "Nutzer-Ziel-Label; grenzwertig nur falls als App-Wirkungsversprechen formuliert — hier neutral"
+		},
+		{
+			"key": "paywall_headline_stress",
+			"value": "Mehr Klarheit im Alltag",
+			"file": "values/strings.xml",
+			"line": 1136,
+			"risk": "none",
+			"why": "bereits in fruehrem Lauf von 'innere Ruhe' entschaerft (A1)"
+		},
+		{
+			"key": "dashboard_profile_focus_entropy",
+			"value": "Sortiert dein Leben: erkennt Stress, Unordnung und Belastung",
+			"file": "values/strings.xml",
+			"line": 962,
+			"risk": "none",
+			"why": "Funktionsbeschreibung"
+		}
+	],
+	"hwg_disclaimers_present": [
+		{
+			"key": "ai_output_health_disclaimer",
+			"value": "Keine Therapie — ersetzt keine professionelle Beratung.",
+			"line": 1501
+		},
+		{ "key": "ai_output_health_disclaimer_long", "line": 1502 },
+		{
+			"key": "settings_crisis_dialog_body",
+			"value": "...ersetzt keine professionelle psychologische oder medizinische Beratung. KI-generierte Analysen sind keine Therapie...",
+			"line": 773
+		},
+		{ "key": "settings_crisis_hotline_de_hours", "line": 775 }
+	],
+	"paywall_abo": [
+		{
+			"key": "paywall_consent_dialog_checkbox",
+			"line": 1106,
+			"category": "trial",
+			"note": "14-Tage-Widerrufsverzicht korrekt (§356 BGB)"
+		},
+		{
+			"key": "churn_auto_renew_note",
+			"line": 1171,
+			"category": "renewal",
+			"note": "Auto-Verlaengerung + jederzeit kuendbar erklaert"
+		},
+		{
+			"key": "paywall_yearly_note",
+			"line": 1116,
+			"category": "renewal",
+			"note": "in Testphase kuendbar"
+		},
+		{
+			"key": "onboarding_try_premium",
+			"value": "8 Tage gratis — danach ab 3,99 €/Monat",
+			"line": 1095,
+			"category": "price"
+		},
+		{
+			"key": "settings_revoke_confirm_body",
+			"line": 752,
+			"category": "cancellation",
+			"note": "Widerrufsbutton §356a BGB"
+		},
+		{
+			"key": "paywall_lifetime_note",
+			"value": "Kein Abo, keine Verlaengerung",
+			"line": 1122,
+			"category": "price"
+		},
+		{
+			"key": "paywall_exit_start_discount",
+			"value": "Zahlungspflichtig — 2 Monate zum halben Preis",
+			"line": 1152,
+			"category": "cta",
+			"note": "Zahlungspflichtig-Label korrekt (Button-Loesung §312j BGB)"
+		}
+	],
+	"assessment": "App rechtlich ausgereift (3. Lauf): durchgehende HWG-Disclaimer, vollstaendige Abo-Transparenz, Widerruf-Mechanik. Keine direkten Heilversprechen oder irrefuehrenden Erfolgsversprechen gefunden.",
+	"plugin_bugs_observed": []
+}

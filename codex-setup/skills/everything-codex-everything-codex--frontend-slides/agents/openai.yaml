@@ -1,0 +1,7 @@
+interface:
+  display_name: "frontend-slides"
+  short_description: "Create stunning, animation-rich HTML presentations from scratch"
+  default_prompt: "Use $everything-codex-everything-codex--frontend-slides for this task."
+
+policy:
+  allow_implicit_invocation: true

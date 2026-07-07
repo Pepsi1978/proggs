@@ -1,0 +1,7 @@
+interface:
+  display_name: "skill-create"
+  short_description: "Analyze local git history to extract coding patterns and"
+  default_prompt: "Use $everything-codex-everything-codex--skill-create for this task."
+
+policy:
+  allow_implicit_invocation: false

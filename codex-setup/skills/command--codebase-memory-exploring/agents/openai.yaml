@@ -1,0 +1,7 @@
+interface:
+  display_name: "command--command--codebase-memory-exploring"
+  short_description: "command--command--codebase-memory-exploring skill"
+  default_prompt: "Use $command--codebase-memory-exploring for this task."
+
+policy:
+  allow_implicit_invocation: false

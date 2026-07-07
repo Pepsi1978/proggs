@@ -1,0 +1,7 @@
+interface:
+  display_name: "update-codemaps"
+  short_description: "update-codemaps"
+  default_prompt: "Use $everything-codex-everything-codex--update-codemaps for this task."
+
+policy:
+  allow_implicit_invocation: false

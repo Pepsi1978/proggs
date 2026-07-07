@@ -1,0 +1,7 @@
+interface:
+  display_name: "audit-prep-assistant"
+  short_description: "Prepares codebases for security review using Trail of Bits'"
+  default_prompt: "Use $building-secure-contracts-trailofbits--audit-prep-assistant for this task."
+
+policy:
+  allow_implicit_invocation: false

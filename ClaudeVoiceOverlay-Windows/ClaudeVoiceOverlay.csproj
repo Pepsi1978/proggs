@@ -1,0 +1,67 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <OutputType>WinExe</OutputType>
+    <TargetFramework>$(DotNetTfm)-windows</TargetFramework>
+    <Nullable>enable</Nullable>
+    <UseWPF>true</UseWPF>
+    <UseWindowsForms>true</UseWindowsForms>
+    <ApplicationManifest>app.manifest</ApplicationManifest>
+    <!-- Per-Monitor DPI Awareness V2: bei aktivem UseWindowsForms muss
+         die High-DPI-Konfiguration ueber diese csproj-Property laufen, NICHT
+         ueber den Manifest-Block <dpiAwareness>. Sonst meldet der Compiler
+         WFAC010. WPF-Windows in derselben Application erben den Modus
+         automatisch. -->
+    <ApplicationHighDpiMode>PerMonitorV2</ApplicationHighDpiMode>
+    <RootNamespace>ClaudeVoiceOverlay</RootNamespace>
+    <AssemblyName>ClaudeVoiceOverlay</AssemblyName>
+    <Product>Spracheingabe - Claude</Product>
+    <!-- Sichtbare Version (Regel version-bump-visible-always): in den EXE-Datei-Eigenschaften
+         (Details -> Produktversion) pruefbar. Bei JEDER Aenderung hochzaehlen.
+         2.0.0 = grosse Portierung: volle Feature-Paritaet mit TerminalVoiceOverlay
+         (PromptBoard, Drive-Sync, History, Slots, Hotkeys, Settings). -->
+    <Version>2.1.26</Version>
+    <InformationalVersion>2.1.26 (28.06.2026, 12.57 Uhr)</InformationalVersion>
+    <AssemblyTitle>Spracheingabe - Claude</AssemblyTitle>
+    <Company>Voice Overlay</Company>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="NAudio" Version="$(NAudioVersion)" />
+    <PackageReference Include="Microsoft.Extensions.DependencyInjection" Version="$(MicrosoftPackagesVersion)" />
+    <PackageReference Include="Microsoft.Extensions.Logging" Version="$(MicrosoftPackagesVersion)" />
+    <PackageReference Include="Microsoft.EntityFrameworkCore.Sqlite" Version="$(MicrosoftPackagesVersion)" />
+    <PackageReference Include="Google.Apis.Drive.v3" Version="$(GoogleApisDriveVersion)" />
+    <PackageReference Include="Google.Apis.Auth" Version="$(GoogleApisAuthVersion)" />
+  </ItemGroup>
+
+  <!-- UI Automation (UIA 2.0, System.Windows.Automation) fuer positions-unabhaengiges
+       Finden/Fokussieren des Eingabefelds in Claude Desktop (Electron/Chromium).
+       Die Assemblies (UIAutomationClient/Types) kommen ueber das WindowsDesktop-
+       Framework (UseWPF) — eine explizite <Reference> erzeugt nur MSB3243-Konflikte. -->
+  <ItemGroup>
+    <FrameworkReference Include="Microsoft.WindowsDesktop.App.WPF" />
+  </ItemGroup>
+
+  <!-- PromptBoard.Core und PromptBoard.Data leben als Subprojekte direkt unter
+       diesem Hauptprojekt. Das WPF-SDK wuerde sonst alle .cs-Files in den
+       Unterverzeichnissen automatisch als Quelle des Haupt-Assemblies aufnehmen
+       — und dieselben Typen kaemen ein zweites Mal ueber die ProjectReferences
+       rein (CS0436). Wir schliessen die Subprojekt-Verzeichnisse darum explizit aus. -->
+  <ItemGroup>
+    <Compile Remove="PromptBoard.Core\**\*" />
+    <Compile Remove="PromptBoard.Data\**\*" />
+    <Page Remove="PromptBoard.Core\**\*" />
+    <Page Remove="PromptBoard.Data\**\*" />
+    <None Remove="PromptBoard.Core\**\*" />
+    <None Remove="PromptBoard.Data\**\*" />
+    <EmbeddedResource Remove="PromptBoard.Core\**\*" />
+    <EmbeddedResource Remove="PromptBoard.Data\**\*" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="PromptBoard.Core\PromptBoard.Core.csproj" />
+    <ProjectReference Include="PromptBoard.Data\PromptBoard.Data.csproj" />
+  </ItemGroup>
+
+</Project>

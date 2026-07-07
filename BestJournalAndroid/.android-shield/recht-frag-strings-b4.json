@@ -1,0 +1,227 @@
+{
+  "bucket": 4,
+  "lineRange": "1145-1508",
+  "stringsReviewed": 148,
+  "coverageConfirmed": true,
+  "findings": [
+    {
+      "findingId": "S4-001",
+      "riskLevel": "🟥",
+      "category": "Abo-Transparenz §312j BGB — Kein konkreter Preis im Zahlungspflichtig-Label",
+      "key": "paywall_exit_start_discount",
+      "line": 1152,
+      "currentText": "Zahlungspflichtig — 2 Monate zum halben Preis",
+      "problem": "§312j BGB Abs. 3 verlangt auf der Bestellschaltfläche bzw. im unmittelbar angrenzenden Hinweis den tatsächlichen Preis. 'Halben Preis' ohne Nennung des Ausgangs- und Rabattpreises ist nicht ausreichend.",
+      "suggestedFixes": [
+        {
+          "text": "Zahlungspflichtig — %1$s statt %2$s/Monat (2 Monate)",
+          "rationale": "Konkrete Preisangabe mit Platzhaltern erfüllt §312j BGB; beide Preise sichtbar."
+        }
+      ],
+      "invasivityLevel": "text-only"
+    },
+    {
+      "findingId": "S4-002",
+      "riskLevel": "🟥",
+      "category": "Abo-Transparenz §312j BGB — Primärer Abonnieren-Button ohne Preis",
+      "key": "paywall_subscribe_button",
+      "line": 1472,
+      "currentText": "Abonnieren",
+      "problem": "§312j BGB Abs. 3 verlangt auf der Bestellschaltfläche eine unmissverständliche Zahlungspflicht-Formulierung mit Preis. 'Abonnieren' allein genügt nicht.",
+      "suggestedFixes": [
+        {
+          "text": "Jetzt abonnieren — %1$s",
+          "rationale": "Preis-Platzhalter %1$s wird zur Laufzeit befüllt; Button macht Zahlungspflicht und Betrag transparent."
+        },
+        {
+          "text": "Zahlungspflichtig abonnieren",
+          "rationale": "Minimalvariante, wenn Preis direkt neben dem Button angezeigt wird."
+        }
+      ],
+      "invasivityLevel": "text-only"
+    },
+    {
+      "findingId": "S4-003",
+      "riskLevel": "🟥",
+      "category": "Abo-Transparenz §312j BGB — Churn-Retention-Angebot ohne Preisangabe",
+      "key": "churn_offer_auto_renew",
+      "line": 1187,
+      "currentText": "Verlängert sich automatisch, jederzeit kündbar",
+      "problem": "Das Retention-Angebot nennt keinen Preis. Vor Klick auf 'Angebot annehmen' müssen gemäß §312j BGB Aktionspreis, Laufzeit, Folgepreis und Verlängerungsbedingungen genannt sein.",
+      "suggestedFixes": [
+        {
+          "text": "Nur %1$s/Monat für %2$d Monate, danach %3$s/Monat — verlängert sich automatisch, jederzeit kündbar",
+          "rationale": "Alle §312j-Pflichtangaben direkt im Angebotstext: Aktionspreis, Aktionsdauer, Folgepreis, Verlängerung, Kündigung."
+        }
+      ],
+      "invasivityLevel": "text-only"
+    },
+    {
+      "findingId": "S4-004",
+      "riskLevel": "🟥",
+      "category": "Abo-Transparenz §312j BGB — 'Angebot annehmen' ohne Zahlungspflichtig-Label",
+      "key": "churn_accept_offer",
+      "line": 1188,
+      "currentText": "Angebot annehmen",
+      "problem": "Dies ist eine Kaufentscheidung (Wechsel/Verlängerung zu neuen Konditionen). Nach §312j BGB muss die Bestellschaltfläche die Zahlungspflicht klar kennzeichnen. 'Angebot annehmen' ist zu neutral.",
+      "suggestedFixes": [
+        {
+          "text": "Zahlungspflichtig annehmen",
+          "rationale": "Ergänzung 'zahlungspflichtig' erfüllt §312j-Mindestanforderung, wenn Preis in der direkten Umgebung gezeigt wird."
+        }
+      ],
+      "invasivityLevel": "text-only"
+    },
+    {
+      "findingId": "S4-005",
+      "riskLevel": "🟥",
+      "category": "Abo-Transparenz §312j BGB — Kein Widerrufshinweis im Churn-Flow",
+      "key": "churn_auto_renew_note",
+      "line": 1171,
+      "currentText": "Dein Abo verlängert sich automatisch über Google Play. Die Kündigung ist jederzeit möglich.",
+      "problem": "Der Hinweis auf die automatische Verlängerung ist korrekt. Jedoch fehlt der Verweis auf das Widerrufsrecht bzw. den AGB-Link. Bei digitalen Abonnements mit sofortigem Zugang erlischt das Widerrufsrecht durch Nutzerzustimmung; diese Zustimmung muss dokumentiert und verlinkt sein.",
+      "suggestedFixes": [
+        {
+          "text": "Dein Abo verlängert sich automatisch über Google Play. Die Kündigung ist jederzeit möglich. Nutzungsbedingungen & Widerruf: %1$s",
+          "rationale": "Verweis auf AGB/Widerrufsinformation erfüllt Dokumentationspflicht nach §355 BGB."
+        }
+      ],
+      "invasivityLevel": "text-only"
+    },
+    {
+      "findingId": "S4-006",
+      "riskLevel": "🟧",
+      "category": "UWG §5 — Rabattangabe 'spare 37%' ohne nachvollziehbaren Vergleichspreis",
+      "key": "ai_limit_yearly",
+      "line": 1201,
+      "currentText": "Jahresabo, %1$s/Jahr (spare 37%%)",
+      "problem": "Der Rabattvergleich 'spare 37%' muss einem klar ausgewiesenen Vergleichspreis entsprechen. Ohne Nennung des Monatsabo-Jahresäquivalents als Bezugsgröße ist die Angabe nach §5 UWG potenziell irreführend.",
+      "suggestedFixes": [
+        {
+          "text": "Jahresabo, %1$s/Jahr (statt %2$s/Jahr bei Monatsabo — spare 37%%)",
+          "rationale": "Gegenüberstellung beider Jahresbeträge macht den Rabatt nachvollziehbar."
+        }
+      ],
+      "invasivityLevel": "text-only"
+    },
+    {
+      "findingId": "S4-007",
+      "riskLevel": "🟧",
+      "category": "UWG §5 — 'Exklusives Angebot' ohne Exklusivitätssubstanz",
+      "key": "churn_exclusive_offer",
+      "line": 1182,
+      "currentText": "Exklusives Angebot",
+      "problem": "Wird das Angebot systematisch jedem Nutzer im Churn-Flow präsentiert, fehlt die Exklusivität. Das kann als irreführende Alleinstellungsbehauptung nach §5 UWG gewertet werden.",
+      "suggestedFixes": [
+        {
+          "text": "Angebot nur für dich",
+          "rationale": "Personalisierungsformulierung ohne überprüfbare Exklusivitätsbehauptung."
+        },
+        {
+          "text": "Sonderangebot",
+          "rationale": "Neutrale Bezeichnung ohne nachweispflichtige Exklusivitätszusage."
+        }
+      ],
+      "invasivityLevel": "text-only"
+    },
+    {
+      "findingId": "S4-008",
+      "riskLevel": "🟧",
+      "category": "HWG §3 / UWG §5 — KI-Disclaimer im ai_banner_body unvollständig",
+      "key": "ai_banner_body",
+      "line": 1211,
+      "currentText": "Alle KI-Ausgaben sind Anregungen, keine professionelle Beratung.",
+      "problem": "Der Disclaimer ist vorhanden, steht aber mitten in einer Feature-Aufzählung und kann optisch übersehen werden. Der Hinweis auf Krisenhilfe (vorhanden in ai_output_health_disclaimer_long, Zeile 1502) fehlt hier.",
+      "suggestedFixes": [
+        {
+          "text": "• Alle KI-Ausgaben sind Anregungen zur Selbstreflexion — kein Ersatz für professionelle Beratung. Bei akuten Problemen wende dich an eine Fachperson.",
+          "rationale": "Angleichung an ai_output_health_disclaimer_long für konsistente Disclaimerkette."
+        }
+      ],
+      "invasivityLevel": "text-only"
+    },
+    {
+      "findingId": "S4-009",
+      "riskLevel": "🟧",
+      "category": "Markenrecht — Google-Marke korrekt, aber Übersetzungsrisiko",
+      "key": "paywall_feature_drive_backup",
+      "line": 1467,
+      "currentText": "Google Drive Backup",
+      "problem": "Google Drive ist eine eingetragene Marke von Google LLC. Aktuelle Schreibweise ist korrekt. Risiko besteht in den 26 Übersetzungsdateien: Der Markenname darf dort nicht verändert oder übersetzt werden.",
+      "suggestedFixes": [
+        {
+          "text": "Google Drive Backup",
+          "rationale": "Aktuelle Schreibweise beibehalten. In allen values-XX/strings.xml sicherstellen, dass der Markenname unverändert bleibt (translatable=false empfohlen)."
+        }
+      ],
+      "invasivityLevel": "text-only"
+    },
+    {
+      "findingId": "S4-010",
+      "riskLevel": "🟨",
+      "category": "DSGVO — Consent-Footer vollständig, aber kein expliziter Widerrufslink",
+      "key": "consent_footer_link_agb",
+      "line": 1507,
+      "currentText": "Nutzungsbedingungen",
+      "problem": "Die drei Consent-Links (Datenschutz, Impressum, Nutzungsbedingungen) sind vorhanden. Ein expliziter Link zur Widerrufsinformation als separates Dokument oder benannter Abschnitt fehlt. Sofern die Widerrufsinformation in den AGB enthalten ist, sollte das Label das deutlicher machen.",
+      "suggestedFixes": [
+        {
+          "text": "Nutzungsbedingungen & Widerruf",
+          "rationale": "Macht explizit, dass das Dokument auch die Widerrufsinformation enthält."
+        }
+      ],
+      "invasivityLevel": "text-only"
+    },
+    {
+      "findingId": "S4-011",
+      "riskLevel": "🟨",
+      "category": "Abo-Transparenz — Lifetime-Label ohne Preis-Platzhalter",
+      "key": "paywall_lifetime_label",
+      "line": 1469,
+      "currentText": "Einmalig",
+      "problem": "Das Label beschreibt das Abrechnungsmodell korrekt. Der Einmalpreis muss direkt daneben sichtbar sein. Empfehlung: Preis-Platzhalter im String, um Layout-Abhängigkeit zu reduzieren.",
+      "suggestedFixes": [
+        {
+          "text": "Einmalig — %1$s",
+          "rationale": "Preisangabe direkt im Label macht die Zahlungsinformation layout-unabhängig sichtbar."
+        }
+      ],
+      "invasivityLevel": "text-only"
+    },
+    {
+      "findingId": "S4-012",
+      "riskLevel": "🟨",
+      "category": "HWG §3 — Notification-Body mit implizitem Wirkversprechen",
+      "key": "notif_reminder_body_2",
+      "line": 1224,
+      "currentText": "Dein zukünftiges Ich wird dir danken",
+      "problem": "Die Formulierung impliziert einen messbaren persönlichen Nutzen durch Tagebuchschreiben (Wohlbefinden/Entwicklung). Im Kontext einer App mit KI-Analysen kann das als grenzwertiges Wirkversprechen (§3 HWG) gewertet werden. Niedriges Risiko, da keine direkte Gesundheitsbehauptung.",
+      "suggestedFixes": [
+        {
+          "text": "Schreib es auf — für dich.",
+          "rationale": "Neutralere Formulierung ohne Wirkungsversprechen."
+        }
+      ],
+      "invasivityLevel": "text-only"
+    },
+    {
+      "findingId": "S4-013",
+      "riskLevel": "🟨",
+      "category": "UWG §5 — Paywall-Headline 'persönlicher KI-Begleiter' potenziell übertrieben",
+      "key": "paywall_headline_default_sub",
+      "line": 1145,
+      "currentText": "Dein persönlicher KI-Begleiter im Alltag",
+      "problem": "Die Headline weckt Erwartungen an kontinuierliche Personalisierung über Sitzungen hinweg. Sofern keine echte gedächtnisbasierte Personalisierung stattfindet, könnte das als irreführend (§5 UWG) eingestuft werden. Niedriges Risiko, da Feature-Liste den Umfang klarstellt.",
+      "suggestedFixes": [
+        {
+          "text": "Dein KI-gestütztes Tagebuch",
+          "rationale": "Beschreibt das Produkt präzise ohne Erwartungen an aktive Begleitung zu wecken."
+        }
+      ],
+      "invasivityLevel": "text-only"
+    }
+  ],
+  "plugin_bugs_observed": [
+    "Kein Plugin-Bug beobachtet. Read-Tool mit offset=1145 limit=370 hat exakt den zugewiesenen Bereich geliefert (Zeilen 1145-1509). Datei endet bei Zeile 1508 (</resources>). Bucket 4 ist vollständig bis Dateiende abgedeckt."
+  ]
+}

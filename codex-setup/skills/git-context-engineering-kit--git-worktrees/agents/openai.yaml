@@ -1,0 +1,7 @@
+interface:
+  display_name: "git:worktrees"
+  short_description: "working on multiple branches simultaneously, context switching"
+  default_prompt: "Use $git-context-engineering-kit--git-worktrees for this task."
+
+policy:
+  allow_implicit_invocation: false

@@ -1,0 +1,33 @@
+{
+  "worker": "tw-es",
+  "language": "es",
+  "applied": {
+    "es": [
+      "ai_limits_dialog_body","ai_prompt_custom_intro","ai_prompt_custom_rules","ai_prompt_entropy_intro",
+      "ai_prompt_goals_rules","ai_prompt_insight_attitude","ai_prompt_no_dates_rule","ai_prompt_rerank_system",
+      "churn_offer_feature_perspectives","consent_card3_title","consent_toggle_analytics_body","consent_toggle_analytics_title",
+      "consent_toggle_do_not_sell_body","onboarding_feature_secure","onboarding_premium_feature_noads","paywall_feature_noads",
+      "paywall_feature_profiles","paywall_from_per_day","paywall_headline_clarity_sub","paywall_monthly_note",
+      "privacy_gate_groq_body","privacy_gate_tts_body","privacy_gate_tts_title","profile_entropy_long","retro_benefit_weekly",
+      "settings_analytics_title","settings_delete_account_confirm_body","settings_delete_account_subtitle",
+      "settings_feedback_dialog_desc","settings_premium_feature_5_perspectives","settings_premium_feature_profiles",
+      "settings_report_ai_confirm_body","settings_revoke_confirm_body","settings_revoke_confirm_title","settings_revoke_subtitle",
+      "datetime_months_relative","datetime_years_relative"
+    ]
+  },
+  "new_inserts": { "es": ["paywall_monthly_note"] },
+  "plurals_replaced": { "es": ["datetime_months_relative","datetime_years_relative"] },
+  "skipped_already_present": {},
+  "validations_performed": {
+    "es": ["xml-valid","no-key-identical-to-de","format-args-match-de","no-bare-percent","apostrophes-ok-0-unescaped","ai_limits-150x4-with-+150-per-profile-clause","legal-delete_account-cuenta-de-Google-se-mantiene","legal-revoke-356a","do_not_sell-no-invented-year"]
+  },
+  "register": "es-419 tuteo (tu), no voseo, no usted; 'derecho de desistimiento' for Widerruf",
+  "worker_overload": false,
+  "plugin_bugs_observed": [
+    {
+      "symptom": "check_apostrophes.py requires --locale and --path flags; template (FIN-044) documents positional path-only usage 'check_apostrophes.py <path>'",
+      "evidence": "Running positional form errors: 'the following arguments are required: --locale, --path'",
+      "suggestion": "Update translation-worker.md FIN-044 snippet to: python3 .../check_apostrophes.py --locale <lang> --path <file>"
+    }
+  ]
+}

@@ -1,0 +1,45 @@
+# Automatische Zeilenende-Normalisierung
+* text=auto
+# JavaScript - immer LF
+*.js text eol=lf
+*.json text eol=lf
+# C# / Windows-Projekte - CRLF
+*.cs text eol=crlf
+*.csproj text eol=crlf
+*.xaml text eol=crlf
+*.sln text eol=crlf
+*.manifest text eol=crlf
+# Swift / macOS-Projekte - LF
+*.swift text eol=lf
+*.plist text eol=lf
+*.entitlements text eol=lf
+# Shell-Skripte - immer LF (auch unter Windows)
+*.sh text eol=lf
+# Versionierte Git-Hooks (bash) - immer LF (sonst killt CRLF den Shebang auf macOS/Linux)
+.githooks/pre-commit text eol=lf
+.githooks/pre-push text eol=lf
+# PowerShell - CRLF
+*.ps1 text eol=crlf
+*.psm1 text eol=crlf
+# VBScript - CRLF
+*.vbs text eol=crlf
+# Markdown und Config - LF
+*.md text eol=lf
+*.yml text eol=lf
+*.yaml text eol=lf
+*.env text eol=lf
+# Binaerdateien
+*.png binary
+*.jpg binary
+*.gif binary
+*.ico binary
+*.exe binary
+*.app binary
+*.dll binary
+BestJournalFrank/app/src/main/assets/whisper/*.onnx filter=lfs diff=lfs merge=lfs -text
+BestJournalAndroid/app/src/main/assets/whisper/*.onnx filter=lfs diff=lfs merge=lfs -text
+*.aar filter=lfs diff=lfs merge=lfs -text
+# VoiceAgent Wake-Word-Modell (~5 MB, klein genug fuer normales Git — kein LFS, damit der Build keinen LFS-Pull braucht)
+VoiceAgent/**/*.onnx binary
+VoiceAgent/**/*.model binary
+*.wav binary

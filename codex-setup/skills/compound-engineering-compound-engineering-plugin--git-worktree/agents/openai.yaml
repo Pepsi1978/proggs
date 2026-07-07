@@ -1,0 +1,7 @@
+interface:
+  display_name: "git-worktree"
+  short_description: "manages Git worktrees for isolated parallel development"
+  default_prompt: "Use $compound-engineering-compound-engineering-plugin--git-worktree for this task."
+
+policy:
+  allow_implicit_invocation: false

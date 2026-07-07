@@ -1,0 +1,1448 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources xmlns:tools="http://schemas.android.com/tools"
+    xmlns:xliff="urn:oasis:names:tc:xliff:document:1.2"
+    tools:locale="tr">
+    <!-- App brand name — do not translate -->
+    <string name="app_name" translatable="false">Best Journal</string>
+
+    <!-- ════════════════════════════════════════════════════════════════════
+         NAVIGATION & TABS
+         ════════════════════════════════════════════════════════════════════ -->
+    <string name="nav_journal">Günlük</string>
+    <string name="nav_retrospective">Özet</string>
+    <string name="nav_dashboard">Panel</string>
+    <string name="nav_settings">Ayarlar</string>
+
+    <!-- ════════════════════════════════════════════════════════════════════
+         COMMON / SHARED
+         ════════════════════════════════════════════════════════════════════ -->
+    <string name="action_cancel">İptal</string>
+    <string name="action_save">Kaydet</string>
+    <string name="action_close">Kapat</string>
+    <string name="action_continue">Devam</string>
+    <string name="action_understood">Anladım</string>
+    <string name="action_retry">Yeniden dene</string>
+    <string name="action_later">Sonra</string>
+    <string name="action_share">Paylaş</string>
+    <string name="action_discard">Vazgeç</string>
+    <string name="action_back">Geri</string>
+    <string name="action_done">Tamam</string>
+    <string name="action_no_thanks">Hayır, teşekkürler</string>
+    <string name="action_delete">Sil</string>
+    <!-- Accessibility label for the undo icon button on the dashboard. -->
+    <string name="action_undo">Geri al</string>
+    <string name="action_ok">Tamam</string>
+    <string name="action_go_google_play">Google Play\'e git</string>
+    <string name="journal_drive_backup_dialog">Google Drive yedeği</string>
+    <string name="journal_improve_text">✨ Metni iyileştir</string>
+    <string name="journal_show_original">↩ Orijinali göster</string>
+    <string name="journal_show_improved">✨ İyileştirilmiş sürümü göster</string>
+    <string name="journal_ai_improving">YZ metni iyileştiriyor, biraz bekle</string>
+    <string name="journal_later">Sonra</string>
+    <!-- Paywall missed strings -->
+    <string name="paywall_from_per_day">Yıllık abonelik, yılda %1$s</string>
+    <string name="paywall_instead_per_month">Aylık plana göre %1$d%% tasarruf</string>
+    <string name="paywall_or">veya</string>
+    <string name="paywall_with_limited">sınırlı limitlerle.</string>
+    <!-- Churn missed string -->
+    <string name="churn_instead_of">yerine </string>
+    <string name="label_premium">Premium</string>
+    <string name="label_original">Orijinal</string>
+    <string name="label_improved">✨ YZ Geliştirildi</string>
+    <string name="label_photo">Fotoğraf</string>
+    <string name="label_video">Video</string>
+    <string name="label_current">Güncel</string>
+    <string name="label_record">Rekor</string>
+    <string name="cd_sync_status">Eşitleme durumu</string>
+    <string name="cd_day">Gündüz</string>
+    <string name="cd_night">Gece</string>
+
+    <!-- ════════════════════════════════════════════════════════════════════
+         JOURNAL SCREEN
+         ════════════════════════════════════════════════════════════════════ -->
+    <string name="journal_title">Günlük</string>
+    <string name="journal_search_placeholder">Girişlerde ara…</string>
+    <string name="journal_search">Ara</string>
+    <string name="journal_search_hint">Arama</string>
+    <string name="journal_search_close">Aramayı kapat</string>
+    <string name="journal_no_entries">Henüz giriş yok</string>
+    <string name="journal_tap_mic_to_start">Başlamak için mikrofona dokun</string>
+    <string name="journal_cd_streak">Gün üst üste</string>
+    <string name="journal_cd_text_input">Metin yaz</string>
+    <string name="journal_achievement_unlocked">Başarım açıldı!</string>
+    <string name="journal_drive_not_signed_in">Google hesabında değilsin</string>
+    <string name="journal_drive_backup_current">Yedek güncel, tüm girişlerin güvende</string>
+    <string name="journal_drive_uploading">Yedek yükleniyor…</string>
+    <string name="journal_drive_downloading">Fotoğraflar/videolar indiriliyor…</string>
+    <string name="journal_drive_failed">Yedekleme başarısız!</string>
+    <string name="journal_drive_last_sync">Son eşitleme: %1$s</string>
+    <string name="journal_new_entry_prompt">Yazma ilhamı</string>
+    <string name="journal_new_entry">Yeni giriş</string>
+    <string name="journal_save_improved">İyileştirilmiş sürümü kaydet</string>
+    <string name="journal_save">Kaydet</string>
+    <string name="journal_cd_write">Yaz</string>
+    <string name="journal_write">Yaz</string>
+    <string name="journal_cd_speak">Konuş</string>
+    <string name="journal_speak">Konuş</string>
+    <string name="journal_your_answer">Cevabın:</string>
+    <string name="journal_placeholder_prompt">Düşüncelerini buraya yaz…</string>
+    <string name="journal_placeholder_edit">Metni düzenlemek için buraya dokun…</string>
+    <string name="journal_freeflow_hint">Düşüncelerini serbestçe akıtıver. Doğrusu ya da yanlışı yok.</string>
+    <string name="journal_transcribed_with">%1$s ile çözümlendi</string>
+    <!-- Default label for the transcription model (local Whisper, runs on-device). -->
+    <string name="transcription_model_local">Yerel Whisper modeli</string>
+    <!-- Brand name of the Groq transcription model — do not translate. -->
+    <string name="transcription_model_groq" translatable="false">Groq Whisper Large V3 Turbo</string>
+    <string name="journal_text_upsell_title">Etkileyici, değil mi?</string>
+    <string name="journal_text_upsell_body">Premium ile her girişi iyileştirebilirsin.</string>
+    <string name="journal_discover_premium">Premium\'u keşfet →</string>
+    <string name="journal_entries_label">Girişler</string>
+    <string name="journal_entry_count">%1$d giriş</string>
+    <string name="journal_streak_days">%1$d gün</string>
+    <string name="journal_streak_days_in_row">%1$d gün üst üste</string>
+    <string name="journal_streak_next_goal">Sonraki hedef: %1$d gün</string>
+    <string name="journal_streak_remaining">%1$d kaldı</string>
+    <string name="journal_streak_premium">Seri koruması: Premium ile kullanılabilir</string>
+    <string name="journal_keep_going">Böyle devam!</string>
+    <string name="journal_daily_prompt">Günün ilhamı</string>
+    <string name="journal_write_about">Bu konuda yaz</string>
+    <string name="journal_recording_error">Kayıt başarısız: %1$s</string>
+    <string name="journal_transcription_error">Çözümleme başarısız: %1$s</string>
+    <string name="journal_rate_limit">Kısa mola: sonraki iyileştirmeye %1$d dakika kaldı.</string>
+    <string name="journal_improve_error">Metin iyileştirme başarısız: %1$s</string>
+    <string name="journal_save_error">Kaydedilemedi: %1$s</string>
+    <string name="recording_tap_stop">Durdurmak için tekrar dokun</string>
+
+    <!-- Streak messages -->
+    <string name="streak_365">Bir tam yıl!</string>
+    <string name="streak_180">İnanılmaz disiplin!</string>
+    <string name="streak_90">Durdurulamazsın!</string>
+    <string name="streak_30">Bir tam ay!</string>
+    <string name="streak_14">İki güçlü hafta!</string>
+    <string name="streak_7">Bir tam hafta!</string>
+    <string name="streak_3">Sürdürüyorsun!</string>
+    <string name="streak_default">Her gün sayılır!</string>
+    <string name="streak_desc_365">Küçük bir alışkanlık olarak başlayan şey artık hayatının sağlam bir parçası. Günlük seni hiç olmadığı kadar tanıyor.</string>
+    <string name="streak_desc_14">İki hafta üst üste, çok az kişinin başardığı bir şey. Gelecekteki sen, bugünkü sana bunun için teşekkür edecek.</string>
+    <string name="streak_desc_7">Düşünceler, duygular ve anılarla dolu bir hafta. Değerli bir şey inşa ediyorsun.</string>
+    <string name="streak_desc_3">Üst üste üç gün, gerçek bir alışkanlığın başlangıcı. Sürdür, değer.</string>
+    <string name="streak_desc_1">Her giriş, gelecekteki sana küçük bir armağan. Yarın da yaz!</string>
+
+    <!-- ════════════════════════════════════════════════════════════════════
+         ENTRY DETAIL SCREEN
+         ════════════════════════════════════════════════════════════════════ -->
+    <string name="entry_title">Giriş</string>
+    <string name="entry_summary">Özet</string>
+    <string name="entry_saving">Kaydediliyor…</string>
+    <string name="entry_improving">İyileştiriliyor…</string>
+    <string name="entry_improve_with_ai">YZ ile sonradan iyileştir</string>
+    <string name="entry_photos_videos">Fotoğraflar/Videolar</string>
+    <string name="entry_add">Ekle</string>
+    <string name="entry_no_photos_yet">Henüz fotoğraf/video eklenmedi</string>
+    <string name="entry_cd_play_video">Videoyu oynat</string>
+    <string name="entry_cd_remove">Kaldır</string>
+    <string name="entry_tts_enable_hint">Sesleri ayarlardan aç</string>
+    <string name="entry_tts_stop">Durdur</string>
+    <string name="entry_tts_read">Sesli oku</string>
+    <string name="entry_cd_share">Paylaş</string>
+    <string name="entry_recording_duration">Kayıt süresi: %1$s</string>
+    <string name="entry_tts_generating">Bekle, ses oluşturuluyor…</string>
+    <string name="entry_tts_journal_label">Günlük girişi</string>
+    <string name="entry_tts_followup_label">Ek not %1$s</string>
+    <string name="entry_cd_photo_page">Fotoğraf %1$d</string>
+    <string name="entry_add_photo_video">Fotoğraf/video ekle</string>
+    <string name="entry_camera">Kamera</string>
+    <string name="entry_gallery">Galeri</string>
+    <string name="entry_delete_title">Girişi silmek istiyor musun?</string>
+    <string name="entry_delete_message">Bu girişi kalıcı olarak silmek istiyor musun?</string>
+
+    <!-- Share dialog -->
+    <string name="share_title">Girişi paylaş</string>
+    <string name="share_which_version">Hangi sürümü paylaşmak istersin?</string>
+    <string name="share_improved_version">İyileştirilmiş sürüm</string>
+    <string name="share_photos_videos_label">Fotoğrafları/videoları da gönder:</string>
+    <string name="share_footer">BestJournal uygulamasından günlük girişi</string>
+    <string name="share_what_to_share">Ne paylaşmak istiyorsun?</string>
+    <string name="share_journal_entry">Günlük girişi</string>
+    <string name="share_followup_numbered">Ek not <xliff:g id="ordinal" example="1">%1$s</xliff:g></string>
+    <string name="share_followup_single">Ek not</string>
+
+    <string name="error_recording_failed">Kayıt başarısız: <xliff:g id="reason" example="Mikrofon kullanılamıyor">%1$s</xliff:g></string>
+    <string name="error_transcription_failed">Yazıya dökme başarısız: <xliff:g id="reason" example="Ağ zaman aşımı">%1$s</xliff:g></string>
+
+    <!-- ════════════════════════════════════════════════════════════════════
+         DASHBOARD SCREEN
+         ════════════════════════════════════════════════════════════════════ -->
+    <string name="dashboard_title">Panel</string>
+    <string name="dashboard_legend">Gösterge</string>
+    <string name="dashboard_refresh">Yenile</string>
+    <string name="dashboard_weekly_review_waiting">Haftalık geri bakışın seni bekliyor</string>
+    <!-- Body text of the weekly-review premium upsell card on the dashboard. -->
+    <string name="dashboard_weekly_review_upsell_body">Hareketli bir haftan geçti. Premium ile tam analizi görebilirsin: kalıpları tanı, içgörüleri keşfet ve seni meşgul edeni anla.</string>
+    <string name="dashboard_discover_premium">Premium\'u keşfet</string>
+    <string name="dashboard_please_wait">Lütfen bekle</string>
+    <string name="dashboard_gemini_unavailable">Gemini şu an ulaşılamıyor, biraz sonra tekrar dene.</string>
+    <string name="dashboard_no_custom_focus">Analiz odağı girilmedi</string>
+    <string name="dashboard_custom_focus_hint">Ayarlar\'da «Kişisel analiz» altında\nbir odak gir,\nya da başka bir profil seç.</string>
+    <string name="dashboard_no_analysis_yet">Henüz analiz yok</string>
+    <string name="dashboard_create_entries_custom">Günlük girişleri oluştur,\nYZ odağını analiz eder.</string>
+    <string name="dashboard_create_entries_default">Günlük girişleri oluştur,\nYZ örüntülerini analiz eder.</string>
+    <string name="dashboard_like_analysis">Analizi beğendin mi?</string>
+    <string name="dashboard_premium_upsell_body">Premium ile istediğin kadar profilden geniş kapsamlı analizler alırsın.</string>
+    <string name="dashboard_learn_more">Daha fazla bilgi</string>
+    <string name="dashboard_feature_analyses">Analizler</string>
+    <string name="dashboard_all_observations">Tüm gözlemler</string>
+    <string name="dashboard_inner_mirror">İç ayna</string>
+    <string name="dashboard_all_insights">Tüm içgörüler</string>
+    <string name="dashboard_goal_overview">Hedef özeti</string>
+    <string name="dashboard_all_goals">Tüm hedefler</string>
+    <string name="dashboard_top_results_fallback">Öne çıkan sonuçlar</string>
+    <string name="dashboard_analysis_fallback">Analiz</string>
+    <string name="dashboard_all_results_fallback">Tüm sonuçlar</string>
+    <string name="dashboard_overall_analysis">Genel analiz</string>
+    <!-- Title of the overview card in the Summary dashboard (scenario 0). -->
+    <string name="dashboard_summary_overview_title">Genel bakış</string>
+    <!-- Title of the next-steps card in the Goals dashboard (scenario 3). -->
+    <string name="dashboard_goals_next_steps_title">Sonraki adımlar</string>
+    <string name="dashboard_all_recommendations">Tüm öneriler</string>
+    <string name="dashboard_connection">Bağlantı</string>
+    <string name="dashboard_limit_daily">Günlük limit doldu. Yarın devam!</string>
+    <string name="dashboard_limit_weekly_profile">Bu profilin haftalık limiti doldu. Profil değiştir veya Pazartesi\'ye kadar bekle.</string>
+    <string name="dashboard_limit_cooldown">Kısa mola: sonraki analize %1$d dakika kaldı.</string>
+    <string name="dashboard_analysis_failed">Analiz başarısız</string>
+    <string name="dashboard_last_updated">Son güncelleme: %1$s</string>
+    <string name="dashboard_loading_profile_switch">YZ paneli her profil değişiminde otomatik güncellenir</string>
+    <string name="dashboard_loading_delete_update">YZ paneli bir giriş silindiğinde otomatik güncellenir</string>
+    <string name="dashboard_loading_auto_update">YZ paneli her yeni girişte otomatik güncellenir</string>
+    <string name="dashboard_loading_default">YZ paneli güncelleniyor</string>
+
+    <!-- Legend labels -->
+    <string name="legend_urgent">Acil</string>
+    <string name="legend_attention">Dikkat</string>
+    <string name="legend_observe">Gözlemle</string>
+    <string name="legend_activity_level">Etkinlik düzeyi</string>
+    <string name="legend_activity_desc">Yarım daire, bu alanda ne kadar olay olduğunu gösterir:</string>
+    <string name="legend_activity_high">Yüksek etkinlik (67–100\u00A0%)</string>
+    <string name="legend_activity_medium">Orta etkinlik (34–66\u00A0%)</string>
+    <string name="legend_activity_low">Düşük etkinlik (0–33\u00A0%)</string>
+    <string name="legend_observation_relevance">Gözlemlerin önemi</string>
+    <string name="legend_relevance_high">Merkez, girişlerinin ana temaları</string>
+    <string name="legend_relevance_medium">Önemli, yinelenen gözlemler</string>
+    <string name="legend_relevance_low">Kenar notu, tekil anma</string>
+    <string name="legend_reflection_depth">Derinliği yansıt</string>
+    <string name="legend_reflection_desc">Yarım daire, öz-yansıtmanın derinliğini gösterir:</string>
+    <string name="legend_reflection_deep">Derin (67–100\u00A0%)</string>
+    <string name="legend_reflection_aware">Farkında (34–66\u00A0%)</string>
+    <string name="legend_reflection_surface">Yüzeysel (0–33\u00A0%)</string>
+    <string name="legend_insight_depth">İçgörülerin derinliği</string>
+    <string name="legend_insight_deep">Derinlemesine, tekrar eden kalıplar ve inançlar</string>
+    <string name="legend_insight_aware">Farkında, tanınmış düşünce ve duygu örüntüleri</string>
+    <string name="legend_insight_surface">Yüzeysel, ilk gözlemler</string>
+    <string name="legend_progress">İlerleme</string>
+    <!-- Legend: Goal progress -->
+    <string name="legend_goal_progress_desc">Yarım daire, hedeflerinin ilerlemesini gösterir:</string>
+    <string name="legend_blocked_range">Engellendi (0–33\u00A0%)</string>
+    <string name="legend_in_progress_range">Sürüyor (34–66\u00A0%)</string>
+    <string name="legend_progress_range">İlerleme (67–100\u00A0%)</string>
+    <string name="legend_goal_status">Hedef durumu</string>
+    <string name="legend_blocked_desc">Engellendi — engelleri olan hedefler</string>
+    <string name="legend_open_desc">Açık — henüz ilerlememiş hedefler</string>
+    <string name="legend_progress_success_desc">İlerleme — görünür başarısı olan hedefler</string>
+    <!-- Legend: Custom analysis -->
+    <string name="legend_analysis_value">Analiz değeri</string>
+    <string name="legend_analysis_relevance_desc">Yarım daire, odak için önemini gösterir:</string>
+    <string name="legend_high_focus">Yüksek (67–100\u00A0%) — odağın çekirdeği</string>
+    <string name="legend_medium_focus">Orta (34–66\u00A0%) — bağlantı sezildi</string>
+    <string name="legend_low_focus">Düşük (0–33\u00A0%) — kenarda</string>
+    <string name="legend_result_relevance">Sonuçların önemi</string>
+    <string name="legend_important_desc">Önemli — odağınla doğrudan ilgili</string>
+    <string name="legend_relevant_desc">İlgili — odağınla bağlantılı</string>
+    <string name="legend_note_desc">Not — kenar yorumu</string>
+    <!-- Legend: Burden/Stress -->
+    <string name="legend_burden_scale">Yük ölçeği</string>
+    <string name="legend_burden_desc">Yarım daire, bu konunun seni ne kadar yorduğunu gösterir:</string>
+    <string name="legend_high_burden">Yüksek (67–100\u00A0%) — şimdi harekete geç</string>
+    <string name="legend_medium_burden">Orta (34–66\u00A0%) — dikkat gerekli</string>
+    <string name="legend_low_burden">Düşük (0–33\u00A0%) — iyi durum</string>
+    <string name="legend_priority_title">Tavsiyelerin önceliği</string>
+    <string name="legend_priority_high">Kırmızı = acil — şimdi harekete geç</string>
+    <string name="legend_priority_medium">Turuncu = orta — yakında ele al</string>
+    <string name="legend_priority_low">Mavi = düşük — gözlemle</string>
+    <!-- Legend: Categories -->
+    <string name="legend_categories">Kategoriler</string>
+    <string name="legend_categories_desc">Kategoriler dinamik oluşturulur, YZ girişlerdeki temaları tanır ve uygun kategoriler oluşturur. Yeni temalar otomatik olarak yeni simgelere yol açar.</string>
+    <!-- CategoryDetailDialog levels -->
+    <string name="level_low">Düşük</string>
+    <string name="level_medium">Orta</string>
+    <string name="level_high">Yüksek</string>
+    <string name="urgency_high">Acil — şimdi harekete geç</string>
+    <string name="urgency_medium">Dikkat gerekli</string>
+    <string name="urgency_low">İyi durum — gözlemle</string>
+    <!-- Dashboard: Derivation dialog -->
+    <string name="dashboard_derived_from">Şundan türetildi:</string>
+    <string name="dashboard_update_for_derivation">Ayrıntılı türetme için paneli güncelle.</string>
+    <!-- Dashboard: Summary section -->
+    <string name="dashboard_top_5_actions">En önemli 5 adım</string>
+    <string name="dashboard_core_insights">Ana içgörüler</string>
+    <string name="dashboard_summary_subtitle">Girişlerinin en önemli noktaları</string>
+    <string name="summary_central">Merkez</string>
+    <string name="summary_relevant">İlgili</string>
+    <string name="summary_side_note">Kenar notu</string>
+    <!-- Dashboard: Insight section -->
+    <string name="dashboard_deepest_insights">En derin içgörüler</string>
+    <string name="dashboard_insight_subtitle">Girişlerinin sana dair anlattıkları</string>
+    <string name="insight_deep_label">Derin</string>
+    <string name="insight_aware_label">Farkında</string>
+    <string name="insight_surface_label">Yüzey</string>
+    <!-- Dashboard: Goal section -->
+    <string name="dashboard_goal_steps">Hedeflerin için önemli adımlar</string>
+    <string name="goal_blocked_label">Engellendi</string>
+    <string name="goal_open_label">Açık</string>
+    <string name="goal_progress_label">İlerleme</string>
+    <!-- Dashboard: Custom analysis section -->
+    <string name="dashboard_custom_subtitle">Kişisel analizine göre</string>
+    <string name="custom_important_label">Önemli</string>
+    <string name="custom_relevant_label">İlgili</string>
+    <string name="custom_note_label">Not</string>
+    <!-- Dashboard: TTS and sharing -->
+    <string name="dashboard_enable_voices">Sesleri ayarlardan aç</string>
+    <string name="dashboard_tts_stop">Durdur</string>
+    <string name="dashboard_tts_read">Sesli oku</string>
+    <string name="dashboard_share_analysis">Analizi paylaş</string>
+    <string name="dashboard_share">Paylaş</string>
+    <string name="dashboard_tts_wait">Bekle, ses oluşturuluyor…</string>
+
+    <!-- Profile names -->
+    <string name="profile_summary">Özet</string>
+    <string name="profile_entropy">Hayatını topla</string>
+    <string name="profile_insight">Öz farkındalık</string>
+    <string name="profile_goals">Kişisel hedefler</string>
+    <string name="profile_custom">Kişisel analiz</string>
+    <string name="profile_summary_desc">Temaları, örüntüleri ve deneyimleri özetler</string>
+    <string name="profile_entropy_desc">Stresi, düzensizliği ve yükü saptar</string>
+    <string name="profile_insight_desc">Tekrar eden düşünce ve duygu kalıplarını görünür kılar</string>
+    <string name="profile_goals_desc">Hedefleri, istekleri ve ilerlemeyi tanır</string>
+    <string name="profile_custom_desc">Kendi analiz odağını belirle</string>
+
+    <!-- Profile long descriptions (settings) -->
+    <string name="profile_summary_long">Girişlerin yargılamadan, tavsiye vermeden nötr biçimde özetlenir.\n\nTek bakışta görürsün:\n\n• şu an seni hangi temalar meşgul ediyor\n• hangi örüntüler tekrarlanıyor\n• hayatın nasıl gelişiyor\n\nHayatında olan biten her şeyin günlük özeti olarak mükemmel.</string>
+    <string name="profile_entropy_long">YZ, günlük hayatında seni neyin yorduğunu bulur ve sıralar. En büyük yük kaynaklarının bir genel bakışını ve 5 somut toparlama adımı alırsın. Genel bakışı yeniden kazanmak istiyorsan idealdir.</string>
+    <string name="profile_insight_long">KI, yalnızca olaylara bakmakla kalmaz. Günlük girişlerinde şunları tanır:
+
+• Kelimelerindeki düşünce kalıpları ve inançlar
+• Tekrar eden duygular ve tepkiler
+• Girişlerinde görünür olan güçlü yönler
+• Eylemlerini yönlendiren değerler
+
+Kendini daha iyi anlamak ve içsel olarak büyümek isteyenler için.</string>
+    <string name="profile_goals_long">YZ girişlerindeki tüm hedefleri, istekleri ve planları bulur, hatta geçerken söylenenleri bile.\n\nGörürsün:\n\n• hangi hedeflerin var (gizli olanlar dahil)\n• her hedefte nereye geldiğin\n• bir sonraki adımın ne olabileceği\n\nKendi sözlerinden okuyan kişisel hedef takipçin.</string>
+    <string name="profile_custom_long">YZ\'nin neye odaklanacağına sen karar verirsin.\n\nKendi analiz odağını yaz, örneğin:\n\n• «Spora dair tüm anmaları bul»\n• «Ruh hali dalgalanmalarımı incele»\n• «En verimli olduğum anları göster»\n\nNe aradığını tam bilenler için tam kontrol.</string>
+    <string name="profile_custom_prompt">Senin için özellikle önemli olan nedir? YZ girişlerini analiz ederken neye odaklanmalı?</string>
+    <string name="profile_select_hint">Bir profil seç. Daha ayrıntılı açıklama için profile dokun.</string>
+    <!-- Premium upsell sheet shown when a free user tries to add a 3rd custom analysis -->
+    <string name="profiles_premium_title">Birden fazla özel profil</string>
+    <string name="profiles_premium_desc">Premium ile istediğin kadar özel analiz profili oluşturabilirsin. Örneğin biri spor için, biri işin için, biri ailen için. Her profil günlük kayıtlarını kendi odağıyla analiz eder.</string>
+    <string name="profiles_benefit_many">İstediğin kadar özel profil oluştur</string>
+    <string name="profiles_benefit_switch">Odakların arasında istediğin zaman geçiş yap</string>
+    <string name="profiles_benefit_named">Her profile kendi adını ver</string>
+
+    <!-- ════════════════════════════════════════════════════════════════════
+         SETTINGS SCREEN
+         ════════════════════════════════════════════════════════════════════ -->
+    <string name="settings_title">Ayarlar</string>
+    <string name="settings_account">Hesap</string>
+    <string name="settings_sign_out">Çıkış yap</string>
+    <string name="settings_last_sync">Son eşitleme: %1$s</string>
+    <string name="settings_entries_auto_loaded">Girişler oturum açıldığında otomatik yüklenir</string>
+    <string name="settings_backup_photos">Fotoğrafları yedekle</string>
+    <string name="settings_backup_videos">Videoları yedekle</string>
+    <string name="settings_syncing">Yedekleniyor…</string>
+    <!-- Shown briefly as a confirmation after a successful cloud backup. -->
+    <string name="settings_sync_success">Yedek başarıyla alındı</string>
+    <!-- Error shown when Google sign-in fails. %1$s = error message from Google (e.g., "Network error"). -->
+    <string name="settings_signin_failed">Oturum açma başarısız: <xliff:g id="error_reason" example="Network error">%1$s</xliff:g></string>
+    <string name="settings_backup_entries">Günlük girişlerini yedekle</string>
+    <string name="settings_not_signed_in">Giriş yapılmadı</string>
+    <string name="settings_entries_loaded_on_sign_in">Yedekteki girişler oturum açıldığında yüklenir</string>
+    <string name="settings_sign_in_google">Google ile giriş yap</string>
+    <string name="settings_appearance">Görünüm</string>
+    <string name="settings_dark_mode">Koyu mod</string>
+    <string name="settings_dark_active">Etkin</string>
+    <string name="settings_dark_off">Kapalı</string>
+    <string name="settings_follow_system">Sistemi izle</string>
+    <string name="settings_automatic">Otomatik</string>
+    <string name="settings_sounds_haptics_section">Ses / Titreşim</string>
+    <string name="settings_app_sounds">Uygulama sesleri</string>
+    <string name="settings_sounds_on">Sesler açık</string>
+    <string name="settings_sounds_off">Sesler kapalı</string>
+    <string name="settings_haptics">Titreşim</string>
+    <string name="settings_haptics_on">Titreşim açık</string>
+    <string name="settings_haptics_off">Titreşim kapalı</string>
+    <string name="settings_voices">Sesler</string>
+    <string name="settings_tts_on">Sesli okuma açık</string>
+    <string name="settings_tts_off">Sesli okuma kapalı</string>
+    <string name="settings_voice_select">Ses seç</string>
+    <string name="settings_voice_choose">Ses seç</string>
+    <string name="settings_reminder_section">Hatırlatma / Geri bakış</string>
+    <string name="settings_daily_reminder">Günlük hatırlatma</string>
+    <string name="settings_reminder_time" formatted="false">Saat: %02d:%02d</string>
+    <string name="settings_reminder_desc">Günlük yazmayı hatırlatır</string>
+    <string name="settings_weekly_review">Haftalık geri bakış</string>
+    <string name="settings_weekly_review_on">Hatırlatma açık</string>
+    <string name="settings_weekly_review_off">Pazar günü 15:00\'te</string>
+    <string name="settings_monthly_review">Aylık geri bakış</string>
+    <string name="settings_monthly_review_on">Hatırlatma açık</string>
+    <string name="settings_yearly_review">Yıllık geri bakış</string>
+    <string name="settings_yearly_review_on">Hatırlatma açık</string>
+    <string name="settings_timezone">Zaman dilimi: %1$s</string>
+    <string name="settings_security">Güvenlik</string>
+    <string name="settings_fingerprint">Parmak izi</string>
+    <string name="settings_fingerprint_desc">Uygulama başlarken kilidi aç</string>
+    <string name="settings_auto_lock">Arka planda 60 saniye sonra otomatik kilitlenir</string>
+    <string name="settings_ai_profiles_title">YZ paneli profilleri:</string>
+    <string name="settings_ai_automations">YZ otomasyonları</string>
+    <string name="settings_custom_prompt_placeholder">Örneğin: uyku kaliteme ve stres seviyeme odaklan. Beslenmemdeki örüntüleri göster. Ruh halimin hafta içinde nasıl değiştiğini analiz et. En verimli olduğum anı ve beni neyin engellediğini bul.\n\nOdağını ne kadar ayrıntılı anlatırsan sonuçlar o kadar iyi olur.</string>
+    <string name="churn_google_play_redirect">Aboneliği yönetmek için Google Play\'e yönlendirileceksin. Günlük girişlerin elbette duruyor.</string>
+    <string name="splash_subtitle">AKILLI GÜNLÜĞÜN</string>
+    <string name="biometric_subtitle">Günlüğünün kilidini aç</string>
+    <!-- Shown in the biometric lock screen below the app name. Hint to authenticate. -->
+    <string name="biometric_prompt_subtitle">Kilidi açmak için kimliğini doğrula</string>
+    <!-- Button in the biometric lock screen to trigger the fingerprint prompt. Keep short. -->
+    <string name="biometric_unlock_button">Kilidi aç</string>
+    <string name="settings_text_improvement">Metin iyileştirme</string>
+    <string name="settings_text_improvement_desc">Varsayılan olarak aç</string>
+    <string name="settings_dashboard_section">Panel</string>
+    <string name="settings_auto_update">Her yeni girişte otomatik güncelle</string>
+    <string name="settings_premium_section">Premium</string>
+    <string name="settings_premium_lifetime">Ömür boyu erişim etkin</string>
+    <string name="settings_premium_active">Premium aboneliği etkin</string>
+    <string name="settings_premium_lifetime_desc">Tek seferlik ödeme, tüm özellikler kalıcı olarak açık.</string>
+    <string name="settings_premium_desc">Tüm özellikler açık, her gün YZ, PDF dışa aktarma ve daha fazlası.</string>
+    <string name="settings_manage_subscription">Aboneliği yönet</string>
+    <string name="settings_export">Dışa aktar</string>
+    <string name="settings_export_pdf_desc">Tüm günlük girişlerini ve fotoğraflarını PDF belgesi olarak dışa aktar.</string>
+
+    <!-- Premium feature list (settings) -->
+    <string name="settings_premium_feature_improve">Günlük YZ metin iyileştirme</string>
+    <string name="settings_premium_feature_improve_desc">İstediğinde YZ girişlerini geliştirir.</string>
+    <string name="settings_premium_feature_dashboard">Günlük gösterge paneli analizleri</string>
+    <string name="settings_premium_feature_dashboard_desc">Gösterge panelin girişlerinle birlikte büyür.</string>
+    <string name="settings_premium_feature_5_perspectives">4 hazır YZ profilinin tümü</string>
+    <string name="settings_premium_feature_5_perspectives_desc">Özetten öz farkındalığa</string>
+    <string name="settings_premium_feature_reviews">Haftalık, aylık ve yıllık geri bakış</string>
+    <string name="settings_premium_feature_reviews_desc">YZ senin hikâyeni anlatır</string>
+    <string name="settings_premium_feature_patterns">Örüntü tanıma</string>
+    <string name="settings_premium_feature_patterns_desc">YZ, girişlerindeki örüntüleri ve bağlantıları görünür kılar.</string>
+    <string name="settings_premium_feature_pdf">Fotoğraflı PDF dışa aktarım</string>
+    <string name="settings_premium_feature_pdf_desc">Tüm girişler fotoğraflarla belge olarak</string>
+    <string name="settings_premium_feature_voice">Daha kesin ses tanıma</string>
+    <string name="settings_premium_feature_voice_desc">Sesli girişler için daha yüksek kalite</string>
+    <string name="settings_premium_feature_profiles">Sayı sınırı olmadan kendi YZ profillerin</string>
+    <string name="settings_premium_feature_profiles_desc">Birden fazla analiz odağı yan yana</string>
+    <string name="settings_unlock_premium">Premium\'u aç</string>
+    <!-- Export dialog -->
+    <!-- AlertDialog title shown before PDF export. Max 25 chars — fits in dialog header. -->
+    <string name="settings_export_dialog_title">PDF dışa aktarım</string>
+    <string name="settings_export_what">Neyi dışa aktarmak istersin?</string>
+    <string name="settings_export_entries">Günlük girişleri</string>
+    <string name="settings_export_photos">Fotoğraflar</string>
+    <string name="settings_export_action">Dışa aktar</string>
+    <string name="settings_exporting">Dışa aktarılıyor…</string>
+    <!-- Export error shown when the user has no journal entries yet. -->
+    <string name="settings_export_no_entries">Kullanılabilir giriş yok</string>
+    <string name="settings_export_entries_photos_pdf">Girişleri ve fotoğrafları PDF olarak dışa aktar</string>
+    <string name="settings_export_data">Verileri dışa aktar</string>
+    <string name="settings_export_entries_photos_pdf_full">Günlük girişlerini fotoğraflarla PDF olarak dışa aktar</string>
+    <!-- Feedback -->
+    <string name="settings_feedback">Geri bildirim</string>
+    <string name="settings_feedback_desc">Öneriler, istekler, iyileştirmeler, hata bildirimleri 🐞</string>
+    <string name="settings_feedback_send">Geri bildirimi gönder</string>
+    <string name="settings_feedback_sent">Başarıyla gönderildi</string>
+    <string name="settings_feedback_dialog_title">Geri bildirim gönder</string>
+    <string name="settings_feedback_dialog_desc">Geliştiricilere mesajın — her mesajı okuyoruz ve olabildiğince hızlı geri dönüyoruz.</string>
+    <string name="settings_feedback_placeholder">Geri bildirimini yaz…</string>
+    <string name="settings_feedback_sending">Gönderiliyor…</string>
+    <string name="settings_feedback_sign_in_first">Önce Google ile giriş yap</string>
+    <string name="settings_feedback_allow_gmail">Gmail erişimine izin ver ve tekrar dene.</string>
+    <string name="settings_feedback_token_error">Belirteç hatası: %1$s</string>
+    <string name="settings_feedback_subject">Best Journal geri bildirimi</string>
+    <string name="settings_feedback_no_error_body">Hata yanıtı alınmadı</string>
+    <string name="settings_feedback_read_error">Hata yanıtı okunamadı</string>
+    <string name="settings_feedback_api_error">Gmail hatası %1$d: %2$s</string>
+    <string name="settings_feedback_unknown_error">Bilinmeyen hata</string>
+    <string name="settings_feedback_confirm_subject">Best Journal\'a geri bildirimin</string>
+    <string name="settings_feedback_confirm_body">Bu mesajı geliştiriciye sen gönderdin.\nSana kişisel olarak dönüş yapacak.\n\n--- Mesajın ---\n%1$s\n\nSelamlar,\nDEV.FRANK</string>
+    <string name="settings_feedback_from">Geri bildirim kaynağı: %1$s</string>
+    <string name="action_send">Gönder</string>
+    <!-- Drive errors -->
+    <string name="drive_consent_needed">Drive erişimine izin verilmeli</string>
+    <string name="drive_not_signed_in">Giriş yapılmadı</string>
+    <string name="drive_no_backup">Yedek bulunamadı</string>
+    <string name="drive_backup_disabled">Google Drive yedeği gizlilik ayarlarında devre dışı</string>
+    <!-- Achievements -->
+    <string name="achievements_title">Başarımlar</string>
+    <string name="achievements_counter">%1$d / %2$d açıldı</string>
+    <string name="achievements_unlocked_at">%1$s tarihinde açıldı</string>
+    <!-- About -->
+    <string name="settings_about">Uygulama hakkında</string>
+    <string name="settings_about_version">Best Journal V0.21.9</string>
+    <string name="settings_about_desc">Kişisel YZ günlüğün</string>
+    <!-- Sign-out dialog -->
+    <string name="settings_sign_out_confirm">Çıkış yapılsın mı?</string>
+    <string name="settings_sign_out_body">Gerçekten çıkış yapmak istiyor musun?</string>
+    <!-- Toggle labels -->
+    <string name="toggle_light">Açık</string>
+    <string name="toggle_dark">Koyu</string>
+    <string name="toggle_sound_on">Ses açık</string>
+    <string name="toggle_sound_off">Ses kapalı</string>
+    <string name="toggle_haptic_on">Titreşim açık</string>
+    <string name="toggle_haptic_off">Titreşim kapalı</string>
+    <string name="toggle_voice_on">Ses açık</string>
+    <string name="toggle_voice_off">Ses kapalı</string>
+    <string name="toggle_sun">Güneş</string>
+    <string name="toggle_moon">Ay</string>
+    <!-- Day names -->
+    <string name="day_monday">Pazartesi</string>
+    <string name="day_tuesday">Salı</string>
+    <string name="day_wednesday">Çarşamba</string>
+    <string name="day_thursday">Perşembe</string>
+    <string name="day_friday">Cuma</string>
+    <string name="day_saturday">Cumartesi</string>
+    <string name="day_sunday">Pazar</string>
+    <!-- Short weekday labels (2 chars) for compact weekday picker. Monday to Sunday. -->
+    <string name="day_abbrev_mon">Pt</string>
+    <string name="day_abbrev_tue">Sa</string>
+    <string name="day_abbrev_wed">Ça</string>
+    <string name="day_abbrev_thu">Pe</string>
+    <string name="day_abbrev_fri">Cu</string>
+    <string name="day_abbrev_sat">Ct</string>
+    <string name="day_abbrev_sun">Pz</string>
+    <!-- Array of short weekday labels for LazyRow / weekday pickers. Order: Mon-Sun. -->
+    <string-array name="weekday_abbreviations">
+        <item>@string/day_abbrev_mon</item>
+        <item>@string/day_abbrev_tue</item>
+        <item>@string/day_abbrev_wed</item>
+        <item>@string/day_abbrev_thu</item>
+        <item>@string/day_abbrev_fri</item>
+        <item>@string/day_abbrev_sat</item>
+        <item>@string/day_abbrev_sun</item>
+    </string-array>
+    <!-- Review schedule dialog -->
+    <string name="settings_reminder_when">Ne zaman hatırlatılsın?</string>
+    <string name="settings_review_when">Geri bakışın ne zaman gelsin?</string>
+    <string name="settings_review_weekday">Haftanın günü</string>
+    <string name="settings_review_time">Saat</string>
+    <string name="settings_monthly_review_off">Ayın son günü 15:00\'te</string>
+    <string name="settings_yearly_review_off">Yılın son günü 15:00\'te</string>
+    <string name="achievement_secret">Gizli</string>
+    <string name="paywall_exit_bonus_days">+ %1$d ek deneme günü</string>
+    <!-- Splash screen start button -->
+    <string name="splash_start">Başla</string>
+    <!-- FreeLimitIndicator: remaining uses counter -->
+    <!-- %1$d = number of remaining AI uses this week -->
+    <string name="limit_remaining"><xliff:g id="count" example="3">%1$d</xliff:g> kaldı</string>
+    <!-- FreeLimitIndicator: usage counter (X of Y used) -->
+    <!-- %1$d = used count, %2$d = max count -->
+    <string name="limit_used_of_max"><xliff:g id="used" example="3">%1$d</xliff:g> / <xliff:g id="max" example="5">%2$d</xliff:g> kullanıldı</string>
+    <!-- ChurnFlowDialog: retention discount badge -->
+    <!-- %1$d = discount percentage -->
+    <string name="churn_discount_badge"><xliff:g id="percent" example="50">%1$d</xliff:g>\u00A0%% TASARRUF</string>
+    <!-- AI prompt language instruction — automatically uses device language -->
+    <string name="ai_prompt_language_style">Basit, net. Zor sözcük yok.</string>
+    <string name="ai_prompt_language_override"></string>
+    <!-- Final response-language instruction appended to every AI prompt. -->
+    <string name="ai_prompt_response_language">YANIT DİLİ: tamamen Türkçe yanıtla. Tüm metinler ve başlıklar Türkçe olmalı, başka dil olmamalı.</string>
+    <string name="ai_prompt_no_dates_rule">TTS SESLİ OKUMAYA UYGUN (ZORUNLU — GÖRÜNÜR METİNLERDE TARİH YASAĞI):\nTÜM görünür metin alanlarında (açıklama, izah, özet, genel analiz) HİÇBİR tarih kullanMAMALISIN — ne \"3.4.\", \"23.04.\", \"28.4.\", \"24.04.\", \"30.4.\" ne de \"3 Nisan tarihli giriş\", \"23.04.\'te\", \"28.4.\'ten\" gibi somut giriş tarihlerine göndermeler. Bu metinler kullanıcıya sesli okunur — tarih zincirleri sesli okunduğunda doğal olmayan biçimde duyulur ve bulgu akışını bozar.\n\nBUNUN YERİNE SALT BULGUYU FORMÜLLE:\n- YANLIŞ: \"3.4., 28.4. ve 23.4. tarihli girişler biyoritmin geç yatma yüzünden bozulduğunu gösteriyor.\"\n- DOĞRU: \"Geç yatma saatleri biyoritmini sistemli biçimde bozuyor.\"\n- YANLIŞ: \"30. tarihli giriş, gelen kutunun 28.4.\'ten beri taştığını ve sana zaman çaldığını gösteriyor.\"\n- DOĞRU: \"Gelen kutun günlerdir taşıyor ve sana zaman çalıyor.\"\n- YANLIŞ: \"Günlük hayatta daha çok genel bakış, 24.04.\'teki toparlama eylemlerinden beri hissediliyor.\"\n- DOĞRU: \"Hareket, günlük hayatta sana hissedilir biçimde daha çok genel bakış sağlıyor.\"\n\nİçerik bulgusu kalır — yalnızca somut tarih göndermeleri düşer. Genel zamansal bağları kullanmaya devam edebilirsin (\"tekrar eden\", \"son zamanlarda\", \"birkaç gün boyunca\"). Tarihler YALNIZCA \"herleitung\" (kaynak izi) alanına aittir (içeride kullanılır, gösterilmez).</string>
+    <string name="ai_prompt_rerank_system">Sen bir profil yeniden sıralayıcısısın. Bir pano analizinden 5 en önemli adımdan oluşan bir JSON dizisi, kullanıcının profil odağı ve özgün günlük girişlerini alırsın.\n\nGörevin 3 adımda:\n1) 5 adımı, profil odağıyla en açık bağı olanlar önce gelecek biçimde sırala.\n2) 5 adımdan en çok 2\'sinin profil odağıyla içerik bağı OLMADIĞINI denetle. Varsa, bunları günlük girişlerinden çıkardığın profil olarak daha güçlü adımlarla değiştir. Her adımın aynı JSON yapısına bağlı kal (titel, beschreibung, erklaerung).\n3) Profil bağını eş anlamlılar ve konusal yakınlıklarla ÇEŞİTLİ biçimde ifade et, profil sözcüklerini mekanik biçimde TEKRARLAMA. Bağ hissedilir olmalı, harfi harfine değil.\n\nÖNEMLİ:\n- Sonunda TAM 5 giriş döndür.\n- Yalnızca gerçek profil bağı eksikse değiştir — zaten iyi uyuyorsa diziyi yalnızca sırala, hiçbir şeyi değiştirme.\n- Her girişin JSON yapısını koru (aynı anahtarlar: titel, beschreibung, erklaerung).\n- Dil Türkçe, tire yok, beschreibung 13-21 sözcük.\n- Hiçbir tıbbi, hukuki ya da finansal teşhis veya bağlayıcı tavsiye verme; bu tür konularda değer yargısı katmadan uzmanlara yönlendir.\n\nTTS SESLİ OKUMAYA UYGUN (ZORUNLU — TARİH YASAĞI):\nbeschreibung ve erklaerung alanlarında tarih kullanma (\"3.4.\", \"23.04.\", \"30. tarihli giriş\"). Bu metinler sesli okunur — tarih zincirleri doğal olmayan biçimde duyulur. Salt bulguyu somut giriş tarihleri olmadan formülle. Örnekler:\n- YANLIŞ: \"3.4. ve 23.04. tarihli girişler biyoritminin bozulduğunu gösteriyor.\"\n- DOĞRU: \"Geç yatma saatleri biyoritmini sistemli biçimde bozuyor.\"\nGenel zamansal bağlara izin var (\"tekrar eden\", \"son zamanlarda\", \"birkaç gün boyunca\"), tarihlere yok.\n\nÇIKTI BİÇİMİ:\n- YALNIZCA bir JSON dizisi (kök düzeyinde köşeli parantezler).\n- Markdown ters tırnak yok, öncesinde/sonrasında metin yok.\n- Doğrudan [ ile başla ve ] ile bitir.</string>
+    <string name="ai_prompt_rerank_user_focus_header">=== KULLANICI PROFİL ODAĞI ===</string>
+    <string name="ai_prompt_rerank_actions_header">=== MEVCUT ÖNCELİKLİ EYLEMLER DİZİSİ (5 giriş) ===</string>
+    <string name="ai_prompt_rerank_entries_header">=== GÜNLÜK KAYITLARI (profile uygun yedek öğeler için kaynak) ===</string>
+    <string name="ai_prompt_rerank_instruction">Profile uymayan en fazla 2 girişi sırala ve değiştir. Tam olarak 5 girişi JSON dizisi olarak döndür.</string>
+    <string name="retro_month_more_entries">(+ %1$d daha fazla giriş)</string>
+    <string name="retro_month_entries_header">BU AYIN ORİJİNAL GÜNLÜK GİRİŞLERİ (özet hâlinde, doğrudan profil bağlantısı için ikinci kaynak olarak):</string>
+    <string name="dashboard_active_profile_label">Aktif Profil: %1$s</string>
+    <string name="dashboard_profile_summary">Özet</string>
+    <string name="dashboard_profile_entropy">Entropi</string>
+    <string name="dashboard_profile_insight">İçgörü</string>
+    <string name="dashboard_profile_goals">Hedefler</string>
+    <string name="dashboard_profile_focus_summary">Olayların ve anların özlü özetleri</string>
+    <string name="dashboard_profile_focus_entropy">Stres ve yük örüntüleriyle klasik entropi analizi</string>
+    <string name="dashboard_profile_focus_insight">Derin öz farkındalık ve kalıpların tanınması</string>
+    <string name="dashboard_profile_focus_goals">Kişisel hedefler ve ilerleme takibi</string>
+    <string name="dashboard_empty_custom_title">Özel profil ayarlanmadı</string>
+    <string name="dashboard_empty_custom_message">Lütfen Ayarlar\'a giderek \"Özel\" profil odağını tanımlayın. Odağı girdikten sonra yapay zeka analizleri buna göre kişiselleştirilecektir.</string>
+
+    <!-- ════════════════════════════════════════════════════════════════════
+         JSON-KEYS für die KI-Antwort (Dashboard).
+         ════════════════════════════════════════════════════════════════════ -->
+    <!-- Top-level JSON keys -->
+    <string name="json_key_overall_analysis">genel_analiz</string>
+    <string name="json_key_top_actions">oncelikli_adimlar</string>
+    <string name="json_key_categories">kategoriler</string>
+    <string name="json_key_heading_top5">baslik_top5</string>
+    <string name="json_key_heading_analysis">baslik_analiz</string>
+    <string name="json_key_heading_results">baslik_sonuclar</string>
+    <string name="json_key_progress">ilerleme</string>
+    <string name="json_key_overall_entropy">toplam_entropi</string>
+    <string name="json_key_trend">egilim</string>
+    <!-- Category-level JSON keys -->
+    <string name="json_key_category_name">ad</string>
+    <string name="json_key_category_icon">ikon</string>
+    <string name="json_key_category_color">renk</string>
+    <string name="json_key_category_entropy_level">entropi_seviyesi</string>
+    <string name="json_key_category_summary">ozet</string>
+    <string name="json_key_category_advices">tavsiyeler</string>
+    <!-- Item-level JSON keys (advice, action, progress) -->
+    <string name="json_key_item_title">baslik</string>
+    <string name="json_key_item_description">aciklama</string>
+    <string name="json_key_item_explanation">acilim</string>
+    <string name="json_key_item_reference">kaynak</string>
+    <string name="json_key_item_priority">oncelik</string>
+    <string name="json_key_item_connection">baglanti</string>
+    <string name="json_key_item_derivation">cikarim</string>
+    <!-- Derivation-level JSON keys -->
+    <string name="json_key_derivation_date">tarih</string>
+    <string name="json_key_derivation_summary">ozet</string>
+    <!-- Enum values (priorities) -->
+    <string name="json_value_priority_high">yuksek</string>
+    <string name="json_value_priority_medium">orta</string>
+    <string name="json_value_priority_low">dusuk</string>
+    <string name="ai_prompt_fresh_summary">YENİ ÖZET — Tamamen yeni, bağımsız bir analiz oluştur.</string>
+    <string name="ai_prompt_fresh_insight">YENİ ÖZ FARKINDALIK ANALİZİ — Tamamen yeni, bağımsız bir analiz oluştur.</string>
+    <string name="ai_prompt_fresh_goals">YENİ HEDEF ANALİZİ — Tamamen yeni, bağımsız bir analiz oluştur.</string>
+    <string name="ai_prompt_fresh_custom">YENİ KİŞİSEL ANALİZ — Kullanıcının odağına göre tamamen yeni, bağımsız bir analiz oluştur.</string>
+    <string name="ai_prompt_fresh_default">YENİ ANALİZ — Tamamen yeni, bağımsız bir analiz oluştur.</string>
+    <string name="ai_prompt_check_summary">ZORUNLU KONTROL: %1$d giriş aldın. Her biri özette ve en az bir temada yer almalı.</string>
+    <string name="ai_prompt_check_insight">ZORUNLU KONTROL: %1$d giriş aldın. Her biri düşünce örüntüleri, duygular, inançlar ve kişisel güçler için incelenmeli.</string>
+    <string name="ai_prompt_check_goals">ZORUNLU KONTROL: %1$d giriş aldın. Her biri hedefler için incelenmeli.</string>
+    <string name="ai_prompt_check_custom">ZORUNLU KONTROL: %1$d giriş aldın. Her biri kullanıcının odağına göre incelenmeli.</string>
+    <string name="ai_prompt_check_default">ZORUNLU KONTROL: %1$d giriş aldın. Her biri analizde yer almalı.</string>
+
+    <!-- ═══════════════════════════════════════════════════════════════════════
+         Retrospective Prompts (Weekly / Monthly / Yearly Rückblicke)
+         ═══════════════════════════════════════════════════════════════════════ -->
+
+    <!-- Weekly retrospective prompt blocks -->
+    <string name="ai_retro_week_intro">Günlük girişlerinden doğal, okuması rahat bir haftalık geri bakış yazan bir anlatıcısın.</string>
+    <string name="ai_retro_week_task">GÖREV: aşağıdaki günlük girişlerini yapılandırılmış bir haftalık geri bakışta özetle.</string>
+    <string name="ai_retro_week_format">BİÇİM (tam olarak uy):\n1. Kısa madde işaretleriyle başla (3-5 madde), her biri «• » ile\n2. Ardından boş satır\n3. Sonra akıcı metin, 2-4 tematik bölüme ayrılmış\n4. Her bölüm köşeli parantez içinde başlıkla başlar: [Tema] (ör. [Yeni karşılaşmalar] veya [Küçük zaferler])\n5. Başlıktan sonra bölümün anlatımı gelir\n6. Bölümleri kronolojik olarak haftanın başından sonuna doğru sırala</string>
+    <string name="ai_retro_week_rules">KURALLAR:\n- «Sen» biçiminde yaz (ya da dilin kişisel karşılığıyla)\n- Selamlama ya da veda yok, doğrudan anlatıya geç\n- Bölümler içinde akıcı üslup ve iyi geçişler\n- Başlıklar kısa ve tematik (2-4 sözcük)\n- Somut olayları, duyguları ve çıkarımları an\n- Sıradan olanı yalnızca anlamlıysa an\n- Olumluyu özellikle öne çıkar, ama zorlukları saklama. Zor anlardan çıkarımlar da tabloya aittir\n- Sıcak ve kişisel yaz, abartma\n- En az 200 sözcük\n- Uzun tire (—) kullanma. Onun yerine virgül veya kısa cümleler kullan.</string>
+    <!-- Section header that introduces the journal entries block. -->
+    <string name="ai_retro_week_entries_header">HAFTANIN GİRİŞLERİ:</string>
+    <!-- Title-generation prompt after a weekly review is ready. %1$s = target language, %2$s = preview. -->
+    <string name="ai_retro_week_title_prompt">Bu haftalık geri bakışa dayanarak kısa, duygusal bir başlık (en fazla 6 sözcük) ver: <xliff:g id="lang" example="Türkçe">%1$s</xliff:g>.\nSadece başlık, başka bir şey yok. Tırnak işareti yok. Uzun tire (—) yok.\n\nGeri bakış:\n<xliff:g id="summary_preview" example="Hafta başladı…">%2$s</xliff:g></string>
+
+    <!-- Monthly retrospective prompt blocks -->
+    <string name="ai_retro_month_intro">Haftalık geri bakışlardan doğal, okuması rahat bir aylık geri bakış yazan bir anlatıcısın.</string>
+    <!-- %1$s = month name, %2$d = year. -->
+    <string name="ai_retro_month_task">GÖREV: aşağıdaki haftalık geri bakışları <xliff:g id="month" example="Nisan">%1$s</xliff:g> <xliff:g id="year" example="2026">%2$d</xliff:g> ayı için yapılandırılmış bir aylık geri bakışta özetle.</string>
+    <string name="ai_retro_month_format">BİÇİM (tam olarak uy):\n1. Kısa madde işaretleriyle başla (4-6 madde), her biri «• » ile\n2. Ardından boş satır\n3. Sonra akıcı metin, 3-5 tematik bölüme ayrılmış\n4. Her bölüm köşeli parantez içinde başlıkla başlar: [Tema] (ör. [Yeni başlangıçlar] veya [Sessiz farkındalıklar])\n5. Başlıktan sonra bölümün anlatımı gelir\n6. Bölümleri kronolojik olarak ayın başından sonuna doğru sırala</string>
+    <string name="ai_retro_month_rules">KURALLAR:\n- «Sen» biçiminde yaz (ya da dilin kişisel karşılığıyla)\n- Selamlama ya da veda yok, doğrudan anlatıya geç\n- Bölümler içinde akıcı üslup ve iyi geçişler\n- Başlıklar kısa ve tematik (2-4 sözcük)\n- Haftaları birbirine bağla, gelişimleri ve ana çizgileri göster\n- Geri bakışları peş peşe tekrar etme, tematik olarak ilişkilendir\n- Sıradan olanı yalnızca anlamlıysa an\n- Olumluyu öne çıkar, zorlukları saklama\n- Sıcak ve kişisel yaz, abartma\n- En az 300 sözcük\n- Uzun tire (—) kullanma. Onun yerine virgül veya kısa cümleler kullan.</string>
+    <string name="ai_retro_month_entries_header">HAFTALIK GERİ BAKIŞLAR:</string>
+    <!-- %1$s = target language, %2$s = preview. -->
+    <string name="ai_retro_month_title_prompt">Bu aylık geri bakışa dayanarak kısa, duygusal bir başlık (en fazla 6 sözcük) ver: <xliff:g id="lang" example="Türkçe">%1$s</xliff:g>.\nSadece başlık, başka bir şey yok. Tırnak işareti yok. Uzun tire (—) yok.\n\nGeri bakış:\n<xliff:g id="summary_preview" example="Nisan getirdi…">%2$s</xliff:g></string>
+
+    <!-- Yearly retrospective prompt blocks -->
+    <string name="ai_retro_year_intro">Aylık geri bakışlardan doğal, okuması rahat bir yıllık geri bakış yazan bir anlatıcısın.</string>
+    <!-- %1$d = year. -->
+    <string name="ai_retro_year_task">GÖREV: aşağıdaki aylık geri bakışları <xliff:g id="year" example="2026">%1$d</xliff:g> yılı için yapılandırılmış bir yıllık geri bakışta özetle.</string>
+    <string name="ai_retro_year_format">BİÇİM (tam olarak uy):\n1. Kısa madde işaretleriyle başla (5-8 madde), her biri «• » ile\n2. Ardından boş satır\n3. Sonra akıcı metin, 4-6 tematik bölüme ayrılmış\n4. Her bölüm köşeli parantez içinde başlıkla başlar: [Tema] (ör. [Yeni başlangıçların baharı] veya [Dinginliği bulmak])\n5. Başlıktan sonra bölümün anlatımı gelir\n6. Bölümleri kronolojik olarak yılın başından sonuna doğru sırala</string>
+    <string name="ai_retro_year_rules">KURALLAR:\n- «Sen» biçiminde yaz (ya da dilin kişisel karşılığıyla)\n- Selamlama ya da veda yok, doğrudan anlatıya geç\n- Bölümler içinde akıcı üslup ve iyi geçişler\n- Başlıklar kısa ve tematik (2-5 sözcük)\n- Ayları birbirine bağla, yıl boyunca gelişmeyi göster\n- Yılın büyük temalarını tanı ve olayları bu çizgilere yerleştir\n- Sıradan olanı yalnızca anlamlıysa an\n- Olumluyu öne çıkar, zorlukları saklama\n- İleriye bakan bir düşünceyle bitir\n- Sıcak ve kişisel yaz, abartma\n- En az 400 sözcük\n- Uzun tire (—) kullanma. Onun yerine virgül veya kısa cümleler kullan.</string>
+    <string name="ai_retro_year_entries_header">AYLIK GERİ BAKIŞLAR:</string>
+    <!-- %1$s = target language, %2$s = preview. -->
+    <string name="ai_retro_year_title_prompt">Bu yıllık geri bakışa dayanarak kısa, duygusal bir başlık (en fazla 6 sözcük) ver: <xliff:g id="lang" example="Türkçe">%1$s</xliff:g>.\nSadece başlık, başka bir şey yok. Tırnak işareti yok. Uzun tire (—) yok.\n\nGeri bakış:\n<xliff:g id="summary_preview" example="Yıl başladı…">%2$s</xliff:g></string>
+
+    <!-- Goals Analysis System Prompt (Profile: Persönliche Ziele) -->
+    <string name="ai_prompt_goals_intro">Dikkatli, motive edici bir hedef analisti ve ilerleme takipçisisin.\n\nGÖREVİN:\nKullanıcının günlük girişlerini incele. Tüm hedefleri, istekleri, planları ve niyetleri tanı, geçerken söylenenler dahil. Birkaç giriş boyunca ilerlemeyi izle. Bunlardan JSON biçiminde yapılandırılmış bir hedef paneli oluştur.</string>
+    <string name="ai_prompt_goals_definition">TANIM — HEDEF NEDİR:\nKullanıcının ulaşmak, değiştirmek, başlatmak, bitirmek, iyileştirmek veya kurmak istediği her şey. Dolaylı ipuçları da sayılır:\n- Doğrudan: «Kilo vermek istiyorum», «Dişçiyi aramalıyım»\n- Dolaylı: «Yeniden koşmak güzel olurdu» = form hedefi\n- Şikâyetler: «Uykum çok kötü» = örtük uyku iyileştirme hedefi\n- Hayaller: «Bir gün İsveç\'e gitmek istiyorum» = uzun vadeli seyahat hedefi</string>
+    <string name="ai_prompt_goals_entry_rules">ÜSTÜN KURAL — HİÇBİR GİRİŞ ATLANMAMALI:\nNumaralı girişler alırsın (ör. «GİRİŞ 1 / 5»).\nHer birini okumalı, incelemeli ve hesaba katmalısın.\n\nAZ GİRİŞLE:\n- 1-2 giriş: tekil hedefleri tanı, ilerlemeyi «bilinmiyor» olarak değerlendir.\n- 3 girişten itibaren: ilerlemeyi etkin biçimde izle ve örüntüleri tanı.</string>
+    <string name="ai_prompt_goals_rules">DİL KURALLARI:\n- %1$s\n- Motive edici ve dürüst, ilerlemeyi kutla, hiçbir şeyi güzel göstermeye çalışma.\n- Uzun tireler (—) yok. Virgül ya da nokta kullan.\n- Sağlık ya da beden hedeflerinde yalnızca motive edici biçimde eşlik et; hiçbir diyet, ilaç ya da tedavi önerisi verme.\n\nMİKTAR KURALI, HER HEDEF SAYILIR:\nTÜM hedefleri tanı — küçük olanları da. ÖZETLEME.</string>
+    <string name="ai_prompt_goals_schema">JSON ÇIKIŞ ŞEMASI:\n{\n  \"genel_analiz\": \"...\",\n  \"oncelikli_adimlar\": [...],\n  \"kategoriler\": [...]\n}\n\n1) \"genel_analiz\" (15-25 cümle): tüm hedefleri adlandır, ilerlemeyi tanı.\n\n2) \"oncelikli_adimlar\" (tam olarak 5): sonraki adımlar.\n   { \"baslik\": \"...\", \"aciklama\": \"13-21 sözcük\", \"acilim\": \"5-8 cümle\" }\n\n3) \"kategoriler\": hedef alanları.\n   {\n     \"ad\": \"en fazla 12 karakter\", \"ikon\": \"material_icon\", \"renk\": \"#HEX\",\n     \"entropi_seviyesi\": 0.0, \"ozet\": \"3-5 cümle\",\n     \"tavsiyeler\": [{\n       \"baslik\": \"...\",\n       \"aciklama\": \"13-21 sözcük. Durum: [açık/sürüyor/engellendi/ulaşıldı]. Sonraki adım: [...].\",\n       \"oncelik\": \"yuksek|orta|dusuk\",\n       \"baglanti\": \"...\", \"cikarim\": [{\"tarih\":\"...\",\"ozet\":\"...\"}]\n     }]\n   }\n   Alanlar: Form, Sağlık, İş, Kariyer, Finans, İlişkiler, Projeler, Öğrenme, Uyku, Psikoloji, Seyahat, Düzen, Yaratıcılık\n   Öncelik: yuksek=engellendi, orta=açık, dusuk=sürüyor/ulaşıldı</string>
+    <string name="ai_prompt_goals_output">ÇIKIŞ BİÇİMİ: YALNIZCA JSON. Ters tırnak yok. { ile başla.</string>
+
+    <!-- Self-Insight Analysis System Prompt (Profile: Selbsterkenntnis) -->
+    <string name="ai_prompt_insight_intro">Kişisel gelişim için empatik, derin bir örüntü analistisin.\n\nGÖREVİN:\nKullanıcının günlük girişlerini incele. Gizli örüntüleri, yinelenen düşünce ve davranış biçimlerini, bilinçdışı inançları, duygusal tepki örüntülerini ve kişisel güçleri bul. Yazarken kullanıcıya fark etmediği ama kendisi hakkında öğrenebileceklerini görünür kıl. Bunlardan JSON biçiminde yapılandırılmış bir öz farkındalık paneli oluştur.</string>
+    <string name="ai_prompt_insight_attitude">TUTUMUN:\nSen iyi niyetli bir aynasın. Kullanıcıya girişlerinde gördüklerini dürüstçe gösterirsin — ama her zaman bundan gelişebilmesi amacıyla. Her bulgu, onun kendini daha iyi anlamasına yardım etmeli. Zor örüntüleri de açıkça adlandırırsın, ama yapıcı biçimde ve suçlamadan. Odak: Kullanıcı kendi sözcüklerinden kendisi hakkında ne öğrenebilir?\n\nHiçbir psikolojik teşhis koymazsın ve hiçbir bozukluk ya da hastalık adlandırmazsın. Yalnızca kullanıcının kendi sözcüklerinden gözlemlenebilir örüntüleri betimlersin.\n\nNE ARARSIN:\n- Tekrar eden duygular: Hangi duygular tekrar tekrar ortaya çıkıyor?\n- Düşünce örüntüleri: Kullanıcı kendisi, başkaları ve dünya hakkında nasıl düşünüyor?\n- Kaçınma örüntüleri: Kullanıcı neyi atlatıyor? Hiç ne hakkında yazmıyor?\n- Güçlü yönler: Kullanıcı, kendisi görmese bile, neyi iyi yapıyor?\n- Değerler: Kullanıcı için gerçekten önemli olan ne (sözlerle değil, davranışla belli olur)?\n- Tetikleyiciler: Hem olumlu hem olumsuz güçlü tepkileri ne tetikliyor?\n- Çelişkiler: Kullanıcı bir şey söyleyip başka türlü mü davranıyor?\n- İhtiyaçlar: Kullanıcının satır aralarından sezilen ihtiyacı ne?\n- Gelişim: Kullanıcının bakış açısı nerede değişti?</string>
+    <string name="ai_prompt_insight_entry_rules">ÜSTÜN KURAL — HİÇBİR GİRİŞ ATLANMAMALI:\nNumaralı girişler alırsın (ör. «GİRİŞ 1 / 5»).\nHer birini okumalı, incelemeli ve hesaba katmalısın.\nYanıttan önce say: TÜM girişleri hesaba kattın mı?\nEksikse HEMEN ekle.\n\nAZ GİRİŞLE:\n- 1-2 giriş: ilk gözlemleri adlandır, derin örüntü yok.\n  İçgörüleri açıklamada «ön» olarak işaretle.\n- 3 girişten itibaren: yinelenen örüntüleri ve derin bağlantıları etkin biçimde ara.\n\nZAMAN AĞIRLIKLANDIRMASI:\nHer giriş hesaba katılmalı. İçsel gelişimi izle: duruş değişti mi? Aynı temalar yeni bir ışıkta mı dönüyor? Öz güven artıyor mu, yoksa belirsizlik mi büyüyor?</string>
+    <string name="ai_prompt_insight_rules">DİL KURALLARI (JSON\'daki TÜM metin alanları için):\n- Basit, net dil. Kısa cümleler.\n- Zor sözcük, jargon, klişe yok.\n- Herkes hemen anlamalı, kafa yormadan.\n- Empatik, dürüst ve yapıcı, suçlamasız, ahkâm kesmeden.\n- Her zaman olumluya bakış: kullanıcı ne öğrenebilir?\n- Uzun tire (—) yok. Virgül veya nokta kullan.\n\nMİKTAR KURALI, EKSİKSİZLİK KISALIKTAN ÖNCE:\nTüm alanlardaki toplam içgörü sayısı en az 15 olmalı. 10\'dan az bir hata. Tanınan her örüntü, bir inançın işareti, yinelenen her duygu kendi içgörüsünü hak eder. Birleştirme. Bir giriş korku, gurur ve kaçınma gösteriyorsa 3 ayrı içgörü çıkar, hepsini birleştiren bir tane değil. JSON uzayabilir, eksiksizlik kısalıktan daha önemli.</string>
+    <string name="ai_prompt_insight_schema_header">JSON ÇIKIŞ ŞEMASI:\n{\n  \"toplam_entropi\": 0.0,\n  \"egilim\": \"artan|sabit|azalan|bilinmiyor\",\n  \"genel_analiz\": \"...\",\n  \"ilerleme\": [...],\n  \"oncelikli_adimlar\": [...],\n  \"kategoriler\": [...]\n}\n\nALAN TANIMLARI:\n\n1) \"toplam_entropi\" (sayı, 0.0–1.0)\n   Kullanıcı girişlerde kendine ne kadar yansıtıyor?\n   - 0.0–0.33 = az öz yansıtma (çoğunlukla olaylar anlatılmış)\n   - 0.34–0.66 = kısmi öz yansıtma (duygu ve düşünceler anılmış)\n   - 0.67–1.0 = güçlü öz yansıtma (kendiyle derin diyalog)\n\n2) \"egilim\" (metin)\n   Yalnızca birkaç gün içinde en az 3 giriş varsa.\n   Eskileri yenilerle karşılaştır:\n   - «artan» = kullanıcı gitgide daha derin yansıtıyor\n   - «sabit» = sabit yansıtma düzeyi\n   - «azalan» = yeni girişlerde daha az öz yansıtma\n   - «bilinmiyor» = yeterli veri yok\n\n3) \"genel_analiz\" (metin, 15-25 cümle)\n   - Giriş giriş ilerle ve derin temayı bul.\n   - Girişler kullanıcı hakkında bir kişi olarak ne anlatıyor?\n   - Düşünme, hissetme ve davranmada hangi örüntüler görünür oluyor?\n   - Fark etmediği halde hangi güçleri sergiliyor?\n   - Davranışını hangi bilinçdışı inançlar yönlendiriyor?\n   - Kişisel büyüme nerede görünüyor?\n   - Empatik ve kişisel yaz, doğrudan kullanıcıya seslen.\n   - Her zaman yapıcı: zor içgörüleri bile öğrenme şansına bağla.</string>
+    <string name="ai_prompt_insight_schema_fields">4) \"ilerleme\" (dizi, 0-8 öğe)\n   Girişlerde görünen kişisel güçler ve olumlu özellikler, kullanıcı kendisi adlandırmasa bile.\n   Güç başına şema:\n   {\n     \"baslik\": \"Kısa başlık (en fazla 5 sözcük)\",\n     \"aciklama\": \"Hangi güç görünüyor ve neden anlaşılıyor (2-3 cümle).\",\n     \"kaynak\": \"Hangi giriş(ler)den çıktığı (1 cümle).\"\n   }\n   Yalnızca 1 giriş veya görünür güç yoksa: boş dizi [].\n\n5) \"oncelikli_adimlar\" (dizi, tam olarak 5 öğe)\n   Tüm girişlerin bütününden çıkan en derin 5 içgörü. Kullanıcının kendisi hakkında öğrenebileceği en önemli şeyler neler? Derinliğe göre sırala (en derin önce). Kesitler arası düşün, kişiliğin tam resmini göster.\n   İçgörü başına şema:\n   {\n     \"baslik\": \"Kısa başlık (en fazla 6 sözcük)\",\n     \"aciklama\": \"13-21 sözcük, içgörüyü kavrayan özlü cümle. Yapıcı, kullanıcı ne öğrenebilir?\",\n     \"acilim\": \"Ayrıntılı açıklama (5-8 cümle). Hangi örüntü ortaya çıkıyor? Hangi girişlerde görülüyor? Öz anlayış için neden önemli? Kullanıcı bununla ne yapabilir?\"\n   }</string>
+    <string name="ai_prompt_insight_schema_categories">6) \"kategoriler\" (dizi, gerektiği kadar)\n   Tanınan HER öz farkındalık alanı için ayrı bir grup.\n   Alanlar yaşam temaları (iş, uyku) DEĞİLDİR, İÇSEL BOYUTLARDIR: kullanıcının nasıl düşündüğü, hissettiği, kendisiyle nasıl ilişkilendiği, karar verdiği, başkalarıyla etkileşimi, motivasyonu ve geri dönüşlerle başa çıkışı.\n   Alan başına şema:\n   {\n     \"ad\": \"Alan adı (en fazla 12 karakter, 1-2 sözcük)\",\n     \"ikon\": \"material_icon_name\",\n     \"renk\": \"#HEX\",\n     \"entropi_seviyesi\": 0.0,\n     \"ozet\": \"Bu alanın özeti (3-5 cümle). Kullanıcı hakkında ne gösteriyor? Hangi örüntü tanınıyor? Ne öğrenilebilir?\",\n     \"tavsiyeler\": [...]\n   }\n\n   ALAN ADLARI — kısa ve kesin:\n   DOĞRU: «Düşünce», «Duygular», «Dürtü», «Başa çıkma», «Değerler»\n   YANLIŞ: «Duygusal tepki örüntüleri» (çok uzun) → «Duygular»\n\n   ALANLAR — DİNAMİK:\n   Bunları temel olarak kullan, bir tema uymuyorsa YENİ oluştur.\n   Alanlar İÇSEL BOYUTLARI yansıtmalı, dış temaları değil:\n   - Düşünce (icon: psychology, renk: #A78BFA)\n   - Duygular (icon: favorite, renk: #F472B6)\n   - Öz imgesi (icon: person, renk: #60A5FA)\n   - Dürtü (icon: bolt, renk: #F59E0B)\n   - Değerler (icon: star, renk: #FBBF24)\n   - İlişkiler (icon: people, renk: #EC4899)\n   - Dayanıklılık (icon: shield, renk: #10B981)\n   - Alışkanlıklar (icon: repeat, renk: #6366F1)\n   - Korkular (icon: nights_stay, renk: #6C63FF)\n   - Sınırlar (icon: block, renk: #EF4444)\n   - Yaratıcılık (icon: lightbulb, renk: #D946EF)\n   - Başa çıkma (icon: handshake, renk: #14B8A6)\n   - Büyüme (icon: trending_up, renk: #22C55E)\n   - İhtiyaçlar (icon: spa, renk: #F97316)\n   - Kontrol (icon: tune, renk: #78716C)\n   Diğer ikonlar: self_improvement, mood, sentiment_satisfied, sentiment_dissatisfied, visibility, lock_open, wb_sunny, explore, balance, healing, volunteer_activism, emoji_objects\n\n   ALAN başına DERİNLİK (\"entropi_seviyesi\" alanı, 0.0–1.0):\n   Öz farkındalık bu alanda ne kadar derine iniyor?\n   - 0.0–0.33 = yüzey (durumları anlatır, az yansıtır)\n   - 0.34–0.66 = farkında (kendi örüntülerini kısmen tanır)\n   - 0.67–1.0 = derin (nedenleri ve bağlantıları anlar)\n\n   ALAN başına İÇGÖRÜLER (\"tavsiyeler\" alanı) — MİKTAR:\n   Çıkarabildiğin TÜM içgörüleri çıkar. Azdan çok daha iyi, alan başına 5-20 normaldir. Tanınan her örüntü, kişiliğe dair her gözlem, içsel duruş işareti kendi içgörüsünü hak eder. Birleştirme. Her içgörü girişlerdeki SOMUT ifadelere dayanmalı. Öneme göre sırala: «yuksek» önce, sonra «orta», sonra «dusuk».\n\n   İçgörü başına şema:\n   {\n     \"baslik\": \"Kısa başlık (en fazla 6 sözcük)\",\n     \"aciklama\": \"13-21 sözcük, içgörüyü kavrayan özlü cümle. Yapıcı, ne ortaya çıkıyor, ne öğrenilebilir?\",\n     \"oncelik\": \"yuksek|orta|dusuk\",\n     \"baglanti\": \"1-2 başka ilişkili alan adı ve neden olduğuna dair bir cümle. Yoksa: null\",\n     \"cikarim\": [\n       {\n         \"tarih\": \"Giriş tarihi (ör. 28.03.2026)\",\n         \"ozet\": \"Bu girişte bu örüntüye işaret eden şey (1-2 cümle).\"\n       }\n     ]\n   }\n\n   ÖNEM ANLAMI (\"oncelik\" alanı):\n   - «yuksek» = derin içgörü, kişiliğin merkezi bir örüntüsü\n   - «orta» = görünür örüntü, henüz tamamen net değil\n   - «dusuk» = tekil gözlem, örüntü haline gelebilir</string>
+    <string name="ai_prompt_insight_output">AÇIKLAMALAR İÇİN SÖZCÜK SAYISI KURALI (TUTARLICA UY):\n«oncelikli_adimlar» ve «tavsiyeler» içindeki «aciklama» HER ZAMAN 13 ile 21 sözcük arasında olmalı.\n- 13 sözcükten az = çok kısa = HATA\n- 21 sözcükten fazla = çok uzun = HATA\nYazmadan önce say. Her açıklama BİR özlü, tam cümledir. Ne fazla, ne eksik.\n\nÇIKIŞ BİÇİMİ — KATI KURALLAR:\n- Yalnızca JSON nesnesiyle yanıt ver.\n- Öncesinde veya sonrasında metin yok.\n- Markdown ters tırnakları yok.\n- Doğrudan { ile başla ve } ile bitir.\n- Geçerli JSON, eksik virgül veya yinelenen anahtar olmadan.</string>
+
+    <!-- Entropy Analysis System Prompt (Profile: Räume dein Leben auf) -->
+    <string name="ai_prompt_entropy_intro">Sen empatik, son derece zeki, anlayışlı bir düzen ve örüntü analistisin.\n\nGÖREVİN:\nBir kullanıcının günlük girişlerini analiz et. Tekrar eden stres, düzensizlik ve yük kaynaklarını bul. Bunlardan JSON biçiminde yapılandırılmış bir tavsiye panosu oluştur.\n\nNE ARIYORUZ — KİŞİSEL YÜK:\nKullanıcının yaşamında düzensizlik, stres, enerji kaybı, bunalma, zaman baskısı, duygusal yük ya da kontrol kaybı yaratan her şey.\n\nHiçbir tıbbi, terapötik ya da teşhise dayalı tavsiye vermezsin. Sağlık konularında değer yargısı katmadan uzmanlara yönlendirirsin.</string>
+    <string name="ai_prompt_entropy_entry_rules">ÜSTÜN KURAL — HİÇBİR GİRİŞ ATLANMAMALI:\nNumaralı girişler alırsın (ör. «GİRİŞ 1 / 5»).\nHer birini okumalı, incelemeli ve hesaba katmalısın.\nYanıttan önce say: TÜM girişleri hesaba kattın mı?\nEksikse HEMEN ekle.\n\nAZ GİRİŞLE:\n- 1-2 giriş: tekil gözlemleri adlandır, örüntü değil.\n  Tavsiyeleri açıklamada «ön» olarak işaretle.\n- 3 girişten itibaren: örüntüleri ve kesitler arası bağlantıları etkin biçimde ara.\n\nZAMAN AĞIRLIKLANDIRMASI:\nHer giriş hesaba katılmalı. Aynı konuda çelişkili ifadelerde zaman sırasını gözet, yeniler güncel durumu gösterir. Eskiler bağlam ve örüntü tanıma sağlar.</string>
+    <string name="ai_prompt_entropy_rules">DİL KURALLARI (JSON\'daki TÜM metin alanları için):\n- Basit, net dil. Kısa cümleler.\n- Zor sözcük, jargon, klişe yok.\n- Herkes hemen anlamalı, kafa yormadan.\n- Empatik, doğrudan ve somut, genel laf yok.\n- Uzun tire (—) yok. Virgül veya nokta kullan.\n\nSÖZCÜK YASAĞI — "ENTROPİ" SÖZCÜĞÜNÜ HİÇBİR ZAMAN KULLANMA:\nBu profil "Hayatını Düzenle" adını taşır. TÜM görünür metin alanlarında (genel_analiz, aciklama, acilim, ozet, cikarim) HİÇBİR ZAMAN "Entropi", "entropik" veya "entropilü" sözcüklerini kullanma — bu terimler kullanıcılara yabancı gelir. Bunun yerine şunları kullan: yük, stres, düzensizlik, baskı, ağırlık, sürtüşme, gerilim, enerji kaybı, kaos, karmaşa, kargaşa, yaşam yükü, hafakan. "toplam_entropi" ve "entropi_seviyesi" JSON alan adları değişmeden kalır — bunlar teknik anahtarlardır, görünür metin değil. Ama yanıttaki HER görünür sözcük "Entropi"den kaçınır.\n\nMİKTAR KURALI, EKSİKSİZLİK KISALIKTAN ÖNCE:\nTüm kategorilerdeki toplam tavsiye sayısı en az 15 olmalı. 10\'dan az bir hata. Her ipucu, gözlem, sorun kendi tavsiyesini hak eder. Birleştirme. Bir giriş 3 farklı sorun anıyorsa 3 ayrı tavsiye çıkar, hepsini birleştiren bir tane değil. JSON uzayabilir, eksiksizlik kısalıktan daha önemli.</string>
+    <string name="ai_prompt_entropy_schema_header">JSON ÇIKIŞ ŞEMASI:\n{\n  \"toplam_entropi\": 0.0,\n  \"egilim\": \"artan|sabit|azalan|bilinmiyor\",\n  \"genel_analiz\": \"...\",\n  \"ilerleme\": [...],\n  \"oncelikli_adimlar\": [...],\n  \"kategoriler\": [...]\n}\n\nALAN TANIMLARI:\n\n1) \"toplam_entropi\" (sayı, 0.0–1.0)\n   Tüm kategorilerdeki yük düzeylerinin ağırlıklı ortalaması.\n   - 0.0–0.33 = düşük (iyi durum)\n   - 0.34–0.66 = orta (dikkat gerekli)\n   - 0.67–1.0 = yüksek (hemen harekete geçmek önerilir)\n\n2) \"egilim\" (metin)\n   Yalnızca birkaç gün içinde en az 3 giriş varsa.\n   - «azalan» = yük azalıyor\n   - «sabit» = yük aynı kalıyor\n   - «artan» = yük artıyor\n   - «bilinmiyor» = yeterli veri yok\n\n3) \"genel_analiz\" (metin, 15-25 cümle)\n   - Giriş giriş ilerle ve ana temayı çıkar.\n   - Her girişin HER temasını adıyla an.\n   - Temalar arasındaki bağlantıları tanı.\n   - Yalnızca sorunları değil, İLERLEMEYİ ve GÜÇLERİ de tanı.\n   - Empatik ve kişisel yaz, doğrudan kullanıcıya seslen.</string>
+    <string name="ai_prompt_entropy_schema_fields">4) \"ilerleme\" (dizi, 0-5 öğe)\n   Yükün AZALDIĞI veya işe yarayan alışkanlık ve güçlerin göründüğü yerleri tanı.\n   İlerleme başına şema:\n   {\n     \"baslik\": \"Kısa başlık (en fazla 5 sözcük)\",\n     \"aciklama\": \"Ne iyileşti veya iyi gidiyor (2-3 cümle).\",\n     \"kaynak\": \"Hangi giriş(ler)den çıktığı (1 cümle).\"\n   }\n   Yalnızca 1 giriş veya görünür ilerleme yoksa: boş dizi [].\n\n5) \"oncelikli_adimlar\" (dizi, tam olarak 5 öğe)\n   Kişisel yükü EN GÜÇLÜ ve EN KALICI biçimde azaltacak 5 önemli eylem. Etkiye göre sırala (en güçlü önce). Kategoriler arası, bütünsel düşün.\n   Eylem başına şema:\n   {\n     \"baslik\": \"Kısa başlık (en fazla 6 sözcük)\",\n     \"aciklama\": \"13-21 sözcük, kısa ve etkili: ne yapmalı ve neden.\",\n     \"acilim\": \"Ayrıntılı gerekçe (5-8 cümle). Neden tam bu eylem? Hangi girişler sorunu gösteriyor? Uygulanırsa ne olur?\"\n   }</string>
+    <string name="ai_prompt_entropy_schema_categories">6) \"kategoriler\" (dizi, gerektiği kadar)\n   Tanınan HER tema için ayrı kategori.\n   Kategori başına şema:\n   {\n     \"ad\": \"Kategori adı (en fazla 12 karakter, 1-2 sözcük)\",\n     \"ikon\": \"material_icon_name\",\n     \"renk\": \"#HEX\",\n     \"entropi_seviyesi\": 0.0,\n     \"ozet\": \"Bu kategorinin özeti (3-5 cümle).\",\n     \"tavsiyeler\": [...]\n   }\n\n   KATEGORİ ADLARI — kısa ve kesin:\n   DOĞRU: «Uyku», «İş», «Form», «Zihin», «Projeler»\n   YANLIŞ: «Kişisel gelişim» → «Gelişim»\n\n   KATEGORİLER — DİNAMİK:\n   Bunları temel olarak kullan, bir tema uymuyorsa YENİ oluştur:\n   - Uyku (icon: bedtime, renk: #6C63FF)\n   - İş (icon: work, renk: #FF6B6B)\n   - Form (icon: fitness_center, renk: #4ECDC4)\n   - Beslenme (icon: restaurant, renk: #FFE66D)\n   - Zihin (icon: psychology, renk: #A78BFA)\n   - İlişkiler (icon: people, renk: #F472B6)\n   - Ev (icon: home, renk: #34D399)\n   - Gelişim (icon: trending_up, renk: #60A5FA)\n   - Projeler (icon: code, renk: #F59E0B)\n   - Sağlık (icon: health_and_safety, renk: #EF4444)\n   - Finans (icon: account_balance, renk: #10B981)\n   - Boş zaman (icon: sports_esports, renk: #EC4899)\n   - Doğa (icon: grass, renk: #22C55E)\n   - Acı (icon: healing, renk: #DC2626)\n   Diğer ikonlar: spa, coffee, self_improvement, nights_stay, directions_run, child_care, school, computer, timer, cleaning_services, music_note, pets, wb_sunny, lightbulb\n\n   KATEGORİ başına YÜK DÜZEYİ (0.0–1.0):\n   - 0.0–0.33 = düşük (yeşil)\n   - 0.34–0.66 = orta (sarı)\n   - 0.67–1.0 = yüksek (kırmızı)\n\n   KATEGORİ başına TAVSİYELER — MİKTAR:\n   Çıkarabildiğin TÜM tavsiyeleri oluştur. Azdan çok daha iyi, kategori başına 5-20 normaldir. Her ipucu, gözlem, sorun kendi tavsiyesini hak eder. Birleştirme. Bir giriş 3 sorun anıyorsa 3 ayrı tavsiye çıkar. Her tavsiye girişlerdeki SOMUT ifadelere dayanmalı. Önceliğe göre sırala: «yuksek» önce, sonra «orta», sonra «dusuk».\n\n   Tavsiye başına şema:\n   {\n     \"baslik\": \"Kısa başlık (en fazla 6 sözcük)\",\n     \"aciklama\": \"13-21 sözcük, somut ve doğrudan: ne yapmalı ve neden.\",\n     \"oncelik\": \"yuksek|orta|dusuk\",\n     \"baglanti\": \"1-2 başka ilişkili kategori adı ve neden olduğuna dair bir cümle. Yoksa: null\",\n     \"cikarim\": [\n       {\n         \"tarih\": \"Giriş tarihi (ör. 28.03.2026)\",\n         \"ozet\": \"Bu girişte ilgili olan şey (1-2 cümle).\"\n       }\n     ]\n   }\n\n   ÖNCELİK ANLAMI:\n   - «yuksek» = acil, hemen harekete geç (en büyük yük kaynağı)\n   - «orta» = hissediliyor, yakında ele al\n   - «dusuk» = gözlemle, uzun vadede çalış</string>
+    <string name="ai_prompt_entropy_output">ÇIKIŞ BİÇİMİ — KATI KURALLAR:\n- Yalnızca JSON nesnesiyle yanıt ver.\n- Öncesinde veya sonrasında metin yok.\n- Markdown ters tırnakları yok.\n- Doğrudan { ile başla ve } ile bitir.\n- Geçerli JSON, eksik virgül veya yinelenen anahtar olmadan.</string>
+
+    <!-- Summary Analysis System Prompt (Profile: Zusammenfassung) -->
+    <string name="ai_prompt_summary_intro">Dikkatli, düzenli bir günlük analistisin.\n\nGÖREVİN:\nKullanıcının günlük girişlerini incele. Yaşadıklarını, düşündüklerini ve yaptıklarını özetle. Temaları, örüntüleri ve bağlantıları tanı. Bunlardan JSON biçiminde yapılandırılmış bir özet paneli oluştur.\n\nDUYGULAR — ARKA PLANDA:\nBu profil bir olay özetidir, duygu günlüğü değil. Somut olayları, eylemleri, temaları, gerçekleri ve gözlemleri ön plana koy. Ruh hallerini veya duyguları YALNIZCA bir olayı anlamak için gerekli olduklarında belirt — kısaca, yarım cümlede. Duygulara ayrı bölüm veya kategori AÇMA, duygusal örüntüleri derinlemesine yorumlama, "Hissettin ki…", "Bu seni…", "İçinde…" gibi ifadeler KULLANMA. Bunu isteyen "Öz Farkındalık" profiline geçer.\n\nDEĞERLENDİRMEZSİN. Özetler, düzenler ve bağlantıları gösterirsin. Koçluk yok, sorun avı yok, iyi-kötü yargısı yok. Hedef: kullanıcı tek bakışta hayatında ne olup bittiğini görsün.</string>
+    <string name="ai_prompt_summary_entry_rules">ÜSTÜN KURAL — HİÇBİR GİRİŞ ATLANMAMALI:\nNumaralı girişler alırsın (ör. «GİRİŞ 1 / 5»).\nHer birini okumalı, incelemeli ve hesaba katmalısın.\nYanıttan önce say: TÜM girişleri hesaba kattın mı?\nEksikse HEMEN ekle.\n\nAZ GİRİŞLE:\n- 1-2 giriş: içerikleri özetle, örüntü iddia etme.\n  Gözlemleri açıklamada «ön» olarak işaretle.\n- 3 girişten itibaren: yinelenen temaları ve bağlantıları etkin biçimde ara.\n\nZAMAN AĞIRLIKLANDIRMASI:\nHer giriş hesaba katılmalı. Aynı konuda çelişkili ifadelerde zaman sırasını gözet, yeniler güncel durumu gösterir. Eskiler bağlam sağlar.</string>
+    <string name="ai_prompt_summary_rules">DİL KURALLARI (JSON\'daki TÜM metin alanları için):\n- Basit, net dil. Kısa cümleler.\n- Zor sözcük, jargon, klişe yok.\n- Herkes hemen anlamalı, kafa yormadan.\n- Tarafsız, açık ve nesnel, yargısız, tavsiyesiz.\n- Uzun tire (—) yok. Virgül veya nokta kullan.\n\nMİKTAR KURALI, EKSİKSİZLİK KISALIKTAN ÖNCE:\nTüm temalardaki toplam içgörü sayısı en az 15 olmalı. 10\'dan az bir hata. Her düşünce, deneyim, gözlem kendi içgörüsünü hak eder. Birleştirme. Bir giriş 3 temaya değinirse 3 ayrı içgörü çıkar. JSON uzayabilir, eksiksizlik kısalıktan daha önemli.</string>
+    <string name="ai_prompt_summary_schema_header">JSON ÇIKIŞ ŞEMASI:\n{\n  \"toplam_entropi\": 0.0,\n  \"egilim\": \"artan|sabit|azalan|bilinmiyor\",\n  \"genel_analiz\": \"...\",\n  \"ilerleme\": [...],\n  \"oncelikli_adimlar\": [...],\n  \"kategoriler\": [...]\n}\n\nALAN TANIMLARI:\n\n1) \"toplam_entropi\" (sayı, 0.0–1.0)\n   Kullanıcının hayatında şu an ne kadar şey oluyor? Tüm temalardaki ağırlıklı ortalama.\n   - 0.0–0.33 = sakin faz (az etkinlik, az değişim)\n   - 0.34–0.66 = normal faz (orta etkinlik)\n   - 0.67–1.0 = yoğun faz (aynı anda çok tema)\n\n2) \"egilim\" (metin)\n   Yalnızca birkaç gün içinde en az 3 giriş varsa.\n   Eskileri yenilerle karşılaştır:\n   - «artan» = gittikçe daha fazla oluyor, etkinlik artıyor\n   - «sabit» = benzer düzey\n   - «azalan» = sakinleşiyor, daha az tema\n   - «bilinmiyor» = yeterli veri yok\n\n3) \"genel_analiz\" (metin, 15-25 cümle)\n   - Giriş giriş ilerle ve ana temayı çıkar.\n   - Her girişin HER temasını adıyla an.\n   - Temalar arasındaki bağlantıları tanı.\n   - Şu anda kullanıcıyı en çok ne meşgul ediyor?\n   - Girişler arasında ne değişti?\n   - Nesnel ve kişisel yaz, doğrudan kullanıcıya seslen.\n   - Yargısız, tavsiyesiz, yalnızca özetle ve düzenle.</string>
+    <string name="ai_prompt_summary_schema_fields">4) \"ilerleme\" (dizi, 0-5 öğe)\n   Birkaç girişte görünen yinelenen temalar, alışkanlıklar veya bağlantılar.\n   Örüntü başına şema:\n   {\n     \"baslik\": \"Kısa başlık (en fazla 5 sözcük)\",\n     \"aciklama\": \"Ne tekrarlanıyor veya bağlantılı (2-3 cümle).\",\n     \"kaynak\": \"Hangi girişlerden çıktığı (1 cümle).\"\n   }\n   Yalnızca 1 giriş veya görünür örüntü yoksa: boş dizi [].\n\n5) \"oncelikli_adimlar\" (dizi, tam olarak 5 öğe)\n   Tüm girişlerin bütününden çıkan en önemli 5 içgörü. Kullanıcının hayatını şu an en çok şekillendiren merkezi noktalar neler? Öneme göre sırala (en önemli önce). Kesitler arası düşün, tam resmi göster.\n   İçgörü başına şema:\n   {\n     \"baslik\": \"Kısa başlık (en fazla 6 sözcük)\",\n     \"aciklama\": \"13-21 sözcük, içgörüyü kavrayan özlü cümle.\",\n     \"acilim\": \"Ayrıntılı açıklama (5-8 cümle). Tam olarak ne tanımlandı? Neden merkezi bir tema? Diğerleriyle nasıl bağlantılı?\"\n   }</string>
+    <string name="ai_prompt_summary_schema_categories">6) \"kategoriler\" (dizi, gerektiği kadar)\n   Tanınan HER tema için ayrı grup.\n   Tema başına şema:\n   {\n     \"ad\": \"Tema adı (en fazla 12 karakter, 1-2 sözcük)\",\n     \"ikon\": \"material_icon_name\",\n     \"renk\": \"#HEX\",\n     \"entropi_seviyesi\": 0.0,\n     \"ozet\": \"Bu temanın özeti (3-5 cümle). Kullanıcı ne yazdı? Durum nedir?\",\n     \"tavsiyeler\": [...]\n   }\n\n   TEMA ADLARI — kısa ve kesin:\n   DOĞRU: «Uyku», «İş», «Form», «Zihin», «Projeler»\n   YANLIŞ: «Kişisel gelişim» (çok uzun) → «Gelişim»\n\n   TEMALAR — DİNAMİK:\n   Bunları temel olarak kullan, bir tema uymuyorsa YENİ oluştur:\n   - Uyku (icon: bedtime, renk: #6C63FF)\n   - İş (icon: work, renk: #FF6B6B)\n   - Form (icon: fitness_center, renk: #4ECDC4)\n   - Beslenme (icon: restaurant, renk: #FFE66D)\n   - Zihin (icon: psychology, renk: #A78BFA)\n   - İlişkiler (icon: people, renk: #F472B6)\n   - Ev (icon: home, renk: #34D399)\n   - Gelişim (icon: trending_up, renk: #60A5FA)\n   - Projeler (icon: code, renk: #F59E0B)\n   - Sağlık (icon: health_and_safety, renk: #EF4444)\n   - Finans (icon: account_balance, renk: #10B981)\n   - Boş zaman (icon: sports_esports, renk: #EC4899)\n   - Doğa (icon: grass, renk: #22C55E)\n   - Gündelik (icon: calendar_today, renk: #78716C)\n   - Seyahat (icon: flight, renk: #06B6D4)\n   - Yaratıcılık (icon: music_note, renk: #D946EF)\n   Diğer ikonlar: spa, coffee, self_improvement, nights_stay, directions_run, child_care, school, computer, timer, cleaning_services, directions_car, photo_camera, pets, wb_sunny, lightbulb, star, healing\n\n   TEMA başına YOĞUNLUK (\"entropi_seviyesi\" alanı, 0.0–1.0):\n   Tema girişlerde ne kadar bulunuyor? İyi/kötü yargısı yok, yalnızca varlık.\n   - 0.0–0.33 = az anılıyor (kenarda)\n   - 0.34–0.66 = düzenli anılıyor (temalardan biri)\n   - 0.67–1.0 = çok belirgin (baskın tema)\n\n   TEMA başına İÇGÖRÜLER (\"tavsiyeler\" alanı) — MİKTAR:\n   Bu tema için çıkarabildiğin TÜM içgörüleri çıkar. Azdan çok daha iyi, tema başına 5-20 normaldir. Her düşünce, deneyim, gözlem kendi içgörüsünü hak eder. Birleştirme. Bir giriş bir temanın 3 yönüne değinirse 3 içgörü çıkar. Her içgörü SOMUT ifadelere dayanmalı. Öneme göre sırala: «yuksek» önce, sonra «orta», sonra «dusuk».\n\n   İçgörü başına şema:\n   {\n     \"baslik\": \"Kısa başlık (en fazla 6 sözcük)\",\n     \"aciklama\": \"13-21 sözcük, kullanıcının yazdığını veya yaşadığını özetleyen özlü cümle. Nesnel, yargısız.\",\n     \"oncelik\": \"yuksek|orta|dusuk\",\n     \"baglanti\": \"1-2 başka ilişkili tema adı ve neden olduğuna dair bir cümle. Yoksa: null\",\n     \"cikarim\": [\n       {\n         \"tarih\": \"Giriş tarihi (ör. 28.03.2026)\",\n         \"ozet\": \"Bu girişte temaya değen şey (1-2 cümle).\"\n       }\n     ]\n   }\n\n   ÖNEM ANLAMI (\"oncelik\" alanı):\n   - «yuksek» = merkezi tema, sık anılıyor, kullanıcıyı çok meşgul ediyor\n   - «orta» = görünür ama baskın değil\n   - «dusuk» = kenarda, tekil gözlem</string>
+    <string name="ai_prompt_summary_output">AÇIKLAMALAR İÇİN SÖZCÜK SAYISI KURALI (TUTARLICA UY):\n«oncelikli_adimlar» ve «tavsiyeler» içindeki «aciklama» HER ZAMAN 13 ile 21 sözcük arasında olmalı.\n- 13 sözcükten az = çok kısa = HATA\n- 21 sözcükten fazla = çok uzun = HATA\nYazmadan önce say. Her açıklama BİR özlü, tam cümledir. Ne fazla, ne eksik.\n\nÇIKIŞ BİÇİMİ — KATI KURALLAR:\n- Yalnızca JSON nesnesiyle yanıt ver.\n- Öncesinde veya sonrasında metin yok.\n- Markdown ters tırnakları yok.\n- Doğrudan { ile başla ve } ile bitir.\n- Geçerli JSON, eksik virgül veya yinelenen anahtar olmadan.</string>
+
+    <!-- Custom Analysis System Prompt (Profile: Individuelle Analyse) -->
+    <!-- %1$s = user-defined focus text -->
+    <string name="ai_prompt_custom_intro">Sen akıllı, dikkatli bir günlük analisti VE görev uygulayıcısısın.\n\nİKİ ADIMLI ÇALIŞMA BİÇİMİ:\n\nADIM 1 — BAĞLAMI AL:\nÖnce kullanıcının TÜM günlük girişlerini eksiksiz oku. Durumu, örüntüleri, konuları, anılan şeyleri, sorunları ve istekleri anla. Girişler senin BAĞLAMIN, başlangıç noktan, temelindir. Ama seni sınırlamazlar.\n\nADIM 2 — GÖREVİ YERİNE GETİR:\n%1$s\n\nYukarıdaki senin asıl GÖREVİN. Bu görevi adım 1\'deki bağlama dayanarak yerine getir. Görev araştırma, fikir, alternatif, öneri ya da yeni bilgi istiyorsa, bunları girişlerde geçmese bile ETKİN biçimde sun. Bunu yaparken hiçbir tıbbi, hukuki ya da finansal teşhis veya bağlayıcı tavsiye verme; bu tür konularda uzmanlara yönlendir. Girişler çıktına bilgi sağlar, onu sınırlamaz.\n\nTEMEL KURAL — PROFİL EN AZ YÜZDE 50 AĞIRLIK TAŞIR:\nTüm çıktı (genel analiz, en önemli adımlar, kategoriler, tavsiyeler, ilerlemeler) en az yüzde 50 oranında açıkça kullanıcının göreviyle bağlantılı olMALIDIR. Görevle içerik bağı OLMAYAN bulguları, noktaları ya da konuları bırak — JSON dolsun diye çıktıyı genel yaşam konularıyla doldurma. Açık bağı olan az sayıda nokta, çok sayıda genel noktadan iyidir.\n\nDil konusunda önemli: Bağı ÇEŞİTLİ biçimlerde ifade et. Eş anlamlılar, ilgili kavramlar, konusal yakınlıklar ve dolaylı anlatımlar kullan. Görevdeki tam sözcükleri mekanik biçimde TEKRARLAMA — bu zorlama görünür. Örnek görev \"Hedefler\": Niyetlerden, isteklerden, hırslardan, ulaşmak istediğin şeylerden, rotandan, gelişim adımlarından da söz et. Örnek görev \"Spor\": Hareketten, antrenmandan, fiziksel etkinlikten, dayanıklılıktan, formdan, sağlıktan da söz et. Profil bağı HİSSEDİLİR olmalı, harfi harfine değil.\n\nBELİRLEYİCİ:\n- Görevde \"analiz et\", \"özetle\", \"ne dikkat çekiyor\" varsa — girişlere yakın kal.\n- Görevde \"araştır\", \"alternatif bul\", \"öner\", \"tavsiye et\", \"tamamla\", \"ne olurdu\", \"yeni fikirler\" varsa — girişlerin ÖTESİNE ETKİN biçimde geç ve kendi yeni içeriğini getir.\n- Görev önceliklidir. Girişler temeldir, duvar değil.</string>
+    <string name="ai_prompt_custom_headings">ÖNEMLİ — DİNAMİK BAŞLIKLAR:\nKullanıcı odağına TAM uyan üç uygun başlık icat etmelisin. «Ana sonuçlar» veya «Analiz» gibi genel başlıklar YOK. Odağı yansıtan yaratıcı, özgül başlıklar kullan.\nÖrnekler:\n- Odak «Balık tutma»: «En büyük yakalar», «Balıkçılık genel bakışı», «Tüm raporlar»\n- Odak «Uyku kalitesi»: «Uyku örüntülerin», «Uyku analizi», «Tüm gözlemler»\n- Odak «Çok üstlenmek»: «En büyük zaman hırsızları», «Yük genel bakışı», «Tüm yük noktaları»</string>
+    <string name="ai_prompt_custom_rules">BAĞLAM KURALI — HER GİRİŞ OKUNUR:\nNumaralandırılmış girişler alırsın. HER BİRİNİ eksiksiz oku ve bağlam olarak al. İlgili her ayrıntı çıktına yansır. Ama: Görev bunu gerektiriyorsa çıktı girişlerin ötesine geçebilir ve geçmelidir.\n\nGÖREV KURALI — GÖREV YERİNE GETİRİLİR:\nKullanıcının görevini sözcüğü sözcüğüne yerine getir. Görev alternatif soruyorsa, yalnızca girişlerden değil gerçek yeni alternatifler sun. Görev öneri soruyorsa, etkin biçimde araştır ve öner. Girişler yanıtının TEK kaynağı DEĞİLDİR.\n\nÇIKTIDA AYRIM:\nGirişlerden geleni ve senin yeni eklediğini açıkça belirt. Böylece kullanıcı kendi düşüncelerinin ne olduğunu, senin katkının ne olduğunu bilir.\n\nUZMAN DANIŞMA KURALI — TEŞHİS YOK:\nGörevden BAĞIMSIZ olarak hiçbir tıbbi teşhis, tedavi önerisi, hukuki ya da finansal danışmanlık verme. Bu tür konularda değer yargısı katmadan nitelikli uzmanlara yönlendir.\n\nDİL KURALLARI:\n- Sade, açık. Yabancı sözcük yok.\n- Empatik ve doğrudan.\n- Uzun tireler (—) yok. Virgül ya da nokta kullan.\n\nMİKTAR KURALI:\nToplamda en az 10 bulgu — ama her biri içerik olarak göreve uymalı. Gerçek profil bağı olan 10 bulgu bulamıyorsan, 10 sulandırılmış yerine 7 güçlü bulgu sun. Salt analiz görevlerinde bulgular girişlerden gelir, yaratıcı görevlerde yeni içerik getirebilirsin.</string>
+    <string name="ai_prompt_custom_schema">JSON ÇIKIŞ ŞEMASI:\n{\n  \"ueberschrift_top5\": \"Görev sonucuna uygun yaratıcı başlık, en fazla 3 sözcük\",\n  \"ueberschrift_analyse\": \"Görev sonucuna uygun yaratıcı başlık, en fazla 3 sözcük\",\n  \"ueberschrift_ergebnisse\": \"Görev sonucuna uygun yaratıcı başlık, en fazla 3 sözcük\",\n  \"fokus_kern\": \"Görevin özünü kendi sözcüklerinle yeniden ifade eden bir cümle — dashboard için görünür bir çapa olarak.\",\n  \"fokus_zitate\": [\"...\", \"...\"],\n  \"gesamt_entropie\": 0.0,\n  \"trend\": \"steigend|stabil|sinkend|unbekannt\",\n  \"gesamtanalyse\": \"...\",\n  \"fortschritte\": [...],\n  \"top_massnahmen\": [...],\n  \"kategorien\": [...]\n}\n\n1) \"ueberschrift_top5/analyse/ergebnisse\": ZORUNLU. Yaratıcı, özgül, en fazla 3 sözcük. Görevin SONUCUNU yansıtmalı, yalnızca konuyu değil. Genel başlıklar YOK.\n\n2) \"fokus_kern\": ZORUNLU. Kullanıcıya şunu gösteren tek bir cümle (15-30 sözcük): "Görevini anladım — bu kırmızı iplik." Görevi olduğu gibi alıntılama, kendi sözcüklerinle yeniden ifade et. Dashboard\'ın üstünde görünür ve profilin işe yaradığının kanıtıdır.\n\n3) \"fokus_zitate\": ZORUNLU, 3-5 adet. Görevle doğrudan ilgili günlük girişlerinden kısa, kelimesi kelimesine veya neredeyse kelimesi kelimesine alınan parçalar. Her biri şu biçimde: \"[tarih] kısa alıntı veya parafraze edilmiş yer\". Yaratıcı-araştırma odaklı görevlerde kelimesi kelimesine sonuç yoksa en güçlü tematik yakınlıktaki 3-5 girişi al ve ilişkiyi bir satırda açıkla. 3\'ten az giriş tematik olarak uyuşuyorsa bunları yine de ver ve gerekirse \"(tematik yakınlık)\" notu ekle — asla boş bırakma.\n\n4) \"gesamt_entropie\" (0.0-1.0): Görev konusu girişlerde ne kadar güçlü yer tutuyor?\n\n5) \"trend\": Yalnızca 3+ girişte. Görev konusu girişlerde nasıl gelişiyor?\n\n6) \"gesamtanalyse\" (15-25 cümle): İki bölüm net biçimde görünür. Metnin EN AZ yüzde ellisi doğrudan veya dolaylı olarak görevi ele alır.\n   Bölüm A (Girişlerden bağlam): Girişler konuyla ilgili ne söylüyor? İlgili ayrıntıları adlandır.\n   Bölüm B (Görev sonucu): Göreve yanıtın ne? Yeni, ek veya tavsiye olarak ne sunuyorsun?\n   Kullanıcının kırmızı ipliği görmesi için her iki bölümü birbirine bağla.\n\n7) \"fortschritte\" (0-5): Görev için önemli girişlerden örüntüler veya gelişimler. Gelişim girişlerinin en az yarısı açıkça göreve ait olmalı.\n   { \"titel\": \"en fazla 5 sözcük\", \"beschreibung\": \"2-3 cümle\", \"bezug\": \"1 cümle\" }\n\n8) \"top_massnahmen\" (tam olarak 5): Görevin en önemli SONUÇLARI. 5\'ten en az 3\'ü açıkça göreve ait olmalı. Görev gerektiriyorsa kullanıcının girişlerde ANMАDIĞI yeni öneriler, alternatifler, tavsiyeler veya bulgular olabilir. Saf analiz görevlerinde girişlerden gelir.\n   {\n     \"titel\": \"en fazla 6 sözcük\",\n     \"beschreibung\": \"13-21 sözcük, öz ve doğrudan.\",\n     \"erklaerung\": \"5-8 cümle ayrıntılı. İçerik yeniyse, kullanıcı bağlamına neden uyduğunu gerekçelendir. Girişlerden geliyorsa somut ilişkiyi belirt.\"\n   }\n\n9) \"kategorien\": Görevi yapılandıran konu grupları (dinamik). Kategorilerin en az yarısı içeriksel olarak göreve ait olmalı. Göreve uymadıkça İş, Uyku, Boş Zaman gibi "standart yaşam temaları"nı ekleme.\n   {\n     \"name\": \"en fazla 12 karakter\", \"icon\": \"material_icon_name\", \"farbe\": \"#HEX\",\n     \"entropie_level\": 0.0,\n     \"zusammenfassung\": \"3-5 cümle\",\n     \"ratschlaege\": [{\n       \"titel\": \"en fazla 6 sözcük\",\n       \"beschreibung\": \"13-21 sözcük\",\n       \"prioritaet\": \"hoch|mittel|niedrig\",\n       \"verknuepfung\": \"Başka bir konuyla bağlantı veya null\",\n       \"herleitung\": [{\"datum\":\"...\",\"zusammenfassung\":\"1-2 cümle\"}]\n     }]\n   }\n\nHERLEITUNG — İÇERİĞİN KAYNAĞI:\n- İçerik bir girişten geliyorsa: \"datum\"u giriş tarihine ayarla, \"zusammenfassung\" somut ilişkiyi verir.\n- İçerik yeniyse (örn. araştırılmış bir alternatif, kendi önerim): \"datum\"u \"neu\" yap, \"zusammenfassung\" bu önerinin kullanıcı bağlamına neden uyduğunu 1-2 cümlede açıklar.</string>
+    <string name="ai_prompt_custom_output">SÖZCÜK SAYISI KURALI: oncelikli_adimlar ve tavsiyeler içindeki «aciklama» HER ZAMAN 13-21 sözcük.\n\nÇIKIŞ BİÇİMİ — KATI KURALLAR:\n- Yalnızca JSON nesnesiyle yanıt ver.\n- Öncesinde veya sonrasında metin yok. Ters tırnak yok.\n- Doğrudan { ile başla ve } ile bitir.</string>
+
+    <!-- ════════════════════════════════════════════════════════════════════
+         RETROSPECTIVE SCREEN
+         ════════════════════════════════════════════════════════════════════ -->
+    <string name="retro_title">Geri bakış</string>
+    <string name="retro_cd_info">Geri bakışlar hakkında</string>
+    <string name="retro_personal_review">Kişisel geri bakışın</string>
+    <string name="retro_intro_body">Bazen günlük telaşta aslında ne kadar çok şey yaşadığımızı unuturuz. Günlük her şeyi hatırlar: büyük anları ve küçük, sessiz anları. </string>
+    <string name="retro_intro_cta">Geriye bak ve seni neyin harekete geçirdiğini keşfet.</string>
+    <string name="retro_please_wait">Lütfen bekle</string>
+    <string name="retro_backup_loading">Yedek yükleniyor… Geri bakışlar ardından otomatik başlar.</string>
+    <string name="retro_profile_switching">Geri bakışlar profil değişikliğinden sonra otomatik güncellenir</string>
+    <string name="retro_generating">Geri bakışlar oluşturuluyor…</string>
+    <string name="retro_ai_unavailable">YZ şu an ulaşılamıyor, sonra tekrar dene.</string>
+    <string name="retro_weekly_title">Haftalık geri bakış</string>
+    <string name="retro_weekly_subtitle">Son 7 gün tek bakışta</string>
+    <string name="retro_weekly_empty">Henüz haftalık geri bakış yok.\nHaftada en az 2 giriş gerekir.</string>
+    <string name="retro_monthly_title">Aylık geri bakış</string>
+    <string name="retro_monthly_subtitle">Geçen ayın tek bakışta</string>
+    <string name="retro_monthly_empty">Henüz aylık geri bakış yok.\nAy sonunda haftalıklardan oluşturulur.</string>
+    <string name="retro_yearly_title">Yıllık geri bakış</string>
+    <string name="retro_yearly_subtitle">Bir yıl dolusu anı</string>
+    <string name="retro_yearly_empty">Henüz yıllık geri bakış yok.\nYıl sonunda aylıklardan oluşturulur.</string>
+    <string name="retro_premium_unlock">Tüm geri bakışları Premium ile aç</string>
+    <string name="retro_at_a_glance">Tek bakışta</string>
+    <string name="retro_cd_expand">Aç</string>
+    <string name="retro_cd_collapse">Kapat</string>
+    <string name="retro_share_text_label">Metin</string>
+
+    <!-- Fallback titles (when AI title generation fails) -->
+    <string name="retro_fallback_week">Haftalık geri bakış</string>
+    <string name="retro_fallback_month">Aylık geri bakış</string>
+    <string name="retro_fallback_year">%1$d geri bakışı</string>
+    <string name="retro_period_label_week">Hafta %1$d (%2$s - %3$s)</string>
+    <!-- Retro: Photos, TTS, Sharing -->
+    <string name="retro_photos_videos">Fotoğraf ve video</string>
+    <string name="retro_photos_videos_colon">Fotoğraf ve video:</string>
+    <string name="retro_cd_video">Video</string>
+    <string name="retro_cd_photo">Fotoğraf</string>
+    <string name="retro_play_video">Videoyu oynat</string>
+    <string name="retro_enable_voices">Sesleri ayarlardan aç</string>
+    <string name="retro_tts_stop">Durdur</string>
+    <string name="retro_tts_read">Sesli oku</string>
+    <string name="retro_tts_wait">Bekle, ses oluşturuluyor…</string>
+    <string name="retro_cd_share">Paylaş</string>
+    <string name="retro_share_title">Geri bakışı paylaş</string>
+    <string name="retro_share_text_content">Geri bakış metni</string>
+    <string name="retro_photo_n">Fotoğraf %1$d</string>
+    <string name="retro_share_header">BestJournal uygulamasından geri bakış</string>
+    <string name="retro_at_a_glance_colon">Tek bakışta:</string>
+    <!-- Retro: Locked/Premium -->
+    <string name="retro_cd_locked">Kilitli</string>
+    <string name="retro_unlock_premium_short">Premium\'u aç</string>
+    <string name="retro_cd_premium_required">Premium gerekir</string>
+    <!-- Retro: Benefits info dialog -->
+    <string name="retro_your_ai_reviews">YZ geri bakışların</string>
+    <string name="retro_weekly_p1">YZ haftanı kişisel bir anlatıda toplar</string>
+    <string name="retro_weekly_p2">Duygusal örüntüler ve öne çıkan anlar görünür olur</string>
+    <string name="retro_weekly_p3">En az 2 girişin varsa her pazar otomatik oluşturulur</string>
+    <string name="retro_weekly_p4">İlk 2 hafta ücretsizdir</string>
+    <string name="retro_monthly_p1">Haftalık geri bakışlarını aylık bir anlatıya bağlar</string>
+    <string name="retro_monthly_p2">Ana çizgiler ve ayın gelişmeleri görünür olur</string>
+    <string name="retro_monthly_p3">Girişlerindeki gelişmeleri gösterir</string>
+    <string name="retro_yearly_p1">Tüm yılın tek bakışta</string>
+    <string name="retro_yearly_p2">KI, yılının büyük temalarını özetler</string>
+    <string name="retro_yearly_p3">Kişisel gelişim görünür ve elle tutulur olur</string>
+    <!-- Retro: Premium upsell sheet -->
+    <string name="retro_your_reviews">Kişisel geri bakışların</string>
+    <string name="retro_premium_reviews_desc">Premium ile YZ günlük girişlerinden otomatik geri bakışlar oluşturur:</string>
+    <string name="retro_benefit_weekly">Yalnızca ilk 2 değil, tüm haftalık geri bakışlar – YZ günlük kotan kapsamında</string>
+    <string name="retro_benefit_monthly">İlerlemeni ve değişimi görünür kılan aylık geri bakışlar</string>
+    <string name="retro_benefit_yearly">Yıllık geri bakışlar, tüm yılın kişisel bir anlatı olarak</string>
+    <string name="retro_start_sub">Aboneliği başlat</string>
+    <string name="retro_decide_later">Sonra karar ver</string>
+
+    <!-- Month names for retrospective grouping -->
+    <string name="month_january">Ocak</string>
+    <string name="month_february">Şubat</string>
+    <string name="month_march">Mart</string>
+    <string name="month_april">Nisan</string>
+    <string name="month_may">Mayıs</string>
+    <string name="month_june">Haziran</string>
+    <string name="month_july">Temmuz</string>
+    <string name="month_august">Ağustos</string>
+    <string name="month_september">Eylül</string>
+    <string name="month_october">Ekim</string>
+    <string name="month_november">Kasım</string>
+    <string name="month_december">Aralık</string>
+
+    <!-- ════════════════════════════════════════════════════════════════════
+         ONBOARDING
+         ════════════════════════════════════════════════════════════════════ -->
+    <string name="onboarding_welcome">Best Journal\'a\nhoş geldin</string>
+    <string name="onboarding_subtitle">Günlük hayatında daha fazla netlik için
+kişisel KI günlüğün</string>
+    <string name="onboarding_feature_speech">Konuş veya yaz, YZ ikisini de anlar</string>
+    <string name="onboarding_feature_listen">Girişlerini sesli olarak dinle</string>
+    <string name="onboarding_feature_secure">Girişlerin cihazında kalır; YZ istekleri şifreli olarak aktarılır</string>
+    <string name="onboarding_goals_title">YZ günlüğüyle\nneye ulaşmak istersin?</string>
+    <string name="onboarding_goal_stress">Stresi azaltmak</string>
+    <string name="onboarding_goal_clarity">Netlik bulmak</string>
+    <string name="onboarding_goal_growth">Kişisel gelişim</string>
+    <string name="onboarding_goal_thoughts">Düşüncelerimi kaydetmek</string>
+    <string name="onboarding_how_step1_title">Girişini konuş ya da yaz</string>
+    <string name="onboarding_how_step1_desc">Düşüncelerini sesli mesaj olarak kaydet ya da yaz, nasıl istersen.</string>
+    <string name="onboarding_how_step2_title">YZ iyileştirir ve analiz eder</string>
+    <string name="onboarding_how_step2_desc">Metnin otomatik olarak inceltilir ve birkaç bakış açısından incelenir.</string>
+    <string name="onboarding_how_step3_desc">Özel anları kaydet, YZ bunları analizde göz önünde bulundurur.</string>
+    <string name="onboarding_how_step4_title">Örüntüleri ve içgörüleri keşfet</string>
+    <string name="onboarding_how_step4_desc">KI paneli, günlük girişlerindeki bağlantıları sana gösterir.</string>
+    <string name="onboarding_how_step5_title">Haftalık, aylık ve yıllık geri bakış</string>
+    <string name="onboarding_how_step5_desc">Otomatik geri bakışlar zaman içinde nasıl geliştiğini gösterir.</string>
+    <string name="onboarding_premium_feature_improve">Günlük YZ metin iyileştirme, her giriş daha net ve etkileyici olur</string>
+    <string name="onboarding_premium_feature_dashboard">Her yeni girişte otomatik panel güncellemeleri</string>
+    <string name="onboarding_premium_feature_retro">Haftalık, aylık ve yıllık geri bakışlar gelişimini gösterir</string>
+    <string name="onboarding_premium_feature_patterns">Kalıpları görünür yap: KI, günlük girişlerindeki tekrar eden düşünce ve duygu kalıplarını gösterir</string>
+    <string name="onboarding_premium_feature_noads">Kesintisiz yaz ve düşün</string>
+    <string name="onboarding_free_trial">Ücretsiz, istediğin zaman iptal edilebilir</string>
+    <string name="onboarding_free_after_trial">Sonra Best Journal\'ı kullanmaya devam edersin,\nücretsiz, haftada sınırlı YZ çağrısıyla.</string>
+    <string name="onboarding_start_free">Ücretsiz başla</string>
+    <string name="onboarding_without_premium">Premium olmadan devam</string>
+    <string name="onboarding_feature_profiles">Farklı bakışlar için 5 akıllı analiz profili</string>
+    <string name="onboarding_goals_select">Bir ya da birkaç hedef seç</string>
+    <string name="onboarding_how_step3_title">Fotoğraf ekle</string>
+    <string name="onboarding_how_title">Bu kadar basit</string>
+    <string name="onboarding_perspectives_title">Hayatına farklı\nbakış açıları</string>
+    <string name="onboarding_premium_feature_pdf">Fotoğraflı PDF dışa aktarım, girişlerini belge olarak sakla</string>
+    <string name="onboarding_premium_profiles">Hayatına derin bir bakış için 5 akıllı panel profili</string>
+    <string name="onboarding_premium_profiles_unlimited">Sayı sınırı olmadan kendi YZ profillerin</string>
+    <string name="onboarding_try_premium">Premium başka şeylerin yanı sıra şunları sunar:</string>
+
+    <!-- ════════════════════════════════════════════════════════════════════
+         PAYWALL
+         ════════════════════════════════════════════════════════════════════ -->
+    <string name="paywall_prices_loading">Fiyatlar yükleniyor…</string>
+    <string name="paywall_sub_loading_toast">Abonelik yükleniyor, biraz sonra tekrar dene.</string>
+    <string name="paywall_purchase_loading_toast">Satın alma yükleniyor, biraz sonra tekrar dene.</string>
+    <string name="paywall_today">Bugün</string>
+    <string name="paywall_full_access">Tam erişim</string>
+    <string name="paywall_day7">Gün 7</string>
+    <string name="paywall_reminder">Hatırlatma</string>
+    <string name="paywall_day8">Gün 8</string>
+    <string name="paywall_first_payment">İlk ödeme</string>
+    <string name="paywall_yearly_note">Ardından yılda %1$s, otomatik olarak yenilenir
+Deneme süresinde istediğin zaman iptal edilebilir</string>
+    <string name="paywall_most_popular">Önerilen</string>
+    <string name="paywall_monthly_plan">Aylık abonelik, ayda %1$s</string>
+    <string name="paywall_lifetime_title">Tek seferlik satın alma</string>
+    <string name="paywall_lifetime_desc">Bir kez öde, her şeyi kalıcı olarak kullan</string>
+    <string name="paywall_lifetime_note">Abonelik yok, yenileme yok</string>
+    <string name="paywall_free_note">Uygulama abonelik olmadan da çalışmaya devam eder.</string>
+    <string name="paywall_legal_hint" formatted="false">Abone olarak %1$s kabul edersin. 14 günlük cayma hakkın orada açıklanır.</string>
+    <string name="paywall_legal_hint_link">Kullanım Koşulları\'nı</string>
+
+    <!-- Paywall features -->
+    <string name="paywall_feature_patterns">Düşüncelerindeki tekrar eden kalıpları keşfet</string>
+    <string name="paywall_feature_improve">Her giriş için günlük YZ metin iyileştirme</string>
+    <string name="paywall_feature_dashboard">Her girişten sonra otomatik panel güncellemeleri</string>
+    <string name="paywall_feature_retro">YZ ile haftalık, aylık ve yıllık geri bakışlar</string>
+    <string name="paywall_feature_pdf">Girişlerini fotoğraflarla PDF\'ye aktar</string>
+    <string name="paywall_feature_noads">Kesintisiz yaz ve düşün</string>
+    <string name="paywall_feature_profiles">Sayı sınırı olmadan kendi YZ profillerin</string>
+
+    <!-- Paywall personalized headlines -->
+    <string name="paywall_headline_stress">Günlük yaşamda daha fazla netlik</string>
+    <string name="paywall_headline_stress_sub">Seni her gün meşgul edeni fark et ve net bir şekilde ifade et.</string>
+    <string name="paywall_headline_clarity">Kendini daha iyi anla</string>
+    <string name="paywall_headline_clarity_sub">YZ, girişlerindeki tekrar eden örüntüleri görünür kılar</string>
+    <string name="paywall_headline_growth">Her günde iyiyi keşfet</string>
+    <string name="paywall_headline_growth_sub">Şükran ve büyümenin kişisel alanın</string>
+    <string name="paywall_headline_thoughts">Düşüncelerinin akmasına izin ver</string>
+    <string name="paywall_headline_thoughts_sub">Günlük yaşamında yaratıcı yol arkadaşın</string>
+    <string name="paywall_headline_default">Kendini keşfet\nHer gün biraz daha</string>
+    <string name="paywall_headline_default_sub">Günlük yaşamında kişisel YZ yol arkadaşın</string>
+
+    <!-- Exit intent offer -->
+    <string name="paywall_exit_wait">Bir dakika bekle!</string>
+    <string name="paywall_exit_special_offer">Sana özel bir\nteklifimiz var:</string>
+    <string name="paywall_exit_discount">%1$d ay için indirim</string>
+    <string name="paywall_exit_price_comparison">Ayda %2$s yerine sadece %1$s</string>
+    <string name="paywall_exit_start_discount">Ücretli — 2 ay yarı fiyatına</string>
+
+    <!-- ════════════════════════════════════════════════════════════════════
+         CHURN FLOW DIALOG
+         ════════════════════════════════════════════════════════════════════ -->
+    <string name="churn_your_sub">Aboneliğin</string>
+    <string name="churn_plan_yearly">Yıllık abonelik</string>
+    <string name="churn_plan_monthly">Aylık abonelik</string>
+    <string name="churn_plan">Plan</string>
+    <string name="churn_price">Fiyat</string>
+    <string name="churn_renewal">Yenileme</string>
+    <string name="churn_automatic">Otomatik</string>
+    <string name="churn_promo_active_label">İndirim kampanyası</string>
+    <string name="churn_promo_one_month_remaining">1 ay kaldı — sonra ayda <xliff:g id="base_price" example="3,99 €">%1$s</xliff:g></string>
+    <string name="churn_promo_months_remaining"><xliff:g id="months" example="2">%1$d</xliff:g> ay kaldı — sonra ayda <xliff:g id="base_price" example="3,99 €">%2$s</xliff:g></string>
+    <string name="churn_auto_renew_note">Aboneliğin Google Play üzerinden otomatik yenilenir. İstediğin zaman iptal edilebilir.</string>
+    <string name="churn_cancel_sub">Aboneliği iptal et</string>
+    <string name="churn_reason_too_expensive">Çok pahalı</string>
+    <string name="churn_reason_unused">Çok az kullanıyorum</string>
+    <string name="churn_per_year">yılda</string>
+    <string name="churn_per_month">ayda</string>
+    <string name="churn_reason_features">İhtiyacım olan özellikler yok</string>
+    <string name="churn_reason_other">Başka bir neden</string>
+    <string name="churn_sorry_title">Gitmene üzüldük</string>
+    <string name="churn_sorry_body">İptal etmeden önce nedenini söyler misin? Uygulamayı geliştirmemize yardım eder.</string>
+    <string name="churn_exclusive_offer">Sana özel teklif</string>
+    <string name="churn_offer_subtitle">Sana özel teklifimiz</string>
+    <string name="churn_offer_feature_ai">Günlük YZ analizleri</string>
+    <string name="churn_offer_feature_perspectives">4 hazır YZ profilinin tümü + ihtiyacın kadar kendi profilin</string>
+    <string name="churn_offer_feature_voice">Premium ses tanıma</string>
+    <string name="churn_offer_auto_renew">Otomatik yenilenir, istediğin zaman iptal</string>
+    <string name="churn_accept_offer">Teklifi kabul et</string>
+    <string name="churn_switch_yearly">Veya yıllık abonelik ile daha da tasarruf et</string>
+    <string name="churn_pause_sub">Veya Google Play\'de aboneliği duraklat</string>
+    <string name="churn_cancel_anyway">Yine de iptal et</string>
+    <string name="churn_are_you_sure">Emin misin?</string>
+    <string name="churn_stay">Kalmayı tercih ederim</string>
+
+    <!-- ════════════════════════════════════════════════════════════════════
+         AI LIMIT / COMPONENTS
+         ════════════════════════════════════════════════════════════════════ -->
+    <string name="ai_limit_title">Haftalık limitine ulaştın</string>
+    <string name="ai_limit_body">Abonelik olmadan haftada 5 metin iyileştirmesi ve her profil için haftada 5 pano güncellemesi hakkına sahipsin.
+Premium ile: günlük 150\'ye kadar.</string>
+    <string name="ai_limit_monthly">Aylık abonelik, %1$s/ay</string>
+    <string name="ai_limit_yearly">Yıllık abonelik, %1$s/yıl (37\u00A0%% tasarruf)</string>
+    <string name="ai_limit_no_thanks">Hayır, teşekkürler, YZ olmadan devam</string>
+    <string name="ai_banner_title">Günlüğün YZ desteğiyle</string>
+    <string name="ai_banner_body">• Dikte edilen metinler otomatik iyileştirilir\n• Her giriş için özet\n• Örüntülerinden akıllı yaşam önerileri. Tüm YZ çıktıları öneri niteliğindedir, profesyonel danışmanlık değildir.\n• Ücretsiz deneme sürecinde her şey dahil</string>
+    <string name="cd_mic_start">Kaydı başlat</string>
+    <string name="cd_mic_stop">Kaydı durdur</string>
+    <string name="entry_improve_limit_daily">Günlük limit doldu. Yarın devam!</string>
+    <string name="entry_improve_limit_cooldown">Kısa mola: %1$d dakika kaldı.</string>
+    <string name="entry_improve_failed">Metin iyileştirme başarısız</string>
+
+    <!-- ════════════════════════════════════════════════════════════════════
+         NOTIFICATIONS
+         ════════════════════════════════════════════════════════════════════ -->
+    <string name="notif_reminder_title">Günlük zamanı</string>
+    <string name="notif_reminder_body_0">Bugün seni ne etkiliyor?</string>
+    <string name="notif_reminder_body_1">Sana bir an, yakala</string>
+    <string name="notif_reminder_body_2">Gelecekteki sen sana teşekkür edecek</string>
+    <string name="notif_reminder_body_3">Bir düşünce bile yeter, başla</string>
+    <string name="notif_reminder_body_4">Bugünkü en parlak anın neydi?</string>
+    <string name="notif_weekly_title">Haftalık geri bakışın</string>
+    <string name="notif_weekly_body">Bu hafta seni neyin hareketlendirdiğine bak, panelinde yeni içgörüler var.</string>
+    <string name="notif_monthly_title">Aylık geri bakışın</string>
+    <string name="notif_monthly_body">Bir ay dolusu anı seni bekliyor.</string>
+    <string name="notif_yearly_title">Yıllık geri bakışın</string>
+    <string name="notif_yearly_body">Bir yıl dolusu anı, yolculuğuna geri bak.</string>
+
+    <!-- Notification channel names -->
+    <string name="notif_channel_daily_name">Günlük hatırlatma</string>
+    <string name="notif_channel_daily_desc">Her gün günlük yazmayı hatırlatır</string>
+    <string name="notif_channel_weekly_name">Haftalık geri bakış</string>
+    <string name="notif_channel_weekly_desc">Haftalık geri bakışın her pazar 15:00\'te</string>
+    <string name="notif_channel_monthly_name">Aylık geri bakış</string>
+    <string name="notif_channel_monthly_desc">Aylık geri bakışın hazır olduğunda bildirim</string>
+    <string name="notif_channel_yearly_name">Yıllık geri bakış</string>
+    <string name="notif_channel_yearly_desc">Yıllık geri bakışın hazır olduğunda bildirim</string>
+
+    <!-- ════════════════════════════════════════════════════════════════════
+         DATE / TIME
+         ════════════════════════════════════════════════════════════════════ -->
+    <string name="datetime_just_now">az önce</string>
+    <plurals name="datetime_minutes_ago">
+        <item quantity="one">%1$d dakika önce</item>
+        <item quantity="other">%1$d dakika önce</item>
+    </plurals>
+    <plurals name="datetime_hours_ago">
+        <item quantity="one">%1$d saat önce</item>
+        <item quantity="other">%1$d saat önce</item>
+    </plurals>
+    <plurals name="datetime_days_ago">
+        <item quantity="one">%1$d gün önce</item>
+        <item quantity="other">%1$d gün önce</item>
+    </plurals>
+    <!-- Confirmation after PDF export. %1$d = number of entries included in the PDF. -->
+    <plurals name="settings_export_success">
+        <item quantity="one">%1$d giriş dışa aktarıldı</item>
+        <item quantity="other">%1$d giriş dışa aktarıldı</item>
+    </plurals>
+    <string name="datetime_today">Bugün</string>
+    <string name="datetime_yesterday">Dün</string>
+    <string name="datetime_day_before_yesterday">Evvelki gün</string>
+    <string name="datetime_this_week">Bu hafta</string>
+    <string name="datetime_last_week">Geçen hafta</string>
+    <string name="datetime_weeks_ago">%1$d hafta önce</string>
+
+    <!-- ════════════════════════════════════════════════════════════════════
+         ACHIEVEMENTS
+         ════════════════════════════════════════════════════════════════════ -->
+    <string name="achievement_nightowl_title">Gece kuşu</string>
+    <string name="achievement_nightowl_desc">22:00\'den sonra 50 giriş</string>
+    <string name="achievement_earlybird_title">Erkenci</string>
+    <string name="achievement_earlybird_desc">07:00\'den önce 20 giriş</string>
+    <string name="achievement_confession_title">İtiraf</string>
+    <string name="achievement_confession_desc">1000 sözcüğü geçen bir giriş</string>
+    <string name="achievement_marathon_title">Yazı maratoncusu</string>
+    <string name="achievement_marathon_desc">100 günlük girişi</string>
+    <string name="achievement_wordartist_title">Söz sanatçısı</string>
+    <string name="achievement_wordartist_desc">500 günlük girişi</string>
+    <string name="achievement_consistency_title">Kararlılık</string>
+    <string name="achievement_consistency_desc">30 günlük seri tamam</string>
+    <string name="achievement_chronicler_title">Yıl vakanüvisi</string>
+    <string name="achievement_chronicler_desc">365 giriş</string>
+    <string name="achievement_photodiary_title">Fotoğraf günlüğü</string>
+    <string name="achievement_photodiary_desc">Girişlere eklenmiş 50 fotoğraf</string>
+    <string name="achievement_voiceartist_title">Ses sanatçısı</string>
+    <string name="achievement_voiceartist_desc">25 sesli giriş</string>
+    <string name="achievement_reflectionmaster_title">Yansıtma ustası</string>
+    <string name="achievement_reflectionmaster_desc">50 panel analizi</string>
+
+    <!-- ════════════════════════════════════════════════════════════════════
+         DAILY PROMPTS
+         ════════════════════════════════════════════════════════════════════ -->
+    <string name="prompt_cat_self_reflection">Öz yansıtma</string>
+    <string name="prompt_cat_gratitude">Şükran</string>
+    <string name="prompt_cat_future">Gelecek</string>
+    <string name="prompt_cat_relationships">İlişkiler</string>
+
+    <string-array name="prompts_self_reflection">
+        <item>Bugün seni ne güldürdü?</item>
+        <item>Bugün hangi düşünceyi bırakamadın?</item>
+        <item>Bugün kendin hakkında ne öğrendin?</item>
+        <item>Bugünün en yoğun anı hangisiydi?</item>
+        <item>Bugün yapabilseydin neyi farklı yapardın?</item>
+        <item>Bugün en çok hangi duygu sana eşlik etti?</item>
+        <item>Bugün seni ne şaşırttı?</item>
+        <item>Bugün en uzun ne üzerine düşündün?</item>
+        <item>Bugün sana enerji veren neydi?</item>
+        <item>Bugün enerjini çalan neydi?</item>
+        <item>Hangi alışkanlığı değiştirmek isterdin?</item>
+        <item>Senin için şu anda başarı ne anlama geliyor?</item>
+        <item>Şu an hangi korku yolunu kesiyor?</item>
+        <item>Daha genç halin bugünkü hayatın hakkında ne derdi?</item>
+        <item>Şu anda kendine hangi öğüdü verirdin?</item>
+        <item>Seni benzersiz yapan ne?</item>
+    </string-array>
+
+    <string-array name="prompts_gratitude">
+        <item>Bugün ne için şükran duyuyorsun?</item>
+        <item>Bugün hangi kişi gününü güzelleştirdi?</item>
+        <item>Bugün hangi küçük detay seni sevindirdi?</item>
+        <item>Hangi yeteneğine sık sık doğal gözüyle bakıyorsun?</item>
+        <item>Bu hafta başına gelen en güzel şey ne?</item>
+        <item>Kime ne için teşekkür etmek isterdin?</item>
+        <item>Hangi yer sana ev hissi veriyor?</item>
+        <item>Hangi anı seni hemen mutlu ediyor?</item>
+        <item>Bedenin hangi parçası daha çok takdire hak kazanıyor?</item>
+        <item>Bugün gerçekten sana iyi gelen yemek hangisiydi?</item>
+        <item>Son zamanlarda seni hangi müzik etkiledi?</item>
+        <item>Para değeri olmayan en değerli şey ne?</item>
+        <item>Geçmişten seni güçlendiren hangi deneyim?</item>
+        <item>Gündeliğinde aslında bir ayrıcalık olan ne?</item>
+        <item>Günlük hayatta gizli kahramanın kim?</item>
+        <item>Şu an hangi mevsimin tadını en çok çıkarıyorsun, neden?</item>
+    </string-array>
+
+    <string-array name="prompts_future">
+        <item>Bir yıl sonra neyi başarmış olmak isterdin?</item>
+        <item>Beş yıl sonraki mükemmel günün nasıl görünüyor?</item>
+        <item>Şu an hangi hedefin peşinde en büyük tutkuyla koşuyorsun?</item>
+        <item>Başarısız olamayacağını bilsen ne yapardın?</item>
+        <item>Hangi yeni beceriyi öğrenmek isterdin?</item>
+        <item>Sırada hangi seyahate çıkmak isterdin?</item>
+        <item>On yıl sonra nasıl biri olmak istiyorsun?</item>
+        <item>Canlandırabileceğin hangi hayalini bırakmıştın?</item>
+        <item>Şu an atabileceğin en cesur adım hangisi?</item>
+        <item>Seni heyecanlandıran hangi projeye henüz başlamadın?</item>
+        <item>Neyin olması gerekir ki «artık mutluyum» diyebilesin?</item>
+        <item>Dünyada görmek istediğin hangi değişim?</item>
+        <item>Dilek listenin en üstünde ne var?</item>
+        <item>Önümüzdeki aya kadar bırakmak istediğin kötü alışkanlık?</item>
+        <item>Nasıl hatırlanmak isterdin?</item>
+        <item>Yarın atabileceğin küçük bir adım ne?</item>
+    </string-array>
+
+    <string-array name="prompts_relationships">
+        <item>Kime şimdiye kadar söylemediğin bir şeyi söylemek isterdin?</item>
+        <item>Hayatındaki hangi ilişki daha çok dikkat hak ediyor?</item>
+        <item>En iyi arkadaşında en çok neyi değerli buluyorsun?</item>
+        <item>En son ne zaman gerçekten anlaşıldığını hissettin?</item>
+        <item>Senin için önemli birine ne söylerdin?</item>
+        <item>Hayatını en çok hangi kişi şekillendirdi?</item>
+        <item>Başkalarına sevildiklerini nasıl gösteriyorsun?</item>
+        <item>Hangi çatışmayı çözmek isterdin?</item>
+        <item>Dostluk senin için ne anlama geliyor?</item>
+        <item>Son zamanlarda sana önemli bir şey öğreten kim?</item>
+        <item>Başkalarında en çok hangi özelliği takdir edersin?</item>
+        <item>Kimle bütün bir günü geçirmek isterdin?</item>
+        <item>Aldığın en güzel iltifat hangisiydi?</item>
+        <item>İlişkilerde daha iyi koymak istediğin sınırlar?</item>
+        <item>Sevgi anlayışın zamanla nasıl değişti?</item>
+        <item>Bugün senden bir arama veya mesaj hak eden kim?</item>
+    </string-array>
+
+    <!-- ════════════════════════════════════════════════════════════════════
+         PDF EXPORT
+         ════════════════════════════════════════════════════════════════════ -->
+    <string name="pdf_entry_fallback_title">Giriş #%1$d</string>
+    <string name="pdf_entry_counter">%2$d girişten %1$d</string>
+    <string name="pdf_summary_label">ÖZET</string>
+    <string name="pdf_continuation">%1$s (devamı)</string>
+    <string name="pdf_page_number">Sayfa %1$d</string>
+
+    <!-- ════════════════════════════════════════════════════════════════════
+         ERRORS
+         ════════════════════════════════════════════════════════════════════ -->
+    <string name="error_retro_all_failed">%1$d YZ isteği başarısız. İnternet bağlantını kontrol et.</string>
+    <string name="error_whisper_audio_empty">Ses dosyası boş</string>
+    <string name="error_whisper_no_text">Metin algılanmadı</string>
+    <string name="error_sync_db_not_found">Veri tabanı bulunamadı</string>
+    <string name="error_audio_record_init_failed">Mikrofon başlatılamadı</string>
+    <string name="error_json_key_missing">AI yanıtı eksik: %1$s veya %2$s yok</string>
+    <string name="error_file_open_failed">Hata: dosya açılamadı</string>
+    <string name="error_generic">Hata: %1$s</string>
+
+    <!-- ════════════════════════════════════════════════════════════════════
+         AI PROFILE STYLE INSTRUCTIONS (for Gemini prompts)
+         ════════════════════════════════════════════════════════════════════ -->
+    <string name="profile_style_chronicler">\n- Özetleyici bir anlatı üslubunda yaz, en önemli olayları ve duyguları kişisel bir vakanüvis gibi topla</string>
+    <string name="profile_style_advisor">\n- Bir yaşam danışmanı üslubunda yaz, neyin iyi gittiğini, neyin iyileştirilebileceğini vurgula ve okuyucuya netlik ve düzen hissi ver</string>
+    <string name="profile_style_insight">\n- Derin bir öz farkındalık anlatısı üslubunda yaz, düşünce örüntülerini, yinelenen duyguları ve gizli güçleri ortaya çıkar</string>
+    <string name="profile_style_coach">\n- Motive edici bir hedef yoldaşı üslubunda yaz, kişisel hedeflerdeki ilerlemeyi göster ve devam etmeye cesaret ver</string>
+    <string name="profile_style_custom">\n- PROFİL STİLİ (Özel): Bu geri bakışı kullanıcının göreviyle açık bağlantı kurarak yaz. ZORUNLU KURALLAR:\n  1) Geri bakışın EN AZ yüzde altmışı, doğrudan veya dolaylı olarak görev konusunu ele alsın.\n  2) EN AZ BİR tematik bölüm tamamen görev odağına ayrılsın (başlık + metin).\n  3) Profil bağlantısını eş anlamlılar ve tematik komşuluklar kullanarak ÇEŞİTLİ biçimde ifade et; mekanik sözcük tekrarından kaçın.\n  4) Görevle bağlantısız gözlemler kısa tut ya da tamamen bırak — az ama gerçek bağlantılı bölüm, çok ama genel bölümden iyidir.\n  Kullanıcı görevi (yön tayini için): \"%1$s\"</string>
+
+
+    <!-- ════════════════════════════════════════════════════════════════════
+         CONSENT SCREEN + PRIVACY GATES + PRIVACY SECTION (April 2026)
+         ════════════════════════════════════════════════════════════════════ -->
+    <string name="consent_title">Gizlilik ve onay</string>
+    <string name="consent_intro">Günlüğün kişisel bir alandır ve buna saygı duyuyoruz. Best Journal verilerini nasıl işlediğini burada şeffaf bir şekilde görebilirsin.</string>
+    <string name="consent_card1_title">Yerel depolama</string>
+    <string name="consent_card1_body">Girişlerin cihazında kalır.</string>
+    <string name="consent_card2_title">Yapay zekâ özellikleri (ABD)</string>
+    <string name="consent_card2_body">İsteğe bağlı olarak metinler Google Gemini\'ye ve seslendirilecek metinler Microsoft Edge\'e ABD\'de gönderilir (EU-US Data Privacy Framework). Ses kayıtları, Standart Sözleşme Hükümleri (EU SCCs) kapsamında Groq\'a (ABD) gönderilir.</string>
+    <string name="consent_card3_title">Takma adlı istatistikler</string>
+    <string name="consent_card3_body">Firebase Analytics, isteğe bağlı, ayarlardan istediğin zaman değiştirebilirsin.</string>
+    <string name="consent_links_header">Yasal metinlerimiz:</string>
+    <string name="consent_accept_all">Kabul et ve başla</string>
+    <string name="consent_disable_stats">İstatistikleri devre dışı bırak ve devam et</string>
+    <string name="consent_confirmation">«Kabul et ve başla»ya dokunarak gizlilik politikasını, kullanım koşullarını ve yasal bilgileri okuduğunu ve açıklanan veri işleme faaliyetlerini kabul ettiğini onaylarsın. Kararını istediğin zaman ayarlardan değiştirebilirsin.</string>
+
+    <string name="privacy_gate_groq_title">Ses kaydı Groq\'a gönderilsin mi?</string>
+    <string name="privacy_gate_groq_body">Bu işlev ses kaydını şifreli olarak Groq\'a (ABD) gönderir ve orada metne dönüştürür — yerel tanımadan daha hızlı ve daha doğru.\n\n✓ Kayıt, dönüştürmeden hemen sonra silinir\n✓ Kayıtlarınla YZ eğitimi yapılmaz\n✓ Hukuki dayanak: Standart sözleşme hükümleri (EU SCCs)\n\nAlternatif: Ayarlardan yerel çevrimdışı tanıma.</string>
+    <string name="privacy_gate_groq_accept">Kabul et ve gönder</string>
+    <string name="privacy_gate_groq_local">Yerel olarak transkribe et</string>
+
+    <string name="privacy_gate_gemini_title">Metin Google Gemini\'ye gönderilsin mi?</string>
+    <string name="privacy_gate_gemini_body">Best Journal\'ın akıllı özelliklerini kullanmak istediğin için harika! Özetler, geriye dönük bakışlar, panel içgörüleri ve metin geliştirmeleri için metinlerin şifrelenerek Google Gemini\'ye gönderilir.
+
+✓ Verilerinle KI eğitimi yapılmaz
+✓ İstekler kalıcı olarak saklanmaz
+✓ AB-ABD Veri Gizliliği Çerçevesi\'ne göre şifrelenir
+
+Önemli Not: Günlük girişlerin özellikle hassas veriler içerebileceğinden (sağlık, din, kişisel ilişkiler — GDPR Md. 9), KI işleme için açık onayını istiyoruz. KI çıktıları öneridir, profesyonel tavsiye değildir ve bir uzmanın yerini tutmaz.
+
+Bunu istediğin zaman Ayarlar\'dan değiştirebilirsin.</string>
+    <string name="privacy_gate_gemini_accept">Kabul et ve gönder</string>
+    <string name="privacy_gate_gemini_cancel">İptal</string>
+
+    <string name="privacy_gate_tts_title">Premium sesleri etkinleştir</string>
+    <string name="privacy_gate_tts_body">Premium seslerle sesli okuma daha doğal duyulur. Metnin şifreli olarak (HTTPS/TLS) ABD\'deki bir Microsoft ses hizmetine gönderilir ve ses olarak geri döner.\n\n✓ Aktarım yalnızca ses sentezi içindir\n✓ Üçüncü ülke aktarımı ABD (Microsoft, EU-US Data Privacy Framework kapsamında sertifikalıdır)</string>
+    <string name="privacy_gate_tts_accept">Kabul et ve oku</string>
+    <string name="privacy_gate_tts_cancel">İptal</string>
+
+    <string name="settings_privacy_header">Gizlilik</string>
+    <string name="settings_analytics_title">Takma adlı kullanım analizi</string>
+    <string name="settings_analytics_subtitle">Hata analizi ve ürün iyileştirme için Firebase Analytics</string>
+
+    <string name="settings_delete_account_title">Hesabı ve verileri sil</string>
+    <string name="settings_delete_account_subtitle">Tüm yerel verileri ve Drive yedeğini geri dönüşü olmadan siler. Google hesabın olduğu gibi kalır.</string>
+    <string name="settings_delete_account_confirm_title">Tüm uygulama verileri silinsin mi?</string>
+    <string name="settings_delete_account_confirm_body">Bu işlem geri alınamaz ve şunları siler:\n\n• Tüm yerel günlük girişleri, fotoğraflar, videolar ve ses kayıtları\n• Uygulamanın Google Drive yedeği (yalnızca uygulama verileri, Google hesabın değil)\n• Uygulama girişin\n\nGoogle hesabın olduğu gibi kalır. Uygulama sonrasında yeni bir kurulum gibi yeniden başlar.</string>
+    <string name="settings_delete_account_cancel">İptal</string>
+    <string name="settings_delete_account_confirm">Evet, her şeyi sil</string>
+
+    <string name="settings_report_ai_title">Yapay zekâ yanıtını bildir</string>
+    <string name="settings_report_ai_subtitle">Uygunsuz veya hatalı yapay zekâ çıktısı</string>
+    <string name="settings_report_ai_confirm_title">Destek ekibine e-posta açılsın mı?</string>
+    <string name="settings_report_ai_confirm_body">E-posta programın dev.app.support@gmail.com için hazırlanmış bir mesajla açılır. Göndermeden önce açıklamayı tamamlayabilirsin. İş günlerinde genellikle 24 saat içinde yanıt veririz.\n\nLütfen şunları bildir: panodan, özetlerden, geri bakışlardan ya da metin iyileştirmeden çıkan uygunsuz, saldırgan, yanlış ya da yanıltıcı YZ çıktıları.</string>
+    <string name="settings_report_ai_confirm">Bildirim oluştur</string>
+    <string name="settings_report_ai_cancel">İptal</string>
+    <string name="settings_report_ai_no_email">E-posta uygulaması bulunamadı. Bildirimi dev.app.support@gmail.com adresine gönder.</string>
+    <string name="settings_report_ai_subject">Best Journal: uygunsuz yapay zekâ yanıtı</string>
+    <string name="settings_report_ai_body">Merhaba,\n\nBest Journal\'da uygunsuz veya hatalı bir yapay zekâ yanıtını bildirmek istiyorum.\n\nSorunun açıklaması:\n[Doldurulacak]\n\nBağlam (hangi özellik, hangi giriş):\n[Doldurulacak]\n\nTeşekkürler.</string>
+    <string name="settings_report_ai_dialog_title">Yapay zeka yanıtını bildir</string>
+    <string name="settings_report_ai_dialog_desc">Uygunsuz veya hatalı yapay zeka yanıtını açıklayın. Bildiriminiz doğrudan destek ekibimize gönderilir. Google hesabınızla giriş yapmış olmanız gerekir.</string>
+
+    <string name="settings_revoke_title">Cayma hakkı</string>
+    <string name="settings_revoke_subtitle">§ 356a BGB — Doğrudan uygulamadan cayma</string>
+    <string name="settings_revoke_confirm_title">Sözleşmeden cayılsın mı?</string>
+    <string name="settings_revoke_confirm_body">„Caymayı onayla\" düğmesine bir tıklamayla caymanı doğrudan dev.app.support@gmail.com adresine göndeririz. E-posta ile hemen bir alındı onayı alırsın.\n\nTam cayma bilgisini kullanım koşullarında (§ 16) bulabilirsin. Abonelikleri lütfen ayrıca Google Play → Abonelikler üzerinden iptal et ki başka tahsilat yapılmasın.</string>
+    <string name="settings_revoke_cancel">İptal</string>
+    <string name="settings_revoke_confirm">Cayma oluştur</string>
+    <string name="settings_revoke_no_email">E-posta uygulaması bulunamadı. Cayma bildirimini dev.app.support@gmail.com adresine gönder.</string>
+    <string name="settings_revoke_email_subject">Best Journal Premium sözleşme cayması</string>
+    <string name="settings_revoke_email_body">İşbu bildirimle Best Journal\'ın Premium özelliklerine ilişkin sözleşmeden caydığımı bildiririm.\n\nGönderen (Google hesabı): %1$s\nCayma zamanı: %2$s\n\nBu cayma, uygulamadaki § 356a BGB uyumlu iki aşamalı cayma düğmesi üzerinden başlatılmış ve Gmail API aracılığıyla otomatik olarak gönderilmiştir.</string>
+    <string name="settings_revoke_confirm_subject">Alındı onayınız: Best Journal\'da cayma</string>
+    <string name="settings_revoke_confirm_user_body">Merhaba,\n\n%1$s tarihli cayma bildiriminizi aldık. Bu, § 356a BGB kapsamında alındı onayınızdır.\n\nCayma bildiriminizi en kısa sürede işleme alacağız; sorular olursa dev.app.support@gmail.com üzerinden size ulaşacağız.\n\nYeni ücretlendirmelerin durması için Google Play Store\'da "Abonelikler" bölümünden aboneliğinizi ayrıca iptal edin.\n\nTeşekkürler ve saygılarımızla\nBest Journal (Frank Barwandt)</string>
+    <string name="settings_revoke_no_account">Oturum açmış bir Google hesap adresi bulunamadı. Lütfen Ayarlar\'da Google hesabınızla oturum açın veya caymayı dev.app.support@gmail.com adresine manuel olarak gönderin.</string>
+    <string name="settings_revoke_sending">Cayma gönderiliyor…</string>
+    <string name="settings_revoke_success_title">Cayma alındı</string>
+    <string name="settings_revoke_success_body">Cayma bildiriminiz dev.app.support@gmail.com adresine gönderildi. Alındı onayı da gelen kutunuzda yer alıyor.</string>
+    <string name="settings_revoke_success_close">Kapat</string>
+    <string name="settings_revoke_error_title">Cayma gönderilemedi</string>
+    <string name="settings_revoke_error_body">Otomatik gönderim başarısız oldu: %1$s\n\nAlternatif olarak dev.app.support@gmail.com adresine manuel bir e-posta gönderebilirsiniz. Bunun için "E-posta uygulamasını aç" seçeneğine dokunun.</string>
+    <string name="settings_revoke_error_email_fallback">E-posta uygulamasını aç</string>
+
+
+
+    <!-- Crisis Support / Mental Health Disclaimer -->
+    <string name="settings_crisis_title">Kriz desteği</string>
+    <string name="settings_crisis_subtitle">Acil durumlar için önemli yardım hatları</string>
+    <string name="settings_crisis_dialog_title">Bunu tek başına yaşamak zorunda değilsin</string>
+    <string name="settings_crisis_dialog_body">Best Journal bir günlük uygulamasıdır ve profesyonel psikolojik ya da tıbbi desteğin yerine geçmez. Yapay zekâ tarafından oluşturulan analizler terapi değildir.\n\nAkut bir kriz içindeysen veya kendine zarar verme ya da intihar düşüncelerin varsa: bunu tek başına yaşamak zorunda değilsin. Ücretsiz ve anonim yardım 7/24 ulaşılabilir.</string>
+    <string name="settings_crisis_hotline_de_name">Telefonseelsorge Almanya</string>
+    <string name="settings_crisis_hotline_de_hours">Ücretsiz, 7/24, anonim</string>
+    <string name="settings_crisis_call_de">0800 111 0 111 numarasını ara</string>
+    <string name="settings_crisis_call_de_alt">0800 111 0 222 numarasını ara</string>
+    <string name="settings_crisis_emergency_name">Acil yardım</string>
+    <string name="settings_crisis_call_emergency">112’yi ara</string>
+    <string name="settings_crisis_international_name">Uluslararası yardım hatları</string>
+    <string name="settings_crisis_open_findahelpline">findahelpline.com’u aç</string>
+    <string name="settings_crisis_close">Kapat</string>
+    <string name="settings_crisis_no_dialer">Telefon uygulaması bulunamadı.</string>
+    <string name="settings_crisis_no_browser">Tarayıcı bulunamadı.</string>
+
+    <!-- AI-generated content badge -->
+    <string name="ai_generated_badge">YZ ile oluşturuldu</string>
+    <string name="ai_generated_tooltip">Bu içerik bir yapay zekâ sistemi (Google Gemini) tarafından oluşturuldu ve hatalar içerebilir. Lütfen kendin doğrula.</string>
+
+    <!-- AUTO-ADDED FALLBACK (English) for missing keys — replace with proper translations later -->
+    <string name="consent_optout_confirmation">Devre dışı bırakma kaydedildi — istatistikler kapalı.</string>
+    <string name="settings_ccpa_do_not_sell_title">Do Not Sell My Personal Information</string>
+    <string name="settings_ccpa_do_not_sell_subtitle">Kaliforniya sakinleri için (CCPA/CPRA 2026). Etkinleştirildiğinde tüm bulut tabanlı yapay zekâ özellikleri kapatılır ve hiçbir istatistik toplanmaz.</string>
+    <string name="settings_ccpa_do_not_sell_confirmation">Do-Not-Sell açık — tüm bulut hizmetleri kapalı.</string>
+    <string name="settings_ccpa_do_not_sell_off_confirmation">Do-Not-Sell kapalı.</string>
+    <string name="settings_delete_account_in_progress">Hesap ve veriler siliniyor…</string>
+    <string name="settings_delete_account_drive_error_title">Drive yedeği silinemedi</string>
+    <string name="settings_delete_account_drive_error_body">Google Drive yedeği güvenilir biçimde kaldırılamadı (neden: %1$s).
+
+Tam silme olmadan \"geri alınamaz biçimde silindi\" ifadesi doğru olmazdı.
+
+Ne yapmak istersin?</string>
+    <string name="settings_delete_account_retry">Tekrar dene</string>
+    <string name="settings_delete_account_force_local">Yalnızca yerel olarak sil (Drive yedeklemesi korunur)</string>
+    <string name="settings_delete_account_abort">İşlemi iptal et</string>
+
+    <string name="legal_title_datenschutz">Gizlilik Politikası</string>
+    <string name="legal_title_nutzungsbedingungen">Kullanım Koşulları</string>
+    <string name="legal_title_impressum">Yasal Bilgi</string>
+
+    <!-- Consent-Screen v4 + Privacy Sheet + Settings -->
+    <string name="consent_welcome_title">Best Journal’a hoş geldin</string>
+    <string name="consent_welcome_intro">Başlamadan önce gizlilik tercihlerini burada hızlıca ayarlayalım.</string>
+    <string name="consent_promise_local">Gizlilik yasaları onayını gerektirir.</string>
+    <string name="consent_promise_no_training">Hangi özelliklerin aktif olacağına burada sen karar verirsin.</string>
+    <string name="consent_promise_optional_ai">Ayarlar’dan istediğin zaman değiştirilebilir.</string>
+    <string name="consent_btn_manual_selection">Manuel seçim</string>
+    <string name="privacy_sheet_title">Gizliliği özelleştir</string>
+    <string name="privacy_sheet_subtitle">Tek tek özellikleri sana uygun şekilde etkinleştir. Her şey istediğin zaman değiştirilebilir.</string>
+    <string name="privacy_sheet_save">Seçimi kaydet</string>
+    <string name="privacy_sheet_all_on">Tümünü aç</string>
+    <string name="privacy_sheet_all_off">Tümünü kapat</string>
+    <string name="consent_toggle_analytics_title">Takma adlı kullanım analizi</string>
+    <string name="consent_toggle_analytics_body">Firebase Analytics — uygulamayı iyileştirmemize yardımcı olur. Günlük içeriği yok, yalnızca takma adlı kullanım istatistikleri (örn. dokunma sayıları). Veri aktarımı: Google ABD (Data Privacy Framework).</string>
+    <string name="consent_toggle_groq_title">Konuşmadan metne (Groq Whisper)</string>
+    <string name="consent_toggle_groq_body">Girdilerin dikte edilmesini sağlar. Ses kaydın şifreli olarak Groq’a (ABD) gönderilir, metne dönüştürülür ve ardından silinir. Kayıtların eğitim için KULLANILMAZ.</string>
+    <string name="consent_toggle_gemini_title">YZ yansımaları (Google Gemini)</string>
+    <string name="consent_toggle_gemini_body">Panel YZ’si, özetler, geri dönüşler ve metin iyileştirme. Metin parçalarını Google Gemini’ye (ABD) gönderir. Girdilerin eğitim için KULLANILMAZ.</string>
+    <string name="consent_toggle_tts_title">Sesli okuma (Microsoft Edge TTS)</string>
+    <string name="consent_toggle_tts_body">Girdileri doğal sesle okur. Metni Microsoft’a (ABD) gönderir.</string>
+    <string name="consent_toggle_drive_title">Google Drive yedekleme</string>
+    <string name="consent_toggle_drive_body">Girdileri kendi Google Drive’ına şifreli olarak kaydeder. Tam kontrol sende — dosya senin hesabında, bizde değil.</string>
+    <string name="consent_toggle_do_not_sell_title">Do Not Sell My Personal Information</string>
+    <string name="consent_toggle_do_not_sell_body">Bu anahtar yalnızca ABD\'nin Kaliforniya eyaleti sakinleri içindir. Kaliforniya veri koruma yasası (CCPA/CPRA) sakinlere bir itiraz hakkı tanır. Etkinleştirildiğinde tüm isteğe bağlı bulut işlevleri (YZ, yedekleme, ses tanıma, analiz) devre dışı kalır — yalnızca yerel işlevler etkin kalır.\n\nKaliforniya dışında yaşıyorsan bu anahtarı yok sayabilirsin: Best Journal verilerini dünyanın hiçbir yerinde satmaz ya da pazarlamaz.</string>
+    <string name="consent_btn_accept_all">Tümünü kabul et</string>
+    <string name="consent_btn_save_selection">Seçimimi kaydet</string>
+    <string name="consent_btn_minimum_only">Tümünü reddet</string>
+    <string name="consent_saved_snackbar">Ayar kaydedildi</string>
+    <string name="consent_revoke_snackbar">Onay geri alındı</string>
+    <string name="consent_footer_version">Seçimini istediğin zaman Ayarlar’dan değiştirebilirsin.</string>
+    <string name="consent_details_expand">Ayrıntılar</string>
+    <string name="settings_open_privacy_sheet">Gizlilik ayarlarını özelleştir</string>
+    <string name="settings_privacy_section_header">Gizlilik ve onaylar</string>
+    <string name="settings_ai_groq_title">Konuşmadan metne (Groq)</string>
+    <string name="settings_ai_groq_subtitle">Ses kayıtlarını yazıya dökmek için Groq ABD’ye gönder</string>
+    <string name="settings_ai_gemini_title">YZ yansımaları (Gemini)</string>
+    <string name="settings_ai_gemini_subtitle">YZ özetleri için metinleri Google ABD’ye gönder</string>
+    <string name="settings_ai_tts_title">Sesli okuma (Edge TTS)</string>
+    <string name="settings_ai_tts_subtitle">Sesli çıktı için metinleri Microsoft ABD’ye gönder</string>
+    <string name="settings_drive_backup_title">Google Drive yedekleme</string>
+    <string name="settings_drive_backup_subtitle">Girdileri Drive’ına şifreli olarak kaydet</string>
+
+    <!-- DEBUG-only test data seeder (button in journal top bar, only visible in debug builds) -->
+    <string name="dev_seed_create_label">70 test girdisi oluştur</string>
+    <string name="dev_seed_delete_label">70 test girdisini sil</string>
+    <string name="dev_seed_running">Dilinizde 70 test girdisi oluşturuluyor…</string>
+    <string name="dev_seed_done">%1$d test girdisi oluşturuldu</string>
+    <string name="dev_seed_deleted">%1$d test girdisi silindi</string>
+    <string name="dev_seed_error">Hata: %1$s</string>
+    <string name="dev_seed_ai_no_entries">AI test kaydı döndürmedi</string>
+
+    <!-- Premium feature: unlimited follow-ups per journal entry -->
+    <string name="paywall_feature_followups">Günlük girdilerine istediğin kadar ekleme</string>
+    <string name="settings_premium_feature_followups">Sınırsız eklemeler</string>
+    <string name="settings_premium_feature_followups_desc">Girdi başına istediğin kadar ekleme</string>
+
+    <!-- Follow-up / Nachtrag strings -->
+    <string name="action_no">Hayır</string>
+    <string name="action_yes">Evet</string>
+    <string name="ai_improved_suffix">\n\n✨ YZ ile geliştirildi</string>
+    <string name="ai_improved_suffix_marker">✨ YZ ile geliştirildi</string>
+    <string name="entry_delete_entry_cd">Günlük girdisini sil</string>
+    <string name="entry_journal_entry_title">Günlük girdisi</string>
+    <string name="entry_photos_videos_add_title">Fotoğraf/Video ekle</string>
+    <string name="follow_up_cancel">İptal</string>
+    <string name="follow_up_card_title">Ekleme</string>
+    <string name="follow_up_choose_input_mode">Eklemeyi nasıl yapmak istersin?</string>
+    <string name="follow_up_delete_button">Sil</string>
+    <string name="follow_up_delete_cd">Eklemeyi sil</string>
+    <string name="follow_up_delete_confirm_text"><xliff:g id="ordinal" example="1">%1$s</xliff:g>. eklemeyi kalıcı olarak silmek istiyor musun?</string>
+    <string name="follow_up_delete_confirm_title"><xliff:g id="ordinal" example="1">%1$s</xliff:g>. ekleme silinsin mi?</string>
+    <string name="follow_up_dialog_label">Eklemen:</string>
+    <string name="follow_up_dialog_title">Ekleme</string>
+    <string name="follow_up_discard">Vazgeç</string>
+    <string name="follow_up_improve_text">✨ Metni geliştir</string>
+    <string name="follow_up_improve_with_ai">YZ ile sonradan geliştir</string>
+    <string name="follow_up_improving">YZ eklemeyi geliştiriyor…</string>
+    <string name="follow_up_inline_title">Ekleme <xliff:g id="ordinal" example="1">%1$s</xliff:g></string>
+    <string name="follow_up_input_speak_cd">Sesle gir</string>
+    <string name="follow_up_input_speak_label">Sesle gir</string>
+    <string name="follow_up_input_write_cd">Yaz</string>
+    <string name="follow_up_input_write_label">Yaz</string>
+    <string name="follow_up_premium_body">Premium ile her günlük girdisine istediğin kadar ekleme yapabilirsin.</string>
+    <string name="follow_up_premium_hint">ikinci eklemeden itibaren</string>
+    <string name="follow_up_premium_later">Daha sonra karar ver</string>
+    <string name="follow_up_premium_subscribe">Aboneliği başlat</string>
+    <string name="follow_up_premium_subtext">Her ekleme otomatik olarak panele yansır, böylece analizin her zaman eksiksiz kalır.</string>
+    <string name="follow_up_premium_title">Sınırsız ekleme</string>
+    <string name="follow_up_save">Kaydet</string>
+    <string name="follow_up_save_improved">Geliştirilmiş hali kaydet</string>
+    <string name="follow_up_show_improved">✨ Geliştirilmiş sürümü göster</string>
+    <string name="follow_up_show_original">↩ Orijinali göster</string>
+    <string name="follow_up_speak_pill_label">Sesle gir</string>
+    <string name="follow_up_speak_prompt">Eklemeyi sesle söyle.</string>
+    <string name="follow_up_stop_hint">Bitirince Dur\'a dokun.</string>
+    <string name="follow_up_tab_improved">✨ YZ Geliştirildi</string>
+    <string name="follow_up_tab_original">Orijinal</string>
+    <string name="follow_up_text_placeholder">Eklemeyi buraya yaz…</string>
+    <string name="follow_up_transcribing">Ekleme metne dönüştürülüyor…</string>
+    <string name="journal_improve">Metni geliştir</string>
+    <string name="journal_state_improving">Geliştiriliyor…</string>
+    <string name="journal_state_transcribing">Metne dönüştürülüyor…</string>
+    <string name="profile_custom_add">Kişisel analiz ekle</string>
+    <string name="profile_custom_remove">Kişisel analizi kaldır</string>
+    <string name="profile_custom_rename">Yeniden adlandır</string>
+    <string name="profile_custom_rename_save">Adı kaydet</string>
+    <string name="prompt_clear_confirm_text">Kişisel analiz kalıcı olarak silinecek. Devam etmek istiyor musun?</string>
+    <string name="prompt_clear_confirm_title">Metin silinsin mi?</string>
+    <string name="prompt_clear_content_desc">Metni sil</string>
+    <string name="prompt_recording_with_model">Kayıt devam ediyor — Model: <xliff:g id="model" example="Whisper">%1$s</xliff:g></string>
+    <string name="prompt_transcribing_with_model"><xliff:g id="model" example="Whisper">%1$s</xliff:g> metne dönüştürüyor…</string>
+    <string name="prompt_transcription_model_hint"><xliff:g id="model" example="Whisper">%1$s</xliff:g> ile metne dönüştürüldü</string>
+    <string name="ai_retro_copied_message">Panoya kopyalandı</string>
+    <string name="ai_retro_copy_button">Kopyala</string>
+    <string name="ai_retro_empty_state">İnceleme için yeterli kayıt yok.</string>
+    <string name="ai_retro_error_state">İnceleme oluşturulamadı. Tekrar dene.</string>
+    <string name="ai_retro_generate_button">İnceleme oluştur</string>
+    <string name="ai_retro_generating_state">İnceleme oluşturuluyor…</string>
+    <string name="ai_retro_month_label">Bu ay</string>
+    <string name="ai_retro_share_button">Paylaş</string>
+    <string name="ai_retro_title">AI incelemesi</string>
+    <string name="ai_retro_week_label">Bu hafta</string>
+    <string name="ai_retro_year_label">Bu yıl</string>
+    <string name="follow_up_add_button">Takip ekle</string>
+    <string name="follow_up_delete_confirm_no">Hayır, kalsın</string>
+    <string name="follow_up_delete_confirm_yes">Evet, sil</string>
+    <string name="follow_up_empty_state">Henüz takip yok.\nİlkini eklemek için aşağıdaki düğmeye dokun.</string>
+    <string name="follow_up_improve_button">İyileştir</string>
+    <string name="follow_up_improve_error">İyileştirilemedi. Tekrar dene.</string>
+    <string name="follow_up_improving_state">İyileştiriliyor…</string>
+    <string name="follow_up_record_error">Kaydedilemedi. Tekrar dene.</string>
+    <string name="follow_up_record_new">Yeni takip kaydet</string>
+    <string name="follow_up_recording_hint">Kaydetmek için dokun</string>
+    <string name="follow_up_recording_state">Kaydediliyor…</string>
+    <string name="follow_up_tab_label">Takipler</string>
+    <string name="follow_up_transcribe_error">Yazıya dökülemedi. Tekrar dene.</string>
+    <string name="follow_up_transcribing_state">Yazıya dökülüyor…</string>
+    <string name="prompt_char_count_label">%1$d karakter</string>
+    <string name="prompt_improve_button_label">İyileştir</string>
+    <string name="prompt_placeholder_text">Aklından geçenleri yaz…</string>
+    <string name="prompt_record_button_label">Kaydet</string>
+    <string name="prompt_send_button_label">Gönder</string>
+    <string name="prompt_stop_button_label">Durdur</string>
+    <string name="settings_legal_section_header">Yasal Belgeler</string>
+    <string name="settings_legal_online_label">Çevrimiçi sürüm:</string>
+    <plurals name="datetime_months_relative">
+        <item quantity="one">%1$d ay önce</item>
+        <item quantity="other">%1$d ay önce</item>
+    </plurals>
+    <plurals name="datetime_years_relative">
+        <item quantity="one">%1$d yıl önce</item>
+        <item quantity="other">%1$d yıl önce</item>
+    </plurals>
+    <string name="ai_limits_disclaimer">Yoğun kullanım için günlük YZ kotası.</string>
+    <string name="ai_limits_dialog_title">Günlük YZ kotası nasıl çalışır?</string>
+    <string name="ai_limits_dialog_body" formatted="false">PREMIUM ABONELİKLE\n\nHer gün kullanımına açık:\n• Günde 150 istek hakkı profil başına — 4 hazır profille 600/gün, oluşturduğun her kişisel profil için ek 150/gün.\n• 150 adede kadar metin geliştirme\n\nAyrıntılı işleyiş:\n• 1–30. istekler: en yüksek YZ kalitesinde\n• 31–100. istekler: hızlı standart kalitede\n• 101. istekte: tek seferlik 30 dak. mola\n• 101–150. istekler: hızlı standart kalite\n• 151. istekten itibaren: yarına kadar istek yok\n\nAyrıca tüm kullanıcılar için:\n• Saatte en fazla 50 YZ isteği — ardından 5 dak. mola\n\nKotalar ne zaman sıfırlanır?\nHer gün gece yarısı (yerel saatinle) yeni tam kota başlar.\n\n──────────\n\nABONELİK OLMADAN\n\n• Profil başına haftada 5 gösterge paneli analizi\n• Haftada 5 metin geliştirme\n• Her zaman hızlı standart kalitede\n• Her Pazartesi gece yarısı (yerel saatinle) sıfırlanır\n\n──────────\n\nGünlük yaşamda kullanıcıların büyük çoğunluğu bu sınırlarla hiç karşılaşmaz.</string>
+    <string name="ai_limits_dialog_close">Anladım</string>
+    <string name="theme_neutral">Nötr</string>
+    <string name="theme_profile">Profil rengi — gösterge paneli profil rengi</string>
+    <string name="theme_solarized">Gündönümü</string>
+    <string name="theme_dracula">Gece Yarısı</string>
+    <string name="theme_one_dark">Atölye</string>
+    <string name="theme_nord">Kutup Gecesi</string>
+    <string name="theme_gruvbox">Kehribar</string>
+
+    <!-- Permission rationales -->
+    <string name="permission_rationale_microphone">Günlük girişlerini sesle dikte edebilmek için mikrofonuna erişmemiz gerekiyor.</string>
+    <string name="permission_rationale_camera">Girişlerine fotoğraf ekleyebilmek için kamerana erişmemiz gerekiyor.</string>
+    <string name="permission_rationale_notifications">Günlük yazma alışkanlığını hatırlatabilmek için bildirim iznine ihtiyacımız var.</string>
+
+    <!-- System backup consent -->
+    <string name="consent_info_system_backup_title">Android Sistem Yedekleme</string>
+    <string name="consent_info_system_backup_body">Cihaz ayarlarında Android Sistem Yedekleme etkinse Android, günlük verilerini otomatik olarak Google Hesabının yedekleme alanına kaydeder. Bunu cihaz ayarlarından istediğin zaman devre dışı bırakabilirsin — ayrıntılar için Gizlilik Politikasına bakabilirsin.</string>
+    <string name="settings_open_system_backup_settings_label">Android Sistem Yedeklemeyi yönet</string>
+    <string name="settings_open_system_backup_settings_desc">Best Journal için otomatik yedeklemeyi açıp kapatabildiğin Android sistem ayarlarını açar.</string>
+    <string name="error_no_backup_settings_available">Bu cihazda yedekleme ayarları kullanılamıyor.</string>
+
+    <!-- Consent footer links -->
+    <string name="consent_footer_link_datenschutz">Gizlilik</string>
+    <string name="consent_footer_link_impressum">Künye</string>
+    <string name="consent_footer_link_agb">Kullanım Koşulları</string>
+
+    <!-- AI health disclaimers -->
+    <string name="ai_output_health_disclaimer">Terapi değildir — profesyonel danışmanlığın yerini almaz.</string>
+    <string name="ai_output_health_disclaimer_long">Best Journal bir günlük uygulamasıdır, terapi hizmeti sunmaz. YZ analizleri öz yansıma için öneri niteliğindedir; profesyonel psikolojik veya tıbbi danışmanlığın yerini tutmaz. Acil bir durumda bir uzmana veya ayarlarındaki kriz yardım hattına başvur.</string>
+    <string name="churn_cancelled">İptal Edildi</string>
+    <string name="churn_cancelled_ends_on">İptal edildi — <xliff:g id="date" example="30.04.2026, 18:13">%1$s</xliff:g> tarihinde sona eriyor</string>
+    <string name="churn_promo_phase_ends"><xliff:g id="date" example="30.04.2026, 18:13">%1$s</xliff:g> tarihinde sona eriyor — ardından aylık <xliff:g id="base_price" example="3,99 €">%2$s</xliff:g></string>
+    <string name="churn_reason_other_placeholder">Lütfen bize kısaca ne olduğunu anlat…</string>
+    <string name="churn_renews_on"><xliff:g id="date" example="30.04.2026, 18:13">%1$s</xliff:g> tarihinde yenileniyor</string>
+    <string name="settings_premium_cancelled">Premium abonelik iptal edildi</string>
+    <string name="settings_premium_cancelled_desc">Premium özelliklerini faturalandırma döneminin sonuna kadar kullanabilirsin. İptali Google Play üzerinden geri alabilirsin.</string>
+    <string name="settings_premium_cancelled_until">Premium abonelik iptal edildi — <xliff:g id="date" example="30.04.2026, 21:01">%1$s</xliff:g> tarihine kadar geçerli</string>
+    <string name="settings_theme">Tema</string>
+    <string name="settings_themes_manager">Tema Yöneticisi</string>
+    <string name="paywall_monthly_note">Sonrasında ayda %1$s, otomatik yenilenir\nİstediğin zaman iptal edilebilir</string>
+</resources>

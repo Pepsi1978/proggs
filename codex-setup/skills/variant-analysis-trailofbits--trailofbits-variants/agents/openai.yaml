@@ -1,0 +1,7 @@
+interface:
+  display_name: "trailofbits-variants"
+  short_description: "Finds similar vulnerabilities using pattern-based analysis"
+  default_prompt: "Use $variant-analysis-trailofbits--trailofbits-variants for this task."
+
+policy:
+  allow_implicit_invocation: false

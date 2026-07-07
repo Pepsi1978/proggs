@@ -1,0 +1,7 @@
+interface:
+  display_name: "skill-stocktake"
+  short_description: "auditing Codex skills and commands for quality"
+  default_prompt: "Use $everything-codex-everything-codex--skill-stocktake for this task."
+
+policy:
+  allow_implicit_invocation: false

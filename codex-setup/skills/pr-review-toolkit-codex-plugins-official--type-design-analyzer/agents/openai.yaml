@@ -1,0 +1,7 @@
+interface:
+  display_name: "type-design-analyzer"
+  short_description: "refactoring important types to review invariants"
+  default_prompt: "Use $pr-review-toolkit-codex-plugins-official--type-design-analyzer for this task."
+
+policy:
+  allow_implicit_invocation: false

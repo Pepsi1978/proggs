@@ -1,0 +1,7 @@
+interface:
+  display_name: "undo-changes"
+  short_description: "Safely revert changes with git revert workflows"
+  default_prompt: "Use $undo-changes for this task."
+
+policy:
+  allow_implicit_invocation: true

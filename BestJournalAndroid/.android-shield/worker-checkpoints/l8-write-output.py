@@ -1,0 +1,149 @@
+# -*- coding: utf-8 -*-
+"""Write final L8 output atomically."""
+import json, os, tempfile
+
+base = os.path.expanduser('~/proggs/BestJournalAndroid/.android-shield')
+out_path = os.path.join(base, 'worker-outputs', 'phase1b-xling-L8.json')
+
+data = {
+ "worker": "L8",
+ "phase": "1b-cross-lingual-legal",
+ "languages": ["pt-rBR", "pt-rPT"],
+ "date": "2026-06-10",
+ "auditOnly": True,
+ "wroteAppFile": False,
+ "assetFinding": {
+  "note": "Asymmetrie der Voll-Datenschutzerklaerung in den Assets: pt-BR hat eine VOLLE PRIVACY.html (67958 Bytes, vergleichbar mit DE DATENSCHUTZ.html 48991 Bytes), pt-PT hat nur eine STUB-PRIVACY.html (6201 Bytes). IMPRINT/TERMS sind in beiden kurz (~4-5 KB).",
+  "severity": "mittel",
+  "consequence": "Europaeische Portugiesisch-Nutzer (pt-PT) sehen in der App-internen Datenschutzansicht nur eine stark gekuerzte Fassung, waehrend brasilianische Nutzer die Vollversion bekommen. Falls pt-PT die Online-Datenschutzerklaerung (settings_legal_online_label -> Versão online) sauber verlinkt, ist das DSGVO-rechtlich abgefangen; trotzdem Empfehlung, die pt-PT PRIVACY.html auf Vollniveau zu bringen (oder bewusst als reinen Online-Verweis zu dokumentieren).",
+  "files": ["app/src/main/assets/legal/pt-BR/PRIVACY.html (67958B)", "app/src/main/assets/legal/pt-PT/PRIVACY.html (6201B)"]
+ },
+ "formatMismatchAnalysis": [
+  {
+   "key": "ai_prompt_rerank_system",
+   "lang": "pt-rBR",
+   "deText": "Du bist ein Profil-Re-Ranker. ... (1864 Zeichen, vollstaendige 3-Schritt-Anleitung, TTS-Datums-Verbot, JSON-Array-Ausgabeformat, KEINE Format-Argumente, korrektes \\\\n-Escaping)",
+   "locText": "Você é um assistente de classificação. Tem três tarefas ... (459 Zeichen, stark verkuerzt, 3 kurze Saetze, KEIN TTS-Datums-Verbot, KEINE Format-Argumente, ABER 4 LITERALE Zeilenumbrueche statt \\\\n)",
+   "rootCause": "Maschinell als formatArgMismatch=0 gemeldet (stimmt — kein %1$s-Argument-Unterschied), ABER manuelle Tiefenpruefung deckt zwei echte Probleme auf: (1) Die pt-rBR-Fassung basiert auf einer VIEL AELTEREN, KUERZEREN DE-Version (459 vs 1864 Zeichen) — identisches Stale-Muster wie L7 es fuer pl an genau diesem Key fand. Es fehlen: das gesamte TTS-Datums-Verbot, die Anweisung zur gleichen JSON-Struktur (titel/beschreibung/erklaerung), die Variantenreichtum-Regel und das praezise Ausgabeformat. (2) Die pt-rBR-XML enthaelt 4 ECHTE Zeilenumbruch-Zeichen statt der escapten \\\\n-Sequenzen (DE+PT haben je 22x \\\\n, BR hat 0x \\\\n + 4 rohe Newlines). Android kollabiert rohe Newlines in strings.xml zu einem Leerzeichen -> die wenige Restformatierung des Prompts geht zur Laufzeit verloren.",
+   "severity": "hoch",
+   "suggestedFix": "pt-rBR-Wert komplett aus dem AKTUELLEN DE (1864 Zeichen) neu uebersetzen — analog zur bereits korrekten pt-rPT-Fassung (1796 Zeichen): 3-Schritt-Anleitung, TTS-Datums-Verbot ('SEM DATAS'), 'EXATAMENTE 5 entradas', JSON-Struktur-Beibehaltung (titel/beschreibung/erklaerung), JSON-Array-Ausgabeformat. Dabei alle Zeilenumbrueche als \\\\n escapen statt roher Newlines. pt-rPT ist die Vorlage — sie ist bereits korrekt."
+  }
+ ],
+ "formatMismatchVerdict": {
+  "summary": "Die maschinelle Matrix meldet formatArgMismatch=0 fuer BEIDE Sprachen — das ist KORREKT (kein einziger %1$s/%1$d-Argument-Unterschied in pt-rBR/pt-rPT, im Gegensatz zu L7s nl/pl). Die Tiefenpruefung findet KEINEN Platzhalter-Fehler, aber EINEN Stale-Drift-Treffer (ai_prompt_rerank_system, nur pt-rBR) der maschinell unsichtbar war, weil er sich NICHT in den Format-Argumenten zeigt, sondern in Laenge (459 vs 1864) + roher-Newline-Escaping.",
+  "consequence": "ai_prompt_rerank_system pt-rBR liefert an Gemini einen stark verkuerzten, veralteten Re-Ranker-Prompt OHNE TTS-Datums-Verbot -> die per Profil neu-sortierten Top-Massnahmen koennen Datumsketten enthalten, die beim Vorlesen unnatuerlich klingen, und die JSON-Struktur-Beibehaltung ist nicht garantiert. KEIN Crash. pt-rPT ist an diesem Key vollstaendig korrekt.",
+  "severityBreakdown": "hoch: ai_prompt_rerank_system (nur pt-rBR) — veraltete/verkuerzte Prompt-Logik + rohe Newlines. pt-rPT: kein einziger Format-/Drift-Treffer in den ai_prompt_*-Keys."
+ },
+ "perLanguage": {
+  "pt-rBR": {
+   "keyCount": 1085,
+   "deKeyCount": 1090,
+   "missingKeys": ["dev_seed_add_action", "dev_seed_cancel_action", "dev_seed_delete_all_action", "dev_seed_dialog_message", "dev_seed_dialog_title"],
+   "missingNote": "Alle 5 fehlenden Keys sind dev_seed_* (Entwickler-Test-Tooling, nicht in der Release-UI sichtbar) — in ALLEN Sprachen gleich, als dev-only gewollt. dev_seed_delete_all_action steht zwar in der 95er-Legal-Liste, ist aber reines Debug-Werkzeug -> rechtlich irrelevant, KEIN Release-Blocker.",
+   "legalKeysVerdict": "Substanz der rechtskritischen Keys ueberwiegend gut: 14-Tage-Widerruf korrekt ('direito de arrependimento de 14 dias', CDC art. 49 fuer Brasilien explizit in settings_revoke_confirm_body), Auto-Renewal/Kuendigung via Google Play korrekt, Krisendisclaimer (settings_crisis_dialog_body) vollstaendig, privacy_gate_gemini/tts vollstaendig inkl. SCC/DPF. ABER 3 stale/luckige Legal-Keys (siehe issues): delete_account_subtitle + confirm_body behaupten faelschlich die Loeschung des Google-/Firebase-Kontos; groq-Gate fehlt die SCC-Rechtsgrundlage; do_not_sell verkuerzt mit erfundenem Jahr.",
+   "numbersCheckAiLimits": {
+    "key": "ai_limits_dialog_body", "result": "PASS",
+    "detail": "Alle Pflichtzahlen mit korrekter Multiplizitaet: 150x4, 600x1, 30x2, 101x2, 151x1, 50x1, 5x3. Volle Sequenz strukturell identisch zu DE (150/Tag/Profil -> 4 vordefinierte = 600/Tag, +150/Tag pro eigenem Profil; Anfragen 1-30 hoechste Qualitaet / 31-100 Standard / 101. = 30-Min-Pause / 101-150 Standard / ab 151 Stopp; max 50/Stunde -> 5-Min-Pause; Free: 5 Analysen + 5 Verbesserungen/Woche). Die '+150/Tag pro eigenem Profil'-Klausel IST vorhanden ('mais 150/dia por cada perfil personalizado criado').",
+    "onlyDifference": "0:00 Uhr (DE) -> 'à meia-noite' (BR) — semantisch identisch, kein quantitativer Unterschied."
+   },
+   "issues": [
+    {"key": "settings_delete_account_subtitle", "severity": "hoch", "type": "stale-legal-factual",
+     "detail": "STALE-MUSTER bestaetigt. DE: 'Dein Google-Konto selbst bleibt bestehen.' pt-rBR: 'Remove de forma irreversível todos os dados locais, SUA CONTA DO GOOGLE e o backup do Drive' — behauptet faelschlich die Loeschung des Google-Kontos. Faktisch falsche/irrefuehrende Aussage ueber den Loeschumfang. Fix: 'sua conta do Google' streichen, DE-Sinn uebernehmen ('A tua conta Google permanece' bzw. BR 'Sua conta do Google permanece intacta')."},
+    {"key": "settings_delete_account_confirm_body", "severity": "hoch", "type": "stale-legal-factual",
+     "detail": "STALE-MUSTER bestaetigt. pt-rBR nennt 'Sua conta do Firebase' (Firebase-Konto) statt der App-Anmeldung und LAESST die DE-Klarstellung 'nur die App-Daten, nicht dein Google-Konto' + 'Dein Google-Konto selbst bleibt bestehen' WEG. Aktuelles DE wurde umgeschrieben (App-Anmeldung, explizite Google-Konto-Klarstellung), BR blieb auf alter Firebase-Fassung. Fix: komplett aus aktuellem DE neu uebersetzen."},
+    {"key": "ai_prompt_rerank_system", "severity": "hoch", "type": "stale-prompt+rohe-newlines",
+     "detail": "459 vs DE 1864 Zeichen, veraltete verkuerzte Prompt-Logik (kein TTS-Datums-Verbot, keine JSON-Struktur-Regel) + 4 rohe Newlines statt \\\\n. siehe formatMismatchAnalysis. pt-rPT ist hier korrekt -> als Vorlage nutzen."},
+    {"key": "privacy_gate_groq_body", "severity": "mittel", "type": "missing-legal-basis",
+     "detail": "Die SCC-Rechtsgrundlage fehlt. DE: '✓ Rechtsgrundlage: Standardvertragsklauseln (EU SCCs)'. pt-rBR nennt nur Verschluesselung + sofortiges Loeschen + kein Training, aber KEINE Rechtsgrundlage fuer den US-Transfer zu Groq. tts_body UND gemini_body nennen die SCC/DPF-Grundlage korrekt — nur groq nicht. Fuer EU-Markt-Konsistenz die SCC-Klausel ergaenzen."},
+    {"key": "consent_toggle_do_not_sell_body", "severity": "mittel", "type": "stale-shortened+invented-year",
+     "detail": "STALE-MUSTER bestaetigt. pt-rBR (identisch zu pt-rPT) ist auf 2 Saetze verkuerzt ('Opt-out da Califórnia (CCPA/CPRA 2026)...'). Enthaelt das ERFUNDENE Jahr '2026' (DE hat KEIN Jahr — CCPA/CPRA hat keine '2026'-Version) und LAESST die zentrale DE-Beruhigungsklausel WEG ('Best Journal verkauft oder vermarktet deine Daten nirgendwo auf der Welt'). Die Rechts-Substanz (Opt-out deaktiviert optionale Verarbeitung) bleibt erhalten. Fix: '2026' entfernen, Verkaufs-Verneinung ergaenzen."},
+    {"keys": ["datetime_months_relative", "datetime_years_relative"], "severity": "mittel", "type": "untranslated-German-plural",
+     "detail": "Beide Plurals sind UNUEBERSETZTES DEUTSCH: 'vor %1$d Monat/Monaten', 'vor %1$d Jahr/Jahren'. Beweis dass es ein echtes Versehen ist: datetime_minutes_ago/hours_ago/days_ago SIND korrekt portugiesisch ('há %1$d minuto/hora/dia') — der Uebersetzer hat Minuten/Stunden/Tage gemacht, Monate/Jahre vergessen. Nutzer-sichtbare relative Datums-Labels erscheinen auf Deutsch in der portugiesischen App. Format-Arg %1$d intakt -> kein Crash. Fix: 'há %1$d mês/meses' und 'há %1$d ano/anos'."},
+    {"key": "settings_revoke_subtitle", "severity": "niedrig", "type": "legal-localization",
+     "detail": "DE='§ 356a BGB — Widerruf direkt per App' (deutsche Norm). pt-rBR='Compra Premium'. Der § 356a-Untertitel wurde durch ein neutrales 'Premium-Kauf' ersetzt — vertretbar, da die deutsche Norm fuer BR nicht gilt und der vollstaendige Widerrufsmechanismus im Body (settings_revoke_confirm_body) korrekt lokalisiert ist (CDC art. 49). Kein rechtlicher Verlust, aber Untertitel sagt nicht mehr was der Eintrag tut."}
+   ],
+   "identicalClassification": {
+    "count": 11, "legit": 11, "realIssue": 0,
+    "explanation": "Alle 11 legitim identisch zu DE: Marken/Lehnworte (label_premium/settings_premium_section='Premium', settings_feedback='Feedback', label_original/follow_up_tab_original='Original'), portugiesische Woerter die zufaellig identisch sind (label_photo/retro_cd_photo/settings_export_photos='Foto/Fotos' — 'foto' IST portugiesisch), Format-Labels (entry_cd_photo_page/retro_photo_n='Foto %1$d'), Versionsstring (settings_about_version='Best Journal V0.21.9'). Keine unuebersetzten Strings darunter."
+   },
+   "sampleQuality": {
+    "sampled": 15,
+    "verdict": "Fluentes brasilianisches Portugiesisch durchgehend. Korrekte BR-Varianten: 'estresse' (nicht stress), 'Renomear', 'retrospectivas... em uma', 'excluir', durchgaengig 'você/seu/sua'-Anrede. Diakritika korrekt ('Autorreflexão', 'anônimas', 'vídeos'). Keine Auffaelligkeiten in der Stichprobe."
+   }
+  },
+  "pt-rPT": {
+   "keyCount": 1085,
+   "deKeyCount": 1090,
+   "missingKeys": ["dev_seed_add_action", "dev_seed_cancel_action", "dev_seed_delete_all_action", "dev_seed_dialog_message", "dev_seed_dialog_title"],
+   "missingNote": "Wie pt-rBR: 5x dev_seed_* (Debug-Tooling), kein Release-Blocker.",
+   "legalKeysVerdict": "Substanz ueberwiegend gut: 14-Tage-Widerruf korrekt ('direito de rescisão de 14 dias', Diretiva UE 2011/83 explizit in settings_revoke_confirm_body), Auto-Renewal/Kuendigung via Google Play korrekt, Krisendisclaimer vollstaendig, privacy_gate_gemini/tts inkl. SCC/DPF, ai_prompt_rerank_system VOLLSTAENDIG (1796 Zeichen, korrektes \\\\n-Escaping — pt-rPT ist hier sauberer als pt-rBR). ABER dieselben 2 stale Konto-Loesch-Keys wie BR + groq-SCC-Luecke + do_not_sell verkuerzt. ZUSAETZLICH: die Asset-Datenschutzerklaerung (PRIVACY.html) ist nur ein 6 KB-Stub (siehe assetFinding).",
+   "numbersCheckAiLimits": {
+    "key": "ai_limits_dialog_body", "result": "PASS",
+    "detail": "Identisch zu pt-rBR: alle Pflichtzahlen mit korrekter Multiplizitaet (150x4, 600x1, 30x2, 101x2, 151x1, 50x1, 5x3), volle Sequenz strukturell DE-getreu, '+150/dia por cada perfil próprio que criares'-Klausel vorhanden.",
+    "onlyDifference": "'à meia-noite' statt 0:00 Uhr — semantisch identisch."
+   },
+   "issues": [
+    {"key": "settings_delete_account_subtitle", "severity": "hoch", "type": "stale-legal-factual",
+     "detail": "STALE-MUSTER bestaetigt (wie BR). DE: 'Dein Google-Konto selbst bleibt bestehen.' pt-rPT: 'Remove de forma irreversível todos os dados locais, A TUA CONTA GOOGLE e a cópia de segurança do Drive' — behauptet faelschlich die Loeschung des Google-Kontos. Fix: 'a tua conta Google' streichen, DE-Sinn uebernehmen ('A tua conta Google permanece intacta')."},
+    {"key": "settings_delete_account_confirm_body", "severity": "hoch", "type": "stale-legal-factual",
+     "detail": "STALE-MUSTER bestaetigt (wie BR). pt-rPT nennt 'A tua conta Firebase' statt der App-Anmeldung und laesst die DE-Klarstellung 'nicht dein Google-Konto' / 'Dein Google-Konto bleibt bestehen' weg. Fix: komplett aus aktuellem DE neu uebersetzen."},
+    {"key": "privacy_gate_groq_body", "severity": "mittel", "type": "missing-legal-basis",
+     "detail": "Die SCC-Rechtsgrundlage fehlt (wie BR). DE: 'Rechtsgrundlage: Standardvertragsklauseln (EU SCCs)'. pt-rPT nennt Verschluesselung + Loeschen + kein Training, aber keine Rechtsgrundlage fuer den US-Transfer. tts_body+gemini_body haben SCC/DPF korrekt. Fuer EU-Markt (pt-PT besonders relevant) die SCC-Klausel ergaenzen — hoehere Prioritaet als bei BR, da pt-PT ein EU-Markt ist."},
+    {"key": "consent_toggle_do_not_sell_body", "severity": "mittel", "type": "stale-shortened+invented-year",
+     "detail": "STALE-MUSTER bestaetigt, identisch zu BR-Wert. Verkuerzt, erfundenes Jahr '2026', fehlende Verkaufs-Verneinungs-Klausel. Rechts-Substanz erhalten. Fix wie BR."},
+    {"keys": ["datetime_months_relative", "datetime_years_relative"], "severity": "mittel", "type": "untranslated-German-plural",
+     "detail": "Identisch zu BR: beide Plurals unuebersetztes Deutsch ('vor %1$d Monat/Monaten/Jahr/Jahren'), waehrend minutes/hours/days korrekt portugiesisch ('há %1$d minuto/hora/dia'). Nutzer-sichtbar. Fix: 'há %1$d mês/meses', 'há %1$d ano/anos'."},
+    {"key": "consent_footer_link_impressum", "severity": "niedrig", "type": "loanword-borderline",
+     "detail": "pt-rPT laesst 'Impressum' (deutsches Rechtswort) als Link-Label stehen (identisch zu DE). Im portugiesischen Rechtskontext eher 'Informação legal'/'Ficha legal' erwartet — aber als Verweis auf das deutsche Impressum-Dokument vertretbar (gleiche Einordnung wie L7 fuer pl). consent_footer_link_datenschutz/agb sind in pt-rPT uebersetzt; nur impressum blieb deutsch. Kosmetischer Konsistenz-Fix optional."},
+    {"key": "settings_revoke_subtitle", "severity": "niedrig", "type": "legal-localization",
+     "detail": "Wie BR: DE '§ 356a BGB...' -> pt-rPT 'Compra Premium'. § 356a gilt fuer PT nicht, Widerrufsmechanismus im Body korrekt lokalisiert (Diretiva UE 2011/83). Kein rechtlicher Verlust."}
+   ],
+   "identicalClassification": {
+    "count": 12, "legit": 12, "realIssue": 0,
+    "explanation": "Alle 12 legitim: dieselben 11 wie BR (Premium/Foto/Original/Feedback/Versionsstring/Format-Labels) PLUS consent_footer_link_impressum='Impressum' (deutsches Lehnwort als Link-Label, borderline aber als Verweis auf das deutsche Impressum-Dokument akzeptabel — separat als niedrig-Issue gelistet). Keine versehentlich unuebersetzten Inhalts-Strings."
+   },
+   "sampleQuality": {
+    "sampled": 15,
+    "verdict": "Fluentes europaeisches Portugiesisch durchgehend. Korrekte PT-Varianten: 'stress' (nicht estresse), 'Mudar o nome' (nicht Renomear), 'retrospetivas... numa', 'eliminar', durchgaengig 'tu/teu/tua'-Anrede, 'utilizador' (57x). Diakritika korrekt ('Autorreflexão', 'anónimas'). Sauber differenziert von pt-rBR."
+   }
+  }
+ },
+ "brPtDifferentiation": {
+  "identicalCount": 611,
+  "sharedKeys": 1087,
+  "identicalPct": 56.2,
+  "legalSharedKeys": 94,
+  "legalIdenticalCount": 33,
+  "legalIdenticalPct": 35.1,
+  "verdict": "ECHT DIFFERENZIERT — KEIN Kopier-Verdacht. 56.2% identische Werte liegen UNTER der 60%-Verdachtsschwelle und sind fuer das BR/PT-Paar normal (kurze Labels, Marken, Zahlen, viele Woerter koinzidieren ohnehin zwischen beiden Varianten). Echte Varianten-Unterschiede durchgaengig nachgewiesen: estresse(BR)/stress(PT), Renomear(BR)/Mudar o nome(PT), retrospectivas+em uma(BR)/retrospetivas+numa(PT), excluir(BR)/eliminar(PT), Anrede você/seu(BR) vs tu/teu(PT), gerenciar/aplicativo(BR) vs gerir/utilizador(PT, 57x). Keine Kreuz-Kontamination: 'time' in pt-rPT = 0 echte Treffer (Blob-Fehlalarm), 'eliminar' in pt-rBR nur 3x in KI-Prompts (in BR ebenfalls gueltig). Die 33 identischen Legal-Keys (35%) sind ueberwiegend Paywall/Churn-Kurzlabels + Zahlen (legit identisch) — die einzige inhaltlich identische Legal-Schwaeche (consent_toggle_do_not_sell_body BR==PT) ist bereits als stale-Issue erfasst."
+ },
+ "top3": [
+  "1. (hoch, BEIDE) settings_delete_account_subtitle + settings_delete_account_confirm_body: behaupten faelschlich die Loeschung des Google-/Firebase-Kontos (DE: 'Google-Konto bleibt bestehen'). Faktisch falsche Aussage ueber den Loeschumfang in BR UND PT — aus aktuellem DE neu uebersetzen.",
+  "2. (hoch, nur pt-rBR) ai_prompt_rerank_system: veralteter/verkuerzter Re-Ranker-Prompt (459 vs 1864 Zeichen, kein TTS-Datums-Verbot) + 4 rohe Newlines statt \\\\n. pt-rPT (1796 Zeichen) ist korrekt und dient als Vorlage.",
+  "3. (mittel, BEIDE) datetime_months_relative + datetime_years_relative: unuebersetztes Deutsch ('vor %1$d Monaten/Jahren') waehrend Minuten/Stunden/Tage korrekt portugiesisch sind — nutzer-sichtbare Datums-Labels. Plus: groq-Gate fehlt die SCC-Rechtsgrundlage (BR+PT), do_not_sell verkuerzt mit erfundenem Jahr 2026."
+ ],
+ "overallVerdict": "Beide Portugiesisch-Varianten sind fluent, sauber voneinander differenziert (kein Kopie-Verdacht) und bei der Mehrheit der rechtskritischen Keys korrekt (14-Tage-Widerruf, Auto-Renewal, Kuendigung, Krisendisclaimer, ai_limits-Zahlen 100% getreu in BEIDEN). Das Hauptproblem ist NICHT die Uebersetzungsqualitaet, sondern STALE-DRIFT bei wenigen Legal-Keys: 2 Konto-Loesch-Strings behaupten faelschlich die Google-Konto-Loeschung (HOCH, beide Sprachen), groq-Gate fehlt die SCC-Rechtsgrundlage (mittel, beide), do_not_sell ist verkuerzt mit erfundenem Jahr (mittel, beide), und 2 Datums-Plurals sind unuebersetzt deutsch (mittel, beide). Nur pt-rBR hat zusaetzlich einen veralteten/verkuerzten KI-Re-Ranker-Prompt (hoch) — pt-rPT ist dort korrekt. Asset-Asymmetrie: pt-BR hat die Voll-Datenschutzerklaerung (68 KB), pt-PT nur einen 6-KB-Stub (mittel). Insgesamt sehr release-nah, aber die 2 Konto-Loesch-Strings sollten vor dem Release gefixt werden (faktisch irrefuehrend).",
+ "selfObservations": [
+  "FIN-037 #1: Die maschinelle formatArgMismatch=0-Meldung war zwar korrekt (kein Platzhalter-Unterschied), hat aber den STALE-DRIFT in ai_prompt_rerank_system (pt-rBR) NICHT erfasst — der zeigte sich nur in Laenge (459 vs 1864) und im rohen-Newline-Escaping. Lehre: formatArgMismatch=0 bedeutet NICHT 'Key ist synchron'. Bei den ai_prompt_*-Keys IMMER zusaetzlich das Laengen-Verhaeltnis loc/de pruefen (hier 0.25 -> klares Drift-Signal). L7 fand denselben Key in pl per Format-Mismatch; in pt war derselbe Drift unter der Format-Radar-Schwelle.",
+  "FIN-037 #2: Die Marker-Heuristik fuer BR/PT-Kreuzkontamination erzeugte einen Fehlalarm ('time:15' in pt-rPT), weil ich die Marker gegen einen zusammengejointen Blob-String matchte und 'time' als Teilstring in Woertern/URLs traf. Der gezielte Wort-Grenzen-Scan (\\\\btime\\\\b) ueber EINZELNE Strings ergab 0 Treffer. Lehre: Substring-Marker-Suche ueber einen Blob ist unzuverlaessig — pro-String mit Wortgrenzen pruefen.",
+  "FIN-037 #3: Der wertvollste Einzelbefund (2 Datums-Plurals unuebersetzt) wurde erst durch den Quervergleich ALLER 5 relative-Zeit-Plurals zweifelsfrei: Minuten/Stunden/Tage waren korrekt portugiesisch, nur Monate/Jahre deutsch. Das beweist 'Versehen, nicht Absicht'. Ein isolierter Umlaut-Scan haette die 2 Keys zwar gefunden, aber die Diagnose (selektives Versehen) kam erst aus dem Vergleich der Geschwister-Keys. Cross-Check ueber verwandte Keys schlaegt Einzelheuristik."
+ ],
+ "plugin_bugs_observed": [
+  "Die cross-lingual-matrix formatArgMismatch-Erkennung verfehlt STALE-DRIFT ohne Argument-Unterschied: ai_prompt_rerank_system (pt-rBR, 459 vs 1864 Zeichen, veraltet) wurde als formatArgMismatch=0 gemeldet und waere ohne manuelle Laengenpruefung durchgerutscht. Vorschlag: pro Key zusaetzlich das Zeichen-Laengen-Verhaeltnis loc/de in die Matrix aufnehmen; ein Wert <0.5 (oder >2.0) als 'lengthDriftSuspect' markieren — das haette diesen Key UND L7s nl/pl-Faelle (auch ueber Laenge) gefangen.",
+  "Die identicalToDe-Erkennung der Matrix uebersieht UNUEBERSETZTE PLURALS: datetime_months_relative + datetime_years_relative sind in pt-rBR/pt-rPT (und sehr wahrscheinlich weiteren Sprachen) rein deutsch, tauchen aber NICHT in identicalToDe auf, weil die Matrix Plurals separat behandelt (missingPlurals=0, aber keine identicalPlurals-Pruefung). Vorschlag: einen identicalPluralToDe-Check ergaenzen (Plural-Item-Text == DE-Plural-Item-Text) — das deckt eine ganze unsichtbare Klasse unuebersetzter Datums-/Mengen-Strings auf.",
+  "Die identicalToDe-Liste enthaelt erwartbar-identische Marken/Format-Labels (Premium, Foto, Foto %1$d, Best Journal V0.21.9), die per Definition gleich bleiben. Vorschlag (wie L7): eine doNotTranslate-Allowlist (label_premium, *_photo*, settings_about_version, brand-Strings) herausfiltern, damit identicalToDe nur die ECHT verdaechtigen Faelle zeigt."
+ ]
+}
+
+# atomic write
+d = os.path.dirname(out_path)
+fd, tmp = tempfile.mkstemp(dir=d, suffix='.tmp')
+with os.fdopen(fd, 'w', encoding='utf-8') as f:
+    json.dump(data, f, ensure_ascii=False, indent=1)
+    f.write('\n')
+os.replace(tmp, out_path)
+print("WROTE", out_path)
+# validate
+with open(out_path, 'r', encoding='utf-8') as f:
+    json.load(f)
+print("JSON valid. Bytes:", os.path.getsize(out_path))

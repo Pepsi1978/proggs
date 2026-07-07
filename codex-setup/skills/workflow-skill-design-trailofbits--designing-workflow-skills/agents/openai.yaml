@@ -1,0 +1,7 @@
+interface:
+  display_name: "designing-workflow-skills"
+  short_description: "designing-workflow-skills skill"
+  default_prompt: "Use $workflow-skill-design-trailofbits--designing-workflow-skills for this task."
+
+policy:
+  allow_implicit_invocation: false

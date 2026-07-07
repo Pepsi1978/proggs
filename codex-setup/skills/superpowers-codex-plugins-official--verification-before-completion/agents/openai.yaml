@@ -1,0 +1,7 @@
+interface:
+  display_name: "verification-before-completion"
+  short_description: "about to claim work is complete, fixed, or passing, before"
+  default_prompt: "Use $superpowers-codex-plugins-official--verification-before-completion for this task."
+
+policy:
+  allow_implicit_invocation: true

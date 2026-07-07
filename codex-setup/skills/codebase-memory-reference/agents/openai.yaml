@@ -1,0 +1,7 @@
+interface:
+  display_name: "codebase-memory-reference"
+  short_description: "codebase-memory-reference skill"
+  default_prompt: "Use $codebase-memory-reference for this task."
+
+policy:
+  allow_implicit_invocation: false

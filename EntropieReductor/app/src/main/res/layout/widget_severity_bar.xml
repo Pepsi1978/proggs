@@ -1,0 +1,31 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Severity-Bar mit 10 Segmenten. Jedes Segment ist eine View mit
+  Background-Drawable. Gefuellte Farben werden zur Laufzeit ueber
+  setInt setBackgroundColor gesetzt (basierend auf severity Wert 1-10).
+-->
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="7dp"
+    android:orientation="horizontal">
+
+    <ImageView android:id="@+id/seg_0" android:layout_width="0dp" android:layout_height="7dp" android:layout_weight="1" android:background="@drawable/widget_severity_segment" />
+    <ImageView android:layout_width="2dp" android:layout_height="7dp" />
+    <ImageView android:id="@+id/seg_1" android:layout_width="0dp" android:layout_height="7dp" android:layout_weight="1" android:background="@drawable/widget_severity_segment" />
+    <ImageView android:layout_width="2dp" android:layout_height="7dp" />
+    <ImageView android:id="@+id/seg_2" android:layout_width="0dp" android:layout_height="7dp" android:layout_weight="1" android:background="@drawable/widget_severity_segment" />
+    <ImageView android:layout_width="2dp" android:layout_height="7dp" />
+    <ImageView android:id="@+id/seg_3" android:layout_width="0dp" android:layout_height="7dp" android:layout_weight="1" android:background="@drawable/widget_severity_segment" />
+    <ImageView android:layout_width="2dp" android:layout_height="7dp" />
+    <ImageView android:id="@+id/seg_4" android:layout_width="0dp" android:layout_height="7dp" android:layout_weight="1" android:background="@drawable/widget_severity_segment" />
+    <ImageView android:layout_width="2dp" android:layout_height="7dp" />
+    <ImageView android:id="@+id/seg_5" android:layout_width="0dp" android:layout_height="7dp" android:layout_weight="1" android:background="@drawable/widget_severity_segment" />
+    <ImageView android:layout_width="2dp" android:layout_height="7dp" />
+    <ImageView android:id="@+id/seg_6" android:layout_width="0dp" android:layout_height="7dp" android:layout_weight="1" android:background="@drawable/widget_severity_segment" />
+    <ImageView android:layout_width="2dp" android:layout_height="7dp" />
+    <ImageView android:id="@+id/seg_7" android:layout_width="0dp" android:layout_height="7dp" android:layout_weight="1" android:background="@drawable/widget_severity_segment" />
+    <ImageView android:layout_width="2dp" android:layout_height="7dp" />
+    <ImageView android:id="@+id/seg_8" android:layout_width="0dp" android:layout_height="7dp" android:layout_weight="1" android:background="@drawable/widget_severity_segment" />
+    <ImageView android:layout_width="2dp" android:layout_height="7dp" />
+    <ImageView android:id="@+id/seg_9" android:layout_width="0dp" android:layout_height="7dp" android:layout_weight="1" android:background="@drawable/widget_severity_segment" />
+</LinearLayout>

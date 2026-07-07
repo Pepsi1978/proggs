@@ -1,0 +1,7 @@
+interface:
+  display_name: "create-agent-skill"
+  short_description: "Create or edit Codex skills with expert guidance on structure"
+  default_prompt: "Use $compound-engineering-compound-engineering-plugin--create-agent-skill for this task."
+
+policy:
+  allow_implicit_invocation: false

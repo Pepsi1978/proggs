@@ -1,0 +1,7 @@
+interface:
+  display_name: "kaizen:analyse"
+  short_description: "Auto-selects best Kaizen method (Gemba Walk, Value Stream, or"
+  default_prompt: "Use $kaizen-context-engineering-kit--kaizen-analyse for this task."
+
+policy:
+  allow_implicit_invocation: false

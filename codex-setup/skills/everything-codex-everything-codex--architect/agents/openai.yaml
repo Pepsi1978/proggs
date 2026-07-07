@@ -1,0 +1,7 @@
+interface:
+  display_name: "architect"
+  short_description: "Software architecture specialist for system design"
+  default_prompt: "Use $everything-codex-everything-codex--architect for this task."
+
+policy:
+  allow_implicit_invocation: false

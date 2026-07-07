@@ -1,0 +1,7 @@
+interface:
+  display_name: "spec-flow-analyzer"
+  short_description: "Analyzes specifications and feature descriptions for user flow"
+  default_prompt: "Use $compound-engineering-compound-engineering-plugin--spec-flow-analyzer for this task."
+
+policy:
+  allow_implicit_invocation: false

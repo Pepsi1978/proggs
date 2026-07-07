@@ -1,0 +1,7 @@
+interface:
+  display_name: "refactor-cleaner"
+  short_description: "Dead code cleanup and consolidation specialist"
+  default_prompt: "Use $everything-codex-everything-codex--refactor-cleaner for this task."
+
+policy:
+  allow_implicit_invocation: false

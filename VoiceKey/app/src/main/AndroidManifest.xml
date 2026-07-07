@@ -1,0 +1,106 @@
+<?xml version="1.0" encoding="utf-8"?>
+<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+
+    <!-- Vosk-Sprachmodelle (DE+EN) werden beim ersten Start heruntergeladen. -->
+    <uses-permission android:name="android.permission.INTERNET" />
+
+    <!-- Dauerhaftes Mikrofon im Hintergrund (Wake-Word-Lauschen). -->
+    <uses-permission android:name="android.permission.RECORD_AUDIO" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_MICROPHONE" />
+    <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
+
+    <!-- Dienst nach Geraete-Neustart wieder hochfahren. -->
+    <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />
+
+    <!-- Bildschirm wecken + Activity ueber dem Lockscreen zeigen + Akku-Ausnahme. -->
+    <uses-permission android:name="android.permission.WAKE_LOCK" />
+    <uses-permission android:name="android.permission.REQUEST_IGNORE_BATTERY_OPTIMIZATIONS" />
+
+    <!--
+      SYSTEM_ALERT_WINDOW: Ab Android 15/16 braucht ein Hintergrund-Dienst ein sichtbares
+      Overlay, um aus dem Hintergrund eine Activity (ChatGPT-Voice) starten zu duerfen
+      (Background-Activity-Launch-Ausnahme). Siehe bugs/android-platform §8 + Recherche.
+    -->
+    <uses-permission android:name="android.permission.SYSTEM_ALERT_WINDOW" />
+
+    <!--
+      Paket-Sichtbarkeit (Android 11+): ohne <queries> blockiert das System den Zugriff
+      auf die ChatGPT-Voice-Activity.
+    -->
+    <queries>
+        <package android:name="com.openai.chatgpt" />
+    </queries>
+
+    <application
+        android:name=".VoiceKeyApp"
+        android:allowBackup="true"
+        android:icon="@mipmap/ic_launcher"
+        android:label="@string/app_name"
+        android:roundIcon="@mipmap/ic_launcher_round"
+        android:supportsRtl="true"
+        android:theme="@style/Theme.VoiceKey">
+
+        <!-- Einstellungs-UI (Hauptbildschirm). singleTask: Launcher-Icon und Notification
+             landen IMMER in derselben Instanz — nie zwei App-Fenster in den Recents. -->
+        <activity
+            android:name=".ui.MainActivity"
+            android:exported="true"
+            android:launchMode="singleTask">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity>
+
+        <!--
+          Trampolin-Activity: erscheint ueber dem Lockscreen, weckt den Bildschirm und
+          loest dann den ChatGPT-Voice-Mode aus. Wird vom Service nach Wake-Word-Treffer
+          gestartet (loest das Background-Activity-Launch- und Lockscreen-Problem).
+        -->
+        <activity
+            android:name=".trigger.AssistantLauncherActivity"
+            android:exported="false"
+            android:excludeFromRecents="true"
+            android:noHistory="true"
+            android:showWhenLocked="true"
+            android:turnScreenOn="true"
+            android:taskAffinity=""
+            android:theme="@style/Theme.VoiceKey.Transparent" />
+
+        <!-- Dauerhafter Wake-Word-Mikrofon-Dienst. -->
+        <service
+            android:name=".service.WakeWordService"
+            android:exported="false"
+            android:foregroundServiceType="microphone" />
+
+        <!--
+          Not-Aus-Rückfallebene (Bedienungshilfe): drückt auf Kommando den echten
+          "Beenden"-Knopf der ChatGPT-Voice-UI — Rück-Geste/Wegwischen beenden die
+          Session sonst NICHT (am Gerät verifiziert).
+        -->
+        <service
+            android:name=".a11y.VoiceKeyAccessibilityService"
+            android:exported="false"
+            android:label="VoiceKey Not-Aus"
+            android:permission="android.permission.BIND_ACCESSIBILITY_SERVICE">
+            <intent-filter>
+                <action android:name="android.accessibilityservice.AccessibilityService" />
+            </intent-filter>
+            <meta-data
+                android:name="android.accessibilityservice"
+                android:resource="@xml/voicekey_a11y_config" />
+        </service>
+
+        <!-- Dienst nach Neustart wieder starten (zeigt Tipp-Notification, da Mic-FGS nicht aus BOOT startbar). -->
+        <receiver
+            android:name=".service.BootReceiver"
+            android:exported="true"
+            android:enabled="true">
+            <intent-filter>
+                <action android:name="android.intent.action.BOOT_COMPLETED" />
+                <action android:name="android.intent.action.LOCKED_BOOT_COMPLETED" />
+            </intent-filter>
+        </receiver>
+    </application>
+</manifest>

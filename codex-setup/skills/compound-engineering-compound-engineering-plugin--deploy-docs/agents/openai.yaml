@@ -1,0 +1,7 @@
+interface:
+  display_name: "deploy-docs"
+  short_description: "Validate and prepare documentation for GitHub Pages deployment"
+  default_prompt: "Use $compound-engineering-compound-engineering-plugin--deploy-docs for this task."
+
+policy:
+  allow_implicit_invocation: false

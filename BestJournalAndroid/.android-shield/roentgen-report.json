@@ -1,0 +1,2820 @@
+{
+  "schema_version": "2.1-normalized",
+  "_schemaVariant": "B-normalized",
+  "appName": "BestJournalAndroid",
+  "scanTimestamp": "2026-06-10T19:20:07Z",
+  "scanMode": "full",
+  "app": {
+    "package": "com.bestjournal.app",
+    "version_name": "0.21.10",
+    "version_code": 291,
+    "min_sdk": 26,
+    "target_sdk": 36,
+    "r8": true
+  },
+  "layer1_manifest": {
+    "permissions": [
+      {
+        "name": "android.permission.INTERNET",
+        "impliedFeature": "Netzwerkzugriff (Groq-Whisper-Cloud, Firebase AI/Gemini, Google Drive, Gmail-Versand, Bing-TTS)",
+        "runtimePermission": false
+      },
+      {
+        "name": "android.permission.ACCESS_NETWORK_STATE",
+        "impliedFeature": "Netzwerkstatus pruefen (online/offline fuer Sync/Cloud-Calls)",
+        "runtimePermission": false
+      },
+      {
+        "name": "android.permission.RECORD_AUDIO",
+        "impliedFeature": "Sprachaufnahme fuer Tagebuch-Diktat (lokales Sherpa-ONNX-Whisper + Groq-Cloud-Transkription)",
+        "runtimePermission": true
+      },
+      {
+        "name": "android.permission.CAMERA",
+        "impliedFeature": "Foto-Aufnahme fuer Tagebucheintraege (FileProvider photos/)",
+        "runtimePermission": true
+      },
+      {
+        "name": "android.permission.POST_NOTIFICATIONS",
+        "impliedFeature": "Erinnerungen/Reviews (taeglich, woechentlich, monatlich, jaehrlich)",
+        "runtimePermission": true
+      },
+      {
+        "name": "android.permission.RECEIVE_BOOT_COMPLETED",
+        "impliedFeature": "Reminder-Alarme nach Reboot/Zeitzonen-/Zeitwechsel neu setzen (BootReminderReceiver)",
+        "runtimePermission": false
+      }
+    ],
+    "usesFeatures": [
+      {
+        "name": "android.hardware.camera",
+        "required": false
+      },
+      {
+        "name": "android.hardware.camera.autofocus",
+        "required": false
+      },
+      {
+        "name": "android.hardware.microphone",
+        "required": false
+      }
+    ],
+    "queries": [
+      "com.google.android.gms (GMS-Verfuegbarkeitscheck)"
+    ],
+    "applicationName": ".BestJournalApp (Hilt @HiltAndroidApp)",
+    "activities": [
+      {
+        "name": ".MainActivity",
+        "exported": true,
+        "reason": "LAUNCHER, einzige Activity, Single-Activity-Compose-Architektur",
+        "intentFilter": "MAIN/LAUNCHER"
+      }
+    ],
+    "receivers": [
+      {
+        "name": ".util.ReminderReceiver",
+        "exported": false,
+        "purpose": "Taegliche Tagebuch-Erinnerung"
+      },
+      {
+        "name": ".util.WeeklyReviewReceiver",
+        "exported": false,
+        "purpose": "Woechentliche Review-Benachrichtigung"
+      },
+      {
+        "name": ".util.MonthlyReviewReceiver",
+        "exported": false,
+        "purpose": "Monatliche Review-Benachrichtigung"
+      },
+      {
+        "name": ".util.YearlyReviewReceiver",
+        "exported": false,
+        "purpose": "Jaehrliche Review-Benachrichtigung"
+      },
+      {
+        "name": ".util.BootReminderReceiver",
+        "exported": true,
+        "purpose": "Alarme nach BOOT_COMPLETED/TIMEZONE_CHANGED/TIME_SET neu planen",
+        "intentFilter": "BOOT_COMPLETED, TIMEZONE_CHANGED, TIME_SET",
+        "note": "exported=true ist fuer BOOT_COMPLETED systembedingt noetig; nimmt nur System-Broadcasts entgegen, geringes Risiko"
+      }
+    ],
+    "providers": [
+      {
+        "name": "androidx.core.content.FileProvider",
+        "authorities": "ApplicationId.fileprovider",
+        "exported": false,
+        "grantUriPermissions": true,
+        "exportedPaths": "files-path 'photos' zeigt auf photos/ (interner App-Speicher, Tagebuch-Fotos); via grantUriPermission temporaer fuer Kamera/Teilen freigegeben"
+      }
+    ],
+    "backup": {
+      "allowBackup": true,
+      "fullBackupContent": "@xml/backup_rules (API kleiner/gleich 30)",
+      "dataExtractionRules": "@xml/data_extraction_rules (API groesser/gleich 31, cloud-backup + device-transfer)",
+      "rulesSummary": "Eingeschlossen ins Cloud-Backup/Geraetetransfer: Tagebuch-DB entropy_journal_db (Eintraege) + Profil/Settings-SharedPreferences. Ausgeschlossen: dashboard_db, retrospective_db (regenerieren aus Eintraegen) UND entropy_journal_secure_prefs (verschluesselte Prefs mit Tokens/Keys).",
+      "sensitiveDataInBackup": "JA. Die kompletten Tagebuch-Eintraege (entropy_journal_db) sowie das Nutzerprofil wandern ins Google-Cloud-Backup. Das sind potenziell hoechst-sensible, ggf. Art.9-DSGVO-Daten (Gesundheit, Gefuehle, Stimmung). API-Keys/Tokens in entropy_journal_secure_prefs sind korrekt AUSGESCHLOSSEN.",
+      "dsgvoRisk": "MITTEL-HOCH: Tagebuchinhalte im Google-Auto-Backup koennen besondere Kategorien personenbezogener Daten enthalten. Muss in der Datenschutzerklaerung adressiert werden (Google als Auftragsverarbeiter des Backups, Speicherort, Verschluesselung). Empfehlung an Legal-Worker: pruefen ob Tagebuch-DB im Cloud-Backup gewuenscht/dokumentiert ist oder ob fuer Art.9-Daten ein Ausschluss sinnvoller waere."
+    },
+    "cleartextTraffic": false,
+    "networkSecurityConfig": "@xml/network_security_config: base-config cleartextTrafficPermitted=false, nur System-Trust-Anchors (kein User-CA, kein Cert-Pinning). Gut fuer DSGVO/Sicherheit.",
+    "enableOnBackInvokedCallback": true,
+    "supportsRtl": true,
+    "intentFilters": [
+      "MAIN/LAUNCHER (MainActivity)",
+      "BOOT_COMPLETED + TIMEZONE_CHANGED + TIME_SET (BootReminderReceiver)"
+    ]
+  },
+  "layer1_5_assets": {
+    "localeFolders": 27,
+    "totalFiles": 81,
+    "sizeMatrix": {
+      "ar": {
+        "imprint": 4761,
+        "privacy": 7424,
+        "terms": 5984
+      },
+      "bn": {
+        "imprint": 5432,
+        "privacy": 9309,
+        "terms": 7894
+      },
+      "de": {
+        "privacy": 48991,
+        "imprint": 5273,
+        "terms": 17412
+      },
+      "en": {
+        "imprint": 5025,
+        "privacy": 54666,
+        "terms": 16487
+      },
+      "es": {
+        "imprint": 4133,
+        "privacy": 6215,
+        "terms": 5039
+      },
+      "fr": {
+        "imprint": 4140,
+        "privacy": 6370,
+        "terms": 5235
+      },
+      "gu": {
+        "imprint": 5238,
+        "privacy": 8867,
+        "terms": 7562
+      },
+      "hi": {
+        "imprint": 5377,
+        "privacy": 9374,
+        "terms": 7825
+      },
+      "id": {
+        "imprint": 4024,
+        "privacy": 5974,
+        "terms": 4964
+      },
+      "it": {
+        "imprint": 4108,
+        "privacy": 6145,
+        "terms": 4894
+      },
+      "ja": {
+        "imprint": 4725,
+        "privacy": 74204,
+        "terms": 6977
+      },
+      "kn": {
+        "imprint": 5433,
+        "privacy": 9329,
+        "terms": 8029
+      },
+      "ko": {
+        "imprint": 3933,
+        "privacy": 72107,
+        "terms": 4822
+      },
+      "ml": {
+        "imprint": 5577,
+        "privacy": 10210,
+        "terms": 8823
+      },
+      "mr": {
+        "imprint": 5289,
+        "privacy": 8921,
+        "terms": 7894
+      },
+      "nl": {
+        "imprint": 4008,
+        "privacy": 5999,
+        "terms": 4856
+      },
+      "pl": {
+        "imprint": 4017,
+        "privacy": 6010,
+        "terms": 4986
+      },
+      "pt-BR": {
+        "imprint": 3981,
+        "privacy": 67958,
+        "terms": 4900
+      },
+      "pt-PT": {
+        "imprint": 4061,
+        "privacy": 6201,
+        "terms": 4967
+      },
+      "ta": {
+        "imprint": 5805,
+        "privacy": 10214,
+        "terms": 9046
+      },
+      "te": {
+        "imprint": 5420,
+        "privacy": 9402,
+        "terms": 7913
+      },
+      "th": {
+        "imprint": 5334,
+        "privacy": 9599,
+        "terms": 7752
+      },
+      "tr": {
+        "imprint": 3917,
+        "privacy": 5813,
+        "terms": 4832
+      },
+      "uk": {
+        "imprint": 4910,
+        "privacy": 7666,
+        "terms": 6600
+      },
+      "ur": {
+        "imprint": 4524,
+        "privacy": 7281,
+        "terms": 6042
+      },
+      "zh-CN": {
+        "imprint": 3757,
+        "privacy": 5516,
+        "terms": 4380
+      },
+      "zh-TW": {
+        "imprint": 3751,
+        "privacy": 5636,
+        "terms": 4376
+      }
+    },
+    "fullVersions": [
+      "de",
+      "en",
+      "ko",
+      "ja",
+      "pt-BR"
+    ],
+    "fullVersionsNote": "User stated 3 full versions (de/en/ko). REALITY: 5 full standalone PRIVACY versions by byte-size: de(48991) en(54666) ko(72107) ja(74204) pt-BR(67958). ja+pt-BR have NO reference-link and are self-contained full policies. This EXCEEDS the stated baseline (more coverage, not a defect). The other 22 locales are genuine short summaries (5.5-10.2KB).",
+    "referenceArchitectureVerified": {
+      "fr": {
+        "hasReferenceLink": true,
+        "linkTarget": "file:///android_asset/legal/en/PRIVACY.html + de/DATENSCHUTZ.html",
+        "linkLanguage": "fr",
+        "clauseFound": true,
+        "clause": "'consulte la version complète en anglais ou en allemand'"
+      },
+      "ja": {
+        "hasReferenceLink": false,
+        "linkTarget": "(none - external regulator/helpline links)",
+        "isFullStandalone": true,
+        "clauseFound": false,
+        "note": "FULL 74KB policy, not a summary"
+      },
+      "ur": {
+        "hasReferenceLink": true,
+        "linkTarget": "en/PRIVACY + de/DATENSCHUTZ",
+        "linkLanguage": "ur",
+        "clauseFound": true,
+        "clause": "'مکمل انگریزی یا جرمن ورژن دیکھیں'"
+      },
+      "pt-BR": {
+        "hasReferenceLink": false,
+        "linkTarget": "(none - ANPD/CVV links)",
+        "isFullStandalone": true,
+        "clauseFound": false,
+        "note": "FULL 68KB policy, not a summary"
+      },
+      "zh-CN": {
+        "hasReferenceLink": true,
+        "linkTarget": "en/PRIVACY + de/DATENSCHUTZ",
+        "linkLanguage": "zh",
+        "clauseFound": true,
+        "clause": "'完整英文版或德文版'"
+      },
+      "gu": {
+        "hasReferenceLink": true,
+        "linkTarget": "en/PRIVACY + de/DATENSCHUTZ",
+        "linkLanguage": "gu",
+        "clauseFound": true,
+        "clause": "'અંગ્રેજી અથવા જર્મન સંપૂર્ણ સંસ્કરણ'"
+      }
+    },
+    "loaderLogic": {
+      "file": "ui/screens/consent/LegalDocumentScreen.kt (enum LegalDocument)",
+      "localeMapping": "4-tier: de->legal/de/<de-name>; en->legal/en/<en-name>; other UI lang->localized summary via summaryFolderFor(); else->en full fallback. Handles pt-BR/pt-PT, zh CN+SG->zh-CN HK/MO/TW->zh-TW, legacy in->id.",
+      "fallback": "onlyIfTranslated() gate + TRANSLATED_SUMMARIES set (25 entries) guarantees no blank WebView; unknown locale falls back to en full versions (Poka-Yoke)",
+      "security": "WebView JS disabled, defaultTextEncoding utf-8, only file:// loads in-WebView, external (mailto/https) open in system browser",
+      "reachableFrom": [
+        "ConsentScreen (onboarding, lines 365-372: Datenschutz/Nutzungsbedingungen/Impressum)",
+        "SettingsScreen (line 4059, footer order Datenschutz/Nutzungsbedingungen/Impressum)",
+        "routes legal/datenschutz, legal/nutzungsbedingungen, legal/impressum"
+      ],
+      "docMismatch": "Inline doc comment (lines 64-73) describes a 3-tier model (de+en full, rest summaries) but ja & pt-BR are actually full standalone docs loaded through the tier-3 path. Functionally correct (full file loads regardless); documentation is just slightly behind reality."
+    },
+    "deVollversionChecks": {
+      "datenschutz": {
+        "verantwortlicher": true,
+        "anschrift": true,
+        "zweck": true,
+        "rechtsgrundlagen": true,
+        "empfaenger": true,
+        "drittland": true,
+        "subprocessorsNamed": "Google, Gemini, Groq, Firebase all present",
+        "speicherdauer": true,
+        "betroffenenrechte": true,
+        "datenuebertragbarkeit_art20": true,
+        "beschwerderecht": true,
+        "kontakt": true
+      },
+      "impressum": {
+        "name": true,
+        "anschrift": true,
+        "email": true,
+        "ddg_para5": true
+      },
+      "nutzungsbedingungen": {
+        "widerrufsbelehrung": true,
+        "frist_14_tage": true,
+        "musterFormular": true,
+        "para_312g_bgb": true,
+        "digitaleInhalte_clause": true
+      }
+    },
+    "whisperFolder": {
+      "path": "assets/whisper/",
+      "files": [
+        "base-decoder.int8.onnx (~130 MB)",
+        "base-encoder.int8.onnx (~29 MB)",
+        "base-tokens.txt (~817 KB)"
+      ],
+      "purpose": "sherpa-onnx Whisper 'base' int8 model for on-device offline speech-to-text (privacy-preserving local transcription, no cloud)"
+    }
+  },
+  "layer2_dependencies": {
+    "sdks": [
+      {
+        "lib": "com.google.firebase:firebase-analytics",
+        "capability": "Nutzungs-Analytics/Event-Tracking (onboarding, entry_created/improved/deleted, paywall_shown, cta_clicked, trial_started)",
+        "sendsDataToThirdParty": true,
+        "thirdParty": "Google (Firebase Analytics)",
+        "activelyUsed": true,
+        "note": "AnalyticsTracker.kt + EdgeTtsPlayer.kt feuern logEvent breitflaechig. ConsentViewModel existiert. Consent-Gating MUSS vom Legal-Worker geprueft werden (DSGVO Art.6/7, ePrivacy/TTDSG)."
+      },
+      {
+        "lib": "com.google.firebase:firebase-ai (Gemini)",
+        "capability": "KI-Textverbesserung/Analysen der Tagebuch-Eintraege via Google Gemini (Firebase AI Logic)",
+        "sendsDataToThirdParty": true,
+        "thirdParty": "Google (Firebase AI / Gemini-Cloud)",
+        "activelyUsed": true,
+        "note": "FirebaseAiService.kt aktiv. Tagebuchinhalte gehen zur KI-Verarbeitung an Google, Art.13/28-Pflicht (Auftragsverarbeiter, Drittlandtransfer USA)."
+      },
+      {
+        "lib": "com.google.firebase:firebase-functions",
+        "capability": "Cloud Functions Aufruf (SubscriptionStatusService, Abo-Status serverseitig pruefen)",
+        "sendsDataToThirdParty": true,
+        "thirdParty": "Google (Firebase Functions)",
+        "activelyUsed": true,
+        "note": "SubscriptionStatusService.kt importiert firebase."
+      },
+      {
+        "lib": "com.google.firebase:firebase-config (Remote Config)",
+        "capability": "Feature-Flags/Remote-Konfiguration",
+        "sendsDataToThirdParty": true,
+        "thirdParty": "Google (Firebase Remote Config)",
+        "activelyUsed": true,
+        "note": "In BestJournalApp.kt initialisiert (5 firebase-Imports)."
+      },
+      {
+        "lib": "com.google.firebase:firebase-appcheck-playintegrity",
+        "capability": "App-Attestierung (Schutz der Backend-Calls vor Missbrauch)",
+        "sendsDataToThirdParty": true,
+        "thirdParty": "Google (Play Integrity / App Check)",
+        "activelyUsed": true,
+        "note": "debug-Variante firebase-appcheck-debug separat. Play-Integrity-Token = geraetebezogen."
+      },
+      {
+        "lib": "com.android.billingclient:billing-ktx 7.1.1",
+        "capability": "In-App-Kauf / Abo (Paywall: Trial, Monthly, Yearly, Lifetime)",
+        "sendsDataToThirdParty": true,
+        "thirdParty": "Google Play Billing",
+        "activelyUsed": true,
+        "note": "BillingManager.kt aktiv. UWG/Paywall-relevant fuer Werbeaussagen-Check."
+      },
+      {
+        "lib": "com.google.android.play:review-ktx 2.0.2",
+        "capability": "In-App-Bewertungsdialog",
+        "sendsDataToThirdParty": true,
+        "thirdParty": "Google Play",
+        "activelyUsed": true,
+        "note": "Import in 1 Datei bestaetigt."
+      },
+      {
+        "lib": "com.google.apis:google-api-services-drive",
+        "capability": "Google-Drive-Backup/Restore der Tagebuchdaten",
+        "sendsDataToThirdParty": true,
+        "thirdParty": "Google Drive (Nutzer-eigener Speicher)",
+        "activelyUsed": true,
+        "note": "DriveBackupManager.kt + DriveRestoreManager.kt aktiv. Daten liegen im Drive des Nutzers. Auftragsverarbeitung Google."
+      },
+      {
+        "lib": "androidx.credentials + googleid + play-services-auth 21.3.0",
+        "capability": "Google-Sign-In via Credential Manager (Konto fuer Drive/Gmail/Abo-Status)",
+        "sendsDataToThirdParty": true,
+        "thirdParty": "Google Identity",
+        "activelyUsed": true,
+        "note": "ConsentViewModel + Drive/Gmail-Pfade nutzen das Konto."
+      },
+      {
+        "lib": "Retrofit 2.11.0 + OkHttp 4.12.0 + Moshi",
+        "capability": "REST-Client fuer Groq-Whisper-Cloud + Gmail-API + sonstige HTTP-Calls",
+        "sendsDataToThirdParty": true,
+        "thirdParty": "Groq (api.groq.com), Google Gmail API",
+        "activelyUsed": true,
+        "note": "GroqApi.kt (4 Imports), NetworkModule.kt, RevokeSender/FeedbackSender. okhttp-logging-interceptor enthalten. Legal-Worker: pruefen ob Logging in Release deaktiviert (Datenleck-Risiko)."
+      },
+      {
+        "lib": "Sherpa-ONNX 1.12.34 (lokale AAR)",
+        "capability": "LOKALE Whisper-Spracherkennung (on-device, KEIN Datenabfluss)",
+        "sendsDataToThirdParty": false,
+        "thirdParty": "-",
+        "activelyUsed": true,
+        "note": "LocalWhisperTranscriber.kt. Datenschutzfreundliche On-Device-Alternative zur Groq-Cloud. noCompress onnx/txt gesetzt."
+      },
+      {
+        "lib": "androidx.room 2.7.0",
+        "capability": "Lokale Datenbanken (entropy_journal_db, dashboard_db, retrospective_db)",
+        "sendsDataToThirdParty": false,
+        "thirdParty": "-",
+        "activelyUsed": true,
+        "note": "Room-DAO/Entities, ksp room.schemaLocation gesetzt."
+      },
+      {
+        "lib": "androidx.security:security-crypto 1.1.0-alpha06",
+        "capability": "EncryptedSharedPreferences (entropy_journal_secure_prefs, Tokens/Keys verschluesselt)",
+        "sendsDataToThirdParty": false,
+        "thirdParty": "-",
+        "activelyUsed": true,
+        "note": "DEPRECATED laut Android-Rules (Empfehlung DataStore+Tink), Hinweis fuer Best-Practices, kein Rechtsrisiko. Korrekt vom Backup ausgeschlossen."
+      },
+      {
+        "lib": "androidx.biometric 1.2.0-alpha05",
+        "capability": "Biometrischer App-Lock (Tagebuch hinter Fingerabdruck/Gesicht)",
+        "sendsDataToThirdParty": false,
+        "thirdParty": "-",
+        "activelyUsed": true,
+        "note": "App-Lock = positives Datenschutz-Feature."
+      },
+      {
+        "lib": "Microsoft Bing Edge TTS (kein Gradle-SDK, direkter WSS-Call)",
+        "capability": "Text-to-Speech (Vorlesen) ueber wss://speech.platform.bing.com",
+        "sendsDataToThirdParty": true,
+        "thirdParty": "Microsoft (Bing/Azure Edge TTS)",
+        "activelyUsed": true,
+        "note": "EdgeTtsPlayer.kt: Text (potenziell Tagebuchinhalt) wird zur Sprachsynthese an Microsoft-Server gesendet. NICHT als Gradle-Dependency sichtbar, in SDK-/Drittanbieter-Listen leicht uebersehen. Legal-Worker: in Datenschutzerklaerung als Microsoft-Datenfluss aufnehmen; pruefen ob inoffizieller Bing-Endpunkt AGB-konform ist."
+      },
+      {
+        "lib": "Coil 3.0.4 (coil-compose + coil-video)",
+        "capability": "Bild-/Video-Thumbnail-Laden (lokale Tagebuch-Fotos)",
+        "sendsDataToThirdParty": false,
+        "thirdParty": "-",
+        "activelyUsed": true,
+        "note": "Aktive Nutzung angenommen (Foto-Feature vorhanden); nicht per Import-Grep gegengeprueft."
+      },
+      {
+        "lib": "Lottie 6.6.4",
+        "capability": "Vektor-Animationen (UI)",
+        "sendsDataToThirdParty": false,
+        "thirdParty": "-",
+        "activelyUsed": "unbekannt",
+        "note": "Deklariert; keine Import-Stichprobe gemacht. Kein Rechtsrisiko."
+      },
+      {
+        "lib": "kotlinx-coroutines (core/android/play-services)",
+        "capability": "Async/Nebenlaeufigkeit",
+        "sendsDataToThirdParty": false,
+        "thirdParty": "-",
+        "activelyUsed": true,
+        "note": "Standard."
+      }
+    ],
+    "appId": "com.bestjournal.app (debug: com.bestjournal.app.debug)",
+    "namespace": "com.bestjournal.app",
+    "versionName": "0.21.10",
+    "versionCode": 291,
+    "minSdk": 26,
+    "targetSdk": 36,
+    "compileSdk": 36,
+    "r8Enabled": true,
+    "r8Details": "release: isMinifyEnabled=true, isShrinkResources=true, proguard-android-optimize + proguard-rules.pro; debug: minify=false, applicationIdSuffix .debug",
+    "javaTarget": "17",
+    "buildToolVersions": {
+      "agp": "8.7.3",
+      "kotlin": "2.1.0",
+      "ksp": "2.1.0-1.0.29",
+      "composeBom": "2025.01.01",
+      "firebaseBom": "34.11.0"
+    },
+    "secretsHandling": "Alle Secrets (google-services.json debug/release, Keystores, keystore.properties) liegen ausserhalb des Repos in HOME/SK/BestJournalAndroid/ und werden per syncSecretsFromSk-Task beim preBuild kopiert. Debug-Keystore-Passwort android steht im Build-Skript (Standard-Debug, unkritisch). Release-Signing aus SK/keystore.properties. KEINE echten Secrets im Repo. Konform mit secrets-in-sk-folder-Regel."
+  },
+  "externalEndpoints": [
+    {
+      "domain": "api.groq.com",
+      "purpose": "Whisper-Cloud-Transkription der Sprachaufnahmen (OpenAI-kompatible API), Tagebuch-Audio/Text geht an Groq Inc. (USA)",
+      "file": "util/Constants.kt:5, data/remote/groq/GroqApi.kt"
+    },
+    {
+      "domain": "speech.platform.bing.com (wss)",
+      "purpose": "Microsoft Bing/Edge Text-to-Speech (Vorlesen), Text geht zur Sprachsynthese an Microsoft",
+      "file": "util/EdgeTtsPlayer.kt:98"
+    },
+    {
+      "domain": "gmail.googleapis.com",
+      "purpose": "E-Mail-Versand ueber das Google-Konto des Nutzers: App-Feedback (FeedbackSender) und Konto-/Zugriffs-Widerruf-Nachricht (RevokeSender), Scope gmail.send",
+      "file": "data/remote/FeedbackSender.kt:19-20, data/remote/RevokeSender.kt:32-33"
+    },
+    {
+      "domain": "www.googleapis.com (Drive + Gmail-Scopes)",
+      "purpose": "Google-Drive-Backup/Restore + OAuth-Scope-URLs (gmail.send)",
+      "file": "data/remote/RevokeSender.kt:33, FeedbackSender.kt:20, DriveBackupManager/DriveRestoreManager"
+    },
+    {
+      "domain": "play.google.com/store/account/subscriptions",
+      "purpose": "Deep-Link zum Abo-Management des Nutzers (Kuendigungs-/Churn-Flow)",
+      "file": "ui/screens/settings/ChurnFlowDialog.kt:228/261, SettingsViewModel.kt:393"
+    },
+    {
+      "domain": "findahelpline.com",
+      "purpose": "Externer Link zu Krisen-/Hilfetelefonen (CrisisHelpDialog), Schutz-Feature, kein Datenabfluss von Nutzerdaten",
+      "file": "ui/components/CrisisHelpDialog.kt:133"
+    },
+    {
+      "domain": "www.w3.org/2001/10/synthesis",
+      "purpose": "KEIN Endpunkt, nur SSML-XML-Namespace im Edge-TTS-Request",
+      "file": "util/EdgeTtsPlayer.kt:159"
+    }
+  ],
+  "layer3_architecture": {
+    "viewModels": [
+      {
+        "name": "SplashViewModel",
+        "responsibility": "Reads consent-shown & onboarding-completed prefs to decide start route."
+      },
+      {
+        "name": "ConsentViewModel",
+        "responsibility": "Holds granular consent toggles (analytics/Groq/Gemini/TTS); persists choices + audit timestamp via prefs & PrivacyGateHelper; injects FirebaseAnalytics."
+      },
+      {
+        "name": "OnboardingViewModel",
+        "responsibility": "Tracks selected goals, saves goals + onboarding-completed flag; fires analytics events."
+      },
+      {
+        "name": "JournalViewModel",
+        "responsibility": "Recording state machine (IDLE->RECORDING->TRANSCRIBING->IMPROVING->PREVIEW->SAVING); orchestrates audio record + Groq transcription + Gemini improve + save; streaks/achievements; AI tiered-access checks."
+      },
+      {
+        "name": "EntryDetailViewModel",
+        "responsibility": "Loads/edits one entry, photos, follow-ups; AI improve/summarize/analyze with rate-limiter; delete + share; Drive sync."
+      },
+      {
+        "name": "DashboardViewModel",
+        "responsibility": "AI entropy analysis + advice generation; manual-refresh limit (3); scenario/custom-profile switching; AI usage tracking + tiered access; auto-update toggle."
+      },
+      {
+        "name": "RetrospectiveViewModel",
+        "responsibility": "Weekly/monthly/yearly summaries from repository; generates retrospectives via use case; photo collage; billing-gated; waits for Drive restore."
+      },
+      {
+        "name": "SettingsViewModel",
+        "responsibility": "All settings state: profile/auth, theme, reminder, biometric lock, Drive backup (photos/videos), PDF export, subscription/churn, consent revoke; injects 3 DAOs + DriveBackupManager + DailyReminderManager + PdfExporter."
+      },
+      {
+        "name": "PaywallViewModel",
+        "responsibility": "Subscription prices (monthly/yearly/lifetime) from BillingManager; personalizes headline by onboarding goal; tracks paywall source for analytics."
+      }
+    ],
+    "roomEntities": [
+      {
+        "entity": "JournalEntryEntity",
+        "table": "journal_entries",
+        "sensitiveFields": [
+          "rawText (raw diary text)",
+          "improvedText (AI-rewritten diary)",
+          "displayText",
+          "summary",
+          "title",
+          "followUpText",
+          "moodTag (mood/emotion)",
+          "adviceCategoryTags",
+          "audioDurationSeconds",
+          "isSynced(->Drive)"
+        ]
+      },
+      {
+        "entity": "EntryFollowUpEntity",
+        "table": "entry_follow_ups",
+        "sensitiveFields": [
+          "text (follow-up diary text)",
+          "rawText",
+          "improvedText (AI)",
+          "entryId(FK CASCADE)"
+        ]
+      },
+      {
+        "entity": "EntryPhotoEntity",
+        "table": "entry_photos",
+        "sensitiveFields": [
+          "filePath (path to user photo/video)",
+          "isVideo",
+          "entryId(FK CASCADE)"
+        ]
+      },
+      {
+        "entity": "RetrospectiveSummaryEntity",
+        "table": "retrospective_summaries",
+        "sensitiveFields": [
+          "title",
+          "summaryText (AI summary of personal diary periods)",
+          "periodLabel"
+        ]
+      },
+      {
+        "entity": "AdviceBlockEntity",
+        "table": "advice_blocks",
+        "sensitiveFields": [
+          "categorySummary",
+          "adviceJson (AI advice on personal life)",
+          "overallAnalysis (AI psych analysis)",
+          "topActionsJson",
+          "entropyLevel"
+        ]
+      }
+    ],
+    "useCases": [
+      "RecordAudioUseCase: wraps AudioRecorderHelper - start/stop mic recording, expose amplitude+duration.",
+      "TranscribeAudioUseCase: speech-to-text via TranscriptionRepository (Groq Whisper, api.groq.com).",
+      "ImproveTextUseCase: rewrites diary text via FirebaseAiService (Gemini); chunks long text; locale-aware prompt.",
+      "SummarizeEntryUseCase: AI summary/title for an entry+follow-ups via FirebaseAiService (Gemini), retries.",
+      "AnalyzeEntropyUseCase: runs AI entropy analysis over all entries via AdviceRepository; tier/rate-limited (cost control).",
+      "GenerateAdviceUseCase: exposes Flow of advice blocks from AdviceRepository (local cache).",
+      "GenerateRetrospectiveUseCase: AI weekly/monthly/yearly retrospectives via FirebaseAiService (Gemini), concurrent w/ Semaphore.",
+      "SaveJournalEntryUseCase: persists a JournalEntry via JournalRepository (Room).",
+      "SignInWithGoogleUseCase: Google sign-in/sign-out + stored profile via AuthRepository (Credential Manager).",
+      "SyncWithDriveUseCase: zips DB+custom-analyses, backup/restore/merge to Google Drive; consent-gated (NeedConsentException).",
+      "SyncProgressHolder: singleton StateFlow exposing Drive upload/download progress across ViewModels (helper, not a UseCase)."
+    ],
+    "repositories": [
+      "JournalRepository: CRUD for journal entries (Room JournalEntryDao).",
+      "EntryFollowUpRepository: CRUD for entry follow-ups (Nachtraege).",
+      "PhotoRepository: manage entry photos/videos (file paths + EntryPhotoDao).",
+      "RetrospectiveRepository: weekly/monthly/yearly retrospective summaries (RetrospectiveDao).",
+      "AdviceRepository: advice/dashboard blocks + entropy analysis cache (AdviceDashboardDao).",
+      "AuthRepository: Google sign-in state + stored UserProfile (Credential Manager).",
+      "TranscriptionRepository: audio->text via Groq Whisper API (returns TranscriptionResult)."
+    ],
+    "diExternalServices": [
+      {
+        "service": "Groq API (Whisper transcription)",
+        "baseUrl": "https://api.groq.com/openai/v1/ (Constants.GROQ_BASE_URL)",
+        "module": "NetworkModule (Retrofit+OkHttp+Moshi)"
+      },
+      {
+        "service": "Firebase Analytics",
+        "baseUrl": "Firebase SDK",
+        "module": "FirebaseModule"
+      },
+      {
+        "service": "FirebaseAiService (Gemini via Firebase AI / Vertex)",
+        "baseUrl": "Firebase SDK (server-side Gemini)",
+        "module": "FirebaseModule"
+      },
+      {
+        "service": "Firebase Cloud Functions getSubscriptionStatus",
+        "baseUrl": "europe-west1 (Belgium, DSGVO)",
+        "module": "FirebaseModule (SubscriptionStatusService)"
+      },
+      {
+        "service": "Google Play Billing (BillingManager)",
+        "baseUrl": "Play Billing SDK",
+        "module": "FirebaseModule"
+      },
+      {
+        "service": "Google Drive backup (DriveBackupManager/DriveRestoreManager)",
+        "baseUrl": "Google Drive API",
+        "module": "used via SyncWithDriveUseCase / SettingsViewModel"
+      },
+      {
+        "service": "Google Credential Manager (sign-in)",
+        "baseUrl": "AndroidX Credentials",
+        "module": "AuthModule"
+      },
+      {
+        "service": "EncryptedSharedPreferences (secrets/prefs store)",
+        "baseUrl": "local (AES256_GCM)",
+        "module": "AppModule - NOTE: EncryptedSharedPreferences+MasterKeys is DEPRECATED API"
+      }
+    ],
+    "backgroundJobs": [
+      {
+        "name": "DailyReminderManager",
+        "trigger": "AlarmManager.setExactAndAllowWhileIdle (RTC_WAKEUP), rescheduled on boot",
+        "purpose": "Daily journaling reminder notification at user-set hour/minute. NO WorkManager in project."
+      },
+      {
+        "name": "Drive sync (SyncWithDriveUseCase)",
+        "trigger": "manual / app lifecycle (coroutine, not WorkManager)",
+        "purpose": "Backup/restore encrypted DB+photos+videos to user's Google Drive."
+      }
+    ]
+  },
+  "layer4_screens": [
+    {
+      "name": "SplashScreen",
+      "file": "ui/screens/splash/SplashScreen.kt",
+      "route": "splash",
+      "entryPoints": [
+        "app start (startDestination)"
+      ],
+      "purpose": "Branding splash; routes to Consent / Onboarding / Main based on first-run + consent-shown + onboarding-completed prefs."
+    },
+    {
+      "name": "ConsentScreen",
+      "file": "ui/screens/consent/ConsentScreen.kt",
+      "route": "consent",
+      "entryPoints": [
+        "Splash (first run, consent not shown)"
+      ],
+      "purpose": "Granular DSGVO consent (analytics, Groq, Gemini, Edge-TTS toggles, default OFF) with links to legal docs; provable timestamp+policy-version persisted."
+    },
+    {
+      "name": "LegalDocumentScreen",
+      "file": "ui/screens/consent/LegalDocumentScreen.kt",
+      "route": "legal/{datenschutz|nutzungsbedingungen|impressum}",
+      "entryPoints": [
+        "ConsentScreen.onOpenDocument",
+        "SettingsScreen.onNavigateToLegal",
+        "PaywallScreen.onOpenTerms"
+      ],
+      "purpose": "Renders one of three legal documents (privacy policy, terms, imprint) with back nav."
+    },
+    {
+      "name": "OnboardingScreen",
+      "file": "ui/screens/onboarding/OnboardingScreen.kt",
+      "route": "onboarding",
+      "entryPoints": [
+        "Splash",
+        "ConsentScreen.onContinue"
+      ],
+      "purpose": "Goal-selection onboarding; saves goals to prefs for paywall personalization; marks onboarding completed."
+    },
+    {
+      "name": "RetrospectiveScreen",
+      "file": "ui/screens/retrospective/RetrospectiveScreen.kt",
+      "route": "main(pager page 0)",
+      "entryPoints": [
+        "main pager swipe/bottom-nav"
+      ],
+      "purpose": "Weekly/monthly/yearly AI-generated retrospectives with photo collage; review gated behind paywall (source=review_locked)."
+    },
+    {
+      "name": "DashboardScreen",
+      "file": "ui/screens/dashboard/DashboardScreen.kt",
+      "route": "main(pager page 1)",
+      "entryPoints": [
+        "main pager swipe/bottom-nav"
+      ],
+      "purpose": "AI entropy analysis dashboard: category advice blocks, top-5 actions, scenario switching, manual refresh limit (3); paywall sources weekly_review/first_analysis/free_limit. OVERSIZE 193KB."
+    },
+    {
+      "name": "JournalScreen",
+      "file": "ui/screens/journal/JournalScreen.kt",
+      "route": "main(pager page 2, default)",
+      "entryPoints": [
+        "main pager (default tab)",
+        "app default landing"
+      ],
+      "purpose": "Core journal: voice recording -> Groq transcription -> Gemini text improvement -> save entry; entry list; streaks/achievements; opens EntryDetail and Paywall."
+    },
+    {
+      "name": "SettingsScreen",
+      "file": "ui/screens/settings/SettingsScreen.kt",
+      "route": "main(pager page 3)",
+      "entryPoints": [
+        "main pager swipe/bottom-nav"
+      ],
+      "purpose": "Settings hub: profile/sign-in, theme, reminders, biometric lock, Drive backup (photos/videos), PDF export, custom analyses, consent revoke, subscription mgmt/churn, legal links, crisis help. OVERSIZE 289KB."
+    },
+    {
+      "name": "EntryDetailScreen",
+      "file": "ui/screens/entrydetail/EntryDetailScreen.kt",
+      "route": "entry_detail/{entryId}",
+      "entryPoints": [
+        "JournalScreen.onEntryClick(entryId, searchQuery)"
+      ],
+      "purpose": "View/edit a journal entry: original vs AI-improved text, photos, follow-ups (Nachtraege), re-improve/summarize/analyze AI actions, delete, share; paywall source nachtrag_upsell."
+    },
+    {
+      "name": "PaywallScreen",
+      "file": "ui/screens/paywall/PaywallScreen.kt",
+      "route": "paywall?source={source}",
+      "entryPoints": [
+        "Dashboard",
+        "Journal",
+        "Settings",
+        "Retrospective",
+        "EntryDetail (all via onNavigateToPaywall)"
+      ],
+      "purpose": "Premium subscription paywall (monthly/yearly/lifetime via Google Play Billing); headline personalized by onboarding goal; source param tracks trigger origin for analytics."
+    }
+  ],
+  "navigation": {
+    "startDestination": "splash",
+    "navHostNote": "Single NavHost, no global Scaffold. 'main' route hosts a 4-page HorizontalPager (Retrospective=0, Dashboard=1, Journal=2, Settings=3) with BottomNavBar; initialTab default=2 (Journal). The 4 main screens are reachable only via swipe/bottom-nav inside 'main', NOT as separate nav routes.",
+    "routes": [
+      {
+        "route": "splash",
+        "screen": "SplashScreen",
+        "args": []
+      },
+      {
+        "route": "consent",
+        "screen": "ConsentScreen",
+        "args": []
+      },
+      {
+        "route": "legal/datenschutz",
+        "screen": "LegalDocumentScreen(Datenschutz)",
+        "args": []
+      },
+      {
+        "route": "legal/nutzungsbedingungen",
+        "screen": "LegalDocumentScreen(Nutzungsbedingungen)",
+        "args": []
+      },
+      {
+        "route": "legal/impressum",
+        "screen": "LegalDocumentScreen(Impressum)",
+        "args": []
+      },
+      {
+        "route": "onboarding",
+        "screen": "OnboardingScreen",
+        "args": []
+      },
+      {
+        "route": "main",
+        "screen": "Pager[Retrospective,Dashboard,Journal,Settings]",
+        "args": [
+          "initialTab"
+        ]
+      },
+      {
+        "route": "entry_detail/{entryId}?searchQuery={searchQuery}",
+        "screen": "EntryDetailScreen",
+        "args": [
+          "entryId:Long",
+          "searchQuery:String=empty"
+        ]
+      },
+      {
+        "route": "paywall?source={source}",
+        "screen": "PaywallScreen",
+        "args": [
+          "source:String=limit_reached"
+        ]
+      }
+    ]
+  },
+  "dialogs": [
+    {
+      "file": "ui/screens/settings/SettingsScreen.kt",
+      "dialogs": [
+        "Clear-data confirm AlertDialog",
+        "Sign-out AlertDialog",
+        "PDF export confirm AlertDialog",
+        "Scenario-info AlertDialog",
+        "Revoke-consent AlertDialog",
+        "Revoke-success AlertDialog",
+        "Revoke-error AlertDialog (no-email)",
+        "ChurnFlowDialog",
+        "CrisisHelpDialog",
+        "PrivacyPreferencesSheet"
+      ]
+    },
+    {
+      "file": "ui/screens/dashboard/DashboardScreen.kt",
+      "dialogs": [
+        "~8 AlertDialogs incl. AdviceDerivationDialog (how advice was derived)",
+        "category/scenario info dialogs",
+        "AdviceDetailSheet (ModalBottomSheet)"
+      ]
+    },
+    {
+      "file": "ui/screens/dashboard/AdviceDetailSheet.kt",
+      "dialogs": [
+        "AdviceDetailSheet (ModalBottomSheet)"
+      ]
+    },
+    {
+      "file": "ui/screens/entrydetail/EntryDetailScreen.kt",
+      "dialogs": [
+        "delete-confirm AlertDialog",
+        "AI-action dialogs (improve/summarize)",
+        "follow-up dialogs (via FollowUpComponents)"
+      ]
+    },
+    {
+      "file": "ui/screens/entrydetail/FollowUpComponents.kt",
+      "dialogs": [
+        "FollowUpDialog",
+        "FollowUpDeleteConfirmDialog",
+        "FollowUpPremiumUpsellDialog"
+      ]
+    },
+    {
+      "file": "ui/screens/entrydetail/ShareEntryDialog.kt",
+      "dialogs": [
+        "ShareEntryDialog (share text + photos via Intent/FileProvider)"
+      ]
+    },
+    {
+      "file": "ui/screens/settings/ChurnFlowDialog.kt",
+      "dialogs": [
+        "ChurnFlowDialog (multi-step: Overview->Reason->RetentionOffer->Confirm cancel)"
+      ]
+    },
+    {
+      "file": "ui/components/CrisisHelpDialog.kt",
+      "dialogs": [
+        "CrisisHelpDialog (emergency phone/web links - mental-health crisis)"
+      ]
+    },
+    {
+      "file": "ui/components/PrivacyGateDialog.kt",
+      "dialogs": [
+        "PrivacyGateDialog (per-use cloud-service consent gate)",
+        "PrivacyGateHost"
+      ]
+    },
+    {
+      "file": "ui/components/PrivacyPreferencesSheet.kt",
+      "dialogs": [
+        "PrivacyPreferencesSheet (ModalBottomSheet, granular consent incl. do-not-sell for en-US)"
+      ]
+    },
+    {
+      "file": "ui/components/AiLimitReachedSheet.kt",
+      "dialogs": [
+        "AiLimitReachedSheet (ModalBottomSheet, AI usage limit reached)"
+      ]
+    },
+    {
+      "file": "ui/components/AiLimitsDisclaimerRow.kt",
+      "dialogs": [
+        "AiLimitsDialog (explains AI usage limits/fair-use)"
+      ]
+    },
+    {
+      "file": "ui/screens/paywall/PaywallScreen.kt",
+      "dialogs": [
+        "billing/error AlertDialog"
+      ]
+    },
+    {
+      "file": "ui/screens/retrospective/RetrospectiveScreen.kt",
+      "dialogs": [
+        "retrospective detail/info dialogs"
+      ]
+    },
+    {
+      "file": "ui/screens/journal/JournalScreen.kt",
+      "dialogs": [
+        "permission/recording dialogs"
+      ]
+    }
+  ],
+  "layer4b_wortlaut_findings": [
+    {
+      "key": "dashboard_gemini_unavailable",
+      "line": 245,
+      "text": "Google Gemini ist gerade nicht erreichbar, bitte versuch es gleich nochmal.",
+      "category": "privacy-claim",
+      "risk": "HOCH",
+      "rationale": "UI bestaetigt: Tagebuchtexte gehen an Google Gemini (Cloud, US). Muss in Datenschutzerklaerung + Data Safety als Drittanbieter-Verarbeitung deklariert sein (Art. 9 sensible Daten)."
+    },
+    {
+      "key": "settings_premium_desc",
+      "line": 485,
+      "text": "Alle Features freigeschaltet, KI jeden Tag, PDF-Export und mehr.",
+      "category": "marketing-claim",
+      "risk": "HOCH",
+      "rationale": "'KI jeden Tag' = taegliches KI-Versprechen, muss exakt mit tatsaechlichem Tageslimit (dashboard_limit_daily existiert) uebereinstimmen. 'und mehr' vage Werbefloskel. UWG §5."
+    },
+    {
+      "key": "settings_premium_feature_5_perspectives",
+      "line": 495,
+      "text": "Alle KI-Profile (4 vordefiniert + unbegrenzt eigene)",
+      "category": "marketing-claim",
+      "risk": "HOCH",
+      "rationale": "'unbegrenzt eigene' Profile — harte Unbegrenztheitsaussage (UWG §5). Muss im Code ohne Cap sein."
+    },
+    {
+      "key": "paywall_from_per_day",
+      "line": 43,
+      "text": "Jahresabo, %1$s pro Jahr",
+      "category": "subscription",
+      "risk": "HOCH",
+      "rationale": "Preis-/Abostring. Key-Name 'from_per_day' passt NICHT zum Text 'pro Jahr' (Verwechslungsgefahr). Auto-Renewal-Hinweis, Laufzeit und Kuendigung fehlen im Wortlaut — Pflichtangaben fuer Abos (UWG/Para 312 BGB/Play-Billing)."
+    },
+    {
+      "key": "follow_up_premium_title",
+      "line": 212,
+      "text": "Unbegrenzte Nachtraege",
+      "category": "subscription",
+      "risk": "HOCH",
+      "rationale": "'Unbegrenzte Nachtraege' — harte Unbegrenztheitsaussage. Muss im Code wirklich kein Cap haben (UWG §5)."
+    },
+    {
+      "key": "profile_entropy_long",
+      "line": 390,
+      "text": "Die KI sucht gezielt nach Stress, Belastung und Unordnung in deinen Eintraegen. Du bekommst: eine Analyse deiner groessten Belastungsquellen, 5 konkrete Massnahmen zum Aufraeumen, Tipps die dir im Alltag helfen koennen. Ideal wenn du das Gefuehl hast, dass gerade alles zu viel wird.",
+      "category": "health-language",
+      "risk": "HOCH",
+      "rationale": "KI gibt '5 konkrete Massnahmen' + 'Tipps' bei Stress/'alles zu viel'. Grenzt an Gesundheits-/Psychoberatung. HWG-/Haftungsrisiko fuer KI-Ratschlaege; Disclaimer 'kein Ersatz fuer professionelle Hilfe' dringend noetig."
+    },
+    {
+      "key": "transcription_model_groq",
+      "line": 95,
+      "text": "whisper-large-v3-turbo",
+      "category": "privacy-claim",
+      "risk": "HOCH",
+      "rationale": "Belegt Groq-Cloud-Transkription (Drittanbieter, US). Sprachaufnahmen ggf. sensible Daten. Datenschutzerklaerung + Data Safety muss Groq als Empfaenger nennen."
+    },
+    {
+      "key": "settings_premium_feature_profiles",
+      "line": 505,
+      "text": "Unbegrenzte individuelle KI-Profile",
+      "category": "marketing-claim",
+      "risk": "HOCH",
+      "rationale": "'Unbegrenzt' ist eine absolute Zusage. Wenn die App durch das KI-Tageslimit/Wochenlimit faktisch begrenzt, ist 'unbegrenzt' irrefuehrend (UWG 5). Gegen Code-Realitaet pruefen: gibt es wirklich KEINE Obergrenze fuer die Anzahl Profile?"
+    },
+    {
+      "key": "ai_prompt_entropy_intro",
+      "line": 914,
+      "text": "Du bist ein empathischer, hochintelligenter Lebensberater und Muster-Analyst. ... Finde wiederkehrende Quellen von Stress, Unordnung und Belastung ... Schmerz, Schlafprobleme, emotionale Belastung ...",
+      "category": "ai-claim",
+      "risk": "HOCH",
+      "rationale": "System-Prompt laesst die KI als 'Lebensberater' agieren und aktiv 'Schmerz, Schlafprobleme, emotionale Belastung' analysieren + 'Ratschlaege' geben (prioritaet 'hoch=sofort handeln'). Gesundheitsnahe Beratung durch KI (HWG/SB-243-Grenzbereich). Risiko, dass Ausgaben wie medizinische/psychologische Empfehlungen wirken. Disclaimer (KI keine Therapie) MUSS an der Ausgabe sichtbar sein."
+    },
+    {
+      "key": "consent_card1_body",
+      "line": 612,
+      "text": "Deine Eintraege bleiben auf deinem Geraet.",
+      "category": "privacy-claim",
+      "risk": "HOCH",
+      "rationale": "Absolute Lokal-Zusage 'bleiben auf deinem Geraet'. Widerspricht der Cloud-Realitaet: KI (Gemini), TTS (Edge), Spracherkennung (Groq) und optionales Drive-Backup senden Eintraege/Texte an US-Server. Ohne sofortiges 'sofern KI/Backup aktiv' im selben Sichtfeld irrefuehrend (UWG 5 / DSGVO Art.13). Karte 2 (Z.614) relativiert es zwar, aber Karte 1 steht plakativ allein."
+    },
+    {
+      "key": "privacy_gate_groq_body",
+      "line": 620,
+      "text": "schickt deine Sprachaufnahme verschluesselt an Groq (USA) ... Aufnahme wird nach der Umwandlung sofort geloescht / Kein KI-Training mit deinen Aufnahmen / Rechtsgrundlage: Standardvertragsklauseln (EU SCCs)",
+      "category": "privacy-claim",
+      "risk": "HOCH",
+      "rationale": "Konkrete Tatsachenbehauptungen ueber einen Drittanbieter: 'sofort geloescht', 'Kein KI-Training'. Muessen durch Groqs AGB/DPA tatsaechlich gedeckt sein - sonst irrefuehrend (UWG 5) UND DSGVO-Falschangabe. Verifizieren, dass Groqs Vertrag No-Training + sofortige Loeschung wirklich zusichert."
+    },
+    {
+      "key": "privacy_gate_gemini_body",
+      "line": 625,
+      "text": "verschluesselt an Google Gemini ... Kein KI-Training mit deinen Daten / Anfragen werden nicht dauerhaft gespeichert ... Die KI-Ausgaben sind Vorschlaege, keine professionelle Beratung und ersetzen keine Fachperson.",
+      "category": "privacy-claim",
+      "risk": "HOCH",
+      "rationale": "'Kein KI-Training' + 'nicht dauerhaft gespeichert' fuer Gemini. Bei der Gemini API gilt No-Training nur fuer den kostenpflichtigen/Cloud-Pfad; Free-Tier/AI-Studio-Daten KOENNEN zum Training genutzt werden. Wenn die App den falschen Endpunkt nutzt, ist die Zusage falsch (UWG/DSGVO). Positiv: Art.9-Hinweis + 'keine Fachperson' (HWG) ist vorbildlich."
+    },
+    {
+      "key": "ai_prompt_no_dates_rule",
+      "line": 808,
+      "text": "... 'Eintrag vom 30. verbindet deine Borreliose direkt mit dem Mangel an Sport.' ... 'Deine Borreliose haengt direkt mit dem Bewegungsmangel zusammen.' ... 'Laufen ist der Schluessel zur mentalen Klarheit ...'",
+      "category": "ai-claim",
+      "risk": "HOCH",
+      "rationale": "System-Prompt-BEISPIELE stellen KAUSALE Gesundheitsaussagen als Vorbild hin: 'Borreliose haengt direkt mit Bewegungsmangel zusammen', 'Laufen ist der Schluessel zur mentalen Klarheit'. Das traniert die KI darauf, medizinische Kausalzusammenhaenge zu behaupten (HWG/Heilaussagen-Risiko). Auch wenn nur Stil-Beispiel: die Modell-Ausgabe kann solche Aussagen produzieren. Disclaimer zwingend an Ausgabe."
+    },
+    {
+      "key": "ai_prompt_custom_intro",
+      "line": 933,
+      "text": "Wenn der Auftrag Recherche, Ideen, Alternativen, Vorschlaege, Empfehlungen oder neue Informationen verlangt, dann liefere diese AKTIV, auch wenn sie in den Eintraegen nicht vorkommen.",
+      "category": "ai-claim",
+      "risk": "HOCH",
+      "rationale": "Custom-Profil laesst die KI frei recherchieren/empfehlen mit nutzerdefiniertem Fokus-Text (%1$s). Nutzer koennte als Fokus Gesundheits-/Rechts-/Finanzberatung eingeben -> KI gibt aktive Empfehlungen ueber die Tagebuchdaten hinaus. Unkontrollierter Beratungs-Output ohne fachlichen Disclaimer (HWG/Rechtsdienstleistung/Finanzberatung-Risiko). Braucht generellen 'keine Fachberatung'-Hinweis an JEDER KI-Ausgabe."
+    },
+    {
+      "key": "onboarding_feature_secure",
+      "line": 1061,
+      "text": "Deine Daten sind lokal gespeichert, KI-Anfragen sind verschluesselt",
+      "category": "marketing-claim",
+      "risk": "HOCH",
+      "rationale": "Doppel-Claim 'Daten lokal gespeichert' + 'KI-Anfragen verschluesselt'. Beide ueberpruefbare Tatsachenbehauptungen (UWG 5). App hat laut Memory Google-Drive-Backup + Gemini-Anfragen - 'lokal gespeichert' kann irrefuehrend sein wenn Cloud-Backup existiert. Gegen tatsaechliche Speicherung/Transportverschluesselung verifizieren."
+    },
+    {
+      "key": "retro_benefit_weekly",
+      "line": 1035,
+      "text": "Unbegrenzte Wochenrueckblicke, nicht nur die ersten 2 Wochen",
+      "category": "marketing-claim",
+      "risk": "HOCH",
+      "rationale": "'Unbegrenzt'-Absolutheitsclaim (UWG 5). Kollidiert potenziell mit KI-Tageskontingent (ai_limits_dialog_body: 150/Tag/Profil + Pausen). Pruefen ob Wochenrueckblicke wirklich ohne Limit erzeugbar sind. Irrefuehrungsrisiko."
+    },
+    {
+      "key": "paywall_feature_profiles",
+      "line": 1125,
+      "text": "Unbegrenzte individuelle KI-Profile",
+      "category": "marketing-claim",
+      "risk": "HOCH",
+      "rationale": "'Unbegrenzt'-Claim fuer KI-Profile (UWG 5). Spannung zum dokumentierten Tageskontingent (150/Tag pro Profil). Anzahl Profile evtl. unbegrenzt, Nutzung aber limitiert - Verbraucher koennte 'unbegrenzt' als unbegrenzte Nutzung missverstehen."
+    },
+    {
+      "key": "churn_offer_feature_perspectives",
+      "line": 1177,
+      "text": "Alle KI-Profile (4 vordefiniert + unbegrenzt eigene)",
+      "category": "marketing-claim",
+      "risk": "HOCH",
+      "rationale": "'unbegrenzt eigene' KI-Profile im Retention-Angebot (UWG 5). Gleiche Spannung zum Tageskontingent. Zahl '4 vordefiniert' muss mit tatsaechlicher Profil-Anzahl uebereinstimmen."
+    },
+    {
+      "key": "onboarding_free_trial",
+      "line": 1081,
+      "text": "Kostenlos, jederzeit kuendbar",
+      "category": "subscription",
+      "risk": "HOCH",
+      "rationale": "'Kostenlos, jederzeit kuendbar' im Onboarding OHNE Preis-/Laufzeit-/Verlaengerungsangabe an dieser Stelle. Abo-Recht (312j BGB Button-Loesung, Google-Play-Policy): vor Trial-Start muessen Folgepreis, Verlaengerungsintervall und Zahlungspflicht klar genannt sein. 'Kostenlos' ohne Hinweis auf anschliessende Zahlungspflicht ist abmahngefaehrdet."
+    },
+    {
+      "key": "onboarding_start_free",
+      "line": 1083,
+      "text": "Kostenlos starten",
+      "category": "subscription",
+      "risk": "HOCH",
+      "rationale": "CTA-Button 'Kostenlos starten' (312j Abs.3 BGB Button-Loesung). Wenn er ein kostenpflichtiges Trial-Abo startet, muss die Beschriftung die Zahlungspflicht erkennen lassen. 'Kostenlos starten' allein kann gegen die Button-Loesung verstossen. Pruefen was der Button ausloest."
+    },
+    {
+      "key": "ai_limits_dialog_body",
+      "line": 1199,
+      "text": "150 Anfragen pro Tag und Profil; 4 vordefinierte zusammen 600/Tag; +150/Tag je eigenem Profil; 1-30 hoechste Qualitaet; 31-100 Standard; 30-Min-Pause bei 101; ab 151 Stopp bis morgen; max 50 Anfragen/Stunde -> 5-Min-Pause; OHNE ABO 5 Dashboard-Analysen/Woche/Profil + 5 Textverbesserungen/Woche; 'Die meisten Nutzer werden diese Grenzen nicht erreichen.'",
+      "category": "ai-claim",
+      "risk": "HOCH",
+      "rationale": "Sehr konkrete KI-Kontingent-/Drosselungs-Aussage (UWG 5) mit vielen ueberpruefbaren Zahlen (150/Tag/Profil, 600/Tag, Qualitaetsstufen 1-30/31-100, 30-Min-Pause bei 101, Stopp ab 151, 50/Stunde, 5-Min-Pause, Free 5/Woche). JEDE Zahl muss exakt der Code-Implementierung entsprechen - Abweichung = Irrefuehrung. Kritisch: Wechselwirkung mit 'Unbegrenzt'-Werbung. Satz 'Die meisten Nutzer werden diese Grenzen nicht erreichen' ist Verharmlosung - vertretbar, pruefen. Hauptrisiko: Konsistenz Code<->Text."
+    },
+    {
+      "key": "onboarding_feature_secure__privacy",
+      "line": 1061,
+      "text": "Deine Daten sind lokal gespeichert, KI-Anfragen sind verschluesselt",
+      "category": "privacy-claim",
+      "risk": "HOCH",
+      "rationale": "Datenschutz-Doppelclaim (zusaetzlich zur marketing-Bewertung): 'lokal gespeichert' + 'verschluesselt'. DSGVO/UWG: beide technisch belegbar. Konflikt mit dokumentiertem Google-Drive-Backup (restoreFromDrive) - bei Cloud-Sicherung ist 'lokal gespeichert' unvollstaendig/irrefuehrend. 'KI-Anfragen verschluesselt' = Transportverschluesselung zu Gemini? Genau belegen. HOCH wegen Datenschutz-Relevanz + moeglichem Widerspruch zur Cloud-Backup-Funktion."
+    },
+    {
+      "key": "journal_text_upsell_body",
+      "line": 97,
+      "text": "Mit Premium kannst du jeden Eintrag verbessern.",
+      "category": "marketing-claim",
+      "risk": "MITTEL",
+      "rationale": "Absolutaussage 'jeden Eintrag' kollidiert mit Rate-Limit (journal_rate_limit Cooldown). 'jeden' suggeriert unbegrenzt — pruefen ob Premium wirklich ohne Limit."
+    },
+    {
+      "key": "journal_rate_limit",
+      "line": 111,
+      "text": "Kurze Pause: Noch %1$d Minuten bis zur naechsten Verbesserung.",
+      "category": "ai-claim",
+      "risk": "MITTEL",
+      "rationale": "Belegt KI-Rate-Limit. Muss gegen Marketing 'jeden Eintrag/taeglich' abgeglichen werden (UWG §5 Irrefuehrung ueber Leistungsumfang)."
+    },
+    {
+      "key": "dashboard_weekly_review_upsell_body",
+      "line": 242,
+      "text": "Du hattest eine bewegte Woche. Mit Premium siehst du die volle Analyse: erkenne Muster, entdecke Einsichten und verstehe, was dich beschaeftigt.",
+      "category": "marketing-claim",
+      "risk": "MITTEL",
+      "rationale": "Werbeversprechen 'volle Analyse/erkenne Muster/verstehe was dich beschaeftigt' — KI-Genauigkeitsversprechen. Disclaimer noetig dass KI-Analysen keine objektive Wahrheit/Diagnose sind."
+    },
+    {
+      "key": "dashboard_premium_upsell_body",
+      "line": 252,
+      "text": "Mit Premium bekommst du grosszuegige Analysen aus beliebig vielen Profilen.",
+      "category": "subscription",
+      "risk": "MITTEL",
+      "rationale": "'grosszuegige Analysen' (vage) + 'beliebig vielen Profilen' (Unbegrenztheit). Muss tatsaechlich unbegrenzt sein, sonst UWG §5."
+    },
+    {
+      "key": "dashboard_loading_auto_update",
+      "line": 277,
+      "text": "KI-Dashboard wird nach jedem neuen Tagebucheintrag automatisch aktualisiert",
+      "category": "ai-claim",
+      "risk": "MITTEL",
+      "rationale": "'nach jedem neuen Eintrag automatisch' kollidiert potenziell mit dashboard_limit_daily/weekly. Pruefen ob 'jedem' durch Limits eingeschraenkt."
+    },
+    {
+      "key": "settings_premium_feature_improve",
+      "line": 491,
+      "text": "Taegliche KI-Textverbesserung",
+      "category": "marketing-claim",
+      "risk": "MITTEL",
+      "rationale": "'Taeglich' Frequenzversprechen. Abgleich mit Rate-Limit noetig (journal_rate_limit Cooldown auch bei Premium?)."
+    },
+    {
+      "key": "settings_premium_feature_dashboard",
+      "line": 493,
+      "text": "Taegliche Dashboard-Analysen",
+      "category": "marketing-claim",
+      "risk": "MITTEL",
+      "rationale": "'Taegliche Analysen' vs. dashboard_limit_daily 'Tageslimit erreicht'. Muss konsistent sein."
+    },
+    {
+      "key": "streak_desc_365",
+      "line": 136,
+      "text": "Was als kleine Gewohnheit begann, ist jetzt ein fester Teil deines Lebens. Dein Tagebuch kennt dich besser als je zuvor.",
+      "category": "marketing-claim",
+      "risk": "MITTEL",
+      "rationale": "'Dein Tagebuch kennt dich besser als je zuvor' impliziert KI-Profilbildung/Personenanalyse. Grenzwertig: Datenschutz (Profiling sensibler Daten) + KI-Versprechen."
+    },
+    {
+      "key": "follow_up_premium_subtext",
+      "line": 214,
+      "text": "Jeder Nachtrag fliesst automatisch ins Dashboard ein, damit deine Analyse immer vollstaendig bleibt.",
+      "category": "marketing-claim",
+      "risk": "MITTEL",
+      "rationale": "'automatisch/immer vollstaendig' — Absolutaussage zur KI-Analyse. 'immer vollstaendig' starkes Versprechen, pruefen ob durch Limits eingeschraenkt."
+    },
+    {
+      "key": "paywall_instead_per_month",
+      "line": 44,
+      "text": "Spare %1$d%% gegenueber dem Monatsabo",
+      "category": "subscription",
+      "risk": "MITTEL",
+      "rationale": "Preisvorteils-Werbung mit Prozent. Ersparnis muss korrekt/nachpruefbar sein (UWG §5). Prozent-Escape korrekt."
+    },
+    {
+      "key": "follow_up_premium_body",
+      "line": 213,
+      "text": "Mit Premium kannst du zu jedem Tagebucheintrag so viele Nachtraege hinzufuegen wie du moechtest.",
+      "category": "subscription",
+      "risk": "MITTEL",
+      "rationale": "'so viele wie du moechtest' = unbegrenzt. Konsistenz mit Title und Code-Realitaet pruefen."
+    },
+    {
+      "key": "settings_premium_lifetime",
+      "line": 479,
+      "text": "Lifetime-Zugang aktiv",
+      "category": "subscription",
+      "risk": "MITTEL",
+      "rationale": "'Lifetime' = lebenslang. Rechtlich heikel (App-Lebensdauer vs. Nutzer-Lebensdauer). Muss klar definiert sein."
+    },
+    {
+      "key": "settings_premium_lifetime_desc",
+      "line": 484,
+      "text": "Einmalkauf, alle Features dauerhaft freigeschaltet.",
+      "category": "subscription",
+      "risk": "MITTEL",
+      "rationale": "'dauerhaft' Lifetime-Versprechen — kann irrefuehren wenn App eingestellt wird; praezisieren."
+    },
+    {
+      "key": "profile_entropy_desc",
+      "line": 383,
+      "text": "Erkennt Stress, Unordnung und Belastung",
+      "category": "health-language",
+      "risk": "MITTEL",
+      "rationale": "Explizit 'Stress'/'Belastung' — mentale-Last-Sprache. HWG-Grenzbereich: darf nicht als Therapie/Heilung verstanden werden. Disclaimer noetig."
+    },
+    {
+      "key": "profile_insight_desc",
+      "line": 384,
+      "text": "Macht wiederkehrende Denk- und Gefuehlsmuster sichtbar",
+      "category": "health-language",
+      "risk": "MITTEL",
+      "rationale": "'Denk- und Gefuehlsmuster' — psychologisch-therapienahe Sprache. Grenzbereich mentale Gesundheit."
+    },
+    {
+      "key": "profile_insight_long",
+      "line": 391,
+      "text": "Die KI schaut tiefer als nur auf Ereignisse. Sie erkennt: Denkmuster und Ueberzeugungen, wiederkehrende Gefuehle und Reaktionen, Staerken, Werte die dein Handeln antreiben. Fuer alle die sich selbst besser verstehen und innerlich wachsen wollen.",
+      "category": "health-language",
+      "risk": "MITTEL",
+      "rationale": "'Denkmuster, Ueberzeugungen, innerlich wachsen' — Selbsterkenntnis/Psychoanalyse-naehe. Klarstellen dass keine Therapie/Diagnose."
+    },
+    {
+      "key": "legend_burden_scale",
+      "line": 323,
+      "text": "Belastungs-Skala",
+      "category": "health-language",
+      "risk": "MITTEL",
+      "rationale": "'Belastung' quantifiziert auf Skala — Naehe zu Stress-/Gesundheitsmessung. Keine Diagnose, aber Grenzbereich."
+    },
+    {
+      "key": "legend_burden_desc",
+      "line": 324,
+      "text": "Der Halbkreis zeigt wie stark dich dieses Thema belastet:",
+      "category": "health-language",
+      "risk": "MITTEL",
+      "rationale": "Misst psychische Belastung. Grenzbereich mentale Gesundheit — kein medizinisches Mess-Versprechen sein lassen."
+    },
+    {
+      "key": "legend_high_burden",
+      "line": 325,
+      "text": "Hoch (67-100%) — Sofort handeln",
+      "category": "health-language",
+      "risk": "MITTEL",
+      "rationale": "'Sofort handeln' bei hoher Belastung — Handlungsanweisung im Wohlbefindens-Kontext, grenzt an Gesundheitsempfehlung."
+    },
+    {
+      "key": "urgency_high",
+      "line": 339,
+      "text": "Dringend — Sofort handeln",
+      "category": "health-language",
+      "risk": "MITTEL",
+      "rationale": "Dringlichkeits-/Handlungsaufforderung der KI; im Stress/Belastungs-Kontext als Gesundheitsrat lesbar."
+    },
+    {
+      "key": "journal_drive_backup_current",
+      "line": 74,
+      "text": "Backup aktuell, alle Eintraege gesichert",
+      "category": "privacy-claim",
+      "risk": "MITTEL",
+      "rationale": "'alle Eintraege gesichert' — Vollstaendigkeitsversprechen. Bei Sync-Fehler/Teilbackup irrefuehrend; gegen Code-Realitaet (Drive-Sync) pruefen."
+    },
+    {
+      "key": "journal_transcribed_with",
+      "line": 91,
+      "text": "Transkribiert mit %1$s",
+      "category": "privacy-claim",
+      "risk": "MITTEL",
+      "rationale": "Zeigt Transkriptionsquelle (z.B. Groq Cloud). Audio geht an Cloud-Anbieter — muss in Datenschutz/Data-Safety deklariert sein."
+    },
+    {
+      "key": "entry_delete_message",
+      "line": 170,
+      "text": "Diesen Eintrag unwiderruflich loeschen?",
+      "category": "legal-text",
+      "risk": "MITTEL",
+      "rationale": "'unwiderruflich' — aber Memory dokumentiert dass Drive-Restore geloeschte Eintraege wiederbelebt. Aussage koennte technisch falsch sein (Loeschung nicht endgueltig). Pruefen."
+    },
+    {
+      "key": "profile_custom_long",
+      "line": 393,
+      "text": "Du bestimmst selbst, worauf die KI achten soll. Schreibe deinen eigenen Analyse-Fokus, zum Beispiel: (deutsche Anfuehrungszeichen) Finde alle Erwaehnungen von Sport (gerades Schluss-Anfuehrungszeichen) ...",
+      "category": "format-bug",
+      "risk": "MITTEL",
+      "rationale": "Rohe deutsche Anfuehrungszeichen mit schliessendem geraden Quote — inkonsistent zu \\u201e/\\u201c-Escapes anderswo (z.B. dashboard_custom_focus_hint). Memory feedback_kotlin_german_quotes_in_strings: deutsche Quotes muessen escaped werden, sonst String-Bruch moeglich. Pruefen."
+    },
+    {
+      "key": "settings_feedback_dialog_desc",
+      "line": 527,
+      "text": "Deine Nachricht an die Entwickler - wir lesen alles und antworten persoenlich!",
+      "category": "marketing-claim",
+      "risk": "MITTEL",
+      "rationale": "'wir lesen alles und antworten persoenlich' ist ein konkretes Leistungsversprechen. Wenn nicht jede Nachricht beantwortet wird, irrefuehrend. Verstaerkt durch 'wir antworten innerhalb von 24 Stunden an Werktagen' (settings_report_ai_confirm_body, Z.639) - eine Reaktionszeit-Zusage, die einhaltbar sein muss."
+    },
+    {
+      "key": "dashboard_profile_focus_entropy",
+      "line": 959,
+      "text": "Sortiert dein Leben: erkennt Stress, Unordnung und Belastung und zeigt was du loslassen oder klaeren kannst.",
+      "category": "health-language",
+      "risk": "MITTEL",
+      "rationale": "'erkennt Stress und zeigt was du loslassen kannst' grenzt an Wohlbefindens-/Selbsthilfe-Versprechen (HWG-Grenzbereich). Als Feature-Beschreibung einer KI ohne Therapieanspruch sollte klar bleiben, dass es um Tagebuch-Reflexion geht, nicht um Stressbehandlung."
+    },
+    {
+      "key": "ai_prompt_insight_intro",
+      "line": 904,
+      "text": "Du bist ein einfuehlsamer, tiefgruendiger Muster-Analyst fuer persoenliche Entwicklung. ... unbewusste Ueberzeugungen, emotionale Reaktionsmuster ...",
+      "category": "ai-claim",
+      "risk": "MITTEL",
+      "rationale": "Psychotherapie-nahe Begriffe ('unbewusste Ueberzeugungen', 'emotionale Reaktionsmuster', 'wohlwollender Spiegel'). KI erstellt psychologisch anmutende Profile. HWG-Grenzbereich - als KI-Selbsterkenntnis vermarktet, aber Naehe zu Psychoanalyse dokumentieren."
+    },
+    {
+      "key": "settings_unlock_premium",
+      "line": 507,
+      "text": "Premium freischalten",
+      "category": "subscription",
+      "risk": "MITTEL",
+      "rationale": "Abo-CTA. In Zeilen 501-1000 fehlen an dieser CTA die Abo-Pflichtangaben (Preis, Laufzeit, automatische Verlaengerung, Kuendigungsweg). Pruefen, ob sie an der Paywall (anderer Zeilenbereich) vollstaendig stehen - sonst UWG/Play-Billing-Verstoss."
+    },
+    {
+      "key": "paywall_exit_bonus_days",
+      "line": 604,
+      "text": "+ %1$d Tage extra Testzeit",
+      "category": "subscription",
+      "risk": "MITTEL",
+      "rationale": "Exit-Bonus verlaengert die Testphase. Trial-/Auto-Renewal-Pflichtangaben muessen klar bleiben (wann beginnt die kostenpflichtige Verlaengerung, wie kuendigen). Dark-Pattern-Risiko, wenn die verlaengerte Testzeit den Auto-Start des Abos verschleiert."
+    },
+    {
+      "key": "churn_discount_badge",
+      "line": 799,
+      "text": "%1$d%% SPAREN",
+      "category": "subscription",
+      "risk": "MITTEL",
+      "rationale": "Rabatt-/Retention-Badge in einem Churn-Flow (Kuendigungs-Abfangen). Prozent-Versprechen muss zutreffen und Bezugspreis nachvollziehbar sein (UWG 5 Preisangaben). Churn-Dialog mit Rabatt ist Dark-Pattern-sensibel - Kuendigung darf nicht erschwert werden."
+    },
+    {
+      "key": "consent_card3_title",
+      "line": 615,
+      "text": "Anonyme Statistiken",
+      "category": "privacy-claim",
+      "risk": "MITTEL",
+      "rationale": "'Anonyme Statistiken' (Firebase Analytics). Firebase nutzt eine pseudonyme App-Instance-ID/Geraetekennungen - datenschutzrechtlich i.d.R. NICHT vollstaendig 'anonym', sondern pseudonym. 'Anonym' kann irrefuehrend sein. Mehrfach verwendet (consent_toggle_analytics_*, settings_analytics_*)."
+    },
+    {
+      "key": "consent_toggle_analytics_body",
+      "line": 671,
+      "text": "Firebase Analytics - hilft uns die App zu verbessern. Keine persoenlichen Inhalte, nur anonyme Klick-Zahlen.",
+      "category": "privacy-claim",
+      "risk": "MITTEL",
+      "rationale": "'nur anonyme Klick-Zahlen' + 'Keine persoenlichen Inhalte'. Firebase erfasst Geraete-/Instanz-IDs (pseudonym). Aussage 'anonym' ist datenschutzrechtlich angreifbar; praeziser waere 'pseudonym/ohne Tagebuchinhalte'."
+    },
+    {
+      "key": "settings_analytics_title",
+      "line": 728,
+      "text": "Anonyme Statistik",
+      "category": "privacy-claim",
+      "risk": "MITTEL",
+      "rationale": "Gleiche 'anonym'-Problematik wie consent_card3 (Firebase = pseudonym). Konsistent verwendet, daher systematischer Fund."
+    },
+    {
+      "key": "consent_toggle_do_not_sell_body",
+      "line": 681,
+      "text": "Best Journal verkauft oder vermarktet deine Daten nirgendwo auf der Welt.",
+      "category": "privacy-claim",
+      "risk": "MITTEL",
+      "rationale": "Absolute weltweite Zusage 'verkauft nirgendwo auf der Welt'. Muss mit der tatsaechlichen Datenweitergabe (Firebase Analytics an Google, Werbe-IDs?) konsistent sein. Unter CCPA/CPRA gilt schon 'sharing' fuer Cross-Context-Werbung teils als 'sale'. Belastbarkeit pruefen."
+    },
+    {
+      "key": "privacy_gate_tts_body",
+      "line": 630,
+      "text": "Dein Text wird verschluesselt an Microsoft gesendet ... Kein KI-Training mit deinen Texten",
+      "category": "privacy-claim",
+      "risk": "MITTEL",
+      "rationale": "'Kein KI-Training' fuer Microsoft Edge TTS. Edge-TTS ist ein inoffizieller/oeffentlicher Endpunkt ohne formelles DPA - die No-Training-Zusage ist schwer belegbar. Verifizieren, welcher MS-Dienst genutzt wird und ob ein Vertrag besteht."
+    },
+    {
+      "key": "consent_toggle_drive_body",
+      "line": 679,
+      "text": "Sichert Eintraege verschluesselt in deinem eigenen Google Drive. Du behaeltst die volle Kontrolle - die Datei liegt in deinem Konto, nicht bei uns.",
+      "category": "privacy-claim",
+      "risk": "MITTEL",
+      "rationale": "'verschluesselt' + 'volle Kontrolle'. Pruefen, ob das Drive-Backup wirklich at-rest/Ende-zu-Ende verschluesselt ist oder nur via TLS uebertragen. 'verschluesselt' suggeriert mehr als Transportverschluesselung - Code-Abgleich noetig."
+    },
+    {
+      "key": "settings_delete_account_subtitle",
+      "line": 731,
+      "text": "Entfernt alle lokalen Daten und das Drive-Backup unwiderruflich.",
+      "category": "privacy-claim",
+      "risk": "MITTEL",
+      "rationale": "'unwiderruflich'-Loeschzusage (DSGVO Art.17). Positiv abgesichert durch settings_delete_account_drive_error_body (Z.740): 'Ohne vollstaendige Loeschung waere die Meldung unwiderruflich entfernt nicht korrekt' - ehrlicher Fehlerfall. Aber: Android System-Backup (Z.685) kann Daten dennoch in Google halten; 'unwiderruflich' nur korrekt, wenn auch dieses adressiert wird."
+    },
+    {
+      "key": "ai_prompt_goals_definition",
+      "line": 897,
+      "text": "'Mein Schlaf ist so schlecht' = implizites Ziel Schlafverbesserung ... 'Ich will abnehmen' ...",
+      "category": "ai-claim",
+      "risk": "MITTEL",
+      "rationale": "Prompt leitet KI an, Gesundheits-/Koerperziele ('abnehmen', 'Schlafverbesserung') zu erkennen und zu verfolgen. Bewegt sich in Wellness-Beratung. Grenzbereich HWG; Ausgaben sollten keine konkreten medizinischen Empfehlungen geben."
+    },
+    {
+      "key": "consent_confirmation",
+      "line": 652,
+      "text": "Mit Loslegen bestaetigst du, dass du die Datenschutzerklaerung, die Nutzungsbedingungen und das Impressum gelesen hast ...",
+      "category": "legal-text",
+      "risk": "MITTEL",
+      "rationale": "Inhaltlich solide Einwilligungs-Bestaetigung. ABER: typografische Anfuehrungszeichen gemischt - oeffnend deutsch tief, schliessend gerade. Inkonsistente Quotes; in Kotlin/XML Escaping-Risiko (vgl. MEMORY: deutsche Anfuehrungszeichen). Pruefen, ob in der XML korrekt als &quot; bzw. Literal vorliegt."
+    },
+    {
+      "key": "onboarding_goal_stress",
+      "line": 1063,
+      "text": "Stress abbauen",
+      "category": "health-language",
+      "risk": "MITTEL",
+      "rationale": "Onboarding-Ziel 'Stress abbauen' positioniert die App als Stress-Reduktions-Werkzeug. HWG-Grenzbereich: gesundheitsbezogener Nutzen. Im Zusammenspiel mit Paywall (paywall_headline_stress) und KI-Analysen als Wirkungsaussage wertbar. Disclaimer entschaerft, das Ziel selbst bleibt ein Wellness-Wirkversprechen."
+    },
+    {
+      "key": "ai_banner_body",
+      "line": 1203,
+      "text": "Intelligente Lebensratschlaege aus deinen Mustern. Alle KI-Ausgaben sind Anregungen, keine professionelle Beratung.",
+      "category": "health-language",
+      "risk": "MITTEL",
+      "rationale": "'Intelligente Lebensratschlaege aus deinen Mustern' ist eine Beratungs-/Coaching-Aussage (HWG/Produkthaftungs-Naehe). Positiv: direkt anschliessend der Disclaimer 'keine professionelle Beratung'. MITTEL, weil 'Lebensratschlaege' eine aktive Empfehlungsfunktion benennt; Disclaimer muss unmittelbar sichtbar bleiben."
+    },
+    {
+      "key": "paywall_feature_followups",
+      "line": 1420,
+      "text": "Unbegrenzte Nachtraege zu jedem Tagebucheintrag",
+      "category": "marketing-claim",
+      "risk": "MITTEL",
+      "rationale": "'Unbegrenzt'-Claim fuer Nachtraege (UWG 5). Nachtraege vermutlich nur Text (kein KI-Limit) -> MITTEL. Ueberpruefbare Absolutheitsbehauptung; bestaetigen dass keine Obergrenze existiert."
+    },
+    {
+      "key": "settings_premium_feature_followups_desc",
+      "line": 1422,
+      "text": "So viele Nachtraege pro Eintrag wie du moechtest",
+      "category": "marketing-claim",
+      "risk": "MITTEL",
+      "rationale": "Umschreibung von 'unbegrenzt'. Gleiche Absolutheitsbehauptung wie paywall_feature_followups (UWG 5). Wahrheit/Konsistenz pruefen."
+    },
+    {
+      "key": "onboarding_premium_feature_improve",
+      "line": 1076,
+      "text": "KI-Textverbesserung taeglich, jeder Eintrag wird klarer und ausdrucksstaerker",
+      "category": "marketing-claim",
+      "risk": "MITTEL",
+      "rationale": "Erfolgszusage 'jeder Eintrag wird klarer und ausdrucksstaerker' (UWG 5). 'jeder Eintrag' ist Allaussage; KI-Ergebnis nicht garantiert. 'taeglich' (Premium-Feature)."
+    },
+    {
+      "key": "onboarding_premium_feature_patterns",
+      "line": 1079,
+      "text": "Muster sichtbar machen: Die KI zeigt wiederkehrende Denk- und Gefuehlsmuster in deinen Eintraegen",
+      "category": "marketing-claim",
+      "risk": "MITTEL",
+      "rationale": "Funktionsversprechen 'KI zeigt Denk-/Gefuehlsmuster' (UWG 5 + HWG-Grenze, psychologie-naher Nutzen). Muss durch tatsaechliche Feature-Faehigkeit gedeckt sein."
+    },
+    {
+      "key": "paywall_feature_patterns",
+      "line": 1119,
+      "text": "Erkenne wiederkehrende Muster in deinem Denken",
+      "category": "marketing-claim",
+      "risk": "MITTEL",
+      "rationale": "Funktions-/Nutzenversprechen 'Muster in deinem Denken erkennen' (UWG 5 + HWG-Grenze). Verifikationspflicht wie patterns-Feature im Onboarding."
+    },
+    {
+      "key": "paywall_headline_clarity_sub",
+      "line": 1131,
+      "text": "Die KI erkennt Muster, die dir verborgen bleiben",
+      "category": "marketing-claim",
+      "risk": "MITTEL",
+      "rationale": "Starke Erfolgszusage 'KI erkennt Muster, die dir verborgen bleiben' (UWG 5). Behauptet ueber menschliche Selbstwahrnehmung hinausgehende Faehigkeit - schwer beweisbar. Pruefen ob abschwaechbar."
+    },
+    {
+      "key": "onboarding_try_premium",
+      "line": 1092,
+      "text": "8 Tage gratis, danach ab 3,99 EUR/Monat",
+      "category": "subscription",
+      "risk": "MITTEL",
+      "rationale": "Trial+Preis '8 Tage gratis, danach ab 3,99 EUR/Monat'. Positiv: Preis + Trialdauer. Aber 'ab 3,99' (Ab-Preis) + fehlende Verlaengerungs-/Kuendigungsangabe an dieser Stelle. Konsistenz 8 Tage vs. Tag-7/Tag-8-Logik pruefen."
+    },
+    {
+      "key": "paywall_first_payment",
+      "line": 1107,
+      "text": "Erste Zahlung",
+      "category": "subscription",
+      "risk": "MITTEL",
+      "rationale": "Teil der Trial-Timeline (Heute/Tag 7 Erinnerung/Tag 8 Erste Zahlung). Belegt automatische Umwandlung Trial->Bezahlabo an Tag 8. Zulaessig WENN vorher klar; in Kombination mit 'Kostenlos starten' muss Zahlungspflicht VOR Klick erkennbar sein. Timeline selbst transparent (positiv), abhaengig vom Button-Wording."
+    },
+    {
+      "key": "paywall_legal_hint",
+      "line": 1115,
+      "text": "Mit dem Abo akzeptierst du die %1$s. Dein 14-taegiges Widerrufsrecht ist dort beschrieben.",
+      "category": "subscription",
+      "risk": "MITTEL",
+      "rationale": "Widerrufs-/AGB-Hinweis. Positiv: nennt 14-taegiges Widerrufsrecht + verlinkt Nutzungsbedingungen. ABER bei sofortiger Bereitstellung digitaler Inhalte muss der Verbraucher dem Verlust des Widerrufsrechts ausdruecklich zustimmen (356 Abs.5 BGB) - siehe Kommentar paywall_purchase_loading_toast (Sofort-Verzichts-Dialog, line 1100). Pruefen ob Verzicht korrekt eingeholt wird; sonst Widerspruch '14 Tage Widerruf' vs. Sofort-Freischaltung."
+    },
+    {
+      "key": "paywall_exit_discount",
+      "line": 1142,
+      "text": "Rabatt fuer %1$d Monate",
+      "category": "subscription",
+      "risk": "MITTEL",
+      "rationale": "Exit-Intent-Rabatt (UWG 5/PreisangabenVO). Bei Rabattwerbung muessen Referenzpreis + Geltungsdauer klar sein. Pruefen dass urspruenglicher Preis + Rabatthoehe transparent (vgl. paywall_exit_price_comparison)."
+    },
+    {
+      "key": "paywall_exit_price_comparison",
+      "line": 1143,
+      "text": "Nur %1$s statt %2$s pro Monat",
+      "category": "subscription",
+      "risk": "MITTEL",
+      "rationale": "Streichpreis-Werbung 'Nur X statt Y' (PreisangabenVO/UWG 5). Der durchgestrichene Referenzpreis muss tatsaechlich der zuvor/regulaer geforderte Preis sein. Irrefuehrungsrisiko bei Schein-Streichpreisen. Verifizieren."
+    },
+    {
+      "key": "ai_limit_yearly",
+      "line": 1193,
+      "text": "Jahresabo, %1$s/Jahr (spare 37%%)",
+      "category": "subscription",
+      "risk": "MITTEL",
+      "rationale": "Ersparnis-Claim 'spare 37 Prozent' (UWG 5/PreisangabenVO). Prozent muss rechnerisch gegen Monatspreis x12 stimmen. Pruefen dass 37 Prozent aus tatsaechlichen Preisen folgt - sonst irrefuehrend. %% korrekt escaped."
+    },
+    {
+      "key": "ai_limit_body",
+      "line": 1191,
+      "text": "Ohne Abo hast du 5 Textverbesserungen pro Woche und 5 Dashboard-Aktualisierungen pro Woche je Profil. Mit dem Premium-Abo: bis zu 150 pro Tag.",
+      "category": "ai-claim",
+      "risk": "MITTEL",
+      "rationale": "KI-Limit-Aussage mit Zahlen (5/Woche Free, 'bis zu 150 pro Tag' Premium). UWG 5: Zahlen muessen der tatsaechlichen Drosselung entsprechen. 'bis zu 150' korrekt relativiert. ABER kollidiert mit 'Unbegrenzt'-Claims (retro_benefit_weekly, paywall_feature_profiles) - interner Widerspruch. Konsistenzpruefung kritisch."
+    },
+    {
+      "key": "profile_style_advisor",
+      "line": 1414,
+      "text": "- Schreibe im Stil eines Lebensberaters, hebe hervor was gut lief, was verbessert werden kann, und gib dem Leser das Gefuehl von Klarheit und Ordnung",
+      "category": "ai-claim",
+      "risk": "MITTEL",
+      "rationale": "Gemini-System-Prompt: KI soll 'im Stil eines Lebensberaters' schreiben und Verbesserungen vorschlagen. HWG/Produkthaftungs-Naehe ('Lebensberater' + 'was verbessert werden kann' erzeugt beratende Ausgaben). KEINE medizinische Diagnose-Anweisung (positiv). MITTEL: ratgebende Ausgaben koennten ohne Disclaimer als professionelle Beratung missverstanden werden - Health-Disclaimer (1487/1488) entschaerft."
+    },
+    {
+      "key": "profile_style_insight",
+      "line": 1415,
+      "text": "- Schreibe im Stil einer tiefgruendigen Selbsterkenntnis-Erzaehlung, decke Denkmuster, wiederkehrende Gefuehle und verborgene Staerken auf",
+      "category": "ai-claim",
+      "risk": "MITTEL",
+      "rationale": "Gemini-System-Prompt: KI soll 'Denkmuster, wiederkehrende Gefuehle und verborgene Staerken aufdecken'. Psychologie-nahe Analyse-Anweisung (HWG-Grenze). Keine Diagnose, aber introspektive/psychologisierende Ausgaben. MITTEL - durch Disclaimer abgesichert; pruefen dass KI keine pathologisierenden Aussagen generiert."
+    },
+    {
+      "key": "profile_style_custom",
+      "line": 1417,
+      "text": "- PROFIL-STIL (Custom): Schreibe diesen Rueckblick mit klarem Bezug zum Benutzer-Auftrag ... Benutzer-Auftrag (zur Orientierung): %1$s",
+      "category": "ai-claim",
+      "risk": "MITTEL",
+      "rationale": "Gemini-System-Prompt mit eingebettetem frei waehlbarem Benutzer-Auftrag (%1$s). Produkthaftungs-/Inhalts-Risiko: Nutzer koennten ueber den Custom-Auftrag die KI zu medizinischen/therapeutischen Ratschlaegen anweisen - das Prompt enthaelt KEINE Schutz-/Verbots-Klausel gegen gesundheitsbezogene Ausgaben. Empfehlung: pruefen ob ein Guardrail (keine Diagnosen/med. Ratschlaege) fehlt. MITTEL."
+    },
+    {
+      "key": "journal_ai_improving",
+      "line": 40,
+      "text": "KI verbessert Text — bitte warten",
+      "category": "ai-claim",
+      "risk": "NIEDRIG",
+      "rationale": "KI-Verarbeitung von Nutzertext. Cloud-Verarbeitung (Gemini/Groq) impliziert; muss von AI-Transparenz (EU AI Act Art. 50) abgedeckt sein."
+    },
+    {
+      "key": "label_improved",
+      "line": 51,
+      "text": "✨ KI verbessert",
+      "category": "ai-claim",
+      "risk": "NIEDRIG",
+      "rationale": "KI-Kennzeichnung des verbesserten Texts — positiv fuer EU AI Act Art. 50(4) Transparenz."
+    },
+    {
+      "key": "legend_categories_desc",
+      "line": 334,
+      "text": "Kategorien werden dynamisch erstellt — die KI erkennt Themen in deinen Eintraegen und erstellt passende Kategorien. Neue Themen fuehren automatisch zu neuen Symbolen.",
+      "category": "ai-claim",
+      "risk": "NIEDRIG",
+      "rationale": "KI-Faehigkeitsbeschreibung 'erkennt Themen/automatisch'. Erklaert KI-Verhalten — eher unkritisch."
+    },
+    {
+      "key": "dashboard_loading_profile_switch",
+      "line": 275,
+      "text": "KI-Dashboard wird nach jedem Profilwechsel automatisch aktualisiert",
+      "category": "ai-claim",
+      "risk": "NIEDRIG",
+      "rationale": "'nach jedem Profilwechsel automatisch' — gleiche moegliche Limit-Kollision wie auto_update."
+    },
+    {
+      "key": "settings_premium_feature_reviews",
+      "line": 497,
+      "text": "Alle Rueckblicke ausfuehrlich mit KI erstellt",
+      "category": "ai-claim",
+      "risk": "NIEDRIG",
+      "rationale": "KI erstellt Rueckblicke. 'ausfuehrlich' Werbewort, eher unkritisch."
+    },
+    {
+      "key": "settings_premium_feature_reviews_desc",
+      "line": 498,
+      "text": "Die KI erzaehlt deine Geschichte",
+      "category": "ai-claim",
+      "risk": "NIEDRIG",
+      "rationale": "Emotionales KI-Versprechen 'erzaehlt deine Geschichte' — Marketing, niedrig."
+    },
+    {
+      "key": "settings_premium_feature_patterns_desc",
+      "line": 500,
+      "text": "Die KI kann Muster und Zusammenhaenge in deinen Eintraegen sichtbar machen",
+      "category": "ai-claim",
+      "risk": "NIEDRIG",
+      "rationale": "Vorsichtig formuliert ('kann ... sichtbar machen') — kein Garantieversprechen, gut."
+    },
+    {
+      "key": "journal_text_upsell_title",
+      "line": 96,
+      "text": "Beeindruckend, oder?",
+      "category": "marketing-claim",
+      "risk": "NIEDRIG",
+      "rationale": "Werblicher Aufhaenger vor Premium-Upsell. Subjektive Anpreisung — niedrig."
+    },
+    {
+      "key": "streak_90",
+      "line": 130,
+      "text": "Du bist unstoppbar!",
+      "category": "marketing-claim",
+      "risk": "NIEDRIG",
+      "rationale": "Gamification-Lob. Uebertreibung, klar als Motivationsspruch erkennbar — niedrig."
+    },
+    {
+      "key": "streak_180",
+      "line": 129,
+      "text": "Unglaubliche Disziplin!",
+      "category": "marketing-claim",
+      "risk": "NIEDRIG",
+      "rationale": "Gamification-Lob. Unkritisch."
+    },
+    {
+      "key": "paywall_with_limited",
+      "line": 46,
+      "text": "mit eingeschraenkten Limits.",
+      "category": "subscription",
+      "risk": "NIEDRIG",
+      "rationale": "Fragment zur Free-Variante. Kontext pruefen ob Limits konkret benannt."
+    },
+    {
+      "key": "churn_instead_of",
+      "line": 48,
+      "text": "statt ",
+      "category": "subscription",
+      "risk": "NIEDRIG",
+      "rationale": "Preis-Fragment (Streichpreis). Streichpreise brauchen klaren Bezugspreis (UWG §5). Fragment."
+    },
+    {
+      "key": "follow_up_premium_hint",
+      "line": 188,
+      "text": "ab dem zweiten Nachtrag",
+      "category": "subscription",
+      "risk": "NIEDRIG",
+      "rationale": "Definiert Free-Limit (1 Nachtrag gratis, ab 2. Premium). Gut fuer Transparenz."
+    },
+    {
+      "key": "settings_premium_cancelled_until",
+      "line": 482,
+      "text": "Premium-Abo gekuendigt — laeuft noch bis %1$s",
+      "category": "subscription",
+      "risk": "NIEDRIG",
+      "rationale": "Restlaufzeit nach Kuendigung — transparent, positiv (Verbraucherrecht)."
+    },
+    {
+      "key": "settings_premium_cancelled_desc",
+      "line": 483,
+      "text": "Deine Premium-Funktionen bleiben bis zum Ende des Abrechnungszeitraums verfuegbar. Du kannst die Kuendigung ueber Google Play rueckgaengig machen.",
+      "category": "subscription",
+      "risk": "NIEDRIG",
+      "rationale": "Korrekte Kuendigungs-/Reaktivierungs-Info via Google Play — entspricht Play-Billing."
+    },
+    {
+      "key": "churn_google_play_redirect",
+      "line": 467,
+      "text": "Du wirst zu Google Play weitergeleitet, um dein Abo zu verwalten. Deine Tagebucheintraege bleiben natuerlich erhalten.",
+      "category": "subscription",
+      "risk": "NIEDRIG",
+      "rationale": "Klarstellung Datenerhalt bei Abo-Verwaltung — transparent."
+    },
+    {
+      "key": "follow_up_premium_later",
+      "line": 216,
+      "text": "Spaeter entscheiden",
+      "category": "subscription",
+      "risk": "NIEDRIG",
+      "rationale": "Opt-out-Button am Paywall — kein Dark Pattern, gut."
+    },
+    {
+      "key": "settings_premium_feature_improve_desc",
+      "line": 492,
+      "text": "KI verbessert deine Eintraege auf Wunsch.",
+      "category": "subscription",
+      "risk": "NIEDRIG",
+      "rationale": "Premium-Feature-Beschreibung. 'auf Wunsch' relativiert gut — unkritisch."
+    },
+    {
+      "key": "profile_entropy",
+      "line": 378,
+      "text": "Raeume dein Leben auf",
+      "category": "health-language",
+      "risk": "NIEDRIG",
+      "rationale": "Profil-Name. Wohlbefindens-naher Slogan, metaphorisch (Aufraeumen). Niedrig."
+    },
+    {
+      "key": "dashboard_inner_mirror",
+      "line": 256,
+      "text": "Innerer Spiegel",
+      "category": "health-language",
+      "risk": "NIEDRIG",
+      "rationale": "Selbstreflexions-Metapher. Wohlbefindens-nah aber unkritisch."
+    },
+    {
+      "key": "legend_reflection_desc",
+      "line": 294,
+      "text": "Der Halbkreis zeigt die Tiefe deiner Selbstreflexion:",
+      "category": "health-language",
+      "risk": "NIEDRIG",
+      "rationale": "Selbstreflexions-Metrik. Unkritisch."
+    },
+    {
+      "key": "settings_entries_auto_loaded",
+      "line": 417,
+      "text": "Eintraege werden bei der Anmeldung automatisch geladen",
+      "category": "privacy-claim",
+      "risk": "NIEDRIG",
+      "rationale": "Cloud-Sync-Verhalten (Drive). Datenfluss-Hinweis — transparent."
+    },
+    {
+      "key": "settings_auto_lock",
+      "line": 463,
+      "text": "Sperrt automatisch nach 60 Sekunden im Hintergrund",
+      "category": "privacy-claim",
+      "risk": "NIEDRIG",
+      "rationale": "Konkrete Sicherheitsangabe (60s). Muss mit tatsaechlichem Verhalten uebereinstimmen."
+    },
+    {
+      "key": "splash_subtitle",
+      "line": 468,
+      "text": "DEIN INTELLIGENTES TAGEBUCH",
+      "category": "marketing-claim",
+      "risk": "NIEDRIG",
+      "rationale": "Claim 'INTELLIGENTES TAGEBUCH' — wirbt mit KI-Intelligenz. Tagline, niedrig, aber Teil der KI-Werbung."
+    },
+    {
+      "key": "prompt_clear_confirm_text",
+      "line": 123,
+      "text": "Die Individuelle Analyse wird unwiderruflich geloescht. Moechtest du wirklich fortfahren?",
+      "category": "legal-text",
+      "risk": "NIEDRIG",
+      "rationale": "'unwiderruflich' Loeschbestaetigung. Pruefen ob wirklich nicht wiederherstellbar (Drive-Restore koennte reviven)."
+    },
+    {
+      "key": "follow_up_delete_confirm_text",
+      "line": 210,
+      "text": "Moechtest du Nachtrag %1$s wirklich unwiderruflich loeschen?",
+      "category": "legal-text",
+      "risk": "NIEDRIG",
+      "rationale": "'unwiderruflich' Loeschwarnung. Gleiche Pruefung (Drive-Restore?)."
+    },
+    {
+      "key": "ai_improved_suffix_marker",
+      "line": 178,
+      "text": "✨ KI-verbessert",
+      "category": "legal-text",
+      "risk": "NIEDRIG",
+      "rationale": "KI-Kennzeichnung gemaess EU AI Act Art. 50(4) — Pflichtkennzeichnung erfuellt, positiv."
+    },
+    {
+      "key": "settings_reminder_time",
+      "line": 450,
+      "text": "Uhrzeit: %02d:%02d Uhr",
+      "category": "format-bug",
+      "risk": "NIEDRIG",
+      "rationale": "formatted=false gesetzt — korrekt fuer %02d ohne Positionsindex. Hinweis: Uebersetzer muessen formatted=false beibehalten."
+    },
+    {
+      "key": "settings_premium_feature_voice",
+      "line": 503,
+      "text": "Praezisere Spracherkennung",
+      "category": "marketing-claim",
+      "risk": "NIEDRIG",
+      "rationale": "Komparativ 'praeziser' impliziert messbar bessere Qualitaet ggue. der lokalen Erkennung. Belastbar nur wenn die Premium-Variante (Groq Whisper) tatsaechlich genauer ist. Grenzfall."
+    },
+    {
+      "key": "settings_premium_feature_voice_desc",
+      "line": 504,
+      "text": "Hoehere Qualitaet fuer deine Spracheintraege",
+      "category": "marketing-claim",
+      "risk": "NIEDRIG",
+      "rationale": "'Hoehere Qualitaet' ist ein Qualitaetsversprechen, subjektiv/unbelegt. Grenzfall fuer UWG 5 Abs.1."
+    },
+    {
+      "key": "settings_crisis_dialog_body",
+      "line": 770,
+      "text": "Best Journal ist ein Tagebuch und ersetzt keine professionelle psychologische oder medizinische Beratung. KI-generierte Analysen sind keine Therapie. ... Gedanken an Selbstverletzung oder Suizid ... kostenlose, anonyme Hilfe - rund um die Uhr.",
+      "category": "health-language",
+      "risk": "NIEDRIG",
+      "rationale": "GUTE Praxis: expliziter HWG/SB-243-Disclaimer ('ersetzt keine Beratung', 'keine Therapie') + Krisen-Hotlines. Positiv-Fund. Sicherstellen, dass dieser Disclaimer auch dort erscheint, wo KI-Analysen ausgegeben werden, nicht nur im Krisendialog."
+    },
+    {
+      "key": "settings_crisis_subtitle",
+      "line": 768,
+      "text": "Wichtige Hotlines im Notfall",
+      "category": "health-language",
+      "risk": "NIEDRIG",
+      "rationale": "Krisen-/Notfall-Sprache. Unbedenklich (Schutzfunktion), aber HWG-relevant gelistet. Grenzfall."
+    },
+    {
+      "key": "dashboard_profile_focus_insight",
+      "line": 960,
+      "text": "Tiefgruendige Selbsterkenntnis: Denkmuster und verborgene Staerken.",
+      "category": "health-language",
+      "risk": "NIEDRIG",
+      "rationale": "Psychologie-naher Wortlaut ('Denkmuster', 'Selbsterkenntnis'). Grenzfall - Reflexions-Feature, kein Heilversprechen, aber HWG-Naehe dokumentieren."
+    },
+    {
+      "key": "retro_premium_unlock",
+      "line": 989,
+      "text": "Mit Premium alle Rueckblicke freischalten",
+      "category": "subscription",
+      "risk": "NIEDRIG",
+      "rationale": "Paywall-Hinweis. Bestaetigt, dass Rueckblicke (Wochen/Monats/Jahres) Premium-gated sind. Konsistenz-Check ggue. Werbeaussagen, die 'Rueckblicke' evtl. als kostenlos darstellen."
+    },
+    {
+      "key": "settings_revoke_subtitle",
+      "line": 747,
+      "text": "356a BGB - Widerruf direkt per App",
+      "category": "subscription",
+      "risk": "NIEDRIG",
+      "rationale": "In-App-Widerrufsbutton (Pflicht ab 19.06.2026). Positiv-Fund. Hinweis 'Abos zusaetzlich ueber Google Play kuendigen' (settings_revoke_confirm_body, Z.749) ist korrekt - Widerruf des Vertrags ungleich Abo-Kuendigung. Gut umgesetzt."
+    },
+    {
+      "key": "ai_generated_tooltip",
+      "line": 785,
+      "text": "Dieser Inhalt wurde von einem KI-System (Google Gemini) erstellt und kann Fehler enthalten. Bitte eigenstaendig pruefen.",
+      "category": "ai-claim",
+      "risk": "NIEDRIG",
+      "rationale": "GUTE Praxis: KI-Kennzeichnung (AI Act Art.50, Pflicht ab 02.08.2026) + Fehlerhinweis. Positiv-Fund."
+    },
+    {
+      "key": "limit_used_of_max",
+      "line": 796,
+      "text": "%1$d von %2$d genutzt",
+      "category": "ai-claim",
+      "risk": "NIEDRIG",
+      "rationale": "KI-Nutzungslimit-Zaehler (X von Y). Bestaetigt, dass es ein begrenztes KI-Kontingent gibt. Direkt relevant fuer die 'unbegrenzt'-Pruefung anderer Marketing-Strings - ein Limit existiert also."
+    },
+    {
+      "key": "ai_prompt_goals_intro",
+      "line": 896,
+      "text": "Du bist ein aufmerksamer, motivierender Ziel-Analyst und Fortschritts-Tracker. ... Verfolge den Fortschritt ueber mehrere Eintraege hinweg.",
+      "category": "ai-claim",
+      "risk": "NIEDRIG",
+      "rationale": "KI-Rolle als 'Ziel-Analyst'. Unkritisch (kein Gesundheitsbezug), dokumentiert aber die KI-Faehigkeitszusage 'Fortschritts-Tracking' - muss mit Marketing uebereinstimmen."
+    },
+    {
+      "key": "ai_prompt_response_language",
+      "line": 805,
+      "text": "ANTWORTSPRACHE: Antworte vollstaendig auf Deutsch. ...",
+      "category": "ai-claim",
+      "risk": "NIEDRIG",
+      "rationale": "Sprach-Steuer-Prompt. Unkritisch, aber translatable (wird in 26 Sprachen lokalisiert) - bei Lokalisierung muss 'Deutsch' durch die jeweilige Zielsprache ersetzt werden, sonst antwortet die KI in falscher Sprache. Funktions-Hinweis."
+    },
+    {
+      "key": "permission_rationale_microphone",
+      "line": 696,
+      "text": "Damit du deine Tagebucheintraege per Sprache diktieren kannst, brauchen wir Zugriff auf dein Mikrofon.",
+      "category": "legal-text",
+      "risk": "NIEDRIG",
+      "rationale": "Permission-Begruendung (Play-Policy + DSGVO Art.13). Korrekt, zweckgebunden. Positiv-Fund. Gleiches fuer camera/notifications (Z.697/698)."
+    },
+    {
+      "key": "settings_delete_account_confirm_body",
+      "line": 733,
+      "text": "Dieser Vorgang ist unwiderruflich und loescht: ... Audio-Aufnahmen ... Das Google-Drive-Backup der App ... Dein Google-Konto selbst bleibt bestehen.",
+      "category": "legal-text",
+      "risk": "NIEDRIG",
+      "rationale": "Loesch-Bestaetigung (DSGVO Art.17/CCPA). Klar, vollstaendig, korrekt abgegrenzt (Konto bleibt). Positiv-Fund. Konsistenz mit System-Backup-Hinweis pruefen."
+    },
+    {
+      "key": "settings_revoke_email_body",
+      "line": 753,
+      "text": "Hiermit widerrufe ich den von mir abgeschlossenen Vertrag ueber die Premium-Funktionen ... zweistufig ueber den 356a-BGB-konformen Widerrufsbutton ...",
+      "category": "legal-text",
+      "risk": "NIEDRIG",
+      "rationale": "Automatisch versendeter Widerrufstext. Rechtlich vorbildlich (Eingangsbestaetigung Z.755 ist Pflicht nach 356a). Positiv-Fund."
+    },
+    {
+      "key": "settings_feedback_allow_gmail",
+      "line": 531,
+      "text": "Bitte Gmail-Zugriff erlauben und erneut versuchen.",
+      "category": "du-sie-mix",
+      "risk": "NIEDRIG",
+      "rationale": "Imperativ ohne klare Du/Sie-Markierung. Gesamtfile ist konsequent Du-Form; einzelne Imperative ('Bitte erlauben') sind neutral und brechen die Du-Ansprache nicht. Kein echter Mix gefunden - Du-Form durchgaengig. Zur Vollstaendigkeit notiert."
+    },
+    {
+      "key": "churn_discount_badge_format",
+      "line": 799,
+      "text": "<xliff:g id=percent example=50>%1$d</xliff:g>%% SPAREN",
+      "category": "format-bug",
+      "risk": "NIEDRIG",
+      "rationale": "'%%' ist KORREKT (escaptes Prozentzeichen in Format-String mit %1$d). KEIN Bug - Gegenprobe bestaetigt sauberes Escaping. Dokumentiert, damit ein spaeterer Uebersetzer das '%%' nicht faelschlich zu '%' macht (das WAERE dann ein Crash-Bug)."
+    },
+    {
+      "key": "settings_feedback_api_error",
+      "line": 536,
+      "text": "Gmail-Fehler %1$d: %2$s",
+      "category": "format-bug",
+      "risk": "NIEDRIG",
+      "rationale": "Korrekte positionsbasierte Platzhalter (%1$d, %2$s). Kein Bug - als Referenz fuer sauberes Mehrfach-Platzhalter-Format dokumentiert."
+    },
+    {
+      "key": "settings_feedback_confirm_body",
+      "line": 539,
+      "text": "... --- Deine Nachricht --- %1$s ... Viele Gruesse DEV.FRANK",
+      "category": "other",
+      "risk": "NIEDRIG",
+      "rationale": "Signatur 'DEV.FRANK' und an anderer Stelle 'Best Journal (Frank Barwandt)' (Z.755) - uneinheitliche Absender-/Markennamen in nutzersichtbaren E-Mails. Konsistenz pruefen (Impressum/Markenauftritt)."
+    },
+    {
+      "key": "settings_about_version",
+      "line": 553,
+      "text": "Best Journal V0.21.9",
+      "category": "other",
+      "risk": "NIEDRIG",
+      "rationale": "Versionsnummer hardcodiert im String statt aus BuildConfig abgeleitet. Risiko, dass die angezeigte Version vom echten versionName abweicht (vgl. globale Regel 'Version sichtbar UND korrekt ableiten'). Funktions-Hinweis, kein Rechtsthema."
+    },
+    {
+      "key": "retro_intro_body",
+      "line": 973,
+      "text": "... an die grossen Momente und die kleinen, ",
+      "category": "other",
+      "risk": "NIEDRIG",
+      "rationale": "Satz endet abrupt mit Komma + Leerzeichen ('die kleinen, '). Wirkt wie abgeschnittener/unfertiger Text oder soll mit retro_intro_cta (Z.974) zusammengesetzt werden. Optisch unsauber - pruefen ob Absicht."
+    },
+    {
+      "key": "paywall_headline_stress",
+      "line": 1128,
+      "text": "Mehr Klarheit im Alltag",
+      "category": "health-language",
+      "risk": "NIEDRIG",
+      "rationale": "Personalisierte Paywall-Headline zum Stress-Ziel. 'Mehr Klarheit' = milde Wohlbefindens-Nutzenaussage. Grenzfall mit gesundheitlichem Beiklang."
+    },
+    {
+      "key": "paywall_headline_stress_sub",
+      "line": 1129,
+      "text": "Erkenne was dich taeglich beschaeftigt und bringe es auf den Punkt.",
+      "category": "health-language",
+      "risk": "NIEDRIG",
+      "rationale": "Sub-Headline Stress-Ziel. Mentale-Entlastungs-Sprache, kein konkretes Heilversprechen. Grenzfall, HWG-Naehe."
+    },
+    {
+      "key": "paywall_headline_clarity",
+      "line": 1130,
+      "text": "Verstehe dich selbst besser",
+      "category": "health-language",
+      "risk": "NIEDRIG",
+      "rationale": "Selbsterkenntnis-Versprechen. Wohlbefindens-Sprache an HWG-Grenze, milde. Grenzfall."
+    },
+    {
+      "key": "paywall_headline_growth",
+      "line": 1132,
+      "text": "Entdecke das Gute in jedem Tag",
+      "category": "health-language",
+      "risk": "NIEDRIG",
+      "rationale": "Positiv-Psychologie-Sprache. Wohlbefindens-Beiklang, milde. Grenzfall."
+    },
+    {
+      "key": "paywall_headline_growth_sub",
+      "line": 1133,
+      "text": "Dein persoenlicher Raum fuer Dankbarkeit und Wachstum",
+      "category": "health-language",
+      "risk": "NIEDRIG",
+      "rationale": "'Dankbarkeit und Wachstum' = Wellness-/Selbstoptimierungs-Sprache. Milde, Grenzfall."
+    },
+    {
+      "key": "churn_offer_feature_ai",
+      "line": 1176,
+      "text": "Taegliche KI-Analysen",
+      "category": "health-language",
+      "risk": "NIEDRIG",
+      "rationale": "Im Retention-Kontext beworbenes KI-Analyse-Feature. HWG-Grenze nur mit Analyse-Inhalten (Lebensratschlaege); selbst neutral. Auch subscription-relevant."
+    },
+    {
+      "key": "ai_output_health_disclaimer",
+      "line": 1487,
+      "text": "Keine Therapie - ersetzt keine professionelle Beratung.",
+      "category": "health-language",
+      "risk": "NIEDRIG",
+      "rationale": "Korrekter HWG-Schutz-Disclaimer (kurz). Positiv-Fund/Schutzmassnahme - richtige Abgrenzung. Kein Risiko."
+    },
+    {
+      "key": "ai_output_health_disclaimer_long",
+      "line": 1488,
+      "text": "Best Journal ist ein Tagebuch und kein Therapieangebot. KI-Analysen sind Anregungen zur Selbstreflexion und ersetzen keine professionelle psychologische oder medizinische Beratung. Bei akuten Problemen wende dich an eine Fachperson oder die Krisenhilfe in deinen Einstellungen.",
+      "category": "health-language",
+      "risk": "NIEDRIG",
+      "rationale": "Ausfuehrlicher HWG-Disclaimer mit Krisenhilfe-Verweis. Vorbildliche Schutzmassnahme. Pruefen ob 'Krisenhilfe in deinen Einstellungen' tatsaechlich existiert (sonst Irrefuehrung); Existenz von Code-Worker zu verifizieren."
+    },
+    {
+      "key": "onboarding_premium_feature_noads",
+      "line": 1080,
+      "text": "Keine Werbung, ungestoert schreiben und reflektieren",
+      "category": "marketing-claim",
+      "risk": "NIEDRIG",
+      "rationale": "'Keine Werbung'-Claim (UWG 5, ueberpruefbar). Muss stimmen dass Premium werbefrei ist. Leicht verifizierbar."
+    },
+    {
+      "key": "paywall_feature_noads",
+      "line": 1124,
+      "text": "Spreche oder schreibe ungestoert, ohne Werbung",
+      "category": "marketing-claim",
+      "risk": "NIEDRIG",
+      "rationale": "'ohne Werbung'-Claim (UWG 5). Verifikationspflicht wie onboarding_premium_feature_noads. Hinweis: 'Spreche' Imperativ-Tippfehler (-> other-Finding)."
+    },
+    {
+      "key": "onboarding_feature_speech",
+      "line": 1060,
+      "text": "Sprich oder schreib, die KI versteht beides",
+      "category": "marketing-claim",
+      "risk": "NIEDRIG",
+      "rationale": "Funktionsaussage 'die KI versteht beides' (UWG 5). Ueblich, leicht belegbar."
+    },
+    {
+      "key": "onboarding_feature_profiles",
+      "line": 1085,
+      "text": "4 intelligente Analyse-Profile fuer verschiedene Perspektiven",
+      "category": "marketing-claim",
+      "risk": "NIEDRIG",
+      "rationale": "Zahlenversprechen '4 Analyse-Profile' (UWG 5). Muss mit tatsaechlicher Profil-Anzahl uebereinstimmen (vgl. churn '4 vordefiniert'). Konsistenz pruefen."
+    },
+    {
+      "key": "onboarding_premium_profiles",
+      "line": 1091,
+      "text": "4 intelligente Dashboard-Profile fuer tiefe Einblicke in dein Leben",
+      "category": "marketing-claim",
+      "risk": "NIEDRIG",
+      "rationale": "Zahlenversprechen '4 Dashboard-Profile' + 'tiefe Einblicke' (UWG 5). Konsistenz mit anderen Profil-Zahlen pruefen."
+    },
+    {
+      "key": "onboarding_premium_feature_pdf",
+      "line": 1090,
+      "text": "PDF-Export mit Fotos, sichere deine Eintraege als Dokument",
+      "category": "marketing-claim",
+      "risk": "NIEDRIG",
+      "rationale": "Funktionsversprechen PDF-Export mit Fotos (UWG 5, leicht verifizierbar)."
+    },
+    {
+      "key": "retro_weekly_p3",
+      "line": 1024,
+      "text": "Jeden Sonntag automatisch erstellt, wenn du mindestens 2 Eintraege hast",
+      "category": "marketing-claim",
+      "risk": "NIEDRIG",
+      "rationale": "Konkrete Funktionszusage mit Bedingung (UWG 5). Positiv: Bedingung transparent. Pruefen dass Automatik so laeuft."
+    },
+    {
+      "key": "retro_premium_reviews_desc",
+      "line": 1034,
+      "text": "Mit Premium erstellt die KI automatisch Rueckblicke aus deinen Tagebucheintraegen:",
+      "category": "marketing-claim",
+      "risk": "NIEDRIG",
+      "rationale": "'automatisch'-Funktionszusage Premium-Rueckblicke (UWG 5). Verifizieren dass Automatik existiert."
+    },
+    {
+      "key": "onboarding_free_after_trial",
+      "line": 1082,
+      "text": "Danach nutzt du Best Journal weiter, kostenlos mit begrenzten KI-Aufrufen pro Woche.",
+      "category": "subscription",
+      "risk": "NIEDRIG",
+      "rationale": "Transparenz: nach Trial kostenlose Weiternutzung mit Limit. Positiv (entschaerft 'kostenlos starten'). Sicherstellen dass Trial NICHT automatisch in Bezahlabo uebergeht ohne aktive Zustimmung (sonst Widerspruch zu paywall_first_payment/Tag-8)."
+    },
+    {
+      "key": "paywall_yearly_note",
+      "line": 1108,
+      "text": "Danach %1$s pro Jahr, verlaengert sich automatisch / In der Testphase jederzeit kuendbar",
+      "category": "subscription",
+      "risk": "NIEDRIG",
+      "rationale": "Korrekte Abo-Pflichtangabe: Preis + 'verlaengert sich automatisch' + 'jederzeit kuendbar'. Positiv-Fund. Platzhalter %1$s muss zur Laufzeit gefuellt werden."
+    },
+    {
+      "key": "paywall_monthly_plan",
+      "line": 1110,
+      "text": "Monatsabo, %1$s pro Monat",
+      "category": "subscription",
+      "risk": "NIEDRIG",
+      "rationale": "Preisangabe Monatsabo mit Platzhalter. Pruefen dass Verlaengerungs-/Kuendigungshinweis in der Naehe steht (paywall_yearly_note deckt nur Jahr ab; fuer Monat fehlt evtl. expliziter Auto-Renewal-Hinweis)."
+    },
+    {
+      "key": "paywall_day7",
+      "line": 1104,
+      "text": "Tag 7",
+      "category": "subscription",
+      "risk": "NIEDRIG",
+      "rationale": "Trial-Timeline-Label. Positiv: Erinnerung an Tag 7 vor Abbuchung ist verbraucherfreundlich/Play-konform. Kontext."
+    },
+    {
+      "key": "paywall_reminder",
+      "line": 1105,
+      "text": "Erinnerung",
+      "category": "subscription",
+      "risk": "NIEDRIG",
+      "rationale": "Trial-Timeline: Erinnerung vor erster Zahlung. Positiv. Kontext-Fund."
+    },
+    {
+      "key": "paywall_exit_start_discount",
+      "line": 1144,
+      "text": "Zahlungspflichtig - 2 Monate zum halben Preis",
+      "category": "subscription",
+      "risk": "NIEDRIG",
+      "rationale": "CTA mit 'Zahlungspflichtig'-Praefix. Positiv-Fund: erfuellt Button-Loesung (312j BGB) vorbildlich. Kontrast zu 'Kostenlos starten' (1083) ohne diesen Hinweis - Inkonsistenz dokumentieren."
+    },
+    {
+      "key": "churn_auto_renew_note",
+      "line": 1163,
+      "text": "Dein Abo verlaengert sich automatisch ueber Google Play. Die Kuendigung ist jederzeit moeglich.",
+      "category": "subscription",
+      "risk": "NIEDRIG",
+      "rationale": "Korrekte Auto-Renewal- + Kuendigungs-Info. Positiv-Fund."
+    },
+    {
+      "key": "churn_offer_auto_renew",
+      "line": 1179,
+      "text": "Verlaengert sich automatisch, jederzeit kuendbar",
+      "category": "subscription",
+      "risk": "NIEDRIG",
+      "rationale": "Korrekte Pflichtangabe im Retention-Angebot. Positiv."
+    },
+    {
+      "key": "churn_promo_one_month_remaining",
+      "line": 1158,
+      "text": "Noch 1 Monat - danach %1$s pro Monat",
+      "category": "subscription",
+      "risk": "NIEDRIG",
+      "rationale": "Promo-Restlaufzeit + Folgepreis transparent (xliff:g). Positiv."
+    },
+    {
+      "key": "churn_promo_months_remaining",
+      "line": 1159,
+      "text": "Noch %1$d Monate - danach %2$s pro Monat",
+      "category": "subscription",
+      "risk": "NIEDRIG",
+      "rationale": "Promo-Restlaufzeit + Folgepreis (2 Platzhalter, xliff:g). Positiv-transparent."
+    },
+    {
+      "key": "churn_promo_phase_ends",
+      "line": 1160,
+      "text": "Endet am %1$s - danach %2$s pro Monat",
+      "category": "subscription",
+      "risk": "NIEDRIG",
+      "rationale": "Promo-Enddatum + Folgepreis transparent. Positiv."
+    },
+    {
+      "key": "churn_pause_sub",
+      "line": 1182,
+      "text": "Oder Abo bei Google Play pausieren",
+      "category": "subscription",
+      "risk": "NIEDRIG",
+      "rationale": "Verweist korrekt auf Google-Play-Abo-Verwaltung (Pause). Positiv."
+    },
+    {
+      "key": "churn_cancel_sub",
+      "line": 1164,
+      "text": "Abo kuendigen",
+      "category": "subscription",
+      "risk": "NIEDRIG",
+      "rationale": "Kuendigungs-Aktion vorhanden (Kuendigungsbutton-Pflicht 312k BGB ueber Google Play erfuellt). Positiv."
+    },
+    {
+      "key": "churn_switch_yearly",
+      "line": 1181,
+      "text": "Oder zum Jahresabo wechseln und noch mehr sparen",
+      "category": "subscription",
+      "risk": "NIEDRIG",
+      "rationale": "Spar-Aussage ohne konkrete Zahl. Milde Werbung; pruefen dass Jahresabo tatsaechlich guenstiger ist."
+    },
+    {
+      "key": "paywall_free_note",
+      "line": 1114,
+      "text": "Die App funktioniert auch ohne Abo weiter.",
+      "category": "subscription",
+      "risk": "NIEDRIG",
+      "rationale": "Transparenz: App ohne Abo nutzbar. Positiv-Fund (ehrliche Free-Tier-Kommunikation)."
+    },
+    {
+      "key": "ai_limits_disclaimer",
+      "line": 1197,
+      "text": "KI-Tageskontingent fuer intensive Nutzung.",
+      "category": "ai-claim",
+      "risk": "NIEDRIG",
+      "rationale": "Kurz-Disclaimer zum Tageskontingent. Positiv (Transparenz)."
+    },
+    {
+      "key": "ai_banner_title",
+      "line": 1202,
+      "text": "Dein Tagebuch wird von KI unterstuetzt",
+      "category": "ai-claim",
+      "risk": "NIEDRIG",
+      "rationale": "KI-Transparenzhinweis (positiv, AI-Act Art.50-Naehe - Offenlegung KI-Einsatz)."
+    },
+    {
+      "key": "profile_style_coach",
+      "line": 1416,
+      "text": "- Schreibe im Stil eines motivierenden Ziel-Begleiters, zeige Fortschritte bei persoenlichen Zielen auf und ermutige weiterzumachen",
+      "category": "ai-claim",
+      "risk": "NIEDRIG",
+      "rationale": "Gemini-System-Prompt: 'motivierender Ziel-Begleiter'. Coaching-Sprache, harmlos/motivierend, keine medizinisch-therapeutische Anweisung."
+    },
+    {
+      "key": "profile_style_chronicler",
+      "line": 1413,
+      "text": "- Schreibe im Stil einer zusammenfassenden Erzaehlung, fasse die wichtigsten Ereignisse und Gefuehle zusammen, wie ein persoenlicher Chronist",
+      "category": "ai-claim",
+      "risk": "NIEDRIG",
+      "rationale": "Gemini-System-Prompt: zusammenfassende Erzaehlung. Neutral, keine Beratungs-/Diagnose-Anweisung."
+    },
+    {
+      "key": "retro_weekly_p1",
+      "line": 1022,
+      "text": "Die KI fasst deine Woche zu einer persoenlichen Erzaehlung zusammen",
+      "category": "ai-claim",
+      "risk": "NIEDRIG",
+      "rationale": "KI-Funktionsbeschreibung (Zusammenfassung). Neutral."
+    },
+    {
+      "key": "retro_yearly_p2",
+      "line": 1030,
+      "text": "Die KI fasst die grossen Themen deines Jahres zusammen",
+      "category": "ai-claim",
+      "risk": "NIEDRIG",
+      "rationale": "KI-Funktionsbeschreibung Jahresrueckblick. Neutral."
+    },
+    {
+      "key": "settings_legal_section_header",
+      "line": 1469,
+      "text": "Rechtliche Dokumente",
+      "category": "legal-text",
+      "risk": "NIEDRIG",
+      "rationale": "Header Rechtsdokumente-Sektion. Positiv: Rechtsdokumente in Settings erreichbar."
+    },
+    {
+      "key": "settings_legal_online_label",
+      "line": 1471,
+      "text": "Online-Version:",
+      "category": "legal-text",
+      "risk": "NIEDRIG",
+      "rationale": "Label fuer Online-Rechtsdokumente. Positiv (Verfuegbarkeit)."
+    },
+    {
+      "key": "consent_footer_link_datenschutz",
+      "line": 1491,
+      "text": "Datenschutz",
+      "category": "legal-text",
+      "risk": "NIEDRIG",
+      "rationale": "Consent-Screen-Link Datenschutz. Positiv-Fund (Pflichtdokument verlinkt)."
+    },
+    {
+      "key": "consent_footer_link_impressum",
+      "line": 1492,
+      "text": "Impressum",
+      "category": "legal-text",
+      "risk": "NIEDRIG",
+      "rationale": "Consent-Screen-Link Impressum. Positiv (Impressumspflicht)."
+    },
+    {
+      "key": "consent_footer_link_agb",
+      "line": 1493,
+      "text": "Nutzungsbedingungen",
+      "category": "legal-text",
+      "risk": "NIEDRIG",
+      "rationale": "Consent-Screen-Link AGB. Positiv. Konsistent mit paywall_legal_hint_link (1116) ('Nutzungsbedingungen')."
+    },
+    {
+      "key": "dev_seed_delete_all_action",
+      "line": 1435,
+      "text": "Alle Eintraege loeschen",
+      "category": "legal-text",
+      "risk": "NIEDRIG",
+      "rationale": "DEBUG-only Loesch-Aktion (nur Debug-Builds sichtbar laut Kommentar). Keine 'unwiderruflich'-Warnung, aber Debug-Tool. Produktiver Loesch-/Account-Flow steht in diesem Bereich nicht - von anderem Worker/Code zu pruefen."
+    },
+    {
+      "key": "paywall_legal_hint__fmt",
+      "line": 1115,
+      "text": "formatted=false mit %1$s",
+      "category": "format-bug",
+      "risk": "NIEDRIG",
+      "rationale": "String hat formatted=false UND verwendet %1$s. Bei formatted=false interpretiert Android Positionsargumente NICHT automatisch - Entwickler muss manuell formatieren. Pruefen dass der Code die Ersetzung selbst uebernimmt, sonst erscheint woertlich '%1$s'. Vermutlich Absicht, verifizieren."
+    },
+    {
+      "key": "ai_limit_yearly__fmt",
+      "line": 1193,
+      "text": "Jahresabo, %1$s/Jahr (spare 37%%)",
+      "category": "format-bug",
+      "risk": "NIEDRIG",
+      "rationale": "Enthaelt %1$s (Positionsargument) UND %% (escaped Prozent) im selben String OHNE formatted=false - korrekt: bei aktivem Formatting muss Prozent als %% escaped sein. Kein Bug, Positiv-Bestaetigung."
+    },
+    {
+      "key": "paywall_feature_noads__typo",
+      "line": 1124,
+      "text": "Spreche oder schreibe ungestoert, ohne Werbung",
+      "category": "other",
+      "risk": "NIEDRIG",
+      "rationale": "Grammatik/Imperativ-Inkonsistenz: 'Spreche' (sollte 'Sprich') + 'schreibe' (sollte 'schreib'). App nutzt sonst 'Sprich' (onboarding_feature_speech 1060). Kein Rechtsrisiko, sprachliche Inkonsistenz/Qualitaet."
+    },
+    {
+      "key": "prompts_arrays_block",
+      "line": 1313,
+      "text": "string-arrays prompts_self_reflection/gratitude/future/relationships (je 16 Items, Du-Form)",
+      "category": "other",
+      "risk": "NIEDRIG",
+      "rationale": "4 Tagesimpuls-Arrays (je 16 Items, ausschliesslich Du-Form Reflexionsfragen). Inhaltlich harmlos, KEINE Heilversprechen/medizinischen Aussagen. Du-Konsistenz durchgaengig. Nur gezaehlt; dokumentiert wegen Pflicht plurals/arrays vollstaendig zu pruefen."
+    }
+  ],
+  "duSie": {
+    "verdict": "durchgaengig Du-Form, konsistent",
+    "perWorker": [
+      {
+        "du": 120,
+        "sie": 0,
+        "mixedKeys": []
+      },
+      {
+        "du": 95,
+        "sie": 0,
+        "mixedKeys": []
+      },
+      {
+        "du": 1,
+        "sie": 0,
+        "mixedKeys": []
+      }
+    ]
+  },
+  "layer5_paywall_deep": {
+    "worker": "w5-paywall",
+    "plans": [
+      {
+        "productId": "bestjournal_ai_monthly",
+        "type": "monthly",
+        "priceSource": "playBilling",
+        "trial": "Play offer (base plan 'monthly'); promo offer 'monthly-50-off-first' (50% first phase) + retention base plan 'retention-monthly-75' (2,99 EUR). Hardcoded fallback MONTHLY_PRICE_DISPLAY='3,99 EUR' exists in Constants but UI shows ellipsis not fallback."
+      },
+      {
+        "productId": "bestjournal_ai_yearly",
+        "type": "yearly",
+        "priceSource": "playBilling",
+        "trial": "Free trial via Play base plan 'yearly' offer (UI timeline Today/Day7-reminder/Day8-first-payment). Retention base plan 'retention-yearly-75' (22,49 EUR). Hardcoded fallback '29,99 EUR' unused in UI."
+      },
+      {
+        "productId": "bestjournal_lifetime",
+        "type": "lifetime",
+        "priceSource": "playBilling",
+        "trial": "none (INAPP one-time, oneTimePurchaseOfferDetails.formattedPrice). Fallback '79,99 EUR' unused in UI."
+      }
+    ],
+    "paywallEntryPoints": [
+      {
+        "from": "AI limit reached (Journal)",
+        "file": "JournalScreen.kt",
+        "line": 723
+      },
+      {
+        "from": "First text improvement upsell",
+        "file": "JournalScreen.kt",
+        "line": 714
+      },
+      {
+        "from": "Streak freeze",
+        "file": "JournalScreen.kt",
+        "line": 1560
+      },
+      {
+        "from": "Weekly review locked",
+        "file": "DashboardScreen.kt",
+        "line": 433
+      },
+      {
+        "from": "First analysis upsell",
+        "file": "DashboardScreen.kt",
+        "line": 748
+      },
+      {
+        "from": "Free limit reached",
+        "file": "DashboardScreen.kt",
+        "line": 790
+      },
+      {
+        "from": "Nachtrag (follow-up) upsell",
+        "file": "EntryDetailScreen.kt",
+        "line": 1473
+      },
+      {
+        "from": "Retrospective review locked",
+        "file": "RetrospectiveScreen.kt",
+        "line": 253
+      },
+      {
+        "from": "Custom analyses limit",
+        "file": "SettingsScreen.kt",
+        "line": 2583
+      },
+      {
+        "from": "Settings premium tap",
+        "file": "SettingsScreen.kt",
+        "line": 2955
+      },
+      {
+        "from": "PDF export gated",
+        "file": "SettingsScreen.kt",
+        "line": 3107
+      },
+      {
+        "from": "Churn switch-to-yearly redirect",
+        "file": "SettingsScreen.kt",
+        "line": 2800
+      },
+      {
+        "from": "NavGraph paywall route (multiple sources via ?source=)",
+        "file": "AppNavGraph.kt",
+        "line": 281
+      }
+    ],
+    "mandatoryDisclosures": {
+      "priceShown": true,
+      "autoRenewalHint": "paywall_yearly_note (strings.xml:1108) 1:1 = 'Danach %1$s pro Jahr, verlaengert sich automatisch\\nIn der Testphase jederzeit kuendbar' shown PaywallScreen.kt:461-466. Lifetime: paywall_lifetime_note (strings.xml:1113) = 'Kein Abo, keine Verlaengerung' PaywallScreen.kt:625-629. Churn: churn_auto_renew_note (strings.xml:1163) = 'Dein Abo verlaengert sich automatisch ueber Google Play. Die Kuendigung ist jederzeit moeglich.'",
+      "cancellationPath": "Cancellation delegated to https://play.google.com/store/account/subscriptions via ChurnFlowDialog.kt:228/261 (correct, policy-compliant venue). No in-app self-cancel claim.",
+      "withdrawalLink": "paywall_legal_hint (strings.xml:1115) 1:1 = 'Mit dem Abo akzeptierst du die %1$s. Dein 14-taegiges Widerrufsrecht ist dort beschrieben.' + link word 'Nutzungsbedingungen' (paywall_legal_hint_link strings.xml:1116). Rendered as clickable underlined Terms link via onOpenTerms at bottom of main paywall PaywallScreen.kt:645-680. PRESENT on the single main paywall screen (all entry points route to same PaywallScreen).",
+      "gaps": [
+        "Auto-renewal hint sits ONLY in paywall_yearly_note (tied to the yearly trial CTA). The MONTHLY plan button (paywall_monthly_plan 'Monatsabo, %1$s pro Monat', PaywallScreen.kt:537) has no inline auto-renewal text next to it; the renewal disclosure relies on the yearly note + the Terms link being read. Recommend explicit per-plan recurring-billing line for monthly.",
+        "Withdrawal/Terms link is a single-tap optional link (TextButton), not inline visible text; the para-312j 'Zahlungspflichtig bestellen' confirmation is handled by the Google Play sheet (acceptable), but the withdrawal info is one tap away rather than on-screen.",
+        "No explicit 'no commitment / billed via Google Play account' line for the lifetime one-time purchase beyond 'Kein Abo, keine Verlaengerung' (adequate but minimal)."
+      ]
+    },
+    "subscriptionStates": [
+      {
+        "state": "Free",
+        "uiBehavior": "SubscriptionState.Free - limited tier; paywall entry points active; AI daily limits TRIAL tier.",
+        "gap": ""
+      },
+      {
+        "state": "Subscribed (active)",
+        "uiBehavior": "SubscriptionState.Subscribed - full access; paywall auto-dismisses (PaywallScreen.kt:109-113); churn dialog reachable from Settings.",
+        "gap": ""
+      },
+      {
+        "state": "Canceled-but-active (autoRenewing=false, not yet expired)",
+        "uiBehavior": "Still Subscribed; churn dialog shows churn_cancelled_ends_on '%1$s' (strings.xml:1162) with expiry date from cloud.",
+        "gap": "Handled in churn overview only; main app still treats as Subscribed (correct)."
+      },
+      {
+        "state": "Expired",
+        "uiBehavior": "SubscriptionStatusService maps SUBSCRIPTION_STATE_EXPIRED + FunctionsException NOT_FOUND -> FetchResult.NotFound -> _subscriptionState=Free, clears last-known token/productId (BillingManager.kt:450-456).",
+        "gap": ""
+      },
+      {
+        "state": "Grace period / On-hold / Paused",
+        "uiBehavior": "NOT modeled as distinct states. SubscriptionState sealed has only Free/Subscribed. Pause is offered (churn_pause_sub -> Play), but app has no GRACE/ON_HOLD branch.",
+        "gap": "POSSIBLE GAP: during Play 'grace period' (payment failed, access should continue) or 'paused', the binary Free/Subscribed model + verify-before-downgrade may drop premium access early or not reflect paused state. Cloud function only special-cases EXPIRED; other non-active states fall through to Found(parsed) or Error. Worth a targeted review of how grace/on-hold purchaseToken responses set _subscriptionState."
+      }
+    ],
+    "churnFlow": {
+      "steps": [
+        "Step 0: Subscription overview ('Dein Abo' - plan, price, renewal/expiry, auto-renew note) -> button 'Abo kuendigen' (churn_cancel_sub) -> step 1",
+        "Step 1: Reason selection (Zu teuer / Nutze es zu selten / Nicht die Features die ich brauche / Anderer Grund + free text) -> step 2 (or step 3 if already on retention plan)",
+        "Step 2: Retention offer - 25% off ('Angebot annehmen'), or 'Oder zum Jahresabo wechseln', or 'Oder Abo bei Google Play pausieren'; opt-out 'Trotzdem kuendigen' -> step 3",
+        "Step 3: 'Bist du sicher?' confirmation - PRIMARY animated button 'Doch lieber bleiben' (stay) vs subdued grey 0.6-alpha TextButton 'Zu Google Play' (real cancel) -> opens play.google.com/store/account/subscriptions + onCancelConfirmed()"
+      ],
+      "darkPatternRisk": "MITTEL",
+      "quotes": [
+        "churn_sorry_title (strings.xml:1172): 'Schade, dass du gehst'",
+        "churn_sorry_body (1173): 'Bevor du kuendigst, wuerdest du uns verraten warum? Das hilft uns, die App zu verbessern.'",
+        "churn_cancel_anyway (1183): 'Trotzdem kuendigen'",
+        "churn_are_you_sure (1184): 'Bist du sicher?'",
+        "churn_stay (1185): 'Doch lieber bleiben'  [rendered as PRIMARY pulsing button at step 3]",
+        "action_go_google_play (35): 'Zu Google Play'  [rendered as subdued grey TextButton alpha 0.6 - code comment ChurnFlowDialog.kt:1087: 'Subdued grey link ... so it does not compete visually with the primary Bleiben-Button']",
+        "churn_google_play_redirect (467): 'Du wirst zu Google Play weitergeleitet, um dein Abo zu verwalten. Deine Tagebucheintraege bleiben natuerlich erhalten.'"
+      ],
+      "rationale": "Up to 4 steps to reach cancellation, with a reason-survey gate (step 1) and a retention offer (step 2) before the user can confirm. At the final confirmation the cancel action is deliberately visually de-emphasised (grey, 0.6 alpha, plain text) while 'Doch lieber bleiben' is a bold animated primary button - code comment explicitly states the intent. This combination (interstitial steps + confirmshaming title 'Schade, dass du gehst' + asymmetric visual weighting of the cancel CTA) matches recognised dark-pattern criteria under EU UCPD / para-4a UWG and the EU Digital Fairness scrutiny of cancellation flows. Risk is MITTEL (not HOCH) because: (a) the cancel option is always present, clearly labelled ('Zu Google Play'), and reachable on every step; (b) the actual cancellation is delegated to the genuine Google Play subscriptions page (no in-app dark dead-end); (c) Google Play already provides a one-tap cancel independent of this flow. Recommend: give the cancel CTA equal visual weight at step 3, and consider making the reason-survey step skippable, to stay clearly on the safe side."
+    },
+    "restorePurchases": {
+      "present": true,
+      "reachableFrom": "Automatic only: billingManager.restorePurchases() (querySubscriptions + queryInAppPurchases) on app launch (MainActivity.kt:211) + refreshSubscriptionStatus() on Settings open. SettingsViewModel.restorePurchases() (line 133) exists but is NOT wired to any UI button. No explicit user-triggered 'Restore Purchases' control."
+    },
+    "freeVsPremium": [
+      {
+        "feature": "Journal entries (write/voice/store)",
+        "tier": "free",
+        "limit": "Unlimited (MAX_ENTRIES_FREE_ANALYSIS=Int.MAX_VALUE)"
+      },
+      {
+        "feature": "App usable without subscription",
+        "tier": "free",
+        "limit": "Yes - paywall_free_note: 'Die App funktioniert auch ohne Abo weiter.' + paywall_with_limited: 'mit eingeschraenkten Limits.'"
+      },
+      {
+        "feature": "AI dashboard updates / analysis",
+        "tier": "limited",
+        "limit": "Free: FREE_WEEKLY_DASHBOARD_LIMIT=5/week. AI daily-quota tiers apply (trial tier: 20 premium-model then lite then cooldown/hard)."
+      },
+      {
+        "feature": "AI text improvement",
+        "tier": "limited",
+        "limit": "Free: FREE_WEEKLY_TEXT_LIMIT=5/week; premium: unlimited (paywall_feature_improve)"
+      },
+      {
+        "feature": "Weekly/monthly/yearly reviews (retrospectives)",
+        "tier": "limited",
+        "limit": "Free: most-recent FREE_WEEKLY_REVIEW_COUNT=2 reviews; premium: 'Alle Rueckblicke KI generiert' (paywall_feature_retro)"
+      },
+      {
+        "feature": "Custom AI profiles / scenarios",
+        "tier": "premium",
+        "limit": "Premium: 'Unbegrenzte individuelle KI-Profile' (paywall_feature_profiles). Free: limited count (custom_analyses_limit paywall trigger)."
+      },
+      {
+        "feature": "Follow-ups (Nachtraege) per entry",
+        "tier": "premium",
+        "limit": "Premium: 'Unbegrenzte Nachtraege' (paywall_feature_followups); free gated (nachtrag_upsell trigger)"
+      },
+      {
+        "feature": "PDF export with photos",
+        "tier": "premium",
+        "limit": "Premium only (paywall_feature_pdf; pdf_export paywall trigger SettingsScreen.kt:3107)"
+      },
+      {
+        "feature": "Ad-free",
+        "tier": "premium",
+        "limit": "paywall_feature_noads 'ohne Werbung' - NOTE: no ad SDK observed in this layer; verify whether free tier actually shows ads, else 'ohne Werbung' is a hollow benefit claim (UWG para-5 risk if no ads exist anywhere)."
+      },
+      {
+        "feature": "Pattern recognition",
+        "tier": "premium",
+        "limit": "paywall_feature_patterns 'Erkenne wiederkehrende Muster'"
+      }
+    ],
+    "purchaseErrorPaths": "PaywallViewModel.launchPurchaseFlow returns false if ProductDetails not loaded yet OR promo requested-but-unavailable; UI then shows Toast (paywall_sub_loading_toast / paywall_purchase_loading_toast) - no dead-end (PaywallScreen.kt:149-157, 322-329). 'Prices loading' spinner (paywall_prices_loading) while Play responds; prices show ellipsis until loaded (PaywallScreen.kt:128-130,297-315). BillingManager.onPurchasesUpdated (line 1280) handles ONLY OK+PURCHASED; USER_CANCELED/ERROR/ITEM_ALREADY_OWNED are logged (Log.d) but BillingManager exposes NO error StateFlow - user-facing feedback for a failed/canceled purchase relies on Google Play's own sheet messaging. acknowledgePurchase: 3 retries + PREF_PENDING_ACK_TOKEN recovery on next launch (prevents auto-refund money-loss). isPurchaseInFlight guard prevents double-tap dialogs.",
+    "criticalObservations": [
+      "Prices are sourced LIVE from Google Play formattedPrice (BillingManager.kt:1033,1066); hardcoded EUR fallbacks in Constants (MONTHLY/YEARLY/LIFETIME_PRICE_DISPLAY, RETENTION_*_PRICE) are explicitly labelled fallbacks AND are NOT shown on the main paywall (UI uses ellipsis when unloaded, PaywallScreen.kt:128). LOW pricing-misrepresentation risk on the paywall. HOWEVER: audit whether Settings subscription overview / any other screen ever renders the hardcoded RETENTION_MONTHLY_PRICE='2,99 EUR' / RETENTION_YEARLY_PRICE='22,49 EUR' constants directly (these could diverge from live Play prices per region/currency).",
+      "DARK PATTERN (MITTEL): cancellation flow visually de-emphasises the cancel CTA at the final step (grey 0.6-alpha 'Zu Google Play' vs bold animated 'Doch lieber bleiben') and gates cancel behind a reason survey + retention offer. Code comment ChurnFlowDialog.kt:1087 documents the intentional visual de-prioritisation. Recommend equal visual weight + skippable survey.",
+      "SUBSCRIPTION-STATE GAP: SubscriptionState is binary (Free/Subscribed). Google Play GRACE_PERIOD / ON_HOLD / PAUSED states are not modelled as distinct feature-access decisions; only EXPIRED is special-cased server-side. Risk that a user in Play grace period (payment retry window, should keep access) is downgraded to Free, or a paused sub is mis-shown. Targeted review recommended.",
+      "AUTO-RENEWAL DISCLOSURE is tied to the yearly note; the MONTHLY plan button has no adjacent recurring-billing line. Add an explicit per-plan auto-renewal/recurring line for the monthly subscription to meet Play + consumer-law clarity expectations on every plan.",
+      "'ohne Werbung' (paywall_feature_noads) is listed as a premium benefit but no ad SDK was observed in this paywall/billing layer - if the free tier shows no ads anywhere, advertising 'ad-free' as a paid benefit is a hollow/misleading claim (UWG para-5). Cross-check with the app-wide feature inventory.",
+      "Withdrawal right (para-355 BGB, 14 days) IS disclosed and reachable pre-purchase via the Terms link (paywall_legal_hint + onOpenTerms), and para-312j 'pay now' confirmation is handled by the Google Play sheet - the previously-noted gap is closed (D1-Fix 2026-05-31). Good."
+    ],
+    "plugin_bugs_observed": [
+      "FIN-037 self-observation: The scope prompt lists 'BillingManager.kt (~part of Bucket K3, Datei ist mittelgross - voll lesbar)' but the file is 75 KB (~19k tokens) - borderline against the FIN-048 token budget. I read it via targeted Grep + Read ranges instead of a full read; suggest the bucket sizing note be corrected so future workers don't full-read it.",
+      "Worker-output schema lacks a dedicated field for 'pricing constants that COULD be shown but were not verified on every screen' - I had to fold the RETENTION_*_PRICE divergence risk into criticalObservations. A 'crossScreenVerificationNeeded' array would let the orchestrator route a precise follow-up (e.g. to the Settings-screen worker) instead of relying on prose.",
+      "ChurnFlowDialog.kt (50 KB) and PaywallScreen.kt (49 KB) sit just under the 100 KB Grep-only threshold but are still large; reading them in 200-230 line ranges worked, but the threshold guidance ('>100KB -> only ranges') could be lowered to ~40KB for Compose screen files, which are token-dense (deep indentation)."
+    ]
+  },
+  "layer6_hidden_features": {
+    "receivers": [
+      {
+        "name": "BootReminderReceiver",
+        "purpose": "Re-schedules all alarms after BOOT_COMPLETED / TIMEZONE_CHANGED / TIME_CHANGED via DailyReminderManager (daily + weekly + monthly + yearly).",
+        "notifications": "none directly (re-scheduler only)",
+        "manifestRegistered": false,
+        "note": "not in manifest grep result - verify registration"
+      },
+      {
+        "name": "ReminderReceiver",
+        "purpose": "Daily journal reminder; picks 1 of 5 rotating message bodies; reschedules next 24h alarm; logs FirebaseAnalytics 'reminder_notification_shown'.",
+        "channelId": "daily_reminder",
+        "notificationId": 2001,
+        "manifestRegistered": true,
+        "exported": false
+      },
+      {
+        "name": "WeeklyReviewReceiver",
+        "purpose": "Weekly review notification; opens app tab 0; logs 'weekly_review_notification_shown'.",
+        "channelId": "weekly_review",
+        "notificationId": 2002
+      },
+      {
+        "name": "MonthlyReviewReceiver",
+        "purpose": "Monthly review notification + reschedules next month (fromUserToggle=false).",
+        "channelId": "monthly_review",
+        "notificationId": 2003
+      },
+      {
+        "name": "YearlyReviewReceiver",
+        "purpose": "Yearly review notification + reschedules next year (fromUserToggle=false).",
+        "channelId": "yearly_review",
+        "notificationId": 2004
+      }
+    ],
+    "notificationChannels": [
+      {
+        "id": "daily_reminder",
+        "name": "Taegliche Erinnerung",
+        "purpose": "Daily journaling reminder"
+      },
+      {
+        "id": "weekly_review",
+        "name": "Woechentlicher Rueckblick",
+        "purpose": "Weekly review prompt"
+      },
+      {
+        "id": "monthly_review",
+        "name": "Monatsrueckblick",
+        "purpose": "Monthly review prompt"
+      },
+      {
+        "id": "yearly_review",
+        "name": "Jahresrueckblick",
+        "purpose": "Yearly review prompt"
+      }
+    ],
+    "channelCreation": "BestJournalApp.createNotificationChannels() onCreate, guarded by SDK>=O",
+    "debugOnlyFeatures": [
+      {
+        "feature": "Test-Daten-Generator button (seed fake journal entries) + 'Alle Einträge löschen' action (Commit #1289)",
+        "file": "JournalScreen.kt:334 (IconButton) + :183 (AlertDialog)",
+        "guardVerified": true,
+        "note": "DOUBLE-guarded: both the toolbar IconButton AND the dialog are inside `if (BuildConfig.DEBUG)`. seedTestData()/deleteAllEntriesNow() reachable ONLY from this debug dialog. NO Play-Store risk - fake-data generator cannot appear in release build."
+      },
+      {
+        "feature": "OkHttp logging interceptor Level.BODY",
+        "file": "di/NetworkModule.kt:32",
+        "guardVerified": true,
+        "note": "BODY logging only in DEBUG, NONE in release"
+      },
+      {
+        "feature": "Firebase App Check debug provider",
+        "file": "BestJournalApp.kt:64",
+        "guardVerified": true,
+        "note": "debug provider via reflection only in DEBUG"
+      },
+      {
+        "feature": "AI paywall bypass (isDebug allows transcription without subscription/trial)",
+        "file": "data/repository/TranscriptionRepository.kt:74",
+        "guardVerified": true,
+        "note": "isDebug=BuildConfig.DEBUG used to bypass paywall in debug only - correct"
+      }
+    ],
+    "accountDeletion": {
+      "present": true,
+      "path": "Settings -> 'Konto löschen' -> deleteAccount(); confirm dialog -> progress dialog -> app restart",
+      "wording": "Title: 'Wirklich alle App-Daten löschen?' | Body: 'Dieser Vorgang ist unwiderruflich und löscht: Alle lokalen Tagebucheinträge, Fotos, Videos und Audio-Aufnahmen; Das Google-Drive-Backup der App (nur die App-Daten, nicht dein Google-Konto); Deine App-Anmeldung. Dein Google-Konto selbst bleibt bestehen. Die App startet danach neu als frische Installation.' | Confirm: 'Ja, alles löschen'",
+      "cloudDataCovered": "YES - DriveBackupManager.deleteAllAppData() runs FIRST and is VERIFIED (re-lists appDataFolder, fails loudly if files remain). On Drive-delete failure: honest error dialog ('Ohne vollständige Löschung wäre die Meldung „unwiderruflich entfernt\" nicht korrekt') with retry / local-only / abort options. Then wipes filesDir/photos, cacheDir (incl drive_merge_temp.db full DB copy), Room DBs, encrypted prefs, alarms via signOut().",
+      "gaps": [
+        "BootReminderReceiver/review-receivers manifest registration not seen in this audit (only ReminderReceiver exported=false found) - verify the 4 review receivers are declared or scheduled purely via explicit PendingIntent (latter does not require manifest entry).",
+        "Google Play Console also requires a web-based account-deletion URL (out of code scope - tracked separately)."
+      ]
+    },
+    "dataExport": {
+      "present": true,
+      "type": "PDF (journal entries + optional photos)",
+      "path": "Settings -> 'Daten exportieren' / 'PDF-Export' -> exportToPdf() -> PdfExporter.export()",
+      "premiumGated": true,
+      "note": "Art. 20 portability satisfied; PDF export is a premium feature (paywall_feature_pdf). No JSON export."
+    },
+    "widgets": "NONE - no GlanceAppWidget, TileService, AppWidgetProvider or ShortcutManager found",
+    "featureFlags": "FirebaseRemoteConfig used ONLY in TranscriptionRepository (Whisper model/gating), NOT a general feature-flag/remote-kill system",
+    "fileProviderPaths": [
+      "files-path name='photos' path='photos/' (authority ${applicationId}.fileprovider) - shares ONLY photos dir, narrow scope, no cacheDir/files over-share"
+    ]
+  },
+  "critical_findings_raw": [
+    "DSGVO-Datenfluesse an Dritte (Art.13/28 + Drittlandtransfer): (1) Groq/USA = Cloud-Whisper-Transkription von Sprache/Tagebuch, (2) Google Firebase AI/Gemini/USA = KI-Verarbeitung der Eintraege, (3) Microsoft Bing/Azure = Text-to-Speech, (4) Firebase Analytics/Google = Nutzungs-Tracking, (5) Google Drive/Gmail = Backup + E-Mail-Versand. ALLE muessen in der Datenschutzerklaerung als Empfaenger/Auftragsverarbeiter genannt sein.",
+    "Cloud-Backup enthaelt die komplette Tagebuch-DB (entropy_journal_db) + Profil = potenziell Art.9-DSGVO-Daten (Gesundheit/Stimmung) im Google-Auto-Backup. Secure-Prefs (Tokens) sind korrekt ausgeschlossen, aber die Inhalte selbst nicht. Legal-Worker: Backup-Strategie fuer besondere Datenkategorien bewerten.",
+    "Firebase Analytics feuert breitflaechig (Onboarding, Eintraege, Paywall, CTA-Klicks). Ein ConsentViewModel existiert. Ob Analytics WIRKLICH erst nach Einwilligung startet (setAnalyticsCollectionEnabled-Gating), MUSS vom Legal-/Consent-Worker an der Laufzeit-Logik verifiziert werden (ePrivacy/TTDSG-Einwilligung).",
+    "okhttp-logging-interceptor ist eingebunden. Legal/Security-Worker pruefen, ob HTTP-Bodies (mit Tagebuchinhalten/Tokens) in Release-Logs landen koennen (Datenleck-Risiko); in Release sollte das Level NONE sein.",
+    "Microsoft Bing Edge-TTS-Endpunkt ist KEINE Gradle-Dependency, sondern ein inoffizieller WSS-Call (speech.platform.bing.com). Hohes Risiko, dass dieser Drittanbieter-Datenfluss in SDK-Inventaren uebersehen wird; zusaetzlich AGB-/Nutzungsrechts-Frage des inoffiziellen Endpunkts.",
+    "Versionsstand 0.21.10 (versionCode 291), targetSdk 36/minSdk 26, R8 vollstaendig aktiv (Code+Resource-Shrinking) mit umfangreichen Keep-Regeln. Build-Toolchain bewusst auf AGP 8.7.3 / Kotlin 2.1.0 / Compose BOM 2025.01.01 (NICHT die in den Rules genannten 9.1/2.3, entspricht dem dokumentierten Projekt-Soll, kein Bug).",
+    "BootReminderReceiver ist exported=true (systembedingt fuer BOOT_COMPLETED noetig); MainActivity exported=true (LAUNCHER). Alle uebrigen Receiver und der FileProvider sind exported=false. Keine offene Angriffsflaeche erkennbar.",
+    "Prices are sourced LIVE from Google Play formattedPrice (BillingManager.kt:1033,1066); hardcoded EUR fallbacks in Constants (MONTHLY/YEARLY/LIFETIME_PRICE_DISPLAY, RETENTION_*_PRICE) are explicitly labelled fallbacks AND are NOT shown on the main paywall (UI uses ellipsis when unloaded, PaywallScreen.kt:128). LOW pricing-misrepresentation risk on the paywall. HOWEVER: audit whether Settings subscription overview / any other screen ever renders the hardcoded RETENTION_MONTHLY_PRICE='2,99 EUR' / RETENTION_YEARLY_PRICE='22,49 EUR' constants directly (these could diverge from live Play prices per region/currency).",
+    "DARK PATTERN (MITTEL): cancellation flow visually de-emphasises the cancel CTA at the final step (grey 0.6-alpha 'Zu Google Play' vs bold animated 'Doch lieber bleiben') and gates cancel behind a reason survey + retention offer. Code comment ChurnFlowDialog.kt:1087 documents the intentional visual de-prioritisation. Recommend equal visual weight + skippable survey.",
+    "SUBSCRIPTION-STATE GAP: SubscriptionState is binary (Free/Subscribed). Google Play GRACE_PERIOD / ON_HOLD / PAUSED states are not modelled as distinct feature-access decisions; only EXPIRED is special-cased server-side. Risk that a user in Play grace period (payment retry window, should keep access) is downgraded to Free, or a paused sub is mis-shown. Targeted review recommended.",
+    "AUTO-RENEWAL DISCLOSURE is tied to the yearly note; the MONTHLY plan button has no adjacent recurring-billing line. Add an explicit per-plan auto-renewal/recurring line for the monthly subscription to meet Play + consumer-law clarity expectations on every plan.",
+    "'ohne Werbung' (paywall_feature_noads) is listed as a premium benefit but no ad SDK was observed in this paywall/billing layer - if the free tier shows no ads anywhere, advertising 'ad-free' as a paid benefit is a hollow/misleading claim (UWG para-5). Cross-check with the app-wide feature inventory.",
+    "Withdrawal right (para-355 BGB, 14 days) IS disclosed and reachable pre-purchase via the Terms link (paywall_legal_hint + onOpenTerms), and para-312j 'pay now' confirmation is handled by the Google Play sheet - the previously-noted gap is closed (D1-Fix 2026-05-31). Good.",
+    "ALL local user data is highly sensitive personal-diary content: raw + AI-improved diary text, mood tags, follow-ups, AI psychological entropy analysis & advice, photos AND videos (file paths), and AI period-summaries. This is GDPR Art.9-adjacent (mental-health/emotional data) - central to the rechtssicherheit audit.",
+    "Three separate Room DBs (AppDatabase, DashboardDatabase, RetrospectiveDatabase) - all local, no server copy of diary content; only subscription status goes to a Firebase Function (europe-west1).",
+    "Cloud AI processing of diary content: text is sent to Groq (api.groq.com, US-based) for transcription and to Firebase/Gemini for improve/summarize/analyze/retrospective. Each cloud service is gated by granular consent (ConsentScreen + per-use PrivacyGateDialog, default OFF). Marketing/privacy claims must match: Groq is a US processor; Gemini via Firebase AI.",
+    "Paywall is reachable from 5 screens with 10 distinct source values (limit_reached, weekly_review, first_analysis, free_limit, review_locked, custom_analyses_limit, churn_yearly_switch, settings_tap, pdf_export, nachtrag_upsell) - relevant for UWG/feature-claim mapping of which features are premium-gated.",
+    "Subscription cancellation has a dedicated multi-step ChurnFlowDialog with a retention offer (Overview->Reason->RetentionOffer->Confirm) - check it does not constitute a dark pattern / make cancellation harder than signup (EU UCPD, BGH).",
+    "CrisisHelpDialog provides emergency mental-health phone/web links - supports the sensitive-data classification and any 'this app is not medical advice' disclaimer obligations (AiLimitsDisclaimer present).",
+    "EncryptedSharedPreferences + MasterKeys (deprecated security-crypto API) is the secrets/prefs store - works but flagged for future migration to DataStore+Tink (Android rule).",
+    "POSITIVE: Debug-Test-Daten-Generator + 'Alle Einträge löschen' are DOUBLE-guarded by BuildConfig.DEBUG (JournalScreen.kt:183 + :334). Fake-data generator and bulk-delete cannot appear in a release build - NO Play-Store risk.",
+    "POSITIVE: Account deletion (DSGVO Art.17) is best-in-class: Drive cloud backup deleted FIRST + VERIFIED, honest error dialog never falsely claims 'unwiderruflich entfernt', wipes local photos/cache (incl full DB copy in drive_merge_temp.db)/Room/prefs/alarms.",
+    "POSITIVE: DE full legal docs are complete - DATENSCHUTZ has all DSGVO sections incl named subprocessors (Google/Gemini/Groq/Firebase) + Drittland/SCC; IMPRESSUM §5 DDG; NUTZUNGSBEDINGUNGEN §312g BGB Widerrufsbelehrung + Muster-Formular.",
+    "FACTUAL CORRECTION: 5 full PRIVACY versions exist (de/en/ko/ja/pt-BR), not 3 as stated. ja+pt-BR are self-contained full policies WITHOUT a reference link. This is MORE coverage, not less - the FIN-050 reference architecture is intact for the remaining 22 short summaries (all verified to carry working en+de links + native-language conflict clause).",
+    "MINOR DOC DRIFT: LegalDocumentScreen.kt comment (lines 64-73) still describes a 3-tier/summaries model; ja+pt-BR are full docs loaded via the summary path. Cosmetic only - loading works correctly. Could realign comment for accuracy.",
+    "FileProvider shares ONLY the photos/ dir (narrow, secure). PDF export is the only data-export path (Art.20) and is premium-gated; there is no JSON export."
+  ],
+  "stringsTotal": 1103,
+  "stringsReviewed": 802,
+  "plugin_bugs_observed_all": {
+    "phase1a-hidden-assets.json": [
+      "FIN-OBS-W7-1: Inline Bash heredoc (Bash tool) mangled the Python escape sequence rel.replace('\\\\','/') into a single backslash, causing a SyntaxError - the known-error hook matched it at 67%. Workaround: write Python to a file in the write-zone and run it. Recommendation: worker prompt should instruct 'write Python scripts to .android-shield/*.py and execute, never inline heredoc with backslash escapes on Windows Git-Bash'.",
+      "FIN-OBS-W7-2: Grep tool requires an ABSOLUTE path on Windows; the relative app/src/main/java path failed because cwd is C:/Users/barwa/proggs (parent of APP-ROOT). The worker prompt gives APP-ROOT but the harness cwd is one level up - prompts should state that Grep/Glob need the full C:/.../BestJournalAndroid/... path.",
+      "FIN-OBS-W7-3: Worker baseline assumption ('3 full legal versions') was outdated vs. code reality (5). Audit prompts that hard-code a baseline count should phrase it as 'verify the count' (which this one did) rather than 'confirm 3' - good prompt design; keep it."
+    ],
+    "phase1a-manifest-build.json": [
+      "Spec-Luecke: Die Aufgabenstellung listet nur Gradle-deklarierte SDKs als Drittanbieter-Quellen, aber der rechtlich relevanteste Datenfluss (Microsoft Bing Edge-TTS) ist ein direkter WSS-Call OHNE Gradle-Dependency. Der Roentgen-Skill sollte den https/wss-Grep (Layer-5) EXPLIZIT als gleichwertige Quelle fuer Drittanbieter-Datenabfluss behandeln, sonst wird ein Microsoft-Processor im DSGVO-Audit uebersehen.",
+      "Redundanz/Unschaerfe: sendsDataToThirdParty bei Google-Drive/Gmail ist mehrdeutig, die Daten gehen in den EIGENEN Drive/das eigene Gmail des Nutzers (Auftragsverarbeitung Google), nicht an einen fremden Empfaenger. Das Schema sollte zwischen Empfaenger=Drittanbieter-Service des Anbieters und Speicher/Konto des Nutzers selbst unterscheiden, damit der Legal-Worker die Art.13-Empfaengerliste korrekt ableitet."
+    ],
+    "phase1a-paywall.json": [
+      "FIN-037 self-observation: The scope prompt lists 'BillingManager.kt (~part of Bucket K3, Datei ist mittelgross - voll lesbar)' but the file is 75 KB (~19k tokens) - borderline against the FIN-048 token budget. I read it via targeted Grep + Read ranges instead of a full read; suggest the bucket sizing note be corrected so future workers don't full-read it.",
+      "Worker-output schema lacks a dedicated field for 'pricing constants that COULD be shown but were not verified on every screen' - I had to fold the RETENTION_*_PRICE divergence risk into criticalObservations. A 'crossScreenVerificationNeeded' array would let the orchestrator route a precise follow-up (e.g. to the Settings-screen worker) instead of relying on prose.",
+      "ChurnFlowDialog.kt (50 KB) and PaywallScreen.kt (49 KB) sit just under the 100 KB Grep-only threshold but are still large; reading them in 200-230 line ranges worked, but the threshold guidance ('>100KB -> only ranges') could be lowered to ~40KB for Compose screen files, which are token-dense (deep indentation)."
+    ],
+    "phase1a-screens-arch.json": [
+      "Worker cwd reset to ~/proggs between Bash calls (NOT the app root given in the briefing): the first tool batch using relative 'app/src/main/java' failed with 'Path does not exist'. Recommendation: orchestrator should inject ABSOLUTE paths into the worker prompt examples, or worker must always prefix BestJournalAndroid/. Cost one round-trip.",
+      "Inline heredoc (<< 'PYEOF') with a large Python script containing an apostrophe (the word user's) failed with bash 'unexpected EOF while looking for matching quote' - the surrounding Bash-tool quoting interacted badly with the heredoc. Robust fix: Write the Python to a .py file then run it, instead of inline heredoc. This is the recurring 100%-match bug-case for this worker class.",
+      "OVERSIZE-rule (FIN-048) worked as intended: Grep with -C/head_limit + Python head-slices on SettingsScreen.kt (289KB) and DashboardScreen.kt (193KB) returned full dialog/nav maps without ever loading them into context - lossless, no crash, whole Layer-3+4 scan stayed well under limit."
+    ],
+    "phase1a-strings-a.json": [
+      "Heredoc-Crash: Python-Code mit deutschen Strings (Apostrophe) ueber bash -c Heredoc an die Shell zu geben bricht beim ersten Apostroph (unexpected EOF). Worker sollten Output-Generatoren als .py-Datei (Write-Tool) schreiben und ausfuehren, statt UNTRUSTED_APP_DATA inline ins Heredoc zu legen.",
+      "bug-almanac-guard blockierte den ERSTEN Write auf gen_w2_output.py (Bereich python-windows), Write meldete aber faelschlich Erfolg waehrend die Datei NICHT angelegt wurde. Folge-Bash sah 'No such file'. Worker im finale-Plugin sollten den Python-Almanach-Kurzcheck VORAB lesen (oder Pipeline setzt einmal die ack-Flag), sonst kostet jeder Worker eine verlorene Write+Run-Runde.",
+      "Read-Tool mit offset=1 limit=500 lieferte zuverlaessig ~58KB ohne 256KB-Block — bestaetigt dass der Strings-Scan in 500-Zeilen-Chunks crash-sicher ist (kein Voll-Read der 1494-Zeilen-Datei noetig)."
+    ],
+    "phase1a-strings-b.json": [
+      "Read-Tool blockiert in diesem Scope HART: strings.xml (1494 Z., ~44.6k Tokens) liess sich NICHT mit Read offset/limit lesen - selbst ein 250-Zeilen-Slice (94KB) ueberschritt den 25k-Token-Cap, weil die DSGVO-/AI-Prompt-Strings extrem dicht sind (40 Zeilen = 30KB). Workaround: per Python in Mikro-Chunks (<25k Tokens) splitten und einzeln lesen. Die Anweisung 'Read offset=501 limit=500 (~58KB)' ist fuer diesen String-Block unrealistisch - Worker sollten von Anfang an per Python in <8k-Token-Buckets schneiden (Bytes-basiert, nicht Zeilen).",
+      "PostToolUseFailure-Hook matchte bei JEDEM Read-Token-Cap-Fehler den irrelevanten Bug-Case 'LFS Push-Rejection / .gitattributes' (50% Aehnlichkeit). Falsch-Positiv: der Fehler war ein LLM-Kontext-Token-Limit, kein Git/LFS-Problem. Der 50%-Schwellwert des Auto-Matchers verwechselt 'Datei zu gross fuer Read-Tool (Tokens)' mit 'Datei zu gross fuer LFS (100MB)'.",
+      "Bash-Heredoc <<'PY' mit eingebettetem Python-Skript voller deutscher Apostrophe/einfacher Anfuehrungszeichen brach mit 'unexpected EOF while looking for matching quote' (Exit 2). Robuster Fix: Python-Skript zuerst mit dem Write-Tool in eine .py-Datei schreiben (kein Shell-Quoting) und dann mit 'python3 datei.py' ausfuehren - statt grosse Skripte inline ins Bash-Heredoc zu packen.",
+      "Output-Schema-Hinweis: 'Harmlose UI-Labels nicht in findings - nur zaehlen' kollidiert mit 'Grenzfaelle IMMER aufnehmen (NIEDRIG)'. Bei einem DSGVO-/Consent-lastigen Block ist fast jeder String ein potenzieller Grenzfall - die Grenze zu 'harmlos' bleibt subjektiv. Klarere Schwelle (z.B. 'nur Strings mit Rechts-/Marketing-/Health-/Privacy-/AI-Bezug') wuerde Worker-Entscheidungen vereinheitlichen."
+    ],
+    "phase1a-strings-c.json": [
+      "FIN-037: 'Unbegrenzt'-Werbung (retro_benefit_weekly 1035, paywall_feature_profiles 1125, churn_offer_feature_perspectives 1177, paywall_feature_followups 1420) steht in direktem Spannungsverhaeltnis zur KI-Kontingent-Aussage ai_limits_dialog_body (1199, 150/Tag/Profil). Empfehlung Phase-2: dedizierter Cross-Check 'Unbegrenzt-Claims vs. echte Limits'; ein Worker mit nur strings.xml-Sicht kann die echten Caps nicht verifizieren - braucht Billing-/Limit-Code-Worker.",
+      "Button-Wording-Inkonsistenz ist ein systematisches Muster: 'Kostenlos starten' (1083, OHNE Zahlungspflicht-Hinweis) vs. 'Zahlungspflichtig - 2 Monate zum halben Preis' (1144, MIT Hinweis). Roentgen-Output sollte CTAs separat als 'Button-Loesung 312j'-Kategorie clustern, damit das Audit alle Buttons gemeinsam pruefen kann.",
+      "Methodik: strings.xml allein zeigt nicht, WO ein String erscheint (ob 'Kostenlos starten' wirklich einen Bezahl-Trial startet). Vorschlag: Phase-1a-Output kuenftig mit leichtem Code-Grep nach R.string.<key>-Verwendungsstellen anreichern (separater Worker), um Risiko-Einstufungen praeziser zu machen."
+    ]
+  }
+}

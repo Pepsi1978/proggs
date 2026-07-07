@@ -1,0 +1,7 @@
+interface:
+  display_name: "kotlin-review"
+  short_description: "Comprehensive Kotlin code review for idiomatic patterns, null"
+  default_prompt: "Use $everything-codex-everything-codex--kotlin-review for this task."
+
+policy:
+  allow_implicit_invocation: true

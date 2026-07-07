@@ -1,0 +1,7 @@
+interface:
+  display_name: "database-migrations"
+  short_description: "Database migration best practices for schema changes, data"
+  default_prompt: "Use $everything-codex-everything-codex--database-migrations for this task."
+
+policy:
+  allow_implicit_invocation: false

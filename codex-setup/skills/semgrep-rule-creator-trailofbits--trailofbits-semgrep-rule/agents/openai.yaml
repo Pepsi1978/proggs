@@ -1,0 +1,7 @@
+interface:
+  display_name: "trailofbits-semgrep-rule"
+  short_description: "Creates Semgrep rules with test-first methodology"
+  default_prompt: "Use $semgrep-rule-creator-trailofbits--trailofbits-semgrep-rule for this task."
+
+policy:
+  allow_implicit_invocation: false

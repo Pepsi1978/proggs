@@ -1,0 +1,7 @@
+interface:
+  display_name: "code-reviewer"
+  short_description: "Review completed project steps against plans and code quality"
+  default_prompt: "Use $superpowers-codex-plugins-official--code-reviewer for this task."
+
+policy:
+  allow_implicit_invocation: false

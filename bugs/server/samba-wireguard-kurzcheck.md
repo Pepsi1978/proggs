@@ -1,0 +1,23 @@
+# Samba/SMB-Dateifreigabe (Linux-Server ↔ Windows ueber WireGuard) Kurzcheck
+
+> **Nur der Kurzcheck (Stufe A).** Treffen Punkte auf deine konkrete Aufgabe zu — oder tritt in
+> diesem Bereich ein Fehler auf — dann lies den ENTSCHEIDENDEN Abschnitt im VOLLTEXT (gleicher
+> Titel ohne "Kurzcheck"), nicht nur diese Kurzfassung.
+
+## ⚡ Kurzcheck (Stufe A — vor der Arbeit lesen)
+
+| # | Signal / Situation | Sofort-Regel | Volltext |
+|---|--------------------|--------------|----------|
+| 1 | ⭐ SSH/Ping ueber WireGuard geht, SMB **nicht** erreichbar | Samba bindet sich NICHT automatisch an `wg0` (kein BROADCAST). In `smb.conf` die **konkrete Host-IP mit Maske**: `interfaces = lo 10.8.0.1/24` + `bind interfaces only = yes` — die **Netz-Adresse** `10.8.0.0/24` reicht NICHT (lauscht dann nur auf `lo`; live verifiziert 2026-06-23). ODER `bind interfaces only = no`. | §1 |
+| 2 | Windows 11: "Benutzername oder Passwort ist falsch" trotz korrekter Daten | In `smb.conf` **`protocol = SMB3`** (server-seitig) erzwingen — `client max protocol = SMB3` allein reicht oft NICHT. Credential-Manager-Altlasten loeschen (§5). | §4, §5 |
+| 3 | Windows: "Zugriff durch Sicherheitsrichtlinie blockiert (Gastzugriff)" | Registry `HKLM\SYSTEM\CurrentControlSet\Services\LanmanWorkstation\Parameters` → DWORD `AllowInsecureGuestAuth=1` (nur fuer privaten PC; lockert Sicherheit). | §6 |
+| 4 | SMB ueber WireGuard sehr langsam (wenige Mbit/s) | MTU-Problem: WireGuard-MTU auf **1350** senken (`ip link set mtu 1350 dev wg0`) + MSS-Clamping fuer TCP. | §3 |
+| 5 | Port-Freigabe fuer SMB im Tunnel | SMB-Ports (445/tcp, 139/tcp) NUR ueber `wg0` zulassen: `ufw allow in on wg0 to any port 445` (NICHT oeffentlich!). Einziger oeffentlicher Port bleibt UDP 51820. | §2 |
+| 6 | Netzlaufwerk verschwindet/rotes X nach Reboot/Login | Persistentes Mapping per `New-SmbMapping -Persistent` (nicht `New-PSDrive`); Credential-Manager-Eintrag pro Servername UND IP; "auf Netzwerk warten"-GPO; PIN-Login kann stoeren. | §5 |
+| 9 | ⭐ Laufwerke fehlen ganz, aber Ping+Port 445 OK & manuelles `net use` klappt | Auto-Reconnect-Gate prueft falschen Port (fremder Dienst statt SMB **445**) → kommt nie bis zum Mapping. Gate IMMER auf 445; Skript-Log lesen (Fehler sonst geschluckt). | §5 |
+| 10 | ⭐⭐ Reconnect-Skript laeuft als geplante Aufgabe (elevated/hidden) → `net use` HAENGT ewig, Laufwerke nie da | `net use ... /persistent:yes` OHNE explizite Credentials promptet im **elevated** Token (Tresor token-getrennt!) interaktiv nach dem Benutzernamen → im hidden/wscript-Kontext kein Eingeber → Endlos-Hang + net.exe-Prozess-Leak. FIX: per **WNetAddConnection2 (mpr.dll) mit EXPLIZITEN Credentials** mappen (ohne `CONNECT_INTERACTIVE` → nie ein Prompt). | §9 |
+| 11 | ⭐⭐ Geplante Aufgabe (RunLevel Highest) mappt erfolgreich, aber Explorer zeigt nichts | UAC-Token-Isolation: im **elevated** Token gemappte Netzlaufwerke sind im **nicht-elevated** Explorer unsichtbar. FIX: `EnableLinkedConnections=1` (HKLM\…\Policies\System, DWORD) → wirksam ab naechstem Login. Wirkt NICHT bei UAC "Prompt for credentials" (→ "Prompt for consent") und NICHT fuer Dienste (UNC nutzen). **Sauberer:** gleich NICHT-elevated mappen (Microsoft `MapDrives.ps1`-Linie). | §10 |
+| 13 | ⭐⭐ Nach Reboot hat EIN Laufwerk (von mehreren vom selben VPS) ein rotes X; Klick → "mehrere Benutzernamen nicht zulaessig" (**1219**), Skript-Log sagt aber "reconnect OK" | **Persistent-Login-Race:** persistente `HKCU:\Network`-Mappings → Windows reconnectet beim Login VOR dem Tunnel → totes Mapping im nicht-elevated Token, kollidiert mit dem (elevated) Skript-Mapping. FIX: persistente `HKCU:\Network`-Eintraege ENTFERNEN; Reconnect-Skript mappt **NICHT-persistent** (Flag 0) als einzige tunnel-bewusste Quelle; bei 1219 alle `10.8.0.1`-Sitzungen abraeumen + neu. Sofort von Hand: `net use Z: /delete /yes` + neu verbinden. | §11 |
+| 12 | `.ps1` startet nicht / Parse-Fehler "schliessende } fehlt", nur via geplanter Aufgabe | **Windows PowerShell 5.1** liest `.ps1` OHNE BOM als **cp1252** → ein Em-Dash (—) in einem String wird zu `â€"` und zerschiesst Quotes/Klammern. FIX: `.ps1` als **UTF-8 mit BOM** speichern UND keine typografischen Zeichen (Em-Dash/Smart-Quotes) im Code. | §9 |
+| 7 | "Brauche ich `ip_forward`/NAT fuer SMB ueber WireGuard?" | **NEIN** — der Dienst laeuft AUF dem VPS, an `wg0` gebunden → lokale Zustellung, kein Forwarding noetig (siehe `wireguard.md` §1). | §1 |
+| 8 | ⭐ Samba 4.19.x ungepatcht? (Upstream EOL) | Upstream-4.19-Zweig ist **EOL** (letzter Upstream-Fix 4.19.1). Auf Ubuntu 24.04 kommen Security-Fixes NUR per **`apt`/USN** ins `2:4.19.5+dfsg-…ubuntuX.Y`-Paket → **`unattended-upgrades` aktivieren** bzw. regelmaessig `apt upgrade`. NICHT auf den Upstream-Versionsstring schauen. | §8 |

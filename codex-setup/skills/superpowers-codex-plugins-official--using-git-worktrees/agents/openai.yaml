@@ -1,0 +1,7 @@
+interface:
+  display_name: "using-git-worktrees"
+  short_description: "starting feature work that needs isolation from current"
+  default_prompt: "Use $superpowers-codex-plugins-official--using-git-worktrees for this task."
+
+policy:
+  allow_implicit_invocation: false

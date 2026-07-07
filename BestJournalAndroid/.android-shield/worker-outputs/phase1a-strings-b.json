@@ -1,0 +1,354 @@
+{
+  "worker": "w3-strings-b",
+  "lineRange": "501-1000",
+  "stringsReviewed": 308,
+  "findings": [
+    {
+      "key": "settings_premium_feature_profiles",
+      "line": 505,
+      "text": "Unbegrenzte individuelle KI-Profile",
+      "category": "marketing-claim",
+      "risk": "HOCH",
+      "rationale": "'Unbegrenzt' ist eine absolute Zusage. Wenn die App durch das KI-Tageslimit/Wochenlimit faktisch begrenzt, ist 'unbegrenzt' irrefuehrend (UWG 5). Gegen Code-Realitaet pruefen: gibt es wirklich KEINE Obergrenze fuer die Anzahl Profile?"
+    },
+    {
+      "key": "settings_premium_feature_voice",
+      "line": 503,
+      "text": "Praezisere Spracherkennung",
+      "category": "marketing-claim",
+      "risk": "NIEDRIG",
+      "rationale": "Komparativ 'praeziser' impliziert messbar bessere Qualitaet ggue. der lokalen Erkennung. Belastbar nur wenn die Premium-Variante (Groq Whisper) tatsaechlich genauer ist. Grenzfall."
+    },
+    {
+      "key": "settings_premium_feature_voice_desc",
+      "line": 504,
+      "text": "Hoehere Qualitaet fuer deine Spracheintraege",
+      "category": "marketing-claim",
+      "risk": "NIEDRIG",
+      "rationale": "'Hoehere Qualitaet' ist ein Qualitaetsversprechen, subjektiv/unbelegt. Grenzfall fuer UWG 5 Abs.1."
+    },
+    {
+      "key": "settings_feedback_dialog_desc",
+      "line": 527,
+      "text": "Deine Nachricht an die Entwickler - wir lesen alles und antworten persoenlich!",
+      "category": "marketing-claim",
+      "risk": "MITTEL",
+      "rationale": "'wir lesen alles und antworten persoenlich' ist ein konkretes Leistungsversprechen. Wenn nicht jede Nachricht beantwortet wird, irrefuehrend. Verstaerkt durch 'wir antworten innerhalb von 24 Stunden an Werktagen' (settings_report_ai_confirm_body, Z.639) - eine Reaktionszeit-Zusage, die einhaltbar sein muss."
+    },
+    {
+      "key": "settings_crisis_dialog_body",
+      "line": 770,
+      "text": "Best Journal ist ein Tagebuch und ersetzt keine professionelle psychologische oder medizinische Beratung. KI-generierte Analysen sind keine Therapie. ... Gedanken an Selbstverletzung oder Suizid ... kostenlose, anonyme Hilfe - rund um die Uhr.",
+      "category": "health-language",
+      "risk": "NIEDRIG",
+      "rationale": "GUTE Praxis: expliziter HWG/SB-243-Disclaimer ('ersetzt keine Beratung', 'keine Therapie') + Krisen-Hotlines. Positiv-Fund. Sicherstellen, dass dieser Disclaimer auch dort erscheint, wo KI-Analysen ausgegeben werden, nicht nur im Krisendialog."
+    },
+    {
+      "key": "settings_crisis_subtitle",
+      "line": 768,
+      "text": "Wichtige Hotlines im Notfall",
+      "category": "health-language",
+      "risk": "NIEDRIG",
+      "rationale": "Krisen-/Notfall-Sprache. Unbedenklich (Schutzfunktion), aber HWG-relevant gelistet. Grenzfall."
+    },
+    {
+      "key": "dashboard_profile_focus_entropy",
+      "line": 959,
+      "text": "Sortiert dein Leben: erkennt Stress, Unordnung und Belastung und zeigt was du loslassen oder klaeren kannst.",
+      "category": "health-language",
+      "risk": "MITTEL",
+      "rationale": "'erkennt Stress und zeigt was du loslassen kannst' grenzt an Wohlbefindens-/Selbsthilfe-Versprechen (HWG-Grenzbereich). Als Feature-Beschreibung einer KI ohne Therapieanspruch sollte klar bleiben, dass es um Tagebuch-Reflexion geht, nicht um Stressbehandlung."
+    },
+    {
+      "key": "dashboard_profile_focus_insight",
+      "line": 960,
+      "text": "Tiefgruendige Selbsterkenntnis: Denkmuster und verborgene Staerken.",
+      "category": "health-language",
+      "risk": "NIEDRIG",
+      "rationale": "Psychologie-naher Wortlaut ('Denkmuster', 'Selbsterkenntnis'). Grenzfall - Reflexions-Feature, kein Heilversprechen, aber HWG-Naehe dokumentieren."
+    },
+    {
+      "key": "ai_prompt_entropy_intro",
+      "line": 914,
+      "text": "Du bist ein empathischer, hochintelligenter Lebensberater und Muster-Analyst. ... Finde wiederkehrende Quellen von Stress, Unordnung und Belastung ... Schmerz, Schlafprobleme, emotionale Belastung ...",
+      "category": "ai-claim",
+      "risk": "HOCH",
+      "rationale": "System-Prompt laesst die KI als 'Lebensberater' agieren und aktiv 'Schmerz, Schlafprobleme, emotionale Belastung' analysieren + 'Ratschlaege' geben (prioritaet 'hoch=sofort handeln'). Gesundheitsnahe Beratung durch KI (HWG/SB-243-Grenzbereich). Risiko, dass Ausgaben wie medizinische/psychologische Empfehlungen wirken. Disclaimer (KI keine Therapie) MUSS an der Ausgabe sichtbar sein."
+    },
+    {
+      "key": "ai_prompt_insight_intro",
+      "line": 904,
+      "text": "Du bist ein einfuehlsamer, tiefgruendiger Muster-Analyst fuer persoenliche Entwicklung. ... unbewusste Ueberzeugungen, emotionale Reaktionsmuster ...",
+      "category": "ai-claim",
+      "risk": "MITTEL",
+      "rationale": "Psychotherapie-nahe Begriffe ('unbewusste Ueberzeugungen', 'emotionale Reaktionsmuster', 'wohlwollender Spiegel'). KI erstellt psychologisch anmutende Profile. HWG-Grenzbereich - als KI-Selbsterkenntnis vermarktet, aber Naehe zu Psychoanalyse dokumentieren."
+    },
+    {
+      "key": "settings_unlock_premium",
+      "line": 507,
+      "text": "Premium freischalten",
+      "category": "subscription",
+      "risk": "MITTEL",
+      "rationale": "Abo-CTA. In Zeilen 501-1000 fehlen an dieser CTA die Abo-Pflichtangaben (Preis, Laufzeit, automatische Verlaengerung, Kuendigungsweg). Pruefen, ob sie an der Paywall (anderer Zeilenbereich) vollstaendig stehen - sonst UWG/Play-Billing-Verstoss."
+    },
+    {
+      "key": "paywall_exit_bonus_days",
+      "line": 604,
+      "text": "+ %1$d Tage extra Testzeit",
+      "category": "subscription",
+      "risk": "MITTEL",
+      "rationale": "Exit-Bonus verlaengert die Testphase. Trial-/Auto-Renewal-Pflichtangaben muessen klar bleiben (wann beginnt die kostenpflichtige Verlaengerung, wie kuendigen). Dark-Pattern-Risiko, wenn die verlaengerte Testzeit den Auto-Start des Abos verschleiert."
+    },
+    {
+      "key": "churn_discount_badge",
+      "line": 799,
+      "text": "%1$d%% SPAREN",
+      "category": "subscription",
+      "risk": "MITTEL",
+      "rationale": "Rabatt-/Retention-Badge in einem Churn-Flow (Kuendigungs-Abfangen). Prozent-Versprechen muss zutreffen und Bezugspreis nachvollziehbar sein (UWG 5 Preisangaben). Churn-Dialog mit Rabatt ist Dark-Pattern-sensibel - Kuendigung darf nicht erschwert werden."
+    },
+    {
+      "key": "retro_premium_unlock",
+      "line": 989,
+      "text": "Mit Premium alle Rueckblicke freischalten",
+      "category": "subscription",
+      "risk": "NIEDRIG",
+      "rationale": "Paywall-Hinweis. Bestaetigt, dass Rueckblicke (Wochen/Monats/Jahres) Premium-gated sind. Konsistenz-Check ggue. Werbeaussagen, die 'Rueckblicke' evtl. als kostenlos darstellen."
+    },
+    {
+      "key": "settings_revoke_subtitle",
+      "line": 747,
+      "text": "356a BGB - Widerruf direkt per App",
+      "category": "subscription",
+      "risk": "NIEDRIG",
+      "rationale": "In-App-Widerrufsbutton (Pflicht ab 19.06.2026). Positiv-Fund. Hinweis 'Abos zusaetzlich ueber Google Play kuendigen' (settings_revoke_confirm_body, Z.749) ist korrekt - Widerruf des Vertrags ungleich Abo-Kuendigung. Gut umgesetzt."
+    },
+    {
+      "key": "consent_card1_body",
+      "line": 612,
+      "text": "Deine Eintraege bleiben auf deinem Geraet.",
+      "category": "privacy-claim",
+      "risk": "HOCH",
+      "rationale": "Absolute Lokal-Zusage 'bleiben auf deinem Geraet'. Widerspricht der Cloud-Realitaet: KI (Gemini), TTS (Edge), Spracherkennung (Groq) und optionales Drive-Backup senden Eintraege/Texte an US-Server. Ohne sofortiges 'sofern KI/Backup aktiv' im selben Sichtfeld irrefuehrend (UWG 5 / DSGVO Art.13). Karte 2 (Z.614) relativiert es zwar, aber Karte 1 steht plakativ allein."
+    },
+    {
+      "key": "consent_card3_title",
+      "line": 615,
+      "text": "Anonyme Statistiken",
+      "category": "privacy-claim",
+      "risk": "MITTEL",
+      "rationale": "'Anonyme Statistiken' (Firebase Analytics). Firebase nutzt eine pseudonyme App-Instance-ID/Geraetekennungen - datenschutzrechtlich i.d.R. NICHT vollstaendig 'anonym', sondern pseudonym. 'Anonym' kann irrefuehrend sein. Mehrfach verwendet (consent_toggle_analytics_*, settings_analytics_*)."
+    },
+    {
+      "key": "consent_toggle_analytics_body",
+      "line": 671,
+      "text": "Firebase Analytics - hilft uns die App zu verbessern. Keine persoenlichen Inhalte, nur anonyme Klick-Zahlen.",
+      "category": "privacy-claim",
+      "risk": "MITTEL",
+      "rationale": "'nur anonyme Klick-Zahlen' + 'Keine persoenlichen Inhalte'. Firebase erfasst Geraete-/Instanz-IDs (pseudonym). Aussage 'anonym' ist datenschutzrechtlich angreifbar; praeziser waere 'pseudonym/ohne Tagebuchinhalte'."
+    },
+    {
+      "key": "settings_analytics_title",
+      "line": 728,
+      "text": "Anonyme Statistik",
+      "category": "privacy-claim",
+      "risk": "MITTEL",
+      "rationale": "Gleiche 'anonym'-Problematik wie consent_card3 (Firebase = pseudonym). Konsistent verwendet, daher systematischer Fund."
+    },
+    {
+      "key": "consent_toggle_do_not_sell_body",
+      "line": 681,
+      "text": "Best Journal verkauft oder vermarktet deine Daten nirgendwo auf der Welt.",
+      "category": "privacy-claim",
+      "risk": "MITTEL",
+      "rationale": "Absolute weltweite Zusage 'verkauft nirgendwo auf der Welt'. Muss mit der tatsaechlichen Datenweitergabe (Firebase Analytics an Google, Werbe-IDs?) konsistent sein. Unter CCPA/CPRA gilt schon 'sharing' fuer Cross-Context-Werbung teils als 'sale'. Belastbarkeit pruefen."
+    },
+    {
+      "key": "privacy_gate_groq_body",
+      "line": 620,
+      "text": "schickt deine Sprachaufnahme verschluesselt an Groq (USA) ... Aufnahme wird nach der Umwandlung sofort geloescht / Kein KI-Training mit deinen Aufnahmen / Rechtsgrundlage: Standardvertragsklauseln (EU SCCs)",
+      "category": "privacy-claim",
+      "risk": "HOCH",
+      "rationale": "Konkrete Tatsachenbehauptungen ueber einen Drittanbieter: 'sofort geloescht', 'Kein KI-Training'. Muessen durch Groqs AGB/DPA tatsaechlich gedeckt sein - sonst irrefuehrend (UWG 5) UND DSGVO-Falschangabe. Verifizieren, dass Groqs Vertrag No-Training + sofortige Loeschung wirklich zusichert."
+    },
+    {
+      "key": "privacy_gate_gemini_body",
+      "line": 625,
+      "text": "verschluesselt an Google Gemini ... Kein KI-Training mit deinen Daten / Anfragen werden nicht dauerhaft gespeichert ... Die KI-Ausgaben sind Vorschlaege, keine professionelle Beratung und ersetzen keine Fachperson.",
+      "category": "privacy-claim",
+      "risk": "HOCH",
+      "rationale": "'Kein KI-Training' + 'nicht dauerhaft gespeichert' fuer Gemini. Bei der Gemini API gilt No-Training nur fuer den kostenpflichtigen/Cloud-Pfad; Free-Tier/AI-Studio-Daten KOENNEN zum Training genutzt werden. Wenn die App den falschen Endpunkt nutzt, ist die Zusage falsch (UWG/DSGVO). Positiv: Art.9-Hinweis + 'keine Fachperson' (HWG) ist vorbildlich."
+    },
+    {
+      "key": "privacy_gate_tts_body",
+      "line": 630,
+      "text": "Dein Text wird verschluesselt an Microsoft gesendet ... Kein KI-Training mit deinen Texten",
+      "category": "privacy-claim",
+      "risk": "MITTEL",
+      "rationale": "'Kein KI-Training' fuer Microsoft Edge TTS. Edge-TTS ist ein inoffizieller/oeffentlicher Endpunkt ohne formelles DPA - die No-Training-Zusage ist schwer belegbar. Verifizieren, welcher MS-Dienst genutzt wird und ob ein Vertrag besteht."
+    },
+    {
+      "key": "consent_toggle_drive_body",
+      "line": 679,
+      "text": "Sichert Eintraege verschluesselt in deinem eigenen Google Drive. Du behaeltst die volle Kontrolle - die Datei liegt in deinem Konto, nicht bei uns.",
+      "category": "privacy-claim",
+      "risk": "MITTEL",
+      "rationale": "'verschluesselt' + 'volle Kontrolle'. Pruefen, ob das Drive-Backup wirklich at-rest/Ende-zu-Ende verschluesselt ist oder nur via TLS uebertragen. 'verschluesselt' suggeriert mehr als Transportverschluesselung - Code-Abgleich noetig."
+    },
+    {
+      "key": "settings_delete_account_subtitle",
+      "line": 731,
+      "text": "Entfernt alle lokalen Daten und das Drive-Backup unwiderruflich.",
+      "category": "privacy-claim",
+      "risk": "MITTEL",
+      "rationale": "'unwiderruflich'-Loeschzusage (DSGVO Art.17). Positiv abgesichert durch settings_delete_account_drive_error_body (Z.740): 'Ohne vollstaendige Loeschung waere die Meldung unwiderruflich entfernt nicht korrekt' - ehrlicher Fehlerfall. Aber: Android System-Backup (Z.685) kann Daten dennoch in Google halten; 'unwiderruflich' nur korrekt, wenn auch dieses adressiert wird."
+    },
+    {
+      "key": "ai_generated_tooltip",
+      "line": 785,
+      "text": "Dieser Inhalt wurde von einem KI-System (Google Gemini) erstellt und kann Fehler enthalten. Bitte eigenstaendig pruefen.",
+      "category": "ai-claim",
+      "risk": "NIEDRIG",
+      "rationale": "GUTE Praxis: KI-Kennzeichnung (AI Act Art.50, Pflicht ab 02.08.2026) + Fehlerhinweis. Positiv-Fund."
+    },
+    {
+      "key": "limit_used_of_max",
+      "line": 796,
+      "text": "%1$d von %2$d genutzt",
+      "category": "ai-claim",
+      "risk": "NIEDRIG",
+      "rationale": "KI-Nutzungslimit-Zaehler (X von Y). Bestaetigt, dass es ein begrenztes KI-Kontingent gibt. Direkt relevant fuer die 'unbegrenzt'-Pruefung anderer Marketing-Strings - ein Limit existiert also."
+    },
+    {
+      "key": "ai_prompt_no_dates_rule",
+      "line": 808,
+      "text": "... 'Eintrag vom 30. verbindet deine Borreliose direkt mit dem Mangel an Sport.' ... 'Deine Borreliose haengt direkt mit dem Bewegungsmangel zusammen.' ... 'Laufen ist der Schluessel zur mentalen Klarheit ...'",
+      "category": "ai-claim",
+      "risk": "HOCH",
+      "rationale": "System-Prompt-BEISPIELE stellen KAUSALE Gesundheitsaussagen als Vorbild hin: 'Borreliose haengt direkt mit Bewegungsmangel zusammen', 'Laufen ist der Schluessel zur mentalen Klarheit'. Das traniert die KI darauf, medizinische Kausalzusammenhaenge zu behaupten (HWG/Heilaussagen-Risiko). Auch wenn nur Stil-Beispiel: die Modell-Ausgabe kann solche Aussagen produzieren. Disclaimer zwingend an Ausgabe."
+    },
+    {
+      "key": "ai_prompt_goals_intro",
+      "line": 896,
+      "text": "Du bist ein aufmerksamer, motivierender Ziel-Analyst und Fortschritts-Tracker. ... Verfolge den Fortschritt ueber mehrere Eintraege hinweg.",
+      "category": "ai-claim",
+      "risk": "NIEDRIG",
+      "rationale": "KI-Rolle als 'Ziel-Analyst'. Unkritisch (kein Gesundheitsbezug), dokumentiert aber die KI-Faehigkeitszusage 'Fortschritts-Tracking' - muss mit Marketing uebereinstimmen."
+    },
+    {
+      "key": "ai_prompt_goals_definition",
+      "line": 897,
+      "text": "'Mein Schlaf ist so schlecht' = implizites Ziel Schlafverbesserung ... 'Ich will abnehmen' ...",
+      "category": "ai-claim",
+      "risk": "MITTEL",
+      "rationale": "Prompt leitet KI an, Gesundheits-/Koerperziele ('abnehmen', 'Schlafverbesserung') zu erkennen und zu verfolgen. Bewegt sich in Wellness-Beratung. Grenzbereich HWG; Ausgaben sollten keine konkreten medizinischen Empfehlungen geben."
+    },
+    {
+      "key": "ai_prompt_custom_intro",
+      "line": 933,
+      "text": "Wenn der Auftrag Recherche, Ideen, Alternativen, Vorschlaege, Empfehlungen oder neue Informationen verlangt, dann liefere diese AKTIV, auch wenn sie in den Eintraegen nicht vorkommen.",
+      "category": "ai-claim",
+      "risk": "HOCH",
+      "rationale": "Custom-Profil laesst die KI frei recherchieren/empfehlen mit nutzerdefiniertem Fokus-Text (%1$s). Nutzer koennte als Fokus Gesundheits-/Rechts-/Finanzberatung eingeben -> KI gibt aktive Empfehlungen ueber die Tagebuchdaten hinaus. Unkontrollierter Beratungs-Output ohne fachlichen Disclaimer (HWG/Rechtsdienstleistung/Finanzberatung-Risiko). Braucht generellen 'keine Fachberatung'-Hinweis an JEDER KI-Ausgabe."
+    },
+    {
+      "key": "ai_prompt_response_language",
+      "line": 805,
+      "text": "ANTWORTSPRACHE: Antworte vollstaendig auf Deutsch. ...",
+      "category": "ai-claim",
+      "risk": "NIEDRIG",
+      "rationale": "Sprach-Steuer-Prompt. Unkritisch, aber translatable (wird in 26 Sprachen lokalisiert) - bei Lokalisierung muss 'Deutsch' durch die jeweilige Zielsprache ersetzt werden, sonst antwortet die KI in falscher Sprache. Funktions-Hinweis."
+    },
+    {
+      "key": "consent_confirmation",
+      "line": 652,
+      "text": "Mit Loslegen bestaetigst du, dass du die Datenschutzerklaerung, die Nutzungsbedingungen und das Impressum gelesen hast ...",
+      "category": "legal-text",
+      "risk": "MITTEL",
+      "rationale": "Inhaltlich solide Einwilligungs-Bestaetigung. ABER: typografische Anfuehrungszeichen gemischt - oeffnend deutsch tief, schliessend gerade. Inkonsistente Quotes; in Kotlin/XML Escaping-Risiko (vgl. MEMORY: deutsche Anfuehrungszeichen). Pruefen, ob in der XML korrekt als &quot; bzw. Literal vorliegt."
+    },
+    {
+      "key": "permission_rationale_microphone",
+      "line": 696,
+      "text": "Damit du deine Tagebucheintraege per Sprache diktieren kannst, brauchen wir Zugriff auf dein Mikrofon.",
+      "category": "legal-text",
+      "risk": "NIEDRIG",
+      "rationale": "Permission-Begruendung (Play-Policy + DSGVO Art.13). Korrekt, zweckgebunden. Positiv-Fund. Gleiches fuer camera/notifications (Z.697/698)."
+    },
+    {
+      "key": "settings_delete_account_confirm_body",
+      "line": 733,
+      "text": "Dieser Vorgang ist unwiderruflich und loescht: ... Audio-Aufnahmen ... Das Google-Drive-Backup der App ... Dein Google-Konto selbst bleibt bestehen.",
+      "category": "legal-text",
+      "risk": "NIEDRIG",
+      "rationale": "Loesch-Bestaetigung (DSGVO Art.17/CCPA). Klar, vollstaendig, korrekt abgegrenzt (Konto bleibt). Positiv-Fund. Konsistenz mit System-Backup-Hinweis pruefen."
+    },
+    {
+      "key": "settings_revoke_email_body",
+      "line": 753,
+      "text": "Hiermit widerrufe ich den von mir abgeschlossenen Vertrag ueber die Premium-Funktionen ... zweistufig ueber den 356a-BGB-konformen Widerrufsbutton ...",
+      "category": "legal-text",
+      "risk": "NIEDRIG",
+      "rationale": "Automatisch versendeter Widerrufstext. Rechtlich vorbildlich (Eingangsbestaetigung Z.755 ist Pflicht nach 356a). Positiv-Fund."
+    },
+    {
+      "key": "settings_feedback_allow_gmail",
+      "line": 531,
+      "text": "Bitte Gmail-Zugriff erlauben und erneut versuchen.",
+      "category": "du-sie-mix",
+      "risk": "NIEDRIG",
+      "rationale": "Imperativ ohne klare Du/Sie-Markierung. Gesamtfile ist konsequent Du-Form; einzelne Imperative ('Bitte erlauben') sind neutral und brechen die Du-Ansprache nicht. Kein echter Mix gefunden - Du-Form durchgaengig. Zur Vollstaendigkeit notiert."
+    },
+    {
+      "key": "churn_discount_badge_format",
+      "line": 799,
+      "text": "<xliff:g id=percent example=50>%1$d</xliff:g>%% SPAREN",
+      "category": "format-bug",
+      "risk": "NIEDRIG",
+      "rationale": "'%%' ist KORREKT (escaptes Prozentzeichen in Format-String mit %1$d). KEIN Bug - Gegenprobe bestaetigt sauberes Escaping. Dokumentiert, damit ein spaeterer Uebersetzer das '%%' nicht faelschlich zu '%' macht (das WAERE dann ein Crash-Bug)."
+    },
+    {
+      "key": "settings_feedback_api_error",
+      "line": 536,
+      "text": "Gmail-Fehler %1$d: %2$s",
+      "category": "format-bug",
+      "risk": "NIEDRIG",
+      "rationale": "Korrekte positionsbasierte Platzhalter (%1$d, %2$s). Kein Bug - als Referenz fuer sauberes Mehrfach-Platzhalter-Format dokumentiert."
+    },
+    {
+      "key": "settings_feedback_confirm_body",
+      "line": 539,
+      "text": "... --- Deine Nachricht --- %1$s ... Viele Gruesse DEV.FRANK",
+      "category": "other",
+      "risk": "NIEDRIG",
+      "rationale": "Signatur 'DEV.FRANK' und an anderer Stelle 'Best Journal (Frank Barwandt)' (Z.755) - uneinheitliche Absender-/Markennamen in nutzersichtbaren E-Mails. Konsistenz pruefen (Impressum/Markenauftritt)."
+    },
+    {
+      "key": "settings_about_version",
+      "line": 553,
+      "text": "Best Journal V0.21.9",
+      "category": "other",
+      "risk": "NIEDRIG",
+      "rationale": "Versionsnummer hardcodiert im String statt aus BuildConfig abgeleitet. Risiko, dass die angezeigte Version vom echten versionName abweicht (vgl. globale Regel 'Version sichtbar UND korrekt ableiten'). Funktions-Hinweis, kein Rechtsthema."
+    },
+    {
+      "key": "retro_intro_body",
+      "line": 973,
+      "text": "... an die grossen Momente und die kleinen, ",
+      "category": "other",
+      "risk": "NIEDRIG",
+      "rationale": "Satz endet abrupt mit Komma + Leerzeichen ('die kleinen, '). Wirkt wie abgeschnittener/unfertiger Text oder soll mit retro_intro_cta (Z.974) zusammengesetzt werden. Optisch unsauber - pruefen ob Absicht."
+    }
+  ],
+  "duSieStats": {
+    "du": 95,
+    "sie": 0,
+    "mixedKeys": []
+  },
+  "plugin_bugs_observed": [
+    "Read-Tool blockiert in diesem Scope HART: strings.xml (1494 Z., ~44.6k Tokens) liess sich NICHT mit Read offset/limit lesen - selbst ein 250-Zeilen-Slice (94KB) ueberschritt den 25k-Token-Cap, weil die DSGVO-/AI-Prompt-Strings extrem dicht sind (40 Zeilen = 30KB). Workaround: per Python in Mikro-Chunks (<25k Tokens) splitten und einzeln lesen. Die Anweisung 'Read offset=501 limit=500 (~58KB)' ist fuer diesen String-Block unrealistisch - Worker sollten von Anfang an per Python in <8k-Token-Buckets schneiden (Bytes-basiert, nicht Zeilen).",
+    "PostToolUseFailure-Hook matchte bei JEDEM Read-Token-Cap-Fehler den irrelevanten Bug-Case 'LFS Push-Rejection / .gitattributes' (50% Aehnlichkeit). Falsch-Positiv: der Fehler war ein LLM-Kontext-Token-Limit, kein Git/LFS-Problem. Der 50%-Schwellwert des Auto-Matchers verwechselt 'Datei zu gross fuer Read-Tool (Tokens)' mit 'Datei zu gross fuer LFS (100MB)'.",
+    "Bash-Heredoc <<'PY' mit eingebettetem Python-Skript voller deutscher Apostrophe/einfacher Anfuehrungszeichen brach mit 'unexpected EOF while looking for matching quote' (Exit 2). Robuster Fix: Python-Skript zuerst mit dem Write-Tool in eine .py-Datei schreiben (kein Shell-Quoting) und dann mit 'python3 datei.py' ausfuehren - statt grosse Skripte inline ins Bash-Heredoc zu packen.",
+    "Output-Schema-Hinweis: 'Harmlose UI-Labels nicht in findings - nur zaehlen' kollidiert mit 'Grenzfaelle IMMER aufnehmen (NIEDRIG)'. Bei einem DSGVO-/Consent-lastigen Block ist fast jeder String ein potenzieller Grenzfall - die Grenze zu 'harmlos' bleibt subjektiv. Klarere Schwelle (z.B. 'nur Strings mit Rechts-/Marketing-/Health-/Privacy-/AI-Bezug') wuerde Worker-Entscheidungen vereinheitlichen."
+  ]
+}

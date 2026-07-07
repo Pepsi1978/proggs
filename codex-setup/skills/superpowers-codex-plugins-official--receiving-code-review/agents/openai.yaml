@@ -1,0 +1,7 @@
+interface:
+  display_name: "receiving-code-review"
+  short_description: "receiving code review feedback, before implementing"
+  default_prompt: "Use $superpowers-codex-plugins-official--receiving-code-review for this task."
+
+policy:
+  allow_implicit_invocation: false

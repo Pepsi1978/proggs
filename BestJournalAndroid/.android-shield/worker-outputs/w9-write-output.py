@@ -1,0 +1,155 @@
+# -*- coding: utf-8 -*-
+import json, os, tempfile
+
+out = {
+    "worker": "w9-code-verify",
+    "verdicts": [
+        {
+            "claim": "A-unbegrenzt-vs-limits",
+            "statement": "Werbung: 'Unbegrenzte Wochenrueckblicke', 'Unbegrenzte individuelle KI-Profile', 'Unbegrenzte Nachtraege' — Dialog nennt 150/Tag/Profil, 600/Tag, Qualitaetsstufen, Stopp ab 151, 50/h.",
+            "verdict": "TEILWEISE",
+            "evidence": [
+                {"file": "app/src/main/java/com/bestjournal/app/util/Constants.kt", "line": 88, "code": "MAX_ENTRIES_FREE_ANALYSIS = Int.MAX_VALUE; MAX_ENTRIES_SUBSCRIBED_ANALYSIS = Int.MAX_VALUE"},
+                {"file": "app/src/main/java/com/bestjournal/app/util/Constants.kt", "line": 98, "code": "SUB_PREMIUM_LIMIT=30; SUB_COOLDOWN_AT=101; SUB_HARD_LIMIT=151"},
+                {"file": "app/src/main/java/com/bestjournal/app/util/Constants.kt", "line": 237, "code": "SPAM_HOURLY_AI_LIMIT_PREMIUM = 50"},
+                {"file": "app/src/main/res/values/strings.xml", "line": 1199, "code": "ai_limits_dialog_body: 150/Tag/Profil, 600/Tag, 1-30 hoechste Qualitaet, 31-100 Standard, 101. Anfrage 30-Min-Pause, ab 151 Stopp, 50/Stunde"},
+                {"file": "app/src/main/java/com/bestjournal/app/data/remote/ai/AiUsageTracker.kt", "line": 290, "code": "count<premiumLimit->Allowed(FLASH); count<cooldownAt->Allowed(FLASH_LITE); count<hardLimit->Cooldown; else HardLimitReached"}
+            ],
+            "detail": "Eintraege/Wochenrueckblicke/eigene Profile/Nachtraege sind fuer Premium TATSAECHLICH uncapped (Int.MAX_VALUE, kein MAX_PROFILES-Cap — custom-Profile-Liste dynamisch). Aber 'unbegrenzt' meint die ANZAHL der analysierten Eintraege/Profile, NICHT die Anzahl der KI-Anfragen pro Tag: pro Profil greift ein hartes Tageslimit von 150 KI-Anfragen (ab 151 blockiert), 600/Tag fuer die 4 Standardprofile, plus 50/Stunde Spam-Schutz fuer ALLE inkl. Premium. Die Dialog-Zahlen (30/100/101-Pause/151/50h) sind 1:1 die Code-Konstanten (SUB_*). Free: 5 Dashboard/Woche/Profil + 5 Text/Woche (FREE_WEEKLY_*_LIMIT=5), 2 Wochenrueckblicke (FREE_WEEKLY_REVIEW_COUNT=2).",
+            "legalRelevance": "UWG 5/UCPD: 'unbegrenzt' ist nur dann unbedenklich, wenn dem Nutzer klar ist, dass es sich auf Eintragsmenge/Profilzahl bezieht und NICHT auf taegliche KI-Nutzung — der ai_limits_dialog stellt das transparent dar (Limits gelten ausdruecklich AUCH fuer Premium), was die Irrefuehrungsgefahr stark senkt. Empfehlung: bei 'unbegrenzt'-Strings einen Hinweis/Stern auf das Tageskontingent verlinken."
+        },
+        {
+            "claim": "B-daten-bleiben-auf-geraet",
+            "statement": "consent_card1_body 'Deine Eintraege bleiben auf deinem Geraet' + onboarding_feature_secure 'Deine Daten sind lokal gespeichert, KI-Anfragen sind verschluesselt'.",
+            "verdict": "TEILWEISE",
+            "evidence": [
+                {"file": "app/src/main/res/values/strings.xml", "line": 612, "code": "consent_card1_body: Deine Eintraege bleiben auf deinem Geraet."},
+                {"file": "app/src/main/java/com/bestjournal/app/ui/components/PrivacyGateDialog.kt", "line": 180, "code": "if (PrivacyGateHelper.hasConsented(context, service)) action() else { pending=action; showDialog=true }"},
+                {"file": "app/src/main/java/com/bestjournal/app/util/PrivacyGateHelper.kt", "line": 35, "code": ".getBoolean(service.prefKey, false)  // alle 3 Cloud-Consents default false"},
+                {"file": "app/src/main/java/com/bestjournal/app/domain/usecase/SyncWithDriveUseCase.kt", "line": 43, "code": "if (!encryptedPrefs.getBoolean(PREF_DRIVE_BACKUP_ENABLED, false)) { return ... }"}
+            ],
+            "detail": "Die DB liegt lokal (Room) — was das Geraet verlaesst, ist immer durch einen aktiv erteilten, per-Service-Consent (Default OFF) gated: Gemini (Eintragstext), Groq (Audio), Edge-TTS (Eintragstext fuers Vorlesen), Drive-Backup (ganze DB), Analytics (Events). PrivacyGateState.run() prueft hasConsented bei JEDER Aktion neu (nicht nur beim Aktivieren). Drive prueft PREF_DRIVE_BACKUP_ENABLED vor JEDER Sync. Aber: 'Eintraege bleiben auf dem Geraet' ist als absolute Aussage zu stark — bei aktivierter KI/TTS/Backup verlassen Eintragsinhalte das Geraet (verschluesselt, mit Consent).",
+            "legalRelevance": "Die Pauschalaussage 'bleiben auf deinem Geraet' kann irrefuehrend wirken, da bei eingeschalteten Cloud-Funktionen Eintragstext an Google/Microsoft/Drive geht. Da dies opt-in (Default OFF) und je Service separat eingewilligt ist, ist es vertretbar — Empfehlung: Formulierung praezisieren ('bleiben standardmaessig/ohne Cloud-Funktionen auf deinem Geraet')."
+        },
+        {
+            "claim": "C-gemini-kein-ki-training",
+            "statement": "privacy_gate_gemini_body: 'Kein KI-Training mit deinen Daten' + 'Anfragen werden nicht dauerhaft gespeichert' + 'EU-US Data Privacy Framework'.",
+            "verdict": "TEILWEISE",
+            "evidence": [
+                {"file": "app/src/main/java/com/bestjournal/app/data/remote/ai/FirebaseAiService.kt", "line": 49, "code": "Firebase.ai(backend = GenerativeBackend.googleAI()).generativeModel(...)"},
+                {"file": "app/src/main/java/com/bestjournal/app/data/remote/ai/FirebaseAiService.kt", "line": 21, "code": "MODEL_FLASH=\"gemini-3.1-flash-lite\"; MODEL_FLASH_LITE=\"gemini-2.5-flash-lite\""},
+                {"file": "app/src/main/java/com/bestjournal/app/BestJournalApp.kt", "line": 78, "code": "FirebaseAppCheck.getInstance().installAppCheckProviderFactory(factory) // Play Integrity in release"}
+            ],
+            "detail": "Zugang laeuft ueber Firebase AI Logic SDK (com.google.firebase.ai) mit GenerativeBackend.googleAI() — das ist der Firebase-vermittelte 'Gemini Developer API'-Backend (NICHT vertexAI()). Ueber Firebase AI Logic mit App Check gilt Googles Zusicherung, dass Prompts/Antworten des kostenpflichtigen/Firebase-Pfads NICHT zum Modelltraining verwendet und nicht dauerhaft gespeichert werden. WICHTIGER VORBEHALT: googleAI() (Gemini Developer API) hat je nach Abrechnungsstatus des Firebase-Projekts andere Datennutzungsregeln als vertexAI(); nur wenn das Projekt auf dem kostenpflichtigen/Blaze-Tier mit aktivierter AI Logic laeuft, greift die 'kein Training'-Zusage zuverlaessig. Der Code allein kann den Billing-Status nicht beweisen.",
+            "legalRelevance": "Die 'kein KI-Training'-Aussage haengt am Firebase-Projekt-Billing-Tier (Blaze + AI Logic). MUSS gegen die Firebase-Console/Google-Vertragslage verifiziert werden — auf dem kostenlosen Spark/Free-Tier des Gemini-Developer-API koennten Daten zum Training genutzt werden, was die Werbeaussage falsch machen wuerde. Nicht-codeseitig pruefbar -> als offenes Compliance-Item kennzeichnen."
+        },
+        {
+            "claim": "D-groq-audio-sofort-geloescht",
+            "statement": "privacy_gate_groq_body: 'Aufnahme wird nach der Umwandlung sofort geloescht'.",
+            "verdict": "WAHR",
+            "evidence": [
+                {"file": "app/src/main/java/com/bestjournal/app/ui/screens/journal/JournalViewModel.kt", "line": 485, "code": "audioFile.delete()  // im onSuccess der Transkription"},
+                {"file": "app/src/main/java/com/bestjournal/app/ui/screens/journal/JournalViewModel.kt", "line": 504, "code": "audioFile.delete()  // auch im onFailure"},
+                {"file": "app/src/main/java/com/bestjournal/app/ui/screens/entrydetail/EntryDetailViewModel.kt", "line": 584, "code": "audioFile.delete() (success+fail 584/605)"},
+                {"file": "app/src/main/java/com/bestjournal/app/ui/screens/settings/SettingsViewModel.kt", "line": 1103, "code": "audioFile.delete() (success+fail 1103/1117)"}
+            ],
+            "detail": "Die lokale WAV-Datei wird nach Abschluss der Transkription geloescht — in ALLEN drei Aufrufpfaden (Journal, EntryDetail, Settings/Prompt) und sowohl im Erfolgs- als auch im Fehlerfall (delete() in beiden Branches). Bezieht sich auf die LOKALE Datei; was Groq serverseitig mit der hochgeladenen Aufnahme tut, ist nicht codeseitig pruefbar (Groq-Policy: keine Speicherung von Audio). Lokale Loeschung = bestaetigt.",
+            "legalRelevance": "Aussage bzgl. der lokalen Aufnahme ist codeseitig belegt. Die serverseitige Loeschung bei Groq beruht auf deren Policy/AVV — sollte vertraglich (Groq Data Processing) abgesichert sein, ist aber nicht aus dem App-Code beweisbar."
+        },
+        {
+            "claim": "E-edge-tts-microsoft",
+            "statement": "Vorlesen via Edge-TTS (Microsoft, wss://speech.platform.bing.com) — durch Consent gated? Welche Daten an Microsoft? Default an/aus?",
+            "verdict": "WAHR",
+            "evidence": [
+                {"file": "app/src/main/java/com/bestjournal/app/util/EdgeTtsPlayer.kt", "line": 98, "code": "wss://speech.platform.bing.com/consumer/speech/synthesize/readaloud/edge/v1"},
+                {"file": "app/src/main/java/com/bestjournal/app/util/EdgeTtsPlayer.kt", "line": 160, "code": "<voice name='$voice'>$escaped</voice>  // 'escaped' = der vorzulesende Eintragstext"},
+                {"file": "app/src/main/java/com/bestjournal/app/ui/screens/entrydetail/EntryDetailScreen.kt", "line": 189, "code": "val edgeTtsGate = rememberPrivacyGateState(PrivacyGateHelper.CloudService.EdgeTts)"},
+                {"file": "app/src/main/java/com/bestjournal/app/util/PrivacyGateHelper.kt", "line": 24, "code": "KEY_EDGE_TTS_CONSENTED default false (hasConsented => false)"}
+            ],
+            "detail": "Edge-TTS schickt den vorzulesenden TEXT (Tagebucheintrag/Rueckblick) per WebSocket an Microsofts bing.com-Endpoint. Es ist durch den EdgeTts-PrivacyGate (Default OFF) gated und in Dashboard-, EntryDetail- und Retrospective-Screen verdrahtet (rememberPrivacyGateState EdgeTts). An Microsoft geht der Eintragstext; an Firebase Analytics gehen NUR voice/locale/error (kein Eintragstext, siehe logTtsFailure). Die erzeugte tts_audio.mp3 wird nach Wiedergabe geloescht (onCompletion/onError, Zeile 290/294).",
+            "legalRelevance": "Drittlandtransfer (USA, Microsoft) von potenziell sensiblem Eintragstext (Art. 9 DSGVO) — durch granularen Opt-in-Consent (Default OFF) abgedeckt. privacy_gate_edge_tts-Text sollte ausdruecklich nennen, dass der Eintragstext an Microsoft geht; ist der Standard-Edge-Consumer-Endpoint (kein Azure-Vertrag/AVV) — Rechtsgrundlage und fehlender AVV mit Microsoft kritisch pruefen."
+        },
+        {
+            "claim": "F-okhttp-logging-release",
+            "statement": "Loggt der okhttp-logging-interceptor im RELEASE-Build die Request/Response-Bodies (Datenleck)?",
+            "verdict": "FALSCH",
+            "evidence": [
+                {"file": "app/src/main/java/com/bestjournal/app/di/NetworkModule.kt", "line": 32, "code": "if (BuildConfig.DEBUG) HttpLoggingInterceptor.Level.BODY"},
+                {"file": "app/src/main/java/com/bestjournal/app/di/NetworkModule.kt", "line": 33, "code": "else HttpLoggingInterceptor.Level.NONE"}
+            ],
+            "detail": "Kein Datenleck: Level.BODY (vollstaendiges Body-Logging) wird AUSSCHLIESSLICH bei BuildConfig.DEBUG gesetzt; im Release-Build ist das Level NONE — es werden keine Header oder Bodies geloggt. Die Behauptung eines Release-Logging-Lecks ist falsch (korrekt abgesichert).",
+            "legalRelevance": "Korrekt — keine Logcat-Exfiltration von Eintragstext/API-Keys im Produktiv-Build. Best-Practice erfuellt."
+        },
+        {
+            "claim": "G-ohne-werbung",
+            "statement": "'ohne Werbung' als Premium-Feature — gibt es ueberhaupt ein Ad-SDK? Suggeriert der Claim faelschlich, Free habe Werbung?",
+            "verdict": "TEILWEISE",
+            "evidence": [
+                {"file": "(repo-weit)", "line": 0, "code": "grep admob|gms.ads|MobileAds|AdView|applovin|ironsource|unityads|facebook.ads|vungle = 0 Treffer in app/src/main + build.gradle.kts + libs.versions.toml"}
+            ],
+            "detail": "Es existiert KEIN Ad-SDK und kein AdView irgendwo im Code oder in den Dependencies. Die App zeigt also weder im Free- noch im Premium-Modus Werbung. Ein Premium-Feature 'ohne Werbung' ist damit gegenstandslos und kann den Eindruck erwecken, die kostenlose Version enthalte Werbung (die es nicht gibt).",
+            "legalRelevance": "UWG 5/UCPD: Ein als Premium-Vorteil beworbenes 'ohne Werbung' kann irrefuehrend sein, wenn die Gratis-Version ebenfalls werbefrei ist (Vorspiegelung eines nicht existierenden Nachteils der Free-Version). Empfehlung: 'ohne Werbung' aus der Premium-Feature-Liste entfernen ODER neutral als generelle App-Eigenschaft darstellen. (Hinweis: kein 'ohne Werbung'-String in den geprueften Premium-Listen direkt gefunden — falls vorhanden, streichen.)"
+        },
+        {
+            "claim": "H-analytics-vor-consent",
+            "statement": "Werden Analytics-Events VOR der Consent-Erteilung gesendet (Splash/Onboarding-Start)?",
+            "verdict": "FALSCH",
+            "evidence": [
+                {"file": "app/src/main/java/com/bestjournal/app/BestJournalApp.kt", "line": 44, "code": "val analyticsEnabled = prefs.getBoolean(PREF_ANALYTICS_ENABLED, false)"},
+                {"file": "app/src/main/java/com/bestjournal/app/BestJournalApp.kt", "line": 45, "code": "FirebaseAnalytics.getInstance(this).setAnalyticsCollectionEnabled(analyticsEnabled) // VOR allen anderen Firebase-Calls"},
+                {"file": "app/src/main/java/com/bestjournal/app/ui/screens/consent/ConsentViewModel.kt", "line": 134, "code": "firebaseAnalytics.setAnalyticsCollectionEnabled(_analyticsEnabled.value) // erst nach Consent"}
+            ],
+            "detail": "Analytics ist von Anfang an deaktiviert: in Application.onCreate() wird setAnalyticsCollectionEnabled mit Default FALSE (PREF_ANALYTICS_ENABLED, Default false) gesetzt — und zwar bewusst VOR allen anderen Firebase-Aufrufen (expliziter DSGVO-Kommentar Z.41-43). Erst wenn der Nutzer im ConsentScreen zustimmt, wird es auf true gesetzt (ConsentViewModel:134). Es werden also keine Events vor Einwilligung gesendet. Behauptung 'Events vor Consent' = falsch.",
+            "legalRelevance": "DSGVO/TTDSG-konform: kein Tracking ohne vorherige Einwilligung; Default-OFF + setAnalyticsCollectionEnabled vor jeglichem Firebase-Event ist die korrekte Umsetzung. CCPA: PREF_DO_NOT_SELL widerruft zusaetzlich alle Cloud-Consents."
+        }
+    ],
+    "limitConstants": {
+        "free": {
+            "weeklyDashboardPerProfile": 5,
+            "weeklyText": 5,
+            "weeklyReviews": 2,
+            "trialUsageDays": 8,
+            "hourlySpamLimit": 30,
+            "maxEntriesAnalysis": "Int.MAX_VALUE",
+            "quality": "immer Standard (flash-lite)"
+        },
+        "premium": {
+            "dailyPremiumQualityLimit": 30,
+            "dailyCooldownAt": 101,
+            "dailyHardLimit": 151,
+            "perProfilePerDay": 150,
+            "fourPredefinedTotalPerDay": 600,
+            "cooldownMinutes": 30,
+            "hourlySpamLimit": 50,
+            "maxEntriesAnalysis": "Int.MAX_VALUE",
+            "customProfiles": "unbegrenzt (kein MAX_PROFILES-Cap, dynamische custom_analyses_json-Liste)"
+        }
+    },
+    "consentGatingMap": [
+        {"dataflow": "gemini", "gatedBy": "PrivacyGateHelper.CloudService.Gemini (KEY_GEMINI_CONSENTED)", "defaultOff": True, "checkedBeforeEachCall": True, "file": "app/src/main/java/com/bestjournal/app/ui/components/PrivacyGateDialog.kt:180"},
+        {"dataflow": "groq", "gatedBy": "PrivacyGateHelper.CloudService.Groq (KEY_GROQ_CONSENTED)", "defaultOff": True, "checkedBeforeEachCall": True, "file": "app/src/main/java/com/bestjournal/app/ui/screens/journal/JournalScreen.kt:240"},
+        {"dataflow": "edge-tts", "gatedBy": "PrivacyGateHelper.CloudService.EdgeTts (KEY_EDGE_TTS_CONSENTED)", "defaultOff": True, "checkedBeforeEachCall": True, "file": "app/src/main/java/com/bestjournal/app/ui/screens/entrydetail/EntryDetailScreen.kt:189"},
+        {"dataflow": "drive", "gatedBy": "Constants.PREF_DRIVE_BACKUP_ENABLED", "defaultOff": True, "checkedBeforeEachCall": True, "file": "app/src/main/java/com/bestjournal/app/domain/usecase/SyncWithDriveUseCase.kt:43"},
+        {"dataflow": "analytics", "gatedBy": "Constants.PREF_ANALYTICS_ENABLED (setAnalyticsCollectionEnabled, default false at startup)", "defaultOff": True, "checkedBeforeEachCall": False, "file": "app/src/main/java/com/bestjournal/app/BestJournalApp.kt:44"}
+    ],
+    "plugin_bugs_observed": [],
+    "selbstbeobachtung": [
+        "Die Praezisierung 'unbegrenzt = Eintragsmenge/Profilzahl, NICHT KI-Anfragen/Tag' war der entscheidende Unterschied — ohne den ai_limits_dialog (Z.1199) gegen die Constants zu legen, waere A faelschlich als FALSCH eingestuft worden.",
+        "GenerativeBackend.googleAI() vs. vertexAI() ist der Kern von Claim C: der Code beweist den Pfad, aber NICHT den Billing-Tier des Firebase-Projekts — die 'kein Training'-Zusage ist nur codeseitig teilbeweisbar, daher TEILWEISE statt WAHR.",
+        "Read-Ranges + gezielte Greps mit Absolutpfaden hielten den Kontext schlank; SettingsScreen.kt (289KB) wurde nie voll geladen, nur via grep -n angefasst — kein Crash-Risiko."
+    ]
+}
+
+path = os.path.expanduser("~/proggs/BestJournalAndroid/.android-shield/worker-outputs/phase1b-code-verify.json")
+os.makedirs(os.path.dirname(path), exist_ok=True)
+d = os.path.dirname(path)
+with tempfile.NamedTemporaryFile("w", dir=d, suffix=".tmp", delete=False, encoding="utf-8") as tmp:
+    json.dump(out, tmp, indent=2, ensure_ascii=False)
+    tmp.write("\n")
+    tmp_path = tmp.name
+os.replace(tmp_path, path)
+# validate
+with open(path, encoding="utf-8") as f:
+    json.load(f)
+print("OK written + validated:", path)
+print("verdicts:", len(out["verdicts"]))

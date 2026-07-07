@@ -1,0 +1,8 @@
+[Unit]
+Description=Cortex: Gedanken (Z) -> Google Drive Spiegel-Backup (crash-sicher)
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+ExecStart=/opt/second-brain/scripts/gedanken-gdrive-backup.sh

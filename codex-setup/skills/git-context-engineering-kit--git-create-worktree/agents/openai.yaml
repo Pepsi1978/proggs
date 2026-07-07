@@ -1,0 +1,7 @@
+interface:
+  display_name: "git:create-worktree"
+  short_description: "Create and setup git worktrees for parallel development with"
+  default_prompt: "Use $git-context-engineering-kit--git-create-worktree for this task."
+
+policy:
+  allow_implicit_invocation: false

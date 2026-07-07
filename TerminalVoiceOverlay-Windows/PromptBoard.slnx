@@ -1,0 +1,4 @@
+<Solution>
+  <Project Path="PromptBoard.Core/PromptBoard.Core.csproj" />
+  <Project Path="PromptBoard.Data/PromptBoard.Data.csproj" />
+</Solution>

@@ -1,0 +1,90 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Sound Preview — Android Audio Werkbank</title>
+<style>
+:root{--bg:#1a1a2e;--card:#16213e;--accent:#0f3460;--highlight:#e94560;--text:#eee}
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;background:var(--bg);color:var(--text);min-height:100vh;padding:20px}
+h1{text-align:center;margin-bottom:8px;font-size:1.6em}
+.subtitle{text-align:center;color:#888;margin-bottom:24px;font-size:.9em}
+.drop-zone{border:2px dashed #444;border-radius:12px;padding:40px;text-align:center;margin-bottom:24px;cursor:pointer;transition:all .3s}
+.drop-zone:hover,.drop-zone.active{border-color:var(--highlight);background:rgba(233,69,96,.05)}
+.drop-zone input{display:none}
+.sound-list{display:grid;gap:12px}
+.sound-card{background:var(--card);border-radius:10px;padding:16px;display:flex;align-items:center;gap:12px;transition:all .2s}
+.sound-card:hover{background:var(--accent)}
+.play-btn{width:44px;height:44px;border-radius:50%;border:2px solid var(--highlight);background:transparent;color:var(--highlight);font-size:18px;cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0;transition:all .2s}
+.play-btn:hover{background:var(--highlight);color:#fff}
+.play-btn.playing{background:var(--highlight);color:#fff}
+.sound-info{flex:1;min-width:0}
+.sound-name{font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.sound-meta{color:#888;font-size:.8em;margin-top:2px}
+.waveform{height:40px;background:rgba(255,255,255,.05);border-radius:6px;overflow:hidden;flex-shrink:0;width:200px}
+.waveform canvas{width:100%;height:100%}
+.volume-control{display:flex;align-items:center;gap:8px;margin-top:16px;padding:12px;background:var(--card);border-radius:10px}
+.volume-control input[type=range]{flex:1;accent-color:var(--highlight)}
+.volume-label{font-size:.85em;color:#888;min-width:30px}
+.format-badge{display:inline-block;padding:2px 8px;border-radius:4px;font-size:.7em;text-transform:uppercase;background:var(--accent)}
+.recommended{background:#0a5c36}
+.tip{background:var(--card);border-left:3px solid var(--highlight);padding:12px 16px;margin-top:20px;border-radius:0 8px 8px 0;font-size:.85em}
+@media(max-width:600px){.waveform{display:none}}
+</style>
+</head>
+<body>
+<h1>Sound Preview</h1>
+<p class="subtitle">Ziehe Audio-Dateien hierher oder klicke zum Auswaehlen</p>
+<div class="drop-zone" id="dropZone">
+<p style="font-size:2em;margin-bottom:8px">🎵</p>
+<p>Audio-Dateien hierher ziehen</p>
+<p style="color:#666;font-size:.85em;margin-top:4px">OGG, WAV, MP3, FLAC, AAC</p>
+<input type="file" id="fileInput" multiple accept="audio/*">
+</div>
+<div class="volume-control">
+<span class="volume-label">🔊</span>
+<input type="range" id="volumeSlider" min="0" max="100" value="80">
+<span class="volume-label" id="volumeValue">80%</span>
+</div>
+<div class="sound-list" id="soundList"></div>
+<div class="tip"><strong>Tipp:</strong> OGG Vorbis (128-192 kbps) ist ideal fuer Android — klein, gute Qualitaet, nativ seit API 1. Dateien in <code>res/raw/</code> legen.</div>
+<script>
+const dropZone=document.getElementById('dropZone'),fileInput=document.getElementById('fileInput'),soundList=document.getElementById('soundList'),volumeSlider=document.getElementById('volumeSlider'),volumeValue=document.getElementById('volumeValue');
+let currentAudio=null,currentBtn=null;
+const audioCtx=new(window.AudioContext||window.webkitAudioContext)();
+dropZone.addEventListener('click',()=>fileInput.click());
+volumeSlider.addEventListener('input',e=>{volumeValue.textContent=e.target.value+'%';if(currentAudio)currentAudio.volume=e.target.value/100});
+['dragenter','dragover'].forEach(e=>dropZone.addEventListener(e,ev=>{ev.preventDefault();dropZone.classList.add('active')}));
+['dragleave','drop'].forEach(e=>dropZone.addEventListener(e,ev=>{ev.preventDefault();dropZone.classList.remove('active')}));
+dropZone.addEventListener('drop',e=>handleFiles(e.dataTransfer.files));
+fileInput.addEventListener('change',e=>handleFiles(e.target.files));
+function handleFiles(f){Array.from(f).filter(x=>x.type.startsWith('audio/')).forEach(addSound)}
+function fmtSize(b){return b<1024?b+' B':b<1048576?(b/1024).toFixed(1)+' KB':(b/1048576).toFixed(1)+' MB'}
+function addSound(file){
+  const url=URL.createObjectURL(file),card=document.createElement('div');card.className='sound-card';
+  const btn=document.createElement('button');btn.className='play-btn';btn.textContent='\u25B6';
+  const info=document.createElement('div');info.className='sound-info';
+  const nameEl=document.createElement('div');nameEl.className='sound-name';nameEl.textContent=file.name;
+  const metaEl=document.createElement('div');metaEl.className='sound-meta';
+  const ext=file.name.split('.').pop().toLowerCase();
+  metaEl.textContent=fmtSize(file.size)+' ';
+  const badge=document.createElement('span');badge.className='format-badge'+(['ogg','opus'].includes(ext)?' recommended':'');badge.textContent=ext;
+  metaEl.appendChild(badge);info.append(nameEl,metaEl);
+  const waveDiv=document.createElement('div');waveDiv.className='waveform';
+  const canvas=document.createElement('canvas');canvas.width=200;canvas.height=40;waveDiv.appendChild(canvas);
+  file.arrayBuffer().then(buf=>audioCtx.decodeAudioData(buf)).then(d=>{
+    const data=d.getChannelData(0),ctx=canvas.getContext('2d'),step=Math.ceil(data.length/200);
+    ctx.strokeStyle='#e94560';ctx.lineWidth=1;ctx.beginPath();
+    for(let i=0;i<200;i++){let mn=1,mx=-1;for(let j=i*step;j<(i+1)*step&&j<data.length;j++){if(data[j]<mn)mn=data[j];if(data[j]>mx)mx=data[j]}
+    ctx.moveTo(i,(1+mn)*20);ctx.lineTo(i,(1+mx)*20)}ctx.stroke()}).catch(()=>{});
+  const audio=new Audio(url);audio.volume=volumeSlider.value/100;
+  btn.addEventListener('click',()=>{
+    if(currentAudio&&currentAudio!==audio){currentAudio.pause();currentAudio.currentTime=0;if(currentBtn){currentBtn.textContent='\u25B6';currentBtn.classList.remove('playing')}}
+    if(audio.paused){audio.volume=volumeSlider.value/100;audio.play();btn.textContent='\u23F8';btn.classList.add('playing');currentAudio=audio;currentBtn=btn}
+    else{audio.pause();audio.currentTime=0;btn.textContent='\u25B6';btn.classList.remove('playing');currentAudio=null;currentBtn=null}});
+  audio.addEventListener('ended',()=>{btn.textContent='\u25B6';btn.classList.remove('playing')});
+  card.append(btn,info,waveDiv);soundList.appendChild(card)}
+</script>
+</body>
+</html>

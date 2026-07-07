@@ -1,0 +1,1382 @@
+<resources xmlns:ns0="http://schemas.android.com/tools" xmlns:ns1="urn:oasis:names:tc:xliff:document:1.2" xmlns:xliff="urn:oasis:names:tc:xliff:document:1.2" ns0:locale="gu">
+    
+    <string name="app_name" translatable="false">Best Journal</string>
+
+    
+    <string name="nav_journal">ડાયરી</string>
+    <string name="nav_retrospective">અવલોકન</string>
+    <string name="nav_dashboard">ડૅશબોર્ડ</string>
+    <string name="nav_settings">સેટિંગ્સ</string>
+
+    
+    <string name="action_cancel">રદ કરો</string>
+    <string name="action_save">સાચવો</string>
+    <string name="action_close">બંધ કરો</string>
+    <string name="action_continue">આગળ વધો</string>
+    <string name="action_understood">સમજાઈ ગયું</string>
+    <string name="action_retry">ફરી પ્રયાસ કરો</string>
+    <string name="action_later">પછીથી</string>
+    <string name="action_share">શૅર કરો</string>
+    <string name="action_discard">કાઢી નાખો</string>
+    <string name="action_back">પાછળ</string>
+    <string name="action_done">થઈ ગયું</string>
+    <string name="action_no_thanks">ના, આભાર</string>
+    <string name="action_delete">ડિલીટ કરો</string>
+    
+    <string name="action_undo">પૂર્વવત્</string>
+    <string name="action_ok">ઑકે</string>
+    <string name="action_go_google_play">Google Play પર જાઓ</string>
+    <string name="journal_drive_backup_dialog">Google Drive બૅકઅપ</string>
+    <string name="journal_improve_text">✨ ટેક્સ્ટ સુધારો</string>
+    <string name="journal_show_original">↩ મૂળ બતાવો</string>
+    <string name="journal_show_improved">✨ સુધારેલ વર્ઝન બતાવો</string>
+    <string name="journal_ai_improving">AI ટેક્સ્ટ સુધારી રહ્યું છે — કૃપા કરી રાહ જુઓ</string>
+    <string name="journal_later">પછીથી</string>
+    
+    <string name="paywall_from_per_day">વાર્ષિક સબ્સ્ક્રિપ્શન, %1$s પ્રતિ વર્ષ</string>
+    <string name="paywall_instead_per_month">માસિક પ્લાન કરતાં %1$d%% બચત</string>
+    <string name="paywall_or">અથવા</string>
+    <string name="paywall_with_limited">મર્યાદિત લિમિટ સાથે.</string>
+    
+    <string name="churn_instead_of">ને બદલે </string>
+    <string name="label_premium">Premium</string>
+    <string name="label_original">મૂળ</string>
+    <string name="label_improved">✨ AI સુધારેલ</string>
+    <string name="label_photo">ફોટો</string>
+    <string name="label_video">વિડિઓ</string>
+    <string name="label_current">વર્તમાન</string>
+    <string name="label_record">રેકૉર્ડ</string>
+    <string name="cd_sync_status">સિંક સ્ટેટસ</string>
+    <string name="cd_day">દિવસ</string>
+    <string name="cd_night">રાત</string>
+
+    
+    <string name="journal_title">ડાયરી</string>
+    <string name="journal_search_placeholder">નોંધો શોધો\u2026</string>
+    <string name="journal_search">શોધો</string>
+    <string name="journal_search_hint">શોધ</string>
+    <string name="journal_search_close">શોધ બંધ કરો</string>
+    <string name="journal_no_entries">હજુ કોઈ નોંધ નથી</string>
+    <string name="journal_tap_mic_to_start">શરૂ કરવા માઇક પર ટૅપ કરો</string>
+    <string name="journal_cd_streak">સળંગ દિવસો</string>
+    <string name="journal_cd_text_input">ટેક્સ્ટ દાખલ કરો</string>
+    <string name="journal_achievement_unlocked">Achievement અનલૉક થઈ!</string>
+    <string name="journal_drive_not_signed_in">Google માં સાઇન ઇન નથી</string>
+    <string name="journal_drive_backup_current">બૅકઅપ અપ-ટૂ-ડેટ, બધી નોંધો સુરક્ષિત</string>
+    <string name="journal_drive_uploading">બૅકઅપ અપલોડ થઈ રહ્યું છે\u2026</string>
+    <string name="journal_drive_downloading">ફોટો/વિડિઓ ડાઉનલોડ થઈ રહ્યા છે\u2026</string>
+    <string name="journal_drive_failed">બૅકઅપ નિષ્ફળ!</string>
+    <string name="journal_drive_last_sync">છેલ્લી સિંક: %1$s</string>
+    <string name="journal_new_entry_prompt">લખવાની પ્રેરણા</string>
+    <string name="journal_new_entry">નવી નોંધ</string>
+    <string name="journal_save_improved">સુધારેલ સાચવો</string>
+    <string name="journal_save">સાચવો</string>
+    <string name="journal_cd_write">લખો</string>
+    <string name="journal_write">લખો</string>
+    <string name="journal_cd_speak">બોલો</string>
+    <string name="journal_speak">બોલો</string>
+    <string name="journal_your_answer">તમારો જવાબ:</string>
+    <string name="journal_placeholder_prompt">અહીં તમારા વિચારો લખો\u2026</string>
+    <string name="journal_placeholder_edit">ટેક્સ્ટ સંપાદિત કરવા અહીં ટૅપ કરો\u2026</string>
+    <string name="journal_freeflow_hint">તમારા વિચારો મુક્ત રીતે વહેવા દો. અહીં સાચું કે ખોટું કંઈ નથી.</string>
+    <string name="journal_transcribed_with">%1$s વડે ટ્રાન્સ્ક્રાઇબ</string>
+    
+    <string name="transcription_model_local">સ્થાનિક Whisper મૉડેલ</string>
+    
+    <string name="transcription_model_groq" translatable="false">Groq Whisper Large V3 Turbo</string>
+    <string name="journal_text_upsell_title">પ્રભાવશાળી, ખરું ને?</string>
+    <string name="journal_text_upsell_body">Premium સાથે તમે દરેક નોંધ સુધારી શકો છો.</string>
+    <string name="journal_discover_premium">Premium શોધો →</string>
+    <string name="journal_entries_label">નોંધો</string>
+    <string name="journal_entry_count">%1$d નોંધો</string>
+    <string name="journal_streak_days">%1$d દિવસ</string>
+    <string name="journal_streak_days_in_row">%1$d સળંગ દિવસ</string>
+    <string name="journal_streak_next_goal">આગળનો લક્ષ્ય: %1$d દિવસ</string>
+    <string name="journal_streak_remaining">હજુ %1$d બાકી</string>
+    <string name="journal_streak_premium">Streak સુરક્ષા: Premium સાથે ઉપલબ્ધ</string>
+    <string name="journal_keep_going">આગળ વધો!</string>
+    <string name="journal_daily_prompt">આજનો લખવાનો વિષય</string>
+    <string name="journal_write_about">આ વિશે લખો</string>
+    <string name="journal_recording_error">રેકૉર્ડિંગ નિષ્ફળ: %1$s</string>
+    <string name="journal_transcription_error">ટ્રાન્સ્ક્રિપ્શન નિષ્ફળ: %1$s</string>
+    <string name="journal_rate_limit">ટૂંકો વિરામ: આગળની સુધારણા સુધી %1$d મિનિટ બાકી.</string>
+    <string name="journal_improve_error">ટેક્સ્ટ સુધારણા નિષ્ફળ: %1$s</string>
+    <string name="journal_save_error">સાચવવું નિષ્ફળ: %1$s</string>
+    <string name="recording_tap_stop">રોકવા ફરી ટૅપ કરો</string>
+
+    
+    <string name="streak_365">આખું એક વર્ષ!</string>
+    <string name="streak_180">અવિશ્વસનીય શિસ્ત!</string>
+    <string name="streak_90">તમને કોઈ રોકી શકે નહીં!</string>
+    <string name="streak_30">આખો એક મહિનો!</string>
+    <string name="streak_14">બે સળંગ અઠવાડિયાં!</string>
+    <string name="streak_7">આખું એક અઠવાડિયું!</string>
+    <string name="streak_3">તમે ટ્રૅક પર છો!</string>
+    <string name="streak_default">દરેક દિવસ ગણાય!</string>
+    <string name="streak_desc_365">નાની ટેવ તરીકે શરૂ થયેલ આ હવે તમારા જીવનનો અભિન્ન ભાગ બની ગઈ છે. તમારી ડાયરી તમને અગાઉ કરતાં વધુ સારી રીતે ઓળખે છે.</string>
+    <string name="streak_desc_14">સળંગ બે અઠવાડિયાં, આ ઓછા લોકો કરી શકે. તમારું ભવિષ્ય-સ્વ તમારો આભાર માનશે.</string>
+    <string name="streak_desc_7">વિચારો, લાગણીઓ અને યાદોથી ભરેલ એક અઠવાડિયું. તમે કંઈ મૂલ્યવાન બનાવી રહ્યા છો.</string>
+    <string name="streak_desc_3">સળંગ ત્રણ દિવસ એ સાચી ટેવની શરૂઆત છે. ટ્રૅક પર રહો, આ ફળ આપે છે!</string>
+    <string name="streak_desc_1">દરેક નોંધ તમારા ભવિષ્ય-સ્વ માટે નાની ભેટ છે. કાલે ફરી લખો!</string>
+
+    
+    <string name="entry_title">નોંધ</string>
+    <string name="entry_summary">સારાંશ</string>
+    <string name="entry_saving">સાચવાઈ રહ્યું છે\u2026</string>
+    <string name="entry_improving">સુધારાઈ રહ્યું છે\u2026</string>
+    <string name="entry_improve_with_ai">AI વડે પછીથી સુધારો</string>
+    <string name="entry_photos_videos">ફોટો/વિડિઓ</string>
+    <string name="entry_add">ઉમેરો</string>
+    <string name="entry_no_photos_yet">હજુ કોઈ ફોટો/વિડિઓ ઉમેર્યા નથી</string>
+    <string name="entry_cd_play_video">વિડિઓ ચલાવો</string>
+    <string name="entry_cd_remove">દૂર કરો</string>
+    <string name="entry_tts_enable_hint">સેટિંગ્સમાં અવાજ ચાલુ કરો</string>
+    <string name="entry_tts_stop">રોકો</string>
+    <string name="entry_tts_read">વાંચો</string>
+    <string name="entry_cd_share">શૅર કરો</string>
+    <string name="entry_recording_duration">રેકૉર્ડિંગ સમય: %1$s</string>
+    <string name="entry_tts_generating">કૃપા કરી રાહ જુઓ, Text-to-Speech બનાવવામાં આવી રહ્યું છે\u2026</string>
+    <string name="entry_tts_journal_label">ડાયરી પ્રવેશ</string>
+    <string name="entry_tts_followup_label">પૂરક %1$s</string>
+    <string name="entry_cd_photo_page">ફોટો %1$d</string>
+    <string name="entry_add_photo_video">ફોટો/વિડિઓ ઉમેરો</string>
+    <string name="entry_camera">કૅમેરા</string>
+    <string name="entry_gallery">ગૅલેરી</string>
+    <string name="entry_delete_title">નોંધ ડિલીટ કરીએ?</string>
+    <string name="entry_delete_message">આ નોંધ કાયમ માટે ડિલીટ કરવી?</string>
+
+    
+    <string name="share_title">નોંધ શૅર કરો</string>
+    <string name="share_which_version">કઈ આવૃત્તિ શૅર કરવી?</string>
+    <string name="share_improved_version">સુધારેલ આવૃત્તિ</string>
+    <string name="share_photos_videos_label">ફોટો/વિડિઓ શૅર કરો:</string>
+    <string name="share_footer">BestJournal App ની ડાયરી નોંધ</string>
+    <string name="share_what_to_share">શું શૅર કરવું છે?</string>
+    <string name="share_journal_entry">ડાયરી નોંધ</string>
+    <string name="share_followup_numbered">વધારાની નોંધ <xliff:g id="ordinal" example="1">%1$s</xliff:g></string>
+    <string name="share_followup_single">વધારાની નોંધ</string>
+
+    <string name="error_recording_failed">રેકોર્ડિંગ નિષ્ફળ: <xliff:g id="reason" example="માઇક્રોફોન ઉપલબ્ધ નથી">%1$s</xliff:g></string>
+    <string name="error_transcription_failed">ટ્રાન્સક્રિપ્શન નિષ્ફળ: <xliff:g id="reason" example="નેટવર્ક સમય સમાપ્ત">%1$s</xliff:g></string>
+
+    
+    <string name="dashboard_title">ડૅશબોર્ડ</string>
+    <string name="dashboard_legend">લિજેન્ડ</string>
+    <string name="dashboard_refresh">તાજું કરો</string>
+    <string name="dashboard_weekly_review_waiting">તમારો સાપ્તાહિક અવલોકન તૈયાર છે</string>
+    
+    <string name="dashboard_weekly_review_upsell_body">તમારો આ અઠવાડિયો ઘણો સઘળો રહ્યો. Premium સાથે તમે સંપૂર્ણ વિશ્લેષણ જોઈ શકો છો: પેટર્ન ઓળખો, અંતર્દૃષ્ટિ શોધો અને સમજો કે તમને શું વ્યસ્ત રાખે છે.</string>
+    <string name="dashboard_discover_premium">Premium શોધો</string>
+    <string name="dashboard_please_wait">કૃપા કરી રાહ જુઓ</string>
+    <string name="dashboard_gemini_unavailable">Gemini અત્યારે ઉપલબ્ધ નથી, કૃપા કરી ટૂંક સમયમાં ફરી પ્રયાસ કરો.</string>
+    <string name="dashboard_no_custom_focus">કોઈ વિશ્લેષણ ફોકસ દાખલ નથી</string>
+    <string name="dashboard_custom_focus_hint">સેટિંગ્સમાં\n\"વ્યક્તિગત વિશ્લેષણ\" હેઠળ ફોકસ દાખલ કરો,\nઅથવા બીજી પ્રોફાઇલ પસંદ કરો.</string>
+    <string name="dashboard_no_analysis_yet">હજુ કોઈ વિશ્લેષણ નથી</string>
+    <string name="dashboard_create_entries_custom">ડાયરી નોંધો બનાવો,\nપછી AI તમારા ફોકસનું વિશ્લેષણ કરશે.</string>
+    <string name="dashboard_create_entries_default">ડાયરી નોંધો બનાવો,\nપછી AI તમારા પૅટર્નનું વિશ્લેષણ કરશે.</string>
+    <string name="dashboard_like_analysis">શું વિશ્લેષણ ગમ્યું?</string>
+    <string name="dashboard_premium_upsell_body">Premium સાથે તને જોઈએ તેટલા પ્રોફાઇલમાંથી ઉદાર વિશ્લેષણો મળે છે.</string>
+    <string name="dashboard_learn_more">વધુ જાણો</string>
+    <string name="dashboard_feature_analyses">વિશ્લેષણો</string>
+    <string name="dashboard_all_observations">બધા અવલોકનો</string>
+    <string name="dashboard_inner_mirror">આંતરિક અરીસો</string>
+    <string name="dashboard_all_insights">બધી આંતરદૃષ્ટિ</string>
+    <string name="dashboard_goal_overview">લક્ષ્ય-અવલોકન</string>
+    <string name="dashboard_all_goals">બધા લક્ષ્યો</string>
+    <string name="dashboard_top_results_fallback">સૌથી મહત્વના પરિણામો</string>
+    <string name="dashboard_analysis_fallback">વિશ્લેષણ</string>
+    <string name="dashboard_all_results_fallback">બધા પરિણામો</string>
+    <string name="dashboard_overall_analysis">સંપૂર્ણ વિશ્લેષણ</string>
+    
+    <string name="dashboard_summary_overview_title">ઝલક</string>
+    
+    <string name="dashboard_goals_next_steps_title">આગળના પગલાં</string>
+    <string name="dashboard_all_recommendations">બધી ભલામણો</string>
+    <string name="dashboard_connection">જોડાણ</string>
+    <string name="dashboard_limit_daily">દૈનિક મર્યાદા પહોંચી. કાલે ફરી!</string>
+    <string name="dashboard_limit_weekly_profile">આ પ્રોફાઇલ માટે સાપ્તાહિક મર્યાદા પૂર્ણ. પ્રોફાઇલ બદલો અથવા સોમવાર સુધી રાહ જુઓ.</string>
+    <string name="dashboard_limit_cooldown">ટૂંકો વિરામ: આગળના વિશ્લેષણ સુધી %1$d મિનિટ બાકી.</string>
+    <string name="dashboard_analysis_failed">વિશ્લેષણ નિષ્ફળ</string>
+    <string name="dashboard_last_updated">છેલ્લે %1$s ના રોજ અપડેટ</string>
+    <string name="dashboard_loading_profile_switch">પ્રોફાઇલ બદલ્યા પછી AI ડૅશબોર્ડ આપોઆપ અપડેટ થાય છે</string>
+    <string name="dashboard_loading_delete_update">ડાયરી નોંધ ડિલીટ કર્યા પછી AI ડૅશબોર્ડ આપોઆપ અપડેટ થાય છે</string>
+    <string name="dashboard_loading_auto_update">નવી ડાયરી નોંધ પછી AI ડૅશબોર્ડ આપોઆપ અપડેટ થાય છે</string>
+    <string name="dashboard_loading_default">AI ડૅશબોર્ડ અપડેટ થઈ રહ્યું છે</string>
+
+    
+    <string name="legend_urgent">તાત્કાલિક</string>
+    <string name="legend_attention">ધ્યાન</string>
+    <string name="legend_observe">અવલોકન</string>
+    <string name="legend_activity_level">પ્રવૃત્તિ સ્તર</string>
+    <string name="legend_activity_desc">અર્ધવર્તુળ દર્શાવે છે આ ક્ષેત્રમાં કેટલું થઈ રહ્યું છે:</string>
+    <string name="legend_activity_high">ઘણી પ્રવૃત્તિ (67–100%)</string>
+    <string name="legend_activity_medium">મધ્યમ પ્રવૃત્તિ (34–66%)</string>
+    <string name="legend_activity_low">ઓછી પ્રવૃત્તિ (0–33%)</string>
+    <string name="legend_observation_relevance">અવલોકનોની પ્રસ્તુતતા</string>
+    <string name="legend_relevance_high">કેન્દ્રીય, તમારી નોંધોના મૂળ વિષયો</string>
+    <string name="legend_relevance_medium">પ્રસ્તુત, વારંવાર આવતા અવલોકનો</string>
+    <string name="legend_relevance_low">સહેજ ઉલ્લેખ, એક વાર આવ્યું</string>
+    <string name="legend_reflection_depth">પ્રતિબિંબ ઊંડાઈ</string>
+    <string name="legend_reflection_desc">અર્ધવર્તુળ તમારા આત્મ-પ્રતિબિંબની ઊંડાઈ દર્શાવે છે:</string>
+    <string name="legend_reflection_deep">ઊંડું (67–100%)</string>
+    <string name="legend_reflection_aware">સભાન (34–66%)</string>
+    <string name="legend_reflection_surface">સ્તર (0–33%)</string>
+    <string name="legend_insight_depth">આંતરદૃષ્ટિ ઊંડાઈ</string>
+    <string name="legend_insight_deep">ઊંડાણ, વારંવાર આવતા પેટર્ન અને માન્યતાઓ</string>
+    <string name="legend_insight_aware">સભાન, ઓળખાયેલ વિચાર અને ભાવ પૅટર્ન</string>
+    <string name="legend_insight_surface">સ્તર, પ્રથમ અવલોકનો</string>
+    <string name="legend_progress">પ્રગતિ</string>
+    
+    <string name="legend_goal_progress_desc">અર્ધવર્તુળ તમારા લક્ષ્યોની પ્રગતિ દર્શાવે છે:</string>
+    <string name="legend_blocked_range">અવરોધિત (0–33%)</string>
+    <string name="legend_in_progress_range">ચાલુ (34–66%)</string>
+    <string name="legend_progress_range">પ્રગતિ (67–100%)</string>
+    <string name="legend_goal_status">લક્ષ્ય સ્ટેટસ</string>
+    <string name="legend_blocked_desc">અવરોધિત — અવરોધ ધરાવતા લક્ષ્યો</string>
+    <string name="legend_open_desc">ખુલ્લું — હજુ પ્રગતિ વિનાના લક્ષ્યો</string>
+    <string name="legend_progress_success_desc">પ્રગતિ — દૃશ્ય સફળતા ધરાવતા લક્ષ્યો</string>
+    
+    <string name="legend_analysis_value">વિશ્લેષણ મૂલ્ય</string>
+    <string name="legend_analysis_relevance_desc">અર્ધવર્તુળ તમારા ફોકસ માટે પ્રસ્તુતતા દર્શાવે છે:</string>
+    <string name="legend_high_focus">ઊંચું (67–100%) — ફોકસનો કેન્દ્ર</string>
+    <string name="legend_medium_focus">મધ્યમ (34–66%) — જોડાણ ઓળખાયું</string>
+    <string name="legend_low_focus">નીચું (0–33%) — કિનારે</string>
+    <string name="legend_result_relevance">પરિણામોની પ્રસ્તુતતા</string>
+    <string name="legend_important_desc">મહત્વપૂર્ણ — સીધા ફોકસ સાથે સંબંધિત</string>
+    <string name="legend_relevant_desc">પ્રસ્તુત — ફોકસ સાથે જોડાણ</string>
+    <string name="legend_note_desc">નોંધ — સહેજ ઉલ્લેખ</string>
+    
+    <string name="legend_burden_scale">ભાર-સ્કેલ</string>
+    <string name="legend_burden_desc">અર્ધવર્તુળ આ વિષય ક્યારે ભાર આપે છે તે દર્શાવે છે:</string>
+    <string name="legend_high_burden">ઊંચું (67–100%) — તરત કાર્ય કરો</string>
+    <string name="legend_medium_burden">મધ્યમ (34–66%) — ધ્યાન જરૂરી</string>
+    <string name="legend_low_burden">નીચું (0–33%) — સારી સ્થિતિ</string>
+    <string name="legend_priority_title">સલાહ પ્રાથમિકતા</string>
+    <string name="legend_priority_high">લાલ = તાત્કાલિક — તરત કાર્ય કરો</string>
+    <string name="legend_priority_medium">નારંગી = મધ્યમ — જલ્દી કરો</string>
+    <string name="legend_priority_low">વાદળી = નીચું — અવલોકન કરો</string>
+    
+    <string name="legend_categories">શ્રેણીઓ</string>
+    <string name="legend_categories_desc">શ્રેણીઓ ગતિશીલ રીતે બનાવવામાં આવે છે — AI તમારી નોંધોમાં વિષયો ઓળખે છે અને યોગ્ય શ્રેણીઓ બનાવે છે. નવા વિષયો આપોઆપ નવા ચિહ્નો લાવે છે.</string>
+    
+    <string name="level_low">નીચું</string>
+    <string name="level_medium">મધ્યમ</string>
+    <string name="level_high">ઊંચું</string>
+    <string name="urgency_high">તાત્કાલિક — તરત કાર્ય કરો</string>
+    <string name="urgency_medium">ધ્યાન જરૂરી</string>
+    <string name="urgency_low">સારી સ્થિતિ — અવલોકન કરો</string>
+    
+    <string name="dashboard_derived_from">આ પરથી:</string>
+    <string name="dashboard_update_for_derivation">વિગતવાર વ્યુત્પત્તિ માટે ડૅશબોર્ડ અપડેટ કરો.</string>
+    
+    <string name="dashboard_top_5_actions">ટૉપ 5 પગલાં</string>
+    <string name="dashboard_core_insights">મૂળ આંતરદૃષ્ટિ</string>
+    <string name="dashboard_summary_subtitle">તમારી નોંધોના સૌથી મહત્વના મુદ્દા</string>
+    <string name="summary_central">કેન્દ્રીય</string>
+    <string name="summary_relevant">પ્રસ્તુત</string>
+    <string name="summary_side_note">સહેજ ઉલ્લેખ</string>
+    
+    <string name="dashboard_deepest_insights">સૌથી ઊંડી આંતરદૃષ્ટિ</string>
+    <string name="dashboard_insight_subtitle">તમારી નોંધો તમારા વિશે શું કહે છે</string>
+    <string name="insight_deep_label">ઊંડું</string>
+    <string name="insight_aware_label">સભાન</string>
+    <string name="insight_surface_label">સ્તર</string>
+    
+    <string name="dashboard_goal_steps">તમારા લક્ષ્યો માટે સૌથી મહત્વના પગલાં</string>
+    <string name="goal_blocked_label">અવરોધિત</string>
+    <string name="goal_open_label">ખુલ્લું</string>
+    <string name="goal_progress_label">પ્રગતિ</string>
+    
+    <string name="dashboard_custom_subtitle">તમારા વ્યક્તિગત વિશ્લેષણ આધારે</string>
+    <string name="custom_important_label">મહત્વપૂર્ણ</string>
+    <string name="custom_relevant_label">પ્રસ્તુત</string>
+    <string name="custom_note_label">નોંધ</string>
+    
+    <string name="dashboard_enable_voices">સેટિંગ્સમાં અવાજ ચાલુ કરો</string>
+    <string name="dashboard_tts_stop">રોકો</string>
+    <string name="dashboard_tts_read">વાંચો</string>
+    <string name="dashboard_share_analysis">વિશ્લેષણ શૅર કરો</string>
+    <string name="dashboard_share">શૅર કરો</string>
+    <string name="dashboard_tts_wait">કૃપા કરી રાહ જુઓ, Text-to-Speech બનાવવામાં આવી રહ્યું છે\u2026</string>
+
+    
+    <string name="profile_summary">સારાંશ</string>
+    <string name="profile_entropy">તમારું જીવન સ્વચ્છ કરો</string>
+    <string name="profile_insight">આત્મ-જ્ઞાન</string>
+    <string name="profile_goals">વ્યક્તિગત લક્ષ્યો</string>
+    <string name="profile_custom">વ્યક્તિગત વિશ્લેષણ</string>
+    <string name="profile_summary_desc">વિષયો, પૅટર્ન અને અનુભવો સારાંશ કરે છે</string>
+    <string name="profile_entropy_desc">તણાવ, અવ્યવસ્થા અને ભારને ઓળખે છે</string>
+    <string name="profile_insight_desc">વારંવારના વિચાર અને લાગણીના પેટર્નને દૃશ્યમાન બનાવે છે</string>
+    <string name="profile_goals_desc">લક્ષ્યો, ઇચ્છાઓ અને પ્રગતિ ઓળખે છે</string>
+    <string name="profile_custom_desc">પોતાનો વિશ્લેષણ ફોકસ નક્કી કરો</string>
+
+    
+    <string name="profile_summary_long">તમારી નોંધો ટીકા કે સલાહ વિના તટસ્થ રીતે સારાંશ થાય છે.\n\nતમે એક નજરે જોઈ શકો:\n\n• અત્યારે ક્યા વિષયો તમને વ્યસ્ત રાખે છે\n• ક્યા પૅટર્ન વારંવાર આવે છે\n• તમારું જીવન કેવી રીતે વિકસે છે\n\nતમારા જીવનમાં જે ચાલી રહ્યું છે તેની દૈનિક ઝલક માટે આદર્શ.</string>
+    <string name="profile_entropy_long">AI શોધે છે કે રોજિંદા જીવનમાં તમને શું ભારે પડે છે, અને તેને ગોઠવે છે. તમને તમારા સૌથી મોટા ભાર-સ્રોતની ઝાંખી અને 5 નક્કર સફાઈ-પગલાં મળે છે. જ્યારે તમે ફરી નિયંત્રણ મેળવવા માગો ત્યારે આદર્શ.</string>
+    <string name="profile_insight_long">AI ફક્ત ઘટનાઓ કરતાં ઊંડું જુએ છે. તે તમારી એન્ટ્રીઓમાં ઓળખે છે:\\n\\n• તમારા શબ્દોમાં વિચારના પેટર્ન અને માન્યતાઓ\\n• વારંવારની લાગણીઓ અને પ્રતિક્રિયાઓ\\n• તમારી એન્ટ્રીઓમાં દૃશ્યમાન થતી શક્તિઓ\\n• જે મૂલ્યો તમારી ક્રિયાઓ ચલાવે છે\\n\\nતે દરેક માટે જે પોતાને વધુ સારી રીતે સમજવા અને આંતરિક વૃદ્ધિ ઇચ્છે છે.</string>
+    <string name="profile_goals_long">AI તમારી નોંધોમાં બધા લક્ષ્યો, ઇચ્છાઓ અને ઇરાદાઓ શોધે છે, સહેજ ઉલ્લેખ પણ.\n\nતમે જોઈ શકો:\n\n• ક્યા લક્ષ્યો છે (છુપાયેલ પણ)\n• દરેક લક્ષ્ય પર ક્યાં છો\n• આગળનું પગલું શું હોઈ શકે\n\nતમારા પોતાના શબ્દો વાંચતો વ્યક્તિગત લક્ષ્ય-ટ્રૅકર.</string>
+    <string name="profile_custom_long">AI શું ધ્યાન આપવું તે તમે જ નક્કી કરો.\n\nતમારો પોતાનો વિશ્લેષણ ફોકસ લખો, ઉદાહરણ:\n\n• \"રમતગમતના બધા ઉલ્લેખ શોધો\"\n• \"મારા મૂડ ફેરફારો વિશ્લેષણ કરો\"\n• \"ક્યારે હું સૌથી વધુ ઉત્પાદક છું\"\n\nજેઓ ઠીક ઠીક જાણે છે કે શું શોધવું છે.</string>
+    <string name="profile_custom_prompt">તમારા માટે ખાસ શું મહત્વપૂર્ણ છે? AI ડાયરી નોંધો વિશ્લેષણ કરતી વખતે શેના પર ધ્યાન આપવું?</string>
+    <string name="profile_select_hint">પ્રોફાઇલ પસંદ કરો. વધુ સ્પષ્ટ સ્પષ્ટીકરણ માટે પ્રોફાઇલ પર ટૅપ કરો.</string>
+    <!-- Premium upsell sheet shown when a free user tries to add a 3rd custom analysis -->
+    <string name="profiles_premium_title">બહુવિધ કસ્ટમ પ્રોફાઇલ</string>
+    <string name="profiles_premium_desc">Premium સાથે તું તારે જેટલી જોઈએ એટલી કસ્ટમ વિશ્લેષણ પ્રોફાઇલ બનાવી શકે છે. જેમ કે એક રમત માટે, એક કામ માટે, એક પરિવાર માટે. દરેક પ્રોફાઇલ તારી ડાયરી એન્ટ્રીનું પોતાના ફોકસથી વિશ્લેષણ કરે છે.</string>
+    <string name="profiles_benefit_many">જોઈએ તેટલા કસ્ટમ પ્રોફાઇલ બનાવ</string>
+    <string name="profiles_benefit_switch">કોઈપણ સમયે ફોકસ વચ્ચે બદલ</string>
+    <string name="profiles_benefit_named">દરેક પ્રોફાઇલને પોતાનું નામ આપ</string>
+
+    
+    <string name="settings_title">સેટિંગ્સ</string>
+    <string name="settings_account">એકાઉન્ટ</string>
+    <string name="settings_sign_out">સાઇન આઉટ</string>
+    <string name="settings_last_sync">છેલ્લી સિંક: %1$s</string>
+    <string name="settings_entries_auto_loaded">સાઇન ઇન થતી વખતે નોંધો આપોઆપ લોડ થઈ જશે</string>
+    <string name="settings_backup_photos">ફોટો સાચવો</string>
+    <string name="settings_backup_videos">વિડિઓ સાચવો</string>
+    <string name="settings_syncing">સાચવવામાં આવી રહ્યું છે\u2026</string>
+    
+    <string name="settings_sync_success">સફળતાપૂર્વક સાચવ્યું</string>
+    
+    <string name="settings_signin_failed">સાઇન ઇન નિષ્ફળ: <ns1:g id="error_reason" example="Network error">%1$s</ns1:g></string>
+    <string name="settings_backup_entries">ડાયરી નોંધો સાચવો</string>
+    <string name="settings_not_signed_in">સાઇન ઇન નથી</string>
+    <string name="settings_entries_loaded_on_sign_in">સાઇન ઇન થતી વખતે સાચવેલ નોંધો લોડ થશે</string>
+    <string name="settings_sign_in_google">Google સાથે સાઇન ઇન</string>
+    <string name="settings_appearance">દેખાવ</string>
+    <string name="settings_dark_mode">ડાર્ક મોડ</string>
+    <string name="settings_dark_active">ચાલુ</string>
+    <string name="settings_dark_off">બંધ</string>
+    <string name="settings_follow_system">સિસ્ટમ અનુસરો</string>
+    <string name="settings_automatic">આપોઆપ</string>
+    <string name="settings_sounds_haptics_section">અવાજ / સ્પંદન</string>
+    <string name="settings_app_sounds">App અવાજ</string>
+    <string name="settings_sounds_on">અવાજ ચાલુ છે</string>
+    <string name="settings_sounds_off">અવાજ બંધ છે</string>
+    <string name="settings_haptics">સ્પંદન</string>
+    <string name="settings_haptics_on">સ્પંદન ચાલુ છે</string>
+    <string name="settings_haptics_off">સ્પંદન બંધ છે</string>
+    <string name="settings_voices">અવાજ</string>
+    <string name="settings_tts_on">વાંચવું ચાલુ છે</string>
+    <string name="settings_tts_off">વાંચવું બંધ છે</string>
+    <string name="settings_voice_select">અવાજ પસંદ કરો</string>
+    <string name="settings_voice_choose">અવાજ પસંદ કરો</string>
+    <string name="settings_reminder_section">રિમાઇન્ડર / અવલોકન</string>
+    <string name="settings_daily_reminder">દૈનિક રિમાઇન્ડર</string>
+    <string name="settings_reminder_time" formatted="false">સમય: %02d:%02d</string>
+    <string name="settings_reminder_desc">ડાયરી લખવાની યાદ અપાવે છે</string>
+    <string name="settings_weekly_review">સાપ્તાહિક અવલોકન</string>
+    <string name="settings_weekly_review_on">રિમાઇન્ડર ચાલુ</string>
+    <string name="settings_weekly_review_off">રવિવારે 15:00 વાગ્યે</string>
+    <string name="settings_monthly_review">માસિક અવલોકન</string>
+    <string name="settings_monthly_review_on">રિમાઇન્ડર ચાલુ</string>
+    <string name="settings_yearly_review">વાર્ષિક અવલોકન</string>
+    <string name="settings_yearly_review_on">રિમાઇન્ડર ચાલુ</string>
+    <string name="settings_timezone">ટાઇમ ઝોન: %1$s</string>
+    <string name="settings_security">સુરક્ષા</string>
+    <string name="settings_fingerprint">ફિંગરપ્રિન્ટ</string>
+    <string name="settings_fingerprint_desc">શરૂ થતી વખતે App અનલૉક કરો</string>
+    <string name="settings_auto_lock">60 સેકન્ડ પછી આપોઆપ બ્લૉક</string>
+    <string name="settings_ai_profiles_title">AI ડૅશબોર્ડ પ્રોફાઇલ:</string>
+    <string name="settings_ai_automations">AI ઓટોમેશન</string>
+    <string name="settings_custom_prompt_placeholder">ઉ.ત. ઊંઘની ગુણવત્તા અને તણાવ સ્તર પર ધ્યાન આપો. ખોરાકમાં પૅટર્ન બતાવો. સાપ્તાહ દરમ્યાન મૂડ કેવી રીતે બદલાય. ક્યારે સૌથી ઉત્પાદક છું અને શું અવરોધ છે.\n\nફોકસ જેટલો વિગતવાર, પરિણામ એટલા સારા.</string>
+    <string name="churn_google_play_redirect">Abo manage કરવા Google Play પર redirect. ડાયરી નોંધો સ્વાભાવિક રીતે સુરક્ષિત.</string>
+    <string name="splash_subtitle">તમારી સ્માર્ટ ડાયરી</string>
+    <string name="biometric_subtitle">ડાયરી અનલૉક કરો</string>
+    
+    <string name="biometric_prompt_subtitle">અનલૉક કરવા ઓળખ આપો</string>
+    
+    <string name="biometric_unlock_button">અનલૉક</string>
+    <string name="settings_text_improvement">ટેક્સ્ટ સુધારણા</string>
+    <string name="settings_text_improvement_desc">મૂળ રૂપે ચાલુ</string>
+    <string name="settings_dashboard_section">ડૅશબોર્ડ</string>
+    <string name="settings_auto_update">નવી ડાયરી નોંધ પર આપોઆપ અપડેટ</string>
+    <string name="settings_premium_section">Premium</string>
+    <string name="settings_premium_lifetime">Lifetime ઍક્સેસ ચાલુ</string>
+    <string name="settings_premium_active">Premium સબ્સ્ક્રિપ્શન ચાલુ</string>
+    <string name="settings_premium_lifetime_desc">એક વખતની ખરીદી, બધી સુવિધાઓ કાયમ માટે અનલૉક.</string>
+    <string name="settings_premium_desc">બધી સુવિધાઓ અનલૉક, રોજ AI, PDF નિકાસ અને વધુ.</string>
+    <string name="settings_manage_subscription">સબ્સ્ક્રિપ્શન manage કરો</string>
+    <string name="settings_export">Export</string>
+    <string name="settings_export_pdf_desc">બધી ડાયરી નોંધો અને ફોટો PDF document તરીકે export.</string>
+
+    
+    <string name="settings_premium_feature_improve">દૈનિક AI લખાણ સુધારણા</string>
+    <string name="settings_premium_feature_improve_desc">AI ઇચ્છા મુજબ તમારી નોંધો સુધારે છે.</string>
+    <string name="settings_premium_feature_dashboard">દૈનિક ડેશબોર્ડ વિશ્લેષણો</string>
+    <string name="settings_premium_feature_dashboard_desc">તમારું ડૅશબોર્ડ તમારી નોંધો સાથે વધે છે.</string>
+    <string name="settings_premium_feature_5_perspectives">બધાં 4 પૂર્વનિર્ધારિત AI પ્રોફાઇલ</string>
+    <string name="settings_premium_feature_5_perspectives_desc">સારાંશથી આત્મ-જ્ઞાન સુધી</string>
+    <string name="settings_premium_feature_reviews">સાપ્તાહિક, માસિક અને વાર્ષિક અવલોકન</string>
+    <string name="settings_premium_feature_reviews_desc">AI તમારી વાર્તા કહે</string>
+    <string name="settings_premium_feature_patterns">પૅટર્ન ઓળખ</string>
+    <string name="settings_premium_feature_patterns_desc">AI તમારી નોંધોમાં રૂઢિઓ અને સંબંધો દૃશ્યમાન કરી શકે છે</string>
+    <string name="settings_premium_feature_pdf">ફોટો સહ PDF Export</string>
+    <string name="settings_premium_feature_pdf_desc">ફોટો સાથે document તરીકે ડાયરી</string>
+    <string name="settings_premium_feature_voice">ચોક્કસ વાણી ઓળખ</string>
+    <string name="settings_premium_feature_voice_desc">અવાજ નોંધ માટે ઊંચી ગુણવત્તા</string>
+    <string name="settings_premium_feature_profiles">સંખ્યા-મર્યાદા વગર પોતાનાં AI પ્રોફાઇલ</string>
+    <string name="settings_premium_feature_profiles_desc">બહુવિધ વિશ્લેષણ ફોકસ એક સાથે</string>
+    <string name="settings_unlock_premium">Premium ખોલો</string>
+    
+    
+    <string name="settings_export_dialog_title">PDF Export</string>
+    <string name="settings_export_what">શું export કરવું?</string>
+    <string name="settings_export_entries">ડાયરી નોંધો</string>
+    <string name="settings_export_photos">ફોટો</string>
+    <string name="settings_export_action">Export</string>
+    <string name="settings_exporting">Export થઈ રહ્યું છે\u2026</string>
+    
+    <string name="settings_export_no_entries">કોઈ નોંધ ઉપલબ્ધ નથી</string>
+    <string name="settings_export_entries_photos_pdf">ડાયરી નોંધો અને ફોટો PDF export</string>
+    <string name="settings_export_data">ડેટા export</string>
+    <string name="settings_export_entries_photos_pdf_full">ફોટો સહ ડાયરી નોંધો PDF export</string>
+    
+    <string name="settings_feedback">ફીડબૅક</string>
+    <string name="settings_feedback_desc">સૂચનો, ઇચ્છાઓ, સુધારા, bugs 🐞</string>
+    <string name="settings_feedback_send">ફીડબૅક મોકલો</string>
+    <string name="settings_feedback_sent">સફળતાપૂર્વક મોકલ્યું</string>
+    <string name="settings_feedback_dialog_title">ફીડબૅક મોકલો</string>
+    <string name="settings_feedback_dialog_desc">વિકાસકર્તાઓને તમારો સંદેશ — અમે દરેક સંદેશ વાંચીએ છીએ અને બને એટલી જલદી જવાબ આપીએ છીએ.</string>
+    <string name="settings_feedback_placeholder">ફીડબૅક લખો\u2026</string>
+    <string name="settings_feedback_sending">મોકલવામાં આવી રહ્યું છે\u2026</string>
+    <string name="settings_feedback_sign_in_first">પ્રથમ Google સાથે સાઇન ઇન કરો</string>
+    <string name="settings_feedback_allow_gmail">Gmail ઍક્સેસ આપો અને ફરી પ્રયાસ કરો.</string>
+    <string name="settings_feedback_token_error">ટોકન ભૂલ: %1$s</string>
+    <string name="settings_feedback_subject">Best Journal વિશે પ્રતિસાદ</string>
+    <string name="settings_feedback_no_error_body">કોઈ ભૂલ પ્રતિસાદ મળ્યો નથી</string>
+    <string name="settings_feedback_read_error">ભૂલ પ્રતિસાદ વાંચી શકાયો નથી</string>
+    <string name="settings_feedback_api_error">Gmail ભૂલ %1$d: %2$s</string>
+    <string name="settings_feedback_unknown_error">અજ્ઞાત ભૂલ</string>
+    <string name="settings_feedback_confirm_subject">Best Journal ને ફીડબૅક</string>
+    <string name="settings_feedback_confirm_body">આ સંદેશ તેં ડેવલપરને મોકલ્યો છે.\nએ તને વ્યક્તિગત રીતે જવાબ આપશે.\n\n--- તારો સંદેશ ---\n%1$s\n\nધન્યવાદ,\nDEV.FRANK</string>
+    <string name="settings_feedback_from">ફીડબૅક: %1$s</string>
+    <string name="action_send">મોકલો</string>
+    
+    <string name="drive_consent_needed">Drive ઍક્સેસ આપવી જરૂરી</string>
+    <string name="drive_not_signed_in">સાઇન ઇન નથી</string>
+    <string name="drive_no_backup">કોઈ બૅકઅપ મળ્યું નહીં</string>
+    <string name="drive_backup_disabled">ગોપનીયતા સેટિંગ્સમાં Google Drive બૅકઅપ બંધ છે</string>
+    
+    <string name="achievements_title">Achievements</string>
+    <string name="achievements_counter">%1$d ઓ %2$d અનલૉક</string>
+    <string name="achievements_unlocked_at">%1$s ના રોજ અનલૉક</string>
+    
+    <string name="settings_about">App વિશે</string>
+    <string name="settings_about_version">Best Journal V0.21.9</string>
+    <string name="settings_about_desc">તમારી વ્યક્તિગત AI ડાયરી</string>
+    
+    <string name="settings_sign_out_confirm">સાઇન આઉટ?</string>
+    <string name="settings_sign_out_body">શું ખરેખર સાઇન આઉટ કરવું?</string>
+    
+    <string name="toggle_light">હળવું</string>
+    <string name="toggle_dark">ડાર્ક</string>
+    <string name="toggle_sound_on">અવાજ ચાલુ</string>
+    <string name="toggle_sound_off">અવાજ બંધ</string>
+    <string name="toggle_haptic_on">સ્પંદન ચાલુ</string>
+    <string name="toggle_haptic_off">સ્પંદન બંધ</string>
+    <string name="toggle_voice_on">અવાજ ચાલુ</string>
+    <string name="toggle_voice_off">અવાજ બંધ</string>
+    <string name="toggle_sun">સૂર્ય</string>
+    <string name="toggle_moon">ચંદ્ર</string>
+    
+    <string name="day_monday">સોમવાર</string>
+    <string name="day_tuesday">મંગળવાર</string>
+    <string name="day_wednesday">બુધવાર</string>
+    <string name="day_thursday">ગુરુવાર</string>
+    <string name="day_friday">શુક્રવાર</string>
+    <string name="day_saturday">શનિવાર</string>
+    <string name="day_sunday">રવિવાર</string>
+    
+    <string name="day_abbrev_mon">સો</string>
+    <string name="day_abbrev_tue">મં</string>
+    <string name="day_abbrev_wed">બુ</string>
+    <string name="day_abbrev_thu">ગુ</string>
+    <string name="day_abbrev_fri">શુ</string>
+    <string name="day_abbrev_sat">શ</string>
+    <string name="day_abbrev_sun">ર</string>
+    
+    <string-array name="weekday_abbreviations">
+        <item>@string/day_abbrev_mon</item>
+        <item>@string/day_abbrev_tue</item>
+        <item>@string/day_abbrev_wed</item>
+        <item>@string/day_abbrev_thu</item>
+        <item>@string/day_abbrev_fri</item>
+        <item>@string/day_abbrev_sat</item>
+        <item>@string/day_abbrev_sun</item>
+    </string-array>
+    
+    <string name="settings_reminder_when">ક્યારે રિમાઇન્ડ કરવું?</string>
+    <string name="settings_review_when">અવલોકન ક્યારે આવવો?</string>
+    <string name="settings_review_weekday">અઠવાડિયાનો દિવસ</string>
+    <string name="settings_review_time">સમય</string>
+    <string name="settings_monthly_review_off">મહિનાના છેલ્લા દિવસે 15:00 વાગ્યે</string>
+    <string name="settings_yearly_review_off">વર્ષના છેલ્લા દિવસે 15:00 વાગ્યે</string>
+    <string name="achievement_secret">ગુપ્ત</string>
+    <string name="paywall_exit_bonus_days">+ %1$d વધારાના ટ્રાયલ દિવસ</string>
+    
+    <string name="splash_start">શરૂ</string>
+    
+    
+    <string name="limit_remaining"><ns1:g id="count" example="3">%1$d</ns1:g> બાકી</string>
+    
+    
+    <string name="limit_used_of_max"><ns1:g id="used" example="3">%1$d</ns1:g> ઓ <ns1:g id="max" example="5">%2$d</ns1:g> ઉપયોગ</string>
+    
+    
+    <string name="churn_discount_badge"><ns1:g id="percent" example="50">%1$d</ns1:g>%% બચત</string>
+    
+    <string name="ai_prompt_language_style">સરળ, સ્પષ્ટ. અંગ્રેજી શબ્દો નહીં.</string>
+    <string name="ai_prompt_language_override" />
+    
+    <string name="ai_prompt_response_language">જવાબ ભાષા: સંપૂર્ણ ગુજરાતીમાં જવાબ આપો. બધા ટેક્સ્ટ અને હેડિંગ ગુજરાતીમાં, બીજી કોઈ ભાષા નહીં.</string>
+
+    <!-- TTS-friendly date ban -->
+    <string name="ai_prompt_no_dates_rule">TTS-વાચન-મૈત્રીપૂર્ણ (ફરજિયાત — દૃશ્યમાન લખાણોમાં તારીખ-પ્રતિબંધ):\nબધાં દૃશ્યમાન લખાણ-ક્ષેત્રોમાં (વર્ણન, સમજૂતી, સારાંશ, કુલ વિશ્લેષણ) તમે કોઈ તારીખ વાપરી ન શકો — ન \"3.4.\", \"23.04.\", \"28.4.\", \"24.04.\", \"30.4.\", ન \"3 એપ્રિલની નોંધ\", \"23.04. ના રોજ\", \"28.4. ની\" કે ચોક્કસ નોંધ-તારીખોના આવા ઉલ્લેખ. આ લખાણો વપરાશકર્તાને વાંચી સંભળાવાય છે — તારીખોની હારમાળા સાંભળતી વખતે અકુદરતી લાગે છે અને તારણનો પ્રવાહ તોડે છે.\n\nતેને બદલે શુદ્ધ તારણ ઘડો:\n- ખોટું: \"3.4., 28.4. અને 23.4. ની નોંધો સાબિત કરે છે કે મોડા ઊંઘવાથી તમારી જૈવિક લય બગડે છે.\"\n- સાચું: \"મોડા ઊંઘવાનો સમય તમારી જૈવિક લયને વ્યવસ્થિત રીતે તોડે છે.\"\n- ખોટું: \"30 ની નોંધ બતાવે છે કે તમારું ઇનબોક્સ 28.4. થી ઊભરાય છે અને તમારો સમય છીનવે છે.\"\n- સાચું: \"તમારું ઇનબોક્સ કેટલાય દિવસોથી ઊભરાય છે અને તમારો સમય છીનવે છે.\"\n- ખોટું: \"24.04. ની સફાઈ-ક્રિયાઓ પછી તમે રોજિંદા જીવનમાં વધુ સ્પષ્ટતા અનુભવો છો.\"\n- સાચું: \"હલનચલન તમને રોજિંદા જીવનમાં સ્પષ્ટપણે વધુ સ્પષ્ટતા આપે છે.\"\n\nવિષયગત તારણ રહે છે — માત્ર ચોક્કસ તારીખ-ઉલ્લેખ દૂર થાય છે. તમે હજુ પણ સામાન્ય સમય-સંબંધો વાપરી શકો છો (\"વારંવાર\", \"છેલ્લે\", \"કેટલાય દિવસોમાં\"). તારીખો માત્ર \"herleitung\" ક્ષેત્રમાં જ આવે છે (ઉદ્ગમ, આંતરિક રીતે વપરાય છે, દર્શાવાતું નથી).</string>
+    <!-- B2 Re-Ranker prompt -->
+    <string name="ai_prompt_rerank_system">તમે એક પ્રોફાઇલ રી-રેન્કર છો. તમને ડેશબોર્ડ વિશ્લેષણમાંથી 5 મુખ્ય પગલાંનો JSON એરે, વપરાશકર્તાનો પ્રોફાઇલ-ફોકસ અને મૂળ ડાયરી-નોંધો મળે છે.\n\nતમારું કાર્ય 3 પગલાંમાં:\n1) 5 પગલાંને એવી રીતે ગોઠવો કે પ્રોફાઇલ-ફોકસ સાથે સૌથી સ્પષ્ટ સંબંધવાળાં પહેલાં આવે.\n2) તપાસો કે 5 માંથી 2 સુધી પગલાંને પ્રોફાઇલ-ફોકસ સાથે કોઈ વિષયગત સંબંધ નથી. જો હોય, તો તેમને પ્રોફાઇલ-મજબૂત પગલાંથી બદલો, જે તમે ડાયરી-નોંધોમાંથી તારવો છો. દરેક પગલાંની એ જ JSON રચના વળગી રહો (titel, beschreibung, erklaerung).\n3) પ્રોફાઇલ-સંબંધને વૈવિધ્યપૂર્ણ રીતે પર્યાયો અને વિષયગત નિકટતાથી વ્યક્ત કરો, પ્રોફાઇલ-શબ્દોના યાંત્રિક પુનરાવર્તનથી નહીં. સંબંધ અનુભવાય એવો હોવો જોઈએ, અક્ષરશઃ નહીં.\n\nમહત્ત્વનું:\n- અંતે બરાબર 5 પ્રવિષ્ટિઓ પાછી આપો.\n- ફેરફાર માત્ર ત્યારે જ્યારે સાચો પ્રોફાઇલ-સંબંધ ખૂટતો હોય — પહેલેથી સારી બંધબેસતી હોય ત્યારે એરેને માત્ર ગોઠવો, કંઈ બદલો નહીં.\n- દરેક પ્રવિષ્ટિની JSON રચના રાખો (એ જ કૂંચીઓ: titel, beschreibung, erklaerung).\n- ભાષા ગુજરાતી, કોઈ ડેશ નહીં, beschreibung 13-21 શબ્દો.\n- કોઈ તબીબી, કાનૂની કે નાણાકીય નિદાન કે બંધનકર્તા સલાહ ન આપો; આવા વિષયોમાં તટસ્થ રીતે નિષ્ણાતો તરફ માર્ગદર્શન કરો.\n\nTTS-વાચન-મૈત્રીપૂર્ણ (ફરજિયાત — તારીખ-પ્રતિબંધ):\nbeschreibung અને erklaerung માં કોઈ તારીખ ન વાપરો (\"3.4.\", \"23.04.\", \"30 ની નોંધ\"). આ લખાણો વાંચી સંભળાવાય છે — તારીખોની હારમાળા અકુદરતી લાગે છે. ચોક્કસ નોંધ-તારીખો વગર શુદ્ધ તારણ ઘડો. ઉદાહરણો:\n- ખોટું: \"3.4. અને 23.04. ની નોંધો સાબિત કરે છે કે તમારી જૈવિક લય બગડે છે.\"\n- સાચું: \"મોડા ઊંઘવાનો સમય તમારી જૈવિક લયને વ્યવસ્થિત રીતે તોડે છે.\"\nસામાન્ય સમય-સંબંધો માન્ય છે (\"વારંવાર\", \"છેલ્લે\", \"કેટલાય દિવસોમાં\"), તારીખો નહીં.\n\nઆઉટપુટ ફોર્મેટ:\n- માત્ર એક JSON એરે (મૂળ સ્તરે ચોરસ કૌંસ).\n- કોઈ માર્કડાઉન બેકટિક્સ નહીં, આગળ/પાછળ કોઈ લખાણ નહીં.\n- સીધા [ થી શરૂ કરો અને ] થી અંત કરો.</string>
+    <string name="ai_prompt_rerank_user_focus_header">=== વપરાશકર્તાનો પ્રોફાઇલ-ફોકસ ===</string>
+    <string name="ai_prompt_rerank_actions_header">=== વર્તમાન ટોચની ક્રિયાઓની એરે (5 એન્ટ્રી) ===</string>
+    <string name="ai_prompt_rerank_entries_header">=== ડાયરી એન્ટ્રીઓ (પ્રોફાઇલ-મજબૂત રિપ્લેસમેન્ટ બિંદુઓનો સ્રોત) ===</string>
+    <string name="ai_prompt_rerank_instruction">ગોઠવો અને ફોકસ બહારની વધુમાં વધુ 2 એન્ટ્રી બદલો. બરાબર 5 એન્ટ્રી JSON એરે તરીકે પાછી આપો.</string>
+    <string name="retro_month_more_entries">(+ <xliff:g id="count" example="3">%1$d</xliff:g> વધુ એન્ટ્રીઓ)</string>
+    <string name="retro_month_entries_header">આ મહિનાની મૂળ ડાયરી એન્ટ્રીઓ (સંક્ષિપ્ત, સીધા પ્રોફાઇલ-સંબંધના બીજા સ્રોત તરીકે):</string>
+    <string name="dashboard_active_profile_label">સક્રિય પ્રોફાઇલ: <xliff:g id="profile" example="સારાંશ">%1$s</xliff:g></string>
+    <string name="dashboard_profile_summary">સારાંશ</string>
+    <string name="dashboard_profile_entropy">તમારું જીવન સાફ કરો</string>
+    <string name="dashboard_profile_insight">આત્મ-જ્ઞાન</string>
+    <string name="dashboard_profile_goals">વ્યક્તિગત લક્ષ્યો</string>
+    <string name="dashboard_profile_focus_summary">સૌથી મહત્વપૂર્ણ ઘટનાઓનો વર્ણનાત્મક સારાંશ.</string>
+    <string name="dashboard_profile_focus_entropy">તમારું જીવન ગોઠવે છે: તણાવ, અવ્યવસ્થા અને બોજ ઓળખે છે, અને બતાવે છે કે તમે શું છોડી શકો અથવા ઉકેલી શકો છો.</string>
+    <string name="dashboard_profile_focus_insight">ઊંડું આત્મ-જ્ઞાન: વિચારની પેટર્ન અને છુપાયેલી તાકાત.</string>
+    <string name="dashboard_profile_focus_goals">પ્રગતિ-દૃશ્ય સાથે પ્રેરણાદાયક લક્ષ્ય-સાથી.</string>
+    <string name="dashboard_empty_custom_title">ફોકસ-ટેક્સ્ટ વગરનો પ્રોફાઇલ</string>
+    <string name="dashboard_empty_custom_message">આ પ્રોફાઇલમાં હજુ સુધી ફોકસ-ટેક્સ્ટ નથી. સેટિંગ્સ ખોલો, આ પ્રોફાઇલ પસંદ કરો અને એક ફોકસ-પ્રોમ્પ્ટ ઉમેરો — પછી તમારું વ્યક્તિગત ડેશબોર્ડ અહીં દેખાશે.</string>
+
+    <string name="json_key_overall_analysis">gesamtanalyse</string>
+    <string name="json_key_top_actions">top_massnahmen</string>
+    <string name="json_key_categories">kategorien</string>
+    <string name="json_key_heading_top5">ueberschrift_top5</string>
+    <string name="json_key_heading_analysis">ueberschrift_analyse</string>
+    <string name="json_key_heading_results">ueberschrift_ergebnisse</string>
+    <string name="json_key_progress">fortschritte</string>
+    <string name="json_key_overall_entropy">gesamt_entropie</string>
+    <string name="json_key_trend">trend</string>
+    
+    <string name="json_key_category_name">name</string>
+    <string name="json_key_category_icon">icon</string>
+    <string name="json_key_category_color">farbe</string>
+    <string name="json_key_category_entropy_level">entropie_level</string>
+    <string name="json_key_category_summary">zusammenfassung</string>
+    <string name="json_key_category_advices">ratschlaege</string>
+    
+    <string name="json_key_item_title">titel</string>
+    <string name="json_key_item_description">beschreibung</string>
+    <string name="json_key_item_explanation">erklaerung</string>
+    <string name="json_key_item_reference">bezug</string>
+    <string name="json_key_item_priority">prioritaet</string>
+    <string name="json_key_item_connection">verknuepfung</string>
+    <string name="json_key_item_derivation">herleitung</string>
+    
+    <string name="json_key_derivation_date">datum</string>
+    <string name="json_key_derivation_summary">zusammenfassung</string>
+    
+    <string name="json_value_priority_high">hoch</string>
+    <string name="json_value_priority_medium">mittel</string>
+    <string name="json_value_priority_low">niedrig</string>
+    <string name="ai_prompt_fresh_summary">તાજો સારાંશ — સંપૂર્ણ નવું, સ્વતંત્ર વિશ્લેષણ બનાવો.</string>
+    <string name="ai_prompt_fresh_insight">તાજો આત્મ-જ્ઞાન વિશ્લેષણ — સંપૂર્ણ નવું, સ્વતંત્ર વિશ્લેષણ બનાવો.</string>
+    <string name="ai_prompt_fresh_goals">તાજો લક્ષ્ય-વિશ્લેષણ — સંપૂર્ણ નવું, સ્વતંત્ર વિશ્લેષણ બનાવો.</string>
+    <string name="ai_prompt_fresh_custom">તાજો વ્યક્તિગત વિશ્લેષણ — User ના ફોકસ આધારે સંપૂર્ણ નવું, સ્વતંત્ર વિશ્લેષણ બનાવો. પહેલાંના કોઈ ભૂતકાળ-વિશ્લેષણ પર આધાર ન રાખો. ફક્ત આ નોંધો અને User નો ઉલ્લેખ કરેલ ફોકસ-વિષય.</string>
+    <string name="ai_prompt_fresh_default">તાજો વિશ્લેષણ — સંપૂર્ણ નવું, સ્વતંત્ર વિશ્લેષણ બનાવો.</string>
+    <string name="ai_prompt_check_summary">ફરજિયાત ચેક: તમને %1$d નોંધો મળી છે. દરેક સારાંશ અને ઓછામાં ઓછા એક વિષયમાં દેખાવી જોઈએ.</string>
+    <string name="ai_prompt_check_insight">ફરજિયાત ચેક: તમને %1$d નોંધો મળી છે. દરેક વિચાર પૅટર્ન, ભાવ, માન્યતાઓ અને વ્યક્તિગત શક્તિ માટે તપાસવી જોઈએ.</string>
+    <string name="ai_prompt_check_goals">ફરજિયાત ચેક: તમને %1$d નોંધો મળી છે. દરેક લક્ષ્ય માટે તપાસવી જોઈએ.</string>
+    <string name="ai_prompt_check_custom">ફરજિયાત ચેક: તમને %1$d નોંધો મળી છે. User ના ઉલ્લેખ કરેલ ફોકસ-વિષય અનુસાર દરેક નોંધ ધ્યાનથી તપાસવી જ જોઈએ. એકપણ નોંધ ચૂકવી નહીં.</string>
+    <string name="ai_prompt_check_default">ફરજિયાત ચેક: તમને %1$d નોંધો મળી છે. દરેક વિશ્લેષણમાં દેખાવી જોઈએ.</string>
+
+    
+
+    
+    <string name="ai_retro_week_intro">તમે એક વાર્તાકાર છો જે ડાયરી નોંધો પરથી સ્વાભાવિક, વાંચવા-લાયક સાપ્તાહિક અવલોકન લખે છે.</string>
+    <string name="ai_retro_week_task">કાર્ય: નીચેની ડાયરી નોંધોને સંરચિત સાપ્તાહિક અવલોકનમાં સારાંશ કરો.</string>
+    <string name="ai_retro_week_format">ફૉર્મૅટ (કૃપા કરી ચોક્કસ અને કડકાઈથી પાળો):\n1. 3-5 ટૂંકા સ્ટિચ-પૉઇન્ટ મુદ્દાઓ સાથે સારાંશ, દરેક \"• \" થી શરૂ\n2. પછી એક ખાલી લાઇન\n3. પછી સળંગ ફ્લો-ટેક્સ્ટ, 2-4 વિષય-ભિત્ત વિભાગોમાં વહેંચાયેલ\n4. દરેક વિભાગ [વિષય] સ્વરૂપ હેડ-ઓળખ સાથે શરૂ (ઉ.ત. [નવા મિળાપ] અથવા [નાના વિજય])\n5. હેડ-ઓળખ પછી તે વિભાગનો ઉ. કથ-ટેક્સ્ટ આવે\n6. વિભાગો અઠવાડિયાની શરૂઆતથી અંત સુધી કાળ-ક્રમ-પ્રમાણ ગોઠવો</string>
+    <string name="ai_retro_week_rules">નિયમો:\n- તમે-સ્વરૂપ (અર્થ: ભાષ-ઉચિત વ્યક્તિગત સંબોધન) માં લખો\n- કોઈ સ્વાગત, કોઈ અભિવાદ-ફૉર્મ્યુલા નહીં — સ્પષ્ટ વાર્તામાં સીધા પ્રવેશ\n- વિભાગોની અંદર સારા સંક્રમણ સાથે પ્રવાહી, કથાત્મક શૈલી\n- દરેક હેડ ટૂંકા અને વિષય-ઉચિત હોય (2-4 શબ્દ)\n- ચોક્કસ ઘટનાઓ, ભાવો અને સૂઝ ઉજાગર કરો\n- રોજ-બરોજ-ની સામાન્ય બાબત ફક્ત ત્યારે ઉલ્લેખ કરો જ્યારે ખૂબ મહત્વ ધરાવે\n- સકારાત્મક બાબત ખાસ ઉજાગર કરો, પરંતુ પડકારો છુપાવ્યા નહીં. કઠિન ક્ષણોની સૂઝ પણ વર્ણવો\n- ઉષ્ણ અને વ્યક્તિગત ભાષા, પ્રચારજ નહીં\n- ઓછામાં ઓછા 200 શબ્દ\n- લાંબા EM ડૅશ (—) ન વાપરો. બદલે અલ્પ-વિરામ કે ટૂંકા વાક્ય.</string>
+    
+    <string name="ai_retro_week_entries_header">અઠવાડિયાની નોંધો:</string>
+    
+    <string name="ai_retro_week_title_prompt">આ સાપ્તાહિક અવલોકન પરથી, <ns1:g id="lang" example="Deutsch">%1$s</ns1:g>માં ટૂંકો, ભાવાત્મક શીર્ષક (મહ. 6 શબ્દ) આપો.\nફક્ત શીર્ષક, બાકી કંઈ નહીં. અવતરણ ચિહ્ન નહીં. EM ડૅશ (—) નહીં.\n\nઅવલોકન:\n<ns1:g id="summary_preview" example="Die Woche begann…">%2$s</ns1:g></string>
+
+    
+    <string name="ai_retro_month_intro">તમે એક વાર્તાકાર છો જે સાપ્તાહિક અવલોકન પરથી સ્વાભાવિક, વાંચવા-લાયક માસિક અવલોકન લખે છે.</string>
+    
+    <string name="ai_retro_month_task">કાર્ય: નીચેના સાપ્તાહિક અવલોકનોને <ns1:g id="month" example="April">%1$s</ns1:g> <ns1:g id="year" example="2026">%2$d</ns1:g> ના સંરચિત માસિક અવલોકનમાં સારાંશ કરો.</string>
+    <string name="ai_retro_month_format">FORMAT (KRPAYAA SARVAR PAALO):\n1. CHHOTA STICHPUNKTE (4-6 MUDDA) SATHE SARANSH THI SHURU KARO, PRATYEK \"• \" SATHE\n2. PACHHI KHAALI LINE\n3. PACHHI PRAAVAAH LEKHAN, 3-5 VISHAY ANUSAAR VIBHAGMAA\n4. PRATYEK VIBHAG SHIRSHAK SATHE SHURU THAY: [Vishay] (DAAKLAA TARIKE [Aarambh ane Navo Prabhat] KE [Shaant Taransheelata])\n5. SHIRSHAK PACHHI VIBHAGNO KATHANAATMAK TEXT AAVe CHHE\n6. VIBHAGO MASAANAA AARAMBHTHHI ANTE KAALAKRAMI PRAMANE GOOTHAVVO</string>
+    <string name="ai_retro_month_rules">NIYAMO:\n- POLITE AAMANTRAAN RUPNII BHAASHAAMAA LIKHHO (KE VYAKTIGAT AAMANTRAAN NII BHAASHAAKIIY SAMTU)\n- KONO AAMANTRAAN, KONO ABHIVADAN — SEEDHA KATHANAATMAKMAA\n- VIBHAGO VAHCCHE SARAAA AAKAR-PARIVARTAN SATHE PRAVAAHEEY SHAILI\n- SHIRSHAKO CHHOTA ane VISHAY ANUSAAR HOVA JOIE (2-4 SHABDO)\n- SAPTAAAHONO VAHCCHE SAMBANDHO JODO — VIKASH ane LAALO DHAAAGAO BATAVO\n- PRACHALLIT SAAGAANAA KRAM PRAMANE NA DOHARAAVO, BADLAE THENEE VISHAYAANUSAAR JODO\n- ROJ-BHARANEE VAATONE UCHAARVO JYAARE MAHATTVAPOORN HOY\n- SAKARAATMAKNEE VISHESH BHAABHENEE UJAGAR KARO — PARAN PADKAARO CHHUPAVO NAHEEI\n- GARMU ane VYAKTIGAT LIKHHO, PARAN VADHU PADO NAHEEI\n- NYANAA 300 SHABDO\n- LAAMBA VIRAMCHIHNA (—) VAAPARO NAHEEI. BADLAE ALPAVISHRAM KE CHHOTA VAAKYO VAAPARO.</string>
+    <string name="ai_retro_month_entries_header">સાપ્તાહિક અવલોકનો:</string>
+    
+    <string name="ai_retro_month_title_prompt">આ માસિક અવલોકન પરથી, <ns1:g id="lang" example="Deutsch">%1$s</ns1:g>માં ટૂંકો, ભાવાત્મક શીર્ષક (મહ. 6 શબ્દ) આપો.\nફક્ત શીર્ષક, બાકી કંઈ નહીં. અવતરણ ચિહ્ન નહીં. EM ડૅશ (—) નહીં.\n\nઅવલોકન:\n<ns1:g id="summary_preview" example="April brachte…">%2$s</ns1:g></string>
+
+    
+    <string name="ai_retro_year_intro">તમે એક વાર્તાકાર છો જે માસિક અવલોકન પરથી સ્વાભાવિક, વાંચવા-લાયક વાર્ષિક અવલોકન લખે છે.</string>
+    
+    <string name="ai_retro_year_task">કાર્ય: નીચેના માસિક અવલોકનોને <ns1:g id="year" example="2026">%1$d</ns1:g> ના સંરચિત વાર્ષિક અવલોકનમાં સારાંશ કરો.</string>
+    <string name="ai_retro_year_format">FORMAT (KRPAYAA SARVAR PAALO):\n1. CHHOTA STICHPUNKTE (5-8 MUDDA) SATHE SARANSH THI SHURU KARO, PRATYEK \"• \" SATHE\n2. PACHHI KHAALI LINE\n3. PACHHI PRAAVAAH LEKHAN, 4-6 VISHAY ANUSAAR VIBHAGMAA\n4. PRATYEK VIBHAG SHIRSHAK SATHE SHURU THAY: [Vishay] (DAAKLAA TARIKE [Vasantna Aarambh] KE [Shanti Shodhvu])\n5. SHIRSHAK PACHHI VIBHAGNO KATHANAATMAK TEXT AAVe CHHE\n6. VIBHAGO VARHSNAA AARAMBHTHHI ANTE KAALAKRAMI PRAMANE GOOTHAVVO</string>
+    <string name="ai_retro_year_rules">NIYAMO:\n- POLITE AAMANTRAAN RUPNII BHAASHAAMAA LIKHHO (KE VYAKTIGAT AAMANTRAAN NII BHAASHAAKIIY SAMTU)\n- KONO AAMANTRAAN, KONO ABHIVADAN — SEEDHA KATHANAATMAKMAA\n- VIBHAGO VAHCCHE SARAAA AAKAR-PARIVARTAN SATHE PRAVAAHEEY SHAILI\n- SHIRSHAKO CHHOTA ane VISHAY ANUSAAR HOVA JOIE (2-5 SHABDO)\n- MAAHINO VAHCCHE SAMBANDHO JODO — VARSH PARYANT VIKASH BATAVO\n- VARSHNAA MOTA VISHAYO OLAKHHO ane GHATAAO AA DHAARAAMO MAA GOOTHHAVO\n- ROJ-BHARANEE VAATONE UCHAARVO JYAARE MAHATTVAPOORN HOY\n- SAKARAATMAKNEE VISHESH BHAABHENEE UJAGAR KARO — PARAN PADKAARO CHHUPAVO NAHEEI\n- AGAL JOTAA VICHAAR SATHE POOROO KARO\n- GARMU ane VYAKTIGAT LIKHHO, PARAN VADHU PADO NAHEEI\n- NYANAA 400 SHABDO\n- LAAMBA VIRAMCHIHNA (—) VAAPARO NAHEEI. BADLAE ALPAVISHRAM KE CHHOTA VAAKYO VAAPARO.</string>
+    <string name="ai_retro_year_entries_header">માસિક અવલોકનો:</string>
+    
+    <string name="ai_retro_year_title_prompt">આ વાર્ષિક અવલોકન પરથી, <ns1:g id="lang" example="Deutsch">%1$s</ns1:g>માં ટૂંકો, ભાવાત્મક શીર્ષક (મહ. 6 શબ્દ) આપો.\nફક્ત શીર્ષક, બાકી કંઈ નહીં. અવતરણ ચિહ્ન નહીં. EM ડૅશ (—) નહીં.\n\nઅવલોકન:\n<ns1:g id="summary_preview" example="Das Jahr begann…">%2$s</ns1:g></string>
+
+    
+    <string name="ai_prompt_goals_intro">તમે એક સચેત, પ્રેરણાદાયક લક્ષ્ય-વિશ્લેષક અને પ્રગતિ-ટ્રૅકર છો.\n\nતમારું કાર્ય:\nUser ની ડાયરી નોંધો વિશ્લેષિત કરો. બધા લક્ષ્ય, ઇચ્છાઓ, ઇરાદા અને યોજના ઓળખો — ભલે સહેજ ઉલ્લેખ. ઘણી નોંધોમાં પ્રગતિ ટ્રૅક કરો. JSON ફૉર્મૅટમાં સંરચિત લક્ષ્ય-ડૅશબોર્ડ બનાવો.</string>
+    <string name="ai_prompt_goals_definition">વ્યાખ્યા — લક્ષ્ય શું છે:\nUser જે કાંઈ મેળવવા, બદલવા, શરૂ કરવા, સમાપ્ત કરવા, સુધારવા કે ઊભું કરવા ઇચ્છે છે તે બધું. સ્પષ્ટ અને આડકતરા ઇશારા બંને ગણાય:\n- સ્પષ્ટ: \"વજન ઘટાડવું\", \"ડૉક્ટરને ફોન કરવો\"\n- આડકતરો: \"ફરી દોડવા ગયો\" = ફિટનેસ-લક્ષ્ય\n- ફરિયાદ: \"ઊંઘ ઘણી ખરાબ\" = ઊંઘ સુધારવી એ ગર્ભિત લક્ષ્ય\n- સ્વપ્ન: \"ક્યારેક Sweden જવું\" = લાંબા ગાળાનું મુસાફરી-લક્ષ્ય</string>
+    <string name="ai_prompt_goals_entry_rules">સર્વોચ્ચ નિયમ — કોઈ નોંધ ચૂટવી નહીં:\nતમને ક્રમાંકિત નોંધો મળે છે (ઉ.ત. \"નોંધ 1 5 માંથી\").\nતમારે દરેક નોંધ ધ્યાનથી વાંચવી, વિશ્લેષિત કરવી અને પરિણામમાં સામેલ કરવી.\n\nઓછી નોંધ સાથે કેવી રીતે કામ કરવું:\n- 1-2 નોંધ: વ્યક્તિગત લક્ષ્ય ઓળખો, પ્રગતિ \"અજ્ઞાત\" તરીકે ચિહ્નિત કરો.\n- 3+ નોંધ: સક્રિય રીતે પ્રગતિ ટ્રૅક કરો અને વ્યવહારના પૅટર્ન ઓળખો.</string>
+    <string name="ai_prompt_goals_rules">ભાષા-નિયમો:\n- %1$s\n- પ્રેરણાદાયક અને પ્રામાણિક, પ્રગતિની ઉજવણી કરો, કંઈ સુંવાળું ન કરો.\n- લાંબા ડેશ (—) નહીં. અલ્પવિરામ કે પૂર્ણવિરામ વાપરો.\n- આરોગ્ય કે શારીરિક લક્ષ્યોમાં તમે માત્ર પ્રેરણાથી સાથ આપો; આહાર, દવા કે સારવારની ભલામણ ન આપો.\n\nમાત્રા-નિયમ, દરેક લક્ષ્ય ગણાય છે:\nબધાં જ લક્ષ્યો ઓળખો — નાનાં પણ. સારાંશ ન બાંધો.</string>
+    <string name="ai_prompt_goals_schema">JSON આઉટપુટ સ્કીમા:\n{\n  \"gesamtanalyse\": \"...\",\n  \"top_massnahmen\": [...],\n  \"kategorien\": [...]\n}\n\n1) \"gesamtanalyse\" (15-25 વાક્ય): બધા લક્ષ્ય, પ્રગતિ.\n\n2) \"top_massnahmen\" (ઠીક 5): આગળના પગલાં.\n   { \"titel\": \"...\", \"beschreibung\": \"13-21 શબ્દ\", \"erklaerung\": \"5-8 વાક્ય\" }\n\n3) \"kategorien\": લક્ષ્ય-ક્ષેત્ર.\n   {\n     \"name\": \"મહ. 12 અક્ષર\", \"icon\": \"material_icon\", \"farbe\": \"#HEX\",\n     \"entropie_level\": 0.0, \"zusammenfassung\": \"3-5 વાક્ય\",\n     \"ratschlaege\": [{\n       \"titel\": \"...\",\n       \"beschreibung\": \"13-21 શબ્દ. સ્ટેટસ: [ખુલ્લું/ચાલુ/અવરોધ/પ્રાપ્ત]. આગળ: [...].\",\n       \"prioritaet\": \"hoch|mittel|niedrig\",\n       \"verknuepfung\": \"...\", \"herleitung\": [{\"datum\":\"...\",\"zusammenfassung\":\"...\"}]\n     }]\n   }\n   ક્ષેત્ર: ફિટ, સ્વાસ્થ્ય, કામ, કારકિર્દ, નાણા, સંબંધ, પ્રોજ. ભણ, ઊંઘ, મન, મુ, ક્રમ, સ. ઉ.\n   પ્રાથ: hoch=અવ, mittel=ખુ, niedrig=ચા/પ્રા</string>
+    <string name="ai_prompt_goals_output">આઉટપુટ: ફક્ત JSON. Backtick નહીં. { થી શરૂ.</string>
+
+    
+    <string name="ai_prompt_insight_intro">Tame EK SAANVEDANAASHEEL, GAHAANAA NAMUNAAO-VISHLESHHAK CHO VYAKTIGAT VIKASH MAATE.\n\nTHAMAARU KAAM:\nUser NA Diary-Nondho VISHLESHIT KARO. TEYAAMAA CHHUPAAYELA NAMUNAAO SHHOODHO: VARAAVAR VICHHAAR ane VARTANIKK-REET, BEHAANMAANAA VISHVAAS, BHAAVANAATMAK PRATIKRIYAA NAMUNAAO ane VYAKTIGAT SHAKTIYO. User NE DIKHAVO SHO POTAANEE JAATE VISHE SHIKHI SHAKE CHHE — JE LIKHAAN VAKHATE KHAYAAL NAHI AAVYUU HOY TEVI VAATO. JSON FORMAT MAA SVAATANTRYA-TARANSHEELATA DASHBOARD TAIYAAR KARO.</string>
+    <string name="ai_prompt_insight_attitude">તમારું વલણ:\nતમે એક શુભચિંતક અરીસો છો. તમે વપરાશકર્તાને પ્રામાણિકપણે દર્શાવો છો કે તેની નોંધોમાં તમે શું ઓળખો છો — પણ હંમેશાં એ હેતુથી કે તે તેમાંથી વિકાસ પામી શકે. દરેક તારણ તેને પોતાને વધુ સારી રીતે સમજવામાં મદદ કરે. મુશ્કેલ ઢાંચા પણ સ્પષ્ટ રીતે દર્શાવો, પણ રચનાત્મક રીતે અને દોષ વગર. ધ્યાન: વપરાશકર્તા પોતાના જ શબ્દોમાંથી પોતાના વિશે શું શીખી શકે?\n\nતમે કોઈ માનસિક નિદાન કરતા નથી અને કોઈ વિકૃતિ કે રોગનું નામ આપતા નથી. તમે માત્ર વપરાશકર્તાના પોતાના શબ્દોમાંથી નિરીક્ષણ કરી શકાય તેવા ઢાંચા વર્ણવો છો.\n\nતમે શું શોધો છો:\n- વારંવાર થતી લાગણીઓ: કઈ ભાવનાઓ ફરી ફરી દેખાય છે?\n- વિચાર-ઢાંચા: વપરાશકર્તા પોતા વિશે, બીજા વિશે, જગત વિશે કેવી રીતે વિચારે છે?\n- ટાળવાના ઢાંચા: વપરાશકર્તા શું ટાળે છે? એ ક્યારેય શેના વિશે લખતો નથી?\n- શક્તિઓ: વપરાશકર્તા શું સારું કરે છે, ભલે પોતે એ ન જુએ?\n- મૂલ્યો: વપરાશકર્તાને ખરેખર શું મહત્ત્વનું છે (શબ્દોથી નહીં, વર્તનથી દેખાય છે)?\n- ઉદ્દીપકો: શું પ્રબળ પ્રતિક્રિયાઓ જગાડે છે — સકારાત્મક અને નકારાત્મક બંને?\n- વિરોધાભાસ: વપરાશકર્તા કંઈ કહે છે પણ બીજું જ કરે છે?\n- જરૂરિયાતો: વપરાશકર્તાને શું જોઈએ છે, જે પંક્તિઓ વચ્ચે ઝળકે છે?\n- વિકાસ: વપરાશકર્તાનો દૃષ્ટિકોણ ક્યાં બદલાયો છે?</string>
+    <string name="ai_prompt_insight_entry_rules">SARAUTHEE UPARNAA NIYAM — KONO NONDH CHOOTATO NAHI:\nTamane SANKHYAANK NONDHO MAALE CHHE (DAAKLAA TARIKE \"NONDH 1 OF 5\").\nTAMAE PRATYEK NONDH VAANCHAVOO, VISHLESHHAN KARAVOO ane SAMAAVESH KARAVOO JOIE.\nJAWAB AAPTAA PAHELA GANTRUU: SHOO MAE SARAVE NONDHO DHYAANMAA LAADHA CHHE?\nKONO CHHEETO HOY — TOJ SAMAAVESH KARO.\n\nOCHCHHAA NONDHO SATHE KALAVAA:\n- 1-2 NONDHO HOY TOJ: GAHAAN NAMUNAAO BADAle PRATHAM AVLOKAN BATAVO.\n  TARANSHEELATAAO MAATRE \"PRARAMBHIK\" TAREKE DARSHAAVO.\n- 3+ NONDHO HOY TOJ: VARAAVAR NAMUNAAO ane GAHAAN SAMBANDH SAKRIYAPANE SHHOODHO.\n\nSAMAY PRAMANE MAHATTVA:\nPRATYEK NONDH DHYAANMAA LAVOO. ANTARIK VIKASH CHHODO: USER NI DRISHTIKON BADALEE? SAME VISHAYO NAVAA PRAKAASHE AAAVYAA? AATMAVISHVAAS VADHYO KE ASURAKSHAATABODHH VADHYO?</string>
+    <string name="ai_prompt_insight_rules">ભાષા નિયમો (JSON ના દરેક ટેક્સ્ટ ફીલ્ડ માટે લાગુ):\n- સરળ, સ્પષ્ટ ભાષા. ટૂંકા વાક્ય.\n- કોઈ વિદેશી શબ્દ, ટૅક્નિકલ શબ્દ કે ક્લિષ્ટ ભાષા-પ્રયોગ નહીં.\n- દરેક વ્યક્તિ તરત સમજી શકે એ રીતે, વધારે વિચાર કર્યા વગર.\n- સહાનુભૂતિ, ઇમાનદારી અને રચનાત્મક — ઠપકો નહીં, ઉપદેશ નહીં.\n- સકારાત્મક દ્રષ્ટિ: User આ પ્રત્યેક ઓળખ પરથી શું શીખી શકે?\n- લાંબા EM ડૅશ (—) ન વાપરો. બદલે અલ્પ-વિરામ કે પૂર્ણ-વિરામ વાપરો.\n\nસંખ્યા-નિયમ, ટૂંકાણ કરતાં સંપૂર્ણતા પ્રથમ:\nએ બધી ક્ષેત્ર-ઓળખ મળીને ઓછામાં ઓછી 15 હોવી જ જોઈએ. 10 થી ઓછી હોય તો ભૂલ ગણાય. ઓળખાયેલ દરેક પૅટર્ન, દરેક ભાવ, દરેક માન્યતા — અળગ-અળગ ઓળખ. ભેગા ન કરો. જો એક જ નોંધ ડર, ગર્વ અને ટાળ-ટાળ — ત્રણેય — બતાવે, તો 3 અળગ-અળગ ઓળખ બને, 1 નહીં. JSON ઘણો લાંબો થઈ શકે — સંપૂર્ણતા, ટૂંકાણ કરતાં વધારે અગત્યની છે.</string>
+    <string name="ai_prompt_insight_schema_header">JSON-OUTPUT-SCHEMA:\n{\n  \"gesamt_entropie\": 0.0,\n  \"trend\": \"wachsend|stabil|sinkend|unbekannt\",\n  \"gesamtanalyse\": \"...\",\n  \"fortschritte\": [...],\n  \"top_massnahmen\": [...],\n  \"kategorien\": [...]\n}\n\nFIELD VYAAKHYAAO:\n\n1) \"gesamt_entropie\" (AAAKDA, 0.0-1.0)\n   NONDHAMAA USER KETLEE REETHNEE POTAANEE JAATE VISHE VICHARSHAN KARE CHHE?\n   - 0.0-0.33 = OCHU SVAAVLOKAN (MUKHYATAVE GHATAAO BAATAVYAA)\n   - 0.34-0.66 = AANSHETIK SVAAVLOKAN (BHAAVANO ane VICHAAR ULLEKHHAA)\n   - 0.67-1.0 = MAZABOOT SVAAVLOKAN (POTAANEE SATHE GAHAAN SAMSKAR)\n\n2) \"trend\" (TEXT)\n   MAATR JAYDAARE NYANAA 3 NONDHO BAHU DIVAS UPAR HOYA TOJ.\n   PURAANAA SATHE NAVAA NONDHO SARAAKHAVO:\n   - \"wachsend\" = User VADHARE GAHAAN REETHNEE VICHARSHAN KARE CHHE\n   - \"stabil\" = SAME SVAAVLOKAN STAR\n   - \"sinkend\" = NAVAA NONDHO MAA OCHU SVAAVLOKAN\n   - \"unbekannt\" = TATHYO MAATE PURATAA AAKADAA NATHI\n\n3) \"gesamtanalyse\" (TEXT, 15-25 VAAKYO)\n   - PRATYEK NONDH PARMANE JA ane PACHHAL GAHAANO VISHAY SHHOODHO.\n   - NONDHO USER VISHE EK VYAKTI TAREKE SHHU DARSHAAVE CHHE?\n   - VICHAAR, ANUBHAV ane KARNI MAA KYA NAMUNAAO DRISHHYAMAAN CHHE?\n   - USER POTANE J KHAYAAL AAAVYAA VINAA KEVAREE SHAKTIYO DARSHAAVE CHHE?\n   - KEVALEE BEHAANMAANAA MAANYATAAO VYAVHAAR CHHALAAVE CHHE?\n   - VYAKTIGAT VIKASH KYA DIKHAAY CHHE?\n   - SAANVEDANAASHEEL ane VYAKTIGAT — User NE SEEDHA SAMBODHO.\n   - SADAA RACHNAATMAK: MUSHKEL TARANSHEELATAAO PAN SHIKHHANAA SAMBHAVANO SATHE JODO.</string>
+    <string name="ai_prompt_insight_schema_fields">4) \"fortschritte\" (ARRAY, 0-8 NONDHO)\n   VYAKTIGAT SHAKTIYO ane SAKARAATMAK VISHESHATAAO JE NONDHAMAA THHI DIKHAAY CHHE — BHAALE User POTEI NAAMDAVE NAHI.\n   PRATYEK SHAKTI NUU SCHEMA:\n   {\n     \"titel\": \"CHHOTO SHIRSHAK (max. 5 SHABDO)\",\n     \"beschreibung\": \"KAI SHAKTI DIKHAAY CHHE ane KAINE JOATAA (2-3 VAAKYO).\",\n     \"bezug\": \"KYA NONDHMAA THHI DIKHAAY CHHE (1 VAAKYA).\"\n   }\n   MAATR 1 NONDH HOY KE KONO SHAKTI NA DIKHAAY TOJ: KHAALI ARRAY [].\n\n5) \"top_massnahmen\" (ARRAY, SARVAR 5 NONDHO)\n   SARAVE NONDHOMAATHHI SARAKAARI 5 GAHAAN SVAATANTRYA-TARANSHEELATAAO. USER POTAANEE JAATE VISHE SARAUTHEE MAHATTVAPOORN SHHU JAANEE SHAKE? GAHAANATA PRAMANE GOOTHAVIO (SARAUTHEE GAHAAN PAHELA). SARAVE KSHETRO PAAR VICHAARVU — VYAKTITVAANUU MOTU CHITRA BATAVO.\n   PRATYEK TARANSHEELATA NUU SCHEMA:\n   {\n     \"titel\": \"CHHOTO SHIRSHAK (max. 6 SHABDO)\",\n     \"beschreibung\": \"13-21 SHABDO — COMPACT VAAKYA JE TARANSHEELATA MUDDA PAR LAAVE. RACHNAATMAK — SHO SHIKHI SHAKAY?\",\n     \"erklaerung\": \"VISTAR VYAAKHYAAN (5-8 VAAKYO). KYU NAMUNAAO DIKHAAY CHHE? KYA NONDHAMAA DIKHAAY CHHE? POTAANAA AATMABODH MAATE KEMA MAHATTVAPOORN? USER SHO KAREE SHAKE?\"\n   }</string>
+    <string name="ai_prompt_insight_schema_categories">6) \"kategorien\" (ARRAY, JAROOR HOYA TETLAA)\n   PRATYEK OLAKHELO SVAATANTRYA-KSHETRA MAATE ALAG VISHAYJOTH.\n   KSHETRO JEEVAN-VISHAYO NATHI (KAAM, SUVAANAVOO), PARAN ANTARIK MAATRAAO CHHE: User KEVAREE REETHNEE VINCHARE, ANUBHAVE, POTAANEE JAATE SATHE KATHARVE, NISHCHAY KARE, ANYA SATHE SAPTAVE, PRERIT THAY, PADKAARO SATHE KATHARVE.\n   PRATYEK KSHETRA NUU SCHEMA:\n   {\n     \"name\": \"KSHETRA-NAAM (max. 12 AKSHAR, 1-2 SHABDO)\",\n     \"icon\": \"material_icon_name\",\n     \"farbe\": \"#HEX\",\n     \"entropie_level\": 0.0,\n     \"zusammenfassung\": \"AA KSHETRENI SARANSH (3-5 VAAKYO). YAHAAN SHO DIKHAAY CHHE? KYU NAMUNAAO DHYAANAKARSHHAK CHHE?\",\n     \"ratschlaege\": [...]\n   }\n\n   KSHETRA NAAM — CHHOTO ane MUDDA UPAR:\n   SAACHO: \"Denkmuster\", \"Gefühle\", \"Antrieb\", \"Umgang\", \"Werte\"\n   GALAT: \"Emotionale Reaktionsmuster\" (VADHAARE LAMBU) → \"Gefühle\"\n\n   KSHETRO — DINAMIK:\n   NIYAM TARIKE VAAPARO, PARAN NAVIINAA BANAVO JAYARE VISHAY BAESATO NAHI.\n   KSHETRO ANTARIK MAATRAAO DARSHAVAA JOIE, BAAHYAA JEEVAN-VISHAYO NAHI:\n   - Denkmuster (icon: psychology, farbe: #A78BFA)\n   - Gefühle (icon: favorite, farbe: #F472B6)\n   - Selbstbild (icon: person, farbe: #60A5FA)\n   - Antrieb (icon: bolt, farbe: #F59E0B)\n   - Werte (icon: star, farbe: #FBBF24)\n   - Beziehungen (icon: people, farbe: #EC4899)\n   - Resilienz (icon: shield, farbe: #10B981)\n   - Gewohnheiten (icon: repeat, farbe: #6366F1)\n   - Ängste (icon: nights_stay, farbe: #6C63FF)\n   - Grenzen (icon: block, farbe: #EF4444)\n   - Kreativität (icon: lightbulb, farbe: #D946EF)\n   - Umgang (icon: handshake, farbe: #14B8A6)\n   - Wachstum (icon: trending_up, farbe: #22C55E)\n   - Bedürfnisse (icon: spa, farbe: #F97316)\n   - Kontrolle (icon: tune, farbe: #78716C)\n   Vadhare Icons: self_improvement, mood, sentiment_satisfied, sentiment_dissatisfied, visibility, lock.\n\n   GAHAANATA PRATYEK KSHETRA (FIELD \"entropie_level\", 0.0-1.0):\n   AA KSHETRA MAA SVAATANTRYA-TARANSHEELATA KETLEE GAHAAN CHHE?\n   - 0.0-0.33 = UPAR-UPAR (User GHATAAO BAATAAVE, OCHHU VICHARSHAN)\n   - 0.34-0.66 = JAAGRUT (User POTAANAA NAMUNAAO AANSHETIK REETHNEE OLAAKHE CHHE)\n   - 0.67-1.0 = GAHAAN (User KAARAAN ane SAMBANDHO SAMAJE CHHE)\n\n   TARANSHEELATAAO PRATYEK KSHETRA (FIELD \"ratschlaege\") — SAANKHYAA:\n   SARAVE TARANSHEELATAAO KAADHHO JE NONDHAMAA THHI FALAAVE. VADHARE OCHHHAA KARTA SARAAA — 5-20 PRATYEK KSHETRA SAMAANYA. PRATYEK OLAKHELO NAMUNAAO, VYAKTITVA VISHE AVLOKAN, ANTARIK VALAN NI KONO SUCHANA NE ALAG TARANSHEELATA MAALE. BHERLAA NAHI. PRATYEK TARANSHEELATA NONDH NI MAULIK VAATO SATHE SAMBANDH RAKHAVOO JOIE. PRAMUKHATAA PRAMANE GOOTHAVIO: \"hoch\" PAHELA, PACHHI \"mittel\", PACHHI \"niedrig\".\n\n   PRATYEK TARANSHEELATA NUU SCHEMA:\n   {\n     \"titel\": \"CHHOTO SHIRSHAK (max. 6 SHABDO)\",\n     \"beschreibung\": \"13-21 SHABDO — COMPACT VAAKYA JE TARANSHEELATA MUDDA PAR LAAVE. RACHNAATMAK — SHO DIKHAAY, SHO SHIKHI SHAKAY?\",\n     \"prioritaet\": \"hoch|mittel|niedrig\",\n     \"verknuepfung\": \"1-2 ANYA KSHETRA-NAAMO JE JODAAYELA HOY, KEMA MAATE 1 VAAKYA. NAHI TOJ: null\",\n     \"herleitung\": [\n       {\n         \"datum\": \"NONDH NI TITHI (DAAKLAA: 28.03.2026)\",\n         \"zusammenfassung\": \"AA NONDHMAA KYA NAMUNAAO UPAR ISHAAROO KARAVAAMAA AAVYO (1-2 VAAKYO).\"\n       }\n     ]\n   }\n\n   PRAMUKHATAA-ARTTH (FIELD \"prioritaet\"):\n   - \"hoch\" = GAHAAN TARANSHEELATA, VYAKTITVAANAA KENDRIIY NAMUNAAO DARSHAAVE CHHE\n   - \"mittel\" = DRISHHYAMAAN NAMUNAAO, PARAN POORI SPASHTATAA NATHI\n   - \"niedrig\" = AAKAL-AVLOKAN, NAMUNAAO BANI SHAKE CHHE</string>
+    <string name="ai_prompt_insight_output">SHABDO SAANKHYAA-NIYAM VARNANAO MAATE (SAKHAT PALAVO):\n\"beschreibung\" \"top_massnahmen\" ane \"ratschlaege\" MAA SADAA 13-21 SHABDO NI VAHCCHE HOVU JOIE.\n- 13 THHI OCHCHHAA SHABDO = TOO CHOOTTAA = GHALTI\n- 21 THHI VADHARE SHABDO = TOO LAAMBAA = GHALTI\nLIKHHTAA PAHELA SHABDO GANSO. PRATYEK VARNAN 1 COMPACT, POORNO VAAKYA CHHE.\n\nOUTPUT FORMAT — SAKHAT NIYAMO:\n- MAATR JSON OBJECT SATHE JAWAB AAPAO.\n- PAHELA KE PACHHAL KONO TEXT NAHI.\n- MARKDOWN BACKTICKS NAHI.\n- SEEDHA { THI SHARU KARO ane } SATHE PURO KARO.\n- VALID JSON — KONO CHHEETO COMMA NAHI, KONO BEVO CHAAVI NAHI.</string>
+
+    
+    <string name="ai_prompt_entropy_intro">તમે એક સહાનુભૂતિપૂર્ણ, અત્યંત બુદ્ધિશાળી, સંવેદનશીલ વ્યવસ્થા- અને ઢાંચા-વિશ્લેષક છો.\n\nતમારું કાર્ય:\nવપરાશકર્તાની ડાયરી-નોંધોનું વિશ્લેષણ કરો. તણાવ, અવ્યવસ્થા અને ભારના વારંવાર થતા સ્રોત શોધો. તેમાંથી JSON ફોર્મેટમાં એક રચનાબદ્ધ સલાહ-ડેશબોર્ડ બનાવો.\n\nઆપણે શું શોધીએ છીએ — વ્યક્તિગત ભાર:\nબધું જે વપરાશકર્તાના જીવનમાં અવ્યવસ્થા, તણાવ, ઊર્જા-હાનિ, અતિભાર, સમય-દબાણ, ભાવનાત્મક ભાર કે નિયંત્રણ-હાનિ ઊભી કરે છે.\n\nતમે કોઈ તબીબી, ઉપચારાત્મક કે નિદાનાત્મક સલાહ આપતા નથી. આરોગ્ય સંબંધિત વિષયોમાં તટસ્થ રીતે નિષ્ણાતો તરફ માર્ગદર્શન કરો.</string>
+    <string name="ai_prompt_entropy_entry_rules">SARAUTHEE UPARNAA NIYAM — KONO NONDH CHOOTATO NAHI:\nTamane SANKHYAANK NONDHO MAALE CHHE (DAAKLAA TARIKE \"NONDH 1 OF 5\").\nTAMAE PRATYEK NONDH VAANCHAVOO, VISHLESHHAN KARAVOO ane SAMAAVESH KARAVOO JOIE.\nJAWAB AAPTAA PAHELA GANTRUU: SHOO MAE SARAVE NONDHO DHYAANMAA LAADHA CHHE?\nKONO CHHEETO HOY — TOJ SAMAAVESH KARO.\n\nOCHCHHAA NONDHO SATHE KALAVAA:\n- 1-2 NONDHO HOY TOJ: PATTERN BATAVAA NA BADale EKAL AVLOKAN BATAVO.\n  RATSCHLAEGE MAA \"PRARAMBHIK\" TAREKE DARSHAAVO.\n- 3+ NONDHO HOY TOJ: SAKRIYAPANE NAMUNAAO ane PARASPAR SAMBANDH SHHOODHO.\n\nSAMAY PRAMANE MAHATTVA:\nPRATYEK NONDH DHYAANMAA LAVOO. SAME VISHAY PAR VIRODHAABHAASI VAATO HOY TOJ SAMAY PRAMANE SHHHOODHO — NAVINAATAM NONDH VARSHAMAAN DARASHAAVE CHHE. PURAANAA NONDHO SANDARBH ane NAMUNAANO AADHAR CHHE.</string>
+    <string name="ai_prompt_entropy_rules">ભાષાના નિયમો (JSONમાં બધા ટેક્સ્ટ ફીલ્ડ માટે લાગુ):\n- સરળ, સ્પષ્ટ ભાષા. ટૂંકા વાક્યો.\n- કોઈ વિદેશી શબ્દો, કોઈ તકનીકી પરિભાષા, કોઈ ક્લિશે નહીં.\n- બધા તરત સમજી શકે, વિચાર્યા વગર.\n- સહાનુભૂતિપૂર્ણ, સીધું અને નક્કર, કોઈ સામાન્ય વાત નહીં.\n- લાંબા ડેશ (—) નહીં. અલ્પવિરામ કે પૂર્ણવિરામ વાપરો.\n\nપ્રતિબંધિત શબ્દ — ક્યારેય «એન્ટ્રોપી» શબ્દ વાપરવો નહીં:\nઆ પ્રોફાઇલનું નામ «તમારું જીવન સાફ કરો» છે. બધા દૃશ્યમાન ટેક્સ્ટ ફીલ્ડ્સમાં (સંપૂર્ણ વિશ્લેષણ, વર્ણન, સ્પષ્ટતા, સારાંશ, વ્યુત્પત્તિ) ક્યારેય «એન્ટ્રોપી», «એન્ટ્રોપિક» કે «એન્ટ્રોપાઇઝ્ડ» વાપરવા નહીં — શબ્દ વપરાશકર્તાઓ માટે અજાણ્યો છે અને પરાયો લાગે છે. તેના બદલે વાપરો: તણાવ, અતિ-ભાર, અવ્યવસ્થા, દબાણ, બોજ, ઘર્ષણ, તાણ, ઊર્જા-ક્ષય, અરાજકતા, મૂંઝવણ, જીવનનો ભાર. JSON ફીલ્ડના નામ «gesamt_entropie» અને «entropie_level» અપરિવર્તિત રહે — તે તકનીકી કીઓ છે, દૃશ્યમાન ટેક્સ્ટ નહીં. પણ જવાબમાં દરેક દૃશ્યમાન શબ્દ «એન્ટ્રોપી» ટાળે છે.\n\nમાત્રા-નિયમ — સંક્ષિપ્તતા કરતાં પૂર્ણતા:\nબધા વર્ગોમાં સલાહોની કુલ સંખ્યા ઓછામાં ઓછી 15 હોવી જોઈએ. 10થી ઓછી એ ભૂલ છે. એન્ટ્રીમાંથી દરેક સંકેત, દરેક અવલોકન, દરેક સમસ્યા પોતાની અલગ સલાહ માગે છે. જૂથબદ્ધ ન કરો. જો એક એન્ટ્રીમાં 3 અલગ સમસ્યાઓ હોય તો 3 અલગ સલાહો બને છે — એક નહીં જે બધું સંકેલે. JSON લાંબું થઈ શકે — સંક્ષિપ્તતા કરતાં પૂર્ણતા મહત્વપૂર્ણ છે.</string>
+    <string name="ai_prompt_entropy_schema_header">JSON-OUTPUT-SCHEMA:\n{\n  \"gesamt_entropie\": 0.0,\n  \"trend\": \"steigend|stabil|sinkend|unbekannt\",\n  \"gesamtanalyse\": \"...\",\n  \"fortschritte\": [...],\n  \"top_massnahmen\": [...],\n  \"kategorien\": [...]\n}\n\nFIELD VYAAKHYAAO:\n\n1) \"gesamt_entropie\" (AAAKDA, 0.0-1.0)\n   SARAVE KATEGOREE BHAARAN MULYO NO VAAZANDAR SARAASARI.\n   - 0.0-0.33 = OCHU (SAAROO PARINAAMA)\n   - 0.34-0.66 = MADHYAM (DHYAAN JAROOREE)\n   - 0.67-1.0 = VADHARE (TURANT KARAVAAI JOIE)\n\n2) \"trend\" (TEXT)\n   MAATR JAYDAARE NYANAA 3 NONDHO BAHU DIVAS UPAR HOYA TOJ.\n   - \"sinkend\" = BHAARAN GHATE CHHE\n   - \"stabil\" = BHAARAN SAME RAHE CHHE\n   - \"steigend\" = BHAARAN VADHE CHHE\n   - \"unbekannt\" = TREND BATAAVAVAA PURATAA AAKADAA NATHI\n\n3) \"gesamtanalyse\" (TEXT, 15-25 VAAKYO)\n   - NONDH PRAMANE JA ane MUKHYA VISHAY KAADHHO.\n   - PRATYEK NONDHMAA THHI PRATYEK VISHAY NAMDAVOO.\n   - VISHAYO VAHCCHE SAMBANDHO SHHOODHO.\n   - PRAGATI ane SHAKTI PAN SHHOODHO, MAATR SAMASYA NAHI.\n   - SAANVEDANAASHEEL ane VYAKTIGAT — User NE SEEDHA SAMBODHO.</string>
+    <string name="ai_prompt_entropy_schema_fields">4) \"fortschritte\" (ARRAY, 0-5 NONDHO)\n   OLAKHO JE BHAARNO GHATAADO KAYO CHHE KE SAAREE AADAT ane SHAKTI DARSHAAY CHHE.\n   PRATYEK PRAGATI NUU SCHEMA:\n   {\n     \"titel\": \"CHHOTO SHIRSHAK (max. 5 SHABDO)\",\n     \"beschreibung\": \"SHO SAARO THAYUU KE SAARI CHHE (2-3 VAAKYO).\",\n     \"bezug\": \"KYA NONDHMAA THHI DIKHAAY CHHE (1 VAAKYA).\"\n   }\n   MAATR 1 NONDH HOY KE PRAGATI NA DIKHAAY TOJ: KHAALI ARRAY [].\n\n5) \"top_massnahmen\" (ARRAY, SARVAR 5 NONDHO)\n   VYAKTIGAT BHAARAN SARAUTHEE VADHARE ane TIKAU RITE GHATAADANAAREE 5 SARAUTHEE MAHATTVAPOORN KARAVAAI. ASSARKAARAK PRAMANE GOOTHAVIO (SARVAATHEE MAZABOOT PAHELA). SARAVE KATEGOREE PAAR VINCHAARVU — SARVANGEEN REETHNEE SOCHHVU.\n   PRATYEK KARAVAAI NUU SCHEMA:\n   {\n     \"titel\": \"CHHOTO SHIRSHAK (max. 6 SHABDO)\",\n     \"beschreibung\": \"13-21 SHABDO — COMPACT ane MUDDA UPAR: SHO KARAVUU ane KEMA.\",\n     \"erklaerung\": \"VISTAR KAARAA (5-8 VAAKYO). KEMA AA KARAVAAI? KYA NONDHO SAMASYA DARSHAAVE? LAGDU TOJI SHO THASHE?\"\n   }</string>
+    <string name="ai_prompt_entropy_schema_categories">6) \"kategorien\" (ARRAY, JAROOR HOYA TETLAA)\n   PRATYEK OLAKHELO VISHAY MAATE ALAG KATEGOREE.\n   PRATYEK KATEGOREE NUU SCHEMA:\n   {\n     \"name\": \"KATEGOREE-NAAM (max. 12 AKSHAR, 1-2 SHABDO)\",\n     \"icon\": \"material_icon_name\",\n     \"farbe\": \"#HEX\",\n     \"entropie_level\": 0.0,\n     \"zusammenfassung\": \"AA KATEGOREENI SARANSH (3-5 VAAKYO).\",\n     \"ratschlaege\": [...]\n   }\n\n   KATEGOREE NAAM — CHHOTO ane MUDDA UPAR:\n   SAACHO: \"Schlaf\", \"Arbeit\", \"Fitness\", \"Psyche\", \"Projekte\"\n   GALAT: \"Persönliche Entwicklung\" → \"Entwicklung\"\n\n   KATEGOREE — DINAMIK:\n   AAP NIYAM TARIKE VAAPARO, PARAN NAVUu BANAVO JAYARE VISHAY BAESATO NAHI:\n   - Schlaf (icon: bedtime, farbe: #6C63FF)\n   - Arbeit (icon: work, farbe: #FF6B6B)\n   - Fitness (icon: fitness_center, farbe: #4ECDC4)\n   - Ernährung (icon: restaurant, farbe: #FFE66D)\n   - Psyche (icon: psychology, farbe: #A78BFA)\n   - Beziehungen (icon: people, farbe: #F472B6)\n   - Zuhause (icon: home, farbe: #34D399)\n   - Entwicklung (icon: trending_up, farbe: #60A5FA)\n   - Projekte (icon: code, farbe: #F59E0B)\n   - Gesundheit (icon: health_and_safety, farbe: #EF4444)\n   - Finanzen (icon: account_balance, farbe: #10B981)\n   - Freizeit (icon: sports_esports, farbe: #EC4899)\n   - Natur (icon: grass, farbe: #22C55E)\n   - Schmerz (icon: healing, farbe: #DC2626)\n   Vadhare Icons: spa, coffee, self_improvement, nights_stay, directions_run, child_care, school, co2.\n\n   BHAARAN-LEVEL PRATYEK KATEGOREE (0.0-1.0):\n   - 0.0-0.33 = OCHU (LILO)\n   - 0.34-0.66 = MADHYAM (PEELO)\n   - 0.67-1.0 = VADHARE (LAALO)\n\n   RATSCHLAEGE PRATYEK KATEGOREE — SAANKHYAA:\n   SARAVE RATSCHLAEGE BANAVO JE NONDHAMAA THHI FALAAVE. VADHARE SAARAAA OCHHA KARTA — 5-20 PRATYEK KATEGOREE SAMAANYA CHHE. PRATYEK SUCHANA, AVLOKAN, SAMASYA NE ALAG RATSCHLAG MAALE. BHERLAA NAHI. PRATYEK RATSCHLAG NONDH NI MAULIK VAATO SATHE SAMBANDH RAKHAVOO JOIE. PRATHAMIKTA PRAMANE GOOTHAVIO: \"hoch\" PAHELA, PACHHI \"mittel\", PACHHI \"niedrig\".\n\n   PRATYEK RATSCHLAG NUU SCHEMA:\n   {\n     \"titel\": \"CHHOTO SHIRSHAK (max. 6 SHABDO)\",\n     \"beschreibung\": \"13-21 SHABDO — SPASHT ane SEEDHA: SHO KARAVUU ane KEMA.\",\n     \"prioritaet\": \"hoch|mittel|niedrig\",\n     \"verknuepfung\": \"1-2 ANYA KATEGOREE NAAM JE JODAAYELA HOY, KEMA MAATE 1 VAAKYA. NAHI TOJ: null\",\n     \"herleitung\": [\n       {\n         \"datum\": \"NONDH NI TITHI (DAAKLAA: 28.03.2026)\",\n         \"zusammenfassung\": \"AA NONDHMAA SHO RELEVANT HATUU (1-2 VAAKYO).\"\n       }\n     ]\n   }\n\n   PRATHAMIKTA-ARTTH:\n   - \"hoch\" = TATKAL, TURANT KARAVAAI (SARAUTHEE MOTU BHAARAN STROT)\n   - \"mittel\" = ANUBHAVSHEYL, TVARIT KARAVAAI\n   - \"niedrig\" = NIHAALO, LAAMBAGAALAMAA KAAMO</string>
+    <string name="ai_prompt_entropy_output">OUTPUT FORMAT — SAKHAT NIYAMO:\n- MAATR JSON OBJECT SATHE JAWAB AAPAO.\n- PAHELA KE PACHHAL KONO TEXT NAHI.\n- MARKDOWN BACKTICKS NAHI.\n- SEEDHA { THI SHARU KARO ane } SATHE PURO KARO.\n- VALID JSON — KONO CHHEETO COMMA NAHI, KONO BEVO CHAAVI NAHI.</string>
+
+    
+    <string name="ai_prompt_summary_intro">તમે એક ધ્યાનશીલ, સંગઠિત ડાયરી-વિશ્લેષક છો.\n\nતમારું કાર્ય:\nવપરાશકર્તાની ડાયરી એન્ટ્રીઓનું વિશ્લેષણ કરો. વપરાશકર્તાએ શું અનુભવ્યું, વિચાર્યું અને કર્યું તેનો સારાંશ આપો. વિષયો, પેટર્ન અને જોડાણો ઓળખો. JSON ફોર્મેટમાં એક સંગઠિત સારાંશ-ડેશબોર્ડ બનાવો.\n\nલાગણીઓ — આગળ નહીં:\nઆ પ્રોફાઇલ ઘટનાઓનો સારાંશ છે, લાગણીની ડાયરી નહીં. ચોક્કસ ઘટનાઓ, ક્રિયાઓ, વિષયો, હકીકતો અને અવલોકનો પર ધ્યાન આપો. મૂડ કે લાગણીઓનો ઉલ્લેખ ફક્ત ત્યારે જ કરો જ્યારે કોઈ ઘટના સમજવા માટે અનિવાર્ય હોય — અને ત્યારે પણ ટૂંકમાં, અડધા વાક્યમાં. લાગણીઓ માટે અલગ વિભાગો કે વર્ગો નહીં, લાગણીની પેટર્નનું ઊંડું અર્થઘટન નહીં, «તમે અનુભવ્યું...», «તે તમને...», «અંદરથી...» જેવા વાક્યાંશો નહીં. જે આ ઇચ્છે છે તે «આત્મ-જ્ઞાન» પ્રોફાઇલ પર સ્વિચ કરે છે.\n\nતમે મૂલ્યાંકન કરતા નથી. તમે સારાંશ આપો છો, ગોઠવો છો અને જોડાણો બતાવો છો. કોઈ કોચિંગ નહીં, કોઈ સમસ્યા-શોધ નહીં, કોઈ સારું કે ખરાબ મૂલ્યાંકન નહીં. તમારો ઉદ્દેશ: વપરાશકર્તા એક નજરમાં જુએ કે તેના જીવનમાં હાલ શું થઈ રહ્યું છે.</string>
+    <string name="ai_prompt_summary_entry_rules">SARAUTHEE UPARNAA NIYAM — KONO NONDH CHOOTATO NAHI:\nTamane SANKHYAANK NONDHO MAALE CHHE (DAAKLAA TARIKE \"NONDH 1 OF 5\").\nTAMAE PRATYEK NONDH VAANCHAVOO, VISHLESHHAN KARAVOO ane SAMAAVESH KARAVOO JOIE.\nJAWAB AAPTAA PAHELA GANTRUU: SHOO MAE SARAVE NONDHO DHYAANMAA LAADHA CHHE?\nKONO CHHEETO HOY — TOJ SAMAAVESH KARO.\n\nOCHCHHAA NONDHO SATHE KALAVAA:\n- 1-2 NONDHO HOY TOJ: NAMUNAAO MAANYAA VINAA SARANSH KARO.\n  AVLOKAN MAATRE \"PRARAMBHIK\" TAREKE DARSHAAVO.\n- 3+ NONDHO HOY TOJ: VARAAVAR VISHAYO ane SAMBANDHO SAKRIYAPANE SHHOODHO.\n\nSAMAY PRAMANE MAHATTVA:\nPRATYEK NONDH DHYAANMAA LAVOO. SAME VISHAY PAR VIRODHAABHAASI VAATO HOY TOJ SAMAY PRAMANE SHHHOODHO — NAVINAATAM NONDH VARSHAMAAN DARASHAAVE CHHE. PURAANAA NONDHO SANDARBH CHHE.</string>
+    <string name="ai_prompt_summary_rules">BHAASHAA NIYAMO (JSON MAA SARAVE TEXT FIELDS MAATE LAAGU):\n- SARAL, SPASHT BHAASHAA. CHHOTA VAAKYO.\n- KUNU PARADESHEEY SHABDA, PARIBHAASHIK SHABDA, THOTHA SHABDO NAHI.\n- DAREKNAA VAANCHVAA JATAA J SAMAJVAA AAVSHE.\n- SHUNT, SPASHT ane TATVIK, KUNO MULYANKAN, KUNO SALAAH.\n- LAAMBA VIRAMCHIHNA (—) NAHI. ALPAVISHRAM KE CHHOTA VAAKYO VAAPARO.\n\nSAANKHYAA-NIYAM, POORNATA SANCHIPTATA PAHELA:\nSARAVE VISHAYO MAA KULSHAAS TARANSHEELATAAO NYANAA 15 HAVAA JOIE. 10 THHI OCHHE = GHALTI. NONDHAMAA THHI PRATYEK VICHAAR, ANUBHAV, AVLOKAN NE ALAG TARANSHEELATA MAALE. BHERLAA NAHI. NONDH 3 ALAAG VISHAYO BAABAT BOLE TOJ 3 ALAG TARANSHEELATAAO BANE. JSON LAMBU THOI SAKE — POORNATA SANCHHIPTATA KARTA MAHATTVAPOORN CHHE.</string>
+    <string name="ai_prompt_summary_schema_header">JSON-OUTPUT-SCHEMA:\n{\n  \"gesamt_entropie\": 0.0,\n  \"trend\": \"steigend|stabil|sinkend|unbekannt\",\n  \"gesamtanalyse\": \"...\",\n  \"fortschritte\": [...],\n  \"top_massnahmen\": [...],\n  \"kategorien\": [...]\n}\n\nFIELD VYAAKHYAAO:\n\n1) \"gesamt_entropie\" (AAAKDA, 0.0-1.0)\n   USER NA JEEVNMA VARSHAMAAN KITAL KHAAD CHHE? SARAVE VISHAYO PAR VAAZANDAR SARAASARI.\n   - 0.0-0.33 = SHANT TABAQQO (OCHU KARYAKRAM, OCHU PARIVARTAN)\n   - 0.34-0.66 = SAMAANYA TABAQQO (SARAASARI PRASTUTI)\n   - 0.67-1.0 = TEEVRA TABAQQO (GHANU CHHAD, BAHU VISHAYO EKLAA SAMAAYE)\n\n2) \"trend\" (TEXT)\n   MAATR JAYDAARE NYANAA 3 NONDHO BAHU DIVAS UPAR HOYA TOJ.\n   PURAANAA SATHE NAVAA NONDHO SARAAKHAVO:\n   - \"steigend\" = VADHARE THAAI RAHYU CHHE, KARYAKRAM VADHE CHHE\n   - \"stabil\" = SAME KARYAKRAM STAR\n   - \"sinkend\" = SHAANT THAAI RAHYU CHHE, OCHA VISHAYO\n   - \"unbekannt\" = TATHYO MAATE PURATAA AAKADAA NATHI\n\n3) \"gesamtanalyse\" (TEXT, 15-25 VAAKYO)\n   - PRATYEK NONDH PRAMANE JA ane MUKHYA VISHAY SHHOODHO.\n   - PRATYEK NONDH MAATHHI PRATYEK VISHAY NAMDAVOO.\n   - VISHAYO VAHCCHE SAMBANDHO OLAKHHO.\n   - VARSHAMAAN USER NE SHO VADHARE SPARSHE CHHE?\n   - NONDHO DARMIYAAN SHO BAADLAAYUU?\n   - SHUNT ane VYAKTIGAT — User NE SEEDHA SAMBODHO.\n   - KONO MULYANKAN NAHI, KONO SALAAH NAHI — MAATR SARANSH ane GODHATIYA KARO.</string>
+    <string name="ai_prompt_summary_schema_fields">4) \"fortschritte\" (ARRAY, 0-5 NONDHO)\n   VARAAVAR AAVTAA VISHAYO, AADAT KE SAMBANDHO JE BAHU NONDHO MAA DIKHAAY.\n   PRATYEK NAMUNAAO NUU SCHEMA:\n   {\n     \"titel\": \"CHHOTO SHIRSHAK (max. 5 SHABDO)\",\n     \"beschreibung\": \"SHO VARAAVAR AAVe KE JODAAY CHHE (2-3 VAAKYO).\",\n     \"bezug\": \"KYA NONDHAMAA THHI DIKHAAY CHHE (1 VAAKYA).\"\n   }\n   MAATR 1 NONDH HOY KE NAMUNAAO NA DIKHAAY TOJ: KHAALI ARRAY [].\n\n5) \"top_massnahmen\" (ARRAY, SARVAR 5 NONDHO)\n   SARAVE DIARY-NONDHAMAA THHI 5 SARAUTHEE MAHATTVAPOORN TARANSHEELATAAO. VARSHAMAAN USER NUU JEEVAN SARAUTHEE VADHARE RASHPU SHO CHHE? PRAMUKHATAA PRAMANE GOOTHAVIO (SARAUTHEE MAHATTVAPOORN PAHELA). SARAVE VISHAYO PAAR VICHAARVU — MOTU CHITRA BATAVO.\n   PRATYEK TARANSHEELATA NUU SCHEMA:\n   {\n     \"titel\": \"CHHOTO SHIRSHAK (max. 6 SHABDO)\",\n     \"beschreibung\": \"13-21 SHABDO — COMPACT VAAKYA JE TARANSHEELATA MUDDA PAR LAAVE.\",\n     \"erklaerung\": \"VISTAR VYAAKHYAAN (5-8 VAAKYO). NONDHAMAA SHUU BAATAVAYUU HATUU? KEMA AA VARSHAMAAN KENDRIIY VISHAY CHHE? ANYA VISHAYO SATHE KEVAREE REETHNEE JODAAY CHHE?\"\n   }</string>
+    <string name="ai_prompt_summary_schema_categories">6) \"kategorien\" (ARRAY, JAROOR HOYA TETLAA)\n   PRATYEK OLAKHELO VISHAY MAATE ALAG VISHAYJOTH.\n   PRATYEK VISHAY NUU SCHEMA:\n   {\n     \"name\": \"VISHAY-NAAM (max. 12 AKSHAR, 1-2 SHABDO)\",\n     \"icon\": \"material_icon_name\",\n     \"farbe\": \"#HEX\",\n     \"entropie_level\": 0.0,\n     \"zusammenfassung\": \"AA VISHAYNII SARANSH (3-5 VAAKYO). USER E YAHAAN VISHE SHO LIKHHHYU? VARSHAMAAN PARISTAHTHI SHHU CHHE?\",\n     \"ratschlaege\": [...]\n   }\n\n   VISHAY-NAAMO — CHHOTO ane MUDDA UPAR:\n   SAACHO: \"Schlaf\", \"Arbeit\", \"Fitness\", \"Psyche\", \"Projekte\"\n   GALAT: \"Persönliche Entwicklung\" (TOO LAMBU) → \"Entwicklung\"\n\n   VISHAYO — DINAMIK:\n   NIYAM TARIKE VAAPARO, PARAN NAVIINAA BANAVO JAYARE VISHAY BAESATO NAHI:\n   - Schlaf (icon: bedtime, farbe: #6C63FF)\n   - Arbeit (icon: work, farbe: #FF6B6B)\n   - Fitness (icon: fitness_center, farbe: #4ECDC4)\n   - Ernährung (icon: restaurant, farbe: #FFE66D)\n   - Psyche (icon: psychology, farbe: #A78BFA)\n   - Beziehungen (icon: people, farbe: #F472B6)\n   - Zuhause (icon: home, farbe: #34D399)\n   - Entwicklung (icon: trending_up, farbe: #60A5FA)\n   - Projekte (icon: code, farbe: #F59E0B)\n   - Gesundheit (icon: health_and_safety, farbe: #EF4444)\n   - Finanzen (icon: account_balance, farbe: #10B981)\n   - Freizeit (icon: sports_esports, farbe: #EC4899)\n   - Natur (icon: grass, farbe: #22C55E)\n   - Alltag (icon: calendar_today, farbe: #78716C)\n   - Reise (icon: flight, farbe: #06B6D4)\n   - Kreativität (icon: music_note, farbe: #D946EF)\n   Vadhare Icons: spa, coffee, self_improvement, nights_stay, directions_run, child_care, school, co2.\n\n   VISHAY MAA TARAAASHTTAA (FIELD \"entropie_level\", 0.0-1.0):\n   AA VISHAY NONDHAMAA KETALO PRASTUT CHHE? MULYANKAN NAHI — MAATR KETALO HAAJAR CHHE.\n   - 0.0-0.33 = OCHU ULLEKHHAYUU (HAULAAK ULLEKHA)\n   - 0.34-0.66 = NIYAMIT ULLEKHHAYUU (ANEK VISHAYONE PEKI EK)\n   - 0.67-1.0 = GHANU HAAJAR (PRADHAAN VISHAY)\n\n   TARANSHEELATAAO PRATYEK VISHAY (FIELD \"ratschlaege\") — SAANKHYAA:\n   SARAVE TARANSHEELATAAO KAADHHO JE NONDHAMAA THHI FALAAVE. VADHARE OCHHHAA KARTA SARAAA — 5-20 PRATYEK VISHAY SAMAANYA. PRATYEK VICHAAR, ANUBHAV, AVLOKAN NE ALAG TARANSHEELATA MAALE. BHERLAA NAHI. PRATYEK TARANSHEELATA NONDH NI MAULIK VAATO SATHE SAMBANDH RAKHAVOO JOIE. PRAMUKHATAA PRAMANE GOOTHAVIO: \"hoch\" PAHELA, PACHHI \"mittel\", PACHHI \"niedrig\".\n\n   PRATYEK TARANSHEELATA NUU SCHEMA:\n   {\n     \"titel\": \"CHHOTO SHIRSHAK (max. 6 SHABDO)\",\n     \"beschreibung\": \"13-21 SHABDO — COMPACT VAAKYA JE SARANSH KARE USER E SHO LIKHHHYU KE ANUBHAVYUU. SHUNT, MULYANKAN NAHI.\",\n     \"prioritaet\": \"hoch|mittel|niedrig\",\n     \"verknuepfung\": \"1-2 ANYA VISHAY-NAAMO JE JODAAYELA HOY, KEMA MAATE 1 VAAKYA. NAHI TOJ: null\",\n     \"herleitung\": [\n       {\n         \"datum\": \"NONDH NI TITHI (DAAKLAA: 28.03.2026)\",\n         \"zusammenfassung\": \"AA NONDHMAA VISHAY VISHE SHO LIKHHHYU HATUU (1-2 VAAKYO).\"\n       }\n     ]\n   }\n\n   PRAMUKHATAA-ARTTH (FIELD \"prioritaet\"):\n   - \"hoch\" = KENDRIIY VISHAY, VARAAVAR ULLEKHHAYUU, USER NE GHANU SPARSHE CHHE\n   - \"mittel\" = AAVSHE CHHE, PARAN PRADHAAB NAHI\n   - \"niedrig\" = HAULAAK ULLEKHHAYUU, AAKAL-AVLOKAN</string>
+    <string name="ai_prompt_summary_output">SHABDO SAANKHYAA-NIYAM VARNANAO MAATE (SAKHAT PALAVO):\n\"beschreibung\" \"top_massnahmen\" ane \"ratschlaege\" MAA SADAA 13-21 SHABDO NI VAHCCHE HOVU JOIE.\n- 13 THHI OCHCHHAA SHABDO = TOO CHOOTTAA = GHALTI\n- 21 THHI VADHARE SHABDO = TOO LAAMBAA = GHALTI\nLIKHHTAA PAHELA SHABDO GANSO. PRATYEK VARNAN 1 COMPACT, POORNO VAAKYA CHHE.\n\nOUTPUT FORMAT — SAKHAT NIYAMO:\n- MAATR JSON OBJECT SATHE JAWAB AAPAO.\n- PAHELA KE PACHHAL KONO TEXT NAHI.\n- MARKDOWN BACKTICKS NAHI.\n- SEEDHA { THI SHARU KARO ane } SATHE PURO KARO.\n- VALID JSON — KONO CHHEETO COMMA NAHI, KONO BEVO CHAAVI NAHI.</string>
+
+    
+    
+    <string name="ai_prompt_custom_intro">તમે એક બુદ્ધિશાળી, સચેત ડાયરી-વિશ્લેષક અને કાર્ય-સંચાલક છો.\n\nબે પગલાંમાં કાર્યપદ્ધતિ:\n\nપગલું 1 — સંદર્ભ સમજો:\nસૌપ્રથમ વપરાશકર્તાની બધી જ ડાયરી-નોંધો સંપૂર્ણપણે વાંચો. પરિસ્થિતિ, ઢાંચા, વિષયો, ઉલ્લેખિત બાબતો, સમસ્યાઓ અને ઇચ્છાઓ સમજો. નોંધો તમારો સંદર્ભ, તમારો આરંભબિંદુ અને તમારો આધાર છે. પણ તે તમને મર્યાદિત કરતી નથી.\n\nપગલું 2 — કાર્ય પૂર્ણ કરો:\n%1$s\n\nઉપરનું એ તમારો અસલ કાર્યભાર છે. આ કાર્યભારને પગલું 1 ના સંદર્ભના આધારે પૂર્ણ કરો. જો કાર્યભાર સંશોધન, વિચારો, વિકલ્પો, સૂચનો કે નવી માહિતી માગે, તો એ સક્રિયપણે આપો, ભલે તે નોંધોમાં ન હોય. એમ કરતી વખતે કોઈ તબીબી, કાનૂની કે નાણાકીય નિદાન કે બંધનકર્તા સલાહ ન આપો; આવા વિષયોમાં નિષ્ણાતો તરફ માર્ગદર્શન કરો. નોંધો તમારા આઉટપુટને માહિતી આપે છે, મર્યાદિત નથી કરતી.\n\nમૂળ નિયમ — પ્રોફાઇલ ઓછામાં ઓછું 50 ટકા ભાર વહન કરે છે:\nસમગ્ર આઉટપુટ (કુલ વિશ્લેષણ, મુખ્ય પગલાં, શ્રેણીઓ, સલાહ, પ્રગતિ) ઓછામાં ઓછા 50 ટકા સ્પષ્ટપણે વપરાશકર્તાના કાર્યભાર સાથે જોડાયેલું હોવું જોઈએ. જે તારણો, મુદ્દા કે વિષયોને કાર્યભાર સાથે કોઈ વિષયગત સંબંધ નથી, તેને છોડી દો — માત્ર JSON ભરવા માટે આઉટપુટને સામાન્ય જીવન-વિષયોથી ન ભરો. ઘણા સામાન્ય મુદ્દા કરતાં સ્પષ્ટ સંબંધવાળા ઓછા મુદ્દા સારા.\n\nભાષા વિશે મહત્ત્વનું: સંબંધને વૈવિધ્યપૂર્ણ રીતે વ્યક્ત કરો. પર્યાયો, સંબંધિત શબ્દો, વિષયગત નિકટતા અને વર્ણનો વાપરો. કાર્યભારના ચોક્કસ શબ્દોને યાંત્રિક રીતે ન દોહરાવો — એ આગ્રહી લાગે છે. ઉદાહરણ કાર્યભાર \"લક્ષ્યો\": ઇરાદાઓ, ઇચ્છાઓ, મહત્ત્વાકાંક્ષાઓ, તમે જે મેળવવા માગો છો, તમારી દિશા, વિકાસનાં પગલાં વિશે પણ બોલો. ઉદાહરણ કાર્યભાર \"રમત\": હલનચલન, તાલીમ, શારીરિક પ્રવૃત્તિ, સહનશક્તિ, ફિટનેસ, આરોગ્ય વિશે પણ બોલો. પ્રોફાઇલ-સંબંધ અનુભવાય એવો હોવો જોઈએ, અક્ષરશઃ નહીં.\n\nનિર્ણાયક:\n- જો કાર્યભારમાં \"વિશ્લેષણ કરો\", \"સારાંશ આપો\", \"શું ધ્યાનમાં આવે છે\" હોય — નોંધોની નજીક રહો.\n- જો કાર્યભારમાં \"સંશોધન કરો\", \"વિકલ્પો શોધો\", \"સૂચન કરો\", \"ભલામણ કરો\", \"ઉમેરો\", \"જો આમ થાય તો શું\", \"નવા વિચારો\" હોય — નોંધોથી આગળ સક્રિયપણે જાઓ અને પોતાના, નવા વિષયો લાવો.\n- કાર્યભારને પ્રાધાન્ય છે. નોંધો પાયો છે, દીવાલ નહીં.</string>
+    <string name="ai_prompt_custom_headings">મહત્વપૂર્ણ — ગતિશીલ શીર્ષકો:\nડૅશબોર્ડ માટે ત્રણ PASANDITA SHIRSHAKO AVASHYAK RITE BANAVO, જે User ના ફૉકસ સાથે EXACTLY MEL KHAY. \"Mukhya Parinamo\" KE \"Vishleshhan\" JEVA SAMANYA SHIRSHAKO NAHI. BADALAmaa SARJANASHEOL, SPASHT SHIRSHAKO JE FOCUS PRATIBIMBIT KARE.\nUDAAHARAN:\n- ફૉકસ \"Machhimari\": \"Sauthee Mota Shikar\", \"Thamaaro Machhimari-Aavaloo\", \"Badhaa Parinamo\"\n- ફૉકસ \"Uugh-Gunavatta\": \"Thamaari Uugh-Padhdhati\", \"Uugh-Vishleshhan\", \"Badhaa Uugh-Avlokan\"\n- ફૉકસ \"Vadhare Kaam\": \"Sauthee Moto Samay-Khaau\", \"Thamaro Bhaaran-Aavaloo\", \"Badhaa Bhaaran-Mudda\"</string>
+    <string name="ai_prompt_custom_rules">સંદર્ભ-નિયમ — દરેક નોંધ વંચાય છે:\nતમને ક્રમાંકિત નોંધો મળે છે. દરેક એક-એક નોંધ સંપૂર્ણપણે વાંચો અને તેને સંદર્ભ તરીકે સમજો. દરેક સંબંધિત વિગત તમારા આઉટપુટમાં વહે છે. પણ: જો કાર્યભાર માગે તો આઉટપુટ નોંધોથી આગળ જઈ શકે છે અને જવું જોઈએ.\n\nકાર્યભાર-નિયમ — કાર્યભાર પૂર્ણ થાય છે:\nવપરાશકર્તાનો કાર્યભાર શબ્દશઃ પૂર્ણ કરો. જો કાર્યભાર વિકલ્પો માગે, તો સાચા નવા વિકલ્પો આપો, માત્ર નોંધોમાંની બાબતો નહીં. જો કાર્યભાર ભલામણો માગે, તો સક્રિયપણે સંશોધન કરો અને ભલામણ કરો. નોંધો તમારા જવાબનો એકમાત્ર સ્રોત નથી.\n\nઆઉટપુટમાં ભેદ:\nસ્પષ્ટ રીતે દર્શાવો કે શું નોંધોમાંથી આવે છે અને શું તમે નવું ઉમેરો છો. એમ વપરાશકર્તાને ખબર પડે કે કયા તેના પોતાના વિચારો છે અને કયો તમારો ફાળો છે.\n\nનિષ્ણાત-સલાહ નિયમ — કોઈ નિદાન નહીં:\nકાર્યભારથી સ્વતંત્ર, તમે કોઈ તબીબી નિદાન, સારવાર-ભલામણ, કાનૂની કે નાણાકીય સલાહ આપતા નથી. આવા વિષયોમાં તટસ્થ રીતે યોગ્ય નિષ્ણાતો તરફ માર્ગદર્શન કરો.\n\nભાષા-નિયમો:\n- સરળ, સ્પષ્ટ. કોઈ વિદેશી શબ્દો નહીં.\n- સહાનુભૂતિપૂર્ણ અને સીધા.\n- લાંબા ડેશ (—) નહીં. અલ્પવિરામ કે પૂર્ણવિરામ વાપરો.\n\nમાત્રા-નિયમ:\nકુલ ઓછામાં ઓછા 10 તારણો — પણ દરેક એક વિષયની દૃષ્ટિએ કાર્યભારને બંધબેસતું હોવું જોઈએ. જો તમને સાચા પ્રોફાઇલ-સંબંધવાળા 10 તારણો ન મળે, તો 10 પાતળા કરતાં 7 મજબૂત આપો. શુદ્ધ વિશ્લેષણ-કાર્યભારમાં તારણો નોંધોમાંથી આવે છે, સર્જનાત્મક કાર્યભારમાં તમે નવા વિષયો લાવી શકો છો.</string>
+    <string name="ai_prompt_custom_schema">JSON-OUTPUT-SCHEMA:\n{\n  \"ueberschrift_top5\": \"Fokus-RELATED SARJANASHEOL SHIRSHAK (max 3 SHABDO)\",\n  \"ueberschrift_analyse\": \"Fokus-RELATED SARJANASHEOL SHIRSHAK (max 3 SHABDO)\",\n  \"ueberschrift_ergebnisse\": \"Fokus-RELATED SARJANASHEOL SHIRSHAK (max 3 SHABDO)\",\n  \"gesamt_entropie\": 0.0,\n  \"trend\": \"steigend|stabil|sinkend|unbekannt\",\n  \"gesamtanalyse\": \"...\"\,\n  \"fortschritte\": [...],\n  \"top_massnahmen\": [...],\n  \"kategorien\": [...]\n}\n\n1) \"ueberschrift_top5/analyse/ergebnisse\": AVASHYAK. SARJANASHEOL, SPASHT, MAX 3 SHABDO. FOKUS-RELATED HOVU JOIE. KONO SAMANYA SHIRSHAK NAHI.\n\n2) \"gesamt_entropie\" (0.0-1.0): FOKUS-KSHETRA NONDHAMAA KITLO PRASTUT CHHE?\n\n3) \"trend\": MAATR 3+ NONDH HOYA TOJ. FOKUS-KSHETRA BADLAAY CHHE?\n\n4) \"gesamtanalyse\" (15-25 VAAKYO): NONDHO FOKUS-KSHETRA VISHE SHO KAHE CHHE? PRATYEK NONDHMAA THHI SARAVE RELEVANT TATVON BATAVO.\n\n5) \"fortschritte\" (0-5): FOKUS-KSHETRA MAA NAMUNAAO KE VIKASH.\n   { \"titel\": \"max 5 SHABDO\", \"beschreibung\": \"2-3 VAAKYO\", \"bezug\": \"1 VAAKYA\" }\n\n6) \"top_massnahmen\" (SARVAR 5): FOKUS-KSHETRA VISHE SARAUTHEE MAHATTVAPOORN TARANSHEELATAAO.\n   {\n     \"titel\": \"max 6 SHABDO\",\n     \"beschreibung\": \"13-21 SHABDO — COMPACT ane MUDDA UPAR.\",\n     \"erklaerung\": \"5-8 VAAKYO VISTARATHEE.\"\n   }\n\n7) \"kategorien\": FOKUS-RELATED VISHAYAJOTH (DINAMIK BANAVO).\n   {\n     \"name\": \"max 12 AKSHAR\", \"icon\": \"material_icon_name\", \"farbe\": \"#HEX\",\n     \"entropie_level\": 0.0,\n     \"zusammenfassung\": \"3-5 VAAKYO\",\n     \"ratschlaege\": [{\n       \"titel\": \"max 6 SHABDO\",\n       \"beschreibung\": \"13-21 SHABDO\",\n       \"prioritaet\": \"hoch|mittel|niedrig\",\n       \"verknuepfung\": \"ANYA VISHAY SAMBANDH KE null\",\n       \"herleitung\": [{\"datum\":\"...\",\"zusammenfassung\":\"1-2 VAAKYO\"}]\n     }]\n   }</string>
+    <string name="ai_prompt_custom_output">SHABDONI SANKHYA-NIYAM: top_massnahmen ane ratschlaege MAA \"beschreibung\" SARAVE 13-21 SHABDO.\n\nOUTPUT FORMAT — SAKHAT NIYAMO:\n- MAATR JSON OBJECT SATHE JAWAB AAPAO.\n- PAHELA KE PACHHAL KONO TEXT NAHI. BACKTICKS NAHI.\n- SEEDHA { THI SHARU KARO ane } SATHE PURO KARO.</string>
+
+    
+    <string name="retro_title">અવલોકન</string>
+    <string name="retro_cd_info">અવલોકન વિશે માહિતી</string>
+    <string name="retro_personal_review">તમારો વ્યક્તિગત અવલોકન</string>
+    <string name="retro_intro_body">ક્યારેક આપણે ભૂલી જઈએ છીએ કે આપણે ખરેખર ક્યા-ક્યા અનુભવ્યું. ડાયરી બધું યાદ રાખે, મોટી ક્ષણ અને નાની. </string>
+    <string name="retro_intro_cta">પાછળ જુઓ અને શોધો શું ચળ્યું.</string>
+    <string name="retro_please_wait">કૃપા કરી રાહ જુઓ</string>
+    <string name="retro_backup_loading">બૅકઅપ લોડ થઈ રહ્યું છે… ત્યારબાદ અવલોકન આપમેળે શરૂ થશે.</string>
+    <string name="retro_profile_switching">પ્રોફાઇલ બદલ્યા પછી અવ. .).</string>
+    <string name="retro_generating">સમીક્ષાઓ બની રહી છે…</string>
+    <string name="retro_ai_unavailable">AI અત્યારે ઉપલબ્ધ નથી, કૃપા કરીને થોડી વાર પછી ફરી પ્રયાસ કરો.</string>
+    <string name="retro_weekly_title">સાપ્તાહિક સમીક્ષા</string>
+    <string name="retro_weekly_subtitle">છેલ્લા 7 દિવસ એક નજરમાં</string>
+    <string name="retro_weekly_empty">હજુ કોઈ સાપ્તાહિક સમીક્ષા નથી.\nઅઠવાડિયે ઓછામાં ઓછી 2 ડાયરી એન્ટ્રી જરૂરી છે.</string>
+    <string name="retro_monthly_title">માસિક સમીક્ષા</string>
+    <string name="retro_monthly_subtitle">તમારો વીતેલો મહિનો એક નજરમાં</string>
+    <string name="retro_monthly_empty">હજુ કોઈ માસિક સમીક્ષા નથી.\nમહિનાના અંતે સાપ્તાહિક સમીક્ષાઓમાંથી બને છે.</string>
+    <string name="retro_yearly_title">વાર્ષિક સમીક્ષા</string>
+    <string name="retro_yearly_subtitle">યાદોથી ભરેલું આખું વર્ષ</string>
+    <string name="retro_yearly_empty">હજુ કોઈ વાર્ષિક સમીક્ષા નથી.\nવર્ષના અંતે માસિક સમીક્ષાઓમાંથી બને છે.</string>
+    <string name="retro_premium_unlock">Premium સાથે બધી સમીક્ષાઓ અનલૉક કરો</string>
+    <string name="retro_at_a_glance">એક નજરમાં</string>
+    <string name="retro_cd_expand">ખોલો</string>
+    <string name="retro_cd_collapse">બંધ કરો</string>
+    <string name="retro_share_text_label">ટેક્સ્ટ</string>
+
+    
+    <string name="retro_fallback_week">સાપ્તાહિક સમીક્ષા</string>
+    <string name="retro_fallback_month">માસિક સમીક્ષા</string>
+    <string name="retro_fallback_year">વાર્ષિક સમીક્ષા %1$d</string>
+    <string name="retro_period_label_week">. %1$d (%2$s - %3$s)</string>
+    
+    <string name="retro_photos_videos">ફોટા અને વીડિયો</string>
+    <string name="retro_photos_videos_colon">ફોટા અને વીડિયો:</string>
+    <string name="retro_cd_video">વીડિયો</string>
+    <string name="retro_cd_photo">ફોટો</string>
+    <string name="retro_play_video">વીડિયો ચલાવો</string>
+    <string name="retro_enable_voices">સેટિંગ્સમાં અવાજ ચાલુ કરો</string>
+    <string name="retro_tts_stop">રોકો</string>
+    <string name="retro_tts_read">વાંચી સંભળાવો</string>
+    <string name="retro_tts_wait">કૃપા કરીને રાહ જુઓ, ટેક્સ્ટ-ટુ-સ્પીચ બની રહ્યું છે…</string>
+    <string name="retro_cd_share">શેર કરો</string>
+    <string name="retro_share_title">સમીક્ષા શેર કરો</string>
+    <string name="retro_share_text_content">સમીક્ષા-ટેક્સ્ટ</string>
+    <string name="retro_photo_n">ફોટો %1$d</string>
+    <string name="retro_share_header">BestJournal App તરફથી સમીક્ષા</string>
+    <string name="retro_at_a_glance_colon">એક નજરમાં:</string>
+    
+    <string name="retro_cd_locked">લૉક કરેલું</string>
+    <string name="retro_unlock_premium_short">Premium અનલૉક કરો</string>
+    <string name="retro_cd_premium_required">Premium જરૂરી છે</string>
+    
+    <string name="retro_your_ai_reviews">તમારી AI-સમીક્ષાઓ</string>
+    <string name="retro_weekly_p1">AI તમારા અઠવાડિયાને એક અંગત વાર્તામાં સમાવે છે</string>
+    <string name="retro_weekly_p2">ભાવનાત્મક પૅટર્ન અને ખાસ ક્ષણો દેખાય છે</string>
+    <string name="retro_weekly_p3">દર રવિવારે આપમેળે બને છે, જો તમારી પાસે ઓછામાં ઓછી 2 એન્ટ્રી હોય</string>
+    <string name="retro_weekly_p4">પહેલા 2 અઠવાડિયા મફત છે</string>
+    <string name="retro_monthly_p1">તમારી સાપ્તાહિક સમીક્ષાઓને એક માસિક વાર્તામાં જોડે છે</string>
+    <string name="retro_monthly_p2">મહિના દરમિયાનના મુખ્ય વિષયો અને વિકાસ દેખાય છે</string>
+    <string name="retro_monthly_p3">તમારી એન્ટ્રીઓ પ્રમાણે ઘટનાઓ દર્શાવે છે</string>
+    <string name="retro_yearly_p1">તમારું આખું વર્ષ એક નજરમાં</string>
+    <string name="retro_yearly_p2">AI તમારા વર્ષના મોટા વિષયો સારાંશ કરે છે</string>
+    <string name="retro_yearly_p3">અંગત વિકાસ દેખાય અને અનુભવાય છે</string>
+    
+    <string name="retro_your_reviews">તમારી અંગત સમીક્ષાઓ</string>
+    <string name="retro_premium_reviews_desc">Premium સાથે AI તમારી ડાયરી એન્ટ્રીઓમાંથી આપમેળે સમીક્ષાઓ બનાવે છે:</string>
+    <string name="retro_benefit_weekly">માત્ર પહેલા 2 ને બદલે બધા સાપ્તાહિક રિવ્યૂ – તમારા AI દૈનિક ક્વોટાની મર્યાદામાં</string>
+    <string name="retro_benefit_monthly">માસિક સમીક્ષાઓ, જે તમારી પ્રગતિ અને ફેરફારોને દર્શાવે છે</string>
+    <string name="retro_benefit_yearly">વાર્ષિક સમીક્ષાઓ, તમારું આખું વર્ષ એક અંગત વાર્તા તરીકે</string>
+    <string name="retro_start_sub">સબ્સ્ક્રિપ્શન શરૂ કરો</string>
+    <string name="retro_decide_later">પછી નક્કી કરો</string>
+
+    
+    <string name="month_january">જાન્યુ.</string>
+    <string name="month_february">ફેબ્રુ.</string>
+    <string name="month_march">માર્ચ</string>
+    <string name="month_april">એપ્રિ.</string>
+    <string name="month_may">મે</string>
+    <string name="month_june">જૂન</string>
+    <string name="month_july">જુ.</string>
+    <string name="month_august">ઑગ.</string>
+    <string name="month_september">સપ્ટ.</string>
+    <string name="month_october">ઑક્ટ.</string>
+    <string name="month_november">નવ.</string>
+    <string name="month_december">ડિસ.</string>
+
+    
+    <string name="onboarding_welcome">Best Journal\nમાં સ્વાગત</string>
+    <string name="onboarding_subtitle">સ્પષ્ટતા માટે તમારી અંગત AI ડાયરી\\nરોજિંદા જીવનમાં</string>
+    <string name="onboarding_feature_speech">બોલો કે લખો, AI બંને સમજે છે</string>
+    <string name="onboarding_feature_listen">તમારી એન્ટ્રીઓ વાંચીને સંભળાવો</string>
+    <string name="onboarding_feature_secure">તમારી નોંધો ઉપકરણ પર જ રહે છે; AI વિનંતીઓ એન્ક્રિપ્ટ કરીને મોકલાય છે</string>
+    <string name="onboarding_goals_title">તમે AI-ડાયરી સાથે\nશું મેળવવા માંગો છો?</string>
+    <string name="onboarding_goal_stress">તણાવ ઓછો કરવો</string>
+    <string name="onboarding_goal_clarity">સ્પષ્ટતા મેળવવી</string>
+    <string name="onboarding_goal_growth">અંગત વિકાસ</string>
+    <string name="onboarding_goal_thoughts">મારા વિચારો નોંધવા</string>
+    <string name="onboarding_how_step1_title">તમારી એન્ટ્રી બોલો કે ટાઇપ કરો</string>
+    <string name="onboarding_how_step1_desc">તમારા વિચારોને વૉઇસ મેસેજ તરીકે રેકોર્ડ કરો કે ટાઇપ કરો, જેમ તમે ઇચ્છો તેમ.</string>
+    <string name="onboarding_how_step2_title">AI સુધારે અને વિશ્લેષણ કરે છે</string>
+    <string name="onboarding_how_step2_desc">તમારો ટેક્સ્ટ ઇચ્છા મુજબ સુધારાય છે અને વિવિધ દૃષ્ટિકોણથી વિશ્લેષણ થાય છે.</string>
+    <string name="onboarding_how_step3_desc">ખાસ ક્ષણો સાચવો, પછી માટે જીવંત યાદો.</string>
+    <string name="onboarding_how_step4_title">પૅટર્ન અને સૂઝ શોધો</string>
+    <string name="onboarding_how_step4_desc">AI Dashboard તમારી એન્ટ્રીઓ વચ્ચેના સંબંધો દર્શાવે છે.</string>
+    <string name="onboarding_how_step5_title">સાપ્તાહિક, માસિક અને વાર્ષિક સમીક્ષા</string>
+    <string name="onboarding_how_step5_desc">આપમેળે બનતી સમીક્ષાઓ બતાવે છે કે તમે સમય સાથે કેવી રીતે વિકસો છો.</string>
+    <string name="onboarding_premium_feature_improve">દૈનિક AI લખાણ સુધારણા, દરેક પ્રવેશ વધુ સ્પષ્ટ અને અભિવ્યક્તિપૂર્ણ બને છે</string>
+    <string name="onboarding_premium_feature_dashboard">દરેક નવી એન્ટ્રી પર આપમેળે Dashboard અપડેટ</string>
+    <string name="onboarding_premium_feature_retro">સાપ્તાહિક, માસિક અને વાર્ષિક સમીક્ષાઓ તમારો વિકાસ બતાવે છે</string>
+    <string name="onboarding_premium_feature_patterns">પેટર્ન દૃશ્યમાન: AI તમારી એન્ટ્રીઓમાં વારંવારના વિચાર અને લાગણીના પેટર્ન દર્શાવે છે</string>
+    <string name="onboarding_premium_feature_noads">વિક્ષેપ વગર લખો અને ચિંતન કરો</string>
+    <string name="onboarding_free_trial">મફત, ગમે ત્યારે રદ્દ કરી શકાય</string>
+    <string name="onboarding_free_after_trial">ત્યાર પછી Best Journal ચાલુ રાખો,\nઅઠવાડિયે મર્યાદિત AI-Call સાથે મફત.</string>
+    <string name="onboarding_start_free">મફતમાં શરૂ કરો</string>
+    <string name="onboarding_without_premium">Premium વિના ચાલુ રાખો</string>
+    <string name="onboarding_feature_profiles">વિવિધ દૃષ્ટિકોણ માટે 4 સ્માર્ટ વિશ્લેષણ પ્રોફાઇલ</string>
+    <string name="onboarding_goals_select">એક કે વધુ ધ્યેય પસંદ કરો</string>
+    <string name="onboarding_how_step3_title">ફોટા અને વીડિયો ઉમેરો</string>
+    <string name="onboarding_how_title">આટલું સરળ છે</string>
+    <string name="onboarding_perspectives_title">તમારા જીવન પર\nવિવિધ દ્રષ્ટિકોણ</string>
+    <string name="onboarding_premium_feature_pdf">ફોટા સાથે PDF એક્સપોર્ટ, તમારી એન્ટ્રીઓ દસ્તાવેજ તરીકે સાચવો</string>
+    <string name="onboarding_premium_profiles">તમારા જીવનમાં ઊંડી સમજ માટે 4 સ્માર્ટ Dashboard પ્રોફાઇલ</string>
+    <string name="onboarding_premium_profiles_unlimited">સંખ્યા-મર્યાદા વગર પોતાનાં AI પ્રોફાઇલ</string>
+    <string name="onboarding_try_premium">Premium સામેલ કરે છે, અન્ય બાબતો ઉપરાંત:</string>
+
+    
+    <string name="paywall_prices_loading">કિંમતો લોડ થઈ રહી છે…</string>
+    <string name="paywall_sub_loading_toast">સબ્સ્ક્રિપ્શન લોડ થઈ રહ્યું છે, કૃપા કરીને થોડી વારમાં ફરી પ્રયાસ કરો.</string>
+    <string name="paywall_purchase_loading_toast">ખરીદી પ્રક્રિયા લોડ થઈ રહી છે, કૃપા કરીને થોડી વારમાં ફરી પ્રયાસ કરો.</string>
+    <string name="paywall_today">આજે</string>
+    <string name="paywall_full_access">સંપૂર્ણ ઍક્સેસ</string>
+    <string name="paywall_day7">દિવસ 7</string>
+    <string name="paywall_reminder">રિમાઇન્ડર</string>
+    <string name="paywall_day8">દિવસ 8</string>
+    <string name="paywall_first_payment">પહેલી ચુકવણી</string>
+    <string name="paywall_yearly_note">ત્યારબાદ %1$s પ્રતિ વર્ષ, આપોઆપ નવીકરણ\\nટ્રાયલ દરમિયાન ગમે ત્યારે રદ્દ કરી શકાય</string>
+    <string name="paywall_most_popular">ભલામણ કરેલ</string>
+    <string name="paywall_monthly_plan">માસિક સબ્સ્ક્રિપ્શન, %1$s પ્રતિ મહિને</string>
+    <string name="paywall_lifetime_title">એક વખતની ખરીદી</string>
+    <string name="paywall_lifetime_desc">એક વખત ચૂકવ, બધું કાયમ માટે વાપર</string>
+    <string name="paywall_lifetime_note">કોઈ સબ્સ્ક્રિપ્શન નહીં, કોઈ રિન્યૂઅલ નહીં</string>
+    <string name="paywall_free_note">App Subscription વગર પણ ચાલુ રહે છે.</string>
+    <string name="paywall_legal_hint" formatted="false">સબ્સ્ક્રાઇબ કરવાથી તું %1$s સ્વીકારે છે. તારો 14-દિવસનો કરાર રદ કરવાનો અધિકાર ત્યાં વર્ણવેલ છે.</string>
+    <string name="paywall_legal_hint_link">ઉપયોગ-શરતો</string>
+
+    
+    <string name="paywall_feature_patterns">તમારા વિચારોમાં વારંવારના પેટર્ન ઓળખો</string>
+    <string name="paywall_feature_improve">દરેક પ્રવેશ માટે દૈનિક AI લખાણ સુધારણા</string>
+    <string name="paywall_feature_dashboard">નવી એન્ટ્રીઓ પછી AI-Dashboard અપડેટ</string>
+    <string name="paywall_feature_retro">બધી સમીક્ષાઓ AI દ્વારા બનાવેલ</string>
+    <string name="paywall_feature_pdf">ડાયરી એન્ટ્રીઓ ફોટા સાથે PDF તરીકે એક્સપોર્ટ કરો</string>
+    <string name="paywall_feature_noads">વિક્ષેપ વગર લખો અને ચિંતન કરો</string>
+    <string name="paywall_feature_profiles">સંખ્યા-મર્યાદા વગર પોતાનાં AI પ્રોફાઇલ</string>
+
+    
+    <string name="paywall_headline_stress">રોજિંદા જીવનમાં વધુ સ્પષ્ટતા</string>
+    <string name="paywall_headline_stress_sub">જે તમને રોજ સ્પર્શે છે તે ઓળખો અને સ્પષ્ટ રીતે વ્યક્ત કરો.</string>
+    <string name="paywall_headline_clarity">તમારી જાતને વધુ સારી રીતે સમજો</string>
+    <string name="paywall_headline_clarity_sub">AI તમારી નોંધોમાંના વારંવાર થતા ઢાંચા દૃશ્યમાન કરે છે</string>
+    <string name="paywall_headline_growth">દરેક દિવસમાં સારું શોધો</string>
+    <string name="paywall_headline_growth_sub">કૃતજ્ઞતા અને વિકાસ માટે તમારી અંગત જગ્યા</string>
+    <string name="paywall_headline_thoughts">તમારા વિચારોને વહેવા દો</string>
+    <string name="paywall_headline_thoughts_sub">તારો રોજિંદા જીવનનો સર્જનાત્મક સાથી</string>
+    <string name="paywall_headline_default">તમારી જાતને શોધો\nદરરોજ થોડું વધારે</string>
+    <string name="paywall_headline_default_sub">તારો રોજિંદા જીવનનો વ્યક્તિગત AI સાથી</string>
+
+    
+    <string name="paywall_exit_wait">થોડી વાર રોકાઓ!</string>
+    <string name="paywall_exit_special_offer">અમારી પાસે તમારા માટે એક ખાસ\nઑફર છે:</string>
+    <string name="paywall_exit_discount">%1$d મહિના માટે ડિસ્કાઉન્ટ</string>
+    <string name="paywall_exit_price_comparison">પ્રતિ મહિને %2$s ને બદલે માત્ર %1$s</string>
+    <string name="paywall_exit_start_discount">ચૂકવણી-આધારિત — 2 મહિના અડધા ભાવે</string>
+
+    
+    <string name="churn_your_sub">તમારું સબ્સ્ક્રિપ્શન</string>
+    <string name="churn_plan_yearly">વાર્ષિક સબ્સ્ક્રિપ્શન</string>
+    <string name="churn_plan_monthly">માસિક સબ્સ્ક્રિપ્શન</string>
+    <string name="churn_plan">પ્લાન</string>
+    <string name="churn_price">કિંમત</string>
+    <string name="churn_renewal">રિન્યૂઅલ</string>
+    <string name="churn_automatic">આપમેળે</string>
+    <string name="churn_promo_active_label">ડિસ્કાઉન્ટ ઓફર</string>
+    <string name="churn_promo_one_month_remaining">1 મહિનો બાકી — પછી દર મહિને <xliff:g id="base_price" example="3,99 €">%1$s</xliff:g></string>
+    <string name="churn_promo_months_remaining"><xliff:g id="months" example="2">%1$d</xliff:g> મહિના બાકી — પછી દર મહિને <xliff:g id="base_price" example="3,99 €">%2$s</xliff:g></string>
+    <string name="churn_auto_renew_note">તમારું સબ્સ્ક્રિપ્શન Google Play દ્વારા આપમેળે રિન્યૂ થાય છે. તમે કોઈપણ સમયે રદ કરી શકો છો.</string>
+    <string name="churn_cancel_sub">સબ્સ્ક્રિપ્શન રદ કરો</string>
+    <string name="churn_reason_too_expensive">ખૂબ મોંઘું</string>
+    <string name="churn_reason_unused">હું તેનો બહુ ઓછો ઉપયોગ કરું છું</string>
+    <string name="churn_per_year">પ્રતિ વર્ષ</string>
+    <string name="churn_per_month">પ્રતિ મહિને</string>
+    <string name="churn_reason_features">મને જોઈતી સુવિધાઓ નથી</string>
+    <string name="churn_reason_other">બીજું કારણ</string>
+    <string name="churn_sorry_title">દુ:ખ છે કે તમે જઈ રહ્યા છો</string>
+    <string name="churn_sorry_body">રદ કરતા પહેલા, શું તમે અમને કારણ જણાવશો? તે અમને App સુધારવામાં મદદ કરે છે.</string>
+    <string name="churn_exclusive_offer">તમારા માટે ઑફર</string>
+    <string name="churn_offer_subtitle">તમારા માટે અમારી ઑફર</string>
+    <string name="churn_offer_feature_ai">દૈનિક AI વિશ્લેષણ</string>
+    <string name="churn_offer_feature_perspectives">બધાં 4 પૂર્વનિર્ધારિત AI પ્રોફાઇલ + જેટલાં તમને જોઈએ એટલાં પોતાનાં</string>
+    <string name="churn_offer_feature_voice">Premium વૉઇસ ઓળખ</string>
+    <string name="churn_offer_auto_renew">આપમેળે રિન્યૂ થાય છે, કોઈપણ સમયે રદ કરી શકાય</string>
+    <string name="churn_accept_offer">ઑફર સ્વીકારો</string>
+    <string name="churn_switch_yearly">અથવા વાર્ષિક સબ્સ્ક્રિપ્શન પર સ્વિચ કરો અને વધુ બચાવો</string>
+    <string name="churn_pause_sub">અથવા Google Play પર સબ્સ્ક્રિપ્શન થોભાવો</string>
+    <string name="churn_cancel_anyway">છતાં પણ રદ કરો</string>
+    <string name="churn_are_you_sure">શું તમે ચોક્કસ છો?</string>
+    <string name="churn_stay">ના, રહેવાનું પસંદ કરું</string>
+
+    
+    <string name="ai_limit_title">તમારી સાપ્તાહિક મર્યાદા પૂરી થઈ ગઈ</string>
+    <string name="ai_limit_body">સબ્સ્ક્રિપ્શન વિના તમારી પાસે દર અઠવાડિયે 5 ટેક્સ્ટ સુધારા અને દર અઠવાડિયે 5 ડૅશબૉર્ડ અપડેટ પ્રતિ પ્રોફાઇલ છે.
+Premium સાથે: દરરોજ 150 સુધી.</string>
+    <string name="ai_limit_monthly">માસિક સબ્સ્ક્રિપ્શન, %1$s/મહિને</string>
+    <string name="ai_limit_yearly">વાર્ષિક સબ્સ્ક્રિપ્શન, %1$s/વર્ષ (37%% બચાવો)</string>
+    <string name="ai_limit_no_thanks">ના આભાર, AI વગર ચાલુ રાખો</string>
+    <string name="ai_banner_title">તમારી ડાયરી AI દ્વારા સપોર્ટેડ છે</string>
+    <string name="ai_banner_body">• ઉચ્ચારેલ ટેક્સ્ટ આપોઆપ સુધારાય છે\n• દરેક નોંધ માટે સારાંશ\n• તમારી રૂઢિઓ પરથી સ્માર્ટ જીવન-સૂચનો. બધા AI-આઉટપુટ સૂચનો છે, વ્યાવસાયિક સલાહ નહીં.\n• તમારા મફત ટ્રાયલ સમયગાળામાં સઘળું સામેલ</string>
+    <string name="cd_mic_start">રેકોર્ડિંગ શરૂ કરો</string>
+    <string name="cd_mic_stop">રેકોર્ડિંગ રોકો</string>
+    <string name="entry_improve_limit_daily">દૈનિક મર્યાદા પૂરી થઈ. કાલે ફરી ચાલુ!</string>
+    <string name="entry_improve_limit_cooldown">ટૂંકો વિરામ: હજુ %1$d મિનિટ.</string>
+    <string name="entry_improve_failed">ટેક્સ્ટ સુધારણા નિષ્ફળ</string>
+
+    
+    <string name="notif_reminder_title">તમારી ડાયરીનો સમય</string>
+    <string name="notif_reminder_body_0">આજે તમને શું સ્પર્શી રહ્યું છે?</string>
+    <string name="notif_reminder_body_1">તમારા માટે એક ક્ષણ, તેને સાચવો</string>
+    <string name="notif_reminder_body_2">તમારું ભવિષ્યનું સ્વરૂપ તમારો આભાર માનશે</string>
+    <string name="notif_reminder_body_3">ફક્ત એક વિચાર પૂરતો છે, શરૂ કરો</string>
+    <string name="notif_reminder_body_4">આજે તમારી ખાસ ક્ષણ કઈ હતી?</string>
+    <string name="notif_weekly_title">તમારી સાપ્તાહિક સમીક્ષા</string>
+    <string name="notif_weekly_body">જુઓ આ અઠવાડિયે તમને શું સ્પર્શ્યું, તમારા Dashboard પર નવી સૂઝ છે.</string>
+    <string name="notif_monthly_title">તમારી માસિક સમીક્ષા</string>
+    <string name="notif_monthly_body">યાદોથી ભરેલો આખો મહિનો તમારી રાહ જુએ છે.</string>
+    <string name="notif_yearly_title">તમારી વાર્ષિક સમીક્ષા</string>
+    <string name="notif_yearly_body">યાદોથી ભરેલું આખું વર્ષ, તમારી સફર પર નજર નાખો.</string>
+
+    
+    <string name="notif_channel_daily_name">દૈનિક રિમાઇન્ડર</string>
+    <string name="notif_channel_daily_desc">તમને દરરોજ ડાયરી લખવાની યાદ અપાવે છે</string>
+    <string name="notif_channel_weekly_name">સાપ્તાહિક સમીક્ષા</string>
+    <string name="notif_channel_weekly_desc">દર રવિવારે 15:00 વાગ્યે તમારી સાપ્તાહિક સમીક્ષા</string>
+    <string name="notif_channel_monthly_name">માસિક સમીક્ષા</string>
+    <string name="notif_channel_monthly_desc">જ્યારે તમારી માસિક સમીક્ષા તૈયાર થાય ત્યારે સૂચના</string>
+    <string name="notif_channel_yearly_name">વાર્ષિક સમીક્ષા</string>
+    <string name="notif_channel_yearly_desc">જ્યારે તમારી વાર્ષિક સમીક્ષા તૈયાર થાય ત્યારે સૂચના</string>
+
+    
+    <string name="datetime_just_now">હમણાં જ</string>
+    <plurals name="datetime_minutes_ago">
+        <item quantity="one">%1$d મિનિટ પહેલા</item>
+        <item quantity="other">%1$d મિનિટ પહેલા</item>
+    </plurals>
+    <plurals name="datetime_hours_ago">
+        <item quantity="one">%1$d કલાક પહેલા</item>
+        <item quantity="other">%1$d કલાક પહેલા</item>
+    </plurals>
+    <plurals name="datetime_days_ago">
+        <item quantity="one">%1$d દિવસ પહેલા</item>
+        <item quantity="other">%1$d દિવસ પહેલા</item>
+    </plurals>
+    
+    <plurals name="settings_export_success">
+        <item quantity="one">%1$d એન્ટ્રી એક્સપોર્ટ કરી</item>
+        <item quantity="other">%1$d એન્ટ્રીઓ એક્સપોર્ટ કરી</item>
+    </plurals>
+    <string name="datetime_today">આજે</string>
+    <string name="datetime_yesterday">ગઈકાલે</string>
+    <string name="datetime_day_before_yesterday">પરમ દિવસે</string>
+    <string name="datetime_this_week">આ અઠવાડિયે</string>
+    <string name="datetime_last_week">ગયા અઠવાડિયે</string>
+    <string name="datetime_weeks_ago">%1$d અઠવાડિયા પહેલા</string>
+
+    
+    <string name="achievement_nightowl_title">રાત્રિ ઘુવડ</string>
+    <string name="achievement_nightowl_desc">22 વાગ્યા પછી 50 એન્ટ્રી લખી</string>
+    <string name="achievement_earlybird_title">વહેલા ઊઠનાર</string>
+    <string name="achievement_earlybird_desc">7 વાગ્યા પહેલા 20 એન્ટ્રી લખી</string>
+    <string name="achievement_confession_title">કબૂલાત</string>
+    <string name="achievement_confession_desc">1,000 થી વધુ શબ્દોની એક એન્ટ્રી લખી</string>
+    <string name="achievement_marathon_title">મેરેથોન લેખક</string>
+    <string name="achievement_marathon_desc">100 ડાયરી એન્ટ્રી લખી</string>
+    <string name="achievement_wordartist_title">શબ્દ કલાકાર</string>
+    <string name="achievement_wordartist_desc">500 ડાયરી એન્ટ્રી લખી</string>
+    <string name="achievement_consistency_title">સાતત્ય</string>
+    <string name="achievement_consistency_desc">30-દિવસની સ્ટ્રીક હાંસલ કરી</string>
+    <string name="achievement_chronicler_title">વાર્ષિક ઇતિહાસકાર</string>
+    <string name="achievement_chronicler_desc">365 એન્ટ્રી લખી</string>
+    <string name="achievement_photodiary_title">ફોટો ડાયરી</string>
+    <string name="achievement_photodiary_desc">એન્ટ્રીઓ સાથે 50 ફોટા જોડ્યા</string>
+    <string name="achievement_voiceartist_title">વૉઇસ કલાકાર</string>
+    <string name="achievement_voiceartist_desc">25 વૉઇસ એન્ટ્રી બનાવી</string>
+    <string name="achievement_reflectionmaster_title">ચિંતન માસ્ટર</string>
+    <string name="achievement_reflectionmaster_desc">50 Dashboard વિશ્લેષણ કર્યા</string>
+
+    
+    <string name="prompt_cat_self_reflection">આત્મ-ચિંતન</string>
+    <string name="prompt_cat_gratitude">કૃતજ્ઞતા</string>
+    <string name="prompt_cat_future">ભવિષ્ય</string>
+    <string name="prompt_cat_relationships">સંબંધો</string>
+
+    <string-array name="prompts_self_reflection">
+        <item>આજે તમને શું હસાવી ગયું?</item>
+        <item>આજે કયો વિચાર તમે છોડી ન શક્યા?</item>
+        <item>આજે તમે તમારા વિશે શું શીખ્યા?</item>
+        <item>આજે કઈ ક્ષણ સૌથી તીવ્ર હતી?</item>
+        <item>જો શક્ય હોત તો આજે તમે શું અલગ કરત?</item>
+        <item>આજે કઈ લાગણી તમારી સાથે સૌથી વધુ રહી?</item>
+        <item>આજે તમને શું આશ્ચર્ય થયું?</item>
+        <item>આજે તમે સૌથી લાંબો સમય શેના વિશે વિચાર્યું?</item>
+        <item>આજે તમને શેણે ઊર્જા આપી?</item>
+        <item>આજે તમારી ઊર્જા શેણે છીનવી?</item>
+        <item>તમે કઈ આદત બદલવા માંગો છો?</item>
+        <item>અત્યારે તમારા માટે સફળતાનો અર્થ શું છે?</item>
+        <item>અત્યારે કયો ડર તમારા માર્ગમાં છે?</item>
+        <item>તમારું નાનું સ્વરૂપ તમારા આજના જીવન વિશે શું કહેત?</item>
+        <item>અત્યારે તમે તમારી જાતને કયો સલાહ આપો છો?</item>
+        <item>તમને શું અનન્ય બનાવે છે?</item>
+    </string-array>
+
+    <string-array name="prompts_gratitude">
+        <item>આજે તમે શેના માટે કૃતજ્ઞ છો?</item>
+        <item>આજે કઈ વ્યક્તિએ તમારો દિવસ સમૃદ્ધ કર્યો?</item>
+        <item>આજે કઈ નાની વિગતે તમને આનંદ આપ્યો?</item>
+        <item>તમારી પાસે કઈ આવડત છે જેને તમે ઘણીવાર ગૃહીત માનો છો?</item>
+        <item>આ અઠવાડિયે તમારી સાથે બનેલી શ્રેષ્ઠ બાબત કઈ છે?</item>
+        <item>તમે કોનો અને શેના માટે આભાર માનવા માંગો છો?</item>
+        <item>કઈ જગ્યા તમને ઘરનો અનુભવ આપે છે?</item>
+        <item>કઈ યાદ તમને તરત જ ખુશ કરી દે છે?</item>
+        <item>તમારા શરીરની કઈ બાબત વધુ કદર માગે છે?</item>
+        <item>આજે કયા ભોજને તમને ખરેખર સારું લાગ્યું?</item>
+        <item>છેલ્લે કયા સંગીતે તમને સ્પર્શ્યા?</item>
+        <item>તમારી પાસેની સૌથી મૂલ્યવાન વસ્તુ કઈ છે જેની કોઈ કિંમત નથી?</item>
+        <item>ભૂતકાળના કયા અનુભવે તમને વધુ મજબૂત બનાવ્યા?</item>
+        <item>તમારા રોજિંદા જીવનની કઈ બાબત ખરેખર એક વિશેષાધિકાર છે?</item>
+        <item>રોજિંદા જીવનમાં તમારો ગુપ્ત નાયક કોણ છે?</item>
+        <item>અત્યારે તમે કઈ ઋતુનો સૌથી વધુ આનંદ માણો છો, અને શા માટે?</item>
+    </string-array>
+
+    <string-array name="prompts_future">
+        <item>એક વર્ષમાં તમે શું હાંસલ કરવા માંગો છો?</item>
+        <item>પાંચ વર્ષમાં તમારો સંપૂર્ણ દિવસ કેવો દેખાય છે?</item>
+        <item>અત્યારે તમે કયા ધ્યેયને સૌથી વધુ ઉત્કટતાથી અનુસરો છો?</item>
+        <item>જો તમને ખબર હોત કે તમે નિષ્ફળ નહીં જાઓ તો તમે શું કરત?</item>
+        <item>તમે કઈ નવી આવડત શીખવા માંગો છો?</item>
+        <item>તમે આગળ ક્યાં પ્રવાસ કરવા માંગો છો?</item>
+        <item>દસ વર્ષમાં તમે કેવી વ્યક્તિ બનવા માંગો છો?</item>
+        <item>તમે કયું સ્વપ્ન છોડી દીધું જેને તમે ફરી જીવંત કરી શકો?</item>
+        <item>અત્યારે તમે લઈ શકો તે સૌથી હિંમતભર્યું પગલું કયું છે?</item>
+        <item>કયો પ્રોજેક્ટ તમને ઉત્સાહિત કરે છે જે તમે હજુ શરૂ કર્યો નથી?</item>
+        <item>શું થવું જોઈએ કે તમે કહો: હવે હું સંતુષ્ટ છું?</item>
+        <item>તમે દુનિયામાં કયો ફેરફાર જોવા માંગો છો?</item>
+        <item>તમારી બકેટ લિસ્ટમાં સૌથી ઉપર શું છે?</item>
+        <item>આવતા મહિના સુધીમાં તમે કઈ ખરાબ આદત છોડવા માંગો છો?</item>
+        <item>તમે કેવી રીતે યાદ રાખવા માંગો છો?</item>
+        <item>કાલે તમે લઈ શકો તે નાનું પગલું કયું છે?</item>
+    </string-array>
+
+    <string-array name="prompts_relationships">
+        <item>તમે કોને કંઈક કહેવા માંગો છો જે તમે અત્યાર સુધી કહ્યું નથી?</item>
+        <item>તમારા જીવનમાં કયો સંબંધ વધુ ધ્યાન માગે છે?</item>
+        <item>તમારા શ્રેષ્ઠ મિત્રની કઈ બાબતની તમે સૌથી વધુ કદર કરો છો?</item>
+        <item>છેલ્લે ક્યારે તમને ખરેખર સમજાયેલા હોવાનો અનુભવ થયો?</item>
+        <item>તમારા માટે મહત્વની વ્યક્તિને તમે શું કહેશો?</item>
+        <item>કઈ વ્યક્તિએ તમારા જીવનને સૌથી વધુ ઘડ્યું?</item>
+        <item>તમે બીજાને કેવી રીતે બતાવો છો કે તમે તેમને પ્રેમ કરો છો?</item>
+        <item>તમે કયો સંઘર્ષ ઉકેલવા માંગો છો?</item>
+        <item>તમારા માટે મિત્રતાનો અર્થ શું છે?</item>
+        <item>છેલ્લે કોણે તમને કંઈક મહત્વનું શીખવ્યું?</item>
+        <item>બીજાની કઈ ખૂબીની તમે સૌથી વધુ પ્રશંસા કરો છો?</item>
+        <item>તમે કોની સાથે આખો દિવસ વિતાવવા માંગો છો?</item>
+        <item>તમને મળેલી સૌથી સુંદર પ્રશંસા કઈ છે?</item>
+        <item>સંબંધોમાં તમે કઈ સીમાઓ વધુ સારી રીતે નક્કી કરવા માંગો છો?</item>
+        <item>સમય સાથે પ્રેમ વિશેની તમારી કલ્પના કેવી રીતે બદલાઈ?</item>
+        <item>આજે કોણ તમારા ફોન કે સંદેશને પાત્ર છે?</item>
+    </string-array>
+
+    
+    <string name="pdf_entry_fallback_title">એન્ટ્રી #%1$d</string>
+    <string name="pdf_entry_counter">એન્ટ્રી %1$d / %2$d</string>
+    <string name="pdf_summary_label">સારાંશ</string>
+    <string name="pdf_continuation">%1$s (ચાલુ)</string>
+    <string name="pdf_page_number">પૃષ્ઠ %1$d</string>
+
+    
+    <string name="error_retro_all_failed">બધી %1$d AI વિનંતીઓ નિષ્ફળ. કૃપા કરીને ઇન્ટરનેટ કનેક્શન તપાસો.</string>
+    <string name="error_whisper_audio_empty">ઑડિયો ફાઇલ ખાલી છે</string>
+    <string name="error_whisper_no_text">કોઈ ટેક્સ્ટ ઓળખાયો નથી</string>
+    <string name="error_sync_db_not_found">ડેટાબેઝ મળ્યો નથી</string>
+    <string name="error_audio_record_init_failed">માઇક્રોફોન શરૂ કરી શકાયો નહીં</string>
+    <string name="error_json_key_missing">AI જવાબ અધૂરો છે: %1$s અથવા %2$s નથી</string>
+    <string name="error_file_open_failed">ભૂલ: ફાઇલ ખોલી શકાઈ નથી</string>
+    <string name="error_generic">ભૂલ: %1$s</string>
+
+    
+    <string name="profile_style_chronicler">\n- સારાંશરૂપ વાર્તાની શૈલીમાં લખો, મુખ્ય ઘટનાઓ અને લાગણીઓને એક અંગત ઇતિહાસકારની જેમ સમાવો</string>
+    <string name="profile_style_advisor">\n- જીવન સલાહકારની શૈલીમાં લખો, શું સારું રહ્યું અને શું સુધારી શકાય તે દર્શાવો, અને વાચકને સ્પષ્ટતા અને વ્યવસ્થાનો અનુભવ આપો</string>
+    <string name="profile_style_insight">\n- ઊંડી આત્મ-સમજની વાર્તાની શૈલીમાં લખો, વિચારોની પૅટર્ન, વારંવાર આવતી લાગણીઓ અને છુપાયેલી શક્તિઓ ઉજાગર કરો</string>
+    <string name="profile_style_coach">\n- પ્રેરક ધ્યેય-સાથીની શૈલીમાં લખો, અંગત ધ્યેયોમાં પ્રગતિ દર્શાવો અને આગળ વધવા પ્રોત્સાહિત કરો</string>
+    <string name="profile_style_custom">\n- પ્રોફાઇલ-શૈલી (Custom): આ સમીક્ષા વપરાશકર્તાના કાર્ય સાથે સ્પષ્ટ સંબંધ રાખીને લખો. ફરજિયાત નિયમો:\n  1) સમીક્ષાનો ઓછામાં ઓછો 60 ટકા ભાગ સીધી રીતે અથવા આડકતરી રીતે કાર્ય-વિષયને આવરી લે.\n  2) ઓછામાં ઓછો એક વિષયક વિભાગ સંપૂર્ણપણે કાર્ય-કેન્દ્ર પર સમર્પિત હોય (શીર્ષક + ટેક્સ્ટ).\n  3) પ્રોફાઇલ-સંબંધ વૈવિધ્યપૂર્ણ રીતે વ્યક્ત કરો, સમાનાર્થી અને વિષયક નિકટતા સાથે, યાંત્રિક શબ્દ-પુનરાવર્તન સાથે નહીં.\n  4) કાર્ય સાથે સંબંધ વગરના અવલોકનો ટૂંકા રાખો અથવા સંપૂર્ણ છોડી દો — સાચા સંબંધવાળા ઓછા વિભાગો સામાન્ય ઘણા કરતાં વધુ સારા.\n  વપરાશકર્તા-કાર્ય (માર્ગદર્શન માટે): \"%1$s\"</string>
+
+
+    <!-- ════════════════════════════════════════════════════════════════════
+         CONSENT SCREEN + PRIVACY GATES + PRIVACY SECTION (April 2026)
+         ════════════════════════════════════════════════════════════════════ -->
+    <string name="consent_title">ગોપનીયતા અને સંમતિ</string>
+    <string name="consent_intro">તમારી ડાયરી એ એક ખાનગી જગ્યા છે અને અમે તેનો આદર કરીએ છીએ. અહીં તમે પારદર્શક રીતે જોઈ શકો છો કે Best Journal તમારા ડેટાનું કેવી રીતે સંચાલન કરે છે.</string>
+    <string name="consent_card1_title">સ્થાનિક સ્ટોરેજ</string>
+    <string name="consent_card1_body">તમારી એન્ટ્રીઓ તમારા ઉપકરણ પર જ રહે છે.</string>
+    <string name="consent_card2_title">AI ફીચર્સ (USA)</string>
+    <string name="consent_card2_body">વૈકલ્પિક રીતે ટેક્સ્ટ Google Gemini ને અને મોટેથી વાંચવાનો ટેક્સ્ટ Microsoft Edge ને USA માં મોકલવામાં આવે છે (EU-US Data Privacy Framework). વૉઇસ રેકોર્ડિંગ માનક કરાર કલમો (EU SCCs) હેઠળ Groq (USA) ને મોકલવામાં આવે છે.</string>
+    <string name="consent_card3_title">છદ્મનામી આંકડા</string>
+    <string name="consent_card3_body">Firebase Analytics, વૈકલ્પિક, સેટિંગ્સમાં ગમે ત્યારે બદલી શકાય છે.</string>
+    <string name="consent_links_header">અમારા કાયદેસર દસ્તાવેજો:</string>
+    <string name="consent_accept_all">સંમત અને શરૂ કરો</string>
+    <string name="consent_disable_stats">આંકડા બંધ કરીને ચાલુ રાખો</string>
+    <string name="consent_confirmation">\"સંમત અને શરૂ કરો\" પર ટેપ કરીને તમે પુષ્ટિ કરો છો કે તમે ગોપનીયતા નીતિ, ઉપયોગની શરતો અને કાનૂની સૂચના વાંચી છે અને વર્ણવેલ ડેટા પ્રોસેસિંગ સાથે સંમત છો. તમે તમારો નિર્ણય સેટિંગ્સમાં ગમે ત્યારે બદલી શકો છો.</string>
+
+    <string name="privacy_gate_groq_title">વૉઇસ રેકોર્ડિંગ Groq ને મોકલવું?</string>
+    <string name="privacy_gate_groq_body">આ સુવિધા તમારી વાણી-રેકોર્ડિંગ એન્ક્રિપ્ટ કરીને Groq (USA) ને મોકલે છે અને ત્યાં તેને લખાણમાં ફેરવે છે — સ્થાનિક ઓળખ કરતાં ઝડપી અને વધુ ચોક્કસ.\n\n✓ ફેરવ્યા પછી રેકોર્ડિંગ તરત જ ભૂંસાય છે\n✓ તમારી રેકોર્ડિંગથી કોઈ AI તાલીમ નહીં\n✓ કાનૂની આધાર: પ્રમાણભૂત કરાર-કલમો (EU SCCs)\n\nવિકલ્પ: સેટિંગ્સમાં સ્થાનિક ઑફલાઇન ઓળખ.</string>
+    <string name="privacy_gate_groq_accept">સંમત અને મોકલો</string>
+    <string name="privacy_gate_groq_local">તેના બદલે સ્થાનિક રીતે ટ્રાન્સક્રાઇબ કરો</string>
+
+    <string name="privacy_gate_gemini_title">ટેક્સ્ટ Google Gemini ને મોકલવો?</string>
+    <string name="privacy_gate_gemini_body">સારું છે કે તમે Best Journal ની સ્માર્ટ સુવિધાઓ વાપરવા ઇચ્છો છો! સારાંશ, સ્મૃતિ, Dashboard અંતર્દૃષ્ટિ અને ટેક્સ્ટ સુધારણા માટે તમારા ટેક્સ્ટ એન્ક્રિપ્ટ કરીને Google Gemini ને મોકલવામાં આવે છે.\\n\\n✓ તમારા ડેટા સાથે AI ટ્રેઇનિંગ નહીં\\n✓ વિનંતીઓ કાયમ સ્ટોર થતી નથી\\n✓ EU-US Data Privacy Framework અનુસાર એન્ક્રિપ્ટ\\n\\nમહત્ત્વની નોંધ: તમારી ડાયરી એન્ટ્રીઓમાં ખૂબ સંવેદનશીલ ડેટા (સ્વાસ્થ્ય, ધર્મ, વ્યક્તિગત સંબંધો — GDPR Art. 9) હોઈ શકે, તેથી અમે AI પ્રક્રિયા માટે તમારી સ્પષ્ટ સંમતિ માંગીએ છીએ. AI આઉટપુટ સૂચનો છે, વ્યાવસાયિક સલાહ નથી.\\n\\nતમે આ ગમે ત્યારે Settings માં બદલી શકો છો.</string>
+    <string name="privacy_gate_gemini_accept">સંમત અને મોકલો</string>
+    <string name="privacy_gate_gemini_cancel">રદ કરો</string>
+
+    <string name="privacy_gate_tts_title">Premium અવાજો ચાલુ કરો</string>
+    <string name="privacy_gate_tts_body">Premium અવાજો સાથે વાચન વધુ કુદરતી લાગે છે. તમારું લખાણ એન્ક્રિપ્ટ કરીને (HTTPS/TLS) USA માં Microsoft ની વાણી-સેવાને મોકલાય છે અને ઑડિયો તરીકે પાછું મળે છે.\n\n✓ સ્થાનાંતર માત્ર વાણી-સંશ્લેષણ માટે\n✓ ત્રીજા-દેશ સ્થાનાંતર USA (Microsoft એ EU-US Data Privacy Framework અનુસાર પ્રમાણિત છે)</string>
+    <string name="privacy_gate_tts_accept">સંમત અને વાંચો</string>
+    <string name="privacy_gate_tts_cancel">રદ કરો</string>
+
+    <string name="settings_privacy_header">ગોપનીયતા</string>
+    <string name="settings_analytics_title">છદ્મનામી ઉપયોગ-વિશ્લેષણ</string>
+    <string name="settings_analytics_subtitle">ભૂલ વિશ્લેષણ અને ઉત્પાદન સુધારણા માટે Firebase Analytics</string>
+
+    <string name="settings_delete_account_title">ખાતું અને ડેટા કાઢી નાખો</string>
+    <string name="settings_delete_account_subtitle">બધો સ્થાનિક ડેટા અને Drive-બેકઅપ અપરિવર્તનીય રીતે દૂર કરે છે. તમારું Google-એકાઉન્ટ પોતે યથાવત્ રહે છે.</string>
+    <string name="settings_delete_account_confirm_title">એપનો બધો ડેટા કાઢી નાખવો?</string>
+    <string name="settings_delete_account_confirm_body">આ પ્રક્રિયા અપરિવર્તનીય છે અને નીચેનું ભૂંસે છે:\n\n• બધી સ્થાનિક ડાયરી-નોંધો, ફોટા, વીડિયો અને ઑડિયો-રેકોર્ડિંગ\n• એપનું Google-Drive બેકઅપ (માત્ર એપ-ડેટા, તમારું Google-એકાઉન્ટ નહીં)\n• તમારી એપ-લૉગિન\n\nતમારું Google-એકાઉન્ટ પોતે યથાવત્ રહે છે. એપ ત્યાર બાદ નવા ઇન્સ્ટોલેશન તરીકે ફરી શરૂ થાય છે.</string>
+    <string name="settings_delete_account_cancel">રદ કરો</string>
+    <string name="settings_delete_account_confirm">હા, બધું કાઢો</string>
+
+    <string name="settings_report_ai_title">AI જવાબની જાણ કરો</string>
+    <string name="settings_report_ai_subtitle">અયોગ્ય અથવા ખોટું AI આઉટપુટ</string>
+    <string name="settings_report_ai_confirm_title">Support ને ઇમેઇલ ખોલવો?</string>
+    <string name="settings_report_ai_confirm_body">dev.app.support@gmail.com ને તૈયાર સંદેશ સાથે તમારું ઇમેઇલ-પ્રોગ્રામ ખૂલે છે. મોકલતા પહેલાં તમે વર્ણન હજુ ઉમેરી શકો છો. અમે સામાન્ય રીતે કાર્યદિવસોમાં 24 કલાકની અંદર જવાબ આપીએ છીએ.\n\nકૃપા કરીને આનાથી જાણ કરો: ડેશબોર્ડ, સારાંશ, રિવ્યૂ કે લખાણ-સુધારણામાંથી અયોગ્ય, અપમાનજનક, ખોટા કે ગેરમાર્ગે દોરનારા AI-આઉટપુટ.</string>
+    <string name="settings_report_ai_confirm">જાણ બનાવો</string>
+    <string name="settings_report_ai_cancel">રદ કરો</string>
+    <string name="settings_report_ai_no_email">કોઈ ઇમેઇલ ઍપ મળી નથી. કૃપા કરીને જાણ dev.app.support@gmail.com પર મોકલો.</string>
+    <string name="settings_report_ai_subject">Best Journal: અયોગ્ય AI જવાબ</string>
+    <string name="settings_report_ai_body">નમસ્તે,\n\nહું Best Journal માં એક અયોગ્ય અથવા ખોટા AI જવાબની જાણ કરવા માંગું છું.\n\nસમસ્યાનું વર્ણન:\n[કૃપા કરીને ભરો]\n\nસંદર્ભ (કઈ સુવિધા, કયું ઇનપુટ):\n[કૃપા કરીને ભરો]\n\nઆભાર.</string>
+    <string name="settings_report_ai_dialog_title">AI પ્રતિસાદની જાણ કરો</string>
+    <string name="settings_report_ai_dialog_desc">અયોગ્ય અથવા ખોટા AI પ્રતિસાદનું વર્ણન કરો. તમારો અહેવાલ સીધો અમારી સપોર્ટ ટીમને મોકલવામાં આવે છે. તમે તમારા Google એકાઉન્ટથી સાઇન ઇન કરેલા હોવા જોઈએ.</string>
+
+    <string name="settings_revoke_title">કરાર રદ કરો</string>
+    <string name="settings_revoke_subtitle">§ 356a BGB — એપ દ્વારા સીધો વિરોધ</string>
+    <string name="settings_revoke_confirm_title">કરાર રદ કરવો છે?</string>
+    <string name="settings_revoke_confirm_body">\"વિરોધ પુષ્ટ કરો\" પર ક્લિક કરવાથી અમે તમારો વિરોધ સીધો dev.app.support@gmail.com ને મોકલીએ છીએ. તમને તરત જ ઇમેઇલ દ્વારા પ્રાપ્તિ-પુષ્ટિ મળે છે.\n\nસંપૂર્ણ વિરોધ-સૂચના તમને ઉપયોગ-શરતો (§ 16) માં મળશે. વધુ બિલિંગ ન થાય તે માટે કૃપા કરીને સબ્સ્ક્રિપ્શન વધારામાં Google Play → સબ્સ્ક્રિપ્શન દ્વારા પણ રદ કરો.</string>
+    <string name="settings_revoke_cancel">રદ કરો</string>
+    <string name="settings_revoke_confirm">રદ બનાવો</string>
+    <string name="settings_revoke_no_email">કોઈ ઇમેઇલ ઍપ મળી નથી. કૃપા કરીને રદ dev.app.support@gmail.com પર મોકલો.</string>
+    <string name="settings_revoke_email_subject">Best Journal Premium કરાર રદ</string>
+    <string name="settings_revoke_email_body">આ દ્વારા હું Best Journal ની Premium સુવિધાઓ સંબંધિત મારા કરારના રદ કરવાની સૂચના આપું છું.\n\nમોકલનાર (Google એકાઉન્ટ): %1$s\nરદ કરવાની ક્ષણ: %2$s\n\nઆ રદ પ્રક્રિયા એપમાં આવેલા § 356a BGB-અનુરૂપ બે-પગલાના રદ બટન દ્વારા શરૂ કરવામાં આવી હતી અને Gmail API મારફતે આપમેળે મોકલવામાં આવી હતી.</string>
+    <string name="settings_revoke_confirm_subject">તમારી પ્રાપ્તી પુષ્ટિ: Best Journal માં રદ</string>
+    <string name="settings_revoke_confirm_user_body">નમસ્તે,\n\n%1$sની તમારી રદ કરવાની જાણ અમને મળી ગઈ છે. આ § 356a BGB મુજબ તમારી પ્રાપ્તી પુષ્ટિ છે.\n\nઅમે તમારી રદ પ્રક્રિયા શક્ય તેટલી વહેલી તકે કરીશું અને કોઈ પ્રશ્ન હોય તો dev.app.support@gmail.com દ્વારા તમારો સંપર્ક કરીશું.\n\nઆગળ કોઈ નવી બિલિંગ ન થાય તે માટે, કૃપા કરીને Google Play Store માં "Subscriptions" હેઠળ તમારી સબ્સ્ક્રિપ્શન પણ રદ કરો.\n\nઆભાર અને શુભેચ્છાઓ\nBest Journal (Frank Barwandt)</string>
+    <string name="settings_revoke_no_account">સાઇન-ઇન થયેલ Google ખાતાનું સરનામું મળ્યું નથી. કૃપા કરીને Settings માં તમારા Google ખાતાથી સાઇન ઇન કરો અથવા રદ કરવાની જાણ dev.app.support@gmail.com પર હાથેથી મોકલો.</string>
+    <string name="settings_revoke_sending">રદ મોકલાઈ રહ્યું છે…</string>
+    <string name="settings_revoke_success_title">રદ પ્રાપ્ત થયું</string>
+    <string name="settings_revoke_success_body">તમારી રદ કરવાની જાણ dev.app.support@gmail.com પર મોકલવામાં આવી છે. પ્રાપ્તી પુષ્ટિ પણ તમારા ઇનબોક્સમાં છે.</string>
+    <string name="settings_revoke_success_close">બંધ કરો</string>
+    <string name="settings_revoke_error_title">રદ મોકલી શકાયું નથી</string>
+    <string name="settings_revoke_error_body">સ્વચાલિત મોકલાણ નિષ્ફળ ગયું: %1$s\n\nવૈકલ્પિક રીતે તમે dev.app.support@gmail.com પર હાથેથી ઇમેઇલ મોકલી શકો છો. તેના માટે "ઇમેઇલ એપ ખોલો" પર ટેપ કરો.</string>
+    <string name="settings_revoke_error_email_fallback">ઇમેઇલ એપ ખોલો</string>
+
+
+
+    <!-- Crisis Support / Mental Health Disclaimer -->
+    <string name="settings_crisis_title">સંકટ સહાય</string>
+    <string name="settings_crisis_subtitle">આકસ્મિક પરિસ્થિતિઓ માટે મહત્વપૂર્ણ હેલ્પલાઇન</string>
+    <string name="settings_crisis_dialog_title">તમે એકલા નથી</string>
+    <string name="settings_crisis_dialog_body">Best Journal એક જર્નલ એપ છે અને તે વ્યાવસાયિક માનસિક અથવા તબીબી સહાયનું સ્થાન લઈ શકતી નથી. AI દ્વારા બનાવાયેલા વિશ્લેષણો થેરાપી નથી.\n\nજો તમે ગંભીર સંકટમાં હો અથવા પોતાને ઇજા પહોંચાડવા કે આત્મહત્યાના વિચારો આવતા હોય, તો તમને આ બધું એકલા પાર કરવું નથી. મફત અને ગોપનીય મદદ 24/7 ઉપલબ્ધ છે.</string>
+    <string name="settings_crisis_hotline_de_name">Telefonseelsorge જર્મની</string>
+    <string name="settings_crisis_hotline_de_hours">મફત, 24/7, ગોપનીય</string>
+    <string name="settings_crisis_call_de">0800 111 0 111 પર કૉલ કરો</string>
+    <string name="settings_crisis_call_de_alt">0800 111 0 222 પર કૉલ કરો</string>
+    <string name="settings_crisis_emergency_name">આપાત્કાલીન મદદ</string>
+    <string name="settings_crisis_call_emergency">112 પર કૉલ કરો</string>
+    <string name="settings_crisis_international_name">આંતરરાષ્ટ્રીય હેલ્પલાઇન</string>
+    <string name="settings_crisis_open_findahelpline">findahelpline.com ખોલો</string>
+    <string name="settings_crisis_close">બંધ કરો</string>
+    <string name="settings_crisis_no_dialer">ફોન એપ મળી નથી.</string>
+    <string name="settings_crisis_no_browser">બ્રાઉઝર મળ્યો નથી.</string>
+
+    <!-- AI-generated content badge -->
+    <string name="ai_generated_badge">AI દ્વારા બનાવેલ</string>
+    <string name="ai_generated_tooltip">આ સામગ્રી AI સિસ્ટમ (Google Gemini) દ્વારા બનાવવામાં આવી છે અને તેમાં ભૂલો હોઈ શકે છે. કૃપા કરીને તમે જાતે ચકાસો.</string>
+
+    <!-- AUTO-ADDED FALLBACK (English) for missing keys — replace with proper translations later -->
+    <string name="consent_optout_confirmation">ઓપ્ટ-આઉટ સાચવ્યું — આંકડાકીય માહિતી બંધ છે.</string>
+    <string name="settings_ccpa_do_not_sell_title">Do Not Sell My Personal Information</string>
+    <string name="settings_ccpa_do_not_sell_subtitle">કેલિફોર્નિયાના રહેવાસીઓ માટે (CCPA/CPRA 2026). સક્રિય હોય ત્યારે બધી ક્લાઉડ AI સુવિધાઓ બંધ થાય છે અને કોઈ આંકડાકીય માહિતી એકત્રિત થતી નથી.</string>
+    <string name="settings_ccpa_do_not_sell_confirmation">Do-Not-Sell ચાલુ — બધી ક્લાઉડ સેવાઓ બંધ છે.</string>
+    <string name="settings_ccpa_do_not_sell_off_confirmation">Do-Not-Sell બંધ કર્યું.</string>
+    <string name="settings_delete_account_in_progress">એકાઉન્ટ અને ડેટા કાઢી રહ્યા છીએ…</string>
+    <string name="settings_delete_account_drive_error_title">Drive બેકઅપ કાઢી શક્યા નથી</string>
+    <string name="settings_delete_account_drive_error_body">Google Drive બેકઅપ વિશ્વસનીય રીતે દૂર કરી શક્યા નથી (કારણ: %1$s).
+
+સંપૂર્ણ કાઢી નાખ્યા વિના \"કાયમ માટે કાઢી નાખ્યું\" સંદેશ સાચો નહીં હોય.
+
+તમે શું કરવા માંગો છો?</string>
+    <string name="settings_delete_account_retry">ફરી પ્રયાસ કરો</string>
+    <string name="settings_delete_account_force_local">ફક્ત સ્થાનિક ભૂંસો (Drive Backup સચવાય છે)</string>
+    <string name="settings_delete_account_abort">ક્રિયા રદ કરો</string>
+
+    <string name="legal_title_datenschutz">ગોપનીયતા નીતિ</string>
+    <string name="legal_title_nutzungsbedingungen">ઉપયોગની શરતો</string>
+    <string name="legal_title_impressum">કાનૂની માહિતી</string>
+
+    <!-- Consent-Screen v4 + Privacy Sheet + Settings -->
+    <string name="consent_welcome_title">Best Journal માં આપનું સ્વાગત છે</string>
+    <string name="consent_welcome_intro">શરૂ કરતા પહેલાં, અહીં ઝડપથી તમારી ગોપનીયતા પસંદગીઓ સેટ કરીએ.</string>
+    <string name="consent_promise_local">ગોપનીયતા કાયદાઓને તમારી સંમતિની જરૂર છે.</string>
+    <string name="consent_promise_no_training">કયા લક્ષણો સક્રિય રહેશે તે તમે અહીં નક્કી કરો છો.</string>
+    <string name="consent_promise_optional_ai">સેટિંગ્સમાં ગમે ત્યારે બદલી શકાય છે.</string>
+    <string name="consent_btn_manual_selection">મેન્યુઅલ પસંદગી</string>
+    <string name="privacy_sheet_title">ગોપનીયતા કસ્ટમાઇઝ કરો</string>
+    <string name="privacy_sheet_subtitle">તમને અનુકૂળ હોય તે રીતે વ્યક્તિગત લક્ષણો સક્ષમ કરો. બધું ગમે ત્યારે બદલી શકાય છે.</string>
+    <string name="privacy_sheet_save">પસંદગી સાચવો</string>
+    <string name="privacy_sheet_all_on">બધું ચાલુ</string>
+    <string name="privacy_sheet_all_off">બધું બંધ</string>
+    <string name="consent_toggle_analytics_title">છદ્મનામી ઉપયોગ-વિશ્લેષણ</string>
+    <string name="consent_toggle_analytics_body">Firebase Analytics — અમને એપ સુધારવામાં મદદ કરે છે. કોઈ ડાયરી-સામગ્રી નહીં, માત્ર છદ્મનામી ઉપયોગ-આંકડા (દા.ત. ક્લિક-સંખ્યા). ડેટા-સ્થાનાંતર: Google USA (Data Privacy Framework).</string>
+    <string name="consent_toggle_groq_title">વાણી-થી-ટેક્સ્ટ (Groq Whisper)</string>
+    <string name="consent_toggle_groq_body">એન્ટ્રીઓ શ્રુતલેખન કરવાની મંજૂરી આપે છે. તમારું વૉઇસ રેકોર્ડિંગ એન્ક્રિપ્ટેડ રીતે Groq (USA) ને મોકલવામાં આવે છે, ટેક્સ્ટમાં રૂપાંતરિત થાય છે, પછી કાઢી નાખવામાં આવે છે. તમારા રેકોર્ડિંગ્સ તાલીમ માટે ઉપયોગમાં લેવાતા નથી.</string>
+    <string name="consent_toggle_gemini_title">AI પ્રતિબિંબ (Google Gemini)</string>
+    <string name="consent_toggle_gemini_body">ડેશબોર્ડ AI, સારાંશ, સમીક્ષાઓ અને ટેક્સ્ટ સુધારણા. ટેક્સ્ટ ટુકડાઓ Google Gemini (USA) ને મોકલે છે. તમારી એન્ટ્રીઓ તાલીમ માટે ઉપયોગમાં લેવાતી નથી.</string>
+    <string name="consent_toggle_tts_title">મોટેથી વાંચન (Microsoft Edge TTS)</string>
+    <string name="consent_toggle_tts_body">કુદરતી અવાજમાં એન્ટ્રીઓ વાંચે છે. ટેક્સ્ટને Microsoft (USA) ને મોકલે છે.</string>
+    <string name="consent_toggle_drive_title">Google Drive બેકઅપ</string>
+    <string name="consent_toggle_drive_body">એન્ટ્રીઓને એન્ક્રિપ્ટેડ રીતે તમારા પોતાના Google Drive માં સાચવે છે. તમે સંપૂર્ણ નિયંત્રણ જાળવી રાખો છો — ફાઇલ તમારા ખાતામાં છે, અમારી પાસે નથી.</string>
+    <string name="consent_toggle_do_not_sell_title">Do Not Sell My Personal Information</string>
+    <string name="consent_toggle_do_not_sell_body">આ સ્વિચ માત્ર US રાજ્ય કૅલિફોર્નિયાના રહેવાસીઓ માટે છે. કૅલિફોર્નિયાનો ડેટા-સંરક્ષણ કાયદો (CCPA/CPRA) રહેવાસીઓને વાંધો ઉઠાવવાનો અધિકાર આપે છે. ચાલુ કરવાથી બધી વૈકલ્પિક ક્લાઉડ-સુવિધાઓ (AI, બેકઅપ, વાણી-ઓળખ, વિશ્લેષણ) બંધ થાય છે — માત્ર સ્થાનિક સુવિધાઓ ચાલુ રહે છે.\n\nજો તમે કૅલિફોર્નિયાની બહાર રહો છો, તો તમે આ સ્વિચને અવગણી શકો છો: Best Journal જગતમાં ક્યાંય તમારો ડેટા વેચતું કે વેપાર કરતું નથી.</string>
+    <string name="consent_btn_accept_all">બધું સ્વીકારો</string>
+    <string name="consent_btn_save_selection">મારી પસંદગી સાચવો</string>
+    <string name="consent_btn_minimum_only">બધું નકારો</string>
+    <string name="consent_saved_snackbar">સેટિંગ સાચવી</string>
+    <string name="consent_revoke_snackbar">સંમતિ પાછી ખેંચી</string>
+    <string name="consent_footer_version">તમારી પસંદગી સેટિંગ્સમાં ગમે ત્યારે બદલી શકાય છે.</string>
+    <string name="consent_details_expand">વિગતો</string>
+    <string name="settings_open_privacy_sheet">ગોપનીયતા સેટિંગ્સ કસ્ટમાઇઝ કરો</string>
+    <string name="settings_privacy_section_header">ગોપનીયતા અને સંમતિઓ</string>
+    <string name="settings_ai_groq_title">વાણી-થી-ટેક્સ્ટ (Groq)</string>
+    <string name="settings_ai_groq_subtitle">ટ્રાન્સક્રિપ્શન માટે વૉઇસ રેકોર્ડિંગ્સ Groq USA ને મોકલો</string>
+    <string name="settings_ai_gemini_title">AI પ્રતિબિંબ (Gemini)</string>
+    <string name="settings_ai_gemini_subtitle">AI સારાંશ માટે Google USA ને ટેક્સ્ટ મોકલો</string>
+    <string name="settings_ai_tts_title">મોટેથી વાંચન (Edge TTS)</string>
+    <string name="settings_ai_tts_subtitle">વૉઇસ આઉટપુટ માટે Microsoft USA ને ટેક્સ્ટ મોકલો</string>
+    <string name="settings_drive_backup_title">Google Drive બેકઅપ</string>
+    <string name="settings_drive_backup_subtitle">તમારા Drive માં એન્ક્રિપ્ટેડ એન્ટ્રીઓ સાચવો</string>
+
+    <!-- DEBUG-only test data seeder (button in journal top bar, only visible in debug builds) -->
+    <string name="dev_seed_create_label">70 પરીક્ષણ એન્ટ્રીઓ બનાવો</string>
+    <string name="dev_seed_delete_label">70 પરીક્ષણ એન્ટ્રીઓ કાઢી નાખો</string>
+    <string name="dev_seed_running">તમારી ભાષામાં 70 પરીક્ષણ એન્ટ્રીઓ બનાવી રહ્યું છે…</string>
+    <string name="dev_seed_done">%1$d પરીક્ષણ એન્ટ્રીઓ બનાવી</string>
+    <string name="dev_seed_deleted">%1$d પરીક્ષણ એન્ટ્રીઓ કાઢી નાખી</string>
+    <string name="dev_seed_error">ભૂલ: %1$s</string>
+    <string name="dev_seed_ai_no_entries">AI એ ટેસ્ટ એન્ટ્રીઓ પરત આપી નથી</string>
+
+    <!-- Premium feature: unlimited follow-ups per journal entry -->
+    <string name="paywall_feature_followups">તમે ઇચ્છો એટલી ડાયરી નોંધો ઉમેરો</string>
+    <string name="settings_premium_feature_followups">અમર્યાદિત વધારાની નોંધો</string>
+    <string name="settings_premium_feature_followups_desc">દરેક પ્રવેશમાં તમે ઇચ્છો તેટલી વધારાની નોંધો</string>
+
+    <!-- Follow-up feature strings -->
+    <string name="action_no">ના</string>
+    <string name="action_yes">હા</string>
+    <string name="ai_improved_suffix"> (AI દ્વારા સુધારેલ)</string>
+    <string name="ai_improved_suffix_marker">✨ AI એ સુધાર્યું</string>
+    <string name="entry_delete_entry_cd">એન્ટ્રી કાઢી નાખો</string>
+    <string name="entry_journal_entry_title">ડાયરી એન્ટ્રી</string>
+    <string name="entry_photos_videos_add_title">ફોટો અને વીડિયો ઉમેરો</string>
+    <string name="follow_up_cancel">રદ કરો</string>
+    <string name="follow_up_card_title">વધારાની નોંધ</string>
+    <string name="follow_up_choose_input_mode">ઇનપુટ પ્રકાર પસંદ કરો</string>
+    <string name="follow_up_delete_button">નોંધ કાઢી નાખો</string>
+    <string name="follow_up_delete_cd">નોંધ કાઢી નાખો</string>
+    <string name="follow_up_delete_confirm_text">શું તમે ખરેખર "<xliff:g id="title" example="મારી નોંધ">%1$s</xliff:g>" કાઢી નાખવા માંગો છો? આ ક્રિયા પૂર્વવત કરી શકાશે નહીં.</string>
+    <string name="follow_up_delete_confirm_title">"<xliff:g id="title" example="મારી નોંધ">%1$s</xliff:g>" કાઢી નાખવી?</string>
+    <string name="follow_up_dialog_label">નોંધ લખો</string>
+    <string name="follow_up_dialog_title">વધારાની નોંધ ઉમેરો</string>
+    <string name="follow_up_discard">છોડી દો</string>
+    <string name="follow_up_improve_text">ટેક્સ્ટ સુધારો</string>
+    <string name="follow_up_improve_with_ai">AI સાથે સુધારો</string>
+    <string name="follow_up_improving">સુધારી રહ્યું છે…</string>
+    <string name="follow_up_inline_title"><xliff:g id="index" example="1">%1$s</xliff:g>. વધારાની નોંધ</string>
+    <string name="follow_up_input_speak_cd">બોલીને લખો</string>
+    <string name="follow_up_input_speak_label">બોલો</string>
+    <string name="follow_up_input_write_cd">ટાઇપ કરીને લખો</string>
+    <string name="follow_up_input_write_label">ટાઇપ કરો</string>
+    <string name="follow_up_premium_body">Premium સાથે દરેક ડાયરી એન્ટ્રીમાં અમર્યાદ વધારાની નોંધો ઉમેરો.</string>
+    <string name="follow_up_premium_hint">વધુ નોંધો જોઈએ છે?</string>
+    <string name="follow_up_premium_later">પછી</string>
+    <string name="follow_up_premium_subscribe">Premium લો</string>
+    <string name="follow_up_premium_subtext">Premium પ્લાન સાથે અમર્યાદ વધારાની નોંધો અનલૉક કરો.</string>
+    <string name="follow_up_premium_title">Premium સુવિધા</string>
+    <string name="follow_up_save">સાચવો</string>
+    <string name="follow_up_save_improved">સુધારેલ સાચવો</string>
+    <string name="follow_up_show_improved">સુધારેલ બતાવો</string>
+    <string name="follow_up_show_original">↩ મૂળ બતાવો</string>
+    <string name="follow_up_speak_pill_label">બોલો</string>
+    <string name="follow_up_speak_prompt">હવે બોલો…</string>
+    <string name="follow_up_stop_hint">રોકવા માટે ટૅપ કરો</string>
+    <string name="follow_up_tab_improved">✨ AI સુધારેલ</string>
+    <string name="follow_up_tab_original">મૂળ</string>
+    <string name="follow_up_text_placeholder">અહીં તમારી નોંધ લખો…</string>
+    <string name="follow_up_transcribing">ટ્રાન્સક્રાઇબ થઈ રહ્યું છે…</string>
+    <string name="journal_improve">સુધારો</string>
+    <string name="journal_state_improving">સુધારી રહ્યું છે…</string>
+    <string name="journal_state_transcribing">ટ્રાન્સક્રાઇબ થઈ રહ્યું છે…</string>
+    <string name="profile_custom_add">પ્રોફાઇલ ઉમેરો</string>
+    <string name="profile_custom_remove">પ્રોફાઇલ દૂર કરો</string>
+    <string name="profile_custom_rename">પ્રોફાઇલ નામ બદલો</string>
+    <string name="profile_custom_rename_save">સાચવો</string>
+    <string name="prompt_clear_confirm_text">શું તમે ખરેખર આ પ્રૉમ્પ્ટ સાફ કરવા માંગો છો?</string>
+    <string name="prompt_clear_confirm_title">પ્રૉમ્પ્ટ સાફ કરવો?</string>
+    <string name="prompt_clear_content_desc">પ્રૉમ્પ્ટ સાફ કરો</string>
+    <string name="prompt_recording_with_model"><xliff:g id="model" example="Whisper">%1$s</xliff:g> સાથે રેકોર્ડ થઈ રહ્યું છે…</string>
+    <string name="prompt_transcribing_with_model"><xliff:g id="model" example="Whisper">%1$s</xliff:g> સાથે ટ્રાન્સક્રાઇબ થઈ રહ્યું છે…</string>
+    <string name="prompt_transcription_model_hint"><xliff:g id="model" example="Whisper">%1$s</xliff:g> નો ઉપયોગ કરીને</string>
+    <string name="ai_retro_copied_message">ક્લિપબોર્ડમાં કૉપી થયું</string>
+    <string name="ai_retro_copy_button">કૉપી કરો</string>
+    <string name="ai_retro_empty_state">સમીક્ષા માટે પૂરતી એન્ટ્રીઓ નથી.</string>
+    <string name="ai_retro_error_state">સમીક્ષા બનાવી શકાઈ નથી. ફરી પ્રયાસ કરો.</string>
+    <string name="ai_retro_generate_button">સમીક્ષા બનાવો</string>
+    <string name="ai_retro_generating_state">સમીક્ષા બની રહી છે…</string>
+    <string name="ai_retro_month_label">આ મહિનો</string>
+    <string name="ai_retro_share_button">શેર કરો</string>
+    <string name="ai_retro_title">AI સમીક્ષા</string>
+    <string name="ai_retro_week_label">આ અઠવાડિયું</string>
+    <string name="ai_retro_year_label">આ વર્ષ</string>
+    <string name="follow_up_add_button">ફોલો-અપ ઉમેરો</string>
+    <string name="follow_up_delete_confirm_no">ના, રાખો</string>
+    <string name="follow_up_delete_confirm_yes">હા, કાઢી નાખો</string>
+    <string name="follow_up_empty_state">હજુ કોઈ ફોલો-અપ નથી.\nપ્રથમ ઉમેરવા માટે નીચેના બટન પર ટેપ કરો.</string>
+    <string name="follow_up_improve_button">સુધારો</string>
+    <string name="follow_up_improve_error">સુધારી શકાયું નથી. ફરી પ્રયાસ કરો.</string>
+    <string name="follow_up_improving_state">સુધારી રહ્યું છે…</string>
+    <string name="follow_up_record_error">રેકોર્ડ કરી શકાયું નથી. ફરી પ્રયાસ કરો.</string>
+    <string name="follow_up_record_new">નવું ફોલો-અપ રેકોર્ડ કરો</string>
+    <string name="follow_up_recording_hint">રેકોર્ડ કરવા ટેપ કરો</string>
+    <string name="follow_up_recording_state">રેકોર્ડ થઈ રહ્યું છે…</string>
+    <string name="follow_up_tab_label">ફોલો-અપ્સ</string>
+    <string name="follow_up_transcribe_error">ટ્રાન્સક્રાઇબ કરી શકાયું નથી. ફરી પ્રયાસ કરો.</string>
+    <string name="follow_up_transcribing_state">ટ્રાન્સક્રાઇબ થઈ રહ્યું છે…</string>
+    <string name="prompt_char_count_label">%1$d અક્ષરો</string>
+    <string name="prompt_improve_button_label">સુધારો</string>
+    <string name="prompt_placeholder_text">તમારા મનમાં જે છે તે લખો…</string>
+    <string name="prompt_record_button_label">રેકોર્ડ</string>
+    <string name="prompt_send_button_label">મોકલો</string>
+    <string name="prompt_stop_button_label">બંધ કરો</string>
+    <string name="settings_legal_section_header">કાનૂની દસ્તાવેજો</string>
+    <string name="settings_legal_online_label">ઑનલાઇન સંસ્કરણ:</string>
+        <plurals name="datetime_months_relative">
+        <item quantity="one">%1$d માસ પહેલાં</item>
+        <item quantity="other">%1$d માસ પહેલાં</item>
+    </plurals>
+        <plurals name="datetime_years_relative">
+        <item quantity="one">%1$d વર્ષ પહેલાં</item>
+        <item quantity="other">%1$d વર્ષ પહેલાં</item>
+    </plurals>
+    <string name="ai_limits_disclaimer">સઘન ઉપયોગ માટે AI દૈનિક ક્વોટા.</string>
+    <string name="ai_limits_dialog_title">દૈનિક AI ક્વોટા કેવી રીતે કામ કરે છે?</string>
+    <string name="ai_limits_dialog_body" formatted="false">PREMIUM સબ્સ્ક્રિપ્શન સાથે\n\nદરરોજ તમારા માટે ઉપલબ્ધ:\n• દરરોજ પ્રત્યેક પ્રોફાઇલ દીઠ 150 વિનંતીઓ — 4 પૂર્વ-વ્યાખ્યાયિત પ્રોફાઇલ માટે 600/દિવસ, વત્તા તમે બનાવેલ દરેક પ્રોફાઇલ માટે 150/દિવસ.\n• 150 ટેક્સ્ટ-સુધારા સુધી\n\nવિગતે આ કેવી રીતે થાય:\n• વિનંતીઓ 1 થી 30: સર્વોચ્ચ AI ગુણવત્તામાં\n• વિનંતીઓ 31 થી 100: ઝડપી પ્રમાણભૂત ગુણવત્તામાં\n• 101મી વિનંતી: એક વખત 30 મિનિટનો વિરામ\n• વિનંતીઓ 101 થી 150: ઝડપી પ્રમાણભૂત ગુણવત્તા\n• 151 વિનંતી પછી: કાલ સુધી વધુ વિનંતીઓ નહીં\n\nઉપરાંત, બધા વપરાશકર્તા માટે:\n• દર કલાકે વધુમાં વધુ 50 AI વિનંતીઓ — ત્યારબાદ 5 મિનિટનો વિરામ\n\nક્વોટા ક્યારે ફરીથી સેટ થાય?\nદરરોજ 0:00 વાગ્યે (તમારો સ્થાનિક સમય) નવો સંપૂર્ણ ક્વોટા શરૂ થાય.\n\n──────────\n\nSUBSCRIPTION વિના\n\n• દર અઠવાડિયે દરેક પ્રોફાઇલ માટે 5 ડૅશબોર્ડ-વિશ્લેષણ\n• દર અઠવાડિયે 5 ટેક્સ્ટ-સુધારા\n• હંમેશા ઝડપી પ્રમાણભૂત ગુણવત્તામાં\n• દર સોમવારે 0:00 વાગ્યે (તમારો સ્થાનિક સમય) ફરીથી સેટ\n\n──────────\n\nરોજના ઉપયોગમાં મોટા ભાગના વપરાશકર્તા ક્યારેય આ મર્યાદા સુધી પહોંચતા નથી.</string>
+    <string name="ai_limits_dialog_close">સમજ્યો</string>
+    <string name="theme_neutral">તટસ્થ</string>
+    <string name="theme_profile">પ્રોફાઇલ રંગ — ડેશબોર્ડ પ્રોફાઇલનો રંગ</string>
+    <string name="theme_solarized">અયનકાળ</string>
+    <string name="theme_dracula">મધ્યરાત્રિ</string>
+    <string name="theme_one_dark">કારીગરી</string>
+    <string name="theme_nord">ધ્રુવ રાત</string>
+    <string name="theme_gruvbox">અંબર</string>
+
+    <string name="permission_rationale_microphone">જેથી તમે અવાજ દ્વારા ડાયરી-નોંધો ઉચ્ચારી શકો, અમને તમારા માઇક્રોફોનની ઍક્સેસ જોઈએ.</string>
+    <string name="permission_rationale_camera">જેથી તમે નોંધોમાં ફોટો ઉમેરી શકો, અમને તમારા કૅમેરાની ઍક્સેસ જોઈએ.</string>
+    <string name="permission_rationale_notifications">જેથી અમે તમને રોજ લખવા માટે યાદ કરાવી શકીએ, અમને સૂચનાઓ માટે પરવાનગી જોઈએ.</string>
+    <string name="consent_info_system_backup_title">Android System-Backup</string>
+    <string name="consent_info_system_backup_body">જો તમે ઉપકરણ-સેટિંગ્સમાં Android System-Backup ચાલુ કર્યું હોય, તો Android તમારા ડાયરી-ડેટાને આપોઆપ તમારા Google ખાતાના Backup-વિભાગમાં સાચવે છે. તમે ઉપકરણ-સેટિંગ્સમાં ગમે ત્યારે આ બંધ કરી શકો — વિગત માટે ગોપનીયતા-નીતિ જુઓ.</string>
+    <string name="settings_open_system_backup_settings_label">Android System-Backup સંચાલિત કરો</string>
+    <string name="settings_open_system_backup_settings_desc">Android સિસ્ટમ-સેટિંગ્સ ખોલે છે, જ્યાં તમે Best Journal માટે આપોઆપ Backup ચાલુ-બંધ કરી શકો.</string>
+    <string name="error_no_backup_settings_available">આ ઉપકરણ પર Backup-સેટિંગ્સ ઉપલબ્ધ નથી.</string>
+    <string name="consent_footer_link_datenschutz">ગોપનીયતા</string>
+    <string name="consent_footer_link_impressum">Impressum</string>
+    <string name="consent_footer_link_agb">ઉપયોગ-શરતો</string>
+    <string name="ai_output_health_disclaimer">ઉપચાર નથી — વ્યાવસાયિક સલાહ-સ્થાન નથી.</string>
+    <string name="ai_output_health_disclaimer_long">Best Journal એ ડાયરી છે, ઉપચાર-સેવા નથી. AI-વિશ્લેષણ સ્વ-ચિંતન માટે સૂચનો છે અને વ્યાવસાયિક મનોવૈજ્ઞાનિક અથવા તબીબી સલાહ-સ્થાન નથી. તીવ્ર સમસ્યાઓ વખતે, કૃપા કરી નિષ્ણાત અથવા તમારા સેટિંગ્સ-ની કટોકટી-સહાય-સ્થળ પર સંપર્ક કરો.</string>
+    <string name="churn_cancelled">રદ કર્યું</string>
+    <string name="churn_cancelled_ends_on">રદ કર્યું — <xliff:g id="date" example="30.04.2026, 18:13">%1$s</xliff:g>ના રોજ સમાપ્ત થાય છે</string>
+    <string name="churn_promo_phase_ends"><xliff:g id="date" example="30.04.2026, 18:13">%1$s</xliff:g>ના રોજ સમાપ્ત — ત્યારબાદ દર મહિને <xliff:g id="base_price" example="3,99 €">%2$s</xliff:g></string>
+    <string name="churn_reason_other_placeholder">કૃપા કરી અમને ટૂંકમાં કહો શું ચાલી રહ્યું છે…</string>
+    <string name="churn_renews_on"><xliff:g id="date" example="30.04.2026, 18:13">%1$s</xliff:g>ના રોજ નવીનીકૃત થાય છે</string>
+    <string name="settings_premium_cancelled">પ્રીમિયમ સબ્સ્ક્રિપ્શન રદ કર્યું</string>
+    <string name="settings_premium_cancelled_desc">તમારી Premium સુવિધાઓ બિલિંગ સમયગાળાના અંત સુધી ઉપલબ્ધ રહેશે. તમે Google Play દ્વારા રદ્દ ઉલટાવી શકો છો.</string>
+    <string name="settings_premium_cancelled_until">પ્રીમિયમ સબ્સ્ક્રિપ્શન રદ કર્યું — <xliff:g id="date" example="30.04.2026, 21:01">%1$s</xliff:g> સુધી ઉપલબ્ધ</string>
+    <string name="settings_theme">થીમ</string>
+    <string name="settings_themes_manager">થીમ્સ મેનેજર</string>
+    <string name="paywall_monthly_note">ત્યાર બાદ %1$s પ્રતિ માસ, આપમેળે રિન્યૂ થાય છે\nગમે ત્યારે રદ કરી શકાય</string>
+</resources>

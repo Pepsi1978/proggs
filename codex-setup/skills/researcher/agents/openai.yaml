@@ -1,0 +1,7 @@
+interface:
+  display_name: "researcher"
+  short_description: "Fast web research for current information"
+  default_prompt: "Use $researcher for this task."
+
+policy:
+  allow_implicit_invocation: true

@@ -1,0 +1,328 @@
+{
+  "layer1_manifest": {
+    "permissions": [
+      {
+        "name": "android.permission.INTERNET",
+        "impliedFeatures": [
+          "Netzwerkzugriff (API-Calls, Firebase, Google Drive, Retrofit)"
+        ],
+        "sensitive": false
+      },
+      {
+        "name": "android.permission.ACCESS_NETWORK_STATE",
+        "impliedFeatures": [
+          "Verbindungsstatus prüfen (Online/Offline-Erkennung)"
+        ],
+        "sensitive": false
+      },
+      {
+        "name": "android.permission.RECORD_AUDIO",
+        "impliedFeatures": [
+          "Sprachaufnahme, lokales Whisper-STT (Sherpa-ONNX)"
+        ],
+        "sensitive": true
+      },
+      {
+        "name": "android.permission.CAMERA",
+        "impliedFeatures": [
+          "Fotos aufnehmen für Journal-Einträge"
+        ],
+        "sensitive": true
+      },
+      {
+        "name": "android.permission.POST_NOTIFICATIONS",
+        "impliedFeatures": [
+          "Reminder-Benachrichtigungen, Wochenzusammenfassungen"
+        ],
+        "sensitive": false
+      },
+      {
+        "name": "android.permission.RECEIVE_BOOT_COMPLETED",
+        "impliedFeatures": [
+          "Reminder nach Gerät-Neustart neu planen (BootReminderReceiver)"
+        ],
+        "sensitive": false
+      }
+    ],
+    "components": {
+      "activities": [
+        {
+          "name": ".MainActivity",
+          "exported": true,
+          "intentFilter": "MAIN/LAUNCHER",
+          "note": "Einzige Activity — Single-Activity-Architektur mit Compose Navigation"
+        }
+      ],
+      "services": [],
+      "receivers": [
+        {
+          "name": ".util.ReminderReceiver",
+          "exported": false
+        },
+        {
+          "name": ".util.WeeklyReviewReceiver",
+          "exported": false
+        },
+        {
+          "name": ".util.MonthlyReviewReceiver",
+          "exported": false
+        },
+        {
+          "name": ".util.YearlyReviewReceiver",
+          "exported": false
+        },
+        {
+          "name": ".util.BootReminderReceiver",
+          "exported": true,
+          "intentFilter": [
+            "android.intent.action.BOOT_COMPLETED",
+            "android.intent.action.TIMEZONE_CHANGED",
+            "android.intent.action.TIME_SET"
+          ],
+          "note": "exported=true notwendig für System-Broadcasts — korrekt und erwartet"
+        }
+      ],
+      "providers": [
+        {
+          "name": "androidx.core.content.FileProvider",
+          "exported": false,
+          "grantUriPermissions": true,
+          "authority": "${applicationId}.fileprovider",
+          "note": "Standard FileProvider, exported=false korrekt"
+        }
+      ]
+    },
+    "deepLinks": [],
+    "backup": {
+      "allowBackup": true,
+      "fullBackupContent": "@xml/backup_rules",
+      "dataExtractionRules": "@xml/data_extraction_rules",
+      "note": "Eigene Backup-Rules vorhanden — Inhalt der XMLs in Schicht 5 (Backup-Audit) prüfen, ob Room-DB-Dateien ausgeschlossen sind"
+    },
+    "network": {
+      "usesCleartextTraffic": "nicht explizit gesetzt (Default=false ab API 28 — korrekt)",
+      "networkSecurityConfig": "@xml/network_security_config",
+      "note": "Eigene NSC vorhanden — Inhalt in Schicht 5 prüfen auf Cleartext-Ausnahmen oder Certificate-Pinning"
+    },
+    "debuggable": "nicht explizit gesetzt (Default=false im Release-Build korrekt; Debug-Build erhält applicationIdSuffix .debug)",
+    "exportedComponents": [
+      {
+        "component": ".MainActivity",
+        "reason": "Launcher-Entry-Point — korrekt und notwendig"
+      },
+      {
+        "component": ".util.BootReminderReceiver",
+        "reason": "BOOT_COMPLETED/TIMEZONE_CHANGED/TIME_SET System-Broadcasts empfangen — korrekt und notwendig"
+      }
+    ]
+  },
+  "layer2_dependencies": {
+    "libraries": [
+      {
+        "name": "Jetpack Compose BOM",
+        "version": "2025.01.01",
+        "capability": "UI-Framework",
+        "activeUsage": true
+      },
+      {
+        "name": "Room",
+        "version": "2.7.0",
+        "capability": "Lokale SQLite-Datenbank für Journal-Einträge",
+        "activeUsage": true
+      },
+      {
+        "name": "Hilt",
+        "version": "2.55",
+        "capability": "Dependency Injection",
+        "activeUsage": true
+      },
+      {
+        "name": "Retrofit",
+        "version": "2.11.0",
+        "capability": "HTTP-Netzwerk (API-Calls, Google Drive)",
+        "activeUsage": true
+      },
+      {
+        "name": "OkHttp + logging-interceptor",
+        "version": "4.12.0",
+        "capability": "HTTP-Client mit Logging",
+        "activeUsage": true
+      },
+      {
+        "name": "Moshi",
+        "version": "1.15.1",
+        "capability": "JSON-Serialisierung",
+        "activeUsage": true
+      },
+      {
+        "name": "Firebase BOM",
+        "version": "34.11.0",
+        "capability": "Firebase-Umbrella",
+        "activeUsage": true
+      },
+      {
+        "name": "firebase-ai",
+        "version": "via BOM",
+        "capability": "Gemini KI über Firebase AI Logic (Textgenerierung, Journaling-Assistent)",
+        "activeUsage": true,
+        "dsgvoRelevant": true
+      },
+      {
+        "name": "firebase-appcheck-playintegrity",
+        "version": "via BOM",
+        "capability": "App-Integritätsprüfung (Play Integrity API)",
+        "activeUsage": true
+      },
+      {
+        "name": "firebase-appcheck-debug",
+        "version": "via BOM",
+        "capability": "Debug-Token für AppCheck in Entwicklung",
+        "activeUsage": true,
+        "debugOnly": true
+      },
+      {
+        "name": "firebase-config",
+        "version": "via BOM",
+        "capability": "Remote Config (Feature-Flags, Paywall-Konfiguration)",
+        "activeUsage": true
+      },
+      {
+        "name": "firebase-analytics",
+        "version": "via BOM",
+        "capability": "Nutzungsanalyse — DSGVO-relevant (automatisch Gerätedaten und App-Events)",
+        "activeUsage": true,
+        "dsgvoRelevant": true
+      },
+      {
+        "name": "firebase-functions",
+        "version": "via BOM",
+        "capability": "Cloud Functions (Subscription-Status-Check)",
+        "activeUsage": true
+      },
+      {
+        "name": "play-billing-ktx",
+        "version": "7.1.1",
+        "capability": "In-App-Käufe/Paywall (Premium-Abonnement)",
+        "activeUsage": true
+      },
+      {
+        "name": "play-review-ktx",
+        "version": "2.0.2",
+        "capability": "In-App-Bewertungsdialog",
+        "activeUsage": true
+      },
+      {
+        "name": "play-services-auth",
+        "version": "21.3.0",
+        "capability": "Google Sign-In",
+        "activeUsage": true,
+        "note": "Direkt hardcodiert in build.gradle.kts — nicht im TOML-Catalog (Inkonsistenz)"
+      },
+      {
+        "name": "androidx.credentials",
+        "version": "1.5.0-alpha06",
+        "capability": "Credential Manager API für modernes Sign-In",
+        "activeUsage": true,
+        "note": "Alpha-Version in Produktions-Build"
+      },
+      {
+        "name": "google-api-client-android",
+        "version": "2.7.0",
+        "capability": "Google API-Client-Basislib",
+        "activeUsage": true
+      },
+      {
+        "name": "google-api-services-drive",
+        "version": "v3-rev20241206-2.0.0",
+        "capability": "Google Drive Backup/Restore von Journal-Daten",
+        "activeUsage": true,
+        "dsgvoRelevant": true
+      },
+      {
+        "name": "security-crypto",
+        "version": "1.1.0-alpha06",
+        "capability": "EncryptedSharedPreferences (verschlüsselte lokale Daten)",
+        "activeUsage": true,
+        "note": "Alpha-Version + offiziell deprecated — DataStore+Tink empfohlen"
+      },
+      {
+        "name": "biometric",
+        "version": "1.2.0-alpha05",
+        "capability": "Biometrische Authentifizierung (Fingerabdruck/Gesicht)",
+        "activeUsage": true,
+        "note": "Alpha-Version in Produktions-Build"
+      },
+      {
+        "name": "sherpa-onnx",
+        "version": "1.12.34",
+        "capability": "Lokales On-Device Whisper-STT (keine Cloud-Übertragung von Audio)",
+        "activeUsage": true,
+        "note": "Lokale AAR-Datei — keine automatischen Sicherheits-Updates"
+      },
+      {
+        "name": "Coil 3 (compose + video)",
+        "version": "3.0.4",
+        "capability": "Bild- und Video-Loading",
+        "activeUsage": true
+      },
+      {
+        "name": "Lottie Compose",
+        "version": "6.6.4",
+        "capability": "JSON-basierte Animationen",
+        "activeUsage": true
+      },
+      {
+        "name": "kotlinx-coroutines",
+        "version": "1.9.0",
+        "capability": "Asynchrone Programmierung",
+        "activeUsage": true
+      },
+      {
+        "name": "navigation-compose",
+        "version": "2.8.7",
+        "capability": "Compose Navigation",
+        "activeUsage": true
+      },
+      {
+        "name": "JUnit 5",
+        "version": "5.10.2",
+        "capability": "Unit-Tests",
+        "activeUsage": true,
+        "testOnly": true
+      },
+      {
+        "name": "MockK",
+        "version": "1.13.13",
+        "capability": "Mocking-Framework für Tests",
+        "activeUsage": true,
+        "testOnly": true
+      }
+    ],
+    "minifyEnabled": false,
+    "r8Note": "R8 bewusst deaktiviert während aktiver Entwicklung. Kommentar in build.gradle.kts Z. 93-97: Sprint 'Release-Hardening' setzt isMinifyEnabled=true. isShrinkResources=false. proguard-rules.pro liegt bereit. PS-001 als deferred-to-release-build markiert. KEIN Finding — dokumentierter Zustand.",
+    "sdkSummary": {
+      "ai": "firebase-ai (Gemini via Firebase AI Logic) + sherpa-onnx 1.12.34 (lokales On-Device Whisper-STT)",
+      "billing": "play-billing-ktx 7.1.1 (In-App-Abonnement/Paywall)",
+      "firebase": "BOM 34.11.0 — analytics (DSGVO), ai (Gemini), appcheck-playintegrity, config (Remote Config), functions (Cloud Functions)",
+      "webview": "NICHT vorhanden",
+      "room": "Room 2.7.0 (Journal-SQLite-DB)",
+      "workmanager": "NICHT direkt vorhanden — Reminder laufen über AlarmManager + BroadcastReceiver (4 Receiver: täglich, wöchentlich, monatlich, jährlich)"
+    }
+  },
+  "observations": [
+    "CAMERA + RECORD_AUDIO: beide als required=false in uses-feature deklariert — korrekt für optionale Features, Play-Store-Filterung nicht zu restriktiv.",
+    "firebase-analytics aktiv: Sendet automatisch Gerätedaten und App-Events an Google. DSGVO-Pflicht: Muss in Datenschutzerklärung genannt werden; Consent-Management oder Opt-Out prüfen, besonders wenn EU-Nutzer.",
+    "google-drive-api: Schreibt Journal-Backups (potenziell persönliche/Gesundheitsdaten) in User-Drive. DSGVO: Explizite Einwilligung und transparente Datenschutzerklärung erforderlich.",
+    "firebase-ai (Gemini): Journal-Inhalte könnten als Prompt an Gemini gesendet werden. DSGVO/Datenschutz: Muss klar kommuniziert werden welche Daten die KI verarbeitet.",
+    "security-crypto 1.1.0-alpha06 ist deprecated (EncryptedSharedPreferences). Empfehlung: DataStore + Tink. Kein akutes Sicherheitsproblem, aber technische Schuld.",
+    "credentials 1.5.0-alpha06 + biometric 1.2.0-alpha05: Alpha-Versionen in Produktions-Build — erhöhtes Risiko für Breaking Changes bei Library-Updates.",
+    "play-services-auth:21.3.0 direkt hardcodiert in build.gradle.kts (nicht im TOML-Catalog) — Inkonsistenz erhöht Wartungsaufwand bei Updates.",
+    "allowBackup=true mit eigenen Backup-Rules: Inhalt von backup_rules.xml und data_extraction_rules.xml muss in Schicht 5 geprüft werden — kritisch wenn Room-DB oder EncryptedSharedPrefs im Backup landen.",
+    "Kein WorkManager: AlarmManager + BroadcastReceiver können auf neueren Android-Versionen bei Doze-Mode/App-Standby unzuverlässig sein. WorkManager wäre robuster für Reminder.",
+    "sherpa-onnx als lokale AAR: Keine automatischen Sicherheits-Updates — manuelle Versionspflege erforderlich."
+  ],
+  "plugin_bugs_observed": [
+    "app-roentgen-export.json enthält laut Aufgabenbeschreibung bereits Permissions/SDKs, war aber leer/nicht auswertbar für Dependency-Daten — der Exporter sollte libs.versions.toml bereits vorparsen, damit Worker R1 die TOML nicht selbst lesen muss.",
+    "Das Report-Schema für exportedComponents sollte den vollen Intent-Filter-Action-String abbilden (nicht nur exported=true/false) — für DSGVO-Audit ist der konkrete System-Broadcast entscheidend."
+  ]
+}

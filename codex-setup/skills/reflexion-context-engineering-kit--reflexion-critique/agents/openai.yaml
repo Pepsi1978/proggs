@@ -1,0 +1,7 @@
+interface:
+  display_name: "reflexion:critique"
+  short_description: "Comprehensive multi-perspective review using specialized judges"
+  default_prompt: "Use $reflexion-context-engineering-kit--reflexion-critique for this task."
+
+policy:
+  allow_implicit_invocation: false

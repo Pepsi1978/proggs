@@ -1,0 +1,7 @@
+interface:
+  display_name: "token-integration-analyzer"
+  short_description: "Token integration and implementation analyzer based on Trail of"
+  default_prompt: "Use $building-secure-contracts-trailofbits--token-integration-analyzer for this task."
+
+policy:
+  allow_implicit_invocation: false

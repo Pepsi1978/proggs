@@ -1,0 +1,7 @@
+interface:
+  display_name: "plugin-validator"
+  short_description: "Validate Codex plugin structure, plugin.json, and component"
+  default_prompt: "Use $plugin-dev-codex-plugins-official--plugin-validator for this task."
+
+policy:
+  allow_implicit_invocation: false

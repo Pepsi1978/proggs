@@ -1,0 +1,35 @@
+{
+  "_format": "FIN-045 Cross-Language Audit Finding",
+  "discoveredAt": "2026-05-22T18:21:56.743414",
+  "discoveredBy": "phase 1.5 cross-language audit (FIN-045 Loop 5)",
+  "category": "broken-translation",
+  "severity": "high",
+  "key": "ai_improved_suffix_marker",
+  "de_value": "✨ KI-verbessert",
+  "affected_locales": [
+    {
+      "locale": "en",
+      "value": "(✨",
+      "translatable": "false",
+      "issue": "truncated value + wrongly marked non-translatable"
+    },
+    {
+      "locale": "es",
+      "value": "(✨",
+      "translatable": "false",
+      "issue": "truncated value + wrongly marked non-translatable"
+    },
+    {
+      "locale": "fr",
+      "value": "(✨",
+      "translatable": "false",
+      "issue": "truncated value + wrongly marked non-translatable"
+    }
+  ],
+  "correctly_translated_locales": 23,
+  "examples_correct": {
+    "pl": "✨ Ulepszone przez AI"
+  },
+  "suggested_fix": "1. Remove translatable=\"false\" attribute in en/es/fr. 2. Re-translate via uebersetzung skill (NICHT direkt editieren — FIN-032 Pflicht). 3. Pre-commit hook bleibt aktiv falls romanische Apostrophe vorkommen.",
+  "plugin_bug_observation": "FIN-045 sollte zusaetzlich erkennen wenn ein Key in einer Sprache translatable=\"false\" markiert ist, aber in der DE-Referenz translatable=\"true\" (Default). Das ist eine andere Bug-Klasse als der atomare Schreibfehler aus BUG #23."
+}

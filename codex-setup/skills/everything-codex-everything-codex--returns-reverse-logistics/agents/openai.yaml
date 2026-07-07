@@ -1,0 +1,7 @@
+interface:
+  display_name: "returns-reverse-logistics"
+  short_description: "returns-reverse-logistics skill"
+  default_prompt: "Use $everything-codex-everything-codex--returns-reverse-logistics for this task."
+
+policy:
+  allow_implicit_invocation: false

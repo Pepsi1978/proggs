@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Compose rendert die UI selbst; dunkles Plattform-Theme verhindert den weissen Start-Blitz. -->
+    <style name="Theme.VoiceKey" parent="android:Theme.Material.NoActionBar">
+        <item name="android:windowBackground">#0C0A09</item>
+    </style>
+
+    <!--
+      Trampolin-Theme: komplett durchsichtig und ohne Animation — die Activity weckt nur den
+      Bildschirm (showWhenLocked/turnScreenOn im Manifest) und feuert den ChatGPT-Trigger.
+    -->
+    <style name="Theme.VoiceKey.Transparent">
+        <item name="android:windowIsTranslucent">true</item>
+        <item name="android:windowBackground">@android:color/transparent</item>
+        <item name="android:windowContentOverlay">@null</item>
+        <item name="android:windowNoTitle">true</item>
+        <item name="android:backgroundDimEnabled">false</item>
+        <item name="android:windowAnimationStyle">@null</item>
+    </style>
+</resources>

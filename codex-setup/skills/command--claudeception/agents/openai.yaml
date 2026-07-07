@@ -1,0 +1,7 @@
+interface:
+  display_name: "command--claudeception"
+  short_description: "Continuous learning command that extracts reusable knowledge"
+  default_prompt: "Use $command--claudeception for this task."
+
+policy:
+  allow_implicit_invocation: false

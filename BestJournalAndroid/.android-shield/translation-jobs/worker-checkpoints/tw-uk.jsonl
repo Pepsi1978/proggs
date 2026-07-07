@@ -1,0 +1,4 @@
+{"stage": "start", "info": {"target": "C:\\Users\\barwa/proggs/BestJournalAndroid/app/src/main/res/values-uk/strings.xml", "n_strings": 34}}
+{"stage": "strings_done", "info": {"applied": 33, "inserted": ["paywall_monthly_note"], "skipped": []}}
+{"stage": "plurals_done", "info": {"replaced": ["datetime_months_relative", "datetime_years_relative"]}}
+{"stage": "write_done", "info": {"errors": []}}

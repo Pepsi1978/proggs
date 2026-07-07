@@ -1,0 +1,7 @@
+interface:
+  display_name: "exa-search"
+  short_description: "Neural search via Exa MCP for web, code, and company research"
+  default_prompt: "Use $everything-codex-everything-codex--exa-search for this task."
+
+policy:
+  allow_implicit_invocation: false

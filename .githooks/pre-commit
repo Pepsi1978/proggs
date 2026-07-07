@@ -1,0 +1,129 @@
+#!/bin/bash
+# Pre-commit hook: validate Android strings.xml files for unescaped apostrophes.
+# Triggered by BUG #29 (Worker A apostrophe build-blocker, finale plugin run 2026-05-22).
+# Installed by Claude Code (2026-05-22, Task #14).
+#
+# Behavior:
+# - Looks at all staged values-XX/strings.xml under any Android app in this repo
+# - Runs check_apostrophes.py (auto-escape) on each — it modifies the file in place
+#   if it finds unescaped apostrophes
+# - Auto-re-stages any modified file so the fix lands in the same commit
+# - Only romance + Turkish locales are validated by default (where the bug actually
+#   bites); all other locales are skipped silently
+# - Skipped without error when the validator is not present (fresh checkout)
+
+set -euo pipefail
+
+VALIDATOR="$HOME/.claude/skills/übersetzung/scripts/validators/check_apostrophes.py"
+
+if [ ! -f "$VALIDATOR" ]; then
+    exit 0
+fi
+
+# Locales where unescaped apostrophes commonly break the Android build.
+# Extend this list when a new build-breaking locale shows up.
+APOSTROPHE_LOCALES_REGEX='^(fr|it|es|pt-rBR|pt-rPT|ca|oc|ro|tr)$'
+
+# Collect staged Android strings.xml files (any app, any locale).
+mapfile -t STAGED_FILES < <(
+    git diff --cached --name-only --diff-filter=ACMR \
+      | grep -E 'app/src/main/res/values(-[A-Za-z0-9-]+)?/strings\.xml$' || true
+)
+
+if [ "${#STAGED_FILES[@]}" -eq 0 ]; then
+    exit 0
+fi
+
+FIXED_FILES=()
+FAILED=0
+
+for file in "${STAGED_FILES[@]}"; do
+    # Extract locale from path: values-fr/strings.xml -> fr; values/strings.xml -> default
+    dir=$(dirname "$file")
+    base=$(basename "$dir")
+    if [ "$base" = "values" ]; then
+        locale="default"
+    else
+        locale="${base#values-}"
+    fi
+
+    # Only validate locales where the issue is known to break builds
+    if ! echo "$locale" | grep -qE "$APOSTROPHE_LOCALES_REGEX"; then
+        continue
+    fi
+
+    abs_path="$(pwd)/$file"
+
+    # Validator auto-escapes and rewrites the file; exit 0 on success or no-op
+    output=$(PYTHONIOENCODING=utf-8 python3 "$VALIDATOR" --locale "$locale" --path "$abs_path" 2>&1) || {
+        echo "[pre-commit] validator error on $file:"
+        echo "$output"
+        FAILED=$((FAILED + 1))
+        continue
+    }
+
+    case "$output" in
+        OK:*)
+            # No changes needed
+            ;;
+        Fixed:*)
+            echo "[pre-commit] auto-escaped apostrophes in $file ($output)"
+            FIXED_FILES+=("$file")
+            ;;
+        *)
+            echo "[pre-commit] unexpected validator output on $file: $output"
+            ;;
+    esac
+done
+
+if [ "${#FIXED_FILES[@]}" -gt 0 ]; then
+    # Re-stage the files so the auto-fix is part of this commit
+    git add -- "${FIXED_FILES[@]}"
+    echo "[pre-commit] re-staged ${#FIXED_FILES[@]} auto-escaped file(s)."
+fi
+
+if [ "$FAILED" -gt 0 ]; then
+    echo "[pre-commit] $FAILED file(s) failed validation — fix manually and re-commit."
+    exit 1
+fi
+
+# ---------------------------------------------------------------------------
+# CancellationException-Guard (Poka-Yoke Stufe 2, 2026-07-02): in Kotlin-Coroutine-Dateien
+# darf catch(Exception) die CancellationException nicht verschlucken (Almanach kotlin 2.1).
+# Bewusste Ausnahmen: Marker "// no-cancellation-rethrow" an der catch-Zeile.
+# ---------------------------------------------------------------------------
+CANCEL_CHECK="tools/check_cancellation_rethrow.py"
+if [ -f "$CANCEL_CHECK" ] && command -v python3 >/dev/null 2>&1; then
+    mapfile -t STAGED_KT < <(
+        git diff --cached --name-only --diff-filter=ACMR | grep -E '\.kt$' || true
+    )
+    if [ "${#STAGED_KT[@]}" -gt 0 ]; then
+        if ! python3 "$CANCEL_CHECK" "${STAGED_KT[@]}"; then
+            echo "[pre-commit] CancellationException-Guard: Verstoesse beheben und erneut committen."
+            exit 1
+        fi
+    fi
+fi
+
+# ---------------------------------------------------------------------------
+# Android-Bug-Guard (Poka-Yoke Stufe 2, 2026-07-03, #47446): blockiert
+# @Insert(onConflict = REPLACE) auf Room-Tabellen mit CASCADE-Kindern —
+# REPLACE = DELETE+INSERT loescht die Kinder still (Almanach room K1,
+# realer Datenverlust EntropieReductor #47442). Nur exit-Code 2 blockiert;
+# Skript-Fehler (andere Codes) lassen den Commit bewusst durch.
+# Bewusste Ausnahme: COMMIT_ALLOW_REPLACE_CASCADE=1 git commit ...
+# ---------------------------------------------------------------------------
+BUG_GUARD=".githooks/android-bug-guard.py"
+if [ -f "$BUG_GUARD" ] && command -v python3 >/dev/null 2>&1; then
+    set +e
+    python3 "$BUG_GUARD"
+    guard_status=$?
+    set -e
+    if [ "$guard_status" -eq 2 ] && [ "${COMMIT_ALLOW_REPLACE_CASCADE:-0}" != "1" ]; then
+        echo "[pre-commit] Android-Bug-Guard: REPLACE+CASCADE-Verstoss beheben (@Upsert) und erneut committen."
+        exit 1
+    fi
+fi
+
+exit 0
+

@@ -1,0 +1,7 @@
+interface:
+  display_name: "swift-protocol-di-testing"
+  short_description: "Protocol-based dependency injection for testable Swift code —"
+  default_prompt: "Use $everything-codex-everything-codex--swift-protocol-di-testing for this task."
+
+policy:
+  allow_implicit_invocation: false

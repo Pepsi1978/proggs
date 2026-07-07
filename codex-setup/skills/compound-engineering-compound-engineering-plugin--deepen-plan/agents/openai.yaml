@@ -1,0 +1,7 @@
+interface:
+  display_name: "deepen-plan"
+  short_description: "Enhance a plan with parallel research agents for each section"
+  default_prompt: "Use $compound-engineering-compound-engineering-plugin--deepen-plan for this task."
+
+policy:
+  allow_implicit_invocation: false

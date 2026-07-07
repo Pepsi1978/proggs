@@ -1,0 +1,7 @@
+interface:
+  display_name: "command--command--undo-changes"
+  short_description: "the user says \"mach rueckgaengig\", \"undo\", \"revert\", \"Aenderung"
+  default_prompt: "Use $command--undo-changes for this task."
+
+policy:
+  allow_implicit_invocation: false

@@ -1,0 +1,7 @@
+interface:
+  display_name: "git:notes"
+  short_description: "adding metadata to commits without changing history, tracking"
+  default_prompt: "Use $git-context-engineering-kit--git-notes for this task."
+
+policy:
+  allow_implicit_invocation: false

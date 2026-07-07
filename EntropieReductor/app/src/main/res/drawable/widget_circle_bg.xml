@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Kreis-Hintergrund fuer den Settings-Zahnrad-Button im Widget-Header.
+  Farbe wird zur Laufzeit ueberschrieben (Theme).
+-->
+<shape xmlns:android="http://schemas.android.com/apk/res/android"
+    android:shape="oval">
+    <solid android:color="#2A1F44" />
+</shape>

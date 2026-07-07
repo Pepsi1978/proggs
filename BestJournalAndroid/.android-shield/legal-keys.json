@@ -1,0 +1,1236 @@
+{
+  "categories": {
+    "paywall_billing": [
+      {
+        "key": "ai_limit_body",
+        "de": "Ohne Abo hast du 5\\u00A0Textverbesserungen pro Woche und 5\\u00A0Dashboard-Aktualisierungen pro Woche je Profil.\\nMit dem Premium-Abo: bis zu 150 pro Tag."
+      },
+      {
+        "key": "ai_limit_monthly",
+        "de": "Monatsabo, %1$s/Monat"
+      },
+      {
+        "key": "ai_limit_no_thanks",
+        "de": "Nein danke, weiter ohne KI"
+      },
+      {
+        "key": "ai_limit_title",
+        "de": "Dein Wochenlimit ist erreicht"
+      },
+      {
+        "key": "ai_limit_yearly",
+        "de": "Jahresabo, %1$s/Jahr (spare 37%%)"
+      },
+      {
+        "key": "ai_limits_dialog_body",
+        "de": "MIT PREMIUM-ABO\\n\\nPro Tag stehen dir zur Verfügung:\\n• 150 Anfragen pro Tag und Profil — für die 4 vordefinierten zusammen 600/Tag, plus 150/Tag für jedes eigene Profil das du erstellst.\\n• Bis zu 150 Text-Verbesserungen\\n\\nWie das im Detail abläuft:\\n• Anfragen 1 bis 30: in höchster KI-Qualität\\n• Anfragen 31 bis 100: in schneller Standard-Qualität\\n• Bei der 101. Anfrage: einmalige 30-Min-Pause\\n• Anfragen 101 bis 150: schnelle Standard-Qualität\\n• Ab Anfrage 151: keine weiteren Anfragen bis morgen\\n\\nAußerdem gilt für alle Nutzer:\\n• Höchstens 50 KI-Anfragen pro Stunde — danach 5-Min-Pause\\n\\nWann werden die Kontingente zurückgesetzt?\\nJeden Tag um 0:00 Uhr (deine Lokalzeit) startet ein neues volles Kontingent.\\n\\n──────────\\n\\nOHNE ABO\\n\\n• 5 Dashboard-Analysen pro Woche pro Profil\\n• 5 Text-Verbesserungen pro Woche\\n• Immer in schneller Standard-Qualität\\n• Zurückgesetzt jeden Montag um 0:00 Uhr (deine Lokalzeit)\\n\\n──────────\\n\\nDie meisten Nutzer im Alltag werden diese Grenzen nicht erreichen."
+      },
+      {
+        "key": "ai_limits_dialog_close",
+        "de": "Verstanden"
+      },
+      {
+        "key": "ai_limits_dialog_title",
+        "de": "Wie funktioniert das KI-Tageskontingent?"
+      },
+      {
+        "key": "ai_limits_disclaimer",
+        "de": "KI-Tageskontingent für intensive Nutzung."
+      },
+      {
+        "key": "churn_price",
+        "de": "Preis"
+      },
+      {
+        "key": "journal_write_about",
+        "de": "Darüber schreiben"
+      },
+      {
+        "key": "onboarding_free_after_trial",
+        "de": "Danach nutzt du Best Journal weiter,\\nkostenlos mit begrenzten KI-Aufrufen pro Woche."
+      },
+      {
+        "key": "onboarding_free_trial",
+        "de": "Kostenlos, jederzeit kündbar"
+      },
+      {
+        "key": "onboarding_premium_feature_dashboard",
+        "de": "Automatische Dashboard-Updates bei jedem neuen Eintrag"
+      },
+      {
+        "key": "onboarding_premium_feature_improve",
+        "de": "KI-Textverbesserung täglich, jeder Eintrag wird klarer und ausdrucksstärker"
+      },
+      {
+        "key": "onboarding_premium_feature_noads",
+        "de": "Keine Werbung, ungestört schreiben und reflektieren"
+      },
+      {
+        "key": "onboarding_premium_feature_patterns",
+        "de": "Muster sichtbar machen: Die KI zeigt wiederkehrende Denk- und Gefühlsmuster in deinen Einträgen"
+      },
+      {
+        "key": "onboarding_premium_feature_pdf",
+        "de": "PDF-Export mit Fotos, sichere deine Einträge als Dokument"
+      },
+      {
+        "key": "onboarding_premium_feature_retro",
+        "de": "Wochen-, Monats- und Jahresrückblicke zeigen deine Entwicklung"
+      },
+      {
+        "key": "paywall_day7",
+        "de": "Tag 7"
+      },
+      {
+        "key": "paywall_day8",
+        "de": "Tag 8"
+      },
+      {
+        "key": "paywall_exit_bonus_days",
+        "de": "+ %1$d Tage extra Testzeit"
+      },
+      {
+        "key": "paywall_exit_discount",
+        "de": "Rabatt für %1$d Monate"
+      },
+      {
+        "key": "paywall_exit_price_comparison",
+        "de": "Nur %1$s statt %2$s pro Monat"
+      },
+      {
+        "key": "paywall_exit_special_offer",
+        "de": "Wir haben ein besonderes\\nAngebot für dich:"
+      },
+      {
+        "key": "paywall_exit_start_discount",
+        "de": "Zahlungspflichtig — 2 Monate zum halben Preis"
+      },
+      {
+        "key": "paywall_exit_wait",
+        "de": "Warte kurz!"
+      },
+      {
+        "key": "paywall_feature_dashboard",
+        "de": "KI-Dashboard-Updates nach neuen Einträgen"
+      },
+      {
+        "key": "paywall_feature_followups",
+        "de": "Unbegrenzte Nachträge zu jedem Tagebucheintrag"
+      },
+      {
+        "key": "paywall_feature_improve",
+        "de": "KI-Textverbesserung für deine Einträge"
+      },
+      {
+        "key": "paywall_feature_noads",
+        "de": "Spreche oder schreibe ungestört, ohne Werbung"
+      },
+      {
+        "key": "paywall_feature_patterns",
+        "de": "Erkenne wiederkehrende Muster in deinem Denken"
+      },
+      {
+        "key": "paywall_feature_pdf",
+        "de": "Tagebucheinträge mit Fotos als PDF exportieren"
+      },
+      {
+        "key": "paywall_feature_profiles",
+        "de": "Unbegrenzte individuelle KI-Profile"
+      },
+      {
+        "key": "paywall_feature_retro",
+        "de": "Alle Rückblicke KI generiert"
+      },
+      {
+        "key": "paywall_first_payment",
+        "de": "Erste Zahlung"
+      },
+      {
+        "key": "paywall_free_note",
+        "de": "Die App funktioniert auch ohne Abo weiter."
+      },
+      {
+        "key": "paywall_from_per_day",
+        "de": "Jahresabo, %1$s pro Jahr"
+      },
+      {
+        "key": "paywall_full_access",
+        "de": "Voller Zugang"
+      },
+      {
+        "key": "paywall_headline_clarity",
+        "de": "Verstehe dich selbst besser"
+      },
+      {
+        "key": "paywall_headline_clarity_sub",
+        "de": "Die KI erkennt Muster, die dir verborgen bleiben"
+      },
+      {
+        "key": "paywall_headline_default",
+        "de": "Entdecke dich selbst\\nJeden Tag ein Stück mehr"
+      },
+      {
+        "key": "paywall_headline_default_sub",
+        "de": "Dein persönlicher KI-Begleiter im Alltag"
+      },
+      {
+        "key": "paywall_headline_growth",
+        "de": "Entdecke das Gute in jedem Tag"
+      },
+      {
+        "key": "paywall_headline_growth_sub",
+        "de": "Dein persönlicher Raum für Dankbarkeit und Wachstum"
+      },
+      {
+        "key": "paywall_headline_stress",
+        "de": "Mehr Klarheit im Alltag"
+      },
+      {
+        "key": "paywall_headline_stress_sub",
+        "de": "Erkenne was dich täglich beschäftigt und bringe es auf den Punkt."
+      },
+      {
+        "key": "paywall_headline_thoughts",
+        "de": "Lass deine Gedanken fließen"
+      },
+      {
+        "key": "paywall_headline_thoughts_sub",
+        "de": "Dein kreativer Begleiter im Alltag"
+      },
+      {
+        "key": "paywall_instead_per_month",
+        "de": "Spare %1$d%% gegenüber dem Monatsabo"
+      },
+      {
+        "key": "paywall_legal_hint",
+        "de": "Mit dem Abo akzeptierst du die %1$s. Dein 14-tägiges Widerrufsrecht ist dort beschrieben."
+      },
+      {
+        "key": "paywall_legal_hint_link",
+        "de": "Nutzungsbedingungen"
+      },
+      {
+        "key": "paywall_lifetime_desc",
+        "de": "Einmal zahlen, alles nutzen"
+      },
+      {
+        "key": "paywall_lifetime_note",
+        "de": "Kein Abo, keine Verlängerung"
+      },
+      {
+        "key": "paywall_lifetime_title",
+        "de": "Einmalkauf"
+      },
+      {
+        "key": "paywall_monthly_plan",
+        "de": "Monatsabo, %1$s pro Monat"
+      },
+      {
+        "key": "paywall_most_popular",
+        "de": "Empfohlen"
+      },
+      {
+        "key": "paywall_or",
+        "de": "oder"
+      },
+      {
+        "key": "paywall_prices_loading",
+        "de": "Preise werden geladen…"
+      },
+      {
+        "key": "paywall_purchase_loading_toast",
+        "de": "Kaufvorgang wird geladen, bitte versuche es gleich nochmal."
+      },
+      {
+        "key": "paywall_reminder",
+        "de": "Erinnerung"
+      },
+      {
+        "key": "paywall_sub_loading_toast",
+        "de": "Abo wird geladen, bitte versuche es gleich nochmal."
+      },
+      {
+        "key": "paywall_today",
+        "de": "Heute"
+      },
+      {
+        "key": "paywall_with_limited",
+        "de": "mit eingeschränkten Limits."
+      },
+      {
+        "key": "paywall_yearly_note",
+        "de": "Danach %1$s pro Jahr, verlängert sich automatisch\\nIn der Testphase jederzeit kündbar"
+      },
+      {
+        "key": "settings_about",
+        "de": "Über die App"
+      },
+      {
+        "key": "settings_about_desc",
+        "de": "Dein persönliches KI-Tagebuch"
+      },
+      {
+        "key": "settings_about_version",
+        "de": "Best Journal V0.21.9"
+      },
+      {
+        "key": "settings_delete_account_abort",
+        "de": "Vorgang abbrechen"
+      },
+      {
+        "key": "settings_manage_subscription",
+        "de": "Abo verwalten"
+      },
+      {
+        "key": "settings_premium_feature_5_perspectives",
+        "de": "Alle KI-Profile (4 vordefiniert + unbegrenzt eigene)"
+      },
+      {
+        "key": "settings_premium_feature_5_perspectives_desc",
+        "de": "Von Zusammenfassung bis Selbsterkenntnis"
+      },
+      {
+        "key": "settings_premium_feature_dashboard",
+        "de": "Tägliche Dashboard-Analysen"
+      },
+      {
+        "key": "settings_premium_feature_dashboard_desc",
+        "de": "Dein Dashboard wächst mit deinen Einträgen."
+      },
+      {
+        "key": "settings_premium_feature_followups",
+        "de": "Unbegrenzte Nachträge"
+      },
+      {
+        "key": "settings_premium_feature_followups_desc",
+        "de": "So viele Nachträge pro Eintrag wie du möchtest"
+      },
+      {
+        "key": "settings_premium_feature_improve",
+        "de": "Tägliche KI-Textverbesserung"
+      },
+      {
+        "key": "settings_premium_feature_improve_desc",
+        "de": "KI verbessert deine Einträge auf Wunsch."
+      },
+      {
+        "key": "settings_premium_feature_patterns",
+        "de": "Muster-Erkennung"
+      },
+      {
+        "key": "settings_premium_feature_patterns_desc",
+        "de": "Die KI kann Muster und Zusammenhänge in deinen Einträgen sichtbar machen"
+      },
+      {
+        "key": "settings_premium_feature_pdf",
+        "de": "PDF-Export mit Fotos"
+      },
+      {
+        "key": "settings_premium_feature_pdf_desc",
+        "de": "Alle Tagebucheinträge mit Bilder als Dokument"
+      },
+      {
+        "key": "settings_premium_feature_profiles",
+        "de": "Unbegrenzte individuelle KI-Profile"
+      },
+      {
+        "key": "settings_premium_feature_profiles_desc",
+        "de": "Mehrere Analyse-Schwerpunkte nebeneinander"
+      },
+      {
+        "key": "settings_premium_feature_reviews",
+        "de": "Alle Rückblicke ausführlich mit KI erstellt"
+      },
+      {
+        "key": "settings_premium_feature_reviews_desc",
+        "de": "Die KI erzählt deine Geschichte"
+      },
+      {
+        "key": "settings_premium_feature_voice",
+        "de": "Präzisere Spracherkennung"
+      },
+      {
+        "key": "settings_premium_feature_voice_desc",
+        "de": "Höhere Qualität für deine Spracheinträge"
+      }
+    ],
+    "churn_cancel": [
+      {
+        "key": "action_cancel",
+        "de": "Abbrechen"
+      },
+      {
+        "key": "churn_accept_offer",
+        "de": "Angebot annehmen"
+      },
+      {
+        "key": "churn_are_you_sure",
+        "de": "Bist du sicher?"
+      },
+      {
+        "key": "churn_auto_renew_note",
+        "de": "Dein Abo verlängert sich automatisch über Google Play. Die Kündigung ist jederzeit möglich."
+      },
+      {
+        "key": "churn_automatic",
+        "de": "Automatisch"
+      },
+      {
+        "key": "churn_cancel_anyway",
+        "de": "Trotzdem kündigen"
+      },
+      {
+        "key": "churn_cancel_sub",
+        "de": "Abo kündigen"
+      },
+      {
+        "key": "churn_cancelled",
+        "de": "Gekündigt"
+      },
+      {
+        "key": "churn_cancelled_ends_on",
+        "de": "Gekündigt — endet am %1$s"
+      },
+      {
+        "key": "churn_discount_badge",
+        "de": "%1$d%% SPAREN"
+      },
+      {
+        "key": "churn_exclusive_offer",
+        "de": "Angebot für dich"
+      },
+      {
+        "key": "churn_google_play_redirect",
+        "de": "Du wirst zu Google Play weitergeleitet, um dein Abo zu verwalten. Deine Tagebucheinträge bleiben natürlich erhalten."
+      },
+      {
+        "key": "churn_instead_of",
+        "de": "statt "
+      },
+      {
+        "key": "churn_offer_auto_renew",
+        "de": "Verlängert sich automatisch, jederzeit kündbar"
+      },
+      {
+        "key": "churn_offer_feature_ai",
+        "de": "Tägliche KI-Analysen"
+      },
+      {
+        "key": "churn_offer_feature_perspectives",
+        "de": "Alle KI-Profile (4 vordefiniert + unbegrenzt eigene)"
+      },
+      {
+        "key": "churn_offer_feature_voice",
+        "de": "Premium-Spracherkennung"
+      },
+      {
+        "key": "churn_offer_subtitle",
+        "de": "Unser Angebot für dich"
+      },
+      {
+        "key": "churn_pause_sub",
+        "de": "Oder Abo bei Google Play pausieren"
+      },
+      {
+        "key": "churn_per_month",
+        "de": "pro Monat"
+      },
+      {
+        "key": "churn_per_year",
+        "de": "pro Jahr"
+      },
+      {
+        "key": "churn_plan",
+        "de": "Tarif"
+      },
+      {
+        "key": "churn_plan_monthly",
+        "de": "Monatsabo"
+      },
+      {
+        "key": "churn_plan_yearly",
+        "de": "Jahresabo"
+      },
+      {
+        "key": "churn_price",
+        "de": "Preis"
+      },
+      {
+        "key": "churn_promo_active_label",
+        "de": "Rabatt-Aktion"
+      },
+      {
+        "key": "churn_promo_months_remaining",
+        "de": "Noch %1$d Monate — danach %2$s pro Monat"
+      },
+      {
+        "key": "churn_promo_one_month_remaining",
+        "de": "Noch 1 Monat — danach %1$s pro Monat"
+      },
+      {
+        "key": "churn_promo_phase_ends",
+        "de": "Endet am %1$s — danach %2$s pro Monat"
+      },
+      {
+        "key": "churn_reason_features",
+        "de": "Nicht die Features die ich brauche"
+      },
+      {
+        "key": "churn_reason_other",
+        "de": "Anderer Grund"
+      },
+      {
+        "key": "churn_reason_other_placeholder",
+        "de": "Bitte sag uns kurz, was los ist…"
+      },
+      {
+        "key": "churn_reason_too_expensive",
+        "de": "Zu teuer"
+      },
+      {
+        "key": "churn_reason_unused",
+        "de": "Nutze es zu selten"
+      },
+      {
+        "key": "churn_renewal",
+        "de": "Verlängerung"
+      },
+      {
+        "key": "churn_renews_on",
+        "de": "Verlängert sich am %1$s"
+      },
+      {
+        "key": "churn_sorry_body",
+        "de": "Bevor du kündigst, würdest du uns verraten warum? Das hilft uns, die App zu verbessern."
+      },
+      {
+        "key": "churn_sorry_title",
+        "de": "Schade, dass du gehst"
+      },
+      {
+        "key": "churn_stay",
+        "de": "Doch lieber bleiben"
+      },
+      {
+        "key": "churn_switch_yearly",
+        "de": "Oder zum Jahresabo wechseln und noch mehr sparen"
+      },
+      {
+        "key": "churn_your_sub",
+        "de": "Dein Abo"
+      },
+      {
+        "key": "follow_up_cancel",
+        "de": "Abbrechen"
+      },
+      {
+        "key": "privacy_gate_gemini_cancel",
+        "de": "Später"
+      },
+      {
+        "key": "privacy_gate_tts_cancel",
+        "de": "Später"
+      },
+      {
+        "key": "settings_delete_account_cancel",
+        "de": "Abbrechen"
+      },
+      {
+        "key": "settings_premium_cancelled",
+        "de": "Premium-Abo gekündigt"
+      },
+      {
+        "key": "settings_premium_cancelled_desc",
+        "de": "Deine Premium-Funktionen bleiben bis zum Ende des Abrechnungszeitraums verfügbar. Du kannst die Kündigung über Google Play rückgängig machen."
+      },
+      {
+        "key": "settings_premium_cancelled_until",
+        "de": "Premium-Abo gekündigt — läuft noch bis %1$s"
+      },
+      {
+        "key": "settings_report_ai_cancel",
+        "de": "Abbrechen"
+      },
+      {
+        "key": "settings_revoke_cancel",
+        "de": "Abbrechen"
+      }
+    ],
+    "widerruf_refund": [],
+    "consent_privacy": [
+      {
+        "key": "consent_accept_all",
+        "de": "Einverstanden und loslegen"
+      },
+      {
+        "key": "consent_btn_accept_all",
+        "de": "Alle akzeptieren"
+      },
+      {
+        "key": "consent_btn_manual_selection",
+        "de": "Manuelle Auswahl"
+      },
+      {
+        "key": "consent_btn_minimum_only",
+        "de": "Alle ablehnen"
+      },
+      {
+        "key": "consent_btn_save_selection",
+        "de": "Meine Auswahl speichern"
+      },
+      {
+        "key": "consent_card1_body",
+        "de": "Deine Einträge bleiben auf deinem Gerät."
+      },
+      {
+        "key": "consent_card1_title",
+        "de": "Lokale Speicherung"
+      },
+      {
+        "key": "consent_card2_body",
+        "de": "Optional werden Texte an Google Gemini und Vorlese-Texte an Microsoft Edge in den USA gesendet (EU-US Data Privacy Framework). Sprachaufnahmen gehen an Groq (USA) mit Standardvertragsklauseln (EU SCCs)."
+      },
+      {
+        "key": "consent_card2_title",
+        "de": "KI-Funktionen (USA)"
+      },
+      {
+        "key": "consent_card3_body",
+        "de": "Firebase Analytics, optional, jederzeit in den Einstellungen änderbar."
+      },
+      {
+        "key": "consent_card3_title",
+        "de": "Anonyme Statistiken"
+      },
+      {
+        "key": "consent_confirmation",
+        "de": "Mit „Loslegen\" bestätigst du, dass du die Datenschutzerklärung, die Nutzungsbedingungen und das Impressum gelesen hast und mit der beschriebenen Datenverarbeitung einverstanden bist. Du kannst deine Entscheidung jederzeit in den Einstellungen ändern."
+      },
+      {
+        "key": "consent_details_expand",
+        "de": "Details"
+      },
+      {
+        "key": "consent_disable_stats",
+        "de": "Statistiken deaktivieren und fortfahren"
+      },
+      {
+        "key": "consent_footer_link_agb",
+        "de": "Nutzungsbedingungen"
+      },
+      {
+        "key": "consent_footer_link_datenschutz",
+        "de": "Datenschutz"
+      },
+      {
+        "key": "consent_footer_link_impressum",
+        "de": "Impressum"
+      },
+      {
+        "key": "consent_footer_version",
+        "de": "Deine Auswahl ist jederzeit in den Einstellungen änderbar."
+      },
+      {
+        "key": "consent_info_system_backup_body",
+        "de": "Wenn du Android System-Backup in den Geräte-Einstellungen aktiviert hast, sichert Android deine Tagebuch-Daten automatisch in den Backup-Bereich deines Google-Kontos. Du kannst das in deinen Geräte-Einstellungen jederzeit deaktivieren — siehe Datenschutzerklärung für Details."
+      },
+      {
+        "key": "consent_info_system_backup_title",
+        "de": "Android System-Backup"
+      },
+      {
+        "key": "consent_intro",
+        "de": "Dein Tagebuch ist ein persönlicher Raum, und das respektieren wir. Hier siehst du transparent, wie Best Journal mit deinen Daten umgeht."
+      },
+      {
+        "key": "consent_links_header",
+        "de": "Unsere Rechtstexte:"
+      },
+      {
+        "key": "consent_optout_confirmation",
+        "de": "Opt-Out gespeichert — Analytics ist deaktiviert."
+      },
+      {
+        "key": "consent_promise_local",
+        "de": "Die Datenschutzgesetze verlangen deine Einwilligung."
+      },
+      {
+        "key": "consent_promise_no_training",
+        "de": "Du entscheidest hier, welche Funktionen aktiv sind."
+      },
+      {
+        "key": "consent_promise_optional_ai",
+        "de": "Jederzeit in den Einstellungen änderbar."
+      },
+      {
+        "key": "consent_revoke_snackbar",
+        "de": "Einwilligung widerrufen"
+      },
+      {
+        "key": "consent_saved_snackbar",
+        "de": "Einstellung gespeichert"
+      },
+      {
+        "key": "consent_title",
+        "de": "Datenschutz & Einwilligung"
+      },
+      {
+        "key": "consent_toggle_analytics_body",
+        "de": "Firebase Analytics — hilft uns die App zu verbessern. Keine persönlichen Inhalte, nur anonyme Klick-Zahlen. Datenübertragung: Google USA (Data Privacy Framework)."
+      },
+      {
+        "key": "consent_toggle_analytics_title",
+        "de": "Anonyme Nutzungsanalyse"
+      },
+      {
+        "key": "consent_toggle_do_not_sell_body",
+        "de": "Dieser Schalter ist nur für Einwohner des US-Bundesstaats Kalifornien gedacht. Das kalifornische Datenschutzgesetz (CCPA/CPRA) räumt Einwohnern ein Widerspruchsrecht ein. Bei Aktivierung werden alle optionalen Cloud-Funktionen (KI, Backup, Spracherkennung, Analyse) deaktiviert — nur lokale Funktionen bleiben aktiv.\\n\\nWohnst du außerhalb Kaliforniens, kannst du diesen Schalter ignorieren: Best Journal verkauft oder vermarktet deine Daten nirgendwo auf der Welt."
+      },
+      {
+        "key": "consent_toggle_do_not_sell_title",
+        "de": "Datenschutz-Wahlrechte (Kalifornien)"
+      },
+      {
+        "key": "consent_toggle_drive_body",
+        "de": "Sichert Einträge verschlüsselt in deinem eigenen Google Drive. Du behältst die volle Kontrolle — die Datei liegt in deinem Konto, nicht bei uns."
+      },
+      {
+        "key": "consent_toggle_drive_title",
+        "de": "Google Drive Backup"
+      },
+      {
+        "key": "consent_toggle_gemini_body",
+        "de": "Dashboard-KI, Zusammenfassungen, Rückblicke und Textverbesserung. Sendet Textausschnitte an Google Gemini (USA). Deine Einträge werden NICHT zum Training verwendet."
+      },
+      {
+        "key": "consent_toggle_gemini_title",
+        "de": "KI-Reflexionen (Google Gemini)"
+      },
+      {
+        "key": "consent_toggle_groq_body",
+        "de": "Erlaubt das Diktieren von Einträgen. Die Sprachaufnahme wird verschlüsselt an Groq (USA) gesendet, in Text umgewandelt und anschließend gelöscht. Deine Aufnahmen werden NICHT zum Training verwendet."
+      },
+      {
+        "key": "consent_toggle_groq_title",
+        "de": "Sprache-zu-Text (Groq Whisper)"
+      },
+      {
+        "key": "consent_toggle_tts_body",
+        "de": "Liest Einträge mit natürlicher Stimme vor. Sendet den Text an Microsoft (USA)."
+      },
+      {
+        "key": "consent_toggle_tts_title",
+        "de": "Vorlesen (Microsoft Edge TTS)"
+      },
+      {
+        "key": "consent_welcome_intro",
+        "de": "Bevor es losgeht, klären wir kurz hier deine Datenschutz-Einstellungen."
+      },
+      {
+        "key": "consent_welcome_title",
+        "de": "Willkommen bei Best Journal"
+      },
+      {
+        "key": "drive_consent_needed",
+        "de": "Drive-Zugriff muss erlaubt werden"
+      },
+      {
+        "key": "legal_title_datenschutz",
+        "de": "Datenschutzerklärung"
+      },
+      {
+        "key": "privacy_gate_gemini_accept",
+        "de": "Ausdrücklich zustimmen"
+      },
+      {
+        "key": "privacy_gate_gemini_body",
+        "de": "Schön, dass du die intelligenten Funktionen von Best Journal nutzen möchtest! Für Zusammenfassungen, Rückblicke, Dashboard-Einblicke und Textverbesserungen werden deine Texte verschlüsselt an Google Gemini gesendet.\\n\\n✓ Kein KI-Training mit deinen Daten\\n✓ Anfragen werden nicht dauerhaft gespeichert\\n✓ Verschlüsselt nach EU-US Data Privacy Framework\\n\\nWichtiger Hinweis: Da deine Tagebucheinträge besonders sensible Daten enthalten können (Gesundheit, Religion, persönliche Beziehungen — Art. 9 DSGVO), bitten wir hier um deine ausdrückliche Zustimmung zur KI-Verarbeitung. Die KI-Ausgaben sind Vorschläge, keine professionelle Beratung und ersetzen keine Fachperson.\\n\\nDu kannst das jederzeit in den Einstellungen ändern."
+      },
+      {
+        "key": "privacy_gate_gemini_cancel",
+        "de": "Später"
+      },
+      {
+        "key": "privacy_gate_gemini_title",
+        "de": "KI-Funktion aktivieren"
+      },
+      {
+        "key": "privacy_gate_groq_accept",
+        "de": "Aktivieren"
+      },
+      {
+        "key": "privacy_gate_groq_body",
+        "de": "Diese Funktion schickt deine Sprachaufnahme verschlüsselt an Groq (USA) und wandelt sie dort in Text um — schneller und genauer als die lokale Erkennung.\\n\\n✓ Aufnahme wird nach der Umwandlung sofort gelöscht\\n✓ Kein KI-Training mit deinen Aufnahmen\\n✓ Rechtsgrundlage: Standardvertragsklauseln (EU SCCs)\\n\\nAlternative: Lokale Offline-Erkennung in den Einstellungen."
+      },
+      {
+        "key": "privacy_gate_groq_local",
+        "de": "Lieber lokal"
+      },
+      {
+        "key": "privacy_gate_groq_title",
+        "de": "Cloud-Spracherkennung aktivieren"
+      },
+      {
+        "key": "privacy_gate_tts_accept",
+        "de": "Aktivieren"
+      },
+      {
+        "key": "privacy_gate_tts_body",
+        "de": "Mit den Premium-Stimmen klingt das Vorlesen natürlicher und angenehmer. Dein Text wird verschlüsselt an Microsoft gesendet und als Audio zurückgegeben.\\n\\n✓ Kein KI-Training mit deinen Texten\\n✓ Verschlüsselt nach EU-US Data Privacy Framework"
+      },
+      {
+        "key": "privacy_gate_tts_cancel",
+        "de": "Später"
+      },
+      {
+        "key": "privacy_gate_tts_title",
+        "de": "Premium-Stimmen aktivieren"
+      },
+      {
+        "key": "privacy_sheet_all_off",
+        "de": "Alle aus"
+      },
+      {
+        "key": "privacy_sheet_all_on",
+        "de": "Alle an"
+      },
+      {
+        "key": "privacy_sheet_save",
+        "de": "Auswahl speichern"
+      },
+      {
+        "key": "privacy_sheet_subtitle",
+        "de": "Aktiviere einzelne Funktionen so, wie es für dich passt. Alles kann jederzeit geändert werden."
+      },
+      {
+        "key": "privacy_sheet_title",
+        "de": "Datenschutz anpassen"
+      },
+      {
+        "key": "settings_open_privacy_sheet",
+        "de": "Datenschutz-Einstellungen anpassen"
+      },
+      {
+        "key": "settings_privacy_header",
+        "de": "Datenschutz"
+      },
+      {
+        "key": "settings_privacy_section_header",
+        "de": "Datenschutz & Einwilligungen"
+      }
+    ],
+    "permission_rationale": [
+      {
+        "key": "permission_rationale_camera",
+        "de": "Damit du Fotos zu deinen Einträgen hinzufügen kannst, brauchen wir Zugriff auf deine Kamera."
+      },
+      {
+        "key": "permission_rationale_microphone",
+        "de": "Damit du deine Tagebucheinträge per Sprache diktieren kannst, brauchen wir Zugriff auf dein Mikrofon."
+      },
+      {
+        "key": "permission_rationale_notifications",
+        "de": "Damit wir dich an dein tägliches Schreiben erinnern dürfen, brauchen wir die Erlaubnis für Benachrichtigungen."
+      }
+    ],
+    "disclaimer": [
+      {
+        "key": "ai_limits_disclaimer",
+        "de": "KI-Tageskontingent für intensive Nutzung."
+      },
+      {
+        "key": "ai_output_health_disclaimer",
+        "de": "Keine Therapie — ersetzt keine professionelle Beratung."
+      },
+      {
+        "key": "ai_output_health_disclaimer_long",
+        "de": "Best Journal ist ein Tagebuch und kein Therapieangebot. KI-Analysen sind Anregungen zur Selbstreflexion und ersetzen keine professionelle psychologische oder medizinische Beratung. Bei akuten Problemen wende dich an eine Fachperson oder die Krisenhilfe in deinen Einstellungen."
+      },
+      {
+        "key": "settings_crisis_call_de",
+        "de": "0800 111 0 111 anrufen"
+      },
+      {
+        "key": "settings_crisis_call_de_alt",
+        "de": "0800 111 0 222 anrufen"
+      },
+      {
+        "key": "settings_crisis_call_emergency",
+        "de": "112 anrufen"
+      },
+      {
+        "key": "settings_crisis_close",
+        "de": "Schließen"
+      },
+      {
+        "key": "settings_crisis_dialog_body",
+        "de": "Best Journal ist ein Tagebuch und ersetzt keine professionelle psychologische oder medizinische Beratung. KI-generierte Analysen sind keine Therapie.\\n\\nWenn du dich in einer akuten Krise befindest, Gedanken an Selbstverletzung oder Suizid hast: Du musst damit nicht allein bleiben. Es gibt kostenlose, anonyme Hilfe — rund um die Uhr."
+      },
+      {
+        "key": "settings_crisis_dialog_title",
+        "de": "Du bist nicht allein"
+      },
+      {
+        "key": "settings_crisis_emergency_name",
+        "de": "Notruf"
+      },
+      {
+        "key": "settings_crisis_hotline_de_hours",
+        "de": "Kostenlos, 24/7, anonym"
+      },
+      {
+        "key": "settings_crisis_hotline_de_name",
+        "de": "Telefonseelsorge Deutschland"
+      },
+      {
+        "key": "settings_crisis_international_name",
+        "de": "Internationale Hotlines"
+      },
+      {
+        "key": "settings_crisis_no_browser",
+        "de": "Kein Browser gefunden."
+      },
+      {
+        "key": "settings_crisis_no_dialer",
+        "de": "Kein Telefon-Programm gefunden."
+      },
+      {
+        "key": "settings_crisis_open_findahelpline",
+        "de": "findahelpline.com öffnen"
+      },
+      {
+        "key": "settings_crisis_subtitle",
+        "de": "Wichtige Hotlines im Notfall"
+      },
+      {
+        "key": "settings_crisis_title",
+        "de": "Krisenhilfe"
+      }
+    ],
+    "account_deletion": [
+      {
+        "key": "settings_delete_account_abort",
+        "de": "Vorgang abbrechen"
+      },
+      {
+        "key": "settings_delete_account_cancel",
+        "de": "Abbrechen"
+      },
+      {
+        "key": "settings_delete_account_confirm",
+        "de": "Ja, alles löschen"
+      },
+      {
+        "key": "settings_delete_account_confirm_body",
+        "de": "Dieser Vorgang ist unwiderruflich und löscht:\\n\\n• Alle lokalen Tagebucheinträge, Fotos, Videos und Audio-Aufnahmen\\n• Das Google-Drive-Backup der App (nur die App-Daten, nicht dein Google-Konto)\\n• Deine App-Anmeldung\\n\\nDein Google-Konto selbst bleibt bestehen. Die App startet danach neu als frische Installation."
+      },
+      {
+        "key": "settings_delete_account_confirm_title",
+        "de": "Wirklich alle App-Daten löschen?"
+      },
+      {
+        "key": "settings_delete_account_drive_error_body",
+        "de": "Das Google-Drive-Backup konnte nicht verlässlich entfernt werden (Grund: %1$s).\\n\\nOhne vollständige Löschung wäre die Meldung „unwiderruflich entfernt\" nicht korrekt.\\n\\nWas möchtest du tun?"
+      },
+      {
+        "key": "settings_delete_account_drive_error_title",
+        "de": "Drive-Backup konnte nicht gelöscht werden"
+      },
+      {
+        "key": "settings_delete_account_force_local",
+        "de": "Nur lokal löschen (Drive-Backup bleibt erhalten)"
+      },
+      {
+        "key": "settings_delete_account_in_progress",
+        "de": "Konto und Daten werden gelöscht…"
+      },
+      {
+        "key": "settings_delete_account_retry",
+        "de": "Erneut versuchen"
+      },
+      {
+        "key": "settings_delete_account_subtitle",
+        "de": "Entfernt alle lokalen Daten und das Drive-Backup unwiderruflich. Dein Google-Konto selbst bleibt bestehen."
+      },
+      {
+        "key": "settings_delete_account_title",
+        "de": "Konto und Daten löschen"
+      }
+    ],
+    "legal_links": [
+      {
+        "key": "consent_footer_link_agb",
+        "de": "Nutzungsbedingungen"
+      },
+      {
+        "key": "consent_footer_link_impressum",
+        "de": "Impressum"
+      },
+      {
+        "key": "legal_title_datenschutz",
+        "de": "Datenschutzerklärung"
+      },
+      {
+        "key": "legal_title_impressum",
+        "de": "Impressum"
+      },
+      {
+        "key": "legal_title_nutzungsbedingungen",
+        "de": "Nutzungsbedingungen"
+      },
+      {
+        "key": "paywall_legal_hint",
+        "de": "Mit dem Abo akzeptierst du die %1$s. Dein 14-tägiges Widerrufsrecht ist dort beschrieben."
+      },
+      {
+        "key": "paywall_legal_hint_link",
+        "de": "Nutzungsbedingungen"
+      },
+      {
+        "key": "settings_legal_online_label",
+        "de": "Online-Version:"
+      },
+      {
+        "key": "settings_legal_section_header",
+        "de": "Rechtliche Dokumente"
+      }
+    ]
+  },
+  "allKeys": [
+    "action_cancel",
+    "ai_limit_body",
+    "ai_limit_monthly",
+    "ai_limit_no_thanks",
+    "ai_limit_title",
+    "ai_limit_yearly",
+    "ai_limits_dialog_body",
+    "ai_limits_dialog_close",
+    "ai_limits_dialog_title",
+    "ai_limits_disclaimer",
+    "ai_output_health_disclaimer",
+    "ai_output_health_disclaimer_long",
+    "churn_accept_offer",
+    "churn_are_you_sure",
+    "churn_auto_renew_note",
+    "churn_automatic",
+    "churn_cancel_anyway",
+    "churn_cancel_sub",
+    "churn_cancelled",
+    "churn_cancelled_ends_on",
+    "churn_discount_badge",
+    "churn_exclusive_offer",
+    "churn_google_play_redirect",
+    "churn_instead_of",
+    "churn_offer_auto_renew",
+    "churn_offer_feature_ai",
+    "churn_offer_feature_perspectives",
+    "churn_offer_feature_voice",
+    "churn_offer_subtitle",
+    "churn_pause_sub",
+    "churn_per_month",
+    "churn_per_year",
+    "churn_plan",
+    "churn_plan_monthly",
+    "churn_plan_yearly",
+    "churn_price",
+    "churn_promo_active_label",
+    "churn_promo_months_remaining",
+    "churn_promo_one_month_remaining",
+    "churn_promo_phase_ends",
+    "churn_reason_features",
+    "churn_reason_other",
+    "churn_reason_other_placeholder",
+    "churn_reason_too_expensive",
+    "churn_reason_unused",
+    "churn_renewal",
+    "churn_renews_on",
+    "churn_sorry_body",
+    "churn_sorry_title",
+    "churn_stay",
+    "churn_switch_yearly",
+    "churn_your_sub",
+    "consent_accept_all",
+    "consent_btn_accept_all",
+    "consent_btn_manual_selection",
+    "consent_btn_minimum_only",
+    "consent_btn_save_selection",
+    "consent_card1_body",
+    "consent_card1_title",
+    "consent_card2_body",
+    "consent_card2_title",
+    "consent_card3_body",
+    "consent_card3_title",
+    "consent_confirmation",
+    "consent_details_expand",
+    "consent_disable_stats",
+    "consent_footer_link_agb",
+    "consent_footer_link_datenschutz",
+    "consent_footer_link_impressum",
+    "consent_footer_version",
+    "consent_info_system_backup_body",
+    "consent_info_system_backup_title",
+    "consent_intro",
+    "consent_links_header",
+    "consent_optout_confirmation",
+    "consent_promise_local",
+    "consent_promise_no_training",
+    "consent_promise_optional_ai",
+    "consent_revoke_snackbar",
+    "consent_saved_snackbar",
+    "consent_title",
+    "consent_toggle_analytics_body",
+    "consent_toggle_analytics_title",
+    "consent_toggle_do_not_sell_body",
+    "consent_toggle_do_not_sell_title",
+    "consent_toggle_drive_body",
+    "consent_toggle_drive_title",
+    "consent_toggle_gemini_body",
+    "consent_toggle_gemini_title",
+    "consent_toggle_groq_body",
+    "consent_toggle_groq_title",
+    "consent_toggle_tts_body",
+    "consent_toggle_tts_title",
+    "consent_welcome_intro",
+    "consent_welcome_title",
+    "drive_consent_needed",
+    "follow_up_cancel",
+    "journal_write_about",
+    "legal_title_datenschutz",
+    "legal_title_impressum",
+    "legal_title_nutzungsbedingungen",
+    "onboarding_free_after_trial",
+    "onboarding_free_trial",
+    "onboarding_premium_feature_dashboard",
+    "onboarding_premium_feature_improve",
+    "onboarding_premium_feature_noads",
+    "onboarding_premium_feature_patterns",
+    "onboarding_premium_feature_pdf",
+    "onboarding_premium_feature_retro",
+    "paywall_day7",
+    "paywall_day8",
+    "paywall_exit_bonus_days",
+    "paywall_exit_discount",
+    "paywall_exit_price_comparison",
+    "paywall_exit_special_offer",
+    "paywall_exit_start_discount",
+    "paywall_exit_wait",
+    "paywall_feature_dashboard",
+    "paywall_feature_followups",
+    "paywall_feature_improve",
+    "paywall_feature_noads",
+    "paywall_feature_patterns",
+    "paywall_feature_pdf",
+    "paywall_feature_profiles",
+    "paywall_feature_retro",
+    "paywall_first_payment",
+    "paywall_free_note",
+    "paywall_from_per_day",
+    "paywall_full_access",
+    "paywall_headline_clarity",
+    "paywall_headline_clarity_sub",
+    "paywall_headline_default",
+    "paywall_headline_default_sub",
+    "paywall_headline_growth",
+    "paywall_headline_growth_sub",
+    "paywall_headline_stress",
+    "paywall_headline_stress_sub",
+    "paywall_headline_thoughts",
+    "paywall_headline_thoughts_sub",
+    "paywall_instead_per_month",
+    "paywall_legal_hint",
+    "paywall_legal_hint_link",
+    "paywall_lifetime_desc",
+    "paywall_lifetime_note",
+    "paywall_lifetime_title",
+    "paywall_monthly_plan",
+    "paywall_most_popular",
+    "paywall_or",
+    "paywall_prices_loading",
+    "paywall_purchase_loading_toast",
+    "paywall_reminder",
+    "paywall_sub_loading_toast",
+    "paywall_today",
+    "paywall_with_limited",
+    "paywall_yearly_note",
+    "permission_rationale_camera",
+    "permission_rationale_microphone",
+    "permission_rationale_notifications",
+    "privacy_gate_gemini_accept",
+    "privacy_gate_gemini_body",
+    "privacy_gate_gemini_cancel",
+    "privacy_gate_gemini_title",
+    "privacy_gate_groq_accept",
+    "privacy_gate_groq_body",
+    "privacy_gate_groq_local",
+    "privacy_gate_groq_title",
+    "privacy_gate_tts_accept",
+    "privacy_gate_tts_body",
+    "privacy_gate_tts_cancel",
+    "privacy_gate_tts_title",
+    "privacy_sheet_all_off",
+    "privacy_sheet_all_on",
+    "privacy_sheet_save",
+    "privacy_sheet_subtitle",
+    "privacy_sheet_title",
+    "settings_about",
+    "settings_about_desc",
+    "settings_about_version",
+    "settings_crisis_call_de",
+    "settings_crisis_call_de_alt",
+    "settings_crisis_call_emergency",
+    "settings_crisis_close",
+    "settings_crisis_dialog_body",
+    "settings_crisis_dialog_title",
+    "settings_crisis_emergency_name",
+    "settings_crisis_hotline_de_hours",
+    "settings_crisis_hotline_de_name",
+    "settings_crisis_international_name",
+    "settings_crisis_no_browser",
+    "settings_crisis_no_dialer",
+    "settings_crisis_open_findahelpline",
+    "settings_crisis_subtitle",
+    "settings_crisis_title",
+    "settings_delete_account_abort",
+    "settings_delete_account_cancel",
+    "settings_delete_account_confirm",
+    "settings_delete_account_confirm_body",
+    "settings_delete_account_confirm_title",
+    "settings_delete_account_drive_error_body",
+    "settings_delete_account_drive_error_title",
+    "settings_delete_account_force_local",
+    "settings_delete_account_in_progress",
+    "settings_delete_account_retry",
+    "settings_delete_account_subtitle",
+    "settings_delete_account_title",
+    "settings_legal_online_label",
+    "settings_legal_section_header",
+    "settings_manage_subscription",
+    "settings_open_privacy_sheet",
+    "settings_premium_cancelled",
+    "settings_premium_cancelled_desc",
+    "settings_premium_cancelled_until",
+    "settings_premium_feature_5_perspectives",
+    "settings_premium_feature_5_perspectives_desc",
+    "settings_premium_feature_dashboard",
+    "settings_premium_feature_dashboard_desc",
+    "settings_premium_feature_followups",
+    "settings_premium_feature_followups_desc",
+    "settings_premium_feature_improve",
+    "settings_premium_feature_improve_desc",
+    "settings_premium_feature_patterns",
+    "settings_premium_feature_patterns_desc",
+    "settings_premium_feature_pdf",
+    "settings_premium_feature_pdf_desc",
+    "settings_premium_feature_profiles",
+    "settings_premium_feature_profiles_desc",
+    "settings_premium_feature_reviews",
+    "settings_premium_feature_reviews_desc",
+    "settings_premium_feature_voice",
+    "settings_premium_feature_voice_desc",
+    "settings_privacy_header",
+    "settings_privacy_section_header",
+    "settings_report_ai_cancel",
+    "settings_revoke_cancel"
+  ],
+  "totalKeys": 234
+}

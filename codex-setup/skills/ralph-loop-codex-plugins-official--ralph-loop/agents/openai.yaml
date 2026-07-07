@@ -1,0 +1,7 @@
+interface:
+  display_name: "ralph-loop"
+  short_description: "Start Ralph Loop in current session"
+  default_prompt: "Use $ralph-loop-codex-plugins-official--ralph-loop for this task."
+
+policy:
+  allow_implicit_invocation: false

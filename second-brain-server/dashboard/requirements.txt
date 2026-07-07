@@ -1,0 +1,5 @@
+# sb-dashboard — Abhaengigkeiten (Web-Cockpit)
+fastapi==0.138.0
+uvicorn[standard]==0.49.0
+httpx>=0.27.0
+psutil>=6.0.0

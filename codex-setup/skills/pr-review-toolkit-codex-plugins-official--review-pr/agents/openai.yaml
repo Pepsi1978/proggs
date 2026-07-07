@@ -1,0 +1,7 @@
+interface:
+  display_name: "review-pr"
+  short_description: "Comprehensive PR review using specialized agents"
+  default_prompt: "Use $pr-review-toolkit-codex-plugins-official--review-pr for this task."
+
+policy:
+  allow_implicit_invocation: true
