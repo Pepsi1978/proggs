@@ -10,7 +10,9 @@ import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import dagger.hilt.android.lifecycle.HiltViewModel
 import de.frank.entropyreducer.data.settings.AppSettings
+import de.frank.entropyreducer.di.ApplicationScope
 import javax.inject.Inject
+import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
@@ -62,6 +64,7 @@ class GewohnheitTtsViewModel
         application: Application,
         private val appSettings: AppSettings,
         private val playback: MentalTtsPlaybackController,
+        @ApplicationScope private val applicationScope: CoroutineScope,
     ) : AndroidViewModel(application) {
 
     private companion object {
@@ -122,7 +125,8 @@ class GewohnheitTtsViewModel
     }
 
     fun setAutoStopMinutes(minutes: Int) {
-        viewModelScope.launch { appSettings.setTtsAutoStopMinutes(minutes) }
+        // Dieser globale Wert muss Navigation weg vom Settings-Screen überleben.
+        applicationScope.launch { appSettings.setTtsAutoStopMinutes(minutes) }
     }
 
     fun dismissError() {

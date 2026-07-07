@@ -12,7 +12,9 @@ import dagger.hilt.android.lifecycle.HiltViewModel
 import de.frank.entropyreducer.data.settings.AppSettings
 import de.frank.entropyreducer.data.tts.TtsUsage
 import de.frank.entropyreducer.data.tts.TtsUsageStore
+import de.frank.entropyreducer.di.ApplicationScope
 import javax.inject.Inject
+import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
@@ -97,6 +99,7 @@ class MentalTtsViewModel
         private val appSettings: AppSettings,
         private val playback: MentalTtsPlaybackController,
         usageStore: TtsUsageStore,
+        @ApplicationScope private val applicationScope: CoroutineScope,
     ) : AndroidViewModel(application) {
 
     /** Live-Monatsverbrauch des TTS-Kontingents (Anzeige unter dem letzten Satz im Mentalboard). */
@@ -183,7 +186,8 @@ class MentalTtsViewModel
     }
 
     fun setAutoStopMinutes(minutes: Int) {
-        viewModelScope.launch { appSettings.setTtsAutoStopMinutes(minutes) }
+        // Dieser globale Wert muss Navigation weg vom Settings-Screen überleben.
+        applicationScope.launch { appSettings.setTtsAutoStopMinutes(minutes) }
     }
 
     fun dismissError() {
