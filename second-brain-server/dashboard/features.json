@@ -1,7 +1,15 @@
 {
-	"stand": "07.07.2026, 13:09 Uhr",
+	"stand": "07.07.2026, 15:44 Uhr",
 	"hinweis": "PFLEGE-PFLICHT: Bei JEDEM Deploy, der ein neues System/Feature einbaut, hier einen Eintrag ERGAENZEN (neueste zuerst) — mit Datum + Uhrzeit und ausfuehrlicher Erklaerung. Diese Datei ist die Quelle des Info-Bereichs in den Dashboard-Einstellungen (GET /api/features). Regel verankert in DEPLOY.md.",
 	"features": [
+		{
+			"id": "hauptagent-werkzeugkasten",
+			"name": "Agenten-Umbau Schritt 2: Werkzeugkasten des Hauptagenten (gebaut + getestet, Chat-Integration folgt)",
+			"eingebaut": "07.07.2026, 15:44 Uhr",
+			"dienst": "agent 0.62.0 + dashboard 0.57.0",
+			"kurz": "Der Hauptagent (GPT-5.5) bekommt eigene Werkzeuge, um selbst im Gehirn zu suchen, gezielt Einträge zu laden, im Web zu suchen und ins Logbuch zu schauen — statt dass ein separater Leseagent die Treffer vorfiltert. Der Motor und die 4 Lese-Werkzeuge sind gebaut und am Star-Trek-Fall erfolgreich getestet; im echten Chat werden sie im nächsten Schritt aktiv.",
+			"erklaerung": "Cortex wird umgebaut, damit der intelligente Hauptagent alles selbst macht, statt die Arbeit auf mehrere kleine Agenten (Router, Leseagent) aufzuteilen, die Fehler machen konnten. Der Auslöser war der Star-Trek-Fall vom 06.07.: Die Rohsuche fand 50 passende Einträge, aber der separate Leseagent wählte 0 davon aus, weil die Frage rein faktisch formuliert war — Cortex sagte fälschlich 'nichts gefunden'. Im Umbau übernimmt der Hauptagent das Filtern selbst, mit vollem Verständnis und der klaren Anweisung, Franks persönlichen Bezug zu einem Thema nicht wegzuwerfen, nur weil ein Eintrag die Faktenfrage nicht wörtlich beantwortet. Dafür gibt es jetzt vier Werkzeuge: 'Gedächtnis durchsuchen' liefert erst nur Titel + kurze Schnipsel + Relevanz (damit nicht alle langen Volltexte auf einmal den Arbeitsspeicher des Agenten sprengen), 'Eintrag laden' holt gezielt den Volltext genau eines Eintrags nach, 'Web-Suche' für aktuelles Weltwissen und 'Logbuch lesen' für Fragen wie 'warum ging das gestern nicht?'. Der zugrunde liegende Werkzeug-Motor (der GPT-5.5 erlaubt, selbst Werkzeuge aufzurufen) ist gebaut und abgesichert (harte Notbremse gegen Endlosschleifen, automatischer Neuversuch bei Verbindungsabbrüchen des Backends). Getestet wurde alles isoliert über einen eigenen Testzugang mit genau dem Star-Trek-Fall: Der Hauptagent fand die 50 Einträge, nutzte Franks eigene Notizen zur Unterscheidung von Veröffentlichungs- und Zeitlinien-Reihenfolge und gab eine korrekte, persönliche Antwort. WICHTIG: Diese Werkzeuge sind noch NICHT im echten Chat aktiv — der laufende Cortex-Chat nutzt vorerst weiter den alten Weg. Das Scharfschalten im echten Chat (der Umbau des zentralen Gesprächs-Ablaufs, bei dem Router und Leseagent als eigene Instanzen wegfallen) ist der unmittelbar nächste Schritt. Nebenbei wurde auch das forensische Voll-Logbuch des Agenten dauerhaft gesichert, sodass es Server-Neubauten übersteht."
+		},
 		{
 			"id": "turn-logbuch-und-sonden-trace",
 			"name": "Turn-Logbuch + Sonden-Trace: jede Anfrage nachvollziehbar, mit Flaschenhals-Radar",
