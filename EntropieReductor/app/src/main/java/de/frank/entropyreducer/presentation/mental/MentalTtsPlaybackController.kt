@@ -10,6 +10,9 @@ import de.frank.entropyreducer.data.diagnostics.DiagnosticArea
 import de.frank.entropyreducer.data.settings.AppSettings
 import de.frank.entropyreducer.di.ApplicationScope
 import de.frank.entropyreducer.domain.tts.TtsPlayer
+import java.text.SimpleDateFormat
+import java.util.Date
+import java.util.Locale
 import javax.inject.Inject
 import javax.inject.Singleton
 import kotlinx.coroutines.CancellationException
@@ -83,7 +86,7 @@ constructor(
         startPlayback("Mental") {
             val settings = mentalSettings()
             val autoStopMinutes = appSettings.ttsAutoStopMinutesFlow.first()
-            val autoStopMs = markAutoStopDeadline(autoStopMinutes)
+            val autoStopMs = markAutoStopDeadline("Mental", autoStopMinutes)
             val gewohnheitTexts =
                 if (settings.includeHabits) {
                     gewohnheiten.map { it.text.trim() }.filter { it.isNotEmpty() }
@@ -126,7 +129,7 @@ constructor(
             val settings = gewohnheitSettings()
             val randomPlayback = mentalSettings().randomPlayback
             val autoStopMinutes = appSettings.ttsAutoStopMinutesFlow.first()
-            val autoStopMs = markAutoStopDeadline(autoStopMinutes)
+            val autoStopMs = markAutoStopDeadline("Gewohnheit", autoStopMinutes)
             runGewohnheitSequence(
                 texts = texts,
                 repeat = settings.repeatCount,
@@ -151,9 +154,16 @@ constructor(
         _isPlayingFlow.value = false
     }
 
-    private fun markAutoStopDeadline(autoStopMinutes: Int): Long {
+    private fun markAutoStopDeadline(label: String, autoStopMinutes: Int): Long {
         val autoStopMs = autoStopMinutes * 60 * 1_000L
-        _autoStopEndsAtWallClockMsFlow.value = System.currentTimeMillis() + autoStopMs
+        val endsAt = System.currentTimeMillis() + autoStopMs
+        _autoStopEndsAtWallClockMsFlow.value = endsAt
+        val endTime = SimpleDateFormat("HH:mm:ss", Locale.GERMANY).format(Date(endsAt))
+        Diag.d(
+            DiagnosticArea.GOOGLE_TTS,
+            TAG,
+            "$label-Vorlesen gestartet: Auto-Stop=$autoStopMinutes Minuten, aktiv bis $endTime Uhr",
+        )
         return autoStopMs
     }
 
