@@ -12,6 +12,7 @@ import androidx.lifecycle.viewModelScope
 import dagger.hilt.android.lifecycle.HiltViewModel
 import de.frank.entropyreducer.data.diagnostics.Diag
 import de.frank.entropyreducer.data.diagnostics.DiagnosticArea
+import de.frank.entropyreducer.data.settings.AppSettings
 import de.frank.entropyreducer.domain.tts.TtsPlayer
 import javax.inject.Inject
 import kotlinx.coroutines.CancellationException
@@ -36,7 +37,7 @@ import kotlinx.coroutines.withContext
  * - Jeder Satz wird [repeatCount]-mal vorgelesen.
  * - 9 Sekunden Pause zwischen jedem gesprochenen Satz.
  * - Jede Wiederholung wird frisch ueber TTS synthetisiert, damit sie nie exakt gleich klingt.
- * - Endlosschleife bis 15 Minuten (Sicherheits-Auto-Stop).
+ * - Endlosschleife bis zur globalen Sicherheitsgrenze aus den Vorlesen-Einstellungen.
  * - Nur die Gewohnheiten UEBER dem Separator werden vorgelesen.
  */
 
@@ -56,6 +57,8 @@ data class GewohnheitTtsUiState(
     val loop: Boolean = false,
     /** Pause zwischen zwei gesprochenen Gewohnheits-Saetzen (1..30 Sekunden). */
     val pauseSeconds: Int = 9,
+    /** Globale Sicherheitsgrenze fuer automatischen Vorlese-Stop (15..120 Minuten). */
+    val autoStopMinutes: Int = AppSettings.DEFAULT_TTS_AUTO_STOP_MINUTES,
     val error: String? = null,
 )
 
@@ -68,15 +71,15 @@ private data class GewohnheitTtsSettings(
 @HiltViewModel
 class GewohnheitTtsViewModel
 @Inject
-constructor(
-    application: Application,
-    private val ttsPlayer: TtsPlayer,
-) : AndroidViewModel(application) {
+    constructor(
+        application: Application,
+        private val ttsPlayer: TtsPlayer,
+        private val appSettings: AppSettings,
+    ) : AndroidViewModel(application) {
 
     private companion object {
         const val TAG = "GewohnheitTts"
         const val DEFAULT_PAUSE_SECONDS = 9
-        const val MAX_DURATION_MS = 15 * 60 * 1_000L
         const val RANGE_MIN = 1
         const val RANGE_MAX = 10
         const val PAUSE_RANGE_MIN = 1
@@ -100,12 +103,13 @@ constructor(
     private val errorFlow = MutableStateFlow<String?>(null)
 
     val uiState: StateFlow<GewohnheitTtsUiState> =
-        combine(settingsFlow, isPlayingFlow, errorFlow) { settings, playing, err ->
+        combine(settingsFlow, appSettings.ttsAutoStopMinutesFlow, isPlayingFlow, errorFlow) { settings, autoStopMinutes, playing, err ->
                 GewohnheitTtsUiState(
                     isPlaying = playing,
                     repeatCount = settings.repeatCount,
                     loop = settings.loop,
                     pauseSeconds = settings.pauseSeconds,
+                    autoStopMinutes = autoStopMinutes,
                     error = err,
                 )
             }
@@ -135,6 +139,10 @@ constructor(
         }
     }
 
+    fun setAutoStopMinutes(minutes: Int) {
+        viewModelScope.launch { appSettings.setTtsAutoStopMinutes(minutes) }
+    }
+
     fun dismissError() {
         errorFlow.value = null
     }
@@ -153,8 +161,15 @@ constructor(
         ttsJob =
             viewModelScope.launch {
                 val settings = settingsFlow.first()
+                val autoStopMinutes = appSettings.ttsAutoStopMinutesFlow.first()
                 try {
-                    runSequence(texts, settings.repeatCount, settings.loop, settings.pauseSeconds * 1_000L)
+                    runSequence(
+                        texts = texts,
+                        repeat = settings.repeatCount,
+                        loop = settings.loop,
+                        pauseMs = settings.pauseSeconds * 1_000L,
+                        autoStopMs = autoStopMinutes * 60 * 1_000L,
+                    )
                 } catch (e: CancellationException) {
                     throw e
                 } catch (e: Exception) {
@@ -176,7 +191,7 @@ constructor(
         isPlayingFlow.value = false
     }
 
-    private suspend fun runSequence(texts: List<String>, repeat: Int, loop: Boolean, pauseMs: Long) {
+    private suspend fun runSequence(texts: List<String>, repeat: Int, loop: Boolean, pauseMs: Long, autoStopMs: Long) {
         val sequence = buildSequence(texts, repeat)
         if (sequence.isEmpty()) return
         Diag.d(
@@ -186,7 +201,7 @@ constructor(
                 "repeat=$repeat loop=$loop pauseMs=$pauseMs)",
         )
 
-        val deadline = SystemClock.elapsedRealtime() + MAX_DURATION_MS
+        val deadline = SystemClock.elapsedRealtime() + autoStopMs
         do {
             for ((index, text) in sequence.withIndex()) {
                 currentCoroutineContext().ensureActive()
@@ -194,7 +209,7 @@ constructor(
                     Diag.d(
                         DiagnosticArea.GOOGLE_TTS,
                         TAG,
-                        "15-Minuten-Grenze erreicht — automatischer Stop",
+                        "${autoStopMs / 60_000}-Minuten-Grenze erreicht — automatischer Stop",
                     )
                     return
                 }

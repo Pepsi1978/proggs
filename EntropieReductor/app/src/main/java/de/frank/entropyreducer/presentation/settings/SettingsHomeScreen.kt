@@ -115,7 +115,7 @@ private fun sectionsFor(): List<SectionDef> =
             icon = Icons.Outlined.RecordVoiceOver,
             accent = LocalCosmos.current.accent,
             title = "Vorlesen",
-            subtitle = "Lege fest, wie lange Mental- und Gewohnheits-Sätze beim Vorlesen pausieren.",
+            subtitle = "Lege Pausen und automatische Abschaltung für das Vorlesen fest.",
             route = Routes.SETTINGS_TTS,
         ),
         SectionDef(

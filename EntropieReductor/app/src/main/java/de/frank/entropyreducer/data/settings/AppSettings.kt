@@ -36,6 +36,9 @@ class AppSettings @Inject constructor(
     val geminiModelFlow: Flow<String> = ds.data.map { it[KEY_GEMINI_MODEL] ?: DEFAULT_GEMINI }
     val transcriptionLanguageFlow: Flow<String> = ds.data.map { it[KEY_LANGUAGE] ?: "de" }
     val ttsVoiceFlow: Flow<String> = ds.data.map { it[KEY_TTS_VOICE] ?: "" }
+    val ttsAutoStopMinutesFlow: Flow<Int> = ds.data
+        .map { (it[KEY_TTS_AUTO_STOP_MINUTES] ?: DEFAULT_TTS_AUTO_STOP_MINUTES).coerceIn(15, 120) }
+        .distinctUntilChanged()
     val profileTextFlow: Flow<String> = ds.data.map { it[KEY_PROFILE_TEXT] ?: "" }
 
     /** Letzter erfolgreicher Whoop-Sync (Epoch-Millisekunden). 0L = noch nie gesynct. */
@@ -199,6 +202,9 @@ class AppSettings @Inject constructor(
     suspend fun setGeminiModel(value: String) = ds.edit { it[KEY_GEMINI_MODEL] = value }
     suspend fun setTranscriptionLanguage(value: String) = ds.edit { it[KEY_LANGUAGE] = value }
     suspend fun setTtsVoice(value: String) = ds.edit { it[KEY_TTS_VOICE] = value }
+    suspend fun setTtsAutoStopMinutes(value: Int) = ds.edit {
+        it[KEY_TTS_AUTO_STOP_MINUTES] = value.coerceIn(15, 120)
+    }
     suspend fun setProfileText(value: String) = ds.edit { it[KEY_PROFILE_TEXT] = value }
     suspend fun setThemeMode(value: ThemeMode) = ds.edit { it[KEY_THEME_MODE] = value.name }
 
@@ -448,6 +454,7 @@ class AppSettings @Inject constructor(
         private val KEY_GEMINI_MODEL = stringPreferencesKey("gemini_model")
         private val KEY_LANGUAGE = stringPreferencesKey("transcription_lang")
         private val KEY_TTS_VOICE = stringPreferencesKey("tts_voice")
+        private val KEY_TTS_AUTO_STOP_MINUTES = intPreferencesKey("tts_auto_stop_minutes")
         private val KEY_PROFILE_TEXT = stringPreferencesKey("profile_text")
         private val KEY_THEME_MODE = stringPreferencesKey("theme_mode")
         private val KEY_WIDGET_THEME_MODE = stringPreferencesKey("widget_theme_mode")
@@ -501,6 +508,7 @@ class AppSettings @Inject constructor(
             else stringSetPreferencesKey("second_brain_${areaKey}_titles")
 
         const val DEFAULT_WHISPER = "whisper-large-v3-turbo"
+        const val DEFAULT_TTS_AUTO_STOP_MINUTES = 15
         // Frank-Wunsch 2026-05-09: Default-Modell ist Gemini 3.1 Flash-Lite. Greift
         // bei jeder Neuinstallation (frischer DataStore = Fallback auf diesen Wert)
         // und bei bestehenden Installationen wo der Nutzer das Modell nicht aktiv

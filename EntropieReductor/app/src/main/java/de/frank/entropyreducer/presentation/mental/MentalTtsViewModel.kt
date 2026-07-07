@@ -12,6 +12,7 @@ import androidx.lifecycle.viewModelScope
 import dagger.hilt.android.lifecycle.HiltViewModel
 import de.frank.entropyreducer.data.diagnostics.Diag
 import de.frank.entropyreducer.data.diagnostics.DiagnosticArea
+import de.frank.entropyreducer.data.settings.AppSettings
 import de.frank.entropyreducer.data.tts.TtsUsage
 import de.frank.entropyreducer.data.tts.TtsUsageStore
 import de.frank.entropyreducer.domain.tts.TtsPlayer
@@ -45,8 +46,9 @@ import kotlinx.coroutines.withContext
  * Vorlese-Reihenfolge automatisch mit (die Sequenz wird bei jedem Start frisch gebildet).
  *
  * Endlosschleife (gruenes Haekchen): nach einem kompletten Durchgang beginnt die Sequenz von vorne,
- * bis Frank den Lautsprecher erneut drueckt ODER die Sicherheitsgrenze [MAX_DURATION_MS] (15 Minuten)
- * erreicht ist — dann stoppt die App automatisch, damit nicht aus Versehen endlos vorgelesen wird.
+ * bis Frank den Lautsprecher erneut drueckt ODER die globale Sicherheitsgrenze aus den Vorlesen-
+ * Einstellungen erreicht ist — dann stoppt die App automatisch, damit nicht aus Versehen endlos
+ * vorgelesen wird.
  *
  * Gewohnheiten mitlesen ("G"-Haekchen, Frank-Wunsch 2026-07-03): Ist [MentalTtsUiState.includeHabits]
  * aktiv, werden die Gewohnheiten NACH dem Mentalblock angehaengt — in der Vorleseweise des
@@ -82,6 +84,8 @@ data class MentalTtsUiState(
     val includeHabits: Boolean = false,
     /** Pause zwischen zwei gesprochenen Mental-Saetzen (1..30 Sekunden). */
     val pauseSeconds: Int = 9,
+    /** Globale Sicherheitsgrenze fuer automatischen Vorlese-Stop (15..120 Minuten). */
+    val autoStopMinutes: Int = AppSettings.DEFAULT_TTS_AUTO_STOP_MINUTES,
     val error: String? = null,
 )
 
@@ -97,11 +101,12 @@ private data class MentalSettings(
 @HiltViewModel
 class MentalTtsViewModel
 @Inject
-constructor(
-    application: Application,
-    private val ttsPlayer: TtsPlayer,
-    usageStore: TtsUsageStore,
-) : AndroidViewModel(application) {
+    constructor(
+        application: Application,
+        private val ttsPlayer: TtsPlayer,
+        private val appSettings: AppSettings,
+        usageStore: TtsUsageStore,
+    ) : AndroidViewModel(application) {
 
     /** Live-Monatsverbrauch des TTS-Kontingents (Anzeige unter dem letzten Satz im Mentalboard). */
     val usage: StateFlow<TtsUsage> = usageStore.usage
@@ -109,7 +114,6 @@ constructor(
     private companion object {
         const val TAG = "MentalTts"
         const val DEFAULT_PAUSE_SECONDS = 9
-        const val MAX_DURATION_MS = 15 * 60 * 1_000L // 15 Minuten Sicherheits-Auto-Stop
         const val RANGE_MIN = 1
         const val RANGE_MAX = 10
         const val PAUSE_RANGE_MIN = 1
@@ -135,7 +139,7 @@ constructor(
     private val errorFlow = MutableStateFlow<String?>(null)
 
     val uiState: StateFlow<MentalTtsUiState> =
-        combine(settingsFlow, isPlayingFlow, errorFlow) { s, playing, err ->
+        combine(settingsFlow, appSettings.ttsAutoStopMinutesFlow, isPlayingFlow, errorFlow) { s, autoStopMinutes, playing, err ->
                 MentalTtsUiState(
                     isPlaying = playing,
                     ankerCount = s.anker,
@@ -143,6 +147,7 @@ constructor(
                     loop = s.loop,
                     includeHabits = s.includeHabits,
                     pauseSeconds = s.pauseSeconds,
+                    autoStopMinutes = autoStopMinutes,
                     error = err,
                 )
             }
@@ -185,6 +190,10 @@ constructor(
         }
     }
 
+    fun setAutoStopMinutes(minutes: Int) {
+        viewModelScope.launch { appSettings.setTtsAutoStopMinutes(minutes) }
+    }
+
     fun dismissError() {
         errorFlow.value = null
     }
@@ -210,6 +219,7 @@ constructor(
         ttsJob =
             viewModelScope.launch {
                 val s = settingsFlow.first()
+                val autoStopMinutes = appSettings.ttsAutoStopMinutesFlow.first()
                 // Gewohnheiten nur anhaengen, wenn das "G"-Haekchen aktiv ist. Ihre "wie-oft pro
                 // Satz"-Zahl kommt aus dem Gewohnheit-Reiter (gemeinsamer DataStore) — die
                 // Gesamt-Wiederholung steuert allein der Mental-Loop.
@@ -243,6 +253,7 @@ constructor(
                         gewohnheitRepeat = gewohnheitSettings.first,
                         mentalPauseMs = s.pauseSeconds * 1_000L,
                         gewohnheitPauseMs = gewohnheitSettings.second * 1_000L,
+                        autoStopMs = autoStopMinutes * 60 * 1_000L,
                     )
                 } catch (e: CancellationException) {
                     throw e // Cancellation NIE verschlucken (Bug-Almanach kotlin §2.1)
@@ -276,6 +287,7 @@ constructor(
         gewohnheitRepeat: Int,
         mentalPauseMs: Long,
         gewohnheitPauseMs: Long,
+        autoStopMs: Long,
     ) {
         // Mentalblock (Anker-Schema) + optional Gewohnheiten am Ende (jeder Satz gewohnheitRepeat-mal).
         val mentalSeq = buildSequence(mentalTexts, anker, folge).map { SpokenStep(it, mentalPauseMs) }
@@ -291,8 +303,8 @@ constructor(
                 "repeat=$gewohnheitRepeat gewohnheitPauseMs=$gewohnheitPauseMs)",
         )
 
-        // Wiedergabe mit frischer Synthese pro Satzvorkommen, Loop + 15-Min-Limit.
-        val deadline = SystemClock.elapsedRealtime() + MAX_DURATION_MS
+        // Wiedergabe mit frischer Synthese pro Satzvorkommen, Loop + einstellbarem Sicherheitslimit.
+        val deadline = SystemClock.elapsedRealtime() + autoStopMs
         do {
             for ((index, step) in sequence.withIndex()) {
                 currentCoroutineContext().ensureActive()
@@ -300,7 +312,7 @@ constructor(
                     Diag.d(
                         DiagnosticArea.GOOGLE_TTS,
                         TAG,
-                        "15-Minuten-Grenze erreicht — automatischer Stop",
+                        "${autoStopMs / 60_000}-Minuten-Grenze erreicht — automatischer Stop",
                     )
                     return
                 }

@@ -77,6 +77,20 @@ fun TtsSettingsScreen(
         ) {
             item {
                 Text(
+                    text = "Automatische Abschaltung",
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = cosmos.textSecondary,
+                )
+            }
+            item {
+                AutoStopSettingCard(
+                    accent = cosmos.accent,
+                    valueMinutes = mentalState.autoStopMinutes,
+                    onValueSelected = mentalTtsViewModel::setAutoStopMinutes,
+                )
+            }
+            item {
+                Text(
                     text = "Pausen zwischen vorgelesenen Sätzen",
                     style = MaterialTheme.typography.bodyMedium,
                     color = cosmos.textSecondary,
@@ -105,6 +119,100 @@ fun TtsSettingsScreen(
         }
     }
 }
+
+@Composable
+private fun AutoStopSettingCard(
+    accent: Color,
+    valueMinutes: Int,
+    onValueSelected: (Int) -> Unit,
+) {
+    val cosmos = LocalCosmos.current
+    GlassCard(modifier = Modifier.fillMaxWidth()) {
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Box(
+                modifier = Modifier
+                    .size(48.dp)
+                    .clip(CircleShape)
+                    .background(accent.copy(alpha = 0.18f)),
+                contentAlignment = Alignment.Center,
+            ) {
+                Icon(Icons.AutoMirrored.Outlined.VolumeUp, null, tint = accent, modifier = Modifier.size(24.dp))
+            }
+            Spacer(Modifier.size(16.dp))
+            Column(modifier = Modifier.weight(1f)) {
+                Text("Abschalten nach", style = MaterialTheme.typography.titleMedium, color = cosmos.textPrimary)
+                Spacer(Modifier.size(2.dp))
+                Text(
+                    "Gilt global für Mental- und Gewohnheits-Vorlesen.",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = cosmos.textSecondary,
+                )
+            }
+            AutoStopDropdown(
+                valueMinutes = valueMinutes,
+                accent = accent,
+                onValueSelected = onValueSelected,
+            )
+        }
+    }
+}
+
+@Composable
+private fun AutoStopDropdown(
+    valueMinutes: Int,
+    accent: Color,
+    onValueSelected: (Int) -> Unit,
+) {
+    var expanded by remember { mutableStateOf(false) }
+    Box {
+        Row(
+            modifier = Modifier
+                .clip(RoundedCornerShape(10.dp))
+                .background(accent.copy(alpha = 0.12f))
+                .clickable { expanded = true }
+                .padding(horizontal = 10.dp, vertical = 8.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Text(
+                text = formatAutoStopMinutes(valueMinutes),
+                style = MaterialTheme.typography.labelLarge,
+                color = accent,
+                fontWeight = FontWeight.Bold,
+            )
+            Icon(Icons.Outlined.ArrowDropDown, null, tint = accent, modifier = Modifier.size(18.dp))
+        }
+        DropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }) {
+            Text(
+                text = "Abschaltzeit auswählen",
+                style = MaterialTheme.typography.labelMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.padding(horizontal = 14.dp, vertical = 8.dp),
+            )
+            (15..120 step 15).forEach { minutes ->
+                DropdownMenuItem(
+                    text = { Text(formatAutoStopMinutes(minutes)) },
+                    onClick = {
+                        onValueSelected(minutes)
+                        expanded = false
+                    },
+                    trailingIcon = {
+                        if (minutes == valueMinutes) {
+                            Icon(Icons.Outlined.Check, null, tint = accent)
+                        }
+                    },
+                )
+            }
+        }
+    }
+}
+
+private fun formatAutoStopMinutes(minutes: Int): String =
+    when (minutes) {
+        60 -> "1 Stunde"
+        120 -> "2 Stunden"
+        in 61..119 -> "${minutes / 60} Stunde ${minutes % 60} Minuten"
+        else -> "$minutes Minuten"
+    }
 
 @Composable
 private fun PauseSettingCard(
