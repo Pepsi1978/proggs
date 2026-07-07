@@ -55,7 +55,7 @@ VERSION = "0.53.0 (05.07.2026, 14.14 Uhr)"  # 0.53.0 (Gruppe D "Mitlernen in Pro
 VERSION = "0.56.0 (06.07.2026, 13:52 Uhr)"  # 0.56.0: Composite-Route query_internet fuer verschachtelte Anfragen (erst Gedächtnis-Kontext, dann Internet-Abgleich). Root Cause: Router-Schema erlaubte bisher genau EINEN intent; dadurch wurde bei Kettenanforderungen nur query ODER internet ausgeführt. Jetzt liefert der Router optional web_query, der Server führt beide bestehenden Pfade sequenziell aus und formuliert eine kombinierte Antwort. Alt: 0.55.3 (06.07.2026, 13:23 Uhr).
 VERSION = "0.57.0 (06.07.2026, 17:23 Uhr)"  # 0.57.0: Qdrant-/Gedächtnis-Limits vollständig dashboardfähig. Zusätzlich zu den bisherigen Recall-/Kontextwerten sind jetzt Duplikat-Suchkandidaten, Entity-Extraktionsfenster, Entity-Vollabruflimit, Antwort-Max-Tokens, Arbeitscache-Schwelle und Kategorie-Batchgröße persistent über /config.limits.agent einstellbar; die Werte wirken sofort im laufenden Agenten. Alt: 0.56.3.
 VERSION = "0.59.1 (07.07.2026, 11:52 Uhr)"  # 0.59.1: Router-Härtung gegen falsche query_internet-Erzwingung. Die Gedächtnis+Internet-Ketten-Erkennung scannt Standard-Modus-/Antwortlängen-Prompts nicht mehr mit, sondern nur Franks aktuelle Nachricht und explizite Zusatz-Prompt-Blöcke. Alt: 0.59.0.
-VERSION = "0.60.0 (07.07.2026, 13:09 Uhr)"  # 0.60.0: NEU Turn-Logbuch (Logbuch 1) + Sonden-Trace (Logbuch 2), Frank-Auftrag 2026-07-07. Jeder /chat + /chat/stream-Turn wird per contextvar-Trace mitgeschrieben: der bestehende checkpoint()-Kanal fuettert zusaetzlich den Trace, ein Phasen-Marker recall_search trennt Rohsuche vom Leseagent-Filter. Logbuch 1 (LOGBOOK_DIR/Trace/turns.jsonl, 100 rollierend) = 1 lesbare Zeile je Anfrage mit Frage, Router->final Intent, Rohtreffer/Auswahl (Star-Trek: 50 gefunden/0 gewaehlt), Confidence, Antwort-Vorschau + Phasen-Timing (router_ms/suche_ms/leseagent_ms/web_antwort_ms = Flaschenhals-Radar). Logbuch 2 (trace.jsonl, 4000 Events) = feine Events je Turn per turn_id verknuepft (erweiterbares Geruest fuer feine Sonden beim Agenten-Umbau). Atomar (tmp+os.replace), secret-maskiert, BEST-EFFORT (try/except ueberall — gefaehrdet den Chat nie). Deterministische Problem-Markierung (_PROBLEM_FEEDBACK_RE) markiert den letzten Turn, wenn Frank ein Problem meldet. GET /logbook/turns fuers Dashboard. Persistent auf Samba (LOGBOOK_DIR bereits gemountet -> ueberlebt Rebuilds; loest fuer die Turn-Ebene die Fluechtigkeit von /app/logs/agent.jsonl). Alt: 0.59.1 (07.07.2026, 11:52 Uhr).
+VERSION = "0.61.0 (07.07.2026, 14:24 Uhr)"  # 0.61.0: Schritt-2-Baustein (Agenten-Umbau) — NEU codex_generate_tools(): GPT/Codex Function-Calling-Loop auf der OpenAI-Responses-API (chatgpt.com/backend-api/codex). Deterministischer Hard-Stop (max_turns UND max_seconds), tool_use<->tool_result strikt 1:1 (function_call verbatim in den Verlauf, je call_id genau ein function_call_output), Tool-Exception als Fehler-tool_result zurueck (nie crashen), Schleifen-Erkennung (>3x gleiche name+args), Tool-Output je Aufruf auf LESE_TOOL_OUT_CAP gekappt; bei Hard-Stop ohne Klartext eine finale Runde OHNE Werkzeuge (Absicherung nach bugs/server/ai-agent-frameworks.md). NEU Endpoint GET /toolloop-selftest: isolierter Machbarkeits-Smoke-Test (2 triviale Tools) — prueft empirisch, ob das Backend eigene function-Tools akzeptiert+aufruft. Beruehrt den Chat-Pfad NICHT (reiner Baustein; sichtbare Dashboard-Version bleibt 0.56.0 bis der Umbau den Chat aendert). Alt: 0.60.0 (07.07.2026, 13:09 Uhr) NEU Turn-Logbuch + Sonden-Trace. Jeder /chat + /chat/stream-Turn wird per contextvar-Trace mitgeschrieben: der bestehende checkpoint()-Kanal fuettert zusaetzlich den Trace, ein Phasen-Marker recall_search trennt Rohsuche vom Leseagent-Filter. Logbuch 1 (LOGBOOK_DIR/Trace/turns.jsonl, 100 rollierend) = 1 lesbare Zeile je Anfrage mit Frage, Router->final Intent, Rohtreffer/Auswahl (Star-Trek: 50 gefunden/0 gewaehlt), Confidence, Antwort-Vorschau + Phasen-Timing (router_ms/suche_ms/leseagent_ms/web_antwort_ms = Flaschenhals-Radar). Logbuch 2 (trace.jsonl, 4000 Events) = feine Events je Turn per turn_id verknuepft (erweiterbares Geruest fuer feine Sonden beim Agenten-Umbau). Atomar (tmp+os.replace), secret-maskiert, BEST-EFFORT (try/except ueberall — gefaehrdet den Chat nie). Deterministische Problem-Markierung (_PROBLEM_FEEDBACK_RE) markiert den letzten Turn, wenn Frank ein Problem meldet. GET /logbook/turns fuers Dashboard. Persistent auf Samba (LOGBOOK_DIR bereits gemountet -> ueberlebt Rebuilds; loest fuer die Turn-Ebene die Fluechtigkeit von /app/logs/agent.jsonl). Alt: 0.59.1 (07.07.2026, 11:52 Uhr).
 
 # ---------------------------------------------------------------------------
 # Konfiguration (alles aus Umgebungsvariablen — Secrets nie im Code)
@@ -136,6 +136,7 @@ ANSWER_MAX_TOKENS = DEFAULT_AGENT_LIMITS["answer_max_tokens"]  # grosszuegig: Th
 LESE_SNIPPET_CHARS = DEFAULT_AGENT_LIMITS["lese_snippet_chars"]   # Leseagent waehlt NUR Nummern -> pro Treffer reicht ein Relevanz-Schnipsel (kein Volltext)
 ANSWER_HIT_CHARS = DEFAULT_AGENT_LIMITS["answer_hit_chars"]       # Hauptagent-Antwort: max pro ausgewaehltem Treffer
 ANSWER_TOTAL_CHARS = DEFAULT_AGENT_LIMITS["answer_total_chars"]  # Hauptagent-Antwort: Gesamt-Kontextbudget (gegen Ueberlauf/Kosten)
+LESE_TOOL_OUT_CAP = 20000   # Kontext-Schutz: Ergebnis EINES Werkzeug-Aufrufs (function_call_output) im Tool-Loop, hart gekappt (ai-agent-Almanach §2.2)
 RECALL_WORKING_CACHE_THRESHOLD = DEFAULT_AGENT_LIMITS["recall_working_cache_threshold"]
 RECALL_NORMAL_MAX = DEFAULT_AGENT_LIMITS["recall_normal_max"]  # Poka-Yoke: normale Fragen duerfen nie hunderte Treffer intern zusammenfassen
 CONTEXT_PROMPT_MAX_CHARS = DEFAULT_AGENT_LIMITS["context_prompt_max_chars"]
@@ -865,6 +866,156 @@ def codex_generate_with_native_web(system: str, user: str, model: str, max_token
     if last_exc:
         raise last_exc
     raise RuntimeError("Keine Codex-Web-Tool-Typen konfiguriert")
+
+
+def codex_generate_tools(
+    system: str,
+    user: str,
+    *,
+    tools: "list[dict]",
+    tool_handlers: "dict[str, Any]",
+    model: str,
+    max_tokens: int = 2048,
+    temperature: float = 0.3,
+    reasoning_effort: str = "high",
+    max_turns: int = 8,
+    max_seconds: float = 120.0,
+    on_delta=None,
+) -> "dict":
+    """GPT/Codex Function-Calling-Loop auf der OpenAI-Responses-API (chatgpt.com/backend-api/codex).
+
+    Der Hauptagent entscheidet SELBST per Tool-Calling: er ruft die uebergebenen Werkzeuge, bekommt
+    deren Ergebnis als function_call_output zurueck und antwortet am Ende in Klartext. Ersetzt die
+    fruehere Router->Leseagent->Antwort-Kette durch EINEN intelligenten Agenten mit Werkzeugen.
+
+    Absicherung nach `bugs/server/ai-agent-frameworks.md` (Tool-Loop):
+    - Deterministischer HARD-STOP: `max_turns` (LLM-Runden) UND `max_seconds` (Wanduhr) — UNABHAENGIG
+      vom LLM (§1.1). Bei Hard-Stop ohne Klartext wird EINE finale Runde OHNE Werkzeuge erzwungen.
+    - `tool_use` <-> `tool_result` strikt 1:1: jedes `function_call`-Item kommt verbatim in den
+      Verlauf, je `call_id` genau ein `function_call_output` (§4.1) — sonst HTTP 400.
+    - Tool-Exception wird GEFANGEN und als Fehlertext-`function_call_output` zurueckgegeben (das LLM
+      kann korrigieren) — nie crashen (§3.2). Timeout pro Backend-Call (§3.3).
+    - Schleifen-Erkennung: dieselbe (name+args)-Kette >3x -> Notbremse-Hinweis statt Endlos-Loop (§1.2).
+    - Tool-Output pro Ergebnis auf `LESE_TOOL_OUT_CAP` gekappt (Kontext-Schutz, §2.2).
+
+    Store ist `false` -> der volle Verlauf wird jede Runde mitgesendet (kein Server-Gedaechtnis).
+    V1-Grenze (bewusst): alle Turns `stream=false`; der finale Klartext geht am Stueck an `on_delta`.
+    Token-Streaming des Schluss-Turns ist Politur (der Final-Turn ist nicht sicher vorab erkennbar).
+
+    Rueckgabe: {"text", "turns", "tool_calls": [{name, ok, ms}...], "stopped": done|max_turns|max_seconds}.
+    """
+    access = _codex_tokens(refresh_if_needed=True).get("access_token", "")
+    headers = _codex_headers(access)
+    effort = _sanitize_reasoning_effort(reasoning_effort, model)
+    slug = _codex_slug(model)
+    # Responses-API mit store:false -> vollstaendigen Verlauf jede Runde mitsenden.
+    input_items: "list[dict]" = [{"role": "user", "content": user}]
+    tool_calls_log: "list[dict]" = []
+    seen_chains: "dict[str, int]" = {}   # (name+args) -> Anzahl (Schleifen-Erkennung)
+    start = time.monotonic()
+    stopped = "max_turns"
+    final_text = ""
+    turn = 0
+
+    def _post_responses(req_body: "dict", timeout: float) -> "dict":
+        try:
+            r = _HTTP.post(f"{CODEX_BASE_URL}/responses", json=req_body, headers=headers, timeout=timeout)
+        except Exception as e:  # Netzwerk/Timeout -> nicht crashen, sauber als 502 melden
+            _log(logging.WARNING, "codex_generate_tools: Backend nicht erreichbar", err=str(e)[:400])
+            raise HTTPException(status_code=502, detail=f"Codex-Tool-Backend nicht erreichbar: {str(e)[:300]}")
+        if r.status_code >= 400:
+            detail = r.text[:800] or r.reason_phrase
+            _log(logging.WARNING, "codex_generate_tools: Backend lehnte ab", status=r.status_code, detail=detail)
+            raise HTTPException(status_code=502, detail=f"Codex-Tool-Backend HTTP {r.status_code}: {detail}")
+        try:
+            return r.json()
+        except Exception as e:
+            raise HTTPException(status_code=502, detail=f"Codex-Tool-Backend: ungueltiges JSON ({str(e)[:200]})")
+
+    for turn in range(1, max_turns + 1):
+        if time.monotonic() - start > max_seconds:
+            stopped = "max_seconds"
+            break
+        body: "dict[str, Any]" = {
+            "model": slug,
+            "instructions": system,
+            "input": input_items,
+            "tools": tools,
+            "tool_choice": "auto",
+            "store": False,
+            "stream": False,
+        }
+        if effort and effort != "none":
+            body["reasoning"] = {"effort": effort, "summary": "auto"}
+            body["include"] = ["reasoning.encrypted_content"]
+        remaining = max(5.0, max_seconds - (time.monotonic() - start))
+        resp = _post_responses(body, timeout=min(120.0, remaining))
+        output_items = resp.get("output") or []
+        fcs = [it for it in output_items if isinstance(it, dict) and it.get("type") == "function_call"]
+        text = _extract_response_text(resp)
+        if not fcs:
+            final_text = text
+            stopped = "done"
+            break
+        # Assistant-Turn (die function_call-Items) VERBATIM in den Verlauf (1:1-Hygiene, §4.1)
+        for it in fcs:
+            input_items.append(it)
+        for it in fcs:
+            name = str(it.get("name") or "")
+            call_id = it.get("call_id") or it.get("id") or ""
+            raw_args = it.get("arguments")
+            chain_key = f"{name}:{raw_args}"
+            seen_chains[chain_key] = seen_chains.get(chain_key, 0) + 1
+            t0 = time.monotonic()
+            ok = True
+            if seen_chains[chain_key] > 3:
+                out_text = ("FEHLER: Dieses Werkzeug wurde mit denselben Argumenten schon mehrfach "
+                            "aufgerufen. Bitte antworte jetzt in Klartext oder waehle ein anderes Vorgehen.")
+                ok = False
+            else:
+                handler = tool_handlers.get(name)
+                if handler is None:
+                    out_text = f"FEHLER: Unbekanntes Werkzeug '{name}'."
+                    ok = False
+                else:
+                    try:
+                        args = json.loads(raw_args) if isinstance(raw_args, str) else (raw_args or {})
+                    except Exception:
+                        args = {}
+                    try:
+                        result = handler(args)
+                        out_text = result if isinstance(result, str) else json.dumps(result, ensure_ascii=False)
+                    except Exception as e:  # Tool-Fehler als tool_result zurueck (§3.2), nie crashen
+                        out_text = f"FEHLER beim Ausfuehren von '{name}': {str(e)[:400]}"
+                        ok = False
+            input_items.append({"type": "function_call_output", "call_id": call_id,
+                                "output": (out_text or "")[:LESE_TOOL_OUT_CAP]})
+            tool_calls_log.append({"name": name, "ok": ok, "ms": int((time.monotonic() - t0) * 1000)})
+
+    # Hard-Stop (max_turns/max_seconds) OHNE finalen Klartext -> eine finale Runde OHNE Werkzeuge erzwingen.
+    if not final_text:
+        forced = {
+            "model": slug,
+            "instructions": system + "\n\nBeende JETZT: antworte dem Nutzer in Klartext, "
+                                      "ohne weitere Werkzeuge aufzurufen.",
+            "input": input_items,
+            "store": False,
+            "stream": False,
+        }
+        if effort and effort != "none":
+            forced["reasoning"] = {"effort": effort, "summary": "auto"}
+            forced["include"] = ["reasoning.encrypted_content"]
+        try:
+            resp = _post_responses(forced, timeout=60.0)
+            final_text = _extract_response_text(resp)
+        except Exception as e:
+            _log(logging.WARNING, "codex_generate_tools: finale Runde fehlgeschlagen", err=str(e)[:300])
+            final_text = final_text or ""
+
+    final_text = (final_text or "").strip()
+    if final_text and on_delta is not None:
+        _safe_delta(on_delta, final_text)   # V1: finalen Text am Stueck (TTS/App bekommt die volle Antwort)
+    return {"text": final_text, "turns": turn, "tool_calls": tool_calls_log, "stopped": stopped}
 
 
 def opencode_generate(system: str, user: str, model: str, max_tokens: int, temperature: float) -> str:
@@ -3607,6 +3758,55 @@ def health() -> dict:
             "version": VERSION, "model": ROLE_MODELS["haupt"], "models": ROLE_MODELS, "reasoning": ROLE_REASONING,
             "codex": {"connected": codex_connected()}, "init_error": init_error,
             "brain": brain, "aktive_sitzungen": len(_sessions), "session_timeout_s": SESSION_TIMEOUT_S}
+
+
+@app.get("/toolloop-selftest", dependencies=[Depends(require_auth)])
+def toolloop_selftest() -> dict:
+    """Isolierter Machbarkeits-Smoke-Test fuer codex_generate_tools (Schritt-2-Vorstufe):
+    Prueft EMPIRISCH, ob das GPT/Codex-Backend EIGENE function-Tools akzeptiert und aufruft
+    (nicht nur die eingebaute Websuche). Definiert zwei triviale Werkzeuge und stellt eine
+    Frage, die beide erzwingt. Erfolg = tool_calls enthaelt beide UND die Antwort verrechnet
+    die Ergebnisse korrekt. Beruehrt den Chat-Pfad NICHT."""
+    calls: "list[str]" = []
+
+    def _serverzeit(_args: dict) -> str:
+        calls.append("aktuelle_serverzeit")
+        return "Die Serverzeit ist 14:37 Uhr (fest fuer den Test)."
+
+    def _addiere(args: dict) -> str:
+        calls.append("addiere")
+        a = int(args.get("a", 0)); b = int(args.get("b", 0))
+        return json.dumps({"summe": a + b}, ensure_ascii=False)
+
+    tools = [
+        {"type": "function", "name": "aktuelle_serverzeit",
+         "description": "Gibt die aktuelle Serverzeit zurueck.",
+         "parameters": {"type": "object", "properties": {}, "additionalProperties": False}},
+        {"type": "function", "name": "addiere",
+         "description": "Addiert zwei ganze Zahlen und gibt die Summe zurueck.",
+         "parameters": {"type": "object",
+                        "properties": {"a": {"type": "integer"}, "b": {"type": "integer"}},
+                        "required": ["a", "b"], "additionalProperties": False}},
+    ]
+    handlers = {"aktuelle_serverzeit": _serverzeit, "addiere": _addiere}
+    system = ("Du bist ein Test-Agent. Nutze die bereitgestellten Werkzeuge, um die Frage zu "
+              "beantworten. Rate nichts — rufe die Werkzeuge auf.")
+    user = "Wie spaet ist es auf dem Server, und was ergibt 17 + 25? Nutze die Werkzeuge."
+    try:
+        result = codex_generate_tools(
+            system, user, tools=tools, tool_handlers=handlers,
+            model=ROLE_MODELS["haupt"], reasoning_effort=ROLE_REASONING.get("haupt", "medium"),
+            max_turns=6, max_seconds=90.0)
+    except Exception as e:  # noqa: BLE001
+        return {"ok": False, "error": f"{type(e).__name__}: {str(e)[:500]}"}
+    text = result.get("text", "")
+    tools_used = sorted(set(calls))
+    success = ("aktuelle_serverzeit" in tools_used and "addiere" in tools_used
+               and ("42" in text) and ("14" in text or "37" in text))
+    return {"ok": success, "tools_used": tools_used, "expected_tools": ["addiere", "aktuelle_serverzeit"],
+            "turns": result.get("turns"), "stopped": result.get("stopped"),
+            "tool_calls": result.get("tool_calls"), "answer": text,
+            "model": ROLE_MODELS["haupt"]}
 
 
 # --- Einstellungen: System-Prompt (editierbarer Teil) + Modell-Wahl --------

@@ -10,6 +10,8 @@ import de.frank.entropyreducer.data.repository.RecurringTemplateRepository
 import de.frank.entropyreducer.domain.model.EntrySource
 import de.frank.entropyreducer.domain.model.EntryStatus
 import de.frank.entropyreducer.domain.model.TimeBucket
+import de.frank.entropyreducer.domain.model.defaultPriorityForBucket
+import de.frank.entropyreducer.domain.model.priorityBucketForScore
 import java.util.Calendar
 import javax.inject.Inject
 import javax.inject.Singleton
@@ -132,6 +134,8 @@ class GenerateRecurringInstancesUseCase @Inject constructor(
         // Deterministische ID: gleicher Tag der gleichen Vorlage erzeugt gleiche ID
         // — verhindert Duplikate bei mehrfachem Aufruf am gleichen Tag.
         val deterministicId = "rec-${template.id}-$occurrenceMs"
+        val effectivePriority =
+            template.targetBucket?.let { defaultPriorityForBucket(it) } ?: template.priorityScore.toDouble()
 
         // Frank-Wunsch 2026-05-23: Loop-Aufgaben kommen OHNE Frist in die Liste.
         // Die Frist setzt Frank manuell im Detail wenn er sie braucht — sonst gar nicht.
@@ -142,15 +146,15 @@ class GenerateRecurringInstancesUseCase @Inject constructor(
             description = template.description ?: "",
             category = template.category,
             severity = template.severity,
-            priorityScore = template.priorityScore.toDouble(),
+            priorityScore = effectivePriority,
             // Frank-Wunsch 2026-06-01: Die im Loop gesetzte Prioritaet ist eine MANUELLE
             // Prioritaet — sie muss in der generierten Aufgabe gelten und darf NICHT von der
             // KI ueberschrieben werden. manualPriorityScore hat Vorrang vor priorityScore.
-            manualPriorityScore = template.priorityScore.toDouble(),
+            manualPriorityScore = effectivePriority,
             priorityReason = "Wiederkehrende Aufgabe aus Vorlage \"${template.title}\"",
             status = EntryStatus.OFFEN,
-            // Frank-Wunsch 2026-05-31: Vorgegebener Ziel-Bucket der Vorlage; null = HEUTE.
-            timeBucket = template.targetBucket ?: TimeBucket.HEUTE,
+            // Vorgegebener Zielbereich; null = aus der Vorlagen-Priorität berechnet.
+            timeBucket = template.targetBucket ?: priorityBucketForScore(effectivePriority),
             manualBucket = template.targetBucket,
             manualBucketSetAt = if (template.targetBucket != null) occurrenceMs else null,
             estimatedDurationMinutes = template.estimatedDurationMinutes,
@@ -295,14 +299,7 @@ class GenerateRecurringInstancesUseCase @Inject constructor(
                             // Noch nie erledigt -> ab heute faellig.
                             todayMidnight
                         }
-                    val daysUntilDue = ((nextDueMidnight - todayMidnight) / MS_PER_DAY).toInt()
-                    val dueBucket =
-                        when {
-                            daysUntilDue <= 0 -> TimeBucket.HEUTE
-                            daysUntilDue == 1 -> TimeBucket.MORGEN
-                            daysUntilDue <= 7 -> TimeBucket.FREIBLOCK
-                            else -> TimeBucket.SPAETER
-                        }
+                    val dueBucket = template.targetBucket ?: priorityBucketForScore(template.priorityScore.toDouble())
                     if (openForThis.isNotEmpty()) {
                         // Vorhandene offene Instanz behalten und in den Faelligkeits-Bucket schieben.
                         // Frank-Wunsch 2026-06-01: dabei auch die manuelle Loop-Prio synchronisieren.
@@ -443,6 +440,9 @@ class GenerateRecurringInstancesUseCase @Inject constructor(
 
         // Frank-Wunsch 2026-05-23: Loop-Aufgaben kommen OHNE Frist in die Liste.
         // Frist setzt Frank manuell im Detail, falls noetig.
+        val effectivePriority =
+            template.targetBucket?.let { defaultPriorityForBucket(it) } ?: template.priorityScore.toDouble()
+
         return EntropyEntryEntity(
             id = "rec-${template.id}-$midnight",
             rawTranscript = "[Wiederkehrend] ${template.title}",
@@ -450,7 +450,7 @@ class GenerateRecurringInstancesUseCase @Inject constructor(
             description = template.description ?: "",
             category = template.category,
             severity = template.severity,
-            priorityScore = template.priorityScore.toDouble(),
+            priorityScore = effectivePriority,
             // Frank-Wunsch 2026-06-01: Die im Loop gesetzte Prioritaet ist eine MANUELLE
             // Prioritaet — sie muss in der generierten Aufgabe gelten und darf NICHT von der
             // KI ueberschrieben werden. manualPriorityScore hat Vorrang vor priorityScore.
@@ -458,7 +458,7 @@ class GenerateRecurringInstancesUseCase @Inject constructor(
             priorityReason = "Wiederkehrende Aufgabe aus Vorlage \"${template.title}\"",
             status = EntryStatus.OFFEN,
             // Frank-Wunsch 2026-05-31: Vorgegebener Ziel-Bucket der Vorlage; null = HEUTE.
-            timeBucket = template.targetBucket ?: TimeBucket.HEUTE,
+            timeBucket = template.targetBucket ?: priorityBucketForScore(effectivePriority),
             manualBucket = template.targetBucket,
             manualBucketSetAt = if (template.targetBucket != null) nowMs else null,
             estimatedDurationMinutes = template.estimatedDurationMinutes,

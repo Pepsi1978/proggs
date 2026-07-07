@@ -18,17 +18,35 @@ enum class EntropyCategory {
 enum class EntryStatus { OFFEN, IN_ARBEIT, REDUZIERT, ARCHIVIERT }
 
 /**
- * Zeit-Buckets fuer Aufgaben (Frank-Wunsch 2026-05-09):
- *  - HEUTE: erscheint im HEUTE-Bucket, max 5 Eintraege sichtbar
- *  - MORGEN: erscheint morgen automatisch im HEUTE (Tag-Rollover beim App-Start)
- *  - FREIBLOCK: naechster freier Schicht-Block — passend fuer Schichtdienst
- *  - SPAETER: kein konkretes Datum, sammelt alles was nicht dringend ist
- *
- * Frank kann jeden Eintrag manuell einem Bucket zuweisen (manualBucket-Feld
- * in EntropyEntryEntity); ohne manuellen Override entscheidet die KI auf Basis
- * von priorityScore + Schichtkalender + geschaetzter Dauer.
+ * Persistierte Aufgaben-Buckets. Die Enum-Namen bleiben für Backup-/DB-Kompatibilität erhalten,
+ * fachlich stehen sie im Aufgaben-Reiter seit 2026-07-07 für Prioritätsbereiche:
+ *  - HEUTE: Priorität sehr hoch, 80-100
+ *  - MORGEN: Priorität hoch, 60-79
+ *  - FREIBLOCK: Priorität mittel, 40-59
+ *  - GERING: Priorität gering, 20-39
+ *  - SPAETER: später, 0-19
  */
-enum class TimeBucket { HEUTE, MORGEN, FREIBLOCK, SPAETER }
+enum class TimeBucket { HEUTE, MORGEN, FREIBLOCK, GERING, SPAETER }
+
+fun priorityBucketForScore(score: Double): TimeBucket {
+    val clamped = score.coerceIn(0.0, 100.0)
+    return when {
+        clamped >= 80.0 -> TimeBucket.HEUTE
+        clamped >= 60.0 -> TimeBucket.MORGEN
+        clamped >= 40.0 -> TimeBucket.FREIBLOCK
+        clamped >= 20.0 -> TimeBucket.GERING
+        else -> TimeBucket.SPAETER
+    }
+}
+
+fun defaultPriorityForBucket(bucket: TimeBucket): Double =
+    when (bucket) {
+        TimeBucket.HEUTE -> 90.0
+        TimeBucket.MORGEN -> 70.0
+        TimeBucket.FREIBLOCK -> 50.0
+        TimeBucket.GERING -> 30.0
+        TimeBucket.SPAETER -> 10.0
+    }
 
 enum class EntrySource {
     NUTZER_MIC,

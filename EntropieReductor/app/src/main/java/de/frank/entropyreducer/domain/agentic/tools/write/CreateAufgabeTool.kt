@@ -12,6 +12,8 @@ import de.frank.entropyreducer.domain.model.EntropyCategory
 import de.frank.entropyreducer.domain.model.EntrySource
 import de.frank.entropyreducer.domain.model.EntryStatus
 import de.frank.entropyreducer.domain.model.TimeBucket
+import de.frank.entropyreducer.domain.model.defaultPriorityForBucket
+import de.frank.entropyreducer.domain.model.priorityBucketForScore
 import java.util.UUID
 import javax.inject.Inject
 import javax.inject.Singleton
@@ -24,14 +26,13 @@ import kotlinx.serialization.json.put
 /**
  * Write-Tool: Legt eine neue Aufgabe im Entropie-Stream an.
  *
- * Aufgaben sind konkrete, handlungsorientierte Einträge, die im
- * HEUTE/MORGEN/FREIBLOCK/SPÄTER-Bucket nach Priority sortiert erscheinen.
+ * Aufgaben sind konkrete, handlungsorientierte Einträge, die nach Priorität sortiert erscheinen.
  *
  * Parameter:
  *  - titel (string, required, max 200 Zeichen): Kurzbezeichnung der Aufgabe
  *  - beschreibung (string, required, max 2000 Zeichen): Ausführliche Beschreibung
  *  - kategorie (string, required): EntropyCategory-Enum-Wert
- *  - bucket (string, optional, default "HEUTE"): TimeBucket-Enum-Wert
+ *  - bucket (string, optional): Prioritätsbereich; default wird aus priorityScore berechnet
  *  - severity (integer, optional, default 5): Schwere 1..10
  *  - priorityScore (number, optional, default 50.0): Priorität 0.0..100.0
  *
@@ -51,8 +52,7 @@ constructor(private val entryRepository: EntryRepository) : AgenticTool {
 
     override val description: String =
         "Legt eine neue Aufgabe an. Nutze dieses Tool wenn der Nutzer einen To-Do-Eintrag " +
-            "braucht, eine konkrete Handlung. Aufgaben werden im HEUTE/MORGEN/FREIBLOCK/" +
-            "SPAETER-Bucket sortiert nach Priority gezeigt."
+            "braucht, eine konkrete Handlung. Aufgaben werden nach Priorität gruppiert und sortiert."
 
     override val parameterSchema: Schema =
         Schema(
@@ -90,11 +90,20 @@ constructor(private val entryRepository: EntryRepository) : AgenticTool {
                         Schema(
                             type = SchemaType.STRING,
                             description =
-                                "Zeitlicher Bucket. Default: HEUTE. " +
-                                    "HEUTE = sofort sichtbar, MORGEN = morgen, " +
-                                    "FREIBLOCK = nächster freier Schichtblock, " +
-                                    "SPAETER = kein konkretes Datum.",
-                            enum = listOf("HEUTE", "MORGEN", "FREIBLOCK", "SPAETER"),
+                                "Prioritätsbereich. Default: aus priorityScore berechnet. " +
+                                    "HEUTE/sehr_hoch=80-100, MORGEN/hoch=60-79, " +
+                                    "FREIBLOCK/mittel=40-59, GERING/gering=20-39, SPAETER=0-19.",
+                            enum =
+                                listOf(
+                                    "SEHR_HOCH",
+                                    "HOCH",
+                                    "MITTEL",
+                                    "GERING",
+                                    "SPAETER",
+                                    "HEUTE",
+                                    "MORGEN",
+                                    "FREIBLOCK",
+                                ),
                         ),
                     "severity" to
                         Schema(
@@ -142,11 +151,11 @@ constructor(private val entryRepository: EntryRepository) : AgenticTool {
             }
 
             // --- Optionale Parameter ---
-            val bucketRaw = obj["bucket"]?.jsonPrimitive?.content?.trim() ?: "HEUTE"
+            val bucketRaw = obj["bucket"]?.jsonPrimitive?.content?.trim()
             val severity = (obj["severity"]?.jsonPrimitive?.content?.toIntOrNull() ?: 5)
                 .coerceIn(1, 10)
-            val priorityScore = (obj["priorityScore"]?.jsonPrimitive?.content?.toDoubleOrNull()
-                ?: 50.0).coerceIn(0.0, 100.0)
+            val priorityScoreArg = obj["priorityScore"]?.jsonPrimitive?.content?.toDoubleOrNull()
+            val priorityScore = (priorityScoreArg ?: 50.0).coerceIn(0.0, 100.0)
 
             // --- Enum-Konvertierung mit verständlicher Fehlermeldung ---
             val kategorie = try {
@@ -159,14 +168,23 @@ constructor(private val entryRepository: EntryRepository) : AgenticTool {
                 )
             }
 
-            val bucket = try {
-                TimeBucket.valueOf(bucketRaw)
-            } catch (e: IllegalArgumentException) {
-                return ToolResult.Failure(
-                    "Unbekannter Bucket: '$bucketRaw'. " +
-                        "Erlaubt: HEUTE, MORGEN, FREIBLOCK, SPAETER."
-                )
-            }
+            val bucket = bucketRaw?.let { raw ->
+                when (raw.uppercase()) {
+                    "HEUTE", "SEHR_HOCH" -> TimeBucket.HEUTE
+                    "MORGEN", "HOCH" -> TimeBucket.MORGEN
+                    "FREIBLOCK", "MITTEL" -> TimeBucket.FREIBLOCK
+                    "GERING" -> TimeBucket.GERING
+                    "SPAETER", "SPÄTER" -> TimeBucket.SPAETER
+                    else ->
+                        return ToolResult.Failure(
+                            "Unbekannter Bucket: '$raw'. " +
+                                "Erlaubt: HEUTE, MORGEN, FREIBLOCK, GERING, SPAETER."
+                        )
+                }
+            } ?: priorityBucketForScore(priorityScore)
+            val effectivePriorityScore =
+                if (priorityScoreArg == null && bucketRaw != null) defaultPriorityForBucket(bucket) else priorityScore
+            val finalBucket = priorityBucketForScore(effectivePriorityScore)
 
             // --- Entity aufbauen ---
             val id = UUID.randomUUID().toString()
@@ -179,10 +197,10 @@ constructor(private val entryRepository: EntryRepository) : AgenticTool {
                 description = beschreibung,
                 category = kategorie,
                 severity = severity,
-                priorityScore = priorityScore,
+                priorityScore = effectivePriorityScore,
                 priorityReason = "Vom Agentic-AI angelegt",
                 status = EntryStatus.OFFEN,
-                timeBucket = bucket,
+                timeBucket = finalBucket,
                 estimatedDurationMinutes = null,
                 createdAt = now,
                 updatedAt = now,
@@ -201,9 +219,9 @@ constructor(private val entryRepository: EntryRepository) : AgenticTool {
                 put("id", id)
                 put("titel", titel)
                 put("kategorie", kategorie.name)
-                put("bucket", bucket.name)
+                put("bucket", finalBucket.name)
                 put("severity", severity)
-                put("priorityScore", priorityScore)
+                put("priorityScore", effectivePriorityScore)
                 put("message", "Aufgabe angelegt")
             }
 

@@ -11,6 +11,8 @@ import de.frank.entropyreducer.domain.model.EntropyCategory
 import de.frank.entropyreducer.domain.model.EntrySource
 import de.frank.entropyreducer.domain.model.EntryStatus
 import de.frank.entropyreducer.domain.model.TimeBucket
+import de.frank.entropyreducer.domain.model.defaultPriorityForBucket
+import de.frank.entropyreducer.domain.model.priorityBucketForScore
 import de.frank.entropyreducer.domain.usecase.GenerateRecurringInstancesUseCase
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
@@ -202,16 +204,16 @@ class RecurringTemplatesViewModel @Inject constructor(
     }
 
     /**
-     * Frank-Wunsch 2026-05-31: Ziel-Bucket (Tag) einer wiederkehrenden Aufgabe.
-     * null = "KI"/automatisch HEUTE. Offene Instanzen werden sofort in den
-     * gewuenschten Bucket verschoben (und als manuell markiert, wenn ein Tag
-     * gewaehlt wurde — sonst wieder KI/automatisch).
+     * Ziel-Prioritätsbereich einer wiederkehrenden Aufgabe.
+     * null = automatisch aus der Vorlagen-Priorität. Offene Instanzen werden sofort
+     * in den gewünschten Bereich verschoben.
      */
     fun setTargetBucket(template: RecurringTemplateEntity, bucket: TimeBucket?) {
         viewModelScope.launch {
             val now = System.currentTimeMillis()
-            repo.upsert(template.copy(targetBucket = bucket, updatedAt = now))
-            val target = bucket ?: TimeBucket.HEUTE
+            val nextPriority = bucket?.let { defaultPriorityForBucket(it).toInt() } ?: template.priorityScore
+            repo.upsert(template.copy(targetBucket = bucket, priorityScore = nextPriority, updatedAt = now))
+            val target = bucket ?: priorityBucketForScore(nextPriority.toDouble())
             entryRepo.getActive().first()
                 .filter {
                     it.source == EntrySource.RECURRING_TEMPLATE &&
@@ -221,6 +223,8 @@ class RecurringTemplatesViewModel @Inject constructor(
                 .forEach {
                     entryRepo.upsert(
                         it.copy(
+                            priorityScore = nextPriority.toDouble(),
+                            manualPriorityScore = nextPriority.toDouble(),
                             timeBucket = target,
                             manualBucket = bucket,
                             manualBucketSetAt = if (bucket != null) now else null,
@@ -313,6 +317,9 @@ class RecurringTemplatesViewModel @Inject constructor(
             set(Calendar.MINUTE, template.timeOfDayMinutes % 60)
         }.timeInMillis
 
+        val effectivePriority =
+            template.targetBucket?.let { defaultPriorityForBucket(it) } ?: template.priorityScore.toDouble()
+
         return EntropyEntryEntity(
             id = "rec-${template.id}-$midnight",
             rawTranscript = "[Wiederkehrend] ${template.title}",
@@ -320,11 +327,11 @@ class RecurringTemplatesViewModel @Inject constructor(
             description = template.description ?: "",
             category = template.category,
             severity = template.severity,
-            priorityScore = template.priorityScore.toDouble(),
+            priorityScore = effectivePriority,
             priorityReason = "Wiederkehrende Aufgabe aus Vorlage \"${template.title}\"",
             status = EntryStatus.OFFEN,
-            // Frank-Wunsch 2026-05-31: Vorgegebener Ziel-Bucket; null = HEUTE (KI/automatisch).
-            timeBucket = template.targetBucket ?: TimeBucket.HEUTE,
+            // Vorgegebener Zielbereich; null = aus der Priorität der Vorlage berechnet.
+            timeBucket = template.targetBucket ?: priorityBucketForScore(effectivePriority),
             manualBucket = template.targetBucket,
             manualBucketSetAt = if (template.targetBucket != null) nowMs else null,
             estimatedDurationMinutes = template.estimatedDurationMinutes,

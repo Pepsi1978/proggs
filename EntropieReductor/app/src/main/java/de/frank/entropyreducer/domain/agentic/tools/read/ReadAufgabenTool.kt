@@ -10,6 +10,7 @@ import de.frank.entropyreducer.domain.agentic.ToolContext
 import de.frank.entropyreducer.domain.agentic.ToolResult
 import de.frank.entropyreducer.domain.model.EntryStatus
 import de.frank.entropyreducer.domain.model.TimeBucket
+import de.frank.entropyreducer.domain.model.priorityBucketForScore
 import javax.inject.Inject
 import javax.inject.Singleton
 import kotlinx.serialization.json.JsonElement
@@ -24,13 +25,12 @@ import kotlinx.serialization.json.put
 /**
  * Liest aktive Aufgaben aus dem EntryRepository.
  *
- * "Aktive Aufgaben" sind Einträge mit timeBucket in (HEUTE, MORGEN, FREIBLOCK)
- * und status in (OFFEN, IN_ARBEIT). Über die optionalen Parameter kann nach
- * Bucket und Status gefiltert werden.
+ * "Aktive Aufgaben" sind Einträge mit Status OFFEN oder IN_ARBEIT. Über die optionalen
+ * Parameter kann nach Prioritätsbereich und Status gefiltert werden.
  *
  * Parameter:
  *  - bucket (string, optional, default="alle"):
- *    "heute" | "morgen" | "freiblock" | "spaeter" | "alle"
+ *    "sehr_hoch" | "hoch" | "mittel" | "gering" | "spaeter" | "alle"
  *  - status (string, optional, default="offen"):
  *    "offen" | "in_arbeit" | "alle"
  *    Hinweis: "offen" liefert auch IN_ARBEIT-Einträge (= alle aktiven)
@@ -53,8 +53,7 @@ constructor(private val entryRepository: EntryRepository) : AgenticTool {
     override val category: ToolCategory = ToolCategory.READ_AUFGABEN
 
     override val description: String =
-        "Liest aktive Aufgaben des Nutzers — Einträge die im HEUTE-, MORGEN- oder FREIBLOCK-Bucket " +
-            "liegen und noch offen oder in Arbeit sind. " +
+        "Liest aktive Aufgaben des Nutzers nach Prioritätsbereichen. " +
             "Nutze dieses Tool wenn du wissen möchtest was der Nutzer aktuell zu erledigen hat, " +
             "z.B. um Prioritäten einzuschätzen, offene Arbeit zu bündeln oder eine Tagesplanung zu erstellen."
 
@@ -70,9 +69,20 @@ constructor(private val entryRepository: EntryRepository) : AgenticTool {
                         Schema(
                             type = SchemaType.STRING,
                             description =
-                                "Zeit-Bucket-Filter. Default: alle. " +
+                                "Prioritätsbereich-Filter. Default: alle. " +
                                     "'offen' liefert OFFEN + IN_ARBEIT gemeinsam.",
-                            enum = listOf("heute", "morgen", "freiblock", "spaeter", "alle"),
+                            enum =
+                                listOf(
+                                    "sehr_hoch",
+                                    "hoch",
+                                    "mittel",
+                                    "gering",
+                                    "spaeter",
+                                    "heute",
+                                    "morgen",
+                                    "freiblock",
+                                    "alle",
+                                ),
                         ),
                     "status" to
                         Schema(
@@ -100,18 +110,19 @@ constructor(private val entryRepository: EntryRepository) : AgenticTool {
             val limit =
                 (obj["limit"]?.jsonPrimitive?.content?.toIntOrNull() ?: 50).coerceIn(1, 200)
 
-            // Bucket-Argument auf TimeBucket-Enum mappen
+            // Prioritätsbereich-Argument auf TimeBucket-Enum mappen. Alte Bucket-Namen bleiben Alias.
             val targetBucket: TimeBucket? =
                 when (bucketArg) {
-                    "heute" -> TimeBucket.HEUTE
-                    "morgen" -> TimeBucket.MORGEN
-                    "freiblock" -> TimeBucket.FREIBLOCK
+                    "sehr_hoch", "heute" -> TimeBucket.HEUTE
+                    "hoch", "morgen" -> TimeBucket.MORGEN
+                    "mittel", "freiblock" -> TimeBucket.FREIBLOCK
+                    "gering" -> TimeBucket.GERING
                     "spaeter" -> TimeBucket.SPAETER
                     "alle" -> null
                     else ->
                         return ToolResult.Failure(
                             "Unbekannter Bucket: '$bucketArg'. " +
-                                "Erlaubt: heute, morgen, freiblock, spaeter, alle."
+                                "Erlaubt: sehr_hoch, hoch, mittel, gering, spaeter, alle."
                         )
                 }
 
@@ -121,7 +132,8 @@ constructor(private val entryRepository: EntryRepository) : AgenticTool {
                 allEntries
                     .filter { entry ->
                         // Bucket-Filter
-                        val bucketOk = targetBucket == null || entry.timeBucket == targetBucket
+                        val effectiveBucket = priorityBucketForScore(entry.manualPriorityScore ?: entry.priorityScore)
+                        val bucketOk = targetBucket == null || effectiveBucket == targetBucket
 
                         // Status-Filter: "offen" = OFFEN + IN_ARBEIT (alle aktiven),
                         // "in_arbeit" = nur IN_ARBEIT, "alle" = kein Filter
@@ -155,12 +167,15 @@ constructor(private val entryRepository: EntryRepository) : AgenticTool {
                     })
                     put("entries", buildJsonArray {
                         filtered.forEach { entry ->
+                            val effectiveBucket =
+                                priorityBucketForScore(entry.manualPriorityScore ?: entry.priorityScore)
                             add(buildJsonObject {
                                 put("id", entry.id)
                                 put("createdAt", entry.createdAt)
                                 put("category", entry.category.name)
                                 put("status", entry.status.name)
                                 put("timeBucket", entry.timeBucket.name)
+                                put("priorityBucket", effectiveBucket.name)
                                 put("title", entry.title)
                                 put(
                                     "description",

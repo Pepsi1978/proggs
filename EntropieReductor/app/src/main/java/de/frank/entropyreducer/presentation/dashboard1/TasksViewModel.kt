@@ -26,6 +26,8 @@ import de.frank.entropyreducer.domain.model.EntropyCategory
 import de.frank.entropyreducer.domain.model.EntrySource
 import de.frank.entropyreducer.domain.model.EntryStatus
 import de.frank.entropyreducer.domain.model.TimeBucket
+import de.frank.entropyreducer.domain.model.defaultPriorityForBucket
+import de.frank.entropyreducer.domain.model.priorityBucketForScore
 import de.frank.entropyreducer.domain.status.StatusBreakdown
 import de.frank.entropyreducer.domain.status.StatusObserver
 import de.frank.entropyreducer.domain.usecase.CalculateBucketsUseCase
@@ -154,18 +156,17 @@ class TasksViewModel @Inject constructor(
         val pendingMethod = detailTriple.second
         val rescore = detailTriple.third
         val filtered = if (cats.isEmpty()) list else list.filter { it.category in cats }
-        // Aktive Eintraege (OFFEN + IN_ARBEIT) → Bucket-Gruppierung.
+        // Aktive Einträge (OFFEN + IN_ARBEIT) → Prioritäts-Gruppierung.
         // PERFORMANCE 2026-05-09: Sortierung nach priorityScore wird HIER vorberechnet
         // statt in der LazyColumn-Lambda. Verhindert dass `sortedByDescending` bei
         // jedem State-Update (Status-Tick alle 5 min, DB-Aenderung) neu laeuft —
         // das war eine der Hauptursachen fuer Scroll-Ruckler im Aufgaben-Bereich.
         val activeList = filtered.filter { it.status == EntryStatus.OFFEN || it.status == EntryStatus.IN_ARBEIT }
-        // Frank-Wunsch 2026-05-31: nach EFFEKTIVER Prioritaet sortieren
-        // (manualPriorityScore ?: priorityScore). So wandert eine manuell auf 100%
-        // gesetzte Aufgabe sofort nach oben — die Liste re-sortiert sich automatisch,
-        // weil der DB-Flow nach dem Update neu emittiert.
+        // Frank-Wunsch 2026-07-07: Die sichtbaren Bereiche sind Prioritätsbereiche,
+        // nicht mehr Heute/Morgen/Freiblock. Wir gruppieren nach effektiver Priorität,
+        // damit eine Slider-Änderung sofort den Bereich wechselt.
         val grouped = activeList
-            .groupBy { it.timeBucket }
+            .groupBy { priorityBucketForScore(it.manualPriorityScore ?: it.priorityScore) }
             .mapValues { (_, entries) ->
                 entries.sortedByDescending { it.manualPriorityScore ?: it.priorityScore }
             }
@@ -220,25 +221,13 @@ class TasksViewModel @Inject constructor(
         // (Frank-Wunsch 2026-05-08: keine vordefinierten Standardfragen,
         // immer durch Gemini aus dem aktuellen Kontext gebildet).
         refreshKiQuestion()
-        // Tag-Rollover: MORGEN-Eintraege die gestern gesetzt wurden werden heute
-        // automatisch zu HEUTE (Frank-Wunsch 2026-05-09).
-        rolloverManualBucketsForNewDay()
-        // Auto-Verteilung: Wenn die KI alle Eintraege in HEUTE eingeordnet hat,
-        // verteilen wir sie auf MORGEN/FREIBLOCK/SPAETER damit Frank ALLE
-        // Aufgaben sieht — nicht nur die top 5 in HEUTE (Frank-Reklamation
-        // 2026-05-09: 12 Aufgaben da, nur 5 sichtbar).
+        // Auto-Verteilung: timeBucket wird aus der effektiven Priorität abgeleitet.
         autoBalanceBuckets()
         // Auto-Archivierung: erledigte Eintraege aelter als 14 Tage werden
         // archiviert und verschwinden aus der Aufgabenliste. Sie sind weiter
         // ueber den Settings-Archiv-Bereich erreichbar (Frank-Wunsch 2026-05-09).
         autoArchiveOldResolved()
-        // Day-Change-Watcher: Prueft minuetlich ob die lokale Datums-Komponente
-        // sich geaendert hat (Mitternacht in Lokalzeit ueberschritten). Wenn ja
-        // → MORGEN-Eintraege werden zu HEUTE, autoBalance verteilt Ueberschuss.
-        // Frank-Wunsch 2026-05-09: "ab 0 Uhr meiner Zeitzone hier sollen diese
-        // Aufgaben dann in heute drin stehen". Laeuft im Hintergrund solange
-        // der ViewModel lebt — bei App-Killing uebernimmt der init-Block beim
-        // naechsten Oeffnen den Rollover.
+        // Day-Change-Watcher: nur noch Auto-Archiv; Aufgabenbereiche sind nicht mehr datumsbasiert.
         startDayChangeWatcher()
         // Auto-Re-Score (Frank-Wunsch 2026-05-09): wenn die priorityScore-
         // Doktrin sich geaendert hat (neue 5-Farben-Entropie-Reduktions-Skala),
@@ -263,7 +252,6 @@ class TasksViewModel @Inject constructor(
      * offenen Aufgaben. Im Gegensatz zum Auto-Refresh hat dieser keinen Throttle.
      */
     fun refreshAll() {
-        rolloverManualBucketsForNewDay()
         autoArchiveOldResolved()
         autoBalanceBuckets()
         rescoreAllOpenEntries()
@@ -296,50 +284,6 @@ class TasksViewModel @Inject constructor(
                 saveProcessedIds(kiStore, TASK_PROCESSED_KEY, updatedProcessedIds)
                 saveProcessedIds(habitStore, HABIT_PROCESSED_KEY, updatedProcessedIds)
             }
-        }
-    }
-
-    /**
-     * "Neue Aufgaben hinzufuegen?"-Button (Frank-Wunsch 2026-05-23).
-     * HEUTE wird nicht mehr automatisch nachgefuellt — erst wenn ALLE
-     * HEUTE-Aufgaben erledigt sind, blendet der TasksScreen diesen Button ein.
-     * Beim Tippen holen wir die [count] hoechstpriorisierten offenen Aufgaben aus
-     * den aelteren Bereichen (MORGEN/FREIBLOCK/SPAETER) nach HEUTE. Wir setzen
-     * manualBucket=HEUTE damit der Eintrag dort sicher liegen bleibt (kein
-     * Auto-Rebalance schiebt ihn weg, kein erneuter Rollover greift).
-     */
-    fun refillHeute(count: Int = 5) {
-        viewModelScope.launch {
-            val active = entries.getActive().first().filter {
-                it.status == EntryStatus.OFFEN || it.status == EntryStatus.IN_ARBEIT
-            }
-            // Nur auffuellen wenn HEUTE wirklich leer ist (Button-Bedingung).
-            val heuteOpen = active.count { it.timeBucket == TimeBucket.HEUTE }
-            if (heuteOpen > 0) return@launch
-            val candidates = active
-                .filter { it.timeBucket != TimeBucket.HEUTE }
-                .sortedByDescending { it.manualPriorityScore ?: it.priorityScore }
-                .take(count)
-            if (candidates.isEmpty()) return@launch
-            val now = System.currentTimeMillis()
-            candidates.forEach { e ->
-                de.frank.entropyreducer.data.diagnostics.Diag.i(
-                    de.frank.entropyreducer.data.diagnostics.DiagnosticArea.APP,
-                    "TasksVM",
-                    "REFILL-HEUTE '${e.title.take(24)}' ${e.timeBucket}->HEUTE (HEUTE war leer)",
-                )
-                entries.update(
-                    e.copy(
-                        manualBucket = TimeBucket.HEUTE,
-                        manualBucketSetAt = now,
-                        timeBucket = TimeBucket.HEUTE,
-                        updatedAt = now,
-                    ),
-                )
-            }
-            // Restliche Buckets neu verteilen (MORGEN/FREIBLOCK/SPAETER), damit die
-            // Caps stimmen nachdem die Eintraege HEUTE zugewiesen wurden.
-            autoBalanceBuckets()
         }
     }
 
@@ -506,9 +450,7 @@ class TasksViewModel @Inject constructor(
                 val today = java.time.LocalDate.now(java.time.ZoneId.systemDefault())
                 if (today != lastCheckedDate) {
                     lastCheckedDate = today
-                    rolloverManualBucketsForNewDay()
-                    // Auch alte erledigte Eintraege archivieren — der 14-Tage-
-                    // Cutoff bewegt sich mit dem Datum mit.
+                    // Alte erledigte Einträge archivieren — der 14-Tage-Cutoff bewegt sich mit.
                     autoArchiveOldResolved()
                 }
             }
@@ -563,95 +505,14 @@ class TasksViewModel @Inject constructor(
         }
     }
 
-    /**
-     * Wenn Frank gestern eine Aufgabe manuell auf MORGEN gesetzt hat, ist sie heute
-     * "morgen" -> wird zu HEUTE. Pruefung: manualBucketSetAt liegt vor Mitternacht
-     * heute. FREIBLOCK und SPAETER bleiben unveraendert (kein Datums-Rollover).
-     */
-    private fun rolloverManualBucketsForNewDay() {
-        viewModelScope.launch {
-            val midnightTodayMs = java.time.LocalDate.now(java.time.ZoneId.systemDefault())
-                .atStartOfDay(java.time.ZoneId.systemDefault())
-                .toInstant().toEpochMilli()
-            val active = entries.getActive().first()
-            val toRollover = active.filter {
-                it.manualBucket == TimeBucket.MORGEN &&
-                    (it.manualBucketSetAt ?: Long.MAX_VALUE) < midnightTodayMs &&
-                    (it.status == EntryStatus.OFFEN || it.status == EntryStatus.IN_ARBEIT)
-            }
-            val now = System.currentTimeMillis()
-            toRollover.forEach { e ->
-                de.frank.entropyreducer.data.diagnostics.Diag.i(
-                    de.frank.entropyreducer.data.diagnostics.DiagnosticArea.APP,
-                    "TasksVM",
-                    "ROLLOVER '${e.title.take(24)}' MORGEN->HEUTE (setAt=${e.manualBucketSetAt} < midnight=$midnightTodayMs)",
-                )
-                entries.update(
-                    e.copy(
-                        manualBucket = TimeBucket.HEUTE,
-                        manualBucketSetAt = now,
-                        timeBucket = TimeBucket.HEUTE,
-                        updatedAt = now,
-                    ),
-                )
-            }
-            if (toRollover.isNotEmpty()) {
-                // Nach Rollover Auto-Verteilung neu aufrufen — gerollte Eintraege
-                // koennten HEUTE-Limit sprengen, autoBalanceBuckets schiebt
-                // schwaechste KI-Eintraege automatisch in MORGEN/FREIBLOCK/SPAETER.
-                autoBalanceBuckets()
-            }
-        }
-    }
-
-    /**
-     * Setzt einen manuellen Bucket fuer einen Eintrag (Frank-Wunsch 2026-05-09).
-     * Ueberschreibt die KI-Zuordnung. Bei HEUTE wird das 5er-Limit eingehalten:
-     * der Eintrag mit niedrigster Prio (ausgenommen der gerade gesetzte) wandert
-     * automatisch nach MORGEN.
-     */
+    /** Kompatibilitätspfad für alte Widget-/Deep-Link-Actions: Bucket-Auswahl setzt Priorität. */
     fun setManualBucket(entryId: String, bucket: TimeBucket) {
-        viewModelScope.launch {
-            val entry = entries.get(entryId) ?: return@launch
-            de.frank.entropyreducer.data.diagnostics.Diag.i(
-                de.frank.entropyreducer.data.diagnostics.DiagnosticArea.APP,
-                "TasksVM",
-                "setManualBucket '${entry.title.take(24)}' alt mb=${entry.manualBucket}/tb=${entry.timeBucket} -> $bucket",
-            )
-            val now = System.currentTimeMillis()
-            entries.update(
-                entry.copy(
-                    manualBucket = bucket,
-                    manualBucketSetAt = now,
-                    timeBucket = bucket,
-                    updatedAt = now,
-                ),
-            )
-            // Nach manueller Zuordnung auto-balance: andere KI-Eintraege werden
-            // ggf. neu verteilt damit Buckets ihre Limits einhalten und alle
-            // Eintraege sichtbar bleiben.
-            autoBalanceBuckets()
-        }
+        setManualPriority(entryId, defaultPriorityForBucket(bucket))
     }
 
-    /**
-     * Setzt manualBucket zurueck — KI uebernimmt die Bucket-Zuordnung wieder.
-     * timeBucket bleibt bis zum naechsten Process/Rebucket auf dem aktuellen Wert.
-     */
+    /** Kompatibilitätspfad: alte Bucket-Reset-Aktion setzt die manuelle Priorität zurück. */
     fun clearManualBucket(entryId: String) {
-        viewModelScope.launch {
-            val entry = entries.get(entryId) ?: return@launch
-            entries.update(
-                entry.copy(
-                    manualBucket = null,
-                    manualBucketSetAt = null,
-                    updatedAt = System.currentTimeMillis(),
-                ),
-            )
-            // KI uebernimmt — Eintrag wird ggf. in einen anderen Bucket
-            // einsortiert basierend auf priorityScore und freien Slots.
-            autoBalanceBuckets()
-        }
+        clearManualPriority(entryId)
     }
 
 
@@ -997,6 +858,7 @@ class TasksViewModel @Inject constructor(
             entries.update(
                 entry.copy(
                     manualPriorityScore = clamped,
+                    timeBucket = priorityBucketForScore(clamped),
                     // Frank-Wunsch 2026-06-19: Marker setzen, dass die Prio AN DIESER INSTANZ
                     // manuell gesetzt wurde. Die Loop-Pflege (GenerateRecurringInstancesUseCase)
                     // ueberschreibt sie dann nicht mehr mit der Template-Prio (manuell > KI/Loop).
@@ -1059,12 +921,30 @@ class TasksViewModel @Inject constructor(
                                     priorityScore = clamped,
                                     manualPriorityScore = clamped,
                                     manualPriorityScoreSetAt = now,
+                                    timeBucket = priorityBucketForScore(clamped),
                                     updatedAt = now,
                                 ),
                             )
                         }
                 }
             }
+            autoBalanceBuckets()
+        }
+    }
+
+    fun clearManualPriority(entryId: String) {
+        viewModelScope.launch {
+            val entry = entries.get(entryId) ?: return@launch
+            val now = System.currentTimeMillis()
+            entries.update(
+                entry.copy(
+                    manualPriorityScore = null,
+                    manualPriorityScoreSetAt = null,
+                    timeBucket = priorityBucketForScore(entry.priorityScore),
+                    updatedAt = now,
+                ),
+            )
+            autoBalanceBuckets()
         }
     }
 

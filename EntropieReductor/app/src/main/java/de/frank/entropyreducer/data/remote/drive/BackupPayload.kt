@@ -901,7 +901,7 @@ fun AmazfitWorkoutEntity.toBackup(): BackupAmazfitWorkout =
  * Drive-Backups nichts verlieren. Unbekannte Werte fallen auf SPAETER zurueck.
  */
 private fun parseBucketCompat(name: String?): TimeBucket {
-    if (name == null) return TimeBucket.HEUTE
+    if (name == null) return TimeBucket.FREIBLOCK
     return runCatching { TimeBucket.valueOf(name) }
         .getOrElse {
             when (name) {

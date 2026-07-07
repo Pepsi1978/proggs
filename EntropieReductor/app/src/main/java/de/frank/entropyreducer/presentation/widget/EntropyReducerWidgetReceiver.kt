@@ -16,6 +16,7 @@ import de.frank.entropyreducer.data.local.dao.EntropyEntryDao
 import de.frank.entropyreducer.data.settings.AppSettings
 import de.frank.entropyreducer.domain.model.EntryStatus
 import de.frank.entropyreducer.domain.model.TimeBucket
+import de.frank.entropyreducer.domain.model.priorityBucketForScore
 import de.frank.entropyreducer.presentation.MainActivity
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.runBlocking
@@ -75,7 +76,11 @@ class EntropyReducerWidgetReceiver : AppWidgetProvider() {
         val openCount = runBlocking {
             val all = dao.getActive().first()
                 .filter { it.status == EntryStatus.OFFEN || it.status == EntryStatus.IN_ARBEIT }
-            if (onlyToday) all.count { it.timeBucket == TimeBucket.HEUTE } else all.size
+            if (onlyToday) {
+                all.count { priorityBucketForScore(it.manualPriorityScore ?: it.priorityScore) == TimeBucket.HEUTE }
+            } else {
+                all.size
+            }
         }
 
         val views = RemoteViews(context.packageName, R.layout.widget_root)
@@ -129,19 +134,19 @@ class EntropyReducerWidgetReceiver : AppWidgetProvider() {
         openCount: Int,
     ) {
         // Titel + Counter mit echter Aufgaben-Anzahl
-        views.setTextViewText(R.id.header_title, if (onlyToday) "Heute" else "Aufgaben")
+        views.setTextViewText(R.id.header_title, if (onlyToday) "Sehr hoch" else "Aufgaben")
         views.setTextColor(R.id.header_title, palette.textPrimary)
         views.setTextViewText(R.id.header_counter, "$openCount offen")
         views.setTextColor(R.id.header_counter, palette.textSecondary)
 
-        // Heute-Indikator Pille: active = gruener Tint, inactive = grau
+        // Prioritätsfilter-Pille: active = sehr hohe Priorität, inactive = alle.
         val pillBg: Int
         val pillTint: Int
         val pillLabel: String
         if (onlyToday) {
             pillBg = applyAlpha(palette.catHealth, 0.30f)
             pillTint = palette.catHealth
-            pillLabel = "Nur Heute"
+            pillLabel = "Sehr hoch"
         } else {
             pillBg = palette.surfaceMuted
             pillTint = palette.textSecondary

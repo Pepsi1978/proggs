@@ -18,6 +18,7 @@ import de.frank.entropyreducer.domain.model.EntropyCategory
 import de.frank.entropyreducer.domain.model.EntrySource
 import de.frank.entropyreducer.domain.model.EntryStatus
 import de.frank.entropyreducer.domain.model.TimeBucket
+import de.frank.entropyreducer.domain.model.priorityBucketForScore
 import kotlinx.coroutines.flow.first
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.Json
@@ -153,8 +154,7 @@ class ProcessEntryUseCase @Inject constructor(
                     priorityScore = parsed.priorityScore.coerceIn(0.0, 100.0),
                     priorityReason = parsed.priorityReason,
                     status = EntryStatus.OFFEN,
-                    timeBucket = runCatching { TimeBucket.valueOf(parsed.timeBucket) }
-                        .getOrDefault(TimeBucket.HEUTE),
+                    timeBucket = priorityBucketForScore(parsed.priorityScore),
                     estimatedDurationMinutes = parsed.estimatedDurationMinutes,
                     createdAt = now,
                     updatedAt = now,
@@ -216,7 +216,7 @@ class ProcessEntryUseCase @Inject constructor(
             priorityScore = 50.0,
             priorityReason = "KI-Verarbeitung fehlgeschlagen — bitte erneut bewerten lassen.",
             status = EntryStatus.OFFEN,
-            timeBucket = TimeBucket.HEUTE,
+            timeBucket = priorityBucketForScore(50.0),
             estimatedDurationMinutes = null,
             createdAt = now,
             updatedAt = now,
@@ -488,6 +488,7 @@ class ProcessEntryUseCase @Inject constructor(
                 priorityScore = finalScore,
                 priorityReason = parsed.priorityReason,
                 estimatedDurationMinutes = nextDuration,
+                timeBucket = priorityBucketForScore(entry.manualPriorityScore ?: finalScore),
                 updatedAt = System.currentTimeMillis(),
             )
             entries.update(updated)
@@ -711,13 +712,14 @@ Antworte AUSSCHLIESSLICH in JSON, ohne Markdown-Codeblock, ohne Einleitung, ohne
   "severity": 1-10,
   "priorityScore": 0.0-100.0,
   "priorityReason": "Begruendung in 1 Satz — bezieht sich konkret auf die Entropie-Reduktion",
-  "timeBucket": "HEUTE | MORGEN | FREIBLOCK | SPAETER",
+  "timeBucket": "HEUTE | MORGEN | FREIBLOCK | GERING | SPAETER",
   "estimatedDurationMinutes": null,
   "tags": ["tag1","tag2"],
   "aiNotes": null
 }
 
 severity ist die rohe Schwere des Problems (1-10).
+timeBucket wird aus priorityScore abgeleitet: HEUTE=80-100, MORGEN=60-79, FREIBLOCK=40-59, GERING=20-39, SPAETER=0-19.
 $PRIORITY_DOCTRINE
         """.trimIndent()
 

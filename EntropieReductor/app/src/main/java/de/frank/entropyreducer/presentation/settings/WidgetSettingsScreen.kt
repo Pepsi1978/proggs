@@ -208,7 +208,7 @@ fun WidgetSettingsScreen(
                 fontWeight = FontWeight.SemiBold,
             )
             Text(
-                "Hier waehlst du, ob das Widget alle Aufgaben oder nur die heutigen anzeigt. " +
+                "Hier wählst du, ob das Widget alle Aufgaben oder nur Priorität sehr hoch anzeigt. " +
                     "Die Einstellung wirkt sofort nach dem Wechsel.",
                 style = MaterialTheme.typography.bodySmall,
                 color = cosmos.textSecondary,
@@ -217,14 +217,14 @@ fun WidgetSettingsScreen(
             ThemeOptionRow(
                 icon = Icons.Outlined.FormatListBulleted,
                 label = "Alle Aufgaben",
-                description = "Zeigt alle Buckets (Heute, Morgen, Freiblock, Spaeter) — Standard",
+                description = "Zeigt alle Prioritätsbereiche — Standard",
                 isActive = !onlyToday,
                 onClick = { setOnlyTodayAndRefresh(false) },
             )
             ThemeOptionRow(
                 icon = Icons.Outlined.Today,
-                label = "Nur Heute",
-                description = "Zeigt nur die fuer heute geplanten Aufgaben — fuer den Tagesfokus",
+                label = "Nur sehr hoch",
+                description = "Zeigt nur Aufgaben mit Priorität 80 bis 100",
                 isActive = onlyToday,
                 onClick = { setOnlyTodayAndRefresh(true) },
             )
@@ -388,7 +388,7 @@ private fun WidgetPreviewCard(
                     .padding(horizontal = 10.dp, vertical = 4.dp),
             ) {
                 Text(
-                    "Heute",
+                    "Priorität sehr hoch",
                     color = accentColor,
                     fontSize = 12.sp,
                     fontWeight = FontWeight.Bold,

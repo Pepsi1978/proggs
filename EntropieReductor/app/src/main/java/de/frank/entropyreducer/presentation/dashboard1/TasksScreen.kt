@@ -40,7 +40,6 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.AccessTime
-import androidx.compose.material.icons.outlined.Add
 import androidx.compose.material.icons.outlined.AutoAwesome
 import androidx.compose.material.icons.outlined.Bolt
 import androidx.compose.material.icons.outlined.Check
@@ -106,6 +105,8 @@ import de.frank.entropyreducer.data.remote.drive.SyncStatus
 import de.frank.entropyreducer.domain.model.EntropyCategory
 import de.frank.entropyreducer.domain.model.EntryStatus
 import de.frank.entropyreducer.domain.model.TimeBucket
+import de.frank.entropyreducer.domain.model.defaultPriorityForBucket
+import de.frank.entropyreducer.domain.model.priorityBucketForScore
 import de.frank.entropyreducer.presentation.ThemeViewModel
 import de.frank.entropyreducer.presentation.components.CosmosScaffold
 import de.frank.entropyreducer.presentation.components.EntropyCategoryPill
@@ -158,9 +159,8 @@ fun TasksScreen(
     val kiTaskAcceptingId by kiTaskSuggestVm.acceptingId.collectAsStateWithLifecycle()
     val kiTaskError by kiTaskSuggestVm.error.collectAsStateWithLifecycle()
     val scope = rememberCoroutineScope()
-    // Lokaler State fuer den Bucket-Picker — speichert nur die Entry-ID, der
-    // tatsaechliche Eintrag wird aus dem aktuellen State frisch nachgelesen damit
-    // die Anzeige immer den neusten manualBucket/timeBucket-Stand zeigt.
+    // Lokaler State für den Prioritätsbereich-Picker — speichert nur die Entry-ID, der
+    // tatsächliche Eintrag wird aus dem aktuellen State frisch nachgelesen.
     var bucketPickerEntryId by remember { mutableStateOf<String?>(null) }
     // Frank-Wunsch 2026-05-31: Welche Aufgabe nach einem Widget-Tap auf die Prio-Perle
     // ihren Schieberegler automatisch geoeffnet bekommt (null = keiner). Wird von der
@@ -175,10 +175,10 @@ fun TasksScreen(
     // darauf zugreifen koennen. Wird unten an die Haupt-LazyColumn uebergeben.
     val listState = androidx.compose.foundation.lazy.rememberLazyListState()
 
-    // Frank-Wunsch 2026-05-24: Aufgabenbloecke (Heute/Morgen/Freiblock/Spaeter/Loop/
-    // Erledigt) sind jetzt aufklappbare Akkordeon-Dropdowns. Es ist immer nur EIN
+    // Aufgabenblöcke (Priorität sehr hoch/hoch/mittel/gering/später/Loop/Erledigt)
+    // sind aufklappbare Akkordeon-Dropdowns. Es ist immer nur EIN
     // Block offen — Klick auf einen Header oeffnet ihn und schliesst den vorher
-    // offenen automatisch; ein erneuter Klick klappt ihn wieder zu. Standard: HEUTE.
+    // offenen automatisch; ein erneuter Klick klappt ihn wieder zu. Standard: sehr hoch.
     // Der Schluessel ist der Sektions-Name (bucket.name bzw. SECTION_LOOP/SECTION_ERLEDIGT).
     var expandedSection by rememberSaveable { mutableStateOf<String?>(TimeBucket.HEUTE.name) }
 
@@ -212,11 +212,14 @@ fun TasksScreen(
     LaunchedEffect(Unit) {
         androidx.compose.runtime
             .snapshotFlow {
-                // Stable signature: nur Bucket-Zuordnung + Reihenfolge der IDs.
-                // Tags/Description-Aenderungen triggern kein Update — die sehen
-                // im Widget eh nicht anders aus solange Layout stabil bleibt.
+                // Stable signature: Prioritätsbereich, Prioritätswert und Reihenfolge der IDs.
+                // Tags/Description-Änderungen triggern kein Update — die sehen im Widget
+                // eh nicht anders aus solange Layout stabil bleibt.
                 state.entriesByBucket.entries.joinToString("|") { (bucket, list) ->
-                    "$bucket=${list.joinToString(",") { it.id + ":" + it.manualBucket?.name.orEmpty() }}"
+                    "$bucket=${list.joinToString(",") { entry ->
+                        val p = entry.manualPriorityScore ?: entry.priorityScore
+                        "${entry.id}:${p.toInt()}"
+                    }}"
                 }
             }
             .distinctUntilChanged()
@@ -230,7 +233,7 @@ fun TasksScreen(
 
     // Frank-Wunsch 2026-05-11: Widget-Tap auf eine Aufgabe oder die KI/Manuell-
     // Pille schickt einen Deep-Link an WidgetDeepLinkBus. Wir reagieren hier:
-    //  - ACTION_RESCHEDULE → BucketPickerSheet fuer die Task oeffnen
+    //  - ACTION_RESCHEDULE → Prioritätsbereich-Picker für die Task öffnen
     //  - ACTION_FOCUS      → Tasks-Tab ist schon offen (NavGraph default); kein
     //    weiterer Schritt noetig — Frank scrollt zur Karte (LazyColumn-Scroll
     //    auf Karten-Ebene koennte spaeter ergaenzt werden).
@@ -273,7 +276,7 @@ fun TasksScreen(
             runCatching { listState.animateScrollToItem(location.second, scrollOffset = -120) }
         }
 
-        // 2) Bei RESCHEDULE zusaetzlich den Bucket-Picker oeffnen
+        // 2) Bei RESCHEDULE zusätzlich den Prioritätsbereich-Picker öffnen
         if (
             link.action ==
                 de.frank.entropyreducer.presentation.widget.WidgetIntents.ACTION_RESCHEDULE
@@ -461,26 +464,12 @@ fun TasksScreen(
                     if (isEmpty) {
                         item(key = "empty", contentType = "empty") { EmptyState() }
                     } else {
-                        // Aktive Eintraege gruppiert nach Time-Bucket. Frank-Wunsch
-                        // 2026-05-09: HEUTE-Limit wird im ViewModel via
-                        // autoBalanceBuckets() durchgesetzt — die DB enthaelt also
-                        // schon nur max 5 in HEUTE. Restliche Eintraege wurden auf
-                        // MORGEN/FREIBLOCK/SPAETER verteilt. Wir zeigen alle Buckets
-                        // sortiert nach priorityScore desc damit Frank ALLE Aufgaben
-                        // sieht.
+                        // Aktive Einträge gruppiert nach Prioritätsbereich. Die alten
+                        // TimeBucket-Schlüssel bleiben nur als stabile interne IDs erhalten.
                         // PERFORMANCE 2026-05-09: Sortierung+Filter laufen jetzt im
                         // ViewModel (TasksViewModel.kt), nicht mehr hier — die Lists
                         // sind beim Eintreffen schon sortiert und gefiltert.
-                        // Frank-Wunsch 2026-05-23: HEUTE wird nicht mehr automatisch
-                        // nachgefuellt. Sind alle HEUTE-Aufgaben erledigt (HEUTE leer)
-                        // und liegen in aelteren Bereichen noch offene Aufgaben, zeigen
-                        // wir im HEUTE-Bereich einen Button der 5 neue nachholt.
-                        val hasPullableTasks =
-                            state.entriesByBucket.any { (b, l) ->
-                                b != de.frank.entropyreducer.domain.model.TimeBucket.HEUTE &&
-                                    l.isNotEmpty()
-                            }
-                        // Frank-Wunsch 2026-05-24: jeder Bucket ist ein aufklappbares
+                        // Frank-Wunsch 2026-05-24: jeder Bereich ist ein aufklappbares
                         // Akkordeon. Der Header wird IMMER gezeigt (auch wenn leer), die
                         // Eintraege nur wenn der Block aufgeklappt ist. Es ist immer nur
                         // ein Block gleichzeitig offen (gesteuert ueber expandedSection).
@@ -557,16 +546,6 @@ fun TasksScreen(
                                             autoOpenPrioSlider = prioPickerEntryId == entry.id,
                                             onPrioSliderConsumed = { prioPickerEntryId = null },
                                         )
-                                    }
-                                } else if (
-                                    bucket ==
-                                        de.frank.entropyreducer.domain.model.TimeBucket.HEUTE &&
-                                        hasPullableTasks
-                                ) {
-                                    // HEUTE ist leer (alles erledigt) — Nachlade-Button statt
-                                    // automatischer Nachfuellung (Frank-Wunsch 2026-05-23).
-                                    item(key = "refill-heute", contentType = "refill-heute") {
-                                        RefillHeuteButton(onClick = { vm.refillHeute() })
                                     }
                                 } else {
                                     item(
@@ -806,9 +785,9 @@ fun TasksScreen(
         )
     }
 
-    // Bucket-Picker-Sheet (Frank-Wunsch 2026-05-09): aktiv wenn der Pill-Button
-    // unten rechts in einer Card geklickt wurde. Eintrag wird live aus dem State
-    // gezogen, damit Aenderungen ohne Sheet-Neuoeffnen sichtbar sind.
+    // Prioritätsbereich-Picker: aktiv wenn der Pill-Button unten rechts in einer Card
+    // geklickt wurde. Eintrag wird live aus dem State gezogen, damit Änderungen ohne
+    // Sheet-Neuöffnen sichtbar sind.
     bucketPickerEntryId?.let { id ->
         val allActive: List<EntropyEntryEntity> =
             state.entriesByBucket.values.flatten() + state.resolvedEntries
@@ -816,8 +795,8 @@ fun TasksScreen(
         if (entry != null) {
             BucketPickerSheet(
                 entry = entry,
-                onPick = { bucket -> vm.setManualBucket(id, bucket) },
-                onClearManual = { vm.clearManualBucket(id) },
+                onPick = { bucket -> vm.setManualPriority(id, defaultPriorityForBucket(bucket)) },
+                onClearManual = { vm.clearManualPriority(id) },
                 onClose = { bucketPickerEntryId = null },
             )
         } else if (allActive.isNotEmpty()) {
@@ -1344,46 +1323,14 @@ private fun iconForCategory(
         EntropyCategory.SONSTIGES -> Icons.Outlined.MoreHoriz
     }
 
-/**
- * "Neue Aufgaben hinzufügen?"-Button (Frank-Wunsch 2026-05-23). Erscheint im HEUTE-Bereich erst
- * wenn alle HEUTE-Aufgaben erledigt sind — statt automatischer Nachfuellung. Hellgelber
- * Hintergrund, ruft vm.refillHeute() auf das 5 neue Aufgaben aus den aelteren Bereichen nach HEUTE
- * holt.
- */
-@Composable
-private fun RefillHeuteButton(onClick: () -> Unit) {
-    Row(
-        modifier =
-            Modifier.fillMaxWidth()
-                .clip(RoundedCornerShape(14.dp))
-                .background(Color(0xFFFEF3C7)) // hellgelb (amber-100)
-                .clickable(onClick = onClick)
-                .padding(horizontal = 16.dp, vertical = 14.dp),
-        verticalAlignment = Alignment.CenterVertically,
-    ) {
-        Icon(
-            imageVector = Icons.Outlined.Add,
-            contentDescription = null,
-            tint = Color(0xFF92400E), // dunkles Bernstein fuer Kontrast auf Hellgelb
-            modifier = Modifier.size(20.dp),
-        )
-        Spacer(Modifier.width(10.dp))
-        Text(
-            text = "Neue Aufgaben hinzufügen?",
-            style = MaterialTheme.typography.bodyMedium,
-            color = Color(0xFF92400E),
-            fontWeight = FontWeight.SemiBold,
-        )
-    }
-}
-
 @Composable
 private fun BucketHeader(bucket: TimeBucket, count: Int, expanded: Boolean, onToggle: () -> Unit) {
     val label =
         when (bucket) {
-            TimeBucket.HEUTE -> "HEUTE"
-            TimeBucket.MORGEN -> "MORGEN"
-            TimeBucket.FREIBLOCK -> "FREIBLOCK"
+            TimeBucket.HEUTE -> "PRIORITÄT SEHR HOCH"
+            TimeBucket.MORGEN -> "PRIORITÄT HOCH"
+            TimeBucket.FREIBLOCK -> "PRIORITÄT MITTEL"
+            TimeBucket.GERING -> "PRIORITÄT GERING"
             TimeBucket.SPAETER -> "SPÄTER"
         }
     AccordionHeaderRow(
@@ -1499,19 +1446,21 @@ private fun EmptyBucketHint() {
 
 private fun bucketIcon(bucket: TimeBucket): androidx.compose.ui.graphics.vector.ImageVector =
     when (bucket) {
-        TimeBucket.HEUTE -> Icons.Outlined.Today
-        TimeBucket.MORGEN -> Icons.Outlined.Event
-        TimeBucket.FREIBLOCK -> Icons.Outlined.DateRange
+        TimeBucket.HEUTE -> Icons.Outlined.Flag
+        TimeBucket.MORGEN -> Icons.Outlined.Bolt
+        TimeBucket.FREIBLOCK -> Icons.Outlined.GridView
+        TimeBucket.GERING -> Icons.Outlined.MoreHoriz
         TimeBucket.SPAETER -> Icons.Outlined.HourglassEmpty
     }
 
 @Composable
 private fun bucketAccent(bucket: TimeBucket): Color =
     when (bucket) {
-        TimeBucket.HEUTE -> LocalCosmos.current.accent
-        TimeBucket.MORGEN -> LocalCosmos.current.accentForscher
-        TimeBucket.FREIBLOCK -> CosmosColors.CatHealth
-        TimeBucket.SPAETER -> LocalCosmos.current.textSecondary
+        TimeBucket.HEUTE -> CosmosColors.PriorityRed
+        TimeBucket.MORGEN -> CosmosColors.PriorityOrange
+        TimeBucket.FREIBLOCK -> CosmosColors.PriorityYellow
+        TimeBucket.GERING -> CosmosColors.PriorityGreen
+        TimeBucket.SPAETER -> CosmosColors.PriorityBlue
     }
 
 /**
@@ -1698,8 +1647,8 @@ private fun EntropyEntryCard(
                 PriorityPearl(label = prioLabel, onClick = { sliderActive = !sliderActive })
                 Spacer(Modifier.width(8.dp))
                 BucketPickerButton(
-                    isManual = entry.manualBucket != null,
-                    bucket = entry.timeBucket,
+                    isManual = entry.manualPriorityScore != null,
+                    bucket = priorityBucketForScore(effectivePriority),
                     onClick = onPickBucket,
                 )
             }
@@ -1757,9 +1706,8 @@ private fun PriorityPearl(label: String, onClick: () -> Unit) {
 }
 
 /**
- * Kleiner Button unten rechts in der Card der das Bucket-Auswahl-Sheet oeffnet (Frank-Wunsch
- * 2026-05-09). Zeigt das Bucket-Icon mit aktiver Farbe wenn Frank den Bucket manuell zugewiesen hat
- * (manualBucket != null), sonst nur dezenter Outline-Style — die KI hat entschieden.
+ * Kleiner Button unten rechts in der Card der die schnelle Prioritätsbereich-Auswahl öffnet.
+ * "manuell" bedeutet: Frank hat einen Prioritätswert gesetzt; sonst kommt der Wert von der KI.
  */
 @Composable
 private fun BucketPickerButton(isManual: Boolean, bucket: TimeBucket, onClick: () -> Unit) {
@@ -1783,7 +1731,7 @@ private fun BucketPickerButton(isManual: Boolean, bucket: TimeBucket, onClick: (
     ) {
         Icon(
             imageVector = bucketIcon(bucket),
-            contentDescription = "Bucket ändern",
+            contentDescription = "Prioritätsbereich ändern",
             tint = tint,
             modifier = Modifier.size(14.dp),
         )
@@ -1798,9 +1746,8 @@ private fun BucketPickerButton(isManual: Boolean, bucket: TimeBucket, onClick: (
 }
 
 /**
- * Bottom-Sheet zur manuellen Bucket-Zuordnung (Frank-Wunsch 2026-05-09). Zeigt vier
- * Bucket-Optionen + "KI bestimmt" als Reset. Aktive Auswahl wird in der Bucket-Akzent-Farbe
- * hervorgehoben.
+ * Bottom-Sheet zur schnellen Prioritätsbereich-Zuordnung. Es setzt denselben manuellen
+ * Prioritätswert wie der Schieberegler, nur über feste Bereichs-Mittelpunkte.
  */
 @OptIn(androidx.compose.material3.ExperimentalMaterial3Api::class)
 @Composable
@@ -1828,7 +1775,7 @@ private fun BucketPickerSheet(
             verticalArrangement = Arrangement.spacedBy(10.dp),
         ) {
             Text(
-                "Wann erledigen?",
+                "Priorität einordnen",
                 style = MaterialTheme.typography.titleLarge,
                 color = cosmos.textPrimary,
                 fontWeight = FontWeight.SemiBold,
@@ -1840,17 +1787,18 @@ private fun BucketPickerSheet(
                 maxLines = 2,
             )
             Spacer(Modifier.height(4.dp))
-            // Vier Bucket-Optionen
+            // Fünf Prioritätsbereiche
             ALL_TIME_BUCKETS.forEach { bucket ->
+                val effectiveBucket =
+                    priorityBucketForScore(entry.manualPriorityScore ?: entry.priorityScore)
                 val isActive =
-                    entry.manualBucket == bucket ||
-                        (entry.manualBucket == null && entry.timeBucket == bucket)
+                    effectiveBucket == bucket
                 BucketOptionRow(
                     bucket = bucket,
                     label = bucketLabelLong(bucket),
                     description = bucketDescription(bucket),
                     isActive = isActive,
-                    isManual = entry.manualBucket == bucket,
+                    isManual = entry.manualPriorityScore != null && isActive,
                     onClick = {
                         onPick(bucket)
                         onClose()
@@ -1858,7 +1806,7 @@ private fun BucketPickerSheet(
                 )
             }
             // Reset auf KI
-            if (entry.manualBucket != null) {
+            if (entry.manualPriorityScore != null) {
                 Spacer(Modifier.height(4.dp))
                 androidx.compose.material3.OutlinedButton(
                     onClick = {
@@ -1876,7 +1824,7 @@ private fun BucketPickerSheet(
                     )
                     Spacer(Modifier.width(8.dp))
                     Text(
-                        text = "KI entscheiden lassen",
+                        text = "KI-Priorität verwenden",
                         color = LocalCosmos.current.accentForscher,
                         fontWeight = FontWeight.SemiBold,
                     )
@@ -1949,18 +1897,20 @@ private fun BucketOptionRow(
 
 private fun bucketLabelLong(bucket: TimeBucket): String =
     when (bucket) {
-        TimeBucket.HEUTE -> "Heute"
-        TimeBucket.MORGEN -> "Morgen"
-        TimeBucket.FREIBLOCK -> "Freiblock"
+        TimeBucket.HEUTE -> "Priorität sehr hoch"
+        TimeBucket.MORGEN -> "Priorität hoch"
+        TimeBucket.FREIBLOCK -> "Priorität mittel"
+        TimeBucket.GERING -> "Priorität gering"
         TimeBucket.SPAETER -> "Später"
     }
 
 private fun bucketDescription(bucket: TimeBucket): String =
     when (bucket) {
-        TimeBucket.HEUTE -> "wird nicht automatisch nachgefüllt — neue Aufgaben erst per Button"
-        TimeBucket.MORGEN -> "rückt morgen automatisch in Heute"
-        TimeBucket.FREIBLOCK -> "nächster freier Schichtblock"
-        TimeBucket.SPAETER -> "kein Datum — Sammelbecken"
+        TimeBucket.HEUTE -> "80-100 — sofort sichtbar ganz oben"
+        TimeBucket.MORGEN -> "60-79 — wichtig, aber nicht Spitzenalarm"
+        TimeBucket.FREIBLOCK -> "40-59 — normale mittlere Entropie-Reduktion"
+        TimeBucket.GERING -> "20-39 — kleine, aber echte Entlastung"
+        TimeBucket.SPAETER -> "0-19 — später oder reine Wunsch-Zustände"
     }
 
 /** Farbiger Kreis mit Material-Icon basierend auf der Entropie-Kategorie. */
@@ -2054,9 +2004,10 @@ private fun EntryMetaRow(entry: EntropyEntryEntity, modifier: Modifier = Modifie
         // Bucket-Time-Label (TimeBucket)
         val bucketLabel =
             when (entry.timeBucket) {
-                de.frank.entropyreducer.domain.model.TimeBucket.HEUTE -> "heute"
-                de.frank.entropyreducer.domain.model.TimeBucket.MORGEN -> "morgen"
-                de.frank.entropyreducer.domain.model.TimeBucket.FREIBLOCK -> "Freiblock"
+                de.frank.entropyreducer.domain.model.TimeBucket.HEUTE -> "Priorität sehr hoch"
+                de.frank.entropyreducer.domain.model.TimeBucket.MORGEN -> "Priorität hoch"
+                de.frank.entropyreducer.domain.model.TimeBucket.FREIBLOCK -> "Priorität mittel"
+                de.frank.entropyreducer.domain.model.TimeBucket.GERING -> "Priorität gering"
                 de.frank.entropyreducer.domain.model.TimeBucket.SPAETER -> "später"
             }
         val durationHint =

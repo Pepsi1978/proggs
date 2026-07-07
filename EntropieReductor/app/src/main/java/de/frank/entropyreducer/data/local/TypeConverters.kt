@@ -78,7 +78,7 @@ class EntropyTypeConverters {
 
     @TypeConverter
     fun toTimeBucket(s: String): TimeBucket =
-        runCatching { TimeBucket.valueOf(s) }.getOrDefault(TimeBucket.HEUTE)
+        runCatching { TimeBucket.valueOf(s) }.getOrDefault(TimeBucket.FREIBLOCK)
 
     @TypeConverter fun fromEntrySource(c: EntrySource): String = c.name
 

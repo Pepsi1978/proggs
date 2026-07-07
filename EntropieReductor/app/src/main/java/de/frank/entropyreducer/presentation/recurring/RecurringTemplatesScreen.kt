@@ -315,7 +315,7 @@ internal fun TemplateAsTaskCard(
                 // Prio-Perle: oeffnet den Schieberegler (setzt priorityScore der Vorlage).
                 LoopPearl(label = prioLabel) { sliderActive = !sliderActive }
                 Spacer(Modifier.width(8.dp))
-                // Bucket-Perle: "KI" oder Tag-Name. Tap oeffnet die Tag-Auswahl.
+                // Bereich-Perle: "KI" oder Prioritätsbereich. Tap öffnet die Bereich-Auswahl.
                 Box {
                     LoopPearl(label = bucketLabel) { bucketMenuOpen = true }
                     DropdownMenu(
@@ -323,7 +323,7 @@ internal fun TemplateAsTaskCard(
                         onDismissRequest = { bucketMenuOpen = false },
                     ) {
                         DropdownMenuItem(
-                            text = { Text("KI · automatisch (Heute)") },
+                            text = { Text("KI · nach Priorität") },
                             onClick = {
                                 onSetTargetBucket(null)
                                 bucketMenuOpen = false
@@ -393,15 +393,16 @@ internal fun loopIntervalLabel(days: Int?): String =
         ?: days?.let { "Alle $it Tage" }
         ?: "KI entscheidet"
 
-/** Die vier waehlbaren Ziel-Buckets fuer eine Loop-Vorlage (Frank-Wunsch 2026-05-31). */
+/** Die fünf wählbaren Prioritätsbereiche für eine Loop-Vorlage. */
 internal val loopBucketOptions =
-    listOf(TimeBucket.HEUTE, TimeBucket.MORGEN, TimeBucket.FREIBLOCK, TimeBucket.SPAETER)
+    listOf(TimeBucket.HEUTE, TimeBucket.MORGEN, TimeBucket.FREIBLOCK, TimeBucket.GERING, TimeBucket.SPAETER)
 
 internal fun loopBucketLabel(b: TimeBucket): String =
     when (b) {
-        TimeBucket.HEUTE -> "Heute"
-        TimeBucket.MORGEN -> "Morgen"
-        TimeBucket.FREIBLOCK -> "Freiblock"
+        TimeBucket.HEUTE -> "Priorität sehr hoch"
+        TimeBucket.MORGEN -> "Priorität hoch"
+        TimeBucket.FREIBLOCK -> "Priorität mittel"
+        TimeBucket.GERING -> "Priorität gering"
         TimeBucket.SPAETER -> "Später"
     }
 

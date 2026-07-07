@@ -19,6 +19,7 @@ import de.frank.entropyreducer.data.settings.AppSettings
 import de.frank.entropyreducer.domain.model.EntropyCategory
 import de.frank.entropyreducer.domain.model.EntryStatus
 import de.frank.entropyreducer.domain.model.TimeBucket
+import de.frank.entropyreducer.domain.model.priorityBucketForScore
 import de.frank.entropyreducer.presentation.priorityRampArgb
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.runBlocking
@@ -81,12 +82,12 @@ class EntropyReducerRemoteViewsFactory(
             val all = dao.getActive().first()
                 .filter { it.status == EntryStatus.OFFEN || it.status == EntryStatus.IN_ARBEIT }
 
-            // Bei "Nur Heute" wird nur der HEUTE-Bucket gezeigt; sonst alle vier. Loop und
-            // Erledigt kommen IMMER dazu (Frank-Wunsch 2026-05-31).
+            // Bei "Sehr hoch" wird nur der höchste Prioritätsbereich gezeigt; sonst alle fünf.
+            // Loop und Erledigt kommen IMMER dazu (Frank-Wunsch 2026-05-31).
             val bucketsToShow = if (onlyToday) listOf(TimeBucket.HEUTE) else ALL_BUCKETS
             val grouped: Map<TimeBucket, List<EntropyEntryEntity>> =
                 bucketsToShow.associateWith { bucket ->
-                    all.filter { it.timeBucket == bucket }
+                    all.filter { priorityBucketForScore(it.manualPriorityScore ?: it.priorityScore) == bucket }
                         .sortedByDescending { it.manualPriorityScore ?: it.priorityScore }
                 }
 
@@ -107,7 +108,7 @@ class EntropyReducerRemoteViewsFactory(
             val expandedName = WidgetExpandState.get()
             val list = mutableListOf<WidgetListItem>()
 
-            // 1.-4. Zeit-Buckets
+            // 1.-5. Prioritätsbereiche
             bucketsToShow.forEach { bucket ->
                 val tasks = grouped[bucket].orEmpty()
                 val isExpanded = expandedName == bucket.name
@@ -313,22 +314,23 @@ class EntropyReducerRemoteViewsFactory(
         views.setColorStateList(R.id.task_prio_pill, "setBackgroundTintList", android.content.res.ColorStateList.valueOf(palette.pearlBg))
         views.setTextColor(R.id.task_prio_pill, palette.pearlText)
 
-        // KI/Manuell-Perle (Bucket): wie in der App KOMPLETT identisch zur Prio-Perle —
+        // KI/Manuell-Perle (Priorität): wie in der App KOMPLETT identisch zur Prio-Perle —
         // gleicher glassBg-Hintergrund + gleiche textSecondary-Farbe fuer Icon UND Text.
         // Nur das Wort unterscheidet ("KI" vs. "manuell"); kein Akzent/Hellblau mehr.
-        val isManual = entry.manualBucket != null
+        val isManual = entry.manualPriorityScore != null
+        val priorityBucket = priorityBucketForScore(effectivePriority)
         views.setColorStateList(R.id.bucket_status_pill, "setBackgroundTintList", android.content.res.ColorStateList.valueOf(palette.pearlBg))
         views.setInt(R.id.bucket_status_icon, "setColorFilter", palette.pearlText)
         views.setTextViewText(R.id.bucket_status_label, if (isManual) "manuell" else "KI")
         views.setTextColor(R.id.bucket_status_label, palette.pearlText)
-        views.setImageViewResource(R.id.bucket_status_icon, bucketIconRes(entry.timeBucket))
+        views.setImageViewResource(R.id.bucket_status_icon, bucketIconRes(priorityBucket))
 
         // FillInIntents (kombiniert mit dem Broadcast-Template aus dem Provider):
         //  - Haekchen   → ACTION_COMPLETE: hakt die Aufgabe DIREKT ab, ohne App
         //  - Karte      → ACTION_FOCUS: oeffnet die App (Detail)
         //  - Prio-Perle → ACTION_SET_PRIORITY: oeffnet die App und klappt direkt den
         //                 Prio-Schieber DIESER Aufgabe auf (manuelle Prioritaet setzen)
-        //  - Bucket     → ACTION_RESCHEDULE: oeffnet die App (dort der Bucket-Picker)
+        //  - Bereich    → ACTION_RESCHEDULE: öffnet die App (dort der Prioritäts-Picker)
         // Bei erledigten Eintraegen hakt das Haekchen NICHT erneut ab — Tap oeffnet die App.
         views.setOnClickFillInIntent(
             R.id.task_check_box,
@@ -353,7 +355,7 @@ class EntropyReducerRemoteViewsFactory(
 // === Sealed class fuer ListView-Items ===
 
 sealed class WidgetListItem {
-    /** Generischer Sektions-Header (Zeit-Bucket, Loop oder Erledigt). */
+    /** Generischer Sektions-Header (Prioritätsbereich, Loop oder Erledigt). */
     data class SectionHeader(
         val key: String,
         val label: String,
@@ -366,7 +368,7 @@ sealed class WidgetListItem {
     data class Loop(val template: RecurringTemplateEntity) : WidgetListItem()
 }
 
-/** Sektions-Schluessel fuer Loop und Erledigt (Zeit-Buckets nutzen TimeBucket.name). */
+/** Sektions-Schlüssel für Loop und Erledigt (Prioritätsbereiche nutzen TimeBucket.name). */
 internal const val SECTION_LOOP = "LOOP"
 internal const val SECTION_ERLEDIGT = "ERLEDIGT"
 
@@ -391,7 +393,7 @@ object WidgetCheckState {
 /**
  * Akkordeon-State des Widgets (Frank-Wunsch 2026-05-31): welcher Bucket-Header
  * gerade aufgeklappt ist (TimeBucket.name) — analog zu expandedSection in der App.
- * Immer nur EINE Sektion offen; null = alle zu. Default: HEUTE offen. In-memory
+ * Immer nur EINE Sektion offen; null = alle zu. Default: sehr hoch offen. In-memory
  * (wie rememberSaveable in der App, ueberlebt keinen Prozess-Tod — Default greift dann).
  */
 object WidgetExpandState {
@@ -407,6 +409,7 @@ internal val ALL_BUCKETS = listOf(
     TimeBucket.HEUTE,
     TimeBucket.MORGEN,
     TimeBucket.FREIBLOCK,
+    TimeBucket.GERING,
     TimeBucket.SPAETER,
 )
 
@@ -414,16 +417,18 @@ internal fun applyAlpha(color: Int, alpha: Float): Int =
     ColorUtils.setAlphaComponent(color, (alpha.coerceIn(0f, 1f) * 255).toInt())
 
 internal fun bucketColor(p: SimpleWidgetPalette, bucket: TimeBucket): Int = when (bucket) {
-    TimeBucket.HEUTE -> p.bucketHeute
-    TimeBucket.MORGEN -> p.bucketMorgen
-    TimeBucket.FREIBLOCK -> p.bucketFreiblock
-    TimeBucket.SPAETER -> p.bucketSpaeter
+    TimeBucket.HEUTE -> p.prioRed
+    TimeBucket.MORGEN -> p.prioOrange
+    TimeBucket.FREIBLOCK -> p.prioYellow
+    TimeBucket.GERING -> p.prioGreen
+    TimeBucket.SPAETER -> p.prioBlue
 }
 
 internal fun bucketLabel(bucket: TimeBucket): String = when (bucket) {
-    TimeBucket.HEUTE -> "Heute"
-    TimeBucket.MORGEN -> "Morgen"
-    TimeBucket.FREIBLOCK -> "Freiblock"
+    TimeBucket.HEUTE -> "Priorität sehr hoch"
+    TimeBucket.MORGEN -> "Priorität hoch"
+    TimeBucket.FREIBLOCK -> "Priorität mittel"
+    TimeBucket.GERING -> "Priorität gering"
     TimeBucket.SPAETER -> "Später"
 }
 
@@ -431,6 +436,7 @@ internal fun bucketIconRes(bucket: TimeBucket): Int = when (bucket) {
     TimeBucket.HEUTE -> R.drawable.ic_widget_bucket_today
     TimeBucket.MORGEN -> R.drawable.ic_widget_bucket_morgen
     TimeBucket.FREIBLOCK -> R.drawable.ic_widget_bucket_freiblock
+    TimeBucket.GERING -> R.drawable.ic_widget_bucket_freiblock
     TimeBucket.SPAETER -> R.drawable.ic_widget_bucket_spaeter
 }
 

@@ -17,7 +17,6 @@ import de.frank.entropyreducer.data.repository.MemoryRepository
 import de.frank.entropyreducer.data.settings.AppSettings
 import de.frank.entropyreducer.data.settings.EncryptedSecretsStore
 import de.frank.entropyreducer.domain.model.EntryStatus
-import de.frank.entropyreducer.domain.model.TimeBucket
 import java.time.LocalDate
 import javax.inject.Inject
 import kotlinx.coroutines.flow.first
@@ -56,19 +55,17 @@ class GenerateDailyBriefingUseCase @Inject constructor(
 
         val today = LocalDate.now()
         val tomorrow = today.plusDays(1)
-        // Frank-Wunsch 2026-05-09 (Morgen): Briefing soll sich AUSSCHLIESSLICH auf die 5 HEUTE-Aufgaben
-        // konzentrieren — nicht auf alle aktiven Eintraege. Andere Buckets (MORGEN, FREIBLOCK,
-        // SPAETER) sind fuer das Tagesbriefing irrelevant. autoBalanceBuckets sorgt dafuer dass
-        // der HEUTE-Bucket maximal 5 Eintraege haelt; das take(5) hier ist redundant aber sicher.
+        // Seit 2026-07-07 sind Aufgabenbereiche Prioritätsbereiche. Das Briefing nimmt daher die
+        // fünf effektiv höchstpriorisierten aktiven Aufgaben statt eines alten Heute-Buckets.
         //
-        // Frank-Wunsch 2026-05-09 (Abend): NUR aktive Aufgaben — erledigte (REDUZIERT) und
+        // NUR aktive Aufgaben — erledigte (REDUZIERT) und
         // archivierte (ARCHIVIERT) Aufgaben gehoeren NICHT ins Briefing. Vorher zitierte das
         // Briefing eine bereits laengst erledigte Aufgabe weil getByBucket() nur ARCHIVIERT
         // ausschliesst, nicht aber REDUZIERT (= "Entropie reduziert" = erledigt). Filter ergaenzt
         // damit nur OFFEN und IN_ARBEIT durchkommen.
-        val todayEntries = entries.getByBucket(TimeBucket.HEUTE).first()
+        val todayEntries = entries.getActive().first()
             .filter { it.status == EntryStatus.OFFEN || it.status == EntryStatus.IN_ARBEIT }
-            .sortedByDescending { it.priorityScore }
+            .sortedByDescending { it.manualPriorityScore ?: it.priorityScore }
             .take(5)
         val latestBiomarker = biomarkerDao.getLatest().first()
         val todayDay = calendarDao.getDay(today.toString()).first()

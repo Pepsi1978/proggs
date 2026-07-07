@@ -144,8 +144,8 @@ class AppSettings @Inject constructor(
     }
 
     /**
-     * Häkchen-Filter im Widget (Frank-Wunsch 2026-05-11). Wenn true, zeigt das
-     * Aufgaben-Widget nur die HEUTE-Aufgaben. Default false = alle Buckets.
+     * Prioritätsfilter im Widget. Wenn true, zeigt das Aufgaben-Widget nur den
+     * höchsten Prioritätsbereich. Default false = alle Bereiche.
      */
     val widgetOnlyTodayFlow: Flow<Boolean> = ds.data
         .map { it[KEY_WIDGET_ONLY_TODAY] ?: false }
@@ -175,7 +175,7 @@ class AppSettings @Inject constructor(
     }
 
     /**
-     * Atomarer Toggle des "Nur Heute"-Flags (Frank-Wunsch 2026-05-11, Bugfix).
+     * Atomarer Toggle des Widget-Prioritätsfilters (Frank-Wunsch 2026-05-11, Bugfix).
      *
      * Vorher: read-then-write in zwei separaten Calls (readWidgetOnlyTodayOnce
      * + setWidgetOnlyToday). Bei zwei schnellen Klicks lasen beide Activity-

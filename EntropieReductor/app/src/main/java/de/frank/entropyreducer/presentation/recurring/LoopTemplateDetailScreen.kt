@@ -52,8 +52,8 @@ import de.frank.entropyreducer.presentation.theme.LocalCosmos
  *
  * Frank wollte die Loop-Aufgaben NICHT mehr ueber die kleinen Perlen in der Karte bearbeiten,
  * sondern durch Reinklicken in die Karte ein eigenes Bearbeitungs-Fenster oeffnen — genau wie bei
- * den "Heute"-Aufgaben. Hier kann er ALLES einstellen: Titel, Beschreibung, Wiederkehr-Intervall
- * (alle N Tage / KI entscheidet), Prioritaet, Ziel-Tag und aktiv/pausiert — plus Loeschen.
+ * den Aufgaben. Hier kann er ALLES einstellen: Titel, Beschreibung, Wiederkehr-Intervall
+ * (alle N Tage / KI entscheidet), Priorität, Ziel-Priorität und aktiv/pausiert — plus Löschen.
  *
  * Nutzt das bestehende RecurringTemplatesViewModel (alle Setter ziehen offene Instanzen im
  * Aufgaben-Reiter automatisch mit). Die Vorlage wird per templateId aus dem templates-Flow
@@ -191,15 +191,15 @@ fun LoopTemplateDetailScreen(
                 }
             }
 
-            // ---- Ziel-Tag (Bucket) ----
+            // ---- Ziel-Priorität ----
             GlassCard(modifier = Modifier.fillMaxWidth()) {
                 Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                    SectionLabel("Ziel-Tag", loopAccent)
+                    SectionLabel("Ziel-Priorität", loopAccent)
                     FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                         FilterChip(
                             selected = t.targetBucket == null,
                             onClick = { viewModel.setTargetBucket(t, null) },
-                            label = { Text("KI / Heute") },
+                            label = { Text("KI / nach Priorität") },
                             colors = chipColors(loopAccent),
                         )
                         loopBucketOptions.forEach { b ->

@@ -5,6 +5,8 @@ import de.frank.entropyreducer.data.local.entities.CalendarDayEntity
 import de.frank.entropyreducer.data.local.entities.EntropyEntryEntity
 import de.frank.entropyreducer.domain.model.EntryStatus
 import de.frank.entropyreducer.domain.model.ShiftCode
+import de.frank.entropyreducer.domain.model.TimeBucket
+import de.frank.entropyreducer.domain.model.priorityBucketForScore
 import javax.inject.Inject
 import javax.inject.Singleton
 
@@ -58,10 +60,10 @@ class KiQuestionGenerator @Inject constructor() {
 
         val openEntries = entries.filter { it.status == EntryStatus.OFFEN }
 
-        // Trigger 1 — Aufgabe heute, Tag ist Tagdienst.
+        // Trigger 1 — sehr hohe Priorität, aber heute kaum Zeit.
         if (todayCalendar?.shiftCode == ShiftCode.TAGDIENST) {
             val todayEntry = openEntries.firstOrNull {
-                it.timeBucket == de.frank.entropyreducer.domain.model.TimeBucket.HEUTE &&
+                priorityBucketForScore(it.manualPriorityScore ?: it.priorityScore) == TimeBucket.HEUTE &&
                     (it.estimatedDurationMinutes ?: 30) > (todayCalendar.availableMinutesEstimate)
             }
             if (todayEntry != null) {
@@ -69,7 +71,7 @@ class KiQuestionGenerator @Inject constructor() {
                 return KiQuestion(
                     triggerKey = "today_overload",
                     text = "Aufgabe \"${todayEntry.title}\" braucht etwa $durationLabel Min. " +
-                        "Schaffst du sie heute trotz Tagdienst, oder schiebe ich sie auf den nächsten Frei-Block?",
+                        "Sie ist sehr hoch priorisiert, passt aber heute eng. Was ist der kleinste nächste Schritt?",
                     rationale = "Tagdienst, ${todayCalendar.availableMinutesEstimate} Min verfuegbar",
                     relatedEntryIds = listOf(todayEntry.id),
                 )
