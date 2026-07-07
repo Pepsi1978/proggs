@@ -1,0 +1,13 @@
+{
+	"name": "nemo-mcp",
+	"version": "1.0.0",
+	"description": "MCP server that provides Nemotron 3 Super 120B as a free knowledge worker via NVIDIA NIM API",
+	"type": "module",
+	"main": "src/index.ts",
+	"scripts": {
+		"start": "bun src/index.ts"
+	},
+	"dependencies": {
+		"@modelcontextprotocol/sdk": "^1.12.1"
+	}
+}
