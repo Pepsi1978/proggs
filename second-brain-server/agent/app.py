@@ -55,7 +55,7 @@ VERSION = "0.53.0 (05.07.2026, 14.14 Uhr)"  # 0.53.0 (Gruppe D "Mitlernen in Pro
 VERSION = "0.56.0 (06.07.2026, 13:52 Uhr)"  # 0.56.0: Composite-Route query_internet fuer verschachtelte Anfragen (erst Gedächtnis-Kontext, dann Internet-Abgleich). Root Cause: Router-Schema erlaubte bisher genau EINEN intent; dadurch wurde bei Kettenanforderungen nur query ODER internet ausgeführt. Jetzt liefert der Router optional web_query, der Server führt beide bestehenden Pfade sequenziell aus und formuliert eine kombinierte Antwort. Alt: 0.55.3 (06.07.2026, 13:23 Uhr).
 VERSION = "0.57.0 (06.07.2026, 17:23 Uhr)"  # 0.57.0: Qdrant-/Gedächtnis-Limits vollständig dashboardfähig. Zusätzlich zu den bisherigen Recall-/Kontextwerten sind jetzt Duplikat-Suchkandidaten, Entity-Extraktionsfenster, Entity-Vollabruflimit, Antwort-Max-Tokens, Arbeitscache-Schwelle und Kategorie-Batchgröße persistent über /config.limits.agent einstellbar; die Werte wirken sofort im laufenden Agenten. Alt: 0.56.3.
 VERSION = "0.59.1 (07.07.2026, 11:52 Uhr)"  # 0.59.1: Router-Härtung gegen falsche query_internet-Erzwingung. Die Gedächtnis+Internet-Ketten-Erkennung scannt Standard-Modus-/Antwortlängen-Prompts nicht mehr mit, sondern nur Franks aktuelle Nachricht und explizite Zusatz-Prompt-Blöcke. Alt: 0.59.0.
-VERSION = "0.61.0 (07.07.2026, 14:24 Uhr)"  # 0.61.0: Schritt-2-Baustein (Agenten-Umbau) — NEU codex_generate_tools(): GPT/Codex Function-Calling-Loop auf der OpenAI-Responses-API (chatgpt.com/backend-api/codex). Deterministischer Hard-Stop (max_turns UND max_seconds), tool_use<->tool_result strikt 1:1 (function_call verbatim in den Verlauf, je call_id genau ein function_call_output), Tool-Exception als Fehler-tool_result zurueck (nie crashen), Schleifen-Erkennung (>3x gleiche name+args), Tool-Output je Aufruf auf LESE_TOOL_OUT_CAP gekappt; bei Hard-Stop ohne Klartext eine finale Runde OHNE Werkzeuge (Absicherung nach bugs/server/ai-agent-frameworks.md). NEU Endpoint GET /toolloop-selftest: isolierter Machbarkeits-Smoke-Test (2 triviale Tools) — prueft empirisch, ob das Backend eigene function-Tools akzeptiert+aufruft. Beruehrt den Chat-Pfad NICHT (reiner Baustein; sichtbare Dashboard-Version bleibt 0.56.0 bis der Umbau den Chat aendert). Alt: 0.60.0 (07.07.2026, 13:09 Uhr) NEU Turn-Logbuch + Sonden-Trace. Jeder /chat + /chat/stream-Turn wird per contextvar-Trace mitgeschrieben: der bestehende checkpoint()-Kanal fuettert zusaetzlich den Trace, ein Phasen-Marker recall_search trennt Rohsuche vom Leseagent-Filter. Logbuch 1 (LOGBOOK_DIR/Trace/turns.jsonl, 100 rollierend) = 1 lesbare Zeile je Anfrage mit Frage, Router->final Intent, Rohtreffer/Auswahl (Star-Trek: 50 gefunden/0 gewaehlt), Confidence, Antwort-Vorschau + Phasen-Timing (router_ms/suche_ms/leseagent_ms/web_antwort_ms = Flaschenhals-Radar). Logbuch 2 (trace.jsonl, 4000 Events) = feine Events je Turn per turn_id verknuepft (erweiterbares Geruest fuer feine Sonden beim Agenten-Umbau). Atomar (tmp+os.replace), secret-maskiert, BEST-EFFORT (try/except ueberall — gefaehrdet den Chat nie). Deterministische Problem-Markierung (_PROBLEM_FEEDBACK_RE) markiert den letzten Turn, wenn Frank ein Problem meldet. GET /logbook/turns fuers Dashboard. Persistent auf Samba (LOGBOOK_DIR bereits gemountet -> ueberlebt Rebuilds; loest fuer die Turn-Ebene die Fluechtigkeit von /app/logs/agent.jsonl). Alt: 0.59.1 (07.07.2026, 11:52 Uhr).
+VERSION = "0.61.1 (07.07.2026, 14:33 Uhr)"  # 0.61.1: FIX codex_generate_tools — das ChatGPT-Codex-Backend ERZWINGT stream:true (stream:false -> HTTP 400 'Stream must be set to true', empirisch per /toolloop-selftest bewiesen). Tool-Loop nutzt jetzt einen streamenden Backend-Helfer (_stream_responses, wie codex_generate) und liest die function_call-Items aus dem response.completed-Event. 0.61.0: Schritt-2-Baustein (Agenten-Umbau) — NEU codex_generate_tools(): GPT/Codex Function-Calling-Loop auf der OpenAI-Responses-API (chatgpt.com/backend-api/codex). Deterministischer Hard-Stop (max_turns UND max_seconds), tool_use<->tool_result strikt 1:1 (function_call verbatim in den Verlauf, je call_id genau ein function_call_output), Tool-Exception als Fehler-tool_result zurueck (nie crashen), Schleifen-Erkennung (>3x gleiche name+args), Tool-Output je Aufruf auf LESE_TOOL_OUT_CAP gekappt; bei Hard-Stop ohne Klartext eine finale Runde OHNE Werkzeuge (Absicherung nach bugs/server/ai-agent-frameworks.md). NEU Endpoint GET /toolloop-selftest: isolierter Machbarkeits-Smoke-Test (2 triviale Tools) — prueft empirisch, ob das Backend eigene function-Tools akzeptiert+aufruft. Beruehrt den Chat-Pfad NICHT (reiner Baustein; sichtbare Dashboard-Version bleibt 0.56.0 bis der Umbau den Chat aendert). Alt: 0.60.0 (07.07.2026, 13:09 Uhr) NEU Turn-Logbuch + Sonden-Trace. Jeder /chat + /chat/stream-Turn wird per contextvar-Trace mitgeschrieben: der bestehende checkpoint()-Kanal fuettert zusaetzlich den Trace, ein Phasen-Marker recall_search trennt Rohsuche vom Leseagent-Filter. Logbuch 1 (LOGBOOK_DIR/Trace/turns.jsonl, 100 rollierend) = 1 lesbare Zeile je Anfrage mit Frage, Router->final Intent, Rohtreffer/Auswahl (Star-Trek: 50 gefunden/0 gewaehlt), Confidence, Antwort-Vorschau + Phasen-Timing (router_ms/suche_ms/leseagent_ms/web_antwort_ms = Flaschenhals-Radar). Logbuch 2 (trace.jsonl, 4000 Events) = feine Events je Turn per turn_id verknuepft (erweiterbares Geruest fuer feine Sonden beim Agenten-Umbau). Atomar (tmp+os.replace), secret-maskiert, BEST-EFFORT (try/except ueberall — gefaehrdet den Chat nie). Deterministische Problem-Markierung (_PROBLEM_FEEDBACK_RE) markiert den letzten Turn, wenn Frank ein Problem meldet. GET /logbook/turns fuers Dashboard. Persistent auf Samba (LOGBOOK_DIR bereits gemountet -> ueberlebt Rebuilds; loest fuer die Turn-Ebene die Fluechtigkeit von /app/logs/agent.jsonl). Alt: 0.59.1 (07.07.2026, 11:52 Uhr).
 
 # ---------------------------------------------------------------------------
 # Konfiguration (alles aus Umgebungsvariablen — Secrets nie im Code)
@@ -917,20 +917,62 @@ def codex_generate_tools(
     final_text = ""
     turn = 0
 
-    def _post_responses(req_body: "dict", timeout: float) -> "dict":
+    def _stream_responses(req_body: "dict", timeout: float) -> "tuple[str, dict]":
+        # Das ChatGPT-Codex-Backend ERZWINGT stream:true (stream:false -> HTTP 400
+        # "Stream must be set to true"). Also streamen und die output-Items (inkl.
+        # function_call) am Ende aus dem response.completed-Event lesen (wie codex_generate).
+        req_body["stream"] = True
+        text_parts: "list[str]" = []
+        completed: "dict | None" = None
         try:
-            r = _HTTP.post(f"{CODEX_BASE_URL}/responses", json=req_body, headers=headers, timeout=timeout)
+            with _HTTP.stream("POST", f"{CODEX_BASE_URL}/responses", json=req_body,
+                              headers=headers, timeout=timeout) as r:
+                if r.status_code >= 400:
+                    detail = r.read().decode("utf-8", errors="replace")[:800] or r.reason_phrase
+                    _log(logging.WARNING, "codex_generate_tools: Backend lehnte ab",
+                         status=r.status_code, detail=detail)
+                    raise HTTPException(status_code=502,
+                                        detail=f"Codex-Tool-Backend HTTP {r.status_code}: {detail}")
+                for line in r.iter_lines():
+                    if not line:
+                        continue
+                    raw = line.strip()
+                    if raw.startswith("data:"):
+                        raw = raw[5:].strip()
+                    elif raw.startswith("event:"):
+                        continue
+                    if not raw or raw == "[DONE]":
+                        continue
+                    try:
+                        event = json.loads(raw)
+                    except Exception:
+                        continue
+                    et = str(event.get("type") or "")
+                    if et == "error":
+                        raise HTTPException(status_code=502,
+                                            detail=f"Codex-Tool-Stream-Fehler: {json.dumps(event, ensure_ascii=False)[:800]}")
+                    if "output_text.delta" in et:
+                        d = event.get("delta")
+                        if isinstance(d, str):
+                            text_parts.append(d)
+                        continue
+                    if et == "response.completed":
+                        resp = event.get("response")
+                        if isinstance(resp, dict):
+                            completed = resp
+                        break
+                    if et == "response.failed":
+                        raise HTTPException(status_code=502,
+                                            detail=f"Codex-Tool-Stream fehlgeschlagen: {json.dumps(event.get('response') or event, ensure_ascii=False)[:800]}")
+        except HTTPException:
+            raise
         except Exception as e:  # Netzwerk/Timeout -> nicht crashen, sauber als 502 melden
             _log(logging.WARNING, "codex_generate_tools: Backend nicht erreichbar", err=str(e)[:400])
             raise HTTPException(status_code=502, detail=f"Codex-Tool-Backend nicht erreichbar: {str(e)[:300]}")
-        if r.status_code >= 400:
-            detail = r.text[:800] or r.reason_phrase
-            _log(logging.WARNING, "codex_generate_tools: Backend lehnte ab", status=r.status_code, detail=detail)
-            raise HTTPException(status_code=502, detail=f"Codex-Tool-Backend HTTP {r.status_code}: {detail}")
-        try:
-            return r.json()
-        except Exception as e:
-            raise HTTPException(status_code=502, detail=f"Codex-Tool-Backend: ungueltiges JSON ({str(e)[:200]})")
+        text = "".join(text_parts).strip()
+        if not text and completed:
+            text = _extract_response_text(completed)
+        return text, (completed or {})
 
     for turn in range(1, max_turns + 1):
         if time.monotonic() - start > max_seconds:
@@ -943,16 +985,14 @@ def codex_generate_tools(
             "tools": tools,
             "tool_choice": "auto",
             "store": False,
-            "stream": False,
         }
         if effort and effort != "none":
             body["reasoning"] = {"effort": effort, "summary": "auto"}
             body["include"] = ["reasoning.encrypted_content"]
         remaining = max(5.0, max_seconds - (time.monotonic() - start))
-        resp = _post_responses(body, timeout=min(120.0, remaining))
+        text, resp = _stream_responses(body, timeout=min(120.0, remaining))
         output_items = resp.get("output") or []
         fcs = [it for it in output_items if isinstance(it, dict) and it.get("type") == "function_call"]
-        text = _extract_response_text(resp)
         if not fcs:
             final_text = text
             stopped = "done"
@@ -1000,14 +1040,12 @@ def codex_generate_tools(
                                       "ohne weitere Werkzeuge aufzurufen.",
             "input": input_items,
             "store": False,
-            "stream": False,
         }
         if effort and effort != "none":
             forced["reasoning"] = {"effort": effort, "summary": "auto"}
             forced["include"] = ["reasoning.encrypted_content"]
         try:
-            resp = _post_responses(forced, timeout=60.0)
-            final_text = _extract_response_text(resp)
+            final_text, _ = _stream_responses(forced, timeout=60.0)
         except Exception as e:
             _log(logging.WARNING, "codex_generate_tools: finale Runde fehlgeschlagen", err=str(e)[:300])
             final_text = final_text or ""
