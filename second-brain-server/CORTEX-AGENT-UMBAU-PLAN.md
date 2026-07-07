@@ -3,8 +3,51 @@
 > **Zweck:** Diese Datei ist das vollständige Gedächtnis für den geplanten Umbau des Cortex-Agenten.
 > Sie wurde am **07.07.2026** erstellt, damit nach einem `/clear` + Session-Restore eine neue Session
 > SOFORT alle Probleme, den Plan und die technischen Anker kennt — ohne die Diagnose neu machen zu müssen.
-> **Stand:** Schritt 1 (Logbuch) ist FERTIG + deployed. Schritt 2 (Agenten-Umbau) ist der nächste.
+> **Stand:** Schritt 1 (Logbuch) ist FERTIG + deployed. Schritt 2 (Agenten-Umbau) LÄUFT — Teilbausteine fertig (siehe Fortschritt unten).
 > Frank-Priorität: **Korrektheit vor Geschwindigkeit.** Hauptagent = **GPT-5.5**, wird auf **High-Thinking** gesetzt.
+
+---
+
+## ⚡ FORTSCHRITT Schritt 2 — Stand 07.07.2026, 15:12 Uhr (agent 0.61.4)
+
+### FERTIG + verifiziert
+1. **Tool-Loop-Funktion `codex_generate_tools()` gebaut, deployed, GRÜN getestet** (agent 0.61.x, Commits #47590–#47595).
+   Der isolierte Selbsttest `GET /toolloop-selftest` (2 triviale Tools) lief `ok:true`, beide Tools aufgerufen, `turns:2, stopped:done`.
+   **→ Die Machbarkeit des ganzen Umbaus (GPT-5.5 macht Tool-Calling selbst) ist damit END-TO-END BEWIESEN.**
+2. **`agent.jsonl`-Volume-Fix (§6.8) FERTIG** (Commit #47596): compose.yaml `- ./agent-logs:/app/logs`, Host-Ordner
+   `/opt/second-brain/agent-logs` gehört uid 1000. Das forensische Voll-Log überlebt jetzt Rebuilds (verifiziert: Datei liegt persistent auf dem Host).
+
+### HART ERARBEITETES TOOL-LOOP-WISSEN (unbedingt beachten beim Weiterbau — sonst Fallen erneut)
+- **Backend = `chatgpt.com/backend-api/codex`** (Subscription-Impersonation, `codex_generate`-Pfad). Function-Calling geht, ABER:
+- **`stream:true` ist PFLICHT** — `stream:false` → HTTP 400 „Stream must be set to true". (empirisch bewiesen)
+- **function_calls kommen als STREAM-EVENTS, NICHT in `completed.output`** (das bleibt leer!). Das vollständige
+  `function_call`-Item (name/call_id/arguments) steckt im **`response.output_item.done`**-Event. Sequenz:
+  `response.created → in_progress → output_item.added → function_call_arguments.delta/done → output_item.done → completed`.
+  Wer nur `completed.output` liest, sieht KEINE Tools (das war der erste Fehl-Befund „Tools werden nicht aufgerufen").
+- **Backend bricht den Chunked-Stream sporadisch ab** („peer closed … incomplete chunked read") → **Streaming-Retry**
+  (bis 3x, nur solange kein `response.completed` kam; Backend-Call ist seiteneffektfrei) ist eingebaut und nötig.
+- Tool-Definition-Format (funktioniert): `{"type":"function","name":...,"description":...,"parameters":{json-schema, additionalProperties:false}}`, `tool_choice:"auto"`.
+- Reasoning `high` möglich (Frank stellt Level ein — `feedback_reasoning_levels_frank_only`).
+
+### NÄCHSTER SCHRITT: Werkzeugkasten (Task #6) — Blaupause / Kern-Bausteine (Zeilen in agent/app.py, Stand 0.61.4)
+Jedes Werkzeug ist ein dünner Handler um eine BESTEHENDE Funktion (nichts neu erfinden, nur kapseln + JSON-Schema):
+| Werkzeug | Nutzt bestehende Funktion | Zeile | Rückgabe an den Agenten |
+|----------|---------------------------|-------|--------------------------|
+| `durchsuche_gedaechtnis(query)` | `smart_recall(user_text, query, user_id)` → `(hits, meta)` | 1898 | Liste {id, titel, kategorie, score, **snippet**} — NICHT Volltext (Kontext-Schutz!) |
+| `lade_eintrag(id)` | brain-api „Eintrag per id" (Funktion noch lokalisieren; `brain_search` 1381 / brain /get) | — | Volltext EINES Eintrags |
+| `web_suche(query)` | `tavily_search(query, response_size)` → dict | 3329 | verdichtetes Web-Ergebnis |
+| `speichere(text)` | `_do_store(quote, categories, …)` → **ABER Bestätigung-vor-Speichern bleibt HARTE Code-Regel im Preflight** | 3146 | Bestätigungs-Rückfrage / Ergebnis |
+| `lies_logbuch(n, nur_probleme)` | `_read_recent_turns(limit, only_problems)` | 537 | letzte Turns (Logbuch 1) |
+| `lies_regeln()` / `schreibe_regel(text)` | Regelpool (Task #8 — zweistufig, Frank bestätigt) | neu | Regeln / Kandidat anlegen |
+Die Leseagent-Filterfunktion (`leseagent_select` 3202) wird NICHT mehr als eigener Agent aufgerufen, sondern der Hauptagent
+filtert selbst (er sieht Snippets via `durchsuche_gedaechtnis`, holt Volltext gezielt via `lade_eintrag`). Antwort-Formulierung
+(`hauptagent_answer` 3291 etc.) und Router (`hauptagent_route`) entfallen im Tool-Modus. intent-Zweige in `_process_turn`: query 5060, query_internet 5024, internet 5099.
+**Reihenfolge Task #7:** deterministischen Preflight (confirm_yes/no, explicit_save, eindeutige Kommandos) BEHALTEN, danach den
+Tool-Loop statt der intent-Verzweigung. `_process_turn` läuft synchron via `to_thread` (nicht blockieren).
+
+### Diagnose-Reste (beim Aufräumen in Task #7 entfernen)
+`codex_generate_tools` hat noch `raw_first_output`/`seen_events` (Diagnose) + den `/toolloop-selftest`-Endpoint. Harmlos, aber
+beim finalen Umbau aufräumen (oder als Sonde behalten — dann in Logbuch 2 einhängen).
 
 ---
 
