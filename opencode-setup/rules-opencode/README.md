@@ -20,10 +20,8 @@ einfuegen — dann landet die kompakte Fassung unter demselben Titel + Kategorie
 | known-bugs-before-coding.md | Bekannte Bugs ZUERST lesen, bevor an einer Technologie gearbeitet wird |
 | debugging-and-verification.md | Debugging & Verifikation: Systematisch statt Trial-and-Error |
 | parallel-sessions-git.md | Parallele Sessions — Commit & Push am geteilten main-Branch |
-| git-workflow.md | Git-Workflow: Alle Regeln fuer Git-Operationen |
 | communication-and-language.md | Kommunikation, Sprache & Benutzer-Interaktion |
 | lossless-context-principle.md | Verlustfrei-Prinzip: Kontext reduzieren OHNE Funktionalitaet zu verlieren |
-| commit-before-build.md | Commit+Push VOR jedem Build |
 | german-umlauts-always.md | Deutsche Umlaute immer verwenden |
 | research-persistence.md | Research-Persistenz: Recherchen in Best Practices & Bug-Almanache einarbeiten |
 | secrets-in-sk-folder.md | Secrets zentral im SK-Ordner (KRITISCH — Poka-Yoke Stufe 3) |
@@ -34,7 +32,16 @@ einfuegen — dann landet die kompakte Fassung unter demselben Titel + Kategorie
 | projekt-wissen-aus-gehirn.md | Projekt-Wissen aus dem Gehirn zuerst lesen (Kategorie Projekte) |
 | commit-push-jede-aufgabe-vor-build.md | Commit & Push nach JEDER Aufgabe — immer VOR Build/Install/Deploy |
 
-Kategorie fuer alle 17: `Programmierung/Rules`.
+Kategorie fuer alle 15: `Programmierung/Rules`.
+
+## BEWUSST AUSGESCHLOSSEN — NICHT wieder anlegen (Frank 2026-07-07)
+`commit-before-build.md` und `git-workflow.md` gehoeren **absichtlich NICHT** in diesen Ordner
+und **NICHT** ins Gehirn (`Programmierung/Rules`). Grund: ChatGPT 5.5 im High-Modus hat sehr gute
+eigene Regeln und erkennt Grenzfaelle selbst — diese beiden Regeln haben das OpenCode-System nur
+durcheinandergebracht. Sie wurden hier entfernt. **Diese zwei Dateien NIEMALS wieder in
+`rules-opencode/` erzeugen** und **NICHT** ins Gehirn hochladen. Zusaetzlich abgesichert durch die
+Blocklist `SKIP_RULE_FILES` in `cortex_sync.py` (das Sync-Skript ueberspringt sie hart). Claude Code
+selbst nutzt die Vollregeln in `~/.claude/rules/` weiterhin — betroffen ist NUR die OpenCode-Weitergabe.
 
 > Hinweis: `commit-push-jede-aufgabe-vor-build.md` ist eine OpenCode-spezifische Regel (kein
 > `~/.claude/rules/`-Original). Sie schaerft `commit-before-build.md` fuer OpenCode: gilt fuer JEDES

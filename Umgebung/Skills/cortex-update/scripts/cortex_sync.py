@@ -73,6 +73,9 @@ LABELS = {
 
 # Meta-/Nicht-Inhalts-Dateien, die NIE ins Brain gehoeren.
 SKIP_NAMES = {"readme.md", "system.md"}
+# Diese Rules-Dateien BEWUSST NIE ins Gehirn (Frank 2026-07-07): ChatGPT 5.5 High hat eigene
+# gute Regeln + erkennt Grenzfaelle selbst; diese beiden stoerten das OpenCode-System.
+SKIP_RULE_FILES = {"commit-before-build.md", "git-workflow.md"}
 # Almanach/BP-Inhaltsdateien heissen immer lowercase-kebab (room.md, jetpack-compose.md).
 KEBAB_RE = re.compile(r"^[a-z0-9][a-z0-9.\-]*\.md$")
 STOPWORDS = {"der", "die", "das", "und", "fuer", "fur", "mit", "im", "in", "the", "a", "of", "to",
@@ -174,6 +177,8 @@ def collect_files(focus):
             name = os.path.basename(f).lower()
             if name in SKIP_NAMES or name.startswith("_"):
                 continue
+            if src["name"] == "Rules" and name in SKIP_RULE_FILES:
+                continue   # Frank 2026-07-07: NIE nach OpenCode/ins Gehirn
             # Check-Versionen (-codecheck/-kurzcheck) gehoeren NUR zur "check"-Quelle, nie zur normalen.
             is_check = bool(CHECK_RE.search(name))
             kind = src.get("file_kind", "normal")
