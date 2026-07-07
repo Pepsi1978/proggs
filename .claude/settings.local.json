@@ -1,0 +1,9 @@
+{
+  "permissions": {
+    "allow": [
+      "PowerShell(Get-Command *)",
+      "PowerShell(Get-ChildItem -Force \"C:\\\\Users\\\\barwa\\\\proggs\" | Select-Object Mode,Name | Format-Table -AutoSize; \"---WINGET---\"; \\(Get-Command winget -ErrorAction SilentlyContinue\\).Source)",
+      "PowerShell(winget install *)"
+    ]
+  }
+}
