@@ -1,7 +1,15 @@
 {
-	"stand": "06.07.2026, 19:08 Uhr",
+	"stand": "07.07.2026, 13:09 Uhr",
 	"hinweis": "PFLEGE-PFLICHT: Bei JEDEM Deploy, der ein neues System/Feature einbaut, hier einen Eintrag ERGAENZEN (neueste zuerst) — mit Datum + Uhrzeit und ausfuehrlicher Erklaerung. Diese Datei ist die Quelle des Info-Bereichs in den Dashboard-Einstellungen (GET /api/features). Regel verankert in DEPLOY.md.",
 	"features": [
+		{
+			"id": "turn-logbuch-und-sonden-trace",
+			"name": "Turn-Logbuch + Sonden-Trace: jede Anfrage nachvollziehbar, mit Flaschenhals-Radar",
+			"eingebaut": "07.07.2026, 13:09 Uhr",
+			"dienst": "agent 0.60.0 + dashboard 0.56.0",
+			"kurz": "Cortex schreibt jetzt zu jeder Anfrage ein lesbares Logbuch: die Frage, welchen Weg das System nahm, wie viele Einträge gefunden und davon ausgewählt wurden, wie sicher die Antwort war — und wie viele Sekunden jede Phase (Router, Suche, Leseagent, Web/Antwort) gebraucht hat.",
+			"erklaerung": "Damit man später genau nachsehen kann, was bei einer Anfrage passiert ist, führt Cortex jetzt zwei Logbücher. Logbuch 1 (das Turn-Logbuch) hält pro Anfrage EINE lesbare Zeile fest: Franks Frage, den vom Router gewählten Weg und den tatsächlich ausgeführten Weg (z. B. 'internet' -> 'query_internet'), die Suchanfragen, wie viele Einträge die Rohsuche im Gehirn gefunden hat und wie viele davon der Leseagent für die Antwort ausgewählt hat, die Sicherheit (Confidence) und eine Vorschau der Antwort. Zusätzlich steht in jeder Zeile ein Flaschenhals-Radar: wie viele Millisekunden Router, Suche, Leseagent und Web/Antwort einzeln gebraucht haben — so sieht man sofort, wo es klemmt. Es werden die letzten 100 Anfragen rollierend gespeichert (die älteste fällt raus), auf der Samba-Platte im Ordner Logbuch/Trace, damit sie jeden Server-Neustart und jedes Deploy überleben. Logbuch 2 (der Sonden-Trace) hält je Anfrage die feineren Einzelschritte fest, über eine gemeinsame Turn-Kennung mit Logbuch 1 verknüpft; das ist bewusst als erweiterbares Gerüst gebaut und wird beim späteren Umbau der Agenten-Architektur mit noch feineren Sonden gefüllt. Beide Logbücher werden geheimnis-frei geschrieben (bekannte API-Schlüssel werden vorher maskiert) und sind so abgesichert, dass ein Schreibfehler den Chat niemals stört. Meldet Frank sinngemäß 'das lief schlecht' oder 'warum ging das nicht', markiert Cortex automatisch die zuletzt betroffene Anfrage im Logbuch als Problemfall, damit man solche Fälle gezielt wiederfindet. Das Logbuch ist die direkte Antwort auf den Star-Trek-Fall vom 06.07., bei dem die Rohsuche 50 passende Einträge fand, der Leseagent aber 0 davon auswählte und Cortex fälschlich 'nichts gefunden' sagte — künftig steht so ein Ablauf schwarz auf weiß im Logbuch. Der Lesezugriff durch den Hauptagenten selbst ('was war da gestern los?') kommt sauber im geplanten Agenten-Umbau dazu; jetzt sind die Logbücher über das Dashboard und den Server einsehbar (GET /logbook/turns)."
+		},
 		{
 			"id": "agenten-einstellungen-ohne-preisfenster",
 			"name": "Agenten-Einstellungen: Preisfenster entfernt",

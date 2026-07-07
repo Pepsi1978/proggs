@@ -25,6 +25,7 @@ from __future__ import annotations
 
 import asyncio
 import base64
+import contextvars
 import json
 import logging
 import os
@@ -53,7 +54,8 @@ VERSION = "0.53.0 (05.07.2026, 14.14 Uhr)"  # 0.53.0 (Gruppe D "Mitlernen in Pro
 
 VERSION = "0.56.0 (06.07.2026, 13:52 Uhr)"  # 0.56.0: Composite-Route query_internet fuer verschachtelte Anfragen (erst Gedächtnis-Kontext, dann Internet-Abgleich). Root Cause: Router-Schema erlaubte bisher genau EINEN intent; dadurch wurde bei Kettenanforderungen nur query ODER internet ausgeführt. Jetzt liefert der Router optional web_query, der Server führt beide bestehenden Pfade sequenziell aus und formuliert eine kombinierte Antwort. Alt: 0.55.3 (06.07.2026, 13:23 Uhr).
 VERSION = "0.57.0 (06.07.2026, 17:23 Uhr)"  # 0.57.0: Qdrant-/Gedächtnis-Limits vollständig dashboardfähig. Zusätzlich zu den bisherigen Recall-/Kontextwerten sind jetzt Duplikat-Suchkandidaten, Entity-Extraktionsfenster, Entity-Vollabruflimit, Antwort-Max-Tokens, Arbeitscache-Schwelle und Kategorie-Batchgröße persistent über /config.limits.agent einstellbar; die Werte wirken sofort im laufenden Agenten. Alt: 0.56.3.
-VERSION = "0.59.0 (06.07.2026, 18:54 Uhr)"  # 0.59.0: Zentrale frei eingesprochene Kontext-Prompts für Android und Dashboard. /config liefert/speichert user_context_prompts persistent in agent-data; aktive Prompts werden serverseitig als Zusatz-Prompt N an Dashboard-Gespräche angehängt. Android kann die Liste seeden, übernehmen und bei Änderungen synchronisieren. Alt: 0.58.0.
+VERSION = "0.59.1 (07.07.2026, 11:52 Uhr)"  # 0.59.1: Router-Härtung gegen falsche query_internet-Erzwingung. Die Gedächtnis+Internet-Ketten-Erkennung scannt Standard-Modus-/Antwortlängen-Prompts nicht mehr mit, sondern nur Franks aktuelle Nachricht und explizite Zusatz-Prompt-Blöcke. Alt: 0.59.0.
+VERSION = "0.60.0 (07.07.2026, 13:09 Uhr)"  # 0.60.0: NEU Turn-Logbuch (Logbuch 1) + Sonden-Trace (Logbuch 2), Frank-Auftrag 2026-07-07. Jeder /chat + /chat/stream-Turn wird per contextvar-Trace mitgeschrieben: der bestehende checkpoint()-Kanal fuettert zusaetzlich den Trace, ein Phasen-Marker recall_search trennt Rohsuche vom Leseagent-Filter. Logbuch 1 (LOGBOOK_DIR/Trace/turns.jsonl, 100 rollierend) = 1 lesbare Zeile je Anfrage mit Frage, Router->final Intent, Rohtreffer/Auswahl (Star-Trek: 50 gefunden/0 gewaehlt), Confidence, Antwort-Vorschau + Phasen-Timing (router_ms/suche_ms/leseagent_ms/web_antwort_ms = Flaschenhals-Radar). Logbuch 2 (trace.jsonl, 4000 Events) = feine Events je Turn per turn_id verknuepft (erweiterbares Geruest fuer feine Sonden beim Agenten-Umbau). Atomar (tmp+os.replace), secret-maskiert, BEST-EFFORT (try/except ueberall — gefaehrdet den Chat nie). Deterministische Problem-Markierung (_PROBLEM_FEEDBACK_RE) markiert den letzten Turn, wenn Frank ein Problem meldet. GET /logbook/turns fuers Dashboard. Persistent auf Samba (LOGBOOK_DIR bereits gemountet -> ueberlebt Rebuilds; loest fuer die Turn-Ebene die Fluechtigkeit von /app/logs/agent.jsonl). Alt: 0.59.1 (07.07.2026, 11:52 Uhr).
 
 # ---------------------------------------------------------------------------
 # Konfiguration (alles aus Umgebungsvariablen — Secrets nie im Code)
@@ -297,9 +299,258 @@ def probe(condition: bool, msg: str, **ctx: Any) -> bool:
 
 
 def checkpoint(step: str, intent: str, ok: bool, **ctx: Any) -> None:
-    """Intent-Checkpoint (erwartet vs. tatsaechlich) — eigener Kanal kind=CHECKPOINT."""
+    """Intent-Checkpoint (erwartet vs. tatsaechlich) — eigener Kanal kind=CHECKPOINT.
+    Fuettert zusaetzlich den aktiven Turn-Trace (Logbuch 1/2), falls einer laeuft — best-effort,
+    darf den Aufrufer NIE stoeren (Frank-Auftrag 2026-07-07)."""
     log.log(logging.INFO if ok else logging.WARNING, f"CHECKPOINT {step}",
             extra={"ctx": {"kind": "CHECKPOINT", "step": step, "intent": intent, "ok": ok, **ctx}})
+    try:
+        _trace_event(step, intent, ok, ctx)
+    except Exception:  # noqa: BLE001 — Logbuch darf den Chat NIE gefaehrden
+        pass
+
+
+# ==========================================================================
+# LOGBUCH 1 (Turn-Log, lesbar) + LOGBUCH 2 (Sonden-/Trace-Log, fein)
+# Frank-Auftrag 2026-07-07: nachverfolgbar machen, was WANN WIE passiert — inkl.
+# Flaschenhals-Radar (Zeit pro Phase). Persistent unter LOGBOOK_DIR/Trace (die Samba-Platte
+# ist bereits gemountet + im Backup -> ueberlebt jedes Deploy), rollierend, atomar, secret-frei,
+# BEST-EFFORT (darf den Chat NIE blockieren/kippen — Direktive #3, funktionserhaltend).
+#   Logbuch 1 -> LOGBOOK_DIR/Trace/turns.jsonl : 1 Zeile je Anfrage (letzte TURNLOG_MAX)
+#   Logbuch 2 -> LOGBOOK_DIR/Trace/trace.jsonl : feine Events je Turn (per turn_id verknuepft)
+# Logbuch 2 ist bewusst das erweiterbare Geruest — feine Sonden kommen mit dem Agenten-Umbau
+# an den dann stabilen Werkzeug-Grenzen dazu (Stale-Probe-Schutz).
+# ==========================================================================
+TRACE_DIR = Path(os.getenv("AGENT_TRACE_DIR", str(Path(LOGBOOK_DIR) / "Trace")))
+TURNLOG_FILE = TRACE_DIR / "turns.jsonl"      # Logbuch 1
+TRACE_FILE = TRACE_DIR / "trace.jsonl"        # Logbuch 2
+TURNLOG_MAX = _env_int("AGENT_TURNLOG_MAX", 100)     # letzte N Anfragen (Frank: 100 rollierend)
+TRACE_MAX = _env_int("AGENT_TRACE_MAX", 4000)        # letzte N feine Events
+_turnlog_lock = threading.Lock()
+_current_trace: contextvars.ContextVar = contextvars.ContextVar("sb_turn_trace", default=None)
+
+# Secret-Maskierung VOR dem Schreiben (ai-agent §6.3 / #12): bekannte Key-Praefixe -> [REDACTED].
+_LOG_SECRET_RE = re.compile(
+    r"\b(tvly-[A-Za-z0-9]{6,}|sk-[A-Za-z0-9]{10,}|gh[pousr]_[A-Za-z0-9]{10,}|github_pat_[A-Za-z0-9_]{10,}"
+    r"|AIza[A-Za-z0-9_\-]{20,}|glpat-[A-Za-z0-9_\-]{6,}|xox[baprs]-[A-Za-z0-9\-]{6,}"
+    r"|nvapi-[A-Za-z0-9_\-]{6,}|gsk_[A-Za-z0-9]{10,}|r8_[A-Za-z0-9]{10,})\b"
+)
+
+
+def _redact_log(text: Any) -> Any:
+    if not isinstance(text, str) or not text:
+        return text
+    return _LOG_SECRET_RE.sub("[REDACTED]", text)
+
+
+def _write_rolling(path: Path, new_lines: "list[dict]", max_lines: int) -> None:
+    """Rollierendes, ATOMARES Schreiben (tmp -> os.replace): haelt die letzten max_lines JSON-Zeilen.
+    Thread-sicher (globaler Lock). Fehler werden geschluckt (Logbuch ist best-effort)."""
+    if not new_lines:
+        return
+    with _turnlog_lock:
+        try:
+            existing = path.read_text(encoding="utf-8").splitlines() if path.exists() else []
+        except Exception:  # noqa: BLE001
+            existing = []
+        for obj in new_lines:
+            try:
+                existing.append(json.dumps(obj, ensure_ascii=False))
+            except Exception:  # noqa: BLE001 — eine kaputte Zeile darf den Rest nicht kippen
+                continue
+        if len(existing) > max_lines:
+            existing = existing[-max_lines:]
+        try:
+            path.parent.mkdir(parents=True, exist_ok=True)
+            tmp = path.with_name(path.name + ".tmp")
+            tmp.write_text("\n".join(existing) + "\n", encoding="utf-8")
+            os.replace(tmp, path)
+        except Exception:  # noqa: BLE001
+            _log(logging.WARNING, "Logbuch-Schreiben fehlgeschlagen", exc_info=True)
+
+
+def _trace_start(user_text: str, context_mode: str, context_prompt: str, session_id: str) -> dict:
+    """Startet einen Turn-Trace und legt ihn in den contextvar — VOR asyncio.to_thread aufrufen,
+    damit der Worker-Thread ihn (per copy_context) sieht und die checkpoints hineinschreiben."""
+    try:
+        zusatz = _explicit_user_context_blocks(context_prompt)
+    except Exception:  # noqa: BLE001
+        zusatz = []
+    tr = {
+        "turn_id": uuid.uuid4().hex[:12],
+        "ts": _now_local().isoformat(timespec="seconds"),
+        "_t0": time.monotonic(),
+        "session_id": session_id,
+        "user_text": _redact_log((user_text or "")[:2000]),
+        "context_mode": context_mode,
+        "zusatz_prompts": [_redact_log(z[:400]) for z in (zusatz or [])],
+        "events": [],
+    }
+    _current_trace.set(tr)
+    return tr
+
+
+def _trace_event(step: str, msg: str, ok: bool, ctx: dict) -> None:
+    """Haengt ein feines Event an den aktiven Turn-Trace (Logbuch 2) — mit Zeit-Delta seit
+    Turn-Start (Flaschenhals-Radar). Aus checkpoint() gefuettert. Kein aktiver Trace -> No-Op."""
+    tr = _current_trace.get()
+    if tr is None:
+        return
+    ev = {"t_ms": int((time.monotonic() - tr["_t0"]) * 1000), "step": step, "ok": bool(ok)}
+    if msg:
+        ev["msg"] = _redact_log(str(msg)[:200])
+    for k, v in (ctx or {}).items():
+        if k in ("kind", "intent"):
+            continue
+        if isinstance(v, str):
+            v = _redact_log(v[:300])
+        elif not isinstance(v, (int, float, bool)) and v is not None:
+            v = _redact_log(str(v)[:300])
+        ev[k] = v
+    tr["events"].append(ev)
+
+
+def _turn_summary(tr: dict, events: "list[dict]", result: dict, total_ms: int) -> dict:
+    """Verdichtet die Turn-Events + die /chat-Antwort zu EINER lesbaren Logbuch-1-Zeile inkl.
+    Phasen-Timing (Router / Suche / Leseagent / Web+Antwort) — dem Flaschenhals-Radar."""
+    def first_t(steps):
+        for ev in events:
+            if ev.get("step") in steps and ev.get("t_ms") is not None:
+                return ev["t_ms"]
+        return None
+
+    def last_val(steps, field):
+        for ev in reversed(events):
+            if ev.get("step") in steps and field in ev:
+                return ev[field]
+        return None
+
+    route_events = [ev for ev in events if ev.get("step") == "route"]
+    router_intent = route_events[0].get("route") if route_events else None
+    final_intent = route_events[-1].get("route") if route_events else (result.get("action") or None)
+
+    selected_count = last_val(["lese_select"], "gewaehlt")
+    hits_total = last_val(["lese_select"], "von")
+    if hits_total is None:
+        hits_total = last_val(["recall", "recall_internet", "recall_full"], "treffer")
+    conf = result.get("confidence")
+    conf_level = conf.get("level") if isinstance(conf, dict) else last_val(["recall", "recall_internet"], "confidence")
+    recall_query = last_val(["recall", "recall_internet", "recall_full"], "recall_query") or last_val(["recall", "recall_full"], "query")
+    web_query = last_val(["recall_internet"], "web_query")
+    web_used = any(ev.get("step") in ("native_web", "internet_answer", "recall_internet") for ev in events)
+
+    t_route = first_t(["route"])
+    t_search = first_t(["recall_search"])
+    t_lese = first_t(["lese_select"])
+    timing = {
+        "router_ms": t_route,
+        "suche_ms": (t_search - t_route) if (t_search is not None and t_route is not None) else None,
+        "leseagent_ms": (t_lese - t_search) if (t_lese is not None and t_search is not None) else None,
+        "web_antwort_ms": (total_ms - t_lese) if t_lese is not None else None,
+        "gesamt_ms": total_ms,
+    }
+    return {
+        "turn_id": tr.get("turn_id"),
+        "ts": tr.get("ts"),
+        "session_id": tr.get("session_id"),
+        "user_text": tr.get("user_text"),
+        "context_mode": tr.get("context_mode"),
+        "zusatz_prompts": tr.get("zusatz_prompts") or [],
+        "router_intent": router_intent,
+        "final_intent": final_intent,
+        "action": result.get("action"),
+        "recall_query": _redact_log(recall_query) if recall_query else None,
+        "web_query": _redact_log(web_query) if web_query else None,
+        "hits_total": hits_total,
+        "selected_count": selected_count,
+        "web_used": web_used,
+        "confidence": conf_level,
+        "answer_preview": _redact_log((result.get("reply") or "")[:300]),
+        "timing": timing,
+        "event_count": len(events),
+        "problem": False,
+        "problem_note": None,
+    }
+
+
+def _trace_finish(tr: dict, result: dict, total_ms: int) -> None:
+    """Schreibt am Turn-Ende Logbuch 1 (Zusammenfassung + Phasen-Timing) UND Logbuch 2 (feine
+    Events, per turn_id verknuepft). Best-effort, im Threadpool aufgerufen. Loescht den Trace-Kontext."""
+    if not isinstance(tr, dict):
+        return
+    try:
+        events = tr.get("events", [])
+        summary = _turn_summary(tr, events, result or {}, total_ms)
+        _write_rolling(TURNLOG_FILE, [summary], TURNLOG_MAX)
+        trace_rows = [{"turn_id": tr["turn_id"], "ts": tr["ts"], **ev} for ev in events]
+        _write_rolling(TRACE_FILE, trace_rows, TRACE_MAX)
+    except Exception:  # noqa: BLE001 — Logbuch darf den Chat nie gefaehrden
+        _log(logging.WARNING, "Turn-Logbuch-Abschluss fehlgeschlagen", exc_info=True)
+    finally:
+        try:
+            _current_trace.set(None)
+        except Exception:  # noqa: BLE001
+            pass
+
+
+# Problem-Markierung: sagt Frank sinngemaess "das lief schlecht / warum ging das nicht", markiert
+# der Server DETERMINISTISCH den zuletzt abgeschlossenen Turn im Logbuch als problem=true (Poka-Yoke
+# wie die anderen deterministischen Erkennungen — haengt NICHT am fragilen Router/LLM, ueberlebt so
+# den geplanten Agenten-Umbau). Der normale Flow laeuft unveraendert weiter.
+_PROBLEM_FEEDBACK_RE = re.compile(
+    r"(das\s+(lief|ging|war|klappt\w*)\s+(schlecht|nicht|schief|falsch|daneben|mist))"
+    r"|(h[äa]tte\s+(besser|anders))"
+    r"|(warum\s+(ging|hat|ist|war|funktioniert\w*)\s+.{0,40}\bnicht\b)"
+    r"|(nicht\s+(gut|richtig|korrekt|optimal)\s+(gelaufen|funktioniert|gemacht))"
+    r"|(das\s+war\s+(nix|mist|falsch|schlecht))"
+    r"|(schlecht\s+gelaufen)",
+    re.IGNORECASE,
+)
+
+
+def _mark_last_turn_problem(note: str) -> bool:
+    """Markiert den JUENGSTEN Turn-Log-Eintrag als problem=true (+ Notiz). Best-effort, atomar."""
+    with _turnlog_lock:
+        try:
+            if not TURNLOG_FILE.exists():
+                return False
+            lines = TURNLOG_FILE.read_text(encoding="utf-8").splitlines()
+        except Exception:  # noqa: BLE001
+            return False
+        if not lines:
+            return False
+        try:
+            last = json.loads(lines[-1])
+            last["problem"] = True
+            last["problem_note"] = _redact_log((note or "")[:300])
+            lines[-1] = json.dumps(last, ensure_ascii=False)
+            tmp = TURNLOG_FILE.with_name(TURNLOG_FILE.name + ".tmp")
+            tmp.write_text("\n".join(lines) + "\n", encoding="utf-8")
+            os.replace(tmp, TURNLOG_FILE)
+            return True
+        except Exception:  # noqa: BLE001
+            _log(logging.WARNING, "Problem-Markierung fehlgeschlagen", exc_info=True)
+            return False
+
+
+def _read_recent_turns(limit: int, only_problems: bool = False) -> "list[dict]":
+    """Liest die letzten `limit` Turn-Log-Eintraege (Logbuch 1) fuers Dashboard/Debugging."""
+    try:
+        if not TURNLOG_FILE.exists():
+            return []
+        lines = TURNLOG_FILE.read_text(encoding="utf-8").splitlines()
+    except Exception:  # noqa: BLE001
+        return []
+    out = []
+    for ln in lines:
+        try:
+            obj = json.loads(ln)
+        except Exception:  # noqa: BLE001
+            continue
+        if only_problems and not obj.get("problem"):
+            continue
+        out.append(obj)
+    return out[-limit:] if limit > 0 else out
 
 
 probe(bool(GEMINI_API_KEY), "GEMINI_API_KEY fehlt")
@@ -1492,6 +1743,11 @@ def smart_recall(user_text: str, query: str, user_id: str = USER_ID) -> "tuple[l
             hits = hits[:max(caps)]
     elif search_limit > 0:
         hits = hits[:search_limit]
+    # Phasen-Marker fuers Flaschenhals-Radar (Logbuch): trennt "Rohsuche" vom nachgelagerten
+    # Leseagent-Filter. treffer=Anzahl Rohtreffer VOR der Leseagent-Auswahl (Star-Trek-Diagnose:
+    # hier standen 50, der Leseagent waehlte 0).
+    checkpoint("recall_search", "Rohsuche im Gehirn abgeschlossen (Hybrid/Multi-Query/Entity)",
+               ok=True, treffer=len(hits))
     return hits, meta
 
 
@@ -2446,17 +2702,47 @@ _PAIR_NEED_RE = re.compile(
 )
 
 
-def wants_recall_then_internet(user_text: str, context_prompt: str = "") -> bool:
-    """Deterministische Poka-Yoke-Korrektur fuer verschachtelte Suchanforderungen.
-
-    Der Router darf nicht mehr zwischen Gedächtnis ODER Internet entscheiden muessen, wenn Frank
-    explizit beide Schritte verlangt. Normale S/M/XL-Prompts mit "Gedächtnis- oder Webtreffer" lösen
-    nicht aus, weil dort weder eine Kette noch ein ausdrueckliches "und" steht.
-    """
-    text = _intent_text(f"{context_prompt}\n{user_text}")
-    if not (_MEMORY_NEED_RE.search(text) and _WEB_NEED_RE.search(text)):
+def _recall_then_internet_in_text(text: str) -> bool:
+    """True nur, wenn EIN Text selbst explizit Gedächtnis UND Internet als Kette verlangt."""
+    normalized = _intent_text(text)
+    if not (_MEMORY_NEED_RE.search(normalized) and _WEB_NEED_RE.search(normalized)):
         return False
-    return bool(_CHAIN_NEED_RE.search(text) or _PAIR_NEED_RE.search(text))
+    return bool(_CHAIN_NEED_RE.search(normalized) or _PAIR_NEED_RE.search(normalized))
+
+
+def _explicit_user_context_blocks(context_prompt: str) -> list[str]:
+    """Nur frei gepflegte Zusatz-Prompts extrahieren; Standard-Modus-/A/S/M/XL-Prompts ignorieren."""
+    prompt = context_prompt or ""
+    matches = list(re.finditer(r"(?im)^Zusatz-Prompt\s+\d+:\s*$", prompt))
+    blocks: list[str] = []
+    for i, m in enumerate(matches):
+        end = matches[i + 1].start() if i + 1 < len(matches) else len(prompt)
+        block = prompt[m.end():end].strip()
+        if block:
+            blocks.append(block)
+    return blocks
+
+
+def wants_recall_then_internet(user_text: str, context_prompt: str = "") -> bool:
+    """Deterministische Poka-Yoke-Korrektur für verschachtelte Suchanforderungen.
+
+    Der Router darf nicht mehr zwischen Gedächtnis ODER Internet entscheiden müssen, wenn Frank
+    explizit beide Schritte verlangt. Wichtig: Der kombinierte App-Kontext enthält auch Standard-
+    Antwortlängen-Prompts mit Wörtern wie "Gedächtnis" und "Webtreffer". Diese Standardtexte
+    dürfen die Route NICHT auslösen (Live-Fund 2026-07-06: Dank/Smalltalk wurde query_internet).
+    """
+    if _recall_then_internet_in_text(user_text):
+        return True
+    for block in _explicit_user_context_blocks(context_prompt):
+        if _recall_then_internet_in_text(block):
+            return True
+    # Kompatibilität für einfache Clients, die NUR einen freien Zusatzprompt senden statt den
+    # Android/Dashboard-Kombiprompt. Sobald Standardmarker vorkommen, bleibt nur Zusatz-Prompt N aktiv.
+    prompt = (context_prompt or "").strip()
+    if prompt and not re.search(r"(?im)^Zusatz-Prompt\s+\d+:", prompt):
+        standard = "Antwortlänge" in prompt or "Du bist jetzt im " in prompt
+        return (not standard) and _recall_then_internet_in_text(prompt)
+    return False
 
 
 def hauptagent_route(session: dict, user_text: str, pending: dict | None, context_mode: str = "auto", context_prompt: str = "") -> dict:
@@ -4584,6 +4870,7 @@ async def chat(req: ChatReq) -> dict:
         if dup is not None:
             return dup
 
+    tr = None   # Logbuch-Trace (best-effort; nie den Chat gefaehrden)
     try:
         async with _lock:
             session = _sessions.get(sid)
@@ -4599,6 +4886,11 @@ async def chat(req: ChatReq) -> dict:
         # Clients ohne eigenen Zusatzprompt (Dashboard): zentrale Modus- + A/S/M/XL-Prompts anhaengen.
         # Android sendet bereits den kombinierten Prompt selbst; dann wird nichts dupliziert.
         cprompt = build_ui_context_prompt(req.context_mode, rsize, req.context_prompt)
+        # Deterministische Problem-Markierung: sagt Frank "das lief schlecht/warum ging das nicht",
+        # markiere den ZULETZT abgeschlossenen Turn im Logbuch (best-effort, aendert den Flow NICHT).
+        if not pending and _PROBLEM_FEEDBACK_RE.search(req.text or ""):
+            await asyncio.to_thread(_mark_last_turn_problem, req.text)
+        tr = _trace_start(req.text, _norm_context_mode(req.context_mode), cprompt, sid)   # vor to_thread -> Worker sieht den Trace
         outcome = await asyncio.to_thread(
             _process_turn,
             session,
@@ -4637,6 +4929,8 @@ async def chat(req: ChatReq) -> dict:
                 "recall_hits": outcome.get("recall_hits"), "options": outcome.get("options"),
                 "sources": outcome.get("sources"), "confidence": outcome.get("confidence"),   # Nr. 38/39
                 "context_limit_reached": limit_hit}
+    if tr is not None:
+        await asyncio.to_thread(_trace_finish, tr, response, int((time.time() - t0) * 1000))
     if rid:
         await _dedup_store(rid, response)
     return response
@@ -4699,6 +4993,10 @@ async def chat_stream(req: ChatReq) -> StreamingResponse:
 
     rsize = _norm_response_size(req.response_size)
     cprompt = build_ui_context_prompt(req.context_mode, rsize, req.context_prompt)   # Dashboard: zentraler Prompt (wie /chat)
+    # Deterministische Problem-Markierung (wie /chat): Frank meldet ein Problem -> letzten Turn markieren.
+    if not pending and _PROBLEM_FEEDBACK_RE.search(req.text or ""):
+        await asyncio.to_thread(_mark_last_turn_problem, req.text)
+    tr = _trace_start(req.text, _norm_context_mode(req.context_mode), cprompt, sid)   # vor ensure_future -> Worker sieht den Trace
     turn = asyncio.ensure_future(asyncio.to_thread(
         _process_turn, session, req.text, pending,
         (req.category or "").strip(), (req.title or "").strip(), req.store_timestamp,
@@ -4743,6 +5041,10 @@ async def chat_stream(req: ChatReq) -> StreamingResponse:
             checkpoint("chat_stream", "Streaming-Chat abgeschlossen (identische Pipeline wie /chat)",
                        ok=(outcome.get("action") in ("save_confirm", "store", "cancel", "recall", "internet", "smalltalk")),
                        action=outcome.get("action"), ms=int((time.time() - t0) * 1000))
+            try:
+                await asyncio.to_thread(_trace_finish, tr, response, int((time.time() - t0) * 1000))
+            except Exception:  # noqa: BLE001 — Logbuch darf die Finalisierung nie kippen
+                _log(logging.WARNING, "Turn-Logbuch (Stream) fehlgeschlagen", exc_info=True)
             if not finalize_fut.done():
                 finalize_fut.set_result(response)
         asyncio.ensure_future(_fin())
@@ -5141,6 +5443,17 @@ def write_logbook(req: LogbookWriteReq) -> dict:
                ok=True, file=target.name)
     _log(logging.INFO, "Logbuch-.txt wiederhergestellt", file=target.name)
     return {"ok": True, "written": True, "file": target.name}
+
+
+@app.get("/logbook/turns", dependencies=[Depends(require_auth)])
+def logbook_turns(limit: int = 50, only_problems: bool = False) -> dict:
+    """Turn-Logbuch (Logbuch 1) fuers Dashboard/Debugging: die letzten `limit` Anfragen — mit Weg
+    (Router->final), Rohtreffer/Auswahl, Confidence, Phasen-Timing (Flaschenhals) und Problem-Flag.
+    neueste zuerst. Read-only; sync def -> Threadpool (fastapi §1)."""
+    n = max(1, min(int(limit or 50), TURNLOG_MAX))
+    turns = _read_recent_turns(n, only_problems=bool(only_problems))
+    turns.reverse()   # neueste zuerst
+    return {"ok": True, "count": len(turns), "max": TURNLOG_MAX, "turns": turns}
 
 
 @app.get("/")
