@@ -2,7 +2,6 @@ package de.frank.entropyreducer.presentation.mental
 
 import android.app.Application
 import android.content.Context
-import android.os.SystemClock
 import androidx.datastore.preferences.core.booleanPreferencesKey
 import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.intPreferencesKey
@@ -10,27 +9,15 @@ import androidx.datastore.preferences.preferencesDataStore
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import dagger.hilt.android.lifecycle.HiltViewModel
-import de.frank.entropyreducer.data.diagnostics.Diag
-import de.frank.entropyreducer.data.diagnostics.DiagnosticArea
 import de.frank.entropyreducer.data.settings.AppSettings
-import de.frank.entropyreducer.domain.tts.TtsPlayer
 import javax.inject.Inject
-import kotlinx.coroutines.CancellationException
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.Job
-import kotlinx.coroutines.currentCoroutineContext
-import kotlinx.coroutines.delay
-import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.flow.Flow
-import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
-import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.withContext
 
 /**
  * Vorlese-System fuer den Gewohnheitsreiter (einfacher als MentalTtsViewModel):
@@ -73,8 +60,8 @@ class GewohnheitTtsViewModel
 @Inject
     constructor(
         application: Application,
-        private val ttsPlayer: TtsPlayer,
         private val appSettings: AppSettings,
+        private val playback: MentalTtsPlaybackController,
     ) : AndroidViewModel(application) {
 
     private companion object {
@@ -99,11 +86,8 @@ class GewohnheitTtsViewModel
             )
         }
 
-    private val isPlayingFlow = MutableStateFlow(false)
-    private val errorFlow = MutableStateFlow<String?>(null)
-
     val uiState: StateFlow<GewohnheitTtsUiState> =
-        combine(settingsFlow, appSettings.ttsAutoStopMinutesFlow, isPlayingFlow, errorFlow) { settings, autoStopMinutes, playing, err ->
+        combine(settingsFlow, appSettings.ttsAutoStopMinutesFlow, playback.isPlayingFlow, playback.errorFlow) { settings, autoStopMinutes, playing, err ->
                 GewohnheitTtsUiState(
                     isPlaying = playing,
                     repeatCount = settings.repeatCount,
@@ -118,8 +102,6 @@ class GewohnheitTtsViewModel
                 started = SharingStarted.WhileSubscribed(5_000),
                 initialValue = GewohnheitTtsUiState(),
             )
-
-    private var ttsJob: Job? = null
 
     fun setRepeatCount(n: Int) {
         viewModelScope.launch {
@@ -144,98 +126,19 @@ class GewohnheitTtsViewModel
     }
 
     fun dismissError() {
-        errorFlow.value = null
+        playback.dismissError()
     }
 
     fun togglePlayback(gewohnheiten: List<Mental>) {
-        if (isPlayingFlow.value) {
-            stop()
-            return
-        }
-        val texts = gewohnheiten.map { it.text.trim() }.filter { it.isNotEmpty() }
-        if (texts.isEmpty()) {
-            errorFlow.value = "Keine Gewohnheiten zum Vorlesen vorhanden."
-            return
-        }
-        isPlayingFlow.value = true
-        ttsJob =
-            viewModelScope.launch {
-                val settings = settingsFlow.first()
-                val autoStopMinutes = appSettings.ttsAutoStopMinutesFlow.first()
-                try {
-                    runSequence(
-                        texts = texts,
-                        repeat = settings.repeatCount,
-                        loop = settings.loop,
-                        pauseMs = settings.pauseSeconds * 1_000L,
-                        autoStopMs = autoStopMinutes * 60 * 1_000L,
-                    )
-                } catch (e: CancellationException) {
-                    throw e
-                } catch (e: Exception) {
-                    val msg = e.message ?: "Vorlesen fehlgeschlagen"
-                    errorFlow.value = msg
-                    Diag.e(DiagnosticArea.GOOGLE_TTS, TAG, "Gewohnheit-Vorlesen fehlgeschlagen: $msg", e)
-                } finally {
-                    ttsPlayer.stop()
-                    ttsPlayer.clearSequenceCache()
-                    isPlayingFlow.value = false
-                }
-            }
+        playback.toggleGewohnheitPlayback(gewohnheiten)
     }
 
     fun stop() {
-        ttsJob?.cancel()
-        ttsJob = null
-        ttsPlayer.stop()
-        isPlayingFlow.value = false
-    }
-
-    private suspend fun runSequence(texts: List<String>, repeat: Int, loop: Boolean, pauseMs: Long, autoStopMs: Long) {
-        val sequence = buildSequence(texts, repeat)
-        if (sequence.isEmpty()) return
-        Diag.d(
-            DiagnosticArea.GOOGLE_TTS,
-            TAG,
-            "Sequenz gebildet: ${sequence.size} Saetze (saetze=${texts.size} " +
-                "repeat=$repeat loop=$loop pauseMs=$pauseMs)",
-        )
-
-        val deadline = SystemClock.elapsedRealtime() + autoStopMs
-        do {
-            for ((index, text) in sequence.withIndex()) {
-                currentCoroutineContext().ensureActive()
-                if (SystemClock.elapsedRealtime() >= deadline) {
-                    Diag.d(
-                        DiagnosticArea.GOOGLE_TTS,
-                        TAG,
-                        "${autoStopMs / 60_000}-Minuten-Grenze erreicht — automatischer Stop",
-                    )
-                    return
-                }
-                val file = ttsPlayer.synthesizeToCache(text, forceFresh = true)
-                withContext(Dispatchers.Main) { ttsPlayer.playCachedFileAwait(file) }
-                val isLastOfRun = index == sequence.lastIndex
-                if (!isLastOfRun || loop) {
-                    delay(pauseMs)
-                }
-            }
-        } while (loop && SystemClock.elapsedRealtime() < deadline)
-    }
-
-    private fun buildSequence(texts: List<String>, repeat: Int): List<String> {
-        return buildList {
-            for (text in texts) {
-                repeat(repeat) { add(text) }
-            }
-        }
+        playback.stop()
     }
 
     override fun onCleared() {
         super.onCleared()
-        ttsJob?.cancel()
-        ttsJob = null
-        ttsPlayer.stop()
-        ttsPlayer.clearSequenceCache()
+        // Playback lebt im ApplicationScope weiter. Stop nur per Lautsprecher oder Timeout.
     }
 }

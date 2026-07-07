@@ -39,7 +39,6 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -284,9 +283,8 @@ fun MentalBoardScreen(
     var dragOrder by remember { mutableStateOf<List<Mental>?>(null) }
     val displayed = dragOrder ?: stored
 
-    // Vorlese-System (Frank-Wunsch 2026-06-16): Lautsprecher + 2 Dropdowns + Endlos-Haekchen oben in
-    // der Top-Bar. Das ViewModel orchestriert die Anker-Sequenz, das Caching, die 2s-Pausen und den
-    // 15-Minuten-Auto-Stop. hiltViewModel() haengt am NavBackStackEntry dieses Screens.
+    // Vorlese-System: Das ViewModel ist UI-Adapter; der laufende Job liegt im Singleton-Controller,
+    // damit Vorlesen beim Reiterwechsel weiterläuft und nur per Lautsprecher oder Timeout stoppt.
     val ttsVm: MentalTtsViewModel = hiltViewModel()
     val ttsState by ttsVm.uiState.collectAsStateWithLifecycle()
     // Live-Zaehler des TTS-Monatskontingents — wird unten als letztes Listenelement gezeigt.
@@ -303,9 +301,6 @@ fun MentalBoardScreen(
             ttsVm.dismissError()
         }
     }
-
-    // Verlaesst Frank den Mental-Reiter, wird ein laufendes Vorlesen sofort gestoppt.
-    DisposableEffect(Unit) { onDispose { ttsVm.stop() } }
 
     // `dragOrder` zuruecksetzen, sobald (a) der gespeicherte Stand die gezogene Reihenfolge
     // erreicht hat (gleiche IDs in gleicher Folge), ODER (b) sich der Eintrags-BESTAND geaendert

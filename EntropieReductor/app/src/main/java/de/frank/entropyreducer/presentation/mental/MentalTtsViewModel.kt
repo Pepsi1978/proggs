@@ -2,7 +2,6 @@ package de.frank.entropyreducer.presentation.mental
 
 import android.app.Application
 import android.content.Context
-import android.os.SystemClock
 import androidx.datastore.preferences.core.booleanPreferencesKey
 import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.intPreferencesKey
@@ -10,29 +9,17 @@ import androidx.datastore.preferences.preferencesDataStore
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import dagger.hilt.android.lifecycle.HiltViewModel
-import de.frank.entropyreducer.data.diagnostics.Diag
-import de.frank.entropyreducer.data.diagnostics.DiagnosticArea
 import de.frank.entropyreducer.data.settings.AppSettings
 import de.frank.entropyreducer.data.tts.TtsUsage
 import de.frank.entropyreducer.data.tts.TtsUsageStore
-import de.frank.entropyreducer.domain.tts.TtsPlayer
 import javax.inject.Inject
-import kotlinx.coroutines.CancellationException
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.Job
-import kotlinx.coroutines.currentCoroutineContext
-import kotlinx.coroutines.delay
-import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.flow.Flow
-import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
-import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.withContext
 
 /**
  * Vorlese-System fuer das Mentalboard (Frank-Wunsch 2026-06-16).
@@ -65,7 +52,7 @@ import kotlinx.coroutines.withContext
 
 /* Eigener kleiner DataStore nur fuer die Vorlese-Einstellungen (anker/folge/loop/G). Bewusst
  * getrennt vom "mental_board"-Store (Saetze) — andere Datei, kein Konflikt. */
-private val Context.mentalTtsStore by preferencesDataStore(name = "mental_tts_settings")
+internal val Context.mentalTtsStore by preferencesDataStore(name = "mental_tts_settings")
 private val KEY_ANKER = intPreferencesKey("anker_count")
 private val KEY_FOLGE = intPreferencesKey("folge_count")
 private val KEY_LOOP = booleanPreferencesKey("loop_enabled")
@@ -103,8 +90,8 @@ class MentalTtsViewModel
 @Inject
     constructor(
         application: Application,
-        private val ttsPlayer: TtsPlayer,
         private val appSettings: AppSettings,
+        private val playback: MentalTtsPlaybackController,
         usageStore: TtsUsageStore,
     ) : AndroidViewModel(application) {
 
@@ -135,11 +122,8 @@ class MentalTtsViewModel
             )
         }
 
-    private val isPlayingFlow = MutableStateFlow(false)
-    private val errorFlow = MutableStateFlow<String?>(null)
-
     val uiState: StateFlow<MentalTtsUiState> =
-        combine(settingsFlow, appSettings.ttsAutoStopMinutesFlow, isPlayingFlow, errorFlow) { s, autoStopMinutes, playing, err ->
+        combine(settingsFlow, appSettings.ttsAutoStopMinutesFlow, playback.isPlayingFlow, playback.errorFlow) { s, autoStopMinutes, playing, err ->
                 MentalTtsUiState(
                     isPlaying = playing,
                     ankerCount = s.anker,
@@ -156,8 +140,6 @@ class MentalTtsViewModel
                 started = SharingStarted.WhileSubscribed(5_000),
                 initialValue = MentalTtsUiState(),
             )
-
-    private var ttsJob: Job? = null
 
     /* ----------------------------- Einstellungen ----------------------------- */
 
@@ -195,170 +177,26 @@ class MentalTtsViewModel
     }
 
     fun dismissError() {
-        errorFlow.value = null
+        playback.dismissError()
     }
 
     /* ----------------------------- Steuerung ----------------------------- */
 
     /**
-     * Lautsprecher-Druck: laeuft gerade etwas, wird gestoppt (Toggle); sonst startet das Vorlesen
-     * der aktuellen Mental-Liste (in der uebergebenen Reihenfolge). Ist das "G"-Haekchen aktiv,
-     * werden die uebergebenen [gewohnheiten] am Ende mitgelesen.
+     * Lautsprecher-Druck: läuft gerade etwas, wird gestoppt (Toggle); sonst startet das Vorlesen
+     * der aktuellen Mental-Liste (in der übergebenen Reihenfolge). Ist das "G"-Häkchen aktiv,
+     * werden die übergebenen [gewohnheiten] am Ende mitgelesen.
      */
     fun togglePlayback(mentals: List<Mental>, gewohnheiten: List<Mental> = emptyList()) {
-        if (isPlayingFlow.value) {
-            stop()
-            return
-        }
-        val mentalTexts = mentals.map { it.text.trim() }.filter { it.isNotEmpty() }
-        if (mentalTexts.isEmpty()) {
-            errorFlow.value = "Keine Mentals zum Vorlesen vorhanden."
-            return
-        }
-        isPlayingFlow.value = true
-        ttsJob =
-            viewModelScope.launch {
-                val s = settingsFlow.first()
-                val autoStopMinutes = appSettings.ttsAutoStopMinutesFlow.first()
-                // Gewohnheiten nur anhaengen, wenn das "G"-Haekchen aktiv ist. Ihre "wie-oft pro
-                // Satz"-Zahl kommt aus dem Gewohnheit-Reiter (gemeinsamer DataStore) — die
-                // Gesamt-Wiederholung steuert allein der Mental-Loop.
-                val gewohnheitTexts =
-                    if (s.includeHabits) {
-                        gewohnheiten.map { it.text.trim() }.filter { it.isNotEmpty() }
-                    } else {
-                        emptyList()
-                    }
-                val gewohnheitSettings =
-                    if (s.includeHabits && gewohnheitTexts.isNotEmpty()) {
-                        ctx.gewohnheitTtsStore.data
-                            .map {
-                                Pair(
-                                    (it[KEY_REPEAT] ?: 1).coerceIn(RANGE_MIN, RANGE_MAX),
-                                    (it[KEY_GEWOHNHEIT_PAUSE_SECONDS] ?: DEFAULT_PAUSE_SECONDS)
-                                        .coerceIn(PAUSE_RANGE_MIN, PAUSE_RANGE_MAX),
-                                )
-                            }
-                            .first()
-                    } else {
-                        Pair(1, DEFAULT_PAUSE_SECONDS)
-                    }
-                try {
-                    runSequence(
-                        mentalTexts = mentalTexts,
-                        anker = s.anker,
-                        folge = s.folge,
-                        loop = s.loop,
-                        gewohnheitTexts = gewohnheitTexts,
-                        gewohnheitRepeat = gewohnheitSettings.first,
-                        mentalPauseMs = s.pauseSeconds * 1_000L,
-                        gewohnheitPauseMs = gewohnheitSettings.second * 1_000L,
-                        autoStopMs = autoStopMinutes * 60 * 1_000L,
-                    )
-                } catch (e: CancellationException) {
-                    throw e // Cancellation NIE verschlucken (Bug-Almanach kotlin §2.1)
-                } catch (e: Exception) {
-                    val msg = e.message ?: "Vorlesen fehlgeschlagen"
-                    errorFlow.value = msg
-                    Diag.e(DiagnosticArea.GOOGLE_TTS, TAG, "Mental-Vorlesen fehlgeschlagen: $msg", e)
-                } finally {
-                    ttsPlayer.stop()
-                    ttsPlayer.clearSequenceCache()
-                    isPlayingFlow.value = false
-                }
-            }
+        playback.toggleMentalPlayback(mentals, gewohnheiten)
     }
 
     fun stop() {
-        ttsJob?.cancel()
-        ttsJob = null
-        ttsPlayer.stop()
-        isPlayingFlow.value = false
-    }
-
-    /* ----------------------------- Vorlese-Schleife ----------------------------- */
-
-    private suspend fun runSequence(
-        mentalTexts: List<String>,
-        anker: Int,
-        folge: Int,
-        loop: Boolean,
-        gewohnheitTexts: List<String>,
-        gewohnheitRepeat: Int,
-        mentalPauseMs: Long,
-        gewohnheitPauseMs: Long,
-        autoStopMs: Long,
-    ) {
-        // Mentalblock (Anker-Schema) + optional Gewohnheiten am Ende (jeder Satz gewohnheitRepeat-mal).
-        val mentalSeq = buildSequence(mentalTexts, anker, folge).map { SpokenStep(it, mentalPauseMs) }
-        val gewohnheitSeq = buildHabitSequence(gewohnheitTexts, gewohnheitRepeat).map { SpokenStep(it, gewohnheitPauseMs) }
-        val sequence = mentalSeq + gewohnheitSeq
-        if (sequence.isEmpty()) return
-        Diag.d(
-            DiagnosticArea.GOOGLE_TTS,
-            TAG,
-                "Sequenz gebildet: mental=${mentalSeq.size} + gewohnheit=${gewohnheitSeq.size} " +
-                "(mentals=${mentalTexts.size} anker=$anker folge=$folge loop=$loop, " +
-                "mentalPauseMs=$mentalPauseMs gewohnheiten=${gewohnheitTexts.size} " +
-                "repeat=$gewohnheitRepeat gewohnheitPauseMs=$gewohnheitPauseMs)",
-        )
-
-        // Wiedergabe mit frischer Synthese pro Satzvorkommen, Loop + einstellbarem Sicherheitslimit.
-        val deadline = SystemClock.elapsedRealtime() + autoStopMs
-        do {
-            for ((index, step) in sequence.withIndex()) {
-                currentCoroutineContext().ensureActive()
-                if (SystemClock.elapsedRealtime() >= deadline) {
-                    Diag.d(
-                        DiagnosticArea.GOOGLE_TTS,
-                        TAG,
-                        "${autoStopMs / 60_000}-Minuten-Grenze erreicht — automatischer Stop",
-                    )
-                    return
-                }
-                val file = ttsPlayer.synthesizeToCache(step.text, forceFresh = true)
-                withContext(Dispatchers.Main) { ttsPlayer.playCachedFileAwait(file) }
-                val isLastOfRun = index == sequence.lastIndex
-                if (!isLastOfRun || loop) {
-                    delay(step.pauseMs)
-                }
-            }
-        } while (loop && SystemClock.elapsedRealtime() < deadline)
-    }
-
-    private data class SpokenStep(val text: String, val pauseMs: Long)
-
-    /**
-     * Baut die flache Mental-Vorlese-Sequenz aus den Saetzen. Bei nur einem Satz wird dieser eine Satz
-     * [anker]-mal vorgelesen (es gibt keinen Folgesatz).
-     */
-    private fun buildSequence(texts: List<String>, anker: Int, folge: Int): List<String> {
-        if (texts.isEmpty()) return emptyList()
-        val first = texts.first()
-        if (texts.size == 1) return List(anker) { first }
-        return buildList {
-            for (i in 1 until texts.size) {
-                repeat(anker) { add(first) }
-                repeat(folge) { add(texts[i]) }
-            }
-        }
-    }
-
-    /** Baut die Gewohnheit-Sequenz: jeder Satz [times]-mal hintereinander (Gewohnheit-Reiter-Weise). */
-    private fun buildHabitSequence(texts: List<String>, times: Int): List<String> {
-        if (texts.isEmpty()) return emptyList()
-        return buildList {
-            for (text in texts) {
-                repeat(times) { add(text) }
-            }
-        }
+        playback.stop()
     }
 
     override fun onCleared() {
         super.onCleared()
-        ttsJob?.cancel()
-        ttsJob = null
-        ttsPlayer.stop()
-        ttsPlayer.clearSequenceCache()
+        // Playback lebt im ApplicationScope weiter. Stop nur per Lautsprecher oder Timeout.
     }
 }

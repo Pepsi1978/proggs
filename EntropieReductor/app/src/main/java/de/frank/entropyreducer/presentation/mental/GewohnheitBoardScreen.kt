@@ -45,7 +45,6 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -301,9 +300,6 @@ fun GewohnheitBoardScreen(
             ttsVm.dismissError()
         }
     }
-
-    // Vorlesen stoppen wenn Screen verlassen wird
-    DisposableEffect(Unit) { onDispose { ttsVm.stop() } }
 
     val error by suggestVm.error.collectAsStateWithLifecycle()
     LaunchedEffect(error) {
