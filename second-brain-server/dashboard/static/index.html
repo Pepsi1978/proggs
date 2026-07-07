@@ -929,8 +929,8 @@ button{font-family:inherit;cursor:pointer}
           </div>
           <div class="overview-sort" aria-label="Kategorie-Sortierung">
             <span class="overview-sort-label">Sortierung</span>
-            <button class="overview-sort-btn active" type="button" data-overview-sort="count" aria-pressed="true">Menge</button>
-            <button class="overview-sort-btn" type="button" data-overview-sort="alpha" aria-pressed="false">Alphabet</button>
+            <button class="overview-sort-btn" type="button" data-overview-sort="count" aria-pressed="false">Menge</button>
+            <button class="overview-sort-btn active" type="button" data-overview-sort="alpha" aria-pressed="true">Alphabet</button>
           </div>
           <div class="bar" id="bar"></div>
           <div class="legend" id="legend"></div>
@@ -1880,7 +1880,7 @@ button{font-family:inherit;cursor:pointer}
   let curParent = null;          // Gehirn-Drilldown: alle Einträge UNTER diesem Kategoriepfad (inkl. Unterpfade)
   let brainCatRoot = { children:new Map() };
   let LAST_OVERVIEW = null;       // letzter Overview-Datensatz (für Re-Render beim Auf-/Zuklappen)
-  let overviewSortMode = "count"; // Standard: wie bisher nach Menge, aber spaltenweise gelesen
+  let overviewSortMode = "alpha"; // Standard: alphabetisch, damit die Übersicht sofort planbar gelesen wird.
   const ovExpanded = new Set();   // aufgeklappte Hauptkategorien in der Übersicht-Legende
   function updateOverviewSortButtons(){
     document.querySelectorAll("[data-overview-sort]").forEach(btn=>{
