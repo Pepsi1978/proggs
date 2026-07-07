@@ -52,6 +52,25 @@ laeuft weiter der alte Code, obwohl die Datei auf dem Server schon neu ist.
 > noetig. Da features.json ins dashboard-Image gebacken ist, das dashboard danach mit `--build`
 > neu bauen (das passiert durch die Version-Bump-Regel unten ohnehin).
 >
+> **SCHREIBWEISE der Eintraege (Dauer-Regel, Frank-Wunsch 2026-07-07):** Der Cortex-Hauptagent liest
+> ueber das Werkzeug `was_kann_cortex` ALLE Eintraege auf EINMAL ein (um Frank zu erklaeren, was Cortex
+> kann) — deshalb: leichtes, verstaendliches Deutsch, kurze Saetze, KOMPAKT halten. ABER: alle
+> Fachbegriffe, Namen und Zahlen (BM25, RRF, Qdrant, ENV-Variablen wie `AGENT_RECALL_LIMIT=0`,
+> Endpunkt-Namen, Grenzwerte) BLEIBEN erhalten und werden je in einem kurzen Halbsatz erklaert — NIE
+> durch Weglassen "vereinfachen" (Frank muss erkennen, WAS konkret gebaut wurde). Einfache Ueberschrift.
+> Aehnliche/redundante Eintraege duerfen ZUSAMMENGEFASST werden (Datum ist sekundaer — entscheidend ist,
+> WAS Cortex kann). Dieselbe Regel steht im `hinweis`-Feld von `features.json`.
+>
+> **FALLE beim STRUKTUR-Umbau der Chronik (nicht nur einen Eintrag anhaengen):** `/api/features` liest
+> die PERSISTENTE Kopie `dashboard-data/features.json` (Bind-Mount `/opt/second-brain/dashboard-data/`)
+> und MERGED fehlende Seed-Eintraege per `id` hinein (0.57.1-Verhalten, schuetzt editierte Eintraege).
+> Wer nur EINEN Eintrag anhaengt, ist sicher. Wer aber die STRUKTUR aendert (Eintraege zusammenfasst,
+> ids aendert/loescht), bekommt DUPLIKATE: alt (persistent) + neu (Seed) = zu viele Eintraege (real
+> 2026-07-07: 55->32 umgebaut, `/api/features` zeigte 68). LOESUNG nach dem `--build`-Deploy die
+> persistente Kopie auf dem VPS mit der neuen Version UEBERSCHREIBEN:
+> `scp dashboard/features.json root@168.231.83.205:/opt/second-brain/dashboard-data/features.json`,
+> dann `chown 10002:10002 .../features.json` + `docker compose restart dashboard`. Danach `/api/features` == neue Zahl.
+>
 > ### ⚠️ PFLICHT VOR JEDEM DEPLOY: sichtbare Version + Timestamp erhoehen (Frank-Wunsch 2026-07-01)
 > Bei JEDER Server-Aenderung — **egal welcher Dienst** (agent, librarian, brain-api, mcp, dashboard) — MUSS die
 > **sichtbare Dashboard-Version** `VERSION` in `dashboard/app.py` erhoeht und ihr **Timestamp auf die
