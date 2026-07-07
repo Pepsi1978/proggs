@@ -58,6 +58,7 @@ private val KEY_FOLGE = intPreferencesKey("folge_count")
 private val KEY_LOOP = booleanPreferencesKey("loop_enabled")
 private val KEY_INCLUDE_HABITS = booleanPreferencesKey("include_habits")
 private val KEY_MENTAL_PAUSE_SECONDS = intPreferencesKey("pause_seconds")
+private val KEY_RANDOM_PLAYBACK = booleanPreferencesKey("random_playback")
 
 data class MentalTtsUiState(
     val isPlaying: Boolean = false,
@@ -69,6 +70,8 @@ data class MentalTtsUiState(
     val loop: Boolean = false,
     /** "G"-Haekchen: Gewohnheiten am Ende mitlesen? */
     val includeHabits: Boolean = false,
+    /** Zufällige Satzreihenfolge: jeden Satzblock einmal pro Durchlauf, Wiederholungen bleiben direkt zusammen. */
+    val randomPlayback: Boolean = false,
     /** Pause zwischen zwei gesprochenen Mental-Saetzen (1..30 Sekunden). */
     val pauseSeconds: Int = 9,
     /** Globale Sicherheitsgrenze fuer automatischen Vorlese-Stop (15..120 Minuten). */
@@ -82,6 +85,7 @@ private data class MentalSettings(
     val folge: Int,
     val loop: Boolean,
     val includeHabits: Boolean,
+    val randomPlayback: Boolean,
     val pauseSeconds: Int,
 )
 
@@ -117,6 +121,7 @@ class MentalTtsViewModel
                 folge = (p[KEY_FOLGE] ?: 1).coerceIn(RANGE_MIN, RANGE_MAX),
                 loop = p[KEY_LOOP] ?: false,
                 includeHabits = p[KEY_INCLUDE_HABITS] ?: false,
+                randomPlayback = p[KEY_RANDOM_PLAYBACK] ?: false,
                 pauseSeconds = (p[KEY_MENTAL_PAUSE_SECONDS] ?: DEFAULT_PAUSE_SECONDS)
                     .coerceIn(PAUSE_RANGE_MIN, PAUSE_RANGE_MAX),
             )
@@ -130,6 +135,7 @@ class MentalTtsViewModel
                     folgeCount = s.folge,
                     loop = s.loop,
                     includeHabits = s.includeHabits,
+                    randomPlayback = s.randomPlayback,
                     pauseSeconds = s.pauseSeconds,
                     autoStopMinutes = autoStopMinutes,
                     error = err,
@@ -162,6 +168,10 @@ class MentalTtsViewModel
     /** "G"-Haekchen: Gewohnheiten am Ende mitlesen. */
     fun setIncludeHabits(enabled: Boolean) {
         viewModelScope.launch { ctx.mentalTtsStore.edit { it[KEY_INCLUDE_HABITS] = enabled } }
+    }
+
+    fun setRandomPlayback(enabled: Boolean) {
+        viewModelScope.launch { ctx.mentalTtsStore.edit { it[KEY_RANDOM_PLAYBACK] = enabled } }
     }
 
     fun setPauseSeconds(seconds: Int) {

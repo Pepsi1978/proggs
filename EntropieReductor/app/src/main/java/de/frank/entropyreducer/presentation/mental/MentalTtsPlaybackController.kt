@@ -49,6 +49,7 @@ constructor(
         val KEY_MENTAL_LOOP = booleanPreferencesKey("loop_enabled")
         val KEY_INCLUDE_HABITS = booleanPreferencesKey("include_habits")
         val KEY_MENTAL_PAUSE_SECONDS = intPreferencesKey("pause_seconds")
+        val KEY_RANDOM_PLAYBACK = booleanPreferencesKey("random_playback")
         val KEY_GEWOHNHEIT_LOOP = booleanPreferencesKey("loop_enabled")
     }
 
@@ -100,6 +101,7 @@ constructor(
                 gewohnheitRepeat = gewohnheitSettings.repeatCount,
                 mentalPauseMs = settings.pauseSeconds * 1_000L,
                 gewohnheitPauseMs = gewohnheitSettings.pauseSeconds * 1_000L,
+                randomPlayback = settings.randomPlayback,
                 autoStopMs = autoStopMinutes * 60 * 1_000L,
             )
         }
@@ -118,12 +120,14 @@ constructor(
 
         startPlayback("Gewohnheit") {
             val settings = gewohnheitSettings()
+            val randomPlayback = mentalSettings().randomPlayback
             val autoStopMinutes = appSettings.ttsAutoStopMinutesFlow.first()
             runGewohnheitSequence(
                 texts = texts,
                 repeat = settings.repeatCount,
                 loop = settings.loop,
                 pauseMs = settings.pauseSeconds * 1_000L,
+                randomPlayback = randomPlayback,
                 autoStopMs = autoStopMinutes * 60 * 1_000L,
             )
         }
@@ -184,6 +188,7 @@ constructor(
                     folge = (p[KEY_FOLGE] ?: 1).coerceIn(RANGE_MIN, RANGE_MAX),
                     loop = p[KEY_MENTAL_LOOP] ?: false,
                     includeHabits = p[KEY_INCLUDE_HABITS] ?: false,
+                    randomPlayback = p[KEY_RANDOM_PLAYBACK] ?: false,
                     pauseSeconds =
                         (p[KEY_MENTAL_PAUSE_SECONDS] ?: DEFAULT_PAUSE_SECONDS)
                             .coerceIn(PAUSE_RANGE_MIN, PAUSE_RANGE_MAX),
@@ -213,23 +218,27 @@ constructor(
         gewohnheitRepeat: Int,
         mentalPauseMs: Long,
         gewohnheitPauseMs: Long,
+        randomPlayback: Boolean,
         autoStopMs: Long,
     ) {
-        val mentalSeq = buildMentalSequence(mentalTexts, anker, folge).map { SpokenStep(it, mentalPauseMs) }
-        val gewohnheitSeq = buildHabitSequence(gewohnheitTexts, gewohnheitRepeat).map { SpokenStep(it, gewohnheitPauseMs) }
-        val sequence = mentalSeq + gewohnheitSeq
-        if (sequence.isEmpty()) return
+        val mentalBlocks = buildMentalBlocks(mentalTexts, anker, folge, mentalPauseMs)
+        val gewohnheitBlocks = buildHabitBlocks(gewohnheitTexts, gewohnheitRepeat, gewohnheitPauseMs)
+        val orderedMentalSequence = buildOrderedMentalSteps(mentalTexts, anker, folge, mentalPauseMs)
+        val orderedGewohnheitSequence = gewohnheitBlocks.flatten()
+        val orderedSequence = orderedMentalSequence + orderedGewohnheitSequence
+        if (orderedSequence.isEmpty()) return
         Diag.d(
             DiagnosticArea.GOOGLE_TTS,
             TAG,
-            "Sequenz gebildet: mental=${mentalSeq.size} + gewohnheit=${gewohnheitSeq.size} " +
-                "(mentals=${mentalTexts.size} anker=$anker folge=$folge loop=$loop, " +
+            "Sequenz gebildet: mental=${orderedMentalSequence.size} + gewohnheit=${orderedGewohnheitSequence.size} " +
+                "(mentals=${mentalTexts.size} anker=$anker folge=$folge loop=$loop random=$randomPlayback, " +
                 "mentalPauseMs=$mentalPauseMs gewohnheiten=${gewohnheitTexts.size} " +
                 "repeat=$gewohnheitRepeat gewohnheitPauseMs=$gewohnheitPauseMs)",
         )
 
         val deadline = SystemClock.elapsedRealtime() + autoStopMs
         do {
+            val sequence = if (randomPlayback) (mentalBlocks + gewohnheitBlocks).shuffled().flatten() else orderedSequence
             for ((index, step) in sequence.withIndex()) {
                 currentCoroutineContext().ensureActive()
                 if (SystemClock.elapsedRealtime() >= deadline) {
@@ -249,54 +258,68 @@ constructor(
         repeat: Int,
         loop: Boolean,
         pauseMs: Long,
+        randomPlayback: Boolean,
         autoStopMs: Long,
     ) {
-        val sequence = buildHabitSequence(texts, repeat)
-        if (sequence.isEmpty()) return
+        val blocks = buildHabitBlocks(texts, repeat, pauseMs)
+        val orderedSequence = blocks.flatten()
+        if (orderedSequence.isEmpty()) return
         Diag.d(
             DiagnosticArea.GOOGLE_TTS,
             TAG,
-            "Sequenz gebildet: ${sequence.size} Sätze (sätze=${texts.size} repeat=$repeat loop=$loop pauseMs=$pauseMs)",
+            "Sequenz gebildet: ${orderedSequence.size} Sätze (sätze=${texts.size} repeat=$repeat loop=$loop random=$randomPlayback pauseMs=$pauseMs)",
         )
 
         val deadline = SystemClock.elapsedRealtime() + autoStopMs
         do {
-            for ((index, text) in sequence.withIndex()) {
+            val sequence = if (randomPlayback) blocks.shuffled().flatten() else orderedSequence
+            for ((index, step) in sequence.withIndex()) {
                 currentCoroutineContext().ensureActive()
                 if (SystemClock.elapsedRealtime() >= deadline) {
                     Diag.d(DiagnosticArea.GOOGLE_TTS, TAG, "${autoStopMs / 60_000}-Minuten-Grenze erreicht - automatischer Stop")
                     return
                 }
-                val file = ttsPlayer.synthesizeToCache(text, forceFresh = true)
+                val file = ttsPlayer.synthesizeToCache(step.text, forceFresh = true)
                 withContext(Dispatchers.Main) { ttsPlayer.playCachedFileAwait(file) }
                 val isLastOfRun = index == sequence.lastIndex
-                if (!isLastOfRun || loop) delay(pauseMs)
+                if (!isLastOfRun || loop) delay(step.pauseMs)
             }
         } while (loop && SystemClock.elapsedRealtime() < deadline)
     }
 
-    private fun buildMentalSequence(texts: List<String>, anker: Int, folge: Int): List<String> {
+    private fun buildOrderedMentalSteps(texts: List<String>, anker: Int, folge: Int, pauseMs: Long): List<SpokenStep> {
         if (texts.isEmpty()) return emptyList()
         val first = texts.first()
-        if (texts.size == 1) return List(anker) { first }
+        if (texts.size == 1) return List(anker) { SpokenStep(first, pauseMs) }
         return buildList {
             for (i in 1 until texts.size) {
-                repeat(anker) { add(first) }
-                repeat(folge) { add(texts[i]) }
+                repeat(anker) { add(SpokenStep(first, pauseMs)) }
+                repeat(folge) { add(SpokenStep(texts[i], pauseMs)) }
             }
         }
     }
 
-    private fun buildHabitSequence(texts: List<String>, times: Int): List<String> =
-        buildList {
-            for (text in texts) repeat(times) { add(text) }
+    private fun buildMentalBlocks(texts: List<String>, anker: Int, folge: Int, pauseMs: Long): List<List<SpokenStep>> {
+        if (texts.isEmpty()) return emptyList()
+        val first = texts.first()
+        if (texts.size == 1) return listOf(List(anker) { SpokenStep(first, pauseMs) })
+        return texts.drop(1).map { followText ->
+            buildList {
+                repeat(anker) { add(SpokenStep(first, pauseMs)) }
+                repeat(folge) { add(SpokenStep(followText, pauseMs)) }
+            }
         }
+    }
+
+    private fun buildHabitBlocks(texts: List<String>, times: Int, pauseMs: Long): List<List<SpokenStep>> =
+        texts.map { text -> List(times) { SpokenStep(text, pauseMs) } }
 
     private data class MentalSettings(
         val anker: Int,
         val folge: Int,
         val loop: Boolean,
         val includeHabits: Boolean,
+        val randomPlayback: Boolean,
         val pauseSeconds: Int,
     )
 

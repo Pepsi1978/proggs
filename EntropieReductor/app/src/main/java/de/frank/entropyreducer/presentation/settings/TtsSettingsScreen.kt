@@ -22,11 +22,14 @@ import androidx.compose.material.icons.outlined.ArrowDropDown
 import androidx.compose.material.icons.outlined.Check
 import androidx.compose.material.icons.outlined.Flag
 import androidx.compose.material.icons.outlined.Psychology
+import androidx.compose.material.icons.outlined.Shuffle
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Switch
+import androidx.compose.material3.SwitchDefaults
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -90,6 +93,13 @@ fun TtsSettingsScreen(
                 )
             }
             item {
+                RandomPlaybackSettingCard(
+                    accent = cosmos.accent,
+                    enabled = mentalState.randomPlayback,
+                    onEnabledChange = mentalTtsViewModel::setRandomPlayback,
+                )
+            }
+            item {
                 Text(
                     text = "Pausen zwischen vorgelesenen Sätzen",
                     style = MaterialTheme.typography.bodyMedium,
@@ -116,6 +126,46 @@ fun TtsSettingsScreen(
                     onValueSelected = gewohnheitTtsViewModel::setPauseSeconds,
                 )
             }
+        }
+    }
+}
+
+@Composable
+private fun RandomPlaybackSettingCard(
+    accent: Color,
+    enabled: Boolean,
+    onEnabledChange: (Boolean) -> Unit,
+) {
+    val cosmos = LocalCosmos.current
+    GlassCard(modifier = Modifier.fillMaxWidth()) {
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Box(
+                modifier = Modifier
+                    .size(48.dp)
+                    .clip(CircleShape)
+                    .background(accent.copy(alpha = 0.18f)),
+                contentAlignment = Alignment.Center,
+            ) {
+                Icon(Icons.Outlined.Shuffle, null, tint = accent, modifier = Modifier.size(24.dp))
+            }
+            Spacer(Modifier.size(16.dp))
+            Column(modifier = Modifier.weight(1f)) {
+                Text("Zufällige Reihenfolge", style = MaterialTheme.typography.titleMedium, color = cosmos.textPrimary)
+                Spacer(Modifier.size(2.dp))
+                Text(
+                    "Mischt die Folgeblöcke zufällig; der erste Mental-Satz bleibt als Anker dazwischen.",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = cosmos.textSecondary,
+                )
+            }
+            Switch(
+                checked = enabled,
+                onCheckedChange = onEnabledChange,
+                colors = SwitchDefaults.colors(
+                    checkedThumbColor = Color.White,
+                    checkedTrackColor = accent,
+                ),
+            )
         }
     }
 }
