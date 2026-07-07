@@ -152,6 +152,11 @@ services:
       # System-Prompt (prompt.txt) + Modell-Wahl (config.json) — ueberleben Neustart/Rebuild.
       # Host-Ordner muss uid 1000 gehoeren (chown beim Deploy), da der Container als uid 1000 schreibt.
       - ./agent-data:/app/data
+      # Forensisches Voll-Log (AGENT_LOG_PATH=/app/logs/agent.jsonl): ALLE _log-Eintraege, Fehler,
+      # checkpoints — mehr als die Turn-Ebene. OHNE dieses Volume ging es bei JEDEM Rebuild verloren
+      # (nur ~274 Zeilen ab dem letzten Build; die Star-Trek-Evidenz war nur durch Glueck noch da).
+      # Bind-Mount-uid == Container-uid 1000 (docker.md §4): Host-Ordner muss frank (1000) gehoeren -> chown beim Deploy.
+      - ./agent-logs:/app/logs
     deploy:
       resources:
         limits:
