@@ -919,13 +919,14 @@ def codex_generate_tools(
     turn = 0
     raw_first_output: "list[dict]" = []   # Diagnose: output-item-Struktur der ERSTEN Runde
 
-    def _stream_responses(req_body: "dict", timeout: float) -> "tuple[str, dict]":
+    def _stream_responses(req_body: "dict", timeout: float) -> "tuple[str, dict, list]":
         # Das ChatGPT-Codex-Backend ERZWINGT stream:true (stream:false -> HTTP 400
         # "Stream must be set to true"). Also streamen und die output-Items (inkl.
         # function_call) am Ende aus dem response.completed-Event lesen (wie codex_generate).
         req_body["stream"] = True
         text_parts: "list[str]" = []
         completed: "dict | None" = None
+        seen_events: "list[str]" = []   # Diagnose: welche Event-Typen sendet das Backend?
         try:
             with _HTTP.stream("POST", f"{CODEX_BASE_URL}/responses", json=req_body,
                               headers=headers, timeout=timeout) as r:
@@ -950,6 +951,8 @@ def codex_generate_tools(
                     except Exception:
                         continue
                     et = str(event.get("type") or "")
+                    if et and et not in seen_events:
+                        seen_events.append(et)
                     if et == "error":
                         raise HTTPException(status_code=502,
                                             detail=f"Codex-Tool-Stream-Fehler: {json.dumps(event, ensure_ascii=False)[:800]}")
@@ -974,7 +977,7 @@ def codex_generate_tools(
         text = "".join(text_parts).strip()
         if not text and completed:
             text = _extract_response_text(completed)
-        return text, (completed or {})
+        return text, (completed or {}), seen_events
 
     for turn in range(1, max_turns + 1):
         if time.monotonic() - start > max_seconds:
@@ -992,11 +995,12 @@ def codex_generate_tools(
             body["reasoning"] = {"effort": effort, "summary": "auto"}
             body["include"] = ["reasoning.encrypted_content"]
         remaining = max(5.0, max_seconds - (time.monotonic() - start))
-        text, resp = _stream_responses(body, timeout=min(120.0, remaining))
+        text, resp, ev = _stream_responses(body, timeout=min(120.0, remaining))
         output_items = resp.get("output") or []
-        if turn == 1:   # Diagnose: was liefert das Backend in der ersten Runde? (type + name je Item)
-            raw_first_output = [{"type": it.get("type"), "name": it.get("name")}
-                                for it in output_items if isinstance(it, dict)]
+        if turn == 1:   # Diagnose: Stream-Event-Typen + output-Item-Typen der ersten Runde
+            raw_first_output = [{"events": ev,
+                                 "output_types": [it.get("type") for it in output_items if isinstance(it, dict)],
+                                 "completed_present": bool(resp)}]
         fcs = [it for it in output_items if isinstance(it, dict) and it.get("type") == "function_call"]
         if not fcs:
             final_text = text
@@ -1050,7 +1054,7 @@ def codex_generate_tools(
             forced["reasoning"] = {"effort": effort, "summary": "auto"}
             forced["include"] = ["reasoning.encrypted_content"]
         try:
-            final_text, _ = _stream_responses(forced, timeout=60.0)
+            final_text, _, _ = _stream_responses(forced, timeout=60.0)
         except Exception as e:
             _log(logging.WARNING, "codex_generate_tools: finale Runde fehlgeschlagen", err=str(e)[:300])
             final_text = final_text or ""
