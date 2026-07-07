@@ -19,6 +19,8 @@ public partial class MainWindow : Window
     private const int SC_RESTORE = 0xF120;
     private const int MONITOR_DEFAULTTONEAREST = 2;
     private const int SW_RESTORE = 9;
+    private const uint FLASHW_ALL = 0x00000003;
+    private const uint FLASHW_TIMERNOFG = 0x0000000C;
     private const uint SWP_NOSIZE = 0x0001;
     private const uint SWP_NOMOVE = 0x0002;
     private const uint SWP_SHOWWINDOW = 0x0040;
@@ -27,6 +29,8 @@ public partial class MainWindow : Window
     private int _providerResizeColumnIndex = -1;
     private double[]? _providerResizeStartWidths;
     private double _providerResizeTotalDelta;
+    private bool _bringToForegroundQueued;
+    private bool _isBringingToForeground;
 
     [DllImport("dwmapi.dll")]
     private static extern int DwmSetWindowAttribute(IntPtr hwnd, int attr, ref int value, int size);
@@ -42,6 +46,27 @@ public partial class MainWindow : Window
 
     [DllImport("user32.dll")]
     private static extern bool SetForegroundWindow(IntPtr hwnd);
+
+    [DllImport("user32.dll")]
+    private static extern IntPtr SetFocus(IntPtr hwnd);
+
+    [DllImport("user32.dll")]
+    private static extern IntPtr GetForegroundWindow();
+
+    [DllImport("user32.dll")]
+    private static extern uint GetWindowThreadProcessId(IntPtr hwnd, out uint processId);
+
+    [DllImport("kernel32.dll")]
+    private static extern uint GetCurrentThreadId();
+
+    [DllImport("user32.dll", SetLastError = true)]
+    private static extern bool AttachThreadInput(uint idAttach, uint idAttachTo, bool attach);
+
+    [DllImport("user32.dll")]
+    private static extern bool IsIconic(IntPtr hwnd);
+
+    [DllImport("user32.dll")]
+    private static extern bool FlashWindowEx(ref FLASHWINFO pwfi);
 
     [DllImport("user32.dll", SetLastError = true)]
     private static extern bool SetWindowPos(IntPtr hwnd, IntPtr hwndInsertAfter, int x, int y, int cx, int cy, uint flags);
@@ -88,26 +113,86 @@ public partial class MainWindow : Window
 
     private void QueueBringToTaskbarForeground()
     {
-        Dispatcher.BeginInvoke(new Action(BringToTaskbarForeground), System.Windows.Threading.DispatcherPriority.ApplicationIdle);
+        if (_bringToForegroundQueued || _isBringingToForeground) return;
+
+        _bringToForegroundQueued = true;
+        Dispatcher.BeginInvoke(new Action(() =>
+        {
+            _bringToForegroundQueued = false;
+            BringToTaskbarForeground();
+        }), System.Windows.Threading.DispatcherPriority.ApplicationIdle);
+    }
+
+    public void BringToForegroundFromExternalActivation()
+    {
+        Logger.Instance.Info("MainWindow", "BringToForegroundFromExternalActivation", "Aktivierung durch zweite Instanz empfangen");
+        QueueBringToTaskbarForeground();
     }
 
     private void BringToTaskbarForeground()
     {
-        if (WindowState == WindowState.Minimized) WindowState = WindowState.Normal;
-        if (!IsVisible) Show();
+        if (_isBringingToForeground) return;
 
-        var hwnd = new WindowInteropHelper(this).Handle;
-        if (hwnd == IntPtr.Zero) return;
-
-        ShowWindow(hwnd, SW_RESTORE);
-        SetWindowPos(hwnd, HWND_TOP, 0, 0, 0, 0, SWP_NOMOVE | SWP_NOSIZE | SWP_SHOWWINDOW);
-        if (!SetForegroundWindow(hwnd))
+        _isBringingToForeground = true;
+        try
         {
-            // Fallback gegen Windows-Z-Order-Hänger bei randlosen WPF-Fenstern: nur kurz pulsen, nie dauerhaft topmost bleiben.
+            if (WindowState == WindowState.Minimized) WindowState = WindowState.Normal;
+            if (!IsVisible) Show();
+
+            var hwnd = new WindowInteropHelper(this).Handle;
+            if (hwnd == IntPtr.Zero) return;
+
+            if (IsIconic(hwnd)) ShowWindow(hwnd, SW_RESTORE);
+            SetWindowPos(hwnd, HWND_TOP, 0, 0, 0, 0, SWP_NOMOVE | SWP_NOSIZE | SWP_SHOWWINDOW);
+            if (TryActivateWithForegroundThread(hwnd) || Activate()) return;
+
+            // Fallback gegen Windows-Foreground-Lock: aufmerksam machen, ohne still zu scheitern.
             Topmost = true;
             Topmost = false;
             SetWindowPos(hwnd, HWND_TOP, 0, 0, 0, 0, SWP_NOMOVE | SWP_NOSIZE | SWP_SHOWWINDOW);
+            FlashTaskbar(hwnd);
+            Logger.Instance.Warn("MainWindow", "BringToTaskbarForeground", "SetForegroundWindow blockiert; Taskleisten-Blinken als Fallback ausgelöst");
         }
+        finally
+        {
+            _isBringingToForeground = false;
+        }
+    }
+
+    private static bool TryActivateWithForegroundThread(IntPtr hwnd)
+    {
+        var foreground = GetForegroundWindow();
+        var currentThread = GetCurrentThreadId();
+        var foregroundThread = foreground == IntPtr.Zero ? 0 : GetWindowThreadProcessId(foreground, out _);
+        var attached = false;
+
+        try
+        {
+            if (foregroundThread != 0 && foregroundThread != currentThread)
+                attached = AttachThreadInput(currentThread, foregroundThread, true);
+
+            var foregroundSet = SetForegroundWindow(hwnd);
+            SetFocus(hwnd);
+            return foregroundSet;
+        }
+        finally
+        {
+            if (attached)
+                AttachThreadInput(currentThread, foregroundThread, false);
+        }
+    }
+
+    private static void FlashTaskbar(IntPtr hwnd)
+    {
+        var info = new FLASHWINFO
+        {
+            cbSize = (uint)Marshal.SizeOf<FLASHWINFO>(),
+            hwnd = hwnd,
+            dwFlags = FLASHW_ALL | FLASHW_TIMERNOFG,
+            uCount = 3,
+            dwTimeout = 0
+        };
+        FlashWindowEx(ref info);
     }
 
     private void RestoreWindowLayout()
@@ -498,6 +583,16 @@ public partial class MainWindow : Window
         public RECT rcMonitor;
         public RECT rcWork;
         public int dwFlags;
+    }
+
+    [StructLayout(LayoutKind.Sequential)]
+    private struct FLASHWINFO
+    {
+        public uint cbSize;
+        public IntPtr hwnd;
+        public uint dwFlags;
+        public uint uCount;
+        public uint dwTimeout;
     }
 }
 
