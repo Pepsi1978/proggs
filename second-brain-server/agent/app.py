@@ -55,7 +55,7 @@ VERSION = "0.53.0 (05.07.2026, 14.14 Uhr)"  # 0.53.0 (Gruppe D "Mitlernen in Pro
 VERSION = "0.56.0 (06.07.2026, 13:52 Uhr)"  # 0.56.0: Composite-Route query_internet fuer verschachtelte Anfragen (erst Gedächtnis-Kontext, dann Internet-Abgleich). Root Cause: Router-Schema erlaubte bisher genau EINEN intent; dadurch wurde bei Kettenanforderungen nur query ODER internet ausgeführt. Jetzt liefert der Router optional web_query, der Server führt beide bestehenden Pfade sequenziell aus und formuliert eine kombinierte Antwort. Alt: 0.55.3 (06.07.2026, 13:23 Uhr).
 VERSION = "0.57.0 (06.07.2026, 17:23 Uhr)"  # 0.57.0: Qdrant-/Gedächtnis-Limits vollständig dashboardfähig. Zusätzlich zu den bisherigen Recall-/Kontextwerten sind jetzt Duplikat-Suchkandidaten, Entity-Extraktionsfenster, Entity-Vollabruflimit, Antwort-Max-Tokens, Arbeitscache-Schwelle und Kategorie-Batchgröße persistent über /config.limits.agent einstellbar; die Werte wirken sofort im laufenden Agenten. Alt: 0.56.3.
 VERSION = "0.59.1 (07.07.2026, 11:52 Uhr)"  # 0.59.1: Router-Härtung gegen falsche query_internet-Erzwingung. Die Gedächtnis+Internet-Ketten-Erkennung scannt Standard-Modus-/Antwortlängen-Prompts nicht mehr mit, sondern nur Franks aktuelle Nachricht und explizite Zusatz-Prompt-Blöcke. Alt: 0.59.0.
-VERSION = "0.61.1 (07.07.2026, 14:33 Uhr)"  # 0.61.1: FIX codex_generate_tools — das ChatGPT-Codex-Backend ERZWINGT stream:true (stream:false -> HTTP 400 'Stream must be set to true', empirisch per /toolloop-selftest bewiesen). Tool-Loop nutzt jetzt einen streamenden Backend-Helfer (_stream_responses, wie codex_generate) und liest die function_call-Items aus dem response.completed-Event. 0.61.0: Schritt-2-Baustein (Agenten-Umbau) — NEU codex_generate_tools(): GPT/Codex Function-Calling-Loop auf der OpenAI-Responses-API (chatgpt.com/backend-api/codex). Deterministischer Hard-Stop (max_turns UND max_seconds), tool_use<->tool_result strikt 1:1 (function_call verbatim in den Verlauf, je call_id genau ein function_call_output), Tool-Exception als Fehler-tool_result zurueck (nie crashen), Schleifen-Erkennung (>3x gleiche name+args), Tool-Output je Aufruf auf LESE_TOOL_OUT_CAP gekappt; bei Hard-Stop ohne Klartext eine finale Runde OHNE Werkzeuge (Absicherung nach bugs/server/ai-agent-frameworks.md). NEU Endpoint GET /toolloop-selftest: isolierter Machbarkeits-Smoke-Test (2 triviale Tools) — prueft empirisch, ob das Backend eigene function-Tools akzeptiert+aufruft. Beruehrt den Chat-Pfad NICHT (reiner Baustein; sichtbare Dashboard-Version bleibt 0.56.0 bis der Umbau den Chat aendert). Alt: 0.60.0 (07.07.2026, 13:09 Uhr) NEU Turn-Logbuch + Sonden-Trace. Jeder /chat + /chat/stream-Turn wird per contextvar-Trace mitgeschrieben: der bestehende checkpoint()-Kanal fuettert zusaetzlich den Trace, ein Phasen-Marker recall_search trennt Rohsuche vom Leseagent-Filter. Logbuch 1 (LOGBOOK_DIR/Trace/turns.jsonl, 100 rollierend) = 1 lesbare Zeile je Anfrage mit Frage, Router->final Intent, Rohtreffer/Auswahl (Star-Trek: 50 gefunden/0 gewaehlt), Confidence, Antwort-Vorschau + Phasen-Timing (router_ms/suche_ms/leseagent_ms/web_antwort_ms = Flaschenhals-Radar). Logbuch 2 (trace.jsonl, 4000 Events) = feine Events je Turn per turn_id verknuepft (erweiterbares Geruest fuer feine Sonden beim Agenten-Umbau). Atomar (tmp+os.replace), secret-maskiert, BEST-EFFORT (try/except ueberall — gefaehrdet den Chat nie). Deterministische Problem-Markierung (_PROBLEM_FEEDBACK_RE) markiert den letzten Turn, wenn Frank ein Problem meldet. GET /logbook/turns fuers Dashboard. Persistent auf Samba (LOGBOOK_DIR bereits gemountet -> ueberlebt Rebuilds; loest fuer die Turn-Ebene die Fluechtigkeit von /app/logs/agent.jsonl). Alt: 0.59.1 (07.07.2026, 11:52 Uhr).
+VERSION = "0.61.2 (07.07.2026, 14:39 Uhr)"  # 0.61.2: DIAGNOSE codex_generate_tools/toolloop-selftest — im ersten Lauf rief gpt-5.5 KEINE Werkzeuge auf (tools_used leer, Antwort 'ohne Werkzeugaufruf nicht bestimmbar'). Verdacht: custom function-Tools erreichen das Modell nicht. Selbsttest testet jetzt tool_choice 'auto' UND 'required' und gibt die rohe output-Item-Struktur der ersten Runde zurueck (raw_first_output), um H1 (Tools kommen nicht an) von H2 (Modell waehlt ab) zu unterscheiden. codex_generate_tools bekam optionalen tool_choice-Parameter. 0.61.1: FIX — ChatGPT-Codex-Backend ERZWINGT stream:true (stream:false -> HTTP 400 'Stream must be set to true', empirisch per /toolloop-selftest bewiesen). Tool-Loop nutzt jetzt einen streamenden Backend-Helfer (_stream_responses, wie codex_generate) und liest die function_call-Items aus dem response.completed-Event. 0.61.0: Schritt-2-Baustein (Agenten-Umbau) — NEU codex_generate_tools(): GPT/Codex Function-Calling-Loop auf der OpenAI-Responses-API (chatgpt.com/backend-api/codex). Deterministischer Hard-Stop (max_turns UND max_seconds), tool_use<->tool_result strikt 1:1 (function_call verbatim in den Verlauf, je call_id genau ein function_call_output), Tool-Exception als Fehler-tool_result zurueck (nie crashen), Schleifen-Erkennung (>3x gleiche name+args), Tool-Output je Aufruf auf LESE_TOOL_OUT_CAP gekappt; bei Hard-Stop ohne Klartext eine finale Runde OHNE Werkzeuge (Absicherung nach bugs/server/ai-agent-frameworks.md). NEU Endpoint GET /toolloop-selftest: isolierter Machbarkeits-Smoke-Test (2 triviale Tools) — prueft empirisch, ob das Backend eigene function-Tools akzeptiert+aufruft. Beruehrt den Chat-Pfad NICHT (reiner Baustein; sichtbare Dashboard-Version bleibt 0.56.0 bis der Umbau den Chat aendert). Alt: 0.60.0 (07.07.2026, 13:09 Uhr) NEU Turn-Logbuch + Sonden-Trace. Jeder /chat + /chat/stream-Turn wird per contextvar-Trace mitgeschrieben: der bestehende checkpoint()-Kanal fuettert zusaetzlich den Trace, ein Phasen-Marker recall_search trennt Rohsuche vom Leseagent-Filter. Logbuch 1 (LOGBOOK_DIR/Trace/turns.jsonl, 100 rollierend) = 1 lesbare Zeile je Anfrage mit Frage, Router->final Intent, Rohtreffer/Auswahl (Star-Trek: 50 gefunden/0 gewaehlt), Confidence, Antwort-Vorschau + Phasen-Timing (router_ms/suche_ms/leseagent_ms/web_antwort_ms = Flaschenhals-Radar). Logbuch 2 (trace.jsonl, 4000 Events) = feine Events je Turn per turn_id verknuepft (erweiterbares Geruest fuer feine Sonden beim Agenten-Umbau). Atomar (tmp+os.replace), secret-maskiert, BEST-EFFORT (try/except ueberall — gefaehrdet den Chat nie). Deterministische Problem-Markierung (_PROBLEM_FEEDBACK_RE) markiert den letzten Turn, wenn Frank ein Problem meldet. GET /logbook/turns fuers Dashboard. Persistent auf Samba (LOGBOOK_DIR bereits gemountet -> ueberlebt Rebuilds; loest fuer die Turn-Ebene die Fluechtigkeit von /app/logs/agent.jsonl). Alt: 0.59.1 (07.07.2026, 11:52 Uhr).
 
 # ---------------------------------------------------------------------------
 # Konfiguration (alles aus Umgebungsvariablen — Secrets nie im Code)
@@ -880,6 +880,7 @@ def codex_generate_tools(
     reasoning_effort: str = "high",
     max_turns: int = 8,
     max_seconds: float = 120.0,
+    tool_choice: str = "auto",
     on_delta=None,
 ) -> "dict":
     """GPT/Codex Function-Calling-Loop auf der OpenAI-Responses-API (chatgpt.com/backend-api/codex).
@@ -916,6 +917,7 @@ def codex_generate_tools(
     stopped = "max_turns"
     final_text = ""
     turn = 0
+    raw_first_output: "list[dict]" = []   # Diagnose: output-item-Struktur der ERSTEN Runde
 
     def _stream_responses(req_body: "dict", timeout: float) -> "tuple[str, dict]":
         # Das ChatGPT-Codex-Backend ERZWINGT stream:true (stream:false -> HTTP 400
@@ -983,7 +985,7 @@ def codex_generate_tools(
             "instructions": system,
             "input": input_items,
             "tools": tools,
-            "tool_choice": "auto",
+            "tool_choice": tool_choice,
             "store": False,
         }
         if effort and effort != "none":
@@ -992,6 +994,9 @@ def codex_generate_tools(
         remaining = max(5.0, max_seconds - (time.monotonic() - start))
         text, resp = _stream_responses(body, timeout=min(120.0, remaining))
         output_items = resp.get("output") or []
+        if turn == 1:   # Diagnose: was liefert das Backend in der ersten Runde? (type + name je Item)
+            raw_first_output = [{"type": it.get("type"), "name": it.get("name")}
+                                for it in output_items if isinstance(it, dict)]
         fcs = [it for it in output_items if isinstance(it, dict) and it.get("type") == "function_call"]
         if not fcs:
             final_text = text
@@ -1053,7 +1058,8 @@ def codex_generate_tools(
     final_text = (final_text or "").strip()
     if final_text and on_delta is not None:
         _safe_delta(on_delta, final_text)   # V1: finalen Text am Stueck (TTS/App bekommt die volle Antwort)
-    return {"text": final_text, "turns": turn, "tool_calls": tool_calls_log, "stopped": stopped}
+    return {"text": final_text, "turns": turn, "tool_calls": tool_calls_log, "stopped": stopped,
+            "raw_first_output": raw_first_output}
 
 
 def opencode_generate(system: str, user: str, model: str, max_tokens: int, temperature: float) -> str:
@@ -3830,21 +3836,27 @@ def toolloop_selftest() -> dict:
     system = ("Du bist ein Test-Agent. Nutze die bereitgestellten Werkzeuge, um die Frage zu "
               "beantworten. Rate nichts — rufe die Werkzeuge auf.")
     user = "Wie spaet ist es auf dem Server, und was ergibt 17 + 25? Nutze die Werkzeuge."
-    try:
-        result = codex_generate_tools(
-            system, user, tools=tools, tool_handlers=handlers,
-            model=ROLE_MODELS["haupt"], reasoning_effort=ROLE_REASONING.get("haupt", "medium"),
-            max_turns=6, max_seconds=90.0)
-    except Exception as e:  # noqa: BLE001
-        return {"ok": False, "error": f"{type(e).__name__}: {str(e)[:500]}"}
-    text = result.get("text", "")
-    tools_used = sorted(set(calls))
-    success = ("aktuelle_serverzeit" in tools_used and "addiere" in tools_used
-               and ("42" in text) and ("14" in text or "37" in text))
-    return {"ok": success, "tools_used": tools_used, "expected_tools": ["addiere", "aktuelle_serverzeit"],
-            "turns": result.get("turns"), "stopped": result.get("stopped"),
-            "tool_calls": result.get("tool_calls"), "answer": text,
-            "model": ROLE_MODELS["haupt"]}
+
+    def _run(tc: str) -> dict:
+        calls.clear()
+        try:
+            r = codex_generate_tools(
+                system, user, tools=tools, tool_handlers=handlers,
+                model=ROLE_MODELS["haupt"], reasoning_effort=ROLE_REASONING.get("haupt", "medium"),
+                max_turns=6, max_seconds=90.0, tool_choice=tc)
+        except Exception as e:  # noqa: BLE001
+            return {"error": f"{type(e).__name__}: {str(e)[:500]}"}
+        used = sorted(set(calls))
+        return {"tools_used": used, "turns": r.get("turns"), "stopped": r.get("stopped"),
+                "tool_calls": r.get("tool_calls"), "raw_first_output": r.get("raw_first_output"),
+                "answer": r.get("text", "")[:400]}
+
+    auto = _run("auto")
+    required = _run("required")
+    success = ("aktuelle_serverzeit" in (auto.get("tools_used") or [])
+               and "addiere" in (auto.get("tools_used") or []))
+    return {"ok": success, "model": ROLE_MODELS["haupt"],
+            "auto": auto, "required": required}
 
 
 # --- Einstellungen: System-Prompt (editierbarer Teil) + Modell-Wahl --------
