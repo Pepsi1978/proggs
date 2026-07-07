@@ -55,7 +55,7 @@ VERSION = "0.53.0 (05.07.2026, 14.14 Uhr)"  # 0.53.0 (Gruppe D "Mitlernen in Pro
 VERSION = "0.56.0 (06.07.2026, 13:52 Uhr)"  # 0.56.0: Composite-Route query_internet fuer verschachtelte Anfragen (erst Gedächtnis-Kontext, dann Internet-Abgleich). Root Cause: Router-Schema erlaubte bisher genau EINEN intent; dadurch wurde bei Kettenanforderungen nur query ODER internet ausgeführt. Jetzt liefert der Router optional web_query, der Server führt beide bestehenden Pfade sequenziell aus und formuliert eine kombinierte Antwort. Alt: 0.55.3 (06.07.2026, 13:23 Uhr).
 VERSION = "0.57.0 (06.07.2026, 17:23 Uhr)"  # 0.57.0: Qdrant-/Gedächtnis-Limits vollständig dashboardfähig. Zusätzlich zu den bisherigen Recall-/Kontextwerten sind jetzt Duplikat-Suchkandidaten, Entity-Extraktionsfenster, Entity-Vollabruflimit, Antwort-Max-Tokens, Arbeitscache-Schwelle und Kategorie-Batchgröße persistent über /config.limits.agent einstellbar; die Werte wirken sofort im laufenden Agenten. Alt: 0.56.3.
 VERSION = "0.59.1 (07.07.2026, 11:52 Uhr)"  # 0.59.1: Router-Härtung gegen falsche query_internet-Erzwingung. Die Gedächtnis+Internet-Ketten-Erkennung scannt Standard-Modus-/Antwortlängen-Prompts nicht mehr mit, sondern nur Franks aktuelle Nachricht und explizite Zusatz-Prompt-Blöcke. Alt: 0.59.0.
-VERSION = "0.61.4 (07.07.2026, 15:07 Uhr)"  # 0.61.4: ROBUSTHEIT codex_generate_tools — Streaming-Retry (bis 3 Versuche) gegen den sporadischen Abbruch des Impersonation-Backends ('peer closed connection ... incomplete chunked read'). Retry NUR solange kein response.completed kam (Backend-Call ist seiteneffektfrei); bei 4xx/failed KEIN Retry. Selbsttest auf EINEN Lauf reduziert (H1/H2-Diagnose abgeschlossen). 0.61.3: FIX — Function-Calling MACHBARKEIT BEWIESEN (function_calls kommen als Stream-Events output_item.done, nicht in completed.output). Das ChatGPT-Codex-Backend liefert function_calls als STREAM-EVENTS (response.output_item.done mit dem vollstaendigen function_call-Item: name/call_id/arguments), NICHT in completed.output (das bleibt leer). Root Cause des 'Tools werden nicht aufgerufen'-Befunds war ein PARSING-Bug (nur completed.output gelesen), KEIN Backend-Limit — die Event-Sequenz-Diagnose zeigte response.function_call_arguments.delta/done + output_item.done. Fix: fc_items aus den output_item.done-Events einsammeln, primaer nutzen (completed.output nur Fallback). 0.61.2: DIAGNOSE codex_generate_tools/toolloop-selftest — im ersten Lauf rief gpt-5.5 KEINE Werkzeuge auf (tools_used leer, Antwort 'ohne Werkzeugaufruf nicht bestimmbar'). Verdacht: custom function-Tools erreichen das Modell nicht. Selbsttest testet jetzt tool_choice 'auto' UND 'required' und gibt die rohe output-Item-Struktur der ersten Runde zurueck (raw_first_output), um H1 (Tools kommen nicht an) von H2 (Modell waehlt ab) zu unterscheiden. codex_generate_tools bekam optionalen tool_choice-Parameter. 0.61.1: FIX — ChatGPT-Codex-Backend ERZWINGT stream:true (stream:false -> HTTP 400 'Stream must be set to true', empirisch per /toolloop-selftest bewiesen). Tool-Loop nutzt jetzt einen streamenden Backend-Helfer (_stream_responses, wie codex_generate) und liest die function_call-Items aus dem response.completed-Event. 0.61.0: Schritt-2-Baustein (Agenten-Umbau) — NEU codex_generate_tools(): GPT/Codex Function-Calling-Loop auf der OpenAI-Responses-API (chatgpt.com/backend-api/codex). Deterministischer Hard-Stop (max_turns UND max_seconds), tool_use<->tool_result strikt 1:1 (function_call verbatim in den Verlauf, je call_id genau ein function_call_output), Tool-Exception als Fehler-tool_result zurueck (nie crashen), Schleifen-Erkennung (>3x gleiche name+args), Tool-Output je Aufruf auf LESE_TOOL_OUT_CAP gekappt; bei Hard-Stop ohne Klartext eine finale Runde OHNE Werkzeuge (Absicherung nach bugs/server/ai-agent-frameworks.md). NEU Endpoint GET /toolloop-selftest: isolierter Machbarkeits-Smoke-Test (2 triviale Tools) — prueft empirisch, ob das Backend eigene function-Tools akzeptiert+aufruft. Beruehrt den Chat-Pfad NICHT (reiner Baustein; sichtbare Dashboard-Version bleibt 0.56.0 bis der Umbau den Chat aendert). Alt: 0.60.0 (07.07.2026, 13:09 Uhr) NEU Turn-Logbuch + Sonden-Trace. Jeder /chat + /chat/stream-Turn wird per contextvar-Trace mitgeschrieben: der bestehende checkpoint()-Kanal fuettert zusaetzlich den Trace, ein Phasen-Marker recall_search trennt Rohsuche vom Leseagent-Filter. Logbuch 1 (LOGBOOK_DIR/Trace/turns.jsonl, 100 rollierend) = 1 lesbare Zeile je Anfrage mit Frage, Router->final Intent, Rohtreffer/Auswahl (Star-Trek: 50 gefunden/0 gewaehlt), Confidence, Antwort-Vorschau + Phasen-Timing (router_ms/suche_ms/leseagent_ms/web_antwort_ms = Flaschenhals-Radar). Logbuch 2 (trace.jsonl, 4000 Events) = feine Events je Turn per turn_id verknuepft (erweiterbares Geruest fuer feine Sonden beim Agenten-Umbau). Atomar (tmp+os.replace), secret-maskiert, BEST-EFFORT (try/except ueberall — gefaehrdet den Chat nie). Deterministische Problem-Markierung (_PROBLEM_FEEDBACK_RE) markiert den letzten Turn, wenn Frank ein Problem meldet. GET /logbook/turns fuers Dashboard. Persistent auf Samba (LOGBOOK_DIR bereits gemountet -> ueberlebt Rebuilds; loest fuer die Turn-Ebene die Fluechtigkeit von /app/logs/agent.jsonl). Alt: 0.59.1 (07.07.2026, 11:52 Uhr).
+VERSION = "0.62.0 (07.07.2026, 15:29 Uhr)"  # 0.62.0: WERKZEUGKASTEN des Hauptagenten (Schritt-2-Baustein, noch NICHT im Chat aktiv). NEU build_agent_tools() + TOOLAGENT_SYSTEM: die 4 Lese-/Such-Werkzeuge als duenne Handler um bestehende Funktionen — durchsuche_gedaechtnis (smart_recall, liefert nur Schnipsel + fuellt hit_cache), lade_eintrag (Volltext EINES Eintrags aus dem Cache — Kontext-Schutz), web_suche (tavily_search), lies_logbuch (_read_recent_turns). Verlagert die Leseagent-Filterung in den Hauptagenten (Direktive #3: verlagern statt loeschen; Antwort- vs. Kontext-Treffer im System-Prompt). NEU Endpoint GET /toolagent-test?q=... : isolierter Test des Werkzeugkastens (fuer den Star-Trek-Regressionsfall), beruehrt den echten Chat NICHT. Schreib-Werkzeuge (speichere/schreibe_regel) folgen mit der _process_turn-Integration. 0.61.4: ROBUSTHEIT codex_generate_tools — Streaming-Retry (bis 3 Versuche) gegen den sporadischen Abbruch des Impersonation-Backends ('peer closed connection ... incomplete chunked read'). Retry NUR solange kein response.completed kam (Backend-Call ist seiteneffektfrei); bei 4xx/failed KEIN Retry. Selbsttest auf EINEN Lauf reduziert (H1/H2-Diagnose abgeschlossen). 0.61.3: FIX — Function-Calling MACHBARKEIT BEWIESEN (function_calls kommen als Stream-Events output_item.done, nicht in completed.output). Das ChatGPT-Codex-Backend liefert function_calls als STREAM-EVENTS (response.output_item.done mit dem vollstaendigen function_call-Item: name/call_id/arguments), NICHT in completed.output (das bleibt leer). Root Cause des 'Tools werden nicht aufgerufen'-Befunds war ein PARSING-Bug (nur completed.output gelesen), KEIN Backend-Limit — die Event-Sequenz-Diagnose zeigte response.function_call_arguments.delta/done + output_item.done. Fix: fc_items aus den output_item.done-Events einsammeln, primaer nutzen (completed.output nur Fallback). 0.61.2: DIAGNOSE codex_generate_tools/toolloop-selftest — im ersten Lauf rief gpt-5.5 KEINE Werkzeuge auf (tools_used leer, Antwort 'ohne Werkzeugaufruf nicht bestimmbar'). Verdacht: custom function-Tools erreichen das Modell nicht. Selbsttest testet jetzt tool_choice 'auto' UND 'required' und gibt die rohe output-Item-Struktur der ersten Runde zurueck (raw_first_output), um H1 (Tools kommen nicht an) von H2 (Modell waehlt ab) zu unterscheiden. codex_generate_tools bekam optionalen tool_choice-Parameter. 0.61.1: FIX — ChatGPT-Codex-Backend ERZWINGT stream:true (stream:false -> HTTP 400 'Stream must be set to true', empirisch per /toolloop-selftest bewiesen). Tool-Loop nutzt jetzt einen streamenden Backend-Helfer (_stream_responses, wie codex_generate) und liest die function_call-Items aus dem response.completed-Event. 0.61.0: Schritt-2-Baustein (Agenten-Umbau) — NEU codex_generate_tools(): GPT/Codex Function-Calling-Loop auf der OpenAI-Responses-API (chatgpt.com/backend-api/codex). Deterministischer Hard-Stop (max_turns UND max_seconds), tool_use<->tool_result strikt 1:1 (function_call verbatim in den Verlauf, je call_id genau ein function_call_output), Tool-Exception als Fehler-tool_result zurueck (nie crashen), Schleifen-Erkennung (>3x gleiche name+args), Tool-Output je Aufruf auf LESE_TOOL_OUT_CAP gekappt; bei Hard-Stop ohne Klartext eine finale Runde OHNE Werkzeuge (Absicherung nach bugs/server/ai-agent-frameworks.md). NEU Endpoint GET /toolloop-selftest: isolierter Machbarkeits-Smoke-Test (2 triviale Tools) — prueft empirisch, ob das Backend eigene function-Tools akzeptiert+aufruft. Beruehrt den Chat-Pfad NICHT (reiner Baustein; sichtbare Dashboard-Version bleibt 0.56.0 bis der Umbau den Chat aendert). Alt: 0.60.0 (07.07.2026, 13:09 Uhr) NEU Turn-Logbuch + Sonden-Trace. Jeder /chat + /chat/stream-Turn wird per contextvar-Trace mitgeschrieben: der bestehende checkpoint()-Kanal fuettert zusaetzlich den Trace, ein Phasen-Marker recall_search trennt Rohsuche vom Leseagent-Filter. Logbuch 1 (LOGBOOK_DIR/Trace/turns.jsonl, 100 rollierend) = 1 lesbare Zeile je Anfrage mit Frage, Router->final Intent, Rohtreffer/Auswahl (Star-Trek: 50 gefunden/0 gewaehlt), Confidence, Antwort-Vorschau + Phasen-Timing (router_ms/suche_ms/leseagent_ms/web_antwort_ms = Flaschenhals-Radar). Logbuch 2 (trace.jsonl, 4000 Events) = feine Events je Turn per turn_id verknuepft (erweiterbares Geruest fuer feine Sonden beim Agenten-Umbau). Atomar (tmp+os.replace), secret-maskiert, BEST-EFFORT (try/except ueberall — gefaehrdet den Chat nie). Deterministische Problem-Markierung (_PROBLEM_FEEDBACK_RE) markiert den letzten Turn, wenn Frank ein Problem meldet. GET /logbook/turns fuers Dashboard. Persistent auf Samba (LOGBOOK_DIR bereits gemountet -> ueberlebt Rebuilds; loest fuer die Turn-Ebene die Fluechtigkeit von /app/logs/agent.jsonl). Alt: 0.59.1 (07.07.2026, 11:52 Uhr).
 
 # ---------------------------------------------------------------------------
 # Konfiguration (alles aus Umgebungsvariablen — Secrets nie im Code)
@@ -3881,6 +3881,151 @@ def toolloop_selftest() -> dict:
     success = ("aktuelle_serverzeit" in (auto.get("tools_used") or [])
                and "addiere" in (auto.get("tools_used") or []))
     return {"ok": success, "model": ROLE_MODELS["haupt"], "auto": auto}
+
+
+# ===========================================================================
+# WERKZEUGKASTEN des Hauptagenten (Schritt 2 des Umbaus) — die LESE-/SUCH-Werkzeuge.
+# Jedes Werkzeug ist ein duenner Handler um eine BESTEHENDE Funktion (nichts neu erfunden).
+# Die Leseagent-Filterfunktion wird hierdurch in den Hauptagenten verlagert (Direktive #3:
+# verlagern, nicht loeschen): durchsuche_gedaechtnis liefert nur Schnipsel + fuellt einen
+# hit_cache; lade_eintrag holt gezielt EINEN Volltext daraus (Kontext-Schutz, ai-agent §2.2).
+# Schreib-Werkzeuge (speichere/schreibe_regel) folgen mit der _process_turn-Integration (Preflight/Bestaetigung).
+# ===========================================================================
+
+TOOLAGENT_SYSTEM = """Du bist Cortex, Franks persoenlicher Gedaechtnis-Assistent (zweites Gehirn). Beantworte Franks Nachricht praezise, ehrlich und in warmem, natuerlichem Deutsch.
+
+Du hast Werkzeuge:
+- durchsuche_gedaechtnis(query): durchsucht Franks persoenliches Gedaechtnis, liefert Titel + kurzen Schnipsel + Score + id.
+- lade_eintrag(id): holt den VOLLTEXT genau EINES Eintrags (nur laden, was du wirklich brauchst).
+- web_suche(query): sucht im Internet (aktuelle/allgemeine Infos, die NICHT in Franks Gedaechtnis stehen).
+- lies_logbuch(anzahl, nur_probleme): liest Cortex' Turn-Logbuch (fuer 'warum ging das gestern nicht?').
+
+Arbeitsweise (WICHTIG):
+1. Durchsuche bei JEDER Wissensfrage ZUERST Franks Gedaechtnis — AUCH bei scheinbar reinen Faktenfragen. Oft hat Frank persoenliche Notizen/Interessen zum Thema, die zur Antwort gehoeren.
+2. Unterscheide Antwort-Treffer (beantworten die Frage direkt) von Kontext-Treffern (Franks persoenlicher Bezug). Verwirf einen Treffer NICHT nur, weil er die Faktenfrage nicht woertlich beantwortet — wenn er Franks Bezug zum Thema zeigt, nutze ihn als Kontext.
+3. Lade gezielt nur die Volltexte, die du wirklich brauchst (Kontext sparsam halten).
+4. Fehlt dir aktuelles Weltwissen, nutze web_suche. Kombiniere ruhig Gedaechtnis + Internet.
+5. Wenn du etwas aus dem Gedaechtnis nutzt, sag kurz, dass es aus Franks Notizen kommt. Findest du wirklich nichts Passendes, sag das ehrlich — erfinde nichts."""
+
+
+def build_agent_tools(user_id: str = USER_ID) -> "tuple[list[dict], dict, dict]":
+    """Baut den Lese-Werkzeugkasten des Hauptagenten. Gibt (tools_schema, handlers, state).
+    Jeder Turn bekommt FRISCHE Werkzeuge mit eigenem hit_cache (state['hits']: doc_id -> voller hit),
+    den durchsuche_gedaechtnis fuellt und lade_eintrag liest — so filtert der Hauptagent selbst
+    mit vollem Verstaendnis, ohne dass alle Volltexte auf einmal in seinen Kontext kippen."""
+    state: "dict" = {"hits": {}, "letzte_suche": None}
+
+    def _durchsuche(args: dict) -> str:
+        q = str(args.get("query") or "").strip()
+        if not q:
+            return "FEHLER: Parameter 'query' fehlt."
+        hits, meta = smart_recall(q, q, user_id=user_id)
+        state["letzte_suche"] = q
+        out = []
+        for h in hits:
+            did = h.get("doc_id")
+            if not did:
+                continue
+            state["hits"][did] = h
+            snippet = (h.get("match") or h.get("text") or "").strip()[:LESE_SNIPPET_CHARS]
+            score = h.get("dense_score") if h.get("dense_score") is not None else h.get("score")
+            out.append({"id": did, "titel": h.get("title") or "(ohne Titel)",
+                        "kategorie": h.get("category"),
+                        "score": round(score, 3) if isinstance(score, (int, float)) else None,
+                        "schnipsel": snippet})
+        if not out:
+            return json.dumps({"treffer": 0, "hinweis": "Nichts im Gedaechtnis gefunden zu dieser Suche."},
+                              ensure_ascii=False)
+        return json.dumps({"treffer": len(out), "eintraege": out,
+                           "hinweis": "Nur Schnipsel. Fuer den Volltext EINES Eintrags: lade_eintrag(id)."},
+                          ensure_ascii=False)
+
+    def _lade(args: dict) -> str:
+        did = str(args.get("id") or "").strip()
+        if not did:
+            return "FEHLER: Parameter 'id' fehlt."
+        h = state["hits"].get(did)
+        if h is None:
+            return f"FEHLER: Eintrag '{did}' ist nicht im aktuellen Suchergebnis. Zuerst durchsuche_gedaechtnis nutzen."
+        text = (h.get("text") or "").strip()
+        return json.dumps({"id": did, "titel": h.get("title"), "kategorie": h.get("category"),
+                           "volltext": text[:LESE_TOOL_OUT_CAP]}, ensure_ascii=False)
+
+    def _web(args: dict) -> str:
+        q = str(args.get("query") or "").strip()
+        if not q:
+            return "FEHLER: Parameter 'query' fehlt."
+        res = tavily_search(q, "m")
+        if not res.get("ok"):
+            return json.dumps({"ok": False, "grund": res.get("reason")}, ensure_ascii=False)
+        top = [{"titel": r.get("title"), "quelle": r.get("url"), "inhalt": (r.get("content") or "")[:600]}
+               for r in (res.get("results") or [])[:6]]
+        return json.dumps({"ok": True, "kurzantwort": res.get("answer"), "treffer": top}, ensure_ascii=False)
+
+    def _logbuch(args: dict) -> str:
+        try:
+            n = int(args.get("anzahl") or 10)
+        except Exception:
+            n = 10
+        nur_probleme = bool(args.get("nur_probleme") or False)
+        turns = _read_recent_turns(max(1, min(n, 50)), only_problems=nur_probleme)
+        schlank = [{"zeit": t.get("ts"), "frage": (t.get("user_text") or "")[:120],
+                    "intent": t.get("final_intent") or t.get("router_intent"),
+                    "treffer": t.get("hits_total"), "gewaehlt": t.get("selected_count"),
+                    "confidence": t.get("confidence"), "problem": t.get("problem"),
+                    "antwort": (t.get("answer_preview") or "")[:120]} for t in turns]
+        return json.dumps({"anzahl": len(schlank), "turns": schlank}, ensure_ascii=False)
+
+    tools = [
+        {"type": "function", "name": "durchsuche_gedaechtnis",
+         "description": ("Durchsucht Franks persoenliches Gedaechtnis (zweites Gehirn) und liefert passende "
+                         "Eintraege als Titel + kurzen Schnipsel + Relevanz-Score + id. Nutze das IMMER, bevor "
+                         "du eine Wissensfrage beantwortest — auch bei scheinbar reinen Faktenfragen."),
+         "parameters": {"type": "object",
+                        "properties": {"query": {"type": "string", "description": "Suchbegriff oder Frage"}},
+                        "required": ["query"], "additionalProperties": False}},
+        {"type": "function", "name": "lade_eintrag",
+         "description": ("Holt den VOLLTEXT genau EINES Gedaechtnis-Eintrags anhand seiner id (aus "
+                         "durchsuche_gedaechtnis). Nur laden, was du wirklich brauchst."),
+         "parameters": {"type": "object",
+                        "properties": {"id": {"type": "string", "description": "die id (doc_id) aus dem Suchergebnis"}},
+                        "required": ["id"], "additionalProperties": False}},
+        {"type": "function", "name": "web_suche",
+         "description": "Sucht im Internet (aktuelle oder allgemeine Infos, die NICHT in Franks Gedaechtnis stehen).",
+         "parameters": {"type": "object",
+                        "properties": {"query": {"type": "string", "description": "Suchbegriff"}},
+                        "required": ["query"], "additionalProperties": False}},
+        {"type": "function", "name": "lies_logbuch",
+         "description": ("Liest die letzten Eintraege aus Cortex' Turn-Logbuch (was wann gefragt/geantwortet "
+                         "wurde, wo etwas schieflief). Fuer Fragen wie 'warum ging das gestern nicht?'."),
+         "parameters": {"type": "object",
+                        "properties": {"anzahl": {"type": "integer", "description": "wie viele letzte Turns (1-50)"},
+                                       "nur_probleme": {"type": "boolean", "description": "nur als Problem markierte Turns"}},
+                        "required": [], "additionalProperties": False}},
+    ]
+    handlers = {"durchsuche_gedaechtnis": _durchsuche, "lade_eintrag": _lade,
+                "web_suche": _web, "lies_logbuch": _logbuch}
+    return tools, handlers, state
+
+
+@app.get("/toolagent-test", dependencies=[Depends(require_auth)])
+def toolagent_test(q: str) -> dict:
+    """Isolierter Test des HAUPTAGENT-Werkzeugkastens (Schritt 2, VOR der _process_turn-Integration):
+    laesst GPT-5.5 die Frage `q` mit den ECHTEN Lese-Werkzeugen beantworten. Beruehrt den echten Chat NICHT.
+    Ideal fuer den Star-Trek-Regressionsfall ('Welche Serie kam nach Star Trek Enterprise?')."""
+    tools, handlers, state = build_agent_tools()
+    try:
+        r = codex_generate_tools(TOOLAGENT_SYSTEM, q, tools=tools, tool_handlers=handlers,
+                                 model=ROLE_MODELS["haupt"],
+                                 reasoning_effort=ROLE_REASONING.get("haupt", "medium"),
+                                 max_turns=8, max_seconds=160.0)
+    except Exception as e:  # noqa: BLE001
+        return {"ok": False, "error": f"{type(e).__name__}: {str(e)[:500]}"}
+    return {"ok": True, "frage": q, "antwort": r.get("text"),
+            "turns": r.get("turns"), "stopped": r.get("stopped"),
+            "tool_calls": r.get("tool_calls"),
+            "gefundene_eintraege": len(state["hits"]),
+            "model": ROLE_MODELS["haupt"]}
 
 
 # --- Einstellungen: System-Prompt (editierbarer Teil) + Modell-Wahl --------
