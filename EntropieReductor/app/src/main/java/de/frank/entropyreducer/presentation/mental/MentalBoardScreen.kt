@@ -376,6 +376,11 @@ fun MentalBoardScreen(
                     contentPadding = PaddingValues(start = 16.dp, top = 16.dp, end = 16.dp, bottom = 160.dp),
                     verticalArrangement = Arrangement.spacedBy(10.dp),
                 ) {
+                    if (ttsState.isPlaying) {
+                        item(key = "tts_auto_stop_info") {
+                            TtsAutoStopInfo(ttsState.autoStopEndsAtWallClockMs)
+                        }
+                    }
                     items(displayed, key = { it.id }) { mental ->
                         ReorderableItem(reorderState, key = mental.id) { isDragging ->
                             val position = displayed.indexOfFirst { it.id == mental.id } + 1

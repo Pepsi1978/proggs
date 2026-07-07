@@ -48,6 +48,7 @@ data class GewohnheitTtsUiState(
     val pauseSeconds: Int = 9,
     /** Globale Sicherheitsgrenze fuer automatischen Vorlese-Stop (15..120 Minuten). */
     val autoStopMinutes: Int = AppSettings.DEFAULT_TTS_AUTO_STOP_MINUTES,
+    val autoStopEndsAtWallClockMs: Long? = null,
     val error: String? = null,
 )
 
@@ -90,13 +91,20 @@ class GewohnheitTtsViewModel
         }
 
     val uiState: StateFlow<GewohnheitTtsUiState> =
-        combine(settingsFlow, appSettings.ttsAutoStopMinutesFlow, playback.isPlayingFlow, playback.errorFlow) { settings, autoStopMinutes, playing, err ->
+        combine(
+            settingsFlow,
+            appSettings.ttsAutoStopMinutesFlow,
+            playback.isPlayingFlow,
+            playback.autoStopEndsAtWallClockMsFlow,
+            playback.errorFlow,
+        ) { settings, autoStopMinutes, playing, autoStopEndsAt, err ->
                 GewohnheitTtsUiState(
                     isPlaying = playing,
                     repeatCount = settings.repeatCount,
                     loop = settings.loop,
                     pauseSeconds = settings.pauseSeconds,
                     autoStopMinutes = autoStopMinutes,
+                    autoStopEndsAtWallClockMs = autoStopEndsAt,
                     error = err,
                 )
             }

@@ -78,6 +78,7 @@ data class MentalTtsUiState(
     val pauseSeconds: Int = 9,
     /** Globale Sicherheitsgrenze fuer automatischen Vorlese-Stop (15..120 Minuten). */
     val autoStopMinutes: Int = AppSettings.DEFAULT_TTS_AUTO_STOP_MINUTES,
+    val autoStopEndsAtWallClockMs: Long? = null,
     val error: String? = null,
 )
 
@@ -131,7 +132,13 @@ class MentalTtsViewModel
         }
 
     val uiState: StateFlow<MentalTtsUiState> =
-        combine(settingsFlow, appSettings.ttsAutoStopMinutesFlow, playback.isPlayingFlow, playback.errorFlow) { s, autoStopMinutes, playing, err ->
+        combine(
+            settingsFlow,
+            appSettings.ttsAutoStopMinutesFlow,
+            playback.isPlayingFlow,
+            playback.autoStopEndsAtWallClockMsFlow,
+            playback.errorFlow,
+        ) { s, autoStopMinutes, playing, autoStopEndsAt, err ->
                 MentalTtsUiState(
                     isPlaying = playing,
                     ankerCount = s.anker,
@@ -141,6 +148,7 @@ class MentalTtsViewModel
                     randomPlayback = s.randomPlayback,
                     pauseSeconds = s.pauseSeconds,
                     autoStopMinutes = autoStopMinutes,
+                    autoStopEndsAtWallClockMs = autoStopEndsAt,
                     error = err,
                 )
             }

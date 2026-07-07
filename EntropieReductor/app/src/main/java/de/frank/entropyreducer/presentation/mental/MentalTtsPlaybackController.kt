@@ -62,6 +62,9 @@ constructor(
     private val _errorFlow = MutableStateFlow<String?>(null)
     val errorFlow: StateFlow<String?> = _errorFlow
 
+    private val _autoStopEndsAtWallClockMsFlow = MutableStateFlow<Long?>(null)
+    val autoStopEndsAtWallClockMsFlow: StateFlow<Long?> = _autoStopEndsAtWallClockMsFlow
+
     fun dismissError() {
         _errorFlow.value = null
     }
@@ -80,6 +83,7 @@ constructor(
         startPlayback("Mental") {
             val settings = mentalSettings()
             val autoStopMinutes = appSettings.ttsAutoStopMinutesFlow.first()
+            val autoStopMs = markAutoStopDeadline(autoStopMinutes)
             val gewohnheitTexts =
                 if (settings.includeHabits) {
                     gewohnheiten.map { it.text.trim() }.filter { it.isNotEmpty() }
@@ -102,7 +106,7 @@ constructor(
                 mentalPauseMs = settings.pauseSeconds * 1_000L,
                 gewohnheitPauseMs = gewohnheitSettings.pauseSeconds * 1_000L,
                 randomPlayback = settings.randomPlayback,
-                autoStopMs = autoStopMinutes * 60 * 1_000L,
+                autoStopMs = autoStopMs,
             )
         }
     }
@@ -122,13 +126,14 @@ constructor(
             val settings = gewohnheitSettings()
             val randomPlayback = mentalSettings().randomPlayback
             val autoStopMinutes = appSettings.ttsAutoStopMinutesFlow.first()
+            val autoStopMs = markAutoStopDeadline(autoStopMinutes)
             runGewohnheitSequence(
                 texts = texts,
                 repeat = settings.repeatCount,
                 loop = settings.loop,
                 pauseMs = settings.pauseSeconds * 1_000L,
                 randomPlayback = randomPlayback,
-                autoStopMs = autoStopMinutes * 60 * 1_000L,
+                autoStopMs = autoStopMs,
             )
         }
     }
@@ -142,7 +147,14 @@ constructor(
         job?.cancel()
         ttsPlayer.stop()
         ttsPlayer.clearSequenceCache()
+        _autoStopEndsAtWallClockMsFlow.value = null
         _isPlayingFlow.value = false
+    }
+
+    private fun markAutoStopDeadline(autoStopMinutes: Int): Long {
+        val autoStopMs = autoStopMinutes * 60 * 1_000L
+        _autoStopEndsAtWallClockMsFlow.value = System.currentTimeMillis() + autoStopMs
+        return autoStopMs
     }
 
     private fun startPlayback(label: String, block: suspend () -> Unit) {
@@ -171,6 +183,7 @@ constructor(
                     if (isCurrent) {
                         withContext(Dispatchers.Main) { ttsPlayer.stop() }
                         ttsPlayer.clearSequenceCache()
+                        _autoStopEndsAtWallClockMsFlow.value = null
                         _isPlayingFlow.value = false
                     }
                 }

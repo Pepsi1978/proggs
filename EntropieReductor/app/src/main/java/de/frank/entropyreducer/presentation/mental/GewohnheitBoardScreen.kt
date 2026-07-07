@@ -451,6 +451,11 @@ fun GewohnheitBoardScreen(
                     contentPadding = PaddingValues(start = 16.dp, top = 16.dp, end = 16.dp, bottom = 96.dp),
                     verticalArrangement = Arrangement.spacedBy(10.dp),
                 ) {
+                    if (ttsState.isPlaying) {
+                        item(key = "tts_auto_stop_info") {
+                            TtsAutoStopInfo(ttsState.autoStopEndsAtWallClockMs)
+                        }
+                    }
                     items(displayed, key = { it.key }) { item ->
                         when (item) {
                             is DisplayItem.UserMental -> {
