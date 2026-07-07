@@ -1,6 +1,7 @@
 package de.frank.entropyreducer.presentation.mental
 
 import android.content.Context
+import android.os.PowerManager
 import android.os.SystemClock
 import androidx.datastore.preferences.core.booleanPreferencesKey
 import androidx.datastore.preferences.core.intPreferencesKey
@@ -8,6 +9,7 @@ import dagger.hilt.android.qualifiers.ApplicationContext
 import de.frank.entropyreducer.data.diagnostics.Diag
 import de.frank.entropyreducer.data.diagnostics.DiagnosticArea
 import de.frank.entropyreducer.data.settings.AppSettings
+import de.frank.entropyreducer.data.tts.TtsPlaybackService
 import de.frank.entropyreducer.di.ApplicationScope
 import de.frank.entropyreducer.domain.tts.TtsPlayer
 import java.text.SimpleDateFormat
@@ -58,6 +60,7 @@ constructor(
 
     private val lock = Any()
     private var playbackJob: Job? = null
+    private var wakeLock: PowerManager.WakeLock? = null
 
     private val _isPlayingFlow = MutableStateFlow(false)
     val isPlayingFlow: StateFlow<Boolean> = _isPlayingFlow
@@ -150,6 +153,7 @@ constructor(
         job?.cancel()
         ttsPlayer.stop()
         ttsPlayer.clearSequenceCache()
+        stopBackgroundPlaybackProtection()
         _autoStopEndsAtWallClockMsFlow.value = null
         _isPlayingFlow.value = false
     }
@@ -164,12 +168,15 @@ constructor(
             TAG,
             "$label-Vorlesen gestartet: Auto-Stop=$autoStopMinutes Minuten, aktiv bis $endTime Uhr",
         )
+        startBackgroundPlaybackProtection(label, autoStopMs)
         return autoStopMs
     }
 
     private fun startPlayback(label: String, block: suspend () -> Unit) {
         _errorFlow.value = null
         _isPlayingFlow.value = true
+        runCatching { TtsPlaybackService.start(context, label) }
+            .onFailure { Diag.e(DiagnosticArea.GOOGLE_TTS, TAG, "$label-Foreground-Service konnte nicht starten: ${it.message}", it) }
         var launchedJob: Job? = null
         val job =
             applicationScope.launch(start = CoroutineStart.LAZY) {
@@ -193,6 +200,7 @@ constructor(
                     if (isCurrent) {
                         withContext(Dispatchers.Main) { ttsPlayer.stop() }
                         ttsPlayer.clearSequenceCache()
+                        stopBackgroundPlaybackProtection()
                         _autoStopEndsAtWallClockMsFlow.value = null
                         _isPlayingFlow.value = false
                     }
@@ -201,6 +209,36 @@ constructor(
         launchedJob = job
         synchronized(lock) { playbackJob = job }
         job.start()
+    }
+
+    private fun startBackgroundPlaybackProtection(label: String, autoStopMs: Long) {
+        runCatching {
+            val pm = context.getSystemService(PowerManager::class.java)
+            val timeoutMs = autoStopMs + 60_000L
+            val lock = synchronized(lock) {
+                wakeLock?.let { if (it.isHeld) it.release() }
+                pm.newWakeLock(PowerManager.PARTIAL_WAKE_LOCK, "EntropyReducer:TtsPlayback")
+                    .apply { setReferenceCounted(false) }
+                    .also { wakeLock = it }
+            }
+            lock.acquire(timeoutMs)
+            Diag.d(DiagnosticArea.GOOGLE_TTS, TAG, "$label-WakeLock aktiv fuer ${timeoutMs / 60_000} Minuten")
+        }.onFailure {
+            Diag.e(DiagnosticArea.GOOGLE_TTS, TAG, "$label-WakeLock konnte nicht aktiviert werden: ${it.message}", it)
+        }
+    }
+
+    private fun stopBackgroundPlaybackProtection() {
+        runCatching { TtsPlaybackService.stop(context) }
+            .onFailure { Diag.e(DiagnosticArea.GOOGLE_TTS, TAG, "TTS-Foreground-Service konnte nicht gestoppt werden: ${it.message}", it) }
+        runCatching {
+            synchronized(lock) {
+                wakeLock?.let { if (it.isHeld) it.release() }
+                wakeLock = null
+            }
+        }.onFailure {
+            Diag.e(DiagnosticArea.GOOGLE_TTS, TAG, "TTS-WakeLock konnte nicht freigegeben werden: ${it.message}", it)
+        }
     }
 
     private suspend fun mentalSettings(): MentalSettings =

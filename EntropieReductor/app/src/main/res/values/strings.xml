@@ -115,6 +115,10 @@
     <string name="notification_recording_text">Sprachnotiz wird aufgenommen …</string>
     <string name="notification_channel_recording_name">Sprachaufnahme</string>
     <string name="notification_channel_recording_desc">Aktive Sprachaufnahme im Hintergrund</string>
+    <string name="notification_tts_title">Entropie Reduktor — Vorlesen</string>
+    <string name="notification_tts_text">%1$s läuft im Hintergrund weiter.</string>
+    <string name="notification_channel_tts_name">Vorlesen</string>
+    <string name="notification_channel_tts_desc">Aktive TTS-Vorlesefunktion im Hintergrund</string>
 
     <!-- Fehler -->
     <string name="error_no_groq_key">Du hast noch keinen Groq-Key hinterlegt. Gehe zu Einstellungen → API-Schlüssel.</string>

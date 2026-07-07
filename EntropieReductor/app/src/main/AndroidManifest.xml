@@ -22,6 +22,7 @@
     <!-- Foreground Service fuer stabile Aufnahme bei Bildschirm-Aus -->
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE_MICROPHONE" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_MEDIA_PLAYBACK" />
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE_SPECIAL_USE" />
     <!-- Frank-Wunsch 2026-05-16: Polar-Bulk-Importer laeuft als Foreground-
          Worker mit Notification damit Android den Import nicht killt waehrend
@@ -222,6 +223,13 @@
             android:enabled="true"
             android:exported="false"
             android:foregroundServiceType="microphone" />
+
+        <!-- Foreground-Service fuer TTS-Vorlesen bei Bildschirm-Aus / App im Hintergrund. -->
+        <service
+            android:name=".data.tts.TtsPlaybackService"
+            android:enabled="true"
+            android:exported="false"
+            android:foregroundServiceType="mediaPlayback" />
 
         <!-- WorkManager SystemForegroundService — Frank-Bugfix 2026-05-16:
              Android 14+ wirft IllegalArgumentException wenn ein Worker mit
