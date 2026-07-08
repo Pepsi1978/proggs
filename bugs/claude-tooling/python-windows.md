@@ -465,10 +465,25 @@ Shebang hat keine Wirkung; falsche Python-Version laeuft.
 **Ursache:** `python3` existiert auf Windows oft NICHT nativ (nur `python`/`py`). Shebangs
 beachtet nur der **py-Launcher** (`py -3.13`), nicht `python.exe` direkt.
 **Versionen:** per Design (Windows).
-**FIX:** Plattformuebergreifend `py -3` (Windows) bzw. `python3` (Unix) bewusst trennen; im
-Repo den Interpreter dokumentieren. Hier lokal existiert ein `~/bin/python3.cmd`-Wrapper, der
-`python3` auf Windows abbildet (`where python3` → `C:\Users\barwa\bin\python3.cmd`).
-**Quelle:** docs Using Python on Windows; joshkel python-2-3-shebangs.
+**FIX:** Plattformuebergreifend `py -3` (Windows) bzw. `python3` (Unix) bewusst trennen. Der
+Windows-Installer legt NUR `python.exe`+`pythonw.exe` an — KEIN `python3.exe`. Dadurch brechen alle
+Hooks/Skripte die `python3` aufrufen (viele Plugin-Hooks, `invariant-check.sh`, der finale-Guard
+`pretooluse-bash.sh` — der ist fail-closed und blockiert dann die GANZE Session). Zwei-Schichten-Fix
+(lokal umgesetzt 2026-07-08):
+1. **Native Windows-Prozesse** (PowerShell-Hooks, neue Shells): Kopie `python3.exe` NEBEN `python.exe`
+   im echten Verzeichnis (`…\Programs\Python\Python313\`) — dort liegen `python313.dll`+`Lib\`, es
+   startet. Dieses Verzeichnis steht im Registry-PATH vor `WindowsApps`.
+2. **Git-Bash-Hooks** (erben den eingefrorenen Prozess-PATH): Shell-Shim `~/bin/python3`
+   (`#!/bin/sh` + `exec "…/Launcher/py.exe" -3 "$@"`). Git-Bash stellt `~/bin` dem PATH IMMER voran
+   (unabhaengig vom Windows-PATH), der py-Launcher findet automatisch die neueste Version (update-sicher).
+**Sackgassen (getestet, NICHT nutzen):** python.exe in einen fremden Ordner KOPIEREN/SYMLINKEN
+scheitert (`STATUS_DLL_NOT_FOUND` 0xC0000135 — der Interpreter sucht `python313.dll` am Link-/Kopie-Ort,
+nicht am Ziel). Ablage in `WindowsApps` scheitert (Exit 53 — der App-Execution-Alias faengt jeden Aufruf
+dort ab, egal welche Datei liegt). Eine `.cmd`/`.bat` wird von Git-Bash NICHT als `python3` erkannt —
+es MUSS ein Script namens `python3` OHNE Endung mit Shebang sein. `.cargo/bin` ist NICHT im
+Git-Bash-non-login-PATH — verlaesslich sind nur `~/bin`, `/usr/bin`, `/mingw64/bin`.
+**Quelle:** docs Using Python on Windows; joshkel python-2-3-shebangs; eigener Vorfall 2026-07-08
+(python3 → leerer MS-Store-Stub, danach finale-Guard fail-closed → gesamte Session blockiert).
 
 ### 6.3 ExecutionPolicy blockiert `venv\Scripts\Activate.ps1`
 **Symptom:** `.\venv\Scripts\Activate.ps1` → "running scripts is disabled on this system"
