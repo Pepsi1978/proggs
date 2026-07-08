@@ -477,7 +477,9 @@ try {
     $claudeArgs = @('--dangerously-skip-permissions', '--settings', $sessionSettings, '--model', {{PowerShellLiteral(modelId)}})
     $effort = {{PowerShellLiteral(effortLevel ?? string.Empty)}}
     if ($effort) {
-        $env:CLAUDE_CODE_EFFORT_LEVEL = $effort
+        # Only pass --effort as the INITIAL value; do NOT set $env:CLAUDE_CODE_EFFORT_LEVEL.
+        # The env var takes precedence over the runtime /effort command, which would pin the
+        # effort permanently and make /effort changes silently snap back (rule: never via env).
         $claudeArgs += @('--effort', $effort)
     }
     $colorName = {{PowerShellLiteral(colorName)}}
