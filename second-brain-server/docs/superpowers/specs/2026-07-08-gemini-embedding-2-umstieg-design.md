@@ -1,5 +1,10 @@
 # Design: Umstieg des Cortex-Speichers auf Gemini Embedding 2 (Text, 3072 Dim)
 
+> ⛔ **ARCHIVIERT / ABGESCHLOSSEN (Stand 08.07.2026, 20.57 Uhr).** Der Umstieg ist vollzogen und
+> `gemini-embedding-001` wurde am 08.07.2026 VOLLSTAENDIG entfernt — Code, Dashboard-Rueckschalter und
+> die alten 1536-Qdrant-Collections. Der hier beschriebene `-001`-Fallback-Schalter existiert im
+> Live-System NICHT mehr. Dieses Dokument bleibt rein historisch als Design-/Wiederherstellungsreferenz.
+
 > **Stand:** 08.07.2026, 18:24 (Europe/Berlin) · **Projekt:** `second-brain-server` (Cortex, "zweites Gehirn")
 > **Umfang (Phase 1):** reines Text-Embedding-Upgrade. Multimodale Einspeisung (Bild/Audio/Video) ist
 > bewusst **Phase 2** (eigenes Projekt) und NICHT Teil dieser Spec.

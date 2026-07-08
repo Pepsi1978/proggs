@@ -1,5 +1,11 @@
 # Gemini Embedding 2 Umstieg — Implementation Plan
 
+> ⛔ **ARCHIVIERT / ABGESCHLOSSEN (Stand 08.07.2026, 20.57 Uhr).** Der Umstieg ist vollzogen und
+> `gemini-embedding-001` wurde am 08.07.2026 VOLLSTAENDIG entfernt — Code (brain-api reine E2-Logik),
+> Dashboard-Rueckschalter und die alten 1536-Qdrant-Collections (`brain`, `brain_entities`). Der hier
+> beschriebene `-001`-Fallback/Rueckweg existiert im Live-System NICHT mehr. Dieses Dokument bleibt rein
+> historisch als Referenz-/Wiederherstellungsanleitung erhalten (der brain-api-Changelog verweist darauf).
+
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:executing-plans to implement this plan task-by-task (inline). Die Kern-Datei `brain-api/app.py` ist >2000 Zeilen → laut Regel `search-and-agent-scope` NICHT per Subagent editieren, sondern direkt per Grep + Read(Ranges) + Edit. Steps nutzen Checkbox (`- [ ]`) Syntax.
 
 **Goal:** Den Cortex-Textspeicher von `gemini-embedding-001` (1536 Dim) auf `gemini-embedding-2` (3072 Dim) umstellen — rückwärtskompatibel (Fallback auf `-001`) und über eine sichere Blau/Grün-Migration ohne Datenverlust.
