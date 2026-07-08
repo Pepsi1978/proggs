@@ -55,7 +55,7 @@ VERSION = "0.53.0 (05.07.2026, 14.14 Uhr)"  # 0.53.0 (Gruppe D "Mitlernen in Pro
 VERSION = "0.56.0 (06.07.2026, 13:52 Uhr)"  # 0.56.0: Composite-Route query_internet fuer verschachtelte Anfragen (erst Gedächtnis-Kontext, dann Internet-Abgleich). Root Cause: Router-Schema erlaubte bisher genau EINEN intent; dadurch wurde bei Kettenanforderungen nur query ODER internet ausgeführt. Jetzt liefert der Router optional web_query, der Server führt beide bestehenden Pfade sequenziell aus und formuliert eine kombinierte Antwort. Alt: 0.55.3 (06.07.2026, 13:23 Uhr).
 VERSION = "0.57.0 (06.07.2026, 17:23 Uhr)"  # 0.57.0: Qdrant-/Gedächtnis-Limits vollständig dashboardfähig. Zusätzlich zu den bisherigen Recall-/Kontextwerten sind jetzt Duplikat-Suchkandidaten, Entity-Extraktionsfenster, Entity-Vollabruflimit, Antwort-Max-Tokens, Arbeitscache-Schwelle und Kategorie-Batchgröße persistent über /config.limits.agent einstellbar; die Werte wirken sofort im laufenden Agenten. Alt: 0.56.3.
 VERSION = "0.59.1 (07.07.2026, 11:52 Uhr)"  # 0.59.1: Router-Härtung gegen falsche query_internet-Erzwingung. Die Gedächtnis+Internet-Ketten-Erkennung scannt Standard-Modus-/Antwortlängen-Prompts nicht mehr mit, sondern nur Franks aktuelle Nachricht und explizite Zusatz-Prompt-Blöcke. Alt: 0.59.0.
-VERSION = "0.63.0 (07.07.2026, 16:03 Uhr)"  # 0.63.0: NEU Werkzeug was_kann_cortex() im Hauptagent-Werkzeugkasten (Frank-Wunsch): liest LIVE die System-Info-Chronik ('Was Cortex kann') vom Dashboard (DASHBOARD_URL/api/features, interner Compose-DNS) — dank des Merge-Fixes immer aktuell, auch Features der letzten Tage. So kann der Hauptagent auf 'was kannst du alles?' aus der echten Feature-Liste antworten. Timing landet automatisch im tool_calls-Log (ms je Werkzeug -> Flaschenhals-Radar, sobald der Tool-Loop im Chat aktiv ist). Noch NICHT im echten Chat aktiv (Test via /toolagent-test). 0.62.0: WERKZEUGKASTEN des Hauptagenten (Schritt-2-Baustein, noch NICHT im Chat aktiv). NEU build_agent_tools() + TOOLAGENT_SYSTEM: die 4 Lese-/Such-Werkzeuge als duenne Handler um bestehende Funktionen — durchsuche_gedaechtnis (smart_recall, liefert nur Schnipsel + fuellt hit_cache), lade_eintrag (Volltext EINES Eintrags aus dem Cache — Kontext-Schutz), web_suche (tavily_search), lies_logbuch (_read_recent_turns). Verlagert die Leseagent-Filterung in den Hauptagenten (Direktive #3: verlagern statt loeschen; Antwort- vs. Kontext-Treffer im System-Prompt). NEU Endpoint GET /toolagent-test?q=... : isolierter Test des Werkzeugkastens (fuer den Star-Trek-Regressionsfall), beruehrt den echten Chat NICHT. Schreib-Werkzeuge (speichere/schreibe_regel) folgen mit der _process_turn-Integration. 0.61.4: ROBUSTHEIT codex_generate_tools — Streaming-Retry (bis 3 Versuche) gegen den sporadischen Abbruch des Impersonation-Backends ('peer closed connection ... incomplete chunked read'). Retry NUR solange kein response.completed kam (Backend-Call ist seiteneffektfrei); bei 4xx/failed KEIN Retry. Selbsttest auf EINEN Lauf reduziert (H1/H2-Diagnose abgeschlossen). 0.61.3: FIX — Function-Calling MACHBARKEIT BEWIESEN (function_calls kommen als Stream-Events output_item.done, nicht in completed.output). Das ChatGPT-Codex-Backend liefert function_calls als STREAM-EVENTS (response.output_item.done mit dem vollstaendigen function_call-Item: name/call_id/arguments), NICHT in completed.output (das bleibt leer). Root Cause des 'Tools werden nicht aufgerufen'-Befunds war ein PARSING-Bug (nur completed.output gelesen), KEIN Backend-Limit — die Event-Sequenz-Diagnose zeigte response.function_call_arguments.delta/done + output_item.done. Fix: fc_items aus den output_item.done-Events einsammeln, primaer nutzen (completed.output nur Fallback). 0.61.2: DIAGNOSE codex_generate_tools/toolloop-selftest — im ersten Lauf rief gpt-5.5 KEINE Werkzeuge auf (tools_used leer, Antwort 'ohne Werkzeugaufruf nicht bestimmbar'). Verdacht: custom function-Tools erreichen das Modell nicht. Selbsttest testet jetzt tool_choice 'auto' UND 'required' und gibt die rohe output-Item-Struktur der ersten Runde zurueck (raw_first_output), um H1 (Tools kommen nicht an) von H2 (Modell waehlt ab) zu unterscheiden. codex_generate_tools bekam optionalen tool_choice-Parameter. 0.61.1: FIX — ChatGPT-Codex-Backend ERZWINGT stream:true (stream:false -> HTTP 400 'Stream must be set to true', empirisch per /toolloop-selftest bewiesen). Tool-Loop nutzt jetzt einen streamenden Backend-Helfer (_stream_responses, wie codex_generate) und liest die function_call-Items aus dem response.completed-Event. 0.61.0: Schritt-2-Baustein (Agenten-Umbau) — NEU codex_generate_tools(): GPT/Codex Function-Calling-Loop auf der OpenAI-Responses-API (chatgpt.com/backend-api/codex). Deterministischer Hard-Stop (max_turns UND max_seconds), tool_use<->tool_result strikt 1:1 (function_call verbatim in den Verlauf, je call_id genau ein function_call_output), Tool-Exception als Fehler-tool_result zurueck (nie crashen), Schleifen-Erkennung (>3x gleiche name+args), Tool-Output je Aufruf auf LESE_TOOL_OUT_CAP gekappt; bei Hard-Stop ohne Klartext eine finale Runde OHNE Werkzeuge (Absicherung nach bugs/server/ai-agent-frameworks.md). NEU Endpoint GET /toolloop-selftest: isolierter Machbarkeits-Smoke-Test (2 triviale Tools) — prueft empirisch, ob das Backend eigene function-Tools akzeptiert+aufruft. Beruehrt den Chat-Pfad NICHT (reiner Baustein; sichtbare Dashboard-Version bleibt 0.56.0 bis der Umbau den Chat aendert). Alt: 0.60.0 (07.07.2026, 13:09 Uhr) NEU Turn-Logbuch + Sonden-Trace. Jeder /chat + /chat/stream-Turn wird per contextvar-Trace mitgeschrieben: der bestehende checkpoint()-Kanal fuettert zusaetzlich den Trace, ein Phasen-Marker recall_search trennt Rohsuche vom Leseagent-Filter. Logbuch 1 (LOGBOOK_DIR/Trace/turns.jsonl, 100 rollierend) = 1 lesbare Zeile je Anfrage mit Frage, Router->final Intent, Rohtreffer/Auswahl (Star-Trek: 50 gefunden/0 gewaehlt), Confidence, Antwort-Vorschau + Phasen-Timing (router_ms/suche_ms/leseagent_ms/web_antwort_ms = Flaschenhals-Radar). Logbuch 2 (trace.jsonl, 4000 Events) = feine Events je Turn per turn_id verknuepft (erweiterbares Geruest fuer feine Sonden beim Agenten-Umbau). Atomar (tmp+os.replace), secret-maskiert, BEST-EFFORT (try/except ueberall — gefaehrdet den Chat nie). Deterministische Problem-Markierung (_PROBLEM_FEEDBACK_RE) markiert den letzten Turn, wenn Frank ein Problem meldet. GET /logbook/turns fuers Dashboard. Persistent auf Samba (LOGBOOK_DIR bereits gemountet -> ueberlebt Rebuilds; loest fuer die Turn-Ebene die Fluechtigkeit von /app/logs/agent.jsonl). Alt: 0.59.1 (07.07.2026, 11:52 Uhr).
+VERSION = "0.64.0 (08.07.2026, 16:45 Uhr)"  # 0.64.0 (Agenten-Umbau Schritt 2, 2026-07-08): WERKZEUGKASTEN im ECHTEN CHAT scharfgeschaltet. _process_turn: die generischen Antwort-Zweige (query/query_internet/internet/smalltalk) durch _toolagent_answer ersetzt = EIN codex_generate_tools-Aufruf mit build_agent_tools (durchsuche_gedaechtnis/lade_eintrag/web_suche/lies_logbuch/was_kann_cortex). Der Hauptagent filtert SELBST (Antwort- vs. Kontext-Treffer) statt eines separaten Leseagenten -> loest den Star-Trek-Bug (Rohsuche fand 50, Leseagent waehlte 0). Verlauf wird eingespeist (Follow-ups funktionieren), Quellen-Chips (aus lade_eintrag bzw. gefundenen) + Confidence bleiben; build_agent_tools trackt state['geladen'] fuer praezise Quellen. Router + komplette Speicher-Sicherheit + deterministische Spezial-Antworten (Projektstand/Kategorie-Gesamt/-Zaehlung) UNANGETASTET (funktionserhaltend, Direktive #3). 0.63.0: NEU Werkzeug was_kann_cortex() im Hauptagent-Werkzeugkasten (Frank-Wunsch): liest LIVE die System-Info-Chronik ('Was Cortex kann') vom Dashboard (DASHBOARD_URL/api/features, interner Compose-DNS) — dank des Merge-Fixes immer aktuell, auch Features der letzten Tage. So kann der Hauptagent auf 'was kannst du alles?' aus der echten Feature-Liste antworten. Timing landet automatisch im tool_calls-Log (ms je Werkzeug -> Flaschenhals-Radar, sobald der Tool-Loop im Chat aktiv ist). Noch NICHT im echten Chat aktiv (Test via /toolagent-test). 0.62.0: WERKZEUGKASTEN des Hauptagenten (Schritt-2-Baustein, noch NICHT im Chat aktiv). NEU build_agent_tools() + TOOLAGENT_SYSTEM: die 4 Lese-/Such-Werkzeuge als duenne Handler um bestehende Funktionen — durchsuche_gedaechtnis (smart_recall, liefert nur Schnipsel + fuellt hit_cache), lade_eintrag (Volltext EINES Eintrags aus dem Cache — Kontext-Schutz), web_suche (tavily_search), lies_logbuch (_read_recent_turns). Verlagert die Leseagent-Filterung in den Hauptagenten (Direktive #3: verlagern statt loeschen; Antwort- vs. Kontext-Treffer im System-Prompt). NEU Endpoint GET /toolagent-test?q=... : isolierter Test des Werkzeugkastens (fuer den Star-Trek-Regressionsfall), beruehrt den echten Chat NICHT. Schreib-Werkzeuge (speichere/schreibe_regel) folgen mit der _process_turn-Integration. 0.61.4: ROBUSTHEIT codex_generate_tools — Streaming-Retry (bis 3 Versuche) gegen den sporadischen Abbruch des Impersonation-Backends ('peer closed connection ... incomplete chunked read'). Retry NUR solange kein response.completed kam (Backend-Call ist seiteneffektfrei); bei 4xx/failed KEIN Retry. Selbsttest auf EINEN Lauf reduziert (H1/H2-Diagnose abgeschlossen). 0.61.3: FIX — Function-Calling MACHBARKEIT BEWIESEN (function_calls kommen als Stream-Events output_item.done, nicht in completed.output). Das ChatGPT-Codex-Backend liefert function_calls als STREAM-EVENTS (response.output_item.done mit dem vollstaendigen function_call-Item: name/call_id/arguments), NICHT in completed.output (das bleibt leer). Root Cause des 'Tools werden nicht aufgerufen'-Befunds war ein PARSING-Bug (nur completed.output gelesen), KEIN Backend-Limit — die Event-Sequenz-Diagnose zeigte response.function_call_arguments.delta/done + output_item.done. Fix: fc_items aus den output_item.done-Events einsammeln, primaer nutzen (completed.output nur Fallback). 0.61.2: DIAGNOSE codex_generate_tools/toolloop-selftest — im ersten Lauf rief gpt-5.5 KEINE Werkzeuge auf (tools_used leer, Antwort 'ohne Werkzeugaufruf nicht bestimmbar'). Verdacht: custom function-Tools erreichen das Modell nicht. Selbsttest testet jetzt tool_choice 'auto' UND 'required' und gibt die rohe output-Item-Struktur der ersten Runde zurueck (raw_first_output), um H1 (Tools kommen nicht an) von H2 (Modell waehlt ab) zu unterscheiden. codex_generate_tools bekam optionalen tool_choice-Parameter. 0.61.1: FIX — ChatGPT-Codex-Backend ERZWINGT stream:true (stream:false -> HTTP 400 'Stream must be set to true', empirisch per /toolloop-selftest bewiesen). Tool-Loop nutzt jetzt einen streamenden Backend-Helfer (_stream_responses, wie codex_generate) und liest die function_call-Items aus dem response.completed-Event. 0.61.0: Schritt-2-Baustein (Agenten-Umbau) — NEU codex_generate_tools(): GPT/Codex Function-Calling-Loop auf der OpenAI-Responses-API (chatgpt.com/backend-api/codex). Deterministischer Hard-Stop (max_turns UND max_seconds), tool_use<->tool_result strikt 1:1 (function_call verbatim in den Verlauf, je call_id genau ein function_call_output), Tool-Exception als Fehler-tool_result zurueck (nie crashen), Schleifen-Erkennung (>3x gleiche name+args), Tool-Output je Aufruf auf LESE_TOOL_OUT_CAP gekappt; bei Hard-Stop ohne Klartext eine finale Runde OHNE Werkzeuge (Absicherung nach bugs/server/ai-agent-frameworks.md). NEU Endpoint GET /toolloop-selftest: isolierter Machbarkeits-Smoke-Test (2 triviale Tools) — prueft empirisch, ob das Backend eigene function-Tools akzeptiert+aufruft. Beruehrt den Chat-Pfad NICHT (reiner Baustein; sichtbare Dashboard-Version bleibt 0.56.0 bis der Umbau den Chat aendert). Alt: 0.60.0 (07.07.2026, 13:09 Uhr) NEU Turn-Logbuch + Sonden-Trace. Jeder /chat + /chat/stream-Turn wird per contextvar-Trace mitgeschrieben: der bestehende checkpoint()-Kanal fuettert zusaetzlich den Trace, ein Phasen-Marker recall_search trennt Rohsuche vom Leseagent-Filter. Logbuch 1 (LOGBOOK_DIR/Trace/turns.jsonl, 100 rollierend) = 1 lesbare Zeile je Anfrage mit Frage, Router->final Intent, Rohtreffer/Auswahl (Star-Trek: 50 gefunden/0 gewaehlt), Confidence, Antwort-Vorschau + Phasen-Timing (router_ms/suche_ms/leseagent_ms/web_antwort_ms = Flaschenhals-Radar). Logbuch 2 (trace.jsonl, 4000 Events) = feine Events je Turn per turn_id verknuepft (erweiterbares Geruest fuer feine Sonden beim Agenten-Umbau). Atomar (tmp+os.replace), secret-maskiert, BEST-EFFORT (try/except ueberall — gefaehrdet den Chat nie). Deterministische Problem-Markierung (_PROBLEM_FEEDBACK_RE) markiert den letzten Turn, wenn Frank ein Problem meldet. GET /logbook/turns fuers Dashboard. Persistent auf Samba (LOGBOOK_DIR bereits gemountet -> ueberlebt Rebuilds; loest fuer die Turn-Ebene die Fluechtigkeit von /app/logs/agent.jsonl). Alt: 0.59.1 (07.07.2026, 11:52 Uhr).
 
 # ---------------------------------------------------------------------------
 # Konfiguration (alles aus Umgebungsvariablen — Secrets nie im Code)
@@ -3915,7 +3915,7 @@ def build_agent_tools(user_id: str = USER_ID) -> "tuple[list[dict], dict, dict]"
     Jeder Turn bekommt FRISCHE Werkzeuge mit eigenem hit_cache (state['hits']: doc_id -> voller hit),
     den durchsuche_gedaechtnis fuellt und lade_eintrag liest — so filtert der Hauptagent selbst
     mit vollem Verstaendnis, ohne dass alle Volltexte auf einmal in seinen Kontext kippen."""
-    state: "dict" = {"hits": {}, "letzte_suche": None}
+    state: "dict" = {"hits": {}, "letzte_suche": None, "geladen": []}
 
     def _durchsuche(args: dict) -> str:
         q = str(args.get("query") or "").strip()
@@ -3949,6 +3949,8 @@ def build_agent_tools(user_id: str = USER_ID) -> "tuple[list[dict], dict, dict]"
         h = state["hits"].get(did)
         if h is None:
             return f"FEHLER: Eintrag '{did}' ist nicht im aktuellen Suchergebnis. Zuerst durchsuche_gedaechtnis nutzen."
+        if did not in state["geladen"]:
+            state["geladen"].append(did)   # fuer praezise Quellen-Chips: was der Agent WIRKLICH geoeffnet hat
         text = (h.get("text") or "").strip()
         return json.dumps({"id": did, "titel": h.get("title"), "kategorie": h.get("category"),
                            "volltext": text[:LESE_TOOL_OUT_CAP]}, ensure_ascii=False)
@@ -5018,6 +5020,61 @@ def entities_overview() -> dict:
     return {"ok": True, "items": brain_entities_list()}
 
 
+def _toolagent_answer(session: dict, user_text: str, context_prompt: str = "",
+                      response_size: str = "m", on_delta=None) -> dict:
+    """SCHRITT-2-UMBAU (Werkzeugkasten im echten Chat): Statt der Router-intent-Verzweigung
+    (query/query_internet/internet/smalltalk) beantwortet EIN Hauptagent die Frage selbst per
+    Werkzeugen — er durchsucht Franks Gedaechtnis, laedt gezielt Volltexte, sucht bei Bedarf im Web,
+    liest das Logbuch, kennt seine Faehigkeiten. Loest den Star-Trek-Bug (der Leseagent verwarf
+    0/50 Treffer): der Hauptagent filtert jetzt SELBST mit vollem Verstaendnis (Antwort- vs.
+    Kontext-Treffer, TOOLAGENT_SYSTEM). Router + komplette Speicher-Sicherheit + die deterministischen
+    Spezial-Antworten (Projektstand, Kategorie-Gesamt/-Zaehlfragen) laufen unveraendert DAVOR.
+    Funktionserhaltend (Direktive #3): liefert weiter reply + Quellen-Chips + Confidence an App/Dashboard.
+    Absicherung im Tool-Loop selbst (codex_generate_tools): Hard-Stop max_turns/max_seconds (ai-agent
+    §1.1), tool_use<->tool_result 1:1 (§4.1), Tool-Fehler als Ergebnis statt Crash (§3.2)."""
+    tools, handlers, state = build_agent_tools()
+    # Verlauf + UI-Kontext als Text-Praefix (spiegelt hauptagent_answer 1:1: der Agent sieht das
+    # bisherige Gespraech -> Follow-up-Fragen wie "und was noch dazu?" behalten den Bezug). Die
+    # aktuelle Nachricht zusaetzlich explizit, damit sie nie im Verlauf untergeht.
+    user_input = (
+        f"BISHERIGES GESPRÄCH:\n{_history_text(session)}\n\n"
+        f"{_context_prompt_block(context_prompt)}"
+        f"AKTUELLE NACHRICHT VON FRANK:\n{user_text}"
+    )
+    try:
+        r = codex_generate_tools(
+            TOOLAGENT_SYSTEM, user_input, tools=tools, tool_handlers=handlers,
+            model=ROLE_MODELS["haupt"], reasoning_effort=ROLE_REASONING.get("haupt", "high"),
+            max_turns=8, max_seconds=160.0, on_delta=on_delta,
+        )
+    except Exception as e:  # noqa: BLE001 — der Tool-Agent darf den Endpunkt NIE killen (ai-agent §3.2)
+        _log(logging.ERROR, "Tool-Agent (Hauptagent) fehlgeschlagen", exc_info=True)
+        return {"reply": f"Beim Nachdenken ist gerade etwas schiefgegangen ({type(e).__name__}). Versuch es bitte gleich nochmal.",
+                "action": "error", "pending": None}
+    answer = (r.get("text") or "").strip()
+    # Quellen-Chips: bevorzugt die Eintraege, die der Agent WIRKLICH per lade_eintrag geoeffnet hat;
+    # hat er nur gesucht (Snippets reichten), die gefundenen als Quellen. Nur Metadaten (kein Volltext).
+    geladen = state.get("geladen") or []
+    used = [state["hits"][d] for d in geladen if d in state["hits"]] or list(state["hits"].values())
+    sources = [{"doc_id": h.get("doc_id"), "title": h.get("title") or "(ohne Titel)",
+                "category": h.get("category"),
+                "score": h.get("dense_score") if h.get("dense_score") is not None else h.get("score"),
+                "matched_by": h.get("matched_by") or ["dense"]}
+               for h in used if h.get("doc_id")]
+    confidence = _confidence_info(used)   # grob aus den genutzten Treffern abgeleitet (Frank-Wahl)
+    used_memory = bool(state["hits"])
+    checkpoint("toolagent", "Schritt-2-Umbau: Hauptagent beantwortet per Werkzeugen (Router-intent-Zweige ersetzt)",
+               ok=bool(answer), frage=user_text[:120], turns=r.get("turns"), stopped=r.get("stopped"),
+               werkzeuge=len(r.get("tool_calls") or []), gefunden=len(state["hits"]),
+               geladen=len(geladen), confidence=confidence.get("level"))
+    if not answer:
+        answer = "Ich habe nachgedacht, konnte aber gerade keine Antwort formulieren. Versuch es bitte gleich nochmal."
+    # action=recall, wenn Gedaechtnis genutzt wurde (App zeigt Meta-Zeile + Quellen-Chips); sonst smalltalk.
+    return {"reply": answer, "action": "recall" if used_memory else "smalltalk",
+            "pending": None, "recall_hits": len(sources),
+            "sources": sources, "confidence": confidence}
+
+
 def _process_turn(session: dict, user_text: str, pending: dict | None, category: str = "", title: str = "", store_timestamp: bool = False, context_mode: str = "auto", context_prompt: str = "", response_size: str = "m", on_delta=None) -> dict:
     """Ein Gespraechszug — laeuft komplett synchron (LLM + brain) und wird vom async-Handler per
     asyncio.to_thread aufgerufen, damit der Event-Loop NICHT blockiert (fastapi §1 / ai-agent §3.1).
@@ -5188,109 +5245,13 @@ def _process_turn(session: dict, user_text: str, pending: dict | None, category:
                        ok=True, frage=user_text[:120], reply=count_answer.get("reply"))
             return count_answer
 
-    if intent == "query_internet":
-        q = (route.get("query") or "").strip() or user_text.strip()
-        web_q = (route.get("web_query") or "").strip() or q or user_text.strip()
-        try:
-            hits, recall_meta = smart_recall(user_text, q)
-            selected, _note = leseagent_select(user_text, hits, payload_cats)
-            confidence = _confidence_info(selected)
-        except Exception as e:  # noqa: BLE001 — Gedächtnis-Teil darf den Endpunkt nie killen
-            _log(logging.ERROR, "Composite-Recall-Suche fehlgeschlagen", exc_info=True)
-            return {"reply": f"Das Nachschlagen im Gedächtnis hat gerade nicht geklappt ({type(e).__name__}). Versuch es bitte gleich nochmal.",
-                    "action": "error", "pending": None}
-        try:
-            search = tavily_search(web_q, response_size)
-            if not search.get("ok") and hauptagent_supports_native_web():
-                answer = hauptagent_answer_recall_native_web(session, user_text, selected, context_prompt, on_delta, confidence)
-                checkpoint("recall_internet", "Gedächtnis-Treffer + modellnative Websuche kombiniert",
-                           ok=True, recall_query=q, web_query=web_q, gewaehlt=len(selected),
-                           confidence=confidence.get("level"), tavily_reason=search.get("reason"), meta=recall_meta or None)
-            else:
-                answer = hauptagent_answer_recall_internet(session, user_text, selected, search, context_prompt, on_delta, confidence)
-                checkpoint("recall_internet", "Gedächtnis-Treffer + Internet-Suchergebnisse kombiniert",
-                           ok=bool(search.get("ok")), recall_query=q, web_query=web_q, treffer=len(hits),
-                           gewaehlt=len(selected), web_treffer=len(search.get("results") or []),
-                           confidence=confidence.get("level"), meta=recall_meta or None)
-        except Exception as e:  # noqa: BLE001 — Internet-/Antwort-Pfad darf den Endpunkt nie killen
-            _log(logging.ERROR, "Composite-Gedächtnis-Internet-Antwort fehlgeschlagen", exc_info=True)
-            return {"reply": f"Beim Kombinieren von Gedächtnis und Internet ist etwas schiefgegangen ({type(e).__name__}). Versuch es bitte gleich nochmal.",
-                    "action": "error", "pending": None}
-        sources = [{"doc_id": h.get("doc_id"), "title": h.get("title") or "(ohne Titel)",
-                    "category": h.get("category"), "score": h.get("dense_score") if h.get("dense_score") is not None else h.get("score"),
-                    "matched_by": h.get("matched_by") or ["dense"]}
-                   for h in selected if h.get("doc_id")]
-        # Client-kompatibel: action bleibt "recall", damit bestehende Apps die Meta-Zeile/Quellen weiter anzeigen.
-        return {"reply": answer, "action": "recall", "pending": None, "recall_hits": len(selected),
-                "sources": sources, "confidence": confidence}
-
-    if intent == "query":
-        q = (route.get("query") or "").strip() or user_text.strip()
-        try:
-            hits, recall_meta = smart_recall(user_text, q)
-        except Exception as e:  # noqa: BLE001 — Suche kann fehlschlagen, nie crashen
-            _log(logging.ERROR, "Recall-Suche fehlgeschlagen", exc_info=True)
-            return {"reply": f"Das Nachschlagen hat gerade nicht geklappt ({type(e).__name__}). Versuch es bitte gleich nochmal.",
-                    "action": "error", "pending": None}
-        if hits and _wants_exhaustive_recall(user_text):
-            try:
-                answer_obj = _semantic_working_cache_answer(session, user_text, hits, context_prompt, on_delta)
-                checkpoint("recall_full", "Semantische Suche ohne Ergebnislimit via Arbeitscache beantwortet",
-                           ok=True, query=q, treffer=len(hits), meta=recall_meta or None)
-                return answer_obj
-            except Exception as e:  # noqa: BLE001
-                _log(logging.ERROR, "Recall-Arbeitscache fehlgeschlagen", exc_info=True)
-                return {"reply": f"Beim Verarbeiten aller Suchtreffer ist etwas schiefgegangen ({type(e).__name__}). Versuch es gleich nochmal.",
-                        "action": "error", "pending": None}
-        try:
-            selected, _note = leseagent_select(user_text, hits, payload_cats)  # Leseagent: filtert (nur Nummern), formuliert NICHT
-            confidence = _confidence_info(selected)                            # Nr. 38: Sicherheit der Grundlage
-            answer = hauptagent_answer(session, user_text, selected, context_prompt, on_delta, confidence)  # Hauptagent: formuliert aus den ORIGINAL-Treffern (+ S/M/XL-Auftrag)
-        except Exception as e:  # noqa: BLE001 — Antwort-LLM darf den Endpunkt nie killen
-            _log(logging.ERROR, "Antwort-Formulierung fehlgeschlagen", exc_info=True)
-            return {"reply": f"Beim Beantworten ist etwas schiefgegangen ({type(e).__name__}). Versuch es gleich nochmal.",
-                    "action": "error", "pending": None}
-        # Nr. 39: Quellen-Drilldown — die GEWAEHLTEN Eintraege strukturiert an App/Dashboard
-        # (Chips unter der Antwort; Klick oeffnet den Volltext-Drawer). Nur Metadaten, kein Volltext.
-        sources = [{"doc_id": h.get("doc_id"), "title": h.get("title") or "(ohne Titel)",
-                    "category": h.get("category"), "score": h.get("dense_score") if h.get("dense_score") is not None else h.get("score"),
-                    "matched_by": h.get("matched_by") or ["dense"]}
-                   for h in selected if h.get("doc_id")]
-        checkpoint("recall", "Level-2-Recall: Zeit/Multi-Query/Entity + RRF -> Leseagent -> Hauptagent (+Confidence/Quellen)",
-                   ok=True, query=q, treffer=len(hits), gewaehlt=len(selected),
-                   confidence=confidence.get("level"), meta=recall_meta or None)
-        return {"reply": answer, "action": "recall", "pending": None, "recall_hits": len(selected),
-                "sources": sources, "confidence": confidence}
-
-    # 3b) Internet-Frage (Live/aktuell) -> Tavily-Suche + Hauptagent formuliert aus den Ergebnissen
-    if intent == "internet":
-        q = (route.get("query") or "").strip() or user_text.strip()
-        try:
-            search = tavily_search(q, response_size)               # Suchtiefe folgt S/M/XL; Tool-Fehler werden in tavily_search gefangen (ai-agent §3.2)
-            if not search.get("ok") and search.get("reason") in {"deaktiviert", "kein_key"} and hauptagent_supports_native_web():
-                answer = hauptagent_answer_native_web(session, user_text, context_prompt, on_delta)
-                checkpoint("internet_answer", "Tavily nicht aktiv -> Modell nutzt eigene native Websuche",
-                           ok=True, query=q, model=ROLE_MODELS["haupt"], tavily_reason=search.get("reason"))
-                return {"reply": answer, "action": "internet", "pending": None}
-            answer = hauptagent_answer_internet(session, user_text, search, context_prompt, on_delta)
-        except Exception as e:  # noqa: BLE001 — Internet-Pfad darf den Endpunkt nie killen
-            _log(logging.ERROR, "Internet-Antwort fehlgeschlagen", exc_info=True)
-            return {"reply": f"Die Internet-Suche ist gerade schiefgegangen ({type(e).__name__}). Versuch es gleich nochmal.",
-                    "action": "error", "pending": None}
-        checkpoint("internet_answer", "Internet-Suche -> Hauptagent formuliert aus den Ergebnissen",
-                   ok=bool(search.get("ok")), query=q, treffer=len(search.get("results") or []))
-        return {"reply": answer, "action": "internet", "pending": None}
-
-    # 4) Smalltalk / sonstiges — laeuft der Router auf einem ANDEREN Modell, formuliert die
-    #    sichtbare Antwort trotzdem der eingestellte HAUPTAGENT (Schritt 2 = Franks Standard-Wahl).
-    reply = (route.get("reply") or "").strip()
-    if _router_is_delegated():
-        try:
-            reply = (hauptagent_answer_smalltalk(session, user_text, context_prompt, on_delta) or "").strip() or reply
-        except Exception:  # noqa: BLE001 — Fallback: Router-Reply statt Fehler
-            _log(logging.ERROR, "Smalltalk-Antwort des Hauptagenten fehlgeschlagen — nutze Router-Reply", exc_info=True)
-    return {"reply": reply or "Erzaehl mir was, oder frag mich was aus deinem Gedaechtnis.",
-            "action": "smalltalk", "pending": None}
+    # 3b) SCHRITT-2-UMBAU: Alle generischen Antwort-Zweige (query_internet, query, internet,
+    #     smalltalk) beantwortet jetzt EIN Hauptagent selbst per Werkzeugen (durchsuche_gedaechtnis/
+    #     lade_eintrag/web_suche/lies_logbuch/was_kann_cortex). Router (oben) und die komplette
+    #     Speicher-Sicherheit (oben) bleiben unangetastet; die deterministischen Spezial-Antworten
+    #     (Projektstand, Kategorie-Gesamt/-Zaehlung) sind bereits davor abgehandelt. So loest der
+    #     Umbau den Star-Trek-Bug im echten Chat, ohne Franks Speicher-Sicherheit zu riskieren.
+    return _toolagent_answer(session, user_text, context_prompt, response_size, on_delta)
 
 
 @app.post("/chat", dependencies=[Depends(require_auth)])
