@@ -435,7 +435,7 @@
 				"hooks": [
 					{
 						"type": "command",
-						"command": "\"$USERPROFILE/.bun/bin/bun.exe\" run \"$USERPROFILE/.claude/hooks/session-autopsy.ts\"",
+						"command": "\"$LOCALAPPDATA/Microsoft/WinGet/Links/bun.exe\" run \"$USERPROFILE/.claude/hooks/session-autopsy.ts\"",
 						"timeout": 10,
 						"async": true
 					}
