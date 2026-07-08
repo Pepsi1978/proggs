@@ -12,6 +12,7 @@ import de.frank.entropyreducer.data.local.dao.HabitSuggestionDao
 import de.frank.entropyreducer.data.local.dao.TaskSuggestionDao
 import de.frank.entropyreducer.data.local.entities.HabitSuggestionEntity
 import de.frank.entropyreducer.data.local.entities.TaskSuggestionEntity
+import de.frank.entropyreducer.data.safety.PhoneContentGuard
 import de.frank.entropyreducer.domain.usecase.AutoHabitSuggestion
 import de.frank.entropyreducer.domain.usecase.GenerateSuggestionsUseCase
 import javax.inject.Inject
@@ -115,9 +116,13 @@ class AutoSuggestionViewModel @Inject constructor(
     ) {
         // Ab ID-Architektur Etappe 2c in Room (task_suggestions). Etappe 2d: Herkunft der Quell-Idee
         // (originId/originType/rootId) mitschreiben.
+        val safeSuggestions = newSuggestions.filterNot { s ->
+            PhoneContentGuard.isSecondBrainWorkArtifact(s.title, s.description)
+        }
+        if (safeSuggestions.isEmpty()) return
         val nowMs = System.currentTimeMillis()
         taskSuggestionDao.upsertAll(
-            newSuggestions.mapIndexed { index, s ->
+            safeSuggestions.mapIndexed { index, s ->
                 TaskSuggestionEntity(
                     id = s.id,
                     title = s.title,
@@ -135,9 +140,13 @@ class AutoSuggestionViewModel @Inject constructor(
         newSuggestions: List<AutoHabitSuggestion>,
     ) {
         // Ab ID-Architektur Etappe 3c/3d in Room (habit_suggestions) mit Herkunft der Quell-Idee.
+        val safeSuggestions = newSuggestions.filterNot { s ->
+            PhoneContentGuard.isSecondBrainWorkArtifact(null, s.text)
+        }
+        if (safeSuggestions.isEmpty()) return
         val nowMs = System.currentTimeMillis()
         habitSuggestionDao.upsertAll(
-            newSuggestions.mapIndexed { index, s ->
+            safeSuggestions.mapIndexed { index, s ->
                 HabitSuggestionEntity(
                     id = s.id,
                     text = s.text,

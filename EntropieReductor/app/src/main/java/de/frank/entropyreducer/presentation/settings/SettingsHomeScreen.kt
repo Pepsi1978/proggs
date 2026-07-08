@@ -16,17 +16,13 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.outlined.ArrowBack
-import androidx.compose.material.icons.outlined.AutoAwesome
-import androidx.compose.material.icons.outlined.Bolt
 import androidx.compose.material.icons.outlined.CalendarMonth
 import androidx.compose.material.icons.outlined.ChatBubbleOutline
 import androidx.compose.material.icons.outlined.ChevronRight
 import androidx.compose.material.icons.outlined.CloudSync
-import androidx.compose.material.icons.outlined.EmojiEvents
 import androidx.compose.material.icons.outlined.Inventory2
 import androidx.compose.material.icons.outlined.IosShare
 import androidx.compose.material.icons.outlined.Key
-import androidx.compose.material.icons.outlined.Lightbulb
 import androidx.compose.material.icons.outlined.Memory
 import androidx.compose.material.icons.outlined.MonitorHeart
 import androidx.compose.material.icons.outlined.Person
@@ -126,20 +122,6 @@ private fun sectionsFor(): List<SectionDef> =
             route = Routes.EXPERIMENT_CALENDAR,
         ),
         SectionDef(
-            icon = Icons.Outlined.Lightbulb,
-            accent = LocalCosmos.current.warn,
-            title = "Insight Board",
-            subtitle = "Bestätigte Methoden, Beobachtungen und verworfene Ansätze.",
-            route = Routes.INSIGHT_BOARD,
-        ),
-        SectionDef(
-            icon = Icons.Outlined.EmojiEvents,
-            accent = LocalCosmos.current.ok,
-            title = "Mein Repertoire",
-            subtitle = "Deine bewaehrtesten Hebel — sortiert nach Wirkung × Wiederholung.",
-            route = Routes.REPERTOIRE,
-        ),
-        SectionDef(
             icon = Icons.Outlined.Key,
             accent = LocalCosmos.current.accent,
             title = "API-Schlüssel",
@@ -180,28 +162,6 @@ private fun sectionsFor(): List<SectionDef> =
             title = "Gedächtnis",
             subtitle = "Entscheide, was sich das Genie merken darf und wie es dich unterstuetzt.",
             route = Routes.SETTINGS_MEMORY,
-        ),
-        SectionDef(
-            icon = Icons.Outlined.Bolt,
-            accent = LocalCosmos.current.accentTasksSub,
-            title = "Prioritäts-Gedächtnis",
-            subtitle = "Gemerkte Aufgaben-Prioritäten, die die KI für neue, sehr ähnliche Aufgaben nutzt.",
-            route = Routes.SETTINGS_PRIORITY_MEMORY,
-        ),
-        SectionDef(
-            icon = Icons.Outlined.AutoAwesome,
-            accent = LocalCosmos.current.accentForscher,
-            title = "Genie-Codex",
-            subtitle = "Lege Verhaltensregeln, Werte und Antwortstil für das Genie fest.",
-            route = Routes.SETTINGS_CODEX,
-        ),
-        SectionDef(
-            icon = Icons.Outlined.Bolt,
-            accent = LocalCosmos.current.accent,
-            title = "KI-Trigger",
-            subtitle =
-                "Beobachte und genehmige automatische Trigger, die das Genie aus deinen Daten ableitet.",
-            route = Routes.SETTINGS_TRIGGERS,
         ),
         SectionDef(
             icon = Icons.Outlined.Inventory2,

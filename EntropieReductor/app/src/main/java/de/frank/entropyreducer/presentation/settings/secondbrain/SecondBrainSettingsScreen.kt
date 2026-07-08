@@ -76,7 +76,8 @@ fun SecondBrainSettingsScreen(
                 Text(
                     text = "Wähle aus, welche Bereiche der App automatisch in dein Second Brain " +
                         "synchronisiert werden. Die Verbindung selbst (Schlüssel + WireGuard) " +
-                        "richtest du im Bereich „API-Schlüssel“ ein.",
+                        "richtest du im Bereich „API-Schlüssel“ ein. Mental synchronisiert nur echte " +
+                        "Mental-Einträge; interne Kurzgerüst-/Bibliothekar-Notizen werden blockiert.",
                     style = MaterialTheme.typography.bodyMedium,
                     color = cosmos.textSecondary,
                 )
@@ -162,7 +163,7 @@ fun SecondBrainSettingsScreen(
 private fun areaDescription(area: SecondBrainArea): String = when (area.key) {
     "ideas" -> "Jede Idee aus „Aufgaben → Ideen“ wird in der Kategorie „Ideen“ gespeichert und bidirektional synchron gehalten."
     "habits" -> "Alle festen Gewohnheiten über den Gewohnheitsvorschlägen werden in der Kategorie „Gewohnheiten“ synchron gehalten."
-    "mental" -> "Alle Sätze aus dem Mental-Reiter werden in der Kategorie „Mental“ synchron gehalten."
+    "mental" -> "Deine Mentals werden in der Kategorie „Mental“ synchron gehalten; interne Kurzgerüst-/Bibliothekar-Notizen werden nicht aufs Handy übernommen."
     "entropy" -> "Alle Entropie-Einträge werden in der Kategorie „Entropie“ synchron gehalten."
     "theses" -> "Alle Thesen werden in der Kategorie „Thesen“ synchron gehalten."
     "journal" -> "Alle Einträge aus dem Journal-Reiter werden in der Kategorie „Tagebucheinträge“ synchron gehalten."
@@ -241,7 +242,7 @@ constructor(
         connector.syncAllNow(viewModelScope)
     }
 
-    /** Vollstaendiger Neu-Sync: Brain-Kategorie „Ideen" leeren + alle Handy-Ideen frisch hochladen. */
+    /** Vollstaendiger Neu-Sync: aktive Brain-Kategorien leeren + Handy-Inhalte frisch hochladen. */
     fun resyncAll() {
         connector.resyncAll(viewModelScope)
     }

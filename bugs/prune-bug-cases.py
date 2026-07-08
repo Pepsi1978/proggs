@@ -11,7 +11,7 @@ Pruning-Prioritaet beim Entfernen (von zuerst nach zuletzt), nur wenn ueber LIMI
   1. noise=true (als Rauschen markierte Diagnose-/Statusbefehle) — aeltester zuerst
   2. normale Eintraege (kein near_miss, nicht angereichert) — aeltester zuerst
   GESCHUETZT (werden NIE entfernt, solange 1+2 zum Kappen reichen):
-  - near_miss=true            (near-miss-retention.md: hoher Lernwert)
+  - near_miss=true            (intelligence-system.md: hoher Lernwert)
   - enriched_by gesetzt / auto_captured=false (echtes, von Hand nachgetragenes Wissen)
 
 Standard = DRY-RUN (zeigt nur, was passieren WUERDE). Mit --apply wird tatsaechlich geschrieben.

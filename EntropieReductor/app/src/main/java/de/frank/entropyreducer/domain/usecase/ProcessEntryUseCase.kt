@@ -12,6 +12,7 @@ import de.frank.entropyreducer.data.repository.EntryRepository
 import de.frank.entropyreducer.data.repository.InsightRepository
 import de.frank.entropyreducer.data.repository.MemoryRepository
 import de.frank.entropyreducer.data.repository.PromptRepository
+import de.frank.entropyreducer.data.safety.PhoneContentGuard
 import de.frank.entropyreducer.data.settings.AppSettings
 import de.frank.entropyreducer.data.settings.EncryptedSecretsStore
 import de.frank.entropyreducer.domain.model.EntropyCategory
@@ -59,6 +60,13 @@ class ProcessEntryUseCase @Inject constructor(
         rootId: String? = null,
     ): Result<EntropyEntryEntity> {
         val cleanManualTitle = manualTitle?.trim()?.takeIf { it.isNotBlank() }
+        if (PhoneContentGuard.isSecondBrainWorkArtifact(cleanManualTitle, rawTranscript)) {
+            return Result.failure(
+                IllegalArgumentException(
+                    "Interner Second-Brain-Arbeitsinhalt wird nicht als Aufgabe gespeichert."
+                )
+            )
+        }
         val key = secrets.geminiApiKey
             ?: return Result.failure(IllegalStateException("Kein Gemini-Key hinterlegt"))
         val model = settings.geminiModelFlow.first()
@@ -169,6 +177,18 @@ class ProcessEntryUseCase @Inject constructor(
                 )
             } else {
                 fallbackEntry(rawTranscript, source, cleanManualTitle, originId, originType, rootId)
+            }
+            if (
+                PhoneContentGuard.isSecondBrainWorkArtifact(
+                    entry.title,
+                    entry.rawTranscript + "\n" + entry.description,
+                )
+            ) {
+                return Result.failure(
+                    IllegalArgumentException(
+                        "Interner Second-Brain-Arbeitsinhalt wird nicht als Aufgabe gespeichert."
+                    )
+                )
             }
             entries.upsert(entry)
             // Frank-Wunsch 2026-06-19: Live-Logik-Checkpoint (Intent-Verifikation) — erwartet vs.

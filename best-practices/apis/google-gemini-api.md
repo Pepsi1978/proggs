@@ -2,6 +2,7 @@
 
 > Gegenstueck zu `bugs/apis/google-gemini-api.md`. Offiziell empfohlen (Quellen). (Researcher-Recherche 2026-06-09, Re-Recherche 2026-07-02.)
 > Update 2026-07-02: Keine neuen belegten SDK-/Thinking-/FinishReason-Regeln; Deprecation-Seite weiter aktiv vor jedem Release pruefen und stabile Modell-IDs pinnen.
+> Update 2026-07-08: §9 Embeddings modell-differenziert — `gemini-embedding-2` (GA ~30.04.2026) aggregiert eine Liste zu EINEM Vektor (NICHT N), `task_type` ist entfernt (→ Text-Präfixe), Default 3072 Dim / 8192 Token. Fallen im Bug-Almanach §J. (Recherche 2026-07-08, Firecrawl+MiniMax, offizielle Google-Doku.)
 
 ## ⚡ Kurzcheck (Stufe A — vor der Arbeit lesen)
 
@@ -19,7 +20,7 @@
 | 6 | Antwortpruefung | 200 OK ≠ Text: block/finishReason erst pruefen | §6 |
 | 7 | Caching/Token | Wiederkehrendes an Prompt-Anfang; `system_instruction` | §7 |
 | 8 | Streaming/Limits | `?alt=sse`; Backoff bei 429; Billing aktiv | §8 |
-| 9 | Embeddings (mehrere Texte) | `embed_content` BATCHEN: `contents=[t1,t2,…]` -> eine embeddings-Liste in Eingabe-Reihenfolge; nie seriell je Text | §9 |
+| 9 | Embeddings (mehrere Texte) | **Modell-abhängig!** `-001`: `contents=[…]` batchen → N Vektoren. `gemini-embedding-2`: Liste → 1 AGGREGIERTER Vektor → pro Text 1 Call; `task_type` weg → Text-Präfixe | §9 |
 
 ## 1. SDK & Client
 - Ausschliesslich das einheitliche SDK `google-genai` (Py) / `@google/genai` (JS) / `google.golang.org/genai` (Go) verwenden; Init ueber `client = genai.Client(api_key=...)` bzw. `genai.Client(vertexai=True, project=..., location=...)`. Altes SDK ist deprecated. Quelle: https://ai.google.dev/gemini-api/docs/libraries · offiziell
@@ -56,9 +57,10 @@
 - `streamGenerateContent` mit `?alt=sse` aufrufen und zeilenweise parsen (Default ist fortlaufendes JSON-Array); letzten Chunk auf `finishReason` pruefen. Quelle: https://ai.google.dev/gemini-api/docs/deprecations · offiziell
 - Clientseitiges Rate-Limiting + Exponential-Backoff bei 429 (Free ~60 RPM/Modell); Billing aktivieren (auch fuer Free-Tier) und Timeout/Retry im SDK konfigurieren. Quelle: https://ai.google.dev/gemini-api/docs/libraries · offiziell
 
-## 9. Embeddings: Batchen statt seriell (Stand 2026-07-02)
-- `embed_content` nimmt MEHRERE `contents` in EINEM Call entgegen; `resp.embeddings` kommt in Eingabe-Reihenfolge zurueck. N Texte (z.B. Dokument-Chunks) NIE seriell je Text embedden — ein 150-Chunk-Dokument macht sonst 150 Round-Trips (Minuten) statt ~10 Batches (Sekunden). Identische Vektoren (gleiche Inputs, gleiches `task_type`, gleiche `output_dimensionality`). Quelle: ai.google.dev/gemini-api/docs/embeddings (Batch-Beispiele) · offiziell; live verifiziert 2026-07-02 (brain-api 1.20.0 `embed_many`, 3-Chunk-Store 0,66s, 1:1-Roundtrip + Suche ok)
-- Batch-Groesse konservativ halten (z.B. 16 je Request) und die Vektor-ANZAHL gegen die Eingabe-Anzahl pruefen — bei Mismatch HART abbrechen statt Vektoren still falsch zuzuordnen.
+## 9. Embeddings: Batch-Verhalten ist MODELL-ABHÄNGIG (Stand 2026-07-08)
+> **KRITISCH:** `gemini-embedding-001` und `gemini-embedding-2` verhalten sich bei einer Liste GEGENSÄTZLICH. Nie die Batch-Logik ungeprüft vom einen aufs andere übertragen (Aggregations-Falle → `bugs/apis/google-gemini-api.md §J23`).
+- **`gemini-embedding-001` (Text, 1536 default):** `embed_content` nimmt MEHRERE `contents` in EINEM Call; `resp.embeddings` kommt in Eingabe-Reihenfolge zurück (N Vektoren). N Chunks NIE seriell — ein 150-Chunk-Dokument macht sonst 150 Round-Trips (Minuten) statt ~10 Batches (Sekunden). `task_type` (RETRIEVAL_DOCUMENT/RETRIEVAL_QUERY) als API-Parameter. Batch-Größe konservativ (z.B. 16), Vektor-ANZAHL gegen Eingabe prüfen, bei Mismatch HART abbrechen. Quelle: ai.google.dev/gemini-api/docs/embeddings · offiziell; live verifiziert 2026-07-02 (brain-api 1.20.0 `embed_many`).
+- **`gemini-embedding-2` (multimodal, 3072 default, GA seit ~30.04.2026):** eine Liste `contents=[…]` liefert EINEN AGGREGIERTEN Vektor (NICHT N!) — für N separate Vektoren pro Text EINEN Call (parallelisierbar über ThreadPool) ODER die asynchrone Batch API (`asyncBatchEmbedContent`, ~halber Preis). `task_type` ist ENTFERNT → Absicht als Text-Präfix: Dokument `title: {Titel} | text: {Inhalt}` (ohne Titel `title: none`), Query `task: search result | query: {Suchtext}` (weitere: question answering / fact checking / code retrieval; symmetrisch: classification / clustering / sentence similarity). Default 3072 (empf. 768/1536/3072, MRL); <3072 wird NICHT auto-normalisiert (bei Cosine egal — Qdrant normalisiert intern). Input-Limit 8192 Token (4× `-001`). Dimensionswechsel erzwingt neue Vektor-Collection (bugs/server/qdrant.md §2). Quelle: ai.google.dev/gemini-api/docs/embeddings (NOTE + „Task types with Embeddings 2") · offiziell; Recherche 2026-07-08.
 
 ## 🔗 Bezug zum Bug-Almanach
 | Best-Practice | Bug-Abschnitt (`bugs/apis/google-gemini-api.md`) |
@@ -71,3 +73,4 @@
 | 6 Safety & Antwortpruefung | D9, D10, B5 |
 | 7 Context Caching & Token-Effizienz | (praeventiv, kein Bug) |
 | 8 Streaming, Rate-Limits & Resilienz | I21, I22, C7, F15, H19, H20 |
+| 9 Embeddings (modell-abhängig) | J23, J24, J25 |

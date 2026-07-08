@@ -17,7 +17,7 @@
 > Begleitseite (wie man es von vornherein richtig macht): siehe
 > `best-practices/agents/orchestrator-agent.md`.
 > Eng verwandte Harness-Regeln (immer geladen): `subagent-crash-proofing.md`,
-> `lossless-context-principle.md`, `metacognitive-monitoring.md`, `agent-and-researcher-rules.md`.
+> `lossless-context-principle.md`, `intelligence-system.md`, `agent-and-researcher-rules.md`.
 
 > **Update 2026-07-02:** Keine neuen belastbaren Bug-/Breaking-Change-Funde nach 2026-06-09 fuer LangGraph, CrewAI, AutoGen/AG2, OpenAI Agents SDK oder Claude Agent SDK in den Quellen. Die dokumentierten Orchestrator-Risiken bleiben massgeblich: Intent-Readback, echte Stop-Bedingungen, schlanke Subagent-Prompts, Tool-Whitelist, Verifier statt Modell-„done".
 
@@ -99,7 +99,7 @@ Plan-Mode zeigt vorab WELCHE Dateien beruehrt werden; Datei-Whitelist/Ownership 
 ### 1.5 Task-Derailment — Abdriften vom Ziel
 **Symptom:** Agent weicht im Lauf vom urspruenglichen Auftrag ab. MAST FM-2.3 = **7,4%**.
 **FIX:** Ziel/Spec persistent halten + periodisch abgleichen („arbeite ich noch am Ziel?");
-strukturierte Plan-Schritte mit Akzeptanzkriterien je Schritt (vgl. metacognitive-monitoring Drift-Detektor).
+strukturierte Plan-Schritte mit Akzeptanzkriterien je Schritt (vgl. intelligence-system Drift-Detektor).
 **Quelle:** MAST FM-2.3.
 
 ### 1.6 Reasoning-Action-Mismatch — denkt A, tut B  [⭐ HAEUFIG]

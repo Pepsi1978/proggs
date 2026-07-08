@@ -49,15 +49,6 @@ if [ -f "$mcp_source" ]; then
     fi
 fi
 
-# Always ensure code-search MCP server dependencies are installed (regardless of new commits)
-mcp_cs_dir="$REPO_DIR/mcp-code-search"
-if [ -d "$mcp_cs_dir" ] && [ ! -d "$mcp_cs_dir/node_modules" ]; then
-    if [ -x /opt/homebrew/bin/bun ]; then
-        (cd "$mcp_cs_dir" && /opt/homebrew/bin/bun install --silent 2>/dev/null) && \
-            hook_log "code-search node_modules installed" || true
-    fi
-fi
-
 if [ "$local_sha" = "$remote_sha" ]; then
     write_status "Auto-Sync: Alle Dateien aktuell."
     exit 0
@@ -93,23 +84,6 @@ if ! git pull --rebase --quiet 2>/dev/null; then
 fi
 
 write_status "Auto-Sync: Git Pull erfolgreich."
-
-# GitNexus: Inkrementelle Reindexierung nach Pull (nur geaenderte Dateien)
-# Laeuft im Hintergrund — blockiert den Session-Start nicht.
-if [ "$behind" -gt 0 ] 2>/dev/null; then
-    GITNEXUS_BIN=""
-    if command -v gitnexus &>/dev/null; then
-        GITNEXUS_BIN="$(command -v gitnexus)"
-    elif [ -x "/opt/homebrew/bin/gitnexus" ]; then
-        GITNEXUS_BIN="/opt/homebrew/bin/gitnexus"
-    fi
-    if [ -n "$GITNEXUS_BIN" ]; then
-        nohup "$GITNEXUS_BIN" analyze "$REPO_DIR" --skip-agents-md \
-            > /tmp/gitnexus-reindex.log 2>&1 &
-        disown $! 2>/dev/null || true
-        write_status "Auto-Sync: GitNexus-Index wird im Hintergrund aktualisiert ($behind neue Commits)."
-    fi
-fi
 
 # C2 (ported from Gemini): Write cross-CLI delta summary to whiteboard after pull
 codex_changes=$(git log --oneline "$local_sha..$remote_sha" -- codex-setup/ 2>/dev/null | wc -l | tr -d ' ')

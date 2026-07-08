@@ -41,6 +41,12 @@ data class ChatResponse(
 )
 
 @JsonClass(generateAdapter = true)
+data class EndSessionRequest(
+    val session_id: String,
+    val user_id: String = "frank"
+)
+
+@JsonClass(generateAdapter = true)
 data class ChatOption(
     val label: String,
     val send: String

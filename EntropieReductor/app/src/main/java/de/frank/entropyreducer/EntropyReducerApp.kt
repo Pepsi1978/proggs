@@ -63,11 +63,6 @@ class EntropyReducerApp : Application(), Configuration.Provider {
 
     @Inject lateinit var amazfitRepository: AmazfitRepository
 
-    /** Sprint 2 (Frank-Wunsch 2026-05-22): wiederkehrende Aufgaben beim App-Start erzeugen. */
-    @Inject
-    lateinit var generateRecurringInstances:
-        de.frank.entropyreducer.domain.usecase.GenerateRecurringInstancesUseCase
-
     @Inject lateinit var ouraRepository: OuraRepository
 
     @Inject lateinit var healthConnect: HealthConnectManager
@@ -172,22 +167,6 @@ class EntropyReducerApp : Application(), Configuration.Provider {
                     Diag.w(DiagnosticArea.APP, 
                         "EntropyReducerApp",
                         "markRunningAsInterrupted fehlgeschlagen",
-                        it,
-                    )
-                }
-        }
-
-        // Frank-Bugfix 2026-05-22 (#949): NICHT mehr blind RRULE-basiert
-        // generieren beim App-Start — das erzeugte Duplikate, weil bei jedem
-        // Start eine neue Instanz mit anderem occurrenceMs kam. Stattdessen
-        // wird jetzt cleanup+ensure aufgerufen: max 1 offene Aufgabe pro aktiver
-        // Vorlage, 0 bei inaktiver.
-        applicationScope.launch {
-            runCatching { generateRecurringInstances.cleanupAndEnsureSingle() }
-                .onFailure {
-                    Diag.w(DiagnosticArea.APP, 
-                        "EntropyReducerApp",
-                        "RecurringCleanup fehlgeschlagen",
                         it,
                     )
                 }

@@ -4,23 +4,22 @@ import android.content.Context
 import dagger.hilt.android.qualifiers.ApplicationContext
 import de.frank.entropyreducer.data.diagnostics.Diag
 import de.frank.entropyreducer.data.diagnostics.DiagnosticArea
-import de.frank.entropyreducer.data.local.dao.EntropyEntryDao
 import de.frank.entropyreducer.data.local.dao.HabitDao
 import de.frank.entropyreducer.data.local.dao.IdeaDao
 import de.frank.entropyreducer.data.local.dao.IdeaWithFollowups
 import de.frank.entropyreducer.data.local.dao.MentalSentenceDao
-import de.frank.entropyreducer.data.local.entities.EntropyEntryEntity
 import de.frank.entropyreducer.data.local.entities.HabitEntity
 import de.frank.entropyreducer.data.local.entities.IdeaEntity
 import de.frank.entropyreducer.data.local.entities.MentalEntity
 import de.frank.entropyreducer.data.local.journalmirror.JournalMirrorDao
 import de.frank.entropyreducer.data.local.journalmirror.JournalMirrorEntryEntity
+import de.frank.entropyreducer.data.safety.PhoneContentGuard
 import de.frank.entropyreducer.data.settings.AppSettings
 import de.frank.entropyreducer.data.settings.EncryptedSecretsStore
-import de.frank.entropyreducer.domain.model.EntropyCategory
-import de.frank.entropyreducer.domain.model.EntrySource
-import de.frank.entropyreducer.domain.model.EntryStatus
-import de.frank.entropyreducer.domain.model.TimeBucket
+import de.frank.entropyreducer.presentation.tagebuch.TagebuchEntry
+import de.frank.entropyreducer.presentation.tagebuch.addTagebuchEntry
+import de.frank.entropyreducer.presentation.tagebuch.deleteTagebuchEntry
+import de.frank.entropyreducer.presentation.tagebuch.tagebuchEntriesFlow
 import de.frank.entropyreducer.presentation.thesen.ThesenEntry
 import de.frank.entropyreducer.presentation.thesen.addThesenEntry
 import de.frank.entropyreducer.presentation.thesen.deleteThesenEntry
@@ -85,7 +84,6 @@ class SecondBrainIdeaConnector @Inject constructor(
     private val ideaDao: IdeaDao,
     private val habitDao: HabitDao,
     private val mentalDao: MentalSentenceDao,
-    private val entropyDao: EntropyEntryDao,
     private val journalMirrorDao: JournalMirrorDao,
     private val settings: AppSettings,
     private val secrets: EncryptedSecretsStore,
@@ -255,6 +253,22 @@ class SecondBrainIdeaConnector @Inject constructor(
         for (item in brain.items) {
             val title = item.title?.trim().orEmpty()
             if (title.isBlank()) continue
+            if (target.area.key != AREAS_IDEAS.key && item.source.equals("librarian", ignoreCase = true)) {
+                Diag.i(
+                    DiagnosticArea.SECOND_BRAIN,
+                    TAG,
+                    "CHECKPOINT step=pullSkippedLibrarian area=${target.area.key} expected=no_agent_phone_write actual=skipped ok=true title=\"$title\"",
+                )
+                continue
+            }
+            if (PhoneContentGuard.isSecondBrainWorkArtifact(title, item.text)) {
+                Diag.w(
+                    DiagnosticArea.SECOND_BRAIN,
+                    TAG,
+                    "CHECKPOINT step=pullSkippedPhoneArtifact area=${target.area.key} expected=not_on_phone actual=skipped ok=true title=\"$title\"",
+                )
+                continue
+            }
             if (title in appTitles) continue
             if (title in knownTitles) continue
             val row = target.insertFromBrain(item) ?: continue
@@ -300,7 +314,17 @@ class SecondBrainIdeaConnector @Inject constructor(
             return false
         }
         val auth = "Bearer $key"
-        val sorted = rows.sortedBy { it.createdAtMs }
+        val skippedArtifacts = rows.count { row -> PhoneContentGuard.isSecondBrainWorkArtifact(row.title, row.body) }
+        val sorted = rows
+            .filterNot { row -> PhoneContentGuard.isSecondBrainWorkArtifact(row.title, row.body) }
+            .sortedBy { it.createdAtMs }
+        if (skippedArtifacts > 0) {
+            Diag.w(
+                DiagnosticArea.SECOND_BRAIN,
+                TAG,
+                "CHECKPOINT step=syncSkippedPhoneArtifacts area=${target.area.key} expected=not_synced actual=skipped=$skippedArtifacts ok=true reason=$reason",
+            )
+        }
         val currentIds = sorted.map { it.id }.toSet()
         val uploadedTitles = settings.readSecondBrainTitles(target.area.key)
 
@@ -406,10 +430,10 @@ class SecondBrainIdeaConnector @Inject constructor(
         ),
         SecondBrainSyncTarget(
             area = AREAS_ENTROPY,
-            observeRows = { entropyDao.getActive().mapRows { rows -> rows.map { it.toSyncRow() } } },
-            loadRows = { entropyDao.getAllForBackup().filter { it.status != EntryStatus.ARCHIVIERT }.map { it.toSyncRow() } },
-            insertFromBrain = { item -> insertEntropyFromBrain(item) },
-            deleteById = { id -> entropyDao.deleteById(id) },
+            observeRows = { tagebuchEntriesFlow(appContext).mapRows { rows -> rows.map { it.toEntropySyncRow() } } },
+            loadRows = { tagebuchEntriesFlow(appContext).first().map { it.toEntropySyncRow() } },
+            insertFromBrain = { item -> insertEntropyJournalFromBrain(item) },
+            deleteById = { id -> deleteTagebuchEntry(appContext, id, propagate = false) },
         ),
         SecondBrainSyncTarget(
             area = AREAS_THESES,
@@ -497,12 +521,15 @@ class SecondBrainIdeaConnector @Inject constructor(
         body = text.trim(),
     )
 
-    private suspend fun insertMentalFromBrain(item: SecondBrainCategoryItem): SecondBrainSyncRow {
+    private suspend fun insertMentalFromBrain(item: SecondBrainCategoryItem): SecondBrainSyncRow? {
+        if (PhoneContentGuard.isSecondBrainWorkArtifact(item.title, item.text)) return null
+        val text = item.text.trim()
+        if (text.isBlank()) return null
         val ts = parseIsoToMs(item.createdAt)
         val nextPosition = mentalDao.maxPosition() + 1
         val entity = MentalEntity(
             id = UUID.randomUUID().toString(),
-            text = item.text.trim(),
+            text = text,
             updatedAt = ts,
             position = nextPosition,
         )
@@ -510,48 +537,29 @@ class SecondBrainIdeaConnector @Inject constructor(
         return entity.toSyncRow()
     }
 
-    private fun EntropyEntryEntity.toSyncRow(): SecondBrainSyncRow = SecondBrainSyncRow(
+    private fun TagebuchEntry.toEntropySyncRow(): SecondBrainSyncRow = SecondBrainSyncRow(
         id = id,
-        createdAtMs = createdAt,
-        updatedAtMs = updatedAt,
-        title = title.trim().ifBlank { rawTranscript.trim().shortTitle("Entropie", id) },
+        createdAtMs = timestampMs,
+        updatedAtMs = updatedAt.takeIf { it > 0L } ?: timestampMs,
+        title = title.trim().ifBlank { text.trim().shortTitle("Entropie", id) },
         bodyLabel = "Entropie",
-        body = description.ifBlank { rawTranscript }.trim(),
-        summary = listOf(
-            "Status: ${status.name}",
-            "Kategorie: ${category.name}",
-            "Priorität: ${manualPriorityScore ?: priorityScore}",
-            "Bucket: ${manualBucket ?: timeBucket}",
-            aiNotes?.takeIf { it.isNotBlank() }?.let { "KI-Notizen: ${it.trim()}" },
-        ).filterNotNull().joinToString("\n"),
+        body = (improvedText?.takeIf { isImproved && it.isNotBlank() } ?: text).trim(),
+        summary = summary?.takeIf { it.isNotBlank() }?.trim(),
     )
 
-    private suspend fun insertEntropyFromBrain(item: SecondBrainCategoryItem): SecondBrainSyncRow {
+    private suspend fun insertEntropyJournalFromBrain(item: SecondBrainCategoryItem): SecondBrainSyncRow {
         val ts = parseIsoToMs(item.createdAt)
         val title = item.title?.trim().orEmpty().ifBlank { "Entropie ${formatTs(ts)}" }
         val text = item.text.trim()
-        val entity = EntropyEntryEntity(
+        val entry = TagebuchEntry(
             id = UUID.randomUUID().toString(),
-            rawTranscript = text,
+            timestampMs = ts,
             title = title,
-            description = text,
-            category = EntropyCategory.SONSTIGES,
-            severity = 1,
-            priorityScore = 0.0,
-            priorityReason = "Aus Second Brain importiert.",
-            status = EntryStatus.OFFEN,
-            timeBucket = TimeBucket.SPAETER,
-            estimatedDurationMinutes = null,
-            createdAt = ts,
             updatedAt = ts,
-            resolvedAt = null,
-            tags = emptyList(),
-            aiNotes = null,
-            source = EntrySource.NUTZER_TEXT,
-            biomarkerSnapshotId = null,
+            text = text,
         )
-        entropyDao.upsert(entity)
-        return entity.toSyncRow()
+        addTagebuchEntry(appContext, entry)
+        return entry.toEntropySyncRow()
     }
 
     private fun ThesenEntry.toSyncRow(): SecondBrainSyncRow = SecondBrainSyncRow(

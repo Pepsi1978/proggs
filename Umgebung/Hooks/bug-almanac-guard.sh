@@ -137,6 +137,16 @@ case "$fpl" in *almtest*) exit 0 ;; esac
 # -- Edit/Write/MultiEdit-Zweig: Bereich anhand des Dateipfads erkennen (bei neuem Almanach hier ergaenzen). --
 slug=""; file=""; name=""
 case "$fpl" in
+    *compose.yaml|*compose.yml|*docker-compose.yml|*docker-compose.yaml|*dockerfile|*dockerfile.*|*.dockerfile)
+        # Docker & Docker-Compose (Self-Hosting-Betrieb): compose.yaml/.yml, docker-compose.*,
+        # Dockerfile (auch Dockerfile.prod / app.dockerfile). Dateiname-basiert, eindeutig.
+        # Abgrenzung: Qdrant-/Agent-spezifisches faengt der jeweilige Almanach separat ab.
+        slug="docker"; file="docker.md"; name="Docker & Docker-Compose (Self-Hosting-Betrieb)";;
+    *caddyfile|*.caddyfile|*.service|*nginx.conf|*/sites-available/*|*/sites-enabled/*)
+        # Reverse-Proxy/TLS (Caddy) + systemd-Units + nginx-Configs -> reverse-proxy-tls.md.
+        # Caddyfile (kein Suffix), *.service (systemd-Unit), nginx.conf/sites-*. Eindeutige Dateimuster.
+        # Abgrenzung: VPN -> wireguard.md, Docker-Betrieb -> docker.md, Security-Architektur -> self-hosted-ai-agent-server.md.
+        slug="reverseproxytls"; file="reverse-proxy-tls.md"; name="Reverse-Proxy/TLS (Caddy) & Linux-VPS-Betrieb";;
     *.sdplugin/*|*propertyinspector*)
         # Stream-Deck-Plugin: Dateien im *.sdPlugin-Ordner ODER ein Property Inspector.
         # MUSS vor dem chrome-Zweig stehen, da ein Stream-Deck-manifest.json sonst vom
@@ -194,6 +204,13 @@ $xml_extra"
         case "$xmlProbe" in
           *appwidget-provider*) slug="appwidgets"; file="app-widgets.md"; name="App-Widgets (Glance/RemoteViews/AppWidgetProvider)";;
         esac
+        # Network Security Config (Cleartext fuer private IP / interne-CA-trust-anchors) -> client-anbindung.md.
+        if [ -z "$file" ]; then
+          case "$fpl" in *network_security_config*) slug="clientanbindung"; file="client-anbindung.md"; name="Endgeraet-zu-self-hosted-Server-Anbindung (VPN/REST)";; esac
+        fi
+        if [ -z "$file" ]; then
+          case "$xmlProbe" in *network-security-config*|*cleartextTrafficPermitted*) slug="clientanbindung"; file="client-anbindung.md"; name="Endgeraet-zu-self-hosted-Server-Anbindung (VPN/REST)";; esac
+        fi
         ;;
     *.kt|*.kts)
         # .kt/.kts: ZENTRALE Android/Kotlin-Erkennung. Inhalt EINMAL proben, dann nach Prioritaet routen.
@@ -330,7 +347,29 @@ $ti_extra"
             case "$probe" in *MTKView*|*MTLDevice*|*MTLCreateSystemDefaultDevice*|*SceneKit*|*SCNView*|*RealityKit*|*RealityView*|*MetalFX*|*MetalKit*) metalSignal=1;; esac
             ;;
         esac
-        if [ "$whisperSignal" -eq 1 ]; then
+        # Info.plist/entitlements mit ATS/Local-Network/network.client -> Client-Anbindung (VPN/REST ans eigene Backend).
+        clientAnbindungSignal=0
+        case "$fpl" in
+          */info.plist|info.plist|*.entitlements)
+            plistProbe=""
+            [ -f "$fp" ] && plistProbe=$(cat "$fp" 2>/dev/null || true)
+            plist_extra=$(printf '%s' "$input" | python3 -c "import json,sys
+try:
+    d=json.load(sys.stdin); ti=d.get('tool_input') or {}
+    parts=[ti.get('content','') or '', ti.get('new_string','') or '']
+    for e in (ti.get('edits') or []): parts.append(e.get('new_string','') or '')
+    print('\n'.join(parts))
+except Exception:
+    print('')
+" 2>/dev/null || true)
+            plistProbe="$plistProbe
+$plist_extra"
+            case "$plistProbe" in *NSAppTransportSecurity*|*NSAllowsLocalNetworking*|*NSLocalNetworkUsageDescription*|*NSExceptionAllowsInsecureHTTPLoads*|*com.apple.security.network.client*) clientAnbindungSignal=1;; esac
+            ;;
+        esac
+        if [ "$clientAnbindungSignal" -eq 1 ]; then
+            slug="clientanbindung"; file="client-anbindung.md"; name="Endgeraet-zu-self-hosted-Server-Anbindung (VPN/REST)"
+        elif [ "$whisperSignal" -eq 1 ]; then
             slug="whisperlokal"; file="whisper-stt-lokal.md"; name="On-Device-Whisper / lokale Transkription"
         elif [ "$macOverlaySignal" -eq 1 ]; then
             slug="macosoverlay"; file="macos-overlay.md"; name="macOS-Overlay-Fenster (Swift/AppKit)"
@@ -345,6 +384,7 @@ $ti_extra"
         # Inhalt aus existierender Datei UND Tool-Input pruefen (analog Compose-Probe). FAIL-OPEN (trap).
         mcpSignal=0
         threejsSignal=0
+        motionAssetSignal=0
         case "$fpl" in
           *.ts|*.tsx)
             probe=""
@@ -367,16 +407,63 @@ $ti_extra"
             case "$probe" in
               *THREE.*|*three/examples*|*@react-three/fiber*|*@react-three/drei*|*@babylonjs*|*WebGPURenderer*|*GLTFLoader*|*KTX2Loader*|*PMREMGenerator*) threejsSignal=1;;
             esac
+            # Lottie/Rive/SVG-Animationen -> lottie-rive-svg-animationen.md (nach MCP, vor generischem TypeScript).
+            case "$probe" in
+              *lottie*|*bodymovin*|*@lottiefiles*|*@rive-app*|*useRive*|*RiveComponent*|*rive.wasm*|*RuntimeLoader*|*loadAnimation*) motionAssetSignal=1;;
+            esac
             ;;
         esac
         if [ "$mcpSignal" -eq 1 ]; then
             slug="mcpserver"; file="mcp-server.md"; name="MCP-Server-Bau (Model Context Protocol)"
+        elif [ "$motionAssetSignal" -eq 1 ]; then
+            slug="lottierivesvg"; file="lottie-rive-svg-animationen.md"; name="Lottie / Rive / SVG-Animationen im Web"
         elif [ "$threejsSignal" -eq 1 ]; then
             slug="threejs"; file="3d-threejs-webgpu.md"; name="3D im Web (Three.js/Babylon/WebGPU)"
         else
             slug="typescript"; file="typescript.md"; name="TypeScript / Node"
         fi
         ;;
+    *.riv|*.lottie|*lottie*.json|*bodymovin*.json|*rive*.json)
+        slug="lottierivesvg"; file="lottie-rive-svg-animationen.md"; name="Lottie / Rive / SVG-Animationen im Web";;
+    *.json)
+        # Lottie-JSON ohne sprechenden Dateinamen nur per Inhalt erkennen, damit package.json/Configs nicht gekapert werden.
+        jsonProbe=""
+        [ -f "$fp" ] && jsonProbe=$(cat "$fp" 2>/dev/null || true)
+        json_extra=$(printf '%s' "$input" | python3 -c "import json,sys
+try:
+    d=json.load(sys.stdin); ti=d.get('tool_input') or {}
+    parts=[ti.get('content','') or '', ti.get('new_string','') or '']
+    for e in (ti.get('edits') or []): parts.append(e.get('new_string') or '')
+    print('\n'.join(parts))
+except Exception:
+    print('')
+" 2>/dev/null || true)
+        jsonProbe="$jsonProbe
+$json_extra"
+        case "$jsonProbe" in
+          *\"fr\"*:*\"layers\"*:*) slug="lottierivesvg"; file="lottie-rive-svg-animationen.md"; name="Lottie / Rive / SVG-Animationen im Web";;
+        esac
+        ;;
+    *.svg)
+        svgProbe=""
+        [ -f "$fp" ] && svgProbe=$(cat "$fp" 2>/dev/null || true)
+        svg_extra=$(printf '%s' "$input" | python3 -c "import json,sys
+try:
+    d=json.load(sys.stdin); ti=d.get('tool_input') or {}
+    parts=[ti.get('content','') or '', ti.get('new_string','') or '']
+    for e in (ti.get('edits') or []): parts.append(e.get('new_string') or '')
+    print('\n'.join(parts))
+except Exception:
+    print('')
+" 2>/dev/null || true)
+        svgProbe="$svgProbe
+$svg_extra"
+        case "$svgProbe" in
+          *'<animate'*|*'<animateTransform'*|*'<animateMotion'*|*'<set'*|*'<mask'*|*'<clipPath'*|*pathLength*|*stroke-dasharray*) slug="lottierivesvg"; file="lottie-rive-svg-animationen.md"; name="Lottie / Rive / SVG-Animationen im Web";;
+        esac
+        ;;
+    *.html|*.css|*.scss|*.sass)
+        slug="webdesign"; file="webseitenbau-webdesign.md"; name="Webseitenbau / Webdesign / visuelle Effekte";;
     *.ico|*.icns)
         # App-Icon-Asset-Datei (.ico Windows / .icns macOS). Eindeutige Endung. Icon-Build-Skripte zusaetzlich per .py-Content-Probe.
         slug="iconbuilding"; file="icon-building.md"; name="App-Icon-Building (Windows/.ico, macOS/.icns, Android adaptive)";;
@@ -470,8 +557,32 @@ $ti_extra"
         case "$probe" in
           *faster_whisper*|*faster-whisper*|*whisper.cpp*|*WhisperModel*|*ctranslate2*|*pywhispercpp*) whisperPy=1;;
         esac
+        # Serverseitiger autonomer KI-Agent: Framework (pydantic-ai/langgraph) ODER eigene Tool-Loop im agent/-Ordner -> ai-agent-frameworks.md.
+        agentPy=0
+        case "$probe" in
+          *pydantic_ai*|*pydantic-ai*|*"from langgraph"*|*"import langgraph"*|*langchain.agents*|*create_react_agent*|*StateGraph*) agentPy=1;;
+        esac
+        if [ "$agentPy" -eq 0 ]; then
+          case "$fpl" in
+            */agent/*.py|agent/*.py)
+              case "$probe" in
+                *generate_content*|*tool_use*|*system_instruction*|*llm_decide*|*brain_store*|*brain_search*) agentPy=1;;
+              esac
+              ;;
+          esac
+        fi
+        # FastAPI/uvicorn-Web-Schicht (Endpoints/Middleware/lifespan/Body-Handling) -> fastapi.md. NACH mcp/agent
+        # (agent/*.py bleibt ai-agent-frameworks), faengt brain-api/dashboard und andere FastAPI-Services.
+        fastapiPy=0
+        case "$probe" in
+          *"from fastapi"*|*"import fastapi"*|*"FastAPI("*|*APIRouter*|*"@app.get"*|*"@app.post"*|*"@app.put"*|*"@app.delete"*|*"@app.patch"*|*uvicorn*) fastapiPy=1;;
+        esac
         if [ "$mcpPy" -eq 1 ]; then
             slug="mcpserver"; file="mcp-server.md"; name="MCP-Server-Bau (Model Context Protocol)"
+        elif [ "$agentPy" -eq 1 ]; then
+            slug="aiagentframeworks"; file="ai-agent-frameworks.md"; name="Serverseitige autonome KI-Agenten (Loop/Tools/State/Kosten)"
+        elif [ "$fastapiPy" -eq 1 ]; then
+            slug="fastapi"; file="fastapi.md"; name="FastAPI & async-Python-Server (uvicorn-Web-Schicht)"
         elif [ "$iconPy" -eq 1 ]; then
             slug="iconbuilding"; file="icon-building.md"; name="App-Icon-Building (Windows/.ico, macOS/.icns, Android adaptive)"
         elif [ "$whisperPy" -eq 1 ]; then

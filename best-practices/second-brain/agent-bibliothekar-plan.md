@@ -147,4 +147,4 @@ Ein Mechanismus (semantischer Aehnlichkeits-Check), zwei Pruefrichtungen:
 - [[speicher-schema-1zu1]] — das as-built 1:1-Schema (Datenmodell, Payload, Kategorien, gefilterte Suche)
 - [[project_second_brain_flugplan]] — Flugplan (Phase 1-6), [[project_second_brain_memory_server]] — voller Stand
 - `second-brain-server/` — der Stack (brain-api, mcp; hier kommt `sb-agent` dazu)
-- `~/.claude/rules/observability-first.md` + `observability-live-logic-probes.md` — Sonden-Pflicht beim Bau
+- `~/.claude/rules/observability-first.md` — Sonden-Pflicht beim Bau

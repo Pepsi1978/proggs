@@ -26,7 +26,9 @@ Observability-First: strukturiertes JSON-Logging (stdout + rotierende Datei), gl
                      Logik-Sonden (probe) + Intent-Checkpoints (checkpoint, beweisen das 1:1-Prinzip live).
 
 Bekannte Fallen beachtet (Almanach): Qdrant api_key erzwingt sonst TLS -> explizite http://-URL
-(bugs/server/qdrant.md §4); Gemini-Embedding defaultet auf 768 -> output_dimensionality EXPLIZIT 1536
+(bugs/server/qdrant.md §4); gemini-embedding-2 (GA, multimodal): output_dimensionality EXPLIZIT 3072;
+task_type entfaellt -> Text-Praefixe (title:|text: / 'task: search result | query:'); eine Liste aggregiert
+-> pro Text 1 Call (bugs/apis/google-gemini-api.md §J)
 (bugs/server/mem0.md §2, best-practices/second-brain/memory-backends.md §0); JSON-Log ensure_ascii=False
 + FileHandler encoding=utf-8 (bugs/claude-tooling/python-windows.md §1.1/§1.5).
 
@@ -42,7 +44,9 @@ import re
 import threading
 import time
 import traceback
+import unicodedata
 import uuid
+from concurrent.futures import ThreadPoolExecutor
 from datetime import date, datetime, timezone
 from logging.handlers import RotatingFileHandler
 from pathlib import Path
@@ -70,8 +74,13 @@ QDRANT_PORT = int(os.getenv("QDRANT_PORT", "6333"))
 QDRANT_URL = os.getenv("QDRANT_URL", f"http://{QDRANT_HOST}:{QDRANT_PORT}")
 COLLECTION = os.getenv("SB_COLLECTION", "brain")
 ENTITY_COLLECTION = os.getenv("SB_ENTITY_COLLECTION", "brain_entities")   # Entity-Register (Nr. 36)
-EMBED_MODEL = os.getenv("GEMINI_EMBED_MODEL", "gemini-embedding-001")
-EMBED_DIMS = int(os.getenv("SB_EMBED_DIMS", "1536"))
+EMBED_MODEL = os.getenv("GEMINI_EMBED_MODEL", "gemini-embedding-2")
+EMBED_DIMS = int(os.getenv("SB_EMBED_DIMS", "3072"))
+# gemini-embedding-2 (multimodal, GA): task_type entfaellt -> Text-Praefixe; eine Liste an embed_content
+# AGGREGIERT zu EINEM Vektor -> pro Text EIN Call, parallel (bugs/apis/google-gemini-api.md §J23/§J24).
+# (gemini-embedding-001-Fallback bewusst entfernt 2026-07-08 auf Frank-Wunsch — reproduzierbar ueber
+#  docs/superpowers/specs + plans, falls je wieder gewuenscht.)
+EMBED_PARALLEL = int(os.getenv("SB_EMBED_PARALLEL", "8"))             # parallele Einzel-Calls
 def _env_int(name: str, default: int) -> int:
     try:
         return int(os.getenv(name, str(default)))
@@ -79,9 +88,10 @@ def _env_int(name: str, default: int) -> int:
         return default
 
 
-# Chunking fuer die SUCHE (gemini-embedding-001: ~2048 Token Input-Limit). Konservativ in Zeichen.
-CHUNK_CHARS = _env_int("SB_CHUNK_CHARS", 4000)
-CHUNK_OVERLAP = _env_int("SB_CHUNK_OVERLAP", 200)
+# Chunking fuer die SUCHE. gemini-embedding-2: 8192 Token Input-Limit (~12000 Zeichen konservativ).
+# Per Env uebersteuerbar (SB_CHUNK_CHARS / SB_CHUNK_OVERLAP).
+CHUNK_CHARS = _env_int("SB_CHUNK_CHARS", 12000)
+CHUNK_OVERLAP = _env_int("SB_CHUNK_OVERLAP", 600)
 SEARCH_OVERFETCH_FACTOR = _env_int("SB_SEARCH_OVERFETCH_FACTOR", 4)
 SEARCH_DATE_OVERFETCH_FACTOR = _env_int("SB_SEARCH_DATE_OVERFETCH_FACTOR", 20)
 BM25_CANDIDATE_FACTOR = _env_int("SB_BM25_CANDIDATE_FACTOR", 4)
@@ -116,8 +126,46 @@ BRAIN_LIMIT_BOUNDS = {
 }
 
 
+_CATEGORY_ALIASES: dict[str, str] = {
+    "gespräche": "Gespräche",
+    "gespraeche": "Gespräche",
+}
+
+
+def category_key(category: str | None) -> str:
+    return unicodedata.normalize("NFC", (category or "").strip()).casefold()
+
+
+def canonical_category(category: str | None) -> str:
+    c = unicodedata.normalize("NFC", (category or "").strip())
+    return _CATEGORY_ALIASES.get(category_key(c), c)
+
+
+def category_aliases(category: str | None) -> list[str]:
+    c = canonical_category(category)
+    if category_key(c) == "gespräche":
+        return ["Gespräche", "gespräche", "gespraeche"]
+    return [c] if c else []
+
+
+def _category_match_filter(category: str) -> Filter:
+    aliases = category_aliases(category)
+    return Filter(should=[cond for alias in aliases for cond in (
+        FieldCondition(key="categories", match=MatchValue(value=alias)),
+        FieldCondition(key="category", match=MatchValue(value=alias)),
+    )])
+
+
+def _parent_match_filter(parent: str) -> Filter:
+    aliases = category_aliases(parent)
+    return Filter(should=[cond for alias in aliases for cond in (
+        FieldCondition(key="parents", match=MatchValue(value=alias)),
+        FieldCondition(key="parent", match=MatchValue(value=alias)),
+    )])
+
+
 def is_overview_total_excluded(category: str | None) -> bool:
-    c = (category or "").strip().casefold()
+    c = category_key(category)
     return c in {"gespräche", "gespraeche"} or c == "bugfixes" or c.startswith("bugfixes/")
 
 # ---------------------------------------------------------------------------
@@ -251,7 +299,7 @@ init_error: str | None = None
 probe(bool(GEMINI_API_KEY), "GEMINI_API_KEY fehlt")
 probe(bool(SB_API_KEY) and len(SB_API_KEY) >= 32, "SB_API_KEY fehlt/zu kurz")
 probe(bool(QDRANT_API_KEY), "QDRANT_API_KEY fehlt")
-probe(EMBED_DIMS in (768, 1536, 3072), "EMBED_DIMS unerwartet (gemini-embedding-001: 768/1536/3072)", dims=EMBED_DIMS)
+probe(EMBED_DIMS in (768, 1536, 3072), "EMBED_DIMS unerwartet (gemini-embedding-2: 768/1536/3072)", dims=EMBED_DIMS)
 
 # Optionaler Datetime-Range-Filter (qdrant-client >= ~1.8). Fehlt er -> Datum-Filter in /search
 # degradiert sauber auf einen Python-Nachfilter (Funktionserhalt, Direktive #3).
@@ -281,7 +329,7 @@ def _init_store() -> None:
         )
         _log(logging.INFO, "Collection angelegt", collection=COLLECTION, dims=EMBED_DIMS)
     # Payload-Indizes fuer schnelle/zuverlaessige Filter (idempotent — Fehler ignorieren)
-    for _field in ("doc_id", "title", "category", "categories", "parent", "parents", "user_id"):
+    for _field in ("doc_id", "title", "category", "categories", "parent", "parents", "user_id", "source"):
         try:
             qc.create_payload_index(collection_name=COLLECTION, field_name=_field, field_schema="keyword")
         except Exception:  # noqa: BLE001 — Index existiert bereits / nicht kritisch
@@ -378,6 +426,10 @@ _init_last_attempt = 0.0
 # Eval-Check legt Test-Entitaeten an) + invalidiert den BM25-Cache (purge lief an _delete_doc vorbei).
 VERSION = "1.24.0 (06.07.2026, 17:23 Uhr)"  # 1.24.0: Dashboard-Limits vervollstaendigt. Zusaetzlich zu Chunking, dense Overfetch und BM25 ist jetzt auch search_date_overfetch_factor persistent ueber /limits einstellbar; Datumsfragen ohne nativen DatetimeRange-Fallback koennen damit gruendlicher suchen, ohne die uebrigen Suchpfade zu veraendern. Alt: 1.23.0.
 
+VERSION = "1.26.0 (08.07.2026, 18.50 Uhr)"  # 1.26.0: UMSTIEG AUF gemini-embedding-2 (3072 Dim, GA). task_type -> Text-Praefixe (Dokument 'title: … | text: …', Suchanfrage 'task: search result | query: …'); embed_many nutzt bei E2 EINEN Call je Text (eine Liste wuerde AGGREGIEREN, bugs/apis/google-gemini-api.md §J23), parallel ueber ThreadPool (SB_EMBED_PARALLEL); Chunk-Default 12000 Zeichen (8192-Token-Limit statt 2048). Modell-abhaengig: Fallback auf gemini-embedding-001 (1536) bleibt allein per Env moeglich (task_type + Listen-Batch). Blau/Gruen-Migration via migrate_to_embedding2.py. Alt: 1.25.0.
+VERSION = "1.27.0 (08.07.2026, 20.06 Uhr)"  # 1.27.0 (Frank-Wunsch 2026-07-08): gemini-embedding-001-Fallback KOMPLETT ausgebaut — nur noch gemini-embedding-2 (3072). IS_EMBED2-Verzweigung + Batch-Pfad (EMBED_BATCH) + '[Titel:…]'-Altpraefix entfernt; embed/embed_many/embed_input/_entity_embed_text sind reine E2-Logik. Verhalten fuer den Nutzer unveraendert (E2 lief bereits live). Wiederherstellung von -001 jederzeit reproduzierbar ueber docs/superpowers/specs + plans. Alt: 1.26.0.
+VERSION = "1.27.1 (08.07.2026, 20:14 Uhr)"  # 1.27.1: FIX Kategorie-Doppelung Gespräche. Altbestand 'gespräche' und neue Kategorie 'Gespräche' werden Unicode-normalisiert, case-insensitiv erkannt und kanonisch als 'Gespräche' gezaehlt/abgerufen; neue Schreibwege normalisieren bekannte Varianten. Alt: 1.27.0.
+
 # Startup-Banner (Observability-First: Log-Pfad + Version EINMAL ausgeben)
 _log(logging.INFO, "brain-api startet", version=VERSION, log_path=LOG_PATH)
 
@@ -417,43 +469,41 @@ def chunk_text(text: str) -> list[str]:
 
 
 def embed(text: str, task_type: str) -> list[float]:
-    """Text -> Vektor via Gemini. task_type='RETRIEVAL_DOCUMENT' beim Speichern,
-    'RETRIEVAL_QUERY' beim Suchen (asymmetrische Suche = bessere Treffer)."""
+    """Text -> Vektor via gemini-embedding-2. task_type ist der interne Modus-Indikator: bei
+    'RETRIEVAL_QUERY' wird das offizielle Query-Praefix vorangestellt; Dokumente sind bereits via
+    embed_input als 'title: … | text: …' formatiert. task_type wird NICHT an die API gesendet
+    (bei gemini-embedding-2 entfernt, bugs/apis/google-gemini-api.md §J24)."""
+    content = f"task: search result | query: {text}" if task_type == "RETRIEVAL_QUERY" else text
     resp = gclient.models.embed_content(
         model=EMBED_MODEL,
-        contents=text,
-        config=genai_types.EmbedContentConfig(output_dimensionality=EMBED_DIMS, task_type=task_type),
+        contents=content,
+        config=genai_types.EmbedContentConfig(output_dimensionality=EMBED_DIMS),
     )
     vec = list(resp.embeddings[0].values)
     probe(len(vec) == EMBED_DIMS, "Embedding-Dimension weicht ab", got=len(vec), want=EMBED_DIMS)
     return vec
 
 
-# Batch-Groesse fuer embed_many: die Gemini-API nimmt MEHRERE contents in EINEM Call entgegen
-# (Antwort: eine embeddings-Liste in Eingabe-Reihenfolge). Konservativ 16 je Request.
-EMBED_BATCH = int(os.getenv("SB_EMBED_BATCH", "16"))
-
-
 def embed_many(texts: list[str], task_type: str) -> list[list[float]]:
-    """MEHRERE Texte in einem API-Call je Batch embedden (Tiefen-Debugging Performance 2026-07-02).
-    Vorher liefen die Chunks eines Dokuments SERIELL durch embed() — ein 150-Chunk-Dokument
-    brauchte 150 Round-Trips (Minuten). Identische Vektoren (gleiche Inputs, gleiches task_type,
-    gleiche Dimension), nur gebuendelte Requests. Bei Anzahl-Mismatch wird HART abgebrochen
-    (RuntimeError) statt Vektoren still falsch zuzuordnen (Direktive #3)."""
-    out: list[list[float]] = []
-    for start in range(0, len(texts), EMBED_BATCH):
-        batch = texts[start:start + EMBED_BATCH]
-        resp = gclient.models.embed_content(
+    """MEHRERE Texte einbetten (gemini-embedding-2): EIN embed_content-Call je Text (eine Liste wuerde
+    AGGREGIEREN, bugs/apis/google-gemini-api.md §J23), parallel ueber einen ThreadPool (der Handler
+    laeuft selbst als def im anyio-Threadpool -> zulaessig, fastapi §1), Reihenfolge streng an den Index
+    gebunden. Vektor-ANZAHL == Eingabe-Anzahl, sonst HART abbrechen (RuntimeError) statt Vektoren still
+    falsch zuzuordnen (Direktive #3)."""
+    def _one(t: str) -> list[float]:
+        content = f"task: search result | query: {t}" if task_type == "RETRIEVAL_QUERY" else t
+        r = gclient.models.embed_content(
             model=EMBED_MODEL,
-            contents=batch,
-            config=genai_types.EmbedContentConfig(output_dimensionality=EMBED_DIMS, task_type=task_type),
+            contents=content,
+            config=genai_types.EmbedContentConfig(output_dimensionality=EMBED_DIMS),
         )
-        vecs = [list(e.values) for e in (resp.embeddings or [])]
-        if len(vecs) != len(batch):
-            raise RuntimeError(f"Batch-Embedding: {len(vecs)} Vektoren fuer {len(batch)} Texte")
-        for v in vecs:
-            probe(len(v) == EMBED_DIMS, "Embedding-Dimension weicht ab", got=len(v), want=EMBED_DIMS)
-        out.extend(vecs)
+        v = list(r.embeddings[0].values)
+        probe(len(v) == EMBED_DIMS, "Embedding-Dimension weicht ab", got=len(v), want=EMBED_DIMS)
+        return v
+    with ThreadPoolExecutor(max_workers=max(1, EMBED_PARALLEL)) as ex:
+        out = list(ex.map(_one, texts))   # ex.map bewahrt die Eingabe-Reihenfolge
+    if len(out) != len(texts):
+        raise RuntimeError(f"Einzel-Embedding: {len(out)} Vektoren fuer {len(texts)} Texte")
     return out
 
 
@@ -571,17 +621,18 @@ def category_parent(category: str | None) -> str:
     Ohne '/' ist die Kategorie selbst die Hauptkategorie. Leer -> ''. Wird als eigenes Payload-Feld
     'parent' gespeichert, damit 'alles unter Haupt' ein exakter MatchValue-Filter ist (Qdrant hat
     KEINEN Praefix-Operator, bugs/server/qdrant.md §7)."""
-    c = (category or "").strip()
+    c = canonical_category(category)
     if not c:
         return ""
     return c.split("/", 1)[0].strip()
 
 
 def _dedup(seq: list[str]) -> list[str]:
-    """Reihenfolge erhalten, case-insensitiv deduplizieren (erste Schreibweise gewinnt)."""
+    """Reihenfolge erhalten, Unicode/case-insensitiv deduplizieren; bekannte Aliase kanonisieren."""
     seen: set = set(); out: list[str] = []
     for x in seq:
-        k = x.casefold()
+        x = canonical_category(x)
+        k = category_key(x)
         if k not in seen:
             seen.add(k); out.append(x)
     return out
@@ -598,10 +649,10 @@ def cats_from_payload(pl: dict) -> list[str]:
     neue Listen-Feld 'categories', faellt sonst auf das alte Einzel-Feld 'category' zurueck."""
     raw = pl.get("categories")
     if isinstance(raw, list):
-        out = _dedup([c.strip() for c in raw if isinstance(c, str) and c.strip()])
+        out = _dedup([canonical_category(c) for c in raw if isinstance(c, str) and c.strip()])
         if out:
             return out
-    one = (pl.get("category") or "").strip()
+    one = canonical_category(pl.get("category"))
     return [one] if one else []
 
 
@@ -609,9 +660,9 @@ def norm_cats(categories: list[str] | None, category: str | None) -> list[str]:
     """Eingehende Kategorien (Liste ODER einzelner String, beide Request-Formen) -> saubere,
     deduplizierte Liste; Reihenfolge erhalten, erste = primaer."""
     if categories:
-        return _dedup([c.strip() for c in categories if isinstance(c, str) and c.strip()])
+        return _dedup([canonical_category(c) for c in categories if isinstance(c, str) and c.strip()])
     if category and category.strip():
-        return [category.strip()]
+        return [canonical_category(category)]
     return []
 
 
@@ -626,12 +677,12 @@ def embed_input(title: str | None, categories: list[str], text: str) -> str:
     Jede Kategorie-/Titel-Aenderung erzwingt Re-Embed (§4) — 'jede Aenderung fuehrt zum neuen Vektor'."""
     t = (title or "").strip()
     exp = [" > ".join(s.strip() for s in c.split("/") if s.strip()) for c in categories if c and c.strip()]
-    parts: list[str] = []
-    if t:
-        parts.append(f"Titel: {t}")
+    # Offizielles gemini-embedding-2-Dokumentpraefix 'title: {…} | text: {…}' (ohne Titel -> 'none').
+    # Kategorien fliessen in den title-Teil -> metadata-enriched retrieval bleibt erhalten (§4).
+    head = t
     if exp:
-        parts.append("Kategorien: " + ", ".join(exp))
-    return f"[{' | '.join(parts)}]\n\n{text}" if parts else text
+        head = f"{t} · {', '.join(exp)}" if t else ", ".join(exp)
+    return f"title: {head or 'none'} | text: {text}"
 
 
 def point_id(doc_id: str, idx: int) -> str:
@@ -848,6 +899,7 @@ class StoreReq(BaseModel):
     title: str | None = Field(default=None, description="Optionaler Titel = Schluessel (gleicher Titel ersetzt)")
     category: str | None = Field(default=None, description="Optionale Kategorie (Abwaertskompat: einzelne Kategorie)")
     categories: list[str] | None = Field(default=None, max_length=12, description="Optional MEHRERE Kategorien (Multi-Category); hat Vorrang vor 'category'. Erste = primaer.")
+    source: str | None = Field(default="manual", max_length=40, description="Herkunft des Schreibers, z.B. manual, entropyreductor oder librarian")
     user_id: str = Field(default="frank", description="Besitzer (aktuell immer 'frank')")
 
 
@@ -996,6 +1048,7 @@ def store(req: StoreReq) -> dict:
     category = cats[0] if cats else ""        # primaere Kategorie (Abwaertskompat)
     parents = category_parents(cats)
     parent = parents[0] if parents else ""    # primaerer Haupt-Teil (Abwaertskompat)
+    source = (req.source or "manual").strip().lower() or "manual"
     chunks = chunk_text(req.text)
     _guard_embed_budget(len(chunks))
     t0 = time.time()
@@ -1017,6 +1070,7 @@ def store(req: StoreReq) -> dict:
             "full_text": req.text,   # 1:1 — exakt die Eingabe, in jedem Chunk gehalten
             "created_at": created_at,
             "updated_at": now,
+            "source": source,
         }))
     _upsert_batched(points)
 
@@ -1024,10 +1078,10 @@ def store(req: StoreReq) -> dict:
     stored_ok = bool(points) and points[0].payload["full_text"] == req.text
     checkpoint("store", "Text wird WORTWOERTLICH 1:1 gespeichert (keine KI-Bearbeitung)", ok=stored_ok,
                title=req.title or None, category=req.category or None, chunks=len(chunks),
-               chars=len(req.text), replaced=replaced, ms=int((time.time() - t0) * 1000))
+               chars=len(req.text), replaced=replaced, source=source, ms=int((time.time() - t0) * 1000))
     return {"ok": True, "doc_id": doc_id, "title": req.title or None,
             "category": req.category or None, "chunks": len(chunks), "chars": len(req.text),
-            "replaced": replaced}
+            "source": source, "replaced": replaced}
 
 
 def _sort_recent(items) -> list[dict]:
@@ -1066,6 +1120,7 @@ def by_title(title: str, user_id: str = "frank") -> dict:
     return {"ok": True, "found": True, "title": real_title, "doc_id": doc_id,
             "category": points[0].payload.get("category") or None,
             "categories": cats_from_payload(points[0].payload),
+            "source": points[0].payload.get("source") or None,
             "created_at": points[0].payload.get("created_at"),
             "updated_at": points[0].payload.get("updated_at"), "text": full}
 
@@ -1074,7 +1129,7 @@ def by_title(title: str, user_id: str = "frank") -> dict:
 def by_category(category: str, user_id: str = "frank") -> dict:
     """Alle Eintraege einer Kategorie (auf Dokument-Ebene dedupliziert), jeweils 1:1."""
     _require_store()
-    cat = category.strip()
+    cat = canonical_category(category)
     points = _scroll(Filter(must=[
         FieldCondition(key="user_id", match=MatchValue(value=user_id)),
         # NUR Chunk 0 je Dokument: full_text ist 1:1 in JEDEM Chunk -> 1 Chunk genuegt; verhindert,
@@ -1082,20 +1137,20 @@ def by_category(category: str, user_id: str = "frank") -> dict:
         # Frank-Bug 2026-06-26 — ein 1,4M-Doc je Kategorie haette sonst N Kopien geladen).
         FieldCondition(key="chunk_index", match=MatchValue(value=0)),
         # Multi-Category: matcht das neue Array 'categories' ODER (Abwaertskompat) das alte 'category'
-        Filter(should=[FieldCondition(key="categories", match=MatchValue(value=cat)),
-                       FieldCondition(key="category", match=MatchValue(value=cat))]),
+        _category_match_filter(cat),
     ]))
     seen: dict[str, dict] = {}
     for p in points:
         did = p.payload.get("doc_id")
         if did not in seen:
             seen[did] = {"doc_id": did, "title": p.payload.get("title") or None,
-                         "text": p.payload.get("full_text", ""), "category": p.payload.get("category") or None,
-                         "categories": cats_from_payload(p.payload),
-                         "created_at": p.payload.get("created_at"),
-                         "updated_at": p.payload.get("updated_at")}
+                          "text": p.payload.get("full_text", ""), "category": canonical_category(p.payload.get("category")) or None,
+                          "categories": cats_from_payload(p.payload),
+                          "source": p.payload.get("source") or None,
+                          "created_at": p.payload.get("created_at"),
+                          "updated_at": p.payload.get("updated_at")}
     items = _sort_recent(seen.values())   # Neueste zuerst (nach Aktualitaet)
-    return {"ok": True, "category": category, "count": len(items), "items": items}
+    return {"ok": True, "category": cat, "count": len(items), "items": items}
 
 
 @app.get("/category-item", dependencies=[Depends(require_auth)])
@@ -1108,13 +1163,12 @@ def category_item(category: str, index: int = 1, user_id: str = "frank") -> dict
     (unabhaengig von updated_at). OOM-sicher: fuer die Liste NUR Metadaten, den Volltext NUR fuer den
     EINEN gewuenschten Eintrag (fastapi §8, wie /by-title)."""
     _require_store()
-    cat = category.strip()
+    cat = canonical_category(category)
     # 1) NUR Metadaten aller Eintraege der Kategorie (KEIN full_text -> kein OOM auch bei grossen Kategorien)
     points = _scroll(Filter(must=[
         FieldCondition(key="user_id", match=MatchValue(value=user_id)),
         FieldCondition(key="chunk_index", match=MatchValue(value=0)),   # 1 Chunk je Doc -> 1 Zeile je Eintrag
-        Filter(should=[FieldCondition(key="categories", match=MatchValue(value=cat)),
-                       FieldCondition(key="category", match=MatchValue(value=cat))]),
+        _category_match_filter(cat),
     ]), with_payload=["doc_id", "title"])
     seen: dict[str, str] = {}   # doc_id -> Titel (dedupliziert)
     for p in points:
@@ -1125,9 +1179,9 @@ def category_item(category: str, index: int = 1, user_id: str = "frank") -> dict
     ordered = sorted(seen.items(), key=lambda kv: (kv[1].lower(), kv[0]))
     total = len(ordered)
     if total == 0:
-        return {"ok": True, "found": False, "category": category, "index": index, "total": 0, "text": None}
+        return {"ok": True, "found": False, "category": cat, "index": index, "total": 0, "text": None}
     if index < 1 or index > total:
-        return {"ok": True, "found": False, "category": category, "index": index, "total": total,
+        return {"ok": True, "found": False, "category": cat, "index": index, "total": total,
                 "text": None, "error": f"index {index} ausserhalb 1..{total}"}
     doc_id, title = ordered[index - 1]
     # 2) Volltext NUR fuer diesen einen Eintrag (limit=1; full_text liegt 1:1 in jedem Chunk)
@@ -1135,9 +1189,10 @@ def category_item(category: str, index: int = 1, user_id: str = "frank") -> dict
     full = pts[0].payload.get("full_text", "") if pts else ""
     checkpoint("category_item", "Sequentieller Kategorie-Abruf per Index (1:1)", ok=bool(full),
                category=cat, index=index, total=total, title=title, chars=len(full))
-    return {"ok": True, "found": True, "category": category, "index": index, "total": total,
+    return {"ok": True, "found": True, "category": cat, "index": index, "total": total,
             "title": title, "doc_id": doc_id,
-            "categories": cats_from_payload(pts[0].payload) if pts else [], "text": full}
+            "categories": cats_from_payload(pts[0].payload) if pts else [],
+            "source": (pts[0].payload.get("source") or None) if pts else None, "text": full}
 
 
 @app.get("/by-parent", dependencies=[Depends(require_auth)])
@@ -1145,26 +1200,26 @@ def by_parent(parent: str, user_id: str = "frank") -> dict:
     """Alle Eintraege UNTER einer Hauptkategorie (= 'Haupt' und alle 'Haupt/Unter'), via parent-Feld
     (exakter MatchValue — Qdrant hat keinen Praefix-Operator). Auf Dokument-Ebene dedupliziert, 1:1."""
     _require_store()
-    par = parent.strip()
+    par = canonical_category(parent)
     points = _scroll(Filter(must=[
         FieldCondition(key="user_id", match=MatchValue(value=user_id)),
         # NUR Chunk 0 je Dokument (full_text 1:1 in jedem Chunk) -> OOM-Schutz bei grossen Docs (s. by_category).
         FieldCondition(key="chunk_index", match=MatchValue(value=0)),
         # Multi-Category: matcht das neue Array 'parents' ODER (Abwaertskompat) das alte 'parent'
-        Filter(should=[FieldCondition(key="parents", match=MatchValue(value=par)),
-                       FieldCondition(key="parent", match=MatchValue(value=par))]),
+        _parent_match_filter(par),
     ]))
     seen: dict[str, dict] = {}
     for p in points:
         did = p.payload.get("doc_id")
         if did not in seen:
             seen[did] = {"doc_id": did, "title": p.payload.get("title") or None,
-                         "text": p.payload.get("full_text", ""), "category": p.payload.get("category") or None,
-                         "categories": cats_from_payload(p.payload),
-                         "parent": p.payload.get("parent") or None,
-                         "created_at": p.payload.get("created_at"), "updated_at": p.payload.get("updated_at")}
+                         "text": p.payload.get("full_text", ""), "category": canonical_category(p.payload.get("category")) or None,
+                          "categories": cats_from_payload(p.payload),
+                          "parent": canonical_category(p.payload.get("parent")) or None,
+                          "source": p.payload.get("source") or None,
+                          "created_at": p.payload.get("created_at"), "updated_at": p.payload.get("updated_at")}
     items = _sort_recent(seen.values())
-    return {"ok": True, "parent": parent, "count": len(items), "items": items}
+    return {"ok": True, "parent": par, "count": len(items), "items": items}
 
 
 @app.post("/backfill-parent", dependencies=[Depends(require_auth)])
@@ -1231,20 +1286,20 @@ def rename_category(req: RenameCategoryReq) -> dict:
     KEIN Re-Embedding). Existiert 'new' bereits, ist das Ergebnis ein Merge (alle 'old'-Eintraege
     wandern nach 'new'). Loescht NIE einen Eintrag."""
     _require_store()
-    old, new = req.old.strip(), req.new.strip()
+    old_raw = (req.old or "").strip()
+    old, new = canonical_category(old_raw), canonical_category(req.new)
     if not old or not new:
         raise HTTPException(status_code=400, detail="old/new duerfen nicht leer sein")
     flt = Filter(must=[
         FieldCondition(key="user_id", match=MatchValue(value=req.user_id)),
         # Multi-Category (seit 1.11.0): auch Eintraege matchen, die 'old' NUR im Array 'categories'
         # tragen (z.B. sekundaere Kategorie) — vorher blieben die komplett unangetastet.
-        Filter(should=[FieldCondition(key="category", match=MatchValue(value=old)),
-                       FieldCondition(key="categories", match=MatchValue(value=old))]),
+        _category_match_filter(old),
     ])
     # OOM-sicher: NUR die Kategorie-Felder laden, KEIN full_text (qdrant §8 / Frank-Bug 2026-06-26)
     pts = _scroll(flt, with_payload=["doc_id", "category", "categories"])
     docs = {p.payload.get("doc_id") for p in pts}
-    if old != new and pts:
+    if (old_raw != new or old != new) and pts:
         # KERN-FIX (Tiefen-Debugging 2026-07-02): das komplette Kategorie-Feld-Set je Punkt neu
         # ableiten — primaeres 'category', das Array 'categories' UND 'parent'/'parents'. Vorher
         # wurde NUR 'category' umgeschrieben; cats_from_payload bevorzugt aber das Array, daher
@@ -1254,9 +1309,9 @@ def rename_category(req: RenameCategoryReq) -> dict:
         for p in pts:
             pl = p.payload or {}
             cats = cats_from_payload(pl)
-            new_cats = _dedup([new if c == old else c for c in cats]) or [new]
-            old_primary = (pl.get("category") or "").strip()
-            cat_primary = new if old_primary == old else old_primary
+            new_cats = _dedup([new if category_key(c) == category_key(old) else c for c in cats]) or [new]
+            old_primary = canonical_category(pl.get("category"))
+            cat_primary = new if category_key(old_primary) == category_key(old) else old_primary
             parents = category_parents(new_cats)
             payload = {"category": cat_primary, "categories": new_cats,
                        "parent": category_parent(cat_primary) or (parents[0] if parents else ""),
@@ -1277,14 +1332,13 @@ def detach_category(req: DetachCategoryReq) -> dict:
     dieser Kategorie. Die Eintraege (Vektoren + Volltext) bleiben vollstaendig erhalten — nur das
     Kategorie-Etikett faellt weg. NIEMALS ein Eintrag geloescht."""
     _require_store()
-    name = req.name.strip()
+    name = canonical_category(req.name)
     if not name:
         raise HTTPException(status_code=400, detail="name darf nicht leer sein")
     flt = Filter(must=[
         FieldCondition(key="user_id", match=MatchValue(value=req.user_id)),
         # Multi-Category (seit 1.11.0): auch Eintraege matchen, die das Etikett NUR im Array tragen
-        Filter(should=[FieldCondition(key="category", match=MatchValue(value=name)),
-                       FieldCondition(key="categories", match=MatchValue(value=name))]),
+        _category_match_filter(name),
     ])
     # OOM-sicher: NUR die Kategorie-Felder laden, KEIN full_text (qdrant §8)
     pts = _scroll(flt, with_payload=["doc_id", "category", "categories"])
@@ -1298,9 +1352,9 @@ def detach_category(req: DetachCategoryReq) -> dict:
         groups: dict[str, tuple[dict, list]] = {}
         for p in pts:
             pl = p.payload or {}
-            new_cats = [c for c in cats_from_payload(pl) if c != name]
-            cat_primary = (pl.get("category") or "").strip()
-            if cat_primary == name:
+            new_cats = [c for c in cats_from_payload(pl) if category_key(c) != category_key(name)]
+            cat_primary = canonical_category(pl.get("category"))
+            if category_key(cat_primary) == category_key(name):
                 cat_primary = new_cats[0] if new_cats else ""
             parents = category_parents(new_cats)
             payload = {"category": cat_primary, "categories": new_cats,
@@ -1337,6 +1391,7 @@ def set_entry_category(req: EntryCategoryReq) -> dict:
     title = (pl.get("title") or "").strip()
     full_text = pl.get("full_text", "")
     created_at = pl.get("created_at", iso_now())
+    source = (pl.get("source") or "manual").strip().lower() or "manual"
     now = iso_now()
 
     _delete_doc(req.doc_id)  # alte Chunks (mit altem Kategorie-Vektor) raus
@@ -1349,7 +1404,7 @@ def set_entry_category(req: EntryCategoryReq) -> dict:
         points.append(PointStruct(id=point_id(req.doc_id, i), vector=vec, payload={
             "doc_id": req.doc_id, "user_id": req.user_id, "title": title,
             "category": new_cat, "categories": new_cats, "parent": new_parent, "parents": new_parents, "chunk_index": i, "chunk_count": len(chunks),
-            "chunk_text": ch, "full_text": full_text, "created_at": created_at, "updated_at": now,
+            "chunk_text": ch, "full_text": full_text, "created_at": created_at, "updated_at": now, "source": source,
         }))
     _upsert_batched(points, wait=True)
     after = _scroll(Filter(must=[FieldCondition(key="doc_id", match=MatchValue(value=req.doc_id))]), limit=1)
@@ -1381,6 +1436,7 @@ def set_entry_categories(req: EntryCategoriesReq) -> dict:
     title = (pl.get("title") or "").strip()
     full_text = pl.get("full_text", "")
     created_at = pl.get("created_at", iso_now())
+    source = (pl.get("source") or "manual").strip().lower() or "manual"
     now = iso_now()
 
     _delete_doc(req.doc_id)  # alte Chunks (mit alten Kategorie-Vektoren) raus
@@ -1395,7 +1451,7 @@ def set_entry_categories(req: EntryCategoriesReq) -> dict:
             "category": cats[0], "categories": cats,
             "parent": (parents[0] if parents else ""), "parents": parents,
             "chunk_index": i, "chunk_count": len(chunks), "chunk_text": ch,
-            "full_text": full_text, "created_at": created_at, "updated_at": now,
+            "full_text": full_text, "created_at": created_at, "updated_at": now, "source": source,
         }))
     _upsert_batched(points, wait=True)
     after = _scroll(Filter(must=[FieldCondition(key="doc_id", match=MatchValue(value=req.doc_id))]), limit=1)
@@ -1462,7 +1518,7 @@ def by_date(date: str, user_id: str = "frank") -> dict:
         did = p.payload.get("doc_id")
         if did not in seen:
             seen[did] = {"doc_id": did, "title": p.payload.get("title") or None,
-                         "category": p.payload.get("category") or None,
+                         "category": canonical_category(p.payload.get("category")) or None,
                          "created_at": created, "updated_at": p.payload.get("updated_at"),
                          "text": p.payload.get("full_text", "")}
     items = list(seen.values())
@@ -1495,9 +1551,8 @@ def search(req: SearchReq) -> dict:
     # Payload-Filter aufbauen (immer user_id; optional Kategorie + Datum)
     must = [FieldCondition(key="user_id", match=MatchValue(value=req.user_id))]
     if req.category and req.category.strip():
-        _c = req.category.strip()   # Multi-Category: neues Array 'categories' ODER altes 'category'
-        must.append(Filter(should=[FieldCondition(key="categories", match=MatchValue(value=_c)),
-                                   FieldCondition(key="category", match=MatchValue(value=_c))]))
+        _c = canonical_category(req.category)   # Multi-Category: neues Array 'categories' ODER altes 'category'
+        must.append(_category_match_filter(_c))
     elif req.parent and req.parent.strip():   # 'alles unter Haupt' (nur wenn keine exakte Kategorie gesetzt)
         _p = req.parent.strip()
         must.append(Filter(should=[FieldCondition(key="parents", match=MatchValue(value=_p)),
@@ -1554,13 +1609,21 @@ def search(req: SearchReq) -> dict:
     bm25_used = False
     if HYBRID_ENABLED:
         try:
-            _cat = (req.category or "").strip()
-            _par = (req.parent or "").strip()
+            _cat = canonical_category(req.category) if req.category and req.category.strip() else ""
+            _par = canonical_category(req.parent) if req.parent and req.parent.strip() else ""
+            _cat_keys = {category_key(a) for a in category_aliases(_cat)} if _cat else set()
+            _par_keys = {category_key(a) for a in category_aliases(_par)} if _par else set()
 
             def _allow(c: dict) -> bool:
-                if _cat and _cat not in (c.get("categories") or []) and _cat != (c.get("category") or ""):
+                c_cat_keys = {category_key(x) for x in (c.get("categories") or [])}
+                if c.get("category"):
+                    c_cat_keys.add(category_key(c.get("category")))
+                if _cat and not (_cat_keys & c_cat_keys):
                     return False
-                if not _cat and _par and _par not in (c.get("parents") or []) and _par != (c.get("parent") or ""):
+                c_par_keys = {category_key(x) for x in (c.get("parents") or [])}
+                if c.get("parent"):
+                    c_par_keys.add(category_key(c.get("parent")))
+                if not _cat and _par and not (_par_keys & c_par_keys):
                     return False
                 if gte or lte:
                     created = (c.get("created_at") or "")[:10]
@@ -1688,6 +1751,7 @@ def delete_entry(doc_id: str, user_id: str = "frank") -> dict:
         # Multi-Category mit in den Papierkorb (Tiefen-Debugging 2026-07-02): vorher ging beim
         # Restore jede sekundaere Kategorie verloren (trash_restore liest via cats_from_payload).
         "categories": cats_from_payload(pl),
+        "source": (pl.get("source") or "manual").strip().lower() or "manual",
         "text": pl.get("full_text", ""),
         "created_at": pl.get("created_at") or iso_now(),
         "deleted_at": iso_now(),
@@ -1718,6 +1782,7 @@ def update_entry(req: UpdateReq) -> dict:
     cats = norm_cats(req.categories, None) or cats_from_payload(pl)   # req.categories ueberschreibt; sonst bisherige Kategorien behalten
     category = cats[0] if cats else ""
     created_at = pl.get("created_at", iso_now())
+    source = (pl.get("source") or "manual").strip().lower() or "manual"
     now = iso_now()
 
     # Titel-Aenderung (Frank-Wunsch): req.title=None -> alter Titel bleibt. Sonst neuer Titel.
@@ -1744,7 +1809,7 @@ def update_entry(req: UpdateReq) -> dict:
         points.append(PointStruct(id=point_id(target_doc_id, i), vector=vec, payload={
             "doc_id": target_doc_id, "user_id": req.user_id, "title": title, "category": category, "categories": cats, "parent": parent, "parents": parents,
             "chunk_index": i, "chunk_count": len(chunks), "chunk_text": ch,
-            "full_text": req.text, "created_at": created_at, "updated_at": now,
+            "full_text": req.text, "created_at": created_at, "updated_at": now, "source": source,
         }))
     _upsert_batched(points)
 
@@ -1826,6 +1891,7 @@ def trash_restore(req: RestoreReq) -> dict:
     cats = cats_from_payload(entry)   # Trash-Eintrag kann 'categories' ODER altes 'category' haben
     category = cats[0] if cats else ""
     created_at = entry.get("created_at") or iso_now()
+    source = (entry.get("source") or "manual").strip().lower() or "manual"
     if not text.strip():
         raise HTTPException(status_code=400, detail="Eintrag hat keinen Text")
 
@@ -1841,7 +1907,7 @@ def trash_restore(req: RestoreReq) -> dict:
         points.append(PointStruct(id=point_id(req.doc_id, i), vector=vec, payload={
             "doc_id": req.doc_id, "user_id": entry.get("user_id") or req.user_id,
             "title": title, "category": category, "categories": cats, "parent": parent, "parents": parents, "chunk_index": i, "chunk_count": len(chunks),
-            "chunk_text": ch, "full_text": text, "created_at": created_at, "updated_at": now,
+            "chunk_text": ch, "full_text": text, "created_at": created_at, "updated_at": now, "source": source,
         }))
     _upsert_batched(points)
 
@@ -1929,7 +1995,9 @@ def _entity_embed_text(name: str, etype: str, aliases: list[str]) -> str:
         parts.append(f"Typ: {etype}")
     if aliases:
         parts.append("Auch bekannt als: " + ", ".join(aliases))
-    return " | ".join(parts)
+    body = " | ".join(parts)
+    # gemini-embedding-2-Dokumentpraefix 'title: {Name} | text: {…}' (task_type entfaellt, §J24).
+    return f"title: {name} | text: {body}"
 
 
 def _entity_get(user_id: str, name: str):

@@ -14,6 +14,7 @@ import de.frank.entropyreducer.data.local.habitSuggestionDaoFrom
 import de.frank.entropyreducer.data.local.taskSuggestionDaoFrom
 import de.frank.entropyreducer.data.remote.drive.BackupMental
 import de.frank.entropyreducer.data.remote.drive.BackupTaskSuggestion
+import de.frank.entropyreducer.data.safety.PhoneContentGuard
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
 import org.json.JSONArray
@@ -119,6 +120,7 @@ suspend fun restoreTaskSuggestions(
     for (ex in dao.getAllForBackup()) {
         val reason = when {
             ex.id in deletedAt -> "Tombstone (geloescht/angenommen)"
+            PhoneContentGuard.isSecondBrainWorkArtifact(ex.title, ex.description) -> "Second-Brain-Artefakt"
             isIdeaAlreadyAccepted(entryDao, habitDao, ex.rootId) -> "Idee angenommen (Kette weiter)"
             isRootIdeaDeleted(ex.rootId, ideaDeletedAt) -> "Idee geloescht (verwaist)"
             else -> null
@@ -138,6 +140,7 @@ suspend fun restoreTaskSuggestions(
     val toAdd = incoming.filterNot {
         it.id in keptExisting ||
             it.id in deletedAt ||
+            PhoneContentGuard.isSecondBrainWorkArtifact(it.title, it.description) ||
             isIdeaAlreadyAccepted(entryDao, habitDao, it.rootId) ||
             isRootIdeaDeleted(it.rootId, ideaDeletedAt)
     }
@@ -204,6 +207,7 @@ suspend fun restoreGewohnheitSuggestions(
     for (ex in dao.getAllForBackup()) {
         val reason = when {
             ex.id in deletedAt -> "Tombstone (geloescht/angenommen)"
+            PhoneContentGuard.isSecondBrainWorkArtifact(null, ex.text) -> "Second-Brain-Artefakt"
             isIdeaAlreadyAccepted(entryDao, habitDao, ex.rootId) -> "Idee angenommen (Kette weiter)"
             isRootIdeaDeleted(ex.rootId, ideaDeletedAt) -> "Idee geloescht (verwaist)"
             else -> null
@@ -222,6 +226,7 @@ suspend fun restoreGewohnheitSuggestions(
     val toAdd = incoming.filterNot {
         it.id in keptExisting ||
             it.id in deletedAt ||
+            PhoneContentGuard.isSecondBrainWorkArtifact(null, it.text) ||
             isIdeaAlreadyAccepted(entryDao, habitDao, it.rootId) ||
             isRootIdeaDeleted(it.rootId, ideaDeletedAt)
     }
@@ -266,6 +271,7 @@ suspend fun healOrphanedSuggestions(context: Context) {
     for (ex in taskDao.getAllForBackup()) {
         val reason = when {
             ex.id in taskSugDeleted -> "Tombstone (geloescht/angenommen)"
+            PhoneContentGuard.isSecondBrainWorkArtifact(ex.title, ex.description) -> "Second-Brain-Artefakt"
             isIdeaAlreadyAccepted(entryDao, habitDao, ex.rootId) -> "Idee angenommen (Kette weiter)"
             isRootIdeaDeleted(ex.rootId, ideaDeleted) -> "Idee geloescht (verwaist)"
             else -> null
@@ -283,6 +289,7 @@ suspend fun healOrphanedSuggestions(context: Context) {
     for (ex in habitSugDao.getAllForBackup()) {
         val reason = when {
             ex.id in habitSugDeleted -> "Tombstone (geloescht/angenommen)"
+            PhoneContentGuard.isSecondBrainWorkArtifact(null, ex.text) -> "Second-Brain-Artefakt"
             isIdeaAlreadyAccepted(entryDao, habitDao, ex.rootId) -> "Idee angenommen (Kette weiter)"
             isRootIdeaDeleted(ex.rootId, ideaDeleted) -> "Idee geloescht (verwaist)"
             else -> null

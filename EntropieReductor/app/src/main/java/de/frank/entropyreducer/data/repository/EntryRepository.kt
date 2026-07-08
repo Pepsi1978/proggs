@@ -9,6 +9,7 @@ import de.frank.entropyreducer.data.local.entities.EntropyEntryEntity
 import de.frank.entropyreducer.data.markDeleted
 import de.frank.entropyreducer.data.markManyDeleted
 import de.frank.entropyreducer.data.remote.drive.SyncCoordinator
+import de.frank.entropyreducer.data.safety.PhoneContentGuard
 import de.frank.entropyreducer.domain.model.EntropyCategory
 import de.frank.entropyreducer.domain.model.EntryStatus
 import de.frank.entropyreducer.domain.model.TimeBucket
@@ -68,11 +69,27 @@ constructor(
         dao.getRecentManualDurationSamples(limit)
 
     suspend fun upsert(entry: EntropyEntryEntity) {
+        if (
+            PhoneContentGuard.isSecondBrainWorkArtifact(
+                entry.title,
+                entry.rawTranscript + "\n" + entry.description,
+            )
+        ) {
+            return
+        }
         dao.upsert(entry)
         coordinatorLazy.get().requestSync("Aufgabe/Entropie-Eintrag: hinzugefuegt/geaendert")
     }
 
     suspend fun update(entry: EntropyEntryEntity) {
+        if (
+            PhoneContentGuard.isSecondBrainWorkArtifact(
+                entry.title,
+                entry.rawTranscript + "\n" + entry.description,
+            )
+        ) {
+            return
+        }
         dao.update(entry)
         coordinatorLazy.get().requestSync("Aufgabe/Entropie-Eintrag: editiert")
     }

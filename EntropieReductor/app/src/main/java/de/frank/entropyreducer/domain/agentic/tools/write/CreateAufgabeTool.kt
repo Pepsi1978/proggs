@@ -4,6 +4,7 @@ import de.frank.entropyreducer.data.local.entities.EntropyEntryEntity
 import de.frank.entropyreducer.data.remote.Schema
 import de.frank.entropyreducer.data.remote.SchemaType
 import de.frank.entropyreducer.data.repository.EntryRepository
+import de.frank.entropyreducer.data.safety.PhoneContentGuard
 import de.frank.entropyreducer.domain.agentic.AgenticTool
 import de.frank.entropyreducer.domain.agentic.ToolCategory
 import de.frank.entropyreducer.domain.agentic.ToolContext
@@ -134,6 +135,9 @@ constructor(private val entryRepository: EntryRepository) : AgenticTool {
 
             val beschreibung = obj["beschreibung"]?.jsonPrimitive?.content?.trim()
                 ?: return ToolResult.Failure("Parameter 'beschreibung' fehlt oder ist leer.")
+            if (PhoneContentGuard.isSecondBrainWorkArtifact(titel, beschreibung)) {
+                return ToolResult.Failure("Interner Second-Brain-Arbeitsinhalt wird nicht als Aufgabe gespeichert.")
+            }
 
             val kategorieRaw = obj["kategorie"]?.jsonPrimitive?.content?.trim()
                 ?: return ToolResult.Failure("Parameter 'kategorie' fehlt oder ist leer.")

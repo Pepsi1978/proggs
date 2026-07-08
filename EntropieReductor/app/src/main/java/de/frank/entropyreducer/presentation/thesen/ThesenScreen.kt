@@ -900,6 +900,7 @@ internal fun thesenEntryFlow(context: Context, id: String): Flow<ThesenEntry?> =
     thesenEntriesFlow(context).map { list -> list.firstOrNull { it.id == id } }
 
 internal suspend fun addThesenEntry(context: Context, entry: ThesenEntry) {
+    if (de.frank.entropyreducer.data.safety.PhoneContentGuard.isSecondBrainWorkArtifact(entry.title, entry.text)) return
     context.thesenStore.edit { prefs ->
         val existing = parseEntries(prefs[KEY_ENTRIES])
         val updated = existing + entry

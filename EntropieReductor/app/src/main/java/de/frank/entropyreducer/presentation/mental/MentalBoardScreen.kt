@@ -57,6 +57,7 @@ import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.stringPreferencesKey
 import androidx.datastore.preferences.preferencesDataStore
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import de.frank.entropyreducer.data.safety.PhoneContentGuard
 import de.frank.entropyreducer.data.tts.TtsUsage
 import de.frank.entropyreducer.presentation.components.CosmosScaffold
 import de.frank.entropyreducer.presentation.components.LocalMicActionsOpen
@@ -141,6 +142,7 @@ internal fun mentalsFromJsonFlow(context: Context): Flow<List<Mental>> =
 internal suspend fun addMental(context: Context, text: String) {
     val clean = text.trim()
     if (clean.isEmpty()) return
+    if (PhoneContentGuard.isSecondBrainWorkArtifact(null, clean)) return
     val dao = de.frank.entropyreducer.data.local.mentalSentenceDaoFrom(context)
     val m = Mental.create(clean)
     dao.upsert(
@@ -157,6 +159,7 @@ internal suspend fun addMental(context: Context, text: String) {
 internal suspend fun updateMental(context: Context, id: String, text: String) {
     val clean = text.trim()
     if (clean.isEmpty()) return
+    if (PhoneContentGuard.isSecondBrainWorkArtifact(null, clean)) return
     val dao = de.frank.entropyreducer.data.local.mentalSentenceDaoFrom(context)
     val current = dao.getById(id) ?: return
     dao.update(current.copy(text = clean, updatedAt = System.currentTimeMillis()))
@@ -212,7 +215,11 @@ internal suspend fun restoreMentals(
     }
     if (incoming.isEmpty()) return deleted
     val existingIds = dao.getAllForBackup().mapTo(HashSet()) { it.id }
-    val toAdd = incoming.filterNot { m -> m.id in existingIds || (deletedAt[m.id]?.let { it > m.updatedAt } == true) }
+    val toAdd = incoming.filterNot { m ->
+        m.id in existingIds ||
+            (deletedAt[m.id]?.let { it > m.updatedAt } == true) ||
+            PhoneContentGuard.isSecondBrainWorkArtifact(null, m.text)
+    }
     if (toAdd.isEmpty()) return deleted
     var nextPos = dao.maxPosition() + 1
     dao.upsertAll(
@@ -263,7 +270,7 @@ fun MentalBoardScreen(
     val scope = rememberCoroutineScope()
 
     val brainSyncVm: de.frank.entropyreducer.presentation.ideen.IdeenBrainSyncViewModel = hiltViewModel()
-    androidx.compose.runtime.LaunchedEffect(Unit) { brainSyncVm.pullNow("mental") }
+    LaunchedEffect(Unit) { brainSyncVm.pullNow("mental") }
 
     // Bugfix 2026-06-10 (Frank, 2. Versuch — Root Cause KORRIGIERT): Der erste Fix war an der
     // falschen Stelle. Echte Ursache: `mentalsFlow(context)` wurde bei JEDER Recomposition NEU

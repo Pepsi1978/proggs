@@ -84,20 +84,6 @@ if ($LASTEXITCODE -ne 0) {
 
 Write-Status "Auto-Sync: Git Pull erfolgreich."
 
-# GitNexus: Inkrementelle Reindexierung nach Pull (nur geaenderte Dateien)
-# Laeuft im Hintergrund — blockiert den Session-Start nicht.
-if ($behind -gt 0) {
-    $gitnexusBin = "$env:USERPROFILE\AppData\Roaming\npm\gitnexus.cmd"
-    if (Test-Path $gitnexusBin) {
-        Start-Process -FilePath $gitnexusBin `
-            -ArgumentList "analyze", $RepoDir, "--skip-agents-md" `
-            -WindowStyle Hidden -WorkingDirectory $RepoDir `
-            -RedirectStandardOutput "$env:TEMP\gitnexus-reindex.log" `
-            -RedirectStandardError "$env:TEMP\gitnexus-reindex-err.log"
-        Write-Status "Auto-Sync: GitNexus-Index wird im Hintergrund aktualisiert ($behind neue Commits)."
-    }
-}
-
 # C2 (ported from Gemini): Write cross-CLI delta summary to whiteboard after pull
 # This makes incoming changes visible for /self-improve and future sessions
 try {

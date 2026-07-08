@@ -912,6 +912,7 @@ internal fun tagebuchEntryFlow(context: Context, id: String): Flow<TagebuchEntry
     tagebuchEntriesFlow(context).map { list -> list.firstOrNull { it.id == id } }
 
 internal suspend fun addTagebuchEntry(context: Context, entry: TagebuchEntry) {
+    if (de.frank.entropyreducer.data.safety.PhoneContentGuard.isSecondBrainWorkArtifact(entry.title, entry.text)) return
     context.tagebuchStore.edit { prefs ->
         val existing = parseEntries(prefs[KEY_ENTRIES])
         val updated = existing + entry

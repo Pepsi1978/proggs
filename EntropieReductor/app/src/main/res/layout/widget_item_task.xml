@@ -9,12 +9,12 @@
   nach unten — dadurch wurde unten exakt 8dp abgeschnitten. Der Wrapper-Padding
   fliesst korrekt in die gemessene Zeilenhoehe ein -> nichts wird gekappt.
 
-  1:1 zur radikal vereinfachten App-Karte (TasksScreen.EntropyEntryCard):
-   - Hintergrund: horizontaler Verlauf in der Prioritaetsfarbe (im Code getoent)
-   - Zeile 1: Haekchen (hakt die Aufgabe DIREKT ab) + Titel (eine Zeile)
-   - Zeile 2 (rechtsbuendig): Prioritaet-Perle + KI/Manuell-Perle
-   Keine Beschreibung, keine Prio-Zahl, kein Schweregrad-Balken, keine Tags,
-   kein Empfohlen/Zeitaufwand — genau wie in der App.
+   1:1 zur radikal vereinfachten App-Karte (TasksScreen.EntropyEntryCard):
+    - Hintergrund: horizontaler Verlauf in der Prioritaetsfarbe (im Code getoent)
+    - Zeile 1: Haekchen (hakt die Aufgabe DIREKT ab) + Titel (eine Zeile)
+    - Zeile 2 (rechtsbuendig): Verschieben-Button
+    Keine Beschreibung, keine Prio-Zahl, kein Schweregrad-Balken, keine Tags,
+    kein Empfohlen/Zeitaufwand — genau wie in der App.
 -->
 <FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
     android:layout_width="match_parent"
@@ -72,7 +72,7 @@
                 android:layout_width="1dp"
                 android:layout_height="8dp" />
 
-            <!-- ZEILE 2: rechtsbuendig — Prioritaet-Perle + KI/Manuell-Perle -->
+            <!-- ZEILE 2: rechtsbuendig — Verschieben-Button wie in der App -->
             <LinearLayout
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
@@ -84,49 +84,18 @@
                     android:layout_height="1dp"
                     android:layout_weight="1" />
 
-                <!-- Prioritaet-Perle ("Priorität KI" / "Priorität <Wert>") -->
                 <TextView
-                    android:id="@+id/task_prio_pill"
+                    android:id="@+id/task_move_button"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:paddingHorizontal="10dp"
+                    android:paddingHorizontal="14dp"
                     android:paddingVertical="6dp"
                     android:background="@drawable/widget_pill_bg"
+                    android:contentDescription="Aufgabe verschieben"
                     android:textSize="12sp"
-                    android:textColor="#A499D9"
-                    android:text="Priorität KI" />
-
-                <ImageView
-                    android:layout_width="8dp"
-                    android:layout_height="1dp" />
-
-                <!-- KI/Manuell-Perle (Bucket-Picker) -->
-                <LinearLayout
-                    android:id="@+id/bucket_status_pill"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:orientation="horizontal"
-                    android:gravity="center_vertical"
-                    android:paddingHorizontal="12dp"
-                    android:paddingVertical="6dp"
-                    android:background="@drawable/widget_pill_bg">
-
-                    <ImageView
-                        android:id="@+id/bucket_status_icon"
-                        android:layout_width="14dp"
-                        android:layout_height="14dp"
-                        android:src="@drawable/ic_widget_bucket_today"
-                        android:contentDescription="@null" />
-
-                    <TextView
-                        android:id="@+id/bucket_status_label"
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:layout_marginStart="6dp"
-                        android:textSize="12sp"
-                        android:textColor="#A499D9"
-                        android:text="KI" />
-                </LinearLayout>
+                    android:textColor="#000000"
+                    android:textStyle="bold"
+                    android:text="Verschieben" />
             </LinearLayout>
         </LinearLayout>
     </FrameLayout>

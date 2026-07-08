@@ -7,6 +7,8 @@
 
 > **Update 2026-07-02:** Keine neuen belastbaren `google-genai`-/`thinkingConfig`-/`finishReason`-Bugs seit 2026-06-08 gefunden. Bestaetigt bleibt der Deprecation-/Shutdown-Druck: alte 1.0/1.5- und Preview-Modelle sind weg; weitere 2.5-/Embedding-Varianten laufen 2026 aus. Modell-IDs weiter pinnen und Deprecations vor Releases pruefen.
 
+> **Update 2026-07-08 (NEU Abschnitt J — Embeddings):** Umstieg `gemini-embedding-001` → `gemini-embedding-2` (GA ~30.04.2026) hat drei echte Migrations-Fallen: (J23) eine Liste `contents=[…]` liefert bei Embedding 2 EINEN aggregierten Vektor statt N; (J24) `task_type` ist entfernt → Text-Präfixe; (J25) Dimensionswechsel (1536→3072) erzwingt eine neue Qdrant-Collection. Recherche 2026-07-08 (Firecrawl+MiniMax, offizielle Google-Doku).
+
 ## ⚡ Kurzcheck (Stufe A — vor der Arbeit lesen)
 
 > **Digest-Modell** (`bugs/SYSTEM.md` §11): Dieser Kurzcheck ist die Vorab-Pflichtlektüre
@@ -23,6 +25,7 @@
 | 6 | 403 PERMISSION_DENIED trotz Key | Billing + API aktivieren, Key→Projekt | §C6 |
 | 7 | Streaming liefert Muell | `?alt=sse` anhaengen, zeilenweise parsen | §I21 |
 | 8 | API-Key uebergeben | Header `x-goog-api-key`, nie `?key=` Query | §C8 |
+| 9 | ⭐ Migration `-001`→`gemini-embedding-2`: Liste liefert 1 statt N Vektoren | `contents=[…]` AGGREGIERT bei Embedding 2 → pro Text 1 Call; `task_type` entfernt → Präfixe; Dim 3072 → neue Collection | §J23-J25 |
 
 ---
 
@@ -151,6 +154,32 @@
 
 ### 22. Abgeschnittene Streaming-Antwort
 - **FIX:** letzten Chunk auf finishReason prüfen, Chunks akkumulieren, bei MAX_TOKENS Budget erhöhen.
+
+---
+
+## J. Embeddings (`gemini-embedding-2` Migrations-Fallen)
+
+> Kontext: Umstieg eines produktiven RAG-Speichers von `gemini-embedding-001` (Text, 1536) auf
+> `gemini-embedding-2` (multimodal, 3072, GA ~30.04.2026). Recherche 2026-07-08 (offizielle Google-Doku).
+
+### 23. ⭐ Liste → EIN aggregierter Vektor (Batch-Falle)
+- **Symptom:** Nach Umstieg auf `gemini-embedding-2` liefert `embed_content(contents=[t1,t2,t3])` nur 1 Vektor statt 3 → alle Chunks bekommen denselben (verschmolzenen) Vektor, ODER ein Anzahl-Check bricht hart ab (`N Vektoren fuer M Texte`) und das Speichern schlaegt fehl.
+- **Ursache:** Offizielle Doku (NOTE): „While `gemini-embedding-001` lets you generate individual embeddings for a list of strings, **Gemini Embedding 2 produces a single aggregated embedding for multiple inputs**." Die Liste wird bei Embedding 2 zu EINEM fusionierten Vektor aggregiert (gedacht fuer multimodale Fusion Text+Bild+Audio), nicht zu N Einzelvektoren wie bei `-001`.
+- **Versionen:** `gemini-embedding-2` (GA ~30.04.2026). Bei `-001` unveraendert N Vektoren pro Liste.
+- **FIX (funktionserhaltend):** Fuer N separate Dokument-Vektoren pro Text EINEN `embed_content`-Call (parallelisierbar ueber ThreadPool) ODER die asynchrone Batch API (`models.asyncBatchEmbedContent`, ~halber Preis, hoher Durchsatz). Vektor-Anzahl weiter gegen die Eingabe pruefen (bei Mismatch HART abbrechen). NIE die `-001`-Batch-Logik (`embed_many`) ungeprueft auf Embedding 2 uebertragen.
+- **Quelle:** ai.google.dev/gemini-api/docs/embeddings (NOTE in `embeddings.md.txt`) · offiziell; Recherche 2026-07-08.
+
+### 24. `task_type` bei `gemini-embedding-2` entfernt (still ignoriert) → Praefixe
+- **Symptom:** `EmbedContentConfig(task_type="RETRIEVAL_DOCUMENT"|"RETRIEVAL_QUERY")` wirkt bei `gemini-embedding-2` nicht (gleicher Vektor unabhaengig vom task_type); die asymmetrische Suche (Dokument ≠ Anfrage) verschlechtert sich unbemerkt.
+- **Ursache:** `task_type` ist bei Embedding 2 deprecated/entfernt; die Absicht wird ueber Text-Praefixe ausgedrueckt (die Doku erwaehnt den Parameter nicht mehr, ein Bugreport meldet stilles Ignorieren).
+- **FIX:** Dokument → `title: {Titel} | text: {Inhalt}` (ohne Titel `title: none`); Anfrage → `task: search result | query: {Suchtext}` (weitere Tasks: question answering / fact checking / code retrieval; symmetrisch: classification / clustering / sentence similarity). Bei `-001` bleibt `task_type` als API-Parameter gueltig → im Code modell-abhaengig verzweigen (nicht hart entfernen, damit der Fallback auf `-001` funktioniert).
+- **Quelle:** ai.google.dev/gemini-api/docs/embeddings (Abschnitt „Task types with Embeddings 2") · offiziell; Recherche 2026-07-08.
+
+### 25. Dimensionswechsel erzwingt neue Qdrant-Collection (+ 8192-Token-Chunks)
+- **Symptom:** Nach `SB_EMBED_DIMS 1536→3072` bricht der Upsert (`could not broadcast … into shape`), obwohl nur die Env geaendert wurde.
+- **Ursache:** Qdrant fixiert die Vektordimension bei Collection-Erstellung (bugs/server/qdrant.md §2). `_init_store()` legt eine Collection nur an, wenn sie NOCH NICHT existiert — ein Modell-/Dim-Wechsel ist daher keine reine Config-Aenderung.
+- **FIX:** Neue Collection mit `size=3072` (Blau/Gruen: parallel befuellen, `points_count` verifizieren, Cutover per Env, alte Collection als Rueckweg behalten). Chunk-Groesse darf auf das 8192-Token-Limit von Embedding 2 angehoben werden (vs. 2048 bei `-001`) → weniger Chunks/Calls (gleicht die Einzel-Calls aus §J23 aus). 3072 = doppelter Vektor-RAM; bei wenigen Tausend Punkten unkritisch, sonst `on_disk`+Quantisierung (qdrant §1).
+- **Quelle:** ai.google.dev/gemini-api/docs/embeddings + bugs/server/qdrant.md §1/§2 · Recherche 2026-07-08.
 
 ---
 

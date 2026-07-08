@@ -1,49 +1,27 @@
 # Bypass Permissions: IMMER aktiv, NIEMALS aenderbar (KRITISCH)
 
 ## Regel
-
-`defaultMode: bypassPermissions` ist die EINZIGE erlaubte Permission-Einstellung.
-Sie muss auf ALLEN Ebenen aktiv sein:
-
-1. **Global**: `~/.claude/settings.json` → `permissions.defaultMode: "bypassPermissions"`
-2. **Global lokal**: `~/.claude/settings.local.json` → `permissions.defaultMode: "bypassPermissions"`
-3. **Jedes Projekt**: `~/.claude/projects/*/settings.local.json` → `permissions.defaultMode: "bypassPermissions"`
+`defaultMode: bypassPermissions` ist die EINZIGE erlaubte Permission-Einstellung, auf ALLEN Ebenen:
+global (`~/.claude/settings.json` + `settings.local.json`), jedes Projekt
+(`~/.claude/projects/*/settings.local.json`).
 
 ## Was NIEMALS passieren darf
+- `defaultMode` auf einen anderen Wert aendern ("default"/"acceptEdits"/...) - `permissions`-Sektion
+  entfernen (z.B. Token-Refresh) - Projekt-Settings die `defaultMode` ueberschreiben - Hook/Plugin/Agent
+  der die Permission-Settings aendert - `allow`-Liste in `permissions` (wirkt als Whitelist-Blocker bei
+  bypassPermissions!)
+- Benutzer nach Erlaubnis fragen fuer Standardaktionen (Build, Test, Commit, Push, Edit, Write)
 
-- ❌ `defaultMode` auf irgendeinen anderen Wert aendern ("default", "acceptEdits", etc.)
-- ❌ Die `permissions`-Sektion aus `settings.local.json` entfernen (z.B. beim Token-Refresh)
-- ❌ Projekt-level Settings erstellen die `defaultMode` ueberschreiben
-- ❌ Ein Hook, Plugin oder Agent der die Permission-Settings aendert
-- ❌ Den Benutzer nach Erlaubnis fragen fuer Standardaktionen (Build, Test, Commit, Push, Edit, Write)
-- ❌ Eine `allow`-Liste in der `permissions`-Sektion haben (wirkt als Whitelist-Blocker bei bypassPermissions!)
-
-## Absicherungsschichten (Defense in Depth)
-
-| Schicht | Mechanismus | Was es tut |
-|---------|-------------|-----------|
-| 1 | `session-guard.ps1` (SessionStart) | Prueft+repariert bypassPermissions UND entfernt allow-Liste bei JEDEM Start |
-| 2 | `config-guard.ps1` (PostToolUse) | Blockiert Aenderungen an defaultMode UND blockiert allow-Listen |
-| 3 | Projekt-level settings.local.json | Jedes Projektverzeichnis hat eigenes bypassPermissions |
-| 4 | Diese Regel | Claude weiss: Nie den Benutzer nach Permissions fragen, nie allow-Liste erstellen |
-| 5 | Memory | Feedback-Memory als zusaetzliche Erinnerung |
-| 6 | `.bashrc` Auto-cd | Workspace-Korrektur bevor Claude Code startet |
-
-## Warum
-
-Der Benutzer arbeitet mit `bypassPermissions` weil er Profi ist und keine Abfragen will.
-Jede Permission-Abfrage unterbricht seinen Workflow und kostet Zeit. Mehrere Systeme
-(Hooks, Plugins, Token-Refresh, Compaction) koennen die Settings versehentlich zuruecksetzen.
-Der `session-guard.ps1` Hook repariert das automatisch bei jedem Session-Start.
+## Absicherung (Defense in Depth)
+`session-guard.ps1` (SessionStart) prueft+repariert bypassPermissions UND entfernt die allow-Liste bei
+JEDEM Start - `config-guard.ps1` (PostToolUse) blockiert Aenderungen an `defaultMode` UND allow-Listen -
+Projekt-Settings, diese Regel + Feedback-Memory als Schichten.
 
 ## Fuer Claude selbst
+NIE fragen "Soll ich bearbeiten / ausfuehren / committen+pushen?" -> einfach MACHEN. Ausnahmen wo DOCH
+gefragt wird: destruktive Git-Ops (force push, `reset --hard`), Shell/Terminal-Updates, neue Repos
+(verboten laut CLAUDE.md).
 
-NIEMALS dem Benutzer eine Frage stellen wie:
-- "Soll ich die Datei bearbeiten?" → Einfach bearbeiten
-- "Darf ich den Befehl ausfuehren?" → Einfach ausfuehren
-- "Soll ich committen und pushen?" → Einfach machen
-
-Ausnahmen wo DOCH gefragt werden muss:
-- Destruktive Git-Operationen (force push, reset --hard)
-- Shell/Terminal-Updates (zerstoeren offene Fenster)
-- Neue Repos erstellen (verboten laut CLAUDE.md)
+## Warum
+Hooks/Token-Refresh/Compaction koennen die Settings versehentlich zuruecksetzen; `session-guard`
+repariert das bei jedem Start.

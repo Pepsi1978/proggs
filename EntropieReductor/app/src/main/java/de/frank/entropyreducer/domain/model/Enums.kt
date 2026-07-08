@@ -20,10 +20,10 @@ enum class EntryStatus { OFFEN, IN_ARBEIT, REDUZIERT, ARCHIVIERT }
 /**
  * Persistierte Aufgaben-Buckets. Die Enum-Namen bleiben für Backup-/DB-Kompatibilität erhalten,
  * fachlich stehen sie im Aufgaben-Reiter seit 2026-07-07 für Prioritätsbereiche:
- *  - HEUTE: Priorität sehr hoch, 80-100
- *  - MORGEN: Priorität hoch, 60-79
- *  - FREIBLOCK: Priorität mittel, 40-59
- *  - GERING: Priorität gering, 20-39
+ *  - HEUTE: Sehr hoch, 80-100
+ *  - MORGEN: Hoch, 60-79
+ *  - FREIBLOCK: Mittel, 40-59
+ *  - GERING: Gering, 20-39
  *  - SPAETER: später, 0-19
  */
 enum class TimeBucket { HEUTE, MORGEN, FREIBLOCK, GERING, SPAETER }

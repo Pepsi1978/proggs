@@ -63,9 +63,10 @@ services:
     environment:
       QDRANT_HOST: qdrant             # Service-Name im Compose-Netz (DNS-aufloesbar)
       QDRANT_PORT: "6333"
-      SB_COLLECTION: brain            # frische Collection fuer den 1:1-Speicher (alt: second_brain unter mem0)
-      SB_EMBED_DIMS: "1536"           # gemini-embedding-001 @ 1536 (MUSS zur Qdrant-Collection passen)
-      GEMINI_EMBED_MODEL: gemini-embedding-001   # nur Embeddings; KEIN LLM mehr beim Speichern (1:1)
+      SB_COLLECTION: brain__e2        # 3072-Sammlung (gemini-embedding-2); alte 1536-Collection 'brain' 2026-07-08 entfernt
+      SB_ENTITY_COLLECTION: brain_entities__e2   # Entity-Register 3072 (gemini-embedding-2); alte 1536-Collection entfernt
+      SB_EMBED_DIMS: "3072"           # gemini-embedding-2 @ 3072 (MUSS zur Qdrant-Collection passen)
+      GEMINI_EMBED_MODEL: gemini-embedding-2     # multimodal-faehig (Text-Phase); gemini-embedding-001 vollstaendig ausgebaut (Frank-Wunsch 2026-07-08)
       SB_LOG_PATH: /app/logs/brain-api.jsonl
     volumes:
       - ./brain-logs:/app/logs        # Logs persistent + vom Host tailbar (Observability-First)
@@ -136,7 +137,7 @@ services:
       AGENT_MODEL: gemini-3.1-flash-lite   # Env-Default; aktive Wahl per Dashboard (auch minimax/minimax-m3)
       # OPENCODE_API_KEY kommt aus .env via env_file (OpenCode Zen Go fuer minimax/minimax-m3, Anthropic
       # /messages-Schema). OPENCODE_GO_URL/OPENCODE_ANTHROPIC_VERSION haben Code-Defaults — nur bei Bedarf setzen.
-      AGENT_SESSION_TIMEOUT_MIN: "30"      # 30 min Inaktivitaet -> Logbuch
+      AGENT_SESSION_TIMEOUT_MIN: "10"      # 10 min Inaktivitaet -> Logbuch (Frank-Wunsch 2026-07-08)
       AGENT_LOGBOOK_DIR: /logbook
       AGENT_TZ: Europe/Berlin
       AGENT_LOG_PATH: /app/logs/agent.jsonl

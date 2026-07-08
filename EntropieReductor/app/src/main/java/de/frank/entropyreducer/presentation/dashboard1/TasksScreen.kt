@@ -16,7 +16,9 @@ import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.gestures.detectDragGesturesAfterLongPress
 import androidx.compose.foundation.gestures.detectTapGestures
+import androidx.compose.foundation.gestures.scrollBy
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -28,6 +30,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.navigationBars
+import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -66,6 +69,8 @@ import androidx.compose.material.icons.outlined.Refresh
 import androidx.compose.material.icons.outlined.Repeat
 import androidx.compose.material.icons.outlined.Settings
 import androidx.compose.material.icons.outlined.Today
+import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.LinearProgressIndicator
@@ -81,6 +86,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
@@ -88,14 +94,20 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.CompositingStrategy
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.layout.LayoutCoordinates
+import androidx.compose.ui.layout.boundsInWindow
+import androidx.compose.ui.layout.onGloballyPositioned
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
@@ -124,7 +136,9 @@ import de.frank.entropyreducer.presentation.theme.label
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
+import kotlin.math.roundToInt
 import kotlinx.coroutines.FlowPreview
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.debounce
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.launch
@@ -147,10 +161,8 @@ fun TasksScreen(
     val snackbar = remember { SnackbarHostState() }
     val brainSyncVm: de.frank.entropyreducer.presentation.ideen.IdeenBrainSyncViewModel = hiltViewModel()
     LaunchedEffect(Unit) { brainSyncVm.pullNow("entropy") }
-    // Frank-Wunsch 2026-05-24: Der Loop-Bereich (wiederkehrende Aufgaben) ist jetzt ein
-    // Akkordeon-Dropdown im Aufgaben-Reiter (zwischen SPAETER und ERLEDIGT) statt eines
-    // eigenen Sub-Screens. Vorlagen + ihre Verknuepfung (Checkbox an = Aufgabe erscheint
-    // im Reiter) kommen unveraendert aus dem RecurringTemplatesViewModel.
+    // Loop-Vorlagen bleiben als Akkordeon im Aufgaben-Reiter sichtbar und werden nur noch
+    // manuell per "Hinzufügen" in die Aufgabenliste kopiert.
     val recurringVm: RecurringTemplatesViewModel = hiltViewModel()
     val recurringTemplates by recurringVm.templates.collectAsStateWithLifecycle()
     val kiTaskSuggestVm: KiTaskSuggestViewModel = hiltViewModel()
@@ -159,26 +171,52 @@ fun TasksScreen(
     val kiTaskAcceptingId by kiTaskSuggestVm.acceptingId.collectAsStateWithLifecycle()
     val kiTaskError by kiTaskSuggestVm.error.collectAsStateWithLifecycle()
     val scope = rememberCoroutineScope()
+    val density = LocalDensity.current
     // Lokaler State für den Prioritätsbereich-Picker — speichert nur die Entry-ID, der
     // tatsächliche Eintrag wird aus dem aktuellen State frisch nachgelesen.
     var bucketPickerEntryId by remember { mutableStateOf<String?>(null) }
-    // Frank-Wunsch 2026-05-31: Welche Aufgabe nach einem Widget-Tap auf die Prio-Perle
-    // ihren Schieberegler automatisch geoeffnet bekommt (null = keiner). Wird von der
-    // Karte selbst wieder geleert, sobald sie den Regler aufgeklappt hat.
-    var prioPickerEntryId by remember { mutableStateOf<String?>(null) }
-    // Frank-Wunsch 2026-05-31: Gleiches fuer LOOP-Vorlagen — welche Vorlage nach einem
-    // Widget-Tap auf ihre Prio- bzw. Tag-Perle den Schieberegler / das Tag-Menue
-    // automatisch geoeffnet bekommt.
-    var prioPickerTemplateId by remember { mutableStateOf<String?>(null) }
-    var bucketPickerTemplateId by remember { mutableStateOf<String?>(null) }
+    var dragState by remember { mutableStateOf<TaskDragState?>(null) }
+    var contentOriginInWindow by remember { mutableStateOf(Offset.Zero) }
+    var listBoundsInWindow by remember { mutableStateOf(Rect(0f, 0f, 0f, 0f)) }
+    val dragPreviewLiftPx = with(density) { 48.dp.toPx() }
+    val dragAutoScrollEdgePx = with(density) { 96.dp.toPx() }
+    val dragAutoScrollStepPx = with(density) { 22.dp.toPx() }
+    fun clearDrag() {
+        dragState = null
+    }
     // LazyListState am Top damit beide LaunchedEffects (Bucket-Picker + Scroll)
     // darauf zugreifen koennen. Wird unten an die Haupt-LazyColumn uebergeben.
     val listState = androidx.compose.foundation.lazy.rememberLazyListState()
 
-    // Aufgabenblöcke (Priorität sehr hoch/hoch/mittel/gering/später/Loop/Erledigt)
-    // sind aufklappbare Akkordeon-Dropdowns. Es ist immer nur EIN
-    // Block offen — Klick auf einen Header oeffnet ihn und schliesst den vorher
-    // offenen automatisch; ein erneuter Klick klappt ihn wieder zu. Standard: sehr hoch.
+    fun resolveDragDropBucket(pointerInWindow: Offset): TimeBucket? =
+        findDropBucket(
+            pointerInWindow = pointerInWindow,
+            listBoundsInWindow = listBoundsInWindow,
+            listState = listState,
+            entriesByBucket = state.entriesByBucket,
+        )
+
+    LaunchedEffect(dragState != null) {
+        while (dragState != null) {
+            val currentDrag = dragState
+            if (currentDrag != null && listBoundsInWindow.height > 0f) {
+                val pointerY = currentDrag.pointerInWindow.y
+                val scrollBy = when {
+                    pointerY < listBoundsInWindow.top + dragAutoScrollEdgePx -> -dragAutoScrollStepPx
+                    pointerY > listBoundsInWindow.bottom - dragAutoScrollEdgePx -> dragAutoScrollStepPx
+                    else -> 0f
+                }
+                if (scrollBy != 0f) {
+                    listState.scrollBy(scrollBy)
+                    dragState = currentDrag.copy(targetBucket = resolveDragDropBucket(currentDrag.pointerInWindow))
+                }
+            }
+            delay(16L)
+        }
+    }
+
+    // Sehr hoch/Hoch/Mittel/Gering bleiben immer sichtbar. Später/Loop/Erledigt/
+    // KI-Vorschläge bleiben als optionale Akkordeonbereiche unter den Hauptbereichen.
     // Der Schluessel ist der Sektions-Name (bucket.name bzw. SECTION_LOOP/SECTION_ERLEDIGT).
     var expandedSection by rememberSaveable { mutableStateOf<String?>(TimeBucket.HEUTE.name) }
 
@@ -231,8 +269,8 @@ fun TasksScreen(
             }
     }
 
-    // Frank-Wunsch 2026-05-11: Widget-Tap auf eine Aufgabe oder die KI/Manuell-
-    // Pille schickt einen Deep-Link an WidgetDeepLinkBus. Wir reagieren hier:
+    // Frank-Wunsch 2026-05-11: Widget-Tap auf eine Aufgabe oder den Verschieben-
+    // Button schickt einen Deep-Link an WidgetDeepLinkBus. Wir reagieren hier:
     //  - ACTION_RESCHEDULE → Prioritätsbereich-Picker für die Task öffnen
     //  - ACTION_FOCUS      → Tasks-Tab ist schon offen (NavGraph default); kein
     //    weiterer Schritt noetig — Frank scrollt zur Karte (LazyColumn-Scroll
@@ -284,24 +322,19 @@ fun TasksScreen(
             bucketPickerEntryId = link.taskId
         }
 
-        // 2b) Bei SET_PRIORITY den Schieberegler genau dieser Aufgabe direkt aufklappen.
-        // Die Karte (EntropyEntryCard) liest prioPickerEntryId und oeffnet ihren Slider,
-        // sobald sie nach dem Scroll gerendert ist — und leert die Markierung wieder.
+        // 2b) Bei SET_PRIORITY oeffnen wir jetzt ebenfalls das Verschieben-Sheet.
         if (
             link.action ==
                 de.frank.entropyreducer.presentation.widget.WidgetIntents.ACTION_SET_PRIORITY
         ) {
-            prioPickerEntryId = link.taskId
+            bucketPickerEntryId = link.taskId
         }
 
         // 3) Bus clearen — Link wurde konsumiert
         de.frank.entropyreducer.presentation.widget.WidgetDeepLinkBus.clear()
     }
 
-    // Frank-Wunsch 2026-05-31: Widget-Tap auf die Prio-/Tag-Perle einer LOOP-Vorlage.
-    // Eigener Handler, weil Loop-Vorlagen keine normalen Aufgaben sind: Loop-Block
-    // aufklappen und genau diese Vorlage markieren — ihre Karte oeffnet dann selbst
-    // den Schieberegler (autoOpenPrioSlider) bzw. das Tag-Menue (autoOpenBucketMenu).
+    // Alte Widget-Taps auf entfernte Loop-Prioritäts-/Bucket-Pillen öffnen nur noch den Loop-Block.
     LaunchedEffect(widgetDeepLink, recurringTemplates) {
         val link = widgetDeepLink ?: return@LaunchedEffect
         val isLoopAction =
@@ -314,12 +347,6 @@ fun TasksScreen(
         // Warten bis die Vorlagen geladen sind (z.B. App-Start direkt aus dem Widget).
         if (recurringTemplates.none { it.id == link.taskId }) return@LaunchedEffect
         expandedSection = SECTION_LOOP
-        when (link.action) {
-            de.frank.entropyreducer.presentation.widget.WidgetIntents.ACTION_SET_LOOP_PRIORITY ->
-                prioPickerTemplateId = link.taskId
-            de.frank.entropyreducer.presentation.widget.WidgetIntents.ACTION_SET_LOOP_BUCKET ->
-                bucketPickerTemplateId = link.taskId
-        }
         de.frank.entropyreducer.presentation.widget.WidgetDeepLinkBus.clear()
     }
 
@@ -335,10 +362,10 @@ fun TasksScreen(
 
     // Frank-Wunsch 2026-05-24: Mit dem Akkordeon ist die Header-Position eindeutig.
     // Nach dem Aufklappen eines Ziel-Blocks sind alle anderen Bloecke zugeklappt
-    // (= je 1 Header-Item). Der Header liegt damit bei: 1 (Briefing) + Position des
-    // Buckets in ALL_TIME_BUCKETS. Erledigt liegt nach allen Buckets + Loop.
+    // (= je 1 Header-Item). Ohne Briefing-Item liegt der Header direkt bei der
+    // Position des Buckets in ALL_TIME_BUCKETS. Erledigt liegt nach allen Buckets + Loop.
     fun bucketHeaderIndex(target: de.frank.entropyreducer.domain.model.TimeBucket): Int =
-        1 + ALL_TIME_BUCKETS.indexOf(target)
+        ALL_TIME_BUCKETS.indexOf(target)
 
     CosmosScaffold(
         title = "Aufgaben",
@@ -387,7 +414,12 @@ fun TasksScreen(
         // schrumpft auf ~8dp. Andere Screens bleiben unangetastet.
         compactHeader = true,
     ) { padding ->
-        Box(modifier = Modifier.fillMaxSize().padding(padding)) {
+        Box(
+            modifier =
+                Modifier.fillMaxSize()
+                    .padding(padding)
+                    .onGloballyPositioned { contentOriginInWindow = it.boundsInWindow().topLeft }
+        ) {
             Column(modifier = Modifier.fillMaxSize()) {
                 // Backup-Statuszeile DIREKT unter dem Titel "Entropie Reduktor"
                 // — Frank-Wunsch 2026-05-09 (praezisiert): kommt ueber die
@@ -446,16 +478,12 @@ fun TasksScreen(
 
                 LazyColumn(
                     state = listState,
-                    modifier = Modifier.fillMaxSize(),
+                    modifier = Modifier.fillMaxSize().onGloballyPositioned {
+                        listBoundsInWindow = it.boundsInWindow()
+                    },
                     contentPadding = androidx.compose.foundation.layout.PaddingValues(16.dp),
                     verticalArrangement = Arrangement.spacedBy(12.dp),
                 ) {
-                    item(key = "briefing", contentType = "briefing") {
-                        // Frank-Wunsch 2026-05-23: BriefingPanel enthaelt jetzt
-                        // auch die KI-Frage des Moments als zweites Dropdown —
-                        // keine separate KiQuestionCard mehr in der LazyColumn.
-                        de.frank.entropyreducer.presentation.briefing.BriefingPanel()
-                    }
                     // Frank-Wunsch 2026-05-23 (Folge-Iteration): Kategorie-
                     // Filterleiste ("Koerperlich/Mental/Zeitlich") ist hier raus —
                     // stoert die Konzentration auf die Aufgaben. Filter-State
@@ -469,20 +497,21 @@ fun TasksScreen(
                         // PERFORMANCE 2026-05-09: Sortierung+Filter laufen jetzt im
                         // ViewModel (TasksViewModel.kt), nicht mehr hier — die Lists
                         // sind beim Eintreffen schon sortiert und gefiltert.
-                        // Frank-Wunsch 2026-05-24: jeder Bereich ist ein aufklappbares
-                        // Akkordeon. Der Header wird IMMER gezeigt (auch wenn leer), die
-                        // Eintraege nur wenn der Block aufgeklappt ist. Es ist immer nur
-                        // ein Block gleichzeitig offen (gesteuert ueber expandedSection).
+                        // Sehr hoch/Hoch/Mittel/Gering sind immer offen. Später bleibt optional.
                         ALL_TIME_BUCKETS.forEach { bucket ->
                             val list = state.entriesByBucket[bucket].orEmpty()
-                            val sectionExpanded = expandedSection == bucket.name
+                            val alwaysOpen = bucket in ALWAYS_VISIBLE_BUCKETS
+                            val sectionExpanded = alwaysOpen || expandedSection == bucket.name
                             item(key = "header-${bucket.name}", contentType = "bucket-header") {
                                 BucketHeader(
                                     bucket = bucket,
                                     count = list.size,
                                     expanded = sectionExpanded,
+                                    isDropTarget = dragState?.targetBucket == bucket,
                                     onToggle = {
-                                        expandedSection = if (sectionExpanded) null else bucket.name
+                                        if (!alwaysOpen) {
+                                            expandedSection = if (sectionExpanded) null else bucket.name
+                                        }
                                     },
                                 )
                             }
@@ -531,20 +560,27 @@ fun TasksScreen(
                                             remember(entry.id) {
                                                 { bucketPickerEntryId = entry.id }
                                             }
-                                        val onSetPrio =
-                                            remember(entry.id) {
-                                                { score: Double ->
-                                                    vm.setManualPriority(entry.id, score)
-                                                }
-                                            }
-                                        EntropyEntryCard(
+                                        DraggableEntropyEntryCard(
                                             entry = entry,
+                                            bucket = bucket,
+                                            isDragging = dragState?.entry?.id == entry.id,
+                                            resolveDropBucket = ::resolveDragDropBucket,
+                                            onDragStateChange = { dragState = it },
+                                            onDrop = { targetBucket ->
+                                                if (targetBucket != bucket) {
+                                                    vm.setManualPriority(entry.id, defaultPriorityForBucket(targetBucket))
+                                                    scope.launch {
+                                                        snackbar.showSnackbar(
+                                                            "Verschoben nach ${bucketLabelLong(targetBucket)}"
+                                                        )
+                                                    }
+                                                }
+                                                clearDrag()
+                                            },
+                                            onDragCancel = ::clearDrag,
                                             onClick = onClick,
                                             onResolve = onResolve,
                                             onPickBucket = onPickBucket,
-                                            onSetManualPriority = onSetPrio,
-                                            autoOpenPrioSlider = prioPickerEntryId == entry.id,
-                                            onPrioSliderConsumed = { prioPickerEntryId = null },
                                         )
                                     }
                                 } else {
@@ -557,10 +593,8 @@ fun TasksScreen(
                                 }
                             }
                         }
-                        // Loop-Block (Frank-Wunsch 2026-05-24): wiederkehrende Aufgaben
-                        // 1:1 wie im fruehern Loop-Reiter, jetzt als Akkordeon zwischen
-                        // SPAETER und ERLEDIGT. Checkbox an = Aufgabe erscheint im Reiter
-                        // (Verknuepfung lebt im RecurringTemplatesViewModel, unveraendert).
+                        // Loop-Block: wiederkehrende Aufgaben bleiben sichtbar und werden nur
+                        // noch manuell per "Hinzufügen" in die Aufgabenliste kopiert.
                         run {
                             val loopExpanded = expandedSection == SECTION_LOOP
                             val loopAccent = cosmos.accentTasks
@@ -583,29 +617,11 @@ fun TasksScreen(
                                         key = { "loop-${it.id}" },
                                         contentType = { "loop-entry" },
                                     ) { template ->
-                                        // Frische Lambdas (1:1 wie im Loop-Reiter) damit
-                                        // toggleActive immer die aktuelle isActive-Version
-                                        // der Vorlage liest.
                                         TemplateAsTaskCard(
                                             template = template,
-                                            onToggleActive = { recurringVm.toggleActive(template) },
                                             onDelete = { recurringVm.delete(template) },
-                                            onSetPriority = { score ->
-                                                recurringVm.setPriority(template, score)
-                                            },
-                                            onSetTargetBucket = { bucket ->
-                                                recurringVm.setTargetBucket(template, bucket)
-                                            },
-                                            onSetInterval = { days ->
-                                                recurringVm.setIntervalDays(template, days)
-                                            },
+                                            onAddToTasks = { bucket -> recurringVm.addToTasks(template, bucket) },
                                             onOpenDetail = { onOpenLoopDetail(template.id) },
-                                            autoOpenPrioSlider =
-                                                prioPickerTemplateId == template.id,
-                                            onPrioSliderConsumed = { prioPickerTemplateId = null },
-                                            autoOpenBucketMenu =
-                                                bucketPickerTemplateId == template.id,
-                                            onBucketMenuConsumed = { bucketPickerTemplateId = null },
                                         )
                                     }
                                 } else {
@@ -645,6 +661,7 @@ fun TasksScreen(
                                             entry = entry,
                                             onClick = onClick,
                                             onResolve = onResolve,
+                                            onPickBucket = { bucketPickerEntryId = entry.id },
                                         )
                                     }
                                 } else {
@@ -731,6 +748,21 @@ fun TasksScreen(
                 }
             }
 
+            dragState?.let { activeDrag ->
+                DraggedTaskPreview(
+                    drag = activeDrag,
+                    modifier =
+                        Modifier.offset {
+                            IntOffset(
+                                x = (activeDrag.pointerInWindow.x - contentOriginInWindow.x - 24f).roundToInt(),
+                                y = (activeDrag.pointerInWindow.y - contentOriginInWindow.y - dragPreviewLiftPx).roundToInt(),
+                            )
+                        }
+                            .padding(horizontal = 18.dp)
+                            .fillMaxWidth(),
+                )
+            }
+
             SnackbarHost(
                 hostState = snackbar,
                 modifier = Modifier.align(Alignment.BottomCenter).padding(bottom = 110.dp),
@@ -796,7 +828,6 @@ fun TasksScreen(
             BucketPickerSheet(
                 entry = entry,
                 onPick = { bucket -> vm.setManualPriority(id, defaultPriorityForBucket(bucket)) },
-                onClearManual = { vm.clearManualPriority(id) },
                 onClose = { bucketPickerEntryId = null },
             )
         } else if (allActive.isNotEmpty()) {
@@ -1324,13 +1355,19 @@ private fun iconForCategory(
     }
 
 @Composable
-private fun BucketHeader(bucket: TimeBucket, count: Int, expanded: Boolean, onToggle: () -> Unit) {
+private fun BucketHeader(
+    bucket: TimeBucket,
+    count: Int,
+    expanded: Boolean,
+    isDropTarget: Boolean = false,
+    onToggle: () -> Unit,
+) {
     val label =
         when (bucket) {
-            TimeBucket.HEUTE -> "PRIORITÄT SEHR HOCH"
-            TimeBucket.MORGEN -> "PRIORITÄT HOCH"
-            TimeBucket.FREIBLOCK -> "PRIORITÄT MITTEL"
-            TimeBucket.GERING -> "PRIORITÄT GERING"
+            TimeBucket.HEUTE -> "SEHR HOCH"
+            TimeBucket.MORGEN -> "HOCH"
+            TimeBucket.FREIBLOCK -> "MITTEL"
+            TimeBucket.GERING -> "GERING"
             TimeBucket.SPAETER -> "SPÄTER"
         }
     AccordionHeaderRow(
@@ -1339,6 +1376,7 @@ private fun BucketHeader(bucket: TimeBucket, count: Int, expanded: Boolean, onTo
         accent = bucketAccent(bucket),
         count = count,
         expanded = expanded,
+        isDropTarget = isDropTarget,
         onToggle = onToggle,
     )
 }
@@ -1368,6 +1406,8 @@ private fun AccordionHeaderRow(
     accent: Color,
     count: Int,
     expanded: Boolean,
+    modifier: Modifier = Modifier,
+    isDropTarget: Boolean = false,
     onToggle: () -> Unit,
 ) {
     val cosmos = LocalCosmos.current
@@ -1379,10 +1419,21 @@ private fun AccordionHeaderRow(
         )
     Row(
         modifier =
-            Modifier.fillMaxWidth()
+            modifier.fillMaxWidth()
                 .padding(top = 6.dp, bottom = 2.dp)
                 .clip(RoundedCornerShape(14.dp))
-                .background(if (expanded) accent.copy(alpha = 0.12f) else Color.Transparent)
+                .background(
+                    when {
+                        isDropTarget -> accent.copy(alpha = 0.26f)
+                        expanded -> accent.copy(alpha = 0.12f)
+                        else -> Color.Transparent
+                    }
+                )
+                .border(
+                    width = if (isDropTarget) 2.dp else 0.dp,
+                    color = if (isDropTarget) accent else Color.Transparent,
+                    shape = RoundedCornerShape(14.dp),
+                )
                 .clickable(onClick = onToggle)
                 .padding(horizontal = 8.dp, vertical = 8.dp),
         verticalAlignment = Alignment.CenterVertically,
@@ -1520,15 +1571,126 @@ private fun formatResolvedAt(ms: Long): String {
 }
 
 @Composable
+private fun DraggableEntropyEntryCard(
+    entry: EntropyEntryEntity,
+    bucket: TimeBucket,
+    isDragging: Boolean,
+    resolveDropBucket: (Offset) -> TimeBucket?,
+    onDragStateChange: (TaskDragState) -> Unit,
+    onDrop: (TimeBucket) -> Unit,
+    onDragCancel: () -> Unit,
+    onClick: () -> Unit,
+    onResolve: () -> Unit,
+    onPickBucket: () -> Unit,
+) {
+    var coordinates: LayoutCoordinates? by remember { mutableStateOf(null) }
+    var lastPointerInWindow: Offset? by remember { mutableStateOf(null) }
+    val currentResolveDropBucket by rememberUpdatedState(resolveDropBucket)
+    fun emitDrag(pointer: Offset) {
+        lastPointerInWindow = pointer
+        onDragStateChange(
+            TaskDragState(
+                entry = entry,
+                sourceBucket = bucket,
+                pointerInWindow = pointer,
+                targetBucket = currentResolveDropBucket(pointer),
+            )
+        )
+    }
+    EntropyEntryCard(
+        entry = entry,
+        modifier =
+            Modifier.onGloballyPositioned { coordinates = it }
+                .pointerInput(entry.id, bucket) {
+                    detectDragGesturesAfterLongPress(
+                        onDragStart = { startOffset ->
+                            coordinates?.localToWindow(startOffset)?.let { emitDrag(it) }
+                        },
+                        onDrag = { change, _ ->
+                            coordinates?.localToWindow(change.position)?.let { emitDrag(it) }
+                            change.consume()
+                        },
+                        onDragEnd = {
+                            val target = lastPointerInWindow?.let { currentResolveDropBucket(it) }
+                            if (target != null) onDrop(target) else onDragCancel()
+                            lastPointerInWindow = null
+                        },
+                        onDragCancel = {
+                            lastPointerInWindow = null
+                            onDragCancel()
+                        },
+                    )
+                },
+        isDragging = isDragging,
+        onClick = onClick,
+        onResolve = onResolve,
+        onPickBucket = onPickBucket,
+    )
+}
+
+@Composable
+private fun DraggedTaskPreview(drag: TaskDragState, modifier: Modifier = Modifier) {
+    val cosmos = LocalCosmos.current
+    val target = drag.targetBucket
+    val accent = bucketAccent(target ?: drag.sourceBucket)
+    GlassCard(
+        modifier =
+            modifier.graphicsLayer {
+                alpha = 0.92f
+                scaleX = 1.03f
+                scaleY = 1.03f
+                shadowElevation = 22f
+            },
+        cornerRadius = 22.dp,
+        contentPadding = 14.dp,
+        backgroundOverride = cosmos.glassBg,
+    ) {
+        Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Box(
+                    modifier =
+                        Modifier.size(30.dp)
+                            .clip(RoundedCornerShape(10.dp))
+                            .background(accent.copy(alpha = 0.22f)),
+                    contentAlignment = Alignment.Center,
+                ) {
+                    Icon(
+                        imageVector = bucketIcon(target ?: drag.sourceBucket),
+                        contentDescription = null,
+                        tint = accent,
+                        modifier = Modifier.size(18.dp),
+                    )
+                }
+                Spacer(Modifier.width(10.dp))
+                Text(
+                    text = drag.entry.title,
+                    style = MaterialTheme.typography.titleSmall,
+                    color = cosmos.textPrimary,
+                    fontWeight = FontWeight.Bold,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                    modifier = Modifier.weight(1f),
+                )
+            }
+            Text(
+                text = target?.let { "Ablegen in ${bucketLabelLong(it)}" } ?: "Über einen Bereich ziehen",
+                style = MaterialTheme.typography.labelMedium,
+                color = accent,
+                fontWeight = FontWeight.SemiBold,
+            )
+        }
+    }
+}
+
+@Composable
 private fun EntropyEntryCard(
     entry: EntropyEntryEntity,
+    modifier: Modifier = Modifier,
+    isDragging: Boolean = false,
     onClick: () -> Unit = {},
     onResolve: () -> Unit = {},
     onSeverityHint: () -> Unit = {},
     onPickBucket: () -> Unit = {},
-    onSetManualPriority: (Double) -> Unit = {},
-    autoOpenPrioSlider: Boolean = false,
-    onPrioSliderConsumed: () -> Unit = {},
 ) {
     val cosmos = LocalCosmos.current
     val isResolved = entry.status == EntryStatus.REDUZIERT || entry.status == EntryStatus.ARCHIVIERT
@@ -1538,24 +1700,7 @@ private fun EntropyEntryCard(
     // Off-Screen-Buffer-Allocation). Vorher: Modifier.alpha erzeugte auch bei
     // alpha = 1f gelegentlich einen Layer.
     val cardAlpha = if (isResolved) 0.55f else 1f
-    // Frank-Wunsch 2026-05-31: manuelle Prioritaet per Schieberegler. Solange der
-    // Regler aktiv ist, faerbt sich die Kachel LIVE nach dem aktuellen Reglerwert.
-    // Effektive Prioritaet = Live-Regler ?: manueller Wert ?: KI-Wert.
-    var sliderActive by remember(entry.id) { mutableStateOf(false) }
-    var liveSlider by remember(entry.id) { mutableStateOf<Float?>(null) }
-    // Frank-Wunsch 2026-05-31: Tap auf die Prio-Perle im Widget oeffnet die App und
-    // klappt direkt den Schieberegler GENAU dieser Aufgabe auf (Verknuepfung zur
-    // manuellen Prioritaet, analog zum Bucket-Picker). autoOpenPrioSlider wird vom
-    // TasksScreen gesetzt, sobald der Widget-Deep-Link diese Karte meint; danach wird
-    // die Markierung via onPrioSliderConsumed sofort wieder geleert.
-    LaunchedEffect(autoOpenPrioSlider) {
-        if (autoOpenPrioSlider) {
-            sliderActive = true
-            onPrioSliderConsumed()
-        }
-    }
-    val effectivePriority =
-        liveSlider?.toDouble() ?: entry.manualPriorityScore ?: entry.priorityScore
+    val effectivePriority = entry.manualPriorityScore ?: entry.priorityScore
 
     // Frank-Wunsch 2026-05-31: Karten-Hintergrund ist ein kraeftiger horizontaler
     // Verlauf in der Prioritaetsfarbe — links dezent, rechts die volle Farbe.
@@ -1566,8 +1711,10 @@ private fun EntropyEntryCard(
         remember(ramp) { Brush.horizontalGradient(colors = listOf(ramp.copy(alpha = 0.20f), ramp)) }
     GlassCard(
         modifier =
-            Modifier.fillMaxWidth().clickable(onClick = onClick).graphicsLayer {
-                alpha = cardAlpha
+            modifier.fillMaxWidth().clickable(onClick = onClick).graphicsLayer {
+                alpha = if (isDragging) 0.28f else cardAlpha
+                scaleX = if (isDragging) 0.98f else 1f
+                scaleY = if (isDragging) 0.98f else 1f
                 compositingStrategy = CompositingStrategy.ModulateAlpha
             },
         tintBrush = priorityBrush,
@@ -1633,116 +1780,63 @@ private fun EntropyEntryCard(
                 }
             }
 
-            // Untere Zeile: Priorität-Perle + KI/manuell-Perle (rechts).
+            // Untere Zeile: direkte Bereichsverschiebung statt Prioritäts-Slider.
             Spacer(Modifier.height(8.dp))
-            val prioLabel =
-                when {
-                    liveSlider != null -> "Priorität ${Math.round(liveSlider!!)}"
-                    entry.manualPriorityScore != null ->
-                        "Priorität ${entry.manualPriorityScore!!.toInt()}"
-                    else -> "Priorität KI"
-                }
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Spacer(Modifier.weight(1f))
-                PriorityPearl(label = prioLabel, onClick = { sliderActive = !sliderActive })
-                Spacer(Modifier.width(8.dp))
-                BucketPickerButton(
-                    isManual = entry.manualPriorityScore != null,
-                    bucket = priorityBucketForScore(effectivePriority),
+                Button(
                     onClick = onPickBucket,
-                )
-            }
-            // Schieberegler — nur wenn die Priorität-Perle angetippt wurde. In 5%-
-            // Schritten (steps=19 → 0,5,…,100). Beim Schieben aendert sich Kachel-
-            // Farbe + Wert live; beim Loslassen wird gespeichert und der Regler
-            // klappt wieder zu.
-            if (sliderActive) {
-                Spacer(Modifier.height(8.dp))
-                val sliderPos =
-                    liveSlider ?: (entry.manualPriorityScore ?: entry.priorityScore).toFloat()
-                androidx.compose.material3.Slider(
-                    value = sliderPos.coerceIn(0f, 100f),
-                    onValueChange = { liveSlider = it },
-                    onValueChangeFinished = {
-                        liveSlider?.let { onSetManualPriority(it.toDouble()) }
-                        sliderActive = false
-                    },
-                    valueRange = 0f..100f,
-                    steps = 19,
-                    colors =
-                        androidx.compose.material3.SliderDefaults.colors(
-                            thumbColor = ramp,
-                            activeTrackColor = ramp,
-                        ),
-                )
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = Color.White,
+                        contentColor = Color.Black,
+                    ),
+                ) {
+                    Text("Verschieben")
+                }
             }
         }
     }
 }
 
-/**
- * Kleine Perle (gleicher Stil wie die KI/manuell-Perle) die die Prioritaet zeigt: "Priorität KI"
- * wenn die KI bestimmt, sonst "Priorität <Wert>" bei manuellem Wert. Klick oeffnet den
- * Schieberegler. Die Perle selbst aendert ihre Farbe NICHT — nur die Kachel dahinter faerbt sich
- * (Frank-Wunsch 2026-05-31).
- */
-@Composable
-private fun PriorityPearl(label: String, onClick: () -> Unit) {
-    val cosmos = LocalCosmos.current
-    val pillShape = remember { RoundedCornerShape(50) }
-    Row(
-        verticalAlignment = Alignment.CenterVertically,
-        modifier =
-            Modifier.background(cosmos.glassBg, pillShape)
-                .clickable(onClick = onClick)
-                .padding(horizontal = 10.dp, vertical = 6.dp),
-    ) {
-        Text(
-            text = label,
-            style = MaterialTheme.typography.labelSmall,
-            color = cosmos.textSecondary,
-        )
+private fun findDropBucket(
+    pointerInWindow: Offset,
+    listBoundsInWindow: Rect,
+    listState: androidx.compose.foundation.lazy.LazyListState,
+    entriesByBucket: Map<TimeBucket, List<EntropyEntryEntity>>,
+): TimeBucket? {
+    if (!listBoundsInWindow.contains(pointerInWindow)) return null
+    val pointerYInList = pointerInWindow.y - listBoundsInWindow.top
+    val visibleItems = listState.layoutInfo.visibleItemsInfo
+    val directHit = visibleItems.firstOrNull { item ->
+        pointerYInList >= item.offset && pointerYInList <= item.offset + item.size
     }
+    val nearHit = directHit ?: visibleItems.minByOrNull { item ->
+        val top = item.offset.toFloat()
+        val bottom = (item.offset + item.size).toFloat()
+        when {
+            pointerYInList < top -> top - pointerYInList
+            pointerYInList > bottom -> pointerYInList - bottom
+            else -> 0f
+        }
+    }?.takeIf { item ->
+        val top = item.offset.toFloat()
+        val bottom = (item.offset + item.size).toFloat()
+        pointerYInList >= top - 36f && pointerYInList <= bottom + 36f
+    }
+    return bucketForLazyKey(nearHit?.key, entriesByBucket)
 }
 
-/**
- * Kleiner Button unten rechts in der Card der die schnelle Prioritätsbereich-Auswahl öffnet.
- * "manuell" bedeutet: Frank hat einen Prioritätswert gesetzt; sonst kommt der Wert von der KI.
- */
-@Composable
-private fun BucketPickerButton(isManual: Boolean, bucket: TimeBucket, onClick: () -> Unit) {
-    val cosmos = LocalCosmos.current
-    // Frank-Wunsch 2026-05-31 (Folge-Korrektur): Beide Pillen (KI + manuell) sind
-    // jetzt KOMPLETT gleich — gleicher heller Perle-Hintergrund (cosmos.glassBg) UND
-    // gleiche Text-/Icon-Farbe (cosmos.textSecondary). Es unterscheidet nur noch das
-    // Wort ("KI" vs. "manuell"); kein Hellblau/Blau mehr, das auf den farbigen
-    // Kacheln schlecht lesbar war.
-    val bg = cosmos.glassBg
-    val tint = cosmos.textSecondary
-    // PERFORMANCE 2026-05-09: clip() entfernt — background(color, shape) clippt
-    // visuell (zeichnet abgerundete Form), Inhalte sind kurz und passen rein.
-    val pillShape = remember { RoundedCornerShape(50) }
-    Row(
-        verticalAlignment = Alignment.CenterVertically,
-        modifier =
-            Modifier.background(bg, pillShape)
-                .clickable(onClick = onClick)
-                .padding(horizontal = 10.dp, vertical = 6.dp),
-    ) {
-        Icon(
-            imageVector = bucketIcon(bucket),
-            contentDescription = "Prioritätsbereich ändern",
-            tint = tint,
-            modifier = Modifier.size(14.dp),
-        )
-        Spacer(Modifier.width(4.dp))
-        Text(
-            text = if (isManual) "manuell" else "KI",
-            style = MaterialTheme.typography.labelSmall,
-            color = tint,
-            fontWeight = if (isManual) FontWeight.SemiBold else FontWeight.Normal,
-        )
-    }
+private fun bucketForLazyKey(
+    key: Any?,
+    entriesByBucket: Map<TimeBucket, List<EntropyEntryEntity>>,
+): TimeBucket? {
+    val textKey = key as? String ?: return null
+    ALL_TIME_BUCKETS.firstOrNull { bucket ->
+        textKey == "header-${bucket.name}" || textKey == "empty-${bucket.name}"
+    }?.let { return it }
+    return entriesByBucket.entries.firstOrNull { (_, entries) ->
+        entries.any { it.id == textKey }
+    }?.key
 }
 
 /**
@@ -1754,7 +1848,6 @@ private fun BucketPickerButton(isManual: Boolean, bucket: TimeBucket, onClick: (
 private fun BucketPickerSheet(
     entry: EntropyEntryEntity,
     onPick: (TimeBucket) -> Unit,
-    onClearManual: () -> Unit,
     onClose: () -> Unit,
 ) {
     val cosmos = LocalCosmos.current
@@ -1775,7 +1868,7 @@ private fun BucketPickerSheet(
             verticalArrangement = Arrangement.spacedBy(10.dp),
         ) {
             Text(
-                "Priorität einordnen",
+                "Verschieben",
                 style = MaterialTheme.typography.titleLarge,
                 color = cosmos.textPrimary,
                 fontWeight = FontWeight.SemiBold,
@@ -1787,48 +1880,17 @@ private fun BucketPickerSheet(
                 maxLines = 2,
             )
             Spacer(Modifier.height(4.dp))
-            // Fünf Prioritätsbereiche
-            ALL_TIME_BUCKETS.forEach { bucket ->
-                val effectiveBucket =
-                    priorityBucketForScore(entry.manualPriorityScore ?: entry.priorityScore)
-                val isActive =
-                    effectiveBucket == bucket
+            val effectiveBucket = priorityBucketForScore(entry.manualPriorityScore ?: entry.priorityScore)
+            ALL_TIME_BUCKETS.filterNot { it == effectiveBucket }.forEach { bucket ->
                 BucketOptionRow(
                     bucket = bucket,
                     label = bucketLabelLong(bucket),
                     description = bucketDescription(bucket),
-                    isActive = isActive,
-                    isManual = entry.manualPriorityScore != null && isActive,
                     onClick = {
                         onPick(bucket)
                         onClose()
                     },
                 )
-            }
-            // Reset auf KI
-            if (entry.manualPriorityScore != null) {
-                Spacer(Modifier.height(4.dp))
-                androidx.compose.material3.OutlinedButton(
-                    onClick = {
-                        onClearManual()
-                        onClose()
-                    },
-                    modifier = Modifier.fillMaxWidth(),
-                    shape = RoundedCornerShape(12.dp),
-                ) {
-                    Icon(
-                        imageVector = Icons.Outlined.Psychology,
-                        contentDescription = null,
-                        tint = LocalCosmos.current.accentForscher,
-                        modifier = Modifier.size(18.dp),
-                    )
-                    Spacer(Modifier.width(8.dp))
-                    Text(
-                        text = "KI-Priorität verwenden",
-                        color = LocalCosmos.current.accentForscher,
-                        fontWeight = FontWeight.SemiBold,
-                    )
-                }
             }
             Spacer(Modifier.height(8.dp))
         }
@@ -1840,19 +1902,16 @@ private fun BucketOptionRow(
     bucket: TimeBucket,
     label: String,
     description: String,
-    isActive: Boolean,
-    isManual: Boolean,
     onClick: () -> Unit,
 ) {
     val cosmos = LocalCosmos.current
     val accent = bucketAccent(bucket)
-    val bg = if (isActive) accent.copy(alpha = 0.18f) else cosmos.glassBg
     Row(
         verticalAlignment = Alignment.CenterVertically,
         modifier =
             Modifier.fillMaxWidth()
                 .clip(RoundedCornerShape(14.dp))
-                .background(bg)
+                .background(cosmos.glassBg)
                 .clickable(onClick = onClick)
                 .padding(horizontal = 12.dp, vertical = 12.dp),
     ) {
@@ -1884,23 +1943,15 @@ private fun BucketOptionRow(
                 color = cosmos.textSecondary,
             )
         }
-        if (isActive) {
-            Icon(
-                imageVector = Icons.Outlined.Check,
-                contentDescription = "aktiv",
-                tint = accent,
-                modifier = Modifier.size(20.dp),
-            )
-        }
     }
 }
 
 private fun bucketLabelLong(bucket: TimeBucket): String =
     when (bucket) {
-        TimeBucket.HEUTE -> "Priorität sehr hoch"
-        TimeBucket.MORGEN -> "Priorität hoch"
-        TimeBucket.FREIBLOCK -> "Priorität mittel"
-        TimeBucket.GERING -> "Priorität gering"
+        TimeBucket.HEUTE -> "Sehr hoch"
+        TimeBucket.MORGEN -> "Hoch"
+        TimeBucket.FREIBLOCK -> "Mittel"
+        TimeBucket.GERING -> "Gering"
         TimeBucket.SPAETER -> "Später"
     }
 
@@ -2004,10 +2055,10 @@ private fun EntryMetaRow(entry: EntropyEntryEntity, modifier: Modifier = Modifie
         // Bucket-Time-Label (TimeBucket)
         val bucketLabel =
             when (entry.timeBucket) {
-                de.frank.entropyreducer.domain.model.TimeBucket.HEUTE -> "Priorität sehr hoch"
-                de.frank.entropyreducer.domain.model.TimeBucket.MORGEN -> "Priorität hoch"
-                de.frank.entropyreducer.domain.model.TimeBucket.FREIBLOCK -> "Priorität mittel"
-                de.frank.entropyreducer.domain.model.TimeBucket.GERING -> "Priorität gering"
+                de.frank.entropyreducer.domain.model.TimeBucket.HEUTE -> "Sehr hoch"
+                de.frank.entropyreducer.domain.model.TimeBucket.MORGEN -> "Hoch"
+                de.frank.entropyreducer.domain.model.TimeBucket.FREIBLOCK -> "Mittel"
+                de.frank.entropyreducer.domain.model.TimeBucket.GERING -> "Gering"
                 de.frank.entropyreducer.domain.model.TimeBucket.SPAETER -> "später"
             }
         val durationHint =
@@ -2346,6 +2397,15 @@ private fun KiSuggestionCard(
 // Performance-Audit Loop 8 (2026-05-10): Top-level Liste statt .values()-Array
 // pro Recomposition. TimeBucket wird in zwei verschiedenen Tab-Reihen iteriert.
 private val ALL_TIME_BUCKETS: List<TimeBucket> = TimeBucket.entries.toList()
+private val ALWAYS_VISIBLE_BUCKETS: Set<TimeBucket> =
+    setOf(TimeBucket.HEUTE, TimeBucket.MORGEN, TimeBucket.FREIBLOCK, TimeBucket.GERING)
+
+private data class TaskDragState(
+    val entry: EntropyEntryEntity,
+    val sourceBucket: TimeBucket,
+    val pointerInWindow: Offset,
+    val targetBucket: TimeBucket?,
+)
 
 // Akkordeon-Sektions-Schluessel fuer Bloecke ohne TimeBucket (Frank-Wunsch 2026-05-24).
 // Loop liegt zwischen SPAETER und ERLEDIGT (Frank-Wunsch 2026-05-24, Aufgabe 3).
@@ -2384,25 +2444,23 @@ private fun formatBackupTime(epochMs: Long): String {
 }
 
 /**
- * Findet den Aufgabenblock der die Aufgabe enthaelt und berechnet ihren LazyColumn- Index
- * (Frank-Wunsch 2026-05-24, Akkordeon). Annahme: GENAU dieser Block ist aufgeklappt, alle anderen
- * Bloecke sind zugeklappt (= je 1 Header-Item) — der Aufrufer klappt den Block vorher auf
- * (expandedSection = bucketName). 0: briefing 1 + Position des Buckets in ALL_TIME_BUCKETS: dessen
- * Header danach: die Eintraege des aufgeklappten Blocks Liefert (Sektions-Schluessel, Item-Index)
- * oder null wenn die Aufgabe in keinem aktiven Bucket liegt.
+ * Findet den Aufgabenblock der die Aufgabe enthaelt und berechnet den LazyColumn-Index.
+ * Sehr hoch/Hoch/Mittel/Gering sind immer offen; optionale Bereiche werden vom Aufrufer vor dem
+ * Scrollen geöffnet. Liefert (Sektions-Schluessel, Item-Index) oder null.
  */
 private fun computeTaskLocation(state: TasksUiState, taskId: String): Pair<String, Int>? {
     val isEmpty =
         state.entriesByBucket.values.all { it.isEmpty() } && state.resolvedEntries.isEmpty()
     if (isEmpty) return null
-    for ((bucketPos, bucket) in ALL_TIME_BUCKETS.withIndex()) {
+    var index = 0
+    for (bucket in ALL_TIME_BUCKETS) {
         val list = state.entriesByBucket[bucket].orEmpty()
         val pos = list.indexOfFirst { it.id == taskId }
         if (pos >= 0) {
-            // briefing(1) + Header der vorherigen (zugeklappten) Bloecke (bucketPos)
-            // + eigener Header(1) + Position in der Liste.
-            return bucket.name to (1 + bucketPos + 1 + pos)
+            return bucket.name to (index + 1 + pos)
         }
+        index += 1
+        if (bucket in ALWAYS_VISIBLE_BUCKETS) index += list.size
     }
     return null
 }

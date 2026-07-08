@@ -1,169 +1,27 @@
 # Debugging & Verifikation: Systematisch statt Trial-and-Error (KRITISCH)
 
-> Konsolidiert aus: confidence-check, inspect-before-guessing,
-> cbr-bugfix-search, debug-hypotheses-runtime
-> Ergaenzt: ~/.claude/rules/resilient-bugfixing.md (fuer den eigentlichen Fix)
+> Ergaenzt `resilient-bugfixing.md` (Direktive #3).
 
----
+## 1. Confidence-Ampel
+**Gruen** (in diesem Block gelesen ODER max 5 Turns) → sicher. **Gelb** (aelter/Training) → nachschlagen.
+**Rot** (Vermutung) → STOP, 1 Nachschlag, sonst als Schaetzung markieren. PFLICHT bei: Versionen, Pfaden
+(Existenz!), API-Parametern, CLI-Flags, JSON-Keys.
 
-## 1. Confidence-Ampel: Unsicherheit erkennen (KRITISCH)
+## 2. Inspect Before Guessing
+Zustand inspizieren bevor Code geaendert wird: API → echte Response (nicht Doku annehmen); Filesystem →
+`ls`/`stat`; Prozesse → `ps`/Port. Nicht raten.
 
-> Quelle: Superintelligenz Finding 5 — arXiv 2503.15850, ICLR 2025
+## 3. Bug-Datenbank ZUERST (CBR)
+Vor jedem neuen Fehler `bug-cases.jsonl` durchsuchen (Grep nach Symptom). 4 Phasen: Retrieve → Reuse →
+Revise → Retain. Schreiben nach Fix >5 Min / 2. Auftreten.
 
-Bei technisch praezisen Aussagen MUSS Claude seine eigene Sicherheit bewerten:
+## 4. Hypothesen-basiert (Sonden VOR dem Raten)
+Stufe 1 (Meldung eindeutig) → direkt fixen. Stufe 2 (Root Cause nach 30 s unklar) → SOFORT Logging-Sonden.
+Stufe 3 (Fix gescheitert) → Sonden Pflicht. **Muster:** Funktion identifizieren → Eingaben/Verzweigungen/
+Rueckgabe loggen → LAUFEN lassen, Logs LESEN → DANN Hypothese (2-3, je konkrete Funktion; max 2 Runden;
+Debug-Logging danach ENTFERNEN).
 
-| Farbe | Bedeutung | Aktion |
-|-------|-----------|--------|
-| **Gruen** | In diesem Antwortblock gelesen/ausgefuehrt ODER max 5 Turns zurueck | Sicher verwenden |
-| **Gelb** | >5 Turns zurueck (gleiche Session) ODER aus frueherer Session/Training | Im Zweifel nachschlagen |
-| **Rot** | Information ist Vermutung oder Schaetzung | **STOP** — genau 1 Nachschlage-Aufruf (Read/Grep/WebSearch). Danach immer noch unklar? → Explizit als Schaetzung markieren |
-
-### Wann die Ampel PFLICHT ist
-
-- Versionsnummern (Kotlin, Gradle, Android API Level, SDK)
-- Dateipfade (Existenz pruefen!)
-- API-Parameter (Funktionssignaturen, Rueckgabetypen)
-- CLI-Befehle (Flags, Syntax)
-- Konfiguration (JSON-Keys, YAML-Strukturen)
-
-### Wann NICHT noetig
-
-- Allgemeine Konzepte, Architektur-Entscheidungen, Erklaerungen in Alltagssprache
-
----
-
-## 2. Inspect Before Guessing: Erst anschauen, dann aendern (KRITISCH)
-
-**Regel:** IMMER den tatsaechlichen Zustand inspizieren bevor Code geaendert wird.
-
-### Inspektions-Methoden nach Kontext
-
-| Kontext | Methode |
-|---------|---------|
-| Web/Browser | DevTools → Elements-Tab, Console |
-| Electron | DevTools → gleiche Methoden |
-| Desktop-App | UI-Inspector, Accessibility-Tree |
-| API | Tatsaechliche Response lesen, nicht Doku annehmen |
-| Filesystem | `ls`, `stat`, tatsaechliche Datei lesen |
-| Prozesse | `ps`, Task Manager, Port-Belegung pruefen |
-
-### Haeufige Falschannahmen (NICHT raten!)
-
-- contenteditable-Felder sehen anders aus als angenommen
-- Feldhoehe/Breite ist nicht was der Code suggeriert
-- aria-label kann in anderer Sprache sein
-- Eltern-Element ist nicht das erwartete Tag
-- CSS-Klassen koennen sich seit dem letzten Lesen geaendert haben
-
----
-
-## 3. Bug-Datenbank durchsuchen VOR dem Debuggen (KRITISCH)
-
-> Quelle: Superintelligenz Finding 6 — Case-Based Reasoning, arXiv 2504.06943
-
-**Regel:** Bevor ein neuer Fehler debuggt wird, ZUERST die Bug-Datenbank durchsuchen:
-`~/proggs/.claude/agent-memory/shared/bug-cases.jsonl`
-
-### Die 4 CBR-Phasen
-
-1. **Retrieve**: Bug-Datenbank durchsuchen (Grep nach Symptom/Fehlermeldung)
-2. **Reuse**: Den alten Fix als ersten Loesungsansatz verwenden
-3. **Revise**: Falls nicht 1:1 passend, anpassen
-4. **Retain**: Den NEUEN Fall in die Datenbank eintragen
-
-### Datenbank-Format (bug-cases.jsonl)
-
-```json
-{"date":"2026-03-31","symptom":"Push rejected: non-fast-forward","root_cause":"Kein fetch+rebase vor push","fix":"git fetch origin && git rebase origin/main vor jedem push","files":["beliebig"],"tags":["git","push","rebase"],"severity":"hoch"}
-```
-
-### Wann durchsuchen
-- Bei JEDEM Build-Fehler, fehlgeschlagenen Befehl, unklaren Fehlermeldung
-
-### Wann schreiben
-- Nach JEDEM Bugfix der >5 Minuten dauerte
-- Nach JEDEM Fehler der zum zweiten Mal auftrat (ALARM!)
-
-### Zusammenspiel
-- **Resilient Bugfixing** (`~/.claude/rules/resilient-bugfixing.md`): CBR formalisiert den "Verwandte Fehlerquellen suchen"-Schritt
-- **Error-Antigens** (`error-antigens.jsonl`): Nutzt Bug-Cases als Grundlage fuer Praevention
-
----
-
-## 4. Hypothesen-basiertes Debugging (KRITISCH)
-
-> Quelle: Cursor Debug Mode 2.2, arXiv 2604.00167 (Fault Localization)
-
-### Stufenregel: Wann Logging-Sonden einsetzen (PFLICHT)
-
-> Quelle: TraceCoder (arXiv 2602.06875) — Execution-Trace-Debugging hat empirisch
-> hoehere Trefferquote als reines Fehlermeldungs-Debugging. Sonden VOR dem Raten
-> einbauen spart Token weil weniger Fehlversuche noetig sind.
-
-| Stufe | Situation | Aktion | Sonden noetig? |
-|-------|-----------|--------|---------------|
-| **1** | Fehlermeldung ist eindeutig (Compiler-Error, falscher Import, Tippfehler) | Direkt fixen — die Fehlermeldung IST die Diagnose | NEIN |
-| **2** | Root Cause nach 30 Sekunden noch unklar | SOFORT Logging-Sonden einbauen, NICHT erst raten | **JA — PFLICHT** |
-| **3** | Erster Fix-Versuch ist gescheitert | Ab jetzt sind Sonden PFLICHT fuer jeden weiteren Versuch | **JA — PFLICHT** |
-
-**Warum bei Stufe 2 schon, nicht erst bei Stufe 3:**
-Ein einziger Sonden-Durchlauf kostet ~500-1000 Token (2-3 Log-Zeilen einbauen + Output lesen).
-Ein gescheiterter Rateverversuch kostet ~2000-5000 Token (Edit + Build + Fehler analysieren + zurueckrollen).
-Sonden bei Stufe 2 sind also GUENSTIGER als ein Fehlversuch bei Stufe 3.
-
-**Sonden-Muster (TraceCoder-Pattern):**
-1. Funktion identifizieren die den Fehler ausloest (Function-level, siehe Fault Localization)
-2. Am Eingang der Funktion: Alle Eingabewerte loggen
-3. An Verzweigungen (if/when/switch): Welcher Pfad wird genommen?
-4. Am Ausgang: Rueckgabewert loggen
-5. Code LAUFEN lassen und Logs LESEN
-6. ERST DANN Hypothese formulieren basierend auf echten Daten
-
-Bei jedem nicht-trivialen Bug (Stufe 2+3) dieser 4-Schritte-Loop:
-
-### Schritt 1: HYPOTHESEN FORMULIEREN (2-3 Stueck)
-
-```
-Hypothese N: [Funktion X] macht [Y] falsch weil [Z]
-```
-- Jede Hypothese benennt eine konkrete **Funktion**
-- Nach Wahrscheinlichkeit geordnet
-
-### Schritt 2: INSTRUMENTIEREN
-
-Fuer jede Hypothese Messpunkte definieren BEVOR Code veraendert wird:
-
-| Plattform | Methode |
-|-----------|---------|
-| Android/Kotlin | `Log.d("DEBUG", "Wert: $variable")` → Logcat |
-| Web/TypeScript | `console.log("Punkt X:", variable)` → DevTools |
-| CLI/Python | `print(f"DEBUG: {variable}")` |
-| C#/WPF | `Debug.WriteLine($"DEBUG: {variable}")` |
-| iOS/Swift | `print("DEBUG: \(variable)")` |
-
-### Schritt 3: RUNTIME-DATEN ANALYSIEREN
-
-- Welche Hypothese bestaetigt? Welche widerlegt?
-- Unerwartete Werte → neue Hypothese?
-- Max 2 Runden. Danach: Minimal-Reproduktions-Fall anfordern.
-
-### Schritt 4: GEZIELTER FIX
-
-- Basiert auf echten Laufzeitdaten, nicht Vermutungen
-- Kommentar: `// Fix: [was in den Logs beobachtet wurde]`
-- Debug-Logging nach Fix ENTFERNEN
-
-### Wann NICHT noetig
-
-- Tippfehler, falscher Variablenname (Root Cause sofort sichtbar)
-- Fehlender Import (Compiler-Fehler ist eindeutig)
-- Fehler den der Benutzer direkt erklaert
-
-**Faustregel:** Root Cause nach 30 Sekunden noch unklar? → Hypothesen-Loop starten.
-
-### Was NIEMALS passieren darf
-
-- ❌ Fix vorschlagen bevor Laufzeitdaten vorliegen
-- ❌ Mehr als 3 Hypothesen (kein Fokus) oder mehr als 2 Runden ohne Daten
-- ❌ Hypothese ohne konkrete Funktion ("irgendwo im State")
-- ❌ Debug-Logging im Code lassen nach dem Fix
+## 5. Bei viel Entropie: reduzieren
+Signal: 3+ wirkungslose Fixes · Flailing >15 Min · gleicher Fehler wiederholt. Reaktion: STOPP →
+nachschlagen ob bekannt (ZUERST lokal `bugs/`+`bug-cases.jsonl`, DANN Internet) → einfachsten Fix zuerst →
+vereinfachen. Praevention: `known-bugs-before-coding.md`.

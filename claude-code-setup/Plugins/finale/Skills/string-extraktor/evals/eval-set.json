@@ -1,0 +1,292 @@
+{
+	"skill_name": "string-extraktor",
+	"version": "2.0",
+	"description": "Eval-Set fuer den string-extraktor Skill. 6 realistische Test-Szenarien decken Phase 0 (Sprach-Kontext), Phase 1 (Scan + Unicode), Phase 2 (Audit), Phase 3 (Create mit Plurals), Phase 5 (Funktions-Check) ab. Jede assertion hat einen normalisierten 'type'-Wert: pattern_exists, pattern_count_gte, pattern_all, absence, manual_check.",
+	"evals": [
+		{
+			"id": 1,
+			"name": "simple-compose-screen",
+			"phase": "3-CREATE",
+			"prompt": "Extrahiere alle hardcodierten Strings aus dem SettingsScreen und lege sie als String-Ressourcen in strings.xml an. Die App nutzt die Du-Form und ist auf Deutsch.",
+			"files": [
+				{
+					"path": "app/src/main/java/com/example/SettingsScreen.kt",
+					"content": "package com.example\n\nimport androidx.compose.material3.*\nimport androidx.compose.runtime.Composable\n\n@Composable\nfun SettingsScreen(onSave: () -> Unit) {\n    Column {\n        TopAppBar(title = { Text(\"Einstellungen\") })\n        Text(\"Allgemeine Einstellungen\")\n        OutlinedTextField(\n            value = \"\",\n            onValueChange = {},\n            label = { Text(\"E-Mail-Adresse\") },\n            placeholder = { Text(\"max.mustermann@example.de\") }\n        )\n        Button(onClick = onSave) {\n            Text(\"Speichern\")\n        }\n        Icon(\n            imageVector = Icons.Default.Settings,\n            contentDescription = \"Einstellungen oeffnen\"\n        )\n    }\n}\n"
+				},
+				{
+					"path": "app/src/main/res/values/strings.xml",
+					"content": "<?xml version=\"1.0\" encoding=\"utf-8\"?>\n<resources>\n    <string name=\"app_name\">Test-App</string>\n</resources>\n"
+				}
+			],
+			"expected_behavior": "Findet 5 hardcodierte Strings plus 1 technischer String (E-Mail-Beispiel). Erstellt strings.xml-Eintraege mit snake_case-Keys, ersetzt im Code mit stringResource(). Beispiel-Key fuer Email-Beispiel sollte als translatable=\"false\" markiert werden.",
+			"assertions": [
+				{
+					"id": 1,
+					"text": "strings.xml enthaelt mindestens 5 neue String-Eintraege",
+					"type": "pattern_count_gte",
+					"pattern": "<string name=\"",
+					"target": 5
+				},
+				{
+					"id": 2,
+					"text": "Kein 'Text(\"Speichern\")' mehr in SettingsScreen.kt",
+					"type": "absence",
+					"pattern": "Text\\(\\s*\"Speichern\""
+				},
+				{
+					"id": 3,
+					"text": "Alle neuen Strings nutzen snake_case-Keys",
+					"type": "pattern_all",
+					"pattern": "name=\"[a-z][a-z0-9_]*\""
+				},
+				{
+					"id": 4,
+					"text": "Du-Form wird konsistent verwendet",
+					"type": "absence",
+					"pattern": ">Sie [a-z]"
+				}
+			]
+		},
+		{
+			"id": 2,
+			"name": "plurals-and-placeholders",
+			"phase": "3-CREATE",
+			"prompt": "Pruefe diesen JournalScreen — die Zaehler-Strings sind hardcoded. Extrahiere sie als Plurals nach CLDR-Regeln. Die App nutzt Du-Form.",
+			"files": [
+				{
+					"path": "app/src/main/java/com/example/JournalScreen.kt",
+					"content": "package com.example\n\nimport androidx.compose.material3.*\nimport androidx.compose.runtime.Composable\n\n@Composable\nfun JournalScreen(entryCount: Int, userName: String) {\n    Column {\n        Text(\"Hallo $userName!\")\n        val countText = if (entryCount == 1) \"1 Eintrag\" else \"$entryCount Eintraege\"\n        Text(countText)\n        Text(\"Heute hast du %d neue Erinnerungen.\")\n        Snackbar { Text(\"Speichern fehlgeschlagen: $userName\") }\n    }\n}\n"
+				},
+				{
+					"path": "app/src/main/res/values/strings.xml",
+					"content": "<?xml version=\"1.0\" encoding=\"utf-8\"?>\n<resources xmlns:tools=\"http://schemas.android.com/tools\"\n           xmlns:xliff=\"urn:oasis:names:tc:xliff:document:1.2\"\n           tools:locale=\"de\">\n    <string name=\"app_name\">Test-App</string>\n</resources>\n"
+				}
+			],
+			"expected_behavior": "Erkennt dass 'Eintrag/Eintraege' eine Plural-Konstruktion ist und erstellt <plurals> mit one+other. Erkennt Template-String 'Hallo $userName' und extrahiert mit Platzhalter %1$s + xliff:g. Erkennt unnummerierte %d und ersetzt mit %1$d.",
+			"assertions": [
+				{
+					"id": 1,
+					"text": "strings.xml enthaelt mindestens 1 <plurals>-Eintrag",
+					"type": "pattern_exists",
+					"pattern": "<plurals name="
+				},
+				{
+					"id": 2,
+					"text": "Plurals haben sowohl 'one' als auch 'other' Kategorie",
+					"type": "pattern_count_gte",
+					"pattern": "quantity=\"(one|other)\"",
+					"target": 2
+				},
+				{
+					"id": 3,
+					"text": "Alle Platzhalter sind nummeriert (%1$s nicht %s)",
+					"type": "absence",
+					"pattern": "(?<!\\d\\$)(?<!\\$)%[sdfu](?![0-9])"
+				},
+				{
+					"id": 4,
+					"text": "Platzhalter haben xliff:g-Tag",
+					"type": "pattern_exists",
+					"pattern": "<xliff:g id="
+				},
+				{
+					"id": 5,
+					"text": "Code nutzt pluralStringResource fuer den Zaehler",
+					"type": "pattern_exists",
+					"pattern": "pluralStringResource"
+				}
+			]
+		},
+		{
+			"id": 3,
+			"name": "enum-displayname-trap",
+			"phase": "5-FUNKTIONS-CHECK",
+			"prompt": "Extrahiere die hardcodierten Mood-Labels. ACHTUNG: Sie werden auch in Room gespeichert — finde das Risiko und schlage einen Fix vor.",
+			"files": [
+				{
+					"path": "app/src/main/java/com/example/Mood.kt",
+					"content": "package com.example\n\nenum class Mood(val displayName: String) {\n    HAPPY(\"Gluecklich\"),\n    SAD(\"Traurig\"),\n    NEUTRAL(\"Neutral\")\n}\n"
+				},
+				{
+					"path": "app/src/main/java/com/example/MoodScreen.kt",
+					"content": "package com.example\n\nimport androidx.compose.material3.*\nimport androidx.compose.runtime.Composable\n\n@Composable\nfun MoodScreen(currentMood: Mood) {\n    Text(\"Aktuelle Stimmung: ${currentMood.displayName}\")\n}\n\n// In MoodViewModel.kt:\n// prefs.putString(\"mood\", currentMood.displayName) // BUG!\n"
+				},
+				{
+					"path": "app/src/main/res/values/strings.xml",
+					"content": "<?xml version=\"1.0\" encoding=\"utf-8\"?>\n<resources>\n    <string name=\"app_name\">Test-App</string>\n</resources>\n"
+				}
+			],
+			"expected_behavior": "Erkennt das Enum-Serialisierungs-Risiko (Phase 5.2): displayName wird sowohl fuer UI als auch fuer DB-Speicherung verwendet — Datenverlust bei Sprachwechsel. Schlaegt vor: Trennung von Anzeige (@StringRes) und Speicherung (enum.name).",
+			"assertions": [
+				{
+					"id": 1,
+					"text": "Enum hat jetzt @StringRes-Property statt String",
+					"type": "pattern_exists",
+					"pattern": "@StringRes\\s+val\\s+\\w+\\s*:\\s*Int"
+				},
+				{
+					"id": 2,
+					"text": "Enum-Werte verweisen auf R.string.mood_*",
+					"type": "pattern_count_gte",
+					"pattern": "R\\.string\\.mood_",
+					"target": 3
+				},
+				{
+					"id": 3,
+					"text": "Funktionalitaets-Check-Warnung wurde dem Benutzer gezeigt",
+					"type": "manual_check",
+					"criterion": "Erwaehnt 'Datenverlust', 'Enum-Serialisierung' oder 'Phase 5.2' in der Antwort"
+				},
+				{
+					"id": 4,
+					"text": "Vorschlag enum.name statt displayName fuer prefs.putString",
+					"type": "manual_check",
+					"criterion": "Erwaehnt 'enum.name' oder 'currentMood.name' fuer Datenspeicherung"
+				}
+			]
+		},
+		{
+			"id": 4,
+			"name": "unicode-escape-detection",
+			"phase": "1-SCAN",
+			"prompt": "Suche in dieser Datei nach versteckten deutschen Umlauten als Unicode-Escapes und extrahiere sie korrekt. Die App nutzt Du-Form.",
+			"files": [
+				{
+					"path": "app/src/main/java/com/example/DashboardScreen.kt",
+					"content": "package com.example\n\nimport androidx.compose.material3.*\nimport androidx.compose.runtime.Composable\n\n@Composable\nfun DashboardScreen() {\n    Column {\n        Text(\"\\u00dcberblick\")\n        Text(\"M\\u00fcllverarbeitung\")\n        Text(\"Gr\\u00fc\\u00dfe an alle\")\n        Text(\"Stra\\u00dfenmusik\")\n    }\n}\n"
+				},
+				{
+					"path": "app/src/main/res/values/strings.xml",
+					"content": "<?xml version=\"1.0\" encoding=\"utf-8\"?>\n<resources>\n    <string name=\"app_name\">Test-App</string>\n</resources>\n"
+				}
+			],
+			"expected_behavior": "Erkennt alle 4 Strings mit Unicode-Escape-Umlauten (Überblick, Müllverarbeitung, Grüße an alle, Straßenmusik). Decodiert sie korrekt in echte Umlaute und extrahiert sie als strings.xml-Eintraege. KEINE Unicode-Escapes mehr in der finalen strings.xml.",
+			"assertions": [
+				{
+					"id": 1,
+					"text": "Mindestens 4 neue String-Eintraege erstellt",
+					"type": "pattern_count_gte",
+					"pattern": "<string name=\"",
+					"target": 4
+				},
+				{
+					"id": 2,
+					"text": "Keine Unicode-Escapes (\\uXXXX) mehr in strings.xml",
+					"type": "absence",
+					"pattern": "\\\\u00(dc|fc|d6|f6|c4|e4|df)"
+				},
+				{
+					"id": 3,
+					"text": "Echte Umlaute (Ü, ü, ö, ß) erscheinen in den extrahierten Strings",
+					"type": "pattern_exists",
+					"pattern": "(Ü|ü|ö|ß)"
+				},
+				{
+					"id": 4,
+					"text": "Code nutzt jetzt stringResource statt Unicode-Escapes",
+					"type": "absence",
+					"pattern": "Text\\(\\s*\"\\\\u00"
+				}
+			]
+		},
+		{
+			"id": 5,
+			"name": "existing-xml-audit",
+			"phase": "2-AUDIT",
+			"prompt": "Pruefe die bestehende strings.xml auf Qualitaetsprobleme. Behebe alle automatisch fixbaren Issues und melde die anderen.",
+			"files": [
+				{
+					"path": "app/src/main/res/values/strings.xml",
+					"content": "<?xml version=\"1.0\" encoding=\"utf-8\"?>\n<resources>\n    <string name=\"app_name\">Mein Tagebuch</string>\n    <string name=\"hello\">Hallo %s, du hast %d Eintraege.</string>\n    <string name=\"url_priv\">https://example.com/privacy</string>\n    <string name=\"legacy\">Das muß gemacht werden, daß stimmt.</string>\n    <string name=\"dup1\">Speichern</string>\n    <string name=\"dup2\">Speichern</string>\n    <string name=\"share_btn\">Hat dir geshared werden koennen.</string>\n</resources>\n"
+				}
+			],
+			"expected_behavior": "Findet 5 Issues: (1) unnummerierte Platzhalter %s/%d, (2) URL ohne translatable=\"false\", (3) veraltete Rechtschreibung (muß/daß), (4) Duplikat-Werte (dup1/dup2 beide 'Speichern'), (5) Denglisch (geshared). Fixt 1-3 automatisch, meldet 4+5 zur Benutzer-Entscheidung.",
+			"assertions": [
+				{
+					"id": 1,
+					"text": "Platzhalter sind nummeriert nach dem Fix",
+					"type": "pattern_exists",
+					"pattern": "%1\\$s.*%2\\$d|%2\\$d.*%1\\$s"
+				},
+				{
+					"id": 2,
+					"text": "URL hat translatable=\"false\"",
+					"type": "pattern_exists",
+					"pattern": "name=\"url_priv\"[^>]*translatable=\"false\""
+				},
+				{
+					"id": 3,
+					"text": "Veraltete Rechtschreibung gefixt (muss/dass statt muß/daß)",
+					"type": "absence",
+					"pattern": "(daß|muß)\\b"
+				},
+				{
+					"id": 4,
+					"text": "Duplikat dem Benutzer gemeldet (manuelle Entscheidung)",
+					"type": "manual_check",
+					"criterion": "Erwaehnt 'Duplikat', 'dup1', 'dup2' oder 'gleicher Wert' in der Antwort"
+				},
+				{
+					"id": 5,
+					"text": "Denglisch erkannt und gemeldet (manuelle Korrektur)",
+					"type": "manual_check",
+					"criterion": "Erwaehnt 'geshared', 'Denglisch' oder 'geteilt' als Vorschlag"
+				}
+			]
+		},
+		{
+			"id": 6,
+			"name": "language-context-detection",
+			"phase": "0-SPRACH-KONTEXT",
+			"prompt": "Diese App hat schon Strings. Erkenne die Anrede (Du/Sie) und Gender-Strategie aus den bestehenden Strings — und melde mir eine Inkonsistenz wenn es eine gibt.",
+			"files": [
+				{
+					"path": "app/src/main/res/values/strings.xml",
+					"content": "<?xml version=\"1.0\" encoding=\"utf-8\"?>\n<resources>\n    <string name=\"welcome\">Willkommen zurueck! Wir freuen uns dich wiederzusehen.</string>\n    <string name=\"profile\">Deine Profil-Einstellungen</string>\n    <string name=\"reminder\">Sie haben heute noch keinen Eintrag erstellt.</string>\n    <string name=\"settings\">Du kannst deine Einstellungen jederzeit aendern.</string>\n    <string name=\"users_label\">Nutzende</string>\n    <string name=\"members_label\">Mitglieder</string>\n</resources>\n"
+				}
+			],
+			"expected_behavior": "Erkennt: (1) Inkonsistente Anrede — 'Wir freuen uns dich' (Du) und 'Du kannst deine' (Du) mit 'Sie haben heute' (Sie). Meldet ALARM. (2) Gender-Strategie ist Strategie 1 (Partizip: 'Nutzende') + Strategie 2 (Neutral: 'Mitglieder'). Sauber konsistent. Meldet beide Befunde.",
+			"assertions": [
+				{
+					"id": 1,
+					"text": "Du/Sie-Inkonsistenz wurde erkannt und gemeldet",
+					"type": "manual_check",
+					"criterion": "Erwaehnt 'inkonsistent', 'ALARM', 'mix' oder 'Du/Sie' in der Antwort"
+				},
+				{
+					"id": 2,
+					"text": "Gender-Strategie Partizip+Neutral wurde erkannt",
+					"type": "manual_check",
+					"criterion": "Erwaehnt 'Partizip', 'Nutzende' oder 'Strategie 1' UND 'Mitglieder' oder 'neutral' oder 'Strategie 2'"
+				},
+				{
+					"id": 3,
+					"text": "Konkrete Beispiele aus strings.xml zitiert",
+					"type": "manual_check",
+					"criterion": "Nennt mindestens 2 konkrete Strings/Keys aus der strings.xml (z.B. 'welcome', 'reminder', 'profile')"
+				}
+			]
+		}
+	],
+	"metadata": {
+		"created": "2026-05-18",
+		"version": "2.0 — erweitert von 3 auf 6 Cases nach zweiter Audit-Runde",
+		"purpose": "Regressions-Test gegen den string-extraktor Skill. Deckt jetzt Phase 0, 1, 2, 3, 5 ab (Phase 4 schwer testbar weil Build-Schritt, Phase 6 ist Setup-Skill nicht Run-Skill).",
+		"coverage": {
+			"phase_0_sprach_kontext": "Eval 6",
+			"phase_1_scan": "Eval 4 (Unicode-Escape)",
+			"phase_2_audit": "Eval 5 (bestehende XML)",
+			"phase_3_create": "Eval 1 (Simple), Eval 2 (Plurals+Placeholders)",
+			"phase_5_funktions_check": "Eval 3 (Enum-Trap)"
+		},
+		"assertion_types": {
+			"pattern_exists": "Pattern muss mindestens 1x vorkommen",
+			"pattern_count_gte": "Pattern muss mindestens N-mal vorkommen (mit 'target')",
+			"pattern_all": "ALLE Matches des Patterns muessen valide sein",
+			"absence": "Pattern darf NICHT vorkommen",
+			"manual_check": "Subjektive Bewertung — 'criterion' beschreibt was erwartet wird"
+		},
+		"manual_run": "bash scripts/validate.sh values/strings.xml (in Test-Verzeichnis)",
+		"automated_run": "python -m scripts.run_loop --eval-set evals/eval-set.json --skill-path . --model claude-opus-4-7"
+	}
+}

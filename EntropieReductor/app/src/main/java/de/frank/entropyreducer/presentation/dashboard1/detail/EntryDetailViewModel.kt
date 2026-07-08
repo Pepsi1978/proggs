@@ -194,13 +194,12 @@ constructor(
                     timeOfDayMinutes = 480,
                     untilEpochMs = null,
                     nextOccurrenceAt = null,
-                    // Frank-Wunsch 2026-06-02 (Bugfix Loop-Prio): Die heutige Instanz entsteht
-                    // SOFORT aus der konvertierten Aufgabe (unten). lastGeneratedAt=now +
-                    // occurrenceCount=1 verhindern, dass GenerateRecurringInstancesUseCase beim
-                    // naechsten App-Start eine ZWEITE Instanz fuer heute erzeugt (Duplikat).
+                    // Loop-Vorlagen erzeugen keine Aufgaben mehr automatisch. Die konvertierte
+                    // Aufgabe bleibt die eine manuell vorhandene Aufgabe; weitere Kopien entstehen
+                    // nur noch durch den Hinzufügen-Button im Loop-Bereich.
                     lastGeneratedAt = now,
                     occurrenceCount = 1,
-                    isActive = true,
+                    isActive = false,
                     createdAt = now,
                     updatedAt = now,
                 )

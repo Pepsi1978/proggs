@@ -446,7 +446,7 @@ LangChain/OpenAI/Confident-AI Eval-Guides):
 | Konzept aus der Recherche | Entspricht im eigenen System |
 |---|---|
 | ACE grow-and-refine, restorable compression | `lossless-context-principle.md` (verlustfrei auslagern statt wegwerfen) |
-| Logs & Replay, Sichtbarkeit pro Schritt | `observability-first.md` + `observability-live-logic-probes.md` |
+| Logs & Replay, Sichtbarkeit pro Schritt | `observability-first.md` |
 | Circuit Breaker, Bounded Execution, Resume | `subagent-crash-proofing.md` (Orchestrator-Resume, Checkpoints) |
 | Secrets in `.env`/ausserhalb Repo | `secrets-in-sk-folder.md` |
 | Maker ≠ Judge, Outcomes statt Completions | Direktive #2 (Selbstbeobachtung) + quality-gate |

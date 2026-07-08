@@ -1,0 +1,54 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+Test-Eingabe fuer den Uebersetzungs-Skill (evals/evals.json).
+
+12 typische deutsche Strings die alle Validator-Pfade triggern koennen:
+- Apostroph-Risiko bei Uebersetzung in FR/IT/EN (Strings mit "es ist", "ich bin")
+- Format-Platzhalter (%1$s, %2$d)
+- Plural-Quantities (Singular/Plural)
+- Lange Strings die in vielen Sprachen >+40% expandieren
+- Kurze Button-Texte
+- Brand-Name (soll NICHT uebersetzt werden)
+- Spezial-Zeichen die XML-Escape brauchen
+
+Repraesentiert den Stil einer Journal-/Wellness-/Mood-App (Frank's BestJournal-Domaene),
+aber generisch genug um fuer jede deutsche Android-App zu funktionieren.
+-->
+<resources>
+
+    <!-- Brand-Name: darf NICHT uebersetzt werden -->
+    <string name="app_name" translatable="false">BestJournal</string>
+
+    <!-- Kurze Button-Texte: testen Laengen-Pacing in Sprachen mit langen Verben -->
+    <string name="action_save">Speichern</string>
+    <string name="action_cancel">Abbrechen</string>
+    <string name="action_ok">OK</string>
+
+    <!-- Kurze Labels: testen Laengen-Pacing in Sprachen mit komplexen Wort-Bildungen -->
+    <string name="label_today">Heute</string>
+    <string name="label_entry">Eintrag</string>
+
+    <!-- Apostroph-Risiko: bei FR/IT-Uebersetzung enthaelt das Output typisch l'app, c'est etc. -->
+    <string name="welcome_message">Willkommen zurueck</string>
+    <string name="prompt_write">Schreibe heute ueber etwas das dich beschaeftigt</string>
+
+    <!-- Lange Beschreibung: testet Laengen-Pacing-Validator -->
+    <string name="onboarding_description">Dein persoenliches Tagebuch hilft dir, jeden Tag bewusster zu erleben und deine Gedanken und Gefuehle festzuhalten. Mit einer einfachen, schoenen Oberflaeche wird Tagebuchschreiben zu einem festen Ritual.</string>
+
+    <!-- Format-Platzhalter %1$s + %2$d: muss EXAKT erhalten bleiben in jeder Sprache -->
+    <string name="greeting_with_count">Hallo %1$s, du hast %2$d Eintraege geschrieben</string>
+
+    <!-- Plural: testet alle CLDR-Plural-Formen (one/few/many/other in PL/RU, alle 6 in AR) -->
+    <plurals name="entries_count">
+        <item quantity="one">%d Eintrag</item>
+        <item quantity="other">%d Eintraege</item>
+    </plurals>
+
+    <!-- XML-Sonderzeichen: testet ob &amp; korrekt escaped wird in der Uebersetzung -->
+    <string name="legal_link">Datenschutz &amp; AGB anzeigen</string>
+
+    <!-- CDATA-Block: testet ob Validatoren CDATA-Inhalte NICHT veraendern (Apostroph,
+         HTML-Tags, Sonderzeichen sind dort alle legal) -->
+    <string name="html_promo"><![CDATA[<b>Premium</b> ist da! Hol dir alle Funktionen.]]></string>
+
+</resources>

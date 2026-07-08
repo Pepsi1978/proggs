@@ -168,6 +168,7 @@ class ChatViewModel : ViewModel() {
                     syncSizePromptsWithServer()
                     // Gemerkte Speicher-Auftraege (Offline-Outbox) automatisch nachsenden.
                     flushOutbox()
+                    flushPendingSessionEnds()
                 }
             }
         }
@@ -617,6 +618,7 @@ class ChatViewModel : ViewModel() {
 
     // Schutz gegen parallele Flush-Laeufe (mehrere CONNECTED-Events kurz nacheinander).
     @Volatile private var outboxFlushing = false
+    @Volatile private var sessionEndFlushing = false
 
     /** Sendet gemerkte Speicher-Auftraege (Offline-Outbox) nach, sobald der Tunnel steht.
      *  Sequenziell + idempotent (request_id aus der Einreihung — der Server dedupliziert,
@@ -680,6 +682,54 @@ class ChatViewModel : ViewModel() {
             } finally {
                 outboxFlushing = false
             }
+        }
+    }
+
+    /** Holt Plus-/Neue-Session-Abschlüsse nach, die ohne VPN oder bei Serverfehler gemerkt wurden. */
+    private fun flushPendingSessionEnds() {
+        if (sessionEndFlushing) return
+        sessionEndFlushing = true
+        viewModelScope.launch(Dispatchers.IO) {
+            try {
+                val items = try {
+                    ChatSessionStore.listPendingSessionEnds()
+                } catch (e: Exception) {   // no-cancellation-rethrow (kein suspend im try)
+                    CortexLog.error("ChatVM", "sessionEndFlush", "Session-Ende-Outbox nicht lesbar: ${e.message}")
+                    emptyList()
+                }
+                if (items.isEmpty()) return@launch
+                CortexLog.info("ChatVM", "sessionEndFlush", "Sende gemerkte Session-Enden", mapOf("count" to items.size))
+                for (item in items) {
+                    if (WireGuardManager.state.value != TunnelState.CONNECTED) break
+                    try {
+                        val response = ApiClient.agentApi().endSession(EndSessionRequest(session_id = item.sessionId))
+                        if (!response.ok) throw Exception(response.message ?: "Server meldet ok=false")
+                        ChatSessionStore.deletePendingSessionEnd(item.sessionId)
+                        CortexLog.info("ChatVM", "sessionEndFlush", "Gemerkte Server-Session beendet",
+                            mapOf("session_id" to item.sessionId))
+                    } catch (e: CancellationException) {
+                        throw e
+                    } catch (e: Exception) {
+                        CortexLog.warn("ChatVM", "sessionEndFlush", "Session-Ende-Nachholung fehlgeschlagen (Rest bleibt gemerkt): ${e.message}",
+                            mapOf("session_id" to item.sessionId))
+                        break
+                    }
+                }
+            } finally {
+                sessionEndFlushing = false
+            }
+        }
+    }
+
+    private fun enqueuePendingSessionEnd(sessionId: String, reason: String) {
+        try {
+            ChatSessionStore.enqueueSessionEnd(sessionId)
+            CortexLog.warn("ChatVM", "sessionEnd", "Server-Session-Ende gemerkt: $reason",
+                mapOf("session_id" to sessionId))
+        } catch (e: Exception) {
+            CortexLog.error("ChatVM", "sessionEnd", "Session-Ende konnte nicht gemerkt werden: ${e.message}",
+                mapOf("session_id" to sessionId))
+            _uiState.update { it.copy(error = "Altes Gespräch fällt auf den 10-Minuten-Fallback zurück: ${e.message}") }
         }
     }
 
@@ -941,6 +991,9 @@ class ChatViewModel : ViewModel() {
 
     fun startNewChat() {
         stopSpeaking()
+        val oldState = _uiState.value
+        val oldSessionId = oldState.sessionId
+        val shouldEndServerSession = oldState.messages.isNotEmpty()
         if (micRecorder.isRecording()) {
             viewModelScope.launch {
                 try {
@@ -967,8 +1020,28 @@ class ChatViewModel : ViewModel() {
                 isGeneratingTitle = false
             )
         }
-        CortexLog.info("ChatVM", "startNewChat", "Neuer Chat gestartet")
+        CortexLog.info("ChatVM", "startNewChat", "Neuer Chat lokal sofort gestartet",
+            mapOf("old_session_id" to oldSessionId, "server_end" to shouldEndServerSession))
         refreshSessions()
+        if (!shouldEndServerSession) return
+
+        viewModelScope.launch(Dispatchers.IO) {
+            try {
+                if (WireGuardManager.state.value != TunnelState.CONNECTED) {
+                    enqueuePendingSessionEnd(oldSessionId, "VPN nicht verbunden")
+                    return@launch
+                }
+                val response = ApiClient.agentApi().endSession(EndSessionRequest(session_id = oldSessionId))
+                if (!response.ok) throw Exception(response.message ?: "Server meldet ok=false")
+                CortexLog.info("ChatVM", "startNewChat", "Alte Server-Session nach Plus-Klick beendet",
+                    mapOf("session_id" to oldSessionId))
+            } catch (e: CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                enqueuePendingSessionEnd(oldSessionId, "Sofortiges Beenden fehlgeschlagen: ${e.message}")
+                _uiState.update { it.copy(error = "Altes Gespräch wird beim nächsten VPN-Start gesichert: ${e.message}") }
+            }
+        }
     }
 
     fun openSessionsPanel() {

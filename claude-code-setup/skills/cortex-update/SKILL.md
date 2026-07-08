@@ -218,7 +218,7 @@ fuer Bereichs-Unterordner oder fest), `title_mode` (`h1_clean` | `first_line`), 
 - **Einzelne Erinnerung manuell ablegen** → MCP `second-brain` `remember` direkt (fuer eine kleine
   Notiz). Cortex Update ist fuer den Datei-Bestand (Massen-Sync, kontext-schonend).
 - **Regeln im Gehirn lesen/laden** → MCP `get_category_item` (siehe Regel
-  `second-brain-load-individually`). Cortex Update SCHREIBT, liest nur zum Vergleich.
+  `second-brain`). Cortex Update SCHREIBT, liest nur zum Vergleich.
 
 ## Voraussetzungen / Fehlerfaelle
 

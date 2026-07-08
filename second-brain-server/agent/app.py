@@ -47,6 +47,8 @@ from fastapi import Depends, FastAPI, Header, HTTPException, Request
 from fastapi.responses import JSONResponse, StreamingResponse
 from pydantic import BaseModel, Field, field_validator
 
+import rules  # self-authored behaviour rules (agent/rules.py) — spec 2026-07-08-cortex-selbst-regeln
+
 VERSION = "0.31.0"  # 0.31.0: Speicher-Cap-Klasse endgueltig beseitigt (Frank-Bug 2026-06-25) — ChatReq.text max_length 100000 -> 500000 (konsistenter, GROSSZUEGIGER Backstop ~25x Franks groesste Datei; lehnt nur als allerletzte OOM-Schranke laut via 422 ab). Der eigentliche stille Slice sass im dashboard /api/chat (jetzt laute Ablehnung statt text[:N]); brain-api StoreReq hat keinen Cap und chunkt selbst -> auf dem gesamten Speicher-Pfad gibt es jetzt KEINE stille Kuerzung mehr. 0.30.0: AUSGABE-Haertung fuer grosse Eintraege (Frank-Wunsch 2026-06-25) — beim Nachschlagen bekam der Leseagent (Filter) den VOLLTEXT aller Treffer (5x18k -> Kontext-Ueberlauf-Risiko), obwohl er nur Nummern waehlt; jetzt nur ein Relevanz-Schnipsel pro Treffer (LESE_SNIPPET_CHARS, bevorzugt der gematchte Chunk). Der Hauptagent (Antwort) bekommt den Inhalt jetzt pro Treffer (ANSWER_HIT_CHARS) UND gesamt (ANSWER_TOTAL_CHARS) gedeckelt mit 'gekuerzt'-Hinweis + Verweis auf den Drawer-Volltext. So koennen Lese-/Hauptagent an beliebig grossen Eintraegen nicht mehr ueberlaufen. 0.29.0: FIX 2. Cap-Schicht (Frank-Bug 2026-06-25) — ChatReq.text war auf max_length=8000 begrenzt (Pydantic lehnte laengere Texte ab -> 422 -> 'nicht erreichbar'); jetzt 100000 (brain-api chunkt selbst). Alle Kategorie-Namen-Caps 60->120 (tiefe Pfade A/B/C/...). 0.28.0: FIX Speichern grosser Texte + Titel-Uebernahme (Frank-Bug 2026-06-25). Root Cause: bei intent=save musste der Router den Text WORTWOERTLICH in quote+reply echoen -> grosse Pastes sprengten max_tokens=2048 -> abgeschnittenes JSON -> Fallback 'nicht verstanden', danach KI-Titel statt Frank-Titel, am Ende NICHTS gespeichert (Confirm kam nie sauber). Fix: Sind Titel ODER Kategorie aus dem Dashboard gesetzt (klares Speicher-Signal) und kein offenes pending -> Router UEBERSPRINGEN, direkt intent=save (voller user_text wird 1:1 zum quote). Rueckfrage zeigt langen Text gekuerzt (gespeichert wird der VOLLE Text) -> klare 'Soll ich ... ablegen?'-Frage mit Ja/Nein. Dashboard leert das Titel-Feld nur noch, wenn der Server den Save erkannt hat (sonst bleibt der Titel fuer den Retry). 0.27.0: Beliebig tiefe Kategorie-Hierarchie (Frank-Wunsch 2026-06-25) — _cat_key normalisiert Pfade jetzt OHNE Tiefen-Limit (A/B/C/...), Speicheragent-Prompts (DEFAULT_SPEICHER + geschuetztes SPEICHER_SCHEMA) erlauben/erklaeren beliebig tiefe Pfade statt nur 2 Ebenen. Dashboard baut die Baeume rekursiv. 0.26.0: Speicheragent kennt 2-Ebenen-Hierarchie (Phase 6, Frank-Wunsch 2026-06-25) — beim Ablegen waehlt er eine passende bestehende Unterkategorie 'Haupt/Unter' zeichengenau ODER schlaegt eine neue 'Haupt/Unter' vor und fragt per Eskalation/Rueckfrage nach (Frank wird vor dem Anlegen gefragt). Kernregel im GESCHUETZTEN SPEICHER_SCHEMA (gilt auch bei custom Prompt) + Erklaerung & Beispiele E/F im DEFAULT_SPEICHER. Max 2 Ebenen, kein Schraegstrich wo flach genuegt; zusammen mit _cat_key-Normalisierung (0.23.2) keine Schreibvarianten-Dubletten. 0.25.0: Eval-Set um 10 TITEL-Saetze erweitert (Frank-Wunsch 2026-06-25, id 91-100) — pruefen das Titel-Feature aus allen Blickwinkeln: store_title (Frank gibt Titel+Kategorie vor -> Eintrag landet unter GENAU dem Titel, per by-title verifiziert, KEIN KI-Titel), query 95-97 (Eintrag ueber Titel+Inhalt auffindbar -> beweist Titel im Embedding), save_confirm_title (Bestaetigungs-Rueckfrage LIEST den Titel woertlich vor, speichert nichts). Zwei neue _eval_one-Zweige (store_title/save_confirm_title), isoliert unter EVAL_USER, nach dem Lauf gepurgt. 0.24.0: TITEL-Override beim Senden (Frank-Wunsch 2026-06-25) — ChatReq.title reicht einen im Dashboard-Sendefeld eingetippten Titel durch (analog zur Kategorie-Wahl); _process_turn merkt ihn im pending und LIEST ihn in der Bestaetigungs-Rueckfrage VOR ('Soll ich das als T unter K ablegen: ...?'); _do_store nimmt den Frank-Titel mit Vorrang (Frank-Titel > KI-Titel > Text-Anfang) und ueberspringt bei Titel+Kategorie den unnoetigen Speicheragent-LLM-Call. So bekommen ganz neue Eintraege ihren Titel von Frank statt KI-geraten -> der dann (brain-api 1.10.0) den Vektor mitpraegt. 0.23.2: Kategorie-Hierarchie-Normalisierung (Phase 5 Fundament, Frank-Wunsch 2026-06-25) — _cat_key normalisiert jetzt Schraegstriche auf genau 2 Ebenen 'Haupt/Unter' (' / ' -> '/', max 2 Ebenen, leere Teile weg), damit Unterkategorien aus dem Dashboard/Speicheragent keine Schreibvarianten-Dubletten erzeugen. 0.23.1: Eval-Set an die Internet-Suche angepasst (Etappe 3) — #52 (Wetter München) + #53 (Dortmund-Ergebnis) von kind 'smalltalk' auf 'internet' umgestellt (echte Live-Fragen gehoeren jetzt ans Internet-Werkzeug, nicht mehr smalltalk); neuer 'internet'-kind im Eval-Flow prueft NUR das Routing (intent==internet, keine echte Tavily-Suche -> spart Credits) + eigene Bereichs-Zeile im Log. 0.23.0: Internet-Suche als 3. Werkzeug (Frank-Wunsch 2026-06-25, Etappe 2). Neuer intent='internet' im Router fuer aktuelle/aeussere Fragen (Wetter, Sport, News, Kurse) -> Tavily-Suche (tavily_search, fuer KI-Agenten gebaut; Key NUR im VPS-.env TAVILY_API_KEY, nie im Repo) -> der HAUPTAGENT formuliert die Antwort aus den Suchergebnissen (hauptagent_answer_internet + HAUPTAGENT_INTERNET_AUFTRAG, mit kurzer Quellenangabe). Router-Persona + ROUTER_SCHEMA + intent-Validierung um 'internet' erweitert; Faustregel internet=aktuell/aeusserlich vs. smalltalk=zeitloses Allgemeinwissen. Tool-Fehler gefangen (ai-agent §3.2), Timeout 20s; fehlt der Key -> ehrliche Fehlanzeige statt Crash. 0.22.0: Agenten-Prompt-Umbau + Leseagent-Architektur (Frank-Wunsch 2026-06-25, nach den Recherche-Prompts). (1) Alle 3 editierbaren Prompts (Hauptagent/Speicheragent/Leseagent) in klarer Struktur ROLLE/AUFGABE/KONTEXT/KATEGORIEN/EINGABEFORMAT/REGELN/AUSGABEFORMAT/BEISPIELE neu geschrieben — die Arbeitsweise steht jetzt fast komplett im EDITIERBAREN Prompt, nur das nackte JSON-Schema bleibt geschuetzt angehaengt. Dynamische {kategorien} bleiben (KEINE feste Liste, respektiert Franks Kategorie-Verwaltung). (2) ARCHITEKTUR-Wechsel: Der Leseagent FORMULIERT die Antwort nicht mehr — er FILTERT nur die Gehirn-Treffer und gibt per JSON deren NUMMERN zurueck (ABFRAGE_SCHEMA, leseagent_select). Der HAUPTAGENT formuliert danach die Antwort aus den ORIGINAL-Treffern (hauptagent_answer + build_hauptagent_answer_prompt + HAUPTAGENT_ANSWER_AUFTRAG) — so kann der Leseagent keinen Text verfaelschen (Wortwoertlichkeit garantiert). 3-Schritt-Kette Router->Filter->Formulierung; query-Flow + Eval-Flow umgestellt; Rolle 'abfrage' im Dashboard jetzt 'Leseagent'. 0.21.0: Eval-Set auf 90 Saetze (Frank-Wunsch 2026-06-25) — +10 komplett sinnlose Plauder-Saetze ('Mann Mann Mann war das ein Tag', 'Im Fruehtau zu Berge', 'Pass mal auf'), die der Hauptagent als 'smalltalk' erkennen muss (nicht speichern/suchen). 0.20.0: Eval-Set auf 80 Saetze erweitert (Frank-Wunsch 2026-06-25) — +30 reine Smalltalk-/Wissens-Saetze (Wetter, Sport, 'erklaer mir Pythagoras', Plauderei, Aussagen ohne Speicher-Signal). Pruefen: Router routet als 'smalltalk' (NICHT speichern, NICHT im Gedaechtnis suchen) -> der Hauptagent funktioniert auch als normaler Sprachassistent. Hinweis: kein Internet-Tool, statische Wissensfragen aus Modell-Wissen, Live-Fragen ehrlich verneint. 0.19.0: POST /categories/move-entry (Frank-Wunsch 2026-06-25) — verschiebt EINEN Eintrag (doc_id) in eine andere Kategorie fuers Kategorie-Dropdown im Drawer: stellt die Ziel-Kategorie kanonisch sicher (neue -> Registry, sofort in Einstellungen+Gespraech-Dropdown synchron), setzt sie via brain set_payload (Vektor bleibt, kein Re-Embed); befuellte Registry-Kategorie wandert aus der Registry. brain_set_entry_category-Helfer. 0.18.0: Eval-Check (Frank-Wunsch 2026-06-25) — Selbsttest aller 3 Agenten gegen 50 feste Saetze (24 Speichern versch. Kategorien -> 18 Abfragen mit erwartetem Inhalt -> Smalltalk -> 3 Injektion). Laeuft unter ISOLIERTEM Test-Nutzer 'eval-test' (nie Franks Gehirn), raeumt danach HART auf (brain /purge — kein Papierkorb). Detail-Log (Markdown) auf Z /eval-logs, 14 Tage Retention. POST /eval-run (via to_thread), GET /eval-logs, GET /eval-log. brain_store/brain_search um user_id erweitert; brain_by_title/brain_purge-Helfer. 0.17.0: Anklickbare Antwort-Knoepfe (Frank-Wunsch 2026-06-25 — sichtbare Manifestation der Haertung). save_confirm UND store_clarify (Eskalation) liefern jetzt 'options' [{label,send}]; /chat reicht sie durch -> das Dashboard zeigt Ja/Nein-Knoepfe unter der Rueckfrage (z.B. 'Ja, „Musik" anlegen' / 'Nein, „Sonstiges"'), Frank klickt statt zu tippen. 0.16.0: Agenten-Haertung Paket C1 (Frank-Wunsch 2026-06-25). B10 Rate-Limit-/5xx-Resilienz: llm_generate ist jetzt ein Retry-Wrapper um _llm_generate_once — bei 429/408/5xx Full-Jitter-Backoff (Retry-After-Header bevorzugt), max 3 Versuche, NUR auf dieser einen Schicht (verhindert 3x5=243-Call-Multiplikation); 400/401/403/404 nie wiederholt. Deckt Gemini-SDK UND OpenCode/httpx ab. Laeuft im Threadpool -> sleep blockiert nur den Worker, nicht den Event-Loop. 0.15.0: Agenten-Haertung Paket B (Frank-Wunsch 2026-06-25). B3 "no receipt, no claim": _store_final bestaetigt "gespeichert" NUR mit doc_id-Quittung vom brain — ohne ID ehrliche Fehlermeldung statt falscher Erfolg. B4 typisiertes Routing: Hauptagent-intent gegen festes Enum validiert (halluzinierter Wert -> smalltalk, geloggt) + Routing-Trace via checkpoint. B5 Schema-Robustheit: llm_generate erkennt MAX_TOKENS (abgeschnittene Antwort) und meldet es als Sonde, statt unvollstaendiges JSON still falsch zu parsen. 0.14.0: Agenten-Haertung Paket A (Frank-Wunsch 2026-06-25). A1 Injektions-Schutz: gespeicherte/gefundene Inhalte sind in ALLEN 3 geschuetzten Bloecken als DATEN (keine Befehle) markiert (Lethal-Trifecta-Luecke geschlossen). A2 Eskalation: Speicheragent liefert eskalation+rueckfrage; will er eine NEUE (unbekannte) Kategorie anlegen ODER ist er unsicher, wird NICHT still gespeichert, sondern bei Frank zurueckgefragt (neuer pending-mode store_clarify: confirm_yes->vorgeschlagene/neue Kategorie, confirm_no->Sonstiges). Dashboard-Override bleibt ohne Rueckfrage. _do_store in _store_final (gemeinsamer Endpunkt) + Eskalations-Verzweigung refaktoriert. 0.13.0: Kategorie-Verwaltung + deutsche Rechtschreibung (Frank-Wunsch 2026-06-25). _cat_key macht KEIN lowercase/Slug mehr -> Kategorien werden 1:1 als Klartext (Substantive gross, Leerzeichen) gespeichert; Dubletten-Schutz jetzt case-insensitiv via _canonical_category (bestehende Schreibweise gewinnt). Leseagent (llm_answer) bekommt NUR Payload-Kategorien (brain_categories), Speicheragent die VOLLE Liste (inkl. leerer). Neue Endpoints GET /categories/detail (mit Eintragszahl+leer-Flag), POST /categories/rename (brain set_payload, auch Merge), POST /categories/delete (Etikett entfernen, Eintraege bleiben); brain-Helfer rename/detach/counts. Speicher-Prompt + geschuetztes Schema verlangen deutsche Rechtschreibung + zeichengenaue Wiederverwendung. 0.12.0: Standard-Prompts aller 3 Agenten (Haupt/Speicher/Abfrage) + improve-Prompt + LLM-Marker (OFFENER PUNKT/ÄHNLICHE EINTRÄGE/Beispiele) selbst auf echte deutsche Umlaute umgestellt — vorher predigten sie Umlaute, waren aber in ae/oe/ue geschrieben (Frank-Wunsch). 0.11.0: Deutsche Umlaute global (Frank-Wunsch) — _cat_key erhaelt ä/ö/ü/ß (kein ae/oe/ue mehr), CONV_CATEGORY 'gespräche', Logbuch-Header/Titel 'Gespräch'/'Gespräche', Speicheragent-Prompt erlaubt Umlaut-Kategorien; path-Helper erkennt alte+neue Praefixe. 0.10.0: DELETE /logbook (Frank-Wunsch) — loescht eine Logbuch-.txt von Platte Z (agent als uid 1000 mit Schreibrecht; Dashboard hat /logbook nur read-only). Pfad streng validiert (kein Traversal, nur .txt in LOGBOOK_DIR); Vektor-Kopie bleibt. 0.9.0: Kategorie-Override beim Senden (Frank-Wunsch 2026-06-24) — waehlt Frank im Dashboard-Dropdown eine Kategorie, wird der bestaetigte Text GENAU dort abgelegt (keine Auto-Kategorie, kein Dubletten-Ersatz); die Rueckfrage nennt die Kategorie. /chat + ChatReq um 'category'; _process_turn reicht sie durch, merkt sie im pending bis zur Bestaetigung; _do_store(override_category). Keine Wahl -> Speicheragent entscheidet wie bisher. 0.8.0: Kategorie-Registry (Frank-Wunsch 2026-06-24) — Kategorien koennen VORAB angelegt werden (auch ohne Eintrag) und ueberleben in categories.json (agent-data). all_categories() = Vereinigung(Gehirn-Kategorien + Registry); der Speicheragent kennt manuell angelegte Kategorien sofort. Neue Endpoints GET/POST /categories. 0.7.0: Drei editierbare System-Prompts (Frank-Wunsch 2026-06-24) — Hauptagent, Speicheragent UND Abfrageagent haben je einen EIGENEN, im Dashboard umschalt-/speicherbaren Prompt (vorher teilten Haupt+Abfrage einen, der Speicheragent war fest). Pro Rolle eigene Datei (haupt-prompt.txt/speicher-prompt.txt/abfrage-prompt.txt); das CODE-kritische JSON-Schema (Router bzw. Speicher) bleibt geschuetzt angehaengt; Anti-Halluzinations-Constraints des Abfrageagenten bleiben geschuetzt. Migration: alter gemeinsamer prompt.txt -> Haupt-Prompt. /prompt + /api/prompt um role-Parameter (Abwaertskompat: ohne role = haupt). 0.6.0: Modell-pro-Rolle (Frank-Wunsch) — Hauptagent, Speicheragent und Abfrageagent koennen je ein EIGENES Modell nutzen (3 Dropdowns im Dashboard); config.json speichert haupt_model/speicher_model/abfrage_model (Migration vom alten Einzel-'model'); /config + /health geben 'models' zurueck (Abwaertskompat: 'model' = Hauptagent). 0.5.0: Agenten-Dreiteilung (Frank-Wunsch) — Frank redet nur mit dem HAUPTAGENTEN. Dieser routet: erkennt Speicher-Absicht und fragt IMMER ZUERST mit WORTWOERTLICHEM Zitat zurueck ("Soll ich ablegen: ...?"), speichert erst nach Zustimmung 1:1 ueber den SPEICHERAGENTEN (Kategorie/Titel/Dublette); Wissensfragen ueber den ABFRAGEAGENTEN (Vektorsuche + Antwort NUR aus Treffern, mit Hinweis "nachgeschaut"). Confirm-vor-Speichern im CODE erzwungen (Zustandsautomat), nicht nur im Prompt. /chat-Schwerlast via asyncio.to_thread (Event-Loop frei, fastapi §1 / ai-agent §3.1). DEFAULT_INSTRUCTIONS=Hauptagent-Persona, SCHEMA_BLOCK->ROUTER_SCHEMA, neuer SPEICHER_SYSTEM. 0.4.0: Multi-Provider — OpenCode Zen Go (minimax-m3 ueber Anthropic /messages-Schema) als zweiter Provider neben Gemini; Modell-Liste aufgeraeumt (3.1-pro/3.1-flash raus, minimax/minimax-m3 rein); neuer /improve-Endpoint (eingesprochenen Text grammatikalisch verbessern OHNE Inhaltsaenderung). 0.3.0: Phase 4b Abruf-Seite — vierter Modus 'recall': Wissensfrage -> read-only Vektorsuche im Gehirn (brain-api /search) -> ZWEITER LLM-Aufruf llm_answer, antwortet NUR aus den Treffern (nichts erfinden), nutzt denselben editierbaren Prompt OHNE Schema. Ein Eingang, zwei Koepfe. SCHEMA_BLOCK um action 'recall' + Feld 'query' erweitert; DEFAULT_INSTRUCTIONS: Wissensfragen -> recall + Antwort-Ton-Abschnitt. maxOutputTokens hoch + finishReason-Pruefung (Gemini-Almanach B4/D10). 0.2.1: Prompt-Haertung (echte Umlaute + Anweisung, Injection-Schutz, Ehrlichkeitsschutz bei Wissensfragen, expliziter Feld-Kontrakt + ausgefuellte Few-shot-Beispiele, Kategorie-Schluessel-Format). 0.2.0: System-Prompt-Instruktionen + Modell editierbar/speicherbar (GET/PUT /prompt + /config, Datei-Persistenz unter /app/data); JSON-Schema bleibt code-seitig geschuetzt. 0.1.3: Zeitstempel JE Nachricht wieder RAUS (verwaessern die semantische Suche im Gehirn) - nur Kopf-Datum/Uhrzeit bleibt. Aktueller-Zeitpunkt-im-Prompt (korrekte Titel) bleibt. 0.1.2: Zeitpunkt+Zeitstempel. 0.1.1: /end+Kategorie. 0.1.0: Phase 4a.
 
 VERSION = "0.31.1"  # Wirksamer Counter-Bump: gespeicherte Gespraech-Eintraege erhalten sekundengenauen Zeitstempel.
@@ -55,7 +57,10 @@ VERSION = "0.53.0 (05.07.2026, 14.14 Uhr)"  # 0.53.0 (Gruppe D "Mitlernen in Pro
 VERSION = "0.56.0 (06.07.2026, 13:52 Uhr)"  # 0.56.0: Composite-Route query_internet fuer verschachtelte Anfragen (erst Gedächtnis-Kontext, dann Internet-Abgleich). Root Cause: Router-Schema erlaubte bisher genau EINEN intent; dadurch wurde bei Kettenanforderungen nur query ODER internet ausgeführt. Jetzt liefert der Router optional web_query, der Server führt beide bestehenden Pfade sequenziell aus und formuliert eine kombinierte Antwort. Alt: 0.55.3 (06.07.2026, 13:23 Uhr).
 VERSION = "0.57.0 (06.07.2026, 17:23 Uhr)"  # 0.57.0: Qdrant-/Gedächtnis-Limits vollständig dashboardfähig. Zusätzlich zu den bisherigen Recall-/Kontextwerten sind jetzt Duplikat-Suchkandidaten, Entity-Extraktionsfenster, Entity-Vollabruflimit, Antwort-Max-Tokens, Arbeitscache-Schwelle und Kategorie-Batchgröße persistent über /config.limits.agent einstellbar; die Werte wirken sofort im laufenden Agenten. Alt: 0.56.3.
 VERSION = "0.59.1 (07.07.2026, 11:52 Uhr)"  # 0.59.1: Router-Härtung gegen falsche query_internet-Erzwingung. Die Gedächtnis+Internet-Ketten-Erkennung scannt Standard-Modus-/Antwortlängen-Prompts nicht mehr mit, sondern nur Franks aktuelle Nachricht und explizite Zusatz-Prompt-Blöcke. Alt: 0.59.0.
-VERSION = "0.63.0 (07.07.2026, 16:03 Uhr)"  # 0.63.0: NEU Werkzeug was_kann_cortex() im Hauptagent-Werkzeugkasten (Frank-Wunsch): liest LIVE die System-Info-Chronik ('Was Cortex kann') vom Dashboard (DASHBOARD_URL/api/features, interner Compose-DNS) — dank des Merge-Fixes immer aktuell, auch Features der letzten Tage. So kann der Hauptagent auf 'was kannst du alles?' aus der echten Feature-Liste antworten. Timing landet automatisch im tool_calls-Log (ms je Werkzeug -> Flaschenhals-Radar, sobald der Tool-Loop im Chat aktiv ist). Noch NICHT im echten Chat aktiv (Test via /toolagent-test). 0.62.0: WERKZEUGKASTEN des Hauptagenten (Schritt-2-Baustein, noch NICHT im Chat aktiv). NEU build_agent_tools() + TOOLAGENT_SYSTEM: die 4 Lese-/Such-Werkzeuge als duenne Handler um bestehende Funktionen — durchsuche_gedaechtnis (smart_recall, liefert nur Schnipsel + fuellt hit_cache), lade_eintrag (Volltext EINES Eintrags aus dem Cache — Kontext-Schutz), web_suche (tavily_search), lies_logbuch (_read_recent_turns). Verlagert die Leseagent-Filterung in den Hauptagenten (Direktive #3: verlagern statt loeschen; Antwort- vs. Kontext-Treffer im System-Prompt). NEU Endpoint GET /toolagent-test?q=... : isolierter Test des Werkzeugkastens (fuer den Star-Trek-Regressionsfall), beruehrt den echten Chat NICHT. Schreib-Werkzeuge (speichere/schreibe_regel) folgen mit der _process_turn-Integration. 0.61.4: ROBUSTHEIT codex_generate_tools — Streaming-Retry (bis 3 Versuche) gegen den sporadischen Abbruch des Impersonation-Backends ('peer closed connection ... incomplete chunked read'). Retry NUR solange kein response.completed kam (Backend-Call ist seiteneffektfrei); bei 4xx/failed KEIN Retry. Selbsttest auf EINEN Lauf reduziert (H1/H2-Diagnose abgeschlossen). 0.61.3: FIX — Function-Calling MACHBARKEIT BEWIESEN (function_calls kommen als Stream-Events output_item.done, nicht in completed.output). Das ChatGPT-Codex-Backend liefert function_calls als STREAM-EVENTS (response.output_item.done mit dem vollstaendigen function_call-Item: name/call_id/arguments), NICHT in completed.output (das bleibt leer). Root Cause des 'Tools werden nicht aufgerufen'-Befunds war ein PARSING-Bug (nur completed.output gelesen), KEIN Backend-Limit — die Event-Sequenz-Diagnose zeigte response.function_call_arguments.delta/done + output_item.done. Fix: fc_items aus den output_item.done-Events einsammeln, primaer nutzen (completed.output nur Fallback). 0.61.2: DIAGNOSE codex_generate_tools/toolloop-selftest — im ersten Lauf rief gpt-5.5 KEINE Werkzeuge auf (tools_used leer, Antwort 'ohne Werkzeugaufruf nicht bestimmbar'). Verdacht: custom function-Tools erreichen das Modell nicht. Selbsttest testet jetzt tool_choice 'auto' UND 'required' und gibt die rohe output-Item-Struktur der ersten Runde zurueck (raw_first_output), um H1 (Tools kommen nicht an) von H2 (Modell waehlt ab) zu unterscheiden. codex_generate_tools bekam optionalen tool_choice-Parameter. 0.61.1: FIX — ChatGPT-Codex-Backend ERZWINGT stream:true (stream:false -> HTTP 400 'Stream must be set to true', empirisch per /toolloop-selftest bewiesen). Tool-Loop nutzt jetzt einen streamenden Backend-Helfer (_stream_responses, wie codex_generate) und liest die function_call-Items aus dem response.completed-Event. 0.61.0: Schritt-2-Baustein (Agenten-Umbau) — NEU codex_generate_tools(): GPT/Codex Function-Calling-Loop auf der OpenAI-Responses-API (chatgpt.com/backend-api/codex). Deterministischer Hard-Stop (max_turns UND max_seconds), tool_use<->tool_result strikt 1:1 (function_call verbatim in den Verlauf, je call_id genau ein function_call_output), Tool-Exception als Fehler-tool_result zurueck (nie crashen), Schleifen-Erkennung (>3x gleiche name+args), Tool-Output je Aufruf auf LESE_TOOL_OUT_CAP gekappt; bei Hard-Stop ohne Klartext eine finale Runde OHNE Werkzeuge (Absicherung nach bugs/server/ai-agent-frameworks.md). NEU Endpoint GET /toolloop-selftest: isolierter Machbarkeits-Smoke-Test (2 triviale Tools) — prueft empirisch, ob das Backend eigene function-Tools akzeptiert+aufruft. Beruehrt den Chat-Pfad NICHT (reiner Baustein; sichtbare Dashboard-Version bleibt 0.56.0 bis der Umbau den Chat aendert). Alt: 0.60.0 (07.07.2026, 13:09 Uhr) NEU Turn-Logbuch + Sonden-Trace. Jeder /chat + /chat/stream-Turn wird per contextvar-Trace mitgeschrieben: der bestehende checkpoint()-Kanal fuettert zusaetzlich den Trace, ein Phasen-Marker recall_search trennt Rohsuche vom Leseagent-Filter. Logbuch 1 (LOGBOOK_DIR/Trace/turns.jsonl, 100 rollierend) = 1 lesbare Zeile je Anfrage mit Frage, Router->final Intent, Rohtreffer/Auswahl (Star-Trek: 50 gefunden/0 gewaehlt), Confidence, Antwort-Vorschau + Phasen-Timing (router_ms/suche_ms/leseagent_ms/web_antwort_ms = Flaschenhals-Radar). Logbuch 2 (trace.jsonl, 4000 Events) = feine Events je Turn per turn_id verknuepft (erweiterbares Geruest fuer feine Sonden beim Agenten-Umbau). Atomar (tmp+os.replace), secret-maskiert, BEST-EFFORT (try/except ueberall — gefaehrdet den Chat nie). Deterministische Problem-Markierung (_PROBLEM_FEEDBACK_RE) markiert den letzten Turn, wenn Frank ein Problem meldet. GET /logbook/turns fuers Dashboard. Persistent auf Samba (LOGBOOK_DIR bereits gemountet -> ueberlebt Rebuilds; loest fuer die Turn-Ebene die Fluechtigkeit von /app/logs/agent.jsonl). Alt: 0.59.1 (07.07.2026, 11:52 Uhr).
+VERSION = "0.65.1 (08.07.2026, 17:35 Uhr)"  # 0.65.1: FIX current_agent_limits() gab das neue history_compress_at nicht zurueck -> /config zeigte den Wert nie (das Dashboard-Feld waere nach dem Speichern faelschlich auf 0 zurueckgefallen). Jetzt in der hardcoded Limit-Liste ergaenzt. 0.65.0 (Frank-Wunsch 2026-07-08): VERLAUFS-KOMPRIMIERUNG — neues Limit history_compress_at (0=aus, Dashboard 'Verlauf komprimieren ab'). Ab N Gesamt-Nachrichten (Frank+Cortex) verdichtet der Hauptagent (GPT-5.5) den Verlauf KUMULATIV (alte Zusammenfassung + neue N -> neue), statt aelteres hart abzuschneiden. Neu: _compress_history/_maybe_compress_history + _history_text-Umbau; RAM session-state (history_summary + history_compressed_upto); best-effort (Fehler killt den Chat nie), Sicherheitsnetz kappt unkomprimierten Rest auf HISTORY_MAX. Aufruf am Anfang von _process_turn. 0.64.0 (Agenten-Umbau Schritt 2, 2026-07-08): WERKZEUGKASTEN im ECHTEN CHAT scharfgeschaltet. _process_turn: die generischen Antwort-Zweige (query/query_internet/internet/smalltalk) durch _toolagent_answer ersetzt = EIN codex_generate_tools-Aufruf mit build_agent_tools (durchsuche_gedaechtnis/lade_eintrag/web_suche/lies_logbuch/was_kann_cortex). Der Hauptagent filtert SELBST (Antwort- vs. Kontext-Treffer) statt eines separaten Leseagenten -> loest den Star-Trek-Bug (Rohsuche fand 50, Leseagent waehlte 0). Verlauf wird eingespeist (Follow-ups funktionieren), Quellen-Chips (aus lade_eintrag bzw. gefundenen) + Confidence bleiben; build_agent_tools trackt state['geladen'] fuer praezise Quellen. Router + komplette Speicher-Sicherheit + deterministische Spezial-Antworten (Projektstand/Kategorie-Gesamt/-Zaehlung) UNANGETASTET (funktionserhaltend, Direktive #3). 0.63.0: NEU Werkzeug was_kann_cortex() im Hauptagent-Werkzeugkasten (Frank-Wunsch): liest LIVE die System-Info-Chronik ('Was Cortex kann') vom Dashboard (DASHBOARD_URL/api/features, interner Compose-DNS) — dank des Merge-Fixes immer aktuell, auch Features der letzten Tage. So kann der Hauptagent auf 'was kannst du alles?' aus der echten Feature-Liste antworten. Timing landet automatisch im tool_calls-Log (ms je Werkzeug -> Flaschenhals-Radar, sobald der Tool-Loop im Chat aktiv ist). Noch NICHT im echten Chat aktiv (Test via /toolagent-test). 0.62.0: WERKZEUGKASTEN des Hauptagenten (Schritt-2-Baustein, noch NICHT im Chat aktiv). NEU build_agent_tools() + TOOLAGENT_SYSTEM: die 4 Lese-/Such-Werkzeuge als duenne Handler um bestehende Funktionen — durchsuche_gedaechtnis (smart_recall, liefert nur Schnipsel + fuellt hit_cache), lade_eintrag (Volltext EINES Eintrags aus dem Cache — Kontext-Schutz), web_suche (tavily_search), lies_logbuch (_read_recent_turns). Verlagert die Leseagent-Filterung in den Hauptagenten (Direktive #3: verlagern statt loeschen; Antwort- vs. Kontext-Treffer im System-Prompt). NEU Endpoint GET /toolagent-test?q=... : isolierter Test des Werkzeugkastens (fuer den Star-Trek-Regressionsfall), beruehrt den echten Chat NICHT. Schreib-Werkzeuge (speichere/schreibe_regel) folgen mit der _process_turn-Integration. 0.61.4: ROBUSTHEIT codex_generate_tools — Streaming-Retry (bis 3 Versuche) gegen den sporadischen Abbruch des Impersonation-Backends ('peer closed connection ... incomplete chunked read'). Retry NUR solange kein response.completed kam (Backend-Call ist seiteneffektfrei); bei 4xx/failed KEIN Retry. Selbsttest auf EINEN Lauf reduziert (H1/H2-Diagnose abgeschlossen). 0.61.3: FIX — Function-Calling MACHBARKEIT BEWIESEN (function_calls kommen als Stream-Events output_item.done, nicht in completed.output). Das ChatGPT-Codex-Backend liefert function_calls als STREAM-EVENTS (response.output_item.done mit dem vollstaendigen function_call-Item: name/call_id/arguments), NICHT in completed.output (das bleibt leer). Root Cause des 'Tools werden nicht aufgerufen'-Befunds war ein PARSING-Bug (nur completed.output gelesen), KEIN Backend-Limit — die Event-Sequenz-Diagnose zeigte response.function_call_arguments.delta/done + output_item.done. Fix: fc_items aus den output_item.done-Events einsammeln, primaer nutzen (completed.output nur Fallback). 0.61.2: DIAGNOSE codex_generate_tools/toolloop-selftest — im ersten Lauf rief gpt-5.5 KEINE Werkzeuge auf (tools_used leer, Antwort 'ohne Werkzeugaufruf nicht bestimmbar'). Verdacht: custom function-Tools erreichen das Modell nicht. Selbsttest testet jetzt tool_choice 'auto' UND 'required' und gibt die rohe output-Item-Struktur der ersten Runde zurueck (raw_first_output), um H1 (Tools kommen nicht an) von H2 (Modell waehlt ab) zu unterscheiden. codex_generate_tools bekam optionalen tool_choice-Parameter. 0.61.1: FIX — ChatGPT-Codex-Backend ERZWINGT stream:true (stream:false -> HTTP 400 'Stream must be set to true', empirisch per /toolloop-selftest bewiesen). Tool-Loop nutzt jetzt einen streamenden Backend-Helfer (_stream_responses, wie codex_generate) und liest die function_call-Items aus dem response.completed-Event. 0.61.0: Schritt-2-Baustein (Agenten-Umbau) — NEU codex_generate_tools(): GPT/Codex Function-Calling-Loop auf der OpenAI-Responses-API (chatgpt.com/backend-api/codex). Deterministischer Hard-Stop (max_turns UND max_seconds), tool_use<->tool_result strikt 1:1 (function_call verbatim in den Verlauf, je call_id genau ein function_call_output), Tool-Exception als Fehler-tool_result zurueck (nie crashen), Schleifen-Erkennung (>3x gleiche name+args), Tool-Output je Aufruf auf LESE_TOOL_OUT_CAP gekappt; bei Hard-Stop ohne Klartext eine finale Runde OHNE Werkzeuge (Absicherung nach bugs/server/ai-agent-frameworks.md). NEU Endpoint GET /toolloop-selftest: isolierter Machbarkeits-Smoke-Test (2 triviale Tools) — prueft empirisch, ob das Backend eigene function-Tools akzeptiert+aufruft. Beruehrt den Chat-Pfad NICHT (reiner Baustein; sichtbare Dashboard-Version bleibt 0.56.0 bis der Umbau den Chat aendert). Alt: 0.60.0 (07.07.2026, 13:09 Uhr) NEU Turn-Logbuch + Sonden-Trace. Jeder /chat + /chat/stream-Turn wird per contextvar-Trace mitgeschrieben: der bestehende checkpoint()-Kanal fuettert zusaetzlich den Trace, ein Phasen-Marker recall_search trennt Rohsuche vom Leseagent-Filter. Logbuch 1 (LOGBOOK_DIR/Trace/turns.jsonl, 100 rollierend) = 1 lesbare Zeile je Anfrage mit Frage, Router->final Intent, Rohtreffer/Auswahl (Star-Trek: 50 gefunden/0 gewaehlt), Confidence, Antwort-Vorschau + Phasen-Timing (router_ms/suche_ms/leseagent_ms/web_antwort_ms = Flaschenhals-Radar). Logbuch 2 (trace.jsonl, 4000 Events) = feine Events je Turn per turn_id verknuepft (erweiterbares Geruest fuer feine Sonden beim Agenten-Umbau). Atomar (tmp+os.replace), secret-maskiert, BEST-EFFORT (try/except ueberall — gefaehrdet den Chat nie). Deterministische Problem-Markierung (_PROBLEM_FEEDBACK_RE) markiert den letzten Turn, wenn Frank ein Problem meldet. GET /logbook/turns fuers Dashboard. Persistent auf Samba (LOGBOOK_DIR bereits gemountet -> ueberlebt Rebuilds; loest fuer die Turn-Ebene die Fluechtigkeit von /app/logs/agent.jsonl). Alt: 0.59.1 (07.07.2026, 11:52 Uhr).
+
+# Wirksamer Counter-Bump: Live-Spiegelung fertiger Gesprächsturns ins Gehirn.
+VERSION = "0.65.2 (08.07.2026, 20:00 Uhr)"  # 0.65.2: FIX Gesprächs-Logbuch wird nicht mehr erst nach 30 Minuten Inaktivität ins Gehirn geschrieben. Nach jeder fertigen Agent-Antwort spiegelt der Agent denselben Gesprächseintrag sofort in die Kategorie Gespräche; der alte 30-Minuten-Flush mit .txt-Kopie bleibt als Sicherheitsnetz. Alt: 0.65.1.
 
 # ---------------------------------------------------------------------------
 # Konfiguration (alles aus Umgebungsvariablen — Secrets nie im Code)
@@ -91,6 +96,7 @@ DEDUP_MIN_SCORE = float(os.getenv("AGENT_DEDUP_MIN_SCORE", "0.70"))  # ab hier d
 DEFAULT_AGENT_LIMITS = {
     "dedup_candidates": DEDUP_CANDIDATES,
     "history_max": _env_int("AGENT_HISTORY_MAX", 40),
+    "history_compress_at": _env_int("AGENT_HISTORY_COMPRESS_AT", 0),   # 0 = aus; ab N Gesamt-Nachrichten wird der Verlauf ueber den Hauptagenten kumulativ verdichtet (statt hart abzuschneiden)
     "recall_full_limit": _env_int("AGENT_RECALL_LIMIT", 0),            # 0 = historisch "kein Ergebnislimit"
     "multi_query_variants": _env_int("AGENT_MULTI_QUERY_VARIANTS", 2),
     "entity_extract_chars": _env_int("AGENT_ENTITY_EXTRACT_CHARS", 2500),
@@ -108,6 +114,7 @@ DEFAULT_AGENT_LIMITS = {
 AGENT_LIMIT_BOUNDS = {
     "dedup_candidates": (1, 50),
     "history_max": (0, 200),
+    "history_compress_at": (0, 500),
     "recall_full_limit": (0, 5000),
     "multi_query_variants": (0, 5),
     "entity_extract_chars": (500, 20000),
@@ -123,6 +130,7 @@ AGENT_LIMIT_BOUNDS = {
     "chat_text_max_chars": (1000, 1_000_000),
 }
 HISTORY_MAX = DEFAULT_AGENT_LIMITS["history_max"]
+HISTORY_COMPRESS_AT = DEFAULT_AGENT_LIMITS["history_compress_at"]   # 0 = aus; sonst Schwelle (Gesamt-Nachrichten) fuer die kumulative Verlaufs-Komprimierung
 RECALL_LIMIT = DEFAULT_AGENT_LIMITS["recall_full_limit"]
 # Level-2 Such-Intelligenz (Frank-Auftrag 2026-07-04, Plan-Nr. 35-38):
 MULTI_QUERY_ENABLED = os.getenv("AGENT_MULTI_QUERY", "1").strip() not in ("0", "false", "no")
@@ -2134,6 +2142,9 @@ def all_categories() -> list[str]:
 # ---------------------------------------------------------------------------
 _sessions: dict[str, dict] = {}
 _lock = asyncio.Lock()
+_background_tasks: set[asyncio.Task] = set()
+_conversation_mirror_locks: dict[str, asyncio.Lock] = {}
+_conversation_mirror_latest: dict[str, int] = {}
 
 # ---------------------------------------------------------------------------
 # Idempotenz (Frank-Wunsch 2026-07-02, Almanach ai-agent §5.2 / BP §4): Die App schickt pro
@@ -2186,6 +2197,22 @@ async def _dedup_release(rid: str) -> None:
         _dedup.pop(rid, None)
 
 
+def _track_background_task(task: asyncio.Task) -> None:
+    """Starke Referenz + Fehlerlog: fire-and-forget Tasks duerfen nie still verschwinden."""
+    _background_tasks.add(task)
+
+    def _done(t: asyncio.Task) -> None:
+        _background_tasks.discard(t)
+        try:
+            t.result()
+        except asyncio.CancelledError:
+            pass
+        except Exception:  # noqa: BLE001
+            _log(logging.ERROR, "Background-Task fehlgeschlagen", exc_info=True)
+
+    task.add_done_callback(_done)
+
+
 def _now_local() -> datetime:
     return datetime.now(TZ)
 
@@ -2199,7 +2226,10 @@ def _with_store_timestamp(text: str) -> str:
 
 def _new_session(user_id: str) -> dict:
     return {"user_id": user_id, "messages": [], "start_local": _now_local(),
-            "last_activity": time.monotonic(), "pending": None}
+            "last_activity": time.monotonic(), "pending": None,
+            # Verlaufs-Komprimierung (RAM, Frank-Wunsch 2026-07-08): kumulative Zusammenfassung des
+            # frueheren Gespraechs + Index, bis zu dem komprimiert wurde. Beide leben nur in der Session.
+            "history_summary": "", "history_compressed_upto": 0}
 
 
 # ---------------------------------------------------------------------------
@@ -2762,6 +2792,7 @@ def current_agent_limits() -> dict[str, int]:
     return {
         "dedup_candidates": DEDUP_CANDIDATES,
         "history_max": HISTORY_MAX,
+        "history_compress_at": HISTORY_COMPRESS_AT,
         "recall_full_limit": RECALL_LIMIT,
         "multi_query_variants": MULTI_QUERY_VARIANTS,
         "entity_extract_chars": ENTITY_EXTRACT_CHARS,
@@ -2779,7 +2810,7 @@ def current_agent_limits() -> dict[str, int]:
 
 
 def apply_agent_limits(limits: dict[str, Any]) -> dict[str, int]:
-    global DEDUP_CANDIDATES, HISTORY_MAX, RECALL_LIMIT, MULTI_QUERY_VARIANTS, ENTITY_EXTRACT_CHARS
+    global DEDUP_CANDIDATES, HISTORY_MAX, HISTORY_COMPRESS_AT, RECALL_LIMIT, MULTI_QUERY_VARIANTS, ENTITY_EXTRACT_CHARS
     global ENTITY_DOCS_LIMIT, LESE_SNIPPET_CHARS, ANSWER_HIT_CHARS, ANSWER_TOTAL_CHARS
     global ANSWER_MAX_TOKENS, RECALL_WORKING_CACHE_THRESHOLD, RECALL_NORMAL_MAX
     global FULL_CATEGORY_BATCH_CHARS, CONTEXT_PROMPT_MAX_CHARS, CHAT_TEXT_MAX_CHARS
@@ -2788,6 +2819,7 @@ def apply_agent_limits(limits: dict[str, Any]) -> dict[str, int]:
         clean["answer_hit_chars"] = clean["answer_total_chars"]
     DEDUP_CANDIDATES = clean["dedup_candidates"]
     HISTORY_MAX = clean["history_max"]
+    HISTORY_COMPRESS_AT = clean["history_compress_at"]
     RECALL_LIMIT = clean["recall_full_limit"]
     MULTI_QUERY_VARIANTS = clean["multi_query_variants"]
     ENTITY_EXTRACT_CHARS = clean["entity_extract_chars"]
@@ -2898,11 +2930,88 @@ def build_abfrage_prompt(categories: list[str]) -> str:
     return instr + "\n\n" + ABFRAGE_SCHEMA
 
 
+def _fmt_history_lines(msgs: "list[dict]") -> str:
+    return "\n".join(("Frank" if m.get("role") == "frank" else "Agent") + ": " + (m.get("text") or "") for m in msgs)
+
+
+# --- Verlaufs-Komprimierung (Frank-Wunsch 2026-07-08) ---------------------------------------------
+# Ab HISTORY_COMPRESS_AT Gesamt-Nachrichten (Frank + Cortex zusammengezaehlt) wird der Gespraechsverlauf
+# ueber den Hauptagenten (GPT-5.5) KUMULATIV verdichtet: die bestehende Zusammenfassung + die neuen
+# Nachrichten seit der letzten Komprimierung werden zu EINER neuen Zusammenfassung verschmolzen. So
+# ersetzt die Komprimierung das harte HISTORY_MAX-Abschneiden — nichts geht verloren, nur verdichtet.
+# Alles nur im RAM (session-state). 0 = aus (dann gilt weiter das alte HISTORY_MAX-Verhalten).
+HISTORY_COMPRESS_SYSTEM = (
+    "Du bist Cortex' Verlaufs-Verdichter. Fasse den bisherigen Gespraechsverlauf zwischen Frank und "
+    "Cortex zu einer KOMPAKTEN, aber VOLLSTAENDIGEN Zusammenfassung zusammen. Behalte ALLE wichtigen "
+    "Fakten, Namen, Zahlen, Entscheidungen, offene Fragen und den roten Faden — verliere nichts "
+    "Wesentliches, nur Fuellwoerter und Wiederholungen. Schreibe in knappen deutschen Stichpunkten "
+    "bzw. Saetzen in der dritten Person ('Frank fragte...', 'Cortex antwortete...'). KEINE Einleitung, "
+    "KEIN Kommentar darueber was du tust — gib NUR die Zusammenfassung selbst."
+)
+
+
+def _compress_history(alte_summary: str, msgs_slice: "list[dict]") -> str:
+    """Verschmilzt die bisherige Zusammenfassung mit den neuen Nachrichten zu einer neuen Gesamt-
+    Zusammenfassung (ueber den Hauptagenten). Gibt bei leerer Eingabe/Fehlschlag die alte zurueck."""
+    if not msgs_slice:
+        return alte_summary
+    user = (
+        "BISHERIGE ZUSAMMENFASSUNG (fruehere Gespraechsteile — mit einbeziehen):\n"
+        + (alte_summary.strip() or "(noch keine)") + "\n\n"
+        "NEUE NACHRICHTEN (in die Zusammenfassung einarbeiten):\n" + _fmt_history_lines(msgs_slice) + "\n\n"
+        "Gib die AKTUALISIERTE Gesamt-Zusammenfassung (alte + neue verschmolzen)."
+    )
+    out = llm_generate(HISTORY_COMPRESS_SYSTEM, user, model=ROLE_MODELS["haupt"],
+                       json_mode=False, max_tokens=ANSWER_MAX_TOKENS, temperature=0.3)
+    return (out or "").strip() or alte_summary
+
+
+def _maybe_compress_history(session: dict) -> None:
+    """Prueft die Schwelle und komprimiert den Verlauf kumulativ (mutiert die Session). BEST-EFFORT:
+    ein Fehler darf den Chat NIE gefaehrden — dann bleibt einfach der alte Stand (der _history_text-
+    Sicherheitsnetz-Cap greift trotzdem)."""
+    n = HISTORY_COMPRESS_AT
+    if not n or n <= 0:
+        return
+    msgs = session.get("messages") or []
+    upto = int(session.get("history_compressed_upto") or 0)
+    if len(msgs) - upto < n:
+        return
+    alt = (session.get("history_summary") or "")
+    try:
+        neue_summary = _compress_history(alt, msgs[upto:])
+    except Exception:  # noqa: BLE001 — Komprimierung darf den Chat nie killen (best-effort)
+        _log(logging.WARNING, "Verlaufs-Komprimierung fehlgeschlagen (best-effort, alter Stand bleibt)", exc_info=True)
+        return
+    if neue_summary and neue_summary != alt:
+        session["history_summary"] = neue_summary
+        session["history_compressed_upto"] = len(msgs)
+        checkpoint("history_compress", "Verlauf kumulativ komprimiert (ersetzt hartes Abschneiden)",
+                   ok=True, ab_nachrichten=n, gesamt=len(msgs), summary_zeichen=len(neue_summary))
+
+
 def _history_text(session: dict) -> str:
-    msgs = session["messages"][-HISTORY_MAX:]
-    if not msgs:
+    msgs = session.get("messages") or []
+    # Komprimierungs-Modus aktiv: Zusammenfassung des frueheren Gespraechs + die noch unkomprimierten
+    # Nachrichten (statt hartem Abschneiden). Sicherheitsnetz: sollte die Komprimierung mal nicht
+    # gelaufen sein, wird der unkomprimierte Rest trotzdem auf HISTORY_MAX gekappt (nie unbegrenzt).
+    if HISTORY_COMPRESS_AT and HISTORY_COMPRESS_AT > 0:
+        summary = (session.get("history_summary") or "").strip()
+        upto = int(session.get("history_compressed_upto") or 0)
+        rest = msgs[upto:]
+        if len(rest) > HISTORY_MAX:
+            rest = rest[-HISTORY_MAX:]
+        parts: "list[str]" = []
+        if summary:
+            parts.append("[Zusammenfassung des frueheren Gespraechs:]\n" + summary)
+        if rest:
+            parts.append(_fmt_history_lines(rest))
+        return "\n".join(parts) if parts else "(noch nichts)"
+    # Klassisch (Komprimierung aus): nur die letzten HISTORY_MAX Nachrichten, aeltere fallen weg.
+    tail = msgs[-HISTORY_MAX:]
+    if not tail:
         return "(noch nichts)"
-    return "\n".join(("Frank" if m["role"] == "frank" else "Agent") + ": " + m["text"] for m in msgs)
+    return _fmt_history_lines(tail)
 
 
 def _norm_context_mode(mode: str | None) -> str:
@@ -3533,23 +3642,77 @@ def _unique_path(folder: Path, base: str) -> Path:
     return p
 
 
-def flush_session_to_logbook(session: dict) -> None:
-    """Schreibt den Gespraechsverlauf 1:1 ins Gehirn (Kategorie gespraeche) UND als .txt-Kopie."""
-    if not session["messages"]:
-        return
-    start = session["start_local"]
+def _coerce_session_start(value) -> datetime:
+    if isinstance(value, datetime):
+        return value
+    try:
+        return datetime.fromisoformat(str(value))
+    except Exception:  # noqa: BLE001
+        return _now_local()
+
+
+def _conversation_logbook_payload(session: dict) -> tuple[str, str, str]:
+    """Einheitlicher 1:1-Text fuer Live-Mirror und Timeout-Flush; gleicher Titel ersetzt im Brain."""
+    start = _coerce_session_start(session.get("start_local"))
     date_str = start.strftime("%d.%m.%Y")
     time_str = f"{start.hour}.{start.minute:02d} Uhr"
     header = f"Kategorie: Gespräche\nDatum/Uhrzeit: {date_str} - {time_str}\n\n"
     body = "\n".join(("Frank" if m["role"] == "frank" else "Agent") + ": " + m["text"]
-                     for m in session["messages"])
+                     for m in (session.get("messages") or []))
     content = header + body + "\n"
+    title = f"Gespräch {date_str} - {time_str}"
+    start_label = f"{date_str} - {time_str}"
+    return title, content, start_label
+
+
+async def _mirror_session_to_brain_now(sid: str, snap: dict) -> None:
+    """Spiegelt einen fertigen Turn sofort ins Gehirn; alter Timeout-Flush bleibt Fallback."""
+    if not snap.get("messages"):
+        return
+    seq = int(snap.get("conversation_mirror_seq") or 0)
+    lock = _conversation_mirror_locks.setdefault(sid, asyncio.Lock())
+    async with lock:
+        if seq and seq < _conversation_mirror_latest.get(sid, 0):
+            _log(logging.INFO, "Veralteter Gesprächs-Mirror übersprungen", session=sid, seq=seq)
+            return
+        title, content, start_label = _conversation_logbook_payload(snap)
+        try:
+            stored = await asyncio.to_thread(
+                brain_store,
+                content,
+                title,
+                CONV_CATEGORY,
+                snap.get("user_id") or USER_ID,
+            )
+            checkpoint("logbuch_live", "Gespräch direkt nach Turn ins Gehirn gespiegelt",
+                       ok=bool(stored.get("doc_id")), brain=True,
+                       nachrichten=len(snap.get("messages") or []), start=start_label,
+                       doc_id=stored.get("doc_id"))
+        except Exception:  # noqa: BLE001 — Timeout-Flush bleibt als reaktive Schutzschicht
+            _log(logging.ERROR, "Live-Gesprächs-Mirror ins Gehirn fehlgeschlagen", exc_info=True, session=sid)
+
+
+def _schedule_conversation_mirror(sid: str, snap: dict) -> None:
+    if not snap.get("messages"):
+        return
+    seq = int(snap.get("conversation_mirror_seq") or 0)
+    if seq:
+        _conversation_mirror_latest[sid] = max(_conversation_mirror_latest.get(sid, 0), seq)
+    _track_background_task(asyncio.create_task(_mirror_session_to_brain_now(sid, snap)))
+
+
+def flush_session_to_logbook(session: dict) -> None:
+    """Schreibt den Gespraechsverlauf 1:1 ins Gehirn (Kategorie gespraeche) UND als .txt-Kopie."""
+    if not session["messages"]:
+        return
+    title, content, start_label = _conversation_logbook_payload(session)
+    start = _coerce_session_start(session.get("start_local"))
 
     txt_ok = False
     try:
         folder = Path(LOGBOOK_DIR) / start.strftime("%Y") / start.strftime("%m")
         folder.mkdir(parents=True, exist_ok=True)
-        path = _unique_path(folder, f"{date_str} - {time_str}")
+        path = _unique_path(folder, start_label)
         path.write_text(content, encoding="utf-8")
         txt_ok = True
         _log(logging.INFO, "Logbuch-.txt geschrieben", path=str(path), chars=len(content))
@@ -3558,14 +3721,14 @@ def flush_session_to_logbook(session: dict) -> None:
 
     brain_ok = False
     try:
-        brain_store(text=content, title=f"Gespräch {date_str} - {time_str}", category=CONV_CATEGORY)
+        brain_store(text=content, title=title, category=CONV_CATEGORY)
         brain_ok = True
     except Exception:  # noqa: BLE001
         _log(logging.ERROR, "Logbuch ins Gehirn fehlgeschlagen", exc_info=True)
 
     checkpoint("logbuch", "Gespraech ZWEIFACH gesichert (Gehirn + .txt-Kopie)",
                ok=(txt_ok or brain_ok), txt=txt_ok, brain=brain_ok,
-               nachrichten=len(session["messages"]), start=f"{date_str} - {time_str}")
+               nachrichten=len(session["messages"]), start=start_label)
 
 
 # ---------------------------------------------------------------------------
@@ -3590,7 +3753,8 @@ def _session_snapshot(sid: str, session: dict) -> dict:
     return {"sid": sid, "user_id": session.get("user_id") or "frank",
             "start_local": session["start_local"].isoformat(),
             "messages": list(session["messages"]), "pending": session.get("pending"),
-            "context_limit_notified": bool(session.get("context_limit_notified"))}
+            "context_limit_notified": bool(session.get("context_limit_notified")),
+            "conversation_mirror_seq": int(session.get("conversation_mirror_seq") or 0)}
 
 
 def _write_session_snapshot(snap: dict) -> None:
@@ -3627,6 +3791,7 @@ def _load_persisted_sessions() -> dict:
                             "messages": d.get("messages") or [],
                             "pending": d.get("pending"),
                             "context_limit_notified": bool(d.get("context_limit_notified")),
+                            "conversation_mirror_seq": int(d.get("conversation_mirror_seq") or 0),
                             "last_activity": time.monotonic()}
             except Exception:  # noqa: BLE001 — eine kaputte Datei darf den Start nicht verhindern
                 _log(logging.WARNING, "Session-Datei nicht lesbar — uebersprungen", file=str(f))
@@ -3901,6 +4066,10 @@ Du hast Werkzeuge:
 - web_suche(query): sucht im Internet (aktuelle/allgemeine Infos, die NICHT in Franks Gedaechtnis stehen).
 - lies_logbuch(anzahl, nur_probleme): liest Cortex' Turn-Logbuch (fuer 'warum ging das gestern nicht?').
 - was_kann_cortex(): liest die aktuelle System-Info-Chronik (alle Faehigkeiten/Features von Cortex, immer aktuell — auch Neues der letzten Tage). Nutze das, wenn Frank fragt, was du alles kannst oder was neu dazugekommen ist.
+- lies_regeln(): zeigt deine aktiven dauerhaften Verhaltensregeln (Titel + Text).
+- schreibe_regel(text): schlaegt eine DAUERHAFTE Verhaltensregel vor (wie du kuenftig antwortest/dich verhaeltst). Frank bestaetigt sie danach.
+
+Regel ODER Gedaechtnis? (WICHTIG): Will Frank festlegen, WIE du dich kuenftig verhalten/antworten sollst ("mach daraus eine Regel", "ab jetzt immer …", "in deine Regeldatei"), dann ist das eine REGEL -> schreibe_regel(text) mit einer praegnanten, imperativen 1-2-Satz-Formulierung. Will Frank ein FAKTUM/eine Notiz merken ("merk dir, dass mein Termin am Freitag ist"), ist das ein Gedaechtnis-Eintrag (Speichern) — KEINE Regel. Im Zweifel frage EINMAL kurz nach, ob es eine dauerhafte Regel oder eine Notiz sein soll.
 
 Arbeitsweise (WICHTIG):
 1. Durchsuche bei JEDER Wissensfrage ZUERST Franks Gedaechtnis — AUCH bei scheinbar reinen Faktenfragen. Oft hat Frank persoenliche Notizen/Interessen zum Thema, die zur Antwort gehoeren.
@@ -3910,12 +4079,65 @@ Arbeitsweise (WICHTIG):
 5. Wenn du etwas aus dem Gedaechtnis nutzt, sag kurz, dass es aus Franks Notizen kommt. Findest du wirklich nichts Passendes, sag das ehrlich — erfinde nichts."""
 
 
+def build_toolagent_system() -> str:
+    """TOOLAGENT_SYSTEM plus Franks aktive Selbst-Regeln (spec K2).
+
+    Die aktiven Regeln werden als verbindlicher Block an den System-Prompt jeder
+    Chat-Antwort gehaengt -> jede Regel wirkt in JEDEM Gespraech. Faellt das Laden
+    aus, laeuft der Chat ohne Regelblock weiter (Regeln duerfen den Chat nie brechen)."""
+    try:
+        block = rules.rules_block(rules.load_rules(rules.rules_path()))
+    except Exception as e:  # noqa: BLE001 — Regeln duerfen den Chat nie brechen
+        _log(logging.WARNING, "rules_block fehlgeschlagen", err=str(e)[:200])
+        block = ""
+    return TOOLAGENT_SYSTEM + ("\n\n" + block if block else "")
+
+
+def _formuliere_regel(user_text: str) -> str:
+    """Formt aus Franks Aussage eine praegnante, imperative Verhaltensregel (spec K3).
+
+    Kurz halten (1-2 Saetze, keine Beispiele) — die Regel steckt in JEDEM Prompt.
+    Faellt der LLM-Call aus, dient Franks Rohtext (gekappt) als Regel."""
+    sys = ("Formuliere aus Franks Nachricht GENAU EINE dauerhafte Verhaltensregel fuer dich (Cortex): "
+           "praezise und imperativ, in maximal 1-2 kurzen Saetzen, ohne Beispiele, ohne Begruendung, "
+           "ohne Anrede. Gib NUR die Regel aus, sonst nichts.")
+    try:
+        out = _llm_generate_once(sys, user_text, model=ROLE_MODELS["haupt"], json_mode=False,
+                                 max_tokens=120, temperature=0.2).strip()
+        return (out or user_text.strip())[:240]
+    except Exception:  # noqa: BLE001
+        return user_text.strip()[:240]
+
+
+def _gen_rule_title(text: str) -> str:
+    """Sehr kurzer KI-Titel fuer eine Regel (Fallback: erste ~60 Zeichen)."""
+    sys = "Gib einen sehr kurzen Titel (2-4 Woerter) fuer diese Regel. Nur den Titel, sonst nichts."
+    try:
+        out = _llm_generate_once(sys, text, model=ROLE_MODELS["haupt"], json_mode=False,
+                                 max_tokens=20, temperature=0.2).strip()
+        return (out or text).strip()[:60]
+    except Exception:  # noqa: BLE001
+        return text.strip()[:60]
+
+
+def _rule_confirm_card(regel_text: str) -> dict:
+    """Baut die Ja/Nein/Bearbeiten-Bestaetigungskarte fuer eine vorgeschlagene Regel (spec K5).
+
+    Nutzt das bestehende pending+options-Muster (wie save_confirm): die Buttons senden
+    deterministische Trigger-Woerter, die _process_turn per Regex erkennt."""
+    return {"reply": regel_text, "action": "rule_confirm",
+            "options": [{"label": "Ja", "send": "regel ja"},
+                        {"label": "Nein", "send": "regel nein"},
+                        {"label": "Bearbeiten", "send": "regel bearbeiten"}],
+            "pending": {"mode": "rule_confirm", "rule_text": regel_text}}
+
+
 def build_agent_tools(user_id: str = USER_ID) -> "tuple[list[dict], dict, dict]":
     """Baut den Lese-Werkzeugkasten des Hauptagenten. Gibt (tools_schema, handlers, state).
     Jeder Turn bekommt FRISCHE Werkzeuge mit eigenem hit_cache (state['hits']: doc_id -> voller hit),
     den durchsuche_gedaechtnis fuellt und lade_eintrag liest — so filtert der Hauptagent selbst
     mit vollem Verstaendnis, ohne dass alle Volltexte auf einmal in seinen Kontext kippen."""
-    state: "dict" = {"hits": {}, "letzte_suche": None}
+    state: "dict" = {"hits": {}, "letzte_suche": None, "geladen": []}
 
     def _durchsuche(args: dict) -> str:
         q = str(args.get("query") or "").strip()
@@ -3949,6 +4171,8 @@ def build_agent_tools(user_id: str = USER_ID) -> "tuple[list[dict], dict, dict]"
         h = state["hits"].get(did)
         if h is None:
             return f"FEHLER: Eintrag '{did}' ist nicht im aktuellen Suchergebnis. Zuerst durchsuche_gedaechtnis nutzen."
+        if did not in state["geladen"]:
+            state["geladen"].append(did)   # fuer praezise Quellen-Chips: was der Agent WIRKLICH geoeffnet hat
         text = (h.get("text") or "").strip()
         return json.dumps({"id": did, "titel": h.get("title"), "kategorie": h.get("category"),
                            "volltext": text[:LESE_TOOL_OUT_CAP]}, ensure_ascii=False)
@@ -3992,6 +4216,27 @@ def build_agent_tools(user_id: str = USER_ID) -> "tuple[list[dict], dict, dict]"
         return json.dumps({"anzahl": len(schlank), "stand": data.get("stand"), "faehigkeiten": schlank},
                           ensure_ascii=False)
 
+    def _lies_regeln(_args: dict) -> str:
+        try:
+            rs = [r for r in rules.load_rules(rules.rules_path()) if r.get("enabled")]
+        except Exception as e:  # noqa: BLE001 — Tool-Fehler als Ergebnis, nie crashen (ai-agent §3.2)
+            return json.dumps({"fehler": f"Regeln nicht lesbar ({type(e).__name__})."}, ensure_ascii=False)
+        if not rs:
+            return json.dumps({"regeln": [], "hinweis": "Noch keine aktiven Regeln."}, ensure_ascii=False)
+        return json.dumps({"regeln": [{"titel": r.get("titel"), "text": r.get("text")} for r in rs]},
+                          ensure_ascii=False)
+
+    def _schreibe_regel(args: dict) -> str:
+        text = str(args.get("text") or "").strip()
+        if not text:
+            return json.dumps({"fehler": "Kein Regeltext angegeben."}, ensure_ascii=False)
+        # NICHT direkt anlegen: nur als Kandidat vormerken. _toolagent_answer wandelt das in eine
+        # Ja/Nein/Bearbeiten-Bestaetigungskarte (spec K5) — Frank bestaetigt, bevor die Regel aktiv wird.
+        state["rule_candidate"] = text[:240]
+        return json.dumps({"status": "vorschlag_bereit",
+                           "hinweis": "Regel wird Frank zur Bestaetigung vorgelegt (Ja/Nein/Bearbeiten)."},
+                          ensure_ascii=False)
+
     tools = [
         {"type": "function", "name": "durchsuche_gedaechtnis",
          "description": ("Durchsucht Franks persoenliches Gedaechtnis (zweites Gehirn) und liefert passende "
@@ -4024,9 +4269,26 @@ def build_agent_tools(user_id: str = USER_ID) -> "tuple[list[dict], dict, dict]"
                          "Nutze das, wenn Frank fragt, was du alles kannst oder was neu dazugekommen ist. "
                          "Die Liste ist immer aktuell (auch Features der letzten Tage)."),
          "parameters": {"type": "object", "properties": {}, "additionalProperties": False}},
+        {"type": "function", "name": "lies_regeln",
+         "description": ("Gibt Franks aktuell aktive DAUERHAFTE Verhaltensregeln zurueck (Titel + Text). "
+                         "Nutze das, wenn Frank fragt, welche Regeln du befolgst, oder um eine Dublette "
+                         "zu vermeiden, bevor du eine neue Regel vorschlaegst."),
+         "parameters": {"type": "object", "properties": {}, "additionalProperties": False}},
+        {"type": "function", "name": "schreibe_regel",
+         "description": ("Schlaegt eine DAUERHAFTE Verhaltensregel vor, die bestimmt, WIE du kuenftig "
+                         "antwortest oder dich verhaeltst (Antwortformat, Ton, Vorgehen). NUR dafuer — "
+                         "NICHT fuer Faktenwissen, Notizen oder Termine (das gehoert ins Gedaechtnis, "
+                         "dafuer ist die Speicher-Funktion). Formuliere die Regel praezise und imperativ "
+                         "in maximal 1-2 kurzen Saetzen, ohne Beispiele. Die Regel wird Frank zur "
+                         "Bestaetigung vorgelegt (Ja/Nein/Bearbeiten), nicht sofort aktiviert."),
+         "parameters": {"type": "object",
+                        "properties": {"text": {"type": "string",
+                                                "description": "die praegnant formulierte Regel (1-2 kurze Saetze)"}},
+                        "required": ["text"], "additionalProperties": False}},
     ]
     handlers = {"durchsuche_gedaechtnis": _durchsuche, "lade_eintrag": _lade,
-                "web_suche": _web, "lies_logbuch": _logbuch, "was_kann_cortex": _was_kann}
+                "web_suche": _web, "lies_logbuch": _logbuch, "was_kann_cortex": _was_kann,
+                "lies_regeln": _lies_regeln, "schreibe_regel": _schreibe_regel}
     return tools, handlers, state
 
 
@@ -4048,6 +4310,54 @@ def toolagent_test(q: str) -> dict:
             "tool_calls": r.get("tool_calls"),
             "gefundene_eintraege": len(state["hits"]),
             "model": ROLE_MODELS["haupt"]}
+
+
+# --- Selbst-Regeln des Agenten (Z:\Logbuch\Regeln\regeln.json) — spec 2026-07-08 ----------
+# CRUD fuer die dauerhaften Verhaltensregeln. Anzeige/Verwaltung im Dashboard-Einstellungen-Tab
+# (ueber den Dashboard-Proxy /api/rules). Anlegen per Chat laeuft ueber den rule_confirm-Flow.
+class RuleCreateReq(BaseModel):
+    text: str = Field(..., min_length=1, max_length=2000, description="Regeltext (praegnant, imperativ)")
+
+
+class RuleUpdateReq(BaseModel):
+    enabled: "bool | None" = Field(default=None, description="Regel aktivieren/deaktivieren")
+    text: "str | None" = Field(default=None, max_length=2000, description="Neuer Regeltext")
+
+
+@app.get("/rules", dependencies=[Depends(require_auth)])
+def api_get_rules() -> dict:
+    return {"rules": rules.load_rules(rules.rules_path())}
+
+
+@app.post("/rules", dependencies=[Depends(require_auth)])
+def api_add_rule(req: RuleCreateReq) -> dict:
+    text = req.text.strip()
+    if not text:
+        raise HTTPException(status_code=400, detail="Regeltext fehlt.")
+    try:
+        rule = rules.add_rule(rules.rules_path(), text, _gen_rule_title(text),
+                              _now_local().isoformat(timespec="seconds"))
+    except rules.RuleLimitError:
+        raise HTTPException(status_code=409, detail="Regel-Limit (40) erreicht — bitte zuerst eine Regel loeschen.")
+    checkpoint("rule_added", "Regel manuell im Dashboard angelegt", ok=True, titel=rule.get("titel"), rid=rule.get("id"))
+    return rule
+
+
+@app.put("/rules/{rule_id}", dependencies=[Depends(require_auth)])
+def api_update_rule(rule_id: str, req: RuleUpdateReq) -> dict:
+    upd = rules.update_rule(rules.rules_path(), rule_id, enabled=req.enabled, text=req.text)
+    if upd is None:
+        raise HTTPException(status_code=404, detail="Regel nicht gefunden.")
+    checkpoint("rule_updated", "Regel geaendert (Dashboard)", ok=True, rid=rule_id, enabled=upd.get("enabled"))
+    return upd
+
+
+@app.delete("/rules/{rule_id}", dependencies=[Depends(require_auth)])
+def api_delete_rule(rule_id: str) -> dict:
+    if not rules.delete_rule(rules.rules_path(), rule_id):
+        raise HTTPException(status_code=404, detail="Regel nicht gefunden.")
+    checkpoint("rule_deleted", "Regel geloescht (Dashboard)", ok=True, rid=rule_id)
+    return {"ok": True}
 
 
 # --- Einstellungen: System-Prompt (editierbarer Teil) + Modell-Wahl --------
@@ -5018,12 +5328,76 @@ def entities_overview() -> dict:
     return {"ok": True, "items": brain_entities_list()}
 
 
+def _toolagent_answer(session: dict, user_text: str, context_prompt: str = "",
+                      response_size: str = "m", on_delta=None) -> dict:
+    """SCHRITT-2-UMBAU (Werkzeugkasten im echten Chat): Statt der Router-intent-Verzweigung
+    (query/query_internet/internet/smalltalk) beantwortet EIN Hauptagent die Frage selbst per
+    Werkzeugen — er durchsucht Franks Gedaechtnis, laedt gezielt Volltexte, sucht bei Bedarf im Web,
+    liest das Logbuch, kennt seine Faehigkeiten. Loest den Star-Trek-Bug (der Leseagent verwarf
+    0/50 Treffer): der Hauptagent filtert jetzt SELBST mit vollem Verstaendnis (Antwort- vs.
+    Kontext-Treffer, TOOLAGENT_SYSTEM). Router + komplette Speicher-Sicherheit + die deterministischen
+    Spezial-Antworten (Projektstand, Kategorie-Gesamt/-Zaehlfragen) laufen unveraendert DAVOR.
+    Funktionserhaltend (Direktive #3): liefert weiter reply + Quellen-Chips + Confidence an App/Dashboard.
+    Absicherung im Tool-Loop selbst (codex_generate_tools): Hard-Stop max_turns/max_seconds (ai-agent
+    §1.1), tool_use<->tool_result 1:1 (§4.1), Tool-Fehler als Ergebnis statt Crash (§3.2)."""
+    tools, handlers, state = build_agent_tools()
+    # Verlauf + UI-Kontext als Text-Praefix (spiegelt hauptagent_answer 1:1: der Agent sieht das
+    # bisherige Gespraech -> Follow-up-Fragen wie "und was noch dazu?" behalten den Bezug). Die
+    # aktuelle Nachricht zusaetzlich explizit, damit sie nie im Verlauf untergeht.
+    user_input = (
+        f"BISHERIGES GESPRÄCH:\n{_history_text(session)}\n\n"
+        f"{_context_prompt_block(context_prompt)}"
+        f"AKTUELLE NACHRICHT VON FRANK:\n{user_text}"
+    )
+    try:
+        r = codex_generate_tools(
+            build_toolagent_system(), user_input, tools=tools, tool_handlers=handlers,
+            model=ROLE_MODELS["haupt"], reasoning_effort=ROLE_REASONING.get("haupt", "high"),
+            max_turns=8, max_seconds=160.0, on_delta=on_delta,
+        )
+    except Exception as e:  # noqa: BLE001 — der Tool-Agent darf den Endpunkt NIE killen (ai-agent §3.2)
+        _log(logging.ERROR, "Tool-Agent (Hauptagent) fehlgeschlagen", exc_info=True)
+        return {"reply": f"Beim Nachdenken ist gerade etwas schiefgegangen ({type(e).__name__}). Versuch es bitte gleich nochmal.",
+                "action": "error", "pending": None}
+    # Hat der Agent per schreibe_regel eine Regel vorgeschlagen? Dann statt normaler Antwort die
+    # Ja/Nein/Bearbeiten-Bestaetigungskarte zeigen (spec K5), nicht die (leere) Chat-Antwort.
+    if state.get("rule_candidate"):
+        checkpoint("rule_confirm", "Agent schlug per schreibe_regel eine Regel vor -> Bestaetigungskarte",
+                   ok=True, regel=str(state.get("rule_candidate"))[:120])
+        return _rule_confirm_card(str(state["rule_candidate"]))
+    answer = (r.get("text") or "").strip()
+    # Quellen-Chips: bevorzugt die Eintraege, die der Agent WIRKLICH per lade_eintrag geoeffnet hat;
+    # hat er nur gesucht (Snippets reichten), die gefundenen als Quellen. Nur Metadaten (kein Volltext).
+    geladen = state.get("geladen") or []
+    used = [state["hits"][d] for d in geladen if d in state["hits"]] or list(state["hits"].values())
+    sources = [{"doc_id": h.get("doc_id"), "title": h.get("title") or "(ohne Titel)",
+                "category": h.get("category"),
+                "score": h.get("dense_score") if h.get("dense_score") is not None else h.get("score"),
+                "matched_by": h.get("matched_by") or ["dense"]}
+               for h in used if h.get("doc_id")]
+    confidence = _confidence_info(used)   # grob aus den genutzten Treffern abgeleitet (Frank-Wahl)
+    used_memory = bool(state["hits"])
+    checkpoint("toolagent", "Schritt-2-Umbau: Hauptagent beantwortet per Werkzeugen (Router-intent-Zweige ersetzt)",
+               ok=bool(answer), frage=user_text[:120], turns=r.get("turns"), stopped=r.get("stopped"),
+               werkzeuge=len(r.get("tool_calls") or []), gefunden=len(state["hits"]),
+               geladen=len(geladen), confidence=confidence.get("level"))
+    if not answer:
+        answer = "Ich habe nachgedacht, konnte aber gerade keine Antwort formulieren. Versuch es bitte gleich nochmal."
+    # action=recall, wenn Gedaechtnis genutzt wurde (App zeigt Meta-Zeile + Quellen-Chips); sonst smalltalk.
+    return {"reply": answer, "action": "recall" if used_memory else "smalltalk",
+            "pending": None, "recall_hits": len(sources),
+            "sources": sources, "confidence": confidence}
+
+
 def _process_turn(session: dict, user_text: str, pending: dict | None, category: str = "", title: str = "", store_timestamp: bool = False, context_mode: str = "auto", context_prompt: str = "", response_size: str = "m", on_delta=None) -> dict:
     """Ein Gespraechszug — laeuft komplett synchron (LLM + brain) und wird vom async-Handler per
     asyncio.to_thread aufgerufen, damit der Event-Loop NICHT blockiert (fastapi §1 / ai-agent §3.1).
     Liest nur session['messages'] (Verlauf), MUTIERT die Session nicht — gibt 'pending' zum Setzen zurueck.
     Erzwingt im CODE: Speichern passiert NUR nach Bestaetigung (confirm_yes), nie direkt bei intent=save.
     'category' = im Dashboard-Dropdown GEWAEHLTE Kategorie (Override); leer = Speicheragent entscheidet."""
+    # Verlaufs-Komprimierung (Frank-Wunsch 2026-07-08): ab HISTORY_COMPRESS_AT Gesamt-Nachrichten den
+    # Verlauf kumulativ ueber den Hauptagenten verdichten (best-effort — gefaehrdet den Turn nie).
+    _maybe_compress_history(session)
     payload_cats = brain_categories()                                                  # NUR Kategorien MIT Eintraegen -> Leseagent (leere bringen ihm nichts)
     categories = sorted((set(payload_cats) | set(load_registry())) - {CONV_CATEGORY})   # VOLLE Liste (inkl. leerer) -> Speicheragent
     # Explizite Speicher-Felder (Titel/Kategorie aus dem Dashboard-Sendebereich) sind ein KLARES
@@ -5118,6 +5492,39 @@ def _process_turn(session: dict, user_text: str, pending: dict | None, category:
             return _store_final(pending.get("quote", ""), cat, pending.get("title", ""), pending.get("replace_title", ""), bool(pending.get("store_timestamp")))
         # sonst (etwas Neues): pending verfaellt, normale Behandlung unten
 
+    # 1c) Antwort auf eine offene Regel-Bestaetigung (Ja / Nein / Bearbeiten->Speichern)? (spec K5)
+    #     Buttons senden deterministische Trigger-Woerter -> per Regex erkennen (wie save_confirm),
+    #     damit nicht das LLM ueber "ja"/"nein" raten muss.
+    if pending and pending.get("mode") == "rule_confirm":
+        low = user_text.strip().lower()
+        m = re.match(r"^\s*regel speichern:\s*(.+)$", user_text, re.IGNORECASE | re.DOTALL)
+        if m:   # bearbeiteter Text -> erneut zur Bestaetigung zeigen (Ja/Nein/Bearbeiten)
+            return _rule_confirm_card(m.group(1).strip()[:240])
+        if re.search(r"\bregel ja\b", low) or re.fullmatch(r"\s*ja[.! ]*", low):
+            try:
+                neu = rules.add_rule(rules.rules_path(), pending.get("rule_text", ""),
+                                     _gen_rule_title(pending.get("rule_text", "")),
+                                     _now_local().isoformat(timespec="seconds"))
+                checkpoint("rule_saved", "Selbst-Regel nach Franks Ja uebernommen", ok=True,
+                           titel=neu.get("titel"), rid=neu.get("id"))
+                return {"reply": f"Regel uebernommen: „{neu.get('titel')}“.", "action": "rule_saved", "pending": None}
+            except rules.RuleLimitError:
+                return {"reply": "Regel-Limit (40) erreicht — bitte zuerst eine Regel loeschen.",
+                        "action": "error", "pending": None}
+        if re.search(r"\bregel nein\b", low) or re.fullmatch(r"\s*nein[.! ]*", low):
+            return {"reply": "Alles klar, ich lege keine Regel an.", "action": "rule_cancelled", "pending": None}
+        if re.search(r"\bregel bearbeiten\b", low):
+            return _rule_confirm_card(pending.get("rule_text", ""))
+        # sonst (etwas Neues): pending verfaellt, normale Behandlung unten
+
+    # 1d) DETERMINISTISCH (spec K3a): Regel-Wunsch (Verhaltensregel) VOR intent==save abfangen, damit
+    #     "gib dir eine Regel, dass du immer …" nicht faelschlich als Gedaechtnis-Eintrag landet.
+    if not pending and rules.is_rule_request(user_text):
+        regel = _formuliere_regel(user_text)
+        checkpoint("rule_confirm", "Regel-Wunsch erkannt -> Vorschlag zur Bestaetigung (Ja/Nein/Bearbeiten)",
+                   ok=bool(regel), quelle=user_text[:120], regel=regel[:120])
+        return _rule_confirm_card(regel)
+
     # 2) Neue Speicher-Absicht -> NICHT speichern, sondern mit wortwoertlichem Zitat zurueckfragen.
     #    Hat Frank eine Kategorie gewaehlt, wird sie im pending gemerkt UND in der Rueckfrage genannt.
     if intent == "save":
@@ -5188,109 +5595,13 @@ def _process_turn(session: dict, user_text: str, pending: dict | None, category:
                        ok=True, frage=user_text[:120], reply=count_answer.get("reply"))
             return count_answer
 
-    if intent == "query_internet":
-        q = (route.get("query") or "").strip() or user_text.strip()
-        web_q = (route.get("web_query") or "").strip() or q or user_text.strip()
-        try:
-            hits, recall_meta = smart_recall(user_text, q)
-            selected, _note = leseagent_select(user_text, hits, payload_cats)
-            confidence = _confidence_info(selected)
-        except Exception as e:  # noqa: BLE001 — Gedächtnis-Teil darf den Endpunkt nie killen
-            _log(logging.ERROR, "Composite-Recall-Suche fehlgeschlagen", exc_info=True)
-            return {"reply": f"Das Nachschlagen im Gedächtnis hat gerade nicht geklappt ({type(e).__name__}). Versuch es bitte gleich nochmal.",
-                    "action": "error", "pending": None}
-        try:
-            search = tavily_search(web_q, response_size)
-            if not search.get("ok") and hauptagent_supports_native_web():
-                answer = hauptagent_answer_recall_native_web(session, user_text, selected, context_prompt, on_delta, confidence)
-                checkpoint("recall_internet", "Gedächtnis-Treffer + modellnative Websuche kombiniert",
-                           ok=True, recall_query=q, web_query=web_q, gewaehlt=len(selected),
-                           confidence=confidence.get("level"), tavily_reason=search.get("reason"), meta=recall_meta or None)
-            else:
-                answer = hauptagent_answer_recall_internet(session, user_text, selected, search, context_prompt, on_delta, confidence)
-                checkpoint("recall_internet", "Gedächtnis-Treffer + Internet-Suchergebnisse kombiniert",
-                           ok=bool(search.get("ok")), recall_query=q, web_query=web_q, treffer=len(hits),
-                           gewaehlt=len(selected), web_treffer=len(search.get("results") or []),
-                           confidence=confidence.get("level"), meta=recall_meta or None)
-        except Exception as e:  # noqa: BLE001 — Internet-/Antwort-Pfad darf den Endpunkt nie killen
-            _log(logging.ERROR, "Composite-Gedächtnis-Internet-Antwort fehlgeschlagen", exc_info=True)
-            return {"reply": f"Beim Kombinieren von Gedächtnis und Internet ist etwas schiefgegangen ({type(e).__name__}). Versuch es bitte gleich nochmal.",
-                    "action": "error", "pending": None}
-        sources = [{"doc_id": h.get("doc_id"), "title": h.get("title") or "(ohne Titel)",
-                    "category": h.get("category"), "score": h.get("dense_score") if h.get("dense_score") is not None else h.get("score"),
-                    "matched_by": h.get("matched_by") or ["dense"]}
-                   for h in selected if h.get("doc_id")]
-        # Client-kompatibel: action bleibt "recall", damit bestehende Apps die Meta-Zeile/Quellen weiter anzeigen.
-        return {"reply": answer, "action": "recall", "pending": None, "recall_hits": len(selected),
-                "sources": sources, "confidence": confidence}
-
-    if intent == "query":
-        q = (route.get("query") or "").strip() or user_text.strip()
-        try:
-            hits, recall_meta = smart_recall(user_text, q)
-        except Exception as e:  # noqa: BLE001 — Suche kann fehlschlagen, nie crashen
-            _log(logging.ERROR, "Recall-Suche fehlgeschlagen", exc_info=True)
-            return {"reply": f"Das Nachschlagen hat gerade nicht geklappt ({type(e).__name__}). Versuch es bitte gleich nochmal.",
-                    "action": "error", "pending": None}
-        if hits and _wants_exhaustive_recall(user_text):
-            try:
-                answer_obj = _semantic_working_cache_answer(session, user_text, hits, context_prompt, on_delta)
-                checkpoint("recall_full", "Semantische Suche ohne Ergebnislimit via Arbeitscache beantwortet",
-                           ok=True, query=q, treffer=len(hits), meta=recall_meta or None)
-                return answer_obj
-            except Exception as e:  # noqa: BLE001
-                _log(logging.ERROR, "Recall-Arbeitscache fehlgeschlagen", exc_info=True)
-                return {"reply": f"Beim Verarbeiten aller Suchtreffer ist etwas schiefgegangen ({type(e).__name__}). Versuch es gleich nochmal.",
-                        "action": "error", "pending": None}
-        try:
-            selected, _note = leseagent_select(user_text, hits, payload_cats)  # Leseagent: filtert (nur Nummern), formuliert NICHT
-            confidence = _confidence_info(selected)                            # Nr. 38: Sicherheit der Grundlage
-            answer = hauptagent_answer(session, user_text, selected, context_prompt, on_delta, confidence)  # Hauptagent: formuliert aus den ORIGINAL-Treffern (+ S/M/XL-Auftrag)
-        except Exception as e:  # noqa: BLE001 — Antwort-LLM darf den Endpunkt nie killen
-            _log(logging.ERROR, "Antwort-Formulierung fehlgeschlagen", exc_info=True)
-            return {"reply": f"Beim Beantworten ist etwas schiefgegangen ({type(e).__name__}). Versuch es gleich nochmal.",
-                    "action": "error", "pending": None}
-        # Nr. 39: Quellen-Drilldown — die GEWAEHLTEN Eintraege strukturiert an App/Dashboard
-        # (Chips unter der Antwort; Klick oeffnet den Volltext-Drawer). Nur Metadaten, kein Volltext.
-        sources = [{"doc_id": h.get("doc_id"), "title": h.get("title") or "(ohne Titel)",
-                    "category": h.get("category"), "score": h.get("dense_score") if h.get("dense_score") is not None else h.get("score"),
-                    "matched_by": h.get("matched_by") or ["dense"]}
-                   for h in selected if h.get("doc_id")]
-        checkpoint("recall", "Level-2-Recall: Zeit/Multi-Query/Entity + RRF -> Leseagent -> Hauptagent (+Confidence/Quellen)",
-                   ok=True, query=q, treffer=len(hits), gewaehlt=len(selected),
-                   confidence=confidence.get("level"), meta=recall_meta or None)
-        return {"reply": answer, "action": "recall", "pending": None, "recall_hits": len(selected),
-                "sources": sources, "confidence": confidence}
-
-    # 3b) Internet-Frage (Live/aktuell) -> Tavily-Suche + Hauptagent formuliert aus den Ergebnissen
-    if intent == "internet":
-        q = (route.get("query") or "").strip() or user_text.strip()
-        try:
-            search = tavily_search(q, response_size)               # Suchtiefe folgt S/M/XL; Tool-Fehler werden in tavily_search gefangen (ai-agent §3.2)
-            if not search.get("ok") and search.get("reason") in {"deaktiviert", "kein_key"} and hauptagent_supports_native_web():
-                answer = hauptagent_answer_native_web(session, user_text, context_prompt, on_delta)
-                checkpoint("internet_answer", "Tavily nicht aktiv -> Modell nutzt eigene native Websuche",
-                           ok=True, query=q, model=ROLE_MODELS["haupt"], tavily_reason=search.get("reason"))
-                return {"reply": answer, "action": "internet", "pending": None}
-            answer = hauptagent_answer_internet(session, user_text, search, context_prompt, on_delta)
-        except Exception as e:  # noqa: BLE001 — Internet-Pfad darf den Endpunkt nie killen
-            _log(logging.ERROR, "Internet-Antwort fehlgeschlagen", exc_info=True)
-            return {"reply": f"Die Internet-Suche ist gerade schiefgegangen ({type(e).__name__}). Versuch es gleich nochmal.",
-                    "action": "error", "pending": None}
-        checkpoint("internet_answer", "Internet-Suche -> Hauptagent formuliert aus den Ergebnissen",
-                   ok=bool(search.get("ok")), query=q, treffer=len(search.get("results") or []))
-        return {"reply": answer, "action": "internet", "pending": None}
-
-    # 4) Smalltalk / sonstiges — laeuft der Router auf einem ANDEREN Modell, formuliert die
-    #    sichtbare Antwort trotzdem der eingestellte HAUPTAGENT (Schritt 2 = Franks Standard-Wahl).
-    reply = (route.get("reply") or "").strip()
-    if _router_is_delegated():
-        try:
-            reply = (hauptagent_answer_smalltalk(session, user_text, context_prompt, on_delta) or "").strip() or reply
-        except Exception:  # noqa: BLE001 — Fallback: Router-Reply statt Fehler
-            _log(logging.ERROR, "Smalltalk-Antwort des Hauptagenten fehlgeschlagen — nutze Router-Reply", exc_info=True)
-    return {"reply": reply or "Erzaehl mir was, oder frag mich was aus deinem Gedaechtnis.",
-            "action": "smalltalk", "pending": None}
+    # 3b) SCHRITT-2-UMBAU: Alle generischen Antwort-Zweige (query_internet, query, internet,
+    #     smalltalk) beantwortet jetzt EIN Hauptagent selbst per Werkzeugen (durchsuche_gedaechtnis/
+    #     lade_eintrag/web_suche/lies_logbuch/was_kann_cortex). Router (oben) und die komplette
+    #     Speicher-Sicherheit (oben) bleiben unangetastet; die deterministischen Spezial-Antworten
+    #     (Projektstand, Kategorie-Gesamt/-Zaehlung) sind bereits davor abgehandelt. So loest der
+    #     Umbau den Star-Trek-Bug im echten Chat, ohne Franks Speicher-Sicherheit zu riskieren.
+    return _toolagent_answer(session, user_text, context_prompt, response_size, on_delta)
 
 
 @app.post("/chat", dependencies=[Depends(require_auth)])
@@ -5349,9 +5660,11 @@ async def chat(req: ChatReq) -> dict:
             session["pending"] = outcome.get("pending")
             session["messages"].append({"role": "agent", "text": outcome.get("reply", "")})
             session["last_activity"] = time.monotonic()
+            session["conversation_mirror_seq"] = int(session.get("conversation_mirror_seq") or 0) + 1
             limit_hit = _mark_context_limit(session)
             snap = _session_snapshot(sid, session)
         await asyncio.to_thread(_write_session_snapshot, snap)   # Spiegel ausserhalb des Locks (fastapi §2)
+        _schedule_conversation_mirror(sid, snap)
     except BaseException:
         # Erstverarbeitung fehlgeschlagen/abgebrochen: request_id freigeben, damit ein
         # ehrlicher Retry neu rechnen darf (sonst blockiert der Key bis zum TTL-Ablauf).
@@ -5467,9 +5780,11 @@ async def chat_stream(req: ChatReq) -> StreamingResponse:
                 session["pending"] = outcome.get("pending")
                 session["messages"].append({"role": "agent", "text": outcome.get("reply", "")})
                 session["last_activity"] = time.monotonic()
+                session["conversation_mirror_seq"] = int(session.get("conversation_mirror_seq") or 0) + 1
                 limit_hit = _mark_context_limit(session)
                 snap = _session_snapshot(sid, session)
             await asyncio.to_thread(_write_session_snapshot, snap)   # Antwort deploy-/crash-sicher spiegeln
+            _schedule_conversation_mirror(sid, snap)
             response = {
                 "ok": True, "reply": outcome.get("reply", ""), "action": outcome.get("action"),
                 "session_id": sid, "category": outcome.get("category"), "title": outcome.get("title"),
