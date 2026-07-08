@@ -18,6 +18,8 @@ import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
@@ -129,8 +131,15 @@ fun LoopTemplateDetailScreen(
                     )
                     var addOpen by remember(t.id) { mutableStateOf(false) }
                     Box {
-                        OutlinedButton(onClick = { addOpen = true }, modifier = Modifier.fillMaxWidth()) {
-                            Text("Hinzufügen", color = loopAccent)
+                        Button(
+                            onClick = { addOpen = true },
+                            modifier = Modifier.fillMaxWidth(),
+                            colors = ButtonDefaults.buttonColors(
+                                containerColor = Color.Black,
+                                contentColor = Color.White,
+                            ),
+                        ) {
+                            Text("Hinzufügen")
                         }
                         DropdownMenu(expanded = addOpen, onDismissRequest = { addOpen = false }) {
                             loopAddChoices.forEach { (label, bucket) ->

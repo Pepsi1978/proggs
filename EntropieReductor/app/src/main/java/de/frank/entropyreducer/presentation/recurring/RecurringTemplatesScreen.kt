@@ -23,7 +23,8 @@ import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedButton
+import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -33,6 +34,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -211,8 +213,14 @@ internal fun TemplateAsTaskCard(
                 LoopPearl(label = "Priorität ${template.priorityScore}") { addMenuOpen = true }
                 Spacer(Modifier.weight(1f))
                 Box {
-                    OutlinedButton(onClick = { addMenuOpen = true }) {
-                        Text("Hinzufügen", color = loopAccent)
+                    Button(
+                        onClick = { addMenuOpen = true },
+                        colors = ButtonDefaults.buttonColors(
+                            containerColor = Color.Black,
+                            contentColor = Color.White,
+                        ),
+                    ) {
+                        Text("Hinzufügen")
                     }
                     DropdownMenu(
                         expanded = addMenuOpen,
