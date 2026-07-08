@@ -66,6 +66,8 @@ import androidx.compose.material.icons.outlined.Refresh
 import androidx.compose.material.icons.outlined.Repeat
 import androidx.compose.material.icons.outlined.Settings
 import androidx.compose.material.icons.outlined.Today
+import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.LinearProgressIndicator
@@ -160,18 +162,12 @@ fun TasksScreen(
     // Lokaler State für den Prioritätsbereich-Picker — speichert nur die Entry-ID, der
     // tatsächliche Eintrag wird aus dem aktuellen State frisch nachgelesen.
     var bucketPickerEntryId by remember { mutableStateOf<String?>(null) }
-    // Frank-Wunsch 2026-05-31: Welche Aufgabe nach einem Widget-Tap auf die Prio-Perle
-    // ihren Schieberegler automatisch geoeffnet bekommt (null = keiner). Wird von der
-    // Karte selbst wieder geleert, sobald sie den Regler aufgeklappt hat.
-    var prioPickerEntryId by remember { mutableStateOf<String?>(null) }
     // LazyListState am Top damit beide LaunchedEffects (Bucket-Picker + Scroll)
     // darauf zugreifen koennen. Wird unten an die Haupt-LazyColumn uebergeben.
     val listState = androidx.compose.foundation.lazy.rememberLazyListState()
 
-    // Aufgabenblöcke (Sehr hoch/Hoch/Mittel/Gering/Später/Loop/Erledigt)
-    // sind aufklappbare Akkordeon-Dropdowns. Es ist immer nur EIN
-    // Block offen — Klick auf einen Header oeffnet ihn und schliesst den vorher
-    // offenen automatisch; ein erneuter Klick klappt ihn wieder zu. Standard: sehr hoch.
+    // Sehr hoch/Hoch/Mittel/Gering bleiben immer sichtbar. Später/Loop/Erledigt/
+    // KI-Vorschläge bleiben als optionale Akkordeonbereiche unter den Hauptbereichen.
     // Der Schluessel ist der Sektions-Name (bucket.name bzw. SECTION_LOOP/SECTION_ERLEDIGT).
     var expandedSection by rememberSaveable { mutableStateOf<String?>(TimeBucket.HEUTE.name) }
 
@@ -277,14 +273,12 @@ fun TasksScreen(
             bucketPickerEntryId = link.taskId
         }
 
-        // 2b) Bei SET_PRIORITY den Schieberegler genau dieser Aufgabe direkt aufklappen.
-        // Die Karte (EntropyEntryCard) liest prioPickerEntryId und oeffnet ihren Slider,
-        // sobald sie nach dem Scroll gerendert ist — und leert die Markierung wieder.
+        // 2b) Bei SET_PRIORITY oeffnen wir jetzt ebenfalls das Verschieben-Sheet.
         if (
             link.action ==
                 de.frank.entropyreducer.presentation.widget.WidgetIntents.ACTION_SET_PRIORITY
         ) {
-            prioPickerEntryId = link.taskId
+            bucketPickerEntryId = link.taskId
         }
 
         // 3) Bus clearen — Link wurde konsumiert
@@ -447,20 +441,20 @@ fun TasksScreen(
                         // PERFORMANCE 2026-05-09: Sortierung+Filter laufen jetzt im
                         // ViewModel (TasksViewModel.kt), nicht mehr hier — die Lists
                         // sind beim Eintreffen schon sortiert und gefiltert.
-                        // Frank-Wunsch 2026-05-24: jeder Bereich ist ein aufklappbares
-                        // Akkordeon. Der Header wird IMMER gezeigt (auch wenn leer), die
-                        // Eintraege nur wenn der Block aufgeklappt ist. Es ist immer nur
-                        // ein Block gleichzeitig offen (gesteuert ueber expandedSection).
+                        // Sehr hoch/Hoch/Mittel/Gering sind immer offen. Später bleibt optional.
                         ALL_TIME_BUCKETS.forEach { bucket ->
                             val list = state.entriesByBucket[bucket].orEmpty()
-                            val sectionExpanded = expandedSection == bucket.name
+                            val alwaysOpen = bucket in ALWAYS_VISIBLE_BUCKETS
+                            val sectionExpanded = alwaysOpen || expandedSection == bucket.name
                             item(key = "header-${bucket.name}", contentType = "bucket-header") {
                                 BucketHeader(
                                     bucket = bucket,
                                     count = list.size,
                                     expanded = sectionExpanded,
                                     onToggle = {
-                                        expandedSection = if (sectionExpanded) null else bucket.name
+                                        if (!alwaysOpen) {
+                                            expandedSection = if (sectionExpanded) null else bucket.name
+                                        }
                                     },
                                 )
                             }
@@ -509,20 +503,11 @@ fun TasksScreen(
                                             remember(entry.id) {
                                                 { bucketPickerEntryId = entry.id }
                                             }
-                                        val onSetPrio =
-                                            remember(entry.id) {
-                                                { score: Double ->
-                                                    vm.setManualPriority(entry.id, score)
-                                                }
-                                            }
                                         EntropyEntryCard(
                                             entry = entry,
                                             onClick = onClick,
                                             onResolve = onResolve,
                                             onPickBucket = onPickBucket,
-                                            onSetManualPriority = onSetPrio,
-                                            autoOpenPrioSlider = prioPickerEntryId == entry.id,
-                                            onPrioSliderConsumed = { prioPickerEntryId = null },
                                         )
                                     }
                                 } else {
@@ -603,6 +588,7 @@ fun TasksScreen(
                                             entry = entry,
                                             onClick = onClick,
                                             onResolve = onResolve,
+                                            onPickBucket = { bucketPickerEntryId = entry.id },
                                         )
                                     }
                                 } else {
@@ -754,7 +740,6 @@ fun TasksScreen(
             BucketPickerSheet(
                 entry = entry,
                 onPick = { bucket -> vm.setManualPriority(id, defaultPriorityForBucket(bucket)) },
-                onClearManual = { vm.clearManualPriority(id) },
                 onClose = { bucketPickerEntryId = null },
             )
         } else if (allActive.isNotEmpty()) {
@@ -1484,9 +1469,6 @@ private fun EntropyEntryCard(
     onResolve: () -> Unit = {},
     onSeverityHint: () -> Unit = {},
     onPickBucket: () -> Unit = {},
-    onSetManualPriority: (Double) -> Unit = {},
-    autoOpenPrioSlider: Boolean = false,
-    onPrioSliderConsumed: () -> Unit = {},
 ) {
     val cosmos = LocalCosmos.current
     val isResolved = entry.status == EntryStatus.REDUZIERT || entry.status == EntryStatus.ARCHIVIERT
@@ -1496,24 +1478,7 @@ private fun EntropyEntryCard(
     // Off-Screen-Buffer-Allocation). Vorher: Modifier.alpha erzeugte auch bei
     // alpha = 1f gelegentlich einen Layer.
     val cardAlpha = if (isResolved) 0.55f else 1f
-    // Frank-Wunsch 2026-05-31: manuelle Prioritaet per Schieberegler. Solange der
-    // Regler aktiv ist, faerbt sich die Kachel LIVE nach dem aktuellen Reglerwert.
-    // Effektive Prioritaet = Live-Regler ?: manueller Wert ?: KI-Wert.
-    var sliderActive by remember(entry.id) { mutableStateOf(false) }
-    var liveSlider by remember(entry.id) { mutableStateOf<Float?>(null) }
-    // Frank-Wunsch 2026-05-31: Tap auf die Prio-Perle im Widget oeffnet die App und
-    // klappt direkt den Schieberegler GENAU dieser Aufgabe auf (Verknuepfung zur
-    // manuellen Prioritaet, analog zum Bucket-Picker). autoOpenPrioSlider wird vom
-    // TasksScreen gesetzt, sobald der Widget-Deep-Link diese Karte meint; danach wird
-    // die Markierung via onPrioSliderConsumed sofort wieder geleert.
-    LaunchedEffect(autoOpenPrioSlider) {
-        if (autoOpenPrioSlider) {
-            sliderActive = true
-            onPrioSliderConsumed()
-        }
-    }
-    val effectivePriority =
-        liveSlider?.toDouble() ?: entry.manualPriorityScore ?: entry.priorityScore
+    val effectivePriority = entry.manualPriorityScore ?: entry.priorityScore
 
     // Frank-Wunsch 2026-05-31: Karten-Hintergrund ist ein kraeftiger horizontaler
     // Verlauf in der Prioritaetsfarbe — links dezent, rechts die volle Farbe.
@@ -1591,115 +1556,21 @@ private fun EntropyEntryCard(
                 }
             }
 
-            // Untere Zeile: Priorität-Perle + KI/manuell-Perle (rechts).
+            // Untere Zeile: direkte Bereichsverschiebung statt Prioritäts-Slider.
             Spacer(Modifier.height(8.dp))
-            val prioLabel =
-                when {
-                    liveSlider != null -> "Priorität ${Math.round(liveSlider!!)}"
-                    entry.manualPriorityScore != null ->
-                        "Priorität ${entry.manualPriorityScore!!.toInt()}"
-                    else -> "Priorität KI"
-                }
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Spacer(Modifier.weight(1f))
-                PriorityPearl(label = prioLabel, onClick = { sliderActive = !sliderActive })
-                Spacer(Modifier.width(8.dp))
-                BucketPickerButton(
-                    isManual = entry.manualPriorityScore != null,
-                    bucket = priorityBucketForScore(effectivePriority),
+                Button(
                     onClick = onPickBucket,
-                )
-            }
-            // Schieberegler — nur wenn die Priorität-Perle angetippt wurde. In 5%-
-            // Schritten (steps=19 → 0,5,…,100). Beim Schieben aendert sich Kachel-
-            // Farbe + Wert live; beim Loslassen wird gespeichert und der Regler
-            // klappt wieder zu.
-            if (sliderActive) {
-                Spacer(Modifier.height(8.dp))
-                val sliderPos =
-                    liveSlider ?: (entry.manualPriorityScore ?: entry.priorityScore).toFloat()
-                androidx.compose.material3.Slider(
-                    value = sliderPos.coerceIn(0f, 100f),
-                    onValueChange = { liveSlider = it },
-                    onValueChangeFinished = {
-                        liveSlider?.let { onSetManualPriority(it.toDouble()) }
-                        sliderActive = false
-                    },
-                    valueRange = 0f..100f,
-                    steps = 19,
-                    colors =
-                        androidx.compose.material3.SliderDefaults.colors(
-                            thumbColor = ramp,
-                            activeTrackColor = ramp,
-                        ),
-                )
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = Color.White,
+                        contentColor = Color.Black,
+                    ),
+                ) {
+                    Text("Verschieben")
+                }
             }
         }
-    }
-}
-
-/**
- * Kleine Perle (gleicher Stil wie die KI/manuell-Perle) die die Prioritaet zeigt: "Priorität KI"
- * wenn die KI bestimmt, sonst "Priorität <Wert>" bei manuellem Wert. Klick oeffnet den
- * Schieberegler. Die Perle selbst aendert ihre Farbe NICHT — nur die Kachel dahinter faerbt sich
- * (Frank-Wunsch 2026-05-31).
- */
-@Composable
-private fun PriorityPearl(label: String, onClick: () -> Unit) {
-    val cosmos = LocalCosmos.current
-    val pillShape = remember { RoundedCornerShape(50) }
-    Row(
-        verticalAlignment = Alignment.CenterVertically,
-        modifier =
-            Modifier.background(cosmos.glassBg, pillShape)
-                .clickable(onClick = onClick)
-                .padding(horizontal = 10.dp, vertical = 6.dp),
-    ) {
-        Text(
-            text = label,
-            style = MaterialTheme.typography.labelSmall,
-            color = cosmos.textSecondary,
-        )
-    }
-}
-
-/**
- * Kleiner Button unten rechts in der Card der die schnelle Prioritätsbereich-Auswahl öffnet.
- * "manuell" bedeutet: Frank hat einen Prioritätswert gesetzt; sonst kommt der Wert von der KI.
- */
-@Composable
-private fun BucketPickerButton(isManual: Boolean, bucket: TimeBucket, onClick: () -> Unit) {
-    val cosmos = LocalCosmos.current
-    // Frank-Wunsch 2026-05-31 (Folge-Korrektur): Beide Pillen (KI + manuell) sind
-    // jetzt KOMPLETT gleich — gleicher heller Perle-Hintergrund (cosmos.glassBg) UND
-    // gleiche Text-/Icon-Farbe (cosmos.textSecondary). Es unterscheidet nur noch das
-    // Wort ("KI" vs. "manuell"); kein Hellblau/Blau mehr, das auf den farbigen
-    // Kacheln schlecht lesbar war.
-    val bg = cosmos.glassBg
-    val tint = cosmos.textSecondary
-    // PERFORMANCE 2026-05-09: clip() entfernt — background(color, shape) clippt
-    // visuell (zeichnet abgerundete Form), Inhalte sind kurz und passen rein.
-    val pillShape = remember { RoundedCornerShape(50) }
-    Row(
-        verticalAlignment = Alignment.CenterVertically,
-        modifier =
-            Modifier.background(bg, pillShape)
-                .clickable(onClick = onClick)
-                .padding(horizontal = 10.dp, vertical = 6.dp),
-    ) {
-        Icon(
-            imageVector = bucketIcon(bucket),
-            contentDescription = "Prioritätsbereich ändern",
-            tint = tint,
-            modifier = Modifier.size(14.dp),
-        )
-        Spacer(Modifier.width(4.dp))
-        Text(
-            text = if (isManual) "manuell" else "KI",
-            style = MaterialTheme.typography.labelSmall,
-            color = tint,
-            fontWeight = if (isManual) FontWeight.SemiBold else FontWeight.Normal,
-        )
     }
 }
 
@@ -1712,7 +1583,6 @@ private fun BucketPickerButton(isManual: Boolean, bucket: TimeBucket, onClick: (
 private fun BucketPickerSheet(
     entry: EntropyEntryEntity,
     onPick: (TimeBucket) -> Unit,
-    onClearManual: () -> Unit,
     onClose: () -> Unit,
 ) {
     val cosmos = LocalCosmos.current
@@ -1733,7 +1603,7 @@ private fun BucketPickerSheet(
             verticalArrangement = Arrangement.spacedBy(10.dp),
         ) {
             Text(
-                "Priorität einordnen",
+                "Verschieben",
                 style = MaterialTheme.typography.titleLarge,
                 color = cosmos.textPrimary,
                 fontWeight = FontWeight.SemiBold,
@@ -1745,48 +1615,17 @@ private fun BucketPickerSheet(
                 maxLines = 2,
             )
             Spacer(Modifier.height(4.dp))
-            // Fünf Prioritätsbereiche
-            ALL_TIME_BUCKETS.forEach { bucket ->
-                val effectiveBucket =
-                    priorityBucketForScore(entry.manualPriorityScore ?: entry.priorityScore)
-                val isActive =
-                    effectiveBucket == bucket
+            val effectiveBucket = priorityBucketForScore(entry.manualPriorityScore ?: entry.priorityScore)
+            ALL_TIME_BUCKETS.filterNot { it == effectiveBucket }.forEach { bucket ->
                 BucketOptionRow(
                     bucket = bucket,
                     label = bucketLabelLong(bucket),
                     description = bucketDescription(bucket),
-                    isActive = isActive,
-                    isManual = entry.manualPriorityScore != null && isActive,
                     onClick = {
                         onPick(bucket)
                         onClose()
                     },
                 )
-            }
-            // Reset auf KI
-            if (entry.manualPriorityScore != null) {
-                Spacer(Modifier.height(4.dp))
-                androidx.compose.material3.OutlinedButton(
-                    onClick = {
-                        onClearManual()
-                        onClose()
-                    },
-                    modifier = Modifier.fillMaxWidth(),
-                    shape = RoundedCornerShape(12.dp),
-                ) {
-                    Icon(
-                        imageVector = Icons.Outlined.Psychology,
-                        contentDescription = null,
-                        tint = LocalCosmos.current.accentForscher,
-                        modifier = Modifier.size(18.dp),
-                    )
-                    Spacer(Modifier.width(8.dp))
-                    Text(
-                        text = "KI-Priorität verwenden",
-                        color = LocalCosmos.current.accentForscher,
-                        fontWeight = FontWeight.SemiBold,
-                    )
-                }
             }
             Spacer(Modifier.height(8.dp))
         }
@@ -1798,19 +1637,16 @@ private fun BucketOptionRow(
     bucket: TimeBucket,
     label: String,
     description: String,
-    isActive: Boolean,
-    isManual: Boolean,
     onClick: () -> Unit,
 ) {
     val cosmos = LocalCosmos.current
     val accent = bucketAccent(bucket)
-    val bg = if (isActive) accent.copy(alpha = 0.18f) else cosmos.glassBg
     Row(
         verticalAlignment = Alignment.CenterVertically,
         modifier =
             Modifier.fillMaxWidth()
                 .clip(RoundedCornerShape(14.dp))
-                .background(bg)
+                .background(cosmos.glassBg)
                 .clickable(onClick = onClick)
                 .padding(horizontal = 12.dp, vertical = 12.dp),
     ) {
@@ -1840,14 +1676,6 @@ private fun BucketOptionRow(
                 text = description,
                 style = MaterialTheme.typography.labelSmall,
                 color = cosmos.textSecondary,
-            )
-        }
-        if (isActive) {
-            Icon(
-                imageVector = Icons.Outlined.Check,
-                contentDescription = "aktiv",
-                tint = accent,
-                modifier = Modifier.size(20.dp),
             )
         }
     }
@@ -2304,6 +2132,8 @@ private fun KiSuggestionCard(
 // Performance-Audit Loop 8 (2026-05-10): Top-level Liste statt .values()-Array
 // pro Recomposition. TimeBucket wird in zwei verschiedenen Tab-Reihen iteriert.
 private val ALL_TIME_BUCKETS: List<TimeBucket> = TimeBucket.entries.toList()
+private val ALWAYS_VISIBLE_BUCKETS: Set<TimeBucket> =
+    setOf(TimeBucket.HEUTE, TimeBucket.MORGEN, TimeBucket.FREIBLOCK, TimeBucket.GERING)
 
 // Akkordeon-Sektions-Schluessel fuer Bloecke ohne TimeBucket (Frank-Wunsch 2026-05-24).
 // Loop liegt zwischen SPAETER und ERLEDIGT (Frank-Wunsch 2026-05-24, Aufgabe 3).
@@ -2342,25 +2172,23 @@ private fun formatBackupTime(epochMs: Long): String {
 }
 
 /**
- * Findet den Aufgabenblock der die Aufgabe enthaelt und berechnet ihren LazyColumn- Index
- * (Frank-Wunsch 2026-05-24, Akkordeon). Annahme: GENAU dieser Block ist aufgeklappt, alle anderen
- * Bloecke sind zugeklappt (= je 1 Header-Item) — der Aufrufer klappt den Block vorher auf
- * (expandedSection = bucketName). 0: briefing 1 + Position des Buckets in ALL_TIME_BUCKETS: dessen
- * Header danach: die Eintraege des aufgeklappten Blocks Liefert (Sektions-Schluessel, Item-Index)
- * oder null wenn die Aufgabe in keinem aktiven Bucket liegt.
+ * Findet den Aufgabenblock der die Aufgabe enthaelt und berechnet den LazyColumn-Index.
+ * Sehr hoch/Hoch/Mittel/Gering sind immer offen; optionale Bereiche werden vom Aufrufer vor dem
+ * Scrollen geöffnet. Liefert (Sektions-Schluessel, Item-Index) oder null.
  */
 private fun computeTaskLocation(state: TasksUiState, taskId: String): Pair<String, Int>? {
     val isEmpty =
         state.entriesByBucket.values.all { it.isEmpty() } && state.resolvedEntries.isEmpty()
     if (isEmpty) return null
-    for ((bucketPos, bucket) in ALL_TIME_BUCKETS.withIndex()) {
+    var index = 0
+    for (bucket in ALL_TIME_BUCKETS) {
         val list = state.entriesByBucket[bucket].orEmpty()
         val pos = list.indexOfFirst { it.id == taskId }
         if (pos >= 0) {
-            // briefing(1) + Header der vorherigen (zugeklappten) Bloecke (bucketPos)
-            // + eigener Header(1) + Position in der Liste.
-            return bucket.name to (1 + bucketPos + 1 + pos)
+            return bucket.name to (index + 1 + pos)
         }
+        index += 1
+        if (bucket in ALWAYS_VISIBLE_BUCKETS) index += list.size
     }
     return null
 }
