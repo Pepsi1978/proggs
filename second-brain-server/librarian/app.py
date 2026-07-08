@@ -56,7 +56,7 @@ OPENCODE_API_KEY = os.getenv("OPENCODE_API_KEY", "")
 OPENCODE_GO_URL = os.getenv("OPENCODE_GO_URL", "https://opencode.ai/zen/go/v1").rstrip("/")
 OPENCODE_ANTHROPIC_VERSION = os.getenv("OPENCODE_ANTHROPIC_VERSION", "2023-06-01")
 USER_ID = os.getenv("SB_USER_ID", "frank")
-VERSION = "0.11.0 (08.07.2026, 15:02 Uhr)"  # Bibliothekar-Prompts + Aktionsausfuehrung blockieren persoenliche Handy-Kategorien praeventiv.
+VERSION = "0.11.1 (08.07.2026, 15:04 Uhr)"  # Prompt-JSON im Interview-System escaped, damit der Dienst beim Import nicht crasht. Alt: 0.11.0.
 AGENT_URL = os.getenv("AGENT_URL", "http://agent:8002").rstrip("/")   # LLM-Durchgriff fuer Codex/GPT (agent 0.52.0)
 # Stille Notbremse gegen Endlosschleifen, wenn 'Ohne Begrenzung' aktiv ist (Almanach ai-agent §2.1:
 # ein Cap muss STOPPEN koennen). 5000 Calls erreicht ehrliche Nacht-Arbeit nie — nur ein Amoklauf.
@@ -744,8 +744,8 @@ WAS DU NICHT KANNST: ins Internet gehen, E-Mails/Apps steuern, ohne Franks Klick
 {_PHONE_ONLY_POLICY}
 Wenn die Aufgabe klar ist (spaetestens nach 3-4 Rueckfragen), fasse sie praezise zusammen.
 Antworte IMMER NUR mit diesem JSON:
-{"reply":"deine Nachricht an Frank","fertig":true/false,
- "task":{"name":"kurzer Name","definition":"praezise Arbeitsanweisung fuer die Nacht (2-6 Saetze)"}}
+{{"reply":"deine Nachricht an Frank","fertig":true/false,
+ "task":{{"name":"kurzer Name","definition":"praezise Arbeitsanweisung fuer die Nacht (2-6 Saetze)"}}}}
 "task" nur fuellen, wenn fertig=true (sonst null)."""
 
 LEARN_INTERVIEW_SYSTEM = """Du bist der Nachtschicht-Bibliothekar von Franks zweitem Gehirn. Frank
