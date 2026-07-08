@@ -62,7 +62,8 @@
 					{
 						"type": "command",
 						"command": "pwsh -NoProfile -ExecutionPolicy Bypass -File \"$USERPROFILE/.claude/hooks/plugin-health-check.ps1\"",
-						"timeout": 15
+						"timeout": 15,
+						"async": true
 					}
 				]
 			},

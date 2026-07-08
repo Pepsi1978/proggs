@@ -53,7 +53,8 @@
 					{
 						"type": "command",
 						"command": "bash ~/.claude/hooks/plugin-health-check.sh",
-						"timeout": 15
+						"timeout": 15,
+						"async": true
 					}
 				]
 			},
