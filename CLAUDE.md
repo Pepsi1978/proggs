@@ -112,8 +112,7 @@ neue Projekte = Unterordner. Diese CLAUDE.md existiert NUR im Repo, keine Kopie 
 - Skills NUR ueber `/skill-creator:skill-creator` erstellen/bearbeiten.
 - Erster Start im Repo: `claude-code-setup/manifest.json` pruefen, Fehlendes melden.
 - **Observability-First:** bei qualifizierten Projekten ZUERST die Beobachtungsschicht
-  (JSON-Lines-Logging, Fehler-Faenger, Logik-Sonden): `observability-first.md` +
-  `observability-live-logic-probes.md`.
+  (JSON-Lines-Logging, Fehler-Faenger, Logik-Sonden, Live-Logik-Checkpoints): `observability-first.md`.
 - **Cowork:** nie nacktes `git commit/push` — immer `bash ~/proggs/cowork-git.sh`
   (`cowork-git-push.md`).
 - **Externer Code** (Skills/Plugins/MCP/Pakete): VOR Installation komplett lesen, auf Prompt
