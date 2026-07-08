@@ -1,13 +1,13 @@
 # Renderer-Capabilities & technische Limits (KRITISCH)
 
-> Bei jedem optischen Wunsch (Farbe, Linien, Schriftgroesse, Animation, Layout) ZUERST hier nachschlagen,
-> BEVOR ein Versuch startet. **Vollstaendige Lookup-Tabelle + Terminal-Grenzen:
+> Bei jedem optischen Wunsch (Farbe, Linien, Groesse, Animation, Layout) ZUERST hier nachschlagen.
+> **Volle Lookup-Tabelle + Terminal-Grenzen:
 > `claude-code-setup/docs/rules/renderer-capabilities.md`.**
 
 ## Verhaltens-Regel (vor jedem Format-Versuch)
 1. Nachschlagen ob es im Claude-Code-Renderer geht. 2. **Unmoeglich** → sofort in Klartext erklaeren +
 Alternative, KEIN Versuch, KEINE Iteration. 3. **Eingeschraenkt** → Grenze benennen, beste Annaeherung.
-4. **Voll moeglich** → direkt umsetzen. (5 Iterationen am Linien-Stil verbrannt, weil die Grenze zu spaet kam.)
+4. **Voll moeglich** → direkt umsetzen.
 
 ## Die haeufigsten Grenzen (im Antworttext)
 - ❌ **Farbige Linien/Text/Hintergrund** → Emoji-Symbole (🟠🟢🟡✅⚠️❗) tragen die Farb-Info; farblose `━`-Linie.

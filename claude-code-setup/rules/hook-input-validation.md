@@ -1,16 +1,11 @@
 # Hook-Input-Validation: Echte Events von Phantom-Events unterscheiden (KRITISCH)
 
-> Vorfall 2026-04-15: SubagentStop-Hook Endlosschleife (50+ Fires/Session ohne echten Subagent). Poka-Yoke Stufe 3.
-
 ## Grundregel
-
-Jeder Hook auf **SubagentStop**, **SubagentStart** oder **PostToolUse** MUSS am Anfang pruefen, ob der
-Hook-Input die erwarteten Felder enthaelt — sonst SOFORT `exit 0` ohne Output (kein Logging, kein
-Schreiben, keine Seiteneffekte). Claude Code sendet bei jedem Stop-Event eine Invokation, auch ohne
-echten Subagent (`agent_id` fehlt dann).
+Jeder Hook auf **SubagentStop/SubagentStart/PostToolUse** MUSS am Anfang pruefen, ob die erwarteten Felder
+da sind -- sonst SOFORT `exit 0` ohne Output (kein Log/Schreiben/Seiteneffekt). Claude Code feuert
+Stop-Events auch ohne echten Subagent. Poka-Yoke 3 (2026-04-15).
 
 ## Pflicht-Feld pro Event
-
 | Event | Pflicht-Feld | wenn leer/fehlt |
 |-------|-------------|-----------------|
 | SubagentStop | `agent_id` | `exit 0` ohne Output |
@@ -21,19 +16,14 @@ echten Subagent (`agent_id` fehlt dann).
 | Stop | keins | kein Guard noetig |
 
 ## AUSNAHME: Passive Context-Injection-Hooks
-
-Hooks die NUR JSON-Kontext ausgeben und KEINE Side-Effects haben (kein Write/Log) brauchen KEINEN Guard
-(er wuerde legitime Kontext-Injection verhindern, z.B. `subagent-context`). Faustregel: Guard nur wenn
-der Hook WRITES/SIDE-EFFECTS hat.
+Hooks die NUR JSON-Kontext ausgeben, KEINE Side-Effects (Write/Log), brauchen KEINEN Guard (z.B.
+`subagent-context`). Guard nur bei Side-Effects.
 
 ## Umsetzung
-
-Guard NACH Shebang/Header/`param()`/Dot-Source der Bibliotheken platzieren (sonst fehlen Log-Funktionen).
-PowerShell: stdin per `[Console]::In.ReadToEnd()`, `ConvertFrom-Json`, bei fehlendem/leerem Feld `exit 0`.
-Bash: `stdin=$(cat)`, Feld per `python3 -c json` extrahieren, bei leer `exit 0`. NIE als `exit 1`/`exit 2`
-(blockiert Claude Code); NIE in einer dot-sourced Bibliothek (killt den Aufrufer).
+Guard NACH Shebang/`param()`/Dot-Source platzieren. PS: stdin `[Console]::In.ReadToEnd()`,
+`ConvertFrom-Json`, leeres Feld -> `exit 0`. Bash: `stdin=$(cat)`, Feld per `python3 -c json`, leer ->
+`exit 0`. NIE `exit 1`/`exit 2` (blockiert CC); NIE in dot-sourced Bibliothek.
 
 ## Was NIEMALS
-
-- SubagentStop-Hook der `agent_id` nicht prueft · PostToolUse-Hook der `tool_name` nicht prueft
-- Guard als `exit 1/2` · Guard in dot-sourced Bibliothek · den Guard ueberspringen "weil der Hook klein ist"
+- SubagentStop ohne `agent_id`-Check; PostToolUse ohne `tool_name`-Check; Guard als `exit 1/2`; Guard in
+  dot-sourced Bibliothek; den Guard ueberspringen "weil der Hook klein ist".
