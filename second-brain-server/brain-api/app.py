@@ -26,7 +26,9 @@ Observability-First: strukturiertes JSON-Logging (stdout + rotierende Datei), gl
                      Logik-Sonden (probe) + Intent-Checkpoints (checkpoint, beweisen das 1:1-Prinzip live).
 
 Bekannte Fallen beachtet (Almanach): Qdrant api_key erzwingt sonst TLS -> explizite http://-URL
-(bugs/server/qdrant.md §4); Gemini-Embedding defaultet auf 768 -> output_dimensionality EXPLIZIT 1536
+(bugs/server/qdrant.md §4); gemini-embedding-2 (GA, multimodal): output_dimensionality EXPLIZIT 3072;
+task_type entfaellt -> Text-Praefixe (title:|text: / 'task: search result | query:'); eine Liste aggregiert
+-> pro Text 1 Call (bugs/apis/google-gemini-api.md §J); Fallback gemini-embedding-001@1536 allein per Env
 (bugs/server/mem0.md §2, best-practices/second-brain/memory-backends.md §0); JSON-Log ensure_ascii=False
 + FileHandler encoding=utf-8 (bugs/claude-tooling/python-windows.md §1.1/§1.5).
 
@@ -43,6 +45,7 @@ import threading
 import time
 import traceback
 import uuid
+from concurrent.futures import ThreadPoolExecutor
 from datetime import date, datetime, timezone
 from logging.handlers import RotatingFileHandler
 from pathlib import Path
@@ -70,8 +73,13 @@ QDRANT_PORT = int(os.getenv("QDRANT_PORT", "6333"))
 QDRANT_URL = os.getenv("QDRANT_URL", f"http://{QDRANT_HOST}:{QDRANT_PORT}")
 COLLECTION = os.getenv("SB_COLLECTION", "brain")
 ENTITY_COLLECTION = os.getenv("SB_ENTITY_COLLECTION", "brain_entities")   # Entity-Register (Nr. 36)
-EMBED_MODEL = os.getenv("GEMINI_EMBED_MODEL", "gemini-embedding-001")
-EMBED_DIMS = int(os.getenv("SB_EMBED_DIMS", "1536"))
+EMBED_MODEL = os.getenv("GEMINI_EMBED_MODEL", "gemini-embedding-2")   # war: gemini-embedding-001
+EMBED_DIMS = int(os.getenv("SB_EMBED_DIMS", "3072"))                  # war: 1536
+# Embedding 2 (multimodal, GA): task_type entfaellt -> Text-Praefixe; eine Liste an embed_content
+# AGGREGIERT bei E2 zu EINEM Vektor -> pro Text EIN Call (bugs/apis/google-gemini-api.md §J23/§J24).
+# gemini-embedding-001 bleibt allein per Env als Fallback moeglich (dann task_type + Listen-Batch).
+IS_EMBED2 = EMBED_MODEL.startswith("gemini-embedding-2")
+EMBED_PARALLEL = int(os.getenv("SB_EMBED_PARALLEL", "8"))             # parallele Einzel-Calls (nur E2)
 def _env_int(name: str, default: int) -> int:
     try:
         return int(os.getenv(name, str(default)))
@@ -79,9 +87,10 @@ def _env_int(name: str, default: int) -> int:
         return default
 
 
-# Chunking fuer die SUCHE (gemini-embedding-001: ~2048 Token Input-Limit). Konservativ in Zeichen.
-CHUNK_CHARS = _env_int("SB_CHUNK_CHARS", 4000)
-CHUNK_OVERLAP = _env_int("SB_CHUNK_OVERLAP", 200)
+# Chunking fuer die SUCHE. Embedding 2: 8192 Token Input-Limit (~12000 Zeichen konservativ);
+# gemini-embedding-001: 2048 Token (~4000 Zeichen). Modell-abhaengiger Default, per Env uebersteuerbar.
+CHUNK_CHARS = _env_int("SB_CHUNK_CHARS", 12000 if IS_EMBED2 else 4000)
+CHUNK_OVERLAP = _env_int("SB_CHUNK_OVERLAP", 600 if IS_EMBED2 else 200)
 SEARCH_OVERFETCH_FACTOR = _env_int("SB_SEARCH_OVERFETCH_FACTOR", 4)
 SEARCH_DATE_OVERFETCH_FACTOR = _env_int("SB_SEARCH_DATE_OVERFETCH_FACTOR", 20)
 BM25_CANDIDATE_FACTOR = _env_int("SB_BM25_CANDIDATE_FACTOR", 4)
@@ -251,7 +260,7 @@ init_error: str | None = None
 probe(bool(GEMINI_API_KEY), "GEMINI_API_KEY fehlt")
 probe(bool(SB_API_KEY) and len(SB_API_KEY) >= 32, "SB_API_KEY fehlt/zu kurz")
 probe(bool(QDRANT_API_KEY), "QDRANT_API_KEY fehlt")
-probe(EMBED_DIMS in (768, 1536, 3072), "EMBED_DIMS unerwartet (gemini-embedding-001: 768/1536/3072)", dims=EMBED_DIMS)
+probe(EMBED_DIMS in (768, 1536, 3072), "EMBED_DIMS unerwartet (gemini-embedding-2: 768/1536/3072)", dims=EMBED_DIMS)
 
 # Optionaler Datetime-Range-Filter (qdrant-client >= ~1.8). Fehlt er -> Datum-Filter in /search
 # degradiert sauber auf einen Python-Nachfilter (Funktionserhalt, Direktive #3).
@@ -378,7 +387,7 @@ _init_last_attempt = 0.0
 # Eval-Check legt Test-Entitaeten an) + invalidiert den BM25-Cache (purge lief an _delete_doc vorbei).
 VERSION = "1.24.0 (06.07.2026, 17:23 Uhr)"  # 1.24.0: Dashboard-Limits vervollstaendigt. Zusaetzlich zu Chunking, dense Overfetch und BM25 ist jetzt auch search_date_overfetch_factor persistent ueber /limits einstellbar; Datumsfragen ohne nativen DatetimeRange-Fallback koennen damit gruendlicher suchen, ohne die uebrigen Suchpfade zu veraendern. Alt: 1.23.0.
 
-VERSION = "1.25.0 (08.07.2026, 14:37 Uhr)"  # Store-/Kategorie-Antworten tragen source; Bibliothekar-Schreibungen werden fuer Phone-Clients unterscheidbar.
+VERSION = "1.26.0 (08.07.2026, 18.50 Uhr)"  # 1.26.0: UMSTIEG AUF gemini-embedding-2 (3072 Dim, GA). task_type -> Text-Praefixe (Dokument 'title: … | text: …', Suchanfrage 'task: search result | query: …'); embed_many nutzt bei E2 EINEN Call je Text (eine Liste wuerde AGGREGIEREN, bugs/apis/google-gemini-api.md §J23), parallel ueber ThreadPool (SB_EMBED_PARALLEL); Chunk-Default 12000 Zeichen (8192-Token-Limit statt 2048). Modell-abhaengig: Fallback auf gemini-embedding-001 (1536) bleibt allein per Env moeglich (task_type + Listen-Batch). Blau/Gruen-Migration via migrate_to_embedding2.py. Alt: 1.25.0.
 
 # Startup-Banner (Observability-First: Log-Pfad + Version EINMAL ausgeben)
 _log(logging.INFO, "brain-api startet", version=VERSION, log_path=LOG_PATH)
@@ -419,29 +428,57 @@ def chunk_text(text: str) -> list[str]:
 
 
 def embed(text: str, task_type: str) -> list[float]:
-    """Text -> Vektor via Gemini. task_type='RETRIEVAL_DOCUMENT' beim Speichern,
-    'RETRIEVAL_QUERY' beim Suchen (asymmetrische Suche = bessere Treffer)."""
-    resp = gclient.models.embed_content(
-        model=EMBED_MODEL,
-        contents=text,
-        config=genai_types.EmbedContentConfig(output_dimensionality=EMBED_DIMS, task_type=task_type),
-    )
+    """Text -> Vektor via Gemini. task_type ist der INTERNE Modus-Indikator ('RETRIEVAL_DOCUMENT'
+    beim Speichern, 'RETRIEVAL_QUERY' beim Suchen — asymmetrische Suche = bessere Treffer).
+    Uebersetzung modell-abhaengig: gemini-embedding-001 -> API-Parameter task_type; gemini-embedding-2 ->
+    Text-Praefix (Query bekommt 'task: search result | query: …', Dokument ist schon via embed_input
+    als 'title: … | text: …' formatiert). Bei E2 wird KEIN task_type gesendet (entfernt, §J24)."""
+    if IS_EMBED2:
+        content = f"task: search result | query: {text}" if task_type == "RETRIEVAL_QUERY" else text
+        resp = gclient.models.embed_content(
+            model=EMBED_MODEL,
+            contents=content,
+            config=genai_types.EmbedContentConfig(output_dimensionality=EMBED_DIMS),
+        )
+    else:
+        resp = gclient.models.embed_content(
+            model=EMBED_MODEL,
+            contents=text,
+            config=genai_types.EmbedContentConfig(output_dimensionality=EMBED_DIMS, task_type=task_type),
+        )
     vec = list(resp.embeddings[0].values)
     probe(len(vec) == EMBED_DIMS, "Embedding-Dimension weicht ab", got=len(vec), want=EMBED_DIMS)
     return vec
 
 
-# Batch-Groesse fuer embed_many: die Gemini-API nimmt MEHRERE contents in EINEM Call entgegen
-# (Antwort: eine embeddings-Liste in Eingabe-Reihenfolge). Konservativ 16 je Request.
+# Batch-Groesse fuer embed_many auf dem -001-Pfad (mehrere contents in EINEM Call -> eine embeddings-
+# Liste in Eingabe-Reihenfolge). Bei gemini-embedding-2 wuerde eine Liste zu EINEM aggregierten Vektor
+# verschmelzen (bugs/apis/google-gemini-api.md §J23) -> dort EIN Call pro Text, parallel.
 EMBED_BATCH = int(os.getenv("SB_EMBED_BATCH", "16"))
 
 
 def embed_many(texts: list[str], task_type: str) -> list[list[float]]:
-    """MEHRERE Texte in einem API-Call je Batch embedden (Tiefen-Debugging Performance 2026-07-02).
-    Vorher liefen die Chunks eines Dokuments SERIELL durch embed() — ein 150-Chunk-Dokument
-    brauchte 150 Round-Trips (Minuten). Identische Vektoren (gleiche Inputs, gleiches task_type,
-    gleiche Dimension), nur gebuendelte Requests. Bei Anzahl-Mismatch wird HART abgebrochen
-    (RuntimeError) statt Vektoren still falsch zuzuordnen (Direktive #3)."""
+    """MEHRERE Texte einbetten. gemini-embedding-2: EIN embed_content-Call je Text (eine Liste wuerde
+    AGGREGIEREN, §J23), parallel ueber einen ThreadPool (der Handler laeuft selbst als def im anyio-
+    Threadpool -> zulaessig, fastapi §1), Reihenfolge streng an den Index gebunden. gemini-embedding-001:
+    gebuendelte Batch-Requests wie bisher (Performance 2026-07-02). Beide: Vektor-ANZAHL == Eingabe-Anzahl,
+    sonst HART abbrechen (RuntimeError) statt Vektoren still falsch zuzuordnen (Direktive #3)."""
+    if IS_EMBED2:
+        def _one(t: str) -> list[float]:
+            content = f"task: search result | query: {t}" if task_type == "RETRIEVAL_QUERY" else t
+            r = gclient.models.embed_content(
+                model=EMBED_MODEL,
+                contents=content,
+                config=genai_types.EmbedContentConfig(output_dimensionality=EMBED_DIMS),
+            )
+            v = list(r.embeddings[0].values)
+            probe(len(v) == EMBED_DIMS, "Embedding-Dimension weicht ab", got=len(v), want=EMBED_DIMS)
+            return v
+        with ThreadPoolExecutor(max_workers=max(1, EMBED_PARALLEL)) as ex:
+            out = list(ex.map(_one, texts))   # ex.map bewahrt die Eingabe-Reihenfolge
+        if len(out) != len(texts):
+            raise RuntimeError(f"Einzel-Embedding: {len(out)} Vektoren fuer {len(texts)} Texte")
+        return out
     out: list[list[float]] = []
     for start in range(0, len(texts), EMBED_BATCH):
         batch = texts[start:start + EMBED_BATCH]
@@ -628,6 +665,13 @@ def embed_input(title: str | None, categories: list[str], text: str) -> str:
     Jede Kategorie-/Titel-Aenderung erzwingt Re-Embed (§4) — 'jede Aenderung fuehrt zum neuen Vektor'."""
     t = (title or "").strip()
     exp = [" > ".join(s.strip() for s in c.split("/") if s.strip()) for c in categories if c and c.strip()]
+    if IS_EMBED2:
+        # Offizielles Embedding-2-Dokumentpraefix 'title: {…} | text: {…}' (ohne Titel -> 'none').
+        # Kategorien fliessen in den title-Teil -> metadata-enriched retrieval bleibt erhalten (§4).
+        head = t
+        if exp:
+            head = f"{t} · {', '.join(exp)}" if t else ", ".join(exp)
+        return f"title: {head or 'none'} | text: {text}"
     parts: list[str] = []
     if t:
         parts.append(f"Titel: {t}")
@@ -1943,7 +1987,9 @@ def _entity_embed_text(name: str, etype: str, aliases: list[str]) -> str:
         parts.append(f"Typ: {etype}")
     if aliases:
         parts.append("Auch bekannt als: " + ", ".join(aliases))
-    return " | ".join(parts)
+    body = " | ".join(parts)
+    # Embedding 2: als Dokumentpraefix 'title: {Name} | text: {…}' (task_type entfaellt, §J24).
+    return f"title: {name} | text: {body}" if IS_EMBED2 else body
 
 
 def _entity_get(user_id: str, name: str):
