@@ -57,6 +57,9 @@ VERSION = "0.57.0 (06.07.2026, 17:23 Uhr)"  # 0.57.0: Qdrant-/Gedächtnis-Limits
 VERSION = "0.59.1 (07.07.2026, 11:52 Uhr)"  # 0.59.1: Router-Härtung gegen falsche query_internet-Erzwingung. Die Gedächtnis+Internet-Ketten-Erkennung scannt Standard-Modus-/Antwortlängen-Prompts nicht mehr mit, sondern nur Franks aktuelle Nachricht und explizite Zusatz-Prompt-Blöcke. Alt: 0.59.0.
 VERSION = "0.65.1 (08.07.2026, 17:35 Uhr)"  # 0.65.1: FIX current_agent_limits() gab das neue history_compress_at nicht zurueck -> /config zeigte den Wert nie (das Dashboard-Feld waere nach dem Speichern faelschlich auf 0 zurueckgefallen). Jetzt in der hardcoded Limit-Liste ergaenzt. 0.65.0 (Frank-Wunsch 2026-07-08): VERLAUFS-KOMPRIMIERUNG — neues Limit history_compress_at (0=aus, Dashboard 'Verlauf komprimieren ab'). Ab N Gesamt-Nachrichten (Frank+Cortex) verdichtet der Hauptagent (GPT-5.5) den Verlauf KUMULATIV (alte Zusammenfassung + neue N -> neue), statt aelteres hart abzuschneiden. Neu: _compress_history/_maybe_compress_history + _history_text-Umbau; RAM session-state (history_summary + history_compressed_upto); best-effort (Fehler killt den Chat nie), Sicherheitsnetz kappt unkomprimierten Rest auf HISTORY_MAX. Aufruf am Anfang von _process_turn. 0.64.0 (Agenten-Umbau Schritt 2, 2026-07-08): WERKZEUGKASTEN im ECHTEN CHAT scharfgeschaltet. _process_turn: die generischen Antwort-Zweige (query/query_internet/internet/smalltalk) durch _toolagent_answer ersetzt = EIN codex_generate_tools-Aufruf mit build_agent_tools (durchsuche_gedaechtnis/lade_eintrag/web_suche/lies_logbuch/was_kann_cortex). Der Hauptagent filtert SELBST (Antwort- vs. Kontext-Treffer) statt eines separaten Leseagenten -> loest den Star-Trek-Bug (Rohsuche fand 50, Leseagent waehlte 0). Verlauf wird eingespeist (Follow-ups funktionieren), Quellen-Chips (aus lade_eintrag bzw. gefundenen) + Confidence bleiben; build_agent_tools trackt state['geladen'] fuer praezise Quellen. Router + komplette Speicher-Sicherheit + deterministische Spezial-Antworten (Projektstand/Kategorie-Gesamt/-Zaehlung) UNANGETASTET (funktionserhaltend, Direktive #3). 0.63.0: NEU Werkzeug was_kann_cortex() im Hauptagent-Werkzeugkasten (Frank-Wunsch): liest LIVE die System-Info-Chronik ('Was Cortex kann') vom Dashboard (DASHBOARD_URL/api/features, interner Compose-DNS) — dank des Merge-Fixes immer aktuell, auch Features der letzten Tage. So kann der Hauptagent auf 'was kannst du alles?' aus der echten Feature-Liste antworten. Timing landet automatisch im tool_calls-Log (ms je Werkzeug -> Flaschenhals-Radar, sobald der Tool-Loop im Chat aktiv ist). Noch NICHT im echten Chat aktiv (Test via /toolagent-test). 0.62.0: WERKZEUGKASTEN des Hauptagenten (Schritt-2-Baustein, noch NICHT im Chat aktiv). NEU build_agent_tools() + TOOLAGENT_SYSTEM: die 4 Lese-/Such-Werkzeuge als duenne Handler um bestehende Funktionen — durchsuche_gedaechtnis (smart_recall, liefert nur Schnipsel + fuellt hit_cache), lade_eintrag (Volltext EINES Eintrags aus dem Cache — Kontext-Schutz), web_suche (tavily_search), lies_logbuch (_read_recent_turns). Verlagert die Leseagent-Filterung in den Hauptagenten (Direktive #3: verlagern statt loeschen; Antwort- vs. Kontext-Treffer im System-Prompt). NEU Endpoint GET /toolagent-test?q=... : isolierter Test des Werkzeugkastens (fuer den Star-Trek-Regressionsfall), beruehrt den echten Chat NICHT. Schreib-Werkzeuge (speichere/schreibe_regel) folgen mit der _process_turn-Integration. 0.61.4: ROBUSTHEIT codex_generate_tools — Streaming-Retry (bis 3 Versuche) gegen den sporadischen Abbruch des Impersonation-Backends ('peer closed connection ... incomplete chunked read'). Retry NUR solange kein response.completed kam (Backend-Call ist seiteneffektfrei); bei 4xx/failed KEIN Retry. Selbsttest auf EINEN Lauf reduziert (H1/H2-Diagnose abgeschlossen). 0.61.3: FIX — Function-Calling MACHBARKEIT BEWIESEN (function_calls kommen als Stream-Events output_item.done, nicht in completed.output). Das ChatGPT-Codex-Backend liefert function_calls als STREAM-EVENTS (response.output_item.done mit dem vollstaendigen function_call-Item: name/call_id/arguments), NICHT in completed.output (das bleibt leer). Root Cause des 'Tools werden nicht aufgerufen'-Befunds war ein PARSING-Bug (nur completed.output gelesen), KEIN Backend-Limit — die Event-Sequenz-Diagnose zeigte response.function_call_arguments.delta/done + output_item.done. Fix: fc_items aus den output_item.done-Events einsammeln, primaer nutzen (completed.output nur Fallback). 0.61.2: DIAGNOSE codex_generate_tools/toolloop-selftest — im ersten Lauf rief gpt-5.5 KEINE Werkzeuge auf (tools_used leer, Antwort 'ohne Werkzeugaufruf nicht bestimmbar'). Verdacht: custom function-Tools erreichen das Modell nicht. Selbsttest testet jetzt tool_choice 'auto' UND 'required' und gibt die rohe output-Item-Struktur der ersten Runde zurueck (raw_first_output), um H1 (Tools kommen nicht an) von H2 (Modell waehlt ab) zu unterscheiden. codex_generate_tools bekam optionalen tool_choice-Parameter. 0.61.1: FIX — ChatGPT-Codex-Backend ERZWINGT stream:true (stream:false -> HTTP 400 'Stream must be set to true', empirisch per /toolloop-selftest bewiesen). Tool-Loop nutzt jetzt einen streamenden Backend-Helfer (_stream_responses, wie codex_generate) und liest die function_call-Items aus dem response.completed-Event. 0.61.0: Schritt-2-Baustein (Agenten-Umbau) — NEU codex_generate_tools(): GPT/Codex Function-Calling-Loop auf der OpenAI-Responses-API (chatgpt.com/backend-api/codex). Deterministischer Hard-Stop (max_turns UND max_seconds), tool_use<->tool_result strikt 1:1 (function_call verbatim in den Verlauf, je call_id genau ein function_call_output), Tool-Exception als Fehler-tool_result zurueck (nie crashen), Schleifen-Erkennung (>3x gleiche name+args), Tool-Output je Aufruf auf LESE_TOOL_OUT_CAP gekappt; bei Hard-Stop ohne Klartext eine finale Runde OHNE Werkzeuge (Absicherung nach bugs/server/ai-agent-frameworks.md). NEU Endpoint GET /toolloop-selftest: isolierter Machbarkeits-Smoke-Test (2 triviale Tools) — prueft empirisch, ob das Backend eigene function-Tools akzeptiert+aufruft. Beruehrt den Chat-Pfad NICHT (reiner Baustein; sichtbare Dashboard-Version bleibt 0.56.0 bis der Umbau den Chat aendert). Alt: 0.60.0 (07.07.2026, 13:09 Uhr) NEU Turn-Logbuch + Sonden-Trace. Jeder /chat + /chat/stream-Turn wird per contextvar-Trace mitgeschrieben: der bestehende checkpoint()-Kanal fuettert zusaetzlich den Trace, ein Phasen-Marker recall_search trennt Rohsuche vom Leseagent-Filter. Logbuch 1 (LOGBOOK_DIR/Trace/turns.jsonl, 100 rollierend) = 1 lesbare Zeile je Anfrage mit Frage, Router->final Intent, Rohtreffer/Auswahl (Star-Trek: 50 gefunden/0 gewaehlt), Confidence, Antwort-Vorschau + Phasen-Timing (router_ms/suche_ms/leseagent_ms/web_antwort_ms = Flaschenhals-Radar). Logbuch 2 (trace.jsonl, 4000 Events) = feine Events je Turn per turn_id verknuepft (erweiterbares Geruest fuer feine Sonden beim Agenten-Umbau). Atomar (tmp+os.replace), secret-maskiert, BEST-EFFORT (try/except ueberall — gefaehrdet den Chat nie). Deterministische Problem-Markierung (_PROBLEM_FEEDBACK_RE) markiert den letzten Turn, wenn Frank ein Problem meldet. GET /logbook/turns fuers Dashboard. Persistent auf Samba (LOGBOOK_DIR bereits gemountet -> ueberlebt Rebuilds; loest fuer die Turn-Ebene die Fluechtigkeit von /app/logs/agent.jsonl). Alt: 0.59.1 (07.07.2026, 11:52 Uhr).
 
+# Wirksamer Counter-Bump: Live-Spiegelung fertiger Gesprächsturns ins Gehirn.
+VERSION = "0.65.2 (08.07.2026, 20:00 Uhr)"  # 0.65.2: FIX Gesprächs-Logbuch wird nicht mehr erst nach 30 Minuten Inaktivität ins Gehirn geschrieben. Nach jeder fertigen Agent-Antwort spiegelt der Agent denselben Gesprächseintrag sofort in die Kategorie Gespräche; der alte 30-Minuten-Flush mit .txt-Kopie bleibt als Sicherheitsnetz. Alt: 0.65.1.
+
 # ---------------------------------------------------------------------------
 # Konfiguration (alles aus Umgebungsvariablen — Secrets nie im Code)
 # ---------------------------------------------------------------------------
@@ -2137,6 +2140,9 @@ def all_categories() -> list[str]:
 # ---------------------------------------------------------------------------
 _sessions: dict[str, dict] = {}
 _lock = asyncio.Lock()
+_background_tasks: set[asyncio.Task] = set()
+_conversation_mirror_locks: dict[str, asyncio.Lock] = {}
+_conversation_mirror_latest: dict[str, int] = {}
 
 # ---------------------------------------------------------------------------
 # Idempotenz (Frank-Wunsch 2026-07-02, Almanach ai-agent §5.2 / BP §4): Die App schickt pro
@@ -2187,6 +2193,22 @@ async def _dedup_release(rid: str) -> None:
     """Bei Fehlschlag der Erstverarbeitung freigeben — ein spaeterer ehrlicher Retry darf neu rechnen."""
     async with _lock:
         _dedup.pop(rid, None)
+
+
+def _track_background_task(task: asyncio.Task) -> None:
+    """Starke Referenz + Fehlerlog: fire-and-forget Tasks duerfen nie still verschwinden."""
+    _background_tasks.add(task)
+
+    def _done(t: asyncio.Task) -> None:
+        _background_tasks.discard(t)
+        try:
+            t.result()
+        except asyncio.CancelledError:
+            pass
+        except Exception:  # noqa: BLE001
+            _log(logging.ERROR, "Background-Task fehlgeschlagen", exc_info=True)
+
+    task.add_done_callback(_done)
 
 
 def _now_local() -> datetime:
@@ -3618,23 +3640,77 @@ def _unique_path(folder: Path, base: str) -> Path:
     return p
 
 
-def flush_session_to_logbook(session: dict) -> None:
-    """Schreibt den Gespraechsverlauf 1:1 ins Gehirn (Kategorie gespraeche) UND als .txt-Kopie."""
-    if not session["messages"]:
-        return
-    start = session["start_local"]
+def _coerce_session_start(value) -> datetime:
+    if isinstance(value, datetime):
+        return value
+    try:
+        return datetime.fromisoformat(str(value))
+    except Exception:  # noqa: BLE001
+        return _now_local()
+
+
+def _conversation_logbook_payload(session: dict) -> tuple[str, str, str]:
+    """Einheitlicher 1:1-Text fuer Live-Mirror und Timeout-Flush; gleicher Titel ersetzt im Brain."""
+    start = _coerce_session_start(session.get("start_local"))
     date_str = start.strftime("%d.%m.%Y")
     time_str = f"{start.hour}.{start.minute:02d} Uhr"
     header = f"Kategorie: Gespräche\nDatum/Uhrzeit: {date_str} - {time_str}\n\n"
     body = "\n".join(("Frank" if m["role"] == "frank" else "Agent") + ": " + m["text"]
-                     for m in session["messages"])
+                     for m in (session.get("messages") or []))
     content = header + body + "\n"
+    title = f"Gespräch {date_str} - {time_str}"
+    start_label = f"{date_str} - {time_str}"
+    return title, content, start_label
+
+
+async def _mirror_session_to_brain_now(sid: str, snap: dict) -> None:
+    """Spiegelt einen fertigen Turn sofort ins Gehirn; alter Timeout-Flush bleibt Fallback."""
+    if not snap.get("messages"):
+        return
+    seq = int(snap.get("conversation_mirror_seq") or 0)
+    lock = _conversation_mirror_locks.setdefault(sid, asyncio.Lock())
+    async with lock:
+        if seq and seq < _conversation_mirror_latest.get(sid, 0):
+            _log(logging.INFO, "Veralteter Gesprächs-Mirror übersprungen", session=sid, seq=seq)
+            return
+        title, content, start_label = _conversation_logbook_payload(snap)
+        try:
+            stored = await asyncio.to_thread(
+                brain_store,
+                content,
+                title,
+                CONV_CATEGORY,
+                snap.get("user_id") or USER_ID,
+            )
+            checkpoint("logbuch_live", "Gespräch direkt nach Turn ins Gehirn gespiegelt",
+                       ok=bool(stored.get("doc_id")), brain=True,
+                       nachrichten=len(snap.get("messages") or []), start=start_label,
+                       doc_id=stored.get("doc_id"))
+        except Exception:  # noqa: BLE001 — Timeout-Flush bleibt als reaktive Schutzschicht
+            _log(logging.ERROR, "Live-Gesprächs-Mirror ins Gehirn fehlgeschlagen", exc_info=True, session=sid)
+
+
+def _schedule_conversation_mirror(sid: str, snap: dict) -> None:
+    if not snap.get("messages"):
+        return
+    seq = int(snap.get("conversation_mirror_seq") or 0)
+    if seq:
+        _conversation_mirror_latest[sid] = max(_conversation_mirror_latest.get(sid, 0), seq)
+    _track_background_task(asyncio.create_task(_mirror_session_to_brain_now(sid, snap)))
+
+
+def flush_session_to_logbook(session: dict) -> None:
+    """Schreibt den Gespraechsverlauf 1:1 ins Gehirn (Kategorie gespraeche) UND als .txt-Kopie."""
+    if not session["messages"]:
+        return
+    title, content, start_label = _conversation_logbook_payload(session)
+    start = _coerce_session_start(session.get("start_local"))
 
     txt_ok = False
     try:
         folder = Path(LOGBOOK_DIR) / start.strftime("%Y") / start.strftime("%m")
         folder.mkdir(parents=True, exist_ok=True)
-        path = _unique_path(folder, f"{date_str} - {time_str}")
+        path = _unique_path(folder, start_label)
         path.write_text(content, encoding="utf-8")
         txt_ok = True
         _log(logging.INFO, "Logbuch-.txt geschrieben", path=str(path), chars=len(content))
@@ -3643,14 +3719,14 @@ def flush_session_to_logbook(session: dict) -> None:
 
     brain_ok = False
     try:
-        brain_store(text=content, title=f"Gespräch {date_str} - {time_str}", category=CONV_CATEGORY)
+        brain_store(text=content, title=title, category=CONV_CATEGORY)
         brain_ok = True
     except Exception:  # noqa: BLE001
         _log(logging.ERROR, "Logbuch ins Gehirn fehlgeschlagen", exc_info=True)
 
     checkpoint("logbuch", "Gespraech ZWEIFACH gesichert (Gehirn + .txt-Kopie)",
                ok=(txt_ok or brain_ok), txt=txt_ok, brain=brain_ok,
-               nachrichten=len(session["messages"]), start=f"{date_str} - {time_str}")
+               nachrichten=len(session["messages"]), start=start_label)
 
 
 # ---------------------------------------------------------------------------
@@ -3675,7 +3751,8 @@ def _session_snapshot(sid: str, session: dict) -> dict:
     return {"sid": sid, "user_id": session.get("user_id") or "frank",
             "start_local": session["start_local"].isoformat(),
             "messages": list(session["messages"]), "pending": session.get("pending"),
-            "context_limit_notified": bool(session.get("context_limit_notified"))}
+            "context_limit_notified": bool(session.get("context_limit_notified")),
+            "conversation_mirror_seq": int(session.get("conversation_mirror_seq") or 0)}
 
 
 def _write_session_snapshot(snap: dict) -> None:
@@ -3712,6 +3789,7 @@ def _load_persisted_sessions() -> dict:
                             "messages": d.get("messages") or [],
                             "pending": d.get("pending"),
                             "context_limit_notified": bool(d.get("context_limit_notified")),
+                            "conversation_mirror_seq": int(d.get("conversation_mirror_seq") or 0),
                             "last_activity": time.monotonic()}
             except Exception:  # noqa: BLE001 — eine kaputte Datei darf den Start nicht verhindern
                 _log(logging.WARNING, "Session-Datei nicht lesbar — uebersprungen", file=str(f))
@@ -5398,9 +5476,11 @@ async def chat(req: ChatReq) -> dict:
             session["pending"] = outcome.get("pending")
             session["messages"].append({"role": "agent", "text": outcome.get("reply", "")})
             session["last_activity"] = time.monotonic()
+            session["conversation_mirror_seq"] = int(session.get("conversation_mirror_seq") or 0) + 1
             limit_hit = _mark_context_limit(session)
             snap = _session_snapshot(sid, session)
         await asyncio.to_thread(_write_session_snapshot, snap)   # Spiegel ausserhalb des Locks (fastapi §2)
+        _schedule_conversation_mirror(sid, snap)
     except BaseException:
         # Erstverarbeitung fehlgeschlagen/abgebrochen: request_id freigeben, damit ein
         # ehrlicher Retry neu rechnen darf (sonst blockiert der Key bis zum TTL-Ablauf).
@@ -5516,9 +5596,11 @@ async def chat_stream(req: ChatReq) -> StreamingResponse:
                 session["pending"] = outcome.get("pending")
                 session["messages"].append({"role": "agent", "text": outcome.get("reply", "")})
                 session["last_activity"] = time.monotonic()
+                session["conversation_mirror_seq"] = int(session.get("conversation_mirror_seq") or 0) + 1
                 limit_hit = _mark_context_limit(session)
                 snap = _session_snapshot(sid, session)
             await asyncio.to_thread(_write_session_snapshot, snap)   # Antwort deploy-/crash-sicher spiegeln
+            _schedule_conversation_mirror(sid, snap)
             response = {
                 "ok": True, "reply": outcome.get("reply", ""), "action": outcome.get("action"),
                 "session_id": sid, "category": outcome.get("category"), "title": outcome.get("title"),
