@@ -16,6 +16,7 @@ import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.gestures.detectDragGesturesAfterLongPress
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -28,6 +29,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.navigationBars
+import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -83,6 +85,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
@@ -90,14 +93,20 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.CompositingStrategy
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.layout.LayoutCoordinates
+import androidx.compose.ui.layout.boundsInWindow
+import androidx.compose.ui.layout.onGloballyPositioned
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
@@ -126,6 +135,7 @@ import de.frank.entropyreducer.presentation.theme.label
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
+import kotlin.math.roundToInt
 import kotlinx.coroutines.FlowPreview
 import kotlinx.coroutines.flow.debounce
 import kotlinx.coroutines.flow.distinctUntilChanged
@@ -159,9 +169,21 @@ fun TasksScreen(
     val kiTaskAcceptingId by kiTaskSuggestVm.acceptingId.collectAsStateWithLifecycle()
     val kiTaskError by kiTaskSuggestVm.error.collectAsStateWithLifecycle()
     val scope = rememberCoroutineScope()
+    val density = LocalDensity.current
     // Lokaler State für den Prioritätsbereich-Picker — speichert nur die Entry-ID, der
     // tatsächliche Eintrag wird aus dem aktuellen State frisch nachgelesen.
     var bucketPickerEntryId by remember { mutableStateOf<String?>(null) }
+    var dragState by remember { mutableStateOf<TaskDragState?>(null) }
+    var dropTargets by remember { mutableStateOf<Map<String, BucketDropTarget>>(emptyMap()) }
+    var contentOriginInWindow by remember { mutableStateOf(Offset.Zero) }
+    val dragPreviewLiftPx = with(density) { 48.dp.toPx() }
+    fun updateDropTarget(key: String, bucket: TimeBucket, bounds: Rect) {
+        val next = BucketDropTarget(bucket = bucket, bounds = bounds)
+        if (dropTargets[key] != next) dropTargets = dropTargets + (key to next)
+    }
+    fun clearDrag() {
+        dragState = null
+    }
     // LazyListState am Top damit beide LaunchedEffects (Bucket-Picker + Scroll)
     // darauf zugreifen koennen. Wird unten an die Haupt-LazyColumn uebergeben.
     val listState = androidx.compose.foundation.lazy.rememberLazyListState()
@@ -365,7 +387,12 @@ fun TasksScreen(
         // schrumpft auf ~8dp. Andere Screens bleiben unangetastet.
         compactHeader = true,
     ) { padding ->
-        Box(modifier = Modifier.fillMaxSize().padding(padding)) {
+        Box(
+            modifier =
+                Modifier.fillMaxSize()
+                    .padding(padding)
+                    .onGloballyPositioned { contentOriginInWindow = it.boundsInWindow().topLeft }
+        ) {
             Column(modifier = Modifier.fillMaxSize()) {
                 // Backup-Statuszeile DIREKT unter dem Titel "Entropie Reduktor"
                 // — Frank-Wunsch 2026-05-09 (praezisiert): kommt ueber die
@@ -451,6 +478,10 @@ fun TasksScreen(
                                     bucket = bucket,
                                     count = list.size,
                                     expanded = sectionExpanded,
+                                    isDropTarget = dragState?.targetBucket == bucket,
+                                    onDropTargetPositioned = { bounds ->
+                                        updateDropTarget("header-${bucket.name}", bucket, bounds)
+                                    },
                                     onToggle = {
                                         if (!alwaysOpen) {
                                             expandedSection = if (sectionExpanded) null else bucket.name
@@ -503,8 +534,24 @@ fun TasksScreen(
                                             remember(entry.id) {
                                                 { bucketPickerEntryId = entry.id }
                                             }
-                                        EntropyEntryCard(
+                                        DraggableEntropyEntryCard(
                                             entry = entry,
+                                            bucket = bucket,
+                                            isDragging = dragState?.entry?.id == entry.id,
+                                            dropTargets = dropTargets.values,
+                                            onDragStateChange = { dragState = it },
+                                            onDrop = { targetBucket ->
+                                                if (targetBucket != bucket) {
+                                                    vm.setManualPriority(entry.id, defaultPriorityForBucket(targetBucket))
+                                                    scope.launch {
+                                                        snackbar.showSnackbar(
+                                                            "Verschoben nach ${bucketLabelLong(targetBucket)}"
+                                                        )
+                                                    }
+                                                }
+                                                clearDrag()
+                                            },
+                                            onDragCancel = ::clearDrag,
                                             onClick = onClick,
                                             onResolve = onResolve,
                                             onPickBucket = onPickBucket,
@@ -673,6 +720,28 @@ fun TasksScreen(
                         Spacer(Modifier.height(120.dp)) // Platz für Bottom-Nav
                     }
                 }
+            }
+
+            dragState?.let { activeDrag ->
+                DragDropBucketDock(
+                    targetBucket = activeDrag.targetBucket,
+                    onDropTargetPositioned = { bucket, bounds ->
+                        updateDropTarget("dock-${bucket.name}", bucket, bounds)
+                    },
+                    modifier = Modifier.align(Alignment.TopCenter).padding(horizontal = 14.dp, vertical = 10.dp),
+                )
+                DraggedTaskPreview(
+                    drag = activeDrag,
+                    modifier =
+                        Modifier.offset {
+                            IntOffset(
+                                x = (activeDrag.pointerInWindow.x - contentOriginInWindow.x - 24f).roundToInt(),
+                                y = (activeDrag.pointerInWindow.y - contentOriginInWindow.y - dragPreviewLiftPx).roundToInt(),
+                            )
+                        }
+                            .padding(horizontal = 18.dp)
+                            .fillMaxWidth(),
+                )
             }
 
             SnackbarHost(
@@ -1267,7 +1336,14 @@ private fun iconForCategory(
     }
 
 @Composable
-private fun BucketHeader(bucket: TimeBucket, count: Int, expanded: Boolean, onToggle: () -> Unit) {
+private fun BucketHeader(
+    bucket: TimeBucket,
+    count: Int,
+    expanded: Boolean,
+    isDropTarget: Boolean = false,
+    onDropTargetPositioned: (Rect) -> Unit = {},
+    onToggle: () -> Unit,
+) {
     val label =
         when (bucket) {
             TimeBucket.HEUTE -> "SEHR HOCH"
@@ -1282,6 +1358,8 @@ private fun BucketHeader(bucket: TimeBucket, count: Int, expanded: Boolean, onTo
         accent = bucketAccent(bucket),
         count = count,
         expanded = expanded,
+        modifier = Modifier.onGloballyPositioned { onDropTargetPositioned(it.boundsInWindow()) },
+        isDropTarget = isDropTarget,
         onToggle = onToggle,
     )
 }
@@ -1311,6 +1389,8 @@ private fun AccordionHeaderRow(
     accent: Color,
     count: Int,
     expanded: Boolean,
+    modifier: Modifier = Modifier,
+    isDropTarget: Boolean = false,
     onToggle: () -> Unit,
 ) {
     val cosmos = LocalCosmos.current
@@ -1322,10 +1402,21 @@ private fun AccordionHeaderRow(
         )
     Row(
         modifier =
-            Modifier.fillMaxWidth()
+            modifier.fillMaxWidth()
                 .padding(top = 6.dp, bottom = 2.dp)
                 .clip(RoundedCornerShape(14.dp))
-                .background(if (expanded) accent.copy(alpha = 0.12f) else Color.Transparent)
+                .background(
+                    when {
+                        isDropTarget -> accent.copy(alpha = 0.26f)
+                        expanded -> accent.copy(alpha = 0.12f)
+                        else -> Color.Transparent
+                    }
+                )
+                .border(
+                    width = if (isDropTarget) 2.dp else 0.dp,
+                    color = if (isDropTarget) accent else Color.Transparent,
+                    shape = RoundedCornerShape(14.dp),
+                )
                 .clickable(onClick = onToggle)
                 .padding(horizontal = 8.dp, vertical = 8.dp),
         verticalAlignment = Alignment.CenterVertically,
@@ -1463,8 +1554,185 @@ private fun formatResolvedAt(ms: Long): String {
 }
 
 @Composable
+private fun DraggableEntropyEntryCard(
+    entry: EntropyEntryEntity,
+    bucket: TimeBucket,
+    isDragging: Boolean,
+    dropTargets: Collection<BucketDropTarget>,
+    onDragStateChange: (TaskDragState) -> Unit,
+    onDrop: (TimeBucket) -> Unit,
+    onDragCancel: () -> Unit,
+    onClick: () -> Unit,
+    onResolve: () -> Unit,
+    onPickBucket: () -> Unit,
+) {
+    var coordinates: LayoutCoordinates? by remember { mutableStateOf(null) }
+    var lastPointerInWindow: Offset? by remember { mutableStateOf(null) }
+    val currentDropTargets by rememberUpdatedState(dropTargets)
+    fun emitDrag(pointer: Offset) {
+        lastPointerInWindow = pointer
+        onDragStateChange(
+            TaskDragState(
+                entry = entry,
+                sourceBucket = bucket,
+                pointerInWindow = pointer,
+                targetBucket = findDropBucket(pointer, currentDropTargets),
+            )
+        )
+    }
+    EntropyEntryCard(
+        entry = entry,
+        modifier =
+            Modifier.onGloballyPositioned { coordinates = it }
+                .pointerInput(entry.id, bucket) {
+                    detectDragGesturesAfterLongPress(
+                        onDragStart = { startOffset ->
+                            coordinates?.localToWindow(startOffset)?.let { emitDrag(it) }
+                        },
+                        onDrag = { change, _ ->
+                            coordinates?.localToWindow(change.position)?.let { emitDrag(it) }
+                            change.consume()
+                        },
+                        onDragEnd = {
+                            val target = lastPointerInWindow?.let { findDropBucket(it, currentDropTargets) }
+                            if (target != null) onDrop(target) else onDragCancel()
+                            lastPointerInWindow = null
+                        },
+                        onDragCancel = {
+                            lastPointerInWindow = null
+                            onDragCancel()
+                        },
+                    )
+                },
+        isDragging = isDragging,
+        onClick = onClick,
+        onResolve = onResolve,
+        onPickBucket = onPickBucket,
+    )
+}
+
+@Composable
+private fun DragDropBucketDock(
+    targetBucket: TimeBucket?,
+    onDropTargetPositioned: (TimeBucket, Rect) -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    val cosmos = LocalCosmos.current
+    GlassCard(
+        modifier =
+            modifier.fillMaxWidth().graphicsLayer {
+                shadowElevation = 18f
+                alpha = 0.96f
+            },
+        cornerRadius = 22.dp,
+        contentPadding = 10.dp,
+        backgroundOverride = cosmos.glassBg,
+    ) {
+        Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+            Text(
+                text = "Aufgabe in Bereich fallen lassen",
+                style = MaterialTheme.typography.labelMedium,
+                color = cosmos.textSecondary,
+                fontWeight = FontWeight.SemiBold,
+            )
+            LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                items(ALL_TIME_BUCKETS, key = { it.name }) { bucket ->
+                    val accent = bucketAccent(bucket)
+                    val active = targetBucket == bucket
+                    Row(
+                        modifier =
+                            Modifier.onGloballyPositioned {
+                                onDropTargetPositioned(bucket, it.boundsInWindow())
+                            }
+                                .clip(RoundedCornerShape(999.dp))
+                                .background(accent.copy(alpha = if (active) 0.30f else 0.14f))
+                                .border(
+                                    width = if (active) 2.dp else 1.dp,
+                                    color = if (active) accent else accent.copy(alpha = 0.35f),
+                                    shape = RoundedCornerShape(999.dp),
+                                )
+                                .padding(horizontal = 12.dp, vertical = 9.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                    ) {
+                        Icon(
+                            imageVector = bucketIcon(bucket),
+                            contentDescription = null,
+                            tint = accent,
+                            modifier = Modifier.size(16.dp),
+                        )
+                        Spacer(Modifier.width(6.dp))
+                        Text(
+                            text = bucketLabelLong(bucket),
+                            style = MaterialTheme.typography.labelMedium,
+                            color = cosmos.textPrimary,
+                            fontWeight = FontWeight.Bold,
+                        )
+                    }
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun DraggedTaskPreview(drag: TaskDragState, modifier: Modifier = Modifier) {
+    val cosmos = LocalCosmos.current
+    val target = drag.targetBucket
+    val accent = bucketAccent(target ?: drag.sourceBucket)
+    GlassCard(
+        modifier =
+            modifier.graphicsLayer {
+                alpha = 0.92f
+                scaleX = 1.03f
+                scaleY = 1.03f
+                shadowElevation = 22f
+            },
+        cornerRadius = 22.dp,
+        contentPadding = 14.dp,
+        backgroundOverride = cosmos.glassBg,
+    ) {
+        Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Box(
+                    modifier =
+                        Modifier.size(30.dp)
+                            .clip(RoundedCornerShape(10.dp))
+                            .background(accent.copy(alpha = 0.22f)),
+                    contentAlignment = Alignment.Center,
+                ) {
+                    Icon(
+                        imageVector = bucketIcon(target ?: drag.sourceBucket),
+                        contentDescription = null,
+                        tint = accent,
+                        modifier = Modifier.size(18.dp),
+                    )
+                }
+                Spacer(Modifier.width(10.dp))
+                Text(
+                    text = drag.entry.title,
+                    style = MaterialTheme.typography.titleSmall,
+                    color = cosmos.textPrimary,
+                    fontWeight = FontWeight.Bold,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                    modifier = Modifier.weight(1f),
+                )
+            }
+            Text(
+                text = target?.let { "Ablegen in ${bucketLabelLong(it)}" } ?: "Über einen Bereich ziehen",
+                style = MaterialTheme.typography.labelMedium,
+                color = accent,
+                fontWeight = FontWeight.SemiBold,
+            )
+        }
+    }
+}
+
+@Composable
 private fun EntropyEntryCard(
     entry: EntropyEntryEntity,
+    modifier: Modifier = Modifier,
+    isDragging: Boolean = false,
     onClick: () -> Unit = {},
     onResolve: () -> Unit = {},
     onSeverityHint: () -> Unit = {},
@@ -1489,8 +1757,10 @@ private fun EntropyEntryCard(
         remember(ramp) { Brush.horizontalGradient(colors = listOf(ramp.copy(alpha = 0.20f), ramp)) }
     GlassCard(
         modifier =
-            Modifier.fillMaxWidth().clickable(onClick = onClick).graphicsLayer {
-                alpha = cardAlpha
+            modifier.fillMaxWidth().clickable(onClick = onClick).graphicsLayer {
+                alpha = if (isDragging) 0.28f else cardAlpha
+                scaleX = if (isDragging) 0.98f else 1f
+                scaleY = if (isDragging) 0.98f else 1f
                 compositingStrategy = CompositingStrategy.ModulateAlpha
             },
         tintBrush = priorityBrush,
@@ -1573,6 +1843,11 @@ private fun EntropyEntryCard(
         }
     }
 }
+
+private fun findDropBucket(
+    pointerInWindow: Offset,
+    dropTargets: Collection<BucketDropTarget>,
+): TimeBucket? = dropTargets.firstOrNull { it.bounds.contains(pointerInWindow) }?.bucket
 
 /**
  * Bottom-Sheet zur schnellen Prioritätsbereich-Zuordnung. Es setzt denselben manuellen
@@ -2134,6 +2409,18 @@ private fun KiSuggestionCard(
 private val ALL_TIME_BUCKETS: List<TimeBucket> = TimeBucket.entries.toList()
 private val ALWAYS_VISIBLE_BUCKETS: Set<TimeBucket> =
     setOf(TimeBucket.HEUTE, TimeBucket.MORGEN, TimeBucket.FREIBLOCK, TimeBucket.GERING)
+
+private data class TaskDragState(
+    val entry: EntropyEntryEntity,
+    val sourceBucket: TimeBucket,
+    val pointerInWindow: Offset,
+    val targetBucket: TimeBucket?,
+)
+
+private data class BucketDropTarget(
+    val bucket: TimeBucket,
+    val bounds: Rect,
+)
 
 // Akkordeon-Sektions-Schluessel fuer Bloecke ohne TimeBucket (Frank-Wunsch 2026-05-24).
 // Loop liegt zwischen SPAETER und ERLEDIGT (Frank-Wunsch 2026-05-24, Aufgabe 3).
