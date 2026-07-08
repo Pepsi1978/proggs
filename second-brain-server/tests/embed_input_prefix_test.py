@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
-"""Reiner Unit-Test der modell-abhaengigen Praefix-Logik (embed_input / IS_EMBED2) — kein Netz,
-kein Qdrant/Gemini-Call. Prueft, dass gemini-embedding-2 das offizielle 'title: … | text: …'-Praefix
-baut und gemini-embedding-001 das alte '[Titel: … | Kategorien: …]'-Format behaelt.
+"""Reiner Unit-Test der embed_input-Praefix-Logik — kein Netz, kein Qdrant/Gemini-Call.
+Prueft, dass embed_input das offizielle gemini-embedding-2-Praefix 'title: … | text: …' baut
+(Kategorien im title-Teil, 'none' ohne Titel). Der -001-Fallback wurde 2026-07-08 ausgebaut.
 
 Lauf (bevorzugt im Container, wo fastapi/google-genai/qdrant-client installiert sind):
     docker compose run --rm brain-api python3 /app/tests/embed_input_prefix_test.py
@@ -42,19 +42,14 @@ def _load(model: str):
 
 
 def main() -> int:
-    e2 = _load("gemini-embedding-2")
-    assert e2.IS_EMBED2 is True, "IS_EMBED2 sollte fuer gemini-embedding-2 True sein"
-    got = e2.embed_input("Titel A", ["Programmierung/Rules"], "Hallo")
+    m = _load("gemini-embedding-2")
+    got = m.embed_input("Titel A", ["Programmierung/Rules"], "Hallo")
     assert got == "title: Titel A · Programmierung > Rules | text: Hallo", got
-    assert e2.embed_input(None, [], "Nur Text") == "title: none | text: Nur Text"
-    assert e2.embed_input("", ["Alltag"], "X") == "title: Alltag | text: X"
+    assert m.embed_input(None, [], "Nur Text") == "title: none | text: Nur Text"
+    assert m.embed_input("", ["Alltag"], "X") == "title: Alltag | text: X"
+    assert m.embed_input("Nur Titel", [], "Y") == "title: Nur Titel | text: Y"
 
-    o1 = _load("gemini-embedding-001")
-    assert o1.IS_EMBED2 is False, "IS_EMBED2 sollte fuer gemini-embedding-001 False sein"
-    assert o1.embed_input("Titel A", [], "Hallo") == "[Titel: Titel A]\n\nHallo"
-    assert o1.embed_input(None, [], "Nur Text") == "Nur Text"
-
-    print("PASS: embed_input Praefix-Logik korrekt (gemini-embedding-2 + gemini-embedding-001)")
+    print("PASS: embed_input Praefix-Logik korrekt (gemini-embedding-2)")
     return 0
 
 
