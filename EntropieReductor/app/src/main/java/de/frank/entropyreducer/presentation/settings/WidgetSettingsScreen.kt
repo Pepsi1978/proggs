@@ -208,7 +208,7 @@ fun WidgetSettingsScreen(
                 fontWeight = FontWeight.SemiBold,
             )
             Text(
-                "Hier wählst du, ob das Widget alle Aufgaben oder nur Priorität sehr hoch anzeigt. " +
+                "Hier wählst du, ob das Widget alle Aufgaben oder nur Sehr hoch anzeigt. " +
                     "Die Einstellung wirkt sofort nach dem Wechsel.",
                 style = MaterialTheme.typography.bodySmall,
                 color = cosmos.textSecondary,
@@ -388,7 +388,7 @@ private fun WidgetPreviewCard(
                     .padding(horizontal = 10.dp, vertical = 4.dp),
             ) {
                 Text(
-                    "Priorität sehr hoch",
+                    "Sehr hoch",
                     color = accentColor,
                     fontSize = 12.sp,
                     fontWeight = FontWeight.Bold,

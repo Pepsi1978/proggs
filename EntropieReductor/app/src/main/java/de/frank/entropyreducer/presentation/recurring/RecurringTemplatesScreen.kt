@@ -251,10 +251,10 @@ internal val loopAddChoices: List<Pair<String, TimeBucket?>> =
 
 internal fun loopBucketLabel(b: TimeBucket): String =
     when (b) {
-        TimeBucket.HEUTE -> "Priorität sehr hoch"
-        TimeBucket.MORGEN -> "Priorität hoch"
-        TimeBucket.FREIBLOCK -> "Priorität mittel"
-        TimeBucket.GERING -> "Priorität gering"
+        TimeBucket.HEUTE -> "Sehr hoch"
+        TimeBucket.MORGEN -> "Hoch"
+        TimeBucket.FREIBLOCK -> "Mittel"
+        TimeBucket.GERING -> "Gering"
         TimeBucket.SPAETER -> "Später"
     }
 

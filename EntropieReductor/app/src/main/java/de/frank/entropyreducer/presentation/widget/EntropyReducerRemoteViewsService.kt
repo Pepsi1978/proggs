@@ -425,10 +425,10 @@ internal fun bucketColor(p: SimpleWidgetPalette, bucket: TimeBucket): Int = when
 }
 
 internal fun bucketLabel(bucket: TimeBucket): String = when (bucket) {
-    TimeBucket.HEUTE -> "Priorität sehr hoch"
-    TimeBucket.MORGEN -> "Priorität hoch"
-    TimeBucket.FREIBLOCK -> "Priorität mittel"
-    TimeBucket.GERING -> "Priorität gering"
+    TimeBucket.HEUTE -> "Sehr hoch"
+    TimeBucket.MORGEN -> "Hoch"
+    TimeBucket.FREIBLOCK -> "Mittel"
+    TimeBucket.GERING -> "Gering"
     TimeBucket.SPAETER -> "Später"
 }
 

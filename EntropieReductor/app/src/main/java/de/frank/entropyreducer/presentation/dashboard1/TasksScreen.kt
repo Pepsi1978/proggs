@@ -168,7 +168,7 @@ fun TasksScreen(
     // darauf zugreifen koennen. Wird unten an die Haupt-LazyColumn uebergeben.
     val listState = androidx.compose.foundation.lazy.rememberLazyListState()
 
-    // Aufgabenblöcke (Priorität sehr hoch/hoch/mittel/gering/später/Loop/Erledigt)
+    // Aufgabenblöcke (Sehr hoch/Hoch/Mittel/Gering/Später/Loop/Erledigt)
     // sind aufklappbare Akkordeon-Dropdowns. Es ist immer nur EIN
     // Block offen — Klick auf einen Header oeffnet ihn und schliesst den vorher
     // offenen automatisch; ein erneuter Klick klappt ihn wieder zu. Standard: sehr hoch.
@@ -319,10 +319,10 @@ fun TasksScreen(
 
     // Frank-Wunsch 2026-05-24: Mit dem Akkordeon ist die Header-Position eindeutig.
     // Nach dem Aufklappen eines Ziel-Blocks sind alle anderen Bloecke zugeklappt
-    // (= je 1 Header-Item). Der Header liegt damit bei: 1 (Briefing) + Position des
-    // Buckets in ALL_TIME_BUCKETS. Erledigt liegt nach allen Buckets + Loop.
+    // (= je 1 Header-Item). Ohne Briefing-Item liegt der Header direkt bei der
+    // Position des Buckets in ALL_TIME_BUCKETS. Erledigt liegt nach allen Buckets + Loop.
     fun bucketHeaderIndex(target: de.frank.entropyreducer.domain.model.TimeBucket): Int =
-        1 + ALL_TIME_BUCKETS.indexOf(target)
+        ALL_TIME_BUCKETS.indexOf(target)
 
     CosmosScaffold(
         title = "Aufgaben",
@@ -434,12 +434,6 @@ fun TasksScreen(
                     contentPadding = androidx.compose.foundation.layout.PaddingValues(16.dp),
                     verticalArrangement = Arrangement.spacedBy(12.dp),
                 ) {
-                    item(key = "briefing", contentType = "briefing") {
-                        // Frank-Wunsch 2026-05-23: BriefingPanel enthaelt jetzt
-                        // auch die KI-Frage des Moments als zweites Dropdown —
-                        // keine separate KiQuestionCard mehr in der LazyColumn.
-                        de.frank.entropyreducer.presentation.briefing.BriefingPanel()
-                    }
                     // Frank-Wunsch 2026-05-23 (Folge-Iteration): Kategorie-
                     // Filterleiste ("Koerperlich/Mental/Zeitlich") ist hier raus —
                     // stoert die Konzentration auf die Aufgaben. Filter-State
@@ -1291,10 +1285,10 @@ private fun iconForCategory(
 private fun BucketHeader(bucket: TimeBucket, count: Int, expanded: Boolean, onToggle: () -> Unit) {
     val label =
         when (bucket) {
-            TimeBucket.HEUTE -> "PRIORITÄT SEHR HOCH"
-            TimeBucket.MORGEN -> "PRIORITÄT HOCH"
-            TimeBucket.FREIBLOCK -> "PRIORITÄT MITTEL"
-            TimeBucket.GERING -> "PRIORITÄT GERING"
+            TimeBucket.HEUTE -> "SEHR HOCH"
+            TimeBucket.MORGEN -> "HOCH"
+            TimeBucket.FREIBLOCK -> "MITTEL"
+            TimeBucket.GERING -> "GERING"
             TimeBucket.SPAETER -> "SPÄTER"
         }
     AccordionHeaderRow(
@@ -1861,10 +1855,10 @@ private fun BucketOptionRow(
 
 private fun bucketLabelLong(bucket: TimeBucket): String =
     when (bucket) {
-        TimeBucket.HEUTE -> "Priorität sehr hoch"
-        TimeBucket.MORGEN -> "Priorität hoch"
-        TimeBucket.FREIBLOCK -> "Priorität mittel"
-        TimeBucket.GERING -> "Priorität gering"
+        TimeBucket.HEUTE -> "Sehr hoch"
+        TimeBucket.MORGEN -> "Hoch"
+        TimeBucket.FREIBLOCK -> "Mittel"
+        TimeBucket.GERING -> "Gering"
         TimeBucket.SPAETER -> "Später"
     }
 
@@ -1968,10 +1962,10 @@ private fun EntryMetaRow(entry: EntropyEntryEntity, modifier: Modifier = Modifie
         // Bucket-Time-Label (TimeBucket)
         val bucketLabel =
             when (entry.timeBucket) {
-                de.frank.entropyreducer.domain.model.TimeBucket.HEUTE -> "Priorität sehr hoch"
-                de.frank.entropyreducer.domain.model.TimeBucket.MORGEN -> "Priorität hoch"
-                de.frank.entropyreducer.domain.model.TimeBucket.FREIBLOCK -> "Priorität mittel"
-                de.frank.entropyreducer.domain.model.TimeBucket.GERING -> "Priorität gering"
+                de.frank.entropyreducer.domain.model.TimeBucket.HEUTE -> "Sehr hoch"
+                de.frank.entropyreducer.domain.model.TimeBucket.MORGEN -> "Hoch"
+                de.frank.entropyreducer.domain.model.TimeBucket.FREIBLOCK -> "Mittel"
+                de.frank.entropyreducer.domain.model.TimeBucket.GERING -> "Gering"
                 de.frank.entropyreducer.domain.model.TimeBucket.SPAETER -> "später"
             }
         val durationHint =
