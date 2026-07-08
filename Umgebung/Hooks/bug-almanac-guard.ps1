@@ -154,6 +154,14 @@ try {
         # MUSS vor dem chrome-Zweig stehen, da ein Stream-Deck-manifest.json sonst vom
         # generischen 'manifest.json$'-Match faelschlich als Chrome-Erweiterung erkannt wuerde.
         $slug = 'streamdeck'; $file = 'stream-deck.md'; $name = 'Elgato Stream Deck Plugin-Entwicklung'
+    } elseif ($fpl -match '(^|/)(docker-)?compose\.ya?ml$' -or $fpl -match '(^|/)dockerfile(\.[^/]+)?$' -or $fpl -match '\.dockerfile$') {
+        # Docker & Docker-Compose (Self-Hosting-Betrieb): compose.yaml/.yml, docker-compose.*,
+        # Dockerfile (auch Dockerfile.prod / app.dockerfile). Dateiname-basiert, eindeutig.
+        $slug = 'docker'; $file = 'docker.md'; $name = 'Docker & Docker-Compose (Self-Hosting-Betrieb)'
+    } elseif ($fpl -match '(^|/)caddyfile$' -or $fpl -match '\.caddyfile$' -or $fpl -match '\.service$' -or $fpl -match '(^|/)nginx\.conf$' -or $fpl -match '/sites-(available|enabled)/') {
+        # Reverse-Proxy/TLS (Caddy) + systemd-Units + nginx-Configs -> reverse-proxy-tls.md.
+        # Caddyfile (kein Suffix), *.service (systemd-Unit), nginx.conf/sites-*. Eindeutige Dateimuster.
+        $slug = 'reverseproxytls'; $file = 'reverse-proxy-tls.md'; $name = 'Reverse-Proxy/TLS (Caddy) & Linux-VPS-Betrieb'
     } elseif ($fpl -match '\.mcp\.json$') {
         # MCP-Server-Registrierung (.mcp.json). Vor dem chrome-'manifest.json'-Zweig (kein
         # Suffix-Konflikt, aber explizit). MCP-Server-Quellcode wird im .ts/.py-Zweig per Content-Probe erkannt.
@@ -200,6 +208,9 @@ try {
         } catch {}
         if ($xmlProbe -match 'appwidget-provider') {
             $slug = 'appwidgets'; $file = 'app-widgets.md'; $name = 'App-Widgets (Glance/RemoteViews/AppWidgetProvider)'
+        } elseif ($fpl -match 'network_security_config' -or $xmlProbe -match 'network-security-config' -or $xmlProbe -match 'cleartextTrafficPermitted') {
+            # Network Security Config (Cleartext fuer private IP / interne-CA-trust-anchors) -> client-anbindung.md.
+            $slug = 'clientanbindung'; $file = 'client-anbindung.md'; $name = 'Endgeraet-zu-self-hosted-Server-Anbindung (VPN/REST)'
         }
     } elseif ($fpl -match '\.kts?$') {
         # .kt/.kts: ZENTRALE Android/Kotlin-Erkennung. Inhalt EINMAL proben (existierende Datei + Tool-Input),
@@ -302,7 +313,22 @@ try {
             # 3D auf macOS (Metal/SceneKit/RealityKit).
             if ($probe -match 'MTKView' -or $probe -match 'MTLDevice' -or $probe -match 'MTLCreateSystemDefaultDevice' -or $probe -match 'SceneKit' -or $probe -match 'SCNView' -or $probe -match 'RealityKit' -or $probe -match 'RealityView' -or $probe -match 'MetalFX' -or $probe -match 'MetalKit') { $metalSignal = $true }
         }
-        if ($whisperSignal) {
+        # Info.plist/entitlements mit ATS/Local-Network/network.client -> Client-Anbindung (VPN/REST ans eigene Backend).
+        $clientAnbindungSignal = $false
+        if ($fpl -match '(^|/)info\.plist$' -or $fpl -match '\.entitlements$') {
+            $plistProbe = ""
+            try { if (Test-Path -LiteralPath $fp) { $plistProbe = Get-Content -LiteralPath $fp -Raw -ErrorAction SilentlyContinue } } catch {}
+            try {
+                $ti = $data.tool_input
+                if ($ti.content)    { $plistProbe += "`n" + [string]$ti.content }
+                if ($ti.new_string) { $plistProbe += "`n" + [string]$ti.new_string }
+                if ($ti.edits)      { foreach ($e in $ti.edits) { if ($e.new_string) { $plistProbe += "`n" + [string]$e.new_string } } }
+            } catch {}
+            if ($plistProbe -match 'NSAppTransportSecurity' -or $plistProbe -match 'NSAllowsLocalNetworking' -or $plistProbe -match 'NSLocalNetworkUsageDescription' -or $plistProbe -match 'NSExceptionAllowsInsecureHTTPLoads' -or $plistProbe -match 'com\.apple\.security\.network\.client') { $clientAnbindungSignal = $true }
+        }
+        if ($clientAnbindungSignal) {
+            $slug = 'clientanbindung'; $file = 'client-anbindung.md'; $name = 'Endgeraet-zu-self-hosted-Server-Anbindung (VPN/REST)'
+        } elseif ($whisperSignal) {
             $slug = 'whisperlokal'; $file = 'whisper-stt-lokal.md'; $name = 'On-Device-Whisper / lokale Transkription'
         } elseif ($macOverlaySignal) {
             $slug = 'macosoverlay'; $file = 'macos-overlay.md'; $name = 'macOS-Overlay-Fenster (Swift/AppKit)'
@@ -316,6 +342,7 @@ try {
         # Inhalt aus existierender Datei UND Tool-Input pruefen (analog zum Compose-Probe). FAIL-OPEN.
         $mcpSignal = $false
         $threejsSignal = $false
+        $motionAssetSignal = $false
         if ($fpl -match '\.tsx?$') {
             $probe = ""
             try { if (Test-Path -LiteralPath $fp) { $probe = Get-Content -LiteralPath $fp -Raw -ErrorAction SilentlyContinue } } catch {}
@@ -328,14 +355,47 @@ try {
             if ($probe -match '@modelcontextprotocol/sdk' -or $probe -match 'McpServer' -or $probe -match 'StdioServerTransport' -or $probe -match 'StreamableHTTPServerTransport' -or $probe -match 'setRequestHandler') { $mcpSignal = $true }
             # 3D im Web (Three.js/Babylon/WebGPU/R3F) -> 3d-threejs-webgpu.md (nach MCP, vor typescript).
             if ($probe -match 'THREE\.' -or $probe -match 'three/examples' -or $probe -match '@react-three/fiber' -or $probe -match '@react-three/drei' -or $probe -match '@babylonjs' -or $probe -match 'WebGPURenderer' -or $probe -match 'GLTFLoader' -or $probe -match 'KTX2Loader' -or $probe -match 'PMREMGenerator') { $threejsSignal = $true }
+            # Lottie/Rive/SVG-Animationen -> lottie-rive-svg-animationen.md (nach MCP, vor generischem TypeScript).
+            if ($probe -match 'lottie|bodymovin|@lottiefiles|@rive-app|useRive|RiveComponent|rive\.wasm|RuntimeLoader|loadAnimation') { $motionAssetSignal = $true }
         }
         if ($mcpSignal) {
             $slug = 'mcpserver'; $file = 'mcp-server.md'; $name = 'MCP-Server-Bau (Model Context Protocol)'
+        } elseif ($motionAssetSignal) {
+            $slug = 'lottierivesvg'; $file = 'lottie-rive-svg-animationen.md'; $name = 'Lottie / Rive / SVG-Animationen im Web'
         } elseif ($threejsSignal) {
             $slug = 'threejs'; $file = '3d-threejs-webgpu.md'; $name = '3D im Web (Three.js/Babylon/WebGPU)'
         } else {
             $slug = 'typescript'; $file = 'typescript.md'; $name = 'TypeScript / Node'
         }
+    } elseif ($fpl -match '\.(riv|lottie)$' -or $fpl -match '(lottie|bodymovin|rive)[^/]*\.json$') {
+        $slug = 'lottierivesvg'; $file = 'lottie-rive-svg-animationen.md'; $name = 'Lottie / Rive / SVG-Animationen im Web'
+    } elseif ($fpl -match '\.json$') {
+        # Lottie-JSON ohne sprechenden Dateinamen nur per Inhalt erkennen, damit package.json/Configs nicht gekapert werden.
+        $jsonProbe = ""
+        try { if (Test-Path -LiteralPath $fp) { $jsonProbe = Get-Content -LiteralPath $fp -Raw -ErrorAction SilentlyContinue } } catch {}
+        try {
+            $ti = $data.tool_input
+            if ($ti.content)    { $jsonProbe += "`n" + [string]$ti.content }
+            if ($ti.new_string) { $jsonProbe += "`n" + [string]$ti.new_string }
+            if ($ti.edits)      { foreach ($e in $ti.edits) { if ($e.new_string) { $jsonProbe += "`n" + [string]$e.new_string } } }
+        } catch {}
+        if ($jsonProbe -match '"fr"\s*:' -and $jsonProbe -match '"layers"\s*:') {
+            $slug = 'lottierivesvg'; $file = 'lottie-rive-svg-animationen.md'; $name = 'Lottie / Rive / SVG-Animationen im Web'
+        }
+    } elseif ($fpl -match '\.svg$') {
+        $svgProbe = ""
+        try { if (Test-Path -LiteralPath $fp) { $svgProbe = Get-Content -LiteralPath $fp -Raw -ErrorAction SilentlyContinue } } catch {}
+        try {
+            $ti = $data.tool_input
+            if ($ti.content)    { $svgProbe += "`n" + [string]$ti.content }
+            if ($ti.new_string) { $svgProbe += "`n" + [string]$ti.new_string }
+            if ($ti.edits)      { foreach ($e in $ti.edits) { if ($e.new_string) { $svgProbe += "`n" + [string]$e.new_string } } }
+        } catch {}
+        if ($svgProbe -match '<animate|<animateTransform|<animateMotion|<set|<mask|<clipPath|pathLength|stroke-dasharray') {
+            $slug = 'lottierivesvg'; $file = 'lottie-rive-svg-animationen.md'; $name = 'Lottie / Rive / SVG-Animationen im Web'
+        }
+    } elseif ($fpl -match '\.(html|css|scss|sass)$') {
+        $slug = 'webdesign'; $file = 'webseitenbau-webdesign.md'; $name = 'Webseitenbau / Webdesign / visuelle Effekte'
     } elseif ($fpl -match '\.ic(o|ns)$') {
         # App-Icon-Asset-Datei (.ico Windows / .icns macOS). Eindeutige Endung, kein Konflikt. Icon-Build-Skripte werden zusaetzlich im .py-Zweig per Content-Probe erkannt.
         $slug = 'iconbuilding'; $file = 'icon-building.md'; $name = 'App-Icon-Building (Windows/.ico, macOS/.icns, Android adaptive)'
@@ -398,8 +458,20 @@ try {
         # On-Device-Whisper / lokale Transkription (faster-whisper/whisper.cpp/CTranslate2) -> whisper-stt-lokal.md.
         $whisperPy = $false
         if ($probe -match 'faster_whisper' -or $probe -match 'faster-whisper' -or $probe -match 'whisper\.cpp' -or $probe -match 'WhisperModel' -or $probe -match 'ctranslate2' -or $probe -match 'pywhispercpp') { $whisperPy = $true }
+        # Serverseitiger autonomer KI-Agent: Framework (pydantic-ai/langgraph) ODER eigene Tool-Loop im agent/-Ordner -> ai-agent-frameworks.md.
+        $agentPy = $false
+        if ($probe -match 'pydantic_ai' -or $probe -match 'pydantic-ai' -or $probe -match 'from langgraph' -or $probe -match 'import langgraph' -or $probe -match 'langchain\.agents' -or $probe -match 'create_react_agent' -or $probe -match 'StateGraph') { $agentPy = $true }
+        if (-not $agentPy -and $fpl -match '(^|/)agent/[^/]+\.py$' -and ($probe -match 'generate_content' -or $probe -match 'tool_use' -or $probe -match 'system_instruction' -or $probe -match 'llm_decide' -or $probe -match 'brain_store' -or $probe -match 'brain_search')) { $agentPy = $true }
+        # FastAPI/uvicorn-Web-Schicht (Endpoints/Middleware/lifespan/Body-Handling) -> fastapi.md. NACH mcp/agent
+        # (agent/*.py bleibt ai-agent-frameworks), faengt brain-api/dashboard und andere FastAPI-Services.
+        $fastapiPy = $false
+        if ($probe -match 'from fastapi' -or $probe -match 'import fastapi' -or $probe -match 'FastAPI\(' -or $probe -match 'APIRouter' -or $probe -match '@app\.(get|post|put|delete|patch)' -or $probe -match 'uvicorn') { $fastapiPy = $true }
         if ($mcpPy) {
             $slug = 'mcpserver'; $file = 'mcp-server.md'; $name = 'MCP-Server-Bau (Model Context Protocol)'
+        } elseif ($agentPy) {
+            $slug = 'aiagentframeworks'; $file = 'ai-agent-frameworks.md'; $name = 'Serverseitige autonome KI-Agenten (Loop/Tools/State/Kosten)'
+        } elseif ($fastapiPy) {
+            $slug = 'fastapi'; $file = 'fastapi.md'; $name = 'FastAPI & async-Python-Server (uvicorn-Web-Schicht)'
         } elseif ($iconPy) {
             $slug = 'iconbuilding'; $file = 'icon-building.md'; $name = 'App-Icon-Building (Windows/.ico, macOS/.icns, Android adaptive)'
         } elseif ($whisperPy) {

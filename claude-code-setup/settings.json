@@ -32,27 +32,22 @@
 		"superpowers@claude-plugins-official": true,
 		"frontend-design@claude-plugins-official": true,
 		"context7@claude-plugins-official": true,
-		"github@claude-plugins-official": false,
+		"github@claude-plugins-official": true,
 		"feature-dev@claude-plugins-official": false,
 		"code-simplifier@claude-plugins-official": true,
 		"commit-commands@claude-plugins-official": true,
 		"security-guidance@claude-plugins-official": true,
 		"claude-md-management@claude-plugins-official": true,
-		"pr-review-toolkit@claude-plugins-official": true,
 		"claude-code-setup@claude-plugins-official": true,
 		"hookify@claude-plugins-official": true,
-		"playground@claude-plugins-official": true,
 		"ralph-loop@claude-plugins-official": true,
-		"episodic-memory@superpowers-marketplace": false,
 		"superpowers-chrome@superpowers-marketplace": false,
 		"code-review@claude-plugins-official": true,
 		"playwright@claude-plugins-official": true,
-		"coderabbit@claude-plugins-official": true,
 		"explanatory-output-style@claude-plugins-official": true,
 		"superpowers-lab@superpowers-marketplace": false,
 		"skill-creator@claude-plugins-official": true,
 		"plugin-dev@claude-plugins-official": false,
-		"agent-sdk-dev@claude-plugins-official": true,
 		"clangd-lsp@claude-plugins-official": true,
 		"rust-analyzer-lsp@claude-plugins-official": true,
 		"gopls-lsp@claude-plugins-official": true,
@@ -62,36 +57,21 @@
 		"php-lsp@claude-plugins-official": true,
 		"pyright-lsp@claude-plugins-official": true,
 		"ruby-lsp@claude-plugins-official": true,
-		"ask-questions-if-underspecified@trailofbits": true,
-		"firebase-apk-scanner@trailofbits": true,
-		"gh-cli@trailofbits": true,
-		"static-analysis@trailofbits": false,
-		"second-opinion@trailofbits": true,
-		"git-cleanup@trailofbits": true,
-		"workflow-skill-design@trailofbits": true,
-		"agentic-actions-auditor@trailofbits": true,
-		"skill-improver@trailofbits": true,
 		"claude-mem@thedotmack": true,
-		"everything-claude-code@everything-claude-code": true,
 		"compound-engineering@compound-engineering-plugin": false,
 		"reflexion@context-engineering-kit": true,
 		"git@context-engineering-kit": true,
-		"tdd@context-engineering-kit": true,
-		"sadd@context-engineering-kit": true,
-		"ddd@context-engineering-kit": true,
-		"sdd@context-engineering-kit": true,
-		"kaizen@context-engineering-kit": true,
-		"customaize-agent@context-engineering-kit": true,
-		"docs@context-engineering-kit": true,
-		"tech-stack@context-engineering-kit": true,
 		"mcp@context-engineering-kit": true,
-		"fpf@context-engineering-kit": true,
-		"xclaude-plugin@xclaude-plugin-marketplace": true,
-		"apple-platform-build-tools@apple-platform-build-tools": true,
+		"xclaude-plugin@xclaude-plugin-marketplace": false,
 		"claude-reflect@claude-reflect-marketplace": true,
-		"spec-driven-development@context-engineering-kit": true,
-		"claude-code-lsps@boostvolt": false,
-		"context-kit@FlineDev": false
+		"episodic-memory@superpowers-marketplace": false,
+		"firebase-apk-scanner@trailofbits": true,
+		"gh-cli@trailofbits": true,
+		"git-cleanup@trailofbits": true,
+		"skill-improver@trailofbits": true,
+		"static-analysis@trailofbits": false,
+		"workflow-skill-design@trailofbits": true,
+		"finale@local": true
 	},
 	"extraKnownMarketplaces": {
 		"superpowers-marketplace": {
@@ -111,12 +91,6 @@
 			"source": {
 				"source": "github",
 				"repo": "thedotmack/claude-mem"
-			}
-		},
-		"everything-claude-code": {
-			"source": {
-				"source": "github",
-				"repo": "affaan-m/everything-claude-code"
 			}
 		},
 		"compound-engineering-plugin": {
@@ -153,6 +127,12 @@
 			"source": {
 				"source": "github",
 				"repo": "trailofbits/skills-curated"
+			}
+		},
+		"local": {
+			"source": {
+				"source": "directory",
+				"path": "/Users/barwa/proggs/Umgebung/Plugins/finale"
 			}
 		}
 	},

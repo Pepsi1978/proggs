@@ -1,0 +1,27 @@
+{
+	"name": "finale",
+	"version": "0.2.0",
+	"description": "Closed-Loop-Pipeline, die eine deutsche Android-App vor der Google-Play-Veröffentlichung vollständig durchleuchtet, rechtssicher macht und layout-stabil mehrsprachig übersetzt — ausschließlich Text-Änderungen, niemals Funktion oder Optik, bis 0 offene Findings.",
+	"author": {
+		"name": "Frank",
+		"email": "barwandt@gmail.com"
+	},
+	"homepage": "https://github.com/Pepsi1978/proggs",
+	"license": "UNLICENSED",
+	"keywords": [
+		"android",
+		"google-play",
+		"rechtssicherheit",
+		"dsgvo",
+		"uwg",
+		"hwg",
+		"ttdsg",
+		"play-policy",
+		"i18n",
+		"lokalisierung",
+		"übersetzung",
+		"strings.xml",
+		"compose",
+		"release"
+	]
+}

@@ -1,0 +1,78 @@
+{
+	"$schema": "https://json-schema.org/draft/2020-12/schema",
+	"$id": "https://finale-plugin.local/schemas/phase2-applied.schema.json",
+	"title": "Phase 2 Applied Fixes Report",
+	"description": "Output-Schema fuer den Fix-Applier nach Phase 2. Auto-Mapping akzeptiert id->findingId, locale->language, change->description.",
+	"type": "object",
+	"required": ["appliedAt"],
+	"properties": {
+		"appliedAt": { "type": "string" },
+		"applied_at": { "type": "string" },
+		"phase": { "type": ["integer", "string"] },
+		"task": { "type": "string" },
+		"total": { "type": "integer", "minimum": 0 },
+		"applied": {
+			"oneOf": [
+				{
+					"type": "integer",
+					"minimum": 0,
+					"description": "Count (alte Variante) — Auto-Mapper wandelt zu Array mit Stubs"
+				},
+				{
+					"type": "array",
+					"items": {
+						"type": "object",
+						"required": ["findingId", "language", "key"],
+						"properties": {
+							"findingId": { "type": "string" },
+							"language": { "type": "string" },
+							"key": { "type": "string" },
+							"oldText": { "type": ["string", "null"] },
+							"newText": { "type": ["string", "null"] },
+							"description": { "type": ["string", "null"] },
+							"rationale": { "type": ["string", "null"] },
+							"status": {
+								"type": "string",
+								"enum": ["applied", "applied-broken", "skipped", "failed"]
+							}
+						}
+					}
+				}
+			]
+		},
+		"findings": {
+			"type": "array",
+			"items": {
+				"type": "object",
+				"properties": {
+					"id": { "type": "string" },
+					"findingId": { "type": "string" },
+					"locale": { "type": "string" },
+					"language": { "type": "string" },
+					"key": { "type": "string" },
+					"status": { "type": "string" },
+					"change": { "type": "string" }
+				}
+			}
+		},
+		"failed": {
+			"type": ["array", "integer"],
+			"items": {
+				"type": "object",
+				"properties": {
+					"findingId": { "type": "string" },
+					"reason": { "type": "string" }
+				}
+			}
+		},
+		"xml_valid": { "type": "boolean" },
+		"files_changed": { "type": "array", "items": { "type": "string" } },
+		"skill_used": { "type": "string" },
+		"skill_invocation_count": { "type": "integer", "minimum": 0 },
+		"plugin_bugs_observed": {
+			"type": "array",
+			"items": { "type": "string" }
+		}
+	},
+	"$comment": "Alias-Mapping (FIN-036): findings[].id->findingId, findings[].locale->language, findings[].change->description. applied:int->applied:[{...}] mit count=N."
+}
