@@ -53,10 +53,31 @@ try {
 
     # Use Python for safe JSON manipulation (no-sed-on-json rule)
     $pythonScript = @"
-import sys, json, os
+import sys, json, os, re
 
 path = sys.argv[1]
-secret_patterns = [p.upper() for p in sys.argv[2:]]
+
+# VALUE-based secret detection. Key-name substring matching (old approach) wrongly
+# redacted harmless config keys whose NAME contains TOKEN/KEY (e.g.
+# CLAUDE_CODE_MAX_OUTPUT_TOKENS=64000). We now redact only real secret VALUES
+# (known token prefixes) plus an explicit whitelist of true secret key names.
+SECRET_VALUE = re.compile(r'^(gh[opsu]_|sk-|AIza|xox[baprs]-|glpat-)[A-Za-z0-9_\-]{16,}$')
+KNOWN_SECRET_KEYS = {
+    'GITHUB_PERSONAL_ACCESS_TOKEN', 'ANTHROPIC_API_KEY', 'OPENAI_API_KEY',
+    'GEMINI_API_KEY', 'GOOGLE_API_KEY', 'GROQ_API_KEY', 'OPENROUTER_API_KEY',
+    'FIRECRAWL_API_KEY', 'DEEPSEEK_API_KEY', 'MISTRAL_API_KEY', 'XAI_API_KEY',
+}
+
+def _is_secret(k, v):
+    if not isinstance(v, str):
+        return False
+    if v.startswith('<REDACTED') or v.startswith('REDACTED'):
+        return False
+    if SECRET_VALUE.match(v):
+        return True
+    if k.upper() in KNOWN_SECRET_KEYS and v and not v.startswith('<'):
+        return True
+    return False
 
 with open(path, 'r', encoding='utf-8') as f:
     data = json.load(f)
@@ -69,13 +90,7 @@ def redact_env(obj):
     if isinstance(obj, dict):
         env = obj.get('env')
         if isinstance(env, dict):
-            keys_to_redact = []
-            for k in env:
-                k_upper = k.upper()
-                for pattern in secret_patterns:
-                    if pattern in k_upper:
-                        keys_to_redact.append(k)
-                        break
+            keys_to_redact = [k for k in env if _is_secret(k, env[k])]
             for k in keys_to_redact:
                 env[k] = '<REDACTED -- set locally>'
                 redacted_count += 1
