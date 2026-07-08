@@ -41,6 +41,11 @@ data class OutboxItem(
     val createdAt: Long
 )
 
+data class PendingSessionEnd(
+    val sessionId: String,
+    val createdAt: Long
+)
+
 object ChatSessionStore {
 
     private lateinit var helper: Helper
@@ -165,6 +170,35 @@ object ChatSessionStore {
         helper.writableDatabase.delete("outbox", "id = ?", arrayOf(id))
     }
 
+    fun enqueueSessionEnd(sessionId: String, createdAt: Long = System.currentTimeMillis()) {
+        helper.writableDatabase.insertWithOnConflict(
+            "pending_session_end",
+            null,
+            ContentValues().apply {
+                put("session_id", sessionId)
+                put("created_at", createdAt)
+            },
+            SQLiteDatabase.CONFLICT_REPLACE
+        )
+    }
+
+    fun listPendingSessionEnds(): List<PendingSessionEnd> = helper.readableDatabase.query(
+        "pending_session_end",
+        arrayOf("session_id", "created_at"),
+        null, null, null, null,
+        "created_at ASC"
+    ).use { cursor ->
+        buildList {
+            while (cursor.moveToNext()) {
+                add(PendingSessionEnd(sessionId = cursor.getString(0), createdAt = cursor.getLong(1)))
+            }
+        }
+    }
+
+    fun deletePendingSessionEnd(sessionId: String) {
+        helper.writableDatabase.delete("pending_session_end", "session_id = ?", arrayOf(sessionId))
+    }
+
     fun deleteSession(sessionId: String) {
         val db = helper.writableDatabase
         db.beginTransaction()
@@ -273,7 +307,14 @@ object ChatSessionStore {
         )
     """
 
-    private class Helper(context: Context) : SQLiteOpenHelper(context, "cortex_chat_sessions.db", null, 2) {
+    private const val PENDING_SESSION_END_TABLE_SQL = """
+        CREATE TABLE IF NOT EXISTS pending_session_end (
+            session_id TEXT PRIMARY KEY,
+            created_at INTEGER NOT NULL
+        )
+    """
+
+    private class Helper(context: Context) : SQLiteOpenHelper(context, "cortex_chat_sessions.db", null, 3) {
         override fun onConfigure(db: SQLiteDatabase) {
             // Statt einmaligem "PRAGMA foreign_keys=ON" in init(): das Pragma gilt nur pro
             // Connection — onConfigure setzt es garantiert fuer JEDE Connection des Helpers.
@@ -311,6 +352,7 @@ object ChatSessionStore {
             db.execSQL("CREATE INDEX idx_sessions_updated_at ON sessions(updated_at DESC)")
             db.execSQL("CREATE INDEX idx_messages_session_timestamp ON messages(session_id, timestamp ASC)")
             db.execSQL(OUTBOX_TABLE_SQL.trimIndent())
+            db.execSQL(PENDING_SESSION_END_TABLE_SQL.trimIndent())
         }
 
         override fun onUpgrade(db: SQLiteDatabase, oldVersion: Int, newVersion: Int) {
@@ -318,6 +360,11 @@ object ChatSessionStore {
             // bestehenden Daten betroffen — echte Migration statt destruktivem Neuaufbau).
             if (oldVersion < 2) {
                 db.execSQL(OUTBOX_TABLE_SQL.trimIndent())
+            }
+            // Version 2 -> 3: robuste Nachholung fuer Plus-/Neue-Session-/end-Calls, falls
+            // der VPN-Tunnel oder Server genau beim Beenden nicht erreichbar ist.
+            if (oldVersion < 3) {
+                db.execSQL(PENDING_SESSION_END_TABLE_SQL.trimIndent())
             }
         }
     }
