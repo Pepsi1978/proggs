@@ -29,8 +29,12 @@ class RuleLimitError(Exception):
 
 
 def rules_path() -> str:
-    """Absolute path of the rules file inside the agent container."""
-    base = os.getenv("LOGBOOK_DIR", "/logbook")
+    """Absolute path of the rules file inside the agent container.
+
+    Uses AGENT_LOGBOOK_DIR (set in compose to /logbook, the Z:\\Logbuch mount);
+    falls back to LOGBOOK_DIR / '/logbook'.
+    """
+    base = os.getenv("AGENT_LOGBOOK_DIR") or os.getenv("LOGBOOK_DIR") or "/logbook"
     return os.path.join(base, "Regeln", "regeln.json")
 
 
