@@ -63,9 +63,10 @@ services:
     environment:
       QDRANT_HOST: qdrant             # Service-Name im Compose-Netz (DNS-aufloesbar)
       QDRANT_PORT: "6333"
-      SB_COLLECTION: brain            # frische Collection fuer den 1:1-Speicher (alt: second_brain unter mem0)
-      SB_EMBED_DIMS: "1536"           # gemini-embedding-001 @ 1536 (MUSS zur Qdrant-Collection passen)
-      GEMINI_EMBED_MODEL: gemini-embedding-001   # nur Embeddings; KEIN LLM mehr beim Speichern (1:1)
+      SB_COLLECTION: brain__e2        # Blau/Gruen-Cutover 2026-07-08: 3072-Sammlung (alt: brain @ 1536 bleibt als Rueckweg)
+      SB_ENTITY_COLLECTION: brain_entities__e2   # Entity-Register 3072 (alt: brain_entities @ 1536)
+      SB_EMBED_DIMS: "3072"           # gemini-embedding-2 @ 3072 (MUSS zur Qdrant-Collection passen)
+      GEMINI_EMBED_MODEL: gemini-embedding-2     # multimodal-faehig (Text-Phase); Fallback: -001 + SB_EMBED_DIMS 1536 + SB_COLLECTION brain
       SB_LOG_PATH: /app/logs/brain-api.jsonl
     volumes:
       - ./brain-logs:/app/logs        # Logs persistent + vom Host tailbar (Observability-First)
