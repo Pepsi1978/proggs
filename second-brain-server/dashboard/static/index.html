@@ -1297,8 +1297,8 @@ button{font-family:inherit;cursor:pointer}
             <div class="row-end">
               <span class="muted-note" id="modelStatus" style="margin-right:auto"></span>
               <div class="embed-switch" id="embedSwitch" role="img" aria-label="Aktives Embedding-Modell" title="Live im Speicher aktives Embedding-Modell (nur Anzeige — Umschalten erfordert eine Neu-Einbettung des gesamten Bestands).">
-                <span class="embed-seg" data-side="1">Modell 1</span>
-                <span class="embed-seg" data-side="2">Modell 2</span>
+                <span class="embed-seg" data-side="1">Gemini Embedding 001</span>
+                <span class="embed-seg" data-side="2">Gemini Embedding 2</span>
               </div>
               <button class="btn btn-primary" id="saveModelBtn">Speichern</button>
             </div>
@@ -1779,8 +1779,8 @@ button{font-family:inherit;cursor:pointer}
       _embSwitch.classList.toggle("on-2", _isE2);
       _embSwitch.classList.toggle("on-1", !_isE2 && !!_em);
       _embSwitch.setAttribute("aria-label",
-        "Aktives Embedding-Modell: " + (_isE2 ? "Modell 2 (gemini-embedding-2)"
-        : (_em ? "Modell 1 (" + _em + ")" : "unbekannt")));
+        "Aktives Embedding-Modell: " + (_isE2 ? "Gemini Embedding 2"
+        : (_em ? "Gemini Embedding 001 (" + _em + ")" : "unbekannt")));
     }
     const dv = document.getElementById("dashVer");
     if(dv){
