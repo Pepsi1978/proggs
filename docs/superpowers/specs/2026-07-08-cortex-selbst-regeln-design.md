@@ -26,9 +26,12 @@ das "Gelernte Regeln"-System des Nachtschicht-Bibliothekars.
 | | Regel (neu) | Gedaechtnis-Eintrag (bestehend) |
 |---|---|---|
 | Inhalt | WIE der Agent sich verhaelt/antwortet | Faktenwissen, Notizen |
-| Ablage | `agent-data/agent-rules.json` | Qdrant (via brain-api) |
+| Ablage | `Z:\Logbuch\Regeln\regeln.json` (extern, Samba) | Qdrant (via brain-api) |
 | Wirkung | in jeden System-Prompt injiziert | auf Suche/Abruf hin geladen |
 | Werkzeug | `schreibe_regel(text)` | `speichere` / `remember` |
+
+Diese Abgrenzung muss der Agent **zuverlaessig treffen** — im gezeigten Gespraech verwechselte er beides.
+Loesung: eigene Trigger-Erkennung (siehe K3a) plus klar abgegrenzte Tool-Beschreibungen (K4).
 
 Diese Abgrenzung ist der Kern des Fixes: Die Tool-Beschreibung von `schreibe_regel` sagt klar, dass es
 **nur** fuer dauerhafte Verhaltensanweisungen gilt, nicht fuer Faktenwissen. Damit verschwindet die
@@ -56,9 +59,22 @@ Verwechslung aus dem gezeigten Gespraech.
 
 ## Komponenten
 
-### K1 — Regel-Ablage (agent/app.py)
+### K1 — Regel-Ablage auf Laufwerk Z (agent/app.py)
 
-Neue Datei **`agent-data/agent-rules.json`**. Format 1:1 wie `lernregeln.json`:
+Die Regeldatei liegt **extern auf Franks Laufwerk Z**, damit sie unabhaengig vom Container gesichert und
+einsehbar ist und automatisch im Samba-Backup landet (Franks Wunsch).
+
+- **Pfad Franks Sicht:** `Z:\Logbuch\Regeln\regeln.json`
+- **Pfad VPS:** `/srv/samba/gedanken/Logbuch/Regeln/regeln.json`
+- **Pfad im Agent-Container:** `/logbook/Regeln/regeln.json`
+
+Wichtig: Der Agent-Container hat `Z:\Logbuch` **bereits** als `/logbook` mit Schreibrecht eingehaengt
+(compose.yaml Z. 149, `- /srv/samba/gedanken/Logbuch:/logbook`, kein `:ro`, uid 1000 = frank). Es ist
+**keine neue Volume-/compose-Aenderung noetig**. Der Agent-Dienst legt beim Start den Unterordner
+`Regeln/` an, falls er fehlt (`os.makedirs(exist_ok=True)`). Neue Konstante
+`RULES_FILE = Path(os.getenv("LOGBOOK_DIR","/logbook")) / "Regeln" / "regeln.json"`.
+
+Format 1:1 wie `lernregeln.json`:
 
 ```json
 [{ "id": "<10-hex>", "text": "<Regeltext>", "titel": "<KI-Kurztitel>",
@@ -66,10 +82,13 @@ Neue Datei **`agent-data/agent-rules.json`**. Format 1:1 wie `lernregeln.json`:
 ```
 
 - `load_rules()` / `save_rules(list)` nach Muster `load_instructions` (agent/app.py ~Z. 2491) bzw.
-  `_write_config_file` (~Z. 2753): atomar (tmp + `os.replace`), `threading.Lock`, fehlertolerant
-  (kaputte Datei -> leere Liste, toetet den Dienst nie).
+  `_write_config_file` (~Z. 2753): atomar (tmp + `os.replace` im selben Ordner, damit es auf dem
+  Samba-Mount klappt), `threading.Lock`, fehlertolerant (kaputte/fehlende Datei -> leere Liste, toetet
+  den Dienst nie; Samba kurz nicht erreichbar -> Fehler wird geloggt, Agent laeuft weiter).
 - **Limit**: max. ~40 Regeln. Beim Ueberschreiten wird das Anlegen abgelehnt mit klarer Meldung
   ("Regel-Limit erreicht, bitte zuerst eine Regel loeschen"). Kein stilles Verwerfen.
+- Hinweis: Der Dashboard-Container mountet `/logbook` nur `:ro` (Z. 240) — das ist ok, weil das
+  Dashboard nie direkt schreibt, sondern die Schreib-Endpunkte des Agent-Diensts aufruft (K8).
 
 ### K2 — Prompt-Injektion (agent/app.py)
 
@@ -86,6 +105,36 @@ Neue Datei **`agent-data/agent-rules.json`**. Format 1:1 wie `lernregeln.json`:
   angehaengt (kein Kontext-Ballast).
 - Der Block wird zusaetzlich gegen eine harte Zeichenobergrenze gekappt (Schutz vor Prompt-Ueberlauf),
   analog zum 6000-Zeichen-Cap des Bibliothekars.
+
+### K3a — Trigger-Erkennung: Regel vs. Speichern (Kern-Fix)
+
+Das eigentliche Problem im gezeigten Gespraech war **nicht** das fehlende Werkzeug allein, sondern dass
+der Agent "gib dir eine Regel, dass du immer X tust" als *Speicher-Wunsch* (Gedaechtnis) missdeutete. Der
+Agent muss zuverlaessig erkennen, wann Frank eine **Verhaltensregel** meint statt eines Gedaechtnis-
+Eintrags. Umgesetzt auf zwei Ebenen (Guertel + Hosentraeger), an beiden aktiven Architektur-Stellen
+(Router-Preflight UND Tool-Agent):
+
+**1. Deterministische Trigger-Woerter (Regex, vor dem LLM).** Enthaelt die Nachricht ein klares
+Regel-Signal, geht sie direkt in den Regel-Pfad (`schreibe_regel`), nicht in den Speicher-Pfad. Signale
+(case-insensitiv, Wortstamm):
+- explizit: `\bregel\b` in Kombination mit Schreib-/Merk-Verben ("mach daraus eine Regel", "als Regel
+  merken/ablegen", "in deine Regeldatei", "das ist eine Regel", "dauerhafte Regel", "neue Regel")
+- verhaltensbezogen-dauerhaft: "ab jetzt immer", "generell immer", "grundsaetzlich immer", "kuenftig
+  immer", "in Zukunft immer", "antworte/verhalte dich immer …"
+
+Abgrenzung: bloss "speicher das" / "merk dir das" / "leg das ab" OHNE Regel-/Immer-Signal bleibt der
+Gedaechtnis-Pfad (`speichere`).
+
+**2. LLM-Ebene (Router-Prompt + Tool-Beschreibungen).** Der Router-Prompt (`DEFAULT_INSTRUCTIONS` /
+`ROUTER_SCHEMA`) bekommt eine neue Intent-Kategorie `rule` mit klarer Definition und Abgrenzung zu
+`save`; die Tool-Beschreibungen von `schreibe_regel` vs. `speichere` benennen den Unterschied explizit.
+Beiden wird das konkrete Kontrast-Beispiel mitgegeben:
+- "Gib dir eine Regel, dass du mir immer als Fliesstext antwortest" -> **rule** (Verhaltensregel), NICHT
+  save.
+- "Merk dir, dass mein Zahnarzttermin am Freitag ist" -> **save** (Faktum ins Gedaechtnis).
+
+Bei Unsicherheit fragt der Agent EINMAL kurz nach ("Soll das eine dauerhafte Regel fuer mein Verhalten
+sein oder eine Notiz im Gedaechtnis?") — statt stillschweigend das Falsche zu tun.
 
 ### K3 — Prägnanz-Prinzip (Formulierung der Regeln)
 
@@ -203,12 +252,15 @@ den Agent-Dienst, oder Wiederverwendung des bestehenden Chat-Proxy-Backends. Whi
 
 ## Betroffene Dateien
 
-- `second-brain-server/agent/app.py` — Regel-Ablage, `build_toolagent_system()`, 2 Tools,
-  `rule_confirm`-Flow, `ChatReq.rule_text`, 4 Endpunkte, Logbuch, Version.
+- `second-brain-server/agent/app.py` — Regel-Ablage auf `/logbook/Regeln/regeln.json` (Z-Laufwerk),
+  Trigger-Erkennung Regel-vs-Speichern (K3a), `build_toolagent_system()`, 2 Tools, `rule_confirm`-Flow,
+  `ChatReq.rule_text`, 4 Endpunkte, Logbuch, Version.
 - `second-brain-server/dashboard/app.py` — Proxy `/api/rules/*` (bzw. Whitelist) + `rule_text` im
   Chat-Proxy durchreichen.
 - `second-brain-server/dashboard/static/index.html` — Chronik-Karte + `renderChatRules` + `ruleCard`.
 - `second-brain-server/CORTEX-AGENT-UMBAU-PLAN.md` — To-Do #4 nach Umsetzung als erledigt markieren.
+- **NICHT geaendert:** `compose.yaml` — der `/logbook`-Mount (Z:\Logbuch) existiert bereits mit
+  Schreibrecht im Agent-Container; kein neuer Mount noetig.
 
 ## Offene Punkte (in der Umsetzungsplanung zu entscheiden)
 
