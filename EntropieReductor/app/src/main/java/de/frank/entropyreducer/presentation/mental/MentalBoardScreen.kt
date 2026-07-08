@@ -269,6 +269,9 @@ fun MentalBoardScreen(
     val context = androidx.compose.ui.platform.LocalContext.current
     val scope = rememberCoroutineScope()
 
+    val brainSyncVm: de.frank.entropyreducer.presentation.ideen.IdeenBrainSyncViewModel = hiltViewModel()
+    LaunchedEffect(Unit) { brainSyncVm.pullNow("mental") }
+
     // Bugfix 2026-06-10 (Frank, 2. Versuch — Root Cause KORRIGIERT): Der erste Fix war an der
     // falschen Stelle. Echte Ursache: `mentalsFlow(context)` wurde bei JEDER Recomposition NEU
     // erzeugt → `collectAsStateWithLifecycle` bekam jedes Mal ein neues Flow-Objekt → die laufende

@@ -7,8 +7,10 @@ import de.frank.entropyreducer.data.diagnostics.DiagnosticArea
 import de.frank.entropyreducer.data.local.dao.HabitDao
 import de.frank.entropyreducer.data.local.dao.IdeaDao
 import de.frank.entropyreducer.data.local.dao.IdeaWithFollowups
+import de.frank.entropyreducer.data.local.dao.MentalSentenceDao
 import de.frank.entropyreducer.data.local.entities.HabitEntity
 import de.frank.entropyreducer.data.local.entities.IdeaEntity
+import de.frank.entropyreducer.data.local.entities.MentalEntity
 import de.frank.entropyreducer.data.local.journalmirror.JournalMirrorDao
 import de.frank.entropyreducer.data.local.journalmirror.JournalMirrorEntryEntity
 import de.frank.entropyreducer.data.safety.PhoneContentGuard
@@ -81,6 +83,7 @@ private data class SecondBrainSyncTarget(
 class SecondBrainIdeaConnector @Inject constructor(
     private val ideaDao: IdeaDao,
     private val habitDao: HabitDao,
+    private val mentalDao: MentalSentenceDao,
     private val journalMirrorDao: JournalMirrorDao,
     private val settings: AppSettings,
     private val secrets: EncryptedSecretsStore,
@@ -94,6 +97,7 @@ class SecondBrainIdeaConnector @Inject constructor(
     val areas: List<SecondBrainArea> = listOf(
         AREAS_IDEAS,
         AREAS_HABITS,
+        AREAS_MENTAL,
         AREAS_ENTROPY,
         AREAS_THESES,
         AREAS_JOURNAL,
@@ -410,6 +414,13 @@ class SecondBrainIdeaConnector @Inject constructor(
             deleteById = { id -> habitDao.deleteById(id) },
         ),
         SecondBrainSyncTarget(
+            area = AREAS_MENTAL,
+            observeRows = { mentalDao.getAll().mapRows { rows -> rows.map { it.toSyncRow() } } },
+            loadRows = { mentalDao.getAllForBackup().map { it.toSyncRow() } },
+            insertFromBrain = { item -> insertMentalFromBrain(item) },
+            deleteById = { id -> mentalDao.deleteById(id) },
+        ),
+        SecondBrainSyncTarget(
             area = AREAS_ENTROPY,
             observeRows = { tagebuchEntriesFlow(appContext).mapRows { rows -> rows.map { it.toEntropySyncRow() } } },
             loadRows = { tagebuchEntriesFlow(appContext).first().map { it.toEntropySyncRow() } },
@@ -490,6 +501,31 @@ class SecondBrainIdeaConnector @Inject constructor(
             position = nextPosition,
         )
         habitDao.upsert(entity)
+        return entity.toSyncRow()
+    }
+
+    private fun MentalEntity.toSyncRow(): SecondBrainSyncRow = SecondBrainSyncRow(
+        id = id,
+        createdAtMs = updatedAt.takeIf { it > 0L } ?: 0L,
+        updatedAtMs = updatedAt.takeIf { it > 0L } ?: 0L,
+        title = text.trim().shortTitle("Mental", id),
+        bodyLabel = "Mental",
+        body = text.trim(),
+    )
+
+    private suspend fun insertMentalFromBrain(item: SecondBrainCategoryItem): SecondBrainSyncRow? {
+        if (PhoneContentGuard.isSecondBrainWorkArtifact(item.title, item.text)) return null
+        val text = item.text.trim()
+        if (text.isBlank()) return null
+        val ts = parseIsoToMs(item.createdAt)
+        val nextPosition = mentalDao.maxPosition() + 1
+        val entity = MentalEntity(
+            id = UUID.randomUUID().toString(),
+            text = text,
+            updatedAt = ts,
+            position = nextPosition,
+        )
+        mentalDao.upsert(entity)
         return entity.toSyncRow()
     }
 
@@ -606,6 +642,7 @@ class SecondBrainIdeaConnector @Inject constructor(
         const val TAG = "SecondBrainSync"
         val AREAS_IDEAS = SecondBrainArea("ideas", "Ideen", "Ideen")
         val AREAS_HABITS = SecondBrainArea("habits", "Gewohnheiten", "Gewohnheiten")
+        val AREAS_MENTAL = SecondBrainArea("mental", "Mental", "Mental")
         val AREAS_ENTROPY = SecondBrainArea("entropy", "Entropie", "Entropie")
         val AREAS_THESES = SecondBrainArea("theses", "Thesen", "Thesen")
         val AREAS_JOURNAL = SecondBrainArea("journal", "Tagebucheinträge", "Tagebucheinträge")
