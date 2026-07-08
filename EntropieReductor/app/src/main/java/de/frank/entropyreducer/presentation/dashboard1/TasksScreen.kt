@@ -178,6 +178,7 @@ fun TasksScreen(
     var dragState by remember { mutableStateOf<TaskDragState?>(null) }
     var contentOriginInWindow by remember { mutableStateOf(Offset.Zero) }
     var listBoundsInWindow by remember { mutableStateOf(Rect(0f, 0f, 0f, 0f)) }
+    var listCoordinates: LayoutCoordinates? by remember { mutableStateOf(null) }
     val dragPreviewLiftPx = with(density) { 48.dp.toPx() }
     val dragAutoScrollEdgePx = with(density) { 96.dp.toPx() }
     val dragAutoScrollStepPx = with(density) { 22.dp.toPx() }
@@ -198,6 +199,8 @@ fun TasksScreen(
             listState = listState,
             entriesByBucket = state.entriesByBucket,
         )
+    val currentEntriesByBucket by rememberUpdatedState(state.entriesByBucket)
+    val currentResolveDropBucket by rememberUpdatedState<(Offset) -> TimeBucket?>(::resolveDragDropBucket)
 
     LaunchedEffect(dragState != null) {
         while (dragState != null) {
@@ -482,9 +485,67 @@ fun TasksScreen(
 
                 LazyColumn(
                     state = listState,
-                    modifier = Modifier.fillMaxSize().onGloballyPositioned {
-                        listBoundsInWindow = it.boundsInWindow()
-                    },
+                    modifier =
+                        Modifier.fillMaxSize()
+                            .onGloballyPositioned {
+                                listCoordinates = it
+                                listBoundsInWindow = it.boundsInWindow()
+                            }
+                            .pointerInput(Unit) {
+                                detectDragGesturesAfterLongPress(
+                                    onDragStart = { startOffset ->
+                                        val source =
+                                            findEntryDragSource(
+                                                pointerYInList = startOffset.y,
+                                                listState = listState,
+                                                entriesByBucket = currentEntriesByBucket,
+                                            ) ?: return@detectDragGesturesAfterLongPress
+                                        val pointerInWindow =
+                                            listCoordinates?.localToWindow(startOffset)
+                                                ?: return@detectDragGesturesAfterLongPress
+                                        dragState =
+                                            TaskDragState(
+                                                entry = source.entry,
+                                                sourceBucket = source.bucket,
+                                                pointerInWindow = pointerInWindow,
+                                                targetBucket = currentResolveDropBucket(pointerInWindow),
+                                            )
+                                    },
+                                    onDrag = { change, _ ->
+                                        val currentDrag = dragState ?: return@detectDragGesturesAfterLongPress
+                                        val pointerInWindow =
+                                            listCoordinates?.localToWindow(change.position)
+                                                ?: return@detectDragGesturesAfterLongPress
+                                        dragState =
+                                            currentDrag.copy(
+                                                pointerInWindow = pointerInWindow,
+                                                targetBucket = currentResolveDropBucket(pointerInWindow),
+                                            )
+                                        change.consume()
+                                    },
+                                    onDragEnd = {
+                                        val currentDrag = dragState
+                                        val targetBucket =
+                                            currentDrag?.pointerInWindow?.let(currentResolveDropBucket)
+                                                ?: currentDrag?.targetBucket
+                                        if (currentDrag != null && targetBucket != null) {
+                                            if (targetBucket != currentDrag.sourceBucket) {
+                                                vm.setManualPriority(
+                                                    currentDrag.entry.id,
+                                                    defaultPriorityForBucket(targetBucket),
+                                                )
+                                                scope.launch {
+                                                    snackbar.showSnackbar(
+                                                        "Verschoben nach ${bucketLabelLong(targetBucket)}"
+                                                    )
+                                                }
+                                            }
+                                        }
+                                        clearDrag()
+                                    },
+                                    onDragCancel = { clearDrag() },
+                                )
+                            },
                     contentPadding = androidx.compose.foundation.layout.PaddingValues(16.dp),
                     verticalArrangement = Arrangement.spacedBy(12.dp),
                 ) {
@@ -566,22 +627,7 @@ fun TasksScreen(
                                             }
                                         DraggableEntropyEntryCard(
                                             entry = entry,
-                                            bucket = bucket,
                                             isDragging = dragState?.entry?.id == entry.id,
-                                            resolveDropBucket = ::resolveDragDropBucket,
-                                            onDragStateChange = { dragState = it },
-                                            onDrop = { targetBucket ->
-                                                if (targetBucket != bucket) {
-                                                    vm.setManualPriority(entry.id, defaultPriorityForBucket(targetBucket))
-                                                    scope.launch {
-                                                        snackbar.showSnackbar(
-                                                            "Verschoben nach ${bucketLabelLong(targetBucket)}"
-                                                        )
-                                                    }
-                                                }
-                                                clearDrag()
-                                            },
-                                            onDragCancel = ::clearDrag,
                                             onClick = onClick,
                                             onResolve = onResolve,
                                             onPickBucket = onPickBucket,
@@ -1577,54 +1623,14 @@ private fun formatResolvedAt(ms: Long): String {
 @Composable
 private fun DraggableEntropyEntryCard(
     entry: EntropyEntryEntity,
-    bucket: TimeBucket,
     isDragging: Boolean,
-    resolveDropBucket: (Offset) -> TimeBucket?,
-    onDragStateChange: (TaskDragState) -> Unit,
-    onDrop: (TimeBucket) -> Unit,
-    onDragCancel: () -> Unit,
     onClick: () -> Unit,
     onResolve: () -> Unit,
     onPickBucket: () -> Unit,
 ) {
-    var coordinates: LayoutCoordinates? by remember { mutableStateOf(null) }
-    var lastPointerInWindow: Offset? by remember { mutableStateOf(null) }
-    val currentResolveDropBucket by rememberUpdatedState(resolveDropBucket)
-    fun emitDrag(pointer: Offset) {
-        lastPointerInWindow = pointer
-        onDragStateChange(
-            TaskDragState(
-                entry = entry,
-                sourceBucket = bucket,
-                pointerInWindow = pointer,
-                targetBucket = currentResolveDropBucket(pointer),
-            )
-        )
-    }
     EntropyEntryCard(
         entry = entry,
-        modifier =
-            Modifier.onGloballyPositioned { coordinates = it }
-                .pointerInput(entry.id, bucket) {
-                    detectDragGesturesAfterLongPress(
-                        onDragStart = { startOffset ->
-                            coordinates?.localToWindow(startOffset)?.let { emitDrag(it) }
-                        },
-                        onDrag = { change, _ ->
-                            coordinates?.localToWindow(change.position)?.let { emitDrag(it) }
-                            change.consume()
-                        },
-                        onDragEnd = {
-                            val target = lastPointerInWindow?.let { currentResolveDropBucket(it) }
-                            if (target != null) onDrop(target) else onDragCancel()
-                            lastPointerInWindow = null
-                        },
-                        onDragCancel = {
-                            lastPointerInWindow = null
-                            onDragCancel()
-                        },
-                    )
-                },
+        modifier = Modifier,
         isDragging = isDragging,
         onClick = onClick,
         onResolve = onResolve,
@@ -1826,12 +1832,31 @@ private fun findDropBucket(
             pointerYInList > bottom -> pointerYInList - bottom
             else -> 0f
         }
-    }?.takeIf { (item, _) ->
-        val top = item.offset.toFloat()
-        val bottom = (item.offset + item.size).toFloat()
-        pointerYInList >= top - 36f && pointerYInList <= bottom + 36f
     }
     return nearHit?.second
+}
+
+private fun findEntryDragSource(
+    pointerYInList: Float,
+    listState: androidx.compose.foundation.lazy.LazyListState,
+    entriesByBucket: Map<TimeBucket, List<EntropyEntryEntity>>,
+): EntryDragSource? {
+    val hit =
+        listState.layoutInfo.visibleItemsInfo.firstOrNull { item ->
+            pointerYInList >= item.offset && pointerYInList <= item.offset + item.size
+        } ?: return null
+    return entryForLazyKey(hit.key, entriesByBucket)
+}
+
+private fun entryForLazyKey(
+    key: Any?,
+    entriesByBucket: Map<TimeBucket, List<EntropyEntryEntity>>,
+): EntryDragSource? {
+    val textKey = key as? String ?: return null
+    entriesByBucket.forEach { (bucket, entries) ->
+        entries.firstOrNull { it.id == textKey }?.let { return EntryDragSource(it, bucket) }
+    }
+    return null
 }
 
 private fun bucketForLazyKey(
@@ -2413,6 +2438,11 @@ private data class TaskDragState(
     val sourceBucket: TimeBucket,
     val pointerInWindow: Offset,
     val targetBucket: TimeBucket?,
+)
+
+private data class EntryDragSource(
+    val entry: EntropyEntryEntity,
+    val bucket: TimeBucket,
 )
 
 // Akkordeon-Sektions-Schluessel fuer Bloecke ohne TimeBucket (Frank-Wunsch 2026-05-24).
