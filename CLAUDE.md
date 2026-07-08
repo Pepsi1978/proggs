@@ -129,6 +129,6 @@ committete Zwischenschritte, lange Datei-Dumps.
 
 ## Sprache
 
-Mit dem Benutzer Deutsch (echte Umlaute: `german-umlauts-always.md`). Code-Kommentare und
-Commits englisch. Eigene Agents/Skills/Commands komplett deutsch
-(`communication-and-language.md`); externe Plugins nicht uebersetzen.
+Mit dem Benutzer Deutsch, echte Umlaute (nie "ae/oe/ue/ss"). Code-Kommentare und Commits englisch.
+Eigene Agents/Skills/Commands komplett deutsch; externe Plugins nicht uebersetzen. Volltext
+(Umlaut-Regel + Kommunikation + Skill-Trigger): `communication-and-language.md`.
