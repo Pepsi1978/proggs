@@ -1,12 +1,12 @@
 #!/usr/bin/env python3
 # rule-size-guard: blockiert Write/Edit auf ~/.claude/rules/*.md und claude-code-setup/rules/*.md,
-# wenn das Ergebnis > 2048 Byte (2 KB) waere. Regel: rule-size-limit.md. Poka-Yoke Stufe 2.
+# wenn das Ergebnis > 1536 Byte (1,5 KB) waere. Regel: rule-size-limit.md. Poka-Yoke Stufe 2.
 # WICHTIG (claude-hooks.md 1.6): NICHT exit 2 zum Blocken -> permissionDecision=deny + exit 0.
 # Detail-Volltexte in claude-code-setup/docs/rules/ sind ausgenommen (unbegrenzt).
 # Notaus: leere Datei rule-size-guard-disable.flag im TEMP -> nie blockieren.
 import json, sys, os
 
-LIMIT = 2048
+LIMIT = 1536
 
 def main():
     try:
@@ -20,18 +20,15 @@ def main():
     fp = (ti.get('file_path') or '').replace('\\', '/')
     if not fp.endswith('.md'):
         return
-    # Nur aktive Regeln + Repo-Spiegel; Detail-Volltexte in docs/rules/ ausnehmen
     is_rule = ('/.claude/rules/' in fp or '/claude-code-setup/rules/' in fp)
     if not is_rule or '/docs/rules/' in fp:
         return
-    # Notaus-Flag
     tmp = os.environ.get('TEMP') or os.environ.get('TMPDIR') or '/tmp'
     if os.path.exists(os.path.join(tmp, 'rule-size-guard-disable.flag')):
         return
-    # Resultierende Byte-Groesse berechnen
     if tool == 'Write':
         size = len((ti.get('content') or '').encode('utf-8'))
-    else:  # Edit: aktuelle Groesse - old_string + new_string (exakt bei single replace)
+    else:  # Edit: aktuelle Groesse - old_string + new_string
         try:
             cur = os.path.getsize(fp) if os.path.exists(fp) else 0
         except Exception:
@@ -41,8 +38,8 @@ def main():
         size = cur - oldb + newb
     if size > LIMIT:
         name = os.path.basename(fp)
-        reason = ("STOPP - Regel-Groessenlimit (rule-size-limit.md): '%s' waere %d Byte (max %d = 2 KB). "
-                  "Regel-Dateien duerfen max 2 KB haben. Kuerze den Inhalt ODER lagere Details nach "
+        reason = ("STOPP - Regel-Groessenlimit (rule-size-limit.md): '%s' waere %d Byte (max %d = 1,5 KB). "
+                  "Regel-Dateien duerfen max 1,5 KB haben. Kuerze den Inhalt ODER lagere Details nach "
                   "claude-code-setup/docs/rules/%s aus (Kern in die Regel, Verweis auf den Volltext). "
                   "Notaus bei Fehlalarm: leere Datei rule-size-guard-disable.flag im TEMP anlegen."
                   % (name, size, LIMIT, name))
