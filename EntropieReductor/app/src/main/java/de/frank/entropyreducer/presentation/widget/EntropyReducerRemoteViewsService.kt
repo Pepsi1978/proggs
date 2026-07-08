@@ -102,16 +102,15 @@ class EntropyReducerRemoteViewsFactory(
                 recurringDao.observeAll().first()
             }.getOrDefault(emptyList())
 
-            // Akkordeon (Frank-Wunsch 2026-05-31): ALLE Sektions-Header sind IMMER sichtbar
-            // (auch leer), damit Frank durchschalten kann. Eintraege erscheinen nur in der
-            // aktuell offenen Sektion (WidgetExpandState, Default HEUTE).
+            // Akkordeon wie in der App: Sehr hoch/Hoch/Mittel/Gering sind immer offen.
+            // Später, Loop und Erledigt bleiben optionale Bereiche mit genau einem offenen Block.
             val expandedName = WidgetExpandState.get()
             val list = mutableListOf<WidgetListItem>()
 
             // 1.-5. Prioritätsbereiche
             bucketsToShow.forEach { bucket ->
                 val tasks = grouped[bucket].orEmpty()
-                val isExpanded = expandedName == bucket.name
+                val isExpanded = bucket in ALWAYS_OPEN_BUCKETS || expandedName == bucket.name
                 list.add(
                     WidgetListItem.SectionHeader(
                         key = bucket.name,
@@ -298,40 +297,22 @@ class EntropyReducerRemoteViewsFactory(
         views.setTextViewText(R.id.task_title, entry.title)
         views.setTextColor(R.id.task_title, palette.textPrimary)
 
-        // Prioritaet-Perle: "Priorität KI" wenn die KI bestimmt, sonst "Priorität <Wert>".
-        // Farben EXAKT wie die App-Karte: glassBg-Hintergrund + textSecondary-Text (neutral).
-        val prioLabel = entry.manualPriorityScore
-            ?.let { "Priorität ${it.toInt()}" }
-            ?: "Priorität KI"
-        views.setTextViewText(R.id.task_prio_pill, prioLabel)
-        views.setColorStateList(R.id.task_prio_pill, "setBackgroundTintList", android.content.res.ColorStateList.valueOf(palette.pearlBg))
-        views.setTextColor(R.id.task_prio_pill, palette.pearlText)
-
-        // KI/Manuell-Perle (Priorität): wie in der App KOMPLETT identisch zur Prio-Perle —
-        // gleicher glassBg-Hintergrund + gleiche textSecondary-Farbe fuer Icon UND Text.
-        // Nur das Wort unterscheidet ("KI" vs. "manuell"); kein Akzent/Hellblau mehr.
-        val isManual = entry.manualPriorityScore != null
-        val priorityBucket = priorityBucketForScore(effectivePriority)
-        views.setColorStateList(R.id.bucket_status_pill, "setBackgroundTintList", android.content.res.ColorStateList.valueOf(palette.pearlBg))
-        views.setInt(R.id.bucket_status_icon, "setColorFilter", palette.pearlText)
-        views.setTextViewText(R.id.bucket_status_label, if (isManual) "manuell" else "KI")
-        views.setTextColor(R.id.bucket_status_label, palette.pearlText)
-        views.setImageViewResource(R.id.bucket_status_icon, bucketIconRes(priorityBucket))
+        // Untere Zeile wie in der App: ein direkter Verschieben-Button statt Priorität-KI-Pille.
+        views.setTextViewText(R.id.task_move_button, "Verschieben")
+        views.setColorStateList(R.id.task_move_button, "setBackgroundTintList", android.content.res.ColorStateList.valueOf(0xFFFFFFFF.toInt()))
+        views.setTextColor(R.id.task_move_button, 0xFF000000.toInt())
 
         // FillInIntents (kombiniert mit dem Broadcast-Template aus dem Provider):
         //  - Haekchen   → ACTION_COMPLETE: hakt die Aufgabe DIREKT ab, ohne App
         //  - Karte      → ACTION_FOCUS: oeffnet die App (Detail)
-        //  - Prio-Perle → ACTION_SET_PRIORITY: oeffnet die App und klappt direkt den
-        //                 Prio-Schieber DIESER Aufgabe auf (manuelle Prioritaet setzen)
-        //  - Bereich    → ACTION_RESCHEDULE: öffnet die App (dort der Prioritäts-Picker)
+        //  - Verschieben → ACTION_RESCHEDULE: öffnet die App mit dem Prioritätsbereich-Picker
         // Bei erledigten Eintraegen hakt das Haekchen NICHT erneut ab — Tap oeffnet die App.
         views.setOnClickFillInIntent(
             R.id.task_check_box,
             fillIn(entry.id, if (resolved) WidgetIntents.ACTION_FOCUS else WidgetIntents.ACTION_COMPLETE),
         )
         views.setOnClickFillInIntent(R.id.task_card_root, fillIn(entry.id, WidgetIntents.ACTION_FOCUS))
-        views.setOnClickFillInIntent(R.id.task_prio_pill, fillIn(entry.id, WidgetIntents.ACTION_SET_PRIORITY))
-        views.setOnClickFillInIntent(R.id.bucket_status_pill, fillIn(entry.id, WidgetIntents.ACTION_RESCHEDULE))
+        views.setOnClickFillInIntent(R.id.task_move_button, fillIn(entry.id, WidgetIntents.ACTION_RESCHEDULE))
 
         return views
     }
@@ -384,19 +365,23 @@ object WidgetCheckState {
 }
 
 /**
- * Akkordeon-State des Widgets (Frank-Wunsch 2026-05-31): welcher Bucket-Header
- * gerade aufgeklappt ist (TimeBucket.name) — analog zu expandedSection in der App.
- * Immer nur EINE Sektion offen; null = alle zu. Default: sehr hoch offen. In-memory
- * (wie rememberSaveable in der App, ueberlebt keinen Prozess-Tod — Default greift dann).
+ * Akkordeon-State des Widgets: Sehr hoch/Hoch/Mittel/Gering sind immer offen.
+ * Dieser State gilt nur für die optionalen Bereiche Später, Loop und Erledigt.
  */
 object WidgetExpandState {
     @Volatile
     private var expanded: String? = TimeBucket.HEUTE.name
     fun get(): String? = expanded
     fun toggle(bucketName: String) {
+        if (ALWAYS_OPEN_BUCKET_NAMES.contains(bucketName)) return
         expanded = if (expanded == bucketName) null else bucketName
     }
 }
+
+internal val ALWAYS_OPEN_BUCKETS: Set<TimeBucket> =
+    setOf(TimeBucket.HEUTE, TimeBucket.MORGEN, TimeBucket.FREIBLOCK, TimeBucket.GERING)
+
+private val ALWAYS_OPEN_BUCKET_NAMES: Set<String> = ALWAYS_OPEN_BUCKETS.map { it.name }.toSet()
 
 internal val ALL_BUCKETS = listOf(
     TimeBucket.HEUTE,
