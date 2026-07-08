@@ -3,8 +3,6 @@ package de.frank.entropyreducer.presentation.recurring
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.FlowRow
-import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -17,17 +15,11 @@ import androidx.compose.material.icons.automirrored.outlined.ArrowBack
 import androidx.compose.material.icons.outlined.Delete
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
-import androidx.compose.material3.FilterChip
-import androidx.compose.material3.FilterChipDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
-import androidx.compose.material3.Slider
-import androidx.compose.material3.SliderDefaults
-import androidx.compose.material3.Switch
-import androidx.compose.material3.SwitchDefaults
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -44,7 +36,6 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import de.frank.entropyreducer.presentation.components.CosmosScaffold
 import de.frank.entropyreducer.presentation.components.GlassCard
-import de.frank.entropyreducer.presentation.theme.CosmosColors
 import de.frank.entropyreducer.presentation.theme.LocalCosmos
 
 /**
@@ -52,12 +43,11 @@ import de.frank.entropyreducer.presentation.theme.LocalCosmos
  *
  * Frank wollte die Loop-Aufgaben NICHT mehr ueber die kleinen Perlen in der Karte bearbeiten,
  * sondern durch Reinklicken in die Karte ein eigenes Bearbeitungs-Fenster oeffnen — genau wie bei
- * den Aufgaben. Hier kann er ALLES einstellen: Titel, Beschreibung, Wiederkehr-Intervall
- * (alle N Tage / KI entscheidet), Priorität, Ziel-Priorität und aktiv/pausiert — plus Löschen.
+ * den Aufgaben. Hier kann er Titel und Beschreibung bearbeiten, die Vorlage manuell in die
+ * Aufgabenliste kopieren und sie löschen.
  *
- * Nutzt das bestehende RecurringTemplatesViewModel (alle Setter ziehen offene Instanzen im
- * Aufgaben-Reiter automatisch mit). Die Vorlage wird per templateId aus dem templates-Flow
- * herausgefiltert, sodass Aenderungen sofort reaktiv erscheinen.
+ * Nutzt das bestehende RecurringTemplatesViewModel. Die Vorlage wird per templateId aus dem
+ * templates-Flow herausgefiltert, sodass Aenderungen sofort reaktiv erscheinen.
  */
 @Composable
 fun LoopTemplateDetailScreen(
@@ -128,110 +118,32 @@ fun LoopTemplateDetailScreen(
                 }
             }
 
-            // ---- Wiederkehr-Intervall ----
+            // ---- Manuell hinzufügen ----
             GlassCard(modifier = Modifier.fillMaxWidth()) {
                 Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                    SectionLabel("Wiederkehr", loopAccent)
+                    SectionLabel("Aufgabe hinzufügen", loopAccent)
                     Text(
-                        text =
-                            "Wie oft soll diese Aufgabe vorgeschlagen werden? Bei einem festen " +
-                                "Intervall erscheint sie erst wieder, wenn so viele Tage seit der " +
-                                "letzten Erledigung vergangen sind. \"KI entscheidet\" überlässt der " +
-                                "App die Planung.",
+                        text = "Diese Loop-Vorlage wird erst dann zur Aufgabe, wenn du sie manuell hinzufügst.",
                         style = MaterialTheme.typography.labelSmall,
                         color = cosmos.textSecondary,
                     )
-                    // Frank-Wunsch 2026-06-01: Dropdown mit voller Bandbreite (taeglich, jeder
-                    // Tageswert lueckenlos, Wochen-/Monats-Schritte, jaehrlich) statt nur
-                    // weniger Chips.
-                    var intervalOpen by remember(t.id) { mutableStateOf(false) }
+                    var addOpen by remember(t.id) { mutableStateOf(false) }
                     Box {
-                        OutlinedButton(
-                            onClick = { intervalOpen = true },
-                            modifier = Modifier.fillMaxWidth(),
-                        ) {
-                            Text(loopIntervalLabel(t.intervalDays), color = loopAccent)
+                        OutlinedButton(onClick = { addOpen = true }, modifier = Modifier.fillMaxWidth()) {
+                            Text("Hinzufügen", color = loopAccent)
                         }
-                        DropdownMenu(
-                            expanded = intervalOpen,
-                            onDismissRequest = { intervalOpen = false },
-                        ) {
-                            loopIntervalChoices.forEach { (label, days) ->
+                        DropdownMenu(expanded = addOpen, onDismissRequest = { addOpen = false }) {
+                            loopAddChoices.forEach { (label, bucket) ->
                                 DropdownMenuItem(
                                     text = { Text(label) },
                                     onClick = {
-                                        viewModel.setIntervalDays(t, days)
-                                        intervalOpen = false
+                                        viewModel.addToTasks(t, bucket)
+                                        addOpen = false
                                     },
                                 )
                             }
                         }
                     }
-                }
-            }
-
-            // ---- Prioritaet ----
-            GlassCard(modifier = Modifier.fillMaxWidth()) {
-                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                    SectionLabel("Priorität: ${t.priorityScore}", loopAccent)
-                    val initialPrio = t.priorityScore.toFloat()
-                    var prio by remember(t.id) { mutableStateOf(initialPrio) }
-                    Slider(
-                        value = prio.coerceIn(0f, 100f),
-                        onValueChange = { prio = it },
-                        onValueChangeFinished = { viewModel.setPriority(t, Math.round(prio)) },
-                        valueRange = 0f..100f,
-                        steps = 19,
-                        colors =
-                            SliderDefaults.colors(
-                                thumbColor = loopAccent,
-                                activeTrackColor = loopAccent,
-                            ),
-                    )
-                }
-            }
-
-            // ---- Ziel-Priorität ----
-            GlassCard(modifier = Modifier.fillMaxWidth()) {
-                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                    SectionLabel("Ziel-Priorität", loopAccent)
-                    FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                        FilterChip(
-                            selected = t.targetBucket == null,
-                            onClick = { viewModel.setTargetBucket(t, null) },
-                            label = { Text("KI / nach Priorität") },
-                            colors = chipColors(loopAccent),
-                        )
-                        loopBucketOptions.forEach { b ->
-                            FilterChip(
-                                selected = t.targetBucket == b,
-                                onClick = { viewModel.setTargetBucket(t, b) },
-                                label = { Text(loopBucketLabel(b)) },
-                                colors = chipColors(loopAccent),
-                            )
-                        }
-                    }
-                }
-            }
-
-            // ---- Aktiv / Pausiert ----
-            GlassCard(modifier = Modifier.fillMaxWidth()) {
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Column(modifier = Modifier.weight(1f)) {
-                        SectionLabel(if (t.isActive) "Aktiv" else "Pausiert", loopAccent)
-                        Text(
-                            text =
-                                if (t.isActive) "Erzeugt automatisch neue Aufgaben."
-                                else "Erzeugt keine neuen Aufgaben.",
-                            style = MaterialTheme.typography.labelSmall,
-                            color = cosmos.textSecondary,
-                        )
-                    }
-                    Switch(
-                        checked = t.isActive,
-                        onCheckedChange = { viewModel.toggleActive(t) },
-                        colors = SwitchDefaults.colors(checkedTrackColor = loopAccent),
-                    )
                 }
             }
 
@@ -260,10 +172,3 @@ private fun SectionLabel(text: String, accent: Color) {
         fontWeight = FontWeight.SemiBold,
     )
 }
-
-@Composable
-private fun chipColors(accent: Color) =
-    FilterChipDefaults.filterChipColors(
-        selectedContainerColor = accent.copy(alpha = 0.25f),
-        selectedLabelColor = LocalCosmos.current.textPrimary,
-    )

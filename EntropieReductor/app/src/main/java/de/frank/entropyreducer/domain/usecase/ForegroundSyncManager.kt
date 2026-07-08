@@ -49,7 +49,6 @@ class ForegroundSyncManager
 constructor(
     private val secrets: EncryptedSecretsStore,
     private val syncEntries: SyncEntriesUseCase,
-    private val generateRecurringInstances: GenerateRecurringInstancesUseCase,
     private val coordinator: SyncCoordinator,
     private val oauth: OAuthService,
     private val whoop: WhoopRepository,
@@ -75,7 +74,7 @@ constructor(
     /**
      * Drive-Restore + Backup. Laeuft bei JEDEM Start/Foreground sofort (kein Throttle).
      * Restore VOR Upload (Frank-Wunsch 2026-06-02): zuerst fremde Geraete-Aenderungen holen,
-     * Loop-Instanzen bereinigen, dann den eigenen Stand hochladen.
+     * dann den eigenen Stand hochladen. Loop-Vorlagen erzeugen keine Aufgaben mehr automatisch.
      * Bei parallelem Aufruf (Lock belegt) kehrt die Methode sofort zurueck.
      */
     suspend fun syncDriveNow() {
@@ -88,7 +87,6 @@ constructor(
             Diag.i(DiagnosticArea.DRIVE_BACKUP, "ForegroundSync", "Drive-Sync START (Restore -> Heilung -> Upload)")
             runCatching { syncEntries.restoreFromDrive() }
                 .onFailure { Diag.w(DiagnosticArea.DRIVE_BACKUP, "ForegroundSync", "Drive-Restore fehlgeschlagen", it) }
-            runCatching { generateRecurringInstances.cleanupAndEnsureSingle() }
             runCatching { coordinator.syncNowAndWait() }
                 .onFailure { Diag.w(DiagnosticArea.DRIVE_BACKUP, "ForegroundSync", "Drive-Upload fehlgeschlagen", it) }
             Diag.i(DiagnosticArea.DRIVE_BACKUP, "ForegroundSync", "Drive-Sync FERTIG")

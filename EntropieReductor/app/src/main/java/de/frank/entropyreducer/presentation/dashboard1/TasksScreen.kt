@@ -147,10 +147,8 @@ fun TasksScreen(
     val snackbar = remember { SnackbarHostState() }
     val brainSyncVm: de.frank.entropyreducer.presentation.ideen.IdeenBrainSyncViewModel = hiltViewModel()
     LaunchedEffect(Unit) { brainSyncVm.pullNow("entropy") }
-    // Frank-Wunsch 2026-05-24: Der Loop-Bereich (wiederkehrende Aufgaben) ist jetzt ein
-    // Akkordeon-Dropdown im Aufgaben-Reiter (zwischen SPAETER und ERLEDIGT) statt eines
-    // eigenen Sub-Screens. Vorlagen + ihre Verknuepfung (Checkbox an = Aufgabe erscheint
-    // im Reiter) kommen unveraendert aus dem RecurringTemplatesViewModel.
+    // Loop-Vorlagen bleiben als Akkordeon im Aufgaben-Reiter sichtbar und werden nur noch
+    // manuell per "Hinzufügen" in die Aufgabenliste kopiert.
     val recurringVm: RecurringTemplatesViewModel = hiltViewModel()
     val recurringTemplates by recurringVm.templates.collectAsStateWithLifecycle()
     val kiTaskSuggestVm: KiTaskSuggestViewModel = hiltViewModel()
@@ -166,11 +164,6 @@ fun TasksScreen(
     // ihren Schieberegler automatisch geoeffnet bekommt (null = keiner). Wird von der
     // Karte selbst wieder geleert, sobald sie den Regler aufgeklappt hat.
     var prioPickerEntryId by remember { mutableStateOf<String?>(null) }
-    // Frank-Wunsch 2026-05-31: Gleiches fuer LOOP-Vorlagen — welche Vorlage nach einem
-    // Widget-Tap auf ihre Prio- bzw. Tag-Perle den Schieberegler / das Tag-Menue
-    // automatisch geoeffnet bekommt.
-    var prioPickerTemplateId by remember { mutableStateOf<String?>(null) }
-    var bucketPickerTemplateId by remember { mutableStateOf<String?>(null) }
     // LazyListState am Top damit beide LaunchedEffects (Bucket-Picker + Scroll)
     // darauf zugreifen koennen. Wird unten an die Haupt-LazyColumn uebergeben.
     val listState = androidx.compose.foundation.lazy.rememberLazyListState()
@@ -298,10 +291,7 @@ fun TasksScreen(
         de.frank.entropyreducer.presentation.widget.WidgetDeepLinkBus.clear()
     }
 
-    // Frank-Wunsch 2026-05-31: Widget-Tap auf die Prio-/Tag-Perle einer LOOP-Vorlage.
-    // Eigener Handler, weil Loop-Vorlagen keine normalen Aufgaben sind: Loop-Block
-    // aufklappen und genau diese Vorlage markieren — ihre Karte oeffnet dann selbst
-    // den Schieberegler (autoOpenPrioSlider) bzw. das Tag-Menue (autoOpenBucketMenu).
+    // Alte Widget-Taps auf entfernte Loop-Prioritäts-/Bucket-Pillen öffnen nur noch den Loop-Block.
     LaunchedEffect(widgetDeepLink, recurringTemplates) {
         val link = widgetDeepLink ?: return@LaunchedEffect
         val isLoopAction =
@@ -314,12 +304,6 @@ fun TasksScreen(
         // Warten bis die Vorlagen geladen sind (z.B. App-Start direkt aus dem Widget).
         if (recurringTemplates.none { it.id == link.taskId }) return@LaunchedEffect
         expandedSection = SECTION_LOOP
-        when (link.action) {
-            de.frank.entropyreducer.presentation.widget.WidgetIntents.ACTION_SET_LOOP_PRIORITY ->
-                prioPickerTemplateId = link.taskId
-            de.frank.entropyreducer.presentation.widget.WidgetIntents.ACTION_SET_LOOP_BUCKET ->
-                bucketPickerTemplateId = link.taskId
-        }
         de.frank.entropyreducer.presentation.widget.WidgetDeepLinkBus.clear()
     }
 
@@ -557,10 +541,8 @@ fun TasksScreen(
                                 }
                             }
                         }
-                        // Loop-Block (Frank-Wunsch 2026-05-24): wiederkehrende Aufgaben
-                        // 1:1 wie im fruehern Loop-Reiter, jetzt als Akkordeon zwischen
-                        // SPAETER und ERLEDIGT. Checkbox an = Aufgabe erscheint im Reiter
-                        // (Verknuepfung lebt im RecurringTemplatesViewModel, unveraendert).
+                        // Loop-Block: wiederkehrende Aufgaben bleiben sichtbar und werden nur
+                        // noch manuell per "Hinzufügen" in die Aufgabenliste kopiert.
                         run {
                             val loopExpanded = expandedSection == SECTION_LOOP
                             val loopAccent = cosmos.accentTasks
@@ -583,29 +565,11 @@ fun TasksScreen(
                                         key = { "loop-${it.id}" },
                                         contentType = { "loop-entry" },
                                     ) { template ->
-                                        // Frische Lambdas (1:1 wie im Loop-Reiter) damit
-                                        // toggleActive immer die aktuelle isActive-Version
-                                        // der Vorlage liest.
                                         TemplateAsTaskCard(
                                             template = template,
-                                            onToggleActive = { recurringVm.toggleActive(template) },
                                             onDelete = { recurringVm.delete(template) },
-                                            onSetPriority = { score ->
-                                                recurringVm.setPriority(template, score)
-                                            },
-                                            onSetTargetBucket = { bucket ->
-                                                recurringVm.setTargetBucket(template, bucket)
-                                            },
-                                            onSetInterval = { days ->
-                                                recurringVm.setIntervalDays(template, days)
-                                            },
+                                            onAddToTasks = { bucket -> recurringVm.addToTasks(template, bucket) },
                                             onOpenDetail = { onOpenLoopDetail(template.id) },
-                                            autoOpenPrioSlider =
-                                                prioPickerTemplateId == template.id,
-                                            onPrioSliderConsumed = { prioPickerTemplateId = null },
-                                            autoOpenBucketMenu =
-                                                bucketPickerTemplateId == template.id,
-                                            onBucketMenuConsumed = { bucketPickerTemplateId = null },
                                         )
                                     }
                                 } else {

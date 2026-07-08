@@ -50,13 +50,8 @@ import de.frank.entropyreducer.presentation.theme.label
  * Bottom-Sheet-Editor fuer Vorlagen wiederkehrender Aufgaben (Sprint 2.6, Frank-Wunsch 2026-05-22).
  * Wird sowohl fuer Anlegen (initial = null) als auch Bearbeiten (initial != null) verwendet.
  *
- * RRULE-Picker:
- * - Tab "Täglich": FREQ=DAILY[;INTERVAL=N]
- * - Tab "Wöchentlich": FREQ=WEEKLY[;INTERVAL=N];BYDAY=MO,DI,...
- * - Tab "Monatlich": FREQ=MONTHLY[;INTERVAL=N];BYMONTHDAY=N
- *
- * Tageszeit (timeOfDayMinutes) wird mit zwei Spinner-aehnlichen +/--Buttons fuer Stunden/Minuten
- * gewaehlt — keine externe Time-Picker-Dependency noetig.
+ * Loop-Vorlagen werden nicht mehr automatisch geplant. Der Editor speichert nur noch den Inhalt;
+ * die eigentliche Aufgabe entsteht spaeter manuell per "Hinzufügen".
  */
 @OptIn(
     ExperimentalMaterial3Api::class,
@@ -75,24 +70,12 @@ fun RecurringTemplateEditorSheet(
     var title by remember { mutableStateOf(initial?.title.orEmpty()) }
     var description by remember { mutableStateOf(initial?.description.orEmpty()) }
     var category by remember { mutableStateOf(initial?.category ?: EntropyCategory.SONSTIGES) }
-    var priorityScore by remember { mutableStateOf((initial?.priorityScore ?: 50).toFloat()) }
     var severity by remember { mutableStateOf((initial?.severity ?: 5).toFloat()) }
     var durationText by remember {
         mutableStateOf(initial?.estimatedDurationMinutes?.toString().orEmpty())
     }
 
-    val initialRule = remember(initial) { parseRule(initial?.rrule ?: "FREQ=DAILY") }
-    var freq by remember { mutableStateOf(initialRule.freq) }
-    var interval by remember { mutableStateOf(initialRule.interval) }
-    var weekdays by remember { mutableStateOf(initialRule.weekdays) }
-    var monthDay by remember { mutableStateOf(initialRule.monthDay) }
-
-    var timeOfDayMinutes by remember { mutableStateOf(initial?.timeOfDayMinutes ?: 480) }
-
-    val canSave =
-        title.isNotBlank() &&
-            (freq != "WEEKLY" || weekdays.isNotEmpty()) &&
-            (freq != "MONTHLY" || (monthDay in 1..31))
+    val canSave = title.isNotBlank()
 
     ModalBottomSheet(
         onDismissRequest = onDismiss,
@@ -152,16 +135,6 @@ fun RecurringTemplateEditorSheet(
             CategoryDropdown(selected = category, onSelect = { category = it })
             Spacer(Modifier.height(16.dp))
 
-            // Priorität-Slider (0..100)
-            SectionTitle("Priorität: ${priorityScore.toInt()}")
-            Slider(
-                value = priorityScore,
-                onValueChange = { priorityScore = it },
-                valueRange = 0f..100f,
-                steps = 99,
-            )
-            Spacer(Modifier.height(8.dp))
-
             // Schweregrad-Slider (1..10)
             SectionTitle("Schweregrad: ${severity.toInt()}")
             Slider(
@@ -179,49 +152,6 @@ fun RecurringTemplateEditorSheet(
                 label = { Text("Geschätzte Dauer in Minuten (optional)") },
                 singleLine = true,
                 modifier = Modifier.fillMaxWidth(),
-            )
-            Spacer(Modifier.height(20.dp))
-
-            // RRULE-Picker
-            SectionTitle("Häufigkeit")
-            FreqTabs(selected = freq, onSelect = { freq = it })
-            Spacer(Modifier.height(12.dp))
-
-            IntervalStepper(
-                interval = interval,
-                unitLabel =
-                    when (freq) {
-                        "DAILY" -> "Tag(e)"
-                        "WEEKLY" -> "Woche(n)"
-                        "MONTHLY" -> "Monat(e)"
-                        else -> "Einheit(en)"
-                    },
-                onChange = { interval = it.coerceIn(1, 30) },
-            )
-            Spacer(Modifier.height(12.dp))
-
-            if (freq == "WEEKLY") {
-                SectionTitle("Wochentage")
-                WeekdayPicker(selected = weekdays, onChange = { weekdays = it })
-                Spacer(Modifier.height(12.dp))
-            }
-            if (freq == "MONTHLY") {
-                SectionTitle("Tag im Monat (1–31)")
-                MonthDayPicker(day = monthDay, onChange = { monthDay = it.coerceIn(1, 31) })
-                Spacer(Modifier.height(12.dp))
-            }
-
-            // Tageszeit
-            SectionTitle("Uhrzeit: ${formatTime(timeOfDayMinutes)}")
-            TimePicker(minutes = timeOfDayMinutes, onChange = { timeOfDayMinutes = it })
-            Spacer(Modifier.height(24.dp))
-
-            // Vorschau
-            Text(
-                text =
-                    "Vorschau: ${humanReadable(buildRule(freq, interval, weekdays, monthDay))} um ${formatTime(timeOfDayMinutes)}",
-                style = MaterialTheme.typography.bodySmall,
-                color = cosmos.textSecondary,
             )
             Spacer(Modifier.height(20.dp))
 
@@ -243,11 +173,11 @@ fun RecurringTemplateEditorSheet(
                                     title = title.trim(),
                                     description = description.trim().ifBlank { null },
                                     category = category,
-                                    priorityScore = priorityScore.toInt(),
+                                    priorityScore = initial?.priorityScore ?: 50,
                                     severity = severity.toInt(),
                                     estimatedDurationMinutes = durationText.toIntOrNull(),
-                                    rrule = buildRule(freq, interval, weekdays, monthDay),
-                                    timeOfDayMinutes = timeOfDayMinutes,
+                                    rrule = initial?.rrule ?: "FREQ=DAILY",
+                                    timeOfDayMinutes = initial?.timeOfDayMinutes ?: 480,
                                     updatedAt = now,
                                 )
                         onSave(template)
