@@ -29,6 +29,7 @@ from __future__ import annotations
 
 import os
 import sys
+import time
 from concurrent.futures import ThreadPoolExecutor
 
 from google import genai
@@ -45,11 +46,24 @@ gc = genai.Client(api_key=os.environ["GEMINI_API_KEY"])
 qc = QdrantClient(url=QURL, api_key=os.getenv("QDRANT_API_KEY") or None, timeout=60.0)
 
 
-def embed_doc(text: str) -> list[float]:
-    """Ein Dokument-Praefix-Text -> ein E2-Vektor (kein task_type; Praefix steckt schon im Text)."""
-    r = gc.models.embed_content(model=MODEL, contents=text,
-                                config=gt.EmbedContentConfig(output_dimensionality=DIMS))
-    return list(r.embeddings[0].values)
+def embed_doc(text: str, _tries: int = 6) -> list[float]:
+    """Ein Dokument-Praefix-Text -> ein E2-Vektor (kein task_type; Praefix steckt schon im Text).
+    Mit Backoff-Retry bei transienten Fehlern (429/RESOURCE_EXHAUSTED/5xx/Timeout) — sonst wuerde ein
+    einzelner Rate-Limit-Treffer die ganze Migration abbrechen (Direktive #3). Nicht-transiente Fehler
+    (400/403 = Key/Modell falsch) werden SOFORT geworfen, kein sinnloses Wiederholen."""
+    for attempt in range(_tries):
+        try:
+            r = gc.models.embed_content(model=MODEL, contents=text,
+                                        config=gt.EmbedContentConfig(output_dimensionality=DIMS))
+            return list(r.embeddings[0].values)
+        except Exception as e:  # noqa: BLE001 — gezielt nach transient/permanent unterscheiden
+            msg = str(e).lower()
+            transient = any(s in msg for s in ("429", "resource_exhausted", "rate", "503", "500",
+                                               "unavailable", "deadline", "timeout"))
+            if attempt < _tries - 1 and transient:
+                time.sleep(min(30, 2 ** attempt))   # 1,2,4,8,16,30s
+                continue
+            raise
 
 
 def _cats(pl: dict) -> list[str]:
