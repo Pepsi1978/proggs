@@ -7,7 +7,6 @@
 #   1. disk-guard        — Speicherplatz pruefen
 #   2. path-health-check — PATH auf Orphans und Ghost-Eintraege pruefen
 #   3. doctor-lite       — Cloud-MCP, .mcp.json, sequential-thinking
-#   4. semantic-search    — Code-Search MCP installiert?
 #   5. mcp-auth-check    — MCP-Server-Authentifizierung pruefen
 #   6. mirror-check      — Mirror-Ledger ausstehende Eintraege
 #
@@ -192,7 +191,7 @@ function Check-DoctorLite {
         $serverName = ""
         foreach ($line in (Get-Content $mcpJson)) {
             if ($line -match '"(\w[\w-]+)":\s*\{') { $serverName = $Matches[1] }
-            if ($serverName -ne "code-search" -and $line -match '/opt/homebrew/') {
+            if ($line -match '/opt/homebrew/') {
                 $macosServers += $serverName
             }
         }
@@ -205,23 +204,6 @@ function Check-DoctorLite {
     if ($localWarnings -eq 0) {
         $script:okChecks += "Doctor-Lite: OK"
     }
-}
-
-# ============================================================
-# CHECK 4: Semantic Search (ehemals semantic-search-check.ps1)
-# ============================================================
-function Check-SemanticSearch {
-    $mcpDir = Join-Path $env:USERPROFILE "proggs\mcp-code-search"
-    if (-not (Test-Path $mcpDir)) {
-        $script:okChecks += "Semantic-Search: Nicht installiert (optional)"
-        return
-    }
-    $nodeModules = Join-Path $mcpDir "node_modules"
-    if (-not (Test-Path $nodeModules)) {
-        $script:warnings += "Semantic-Search: node_modules fehlen. Fix: cd ~/proggs/mcp-code-search && bun install"
-        return
-    }
-    $script:okChecks += "Semantic-Search: OK"
 }
 
 # ============================================================
@@ -262,7 +244,6 @@ Check-DiskSpace
 Check-PathHealth
 Check-PythonStub
 Check-DoctorLite
-Check-SemanticSearch
 Check-MirrorLedger
 Check-McpAuth  # LETZTER Check — ruft claude mcp list auf (kann bis zu 5s dauern)
 

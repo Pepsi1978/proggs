@@ -53,15 +53,6 @@ try {
     $errors++
 }
 
-# --- CHECK 2: Ollama ---
-$checks++
-try {
-    $r = Invoke-WebRequest -Uri "http://localhost:11434/api/tags" -TimeoutSec 3 -UseBasicParsing -ErrorAction Stop
-    Hook-Log "PASS ollama (localhost:11434)"
-} catch {
-    Hook-LogWarn "SKIP ollama (localhost:11434) — not running"
-}
-
 # --- CHECK 3: Plugin hooks.json integrity ---
 $pluginCache = "$env:USERPROFILE\.claude\plugins\cache\thedotmack\claude-mem"
 if (Test-Path $pluginCache) {
@@ -80,24 +71,6 @@ if (Test-Path $pluginCache) {
             Hook-LogError "FAIL claude-mem hooks.json missing at $hooksFile"
             $errors++
         }
-    }
-}
-
-# --- CHECK 4: code-search MCP dependencies ---
-$mcpDir = "$env:USERPROFILE\proggs\mcp-code-search"
-if (Test-Path $mcpDir) {
-    $checks++
-    $missing = @()
-    if (-not (Test-Path "$mcpDir\src\index.ts")) { $missing += "index.ts" }
-    if (-not (Test-Path "$mcpDir\src\db-state.ts")) { $missing += "db-state.ts" }
-    if (-not (Test-Path "$mcpDir\src\reindex-core.ts")) { $missing += "reindex-core.ts" }
-    if (-not (Test-Path "$mcpDir\node_modules\better-sqlite3")) { $missing += "node_modules/better-sqlite3" }
-
-    if ($missing.Count -eq 0) {
-        Hook-Log "PASS code-search MCP (all source files present)"
-    } else {
-        Hook-LogError "FAIL code-search MCP — missing: $($missing -join ', ')"
-        $errors++
     }
 }
 

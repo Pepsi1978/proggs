@@ -49,15 +49,6 @@ if [ -f "$mcp_source" ]; then
     fi
 fi
 
-# Always ensure code-search MCP server dependencies are installed (regardless of new commits)
-mcp_cs_dir="$REPO_DIR/mcp-code-search"
-if [ -d "$mcp_cs_dir" ] && [ ! -d "$mcp_cs_dir/node_modules" ]; then
-    if [ -x /opt/homebrew/bin/bun ]; then
-        (cd "$mcp_cs_dir" && /opt/homebrew/bin/bun install --silent 2>/dev/null) && \
-            hook_log "code-search node_modules installed" || true
-    fi
-fi
-
 if [ "$local_sha" = "$remote_sha" ]; then
     write_status "Auto-Sync: Alle Dateien aktuell."
     exit 0

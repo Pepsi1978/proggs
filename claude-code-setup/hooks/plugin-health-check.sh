@@ -45,16 +45,6 @@ else
 fi
 
 # ============================================================================
-# CHECK 2: Ollama (needed by code-search MCP server)
-# ============================================================================
-checks=$((checks + 1))
-if curl -sf --connect-timeout 2 --max-time 3 "http://localhost:11434/api/tags" >/dev/null 2>&1; then
-    hook_log "PASS ollama (localhost:11434)"
-else
-    hook_log_warn "SKIP ollama (localhost:11434) — not running (code-search will be unavailable)"
-fi
-
-# ============================================================================
 # CHECK 3: Plugin hooks.json integrity (are expected files present?)
 # ============================================================================
 PLUGIN_CACHE="$HOME/.claude/plugins/cache"
@@ -77,28 +67,6 @@ if [ -d "$CMEM_HOOKS" ]; then
             hook_log_error "FAIL claude-mem hooks.json missing at $HOOKS_FILE"
             errors=$((errors + 1))
         fi
-    fi
-fi
-
-# ============================================================================
-# CHECK 4: Key MCP server dependencies
-# ============================================================================
-
-# code-search needs: tsx, better-sqlite3, the index script
-MCP_DIR="$HOME/proggs/mcp-code-search"
-if [ -d "$MCP_DIR" ]; then
-    checks=$((checks + 1))
-    missing=""
-    [ ! -f "$MCP_DIR/src/index.ts" ] && missing="$missing index.ts"
-    [ ! -f "$MCP_DIR/src/db-state.ts" ] && missing="$missing db-state.ts"
-    [ ! -f "$MCP_DIR/src/reindex-core.ts" ] && missing="$missing reindex-core.ts"
-    [ ! -d "$MCP_DIR/node_modules/better-sqlite3" ] && missing="$missing node_modules/better-sqlite3"
-
-    if [ -z "$missing" ]; then
-        hook_log "PASS code-search MCP (all source files present)"
-    else
-        hook_log_error "FAIL code-search MCP — missing:$missing"
-        errors=$((errors + 1))
     fi
 fi
 

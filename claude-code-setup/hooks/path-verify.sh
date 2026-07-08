@@ -121,9 +121,6 @@ if [ "$(uname -s)" = "Darwin" ]; then
     check_cmd "kotlin" "Kotlin" "brew install kotlin" || true
     check_cmd "gradle" "Gradle" "brew install gradle" || true
 
-    # Ollama
-    check_cmd "ollama" "Ollama" "brew install ollama"
-
     # Deno
     check_cmd "deno" "Deno" "brew install deno"
 

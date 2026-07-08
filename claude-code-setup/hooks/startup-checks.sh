@@ -8,7 +8,6 @@
 #   1. disk-guard        — Speicherplatz pruefen
 #   2. path-health-check — PATH auf Orphans und Ghost-Eintraege pruefen
 #   3. doctor-lite       — Cloud-MCP, .mcp.json, sequential-thinking
-#   4. semantic-search    — Code-Search MCP installiert?
 #   5. mcp-auth-check    — MCP-Server-Authentifizierung pruefen
 #   6. mirror-check      — Mirror-Ledger ausstehende Eintraege
 #
@@ -114,7 +113,7 @@ check_doctor_lite() {
     # Check .mcp.json for Windows paths on macOS
     local mcp_json="$HOME/.mcp.json"
     if [ -f "$mcp_json" ] && [ "$(uname)" = "Darwin" ]; then
-        if grep -v "code-search" "$mcp_json" 2>/dev/null | grep -q 'C:\\Users\\' 2>/dev/null; then
+        if grep -q 'C:\\Users\\' "$mcp_json" 2>/dev/null; then
             warnings+=(".mcp.json: Windows-Pfade auf macOS gefunden")
             local_warnings=$((local_warnings + 1))
         fi
@@ -123,22 +122,6 @@ check_doctor_lite() {
     if [ "$local_warnings" -eq 0 ]; then
         ok_checks+=("Doctor-Lite: OK")
     fi
-}
-
-# ============================================================
-# CHECK 4: Semantic Search (ehemals semantic-search-check.sh)
-# ============================================================
-check_semantic_search() {
-    local mcp_dir="$HOME/proggs/mcp-code-search"
-    if [ ! -d "$mcp_dir" ]; then
-        ok_checks+=("Semantic-Search: Nicht installiert (optional)")
-        return
-    fi
-    if [ ! -d "$mcp_dir/node_modules" ]; then
-        warnings+=("Semantic-Search: node_modules fehlen. Fix: cd ~/proggs/mcp-code-search && bun install")
-        return
-    fi
-    ok_checks+=("Semantic-Search: OK")
 }
 
 # ============================================================
@@ -180,7 +163,6 @@ check_mirror_ledger() {
 check_disk_space
 check_path_health
 check_doctor_lite
-check_semantic_search
 check_mirror_ledger
 check_mcp_auth  # LETZTER Check — ruft claude mcp list auf (kann bis zu 5s dauern)
 
