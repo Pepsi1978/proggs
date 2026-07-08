@@ -38,14 +38,11 @@ import de.frank.entropyreducer.presentation.dashboard4.HealthConnectDetailScreen
 import de.frank.entropyreducer.presentation.dashboard4.OuraDetailScreen
 import de.frank.entropyreducer.presentation.experimentcalendar.ExperimentCalendarScreen
 import de.frank.entropyreducer.presentation.ideen.IdeenScreen
-import de.frank.entropyreducer.presentation.insights.InsightBoardScreen
-import de.frank.entropyreducer.presentation.insights.RepertoireScreen
 import de.frank.entropyreducer.presentation.mental.GewohnheitBoardScreen
 import de.frank.entropyreducer.presentation.mental.MentalBoardScreen
 import de.frank.entropyreducer.presentation.settings.SettingsHomeScreen
 import de.frank.entropyreducer.presentation.settings.api.ApiKeysScreen
 import de.frank.entropyreducer.presentation.settings.secondbrain.SecondBrainSettingsScreen
-import de.frank.entropyreducer.presentation.settings.codex.CodexScreen
 import de.frank.entropyreducer.presentation.settings.export.ExportScreen
 import de.frank.entropyreducer.presentation.settings.memory.MemoryScreen
 import de.frank.entropyreducer.presentation.settings.models.ModelsScreen
@@ -463,18 +460,6 @@ private fun AppNavHostInner(nav: androidx.navigation.NavHostController, modifier
                     onBack = { nav.popBackStack() }
                 )
             }
-            composable(Routes.INSIGHT_BOARD) {
-                InsightBoardScreen(
-                    onBack = { nav.popBackStack() }
-                )
-            }
-            composable(Routes.REPERTOIRE) {
-                RepertoireScreen(
-                    onBack = { nav.popBackStack() },
-                    onOpenInsight = { nav.navigate(Routes.INSIGHT_BOARD) },
-                )
-            }
-
             composable(Routes.SETTINGS_HOME) {
                 SettingsHomeScreen(
                     onBack = { nav.popBackStack() },
@@ -505,20 +490,6 @@ private fun AppNavHostInner(nav: androidx.navigation.NavHostController, modifier
             composable(Routes.SETTINGS_MEMORY) {
                 MemoryScreen(
                     onBack = { nav.popBackStack() }
-                )
-            }
-            composable(Routes.SETTINGS_PRIORITY_MEMORY) {
-                de.frank.entropyreducer.presentation.settings.prioritymemory.PriorityMemoryScreen(
-                    onBack = { nav.popBackStack() },
-                    onOpenDetail = { id -> nav.navigate(Routes.priorityMemoryDetail(id)) },
-                )
-            }
-            composable(
-                route = Routes.PRIORITY_MEMORY_DETAIL_PATTERN,
-                arguments = listOf(navArgument("memoryId") { type = NavType.StringType }),
-            ) {
-                de.frank.entropyreducer.presentation.settings.prioritymemory.PriorityMemoryDetailScreen(
-                    onBack = { nav.popBackStack() },
                 )
             }
             composable(Routes.SETTINGS_EXPORT) {

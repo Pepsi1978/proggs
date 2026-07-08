@@ -72,8 +72,6 @@ object Routes {
 
     // Stage-3-Spezialansichten (siehe Spec §14)
     const val EXPERIMENT_CALENDAR = "experiment_calendar"
-    const val INSIGHT_BOARD = "insight_board"
-    const val REPERTOIRE = "repertoire"
 
     // Biomarker-Detail-Screen pro Metrik (Frank-Wunsch 2026-05-08).
     // Pfad: biomarker/detail/{metricKey}
@@ -110,17 +108,10 @@ object Routes {
     const val SETTINGS_PROFILE = "settings/profile"
     const val SETTINGS_PROMPTS = "settings/prompts"
     const val SETTINGS_MEMORY = "settings/memory"
-    const val SETTINGS_CODEX = "settings/codex"
     const val SETTINGS_EXPORT = "settings/export"
-    const val SETTINGS_TRIGGERS = "settings/triggers"
     const val SETTINGS_ARCHIVE = "settings/archive"
     const val SETTINGS_WIDGET = "settings/widget"
     const val SETTINGS_DIAGNOSTICS = "settings/diagnostics"
     const val SETTINGS_TTS = "settings/tts"
 
-    // Prioritaets-Gedaechtnis (Frank-Wunsch 2026-06-19)
-    const val SETTINGS_PRIORITY_MEMORY = "settings/priority_memory"
-    const val PRIORITY_MEMORY_DETAIL_PATTERN = "settings/priority_memory/{memoryId}"
-
-    fun priorityMemoryDetail(memoryId: String): String = "settings/priority_memory/$memoryId"
 }

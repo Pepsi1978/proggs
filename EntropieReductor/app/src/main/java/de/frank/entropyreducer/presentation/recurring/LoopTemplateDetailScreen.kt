@@ -32,6 +32,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
@@ -59,6 +60,7 @@ fun LoopTemplateDetailScreen(
 ) {
     val cosmos = LocalCosmos.current
     val loopAccent = LocalCosmos.current.accentTasks
+    val context = LocalContext.current
     val templates by viewModel.templates.collectAsStateWithLifecycle()
     val template = templates.firstOrNull { it.id == templateId }
 
@@ -147,6 +149,11 @@ fun LoopTemplateDetailScreen(
                                     text = { Text(label) },
                                     onClick = {
                                         viewModel.addToTasks(t, bucket)
+                                        android.widget.Toast.makeText(
+                                            context,
+                                            "Aufgabe hinzugefügt",
+                                            android.widget.Toast.LENGTH_SHORT,
+                                        ).show()
                                         addOpen = false
                                     },
                                 )

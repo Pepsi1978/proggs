@@ -1,6 +1,5 @@
 package de.frank.entropyreducer.presentation.recurring
 
-import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -14,7 +13,6 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.Delete
 import androidx.compose.material.icons.outlined.Repeat
@@ -35,6 +33,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -171,7 +170,7 @@ internal fun TemplateAsTaskCard(
     onOpenDetail: () -> Unit = {},
 ) {
     val cosmos = LocalCosmos.current
-    val loopAccent = LocalCosmos.current.accentTasks
+    val context = LocalContext.current
 
     var addMenuOpen by remember(template.id) { mutableStateOf(false) }
 
@@ -208,9 +207,8 @@ internal fun TemplateAsTaskCard(
             }
 
             Spacer(Modifier.height(8.dp))
-            // ZEILE 2: Nur noch gespeicherte Vorlagen-Priorität + manuelles Hinzufügen.
+            // ZEILE 2: Nur noch manuelles Hinzufügen.
             Row(verticalAlignment = Alignment.CenterVertically) {
-                LoopPearl(label = "Priorität ${template.priorityScore}") { addMenuOpen = true }
                 Spacer(Modifier.weight(1f))
                 Box {
                     Button(
@@ -231,6 +229,11 @@ internal fun TemplateAsTaskCard(
                                 text = { Text(label) },
                                 onClick = {
                                     onAddToTasks(bucket)
+                                    android.widget.Toast.makeText(
+                                        context,
+                                        "Aufgabe hinzugefügt",
+                                        android.widget.Toast.LENGTH_SHORT,
+                                    ).show()
                                     addMenuOpen = false
                                 },
                             )
@@ -257,28 +260,6 @@ internal fun loopBucketLabel(b: TimeBucket): String =
         TimeBucket.GERING -> "Gering"
         TimeBucket.SPAETER -> "Später"
     }
-
-/**
- * Kleine Perle im Aufgaben-Karten-Stil.
- */
-@Composable
-private fun LoopPearl(label: String, onClick: () -> Unit) {
-    val cosmos = LocalCosmos.current
-    val pillShape = remember { RoundedCornerShape(50) }
-    Row(
-        verticalAlignment = Alignment.CenterVertically,
-        modifier =
-            Modifier.background(cosmos.glassBg, pillShape)
-                .clickable(onClick = onClick)
-                .padding(horizontal = 10.dp, vertical = 6.dp),
-    ) {
-        Text(
-            text = label,
-            style = MaterialTheme.typography.labelSmall,
-            color = cosmos.textSecondary,
-        )
-    }
-}
 
 /** Inline-Items-Helper fuer LazyColumn. */
 private inline fun <T> androidx.compose.foundation.lazy.LazyListScope.items(
