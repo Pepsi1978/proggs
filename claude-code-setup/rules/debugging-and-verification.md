@@ -1,169 +1,52 @@
 # Debugging & Verifikation: Systematisch statt Trial-and-Error (KRITISCH)
 
-> Konsolidiert aus: confidence-check, inspect-before-guessing,
-> cbr-bugfix-search, debug-hypotheses-runtime
-> Ergaenzt: ~/.claude/rules/resilient-bugfixing.md (fuer den eigentlichen Fix)
+> Ergaenzt `resilient-bugfixing.md` (Direktive #3, fuer den eigentlichen Fix).
 
----
-
-## 1. Confidence-Ampel: Unsicherheit erkennen (KRITISCH)
-
-> Quelle: Superintelligenz Finding 5 — arXiv 2503.15850, ICLR 2025
-
-Bei technisch praezisen Aussagen MUSS Claude seine eigene Sicherheit bewerten:
+## 1. Confidence-Ampel: Unsicherheit erkennen
 
 | Farbe | Bedeutung | Aktion |
 |-------|-----------|--------|
-| **Gruen** | In diesem Antwortblock gelesen/ausgefuehrt ODER max 5 Turns zurueck | Sicher verwenden |
-| **Gelb** | >5 Turns zurueck (gleiche Session) ODER aus frueherer Session/Training | Im Zweifel nachschlagen |
-| **Rot** | Information ist Vermutung oder Schaetzung | **STOP** — genau 1 Nachschlage-Aufruf (Read/Grep/WebSearch). Danach immer noch unklar? → Explizit als Schaetzung markieren |
+| **Gruen** | in diesem Block gelesen/ausgefuehrt ODER max 5 Turns zurueck | sicher verwenden |
+| **Gelb** | >5 Turns zurueck / fruehere Session / Training | im Zweifel nachschlagen |
+| **Rot** | Vermutung/Schaetzung | STOP — genau 1 Nachschlage-Aufruf (Read/Grep/WebSearch); danach unklar → als Schaetzung markieren |
 
-### Wann die Ampel PFLICHT ist
+PFLICHT bei: Versionsnummern, Dateipfaden (Existenz pruefen!), API-Parametern, CLI-Flags, JSON/YAML-Keys.
+NICHT noetig bei allgemeinen Konzepten/Architektur/Erklaerungen.
 
-- Versionsnummern (Kotlin, Gradle, Android API Level, SDK)
-- Dateipfade (Existenz pruefen!)
-- API-Parameter (Funktionssignaturen, Rueckgabetypen)
-- CLI-Befehle (Flags, Syntax)
-- Konfiguration (JSON-Keys, YAML-Strukturen)
+## 2. Inspect Before Guessing
 
-### Wann NICHT noetig
+IMMER den tatsaechlichen Zustand inspizieren bevor Code geaendert wird: Web → DevTools; API → echte
+Response lesen (nicht Doku annehmen); Filesystem → `ls`/`stat`/Datei lesen; Prozesse → `ps`/Port pruefen.
+Haeufige Falschannahmen nicht raten (contenteditable, Feldgroesse, aria-label-Sprache, Eltern-Element, CSS-Klassen).
 
-- Allgemeine Konzepte, Architektur-Entscheidungen, Erklaerungen in Alltagssprache
+## 3. Bug-Datenbank durchsuchen VOR dem Debuggen (CBR)
 
----
+Vor jedem neuen Fehler ZUERST `~/proggs/.claude/agent-memory/shared/bug-cases.jsonl` durchsuchen
+(Grep nach Symptom/Fehlermeldung). 4 Phasen: **Retrieve** (durchsuchen) → **Reuse** (alten Fix als
+ersten Ansatz) → **Revise** (anpassen) → **Retain** (neuen Fall eintragen).
+Format: `{"date","symptom","root_cause","fix","files","tags","severity"}`. Durchsuchen bei jedem
+Build-Fehler/fehlgeschlagenen Befehl. Schreiben nach jedem Fix >5 Min ODER bei 2. Auftreten (ALARM).
 
-## 2. Inspect Before Guessing: Erst anschauen, dann aendern (KRITISCH)
+## 4. Hypothesen-basiertes Debugging
 
-**Regel:** IMMER den tatsaechlichen Zustand inspizieren bevor Code geaendert wird.
+**Stufenregel (Sonden VOR dem Raten):**
 
-### Inspektions-Methoden nach Kontext
+| Stufe | Situation | Aktion | Sonden? |
+|-------|-----------|--------|---------|
+| 1 | Fehlermeldung eindeutig (Compiler, Import, Tippfehler) | direkt fixen — die Meldung IST die Diagnose | NEIN |
+| 2 | Root Cause nach 30 s unklar | SOFORT Logging-Sonden, NICHT raten | **JA** |
+| 3 | erster Fix-Versuch gescheitert | Sonden Pflicht fuer jeden weiteren Versuch | **JA** |
 
-| Kontext | Methode |
-|---------|---------|
-| Web/Browser | DevTools → Elements-Tab, Console |
-| Electron | DevTools → gleiche Methoden |
-| Desktop-App | UI-Inspector, Accessibility-Tree |
-| API | Tatsaechliche Response lesen, nicht Doku annehmen |
-| Filesystem | `ls`, `stat`, tatsaechliche Datei lesen |
-| Prozesse | `ps`, Task Manager, Port-Belegung pruefen |
+Sonden bei Stufe 2 (~500-1000 Token) sind GUENSTIGER als ein gescheiterter Rateversuch (~2000-5000 Token).
 
-### Haeufige Falschannahmen (NICHT raten!)
+**Sonden-Muster:** Funktion identifizieren die den Fehler ausloest (function-level) → Eingabewerte am
+Eingang loggen → an Verzweigungen welcher Pfad → Rueckgabewert am Ausgang → LAUFEN lassen, Logs LESEN →
+DANN Hypothese aus echten Daten.
 
-- contenteditable-Felder sehen anders aus als angenommen
-- Feldhoehe/Breite ist nicht was der Code suggeriert
-- aria-label kann in anderer Sprache sein
-- Eltern-Element ist nicht das erwartete Tag
-- CSS-Klassen koennen sich seit dem letzten Lesen geaendert haben
+**4-Schritte-Loop (Stufe 2+3):** 2-3 Hypothesen formulieren (jede benennt konkrete **Funktion**, nach
+Wahrscheinlichkeit) → instrumentieren (`Log.d`/`console.log`/`print`/`Debug.WriteLine`) → Runtime-Daten
+analysieren (max 2 Runden, dann Minimal-Repro anfordern) → gezielter Fix (Kommentar was beobachtet wurde,
+Debug-Logging danach ENTFERNEN).
 
----
-
-## 3. Bug-Datenbank durchsuchen VOR dem Debuggen (KRITISCH)
-
-> Quelle: Superintelligenz Finding 6 — Case-Based Reasoning, arXiv 2504.06943
-
-**Regel:** Bevor ein neuer Fehler debuggt wird, ZUERST die Bug-Datenbank durchsuchen:
-`~/proggs/.claude/agent-memory/shared/bug-cases.jsonl`
-
-### Die 4 CBR-Phasen
-
-1. **Retrieve**: Bug-Datenbank durchsuchen (Grep nach Symptom/Fehlermeldung)
-2. **Reuse**: Den alten Fix als ersten Loesungsansatz verwenden
-3. **Revise**: Falls nicht 1:1 passend, anpassen
-4. **Retain**: Den NEUEN Fall in die Datenbank eintragen
-
-### Datenbank-Format (bug-cases.jsonl)
-
-```json
-{"date":"2026-03-31","symptom":"Push rejected: non-fast-forward","root_cause":"Kein fetch+rebase vor push","fix":"git fetch origin && git rebase origin/main vor jedem push","files":["beliebig"],"tags":["git","push","rebase"],"severity":"hoch"}
-```
-
-### Wann durchsuchen
-- Bei JEDEM Build-Fehler, fehlgeschlagenen Befehl, unklaren Fehlermeldung
-
-### Wann schreiben
-- Nach JEDEM Bugfix der >5 Minuten dauerte
-- Nach JEDEM Fehler der zum zweiten Mal auftrat (ALARM!)
-
-### Zusammenspiel
-- **Resilient Bugfixing** (`~/.claude/rules/resilient-bugfixing.md`): CBR formalisiert den "Verwandte Fehlerquellen suchen"-Schritt
-- **Error-Antigens** (`error-antigens.jsonl`): Nutzt Bug-Cases als Grundlage fuer Praevention
-
----
-
-## 4. Hypothesen-basiertes Debugging (KRITISCH)
-
-> Quelle: Cursor Debug Mode 2.2, arXiv 2604.00167 (Fault Localization)
-
-### Stufenregel: Wann Logging-Sonden einsetzen (PFLICHT)
-
-> Quelle: TraceCoder (arXiv 2602.06875) — Execution-Trace-Debugging hat empirisch
-> hoehere Trefferquote als reines Fehlermeldungs-Debugging. Sonden VOR dem Raten
-> einbauen spart Token weil weniger Fehlversuche noetig sind.
-
-| Stufe | Situation | Aktion | Sonden noetig? |
-|-------|-----------|--------|---------------|
-| **1** | Fehlermeldung ist eindeutig (Compiler-Error, falscher Import, Tippfehler) | Direkt fixen — die Fehlermeldung IST die Diagnose | NEIN |
-| **2** | Root Cause nach 30 Sekunden noch unklar | SOFORT Logging-Sonden einbauen, NICHT erst raten | **JA — PFLICHT** |
-| **3** | Erster Fix-Versuch ist gescheitert | Ab jetzt sind Sonden PFLICHT fuer jeden weiteren Versuch | **JA — PFLICHT** |
-
-**Warum bei Stufe 2 schon, nicht erst bei Stufe 3:**
-Ein einziger Sonden-Durchlauf kostet ~500-1000 Token (2-3 Log-Zeilen einbauen + Output lesen).
-Ein gescheiterter Rateverversuch kostet ~2000-5000 Token (Edit + Build + Fehler analysieren + zurueckrollen).
-Sonden bei Stufe 2 sind also GUENSTIGER als ein Fehlversuch bei Stufe 3.
-
-**Sonden-Muster (TraceCoder-Pattern):**
-1. Funktion identifizieren die den Fehler ausloest (Function-level, siehe Fault Localization)
-2. Am Eingang der Funktion: Alle Eingabewerte loggen
-3. An Verzweigungen (if/when/switch): Welcher Pfad wird genommen?
-4. Am Ausgang: Rueckgabewert loggen
-5. Code LAUFEN lassen und Logs LESEN
-6. ERST DANN Hypothese formulieren basierend auf echten Daten
-
-Bei jedem nicht-trivialen Bug (Stufe 2+3) dieser 4-Schritte-Loop:
-
-### Schritt 1: HYPOTHESEN FORMULIEREN (2-3 Stueck)
-
-```
-Hypothese N: [Funktion X] macht [Y] falsch weil [Z]
-```
-- Jede Hypothese benennt eine konkrete **Funktion**
-- Nach Wahrscheinlichkeit geordnet
-
-### Schritt 2: INSTRUMENTIEREN
-
-Fuer jede Hypothese Messpunkte definieren BEVOR Code veraendert wird:
-
-| Plattform | Methode |
-|-----------|---------|
-| Android/Kotlin | `Log.d("DEBUG", "Wert: $variable")` → Logcat |
-| Web/TypeScript | `console.log("Punkt X:", variable)` → DevTools |
-| CLI/Python | `print(f"DEBUG: {variable}")` |
-| C#/WPF | `Debug.WriteLine($"DEBUG: {variable}")` |
-| iOS/Swift | `print("DEBUG: \(variable)")` |
-
-### Schritt 3: RUNTIME-DATEN ANALYSIEREN
-
-- Welche Hypothese bestaetigt? Welche widerlegt?
-- Unerwartete Werte → neue Hypothese?
-- Max 2 Runden. Danach: Minimal-Reproduktions-Fall anfordern.
-
-### Schritt 4: GEZIELTER FIX
-
-- Basiert auf echten Laufzeitdaten, nicht Vermutungen
-- Kommentar: `// Fix: [was in den Logs beobachtet wurde]`
-- Debug-Logging nach Fix ENTFERNEN
-
-### Wann NICHT noetig
-
-- Tippfehler, falscher Variablenname (Root Cause sofort sichtbar)
-- Fehlender Import (Compiler-Fehler ist eindeutig)
-- Fehler den der Benutzer direkt erklaert
-
-**Faustregel:** Root Cause nach 30 Sekunden noch unklar? → Hypothesen-Loop starten.
-
-### Was NIEMALS passieren darf
-
-- ❌ Fix vorschlagen bevor Laufzeitdaten vorliegen
-- ❌ Mehr als 3 Hypothesen (kein Fokus) oder mehr als 2 Runden ohne Daten
-- ❌ Hypothese ohne konkrete Funktion ("irgendwo im State")
-- ❌ Debug-Logging im Code lassen nach dem Fix
+Was NIEMALS: Fix vorschlagen bevor Laufzeitdaten vorliegen · >3 Hypothesen/>2 Runden ohne Daten ·
+Hypothese ohne konkrete Funktion · Debug-Logging nach dem Fix im Code lassen.
