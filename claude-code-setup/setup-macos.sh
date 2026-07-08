@@ -199,8 +199,9 @@ ok "$(ls "$SCRIPT_DIR/rules/"*.md | wc -l | tr -d ' ') Rule-Dateien kopiert"
 # ─── Schritt 11: Weitere Dateien und Git-Konfiguration ────────────────────────
 step "11/11" "CLAUDE.md, .gitignore_global, Git-Konfiguration"
 
-cp "$SCRIPT_DIR/CLAUDE.md" ~/CLAUDE.md
-ok "CLAUDE.md → ~/CLAUDE.md"
+# CLAUDE.md is NOT copied to ~/CLAUDE.md — the home duplicate was intentionally
+# removed (2026-04-04) to save ~8700 tokens of context. CLAUDE.md lives ONLY in the
+# repo (~/proggs/CLAUDE.md). Re-creating the home copy would reintroduce that cost.
 
 cp "$SCRIPT_DIR/.gitignore_global" ~/.gitignore_global
 ok ".gitignore_global → ~/.gitignore_global"
@@ -314,7 +315,7 @@ echo "  • Agents                 → ~/.claude/agents/"
 echo "  • Commands (+ Subdirs)   → ~/.claude/commands/"
 echo "  • Skills (dirs + .md)    → ~/.claude/skills/"
 echo "  • Rules                  → ~/.claude/rules/"
-echo "  • CLAUDE.md              → ~/CLAUDE.md"
+echo "  • CLAUDE.md              (nur im Repo, KEINE Home-Kopie)"
 echo "  • .gitignore_global      → ~/.gitignore_global"
 echo "  • Git-Konfiguration      gesetzt"
 echo "  • agent-memory/shared/   angelegt (MEMORY.md nur wenn neu)"

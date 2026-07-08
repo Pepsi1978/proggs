@@ -29,7 +29,9 @@ if (Test-Path "$ScriptDir\hooks\prompt-injection-defender") {
 $hookCount = (Get-ChildItem "$ClaudeDir\hooks\*.ps1" -ErrorAction SilentlyContinue).Count
 Write-Host "Hooks copied ($hookCount .ps1 files)" -ForegroundColor Green
 
-Copy-Item "$ScriptDir\CLAUDE.md" "$env:USERPROFILE\CLAUDE.md" -Force
+# CLAUDE.md is NOT copied to ~/CLAUDE.md — the home duplicate was intentionally
+# removed (2026-04-04) to save ~8700 tokens of context. CLAUDE.md lives ONLY in the
+# repo (~/proggs/CLAUDE.md). Re-creating the home copy would reintroduce that cost.
 Copy-Item "$ScriptDir\.gitignore_global" "$env:USERPROFILE\.gitignore_global" -Force
 
 # Copy command subdirectories (self-improve-ref/, tool-check-ref/)
