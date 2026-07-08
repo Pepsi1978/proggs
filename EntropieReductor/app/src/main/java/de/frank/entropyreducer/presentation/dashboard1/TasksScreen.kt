@@ -181,6 +181,8 @@ fun TasksScreen(
     val dragPreviewLiftPx = with(density) { 48.dp.toPx() }
     val dragAutoScrollEdgePx = with(density) { 96.dp.toPx() }
     val dragAutoScrollStepPx = with(density) { 22.dp.toPx() }
+    val dragAutoScrollFastStepPx = with(density) { 38.dp.toPx() }
+    val dragBottomBarOvershootPx = with(density) { 160.dp.toPx() }
     fun clearDrag() {
         dragState = null
     }
@@ -192,6 +194,7 @@ fun TasksScreen(
         findDropBucket(
             pointerInWindow = pointerInWindow,
             listBoundsInWindow = listBoundsInWindow,
+            bottomOvershootPx = dragBottomBarOvershootPx,
             listState = listState,
             entriesByBucket = state.entriesByBucket,
         )
@@ -203,6 +206,7 @@ fun TasksScreen(
                 val pointerY = currentDrag.pointerInWindow.y
                 val scrollBy = when {
                     pointerY < listBoundsInWindow.top + dragAutoScrollEdgePx -> -dragAutoScrollStepPx
+                    pointerY > listBoundsInWindow.bottom -> dragAutoScrollFastStepPx
                     pointerY > listBoundsInWindow.bottom - dragAutoScrollEdgePx -> dragAutoScrollStepPx
                     else -> 0f
                 }
@@ -1801,16 +1805,20 @@ private fun EntropyEntryCard(
 private fun findDropBucket(
     pointerInWindow: Offset,
     listBoundsInWindow: Rect,
+    bottomOvershootPx: Float,
     listState: androidx.compose.foundation.lazy.LazyListState,
     entriesByBucket: Map<TimeBucket, List<EntropyEntryEntity>>,
 ): TimeBucket? {
-    if (!listBoundsInWindow.contains(pointerInWindow)) return null
-    val pointerYInList = pointerInWindow.y - listBoundsInWindow.top
-    val visibleItems = listState.layoutInfo.visibleItemsInfo
-    val directHit = visibleItems.firstOrNull { item ->
+    if (pointerInWindow.x < listBoundsInWindow.left || pointerInWindow.x > listBoundsInWindow.right) return null
+    if (pointerInWindow.y < listBoundsInWindow.top || pointerInWindow.y > listBoundsInWindow.bottom + bottomOvershootPx) return null
+    val pointerYInList = pointerInWindow.y.coerceIn(listBoundsInWindow.top, listBoundsInWindow.bottom) - listBoundsInWindow.top
+    val visibleBucketItems = listState.layoutInfo.visibleItemsInfo.mapNotNull { item ->
+        bucketForLazyKey(item.key, entriesByBucket)?.let { bucket -> item to bucket }
+    }
+    val directHit = visibleBucketItems.firstOrNull { (item, _) ->
         pointerYInList >= item.offset && pointerYInList <= item.offset + item.size
     }
-    val nearHit = directHit ?: visibleItems.minByOrNull { item ->
+    val nearHit = directHit ?: visibleBucketItems.minByOrNull { (item, _) ->
         val top = item.offset.toFloat()
         val bottom = (item.offset + item.size).toFloat()
         when {
@@ -1818,12 +1826,12 @@ private fun findDropBucket(
             pointerYInList > bottom -> pointerYInList - bottom
             else -> 0f
         }
-    }?.takeIf { item ->
+    }?.takeIf { (item, _) ->
         val top = item.offset.toFloat()
         val bottom = (item.offset + item.size).toFloat()
         pointerYInList >= top - 36f && pointerYInList <= bottom + 36f
     }
-    return bucketForLazyKey(nearHit?.key, entriesByBucket)
+    return nearHit?.second
 }
 
 private fun bucketForLazyKey(

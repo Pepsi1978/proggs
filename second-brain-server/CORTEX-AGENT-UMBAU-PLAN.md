@@ -154,7 +154,7 @@ verschwinden, aber ihre ZWECKE bleiben — als Werkzeuge + wenige harte Code-Reg
   die harten Fälle (Speicher-Bestätigung, eindeutige Kommandos).
 - Leseagent als eigener Agent **weg** (Filter-Funktion wird zum Tool-Schritt des Hauptagenten).
 
-### 3.4 Regelpool / Regeldatei (Franks Wunsch)
+### 3.4 Regelpool / Regeldatei (Franks Wunsch) — ✅ FERTIG (#47682–#47688, 08.07.2026)
 - Der Hauptagent kann **eigene Regeln** speichern (z.B. "Dank/Feedback ≠ Speicherwunsch").
 - **ZWEISTUFIG (Pflicht):** Regel-Kandidat erkennen → **Frank bestätigt einmal** → erst dann aktiv.
   (Sonst vergiftet sich das System mit falschen Regeln — ChatGPT hat das selbst erkannt.)
@@ -207,7 +207,7 @@ verschwinden, aber ihre ZWECKE bleiben — als Werkzeuge + wenige harte Code-Reg
    (unterstützt `codex_generate` schon Tools?). Dann Ziel-Architektur (§3.3) als Design festzurren.
 2. Werkzeuge bauen (§3.3), Hauptagent-Loop mit Hard-Stop + tool_use/tool_result-Hygiene.
 3. Router-LLM entfernen (deterministischer Preflight bleibt), Leseagent entfernen (Filter → Tool-Schritt).
-4. Regelpool (§3.4, zweistufig + Limit).
+4. ~~Regelpool (§3.4, zweistufig + Limit).~~ **FERTIG** (#47682–#47688, 08.07.2026): `agent/rules.py` (atomare Ablage, Regelblock, Trigger-Erkennung), `rule_confirm`-Chatdialog (Ja/Nein/Bearbeiten), deterministische Regel-vs-Speichern-Unterscheidung (`is_rule_request`), REST `/rules` + Dashboard-Chronik. Ablage EXTERN auf `Z:\Logbuch\Regeln` (nicht agent-data), 40-Regeln-Limit. Spec: `docs/superpowers/specs/2026-07-08-cortex-selbst-regeln-design.md`.
 5. Feine Sonden in Logbuch 2 (§3.6).
 6. Evil-Test: Star-Trek-Regressionsfall in die Eval-Suite (Rohsuche findet Star-Trek-Einträge →
    Auswahl behält ≥1 → Antwort enthält sichtbaren Gedächtnis-Kontext). Auch: "Danke" ≠ speichern/query_internet.

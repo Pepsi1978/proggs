@@ -61,6 +61,7 @@ VERSION = "0.65.1 (08.07.2026, 17:35 Uhr)"  # 0.65.1: FIX current_agent_limits()
 
 # Wirksamer Counter-Bump: Live-Spiegelung fertiger Gesprächsturns ins Gehirn.
 VERSION = "0.65.2 (08.07.2026, 20:00 Uhr)"  # 0.65.2: FIX Gesprächs-Logbuch wird nicht mehr erst nach 30 Minuten Inaktivität ins Gehirn geschrieben. Nach jeder fertigen Agent-Antwort spiegelt der Agent denselben Gesprächseintrag sofort in die Kategorie Gespräche; der alte 30-Minuten-Flush mit .txt-Kopie bleibt als Sicherheitsnetz. Alt: 0.65.1.
+VERSION = "0.66.0 (08.07.2026, 22.10 Uhr)"  # 0.66.0 (Frank-Auftrag 2026-07-08): Selbst-Regeln des Hauptagenten — der Agent kann sich dauerhafte Verhaltensregeln geben (extern auf Z:\\Logbuch\\Regeln\\regeln.json, im Samba-Backup), die in JEDEM Gespräch im System-Prompt wirken. Neu: agent/rules.py (atomare Ablage, Regelblock, Trigger-Erkennung), Tools lies_regeln/schreibe_regel, rule_confirm-Chatdialog (Ja/Nein/Bearbeiten), deterministische Regel-vs-Speichern-Unterscheidung (is_rule_request) + Tool-/Prompt-Abgrenzung, REST /rules (GET/POST/PUT/DELETE), Dashboard-Chronik. 40-Regeln-Limit + 6000-Zeichen-Cap gegen Context-Rot. Alt: 0.65.2.
 
 # ---------------------------------------------------------------------------
 # Konfiguration (alles aus Umgebungsvariablen — Secrets nie im Code)
@@ -4338,7 +4339,7 @@ def api_add_rule(req: RuleCreateReq) -> dict:
         rule = rules.add_rule(rules.rules_path(), text, _gen_rule_title(text),
                               _now_local().isoformat(timespec="seconds"))
     except rules.RuleLimitError:
-        raise HTTPException(status_code=409, detail="Regel-Limit (40) erreicht — bitte zuerst eine Regel loeschen.")
+        raise HTTPException(status_code=409, detail="Regel-Limit (40) erreicht — bitte zuerst eine Regel löschen.")
     checkpoint("rule_added", "Regel manuell im Dashboard angelegt", ok=True, titel=rule.get("titel"), rid=rule.get("id"))
     return rule
 
@@ -5507,9 +5508,9 @@ def _process_turn(session: dict, user_text: str, pending: dict | None, category:
                                      _now_local().isoformat(timespec="seconds"))
                 checkpoint("rule_saved", "Selbst-Regel nach Franks Ja uebernommen", ok=True,
                            titel=neu.get("titel"), rid=neu.get("id"))
-                return {"reply": f"Regel uebernommen: „{neu.get('titel')}“.", "action": "rule_saved", "pending": None}
+                return {"reply": f"Regel übernommen: „{neu.get('titel')}“.", "action": "rule_saved", "pending": None}
             except rules.RuleLimitError:
-                return {"reply": "Regel-Limit (40) erreicht — bitte zuerst eine Regel loeschen.",
+                return {"reply": "Regel-Limit (40) erreicht — bitte zuerst eine Regel löschen.",
                         "action": "error", "pending": None}
         if re.search(r"\bregel nein\b", low) or re.fullmatch(r"\s*nein[.! ]*", low):
             return {"reply": "Alles klar, ich lege keine Regel an.", "action": "rule_cancelled", "pending": None}
