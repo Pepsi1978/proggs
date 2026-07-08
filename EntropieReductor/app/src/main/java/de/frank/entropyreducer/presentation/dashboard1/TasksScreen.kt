@@ -220,8 +220,8 @@ fun TasksScreen(
             }
     }
 
-    // Frank-Wunsch 2026-05-11: Widget-Tap auf eine Aufgabe oder die KI/Manuell-
-    // Pille schickt einen Deep-Link an WidgetDeepLinkBus. Wir reagieren hier:
+    // Frank-Wunsch 2026-05-11: Widget-Tap auf eine Aufgabe oder den Verschieben-
+    // Button schickt einen Deep-Link an WidgetDeepLinkBus. Wir reagieren hier:
     //  - ACTION_RESCHEDULE → Prioritätsbereich-Picker für die Task öffnen
     //  - ACTION_FOCUS      → Tasks-Tab ist schon offen (NavGraph default); kein
     //    weiterer Schritt noetig — Frank scrollt zur Karte (LazyColumn-Scroll

@@ -107,6 +107,13 @@ private fun AppNavHostInner(nav: androidx.navigation.NavHostController, modifier
                 nav.tabSwitch(Routes.TASKS)
                 de.frank.entropyreducer.presentation.widget.WidgetDeepLinkBus.clear()
             }
+            de.frank.entropyreducer.presentation.widget.WidgetIntents.ACTION_FOCUS,
+            de.frank.entropyreducer.presentation.widget.WidgetIntents.ACTION_RESCHEDULE,
+            de.frank.entropyreducer.presentation.widget.WidgetIntents.ACTION_SET_PRIORITY -> {
+                // Den Link NICHT clearen: der TasksScreen muss ihn nach der Navigation konsumieren
+                // und bei RESCHEDULE/SET_PRIORITY das Verschieben-Sheet fuer genau diese Aufgabe oeffnen.
+                nav.tabSwitch(Routes.TASKS)
+            }
             else -> Unit
         }
     }

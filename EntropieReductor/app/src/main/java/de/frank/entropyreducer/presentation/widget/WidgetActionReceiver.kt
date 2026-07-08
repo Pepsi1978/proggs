@@ -69,6 +69,7 @@ class WidgetActionReceiver : BroadcastReceiver() {
                 flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_SINGLE_TOP
                 putExtra(WidgetIntents.EXTRA_TASK_ID, taskId)
                 putExtra(WidgetIntents.EXTRA_ACTION, action)
+                data = android.net.Uri.parse("widget://action/$action/$taskId/${System.nanoTime()}")
             }
             context.startActivity(launch)
         }
