@@ -1,19 +1,21 @@
 # Projektregeln
 
-> Kompakte Steuerdatei. Volltexte aller Direktiven/Detailregeln liegen in `~/.claude/rules/`
-> (werden IMMER automatisch mitgeladen) — hier steht nur, was dort fehlt. Ausgelagerte
-> Referenzen bei Bedarf per `Read` laden (nie `@`-Import — spart keine Tokens).
+> Kompakte Steuerdatei. In `~/.claude/rules/` liegen die Regel-Kerne (je ≤2 KB, IMMER automatisch
+> mitgeladen); ausgelagerte Volltexte/Details in `claude-code-setup/docs/rules/` bei Bedarf per `Read`
+> (nie `@`-Import — spart keine Tokens).
 
 ## DIE 3 HAUPTDIREKTIVEN (HOECHSTE PRIORITAET — IMMER AKTIV)
 
-Stehen UEBER allen anderen Regeln, gelten in jeder Session bei jeder Aufgabe. Die autoritativen
-Volltexte in `~/.claude/rules/` NIEMALS entfernen, ersetzen oder abschwaechen.
+Stehen UEBER allen anderen Regeln, gelten in jeder Session bei jeder Aufgabe. Der **Kern** liegt in
+`~/.claude/rules/` (immer geladen, ≤2 KB); der **1:1-Volltext** in `claude-code-setup/docs/rules/` wird
+auf Zuruf "nach Direktive 1/2/3" (oder "alle drei") per `Read` geladen. Kern UND Volltext NIEMALS
+abschwaechen oder entfernen.
 
-| Rang | Direktive | Kern | Volltext (immer geladen) |
-|------|-----------|------|--------------------------|
-| #1 | ⚡ Superintelligenz | Intelligenteste Umgebung der Welt. Compound Intelligence Effect. | `superintelligence.md` |
-| #2 | 🔍 Selbstbeobachtung | Beobachten, Erkennen, Lernen. Rueckblick + Vorschlaege nach jeder Aufgabe. | `self-observation.md` |
-| #3 | 🛡️ Resilient Bugfixing | Kein Fehler zweimal. Root Cause → verwandte Fehler → Poka-Yoke → dokumentieren. Funktionserhaltend. | `resilient-bugfixing.md` |
+| Rang | Direktive | Kern (immer geladen) | Volltext auf Zuruf |
+|------|-----------|----------------------|--------------------|
+| #1 | ⚡ Superintelligenz | Intelligenteste Umgebung der Welt. Compound Intelligence Effect. | `docs/rules/superintelligence.md` |
+| #2 | 🔍 Selbstbeobachtung | Beobachten, Erkennen, Lernen. Rueckblick + Vorschlaege nach jeder Aufgabe. | `docs/rules/self-observation.md` |
+| #3 | 🛡️ Resilient Bugfixing | Kein Fehler zweimal. Root Cause → verwandte Fehler → Poka-Yoke → dokumentieren. Funktionserhaltend. | `docs/rules/resilient-bugfixing.md` |
 
 - **Intelligenz-Vorschlaege** nach jeder Aufgabe (Format: `intelligence-system.md`) — nach der
   Status-Meldung, nie mittendrin. Mindestens 1 pro Session.
