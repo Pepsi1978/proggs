@@ -178,6 +178,25 @@ if (-not (Get-Command "dotnet" -ErrorAction SilentlyContinue)) {
     Write-Host "  OK .NET $(dotnet --version)" -ForegroundColor Green
 }
 
+# jq — REQUIRED at runtime by the statusline hook (statusline.sh parses the
+# session JSON via jq). Without jq the statusline renders empty ("--" instead
+# of model/effort/percentages). winget's jq lands in %LOCALAPPDATA%\Microsoft\
+# WinGet\Links which is on the User PATH, so a fresh terminal/Claude Code picks
+# it up automatically. (2026-07-08: statusline was silently broken because jq
+# was never installed despite the README claiming setup installs it.)
+$jqLink = Join-Path $env:LOCALAPPDATA "Microsoft\WinGet\Links\jq.exe"
+if ((-not (Get-Command "jq" -ErrorAction SilentlyContinue)) -and (-not (Test-Path $jqLink))) {
+    Write-Host "  jq installieren ... " -NoNewline
+    try {
+        winget install jqlang.jq --accept-source-agreements --accept-package-agreements 2>&1 | Out-Null
+        Write-Host "OK" -ForegroundColor Green
+    } catch {
+        Write-Host "X (manuell: winget install jqlang.jq)" -ForegroundColor Red
+    }
+} else {
+    Write-Host "  OK jq (bereits vorhanden)" -ForegroundColor Green
+}
+
 # ---------------------------------------------------
 # 4. Extra Marketplaces einrichten
 # ---------------------------------------------------

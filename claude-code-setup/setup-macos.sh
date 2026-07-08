@@ -44,6 +44,20 @@ step "2/11" "settings.json kopieren"
 cp "$SCRIPT_DIR/settings.json" ~/.claude/settings.json
 ok "settings.json → ~/.claude/settings.json"
 
+# jq — REQUIRED at runtime by the statusline hook (statusline.sh parses the
+# session JSON via jq). Without jq the statusline renders empty ("--" instead of
+# model/effort/percentages). Install it up front if missing. (2026-07-08 parity
+# with setup.ps1 — jq was never auto-installed despite the README claiming it.)
+if ! command -v jq &>/dev/null; then
+    if command -v brew &>/dev/null; then
+        brew install jq && ok "jq installiert" || warn "jq-Installation fehlgeschlagen (manuell: brew install jq)"
+    else
+        warn "jq fehlt und Homebrew nicht gefunden — Statusline braucht jq (manuell: brew install jq)"
+    fi
+else
+    ok "jq bereits vorhanden"
+fi
+
 # ─── Schritt 3: macOS-Hooks in settings.json einmergen ────────────────────────
 step "3/11" "macOS-Hooks in settings.json einmergen (hooks-macos.json)"
 
