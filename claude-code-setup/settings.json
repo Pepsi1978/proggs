@@ -461,7 +461,7 @@
 		"playground@claude-plugins-official": true,
 		"ralph-loop@claude-plugins-official": true,
 		"episodic-memory@superpowers-marketplace": false,
-		"superpowers-chrome@superpowers-marketplace": true,
+		"superpowers-chrome@superpowers-marketplace": false,
 		"code-review@claude-plugins-official": true,
 		"playwright@claude-plugins-official": true,
 		"coderabbit@claude-plugins-official": true,

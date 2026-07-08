@@ -484,7 +484,7 @@
 		"hookify@claude-plugins-official": true,
 		"playground@claude-plugins-official": true,
 		"ralph-loop@claude-plugins-official": true,
-		"superpowers-chrome@superpowers-marketplace": true,
+		"superpowers-chrome@superpowers-marketplace": false,
 		"code-review@claude-plugins-official": true,
 		"playwright@claude-plugins-official": true,
 		"explanatory-output-style@claude-plugins-official": true,
