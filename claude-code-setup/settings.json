@@ -460,7 +460,7 @@
 		"hookify@claude-plugins-official": true,
 		"playground@claude-plugins-official": true,
 		"ralph-loop@claude-plugins-official": true,
-		"episodic-memory@superpowers-marketplace": true,
+		"episodic-memory@superpowers-marketplace": false,
 		"superpowers-chrome@superpowers-marketplace": true,
 		"code-review@claude-plugins-official": true,
 		"playwright@claude-plugins-official": true,

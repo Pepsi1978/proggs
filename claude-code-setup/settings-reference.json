@@ -453,7 +453,12 @@
 		]
 	},
 	"worktree": {
-		"symlinkDirectories": ["node_modules", ".cache", ".gradle", "build"],
+		"symlinkDirectories": [
+			"node_modules",
+			".cache",
+			".gradle",
+			"build"
+		],
 		"baseRef": "fresh"
 	},
 	"statusLine": {
@@ -514,7 +519,7 @@
 		"xclaude-plugin@xclaude-plugin-marketplace": false,
 		"claude-reflect@claude-reflect-marketplace": true,
 		"coderabbit@claude-plugins-official": true,
-		"episodic-memory@superpowers-marketplace": true,
+		"episodic-memory@superpowers-marketplace": false,
 		"firebase-apk-scanner@trailofbits": true,
 		"gh-cli@trailofbits": true,
 		"git-cleanup@trailofbits": true,
