@@ -55,7 +55,7 @@ VERSION = "0.53.0 (05.07.2026, 14.14 Uhr)"  # 0.53.0 (Gruppe D "Mitlernen in Pro
 VERSION = "0.56.0 (06.07.2026, 13:52 Uhr)"  # 0.56.0: Composite-Route query_internet fuer verschachtelte Anfragen (erst Gedächtnis-Kontext, dann Internet-Abgleich). Root Cause: Router-Schema erlaubte bisher genau EINEN intent; dadurch wurde bei Kettenanforderungen nur query ODER internet ausgeführt. Jetzt liefert der Router optional web_query, der Server führt beide bestehenden Pfade sequenziell aus und formuliert eine kombinierte Antwort. Alt: 0.55.3 (06.07.2026, 13:23 Uhr).
 VERSION = "0.57.0 (06.07.2026, 17:23 Uhr)"  # 0.57.0: Qdrant-/Gedächtnis-Limits vollständig dashboardfähig. Zusätzlich zu den bisherigen Recall-/Kontextwerten sind jetzt Duplikat-Suchkandidaten, Entity-Extraktionsfenster, Entity-Vollabruflimit, Antwort-Max-Tokens, Arbeitscache-Schwelle und Kategorie-Batchgröße persistent über /config.limits.agent einstellbar; die Werte wirken sofort im laufenden Agenten. Alt: 0.56.3.
 VERSION = "0.59.1 (07.07.2026, 11:52 Uhr)"  # 0.59.1: Router-Härtung gegen falsche query_internet-Erzwingung. Die Gedächtnis+Internet-Ketten-Erkennung scannt Standard-Modus-/Antwortlängen-Prompts nicht mehr mit, sondern nur Franks aktuelle Nachricht und explizite Zusatz-Prompt-Blöcke. Alt: 0.59.0.
-VERSION = "0.64.0 (08.07.2026, 16:45 Uhr)"  # 0.64.0 (Agenten-Umbau Schritt 2, 2026-07-08): WERKZEUGKASTEN im ECHTEN CHAT scharfgeschaltet. _process_turn: die generischen Antwort-Zweige (query/query_internet/internet/smalltalk) durch _toolagent_answer ersetzt = EIN codex_generate_tools-Aufruf mit build_agent_tools (durchsuche_gedaechtnis/lade_eintrag/web_suche/lies_logbuch/was_kann_cortex). Der Hauptagent filtert SELBST (Antwort- vs. Kontext-Treffer) statt eines separaten Leseagenten -> loest den Star-Trek-Bug (Rohsuche fand 50, Leseagent waehlte 0). Verlauf wird eingespeist (Follow-ups funktionieren), Quellen-Chips (aus lade_eintrag bzw. gefundenen) + Confidence bleiben; build_agent_tools trackt state['geladen'] fuer praezise Quellen. Router + komplette Speicher-Sicherheit + deterministische Spezial-Antworten (Projektstand/Kategorie-Gesamt/-Zaehlung) UNANGETASTET (funktionserhaltend, Direktive #3). 0.63.0: NEU Werkzeug was_kann_cortex() im Hauptagent-Werkzeugkasten (Frank-Wunsch): liest LIVE die System-Info-Chronik ('Was Cortex kann') vom Dashboard (DASHBOARD_URL/api/features, interner Compose-DNS) — dank des Merge-Fixes immer aktuell, auch Features der letzten Tage. So kann der Hauptagent auf 'was kannst du alles?' aus der echten Feature-Liste antworten. Timing landet automatisch im tool_calls-Log (ms je Werkzeug -> Flaschenhals-Radar, sobald der Tool-Loop im Chat aktiv ist). Noch NICHT im echten Chat aktiv (Test via /toolagent-test). 0.62.0: WERKZEUGKASTEN des Hauptagenten (Schritt-2-Baustein, noch NICHT im Chat aktiv). NEU build_agent_tools() + TOOLAGENT_SYSTEM: die 4 Lese-/Such-Werkzeuge als duenne Handler um bestehende Funktionen — durchsuche_gedaechtnis (smart_recall, liefert nur Schnipsel + fuellt hit_cache), lade_eintrag (Volltext EINES Eintrags aus dem Cache — Kontext-Schutz), web_suche (tavily_search), lies_logbuch (_read_recent_turns). Verlagert die Leseagent-Filterung in den Hauptagenten (Direktive #3: verlagern statt loeschen; Antwort- vs. Kontext-Treffer im System-Prompt). NEU Endpoint GET /toolagent-test?q=... : isolierter Test des Werkzeugkastens (fuer den Star-Trek-Regressionsfall), beruehrt den echten Chat NICHT. Schreib-Werkzeuge (speichere/schreibe_regel) folgen mit der _process_turn-Integration. 0.61.4: ROBUSTHEIT codex_generate_tools — Streaming-Retry (bis 3 Versuche) gegen den sporadischen Abbruch des Impersonation-Backends ('peer closed connection ... incomplete chunked read'). Retry NUR solange kein response.completed kam (Backend-Call ist seiteneffektfrei); bei 4xx/failed KEIN Retry. Selbsttest auf EINEN Lauf reduziert (H1/H2-Diagnose abgeschlossen). 0.61.3: FIX — Function-Calling MACHBARKEIT BEWIESEN (function_calls kommen als Stream-Events output_item.done, nicht in completed.output). Das ChatGPT-Codex-Backend liefert function_calls als STREAM-EVENTS (response.output_item.done mit dem vollstaendigen function_call-Item: name/call_id/arguments), NICHT in completed.output (das bleibt leer). Root Cause des 'Tools werden nicht aufgerufen'-Befunds war ein PARSING-Bug (nur completed.output gelesen), KEIN Backend-Limit — die Event-Sequenz-Diagnose zeigte response.function_call_arguments.delta/done + output_item.done. Fix: fc_items aus den output_item.done-Events einsammeln, primaer nutzen (completed.output nur Fallback). 0.61.2: DIAGNOSE codex_generate_tools/toolloop-selftest — im ersten Lauf rief gpt-5.5 KEINE Werkzeuge auf (tools_used leer, Antwort 'ohne Werkzeugaufruf nicht bestimmbar'). Verdacht: custom function-Tools erreichen das Modell nicht. Selbsttest testet jetzt tool_choice 'auto' UND 'required' und gibt die rohe output-Item-Struktur der ersten Runde zurueck (raw_first_output), um H1 (Tools kommen nicht an) von H2 (Modell waehlt ab) zu unterscheiden. codex_generate_tools bekam optionalen tool_choice-Parameter. 0.61.1: FIX — ChatGPT-Codex-Backend ERZWINGT stream:true (stream:false -> HTTP 400 'Stream must be set to true', empirisch per /toolloop-selftest bewiesen). Tool-Loop nutzt jetzt einen streamenden Backend-Helfer (_stream_responses, wie codex_generate) und liest die function_call-Items aus dem response.completed-Event. 0.61.0: Schritt-2-Baustein (Agenten-Umbau) — NEU codex_generate_tools(): GPT/Codex Function-Calling-Loop auf der OpenAI-Responses-API (chatgpt.com/backend-api/codex). Deterministischer Hard-Stop (max_turns UND max_seconds), tool_use<->tool_result strikt 1:1 (function_call verbatim in den Verlauf, je call_id genau ein function_call_output), Tool-Exception als Fehler-tool_result zurueck (nie crashen), Schleifen-Erkennung (>3x gleiche name+args), Tool-Output je Aufruf auf LESE_TOOL_OUT_CAP gekappt; bei Hard-Stop ohne Klartext eine finale Runde OHNE Werkzeuge (Absicherung nach bugs/server/ai-agent-frameworks.md). NEU Endpoint GET /toolloop-selftest: isolierter Machbarkeits-Smoke-Test (2 triviale Tools) — prueft empirisch, ob das Backend eigene function-Tools akzeptiert+aufruft. Beruehrt den Chat-Pfad NICHT (reiner Baustein; sichtbare Dashboard-Version bleibt 0.56.0 bis der Umbau den Chat aendert). Alt: 0.60.0 (07.07.2026, 13:09 Uhr) NEU Turn-Logbuch + Sonden-Trace. Jeder /chat + /chat/stream-Turn wird per contextvar-Trace mitgeschrieben: der bestehende checkpoint()-Kanal fuettert zusaetzlich den Trace, ein Phasen-Marker recall_search trennt Rohsuche vom Leseagent-Filter. Logbuch 1 (LOGBOOK_DIR/Trace/turns.jsonl, 100 rollierend) = 1 lesbare Zeile je Anfrage mit Frage, Router->final Intent, Rohtreffer/Auswahl (Star-Trek: 50 gefunden/0 gewaehlt), Confidence, Antwort-Vorschau + Phasen-Timing (router_ms/suche_ms/leseagent_ms/web_antwort_ms = Flaschenhals-Radar). Logbuch 2 (trace.jsonl, 4000 Events) = feine Events je Turn per turn_id verknuepft (erweiterbares Geruest fuer feine Sonden beim Agenten-Umbau). Atomar (tmp+os.replace), secret-maskiert, BEST-EFFORT (try/except ueberall — gefaehrdet den Chat nie). Deterministische Problem-Markierung (_PROBLEM_FEEDBACK_RE) markiert den letzten Turn, wenn Frank ein Problem meldet. GET /logbook/turns fuers Dashboard. Persistent auf Samba (LOGBOOK_DIR bereits gemountet -> ueberlebt Rebuilds; loest fuer die Turn-Ebene die Fluechtigkeit von /app/logs/agent.jsonl). Alt: 0.59.1 (07.07.2026, 11:52 Uhr).
+VERSION = "0.65.0 (08.07.2026, 17:27 Uhr)"  # 0.65.0 (Frank-Wunsch 2026-07-08): VERLAUFS-KOMPRIMIERUNG — neues Limit history_compress_at (0=aus, Dashboard 'Verlauf komprimieren ab'). Ab N Gesamt-Nachrichten (Frank+Cortex) verdichtet der Hauptagent (GPT-5.5) den Verlauf KUMULATIV (alte Zusammenfassung + neue N -> neue), statt aelteres hart abzuschneiden. Neu: _compress_history/_maybe_compress_history + _history_text-Umbau; RAM session-state (history_summary + history_compressed_upto); best-effort (Fehler killt den Chat nie), Sicherheitsnetz kappt unkomprimierten Rest auf HISTORY_MAX. Aufruf am Anfang von _process_turn. 0.64.0 (Agenten-Umbau Schritt 2, 2026-07-08): WERKZEUGKASTEN im ECHTEN CHAT scharfgeschaltet. _process_turn: die generischen Antwort-Zweige (query/query_internet/internet/smalltalk) durch _toolagent_answer ersetzt = EIN codex_generate_tools-Aufruf mit build_agent_tools (durchsuche_gedaechtnis/lade_eintrag/web_suche/lies_logbuch/was_kann_cortex). Der Hauptagent filtert SELBST (Antwort- vs. Kontext-Treffer) statt eines separaten Leseagenten -> loest den Star-Trek-Bug (Rohsuche fand 50, Leseagent waehlte 0). Verlauf wird eingespeist (Follow-ups funktionieren), Quellen-Chips (aus lade_eintrag bzw. gefundenen) + Confidence bleiben; build_agent_tools trackt state['geladen'] fuer praezise Quellen. Router + komplette Speicher-Sicherheit + deterministische Spezial-Antworten (Projektstand/Kategorie-Gesamt/-Zaehlung) UNANGETASTET (funktionserhaltend, Direktive #3). 0.63.0: NEU Werkzeug was_kann_cortex() im Hauptagent-Werkzeugkasten (Frank-Wunsch): liest LIVE die System-Info-Chronik ('Was Cortex kann') vom Dashboard (DASHBOARD_URL/api/features, interner Compose-DNS) — dank des Merge-Fixes immer aktuell, auch Features der letzten Tage. So kann der Hauptagent auf 'was kannst du alles?' aus der echten Feature-Liste antworten. Timing landet automatisch im tool_calls-Log (ms je Werkzeug -> Flaschenhals-Radar, sobald der Tool-Loop im Chat aktiv ist). Noch NICHT im echten Chat aktiv (Test via /toolagent-test). 0.62.0: WERKZEUGKASTEN des Hauptagenten (Schritt-2-Baustein, noch NICHT im Chat aktiv). NEU build_agent_tools() + TOOLAGENT_SYSTEM: die 4 Lese-/Such-Werkzeuge als duenne Handler um bestehende Funktionen — durchsuche_gedaechtnis (smart_recall, liefert nur Schnipsel + fuellt hit_cache), lade_eintrag (Volltext EINES Eintrags aus dem Cache — Kontext-Schutz), web_suche (tavily_search), lies_logbuch (_read_recent_turns). Verlagert die Leseagent-Filterung in den Hauptagenten (Direktive #3: verlagern statt loeschen; Antwort- vs. Kontext-Treffer im System-Prompt). NEU Endpoint GET /toolagent-test?q=... : isolierter Test des Werkzeugkastens (fuer den Star-Trek-Regressionsfall), beruehrt den echten Chat NICHT. Schreib-Werkzeuge (speichere/schreibe_regel) folgen mit der _process_turn-Integration. 0.61.4: ROBUSTHEIT codex_generate_tools — Streaming-Retry (bis 3 Versuche) gegen den sporadischen Abbruch des Impersonation-Backends ('peer closed connection ... incomplete chunked read'). Retry NUR solange kein response.completed kam (Backend-Call ist seiteneffektfrei); bei 4xx/failed KEIN Retry. Selbsttest auf EINEN Lauf reduziert (H1/H2-Diagnose abgeschlossen). 0.61.3: FIX — Function-Calling MACHBARKEIT BEWIESEN (function_calls kommen als Stream-Events output_item.done, nicht in completed.output). Das ChatGPT-Codex-Backend liefert function_calls als STREAM-EVENTS (response.output_item.done mit dem vollstaendigen function_call-Item: name/call_id/arguments), NICHT in completed.output (das bleibt leer). Root Cause des 'Tools werden nicht aufgerufen'-Befunds war ein PARSING-Bug (nur completed.output gelesen), KEIN Backend-Limit — die Event-Sequenz-Diagnose zeigte response.function_call_arguments.delta/done + output_item.done. Fix: fc_items aus den output_item.done-Events einsammeln, primaer nutzen (completed.output nur Fallback). 0.61.2: DIAGNOSE codex_generate_tools/toolloop-selftest — im ersten Lauf rief gpt-5.5 KEINE Werkzeuge auf (tools_used leer, Antwort 'ohne Werkzeugaufruf nicht bestimmbar'). Verdacht: custom function-Tools erreichen das Modell nicht. Selbsttest testet jetzt tool_choice 'auto' UND 'required' und gibt die rohe output-Item-Struktur der ersten Runde zurueck (raw_first_output), um H1 (Tools kommen nicht an) von H2 (Modell waehlt ab) zu unterscheiden. codex_generate_tools bekam optionalen tool_choice-Parameter. 0.61.1: FIX — ChatGPT-Codex-Backend ERZWINGT stream:true (stream:false -> HTTP 400 'Stream must be set to true', empirisch per /toolloop-selftest bewiesen). Tool-Loop nutzt jetzt einen streamenden Backend-Helfer (_stream_responses, wie codex_generate) und liest die function_call-Items aus dem response.completed-Event. 0.61.0: Schritt-2-Baustein (Agenten-Umbau) — NEU codex_generate_tools(): GPT/Codex Function-Calling-Loop auf der OpenAI-Responses-API (chatgpt.com/backend-api/codex). Deterministischer Hard-Stop (max_turns UND max_seconds), tool_use<->tool_result strikt 1:1 (function_call verbatim in den Verlauf, je call_id genau ein function_call_output), Tool-Exception als Fehler-tool_result zurueck (nie crashen), Schleifen-Erkennung (>3x gleiche name+args), Tool-Output je Aufruf auf LESE_TOOL_OUT_CAP gekappt; bei Hard-Stop ohne Klartext eine finale Runde OHNE Werkzeuge (Absicherung nach bugs/server/ai-agent-frameworks.md). NEU Endpoint GET /toolloop-selftest: isolierter Machbarkeits-Smoke-Test (2 triviale Tools) — prueft empirisch, ob das Backend eigene function-Tools akzeptiert+aufruft. Beruehrt den Chat-Pfad NICHT (reiner Baustein; sichtbare Dashboard-Version bleibt 0.56.0 bis der Umbau den Chat aendert). Alt: 0.60.0 (07.07.2026, 13:09 Uhr) NEU Turn-Logbuch + Sonden-Trace. Jeder /chat + /chat/stream-Turn wird per contextvar-Trace mitgeschrieben: der bestehende checkpoint()-Kanal fuettert zusaetzlich den Trace, ein Phasen-Marker recall_search trennt Rohsuche vom Leseagent-Filter. Logbuch 1 (LOGBOOK_DIR/Trace/turns.jsonl, 100 rollierend) = 1 lesbare Zeile je Anfrage mit Frage, Router->final Intent, Rohtreffer/Auswahl (Star-Trek: 50 gefunden/0 gewaehlt), Confidence, Antwort-Vorschau + Phasen-Timing (router_ms/suche_ms/leseagent_ms/web_antwort_ms = Flaschenhals-Radar). Logbuch 2 (trace.jsonl, 4000 Events) = feine Events je Turn per turn_id verknuepft (erweiterbares Geruest fuer feine Sonden beim Agenten-Umbau). Atomar (tmp+os.replace), secret-maskiert, BEST-EFFORT (try/except ueberall — gefaehrdet den Chat nie). Deterministische Problem-Markierung (_PROBLEM_FEEDBACK_RE) markiert den letzten Turn, wenn Frank ein Problem meldet. GET /logbook/turns fuers Dashboard. Persistent auf Samba (LOGBOOK_DIR bereits gemountet -> ueberlebt Rebuilds; loest fuer die Turn-Ebene die Fluechtigkeit von /app/logs/agent.jsonl). Alt: 0.59.1 (07.07.2026, 11:52 Uhr).
 
 # ---------------------------------------------------------------------------
 # Konfiguration (alles aus Umgebungsvariablen — Secrets nie im Code)
@@ -91,6 +91,7 @@ DEDUP_MIN_SCORE = float(os.getenv("AGENT_DEDUP_MIN_SCORE", "0.70"))  # ab hier d
 DEFAULT_AGENT_LIMITS = {
     "dedup_candidates": DEDUP_CANDIDATES,
     "history_max": _env_int("AGENT_HISTORY_MAX", 40),
+    "history_compress_at": _env_int("AGENT_HISTORY_COMPRESS_AT", 0),   # 0 = aus; ab N Gesamt-Nachrichten wird der Verlauf ueber den Hauptagenten kumulativ verdichtet (statt hart abzuschneiden)
     "recall_full_limit": _env_int("AGENT_RECALL_LIMIT", 0),            # 0 = historisch "kein Ergebnislimit"
     "multi_query_variants": _env_int("AGENT_MULTI_QUERY_VARIANTS", 2),
     "entity_extract_chars": _env_int("AGENT_ENTITY_EXTRACT_CHARS", 2500),
@@ -108,6 +109,7 @@ DEFAULT_AGENT_LIMITS = {
 AGENT_LIMIT_BOUNDS = {
     "dedup_candidates": (1, 50),
     "history_max": (0, 200),
+    "history_compress_at": (0, 500),
     "recall_full_limit": (0, 5000),
     "multi_query_variants": (0, 5),
     "entity_extract_chars": (500, 20000),
@@ -123,6 +125,7 @@ AGENT_LIMIT_BOUNDS = {
     "chat_text_max_chars": (1000, 1_000_000),
 }
 HISTORY_MAX = DEFAULT_AGENT_LIMITS["history_max"]
+HISTORY_COMPRESS_AT = DEFAULT_AGENT_LIMITS["history_compress_at"]   # 0 = aus; sonst Schwelle (Gesamt-Nachrichten) fuer die kumulative Verlaufs-Komprimierung
 RECALL_LIMIT = DEFAULT_AGENT_LIMITS["recall_full_limit"]
 # Level-2 Such-Intelligenz (Frank-Auftrag 2026-07-04, Plan-Nr. 35-38):
 MULTI_QUERY_ENABLED = os.getenv("AGENT_MULTI_QUERY", "1").strip() not in ("0", "false", "no")
@@ -2199,7 +2202,10 @@ def _with_store_timestamp(text: str) -> str:
 
 def _new_session(user_id: str) -> dict:
     return {"user_id": user_id, "messages": [], "start_local": _now_local(),
-            "last_activity": time.monotonic(), "pending": None}
+            "last_activity": time.monotonic(), "pending": None,
+            # Verlaufs-Komprimierung (RAM, Frank-Wunsch 2026-07-08): kumulative Zusammenfassung des
+            # frueheren Gespraechs + Index, bis zu dem komprimiert wurde. Beide leben nur in der Session.
+            "history_summary": "", "history_compressed_upto": 0}
 
 
 # ---------------------------------------------------------------------------
@@ -2779,7 +2785,7 @@ def current_agent_limits() -> dict[str, int]:
 
 
 def apply_agent_limits(limits: dict[str, Any]) -> dict[str, int]:
-    global DEDUP_CANDIDATES, HISTORY_MAX, RECALL_LIMIT, MULTI_QUERY_VARIANTS, ENTITY_EXTRACT_CHARS
+    global DEDUP_CANDIDATES, HISTORY_MAX, HISTORY_COMPRESS_AT, RECALL_LIMIT, MULTI_QUERY_VARIANTS, ENTITY_EXTRACT_CHARS
     global ENTITY_DOCS_LIMIT, LESE_SNIPPET_CHARS, ANSWER_HIT_CHARS, ANSWER_TOTAL_CHARS
     global ANSWER_MAX_TOKENS, RECALL_WORKING_CACHE_THRESHOLD, RECALL_NORMAL_MAX
     global FULL_CATEGORY_BATCH_CHARS, CONTEXT_PROMPT_MAX_CHARS, CHAT_TEXT_MAX_CHARS
@@ -2788,6 +2794,7 @@ def apply_agent_limits(limits: dict[str, Any]) -> dict[str, int]:
         clean["answer_hit_chars"] = clean["answer_total_chars"]
     DEDUP_CANDIDATES = clean["dedup_candidates"]
     HISTORY_MAX = clean["history_max"]
+    HISTORY_COMPRESS_AT = clean["history_compress_at"]
     RECALL_LIMIT = clean["recall_full_limit"]
     MULTI_QUERY_VARIANTS = clean["multi_query_variants"]
     ENTITY_EXTRACT_CHARS = clean["entity_extract_chars"]
@@ -2898,11 +2905,88 @@ def build_abfrage_prompt(categories: list[str]) -> str:
     return instr + "\n\n" + ABFRAGE_SCHEMA
 
 
+def _fmt_history_lines(msgs: "list[dict]") -> str:
+    return "\n".join(("Frank" if m.get("role") == "frank" else "Agent") + ": " + (m.get("text") or "") for m in msgs)
+
+
+# --- Verlaufs-Komprimierung (Frank-Wunsch 2026-07-08) ---------------------------------------------
+# Ab HISTORY_COMPRESS_AT Gesamt-Nachrichten (Frank + Cortex zusammengezaehlt) wird der Gespraechsverlauf
+# ueber den Hauptagenten (GPT-5.5) KUMULATIV verdichtet: die bestehende Zusammenfassung + die neuen
+# Nachrichten seit der letzten Komprimierung werden zu EINER neuen Zusammenfassung verschmolzen. So
+# ersetzt die Komprimierung das harte HISTORY_MAX-Abschneiden — nichts geht verloren, nur verdichtet.
+# Alles nur im RAM (session-state). 0 = aus (dann gilt weiter das alte HISTORY_MAX-Verhalten).
+HISTORY_COMPRESS_SYSTEM = (
+    "Du bist Cortex' Verlaufs-Verdichter. Fasse den bisherigen Gespraechsverlauf zwischen Frank und "
+    "Cortex zu einer KOMPAKTEN, aber VOLLSTAENDIGEN Zusammenfassung zusammen. Behalte ALLE wichtigen "
+    "Fakten, Namen, Zahlen, Entscheidungen, offene Fragen und den roten Faden — verliere nichts "
+    "Wesentliches, nur Fuellwoerter und Wiederholungen. Schreibe in knappen deutschen Stichpunkten "
+    "bzw. Saetzen in der dritten Person ('Frank fragte...', 'Cortex antwortete...'). KEINE Einleitung, "
+    "KEIN Kommentar darueber was du tust — gib NUR die Zusammenfassung selbst."
+)
+
+
+def _compress_history(alte_summary: str, msgs_slice: "list[dict]") -> str:
+    """Verschmilzt die bisherige Zusammenfassung mit den neuen Nachrichten zu einer neuen Gesamt-
+    Zusammenfassung (ueber den Hauptagenten). Gibt bei leerer Eingabe/Fehlschlag die alte zurueck."""
+    if not msgs_slice:
+        return alte_summary
+    user = (
+        "BISHERIGE ZUSAMMENFASSUNG (fruehere Gespraechsteile — mit einbeziehen):\n"
+        + (alte_summary.strip() or "(noch keine)") + "\n\n"
+        "NEUE NACHRICHTEN (in die Zusammenfassung einarbeiten):\n" + _fmt_history_lines(msgs_slice) + "\n\n"
+        "Gib die AKTUALISIERTE Gesamt-Zusammenfassung (alte + neue verschmolzen)."
+    )
+    out = llm_generate(HISTORY_COMPRESS_SYSTEM, user, model=ROLE_MODELS["haupt"],
+                       json_mode=False, max_tokens=ANSWER_MAX_TOKENS, temperature=0.3)
+    return (out or "").strip() or alte_summary
+
+
+def _maybe_compress_history(session: dict) -> None:
+    """Prueft die Schwelle und komprimiert den Verlauf kumulativ (mutiert die Session). BEST-EFFORT:
+    ein Fehler darf den Chat NIE gefaehrden — dann bleibt einfach der alte Stand (der _history_text-
+    Sicherheitsnetz-Cap greift trotzdem)."""
+    n = HISTORY_COMPRESS_AT
+    if not n or n <= 0:
+        return
+    msgs = session.get("messages") or []
+    upto = int(session.get("history_compressed_upto") or 0)
+    if len(msgs) - upto < n:
+        return
+    alt = (session.get("history_summary") or "")
+    try:
+        neue_summary = _compress_history(alt, msgs[upto:])
+    except Exception:  # noqa: BLE001 — Komprimierung darf den Chat nie killen (best-effort)
+        _log(logging.WARNING, "Verlaufs-Komprimierung fehlgeschlagen (best-effort, alter Stand bleibt)", exc_info=True)
+        return
+    if neue_summary and neue_summary != alt:
+        session["history_summary"] = neue_summary
+        session["history_compressed_upto"] = len(msgs)
+        checkpoint("history_compress", "Verlauf kumulativ komprimiert (ersetzt hartes Abschneiden)",
+                   ok=True, ab_nachrichten=n, gesamt=len(msgs), summary_zeichen=len(neue_summary))
+
+
 def _history_text(session: dict) -> str:
-    msgs = session["messages"][-HISTORY_MAX:]
-    if not msgs:
+    msgs = session.get("messages") or []
+    # Komprimierungs-Modus aktiv: Zusammenfassung des frueheren Gespraechs + die noch unkomprimierten
+    # Nachrichten (statt hartem Abschneiden). Sicherheitsnetz: sollte die Komprimierung mal nicht
+    # gelaufen sein, wird der unkomprimierte Rest trotzdem auf HISTORY_MAX gekappt (nie unbegrenzt).
+    if HISTORY_COMPRESS_AT and HISTORY_COMPRESS_AT > 0:
+        summary = (session.get("history_summary") or "").strip()
+        upto = int(session.get("history_compressed_upto") or 0)
+        rest = msgs[upto:]
+        if len(rest) > HISTORY_MAX:
+            rest = rest[-HISTORY_MAX:]
+        parts: "list[str]" = []
+        if summary:
+            parts.append("[Zusammenfassung des frueheren Gespraechs:]\n" + summary)
+        if rest:
+            parts.append(_fmt_history_lines(rest))
+        return "\n".join(parts) if parts else "(noch nichts)"
+    # Klassisch (Komprimierung aus): nur die letzten HISTORY_MAX Nachrichten, aeltere fallen weg.
+    tail = msgs[-HISTORY_MAX:]
+    if not tail:
         return "(noch nichts)"
-    return "\n".join(("Frank" if m["role"] == "frank" else "Agent") + ": " + m["text"] for m in msgs)
+    return _fmt_history_lines(tail)
 
 
 def _norm_context_mode(mode: str | None) -> str:
@@ -5081,6 +5165,9 @@ def _process_turn(session: dict, user_text: str, pending: dict | None, category:
     Liest nur session['messages'] (Verlauf), MUTIERT die Session nicht — gibt 'pending' zum Setzen zurueck.
     Erzwingt im CODE: Speichern passiert NUR nach Bestaetigung (confirm_yes), nie direkt bei intent=save.
     'category' = im Dashboard-Dropdown GEWAEHLTE Kategorie (Override); leer = Speicheragent entscheidet."""
+    # Verlaufs-Komprimierung (Frank-Wunsch 2026-07-08): ab HISTORY_COMPRESS_AT Gesamt-Nachrichten den
+    # Verlauf kumulativ ueber den Hauptagenten verdichten (best-effort — gefaehrdet den Turn nie).
+    _maybe_compress_history(session)
     payload_cats = brain_categories()                                                  # NUR Kategorien MIT Eintraegen -> Leseagent (leere bringen ihm nichts)
     categories = sorted((set(payload_cats) | set(load_registry())) - {CONV_CATEGORY})   # VOLLE Liste (inkl. leerer) -> Speicheragent
     # Explizite Speicher-Felder (Titel/Kategorie aus dem Dashboard-Sendebereich) sind ein KLARES

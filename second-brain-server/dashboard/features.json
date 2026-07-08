@@ -3,6 +3,14 @@
 	"hinweis": "PFLEGE-PFLICHT: Bei JEDEM Deploy, der ein neues System/Feature einbaut, hier einen Eintrag ERGÄNZEN (neueste zuerst). SCHREIBWEISE (Dauer-Regel): leichtes, verständliches Deutsch, kurze Sätze; ALLE Fachbegriffe, Namen und Zahlen (z.B. BM25, RRF, Qdrant, ENV-Variablen, Endpunkt-Namen) BEHALTEN, aber jeden in einem kurzen Halbsatz erklären — NIE durch Weglassen vereinfachen; kompakt halten (der Hauptagent liest über das Werkzeug 'was_kann_cortex' ALLE Einträge auf einmal ein), aber vollständig genug, dass man erkennt WAS eingebaut wurde; einfache Überschrift. Ähnliche/redundante Einträge dürfen zusammengefasst werden — Datum sekundär, entscheidend ist WAS Cortex kann. Quelle des Info-Bereichs in den Dashboard-Einstellungen (GET /api/features). Verankert in DEPLOY.md.",
 	"features": [
 		{
+			"id": "verlaufs-komprimierung",
+			"eingebaut": "08.07.2026, 17:27 Uhr",
+			"dienst": "agent 0.65.0 + dashboard 0.62.0",
+			"name": "Gesprächsverlauf-Komprimierung: ab einstellbarer Nachrichtenzahl wird der Verlauf verdichtet statt abgeschnitten",
+			"kurz": "Neue Einstellung 'Verlauf komprimieren ab' (unter Einstellungen → Qdrant Limits). Ab so vielen Chat-Nachrichten (deine Fragen + Cortex' Antworten zusammen) fasst der Hauptagent den bisherigen Gesprächsverlauf zu einer kompakten Zusammenfassung zusammen — ohne wichtige Details zu verlieren. Danach läuft der Verlauf wieder voll und wird bei der nächsten Schwelle erneut verdichtet, wobei die vorige Zusammenfassung mit einfließt. 0 = aus.",
+			"erklaerung": "Bisher gab es nur 'Gesprächsverlauf' (history_max): die letzten 40 Nachrichten gingen mit, alles Ältere wurde hart abgeschnitten und war weg. Die neue Einstellung 'Verlauf komprimieren ab' (history_compress_at, Standard 0 = aus) verdichtet stattdessen: Zählt der Gesamtverlauf z.B. 20 Nachrichten, fasst der Hauptagent (GPT-5.5) alles zu einer Zusammenfassung zusammen, die alle Fakten, Namen, Zahlen, Entscheidungen und offenen Fragen behält — nur Füllwörter und Wiederholungen fallen weg. Ab dann geht nur noch diese Zusammenfassung plus die neuen, noch nicht verdichteten Nachrichten an den Agenten. Läuft der Verlauf erneut auf die Schwelle, wird wieder komprimiert und die alte Zusammenfassung fließt mit ein (kumulativ) — so bleibt der rote Faden über beliebig lange Gespräche erhalten, während der Kontext klein bleibt. Technisch lebt das nur im Arbeitsspeicher der laufenden Sitzung (history_summary + history_compressed_upto in der Session); ein Neustart beginnt frisch. Die Komprimierung ist best-effort: schlägt der Zusammenfass-Schritt einmal fehl, läuft der Chat normal weiter und der noch unkomprimierte Rest wird sicherheitshalber weiter auf den 'Gesprächsverlauf'-Wert begrenzt. Bei 0 bleibt alles wie vorher (hartes Abschneiden)."
+		},
+		{
 			"id": "hauptagent-im-echten-chat",
 			"eingebaut": "08.07.2026, 16:45 Uhr",
 			"dienst": "agent 0.64.0 + dashboard 0.61.0",
