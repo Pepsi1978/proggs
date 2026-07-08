@@ -216,8 +216,8 @@ internal fun TemplateAsTaskCard(
                     Button(
                         onClick = { addMenuOpen = true },
                         colors = ButtonDefaults.buttonColors(
-                            containerColor = Color.Black,
-                            contentColor = Color.White,
+                            containerColor = Color.White,
+                            contentColor = Color.Black,
                         ),
                     ) {
                         Text("Hinzufügen")

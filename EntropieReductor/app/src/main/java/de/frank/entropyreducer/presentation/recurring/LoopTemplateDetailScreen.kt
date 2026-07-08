@@ -135,8 +135,8 @@ fun LoopTemplateDetailScreen(
                             onClick = { addOpen = true },
                             modifier = Modifier.fillMaxWidth(),
                             colors = ButtonDefaults.buttonColors(
-                                containerColor = Color.Black,
-                                contentColor = Color.White,
+                                containerColor = Color.White,
+                                contentColor = Color.Black,
                             ),
                         ) {
                             Text("Hinzufügen")
