@@ -6,6 +6,26 @@
 
 input=$(cat)
 
+# jq-Selbstheilung: Die Statusline braucht jq zum Parsen des Session-JSON. Wenn
+# jq NICHT im PATH ist (typisch: Claude-Code-Session wurde VOR der jq-Installation
+# gestartet — Windows winget legt jq in WinGet\Links, das erst ein neuer Prozess
+# im PATH sieht), suchen wir es direkt in den bekannten Installationsorten und
+# haengen den Fundort an PATH. Ohne das rendert die Leiste leer ("--" statt
+# Modell/Effort/Prozenten), bis Claude Code neu startet. (Frank-Bug 2026-07-08,
+# vgl. bugs/claude-tooling/claude-hooks.md §13.2 "jq nicht installiert".)
+if ! command -v jq >/dev/null 2>&1; then
+    for _d in \
+        "$LOCALAPPDATA/Microsoft/WinGet/Links" \
+        "$HOME/AppData/Local/Microsoft/WinGet/Links" \
+        "$HOME/bin" "$HOME/.local/bin" \
+        /opt/homebrew/bin /usr/local/bin /usr/bin; do
+        if [ -x "$_d/jq" ] || [ -x "$_d/jq.exe" ]; then
+            PATH="$_d:$PATH"
+            break
+        fi
+    done
+fi
+
 # Effort: ZUERST aus Stdin (.effort.level) — das ist der LIVE-Session-Wert,
 # der von /effort low/medium/high/xhigh aktualisiert wird. settings.json haelt
 # nur den Default fuer den Session-Start. Frueher hat die Statusline NUR aus
@@ -51,6 +71,16 @@ effort_upper=$(printf '%s' "$effort" | tr '[:lower:]' '[:upper:]')
 model="${model/ context)/)}"
 model="${model/ Context)/)}"
 model="${model/ Kontext)/)}"
+
+# Windows-Pfad-Normalisierung (Frank-Bug 2026-07-08): cwd kommt auf Windows mit
+# BACKSLASHES (C:\Users\barwa\proggs). Der Pfad wird weiter unten in einen printf-
+# FORMAT-String interpoliert (`printf "...${cwd}..."`), wo `\U`, `\b`, `\p` als
+# Escapes gelten — `\b` ist ein Backspace (0x08), der beim Rendern sogar VORHER
+# gedruckte Segmente (Context, Modell) von der Zeile loescht. Symptom: mit
+# Backslash-cwd zeigte die Leiste nur Effort/5h/7d/Zeit, Modell war leer, Context
+# und Ordner fehlten ganz. Backslashes -> Forward-Slashes macht den Pfad escape-frei
+# und zeigt ihn zugleich einheitlich (wie die uebrigen Pfade in der Leiste).
+cwd_raw="${cwd_raw//\\//}"
 
 # Home-Pfad zu ~ kuerzen ohne Subprocess
 case "$cwd_raw" in
