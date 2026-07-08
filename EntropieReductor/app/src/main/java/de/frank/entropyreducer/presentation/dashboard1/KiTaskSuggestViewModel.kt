@@ -13,6 +13,7 @@ import de.frank.entropyreducer.data.kiTaskSuggestionStore
 import de.frank.entropyreducer.data.local.dao.TaskSuggestionDao
 import de.frank.entropyreducer.data.local.entities.OriginType
 import de.frank.entropyreducer.data.local.entities.TaskSuggestionEntity
+import de.frank.entropyreducer.data.safety.PhoneContentGuard
 import de.frank.entropyreducer.domain.model.EntrySource
 import de.frank.entropyreducer.domain.usecase.AutoTaskSuggestion
 import de.frank.entropyreducer.domain.usecase.GenerateSuggestionsUseCase
@@ -176,8 +177,12 @@ class KiTaskSuggestViewModel @Inject constructor(
         viewModelScope.launch {
             // ID-Architektur Etappe 2d: Herkunft (originId/originType/rootId) der Quell-Idee mitschreiben.
             val nowMs = System.currentTimeMillis()
+            val safeSuggestions = newSuggestions.filterNot { s ->
+                PhoneContentGuard.isSecondBrainWorkArtifact(s.title, s.description)
+            }
+            if (safeSuggestions.isEmpty()) return@launch
             taskSuggestionDao.upsertAll(
-                newSuggestions.mapIndexed { index, s ->
+                safeSuggestions.mapIndexed { index, s ->
                     TaskSuggestionEntity(
                         id = s.id,
                         title = s.title,

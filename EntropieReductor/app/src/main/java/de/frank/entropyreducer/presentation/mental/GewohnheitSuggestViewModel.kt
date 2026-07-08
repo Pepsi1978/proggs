@@ -10,6 +10,7 @@ import dagger.hilt.android.qualifiers.ApplicationContext
 import de.frank.entropyreducer.data.gewohnheitSuggestionStore
 import de.frank.entropyreducer.data.local.dao.HabitSuggestionDao
 import de.frank.entropyreducer.data.local.entities.HabitSuggestionEntity
+import de.frank.entropyreducer.data.safety.PhoneContentGuard
 import de.frank.entropyreducer.domain.usecase.AutoHabitSuggestion
 import de.frank.entropyreducer.domain.usecase.GenerateSuggestionsUseCase
 import de.frank.entropyreducer.presentation.ideen.ideenEntriesFlow
@@ -122,6 +123,7 @@ class GewohnheitSuggestViewModel @Inject constructor(
     fun addSuggestion(text: String) {
         val clean = text.trim()
         if (clean.isEmpty()) return
+        if (PhoneContentGuard.isSecondBrainWorkArtifact(null, clean)) return
         viewModelScope.launch {
             val m = Mental.create(clean)
             habitSuggestionDao.upsert(
@@ -135,9 +137,13 @@ class GewohnheitSuggestViewModel @Inject constructor(
     private fun storeSuggestions(newSuggestions: List<AutoHabitSuggestion>) {
         viewModelScope.launch {
             // ID-Architektur Etappe 3d: Herkunft (originId/originType/rootId) der Quell-Idee mitschreiben.
+            val safeSuggestions = newSuggestions.filterNot { s ->
+                PhoneContentGuard.isSecondBrainWorkArtifact(null, s.text)
+            }
+            if (safeSuggestions.isEmpty()) return@launch
             val nowMs = System.currentTimeMillis()
             habitSuggestionDao.upsertAll(
-                newSuggestions.mapIndexed { index, s ->
+                safeSuggestions.mapIndexed { index, s ->
                     HabitSuggestionEntity(
                         id = s.id,
                         text = s.text,

@@ -4,6 +4,7 @@ import de.frank.entropyreducer.data.local.entities.EntropyEntryEntity
 import de.frank.entropyreducer.data.remote.Schema
 import de.frank.entropyreducer.data.remote.SchemaType
 import de.frank.entropyreducer.data.repository.EntryRepository
+import de.frank.entropyreducer.data.safety.PhoneContentGuard
 import de.frank.entropyreducer.domain.agentic.AgenticTool
 import de.frank.entropyreducer.domain.agentic.ToolCategory
 import de.frank.entropyreducer.domain.agentic.ToolContext
@@ -102,6 +103,9 @@ constructor(private val entryRepository: EntryRepository) : AgenticTool {
             // --- Pflicht-Parameter ---
             val text = obj["text"]?.jsonPrimitive?.content?.trim()
                 ?: return ToolResult.Failure("Parameter 'text' fehlt oder ist leer.")
+            if (PhoneContentGuard.isSecondBrainWorkArtifact(obj["titel"]?.jsonPrimitive?.content, text)) {
+                return ToolResult.Failure("Interner Second-Brain-Arbeitsinhalt wird nicht als Tagebuch-Eintrag gespeichert.")
+            }
 
             // --- Längen-Validierung ---
             if (text.length > 5000) {

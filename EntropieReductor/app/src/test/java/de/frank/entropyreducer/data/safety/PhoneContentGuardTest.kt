@@ -18,6 +18,24 @@ class PhoneContentGuardTest {
                 text = "Interne Arbeitsnotiz",
             )
         ).isTrue()
+        assertThat(
+            PhoneContentGuard.isSecondBrainWorkArtifact(
+                title = "Nachtschech Bibliothekar",
+                text = "interner Plan",
+            )
+        ).isTrue()
+        assertThat(
+            PhoneContentGuard.isSecondBrainWorkArtifact(
+                title = "Nacht Schicht Bibliothekar",
+                text = "interner Plan",
+            )
+        ).isTrue()
+        assertThat(
+            PhoneContentGuard.isSecondBrainWorkArtifact(
+                title = "Nachtschech-Bibliothekar",
+                text = "interner Plan",
+            )
+        ).isTrue()
     }
 
     @Test

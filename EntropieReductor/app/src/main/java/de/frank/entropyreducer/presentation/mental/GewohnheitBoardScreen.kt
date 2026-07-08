@@ -117,6 +117,7 @@ internal suspend fun addGewohnheit(
 ) {
     val clean = text.trim()
     if (clean.isEmpty()) return
+    if (de.frank.entropyreducer.data.safety.PhoneContentGuard.isSecondBrainWorkArtifact(null, clean)) return
     val dao = de.frank.entropyreducer.data.local.habitDaoFrom(context)
     val m = Mental.create(clean)
     dao.upsert(
@@ -163,6 +164,7 @@ internal suspend fun addGewohnheitFromSuggestion(context: Context, suggestionId:
 internal suspend fun updateGewohnheit(context: Context, id: String, text: String) {
     val clean = text.trim()
     if (clean.isEmpty()) return
+    if (de.frank.entropyreducer.data.safety.PhoneContentGuard.isSecondBrainWorkArtifact(null, clean)) return
     val dao = de.frank.entropyreducer.data.local.habitDaoFrom(context)
     val current = dao.getById(id) ?: return
     // copy erhaelt position + Herkunft, aktualisiert nur Text + Zeitstempel.
@@ -223,7 +225,14 @@ internal suspend fun restoreGewohnheiten(
             continue
         }
         val inc = incomingById[ex.id]
-        if (inc != null && inc.updatedAt > ex.updatedAt) {
+        if (
+            inc != null &&
+                inc.updatedAt > ex.updatedAt &&
+                !de.frank.entropyreducer.data.safety.PhoneContentGuard.isSecondBrainWorkArtifact(
+                    null,
+                    inc.text,
+                )
+        ) {
             // copy erhaelt position + Herkunft; nur Text + Zeitstempel aktualisieren.
             dao.update(ex.copy(text = inc.text, updatedAt = inc.updatedAt))
             changed++
@@ -235,6 +244,7 @@ internal suspend fun restoreGewohnheiten(
         if (inc.id in existingIds) continue
         val ts = deletedAt[inc.id]
         if (ts != null && ts > inc.updatedAt) continue
+        if (de.frank.entropyreducer.data.safety.PhoneContentGuard.isSecondBrainWorkArtifact(null, inc.text)) continue
         dao.upsert(
             de.frank.entropyreducer.data.local.entities.HabitEntity(
                 id = inc.id,
