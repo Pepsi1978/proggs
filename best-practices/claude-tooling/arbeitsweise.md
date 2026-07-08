@@ -431,4 +431,4 @@
 - **Was:** `/effort` zeigt jetzt an, wenn das Level als Default fuer neue Sessions persistiert. Nur mehr Transparenz. Regel bleibt: Effort nie per `CLAUDE_CODE_EFFORT_LEVEL`-Env setzen (blockiert `/effort`).
 - **Quelle:** code.claude.com/docs/en/changelog `[offiziell]`
 
-**Betrifft eigene Werkzeuge:** Punkt 1 rechtfertigt eine Anpassung von `semantic-search-before-agents.md` und `debugging-and-verification.md` — der bisherige Hinweis "Read(Ausschnitt) nach Grep" ist veraltet; der Grep-Schritt IST jetzt das Read. Der Grep-Reflex selbst bleibt unveraendert.
+**Betrifft eigene Werkzeuge:** Punkt 1 rechtfertigt eine Anpassung von `search-and-agent-scope.md` und `debugging-and-verification.md` — der bisherige Hinweis "Read(Ausschnitt) nach Grep" ist veraltet; der Grep-Schritt IST jetzt das Read. Der Grep-Reflex selbst bleibt unveraendert.

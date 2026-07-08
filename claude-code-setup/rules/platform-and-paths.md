@@ -33,12 +33,11 @@ SOFORT path-verify → Ergebnis zeigen.
 Gradle-Daemon/adb vorher stoppen · Windows `cmd.exe //c "ren"` statt `git mv` · sofort `.gitattributes`
 LFS-Regeln aktualisieren (sonst 100MB-Rejection).
 
-## 6. Semantische Suche: Plattform-Isolation
+## 6. `.mcp.json`: Plattform-Isolation
 
-`.mcp.json`, code-search, Reindex-Hooks pro System eigenstaendig. macOS-Aenderungen duerfen Windows
-NICHT beeinflussen (und umgekehrt). `.mcp.json` NIEMALS automatisch aendern/"vereinheitlichen" (macOS
-braucht absolute Pfade). Betroffen (HANDS OFF fuer andere Plattform): `~/proggs/.mcp.json`,
-`mcp-macos.json`/`mcp-windows.json`, `reindex-codebase.{sh,ps1}`, `~/proggs/.code-search/`.
+`.mcp.json` ist pro System eigenstaendig — macOS-Aenderungen duerfen Windows NICHT beeinflussen (und
+umgekehrt). `.mcp.json` NIEMALS automatisch aendern/"vereinheitlichen" (macOS braucht absolute Pfade).
+HANDS OFF fuer die andere Plattform: `~/proggs/.mcp.json`, `mcp-macos.json`/`mcp-windows.json`.
 
 ## 7. JSON: kein sed/awk
 

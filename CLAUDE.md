@@ -92,7 +92,8 @@ neue Projekte = Unterordner. Diese CLAUDE.md existiert NUR im Repo, keine Kopie 
   (`highest-model-everywhere.md`). Absturzsicherheit: `subagent-crash-proofing.md`.
 - Agent Teams nur auf Ansage oder bei klarem Mehrwert — 3-4x teurer.
 - Muster + Speed-Tiers: `claude-code-setup/docs/parallel-muster.md`.
-- Such-Reflex (Grep vs. semantisch, sichtbare Ansage): `semantic-search-before-agents.md`.
+- Such-Reflex: Grep/Glob (kein code-search/semantische Suche im CLI mehr); Agent-Scope nach
+  Dateigroesse (>500 Zeilen nie per Agent editieren): `search-and-agent-scope.md`.
 
 ## Qualitaetsschleife (PFLICHT nach jedem Feature/Projekt)
 
