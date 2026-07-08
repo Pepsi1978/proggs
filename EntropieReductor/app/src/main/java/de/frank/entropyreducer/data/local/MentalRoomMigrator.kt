@@ -8,6 +8,7 @@ import de.frank.entropyreducer.data.diagnostics.Diag
 import de.frank.entropyreducer.data.diagnostics.DiagnosticArea
 import de.frank.entropyreducer.data.local.dao.MentalSentenceDao
 import de.frank.entropyreducer.data.local.entities.MentalEntity
+import de.frank.entropyreducer.data.safety.PhoneContentGuard
 import de.frank.entropyreducer.di.ApplicationScope
 import de.frank.entropyreducer.presentation.mental.mentalsFromJsonFlow
 import javax.inject.Inject
@@ -37,10 +38,12 @@ class MentalRoomMigrator @Inject constructor(
         context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
 
     fun migrateIfNeeded() {
-        if (prefs.getBoolean(KEY_DONE, false)) return
         applicationScope.launch {
             withContext(Dispatchers.IO) {
-                runCatching { runMigration() }
+                runCatching {
+                        if (!prefs.getBoolean(KEY_DONE, false)) runMigration()
+                        cleanupSecondBrainArtifacts()
+                    }
                     .onFailure { ex ->
                         Diag.w(
                             DiagnosticArea.DATABASE,
@@ -76,16 +79,16 @@ class MentalRoomMigrator @Inject constructor(
                     updatedAt = m.updatedAt,
                     position = index,
                 )
-            }
+            }.filterNot { entity -> PhoneContentGuard.isSecondBrainWorkArtifact(null, entity.text) }
         if (entities.isNotEmpty()) mentalSentenceDao.upsertAll(entities)
 
         // Anzahl-Abgleich (Live-Logik-Sonde / CHECKPOINT).
         val written = mentalSentenceDao.count()
-        val ok = written == mentals.size
+        val ok = written == entities.size
         Diag.i(
             DiagnosticArea.DATABASE,
             TAG,
-            "CHECKPOINT migration=mental_sentences erwartet=${mentals.size} tatsaechlich=$written ok=$ok",
+            "CHECKPOINT migration=mental_sentences erwartet=${entities.size} tatsaechlich=$written ok=$ok",
         )
 
         if (ok) {
@@ -100,6 +103,23 @@ class MentalRoomMigrator @Inject constructor(
                 DiagnosticArea.DATABASE,
                 TAG,
                 "Anzahl-Mismatch -> Flag NICHT gesetzt, Retry beim naechsten Start. JSON unangetastet.",
+            )
+        }
+    }
+
+    private suspend fun cleanupSecondBrainArtifacts() {
+        var removed = 0
+        for (mental in mentalSentenceDao.getAllForBackup()) {
+            if (PhoneContentGuard.isSecondBrainWorkArtifact(null, mental.text)) {
+                mentalSentenceDao.deleteById(mental.id)
+                removed++
+            }
+        }
+        if (removed > 0) {
+            Diag.w(
+                DiagnosticArea.DATABASE,
+                TAG,
+                "CHECKPOINT cleanup=mental_phone_artifacts expected=not_on_phone actual=removed=$removed ok=true",
             )
         }
     }

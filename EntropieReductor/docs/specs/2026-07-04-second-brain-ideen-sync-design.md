@@ -52,18 +52,21 @@ App gelöscht — abgesichert durch `health.ready` (Ladefenster-Schutz gegen fä
 Trigger: beim App-Start (MainActivity) UND beim Betreten des Ideen-Reiters (IdeenScreen + IdeenBrainSyncViewModel),
 je mit Retry für den Tunnel-Aufbau. Alle vier Richtungen live verifiziert.
 
-## Etappe 3 (umgesetzt, v0.21.0) — dasselbe für ALLE weiteren Listen
+## Etappe 3 (umgesetzt, v0.21.0; korrigiert v0.25.5) — weitere Listen, aber niemals Mental
 
-Frank-Wunsch: den kompletten Ideen-Sync **1:1 auf alle weiteren App-Listen** ausrollen, je mit
-eigenem An/Aus-Schalter im Second-Brain-Einstellungsbereich:
+Ursprünglich wurde der komplette Ideen-Sync **1:1 auf alle weiteren App-Listen** ausgerollt, je mit
+eigenem An/Aus-Schalter im Second-Brain-Einstellungsbereich. Korrektur: Der Mental-Reiter ist keine
+Brain-Ablage, sondern Franks persönlicher Gedankenbereich. Dort darf die App niemals Einträge aus
+dem Second Brain anlegen oder dorthin synchronisieren.
 - **Entropie / „Forscher"** (EntropyEntryEntity / EntropyEntryDao)
 - **Thesen**
 - **Journal** (Tagebuch / JournalMirror)
 - **Gewohnheiten** (HabitEntity / HabitDao)
-- **Mental** (MentalEntity / MentalSentenceDao)
+- **Mental** (MentalEntity / MentalSentenceDao) — **ausgeschlossen**, nie Second-Brain-Sync
 
-Jeweils volle bidirektionale Synchronität (rein UND raus) wie bei Ideen — eigene Brain-Kategorie,
-Import/Upload/Löschung beidseitig, Ladefenster- + Tombstone-Schutz, Resync-Knopf.
+Für die erlaubten Bereiche gilt jeweils volle bidirektionale Synchronität (rein UND raus) wie bei
+Ideen — eigene Brain-Kategorie, Import/Upload/Löschung beidseitig, Ladefenster- + Tombstone-Schutz,
+Resync-Knopf. Mental bleibt lokal/Backup-only.
 
 **Umsetzung:** Der vorhandene `SecondBrainIdeaConnector` ist generisch parametrisiert (Kategorie +
 jeweilige DAO/DataStore-Quelle + **eigene** Settings-Marken-Keys pro Liste). Schalter je Liste stehen
