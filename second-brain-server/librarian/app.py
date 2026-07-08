@@ -56,6 +56,7 @@ OPENCODE_API_KEY = os.getenv("OPENCODE_API_KEY", "")
 OPENCODE_GO_URL = os.getenv("OPENCODE_GO_URL", "https://opencode.ai/zen/go/v1").rstrip("/")
 OPENCODE_ANTHROPIC_VERSION = os.getenv("OPENCODE_ANTHROPIC_VERSION", "2023-06-01")
 USER_ID = os.getenv("SB_USER_ID", "frank")
+VERSION = "0.10.0 (08.07.2026, 14:37 Uhr)"  # Bibliothekar-Store setzt source=librarian fuer gezielten Phone-Client-Block.
 AGENT_URL = os.getenv("AGENT_URL", "http://agent:8002").rstrip("/")   # LLM-Durchgriff fuer Codex/GPT (agent 0.52.0)
 # Stille Notbremse gegen Endlosschleifen, wenn 'Ohne Begrenzung' aktiv ist (Almanach ai-agent §2.1:
 # ein Cap muss STOPPEN koennen). 5000 Calls erreicht ehrliche Nacht-Arbeit nie — nur ein Amoklauf.
@@ -474,7 +475,7 @@ def brain_search(query: str, limit: int = 5) -> list[dict]:
 
 
 def brain_store(text: str, title: str, category: str, categories: "list[str] | None" = None) -> dict:
-    payload: dict = {"text": text, "user_id": USER_ID}
+    payload: dict = {"text": text, "user_id": USER_ID, "source": "librarian"}
     if title.strip():
         payload["title"] = title.strip()
     if categories:

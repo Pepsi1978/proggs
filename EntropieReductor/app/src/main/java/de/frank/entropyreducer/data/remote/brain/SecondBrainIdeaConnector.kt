@@ -77,7 +77,6 @@ private data class SecondBrainSyncTarget(
     val loadRows: suspend () -> List<SecondBrainSyncRow>,
     val insertFromBrain: suspend (SecondBrainCategoryItem) -> SecondBrainSyncRow?,
     val deleteById: suspend (String) -> Unit,
-    val allowPhonePull: Boolean = false,
 )
 
 @Singleton
@@ -234,14 +233,6 @@ class SecondBrainIdeaConnector @Inject constructor(
 
     private suspend fun pullOnce(target: SecondBrainSyncTarget): Boolean {
         if (!settings.secondBrainConnectorEnabledFlow(target.area.key).first()) return true
-        if (!target.allowPhonePull) {
-            Diag.i(
-                DiagnosticArea.SECOND_BRAIN,
-                TAG,
-                "CHECKPOINT step=pullSkippedUploadOnly area=${target.area.key} expected=no_phone_write actual=upload_only ok=true",
-            )
-            return true
-        }
         val key = secrets.secondBrainApiKey.orEmpty().trim()
         if (key.isBlank()) return true
         val auth = "Bearer $key"
@@ -262,6 +253,14 @@ class SecondBrainIdeaConnector @Inject constructor(
         for (item in brain.items) {
             val title = item.title?.trim().orEmpty()
             if (title.isBlank()) continue
+            if (target.area.key != AREAS_IDEAS.key && item.source.equals("librarian", ignoreCase = true)) {
+                Diag.i(
+                    DiagnosticArea.SECOND_BRAIN,
+                    TAG,
+                    "CHECKPOINT step=pullSkippedLibrarian area=${target.area.key} expected=no_agent_phone_write actual=skipped ok=true title=\"$title\"",
+                )
+                continue
+            }
             if (PhoneContentGuard.isSecondBrainWorkArtifact(title, item.text)) {
                 Diag.w(
                     DiagnosticArea.SECOND_BRAIN,
@@ -414,7 +413,6 @@ class SecondBrainIdeaConnector @Inject constructor(
             loadRows = { loadIdeaRows() },
             insertFromBrain = { item -> insertIdeaFromBrain(item) },
             deleteById = { id -> ideaDao.deleteIdeaById(id) },
-            allowPhonePull = true,
         ),
         SecondBrainSyncTarget(
             area = AREAS_HABITS,

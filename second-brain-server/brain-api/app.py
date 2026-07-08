@@ -281,7 +281,7 @@ def _init_store() -> None:
         )
         _log(logging.INFO, "Collection angelegt", collection=COLLECTION, dims=EMBED_DIMS)
     # Payload-Indizes fuer schnelle/zuverlaessige Filter (idempotent — Fehler ignorieren)
-    for _field in ("doc_id", "title", "category", "categories", "parent", "parents", "user_id"):
+    for _field in ("doc_id", "title", "category", "categories", "parent", "parents", "user_id", "source"):
         try:
             qc.create_payload_index(collection_name=COLLECTION, field_name=_field, field_schema="keyword")
         except Exception:  # noqa: BLE001 — Index existiert bereits / nicht kritisch
@@ -377,6 +377,8 @@ _init_last_attempt = 0.0
 # Alt: 1.21.1: /purge raeumt jetzt AUCH die Entitaeten des eval-Test-Nutzers auf (der erweiterte
 # Eval-Check legt Test-Entitaeten an) + invalidiert den BM25-Cache (purge lief an _delete_doc vorbei).
 VERSION = "1.24.0 (06.07.2026, 17:23 Uhr)"  # 1.24.0: Dashboard-Limits vervollstaendigt. Zusaetzlich zu Chunking, dense Overfetch und BM25 ist jetzt auch search_date_overfetch_factor persistent ueber /limits einstellbar; Datumsfragen ohne nativen DatetimeRange-Fallback koennen damit gruendlicher suchen, ohne die uebrigen Suchpfade zu veraendern. Alt: 1.23.0.
+
+VERSION = "1.25.0 (08.07.2026, 14:37 Uhr)"  # Store-/Kategorie-Antworten tragen source; Bibliothekar-Schreibungen werden fuer Phone-Clients unterscheidbar.
 
 # Startup-Banner (Observability-First: Log-Pfad + Version EINMAL ausgeben)
 _log(logging.INFO, "brain-api startet", version=VERSION, log_path=LOG_PATH)
@@ -848,6 +850,7 @@ class StoreReq(BaseModel):
     title: str | None = Field(default=None, description="Optionaler Titel = Schluessel (gleicher Titel ersetzt)")
     category: str | None = Field(default=None, description="Optionale Kategorie (Abwaertskompat: einzelne Kategorie)")
     categories: list[str] | None = Field(default=None, max_length=12, description="Optional MEHRERE Kategorien (Multi-Category); hat Vorrang vor 'category'. Erste = primaer.")
+    source: str | None = Field(default="manual", max_length=40, description="Herkunft des Schreibers, z.B. manual, entropyreductor oder librarian")
     user_id: str = Field(default="frank", description="Besitzer (aktuell immer 'frank')")
 
 
@@ -996,6 +999,7 @@ def store(req: StoreReq) -> dict:
     category = cats[0] if cats else ""        # primaere Kategorie (Abwaertskompat)
     parents = category_parents(cats)
     parent = parents[0] if parents else ""    # primaerer Haupt-Teil (Abwaertskompat)
+    source = (req.source or "manual").strip().lower() or "manual"
     chunks = chunk_text(req.text)
     _guard_embed_budget(len(chunks))
     t0 = time.time()
@@ -1017,6 +1021,7 @@ def store(req: StoreReq) -> dict:
             "full_text": req.text,   # 1:1 — exakt die Eingabe, in jedem Chunk gehalten
             "created_at": created_at,
             "updated_at": now,
+            "source": source,
         }))
     _upsert_batched(points)
 
@@ -1024,10 +1029,10 @@ def store(req: StoreReq) -> dict:
     stored_ok = bool(points) and points[0].payload["full_text"] == req.text
     checkpoint("store", "Text wird WORTWOERTLICH 1:1 gespeichert (keine KI-Bearbeitung)", ok=stored_ok,
                title=req.title or None, category=req.category or None, chunks=len(chunks),
-               chars=len(req.text), replaced=replaced, ms=int((time.time() - t0) * 1000))
+               chars=len(req.text), replaced=replaced, source=source, ms=int((time.time() - t0) * 1000))
     return {"ok": True, "doc_id": doc_id, "title": req.title or None,
             "category": req.category or None, "chunks": len(chunks), "chars": len(req.text),
-            "replaced": replaced}
+            "source": source, "replaced": replaced}
 
 
 def _sort_recent(items) -> list[dict]:
@@ -1066,6 +1071,7 @@ def by_title(title: str, user_id: str = "frank") -> dict:
     return {"ok": True, "found": True, "title": real_title, "doc_id": doc_id,
             "category": points[0].payload.get("category") or None,
             "categories": cats_from_payload(points[0].payload),
+            "source": points[0].payload.get("source") or None,
             "created_at": points[0].payload.get("created_at"),
             "updated_at": points[0].payload.get("updated_at"), "text": full}
 
@@ -1090,10 +1096,11 @@ def by_category(category: str, user_id: str = "frank") -> dict:
         did = p.payload.get("doc_id")
         if did not in seen:
             seen[did] = {"doc_id": did, "title": p.payload.get("title") or None,
-                         "text": p.payload.get("full_text", ""), "category": p.payload.get("category") or None,
-                         "categories": cats_from_payload(p.payload),
-                         "created_at": p.payload.get("created_at"),
-                         "updated_at": p.payload.get("updated_at")}
+                          "text": p.payload.get("full_text", ""), "category": p.payload.get("category") or None,
+                          "categories": cats_from_payload(p.payload),
+                          "source": p.payload.get("source") or None,
+                          "created_at": p.payload.get("created_at"),
+                          "updated_at": p.payload.get("updated_at")}
     items = _sort_recent(seen.values())   # Neueste zuerst (nach Aktualitaet)
     return {"ok": True, "category": category, "count": len(items), "items": items}
 
@@ -1137,7 +1144,8 @@ def category_item(category: str, index: int = 1, user_id: str = "frank") -> dict
                category=cat, index=index, total=total, title=title, chars=len(full))
     return {"ok": True, "found": True, "category": category, "index": index, "total": total,
             "title": title, "doc_id": doc_id,
-            "categories": cats_from_payload(pts[0].payload) if pts else [], "text": full}
+            "categories": cats_from_payload(pts[0].payload) if pts else [],
+            "source": (pts[0].payload.get("source") or None) if pts else None, "text": full}
 
 
 @app.get("/by-parent", dependencies=[Depends(require_auth)])
@@ -1160,9 +1168,10 @@ def by_parent(parent: str, user_id: str = "frank") -> dict:
         if did not in seen:
             seen[did] = {"doc_id": did, "title": p.payload.get("title") or None,
                          "text": p.payload.get("full_text", ""), "category": p.payload.get("category") or None,
-                         "categories": cats_from_payload(p.payload),
-                         "parent": p.payload.get("parent") or None,
-                         "created_at": p.payload.get("created_at"), "updated_at": p.payload.get("updated_at")}
+                          "categories": cats_from_payload(p.payload),
+                          "parent": p.payload.get("parent") or None,
+                          "source": p.payload.get("source") or None,
+                          "created_at": p.payload.get("created_at"), "updated_at": p.payload.get("updated_at")}
     items = _sort_recent(seen.values())
     return {"ok": True, "parent": parent, "count": len(items), "items": items}
 
@@ -1337,6 +1346,7 @@ def set_entry_category(req: EntryCategoryReq) -> dict:
     title = (pl.get("title") or "").strip()
     full_text = pl.get("full_text", "")
     created_at = pl.get("created_at", iso_now())
+    source = (pl.get("source") or "manual").strip().lower() or "manual"
     now = iso_now()
 
     _delete_doc(req.doc_id)  # alte Chunks (mit altem Kategorie-Vektor) raus
@@ -1349,7 +1359,7 @@ def set_entry_category(req: EntryCategoryReq) -> dict:
         points.append(PointStruct(id=point_id(req.doc_id, i), vector=vec, payload={
             "doc_id": req.doc_id, "user_id": req.user_id, "title": title,
             "category": new_cat, "categories": new_cats, "parent": new_parent, "parents": new_parents, "chunk_index": i, "chunk_count": len(chunks),
-            "chunk_text": ch, "full_text": full_text, "created_at": created_at, "updated_at": now,
+            "chunk_text": ch, "full_text": full_text, "created_at": created_at, "updated_at": now, "source": source,
         }))
     _upsert_batched(points, wait=True)
     after = _scroll(Filter(must=[FieldCondition(key="doc_id", match=MatchValue(value=req.doc_id))]), limit=1)
@@ -1381,6 +1391,7 @@ def set_entry_categories(req: EntryCategoriesReq) -> dict:
     title = (pl.get("title") or "").strip()
     full_text = pl.get("full_text", "")
     created_at = pl.get("created_at", iso_now())
+    source = (pl.get("source") or "manual").strip().lower() or "manual"
     now = iso_now()
 
     _delete_doc(req.doc_id)  # alte Chunks (mit alten Kategorie-Vektoren) raus
@@ -1395,7 +1406,7 @@ def set_entry_categories(req: EntryCategoriesReq) -> dict:
             "category": cats[0], "categories": cats,
             "parent": (parents[0] if parents else ""), "parents": parents,
             "chunk_index": i, "chunk_count": len(chunks), "chunk_text": ch,
-            "full_text": full_text, "created_at": created_at, "updated_at": now,
+            "full_text": full_text, "created_at": created_at, "updated_at": now, "source": source,
         }))
     _upsert_batched(points, wait=True)
     after = _scroll(Filter(must=[FieldCondition(key="doc_id", match=MatchValue(value=req.doc_id))]), limit=1)
@@ -1688,6 +1699,7 @@ def delete_entry(doc_id: str, user_id: str = "frank") -> dict:
         # Multi-Category mit in den Papierkorb (Tiefen-Debugging 2026-07-02): vorher ging beim
         # Restore jede sekundaere Kategorie verloren (trash_restore liest via cats_from_payload).
         "categories": cats_from_payload(pl),
+        "source": (pl.get("source") or "manual").strip().lower() or "manual",
         "text": pl.get("full_text", ""),
         "created_at": pl.get("created_at") or iso_now(),
         "deleted_at": iso_now(),
@@ -1718,6 +1730,7 @@ def update_entry(req: UpdateReq) -> dict:
     cats = norm_cats(req.categories, None) or cats_from_payload(pl)   # req.categories ueberschreibt; sonst bisherige Kategorien behalten
     category = cats[0] if cats else ""
     created_at = pl.get("created_at", iso_now())
+    source = (pl.get("source") or "manual").strip().lower() or "manual"
     now = iso_now()
 
     # Titel-Aenderung (Frank-Wunsch): req.title=None -> alter Titel bleibt. Sonst neuer Titel.
@@ -1744,7 +1757,7 @@ def update_entry(req: UpdateReq) -> dict:
         points.append(PointStruct(id=point_id(target_doc_id, i), vector=vec, payload={
             "doc_id": target_doc_id, "user_id": req.user_id, "title": title, "category": category, "categories": cats, "parent": parent, "parents": parents,
             "chunk_index": i, "chunk_count": len(chunks), "chunk_text": ch,
-            "full_text": req.text, "created_at": created_at, "updated_at": now,
+            "full_text": req.text, "created_at": created_at, "updated_at": now, "source": source,
         }))
     _upsert_batched(points)
 
@@ -1826,6 +1839,7 @@ def trash_restore(req: RestoreReq) -> dict:
     cats = cats_from_payload(entry)   # Trash-Eintrag kann 'categories' ODER altes 'category' haben
     category = cats[0] if cats else ""
     created_at = entry.get("created_at") or iso_now()
+    source = (entry.get("source") or "manual").strip().lower() or "manual"
     if not text.strip():
         raise HTTPException(status_code=400, detail="Eintrag hat keinen Text")
 
@@ -1841,7 +1855,7 @@ def trash_restore(req: RestoreReq) -> dict:
         points.append(PointStruct(id=point_id(req.doc_id, i), vector=vec, payload={
             "doc_id": req.doc_id, "user_id": entry.get("user_id") or req.user_id,
             "title": title, "category": category, "categories": cats, "parent": parent, "parents": parents, "chunk_index": i, "chunk_count": len(chunks),
-            "chunk_text": ch, "full_text": text, "created_at": created_at, "updated_at": now,
+            "chunk_text": ch, "full_text": text, "created_at": created_at, "updated_at": now, "source": source,
         }))
     _upsert_batched(points)
 
