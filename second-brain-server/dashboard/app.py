@@ -36,6 +36,7 @@ VERSION = "0.63.1 (08.07.2026, 19.55 Uhr)"  # 0.63.1 (Frank-Wunsch): Embedding-S
 VERSION = "0.63.2 (08.07.2026, 20:00 Uhr)"  # 0.63.2: Sichtbarer Bump zum agent-0.65.2-Fix: Gespräche werden nach jeder fertigen Agent-Antwort sofort in die Brain-Kategorie „Gespräche“ gespiegelt, statt erst nach 30 Minuten Inaktivität. Alt: 0.63.1.
 VERSION = "0.63.3 (08.07.2026, 20:14 Uhr)"  # 0.63.3: Sichtbarer Bump zum brain-api-1.27.1-Fix: alte Kategorie 'gespräche' und neue Kategorie 'Gespräche' werden zusammengeführt, damit im Gehirn keine doppelt gleich angezeigten Gespräche-Kategorien erscheinen. Alt: 0.63.2.
 VERSION = "0.63.4 (08.07.2026, 20:29 Uhr)"  # 0.63.4: Sichtbarer Bump zur Server-Konfiguration: Agent-Session-Timeout für Gesprächs-Logbuch von 30 auf 10 Minuten verkürzt. Alt: 0.63.3.
+VERSION = "0.64.0 (08.07.2026, 22.18 Uhr)"  # 0.64.0 (Frank-Auftrag 2026-07-08): Selbst-Regeln des Chat-Agenten — neue Einstellungen-Karte 'Selbst-Regeln des Agenten' (Chronik mit Datum, An/Aus, Bearbeiten, Löschen, manuell hinzufügen; Proxy /api/rules GET/POST/PUT/DELETE an agent 0.66.0), Ja/Nein/Bearbeiten-Regeldialog im Chat, Systeminfo-Chronik 'Was Cortex kann' um den Selbst-Regel-Eintrag ergänzt (features.json). Regeln liegen extern auf Z:\\Logbuch\\Regeln. Alt: 0.63.4.
 BRAIN_URL = os.getenv("BRAIN_URL", "http://brain-api:8000").rstrip("/")
 AGENT_URL = os.getenv("AGENT_URL", "http://agent:8002").rstrip("/")
 SB_API_KEY = os.getenv("SB_API_KEY", "")

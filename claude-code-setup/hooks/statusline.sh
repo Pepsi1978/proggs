@@ -113,7 +113,12 @@ state_dir="$HOME/.claude/state"
 [ -d "$state_dir" ] || mkdir -p "$state_dir" 2>/dev/null
 # date statt printf '%(%s)T' — letzteres ist bash 4.2+, faellt auf macOS bash 3.2
 # still aus (now_ts leer → alle Zeit-/Countdown-Berechnungen kaputt). Frank 2026-06-11.
-now_ts=$(date +%s)
+# Performance (Frank 2026-07-08): now_ts UND Uhrzeit in EINEM date-Aufruf holen statt
+# zwei (spart einen Subprozess ~0.3s auf Windows). "|" als Trenner (kommt in %s/%H:%M
+# nie vor). Die Uhrzeit wird erst weiter unten fuer die Anzeige gebraucht.
+_dt=$(date '+%s|%H:%M')
+now_ts=${_dt%%|*}
+time=${_dt#*|}
 
 # Defekte Datei mit leerer session_id IMMER entfernen (Self-Healing, Schicht 2)
 [ -f "$state_dir/rate-limits-.json" ] && rm -f "$state_dir/rate-limits-.json" 2>/dev/null
@@ -138,8 +143,34 @@ now_ts=$(date +%s)
 account_fp="default"
 claude_json="$HOME/.claude.json"
 acct_uuid=""
-[ -f "$claude_json" ] && acct_uuid=$(jq -r '.oauthAccount.accountUuid // .userID // empty' "$claude_json" 2>/dev/null)
-if [ -n "$acct_uuid" ]; then
+# PERFORMANCE-CACHE (Frank-Bug-Report 2026-07-08): Der account_fp aendert sich fast
+# nie (nur bei Account-Wechsel). Ihn bei JEDEM Statusline-Aufruf per jq (~370ms) +
+# sha256sum aus ~/.claude.json zu berechnen kostete auf Windows/Git-Bash ~1.5s pro
+# Aufruf — zusammen mit den anderen Subprozessen brauchte die Statusline ~5s und wurde
+# von Claude Code abgebrochen (in-flight execution cancelled), sobald der naechste
+# refreshInterval-Trigger (1s) kam -> Leiste erschien in neuen Sessions NIE.
+# Fix: fp cachen mit ZEIT-basiertem TTL (10 Min), NICHT ueber ~/.claude.json-mtime:
+# ~/.claude.json wird von Claude Code bei fast jeder Aktion neu geschrieben (mtime
+# aendert sich im Sekundentakt — verifiziert 2026-07-08), ein mtime-Check wuerde den
+# Cache also NIE greifen lassen. Der accountUuid darin ist aber quasi-konstant. TTL 600s:
+# ein Account-Wechsel wird spaetestens nach 10 Min uebernommen (selten; der MAX-jq unten
+# filtert fremde Fingerprints ohnehin heraus). $(< file) liest ohne cat-Subprozess.
+# Cache-Format: "fp|ts_seconds".
+fp_cache="$state_dir/account-fp.cache"
+if [ -s "$fp_cache" ]; then
+    _c=$(< "$fp_cache")
+    _cfp=${_c%%|*}
+    _cts=${_c#*|}
+    if [ -n "$_cts" ] && [ "$_cts" != "$_c" ] && [ "$((now_ts - _cts))" -lt 600 ] 2>/dev/null; then
+        account_fp="$_cfp"
+        [ -z "$account_fp" ] && account_fp="default"
+        _fp_from_cache=1
+    fi
+fi
+[ -f "$claude_json" ] && [ -z "$_fp_from_cache" ] && acct_uuid=$(jq -r '.oauthAccount.accountUuid // .userID // empty' "$claude_json" 2>/dev/null)
+if [ -n "$_fp_from_cache" ]; then
+    : # account_fp bereits aus Cache — keine Berechnung noetig
+elif [ -n "$acct_uuid" ]; then
     # accountUuid hashen (nie roh ins State-File schreiben). sha256sum (Linux/Git-Bash)
     # ODER shasum -a 256 (macOS) — ohne Fallback waere der fp auf macOS leer.
     if command -v sha256sum >/dev/null 2>&1; then
@@ -161,6 +192,12 @@ else
         fi
         [ -z "$account_fp" ] && account_fp="default"
     fi
+fi
+# Frisch berechneten fp in den Cache schreiben (atomic tmp+mv). Beim naechsten Aufruf
+# wird er ohne jq/sha256sum gelesen, solange ~/.claude.json sich nicht aendert.
+if [ -z "$_fp_from_cache" ]; then
+    printf '%s|%s' "$account_fp" "$now_ts" > "$fp_cache.tmp" 2>/dev/null \
+        && mv -f "$fp_cache.tmp" "$fp_cache" 2>/dev/null
 fi
 
 # Plausibilitaet: Prozent muss 0..100 sein (nur Ziffern + optional . — keine UUIDs)
@@ -258,13 +295,15 @@ if [ $((now_ts % 600)) -lt 2 ]; then
     # Zusaetzlich: Files von fremden Accounts (anderer Fingerprint) sofort weg —
     # nicht erst nach 24h. Sonst zeigt nach Account-Wechsel die alte Anzeige.
     if [ "$account_fp" != "default" ]; then
-        for f in "$state_dir"/rate-limits-*.json; do
-            [ -f "$f" ] || continue
-            file_fp=$(jq -r '.account_fp // ""' "$f" 2>/dev/null)
-            if [ -n "$file_fp" ] && [ "$file_fp" != "$account_fp" ]; then
-                rm -f "$f" 2>/dev/null
-            fi
-        done
+        # Performance (Frank 2026-07-08): frueher 1 jq PRO State-Datei (bei 16 parallelen
+        # Sessions = 16 jq ~6s -> Ausreisser bis 12s). Jetzt EIN jq ohne slurp ueber alle
+        # Dateien; input_filename liefert pro Eintrag den Dateinamen. Nur fremde
+        # (nicht-leere, abweichende) Fingerprints werden ausgegeben und geloescht.
+        jq -r --arg fp "$account_fp" \
+            'select((.account_fp // "") != "" and (.account_fp // "") != $fp) | input_filename' \
+            "$state_dir"/rate-limits-*.json 2>/dev/null | while IFS= read -r f; do
+                [ -n "$f" ] && rm -f "$f" 2>/dev/null
+            done
     fi
 fi
 
@@ -472,8 +511,8 @@ if [ -n "$week_resets" ] && [ "$week_resets" -gt 0 ] 2>/dev/null; then
     fi
 fi
 
-# Uhrzeit — date statt printf '%(%H:%M)T' (bash 4.2+, auf macOS bash 3.2 leer). Frank 2026-06-11.
-time=$(date +%H:%M)
+# Uhrzeit — bereits oben zusammen mit now_ts in EINEM date-Aufruf geholt ($time).
+# Frueher hier ein separates date +%H:%M (Frank 2026-06-11); 2026-07-08 zusammengelegt.
 
 # --- Farben (ANSI 24-bit) ---
 B='\033[38;2;100;180;255m'   # Cyan-Blau    — Modell
