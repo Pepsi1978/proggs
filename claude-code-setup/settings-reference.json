@@ -131,6 +131,16 @@
 		],
 		"PreToolUse": [
 			{
+				"matcher": "Write|Edit",
+				"hooks": [
+					{
+						"type": "command",
+						"command": "pwsh -NoProfile -ExecutionPolicy Bypass -File \"$USERPROFILE/.claude/hooks/rule-size-guard.ps1\"",
+						"timeout": 5
+					}
+				]
+			},
+			{
 				"hooks": [
 					{
 						"type": "command",

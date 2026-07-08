@@ -192,6 +192,16 @@
 		],
 		"PreToolUse": [
 			{
+				"matcher": "Write|Edit",
+				"hooks": [
+					{
+						"type": "command",
+						"command": "bash \"$HOME/.claude/hooks/rule-size-guard.sh\"",
+						"timeout": 5
+					}
+				]
+			},
+			{
 				"hooks": [
 					{
 						"type": "command",
