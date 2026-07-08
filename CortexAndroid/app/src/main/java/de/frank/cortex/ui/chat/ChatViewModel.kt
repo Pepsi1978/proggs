@@ -941,6 +941,9 @@ class ChatViewModel : ViewModel() {
 
     fun startNewChat() {
         stopSpeaking()
+        val oldState = _uiState.value
+        val oldSessionId = oldState.sessionId
+        val shouldEndServerSession = oldState.messages.isNotEmpty()
         if (micRecorder.isRecording()) {
             viewModelScope.launch {
                 try {
@@ -967,8 +970,30 @@ class ChatViewModel : ViewModel() {
                 isGeneratingTitle = false
             )
         }
-        CortexLog.info("ChatVM", "startNewChat", "Neuer Chat gestartet")
+        CortexLog.info("ChatVM", "startNewChat", "Neuer Chat lokal sofort gestartet",
+            mapOf("old_session_id" to oldSessionId, "server_end" to shouldEndServerSession))
         refreshSessions()
+        if (!shouldEndServerSession) return
+
+        viewModelScope.launch(Dispatchers.IO) {
+            try {
+                if (WireGuardManager.state.value != TunnelState.CONNECTED) {
+                    CortexLog.warn("ChatVM", "startNewChat", "VPN nicht verbunden; Server beendet die alte Session per Timeout",
+                        mapOf("session_id" to oldSessionId))
+                    return@launch
+                }
+                val response = ApiClient.agentApi().endSession(EndSessionRequest(session_id = oldSessionId))
+                if (!response.ok) throw Exception(response.message ?: "Server meldet ok=false")
+                CortexLog.info("ChatVM", "startNewChat", "Alte Server-Session nach Plus-Klick beendet",
+                    mapOf("session_id" to oldSessionId))
+            } catch (e: CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                CortexLog.warn("ChatVM", "startNewChat", "Alte Server-Session konnte nach Plus-Klick nicht sofort beendet werden: ${e.message}",
+                    mapOf("session_id" to oldSessionId))
+                _uiState.update { it.copy(error = "Altes Gespräch wird per 10-Minuten-Fallback gesichert: ${e.message}") }
+            }
+        }
     }
 
     fun openSessionsPanel() {

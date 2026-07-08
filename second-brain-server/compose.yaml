@@ -137,7 +137,7 @@ services:
       AGENT_MODEL: gemini-3.1-flash-lite   # Env-Default; aktive Wahl per Dashboard (auch minimax/minimax-m3)
       # OPENCODE_API_KEY kommt aus .env via env_file (OpenCode Zen Go fuer minimax/minimax-m3, Anthropic
       # /messages-Schema). OPENCODE_GO_URL/OPENCODE_ANTHROPIC_VERSION haben Code-Defaults — nur bei Bedarf setzen.
-      AGENT_SESSION_TIMEOUT_MIN: "30"      # 30 min Inaktivitaet -> Logbuch
+      AGENT_SESSION_TIMEOUT_MIN: "10"      # 10 min Inaktivitaet -> Logbuch (Frank-Wunsch 2026-07-08)
       AGENT_LOGBOOK_DIR: /logbook
       AGENT_TZ: Europe/Berlin
       AGENT_LOG_PATH: /app/logs/agent.jsonl

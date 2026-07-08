@@ -8,6 +8,9 @@ interface AgentApi {
     @POST("/chat")
     suspend fun chat(@Body request: ChatRequest): ChatResponse
 
+    @POST("/end")
+    suspend fun endSession(@Body request: EndSessionRequest): SimpleResponse
+
     @GET("/categories/detail")
     suspend fun getCategories(): CategoriesResponse
 
