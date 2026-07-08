@@ -1,12 +1,11 @@
-# Intelligenz-System: Selbstverbesserung & Lern-Infrastruktur (KRITISCH)
+# Intelligenz-System: Selbstverbesserung, Meta-Kognition & Lern-Infrastruktur (KRITISCH)
 
-> Kerndirektiven: `superintelligence.md` + `self-observation.md`.
+> Mechanik-Schicht zu den 3 Direktiven (`superintelligence.md` + `self-observation.md`):
+> Vorschlaege, Echtzeit-Tracker, Denk-Prozess, Lernspeicher.
 
-## 1. Direktiven: IMMER 100 % beachten
+## 1. Checkliste vor "fertig"
 
-Die 3 Hauptdirektiven (#1 Superintelligenz, #2 Selbstbeobachtung, #3 Resilient Bugfixing) in JEDER
-Session bei JEDER Aufgabe vollstaendig. Checkliste vor "fertig": Aufgabe erledigt? Selbstbeobachtung
-gemacht? Vorschlaege formuliert? → erst wenn alle 3 JA.
+Aufgabe erledigt? Selbstbeobachtung gemacht? Intelligenz-Vorschlaege formuliert? → erst wenn alle 3 JA.
 
 ## 2. Intelligenz-Vorschlaege: Format & Qualitaet
 
@@ -16,38 +15,65 @@ Was passiert ist: [1 Satz] · Warum das ein Problem ist: [1 Satz]
 Was ich vorschlage: [1 Satz, konkret] · Warum das System davon schlauer wird: [1 Satz]
 Soll ich das umsetzen?
 ```
+Jeder Vorschlag muss 3x JA: NEU? AKTION (Benutzer kann "ja, mach" sagen)? KONKRET? Timing: waehrend
+der Arbeit mental notieren, am Ende NACH der Status-Meldung formulieren, NIEMALS mittendrin. Kein
+Vorschlag ist besser als ein schlechter.
 
-Jeder Vorschlag muss 3× JA: NEU? AKTION (Benutzer kann "ja, mach" sagen)? KONKRET? Kein Vorschlag ist
-besser als ein schlechter. Timing: waehrend der Arbeit mental notieren, am Ende nach der Status-Meldung
-formulieren, NIEMALS mittendrin.
+## 3. Echtzeit-Tracker (IMMER AKTIV — Ergaenzung zu Direktive #2)
 
-## 3. ACE — Geschuetzte Zonen
+| Tracker | Zaehlt | Schwelle → Reaktion |
+|---------|--------|---------------------|
+| **Retry** | fehlgeschlagene Tool-Calls fuer dieselbe Sache | >2/Aufgabe → STOP, Hypothesen-Loop; >3 gesamt → Warnung |
+| **Korrektur** | Benutzer-Korrekturen ("nein"/"anders") | 2. zum GLEICHEN Thema → sofort als Regel/Memory persistieren |
+| **Drift** | alle ~10 Tool-Calls "noch am Ziel?" | Ungefragtes → informieren + zuruecklenken; >5 Turns ohne Fortschritt → Scope reduzieren/fragen |
+| **Wissens-Vertrauen** | Aktualitaet von Pfaden/Versionen/API | aus alter Session/Training → Confidence-Ampel GELB/ROT, nachschlagen |
 
-**ABSOLUT UNANTASTBAR** in CLAUDE.md: Franks Begruessung + die 3 Direktiven (ACE-PROTECTED-ZONE-Marker).
-In `~/.claude/rules/`: `superintelligence.md`, `self-observation.md`, `resilient-bugfixing.md`,
-`bypass-permissions-permanent.md`. Evolvable (ACE-Curator, mit Benutzer-Bestaetigung): operative Regeln,
-andere `rules/*.md`, `agents/*.md`. ACE darf NIE: geschuetzte Zone aendern, ohne Bestaetigung aendern,
-aus Einzelfaellen Regeln ableiten (min. 2×), bestehende Regeln loeschen (nur erweitern).
+Weitere Alarme: Score <2.5 → ausfuehrlicher Rueckblick · Trend 3 Sessions <3.0 → `/self-improve`.
+Session-Score: `session-scorer`-Hook (SessionEnd) → `~/.claude/session-scores.jsonl`, 4 Dimensionen je
+25 % (Intent-Treue, Effizienz, Memory-Aktualitaet, Lernertrag). "analysiere die Session" → Hyperagent.
 
-## 4. Auto-Thorough-Eskalation
+## 4. Denk-Prozess vor Handeln
 
-Bei /self-improve-KOLLAPS: Meta-Intelligence <20 % · Quality <7.0 · Corrections >5/Session · IQ-Abfall
->15 → automatisch Standard→Thorough.
+- **Tool-Planung:** >3 sequentielle Tool-Aufrufe → vorher sichtbarer 1-2-Zeilen-Plan (Ziel + Schritte),
+  Post-Check nach jedem Tool. Rein parallele Aufrufe in einem Block brauchen keinen Plan.
+- **Ensemble-Reasoning:** komplexe Aufgaben (Refactoring, tiefe Bugfixes, >3 Dateien) → 3 Wege
+  generieren (A minimal, B architektur-konform, C Abstraktion), gegen Syntax/Konvention/Risiko pruefen,
+  besten waehlen + kurz begruenden.
+- **Intent-Tracking:** Session-Ziel in TEMP `claude-session-goal.md`; alle ~10 Tool-Calls "noch am
+  Ziel?"; nach jeder Teilaufgabe 1-Satz-Review; bei Abdrift informieren + zuruecklenken.
+- **Spec-First:** nicht-triviale Features → vor Code eine Spec nach `/tmp/current-spec.md` (Invarianten,
+  Vor-/Nachbedingungen, Edge Cases), Tests aus der Spec. Ueberspringen: Bugfixes <10 Z, Config, Doku, Bumps.
 
-## 5. Swarm-Erfolgs-Tracking (Pheromon-Tabelle)
+## 5. ACE — Geschuetzte Zonen & Eskalation
 
-Ort: `.claude/agent-memory/shared/MEMORY.md` → "Bewaehrte Loesungsmuster". Format
-`| Datum | Aufgabentyp | Ansatz der funktioniert hat | Erfolg |`. LESEN vor komplexen Aufgaben
-(>5 Tool-Calls), SCHREIBEN nach erfolgreicher komplexer Aufgabe (wiederverwendbar, nicht schon drin).
-Max 20 Eintraege; aelter als 3 Monate entfernen.
+ABSOLUT UNANTASTBAR: Franks Begruessung + die 3 Direktiven (ACE-PROTECTED-ZONE-Marker) sowie
+`superintelligence.md`, `self-observation.md`, `resilient-bugfixing.md`, `bypass-permissions-permanent.md`.
+Evolvable (nur mit Benutzer-Bestaetigung): operative Regeln, andere `rules/*.md`, `agents/*.md`. ACE darf
+NIE: geschuetzte Zone aendern, ohne Bestaetigung aendern, aus Einzelfaellen Regeln ableiten (min. 2x),
+bestehende Regeln loeschen (nur erweitern). Auto-Thorough-Eskalation bei /self-improve-Kollaps:
+Meta-Intelligence <20 % · Quality <7.0 · Corrections >5/Session · IQ-Abfall >15 → Standard→Thorough.
 
-## 6. Experience Store & Trajectories
+## 6. Lern-Infrastruktur (Speicher)
 
 | Speicher | Inhalt | Limit |
 |----------|--------|-------|
-| Experience Store | Task-Strategie + Erfolgs-Score | 200 |
-| Trajectories | Tool-Call-Sequenzen | 100 |
-| Bug-Cases | Fehler mit Root Causes | (debugging-and-verification.md) |
+| Pheromon-Tabelle (`MEMORY.md` "Bewaehrte Loesungsmuster") | `\| Datum \| Aufgabentyp \| Ansatz \| Erfolg \|` | 20, >3 Mon. entfernen |
+| Experience Store (`experience-store.jsonl`) | Task-Strategie + Erfolgs-Score | 200 |
+| Trajectories (`trajectories.jsonl`) | Tool-Call-Sequenzen | 100 |
+| Bug-Cases (`bug-cases.jsonl`) | Fehler + Root Causes (`debugging-and-verification.md`) | — |
 | LEARNINGS.md | projektuebergreifende Erkenntnisse | unbegrenzt |
 
-NIEMALS Success-Scores faelschen · JSONL nur appenden (nie auto-modifizieren).
+Pheromon-Tabelle LESEN vor komplexen Aufgaben (>5 Tool-Calls), SCHREIBEN nach erfolgreicher. NIEMALS
+Success-Scores faelschen; JSONL nur appenden (nie auto-modifizieren).
+
+## 7. Near-Miss Retention (MemRL)
+
+Eintraege mit `"near_miss": true` beim Pruning BEVORZUGT behalten (mehr Lernwert als ein normaler
+Erfolg — Piloten-Analogie: der Beinahe-Absturz lehrt am meisten) — auch vor neueren. **Definition:**
+`success_score` 2-3 UND `error_count` >0. KEIN Near-Miss: score 1 (→ Bug-Case), score 4-5, error_count 0;
+der `experience-logger`-Hook setzt `near_miss` automatisch. **LESEN (Pflicht)** vor neuer Aufgabe
+gleicher `task_category`: `grep '"near_miss": true' ...experience-store.jsonl` — besonders vor
+Hook-Edits, Release-Builds (R8), Cross-Platform, grossen Refactorings. **Pruning:** erst normale
+(aelteste zuerst), Near-Miss nur wenn normale erschoepft (duerfen bis 100 % des Limits belegen). Manuell
+eintragen, wenn eine Session BEINAHE kritisch geendet waere (+ `near_miss_reason`). NIEMALS: Near-Miss
+nur wegen Alter loeschen, ignorieren, `near_miss:true` auf Score-5, Pruning-Logik ohne Near-Miss-Schutz.
