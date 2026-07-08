@@ -1229,6 +1229,20 @@ button{font-family:inherit;cursor:pointer}
       <section class="view settings" id="view-settings">
         <div class="set-row">
           <div class="card set-section">
+            <h3><span class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6M8 13h8M8 17h5"/></svg></span>Selbst-Regeln des Agenten</h3>
+            <p class="set-desc">Dauerhafte Verhaltensregeln, die der Hauptagent in <b>jedem</b> Gespräch befolgt (z.B. „antworte als gut vorlesbarer Fließtext"). Der Agent legt sie nach deiner Bestätigung im Chat an; hier kannst du sie an/aus schalten, bearbeiten, löschen oder selbst eine hinzufügen. Sie liegen extern auf <b>Z:\Logbuch\Regeln</b>.</p>
+            <div id="chatRulesList"></div>
+            <div style="margin-top:14px">
+              <textarea id="chatRuleNew" class="lib-own" style="min-height:60px;width:100%;box-sizing:border-box" placeholder="Neue Regel — kurz und klar formulieren …"></textarea>
+              <div class="lib-run-line" style="margin-top:8px">
+                <button id="chatRuleAdd" class="btn btn-sm btn-primary" type="button">Regel hinzufügen</button>
+                <span id="chatRuleState" class="set-desc"></span>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="set-row">
+          <div class="card set-section">
             <h3><span class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M12 2a4 4 0 0 1 4 4v1a4 4 0 0 1-8 0V6a4 4 0 0 1 4-4Z"/><path d="M5 21v-1a7 7 0 0 1 14 0v1"/></svg></span>Agenten</h3>
             <p class="set-desc">Die Tages-Agenten — wähle für jeden ein eigenes Modell. Der <b>Hauptagent</b> redet mit dir, der <b>Speicheragent</b> legt 1:1 ab, der <b>Abfrageagent</b> sucht im Gehirn. (Der Nachtschicht-Bibliothekar ist ein Spezialagent und hat seinen eigenen Bereich.)</p>
             <div class="mr-pair">
@@ -2489,6 +2503,7 @@ button{font-family:inherit;cursor:pointer}
     clearTimeout(e._t); e._t = setTimeout(()=>{ e.textContent=""; e.style.color=""; }, 3400);
   }
   async function loadSettings(){
+    loadChatRules();   // Selbst-Regeln-Chronik (unabhaengig, eigene Fehlerbehandlung)
     /* Drei Modell-Dropdowns (Hauptagent/Speicheragent/Abfrageagent) aus dem Agenten füllen + aktives markieren */
     try{
       const c = await api("/api/config");
@@ -3784,6 +3799,41 @@ button{font-family:inherit;cursor:pointer}
     logEl.appendChild(wrap);
     logEl.scrollTop = logEl.scrollHeight;
   }
+  /* Regel-Vorschlag mit Ja / Nein / Bearbeiten (spec K5). Der Regeltext steht bereits als
+     Agent-Bubble davor. „Bearbeiten" blendet eine Textarea mit dem Regeltext ein; der Knopf wird
+     zu „Speichern" und sendet „regel speichern: <text>" — der Server zeigt den geänderten Text
+     erneut mit Ja/Nein. Alles per value/textContent gesetzt (Injection-sicher). */
+  function ruleCard(text){
+    const logEl = document.getElementById("chatLog");
+    const wrap = document.createElement("div");
+    wrap.className = "chat-opts";
+    const send = (t)=>{ wrap.remove(); const ta=document.getElementById("chatText"); ta.value = t; sendChat(); };
+    const mkBtn = (label)=>{ const b=document.createElement("button"); b.className="chat-opt-btn"; b.type="button"; b.textContent=label; return b; };
+    const ja = mkBtn("Ja"), nein = mkBtn("Nein"), bearb = mkBtn("Bearbeiten");
+    ja.addEventListener("click", ()=> send("regel ja"));
+    nein.addEventListener("click", ()=> send("regel nein"));
+    bearb.addEventListener("click", ()=>{
+      wrap.innerHTML = "";
+      const ta = document.createElement("textarea");
+      ta.className = "lib-own";
+      ta.style.cssText = "width:100%;min-height:80px;box-sizing:border-box;margin-bottom:8px";
+      ta.value = text;
+      const line = document.createElement("div"); line.className = "chat-opts";
+      const save = mkBtn("Speichern"), abbr = mkBtn("Nein");
+      save.addEventListener("click", ()=>{
+        const neu = (ta.value||"").trim();
+        if(neu.length < 3){ ta.focus(); return; }
+        send("regel speichern: " + neu);
+      });
+      abbr.addEventListener("click", ()=> send("regel nein"));
+      line.appendChild(save); line.appendChild(abbr);
+      wrap.appendChild(ta); wrap.appendChild(line);
+      ta.focus();
+    });
+    wrap.appendChild(ja); wrap.appendChild(nein); wrap.appendChild(bearb);
+    logEl.appendChild(wrap);
+    logEl.scrollTop = logEl.scrollHeight;
+  }
   /* Quellen-Drilldown (Level-2 Nr. 39): anklickbare Quellen-Chips + Konfidenz-Etikett unter einer
      Gedächtnis-Antwort. Klick öffnet den bekannten Drawer — openEntry lädt den Volltext per Titel
      nach. Alles per textContent gesetzt (Titel/Kategorien sind Daten, keine HTML — Injection-sicher). */
@@ -3980,9 +4030,13 @@ button{font-family:inherit;cursor:pointer}
       else if(r.action==="save_confirm") meta = "↳ Rückfrage — Knopf wählen oder antworten";
       else if(r.action==="store_clarify") meta = "↳ Kategorie-Rückfrage — Knopf wählen oder antworten";
       else if(r.action==="cancel") meta = "↳ nicht gespeichert";
+      else if(r.action==="rule_confirm") meta = "↳ Regel-Vorschlag — Ja / Nein / Bearbeiten";
+      else if(r.action==="rule_saved") meta = "↳ Regel übernommen";
+      else if(r.action==="rule_cancelled") meta = "↳ keine Regel angelegt";
       chatAppend("agent", r.reply || "(keine Antwort)", meta || null);
       if(window.speakTTS && r.reply) window.speakTTS(r.reply);    // Antwort vorlesen (wenn Lautsprecher an)
-      if(r.options && r.options.length) chatOptions(r.options);   // anklickbare Ja/Nein-Knöpfe
+      if(r.action==="rule_confirm"){ ruleCard(r.reply); }         // Regel-Bestätigung mit Bearbeiten
+      else if(r.options && r.options.length){ chatOptions(r.options); }   // anklickbare Ja/Nein-Knöpfe
       if(r.action==="recall") chatSources(r.sources, r.confidence);   // Nr. 39: Quellen-Chips + Konfidenz
       // Sichtbare Meldung, wenn das Server-Kontextfenster (40 Nachrichten) erstmals ueberschritten
       // wurde (Frank-Wunsch 2026-07-02) — kommt pro Session genau einmal vom Agenten.
@@ -4823,6 +4877,77 @@ button{font-family:inherit;cursor:pointer}
       });
       box.appendChild(wrap);
     });
+  }
+
+  /* — Chronik der Selbst-Regeln des Agenten (Einstellungen). Vorbild: renderLibLearned. Nutzt /api/rules. — */
+  function renderChatRules(list){
+    const box=document.getElementById("chatRulesList"); if(!box) return;
+    box.innerHTML="";
+    if(!list.length){ box.innerHTML='<p class="set-desc">Noch keine Regeln — der Agent legt sie nach deiner Bestätigung an, oder füge unten selbst eine hinzu.</p>'; return; }
+    list.forEach(t=>{
+      const wrap=document.createElement("div"); wrap.style.borderBottom="1px solid var(--border)";
+      const row=document.createElement("div"); row.className="lib-taskrow"; row.style.borderBottom="none";
+      const meta=(t.created_at? "Angelegt am "+String(t.created_at).slice(0,10):"");
+      const titel=(t.titel && String(t.titel).trim()) ? t.titel : (t.text||"").slice(0,40);
+      row.innerHTML='<div class="nm"><b>'+escapeHtml(titel)+'</b><span>'+escapeHtml(meta)+'</span></div>';
+      const editB=document.createElement("button"); editB.className="btn btn-sm"; editB.textContent="Bearbeiten";
+      const sw=document.createElement("input"); sw.type="checkbox"; sw.className="lib-sw"; sw.checked=t.enabled!==false; sw.title="Regel an/aus";
+      sw.addEventListener("change", async()=>{
+        try{ await apiSend("/api/rules/"+encodeURIComponent(t.id),"PUT",{enabled:sw.checked}); }
+        catch(e){ sw.checked=!sw.checked; alert("Fehler: "+e.message); }
+      });
+      const del=document.createElement("button"); del.className="lib-trash"; del.title="Regel löschen";
+      del.innerHTML='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M3 6h18M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2m3 0v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6h14Z"/></svg>';
+      del.addEventListener("click", async()=>{
+        if(!confirm("Regel wirklich löschen?")) return;
+        try{ await apiSend("/api/rules/"+encodeURIComponent(t.id),"DELETE",{}); loadChatRules(); }
+        catch(e){ alert("Fehler: "+e.message); }
+      });
+      row.appendChild(editB); row.appendChild(sw); row.appendChild(del);
+      wrap.appendChild(row);
+      const ed=document.createElement("div"); ed.style.cssText="display:none;padding:0 0 12px";
+      const eta=document.createElement("textarea"); eta.className="lib-own"; eta.style.cssText="min-height:80px;width:100%;box-sizing:border-box"; eta.value=t.text||"";
+      const er=document.createElement("div"); er.className="lib-run-line";
+      const esave=document.createElement("button"); esave.className="btn btn-sm btn-primary"; esave.textContent="Speichern";
+      const estate=document.createElement("span"); estate.className="set-desc";
+      er.appendChild(esave); er.appendChild(estate);
+      ed.appendChild(eta); ed.appendChild(er);
+      wrap.appendChild(ed);
+      editB.addEventListener("click",()=>{
+        const open=ed.style.display==="none";
+        ed.style.display=open?"block":"none";
+        editB.textContent=open?"Zuklappen":"Bearbeiten";
+      });
+      esave.addEventListener("click", async()=>{
+        const v=(eta.value||"").trim();
+        if(v.length<3){ estate.textContent="Regel-Text ist zu kurz."; return; }
+        try{
+          const rr=await apiSend("/api/rules/"+encodeURIComponent(t.id),"PUT",{text:v});
+          t.text=v; if(rr && rr.titel) t.titel=rr.titel;
+          const b=row.querySelector(".nm b"); if(b) b.textContent=(t.titel||v.slice(0,40));
+          estate.textContent="✓ Gespeichert — gilt ab dem nächsten Gespräch.";
+        }catch(e){ estate.textContent="Fehler: "+e.message; }
+      });
+      box.appendChild(wrap);
+    });
+  }
+  function _bindChatRuleAdd(){
+    const btn=document.getElementById("chatRuleAdd"); if(!btn || btn._bound) return; btn._bound=true;
+    btn.addEventListener("click", async()=>{
+      const ta=document.getElementById("chatRuleNew"); const st=document.getElementById("chatRuleState");
+      const v=((ta&&ta.value)||"").trim();
+      if(v.length<3){ if(st) st.textContent="Regel-Text ist zu kurz."; return; }
+      try{
+        await apiSend("/api/rules","POST",{text:v});
+        if(ta) ta.value=""; if(st) st.textContent="✓ Regel hinzugefügt.";
+        loadChatRules();
+      }catch(e){ if(st) st.textContent="Konnte nicht anlegen (evtl. Limit erreicht)."; }
+    });
+  }
+  async function loadChatRules(){
+    _bindChatRuleAdd();
+    try{ const r=await api("/api/rules"); renderChatRules((r&&r.rules)||[]); }
+    catch(e){ /* Chronik ist optional — der Rest der Einstellungen laedt unabhaengig weiter */ }
   }
 
   /* — Gelernte Regeln rückwirkend auf offene Vorschläge anwenden (Frank-Wunsch 2026-07-05) — */
