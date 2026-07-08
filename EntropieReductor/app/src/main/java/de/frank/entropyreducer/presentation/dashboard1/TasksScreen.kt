@@ -18,6 +18,7 @@ import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.detectDragGesturesAfterLongPress
 import androidx.compose.foundation.gestures.detectTapGestures
+import androidx.compose.foundation.gestures.scrollBy
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -137,6 +138,7 @@ import java.util.Date
 import java.util.Locale
 import kotlin.math.roundToInt
 import kotlinx.coroutines.FlowPreview
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.debounce
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.launch
@@ -174,19 +176,44 @@ fun TasksScreen(
     // tatsächliche Eintrag wird aus dem aktuellen State frisch nachgelesen.
     var bucketPickerEntryId by remember { mutableStateOf<String?>(null) }
     var dragState by remember { mutableStateOf<TaskDragState?>(null) }
-    var dropTargets by remember { mutableStateOf<Map<String, BucketDropTarget>>(emptyMap()) }
     var contentOriginInWindow by remember { mutableStateOf(Offset.Zero) }
+    var listBoundsInWindow by remember { mutableStateOf(Rect(0f, 0f, 0f, 0f)) }
     val dragPreviewLiftPx = with(density) { 48.dp.toPx() }
-    fun updateDropTarget(key: String, bucket: TimeBucket, bounds: Rect) {
-        val next = BucketDropTarget(bucket = bucket, bounds = bounds)
-        if (dropTargets[key] != next) dropTargets = dropTargets + (key to next)
-    }
+    val dragAutoScrollEdgePx = with(density) { 96.dp.toPx() }
+    val dragAutoScrollStepPx = with(density) { 22.dp.toPx() }
     fun clearDrag() {
         dragState = null
     }
     // LazyListState am Top damit beide LaunchedEffects (Bucket-Picker + Scroll)
     // darauf zugreifen koennen. Wird unten an die Haupt-LazyColumn uebergeben.
     val listState = androidx.compose.foundation.lazy.rememberLazyListState()
+
+    fun resolveDragDropBucket(pointerInWindow: Offset): TimeBucket? =
+        findDropBucket(
+            pointerInWindow = pointerInWindow,
+            listBoundsInWindow = listBoundsInWindow,
+            listState = listState,
+            entriesByBucket = state.entriesByBucket,
+        )
+
+    LaunchedEffect(dragState != null) {
+        while (dragState != null) {
+            val currentDrag = dragState
+            if (currentDrag != null && listBoundsInWindow.height > 0f) {
+                val pointerY = currentDrag.pointerInWindow.y
+                val scrollBy = when {
+                    pointerY < listBoundsInWindow.top + dragAutoScrollEdgePx -> -dragAutoScrollStepPx
+                    pointerY > listBoundsInWindow.bottom - dragAutoScrollEdgePx -> dragAutoScrollStepPx
+                    else -> 0f
+                }
+                if (scrollBy != 0f) {
+                    listState.scrollBy(scrollBy)
+                    dragState = currentDrag.copy(targetBucket = resolveDragDropBucket(currentDrag.pointerInWindow))
+                }
+            }
+            delay(16L)
+        }
+    }
 
     // Sehr hoch/Hoch/Mittel/Gering bleiben immer sichtbar. Später/Loop/Erledigt/
     // KI-Vorschläge bleiben als optionale Akkordeonbereiche unter den Hauptbereichen.
@@ -451,7 +478,9 @@ fun TasksScreen(
 
                 LazyColumn(
                     state = listState,
-                    modifier = Modifier.fillMaxSize(),
+                    modifier = Modifier.fillMaxSize().onGloballyPositioned {
+                        listBoundsInWindow = it.boundsInWindow()
+                    },
                     contentPadding = androidx.compose.foundation.layout.PaddingValues(16.dp),
                     verticalArrangement = Arrangement.spacedBy(12.dp),
                 ) {
@@ -479,9 +508,6 @@ fun TasksScreen(
                                     count = list.size,
                                     expanded = sectionExpanded,
                                     isDropTarget = dragState?.targetBucket == bucket,
-                                    onDropTargetPositioned = { bounds ->
-                                        updateDropTarget("header-${bucket.name}", bucket, bounds)
-                                    },
                                     onToggle = {
                                         if (!alwaysOpen) {
                                             expandedSection = if (sectionExpanded) null else bucket.name
@@ -538,7 +564,7 @@ fun TasksScreen(
                                             entry = entry,
                                             bucket = bucket,
                                             isDragging = dragState?.entry?.id == entry.id,
-                                            dropTargets = dropTargets.values,
+                                            resolveDropBucket = ::resolveDragDropBucket,
                                             onDragStateChange = { dragState = it },
                                             onDrop = { targetBucket ->
                                                 if (targetBucket != bucket) {
@@ -723,13 +749,6 @@ fun TasksScreen(
             }
 
             dragState?.let { activeDrag ->
-                DragDropBucketDock(
-                    targetBucket = activeDrag.targetBucket,
-                    onDropTargetPositioned = { bucket, bounds ->
-                        updateDropTarget("dock-${bucket.name}", bucket, bounds)
-                    },
-                    modifier = Modifier.align(Alignment.TopCenter).padding(horizontal = 14.dp, vertical = 10.dp),
-                )
                 DraggedTaskPreview(
                     drag = activeDrag,
                     modifier =
@@ -1341,7 +1360,6 @@ private fun BucketHeader(
     count: Int,
     expanded: Boolean,
     isDropTarget: Boolean = false,
-    onDropTargetPositioned: (Rect) -> Unit = {},
     onToggle: () -> Unit,
 ) {
     val label =
@@ -1358,7 +1376,6 @@ private fun BucketHeader(
         accent = bucketAccent(bucket),
         count = count,
         expanded = expanded,
-        modifier = Modifier.onGloballyPositioned { onDropTargetPositioned(it.boundsInWindow()) },
         isDropTarget = isDropTarget,
         onToggle = onToggle,
     )
@@ -1558,7 +1575,7 @@ private fun DraggableEntropyEntryCard(
     entry: EntropyEntryEntity,
     bucket: TimeBucket,
     isDragging: Boolean,
-    dropTargets: Collection<BucketDropTarget>,
+    resolveDropBucket: (Offset) -> TimeBucket?,
     onDragStateChange: (TaskDragState) -> Unit,
     onDrop: (TimeBucket) -> Unit,
     onDragCancel: () -> Unit,
@@ -1568,7 +1585,7 @@ private fun DraggableEntropyEntryCard(
 ) {
     var coordinates: LayoutCoordinates? by remember { mutableStateOf(null) }
     var lastPointerInWindow: Offset? by remember { mutableStateOf(null) }
-    val currentDropTargets by rememberUpdatedState(dropTargets)
+    val currentResolveDropBucket by rememberUpdatedState(resolveDropBucket)
     fun emitDrag(pointer: Offset) {
         lastPointerInWindow = pointer
         onDragStateChange(
@@ -1576,7 +1593,7 @@ private fun DraggableEntropyEntryCard(
                 entry = entry,
                 sourceBucket = bucket,
                 pointerInWindow = pointer,
-                targetBucket = findDropBucket(pointer, currentDropTargets),
+                targetBucket = currentResolveDropBucket(pointer),
             )
         )
     }
@@ -1594,7 +1611,7 @@ private fun DraggableEntropyEntryCard(
                             change.consume()
                         },
                         onDragEnd = {
-                            val target = lastPointerInWindow?.let { findDropBucket(it, currentDropTargets) }
+                            val target = lastPointerInWindow?.let { currentResolveDropBucket(it) }
                             if (target != null) onDrop(target) else onDragCancel()
                             lastPointerInWindow = null
                         },
@@ -1609,69 +1626,6 @@ private fun DraggableEntropyEntryCard(
         onResolve = onResolve,
         onPickBucket = onPickBucket,
     )
-}
-
-@Composable
-private fun DragDropBucketDock(
-    targetBucket: TimeBucket?,
-    onDropTargetPositioned: (TimeBucket, Rect) -> Unit,
-    modifier: Modifier = Modifier,
-) {
-    val cosmos = LocalCosmos.current
-    GlassCard(
-        modifier =
-            modifier.fillMaxWidth().graphicsLayer {
-                shadowElevation = 18f
-                alpha = 0.96f
-            },
-        cornerRadius = 22.dp,
-        contentPadding = 10.dp,
-        backgroundOverride = cosmos.glassBg,
-    ) {
-        Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-            Text(
-                text = "Aufgabe in Bereich fallen lassen",
-                style = MaterialTheme.typography.labelMedium,
-                color = cosmos.textSecondary,
-                fontWeight = FontWeight.SemiBold,
-            )
-            LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                items(ALL_TIME_BUCKETS, key = { it.name }) { bucket ->
-                    val accent = bucketAccent(bucket)
-                    val active = targetBucket == bucket
-                    Row(
-                        modifier =
-                            Modifier.onGloballyPositioned {
-                                onDropTargetPositioned(bucket, it.boundsInWindow())
-                            }
-                                .clip(RoundedCornerShape(999.dp))
-                                .background(accent.copy(alpha = if (active) 0.30f else 0.14f))
-                                .border(
-                                    width = if (active) 2.dp else 1.dp,
-                                    color = if (active) accent else accent.copy(alpha = 0.35f),
-                                    shape = RoundedCornerShape(999.dp),
-                                )
-                                .padding(horizontal = 12.dp, vertical = 9.dp),
-                        verticalAlignment = Alignment.CenterVertically,
-                    ) {
-                        Icon(
-                            imageVector = bucketIcon(bucket),
-                            contentDescription = null,
-                            tint = accent,
-                            modifier = Modifier.size(16.dp),
-                        )
-                        Spacer(Modifier.width(6.dp))
-                        Text(
-                            text = bucketLabelLong(bucket),
-                            style = MaterialTheme.typography.labelMedium,
-                            color = cosmos.textPrimary,
-                            fontWeight = FontWeight.Bold,
-                        )
-                    }
-                }
-            }
-        }
-    }
 }
 
 @Composable
@@ -1846,8 +1800,44 @@ private fun EntropyEntryCard(
 
 private fun findDropBucket(
     pointerInWindow: Offset,
-    dropTargets: Collection<BucketDropTarget>,
-): TimeBucket? = dropTargets.firstOrNull { it.bounds.contains(pointerInWindow) }?.bucket
+    listBoundsInWindow: Rect,
+    listState: androidx.compose.foundation.lazy.LazyListState,
+    entriesByBucket: Map<TimeBucket, List<EntropyEntryEntity>>,
+): TimeBucket? {
+    if (!listBoundsInWindow.contains(pointerInWindow)) return null
+    val pointerYInList = pointerInWindow.y - listBoundsInWindow.top
+    val visibleItems = listState.layoutInfo.visibleItemsInfo
+    val directHit = visibleItems.firstOrNull { item ->
+        pointerYInList >= item.offset && pointerYInList <= item.offset + item.size
+    }
+    val nearHit = directHit ?: visibleItems.minByOrNull { item ->
+        val top = item.offset.toFloat()
+        val bottom = (item.offset + item.size).toFloat()
+        when {
+            pointerYInList < top -> top - pointerYInList
+            pointerYInList > bottom -> pointerYInList - bottom
+            else -> 0f
+        }
+    }?.takeIf { item ->
+        val top = item.offset.toFloat()
+        val bottom = (item.offset + item.size).toFloat()
+        pointerYInList >= top - 36f && pointerYInList <= bottom + 36f
+    }
+    return bucketForLazyKey(nearHit?.key, entriesByBucket)
+}
+
+private fun bucketForLazyKey(
+    key: Any?,
+    entriesByBucket: Map<TimeBucket, List<EntropyEntryEntity>>,
+): TimeBucket? {
+    val textKey = key as? String ?: return null
+    ALL_TIME_BUCKETS.firstOrNull { bucket ->
+        textKey == "header-${bucket.name}" || textKey == "empty-${bucket.name}"
+    }?.let { return it }
+    return entriesByBucket.entries.firstOrNull { (_, entries) ->
+        entries.any { it.id == textKey }
+    }?.key
+}
 
 /**
  * Bottom-Sheet zur schnellen Prioritätsbereich-Zuordnung. Es setzt denselben manuellen
@@ -2415,11 +2405,6 @@ private data class TaskDragState(
     val sourceBucket: TimeBucket,
     val pointerInWindow: Offset,
     val targetBucket: TimeBucket?,
-)
-
-private data class BucketDropTarget(
-    val bucket: TimeBucket,
-    val bounds: Rect,
 )
 
 // Akkordeon-Sektions-Schluessel fuer Bloecke ohne TimeBucket (Frank-Wunsch 2026-05-24).
