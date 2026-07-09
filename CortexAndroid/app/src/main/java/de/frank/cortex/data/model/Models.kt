@@ -271,13 +271,20 @@ data class RuntimeLimits(
 
 @JsonClass(generateAdapter = true)
 data class AgentRuntimeLimits(
+    val dedup_candidates: Int = 3,
     val history_max: Int = 40,
+    val history_compress_at: Int = 0,
     val recall_full_limit: Int = 0,
     val multi_query_variants: Int = 2,
+    val entity_extract_chars: Int = 2500,
+    val entity_docs_limit: Int = 0,
     val lese_snippet_chars: Int = 1200,
     val answer_hit_chars: Int = 8000,
     val answer_total_chars: Int = 24000,
+    val answer_max_tokens: Int = 4096,
+    val recall_working_cache_threshold: Int = 20,
     val recall_normal_max: Int = 50,
+    val full_category_batch_chars: Int = 28000,
     val context_prompt_max_chars: Int = 4000,
     val chat_text_max_chars: Int = 500000
 )
@@ -287,6 +294,7 @@ data class BrainRuntimeLimits(
     val chunk_chars: Int = 4000,
     val chunk_overlap: Int = 200,
     val search_overfetch_factor: Int = 4,
+    val search_date_overfetch_factor: Int = 20,
     val bm25_candidate_factor: Int = 4,
     val bm25_min_candidates: Int = 20
 )

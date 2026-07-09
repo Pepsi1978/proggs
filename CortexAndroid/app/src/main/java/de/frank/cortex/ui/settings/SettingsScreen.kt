@@ -1207,6 +1207,20 @@ private val runtimeLimitItems = listOf(
         "Cortex sucht immer mit deiner Originalfrage. Dieser Wert sagt, wie viele alternative Suchformulierungen der Router zusätzlich erzeugen darf. 2 bedeutet: Originalfrage plus 2 Varianten, also maximal 3 Suchläufe. Größer findet mehr Formulierungen und Synonyme, kostet aber mehr Zeit und kann mehr Rauschen erzeugen. 0 heißt: nur deine Originalfrage."
     ),
     LimitItem(
+        "agent.entity_docs_limit",
+        "Entity-Vollabruf",
+        "Dokumente · 0 = alle",
+        "Wie viele verknüpfte Dokumente bei „Alles über X“ gelesen werden dürfen.",
+        "Das Entity-Register ist keine normale Top-N-Suche: Wenn Cortex eine Entität erkennt, kann es alle damit verknüpften Einträge holen. Dieser Wert begrenzt diese Menge; 0 bedeutet vollständig. Größer als 0 macht Entity-Fragen schneller und kleiner, kann aber bei großen Themen unvollständig werden."
+    ),
+    LimitItem(
+        "agent.entity_extract_chars",
+        "Entity-Extraktionsfenster",
+        "Zeichen",
+        "Wie viel Text der Speicheragent je Eintrag zur Entity-Erkennung sieht.",
+        "Beim Speichern kann Cortex Personen, Projekte, Geräte oder Themen als Entitäten erkennen. Dieses Fenster sagt, wie viel vom Eintrag für diese Extraktion betrachtet wird. Der Volltext wird trotzdem 1:1 gespeichert. Größer verknüpft lange Einträge besser, kostet aber mehr Modellkontext beim Speichern."
+    ),
+    LimitItem(
         "agent.lese_snippet_chars",
         "Leseagent-Schnipsel",
         "Zeichen je Treffer",
@@ -1228,11 +1242,46 @@ private val runtimeLimitItems = listOf(
         "Das ist der Deckel für alle ausgewählten Einträge zusammen. Beispiel: Wenn 10 Einträge ausgewählt werden, teilt Cortex dieses Budget auf sie auf. Größer gibt dem Antwort-Agenten mehr Material, wird aber langsamer und teurer. Kleiner hält Antworten stabiler und verhindert Hänger, kann aber Zusammenhänge verkürzen."
     ),
     LimitItem(
+        "agent.answer_max_tokens",
+        "Antwort-Max-Tokens",
+        "Tokens",
+        "Maximale Länge, die das Modell als Antwort erzeugen darf.",
+        "Selbst wenn viel Kontext gelesen wurde, kann die Antwort am Ausgabelimit enden. Dieser Wert steuert die maximale Antwortlänge des Modells. Größer erlaubt ausführlichere Gesamtantworten, kleinere Werte halten Antworten kürzer und günstiger."
+    ),
+    LimitItem(
+        "agent.recall_working_cache_threshold",
+        "Arbeitscache ab",
+        "Treffer",
+        "Ab wie vielen Treffern Cortex blockweise verdichtet statt alles direkt zu lesen.",
+        "Der Arbeitscache ist die Sicherheitsbrücke für große Vollabrufe: Treffer werden in Blöcke geteilt, zwischengespeichert und verdichtet, statt alle Volltexte in ein einziges Kontextfenster zu drücken. Niedriger ist sicherer, höher bleibt bei mittleren Mengen direkter."
+    ),
+    LimitItem(
+        "agent.full_category_batch_chars",
+        "Kategorie-Batch",
+        "Zeichen je Block",
+        "Blockgröße für sequenziell gelesene Kategorien.",
+        "Kategoriefragen laufen nicht als normale semantische Top-N-Suche, sondern lesen die Kategorie Eintrag für Eintrag. Dieser Wert sagt, wie groß ein Verdichtungsblock sein darf. Größer erhält mehr Zusammenhang, kleiner ist stabiler."
+    ),
+    LimitItem(
+        "agent.dedup_candidates",
+        "Duplikat-Prüfung",
+        "Kandidaten",
+        "Wie viele ähnliche bestehende Einträge vor dem Speichern geprüft werden.",
+        "Beim Speichern sucht Cortex nach ähnlichen vorhandenen Einträgen, damit nicht unnötig Dubletten entstehen. Höher erkennt mehr Ähnlichkeiten, niedriger macht Speichern schneller. Dieses Limit wirkt nur im Speicherpfad, nicht auf normale Antworten."
+    ),
+    LimitItem(
         "agent.history_max",
         "Gesprächsverlauf",
         "Nachrichten",
         "Wie viele alte Chat-Nachrichten der Agent zusätzlich mitnimmt.",
         "Dieser Wert ist getrennt von der Gedächtnissuche. Er sagt nur, wie viel vom laufenden Gespräch als Kontext an das Modell geht. Größer hilft, wenn du dich auf frühere Chatstellen beziehst. Kleiner spart Kontext und reduziert Verwirrung durch alte Nebenthemen. 0 bedeutet: kein alter Verlauf."
+    ),
+    LimitItem(
+        "agent.history_compress_at",
+        "Verlauf komprimieren ab",
+        "Nachrichten · 0 = aus",
+        "Ab wie vielen Chat-Nachrichten Cortex den Verlauf zusammenfasst.",
+        "Zählt deine Fragen und Cortex-Antworten zusammen. Ist die Schwelle erreicht, fasst der Hauptagent den bisherigen Verlauf kumulativ zusammen, statt alte Nachrichten nur hart abzuschneiden. 0 schaltet diese Komprimierung aus; dann gilt allein das Gesprächsverlauf-Limit."
     ),
     LimitItem(
         "agent.context_prompt_max_chars",
@@ -1254,6 +1303,13 @@ private val runtimeLimitItems = listOf(
         "Faktor",
         "Wie viele rohe Qdrant-Punkte intern pro gewünschtem Treffer geholt werden.",
         "Qdrant sucht auf Chunk-Ebene. Ein Dokument kann mehrere Chunks haben, deshalb holt die Brain-API intern mehr Rohpunkte und dedupliziert danach auf Dokumente. Faktor 4 bei 50 Treffern bedeutet: bis zu 200 rohe Vektor-Punkte. Größer verbessert die Chance, nach dem Deduplizieren genug gute Dokumente zu behalten. Kleiner ist schneller, kann aber passende Dokumente verlieren."
+    ),
+    LimitItem(
+        "brain.search_date_overfetch_factor",
+        "Datums-Overfetch",
+        "Faktor",
+        "Reserve für Zeitfragen, falls nach Datum nachgefiltert werden muss.",
+        "Wenn Qdrant oder der Client einen Datumsfilter nicht nativ anwenden kann, holt Cortex mehr Kandidaten und filtert danach in Python. Dieser Faktor verhindert, dass passende Datumstreffer vorher verdrängt werden. Er wirkt nur auf Suchfragen mit Datum oder Zeitraum."
     ),
     LimitItem(
         "brain.bm25_candidate_factor",
@@ -1286,18 +1342,26 @@ private val runtimeLimitItems = listOf(
 )
 
 private fun limitsToDrafts(limits: RuntimeLimits): Map<String, String> = mapOf(
+    "agent.dedup_candidates" to limits.agent.dedup_candidates.toString(),
     "agent.history_max" to limits.agent.history_max.toString(),
+    "agent.history_compress_at" to limits.agent.history_compress_at.toString(),
     "agent.recall_full_limit" to limits.agent.recall_full_limit.toString(),
     "agent.multi_query_variants" to limits.agent.multi_query_variants.toString(),
+    "agent.entity_extract_chars" to limits.agent.entity_extract_chars.toString(),
+    "agent.entity_docs_limit" to limits.agent.entity_docs_limit.toString(),
     "agent.lese_snippet_chars" to limits.agent.lese_snippet_chars.toString(),
     "agent.answer_hit_chars" to limits.agent.answer_hit_chars.toString(),
     "agent.answer_total_chars" to limits.agent.answer_total_chars.toString(),
+    "agent.answer_max_tokens" to limits.agent.answer_max_tokens.toString(),
+    "agent.recall_working_cache_threshold" to limits.agent.recall_working_cache_threshold.toString(),
     "agent.recall_normal_max" to limits.agent.recall_normal_max.toString(),
+    "agent.full_category_batch_chars" to limits.agent.full_category_batch_chars.toString(),
     "agent.context_prompt_max_chars" to limits.agent.context_prompt_max_chars.toString(),
     "agent.chat_text_max_chars" to limits.agent.chat_text_max_chars.toString(),
     "brain.chunk_chars" to limits.brain.chunk_chars.toString(),
     "brain.chunk_overlap" to limits.brain.chunk_overlap.toString(),
     "brain.search_overfetch_factor" to limits.brain.search_overfetch_factor.toString(),
+    "brain.search_date_overfetch_factor" to limits.brain.search_date_overfetch_factor.toString(),
     "brain.bm25_candidate_factor" to limits.brain.bm25_candidate_factor.toString(),
     "brain.bm25_min_candidates" to limits.brain.bm25_min_candidates.toString()
 )
@@ -1307,13 +1371,20 @@ private fun limitInt(drafts: Map<String, String>, key: String, fallback: Int): I
 
 private fun draftsToLimits(current: RuntimeLimits, drafts: Map<String, String>): RuntimeLimits = RuntimeLimits(
     agent = AgentRuntimeLimits(
+        dedup_candidates = limitInt(drafts, "agent.dedup_candidates", current.agent.dedup_candidates),
         history_max = limitInt(drafts, "agent.history_max", current.agent.history_max),
+        history_compress_at = limitInt(drafts, "agent.history_compress_at", current.agent.history_compress_at),
         recall_full_limit = limitInt(drafts, "agent.recall_full_limit", current.agent.recall_full_limit),
         multi_query_variants = limitInt(drafts, "agent.multi_query_variants", current.agent.multi_query_variants),
+        entity_extract_chars = limitInt(drafts, "agent.entity_extract_chars", current.agent.entity_extract_chars),
+        entity_docs_limit = limitInt(drafts, "agent.entity_docs_limit", current.agent.entity_docs_limit),
         lese_snippet_chars = limitInt(drafts, "agent.lese_snippet_chars", current.agent.lese_snippet_chars),
         answer_hit_chars = limitInt(drafts, "agent.answer_hit_chars", current.agent.answer_hit_chars),
         answer_total_chars = limitInt(drafts, "agent.answer_total_chars", current.agent.answer_total_chars),
+        answer_max_tokens = limitInt(drafts, "agent.answer_max_tokens", current.agent.answer_max_tokens),
+        recall_working_cache_threshold = limitInt(drafts, "agent.recall_working_cache_threshold", current.agent.recall_working_cache_threshold),
         recall_normal_max = limitInt(drafts, "agent.recall_normal_max", current.agent.recall_normal_max),
+        full_category_batch_chars = limitInt(drafts, "agent.full_category_batch_chars", current.agent.full_category_batch_chars),
         context_prompt_max_chars = limitInt(drafts, "agent.context_prompt_max_chars", current.agent.context_prompt_max_chars),
         chat_text_max_chars = limitInt(drafts, "agent.chat_text_max_chars", current.agent.chat_text_max_chars)
     ),
@@ -1321,6 +1392,7 @@ private fun draftsToLimits(current: RuntimeLimits, drafts: Map<String, String>):
         chunk_chars = limitInt(drafts, "brain.chunk_chars", current.brain.chunk_chars),
         chunk_overlap = limitInt(drafts, "brain.chunk_overlap", current.brain.chunk_overlap),
         search_overfetch_factor = limitInt(drafts, "brain.search_overfetch_factor", current.brain.search_overfetch_factor),
+        search_date_overfetch_factor = limitInt(drafts, "brain.search_date_overfetch_factor", current.brain.search_date_overfetch_factor),
         bm25_candidate_factor = limitInt(drafts, "brain.bm25_candidate_factor", current.brain.bm25_candidate_factor),
         bm25_min_candidates = limitInt(drafts, "brain.bm25_min_candidates", current.brain.bm25_min_candidates)
     )
