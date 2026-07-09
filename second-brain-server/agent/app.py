@@ -35,7 +35,7 @@ import threading
 import time
 import traceback
 import uuid
-from contextlib import asynccontextmanager
+from contextlib import asynccontextmanager, contextmanager
 from datetime import datetime
 from logging.handlers import RotatingFileHandler
 from pathlib import Path
@@ -61,7 +61,7 @@ VERSION = "0.65.1 (08.07.2026, 17:35 Uhr)"  # 0.65.1: FIX current_agent_limits()
 
 # Wirksamer Counter-Bump: Live-Spiegelung fertiger Gesprächsturns ins Gehirn.
 VERSION = "0.65.2 (08.07.2026, 20:00 Uhr)"  # 0.65.2: FIX Gesprächs-Logbuch wird nicht mehr erst nach 30 Minuten Inaktivität ins Gehirn geschrieben. Nach jeder fertigen Agent-Antwort spiegelt der Agent denselben Gesprächseintrag sofort in die Kategorie Gespräche; der alte 30-Minuten-Flush mit .txt-Kopie bleibt als Sicherheitsnetz. Alt: 0.65.1.
-VERSION = "0.66.4 (09.07.2026, 12:36 Uhr)"  # 0.66.4: NEU manueller Endpoint /conversations/smoke-cleanup fuer den Dashboard-Knopf; ruft dieselbe enge Smoke-Test-Gespraechsbereinigung wie der Hintergrundlauf auf und liefert das Ergebnis sichtbar zurueck. Alt: 0.66.3.
+VERSION = "0.67.0 (09.07.2026, 13:24 Uhr)"  # 0.67.0: FEINE Performance-Sonden im gesamten Agenten-Hot-Path. Trace-Log misst jetzt Router, Kategorien, Registry, Verlaufs-Komprimierung, LLM-Retry-Versuche, Brain-HTTP-Aufrufe, Multi-Query-Varianten, einzelne Suchvarianten, Tool-Loop-Runden, einzelne Werkzeugaufrufe und Codex/GPT-Streams (Headers, erstes Event, erstes Text-Delta, completed) millisekundengenau. Alt: 0.66.4.
 
 # ---------------------------------------------------------------------------
 # Konfiguration (alles aus Umgebungsvariablen — Secrets nie im Code)
@@ -423,6 +423,42 @@ def _trace_event(step: str, msg: str, ok: bool, ctx: dict) -> None:
     tr["events"].append(ev)
 
 
+def _perf_mark(step: str, msg: str = "", **ctx) -> None:
+    """Feine Performance-Sonde fuer trace.jsonl. Kein aktiver Turn -> No-Op."""
+    try:
+        _trace_event(step, msg or step, True, {"perf": "mark", **ctx})
+    except Exception:  # noqa: BLE001 — Sonden duerfen den Chat nie gefaehrden
+        pass
+
+
+@contextmanager
+def _perf_span(step: str, msg: str = "", **ctx):
+    """Misst einen kleinen Code-Abschnitt millisekundengenau im Turn-Trace.
+    Schreibt start/end/error, damit Flaschenhaelse bis auf einzelne Befehle sichtbar werden."""
+    t0 = time.monotonic()
+    label = msg or step
+    try:
+        _trace_event(f"{step}_start", label, True, {"perf": "start", **ctx})
+    except Exception:  # noqa: BLE001
+        pass
+    try:
+        yield
+    except Exception as e:  # noqa: BLE001
+        try:
+            _trace_event(f"{step}_error", label, False,
+                         {"perf": "error", "ms": int((time.monotonic() - t0) * 1000),
+                          "error": type(e).__name__, **ctx})
+        except Exception:  # noqa: BLE001
+            pass
+        raise
+    else:
+        try:
+            _trace_event(f"{step}_end", label, True,
+                         {"perf": "end", "ms": int((time.monotonic() - t0) * 1000), **ctx})
+        except Exception:  # noqa: BLE001
+            pass
+
+
 def _turn_summary(tr: dict, events: "list[dict]", result: dict, total_ms: int) -> dict:
     """Verdichtet die Turn-Events + die /chat-Antwort zu EINER lesbaren Logbuch-1-Zeile inkl.
     Phasen-Timing (Router / Suche / Leseagent / Web+Antwort) — dem Flaschenhals-Radar."""
@@ -682,13 +718,14 @@ def _refresh_codex_tokens(tokens: dict) -> dict:
     refresh_token = (tokens.get("refresh_token") or "").strip()
     if not refresh_token:
         raise RuntimeError("Codex refresh_token fehlt — neu verbinden")
-    r = _HTTP.post(
-        CODEX_TOKEN_URL,
-        data={"grant_type": "refresh_token", "refresh_token": refresh_token, "client_id": CODEX_OAUTH_CLIENT_ID},
-        headers={"Content-Type": "application/x-www-form-urlencoded", "Accept": "application/json"},
-        timeout=20.0,
-    )
-    r.raise_for_status()
+    with _perf_span("codex_token_refresh", "Codex OAuth-Token erneuern"):
+        r = _HTTP.post(
+            CODEX_TOKEN_URL,
+            data={"grant_type": "refresh_token", "refresh_token": refresh_token, "client_id": CODEX_OAUTH_CLIENT_ID},
+            headers={"Content-Type": "application/x-www-form-urlencoded", "Accept": "application/json"},
+            timeout=20.0,
+        )
+        r.raise_for_status()
     payload = r.json()
     access = payload.get("access_token")
     if not access:
@@ -705,14 +742,19 @@ def _refresh_codex_tokens(tokens: dict) -> dict:
 
 
 def _codex_tokens(refresh_if_needed: bool = True) -> dict:
-    auth = _load_codex_auth()
-    tokens = auth.get("tokens") if isinstance(auth.get("tokens"), dict) else {}
-    access = (tokens.get("access_token") or "").strip()
-    if not access:
-        raise RuntimeError("Codex ist nicht verbunden")
-    if refresh_if_needed and _jwt_exp(access) and _jwt_exp(access) - time.time() < 120:
-        tokens = _refresh_codex_tokens(tokens)
-    return tokens
+    with _perf_span("codex_tokens", "Codex OAuth-Tokens laden", refresh_if_needed=refresh_if_needed):
+        auth = _load_codex_auth()
+        tokens = auth.get("tokens") if isinstance(auth.get("tokens"), dict) else {}
+        access = (tokens.get("access_token") or "").strip()
+        if not access:
+            raise RuntimeError("Codex ist nicht verbunden")
+        exp = _jwt_exp(access)
+        if refresh_if_needed and exp and exp - time.time() < 120:
+            tokens = _refresh_codex_tokens(tokens)
+            _perf_mark("codex_tokens_refreshed", "Codex OAuth-Token wurde erneuert")
+        else:
+            _perf_mark("codex_tokens_reused", "Codex OAuth-Token wiederverwendet", expires_in_s=int(exp - time.time()) if exp else None)
+        return tokens
 
 
 def _codex_headers(access_token: str) -> dict:
@@ -807,43 +849,68 @@ def codex_generate(system: str, user: str, model: str, max_tokens: int, temperat
     text_parts: list[str] = []
     completed_response: dict | None = None
     timeout = 180.0 if web_tool_type else 120.0
-    with _HTTP.stream("POST", f"{CODEX_BASE_URL}/responses", json=body, headers=_codex_headers(access), timeout=timeout) as r:
-        if r.status_code >= 400:
-            detail = r.read().decode("utf-8", errors="replace")[:800] or r.reason_phrase
-            _log(logging.WARNING, "Codex-Backend lehnte Request ab", status=r.status_code, detail=detail)
-            raise HTTPException(status_code=502, detail=f"Codex-Backend HTTP {r.status_code}: {detail}")
-        for line in r.iter_lines():
-            if not line:
-                continue
-            raw = line.strip()
-            if raw.startswith("data:"):
-                raw = raw[5:].strip()
-            elif raw.startswith("event:"):
-                continue
-            if not raw or raw == "[DONE]":
-                continue
-            try:
-                event = json.loads(raw)
-            except Exception:
-                continue
-            event_type = str(event.get("type") or "")
-            if event_type == "error":
-                detail = json.dumps(event, ensure_ascii=False)[:800]
-                raise HTTPException(status_code=502, detail=f"Codex-Stream-Fehler: {detail}")
-            if "output_text.delta" in event_type:
-                delta = event.get("delta")
-                if isinstance(delta, str):
-                    text_parts.append(delta)
-                    _safe_delta(on_delta, delta)   # Live-Streaming an die App (2026-07-02)
-                continue
-            if event_type == "response.completed":
-                resp = event.get("response")
-                if isinstance(resp, dict):
-                    completed_response = resp
-                break
-            if event_type == "response.failed":
-                detail = json.dumps(event.get("response") or event, ensure_ascii=False)[:800]
-                raise HTTPException(status_code=502, detail=f"Codex-Stream fehlgeschlagen: {detail}")
+    req_t0 = time.monotonic()
+    event_count = 0
+    delta_count = 0
+    first_event_seen = False
+    first_delta_seen = False
+    with _perf_span("codex_stream", "Codex/GPT Responses-Stream", model=model, web=bool(web_tool_type), tool=web_tool_type or "", max_tokens=max_tokens, reasoning=effort):
+        with _HTTP.stream("POST", f"{CODEX_BASE_URL}/responses", json=body, headers=_codex_headers(access), timeout=timeout) as r:
+            _perf_mark("codex_headers_received", "Codex/GPT HTTP-Header erhalten",
+                       ms=int((time.monotonic() - req_t0) * 1000), status=r.status_code,
+                       model=model, web=bool(web_tool_type), tool=web_tool_type or "")
+            if r.status_code >= 400:
+                detail = r.read().decode("utf-8", errors="replace")[:800] or r.reason_phrase
+                _log(logging.WARNING, "Codex-Backend lehnte Request ab", status=r.status_code, detail=detail)
+                raise HTTPException(status_code=502, detail=f"Codex-Backend HTTP {r.status_code}: {detail}")
+            for line in r.iter_lines():
+                if not line:
+                    continue
+                raw = line.strip()
+                if raw.startswith("data:"):
+                    raw = raw[5:].strip()
+                elif raw.startswith("event:"):
+                    continue
+                if not raw or raw == "[DONE]":
+                    continue
+                try:
+                    event = json.loads(raw)
+                except Exception:
+                    continue
+                event_count += 1
+                event_type = str(event.get("type") or "")
+                if not first_event_seen:
+                    first_event_seen = True
+                    _perf_mark("codex_first_event", "Erstes Codex/GPT-Stream-Event",
+                               ms=int((time.monotonic() - req_t0) * 1000), event=event_type,
+                               model=model, web=bool(web_tool_type), tool=web_tool_type or "")
+                if event_type == "error":
+                    detail = json.dumps(event, ensure_ascii=False)[:800]
+                    raise HTTPException(status_code=502, detail=f"Codex-Stream-Fehler: {detail}")
+                if "output_text.delta" in event_type:
+                    delta = event.get("delta")
+                    if isinstance(delta, str):
+                        delta_count += 1
+                        if not first_delta_seen:
+                            first_delta_seen = True
+                            _perf_mark("codex_first_text_delta", "Erstes Codex/GPT-Text-Delta",
+                                       ms=int((time.monotonic() - req_t0) * 1000), event_count=event_count,
+                                       model=model, web=bool(web_tool_type), tool=web_tool_type or "")
+                        text_parts.append(delta)
+                        _safe_delta(on_delta, delta)   # Live-Streaming an die App (2026-07-02)
+                    continue
+                if event_type == "response.completed":
+                    resp = event.get("response")
+                    if isinstance(resp, dict):
+                        completed_response = resp
+                    _perf_mark("codex_response_completed", "Codex/GPT-Response completed",
+                               ms=int((time.monotonic() - req_t0) * 1000), event_count=event_count,
+                               delta_count=delta_count, model=model, web=bool(web_tool_type),
+                               tool=web_tool_type or "", response_id=(completed_response or {}).get("id"))
+                    break
+                if event_type == "response.failed":
+                    detail = json.dumps(event.get("response") or event, ensure_ascii=False)[:800]
+                    raise HTTPException(status_code=502, detail=f"Codex-Stream fehlgeschlagen: {detail}")
     text = "".join(text_parts).strip()
     if not text and completed_response:
         text = _extract_response_text(completed_response)
@@ -860,16 +927,17 @@ def codex_generate_with_native_web(system: str, user: str, model: str, max_token
     last_exc: Exception | None = None
     for tool_type in CODEX_WEB_TOOL_TYPES:
         try:
-            text = codex_generate(
-                system,
-                user,
-                model=model,
-                max_tokens=max_tokens,
-                temperature=temperature,
-                reasoning_effort=reasoning_effort,
-                web_tool_type=tool_type,
-                on_delta=on_delta,
-            )
+            with _perf_span("codex_native_web_tool", "Codex/GPT-Websuche mit Tool-Typ", model=model, tool=tool_type):
+                text = codex_generate(
+                    system,
+                    user,
+                    model=model,
+                    max_tokens=max_tokens,
+                    temperature=temperature,
+                    reasoning_effort=reasoning_effort,
+                    web_tool_type=tool_type,
+                    on_delta=on_delta,
+                )
             checkpoint("native_web", "Codex/GPT-Websuche ausgeführt", ok=True, model=model, tool=tool_type)
             return text
         except Exception as e:  # noqa: BLE001 — Tool-Fallback statt Tavily-Aus-Sackgasse
@@ -931,7 +999,7 @@ def codex_generate_tools(
     turn = 0
     raw_first_output: "list[dict]" = []   # Diagnose: output-item-Struktur der ERSTEN Runde
 
-    def _stream_responses(req_body: "dict", timeout: float) -> "tuple[str, dict, list, list]":
+    def _stream_responses(req_body: "dict", timeout: float, phase: str) -> "tuple[str, dict, list, list]":
         # Das ChatGPT-Codex-Backend ERZWINGT stream:true (stream:false -> HTTP 400
         # "Stream must be set to true"). Also streamen und die output-Items (inkl.
         # function_call) am Ende aus dem response.completed-Event lesen (wie codex_generate).
@@ -946,55 +1014,83 @@ def codex_generate_tools(
             completed: "dict | None" = None
             seen_events: "list[str]" = []   # Diagnose: welche Event-Typen sendet das Backend?
             fc_items: "list[dict]" = []      # function_call-Items aus den Stream-Events (Backend liefert sie NICHT in completed.output!)
+            req_t0 = time.monotonic()
+            event_count = 0
+            delta_count = 0
+            first_event_seen = False
+            first_delta_seen = False
             try:
-                with _HTTP.stream("POST", f"{CODEX_BASE_URL}/responses", json=req_body,
-                                  headers=headers, timeout=timeout) as r:
-                    if r.status_code >= 400:
-                        detail = r.read().decode("utf-8", errors="replace")[:800] or r.reason_phrase
-                        _log(logging.WARNING, "codex_generate_tools: Backend lehnte ab",
-                             status=r.status_code, detail=detail)
-                        raise HTTPException(status_code=502,
-                                            detail=f"Codex-Tool-Backend HTTP {r.status_code}: {detail}")
-                    for line in r.iter_lines():
-                        if not line:
-                            continue
-                        raw = line.strip()
-                        if raw.startswith("data:"):
-                            raw = raw[5:].strip()
-                        elif raw.startswith("event:"):
-                            continue
-                        if not raw or raw == "[DONE]":
-                            continue
-                        try:
-                            event = json.loads(raw)
-                        except Exception:
-                            continue
-                        et = str(event.get("type") or "")
-                        if et and et not in seen_events:
-                            seen_events.append(et)
-                        if et == "error":
+                with _perf_span("codex_tool_stream", "Codex/GPT Tool-Loop Stream", model=model, phase=phase, attempt=attempt + 1, input_items=len(req_body.get("input") or []), tools=len(req_body.get("tools") or []), tool_choice=str(req_body.get("tool_choice") or "")):
+                    with _HTTP.stream("POST", f"{CODEX_BASE_URL}/responses", json=req_body,
+                                      headers=headers, timeout=timeout) as r:
+                        _perf_mark("codex_tool_headers_received", "Codex/GPT Tool-Loop HTTP-Header erhalten",
+                                   ms=int((time.monotonic() - req_t0) * 1000), status=r.status_code,
+                                   model=model, phase=phase, attempt=attempt + 1)
+                        if r.status_code >= 400:
+                            detail = r.read().decode("utf-8", errors="replace")[:800] or r.reason_phrase
+                            _log(logging.WARNING, "codex_generate_tools: Backend lehnte ab",
+                                 status=r.status_code, detail=detail)
                             raise HTTPException(status_code=502,
-                                                detail=f"Codex-Tool-Stream-Fehler: {json.dumps(event, ensure_ascii=False)[:800]}")
-                        if "output_text.delta" in et:
-                            d = event.get("delta")
-                            if isinstance(d, str):
-                                text_parts.append(d)
-                            continue
-                        if et == "response.output_item.done":
-                            # Backend liefert das VOLLSTAENDIGE function_call-Item (name/call_id/arguments) hier,
-                            # NICHT in completed.output -> genau von hier einsammeln.
-                            item = event.get("item")
-                            if isinstance(item, dict) and item.get("type") == "function_call":
-                                fc_items.append(item)
-                            continue
-                        if et == "response.completed":
-                            resp = event.get("response")
-                            if isinstance(resp, dict):
-                                completed = resp
-                            break
-                        if et == "response.failed":
-                            raise HTTPException(status_code=502,
-                                                detail=f"Codex-Tool-Stream fehlgeschlagen: {json.dumps(event.get('response') or event, ensure_ascii=False)[:800]}")
+                                                detail=f"Codex-Tool-Backend HTTP {r.status_code}: {detail}")
+                        for line in r.iter_lines():
+                            if not line:
+                                continue
+                            raw = line.strip()
+                            if raw.startswith("data:"):
+                                raw = raw[5:].strip()
+                            elif raw.startswith("event:"):
+                                continue
+                            if not raw or raw == "[DONE]":
+                                continue
+                            try:
+                                event = json.loads(raw)
+                            except Exception:
+                                continue
+                            event_count += 1
+                            et = str(event.get("type") or "")
+                            if not first_event_seen:
+                                first_event_seen = True
+                                _perf_mark("codex_tool_first_event", "Erstes Codex/GPT Tool-Loop-Event",
+                                           ms=int((time.monotonic() - req_t0) * 1000), event=et,
+                                           model=model, phase=phase, attempt=attempt + 1)
+                            if et and et not in seen_events:
+                                seen_events.append(et)
+                            if et == "error":
+                                raise HTTPException(status_code=502,
+                                                    detail=f"Codex-Tool-Stream-Fehler: {json.dumps(event, ensure_ascii=False)[:800]}")
+                            if "output_text.delta" in et:
+                                d = event.get("delta")
+                                if isinstance(d, str):
+                                    delta_count += 1
+                                    if not first_delta_seen:
+                                        first_delta_seen = True
+                                        _perf_mark("codex_tool_first_text_delta", "Erstes Codex/GPT Tool-Loop-Text-Delta",
+                                                   ms=int((time.monotonic() - req_t0) * 1000), event_count=event_count,
+                                                   model=model, phase=phase, attempt=attempt + 1)
+                                    text_parts.append(d)
+                                continue
+                            if et == "response.output_item.done":
+                                # Backend liefert das VOLLSTAENDIGE function_call-Item (name/call_id/arguments) hier,
+                                # NICHT in completed.output -> genau von hier einsammeln.
+                                item = event.get("item")
+                                if isinstance(item, dict) and item.get("type") == "function_call":
+                                    fc_items.append(item)
+                                    _perf_mark("codex_tool_function_call", "Codex/GPT fordert Werkzeug an",
+                                               ms=int((time.monotonic() - req_t0) * 1000), name=str(item.get("name") or "")[:80],
+                                               call_count=len(fc_items), model=model, phase=phase, attempt=attempt + 1)
+                                continue
+                            if et == "response.completed":
+                                resp = event.get("response")
+                                if isinstance(resp, dict):
+                                    completed = resp
+                                _perf_mark("codex_tool_response_completed", "Codex/GPT Tool-Loop Response completed",
+                                           ms=int((time.monotonic() - req_t0) * 1000), event_count=event_count,
+                                           delta_count=delta_count, function_calls=len(fc_items), model=model,
+                                           phase=phase, attempt=attempt + 1, response_id=(completed or {}).get("id"))
+                                break
+                            if et == "response.failed":
+                                raise HTTPException(status_code=502,
+                                                    detail=f"Codex-Tool-Stream fehlgeschlagen: {json.dumps(event.get('response') or event, ensure_ascii=False)[:800]}")
             except HTTPException:
                 raise   # echter Backend-Fehler (4xx / error / failed) -> kein Retry
             except Exception as e:  # Verbindungsabbruch (incomplete chunked read / peer closed / ReadError)
@@ -1029,7 +1125,8 @@ def codex_generate_tools(
             body["reasoning"] = {"effort": effort, "summary": "auto"}
             body["include"] = ["reasoning.encrypted_content"]
         remaining = max(5.0, max_seconds - (time.monotonic() - start))
-        text, resp, ev, fc_items = _stream_responses(body, timeout=min(120.0, remaining))
+        with _perf_span("tool_loop_turn", "Hauptagent Tool-Loop Runde", turn=turn, remaining_ms=int(remaining * 1000), input_items=len(input_items)):
+            text, resp, ev, fc_items = _stream_responses(body, timeout=min(120.0, remaining), phase=f"turn_{turn}")
         output_items = resp.get("output") or []
         # Das Codex-Backend liefert function_calls als Stream-Events (output_item.done), NICHT in
         # completed.output -> primaer fc_items, completed.output nur als Fallback.
@@ -1049,31 +1146,33 @@ def codex_generate_tools(
             raw_args = it.get("arguments")
             chain_key = f"{name}:{raw_args}"
             seen_chains[chain_key] = seen_chains.get(chain_key, 0) + 1
-            t0 = time.monotonic()
             ok = True
-            if seen_chains[chain_key] > 3:
-                out_text = ("FEHLER: Dieses Werkzeug wurde mit denselben Argumenten schon mehrfach "
-                            "aufgerufen. Bitte antworte jetzt in Klartext oder waehle ein anderes Vorgehen.")
-                ok = False
-            else:
-                handler = tool_handlers.get(name)
-                if handler is None:
-                    out_text = f"FEHLER: Unbekanntes Werkzeug '{name}'."
+            t0 = time.monotonic()
+            with _perf_span("tool_handler", "Werkzeugausfuehrung", name=name[:80], turn=turn, args_chars=len(str(raw_args or ""))):
+                if seen_chains[chain_key] > 3:
+                    out_text = ("FEHLER: Dieses Werkzeug wurde mit denselben Argumenten schon mehrfach "
+                                "aufgerufen. Bitte antworte jetzt in Klartext oder waehle ein anderes Vorgehen.")
                     ok = False
                 else:
-                    try:
-                        args = json.loads(raw_args) if isinstance(raw_args, str) else (raw_args or {})
-                    except Exception:
-                        args = {}
-                    try:
-                        result = handler(args)
-                        out_text = result if isinstance(result, str) else json.dumps(result, ensure_ascii=False)
-                    except Exception as e:  # Tool-Fehler als tool_result zurueck (§3.2), nie crashen
-                        out_text = f"FEHLER beim Ausfuehren von '{name}': {str(e)[:400]}"
+                    handler = tool_handlers.get(name)
+                    if handler is None:
+                        out_text = f"FEHLER: Unbekanntes Werkzeug '{name}'."
                         ok = False
+                    else:
+                        try:
+                            args = json.loads(raw_args) if isinstance(raw_args, str) else (raw_args or {})
+                        except Exception:
+                            args = {}
+                        try:
+                            result = handler(args)
+                            out_text = result if isinstance(result, str) else json.dumps(result, ensure_ascii=False)
+                        except Exception as e:  # Tool-Fehler als tool_result zurueck (§3.2), nie crashen
+                            out_text = f"FEHLER beim Ausfuehren von '{name}': {str(e)[:400]}"
+                            ok = False
             input_items.append({"type": "function_call_output", "call_id": call_id,
                                 "output": (out_text or "")[:LESE_TOOL_OUT_CAP]})
-            tool_calls_log.append({"name": name, "ok": ok, "ms": int((time.monotonic() - t0) * 1000)})
+            tool_calls_log.append({"name": name, "ok": ok, "ms": int((time.monotonic() - t0) * 1000),
+                                   "output_chars": len((out_text or "")[:LESE_TOOL_OUT_CAP])})
 
     # Hard-Stop (max_turns/max_seconds) OHNE finalen Klartext -> eine finale Runde OHNE Werkzeuge erzwingen.
     if not final_text:
@@ -1088,7 +1187,7 @@ def codex_generate_tools(
             forced["reasoning"] = {"effort": effort, "summary": "auto"}
             forced["include"] = ["reasoning.encrypted_content"]
         try:
-            final_text, _, _, _ = _stream_responses(forced, timeout=60.0)
+            final_text, _, _, _ = _stream_responses(forced, timeout=60.0, phase="forced_final")
         except Exception as e:
             _log(logging.WARNING, "codex_generate_tools: finale Runde fehlgeschlagen", err=str(e)[:300])
             final_text = final_text or ""
@@ -1275,51 +1374,63 @@ def _llm_generate_once(system: str, user: str, *, model: str, json_mode: bool, m
     llm_generate() umschliesst ihn. Bei json_mode nutzt Gemini response_mime_type=application/json;
     OpenCode/minimax erzwingt das JSON ueber das Schema im System-Prompt (Aufrufer parst per _extract_json).
     reasoning_override: gezielt fuer DIESEN Aufruf (z.B. Router-Deckel) statt der Rollen-Stufe."""
-    if _is_codex(model):
-        role = next((r for r, m in ROLE_MODELS.items() if m == model), "haupt")
-        return codex_generate(system, user, model=model, max_tokens=max_tokens, temperature=temperature,
-                              reasoning_effort=reasoning_override or ROLE_REASONING.get(role, "medium"),
-                              on_delta=on_delta)
-    if _is_opencode(model):
-        # OpenCode/minimax: kein Streaming implementiert — Antwort kommt am Ende komplett (Fallback).
-        return opencode_generate(system, user, model=model, max_tokens=max_tokens, temperature=temperature)
-    if gclient is None:
-        raise RuntimeError(f"Gemini nicht initialisiert: {init_error}")
-    kwargs: dict[str, Any] = dict(system_instruction=system, temperature=temperature, max_output_tokens=max_tokens)
-    if json_mode:
-        kwargs["response_mime_type"] = "application/json"
-    if on_delta is not None and not json_mode:
-        # Gemini-Streaming (2026-07-02): Chunks live an die App; bei Fehler VOR dem ersten Chunk
-        # sauber auf den nicht-streamenden Pfad zurueckfallen (funktionserhaltend).
-        parts: list[str] = []
+    provider = "codex" if _is_codex(model) else ("opencode" if _is_opencode(model) else "gemini")
+    with _perf_span("llm_once", "Einzelner LLM-Aufruf", provider=provider, model=model, json_mode=json_mode,
+                    max_tokens=max_tokens, reasoning=reasoning_override or ""):
+        if _is_codex(model):
+            role = next((r for r, m in ROLE_MODELS.items() if m == model), "haupt")
+            return codex_generate(system, user, model=model, max_tokens=max_tokens, temperature=temperature,
+                                  reasoning_effort=reasoning_override or ROLE_REASONING.get(role, "medium"),
+                                  on_delta=on_delta)
+        if _is_opencode(model):
+            # OpenCode/minimax: kein Streaming implementiert — Antwort kommt am Ende komplett (Fallback).
+            return opencode_generate(system, user, model=model, max_tokens=max_tokens, temperature=temperature)
+        if gclient is None:
+            raise RuntimeError(f"Gemini nicht initialisiert: {init_error}")
+        kwargs: dict[str, Any] = dict(system_instruction=system, temperature=temperature, max_output_tokens=max_tokens)
+        if json_mode:
+            kwargs["response_mime_type"] = "application/json"
+        if on_delta is not None and not json_mode:
+            # Gemini-Streaming (2026-07-02): Chunks live an die App; bei Fehler VOR dem ersten Chunk
+            # sauber auf den nicht-streamenden Pfad zurueckfallen (funktionserhaltend).
+            parts: list[str] = []
+            stream_t0 = time.monotonic()
+            first_delta = False
+            try:
+                with _perf_span("gemini_stream", "Gemini-Streaming", model=model, max_tokens=max_tokens):
+                    for ev in _gemini_generate_stream(model=model, contents=user, base_kwargs=kwargs,
+                                                      base_max_tokens=max_tokens, effort_override=reasoning_override):
+                        t = getattr(ev, "text", None)
+                        if t:
+                            if not first_delta:
+                                first_delta = True
+                                _perf_mark("gemini_first_text_delta", "Erstes Gemini-Text-Delta",
+                                           ms=int((time.monotonic() - stream_t0) * 1000), model=model)
+                            parts.append(t)
+                            _safe_delta(on_delta, t)
+                text = "".join(parts).strip()
+                if text:
+                    return text
+                probe(False, "Gemini-Stream lieferte leeren Text -> nicht-streamender Fallback", model=model)
+            except Exception as e:  # noqa: BLE001
+                if parts:
+                    raise   # mitten im Stream gescheitert -> Retry-Schicht uebernimmt (App heilt via Final-Reply)
+                _log(logging.WARNING, "Gemini-Streaming fehlgeschlagen -> nicht-streamender Fallback", model=model, err=str(e)[:200])
+        with _perf_span("gemini_generate", "Gemini GenerateContent", model=model, json_mode=json_mode, max_tokens=max_tokens):
+            resp = _gemini_generate(model=model, contents=user, base_kwargs=kwargs, base_max_tokens=max_tokens, effort_override=reasoning_override)
+        text = (resp.text or "").strip() if getattr(resp, "text", None) else ""
+        finish = None
         try:
-            for ev in _gemini_generate_stream(model=model, contents=user, base_kwargs=kwargs,
-                                              base_max_tokens=max_tokens, effort_override=reasoning_override):
-                t = getattr(ev, "text", None)
-                if t:
-                    parts.append(t)
-                    _safe_delta(on_delta, t)
-            text = "".join(parts).strip()
-            if text:
-                return text
-            probe(False, "Gemini-Stream lieferte leeren Text -> nicht-streamender Fallback", model=model)
-        except Exception as e:  # noqa: BLE001
-            if parts:
-                raise   # mitten im Stream gescheitert -> Retry-Schicht uebernimmt (App heilt via Final-Reply)
-            _log(logging.WARNING, "Gemini-Streaming fehlgeschlagen -> nicht-streamender Fallback", model=model, err=str(e)[:200])
-    resp = _gemini_generate(model=model, contents=user, base_kwargs=kwargs, base_max_tokens=max_tokens, effort_override=reasoning_override)
-    text = (resp.text or "").strip() if getattr(resp, "text", None) else ""
-    finish = None
-    try:
-        finish = getattr((resp.candidates or [None])[0], "finish_reason", None)
-    except Exception:  # noqa: BLE001 — Auswertung darf nie crashen
-        pass
-    if not text:  # Diagnose erhalten (Gemini-Almanach B4/D10): finishReason bei leerem Text loggen
-        probe(False, "LLM lieferte leeren Text", model=model, finish=str(finish))
-    elif finish is not None and "MAX_TOKENS" in str(finish).upper():
-        # B5: abgeschnitten -> JSON evtl. unvollstaendig; Diagnose (Aufrufer parst defensiv per _extract_json + Fallback)
-        probe(False, "LLM-Antwort evtl. abgeschnitten (MAX_TOKENS) — max_tokens ggf. erhoehen", model=model, chars=len(text))
-    return text
+            finish = getattr((resp.candidates or [None])[0], "finish_reason", None)
+        except Exception:  # noqa: BLE001 — Auswertung darf nie crashen
+            pass
+        if not text:  # Diagnose erhalten (Gemini-Almanach B4/D10): finishReason bei leerem Text loggen
+            probe(False, "LLM lieferte leeren Text", model=model, finish=str(finish))
+        elif finish is not None and "MAX_TOKENS" in str(finish).upper():
+            # B5: abgeschnitten -> JSON evtl. unvollstaendig; Diagnose (Aufrufer parst defensiv per _extract_json + Fallback)
+            probe(False, "LLM-Antwort evtl. abgeschnitten (MAX_TOKENS) — max_tokens ggf. erhoehen", model=model, chars=len(text))
+        _perf_mark("llm_once_result", "LLM-Aufruf Ergebnis", provider=provider, model=model, chars=len(text), finish=str(finish) if finish is not None else "")
+        return text
 
 
 # B10 (Loop §9): Rate-Limit-/5xx-Resilienz — Full-Jitter-Backoff, Retry-After bevorzugt, nur DIESE eine Schicht.
@@ -1361,7 +1472,9 @@ def llm_generate(system: str, user: str, *, model: str, json_mode: bool, max_tok
     last_exc: "Exception | None" = None
     for attempt in range(LLM_MAX_RETRIES + 1):
         try:
-            return _llm_generate_once(system, user, model=model, json_mode=json_mode, max_tokens=max_tokens, temperature=temperature, reasoning_override=reasoning_override, on_delta=on_delta)
+            with _perf_span("llm_attempt", "LLM-Versuch", model=model, attempt=attempt + 1, json_mode=json_mode,
+                            max_tokens=max_tokens, reasoning=reasoning_override or ""):
+                return _llm_generate_once(system, user, model=model, json_mode=json_mode, max_tokens=max_tokens, temperature=temperature, reasoning_override=reasoning_override, on_delta=on_delta)
         except Exception as e:  # noqa: BLE001 — retrybare Fehler abfangen, Rest sofort weiterreichen
             code = _retryable_code(e)
             if code is None or attempt >= LLM_MAX_RETRIES:
@@ -1370,6 +1483,8 @@ def llm_generate(system: str, user: str, *, model: str, json_mode: bool, max_tok
             ra = _retry_after_s(e)
             delay = min(ra, LLM_RETRY_CAP_S) if ra is not None else random.uniform(0, min(LLM_RETRY_CAP_S, LLM_RETRY_BASE_S * (2 ** attempt)))
             _log(logging.WARNING, "LLM-Call retrybar fehlgeschlagen -> Backoff", code=code, attempt=attempt + 1, delay_s=round(delay, 2), model=model)
+            _perf_mark("llm_retry_backoff", "LLM-Retry-Backoff", model=model, attempt=attempt + 1,
+                       code=code, delay_ms=int(delay * 1000))
             time.sleep(delay)
     if last_exc:   # defensiv — unerreichbar, die Schleife raised vorher
         raise last_exc
@@ -1385,9 +1500,13 @@ def brain_store(text: str, title: str, category: str, user_id: str = USER_ID) ->
         payload["title"] = title.strip()
     if category.strip():
         payload["category"] = category.strip()
-    r = _HTTP.post(f"{BRAIN_URL}/store", json=payload, headers=HEADERS, timeout=120.0)
-    r.raise_for_status()
-    return r.json()
+    with _perf_span("brain_http_store", "brain-api /store", chars=len(text), title_chars=len(title), category=category[:120]):
+        r = _HTTP.post(f"{BRAIN_URL}/store", json=payload, headers=HEADERS, timeout=120.0)
+        r.raise_for_status()
+        data = r.json()
+    _perf_mark("brain_http_store_result", "brain-api /store Ergebnis", status=r.status_code,
+               chunks=data.get("chunks"), replaced=bool(data.get("replaced")))
+    return data
 
 
 def brain_search(query: str, limit: int, user_id: str = USER_ID,
@@ -1400,9 +1519,13 @@ def brain_search(query: str, limit: int, user_id: str = USER_ID,
         payload["date_to"] = date_to
     if category:
         payload["category"] = category     # D31: gezielt in EINER Kategorie suchen (z.B. Programmierung/Sessions)
-    r = _HTTP.post(f"{BRAIN_URL}/search", json=payload, headers=HEADERS, timeout=60.0)
-    r.raise_for_status()
-    return r.json().get("items", [])
+    with _perf_span("brain_http_search", "brain-api /search", query_len=len(query), limit=limit,
+                    date_from=date_from or "", date_to=date_to or "", category=category or ""):
+        r = _HTTP.post(f"{BRAIN_URL}/search", json=payload, headers=HEADERS, timeout=60.0)
+        r.raise_for_status()
+        items = r.json().get("items", [])
+    _perf_mark("brain_http_search_result", "brain-api /search Ergebnis", status=r.status_code, hits=len(items))
+    return items
 
 
 def brain_by_category(category: str, user_id: str = USER_ID) -> list[dict]:
@@ -1412,37 +1535,42 @@ def brain_by_category(category: str, user_id: str = USER_ID) -> list[dict]:
     abgeschnitten werden. Bewusst NICHT /by-category: sehr grosse Kategorien werden Eintrag fuer
     Eintrag gelesen, damit nicht 100+ Volltexte auf einmal im RAM landen.
     """
-    r = _HTTP.get(f"{BRAIN_URL}/category-item", params={"category": category, "user_id": user_id, "index": 1},
-                  headers=HEADERS, timeout=60.0)
-    r.raise_for_status()
-    first = r.json()
+    with _perf_span("brain_http_category_item", "brain-api /category-item", category=category[:120], index=1):
+        r = _HTTP.get(f"{BRAIN_URL}/category-item", params={"category": category, "user_id": user_id, "index": 1},
+                      headers=HEADERS, timeout=60.0)
+        r.raise_for_status()
+        first = r.json()
     total = int(first.get("total") or 0)
     if not first.get("found") or total <= 0:
         return []
     items = [first]
     for index in range(2, total + 1):
-        r = _HTTP.get(f"{BRAIN_URL}/category-item",
-                      params={"category": category, "user_id": user_id, "index": index},
-                      headers=HEADERS, timeout=60.0)
-        r.raise_for_status()
-        item = r.json()
+        with _perf_span("brain_http_category_item", "brain-api /category-item", category=category[:120], index=index, total=total):
+            r = _HTTP.get(f"{BRAIN_URL}/category-item",
+                          params={"category": category, "user_id": user_id, "index": index},
+                          headers=HEADERS, timeout=60.0)
+            r.raise_for_status()
+            item = r.json()
         if item.get("found"):
             items.append(item)
+    _perf_mark("brain_http_category_done", "Kategorie sequenziell gelesen", category=category[:120], total=total, items=len(items))
     return items
 
 
 def brain_by_title(title: str, user_id: str) -> dict:
     """Exakter Abruf per Titel (fuer die Eval-Verifikation: ist der Eintrag wirklich drin?)."""
-    r = _HTTP.get(f"{BRAIN_URL}/by-title", params={"title": title, "user_id": user_id}, headers=HEADERS, timeout=30.0)
-    r.raise_for_status()
-    return r.json()
+    with _perf_span("brain_http_by_title", "brain-api /by-title", title=title[:160]):
+        r = _HTTP.get(f"{BRAIN_URL}/by-title", params={"title": title, "user_id": user_id}, headers=HEADERS, timeout=30.0)
+        r.raise_for_status()
+        return r.json()
 
 
 def brain_forget_title(title: str, user_id: str = USER_ID) -> dict:
     """Loescht einen Eintrag per Titel komplett; fuer deterministische Test-Artefakt-Bereinigung."""
-    r = _HTTP.delete(f"{BRAIN_URL}/by-title", params={"title": title, "user_id": user_id}, headers=HEADERS, timeout=30.0)
-    r.raise_for_status()
-    return r.json()
+    with _perf_span("brain_http_forget_title", "brain-api DELETE /by-title", title=title[:160]):
+        r = _HTTP.delete(f"{BRAIN_URL}/by-title", params={"title": title, "user_id": user_id}, headers=HEADERS, timeout=30.0)
+        r.raise_for_status()
+        return r.json()
 
 
 def brain_purge(user_id: str) -> dict:
@@ -1459,11 +1587,13 @@ def brain_categories() -> list[str]:
     Eintraege fehlten -> der Speicheragent haette bestehende Kategorien 'neu' vorgeschlagen)
     und kannte nur die PRIMAERE Kategorie je Eintrag (sekundaere Multi-Kategorien fehlten)."""
     try:
-        r = _HTTP.get(f"{BRAIN_URL}/category-counts", params={"user_id": USER_ID},
-                      headers=HEADERS, timeout=30.0)
-        r.raise_for_status()
-        cats = {c for c in (r.json().get("counts", {}) or {}) if c}
+        with _perf_span("brain_http_category_counts", "brain-api /category-counts", caller="brain_categories"):
+            r = _HTTP.get(f"{BRAIN_URL}/category-counts", params={"user_id": USER_ID},
+                          headers=HEADERS, timeout=30.0)
+            r.raise_for_status()
+            cats = {c for c in (r.json().get("counts", {}) or {}) if c}
         cats.discard(CONV_CATEGORY)  # Gespraechs-Logs sind keine Fakten-Kategorie
+        _perf_mark("brain_categories_result", "Kategorien geladen", categories=len(cats))
         return sorted(cats)
     except Exception:  # noqa: BLE001 — Kategorien sind Hilfskontext, kein harter Fehler
         _log(logging.WARNING, "Kategorien-Abruf fehlgeschlagen", exc_info=True)
@@ -1473,9 +1603,12 @@ def brain_categories() -> list[str]:
 def brain_category_counts() -> dict:
     """{Kategorie: Anzahl Eintraege} aus den Payloads (doc_id-dedupliziert). Hilfskontext — nie crashen."""
     try:
-        r = _HTTP.get(f"{BRAIN_URL}/category-counts", params={"user_id": USER_ID}, headers=HEADERS, timeout=30.0)
-        r.raise_for_status()
-        return r.json().get("counts", {}) or {}
+        with _perf_span("brain_http_category_counts", "brain-api /category-counts", caller="brain_category_counts"):
+            r = _HTTP.get(f"{BRAIN_URL}/category-counts", params={"user_id": USER_ID}, headers=HEADERS, timeout=30.0)
+            r.raise_for_status()
+            counts = r.json().get("counts", {}) or {}
+        _perf_mark("brain_category_counts_result", "Kategorie-Zahlen geladen", categories=len(counts))
+        return counts
     except Exception:  # noqa: BLE001
         _log(logging.WARNING, "category-counts-Abruf fehlgeschlagen", exc_info=True)
         return {}
@@ -1843,15 +1976,17 @@ def multi_query_variants(question: str) -> list[str]:
     """Bis zu MULTI_QUERY_VARIANTS interne Umformulierungen (Router-Modell — schnell/billig).
     Best-effort: bei Fehler einfach keine Varianten (Suche laeuft mit der Original-Query)."""
     try:
-        raw = _extract_json(llm_generate(MULTI_QUERY_SYSTEM, question, model=_router_model(),
-                                         json_mode=True, max_tokens=256, temperature=0.4,
-                                         reasoning_override=_router_reasoning()))
+        with _perf_span("multi_query_llm", "Multi-Query-Varianten per LLM", question_len=len(question), max_variants=MULTI_QUERY_VARIANTS):
+            raw = _extract_json(llm_generate(MULTI_QUERY_SYSTEM, question, model=_router_model(),
+                                             json_mode=True, max_tokens=256, temperature=0.4,
+                                             reasoning_override=_router_reasoning()))
         arr = json.loads(raw).get("varianten") or []
         out = []
         qn = re.sub(r"\s+", " ", question.strip().lower())
         for v in arr:
             if isinstance(v, str) and v.strip() and re.sub(r"\s+", " ", v.strip().lower()) != qn:
                 out.append(v.strip())
+        _perf_mark("multi_query_result", "Multi-Query-Varianten erzeugt", variants=len(out[:MULTI_QUERY_VARIANTS]))
         return out[:MULTI_QUERY_VARIANTS]
     except Exception:  # noqa: BLE001 — Varianten sind ein Bonus, nie ein Blocker
         _log(logging.WARNING, "Multi-Query-Varianten fehlgeschlagen", exc_info=True)
@@ -1922,39 +2057,47 @@ def smart_recall(user_text: str, query: str, user_id: str = USER_ID) -> "tuple[l
     Gibt (hits, meta) — meta beschreibt, was aktiv war (fuer Log + Confidence-Ehrlichkeit).
     user_id: Standard Frank; der Eval-Check testet DIESELBE Kette isoliert unter EVAL_USER."""
     meta: dict = {}
-    d_from, d_to, d_label = parse_time_range(user_text)
-    if d_label:
-        meta["time_filter"] = {"from": d_from, "to": d_to, "label": d_label}
+    with _perf_span("smart_recall_prepare", "Smart-Recall vorbereiten", user_text_len=len(user_text), query_len=len(query)):
+        d_from, d_to, d_label = parse_time_range(user_text)
+        if d_label:
+            meta["time_filter"] = {"from": d_from, "to": d_to, "label": d_label}
 
-    search_limit = _recall_search_limit(user_text)
-    meta["search_limit"] = search_limit
-    queries = [query]
-    if MULTI_QUERY_ENABLED:
-        variants = multi_query_variants(query)
-        if variants:
-            queries += variants
-            meta["multi_query"] = variants
+        search_limit = _recall_search_limit(user_text)
+        meta["search_limit"] = search_limit
+        queries = [query]
+        if MULTI_QUERY_ENABLED:
+            variants = multi_query_variants(query)
+            if variants:
+                queries += variants
+                meta["multi_query"] = variants
+    _perf_mark("smart_recall_queries", "Smart-Recall Suchanfragen", queries=len(queries), search_limit=search_limit,
+               time_filter=bool(d_label))
 
     def _one(q: str) -> list[dict]:
         try:
-            return brain_search(q, search_limit, user_id=user_id, date_from=d_from, date_to=d_to)
+            with _perf_span("smart_recall_variant", "Einzelne Recall-Suchvariante", query_len=len(q), search_limit=search_limit):
+                return brain_search(q, search_limit, user_id=user_id, date_from=d_from, date_to=d_to)
         except Exception:  # noqa: BLE001 — einzelne Varianten-Suche darf den Recall nicht kippen
             _log(logging.WARNING, "Teil-Suche fehlgeschlagen", exc_info=True)
             return []
 
     if len(queries) == 1:
-        lists = [brain_search(queries[0], search_limit, user_id=user_id, date_from=d_from, date_to=d_to)]
+        with _perf_span("smart_recall_searches", "Smart-Recall Suche", queries=1):
+            lists = [brain_search(queries[0], search_limit, user_id=user_id, date_from=d_from, date_to=d_to)]
     else:
         from concurrent.futures import ThreadPoolExecutor
-        with ThreadPoolExecutor(max_workers=len(queries)) as ex:   # wir laufen selbst im Threadpool (sync)
-            lists = list(ex.map(_one, queries))
-    hits = _rrf_fuse_hits(lists) if len(lists) > 1 else list(lists[0])
+        with _perf_span("smart_recall_searches", "Smart-Recall parallele Suchen", queries=len(queries)):
+            with ThreadPoolExecutor(max_workers=len(queries)) as ex:   # wir laufen selbst im Threadpool (sync)
+                lists = list(ex.map(_one, queries))
+    with _perf_span("smart_recall_rrf", "RRF-Fusion der Suchvarianten", lists=len(lists), raw_hits=sum(len(x) for x in lists)):
+        hits = _rrf_fuse_hits(lists) if len(lists) > 1 else list(lists[0])
 
     # Weicher Zeit-Fallback (rag-retrieval §2): lieber ehrlich 'im Zeitraum nichts, aber generell X'
     # als ein falsches 'nichts gespeichert' — der Filter grenzt ein, er darf nicht verschlucken.
     if d_label and not hits:
         try:
-            hits = brain_search(query, search_limit, user_id=user_id)
+            with _perf_span("smart_recall_time_fallback", "Zeitfilter-Fallback ohne Datum", search_limit=search_limit):
+                hits = brain_search(query, search_limit, user_id=user_id)
             meta["time_filter_fallback"] = True
         except Exception:  # noqa: BLE001
             _log(logging.WARNING, "Zeit-Fallback-Suche fehlgeschlagen", exc_info=True)
@@ -1963,7 +2106,8 @@ def smart_recall(user_text: str, query: str, user_id: str = USER_ID) -> "tuple[l
     if ENTITY_ENABLED:
         ent_name = entity_name_from_question(user_text)
         if ent_name:
-            ent = brain_entities_docs(ent_name, ENTITY_DOCS_LIMIT, user_id=user_id)
+            with _perf_span("smart_recall_entity_docs", "Entity-Register Vollabruf", entity=ent_name[:120], limit=ENTITY_DOCS_LIMIT):
+                ent = brain_entities_docs(ent_name, ENTITY_DOCS_LIMIT, user_id=user_id)
             if ent.get("found") and ent.get("items"):
                 meta["entity"] = {"name": ent.get("name"), "docs": len(ent["items"])}
                 seen = {h.get("doc_id") for h in hits}
@@ -2982,14 +3126,19 @@ def _maybe_compress_history(session: dict) -> None:
     Sicherheitsnetz-Cap greift trotzdem)."""
     n = HISTORY_COMPRESS_AT
     if not n or n <= 0:
+        _perf_mark("history_compress_skip", "Verlaufs-Komprimierung aus", threshold=n)
         return
     msgs = session.get("messages") or []
     upto = int(session.get("history_compressed_upto") or 0)
     if len(msgs) - upto < n:
+        _perf_mark("history_compress_skip", "Verlaufs-Komprimierung unter Schwelle", threshold=n,
+                   messages=len(msgs), new_messages=len(msgs) - upto)
         return
     alt = (session.get("history_summary") or "")
     try:
-        neue_summary = _compress_history(alt, msgs[upto:])
+        with _perf_span("history_compress", "Verlauf kumulativ komprimieren", threshold=n,
+                        messages=len(msgs), new_messages=len(msgs) - upto, old_summary_chars=len(alt)):
+            neue_summary = _compress_history(alt, msgs[upto:])
     except Exception:  # noqa: BLE001 — Komprimierung darf den Chat nie killen (best-effort)
         _log(logging.WARNING, "Verlaufs-Komprimierung fehlgeschlagen (best-effort, alter Stand bleibt)", exc_info=True)
         return
@@ -5508,22 +5657,25 @@ def _toolagent_answer(session: dict, user_text: str, context_prompt: str = "",
     Funktionserhaltend (Direktive #3): liefert weiter reply + Quellen-Chips + Confidence an App/Dashboard.
     Absicherung im Tool-Loop selbst (codex_generate_tools): Hard-Stop max_turns/max_seconds (ai-agent
     §1.1), tool_use<->tool_result 1:1 (§4.1), Tool-Fehler als Ergebnis statt Crash (§3.2)."""
-    tools, handlers, state = build_agent_tools(session=session, context_prompt=context_prompt,
-                                               response_size=response_size)
+    with _perf_span("toolagent_build_tools", "Tool-Agent Werkzeugkasten bauen", response_size=response_size):
+        tools, handlers, state = build_agent_tools(session=session, context_prompt=context_prompt,
+                                                   response_size=response_size)
     # Verlauf + UI-Kontext als Text-Praefix (spiegelt hauptagent_answer 1:1: der Agent sieht das
     # bisherige Gespraech -> Follow-up-Fragen wie "und was noch dazu?" behalten den Bezug). Die
     # aktuelle Nachricht zusaetzlich explizit, damit sie nie im Verlauf untergeht.
-    user_input = (
-        f"BISHERIGES GESPRÄCH:\n{_history_text(session)}\n\n"
-        f"{_context_prompt_block(context_prompt)}"
-        f"AKTUELLE NACHRICHT VON FRANK:\n{user_text}"
-    )
-    try:
-        r = codex_generate_tools(
-            build_toolagent_system(), user_input, tools=tools, tool_handlers=handlers,
-            model=ROLE_MODELS["haupt"], reasoning_effort=ROLE_REASONING.get("haupt", "high"),
-            max_turns=8, max_seconds=240.0, on_delta=on_delta,
+    with _perf_span("toolagent_prompt_build", "Tool-Agent Prompt bauen", history_messages=len(session.get("messages") or []), context_chars=len(context_prompt or "")):
+        user_input = (
+            f"BISHERIGES GESPRÄCH:\n{_history_text(session)}\n\n"
+            f"{_context_prompt_block(context_prompt)}"
+            f"AKTUELLE NACHRICHT VON FRANK:\n{user_text}"
         )
+    try:
+        with _perf_span("toolagent_codex_loop", "Tool-Agent Codex/GPT-Loop", model=ROLE_MODELS["haupt"], tools=len(tools)):
+            r = codex_generate_tools(
+                build_toolagent_system(), user_input, tools=tools, tool_handlers=handlers,
+                model=ROLE_MODELS["haupt"], reasoning_effort=ROLE_REASONING.get("haupt", "high"),
+                max_turns=8, max_seconds=240.0, on_delta=on_delta,
+            )
     except Exception as e:  # noqa: BLE001 — der Tool-Agent darf den Endpunkt NIE killen (ai-agent §3.2)
         _log(logging.ERROR, "Tool-Agent (Hauptagent) fehlgeschlagen", exc_info=True)
         return {"reply": f"Beim Nachdenken ist gerade etwas schiefgegangen ({type(e).__name__}). Versuch es bitte gleich nochmal.",
@@ -5534,18 +5686,19 @@ def _toolagent_answer(session: dict, user_text: str, context_prompt: str = "",
         checkpoint("rule_confirm", "Agent schlug per schreibe_regel eine Regel vor -> Bestaetigungskarte",
                    ok=True, regel=str(state.get("rule_candidate"))[:120])
         return _rule_confirm_card(str(state["rule_candidate"]))
-    answer = (r.get("text") or "").strip()
+    with _perf_span("toolagent_sources", "Tool-Agent Quellen und Confidence bauen", loaded=len(state.get("geladen") or []), hits=len(state.get("hits") or {})):
+        answer = (r.get("text") or "").strip()
     # Quellen-Chips: bevorzugt die Eintraege, die der Agent WIRKLICH per lade_eintrag geoeffnet hat;
     # hat er nur gesucht (Snippets reichten), die gefundenen als Quellen. Nur Metadaten (kein Volltext).
-    geladen = state.get("geladen") or []
-    used = [state["hits"][d] for d in geladen if d in state["hits"]] or list(state["hits"].values())
-    sources = [{"doc_id": h.get("doc_id"), "title": h.get("title") or "(ohne Titel)",
-                "category": h.get("category"),
-                "score": h.get("dense_score") if h.get("dense_score") is not None else h.get("score"),
-                "matched_by": h.get("matched_by") or ["dense"]}
-               for h in used if h.get("doc_id")]
-    confidence = _confidence_info(used)   # grob aus den genutzten Treffern abgeleitet (Frank-Wahl)
-    used_memory = bool(state["hits"])
+        geladen = state.get("geladen") or []
+        used = [state["hits"][d] for d in geladen if d in state["hits"]] or list(state["hits"].values())
+        sources = [{"doc_id": h.get("doc_id"), "title": h.get("title") or "(ohne Titel)",
+                    "category": h.get("category"),
+                    "score": h.get("dense_score") if h.get("dense_score") is not None else h.get("score"),
+                    "matched_by": h.get("matched_by") or ["dense"]}
+                   for h in used if h.get("doc_id")]
+        confidence = _confidence_info(used)   # grob aus den genutzten Treffern abgeleitet (Frank-Wahl)
+        used_memory = bool(state["hits"])
     checkpoint("toolagent", "Schritt-2-Umbau: Hauptagent beantwortet per Werkzeugen (Router-intent-Zweige ersetzt)",
                ok=bool(answer), frage=user_text[:120], turns=r.get("turns"), stopped=r.get("stopped"),
                werkzeuge=len(r.get("tool_calls") or []), gefunden=len(state["hits"]),
@@ -5564,11 +5717,17 @@ def _process_turn(session: dict, user_text: str, pending: dict | None, category:
     Liest nur session['messages'] (Verlauf), MUTIERT die Session nicht — gibt 'pending' zum Setzen zurueck.
     Erzwingt im CODE: Speichern passiert NUR nach Bestaetigung (confirm_yes), nie direkt bei intent=save.
     'category' = im Dashboard-Dropdown GEWAEHLTE Kategorie (Override); leer = Speicheragent entscheidet."""
+    _perf_mark("process_turn_start", "Gesamter synchroner Agent-Turn startet", user_text_len=len(user_text),
+               pending=bool(pending), mode=context_mode, response_size=response_size)
     # Verlaufs-Komprimierung (Frank-Wunsch 2026-07-08): ab HISTORY_COMPRESS_AT Gesamt-Nachrichten den
     # Verlauf kumulativ ueber den Hauptagenten verdichten (best-effort — gefaehrdet den Turn nie).
     _maybe_compress_history(session)
-    payload_cats = brain_categories()                                                  # NUR Kategorien MIT Eintraegen -> Leseagent (leere bringen ihm nichts)
-    categories = sorted((set(payload_cats) | set(load_registry())) - {CONV_CATEGORY})   # VOLLE Liste (inkl. leerer) -> Speicheragent
+    with _perf_span("process_categories", "Kategorien und Registry laden"):
+        payload_cats = brain_categories()                                                  # NUR Kategorien MIT Eintraegen -> Leseagent (leere bringen ihm nichts)
+        with _perf_span("process_registry", "Lokale Kategorie-Registry laden"):
+            registry_cats = load_registry()
+        categories = sorted((set(payload_cats) | set(registry_cats)) - {CONV_CATEGORY})   # VOLLE Liste (inkl. leerer) -> Speicheragent
+    _perf_mark("process_categories_result", "Kategorien fuer Turn bereit", payload_categories=len(payload_cats), total_categories=len(categories))
     # Explizite Speicher-Felder (Titel/Kategorie aus dem Dashboard-Sendebereich) sind ein KLARES
     # Speicher-Signal — dann den Router NICHT ueber den (evtl. riesigen) Text raten lassen: grosse
     # Pastes sprengen sonst sein JSON-Budget (max_tokens) und enden faelschlich als "nicht verstanden".
@@ -5578,7 +5737,8 @@ def _process_turn(session: dict, user_text: str, pending: dict | None, category:
         route = {"intent": "save", "quote": "", "query": "", "web_query": "", "reply": ""}
         checkpoint("route", "Explizite Speicher-Felder (Titel/Kategorie) -> direkt save, Router uebersprungen", ok=True, route="save")
     else:
-        route = hauptagent_route(session, user_text, pending, context_mode, context_prompt)
+        with _perf_span("process_router", "Hauptagent-Router", mode=context_mode, pending=bool(pending)):
+            route = hauptagent_route(session, user_text, pending, context_mode, context_prompt)
     intent = (route.get("intent") or "smalltalk").strip()
 
     if _norm_context_mode(context_mode) != "smalltalk" and not pending and intent in {"query", "internet", "smalltalk", "query_internet"} and wants_recall_then_internet(user_text, context_prompt):

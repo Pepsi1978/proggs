@@ -1,7 +1,15 @@
 {
-  "stand": "09.07.2026, 12:36 Uhr",
+  "stand": "09.07.2026, 13:24 Uhr",
   "hinweis": "PFLEGE-PFLICHT: Bei JEDEM Deploy, der ein neues System/Feature einbaut, hier einen Eintrag ERGÄNZEN (neueste zuerst). SCHREIBWEISE (Dauer-Regel): leichtes, verständliches Deutsch, kurze Sätze; ALLE Fachbegriffe, Namen und Zahlen (z.B. BM25, RRF, Qdrant, ENV-Variablen, Endpunkt-Namen) BEHALTEN, aber jeden in einem kurzen Halbsatz erklären — NIE durch Weglassen vereinfachen; kompakt halten (der Hauptagent liest über das Werkzeug 'was_kann_cortex' ALLE Einträge auf einmal ein), aber vollständig genug, dass man erkennt WAS eingebaut wurde; einfache Überschrift. Ähnliche/redundante Einträge dürfen zusammengefasst werden — Datum sekundär, entscheidend ist WAS Cortex kann. Quelle des Info-Bereichs in den Dashboard-Einstellungen (GET /api/features). Verankert in DEPLOY.md.",
   "features": [
+    {
+      "id": "feine-performance-sonden",
+      "eingebaut": "09.07.2026, 13:24 Uhr",
+      "dienst": "agent 0.67.0 + dashboard 0.65.0",
+      "name": "Feine Performance-Sonden: Flaschenhälse im Agenten millisekundengenau sichtbar machen",
+      "kurz": "Cortex misst jetzt sehr viele Einzelschritte pro Anfrage in trace.jsonl: Router, Kategorien, Registry, Verlaufskomprimierung, Brain-HTTP, Multi-Query, einzelne Suchvarianten, Tool-Loop-Runden, Werkzeugaufrufe und GPT-/Codex-Streams mit HTTP-Header, erstem Event, erstem Text-Delta und completed-Zeit.",
+      "erklaerung": "Das bestehende Turn-Logbuch bleibt kompatibel, bekommt aber deutlich feinere Sonden im Sonden-Trace. Jede Anfrage hat weiter eine turn_id; darunter stehen jetzt start/end/error-Spans mit Millisekunden-Dauer. Gemessen werden die Hauptpfade des Agenten: Kategorien aus brain-api /category-counts, lokale Kategorie-Registry, Verlaufskomprimierung, LLM-Retry-Versuche, einzelne Provider-Aufrufe, brain-api /search, /store, /by-title und /category-item, Multi-Query-Varianten per LLM, jede Suchvariante, RRF-Fusion, Entity-Register-Abrufe, Tool-Agent-Promptbau, jede Codex/GPT-Tool-Loop-Runde und jeder Werkzeugaufruf. Speziell für GPT-Websuche wird die bisherige Blackbox aufgeteilt: Token laden/erneuern, HTTP-Header erhalten, erstes Stream-Event, erstes Text-Delta und response.completed. Dadurch sieht Frank beim nächsten langsamen Turn, ob die Wartezeit vor dem ersten Byte, in der Websuche, im Reasoning, im Streaming, in Qdrant oder in einem einzelnen Werkzeug hängt. Die Sonden schreiben nur ins bestehende Trace-Log auf der Samba-Platte, maskieren Secrets über die vorhandene Logik und dürfen den Chat nie blockieren."
+    },
     {
       "id": "websuche-schalter-test-und-smoke-cleanup",
       "eingebaut": "09.07.2026, 12:36 Uhr",
