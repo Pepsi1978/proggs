@@ -61,7 +61,7 @@ VERSION = "0.65.1 (08.07.2026, 17:35 Uhr)"  # 0.65.1: FIX current_agent_limits()
 
 # Wirksamer Counter-Bump: Live-Spiegelung fertiger Gesprächsturns ins Gehirn.
 VERSION = "0.65.2 (08.07.2026, 20:00 Uhr)"  # 0.65.2: FIX Gesprächs-Logbuch wird nicht mehr erst nach 30 Minuten Inaktivität ins Gehirn geschrieben. Nach jeder fertigen Agent-Antwort spiegelt der Agent denselben Gesprächseintrag sofort in die Kategorie Gespräche; der alte 30-Minuten-Flush mit .txt-Kopie bleibt als Sicherheitsnetz. Alt: 0.65.1.
-VERSION = "0.66.0 (08.07.2026, 22.10 Uhr)"  # 0.66.0 (Frank-Auftrag 2026-07-08): Selbst-Regeln des Hauptagenten — der Agent kann sich dauerhafte Verhaltensregeln geben (extern auf Z:\\Logbuch\\Regeln\\regeln.json, im Samba-Backup), die in JEDEM Gespräch im System-Prompt wirken. Neu: agent/rules.py (atomare Ablage, Regelblock, Trigger-Erkennung), Tools lies_regeln/schreibe_regel, rule_confirm-Chatdialog (Ja/Nein/Bearbeiten), deterministische Regel-vs-Speichern-Unterscheidung (is_rule_request) + Tool-/Prompt-Abgrenzung, REST /rules (GET/POST/PUT/DELETE), Dashboard-Chronik. 40-Regeln-Limit + 6000-Zeichen-Cap gegen Context-Rot. Alt: 0.65.2.
+VERSION = "0.66.1 (09.07.2026, 11:20 Uhr)"  # 0.66.1: FIX web_suche im neuen Hauptagent-Werkzeugkasten respektiert den Tavily-Schalter eindeutig: Tavily an = Tavily übernimmt die Websuche; Tavily aus = modellnative Websuche des Hauptmodells (GPT/Codex web_search oder Gemini Grounding), statt {ok:false, grund:"deaktiviert"}. Root Cause: 0.64.0 ersetzte die alten query/internet-Zweige durch den Tool-Agenten, aber dessen web_suche-Handler rief nur Tavily auf und verlor den bestehenden native-Web-Fallback. Alt: 0.66.0.
 
 # ---------------------------------------------------------------------------
 # Konfiguration (alles aus Umgebungsvariablen — Secrets nie im Code)
@@ -4133,7 +4133,8 @@ def _rule_confirm_card(regel_text: str) -> dict:
             "pending": {"mode": "rule_confirm", "rule_text": regel_text}}
 
 
-def build_agent_tools(user_id: str = USER_ID) -> "tuple[list[dict], dict, dict]":
+def build_agent_tools(user_id: str = USER_ID, session: "dict | None" = None,
+                      context_prompt: str = "", response_size: str = "m") -> "tuple[list[dict], dict, dict]":
     """Baut den Lese-Werkzeugkasten des Hauptagenten. Gibt (tools_schema, handlers, state).
     Jeder Turn bekommt FRISCHE Werkzeuge mit eigenem hit_cache (state['hits']: doc_id -> voller hit),
     den durchsuche_gedaechtnis fuellt und lade_eintrag liest — so filtert der Hauptagent selbst
@@ -4182,9 +4183,25 @@ def build_agent_tools(user_id: str = USER_ID) -> "tuple[list[dict], dict, dict]"
         q = str(args.get("query") or "").strip()
         if not q:
             return "FEHLER: Parameter 'query' fehlt."
-        res = tavily_search(q, "m")
+        res = tavily_search(q, response_size)
         if not res.get("ok"):
-            return json.dumps({"ok": False, "grund": res.get("reason")}, ensure_ascii=False)
+            reason = res.get("reason") or "unbekannt"
+            if reason == "deaktiviert" and hauptagent_supports_native_web():
+                try:
+                    answer = hauptagent_answer_native_web(
+                        session or {"messages": []}, q, context_prompt, on_delta=None
+                    )
+                    checkpoint("native_web", "web_suche nutzte modellnative Websuche als Tavily-Fallback",
+                               ok=True, query=q[:80], tavily_reason=reason,
+                               model=ROLE_MODELS.get("haupt", ""))
+                    return json.dumps({"ok": True, "anbieter": "modellnative_websuche",
+                                       "grund_tavily": reason, "antwort": answer}, ensure_ascii=False)
+                except Exception as e:  # noqa: BLE001 — Tool-Fehler sichtbar zurückgeben, nicht crashen
+                    _log(logging.WARNING, "Modellnative Websuche im web_suche-Tool fehlgeschlagen",
+                         err=str(e)[:500], tavily_reason=reason)
+                    return json.dumps({"ok": False, "grund": reason,
+                                       "native_web_fehler": type(e).__name__}, ensure_ascii=False)
+            return json.dumps({"ok": False, "grund": reason}, ensure_ascii=False)
         top = [{"titel": r.get("title"), "quelle": r.get("url"), "inhalt": (r.get("content") or "")[:600]}
                for r in (res.get("results") or [])[:6]]
         return json.dumps({"ok": True, "kurzantwort": res.get("answer"), "treffer": top}, ensure_ascii=False)
@@ -4298,7 +4315,7 @@ def toolagent_test(q: str) -> dict:
     """Isolierter Test des HAUPTAGENT-Werkzeugkastens (Schritt 2, VOR der _process_turn-Integration):
     laesst GPT-5.5 die Frage `q` mit den ECHTEN Lese-Werkzeugen beantworten. Beruehrt den echten Chat NICHT.
     Ideal fuer den Star-Trek-Regressionsfall ('Welche Serie kam nach Star Trek Enterprise?')."""
-    tools, handlers, state = build_agent_tools()
+    tools, handlers, state = build_agent_tools(response_size="m")
     try:
         r = codex_generate_tools(TOOLAGENT_SYSTEM, q, tools=tools, tool_handlers=handlers,
                                  model=ROLE_MODELS["haupt"],
@@ -5341,7 +5358,8 @@ def _toolagent_answer(session: dict, user_text: str, context_prompt: str = "",
     Funktionserhaltend (Direktive #3): liefert weiter reply + Quellen-Chips + Confidence an App/Dashboard.
     Absicherung im Tool-Loop selbst (codex_generate_tools): Hard-Stop max_turns/max_seconds (ai-agent
     §1.1), tool_use<->tool_result 1:1 (§4.1), Tool-Fehler als Ergebnis statt Crash (§3.2)."""
-    tools, handlers, state = build_agent_tools()
+    tools, handlers, state = build_agent_tools(session=session, context_prompt=context_prompt,
+                                               response_size=response_size)
     # Verlauf + UI-Kontext als Text-Praefix (spiegelt hauptagent_answer 1:1: der Agent sieht das
     # bisherige Gespraech -> Follow-up-Fragen wie "und was noch dazu?" behalten den Bezug). Die
     # aktuelle Nachricht zusaetzlich explizit, damit sie nie im Verlauf untergeht.
@@ -5354,7 +5372,7 @@ def _toolagent_answer(session: dict, user_text: str, context_prompt: str = "",
         r = codex_generate_tools(
             build_toolagent_system(), user_input, tools=tools, tool_handlers=handlers,
             model=ROLE_MODELS["haupt"], reasoning_effort=ROLE_REASONING.get("haupt", "high"),
-            max_turns=8, max_seconds=160.0, on_delta=on_delta,
+            max_turns=8, max_seconds=240.0, on_delta=on_delta,
         )
     except Exception as e:  # noqa: BLE001 — der Tool-Agent darf den Endpunkt NIE killen (ai-agent §3.2)
         _log(logging.ERROR, "Tool-Agent (Hauptagent) fehlgeschlagen", exc_info=True)
