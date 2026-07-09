@@ -62,6 +62,7 @@ VERSION = "0.65.1 (08.07.2026, 17:35 Uhr)"  # 0.65.1: FIX current_agent_limits()
 # Wirksamer Counter-Bump: Live-Spiegelung fertiger Gesprächsturns ins Gehirn.
 VERSION = "0.65.2 (08.07.2026, 20:00 Uhr)"  # 0.65.2: FIX Gesprächs-Logbuch wird nicht mehr erst nach 30 Minuten Inaktivität ins Gehirn geschrieben. Nach jeder fertigen Agent-Antwort spiegelt der Agent denselben Gesprächseintrag sofort in die Kategorie Gespräche; der alte 30-Minuten-Flush mit .txt-Kopie bleibt als Sicherheitsnetz. Alt: 0.65.1.
 VERSION = "0.67.0 (09.07.2026, 13:24 Uhr)"  # 0.67.0: FEINE Performance-Sonden im gesamten Agenten-Hot-Path. Trace-Log misst jetzt Router, Kategorien, Registry, Verlaufs-Komprimierung, LLM-Retry-Versuche, Brain-HTTP-Aufrufe, Multi-Query-Varianten, einzelne Suchvarianten, Tool-Loop-Runden, einzelne Werkzeugaufrufe und Codex/GPT-Streams (Headers, erstes Event, erstes Text-Delta, completed) millisekundengenau. Alt: 0.66.4.
+VERSION = "0.67.1 (09.07.2026, 13:32 Uhr)"  # 0.67.1: FIX Performance-Trace bleibt turn-genau: der nachgelagerte Gesprächs-Mirror erbt den aktiven Turn-Trace nicht mehr, damit Hintergrund-Brain-Store-Spans keine unvollständigen Start-Events in abgeschlossene Turn-Traces schreiben. Alt: 0.67.0.
 
 # ---------------------------------------------------------------------------
 # Konfiguration (alles aus Umgebungsvariablen — Secrets nie im Code)
@@ -3927,7 +3928,11 @@ def _schedule_conversation_mirror(sid: str, snap: dict) -> None:
     seq = int(snap.get("conversation_mirror_seq") or 0)
     if seq:
         _conversation_mirror_latest[sid] = max(_conversation_mirror_latest.get(sid, 0), seq)
-    _track_background_task(asyncio.create_task(_mirror_session_to_brain_now(sid, snap)))
+    # Der Mirror läuft nach der Antwort weiter. Er darf den aktiven Turn-Trace nicht erben,
+    # sonst landen Hintergrund-Spans halb in bereits abgeschlossenen Trace-Dateien.
+    bg_context = contextvars.copy_context()
+    bg_context.run(_current_trace.set, None)
+    _track_background_task(asyncio.create_task(_mirror_session_to_brain_now(sid, snap), context=bg_context))
 
 
 def flush_session_to_logbook(session: dict) -> None:
