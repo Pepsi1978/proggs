@@ -61,7 +61,7 @@ VERSION = "0.65.1 (08.07.2026, 17:35 Uhr)"  # 0.65.1: FIX current_agent_limits()
 
 # Wirksamer Counter-Bump: Live-Spiegelung fertiger Gesprächsturns ins Gehirn.
 VERSION = "0.65.2 (08.07.2026, 20:00 Uhr)"  # 0.65.2: FIX Gesprächs-Logbuch wird nicht mehr erst nach 30 Minuten Inaktivität ins Gehirn geschrieben. Nach jeder fertigen Agent-Antwort spiegelt der Agent denselben Gesprächseintrag sofort in die Kategorie Gespräche; der alte 30-Minuten-Flush mit .txt-Kopie bleibt als Sicherheitsnetz. Alt: 0.65.1.
-VERSION = "0.66.2 (09.07.2026, 11:40 Uhr)"  # 0.66.2: NEU fester Websuche-Schalter-Selbsttest /websearch-toggle-selftest fuer den Dashboard-Knopf neben Tavily: prueft ohne echte Webkosten Tavily aus -> modellnative Websuche, Tavily an -> Tavily, Tavily an aber kein Key -> sichtbarer Fehler. Alt: 0.66.1.
+VERSION = "0.66.3 (09.07.2026, 11:49 Uhr)"  # 0.66.3: NEU regelmaessige Bereinigung alter Smoke-Test-Gespraeche aus der Kategorie Gespräche. Der bestehende Flush-Loop scannt best-effort in grossen Abstaenden, erkennt nur enge Smoke-/Selbsttest-Phrasen und loescht diese per Titel aus dem Brain. Alt: 0.66.2.
 
 # ---------------------------------------------------------------------------
 # Konfiguration (alles aus Umgebungsvariablen — Secrets nie im Code)
@@ -92,6 +92,8 @@ SESSION_TIMEOUT_S = _env_int("AGENT_SESSION_TIMEOUT_MIN", 30) * 60
 LOGBOOK_DIR = os.getenv("AGENT_LOGBOOK_DIR", "/logbook")  # gemountet auf /srv/samba/gedanken/Logbuch
 TZNAME = os.getenv("AGENT_TZ", "Europe/Berlin")
 CONV_CATEGORY = os.getenv("AGENT_CONV_CATEGORY", "Gespräche")  # deutsche Umlaute; Altbestand mit kleinem g bleibt per casefold erkannt
+SMOKE_CONV_RETENTION_HOURS = _env_int("AGENT_SMOKE_CONV_RETENTION_HOURS", 6)
+SMOKE_CONV_CLEANUP_INTERVAL_S = _env_int("AGENT_SMOKE_CONV_CLEANUP_INTERVAL_S", 6 * 60 * 60)
 DEDUP_CANDIDATES = _env_int("AGENT_DEDUP_CANDIDATES", 3)
 DEDUP_MIN_SCORE = float(os.getenv("AGENT_DEDUP_MIN_SCORE", "0.70"))  # ab hier dem LLM als Kandidat zeigen
 DEFAULT_AGENT_LIMITS = {
@@ -1432,6 +1434,13 @@ def brain_by_category(category: str, user_id: str = USER_ID) -> list[dict]:
 def brain_by_title(title: str, user_id: str) -> dict:
     """Exakter Abruf per Titel (fuer die Eval-Verifikation: ist der Eintrag wirklich drin?)."""
     r = _HTTP.get(f"{BRAIN_URL}/by-title", params={"title": title, "user_id": user_id}, headers=HEADERS, timeout=30.0)
+    r.raise_for_status()
+    return r.json()
+
+
+def brain_forget_title(title: str, user_id: str = USER_ID) -> dict:
+    """Loescht einen Eintrag per Titel komplett; fuer deterministische Test-Artefakt-Bereinigung."""
+    r = _HTTP.delete(f"{BRAIN_URL}/by-title", params={"title": title, "user_id": user_id}, headers=HEADERS, timeout=30.0)
     r.raise_for_status()
     return r.json()
 
@@ -3666,6 +3675,76 @@ def _conversation_logbook_payload(session: dict) -> tuple[str, str, str]:
     return title, content, start_label
 
 
+_SMOKE_CONV_NEEDLES = (
+    "smoke-test",
+    "smoketest",
+    "logbuch-selbsttest",
+    "logbuch selbsttest",
+    "teste kurz die websuche",
+    "websuche-selbsttest",
+    "websuche selbsttest",
+)
+
+
+def _conversation_title_started_at(title: str) -> datetime | None:
+    m = re.match(r"^Gespräch\s+(\d{2})\.(\d{2})\.(\d{4})\s+-\s+(\d{1,2})\.(\d{2})\s+Uhr$", title or "")
+    if not m:
+        return None
+    day, month, year, hour, minute = (int(x) for x in m.groups())
+    try:
+        return datetime(year, month, day, hour, minute, tzinfo=TZ)
+    except ValueError:
+        return None
+
+
+def _is_old_smoke_conversation(item: dict, now: datetime | None = None) -> bool:
+    """Enger Filter: nur alte, eindeutig als Smoke-/Selbsttest erkennbare Gesprächs-Logbucheintraege."""
+    title = (item.get("title") or "").strip()
+    text = (item.get("text") or "").strip()
+    if not title.startswith("Gespräch ") or not text:
+        return False
+    lowered = text.casefold()
+    if "kategorie: gespräche" not in lowered or "frank:" not in lowered:
+        return False
+    if not any(needle in lowered for needle in _SMOKE_CONV_NEEDLES):
+        return False
+    started = _conversation_title_started_at(title)
+    if started is None:
+        return False
+    age_hours = ((_now_local() if now is None else now) - started).total_seconds() / 3600
+    return age_hours >= max(0, SMOKE_CONV_RETENTION_HOURS)
+
+
+def cleanup_old_smoke_conversations(user_id: str = USER_ID) -> dict:
+    """Best-effort Retention fuer alte Smoke-Test-Gespräche; echte Gespräche bleiben unberuehrt."""
+    if SMOKE_CONV_RETENTION_HOURS < 0 or SMOKE_CONV_CLEANUP_INTERVAL_S <= 0:
+        return {"ok": True, "enabled": False, "deleted": 0, "scanned": 0, "errors": []}
+    try:
+        items = brain_by_category(CONV_CATEGORY, user_id=user_id)
+    except Exception as e:  # noqa: BLE001 — Aufraeumung darf den Chat/Flush-Loop nie brechen
+        _log(logging.WARNING, "Smoke-Gesprächsbereinigung: Kategorie nicht lesbar", err=str(e)[:300])
+        return {"ok": False, "enabled": True, "deleted": 0, "scanned": 0, "errors": [type(e).__name__]}
+    deleted: list[str] = []
+    errors: list[str] = []
+    now = _now_local()
+    for item in items:
+        title = (item.get("title") or "").strip()
+        if not _is_old_smoke_conversation(item, now=now):
+            continue
+        try:
+            res = brain_forget_title(title, user_id=user_id)
+            if res.get("deleted"):
+                deleted.append(res.get("title") or title)
+        except Exception as e:  # noqa: BLE001 — ein defekter Eintrag darf weitere nicht blockieren
+            errors.append(f"{title}: {type(e).__name__}")
+            _log(logging.WARNING, "Smoke-Gespräch konnte nicht geloescht werden", title=title, err=str(e)[:300])
+    if deleted or errors:
+        checkpoint("smoke_conversation_cleanup", "Alte Smoke-Test-Gespräche bereinigt",
+                   ok=not errors, scanned=len(items), deleted=len(deleted), errors=len(errors))
+    return {"ok": not errors, "enabled": True, "scanned": len(items), "deleted": len(deleted),
+            "titles": deleted, "errors": errors[:10]}
+
+
 async def _mirror_session_to_brain_now(sid: str, snap: dict) -> None:
     """Spiegelt einen fertigen Turn sofort ins Gehirn; alter Timeout-Flush bleibt Fallback."""
     if not snap.get("messages"):
@@ -3803,6 +3882,7 @@ def _load_persisted_sessions() -> dict:
 
 async def _flush_loop() -> None:
     """Hintergrund: alle 60s pruefen, welche Sitzungen >30 min inaktiv sind -> Logbuch + schliessen."""
+    next_smoke_cleanup = 0.0
     while True:
         try:
             await asyncio.sleep(60)
@@ -3824,6 +3904,12 @@ async def _flush_loop() -> None:
                     _log(logging.INFO, "Sitzung nach Inaktivitaet geschlossen", session=sid)
                 except Exception:  # noqa: BLE001
                     _log(logging.ERROR, "Flush fehlgeschlagen", exc_info=True, session=sid)
+            if now >= next_smoke_cleanup:
+                next_smoke_cleanup = now + max(60, SMOKE_CONV_CLEANUP_INTERVAL_S)
+                res = await asyncio.to_thread(cleanup_old_smoke_conversations, USER_ID)
+                if res.get("deleted") or res.get("errors"):
+                    _log(logging.INFO, "Smoke-Gesprächsbereinigung gelaufen",
+                         scanned=res.get("scanned"), deleted=res.get("deleted"), errors=len(res.get("errors") or []))
         except asyncio.CancelledError:
             break
         except Exception:  # noqa: BLE001 — der Loop darf nie sterben
