@@ -61,7 +61,7 @@ VERSION = "0.65.1 (08.07.2026, 17:35 Uhr)"  # 0.65.1: FIX current_agent_limits()
 
 # Wirksamer Counter-Bump: Live-Spiegelung fertiger Gesprächsturns ins Gehirn.
 VERSION = "0.65.2 (08.07.2026, 20:00 Uhr)"  # 0.65.2: FIX Gesprächs-Logbuch wird nicht mehr erst nach 30 Minuten Inaktivität ins Gehirn geschrieben. Nach jeder fertigen Agent-Antwort spiegelt der Agent denselben Gesprächseintrag sofort in die Kategorie Gespräche; der alte 30-Minuten-Flush mit .txt-Kopie bleibt als Sicherheitsnetz. Alt: 0.65.1.
-VERSION = "0.66.1 (09.07.2026, 11:20 Uhr)"  # 0.66.1: FIX web_suche im neuen Hauptagent-Werkzeugkasten respektiert den Tavily-Schalter eindeutig: Tavily an = Tavily übernimmt die Websuche; Tavily aus = modellnative Websuche des Hauptmodells (GPT/Codex web_search oder Gemini Grounding), statt {ok:false, grund:"deaktiviert"}. Root Cause: 0.64.0 ersetzte die alten query/internet-Zweige durch den Tool-Agenten, aber dessen web_suche-Handler rief nur Tavily auf und verlor den bestehenden native-Web-Fallback. Alt: 0.66.0.
+VERSION = "0.66.2 (09.07.2026, 11:40 Uhr)"  # 0.66.2: NEU fester Websuche-Schalter-Selbsttest /websearch-toggle-selftest fuer den Dashboard-Knopf neben Tavily: prueft ohne echte Webkosten Tavily aus -> modellnative Websuche, Tavily an -> Tavily, Tavily an aber kein Key -> sichtbarer Fehler. Alt: 0.66.1.
 
 # ---------------------------------------------------------------------------
 # Konfiguration (alles aus Umgebungsvariablen — Secrets nie im Code)
@@ -4134,12 +4134,17 @@ def _rule_confirm_card(regel_text: str) -> dict:
 
 
 def build_agent_tools(user_id: str = USER_ID, session: "dict | None" = None,
-                      context_prompt: str = "", response_size: str = "m") -> "tuple[list[dict], dict, dict]":
+                      context_prompt: str = "", response_size: str = "m",
+                      tavily_func=None, native_web_func=None,
+                      native_web_supported_func=None) -> "tuple[list[dict], dict, dict]":
     """Baut den Lese-Werkzeugkasten des Hauptagenten. Gibt (tools_schema, handlers, state).
     Jeder Turn bekommt FRISCHE Werkzeuge mit eigenem hit_cache (state['hits']: doc_id -> voller hit),
     den durchsuche_gedaechtnis fuellt und lade_eintrag liest — so filtert der Hauptagent selbst
     mit vollem Verstaendnis, ohne dass alle Volltexte auf einmal in seinen Kontext kippen."""
     state: "dict" = {"hits": {}, "letzte_suche": None, "geladen": []}
+    tavily_func = tavily_func or tavily_search
+    native_web_func = native_web_func or hauptagent_answer_native_web
+    native_web_supported_func = native_web_supported_func or hauptagent_supports_native_web
 
     def _durchsuche(args: dict) -> str:
         q = str(args.get("query") or "").strip()
@@ -4183,12 +4188,12 @@ def build_agent_tools(user_id: str = USER_ID, session: "dict | None" = None,
         q = str(args.get("query") or "").strip()
         if not q:
             return "FEHLER: Parameter 'query' fehlt."
-        res = tavily_search(q, response_size)
+        res = tavily_func(q, response_size)
         if not res.get("ok"):
             reason = res.get("reason") or "unbekannt"
-            if reason == "deaktiviert" and hauptagent_supports_native_web():
+            if reason == "deaktiviert" and native_web_supported_func():
                 try:
-                    answer = hauptagent_answer_native_web(
+                    answer = native_web_func(
                         session or {"messages": []}, q, context_prompt, on_delta=None
                     )
                     checkpoint("native_web", "web_suche nutzte modellnative Websuche als Tavily-Fallback",
@@ -4308,6 +4313,55 @@ def build_agent_tools(user_id: str = USER_ID, session: "dict | None" = None,
                 "web_suche": _web, "lies_logbuch": _logbuch, "was_kann_cortex": _was_kann,
                 "lies_regeln": _lies_regeln, "schreibe_regel": _schreibe_regel}
     return tools, handlers, state
+
+
+@app.get("/websearch-toggle-selftest", dependencies=[Depends(require_auth)])
+def websearch_toggle_selftest() -> dict:
+    """Fester, kostenfreier Eval-Test fuer den Tavily-Schalter.
+    Simuliert beide Schalterstellungen im web_suche-Werkzeug selbst, ohne Tavily oder GPT wirklich aufzurufen."""
+    question = "Wer spielt im Viertelfinale?"
+
+    def _run(name: str, tavily_result: dict, expect: str) -> dict:
+        def fake_tavily(_query: str, _response_size: str = "m") -> dict:
+            return tavily_result
+
+        def fake_native(_session: dict, q: str, _context_prompt: str = "", on_delta=None) -> str:
+            return "NATIVE_OK: " + q
+
+        _tools, handlers, _state = build_agent_tools(
+            session={"messages": []}, response_size="m", tavily_func=fake_tavily,
+            native_web_func=fake_native, native_web_supported_func=lambda: True,
+        )
+        raw = handlers["web_suche"]({"query": question})
+        try:
+            data = json.loads(raw)
+        except Exception as e:  # noqa: BLE001
+            data = {"ok": False, "parse_error": type(e).__name__, "raw": raw[:300]}
+        if expect == "native":
+            passed = data.get("ok") is True and data.get("anbieter") == "modellnative_websuche"
+        elif expect == "tavily":
+            passed = data.get("ok") is True and data.get("kurzantwort") == "TAVILY_OK"
+        elif expect == "error":
+            passed = data.get("ok") is False and data.get("grund") == "kein_key"
+        else:
+            passed = False
+        return {"name": name, "pass": bool(passed), "expect": expect, "result": data}
+
+    cases = [
+        _run("Tavily aus -> Modell-Websuche", {"ok": False, "reason": "deaktiviert"}, "native"),
+        _run("Tavily an -> Tavily", {"ok": True, "answer": "TAVILY_OK", "results": [
+            {"title": "Testquelle", "url": "https://example.test", "content": "Testtreffer"}
+        ]}, "tavily"),
+        _run("Tavily an, kein Key -> Fehler sichtbar", {"ok": False, "reason": "kein_key"}, "error"),
+    ]
+    passed = sum(1 for c in cases if c["pass"])
+    ok = passed == len(cases)
+    checkpoint("websearch_toggle_selftest", "Tavily-Schalter-Selbsttest ausgefuehrt",
+               ok=ok, passed=passed, total=len(cases), model=ROLE_MODELS.get("haupt", ""),
+               tavily_enabled=TAVILY_ENABLED)
+    return {"ok": ok, "passed": passed, "total": len(cases), "cases": cases,
+            "current": {"tavily_enabled": TAVILY_ENABLED, "model": ROLE_MODELS.get("haupt", ""),
+                        "native_web_supported": hauptagent_supports_native_web()}}
 
 
 @app.get("/toolagent-test", dependencies=[Depends(require_auth)])

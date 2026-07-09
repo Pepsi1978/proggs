@@ -1298,10 +1298,11 @@ button{font-family:inherit;cursor:pointer}
                     <span class="vl-track"></span>
                   </label>
                 </div>
+                <button class="btn btn-sm" id="tavilyTestBtn" type="button">Websuche testen</button>
                 <button class="btn" id="codexConnectBtn">Mit Codex verbinden</button>
                 <button class="btn" id="codexDisconnectBtn">Trennen</button>
               </div>
-              <div class="muted-note" style="margin-top:7px">Tavily ist synchron mit der Android-App. Für GPT-5.5 kannst du es ausschalten, wenn das Modell eigene Websuche nutzen soll.</div>
+              <div class="muted-note" id="tavilyTestStatus" style="margin-top:7px">Tavily ist synchron mit der Android-App. Für GPT-5.5 kannst du es ausschalten, wenn das Modell eigene Websuche nutzen soll.</div>
             </div>
             <div class="row-end">
               <span class="muted-note" id="modelStatus" style="margin-right:auto"></span>
@@ -3484,6 +3485,23 @@ button{font-family:inherit;cursor:pointer}
     finally{ btn.disabled = false; }
   }
 
+  async function runTavilyToggleTest(){
+    const btn = document.getElementById("tavilyTestBtn");
+    const st = document.getElementById("tavilyTestStatus");
+    if(btn) btn.disabled = true;
+    if(st) st.textContent = "Websuche-Test läuft…";
+    try{
+      const r = await apiSend("/api/websearch/toggle-test", "POST", {});
+      if(r && r.ok){
+        const cur = r.current?.tavily_enabled ? "aktuell: Tavily an" : "aktuell: Tavily aus";
+        if(st) st.textContent = `Websuche-Test bestanden: ${r.passed}/${r.total} · ${cur}`;
+      }else{
+        if(st) st.textContent = `Websuche-Test fehlgeschlagen: ${r?.passed||0}/${r?.total||3}`;
+      }
+    }catch(e){ if(st) st.textContent = "Websuche-Test nicht erreichbar"; }
+    finally{ if(btn) btn.disabled = false; }
+  }
+
   let codexPollTimer = null;
   async function startCodexAuth(){
     const state=document.getElementById("codexState"), code=document.getElementById("codexCode"), btn=document.getElementById("codexConnectBtn");
@@ -3558,6 +3576,7 @@ button{font-family:inherit;cursor:pointer}
   document.getElementById("recommendLimitsBtn") && document.getElementById("recommendLimitsBtn").addEventListener("click", recommendRuntimeLimits);
   document.getElementById("saveLimitsBtn") && document.getElementById("saveLimitsBtn").addEventListener("click", saveRuntimeLimits);
   document.getElementById("tavilyEnabled") && document.getElementById("tavilyEnabled").addEventListener("change", syncTavilyState);
+  document.getElementById("tavilyTestBtn") && document.getElementById("tavilyTestBtn").addEventListener("click", runTavilyToggleTest);
   document.getElementById("codexConnectBtn") && document.getElementById("codexConnectBtn").addEventListener("click", startCodexAuth);
   document.getElementById("codexDisconnectBtn") && document.getElementById("codexDisconnectBtn").addEventListener("click", disconnectCodex);
   document.getElementById("savePromptBtn") && document.getElementById("savePromptBtn").addEventListener("click", savePrompt);
