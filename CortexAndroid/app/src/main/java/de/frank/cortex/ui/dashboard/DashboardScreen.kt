@@ -172,7 +172,7 @@ private fun SpectrumCard(
     onDrillToRoot: () -> Unit
 ) {
     val isDark = MaterialTheme.colorScheme.background == DarkBg
-    var sortMode by remember { mutableStateOf(OverviewSortMode.Count) }
+    var sortMode by remember { mutableStateOf(OverviewSortMode.Alphabet) }
     val spectrumCounts = if (categoryPath.isEmpty()) categoryCounts else subcategories
     // remember: Filter/Sortierung nur bei Datenaenderung neu berechnen — die Card recomposed
     // waehrend der Zaehler-Animation pro FRAME, ohne remember liefen die Sortierungen ~66x/s.
