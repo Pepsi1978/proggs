@@ -17,7 +17,7 @@ namespace TerminalVoiceOverlay.Services
         private readonly string _model;
         private readonly string _language;
         private readonly string _url;
-        private static readonly bool PreferCurlTransport = OperatingSystem.IsWindows();
+        private static readonly bool EnableCurlFallback = OperatingSystem.IsWindows();
 
         // Statischer geteilter HttpClient. In dieser App wird der GroqWhisperClient
         // aktuell pro Process nur einmal gebaut, daher ist Socket-Exhaustion
@@ -154,8 +154,16 @@ namespace TerminalVoiceOverlay.Services
 
         private async Task<string> TranscribeWithRetry(byte[] fileBytes, int attempt)
         {
-            if (PreferCurlTransport)
+            try
             {
+                return await TranscribeWithHttpClientAsync(fileBytes, attempt).ConfigureAwait(false);
+            }
+            catch (Exception ex) when (EnableCurlFallback)
+            {
+                // Funktionserhaltend: Falls der lokale .NET-HTTP-Transport wieder
+                // haengt/fehlschlaegt, bleibt curl.exe als schneller Windows-
+                // Fallback erhalten. Standard bleibt aber der .NET-Client.
+                DiagLog.Warn("Groq", "dotnet_transport_failed_fallback_curl", ("err", ex.Message), ("type", ex.GetType().Name));
                 try
                 {
                     var json = await SendWithCurlAsync(fileBytes).ConfigureAwait(false);
@@ -166,15 +174,11 @@ namespace TerminalVoiceOverlay.Services
                         return text;
                     throw new Exception("Leere Antwort von Groq");
                 }
-                catch (Exception ex)
+                catch (Exception curlEx)
                 {
-                    // Funktionserhaltend: Wenn curl.exe fehlt oder lokal blockiert ist,
-                    // bleibt der bisherige HttpClient-Transport als Fallback erhalten.
-                    DiagLog.Warn("Groq", "curl_transport_failed_fallback_dotnet", ("err", ex.Message), ("type", ex.GetType().Name));
+                    throw new Exception($"Groq .NET transport failed and curl fallback failed: {curlEx.Message}", ex);
                 }
             }
-
-            return await TranscribeWithHttpClientAsync(fileBytes, attempt).ConfigureAwait(false);
         }
 
         private async Task<string> SendWithCurlAsync(byte[] fileBytes)
@@ -285,7 +289,11 @@ namespace TerminalVoiceOverlay.Services
 
             var httpSw = Stopwatch.StartNew();
             DiagLog.Write("Groq", "http_start", ("attempt", attempt), ("bytes", fileBytes.Length), ("url", _url));
-            var response = await SharedHttp.SendAsync(request).ConfigureAwait(false);
+            // ResponseHeadersRead ist hier der Root-Fix: Der Standardmodus
+            // ResponseContentRead puffert die komplette Antwort vor Rueckgabe.
+            // Auf Franks Windows-Rechner hing genau dieser Pfad bei Groq/Cloudflare
+            // konstant ca. 42,5 s, obwohl Header + Body sofort verfuegbar waren.
+            var response = await SharedHttp.SendAsync(request, HttpCompletionOption.ResponseHeadersRead).ConfigureAwait(false);
             var statusCode = (int)response.StatusCode;
             DiagLog.Perf("Groq", "http_response", httpSw,
                 ("attempt", attempt),
