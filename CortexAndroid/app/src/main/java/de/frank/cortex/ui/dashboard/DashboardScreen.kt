@@ -7,6 +7,9 @@ import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.gestures.awaitEachGesture
+import androidx.compose.foundation.gestures.awaitFirstDown
+import androidx.compose.foundation.gestures.calculateZoom
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.foundation.lazy.LazyColumn
@@ -28,6 +31,7 @@ import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.focus.onFocusChanged
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -36,6 +40,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import de.frank.cortex.data.model.BrainEntry
 import de.frank.cortex.data.model.CategoryInfo
+import de.frank.cortex.observability.CortexLog
 import de.frank.cortex.ui.chat.CategoryPickerPill
 import de.frank.cortex.ui.common.VpnSleepOverlay
 import de.frank.cortex.ui.theme.*
@@ -173,6 +178,7 @@ private fun SpectrumCard(
 ) {
     val isDark = MaterialTheme.colorScheme.background == DarkBg
     var sortMode by remember { mutableStateOf(OverviewSortMode.Alphabet) }
+    var categoryZoom by remember { mutableFloatStateOf(1f) }
     val spectrumCounts = if (categoryPath.isEmpty()) categoryCounts else subcategories
     // remember: Filter/Sortierung nur bei Datenaenderung neu berechnen — die Card recomposed
     // waehrend der Zaehler-Animation pro FRAME, ohne remember liefen die Sortierungen ~66x/s.
@@ -338,8 +344,37 @@ private fun SpectrumCard(
                 }
 
                 Column(
-                    modifier = Modifier.padding(top = 14.dp),
-                    verticalArrangement = Arrangement.spacedBy(1.dp)
+                    modifier = Modifier
+                        .padding(top = 14.dp)
+                        .pointerInput(Unit) {
+                            awaitEachGesture {
+                                awaitFirstDown(requireUnconsumed = false)
+                                val startZoom = categoryZoom
+                                var multiTouchSeen = false
+
+                                while (true) {
+                                    val event = awaitPointerEvent()
+                                    if (event.changes.count { it.pressed } >= 2) {
+                                        multiTouchSeen = true
+                                        categoryZoom = (categoryZoom * event.calculateZoom())
+                                            .coerceIn(1f, 1.35f)
+                                        event.changes.forEach { it.consume() }
+                                    }
+                                    if (event.changes.none { it.pressed }) break
+                                }
+
+                                if (multiTouchSeen && categoryZoom != startZoom) {
+                                    CortexLog.checkpoint(
+                                        step = "dashboard_category_zoom",
+                                        intent = "Nur die Kategorienliste per Zwei-Finger-Geste skalieren",
+                                        expected = "Zoomfaktor 1.0 bis 1.35",
+                                        actual = "Zoomfaktor $categoryZoom",
+                                        ok = categoryZoom in 1f..1.35f
+                                    )
+                                }
+                            }
+                        },
+                    verticalArrangement = Arrangement.spacedBy((1f * categoryZoom).dp)
                 ) {
                     spectrumItems.forEachIndexed { index, entry ->
                         val (name, count) = entry
@@ -353,26 +388,29 @@ private fun SpectrumCard(
                                         onDrillInto(name)
                                     }
                                 }
-                                .padding(vertical = 7.dp, horizontal = 6.dp),
+                                .padding(
+                                    vertical = (7f * categoryZoom).dp,
+                                    horizontal = 6.dp
+                                ),
                             verticalAlignment = Alignment.CenterVertically
                         ) {
                             Box(
                                 modifier = Modifier
-                                    .size(11.dp)
-                                    .clip(RoundedCornerShape(3.dp))
+                                    .size((11f * categoryZoom).dp)
+                                    .clip(RoundedCornerShape((3f * categoryZoom).dp))
                                     .background(spectrumColor(index))
                             )
                             Spacer(Modifier.width(10.dp))
                             Text(
                                 text = displayCategoryName(name),
-                                fontSize = 13.5.sp,
+                                fontSize = (13.5f * categoryZoom).sp,
                                 modifier = Modifier.weight(1f),
                                 color = MaterialTheme.colorScheme.onSurface
                             )
                             Text(
                                 text = "$count",
                                 fontFamily = JetBrainsMono,
-                                fontSize = 11.5.sp,
+                                fontSize = (11.5f * categoryZoom).sp,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant
                             )
                         }
