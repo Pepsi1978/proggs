@@ -62,7 +62,7 @@ VERSION = "0.65.1 (08.07.2026, 17:35 Uhr)"  # 0.65.1: FIX current_agent_limits()
 # Wirksamer Counter-Bump: Live-Spiegelung fertiger Gesprächsturns ins Gehirn.
 VERSION = "0.65.2 (08.07.2026, 20:00 Uhr)"  # 0.65.2: FIX Gesprächs-Logbuch wird nicht mehr erst nach 30 Minuten Inaktivität ins Gehirn geschrieben. Nach jeder fertigen Agent-Antwort spiegelt der Agent denselben Gesprächseintrag sofort in die Kategorie Gespräche; der alte 30-Minuten-Flush mit .txt-Kopie bleibt als Sicherheitsnetz. Alt: 0.65.1.
 VERSION = "0.67.0 (09.07.2026, 13:24 Uhr)"  # 0.67.0: FEINE Performance-Sonden im gesamten Agenten-Hot-Path. Trace-Log misst jetzt Router, Kategorien, Registry, Verlaufs-Komprimierung, LLM-Retry-Versuche, Brain-HTTP-Aufrufe, Multi-Query-Varianten, einzelne Suchvarianten, Tool-Loop-Runden, einzelne Werkzeugaufrufe und Codex/GPT-Streams (Headers, erstes Event, erstes Text-Delta, completed) millisekundengenau. Alt: 0.66.4.
-VERSION = "0.67.2 (09.07.2026, 18:47 Uhr)"  # 0.67.2: Performance-Fix Tool-Loop: unabhängige Werkzeugaufrufe einer GPT-Tool-Runde (z.B. Gedächtnissuche + Websuche) laufen parallel und werden danach in Originalreihenfolge als function_call_output zurückgegeben. Abhängige/seiteneffektstarke Tools bleiben seriell. Alt: 0.67.1.
+VERSION = "0.68.1 (09.07.2026, 19:43 Uhr)"  # 0.68.1: Profil-Prompt wirkt jetzt auch zur Laufzeit im schnellen Auto-Parallelpfad, nicht nur im Dashboard-Editor/Review. 0.68.0: NEU Agenten-Profile. Profil "Klassisch" behaelt Router+Tool-Agent. Profil "Sofort Web + Gedaechtnis" ueberspringt bei normalen Auto-Fragen den Router, startet Gedaechtnissuche und Websuche sofort parallel und laesst den Hauptagenten danach aus beiden Ergebnissen antworten. Speicher-, Regel- und offene Bestaetigungspfade bleiben geschuetzt im klassischen Spezialpfad. Alt: 0.67.2.
 
 # ---------------------------------------------------------------------------
 # Konfiguration (alles aus Umgebungsvariablen — Secrets nie im Code)
@@ -173,6 +173,34 @@ LEGACY_PROMPT_FILE = Path(AGENT_DATA_DIR) / "prompt.txt"  # alter GEMEINSAMER Pr
 CONFIG_FILE = Path(AGENT_DATA_DIR) / "config.json"     # {"model": "..."}
 CODEX_AUTH_FILE = Path(AGENT_DATA_DIR) / "codex-auth.json"  # ChatGPT/Codex OAuth-Tokens, NIE ins Repo
 CATEGORIES_FILE = Path(AGENT_DATA_DIR) / "categories.json"  # manuell angelegte Kategorien (auch LEERE, ohne Eintrag)
+ACTIVE_PROFILE_CLASSIC = "klassisch"
+ACTIVE_PROFILE_PARALLEL = "sofort_web_gedaechtnis"
+PROFILE_DEFAULTS = [
+    {
+        "id": ACTIVE_PROFILE_CLASSIC,
+        "name": "Klassisch",
+        "description": "Bisheriger Ablauf: Cortex fragt zuerst den Router, danach plant der Hauptagent seine Werkzeuge selbst. Stabil und bewaehrt, aber bei Webfragen oft seriell und langsamer.",
+        "prompt": """Profil Klassisch: Nutze den bisherigen Cortex-Ablauf. Der Router klassifiziert zuerst Speichern, Suchen, Internet und Smalltalk. Danach beantwortet der Hauptagent normale Fragen per Werkzeugkasten. Speicherbestaetigungen, Regeln und Spezialfaelle bleiben unveraendert geschuetzt.""",
+    },
+    {
+        "id": ACTIVE_PROFILE_PARALLEL,
+        "name": "Sofort Web + Gedächtnis",
+        "description": "Normaler Auto-Modus ohne Router-Wartezeit: Cortex startet sofort Gedächtnissuche und Websuche parallel. Der Hauptagent entscheidet danach, ob er Web, Gedächtnis oder beides nutzt.",
+        "prompt": """Profil Sofort Web + Gedächtnis:
+Bei normalen Auto-Fragen wird der LLM-Router uebersprungen. Direkt nach Eingang der Frage startet Cortex parallel:
+1. Gedächtnissuche mit Franks Originalfrage.
+2. Websuche mit Franks Originalfrage.
+
+Wenn beide Ergebnisse vorliegen, bekommt der Hauptagent die Originalfrage, den bisherigen Gesprächsverlauf, den UI-Zusatzprompt, die besten Gedächtnis-Schnipsel und das Webergebnis. Er entscheidet selbst, ob er nur aus dem Gedächtnis antwortet, nur Web nutzt oder beides kombiniert. Webtreffer duerfen ignoriert werden, wenn sie fuer die Frage nichts bringen.
+
+Technische Sicherungen:
+- Offene Bestätigungen bleiben im bestehenden sicheren Bestätigungsfluss.
+- Eindeutige Regelwünsche werden direkt als Regelvorschlag behandelt.
+- Eindeutige Speicherbefehle oder Disketten-/Speichermodus bleiben im bestehenden Speicherfluss und starten keine Websuche.
+- Kategorie-Gesamtfragen und Projektstand-Fragen bleiben deterministisch geschuetzt.
+Ziel: keine serielle Router- und Tool-Planungswartezeit bei normalen Fragen, besonders bei aktuellen Produkt-, Wetter-, Sport-, Technik- und Webfragen.""",
+    },
+]
 # Auswahl fuers Dashboard-Dropdown. gemini-3.1-pro + gemini-3.1-flash bewusst entfernt (Frank, #NNN);
 # es bleiben gemini-3.1-flash-lite + gemini-2.5-flash. minimax/minimax-m3 laeuft ueber OpenCode Zen Go
 # (Anthropic /messages-Schema, siehe opencode_generate). "provider/modell"-Schreibweise = Routing-Hinweis.
@@ -2963,6 +2991,77 @@ def _write_config_file(data: dict) -> None:
     os.replace(tmp, CONFIG_FILE)
 
 
+def _clean_profile(p: dict) -> dict | None:
+    pid = re.sub(r"[^a-zA-Z0-9_-]+", "_", str(p.get("id") or "").strip())[:80]
+    if not pid:
+        return None
+    name = str(p.get("name") or pid).strip()[:80] or pid
+    desc = str(p.get("description") or "").strip()[:1200]
+    prompt = str(p.get("prompt") or "").strip()[:12000]
+    return {"id": pid, "name": name, "description": desc, "prompt": prompt}
+
+
+def load_agent_profiles() -> dict:
+    """Persistente Agenten-Profile aus config.json; Defaults werden immer ergaenzt."""
+    cfg = _read_config_file()
+    by_id: dict[str, dict] = {}
+    for p in PROFILE_DEFAULTS:
+        cp = _clean_profile(dict(p))
+        if cp:
+            by_id[cp["id"]] = cp
+    stored = cfg.get("agent_profiles") if isinstance(cfg.get("agent_profiles"), list) else []
+    for p in stored:
+        if isinstance(p, dict):
+            cp = _clean_profile(p)
+            if cp and cp["id"] in by_id:
+                by_id[cp["id"]].update(cp)
+    active = str(cfg.get("active_agent_profile") or ACTIVE_PROFILE_CLASSIC).strip()
+    if active not in by_id:
+        active = ACTIVE_PROFILE_CLASSIC
+    return {"active": active, "profiles": list(by_id.values())}
+
+
+def save_agent_profiles(profiles: list[dict], active: str | None = None) -> dict:
+    by_id: dict[str, dict] = {}
+    for p in profiles:
+        cp = _clean_profile(p)
+        if cp:
+            by_id[cp["id"]] = cp
+    cur = load_agent_profiles()
+    for p in cur["profiles"]:
+        if p["id"] not in by_id:
+            by_id[p["id"]] = p
+    active_id = (active or cur["active"] or ACTIVE_PROFILE_CLASSIC).strip()
+    if active_id not in by_id:
+        active_id = ACTIVE_PROFILE_CLASSIC
+    data = _read_config_file()
+    data["agent_profiles"] = list(by_id.values())
+    data["active_agent_profile"] = active_id
+    _write_config_file(data)
+    return {"active": active_id, "profiles": list(by_id.values())}
+
+
+def set_active_agent_profile(profile_id: str) -> dict:
+    cur = load_agent_profiles()
+    ids = {p["id"] for p in cur["profiles"]}
+    pid = (profile_id or "").strip()
+    if pid not in ids:
+        raise HTTPException(status_code=404, detail="Profil nicht gefunden")
+    return save_agent_profiles(cur["profiles"], pid)
+
+
+def active_agent_profile_id() -> str:
+    return load_agent_profiles().get("active") or ACTIVE_PROFILE_CLASSIC
+
+
+def _looks_like_save_request(text: str, context_mode: str = "auto") -> bool:
+    """Nur eindeutige Speicherbefehle: diese duerfen im aggressiven Auto-Profil keine Websuche ausloesen."""
+    if _norm_context_mode(context_mode) == "save":
+        return True
+    low = (text or "").strip().lower()
+    return bool(re.search(r"\b(speicher|speichere|merk\s+dir|notier|lege?\s+.*\bab|ins\s+ged[äa]chtnis|ablegen)\b", low))
+
+
 def save_models(models: dict, reasoning: dict | None = None, tavily_enabled: bool | None = None,
                 router_model: str | None = None, router_reasoning: str | None = None) -> None:
     """Atomar je-Rolle-Modelle, Reasoning, Router-Einstellung und optionale Tool-Schalter speichern.
@@ -4232,6 +4331,22 @@ class ConfigReq(BaseModel):
     limits: dict[str, Any] | None = Field(default=None, description="Laufzeitlimits: {'agent': {...}, 'brain': {...}}")
 
 
+class AgentProfileReq(BaseModel):
+    name: str | None = Field(default=None, max_length=80)
+    description: str | None = Field(default=None, max_length=1200)
+    prompt: str = Field(..., min_length=1, max_length=12000)
+
+
+class ActiveProfileReq(BaseModel):
+    id: str = Field(..., min_length=1, max_length=80)
+
+
+class ProfileReviewReq(BaseModel):
+    name: str | None = Field(default=None, max_length=80)
+    description: str | None = Field(default=None, max_length=1200)
+    prompt: str = Field(..., min_length=1, max_length=12000)
+
+
 class CodexAuthPollReq(BaseModel):
     auth_id: str = Field(..., min_length=8, max_length=80)
 
@@ -4847,6 +4962,54 @@ def put_config(req: ConfigReq) -> dict:
             "context_prompts": context_prompts, "context_prompts_custom": context_custom,
             "user_context_prompts": user_context_prompts, "user_context_prompts_custom": user_context_custom,
             "tavily_enabled": TAVILY_ENABLED, "limits": limit_result or combined_limits()}
+
+
+@app.get("/profiles", dependencies=[Depends(require_auth)])
+def get_profiles() -> dict:
+    data = load_agent_profiles()
+    return {"ok": True, **data}
+
+
+@app.put("/profiles/{profile_id}", dependencies=[Depends(require_auth)])
+def put_profile(profile_id: str, req: AgentProfileReq) -> dict:
+    cur = load_agent_profiles()
+    profiles = []
+    found = False
+    for p in cur["profiles"]:
+        if p["id"] == profile_id:
+            p = {**p, "name": (req.name or p["name"]), "description": (req.description if req.description is not None else p.get("description", "")), "prompt": req.prompt}
+            found = True
+        profiles.append(p)
+    if not found:
+        raise HTTPException(status_code=404, detail="Profil nicht gefunden")
+    saved = save_agent_profiles(profiles, cur["active"])
+    checkpoint("profile_saved", "Agenten-Profil gespeichert", ok=True, profile=profile_id)
+    return {"ok": True, **saved}
+
+
+@app.post("/profiles/active", dependencies=[Depends(require_auth)])
+def post_active_profile(req: ActiveProfileReq) -> dict:
+    saved = set_active_agent_profile(req.id)
+    active_name = next((p.get("name") for p in saved["profiles"] if p.get("id") == saved["active"]), saved["active"])
+    checkpoint("profile_active", "Agenten-Profil aktiviert", ok=True, profile=saved["active"])
+    return {"ok": True, "message": f"Profil {active_name} ist aktiviert.", **saved}
+
+
+@app.post("/profiles/review", dependencies=[Depends(require_auth)])
+def post_profile_review(req: ProfileReviewReq) -> dict:
+    system = (
+        "Du bist ein Senior-Architekt fuer den Cortex-Agenten. Pruefe ein Agenten-Profil auf Machbarkeit, "
+        "Risiken und konkrete Verbesserungen. Antworte auf Deutsch, knapp, praktisch und umsetzbar. "
+        "Bewerte besonders: Funktionserhalt, Speicher-/Regel-Sicherheit, Latenz, parallele Ausfuehrung, "
+        "Fehlerfaelle, Observability und ob der Prompt eindeutig genug ist."
+    )
+    user = (f"Profilname: {req.name or '(ohne Name)'}\n\n"
+            f"Beschreibung:\n{req.description or ''}\n\n"
+            f"Profil-Prompt / Architektur:\n{req.prompt}")
+    with _perf_span("profile_review", "Agenten-Profil mit GPT-5.5 high pruefen", chars=len(req.prompt)):
+        text = llm_generate(system, user, model="gpt-5.5", json_mode=False, max_tokens=1800,
+                            temperature=0.2, reasoning_override="high")
+    return {"ok": True, "review": (text or "").strip()}
 
 
 @app.post("/codex/auth/start", dependencies=[Depends(require_auth)])
@@ -5765,6 +5928,111 @@ def _toolagent_answer(session: dict, user_text: str, context_prompt: str = "",
             "sources": sources, "confidence": confidence}
 
 
+def _auto_parallel_answer(session: dict, user_text: str, context_prompt: str = "",
+                          response_size: str = "m", on_delta=None) -> dict:
+    """Profil 'Sofort Web + Gedaechtnis': normale Auto-Fragen ohne Router beantworten.
+
+    Gedaechtnis- und Websuche starten sofort parallel mit Franks Originalfrage. Der finale
+    Hauptagent bekommt beide Ergebnisse und entscheidet selbst, was davon relevant ist.
+    Speicher-/Regel-/Pending-Sicherheit bleibt ausserhalb: diese Funktion wird nur nach den
+    deterministischen Sicherungen in _process_turn aufgerufen.
+    """
+    from concurrent.futures import ThreadPoolExecutor
+
+    def _memory_job() -> dict:
+        with _perf_span("auto_parallel_memory", "Profil: Gedaechtnissuche sofort", query_len=len(user_text)):
+            hits, meta = smart_recall(user_text, user_text, user_id=USER_ID)
+            snippets = []
+            for h in hits[:12]:
+                score = h.get("dense_score") if h.get("dense_score") is not None else h.get("score")
+                snippets.append({
+                    "doc_id": h.get("doc_id"),
+                    "title": h.get("title") or "(ohne Titel)",
+                    "category": h.get("category"),
+                    "score": round(score, 3) if isinstance(score, (int, float)) else None,
+                    "snippet": (h.get("match") or h.get("text") or "").strip()[:LESE_SNIPPET_CHARS],
+                })
+            checkpoint("auto_parallel_memory", "Profil-Suche: Gedaechtnis fertig", ok=True, treffer=len(hits))
+            return {"ok": True, "hits": hits, "snippets": snippets, "meta": meta}
+
+    def _web_job() -> dict:
+        with _perf_span("auto_parallel_web", "Profil: Websuche sofort", query_len=len(user_text)):
+            res = tavily_search(user_text, response_size)
+            if not res.get("ok") and (res.get("reason") or "") == "deaktiviert" and hauptagent_supports_native_web():
+                answer = hauptagent_answer_native_web(session or {"messages": []}, user_text, context_prompt, on_delta=None)
+                checkpoint("native_web", "Profil-Sofortsuche nutzte modellnative Websuche als Tavily-Fallback",
+                           ok=True, query=user_text[:80], tavily_reason="deaktiviert", model=ROLE_MODELS.get("haupt", ""))
+                return {"ok": True, "anbieter": "modellnative_websuche", "antwort": answer}
+            checkpoint("auto_parallel_web", "Profil-Suche: Web fertig", ok=bool(res.get("ok")), provider="tavily", reason=res.get("reason"))
+            return {"ok": bool(res.get("ok")), "anbieter": "tavily", **res}
+
+    with _perf_span("auto_parallel_start", "Profil: Gedaechtnis und Web parallel starten"):
+        with ThreadPoolExecutor(max_workers=2) as ex:
+            mem_f = ex.submit(contextvars.copy_context().run, _memory_job)
+            web_f = ex.submit(contextvars.copy_context().run, _web_job)
+            mem = mem_f.result()
+            web = web_f.result()
+
+    mem_snippets = mem.get("snippets") or []
+    web_summary = ""
+    if web.get("ok"):
+        if web.get("anbieter") == "modellnative_websuche":
+            web_summary = str(web.get("antwort") or "")[:12000]
+        else:
+            top = [{"title": r.get("title"), "url": r.get("url"), "content": (r.get("content") or "")[:800]}
+                   for r in (web.get("results") or [])[:8]]
+            web_summary = json.dumps({"answer": web.get("answer"), "results": top}, ensure_ascii=False)
+    else:
+        web_summary = json.dumps({"ok": False, "reason": web.get("reason") or web.get("grund") or "unbekannt"}, ensure_ascii=False)
+
+    profile_prompt = ""
+    try:
+        cur_profiles = load_agent_profiles()
+        active_id = cur_profiles.get("active") or ACTIVE_PROFILE_PARALLEL
+        profile_prompt = next((p.get("prompt") or "" for p in cur_profiles.get("profiles", []) if p.get("id") == active_id), "")
+    except Exception as e:  # noqa: BLE001
+        _log(logging.WARNING, "Aktiver Profil-Prompt nicht lesbar — nutze festen Auto-Parallel-Auftrag", err=str(e))
+
+    system = (
+        "Du bist Cortex' Hauptagent. Antworte Frank direkt und hilfreich. Du bekommst parallel vorbereitete "
+        "Gedächtnis- und Web-Ergebnisse. Entscheide selbst, ob Web, Gedächtnis oder beides relevant ist. "
+        "Erfinde nichts: Wenn ein Ergebnis nicht passt, ignoriere es. Trenne bei Bedarf kurz, was aus Franks "
+        "Gedächtnis kommt und was externe Recherche ist. Speichere nichts und lege keine Regel an; diese Pfade "
+        "werden separat vor dieser Antwort behandelt."
+    )
+    if profile_prompt.strip():
+        system += "\n\nAKTIVER PROFIL-PROMPT (vom Dashboard editierbar):\n" + profile_prompt.strip()[:12000]
+    user = (
+        f"BISHERIGES GESPRÄCH:\n{_history_text(session)}\n\n"
+        f"{_context_prompt_block(context_prompt)}"
+        f"AKTUELLE NACHRICHT VON FRANK:\n{user_text}\n\n"
+        f"GEDÄCHTNIS-ERGEBNISSE (Schnipsel, du darfst irrelevante ignorieren):\n"
+        f"{json.dumps(mem_snippets, ensure_ascii=False)[:ANSWER_TOTAL_CHARS]}\n\n"
+        f"WEB-ERGEBNIS (du darfst es ignorieren, wenn es nicht hilft):\n{web_summary[:16000]}"
+    )
+    try:
+        with _perf_span("auto_parallel_final", "Profil: finale Hauptagent-Antwort", memory_hits=len(mem_snippets), web_ok=bool(web.get("ok"))):
+            answer = llm_generate(system, user, model=ROLE_MODELS["haupt"], json_mode=False,
+                                  max_tokens=ANSWER_MAX_TOKENS, temperature=0.4,
+                                  reasoning_override=ROLE_REASONING.get("haupt", "medium"), on_delta=on_delta)
+    except Exception as e:  # noqa: BLE001
+        _log(logging.ERROR, "Auto-Parallel-Profil fehlgeschlagen", exc_info=True)
+        return {"reply": f"Beim parallelen Nachschlagen ist gerade etwas schiefgegangen ({type(e).__name__}). Versuch es bitte gleich nochmal.",
+                "action": "error", "pending": None}
+    hits = mem.get("hits") or []
+    sources = [{"doc_id": h.get("doc_id"), "title": h.get("title") or "(ohne Titel)",
+                "category": h.get("category"),
+                "score": h.get("dense_score") if h.get("dense_score") is not None else h.get("score"),
+                "matched_by": h.get("matched_by") or ["dense"]}
+               for h in hits[:8] if h.get("doc_id")]
+    confidence = _confidence_info(hits)
+    checkpoint("auto_parallel", "Profil Sofort Web + Gedaechtnis beantwortete Auto-Frage ohne Router",
+               ok=bool(answer), memory_hits=len(hits), web_ok=bool(web.get("ok")), profile=ACTIVE_PROFILE_PARALLEL)
+    return {"reply": (answer or "").strip() or "Ich konnte gerade keine Antwort formulieren.",
+            "action": "recall" if hits else "internet" if web.get("ok") else "smalltalk",
+            "pending": None, "recall_hits": len(sources), "sources": sources, "confidence": confidence}
+
+
 def _process_turn(session: dict, user_text: str, pending: dict | None, category: str = "", title: str = "", store_timestamp: bool = False, context_mode: str = "auto", context_prompt: str = "", response_size: str = "m", on_delta=None) -> dict:
     """Ein Gespraechszug — laeuft komplett synchron (LLM + brain) und wird vom async-Handler per
     asyncio.to_thread aufgerufen, damit der Event-Loop NICHT blockiert (fastapi §1 / ai-agent §3.1).
@@ -5790,6 +6058,31 @@ def _process_turn(session: dict, user_text: str, pending: dict | None, category:
     if explicit_save:
         route = {"intent": "save", "quote": "", "query": "", "web_query": "", "reply": ""}
         checkpoint("route", "Explizite Speicher-Felder (Titel/Kategorie) -> direkt save, Router uebersprungen", ok=True, route="save")
+    elif (active_agent_profile_id() == ACTIVE_PROFILE_PARALLEL
+          and _norm_context_mode(context_mode) == "auto"
+          and not pending
+          and not _looks_like_save_request(user_text, context_mode)):
+        checkpoint("profile_route", "Aktives Profil ueberspringt Router fuer normale Auto-Frage",
+                   ok=True, profile=ACTIVE_PROFILE_PARALLEL)
+        if rules.is_rule_request(user_text):
+            regel = _formuliere_regel(user_text)
+            checkpoint("rule_confirm", "Regel-Wunsch per Profil-Fastpath erkannt -> Bestaetigung", ok=bool(regel), regel=regel[:120])
+            return _rule_confirm_card(regel)
+        if projektstand_question(user_text):
+            _ps = _projektstand_recall(session, user_text, {"intent": "query"}, context_prompt, on_delta)
+            if _ps is not None:
+                return _ps
+        full_answer = _full_category_answer(session, user_text, context_prompt, on_delta)
+        if full_answer is not None:
+            checkpoint("category_full", "Kategorie-Gesamtfrage im Profil-Fastpath beantwortet",
+                       ok=True, frage=user_text[:120], treffer=full_answer.get("recall_hits"))
+            return full_answer
+        count_answer = _category_count_answer(user_text)
+        if count_answer is not None:
+            checkpoint("category_count", "Kategorie-Zaehlfrage im Profil-Fastpath beantwortet",
+                       ok=True, frage=user_text[:120], reply=count_answer.get("reply"))
+            return count_answer
+        return _auto_parallel_answer(session, user_text, context_prompt, response_size, on_delta)
     else:
         with _perf_span("process_router", "Hauptagent-Router", mode=context_mode, pending=bool(pending)):
             route = hauptagent_route(session, user_text, pending, context_mode, context_prompt)

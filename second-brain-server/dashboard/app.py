@@ -37,7 +37,7 @@ VERSION = "0.63.2 (08.07.2026, 20:00 Uhr)"  # 0.63.2: Sichtbarer Bump zum agent-
 VERSION = "0.63.3 (08.07.2026, 20:14 Uhr)"  # 0.63.3: Sichtbarer Bump zum brain-api-1.27.1-Fix: alte Kategorie 'gespräche' und neue Kategorie 'Gespräche' werden zusammengeführt, damit im Gehirn keine doppelt gleich angezeigten Gespräche-Kategorien erscheinen. Alt: 0.63.2.
 VERSION = "0.63.4 (08.07.2026, 20:29 Uhr)"  # 0.63.4: Sichtbarer Bump zur Server-Konfiguration: Agent-Session-Timeout für Gesprächs-Logbuch von 30 auf 10 Minuten verkürzt. Alt: 0.63.3.
 VERSION = "0.65.0 (09.07.2026, 13:24 Uhr)"  # 0.65.0: Sichtbarer Bump zum agent-0.67.0-Deploy. Der Agent schreibt jetzt sehr feine Performance-Sonden in trace.jsonl: Router, Kategorien, Registry, Verlaufskomprimierung, Brain-HTTP, Multi-Query, Tool-Loop, Werkzeugaufrufe und Codex/GPT-Streaming mit Header-/First-Event-/First-Delta-/Completed-Zeiten. Alt: 0.64.5.
-VERSION = "0.65.2 (09.07.2026, 18:47 Uhr)"  # 0.65.2: Sichtbarer Bump zum agent-0.67.2-Performance-Fix: unabhängige Werkzeugaufrufe einer Hauptagent-Runde (z.B. Gedächtnissuche + Websuche) laufen parallel statt seriell; Outputs bleiben protokollkorrekt in Originalreihenfolge. Alt: 0.65.1.
+VERSION = "0.66.1 (09.07.2026, 19:43 Uhr)"  # 0.66.1: Sichtbarer Bump zum agent-0.68.1-Fix: Der editierbare Profil-Prompt wirkt jetzt auch im schnellen Auto-Parallelpfad. 0.66.0: Einstellungen -> Profile neben Agenten. Google-Drive-Backup ist darunter vollbreit. Profile lassen sich aktivieren, bearbeiten und per GPT-5.5 high pruefen; das neue Profil "Sofort Web + Gedaechtnis" schaltet den agent-0.68.0-Auto-Parallelpfad. Alt: 0.65.2.
 BRAIN_URL = os.getenv("BRAIN_URL", "http://brain-api:8000").rstrip("/")
 AGENT_URL = os.getenv("AGENT_URL", "http://agent:8002").rstrip("/")
 SB_API_KEY = os.getenv("SB_API_KEY", "")
@@ -612,6 +612,31 @@ async def api_conversations_smoke_cleanup() -> dict:
     except Exception as e:  # noqa: BLE001
         _log(logging.WARNING, "Smoke-Gesprächsbereinigung fehlgeschlagen", err=str(e))
         return JSONResponse(status_code=502, content={"ok": False, "detail": f"Smoke-Cleanup fehlgeschlagen: {type(e).__name__}"})
+
+
+@app.get("/api/profiles")
+def api_get_profiles() -> dict:
+    return _aget("/profiles")
+
+
+@app.put("/api/profiles/{profile_id}")
+async def api_put_profile(profile_id: str, request: Request) -> dict:
+    body = await request.json()
+    payload = {"name": body.get("name"), "description": body.get("description"), "prompt": body.get("prompt", "")}
+    return await asyncio.to_thread(_aput, f"/profiles/{profile_id}", payload)
+
+
+@app.post("/api/profiles/active")
+async def api_post_active_profile(request: Request) -> dict:
+    body = await request.json()
+    return await asyncio.to_thread(_apost, "/profiles/active", {"id": body.get("id", "")})
+
+
+@app.post("/api/profiles/review")
+async def api_post_profile_review(request: Request) -> dict:
+    body = await request.json()
+    payload = {"name": body.get("name"), "description": body.get("description"), "prompt": body.get("prompt", "")}
+    return await asyncio.to_thread(_apost, "/profiles/review", payload)
 
 
 # --- Selbst-Regeln des Agenten (Proxy an agent /rules) — spec 2026-07-08 --------

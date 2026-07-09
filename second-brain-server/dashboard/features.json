@@ -1,7 +1,15 @@
 {
-  "stand": "09.07.2026, 13:32 Uhr",
+  "stand": "09.07.2026, 19:43 Uhr",
   "hinweis": "PFLEGE-PFLICHT: Bei JEDEM Deploy, der ein neues System/Feature einbaut, hier einen Eintrag ERGÄNZEN (neueste zuerst). SCHREIBWEISE (Dauer-Regel): leichtes, verständliches Deutsch, kurze Sätze; ALLE Fachbegriffe, Namen und Zahlen (z.B. BM25, RRF, Qdrant, ENV-Variablen, Endpunkt-Namen) BEHALTEN, aber jeden in einem kurzen Halbsatz erklären — NIE durch Weglassen vereinfachen; kompakt halten (der Hauptagent liest über das Werkzeug 'was_kann_cortex' ALLE Einträge auf einmal ein), aber vollständig genug, dass man erkennt WAS eingebaut wurde; einfache Überschrift. Ähnliche/redundante Einträge dürfen zusammengefasst werden — Datum sekundär, entscheidend ist WAS Cortex kann. Quelle des Info-Bereichs in den Dashboard-Einstellungen (GET /api/features). Verankert in DEPLOY.md.",
   "features": [
+    {
+      "id": "agenten-profile-auto-parallel",
+      "eingebaut": "09.07.2026, 19:43 Uhr",
+      "dienst": "agent 0.68.1 + dashboard 0.66.1",
+      "name": "Agenten-Profile: klassisch oder sofort Web plus Gedächtnis parallel",
+      "kurz": "In Einstellungen steht neben 'Agenten' jetzt 'Profile'. Dort kann Frank zwischen dem klassischen Ablauf und dem neuen Profil 'Sofort Web + Gedächtnis' wechseln. Google-Drive-Backup steht darunter vollbreit. Profile lassen sich bearbeiten und mit GPT-5.5 high prüfen.",
+      "erklaerung": "Das Profil 'Klassisch' behält den bisherigen Ablauf: Router zuerst, danach Tool-Agent. Das neue Profil 'Sofort Web + Gedächtnis' verändert den normalen Auto-Modus: Bei normalen Fragen wird der LLM-Router übersprungen, Cortex startet sofort parallel die Gedächtnissuche und die Websuche mit Franks Originalfrage, und danach formuliert der Hauptagent aus Frage, Verlauf, Gedächtnis-Schnipseln und Webergebnis die Antwort. Der Hauptagent darf Webtreffer ignorieren, wenn sie nichts bringen. Der editierbare Profil-Prompt wird dabei als aktiver Laufzeit-Prompt an den Hauptagenten übergeben, nicht nur gespeichert. Die technischen Sicherungen bleiben: offene Bestätigungen, eindeutige Speicherbefehle, Disketten-/Speichermodus und Regelwünsche gehen weiter in die geschützten Spezialpfade und starten keine Websuche; Kategorie-Gesamtfragen und Projektstand-Fragen bleiben deterministisch. Im Dashboard hat jedes Profil eine einfache Beschreibung, einen Auswahlknopf und einen Speichern-Button. Über 'Bearbeiten' öffnet sich der komplette Profil-Prompt in einem scrollbaren Feld; 'Überprüfen' lässt GPT-5.5 mit Thinking high Machbarkeit, Risiken und Verbesserungen bewerten. Die aktive Auswahl landet persistent in agent-data/config.json und wirkt sofort auch für die Android-App, weil die App denselben Agent-Endpunkt nutzt."
+    },
     {
       "id": "feine-performance-sonden",
       "eingebaut": "09.07.2026, 13:24 Uhr",
