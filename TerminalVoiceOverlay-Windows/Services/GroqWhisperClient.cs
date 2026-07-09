@@ -26,12 +26,19 @@ namespace TerminalVoiceOverlay.Services
         // TIME_WAIT freigeben. Statisch geteilt wie bei GeminiClient.SharedHttp
         // ist die kanonische .NET-Loesung. Authorization-Header wird pro Request
         // gesetzt (nicht am Client), daher kein Konflikt bei Sharing.
-        private static readonly HttpClient SharedHttp = new HttpClient
+        private static readonly HttpClient SharedHttp = new HttpClient(new SocketsHttpHandler
         {
-            Timeout = TimeSpan.FromSeconds(180)
+            PooledConnectionLifetime = TimeSpan.FromMinutes(5)
+        })
+        {
+            // Funktionserhaltend: Groq ist heute zeitweise 40-50 s langsam.
+            // Ein 20-s-Timeout machte die App zwar schnell wieder gelb, verlor
+            // aber jede Aufnahme. 75 s laesst den Text noch ankommen; die
+            // Latenz-Sonden zeigen trotzdem exakt, ob Groq der Flaschenhals ist.
+            Timeout = TimeSpan.FromSeconds(75)
         };
         private static readonly int[] RetryableStatusCodes = { 429, 500, 503 };
-        private const int MaxRetries = 3;
+        private const int MaxRetries = 0;
         private static readonly int[] DelaysMs = { 2000, 4000, 8000 };
 
         // ----- Confidence-Gate-Schwellen gegen Whisper-Stille-Halluzination -----
@@ -110,19 +117,38 @@ namespace TerminalVoiceOverlay.Services
 
         public async Task<string> TranscribeAsync(string wavFilePath)
         {
+            var totalSw = Stopwatch.StartNew();
+            DiagLog.Write("Groq", "transcribe_start", ("file", wavFilePath), ("model", _model), ("lang", _language));
             // Datei einmal in den Speicher laden und ueber alle Retry-Versuche
             // wiederverwenden. Vorher las jeder Retry die WAV-Datei neu von
             // Disk — bei 3 Retries und ~1 MB Audio entstehen 3 MB unnoetige
             // Disk-I/O. Die Bytes werden im Aufruf nicht mutiert, also ist
             // Sharing zwischen Versuchen sicher.
-            byte[] fileBytes = await File.ReadAllBytesAsync(wavFilePath);
+            var readSw = Stopwatch.StartNew();
+            byte[] fileBytes = await File.ReadAllBytesAsync(wavFilePath).ConfigureAwait(false);
+            DiagLog.Perf("Groq", "read_wav", readSw, ("bytes", fileBytes.Length));
             // Schicht 1 (Sprachinhalt-Vorfilter): Aufnahme ohne erkennbaren Sprachinhalt gar nicht
             // erst senden. Faengt "Knopf gedrueckt, nichts gesagt" -> Whisper haette sonst Stille als
             // Floskel halluziniert. Werfen statt leer zurueckgeben -> der Aufrufer-catch behandelt es
             // wie die bisherige "leere Antwort" und tippt NICHTS (kein einsames " ; ").
+            var prefilterSw = Stopwatch.StartNew();
             if (!HasSpeechContent(fileBytes))
+            {
+                DiagLog.Warn("Groq", "prefilter_rejected", ("ms", prefilterSw.ElapsedMilliseconds), ("bytes", fileBytes.Length));
                 throw new Exception("Aufnahme ohne erkennbaren Sprachinhalt — nicht an Groq gesendet (Stille-Schutz)");
-            return await TranscribeWithRetry(fileBytes, 0);
+            }
+            DiagLog.Perf("Groq", "prefilter_ok", prefilterSw, ("bytes", fileBytes.Length));
+            try
+            {
+                var text = await TranscribeWithRetry(fileBytes, 0).ConfigureAwait(false);
+                DiagLog.Perf("Groq", "transcribe_total", totalSw, ("chars", text.Length));
+                return text;
+            }
+            catch (Exception ex)
+            {
+                DiagLog.Error("Groq", "transcribe_failed", ex, ("ms", totalSw.ElapsedMilliseconds), ("bytes", fileBytes.Length));
+                throw;
+            }
         }
 
         private async Task<string> TranscribeWithRetry(byte[] fileBytes, int attempt)
@@ -150,12 +176,18 @@ namespace TerminalVoiceOverlay.Services
             };
             request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", _apiKey);
 
-            var response = await SharedHttp.SendAsync(request);
+            var httpSw = Stopwatch.StartNew();
+            DiagLog.Write("Groq", "http_start", ("attempt", attempt), ("bytes", fileBytes.Length), ("url", _url));
+            var response = await SharedHttp.SendAsync(request).ConfigureAwait(false);
             var statusCode = (int)response.StatusCode;
+            DiagLog.Perf("Groq", "http_response", httpSw,
+                ("attempt", attempt),
+                ("status", statusCode),
+                ("retryAfter", response.Headers.RetryAfter?.ToString() ?? ""));
 
             if (response.IsSuccessStatusCode)
             {
-                var json = await response.Content.ReadAsStringAsync();
+                var json = await response.Content.ReadAsStringAsync().ConfigureAwait(false);
                 // Schicht 3: Voiced-Timeline aus dem aufgenommenen PCM bauen (16-bit mono WAV), damit
                 // FilterTranscription jedes Segment gegen die echte Lautstaerke abgleichen kann.
                 bool[]? voiced = BuildVoicedTimeline(fileBytes);
@@ -163,6 +195,7 @@ namespace TerminalVoiceOverlay.Services
                 // -> zurueck. Alles Stille/halluziniert -> leer: wie bisher die "leere Antwort"
                 // (gleiche Exception, gleicher Aufrufer-catch) — funktionserhaltend.
                 var text = FilterTranscription(json, voiced);
+                DiagLog.Write("Groq", "filter_done", ("jsonChars", json.Length), ("textChars", text.Length));
                 if (!string.IsNullOrEmpty(text))
                     return text;
                 throw new Exception("Leere Antwort von Groq");
@@ -171,12 +204,20 @@ namespace TerminalVoiceOverlay.Services
             if (Array.IndexOf(RetryableStatusCodes, statusCode) >= 0 && attempt < MaxRetries)
             {
                 Console.WriteLine($"Groq {statusCode} - Versuch {attempt + 1}/{MaxRetries}, warte {DelaysMs[attempt]}ms...");
-                await Task.Delay(DelaysMs[attempt]);
-                return await TranscribeWithRetry(fileBytes, attempt + 1);
+                DiagLog.Warn("Groq", "retry_scheduled", ("status", statusCode), ("attempt", attempt), ("delayMs", DelaysMs[attempt]));
+                await Task.Delay(DelaysMs[attempt]).ConfigureAwait(false);
+                return await TranscribeWithRetry(fileBytes, attempt + 1).ConfigureAwait(false);
             }
 
-            var errorBody = await response.Content.ReadAsStringAsync();
+            var errorBody = await response.Content.ReadAsStringAsync().ConfigureAwait(false);
+            DiagLog.Warn("Groq", "http_error", ("status", statusCode), ("body", Truncate(errorBody, 500)));
             throw new Exception($"Groq API Fehler {statusCode}: {errorBody}");
+        }
+
+        private static string Truncate(string value, int maxChars)
+        {
+            if (string.IsNullOrEmpty(value) || value.Length <= maxChars) return value;
+            return value.Substring(0, maxChars) + "…";
         }
 
         /// <summary>
@@ -241,6 +282,7 @@ namespace TerminalVoiceOverlay.Services
             if (kept.Count == 0 && afterConfidence.Count > 0 && voiced != null)
             {
                 Console.WriteLine("Groq: Audio-Abgleich (Schicht 3) verwarf alle Segmente -> Fallback auf Confidence-gefilterte (Zeitstempel-Drift?).");
+                DiagLog.Warn("Groq", "audio_filter_drift_fallback", ("segments", afterConfidence.Count));
                 finalSegs = afterConfidence;
             }
 
@@ -254,7 +296,10 @@ namespace TerminalVoiceOverlay.Services
             }
 
             if (droppedConfidence > 0 || droppedAudio > 0)
+            {
                 Console.WriteLine($"Groq: {droppedConfidence} Confidence- + {droppedAudio} Audio-Segment(e) verworfen, {finalSegs.Count} behalten (Stille-Schutz).");
+                DiagLog.Write("Groq", "segments_filtered", ("confidence", droppedConfidence), ("audio", droppedAudio), ("kept", finalSegs.Count));
+            }
 
             // Schicht 4: Floskel-Blocklist (letzter Filter, an ALLEN Ausgaengen — siehe oben). Faengt
             // "Vielen Dank", das Schicht 2+3 ueberlebt. Funktionserhaltend (kurz + exakt + Stille-Kontext).
@@ -271,6 +316,7 @@ namespace TerminalVoiceOverlay.Services
             if (IsBlocklistedFloskel(text, voiced))
             {
                 Console.WriteLine($"Groq: Floskel-Blocklist (Schicht 4) verwarf \"{text}\" (kurz + exakter Match + Stille-Kontext).");
+                DiagLog.Warn("Groq", "floskel_blocked", ("chars", text.Length));
                 return string.Empty;
             }
             return text;
@@ -417,6 +463,7 @@ namespace TerminalVoiceOverlay.Services
                 if (rms > SpeechRmsThreshold) voicedMs += 20;
             }
             Console.WriteLine($"Groq-Vorfilter: laute Zeit {voicedMs:F0} ms (Schwelle {MinSpeechMs} ms) -> {(voicedMs >= MinSpeechMs ? "senden" : "verworfen")}.");
+            DiagLog.Write("Groq", "prefilter_measure", ("voicedMs", voicedMs.ToString("F0")), ("thresholdMs", MinSpeechMs), ("ok", voicedMs >= MinSpeechMs));
             return voicedMs >= MinSpeechMs;
         }
     }

@@ -21,12 +21,15 @@ namespace TerminalVoiceOverlay.Services
         // schnellen Aufnahmen drohen ausgehende TCP-Ports im TIME_WAIT-Zustand
         // zu erschoepfen. Das HttpClient-Objekt selbst haelt keine Auth — die
         // steckt in der URL pro Aufruf — also ist Sharing sicher.
-        private static readonly HttpClient SharedHttp = new HttpClient
+        private static readonly HttpClient SharedHttp = new HttpClient(new SocketsHttpHandler
         {
-            Timeout = TimeSpan.FromSeconds(120)
+            PooledConnectionLifetime = TimeSpan.FromMinutes(5)
+        })
+        {
+            Timeout = TimeSpan.FromSeconds(15)
         };
         private static readonly int[] RetryableStatusCodes = { 429, 500, 503 };
-        private const int MaxRetries = 5;
+        private const int MaxRetries = 0;
         private static readonly int[] DelaysMs = { 2000, 4000, 8000, 16000, 32000 };
 
         private const string PromptTemplate = @"ROLLE:
@@ -504,6 +507,7 @@ Der zu verarbeitende Whisper-Text folgt nun:
 
         private async Task<string> SendWithRetry(string prompt, int attempt)
         {
+            var totalSw = Stopwatch.StartNew();
             var url = $"https://generativelanguage.googleapis.com/v1beta/models/{_model}:generateContent?key={_apiKey}";
 
             var payload = new
@@ -521,23 +525,29 @@ Der zu verarbeitende Whisper-Text folgt nun:
 
             var json = JsonSerializer.Serialize(payload);
             using var content = new StringContent(json, Encoding.UTF8, "application/json");
-            var response = await SharedHttp.PostAsync(url, content);
+            DiagLog.Write("Gemini", "http_start", ("model", _model), ("attempt", attempt), ("promptChars", prompt.Length), ("payloadBytes", Encoding.UTF8.GetByteCount(json)));
+            var response = await SharedHttp.PostAsync(url, content).ConfigureAwait(false);
             var statusCode = (int)response.StatusCode;
+            DiagLog.Perf("Gemini", "http_response", totalSw, ("status", statusCode), ("attempt", attempt), ("retryAfter", response.Headers.RetryAfter?.ToString() ?? ""));
 
             if (response.IsSuccessStatusCode)
             {
-                var body = await response.Content.ReadAsStringAsync();
-                return ExtractText(body);
+                var body = await response.Content.ReadAsStringAsync().ConfigureAwait(false);
+                var text = ExtractText(body);
+                DiagLog.Perf("Gemini", "extract_done", totalSw, ("bodyChars", body.Length), ("textChars", text.Length));
+                return text;
             }
 
             if (Array.IndexOf(RetryableStatusCodes, statusCode) >= 0 && attempt < MaxRetries)
             {
                 Console.WriteLine($"Gemini {statusCode} - Versuch {attempt + 1}/{MaxRetries}, warte {DelaysMs[attempt]}ms...");
-                await Task.Delay(DelaysMs[attempt]);
-                return await SendWithRetry(prompt, attempt + 1);
+                DiagLog.Warn("Gemini", "retry_scheduled", ("status", statusCode), ("attempt", attempt), ("delayMs", DelaysMs[attempt]));
+                await Task.Delay(DelaysMs[attempt]).ConfigureAwait(false);
+                return await SendWithRetry(prompt, attempt + 1).ConfigureAwait(false);
             }
 
-            var errorBody = await response.Content.ReadAsStringAsync();
+            var errorBody = await response.Content.ReadAsStringAsync().ConfigureAwait(false);
+            DiagLog.Warn("Gemini", "http_error", ("status", statusCode), ("body", errorBody.Length > 500 ? errorBody.Substring(0, 500) + "…" : errorBody));
             throw new Exception($"Gemini API Fehler {statusCode}: {errorBody}");
         }
 

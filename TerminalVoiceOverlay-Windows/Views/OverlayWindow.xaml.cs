@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Runtime.InteropServices;
@@ -69,6 +70,7 @@ namespace TerminalVoiceOverlay.Views
         // ── State ──
         private RecordingState _micState    = RecordingState.Idle;
         private bool _isProcessing          = false;
+        private long _voiceTurnSeq          = 0;
         private bool isBtwRecording         = false;
         private bool geminiEnabled          = false;  // Default = Gemini-Korrektur AUS (Whisper-roh), KEIN Profil aktiv (Frank-Wunsch 2026-06-22: beim Start kein Profil voreingestellt). Profil-Klick oder G-Button schaltet Gemini ein. Ohne Gemini-API-Key bleibt es ohnehin false.
         private bool autoEnterEnabled       = true;  // macOS default (was false in Windows)
@@ -201,6 +203,44 @@ namespace TerminalVoiceOverlay.Views
             return $"{flat.Substring(0, 20)}…{flat.Substring(len - 10)} [{len} chars]";
         }
 
+        private static long EstimateWavDurationMs(string? wavPath)
+        {
+            try
+            {
+                if (string.IsNullOrWhiteSpace(wavPath) || !File.Exists(wavPath)) return 0;
+                byte[] header = new byte[44];
+                using var fs = File.OpenRead(wavPath);
+                if (fs.Read(header, 0, header.Length) < header.Length) return 0;
+                int sampleRate = header[24] | (header[25] << 8) | (header[26] << 16) | (header[27] << 24);
+                short channels = (short)(header[22] | (header[23] << 8));
+                short bits = (short)(header[34] | (header[35] << 8));
+                if (sampleRate <= 0 || channels <= 0 || bits <= 0) return 0;
+                long dataBytes = Math.Max(0, fs.Length - 44);
+                double bytesPerSecond = sampleRate * channels * (bits / 8.0);
+                return bytesPerSecond <= 0 ? 0 : (long)(dataBytes * 1000.0 / bytesPerSecond);
+            }
+            catch { return 0; }
+        }
+
+        /// <summary>
+        /// Fire-and-forget Append fuer Diagnose-Logs. Bewahrt die bestehenden
+        /// Logdateien, verschiebt aber Datei-IO aus UI- und Keyboard-Hook-Pfaden.
+        /// </summary>
+        private static void AppendDiagnosticLine(string path, string line)
+        {
+            _ = Task.Run(() =>
+            {
+                try
+                {
+                    var dir = System.IO.Path.GetDirectoryName(path);
+                    if (!string.IsNullOrWhiteSpace(dir))
+                        System.IO.Directory.CreateDirectory(dir);
+                    System.IO.File.AppendAllText(path, line, System.Text.Encoding.UTF8);
+                }
+                catch { /* Diagnostics must never break the main flow. */ }
+            });
+        }
+
         /// <summary>
         /// Schreibt eine Diagnose-Zeile in title-debug.log neben der
         /// Promptboard-Datenbank. Praktisch zum Erkennen warum die Historie-
@@ -214,11 +254,9 @@ namespace TerminalVoiceOverlay.Views
                 string dir = System.IO.Path.Combine(
                     Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
                     "PromptBoard", "history");
-                System.IO.Directory.CreateDirectory(dir);
                 string path = System.IO.Path.Combine(dir, "title-debug.log");
                 string ts = DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss.fff");
-                System.IO.File.AppendAllText(path, $"{ts}  {line}\n",
-                    System.Text.Encoding.UTF8);
+                AppendDiagnosticLine(path, $"{ts}  {line}\n");
             }
             catch { /* Diagnostics must never break the main flow. */ }
         }
@@ -238,11 +276,9 @@ namespace TerminalVoiceOverlay.Views
                 string dir = System.IO.Path.Combine(
                     Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
                     "PromptBoard", "screenshot-debug");
-                System.IO.Directory.CreateDirectory(dir);
                 string path = System.IO.Path.Combine(dir, "screenshot.log");
                 string ts = DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss.fff");
-                System.IO.File.AppendAllText(path, $"{ts}  {line}\n",
-                    System.Text.Encoding.UTF8);
+                AppendDiagnosticLine(path, $"{ts}  {line}\n");
             }
             catch { /* Diagnostics must never break the main flow. */ }
         }
@@ -2029,7 +2065,7 @@ namespace TerminalVoiceOverlay.Views
             try
             {
                 string path = System.IO.Path.Combine(System.IO.Path.GetTempPath(), "TVO-hotkey.log");
-                System.IO.File.AppendAllText(path,
+                AppendDiagnosticLine(path,
                     $"{DateTime.Now:HH:mm:ss.fff} TOGGLE-ERROR {msg}{Environment.NewLine}");
             }
             catch { /* never block hotkey path */ }
@@ -2515,6 +2551,9 @@ namespace TerminalVoiceOverlay.Views
 
             if (_micState == RecordingState.Recording)
             {
+                string turnId = System.Threading.Interlocked.Increment(ref _voiceTurnSeq).ToString();
+                var turnSw = Stopwatch.StartNew();
+                DiagLog.Write("VoiceTurn", "stop_clicked", ("turn", turnId), ("kind", "main"), ("autoEnter", autoEnterEnabled), ("gemini", geminiEnabled), ("profile", _activeProfile));
                 // ── Stop recording ──
                 var wavFile = _audioRecorder.Stop();
                 _ = Task.Run(() => { Console.Beep(660, 120); Console.Beep(440, 120); });
@@ -2523,9 +2562,14 @@ namespace TerminalVoiceOverlay.Views
 
                 if (wavFile == null)
                 {
+                    DiagLog.Warn("VoiceTurn", "wav_null", ("turn", turnId), ("kind", "main"));
                     SetMicState(RecordingState.Idle);
                     return;
                 }
+                long wavBytes = 0;
+                try { wavBytes = new FileInfo(wavFile).Length; } catch { }
+                long wavMs = EstimateWavDurationMs(wavFile);
+                DiagLog.Write("VoiceTurn", "wav_ready", ("turn", turnId), ("kind", "main"), ("wavBytes", wavBytes), ("wavMs", wavMs));
 
                 _isProcessing = true;
                 SetMicState(RecordingState.Processing);
@@ -2533,7 +2577,10 @@ namespace TerminalVoiceOverlay.Views
 
                 try
                 {
+                    var sttSw = Stopwatch.StartNew();
+                    DiagLog.Write("VoiceTurn", "stt_start", ("turn", turnId), ("kind", "main"), ("wavBytes", wavBytes), ("wavMs", wavMs));
                     var transcript = await _groqClient.TranscribeAsync(wavFile);
+                    DiagLog.Perf("VoiceTurn", "stt_done", sttSw, ("turn", turnId), ("kind", "main"), ("chars", transcript.Length), ("preview", SafeLogPreview(transcript)));
                     Console.WriteLine($"Transcript: {SafeLogPreview(transcript)}");
                     lastRawTranscript = transcript;
                     // Re-Correct-Cache: Roh-Whisper-Text + Zeitstempel merken,
@@ -2542,18 +2589,23 @@ namespace TerminalVoiceOverlay.Views
                     _lastCorrectableRaw = transcript;
 
                     string finalText;
+                    var geminiResolveSw = Stopwatch.StartNew();
                     var activeGemini = geminiEnabled ? await GetActiveGeminiClientAsync() : null;
+                    DiagLog.Perf("VoiceTurn", "gemini_resolve", geminiResolveSw, ("turn", turnId), ("kind", "main"), ("enabled", geminiEnabled), ("available", activeGemini != null));
                     if (activeGemini != null)
                     {
                         Console.WriteLine($"Gemini correction (profile {_activeProfile})...");
                         try
                         {
+                            var geminiSw = Stopwatch.StartNew();
                             finalText = await activeGemini.CorrectTextAsync(transcript, _activeProfile);
+                            DiagLog.Perf("VoiceTurn", "gemini_done", geminiSw, ("turn", turnId), ("kind", "main"), ("inChars", transcript.Length), ("outChars", finalText.Length), ("profile", _activeProfile));
                             Console.WriteLine($"Corrected: {SafeLogPreview(finalText)}");
                         }
                         catch (Exception ex)
                         {
                             Console.WriteLine($"Gemini error: {ex.Message}, using raw text");
+                            DiagLog.Error("VoiceTurn", "gemini_failed_using_raw", ex, ("turn", turnId), ("kind", "main"));
                             finalText = transcript;
                         }
                     }
@@ -2577,7 +2629,9 @@ namespace TerminalVoiceOverlay.Views
                     // in der Historie.
                     if (_promptPanel?.IsInputWindowVisible == true)
                     {
+                        var routeSw = Stopwatch.StartNew();
                         _promptPanel.RouteVoiceTextToInput(finalText, autoEnterEnabled);
+                        DiagLog.Perf("VoiceTurn", "route_prompt_input", routeSw, ("turn", turnId), ("kind", "main"), ("chars", finalText.Length), ("autoSubmit", autoEnterEnabled));
                         SetMicState(RecordingState.Success);
                         Console.WriteLine($"Voice text routed to PromptInputWindow (autoSubmit={autoEnterEnabled}).");
                     }
@@ -2585,7 +2639,9 @@ namespace TerminalVoiceOverlay.Views
                     {
                         if (!hasPastedText)
                         {
+                            var wrapperSw = Stopwatch.StartNew();
                             var (preFix, postFix) = await BuildAlwaysOnWrappersAsync();
+                            DiagLog.Perf("VoiceTurn", "always_on_wrappers", wrapperSw, ("turn", turnId), ("kind", "main"), ("preChars", preFix?.Length ?? 0), ("postChars", postFix?.Length ?? 0));
                             if (!string.IsNullOrEmpty(preFix))
                                 finalText = preFix + finalText;
                             if (!string.IsNullOrEmpty(postFix))
@@ -2601,7 +2657,10 @@ namespace TerminalVoiceOverlay.Views
                         // Async-Variante: blockiert nicht mehr UI fuer ~500ms
                         // pro Voice-Submit (Win32 Sleeps laufen auf Background-
                         // Thread).
+                        var pasteSw = Stopwatch.StartNew();
+                        DiagLog.Write("VoiceTurn", "paste_start", ("turn", turnId), ("kind", "main"), ("chars", finalText.Length), ("autoEnter", autoEnterEnabled), ("hwnd", $"0x{_terminalWatcher.ActiveTerminalHwnd.ToInt64():X}"));
                         await TerminalController.PasteTextAsync(finalText, _terminalWatcher.ActiveTerminalHwnd, autoEnterEnabled);
+                        DiagLog.Perf("VoiceTurn", "paste_done", pasteSw, ("turn", turnId), ("kind", "main"), ("chars", finalText.Length));
                         SetMicState(RecordingState.Success);
                         Console.WriteLine("Text inserted");
 
@@ -2614,11 +2673,13 @@ namespace TerminalVoiceOverlay.Views
                 catch (Exception ex)
                 {
                     Console.WriteLine($"Transcription error: {ex.Message}");
+                    DiagLog.Error("VoiceTurn", "turn_failed", ex, ("turn", turnId), ("kind", "main"), ("ms", turnSw.ElapsedMilliseconds));
                     SetMicState(RecordingState.Error);
                 }
                 finally
                 {
                     _isProcessing = false;
+                    DiagLog.Perf("VoiceTurn", "turn_total", turnSw, ("turn", turnId), ("kind", "main"));
                     ScheduleReset();
 
                     try { if (wavFile != null) File.Delete(wavFile); }
@@ -2659,6 +2720,9 @@ namespace TerminalVoiceOverlay.Views
 
             if (isBtwRecording)
             {
+                string turnId = System.Threading.Interlocked.Increment(ref _voiceTurnSeq).ToString();
+                var turnSw = Stopwatch.StartNew();
+                DiagLog.Write("VoiceTurn", "stop_clicked", ("turn", turnId), ("kind", "btw"), ("autoEnter", autoEnterEnabled), ("gemini", geminiEnabled), ("profile", _activeProfile));
                 // ── Stop BTW recording ──
                 var wavFile = _audioRecorder.Stop();
                 _ = Task.Run(() => { Console.Beep(660, 120); Console.Beep(440, 120); });
@@ -2668,9 +2732,14 @@ namespace TerminalVoiceOverlay.Views
 
                 if (wavFile == null)
                 {
+                    DiagLog.Warn("VoiceTurn", "wav_null", ("turn", turnId), ("kind", "btw"));
                     SetBtwMicState(RecordingState.Idle);
                     return;
                 }
+                long wavBytes = 0;
+                try { wavBytes = new FileInfo(wavFile).Length; } catch { }
+                long wavMs = EstimateWavDurationMs(wavFile);
+                DiagLog.Write("VoiceTurn", "wav_ready", ("turn", turnId), ("kind", "btw"), ("wavBytes", wavBytes), ("wavMs", wavMs));
 
                 _isProcessing = true;
                 SetBtwMicState(RecordingState.Processing);
@@ -2678,24 +2747,32 @@ namespace TerminalVoiceOverlay.Views
 
                 try
                 {
+                    var sttSw = Stopwatch.StartNew();
+                    DiagLog.Write("VoiceTurn", "stt_start", ("turn", turnId), ("kind", "btw"), ("wavBytes", wavBytes), ("wavMs", wavMs));
                     var transcript = await _groqClient.TranscribeAsync(wavFile);
+                    DiagLog.Perf("VoiceTurn", "stt_done", sttSw, ("turn", turnId), ("kind", "btw"), ("chars", transcript.Length), ("preview", SafeLogPreview(transcript)));
                     Console.WriteLine($"BTW transcript: {SafeLogPreview(transcript)}");
                     // Re-Correct-Cache fuer die BTW-Spur ebenfalls fuellen
                     _lastCorrectableRaw = transcript;
 
                     string finalText;
+                    var geminiResolveSw = Stopwatch.StartNew();
                     var btwGemini = geminiEnabled ? await GetActiveGeminiClientAsync() : null;
+                    DiagLog.Perf("VoiceTurn", "gemini_resolve", geminiResolveSw, ("turn", turnId), ("kind", "btw"), ("enabled", geminiEnabled), ("available", btwGemini != null));
                     if (btwGemini != null)
                     {
                         Console.WriteLine($"BTW Gemini correction (profile {_activeProfile})...");
                         try
                         {
+                            var geminiSw = Stopwatch.StartNew();
                             finalText = await btwGemini.CorrectTextAsync(transcript, _activeProfile);
+                            DiagLog.Perf("VoiceTurn", "gemini_done", geminiSw, ("turn", turnId), ("kind", "btw"), ("inChars", transcript.Length), ("outChars", finalText.Length), ("profile", _activeProfile));
                             Console.WriteLine($"BTW corrected: {SafeLogPreview(finalText)}");
                         }
                         catch (Exception ex)
                         {
                             Console.WriteLine($"BTW Gemini error: {ex.Message}, using raw text");
+                            DiagLog.Error("VoiceTurn", "gemini_failed_using_raw", ex, ("turn", turnId), ("kind", "btw"));
                             finalText = transcript;
                         }
                     }
@@ -2714,7 +2791,10 @@ namespace TerminalVoiceOverlay.Views
                     else
                         finalText = btwMarker + finalText;
 
+                    var pasteSw = Stopwatch.StartNew();
+                    DiagLog.Write("VoiceTurn", "paste_start", ("turn", turnId), ("kind", "btw"), ("chars", finalText.Length), ("autoEnter", autoEnterEnabled), ("hwnd", $"0x{_terminalWatcher.ActiveTerminalHwnd.ToInt64():X}"));
                     await TerminalController.PasteTextAsync(finalText, _terminalWatcher.ActiveTerminalHwnd, autoEnterEnabled);
+                    DiagLog.Perf("VoiceTurn", "paste_done", pasteSw, ("turn", turnId), ("kind", "btw"), ("chars", finalText.Length));
                     SetBtwMicState(RecordingState.Success);
                     Console.WriteLine("BTW text inserted");
 
@@ -2725,11 +2805,13 @@ namespace TerminalVoiceOverlay.Views
                 catch (Exception ex)
                 {
                     Console.WriteLine($"BTW transcription error: {ex.Message}");
+                    DiagLog.Error("VoiceTurn", "turn_failed", ex, ("turn", turnId), ("kind", "btw"), ("ms", turnSw.ElapsedMilliseconds));
                     SetBtwMicState(RecordingState.Error);
                 }
                 finally
                 {
                     _isProcessing = false;
+                    DiagLog.Perf("VoiceTurn", "turn_total", turnSw, ("turn", turnId), ("kind", "btw"));
 
                     // Reset BTW button to idle after 3 s
                     await Task.Delay(3000);
@@ -3358,7 +3440,7 @@ namespace TerminalVoiceOverlay.Views
             try
             {
                 string path = System.IO.Path.Combine(System.IO.Path.GetTempPath(), "TVO-hotkey.log");
-                System.IO.File.AppendAllText(path,
+                AppendDiagnosticLine(path,
                     $"{DateTime.Now:HH:mm:ss.fff} STATE-CHANGE source={source} from={oldValue} to={newValue}{Environment.NewLine}");
             }
             catch { /* never block UI for diagnostics */ }
@@ -3912,11 +3994,9 @@ namespace TerminalVoiceOverlay.Views
                 string dir = System.IO.Path.Combine(
                     Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
                     "PromptBoard", "history");
-                System.IO.Directory.CreateDirectory(dir);
                 string path = System.IO.Path.Combine(dir, "history-sync-debug.log");
                 string ts = DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss.fff");
-                System.IO.File.AppendAllText(path, $"{ts}  {line}\n",
-                    System.Text.Encoding.UTF8);
+                AppendDiagnosticLine(path, $"{ts}  {line}\n");
             }
             catch { /* Diagnostics never break the main flow. */ }
         }
@@ -5152,7 +5232,7 @@ namespace TerminalVoiceOverlay.Views
             try
             {
                 string path = System.IO.Path.Combine(System.IO.Path.GetTempPath(), "TVO-hotkey.log");
-                System.IO.File.AppendAllText(path, $"{DateTime.Now:HH:mm:ss.fff} {message}{Environment.NewLine}");
+                AppendDiagnosticLine(path, $"{DateTime.Now:HH:mm:ss.fff} {message}{Environment.NewLine}");
             }
             catch
             {

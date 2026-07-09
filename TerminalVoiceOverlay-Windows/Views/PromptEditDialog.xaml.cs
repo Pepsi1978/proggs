@@ -389,6 +389,8 @@ public partial class PromptEditDialog : Window
             string? wavPath = null;
             try
             {
+                var turnSw = System.Diagnostics.Stopwatch.StartNew();
+                DiagLog.Write("PromptEditMic", "stop_clicked");
                 wavPath = recorder.Stop();
                 // Unsere Aufnahme ist beendet — Eigentum freigeben, damit ein
                 // spaeterer Closed-Handler sie nicht erneut anzufassen versucht.
@@ -399,8 +401,11 @@ public partial class PromptEditDialog : Window
                     BtnMic.Background = MicIdle;
                     return;
                 }
+                var sttSw = System.Diagnostics.Stopwatch.StartNew();
                 var text = await groq.TranscribeAsync(wavPath);
+                DiagLog.Perf("PromptEditMic", "stt_done", sttSw, ("chars", text.Length));
                 AppendToPromptText(text);
+                DiagLog.Perf("PromptEditMic", "total", turnSw, ("chars", text.Length));
                 ShowStatus($"{text.Length} Zeichen eingefuegt.");
                 // Auto-title only if the user hasn't already typed a custom
                 // label themselves. AutoTitleAsync silently no-ops when
@@ -409,6 +414,7 @@ public partial class PromptEditDialog : Window
             }
             catch (Exception ex)
             {
+                DiagLog.Error("PromptEditMic", "failed", ex);
                 ShowStatus($"Transkription fehlgeschlagen: {ex.Message}");
             }
             finally
@@ -424,6 +430,7 @@ public partial class PromptEditDialog : Window
         try
         {
             recorder.Start();
+            DiagLog.Write("PromptEditMic", "recording_start");
             _recordingStartedHere = true;
             StartPulse();
             ShowStatus("Aufnahme laeuft. Klick erneut auf Mic zum Stoppen.");

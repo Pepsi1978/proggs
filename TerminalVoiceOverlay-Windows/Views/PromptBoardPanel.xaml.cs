@@ -943,7 +943,7 @@ public partial class PromptBoardPanel : Window
         try
         {
             var (map, times, summaries, priorities) = await VoiceServiceProvider.Slots.LoadMapTimesSummariesAsync().ConfigureAwait(false);
-            Dispatcher.Invoke(() => _inputWindow?.SetSlotContents(map, times, summaries, priorities));
+            await Dispatcher.InvokeAsync(() => _inputWindow?.SetSlotContents(map, times, summaries, priorities));
         }
         catch (Exception ex)
         {
@@ -2735,17 +2735,21 @@ public partial class PromptBoardPanel : Window
     /// </summary>
     private void RecordSuccessfulSync()
     {
-        try
+        var now = DateTime.UtcNow;
+        _ = Task.Run(() =>
         {
-            Directory.CreateDirectory(Path.GetDirectoryName(LastSyncFilePath)!);
-            File.WriteAllText(LastSyncFilePath,
-                DateTime.UtcNow.ToString("o", CultureInfo.InvariantCulture));
-        }
-        catch (Exception ex)
-        {
-            Console.WriteLine($"[PBPanel] write last-sync failed: {ex.Message}");
-        }
-        RefreshSyncLabel();
+            try
+            {
+                Directory.CreateDirectory(Path.GetDirectoryName(LastSyncFilePath)!);
+                File.WriteAllText(LastSyncFilePath,
+                    now.ToString("o", CultureInfo.InvariantCulture));
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"[PBPanel] write last-sync failed: {ex.Message}");
+            }
+        });
+        RefreshSyncLabel(now);
     }
 
     /// <summary>
@@ -2758,7 +2762,10 @@ public partial class PromptBoardPanel : Window
     /// </summary>
     public void MarkSyncedNow()
     {
-        Dispatcher.Invoke(RecordSuccessfulSync);
+        if (Dispatcher.CheckAccess())
+            RecordSuccessfulSync();
+        else
+            Dispatcher.BeginInvoke(new Action(RecordSuccessfulSync));
     }
 
     /// <summary>
@@ -2766,9 +2773,9 @@ public partial class PromptBoardPanel : Window
     /// muted badge: "· sync 24.04. 22:39". Always shows date+time so freshness
     /// is obvious right after restart. Empty when no sync has happened yet.
     /// </summary>
-    private void RefreshSyncLabel()
+    private void RefreshSyncLabel(DateTime? value = null)
     {
-        var d = ReadLastSync();
+        var d = value ?? ReadLastSync();
         if (d is null) { SyncLabel.Text = ""; return; }
         var de = new CultureInfo("de-DE");
         SyncLabel.Text = "· sync " + d.Value.ToLocalTime().ToString("dd.MM. HH:mm", de);

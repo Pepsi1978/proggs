@@ -1,4 +1,5 @@
 using System;
+using System.Diagnostics;
 using System.Runtime.InteropServices;
 using System.Threading;
 using System.Threading.Tasks;
@@ -137,6 +138,8 @@ namespace TerminalVoiceOverlay.Services
         /// </summary>
         public static void PasteText(string text, IntPtr terminalHwnd, bool autoEnter = false)
         {
+            var totalSw = Stopwatch.StartNew();
+            DiagLog.Write("Paste", "start", ("chars", text.Length), ("autoEnter", autoEnter), ("hwnd", $"0x{terminalHwnd.ToInt64():X}"));
             // Generation-ID fuer diesen Paste-Zyklus. Wenn ein folgender
             // Paste den Zaehler erhoeht, weiss der Restore-Task dass er
             // nichts mehr machen darf.
@@ -146,15 +149,18 @@ namespace TerminalVoiceOverlay.Services
             // gerade laufender Excel-Copy o.ae. wuerde sonst die App
             // ueber unhandled COMException zum Watchdog-Restart zwingen.
             string? previousClipboard = null;
+            var clipboardSw = Stopwatch.StartNew();
             bool clipboardSet = TryRunOnUiThread(() =>
             {
                 if (Clipboard.ContainsText())
                     previousClipboard = Clipboard.GetText();
                 Clipboard.SetText(text);
             });
+            DiagLog.Perf("Paste", "clipboard_set", clipboardSw, ("ok", clipboardSet), ("chars", text.Length));
             if (!clipboardSet)
             {
                 Console.WriteLine("PasteText: Clipboard.SetText fehlgeschlagen — Paste uebersprungen.");
+                DiagLog.Warn("Paste", "clipboard_set_failed", ("chars", text.Length));
                 return;
             }
 
@@ -170,7 +176,9 @@ namespace TerminalVoiceOverlay.Services
             ReleaseNonCtrlModifiers();
 
             // Bring terminal to foreground (robust: AttachThreadInput + AllowSetForegroundWindow)
+            var foregroundSw = Stopwatch.StartNew();
             BringToForeground(terminalHwnd);
+            DiagLog.Perf("Paste", "foreground", foregroundSw, ("hwnd", $"0x{terminalHwnd.ToInt64():X}"));
 
             // ── Sicherheitsnetz: Modifier nochmal freigeben vor Ctrl+V ──
             // Wenn der Paste durch einen Hotkey ausgeloest wurde (z.B.
@@ -187,7 +195,9 @@ namespace TerminalVoiceOverlay.Services
             ReleaseNonCtrlModifiers();
 
             // Send Ctrl+V
+            var sendSw = Stopwatch.StartNew();
             SendCtrlV();
+            DiagLog.Perf("Paste", "ctrl_v", sendSw);
 
             // Send Enter if auto-enter is enabled
             if (autoEnter)
@@ -195,6 +205,7 @@ namespace TerminalVoiceOverlay.Services
                 Thread.Sleep(300); // macOS uses 300ms before optional Enter
                 BringToForeground(terminalHwnd);
                 SendKey(VK_RETURN);
+                DiagLog.Write("Paste", "auto_enter_sent");
             }
 
             // Restore previous clipboard after paste completes — aber NUR
@@ -209,11 +220,15 @@ namespace TerminalVoiceOverlay.Services
                     if (System.Threading.Interlocked.Read(ref _clipboardGen) != myGen)
                     {
                         Console.WriteLine("Clipboard restore skipped — newer paste in flight.");
+                        DiagLog.Write("Paste", "clipboard_restore_skipped_newer_generation");
                         return;
                     }
-                    TryRunOnUiThread(() => Clipboard.SetText(prev));
+                    var restoreSw = Stopwatch.StartNew();
+                    bool restored = TryRunOnUiThread(() => Clipboard.SetText(prev));
+                    DiagLog.Perf("Paste", "clipboard_restore", restoreSw, ("ok", restored));
                 });
             }
+            DiagLog.Perf("Paste", "total", totalSw, ("chars", text.Length), ("autoEnter", autoEnter));
         }
 
         /// <summary>

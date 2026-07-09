@@ -1,6 +1,9 @@
 using System;
+using System.Collections.Concurrent;
+using System.Diagnostics;
 using System.IO;
 using System.Text;
+using System.Threading.Tasks;
 
 namespace TerminalVoiceOverlay.Services
 {
@@ -20,9 +23,31 @@ namespace TerminalVoiceOverlay.Services
     {
         private static readonly object _lock = new();
         private static readonly string _path = ResolvePath();
+        private static readonly BlockingCollection<string> _queue = new();
+        private static readonly Task _writerTask = Task.Factory.StartNew(
+            WriterLoop,
+            TaskCreationOptions.LongRunning);
         private static bool _announced;
 
+        static DiagLog()
+        {
+            AppDomain.CurrentDomain.ProcessExit += (_, _) => FlushOnExit();
+            AppDomain.CurrentDomain.DomainUnload += (_, _) => FlushOnExit();
+        }
+
         public static string FilePath => _path;
+
+        public static void Info(string ctx, string msg, params (string Key, object? Value)[] extra)
+            => Write(ctx, msg, extra);
+
+        public static void Warn(string ctx, string msg, params (string Key, object? Value)[] extra)
+            => Write(ctx, msg, Combine(("level", "WARN"), extra));
+
+        public static void Error(string ctx, string msg, Exception ex, params (string Key, object? Value)[] extra)
+            => Write(ctx, msg, Combine(("level", "ERROR"), Combine(("err", ex.Message), Combine(("type", ex.GetType().Name), extra))));
+
+        public static void Perf(string ctx, string step, Stopwatch sw, params (string Key, object? Value)[] extra)
+            => Write(ctx, "perf", Combine(("step", step), Combine(("ms", sw.ElapsedMilliseconds), extra)));
 
         private static string ResolvePath()
         {
@@ -58,19 +83,48 @@ namespace TerminalVoiceOverlay.Services
                     }
                 sb.Append('}');
 
-                lock (_lock)
+                EnqueueLine(sb.ToString());
+            }
+            catch { /* Logging darf nie crashen */ }
+        }
+
+        private static void EnqueueLine(string line)
+        {
+            lock (_lock)
+            {
+                if (!_announced)
                 {
-                    RotateIfBig();
-                    if (!_announced)
-                    {
-                        _announced = true;
-                        File.AppendAllText(_path,
-                            "{\"ts\":\"" + DateTime.Now.ToString("yyyy-MM-ddTHH:mm:ss.fff") +
-                            "\",\"ctx\":\"DiagLog\",\"msg\":\"=== session start ===\"}\n",
-                            Encoding.UTF8);
-                    }
-                    File.AppendAllText(_path, sb.ToString() + "\n", Encoding.UTF8);
+                    _announced = true;
+                    _queue.Add("{\"ts\":\"" + DateTime.Now.ToString("yyyy-MM-ddTHH:mm:ss.fff") +
+                               "\",\"ctx\":\"DiagLog\",\"msg\":\"=== session start ===\"}");
                 }
+                _queue.Add(line);
+            }
+        }
+
+        private static void WriterLoop()
+        {
+            try
+            {
+                foreach (var line in _queue.GetConsumingEnumerable())
+                {
+                    try
+                    {
+                        RotateIfBig();
+                        File.AppendAllText(_path, line + "\n", Encoding.UTF8);
+                    }
+                    catch { /* Logging darf nie crashen */ }
+                }
+            }
+            catch { /* Logging darf nie crashen */ }
+        }
+
+        private static void FlushOnExit()
+        {
+            try
+            {
+                _queue.CompleteAdding();
+                _writerTask.Wait(500);
             }
             catch { /* Logging darf nie crashen */ }
         }
@@ -93,6 +147,15 @@ namespace TerminalVoiceOverlay.Services
         private static void AppendKv(StringBuilder sb, string key, string val)
         {
             sb.Append('"').Append(Escape(key)).Append("\":\"").Append(Escape(val)).Append('"');
+        }
+
+        private static (string Key, object? Value)[] Combine((string Key, object? Value) first, params (string Key, object? Value)[] rest)
+        {
+            var result = new (string Key, object? Value)[(rest?.Length ?? 0) + 1];
+            result[0] = first;
+            if (rest != null && rest.Length > 0)
+                Array.Copy(rest, 0, result, 1, rest.Length);
+            return result;
         }
 
         private static string Escape(string s)

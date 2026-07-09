@@ -1,4 +1,5 @@
 using System;
+using System.Diagnostics;
 using System.IO;
 using NAudio.Wave;
 
@@ -12,6 +13,10 @@ namespace TerminalVoiceOverlay.Services
         private WaveFileWriter? _writer;
         private string? _tempFile;
         private readonly object _lock = new();
+        private readonly Stopwatch _recordingSw = new();
+        private long _bytesRecorded;
+        private long _buffersRecorded;
+        private float _peakMax;
 
         public bool IsRecording { get; private set; }
 
@@ -35,6 +40,10 @@ namespace TerminalVoiceOverlay.Services
             if (IsRecording) return;
 
             _tempFile = Path.Combine(Path.GetTempPath(), $"tvo_recording_{Guid.NewGuid():N}.wav");
+            _bytesRecorded = 0;
+            _buffersRecorded = 0;
+            _peakMax = 0;
+            _recordingSw.Restart();
 
             var waveFormat = new WaveFormat(_sampleRate, 16, _channels);
             _writer = new WaveFileWriter(_tempFile, waveFormat);
@@ -51,6 +60,8 @@ namespace TerminalVoiceOverlay.Services
                 {
                     _writer?.Write(e.Buffer, 0, e.BytesRecorded);
                 }
+                _bytesRecorded += e.BytesRecorded;
+                _buffersRecorded++;
 
                 // Peak-Pegel aus dem 16-bit signed PCM-Buffer berechnen.
                 // Wir scannen alle Samples und behalten den groessten
@@ -68,6 +79,7 @@ namespace TerminalVoiceOverlay.Services
                     if (abs > peak) peak = abs;
                 }
                 float normalized = peak / 32768f;
+                if (normalized > _peakMax) _peakMax = normalized;
                 try { LevelChanged?.Invoke(normalized); }
                 catch { /* Listener-Fehler duerfen die Aufnahme nicht abbrechen. */ }
             };
@@ -75,12 +87,14 @@ namespace TerminalVoiceOverlay.Services
             _waveIn.StartRecording();
             IsRecording = true;
             Console.WriteLine($"AudioRecorder: Aufnahme gestartet ({_sampleRate}Hz, {_channels}ch)");
+            DiagLog.Write("Audio", "recording_start", ("sampleRate", _sampleRate), ("channels", _channels), ("path", _tempFile));
         }
 
         public string? Stop()
         {
             if (!IsRecording) return null;
             IsRecording = false;
+            _recordingSw.Stop();
 
             try
             {
@@ -97,11 +111,22 @@ namespace TerminalVoiceOverlay.Services
                 _waveIn = null;
 
                 Console.WriteLine("AudioRecorder: Aufnahme gestoppt");
+                long fileBytes = 0;
+                try { if (!string.IsNullOrEmpty(_tempFile) && File.Exists(_tempFile)) fileBytes = new FileInfo(_tempFile).Length; }
+                catch { }
+                DiagLog.Write("Audio", "recording_stop",
+                    ("ms", _recordingSw.ElapsedMilliseconds),
+                    ("pcmBytes", _bytesRecorded),
+                    ("fileBytes", fileBytes),
+                    ("buffers", _buffersRecorded),
+                    ("peak", _peakMax.ToString("0.000")),
+                    ("path", _tempFile));
                 return _tempFile;
             }
             catch (Exception ex)
             {
                 Console.WriteLine($"AudioRecorder: Fehler beim Stoppen: {ex.Message}");
+                DiagLog.Error("Audio", "recording_stop_failed", ex, ("ms", _recordingSw.ElapsedMilliseconds));
                 return null;
             }
         }
