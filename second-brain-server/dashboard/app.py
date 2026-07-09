@@ -36,7 +36,7 @@ VERSION = "0.63.1 (08.07.2026, 19.55 Uhr)"  # 0.63.1 (Frank-Wunsch): Embedding-S
 VERSION = "0.63.2 (08.07.2026, 20:00 Uhr)"  # 0.63.2: Sichtbarer Bump zum agent-0.65.2-Fix: Gespräche werden nach jeder fertigen Agent-Antwort sofort in die Brain-Kategorie „Gespräche“ gespiegelt, statt erst nach 30 Minuten Inaktivität. Alt: 0.63.1.
 VERSION = "0.63.3 (08.07.2026, 20:14 Uhr)"  # 0.63.3: Sichtbarer Bump zum brain-api-1.27.1-Fix: alte Kategorie 'gespräche' und neue Kategorie 'Gespräche' werden zusammengeführt, damit im Gehirn keine doppelt gleich angezeigten Gespräche-Kategorien erscheinen. Alt: 0.63.2.
 VERSION = "0.63.4 (08.07.2026, 20:29 Uhr)"  # 0.63.4: Sichtbarer Bump zur Server-Konfiguration: Agent-Session-Timeout für Gesprächs-Logbuch von 30 auf 10 Minuten verkürzt. Alt: 0.63.3.
-VERSION = "0.64.4 (09.07.2026, 11:53 Uhr)"  # 0.64.4: Sichtbarer Gesamt-Bump zum agent-0.66.3-Deploy: Alte Smoke-Test-Gespräche werden regelmäßig eng gefiltert aus der Kategorie Gespräche bereinigt. Alt: 0.64.3.
+VERSION = "0.64.5 (09.07.2026, 12:36 Uhr)"  # 0.64.5: System-Info bekommt einen Knopf "Smoke-Test-Gespräche bereinigen" mit sichtbarem Ergebnis; Proxy an agent /conversations/smoke-cleanup. Alt: 0.64.4.
 BRAIN_URL = os.getenv("BRAIN_URL", "http://brain-api:8000").rstrip("/")
 AGENT_URL = os.getenv("AGENT_URL", "http://agent:8002").rstrip("/")
 SB_API_KEY = os.getenv("SB_API_KEY", "")
@@ -601,6 +601,16 @@ async def api_websearch_toggle_test() -> dict:
     except Exception as e:  # noqa: BLE001
         _log(logging.WARNING, "Websuche-Schaltertest fehlgeschlagen", err=str(e))
         return JSONResponse(status_code=502, content={"ok": False, "detail": f"Websuche-Test fehlgeschlagen: {type(e).__name__}"})
+
+
+@app.post("/api/conversations/smoke-cleanup")
+async def api_conversations_smoke_cleanup() -> dict:
+    """Manuelle Bereinigung alter Smoke-Test-Gespraeche. Proxy an agent /conversations/smoke-cleanup."""
+    try:
+        return await asyncio.to_thread(_apost, "/conversations/smoke-cleanup", {})
+    except Exception as e:  # noqa: BLE001
+        _log(logging.WARNING, "Smoke-Gesprächsbereinigung fehlgeschlagen", err=str(e))
+        return JSONResponse(status_code=502, content={"ok": False, "detail": f"Smoke-Cleanup fehlgeschlagen: {type(e).__name__}"})
 
 
 # --- Selbst-Regeln des Agenten (Proxy an agent /rules) — spec 2026-07-08 --------

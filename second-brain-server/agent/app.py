@@ -61,7 +61,7 @@ VERSION = "0.65.1 (08.07.2026, 17:35 Uhr)"  # 0.65.1: FIX current_agent_limits()
 
 # Wirksamer Counter-Bump: Live-Spiegelung fertiger Gesprächsturns ins Gehirn.
 VERSION = "0.65.2 (08.07.2026, 20:00 Uhr)"  # 0.65.2: FIX Gesprächs-Logbuch wird nicht mehr erst nach 30 Minuten Inaktivität ins Gehirn geschrieben. Nach jeder fertigen Agent-Antwort spiegelt der Agent denselben Gesprächseintrag sofort in die Kategorie Gespräche; der alte 30-Minuten-Flush mit .txt-Kopie bleibt als Sicherheitsnetz. Alt: 0.65.1.
-VERSION = "0.66.3 (09.07.2026, 11:49 Uhr)"  # 0.66.3: NEU regelmaessige Bereinigung alter Smoke-Test-Gespraeche aus der Kategorie Gespräche. Der bestehende Flush-Loop scannt best-effort in grossen Abstaenden, erkennt nur enge Smoke-/Selbsttest-Phrasen und loescht diese per Titel aus dem Brain. Alt: 0.66.2.
+VERSION = "0.66.4 (09.07.2026, 12:36 Uhr)"  # 0.66.4: NEU manueller Endpoint /conversations/smoke-cleanup fuer den Dashboard-Knopf; ruft dieselbe enge Smoke-Test-Gespraechsbereinigung wie der Hintergrundlauf auf und liefert das Ergebnis sichtbar zurueck. Alt: 0.66.3.
 
 # ---------------------------------------------------------------------------
 # Konfiguration (alles aus Umgebungsvariablen — Secrets nie im Code)
@@ -4448,6 +4448,16 @@ def websearch_toggle_selftest() -> dict:
     return {"ok": ok, "passed": passed, "total": len(cases), "cases": cases,
             "current": {"tavily_enabled": TAVILY_ENABLED, "model": ROLE_MODELS.get("haupt", ""),
                         "native_web_supported": hauptagent_supports_native_web()}}
+
+
+@app.post("/conversations/smoke-cleanup", dependencies=[Depends(require_auth)])
+def conversations_smoke_cleanup() -> dict:
+    """Manueller Dashboard-Trigger fuer dieselbe enge Smoke-Test-Gesprächsbereinigung."""
+    res = cleanup_old_smoke_conversations(USER_ID)
+    checkpoint("smoke_conversation_cleanup_manual", "Smoke-Test-Gespräche manuell bereinigt",
+               ok=bool(res.get("ok")), scanned=res.get("scanned"), deleted=res.get("deleted"),
+               errors=len(res.get("errors") or []))
+    return res
 
 
 @app.get("/toolagent-test", dependencies=[Depends(require_auth)])

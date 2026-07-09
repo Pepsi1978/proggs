@@ -1489,9 +1489,11 @@ button{font-family:inherit;cursor:pointer}
         <div class="card set-section" id="featureInfoSection">
           <div class="set-title-row">
             <h3><span class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><circle cx="12" cy="12" r="9"/><path d="M12 8h.01M11 12h1v4h1"/></svg></span>System-Info: Was Cortex kann</h3>
+            <button class="btn" id="smokeCleanupBtn" type="button">Smoke-Test-Gespräche bereinigen</button>
             <button class="btn btn-primary" id="saveCortexKnowledgeBtn" type="button">Cortex Wissen speichern</button>
           </div>
           <p class="set-desc">Die komplette Chronik aller eingebauten Systeme — <b>was</b> eingebaut wurde, <b>wann</b> (Datum + Uhrzeit) und <b>wie es funktioniert</b>. Zum Nachlesen, wenn du einen Bereich ändern lassen willst und wissen musst, wie er heißt und wo er sitzt. Neuestes zuerst; jeder Punkt ist aufklappbar.</p>
+          <span class="muted-note cortex-knowledge-status" id="smokeCleanupStatus"></span>
           <span class="muted-note cortex-knowledge-status" id="saveCortexKnowledgeStatus"></span>
           <div id="featList"><span class="muted-note">lädt…</span></div>
         </div>
@@ -3902,6 +3904,25 @@ button{font-family:inherit;cursor:pointer}
     const intro = "Dieser Eintrag ist Cortex-Wissen: Er beschreibt, wie Cortex funktioniert, was Cortex kann inzwischen und welche Fähigkeit im Gesamtsystem eingebaut ist. Er soll bei Fragen wie 'Was kann Cortex alles schon?' oder 'Wie funktioniert Cortex?' über die semantische Suche gefunden werden.";
     return [intro, meta, f.kurz || "", f.erklaerung || ""].filter(Boolean).join("\n\n");
   }
+  async function runSmokeCleanup(){
+    const btn = document.getElementById("smokeCleanupBtn");
+    const status = document.getElementById("smokeCleanupStatus");
+    if(btn){ btn.disabled = true; btn.textContent = "Bereinigt…"; }
+    if(status) status.textContent = "Smoke-Test-Gespräche werden geprüft…";
+    try{
+      const r = await apiSend("/api/conversations/smoke-cleanup", "POST", {});
+      if(!r || r.ok === false) throw new Error((r && r.detail) || "Bereinigung fehlgeschlagen");
+      const scanned = Number(r.scanned || 0);
+      const deleted = Number(r.deleted || 0);
+      const errors = (r.errors || []).length;
+      const titles = (r.titles || []).slice(0, 3).join(" · ");
+      if(status) status.textContent = `Smoke-Cleanup fertig: ${scanned} Gespräche geprüft, ${deleted} gelöscht${errors ? `, ${errors} Fehler` : ""}${titles ? ` (${titles})` : ""}.`;
+    }catch(e){
+      if(status) status.textContent = "Smoke-Cleanup nicht erreichbar: " + (e.message || e);
+    }finally{
+      if(btn){ btn.disabled = false; btn.textContent = "Smoke-Test-Gespräche bereinigen"; }
+    }
+  }
   async function saveCortexKnowledge(){
     const btn = document.getElementById("saveCortexKnowledgeBtn");
     const status = document.getElementById("saveCortexKnowledgeStatus");
@@ -4021,6 +4042,8 @@ button{font-family:inherit;cursor:pointer}
     }
   }
   (function initFeatureInfo(){
+    const smokeBtn = document.getElementById("smokeCleanupBtn");
+    if(smokeBtn) smokeBtn.addEventListener("click", runSmokeCleanup);
     const saveBtn = document.getElementById("saveCortexKnowledgeBtn");
     if(saveBtn) saveBtn.addEventListener("click", saveCortexKnowledge);
     loadFeatureInfo();
