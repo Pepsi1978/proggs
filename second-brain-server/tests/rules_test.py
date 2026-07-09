@@ -159,6 +159,8 @@ def main() -> int:
             end = app_source.find("\ndef ", start + 1)
             body = app_source[start:end if end >= 0 else len(app_source)]
             check("_reinforce_self_rules(" in body, f"{name} erinnert Selbst-Regeln vor Ausgabe")
+        check(app_source.count("_enforce_self_rules_on_outcome") >= 3,
+              "letzter Selbstregel-Prüfer ist definiert und in Chat plus Stream aktiv")
         tree = ast.parse(app_source)
         misplaced = []
         for node in (item for item in ast.walk(tree) if isinstance(item, ast.FunctionDef)):
