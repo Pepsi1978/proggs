@@ -64,6 +64,7 @@ VERSION = "0.65.2 (08.07.2026, 20:00 Uhr)"  # 0.65.2: FIX Gesprächs-Logbuch wir
 VERSION = "0.67.0 (09.07.2026, 13:24 Uhr)"  # 0.67.0: FEINE Performance-Sonden im gesamten Agenten-Hot-Path. Trace-Log misst jetzt Router, Kategorien, Registry, Verlaufs-Komprimierung, LLM-Retry-Versuche, Brain-HTTP-Aufrufe, Multi-Query-Varianten, einzelne Suchvarianten, Tool-Loop-Runden, einzelne Werkzeugaufrufe und Codex/GPT-Streams (Headers, erstes Event, erstes Text-Delta, completed) millisekundengenau. Alt: 0.66.4.
 VERSION = "0.68.1 (09.07.2026, 19:43 Uhr)"  # 0.68.1: Profil-Prompt wirkt jetzt auch zur Laufzeit im schnellen Auto-Parallelpfad, nicht nur im Dashboard-Editor/Review. 0.68.0: NEU Agenten-Profile. Profil "Klassisch" behaelt Router+Tool-Agent. Profil "Sofort Web + Gedaechtnis" ueberspringt bei normalen Auto-Fragen den Router, startet Gedaechtnissuche und Websuche sofort parallel und laesst den Hauptagenten danach aus beiden Ergebnissen antworten. Speicher-, Regel- und offene Bestaetigungspfade bleiben geschuetzt im klassischen Spezialpfad. Alt: 0.67.2.
 VERSION = "0.68.5 (09.07.2026, 21:31 Uhr)"  # 0.68.5: Allgemeiner letzter Selbstregel-Pruefer ueberarbeitet freie Agentenantworten vor Ausgabe dynamisch nach ALLEN aktiven Regeln; keine TTS-Sonderlogik. Prompt-Injektion und Pflicht-Erinnerung bleiben als erste zwei Schutzschichten. 0.68.4: nativer Web-Helfer repariert.
+VERSION = "0.68.6 (09.07.2026, 22:00 Uhr)"  # 0.68.6: FIX Parallelprofil meldete immer hoechstens 8 Treffer, obwohl die konfigurierte Rohsuche 30 fand. recall_hits berichtet jetzt die echte Suchtrefferzahl; 8 Quellen-Chips und 12 Antwort-Schnipsel bleiben als getrennte Kontext-/UI-Grenzen unveraendert. Alt: 0.68.5.
 
 # ---------------------------------------------------------------------------
 # Konfiguration (alles aus Umgebungsvariablen — Secrets nie im Code)
@@ -6099,10 +6100,11 @@ def _auto_parallel_answer(session: dict, user_text: str, context_prompt: str = "
                for h in hits[:8] if h.get("doc_id")]
     confidence = _confidence_info(hits)
     checkpoint("auto_parallel", "Profil Sofort Web + Gedaechtnis beantwortete Auto-Frage ohne Router",
-               ok=bool(answer), memory_hits=len(hits), web_ok=bool(web.get("ok")), profile=ACTIVE_PROFILE_PARALLEL)
+               ok=bool(answer), memory_hits=len(hits), answer_snippets=len(mem_snippets),
+               source_chips=len(sources), web_ok=bool(web.get("ok")), profile=ACTIVE_PROFILE_PARALLEL)
     return {"reply": (answer or "").strip() or "Ich konnte gerade keine Antwort formulieren.",
             "action": "recall" if hits else "internet" if web.get("ok") else "smalltalk",
-            "pending": None, "recall_hits": len(sources), "sources": sources, "confidence": confidence}
+            "pending": None, "recall_hits": len(hits), "sources": sources, "confidence": confidence}
 
 
 def _process_turn(session: dict, user_text: str, pending: dict | None, category: str = "", title: str = "", store_timestamp: bool = False, context_mode: str = "auto", context_prompt: str = "", response_size: str = "m", on_delta=None) -> dict:
