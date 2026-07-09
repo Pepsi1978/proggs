@@ -91,6 +91,9 @@ fun SettingsScreen(
     var routerModel by remember { mutableStateOf(ROUTER_AUTO) }
     var routerReasoning by remember { mutableStateOf(ROUTER_AUTO) }
     var tavilyEnabled by remember { mutableStateOf(true) }
+    var memoryWebInfluence by remember { mutableStateOf("normal") }
+    var memoryWebInfluenceSaving by remember { mutableStateOf(false) }
+    var memoryWebInfluenceStatus by remember { mutableStateOf("Server-Stand wird geladen") }
     var modelPriceLabels by remember { mutableStateOf<Map<String, String>>(emptyMap()) }
     var agentModelsLoading by remember { mutableStateOf(false) }
     var agentModelsSaving by remember { mutableStateOf(false) }
@@ -203,6 +206,8 @@ fun SettingsScreen(
             routerModel = config.router_model.ifBlank { ROUTER_AUTO }
             routerReasoning = config.router_reasoning.ifBlank { ROUTER_AUTO }
             tavilyEnabled = config.tavily_enabled
+            memoryWebInfluence = config.memory_web_influence.takeIf { it in setOf("light", "normal", "strong") } ?: "normal"
+            memoryWebInfluenceStatus = "Aktueller Server-Stand geladen"
             if (config.size_prompts_custom) {
                 config.size_prompts.forEach { (k, v) ->
                     if (k in setOf("auto", "s", "m", "xl") && v.isNotBlank()) SettingsStore.setResponseSizePrompt(k, v)
@@ -227,6 +232,7 @@ fun SettingsScreen(
         } catch (e: Exception) {
             CortexLog.warn("Settings", "loadAgentModels", "Agent-Modelle nicht geladen: ${e.message}")
             agentModelStatus = "Server-Stand nicht erreichbar"
+            memoryWebInfluenceStatus = "Server-Stand nicht erreichbar"
             limitsStatus = "Limits nicht erreichbar"
         } finally {
             agentModelsLoading = false
@@ -1083,6 +1089,101 @@ fun SettingsScreen(
                         ) { Text("Bearbeiten", fontSize = 13.sp, fontWeight = FontWeight.SemiBold) }
                     }
                 }
+            }
+        }
+
+        // === GEDÄCHTNIS-EINFLUSS BEI WEBSUCHEN ===
+        SectionHeader("GEDÄCHTNIS + WEB")
+        Surface(
+            shape = RoundedCornerShape(18.dp),
+            color = Color.Transparent,
+            border = BorderStroke(1.dp, Iris.copy(alpha = 0.55f))
+        ) {
+            Column(
+                modifier = Modifier
+                    .background(
+                        Brush.linearGradient(
+                            listOf(
+                                Iris.copy(alpha = if (isDark) 0.18f else 0.10f),
+                                MaterialTheme.colorScheme.surface,
+                                Orange.copy(alpha = if (isDark) 0.08f else 0.05f)
+                            )
+                        )
+                    )
+                    .padding(15.dp),
+                verticalArrangement = Arrangement.spacedBy(12.dp)
+            ) {
+                Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(11.dp)) {
+                    Icon(Icons.Default.Psychology, null, tint = Iris, modifier = Modifier.size(24.dp))
+                    Column(modifier = Modifier.weight(1f)) {
+                        Text("Gedächtnis-Einfluss bei Websuchen", fontSize = 14.sp, fontWeight = FontWeight.Bold)
+                        Text(
+                            "Wie stark passende persönliche Notizen mit aktuellen Webfakten verbunden werden. Suchtreffer und Qdrant-Limits bleiben gleich.",
+                            fontSize = 11.5.sp,
+                            lineHeight = 16.sp,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
+                    if (memoryWebInfluenceSaving) {
+                        CircularProgressIndicator(modifier = Modifier.size(18.dp), strokeWidth = 2.dp, color = Iris)
+                    }
+                }
+
+                val influenceOptions = listOf(
+                    Triple("light", "Leicht", "Webfakten führen; Notizen bleiben sparsam, aber erkennbar."),
+                    Triple("normal", "Normal", "Notizen werden sichtbar an mehreren passenden Stellen verbunden."),
+                    Triple("strong", "Stark", "Persönliche Einträge bilden die zentrale, ausführlichere Linse.")
+                )
+                influenceOptions.forEach { (id, label, description) ->
+                    val active = memoryWebInfluence == id
+                    Surface(
+                        shape = RoundedCornerShape(13.dp),
+                        color = if (active) Iris.copy(alpha = 0.18f) else MaterialTheme.colorScheme.surface.copy(alpha = 0.76f),
+                        border = BorderStroke(1.dp, if (active) Iris else MaterialTheme.colorScheme.outline.copy(alpha = 0.55f)),
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clickable(enabled = !memoryWebInfluenceSaving) {
+                                if (!active) {
+                                    val previous = memoryWebInfluence
+                                    memoryWebInfluence = id
+                                    memoryWebInfluenceSaving = true
+                                    screenScope.launch {
+                                        try {
+                                            val response = ApiClient.agentApi().updateConfig(
+                                                AgentConfigRequest(memory_web_influence = id)
+                                            )
+                                            memoryWebInfluence = response.memory_web_influence.takeIf {
+                                                it in setOf("light", "normal", "strong")
+                                            } ?: "normal"
+                                            memoryWebInfluenceStatus = "Gespeichert und sofort aktiv"
+                                        } catch (e: CancellationException) {
+                                            throw e
+                                        } catch (e: Exception) {
+                                            memoryWebInfluence = previous
+                                            memoryWebInfluenceStatus = "Speichern fehlgeschlagen"
+                                            CortexLog.error("Settings", "saveMemoryWebInfluence", "Speichern fehlgeschlagen: ${e.message}")
+                                            Toast.makeText(context, "Gedächtnis-Einfluss konnte nicht gespeichert werden", Toast.LENGTH_SHORT).show()
+                                        } finally {
+                                            memoryWebInfluenceSaving = false
+                                        }
+                                    }
+                                }
+                            }
+                    ) {
+                        Row(
+                            modifier = Modifier.fillMaxWidth().padding(horizontal = 13.dp, vertical = 11.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(11.dp)
+                        ) {
+                            RadioButton(selected = active, onClick = null, colors = RadioButtonDefaults.colors(selectedColor = Iris))
+                            Column(modifier = Modifier.weight(1f)) {
+                                Text(label, fontSize = 13.sp, fontWeight = FontWeight.Bold, color = if (active) Iris else MaterialTheme.colorScheme.onSurface)
+                                Text(description, fontSize = 11.sp, lineHeight = 15.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                            }
+                        }
+                    }
+                }
+                Text(memoryWebInfluenceStatus, fontSize = 11.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
             }
         }
 

@@ -39,7 +39,7 @@ VERSION = "0.63.4 (08.07.2026, 20:29 Uhr)"  # 0.63.4: Sichtbarer Bump zur Server
 VERSION = "0.65.0 (09.07.2026, 13:24 Uhr)"  # 0.65.0: Sichtbarer Bump zum agent-0.67.0-Deploy. Der Agent schreibt jetzt sehr feine Performance-Sonden in trace.jsonl: Router, Kategorien, Registry, Verlaufskomprimierung, Brain-HTTP, Multi-Query, Tool-Loop, Werkzeugaufrufe und Codex/GPT-Streaming mit Header-/First-Event-/First-Delta-/Completed-Zeiten. Alt: 0.64.5.
 VERSION = "0.66.5 (09.07.2026, 21:31 Uhr)"  # 0.66.5: Sichtbarer Bump zum agent-0.68.5: allgemeiner letzter Selbstregel-Prüfer für freie Antworten. Alt: 0.66.4.
 VERSION = "0.66.6 (09.07.2026, 22:00 Uhr)"  # 0.66.6: Sichtbarer Bump zum agent-0.68.6-Fix: Das Parallelprofil zeigt die echte Zahl gefundener Gedächtnistreffer statt der auf acht begrenzten Quellen-Chips. Alt: 0.66.5.
-VERSION = "0.66.7 (09.07.2026, 22:17 Uhr)"  # 0.66.7: Sichtbarer Bump zum agent-0.68.7 und Cortex 0.6.6: Antwort-Schnipsel und Quellen-Chips sind in den Qdrant-Limits einstellbar. Alt: 0.66.6.
+VERSION = "0.67.0 (09.07.2026, 22:52 Uhr)"  # 0.67.0: Sichtbarer Bump zum agent-0.69.0 und Cortex 0.6.7: dreistufiger Gedächtnis-Einfluss bei Websuchen. Alt: 0.66.7.
 BRAIN_URL = os.getenv("BRAIN_URL", "http://brain-api:8000").rstrip("/")
 AGENT_URL = os.getenv("AGENT_URL", "http://agent:8002").rstrip("/")
 SB_API_KEY = os.getenv("SB_API_KEY", "")
@@ -589,11 +589,19 @@ async def api_put_config(request: Request) -> dict:
     payload = {k: body.get(k) for k in (
         "haupt_model", "speicher_model", "abfrage_model", "model",
         "haupt_reasoning", "speicher_reasoning", "abfrage_reasoning",
-        "router_model", "router_reasoning", "tavily_enabled", "limits",
+        "router_model", "router_reasoning", "tavily_enabled", "memory_web_influence", "limits",
         "size_prompt_auto", "size_prompt_s", "size_prompt_m", "size_prompt_xl",
         "context_prompt_save", "context_prompt_search", "user_context_prompts"
     ) if k in body and body.get(k) is not None}
-    return await asyncio.to_thread(_aput, "/config", payload)
+    try:
+        return await asyncio.to_thread(_aput, "/config", payload)
+    except httpx.HTTPStatusError as e:
+        detail = "Konfiguration konnte nicht gespeichert werden."
+        try:
+            detail = e.response.json().get("detail", detail)
+        except Exception:  # noqa: BLE001
+            pass
+        raise HTTPException(status_code=e.response.status_code, detail=detail)
 
 
 @app.post("/api/websearch/toggle-test")

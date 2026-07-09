@@ -204,6 +204,7 @@ data class AgentConfigResponse(
     val limits: RuntimeLimits = RuntimeLimits(),
     val codex: CodexState? = null,
     val tavily_enabled: Boolean = true,
+    val memory_web_influence: String = "normal",
     val model: String? = null,
     val default: String? = null,
     val available: List<String> = emptyList(),
@@ -236,6 +237,7 @@ data class AgentConfigRequest(
     val context_prompt_search: String? = null,
     val user_context_prompts: List<AgentUserContextPrompt>? = null,
     val tavily_enabled: Boolean? = null,
+    val memory_web_influence: String? = null,
     val limits: RuntimeLimits? = null
 )
 
@@ -245,6 +247,7 @@ data class AgentConfigUpdateResponse(
     val models: Map<String, String> = emptyMap(),
     val reasoning: Map<String, String> = emptyMap(),
     val tavily_enabled: Boolean = true,
+    val memory_web_influence: String = "normal",
     val limits: RuntimeLimits = RuntimeLimits()
 )
 

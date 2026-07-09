@@ -39,7 +39,7 @@ from contextlib import asynccontextmanager, contextmanager
 from datetime import datetime
 from logging.handlers import RotatingFileHandler
 from pathlib import Path
-from typing import Any
+from typing import Any, Callable, Literal
 from zoneinfo import ZoneInfo
 
 import httpx
@@ -65,7 +65,7 @@ VERSION = "0.67.0 (09.07.2026, 13:24 Uhr)"  # 0.67.0: FEINE Performance-Sonden i
 VERSION = "0.68.1 (09.07.2026, 19:43 Uhr)"  # 0.68.1: Profil-Prompt wirkt jetzt auch zur Laufzeit im schnellen Auto-Parallelpfad, nicht nur im Dashboard-Editor/Review. 0.68.0: NEU Agenten-Profile. Profil "Klassisch" behaelt Router+Tool-Agent. Profil "Sofort Web + Gedaechtnis" ueberspringt bei normalen Auto-Fragen den Router, startet Gedaechtnissuche und Websuche sofort parallel und laesst den Hauptagenten danach aus beiden Ergebnissen antworten. Speicher-, Regel- und offene Bestaetigungspfade bleiben geschuetzt im klassischen Spezialpfad. Alt: 0.67.2.
 VERSION = "0.68.5 (09.07.2026, 21:31 Uhr)"  # 0.68.5: Allgemeiner letzter Selbstregel-Pruefer ueberarbeitet freie Agentenantworten vor Ausgabe dynamisch nach ALLEN aktiven Regeln; keine TTS-Sonderlogik. Prompt-Injektion und Pflicht-Erinnerung bleiben als erste zwei Schutzschichten. 0.68.4: nativer Web-Helfer repariert.
 VERSION = "0.68.6 (09.07.2026, 22:00 Uhr)"  # 0.68.6: FIX Parallelprofil meldete immer hoechstens 8 Treffer, obwohl die konfigurierte Rohsuche 30 fand. recall_hits berichtet jetzt die echte Suchtrefferzahl; 8 Quellen-Chips und 12 Antwort-Schnipsel bleiben als getrennte Kontext-/UI-Grenzen unveraendert. Alt: 0.68.5.
-VERSION = "0.68.7 (09.07.2026, 22:17 Uhr)"  # 0.68.7: Antwort-Schnipsel und Quellen-Chips des Parallelprofils sind als persistente Laufzeitlimits konfigurierbar. Defaults bleiben 12/8. Alt: 0.68.6.
+VERSION = "0.69.0 (09.07.2026, 22:52 Uhr)"  # 0.69.0: Neue persistente Gedächtnisgewichtung Leicht/Normal/Stark steuert in allen kombinierten Web+Gedächtnis-Pfaden, wie sichtbar persönliche Notizen in die Antwort einfließen. Alt: 0.68.7.
 
 # ---------------------------------------------------------------------------
 # Konfiguration (alles aus Umgebungsvariablen — Secrets nie im Code)
@@ -170,6 +170,7 @@ TAVILY_API_KEY = os.getenv("TAVILY_API_KEY", "")
 TAVILY_URL = os.getenv("TAVILY_URL", "https://api.tavily.com/search")
 TAVILY_MAX_RESULTS = int(os.getenv("AGENT_TAVILY_MAX_RESULTS", "5"))
 TAVILY_ENABLED = True
+MEMORY_WEB_INFLUENCE = "normal"
 LOG_PATH = os.getenv("AGENT_LOG_PATH", "/app/logs/agent.jsonl")
 LOG_LEVEL = os.getenv("AGENT_LOG_LEVEL", "INFO").upper()
 
@@ -180,6 +181,7 @@ ROLES = ("haupt", "speicher", "abfrage")
 PROMPT_FILES = {r: Path(AGENT_DATA_DIR) / f"{r}-prompt.txt" for r in ROLES}
 LEGACY_PROMPT_FILE = Path(AGENT_DATA_DIR) / "prompt.txt"  # alter GEMEINSAMER Prompt -> wird zum Haupt-Prompt migriert
 CONFIG_FILE = Path(AGENT_DATA_DIR) / "config.json"     # {"model": "..."}
+CONFIG_LOCK = threading.RLock()
 CODEX_AUTH_FILE = Path(AGENT_DATA_DIR) / "codex-auth.json"  # ChatGPT/Codex OAuth-Tokens, NIE ins Repo
 CATEGORIES_FILE = Path(AGENT_DATA_DIR) / "categories.json"  # manuell angelegte Kategorien (auch LEERE, ohne Eintrag)
 ACTIVE_PROFILE_CLASSIC = "klassisch"
@@ -2779,45 +2781,34 @@ def load_models() -> dict:
     """Aktive Modelle je Rolle (haupt/speicher/abfrage) aus config.json. Migration vom alten
     Einzel-Feld {"model": ..} (dann fuer alle drei). Fallback = Env-Default."""
     out = {"haupt": AGENT_MODEL_DEFAULT, "speicher": AGENT_MODEL_DEFAULT, "abfrage": AGENT_MODEL_DEFAULT}
-    try:
-        if CONFIG_FILE.exists():
-            cfg = json.loads(CONFIG_FILE.read_text(encoding="utf-8"))
-            legacy = (cfg.get("model") or "").strip()   # alte Einzel-Modell-Konfiguration
-            for r in out:
-                m = (cfg.get(r + "_model") or "").strip() or legacy
-                if m:
-                    out[r] = m
-    except Exception as e:  # noqa: BLE001
-        _log(logging.WARNING, "config.json nicht lesbar — nutze Env-Default", err=str(e))
+    cfg = _read_config_file()
+    legacy = (cfg.get("model") or "").strip()   # alte Einzel-Modell-Konfiguration
+    for r in out:
+        m = (cfg.get(r + "_model") or "").strip() or legacy
+        if m:
+            out[r] = m
     return out
 
 
 def load_reasoning() -> dict:
     """Reasoning-Effort je Rolle aus config.json laden; defensiver Default bleibt medium."""
     out = {r: "medium" for r in ("haupt", "speicher", "abfrage")}
-    try:
-        if CONFIG_FILE.exists():
-            cfg = json.loads(CONFIG_FILE.read_text(encoding="utf-8"))
-            stored = cfg.get("reasoning") if isinstance(cfg.get("reasoning"), dict) else {}
-            for r in out:
-                v = (stored.get(r) or cfg.get(r + "_reasoning") or "").strip().lower()
-                if v in VALID_REASONING_EFFORTS:
-                    out[r] = v
-    except Exception as e:  # noqa: BLE001
-        _log(logging.WARNING, "Reasoning-Konfiguration nicht lesbar — nutze medium", err=str(e))
+    cfg = _read_config_file()
+    stored = cfg.get("reasoning") if isinstance(cfg.get("reasoning"), dict) else {}
+    for r in out:
+        v = (stored.get(r) or cfg.get(r + "_reasoning") or "").strip().lower()
+        if v in VALID_REASONING_EFFORTS:
+            out[r] = v
     return out
 
 
 def load_router_config() -> "tuple[str, str]":
     """(router_model, router_reasoning) aus config.json — leer = 'wie Hauptagent' (Default)."""
-    try:
-        if CONFIG_FILE.exists():
-            cfg = json.loads(CONFIG_FILE.read_text(encoding="utf-8"))
-            rm = (cfg.get("router_model") or "").strip()
-            rr = (cfg.get("router_reasoning") or "").strip().lower()
-            return rm, (rr if rr in VALID_REASONING_EFFORTS else "")
-    except Exception as e:  # noqa: BLE001
-        _log(logging.WARNING, "Router-Konfiguration nicht lesbar — nutze 'wie Hauptagent'", err=str(e))
+    cfg = _read_config_file()
+    rm = (cfg.get("router_model") or "").strip()
+    rr = (cfg.get("router_reasoning") or "").strip().lower()
+    if rm or rr:
+        return rm, (rr if rr in VALID_REASONING_EFFORTS else "")
     return "", ""
 
 
@@ -2977,31 +2968,85 @@ def build_ui_context_prompt(context_mode: str | None, response_size: str | None,
 
 def load_tavily_enabled() -> bool:
     """Tavily-Schalter aus config.json laden; Default bleibt an fuer bestehendes Verhalten."""
-    try:
-        if CONFIG_FILE.exists():
-            cfg = json.loads(CONFIG_FILE.read_text(encoding="utf-8"))
-            return bool(cfg.get("tavily_enabled", True))
-    except Exception as e:  # noqa: BLE001
-        _log(logging.WARNING, "Tavily-Konfiguration nicht lesbar — nutze an", err=str(e))
-    return True
+    return bool(_read_config_file().get("tavily_enabled", True))
+
+
+VALID_MEMORY_WEB_INFLUENCES = {"light", "normal", "strong"}
+
+
+def _norm_memory_web_influence(value: Any) -> str:
+    normalized = str(value or "").strip().lower()
+    return normalized if normalized in VALID_MEMORY_WEB_INFLUENCES else "normal"
+
+
+def load_memory_web_influence() -> str:
+    """Gewichtung persönlicher Notizen in kombinierten Web+Gedächtnis-Antworten."""
+    return _norm_memory_web_influence(_read_config_file().get("memory_web_influence"))
+
+
+def save_memory_web_influence(value: str) -> str:
+    normalized = str(value).strip().lower()
+    if normalized not in VALID_MEMORY_WEB_INFLUENCES:
+        raise ValueError(f"Ungültiger Gedächtniseinfluss: {value}")
+    _update_config_file(lambda data: data.update(memory_web_influence=normalized))
+    return normalized
+
+
+def memory_web_influence_prompt() -> str:
+    shared = (
+        "DIESE STUFE GILT NUR, WENN du im aktuellen Turn sowohl passende Gedächtnisdaten als auch Webdaten "
+        "tatsächlich für die Antwort verwendest. Bei reinen Gedächtnis-, reinen Web- oder Smalltalk-Antworten "
+        "ignorierst du diese Stufe vollständig. Nutze ausschließlich relevante persönliche Einträge. "
+        "Erfinde keinen persönlichen Bezug, ignoriere "
+        "unpassende Treffer und ersetze aktuelle verlässliche Webfakten nie durch alte Notizen. Erzeuge keine "
+        "künstliche Länge, sondern nur hilfreiche persönliche Einordnung."
+    )
+    modes = {
+        "light": (
+            "LEICHT: Webfakten führen. Webe passende persönliche Notizen sparsam und natürlich an einzelnen "
+            "Stellen ein, sodass Franks Bezug erkennbar bleibt, aber die Antwort nicht von den Notizen dominiert wird."
+        ),
+        "normal": (
+            "NORMAL: Verbinde passende persönliche Notizen sichtbar mit den aktuellen Webfakten. Beziehe sie in "
+            "mehreren passenden Antwortteilen ein und erläutere ihren Nutzen etwas ausführlicher als nur beiläufig."
+        ),
+        "strong": (
+            "STARK: Behandle passende persönliche Einträge als zentrale persönliche Linse der Antwort. Verknüpfe "
+            "mehrere relevante Notizen aktiv mit den Webfakten und erkläre Konsequenzen, Widersprüche und konkrete "
+            "Bedeutung für Frank ausführlich. Die Antwort darf dafür merklich länger sein."
+        ),
+    }
+    mode = _norm_memory_web_influence(MEMORY_WEB_INFLUENCE)
+    return f"GEDÄCHTNIS-EINFLUSS BEI WEBSUCHE ({mode.upper()}):\n{modes[mode]}\n{shared}"
 
 
 def _read_config_file() -> dict:
-    try:
-        if CONFIG_FILE.exists():
-            data = json.loads(CONFIG_FILE.read_text(encoding="utf-8"))
-            if isinstance(data, dict):
-                return data
-    except Exception as e:  # noqa: BLE001
-        _log(logging.WARNING, "config.json nicht lesbar — nutze Defaults", err=str(e))
-    return {}
+    with CONFIG_LOCK:
+        try:
+            if CONFIG_FILE.exists():
+                data = json.loads(CONFIG_FILE.read_text(encoding="utf-8"))
+                if isinstance(data, dict):
+                    return data
+        except Exception as e:  # noqa: BLE001
+            _log(logging.WARNING, "config.json nicht lesbar — nutze Defaults", err=str(e))
+        return {}
 
 
 def _write_config_file(data: dict) -> None:
-    Path(AGENT_DATA_DIR).mkdir(parents=True, exist_ok=True)
-    tmp = CONFIG_FILE.with_suffix(".tmp")
-    tmp.write_text(json.dumps(data, ensure_ascii=False, indent=2), encoding="utf-8", newline="\n")
-    os.replace(tmp, CONFIG_FILE)
+    with CONFIG_LOCK:
+        Path(AGENT_DATA_DIR).mkdir(parents=True, exist_ok=True)
+        tmp = CONFIG_FILE.with_suffix(".tmp")
+        tmp.write_text(json.dumps(data, ensure_ascii=False, indent=2), encoding="utf-8", newline="\n")
+        os.replace(tmp, CONFIG_FILE)
+
+
+def _update_config_file(mutator: Callable[[dict], None]) -> dict:
+    """Read-Modify-Write unter einem Lock, damit parallele UIs keine Einstellungen verlieren."""
+    with CONFIG_LOCK:
+        data = _read_config_file()
+        mutator(data)
+        _write_config_file(data)
+        return data
 
 
 def _clean_profile(p: dict) -> dict | None:
@@ -3035,23 +3080,23 @@ def load_agent_profiles() -> dict:
 
 
 def save_agent_profiles(profiles: list[dict], active: str | None = None) -> dict:
-    by_id: dict[str, dict] = {}
-    for p in profiles:
-        cp = _clean_profile(p)
-        if cp:
-            by_id[cp["id"]] = cp
-    cur = load_agent_profiles()
-    for p in cur["profiles"]:
-        if p["id"] not in by_id:
-            by_id[p["id"]] = p
-    active_id = (active or cur["active"] or ACTIVE_PROFILE_CLASSIC).strip()
-    if active_id not in by_id:
-        active_id = ACTIVE_PROFILE_CLASSIC
-    data = _read_config_file()
-    data["agent_profiles"] = list(by_id.values())
-    data["active_agent_profile"] = active_id
-    _write_config_file(data)
-    return {"active": active_id, "profiles": list(by_id.values())}
+    with CONFIG_LOCK:
+        by_id: dict[str, dict] = {}
+        for p in profiles:
+            cp = _clean_profile(p)
+            if cp:
+                by_id[cp["id"]] = cp
+        cur = load_agent_profiles()
+        for p in cur["profiles"]:
+            if p["id"] not in by_id:
+                by_id[p["id"]] = p
+        active_id = (active or cur["active"] or ACTIVE_PROFILE_CLASSIC).strip()
+        if active_id not in by_id:
+            active_id = ACTIVE_PROFILE_CLASSIC
+        _update_config_file(lambda data: data.update(
+            agent_profiles=list(by_id.values()), active_agent_profile=active_id
+        ))
+        return {"active": active_id, "profiles": list(by_id.values())}
 
 
 def set_active_agent_profile(profile_id: str) -> dict:
@@ -3079,20 +3124,22 @@ def save_models(models: dict, reasoning: dict | None = None, tavily_enabled: boo
                 router_model: str | None = None, router_reasoning: str | None = None) -> None:
     """Atomar je-Rolle-Modelle, Reasoning, Router-Einstellung und optionale Tool-Schalter speichern.
     router_model/router_reasoning: None = aktuellen Wert behalten; '' = 'wie Hauptagent'."""
-    Path(AGENT_DATA_DIR).mkdir(parents=True, exist_ok=True)
-    current_tavily = load_tavily_enabled()
-    current_router_model, current_router_reasoning = load_router_config()
-    data = _read_config_file()
-    data.update({f"{r}_model": (models.get(r) or AGENT_MODEL_DEFAULT) for r in ("haupt", "speicher", "abfrage")})
-    if reasoning is not None:
-        data["reasoning"] = {
-            r: ((reasoning.get(r) or "medium") if (reasoning.get(r) or "medium") in VALID_REASONING_EFFORTS else "medium")
-            for r in ("haupt", "speicher", "abfrage")
-        }
-    data["tavily_enabled"] = current_tavily if tavily_enabled is None else bool(tavily_enabled)
-    data["router_model"] = current_router_model if router_model is None else router_model
-    data["router_reasoning"] = current_router_reasoning if router_reasoning is None else router_reasoning
-    _write_config_file(data)
+    with CONFIG_LOCK:
+        current_tavily = load_tavily_enabled()
+        current_router_model, current_router_reasoning = load_router_config()
+
+        def mutate(data: dict) -> None:
+            data.update({f"{r}_model": (models.get(r) or AGENT_MODEL_DEFAULT) for r in ("haupt", "speicher", "abfrage")})
+            if reasoning is not None:
+                data["reasoning"] = {
+                    r: ((reasoning.get(r) or "medium") if (reasoning.get(r) or "medium") in VALID_REASONING_EFFORTS else "medium")
+                    for r in ("haupt", "speicher", "abfrage")
+                }
+            data["tavily_enabled"] = current_tavily if tavily_enabled is None else bool(tavily_enabled)
+            data["router_model"] = current_router_model if router_model is None else router_model
+            data["router_reasoning"] = current_router_reasoning if router_reasoning is None else router_reasoning
+
+        _update_config_file(mutate)
 
 
 def _coerce_agent_limit(key: str, value: Any) -> int:
@@ -3167,17 +3214,20 @@ def load_agent_limits() -> dict[str, int]:
 
 
 def save_agent_limits(update: dict[str, Any]) -> dict[str, int]:
-    cur = current_agent_limits()
-    for k in DEFAULT_AGENT_LIMITS:
-        if k in update:
-            cur[k] = update[k]
-    clean = apply_agent_limits(cur)
-    cfg = _read_config_file()
-    limits = cfg.get("limits") if isinstance(cfg.get("limits"), dict) else {}
-    limits["agent"] = clean
-    cfg["limits"] = limits
-    _write_config_file(cfg)
-    return clean
+    with CONFIG_LOCK:
+        cur = current_agent_limits()
+        for k in DEFAULT_AGENT_LIMITS:
+            if k in update:
+                cur[k] = update[k]
+        clean = apply_agent_limits(cur)
+
+        def mutate(cfg: dict) -> None:
+            limits = cfg.get("limits") if isinstance(cfg.get("limits"), dict) else {}
+            limits["agent"] = clean
+            cfg["limits"] = limits
+
+        _update_config_file(mutate)
+        return clean
 
 
 def get_brain_limits() -> dict:
@@ -3840,7 +3890,7 @@ def build_hauptagent_native_web_prompt() -> str:
 def build_hauptagent_recall_internet_prompt() -> str:
     """HAUPTAGENT kombiniert ausgewählte Gedächtnistreffer und Internet-Suchergebnisse."""
     instr = load_instructions("haupt").replace("{kategorien}", "(aus Gedächtnis- und Internet-Treffern)")
-    return _with_self_rules(instr + "\n\n" + HAUPTAGENT_RECALL_INTERNET_AUFTRAG)
+    return _with_self_rules(instr + "\n\n" + HAUPTAGENT_RECALL_INTERNET_AUFTRAG + "\n\n" + memory_web_influence_prompt())
 
 
 def hauptagent_supports_native_web() -> bool:
@@ -4246,16 +4296,17 @@ def require_auth(authorization: str = Header(default="")) -> None:
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    global ROLE_MODELS, ROLE_REASONING, TAVILY_ENABLED, ROUTER_MODEL, ROUTER_REASONING
+    global ROLE_MODELS, ROLE_REASONING, TAVILY_ENABLED, ROUTER_MODEL, ROUTER_REASONING, MEMORY_WEB_INFLUENCE
     ROLE_MODELS = load_models()   # gespeicherte Modell-Wahl JE ROLLE uebernehmen (sonst Env-Default)
     ROLE_REASONING = load_reasoning()
     TAVILY_ENABLED = load_tavily_enabled()
+    MEMORY_WEB_INFLUENCE = load_memory_web_influence()
     ROUTER_MODEL, ROUTER_REASONING = load_router_config()
     # Diagnose: nutzt EINE Rolle ein OpenCode-Modell (minimax), muss der OpenCode-Key da sein.
     if any(_is_opencode(m) for m in ROLE_MODELS.values()):
         probe(bool(OPENCODE_API_KEY), "OPENCODE_API_KEY fehlt, aber OpenCode-Modell aktiv", models=ROLE_MODELS)
     _log(logging.INFO, "sb-agent gestartet", version=VERSION, models=ROLE_MODELS, reasoning=ROLE_REASONING,
-         tavily_enabled=TAVILY_ENABLED,
+          tavily_enabled=TAVILY_ENABLED, memory_web_influence=MEMORY_WEB_INFLUENCE,
          prompts=[r for r in ROLES if not is_prompt_default(r)] or ["alle default"], data_dir=AGENT_DATA_DIR)
     # Persistierte Sessions wiederherstellen (Frank-Bug 2026-07-02): ein Deploy/Neustart verliert
     # kein laufendes Gespraech mehr — es geht in DERSELBEN Session weiter und landet am Ende als
@@ -4346,6 +4397,7 @@ class ConfigReq(BaseModel):
     context_prompt_search: str | None = Field(default=None, max_length=4000, description="Zentraler Suchen-Modus-Prompt")
     user_context_prompts: list[UserContextPromptReq] | None = Field(default=None, description="Frei eingesprochene Kontext-Prompts aus App/Dashboard, inklusive Aktivstatus")
     tavily_enabled: bool | None = Field(default=None, description="Tavily-Websearch fuer intent=internet an/aus")
+    memory_web_influence: Literal["light", "normal", "strong"] | None = Field(default=None, description="Persönlicher Gedächtniseinfluss bei Websuchen: light|normal|strong")
     limits: dict[str, Any] | None = Field(default=None, description="Laufzeitlimits: {'agent': {...}, 'brain': {...}}")
 
 
@@ -4579,7 +4631,7 @@ def build_toolagent_system() -> str:
     Die aktiven Regeln werden als verbindlicher Block an den System-Prompt jeder
     Chat-Antwort gehaengt -> jede Regel wirkt in JEDEM Gespraech. Faellt das Laden
     aus, laeuft der Chat ohne Regelblock weiter (Regeln duerfen den Chat nie brechen)."""
-    return _with_self_rules(TOOLAGENT_SYSTEM)
+    return _with_self_rules(TOOLAGENT_SYSTEM + "\n\n" + memory_web_influence_prompt())
 
 
 def _formuliere_regel(user_text: str) -> str:
@@ -4966,6 +5018,11 @@ def put_prompt(req: PromptReq) -> dict:
 
 @app.get("/config", dependencies=[Depends(require_auth)])
 def get_config() -> dict:
+    with CONFIG_LOCK:
+        return _get_config_locked()
+
+
+def _get_config_locked() -> dict:
     available = AVAILABLE_MODELS + [m for m in codex_models() if m not in AVAILABLE_MODELS]
     size_prompts, size_custom = load_size_prompts()
     context_prompts, context_custom = load_context_prompts()
@@ -4976,7 +5033,7 @@ def get_config() -> dict:
             "size_prompts": size_prompts, "size_prompts_custom": size_custom,
             "context_prompts": context_prompts, "context_prompts_custom": context_custom,
             "user_context_prompts": user_context_prompts, "user_context_prompts_custom": user_context_custom,
-            "tavily_enabled": TAVILY_ENABLED,
+            "tavily_enabled": TAVILY_ENABLED, "memory_web_influence": MEMORY_WEB_INFLUENCE,
             "limits": combined_limits(),
             "codex": {"connected": codex_connected()},
             "default": AGENT_MODEL_DEFAULT, "available": available, "model_prices": MODEL_PRICES}
@@ -4984,7 +5041,12 @@ def get_config() -> dict:
 
 @app.put("/config", dependencies=[Depends(require_auth)])
 def put_config(req: ConfigReq) -> dict:
-    global ROLE_MODELS, ROLE_REASONING, TAVILY_ENABLED, ROUTER_MODEL, ROUTER_REASONING
+    with CONFIG_LOCK:
+        return _put_config_locked(req)
+
+
+def _put_config_locked(req: ConfigReq) -> dict:
+    global ROLE_MODELS, ROLE_REASONING, TAVILY_ENABLED, ROUTER_MODEL, ROUTER_REASONING, MEMORY_WEB_INFLUENCE
     new = dict(ROLE_MODELS)
     if req.model and req.model.strip():          # Abwaertskompat: EIN Modell -> alle drei Rollen
         m = req.model.strip()
@@ -5011,6 +5073,8 @@ def put_config(req: ConfigReq) -> dict:
             ROUTER_REASONING = rr
     if req.tavily_enabled is not None:
         TAVILY_ENABLED = bool(req.tavily_enabled)
+    if req.memory_web_influence is not None:
+        MEMORY_WEB_INFLUENCE = save_memory_web_influence(req.memory_web_influence)
     limit_result = None
     if isinstance(req.limits, dict):
         agent_update = req.limits.get("agent") if isinstance(req.limits.get("agent"), dict) else None
@@ -5036,7 +5100,7 @@ def put_config(req: ConfigReq) -> dict:
     save_models(ROLE_MODELS, ROLE_REASONING, TAVILY_ENABLED, ROUTER_MODEL, ROUTER_REASONING)  # sofort aktiv, kein Neustart noetig
     _log(logging.INFO, "Agent-Konfiguration gewechselt", models=ROLE_MODELS, reasoning=ROLE_REASONING,
           router_model=ROUTER_MODEL or "(wie Hauptagent)", router_reasoning=ROUTER_REASONING or "(wie Hauptagent)",
-          tavily_enabled=TAVILY_ENABLED, limits=limit_result)
+          tavily_enabled=TAVILY_ENABLED, memory_web_influence=MEMORY_WEB_INFLUENCE, limits=limit_result)
     size_prompts, size_custom = load_size_prompts()
     context_prompts, context_custom = load_context_prompts()
     user_context_prompts, user_context_custom = load_user_context_prompts()
@@ -5045,7 +5109,8 @@ def put_config(req: ConfigReq) -> dict:
             "size_prompts": size_prompts, "size_prompts_custom": size_custom,
             "context_prompts": context_prompts, "context_prompts_custom": context_custom,
             "user_context_prompts": user_context_prompts, "user_context_prompts_custom": user_context_custom,
-            "tavily_enabled": TAVILY_ENABLED, "limits": limit_result or combined_limits()}
+            "tavily_enabled": TAVILY_ENABLED, "memory_web_influence": MEMORY_WEB_INFLUENCE,
+            "limits": limit_result or combined_limits()}
 
 
 @app.get("/profiles", dependencies=[Depends(require_auth)])
@@ -6097,6 +6162,7 @@ def _auto_parallel_answer(session: dict, user_text: str, context_prompt: str = "
         "Gedächtnis kommt und was externe Recherche ist. Speichere nichts und lege keine Regel an; diese Pfade "
         "werden separat vor dieser Antwort behandelt."
     )
+    system += "\n\n" + memory_web_influence_prompt()
     if profile_prompt.strip():
         system += "\n\nAKTIVER PROFIL-PROMPT (vom Dashboard editierbar):\n" + profile_prompt.strip()[:12000]
     system = _with_self_rules(system)
@@ -6125,7 +6191,8 @@ def _auto_parallel_answer(session: dict, user_text: str, context_prompt: str = "
     confidence = _confidence_info(hits)
     checkpoint("auto_parallel", "Profil Sofort Web + Gedaechtnis beantwortete Auto-Frage ohne Router",
                ok=bool(answer), memory_hits=len(hits), answer_snippets=len(mem_snippets),
-               source_chips=len(sources), web_ok=bool(web.get("ok")), profile=ACTIVE_PROFILE_PARALLEL)
+               source_chips=len(sources), web_ok=bool(web.get("ok")), profile=ACTIVE_PROFILE_PARALLEL,
+               memory_web_influence=MEMORY_WEB_INFLUENCE)
     return {"reply": (answer or "").strip() or "Ich konnte gerade keine Antwort formulieren.",
             "action": "recall" if hits else "internet" if web.get("ok") else "smalltalk",
             "pending": None, "recall_hits": len(hits), "sources": sources, "confidence": confidence}
