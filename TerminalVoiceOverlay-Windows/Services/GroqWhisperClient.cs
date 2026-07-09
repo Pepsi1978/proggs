@@ -17,6 +17,7 @@ namespace TerminalVoiceOverlay.Services
         private readonly string _model;
         private readonly string _language;
         private readonly string _url;
+        private static readonly bool PreferCurlTransport = OperatingSystem.IsWindows();
 
         // Statischer geteilter HttpClient. In dieser App wird der GroqWhisperClient
         // aktuell pro Process nur einmal gebaut, daher ist Socket-Exhaustion
@@ -152,6 +153,112 @@ namespace TerminalVoiceOverlay.Services
         }
 
         private async Task<string> TranscribeWithRetry(byte[] fileBytes, int attempt)
+        {
+            if (PreferCurlTransport)
+            {
+                try
+                {
+                    var json = await SendWithCurlAsync(fileBytes).ConfigureAwait(false);
+                    bool[]? voiced = BuildVoicedTimeline(fileBytes);
+                    var text = FilterTranscription(json, voiced);
+                    DiagLog.Write("Groq", "filter_done", ("jsonChars", json.Length), ("textChars", text.Length), ("transport", "curl"));
+                    if (!string.IsNullOrEmpty(text))
+                        return text;
+                    throw new Exception("Leere Antwort von Groq");
+                }
+                catch (Exception ex)
+                {
+                    // Funktionserhaltend: Wenn curl.exe fehlt oder lokal blockiert ist,
+                    // bleibt der bisherige HttpClient-Transport als Fallback erhalten.
+                    DiagLog.Warn("Groq", "curl_transport_failed_fallback_dotnet", ("err", ex.Message), ("type", ex.GetType().Name));
+                }
+            }
+
+            return await TranscribeWithHttpClientAsync(fileBytes, attempt).ConfigureAwait(false);
+        }
+
+        private async Task<string> SendWithCurlAsync(byte[] fileBytes)
+        {
+            string wavPath = Path.Combine(Path.GetTempPath(), $"tvo_groq_upload_{Guid.NewGuid():N}.wav");
+            try
+            {
+                await File.WriteAllBytesAsync(wavPath, fileBytes).ConfigureAwait(false);
+
+                using var process = new Process();
+                process.StartInfo = new ProcessStartInfo
+                {
+                    FileName = "curl.exe",
+                    Arguments = "--config -",
+                    UseShellExecute = false,
+                    RedirectStandardInput = true,
+                    RedirectStandardOutput = true,
+                    RedirectStandardError = true,
+                    CreateNoWindow = true,
+                    StandardInputEncoding = Encoding.UTF8,
+                    StandardOutputEncoding = Encoding.UTF8,
+                    StandardErrorEncoding = Encoding.UTF8,
+                };
+
+                var curlSw = Stopwatch.StartNew();
+                DiagLog.Write("Groq", "http_start", ("attempt", 0), ("bytes", fileBytes.Length), ("url", _url), ("transport", "curl"));
+                process.Start();
+                await process.StandardInput.WriteAsync(BuildCurlConfig(wavPath)).ConfigureAwait(false);
+                process.StandardInput.Close();
+                string stdout = await process.StandardOutput.ReadToEndAsync().ConfigureAwait(false);
+                string stderr = await process.StandardError.ReadToEndAsync().ConfigureAwait(false);
+                await process.WaitForExitAsync().ConfigureAwait(false);
+                DiagLog.Perf("Groq", "http_response", curlSw,
+                    ("attempt", 0),
+                    ("status", process.ExitCode == 0 ? 200 : 0),
+                    ("transport", "curl"),
+                    ("exit", process.ExitCode));
+
+                if (process.ExitCode != 0)
+                    throw new Exception($"curl.exe Groq request failed (exit {process.ExitCode}): {Truncate(stderr, 500)}");
+                if (string.IsNullOrWhiteSpace(stdout))
+                    throw new Exception("curl.exe Groq request returned an empty body");
+                return stdout;
+            }
+            finally
+            {
+                TryDelete(wavPath);
+            }
+        }
+
+        private string BuildCurlConfig(string wavPath)
+        {
+            var sb = new StringBuilder();
+            sb.Append("url = ").Append(CurlQuote(_url)).Append('\n');
+            sb.Append("request = \"POST\"\n");
+            sb.Append("header = ").Append(CurlQuote("Authorization: Bearer " + _apiKey)).Append('\n');
+            sb.Append("form = ").Append(CurlQuote("file=@" + wavPath + ";type=audio/wav")).Append('\n');
+            sb.Append("form = ").Append(CurlQuote("model=" + _model)).Append('\n');
+            sb.Append("form = ").Append(CurlQuote("language=" + _language)).Append('\n');
+            sb.Append("form = \"response_format=verbose_json\"\n");
+            sb.Append("form = \"temperature=0\"\n");
+            sb.Append("silent\n");
+            sb.Append("show-error\n");
+            sb.Append("fail-with-body\n");
+            sb.Append("max-time = 15\n");
+            return sb.ToString();
+        }
+
+        private static string CurlQuote(string value)
+        {
+            return "\"" + value.Replace("\\", "\\\\").Replace("\"", "\\\"") + "\"";
+        }
+
+        private static void TryDelete(string path)
+        {
+            try
+            {
+                if (!string.IsNullOrEmpty(path) && File.Exists(path))
+                    File.Delete(path);
+            }
+            catch { /* Temp cleanup must not break transcription. */ }
+        }
+
+        private async Task<string> TranscribeWithHttpClientAsync(byte[] fileBytes, int attempt)
         {
             using var content = new MultipartFormDataContent();
 
