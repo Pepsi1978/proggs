@@ -27,8 +27,8 @@ public sealed partial class MainViewModel : ObservableObject
         _ = RefreshOpenRouterFreeModelsAsync();
         WorkDir = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), "proggs");
 
-        var version = Assembly.GetExecutingAssembly().GetName().Version?.ToString(3) ?? "1.7.8";
-        Version = $"Version {version} (08.07.2026, 18:10 Uhr)";
+        var version = Assembly.GetExecutingAssembly().GetName().Version?.ToString(3) ?? "1.7.9";
+        Version = $"Version {version} (09.07.2026, 20:43 Uhr)";
     }
 
     public ObservableCollection<ModelGroupEntry> ModelGroups { get; } = new();
@@ -266,21 +266,22 @@ public sealed partial class MainViewModel : ObservableObject
     [RelayCommand]
     private void AddModel()
     {
-        var targetGroup = FindGroupForModel(SelectedModel) ?? ModelGroups.FirstOrDefault(g => g.Id == "openrouter") ?? ModelGroups.FirstOrDefault();
-        if (targetGroup == null) return;
-        var slug = SimplePrompt("Neues Modell hinzufügen",
-            $"Modell-ID für '{targetGroup.Title}' eingeben (ohne Provider-Präfix):", "");
-        if (string.IsNullOrWhiteSpace(slug)) return;
-        var display = SimplePrompt("Anzeigename",
-            "Anzeigename (frei lassen für Slug):", slug);
+        var defaultGroup = FindGroupForModel(SelectedModel) ?? ModelGroups.FirstOrDefault(g => g.Id == "openrouter") ?? ModelGroups.FirstOrDefault();
+        if (defaultGroup == null) return;
+        var result = ShowAddModelDialog(ModelGroups, defaultGroup);
+        if (result == null) return;
+        var (targetGroup, slug, display) = result.Value;
         if (_registry.AddModel(targetGroup, slug, display))
         {
             var entry = targetGroup.Models.Last();
             SelectedModel = entry;
+            targetGroup.IsExpanded = true;
+            targetGroup.RefreshHeaderText();
+            StatusText = $"Modell '{entry.DisplayName}' zu '{targetGroup.Title}' hinzugefügt.";
         }
         else
         {
-            StatusText = $"Modell '{slug}' existiert bereits.";
+            StatusText = $"Modell '{slug}' existiert in '{targetGroup.Title}' bereits.";
         }
     }
 
@@ -449,6 +450,22 @@ public sealed partial class MainViewModel : ObservableObject
         SelectedModel = item;
     }
 
+    public void MoveModel(ModelGroupEntry sourceGroup, int from, ModelGroupEntry targetGroup, int to)
+    {
+        if (from < 0 || from >= sourceGroup.Models.Count) return;
+        var item = sourceGroup.Models[from];
+        if (!_registry.MoveModel(sourceGroup, from, targetGroup, to))
+        {
+            StatusText = $"Modell '{item.DisplayName}' existiert in '{targetGroup.Title}' bereits.";
+            return;
+        }
+        targetGroup.IsExpanded = true;
+        SelectedModel = item;
+        StatusText = ReferenceEquals(sourceGroup, targetGroup)
+            ? $"Modell in '{targetGroup.Title}' verschoben."
+            : $"Modell nach '{targetGroup.Title}' verschoben.";
+    }
+
     public void MoveGroup(int from, int to)
     {
         if (from < 0 || from >= ModelGroups.Count || to < 0 || to >= ModelGroups.Count || from == to) return;
@@ -474,28 +491,77 @@ public sealed partial class MainViewModel : ObservableObject
     private static bool IsClaudeCodeModel(ModelEntry? model) =>
         string.Equals(model?.ProviderId, "anthropic", StringComparison.OrdinalIgnoreCase);
 
-    // Minimaler Input-Dialog ohne eigene Window-XAML (System.Windows.MessageBox kann kein Text-Eingabefeld).
-    private static string SimplePrompt(string title, string label, string defaultValue)
+    private static (ModelGroupEntry Group, string Slug, string DisplayName)? ShowAddModelDialog(IEnumerable<ModelGroupEntry> groups, ModelGroupEntry defaultGroup)
     {
+        var groupList = groups.ToList();
+        if (groupList.Count == 0) return null;
+
         var w = new Window
         {
-            Title = title,
-            Width = 460,
-            Height = 200,
+            Title = "Neues Modell hinzufügen",
+            Width = 560,
+            Height = 330,
             WindowStartupLocation = WindowStartupLocation.CenterScreen,
             ResizeMode = ResizeMode.NoResize,
             Background = new System.Windows.Media.SolidColorBrush(System.Windows.Media.Color.FromRgb(32, 32, 40)),
         };
-        var sp = new System.Windows.Controls.StackPanel { Margin = new Thickness(16) };
-        var tb = new System.Windows.Controls.TextBlock { Text = label, Foreground = System.Windows.Media.Brushes.White, Margin = new Thickness(0, 0, 0, 8) };
-        var input = new System.Windows.Controls.TextBox { Text = defaultValue, Padding = new Thickness(8) };
-        var btn = new System.Windows.Controls.Button { Content = "OK", Padding = new Thickness(20, 6, 20, 6), HorizontalAlignment = HorizontalAlignment.Right, Margin = new Thickness(0, 12, 0, 0) };
-        btn.Click += (_, _) => { w.DialogResult = true; w.Close(); };
-        sp.Children.Add(tb); sp.Children.Add(input); sp.Children.Add(btn);
+        var sp = new System.Windows.Controls.StackPanel { Margin = new Thickness(18) };
+        sp.Children.Add(new System.Windows.Controls.TextBlock
+        {
+            Text = "In welche Kategorie soll das Modell?",
+            Foreground = System.Windows.Media.Brushes.White,
+            Margin = new Thickness(0, 0, 0, 8)
+        });
+        var category = new System.Windows.Controls.ComboBox
+        {
+            ItemsSource = groupList,
+            DisplayMemberPath = nameof(ModelGroupEntry.Title),
+            SelectedItem = defaultGroup,
+            Padding = new Thickness(8),
+            Margin = new Thickness(0, 0, 0, 14)
+        };
+        sp.Children.Add(category);
+        sp.Children.Add(new System.Windows.Controls.TextBlock
+        {
+            Text = "Modell-ID",
+            Foreground = System.Windows.Media.Brushes.White,
+            Margin = new Thickness(0, 0, 0, 8)
+        });
+        var slugInput = new System.Windows.Controls.TextBox { Padding = new Thickness(8), Margin = new Thickness(0, 0, 0, 12) };
+        sp.Children.Add(slugInput);
+        sp.Children.Add(new System.Windows.Controls.TextBlock
+        {
+            Text = "Anzeigename (optional)",
+            Foreground = System.Windows.Media.Brushes.White,
+            Margin = new Thickness(0, 0, 0, 8)
+        });
+        var displayInput = new System.Windows.Controls.TextBox { Padding = new Thickness(8) };
+        sp.Children.Add(displayInput);
+
+        var buttons = new System.Windows.Controls.StackPanel
+        {
+            Orientation = System.Windows.Controls.Orientation.Horizontal,
+            HorizontalAlignment = HorizontalAlignment.Right,
+            Margin = new Thickness(0, 18, 0, 0)
+        };
+        var cancel = DialogButton("Abbrechen", false);
+        var add = DialogButton("Hinzufügen", true);
+        cancel.Click += (_, _) => { w.DialogResult = false; w.Close(); };
+        add.Click += (_, _) =>
+        {
+            if (category.SelectedItem is not ModelGroupEntry || string.IsNullOrWhiteSpace(slugInput.Text)) return;
+            w.DialogResult = true;
+            w.Close();
+        };
+        buttons.Children.Add(cancel);
+        buttons.Children.Add(add);
+        sp.Children.Add(buttons);
         w.Content = sp;
-        input.Focus();
-        input.SelectAll();
-        return w.ShowDialog() == true ? input.Text.Trim() : string.Empty;
+        slugInput.Focus();
+
+        return w.ShowDialog() == true && category.SelectedItem is ModelGroupEntry selectedGroup
+            ? (selectedGroup, slugInput.Text.Trim(), displayInput.Text.Trim())
+            : null;
     }
 
     private static bool ConfirmRemoveModel(string displayName, string slug)

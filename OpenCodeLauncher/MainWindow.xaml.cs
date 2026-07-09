@@ -443,6 +443,15 @@ public partial class MainWindow : Window
             return;
         }
 
+        if (e.Data.GetDataPresent(typeof(OpenCodeLauncher.Models.ModelEntry)) && _dragSourceGroup != null && _dragSourceIndex >= 0)
+        {
+            ViewModel.MoveModel(_dragSourceGroup, _dragSourceIndex, targetGroup, targetGroup.Models.Count);
+            _dragSourceGroup = null;
+            _dragSourceIndex = -1;
+            e.Handled = true;
+            return;
+        }
+
         e.Handled = true;
     }
 
@@ -488,17 +497,10 @@ public partial class MainWindow : Window
         var lb = sender as System.Windows.Controls.ListBox;
         var targetGroup = lb?.DataContext as OpenCodeLauncher.Models.ModelGroupEntry;
         if (lb == null || targetGroup == null) return;
-        if (!ReferenceEquals(_dragSourceGroup, targetGroup))
-        {
-            _dragSourceGroup = null;
-            _dragSourceIndex = -1;
-            e.Handled = true;
-            return;
-        }
         var pos = e.GetPosition(lb);
         var targetIdx = IndexFromPoint(lb, pos);
         if (targetIdx < 0) targetIdx = targetGroup.Models.Count;
-        ViewModel.MoveModel(_dragSourceGroup, _dragSourceIndex, targetIdx);
+        ViewModel.MoveModel(_dragSourceGroup, _dragSourceIndex, targetGroup, targetIdx);
         _dragSourceGroup = null;
         _dragSourceIndex = -1;
         e.Handled = true;

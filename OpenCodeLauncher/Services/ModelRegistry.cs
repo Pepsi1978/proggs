@@ -101,7 +101,7 @@ public sealed class ModelRegistry
 
     public bool AddModel(ModelGroupEntry group, string slug, string displayName)
     {
-        slug = slug.Trim().ToLowerInvariant();
+        slug = NormalizeSlugForGroup(slug, group.ProviderId);
         if (group.Models.Any(m => string.Equals(m.Slug, slug, StringComparison.OrdinalIgnoreCase)))
         {
             Logger.Instance.Warn("ModelRegistry", "AddModel", $"Slug existiert bereits: {slug}");
@@ -145,6 +145,37 @@ public sealed class ModelRegistry
         group.Models.Insert(Math.Clamp(to, 0, group.Models.Count), item);
         Save();
         Logger.Instance.Info("ModelRegistry", "MoveModel", $"{group.Title}:{from} -> {to}");
+    }
+
+    public bool MoveModel(ModelGroupEntry sourceGroup, int from, ModelGroupEntry targetGroup, int to)
+    {
+        if (ReferenceEquals(sourceGroup, targetGroup))
+        {
+            MoveModel(sourceGroup, from, to);
+            return true;
+        }
+        if (from < 0 || from >= sourceGroup.Models.Count) return false;
+
+        var item = sourceGroup.Models[from];
+        var targetSlug = NormalizeSlugForGroup(item.Slug, targetGroup.ProviderId);
+        if (targetGroup.Models.Any(m => string.Equals(m.Slug, targetSlug, StringComparison.OrdinalIgnoreCase)))
+        {
+            Logger.Instance.Warn("ModelRegistry", "MoveModel", $"Ziel enthält Slug bereits: {targetSlug}", new { source = sourceGroup.Title, target = targetGroup.Title });
+            return false;
+        }
+
+        sourceGroup.Models.RemoveAt(from);
+        item.Slug = targetSlug;
+        item.ProviderId = targetGroup.ProviderId;
+        item.ProviderName = targetGroup.ProviderName;
+        if (to < 0) to = targetGroup.Models.Count;
+        if (to > targetGroup.Models.Count) to = targetGroup.Models.Count;
+        targetGroup.Models.Insert(to, item);
+        Save();
+        sourceGroup.RefreshHeaderText();
+        targetGroup.RefreshHeaderText();
+        Logger.Instance.Info("ModelRegistry", "MoveModel", $"{sourceGroup.Title}:{from} -> {targetGroup.Title}:{to}");
+        return true;
     }
 
     public void MoveGroup(int from, int to)
@@ -398,6 +429,14 @@ public sealed class ModelRegistry
             model.Slug = model.Slug[$"{providerId}/".Length..];
         if (string.IsNullOrWhiteSpace(model.DisplayName)) model.DisplayName = ToDisplayName(model.Slug);
         return model;
+    }
+
+    private static string NormalizeSlugForGroup(string slug, string providerId)
+    {
+        slug = slug.Trim().ToLowerInvariant();
+        if (slug.StartsWith($"{providerId}/", StringComparison.OrdinalIgnoreCase))
+            slug = slug[$"{providerId}/".Length..];
+        return slug;
     }
 
     private static void AddUnique(List<string> values, string value)
