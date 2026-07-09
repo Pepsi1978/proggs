@@ -94,7 +94,9 @@ fun SettingsScreen(
     var modelPriceLabels by remember { mutableStateOf<Map<String, String>>(emptyMap()) }
     var agentModelsLoading by remember { mutableStateOf(false) }
     var agentModelsSaving by remember { mutableStateOf(false) }
+    var websearchTestRunning by remember { mutableStateOf(false) }
     var agentModelStatus by remember { mutableStateOf("") }
+    var websearchTestStatus by remember { mutableStateOf("Schalter-Test prüft ohne echte Websuche, ob Tavily-Aus korrekt auf GPT-Websuche fällt.") }
     var runtimeLimits by remember { mutableStateOf(RuntimeLimits()) }
     var limitDrafts by remember { mutableStateOf(limitsToDrafts(RuntimeLimits())) }
     var limitsSaving by remember { mutableStateOf(false) }
@@ -863,6 +865,54 @@ fun SettingsScreen(
                         onCheckedChange = { tavilyEnabled = it },
                         colors = SwitchDefaults.colors(checkedThumbColor = Color.White, checkedTrackColor = Orange)
                     )
+                }
+
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(10.dp)
+                ) {
+                    Text(
+                        websearchTestStatus,
+                        fontSize = 11.5.sp,
+                        lineHeight = 15.sp,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        modifier = Modifier.weight(1f)
+                    )
+                    OutlinedButton(
+                        onClick = {
+                            screenScope.launch {
+                                websearchTestRunning = true
+                                websearchTestStatus = "Websuche-Test läuft..."
+                                try {
+                                    val result = ApiClient.agentApi().websearchToggleSelftest()
+                                    val current = if (result.current?.tavily_enabled == true) "Tavily an" else "Tavily aus"
+                                    websearchTestStatus = if (result.ok) {
+                                        "Websuche-Test bestanden: ${result.passed}/${result.total} · aktuell: $current"
+                                    } else {
+                                        "Websuche-Test fehlgeschlagen: ${result.passed}/${result.total}"
+                                    }
+                                } catch (e: CancellationException) {
+                                    throw e
+                                } catch (e: Exception) {
+                                    CortexLog.error("Settings", "websearchToggleSelftest", "Websuche-Test fehlgeschlagen: ${e.message}")
+                                    websearchTestStatus = "Websuche-Test nicht erreichbar"
+                                    Toast.makeText(context, "Websuche-Test nicht erreichbar", Toast.LENGTH_SHORT).show()
+                                } finally {
+                                    websearchTestRunning = false
+                                }
+                            }
+                        },
+                        enabled = !websearchTestRunning,
+                        shape = RoundedCornerShape(12.dp),
+                        border = BorderStroke(1.dp, Orange.copy(alpha = 0.6f))
+                    ) {
+                        if (websearchTestRunning) {
+                            CircularProgressIndicator(modifier = Modifier.size(16.dp), strokeWidth = 2.dp, color = Orange)
+                        } else {
+                            Text("Websuche testen", fontSize = 12.5.sp, fontWeight = FontWeight.SemiBold, color = Orange)
+                        }
+                    }
                 }
 
                 Row(

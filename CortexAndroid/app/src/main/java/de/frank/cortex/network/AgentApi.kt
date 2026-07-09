@@ -26,6 +26,9 @@ interface AgentApi {
     @PUT("/config")
     suspend fun updateConfig(@Body request: AgentConfigRequest): AgentConfigUpdateResponse
 
+    @GET("/websearch-toggle-selftest")
+    suspend fun websearchToggleSelftest(): WebsearchToggleSelftestResponse
+
     @POST("/codex/auth/start")
     suspend fun startCodexAuth(): CodexAuthStartResponse
 

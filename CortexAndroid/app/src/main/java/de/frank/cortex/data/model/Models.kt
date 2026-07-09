@@ -249,6 +249,21 @@ data class AgentConfigUpdateResponse(
 )
 
 @JsonClass(generateAdapter = true)
+data class WebsearchToggleSelftestResponse(
+    val ok: Boolean,
+    val passed: Int,
+    val total: Int,
+    val current: WebsearchToggleCurrent? = null
+)
+
+@JsonClass(generateAdapter = true)
+data class WebsearchToggleCurrent(
+    val tavily_enabled: Boolean = true,
+    val model: String? = null,
+    val native_web_supported: Boolean = false
+)
+
+@JsonClass(generateAdapter = true)
 data class RuntimeLimits(
     val agent: AgentRuntimeLimits = AgentRuntimeLimits(),
     val brain: BrainRuntimeLimits = BrainRuntimeLimits()
