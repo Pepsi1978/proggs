@@ -147,6 +147,17 @@ def main() -> int:
             end = app_source.find("\ndef ", start + 1)
             body = app_source[start:end if end >= 0 else len(app_source)]
             check("_with_self_rules(" in body, f"{name} injiziert Selbst-Regeln")
+        provider_paths = [
+            "codex_generate",
+            "codex_generate_tools",
+            "gemini_generate_with_native_web",
+            "_llm_generate_once",
+        ]
+        for name in provider_paths:
+            start = app_source.index(f"def {name}(")
+            end = app_source.find("\ndef ", start + 1)
+            body = app_source[start:end if end >= 0 else len(app_source)]
+            check("_reinforce_self_rules(" in body, f"{name} erinnert Selbst-Regeln vor Ausgabe")
 
         # --- Trigger-Erkennung Regel vs. Speichern --------------------------
         rule_true = [

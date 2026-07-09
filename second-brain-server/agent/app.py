@@ -63,7 +63,7 @@ VERSION = "0.65.1 (08.07.2026, 17:35 Uhr)"  # 0.65.1: FIX current_agent_limits()
 VERSION = "0.65.2 (08.07.2026, 20:00 Uhr)"  # 0.65.2: FIX Gesprächs-Logbuch wird nicht mehr erst nach 30 Minuten Inaktivität ins Gehirn geschrieben. Nach jeder fertigen Agent-Antwort spiegelt der Agent denselben Gesprächseintrag sofort in die Kategorie Gespräche; der alte 30-Minuten-Flush mit .txt-Kopie bleibt als Sicherheitsnetz. Alt: 0.65.1.
 VERSION = "0.67.0 (09.07.2026, 13:24 Uhr)"  # 0.67.0: FEINE Performance-Sonden im gesamten Agenten-Hot-Path. Trace-Log misst jetzt Router, Kategorien, Registry, Verlaufs-Komprimierung, LLM-Retry-Versuche, Brain-HTTP-Aufrufe, Multi-Query-Varianten, einzelne Suchvarianten, Tool-Loop-Runden, einzelne Werkzeugaufrufe und Codex/GPT-Streams (Headers, erstes Event, erstes Text-Delta, completed) millisekundengenau. Alt: 0.66.4.
 VERSION = "0.68.1 (09.07.2026, 19:43 Uhr)"  # 0.68.1: Profil-Prompt wirkt jetzt auch zur Laufzeit im schnellen Auto-Parallelpfad, nicht nur im Dashboard-Editor/Review. 0.68.0: NEU Agenten-Profile. Profil "Klassisch" behaelt Router+Tool-Agent. Profil "Sofort Web + Gedaechtnis" ueberspringt bei normalen Auto-Fragen den Router, startet Gedaechtnissuche und Websuche sofort parallel und laesst den Hauptagenten danach aus beiden Ergebnissen antworten. Speicher-, Regel- und offene Bestaetigungspfade bleiben geschuetzt im klassischen Spezialpfad. Alt: 0.67.2.
-VERSION = "0.68.2 (09.07.2026, 21:13 Uhr)"  # 0.68.2: FIX Selbst-Regeln wirken allgemein in allen Chat-Agenten- und sichtbaren Antwortpfaden, auch im aktiven Profil "Sofort Web + Gedaechtnis". Alle aktiven Regeln werden vollstaendig und zuletzt injiziert; Vorrang vor Profil/Stil, aber nie vor Sicherheit, Wahrheit, Datenintegritaet, Pflicht-Schemas oder Bestaetigungsablaeufen. Keine TTS-Sonderlogik hardcodiert. Alt: 0.68.1.
+VERSION = "0.68.3 (09.07.2026, 21:22 Uhr)"  # 0.68.3: Selbst-Regeln werden direkt vor jedem Modellaufruf allgemein noch einmal als letzte Pflichtpruefung in Erinnerung gerufen. Das verhindert, dass eine widersprechende Nutzeranweisung die injizierte Regel verdraengt; gilt fuer beliebige Regeln, keine TTS-Sonderlogik. 0.68.2: Regeln in allen Chat-/Antwortpfaden vollstaendig injiziert. Alt: 0.68.1.
 
 # ---------------------------------------------------------------------------
 # Konfiguration (alles aus Umgebungsvariablen — Secrets nie im Code)
@@ -861,6 +861,7 @@ def _safe_delta(on_delta, chunk: str) -> None:
 def codex_generate(system: str, user: str, model: str, max_tokens: int, temperature: float,
                    reasoning_effort: str = "medium", web_tool_type: str | None = None,
                    on_delta=None) -> str:
+    user = _reinforce_self_rules(system, user)
     access = _codex_tokens(refresh_if_needed=True).get("access_token", "")
     body: dict[str, Any] = {
         "model": _codex_slug(model),
@@ -1015,6 +1016,7 @@ def codex_generate_tools(
 
     Rueckgabe: {"text", "turns", "tool_calls": [{name, ok, ms}...], "stopped": done|max_turns|max_seconds}.
     """
+    user = _reinforce_self_rules(system, user)
     access = _codex_tokens(refresh_if_needed=True).get("access_token", "")
     headers = _codex_headers(access)
     effort = _sanitize_reasoning_effort(reasoning_effort, model)
@@ -1311,6 +1313,7 @@ def gemini_generate_with_native_web(system: str, user: str, model: str, max_toke
     Freitext-Antwort mit eingebetteten Such-Quellen; KEIN json_mode (Tools + response_mime_type
     schliessen sich aus). finishReason-Diagnose wie im Text-Pfad (Gemini-Almanach B4/B5).
     Bei leerem Text: raise -> die Internet-Route faengt es (ai-agent §3.2) und meldet ehrlich."""
+    user = _reinforce_self_rules(system, user)
     if gclient is None:
         raise RuntimeError(f"Gemini nicht initialisiert: {init_error}")
     tool = genai_types.Tool(google_search=genai_types.GoogleSearch())
@@ -1453,6 +1456,7 @@ def _llm_generate_once(system: str, user: str, *, model: str, json_mode: bool, m
     llm_generate() umschliesst ihn. Bei json_mode nutzt Gemini response_mime_type=application/json;
     OpenCode/minimax erzwingt das JSON ueber das Schema im System-Prompt (Aufrufer parst per _extract_json).
     reasoning_override: gezielt fuer DIESEN Aufruf (z.B. Router-Deckel) statt der Rollen-Stufe."""
+    user = _reinforce_self_rules(system, user)
     provider = "codex" if _is_codex(model) else ("opencode" if _is_opencode(model) else "gemini")
     with _perf_span("llm_once", "Einzelner LLM-Aufruf", provider=provider, model=model, json_mode=json_mode,
                     max_tokens=max_tokens, reasoning=reasoning_override or ""):
@@ -3847,6 +3851,7 @@ def hauptagent_answer_native_web(session: dict, question: str, context_prompt: s
     if _is_gemini(model):
         return _strip_markdown_tts(gemini_generate_with_native_web(
             system, user_block, model=model, max_tokens=ANSWER_MAX_TOKENS, temperature=0.4, on_delta=on_delta))
+    user = _reinforce_self_rules(system, user)
     if _is_codex(model):
         return _strip_markdown_tts(codex_generate_with_native_web(
             system, user_block, model=model, max_tokens=ANSWER_MAX_TOKENS,
@@ -4497,6 +4502,21 @@ def _with_self_rules(system: str) -> str:
         _log(logging.WARNING, "rules_block fehlgeschlagen", err=str(e)[:200])
         block = ""
     return rules.inject_into_system_prompt(system, loaded) if block else system
+
+
+def _reinforce_self_rules(system: str, user: str) -> str:
+    """Repeat the general rule precedence at the most recent prompt position."""
+    marker = "LETZTE SELBSTREGEL-PRÜFUNG VOR DER AUSGABE"
+    if "DAUERHAFTE SELBST-REGELN VON FRANK" not in system or marker in user:
+        return user
+    return (
+        user
+        + "\n\n"
+        + marker
+        + ": Prüfe deine geplante Ausgabe jetzt gegen ALLE aktiven Selbst-Regeln im System-Prompt. "
+          "Widerspricht Franks aktuelle Nachricht einer Selbst-Regel, befolge die Selbst-Regel. "
+          "Erst danach darfst du ausgeben. Pflicht-Schemas und geschützte Abläufe bleiben unverändert."
+    )
 
 
 def build_toolagent_system() -> str:
