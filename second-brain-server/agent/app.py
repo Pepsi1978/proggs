@@ -62,7 +62,7 @@ VERSION = "0.65.1 (08.07.2026, 17:35 Uhr)"  # 0.65.1: FIX current_agent_limits()
 # Wirksamer Counter-Bump: Live-Spiegelung fertiger Gesprächsturns ins Gehirn.
 VERSION = "0.65.2 (08.07.2026, 20:00 Uhr)"  # 0.65.2: FIX Gesprächs-Logbuch wird nicht mehr erst nach 30 Minuten Inaktivität ins Gehirn geschrieben. Nach jeder fertigen Agent-Antwort spiegelt der Agent denselben Gesprächseintrag sofort in die Kategorie Gespräche; der alte 30-Minuten-Flush mit .txt-Kopie bleibt als Sicherheitsnetz. Alt: 0.65.1.
 VERSION = "0.67.0 (09.07.2026, 13:24 Uhr)"  # 0.67.0: FEINE Performance-Sonden im gesamten Agenten-Hot-Path. Trace-Log misst jetzt Router, Kategorien, Registry, Verlaufs-Komprimierung, LLM-Retry-Versuche, Brain-HTTP-Aufrufe, Multi-Query-Varianten, einzelne Suchvarianten, Tool-Loop-Runden, einzelne Werkzeugaufrufe und Codex/GPT-Streams (Headers, erstes Event, erstes Text-Delta, completed) millisekundengenau. Alt: 0.66.4.
-VERSION = "0.67.1 (09.07.2026, 13:32 Uhr)"  # 0.67.1: FIX Performance-Trace bleibt turn-genau: der nachgelagerte Gesprächs-Mirror erbt den aktiven Turn-Trace nicht mehr, damit Hintergrund-Brain-Store-Spans keine unvollständigen Start-Events in abgeschlossene Turn-Traces schreiben. Alt: 0.67.0.
+VERSION = "0.67.2 (09.07.2026, 18:47 Uhr)"  # 0.67.2: Performance-Fix Tool-Loop: unabhängige Werkzeugaufrufe einer GPT-Tool-Runde (z.B. Gedächtnissuche + Websuche) laufen parallel und werden danach in Originalreihenfolge als function_call_output zurückgegeben. Abhängige/seiteneffektstarke Tools bleiben seriell. Alt: 0.67.1.
 
 # ---------------------------------------------------------------------------
 # Konfiguration (alles aus Umgebungsvariablen — Secrets nie im Code)
@@ -1141,39 +1141,88 @@ def codex_generate_tools(
         # Assistant-Turn (die function_call-Items) VERBATIM in den Verlauf (1:1-Hygiene, §4.1)
         for it in fcs:
             input_items.append(it)
-        for it in fcs:
+
+        parallel_safe_tools = {"durchsuche_gedaechtnis", "web_suche", "lies_logbuch", "was_kann_cortex", "lies_regeln"}
+
+        def _prepare_tool_job(pos: int, it: dict) -> dict:
             name = str(it.get("name") or "")
             call_id = it.get("call_id") or it.get("id") or ""
             raw_args = it.get("arguments")
             chain_key = f"{name}:{raw_args}"
             seen_chains[chain_key] = seen_chains.get(chain_key, 0) + 1
-            ok = True
+            pre_error = ""
+            args: dict = {}
+            if seen_chains[chain_key] > 3:
+                pre_error = ("FEHLER: Dieses Werkzeug wurde mit denselben Argumenten schon mehrfach "
+                             "aufgerufen. Bitte antworte jetzt in Klartext oder waehle ein anderes Vorgehen.")
+            elif tool_handlers.get(name) is None:
+                pre_error = f"FEHLER: Unbekanntes Werkzeug '{name}'."
+            else:
+                try:
+                    args = json.loads(raw_args) if isinstance(raw_args, str) else (raw_args or {})
+                except Exception:
+                    args = {}
+            return {"pos": pos, "name": name, "call_id": call_id, "raw_args": raw_args,
+                    "args": args, "pre_error": pre_error,
+                    "parallel_safe": name in parallel_safe_tools and not pre_error}
+
+        def _run_tool_job(job: dict, parallel_group_size: int = 1) -> dict:
+            name = job["name"]
             t0 = time.monotonic()
-            with _perf_span("tool_handler", "Werkzeugausfuehrung", name=name[:80], turn=turn, args_chars=len(str(raw_args or ""))):
-                if seen_chains[chain_key] > 3:
-                    out_text = ("FEHLER: Dieses Werkzeug wurde mit denselben Argumenten schon mehrfach "
-                                "aufgerufen. Bitte antworte jetzt in Klartext oder waehle ein anderes Vorgehen.")
+            ok = True
+            out_text = ""
+            with _perf_span("tool_handler", "Werkzeugausfuehrung", name=name[:80], turn=turn,
+                            args_chars=len(str(job.get("raw_args") or "")), parallel_group_size=parallel_group_size):
+                if job.get("pre_error"):
+                    out_text = str(job["pre_error"])
                     ok = False
                 else:
                     handler = tool_handlers.get(name)
-                    if handler is None:
-                        out_text = f"FEHLER: Unbekanntes Werkzeug '{name}'."
+                    try:
+                        result = handler(job.get("args") or {})
+                        out_text = result if isinstance(result, str) else json.dumps(result, ensure_ascii=False)
+                    except Exception as e:  # Tool-Fehler als tool_result zurueck (§3.2), nie crashen
+                        out_text = f"FEHLER beim Ausfuehren von '{name}': {str(e)[:400]}"
                         ok = False
-                    else:
-                        try:
-                            args = json.loads(raw_args) if isinstance(raw_args, str) else (raw_args or {})
-                        except Exception:
-                            args = {}
-                        try:
-                            result = handler(args)
-                            out_text = result if isinstance(result, str) else json.dumps(result, ensure_ascii=False)
-                        except Exception as e:  # Tool-Fehler als tool_result zurueck (§3.2), nie crashen
-                            out_text = f"FEHLER beim Ausfuehren von '{name}': {str(e)[:400]}"
-                            ok = False
-            input_items.append({"type": "function_call_output", "call_id": call_id,
-                                "output": (out_text or "")[:LESE_TOOL_OUT_CAP]})
-            tool_calls_log.append({"name": name, "ok": ok, "ms": int((time.monotonic() - t0) * 1000),
-                                   "output_chars": len((out_text or "")[:LESE_TOOL_OUT_CAP])})
+            capped = (out_text or "")[:LESE_TOOL_OUT_CAP]
+            return {"pos": job["pos"], "name": name, "call_id": job["call_id"], "ok": ok,
+                    "output": capped, "ms": int((time.monotonic() - t0) * 1000),
+                    "output_chars": len(capped)}
+
+        def _run_tool_jobs(jobs: list[dict]) -> list[dict]:
+            results: dict[int, dict] = {}
+            i = 0
+            while i < len(jobs):
+                job = jobs[i]
+                if not job.get("parallel_safe"):
+                    results[job["pos"]] = _run_tool_job(job)
+                    i += 1
+                    continue
+                run = [job]
+                j = i + 1
+                while j < len(jobs) and jobs[j].get("parallel_safe"):
+                    run.append(jobs[j])
+                    j += 1
+                if len(run) == 1:
+                    results[job["pos"]] = _run_tool_job(job)
+                else:
+                    _perf_mark("tool_handlers_parallel", "Unabhängige Werkzeuge parallel gestartet",
+                               turn=turn, count=len(run), names=",".join(x["name"][:40] for x in run))
+                    from concurrent.futures import ThreadPoolExecutor
+                    with ThreadPoolExecutor(max_workers=len(run)) as ex:
+                        futs = [ex.submit(contextvars.copy_context().run, _run_tool_job, x, len(run)) for x in run]
+                        for fut in futs:
+                            r = fut.result()
+                            results[r["pos"]] = r
+                i = j
+            return [results[k] for k in sorted(results)]
+
+        jobs = [_prepare_tool_job(pos, it) for pos, it in enumerate(fcs)]
+        for r in _run_tool_jobs(jobs):
+            input_items.append({"type": "function_call_output", "call_id": r["call_id"],
+                                "output": r["output"]})
+            tool_calls_log.append({"name": r["name"], "ok": r["ok"], "ms": r["ms"],
+                                   "output_chars": r["output_chars"]})
 
     # Hard-Stop (max_turns/max_seconds) OHNE finalen Klartext -> eine finale Runde OHNE Werkzeuge erzwingen.
     if not final_text:
