@@ -47,6 +47,11 @@ namespace TerminalVoiceOverlay.NativeMethods
         [DllImport("user32.dll")]
         public static extern IntPtr GetParent(IntPtr hWnd);
 
+        public const uint GA_ROOT = 2;
+
+        [DllImport("user32.dll")]
+        public static extern IntPtr GetAncestor(IntPtr hWnd, uint gaFlags);
+
         [DllImport("user32.dll")]
         public static extern int GetWindowLong(IntPtr hWnd, int nIndex);
 

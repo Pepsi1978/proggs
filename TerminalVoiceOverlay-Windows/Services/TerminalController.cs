@@ -177,8 +177,13 @@ namespace TerminalVoiceOverlay.Services
 
             // Bring terminal to foreground (robust: AttachThreadInput + AllowSetForegroundWindow)
             var foregroundSw = Stopwatch.StartNew();
-            BringToForeground(terminalHwnd);
-            DiagLog.Perf("Paste", "foreground", foregroundSw, ("hwnd", $"0x{terminalHwnd.ToInt64():X}"));
+            bool foregroundOk = BringToForeground(terminalHwnd);
+            DiagLog.Perf("Paste", "foreground", foregroundSw, ("ok", foregroundOk), ("hwnd", $"0x{terminalHwnd.ToInt64():X}"));
+            if (!foregroundOk)
+            {
+                DiagLog.Warn("Paste", "foreground_failed_skip_ctrl_v", ("hwnd", $"0x{terminalHwnd.ToInt64():X}"));
+                return;
+            }
 
             // ── Sicherheitsnetz: Modifier nochmal freigeben vor Ctrl+V ──
             // Wenn der Paste durch einen Hotkey ausgeloest wurde (z.B.
@@ -327,15 +332,32 @@ namespace TerminalVoiceOverlay.Services
         /// restriction by attaching to the target window's input queue. Ported from the sister
         /// project ClaudeVoiceOverlay-Windows/Services/AppController.cs — proven in production.
         /// </summary>
-        private static void BringToForeground(IntPtr terminalHwnd)
+        private static bool BringToForeground(IntPtr terminalHwnd)
         {
-            if (terminalHwnd == IntPtr.Zero) return;
+            if (terminalHwnd == IntPtr.Zero)
+            {
+                DiagLog.Warn("Paste", "foreground_no_hwnd");
+                return false;
+            }
+
+            if (!Win32.IsWindow(terminalHwnd))
+            {
+                DiagLog.Warn("Paste", "foreground_stale_hwnd", ("hwnd", $"0x{terminalHwnd.ToInt64():X}"));
+                return false;
+            }
+
+            var activationHwnd = ResolveActivationWindow(terminalHwnd);
+            if (activationHwnd == IntPtr.Zero || !Win32.IsWindow(activationHwnd))
+            {
+                DiagLog.Warn("Paste", "foreground_invalid_root", ("hwnd", $"0x{terminalHwnd.ToInt64():X}"), ("root", $"0x{activationHwnd.ToInt64():X}"));
+                return false;
+            }
 
             var currentFg = Win32.GetForegroundWindow();
-            if (currentFg == terminalHwnd)
+            if (IsSameOrDescendant(currentFg, activationHwnd))
             {
                 Thread.Sleep(30);
-                return;
+                return true;
             }
 
             // AttachThreadInput-Trick (Fix 2026-06-21): An den AKTUELLEN VORDERGRUND-
@@ -346,21 +368,68 @@ namespace TerminalVoiceOverlay.Services
             // heraus tatsaechlich nach vorn holt. Vorher wurde faelschlich an den
             // Terminal-Thread geheftet -> aus Browser/anderen Apps scheiterte der
             // Wechsel (Foreground-Lock) -> Terminal blinkte nur, Paste verpuffte
-            // (Bug-Almanach dotnet-csharp 5.5).
+            // (Bug-Almanach dotnet-csharp 5.5). Wichtig: Windows Terminal kann
+            // ein inneres TermControl-HWND als Ziel liefern. Aktiviert werden
+            // muss aber das Root-Top-Level-HWND; SetForegroundWindow auf einem
+            // Child-HWND kann fehlschlagen und danach trifft Ctrl+V kein Feld.
             uint ourThread = Win32.GetCurrentThreadId();
             uint fgThread  = Win32.GetWindowThreadProcessId(currentFg, out _);
+            uint targetThread = Win32.GetWindowThreadProcessId(activationHwnd, out _);
 
-            bool attached = false;
-            if (ourThread != fgThread && fgThread != 0)
-                attached = Win32.AttachThreadInput(ourThread, fgThread, true);
+            bool attachedFg = false;
+            bool attachedTarget = false;
+            try
+            {
+                if (ourThread != fgThread && fgThread != 0)
+                    attachedFg = Win32.AttachThreadInput(ourThread, fgThread, true);
+                if (ourThread != targetThread && targetThread != 0 && targetThread != fgThread)
+                    attachedTarget = Win32.AttachThreadInput(ourThread, targetThread, true);
 
-            Win32.AllowSetForegroundWindow(unchecked((uint)-1));
-            Win32.SetForegroundWindow(terminalHwnd);
-            Win32.BringWindowToTop(terminalHwnd);
-            Thread.Sleep(200);
+                if (Win32.IsIconic(activationHwnd))
+                    Win32.ShowWindow(activationHwnd, Win32.SW_RESTORE);
 
-            if (attached)
-                Win32.AttachThreadInput(ourThread, fgThread, false);
+                Win32.AllowSetForegroundWindow(unchecked((uint)-1));
+                bool setOk = Win32.SetForegroundWindow(activationHwnd);
+                Win32.BringWindowToTop(activationHwnd);
+                Thread.Sleep(120);
+
+                var after = Win32.GetForegroundWindow();
+                bool ok = IsSameOrDescendant(after, activationHwnd);
+                DiagLog.Write("Paste", "foreground_verify",
+                    ("ok", ok),
+                    ("setOk", setOk),
+                    ("hwnd", $"0x{terminalHwnd.ToInt64():X}"),
+                    ("root", $"0x{activationHwnd.ToInt64():X}"),
+                    ("before", $"0x{currentFg.ToInt64():X}"),
+                    ("after", $"0x{after.ToInt64():X}"));
+                return ok;
+            }
+            finally
+            {
+                if (attachedTarget)
+                    Win32.AttachThreadInput(ourThread, targetThread, false);
+                if (attachedFg)
+                    Win32.AttachThreadInput(ourThread, fgThread, false);
+            }
+        }
+
+        private static IntPtr ResolveActivationWindow(IntPtr hwnd)
+        {
+            var root = Win32.GetAncestor(hwnd, Win32.GA_ROOT);
+            return root == IntPtr.Zero ? hwnd : root;
+        }
+
+        private static bool IsSameOrDescendant(IntPtr hwnd, IntPtr ancestor)
+        {
+            if (hwnd == IntPtr.Zero || ancestor == IntPtr.Zero) return false;
+            if (hwnd == ancestor) return true;
+            var cur = hwnd;
+            for (int i = 0; i < 12 && cur != IntPtr.Zero; i++)
+            {
+                cur = Win32.GetParent(cur);
+                if (cur == ancestor) return true;
+            }
+            return false;
         }
 
         private static void SendKeyCombo(ushort modifier, ushort key)
