@@ -11,6 +11,7 @@ Exit 0 = PASS, 1 = FAIL.
 """
 from __future__ import annotations
 
+import ast
 import importlib.util
 import os
 import sys
@@ -158,6 +159,19 @@ def main() -> int:
             end = app_source.find("\ndef ", start + 1)
             body = app_source[start:end if end >= 0 else len(app_source)]
             check("_reinforce_self_rules(" in body, f"{name} erinnert Selbst-Regeln vor Ausgabe")
+        tree = ast.parse(app_source)
+        misplaced = []
+        for node in (item for item in ast.walk(tree) if isinstance(item, ast.FunctionDef)):
+            params = {arg.arg for arg in node.args.args + node.args.kwonlyargs}
+            uses_reinforce = any(
+                isinstance(call, ast.Call)
+                and isinstance(call.func, ast.Name)
+                and call.func.id == "_reinforce_self_rules"
+                for call in ast.walk(node)
+            )
+            if uses_reinforce and node.name != "_reinforce_self_rules" and "user" not in params:
+                misplaced.append(node.name)
+        check(not misplaced, f"Selbstregel-Erinnerung nur in Funktionen mit user-Parameter: {misplaced}")
 
         # --- Trigger-Erkennung Regel vs. Speichern --------------------------
         rule_true = [

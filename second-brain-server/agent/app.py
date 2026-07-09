@@ -63,7 +63,7 @@ VERSION = "0.65.1 (08.07.2026, 17:35 Uhr)"  # 0.65.1: FIX current_agent_limits()
 VERSION = "0.65.2 (08.07.2026, 20:00 Uhr)"  # 0.65.2: FIX Gesprächs-Logbuch wird nicht mehr erst nach 30 Minuten Inaktivität ins Gehirn geschrieben. Nach jeder fertigen Agent-Antwort spiegelt der Agent denselben Gesprächseintrag sofort in die Kategorie Gespräche; der alte 30-Minuten-Flush mit .txt-Kopie bleibt als Sicherheitsnetz. Alt: 0.65.1.
 VERSION = "0.67.0 (09.07.2026, 13:24 Uhr)"  # 0.67.0: FEINE Performance-Sonden im gesamten Agenten-Hot-Path. Trace-Log misst jetzt Router, Kategorien, Registry, Verlaufs-Komprimierung, LLM-Retry-Versuche, Brain-HTTP-Aufrufe, Multi-Query-Varianten, einzelne Suchvarianten, Tool-Loop-Runden, einzelne Werkzeugaufrufe und Codex/GPT-Streams (Headers, erstes Event, erstes Text-Delta, completed) millisekundengenau. Alt: 0.66.4.
 VERSION = "0.68.1 (09.07.2026, 19:43 Uhr)"  # 0.68.1: Profil-Prompt wirkt jetzt auch zur Laufzeit im schnellen Auto-Parallelpfad, nicht nur im Dashboard-Editor/Review. 0.68.0: NEU Agenten-Profile. Profil "Klassisch" behaelt Router+Tool-Agent. Profil "Sofort Web + Gedaechtnis" ueberspringt bei normalen Auto-Fragen den Router, startet Gedaechtnissuche und Websuche sofort parallel und laesst den Hauptagenten danach aus beiden Ergebnissen antworten. Speicher-, Regel- und offene Bestaetigungspfade bleiben geschuetzt im klassischen Spezialpfad. Alt: 0.67.2.
-VERSION = "0.68.3 (09.07.2026, 21:22 Uhr)"  # 0.68.3: Selbst-Regeln werden direkt vor jedem Modellaufruf allgemein noch einmal als letzte Pflichtpruefung in Erinnerung gerufen. Das verhindert, dass eine widersprechende Nutzeranweisung die injizierte Regel verdraengt; gilt fuer beliebige Regeln, keine TTS-Sonderlogik. 0.68.2: Regeln in allen Chat-/Antwortpfaden vollstaendig injiziert. Alt: 0.68.1.
+VERSION = "0.68.4 (09.07.2026, 21:27 Uhr)"  # 0.68.4: FIX falsch platzierte Selbstregel-Erinnerung im nativen Web-Helfer (UnboundLocalError vor Codex-Websuche); die Provider wenden sie bereits zentral an. 0.68.3: allgemeine letzte Pflichtpruefung vor jedem Modellaufruf. 0.68.2: Regeln in allen Chat-/Antwortpfaden vollstaendig injiziert.
 
 # ---------------------------------------------------------------------------
 # Konfiguration (alles aus Umgebungsvariablen — Secrets nie im Code)
@@ -3851,7 +3851,6 @@ def hauptagent_answer_native_web(session: dict, question: str, context_prompt: s
     if _is_gemini(model):
         return _strip_markdown_tts(gemini_generate_with_native_web(
             system, user_block, model=model, max_tokens=ANSWER_MAX_TOKENS, temperature=0.4, on_delta=on_delta))
-    user = _reinforce_self_rules(system, user)
     if _is_codex(model):
         return _strip_markdown_tts(codex_generate_with_native_web(
             system, user_block, model=model, max_tokens=ANSWER_MAX_TOKENS,
