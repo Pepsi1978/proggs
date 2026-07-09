@@ -1228,6 +1228,20 @@ private val runtimeLimitItems = listOf(
         "Der Leseagent liest nicht sofort jeden Volltext. Er bekommt pro Treffer nur einen relevanten Ausschnitt und entscheidet daraus, welche Einträge wirklich zur Frage passen. Größer gibt ihm mehr Kontext und hilft bei langen Einträgen. Kleiner ist schneller und spart Kontext, kann aber wichtige Stellen außerhalb des Schnipsels übersehen."
     ),
     LimitItem(
+        "agent.answer_snippet_limit",
+        "Antwort-Schnipsel",
+        "Treffer",
+        "Wie viele der besten Gedächtnistreffer das Sofort-Profil an den Antwort-Agenten gibt.",
+        "Nach der Qdrant-Suche reicht das Profil „Sofort Web + Gedächtnis“ nur diese Anzahl der bestbewerteten Treffer als Text-Schnipsel an den Hauptagenten weiter. Größer gibt der Antwort eine breitere Wissensgrundlage, benötigt aber mehr Kontext und kann zusätzliches Rauschen einbringen. Kleiner antwortet fokussierter und schneller, kann aber einen weiter hinten liegenden relevanten Treffer auslassen. Die Zeichenlimits je Schnipsel und für den gesamten Antwort-Kontext gelten zusätzlich."
+    ),
+    LimitItem(
+        "agent.source_chip_limit",
+        "Anklickbare Quellen-Chips",
+        "Quellen",
+        "Wie viele gelesene Gedächtniseinträge im Web-Dashboard anklickbar angezeigt werden.",
+        "Dieses Limit steuert nur die Quellen-Chips unter Antworten im Web-Dashboard; der Android-Chat zeigt diese Chips derzeit nicht. Es verändert weder die Anzahl der Qdrant-Suchtreffer noch die Anzahl der Antwort-Schnipsel. Größer macht mehr gelesene Treffer direkt nachprüfbar, benötigt aber mehr Platz unter der Antwort. Cortex zeigt nie mehr Chips als Antwort-Schnipsel gelesen wurden oder passende Einträge vorhanden sind."
+    ),
+    LimitItem(
         "agent.answer_hit_chars",
         "Antwort je Eintrag",
         "Zeichen je Eintrag",
@@ -1350,6 +1364,8 @@ private fun limitsToDrafts(limits: RuntimeLimits): Map<String, String> = mapOf(
     "agent.entity_extract_chars" to limits.agent.entity_extract_chars.toString(),
     "agent.entity_docs_limit" to limits.agent.entity_docs_limit.toString(),
     "agent.lese_snippet_chars" to limits.agent.lese_snippet_chars.toString(),
+    "agent.answer_snippet_limit" to limits.agent.answer_snippet_limit.toString(),
+    "agent.source_chip_limit" to limits.agent.source_chip_limit.toString(),
     "agent.answer_hit_chars" to limits.agent.answer_hit_chars.toString(),
     "agent.answer_total_chars" to limits.agent.answer_total_chars.toString(),
     "agent.answer_max_tokens" to limits.agent.answer_max_tokens.toString(),
@@ -1379,6 +1395,8 @@ private fun draftsToLimits(current: RuntimeLimits, drafts: Map<String, String>):
         entity_extract_chars = limitInt(drafts, "agent.entity_extract_chars", current.agent.entity_extract_chars),
         entity_docs_limit = limitInt(drafts, "agent.entity_docs_limit", current.agent.entity_docs_limit),
         lese_snippet_chars = limitInt(drafts, "agent.lese_snippet_chars", current.agent.lese_snippet_chars),
+        answer_snippet_limit = limitInt(drafts, "agent.answer_snippet_limit", current.agent.answer_snippet_limit),
+        source_chip_limit = limitInt(drafts, "agent.source_chip_limit", current.agent.source_chip_limit),
         answer_hit_chars = limitInt(drafts, "agent.answer_hit_chars", current.agent.answer_hit_chars),
         answer_total_chars = limitInt(drafts, "agent.answer_total_chars", current.agent.answer_total_chars),
         answer_max_tokens = limitInt(drafts, "agent.answer_max_tokens", current.agent.answer_max_tokens),

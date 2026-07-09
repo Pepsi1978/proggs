@@ -65,6 +65,7 @@ VERSION = "0.67.0 (09.07.2026, 13:24 Uhr)"  # 0.67.0: FEINE Performance-Sonden i
 VERSION = "0.68.1 (09.07.2026, 19:43 Uhr)"  # 0.68.1: Profil-Prompt wirkt jetzt auch zur Laufzeit im schnellen Auto-Parallelpfad, nicht nur im Dashboard-Editor/Review. 0.68.0: NEU Agenten-Profile. Profil "Klassisch" behaelt Router+Tool-Agent. Profil "Sofort Web + Gedaechtnis" ueberspringt bei normalen Auto-Fragen den Router, startet Gedaechtnissuche und Websuche sofort parallel und laesst den Hauptagenten danach aus beiden Ergebnissen antworten. Speicher-, Regel- und offene Bestaetigungspfade bleiben geschuetzt im klassischen Spezialpfad. Alt: 0.67.2.
 VERSION = "0.68.5 (09.07.2026, 21:31 Uhr)"  # 0.68.5: Allgemeiner letzter Selbstregel-Pruefer ueberarbeitet freie Agentenantworten vor Ausgabe dynamisch nach ALLEN aktiven Regeln; keine TTS-Sonderlogik. Prompt-Injektion und Pflicht-Erinnerung bleiben als erste zwei Schutzschichten. 0.68.4: nativer Web-Helfer repariert.
 VERSION = "0.68.6 (09.07.2026, 22:00 Uhr)"  # 0.68.6: FIX Parallelprofil meldete immer hoechstens 8 Treffer, obwohl die konfigurierte Rohsuche 30 fand. recall_hits berichtet jetzt die echte Suchtrefferzahl; 8 Quellen-Chips und 12 Antwort-Schnipsel bleiben als getrennte Kontext-/UI-Grenzen unveraendert. Alt: 0.68.5.
+VERSION = "0.68.7 (09.07.2026, 22:17 Uhr)"  # 0.68.7: Antwort-Schnipsel und Quellen-Chips des Parallelprofils sind als persistente Laufzeitlimits konfigurierbar. Defaults bleiben 12/8. Alt: 0.68.6.
 
 # ---------------------------------------------------------------------------
 # Konfiguration (alles aus Umgebungsvariablen — Secrets nie im Code)
@@ -108,6 +109,8 @@ DEFAULT_AGENT_LIMITS = {
     "entity_extract_chars": _env_int("AGENT_ENTITY_EXTRACT_CHARS", 2500),
     "entity_docs_limit": _env_int("AGENT_ENTITY_DOCS_LIMIT", 0),
     "lese_snippet_chars": _env_int("AGENT_LESE_SNIPPET_CHARS", 1200),
+    "answer_snippet_limit": _env_int("AGENT_ANSWER_SNIPPET_LIMIT", 12),
+    "source_chip_limit": _env_int("AGENT_SOURCE_CHIP_LIMIT", 8),
     "answer_hit_chars": _env_int("AGENT_ANSWER_HIT_CHARS", 8000),
     "answer_total_chars": _env_int("AGENT_ANSWER_TOTAL_CHARS", 24000),
     "answer_max_tokens": _env_int("AGENT_ANSWER_MAX_TOKENS", 4096),
@@ -126,6 +129,8 @@ AGENT_LIMIT_BOUNDS = {
     "entity_extract_chars": (500, 20000),
     "entity_docs_limit": (0, 5000),
     "lese_snippet_chars": (200, 10000),
+    "answer_snippet_limit": (1, 500),
+    "source_chip_limit": (1, 500),
     "answer_hit_chars": (500, 50000),
     "answer_total_chars": (1000, 200000),
     "answer_max_tokens": (512, 65536),
@@ -149,6 +154,8 @@ ENTITY_DOCS_LIMIT = DEFAULT_AGENT_LIMITS["entity_docs_limit"]        # 0 = alle 
 ANSWER_MAX_TOKENS = DEFAULT_AGENT_LIMITS["answer_max_tokens"]  # grosszuegig: Thinking-Tokens zaehlen dagegen (Gemini-Almanach B4)
 # Ausgabe-Haertung (Frank-Wunsch 2026-06-25): grosse Eintraege duerfen Lese-/Hauptagent nicht sprengen.
 LESE_SNIPPET_CHARS = DEFAULT_AGENT_LIMITS["lese_snippet_chars"]   # Leseagent waehlt NUR Nummern -> pro Treffer reicht ein Relevanz-Schnipsel (kein Volltext)
+ANSWER_SNIPPET_LIMIT = DEFAULT_AGENT_LIMITS["answer_snippet_limit"]
+SOURCE_CHIP_LIMIT = DEFAULT_AGENT_LIMITS["source_chip_limit"]
 ANSWER_HIT_CHARS = DEFAULT_AGENT_LIMITS["answer_hit_chars"]       # Hauptagent-Antwort: max pro ausgewaehltem Treffer
 ANSWER_TOTAL_CHARS = DEFAULT_AGENT_LIMITS["answer_total_chars"]  # Hauptagent-Antwort: Gesamt-Kontextbudget (gegen Ueberlauf/Kosten)
 LESE_TOOL_OUT_CAP = 20000   # Kontext-Schutz: Ergebnis EINES Werkzeug-Aufrufs (function_call_output) im Tool-Loop, hart gekappt (ai-agent-Almanach §2.2)
@@ -3107,6 +3114,8 @@ def current_agent_limits() -> dict[str, int]:
         "entity_extract_chars": ENTITY_EXTRACT_CHARS,
         "entity_docs_limit": ENTITY_DOCS_LIMIT,
         "lese_snippet_chars": LESE_SNIPPET_CHARS,
+        "answer_snippet_limit": ANSWER_SNIPPET_LIMIT,
+        "source_chip_limit": SOURCE_CHIP_LIMIT,
         "answer_hit_chars": ANSWER_HIT_CHARS,
         "answer_total_chars": ANSWER_TOTAL_CHARS,
         "answer_max_tokens": ANSWER_MAX_TOKENS,
@@ -3120,7 +3129,8 @@ def current_agent_limits() -> dict[str, int]:
 
 def apply_agent_limits(limits: dict[str, Any]) -> dict[str, int]:
     global DEDUP_CANDIDATES, HISTORY_MAX, HISTORY_COMPRESS_AT, RECALL_LIMIT, MULTI_QUERY_VARIANTS, ENTITY_EXTRACT_CHARS
-    global ENTITY_DOCS_LIMIT, LESE_SNIPPET_CHARS, ANSWER_HIT_CHARS, ANSWER_TOTAL_CHARS
+    global ENTITY_DOCS_LIMIT, LESE_SNIPPET_CHARS, ANSWER_SNIPPET_LIMIT, SOURCE_CHIP_LIMIT
+    global ANSWER_HIT_CHARS, ANSWER_TOTAL_CHARS
     global ANSWER_MAX_TOKENS, RECALL_WORKING_CACHE_THRESHOLD, RECALL_NORMAL_MAX
     global FULL_CATEGORY_BATCH_CHARS, CONTEXT_PROMPT_MAX_CHARS, CHAT_TEXT_MAX_CHARS
     clean = {k: _coerce_agent_limit(k, limits.get(k, DEFAULT_AGENT_LIMITS[k])) for k in DEFAULT_AGENT_LIMITS}
@@ -3134,6 +3144,8 @@ def apply_agent_limits(limits: dict[str, Any]) -> dict[str, int]:
     ENTITY_EXTRACT_CHARS = clean["entity_extract_chars"]
     ENTITY_DOCS_LIMIT = clean["entity_docs_limit"]
     LESE_SNIPPET_CHARS = clean["lese_snippet_chars"]
+    ANSWER_SNIPPET_LIMIT = clean["answer_snippet_limit"]
+    SOURCE_CHIP_LIMIT = clean["source_chip_limit"]
     ANSWER_HIT_CHARS = clean["answer_hit_chars"]
     ANSWER_TOTAL_CHARS = clean["answer_total_chars"]
     ANSWER_MAX_TOKENS = clean["answer_max_tokens"]
@@ -6015,13 +6027,14 @@ def _auto_parallel_answer(session: dict, user_text: str, context_prompt: str = "
         with _perf_span("auto_parallel_memory", "Profil: Gedaechtnissuche sofort", query_len=len(user_text)):
             hits, meta = smart_recall(user_text, user_text, user_id=USER_ID)
             snippets = []
-            for h in hits[:12]:
+            for h in hits[:ANSWER_SNIPPET_LIMIT]:
                 score = h.get("dense_score") if h.get("dense_score") is not None else h.get("score")
                 snippets.append({
                     "doc_id": h.get("doc_id"),
                     "title": h.get("title") or "(ohne Titel)",
                     "category": h.get("category"),
                     "score": round(score, 3) if isinstance(score, (int, float)) else None,
+                    "matched_by": h.get("matched_by") or ["dense"],
                     "snippet": (h.get("match") or h.get("text") or "").strip()[:LESE_SNIPPET_CHARS],
                 })
             checkpoint("auto_parallel_memory", "Profil-Suche: Gedaechtnis fertig", ok=True, treffer=len(hits))
@@ -6046,6 +6059,18 @@ def _auto_parallel_answer(session: dict, user_text: str, context_prompt: str = "
             web = web_f.result()
 
     mem_snippets = mem.get("snippets") or []
+    memory_context = json.dumps(mem_snippets, ensure_ascii=False)
+    while len(memory_context) > ANSWER_TOTAL_CHARS and mem_snippets:
+        if len(mem_snippets) > 1:
+            mem_snippets.pop()
+        else:
+            overflow = len(memory_context) - ANSWER_TOTAL_CHARS
+            snippet_text = str(mem_snippets[0].get("snippet") or "")
+            if overflow >= len(snippet_text):
+                mem_snippets.clear()
+            else:
+                mem_snippets[0] = {**mem_snippets[0], "snippet": snippet_text[:-overflow]}
+        memory_context = json.dumps(mem_snippets, ensure_ascii=False)
     web_summary = ""
     if web.get("ok"):
         if web.get("anbieter") == "modellnative_websuche":
@@ -6080,7 +6105,7 @@ def _auto_parallel_answer(session: dict, user_text: str, context_prompt: str = "
         f"{_context_prompt_block(context_prompt)}"
         f"AKTUELLE NACHRICHT VON FRANK:\n{user_text}\n\n"
         f"GEDÄCHTNIS-ERGEBNISSE (Schnipsel, du darfst irrelevante ignorieren):\n"
-        f"{json.dumps(mem_snippets, ensure_ascii=False)[:ANSWER_TOTAL_CHARS]}\n\n"
+        f"{memory_context}\n\n"
         f"WEB-ERGEBNIS (du darfst es ignorieren, wenn es nicht hilft):\n{web_summary[:16000]}"
     )
     try:
@@ -6094,10 +6119,9 @@ def _auto_parallel_answer(session: dict, user_text: str, context_prompt: str = "
                 "action": "error", "pending": None}
     hits = mem.get("hits") or []
     sources = [{"doc_id": h.get("doc_id"), "title": h.get("title") or "(ohne Titel)",
-                "category": h.get("category"),
-                "score": h.get("dense_score") if h.get("dense_score") is not None else h.get("score"),
+                "category": h.get("category"), "score": h.get("score"),
                 "matched_by": h.get("matched_by") or ["dense"]}
-               for h in hits[:8] if h.get("doc_id")]
+               for h in mem_snippets[:SOURCE_CHIP_LIMIT] if h.get("doc_id")]
     confidence = _confidence_info(hits)
     checkpoint("auto_parallel", "Profil Sofort Web + Gedaechtnis beantwortete Auto-Frage ohne Router",
                ok=bool(answer), memory_hits=len(hits), answer_snippets=len(mem_snippets),

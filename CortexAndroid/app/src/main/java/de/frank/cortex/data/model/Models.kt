@@ -279,6 +279,8 @@ data class AgentRuntimeLimits(
     val entity_extract_chars: Int = 2500,
     val entity_docs_limit: Int = 0,
     val lese_snippet_chars: Int = 1200,
+    val answer_snippet_limit: Int = 12,
+    val source_chip_limit: Int = 8,
     val answer_hit_chars: Int = 8000,
     val answer_total_chars: Int = 24000,
     val answer_max_tokens: Int = 4096,

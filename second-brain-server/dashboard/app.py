@@ -39,6 +39,7 @@ VERSION = "0.63.4 (08.07.2026, 20:29 Uhr)"  # 0.63.4: Sichtbarer Bump zur Server
 VERSION = "0.65.0 (09.07.2026, 13:24 Uhr)"  # 0.65.0: Sichtbarer Bump zum agent-0.67.0-Deploy. Der Agent schreibt jetzt sehr feine Performance-Sonden in trace.jsonl: Router, Kategorien, Registry, Verlaufskomprimierung, Brain-HTTP, Multi-Query, Tool-Loop, Werkzeugaufrufe und Codex/GPT-Streaming mit Header-/First-Event-/First-Delta-/Completed-Zeiten. Alt: 0.64.5.
 VERSION = "0.66.5 (09.07.2026, 21:31 Uhr)"  # 0.66.5: Sichtbarer Bump zum agent-0.68.5: allgemeiner letzter Selbstregel-Prüfer für freie Antworten. Alt: 0.66.4.
 VERSION = "0.66.6 (09.07.2026, 22:00 Uhr)"  # 0.66.6: Sichtbarer Bump zum agent-0.68.6-Fix: Das Parallelprofil zeigt die echte Zahl gefundener Gedächtnistreffer statt der auf acht begrenzten Quellen-Chips. Alt: 0.66.5.
+VERSION = "0.66.7 (09.07.2026, 22:17 Uhr)"  # 0.66.7: Sichtbarer Bump zum agent-0.68.7 und Cortex 0.6.6: Antwort-Schnipsel und Quellen-Chips sind in den Qdrant-Limits einstellbar. Alt: 0.66.6.
 BRAIN_URL = os.getenv("BRAIN_URL", "http://brain-api:8000").rstrip("/")
 AGENT_URL = os.getenv("AGENT_URL", "http://agent:8002").rstrip("/")
 SB_API_KEY = os.getenv("SB_API_KEY", "")
