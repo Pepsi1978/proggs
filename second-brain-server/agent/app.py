@@ -63,6 +63,7 @@ VERSION = "0.65.1 (08.07.2026, 17:35 Uhr)"  # 0.65.1: FIX current_agent_limits()
 VERSION = "0.65.2 (08.07.2026, 20:00 Uhr)"  # 0.65.2: FIX Gesprächs-Logbuch wird nicht mehr erst nach 30 Minuten Inaktivität ins Gehirn geschrieben. Nach jeder fertigen Agent-Antwort spiegelt der Agent denselben Gesprächseintrag sofort in die Kategorie Gespräche; der alte 30-Minuten-Flush mit .txt-Kopie bleibt als Sicherheitsnetz. Alt: 0.65.1.
 VERSION = "0.67.0 (09.07.2026, 13:24 Uhr)"  # 0.67.0: FEINE Performance-Sonden im gesamten Agenten-Hot-Path. Trace-Log misst jetzt Router, Kategorien, Registry, Verlaufs-Komprimierung, LLM-Retry-Versuche, Brain-HTTP-Aufrufe, Multi-Query-Varianten, einzelne Suchvarianten, Tool-Loop-Runden, einzelne Werkzeugaufrufe und Codex/GPT-Streams (Headers, erstes Event, erstes Text-Delta, completed) millisekundengenau. Alt: 0.66.4.
 VERSION = "0.68.1 (09.07.2026, 19:43 Uhr)"  # 0.68.1: Profil-Prompt wirkt jetzt auch zur Laufzeit im schnellen Auto-Parallelpfad, nicht nur im Dashboard-Editor/Review. 0.68.0: NEU Agenten-Profile. Profil "Klassisch" behaelt Router+Tool-Agent. Profil "Sofort Web + Gedaechtnis" ueberspringt bei normalen Auto-Fragen den Router, startet Gedaechtnissuche und Websuche sofort parallel und laesst den Hauptagenten danach aus beiden Ergebnissen antworten. Speicher-, Regel- und offene Bestaetigungspfade bleiben geschuetzt im klassischen Spezialpfad. Alt: 0.67.2.
+VERSION = "0.68.2 (09.07.2026, 21:13 Uhr)"  # 0.68.2: FIX Selbst-Regeln wirken allgemein in allen Chat-Agenten- und sichtbaren Antwortpfaden, auch im aktiven Profil "Sofort Web + Gedaechtnis". Alle aktiven Regeln werden vollstaendig und zuletzt injiziert; Vorrang vor Profil/Stil, aber nie vor Sicherheit, Wahrheit, Datenintegritaet, Pflicht-Schemas oder Bestaetigungsablaeufen. Keine TTS-Sonderlogik hardcodiert. Alt: 0.68.1.
 
 # ---------------------------------------------------------------------------
 # Konfiguration (alles aus Umgebungsvariablen — Secrets nie im Code)
@@ -3194,7 +3195,7 @@ def build_hauptagent_prompt() -> str:
     Der Hauptagent kategorisiert NICHT (das macht der Speicheragent) — ein evtl. alter {kategorien}-Marker
     aus einem gespeicherten Persona-Text wird daher neutralisiert."""
     instr = load_instructions("haupt").replace("{kategorien}", "(wählt der Speicheragent)")
-    return instr + "\n\n" + ROUTER_SCHEMA
+    return _with_self_rules(instr + "\n\n" + ROUTER_SCHEMA)
 
 
 def build_speicher_prompt(categories: list[str]) -> str:
@@ -3202,7 +3203,7 @@ def build_speicher_prompt(categories: list[str]) -> str:
     ersetzt) + geschuetztes JSON-Schema. Das Format bleibt fest, auch wenn Frank den Text aendert."""
     cat_line = ", ".join(categories) if categories else "(noch keine)"
     instr = load_instructions("speicher").replace("{kategorien}", cat_line)
-    return instr + "\n\n" + SPEICHER_SCHEMA
+    return _with_self_rules(instr + "\n\n" + SPEICHER_SCHEMA)
 
 
 # Geschuetzter Antwort-Auftrag des HAUPTAGENTEN fuer die NACHLESEN-Formulierung (Aufgabe 2): kein
@@ -3222,7 +3223,7 @@ def build_hauptagent_answer_prompt() -> str:
     Antwort-Auftrag (Freitext NUR aus den ausgewaehlten Treffern, kein JSON). Derselbe Persona-Prompt
     wie beim Routing, aber statt des Router-Schemas der Formulierungs-Auftrag."""
     instr = load_instructions("haupt").replace("{kategorien}", "(aus den Treffern)")
-    return instr + "\n\n" + HAUPTAGENT_ANSWER_AUFTRAG
+    return _with_self_rules(instr + "\n\n" + HAUPTAGENT_ANSWER_AUFTRAG)
 
 
 def build_abfrage_prompt(categories: list[str]) -> str:
@@ -3230,7 +3231,7 @@ def build_abfrage_prompt(categories: list[str]) -> str:
     + geschuetztes Auswahl-Schema. Der Leseagent waehlt nur Treffer-Nummern aus, formuliert nichts."""
     cat_line = ", ".join(categories) if categories else "(noch keine)"
     instr = load_instructions("abfrage").replace("{kategorien}", cat_line)
-    return instr + "\n\n" + ABFRAGE_SCHEMA
+    return _with_self_rules(instr + "\n\n" + ABFRAGE_SCHEMA)
 
 
 def _fmt_history_lines(msgs: "list[dict]") -> str:
@@ -3671,7 +3672,7 @@ def build_hauptagent_smalltalk_prompt() -> str:
     """HAUPTAGENT im Gespraechs-Modus: editierbare Persona + geschuetzter Smalltalk-Auftrag. Wird nur
     gebraucht, wenn der ROUTER auf einem anderen Modell laeuft (sonst liefert der Router-Call den Reply)."""
     instr = load_instructions("haupt").replace("{kategorien}", "(nicht relevant)")
-    return instr + "\n\n" + HAUPTAGENT_SMALLTALK_AUFTRAG
+    return _with_self_rules(instr + "\n\n" + HAUPTAGENT_SMALLTALK_AUFTRAG)
 
 
 def hauptagent_answer_smalltalk(session: dict, question: str, context_prompt: str = "", on_delta=None) -> str:
@@ -3810,19 +3811,19 @@ HAUPTAGENT_RECALL_INTERNET_AUFTRAG = """JETZT BIST DU IM GEDÄCHTNIS-PLUS-INTERN
 def build_hauptagent_internet_prompt() -> str:
     """HAUPTAGENT im Internet-Antwort-Modus: editierbare Persona (Rolle 'haupt') + geschuetzter Internet-Auftrag."""
     instr = load_instructions("haupt").replace("{kategorien}", "(nicht relevant)")
-    return instr + "\n\n" + HAUPTAGENT_INTERNET_AUFTRAG
+    return _with_self_rules(instr + "\n\n" + HAUPTAGENT_INTERNET_AUFTRAG)
 
 
 def build_hauptagent_native_web_prompt() -> str:
     """HAUPTAGENT nutzt modellnative Websuche, wenn Tavily deaktiviert/fehlend ist und das Modell es kann."""
     instr = load_instructions("haupt").replace("{kategorien}", "(nicht relevant)")
-    return instr + "\n\n" + HAUPTAGENT_NATIVE_WEB_AUFTRAG
+    return _with_self_rules(instr + "\n\n" + HAUPTAGENT_NATIVE_WEB_AUFTRAG)
 
 
 def build_hauptagent_recall_internet_prompt() -> str:
     """HAUPTAGENT kombiniert ausgewählte Gedächtnistreffer und Internet-Suchergebnisse."""
     instr = load_instructions("haupt").replace("{kategorien}", "(aus Gedächtnis- und Internet-Treffern)")
-    return instr + "\n\n" + HAUPTAGENT_RECALL_INTERNET_AUFTRAG
+    return _with_self_rules(instr + "\n\n" + HAUPTAGENT_RECALL_INTERNET_AUFTRAG)
 
 
 def hauptagent_supports_native_web() -> bool:
@@ -4484,18 +4485,27 @@ Arbeitsweise (WICHTIG):
 5. Wenn du etwas aus dem Gedaechtnis nutzt, sag kurz, dass es aus Franks Notizen kommt. Findest du wirklich nichts Passendes, sag das ehrlich — erfinde nichts."""
 
 
+def _with_self_rules(system: str) -> str:
+    """Append active self-rules to every system prompt producing visible text."""
+    try:
+        loaded = rules.load_rules(rules.rules_path())
+        block = rules.rules_block(loaded)
+        active = sum(1 for item in loaded if item.get("enabled") and (item.get("text") or "").strip())
+        checkpoint("self_rules", "Aktive Selbst-Regeln in sichtbaren Antwort-Prompt injiziert",
+                   ok=True, active=active, injected=bool(block))
+    except Exception as e:  # noqa: BLE001 — Regeln duerfen den Chat nie brechen
+        _log(logging.WARNING, "rules_block fehlgeschlagen", err=str(e)[:200])
+        block = ""
+    return rules.inject_into_system_prompt(system, loaded) if block else system
+
+
 def build_toolagent_system() -> str:
     """TOOLAGENT_SYSTEM plus Franks aktive Selbst-Regeln (spec K2).
 
     Die aktiven Regeln werden als verbindlicher Block an den System-Prompt jeder
     Chat-Antwort gehaengt -> jede Regel wirkt in JEDEM Gespraech. Faellt das Laden
     aus, laeuft der Chat ohne Regelblock weiter (Regeln duerfen den Chat nie brechen)."""
-    try:
-        block = rules.rules_block(rules.load_rules(rules.rules_path()))
-    except Exception as e:  # noqa: BLE001 — Regeln duerfen den Chat nie brechen
-        _log(logging.WARNING, "rules_block fehlgeschlagen", err=str(e)[:200])
-        block = ""
-    return TOOLAGENT_SYSTEM + ("\n\n" + block if block else "")
+    return _with_self_rules(TOOLAGENT_SYSTEM)
 
 
 def _formuliere_regel(user_text: str) -> str:
@@ -4785,7 +4795,7 @@ def toolagent_test(q: str) -> dict:
     Ideal fuer den Star-Trek-Regressionsfall ('Welche Serie kam nach Star Trek Enterprise?')."""
     tools, handlers, state = build_agent_tools(response_size="m")
     try:
-        r = codex_generate_tools(TOOLAGENT_SYSTEM, q, tools=tools, tool_handlers=handlers,
+        r = codex_generate_tools(build_toolagent_system(), q, tools=tools, tool_handlers=handlers,
                                  model=ROLE_MODELS["haupt"],
                                  reasoning_effort=ROLE_REASONING.get("haupt", "medium"),
                                  max_turns=8, max_seconds=160.0)
@@ -6002,6 +6012,7 @@ def _auto_parallel_answer(session: dict, user_text: str, context_prompt: str = "
     )
     if profile_prompt.strip():
         system += "\n\nAKTIVER PROFIL-PROMPT (vom Dashboard editierbar):\n" + profile_prompt.strip()[:12000]
+    system = _with_self_rules(system)
     user = (
         f"BISHERIGES GESPRÄCH:\n{_history_text(session)}\n\n"
         f"{_context_prompt_block(context_prompt)}"

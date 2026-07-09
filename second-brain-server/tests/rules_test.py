@@ -108,9 +108,45 @@ def main() -> int:
         check("Antworte als Fliesstext." in block, "rules_block listet aktive Regel 1")
         check("Sei knapp." in block, "rules_block listet aktive Regel 2")
         check("Ignoriere mich." not in block, "rules_block laesst inaktive weg")
-        check("DAUERHAFTE REGELN" in block, "rules_block hat Header")
-        many = [{"text": "x" * 100, "enabled": True} for _ in range(200)]
-        check(len(rules.rules_block(many, max_chars=500)) <= 500, "rules_block kappt Laenge")
+        check("DAUERHAFTE SELBST-REGELN" in block, "rules_block hat Header")
+        check("Selbst-Regeln Vorrang" in block, "rules_block setzt Vorrang vor Profil und Stil")
+        arbitrary = rules.rules_block([
+            {"text": "Beginne jede Antwort mit dem Wort Komet.", "enabled": True},
+        ])
+        check("Beginne jede Antwort mit dem Wort Komet." in arbitrary,
+              "rules_block injiziert beliebige Regeltexte unveraendert")
+        long_rules = [{"text": f"Regel {i}: " + "x" * 1900, "enabled": True} for i in range(4)]
+        long_block = rules.rules_block(long_rules)
+        check(all(item["text"] in long_block for item in long_rules),
+              "rules_block injiziert alle aktiven Regeln vollstaendig")
+        injected = rules.inject_into_system_prompt("BASIS-PROMPT", [
+            {"text": "Antworte mit Komet.", "enabled": True},
+            {"text": "Unsichtbar", "enabled": False},
+        ])
+        check(injected.startswith("BASIS-PROMPT"), "Regel-Injektion behaelt Basis-Prompt")
+        check(injected.endswith("- Antworte mit Komet."), "aktive Regel steht zuletzt im System-Prompt")
+        check("Unsichtbar" not in injected, "inaktive Regel wird nicht injiziert")
+
+        # Regression 09.07.2026: Das Parallelprofil hatte seinen eigenen sichtbaren
+        # Antwort-Prompt gebaut und dabei alle aktiven Selbst-Regeln ausgelassen.
+        app_source = (_RULES_PY.parent / "app.py").read_text(encoding="utf-8")
+        visible_paths = [
+            "build_hauptagent_prompt",
+            "build_speicher_prompt",
+            "build_abfrage_prompt",
+            "build_hauptagent_answer_prompt",
+            "build_hauptagent_smalltalk_prompt",
+            "build_hauptagent_internet_prompt",
+            "build_hauptagent_native_web_prompt",
+            "build_hauptagent_recall_internet_prompt",
+            "build_toolagent_system",
+            "_auto_parallel_answer",
+        ]
+        for name in visible_paths:
+            start = app_source.index(f"def {name}(")
+            end = app_source.find("\ndef ", start + 1)
+            body = app_source[start:end if end >= 0 else len(app_source)]
+            check("_with_self_rules(" in body, f"{name} injiziert Selbst-Regeln")
 
         # --- Trigger-Erkennung Regel vs. Speichern --------------------------
         rule_true = [

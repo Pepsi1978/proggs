@@ -110,19 +110,31 @@ def delete_rule(path: str, rule_id: str) -> bool:
     return True
 
 
-def rules_block(rules: list, max_chars: int = 6000) -> str:
+def rules_block(rules: list) -> str:
     """Build the mandatory rule block for the system prompt from active rules.
 
-    Returns '' when there is no active rule (no context ballast). Capped at
-    max_chars to guard against prompt overflow / context rot.
+    Returns '' when there is no active rule (no context ballast). Active rules
+    are never truncated: a partial instruction is less safe than a long one.
     """
     active = [(r.get("text") or "").strip() for r in rules if r.get("enabled")]
     active = [t for t in active if t]
     if not active:
         return ""
-    header = "DAUERHAFTE REGELN VON FRANK (verbindlich, immer befolgen):\n"
+    header = (
+        "DAUERHAFTE SELBST-REGELN VON FRANK (verbindlich, immer befolgen):\n"
+        "Sie steuern dein Verhalten und den natuerlichsprachlichen Inhalt deiner Antworten. "
+        "Bei einem Konflikt mit Profil- oder Stilvorgaben haben diese Selbst-Regeln Vorrang. "
+        "Sicherheits-, Wahrheits-, Quellen- und Datenerhaltungsregeln, erforderliche Ausgabe-Schemas "
+        "sowie geschuetzte Bestaetigungsablaeufe stehen darueber und duerfen nie veraendert werden.\n"
+    )
     body = "\n".join(f"- {t}" for t in active)
-    return (header + body)[:max_chars]
+    return header + body
+
+
+def inject_into_system_prompt(system: str, rule_items: list) -> str:
+    """Append all active self-rules after base/profile instructions."""
+    block = rules_block(rule_items)
+    return system + ("\n\n" + block if block else "")
 
 
 # --- Trigger detection: rule vs. memory-save (spec K3a) --------------------
