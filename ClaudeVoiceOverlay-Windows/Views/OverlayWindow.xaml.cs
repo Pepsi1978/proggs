@@ -659,7 +659,7 @@ namespace ClaudeVoiceOverlay.Views
         //  Auto-Hide / Hover-to-Expand
         //  Zwei Zustaende: ausgeklappt (volles Overlay) und eingeklappt
         //  (nur der Mic-Button). Hover klappt aus; Maus-Verlassen klappt
-        //  nach 2 s (wenn etwas benutzt wurde) bzw. 5 s (nur gehovert)
+        //  unmittelbar nach Verlassen der gesamten eigenen UI
         //  wieder ein. Waehrend einer Aufnahme bleibt es immer ausgeklappt.
         //  Per Einstellung (AppSettings.AutoHide) komplett abschaltbar —
         //  dann verhaelt sich das Overlay wie frueher (immer voll sichtbar).
@@ -683,11 +683,10 @@ namespace ClaudeVoiceOverlay.Views
         // auch der Beam-Effekt blendet GENAU hier wieder ein, nicht hoeher
         // (Frank 2026-05-25: "im Viereck bleiben, nicht nach oben vergroessern").
         private const double VerticalTopOffset = 57;
-        // Frank-Wunsch 2026-06-02: nach Verlassen mit der Maus IMMER nach 1 s
-        // einklappen — egal ob vorher geklickt (Use) oder nur drueber gehovert
-        // (Peek). Gilt fuer beide Orientierungen (gemeinsamer _collapseTimer).
-        private const int    CollapseAfterUseMs  = 1000;
-        private const int    CollapseAfterPeekMs = 1000;
+        // Eigene Zusatzfenster (Promptboard, Eingabe, Dialoge) werden kurz
+        // abgefragt, damit das Overlay unmittelbar nach Verlassen der GESAMTEN
+        // eigenen UI einklappt, ohne beim Wechsel zwischen Teilfenstern zu blitzen.
+        private const int OwnUiCollapsePollMs = 50;
 
         // Horizontaler Modus: Abstand (in DIPs) zwischen dem UNTEREN Rand der
         // Leiste und dem unteren Rand der Monitor-Arbeitsflaeche (= Oberkante
@@ -748,13 +747,15 @@ namespace ClaudeVoiceOverlay.Views
                 _autoHideEnabled = true;
             }
 
-            // Einklapp-Timer. Intervall wird pro Ausloesung gesetzt (2 s/5 s).
+            // Nur noch als kurzer Cursor-Poller fuer eigene Zusatzfenster. Beim
+            // direkten Verlassen des Overlays wird ohne Wartezeit eingeklappt.
             _collapseTimer = new DispatcherTimer();
             _collapseTimer.Tick += (_, _) =>
             {
                 _collapseTimer!.Stop();
-                // Niemals waehrend Aufnahme/Verarbeitung einklappen.
-                if (_micState == RecordingState.Recording || _isProcessing || isBtwRecording)
+                // Eine laufende Aufnahme bleibt sichtbar; die Transkription darf
+                // dagegen bereits in der kompakten Mikrofonansicht weiterlaufen.
+                if (_micState == RecordingState.Recording || isBtwRecording)
                     return;
                 // Maus (noch) ueber Overlay, Promptboard ODER Eingabefeld? Dann
                 // NICHT einklappen — erneut warten und pruefen. (Diese sind
@@ -785,11 +786,11 @@ namespace ClaudeVoiceOverlay.Views
             {
                 if (!_autoHideEnabled) return;
                 _mouseOverOverlay = false;
-                ScheduleCollapse();
+                TryCollapseImmediately();
             };
 
-            // Jeder Klick irgendwo im vollen Overlay zaehlt als "benutzt" →
-            // schnelleres Einklappen (2 s). Reines Hovern zaehlt NICHT.
+            // Interaktionen weiterhin markieren, damit bestehende Zustands-
+            // und Diagnosepfade ihre Semantik behalten.
             FullView.PreviewMouseDown += (_, _) => _usedSinceExpand = true;
 
             // Hover-Animation fuer den neuen Orientierungs-Umschalter.
@@ -805,11 +806,9 @@ namespace ClaudeVoiceOverlay.Views
         }
 
         /// <summary>
-        /// Startet den Einklapp-Timer, wenn die Maus das Overlay verlassen
-        /// hat. Verzoegerung: 2 s wenn seit dem Aufklappen etwas benutzt
-        /// wurde, sonst 5 s. No-Op wenn das Feature aus ist, bereits
-        /// eingeklappt ist, gerade aufgenommen wird oder die Maus (doch)
-        /// drueber ist.
+        /// Klappt ohne kuenstliche Wartezeit ein, sobald der Cursor die gesamte
+        /// eigene UI verlassen hat. Nur beim Wechsel in ein eigenes Zusatzfenster
+        /// prueft ein kurzer Poller weiter, bis auch dieses verlassen wurde.
         /// </summary>
         // True solange die Maus ueber dem Overlay, dem Promptboard ODER dem
         // Eingabefenster ist. Promptboard + Eingabe sind EIGENE Fenster, daher
@@ -915,16 +914,21 @@ namespace ClaudeVoiceOverlay.Views
             catch { return false; }
         }
 
-        private void ScheduleCollapse()
+        private void TryCollapseImmediately()
         {
             if (!_autoHideEnabled || _isCollapsed || _collapseTimer is null) return;
-            if (_micState == RecordingState.Recording || _isProcessing || isBtwRecording) return;
+            if (_micState == RecordingState.Recording || isBtwRecording) return;
             if (_mouseOverOverlay) return;
 
-            int ms = _usedSinceExpand ? CollapseAfterUseMs : CollapseAfterPeekMs;
-            _collapseTimer.Interval = TimeSpan.FromMilliseconds(ms);
-            _collapseTimer.Stop();
-            _collapseTimer.Start();
+            if (IsCursorOverOwnUi() || IsAuxiliaryWindowOpen() || IsTransientChildVisible())
+            {
+                _collapseTimer.Interval = TimeSpan.FromMilliseconds(OwnUiCollapsePollMs);
+                _collapseTimer.Stop();
+                _collapseTimer.Start();
+                return;
+            }
+
+            CollapseImmediate();
         }
 
         /// <summary>
@@ -1051,8 +1055,7 @@ namespace ClaudeVoiceOverlay.Views
         private void CollapsedMicButton_Click(object sender, RoutedEventArgs e)
         {
             // Erst ausklappen (Expand() setzt _usedSinceExpand zurueck), DANN
-            // als "benutzt" markieren — sonst wuerde der Mic-Klick faelschlich
-            // als reines Hovern gewertet (5 s statt 2 s bis zum Einklappen).
+            // als "benutzt" markieren.
             Expand();
             _usedSinceExpand = true;
             BtnMic_Click(MicButton, new RoutedEventArgs());
@@ -1064,8 +1067,8 @@ namespace ClaudeVoiceOverlay.Views
         //  FullView (vertikal) und HorizontalView/HBar umgehaengt. Dadurch
         //  bleibt die gesamte Zustands-Logik (SetMicState, Profile, Aufnahme)
         //  unveraendert. Die vertikale XAML ist und bleibt Standard + Fallback.
-        //  v1: Auto-Hide nur im vertikalen Modus aktiv; horizontal bleibt die
-        //  Leiste sichtbar (horizontale Collapse-Geometrie folgt als Schritt).
+        //  Auto-Hide und die Mic-zentrierte Collapse-Geometrie gelten fuer
+        //  vertikalen und horizontalen Modus gleichermassen.
         // ════════════════════════════════════════════════════════════
 
         private bool _isHorizontal;
@@ -1367,7 +1370,7 @@ namespace ClaudeVoiceOverlay.Views
                 HorizontalView.Opacity    = 0; // unsichtbar bis positioniert → kein Flash an alter Stelle
                 HorizontalView.Visibility = Visibility.Visible;
                 _isHorizontal = true;
-                _isCollapsed  = false; // Auto-Hide ist im Horizontal-Modus (v1) inaktiv
+                _isCollapsed  = false;
             }
             else
             {
@@ -4450,8 +4453,8 @@ namespace ClaudeVoiceOverlay.Views
             }
 
             // Auto-Hide: waehrend einer Aufnahme immer ausgeklappt (Welle
-            // sichtbar). Nach Abschluss (Idle/Success/Error) wieder einklappen
-            // — aber nur wenn die Maus nicht ueber dem Overlay ist.
+            // sichtbar). Ab Processing sofort einklappen, sobald die Maus die
+            // gesamte eigene UI verlassen hat; die Transkription laeuft weiter.
             if (_autoHideEnabled)
             {
                 if (state == RecordingState.Recording)
@@ -4459,11 +4462,12 @@ namespace ClaudeVoiceOverlay.Views
                     if (_isCollapsed) Expand();
                 }
                 else if (!_mouseOverOverlay &&
-                         (state == RecordingState.Idle
+                         (state == RecordingState.Processing
+                          || state == RecordingState.Idle
                           || state == RecordingState.Success
                           || state == RecordingState.Error))
                 {
-                    ScheduleCollapse();
+                    TryCollapseImmediately();
                 }
             }
         }
