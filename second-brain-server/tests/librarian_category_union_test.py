@@ -21,7 +21,8 @@ APP_SOURCE = APP_PATH.read_text(encoding="utf-8")
 
 def load_functions() -> dict:
     tree = ast.parse(APP_SOURCE)
-    wanted = {"brain_add_category", "_execute_action"}
+    wanted = {"brain_add_category", "_execute_action", "_custom_entry_block",
+              "_custom_action_needs_complete_source"}
     selected: list[ast.stmt] = [node for node in tree.body
                                 if isinstance(node, ast.FunctionDef) and node.name in wanted]
     namespace: dict = {}
@@ -75,6 +76,21 @@ def main() -> int:
     )
     check("hinzugefügt" in message and "5 Kategorien" in message,
           "Bibliothekar-Aktion meldet die additive Zuordnung korrekt")
+
+    block, truncated = ns["_custom_entry_block"](
+        "doc-2", {"title": "Langer Eintrag", "category": "Cortex", "text": "x" * 30}, 10
+    )
+    check(truncated is True and "GEKUERZTER AUSZUG" in block,
+          "eigene Aufgaben markieren gekuerzte Eintragstexte sichtbar")
+    check(ns["_custom_action_needs_complete_source"](
+        {"typ": "update", "doc_id": "doc-2", "text": "unvollstaendig"}, {"doc-2"}
+    ) is True, "Update auf gekuerztem Zieltext wird blockiert")
+    check(ns["_custom_action_needs_complete_source"](
+        {"typ": "merge", "doc_ids": ["doc-1", "doc-2"], "text": "unvollstaendig"}, {"doc-2"}
+    ) is True, "Merge mit gekuerztem Zieltext wird blockiert")
+    check(ns["_custom_action_needs_complete_source"](
+        {"typ": "hinweis"}, {"doc-2"}
+    ) is False, "Hinweise bleiben trotz gekuerzter Quelle erlaubt")
 
     print("PASS: Bibliothekar ergaenzt Kategorien verlustfrei")
     return 0

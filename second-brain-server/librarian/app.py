@@ -58,7 +58,7 @@ OPENCODE_GO_URL = os.getenv("OPENCODE_GO_URL", "https://opencode.ai/zen/go/v1").
 OPENCODE_ANTHROPIC_VERSION = os.getenv("OPENCODE_ANTHROPIC_VERSION", "2023-06-01")
 USER_ID = os.getenv("SB_USER_ID", "frank")
 VERSION = "0.11.1 (08.07.2026, 15:04 Uhr)"  # Prompt-JSON im Interview-System escaped, damit der Dienst beim Import nicht crasht. Alt: 0.11.0.
-VERSION = "0.11.3 (10.07.2026, 18:45 Uhr)"  # 0.11.3: Bibliothekar-Kategorie-Vorschlaege ergaenzen die vorhandenen Kategorien verlustfrei ueber /entry/categories, statt sie ueber den alten Einzelkategorie-Endpunkt zu ersetzen. Alt: 0.11.2.
+VERSION = "0.11.4 (10.07.2026, 19:01 Uhr)"  # 0.11.4: Eigene Aufgaben markieren gekuerzte Eintragsauszuege sichtbar und blockieren Update-/Merge-Aktionen, wenn der Zieltext nur gekuerzt vorlag. Alt: 0.11.3.
 AGENT_URL = os.getenv("AGENT_URL", "http://agent:8002").rstrip("/")   # LLM-Durchgriff fuer Codex/GPT (agent 0.52.0)
 # Stille Notbremse gegen Endlosschleifen, wenn 'Ohne Begrenzung' aktiv ist (Almanach ai-agent §2.1:
 # ein Cap muss STOPPEN koennen). 5000 Calls erreicht ehrliche Nacht-Arbeit nie — nur ein Amoklauf.
@@ -760,7 +760,8 @@ Antworte NUR mit diesem JSON: {{"doc_ids":["..."]}}"""
 
 CUSTOM_RUN_SYSTEM = f"""Du bist der Nachtschicht-Bibliothekar und fuehrst eine von Frank selbst
 definierte Zusatzaufgabe aus. Du bekommst die Aufgaben-Definition und die angeforderten Eintrags-
-Volltexte. Erzeuge daraus FUNDE als Vorschlaege fuer Frank (er bestaetigt morgens per Klick).
+Texte. Lange Eintraege koennen ausdruecklich als GEKUERZTER AUSZUG markiert sein. Erzeuge daraus
+FUNDE als Vorschlaege fuer Frank (er bestaetigt morgens per Klick).
 Jeder Fund braucht: beschreibung (was gefunden wurde, leichtes Deutsch), empfehlung (was zu tun
 waere) und optional eine ausfuehrbare aktion. Erlaubte aktion-Typen:
 - {{"typ":"update","doc_id":"...","text":"neuer VOLLSTAENDIGER Volltext","titel":"optional neuer Titel"}}
@@ -768,6 +769,9 @@ waere) und optional eine ausfuehrbare aktion. Erlaubte aktion-Typen:
 - {{"typ":"kategorie","doc_id":"...","kategorie":"Haupt/Unter"}} (fuegt diese Kategorie ZUSAETZLICH hinzu; bestehende Kategorien bleiben erhalten)
 - {{"typ":"neu","titel":"...","kategorie":"...","text":"..."}}
 - {{"typ":"hinweis"}} (nur zur Kenntnis, nichts auszufuehren)
+WICHTIG: Wenn ein Eintrag als GEKUERZTER AUSZUG markiert ist, darfst du fuer diesen Ziel-Eintrag
+KEINE update- oder merge-Aktion vorschlagen, weil der neue Volltext sonst unvollstaendig waere.
+Schlage dann nur einen Hinweis vor und sage, dass der vollstaendige Text gezielt geladen werden muss.
 Maximal 6 Funde. Keine Funde -> leere Liste.
 {_UNTRUSTED}
 Antworte NUR mit diesem JSON: {{"funde":[{{"titel":"kurz","beschreibung":"...","empfehlung":"...","aktion":{{...}}}}]}}"""
@@ -925,6 +929,29 @@ def _set_night(**kw: Any) -> None:
 def _excerpt(text: str, n: int = 700) -> str:
     t = (text or "").strip()
     return t[:n] + ("…" if len(t) > n else "")
+
+
+def _custom_entry_block(doc_id: str, entry: dict, limit: int = 2500) -> "tuple[str, bool]":
+    """Prompt-Block fuer eigene Aufgaben; markiert Kuerzung, damit kein Update daraus entsteht."""
+    text = (entry.get("text") or "").strip()
+    truncated = len(text) > limit
+    marker = "GEKUERZTER AUSZUG" if truncated else "VOLLSTAENDIGER TEXT"
+    body = text[:limit]
+    if truncated:
+        body += ("\n[ENDE DES GEKUERZTEN AUSZUGS — diesen Eintrag NICHT per update/merge "
+                 "aktualisieren, ohne den vollstaendigen Text gezielt zu laden.]")
+    return (f"doc_id={doc_id} | Titel: {entry['title']} | Kategorie: {entry['category']} | {marker}\n{body}",
+            truncated)
+
+
+def _custom_action_needs_complete_source(aktion: dict, truncated_doc_ids: set[str]) -> bool:
+    """True, wenn eine eigene Aufgabe einen nur gekuerzt gelesenen Zieltext ersetzen wuerde."""
+    typ = (aktion.get("typ") or "").strip().casefold()
+    if typ not in {"update", "merge"}:
+        return False
+    doc_ids = [str(aktion.get("doc_id") or "").strip()]
+    doc_ids.extend(str(d or "").strip() for d in (aktion.get("doc_ids") or []))
+    return any(d and d in truncated_doc_ids for d in doc_ids)
 
 
 def _all_entries_with_text() -> dict[str, dict]:
@@ -1351,8 +1378,14 @@ def _task_custom(cfg: dict, st: dict, budget: NightBudget, entries: dict, report
     except Exception:  # noqa: BLE001
         _log(logging.WARNING, "Custom-Auswahl fehlgeschlagen", task=tname, exc_info=True)
         return
-    texts = "\n\n===\n\n".join(f"doc_id={d} | Titel: {entries[d]['title']} | Kategorie: {entries[d]['category']}\n{_excerpt(entries[d].get('text') or '', 2500)}"
-                               for d in picked) or "(keine Volltexte angefordert)"
+    text_blocks: list[str] = []
+    truncated_docs: set[str] = set()
+    for d in picked:
+        block, truncated = _custom_entry_block(d, entries[d], 2500)
+        text_blocks.append(block)
+        if truncated:
+            truncated_docs.add(d)
+    texts = "\n\n===\n\n".join(text_blocks) or "(keine Eintragstexte angefordert)"
     if not budget.take():
         report["fehler"].append(f"Eigene Aufgabe „{tname}“: LLM-Budget erschöpft.")
         return
@@ -1374,9 +1407,17 @@ def _task_custom(cfg: dict, st: dict, budget: NightBudget, entries: dict, report
         key = f"cust:{tid}:{uuid.uuid5(uuid.NAMESPACE_OID, besch[:120]).hex[:12]}"
         if _finding_blocked(st, key):
             continue
-        aktion = f.get("aktion") if isinstance(f.get("aktion"), dict) else {"typ": "hinweis"}
+        raw_aktion = f.get("aktion")
+        aktion: dict = raw_aktion if isinstance(raw_aktion, dict) else {"typ": "hinweis"}
+        empfehlung = (f.get("empfehlung") or "Siehe Beschreibung.").strip()
+        if _custom_action_needs_complete_source(aktion, truncated_docs):
+            aktion = {"typ": "hinweis"}
+            empfehlung = (empfehlung + " Der Bibliothekar hatte fuer den Ziel-Eintrag nur einen "
+                          "gekuerzten Auszug; die ausfuehrbare Aktualisierung wurde deshalb "
+                          "blockiert. Bitte den vollstaendigen Text gezielt laden und danach "
+                          "aktualisieren.")
         item = _new_item("custom", key, f"{tname}: {(f.get('titel') or 'Fund').strip()[:120]}",
-                         besch, (f.get("empfehlung") or "Siehe Beschreibung.").strip(),
+                         besch, empfehlung,
                          aktion, [], ja_label="Umsetzen", nein_label="Verwerfen")
         item["taskname"] = tname
         report["items"].append(item)
