@@ -28,8 +28,10 @@ for _stream in (sys.stdout, sys.stderr):
 
 TEST_USER = "eval-librarian-category-union"
 TEST_TITLE = "EVAL Bibliothekar Kategorien-Union"
+UNCATEGORIZED_TITLE = "EVAL Bibliothekar Ohne Kategorie"
 BEFORE = ["Eval/A", "Eval/B", "Eval/C", "Eval/D"]
 ADDED = "Eval/E"
+FIRST_CATEGORY = "Eval/Erste"
 
 # Muss VOR dem Import gesetzt werden: librarian/app.py liest USER_ID beim Modulstart.
 os.environ["SB_USER_ID"] = TEST_USER
@@ -90,7 +92,26 @@ def main() -> int:
         if duplicate.get("categories") != expected:
             raise AssertionError("Case-insensitives Duplikat veraenderte die Kategorie-Liste")
 
-        print("PASS: echter Bibliothekar-Pfad bewahrt 4 Kategorien und ergaenzt die 5. Kategorie.")
+        uncategorized = librarian.brain_store(
+            "Produktionsnaher Test fuer einen Eintrag ohne bisherige Kategorie.",
+            UNCATEGORIZED_TITLE,
+            "",
+        )
+        uncategorized_id = (uncategorized.get("doc_id") or "").strip()
+        if not uncategorized_id:
+            raise AssertionError("/store lieferte fuer den kategorielosen Eintrag keine doc_id")
+        wait_for_doc(uncategorized_id)
+        if librarian.brain_get_categories(uncategorized_id) != []:
+            raise AssertionError("Neuer Testeintrag war nicht kategorielos")
+
+        first = librarian.brain_add_category(uncategorized_id, FIRST_CATEGORY)
+        if first.get("categories") != [FIRST_CATEGORY]:
+            raise AssertionError(f"0 -> 1 fehlgeschlagen: {first.get('categories')!r}")
+        if not any(item.get("doc_id") == uncategorized_id
+                   for item in librarian.brain_by_category(FIRST_CATEGORY)):
+            raise AssertionError("Zuvor kategorieloser Eintrag fehlt in seiner ersten Kategorie")
+
+        print("PASS: echter Bibliothekar-Pfad bewahrt 4 -> 5 und ergaenzt 0 -> 1 Kategorie.")
         return 0
     except Exception:  # noqa: BLE001 - Test soll den kompletten Diagnose-Stack zeigen
         traceback.print_exc()
