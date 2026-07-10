@@ -18,3 +18,4 @@
 | 8 | Undo/Redo braucht Git | `/undo` + `/redo` verwalten Datei- UND Nachrichtenänderungen über Git → Projekt MUSS ein Git-Repo sein | §5 |
 | 9 | Empfohlener Workflow | mit `Tab` in Plan-Modus Feature beschreiben + iterieren, dann `Tab` zu Build „Go ahead."; Subagents `@explore`/`@scout` für Spezialarbeit | §6 |
 | 10 | Pfade & Logs ermitteln | `opencode debug paths` (undokumentiert, sehr nützlich) zeigt exakte Pfade je OS; Logs in `~/.local/share/opencode/log/`, mehr per `--log-level DEBUG` / `--print-logs` | §3, §8 |
+| 11 | OpenCode ohne Tastatur kopieren/einfügen | Windows-Terminal-`settings.json`: `"copyOnSelect": true`, `"experimental.rightClickContextMenu": false`, optional `"copyFormatting": "none"`; Linksauswahl kopiert, Rechtsklick fügt ein | §7 |

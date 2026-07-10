@@ -327,6 +327,11 @@ Subagents für spezialisierte Arbeit: `@general`, `@explore` (schnell, read-only
 8. **Windows-Keybind-Defaults:** `input_undo` enthält `ctrl+z`; `terminal_suspend` ist `none`. `offiziell`
 9. **Node.js erforderlich** für den npm-Weg (`node -v` prüfen). `extern`
 10. **Desktop-App braucht WebView2-Runtime** (blankes Fenster → WebView2 installieren). `offiziell`
+11. **OpenCode ohne Tastatur kopieren/einfügen:** Das Verhalten gehört Windows Terminal, nicht OpenCode.
+    In der globalen Windows-Terminal-`settings.json` `"copyOnSelect": true` und
+    `"experimental.rightClickContextMenu": false` setzen. Damit kopiert das Loslassen der linken
+    Maustaste sofort, und Rechtsklick fügt ein. `"copyFormatting": "none"` kopiert nur Klartext.
+    `offiziell` (Microsoft Learn: `windows/terminal/customize-settings/interaction`)
 
 ---
 
