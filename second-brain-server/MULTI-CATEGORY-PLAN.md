@@ -1,6 +1,6 @@
 # Umbau-Plan: Mehrfach-Kategorien pro Eintrag (Multi-Category)
 
-> Frank-Wunsch 2026-06-25. Status: **GEPLANT, noch nicht umgesetzt.**
+> Frank-Wunsch 2026-06-25. Status: **UMGESETZT** (brain-api ≥1.11.0 `/entry/categories`, Dashboard-Drawer-Chips; Header aktualisiert 2026-07-10 — nur Etappe 4, der optionale Multi-Kategorie-Vorschlag des Speicheragenten beim NEU-Anlegen, ist noch offen.)
 > Umsetzung erst, wenn die parallele Unterkategorien-Arbeit (agent ≥ v0.26.0, brain-api parent-Backfill,
 > dashboard Hierarchie-UI) vollständig durch und gemergt ist — beide bauen am selben `category`-Feld.
 > Bezug: `bugs/server/qdrant.md` §7/§10/§12, `best-practices/server/rag-retrieval.md` §1–§4.

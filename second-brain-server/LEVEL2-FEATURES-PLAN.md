@@ -4,7 +4,7 @@
 >
 > | Gruppe | Punkte | Status |
 > |--------|--------|--------|
-> | A — Gedächtnis-Architektur | 1-10 | 🔴 offen |
+> | A — Gedächtnis-Architektur | 1-10 | ✅ FERTIG (2026-07-10, #47796–#47802): 1 Kurzzeit/Langzeit-Ebene + Bibliothekar-Beförderung, 2+3 Kern-Blöcke (agent/coreblocks.py, Werkzeug aktualisiere_kernblock, Dashboard-Karte), 4 bi-temporal (nur manuell, Drawer), 6 Episoden-Destillation (Nacht-Task, nur Vorschläge), 7+8 Recall-Verstärkung (/entries/touch + sanfter Boost, KEIN Alters-Malus), 9 Meta-Gedächtnis (Daumen hoch/runter + Nacht-Muster→Regel-Vorschläge), 10 Provenance (source=chat, trust, Drawer-Zeile). **Punkt 5 (ADD/UPDATE/DELETE beim Speichern) auf Franks ausdrücklichen Wunsch GESTRICHEN — Speichern bleibt 1:1 ohne Bewertung/Ersetzung.** |
 > | B — Nachtschicht-Bibliothekar | 11-18 | ✅ FERTIG (librarian 0.1.0-0.8.0, 2026-07-05) |
 > | C — Proaktivität / Unterbewusstsein | 19-26 | 🔴 offen |
 > | D — Mitlernen in Programmier-Sessions | 27-33 | ✅ FERTIG (agent 0.53.0 + SessionEnd-Hook + librarian 0.8.0, 2026-07-05) — Detail: D27 /session-log, D28 Kern-Block, D29 Entscheidungs-Regel, D30 OpenCode-AGENTS.md, D31 Projektstand-Recall, D32 Episoden-Auszug+Schema-Canary, D33 Reibungs-Detektor. Hinweis zu D32: bewusst als verdichtete Episode IM Session-Eintrag umgesetzt (Prompts-Auszug), nicht als separates Voll-Transkript-Archiv |
