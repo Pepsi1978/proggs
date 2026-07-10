@@ -1588,6 +1588,13 @@ button{font-family:inherit;cursor:pointer}
     <div class="drawer-title" id="drawerTitle">—</div>
     <div class="drawer-date" id="drawerDate"></div>
     <div class="drawer-date" id="drawerProv" title="Herkunft (Provenance): Quelle, Gedächtnis-Ebene und abgeleitetes Vertrauens-Level dieses Eintrags"></div>
+    <div class="drawer-date" id="drawerValidity" style="display:none;align-items:center;gap:6px;flex-wrap:wrap" title="Bi-temporale Gültigkeit: Historisches bleibt erhalten und auffindbar — es wird nur als 'galt bis' gekennzeichnet, nie gelöscht">
+      <span>Gültig</span>
+      <label>ab <input type="date" id="drawerValidFrom" style="font:inherit"></label>
+      <label>bis <input type="date" id="drawerValidUntil" style="font:inherit"></label>
+      <button id="drawerValiditySave" class="btn btn-sm" type="button">Übernehmen</button>
+      <span id="drawerValidityState"></span>
+    </div>
     <div class="drawer-actions" id="drawerViewActions">
       <button class="btn drawer-del-btn" id="drawerDeleteBtn" title="Eintrag löschen" aria-label="Eintrag löschen">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M3 6h18M8 6V4a1 1 0 0 1 1-1h6a1 1 0 0 1 1 1v2m2 0v14a1 1 0 0 1-1 1H7a1 1 0 0 1-1-1V6"/><path d="M10 11v6M14 11v6"/></svg>
@@ -2165,6 +2172,7 @@ button{font-family:inherit;cursor:pointer}
     document.getElementById("drawerTitle").textContent = it.title||"Ohne Titel";
     document.getElementById("drawerDate").textContent = fmtStamp(entryStamp(it));
     renderDrawerProv(it);
+    renderDrawerValidity(it);
     const box = document.getElementById("drawerText");
     box.textContent = it.text || it.match || "lädt…";
     document.getElementById("drawerStatus").textContent = "";
@@ -2186,7 +2194,10 @@ button{font-family:inherit;cursor:pointer}
           if(full.source) curEntry.source = full.source;
           if(full.layer) curEntry.layer = full.layer;
           if(full.trust) curEntry.trust = full.trust;
+          curEntry.valid_from = full.valid_from || null;
+          curEntry.valid_until = full.valid_until || null;
           renderDrawerProv(curEntry);
+          renderDrawerValidity(curEntry);
           document.getElementById("drawerDate").textContent = fmtStamp(entryStamp(curEntry));
         }
       }catch(e){
@@ -2280,7 +2291,35 @@ button{font-family:inherit;cursor:pointer}
     if(it.source) parts.push("Quelle: "+(PROV_SOURCES[String(it.source).toLowerCase()]||it.source));
     if(it.layer) parts.push("Ebene: "+(it.layer==="kurzzeit"?"Kurzzeitgedächtnis":"Langzeitgedächtnis"));
     if(it.trust) parts.push("Vertrauen: "+(it.trust==="hoch"?"hoch (direkt von dir)":"mittel (automatisch erzeugt)"));
+    if(it.valid_until) parts.push("galt bis "+it.valid_until);
+    else if(it.valid_from) parts.push("gültig ab "+it.valid_from);
     el.textContent=parts.join(" · ");
+  }
+
+  /* — Bi-temporale Gültigkeit im Drawer (Level-2 #4, NUR manuell) — */
+  function renderDrawerValidity(it){
+    const box=document.getElementById("drawerValidity"); if(!box) return;
+    const editable=!!(it && it.doc_id && !it.logbook);
+    box.style.display=editable?"flex":"none";
+    if(!editable) return;
+    document.getElementById("drawerValidFrom").value=it.valid_from||"";
+    document.getElementById("drawerValidUntil").value=it.valid_until||"";
+    document.getElementById("drawerValidityState").textContent="";
+    const btn=document.getElementById("drawerValiditySave");
+    if(!btn._bound){ btn._bound=true;
+      btn.addEventListener("click", async()=>{
+        if(!curEntry || !curEntry.doc_id) return;
+        const st=document.getElementById("drawerValidityState");
+        try{
+          const vf=document.getElementById("drawerValidFrom").value||null;
+          const vu=document.getElementById("drawerValidUntil").value||null;
+          await apiSend("/api/entry/validity","PUT",{doc_id:curEntry.doc_id,valid_from:vf,valid_until:vu});
+          curEntry.valid_from=vf; curEntry.valid_until=vu;
+          renderDrawerProv(curEntry);
+          st.textContent="✓ Gespeichert — der Eintrag bleibt voll erhalten, nur die Kennzeichnung ändert sich.";
+        }catch(e){ st.textContent="Fehler: "+e.message; }
+      });
+    }
   }
   function renderDrawerCats(){
     const box = document.getElementById("drawerCatChips");

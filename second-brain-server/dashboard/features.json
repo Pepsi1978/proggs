@@ -1,7 +1,15 @@
 {
-	"stand": "10.07.2026, 21:39 Uhr",
+	"stand": "10.07.2026, 22:00 Uhr",
 	"hinweis": "PFLEGE-PFLICHT: Bei JEDEM Deploy, der ein neues System/Feature einbaut, hier einen Eintrag ERGÄNZEN (neueste zuerst). SCHREIBWEISE (Dauer-Regel): leichtes, verständliches Deutsch, kurze Sätze; ALLE Fachbegriffe, Namen und Zahlen (z.B. BM25, RRF, Qdrant, ENV-Variablen, Endpunkt-Namen) BEHALTEN, aber jeden in einem kurzen Halbsatz erklären — NIE durch Weglassen vereinfachen; kompakt halten (der Hauptagent liest über das Werkzeug 'was_kann_cortex' ALLE Einträge auf einmal ein), aber vollständig genug, dass man erkennt WAS eingebaut wurde; einfache Überschrift. Ähnliche/redundante Einträge dürfen zusammengefasst werden — Datum sekundär, entscheidend ist WAS Cortex kann. Quelle des Info-Bereichs in den Dashboard-Einstellungen (GET /api/features). Verankert in DEPLOY.md.",
 	"features": [
+		{
+			"id": "bi-temporale-fakten",
+			"eingebaut": "10.07.2026, 22:00 Uhr",
+			"dienst": "brain-api 1.31.0 + agent 0.72.0 + dashboard 0.71.0",
+			"name": "Bi-temporale Fakten: gültig-ab / gültig-bis",
+			"kurz": "Einträge können eine Gültigkeit tragen (gültig ab / gültig bis) — nur von Frank manuell gesetzt, nie automatisch. Nichts geht verloren: Historisches bleibt voll auffindbar und wird nur als 'galt bis X' gekennzeichnet.",
+			"erklaerung": "Fakten ändern sich ('Wo wohne ich?' hat 2024 eine andere Antwort als heute). Nach dem Zep-Muster (bi-temporales Gedächtnis) tragen Einträge jetzt zwei optionale Datumsfelder valid_from und valid_until (Format YYYY-MM-DD). Sie werden AUSSCHLIESSLICH manuell gesetzt — im Eintrags-Drawer des Dashboards gibt es dafür die neue Zeile 'Gültig ab/bis' mit Übernehmen-Knopf (Proxy PUT /api/entry/validity → brain-api PUT /entry/validity). Es wird NIE etwas gelöscht oder aus der Suche gefiltert: Ein abgelaufener Eintrag bleibt vollständig auffindbar; die Suche liefert die Gültigkeit als Kennzeichnung mit, und der Hauptagent kennt die Regel: Bei Fragen nach dem AKTUELLEN Stand kennzeichnet er Historisches ('galt bis …'), bei Fragen nach FRÜHER ('damals', '2024') ist genau der historische Eintrag die richtige Antwort. Alle Verwaltungswege (Kategorie-Wechsel, Bearbeiten, Papierkorb und Wiederherstellen) erhalten die Gültigkeit. So geht beim Aktualisieren eines Fakts nichts verloren — der alte Stand bekommt einfach ein 'galt bis' und der neue Stand wird als eigener Eintrag gespeichert."
+		},
 		{
 			"id": "recall-verstaerkung-sanftes-vergessen",
 			"eingebaut": "10.07.2026, 21:39 Uhr",

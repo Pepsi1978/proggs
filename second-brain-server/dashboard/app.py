@@ -53,6 +53,7 @@ VERSION = "0.68.0 (10.07.2026, 20:34 Uhr)"  # 0.68.0 (Level-2 Gruppe A, Punkte 2
 VERSION = "0.69.0 (10.07.2026, 21:17 Uhr)"  # 0.69.0 (Level-2 Gruppe A, Punkte 1+10): HERKUNFT+EBENE IM DRAWER — neue Provenance-Zeile unter dem Datum (Quelle deutsch benannt, Ebene Kurzzeit-/Langzeitgedaechtnis, Vertrauens-Level hoch=direkt von Frank / mittel=automatisch). Kommt aus brain-api 1.29.0 (by-title liefert source/layer/trust). Gehoert zu agent 0.70.1 (source=chat beim Speichern) + librarian 0.12.0 (Befoerderungs-Nachtaufgabe). features.json-Eintrag gedaechtnis-ebenen-provenance. Alt: 0.68.0.
 VERSION = "0.69.1 (10.07.2026, 21:25 Uhr)"  # 0.69.1 HALF-OPEN-KEEP-ALIVE-DEPLOY (Stack-Bugfix #47796): alle uvicorn-Dienste (brain-api/agent/dashboard/librarian) laufen jetzt mit --timeout-keep-alive 620, sb-mcp 1.4.1 mit MCP_KEEP_ALIVE_S=620 — behebt die sporadischen MCP-Timeouts (socket closed / -32001) durch server-seitig zu frueh geschlossene idle Verbindungen (Half-Open-Sockets in den CLI-Client-Pools). Kein UI-Feature, sichtbarer Bump zum Server-Deploy. Alt: 0.69.0.
 VERSION = "0.70.0 (10.07.2026, 21:39 Uhr)"  # 0.70.0 (Level-2 Gruppe A, Punkte 7+8): Sichtbarer Bump zur Recall-Verstaerkung — brain-api 1.30.0 (/entries/touch + recall_boost_promille-Limit) + agent 0.71.0 (brain_touch nach jeder Gedaechtnis-Antwort). features.json-Eintrag recall-verstaerkung-sanftes-vergessen. Alt: 0.69.1.
+VERSION = "0.71.0 (10.07.2026, 22:00 Uhr)"  # 0.71.0 (Level-2 Gruppe A, Punkt 4): Drawer-Gueltigkeitszeile (gueltig ab/bis Datumsfelder + Uebernehmen -> NEU Proxy PUT /api/entry/validity -> brain /entry/validity); Provenance-Zeile zeigt galt bis X. features.json-Eintrag bi-temporale-fakten. Alt: 0.70.0.
 BRAIN_URL = os.getenv("BRAIN_URL", "http://brain-api:8000").rstrip("/")
 AGENT_URL = os.getenv("AGENT_URL", "http://agent:8002").rstrip("/")
 SB_API_KEY = os.getenv("SB_API_KEY", "")
@@ -694,6 +695,23 @@ async def api_update_rule(rule_id: str, request: Request) -> dict:
 @app.delete("/api/rules/{rule_id}")
 def api_delete_rule(rule_id: str) -> dict:
     return _adelete(f"/rules/{rule_id}")
+
+
+# --- Bi-temporale Gueltigkeit (Proxy an brain /entry/validity) — Level-2 #4 -----
+@app.put("/api/entry/validity")
+async def api_put_entry_validity(request: Request) -> dict:
+    body = await request.json()
+    payload = {"doc_id": (body.get("doc_id") or ""),
+               "valid_from": body.get("valid_from"), "valid_until": body.get("valid_until")}
+    try:
+        return await asyncio.to_thread(_bput, "/entry/validity", payload)
+    except httpx.HTTPStatusError as e:
+        detail = "Gültigkeit konnte nicht gespeichert werden."
+        try:
+            detail = e.response.json().get("detail", detail)
+        except Exception:  # noqa: BLE001
+            pass
+        raise HTTPException(status_code=e.response.status_code, detail=detail)
 
 
 # --- Kern-Bloecke (Proxy an agent /coreblocks) — Level-2 #2/#3 ------------------

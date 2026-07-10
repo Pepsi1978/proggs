@@ -73,6 +73,7 @@ VERSION = "0.69.3 (10.07.2026, 20:13 Uhr)"  # 0.69.3: Hauptagent-Werkzeug lies_e
 VERSION = "0.70.0 (10.07.2026, 20:24 Uhr)"  # 0.70.0 (Level-2 Gruppe A, Punkte 2+3 — Frank-Freigabe 2026-07-10): KERN-BLOECKE nach Letta-Vorbild. Neues Modul agent/coreblocks.py: 5 feste, immer praesente Wissens-Bloecke (profil/ziele/projekte/aufgaben/vorlieben, je max 2000 Zeichen) auf /logbook/Kernbloecke/ (Samba, atomar, RLock) + append-only Aenderungs-Log kernbloecke-log.jsonl (jede alte Fassung bleibt erhalten — verlustfrei). _core_knowledge_section() injiziert die gefuellten Bloecke best-effort in JEDEN Chat-System-Prompt (build_toolagent_system, VOR den Selbst-Regeln; Fehler brechen den Chat nie). Neues Hauptagent-Werkzeug aktualisiere_kernblock(block, text): selbst-editierende Bloecke (Level-2 #3) — ERSETZT den ganzen Block kompakt, nur auf Basis von Franks direkten Aussagen (Injektions-Schutz gegen Memory-Poisoning), jede Aenderung protokolliert + checkpoint. REST GET /coreblocks, PUT /coreblocks/{name} (Frank via Dashboard), GET /coreblocks/log. Dockerfile: COPY coreblocks.py. WICHTIG: Speicher-Pfad des Gehirns UNANGETASTET (Franks Vorgabe: kein ADD/UPDATE/DELETE beim Speichern — Punkt 5 bewusst NICHT gebaut).
 VERSION = "0.70.1 (10.07.2026, 21:17 Uhr)"  # 0.70.1 (Level-2 Gruppe A, Punkt 10): brain_store sendet jetzt source='chat' (Provenance) — im Dashboard-Drawer steht damit bei per Gespraech gespeicherten Eintraegen die echte Herkunft statt 'manual'. Neue Eintraege landen zudem im Kurzzeitgedaechtnis (brain-api 1.29.0 layer-Default kurzzeit); der Bibliothekar befoerdert sie nach Reife (librarian 0.12.0). Alt: 0.70.0.
 VERSION = "0.71.0 (10.07.2026, 21:39 Uhr)"  # 0.71.0 (Level-2 Gruppe A, Punkt 7): NEU brain_touch() — nach jeder Tool-Agent-Antwort mit Gedaechtnis-Nutzung werden die WIRKLICH benutzten Eintraege (bevorzugt per lade_eintrag geoeffnete, sonst die gefundenen) an brain-api /entries/touch gemeldet (access_count+1, Vergessens-Uhr zurueck). Best-effort: ein Fehler bricht die Antwort nie. Alt: 0.70.1.
+VERSION = "0.72.0 (10.07.2026, 22:00 Uhr)"  # 0.72.0 (Level-2 Gruppe A, Punkt 4): Bi-temporale Kennzeichnung im Werkzeugkasten — durchsuche_gedaechtnis liefert gueltig_ab/gueltig_bis mit, TOOLAGENT_SYSTEM Arbeitsweise-Regel 6: historische Staende (galt bis X) bei Aktuell-Fragen kennzeichnen/nachrangig, bei Frueher-Fragen bevorzugen, NIE verwerfen. Alt: 0.71.0.
 
 # ---------------------------------------------------------------------------
 # Konfiguration (alles aus Umgebungsvariablen — Secrets nie im Code)
@@ -4874,7 +4875,8 @@ Arbeitsweise (WICHTIG):
 2. Unterscheide Antwort-Treffer (beantworten die Frage direkt) von Kontext-Treffern (Franks persoenlicher Bezug). Verwirf einen Treffer NICHT nur, weil er die Faktenfrage nicht woertlich beantwortet — wenn er Franks Bezug zum Thema zeigt, nutze ihn als Kontext.
 3. Lade gezielt nur die Volltexte, die du wirklich brauchst (Kontext sparsam halten).
 4. Fehlt dir aktuelles Weltwissen, nutze web_suche. Kombiniere ruhig Gedaechtnis + Internet.
-5. Wenn du etwas aus dem Gedaechtnis nutzt, sag kurz, dass es aus Franks Notizen kommt. Findest du wirklich nichts Passendes, sag das ehrlich — erfinde nichts."""
+5. Wenn du etwas aus dem Gedaechtnis nutzt, sag kurz, dass es aus Franks Notizen kommt. Findest du wirklich nichts Passendes, sag das ehrlich — erfinde nichts.
+6. Traegt ein Treffer "gueltig_bis" (Datum in der Vergangenheit), ist das ein HISTORISCHER Stand: Bei Fragen nach dem AKTUELLEN Stand bevorzuge unbefristete Eintraege und kennzeichne Historisches ("galt bis ..."); bei Fragen nach FRUEHER ("damals", "2024") ist genau so ein Eintrag die richtige Antwort. Verwirf befristete Eintraege nie — sie sind Geschichte, kein Muell."""
 
 
 def _with_self_rules(system: str) -> str:
@@ -5043,10 +5045,16 @@ def build_agent_tools(user_id: str = USER_ID, session: "dict | None" = None,
             state["hits"][did] = h
             snippet = (h.get("match") or h.get("text") or "").strip()[:LESE_SNIPPET_CHARS]
             score = h.get("dense_score") if h.get("dense_score") is not None else h.get("score")
-            out.append({"id": did, "titel": h.get("title") or "(ohne Titel)",
-                        "kategorie": h.get("category"),
-                        "score": round(score, 3) if isinstance(score, (int, float)) else None,
-                        "schnipsel": snippet})
+            item = {"id": did, "titel": h.get("title") or "(ohne Titel)",
+                    "kategorie": h.get("category"),
+                    "score": round(score, 3) if isinstance(score, (int, float)) else None,
+                    "schnipsel": snippet}
+            # Bi-temporal (Level-2 #4): abgelaufene/befristete Fakten KENNZEICHNEN, nie verstecken.
+            if h.get("valid_until"):
+                item["gueltig_bis"] = h.get("valid_until")
+            if h.get("valid_from"):
+                item["gueltig_ab"] = h.get("valid_from")
+            out.append(item)
         if not out:
             return json.dumps({"treffer": 0, "hinweis": "Nichts im Gedaechtnis gefunden zu dieser Suche."},
                               ensure_ascii=False)

@@ -447,6 +447,7 @@ VERSION = "1.28.0 (10.07.2026, 19:26 Uhr)"  # 1.28.0: Neuer read-only GET /entry
 VERSION = "1.28.1 (10.07.2026, 19:40 Uhr)"  # 1.28.1: GET /entry/categories protokolliert seine gesamte Antwortzeit dauerhaft als checkpoint-Feld ms. Alt: 1.28.0.
 VERSION = "1.29.0 (10.07.2026, 21:05 Uhr)"  # 1.29.0 (Level-2 Gruppe A, Punkte 1+10 — Frank-Freigabe 2026-07-10): GEDAECHTNIS-EBENE + VERTRAUENS-LEVEL. Neues Payload-Feld layer (kurzzeit/langzeit, Keyword-Index): neue /store-Eintraege landen standardmaessig im KURZZEIT-Gedaechtnis (Arbeitsgedaechtnis); Bestand OHNE Feld gilt beim Lesen als langzeit (payload_layer() — KEINE Migration noetig, verlustfrei). Die SUCHE filtert NIE nach layer (reines Organisations-Metadatum). ALLE Payload-Rebuild-Wege (entry/category, entry/categories, PUT /entry, Papierkorb+Restore) erhalten die Ebene (Feld-Drift-Schutz qdrant.md Par. 9). NEU POST /layer/promote {min_age_days}: befoerdert Kurzzeit-Eintraege ab Mindestalter per set_payload ins Langzeitgedaechtnis (NUR das Flag — Text/Vektor/Kategorien unberuehrt; nie zurueck; idempotent; fuer den Nacht-Bibliothekar). trust (hoch/mittel) wird NICHT gespeichert, sondern deterministisch aus source abgeleitet (source_trust: manual/chat/app/dashboard=hoch, sonst mittel) und in by-title/by-category/category-item/by-parent mit ausgegeben (layer ebenso). Speicher-Pfad-Verhalten sonst UNANGETASTET (Franks Vorgabe: keine Bewertung/Ersetzung beim Speichern). Alt: 1.28.1.
 VERSION = "1.30.0 (10.07.2026, 21:39 Uhr)"  # 1.30.0 (Level-2 Gruppe A, Punkte 7+8 — Frank-Freigabe 2026-07-10): RECALL-VERSTAERKUNG + SANFTES VERGESSEN. NEU POST /entries/touch {doc_ids}: registriert einen Abruf — access_count+1 und last_accessed_at=jetzt (Vergessens-Uhr zurueckgestellt) per set_payload auf alle Chunks (reine Metadaten, Text/Vektor unberuehrt). /search boostet oft abgerufene Eintraege SANFT multiplikativ (neues Runtime-Limit recall_boost_promille, Default 50 = max +5 Prozent ab 20 Abrufen, 0 = AUS): wirkt auf den dense-Score UND den RRF-Fusions-Score. BEWUSST NUR positiver Bonus, KEIN Alters-Malus — Eintraege ohne Abrufe ranken EXAKT wie bisher (access_count=0 -> Faktor 1.0; Regressionsschutz/Funktionserhalt Direktive #3); das sanfte Vergessen entsteht relativ (Nicht-Abgerufenes faellt zurueck, weil Abgerufenes steigt), GELOESCHT oder GEFILTERT wird NIE — jeder Eintrag bleibt jederzeit auffindbar und holt sich mit einem Abruf seinen Boost zurueck (MemoryBank-Muster). Alt: 1.29.0.
+VERSION = "1.31.0 (10.07.2026, 22:00 Uhr)"  # 1.31.0 (Level-2 Gruppe A, Punkt 4 — Frank-Freigabe 2026-07-10): BI-TEMPORALE FAKTEN. Optionale Payload-Felder valid_from/valid_until (YYYY-MM-DD), gesetzt AUSSCHLIESSLICH manuell ueber NEU PUT /entry/validity (Dashboard-Drawer) — NIE automatisch (Franks Vorgabe: kein automatisches Bewerten/Ersetzen). NICHTS wird geloescht oder gefiltert: abgelaufene Eintraege bleiben voll auffindbar, /search + by-title geben die Gueltigkeit nur als Kennzeichnung mit (der Agent sagt dann galt bis X). Alle Rebuild-Wege (Kategorie-Wechsel, PUT /entry, Papierkorb+Restore) ERHALTEN die Felder (Feld-Drift-Schutz qdrant.md Par. 9). Leeres Feld entfernt die Grenze (delete_payload). Wer will, fragt historisch (Wo wohnte ich 2024?) und aktuell (Wo wohne ich?) — beides bleibt beantwortbar. Alt: 1.30.0.
 
 # Startup-Banner (Observability-First: Log-Pfad + Version EINMAL ausgeben)
 _log(logging.INFO, "brain-api startet", version=VERSION, log_path=LOG_PATH)
@@ -1195,6 +1196,8 @@ def by_title(title: str, user_id: str = "frank") -> dict:
             "source": points[0].payload.get("source") or None,
             "layer": payload_layer(points[0].payload),
             "trust": source_trust(points[0].payload.get("source")),
+            "valid_from": points[0].payload.get("valid_from") or None,
+            "valid_until": points[0].payload.get("valid_until") or None,
             "created_at": points[0].payload.get("created_at"),
             "updated_at": points[0].payload.get("updated_at"), "text": full}
 
@@ -1327,6 +1330,52 @@ def backfill_parent(user_id: str = "frank") -> dict:
     checkpoint("backfill_parent", "parent-Feld auf Altbestand gesetzt (set_payload, kein Re-Embed)",
                ok=True, chunks_updated=updated, groups=len(by_par))
     return {"ok": True, "chunks_updated": updated, "groups": len(by_par)}
+
+
+class ValidityReq(BaseModel):
+    doc_id: str = Field(..., min_length=1)
+    valid_from: str | None = Field(default=None, max_length=10, description="Gueltig ab (YYYY-MM-DD) — leer/None = kein Beginn gesetzt")
+    valid_until: str | None = Field(default=None, max_length=10, description="Gueltig bis (YYYY-MM-DD) — leer/None = unbegrenzt gueltig")
+    user_id: str = Field(default="frank")
+
+
+_VALIDITY_DATE_RE = re.compile(r"^\d{4}-\d{2}-\d{2}$")
+
+
+@app.put("/entry/validity", dependencies=[Depends(require_auth)])
+def entry_validity(req: ValidityReq) -> dict:
+    """Bi-temporale Fakten (Level-2 #4): setzt gueltig-ab/gueltig-bis EINES Eintrags.
+
+    Wird NUR manuell aufgerufen (Dashboard-Drawer) — NIE automatisch (Franks Vorgabe).
+    Nichts wird geloescht: ein abgelaufener Eintrag bleibt voll auffindbar und wird in
+    Suche/Agent nur als 'galt bis X' gekennzeichnet. set_payload auf alle Chunks
+    (Feld-Drift-Schutz qdrant.md §9); leeres Feld entfernt die jeweilige Grenze."""
+    _require_store()
+    vf = (req.valid_from or "").strip()
+    vu = (req.valid_until or "").strip()
+    for label, v in (("valid_from", vf), ("valid_until", vu)):
+        if v and not _VALIDITY_DATE_RE.match(v):
+            raise HTTPException(status_code=422, detail=f"{label} muss YYYY-MM-DD sein (oder leer).")
+    if vf and vu and vu < vf:
+        raise HTTPException(status_code=422, detail="valid_until liegt vor valid_from.")
+    pts = _scroll(Filter(must=[FieldCondition(key="user_id", match=MatchValue(value=req.user_id)),
+                               FieldCondition(key="doc_id", match=MatchValue(value=req.doc_id))]),
+                  with_payload=False)
+    if not pts:
+        raise HTTPException(status_code=404, detail="Eintrag nicht gefunden.")
+    ids = [p.id for p in pts]
+    to_set = {k: v for k, v in (("valid_from", vf), ("valid_until", vu)) if v}
+    to_clear = [k for k, v in (("valid_from", vf), ("valid_until", vu)) if not v]
+    if to_set:
+        qc.set_payload(collection_name=COLLECTION, payload=to_set, points=ids, wait=True)
+    if to_clear:
+        try:
+            qc.delete_payload(collection_name=COLLECTION, keys=to_clear, points=ids, wait=True)
+        except Exception:  # noqa: BLE001 — Felder existierten evtl. nie; Loeschen ist dann ein No-Op
+            pass
+    checkpoint("entry_validity", "Gueltigkeit (bi-temporal) manuell gesetzt — Eintrag bleibt voll erhalten",
+               ok=True, doc_id=req.doc_id, valid_from=vf or None, valid_until=vu or None)
+    return {"ok": True, "doc_id": req.doc_id, "valid_from": vf or None, "valid_until": vu or None}
 
 
 class TouchReq(BaseModel):
@@ -1536,6 +1585,7 @@ def set_entry_category(req: EntryCategoryReq) -> dict:
     created_at = pl.get("created_at", iso_now())
     source = (pl.get("source") or "manual").strip().lower() or "manual"
     layer = payload_layer(pl)   # Ebene beim Rebuild erhalten (Feld-Drift-Schutz, qdrant.md §9)
+    validity = {k: pl.get(k) for k in ("valid_from", "valid_until") if pl.get(k)}   # bi-temporal erhalten (#4)
     now = iso_now()
 
     _delete_doc(req.doc_id)  # alte Chunks (mit altem Kategorie-Vektor) raus
@@ -1548,7 +1598,7 @@ def set_entry_category(req: EntryCategoryReq) -> dict:
         points.append(PointStruct(id=point_id(req.doc_id, i), vector=vec, payload={
             "doc_id": req.doc_id, "user_id": req.user_id, "title": title,
             "category": new_cat, "categories": new_cats, "parent": new_parent, "parents": new_parents, "chunk_index": i, "chunk_count": len(chunks),
-            "chunk_text": ch, "full_text": full_text, "created_at": created_at, "updated_at": now, "source": source, "layer": layer,
+            "chunk_text": ch, "full_text": full_text, "created_at": created_at, "updated_at": now, "source": source, "layer": layer, **validity,
         }))
     _upsert_batched(points, wait=True)
     after = _scroll(Filter(must=[FieldCondition(key="doc_id", match=MatchValue(value=req.doc_id))]), limit=1)
@@ -1604,6 +1654,7 @@ def set_entry_categories(req: EntryCategoriesReq) -> dict:
     created_at = pl.get("created_at", iso_now())
     source = (pl.get("source") or "manual").strip().lower() or "manual"
     layer = payload_layer(pl)   # Ebene beim Rebuild erhalten (Feld-Drift-Schutz, qdrant.md §9)
+    validity = {k: pl.get(k) for k in ("valid_from", "valid_until") if pl.get(k)}   # bi-temporal erhalten (#4)
     now = iso_now()
 
     _delete_doc(req.doc_id)  # alte Chunks (mit alten Kategorie-Vektoren) raus
@@ -1618,7 +1669,7 @@ def set_entry_categories(req: EntryCategoriesReq) -> dict:
             "category": cats[0], "categories": cats,
             "parent": (parents[0] if parents else ""), "parents": parents,
             "chunk_index": i, "chunk_count": len(chunks), "chunk_text": ch,
-            "full_text": full_text, "created_at": created_at, "updated_at": now, "source": source, "layer": layer,
+            "full_text": full_text, "created_at": created_at, "updated_at": now, "source": source, "layer": layer, **validity,
         }))
     _upsert_batched(points, wait=True)
     after = _scroll(Filter(must=[FieldCondition(key="doc_id", match=MatchValue(value=req.doc_id))]), limit=1)
@@ -1759,7 +1810,7 @@ def search(req: SearchReq) -> dict:
         query_filter=Filter(must=must),
         limit=overfetch,
         with_payload=["doc_id", "title", "category", "categories", "created_at", "updated_at", "chunk_text",
-                      "access_count"],
+                      "access_count", "valid_from", "valid_until"],
     ).points
 
     best: dict[str, dict] = {}
@@ -1777,6 +1828,8 @@ def search(req: SearchReq) -> dict:
                          "updated_at": h.payload.get("updated_at"),
                          "text": "",
                          "access_count": int(h.payload.get("access_count") or 0),
+                         "valid_from": h.payload.get("valid_from") or None,
+                         "valid_until": h.payload.get("valid_until") or None,
                          "dense_score": float(h.score), "matched_by": ["dense"], "bm25_rank": None}
 
     # Recall-Verstaerkung (Level-2 #7): sanfter multiplikativer Boost fuer oft abgerufene Eintraege.
@@ -1951,6 +2004,7 @@ def delete_entry(doc_id: str, user_id: str = "frank") -> dict:
         "categories": cats_from_payload(pl),
         "source": (pl.get("source") or "manual").strip().lower() or "manual",
         "layer": payload_layer(pl),   # Ebene mit in den Papierkorb (Restore stellt sie wieder her)
+        **{k: pl.get(k) for k in ("valid_from", "valid_until") if pl.get(k)},   # bi-temporal mitnehmen (#4)
         "text": pl.get("full_text", ""),
         "created_at": pl.get("created_at") or iso_now(),
         "deleted_at": iso_now(),
@@ -1983,6 +2037,7 @@ def update_entry(req: UpdateReq) -> dict:
     created_at = pl.get("created_at", iso_now())
     source = (pl.get("source") or "manual").strip().lower() or "manual"
     layer = payload_layer(pl)   # Ebene beim Rebuild erhalten (Feld-Drift-Schutz, qdrant.md §9)
+    validity = {k: pl.get(k) for k in ("valid_from", "valid_until") if pl.get(k)}   # bi-temporal erhalten (#4)
     now = iso_now()
 
     # Titel-Aenderung (Frank-Wunsch): req.title=None -> alter Titel bleibt. Sonst neuer Titel.
@@ -2009,7 +2064,7 @@ def update_entry(req: UpdateReq) -> dict:
         points.append(PointStruct(id=point_id(target_doc_id, i), vector=vec, payload={
             "doc_id": target_doc_id, "user_id": req.user_id, "title": title, "category": category, "categories": cats, "parent": parent, "parents": parents,
             "chunk_index": i, "chunk_count": len(chunks), "chunk_text": ch,
-            "full_text": req.text, "created_at": created_at, "updated_at": now, "source": source, "layer": layer,
+            "full_text": req.text, "created_at": created_at, "updated_at": now, "source": source, "layer": layer, **validity,
         }))
     _upsert_batched(points)
 
@@ -2093,6 +2148,7 @@ def trash_restore(req: RestoreReq) -> dict:
     created_at = entry.get("created_at") or iso_now()
     source = (entry.get("source") or "manual").strip().lower() or "manual"
     layer = payload_layer(entry)   # Ebene ueberlebt den Papierkorb-Roundtrip
+    validity = {k: entry.get(k) for k in ("valid_from", "valid_until") if entry.get(k)}   # bi-temporal erhalten (#4)
     if not text.strip():
         raise HTTPException(status_code=400, detail="Eintrag hat keinen Text")
 
@@ -2108,7 +2164,7 @@ def trash_restore(req: RestoreReq) -> dict:
         points.append(PointStruct(id=point_id(req.doc_id, i), vector=vec, payload={
             "doc_id": req.doc_id, "user_id": entry.get("user_id") or req.user_id,
             "title": title, "category": category, "categories": cats, "parent": parent, "parents": parents, "chunk_index": i, "chunk_count": len(chunks),
-            "chunk_text": ch, "full_text": text, "created_at": created_at, "updated_at": now, "source": source, "layer": layer,
+            "chunk_text": ch, "full_text": text, "created_at": created_at, "updated_at": now, "source": source, "layer": layer, **validity,
         }))
     _upsert_batched(points)
 
