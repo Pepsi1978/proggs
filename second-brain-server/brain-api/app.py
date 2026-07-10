@@ -434,6 +434,7 @@ VERSION = "1.26.0 (08.07.2026, 18.50 Uhr)"  # 1.26.0: UMSTIEG AUF gemini-embeddi
 VERSION = "1.27.0 (08.07.2026, 20.06 Uhr)"  # 1.27.0 (Frank-Wunsch 2026-07-08): gemini-embedding-001-Fallback KOMPLETT ausgebaut — nur noch gemini-embedding-2 (3072). IS_EMBED2-Verzweigung + Batch-Pfad (EMBED_BATCH) + '[Titel:…]'-Altpraefix entfernt; embed/embed_many/embed_input/_entity_embed_text sind reine E2-Logik. Verhalten fuer den Nutzer unveraendert (E2 lief bereits live). Wiederherstellung von -001 jederzeit reproduzierbar ueber docs/superpowers/specs + plans. Alt: 1.26.0.
 VERSION = "1.27.1 (08.07.2026, 20:14 Uhr)"  # 1.27.1: FIX Kategorie-Doppelung Gespräche. Altbestand 'gespräche' und neue Kategorie 'Gespräche' werden Unicode-normalisiert, case-insensitiv erkannt und kanonisch als 'Gespräche' gezaehlt/abgerufen; neue Schreibwege normalisieren bekannte Varianten. Alt: 1.27.0.
 VERSION = "1.27.2 (10.07.2026, 11:34 Uhr)"  # 1.27.2: Tiefen-Debugging-Haertung. Gemini-Embedding-Calls mit 60s-Timeout + Backoff-Retry (nur transiente 429/5xx/Netzfehler); Bearer-Vergleich konstantzeitig (hmac.compare_digest); limit=0-Zaehlpfad dedupliziert ueber chunk_index=0 + serverseitiges qc.count (identisches Ergebnis, ~5x weniger Scan); created_at-None-Guard in /by-date; Embedding-Tages-Cap liest unter Lock. Alt: 1.27.1.
+VERSION = "1.28.0 (10.07.2026, 19:26 Uhr)"  # 1.28.0: Neuer read-only GET /entry/categories?doc_id=... liest Kategorien gezielt per doc_id+user_id aus genau einem Chunk und nur kleinen Metadatenfeldern. Alt: 1.27.2.
 
 # Startup-Banner (Observability-First: Log-Pfad + Version EINMAL ausgeben)
 _log(logging.INFO, "brain-api startet", version=VERSION, log_path=LOG_PATH)
@@ -1440,6 +1441,27 @@ def set_entry_category(req: EntryCategoryReq) -> dict:
                ok=applied, doc_id=req.doc_id, old=old_cat or None, new=new_cat or None,
                parent=new_parent or None, chunks=len(chunks), ms=int((time.time() - t0) * 1000))
     return {"ok": True, "doc_id": req.doc_id, "old": old_cat or None, "new": new_cat or None}
+
+
+@app.get("/entry/categories", dependencies=[Depends(require_auth)])
+def get_entry_categories(doc_id: str, user_id: str = "frank") -> dict:
+    """Liest die Kategorie-Liste eines Eintrags gezielt per doc_id, ohne Volltext oder Bestandsscan."""
+    _require_store()
+    doc_id = (doc_id or "").strip()
+    if not doc_id:
+        raise HTTPException(status_code=400, detail="doc_id erforderlich")
+    pts = _scroll(Filter(must=[
+        FieldCondition(key="doc_id", match=MatchValue(value=doc_id)),
+        FieldCondition(key="user_id", match=MatchValue(value=user_id)),
+    ]), limit=1, with_payload=["doc_id", "category", "categories", "parent", "parents"])
+    if not pts:
+        raise HTTPException(status_code=404, detail="Eintrag nicht gefunden")
+    cats = cats_from_payload(pts[0].payload or {})
+    parents = category_parents(cats)
+    checkpoint("get_entry_categories", "Kategorie-Liste gezielt per doc_id gelesen (ohne Volltext/Bestandsscan)",
+               ok=True, doc_id=doc_id, categories=len(cats))
+    return {"ok": True, "doc_id": doc_id, "category": cats[0] if cats else None,
+            "categories": cats, "parent": parents[0] if parents else None, "parents": parents}
 
 
 @app.post("/entry/categories", dependencies=[Depends(require_auth)])

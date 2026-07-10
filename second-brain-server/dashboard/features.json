@@ -1,14 +1,14 @@
 {
-	"stand": "10.07.2026, 19:15 Uhr",
+	"stand": "10.07.2026, 19:26 Uhr",
 	"hinweis": "PFLEGE-PFLICHT: Bei JEDEM Deploy, der ein neues System/Feature einbaut, hier einen Eintrag ERGÄNZEN (neueste zuerst). SCHREIBWEISE (Dauer-Regel): leichtes, verständliches Deutsch, kurze Sätze; ALLE Fachbegriffe, Namen und Zahlen (z.B. BM25, RRF, Qdrant, ENV-Variablen, Endpunkt-Namen) BEHALTEN, aber jeden in einem kurzen Halbsatz erklären — NIE durch Weglassen vereinfachen; kompakt halten (der Hauptagent liest über das Werkzeug 'was_kann_cortex' ALLE Einträge auf einmal ein), aber vollständig genug, dass man erkennt WAS eingebaut wurde; einfache Überschrift. Ähnliche/redundante Einträge dürfen zusammengefasst werden — Datum sekundär, entscheidend ist WAS Cortex kann. Quelle des Info-Bereichs in den Dashboard-Einstellungen (GET /api/features). Verankert in DEPLOY.md.",
 	"features": [
 		{
 			"id": "bibliothekar-kategorien-vorschau-live-eval",
 			"eingebaut": "10.07.2026, 19:15 Uhr",
-			"dienst": "dashboard 0.67.5 + librarian 0.11.3",
+			"dienst": "dashboard 0.67.6 + brain-api 1.28.0 + librarian 0.11.3",
 			"name": "Bibliothekar zeigt Kategorien vorher und nachher",
 			"kurz": "Kategorie-Vorschläge zeigen vor dem Umsetzen alle bisherigen Kategorien und die vollständige neue Liste. Ein isolierter Live-Eval prüft den echten 4-zu-5-Pfad gegen die laufende brain-api und räumt danach automatisch auf.",
-			"erklaerung": "Auf jeder offenen Bibliothekar-Karte mit einer Kategorie-Aktion steht jetzt eine read-only Vorschau: 'Vorher' zeigt die aktuelle Multi-Category-Liste des Eintrags, 'Nachher' zeigt dieselbe Liste plus die neu vorgeschlagene Kategorie; die neue Kategorie ist orange markiert. Das Dashboard liest dafür die exakte doc_id über GET /api/entry/categories und verändert dabei nichts. Der produktionsnahe Test tests/librarian_category_live_eval.py startet den echten Bibliothekar-Code mit dem geschützten Nutzer eval-librarian-category-union, legt einen Testeintrag mit vier Kategorien an, ergänzt die fünfte über brain_add_category(), prüft die Auffindbarkeit in allen fünf Kategorien sowie den Duplikatschutz und löscht im finally-Block alle Testdaten per /purge. Franks Nutzer frank wird nie verwendet."
+			"erklaerung": "Auf jeder offenen Bibliothekar-Karte mit einer Kategorie-Aktion steht jetzt eine read-only Vorschau: 'Vorher' zeigt die aktuelle Multi-Category-Liste des Eintrags, 'Nachher' zeigt dieselbe Liste plus die neu vorgeschlagene Kategorie; die neue Kategorie ist orange markiert. Das Dashboard ruft dafür GET /api/entry/categories auf und reicht die doc_id an den gleichnamigen read-only brain-api-Endpunkt weiter. Die brain-api filtert Qdrant direkt nach doc_id und user_id, liest genau einen Chunk und nur category, categories, parent und parents — keinen Volltext und keinen Bestandsscan. Der produktionsnahe Test tests/librarian_category_live_eval.py startet den echten Bibliothekar-Code mit dem geschützten Nutzer eval-librarian-category-union, legt einen Testeintrag mit vier Kategorien an, ergänzt die fünfte über brain_add_category(), prüft die Auffindbarkeit in allen fünf Kategorien sowie den Duplikatschutz und löscht im finally-Block alle Testdaten per /purge. Franks Nutzer frank wird nie verwendet."
 		},
 		{
 			"id": "tiefen-debugging-qualitaetslauf-2026-07-10",

@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 import ast
-import asyncio
 import sys
 from pathlib import Path
 
@@ -45,17 +44,26 @@ def check(condition: bool, message: str) -> None:
 def main() -> int:
     ns = load_endpoint()
 
+    calls: list[tuple[str, dict]] = []
+
     def fake_get(path: str, **params):
-        if path == "/list":
-            return {"ok": True, "ready": True, "items": [{"doc_id": "doc-1", "category": "A"}]}
-        if path == "/by-category":
-            return {"ok": True, "items": [{"doc_id": "doc-1", "categories": ["A", "B", "C", "D"]}]}
-        raise AssertionError(path)
+        calls.append((path, params))
+        if path != "/entry/categories":
+            raise AssertionError(path)
+        return {"ok": True, "doc_id": "doc-1", "categories": ["A", "B", "C", "D"]}
 
     ns["_bget"] = fake_get
     result = ns["api_get_entry_categories"]("doc-1")
     check(result["categories"] == ["A", "B", "C", "D"],
           "read-only Endpunkt liefert alle vier vorhandenen Kategorien")
+    check(calls == [("/entry/categories", {"doc_id": "doc-1", "user_id": "frank"})],
+          "Dashboard nutzt genau einen gezielten brain-api-Abruf ohne Bestandsscan")
+
+    brain_source = (ROOT / "brain-api" / "app.py").read_text(encoding="utf-8")
+    check('@app.get("/entry/categories"' in brain_source and "def get_entry_categories" in brain_source,
+          "brain-api stellt den gezielten read-only Endpunkt bereit")
+    check('limit=1, with_payload=["doc_id", "category", "categories", "parent", "parents"]' in brain_source,
+          "brain-api liest genau einen Chunk und keine Volltexte")
 
     source = INDEX_PATH.read_text(encoding="utf-8")
     check("<b>Vorher</b>" in source and "<b>Nachher</b>" in source,
@@ -65,7 +73,7 @@ def main() -> int:
     check('it.aktion.typ==="kategorie"' in source and "loadLibCategoryPreview(preview,it)" in source,
           "Vorschau wird nur fuer Kategorie-Aktionen geladen")
 
-    print("PASS: Bibliothekar-Kategorien-Vorschau zeigt 4 -> 5 verlustfrei")
+    print("PASS: Bibliothekar-Kategorien-Vorschau nutzt gezielten doc_id-Abruf und zeigt 4 -> 5")
     return 0
 
 
