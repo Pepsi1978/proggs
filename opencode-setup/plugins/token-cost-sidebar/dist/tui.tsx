@@ -141,13 +141,22 @@ function formatDateTime(value: Date): string {
 function SidebarClock(props: { api: TuiPluginApi }) {
   const [now, setNow] = createSignal(new Date())
   const theme = () => props.api.theme.current
-  let timer: ReturnType<typeof setInterval> | undefined
+  let timer: ReturnType<typeof setTimeout> | undefined
+
+  const scheduleNextMinute = () => {
+    const current = new Date()
+    const delay = 60_000 - current.getSeconds() * 1_000 - current.getMilliseconds() + 25
+    timer = setTimeout(() => {
+      setNow(new Date())
+      scheduleNextMinute()
+    }, delay)
+  }
 
   onMount(() => {
-    timer = setInterval(() => setNow(new Date()), 1000)
+    scheduleNextMinute()
   })
   onCleanup(() => {
-    if (timer) clearInterval(timer)
+    if (timer) clearTimeout(timer)
   })
 
   return (
