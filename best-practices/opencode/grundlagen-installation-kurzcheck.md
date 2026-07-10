@@ -18,4 +18,4 @@
 | 8 | Undo/Redo braucht Git | `/undo` + `/redo` verwalten Datei- UND Nachrichtenänderungen über Git → Projekt MUSS ein Git-Repo sein | §5 |
 | 9 | Empfohlener Workflow | mit `Tab` in Plan-Modus Feature beschreiben + iterieren, dann `Tab` zu Build „Go ahead."; Subagents `@explore`/`@scout` für Spezialarbeit | §6 |
 | 10 | Pfade & Logs ermitteln | `opencode debug paths` (undokumentiert, sehr nützlich) zeigt exakte Pfade je OS; Logs in `~/.local/share/opencode/log/`, mehr per `--log-level DEBUG` / `--print-logs` | §3, §8 |
-| 11 | OpenCode-Mausmodus wählen | Für anklickbare Confirm-/Allow-Dialoge `"mouse": true`; `"mouse": false` verbessert native Auswahl/Rechtsklick, deaktiviert aber ALLE OpenCode-Mausfunktionen. Beide Arbeitsweisen sind in OpenCode 1.17.18 nicht gleichzeitig verfügbar | §7 |
+| 11 | Windows: vollständige Mausbedienung | `"mouse": true` beibehalten. Für OpenCode 1.17.18 den bestätigten Hybridpatch nutzen: Selection-End-Event kopiert, Rechtsklick liest Text nur im Prompt nativ per PowerShell; Mausrad und Confirm-/Allow-Klicks bleiben erhalten. Versionsgebunden bauen, `--version` prüfen und offiziellen Binary-Fallback behalten | §4.6, §7 |

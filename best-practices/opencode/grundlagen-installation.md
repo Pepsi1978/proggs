@@ -1,4 +1,4 @@
-# Grundlagen & Installation — Best Practices (Stand 2026-06-18, OpenCode CLI)
+# Grundlagen & Installation — Best Practices (Stand 2026-07-10, OpenCode CLI 1.17.18)
 
 > Tool: **OpenCode** von SST/Anomaly (GitHub `anomalyco/opencode`, früher `sst/opencode`; Website
 > `opencode.ai`). NICHT verwechseln mit der Klon-Domain `open-code.ai` — im Zweifel ist `opencode.ai`
@@ -230,6 +230,46 @@ wird mit Defaults gemerged (nur Abweichungen angeben). Custom-Pfad via `OPENCODE
 Keybind deaktivieren: `"none"`/`false`. Attention-Feature (Benachrichtigungen/Sounds bei Fragen/Fehlern/
 fertigen Sessions) ist per Default aus. View-Einstellungen über `ctrl+p` (persistieren).
 
+### 4.6 Windows-Hybridmaus: Copy-on-select, Rechtsklick-Paste und TUI-Klicks gemeinsam
+
+Für native Windows-Terminal-Sessions `"mouse": true` beibehalten. `"mouse": false` ist kein vollständiger
+Clipboard-Fix: Es gibt die Maus an das Terminal zurück, entfernt aber zugleich Mausrad-Scrolling und
+anklickbare Confirm-/Allow-Dialoge aus OpenCode. Die beste bestätigte Lösung für OpenCode 1.17.18 ist ein
+kleiner, versionsgebundener Quellpatch mit klar getrennten Zuständigkeiten:
+
+1. **Auswahlende statt Mouse-up:** `CliRenderEvents.SELECTION` ist das verlässliche Ende einer echten
+   Auswahl. Dort `Selection.copy(...)` ausführen und den Listener beim Cleanup wieder entfernen.
+2. **Rechtsklick nur im Prompt:** Über die Bildschirmgrenzen des Prompt-Inputs prüfen, ob der Klick dort
+   liegt. Nur dann direkt `PromptRef.paste()` aufrufen und das Event konsumieren. Kein künstliches
+   `keymap.dispatchCommand("prompt.paste")` ohne Keyboard-Event-Kontext verwenden.
+3. **Windows-Textclipboard nativ lesen:** Erst den bestehenden Bild-Paste-Pfad versuchen, danach Text über
+   PowerShell `Get-Clipboard -Raw` mit expliziter UTF-8-Ausgabe lesen. So bleiben Bilder erhalten und
+   Unicode-Text wird korrekt eingefügt.
+4. **OpenCode behält die übrige Maus:** `"mouse": true` sorgt weiter für Mausrad und TUI-Schaltflächen;
+   Rechtsklick außerhalb des Prompt-Felds wird nicht pauschal umgedeutet.
+
+Der Root Cause besteht aus vier Teilen: Windows deaktiviert OpenCodes Copy-on-select standardmäßig;
+bubbled `onMouseUp` signalisiert das Auswahlende nicht zuverlässig; Command-Dispatch braucht einen
+Tastatur-Event-Kontext; der bisherige Windows-Clipboard-Pfad liefert für Text in dieser Konstellation
+keinen Inhalt. Nur die Kombination der vier Korrekturen liefert den vollständigen Hybridbetrieb.
+
+**Update- und Installationsstrategie:** Den Patch an einen exakten OpenCode-Tag binden und vor jeder
+Anwendung mit `git apply --check` validieren. Das Binary mit einer eindeutigen Suffix-Version wie
+`1.17.18-mousefix.5` bauen, zunächst als `.new` in einen stabilen User-Pfad kopieren, atomar umbenennen
+und `opencode.exe --version` gegen die erwartete Version prüfen. Ein Launcher bevorzugt das Custom-Binary
+nur, wenn die Datei existiert, und fällt sonst mit Log-Warnung auf das offizielle `opencode` im `PATH`
+zurück. Nach jedem Upstream-Update den Patch neu prüfen und bauen; niemals einen Patch für 1.17.18 blind
+auf eine andere Version anwenden.
+
+**Pflicht-Verifikation:** Typechecks der geänderten Pakete, Clipboard-Tests, Single-Binary-Build,
+`--version`-Smoke-Test und ein realer TUI-Test mit allen vier Funktionen: Auswahl kopiert sofort,
+Rechtsklick fügt Text in den Prompt ein, Mausrad scrollt, Permission-Schaltflächen sind anklickbar.
+Zusätzlich Bild-Paste und Rechtsklick außerhalb des Prompts prüfen, weil beide denselben Eingabepfad
+bzw. dieselbe globale Mausbehandlung berühren.
+
+`lokal verifiziert` (OpenCode 1.17.18, Windows Terminal 1.24.11321.0, Patchrevision mousefix.5,
+2026-07-10). Fehlerdetails und Root Cause: `bugs/opencode/opencode-cli.md` §2 #10a.
+
 ---
 
 ## 5. Sessions & Slash-Befehle
@@ -327,15 +367,14 @@ Subagents für spezialisierte Arbeit: `@general`, `@explore` (schnell, read-only
 8. **Windows-Keybind-Defaults:** `input_undo` enthält `ctrl+z`; `terminal_suspend` ist `none`. `offiziell`
 9. **Node.js erforderlich** für den npm-Weg (`node -v` prüfen). `extern`
 10. **Desktop-App braucht WebView2-Runtime** (blankes Fenster → WebView2 installieren). `offiziell`
-11. **OpenCode-Mausmodus bewusst wählen:** Für anklickbare Confirm-/Allow-Dialoge muss
-    `~/.config/opencode/tui.json` `"mouse": true` enthalten. `"mouse": false` übergibt die Maus
-    vollständig an Windows Terminal und verbessert mit `"copyOnSelect": true` sowie
-    `"experimental.rightClickContextMenu": false` native Auswahl und Rechtsklick-Einfügen, deaktiviert
-    aber zugleich ALLE OpenCode-Mausfunktionen. `"selectionBackground": "#808080"` und
-    `"copyFormatting": "none"` können unabhängig davon bestehen bleiben. OpenCode 1.17.18 bietet
-    keinen getrennten Modus für native Textauswahl und anklickbare TUI-Elemente; Confirm-Klicks haben
-    Vorrang, wenn beide Arbeitsweisen benötigt werden.
-    `offiziell` (OpenCode TUI Options; Microsoft Learn Windows Terminal Interaction und Appearance)
+11. **Für vollständige Mausbedienung den Hybridpatch verwenden:** `~/.config/opencode/tui.json` auf
+    `"mouse": true` lassen. Die Windows-Terminal-Werte `"copyOnSelect": true`,
+    `"experimental.rightClickContextMenu": false`, `"selectionBackground": "#808080"` und
+    `"copyFormatting": "none"` können bestehen bleiben. Für OpenCode 1.17.18 aktiviert der bestätigte
+    Patch Copy-on-select über das Selection-End-Event und Text-Paste per Rechtsklick nur im Prompt,
+    während Mausrad und Confirm-/Allow-Klicks erhalten bleiben. Patch, reproduzierbarer Build,
+    atomare Installation, Versionsprüfung und offizieller Binary-Fallback gehören zusammen; Details
+    siehe §4.6. `lokal verifiziert` (2026-07-10), TUI-/Terminal-Optionen `offiziell`.
 
 ---
 

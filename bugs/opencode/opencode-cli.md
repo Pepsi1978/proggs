@@ -3,11 +3,12 @@
 > **PFLICHT vor jeder echten Arbeit an OpenCode lesen.** Bekannte Bugs, Fallen und ihre
 > bewährten, **funktionserhaltenden** Lösungen — damit der Fehler gar nicht erst passiert.
 >
-> **Stand:** recherchiert am 2026-06-18 für **OpenCode CLI v1.17.8** (Repo `anomalyco/opencode`,
+> **Stand:** recherchiert am 2026-06-18 für **OpenCode CLI v1.17.8**, lokal ergänzt am 2026-07-10
+> um den bestätigten Windows-Mausfix für **OpenCode CLI v1.17.18** (Repo `anomalyco/opencode`,
 > früher `sst/opencode`; Doku `opencode.ai`). Recherche: 7 parallele Researcher (offizielle Doku +
 > Changelog v1.1.64→v1.17.8, GitHub-Issues, Community, Plattform-Fallen, Config/AGENTS.md,
 > Agents/Plugins/MCP/Skills, Token/Provider/OpenRouter). Quellen je Eintrag verlinkt.
-> **Anker:** opencode=1.17.8 (Erst-Recherche); MCP-Lazy-Loading-Stand bestätigt für **1.17.11** (2026-06-26, #56 — weiterhin kein natives Lazy-Loading)
+> **Anker:** opencode=1.17.18 (Mausfix lokal bestätigt); MCP-Lazy-Loading-Stand bestätigt für **1.17.11** (2026-06-26, #56 — weiterhin kein natives Lazy-Loading)
 >
 > Gegenstück (wie man es von vornherein richtig macht): `best-practices/opencode/` (8 Dateien).
 > Digest-Modell (Stufe A/B/C) siehe `bugs/SYSTEM.md` §11.
@@ -22,7 +23,7 @@
 | # | Signal / Situation | Sofort-Regel | Volltext |
 |---|--------------------|--------------|----------|
 | 1 | ⭐ Windows nativ: npm-Wrapper, kaputte Umlaute, Paste tot, Bun-Segfault | Offiziell **WSL nutzen** (`opencode.ai/docs/windows-wsl`). Nativ ist Fallback. | §1, §2, §12 |
-| 1a | Windows Terminal: Maus-Kopieren und anklickbare Confirm-Dialoge kollidieren | Für Confirm-/Allow-Klicks OpenCode-`tui.json` auf `"mouse": true` lassen. `"mouse": false` verbessert native Auswahl/Rechtsklick, deaktiviert aber ALLE OpenCode-Mausfunktionen. | §2 (#10a) |
+| 1a | Windows Terminal: Auswahl kopiert nicht, Rechtsklick fügt nicht ein oder Confirm-Klicks fehlen | `"mouse": true` beibehalten. Für OpenCode 1.17.18 den bestätigten Hybridpatch verwenden: Selection-End-Event kopiert, Rechtsklick im Prompt liest Text nativ per PowerShell, übrige Mausereignisse bleiben bei OpenCode. | §2 (#10a) |
 | 2 | ⭐ Kontext/Token läuft voll, viele MCP-Server aktiv | Jeder MCP lädt sein Tool-Schema in JEDEN Prompt (GitHub-MCP ~15–20k Tok; Extrem 147k). **KEIN natives Lazy-Loading** (Stand 1.17.11, anders als Claude Code) → manuelle Per-Agent-Auslagerung ist der EINZIGE Hebel: global `"tools":{"servername*":false}`, im Agent `true`. | §8 (#56) |
 | 3 | ⭐ Agent ändert/committet ungefragt | Defaults sind permissiv (`edit`/`bash` = allow). `permission: {edit:"ask", bash:"ask"}`. Permission-Keys **nur lowercase** — PascalCase (`"Bash"`) wird STILL ignoriert! | §6 |
 | 3a | ⭐ Modell VERWEIGERT Commit/Push mit erfundener „nur auf Anweisung"-Begründung | Text-Regel reicht nicht (trainiertes Vorsichtsverhalten) → zusätzlich Plugin `git-dirty-watchdog.js` (warnt hörbar bei `session.idle` + dirty Repo) | §6 (#48a) |
@@ -119,11 +120,28 @@
 **Quelle:** https://github.com/anomalyco/opencode/issues/13800
 
 ### 10a. Windows Terminal: Maus-Kopieren und anklickbare Confirm-Dialoge kollidieren
-**Symptom:** Mit `"mouse": true` kopiert die Linksauswahl unzuverlässig und Rechtsklick wird abgefangen. Mit `"mouse": false` funktionieren native Auswahl und Rechtsklick, aber Confirm-/Allow-Schaltflächen reagieren nicht mehr auf Linksklick.
-**Ursache:** `mouse` ist in OpenCode 1.17.18 ein globaler TUI-Schalter. `true` übergibt Mausereignisse an OpenCode, `false` vollständig an das Terminal. Es gibt keinen getrennten Schalter für Textauswahl und anklickbare TUI-Elemente. OpenCodes eigener Copy-on-select-Pfad ist zudem als offener Fehler #17796 dokumentiert.
-**Versionen:** OpenCode 1.17.18 und Windows Terminal 1.24.11321.0 bestätigt; OpenCode-Fehler #17796 offen.
-**FIX:** Wenn Confirm-/Allow-Dialoge per Maus bedient werden, in `~/.config/opencode/tui.json` `"mouse": true` setzen. Die Windows-Terminal-Werte `"copyOnSelect": true`, `"experimental.rightClickContextMenu": false`, `"copyFormatting": "none"` und Profil-`"selectionBackground": "#808080"` können bestehen bleiben. Wer stattdessen ausschließlich native Mausauswahl und Rechtsklick braucht, kann bewusst `"mouse": false` wählen, verliert dann aber sämtliche OpenCode-Mausinteraktion. Bis OpenCode getrennte Mausmodi anbietet oder #17796 behebt, ist beides mit normalen Mausklicks nicht gleichzeitig verfügbar.
-**Quelle:** https://opencode.ai/docs/tui/#options · https://github.com/anomalyco/opencode/issues/17796 · https://learn.microsoft.com/windows/terminal/customize-settings/interaction#automatically-copy-selection-to-clipboard · https://learn.microsoft.com/windows/terminal/customize-settings/interaction#context-menu · https://learn.microsoft.com/windows/terminal/customize-settings/profile-appearance#selection-background-color
+**Symptom:** Mit `"mouse": true` kopiert die Linksauswahl unzuverlässig und Rechtsklick wird von der TUI abgefangen. Mit `"mouse": false` funktionieren native Auswahl und Rechtsklick, aber Mausrad sowie Confirm-/Allow-Schaltflächen reagieren nicht mehr auf die Maus.
+
+**Ursache (im Quellcode bestätigt):** `mouse` ist in OpenCode 1.17.18 ein globaler TUI-Schalter. `true` übergibt Mausereignisse an OpenCode, `false` vollständig an das Terminal. Zusätzlich deaktiviert `packages/core/src/flag/flag.ts` Copy-on-select unter Windows standardmäßig. Das bubbled `onMouseUp` ist kein zuverlässiges Signal für das tatsächliche Auswahlende. Ein programmatisches `keymap.dispatchCommand("prompt.paste")` funktioniert außerhalb eines Tastatur-Event-Kontexts nicht, und `packages/tui/src/clipboard.ts` liefert beim Windows-Textclipboard in diesem Pfad `undefined`. Zusammen blockieren diese vier Ursachen den gewünschten Hybridbetrieb.
+
+**Versionen:** OpenCode 1.17.18 und Windows Terminal 1.24.11321.0 lokal bestätigt; OpenCode-Fehler #17796 offen. Der folgende Patch ist versionsgebunden und muss nach jedem OpenCode-Update gegen den neuen Tag geprüft werden.
+
+**FIX (funktionserhaltend, bestätigt als `1.17.18-mousefix.5`):**
+1. `~/.config/opencode/tui.json` auf `"mouse": true` lassen, damit Mausrad und anklickbare TUI-Elemente erhalten bleiben.
+2. Den Windows-Default von `OPENCODE_EXPERIMENTAL_DISABLE_COPY_ON_SELECT` auf `false` setzen.
+3. In `packages/tui/src/app.tsx` auf `CliRenderEvents.SELECTION` hören und dort `Selection.copy(...)` ausführen; den Listener bei Cleanup wieder entfernen. Nicht auf bubbled `onMouseUp` vertrauen.
+4. Rechtsklick nur innerhalb der Prompt-Grenzen abfangen und direkt eine öffentliche `PromptRef.paste()`-Methode aufrufen. Außerhalb des Prompts bleibt das normale OpenCode-Mausverhalten erhalten.
+5. In `packages/tui/src/clipboard.ts` unter Windows Text mit `powershell.exe -NonInteractive -NoProfile -Command "[Console]::OutputEncoding = [System.Text.UTF8Encoding]::new($false); Get-Clipboard -Raw"` lesen und als UTF-8-`text/plain` zurückgeben. Den vorhandenen Bild-Paste-Pfad unverändert voranstellen.
+
+**Updatefester Betrieb:** Patch nur auf den exakt passenden Git-Tag anwenden (`git apply --check` vor `git apply`), mit einer eindeutigen Version wie `1.17.18-mousefix.5` bauen, das Binary atomar über eine `.new`-Datei in einen stabilen User-Pfad installieren und anschließend `--version` prüfen. Ein Launcher darf dieses Binary nur verwenden, wenn es existiert; andernfalls muss er mit protokollierter Warnung auf das offizielle `opencode` im `PATH` zurückfallen. So bleibt OpenCode auch bei fehlendem oder nach einem Update noch nicht neu gebautem Patch startbar.
+
+**Verifikation:** Typechecks für `packages/core`, `packages/plugin`, `packages/tui` und `packages/opencode` bestanden; `packages/tui/test/clipboard.test.ts` mit 4/4 Tests grün; Build und `--version`-Smoke-Test bestanden. Im realen Windows-Terminal-Test funktionierten anschließend gleichzeitig: Auswahl kopiert sofort, Rechtsklick fügt in den Prompt ein, Mausrad scrollt und Permission-Schaltflächen bleiben anklickbar.
+
+**Funktionalitäts-Diff:** Vorher musste zwischen Zwischenablage und OpenCode-Mausinteraktion gewählt werden. Nachher bleiben Auswahl, Text- und Bild-Paste, Scrollen sowie Confirm-/Allow-Klicks erhalten; es wurde keine Funktion deaktiviert.
+
+**Verwandte Prüfung:** Der gleiche Clipboard-Leser wird vom Tastatur-Paste-Pfad verwendet; deshalb muss Text-Paste dort mitgetestet werden. Der Rechtsklick darf nur im Prompt konsumiert werden, damit Dialoge und andere TUI-Flächen nicht regressieren. Beim Versionssprung ist der Patch wegen möglicher Änderungen an OpenTUI-Events, PromptRef oder Clipboard-Code immer neu zu prüfen, nicht blind anzuwenden.
+
+**Quelle:** lokal reproduziert und vom Benutzer am 2026-07-10 bestätigt · https://opencode.ai/docs/tui/#options · https://github.com/anomalyco/opencode/issues/17796 · https://learn.microsoft.com/windows/terminal/customize-settings/interaction#automatically-copy-selection-to-clipboard · https://learn.microsoft.com/windows/terminal/customize-settings/interaction#context-menu · https://learn.microsoft.com/windows/terminal/customize-settings/profile-appearance#selection-background-color · Gegenstück: `best-practices/opencode/grundlagen-installation.md` §4.6 und §7.
 
 ### 11. Windows: Bild-Paste schlägt still fehl (Bun strippt `$` in PowerShell)
 **Symptom:** Bild aus Zwischenablage lässt sich nicht einfügen, kein Fehler.
@@ -962,7 +980,7 @@ streamable-http), §61 (kein Auto-Reconnect/Keepalive; Session-404 nach Server-N
 
 | Bug-Almanach (diese Datei) | Best-Practice-Datei (`best-practices/opencode/`) |
 |----------------------------|--------------------------------------------------|
-| §1 Installation/Update, §2 TUI, §12 Bun-Crashes | `grundlagen-installation.md` (§2 Installation, §4 TUI, §7 Windows-Stolperfallen, §8 Logs/Debug) |
+| §1 Installation/Update, §2 TUI (einschließlich #10a Windows-Hybridmaus), §12 Bun-Crashes | `grundlagen-installation.md` (§2 Installation, §4 TUI, §4.6 Hybridmaus, §7 Windows-Stolperfallen, §8 Logs/Debug) |
 | §3 Konfiguration | `konfiguration.md` (Schema, Präzedenz, Variablen, Permissions, Beispiel-Configs) |
 | §4 AGENTS.md/Memory/Sessions, §5 Kontext | `agents-md-memory.md` (AGENTS.md, /init, Precedence, instructions, Memory, Compaction) |
 | §6 Agents/Modes/Permissions | `agents-modes.md` (Primary/Subagents, Plan/Build, Custom Agents, Permissions, Modellwahl) |
