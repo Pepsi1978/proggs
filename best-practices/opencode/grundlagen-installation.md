@@ -255,7 +255,7 @@ keinen Inhalt. Nur die Kombination der vier Korrekturen liefert den vollständig
 
 **Update- und Installationsstrategie:** Den Patch an einen exakten OpenCode-Tag binden und vor jeder
 Anwendung mit `git apply --check` validieren. Das Binary mit einer eindeutigen Suffix-Version wie
-`1.17.18-mousefix.5` bauen, zunächst als `.new` in einen stabilen User-Pfad kopieren, atomar umbenennen
+`1.17.18-windowsfix.6` bauen, zunächst als `.new` in einen stabilen User-Pfad kopieren, atomar umbenennen
 und `opencode.exe --version` gegen die erwartete Version prüfen. Ein Launcher bevorzugt das Custom-Binary
 nur, wenn die Datei existiert, und fällt sonst mit Log-Warnung auf das offizielle `opencode` im `PATH`
 zurück. Nach jedem Upstream-Update den Patch neu prüfen und bauen; niemals einen Patch für 1.17.18 blind
@@ -267,8 +267,27 @@ Rechtsklick fügt Text in den Prompt ein, Mausrad scrollt, Permission-Schaltflä
 Zusätzlich Bild-Paste und Rechtsklick außerhalb des Prompts prüfen, weil beide denselben Eingabepfad
 bzw. dieselbe globale Mausbehandlung berühren.
 
-`lokal verifiziert` (OpenCode 1.17.18, Windows Terminal 1.24.11321.0, Patchrevision mousefix.5,
+`lokal verifiziert` (OpenCode 1.17.18, Windows Terminal 1.24.11321.0, Patchrevision windowsfix.6,
 2026-07-10). Fehlerdetails und Root Cause: `bugs/opencode/opencode-cli.md` §2 #10a.
+
+### 4.7 Windows-Stabilitätsbuild: Full-Repaint und prozesslokale Modellvariante
+
+Der reproduzierbare Windows-Build bündelt drei voneinander unabhängige Korrekturen in einem Binary:
+
+1. Der bestätigte Hybridmaus-Patch aus §4.6 erhält Copy, Paste, Mausrad und TUI-Klicks gemeinsam.
+2. OpenTUI 0.4.3 setzt nach einer nativen Renderablehnung `forceFullRepaintRequested = true`. Dadurch heilt
+   der nächste Renderzyklus einen desynchronisierten Diff-Puffer automatisch; ein manueller Resize bleibt
+   nur der Fallback für ältere Binaries.
+3. Die Rich-TUI akzeptiert `--variant <name>` als prozesslokalen Startwert. Der Wert gilt nur für das mit
+   `--model` gestartete Modell und wird bei einer bewussten Variantenauswahl innerhalb der TUI freigegeben.
+   Dadurch können parallele Sitzungen mit verschiedenen Reasoning-Stufen laufen, ohne sich über die globale
+   `~/.local/state/opencode/model.json` gegenseitig zu überschreiben.
+
+Der Launcher muss das Custom-Binary nur bei vorhandener Datei wählen und `--variant` ausschließlich diesem
+Binary übergeben. Fehlt es, bleibt das offizielle `opencode` im `PATH` ein startfähiger Fallback; die ältere
+globale Config-/State-Vorbelegung sorgt dort weiterhin für bestmögliche Kompatibilität. Bei jedem OpenCode-
+Update müssen Quellpatch, OpenTUI-Version, Typechecks, fokussierte Tests, Binary-Smoke-Test und realer
+Maus-/Variantentest erneut ausgeführt werden.
 
 ---
 

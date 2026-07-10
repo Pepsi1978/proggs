@@ -126,14 +126,14 @@
 
 **Versionen:** OpenCode 1.17.18 und Windows Terminal 1.24.11321.0 lokal bestätigt; OpenCode-Fehler #17796 offen. Der folgende Patch ist versionsgebunden und muss nach jedem OpenCode-Update gegen den neuen Tag geprüft werden.
 
-**FIX (funktionserhaltend, bestätigt als `1.17.18-mousefix.5`):**
+**FIX (funktionserhaltend, bestätigt als Teil von `1.17.18-windowsfix.6`):**
 1. `~/.config/opencode/tui.json` auf `"mouse": true` lassen, damit Mausrad und anklickbare TUI-Elemente erhalten bleiben.
 2. Den Windows-Default von `OPENCODE_EXPERIMENTAL_DISABLE_COPY_ON_SELECT` auf `false` setzen.
 3. In `packages/tui/src/app.tsx` auf `CliRenderEvents.SELECTION` hören und dort `Selection.copy(...)` ausführen; den Listener bei Cleanup wieder entfernen. Nicht auf bubbled `onMouseUp` vertrauen.
 4. Rechtsklick nur innerhalb der Prompt-Grenzen abfangen und direkt eine öffentliche `PromptRef.paste()`-Methode aufrufen. Außerhalb des Prompts bleibt das normale OpenCode-Mausverhalten erhalten.
 5. In `packages/tui/src/clipboard.ts` unter Windows Text mit `powershell.exe -NonInteractive -NoProfile -Command "[Console]::OutputEncoding = [System.Text.UTF8Encoding]::new($false); Get-Clipboard -Raw"` lesen und als UTF-8-`text/plain` zurückgeben. Den vorhandenen Bild-Paste-Pfad unverändert voranstellen.
 
-**Updatefester Betrieb:** Patch nur auf den exakt passenden Git-Tag anwenden (`git apply --check` vor `git apply`), mit einer eindeutigen Version wie `1.17.18-mousefix.5` bauen, das Binary atomar über eine `.new`-Datei in einen stabilen User-Pfad installieren und anschließend `--version` prüfen. Ein Launcher darf dieses Binary nur verwenden, wenn es existiert; andernfalls muss er mit protokollierter Warnung auf das offizielle `opencode` im `PATH` zurückfallen. So bleibt OpenCode auch bei fehlendem oder nach einem Update noch nicht neu gebautem Patch startbar.
+**Updatefester Betrieb:** Patch nur auf den exakt passenden Git-Tag anwenden (`git apply --check --ignore-space-change` vor `git apply --ignore-space-change`, damit Windows-CRLF den Kontext nicht verfälscht), mit einer eindeutigen Version wie `1.17.18-windowsfix.6` bauen, das Binary atomar über eine `.new`-Datei in einen stabilen User-Pfad installieren und anschließend `--version` prüfen. Ein Launcher darf dieses Binary nur verwenden, wenn es existiert; andernfalls muss er auf das offizielle `opencode` im `PATH` zurückfallen. So bleibt OpenCode auch bei fehlendem oder nach einem Update noch nicht neu gebautem Patch startbar.
 
 **Verifikation:** Typechecks für `packages/core`, `packages/plugin`, `packages/tui` und `packages/opencode` bestanden; `packages/tui/test/clipboard.test.ts` mit 4/4 Tests grün; Build und `--version`-Smoke-Test bestanden. Im realen Windows-Terminal-Test funktionierten anschließend gleichzeitig: Auswahl kopiert sofort, Rechtsklick fügt in den Prompt ein, Mausrad scrollt und Permission-Schaltflächen bleiben anklickbar.
 
@@ -165,11 +165,17 @@
 **Quelle:** https://github.com/anomalyco/opencode/issues/16967
 
 ### 14. TUI nach langer Ausgabe / Resume verstümmelt (rein visuell)
-**Symptom:** Zeichen überlappen, Layout bricht nach langer Ausgabe oder nach `Ctrl+Z`+`fg`. Die eigentliche Modell-Ausgabe bleibt korrekt.
-**Ursache:** Fehlendes vollständiges Repaint (opentui-Renderer).
-**Versionen:** unabhängig (#15388, #16327).
-**FIX:** Terminal-Fenster kurz resizen → erzwingt Full-Redraw.
-**Quelle:** https://github.com/anomalyco/opencode/issues/15388 · https://github.com/anomalyco/opencode/issues/16327
+**Symptom:** Nach längerer Arbeit und schnellen Tool-Output-Bursts werden große Flächen schwarz; Panelhintergründe und statische Zeichen fehlen, während einzelne neue Ziffern weiter erscheinen. Ein Terminal-Resize stellt den vollständigen unveränderten Inhalt sofort wieder her.
+
+**Root Cause (OpenTUI 0.4.3, lokal bestätigt):** Der native Windows-Renderpfad kann einen Frame ablehnen. `handleNativeRenderRejection()` ruft dann `reportNativeRenderFailure()` auf, dessen Meldung ein Full Repaint beim nächsten Render verspricht. Die Funktion setzte `forceFullRepaintRequested` jedoch nicht. Der interne Diff-Puffer galt dadurch weiter als aktuell, obwohl Windows Terminal den Frame nicht vollständig erhalten hatte. Ein Resize baut die Puffer neu auf und erklärt die sofortige Wiederherstellung.
+
+**FIX in `1.17.18-windowsfix.6`:** `reportNativeRenderFailure()` setzt vor der bestehenden Fehlermeldung `forceFullRepaintRequested = true`. Der nächste normale Renderzyklus überträgt dadurch den ganzen Frame. Der versionsgebundene Build prüft OpenTUI exakt auf `0.4.3`, akzeptiert den Patch idempotent und bricht bei unbekanntem Bundle sicher ab. Sidebar, Maus und Tool-Ausgabe bleiben aktiv; kein Feature wurde gedrosselt oder deaktiviert.
+
+**Verifikation:** Der Benutzer reproduzierte die Wiederherstellung durch Resize; das bestätigt den Puffer-/Full-Repaint-Pfad. OpenCode-Typechecks, fokussierte Tests, Single-Binary-Build und Versions-Smoke-Test sind grün. Die automatische Recovery ist installiert; die Langzeitbeobachtung unter realer Output-Last läuft weiter.
+
+**Sofort-Workaround für ältere Binaries:** Terminal-Fenster kurz resizen, um ein Full Repaint zu erzwingen.
+
+**Quelle:** lokal auf OpenCode 1.17.18, OpenTUI 0.4.3 und Windows Terminal 1.24.11321.0 reproduziert · https://github.com/anomalyco/opencode/issues/15388 · https://github.com/anomalyco/opencode/issues/16327
 
 ### 15. TUI-Freeze (Spinlock) — Prozess läuft nach Terminal-Schließen weiter
 **Symptom:** TUI komplett unresponsive; nach Terminal-Schließen läuft `opencode` mit CPU-Last weiter.
