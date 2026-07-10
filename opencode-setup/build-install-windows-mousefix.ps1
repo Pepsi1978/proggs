@@ -105,7 +105,7 @@ try {
     try {
         $lock = [IO.File]::Open($lockPath, [IO.FileMode]::OpenOrCreate, [IO.FileAccess]::ReadWrite, [IO.FileShare]::None)
     } catch [IO.IOException] {
-        "Update läuft bereits."
+        "OPENCODE_UPDATE_STATUS=busy"
         return
     }
 
@@ -122,7 +122,7 @@ try {
             ).ToUniversalTime()
         }
         if ($next -gt [DateTime]::UtcNow) {
-            "Updateprüfung erst wieder ab $($next.ToString('o'))."
+            "OPENCODE_UPDATE_STATUS=deferred;$($next.ToString('o'))"
             return
         }
     }

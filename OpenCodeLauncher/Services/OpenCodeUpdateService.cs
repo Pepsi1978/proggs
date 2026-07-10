@@ -39,13 +39,15 @@ public sealed class OpenCodeUpdateService
             var stdout = (await stdoutTask).Trim();
             var stderr = (await stderrTask).Trim();
             var state = ReadState(home);
-            var status = stdout.StartsWith("Updateprüfung erst wieder", StringComparison.Ordinal)
+            var status = stdout.StartsWith("OPENCODE_UPDATE_STATUS=deferred", StringComparison.Ordinal)
                 ? "deferred"
-                : stdout.StartsWith("Update läuft bereits", StringComparison.Ordinal)
+                : stdout.StartsWith("OPENCODE_UPDATE_STATUS=busy", StringComparison.Ordinal)
                     ? "busy"
                     : state.Status ?? (process.ExitCode == 0 ? "completed" : "failed");
-            var message = status is "deferred" or "busy"
-                ? stdout
+            var message = status == "deferred"
+                ? "Die tägliche OpenCode-Updateprüfung ist noch nicht fällig."
+                : status == "busy"
+                    ? "Eine OpenCode-Updateprüfung läuft bereits."
                 : state.Message ?? (process.ExitCode == 0 ? stdout : stderr);
             Logger.Instance.Info("OpenCodeUpdateService", "CheckAsync", "Windows-Fix-Update abgeschlossen",
                 new { status, message, process.ExitCode, stdout, stderr });
