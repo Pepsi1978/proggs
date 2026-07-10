@@ -538,14 +538,16 @@
          Die vertikale FullView bleibt davon voellig unberuehrt (Fallback). -->
     <Border x:Name="HorizontalView"
             CornerRadius="36"
-            Background="#B31A1A1A"
+            Background="{x:Null}"
             BorderBrush="#FF000000"
             BorderThickness="2"
             VerticalAlignment="Top"
             HorizontalAlignment="Left"
             Visibility="Collapsed">
-        <!-- Kein Padding: die farbigen Gruppen fuellen die volle Leistenhoehe
-             (Headroom fuer die Hover-Vergroesserung steckt im Gruppen-Padding). -->
+        <!-- Kein eigener Hintergrund: jede Gruppe malt bereits denselben B3-Alpha-
+             Brush wie die entsprechende vertikale Sektion. Eine zweite B3-Schicht
+             darunter wuerde die horizontale Leiste sichtbar deckender machen.
+             Kein Padding: die Gruppen fuellen die volle Leistenhoehe. -->
         <StackPanel x:Name="HBar" Orientation="Horizontal" VerticalAlignment="Stretch"/>
     </Border>
 
