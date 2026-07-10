@@ -8,6 +8,10 @@ VoiceAgent **1.2.0**.
 
 > **Update 2026-07-02:** Re-Recherche fand keine neuen belegten Speech-Pipeline-Bugs seit 2026-06-10. Die Kernpraxis bleibt: FSM, Timer nur im Idle, semantisches Endpointing statt reiner Stille, Barge-in mit Echo-/Filler-Schutz, Tool-Call-Abschnitte bewusst interruptible/non-interruptible markieren.
 
+> **Update 2026-07-10:** Für kurze Windows-UI-Signale bestätigt: PCM-Daten und Audio-Output
+> vorhalten. Die kleinste nominelle Pufferlatenz ist nicht automatisch die beste; auf dem getesteten
+> Realtek-Treiber waren `100 ms / 3 Buffer` schnell und flüssig, `40 ms / 2 Buffer` stotterte.
+
 > **Zweite Seite der Medaille zum Bug-Almanach** ([`bugs/desktop/voice-pipeline.md`](../../bugs/desktop/voice-pipeline.md)):
 > der Almanach sagt *was schiefgeht*, diese Datei sagt *wie man eine Sprach-Pipeline von
 > vornherein so baut, dass sie fluessig, schnell und zuverlaessig wirkt*. Nachbar-Seiten:
@@ -40,6 +44,7 @@ VoiceAgent **1.2.0**.
 | 14 | Frueherkennung sichern | Jeden FSM-Uebergang + Stufen-Latenz als CHECKPOINT loggen | §7 |
 | 15 | Aufnahme nicht von aussen abwuergen | Busy-Status (Aufnahme/Transkription) ueber lokalen Endpoint exponieren; Deploy/Rebuild/Kill wartet auf Ruhe | §8 |
 | 16 | Hybrid-Diktat (Live-Vorschau + finale Engine) | Vorschau getrennt vom Zielfeld; `previewActive`-Riegel: nach Stopp schreibt nur die finale Engine; Fallback mit Hinweis | §9 |
+| 17 | Kurze UI-Töne ohne Kaltstartlatenz | NAudio-Output dauerhaft offen; PCM vorhalten; Puffer live auf schnell + flüssig abstimmen | §4 |
 
 ---
 
@@ -106,6 +111,12 @@ VoiceAgent **1.2.0**.
   REST-TTFB und das 200-RPM-Limit); kein SSML im Streaming → `[pause]`-Markup; 5.000 Bytes/Request. `offiziell`
 - **Gapless Audio**: EIN offener Output, `BufferedWaveProvider`, LINEAR16/PCM, identisches
   WaveFormat fuer alle Chunks — keine Klicks zwischen Saetzen. `extern`(markheath)
+- **Kurze Statussignale unter Windows**: Nicht pro Klick `Console.Beep`, `SoundPlayer` oder einen
+  neuen Output starten. Einen `WaveOutEvent` beim App-Start öffnen, mit
+  `BufferedWaveProvider(ReadFully=true)` warm halten und vorberechnete PCM-Samples einreihen.
+  `DesiredLatency` und Bufferzahl sind Treiberparameter, keine Wettbewerbswerte: mit Sonden und
+  Hörtest den kleinsten **stabilen** Wert wählen. Bestätigte Realtek-Baseline: `100 ms / 3 Buffer`;
+  `40 ms / 2 Buffer` verursachte Underruns. Output-Stopp/Fehler loggen und reinitialisieren. `eigener Vorfall`
 
 ## 5. Echo & Unterbrechbarkeit (Barge-in)
 

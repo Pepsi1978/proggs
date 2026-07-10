@@ -28,3 +28,4 @@
 | 14 | Frueherkennung sichern | Jeden FSM-Uebergang + Stufen-Latenz als CHECKPOINT loggen | §7 |
 | 15 | Aufnahme nicht von aussen abwuergen | Busy-Status (Aufnahme/Transkription) ueber lokalen Endpoint exponieren; Deploy/Rebuild/Kill wartet auf Ruhe | §8 |
 | 16 | Hybrid-Diktat (Live-Vorschau + finale Engine) | Vorschau getrennt vom Zielfeld; `previewActive`-Riegel: nach Stopp schreibt nur die finale Engine; Fallback mit Hinweis | §9 |
+| 17 | Kurze UI-Töne ohne Kaltstartlatenz | NAudio-Output dauerhaft offen; PCM vorhalten; Puffer live auf schnell + flüssig abstimmen | §4 |

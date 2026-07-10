@@ -18,6 +18,10 @@
 
 > **Update 2026-07-02:** Keine neuen belegten Bugs/Regressionen seit 2026-06-10 gefunden. Bestehende Designrisiken wurden bestaetigt: silence-only VAD verwechselt Denkpausen mit Turn-Ende, Barge-in braucht Echo-/Filler-Handling, und Tool-Calls duerfen nicht mitten in der Wiedergabe unkontrolliert unterbrochen werden.
 
+> **Update 2026-07-10:** Eigener Windows-Vorfall ergänzt: kurze UI-Tonsignale hatten trotz vorab
+> geladener WAVs 1–3 s Ausgabelatenz. Ein dauerhaft offener NAudio-PCM-Ausgang beseitigte die
+> Geräte-Startlatenz; `40 ms / 2 Buffer` stotterte auf Realtek, `100 ms / 3 Buffer` war schnell und flüssig.
+
 ---
 
 ## ⚡ Kurzcheck (Stufe A — vor der Arbeit lesen)
@@ -44,6 +48,7 @@
 | 14 | Einzelwort ("ja") in falscher Sprache | `language=de` IMMER explizit, nie Auto-Detect | §6.1 |
 | 15 | Haengender STT friert Turn 60 s ein | Groq-Timeout auf 5–10 s, EIN statischer HttpClient | §6.2 |
 | 16 | Diktat-Live-Vorschau ueberschreibt finale Fassung / springt im Feld ⭐⭐ | Vorschau getrennt vom Zielfeld; `previewActive`-Riegel: nach Stopp schreibt NUR die finale Engine | §7 |
+| 17 | Kurzer Start-/Stoppton kommt Sekunden später oder stottert ⭐⭐ | Output dauerhaft offen halten; PCM puffern; Latenz nicht unter die Treibergrenze drücken | §4.4 |
 
 ---
 
@@ -220,6 +225,26 @@ Chunks; MP3-Frame-Grenzen.
 **FIX:** EINEN Output offen halten und Saetze in einen `BufferedWaveProvider` einspeisen;
 LINEAR16/PCM statt MP3; identisches WaveFormat fuer alle Chunks.
 **Quelle:** markheath.net (Concatenating WAV) · Hydrogenaudio (Gapless).
+
+### 4.4 Kurze UI-Tonsignale: Sekunden-Latenz oder Stottern bei zu kleinem Puffer   [⭐⭐ EIGENER VORFALL 2026-07-10]
+**Symptom:** Start- und Endton eines Mikrofon-Overlays klingen korrekt, beginnen auf einem
+Windows-Rechner aber erst nach 1–3 s. Nach Umstellung auf einen 40-ms-Ausgang kommen sie sofort,
+klingen auf dem Realtek-Treiber jedoch abgehackt.
+**Ursache:** Ein pro Signal angestoßener `Console.Beep`-/`SoundPlayer`-Pfad muss den Windows-
+Ausgabepfad jeweils schedulen bzw. aktivieren. Vorladen der WAV-Daten entfernt nur Datei-I/O, nicht
+die Geräte-Startlatenz. Ein dauerhaft offener `WaveOutEvent` entfernt diese Kaltstartkosten; mit
+`DesiredLatency=40` und nur zwei Buffern lag die Periodengröße auf diesem Treiber unter seiner
+stabilen Nachliefergrenze und erzeugte Underruns.
+**Versionen:** .NET 10, NAudio 2.2.1, Windows 11, Realtek-Ausgabe; Treibergrenze ist geräteabhängig.
+**FIX:** Einen `WaveOutEvent` beim App-Start initialisieren und dauerhaft auf einem
+`BufferedWaveProvider(ReadFully=true)` laufen lassen. Vorab erzeugte PCM-Samples nur noch per
+`ClearBuffer` + `AddSamples` einreihen. Mit Laufzeitsonden `output_ready`, `pcm_queued`, Capture-
+`setupMs` und Stopdauer messen. Nicht blind auf die kleinste nominelle Latenz optimieren: hier waren
+`100 ms / 3 Buffer` live schnell und flüssig; `40 ms / 2 Buffer` war schneller, aber hörbar instabil.
+Bei Output-Fehler loggen, neu initialisieren und einen Systemton als Fallback behalten.
+**Verifikation:** TVO 1.4.41 / CVO 2.1.29; Capture-Setup 265–293 ms, Stop 96–146 ms; Frank bestätigte
+Start und Stopp als sofort sowie beide Tonfolgen als flüssig.
+**Quelle:** eigener Laufzeitvorfall TVO/CVO 2026-07-10 · NAudio-Pattern aus §4.3.
 
 ---
 
