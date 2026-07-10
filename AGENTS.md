@@ -72,7 +72,7 @@ AGENTS.md §3 + brain `Programmierung/Rules`.
 
 ## Quality Requirements
 
-- Quality Gates follow global AGENTS.md §6: Schnellmodus exactly 1 pass, Normalmodus at most 3,
+- Quality Gates follow global AGENTS.md §6: Schnellmodus no pass, Normalmodus at most 2,
   Gruendlichkeitsmodus at most 6; never turn review findings outside the user scope into a second task
 - Required builds must be green before task completion/deploy; the pre-build commit order from global
   AGENTS.md §3 remains binding, and build failures require an immediate follow-up fix
