@@ -48,7 +48,7 @@ import traceback
 import unicodedata
 import uuid
 from concurrent.futures import ThreadPoolExecutor
-from datetime import date, datetime, timezone
+from datetime import date, datetime, timedelta, timezone
 from logging.handlers import RotatingFileHandler
 from pathlib import Path
 from typing import Any
@@ -333,7 +333,7 @@ def _init_store() -> None:
         )
         _log(logging.INFO, "Collection angelegt", collection=COLLECTION, dims=EMBED_DIMS)
     # Payload-Indizes fuer schnelle/zuverlaessige Filter (idempotent — Fehler ignorieren)
-    for _field in ("doc_id", "title", "category", "categories", "parent", "parents", "user_id", "source"):
+    for _field in ("doc_id", "title", "category", "categories", "parent", "parents", "user_id", "source", "layer"):
         try:
             qc.create_payload_index(collection_name=COLLECTION, field_name=_field, field_schema="keyword")
         except Exception:  # noqa: BLE001 — Index existiert bereits / nicht kritisch
@@ -436,6 +436,7 @@ VERSION = "1.27.1 (08.07.2026, 20:14 Uhr)"  # 1.27.1: FIX Kategorie-Doppelung Ge
 VERSION = "1.27.2 (10.07.2026, 11:34 Uhr)"  # 1.27.2: Tiefen-Debugging-Haertung. Gemini-Embedding-Calls mit 60s-Timeout + Backoff-Retry (nur transiente 429/5xx/Netzfehler); Bearer-Vergleich konstantzeitig (hmac.compare_digest); limit=0-Zaehlpfad dedupliziert ueber chunk_index=0 + serverseitiges qc.count (identisches Ergebnis, ~5x weniger Scan); created_at-None-Guard in /by-date; Embedding-Tages-Cap liest unter Lock. Alt: 1.27.1.
 VERSION = "1.28.0 (10.07.2026, 19:26 Uhr)"  # 1.28.0: Neuer read-only GET /entry/categories?doc_id=... liest Kategorien gezielt per doc_id+user_id aus genau einem Chunk und nur kleinen Metadatenfeldern. Alt: 1.27.2.
 VERSION = "1.28.1 (10.07.2026, 19:40 Uhr)"  # 1.28.1: GET /entry/categories protokolliert seine gesamte Antwortzeit dauerhaft als checkpoint-Feld ms. Alt: 1.28.0.
+VERSION = "1.29.0 (10.07.2026, 21:05 Uhr)"  # 1.29.0 (Level-2 Gruppe A, Punkte 1+10 — Frank-Freigabe 2026-07-10): GEDAECHTNIS-EBENE + VERTRAUENS-LEVEL. Neues Payload-Feld layer (kurzzeit/langzeit, Keyword-Index): neue /store-Eintraege landen standardmaessig im KURZZEIT-Gedaechtnis (Arbeitsgedaechtnis); Bestand OHNE Feld gilt beim Lesen als langzeit (payload_layer() — KEINE Migration noetig, verlustfrei). Die SUCHE filtert NIE nach layer (reines Organisations-Metadatum). ALLE Payload-Rebuild-Wege (entry/category, entry/categories, PUT /entry, Papierkorb+Restore) erhalten die Ebene (Feld-Drift-Schutz qdrant.md Par. 9). NEU POST /layer/promote {min_age_days}: befoerdert Kurzzeit-Eintraege ab Mindestalter per set_payload ins Langzeitgedaechtnis (NUR das Flag — Text/Vektor/Kategorien unberuehrt; nie zurueck; idempotent; fuer den Nacht-Bibliothekar). trust (hoch/mittel) wird NICHT gespeichert, sondern deterministisch aus source abgeleitet (source_trust: manual/chat/app/dashboard=hoch, sonst mittel) und in by-title/by-category/category-item/by-parent mit ausgegeben (layer ebenso). Speicher-Pfad-Verhalten sonst UNANGETASTET (Franks Vorgabe: keine Bewertung/Ersetzung beim Speichern). Alt: 1.28.1.
 
 # Startup-Banner (Observability-First: Log-Pfad + Version EINMAL ausgeben)
 _log(logging.INFO, "brain-api startet", version=VERSION, log_path=LOG_PATH)
@@ -920,6 +921,36 @@ def _require_store() -> None:
 
 
 # ---------------------------------------------------------------------------
+# Gedaechtnis-Ebene (layer) + Vertrauens-Level (trust) — Level-2 Gruppe A, #1 + #10
+# ---------------------------------------------------------------------------
+# layer: 'kurzzeit' (Arbeitsgedaechtnis, neue Eintraege) oder 'langzeit' (bewaehrt).
+# Bestand OHNE layer-Feld gilt als 'langzeit' (keine Migration noetig — verlustfrei).
+# Die SUCHE filtert NIE nach layer (reines Organisations-Metadatum, kein Recall-Verlust).
+LAYERS = ("kurzzeit", "langzeit")
+
+# trust wird NICHT gespeichert, sondern deterministisch aus der Herkunft (source)
+# abgeleitet — eine Quelle der Wahrheit, kein Feld-Drift (qdrant.md §9).
+# 'hoch' = von Frank direkt eingegeben; 'mittel' = automatisch erzeugt/importiert.
+_TRUST_HIGH_SOURCES = {"manual", "chat", "app", "dashboard"}
+
+
+def norm_layer(value) -> str:
+    v = (str(value or "").strip().lower())
+    return v if v in LAYERS else "kurzzeit"
+
+
+def payload_layer(pl: dict) -> str:
+    """Ebene eines bestehenden Payloads — fehlendes Feld = Altbestand = 'langzeit'."""
+    v = (str((pl or {}).get("layer") or "").strip().lower())
+    return v if v in LAYERS else "langzeit"
+
+
+def source_trust(source) -> str:
+    s = (str(source or "manual").strip().lower()) or "manual"
+    return "hoch" if s in _TRUST_HIGH_SOURCES else "mittel"
+
+
+# ---------------------------------------------------------------------------
 # Request-Modelle
 # ---------------------------------------------------------------------------
 class StoreReq(BaseModel):
@@ -928,6 +959,7 @@ class StoreReq(BaseModel):
     category: str | None = Field(default=None, description="Optionale Kategorie (Abwaertskompat: einzelne Kategorie)")
     categories: list[str] | None = Field(default=None, max_length=12, description="Optional MEHRERE Kategorien (Multi-Category); hat Vorrang vor 'category'. Erste = primaer.")
     source: str | None = Field(default="manual", max_length=40, description="Herkunft des Schreibers, z.B. manual, entropyreductor oder librarian")
+    layer: str | None = Field(default=None, max_length=16, description="Gedaechtnis-Ebene: 'kurzzeit' (Default fuer Neues) oder 'langzeit'")
     user_id: str = Field(default="frank", description="Besitzer (aktuell immer 'frank')")
 
 
@@ -1077,6 +1109,7 @@ def store(req: StoreReq) -> dict:
     parents = category_parents(cats)
     parent = parents[0] if parents else ""    # primaerer Haupt-Teil (Abwaertskompat)
     source = (req.source or "manual").strip().lower() or "manual"
+    layer = norm_layer(req.layer)   # Neues landet standardmaessig im Kurzzeitgedaechtnis (Level-2 #1)
     chunks = chunk_text(req.text)
     _guard_embed_budget(len(chunks))
     t0 = time.time()
@@ -1099,6 +1132,7 @@ def store(req: StoreReq) -> dict:
             "created_at": created_at,
             "updated_at": now,
             "source": source,
+            "layer": layer,
         }))
     _upsert_batched(points)
 
@@ -1149,6 +1183,8 @@ def by_title(title: str, user_id: str = "frank") -> dict:
             "category": points[0].payload.get("category") or None,
             "categories": cats_from_payload(points[0].payload),
             "source": points[0].payload.get("source") or None,
+            "layer": payload_layer(points[0].payload),
+            "trust": source_trust(points[0].payload.get("source")),
             "created_at": points[0].payload.get("created_at"),
             "updated_at": points[0].payload.get("updated_at"), "text": full}
 
@@ -1175,6 +1211,8 @@ def by_category(category: str, user_id: str = "frank") -> dict:
                           "text": p.payload.get("full_text", ""), "category": canonical_category(p.payload.get("category")) or None,
                           "categories": cats_from_payload(p.payload),
                           "source": p.payload.get("source") or None,
+                          "layer": payload_layer(p.payload),
+                          "trust": source_trust(p.payload.get("source")),
                           "created_at": p.payload.get("created_at"),
                           "updated_at": p.payload.get("updated_at")}
     items = _sort_recent(seen.values())   # Neueste zuerst (nach Aktualitaet)
@@ -1220,7 +1258,9 @@ def category_item(category: str, index: int = 1, user_id: str = "frank") -> dict
     return {"ok": True, "found": True, "category": cat, "index": index, "total": total,
             "title": title, "doc_id": doc_id,
             "categories": cats_from_payload(pts[0].payload) if pts else [],
-            "source": (pts[0].payload.get("source") or None) if pts else None, "text": full}
+            "source": (pts[0].payload.get("source") or None) if pts else None,
+            "layer": payload_layer(pts[0].payload) if pts else None,
+            "trust": source_trust(pts[0].payload.get("source")) if pts else None, "text": full}
 
 
 @app.get("/by-parent", dependencies=[Depends(require_auth)])
@@ -1245,6 +1285,8 @@ def by_parent(parent: str, user_id: str = "frank") -> dict:
                           "categories": cats_from_payload(p.payload),
                           "parent": canonical_category(p.payload.get("parent")) or None,
                           "source": p.payload.get("source") or None,
+                          "layer": payload_layer(p.payload),
+                          "trust": source_trust(p.payload.get("source")),
                           "created_at": p.payload.get("created_at"), "updated_at": p.payload.get("updated_at")}
     items = _sort_recent(seen.values())
     return {"ok": True, "parent": par, "count": len(items), "items": items}
@@ -1275,6 +1317,39 @@ def backfill_parent(user_id: str = "frank") -> dict:
     checkpoint("backfill_parent", "parent-Feld auf Altbestand gesetzt (set_payload, kein Re-Embed)",
                ok=True, chunks_updated=updated, groups=len(by_par))
     return {"ok": True, "chunks_updated": updated, "groups": len(by_par)}
+
+
+class PromoteLayerReq(BaseModel):
+    min_age_days: int = Field(default=14, ge=1, le=365, description="Mindestalter (Tage), ab dem ein Kurzzeit-Eintrag befoerdert wird")
+    user_id: str = Field(default="frank")
+
+
+@app.post("/layer/promote", dependencies=[Depends(require_auth)])
+def promote_layer(req: PromoteLayerReq) -> dict:
+    """Befoerdert bewaehrte Kurzzeit-Eintraege ins Langzeitgedaechtnis (Level-2 #1, Nacht-Task).
+
+    Aendert AUSSCHLIESSLICH das layer-Flag per set_payload — Text, Vektor, Kategorien,
+    Titel und Zeitstempel bleiben unberuehrt (rein additive Organisations-Ebene).
+    Befoerdert wird nur kurzzeit -> langzeit, nie zurueck. Idempotent."""
+    _require_store()
+    cutoff = (datetime.now(timezone.utc) - timedelta(days=req.min_age_days)).strftime("%Y-%m-%dT%H:%M:%SZ")
+    flt = Filter(must=[FieldCondition(key="user_id", match=MatchValue(value=req.user_id)),
+                       FieldCondition(key="layer", match=MatchValue(value="kurzzeit"))])
+    # ALLE Chunks laden (set_payload muss jeden Chunk des Dokuments treffen — Feld-Drift-Schutz,
+    # qdrant.md §9); nur die kleinen Zaehl-Felder, kein full_text (qdrant.md §8/§15).
+    pts = _scroll(flt, with_payload=["doc_id", "title", "created_at"])
+    ids, docs = [], {}
+    for p in pts:
+        created = (p.payload.get("created_at") or "")
+        if created and created <= cutoff:
+            ids.append(p.id)
+            docs[p.payload.get("doc_id")] = (p.payload.get("title") or "").strip()
+    if ids:
+        qc.set_payload(collection_name=COLLECTION, payload={"layer": "langzeit"}, points=ids, wait=True)
+    checkpoint("layer_promote", "Kurzzeit-Eintraege ins Langzeitgedaechtnis befoerdert (nur layer-Flag)",
+               ok=True, candidates=len(docs), points=len(ids), min_age_days=req.min_age_days)
+    return {"ok": True, "promoted": len(docs), "points": len(ids),
+            "titles": sorted(t for t in docs.values() if t)[:50], "min_age_days": req.min_age_days}
 
 
 @app.get("/category-counts", dependencies=[Depends(require_auth)])
@@ -1420,6 +1495,7 @@ def set_entry_category(req: EntryCategoryReq) -> dict:
     full_text = pl.get("full_text", "")
     created_at = pl.get("created_at", iso_now())
     source = (pl.get("source") or "manual").strip().lower() or "manual"
+    layer = payload_layer(pl)   # Ebene beim Rebuild erhalten (Feld-Drift-Schutz, qdrant.md §9)
     now = iso_now()
 
     _delete_doc(req.doc_id)  # alte Chunks (mit altem Kategorie-Vektor) raus
@@ -1432,7 +1508,7 @@ def set_entry_category(req: EntryCategoryReq) -> dict:
         points.append(PointStruct(id=point_id(req.doc_id, i), vector=vec, payload={
             "doc_id": req.doc_id, "user_id": req.user_id, "title": title,
             "category": new_cat, "categories": new_cats, "parent": new_parent, "parents": new_parents, "chunk_index": i, "chunk_count": len(chunks),
-            "chunk_text": ch, "full_text": full_text, "created_at": created_at, "updated_at": now, "source": source,
+            "chunk_text": ch, "full_text": full_text, "created_at": created_at, "updated_at": now, "source": source, "layer": layer,
         }))
     _upsert_batched(points, wait=True)
     after = _scroll(Filter(must=[FieldCondition(key="doc_id", match=MatchValue(value=req.doc_id))]), limit=1)
@@ -1487,6 +1563,7 @@ def set_entry_categories(req: EntryCategoriesReq) -> dict:
     full_text = pl.get("full_text", "")
     created_at = pl.get("created_at", iso_now())
     source = (pl.get("source") or "manual").strip().lower() or "manual"
+    layer = payload_layer(pl)   # Ebene beim Rebuild erhalten (Feld-Drift-Schutz, qdrant.md §9)
     now = iso_now()
 
     _delete_doc(req.doc_id)  # alte Chunks (mit alten Kategorie-Vektoren) raus
@@ -1501,7 +1578,7 @@ def set_entry_categories(req: EntryCategoriesReq) -> dict:
             "category": cats[0], "categories": cats,
             "parent": (parents[0] if parents else ""), "parents": parents,
             "chunk_index": i, "chunk_count": len(chunks), "chunk_text": ch,
-            "full_text": full_text, "created_at": created_at, "updated_at": now, "source": source,
+            "full_text": full_text, "created_at": created_at, "updated_at": now, "source": source, "layer": layer,
         }))
     _upsert_batched(points, wait=True)
     after = _scroll(Filter(must=[FieldCondition(key="doc_id", match=MatchValue(value=req.doc_id))]), limit=1)
@@ -1811,6 +1888,7 @@ def delete_entry(doc_id: str, user_id: str = "frank") -> dict:
         # Restore jede sekundaere Kategorie verloren (trash_restore liest via cats_from_payload).
         "categories": cats_from_payload(pl),
         "source": (pl.get("source") or "manual").strip().lower() or "manual",
+        "layer": payload_layer(pl),   # Ebene mit in den Papierkorb (Restore stellt sie wieder her)
         "text": pl.get("full_text", ""),
         "created_at": pl.get("created_at") or iso_now(),
         "deleted_at": iso_now(),
@@ -1842,6 +1920,7 @@ def update_entry(req: UpdateReq) -> dict:
     category = cats[0] if cats else ""
     created_at = pl.get("created_at", iso_now())
     source = (pl.get("source") or "manual").strip().lower() or "manual"
+    layer = payload_layer(pl)   # Ebene beim Rebuild erhalten (Feld-Drift-Schutz, qdrant.md §9)
     now = iso_now()
 
     # Titel-Aenderung (Frank-Wunsch): req.title=None -> alter Titel bleibt. Sonst neuer Titel.
@@ -1868,7 +1947,7 @@ def update_entry(req: UpdateReq) -> dict:
         points.append(PointStruct(id=point_id(target_doc_id, i), vector=vec, payload={
             "doc_id": target_doc_id, "user_id": req.user_id, "title": title, "category": category, "categories": cats, "parent": parent, "parents": parents,
             "chunk_index": i, "chunk_count": len(chunks), "chunk_text": ch,
-            "full_text": req.text, "created_at": created_at, "updated_at": now, "source": source,
+            "full_text": req.text, "created_at": created_at, "updated_at": now, "source": source, "layer": layer,
         }))
     _upsert_batched(points)
 
@@ -1951,6 +2030,7 @@ def trash_restore(req: RestoreReq) -> dict:
     category = cats[0] if cats else ""
     created_at = entry.get("created_at") or iso_now()
     source = (entry.get("source") or "manual").strip().lower() or "manual"
+    layer = payload_layer(entry)   # Ebene ueberlebt den Papierkorb-Roundtrip
     if not text.strip():
         raise HTTPException(status_code=400, detail="Eintrag hat keinen Text")
 
@@ -1966,7 +2046,7 @@ def trash_restore(req: RestoreReq) -> dict:
         points.append(PointStruct(id=point_id(req.doc_id, i), vector=vec, payload={
             "doc_id": req.doc_id, "user_id": entry.get("user_id") or req.user_id,
             "title": title, "category": category, "categories": cats, "parent": parent, "parents": parents, "chunk_index": i, "chunk_count": len(chunks),
-            "chunk_text": ch, "full_text": text, "created_at": created_at, "updated_at": now, "source": source,
+            "chunk_text": ch, "full_text": text, "created_at": created_at, "updated_at": now, "source": source, "layer": layer,
         }))
     _upsert_batched(points)
 

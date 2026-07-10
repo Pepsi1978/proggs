@@ -60,6 +60,7 @@ USER_ID = os.getenv("SB_USER_ID", "frank")
 VERSION = "0.11.1 (08.07.2026, 15:04 Uhr)"  # Prompt-JSON im Interview-System escaped, damit der Dienst beim Import nicht crasht. Alt: 0.11.0.
 VERSION = "0.11.4 (10.07.2026, 19:01 Uhr)"  # 0.11.4: Eigene Aufgaben markieren gekuerzte Eintragsauszuege sichtbar und blockieren Update-/Merge-Aktionen, wenn der Zieltext nur gekuerzt vorlag. Alt: 0.11.3.
 VERSION = "0.11.5 (10.07.2026, 19:38 Uhr)"  # 0.11.5: Additive Kategorie-Aktionen lesen den Bestand gezielt per GET /entry/categories?doc_id=... statt per /list- und /by-category-Scans. Alt: 0.11.4.
+VERSION = "0.12.0 (10.07.2026, 21:17 Uhr)"  # 0.12.0 (Level-2 Gruppe A, Punkt 1 — Frank-Freigabe 2026-07-10): NEU Standard-Nachtaufgabe GEDAECHTNIS-BEFOERDERUNG (zweite AUTO-Aufgabe neben Nachzuegler, laeuft ZUERST): ruft brain-api POST /layer/promote und befoerdert bewaehrte Kurzzeit-Eintraege (aelter als befoerderung_min_age_days, Default 14) ins Langzeitgedaechtnis. Deterministisch, KEIN LLM, inhaltsneutral — es wird NUR das layer-Etikett gesetzt, Text/Vektor/Kategorien bleiben 1:1 (Franks Vorgabe: nie Eintraege veraendern). Eigene Bilanz-Zeile (auch: nichts faellig) + report.auto.befoerderung (Anzahl + Titel) fuer den Morgen-Report. Toggle erscheint automatisch in den Einstellungen (standard_tasks dynamisch). Alt: 0.11.5.
 AGENT_URL = os.getenv("AGENT_URL", "http://agent:8002").rstrip("/")   # LLM-Durchgriff fuer Codex/GPT (agent 0.52.0)
 # Stille Notbremse gegen Endlosschleifen, wenn 'Ohne Begrenzung' aktiv ist (Almanach ai-agent §2.1:
 # ein Cap muss STOPPEN koennen). 5000 Calls erreicht ehrliche Nacht-Arbeit nie — nur ein Amoklauf.
@@ -191,6 +192,8 @@ def _write_json(path: Path, data: Any) -> None:
 STANDARD_TASKS: dict[str, dict] = {
     "nachzuegler": {"name": "Nachzügler-Verknüpfung", "nr": "Bonus",
                     "desc": "Einträge ohne Verknüpfung im Personen-/Themen-Register nachverknüpfen (läuft automatisch, verändert keinen Eintrag)."},
+    "befoerderung": {"name": "Gedächtnis-Beförderung", "nr": "1",
+                     "desc": "Bewährte Kurzzeit-Einträge (älter als die Mindestreife) ins Langzeitgedächtnis befördern — ändert NUR das Ebenen-Etikett, nie den Inhalt (läuft automatisch)."},
     "dubletten": {"name": "Dubletten-Vorschläge", "nr": "13",
                   "desc": "Fast identische Einträge finden und das Zusammenführen vorschlagen."},
     "widersprueche": {"name": "Widerspruchs-Suche", "nr": "12",
@@ -220,6 +223,7 @@ DEFAULT_CONFIG: dict = {
     "dubletten_scan_max": 150,             # greift NUR wenn unlimited=False
     "veraltet_max": 50,                    # greift NUR wenn unlimited=False
     "veraltet_min_age_days": 45,           # juengere Eintraege gelten nie als veraltet
+    "befoerderung_min_age_days": 14,       # Mindestreife (Tage), ab der Kurzzeit -> Langzeit befoerdert wird
     "standard_task_overrides": {},          # key -> {definition}; Frank kann Standard-Aufgaben im Dashboard nachschaerfen
     "custom_tasks": [],                    # [{id, name, definition, enabled, created_at}] — Franks eigene Aufgaben
 }
@@ -998,6 +1002,24 @@ def _is_worklike(entry: dict) -> bool:
     return not (_is_conv(entry) or c == "bugfixes" or c.startswith("bugfixes/"))
 
 
+def _task_befoerderung(cfg: dict, st: dict, budget: NightBudget, entries: dict, report: dict) -> None:
+    """Level-2 #1: Kurzzeit-Eintraege ab Mindestreife ins Langzeitgedaechtnis befoerdern.
+
+    Zweite AUTO-Aufgabe (wie Nachzuegler): deterministisch, KEIN LLM, inhaltsneutral —
+    brain-api /layer/promote aendert nur das layer-Flag (Text/Vektor/Kategorien bleiben 1:1)."""
+    days = max(1, int(cfg.get("befoerderung_min_age_days", 14) or 14))
+    r = _HTTP.post(f"{BRAIN_URL}/layer/promote",
+                   json={"min_age_days": days, "user_id": USER_ID},
+                   headers=HEADERS, timeout=120.0)
+    r.raise_for_status()
+    data = r.json()
+    promoted = int(data.get("promoted", 0) or 0)
+    report["auto"]["befoerderung"] = {"promoted": promoted, "titles": data.get("titles") or [],
+                                      "min_age_days": days}
+    checkpoint("layer_promote", "Kurzzeit-Eintraege ins Langzeitgedaechtnis befoerdert",
+               ok=True, promoted=promoted, min_age_days=days)
+
+
 def _task_nachzuegler(cfg: dict, st: dict, budget: NightBudget, entries: dict, report: dict) -> None:
     """Bonus: Eintraege ohne Entity-Verknuepfung nachziehen (einzige AUTO-Aufgabe — inhaltsneutral)."""
     linked: set[str] = set()
@@ -1539,6 +1561,7 @@ def _run_night(manual: bool) -> None:
 
         tasks_cfg = cfg.get("tasks", {})
         runners: list[tuple[str, Any]] = [
+            ("befoerderung", _task_befoerderung),   # Level-2 #1: deterministisch, kein LLM, inhaltsneutral
             ("nachzuegler", _task_nachzuegler),
             ("dubletten", _task_dubletten_widersprueche),   # deckt 13 UND 12 in einem Scan ab
             ("veraltet", _task_veraltet),
@@ -1583,6 +1606,14 @@ def _run_night(manual: bool) -> None:
         # Nacht-BILANZ: fuer JEDE Aufgabe eine ehrliche Zeile — auch wenn nichts gefunden wurde
         # (Frank-Wunsch 2026-07-05: 'wenn da nichts gefunden wurde, soll das auch mit drinstehen').
         bilanz: list[str] = []
+        if tasks_cfg.get("befoerderung", True):
+            bf = report["auto"].get("befoerderung") or {}
+            bf_n = int(bf.get("promoted", 0) or 0)
+            bilanz.append(f"Gedächtnis-Beförderung: {bf_n} " + ("Eintrag" if bf_n == 1 else "Einträge")
+                          + " ins Langzeitgedächtnis befördert" if bf_n else
+                          "Gedächtnis-Beförderung: nichts fällig — kein Kurzzeit-Eintrag hat die Mindestreife erreicht")
+        else:
+            bilanz.append("Gedächtnis-Beförderung: ausgeschaltet")
         if tasks_cfg.get("nachzuegler", True):
             nz = int(report["auto"].get("nachzuegler_verknuepft", 0) or 0)
             bilanz.append(f"Nachzügler-Verknüpfung: {nz} Einträge nachverknüpft" if nz else

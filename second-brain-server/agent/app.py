@@ -71,6 +71,7 @@ VERSION = "0.69.1 (10.07.2026, 10:15 Uhr)"  # 0.69.1: Dialogische Speicherbefehl
 VERSION = "0.69.2 (10.07.2026, 11:34 Uhr)"  # 0.69.2: Tiefen-Debugging-Haertung. Parallelprofil-Jobs (Gedaechtnis/Web) crashen den Chat-Turn nicht mehr (Live-Crash 09.07. 19:26: Exception aus _web_job -> HTTP 500); stattdessen ehrliche Degradation mit Log + Checkpoint. Flush-Loop-Task mit starker Referenz getrackt (GC-Schutz). Alt: 0.69.1.
 VERSION = "0.69.3 (10.07.2026, 20:13 Uhr)"  # 0.69.3: Hauptagent-Werkzeug lies_eintrags_kategorien(id) liest die vollstaendige Kategorie-Metadatenliste gezielt per doc_id ohne Volltext/Bestandsscan. Alt: 0.69.2.
 VERSION = "0.70.0 (10.07.2026, 20:24 Uhr)"  # 0.70.0 (Level-2 Gruppe A, Punkte 2+3 — Frank-Freigabe 2026-07-10): KERN-BLOECKE nach Letta-Vorbild. Neues Modul agent/coreblocks.py: 5 feste, immer praesente Wissens-Bloecke (profil/ziele/projekte/aufgaben/vorlieben, je max 2000 Zeichen) auf /logbook/Kernbloecke/ (Samba, atomar, RLock) + append-only Aenderungs-Log kernbloecke-log.jsonl (jede alte Fassung bleibt erhalten — verlustfrei). _core_knowledge_section() injiziert die gefuellten Bloecke best-effort in JEDEN Chat-System-Prompt (build_toolagent_system, VOR den Selbst-Regeln; Fehler brechen den Chat nie). Neues Hauptagent-Werkzeug aktualisiere_kernblock(block, text): selbst-editierende Bloecke (Level-2 #3) — ERSETZT den ganzen Block kompakt, nur auf Basis von Franks direkten Aussagen (Injektions-Schutz gegen Memory-Poisoning), jede Aenderung protokolliert + checkpoint. REST GET /coreblocks, PUT /coreblocks/{name} (Frank via Dashboard), GET /coreblocks/log. Dockerfile: COPY coreblocks.py. WICHTIG: Speicher-Pfad des Gehirns UNANGETASTET (Franks Vorgabe: kein ADD/UPDATE/DELETE beim Speichern — Punkt 5 bewusst NICHT gebaut).
+VERSION = "0.70.1 (10.07.2026, 21:17 Uhr)"  # 0.70.1 (Level-2 Gruppe A, Punkt 10): brain_store sendet jetzt source='chat' (Provenance) — im Dashboard-Drawer steht damit bei per Gespraech gespeicherten Eintraegen die echte Herkunft statt 'manual'. Neue Eintraege landen zudem im Kurzzeitgedaechtnis (brain-api 1.29.0 layer-Default kurzzeit); der Bibliothekar befoerdert sie nach Reife (librarian 0.12.0). Alt: 0.70.0.
 
 # ---------------------------------------------------------------------------
 # Konfiguration (alles aus Umgebungsvariablen — Secrets nie im Code)
@@ -1595,7 +1596,8 @@ def llm_generate(system: str, user: str, *, model: str, json_mode: bool, max_tok
 # brain-api-Helfer (der Agent NUTZT den 1:1-Speicher, ersetzt ihn nicht)
 # ---------------------------------------------------------------------------
 def brain_store(text: str, title: str, category: str, user_id: str = USER_ID) -> dict:
-    payload = {"text": text, "user_id": user_id}   # user_id nur fuer den Eval-Test-Nutzer abweichend
+    # source='chat' (Provenance, Level-2 #10): im Drawer sichtbar, woher der Eintrag stammt.
+    payload = {"text": text, "user_id": user_id, "source": "chat"}   # user_id nur fuer den Eval-Test-Nutzer abweichend
     if title.strip():
         payload["title"] = title.strip()
     if category.strip():

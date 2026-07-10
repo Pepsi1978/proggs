@@ -1,7 +1,15 @@
 {
-	"stand": "10.07.2026, 20:34 Uhr",
+	"stand": "10.07.2026, 21:17 Uhr",
 	"hinweis": "PFLEGE-PFLICHT: Bei JEDEM Deploy, der ein neues System/Feature einbaut, hier einen Eintrag ERGÄNZEN (neueste zuerst). SCHREIBWEISE (Dauer-Regel): leichtes, verständliches Deutsch, kurze Sätze; ALLE Fachbegriffe, Namen und Zahlen (z.B. BM25, RRF, Qdrant, ENV-Variablen, Endpunkt-Namen) BEHALTEN, aber jeden in einem kurzen Halbsatz erklären — NIE durch Weglassen vereinfachen; kompakt halten (der Hauptagent liest über das Werkzeug 'was_kann_cortex' ALLE Einträge auf einmal ein), aber vollständig genug, dass man erkennt WAS eingebaut wurde; einfache Überschrift. Ähnliche/redundante Einträge dürfen zusammengefasst werden — Datum sekundär, entscheidend ist WAS Cortex kann. Quelle des Info-Bereichs in den Dashboard-Einstellungen (GET /api/features). Verankert in DEPLOY.md.",
 	"features": [
+		{
+			"id": "gedaechtnis-ebenen-provenance",
+			"eingebaut": "10.07.2026, 21:17 Uhr",
+			"dienst": "brain-api 1.29.0 + agent 0.70.1 + librarian 0.12.0 + dashboard 0.69.0",
+			"name": "Gedächtnis-Ebenen (Kurzzeit/Langzeit) + Herkunftsnachweis",
+			"kurz": "Jeder Eintrag hat jetzt eine Gedächtnis-Ebene (Kurzzeit oder Langzeit) und einen sichtbaren Herkunftsnachweis (Quelle + Vertrauens-Level). Der Bibliothekar befördert bewährte Kurzzeit-Einträge nachts automatisch ins Langzeitgedächtnis — nur das Etikett, nie der Inhalt.",
+			"erklaerung": "Das Gehirn arbeitet jetzt wie ein echtes Gedächtnis in zwei Ebenen: Neues landet zuerst im KURZZEIT-Gedächtnis (Payload-Feld layer=kurzzeit in Qdrant, der Vektordatenbank). Der Nachtschicht-Bibliothekar hat eine neue automatische Aufgabe 'Gedächtnis-Beförderung': Kurzzeit-Einträge, die älter als die Mindestreife sind (Einstellung befoerderung_min_age_days, Standard 14 Tage), werden über den neuen brain-api-Endpunkt POST /layer/promote ins LANGZEIT-Gedächtnis befördert. Dabei wird ausschließlich das Ebenen-Etikett gesetzt (set_payload) — Text, Vektor, Titel und Kategorien bleiben unangetastet, und die Suche filtert NIE nach der Ebene (kein Eintrag wird dadurch schlechter auffindbar). Der gesamte Altbestand gilt automatisch als Langzeit — ganz ohne Migration. Zusätzlich zeigt der Eintrags-Drawer jetzt eine Herkunfts-Zeile: die Quelle (z.B. Chat/Gespräch, Android-App, Bibliothekar, Entropie Reductor — das source-Feld gab es schon, der Chat-Agent meldet sich jetzt korrekt als 'chat'), die Gedächtnis-Ebene und ein abgeleitetes Vertrauens-Level (hoch = direkt von Frank eingegeben, mittel = automatisch erzeugt; wird nicht gespeichert, sondern aus der Quelle berechnet — Funktion source_trust). Die Beförderung erscheint mit eigener Zeile in der Nacht-Bilanz des Morgen-Reports."
+		},
 		{
 			"id": "kern-wissen-bloecke",
 			"eingebaut": "10.07.2026, 20:34 Uhr",

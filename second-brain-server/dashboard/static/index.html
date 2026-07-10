@@ -1587,6 +1587,7 @@ button{font-family:inherit;cursor:pointer}
     </div>
     <div class="drawer-title" id="drawerTitle">—</div>
     <div class="drawer-date" id="drawerDate"></div>
+    <div class="drawer-date" id="drawerProv" title="Herkunft (Provenance): Quelle, Gedächtnis-Ebene und abgeleitetes Vertrauens-Level dieses Eintrags"></div>
     <div class="drawer-actions" id="drawerViewActions">
       <button class="btn drawer-del-btn" id="drawerDeleteBtn" title="Eintrag löschen" aria-label="Eintrag löschen">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M3 6h18M8 6V4a1 1 0 0 1 1-1h6a1 1 0 0 1 1 1v2m2 0v14a1 1 0 0 1-1 1H7a1 1 0 0 1-1-1V6"/><path d="M10 11v6M14 11v6"/></svg>
@@ -2163,6 +2164,7 @@ button{font-family:inherit;cursor:pointer}
     if(curEntry) curEntry.categories = (Array.isArray(it.categories) && it.categories.length) ? it.categories.slice() : (it.category ? [it.category] : []);
     document.getElementById("drawerTitle").textContent = it.title||"Ohne Titel";
     document.getElementById("drawerDate").textContent = fmtStamp(entryStamp(it));
+    renderDrawerProv(it);
     const box = document.getElementById("drawerText");
     box.textContent = it.text || it.match || "lädt…";
     document.getElementById("drawerStatus").textContent = "";
@@ -2181,6 +2183,10 @@ button{font-family:inherit;cursor:pointer}
           if(full.created_at) curEntry.created_at = full.created_at;
           if(full.updated_at) curEntry.updated_at = full.updated_at;
           if(Array.isArray(full.categories) && full.categories.length){ curEntry.categories = full.categories.slice(); renderDrawerCats(); }
+          if(full.source) curEntry.source = full.source;
+          if(full.layer) curEntry.layer = full.layer;
+          if(full.trust) curEntry.trust = full.trust;
+          renderDrawerProv(curEntry);
           document.getElementById("drawerDate").textContent = fmtStamp(entryStamp(curEntry));
         }
       }catch(e){
@@ -2262,6 +2268,20 @@ button{font-family:inherit;cursor:pointer}
      Jede Änderung speichert SOFORT über /api/entry/categories (brain bettet den Eintrag mit ALLEN
      Kategorien neu ein -> in jeder Kategorie auffindbar). Quelle wie überall: /api/categories/detail. */
   function drawerCats(){ return (curEntry && Array.isArray(curEntry.categories)) ? curEntry.categories : []; }
+
+  /* — Herkunfts-Zeile im Drawer (Provenance, Level-2 #10 + Ebene #1) — */
+  const PROV_SOURCES = {chat:"Chat/Gespräch", manual:"manuell", app:"Android-App", dashboard:"Dashboard",
+                        librarian:"Nachtschicht-Bibliothekar", session:"Programmier-Session",
+                        entropyreductor:"Entropie Reductor"};
+  function renderDrawerProv(it){
+    const el=document.getElementById("drawerProv"); if(!el) return;
+    if(!it || (!it.source && !it.layer)){ el.textContent=""; return; }
+    const parts=[];
+    if(it.source) parts.push("Quelle: "+(PROV_SOURCES[String(it.source).toLowerCase()]||it.source));
+    if(it.layer) parts.push("Ebene: "+(it.layer==="kurzzeit"?"Kurzzeitgedächtnis":"Langzeitgedächtnis"));
+    if(it.trust) parts.push("Vertrauen: "+(it.trust==="hoch"?"hoch (direkt von dir)":"mittel (automatisch erzeugt)"));
+    el.textContent=parts.join(" · ");
+  }
   function renderDrawerCats(){
     const box = document.getElementById("drawerCatChips");
     const addSel = document.getElementById("drawerAddCat");
