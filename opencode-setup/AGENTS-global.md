@@ -46,23 +46,23 @@ Diese Kernregeln gelten nach Compact/Compress unverändert. Zusammenfassungen m�
 echten Umlauten sein und alle offenen ` ; `-Aufgaben bewahren.
 
 ### 6. Arbeitsmodi und proportionale Quality Gates (KRITISCH)
-Ohne Modusangabe gilt **Normalmodus**. Frank kann einen Modus für eine Aufgabe oder bis auf Widerruf
+Ohne Modusangabe gilt **Schnellmodus**. Frank kann einen Modus für eine Aufgabe oder bis auf Widerruf
 setzen. Ein Gate-Durchlauf ist genau ein Aufruf eines read-only Reviewers. Findings blockieren nur bei
 Auftragsbezug, fehlschlagendem Build/Test, Sicherheit, Datenintegrität oder reproduzierbarer Regression;
 entfernte Randfälle werden notiert, erweitern den Auftrag aber nicht automatisch.
 
-- **Schnellmodus:** kleinster korrekter Fix, keine allgemeine Härtung, fokussierte Tests, genau EIN
-  breites Gate. Echte Blocker danach beheben und gezielt testen, aber kein zweites Gate; transparent
-  melden, dass die Korrektur nicht erneut extern reviewed wurde.
-- **Normalmodus (Standard):** proportionaler Fix und relevante Regressionstests; breites, strikt
-  auftragsbezogenes Gate, höchstens 3 Durchläufe, bei Grün sofort stoppen. Nach dem dritten roten Lauf
+- **Schnellmodus (Standard):** kleinster korrekter Fix, keine allgemeine Härtung, fokussierte Tests, KEIN Gate.
+  Auf externe read-only Reviews vollständig verzichten, damit die Aufgabe schnell abgeschlossen wird.
+- **Normalmodus:** proportionaler Fix und relevante Regressionstests; breites, strikt
+  auftragsbezogenes Gate, höchstens 2 Durchläufe, bei Grün sofort stoppen. Nach dem zweiten roten Lauf
   offene Punkte zusammenfassen und Frank fragen.
-- **Gründlichkeitsmodus:** verwandte Fehlerklassen und sinnvolle Härtung mitprüfen; höchstens 6
-  Durchläufe, bei Grün sofort stoppen. Danach offene Punkte, Nutzen weiterer Gates und Empfehlung
-  zusammenfassen; nur mit Franks Freigabe fortsetzen.
+- **Gründlichkeitsmodus:** verwandte Fehlerklassen und sinnvolle Härtung mitprüfen; Quality-Gate-
+  Durchläufe ohne feste Obergrenze. Auftragsbezogene Findings beheben, deterministisch testen und das
+  Gate wiederholen, bis es grün ist. Bei einer objektiv nicht auflösbaren externen Blockade Frank fragen.
 
-Immer: keine unbegrenzten Review-Loops, keine unbeauftragte zweite Großaufgabe, keine falsche PASS-
-Meldung. Deterministische Tests nach Korrekturen müssen grün sein; Restunsicherheit ehrlich nennen.
+Immer: Schnell- und Normalmodus halten ihre festen Gate-Grenzen ein; nur der Gründlichkeitsmodus läuft
+bewusst bis Grün. Keine unbeauftragte zweite Großaufgabe, keine falsche PASS-Meldung. Deterministische
+Tests nach Korrekturen müssen grün sein; Restunsicherheit ehrlich nennen.
 Geschwindigkeit ist eine Qualitätsdimension und wird gegen Absicherung balanciert.
 
 ### 7. Bei jedem Bug/Fehler: Direktive 3 (KRITISCH)
