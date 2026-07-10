@@ -43,6 +43,7 @@ VERSION = "0.67.0 (09.07.2026, 22:52 Uhr)"  # 0.67.0: Sichtbarer Bump zum agent-
 VERSION = "0.67.1 (10.07.2026, 10:15 Uhr)"  # 0.67.1: Sichtbarer Bump zum agent-0.69.1-Fix: gesprochene Speicherwünsche werden vor der Bestätigung kohärent formuliert. Alt: 0.67.0.
 VERSION = "0.67.2 (10.07.2026, 11:34 Uhr)"  # 0.67.2: Tiefen-Debugging-Qualitätslauf über das GANZE Cortex-System. KRITISCH: nächtliches Gehirn-Backup zielte seit der Embedding-2-Migration auf die gelöschte Collection 'brain' (2 Nächte ohne Snapshot!) — Skripte auf brain__e2 + Entity-Register umgestellt. Agent 0.69.2 (Parallelprofil-Jobs crashsicher), brain-api 1.27.2 (Gemini-Timeout+Retry, Auth konstantzeitig), librarian 0.11.2 (Retry-Sturm-Bremse), Dashboard-Fehlerantworten ohne interne Details. Alt: 0.67.1.
 VERSION = "0.67.3 (10.07.2026, 16:57 Uhr)"  # 0.67.3: MCP-Volltextabrufe laufen stateless als direkte JSON-Antwort; parallele grosse Eintraege bleiben nicht mehr im Session-/SSE-Rueckkanal haengen. Alt: 0.67.2.
+VERSION = "0.67.4 (10.07.2026, 18:45 Uhr)"  # 0.67.4: Sichtbarer Bump zum librarian-0.11.3-Fix: Kategorie-Vorschlaege des Nachtschicht-Bibliothekars ergaenzen vorhandene Kategorien, statt sie zu ersetzen. Alt: 0.67.3.
 BRAIN_URL = os.getenv("BRAIN_URL", "http://brain-api:8000").rstrip("/")
 AGENT_URL = os.getenv("AGENT_URL", "http://agent:8002").rstrip("/")
 SB_API_KEY = os.getenv("SB_API_KEY", "")

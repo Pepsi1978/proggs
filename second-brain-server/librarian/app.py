@@ -58,7 +58,7 @@ OPENCODE_GO_URL = os.getenv("OPENCODE_GO_URL", "https://opencode.ai/zen/go/v1").
 OPENCODE_ANTHROPIC_VERSION = os.getenv("OPENCODE_ANTHROPIC_VERSION", "2023-06-01")
 USER_ID = os.getenv("SB_USER_ID", "frank")
 VERSION = "0.11.1 (08.07.2026, 15:04 Uhr)"  # Prompt-JSON im Interview-System escaped, damit der Dienst beim Import nicht crasht. Alt: 0.11.0.
-VERSION = "0.11.2 (10.07.2026, 11:34 Uhr)"  # 0.11.2: Tiefen-Debugging-Haertung. Retry-Sturm-Bremse fuer den Auto-Nachtlauf (max 3 Versuche/Tag mit 15/30/45-min-Backoff statt bis zu 720 Neustarts alle 30 s bei fruehem Fehlschlag; Nachholen bleibt); Auth fail-closed bei fehlendem SB_API_KEY + konstantzeitiger Token-Vergleich. Alt: 0.11.1.
+VERSION = "0.11.3 (10.07.2026, 18:45 Uhr)"  # 0.11.3: Bibliothekar-Kategorie-Vorschlaege ergaenzen die vorhandenen Kategorien verlustfrei ueber /entry/categories, statt sie ueber den alten Einzelkategorie-Endpunkt zu ersetzen. Alt: 0.11.2.
 AGENT_URL = os.getenv("AGENT_URL", "http://agent:8002").rstrip("/")   # LLM-Durchgriff fuer Codex/GPT (agent 0.52.0)
 # Stille Notbremse gegen Endlosschleifen, wenn 'Ohne Begrenzung' aktiv ist (Almanach ai-agent §2.1:
 # ein Cap muss STOPPEN koennen). 5000 Calls erreicht ehrliche Nacht-Arbeit nie — nur ein Amoklauf.
@@ -512,6 +512,45 @@ def brain_set_category(doc_id: str, category: str) -> dict:
     return r.json()
 
 
+def brain_set_categories(doc_id: str, categories: list[str]) -> dict:
+    r = _HTTP.post(f"{BRAIN_URL}/entry/categories",
+                   json={"doc_id": doc_id, "categories": categories, "user_id": USER_ID},
+                   headers=HEADERS, timeout=180.0)
+    r.raise_for_status()
+    return r.json()
+
+
+def brain_add_category(doc_id: str, category: str) -> dict:
+    """Ergaenzt genau eine Kategorie, ohne vorhandene Multi-Category-Zuordnungen zu verlieren."""
+    new_category = (category or "").strip()
+    if not doc_id or not new_category:
+        raise ValueError("doc_id und Kategorie erforderlich")
+
+    meta = next((entry for entry in brain_list() if entry.get("doc_id") == doc_id), None)
+    if meta is None:
+        raise RuntimeError("Eintrag nicht in der vollstaendigen Metadatenliste gefunden")
+
+    primary = (meta.get("category") or "").strip()
+    current: list[str] = []
+    if primary:
+        entry = next((item for item in brain_by_category(primary) if item.get("doc_id") == doc_id), None)
+        if entry is None:
+            raise RuntimeError("Bestehende Kategorien konnten nicht verlustfrei gelesen werden")
+        current = [c.strip() for c in (entry.get("categories") or [])
+                   if isinstance(c, str) and c.strip()] or [primary]
+
+    categories: list[str] = []
+    seen: set[str] = set()
+    for value in current + [new_category]:
+        key = value.casefold()
+        if key not in seen:
+            seen.add(key)
+            categories.append(value)
+    if len(categories) > 12:
+        raise ValueError("Ein Eintrag kann hoechstens 12 Kategorien haben")
+    return brain_set_categories(doc_id, categories)
+
+
 def brain_rename_category(old: str, new: str) -> dict:
     r = _HTTP.post(f"{BRAIN_URL}/rename-category", json={"old": old, "new": new, "user_id": USER_ID},
                    headers=HEADERS, timeout=120.0)
@@ -726,7 +765,7 @@ Jeder Fund braucht: beschreibung (was gefunden wurde, leichtes Deutsch), empfehl
 waere) und optional eine ausfuehrbare aktion. Erlaubte aktion-Typen:
 - {{"typ":"update","doc_id":"...","text":"neuer VOLLSTAENDIGER Volltext","titel":"optional neuer Titel"}}
 - {{"typ":"papierkorb","doc_id":"..."}}
-- {{"typ":"kategorie","doc_id":"...","kategorie":"Haupt/Unter"}}
+- {{"typ":"kategorie","doc_id":"...","kategorie":"Haupt/Unter"}} (fuegt diese Kategorie ZUSAETZLICH hinzu; bestehende Kategorien bleiben erhalten)
 - {{"typ":"neu","titel":"...","kategorie":"...","text":"..."}}
 - {{"typ":"hinweis"}} (nur zur Kenntnis, nichts auszufuehren)
 Maximal 6 Funde. Keine Funde -> leere Liste.
@@ -770,7 +809,7 @@ Baue daraus GENAU EINE ausfuehrbare Aktion. Erlaubte Typen:
 - {{"typ":"merge","doc_ids":["a","b"],"titel":"...","kategorie":"...","text":"vollstaendiger zusammengefuehrter Text"}}
 - {{"typ":"update","doc_id":"...","text":"neuer VOLLSTAENDIGER Volltext","titel":"optional neuer Titel"}}
 - {{"typ":"papierkorb","doc_id":"..."}}
-- {{"typ":"kategorie","doc_id":"...","kategorie":"Haupt/Unter"}}
+- {{"typ":"kategorie","doc_id":"...","kategorie":"Haupt/Unter"}} (fuegt diese Kategorie ZUSAETZLICH hinzu; bestehende Kategorien bleiben erhalten)
 - {{"typ":"kategorie_umbenennen","alt":"...","neu":"..."}}
 - {{"typ":"neu","titel":"...","kategorie":"...","text":"..."}}
 - {{"typ":"nichts"}} (Frank will nichts veraendern)
@@ -1683,8 +1722,8 @@ def _execute_action(aktion: dict, item: "dict | None" = None) -> str:
         r = brain_update(aktion.get("doc_id") or "", aktion.get("text") or "", aktion.get("titel"))
         return f"Eintrag aktualisiert („{r.get('title') or aktion.get('doc_id')}“)."
     if typ == "kategorie":
-        brain_set_category(aktion.get("doc_id") or "", (aktion.get("kategorie") or "").strip())
-        return f"Kategorie geändert auf „{aktion.get('kategorie')}“."
+        r = brain_add_category(aktion.get("doc_id") or "", (aktion.get("kategorie") or "").strip())
+        return f"Kategorie „{aktion.get('kategorie')}“ hinzugefügt · jetzt {len(r.get('categories') or [])} Kategorien."
     if typ == "kategorie_umbenennen":
         brain_rename_category((aktion.get("alt") or "").strip(), (aktion.get("neu") or "").strip())
         return f"Kategorie „{aktion.get('alt')}“ → „{aktion.get('neu')}“ umbenannt."
@@ -1732,7 +1771,7 @@ def _run_process(day: str, decisions: list[dict]) -> None:
                     _mark_finding(st, item.get("key") or f"item:{item['id']}", "abgelehnt")
                     results.append({"id": item["id"], "titel": item["titel"], "ok": True, "ergebnis": item["ergebnis"]})
                 elif choice == "ja":
-                    aktion = dict(item.get("aktion") or {"typ": "hinweis"})
+                    aktion: dict[str, Any] = dict(item.get("aktion") or {"typ": "hinweis"})
                     if aktion.get("typ") == "merge":
                         # Franks Dashboard-Overrides: editierter Merge-Text + abgewaehlte Kategorien
                         if (d.get("merge_text") or "").strip():
