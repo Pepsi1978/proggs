@@ -218,7 +218,7 @@ und maschinenspezifisch (session-scores, cache, etc. — werden NICHT ueber Git 
 - **Cross-Platform:** Beide Plattformen synchron. macOS-Stand wird beim naechsten Mac-Start aufgeholt.
 - **[2026-05-10 19:30] /self-improve Thorough**: Lauf abgeschlossen — Merge-Konflikt MEMORY.md gefixt, 35 Spam-Eintraege archiviert, 3 Stop-Hook-Stale-Eintraege als GEFIXT markiert (Compound Effect #5), session-scorer.ts Dedup-Fix umgesetzt, startup-checks Cooldown gestuft (.ps1+.sh), worktree.baseRef:"fresh" eingetragen, R8-Findings (Anthropic Dreaming, Darwin Goedel Machine, ARISE, Outcomes/Grader) in Forschung.md ergaenzt.
 - **[2026-05-10 19:22] evolution-analyst**: PLATEAU (8.72→8.74, +0.02): Qualitaet stabil aber Meta-Intelligence KRITISCH (10% self-improving, 40% Vorschlaege) — groesste Schwaeche ist fehlendes 7. Compound-Effect seit 3 Wochen und 6 unumgesetzte UMZUSETZEN-Forschungseintraege (SICA, MAR, TraceCoder, When-To-Verify, KGCompass, Fault-Localization) die alle >30 Tage alt sind.
-- **Pending Admin Updates (2):** Go (Programmiersprache), Microsoft.VCRedist.2015+.x64
+- **Pending Admin Updates (1):** Microsoft.VCRedist.2015+.x64
 ---
 
 ## Erkenntnisse aus Code Reviews
