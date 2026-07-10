@@ -39,11 +39,11 @@ namespace TerminalVoiceOverlay.Services
         {
             if (IsRecording) return;
 
+            var setupSw = Stopwatch.StartNew();
             _tempFile = Path.Combine(Path.GetTempPath(), $"tvo_recording_{Guid.NewGuid():N}.wav");
             _bytesRecorded = 0;
             _buffersRecorded = 0;
             _peakMax = 0;
-            _recordingSw.Restart();
 
             var waveFormat = new WaveFormat(_sampleRate, 16, _channels);
             _writer = new WaveFileWriter(_tempFile, waveFormat);
@@ -51,7 +51,8 @@ namespace TerminalVoiceOverlay.Services
             _waveIn = new WaveInEvent
             {
                 WaveFormat = waveFormat,
-                BufferMilliseconds = 50
+                BufferMilliseconds = 50,
+                NumberOfBuffers = 3
             };
 
             _waveIn.DataAvailable += (_, e) =>
@@ -86,8 +87,9 @@ namespace TerminalVoiceOverlay.Services
 
             _waveIn.StartRecording();
             IsRecording = true;
+            _recordingSw.Restart();
             Console.WriteLine($"AudioRecorder: Aufnahme gestartet ({_sampleRate}Hz, {_channels}ch)");
-            DiagLog.Write("Audio", "recording_start", ("sampleRate", _sampleRate), ("channels", _channels), ("path", _tempFile));
+            DiagLog.Write("Audio", "recording_start", ("setupMs", setupSw.ElapsedMilliseconds), ("sampleRate", _sampleRate), ("channels", _channels), ("path", _tempFile));
         }
 
         public string? Stop()

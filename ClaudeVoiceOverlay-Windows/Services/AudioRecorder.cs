@@ -1,4 +1,5 @@
 using System;
+using System.Diagnostics;
 using System.IO;
 using NAudio.Wave;
 
@@ -34,6 +35,7 @@ namespace ClaudeVoiceOverlay.Services
         {
             if (IsRecording) return;
 
+            var setupSw = Stopwatch.StartNew();
             _tempFile = Path.Combine(Path.GetTempPath(), $"tvo_recording_{Guid.NewGuid():N}.wav");
 
             var waveFormat = new WaveFormat(_sampleRate, 16, _channels);
@@ -42,7 +44,8 @@ namespace ClaudeVoiceOverlay.Services
             _waveIn = new WaveInEvent
             {
                 WaveFormat = waveFormat,
-                BufferMilliseconds = 50
+                BufferMilliseconds = 50,
+                NumberOfBuffers = 3
             };
 
             _waveIn.DataAvailable += (_, e) =>
@@ -75,6 +78,7 @@ namespace ClaudeVoiceOverlay.Services
             _waveIn.StartRecording();
             IsRecording = true;
             Console.WriteLine($"AudioRecorder: Aufnahme gestartet ({_sampleRate}Hz, {_channels}ch)");
+            DiagLog.Write("Audio", "recording_start", ("setupMs", setupSw.ElapsedMilliseconds), ("sampleRate", _sampleRate), ("channels", _channels), ("path", _tempFile));
         }
 
         public string? Stop()
@@ -97,6 +101,7 @@ namespace ClaudeVoiceOverlay.Services
                 _waveIn = null;
 
                 Console.WriteLine("AudioRecorder: Aufnahme gestoppt");
+                DiagLog.Write("Audio", "recording_stop", ("path", _tempFile));
                 return _tempFile;
             }
             catch (Exception ex)
