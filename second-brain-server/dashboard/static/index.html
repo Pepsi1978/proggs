@@ -4051,10 +4051,12 @@ button{font-family:inherit;cursor:pointer}
   const chatSession = "dash-" + ((self.crypto && crypto.randomUUID)
     ? crypto.randomUUID() : (Date.now().toString(36) + Math.floor(Math.random()*1e6).toString(36)));
   let chatBusy = false;
+  let _lastFrankMsg = "";   // fuers Antwort-Feedback (Meta-Gedaechtnis #9): welche Frage gehoerte zur Antwort
   function chatAppend(role, text, meta){
     const logEl = document.getElementById("chatLog");
     const empty = document.getElementById("chatEmpty");
     if(empty) empty.remove();
+    if(role==="frank") _lastFrankMsg = text || "";
     const el = document.createElement("div");
     el.className = "msg " + (role==="frank" ? "frank" : "agent");
     el.textContent = text;
@@ -4075,6 +4077,47 @@ button{font-family:inherit;cursor:pointer}
       b.addEventListener("click", ()=>{ wrap.remove(); const ta=document.getElementById("chatText"); ta.value = o.send; sendChat(); });
       wrap.appendChild(b);
     });
+    logEl.appendChild(wrap);
+    logEl.scrollTop = logEl.scrollHeight;
+  }
+  /* Meta-Gedaechtnis (Level-2 #9): Daumen hoch/runter unter jeder echten Antwort.
+     Landet GETRENNT vom Inhalts-Gehirn in Z:\Logbuch\Feedback; der Nacht-Bibliothekar
+     macht aus wiederkehrenden Daumen-runter-Mustern Selbst-Regel-Vorschlaege. */
+  function chatFeedback(frage, antwort){
+    const logEl = document.getElementById("chatLog");
+    const wrap = document.createElement("div");
+    wrap.className = "chat-opts";
+    wrap.style.gap = "6px";
+    const mk = (vote, svgPath, title) => {
+      const b = document.createElement("button");
+      b.className = "chat-opt-btn"; b.type = "button"; b.title = title;
+      b.style.padding = "4px 10px";
+      b.innerHTML = '<svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2"><path d="'+svgPath+'"/></svg>';
+      const send = async(kommentar)=>{
+        try{
+          await apiSend("/api/feedback","POST",{vote:vote, frage:(frage||"").slice(0,2000),
+                                                antwort:(antwort||"").slice(0,2000), kommentar:(kommentar||"").slice(0,1000)});
+          wrap.innerHTML = '<span class="msg-meta">'+(vote==="hoch"?"Danke — als gute Antwort gemerkt.":"Danke — Cortex lernt daraus (Nacht-Auswertung).")+'</span>';
+        }catch(e){ wrap.innerHTML = '<span class="msg-meta">Feedback gerade nicht speicherbar.</span>'; }
+      };
+      b.addEventListener("click", ()=>{
+        if(vote==="hoch"){ send(""); return; }
+        // Daumen runter: kleines Inline-Feld statt nativem prompt() (theme-gerecht, optional)
+        wrap.innerHTML = "";
+        const inp = document.createElement("input");
+        inp.type = "text"; inp.placeholder = "Kurz (optional): Was war schlecht?";
+        inp.style.cssText = "flex:1;min-width:200px;font:inherit;padding:4px 8px;border-radius:8px;border:1px solid var(--border);background:transparent;color:inherit";
+        const ok = document.createElement("button");
+        ok.className = "chat-opt-btn"; ok.type = "button"; ok.textContent = "Senden";
+        ok.addEventListener("click", ()=>send(inp.value));
+        inp.addEventListener("keydown", ev=>{ if(ev.key==="Enter") send(inp.value); });
+        wrap.appendChild(inp); wrap.appendChild(ok);
+        inp.focus();
+      });
+      return b;
+    };
+    wrap.appendChild(mk("hoch", "M7 10v12M15 5.88 14 10h5.83a2 2 0 0 1 1.92 2.56l-2.33 8A2 2 0 0 1 17.5 22H4a2 2 0 0 1-2-2v-8a2 2 0 0 1 2-2h2.76a2 2 0 0 0 1.79-1.11L12 2a3.13 3.13 0 0 1 3 3.88Z", "Gute Antwort"));
+    wrap.appendChild(mk("runter", "M17 14V2M9 18.12 10 14H4.17a2 2 0 0 1-1.92-2.56l2.33-8A2 2 0 0 1 6.5 2H20a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2h-2.76a2 2 0 0 0-1.79 1.11L12 22a3.13 3.13 0 0 1-3-3.88Z", "Schlechte Antwort — Cortex lernt daraus"));
     logEl.appendChild(wrap);
     logEl.scrollTop = logEl.scrollHeight;
   }
@@ -4338,6 +4381,7 @@ button{font-family:inherit;cursor:pointer}
       if(r.action==="rule_confirm"){ ruleCard(r.reply); }         // Regel-Bestätigung mit Bearbeiten
       else if(r.options && r.options.length){ chatOptions(r.options); }   // anklickbare Ja/Nein-Knöpfe
       if(r.action==="recall") chatSources(r.sources, r.confidence);   // Nr. 39: Quellen-Chips + Konfidenz
+      if(r.action==="recall" || r.action==="smalltalk") chatFeedback(_lastFrankMsg, r.reply||"");   // Meta-Gedaechtnis #9
       // Sichtbare Meldung, wenn das Server-Kontextfenster (40 Nachrichten) erstmals ueberschritten
       // wurde (Frank-Wunsch 2026-07-02) — kommt pro Session genau einmal vom Agenten.
       if(r.context_limit_reached) chatAppend("agent", "⚠️ Kontextgrenze erreicht — ältere Nachrichten dieses Gesprächs fließen ab jetzt nicht mehr in die Antworten ein.");

@@ -74,6 +74,7 @@ VERSION = "0.70.0 (10.07.2026, 20:24 Uhr)"  # 0.70.0 (Level-2 Gruppe A, Punkte 2
 VERSION = "0.70.1 (10.07.2026, 21:17 Uhr)"  # 0.70.1 (Level-2 Gruppe A, Punkt 10): brain_store sendet jetzt source='chat' (Provenance) — im Dashboard-Drawer steht damit bei per Gespraech gespeicherten Eintraegen die echte Herkunft statt 'manual'. Neue Eintraege landen zudem im Kurzzeitgedaechtnis (brain-api 1.29.0 layer-Default kurzzeit); der Bibliothekar befoerdert sie nach Reife (librarian 0.12.0). Alt: 0.70.0.
 VERSION = "0.71.0 (10.07.2026, 21:39 Uhr)"  # 0.71.0 (Level-2 Gruppe A, Punkt 7): NEU brain_touch() — nach jeder Tool-Agent-Antwort mit Gedaechtnis-Nutzung werden die WIRKLICH benutzten Eintraege (bevorzugt per lade_eintrag geoeffnete, sonst die gefundenen) an brain-api /entries/touch gemeldet (access_count+1, Vergessens-Uhr zurueck). Best-effort: ein Fehler bricht die Antwort nie. Alt: 0.70.1.
 VERSION = "0.72.0 (10.07.2026, 22:00 Uhr)"  # 0.72.0 (Level-2 Gruppe A, Punkt 4): Bi-temporale Kennzeichnung im Werkzeugkasten — durchsuche_gedaechtnis liefert gueltig_ab/gueltig_bis mit, TOOLAGENT_SYSTEM Arbeitsweise-Regel 6: historische Staende (galt bis X) bei Aktuell-Fragen kennzeichnen/nachrangig, bei Frueher-Fragen bevorzugen, NIE verwerfen. Alt: 0.71.0.
+VERSION = "0.73.0 (10.07.2026, 22:34 Uhr)"  # 0.73.0 (Level-2 Gruppe A, Punkt 9 — Frank-Freigabe 2026-07-10): META-GEDAECHTNIS. NEU POST /feedback (vote hoch/runter + Frage-/Antwort-Vorschau + optionaler Kommentar) -> append-only /logbook/Feedback/feedback.jsonl (GETRENNT vom Inhalts-Gehirn, secret-maskiert via _redact_log) + GET /feedback (neueste zuerst, mit hoch/runter-Zaehlern) fuer die Nacht-Auswertung des Bibliothekars. Alt: 0.72.0.
 
 # ---------------------------------------------------------------------------
 # Konfiguration (alles aus Umgebungsvariablen — Secrets nie im Code)
@@ -5427,6 +5428,60 @@ def api_put_coreblock(name: str, req: CoreBlockUpdateReq) -> dict:
 @app.get("/coreblocks/log", dependencies=[Depends(require_auth)])
 def api_get_coreblocks_log(limit: int = 50) -> dict:
     return {"log": coreblocks.read_log(coreblocks.log_path(), max(1, min(limit, 500)))}
+
+
+# --- Meta-Gedaechtnis (Level-2 #9): Daumen hoch/runter zu Antworten ---------------
+# GETRENNT vom Inhalts-Gehirn (bewusst KEIN Qdrant-Eintrag): append-only JSONL auf dem
+# Samba-Mount. Der Nacht-Bibliothekar wertet wiederkehrende Daumen-runter-Muster aus
+# (Task 'meta') und schlaegt daraus Selbst-Regel-Kandidaten vor — Frank bestaetigt.
+FEEDBACK_FILE = Path(LOGBOOK_DIR) / "Feedback" / "feedback.jsonl"
+
+
+class FeedbackReq(BaseModel):
+    vote: str = Field(..., pattern="^(hoch|runter)$", description="Daumen hoch oder runter")
+    frage: str = Field(default="", max_length=2000, description="Franks Frage (Vorschau)")
+    antwort: str = Field(default="", max_length=2000, description="Cortex' Antwort (Vorschau)")
+    kommentar: str = Field(default="", max_length=1000, description="Optional: was gut/schlecht war")
+
+
+@app.post("/feedback", dependencies=[Depends(require_auth)])
+def api_post_feedback(req: FeedbackReq) -> dict:
+    entry = {"ts": _now_local().isoformat(timespec="seconds"), "vote": req.vote,
+             "frage": _redact_log(req.frage.strip()), "antwort": _redact_log(req.antwort.strip()),
+             "kommentar": _redact_log(req.kommentar.strip())}
+    try:
+        FEEDBACK_FILE.parent.mkdir(parents=True, exist_ok=True)
+        with open(FEEDBACK_FILE, "a", encoding="utf-8", newline="\n") as f:
+            f.write(json.dumps(entry, ensure_ascii=False) + "\n")
+    except OSError as e:
+        _log(logging.ERROR, "Feedback nicht schreibbar", err=str(e)[:200])
+        raise HTTPException(status_code=503, detail="Feedback-Speicher nicht erreichbar.")
+    checkpoint("meta_feedback", "Antwort-Feedback gespeichert (Meta-Gedaechtnis, getrennt vom Inhalts-Gehirn)",
+               ok=True, vote=req.vote, mit_kommentar=bool(req.kommentar.strip()))
+    return {"ok": True}
+
+
+@app.get("/feedback", dependencies=[Depends(require_auth)])
+def api_get_feedback(limit: int = 200) -> dict:
+    """Letzte Feedback-Eintraege, neueste zuerst (fuer Bibliothekar-Auswertung + Anzeige)."""
+    try:
+        with open(FEEDBACK_FILE, "r", encoding="utf-8") as f:
+            lines = f.readlines()
+    except FileNotFoundError:
+        return {"feedback": [], "hoch": 0, "runter": 0}
+    except OSError as e:
+        _log(logging.WARNING, "Feedback nicht lesbar", err=str(e)[:200])
+        return {"feedback": [], "hoch": 0, "runter": 0, "fehler": type(e).__name__}
+    out = []
+    for line in lines:
+        try:
+            out.append(json.loads(line))
+        except (json.JSONDecodeError, ValueError):
+            continue
+    hoch = sum(1 for e in out if e.get("vote") == "hoch")
+    runter = sum(1 for e in out if e.get("vote") == "runter")
+    out.reverse()
+    return {"feedback": out[:max(1, min(limit, 1000))], "hoch": hoch, "runter": runter}
 
 
 # --- Einstellungen: System-Prompt (editierbarer Teil) + Modell-Wahl --------

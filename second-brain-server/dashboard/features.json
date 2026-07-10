@@ -1,7 +1,15 @@
 {
-	"stand": "10.07.2026, 22:12 Uhr",
+	"stand": "10.07.2026, 22:34 Uhr",
 	"hinweis": "PFLEGE-PFLICHT: Bei JEDEM Deploy, der ein neues System/Feature einbaut, hier einen Eintrag ERGÄNZEN (neueste zuerst). SCHREIBWEISE (Dauer-Regel): leichtes, verständliches Deutsch, kurze Sätze; ALLE Fachbegriffe, Namen und Zahlen (z.B. BM25, RRF, Qdrant, ENV-Variablen, Endpunkt-Namen) BEHALTEN, aber jeden in einem kurzen Halbsatz erklären — NIE durch Weglassen vereinfachen; kompakt halten (der Hauptagent liest über das Werkzeug 'was_kann_cortex' ALLE Einträge auf einmal ein), aber vollständig genug, dass man erkennt WAS eingebaut wurde; einfache Überschrift. Ähnliche/redundante Einträge dürfen zusammengefasst werden — Datum sekundär, entscheidend ist WAS Cortex kann. Quelle des Info-Bereichs in den Dashboard-Einstellungen (GET /api/features). Verankert in DEPLOY.md.",
 	"features": [
+		{
+			"id": "meta-gedaechtnis-feedback",
+			"eingebaut": "10.07.2026, 22:34 Uhr",
+			"dienst": "agent 0.73.0 + librarian 0.14.0 + dashboard 0.73.0",
+			"name": "Meta-Gedächtnis: Daumen hoch/runter + Muster-Lernen",
+			"kurz": "Unter jeder echten Chat-Antwort gibt es jetzt Daumen hoch/runter (bei runter mit optionalem Kurz-Kommentar). Der Nachtschicht-Bibliothekar erkennt wiederkehrende Daumen-runter-Muster und schlägt daraus Selbst-Regeln vor — aktiviert wird eine Regel nur nach Franks Bestätigung.",
+			"erklaerung": "Cortex lernt jetzt, WIE Frank Antworten mag — getrennt vom Inhalts-Gehirn. Im Dashboard-Chat stehen unter jeder echten Antwort (Gedächtnis- oder Smalltalk-Antwort, nicht unter Rückfragen) zwei kleine Daumen-Knöpfe. Daumen hoch heißt 'gute Antwort'; bei Daumen runter kann Frank optional in einem kleinen Eingabefeld kurz sagen, was schlecht war. Jedes Feedback landet mit Frage- und Antwort-Vorschau als Zeile in der Datei Z:\\Logbuch\\Feedback\\feedback.jsonl (agent-Endpunkt POST /feedback; bewusst KEIN Eintrag im Qdrant-Wissensspeicher — Meta-Wissen bleibt vom Inhalts-Wissen getrennt). Die neue Nachtaufgabe 'Meta-Gedächtnis-Auswertung' des Bibliothekars liest das Daumen-runter-Feedback der letzten 14 Tage (agent GET /feedback) und sucht WIEDERKEHRENDE Muster — mindestens 2 ähnliche Fälle, Einzelfälle zählen nicht (z.B. 'Antworten zu lang'). Je Muster erscheint im Morgen-Report eine Karte mit einem fertig formulierten Selbst-Regel-Vorschlag. Wichtig: Es wird NIE automatisch eine Regel aktiviert — Frank macht daraus per Chat ('mach daraus eine Regel') oder in den Einstellungen eine Selbst-Regel, mit der bestehenden Bestätigung."
+		},
 		{
 			"id": "episoden-destillation",
 			"eingebaut": "10.07.2026, 22:12 Uhr",

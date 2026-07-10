@@ -62,6 +62,7 @@ VERSION = "0.11.4 (10.07.2026, 19:01 Uhr)"  # 0.11.4: Eigene Aufgaben markieren 
 VERSION = "0.11.5 (10.07.2026, 19:38 Uhr)"  # 0.11.5: Additive Kategorie-Aktionen lesen den Bestand gezielt per GET /entry/categories?doc_id=... statt per /list- und /by-category-Scans. Alt: 0.11.4.
 VERSION = "0.12.0 (10.07.2026, 21:17 Uhr)"  # 0.12.0 (Level-2 Gruppe A, Punkt 1 — Frank-Freigabe 2026-07-10): NEU Standard-Nachtaufgabe GEDAECHTNIS-BEFOERDERUNG (zweite AUTO-Aufgabe neben Nachzuegler, laeuft ZUERST): ruft brain-api POST /layer/promote und befoerdert bewaehrte Kurzzeit-Eintraege (aelter als befoerderung_min_age_days, Default 14) ins Langzeitgedaechtnis. Deterministisch, KEIN LLM, inhaltsneutral — es wird NUR das layer-Etikett gesetzt, Text/Vektor/Kategorien bleiben 1:1 (Franks Vorgabe: nie Eintraege veraendern). Eigene Bilanz-Zeile (auch: nichts faellig) + report.auto.befoerderung (Anzahl + Titel) fuer den Morgen-Report. Toggle erscheint automatisch in den Einstellungen (standard_tasks dynamisch). Alt: 0.11.5.
 VERSION = "0.13.0 (10.07.2026, 22:12 Uhr)"  # 0.13.0 (Level-2 Gruppe A, Punkt 6 — Frank-Freigabe 2026-07-10): NEU Standard-Nachtaufgabe EPISODEN-DESTILLATION (DISTILL_SYSTEM + _task_destillation, laeuft nach dem Luecken-Detektor): destilliert aus den Gespraechen der letzten 14 Tage max 3 DAUERHAFTE Fakten-Kandidaten (nur woertlich von Frank Gesagtes, mit Kurz-Beleg; keine Tageszustaende). Jeder Kandidat wird semantisch gegen den Bestand dedupliziert (>=0.66 Aehnlichkeit als Nicht-Gespraechs-Eintrag -> kein Vorschlag) und landet als Ja/Nein-Fund im Morgen-Report — gespeichert wird ERST nach Franks Ja (Aktionstyp neu, source=librarian, layer=kurzzeit; Originale bleiben 1:1). Eigene Bilanz-Zeile. Alt: 0.12.0.
+VERSION = "0.14.0 (10.07.2026, 22:34 Uhr)"  # 0.14.0 (Level-2 Gruppe A, Punkt 9): NEU Standard-Nachtaufgabe META-GEDAECHTNIS-AUSWERTUNG (META_SYSTEM + _task_meta): liest Franks Daumen-runter-Feedback der letzten 14 Tage (agent GET /feedback), findet WIEDERKEHRENDE Muster (>=2 Faelle, max 2 pro Nacht, Einzelfaelle zaehlen nicht) und legt je Muster einen Morgen-Report-Fund mit vorformuliertem SELBST-REGEL-Vorschlag an — OHNE Auto-Aktion: aktiviert wird eine Regel NUR ueber den bestehenden bestaetigten Regel-Weg (Chat mach daraus eine Regel / Einstellungen). Eigene Bilanz-Zeile. Alt: 0.13.0.
 AGENT_URL = os.getenv("AGENT_URL", "http://agent:8002").rstrip("/")   # LLM-Durchgriff fuer Codex/GPT (agent 0.52.0)
 # Stille Notbremse gegen Endlosschleifen, wenn 'Ohne Begrenzung' aktiv ist (Almanach ai-agent §2.1:
 # ein Cap muss STOPPEN koennen). 5000 Calls erreicht ehrliche Nacht-Arbeit nie — nur ein Amoklauf.
@@ -211,6 +212,8 @@ STANDARD_TASKS: dict[str, dict] = {
                      "desc": "Aus den letzten Gesprächen dauerhafte Fakten herausdestillieren → Vorschlag im Morgen-Report; gespeichert wird erst nach deinem Ja."},
     "friction": {"name": "Reibungs-Detektor", "nr": "33",
                  "desc": "Wiederkehrende Fehlversuche/Korrekturen aus den Programmier-Session-Protokollen erkennen → Verbesserungs-Merkzettel vorschlagen."},
+    "meta": {"name": "Meta-Gedächtnis-Auswertung", "nr": "9",
+             "desc": "Daumen-runter-Feedback zu Cortex-Antworten auf wiederkehrende Muster prüfen → Selbst-Regel-Vorschlag (nichts wird automatisch aktiviert)."},
 }
 
 DEFAULT_CONFIG: dict = {
@@ -692,6 +695,16 @@ Frank noch ergaenzen sollte. Beginne mit der Zeile:
 [Vom Nachtschicht-Bibliothekar angelegt — bitte ergaenzen]
 {_UNTRUSTED}
 Antworte NUR mit diesem JSON: {{"titel":"...","text":"..."}}"""
+
+META_SYSTEM = f"""Du bist der Meta-Gedaechtnis-Auswerter eines persoenlichen Gedaechtnis-Assistenten.
+Du bekommst Franks Daumen-runter-Feedback zu Antworten des Assistenten (Frage, Antwort-Vorschau,
+optional Kommentar). Finde maximal 2 WIEDERKEHRENDE Muster (mindestens 2 aehnliche Faelle!) —
+z.B. 'Antworten zu lang', 'bei Gesundheitsfragen fehlt die Quelle'. Einzelfaelle zaehlen NICHT.
+Formuliere je Muster einen praezisen, imperativen SELBST-REGEL-Vorschlag (1-2 Saetze, wie der
+Assistent kuenftig antworten soll).
+{_UNTRUSTED}
+Antworte NUR mit diesem JSON:
+{{"muster":[{{"muster":"kurze Beschreibung","faelle":2,"regel":"imperativer Regel-Vorschlag"}}]}}"""
 
 DISTILL_SYSTEM = f"""Du bist der Nachtschicht-Bibliothekar eines persoenlichen Gedaechtnisses.
 Du bekommst Auszuege aus den letzten Gespraechen des Besitzers (Frank) mit seinem Gedaechtnis-Agenten
@@ -1407,6 +1420,64 @@ def _task_destillation(cfg: dict, st: dict, budget: NightBudget, entries: dict, 
     checkpoint("destillation", "Episoden-zu-Fakten-Destillation gelaufen", ok=True, funde=found)
 
 
+def _task_meta(cfg: dict, st: dict, budget: NightBudget, entries: dict, report: dict) -> None:
+    """Level-2 #9: Meta-Gedaechtnis. Wertet Franks Daumen-runter-Feedback (agent /feedback,
+    GETRENNT vom Inhalts-Gehirn) auf wiederkehrende Muster aus (>=2 Faelle). Jedes Muster wird
+    ein Morgen-Report-Fund mit vorformuliertem SELBST-REGEL-Vorschlag — aktiviert wird eine Regel
+    NUR ueber den bestehenden bestaetigten Regel-Weg (Frank sagt im Chat 'mach daraus eine Regel'
+    oder legt sie in den Einstellungen an). Nichts laeuft automatisch."""
+    try:
+        r = _HTTP.get(f"{AGENT_URL}/feedback", params={"limit": 200}, headers=HEADERS, timeout=30.0)
+        r.raise_for_status()
+        fb = r.json()
+    except Exception:  # noqa: BLE001
+        _log(logging.WARNING, "Feedback vom agent nicht lesbar — Meta-Auswertung uebersprungen", exc_info=True)
+        report["zahlen"]["meta"] = 0
+        return
+    cutoff = (datetime.now(TZ) - timedelta(days=14)).strftime("%Y-%m-%d")
+    down = [e for e in (fb.get("feedback") or [])
+            if e.get("vote") == "runter" and (e.get("ts") or "") >= cutoff]
+    if len(down) < 2 or not budget.take():
+        report["zahlen"]["meta"] = 0
+        return
+    corpus = "\n\n---\n\n".join(
+        f"Frage: {_excerpt(e.get('frage') or '', 200)}\nAntwort: {_excerpt(e.get('antwort') or '', 300)}"
+        + (f"\nKommentar: {_excerpt(e.get('kommentar') or '', 200)}" if e.get("kommentar") else "")
+        for e in down[:40])[:30000]
+    try:
+        verdict = json.loads(_extract_json(llm(_with_rules(_with_task_override(META_SYSTEM, cfg, "meta")),
+                                               f"Daumen-runter-Feedback der letzten 14 Tage ({len(down)} Fälle):\n\n{corpus}",
+                                               model=cfg["model"], max_tokens=800)))
+    except Exception:  # noqa: BLE001
+        _log(logging.WARNING, "Meta-Auswertung fehlgeschlagen", exc_info=True)
+        report["zahlen"]["meta"] = 0
+        return
+    found = 0
+    for m in (verdict.get("muster") or [])[:2]:
+        if not isinstance(m, dict):
+            continue
+        muster = (m.get("muster") or "").strip()
+        regel = (m.get("regel") or "").strip()
+        if len(muster) < 5 or len(regel) < 10 or int(m.get("faelle") or 0) < 2:
+            continue
+        key = f"meta:{re.sub(r'[^a-z0-9]+', '-', muster.casefold())[:60]}"
+        if _finding_blocked(st, key):
+            continue
+        item = _new_item("meta", key,
+                         f"Antwort-Muster: „{muster}“",
+                         f"Dein Daumen-runter-Feedback zeigt dieses Muster mehrfach ({m.get('faelle')} Fälle in 14 Tagen).",
+                         f"Vorgeschlagene Selbst-Regel: „{regel}“ — sag Cortex im Chat »mach daraus eine Regel« "
+                         "oder lege sie in den Einstellungen unter Selbst-Regeln an (du bestätigst, nichts läuft automatisch).",
+                         None,   # bewusst KEINE Auto-Aktion: Regeln aktiviert nur der bestaetigte Regel-Weg
+                         [],
+                         ja_label="Verstanden", nein_label="Kein Muster")
+        report["items"].append(item)
+        _mark_finding(st, key, "offen")
+        found += 1
+    report["zahlen"]["meta"] = found
+    checkpoint("meta", "Meta-Gedaechtnis-Auswertung gelaufen", ok=True, feedback_runter=len(down), funde=found)
+
+
 def _task_verdichtung(cfg: dict, st: dict, budget: NightBudget, entries: dict, report: dict) -> None:
     done_months = set(st.setdefault("summarized_months", []))
     by_month: dict[str, list[dict]] = {}
@@ -1645,6 +1716,7 @@ def _run_night(manual: bool) -> None:
             ("kategorien", _task_kategorien),
             ("luecken", _task_luecken),
             ("destillation", _task_destillation),   # Level-2 #6: Episoden -> Fakten (nur Vorschlaege)
+            ("meta", _task_meta),                   # Level-2 #9: Feedback-Muster -> Regel-Vorschlaege
             ("verdichtung", _task_verdichtung),
             ("friction", _task_friction),   # D33: NACH allem — die Session-Protokolle liegen dann frisch vor
         ]
@@ -1705,6 +1777,7 @@ def _run_night(manual: bool) -> None:
             ("kategorien", "Kategorien-Gärtner", "keine Kategorie-Vorschläge nötig"),
             ("luecken", "Wissens-Lücken-Detektor", "keine Wissens-Lücken erkannt"),
             ("destillation", "Episoden-Destillation", "kein neuer dauerhafter Fakt in den letzten Gesprächen gefunden"),
+            ("meta", "Meta-Gedächtnis-Auswertung", "kein wiederkehrendes Muster im Antwort-Feedback (oder zu wenig Feedback)"),
             ("verdichtung", "Logbuch-Verdichtung", "kein Monat zum Verdichten fällig"),
             ("friction", "Reibungs-Detektor", "keine wiederkehrende Reibung in den Session-Protokollen erkannt"),
         ):

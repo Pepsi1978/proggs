@@ -55,6 +55,7 @@ VERSION = "0.69.1 (10.07.2026, 21:25 Uhr)"  # 0.69.1 HALF-OPEN-KEEP-ALIVE-DEPLOY
 VERSION = "0.70.0 (10.07.2026, 21:39 Uhr)"  # 0.70.0 (Level-2 Gruppe A, Punkte 7+8): Sichtbarer Bump zur Recall-Verstaerkung — brain-api 1.30.0 (/entries/touch + recall_boost_promille-Limit) + agent 0.71.0 (brain_touch nach jeder Gedaechtnis-Antwort). features.json-Eintrag recall-verstaerkung-sanftes-vergessen. Alt: 0.69.1.
 VERSION = "0.71.0 (10.07.2026, 22:00 Uhr)"  # 0.71.0 (Level-2 Gruppe A, Punkt 4): Drawer-Gueltigkeitszeile (gueltig ab/bis Datumsfelder + Uebernehmen -> NEU Proxy PUT /api/entry/validity -> brain /entry/validity); Provenance-Zeile zeigt galt bis X. features.json-Eintrag bi-temporale-fakten. Alt: 0.70.0.
 VERSION = "0.72.0 (10.07.2026, 22:12 Uhr)"  # 0.72.0 (Level-2 Gruppe A, Punkt 6): Sichtbarer Bump zur Episoden-Destillation des Bibliothekars (librarian 0.13.0) — Fakten-Kandidaten aus Gespraechen als Morgen-Report-Funde, Speichern erst nach Franks Ja. features.json-Eintrag episoden-destillation. Alt: 0.71.0.
+VERSION = "0.73.0 (10.07.2026, 22:34 Uhr)"  # 0.73.0 (Level-2 Gruppe A, Punkt 9): DAUMEN HOCH/RUNTER unter jeder echten Chat-Antwort (recall/smalltalk; SVG-Buttons, bei runter optionales Inline-Kommentarfeld statt nativem prompt) -> NEU Proxy POST /api/feedback -> agent /feedback. Gehoert zu agent 0.73.0 + librarian 0.14.0. features.json-Eintrag meta-gedaechtnis-feedback. Alt: 0.72.0.
 BRAIN_URL = os.getenv("BRAIN_URL", "http://brain-api:8000").rstrip("/")
 AGENT_URL = os.getenv("AGENT_URL", "http://agent:8002").rstrip("/")
 SB_API_KEY = os.getenv("SB_API_KEY", "")
@@ -696,6 +697,15 @@ async def api_update_rule(rule_id: str, request: Request) -> dict:
 @app.delete("/api/rules/{rule_id}")
 def api_delete_rule(rule_id: str) -> dict:
     return _adelete(f"/rules/{rule_id}")
+
+
+# --- Antwort-Feedback (Proxy an agent /feedback) — Meta-Gedaechtnis Level-2 #9 --
+@app.post("/api/feedback")
+async def api_post_feedback(request: Request) -> dict:
+    body = await request.json()
+    payload = {"vote": (body.get("vote") or ""), "frage": (body.get("frage") or "")[:2000],
+               "antwort": (body.get("antwort") or "")[:2000], "kommentar": (body.get("kommentar") or "")[:1000]}
+    return await asyncio.to_thread(_apost, "/feedback", payload)
 
 
 # --- Bi-temporale Gueltigkeit (Proxy an brain /entry/validity) — Level-2 #4 -----
