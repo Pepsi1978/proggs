@@ -785,23 +785,7 @@ namespace TerminalVoiceOverlay.Views
             _collapseTimer.Tick += (_, _) =>
             {
                 _collapseTimer!.Stop();
-                // Eine laufende Aufnahme bleibt sichtbar; die Transkription darf
-                // dagegen bereits in der kompakten Mikrofonansicht weiterlaufen.
-                if (_micState == RecordingState.Recording || isBtwRecording)
-                    return;
-                // Maus (noch) ueber Overlay, Promptboard ODER Eingabefeld? Dann
-                // NICHT einklappen — erneut warten und pruefen. (Diese sind
-                // eigene Fenster, das Overlay-MouseLeave allein reicht nicht.)
-                // ZUSAETZLICH: ein offener Editier-/Einstellungs-Dialog (modal,
-                // liegt UEBER dem Board) haelt das Overlay ebenfalls offen —
-                // sonst klappt der Timer waehrend des Bearbeitens ein und
-                // versteckt das Board hinter dem Dialog. Re-arm statt einklappen.
-                if (IsCursorOverOwnUi() || IsAuxiliaryWindowOpen() || IsTransientChildVisible())
-                {
-                    _collapseTimer!.Start();
-                    return;
-                }
-                CollapseImmediate();
+                TryCollapseImmediately();
             };
 
             // Fenster-weite Hover-Erkennung. MouseEnter/MouseLeave am Window
@@ -952,7 +936,12 @@ namespace TerminalVoiceOverlay.Views
             if (_micState == RecordingState.Recording || isBtwRecording) return;
             if (_mouseOverOverlay) return;
 
-            if (IsCursorOverOwnUi() || IsAuxiliaryWindowOpen() || IsTransientChildVisible())
+            // WPF kann waehrend Beam-/Layout-Wechseln ein kurzes MouseLeave
+            // melden, obwohl der Cursor physisch noch im Fenster liegt. Das
+            // echte Win32-Rechteck umfasst auch den transparenten Body und ist
+            // deshalb die kanonische Grenze fuer "gesamtes Overlay verlassen".
+            if (IsCursorInsideOverlayBounds() || IsCursorOverOwnUi()
+                || IsAuxiliaryWindowOpen() || IsTransientChildVisible())
             {
                 _collapseTimer.Interval = TimeSpan.FromMilliseconds(OwnUiCollapsePollMs);
                 _collapseTimer.Stop();
@@ -961,6 +950,26 @@ namespace TerminalVoiceOverlay.Views
             }
 
             CollapseImmediate();
+        }
+
+        private bool IsCursorInsideOverlayBounds()
+        {
+            try
+            {
+                IntPtr hwnd = new WindowInteropHelper(this).Handle;
+                if (hwnd == IntPtr.Zero
+                    || !NativeMethods.Win32.GetCursorPos(out var pt)
+                    || !NativeMethods.Win32.GetWindowRect(hwnd, out var rect))
+                    return IsMouseOver;
+
+                return pt.X >= rect.Left && pt.X < rect.Right
+                    && pt.Y >= rect.Top && pt.Y < rect.Bottom;
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"IsCursorInsideOverlayBounds: {ex.Message}");
+                return IsMouseOver;
+            }
         }
 
         /// <summary>
