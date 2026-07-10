@@ -7,17 +7,11 @@
 
 ## ⚡ Globale Kern-Regeln + Arbeitsregeln aus dem Gehirn
 
-Es gelten die globalen OpenCode-Kern-Regeln: @~/.config/opencode/AGENTS.md
-(Deutsch+Umlaute inkl. Denkvorgang, Multi-Task ` ; `, Git-Disziplin/Parallele-Sessions, Secrets,
-Komprimierung, Direktive #3). Sie werden bei JEDEM Turn frisch geladen und gelten auch nach
-Komprimierung. Dort steht auch die **PFLICHT-Startaufgabe, die vollen Arbeitsregeln aus dem zweiten Gehirn zu
-laden — EINZELN, eine nach der anderen** (`second-brain`-MCP: erst `list_memories`, dann jede Regel
-der Kategorie `[Programmierung/Rules]` per `get_by_title`; **NIEMALS** `get_by_category` — das wird
-bei ~125 KB truncated/abgelehnt) und in EINER Zeile "N Regeln aus dem zweiten Gehirn einzeln
-eingelesen" zu bestaetigen. **Generelle Muss-Regel:** jeder Second-Brain-Abruf laeuft einzeln, nie
-eine ganze grosse Kategorie auf einmal. Klappt der Abruf nicht (MCP weg / Modell ruft nicht ab),
-gelten die fest verdrahteten Kern-Regeln der globalen Datei OHNEHIN. Diese Projekt-Datei ergaenzt
-nur das **proggs-Spezifische** (unten).
+Es gelten die globalen OpenCode-Kernregeln aus `~/.config/opencode/AGENTS.md` (Sprache, Multi-Task,
+Git, Secrets, Komprimierung, Arbeitsmodi und Direktive 3). Dort steht auch die Pflicht-Startaufgabe:
+`Programmierung/Rules` vollständig per `get_category_item` von 1 bis N einzeln laden und danach
+„N Regeln aus dem zweiten Gehirn eingelesen.“ bestätigen. Second-Brain-Einträge immer einzeln laden,
+nie eine große Kategorie per `get_by_category`. Diese Datei ergänzt nur das proggs-Spezifische.
 
 ## Repository Structure
 
@@ -78,8 +72,10 @@ AGENTS.md §3 + brain `Programmierung/Rules`.
 
 ## Quality Requirements
 
-- Every feature must pass `quality-gate` agent before commit
-- Build must be green before commit (no broken builds pushed)
+- Quality Gates follow global AGENTS.md §6: Schnellmodus exactly 1 pass, Normalmodus at most 3,
+  Gruendlichkeitsmodus at most 6; never turn review findings outside the user scope into a second task
+- Required builds must be green before task completion/deploy; the pre-build commit order from global
+  AGENTS.md §3 remains binding, and build failures require an immediate follow-up fix
 - Cross-platform: .ps1 hooks need .sh counterpart (and vice versa)
 - Do not leave project files untracked. Anything an agent creates or edits in the repo must be committed and pushed to GitHub, except secrets/local/generated files which must be explicitly ignored or replaced with a safe template.
 
@@ -106,9 +102,8 @@ AGENTS.md §3 + brain `Programmierung/Rules`.
 WANN genau der Fix ins Gehirn kam (nicht nur an welchem Tag); macht Fixes am selben Bereich eindeutig.
 (Beispiele: `Bugfix Cortex Vorlesen Toggle Layout 2026-06-26 14:23`, `Bugfix Cortex Gehirn Kategorie Drilldown 2026-06-26 15:07`.)
 
-**Kategorie:** `bugfixes/<unterkategorie>` — ZUERST pruefen ob es schon eine sinnvolle Unterkategorie
-gibt (Kategorie-Liste / `get_by_category` ansehen) und dort einordnen; nur wenn keine passt, eine neue
-sprechende anlegen (z.B. `bugfixes/cortex-dashboard`, `bugfixes/brain-api`).
+**Kategorie:** `bugfixes/<unterkategorie>` — per gezieltem `recall` prüfen, ob eine passende bestehende
+Unterkategorie existiert; nur sonst eine neue sprechende anlegen (z.B. `bugfixes/cortex-dashboard`).
 
 **Inhalt:** `Bugfix <YYYY-MM-DD HH:MM>: <App> <Bereich>. Symptom: … Root Cause: … Fix: … Verwandte Pruefung: …
 Verifikation: … Funktionalitaets-Diff: … [Poka-Yoke: …]` (dieselben Bausteine wie Direktive #3).
