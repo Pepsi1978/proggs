@@ -1281,6 +1281,17 @@ button{font-family:inherit;cursor:pointer}
         </div>
         <div class="set-row">
           <div class="card set-section">
+            <h3><span class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><circle cx="12" cy="12" r="9"/><path d="M12 8v4l2.5 2.5M12 3v2M21 12h-2M12 21v-2M3 12h2"/></svg></span>Kern-Wissen (immer präsent)</h3>
+            <p class="set-desc">Cortex' ständiger Überblick über dich — 5 kleine Blöcke, die bei <b>jeder</b> Antwort im Kopf des Hauptagenten liegen (Wer du bist, Ziele, Projekte, Aufgaben, Vorlieben). Cortex hält sie im Gespräch selbst aktuell (Werkzeug <b>aktualisiere_kernblock</b>); hier kannst du sie ansehen und direkt bearbeiten. Jede Änderung landet im Änderungs-Log (alte Fassungen bleiben erhalten); Ablage extern auf <b>Z:\Logbuch\Kernbloecke</b>.</p>
+            <div id="coreBlocksList"><p class="set-desc">Lade Kern-Blöcke …</p></div>
+            <details style="margin-top:12px">
+              <summary class="set-desc" style="cursor:pointer">Änderungs-Chronik (wer hat wann welchen Block geändert)</summary>
+              <div id="coreBlocksLog" style="margin-top:8px"></div>
+            </details>
+          </div>
+        </div>
+        <div class="set-row">
+          <div class="card set-section">
             <h3><span class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M12 2a4 4 0 0 1 4 4v1a4 4 0 0 1-8 0V6a4 4 0 0 1 4-4Z"/><path d="M5 21v-1a7 7 0 0 1 14 0v1"/></svg></span>Agenten</h3>
             <p class="set-desc">Die Tages-Agenten — wähle für jeden ein eigenes Modell. Der <b>Hauptagent</b> redet mit dir, der <b>Speicheragent</b> legt 1:1 ab, der <b>Abfrageagent</b> sucht im Gehirn. (Der Nachtschicht-Bibliothekar ist ein Spezialagent und hat seinen eigenen Bereich.)</p>
             <div class="mr-pair">
@@ -2688,6 +2699,7 @@ button{font-family:inherit;cursor:pointer}
 
   async function loadSettings(){
     loadChatRules();   // Selbst-Regeln-Chronik (unabhaengig, eigene Fehlerbehandlung)
+    loadCoreBlocks();  // Kern-Wissen-Karte (unabhaengig, eigene Fehlerbehandlung)
     loadProfiles();    // Agenten-Profile (Klassisch / Sofort Web + Gedächtnis)
     /* Drei Modell-Dropdowns (Hauptagent/Speicheragent/Abfrageagent) aus dem Agenten füllen + aktives markieren */
     try{
@@ -5206,6 +5218,77 @@ button{font-family:inherit;cursor:pointer}
     _bindChatRuleAdd();
     try{ const r=await api("/api/rules"); renderChatRules((r&&r.rules)||[]); }
     catch(e){ /* Chronik ist optional — der Rest der Einstellungen laedt unabhaengig weiter */ }
+  }
+
+  /* — Kern-Wissen (immer praesente Kern-Bloecke, Level-2 #2/#3). Nutzt /api/coreblocks. — */
+  function renderCoreBlocks(data){
+    const box=document.getElementById("coreBlocksList"); if(!box) return;
+    box.innerHTML="";
+    const defs=(data&&data.defs)||{}; const blocks=(data&&data.blocks)||{}; const limit=(data&&data.limit)||2000;
+    Object.keys(defs).forEach(name=>{
+      const def=defs[name]||{}; const b=blocks[name]||{};
+      const wrap=document.createElement("div"); wrap.style.borderBottom="1px solid var(--border)";
+      const row=document.createElement("div"); row.className="lib-taskrow"; row.style.borderBottom="none";
+      const who=b.updated_by==="cortex"?"Cortex":(b.updated_by==="frank"?"Frank":"");
+      const meta=b.updated_at?("Zuletzt geändert "+String(b.updated_at).slice(0,16).replace("T"," ")+(who?" von "+who:"")):"noch leer";
+      row.innerHTML='<div class="nm"><b>'+escapeHtml(def.titel||name)+'</b><span>'+escapeHtml(meta)+'</span></div>';
+      const editB=document.createElement("button"); editB.className="btn btn-sm"; editB.textContent="Bearbeiten";
+      row.appendChild(editB);
+      wrap.appendChild(row);
+      const prev=document.createElement("div"); prev.className="set-desc";
+      prev.style.cssText="white-space:pre-wrap;padding:0 0 10px";
+      prev.textContent=(b.text&&String(b.text).trim())?b.text:(def.hinweis||"");
+      if(!(b.text&&String(b.text).trim())) prev.style.opacity="0.6";
+      wrap.appendChild(prev);
+      const ed=document.createElement("div"); ed.style.cssText="display:none;padding:0 0 12px";
+      const eta=document.createElement("textarea"); eta.className="lib-own";
+      eta.style.cssText="min-height:100px;width:100%;box-sizing:border-box"; eta.value=b.text||"";
+      eta.maxLength=limit;
+      const er=document.createElement("div"); er.className="lib-run-line";
+      const esave=document.createElement("button"); esave.className="btn btn-sm btn-primary"; esave.textContent="Speichern";
+      const estate=document.createElement("span"); estate.className="set-desc";
+      const ecount=document.createElement("span"); ecount.className="set-desc";
+      const updCount=()=>{ ecount.textContent=(eta.value||"").length+" / "+limit+" Zeichen"; };
+      eta.addEventListener("input",updCount); updCount();
+      er.appendChild(esave); er.appendChild(ecount); er.appendChild(estate);
+      ed.appendChild(eta); ed.appendChild(er);
+      wrap.appendChild(ed);
+      editB.addEventListener("click",()=>{
+        const open=ed.style.display==="none";
+        ed.style.display=open?"block":"none"; prev.style.display=open?"none":"block";
+        editB.textContent=open?"Zuklappen":"Bearbeiten";
+      });
+      esave.addEventListener("click", async()=>{
+        try{
+          await apiSend("/api/coreblocks/"+encodeURIComponent(name),"PUT",{text:(eta.value||"").trim()});
+          estate.textContent="✓ Gespeichert — liegt ab sofort in jedem Gespräch im Kontext.";
+          loadCoreBlocks();
+        }catch(e){ estate.textContent="Fehler: "+e.message; }
+      });
+      box.appendChild(wrap);
+    });
+    if(!Object.keys(defs).length) box.innerHTML='<p class="set-desc">Kern-Blöcke nicht erreichbar (Agent offline?).</p>';
+  }
+  function renderCoreBlocksLog(list){
+    const box=document.getElementById("coreBlocksLog"); if(!box) return;
+    if(!list.length){ box.innerHTML='<p class="set-desc">Noch keine Änderungen protokolliert.</p>'; return; }
+    box.innerHTML="";
+    list.forEach(e=>{
+      const row=document.createElement("div"); row.className="set-desc"; row.style.cssText="padding:3px 0;border-bottom:1px solid var(--border)";
+      const who=e.by==="cortex"?"Cortex":"Frank";
+      const alt=(e.alt||"").trim(); const neu=(e.neu||"").trim();
+      row.textContent=String(e.ts||"").slice(0,16).replace("T"," ")+" · "+who+" · "+(e.block||"")+" — "
+        +(alt?("vorher: „"+alt.slice(0,80)+(alt.length>80?"…":"")+"“ → "):"neu angelegt: ")
+        +"„"+neu.slice(0,80)+(neu.length>80?"…":"")+"“";
+      box.appendChild(row);
+    });
+  }
+  async function loadCoreBlocks(){
+    try{ const r=await api("/api/coreblocks"); renderCoreBlocks(r||{}); }
+    catch(e){ const box=document.getElementById("coreBlocksList");
+      if(box) box.innerHTML='<p class="set-desc">Kern-Blöcke nicht erreichbar (Agent offline?).</p>'; }
+    try{ const l=await api("/api/coreblocks/log?limit=50"); renderCoreBlocksLog((l&&l.log)||[]); }
+    catch(e){ /* Chronik optional */ }
   }
 
   /* — Gelernte Regeln rückwirkend auf offene Vorschläge anwenden (Frank-Wunsch 2026-07-05) — */

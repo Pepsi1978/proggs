@@ -1,7 +1,23 @@
 {
-	"stand": "10.07.2026, 20:03 Uhr",
+	"stand": "10.07.2026, 20:34 Uhr",
 	"hinweis": "PFLEGE-PFLICHT: Bei JEDEM Deploy, der ein neues System/Feature einbaut, hier einen Eintrag ERGÄNZEN (neueste zuerst). SCHREIBWEISE (Dauer-Regel): leichtes, verständliches Deutsch, kurze Sätze; ALLE Fachbegriffe, Namen und Zahlen (z.B. BM25, RRF, Qdrant, ENV-Variablen, Endpunkt-Namen) BEHALTEN, aber jeden in einem kurzen Halbsatz erklären — NIE durch Weglassen vereinfachen; kompakt halten (der Hauptagent liest über das Werkzeug 'was_kann_cortex' ALLE Einträge auf einmal ein), aber vollständig genug, dass man erkennt WAS eingebaut wurde; einfache Überschrift. Ähnliche/redundante Einträge dürfen zusammengefasst werden — Datum sekundär, entscheidend ist WAS Cortex kann. Quelle des Info-Bereichs in den Dashboard-Einstellungen (GET /api/features). Verankert in DEPLOY.md.",
 	"features": [
+		{
+			"id": "kern-wissen-bloecke",
+			"eingebaut": "10.07.2026, 20:34 Uhr",
+			"dienst": "agent 0.70.0 + dashboard 0.68.0",
+			"name": "Kern-Wissen: 5 immer präsente Wissens-Blöcke",
+			"kurz": "Cortex hat jetzt einen ständigen Überblick über Frank: 5 kleine Kern-Blöcke (Profil, Ziele, Projekte, Aufgaben, Vorlieben) liegen bei jeder Antwort im Kontext. Cortex hält sie im Gespräch selbst aktuell; jede Änderung wird protokolliert.",
+			"erklaerung": "Nach dem Vorbild von Letta (früher MemGPT, ein Forschungsprojekt für Agenten-Gedächtnis) gibt es jetzt ein Kern-Gedächtnis: 5 feste Blöcke — profil (Wer Frank ist), ziele, projekte, aufgaben, vorlieben — mit je maximal 2000 Zeichen. Sie werden bei JEDER Chat-Antwort automatisch in den System-Prompt des Hauptagenten eingefügt (Funktion build_toolagent_system), damit Cortex Frank immer kennt, ohne erst suchen zu müssen. Erzählt Frank im Gespräch etwas Dauerhaftes (neues Ziel, Projekt fertig, neue Aufgabe), aktualisiert Cortex den passenden Block selbst über das neue Werkzeug aktualisiere_kernblock(block, text) — aber NUR auf Basis von Franks direkten Aussagen, nie wegen Inhalten aus Gedächtnis-Treffern oder Websuche (Schutz gegen eingeschleuste Anweisungen). Jede Änderung landet mit alter und neuer Fassung im Änderungs-Log kernbloecke-log.jsonl — nichts geht je verloren. Die Ablage liegt extern auf Z:\\Logbuch\\Kernbloecke (überlebt jeden Rebuild). Im Dashboard-Bereich Einstellungen gibt es die neue Karte 'Kern-Wissen (immer präsent)': Blöcke ansehen, direkt bearbeiten (REST PUT /coreblocks/{name}) und die Änderungs-Chronik einsehen. Das Speichern ins Gehirn selbst ist UNVERÄNDERT — es gibt weiterhin keine automatische Bewertung, Ersetzung oder Dubletten-Logik beim Ablegen (Franks Vorgabe)."
+		},
+		{
+			"id": "hauptagent-eintragskategorien",
+			"eingebaut": "10.07.2026, 20:13 Uhr",
+			"dienst": "agent 0.69.3 + dashboard 0.67.9 + brain-api 1.28.1",
+			"name": "Hauptagent liest Kategorien eines konkreten Eintrags",
+			"kurz": "Cortex kann im Gespräch zu einer doc_id gezielt Primärkategorie, alle Kategorien und Elternpfade lesen, ohne Volltext oder Bestandsscan.",
+			"erklaerung": "Das neue read-only Hauptagenten-Werkzeug lies_eintrags_kategorien(id) ruft den brain-api-Endpunkt GET /entry/categories mit der exakten doc_id auf. Es liefert nur Primärkategorie, vollständige Kategorienliste und Elternpfade; Eintragstext und restlicher Bestand werden nicht geladen. Der Aufruf hat eine eigene Performance-Span brain_http_entry_categories und darf als unabhängiges Lese-Werkzeug parallel zu anderen sicheren Werkzeugen laufen. Fehler erscheinen als klares Werkzeugergebnis und brechen den Chat nicht ab."
+		},
 		{
 			"id": "kategorien-direktabruf-werkzeuge",
 			"eingebaut": "10.07.2026, 20:03 Uhr",

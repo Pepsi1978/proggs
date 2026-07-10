@@ -48,6 +48,8 @@ VERSION = "0.67.5 (10.07.2026, 19:08 Uhr)"  # 0.67.5: Bibliothekar-Kategorie-Fun
 VERSION = "0.67.6 (10.07.2026, 19:26 Uhr)"  # 0.67.6: Kategorien-Vorschau liest per gezieltem brain-api GET /entry/categories statt per /list- und /by-category-Bestandsscans. Alt: 0.67.5.
 VERSION = "0.67.7 (10.07.2026, 19:52 Uhr)"  # 0.67.7: Kategorien-Paket komplett: direkter Bibliothekarpfad, Latenzsonde, MCP-Werkzeug, 4-zu-5/0-zu-1-Live-Eval und idempotentes Windows-ACL-Skript. Alt: 0.67.6.
 VERSION = "0.67.8 (10.07.2026, 20:03 Uhr)"  # 0.67.8: Chronik-Fix: Das neue Kategorien-Paket nutzt eine eigene Feature-ID, damit der persistente Seed-Merge es sichtbar uebernimmt, ohne editierte Eintraege zu ueberschreiben. Alt: 0.67.7.
+VERSION = "0.67.9 (10.07.2026, 20:13 Uhr)"  # 0.67.9: Sichtbarer Bump zum agent-0.69.3-Werkzeug lies_eintrags_kategorien(id) fuer gezielte Kategorie-Metadaten. Alt: 0.67.8.
+VERSION = "0.68.0 (10.07.2026, 20:34 Uhr)"  # 0.68.0 (Level-2 Gruppe A, Punkte 2+3): KERN-WISSEN — neue Einstellungen-Karte 'Kern-Wissen (immer praesent)': 5 Kern-Bloecke (profil/ziele/projekte/aufgaben/vorlieben) ansehen + bearbeiten (PUT /api/coreblocks/{name} -> agent /coreblocks) + Aenderungs-Chronik (/api/coreblocks/log). Gehoert zu agent 0.70.0 (coreblocks.py, Prompt-Injektion, Werkzeug aktualisiere_kernblock). features.json-Eintrag kern-wissen-bloecke.
 BRAIN_URL = os.getenv("BRAIN_URL", "http://brain-api:8000").rstrip("/")
 AGENT_URL = os.getenv("AGENT_URL", "http://agent:8002").rstrip("/")
 SB_API_KEY = os.getenv("SB_API_KEY", "")
@@ -689,6 +691,31 @@ async def api_update_rule(rule_id: str, request: Request) -> dict:
 @app.delete("/api/rules/{rule_id}")
 def api_delete_rule(rule_id: str) -> dict:
     return _adelete(f"/rules/{rule_id}")
+
+
+# --- Kern-Bloecke (Proxy an agent /coreblocks) — Level-2 #2/#3 ------------------
+@app.get("/api/coreblocks")
+def api_get_coreblocks() -> dict:
+    return _aget("/coreblocks")
+
+
+@app.get("/api/coreblocks/log")
+def api_get_coreblocks_log(limit: int = 50) -> dict:
+    return _aget(f"/coreblocks/log?limit={int(limit)}")
+
+
+@app.put("/api/coreblocks/{name}")
+async def api_put_coreblock(name: str, request: Request) -> dict:
+    body = await request.json()
+    try:
+        return await asyncio.to_thread(_aput, f"/coreblocks/{name}", {"text": (body.get("text") or "")})
+    except httpx.HTTPStatusError as e:
+        detail = "Kern-Block konnte nicht gespeichert werden."
+        try:
+            detail = e.response.json().get("detail", detail)
+        except Exception:  # noqa: BLE001
+            pass
+        raise HTTPException(status_code=e.response.status_code, detail=detail)
 
 
 def _clampi(value: int, low: int, high: int) -> int:
