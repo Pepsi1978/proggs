@@ -12,11 +12,8 @@ import {
 } from "./pricing"
 
 const FALLBACK_EUR_PER_USD = 0.92
-const PLUGIN_VERSION = "1.0.1"
-const PLUGIN_VERSION_TIMESTAMP = "10.07.2026, 11:31 Uhr"
-const MONEY_SOURCE_RECORDED = "OpenCode"
-const MONEY_SOURCE_CALCULATED = "models.dev"
-const MONEY_SOURCE_MIXED = "OpenCode + models.dev"
+const PLUGIN_VERSION = "1.0.2"
+const PLUGIN_VERSION_TIMESTAMP = "10.07.2026, 11:46 Uhr"
 
 function safeNumber(value: unknown): number {
   if (typeof value === "number" && Number.isFinite(value)) return value
@@ -67,12 +64,6 @@ function shortLabel(label: string): string {
 
 function formatInt(value: number): string {
   return new Intl.NumberFormat("de-DE").format(Math.max(0, Math.round(value)))
-}
-
-function formatUsd(value: number): string {
-  if (value <= 0) return "0,00 $"
-  if (value < 0.01) return "<0,01 $"
-  return new Intl.NumberFormat("de-DE", { style: "currency", currency: "USD" }).format(value)
 }
 
 function formatUsdPerMillion(value: number): string {
@@ -220,15 +211,9 @@ function View(props: { api: TuiPluginApi; sessionID: string }) {
     const t = totals()
     const cost = calculateSessionCost(pricedModel(), t.records)
 
-    const source = cost.usedRecorded && cost.usedCalculated
-      ? MONEY_SOURCE_MIXED
-      : cost.usedRecorded
-        ? MONEY_SOURCE_RECORDED
-        : MONEY_SOURCE_CALCULATED
     return {
       usd: cost.usd,
       eur: cost.usd * eurPerUsd(),
-      source,
       available: !cost.missingUnpriced && (cost.usedRecorded || cost.pricingAvailable),
     }
   })
@@ -266,9 +251,6 @@ function View(props: { api: TuiPluginApi; sessionID: string }) {
           value={formatInt(totals().input + totals().output + totals().reasoning)}
         />
         <Row api={props.api} label="Kosten" value={money().available ? formatEur(money().eur) : "nicht verfügbar"} />
-        <Show when={money().available}>
-          <text fg={theme().textMuted}>{`${formatUsd(money().usd)} · ${money().source}`}</text>
-        </Show>
         <text fg={theme().textMuted}>{`Version ${PLUGIN_VERSION} (${PLUGIN_VERSION_TIMESTAMP})`}</text>
       </box>
     </Show>

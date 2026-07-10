@@ -139,6 +139,8 @@ describe("models.dev pricing", () => {
     expect(source).toContain('return "<$0.000001 / 1M"')
     expect(source).toContain(`PLUGIN_VERSION = "${packageJson.version}"`)
     expect(source).toMatch(/PLUGIN_VERSION_TIMESTAMP = "\d{2}\.\d{2}\.\d{4}, \d{2}:\d{2} Uhr"/)
+    expect(source).not.toContain("MONEY_SOURCE_")
+    expect(source).not.toContain("formatUsd(money().usd)")
   })
 
   test("prefers the complete live model over incomplete embedded pricing", () => {

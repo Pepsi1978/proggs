@@ -1,6 +1,6 @@
 {
   "name": "frank-token-cost-sidebar",
-  "version": "1.0.1",
+  "version": "1.0.2",
   "description": "Local OpenCode TUI sidebar plugin showing current model, separate USD input/output rates, token totals, and session cost.",
   "type": "module",
   "exports": {
