@@ -23,7 +23,8 @@ set -euo pipefail
 # ── Konfiguration (Defaults passen zum Stack; per Env ueberschreibbar) ───────────────────────────
 APP_DIR="${SB_APP_DIR:-/opt/second-brain}"
 QDRANT_URL="${SB_QDRANT_URL:-http://127.0.0.1:6333}"
-COLLECTION="${SB_COLLECTION:-brain}"
+COLLECTION="${SB_COLLECTION:-brain__e2}"                        # Haupt-Gehirn (muss zur compose.yaml passen; Vorfall 2026-07-10: alter Default 'brain' zeigte auf geloeschte Collection)
+ENTITY_COLLECTION="${SB_ENTITY_COLLECTION:-brain_entities__e2}"  # Entity-Register (sonst nach Restore weg)
 OUT_DIR="${SB_BACKUP_OUT:-$APP_DIR/backups}"
 WG_CONF="${SB_WG_CONF:-/etc/wireguard/wg0.conf}"
 SAMBA_DIR="${SB_SAMBA_DIR:-/srv/samba}"   # Z=gedanken (Logbuch) + Y=daten (Franks Netzlaufwerke)
@@ -43,20 +44,32 @@ mkdir -p "$OUT_DIR" "$WORK"
 if [ -f "$APP_DIR/.env" ]; then set -a; . "$APP_DIR/.env"; set +a; fi
 QKEY="${QDRANT_API_KEY:-}"
 
-# ── 1) Qdrant-Snapshot (konsistent, ueber die API) ──────────────────────────────────────────────
-qdrant_ok=0
-if [ -n "$QKEY" ]; then
-  if resp=$(curl -fsS -X POST "$QDRANT_URL/collections/$COLLECTION/snapshots" -H "api-key: $QKEY" 2>/dev/null); then
+# ── 1) Qdrant-Snapshots (konsistent, ueber die API): Haupt-Gehirn + Entity-Register ─────────────
+# $1 = Collection, $2 = Ziel-Dateiname in $WORK. Rueckgabe 0 = Snapshot liegt in $WORK.
+snapshot_collection() {
+  local coll="$1" outfile="$2" resp name sz
+  if resp=$(curl -fsS -X POST "$QDRANT_URL/collections/$coll/snapshots" -H "api-key: $QKEY" 2>/dev/null); then
     name=$(printf '%s' "$resp" | python3 -c "import sys,json;print(json.load(sys.stdin)['result']['name'])" 2>/dev/null || echo "")
     if [ -n "$name" ]; then
-      if curl -fsS "$QDRANT_URL/collections/$COLLECTION/snapshots/$name" -H "api-key: $QKEY" -o "$WORK/qdrant-brain.snapshot" 2>/dev/null; then
-        sz=$(stat -c%s "$WORK/qdrant-brain.snapshot" 2>/dev/null || echo 0)
-        if [ "$sz" -ge 1000 ]; then qdrant_ok=1; log "Qdrant-Snapshot OK ($sz bytes)"; else log "WARN: Qdrant-Snapshot zu klein ($sz) — verworfen"; rm -f "$WORK/qdrant-brain.snapshot"; fi
-      else log "WARN: Qdrant-Snapshot-Download fehlgeschlagen"; fi
+      if curl -fsS "$QDRANT_URL/collections/$coll/snapshots/$name" -H "api-key: $QKEY" -o "$WORK/$outfile" 2>/dev/null; then
+        sz=$(stat -c%s "$WORK/$outfile" 2>/dev/null || echo 0)
+        if [ "$sz" -ge 1000 ]; then
+          log "Qdrant-Snapshot OK ($coll, $sz bytes)"
+          curl -fsS -X DELETE "$QDRANT_URL/collections/$coll/snapshots/$name" -H "api-key: $QKEY" >/dev/null 2>&1 || true
+          return 0
+        fi
+        log "WARN: Qdrant-Snapshot zu klein ($coll, $sz) — verworfen"; rm -f "$WORK/$outfile"
+      else log "WARN: Qdrant-Snapshot-Download fehlgeschlagen ($coll)"; fi
       # internen Snapshot wieder loeschen (kein Ansammeln im Container)
-      curl -fsS -X DELETE "$QDRANT_URL/collections/$COLLECTION/snapshots/$name" -H "api-key: $QKEY" >/dev/null 2>&1 || true
-    else log "WARN: Snapshot-Name nicht lesbar"; fi
-  else log "WARN: Qdrant-Snapshot-Erstellung fehlgeschlagen (Qdrant erreichbar?)"; fi
+      curl -fsS -X DELETE "$QDRANT_URL/collections/$coll/snapshots/$name" -H "api-key: $QKEY" >/dev/null 2>&1 || true
+    else log "WARN: Snapshot-Name nicht lesbar ($coll)"; fi
+  else log "WARN: Qdrant-Snapshot-Erstellung fehlgeschlagen ($coll — Qdrant erreichbar? Collection vorhanden?)"; fi
+  return 1
+}
+qdrant_ok=0
+if [ -n "$QKEY" ]; then
+  snapshot_collection "$COLLECTION" "qdrant-brain.snapshot" && qdrant_ok=1
+  snapshot_collection "$ENTITY_COLLECTION" "qdrant-brain-entities.snapshot" || log "WARN: Entity-Register nicht gesichert"
 else
   log "WARN: QDRANT_API_KEY fehlt — Qdrant-Snapshot uebersprungen"
 fi
@@ -112,7 +125,7 @@ if [ -r "$WG_CONF" ]; then cp "$WG_CONF" "$WORK/wg0.conf" && log "wg0.conf gesic
   echo "erstellt:   $(date '+%Y-%m-%d %H:%M:%S %Z')"
   echo "host:       $HOST"
   echo "app_dir:    $APP_DIR"
-  echo "collection: $COLLECTION"
+  echo "collection: $COLLECTION (+ $ENTITY_COLLECTION)"
   echo "qdrant_snapshot: $([ "$qdrant_ok" -eq 1 ] && echo ja || echo 'nein (Fallback qdrant-data)')"
   echo "docker:     $(docker --version 2>/dev/null || echo '?')"
   echo "inhalt:"
@@ -125,11 +138,12 @@ CORTEX (zweites Gehirn) — so stellst du den ganzen Server wieder her
 ====================================================================
 Du musst NICHTS von Hand installieren. Die compose.yaml in diesem Backup ist der
 komplette Bauplan: docker compose zieht/baut alles automatisch (Qdrant-Vektor-DB,
-brain-api mit Gemini-Embedding-001, agent, dashboard, mcp, caddy). Die API-Keys
+brain-api mit gemini-embedding-2, agent, dashboard, mcp, caddy). Die API-Keys
 stehen in der mitgesicherten .env -> die Cloud-APIs laufen sofort wieder.
 
 WAS IN DIESEM BACKUP STECKT:
   - qdrant-brain.snapshot ... dein Gehirn (alle Eintraege + Vektoren)
+  - qdrant-brain-entities.snapshot ... das Entity-Register (Verknuepfungen)
   - opt-second-brain.tar.gz . compose.yaml, .env (Secrets!), agent-data (3 Prompts +
                               config + Kategorien), dashboard (dein Frontend), Code
   - samba.tar.gz ............ Logbuch (.txt-Gespraeche) + daten-Laufwerk

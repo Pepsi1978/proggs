@@ -67,6 +67,7 @@ VERSION = "0.68.5 (09.07.2026, 21:31 Uhr)"  # 0.68.5: Allgemeiner letzter Selbst
 VERSION = "0.68.6 (09.07.2026, 22:00 Uhr)"  # 0.68.6: FIX Parallelprofil meldete immer hoechstens 8 Treffer, obwohl die konfigurierte Rohsuche 30 fand. recall_hits berichtet jetzt die echte Suchtrefferzahl; 8 Quellen-Chips und 12 Antwort-Schnipsel bleiben als getrennte Kontext-/UI-Grenzen unveraendert. Alt: 0.68.5.
 VERSION = "0.69.0 (09.07.2026, 22:52 Uhr)"  # 0.69.0: Neue persistente Gedächtnisgewichtung Leicht/Normal/Stark steuert in allen kombinierten Web+Gedächtnis-Pfaden, wie sichtbar persönliche Notizen in die Antwort einfließen. Alt: 0.68.7.
 VERSION = "0.69.1 (10.07.2026, 10:15 Uhr)"  # 0.69.1: Dialogische Speicherbefehle werden vor der Bestaetigung zu einer kohaerenten Aussage destilliert; Faktenwaechter, geloggter Fallback und 1:1-Dokumentpfade verhindern Inhaltsverlust. Alt: 0.69.0.
+VERSION = "0.69.2 (10.07.2026, 11:34 Uhr)"  # 0.69.2: Tiefen-Debugging-Haertung. Parallelprofil-Jobs (Gedaechtnis/Web) crashen den Chat-Turn nicht mehr (Live-Crash 09.07. 19:26: Exception aus _web_job -> HTTP 500); stattdessen ehrliche Degradation mit Log + Checkpoint. Flush-Loop-Task mit starker Referenz getrackt (GC-Schutz). Alt: 0.69.1.
 
 # ---------------------------------------------------------------------------
 # Konfiguration (alles aus Umgebungsvariablen — Secrets nie im Code)
@@ -4600,7 +4601,9 @@ async def lifespan(app: FastAPI):
     if restored:
         _sessions.update(restored)
         _log(logging.INFO, "Sessions von Platte wiederhergestellt", anzahl=len(restored))
-    task = asyncio.create_task(_flush_loop())
+    # Starke Referenz + Fehler-Logging wie bei allen anderen Hintergrund-Tasks (fastapi.md §6:
+    # der Loop haelt nur weak refs — ein untracked Task kann vom GC eingesammelt werden).
+    _track_background_task(asyncio.create_task(_flush_loop()))
     _log(logging.INFO, "Flush-Loop gestartet")
     try:
         yield
@@ -6374,32 +6377,44 @@ def _auto_parallel_answer(session: dict, user_text: str, context_prompt: str = "
     from concurrent.futures import ThreadPoolExecutor
 
     def _memory_job() -> dict:
-        with _perf_span("auto_parallel_memory", "Profil: Gedaechtnissuche sofort", query_len=len(user_text)):
-            hits, meta = smart_recall(user_text, user_text, user_id=USER_ID)
-            snippets = []
-            for h in hits[:ANSWER_SNIPPET_LIMIT]:
-                score = h.get("dense_score") if h.get("dense_score") is not None else h.get("score")
-                snippets.append({
-                    "doc_id": h.get("doc_id"),
-                    "title": h.get("title") or "(ohne Titel)",
-                    "category": h.get("category"),
-                    "score": round(score, 3) if isinstance(score, (int, float)) else None,
-                    "matched_by": h.get("matched_by") or ["dense"],
-                    "snippet": (h.get("match") or h.get("text") or "").strip()[:LESE_SNIPPET_CHARS],
-                })
-            checkpoint("auto_parallel_memory", "Profil-Suche: Gedaechtnis fertig", ok=True, treffer=len(hits))
-            return {"ok": True, "hits": hits, "snippets": snippets, "meta": meta}
+        # Job-Fehler duerfen NIE den ganzen Turn killen (Live-Crash 2026-07-09: Exception aus einem
+        # Job propagierte durch future.result() -> HTTP 500). Ehrliche Degradation statt Absturz.
+        try:
+            with _perf_span("auto_parallel_memory", "Profil: Gedaechtnissuche sofort", query_len=len(user_text)):
+                hits, meta = smart_recall(user_text, user_text, user_id=USER_ID)
+                snippets = []
+                for h in hits[:ANSWER_SNIPPET_LIMIT]:
+                    score = h.get("dense_score") if h.get("dense_score") is not None else h.get("score")
+                    snippets.append({
+                        "doc_id": h.get("doc_id"),
+                        "title": h.get("title") or "(ohne Titel)",
+                        "category": h.get("category"),
+                        "score": round(score, 3) if isinstance(score, (int, float)) else None,
+                        "matched_by": h.get("matched_by") or ["dense"],
+                        "snippet": (h.get("match") or h.get("text") or "").strip()[:LESE_SNIPPET_CHARS],
+                    })
+                checkpoint("auto_parallel_memory", "Profil-Suche: Gedaechtnis fertig", ok=True, treffer=len(hits))
+                return {"ok": True, "hits": hits, "snippets": snippets, "meta": meta}
+        except Exception as e:  # noqa: BLE001 — Fehler wird geloggt + als leeres Ergebnis gemeldet, nie verschluckt
+            _log(logging.ERROR, "Profil-Gedaechtnissuche fehlgeschlagen — antworte ohne Gedaechtnis-Kontext", exc_info=True)
+            checkpoint("auto_parallel_memory", "Profil-Suche: Gedaechtnis FEHLER", ok=False, fehler=type(e).__name__)
+            return {"ok": False, "reason": type(e).__name__, "hits": [], "snippets": [], "meta": {}}
 
     def _web_job() -> dict:
-        with _perf_span("auto_parallel_web", "Profil: Websuche sofort", query_len=len(user_text)):
-            res = tavily_search(user_text, response_size)
-            if not res.get("ok") and (res.get("reason") or "") == "deaktiviert" and hauptagent_supports_native_web():
-                answer = hauptagent_answer_native_web(session or {"messages": []}, user_text, context_prompt, on_delta=None)
-                checkpoint("native_web", "Profil-Sofortsuche nutzte modellnative Websuche als Tavily-Fallback",
-                           ok=True, query=user_text[:80], tavily_reason="deaktiviert", model=ROLE_MODELS.get("haupt", ""))
-                return {"ok": True, "anbieter": "modellnative_websuche", "antwort": answer}
-            checkpoint("auto_parallel_web", "Profil-Suche: Web fertig", ok=bool(res.get("ok")), provider="tavily", reason=res.get("reason"))
-            return {"ok": bool(res.get("ok")), "anbieter": "tavily", **res}
+        try:
+            with _perf_span("auto_parallel_web", "Profil: Websuche sofort", query_len=len(user_text)):
+                res = tavily_search(user_text, response_size)
+                if not res.get("ok") and (res.get("reason") or "") == "deaktiviert" and hauptagent_supports_native_web():
+                    answer = hauptagent_answer_native_web(session or {"messages": []}, user_text, context_prompt, on_delta=None)
+                    checkpoint("native_web", "Profil-Sofortsuche nutzte modellnative Websuche als Tavily-Fallback",
+                               ok=True, query=user_text[:80], tavily_reason="deaktiviert", model=ROLE_MODELS.get("haupt", ""))
+                    return {"ok": True, "anbieter": "modellnative_websuche", "antwort": answer}
+                checkpoint("auto_parallel_web", "Profil-Suche: Web fertig", ok=bool(res.get("ok")), provider="tavily", reason=res.get("reason"))
+                return {"ok": bool(res.get("ok")), "anbieter": "tavily", **res}
+        except Exception as e:  # noqa: BLE001 — z.B. native-Web wirft, wenn alle Codex-Web-Tools scheitern
+            _log(logging.ERROR, "Profil-Websuche fehlgeschlagen — antworte ohne Web-Kontext", exc_info=True)
+            checkpoint("auto_parallel_web", "Profil-Suche: Web FEHLER", ok=False, fehler=type(e).__name__)
+            return {"ok": False, "reason": type(e).__name__}
 
     with _perf_span("auto_parallel_start", "Profil: Gedaechtnis und Web parallel starten"):
         with ThreadPoolExecutor(max_workers=2) as ex:

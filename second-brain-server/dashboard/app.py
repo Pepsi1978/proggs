@@ -41,6 +41,7 @@ VERSION = "0.66.5 (09.07.2026, 21:31 Uhr)"  # 0.66.5: Sichtbarer Bump zum agent-
 VERSION = "0.66.6 (09.07.2026, 22:00 Uhr)"  # 0.66.6: Sichtbarer Bump zum agent-0.68.6-Fix: Das Parallelprofil zeigt die echte Zahl gefundener Gedächtnistreffer statt der auf acht begrenzten Quellen-Chips. Alt: 0.66.5.
 VERSION = "0.67.0 (09.07.2026, 22:52 Uhr)"  # 0.67.0: Sichtbarer Bump zum agent-0.69.0 und Cortex 0.6.7: dreistufiger Gedächtnis-Einfluss bei Websuchen. Alt: 0.66.7.
 VERSION = "0.67.1 (10.07.2026, 10:15 Uhr)"  # 0.67.1: Sichtbarer Bump zum agent-0.69.1-Fix: gesprochene Speicherwünsche werden vor der Bestätigung kohärent formuliert. Alt: 0.67.0.
+VERSION = "0.67.2 (10.07.2026, 11:34 Uhr)"  # 0.67.2: Tiefen-Debugging-Qualitätslauf über das GANZE Cortex-System. KRITISCH: nächtliches Gehirn-Backup zielte seit der Embedding-2-Migration auf die gelöschte Collection 'brain' (2 Nächte ohne Snapshot!) — Skripte auf brain__e2 + Entity-Register umgestellt. Agent 0.69.2 (Parallelprofil-Jobs crashsicher), brain-api 1.27.2 (Gemini-Timeout+Retry, Auth konstantzeitig), librarian 0.11.2 (Retry-Sturm-Bremse), Dashboard-Fehlerantworten ohne interne Details. Alt: 0.67.1.
 BRAIN_URL = os.getenv("BRAIN_URL", "http://brain-api:8000").rstrip("/")
 AGENT_URL = os.getenv("AGENT_URL", "http://agent:8002").rstrip("/")
 SB_API_KEY = os.getenv("SB_API_KEY", "")
@@ -200,7 +201,10 @@ _log(logging.INFO, "sb-dashboard gestartet", version=VERSION, brain_url=BRAIN_UR
 async def unhandled(request: Request, exc: Exception) -> JSONResponse:
     log.error(json.dumps({"module": "sb-dashboard", "msg": "Unbehandelte Ausnahme",
                           "path": str(request.url.path), "trace": traceback.format_exc()}, ensure_ascii=False))
-    return JSONResponse(status_code=500, content={"error": type(exc).__name__, "detail": str(exc)})
+    # Kein str(exc) an den Browser (fastapi.md Kurzcheck #8: interne Details/Upstream-Hosts leaken);
+    # der volle Traceback steht bereits oben im Server-Log.
+    return JSONResponse(status_code=500, content={"error": type(exc).__name__,
+                                                  "detail": "Interner Fehler — Details im Server-Log."})
 
 
 FEATURES_SEED_FILE = Path(__file__).parent / "features.json"   # Seed im Image; editierbare Kopie lebt persistent in /app/data
@@ -349,7 +353,6 @@ def overview() -> dict:
         out["total"] = cc.get("total_distinct")
     except Exception as e:  # noqa: BLE001
         _log(logging.WARNING, "Kategorien-Abruf fehlgeschlagen", err=str(e))
-        f_registry.cancel()   # haengt an keinem Ergebnis mehr
     try:
         a = f_agent.result()
         out["agent"] = {"status": a.get("status"), "version": a.get("version"),

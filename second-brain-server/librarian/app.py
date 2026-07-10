@@ -24,6 +24,7 @@ mit starker Referenz (ai-agent §6), atomare JSON-Dateien, JSON-Lines-Log (Obser
 """
 from __future__ import annotations
 
+import hmac
 import json
 import logging
 import os
@@ -57,6 +58,7 @@ OPENCODE_GO_URL = os.getenv("OPENCODE_GO_URL", "https://opencode.ai/zen/go/v1").
 OPENCODE_ANTHROPIC_VERSION = os.getenv("OPENCODE_ANTHROPIC_VERSION", "2023-06-01")
 USER_ID = os.getenv("SB_USER_ID", "frank")
 VERSION = "0.11.1 (08.07.2026, 15:04 Uhr)"  # Prompt-JSON im Interview-System escaped, damit der Dienst beim Import nicht crasht. Alt: 0.11.0.
+VERSION = "0.11.2 (10.07.2026, 11:34 Uhr)"  # 0.11.2: Tiefen-Debugging-Haertung. Retry-Sturm-Bremse fuer den Auto-Nachtlauf (max 3 Versuche/Tag mit 15/30/45-min-Backoff statt bis zu 720 Neustarts alle 30 s bei fruehem Fehlschlag; Nachholen bleibt); Auth fail-closed bei fehlendem SB_API_KEY + konstantzeitiger Token-Vergleich. Alt: 0.11.1.
 AGENT_URL = os.getenv("AGENT_URL", "http://agent:8002").rstrip("/")   # LLM-Durchgriff fuer Codex/GPT (agent 0.52.0)
 # Stille Notbremse gegen Endlosschleifen, wenn 'Ohne Begrenzung' aktiv ist (Almanach ai-agent §2.1:
 # ein Cap muss STOPPEN koennen). 5000 Calls erreicht ehrliche Nacht-Arbeit nie — nur ein Amoklauf.
@@ -1557,6 +1559,7 @@ def _run_night(manual: bool) -> None:
                           "bilanz": bilanz}
         if not manual:
             st["last_auto_date"] = day
+            st.pop("auto_fail", None)   # Erfolg: Fehlversuchs-Bremse zuruecksetzen
         save_state(st)
         _prune_reports()
         checkpoint("night_run", "Nachtlauf abgeschlossen", ok=True, dauer_s=report["dauer_s"],
@@ -1567,6 +1570,20 @@ def _run_night(manual: bool) -> None:
         report["fehler"].append(f"Nachtlauf abgebrochen: {type(e).__name__}")
         report["zusammenfassung"] = report.get("zusammenfassung") or "Heute Nacht: Lauf abgebrochen (Details im Log)."
         save_report(report)
+        # Retry-Sturm-Bremse (ai-agent-frameworks.md §1.1 Hard-Stop): OHNE sie startet der Scheduler
+        # einen frueh scheiternden Auto-Lauf alle 30 s neu (bis ~720x im 6-h-Fenster, mit LLM-Kosten).
+        # Nachholen bleibt erhalten: bis zu 3 Auto-Versuche pro Tag, mit wachsendem Abstand (15/30/45 min).
+        if not manual:
+            try:
+                st2 = load_state()
+                af = st2.get("auto_fail") or {}
+                cnt = (af.get("count", 0) + 1) if af.get("date") == day else 1
+                st2["auto_fail"] = {"date": day, "count": cnt, "next_ts": time.time() + 900 * cnt}
+                save_state(st2)
+                _log(logging.WARNING, "Auto-Nachtlauf-Fehlversuch registriert",
+                     versuch=cnt, naechster_versuch_in_min=15 * cnt if cnt < 3 else None)
+            except Exception:  # noqa: BLE001 — Bremse ist Schutz, darf den Fehlerpfad nie verschlimmern
+                _log(logging.ERROR, "Fehlversuchs-Bremse nicht speicherbar", exc_info=True)
     finally:
         _set_night(running=False, task="", detail="")
 
@@ -1609,6 +1626,11 @@ def _scheduler_loop() -> None:
             today = now.strftime("%Y-%m-%d")
             st = load_state()
             if st.get("last_auto_date") == today:
+                continue
+            # Fehlversuchs-Bremse: nach einem gescheiterten Auto-Lauf fruehestens nach Backoff
+            # erneut, maximal 3 Auto-Versuche pro Tag (manueller Start bleibt jederzeit moeglich).
+            af = st.get("auto_fail") or {}
+            if af.get("date") == today and (af.get("count", 0) >= 3 or time.time() < af.get("next_ts", 0)):
                 continue
             hh, mm = (cfg.get("start_time") or "04:10").split(":")
             start = now.replace(hour=int(hh), minute=int(mm), second=0, microsecond=0)
@@ -1899,9 +1921,12 @@ def _run_apply_rules() -> None:
 # API
 # ---------------------------------------------------------------------------
 def require_auth(authorization: str = Header(default="")) -> None:
+    # Fail-closed: ohne konfigurierten Key NICHT alles offen lassen (im Normalbetrieb ist
+    # SB_API_KEY immer gesetzt -> identisches Verhalten; nur der Fehlkonfigurations-Fall aendert
+    # sich von 'offen' zu 'klare Fehlermeldung'). WireGuard bleibt die aeussere Schicht.
     if not SB_API_KEY:
-        return
-    if authorization != f"Bearer {SB_API_KEY}":
+        raise HTTPException(status_code=503, detail="SB_API_KEY nicht konfiguriert")
+    if not hmac.compare_digest(authorization.encode(), f"Bearer {SB_API_KEY}".encode()):
         raise HTTPException(status_code=401, detail="Ungueltiger oder fehlender API-Key")
 
 

@@ -15,13 +15,17 @@ fsync + os.replace).
 from __future__ import annotations
 
 import json
+import logging
 import os
 import re
 import threading
 import uuid
 
 MAX_RULES = 40
-_LOCK = threading.Lock()
+# RLock: add/update/delete halten den Lock ueber den GANZEN load->mutate->save-Zyklus
+# (sonst Lost-Update bei parallelen Edits); save_rules nimmt ihn reentrant erneut.
+_LOCK = threading.RLock()
+_log = logging.getLogger("sb-agent.rules")
 
 
 class RuleLimitError(Exception):
@@ -43,12 +47,20 @@ def new_rule_id() -> str:
 
 
 def load_rules(path: str) -> list:
-    """Read the rule list; tolerant of a missing/corrupt file (-> [])."""
+    """Read the rule list; tolerant of a missing/corrupt file (-> []).
+
+    A missing file is the normal empty state (silent). Anything else (stale Samba
+    mount, EIO, corrupt JSON) still returns [] so the chat keeps working, but is
+    LOGGED — otherwise all self-rules silently vanish from every system prompt."""
     try:
         with open(path, "r", encoding="utf-8") as f:
             data = json.load(f)
         return data if isinstance(data, list) else []
-    except (FileNotFoundError, json.JSONDecodeError, OSError, ValueError):
+    except FileNotFoundError:
+        return []
+    except (json.JSONDecodeError, OSError, ValueError) as e:
+        _log.warning("Regel-Datei nicht lesbar — Selbst-Regeln fehlen in diesem Turn (path=%s, %s: %s)",
+                     path, type(e).__name__, e)
         return []
 
 
@@ -67,47 +79,50 @@ def save_rules(path: str, rules: list) -> None:
 
 def add_rule(path: str, text: str, titel: str, now_iso: str) -> dict:
     """Append a new rule. Raises RuleLimitError beyond MAX_RULES."""
-    rules = load_rules(path)
-    if len(rules) >= MAX_RULES:
-        raise RuleLimitError(f"Regel-Limit erreicht ({MAX_RULES}).")
-    rule = {
-        "id": new_rule_id(),
-        "text": (text or "").strip(),
-        "titel": (titel or "").strip(),
-        "enabled": True,
-        "created_at": now_iso,
-    }
-    rules.append(rule)
-    save_rules(path, rules)
-    return rule
+    with _LOCK:   # whole read-modify-write cycle (no lost update between parallel edits)
+        rules = load_rules(path)
+        if len(rules) >= MAX_RULES:
+            raise RuleLimitError(f"Regel-Limit erreicht ({MAX_RULES}).")
+        rule = {
+            "id": new_rule_id(),
+            "text": (text or "").strip(),
+            "titel": (titel or "").strip(),
+            "enabled": True,
+            "created_at": now_iso,
+        }
+        rules.append(rule)
+        save_rules(path, rules)
+        return rule
 
 
 def update_rule(path: str, rule_id: str, *, enabled=None, text=None):
     """Toggle enabled and/or replace text. Returns the rule or None if unknown."""
-    rules = load_rules(path)
-    hit = None
-    for r in rules:
-        if r.get("id") == rule_id:
-            if enabled is not None:
-                r["enabled"] = bool(enabled)
-            if text is not None:
-                r["text"] = text.strip()
-            hit = r
-            break
-    if hit is None:
-        return None
-    save_rules(path, rules)
-    return hit
+    with _LOCK:   # whole read-modify-write cycle
+        rules = load_rules(path)
+        hit = None
+        for r in rules:
+            if r.get("id") == rule_id:
+                if enabled is not None:
+                    r["enabled"] = bool(enabled)
+                if text is not None:
+                    r["text"] = text.strip()
+                hit = r
+                break
+        if hit is None:
+            return None
+        save_rules(path, rules)
+        return hit
 
 
 def delete_rule(path: str, rule_id: str) -> bool:
     """Remove a rule by id. Returns True if something was removed."""
-    rules = load_rules(path)
-    kept = [r for r in rules if r.get("id") != rule_id]
-    if len(kept) == len(rules):
-        return False
-    save_rules(path, kept)
-    return True
+    with _LOCK:   # whole read-modify-write cycle
+        rules = load_rules(path)
+        kept = [r for r in rules if r.get("id") != rule_id]
+        if len(kept) == len(rules):
+            return False
+        save_rules(path, kept)
+        return True
 
 
 def rules_block(rules: list) -> str:

@@ -20,7 +20,8 @@ set -euo pipefail
 ARCHIVE="${1:-}"
 APP_DIR="${SB_APP_DIR:-/opt/second-brain}"
 QDRANT_URL="${SB_QDRANT_URL:-http://127.0.0.1:6333}"
-COLLECTION="${SB_COLLECTION:-brain}"
+COLLECTION="${SB_COLLECTION:-brain__e2}"                        # muss zur compose.yaml passen (Vorfall 2026-07-10: alter Default 'brain' = geloeschte Collection)
+ENTITY_COLLECTION="${SB_ENTITY_COLLECTION:-brain_entities__e2}"  # Entity-Register
 SAMBA_DIR="${SB_SAMBA_DIR:-/srv/samba}"
 WORK="$(mktemp -d "${TMPDIR:-/tmp}/cortex-restore.XXXXXX")"
 log() { printf '%s  %s\n' "$(date '+%Y-%m-%d %H:%M:%S')" "$*"; }
@@ -101,6 +102,21 @@ if [ -f "$WORK/qdrant-brain.snapshot" ]; then
   fi
 else
   log "Info: kein Qdrant-Snapshot im Archiv (Fallback qdrant-data wurde — falls vorhanden — bereits eingespielt)."
+fi
+
+# 5b) Entity-Register aus dem Snapshot wiederherstellen (in aelteren Archiven nicht enthalten)
+if [ -f "$WORK/qdrant-brain-entities.snapshot" ]; then
+  if [ -f "$APP_DIR/.env" ]; then set -a; . "$APP_DIR/.env"; set +a; fi
+  QKEY="${QDRANT_API_KEY:-}"   # eigenes Laden: Block 5 koennte uebersprungen worden sein (set -u)
+  log "Spiele Entity-Snapshot ein (Collection $ENTITY_COLLECTION)…"
+  if curl -fsS -X POST "$QDRANT_URL/collections/$ENTITY_COLLECTION/snapshots/upload?priority=snapshot" \
+        ${QKEY:+-H "api-key: $QKEY"} -F "snapshot=@$WORK/qdrant-brain-entities.snapshot" >/dev/null 2>&1; then
+    log "Entity-Register wiederhergestellt."
+  else
+    log "WARN: Entity-Snapshot-Upload fehlgeschlagen — brain-api legt die Collection leer neu an (Verknuepfungen fehlen dann)."
+  fi
+else
+  log "Info: kein Entity-Snapshot im Archiv (aelteres Backup) — brain-api legt die Collection leer neu an."
 fi
 
 log "RESTORE FERTIG. Pruefe: docker compose ps  +  das Dashboard ueber den WireGuard-Tunnel."

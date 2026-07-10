@@ -37,6 +37,7 @@ Plan/Doku: best-practices/second-brain/UMSETZUNGSPLAN.md
 from __future__ import annotations
 
 import hashlib
+import hmac
 import json
 import logging
 import os
@@ -316,7 +317,10 @@ def _init_store() -> None:
     depends_on wartet nur auf START, nicht 'bereit' — docker.md §3). Vorher blieb der Container
     dann DAUERHAFT degraded/503 bis zum manuellen Neustart (Self-Healing, Direktive #3)."""
     global qc, gclient, init_error
-    gclient = genai.Client(api_key=GEMINI_API_KEY)
+    # Timeout PFLICHT (fastapi.md Kurzcheck #5 / ai-agent §3.3): ohne haengt ein toter Google-Call
+    # unbegrenzt und bindet einen anyio-Threadpool-Worker. google-genai erwartet Millisekunden.
+    gclient = genai.Client(api_key=GEMINI_API_KEY,
+                           http_options=genai_types.HttpOptions(timeout=60_000))
     # url=http://... -> kein TLS (api_key wuerde sonst https=True erzwingen). Almanach qdrant.md §4.
     qc = QdrantClient(url=QDRANT_URL, api_key=QDRANT_API_KEY or None, timeout=30.0)
 
@@ -429,6 +433,7 @@ VERSION = "1.24.0 (06.07.2026, 17:23 Uhr)"  # 1.24.0: Dashboard-Limits vervollst
 VERSION = "1.26.0 (08.07.2026, 18.50 Uhr)"  # 1.26.0: UMSTIEG AUF gemini-embedding-2 (3072 Dim, GA). task_type -> Text-Praefixe (Dokument 'title: … | text: …', Suchanfrage 'task: search result | query: …'); embed_many nutzt bei E2 EINEN Call je Text (eine Liste wuerde AGGREGIEREN, bugs/apis/google-gemini-api.md §J23), parallel ueber ThreadPool (SB_EMBED_PARALLEL); Chunk-Default 12000 Zeichen (8192-Token-Limit statt 2048). Modell-abhaengig: Fallback auf gemini-embedding-001 (1536) bleibt allein per Env moeglich (task_type + Listen-Batch). Blau/Gruen-Migration via migrate_to_embedding2.py. Alt: 1.25.0.
 VERSION = "1.27.0 (08.07.2026, 20.06 Uhr)"  # 1.27.0 (Frank-Wunsch 2026-07-08): gemini-embedding-001-Fallback KOMPLETT ausgebaut — nur noch gemini-embedding-2 (3072). IS_EMBED2-Verzweigung + Batch-Pfad (EMBED_BATCH) + '[Titel:…]'-Altpraefix entfernt; embed/embed_many/embed_input/_entity_embed_text sind reine E2-Logik. Verhalten fuer den Nutzer unveraendert (E2 lief bereits live). Wiederherstellung von -001 jederzeit reproduzierbar ueber docs/superpowers/specs + plans. Alt: 1.26.0.
 VERSION = "1.27.1 (08.07.2026, 20:14 Uhr)"  # 1.27.1: FIX Kategorie-Doppelung Gespräche. Altbestand 'gespräche' und neue Kategorie 'Gespräche' werden Unicode-normalisiert, case-insensitiv erkannt und kanonisch als 'Gespräche' gezaehlt/abgerufen; neue Schreibwege normalisieren bekannte Varianten. Alt: 1.27.0.
+VERSION = "1.27.2 (10.07.2026, 11:34 Uhr)"  # 1.27.2: Tiefen-Debugging-Haertung. Gemini-Embedding-Calls mit 60s-Timeout + Backoff-Retry (nur transiente 429/5xx/Netzfehler); Bearer-Vergleich konstantzeitig (hmac.compare_digest); limit=0-Zaehlpfad dedupliziert ueber chunk_index=0 + serverseitiges qc.count (identisches Ergebnis, ~5x weniger Scan); created_at-None-Guard in /by-date; Embedding-Tages-Cap liest unter Lock. Alt: 1.27.1.
 
 # Startup-Banner (Observability-First: Log-Pfad + Version EINMAL ausgeben)
 _log(logging.INFO, "brain-api startet", version=VERSION, log_path=LOG_PATH)
@@ -446,8 +451,9 @@ def _guard_embed_budget(n: int = 1) -> None:
         if _embed_calls["day"] != today:
             _embed_calls["day"], _embed_calls["count"] = today, 0
         _embed_calls["count"] += n
-    if _embed_calls["count"] > MAX_EMBED_CALLS_PER_DAY:
-        _log(logging.ERROR, "Embedding-Tages-Cap erreicht", count=_embed_calls["count"], cap=MAX_EMBED_CALLS_PER_DAY)
+        current = _embed_calls["count"]   # unter dem Lock lesen (kein Race mit parallelen Handlern)
+    if current > MAX_EMBED_CALLS_PER_DAY:
+        _log(logging.ERROR, "Embedding-Tages-Cap erreicht", count=current, cap=MAX_EMBED_CALLS_PER_DAY)
         raise HTTPException(status_code=429, detail="Taegliches Embedding-Limit erreicht (Sicherheits-Cap)")
 
 
@@ -468,17 +474,40 @@ def chunk_text(text: str) -> list[str]:
     return out
 
 
+def _embed_call(content: str):
+    """EIN embed_content-Call mit kleinem Retry gegen TRANSIENTE Google-Fehler (429/5xx/Netz/Timeout).
+    Permanente Fehler (400/401/403 …) schlagen sofort durch — die soll niemand wegretryen.
+    Backoff blockiert nur den eigenen Threadpool-Worker (Handler sind def), nie den Event-Loop.
+    (ai-agent-frameworks.md §6.2: Backoff statt Sofort-Retry; fastapi.md §3: Timeouts + begrenzte Retries.)"""
+    last: Exception | None = None
+    for attempt in range(3):
+        try:
+            return gclient.models.embed_content(
+                model=EMBED_MODEL,
+                contents=content,
+                config=genai_types.EmbedContentConfig(output_dimensionality=EMBED_DIMS),
+            )
+        except Exception as e:  # noqa: BLE001 — klassifizieren, gezielt retryen, sonst durchreichen
+            code = getattr(e, "code", None) or getattr(getattr(e, "response", None), "status_code", None)
+            name = type(e).__name__.lower()
+            transient = code in (429, 500, 502, 503, 504) or "timeout" in name or "connect" in name or "transport" in name
+            last = e
+            if not transient or attempt == 2:
+                raise
+            wait = 2.0 * (attempt + 1)
+            _log(logging.WARNING, "Gemini-Embedding transient fehlgeschlagen — Retry",
+                 versuch=attempt + 1, wartezeit_s=wait, fehler=type(e).__name__, code=code)
+            time.sleep(wait)
+    raise last  # pragma: no cover — logisch unerreichbar (raise oben), Sicherheitsnetz
+
+
 def embed(text: str, task_type: str) -> list[float]:
     """Text -> Vektor via gemini-embedding-2. task_type ist der interne Modus-Indikator: bei
     'RETRIEVAL_QUERY' wird das offizielle Query-Praefix vorangestellt; Dokumente sind bereits via
     embed_input als 'title: … | text: …' formatiert. task_type wird NICHT an die API gesendet
     (bei gemini-embedding-2 entfernt, bugs/apis/google-gemini-api.md §J24)."""
     content = f"task: search result | query: {text}" if task_type == "RETRIEVAL_QUERY" else text
-    resp = gclient.models.embed_content(
-        model=EMBED_MODEL,
-        contents=content,
-        config=genai_types.EmbedContentConfig(output_dimensionality=EMBED_DIMS),
-    )
+    resp = _embed_call(content)
     vec = list(resp.embeddings[0].values)
     probe(len(vec) == EMBED_DIMS, "Embedding-Dimension weicht ab", got=len(vec), want=EMBED_DIMS)
     return vec
@@ -492,11 +521,7 @@ def embed_many(texts: list[str], task_type: str) -> list[list[float]]:
     falsch zuzuordnen (Direktive #3)."""
     def _one(t: str) -> list[float]:
         content = f"task: search result | query: {t}" if task_type == "RETRIEVAL_QUERY" else t
-        r = gclient.models.embed_content(
-            model=EMBED_MODEL,
-            contents=content,
-            config=genai_types.EmbedContentConfig(output_dimensionality=EMBED_DIMS),
-        )
+        r = _embed_call(content)
         v = list(r.embeddings[0].values)
         probe(len(v) == EMBED_DIMS, "Embedding-Dimension weicht ab", got=len(v), want=EMBED_DIMS)
         return v
@@ -868,7 +893,8 @@ def _rrf_fuse(ranked_lists: list[list[str]], k: int = None) -> dict[str, float]:
 # ---------------------------------------------------------------------------
 def require_auth(authorization: str = Header(default="")) -> None:
     expected = f"Bearer {SB_API_KEY}"
-    if not SB_API_KEY or authorization != expected:
+    # hmac.compare_digest: konstantzeitiger Vergleich (kein Timing-Seitenkanal aufs Token)
+    if not SB_API_KEY or not hmac.compare_digest(authorization.encode(), expected.encode()):
         raise HTTPException(status_code=401, detail="Unauthorized")
 
 
@@ -1512,7 +1538,7 @@ def by_date(date: str, user_id: str = "frank") -> dict:
     points = _scroll(Filter(must=must))
     seen: dict[str, dict] = {}
     for p in points:
-        created = p.payload.get("created_at", "")
+        created = p.payload.get("created_at", "") or ""   # or "": Key koennte explizit None sein
         if not created.startswith(date):
             continue
         did = p.payload.get("doc_id")
@@ -1568,13 +1594,22 @@ def search(req: SearchReq) -> dict:
     effective_limit = req.limit
     search_point_limit = 0
     if effective_limit <= 0:
-        count_pts = _scroll(Filter(must=must), with_payload=["doc_id", "created_at"])
         if py_date_filter:
+            # Fallback-Pfad (alte qdrant-client-Version ohne DatetimeRange): Datums-Nachfilter muss in
+            # Python laufen -> hier weiterhin alle Punkte scannen (identisches Ergebnis wie bisher).
+            count_pts = _scroll(Filter(must=must), with_payload=["doc_id", "created_at"])
             count_pts = [p for p in count_pts
                          if not ((gte and (p.payload.get("created_at") or "")[:10] < gte[:10])
                                  or (lte and (p.payload.get("created_at") or "")[:10] > lte[:10]))]
-        effective_limit = max(1, len({p.payload.get("doc_id") for p in count_pts if p.payload.get("doc_id")}))
-        search_point_limit = max(1, len(count_pts))
+            effective_limit = max(1, len({p.payload.get("doc_id") for p in count_pts if p.payload.get("doc_id")}))
+            search_point_limit = max(1, len(count_pts))
+        else:
+            # qdrant.md §10: distinkte doc_ids NUR ueber chunk_index=0 zaehlen (identisches Ergebnis,
+            # ~5x weniger Scan); die Gesamt-PUNKT-Zahl liefert qc.count serverseitig ohne Payload-Transfer.
+            first_chunks = _scroll(Filter(must=must + [FieldCondition(key="chunk_index", match=MatchValue(value=0))]),
+                                   with_payload=["doc_id"])
+            effective_limit = max(1, len({p.payload.get("doc_id") for p in first_chunks if p.payload.get("doc_id")}))
+            search_point_limit = max(1, int(qc.count(collection_name=COLLECTION, count_filter=Filter(must=must), exact=True).count))
 
     # Bei Python-Datums-Nachfilter mehr Kandidaten holen, damit datumspassende Treffer nicht durchrutschen.
     overfetch = search_point_limit or (effective_limit * (SEARCH_DATE_OVERFETCH_FACTOR if py_date_filter else SEARCH_OVERFETCH_FACTOR))
