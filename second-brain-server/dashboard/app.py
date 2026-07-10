@@ -46,6 +46,7 @@ VERSION = "0.67.3 (10.07.2026, 16:57 Uhr)"  # 0.67.3: MCP-Volltextabrufe laufen 
 VERSION = "0.67.4 (10.07.2026, 18:45 Uhr)"  # 0.67.4: Sichtbarer Bump zum librarian-0.11.3-Fix: Kategorie-Vorschlaege des Nachtschicht-Bibliothekars ergaenzen vorhandene Kategorien, statt sie zu ersetzen. Alt: 0.67.3.
 VERSION = "0.67.5 (10.07.2026, 19:08 Uhr)"  # 0.67.5: Bibliothekar-Kategorie-Funde zeigen Vorher/Nachher; produktionsnaher isolierter 4-zu-5-Live-Eval prueft die Kategorien-Union. Alt: 0.67.4.
 VERSION = "0.67.6 (10.07.2026, 19:26 Uhr)"  # 0.67.6: Kategorien-Vorschau liest per gezieltem brain-api GET /entry/categories statt per /list- und /by-category-Bestandsscans. Alt: 0.67.5.
+VERSION = "0.67.7 (10.07.2026, 19:52 Uhr)"  # 0.67.7: Kategorien-Paket komplett: direkter Bibliothekarpfad, Latenzsonde, MCP-Werkzeug, 4-zu-5/0-zu-1-Live-Eval und idempotentes Windows-ACL-Skript. Alt: 0.67.6.
 BRAIN_URL = os.getenv("BRAIN_URL", "http://brain-api:8000").rstrip("/")
 AGENT_URL = os.getenv("AGENT_URL", "http://agent:8002").rstrip("/")
 SB_API_KEY = os.getenv("SB_API_KEY", "")
