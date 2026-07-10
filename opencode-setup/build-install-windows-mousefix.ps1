@@ -202,7 +202,10 @@ try {
         } finally { Pop-Location }
         Push-Location "packages\opencode"
         try {
-            bun test "test/cli/tui/thread.test.ts" "test/cli/tui/plugin-toggle.test.ts" "test/plugin/install.test.ts" "test/config/config.test.ts"
+            # Run process-spawning CLI tests separately so their fixed 5 s timeout is not consumed by suite contention.
+            bun test "test/cli/tui/thread.test.ts"
+            if ($LASTEXITCODE -ne 0) { throw "CLI-Livetests fehlgeschlagen." }
+            bun test "test/cli/tui/plugin-toggle.test.ts" "test/plugin/install.test.ts" "test/config/config.test.ts"
             if ($LASTEXITCODE -ne 0) { throw "CLI-Regressionstests fehlgeschlagen." }
         } finally { Pop-Location }
 
