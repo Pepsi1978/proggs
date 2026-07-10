@@ -55,7 +55,7 @@ data class BackupPayload(
     // BackupPayload-Snapshot ohne explizite version-Angabe erstellt wird (z.B.
     // in Tests), wuerde er fueschlich Version 5 melden. Default auf aktuelle
     // Schema-Version anheben damit alle Code-Pfade konsistent sind.
-    val version: Int = 18,
+    val version: Int = 20,
     val exportedAt: Long,
     val entries: List<BackupEntry>,
     val insights: List<BackupInsight> = emptyList(),
@@ -375,6 +375,7 @@ data class BackupTagebuchEntry(
     val text: String,
     val summary: String? = null,
     val followups: List<BackupTagebuchFollowup> = emptyList(),
+    val area: String = "ENTROPY",
 )
 
 /** Schema v6: einzelner Nachtrag im Tagebuch. */

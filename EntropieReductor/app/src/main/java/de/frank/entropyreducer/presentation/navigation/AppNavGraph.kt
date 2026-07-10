@@ -31,7 +31,6 @@ import de.frank.entropyreducer.presentation.components.MicActionsState
 import de.frank.entropyreducer.presentation.components.MicState
 import de.frank.entropyreducer.presentation.components.LocalBelowSubTabRow
 import de.frank.entropyreducer.presentation.dashboard1.TasksScreen
-import de.frank.entropyreducer.presentation.dashboard3.ScientistScreen
 import de.frank.entropyreducer.presentation.dashboard4.BiomarkerDetailScreen
 import de.frank.entropyreducer.presentation.dashboard4.BiomarkerHostScreen
 import de.frank.entropyreducer.presentation.dashboard4.HealthConnectDetailScreen
@@ -241,16 +240,16 @@ private fun AppNavHostInner(nav: androidx.navigation.NavHostController, modifier
                                 modifier = Modifier.weight(1f),
                                 beyondViewportPageCount = tabs.size - 1,
                             ) { page ->
-                                // Frank-Wunsch 2026-06-24: Hauptreiter "Forscher" steht ganz
-                                // vorne (page 0 = ScientistScreen). Danach Entropie (Tagebuch),
-                                // Thesen und Journal in ihrer logischen Reihenfolge.
+                                // Der Hauptreiter "Lernen" verwendet dieselbe Listen- und
+                                // Aufnahmefunktion wie Entropie, aber einen getrennten Datenbestand.
                                 when (page) {
-                                    0 -> ScientistScreen(
-                                        onOpenSettings = { nav.navigate(Routes.SETTINGS_HOME) },
+                                    0 -> TagebuchScreen(
+                                        onBack = { nav.popBackStack() },
+                                        onSwitchSub = { p, i -> nav.navigate(Routes.subRouteFor(p, i)) },
                                         onSwitchTab = { route -> nav.tabSwitch(route) },
-                                        currentTab = Routes.SCIENTIST,
-                                        onOpenSubArea = { parent, index -> nav.navigate(Routes.subRouteFor(parent, index)) },
+                                        onOpenEntry = { entryId -> nav.navigate(Routes.tagebuchEntryDetail(entryId)) },
                                         showBottomBar = false,
+                                        area = de.frank.entropyreducer.presentation.tagebuch.TagebuchArea.LEARNING,
                                     )
                                     1 -> TagebuchScreen(
                                         onBack = { nav.popBackStack() },

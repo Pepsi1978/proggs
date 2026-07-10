@@ -176,7 +176,7 @@ fun subTabsFor(parentTab: String): List<String> =
     when (parentTab) {
         Routes.TASKS -> listOf("Aufgaben", "Gewohnheit", "Mental", "Ideen")
         Routes.ANALYSIS -> listOf("Analyse", "2", "3", "4")
-        Routes.SCIENTIST -> listOf("Forscher", "Entropie", "Thesen", "Journal")
+        Routes.SCIENTIST -> listOf("Lernen", "Entropie", "Thesen", "Journal")
         Routes.BIOMARKER -> listOf("Biomarker", "2", "3", "4")
         else -> emptyList()
     }

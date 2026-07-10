@@ -350,7 +350,11 @@ class AppSettings @Inject constructor(
 
     /** Second-Brain-Connector: schreibt App-Bereiche automatisch in ihre Brain-Kategorie. */
     fun secondBrainConnectorEnabledFlow(areaKey: String): Flow<Boolean> = ds.data
-        .map { it[secondBrainEnabledKey(areaKey)] ?: false }
+        .map { prefs ->
+            prefs[secondBrainEnabledKey(areaKey)]
+                ?: (if (areaKey == "learning") prefs[secondBrainEnabledKey("entropy")] else null)
+                ?: false
+        }
         .distinctUntilChanged()
 
     val secondBrainIdeasConnectorEnabledFlow: Flow<Boolean> = secondBrainConnectorEnabledFlow("ideas")

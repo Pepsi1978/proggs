@@ -414,7 +414,7 @@ constructor(
             if (payload.tagebuchEntries.isNotEmpty() || tagebuchDeletedAt.isNotEmpty()) {
                 val existingMap =
                     de.frank.entropyreducer.presentation.tagebuch
-                        .tagebuchEntriesFlow(appContext)
+                        .allTagebuchEntriesFlow(appContext)
                         .first()
                         .associateBy { it.id }
                 val incomingById = payload.tagebuchEntries.associateBy { it.id }
@@ -427,6 +427,9 @@ constructor(
                         title = b.title,
                         text = b.text,
                         summary = b.summary,
+                        area =
+                            de.frank.entropyreducer.presentation.tagebuch
+                                .tagebuchAreaFromStoredValue(b.area),
                         followups =
                             b.followups.map { f ->
                                 de.frank.entropyreducer.presentation.tagebuch.TagebuchFollowup(

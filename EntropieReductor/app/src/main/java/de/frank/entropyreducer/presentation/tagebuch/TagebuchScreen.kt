@@ -99,6 +99,7 @@ fun TagebuchScreen(
     onSwitchTab: (route: String) -> Unit,
     onOpenEntry: (entryId: String) -> Unit = {},
     showBottomBar: Boolean = true,
+    area: TagebuchArea = TagebuchArea.ENTROPY,
 ) {
     val cosmos = LocalCosmos.current
     val context = LocalContext.current
@@ -107,7 +108,7 @@ fun TagebuchScreen(
     // Flow NICHT pro Recomposition neu bauen, sonst verpasst collectAsStateWithLifecycle
     // Emissionen (gespeicherte Aenderung erscheint erst beim naechsten Tap). remember stabilisiert
     // ihn.
-    val entriesStream = remember(context) { tagebuchEntriesFlow(context) }
+    val entriesStream = remember(context, area) { tagebuchEntriesFlow(context, area) }
     val entries by entriesStream.collectAsStateWithLifecycle(initialValue = emptyList())
 
     var inputDialogOpen by remember { mutableStateOf(false) }
@@ -115,7 +116,7 @@ fun TagebuchScreen(
     // Klick auf Mic legt rechts "Aufnehmen" und links "Schreiben" frei.
     val micActions = LocalMicActionsOpen.current
     // A12: echte Whisper-Aufnahme via Groq + Gemini-Text-Verbesserung.
-    val voiceVm: VoiceCaptureViewModel = hiltViewModel()
+    val voiceVm: VoiceCaptureViewModel = hiltViewModel(key = "tagebuch-${area.name}-voice")
     val voiceState by voiceVm.state.collectAsStateWithLifecycle()
     val voiceError by voiceVm.error.collectAsStateWithLifecycle()
     LaunchedEffect(voiceError) {
@@ -124,17 +125,17 @@ fun TagebuchScreen(
             voiceVm.clearError()
         }
     }
-    val improveVm: TagebuchImproveViewModel = hiltViewModel()
+    val improveVm: TagebuchImproveViewModel = hiltViewModel(key = "tagebuch-${area.name}-improve")
     val improveState by improveVm.state.collectAsStateWithLifecycle()
     val improvedText by improveVm.improvedText.collectAsStateWithLifecycle()
     val improveError by improveVm.error.collectAsStateWithLifecycle()
     // Frank-Wunsch 2026-05-19: Auto-Ueberschrift via Gemini (max 3 Woerter).
     // Wird nach jedem neuen Eintrag und nach jedem Edit asynchron gesetzt.
-    val titleVm: TagebuchTitleViewModel = hiltViewModel()
+    val titleVm: TagebuchTitleViewModel = hiltViewModel(key = "tagebuch-${area.name}-title")
     // Frank-Wunsch 2026-05-20: Auto-Zusammenfassung (3-5 Bullet-Points) via Gemini.
     // Wird nach jedem neuen Eintrag asynchron erzeugt — Detail-Screen zeigt sie als
     // Bullet-Points statt eines leeren Platzhalters.
-    val summaryVm: TagebuchSummaryViewModel = hiltViewModel()
+    val summaryVm: TagebuchSummaryViewModel = hiltViewModel(key = "tagebuch-${area.name}-summary")
     var pendingTranscript by remember { mutableStateOf<String?>(null) }
     val micPermission =
         rememberMicPermissionState(
@@ -156,7 +157,7 @@ fun TagebuchScreen(
     // genau wie bei der nachtraeglichen Verbesserung. preferImproved spiegelt Franks
     // Anzeigewahl im Transkript-Dialog (welcher Text als primaer angezeigt wird).
     val saveNewEntry: (String, String?, Boolean) -> Unit = { rawText, improved, preferImproved ->
-        val base = TagebuchEntry.create(rawText)
+        val base = TagebuchEntry.create(rawText, area)
         val entry =
             if (!improved.isNullOrBlank()) {
                 base.copy(improvedText = improved, isImproved = preferImproved)
@@ -176,6 +177,7 @@ fun TagebuchScreen(
 
     if (inputDialogOpen) {
         TextInputDialog(
+            area = area,
             onDismiss = { inputDialogOpen = false },
             onSave = { text ->
                 // Manuell getippter Eintrag — keine KI-Verbesserung, nur Original.
@@ -210,7 +212,7 @@ fun TagebuchScreen(
     // dorthin — kein AlertDialog mehr.
 
     CosmosScaffold(
-        title = "Tagebuch",
+        title = if (area == TagebuchArea.LEARNING) "Lernen" else "Tagebuch",
         showBottomBar = showBottomBar,
         bottomBar = {
             CosmosBottomBar(
@@ -251,7 +253,7 @@ fun TagebuchScreen(
                     )
                     Spacer(Modifier.height(16.dp))
                     Text(
-                        text = "Dein Tagebuch",
+                        text = if (area == TagebuchArea.LEARNING) "Deine Lerneinträge" else "Dein Tagebuch",
                         style = MaterialTheme.typography.titleLarge,
                         color = cosmos.textPrimary,
                         fontWeight = FontWeight.SemiBold,
@@ -259,8 +261,13 @@ fun TagebuchScreen(
                     Spacer(Modifier.height(8.dp))
                     Text(
                         text =
-                            "Hier kannst du innere, mentale und emotionale Entropie aufschreiben. " +
-                                "Tippe auf den Stift um deinen ersten Eintrag zu erstellen.",
+                            if (area == TagebuchArea.LEARNING) {
+                                "Hier kannst du alles festhalten, was du lernst. " +
+                                    "Tippe auf den Stift, um deinen ersten Eintrag zu erstellen."
+                            } else {
+                                "Hier kannst du innere, mentale und emotionale Entropie aufschreiben. " +
+                                    "Tippe auf den Stift um deinen ersten Eintrag zu erstellen."
+                            },
                         style = MaterialTheme.typography.bodyMedium,
                         color = cosmos.textSecondary,
                     )
@@ -606,18 +613,28 @@ private fun FabIconButton(
 }
 
 @Composable
-private fun TextInputDialog(onDismiss: () -> Unit, onSave: (String) -> Unit) {
+private fun TextInputDialog(
+    area: TagebuchArea,
+    onDismiss: () -> Unit,
+    onSave: (String) -> Unit,
+) {
     var text by remember { mutableStateOf("") }
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text("Neuer Tagebucheintrag") },
+        title = { Text(if (area == TagebuchArea.LEARNING) "Neuer Lerneintrag" else "Neuer Tagebucheintrag") },
         text = {
             OutlinedTextField(
                 value = text,
                 onValueChange = { text = it },
                 modifier = Modifier.fillMaxWidth().height(180.dp),
                 placeholder = {
-                    Text("Beschreibe deine innere, mentale oder emotionale Entropie ...")
+                    Text(
+                        if (area == TagebuchArea.LEARNING) {
+                            "Was hast du gelernt?"
+                        } else {
+                            "Beschreibe deine innere, mentale oder emotionale Entropie ..."
+                        }
+                    )
                 },
             )
         },
@@ -828,6 +845,14 @@ private fun EntryDetailDialog(
 
 /* ============================== Datenmodell ============================== */
 
+enum class TagebuchArea {
+    ENTROPY,
+    LEARNING,
+}
+
+internal fun tagebuchAreaFromStoredValue(value: String?): TagebuchArea =
+    runCatching { TagebuchArea.valueOf(value.orEmpty()) }.getOrDefault(TagebuchArea.ENTROPY)
+
 data class TagebuchEntry(
     val id: String,
     val timestampMs: Long,
@@ -859,9 +884,10 @@ data class TagebuchEntry(
      * faellt im Parser auf `timestampMs` als Baseline zurueck.
      */
     val updatedAt: Long = 0L,
+    val area: TagebuchArea = TagebuchArea.ENTROPY,
 ) {
     companion object {
-        fun create(text: String): TagebuchEntry {
+        fun create(text: String, area: TagebuchArea = TagebuchArea.ENTROPY): TagebuchEntry {
             // Title = erste 30-40 Zeichen oder erste Zeile, ohne Punkt-Suffix.
             val firstLine = text.lineSequence().firstOrNull().orEmpty()
             val title =
@@ -874,6 +900,7 @@ data class TagebuchEntry(
                 text = text,
                 followups = emptyList(),
                 updatedAt = now,
+                area = area,
             )
         }
     }
@@ -894,7 +921,7 @@ data class TagebuchFollowup(
 private val Context.tagebuchStore by preferencesDataStore(name = "tagebuch_entries")
 private val KEY_ENTRIES = stringPreferencesKey("entries_json")
 
-internal fun tagebuchEntriesFlow(context: Context): Flow<List<TagebuchEntry>> =
+internal fun allTagebuchEntriesFlow(context: Context): Flow<List<TagebuchEntry>> =
     context.tagebuchStore.data.map { prefs ->
         val raw = prefs[KEY_ENTRIES] ?: return@map emptyList()
         runCatching {
@@ -907,9 +934,16 @@ internal fun tagebuchEntriesFlow(context: Context): Flow<List<TagebuchEntry>> =
             .sortedByDescending { it.timestampMs }
     }
 
+internal fun tagebuchEntriesFlow(
+    context: Context,
+    area: TagebuchArea = TagebuchArea.ENTROPY,
+): Flow<List<TagebuchEntry>> = allTagebuchEntriesFlow(context).map { entries ->
+    entries.filter { it.area == area }
+}
+
 /** Beobachtbarer Flow eines einzelnen Eintrags — für den Vollbild-Detail-Screen. */
 internal fun tagebuchEntryFlow(context: Context, id: String): Flow<TagebuchEntry?> =
-    tagebuchEntriesFlow(context).map { list -> list.firstOrNull { it.id == id } }
+    allTagebuchEntriesFlow(context).map { list -> list.firstOrNull { it.id == id } }
 
 internal suspend fun addTagebuchEntry(context: Context, entry: TagebuchEntry) {
     if (de.frank.entropyreducer.data.safety.PhoneContentGuard.isSecondBrainWorkArtifact(entry.title, entry.text)) return
@@ -1092,6 +1126,7 @@ private fun jsonToEntry(o: JSONObject): TagebuchEntry =
         isImproved = o.optBoolean("isImproved", false),
         // Edit-Sync: Bestand ohne updatedAt faellt auf ts (Erstellzeit) als Baseline zurueck.
         updatedAt = o.optLong("updatedAt", o.optLong("ts")),
+        area = tagebuchAreaFromStoredValue(o.optString("area").takeIf { it.isNotBlank() }),
     )
 
 private fun jsonToFollowups(arr: JSONArray?): List<TagebuchFollowup> {
@@ -1121,6 +1156,7 @@ private fun serializeEntries(entries: List<TagebuchEntry>): String {
         o.put("updatedAt", e.updatedAt)
         o.put("title", e.title)
         o.put("text", e.text)
+        o.put("area", e.area.name)
         if (e.followups.isNotEmpty()) {
             val fArr = JSONArray()
             for (f in e.followups) {

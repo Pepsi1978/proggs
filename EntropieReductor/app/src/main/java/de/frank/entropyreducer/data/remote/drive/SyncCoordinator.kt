@@ -240,7 +240,7 @@ constructor(
             val profileText = appSettingsLazy.get().profileTextFlow.first()
             val tagebuchList =
                 de.frank.entropyreducer.presentation.tagebuch
-                    .tagebuchEntriesFlow(appContext)
+                    .allTagebuchEntriesFlow(appContext)
                     .first()
             val tagebuchBackups = tagebuchList.map { e ->
                 BackupTagebuchEntry(
@@ -250,6 +250,7 @@ constructor(
                     title = e.title,
                     text = e.text,
                     summary = e.summary,
+                    area = e.area.name,
                     followups =
                         e.followups.map { f ->
                             BackupTagebuchFollowup(
@@ -424,7 +425,7 @@ constructor(
                     // haelt den Ketten-Dedup nach Drive-Sync/Restore geraeteuebergreifend wirksam.
                     // v19 (2026-06-20): zusaetzlich die Herkunft der ANGENOMMENEN Aufgaben (entropy_entries)
                     // mitsichern -> die Kette bricht beim Annehmen eines Vorschlags auch cross-device nicht.
-                    version = 19,
+                    version = 20,
                     exportedAt = System.currentTimeMillis(),
                     entries = entries,
                     insights = insights,
@@ -745,7 +746,11 @@ constructor(
                 mentals = rescueIfLocalEmpty(local.mentals, remote.mentals),
                 ideenEntries = rescueIfLocalEmpty(local.ideenEntries, remote.ideenEntries),
                 gewohnheiten = rescueIfLocalEmpty(local.gewohnheiten, remote.gewohnheiten),
-                tagebuchEntries = rescueIfLocalEmpty(local.tagebuchEntries, remote.tagebuchEntries),
+                tagebuchEntries =
+                    rescueTagebuchAreasIfLocallyEmpty(
+                        local.tagebuchEntries,
+                        remote.tagebuchEntries,
+                    ),
                 thesenEntries = rescueIfLocalEmpty(local.thesenEntries, remote.thesenEntries),
                 taskSuggestions = rescueIfLocalEmpty(local.taskSuggestions, remote.taskSuggestions),
                 gewohnheitSuggestions =
@@ -810,4 +815,20 @@ constructor(
          */
         const val BIOMARKER_DEBOUNCE_MS = 5000L
     }
+}
+
+/**
+ * Entropie und Lernen teilen sich das Backup-Feld, sind aber getrennte Listen. Ein vorhandener
+ * Lernbereich darf daher die Rettung einer lokal komplett fehlenden Entropie-Liste nicht blockieren
+ * und umgekehrt. Bereiche mit mindestens einem lokalen Eintrag bleiben unverändert, damit
+ * absichtliche Löschungen weiterhin gewinnen.
+ */
+internal fun rescueTagebuchAreasIfLocallyEmpty(
+    local: List<BackupTagebuchEntry>,
+    remote: List<BackupTagebuchEntry>,
+): List<BackupTagebuchEntry> {
+    if (remote.isEmpty()) return local
+    val localAreas = local.mapTo(mutableSetOf()) { it.area }
+    val rescued = remote.filter { it.area !in localAreas }
+    return (local + rescued).distinctBy { it.id }.sortedByDescending { it.timestampMs }
 }

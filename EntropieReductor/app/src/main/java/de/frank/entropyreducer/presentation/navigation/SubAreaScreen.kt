@@ -73,7 +73,7 @@ fun SubAreaScreen(
         when (parentTab) {
             Routes.TASKS -> "Aufgaben"
             Routes.ANALYSIS -> "Analyse"
-            Routes.SCIENTIST -> "Forscher"
+            Routes.SCIENTIST -> "Lernen"
             Routes.BIOMARKER -> "Biomarker"
             else -> "Bereich"
         }

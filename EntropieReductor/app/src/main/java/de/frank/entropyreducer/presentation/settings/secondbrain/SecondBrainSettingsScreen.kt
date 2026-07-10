@@ -165,6 +165,7 @@ private fun areaDescription(area: SecondBrainArea): String = when (area.key) {
     "habits" -> "Alle festen Gewohnheiten über den Gewohnheitsvorschlägen werden in der Kategorie „Gewohnheiten“ synchron gehalten."
     "mental" -> "Deine Mentals werden in der Kategorie „Mental“ synchron gehalten; interne Kurzgerüst-/Bibliothekar-Notizen werden nicht aufs Handy übernommen."
     "entropy" -> "Alle Entropie-Einträge werden in der Kategorie „Entropie“ synchron gehalten."
+    "learning" -> "Alle Lerneinträge werden in der Kategorie „Lernen“ synchron gehalten. Standardmäßig folgt dieser Schalter der Entropie-Einstellung."
     "theses" -> "Alle Thesen werden in der Kategorie „Thesen“ synchron gehalten."
     "journal" -> "Alle Einträge aus dem Journal-Reiter werden in der Kategorie „Tagebucheinträge“ synchron gehalten."
     else -> "Dieser Bereich wird in der Kategorie „${area.category}“ synchron gehalten."

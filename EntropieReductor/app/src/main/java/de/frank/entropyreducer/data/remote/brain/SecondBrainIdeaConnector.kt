@@ -17,6 +17,7 @@ import de.frank.entropyreducer.data.safety.PhoneContentGuard
 import de.frank.entropyreducer.data.settings.AppSettings
 import de.frank.entropyreducer.data.settings.EncryptedSecretsStore
 import de.frank.entropyreducer.presentation.tagebuch.TagebuchEntry
+import de.frank.entropyreducer.presentation.tagebuch.TagebuchArea
 import de.frank.entropyreducer.presentation.tagebuch.addTagebuchEntry
 import de.frank.entropyreducer.presentation.tagebuch.deleteTagebuchEntry
 import de.frank.entropyreducer.presentation.tagebuch.tagebuchEntriesFlow
@@ -99,6 +100,7 @@ class SecondBrainIdeaConnector @Inject constructor(
         AREAS_HABITS,
         AREAS_MENTAL,
         AREAS_ENTROPY,
+        AREAS_LEARNING,
         AREAS_THESES,
         AREAS_JOURNAL,
     )
@@ -250,6 +252,7 @@ class SecondBrainIdeaConnector @Inject constructor(
         val uploadedMap = settings.readSecondBrainTitles(target.area.key)
         val knownTitles = uploadedMap.values.map { it.trim() }.toSet()
         var imported = 0
+        val importedRowIds = mutableSetOf<String>()
         for (item in brain.items) {
             val title = item.title?.trim().orEmpty()
             if (title.isBlank()) continue
@@ -273,7 +276,8 @@ class SecondBrainIdeaConnector @Inject constructor(
             if (title in knownTitles) continue
             val row = target.insertFromBrain(item) ?: continue
             settings.markSecondBrainSynced(target.area.key, row.id, syncStamp(row))
-            settings.setSecondBrainTitle(target.area.key, row.id, row.title)
+            settings.setSecondBrainTitle(target.area.key, row.id, title)
+            importedRowIds += row.id
             imported++
             Diag.i(DiagnosticArea.SECOND_BRAIN, TAG, "CHECKPOINT step=pullImported area=${target.area.key} expected=row_created actual=created ok=true title=\"${row.title}\" id=${row.id}")
         }
@@ -287,6 +291,7 @@ class SecondBrainIdeaConnector @Inject constructor(
         }
         if (ready) {
             for (row in appRows) {
+                if (row.id in importedRowIds) continue
                 val syncedTitle = (uploadedMap[row.id] ?: continue).trim()
                 if (syncedTitle.isNotEmpty() && syncedTitle !in brainTitles) {
                     target.deleteById(row.id)
@@ -361,7 +366,7 @@ class SecondBrainIdeaConnector @Inject constructor(
         var synced = 0
         for (row in pending) {
             val stamp = syncStamp(row)
-            val title = brainTitle(row)
+            val title = brainTitle(target, row)
             val text = row.toBrainText()
             val previousTitle = uploadedTitles[row.id]
             if (previousTitle != null && previousTitle != title) {
@@ -430,9 +435,16 @@ class SecondBrainIdeaConnector @Inject constructor(
         ),
         SecondBrainSyncTarget(
             area = AREAS_ENTROPY,
-            observeRows = { tagebuchEntriesFlow(appContext).mapRows { rows -> rows.map { it.toEntropySyncRow() } } },
-            loadRows = { tagebuchEntriesFlow(appContext).first().map { it.toEntropySyncRow() } },
+            observeRows = { tagebuchEntriesFlow(appContext, TagebuchArea.ENTROPY).mapRows { rows -> rows.map { it.toEntropySyncRow() } } },
+            loadRows = { tagebuchEntriesFlow(appContext, TagebuchArea.ENTROPY).first().map { it.toEntropySyncRow() } },
             insertFromBrain = { item -> insertEntropyJournalFromBrain(item) },
+            deleteById = { id -> deleteTagebuchEntry(appContext, id, propagate = false) },
+        ),
+        SecondBrainSyncTarget(
+            area = AREAS_LEARNING,
+            observeRows = { tagebuchEntriesFlow(appContext, TagebuchArea.LEARNING).mapRows { rows -> rows.map { it.toLearningSyncRow() } } },
+            loadRows = { tagebuchEntriesFlow(appContext, TagebuchArea.LEARNING).first().map { it.toLearningSyncRow() } },
+            insertFromBrain = { item -> insertLearningFromBrain(item) },
             deleteById = { id -> deleteTagebuchEntry(appContext, id, propagate = false) },
         ),
         SecondBrainSyncTarget(
@@ -562,6 +574,34 @@ class SecondBrainIdeaConnector @Inject constructor(
         return entry.toEntropySyncRow()
     }
 
+    private fun TagebuchEntry.toLearningSyncRow(): SecondBrainSyncRow = SecondBrainSyncRow(
+        id = id,
+        createdAtMs = timestampMs,
+        updatedAtMs = updatedAt.takeIf { it > 0L } ?: timestampMs,
+        title = title.trim().ifBlank { text.trim().shortTitle("Lernen", id) },
+        bodyLabel = "Lernen",
+        body = (improvedText?.takeIf { isImproved && it.isNotBlank() } ?: text).trim(),
+        summary = summary?.takeIf { it.isNotBlank() }?.trim(),
+    )
+
+    private suspend fun insertLearningFromBrain(item: SecondBrainCategoryItem): SecondBrainSyncRow {
+        val ts = parseIsoToMs(item.createdAt)
+        val parsedTitle = parseLearningBrainTitle(item.title)
+        val id = parsedTitle.rowId ?: UUID.randomUUID().toString()
+        val title = parsedTitle.displayTitle.ifBlank { "Lernen ${formatTs(ts)}" }
+        val entry = TagebuchEntry(
+            id = id,
+            timestampMs = ts,
+            title = title,
+            updatedAt = ts,
+            text = item.text.trim(),
+            area = TagebuchArea.LEARNING,
+        )
+        deleteTagebuchEntry(appContext, id, propagate = false)
+        addTagebuchEntry(appContext, entry)
+        return entry.toLearningSyncRow()
+    }
+
     private fun ThesenEntry.toSyncRow(): SecondBrainSyncRow = SecondBrainSyncRow(
         id = id,
         createdAtMs = timestampMs,
@@ -619,7 +659,14 @@ class SecondBrainIdeaConnector @Inject constructor(
 
     private fun syncStamp(row: SecondBrainSyncRow): String = "${row.id}:${maxOf(row.createdAtMs, row.updatedAtMs)}"
 
-    private fun brainTitle(row: SecondBrainSyncRow): String = row.title.trim().ifBlank { "${row.bodyLabel} ${row.id.take(8)}" }
+    private fun brainTitle(target: SecondBrainSyncTarget, row: SecondBrainSyncRow): String {
+        val displayTitle = row.title.trim().ifBlank { "${row.bodyLabel} ${row.id.take(8)}" }
+        return if (target.area.key == AREAS_LEARNING.key) {
+            learningBrainTitle(displayTitle, row.id)
+        } else {
+            displayTitle
+        }
+    }
 
     private fun SecondBrainSyncRow.toBrainText(): String = buildString {
         appendLine("Erstellt am: ${formatTs(createdAtMs)}")
@@ -652,6 +699,7 @@ class SecondBrainIdeaConnector @Inject constructor(
         val AREAS_HABITS = SecondBrainArea("habits", "Gewohnheiten", "Gewohnheiten")
         val AREAS_MENTAL = SecondBrainArea("mental", "Mental", "Mental")
         val AREAS_ENTROPY = SecondBrainArea("entropy", "Entropie", "Entropie")
+        val AREAS_LEARNING = SecondBrainArea("learning", "Lernen", "Lernen")
         val AREAS_THESES = SecondBrainArea("theses", "Thesen", "Thesen")
         val AREAS_JOURNAL = SecondBrainArea("journal", "Tagebucheinträge", "Tagebucheinträge")
         const val PUSH_RETRIES = 4
@@ -659,3 +707,23 @@ class SecondBrainIdeaConnector @Inject constructor(
         val DATE_TEXT: DateTimeFormatter = DateTimeFormatter.ofPattern("dd.MM.yyyy, HH:mm 'Uhr'", Locale.GERMANY)
     }
 }
+
+internal fun learningBrainTitle(displayTitle: String, rowId: String): String =
+    "$displayTitle$LEARNING_TITLE_MARKER$rowId"
+
+internal data class LearningBrainTitleParts(
+    val displayTitle: String,
+    val rowId: String?,
+)
+
+internal fun parseLearningBrainTitle(title: String?): LearningBrainTitleParts {
+    val clean = title?.trim().orEmpty()
+    val markerIndex = clean.lastIndexOf(LEARNING_TITLE_MARKER)
+    if (markerIndex < 0) return LearningBrainTitleParts(clean, null)
+    val candidateId = clean.substring(markerIndex + LEARNING_TITLE_MARKER.length).trim()
+    val validId = runCatching { UUID.fromString(candidateId).toString() }.getOrNull()
+        ?: return LearningBrainTitleParts(clean, null)
+    return LearningBrainTitleParts(clean.substring(0, markerIndex).trim(), validId)
+}
+
+private const val LEARNING_TITLE_MARKER = " · Lernen · "

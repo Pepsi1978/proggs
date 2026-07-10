@@ -48,7 +48,7 @@ import de.frank.entropyreducer.presentation.theme.LocalCosmos
 /**
  * Bottom-Bar mit zentralem Mic-Button (FAB-Style).
  *
- * Zeigt unten immer nur die vier Hauptreiter Aufgaben/Forscher/Biomarker/Einstellungen plus Mic.
+ * Zeigt unten immer nur die vier Hauptreiter Aufgaben/Lernen/Biomarker/Einstellungen plus Mic.
  * Sub-Navigation sitzt ausschliesslich oben in [SubTabRow]. Die alten Sub-Bar-Parameter bleiben als
  * No-Op erhalten, damit bestehende Screen-Signaturen nicht gleichzeitig umgebaut werden muessen.
  *
@@ -121,8 +121,8 @@ private fun NormalTabsRow(currentTab: String, onTabSelected: (String) -> Unit) {
             selected = currentTab == Routes.TASKS,
         )
         TabItem(
-            label = "Forscher",
-            icon = Icons.Outlined.Science,
+            label = "Lernen",
+            icon = Icons.Outlined.Book,
             tint = overviewTint,
             onClick = { onTabSelected(Routes.SCIENTIST) },
             selected = currentTab == Routes.SCIENTIST,
@@ -323,7 +323,7 @@ private fun parentMetaFor(tab: String): ParentMeta =
     when (tab) {
         Routes.TASKS -> ParentMeta("Aufgaben", Icons.Outlined.Checklist)
         Routes.ANALYSIS -> ParentMeta("Analyse", Icons.Outlined.Analytics)
-        Routes.SCIENTIST -> ParentMeta("Forscher", Icons.Outlined.Science)
+        Routes.SCIENTIST -> ParentMeta("Lernen", Icons.Outlined.Book)
         Routes.BIOMARKER -> ParentMeta("Biomarker", Icons.Outlined.MonitorHeart)
         else -> ParentMeta("Aufgaben", Icons.Outlined.Checklist)
     }
