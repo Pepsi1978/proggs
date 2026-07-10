@@ -27,7 +27,7 @@ from typing import Any
 import httpx
 from mcp.server.fastmcp import FastMCP
 
-VERSION = "1.3.3"  # 1.3.3: Grosse parallele Volltext-Abrufe laufen stateless als direkte JSON-Antwort statt ueber den fragilen Session-/SSE-Rueckkanal; get_by_title loggt Laufzeit und Zeichenzahl. Alt: 1.3.2.
+VERSION = "1.4.0 (10.07.2026, 19:47 Uhr)"  # 1.4.0: Neues read-only Werkzeug get_entry_categories(doc_id) fuer den gezielten Kategorienabruf ohne Volltext. Alt: 1.3.3.
 
 # ---------------------------------------------------------------------------
 # Konfiguration (alles aus Umgebungsvariablen — Secrets nie im Code)
@@ -239,6 +239,30 @@ def get_by_category(category: str) -> str:
         title = it.get("title") or "(ohne Titel)"
         blocks.append(f"### {title}\n{it.get('text', '')}")
     return f"{len(items)} Eintrag(e) in '{category}':\n\n" + "\n\n".join(blocks)
+
+
+@mcp.tool()
+def get_entry_categories(doc_id: str) -> str:
+    """Hole die Kategorien eines Eintrags gezielt per doc_id — ohne Volltext oder Bestandsscan.
+    Liefert Primaerkategorie, alle Kategorien und die abgeleiteten Elternpfade."""
+    t0 = time.monotonic()
+    try:
+        data = _get("/entry/categories", {"doc_id": doc_id, "user_id": USER_ID})
+    except Exception as e:  # noqa: BLE001
+        _log(logging.ERROR, "get_entry_categories fehlgeschlagen", doc_id=doc_id, exc_info=True)
+        return f"Fehler beim Kategorienabruf: {type(e).__name__}: {e}"
+    categories = data.get("categories") or []
+    parents = data.get("parents") or []
+    _log(logging.INFO, "get_entry_categories ok", doc_id=doc_id, categories=len(categories),
+         ms=int((time.monotonic() - t0) * 1000))
+    if not categories:
+        return f"Eintrag '{doc_id}' hat keine Kategorie."
+    lines = [f"Eintrag '{doc_id}' ist in {len(categories)} Kategorie(n):"]
+    lines.extend(f"- {category}" for category in categories)
+    lines.append(f"Primaer: {data.get('category') or categories[0]}")
+    if parents:
+        lines.append("Elternpfade: " + ", ".join(parents))
+    return "\n".join(lines)
 
 
 @mcp.tool()

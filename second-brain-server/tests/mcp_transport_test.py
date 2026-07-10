@@ -41,7 +41,19 @@ def main() -> int:
         print("FAIL: get_by_title-Laufzeitsonde unvollstaendig: " + ", ".join(missing))
         return 1
 
-    print("PASS: MCP nutzt stateless JSON und misst grosse Volltextabrufe")
+    category_function = next(
+        node for node in tree.body
+        if isinstance(node, ast.FunctionDef) and node.name == "get_entry_categories"
+    )
+    category_source = ast.get_source_segment(source, category_function) or ""
+    required_category = ('_get("/entry/categories"', '"doc_id": doc_id',
+                         '"get_entry_categories ok"', 'ms=int(')
+    missing_category = [item for item in required_category if item not in category_source]
+    if missing_category:
+        print("FAIL: get_entry_categories-Werkzeug unvollstaendig: " + ", ".join(missing_category))
+        return 1
+
+    print("PASS: MCP nutzt stateless JSON, misst Volltextabrufe und liest Kategorien gezielt")
     return 0
 
 
