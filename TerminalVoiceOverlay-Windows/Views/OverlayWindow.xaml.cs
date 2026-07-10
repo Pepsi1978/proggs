@@ -715,10 +715,11 @@ namespace TerminalVoiceOverlay.Views
         // auch der Beam-Effekt blendet GENAU hier wieder ein, nicht hoeher
         // (Frank 2026-05-25: "im Viereck bleiben, nicht nach oben vergroessern").
         private const double VerticalTopOffset = 57;
-        // Eigene Zusatzfenster (Promptboard, Eingabe, Dialoge) werden kurz
-        // abgefragt, damit das Overlay unmittelbar nach Verlassen der GESAMTEN
-        // eigenen UI einklappt, ohne beim Wechsel zwischen Teilfenstern zu blitzen.
-        private const int OwnUiCollapsePollMs = 50;
+        // Kurzer Schutz gegen WPF-MouseLeave-Flattern beim Wechsel zwischen
+        // Controls. 350 ms liegen sicher hinter dem 240-ms-Fade-Out, ohne die
+        // fruehere volle Sekunde Wartezeit wieder einzufuehren.
+        private const int CollapseAfterUseMs  = 350;
+        private const int CollapseAfterPeekMs = 350;
 
         // Horizontaler Modus: Abstand (in DIPs) zwischen dem UNTEREN Rand der
         // Leiste und dem unteren Rand der Monitor-Arbeitsflaeche (= Oberkante
@@ -740,6 +741,7 @@ namespace TerminalVoiceOverlay.Views
         // wiederhergestellt beim Aufklappen (absolut statt relativ, damit der
         // Beam-Crossfade auch bei Hover-Ueberlappung konsistent bleibt).
         private double _preCollapseLeft, _preCollapseTop;
+        private int _collapseBeamGen;
 
         private void InitAutoHide()
         {
@@ -776,13 +778,20 @@ namespace TerminalVoiceOverlay.Views
                 _autoHideEnabled = true;
             }
 
-            // Nur noch als kurzer Cursor-Poller fuer eigene Zusatzfenster. Beim
-            // direkten Verlassen des Overlays wird ohne Wartezeit eingeklappt.
+            // Einklapp-Timer. Das kurze Intervall wird pro Ausloesung gesetzt.
             _collapseTimer = new DispatcherTimer();
             _collapseTimer.Tick += (_, _) =>
             {
                 _collapseTimer!.Stop();
-                TryCollapseImmediately();
+                if (_micState == RecordingState.Recording || isBtwRecording)
+                    return;
+                if (_orientationTransitioning || IsCursorOverOwnUi()
+                    || IsAuxiliaryWindowOpen() || IsTransientChildVisible())
+                {
+                    _collapseTimer.Start();
+                    return;
+                }
+                CollapseImmediate();
             };
 
             // Fenster-weite Hover-Erkennung. MouseEnter/MouseLeave am Window
@@ -799,7 +808,7 @@ namespace TerminalVoiceOverlay.Views
             {
                 if (!_autoHideEnabled) return;
                 _mouseOverOverlay = false;
-                TryCollapseImmediately();
+                ScheduleCollapse();
             };
 
             // Interaktionen weiterhin markieren, damit bestehende Zustands-
@@ -927,51 +936,20 @@ namespace TerminalVoiceOverlay.Views
             catch { return false; }
         }
 
-        private void TryCollapseImmediately()
+        private void ScheduleCollapse()
         {
             if (!_autoHideEnabled || _isCollapsed || _collapseTimer is null) return;
             if (_micState == RecordingState.Recording || isBtwRecording) return;
             if (_mouseOverOverlay) return;
 
-            // WPF kann waehrend Beam-/Layout-Wechseln ein kurzes MouseLeave
-            // melden, obwohl der Cursor physisch noch im Fenster liegt. Das
-            // echte Win32-Rechteck umfasst auch den transparenten Body und ist
-            // deshalb die kanonische Grenze fuer "gesamtes Overlay verlassen".
-            if (IsCursorInsideOverlayBounds() || IsCursorOverOwnUi()
-                || IsAuxiliaryWindowOpen() || IsTransientChildVisible())
-            {
-                _collapseTimer.Interval = TimeSpan.FromMilliseconds(OwnUiCollapsePollMs);
-                _collapseTimer.Stop();
-                _collapseTimer.Start();
-                return;
-            }
-
-            CollapseImmediate();
-        }
-
-        private bool IsCursorInsideOverlayBounds()
-        {
-            try
-            {
-                IntPtr hwnd = new WindowInteropHelper(this).Handle;
-                if (hwnd == IntPtr.Zero
-                    || !NativeMethods.Win32.GetCursorPos(out var pt)
-                    || !NativeMethods.Win32.GetWindowRect(hwnd, out var rect))
-                    return IsMouseOver;
-
-                return pt.X >= rect.Left && pt.X < rect.Right
-                    && pt.Y >= rect.Top && pt.Y < rect.Bottom;
-            }
-            catch (Exception ex)
-            {
-                Console.WriteLine($"IsCursorInsideOverlayBounds: {ex.Message}");
-                return IsMouseOver;
-            }
+            int ms = _usedSinceExpand ? CollapseAfterUseMs : CollapseAfterPeekMs;
+            _collapseTimer.Interval = TimeSpan.FromMilliseconds(ms);
+            _collapseTimer.Stop();
+            _collapseTimer.Start();
         }
 
         /// <summary>
-        /// Klappt das Overlay wieder zur vollen Form auf. Geometrie und Position
-        /// wechseln atomar; die volle Form wird danach weich eingeblendet.
+        /// Klappt das Overlay wieder zur vollen Form auf — mit Beam-Crossfade.
         /// </summary>
         private void Expand()
         {
@@ -980,34 +958,34 @@ namespace TerminalVoiceOverlay.Views
             _usedSinceExpand = false;
             _collapseTimer?.Stop();
 
-            // Geometrie synchron wechseln. Ein asynchrones Fade-Out darf hier
-            // keine Zwischenposition offenlassen: schnelle Hover-Wechsel wuerden
-            // sonst eine bereits eingeklappte Position als Expand-Anker speichern.
-            CollapsedView.BeginAnimation(UIElement.OpacityProperty, null);
-            CollapsedView.Visibility = Visibility.Collapsed;
-            if (_isHorizontal)
+            int gen = ++_collapseBeamGen;
+            BeamFadeOut(CollapsedView, () =>
             {
-                HorizontalView.Visibility = Visibility.Visible;
-                SizeToContent = SizeToContent.WidthAndHeight;
-                UpdateLayout();
-            }
-            else
-            {
-                FullView.Visibility = Visibility.Visible;
-                SizeToContent = SizeToContent.Manual;
-                Width  = 96;
-                Height = FullHeight;
-            }
-            Left = _preCollapseLeft;
-            Top  = _preCollapseTop;
-            BeamFadeIn(_isHorizontal ? HorizontalView : (UIElement)FullView);
-            ShowPromptUiAfterExpand();
-            ReassertTopmostIfVisible();
+                if (gen != _collapseBeamGen) return;
+                CollapsedView.Visibility = Visibility.Collapsed;
+                if (_isHorizontal)
+                {
+                    HorizontalView.Visibility = Visibility.Visible;
+                    SizeToContent = SizeToContent.WidthAndHeight;
+                    UpdateLayout();
+                }
+                else
+                {
+                    FullView.Visibility = Visibility.Visible;
+                    SizeToContent = SizeToContent.Manual;
+                    Width  = 96;
+                    Height = FullHeight;
+                }
+                Left = _preCollapseLeft;
+                Top  = _preCollapseTop;
+                BeamFadeIn(_isHorizontal ? HorizontalView : (UIElement)FullView);
+                ShowPromptUiAfterExpand();
+                ReassertTopmostIfVisible();
+            });
         }
 
         /// <summary>
-        /// Klappt das Overlay atomar auf die kompakte Mic-Pille ein. Der Mic
-        /// bleibt an seiner Bildschirmposition und wird weich eingeblendet.
+        /// Klappt das Overlay auf die kompakte Mic-Pille ein — mit Beam-Crossfade.
         /// </summary>
         private void CollapseImmediate()
         {
@@ -1052,22 +1030,22 @@ namespace TerminalVoiceOverlay.Views
                 collapsedTop  = Top + CollapseTopOffset;
             }
 
+            int gen = ++_collapseBeamGen;
             UIElement fromView = _isHorizontal ? (UIElement)HorizontalView : FullView;
-
-            // Auch das Einklappen ist atomar: Die grosse Geometrie bleibt nicht
-            // waehrend eines Fade-Outs aktiv und kann daher nie als kompakter
-            // Folge-Anker missverstanden werden.
-            fromView.BeginAnimation(UIElement.OpacityProperty, null);
-            fromView.Visibility = Visibility.Collapsed;
-            CollapsedView.Visibility = Visibility.Visible;
-            SizeToContent = SizeToContent.Manual;
-            Width  = 96;
-            Height = CollapsedHeight;
-            Left = collapsedLeft;
-            Top  = collapsedTop;
-            BeamFadeIn(CollapsedView);
-            HidePromptUiForCollapse();
-            ReassertTopmostIfVisible();
+            BeamFadeOut(fromView, () =>
+            {
+                if (gen != _collapseBeamGen) return;
+                fromView.Visibility = Visibility.Collapsed;
+                CollapsedView.Visibility = Visibility.Visible;
+                SizeToContent = SizeToContent.Manual;
+                Width  = 96;
+                Height = CollapsedHeight;
+                Left = collapsedLeft;
+                Top  = collapsedTop;
+                BeamFadeIn(CollapsedView);
+                HidePromptUiForCollapse();
+                ReassertTopmostIfVisible();
+            });
         }
 
         /// <summary>
@@ -1096,6 +1074,7 @@ namespace TerminalVoiceOverlay.Views
         // ════════════════════════════════════════════════════════════
 
         private bool _isHorizontal;
+        private bool _orientationTransitioning;
         private bool _orientationCaptured;
         private readonly Dictionary<FrameworkElement, (DependencyObject parent, int index, Thickness margin, double w, double h)> _vplace = new();
         // Zuletzt bekannte Monitor-Arbeitsflaeche (aus OnTerminalActivated),
@@ -1412,6 +1391,7 @@ namespace TerminalVoiceOverlay.Views
 
         private void BtnOrientationToggle_Click(object sender, RoutedEventArgs e)
         {
+            if (_orientationTransitioning) return;
             bool target = !_isHorizontal;
             // Wunsch 2026-05-23: Beim Umschalten erst Promtboard + Eingabe
             // schliessen, damit sich NUR das Overlay dreht. Der Benutzer
@@ -1436,12 +1416,14 @@ namespace TerminalVoiceOverlay.Views
         /// </summary>
         private void BeamToOrientation(bool horizontal)
         {
+            _orientationTransitioning = true;
             // Sicherheitsnetz: ohne bekannte Monitor-Geometrie klassisch
             // umschalten (kein Beam, aber voll funktionsfaehig).
             if (_waW <= 0)
             {
                 ApplyOrientation(horizontal);
                 PositionForCurrentOrientation(orientationSwitch: true);
+                FinishOrientationTransition();
                 return;
             }
 
@@ -1484,7 +1466,7 @@ namespace TerminalVoiceOverlay.Views
                 Top  = ColumnTop;
                 BeamFadeIn(HorizontalView, () =>
                 {
-                    AnimateWindowTo(finalLeft, finalTop); // glatter Fall nach unten (Fenster-Move)
+                    AnimateWindowTo(finalLeft, finalTop, FinishOrientationTransition);
                 });
             });
         }
@@ -1513,9 +1495,19 @@ namespace TerminalVoiceOverlay.Views
                     Top  = ColumnTop;
                     _manuallyPositioned = _savedVerticalPos is not null;
                     // 4) Saeule dort langsam + weich wieder einblenden.
-                    BeamFadeIn(FullView, () => ReassertTopmostIfVisible());
+                    BeamFadeIn(FullView, () =>
+                    {
+                        ReassertTopmostIfVisible();
+                        FinishOrientationTransition();
+                    });
                 });
             });
+        }
+
+        private void FinishOrientationTransition()
+        {
+            _orientationTransitioning = false;
+            if (!_mouseOverOverlay) ScheduleCollapse();
         }
 
         /// <summary>
@@ -4535,7 +4527,7 @@ namespace TerminalVoiceOverlay.Views
                           || state == RecordingState.Success
                           || state == RecordingState.Error))
                 {
-                    TryCollapseImmediately();
+                    ScheduleCollapse();
                 }
             }
         }
