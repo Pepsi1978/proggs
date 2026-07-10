@@ -137,6 +137,14 @@ describe("models.dev pricing", () => {
     expect(source).not.toContain("modelMeta().label !== modelMeta().fullID")
   })
 
+  test("replaces the sidebar title with a live German date and time", async () => {
+    const source = await Bun.file(new URL("../dist/tui.tsx", import.meta.url)).text()
+    expect(source).toContain("sidebar_title()")
+    expect(source).toContain("return <SidebarClock api={api} />")
+    expect(source).toContain("setInterval(() => setNow(new Date()), 1000)")
+    expect(source).toContain('`${pad(value.getDate())}.${pad(value.getMonth() + 1)}.${value.getFullYear()} ${pad(value.getHours())}:${pad(value.getMinutes())} Uhr`')
+  })
+
   test("offers built-in themes in a mouse-controlled dropdown", async () => {
     const source = await Bun.file(new URL("../dist/tui.tsx", import.meta.url)).text()
     const profileBlock = source.match(/const THEME_PROFILES = \[([\s\S]*?)\] as const/)?.[1] ?? ""

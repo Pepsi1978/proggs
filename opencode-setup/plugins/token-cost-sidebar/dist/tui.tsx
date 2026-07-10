@@ -126,6 +126,26 @@ function Row(props: { label: string; value: string; muted?: boolean; api: TuiPlu
   )
 }
 
+function formatDateTime(value: Date): string {
+  const pad = (part: number) => String(part).padStart(2, "0")
+  return `${pad(value.getDate())}.${pad(value.getMonth() + 1)}.${value.getFullYear()} ${pad(value.getHours())}:${pad(value.getMinutes())} Uhr`
+}
+
+function SidebarClock(props: { api: TuiPluginApi }) {
+  const [now, setNow] = createSignal(new Date())
+  const theme = () => props.api.theme.current
+  let timer: ReturnType<typeof setInterval> | undefined
+
+  onMount(() => {
+    timer = setInterval(() => setNow(new Date()), 1000)
+  })
+  onCleanup(() => {
+    if (timer) clearInterval(timer)
+  })
+
+  return <text fg={theme().text}>{formatDateTime(now())}</text>
+}
+
 function applyTheme(api: TuiPluginApi, name: string): boolean {
   const changed = api.theme.set(name)
   if (!changed) {
@@ -373,6 +393,9 @@ const tui: TuiPlugin = async (api) => {
   api.slots.register({
     order: 110,
     slots: {
+      sidebar_title() {
+        return <SidebarClock api={api} />
+      },
       sidebar_content(_ctx, props) {
         return <View api={api} sessionID={props.session_id} />
       },
