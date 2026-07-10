@@ -28,6 +28,10 @@ trap 'rc=$?; [ $rc -ne 0 ] && echo "[FEHLER] Abbruch in Zeile $LINENO (exit $rc)
 VPS="${CORTEX_VPS:-root@168.231.83.205}"
 REMOTE_DIR="${CORTEX_REMOTE_DIR:-/opt/second-brain}"
 SSH_OPTS=(-o ConnectTimeout=10 -o BatchMode=yes)
+# Cortex-SSH-Key automatisch nutzen (DEPLOY.md: ~/SK/second-brain/id_ed25519) — ohne ihn
+# scheiterte jedes ssh/scp mit 'Permission denied' (Windows hat keinen ~/.ssh/config-Eintrag).
+CORTEX_KEY="${CORTEX_KEY:-$HOME/SK/second-brain/id_ed25519}"
+[ -f "$CORTEX_KEY" ] && SSH_OPTS+=(-i "$CORTEX_KEY")
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 SBROOT="$(cd "$SCRIPT_DIR/.." && pwd)"                 # second-brain-server/
@@ -55,7 +59,16 @@ check_file() {
   fi
   tvps="$(mktemp)"; thead="$(mktemp)"
   git -C "$SBROOT" show "HEAD:$repopath" > "$thead" 2>/dev/null || : > "$thead"
-  if ! ssh "${SSH_OPTS[@]}" "$VPS" "cat '$remote' 2>/dev/null" > "$tvps"; then
+  # SSH-VERBINDUNGSFEHLER (rc 255) STRIKT von 'Datei fehlt' (cat rc 1) unterscheiden:
+  # sonst wird ein kaputter SSH-Zugang als 'Neuanlage, kein Risiko' fehlinterpretiert
+  # und der Guard laeuft ins Leere (Vorfall 2026-07-10, fehlender -i Key auf Windows).
+  ssh_rc=0
+  ssh "${SSH_OPTS[@]}" "$VPS" "cat '$remote' 2>/dev/null" > "$tvps" || ssh_rc=$?
+  if [ "$ssh_rc" -ge 255 ]; then
+    err "SSH-Verbindung fehlgeschlagen (rc=$ssh_rc) — VPS-Stand unpruefbar, NICHT deploybar"
+    BLOCKED+=("$rel"); rm -f "$tvps" "$thead"; return 1
+  fi
+  if [ "$ssh_rc" -ne 0 ]; then
     warn "auf dem VPS (noch) nicht vorhanden -> Neuanlage, kein Ueberschreib-Risiko"; SAFE+=("$rel")
     rm -f "$tvps" "$thead"; return 0
   fi

@@ -175,6 +175,11 @@ ohne sie dem Haupt-Agenten anzubieten. (Mechanik in der jeweiligen Agent-/Subage
   Timeout — KEIN MCP-Bug. **Vor dem CLI-Start Tunnel sicherstellen:** `wg show` / `ping 10.8.0.1` /
   `curl -i http://10.8.0.1:8001/mcp` (erwartet eine MCP-Antwort, nicht „refused"). (Tunnel-Details:
   `server/wireguard.md`.) Bricht der Tunnel mitten in der Session → wie §6 (reconnect).
+  **Peer-Zuordnung (live verifiziert 2026-07-10):** Der Windows-PC laeuft als **10.8.0.2**, das Handy
+  als 10.8.0.3 — die SK-Dateinamen `pc.conf` (enthaelt .3) und `phone.conf` (enthaelt .2) sind
+  historisch VERTAUSCHT benannt. Bei `wg show`-Diagnose auf dem Server also .2 = PC lesen.
+  `wg.exe show` am PC braucht Adminrechte („Permission denied" ist normal); Alternative ohne Admin:
+  `Get-NetIPAddress -InterfaceAlias secondbrain` (eigene IP) + `wg show wg0` per SSH auf dem Server.
 - **(b) DNS-Rebinding-Schutz:** Das MCP-Python-SDK validiert den `Host`-Header gegen `allowed_hosts`
   (SDK-Default nur `localhost`/`127.0.0.1`). Unser sb-mcp setzt bewusst
   `allowed_hosts=[10.8.0.1:8001, 10.8.0.1, 127.0.0.1:8001, localhost:8001]` (server.py). **Client-Falle:**
