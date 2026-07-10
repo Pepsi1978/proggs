@@ -32,6 +32,17 @@ namespace TerminalVoiceOverlay
         public App()
         {
             _instance = this;
+
+            var suppressToolTip = new System.Windows.Controls.ToolTipEventHandler(
+                (_, args) => args.Handled = true);
+            EventManager.RegisterClassHandler(
+                typeof(FrameworkElement),
+                System.Windows.Controls.ToolTipService.ToolTipOpeningEvent,
+                suppressToolTip);
+            EventManager.RegisterClassHandler(
+                typeof(FrameworkContentElement),
+                System.Windows.Controls.ToolTipService.ToolTipOpeningEvent,
+                suppressToolTip);
         }
 
         /// <summary>

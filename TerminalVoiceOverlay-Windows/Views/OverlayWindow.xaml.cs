@@ -560,19 +560,6 @@ namespace TerminalVoiceOverlay.Views
             // Verkabelung pro Profil ist aktiv via SK-Dateien.
             SetActiveProfile(_activeProfile);
 
-            // ── Tooltip-Positionierung global ankern ──
-            // Standard-WPF-Verhalten setzt den Tooltip relativ zum Button.
-            // Bei den rechten Profil-Tiles waere er dadurch mitten ueber
-            // dem Mic. Stattdessen wickeln wir jeden String-ToolTip in ein
-            // ToolTip-Objekt und haengen einen Opened-Handler dran, der die
-            // Position dynamisch setzt: rechte Tooltip-Kante immer 8 Pixel
-            // links vom Window, vertikal mittig zum gehoverten Button.
-            //
-            // String-ToolTips werden von WPF erst beim Anzeigen in ToolTip-
-            // Objekte umgewandelt — zu spaet fuer ToolTipOpening. Pre-
-            // wickeln loest das.
-            WrapStringTooltips();
-
             // ── Waveform-Striche einmalig im Canvas anlegen ──
             // 14 weisse Rectangles mit voller Deckkraft auf dem roten
             // Recording-Hintergrund — klassischer VU-Meter-Look. Sie
