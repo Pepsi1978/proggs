@@ -63,6 +63,7 @@ namespace TerminalVoiceOverlay.Views
 
         // ── Services ──
         private readonly AudioRecorder     _audioRecorder;
+        private readonly RecordingCuePlayer _recordingCuePlayer;
         private readonly GroqWhisperClient _groqClient;
         private readonly GeminiClient?     _geminiClient;
         private readonly TerminalWatcher   _terminalWatcher;
@@ -452,6 +453,7 @@ namespace TerminalVoiceOverlay.Views
             InitializeComponent();
 
             _audioRecorder   = new AudioRecorder(config.AudioSampleRate, config.AudioChannels);
+            _recordingCuePlayer = new RecordingCuePlayer();
             _groqClient      = new GroqWhisperClient(config.GroqApiKey, config.WhisperModel, config.WhisperLang, config.WhisperUrl);
             _terminalWatcher = new TerminalWatcher(config.TerminalProcessNames);
 
@@ -2556,7 +2558,7 @@ namespace TerminalVoiceOverlay.Views
                 DiagLog.Write("VoiceTurn", "stop_clicked", ("turn", turnId), ("kind", "main"), ("autoEnter", autoEnterEnabled), ("gemini", geminiEnabled), ("profile", _activeProfile));
                 // ── Stop recording ──
                 var wavFile = _audioRecorder.Stop();
-                _ = Task.Run(() => { Console.Beep(660, 120); Console.Beep(440, 120); });
+                _recordingCuePlayer.PlayStop();
                 _pulseTimer.Stop();
                 _pulseBright = false;
 
@@ -2699,7 +2701,7 @@ namespace TerminalVoiceOverlay.Views
                 {
                     _audioRecorder.Start();
                     SetMicState(RecordingState.Recording);
-                    _ = Task.Run(() => Console.Beep(880, 150));
+                    _recordingCuePlayer.PlayStart();
                     Console.WriteLine("Recording started");
                 }
                 catch (Exception ex)
@@ -2725,7 +2727,7 @@ namespace TerminalVoiceOverlay.Views
                 DiagLog.Write("VoiceTurn", "stop_clicked", ("turn", turnId), ("kind", "btw"), ("autoEnter", autoEnterEnabled), ("gemini", geminiEnabled), ("profile", _activeProfile));
                 // ── Stop BTW recording ──
                 var wavFile = _audioRecorder.Stop();
-                _ = Task.Run(() => { Console.Beep(660, 120); Console.Beep(440, 120); });
+                _recordingCuePlayer.PlayStop();
                 _btwPulseTimer.Stop();
                 _btwPulseBright = false;
                 isBtwRecording = false;
@@ -2830,7 +2832,7 @@ namespace TerminalVoiceOverlay.Views
                     isBtwRecording = true;
                     _audioRecorder.Start();
                     SetBtwMicState(RecordingState.Recording);
-                    _ = Task.Run(() => Console.Beep(880, 150));
+                    _recordingCuePlayer.PlayStart();
                     Console.WriteLine("BTW recording started");
                 }
                 catch (Exception ex)
@@ -5444,6 +5446,7 @@ namespace TerminalVoiceOverlay.Views
 
             _audioRecorder.LevelChanged -= OnAudioLevelChanged;
             _terminalWatcher.Dispose();
+            _recordingCuePlayer.Dispose();
             _audioRecorder.Dispose();
             base.OnClosed(e);
         }

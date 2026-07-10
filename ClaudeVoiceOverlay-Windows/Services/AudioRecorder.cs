@@ -16,7 +16,7 @@ namespace ClaudeVoiceOverlay.Services
         public bool IsRecording { get; private set; }
 
         /// <summary>
-        /// Wird waehrend einer laufenden Aufnahme alle ~100ms gefeuert
+        /// Wird waehrend einer laufenden Aufnahme alle ~50ms gefeuert
         /// (Takt entspricht WaveInEvent.BufferMilliseconds). Der Wert ist
         /// der Peak-Pegel des aktuellen Buffers, normiert auf 0..1 (Stille
         /// bis Vollausschlag). Subscribers laufen auf dem NAudio-Thread —
@@ -42,7 +42,7 @@ namespace ClaudeVoiceOverlay.Services
             _waveIn = new WaveInEvent
             {
                 WaveFormat = waveFormat,
-                BufferMilliseconds = 100
+                BufferMilliseconds = 50
             };
 
             _waveIn.DataAvailable += (_, e) =>
