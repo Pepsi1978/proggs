@@ -10,7 +10,9 @@
 > **neueste stabile Version** — kein 1.19+. **Ergaenzt 2026-07-02** (Tiefen-Debugging second-brain-server):
 > NEU §9 Payload-Schema-Drift bei Einzelfeld→Array-Migration (Kurzcheck #14). **Ergaenzt 2026-07-02
 > abends** (Tiefen-Debugging PERFORMANCE): NEU §10 Alle-Chunks-Scan statt Chunk-0 + Payload-Eingrenzung
-> bei Existenz-/Teil-Reads (Kurzcheck #15). **Anker:** Qdrant **1.18.2** (live: `curl http://127.0.0.1:6333/` → version
+> bei Existenz-/Teil-Reads (Kurzcheck #15). **Ergaenzt 2026-07-10** (Tiefen-Debugging Qualitaet, LIVE-Vorfall):
+> NEU §11 Collection-Migration laesst Backup-/Restore-Skripte auf die geloeschte Collection zeigen —
+> 2 Naechte ohne Gehirn-Backup (Kurzcheck #16). **Anker:** Qdrant **1.18.2** (live: `curl http://127.0.0.1:6333/` → version
 > 1.18.2), Docker-Image `qdrant/qdrant:latest`, im Stack mit mem0 2.0.7 (Embeddings @1536).
 > Verwandt: [`self-hosted-ai-agent-server.md`](self-hosted-ai-agent-server.md), [`mem0.md`](mem0.md), [`wireguard.md`](wireguard.md).
 
@@ -35,6 +37,7 @@
 | 13 | ⭐ `client.scroll(..., with_payload=True)` ueber viele/grosse Payloads | Laedt ALLE Payload-Felder ALLER Punkte gleichzeitig in den **Client**-RAM (nicht Qdrant-RAM!). Bei grossen Feldern (z.B. Volltext 1:1 pro Chunk) + periodischem Aufruf → Client-Container-OOM-Loop. Fuer Zaehl-/Listen-Operationen NUR die noetigen Felder laden: `with_payload=["feld1","feld2"]` statt `True`. Container-Memory-Limit hochsetzen hilft NICHT (Last waechst unbeschraenkt). | §8 |
 | 14 | Payload-Schema um ein ARRAY neben dem alten Einzelfeld erweitert (z.B. `categories` + `category`) | JEDER Verwaltungs-/Schreibweg muss BEIDE pflegen — ein `set_payload` nur aufs Einzelfeld laesst das Array stehen → der Lesepfad (bevorzugt das Array) zeigt weiter den ALTEN Wert; rename/detach wirken „gar nicht". Auch Export/Trash-Roundtrips muessen das Array mitnehmen. | §9 |
 | 15 | Zaehl-/Listen-/Titel-Scan bei Chunk-Schema (Metadaten in JEDEM Chunk identisch, doc_id-dedupliziert) | OHNE `chunk_index=0`-Filter scannt jede Metadaten-Operation ALLE Chunks (~5x mehr Punkte, bei jedem Poll). Filter `chunk_index=0` liefert EXAKT dasselbe deduplizierte Ergebnis. Existenz-Checks mit `with_payload=False`, Teil-Reads mit Feldliste (nie vollen Payload fuer ein bool/created_at). | §10 |
+| 16 | ⭐ Collection migriert/umbenannt (Blau/Gruen, Embedding-Wechsel) | ALLE Backup-/Restore-Skripte + Cron/systemd greppen und mitziehen — sonst sichern sie die GELOESCHTE Collection (404, still kein Backup; live: 2 Naechte Luecke). Namen aus EINER Quelle (.env-Override); JEDE produktive Collection (auch Entity-Register) in Backup UND Restore; Backup-Log der naechsten Nacht aktiv pruefen. | §11 |
 
 ---
 
@@ -278,6 +281,34 @@ anfassen muessen (set_payload-Backfills, Re-Embeds), duerfen NICHT auf Chunk 0 g
 dort nur die Payload-Feldliste eingrenzen.
 **Quelle:** Tiefen-Debugging second-brain-server (Performance) 2026-07-02, statisch + live verifiziert
 (Zaehlungen vor/nach identisch: total_distinct 592).
+
+---
+
+## 11. ⭐ Collection-Migration/-Umbenennung: Backup-/Restore-Skripte zeigen auf die GELOESCHTE Collection (live 2026-07-10)
+
+**Symptom:** Das taegliche Snapshot-Backup loggt "FEHLER: Snapshot-Erstellung fehlgeschlagen"
+(Qdrant-API 404), das Voll-Backup laeuft STILL ohne Gehirn-Snapshot weiter (warn-only-Zweig), und
+das Restore-Skript wuerde einen guten Snapshot in eine falsche/leere Collection einspielen, die die
+App nie liest. Faellt erst auf, wenn jemand das Backup-Log liest — oder beim Restore-Versuch.
+**Ursache:** Eine Blau/Gruen-Migration (hier: gemini-embedding-2, `brain` 1536 → `brain__e2` 3072,
+alte Collection geloescht) aenderte den Collection-Namen NUR in `compose.yaml` (`environment:`).
+Die Host-seitigen Backup-/Restore-Skripte sourcen aber die `.env` — dort stand `SB_COLLECTION`
+nie —, und ihr Default (bzw. Hartcodierung) war weiter der ALTE Name. Drei Skripte, drei Kopien
+des Namens, keine gemeinsame Quelle. Zusatz-Falle: die parallel eingefuehrte Entity-Collection
+(`brain_entities__e2`) war in KEINEM Backup-Skript enthalten → Restore haette alle Verknuepfungen verloren.
+**Versionen:** strukturell (Betriebs-/Skript-Logik, jede Qdrant-Version).
+**Betrifft unseren Code:** `scripts/brain-backup.sh` (Cron 04:00), `scripts/full-backup-create.sh`,
+`scripts/full-restore.sh` — Vorfall live: 2 Naechte (09.+10.07.) ohne Gehirn-Backup. GEFIXT
+2026-07-10 (#47726): alle drei auf `${SB_COLLECTION:-brain__e2}` + `${SB_ENTITY_COLLECTION:-brain_entities__e2}`,
+beide Collections werden gesichert/restauriert; Rotation je Prefix ueber Datums-Glob
+(`brain-????-??-??.snapshot`), damit die Prefixe `brain` und `brain-entities` sich nicht gegenseitig wegrotieren.
+**FIX (funktionserhaltend, Poka-Yoke):** (a) Collection-Namen aus EINER Quelle beziehen (.env-Override
++ EIN Default je Skript, identisch zur compose.yaml) statt mehrfach hartcodiert; (b) bei JEDER
+Migration/Umbenennung sofort `grep -r '<alter-name>'` ueber Skripte/Cron/systemd/Doku; (c) nach der
+Migration das Backup-Log der NAECHSTEN Nacht aktiv pruefen (der 404 stand dort ab Nacht 1);
+(d) JEDE produktive Collection (auch Entity-/Neben-Collections) gehoert in Backup UND Restore.
+**Quelle:** Tiefen-Debugging second-brain-server (Qualitaet) 2026-07-10, live verifiziert
+(Backup-Log 404 09.+10.07.; nach Fix: brain-2026-07-10.snapshot 139 MB + brain-entities-2026-07-10.snapshot 34 MB).
 
 ---
 

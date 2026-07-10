@@ -66,6 +66,12 @@ Insert auf Status `green` warten (sonst Brute-Force-Fallback).
   vor Zitat in den Release-Notes pruefen; das Pinnen-Argument steht unabhaengig davon.
 - **Backup:** Snapshots einrichten + Restore testen; beim Restore `Content-Type` NICHT explizit setzen
   (sonst extrem langsam, siehe Almanach §3c).
+- **Backup-Skripte migrationsfest bauen (Stand 2026-07-10, aus Live-Vorfall Almanach §11):** Collection-Namen
+  in Backup-/Restore-Skripten NIE hartcodieren — aus EINER Quelle beziehen (`.env`-Override + Default identisch
+  zur compose.yaml, z.B. `${SB_COLLECTION:-brain__e2}`). JEDE produktive Collection (auch Entity-/Neben-
+  Collections) gehoert in Backup UND Restore. Nach jeder Collection-Migration/-Umbenennung: `grep -r` nach dem
+  alten Namen ueber Skripte/Cron/systemd + das Backup-Log der naechsten Nacht aktiv pruefen (ein 404 steht dort
+  ab Nacht 1 — sonst faellt die Luecke erst beim Restore auf).
 
 ## §4 Client-Anbindung
 REST=6333, gRPC=6334 nicht verwechseln. Ohne echtes TLS eine explizite `http://`-URL uebergeben

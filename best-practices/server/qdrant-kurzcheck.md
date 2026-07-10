@@ -14,3 +14,4 @@
 | 4 | Client anbinden | korrekter Port (REST 6333), ohne TLS explizite `http://`-URL | §4 |
 | 5 | Tunen | Quantisierung (Scalar int8/TurboQuant 1.18); `hnsw_ef` zur Suche steuern; Memory-Monitoring | §5 |
 | 6 | Hierarchische Kategorien (Haupt/Unter) filtern | Pfad-String `Haupt/Unter` fuer den Anzeige-Wert + **separates `parent`-Feld** (Keyword-Index) fuer „alles unter Haupt" (`MatchValue`) — KEIN Praefix-Operator in Qdrant. Index VOR Ingest. | §6 |
+| 7 | Backup-/Restore-Skripte | Collection-Namen NIE hartcodieren: EINE Quelle (`.env`-Override + Default == compose.yaml); JEDE produktive Collection (auch Entity-Register) in Backup UND Restore; nach Migration `grep -r` alter Name + Backup-Log der naechsten Nacht pruefen (Live-Vorfall 2026-07-10: 2 Naechte ohne Backup). | §3 |
