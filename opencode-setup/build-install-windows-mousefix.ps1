@@ -44,11 +44,13 @@ try {
     $newline = if ($rendererSource.Contains("`r`n")) { "`r`n" } else { "`n" }
     $rendererNeedle = "  reportNativeRenderFailure() {${newline}    console.error(`"[CliRenderer] Native frame render failed; waiting for the next render request to force repaint`");"
     $rendererReplacement = "  reportNativeRenderFailure() {${newline}    this.forceFullRepaintRequested = true;${newline}    console.error(`"[CliRenderer] Native frame render failed; waiting for the next render request to force repaint`");"
-    if (-not $rendererSource.Contains($rendererNeedle)) {
+    if ($rendererSource.Contains($rendererNeedle)) {
+        $rendererSource = $rendererSource.Replace($rendererNeedle, $rendererReplacement)
+        [IO.File]::WriteAllText($openTuiBundle, $rendererSource, [Text.UTF8Encoding]::new($false))
+    }
+    elseif (-not $rendererSource.Contains($rendererReplacement)) {
         throw "Der OpenTUI-Recovery-Patch passt nicht auf Core $openTuiVersion."
     }
-    $rendererSource = $rendererSource.Replace($rendererNeedle, $rendererReplacement)
-    [IO.File]::WriteAllText($openTuiBundle, $rendererSource, [Text.UTF8Encoding]::new($false))
 
     $env:OPENCODE_VERSION = "$Version-windowsfix.$PatchRevision"
     bun run --cwd packages/opencode script/build.ts --single --skip-install --skip-embed-web-ui
