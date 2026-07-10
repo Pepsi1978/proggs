@@ -125,8 +125,16 @@ describe("models.dev pricing", () => {
     expect(source).toContain('label="Input"')
     expect(source).toContain('label="Output"')
     expect(source).toContain('label="Reasoning"')
+    expect(source).not.toContain('label="Reasoning" value={formatInt(totals().reasoning)} muted')
     expect(source).toContain('label="Gesamt"')
     expect(source).not.toContain('label="Cache"')
+  })
+
+  test("shows only the accented model name without redundant headings", async () => {
+    const source = await Bun.file(new URL("../dist/tui.tsx", import.meta.url)).text()
+    expect(source).toContain('<text fg={theme().accent}>{shortLabel(modelMeta().label)}</text>')
+    expect(source).not.toContain("Modellkosten")
+    expect(source).not.toContain("modelMeta().label !== modelMeta().fullID")
   })
 
   test("offers built-in themes in a mouse-controlled dropdown", async () => {
@@ -160,6 +168,8 @@ describe("models.dev pricing", () => {
     const source = await Bun.file(new URL("../dist/tui.tsx", import.meta.url)).text()
     expect(source).toContain('label="Inputpreis"')
     expect(source).toContain('label="Outputpreis"')
+    expect(source).toMatch(/label="Inputpreis"[\s\S]*?value=\{rateValue\("input"\)\}[\s\S]*?muted/)
+    expect(source).toMatch(/label="Outputpreis"[\s\S]*?value=\{rateValue\("output"\)\}[\s\S]*?muted/)
     expect(source).toContain('return `$${new Intl.NumberFormat("en-US"')
     expect(source).toContain("} / 1M`")
     expect(source).toContain('return "<$0.000001 / 1M"')

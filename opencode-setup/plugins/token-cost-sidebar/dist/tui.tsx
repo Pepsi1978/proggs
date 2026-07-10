@@ -339,28 +339,24 @@ function View(props: { api: TuiPluginApi; sessionID: string }) {
   return (
     <Show when={hasAnything()}>
       <box>
-        <text fg={theme().text}>
-          <b>Modellkosten</b>
-        </text>
         <text fg={theme().accent}>{shortLabel(modelMeta().label)}</text>
-        <Show when={modelMeta().label !== modelMeta().fullID}>
-          <text fg={theme().textMuted}>{shortLabel(modelMeta().fullID)}</text>
-        </Show>
 
         <Row
           api={props.api}
           label="Inputpreis"
           value={rateValue("input")}
+          muted
         />
         <Row
           api={props.api}
           label="Outputpreis"
           value={rateValue("output")}
+          muted
         />
 
         <Row api={props.api} label="Input" value={formatInt(totals().input)} />
         <Row api={props.api} label="Output" value={formatInt(totals().output)} />
-        <Row api={props.api} label="Reasoning" value={formatInt(totals().reasoning)} muted />
+        <Row api={props.api} label="Reasoning" value={formatInt(totals().reasoning)} />
         <Row
           api={props.api}
           label="Gesamt"
