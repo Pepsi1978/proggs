@@ -708,9 +708,6 @@ namespace ClaudeVoiceOverlay.Views
         // wiederhergestellt beim Aufklappen (absolut statt relativ, damit der
         // Beam-Crossfade auch bei Hover-Ueberlappung konsistent bleibt).
         private double _preCollapseLeft, _preCollapseTop;
-        // Generations-Zaehler fuer den Einklapp-/Ausklapp-Beam: jeder neue
-        // Uebergang erhoeht ihn; veraltete Animations-Callbacks brechen ab.
-        private int _collapseBeamGen;
 
         private void InitAutoHide()
         {
@@ -941,10 +938,8 @@ namespace ClaudeVoiceOverlay.Views
         }
 
         /// <summary>
-        /// Klappt das Overlay wieder zur vollen Form auf — mit Beam-Crossfade:
-        /// Mic-Pille ausblenden → unsichtbar zur vollen Form + gemerkte
-        /// Expand-Position zuruecksetzen → volle Form weich einblenden. Beide
-        /// Orientierungen. Frank-Wunsch 2026-05-25 ("mit dem gleichen Beam-Effekt").
+        /// Klappt das Overlay wieder zur vollen Form auf. Geometrie und Position
+        /// wechseln atomar; die volle Form wird danach weich eingeblendet.
         /// </summary>
         private void Expand()
         {
@@ -953,42 +948,34 @@ namespace ClaudeVoiceOverlay.Views
             _usedSinceExpand = false;
             _collapseTimer?.Stop();
 
-            int gen = ++_collapseBeamGen;
-            // Mic-Pille sichtbar ausblenden.
-            BeamFadeOut(CollapsedView, () =>
+            // Geometrie synchron wechseln. Ein asynchrones Fade-Out darf hier
+            // keine Zwischenposition offenlassen: schnelle Hover-Wechsel wuerden
+            // sonst eine bereits eingeklappte Position als Expand-Anker speichern.
+            CollapsedView.BeginAnimation(UIElement.OpacityProperty, null);
+            CollapsedView.Visibility = Visibility.Collapsed;
+            if (_isHorizontal)
             {
-                if (gen != _collapseBeamGen) return; // durch neuen Uebergang ueberholt
-                // Unsichtbar auf die volle Form wechseln + Groesse/Position setzen.
-                CollapsedView.Visibility = Visibility.Collapsed;
-                if (_isHorizontal)
-                {
-                    HorizontalView.Visibility = Visibility.Visible;
-                    SizeToContent = SizeToContent.WidthAndHeight;
-                    UpdateLayout();
-                }
-                else
-                {
-                    FullView.Visibility = Visibility.Visible;
-                    SizeToContent = SizeToContent.Manual;
-                    Width  = 96;
-                    Height = FullHeight;
-                }
-                // Exakt die vor dem Einklappen gemerkte Expand-Position (absolut).
-                Left = _preCollapseLeft;
-                Top  = _preCollapseTop;
-                // Volle Form weich einblenden.
-                BeamFadeIn(_isHorizontal ? HorizontalView : (UIElement)FullView);
-                ShowPromptUiAfterExpand(); // vorher aktives Promptboard/Eingabefeld zurueckholen
-                ReassertTopmostIfVisible();
-            });
+                HorizontalView.Visibility = Visibility.Visible;
+                SizeToContent = SizeToContent.WidthAndHeight;
+                UpdateLayout();
+            }
+            else
+            {
+                FullView.Visibility = Visibility.Visible;
+                SizeToContent = SizeToContent.Manual;
+                Width  = 96;
+                Height = FullHeight;
+            }
+            Left = _preCollapseLeft;
+            Top  = _preCollapseTop;
+            BeamFadeIn(_isHorizontal ? HorizontalView : (UIElement)FullView);
+            ShowPromptUiAfterExpand();
+            ReassertTopmostIfVisible();
         }
 
         /// <summary>
-        /// Klappt das Overlay auf die kompakte Mic-Pille ein — mit Beam-Crossfade:
-        /// volle Form ausblenden → unsichtbar auf die Mic-Pille schrumpfen (Mic
-        /// bleibt an seiner Bildschirmposition) → Mic weich einblenden. Beide
-        /// Orientierungen. Die expandierte Position wird vorher gemerkt, damit
-        /// das Aufklappen sie exakt wiederherstellt.
+        /// Klappt das Overlay atomar auf die kompakte Mic-Pille ein. Der Mic
+        /// bleibt an seiner Bildschirmposition und wird weich eingeblendet.
         /// </summary>
         private void CollapseImmediate()
         {
@@ -1033,26 +1020,22 @@ namespace ClaudeVoiceOverlay.Views
                 collapsedTop  = Top + CollapseTopOffset;
             }
 
-            int gen = ++_collapseBeamGen;
             UIElement fromView = _isHorizontal ? (UIElement)HorizontalView : FullView;
 
-            // Volle Form sichtbar ausblenden.
-            BeamFadeOut(fromView, () =>
-            {
-                if (gen != _collapseBeamGen) return; // durch neuen Uebergang ueberholt
-                // Unsichtbar auf die Mic-Pille schrumpfen.
-                fromView.Visibility = Visibility.Collapsed;
-                CollapsedView.Visibility = Visibility.Visible;
-                SizeToContent = SizeToContent.Manual;
-                Width  = 96;
-                Height = CollapsedHeight;
-                Left = collapsedLeft;
-                Top  = collapsedTop;
-                // Mic weich einblenden.
-                BeamFadeIn(CollapsedView);
-                HidePromptUiForCollapse(); // Promptboard + Eingabefeld mit einklappen
-                ReassertTopmostIfVisible();
-            });
+            // Auch das Einklappen ist atomar: Die grosse Geometrie bleibt nicht
+            // waehrend eines Fade-Outs aktiv und kann daher nie als kompakter
+            // Folge-Anker missverstanden werden.
+            fromView.BeginAnimation(UIElement.OpacityProperty, null);
+            fromView.Visibility = Visibility.Collapsed;
+            CollapsedView.Visibility = Visibility.Visible;
+            SizeToContent = SizeToContent.Manual;
+            Width  = 96;
+            Height = CollapsedHeight;
+            Left = collapsedLeft;
+            Top  = collapsedTop;
+            BeamFadeIn(CollapsedView);
+            HidePromptUiForCollapse();
+            ReassertTopmostIfVisible();
         }
 
         /// <summary>
