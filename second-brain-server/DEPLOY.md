@@ -24,6 +24,29 @@ neu bauen. Fertig. (Es gibt KEIN `git pull` auf dem Server — wer danach sucht,
 Alle Dienste sind an die WireGuard-IP `10.8.0.1` gebunden (oeffentlich unsichtbar, nur ueber den
 VPN-Tunnel erreichbar). Oeffentlich offen ist nur SSH (22) + WireGuard (51820/udp).
 
+## Einmalig auf jedem neuen Windows-Rechner: SSH-Schluessel-ACL
+
+Windows OpenSSH ignoriert einen privaten Schluessel, sobald eine zusaetzliche Gruppe ihn lesen darf
+(`UNPROTECTED PRIVATE KEY FILE` / `bad permissions`). Nach dem Ablegen des Schluessels unter
+`~/SK/second-brain/id_ed25519` diesen PowerShell-Block **einmalig als der normale Benutzer** ausfuehren:
+
+```powershell
+$key = Join-Path $HOME "SK\second-brain\id_ed25519"
+if (-not (Test-Path -LiteralPath $key)) { throw "SSH-Schluessel fehlt: $key" }
+
+$userSid = [System.Security.Principal.WindowsIdentity]::GetCurrent().User.Value
+icacls $key /inheritance:r
+icacls $key /grant:r "*$($userSid):(F)" "*S-1-5-18:(F)" "*S-1-5-32-544:(F)"
+icacls $key
+
+ssh -o BatchMode=yes -o ConnectTimeout=15 -i $key root@168.231.83.205 "printf 'SSH_ACL_OK'"
+```
+
+Die drei erlaubten ACL-Eintraege sind der aktuelle Benutzer, `SYSTEM` (`S-1-5-18`) und die lokale
+Administratorengruppe (`S-1-5-32-544`), jeweils mit Vollzugriff. Die letzte Zeile muss
+`SSH_ACL_OK` ausgeben. Niemals den Schluesselinhalt anzeigen, ins Repo kopieren oder die
+OpenSSH-Pruefung global abschalten.
+
 ## Dienste und ihre Bau-Pfade
 
 | Dienst (compose-Name) | Bau-Pfad (Repo + VPS) | Port (an 10.8.0.1) | Selbst gebaut? |
