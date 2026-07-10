@@ -3,9 +3,19 @@
 > Wird bei jedem OpenCode-Start aus `~/.config/opencode/AGENTS.md` geladen. Diese kompakte Datei
 > enthält die immer geltenden Kernregeln; die ausführlichen Arbeitsregeln liegen im zweiten Gehirn.
 
-## ZUERST: Arbeitsregeln einzeln aus dem zweiten Gehirn laden (PFLICHT)
+## ZUERST: Repository mit origin/main synchronisieren (PFLICHT)
 
-**Allererste Handlung jeder Session, vor jeder anderen Arbeit:**
+**Allererste Handlung jeder Session, sofern das Arbeitsverzeichnis in einem Git-Repository liegt:**
+1. `git fetch origin` ausführen.
+2. Mit `git rev-list --count HEAD..origin/main` prüfen, ob `origin/main` voraus ist.
+3. Ist der Wert größer als 0, sofort `git rebase --autostash origin/main` ausführen.
+4. Bei einem Rebase-Konflikt `git rebase --abort` ausführen und Frank fragen; nie Konflikte raten.
+
+So beginnt jede Session auf dem neuesten Remote-Stand. Existiert kein `origin/main`, normal fortfahren.
+
+## DANACH: Arbeitsregeln einzeln aus dem zweiten Gehirn laden (PFLICHT)
+
+**Zweite Handlung jeder Session, vor der eigentlichen Aufgabe:**
 1. `second-brain_get_category_item(category='Programmierung/Rules', index=1)` aufrufen.
 2. Aus „Eintrag 1 von N“ die Gesamtzahl N ablesen und danach Index 2, 3, ... bis N einzeln laden.
 3. Jeden Eintrag vollständig lesen und erst danach bestätigen: „N Regeln aus dem zweiten Gehirn eingelesen.“

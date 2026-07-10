@@ -13,6 +13,13 @@ Git, Secrets, Komprimierung, Arbeitsmodi und Direktive 3). Dort steht auch die P
 „N Regeln aus dem zweiten Gehirn eingelesen.“ bestätigen. Second-Brain-Einträge immer einzeln laden,
 nie eine große Kategorie per `get_by_category`. Diese Datei ergänzt nur das proggs-Spezifische.
 
+## Session-Start Git-Sync (PFLICHT)
+
+Vor jeder anderen Session-Arbeit `git fetch origin` ausführen. Ist
+`git rev-list --count HEAD..origin/main` größer als 0, sofort mit
+`git rebase --autostash origin/main` aktualisieren. Bei Konflikten `git rebase --abort` ausführen und
+Frank fragen; nie Konflikte raten. Erst danach die Arbeitsregeln laden und die Aufgabe bearbeiten.
+
 ## Repository Structure
 
 ```
