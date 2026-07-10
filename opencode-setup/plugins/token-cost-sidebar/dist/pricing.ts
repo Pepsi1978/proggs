@@ -49,6 +49,14 @@ export function readPricing(model: any, contextTokens = 0) {
   }
 }
 
+export function readPricingPerMillion(model: any, contextTokens = 0) {
+  const price = readPricing(model, contextTokens)
+  return {
+    input: price.input * 1_000_000,
+    output: price.output * 1_000_000,
+  }
+}
+
 export function hasPositivePricing(model: any): boolean {
   const price = readPricing(model)
   return (

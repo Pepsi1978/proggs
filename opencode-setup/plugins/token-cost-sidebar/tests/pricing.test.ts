@@ -8,6 +8,7 @@ import {
   hasPositivePricing,
   loadCatalogModel,
   readPricing,
+  readPricingPerMillion,
   selectPricingModel,
 } from "../dist/pricing"
 
@@ -44,6 +45,11 @@ describe("models.dev pricing", () => {
       cacheRead: 0.0000005,
       cacheWrite: 0.00000625,
     })
+  })
+
+  test("exposes input and output rates in USD per million tokens", () => {
+    expect(readPricingPerMillion(model)).toEqual({ input: 5, output: 30 })
+    expect(readPricingPerMillion({ cost: { input: 0, output: 0 } })).toEqual({ input: 0, output: 0 })
   })
 
   test("uses the context tier for a large individual request", () => {
@@ -121,6 +127,18 @@ describe("models.dev pricing", () => {
     expect(source).toContain('label="Reasoning"')
     expect(source).toContain('label="Gesamt"')
     expect(source).not.toContain('label="Cache"')
+  })
+
+  test("renders separate dollar input and output model prices with an explicit unit", async () => {
+    const source = await Bun.file(new URL("../dist/tui.tsx", import.meta.url)).text()
+    const packageJson = await Bun.file(new URL("../package.json", import.meta.url)).json()
+    expect(source).toContain('label="Inputpreis"')
+    expect(source).toContain('label="Outputpreis"')
+    expect(source).toContain('return `$${new Intl.NumberFormat("en-US"')
+    expect(source).toContain("} / 1M`")
+    expect(source).toContain('return "<$0.000001 / 1M"')
+    expect(source).toContain(`PLUGIN_VERSION = "${packageJson.version}"`)
+    expect(source).toMatch(/PLUGIN_VERSION_TIMESTAMP = "\d{2}\.\d{2}\.\d{4}, \d{2}:\d{2} Uhr"/)
   })
 
   test("prefers the complete live model over incomplete embedded pricing", () => {

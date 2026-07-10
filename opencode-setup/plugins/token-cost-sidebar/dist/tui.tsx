@@ -1,9 +1,19 @@
 /** @jsxImportSource @opentui/solid */
 import { createEffect, createMemo, createSignal, onMount, Show } from "solid-js"
 import type { TuiPlugin, TuiPluginApi, TuiPluginModule } from "@opencode-ai/plugin/tui"
-import { calculateSessionCost, commitIfCurrent, loadCatalogModel, selectPricingModel, type TokenUsage } from "./pricing"
+import {
+  calculateSessionCost,
+  commitIfCurrent,
+  hasKnownPricing,
+  loadCatalogModel,
+  readPricingPerMillion,
+  selectPricingModel,
+  type TokenUsage,
+} from "./pricing"
 
 const FALLBACK_EUR_PER_USD = 0.92
+const PLUGIN_VERSION = "1.0.1"
+const PLUGIN_VERSION_TIMESTAMP = "10.07.2026, 11:31 Uhr"
 const MONEY_SOURCE_RECORDED = "OpenCode"
 const MONEY_SOURCE_CALCULATED = "models.dev"
 const MONEY_SOURCE_MIXED = "OpenCode + models.dev"
@@ -63,6 +73,15 @@ function formatUsd(value: number): string {
   if (value <= 0) return "0,00 $"
   if (value < 0.01) return "<0,01 $"
   return new Intl.NumberFormat("de-DE", { style: "currency", currency: "USD" }).format(value)
+}
+
+function formatUsdPerMillion(value: number): string {
+  if (value > 0 && value < 0.000001) return "<$0.000001 / 1M"
+  const fractionDigits = value > 0 && value < 0.01 ? 6 : value < 1 ? 4 : 2
+  return `$${new Intl.NumberFormat("en-US", {
+    minimumFractionDigits: fractionDigits,
+    maximumFractionDigits: fractionDigits,
+  }).format(Math.max(0, value))} / 1M`
 }
 
 function formatEur(value: number): string {
@@ -185,11 +204,21 @@ function View(props: { api: TuiPluginApi; sessionID: string }) {
     return result
   })
 
+  const pricedModel = createMemo(() => selectPricingModel(modelMeta().model, catalogModel()))
+
+  const rates = createMemo(() => {
+    const model = pricedModel()
+    return hasKnownPricing(model) ? readPricingPerMillion(model) : undefined
+  })
+
+  const rateValue = (kind: "input" | "output") => {
+    const currentRates = rates()
+    return currentRates ? formatUsdPerMillion(currentRates[kind]) : "nicht verfügbar"
+  }
+
   const money = createMemo(() => {
     const t = totals()
-    const embeddedModel = modelMeta().model
-    const pricedModel = selectPricingModel(embeddedModel, catalogModel())
-    const cost = calculateSessionCost(pricedModel, t.records)
+    const cost = calculateSessionCost(pricedModel(), t.records)
 
     const source = cost.usedRecorded && cost.usedCalculated
       ? MONEY_SOURCE_MIXED
@@ -217,6 +246,17 @@ function View(props: { api: TuiPluginApi; sessionID: string }) {
           <text fg={theme().textMuted}>{shortLabel(modelMeta().fullID)}</text>
         </Show>
 
+        <Row
+          api={props.api}
+          label="Inputpreis"
+          value={rateValue("input")}
+        />
+        <Row
+          api={props.api}
+          label="Outputpreis"
+          value={rateValue("output")}
+        />
+
         <Row api={props.api} label="Input" value={formatInt(totals().input)} />
         <Row api={props.api} label="Output" value={formatInt(totals().output)} />
         <Row api={props.api} label="Reasoning" value={formatInt(totals().reasoning)} muted />
@@ -229,6 +269,7 @@ function View(props: { api: TuiPluginApi; sessionID: string }) {
         <Show when={money().available}>
           <text fg={theme().textMuted}>{`${formatUsd(money().usd)} · ${money().source}`}</text>
         </Show>
+        <text fg={theme().textMuted}>{`Version ${PLUGIN_VERSION} (${PLUGIN_VERSION_TIMESTAMP})`}</text>
       </box>
     </Show>
   )
