@@ -1,6 +1,10 @@
 {
   "$schema": "https://opencode.ai/config.json",
 
+  // LSP fuer jede OpenCode-Session aktivieren. Passende integrierte Sprachserver
+  // starten bedarfsgesteuert, sobald OpenCode eine unterstuetzte Datei oeffnet.
+  "lsp": true,
+
   // Punkt 1 — globale Regel-Datei IMMER zuverlaessig laden:
   // Auch wenn ein Projekt (z. B. ~/proggs) eine eigene AGENTS.md hat oder nach /new,
   // wird die globale Regel-Datei ueber instructions zusaetzlich geladen.
