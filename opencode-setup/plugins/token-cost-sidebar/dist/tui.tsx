@@ -1,5 +1,5 @@
 /** @jsxImportSource @opentui/solid */
-import { createEffect, createMemo, createSignal, onMount, Show } from "solid-js"
+import { createEffect, createMemo, createSignal, onCleanup, onMount, Show } from "solid-js"
 import type { TuiPlugin, TuiPluginApi, TuiPluginModule } from "@opencode-ai/plugin/tui"
 import {
   calculateSessionCost,
@@ -146,23 +146,32 @@ function ThemeSelect(props: { api: TuiPluginApi }) {
   const mode = () => props.api.theme.mode()
 
   const open = () => {
+    const initial = selected()
+    let confirmed = false
     const options = THEME_PROFILES.filter((name) => props.api.theme.has(name)).map((name) => ({
       title: name,
       value: name,
       description: name === "system" ? "Folgt den Terminalfarben" : undefined,
     }))
     const DialogSelect = props.api.ui.DialogSelect
-    props.api.ui.dialog.replace(() => (
-      <DialogSelect
-        title="Theme auswählen"
-        options={options}
-        current={selected()}
-        onSelect={(option) => {
-          if (!applyTheme(props.api, option.value)) return
-          props.api.ui.dialog.clear()
-        }}
-      />
-    ))
+    props.api.ui.dialog.replace(() => {
+      onCleanup(() => {
+        if (!confirmed) applyTheme(props.api, initial)
+      })
+      return (
+        <DialogSelect
+          title="Theme auswählen"
+          options={options}
+          current={initial}
+          onMove={(option) => applyTheme(props.api, option.value)}
+          onSelect={(option) => {
+            if (!applyTheme(props.api, option.value)) return
+            confirmed = true
+            props.api.ui.dialog.clear()
+          }}
+        />
+      )
+    })
   }
 
   const selectMode = (next: "dark" | "light") => {
