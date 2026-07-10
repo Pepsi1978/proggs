@@ -62,6 +62,16 @@ green "OK  AGENTS.md (globale Regeln)"
 if cp "$SRC/agents/"*.md "$DST/agents/" 2>/dev/null; then green "OK  agents/"; else yellow "--  keine agents/*.md"; fi
 if cp "$SRC/plugins/"*.js "$DST/plugins/" 2>/dev/null; then green "OK  plugins/ (inkl. tool-first-guard)"; else yellow "--  keine plugins/*.js"; fi
 if find "$SRC/plugins" -mindepth 1 -maxdepth 1 -type d -exec cp -R {} "$DST/plugins/" \; 2>/dev/null; then green "OK  plugins/*/ (TUI-Plugin-Pakete)"; else yellow "--  keine plugins/*/"; fi
+
+# Entfernt die mit Plugin 1.1.0 ausgelieferten Theme-Duplikate. Seit 1.2.0 nutzt das Dropdown
+# ausschliesslich die eingebauten OpenCode-Themes.
+rm -f \
+  "$DST/themes/frank-dark.json" \
+  "$DST/themes/frank-light.json" \
+  "$DST/plugins/token-cost-sidebar/themes/frank-dark.json" \
+  "$DST/plugins/token-cost-sidebar/themes/frank-light.json"
+rmdir "$DST/plugins/token-cost-sidebar/themes" 2>/dev/null || true
+
 if command -v npm >/dev/null 2>&1; then
   if (cd "$DST" && npm install --silent '@opencode-ai/plugin@1.17.7' '@opentui/core@0.3.4' '@opentui/solid@0.4.0' 'solid-js@1.9.12'); then
     green "OK  TUI-Plugin-Dependencies (npm)"

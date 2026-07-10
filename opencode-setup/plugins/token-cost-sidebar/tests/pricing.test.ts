@@ -129,6 +129,25 @@ describe("models.dev pricing", () => {
     expect(source).not.toContain('label="Cache"')
   })
 
+  test("offers built-in themes in a mouse-controlled dropdown", async () => {
+    const source = await Bun.file(new URL("../dist/tui.tsx", import.meta.url)).text()
+    const profileBlock = source.match(/const THEME_PROFILES = \[([\s\S]*?)\] as const/)?.[1] ?? ""
+    const profiles = [...profileBlock.matchAll(/"([^"]+)"/g)].map((match) => match[1])
+    expect(source).toContain("DialogSelect")
+    expect(source).toContain('title="Theme auswählen"')
+    expect(source).toContain("api.theme.set(name)")
+    expect(profiles).toHaveLength(34)
+    expect(profiles).toContain("aura")
+    expect(profiles).toContain("dracula")
+    expect(profiles).toContain("github")
+    expect(profiles).toContain("solarized")
+    expect(profiles).toContain("system")
+    expect(source).toContain("const selected = () => props.api.theme.selected")
+    expect(source).not.toContain("frank.theme")
+    expect(source).not.toContain("frank-dark")
+    expect(source).not.toContain("frank-light")
+  })
+
   test("renders separate dollar input and output model prices with an explicit unit", async () => {
     const source = await Bun.file(new URL("../dist/tui.tsx", import.meta.url)).text()
     const packageJson = await Bun.file(new URL("../package.json", import.meta.url)).json()

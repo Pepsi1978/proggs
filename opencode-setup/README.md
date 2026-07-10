@@ -127,8 +127,9 @@ installiert OpenCode beim Start selbst aus der `plugin`-Liste.
   warnen ("Laws"-Ebene). Hintergrund: `best-practices/agents/anti-halluzination-regeln.md` §1+§7.
 - **`token-cost-sidebar/`** — lokales TUI-Plugin fuer die rechte Seitenleiste. Zeigt aktuelles Modell,
   Input-, Output-, optionale Reasoning- und Gesamttokens sowie Kosten in Euro. Ein mit der Maus
-  bedienbarer Schalter wechselt sofort zwischen dem festen dunklen und hellen Theme und merkt sich
-  die Auswahl. Das Plugin bevorzugt die von OpenCode gespeicherte echte `cost`; bei fehlenden oder
+  bedienbares Dropdown wechselt zwischen den vorhandenen OpenCode-Themes und merkt sich die Auswahl;
+  deren helle oder dunkle Variante folgt automatisch dem Terminal. Das Plugin bevorzugt die von
+  OpenCode gespeicherte echte `cost`; bei fehlenden oder
   veralteten Nullpreisen laedt es den aktuellen Modellpreis von models.dev und beruecksichtigt
   kontextabhaengige Preisstufen. Geladen wird es ueber `tui.json` (`./plugins/token-cost-sidebar`).
 

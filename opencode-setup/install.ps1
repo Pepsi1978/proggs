@@ -73,6 +73,20 @@ if ($plugins) { $plugins | Copy-Item -Destination (Join-Path $Dst 'plugins') -Fo
 $pluginDirs = Get-ChildItem (Join-Path $Src 'plugins') -Directory -ErrorAction SilentlyContinue
 if ($pluginDirs) { $pluginDirs | Copy-Item -Destination (Join-Path $Dst 'plugins') -Recurse -Force; Ok 'plugins/*/ (TUI-Plugin-Pakete)' } else { Warn 'keine plugins/*/' }
 
+# Entfernt die mit Plugin 1.1.0 ausgelieferten Theme-Duplikate. Seit 1.2.0 nutzt das Dropdown
+# ausschliesslich die eingebauten OpenCode-Themes.
+$obsoleteThemes = @(
+  (Join-Path $Dst 'themes\frank-dark.json'),
+  (Join-Path $Dst 'themes\frank-light.json'),
+  (Join-Path $Dst 'plugins\token-cost-sidebar\themes\frank-dark.json'),
+  (Join-Path $Dst 'plugins\token-cost-sidebar\themes\frank-light.json')
+)
+$obsoleteThemes | Remove-Item -Force -ErrorAction SilentlyContinue
+$obsoletePluginThemeDir = Join-Path $Dst 'plugins\token-cost-sidebar\themes'
+if ((Test-Path $obsoletePluginThemeDir) -and -not (Get-ChildItem $obsoletePluginThemeDir -Force)) {
+  Remove-Item $obsoletePluginThemeDir -Force
+}
+
 $npm = Get-Command npm -ErrorAction SilentlyContinue
 if ($npm) {
   Push-Location $Dst
