@@ -61,6 +61,7 @@ VERSION = "0.11.1 (08.07.2026, 15:04 Uhr)"  # Prompt-JSON im Interview-System es
 VERSION = "0.11.4 (10.07.2026, 19:01 Uhr)"  # 0.11.4: Eigene Aufgaben markieren gekuerzte Eintragsauszuege sichtbar und blockieren Update-/Merge-Aktionen, wenn der Zieltext nur gekuerzt vorlag. Alt: 0.11.3.
 VERSION = "0.11.5 (10.07.2026, 19:38 Uhr)"  # 0.11.5: Additive Kategorie-Aktionen lesen den Bestand gezielt per GET /entry/categories?doc_id=... statt per /list- und /by-category-Scans. Alt: 0.11.4.
 VERSION = "0.12.0 (10.07.2026, 21:17 Uhr)"  # 0.12.0 (Level-2 Gruppe A, Punkt 1 — Frank-Freigabe 2026-07-10): NEU Standard-Nachtaufgabe GEDAECHTNIS-BEFOERDERUNG (zweite AUTO-Aufgabe neben Nachzuegler, laeuft ZUERST): ruft brain-api POST /layer/promote und befoerdert bewaehrte Kurzzeit-Eintraege (aelter als befoerderung_min_age_days, Default 14) ins Langzeitgedaechtnis. Deterministisch, KEIN LLM, inhaltsneutral — es wird NUR das layer-Etikett gesetzt, Text/Vektor/Kategorien bleiben 1:1 (Franks Vorgabe: nie Eintraege veraendern). Eigene Bilanz-Zeile (auch: nichts faellig) + report.auto.befoerderung (Anzahl + Titel) fuer den Morgen-Report. Toggle erscheint automatisch in den Einstellungen (standard_tasks dynamisch). Alt: 0.11.5.
+VERSION = "0.13.0 (10.07.2026, 22:12 Uhr)"  # 0.13.0 (Level-2 Gruppe A, Punkt 6 — Frank-Freigabe 2026-07-10): NEU Standard-Nachtaufgabe EPISODEN-DESTILLATION (DISTILL_SYSTEM + _task_destillation, laeuft nach dem Luecken-Detektor): destilliert aus den Gespraechen der letzten 14 Tage max 3 DAUERHAFTE Fakten-Kandidaten (nur woertlich von Frank Gesagtes, mit Kurz-Beleg; keine Tageszustaende). Jeder Kandidat wird semantisch gegen den Bestand dedupliziert (>=0.66 Aehnlichkeit als Nicht-Gespraechs-Eintrag -> kein Vorschlag) und landet als Ja/Nein-Fund im Morgen-Report — gespeichert wird ERST nach Franks Ja (Aktionstyp neu, source=librarian, layer=kurzzeit; Originale bleiben 1:1). Eigene Bilanz-Zeile. Alt: 0.12.0.
 AGENT_URL = os.getenv("AGENT_URL", "http://agent:8002").rstrip("/")   # LLM-Durchgriff fuer Codex/GPT (agent 0.52.0)
 # Stille Notbremse gegen Endlosschleifen, wenn 'Ohne Begrenzung' aktiv ist (Almanach ai-agent §2.1:
 # ein Cap muss STOPPEN koennen). 5000 Calls erreicht ehrliche Nacht-Arbeit nie — nur ein Amoklauf.
@@ -206,6 +207,8 @@ STANDARD_TASKS: dict[str, dict] = {
                 "desc": "Wonach Frank oft fragt, ohne dass etwas gespeichert ist → Anlege-Vorschlag."},
     "verdichtung": {"name": "Logbuch-Verdichtung", "nr": "14",
                     "desc": "Alte Gesprächs-Monate zu einer Monats-Zusammenfassung verdichten (Originale bleiben 1:1)."},
+    "destillation": {"name": "Episoden-Destillation", "nr": "6",
+                     "desc": "Aus den letzten Gesprächen dauerhafte Fakten herausdestillieren → Vorschlag im Morgen-Report; gespeichert wird erst nach deinem Ja."},
     "friction": {"name": "Reibungs-Detektor", "nr": "33",
                  "desc": "Wiederkehrende Fehlversuche/Korrekturen aus den Programmier-Session-Protokollen erkennen → Verbesserungs-Merkzettel vorschlagen."},
 }
@@ -689,6 +692,20 @@ Frank noch ergaenzen sollte. Beginne mit der Zeile:
 [Vom Nachtschicht-Bibliothekar angelegt — bitte ergaenzen]
 {_UNTRUSTED}
 Antworte NUR mit diesem JSON: {{"titel":"...","text":"..."}}"""
+
+DISTILL_SYSTEM = f"""Du bist der Nachtschicht-Bibliothekar eines persoenlichen Gedaechtnisses.
+Du bekommst Auszuege aus den letzten Gespraechen des Besitzers (Frank) mit seinem Gedaechtnis-Agenten
+(episodische Spur). Destilliere daraus maximal 3 DAUERHAFTE FAKTEN ueber Frank (semantisches Wissen),
+die ueber den Gespraechsmoment hinaus gelten: Vorlieben, Besitz, Personen, Orte, Gewohnheiten,
+getroffene Entscheidungen, gesundheitliche Dauerthemen.
+STRENGE Regeln:
+- NUR Fakten, die Frank SELBST gesagt hat — nichts erschliessen, nichts erfinden.
+- KEINE fluechtigen Tageszustaende ('war heute muede'), KEINE Aufgaben/Termine, KEINE Web-Inhalte.
+- Formuliere jeden Fakt wortnah in 1-3 kurzen Saetzen, mit woertlichem Kurz-Beleg aus dem Gespraech.
+- Lieber 0 Funde als ein wackliger.
+{_UNTRUSTED}
+Antworte NUR mit diesem JSON:
+{{"fakten":[{{"titel":"kurzer Eintrags-Titel","fakt":"der Fakt in 1-3 Saetzen","kategorie":"passende bestehende Kategorie oder 'Persönlich'","beleg":"woertliches Kurzzitat","begruendung":"1 Satz — warum dauerhaft"}}]}}"""
 
 CONDENSE_SYSTEM = f"""Du bist der Nachtschicht-Bibliothekar. Verdichte die mitgelieferten
 Gespraechs-Protokolle EINES Monats zu einer Monats-Zusammenfassung in leichtem Deutsch:
@@ -1330,6 +1347,66 @@ def _task_luecken(cfg: dict, st: dict, budget: NightBudget, entries: dict, repor
     checkpoint("luecken", "Wissens-Luecken-Analyse gelaufen", ok=True, funde=found)
 
 
+def _task_destillation(cfg: dict, st: dict, budget: NightBudget, entries: dict, report: dict) -> None:
+    """Level-2 #6: Episoden -> Fakten. Destilliert aus den letzten Gespraechen (episodische Spur)
+    dauerhafte Fakten-KANDIDATEN (semantische Spur). NIE automatisch gespeichert: jeder Kandidat
+    wird ein Morgen-Report-Fund mit Ja/Nein — erst Franks Ja legt den Eintrag an (source=librarian,
+    layer=kurzzeit). Die Original-Gespraeche bleiben 1:1 erhalten (zusaetzliche Ebene)."""
+    convs = [(did, e) for did, e in entries.items() if _is_conv(e) and e.get("text")]
+    convs.sort(key=lambda x: x[1].get("created_at") or "", reverse=True)
+    cutoff = (datetime.now(TZ) - timedelta(days=14)).strftime("%Y-%m-%d")
+    recent = [(did, e) for did, e in convs if (e.get("created_at") or "") >= cutoff][:20]
+    if not recent or not budget.take():
+        report["zahlen"]["destillation"] = 0
+        return
+    corpus = "\n\n---\n\n".join(_excerpt(e["text"], 1500) for _, e in recent)[:35000]
+    try:
+        verdict = json.loads(_extract_json(llm(_with_rules(_with_task_override(DISTILL_SYSTEM, cfg, "destillation")),
+                                               f"Gespräche der letzten Zeit:\n\n{corpus}",
+                                               model=cfg["model"], max_tokens=1200)))
+    except Exception:  # noqa: BLE001
+        _log(logging.WARNING, "Destillation fehlgeschlagen", exc_info=True)
+        report["zahlen"]["destillation"] = 0
+        return
+    found = 0
+    for f in (verdict.get("fakten") or [])[:3]:
+        if not isinstance(f, dict):
+            continue
+        fakt = (f.get("fakt") or "").strip()
+        titel = (f.get("titel") or "").strip()[:200]
+        if len(fakt) < 10 or len(titel) < 3:
+            continue
+        key = f"dst:{re.sub(r'[^a-z0-9]+', '-', titel.casefold())[:60]}"
+        if _finding_blocked(st, key):
+            continue
+        # Dedup gegen den Bestand: gibt es den Fakt (semantisch) schon als NICHT-Gespraechs-Eintrag?
+        try:
+            hits = brain_search(fakt, limit=3)
+        except Exception:  # noqa: BLE001
+            hits = []
+        best = max((float(h.get("score", 0)) for h in hits
+                    if not _is_conv({"category": h.get("category")})), default=0.0)
+        if best >= 0.66:
+            continue   # steht schon (aehnlich genug) im semantischen Wissen
+        kategorie = (f.get("kategorie") or "Persönlich").strip() or "Persönlich"
+        beleg = (f.get("beleg") or "").strip()
+        text = fakt + (f"\n\n[Beleg aus dem Gespräch: „{beleg}“ — vom Nachtschicht-Bibliothekar destilliert]" if beleg else
+                       "\n\n[Vom Nachtschicht-Bibliothekar aus den Gesprächen destilliert]")
+        item = _new_item("destillation", key,
+                         f"Dauerhafter Fakt: „{titel}“",
+                         (f.get("begruendung") or "Aus den letzten Gesprächen destilliert.")
+                         + (f" Beleg: „{_excerpt(beleg, 160)}“" if beleg else ""),
+                         f"Als Eintrag „{titel}“ unter „{kategorie}“ speichern — die Original-Gespräche bleiben unverändert.",
+                         {"typ": "neu", "titel": titel, "kategorie": kategorie, "text": text},
+                         [{"doc_id": "", "titel": titel, "kategorie": kategorie, "auszug": _excerpt(text, 400)}],
+                         ja_label="Fakt speichern", nein_label="Nicht speichern")
+        report["items"].append(item)
+        _mark_finding(st, key, "offen")
+        found += 1
+    report["zahlen"]["destillation"] = found
+    checkpoint("destillation", "Episoden-zu-Fakten-Destillation gelaufen", ok=True, funde=found)
+
+
 def _task_verdichtung(cfg: dict, st: dict, budget: NightBudget, entries: dict, report: dict) -> None:
     done_months = set(st.setdefault("summarized_months", []))
     by_month: dict[str, list[dict]] = {}
@@ -1567,6 +1644,7 @@ def _run_night(manual: bool) -> None:
             ("veraltet", _task_veraltet),
             ("kategorien", _task_kategorien),
             ("luecken", _task_luecken),
+            ("destillation", _task_destillation),   # Level-2 #6: Episoden -> Fakten (nur Vorschlaege)
             ("verdichtung", _task_verdichtung),
             ("friction", _task_friction),   # D33: NACH allem — die Session-Protokolle liegen dann frisch vor
         ]
@@ -1626,6 +1704,7 @@ def _run_night(manual: bool) -> None:
             ("veraltet", "Veraltet-Erkennung", "nichts Veraltetes gefunden"),
             ("kategorien", "Kategorien-Gärtner", "keine Kategorie-Vorschläge nötig"),
             ("luecken", "Wissens-Lücken-Detektor", "keine Wissens-Lücken erkannt"),
+            ("destillation", "Episoden-Destillation", "kein neuer dauerhafter Fakt in den letzten Gesprächen gefunden"),
             ("verdichtung", "Logbuch-Verdichtung", "kein Monat zum Verdichten fällig"),
             ("friction", "Reibungs-Detektor", "keine wiederkehrende Reibung in den Session-Protokollen erkannt"),
         ):

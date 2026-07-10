@@ -1,7 +1,15 @@
 {
-	"stand": "10.07.2026, 22:00 Uhr",
+	"stand": "10.07.2026, 22:12 Uhr",
 	"hinweis": "PFLEGE-PFLICHT: Bei JEDEM Deploy, der ein neues System/Feature einbaut, hier einen Eintrag ERGÄNZEN (neueste zuerst). SCHREIBWEISE (Dauer-Regel): leichtes, verständliches Deutsch, kurze Sätze; ALLE Fachbegriffe, Namen und Zahlen (z.B. BM25, RRF, Qdrant, ENV-Variablen, Endpunkt-Namen) BEHALTEN, aber jeden in einem kurzen Halbsatz erklären — NIE durch Weglassen vereinfachen; kompakt halten (der Hauptagent liest über das Werkzeug 'was_kann_cortex' ALLE Einträge auf einmal ein), aber vollständig genug, dass man erkennt WAS eingebaut wurde; einfache Überschrift. Ähnliche/redundante Einträge dürfen zusammengefasst werden — Datum sekundär, entscheidend ist WAS Cortex kann. Quelle des Info-Bereichs in den Dashboard-Einstellungen (GET /api/features). Verankert in DEPLOY.md.",
 	"features": [
+		{
+			"id": "episoden-destillation",
+			"eingebaut": "10.07.2026, 22:12 Uhr",
+			"dienst": "librarian 0.13.0 + dashboard 0.72.0",
+			"name": "Episoden-Destillation: aus Gesprächen werden Fakten-Vorschläge",
+			"kurz": "Der Nachtschicht-Bibliothekar destilliert aus den letzten Gesprächen dauerhafte Fakten über Frank und legt sie als Ja/Nein-Vorschläge in den Morgen-Report. Gespeichert wird ERST nach Franks Ja — die Original-Gespräche bleiben unverändert.",
+			"erklaerung": "Das Gehirn hat zwei Spuren: die episodische (wortgetreue Gespräche/Logbücher) und die semantische (dauerhafte Fakten). Die neue Standard-Nachtaufgabe 'Episoden-Destillation' baut die Brücke — wie die Schlaf-Konsolidierung beim Menschen: Der Bibliothekar liest die Gespräche der letzten 14 Tage und destilliert maximal 3 dauerhafte Fakten-Kandidaten (Vorlieben, Besitz, Personen, Gewohnheiten, Entscheidungen). Strenge Regeln: nur wörtlich von Frank Gesagtes, mit wörtlichem Kurz-Beleg aus dem Gespräch, keine flüchtigen Tageszustände, lieber 0 Funde als ein wackliger. Jeder Kandidat wird per semantischer Suche gegen den Bestand geprüft (ab 66 Prozent Ähnlichkeit zu einem bestehenden Fakten-Eintrag: kein Vorschlag — keine Dubletten). Die Kandidaten erscheinen als Funde im Morgen-Report mit den Knöpfen 'Fakt speichern' / 'Nicht speichern' — NIE wird automatisch gespeichert (Franks Vorgabe). Sagt Frank Ja, wird der Fakt als neuer Eintrag angelegt (Herkunft librarian, Ebene Kurzzeitgedächtnis) und trägt den Beleg im Text; die Original-Gespräche bleiben 1:1 erhalten."
+		},
 		{
 			"id": "bi-temporale-fakten",
 			"eingebaut": "10.07.2026, 22:00 Uhr",
