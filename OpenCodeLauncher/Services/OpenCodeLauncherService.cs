@@ -561,8 +561,21 @@ try {
 
     private static string BuildOpenCodeCommand(string modelString, string? thinkingLevel)
     {
-        // Der interaktive TUI-Start akzeptiert kein --variant; Thinking wird vorab in opencode.json(c) geschrieben.
-        return $"opencode -m '{EscapePowerShellSingleQuotedValue(modelString)}'";
+        var executable = ResolveOpenCodeExecutable();
+        var command = Path.IsPathFullyQualified(executable)
+            ? $"& '{EscapePowerShellSingleQuotedValue(executable)}'"
+            : executable;
+        var variant = Path.IsPathFullyQualified(executable) && !string.IsNullOrWhiteSpace(thinkingLevel)
+            ? $" --variant '{EscapePowerShellSingleQuotedValue(thinkingLevel)}'"
+            : string.Empty;
+        return $"{command} -m '{EscapePowerShellSingleQuotedValue(modelString)}'{variant}";
+    }
+
+    private static string ResolveOpenCodeExecutable()
+    {
+        var home = Environment.GetFolderPath(Environment.SpecialFolder.UserProfile);
+        var custom = Path.Combine(home, ".local", "share", "opencode-mousefix", "opencode.exe");
+        return File.Exists(custom) ? custom : "opencode";
     }
 
     private static string? NormalizeThinkingLevel(string? thinkingLevel) => string.IsNullOrWhiteSpace(thinkingLevel)
