@@ -4,7 +4,7 @@
 #
 # Kopiert ALLES aus opencode-setup/ an seinen Platz unter ~/.config/opencode/, sodass OpenCode
 # auf einem frischen Rechner 1:1 dieselbe Umgebung hat: globale Config, globale Regeln (AGENTS.md),
-# globale Agents, lokale Plugins, Notifier-Sounds. Danach folgt ein Voraussetzungs-Check
+# globale Agents, lokale Plugins, TUI-Plugin-Dependencies, Notifier-Sounds. Danach folgt ein Voraussetzungs-Check
 # (SK-Keys, OPENROUTER_API_KEY, WireGuard/Second-Brain, opencode-Auth) mit klarer TODO-Liste.
 #
 # Voraussetzung: OpenCode-CLI ist bereits installiert (siehe README, Schritt 1).
@@ -50,6 +50,10 @@ backup "$DST/opencode.jsonc"
 sed 's/"shell": "pwsh"/"shell": "bash"/' "$SRC/opencode.jsonc" > "$DST/opencode.jsonc"
 green "OK  opencode.jsonc (shell=bash)"
 
+backup "$DST/tui.json"
+cp "$SRC/tui.json" "$DST/tui.json"
+green "OK  tui.json (TUI-Plugins)"
+
 # --- 3) Globale Regeln, Agents, Plugins ---
 backup "$DST/AGENTS.md"
 cp "$SRC/AGENTS-global.md" "$DST/AGENTS.md"
@@ -57,6 +61,16 @@ green "OK  AGENTS.md (globale Regeln)"
 
 if cp "$SRC/agents/"*.md "$DST/agents/" 2>/dev/null; then green "OK  agents/"; else yellow "--  keine agents/*.md"; fi
 if cp "$SRC/plugins/"*.js "$DST/plugins/" 2>/dev/null; then green "OK  plugins/ (inkl. tool-first-guard)"; else yellow "--  keine plugins/*.js"; fi
+if find "$SRC/plugins" -mindepth 1 -maxdepth 1 -type d -exec cp -R {} "$DST/plugins/" \; 2>/dev/null; then green "OK  plugins/*/ (TUI-Plugin-Pakete)"; else yellow "--  keine plugins/*/"; fi
+if command -v npm >/dev/null 2>&1; then
+  if (cd "$DST" && npm install --silent '@opencode-ai/plugin@1.17.7' '@opentui/core@0.3.4' '@opentui/solid@0.4.0' 'solid-js@1.9.12'); then
+    green "OK  TUI-Plugin-Dependencies (npm)"
+  else
+    yellow "--  TUI-Plugin-Dependencies konnten nicht installiert werden"
+  fi
+else
+  yellow "--  npm nicht gefunden -> TUI-Plugin-Dependencies manuell in ~/.config/opencode installieren"
+fi
 if cp -R "$SRC/skill/"* "$DST/skill/" 2>/dev/null; then green "OK  skill/ (OpenCode-Skills, z.B. session-opencode)"; else yellow "--  keine skill/*"; fi
 
 # --- 4) Notifier-Sounds + Config (Pfade lokal erzeugen, NICHT die Windows-Pfade kopieren) ---

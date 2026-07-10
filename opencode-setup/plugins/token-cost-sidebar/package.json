@@ -1,0 +1,21 @@
+{
+  "name": "frank-token-cost-sidebar",
+  "version": "1.0.0",
+  "description": "Local OpenCode TUI sidebar plugin showing current model, token totals, and EUR cost.",
+  "type": "module",
+  "exports": {
+    "./tui": "./dist/tui.tsx"
+  },
+  "files": [
+    "dist"
+  ],
+  "engines": {
+    "opencode": ">=1.4.3"
+  },
+  "dependencies": {
+    "@opencode-ai/plugin": "^1.17.7",
+    "@opentui/core": "^0.3.4",
+    "@opentui/solid": "^0.4.0",
+    "solid-js": "^1.9.12"
+  }
+}

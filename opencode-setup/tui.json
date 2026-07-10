@@ -1,0 +1,6 @@
+{
+  "plugin": [
+    "@tarquinen/opencode-dcp@latest",
+    "./plugins/token-cost-sidebar"
+  ]
+}

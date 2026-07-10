@@ -17,7 +17,8 @@
 | 1. Globale Regeln | `~/.config/opencode/AGENTS.md` | nein (lokal) | **`AGENTS-global.md`** | ja |
 | 2. Globale Config | `~/.config/opencode/opencode.jsonc` | nein (lokal) | **`opencode.jsonc`** | ja (shell angepasst) |
 | 2b. Globale Agents | `~/.config/opencode/agents/*.md` | nein (lokal) | **`agents/`** (z.B. `researcher.md`) | ja |
-| 2c. Globale Plugins | `~/.config/opencode/plugins/*.js` | nein (lokal) | **`plugins/`** (z.B. `tool-first-guard.js`) | ja |
+| 2c. Globale Plugins | `~/.config/opencode/plugins/*.js` + Plugin-Pakete | nein (lokal) | **`plugins/`** (z.B. `tool-first-guard.js`, `token-cost-sidebar/`) | ja |
+| 2c1. TUI-Plugin-Liste | `~/.config/opencode/tui.json` | nein (lokal) | **`tui.json`** | ja |
 | 2c2. Globale Skills | `~/.config/opencode/skill/<name>/SKILL.md` | nein (lokal) | **`skill/`** (z.B. `session-opencode`) | ja |
 | 2d. Notifier-Sounds | `~/.config/opencode/sounds/*.wav` | nein (lokal) | **`sounds/`** (complete/error/permission) | ja |
 | 2e. Notifier-Config | `~/.config/opencode/opencode-notifier.json` | nein (lokal) | — (Installer **generiert** sie mit lokalen Pfaden) | ja (erzeugt) |
@@ -110,8 +111,8 @@ installiert OpenCode beim Start selbst aus der `plugin`-Liste.
 
 1. Prueft, ob `opencode` im PATH ist (nur Hinweis, kein Abbruch).
 2. Legt `~/.config/opencode/{agents,plugins,sounds}` an und sichert vorhandene Dateien nach `.backup-<zeit>/`.
-3. Kopiert `opencode.jsonc` — auf **macOS/Linux** wird `"shell": "pwsh"` → `"bash"` ersetzt; auf **Windows** bleibt `pwsh`.
-4. Kopiert `AGENTS-global.md` → `AGENTS.md`, alle `agents/*.md`, alle `plugins/*.js`, alle `sounds/*.wav`, alle `skill/<name>/SKILL.md` (OpenCode-Skills wie `session-opencode`).
+3. Kopiert `opencode.jsonc` — auf **macOS/Linux** wird `"shell": "pwsh"` → `"bash"` ersetzt; auf **Windows** bleibt `pwsh`; kopiert außerdem `tui.json` fuer TUI-Plugins.
+4. Kopiert `AGENTS-global.md` → `AGENTS.md`, alle `agents/*.md`, alle `plugins/*.js`, Plugin-Paket-Verzeichnisse, installiert die TUI-Plugin-Dependencies per `npm`, alle `sounds/*.wav`, alle `skill/<name>/SKILL.md` (OpenCode-Skills wie `session-opencode`).
 5. **Erzeugt** `opencode-notifier.json` neu mit den korrekten lokalen Sound-Pfaden (Windows BOM-frei) —
    die Repo-Variante haette feste Windows-Pfade, die auf macOS brechen.
 6. Voraussetzungs-Check (SK-Keys, `OPENROUTER_API_KEY`, WireGuard `10.8.0.1`) + TODO-Liste.
@@ -124,14 +125,21 @@ installiert OpenCode beim Start selbst aus der `plugin`-Liste.
   Code durch: warnt (Log), wenn eine bestehende Datei mit `edit`/`patch` geaendert wird, ohne sie
   vorher mit `read` gelesen zu haben. Mit `OPENCODE_TOOL_FIRST_ENFORCE=1` blockt es hart statt zu
   warnen ("Laws"-Ebene). Hintergrund: `best-practices/agents/anti-halluzination-regeln.md` §1+§7.
+- **`token-cost-sidebar/`** — lokales TUI-Plugin fuer die rechte Seitenleiste. Zeigt aktuelles Modell,
+  Input-/Output-Tokens, optionale Cache-/Reasoning-Tokens und Kosten in Euro. Es bevorzugt die von
+  OpenCode gespeicherte echte `cost`; wenn diese fehlt, rechnet es aus den Modellpreisen der
+  OpenCode-/models.dev-Metadaten. Geladen wird es ueber `tui.json` (`./plugins/token-cost-sidebar`).
 
 ## Manueller Weg (Fallback, falls das Skript nicht passt)
 ```sh
 mkdir -p ~/.config/opencode/agents ~/.config/opencode/plugins ~/.config/opencode/sounds
 cp ~/proggs/opencode-setup/opencode.jsonc   ~/.config/opencode/opencode.jsonc   # macOS: shell auf "bash" aendern
+cp ~/proggs/opencode-setup/tui.json          ~/.config/opencode/tui.json
 cp ~/proggs/opencode-setup/AGENTS-global.md ~/.config/opencode/AGENTS.md
 cp ~/proggs/opencode-setup/agents/*.md      ~/.config/opencode/agents/
 cp ~/proggs/opencode-setup/plugins/*.js     ~/.config/opencode/plugins/
+cp -R ~/proggs/opencode-setup/plugins/token-cost-sidebar ~/.config/opencode/plugins/
+npm --prefix ~/.config/opencode install @opencode-ai/plugin@1.17.7 @opentui/core@0.3.4 @opentui/solid@0.4.0 solid-js@1.9.12
 cp ~/proggs/opencode-setup/sounds/*.wav     ~/.config/opencode/sounds/
 # opencode-notifier.json mit lokalen Pfaden von Hand anlegen (siehe install-Skript als Vorlage)
 ```

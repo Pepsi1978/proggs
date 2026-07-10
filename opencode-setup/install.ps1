@@ -2,7 +2,7 @@
 #
 # Kopiert ALLES aus opencode-setup\ an seinen Platz unter %USERPROFILE%\.config\opencode\, sodass
 # OpenCode auf einem frischen Rechner 1:1 dieselbe Umgebung hat: globale Config, globale Regeln
-# (AGENTS.md), globale Agents, lokale Plugins, Notifier-Sounds. Danach ein Voraussetzungs-Check
+# (AGENTS.md), globale Agents, lokale Plugins, TUI-Plugin-Dependencies, Notifier-Sounds. Danach ein Voraussetzungs-Check
 # (SK-Keys, OPENROUTER_API_KEY, WireGuard/Second-Brain, opencode-Auth) mit klarer TODO-Liste.
 #
 # Voraussetzung: OpenCode-CLI ist bereits installiert (siehe README, Schritt 1).
@@ -55,6 +55,10 @@ Backup (Join-Path $Dst 'opencode.jsonc')
 Copy-Item (Join-Path $Src 'opencode.jsonc') (Join-Path $Dst 'opencode.jsonc') -Force
 Ok 'opencode.jsonc (shell=pwsh)'
 
+Backup (Join-Path $Dst 'tui.json')
+Copy-Item (Join-Path $Src 'tui.json') (Join-Path $Dst 'tui.json') -Force
+Ok 'tui.json (TUI-Plugins)'
+
 # --- 3) Globale Regeln, Agents, Plugins ---
 Backup (Join-Path $Dst 'AGENTS.md')
 Copy-Item (Join-Path $Src 'AGENTS-global.md') (Join-Path $Dst 'AGENTS.md') -Force
@@ -65,6 +69,22 @@ if ($agents) { $agents | Copy-Item -Destination (Join-Path $Dst 'agents') -Force
 
 $plugins = Get-ChildItem (Join-Path $Src 'plugins') -Filter *.js -ErrorAction SilentlyContinue
 if ($plugins) { $plugins | Copy-Item -Destination (Join-Path $Dst 'plugins') -Force; Ok 'plugins/ (inkl. tool-first-guard)' } else { Warn 'keine plugins/*.js' }
+
+$pluginDirs = Get-ChildItem (Join-Path $Src 'plugins') -Directory -ErrorAction SilentlyContinue
+if ($pluginDirs) { $pluginDirs | Copy-Item -Destination (Join-Path $Dst 'plugins') -Recurse -Force; Ok 'plugins/*/ (TUI-Plugin-Pakete)' } else { Warn 'keine plugins/*/' }
+
+$npm = Get-Command npm -ErrorAction SilentlyContinue
+if ($npm) {
+  Push-Location $Dst
+  try {
+    & npm install --silent '@opencode-ai/plugin@1.17.7' '@opentui/core@0.3.4' '@opentui/solid@0.4.0' 'solid-js@1.9.12' | Out-Null
+    if ($LASTEXITCODE -eq 0) { Ok 'TUI-Plugin-Dependencies (npm)' } else { Warn 'TUI-Plugin-Dependencies konnten nicht installiert werden' }
+  } finally {
+    Pop-Location
+  }
+} else {
+  Warn 'npm nicht gefunden -> TUI-Plugin-Dependencies manuell in ~/.config/opencode installieren'
+}
 
 $skills = Get-ChildItem (Join-Path $Src 'skill') -Directory -ErrorAction SilentlyContinue
 if ($skills) { $skills | Copy-Item -Destination (Join-Path $Dst 'skill') -Recurse -Force; Ok 'skill/ (OpenCode-Skills, z.B. session-opencode)' } else { Warn 'keine skill/*' }
