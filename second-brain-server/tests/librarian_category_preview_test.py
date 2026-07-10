@@ -64,6 +64,9 @@ def main() -> int:
           "brain-api stellt den gezielten read-only Endpunkt bereit")
     check('limit=1, with_payload=["doc_id", "category", "categories", "parent", "parents"]' in brain_source,
           "brain-api liest genau einen Chunk und keine Volltexte")
+    check('checkpoint("get_entry_categories"' in brain_source
+          and 'ms=int((time.perf_counter() - t0) * 1000)' in brain_source,
+          "brain-api protokolliert die gesamte Endpoint-Antwortzeit dauerhaft in Millisekunden")
 
     source = INDEX_PATH.read_text(encoding="utf-8")
     check("<b>Vorher</b>" in source and "<b>Nachher</b>" in source,
