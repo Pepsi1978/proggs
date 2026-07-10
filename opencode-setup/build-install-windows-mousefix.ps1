@@ -212,5 +212,5 @@ catch {
     throw
 }
 finally {
-    $lock?.Dispose()
+    if ($null -ne $lock) { $lock.Dispose() }
 }
