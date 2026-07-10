@@ -2,12 +2,29 @@
 # ZWEISTUFIGER Reconnect (Direktive #3, Defense in Depth, seit 2026-06-25 - zwei unabhaengige Wege):
 #  1) Aufgabe "WG-Drive-Mount" NICHT-erhoeht (Limited) -> PRIMAERER, im Explorer SICHTBARER Mapping-Weg (wg-drive-mount.ps1).
 #  2) Aufgabe "WG-Drive-Reconnect" ERHOEHT (Highest) -> WireGuard-Dienst sicherstellen + EnableLinkedConnections + Backup-Mapping.
-#  3) WireGuard-Tunnel-Dienst Auto-Wiederherstellung setzen (Neustart bei Boot-Fehler nach 5s/30s/60s).
+#  3) Cortex-SSH-Schluessel-ACL idempotent setzen und per BatchMode testen (wenn der Schluessel vorhanden ist).
+#  4) WireGuard-Tunnel-Dienst Auto-Wiederherstellung setzen (Neustart bei Boot-Fehler nach 5s/30s/60s).
 # Schreibt das Ergebnis nach %LOCALAPPDATA%\wg-setup-result.txt (zur Kontrolle, kein Fenster noetig).
 $ErrorActionPreference = 'Continue'
 $res = Join-Path $env:LOCALAPPDATA 'wg-setup-result.txt'
 function R($m) { $m | Out-File -FilePath $res -Append -Encoding utf8 }
 "--- WG-Setup $(Get-Date -Format 'yyyy-MM-dd HH:mm:ss') ---" | Out-File -FilePath $res -Encoding utf8
+
+# Private Cortex-Schluessel duerfen unter Windows keine geerbten Gruppen-Leserechte behalten.
+# Das dedizierte Skript setzt exakt Benutzer + SYSTEM + Administratoren und prueft echten SSH-Zugriff.
+$aclSetup = Join-Path $PSScriptRoot 'set-cortex-ssh-key-acl.ps1'
+$cortexKey = Join-Path $HOME 'SK\second-brain\id_ed25519'
+if ((Test-Path -LiteralPath $aclSetup -PathType Leaf) -and
+    (Test-Path -LiteralPath $cortexKey -PathType Leaf)) {
+    try {
+        & $aclSetup -KeyPath $cortexKey 2>&1 | ForEach-Object { R ("SSH-ACL: " + $_) }
+        R "Cortex-SSH-Schluessel-ACL eingerichtet und getestet"
+    } catch {
+        R ("Cortex-SSH-Schluessel-ACL FEHLER: " + $_.Exception.Message)
+    }
+} else {
+    R ("Cortex-SSH-Schluessel-ACL uebersprungen: Skript oder Schluessel fehlt (" + $cortexKey + ")")
+}
 
 # Rechner-/Benutzerkonto und Tunnel-Dienstname DYNAMISCH ermitteln (kein hartcodiertes POWER-PC\barwa /
 # WireGuardTunnel$pc mehr) - laeuft so unveraendert auf jedem Windows-Client. Auf dem Haupt-PC ergeben

@@ -40,8 +40,12 @@ ssh-keygen -t ed25519 -f "$env:USERPROFILE\SK\second-brain\id_cortex" -C "cortex
 # (Bei "Passphrase" einfach Enter drücken für passwortlos.)
 # Öffentlichen Schlüssel auf den Server bringen (einmalig, fragt nach dem Server-Passwort):
 type "$env:USERPROFILE\SK\second-brain\id_cortex.pub" | ssh ROOT@SERVER_IP "mkdir -p ~/.ssh && cat >> ~/.ssh/authorized_keys"
+# Danach die Windows-ACL idempotent absichern und den echten SSH-Zugriff testen
+pwsh -NoProfile -File .\set-cortex-ssh-key-acl.ps1 `
+  -KeyPath "$env:USERPROFILE\SK\second-brain\id_cortex" -Server SERVER_IP
 ```
-(`ROOT@SERVER_IP` durch deinen echten Nutzer/IP ersetzen.)
+(`ROOT@SERVER_IP` und `SERVER_IP` durch deinen echten Nutzer beziehungsweise die echte IP ersetzen.
+Den Block aus dem `windows`-Ordner des Repos ausführen.)
 
 ### 3. Konfig-Datei `backup.env` anlegen
 Datei: `%USERPROFILE%\SK\second-brain\backup.env` (liegt **außerhalb** des Repos — Secrets-Regel).
