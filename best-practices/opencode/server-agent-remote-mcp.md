@@ -25,7 +25,7 @@
 |---|-------|--------|
 | 1 | **Tunnel zuerst** | WireGuard aktiv pruefen, BEVOR die CLI startet (`ping 10.8.0.1`, `curl http://10.8.0.1:8001/mcp`). API nur ueber VPN → Tunnel = Voraussetzung. |
 | 2 | **URL exakt** | `http://10.8.0.1:8001/mcp` — Host/Port wie in `allowed_hosts`, Pfad `/mcp`, kein DNS-Name. |
-| 3 | **OpenCode-Eintrag** | `type:"remote"`, `enabled:true`; kein Header noetig (Tunnel ist der Kanal). Env-Header (falls je) `{env:VAR}` / `{file:~/SK/...}` (NIE `${...}`); bei API-Key `oauth:false`. |
+| 3 | **OpenCode-Eintrag** | Allgemein `type:"remote"`; unser OpenCode 1.17.18 nutzt wegen Remote-/SSE-HTTP-400 ausnahmsweise `type:"local"` über `mcp-remote@0.1.38 --transport http-only --allow-http --silent`, `timeout:30000`. Kein Header nötig (Tunnel ist der Kanal). |
 | 4 | **Claude-Eintrag** | `claude mcp add --transport http second-brain http://10.8.0.1:8001/mcp --scope user`; NIE `mcp-remote`-stdio. `streamable-http`=Alias fuer `http`. |
 | 5 | **Aufgabenteilung** | Trenne **Leser** (nur `second-brain_recall/get_*/list_memories/brain_health`) von **Schreiber** (zusaetzlich `remember/forget`). Scope „enforced by architecture, not instruction". |
 | 6 | **Server-Operator-Modus** | Eigener Markdown-Agent `~/.config/opencode/agents/<name>.md` (Dateiname=Name), Frontmatter `description`(Pflicht)/`mode`/`model`/`permission`. `permission` statt `tools` (deprecated). |
@@ -49,7 +49,7 @@
 ---
 
 ## §1 — OpenCode-Eintrag sauber konfigurieren `offiziell`
-**Empfohlene Form fuers eigene Gehirn ueber WireGuard** (so steht es in `~/.config/opencode/opencode.jsonc`):
+**Allgemeine Form für Remote-MCP:**
 ```jsonc
 "mcp": {
   "second-brain": {
@@ -59,6 +59,20 @@
   }
 }
 ```
+**Aktive Ausnahme für OpenCode 1.17.18:** Der native Remote-Pfad fällt nach einem sessionlosen GET
+`/mcp` mit HTTP 400 fehlerhaft auf SSE zurück und markiert den MCP als gescheitert. Deshalb steht in
+`~/.config/opencode/opencode.jsonc` und im Repo-Spiegel derzeit:
+```jsonc
+"second-brain": {
+  "type": "local",
+  "command": ["npx.cmd", "-y", "mcp-remote@0.1.38", "http://10.8.0.1:8001/mcp",
+    "--allow-http", "--transport", "http-only", "--silent"],
+  "enabled": true,
+  "timeout": 30000
+}
+```
+- `--allow-http` ist ausschließlich wegen des privaten WireGuard-Kanals vertretbar; nicht für öffentliches
+  Klartext-HTTP verwenden. `--silent` schützt den STDIO-Protokollkanal, `timeout` deckt den npx-Kaltstart ab.
 - **Streamable HTTP, nicht SSE** (SSE hat bekannte OpenCode-Issues). Remote-Server nutzen `url` (String);
   local-Server `command` (Array) — **nie mischen** (opencode.school).
 - **Kein Header noetig**, weil der WireGuard-Tunnel der private Kanal ist. Falls je ein Token gebraucht wird:
@@ -70,6 +84,10 @@
   `enabled:false` ausliefern, pro Entwickler lokal aktivieren.
 - **Diagnose:** `opencode mcp debug` ist nur ein Indiz (zeigt teils faelschlich „failed") — Wahrheit ist
   `/status` in der TUI + ein echter Tool-Aufruf.
+- **Kategorieprotokoll sequenziell:** `get_category_item(index=1)` liefert `total`; danach Index 2 bis
+  `total` einzeln abrufen. Nicht parallelisieren. Unabhängige große `get_by_title`-Abrufe dürfen seit dem
+  produktiv verifizierten sb-mcp-1.3.3-Transportfix begrenzt parallel laufen; das ändert nicht den
+  zustandsabhängigen Kategorie-Workflow.
 
 ## §2 — Claude-Code-Eintrag sauber konfigurieren `offiziell`
 ```bash

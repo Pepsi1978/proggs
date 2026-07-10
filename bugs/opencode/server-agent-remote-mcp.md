@@ -63,11 +63,20 @@
   Bei API-Key-Servern stoert das → `"oauth": false` + Key via `headers`. (Vertieft: `opencode-cli.md` §63.)
 - **`opencode mcp debug` ist irrefuehrend:** zeigt teils „nicht erfolgreich", obwohl das Tool in der TUI
   funktioniert. Verlass dich auf `/status` in der TUI + einen echten Tool-Aufruf, nicht allein auf debug.
-- **Unser sb-mcp braucht KEINEN Header:** `type:"remote"`, `url:"http://10.8.0.1:8001/mcp"`, `enabled:true`
-  — kein `headers`/`oauth` (der WireGuard-Tunnel ist der private Kanal). Genau so steht es in
-  `~/.config/opencode/opencode.jsonc`. Werkzeuge erscheinen als `second-brain_remember`/`_recall`/…
+- **Unser sb-mcp braucht KEINEN Header:** Der WireGuard-Tunnel ist der private Kanal. OpenCode 1.17.18
+  verwendet wegen seines fehlerhaften Remote-/SSE-Fallbacks derzeit ausnahmsweise einen lokalen
+  `type:"local"`-Eintrag mit gepinntem `mcp-remote@0.1.38`, `--transport http-only`, `--allow-http`,
+  `--silent` und `timeout:30000`. Der Proxy zeigt weiterhin auf `http://10.8.0.1:8001/mcp` und braucht
+  keine Header. Die allgemeine `type:"remote"`-Syntax bleibt für nicht betroffene OpenCode-Versionen
+  korrekt. Werkzeuge erscheinen als `second-brain_remember`/`_recall`/…
 **Versionen:** OpenCode 1.17.9 (Syntax `{env:}` stabil). **Quelle:** opencode.ai/docs/mcp-servers ·
 github.com/github/github-mcp-server/issues/1396 (Header-Syntax, `mcp debug` irrefuehrend).
+
+**Kategorie-Abrufe:** `get_category_item` nie auffächern. Index 1 liefert `total`; danach 2 bis `total`
+streng nacheinander abrufen. Ein 15-facher Parallelburst kann lokal zwischen OpenCode-STDIO-Client und
+Proxy hängen, bevor der Server einen Request sieht. Unabhängige Volltextabrufe sind davon getrennt:
+Seit sb-mcp 1.3.3 antwortet der Server zustandslos direkt als JSON und wurde mit drei parallelen großen
+Dokumenten produktiv verifiziert.
 
 ## 2. Claude Code: Remote-MCP-Eintrag in `.mcp.json` startet nicht
 **Symptom:** `/mcp` zeigt `✘ failed`, `/tools` listet nur die eingebauten Tools; Child-Prozess
