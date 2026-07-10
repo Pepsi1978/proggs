@@ -1,4 +1,5 @@
-import { mkdir, readFile, rename, rm, writeFile } from "node:fs/promises"
+import { mkdirSync, renameSync, rmSync, writeFileSync } from "node:fs"
+import { readFile } from "node:fs/promises"
 import { homedir } from "node:os"
 import { join } from "node:path"
 
@@ -33,19 +34,19 @@ export async function readWorkMode(sessionID: string, directory = WORK_MODE_DIRE
   }
 }
 
-export async function writeWorkMode(
+export function writeWorkMode(
   sessionID: string,
   mode: WorkModeId,
   directory = WORK_MODE_DIRECTORY,
-): Promise<void> {
-  await mkdir(directory, { recursive: true })
+): void {
+  mkdirSync(directory, { recursive: true })
   const target = stateFile(sessionID, directory)
   const temporary = `${target}.${process.pid}.${Date.now()}.tmp`
-  await writeFile(temporary, mode, "utf8")
+  writeFileSync(temporary, mode, "utf8")
   try {
-    await rename(temporary, target)
+    renameSync(temporary, target)
   } finally {
-    await rm(temporary, { force: true })
+    rmSync(temporary, { force: true })
   }
 }
 

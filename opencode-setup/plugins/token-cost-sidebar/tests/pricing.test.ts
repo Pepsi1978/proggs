@@ -164,7 +164,7 @@ describe("models.dev pricing", () => {
     const source = await Bun.file(new URL("../dist/tui.tsx", import.meta.url)).text()
     expect(source).toContain("order: 90")
     expect(source).toContain("<WorkModeSelector api={api} sessionID={props.session_id} />")
-    expect(source).toContain("event.button === 0 && void selectMode(item.id)")
+    expect(source).toContain("event.button === 0 && selectMode(item.id)")
     expect(source).toContain("theme().textMuted")
     expect(source).toContain("<text fg={theme().accent}><b>{item.label}</b></text>")
     expect(WORK_MODES.map((mode) => mode.label)).toEqual([
@@ -178,13 +178,34 @@ describe("models.dev pricing", () => {
     const directory = await mkdtemp(join(tmpdir(), "opencode-work-mode-"))
     try {
       expect(await readWorkMode("session-a", directory)).toBe(DEFAULT_WORK_MODE)
-      await writeWorkMode("session-a", "normal", directory)
+      writeWorkMode("session-a", "normal", directory)
       expect(await readWorkMode("session-a", directory)).toBe("normal")
-      await writeWorkMode("session-a", "gruendlich", directory)
+      writeWorkMode("session-a", "gruendlich", directory)
       expect(await readWorkMode("session-a", directory)).toBe("gruendlich")
       expect(await readWorkMode("session-b", directory)).toBe(DEFAULT_WORK_MODE)
       expect(workModeInstruction("normal")).toContain("höchstens zwei")
       expect(workModeInstruction("gruendlich")).toContain("bis alles grün ist")
+    } finally {
+      await rm(directory, { recursive: true, force: true })
+    }
+  })
+
+  test("makes every mode visible to the next model request before the click returns", async () => {
+    const directory = await mkdtemp(join(tmpdir(), "opencode-work-mode-sync-"))
+    try {
+      for (const mode of WORK_MODES) {
+        writeWorkMode("session-sync", mode.id, directory)
+        expect(await readWorkMode("session-sync", directory)).toBe(mode.id)
+        expect(workModeInstruction(mode.id)).toContain(`AKTIVER ARBEITSMODUS: ${mode.label}`)
+      }
+
+      const source = await Bun.file(new URL("../dist/tui.tsx", import.meta.url)).text()
+      expect(source).toContain("const selectMode = (next: WorkModeId) =>")
+      expect(source).toContain("writeWorkMode(props.sessionID, next)")
+      expect(source).toContain("selectionRevision++")
+      expect(source).toContain("if (selectionRevision === revision) setMode(savedMode)")
+      expect(source).not.toContain("if (next === mode()) return")
+      expect(source.indexOf("writeWorkMode(props.sessionID, next)")).toBeLessThan(source.indexOf("setMode(next)"))
     } finally {
       await rm(directory, { recursive: true, force: true })
     }

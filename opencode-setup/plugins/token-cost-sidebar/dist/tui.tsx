@@ -169,10 +169,14 @@ function SidebarClock(props: { api: TuiPluginApi }) {
 function WorkModeSelector(props: { api: TuiPluginApi; sessionID: string }) {
   const [mode, setMode] = createSignal<WorkModeId>(DEFAULT_WORK_MODE)
   const theme = () => props.api.theme.current
+  let selectionRevision = 0
 
   onMount(() => {
+    const revision = selectionRevision
     void readWorkMode(props.sessionID)
-      .then(setMode)
+      .then((savedMode) => {
+        if (selectionRevision === revision) setMode(savedMode)
+      })
       .catch(() => props.api.ui.toast({
         variant: "error",
         title: "Arbeitsmodus",
@@ -180,14 +184,12 @@ function WorkModeSelector(props: { api: TuiPluginApi; sessionID: string }) {
       }))
   })
 
-  const selectMode = async (next: WorkModeId) => {
-    if (next === mode()) return
-    const previous = mode()
-    setMode(next)
+  const selectMode = (next: WorkModeId) => {
     try {
-      await writeWorkMode(props.sessionID, next)
+      writeWorkMode(props.sessionID, next)
+      selectionRevision++
+      setMode(next)
     } catch {
-      setMode(previous)
       props.api.ui.toast({
         variant: "error",
         title: "Arbeitsmodus",
@@ -202,7 +204,7 @@ function WorkModeSelector(props: { api: TuiPluginApi; sessionID: string }) {
         {(item) => {
           const active = () => mode() === item.id
           return (
-            <box onMouseUp={(event) => event.button === 0 && void selectMode(item.id)}>
+            <box onMouseUp={(event) => event.button === 0 && selectMode(item.id)}>
               <Show
                 when={active()}
                 fallback={<text fg={theme().textMuted}>{item.label}</text>}
