@@ -1107,6 +1107,34 @@ async def api_move_entry_category(request: Request) -> dict:
 
 
 # --- Multi-Category: komplette Kategorie-LISTE eines Eintrags setzen (Drawer-Plus) -> Proxy an brain -----
+@app.get("/api/entry/categories")
+def api_get_entry_categories(doc_id: str) -> dict:
+    """Liest die aktuelle Kategorie-Liste eines Eintrags fuer die Bibliothekar-Vorschau."""
+    doc_id = (doc_id or "").strip()
+    if not doc_id:
+        return JSONResponse(status_code=400, content={"ok": False, "detail": "doc_id erforderlich"})
+    try:
+        listing = _bget("/list", user_id=USER_ID, limit=100000)
+        if listing.get("ready") is False:
+            return JSONResponse(status_code=503, content={"ok": False, "detail": "Gehirn lädt noch"})
+        meta = next((item for item in (listing.get("items") or []) if item.get("doc_id") == doc_id), None)
+        if meta is None:
+            return JSONResponse(status_code=404, content={"ok": False, "detail": "Eintrag nicht gefunden"})
+        primary = (meta.get("category") or "").strip()
+        if not primary:
+            return {"ok": True, "doc_id": doc_id, "categories": []}
+        by_category = _bget("/by-category", category=primary, user_id=USER_ID)
+        entry = next((item for item in (by_category.get("items") or []) if item.get("doc_id") == doc_id), None)
+        if entry is None:
+            return JSONResponse(status_code=409, content={"ok": False, "detail": "Kategorienbestand nicht eindeutig lesbar"})
+        categories = [c.strip() for c in (entry.get("categories") or [])
+                      if isinstance(c, str) and c.strip()] or [primary]
+        return {"ok": True, "doc_id": doc_id, "categories": categories}
+    except Exception as e:  # noqa: BLE001
+        _log(logging.WARNING, "Kategorie-Liste fuer Vorschau nicht lesbar", doc_id=doc_id, err=str(e))
+        return JSONResponse(status_code=502, content={"ok": False, "detail": "Kategorien konnten nicht geladen werden"})
+
+
 @app.post("/api/entry/categories")
 async def api_set_entry_categories(request: Request) -> dict:
     """Setzt die VOLLSTAENDIGE Kategorie-Liste eines Eintrags (Multi-Category, hinter dem Drawer-Plus).

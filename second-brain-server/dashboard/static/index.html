@@ -1140,6 +1140,11 @@ button{font-family:inherit;cursor:pointer}
         .lib-cat-chip.on{border-color:var(--accent);color:var(--accent);background:rgba(255,166,87,.13);
           box-shadow:0 0 7px rgba(255,166,87,.28)}
         .lib-cat-chip:not(.on){text-decoration:line-through;opacity:.6}
+        .lib-cat-preview{margin-top:10px;padding:10px 12px;border:1px solid var(--border);border-radius:11px;background:var(--surface)}
+        .lib-cat-preview-row{display:flex;align-items:center;gap:7px;flex-wrap:wrap;margin:4px 0;font-size:12px;color:var(--text-faint)}
+        .lib-cat-preview-row b{min-width:58px;color:var(--text)}
+        .lib-preview-chip{padding:3px 8px;border-radius:8px;border:1px solid var(--border);color:var(--text-dim);background:var(--surface-2)}
+        .lib-preview-chip.new{border-color:var(--accent);color:var(--accent);background:rgba(255,166,87,.13)}
         /* Lernen-Knopf hinten an jedem Fund: grau -> Klick: rot (aktiv) -> gespeichert: gruen */
         .lib-learn{margin-left:auto;padding:8px 15px;border-radius:11px;border:1px solid var(--border);
           background:var(--surface-2);color:var(--text-faint);cursor:pointer;font-size:13px;font-weight:600}
@@ -4528,6 +4533,28 @@ button{font-family:inherit;cursor:pointer}
     return d;
   }
   let libDay=null, libSel={}, libOverrides={}, libNightPoll=null, libProcPoll=null, libIv=[], libIvTask=null;
+  const libCategoryPreviewCache=new Map();
+
+  async function loadLibCategoryPreview(box,it){
+    const docId=((it.aktion||{}).doc_id||"").trim();
+    const proposed=((it.aktion||{}).kategorie||"").trim();
+    if(!docId||!proposed){ box.textContent="Kategorien-Vorschau nicht verfügbar."; return; }
+    try{
+      if(!libCategoryPreviewCache.has(docId)){
+        libCategoryPreviewCache.set(docId, api("/api/entry/categories?doc_id="+encodeURIComponent(docId)));
+      }
+      const data=await libCategoryPreviewCache.get(docId);
+      const before=(data.categories||[]).filter(c=>typeof c==="string"&&c.trim()).map(c=>c.trim());
+      const seen=new Set(before.map(c=>c.toLocaleLowerCase("de-DE")));
+      const after=before.slice();
+      if(!seen.has(proposed.toLocaleLowerCase("de-DE"))) after.push(proposed);
+      const chips=(cats,markNew)=>cats.length
+        ? cats.map(c=>'<span class="lib-preview-chip'+(markNew&&c===proposed&&!seen.has(proposed.toLocaleLowerCase("de-DE"))?' new':'')+'">'+escapeHtml(c)+'</span>').join("")
+        : '<span class="set-desc">ohne Kategorie</span>';
+      box.innerHTML='<div class="lib-cat-preview-row"><b>Vorher</b>'+chips(before,false)+'</div>'
+        +'<div class="lib-cat-preview-row"><b>Nachher</b>'+chips(after,true)+'</div>';
+    }catch(e){ box.textContent="Kategorien-Vorschau nicht ladbar: "+e.message; }
+  }
 
   function libFmtDay(d){ const p=(d||"").split("-"); return p.length===3 ? p[2]+"."+p[1]+"."+p[0] : d; }
   function libBadge(days){
@@ -4711,6 +4738,13 @@ button{font-family:inherit;cursor:pointer}
         });
         card.appendChild(lbl); card.appendChild(cr);
       }
+    }
+
+    if(it.aktion && it.aktion.typ==="kategorie"){
+      const preview=document.createElement("div"); preview.className="lib-cat-preview";
+      preview.textContent="Kategorien-Vorschau wird geladen …";
+      card.appendChild(preview);
+      loadLibCategoryPreview(preview,it);
     }
 
     const row=document.createElement("div"); row.className="lib-choice";
