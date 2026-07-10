@@ -1,5 +1,5 @@
 /** @jsxImportSource @opentui/solid */
-import { createEffect, createMemo, createSignal, onCleanup, onMount, Show } from "solid-js"
+import { createEffect, createMemo, createSignal, For, onCleanup, onMount, Show } from "solid-js"
 import type { TuiPlugin, TuiPluginApi, TuiPluginModule } from "@opencode-ai/plugin/tui"
 import {
   calculateSessionCost,
@@ -10,6 +10,13 @@ import {
   selectPricingModel,
   type TokenUsage,
 } from "./pricing"
+import {
+  DEFAULT_WORK_MODE,
+  readWorkMode,
+  type WorkModeId,
+  WORK_MODES,
+  writeWorkMode,
+} from "./work-mode"
 
 const FALLBACK_EUR_PER_USD = 0.92
 const THEME_PROFILES = [
@@ -147,6 +154,57 @@ function SidebarClock(props: { api: TuiPluginApi }) {
     <text fg={theme().text}>
       <b>Session</b>{" "}{formatDateTime(now())}
     </text>
+  )
+}
+
+function WorkModeSelector(props: { api: TuiPluginApi; sessionID: string }) {
+  const [mode, setMode] = createSignal<WorkModeId>(DEFAULT_WORK_MODE)
+  const theme = () => props.api.theme.current
+
+  onMount(() => {
+    void readWorkMode(props.sessionID)
+      .then(setMode)
+      .catch(() => props.api.ui.toast({
+        variant: "error",
+        title: "Arbeitsmodus",
+        message: "Gespeicherter Arbeitsmodus konnte nicht gelesen werden.",
+      }))
+  })
+
+  const selectMode = async (next: WorkModeId) => {
+    if (next === mode()) return
+    const previous = mode()
+    setMode(next)
+    try {
+      await writeWorkMode(props.sessionID, next)
+    } catch {
+      setMode(previous)
+      props.api.ui.toast({
+        variant: "error",
+        title: "Arbeitsmodus",
+        message: "Arbeitsmodus konnte nicht gespeichert werden.",
+      })
+    }
+  }
+
+  return (
+    <box>
+      <For each={WORK_MODES}>
+        {(item) => {
+          const active = () => mode() === item.id
+          return (
+            <box onMouseUp={(event) => event.button === 0 && void selectMode(item.id)}>
+              <Show
+                when={active()}
+                fallback={<text fg={theme().textMuted}>{item.label}</text>}
+              >
+                <text fg={theme().accent}><b>{item.label}</b></text>
+              </Show>
+            </box>
+          )
+        }}
+      </For>
+    </box>
   )
 }
 
@@ -394,6 +452,15 @@ function View(props: { api: TuiPluginApi; sessionID: string }) {
 }
 
 const tui: TuiPlugin = async (api) => {
+  api.slots.register({
+    order: 90,
+    slots: {
+      sidebar_content(_ctx, props) {
+        return <WorkModeSelector api={api} sessionID={props.session_id} />
+      },
+    },
+  })
+
   api.slots.register({
     order: 110,
     slots: {

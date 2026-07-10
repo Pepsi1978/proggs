@@ -11,6 +11,16 @@ import {
   readPricingPerMillion,
   selectPricingModel,
 } from "../dist/pricing"
+import {
+  DEFAULT_WORK_MODE,
+  readWorkMode,
+  WORK_MODES,
+  workModeInstruction,
+  writeWorkMode,
+} from "../dist/work-mode"
+import { mkdtemp, rm } from "node:fs/promises"
+import { tmpdir } from "node:os"
+import { join } from "node:path"
 
 const model = {
   cost: {
@@ -144,6 +154,44 @@ describe("models.dev pricing", () => {
     expect(source).toContain("setInterval(() => setNow(new Date()), 1000)")
     expect(source).toContain('<b>Session</b>{" "}{formatDateTime(now())}')
     expect(source).toContain('`${pad(value.getDate())}.${pad(value.getMonth() + 1)}.${value.getFullYear()} ${pad(value.getHours())}:${pad(value.getMinutes())} Uhr`')
+  })
+
+  test("renders clickable work modes before the built-in context block", async () => {
+    const source = await Bun.file(new URL("../dist/tui.tsx", import.meta.url)).text()
+    expect(source).toContain("order: 90")
+    expect(source).toContain("<WorkModeSelector api={api} sessionID={props.session_id} />")
+    expect(source).toContain("event.button === 0 && void selectMode(item.id)")
+    expect(source).toContain("theme().textMuted")
+    expect(source).toContain("<text fg={theme().accent}><b>{item.label}</b></text>")
+    expect(WORK_MODES.map((mode) => mode.label)).toEqual([
+      "Schnellmodus",
+      "Normalmodus",
+      "Gründlichkeitsmodus",
+    ])
+  })
+
+  test("persists work mode per session and creates binding model instructions", async () => {
+    const directory = await mkdtemp(join(tmpdir(), "opencode-work-mode-"))
+    try {
+      expect(await readWorkMode("session-a", directory)).toBe(DEFAULT_WORK_MODE)
+      await writeWorkMode("session-a", "normal", directory)
+      expect(await readWorkMode("session-a", directory)).toBe("normal")
+      await writeWorkMode("session-a", "gruendlich", directory)
+      expect(await readWorkMode("session-a", directory)).toBe("gruendlich")
+      expect(await readWorkMode("session-b", directory)).toBe(DEFAULT_WORK_MODE)
+      expect(workModeInstruction("normal")).toContain("höchstens zwei")
+      expect(workModeInstruction("gruendlich")).toContain("bis alles grün ist")
+    } finally {
+      await rm(directory, { recursive: true, force: true })
+    }
+  })
+
+  test("injects the selected work mode into every model request", async () => {
+    const source = await Bun.file(new URL("../../work-mode.js", import.meta.url)).text()
+    expect(source).toContain('"experimental.chat.system.transform"')
+    expect(source).toContain("readWorkMode(input.sessionID)")
+    expect(source).toContain("output.system.push(workModeInstruction(mode))")
+    expect(source).not.toContain("console.")
   })
 
   test("offers built-in themes in a mouse-controlled dropdown", async () => {
