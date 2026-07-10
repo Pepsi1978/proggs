@@ -73,7 +73,9 @@
     // Werkzeuge erscheinen als second-brain_remember / _recall / _list_memories / _brain_health.
     // OpenCodes Remote-Transport faellt beim Start faelschlich auf sessionloses SSE zurueck (HTTP 400).
     // Der gepinnte Proxy erzwingt Streamable HTTP und reicht es lokal stabil als STDIO weiter.
-    // 30 s decken einen kalten npx-Download ab; --silent haelt STDIO protokollsauber.
+    // 120 s decken den kalten npx-Download UND einen WireGuard-Cold-Start (Tunnel-Aufwachen nach
+    // Standby/Boot ~11 s Handshake) ab; --silent haelt STDIO protokollsauber. Der recall selbst ist
+    // schnell (~0,5 s warm, ~1,8 s kalt) — der Puffer ist reines Sicherheitsnetz, kein Normalfall.
     // Quelle/Bau: ~/proggs/second-brain-server/ (compose-Service sb-mcp, FastMCP Streamable-HTTP).
     "second-brain": {
       "type": "local",
@@ -83,7 +85,7 @@
         "--allow-http", "--transport", "http-only", "--silent"
       ],
       "enabled": true,
-      "timeout": 30000
+      "timeout": 120000
     }
   },
 

@@ -3,7 +3,8 @@
   "mcpServers": {
     "second-brain": {
       "type": "http",
-      "url": "http://10.8.0.1:8001/mcp"
+      "url": "http://10.8.0.1:8001/mcp",
+      "timeout": 120000
     }
   }
 }
