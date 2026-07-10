@@ -40,6 +40,7 @@ VERSION = "0.65.0 (09.07.2026, 13:24 Uhr)"  # 0.65.0: Sichtbarer Bump zum agent-
 VERSION = "0.66.5 (09.07.2026, 21:31 Uhr)"  # 0.66.5: Sichtbarer Bump zum agent-0.68.5: allgemeiner letzter Selbstregel-Prüfer für freie Antworten. Alt: 0.66.4.
 VERSION = "0.66.6 (09.07.2026, 22:00 Uhr)"  # 0.66.6: Sichtbarer Bump zum agent-0.68.6-Fix: Das Parallelprofil zeigt die echte Zahl gefundener Gedächtnistreffer statt der auf acht begrenzten Quellen-Chips. Alt: 0.66.5.
 VERSION = "0.67.0 (09.07.2026, 22:52 Uhr)"  # 0.67.0: Sichtbarer Bump zum agent-0.69.0 und Cortex 0.6.7: dreistufiger Gedächtnis-Einfluss bei Websuchen. Alt: 0.66.7.
+VERSION = "0.67.1 (10.07.2026, 10:15 Uhr)"  # 0.67.1: Sichtbarer Bump zum agent-0.69.1-Fix: gesprochene Speicherwünsche werden vor der Bestätigung kohärent formuliert. Alt: 0.67.0.
 BRAIN_URL = os.getenv("BRAIN_URL", "http://brain-api:8000").rstrip("/")
 AGENT_URL = os.getenv("AGENT_URL", "http://agent:8002").rstrip("/")
 SB_API_KEY = os.getenv("SB_API_KEY", "")
