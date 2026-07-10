@@ -111,11 +111,16 @@ try {
 
     $state = Read-Json $statePath
     if (-not $Force -and -not $sourceVersion -and $state.nextCheckNotBeforeUtc) {
-        $next = [DateTime]::Parse(
-            [string]$state.nextCheckNotBeforeUtc,
-            [Globalization.CultureInfo]::InvariantCulture,
-            [Globalization.DateTimeStyles]::RoundtripKind
-        ).ToUniversalTime()
+        $nextValue = $state.nextCheckNotBeforeUtc
+        $next = if ($nextValue -is [DateTime]) {
+            $nextValue.ToUniversalTime()
+        } else {
+            [DateTime]::Parse(
+                [string]$nextValue,
+                [Globalization.CultureInfo]::InvariantCulture,
+                [Globalization.DateTimeStyles]::RoundtripKind
+            ).ToUniversalTime()
+        }
         if ($next -gt [DateTime]::UtcNow) {
             "Updateprüfung erst wieder ab $($next.ToString('o'))."
             return
