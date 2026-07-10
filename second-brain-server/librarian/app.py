@@ -59,6 +59,7 @@ OPENCODE_ANTHROPIC_VERSION = os.getenv("OPENCODE_ANTHROPIC_VERSION", "2023-06-01
 USER_ID = os.getenv("SB_USER_ID", "frank")
 VERSION = "0.11.1 (08.07.2026, 15:04 Uhr)"  # Prompt-JSON im Interview-System escaped, damit der Dienst beim Import nicht crasht. Alt: 0.11.0.
 VERSION = "0.11.4 (10.07.2026, 19:01 Uhr)"  # 0.11.4: Eigene Aufgaben markieren gekuerzte Eintragsauszuege sichtbar und blockieren Update-/Merge-Aktionen, wenn der Zieltext nur gekuerzt vorlag. Alt: 0.11.3.
+VERSION = "0.11.5 (10.07.2026, 19:38 Uhr)"  # 0.11.5: Additive Kategorie-Aktionen lesen den Bestand gezielt per GET /entry/categories?doc_id=... statt per /list- und /by-category-Scans. Alt: 0.11.4.
 AGENT_URL = os.getenv("AGENT_URL", "http://agent:8002").rstrip("/")   # LLM-Durchgriff fuer Codex/GPT (agent 0.52.0)
 # Stille Notbremse gegen Endlosschleifen, wenn 'Ohne Begrenzung' aktiv ist (Almanach ai-agent §2.1:
 # ein Cap muss STOPPEN koennen). 5000 Calls erreicht ehrliche Nacht-Arbeit nie — nur ein Amoklauf.
@@ -520,24 +521,21 @@ def brain_set_categories(doc_id: str, categories: list[str]) -> dict:
     return r.json()
 
 
+def brain_get_categories(doc_id: str) -> list[str]:
+    r = _HTTP.get(f"{BRAIN_URL}/entry/categories",
+                  params={"doc_id": doc_id, "user_id": USER_ID}, headers=HEADERS, timeout=60.0)
+    r.raise_for_status()
+    return [c.strip() for c in (r.json().get("categories") or [])
+            if isinstance(c, str) and c.strip()]
+
+
 def brain_add_category(doc_id: str, category: str) -> dict:
     """Ergaenzt genau eine Kategorie, ohne vorhandene Multi-Category-Zuordnungen zu verlieren."""
     new_category = (category or "").strip()
     if not doc_id or not new_category:
         raise ValueError("doc_id und Kategorie erforderlich")
 
-    meta = next((entry for entry in brain_list() if entry.get("doc_id") == doc_id), None)
-    if meta is None:
-        raise RuntimeError("Eintrag nicht in der vollstaendigen Metadatenliste gefunden")
-
-    primary = (meta.get("category") or "").strip()
-    current: list[str] = []
-    if primary:
-        entry = next((item for item in brain_by_category(primary) if item.get("doc_id") == doc_id), None)
-        if entry is None:
-            raise RuntimeError("Bestehende Kategorien konnten nicht verlustfrei gelesen werden")
-        current = [c.strip() for c in (entry.get("categories") or [])
-                   if isinstance(c, str) and c.strip()] or [primary]
+    current = brain_get_categories(doc_id)
 
     categories: list[str] = []
     seen: set[str] = set()

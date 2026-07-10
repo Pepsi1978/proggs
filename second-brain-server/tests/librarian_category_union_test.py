@@ -38,10 +38,10 @@ def check(condition: bool, message: str) -> None:
 def main() -> int:
     ns = load_functions()
     written: list[tuple[str, list[str]]] = []
-    ns["brain_list"] = lambda: [{"doc_id": "doc-1", "category": "A"}]
-    ns["brain_by_category"] = lambda category: [{
-        "doc_id": "doc-1", "category": "A", "categories": ["A", "B", "C", "D"]
-    }]
+    reads: list[str] = []
+    ns["brain_get_categories"] = lambda doc_id: reads.append(doc_id) or ["A", "B", "C", "D"]
+    ns["brain_list"] = lambda: (_ for _ in ()).throw(AssertionError("/list darf nicht aufgerufen werden"))
+    ns["brain_by_category"] = lambda category: (_ for _ in ()).throw(AssertionError("/by-category darf nicht aufgerufen werden"))
     ns["brain_set_categories"] = lambda doc_id, categories: (
         written.append((doc_id, list(categories))) or
         {"ok": True, "doc_id": doc_id, "categories": list(categories)}
@@ -52,12 +52,13 @@ def main() -> int:
           "vier bestehende Kategorien plus Vorschlag ergeben fuenf")
     check(written[-1] == ("doc-1", ["A", "B", "C", "D", "E"]),
           "der Multi-Category-Endpunkt erhaelt die vollstaendige Union")
+    check(reads == ["doc-1"], "Bestand wird genau einmal gezielt per doc_id gelesen")
 
     ns["brain_add_category"]("doc-1", "b")
     check(written[-1][1] == ["A", "B", "C", "D"],
           "Gross-/Kleinschreibung erzeugt keine doppelte Kategorie")
 
-    ns["brain_list"] = lambda: []
+    ns["brain_get_categories"] = lambda doc_id: (_ for _ in ()).throw(RuntimeError("nicht lesbar"))
     before = len(written)
     try:
         ns["brain_add_category"]("doc-1", "E")
