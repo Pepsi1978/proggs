@@ -36,6 +36,7 @@
 | 7 | ⭐ Tools des Gehirns tauchen gar nicht auf | Reihenfolge pruefen: `enabled:true`? global `tools:{...false}` aktiv? Tunnel/Host-Header ok? Bei Claude: 64-Zeichen-Limit `mcp__<server>__<tool>` (unser `second-brain` ist kurz genug). `/status`(OpenCode) bzw. `/mcp`(Claude) zeigt den Verbindungsstatus. | §3 |
 | 8 | ⭐ Server-only-Agent soll NUR das Gehirn nutzen | OpenCode: global `tools:{"*":false}`-Aequivalent vermeiden — gezielt `"second-brain*": true` im Agent + andere Tools `deny`. Claude Code: MCP-Tools-nur-fuer-Subagent ist seit #6915 moeglich. | §4 |
 | 9 | Unerwartet hohe Token / teuer beim Server-Agenten | Jedes MCP-Tool-Schema laedt in JEDEN Prompt (~10-20k+ bei vielen Servern). Claude Tool Search ab 2.1.7 mildert automatisch (ihr: 2.1.187). Nicht gebrauchte MCP pro Agent deaktivieren. | §7 |
+| 10 | ⭐ `-32001 Request timed out` obwohl der Tunnel STEHT (erster recall nach Idle/Standby) | WireGuard-**Cold-Start** (~11 s Handshake nach Leerlauf) sprengt einen zu knappen Client-Timeout; der recall selbst ist schnell (~0,5 s). FIX: `PersistentKeepalive=25` (Tunnel warm) + Client-`timeout` großzügig (OpenCode + Claude `120000`; Default 30000 zu knapp). | §5 |
 
 ---
 
@@ -182,6 +183,17 @@ ohne sie dem Haupt-Agenten anzubieten. (Mechanik in der jeweiligen Agent-/Subage
   `10.8.0.1:8001` halten ODER server-seitig den genutzten Host in `allowed_hosts` aufnehmen (Server-Seite:
   `claude-tooling/mcp-server.md` §3.13).
 - **Pfad:** Streamable-HTTP-Endpunkt ist `/mcp` (nicht `/sse`, nicht `/`). URL ohne `/mcp` → 404/kein Tool.
+- **(c) Cold-Start-Timeout — Tunnel AKTIV, aber erster Aufruf nach Idle/Standby läuft in den Client-Timeout:**
+  Symptom `MCP error -32001: Request timed out` (OpenCode/Claude), obwohl der Tunnel steht. Ursache: nach
+  Leerlauf (PC-Standby/Boot) braucht WireGuard beim ERSTEN Paket einen neuen Handshake (~11 s gemessen,
+  danach 0,05 s). Der recall serverseitig ist schnell (~0,5 s warm, ~1,8 s kalt — brain-api `/search` =
+  Gemini-Embedding + Qdrant), also NIE der Flaschenhals — nur der Cold-Start sprengt einen zu knappen
+  Client-Timeout. **FIX (2 Schichten, funktionserhaltend):** (1) Tunnel warm halten:
+  `PersistentKeepalive = 25` im Client-`[Peer]` (32-Byte-Paket alle 25 s, kein spürbarer Overhead;
+  `server/wireguard.md` §4). (2) Client-Timeout großzügig: OpenCode `mcp.<name>.timeout: 120000`
+  (Default 30000 war zu knapp), Claude Code per-Server `"timeout": 120000` in `.mcp.json`
+  (überschreibt `MCP_TOOL_TIMEOUT`; Werte <1000 werden ignoriert). Normalfall bleibt schnell — der
+  Timeout ist nur die Obergrenze. Belegt: #47780 (2026-07-10).
 **Versionen:** mcp-sdk>=1.27 (server). **Quelle:** github.com/nicolargo/glances/issues/3467 (Host-Header-
 Allowlist, „invalid host header") · server.py (`TransportSecuritySettings`) · `server/wireguard.md`.
 
