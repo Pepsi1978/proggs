@@ -10,10 +10,18 @@ import {
   selectPricingModel,
   type TokenUsage,
 } from "./pricing"
+import { fileURLToPath } from "node:url"
 
 const FALLBACK_EUR_PER_USD = 0.92
-const PLUGIN_VERSION = "1.0.2"
-const PLUGIN_VERSION_TIMESTAMP = "10.07.2026, 11:46 Uhr"
+const PLUGIN_VERSION = "1.1.0"
+const PLUGIN_VERSION_TIMESTAMP = "10.07.2026, 13:35 Uhr"
+const THEME_MODE_KEY = "frank.theme-mode"
+const THEME_NAMES = {
+  dark: "frank-dark",
+  light: "frank-light",
+} as const
+
+type ThemeMode = keyof typeof THEME_NAMES
 
 function safeNumber(value: unknown): number {
   if (typeof value === "number" && Number.isFinite(value)) return value
@@ -88,6 +96,57 @@ function Row(props: { label: string; value: string; muted?: boolean; api: TuiPlu
       <text fg={props.muted ? theme().textMuted : theme().text}>{props.label}</text>
       <box flexGrow={1} />
       <text fg={props.muted ? theme().textMuted : theme().text}>{props.value}</text>
+    </box>
+  )
+}
+
+function applyTheme(api: TuiPluginApi, mode: ThemeMode): boolean {
+  const changed = api.theme.set(THEME_NAMES[mode])
+  if (!changed) {
+    api.ui.toast({
+      variant: "error",
+      title: "Darstellung",
+      message: `Theme ${THEME_NAMES[mode]} konnte nicht aktiviert werden.`,
+    })
+    return false
+  }
+
+  api.kv.set(THEME_MODE_KEY, mode)
+  return true
+}
+
+function ThemeToggle(props: { api: TuiPluginApi }) {
+  const initial = props.api.theme.selected === THEME_NAMES.light ? "light" : "dark"
+  const [mode, setMode] = createSignal<ThemeMode>(initial)
+  const theme = () => props.api.theme.current
+
+  const select = (next: ThemeMode) => {
+    if (applyTheme(props.api, next)) setMode(next)
+  }
+
+  return (
+    <box paddingTop={1}>
+      <text fg={theme().text}>
+        <b>Darstellung</b>
+      </text>
+      <box flexDirection="row">
+        <box
+          flexGrow={1}
+          paddingX={1}
+          backgroundColor={mode() === "dark" ? theme().backgroundElement : undefined}
+          onMouseUp={(event) => event.button === 0 && select("dark")}
+        >
+          <text fg={mode() === "dark" ? theme().accent : theme().textMuted}>Dunkel</text>
+        </box>
+        <box
+          flexGrow={1}
+          paddingX={1}
+          backgroundColor={mode() === "light" ? theme().backgroundElement : undefined}
+          onMouseUp={(event) => event.button === 0 && select("light")}
+        >
+          <text fg={mode() === "light" ? theme().accent : theme().textMuted}>Hell</text>
+        </box>
+      </box>
     </box>
   )
 }
@@ -251,6 +310,7 @@ function View(props: { api: TuiPluginApi; sessionID: string }) {
           value={formatInt(totals().input + totals().output + totals().reasoning)}
         />
         <Row api={props.api} label="Kosten" value={money().available ? formatEur(money().eur) : "nicht verfügbar"} />
+        <ThemeToggle api={props.api} />
         <text fg={theme().textMuted}>{`Version ${PLUGIN_VERSION} (${PLUGIN_VERSION_TIMESTAMP})`}</text>
       </box>
     </Show>
@@ -258,6 +318,22 @@ function View(props: { api: TuiPluginApi; sessionID: string }) {
 }
 
 const tui: TuiPlugin = async (api) => {
+  const themeFiles = ["frank-dark.json", "frank-light.json"]
+  try {
+    await Promise.all(
+      themeFiles.map((file) => api.theme.install(fileURLToPath(new URL(`../themes/${file}`, import.meta.url)))),
+    )
+    const saved = api.kv.get<ThemeMode>(THEME_MODE_KEY)
+    const mode = saved === "dark" || saved === "light" ? saved : api.theme.mode()
+    applyTheme(api, mode)
+  } catch (error) {
+    api.ui.toast({
+      variant: "error",
+      title: "Darstellung",
+      message: error instanceof Error ? error.message : "Themes konnten nicht geladen werden.",
+    })
+  }
+
   api.slots.register({
     order: 110,
     slots: {
