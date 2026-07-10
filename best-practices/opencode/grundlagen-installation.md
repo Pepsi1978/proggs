@@ -253,13 +253,13 @@ bubbled `onMouseUp` signalisiert das Auswahlende nicht zuverlässig; Command-Dis
 Tastatur-Event-Kontext; der bisherige Windows-Clipboard-Pfad liefert für Text in dieser Konstellation
 keinen Inhalt. Nur die Kombination der vier Korrekturen liefert den vollständigen Hybridbetrieb.
 
-**Update- und Installationsstrategie:** Den Patch an einen exakten OpenCode-Tag binden und vor jeder
-Anwendung mit `git apply --check` validieren. Das Binary mit einer eindeutigen Suffix-Version wie
-`1.17.18-windowsfix.6` bauen, zunächst als `.new` in einen stabilen User-Pfad kopieren, atomar umbenennen
-und `opencode.exe --version` gegen die erwartete Version prüfen. Ein Launcher bevorzugt das Custom-Binary
-nur, wenn die Datei existiert, und fällt sonst mit Log-Warnung auf das offizielle `opencode` im `PATH`
-zurück. Nach jedem Upstream-Update den Patch neu prüfen und bauen; niemals einen Patch für 1.17.18 blind
-auf eine andere Version anwenden.
+**Update- und Installationsstrategie:** Der Launcher prüft höchstens täglich die stabile npm-Version. Das
+Buildskript bindet den Patch an den exakten Git-Tag, validiert die stabile SemVer, führt Typechecks, fokussierte
+Tests, Build und Smoke-Test aus und installiert jedes Ergebnis unveränderlich unter
+`~/.local/share/opencode-mousefix/versions/<customVersion>/opencode.exe`. Erst nach allen grünen Gates wird
+`current.json` atomar aktiviert. Laufende Binaries werden nie überschrieben. Bei Konflikt bleibt der aktive
+Pointer unverändert; der Launcher versucht `active`, `previous`, `current.json.bak`, das Legacy-Binary und
+zuletzt das offizielle `opencode` im PATH. Ein exklusiver Lock verhindert parallele Builds.
 
 **Pflicht-Verifikation:** Typechecks der geänderten Pakete, Clipboard-Tests, Single-Binary-Build,
 `--version`-Smoke-Test und ein realer TUI-Test mit allen vier Funktionen: Auswahl kopiert sofort,
@@ -283,11 +283,20 @@ Der reproduzierbare Windows-Build bündelt drei voneinander unabhängige Korrekt
    Dadurch können parallele Sitzungen mit verschiedenen Reasoning-Stufen laufen, ohne sich über die globale
    `~/.local/state/opencode/model.json` gegenseitig zu überschreiben.
 
-Der Launcher muss das Custom-Binary nur bei vorhandener Datei wählen und `--variant` ausschließlich diesem
-Binary übergeben. Fehlt es, bleibt das offizielle `opencode` im `PATH` ein startfähiger Fallback; die ältere
-globale Config-/State-Vorbelegung sorgt dort weiterhin für bestmögliche Kompatibilität. Bei jedem OpenCode-
-Update müssen Quellpatch, OpenTUI-Version, Typechecks, fokussierte Tests, Binary-Smoke-Test und realer
-Maus-/Variantentest erneut ausgeführt werden.
+Der Launcher übergibt `--variant` ausschließlich einem per Pointer als grün ausgewiesenen Custom-Binary.
+Die automatische Hintergrundprüfung blockiert weder Launcher-UI noch OpenCode-Start. Bei jedem Upstream-
+Update laufen Quellpatch, OpenTUI-Recovery-Prüfung, vier Typechecks, fokussierte Tests, Binary-Smoke-Test und
+Promotion-Gate erneut. Ein inkompatibles Update wird zurückgestellt, niemals ungepatcht aktiviert.
+
+### 4.8 Vollständige Windows-Parität auf einem zweiten Rechner
+
+`opencode-setup/install.ps1` ist der idempotente Bootstrap. Nach Repo-Clone und Installation der Build-
+Voraussetzungen kopiert er Config, globale Regeln, Agents, Skills, Sounds und das komplette Sidebar-Plugin,
+installiert dessen Laufzeitabhängigkeiten, baut den aktuellen Windows-Fix und den Launcher und erzeugt die
+Desktop-Verknüpfung. Damit bleiben Session-Datum/-Uhrzeit, drei Arbeitsmodi, Modellpreise/Kosten,
+Theme-Auswahl und Hell/Dunkel identisch. Secrets, Provider-Auth, `OPENROUTER_API_KEY` und WireGuard werden
+bewusst nicht versioniert und müssen pro Rechner separat gesetzt werden. Unter Windows immer über den
+Launcher starten; `opencode` im PATH bleibt nur der offizielle Fallback.
 
 ---
 

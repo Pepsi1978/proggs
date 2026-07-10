@@ -22,6 +22,8 @@
 | 2c2. Globale Skills | `~/.config/opencode/skill/<name>/SKILL.md` | nein (lokal) | **`skill/`** (z.B. `session-opencode`) | ja |
 | 2d. Notifier-Sounds | `~/.config/opencode/sounds/*.wav` | nein (lokal) | **`sounds/`** (complete/error/permission) | ja |
 | 2e. Notifier-Config | `~/.config/opencode/opencode-notifier.json` | nein (lokal) | — (Installer **generiert** sie mit lokalen Pfaden) | ja (erzeugt) |
+| 2f. Windows-Fix-Binary | `~/.local/share/opencode-mousefix/versions/*/opencode.exe` | nein (lokal) | Patch + Buildskript | ja (gebaut) |
+| 2g. OpenCode Launcher | `~/proggs/OpenCodeLauncher/bin/Release/.../OpenCodeLauncher.exe` | **ja** (Quellcode) | `OpenCodeLauncher/` | ja (gebaut + Shortcut) |
 | 3. Projekt-Regeln | `~/proggs/AGENTS.md` | **ja** | (liegt schon im Repo) | — |
 | 4. Projekt-CLAUDE.md | `~/proggs/CLAUDE.md` | **ja** | (liegt schon im Repo) | — |
 
@@ -55,6 +57,9 @@ scoop install opencode                  # empfohlen (setzt PATH automatisch)
 # oder:  choco install opencode
 opencode --version
 ```
+Für den vollständigen Windows-Fix braucht der automatische Build zusätzlich **Git, Bun, npm/Node.js,
+PowerShell 7 und das .NET-8-SDK**. Der Installer bricht einen Windows-Fix-Build sicher ab, wenn eine dieser
+Voraussetzungen fehlt; eine bereits aktive funktionierende Version bleibt dabei erhalten.
 > Offizielle Empfehlung fuer Windows ist eigentlich **WSL** (bester Support). Nativ geht auch — dann
 > bleibt `"shell": "pwsh"` in der Config richtig. Details: `best-practices/opencode/grundlagen-installation.md`.
 
@@ -66,9 +71,9 @@ Damit sind Projekt-`AGENTS.md` + `CLAUDE.md` (Ebene 3+4) automatisch da.
 
 ### Schritt 3 — Das Installer-Skript ausfuehren (DER eine Befehl)
 
-Kopiert Config, Regeln, Agents, Plugins und Sounds an ihren Platz, passt die plattformspezifische
-`shell`-Zeile an, erzeugt die Notifier-Config mit korrekten lokalen Pfaden und prueft am Ende die
-Voraussetzungen:
+Kopiert Config, Regeln, Agents, Plugins und Sounds an ihren Platz, erzeugt die Notifier-Config mit lokalen
+Pfaden und prüft am Ende die Voraussetzungen. Unter Windows baut derselbe Befehl außerdem den aktuellen
+geprüften `windowsfix`, den Launcher und die Desktop-Verknüpfung:
 
 **macOS / Linux:**
 ```bash
@@ -98,12 +103,41 @@ Der Installer zeigt am Ende eine `OK`/`FEHLT`-Liste. Diese Dinge sind manuell zu
 - **`opencode auth login`** (bzw. `/connect` in der TUI) — fuer das Go-Abo (opencode-go/MiniMax + Plan).
 
 ### Schritt 5 — Start & Selbst-Check
-```sh
-cd ~/proggs && opencode
-```
+Unter Windows über die erzeugte Desktop-Verknüpfung **OpenCode Launcher** starten. Ein nacktes `opencode`
+im PATH ist nur der ungepatchte offizielle Fallback. Unter macOS/Linux weiterhin `cd ~/proggs && opencode`.
+
 Beim ersten Prompt MUSS OpenCode melden: **"N Regeln aus dem zweiten Gehirn eingelesen."** — dann ist
 die Umgebung komplett. Die npm-Plugins (`@mohak34/opencode-notifier`, `@plannotator/opencode`)
 installiert OpenCode beim Start selbst aus der `plugin`-Liste.
+
+Die rechte TUI-Seitenleiste muss danach auf beiden Windows-Rechnern dieselben Funktionen zeigen:
+
+- Session-Datum und Uhrzeit
+- Schnellmodus, Normalmodus und Gründlichkeitsmodus
+- Modellname, Tokenmengen, Eingabe-/Ausgabepreise und Sitzungskosten
+- Theme-Auswahl sowie Dunkel-/Hell-Umschalter
+- OpenCode-Version mit `-windowsfix.<revision>`
+
+Der Windows-Build erhält zusätzlich Linksauswahl-Copy, Rechtsklick-Paste, Mausrad, anklickbare Dialoge,
+automatische Full-Repaint-Recovery und prozesslokales `--variant` für High/Medium/etc.
+
+## Automatische OpenCode-Updates unter Windows
+
+Der Launcher prüft höchstens einmal täglich im Hintergrund die stabile npm-Version von `opencode-ai`.
+Ist eine neuere Version vorhanden, wird sie nicht ungeprüft über das funktionierende Binary geschrieben:
+
+1. Exakten Git-Tag klonen und den Windows-Patch prüfen.
+2. Maus-, Variant- und Full-Repaint-Fähigkeiten sicherstellen.
+3. Vier Typechecks, fokussierte Regressionstests, Binary-Build und `--version`-Smoke-Test ausführen.
+4. Das Binary in einen unveränderlichen Versionsordner unter
+   `~/.local/share/opencode-mousefix/versions/` installieren.
+5. Erst danach `current.json` atomar auf die neue grüne Version umschalten.
+
+Laufende Sitzungen behalten ihr altes Binary; neue Sitzungen verwenden automatisch den neuen Pointer.
+Scheitert Patch, Test, Build, Netzwerk oder Git-Tag, bleibt `current.json` bytegenau auf der letzten grünen
+Version. Der Launcher fällt bei einem beschädigten Pointer auf `previous`, dann auf das alte stabile Binary
+und zuletzt auf das offizielle `opencode` im PATH zurück. Dadurch gehen Sidebar, Arbeitsmodi, Preise,
+Themes, Mausfix, Rendererfix und Reasoning-Stufe bei Updates nicht still verloren.
 
 ---
 
@@ -116,7 +150,9 @@ installiert OpenCode beim Start selbst aus der `plugin`-Liste.
 5. **Erzeugt** `opencode-notifier.json` neu mit den korrekten lokalen Sound-Pfaden (Windows BOM-frei).
    Abschluss-, Unteraufgaben-, Freigabe-, Frage-, Plan- und Fehlerereignisse melden sich auch dann,
    wenn OpenCode gerade fokussiert ist; Start- und Nachrichteneingangs-Ereignisse bleiben stumm.
-6. Voraussetzungs-Check (SK-Keys, `OPENROUTER_API_KEY`, WireGuard `10.8.0.1`) + TODO-Liste.
+6. Unter Windows: neueste stabile OpenCode-Version prüfen, vollständig testen, versioniert installieren und
+   erst danach atomar aktivieren; Launcher `Release` bauen und Desktop-Verknüpfung erzeugen.
+7. Voraussetzungs-Check (SK-Keys, `OPENROUTER_API_KEY`, WireGuard `10.8.0.1`) + TODO-Liste.
 
 ## Lokale Plugins (Detail)
 
@@ -145,7 +181,7 @@ cp ~/proggs/opencode-setup/AGENTS-global.md ~/.config/opencode/AGENTS.md
 cp ~/proggs/opencode-setup/agents/*.md      ~/.config/opencode/agents/
 cp ~/proggs/opencode-setup/plugins/*.js     ~/.config/opencode/plugins/
 cp -R ~/proggs/opencode-setup/plugins/token-cost-sidebar ~/.config/opencode/plugins/
-npm --prefix ~/.config/opencode install @opencode-ai/plugin@1.17.7 @opentui/core@0.3.4 @opentui/solid@0.4.0 solid-js@1.9.12
+npm --prefix ~/.config/opencode install @opencode-ai/plugin@1.17.15 @opentui/core@0.4.3 @opentui/solid@0.4.3 solid-js@1.9.12
 cp ~/proggs/opencode-setup/sounds/*.wav     ~/.config/opencode/sounds/
 # opencode-notifier.json mit lokalen Pfaden von Hand anlegen (siehe install-Skript als Vorlage)
 ```
@@ -159,6 +195,8 @@ cp ~/proggs/opencode-setup/sounds/*.wav     ~/.config/opencode/sounds/
   alten Stand. (Gleiche Idee wie `claude-code-setup/` fuer Claude Code, nur fuer OpenCode.)
 - Die eigentlichen **Arbeitsregeln** aenderst du NICHT hier, sondern zentral im **zweiten Gehirn**
   (Kategorie `Programmierung/Rules`) — von dort holt sie jeder Rechner automatisch.
+- Nach Änderungen an Config/Plugin/Launcher auf dem zweiten Rechner zuerst `git pull`, danach den
+  Windows-Installer erneut ausführen. Der Vorgang ist idempotent und sichert bestehende Config-Dateien.
 - `opencode.jsonc` enthaelt **keine** Klartext-Secrets (nur `{file:}`/`{env:}`-Referenzen) — daher
   unbedenklich im Repo.
 - `rules-opencode/` sind kompakte Regel-Fassungen fuer das Gehirn (Token-Sparen) — sie werden NICHT
