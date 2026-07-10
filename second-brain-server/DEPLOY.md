@@ -28,24 +28,18 @@ VPN-Tunnel erreichbar). Oeffentlich offen ist nur SSH (22) + WireGuard (51820/ud
 
 Windows OpenSSH ignoriert einen privaten Schluessel, sobald eine zusaetzliche Gruppe ihn lesen darf
 (`UNPROTECTED PRIVATE KEY FILE` / `bad permissions`). Nach dem Ablegen des Schluessels unter
-`~/SK/second-brain/id_ed25519` diesen PowerShell-Block **einmalig als der normale Benutzer** ausfuehren:
+`~/SK/second-brain/id_ed25519` das idempotente Einrichtungsskript **als der normale Benutzer** ausfuehren:
 
 ```powershell
-$key = Join-Path $HOME "SK\second-brain\id_ed25519"
-if (-not (Test-Path -LiteralPath $key)) { throw "SSH-Schluessel fehlt: $key" }
-
-$userSid = [System.Security.Principal.WindowsIdentity]::GetCurrent().User.Value
-icacls $key /inheritance:r
-icacls $key /grant:r "*$($userSid):(F)" "*S-1-5-18:(F)" "*S-1-5-32-544:(F)"
-icacls $key
-
-ssh -o BatchMode=yes -o ConnectTimeout=15 -i $key root@168.231.83.205 "printf 'SSH_ACL_OK'"
+pwsh -NoProfile -File .\windows\set-cortex-ssh-key-acl.ps1
 ```
 
-Die drei erlaubten ACL-Eintraege sind der aktuelle Benutzer, `SYSTEM` (`S-1-5-18`) und die lokale
-Administratorengruppe (`S-1-5-32-544`), jeweils mit Vollzugriff. Die letzte Zeile muss
-`SSH_ACL_OK` ausgeben. Niemals den Schluesselinhalt anzeigen, ins Repo kopieren oder die
-OpenSSH-Pruefung global abschalten.
+Optionaler anderer Schluesselpfad: `-KeyPath "C:\Pfad\id_ed25519"`. Das Skript kann beliebig oft
+laufen: Es setzt immer exakt dieselben drei erlaubten ACL-Eintraege mit Vollzugriff — aktueller
+Benutzer, `SYSTEM` (`S-1-5-18`) und lokale Administratoren (`S-1-5-32-544`) —, verifiziert den
+Zustand und fuehrt danach den echten BatchMode-SSH-Test aus. Die letzte Zeile muss `SSH_ACL_OK`
+ausgeben. Nur fuer einen reinen ACL-Test ohne erreichbaren Server `-SkipSshTest` verwenden.
+Niemals den Schluesselinhalt anzeigen, ins Repo kopieren oder die OpenSSH-Pruefung global abschalten.
 
 ## Dienste und ihre Bau-Pfade
 
