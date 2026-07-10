@@ -1,10 +1,12 @@
 /** @jsxImportSource @opentui/solid */
-import { createMemo, createSignal, onMount, Show } from "solid-js"
+import { createEffect, createMemo, createSignal, onMount, Show } from "solid-js"
 import type { TuiPlugin, TuiPluginApi, TuiPluginModule } from "@opencode-ai/plugin/tui"
+import { calculateSessionCost, commitIfCurrent, loadCatalogModel, selectPricingModel, type TokenUsage } from "./pricing"
 
 const FALLBACK_EUR_PER_USD = 0.92
 const MONEY_SOURCE_RECORDED = "OpenCode"
-const MONEY_SOURCE_CALCULATED = "Modellpreis"
+const MONEY_SOURCE_CALCULATED = "models.dev"
+const MONEY_SOURCE_MIXED = "OpenCode + models.dev"
 
 function safeNumber(value: unknown): number {
   if (typeof value === "number" && Number.isFinite(value)) return value
@@ -27,24 +29,7 @@ function readCost(source: any): number {
   return firstNumber(source?.cost, source?.info?.cost, source?.usage?.cost, source?.metrics?.cost)
 }
 
-function normalizePrice(value: unknown): number {
-  const parsed = safeNumber(value)
-  if (parsed <= 0) return 0
-  // models.dev exposes USD per 1M tokens; custom opencode config commonly uses USD per token.
-  return parsed > 0.001 ? parsed / 1_000_000 : parsed
-}
-
-function readPricing(model: any) {
-  const price = model?.cost ?? model?.pricing ?? model?.price ?? model?.info?.cost ?? {}
-  return {
-    input: normalizePrice(price?.input ?? price?.prompt),
-    output: normalizePrice(price?.output ?? price?.completion),
-    cacheRead: normalizePrice(price?.cache_read ?? price?.cacheRead ?? price?.cache?.read),
-    cacheWrite: normalizePrice(price?.cache_write ?? price?.cacheWrite ?? price?.cache?.write),
-  }
-}
-
-function tokensOf(message: any) {
+function tokensOf(message: any): TokenUsage {
   return {
     input: safeNumber(message?.tokens?.input ?? message?.info?.tokens?.input),
     output: safeNumber(message?.tokens?.output ?? message?.info?.tokens?.output),
@@ -99,6 +84,7 @@ function Row(props: { label: string; value: string; muted?: boolean; api: TuiPlu
 
 function View(props: { api: TuiPluginApi; sessionID: string }) {
   const [eurPerUsd, setEurPerUsd] = createSignal(FALLBACK_EUR_PER_USD)
+  const [catalogModel, setCatalogModel] = createSignal<any>()
   const theme = () => props.api.theme.current
   const messages = createMemo(() => props.api.state.session.messages(props.sessionID) as any[])
   const configModel = createMemo(() => String((props.api.state.config as any)?.model ?? ""))
@@ -148,6 +134,19 @@ function View(props: { api: TuiPluginApi; sessionID: string }) {
     }
   })
 
+  let catalogRequestKey = ""
+  createEffect(() => {
+    const providerID = current().providerID
+    const modelID = current().modelID
+    const key = `${providerID ?? ""}/${modelID ?? ""}`
+    if (key === catalogRequestKey) return
+    catalogRequestKey = key
+    setCatalogModel(undefined)
+    void loadCatalogModel(providerID, modelID)
+      .then((model) => commitIfCurrent(key, () => catalogRequestKey, setCatalogModel, model))
+      .catch(() => commitIfCurrent(key, () => catalogRequestKey, setCatalogModel, undefined))
+  })
+
   const totals = createMemo(() => {
     const providerID = current().providerID
     const modelID = current().modelID
@@ -160,6 +159,7 @@ function View(props: { api: TuiPluginApi; sessionID: string }) {
       cacheWrite: 0,
       recordedCostUsd: 0,
       matchedMessages: 0,
+      records: [] as Array<{ usage: TokenUsage; recordedCostUsd: number }>,
     }
 
     for (const message of messages()) {
@@ -177,27 +177,30 @@ function View(props: { api: TuiPluginApi; sessionID: string }) {
       result.reasoning += t.reasoning
       result.cacheRead += t.cacheRead
       result.cacheWrite += t.cacheWrite
-      result.recordedCostUsd += readCost(message)
+      const recordedCostUsd = readCost(message)
+      result.recordedCostUsd += recordedCostUsd
       result.matchedMessages++
+      result.records.push({ usage: t, recordedCostUsd })
     }
     return result
   })
 
   const money = createMemo(() => {
     const t = totals()
-    const pricing = readPricing(modelMeta().model)
-    const calculated =
-      t.input * pricing.input +
-      t.output * pricing.output +
-      t.reasoning * pricing.output +
-      t.cacheRead * (pricing.cacheRead || pricing.input) +
-      t.cacheWrite * (pricing.cacheWrite || pricing.input)
-    const useRecorded = t.recordedCostUsd > 0
-    const usd = useRecorded ? t.recordedCostUsd : calculated
+    const embeddedModel = modelMeta().model
+    const pricedModel = selectPricingModel(embeddedModel, catalogModel())
+    const cost = calculateSessionCost(pricedModel, t.records)
+
+    const source = cost.usedRecorded && cost.usedCalculated
+      ? MONEY_SOURCE_MIXED
+      : cost.usedRecorded
+        ? MONEY_SOURCE_RECORDED
+        : MONEY_SOURCE_CALCULATED
     return {
-      usd,
-      eur: usd * eurPerUsd(),
-      source: useRecorded ? MONEY_SOURCE_RECORDED : MONEY_SOURCE_CALCULATED,
+      usd: cost.usd,
+      eur: cost.usd * eurPerUsd(),
+      source,
+      available: !cost.missingUnpriced && (cost.usedRecorded || cost.pricingAvailable),
     }
   })
 
@@ -216,14 +219,16 @@ function View(props: { api: TuiPluginApi; sessionID: string }) {
 
         <Row api={props.api} label="Input" value={formatInt(totals().input)} />
         <Row api={props.api} label="Output" value={formatInt(totals().output)} />
-        <Show when={totals().reasoning > 0}>
-          <Row api={props.api} label="Reasoning" value={formatInt(totals().reasoning)} muted />
+        <Row api={props.api} label="Reasoning" value={formatInt(totals().reasoning)} muted />
+        <Row
+          api={props.api}
+          label="Gesamt"
+          value={formatInt(totals().input + totals().output + totals().reasoning)}
+        />
+        <Row api={props.api} label="Kosten" value={money().available ? formatEur(money().eur) : "nicht verfügbar"} />
+        <Show when={money().available}>
+          <text fg={theme().textMuted}>{`${formatUsd(money().usd)} · ${money().source}`}</text>
         </Show>
-        <Show when={totals().cacheRead + totals().cacheWrite > 0}>
-          <Row api={props.api} label="Cache" value={`${formatInt(totals().cacheRead)} / ${formatInt(totals().cacheWrite)}`} muted />
-        </Show>
-        <Row api={props.api} label="Kosten" value={formatEur(money().eur)} />
-        <text fg={theme().textMuted}>{`${formatUsd(money().usd)} · ${money().source}`}</text>
       </box>
     </Show>
   )

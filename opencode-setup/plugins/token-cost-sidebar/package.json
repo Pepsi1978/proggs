@@ -9,6 +9,9 @@
   "files": [
     "dist"
   ],
+  "scripts": {
+    "test": "bun test"
+  },
   "engines": {
     "opencode": ">=1.4.3"
   },

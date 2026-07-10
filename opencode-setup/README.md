@@ -126,9 +126,10 @@ installiert OpenCode beim Start selbst aus der `plugin`-Liste.
   vorher mit `read` gelesen zu haben. Mit `OPENCODE_TOOL_FIRST_ENFORCE=1` blockt es hart statt zu
   warnen ("Laws"-Ebene). Hintergrund: `best-practices/agents/anti-halluzination-regeln.md` §1+§7.
 - **`token-cost-sidebar/`** — lokales TUI-Plugin fuer die rechte Seitenleiste. Zeigt aktuelles Modell,
-  Input-/Output-Tokens, optionale Cache-/Reasoning-Tokens und Kosten in Euro. Es bevorzugt die von
-  OpenCode gespeicherte echte `cost`; wenn diese fehlt, rechnet es aus den Modellpreisen der
-  OpenCode-/models.dev-Metadaten. Geladen wird es ueber `tui.json` (`./plugins/token-cost-sidebar`).
+  Input-, Output-, optionale Reasoning- und Gesamttokens sowie Kosten in Euro. Es bevorzugt die von
+  OpenCode gespeicherte echte `cost`; bei fehlenden oder veralteten Nullpreisen laedt es den aktuellen
+  Modellpreis von models.dev und beruecksichtigt kontextabhaengige Preisstufen. Geladen wird es ueber
+  `tui.json` (`./plugins/token-cost-sidebar`).
 
 ## Manueller Weg (Fallback, falls das Skript nicht passt)
 ```sh
