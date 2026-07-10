@@ -166,8 +166,8 @@ try {
         # MCP-Server-Registrierung (.mcp.json). Vor dem chrome-'manifest.json'-Zweig (kein
         # Suffix-Konflikt, aber explizit). MCP-Server-Quellcode wird im .ts/.py-Zweig per Content-Probe erkannt.
         $slug = 'mcpserver'; $file = 'mcp-server.md'; $name = 'MCP-Server-Bau (Model Context Protocol)'
-    } elseif ($fpl -match '(^|/)opencode\.json$' -or $fpl -match '/\.opencode/' -or $fpl -match '/\.config/opencode/') {
-        # OpenCode CLI: zentrale Config (opencode.json, strict) ODER projekt-/user-lokaler opencode-Ordner.
+    } elseif ($fpl -match '(^|/)(opencode|tui)\.jsonc?$' -or $fpl -match '/\.opencode/' -or $fpl -match '/\.config/opencode/') {
+        # OpenCode CLI: zentrale Config (opencode.json/tui.json) ODER projekt-/user-lokaler opencode-Ordner.
         # Eindeutige Muster, kein Konflikt mit .mcp.json/settings.json. (Coverage-Luecke geschlossen 2026-06-20.)
         $slug = 'opencode'; $file = 'opencode-cli.md'; $name = 'OpenCode CLI (Config/Agents/Plugins)'
     } elseif ($fpl -match 'manifest\.json$' -or $fpl -match '/overlays/' -or $fpl -match 'background\.js$' -or $fpl -match 'service-worker\.js$' -or $fpl -match 'vorlese-overlay') {

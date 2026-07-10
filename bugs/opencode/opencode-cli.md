@@ -22,7 +22,7 @@
 | # | Signal / Situation | Sofort-Regel | Volltext |
 |---|--------------------|--------------|----------|
 | 1 | ⭐ Windows nativ: npm-Wrapper, kaputte Umlaute, Paste tot, Bun-Segfault | Offiziell **WSL nutzen** (`opencode.ai/docs/windows-wsl`). Nativ ist Fallback. | §1, §2, §12 |
-| 1a | Windows Terminal: Markieren kopiert nicht, `Strg+V` fehlt | In Windows-Terminal-`settings.json`: `"copyOnSelect": true` und `"experimental.rightClickContextMenu": false`; dann kopiert Linksauswahl sofort und Rechtsklick fügt ein. | §2 (#10a) |
+| 1a | Windows Terminal: Markieren/Rechtsklick wird von OpenCode abgefangen | OpenCode-`tui.json`: `"mouse": false`; zusätzlich im Terminal `"copyOnSelect": true` und `"experimental.rightClickContextMenu": false`. | §2 (#10a) |
 | 2 | ⭐ Kontext/Token läuft voll, viele MCP-Server aktiv | Jeder MCP lädt sein Tool-Schema in JEDEN Prompt (GitHub-MCP ~15–20k Tok; Extrem 147k). **KEIN natives Lazy-Loading** (Stand 1.17.11, anders als Claude Code) → manuelle Per-Agent-Auslagerung ist der EINZIGE Hebel: global `"tools":{"servername*":false}`, im Agent `true`. | §8 (#56) |
 | 3 | ⭐ Agent ändert/committet ungefragt | Defaults sind permissiv (`edit`/`bash` = allow). `permission: {edit:"ask", bash:"ask"}`. Permission-Keys **nur lowercase** — PascalCase (`"Bash"`) wird STILL ignoriert! | §6 |
 | 3a | ⭐ Modell VERWEIGERT Commit/Push mit erfundener „nur auf Anweisung"-Begründung | Text-Regel reicht nicht (trainiertes Vorsichtsverhalten) → zusätzlich Plugin `git-dirty-watchdog.js` (warnt hörbar bei `session.idle` + dirty Repo) | §6 (#48a) |
@@ -118,12 +118,12 @@
 **FIX:** Rechtsklick-Einfügen oder Strg+Umschalt+V; oder in WSL arbeiten.
 **Quelle:** https://github.com/anomalyco/opencode/issues/13800
 
-### 10a. Windows Terminal: Linksauswahl kopiert nicht automatisch, Rechtsklick kopiert nur
-**Symptom:** Mit der linken Maustaste markierter OpenCode-Text landet erst nach einem Rechtsklick in der Zwischenablage; zum Einfügen ist anschließend eine Tastenkombination nötig.
-**Ursache:** Windows Terminal steuert Auswahl und Zwischenablage außerhalb von OpenCode. Beim Standard `"copyOnSelect": false` bleibt die Auswahl bestehen und Rechtsklick kopiert sie, statt den vorhandenen Zwischenablageinhalt einzufügen.
-**Versionen:** Windows Terminal, per Design.
-**FIX (funktionserhaltend):** In der globalen Windows-Terminal-`settings.json` `"copyOnSelect": true` und `"experimental.rightClickContextMenu": false` setzen. Dann kopiert das Loslassen der linken Maustaste die Auswahl sofort, und Rechtsklick fügt die Zwischenablage ein. `copyFormatting: "none"` hält den Inhalt als Klartext. Der Fix gilt terminalweit, nicht nur für OpenCode.
-**Quelle:** https://learn.microsoft.com/windows/terminal/customize-settings/interaction#automatically-copy-selection-to-clipboard · https://learn.microsoft.com/windows/terminal/customize-settings/interaction#context-menu
+### 10a. Windows Terminal: Linksauswahl kopiert nicht automatisch, Rechtsklick wird abgefangen
+**Symptom:** Mit der linken Maustaste markierter OpenCode-Text landet erst nach einem Rechtsklick oder trotz „Copied to clipboard" gar nicht in der Zwischenablage; Rechtsklick im Eingabefeld fügt nichts ein.
+**Ursache:** OpenCode aktiviert standardmäßig `"mouse": true` und übernimmt damit die Mausereignisse selbst. Windows Terminal erhält deshalb weder das Loslassen der linken Taste noch den Rechtsklick zuverlässig. Die alleinige Terminalkonfiguration reicht nicht. OpenCodes eigener Copy-on-select-Pfad ist zudem als offener Fehler #17796 dokumentiert.
+**Versionen:** OpenCode 1.17.18 und Windows Terminal 1.24.11321.0 bestätigt; OpenCode-Fehler #17796 offen.
+**FIX (funktionserhaltend für Copy/Paste):** In `~/.config/opencode/tui.json` `"mouse": false` setzen. Laut offizieller OpenCode-Dokumentation bleibt damit die native Mausauswahl des Terminals erhalten. Zusätzlich in Windows-Terminal-`settings.json` `"copyOnSelect": true`, `"experimental.rightClickContextMenu": false` und optional `"copyFormatting": "none"` setzen. Dann kopiert Mouse-Up die native Auswahl und Rechtsklick fügt ein. Trade-off: OpenCodes eigene Mausfunktionen wie internes Scrollen und anklickbare TUI-Elemente sind deaktiviert; Tastatur und natives Terminal-Scrollen bleiben.
+**Quelle:** https://opencode.ai/docs/tui/#options · https://github.com/anomalyco/opencode/issues/17796 · https://learn.microsoft.com/windows/terminal/customize-settings/interaction#automatically-copy-selection-to-clipboard · https://learn.microsoft.com/windows/terminal/customize-settings/interaction#context-menu
 
 ### 11. Windows: Bild-Paste schlägt still fehl (Bun strippt `$` in PowerShell)
 **Symptom:** Bild aus Zwischenablage lässt sich nicht einfügen, kein Fehler.

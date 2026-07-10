@@ -156,8 +156,8 @@ case "$fpl" in
         # MCP-Server-Registrierung (.mcp.json). Vor dem chrome-'manifest.json'-Zweig (kein
         # Suffix-Konflikt, aber explizit). MCP-Server-Quellcode wird im .ts/.py-Zweig per Content-Probe erkannt.
         slug="mcpserver"; file="mcp-server.md"; name="MCP-Server-Bau (Model Context Protocol)";;
-    *opencode.json|*/.opencode/*|*/.config/opencode/*)
-        # OpenCode CLI: zentrale Config (opencode.json, strict) ODER projekt-/user-lokaler opencode-Ordner.
+    *opencode.json|*opencode.jsonc|*tui.json|*tui.jsonc|*/.opencode/*|*/.config/opencode/*)
+        # OpenCode CLI: zentrale Config (opencode.json/tui.json) ODER projekt-/user-lokaler opencode-Ordner.
         # Eindeutige Muster, kein Konflikt mit .mcp.json/settings.json. (Coverage-Luecke geschlossen 2026-06-20.)
         slug="opencode"; file="opencode-cli.md"; name="OpenCode CLI (Config/Agents/Plugins)";;
     *manifest.json|*/overlays/*|*background.js|*service-worker.js|*vorlese-overlay*)
