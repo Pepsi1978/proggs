@@ -114,10 +114,43 @@ if ($wavs) { $wavs | Copy-Item -Destination (Join-Path $Dst 'sounds') -Force; Ok
 
 Backup (Join-Path $Dst 'opencode-notifier.json')
 $notifier = [ordered]@{
+  sound = $true
+  notification = $true
+  showSessionTitle = $true
+  suppressWhenFocused = $false
+  minDuration = 0
+  events = [ordered]@{
+    permission = $true
+    complete = $true
+    subagent_complete = $true
+    error = $true
+    question = $true
+    interrupted = $true
+    user_cancelled = $true
+    plan_exit = $true
+    session_started = $false
+    user_message = $false
+    client_connected = $false
+  }
+  messages = [ordered]@{
+    permission = 'OpenCode benötigt eine Freigabe: {sessionTitle}'
+    complete = 'Arbeit abgeschlossen: {sessionTitle}'
+    subagent_complete = 'Unteraufgabe abgeschlossen: {sessionTitle}'
+    error = 'Fehler in der Session: {sessionTitle}'
+    question = 'OpenCode hat eine Frage: {sessionTitle}'
+    interrupted = 'Session wurde unterbrochen: {sessionTitle}'
+    user_cancelled = 'Session wurde abgebrochen: {sessionTitle}'
+    plan_exit = 'Plan ist zur Prüfung bereit: {sessionTitle}'
+  }
   sounds = [ordered]@{
     permission = (Join-Path $Dst 'sounds\permission.wav')
     complete   = (Join-Path $Dst 'sounds\complete.wav')
+    subagent_complete = (Join-Path $Dst 'sounds\complete.wav')
     error      = (Join-Path $Dst 'sounds\error.wav')
+    question   = (Join-Path $Dst 'sounds\permission.wav')
+    interrupted = (Join-Path $Dst 'sounds\error.wav')
+    user_cancelled = (Join-Path $Dst 'sounds\error.wav')
+    plan_exit  = (Join-Path $Dst 'sounds\permission.wav')
   }
 }
 Write-Utf8NoBom (Join-Path $Dst 'opencode-notifier.json') ($notifier | ConvertTo-Json -Depth 5)

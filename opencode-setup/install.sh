@@ -88,10 +88,43 @@ if cp "$SRC/sounds/"*.wav "$DST/sounds/" 2>/dev/null; then green "OK  sounds/"; 
 backup "$DST/opencode-notifier.json"
 cat > "$DST/opencode-notifier.json" <<EOF
 {
+  "sound": true,
+  "notification": true,
+  "showSessionTitle": true,
+  "suppressWhenFocused": false,
+  "minDuration": 0,
+  "events": {
+    "permission": true,
+    "complete": true,
+    "subagent_complete": true,
+    "error": true,
+    "question": true,
+    "interrupted": true,
+    "user_cancelled": true,
+    "plan_exit": true,
+    "session_started": false,
+    "user_message": false,
+    "client_connected": false
+  },
+  "messages": {
+    "permission": "OpenCode benötigt eine Freigabe: {sessionTitle}",
+    "complete": "Arbeit abgeschlossen: {sessionTitle}",
+    "subagent_complete": "Unteraufgabe abgeschlossen: {sessionTitle}",
+    "error": "Fehler in der Session: {sessionTitle}",
+    "question": "OpenCode hat eine Frage: {sessionTitle}",
+    "interrupted": "Session wurde unterbrochen: {sessionTitle}",
+    "user_cancelled": "Session wurde abgebrochen: {sessionTitle}",
+    "plan_exit": "Plan ist zur Prüfung bereit: {sessionTitle}"
+  },
   "sounds": {
     "permission": "$DST/sounds/permission.wav",
     "complete": "$DST/sounds/complete.wav",
-    "error": "$DST/sounds/error.wav"
+    "subagent_complete": "$DST/sounds/complete.wav",
+    "error": "$DST/sounds/error.wav",
+    "question": "$DST/sounds/permission.wav",
+    "interrupted": "$DST/sounds/error.wav",
+    "user_cancelled": "$DST/sounds/error.wav",
+    "plan_exit": "$DST/sounds/permission.wav"
   }
 }
 EOF

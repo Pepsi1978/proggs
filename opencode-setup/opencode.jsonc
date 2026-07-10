@@ -44,18 +44,17 @@
   // Umschalten in der TUI weiterhin per Tab (agent_cycle); dies setzt nur den Start-Default.
   "default_agent": "build",
 
-  // Punkt 6 — Plugins (extern, Quellcode vor Install geprueft 2026-06-19):
+  // Punkt 6 — Plugins (extern, Quellcode vor Install geprueft 2026-07-10):
   //  - @mohak34/opencode-notifier (v0.2.8, MIT): Ton + System-Notification bei
-  //    permission / complete / error. Nutzt node-notifier; bringt Default-Sounds mit
-  //    (funktioniert sofort). Eigene WAV pro Event spaeter in
-  //    ~/.config/opencode/opencode-notifier.json (Events: permission/complete/error).
+  //    Session-/Unteraufgaben-Abschluss, permission, question, plan_exit und error.
+  //    Die Installer erzeugen ~/.config/opencode/opencode-notifier.json mit eigenen WAVs.
   //  - @plannotator/opencode (v0.20.3 — >=0.20.0 PFLICHT, sonst Bun-Import-Bug auf
   //    Node-Host, Almanach §55c): Plan-Annotation. workflow:"manual" -> submit_plan wird
   //    NICHT registriert, nur per /plannotator-annotate|review|last auf Abruf. KEIN
   //    Plan-Zwang bei normalen Anfragen (Frank-Wunsch). Slash-Commands kommen mit dem Paket.
   //  Eintrag-Form: String ODER [name, options]; { } NICHT als eigenes Array-Item (Plannotator-Doku).
   "plugin": [
-    "@mohak34/opencode-notifier@latest",
+    "@mohak34/opencode-notifier@0.2.8",
     ["@plannotator/opencode@latest", { "workflow": "manual" }]
   ],
 

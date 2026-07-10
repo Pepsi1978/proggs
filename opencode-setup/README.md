@@ -113,8 +113,9 @@ installiert OpenCode beim Start selbst aus der `plugin`-Liste.
 2. Legt `~/.config/opencode/{agents,plugins,sounds}` an und sichert vorhandene Dateien nach `.backup-<zeit>/`.
 3. Kopiert `opencode.jsonc` — auf **macOS/Linux** wird `"shell": "pwsh"` → `"bash"` ersetzt; auf **Windows** bleibt `pwsh`; kopiert außerdem `tui.json` fuer TUI-Plugins.
 4. Kopiert `AGENTS-global.md` → `AGENTS.md`, alle `agents/*.md`, alle `plugins/*.js`, Plugin-Paket-Verzeichnisse, installiert die TUI-Plugin-Dependencies per `npm`, alle `sounds/*.wav`, alle `skill/<name>/SKILL.md` (OpenCode-Skills wie `session-opencode`).
-5. **Erzeugt** `opencode-notifier.json` neu mit den korrekten lokalen Sound-Pfaden (Windows BOM-frei) —
-   die Repo-Variante haette feste Windows-Pfade, die auf macOS brechen.
+5. **Erzeugt** `opencode-notifier.json` neu mit den korrekten lokalen Sound-Pfaden (Windows BOM-frei).
+   Abschluss-, Unteraufgaben-, Freigabe-, Frage-, Plan- und Fehlerereignisse melden sich auch dann,
+   wenn OpenCode gerade fokussiert ist; Start- und Nachrichteneingangs-Ereignisse bleiben stumm.
 6. Voraussetzungs-Check (SK-Keys, `OPENROUTER_API_KEY`, WireGuard `10.8.0.1`) + TODO-Liste.
 
 ## Lokale Plugins (Detail)
