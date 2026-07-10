@@ -1,6 +1,6 @@
 # ClaudeVoiceOverlay — Windows
 
-Ein schwebendes WPF-Overlay, das sich automatisch am Rand der aktiven **Claude Desktop App** oder **Codex Desktop App** einblendet. Per Knopfdruck wird Sprache aufgenommen, via **Groq Whisper** in Text umgewandelt und direkt in die App eingefuegt. Optional korrigiert **Google Gemini** den transkribierten Text vor dem Einfuegen — optimiert fuer Programmier-Anweisungen an KI-Coding-Tools wie Claude Code.
+Ein schwebendes WPF-Overlay, das sich automatisch am Rand der aktiven **Claude Desktop App** oder der kombinierten **ChatGPT-/Codex-App** einblendet. Per Knopfdruck wird Sprache aufgenommen, via **Groq Whisper** in Text umgewandelt und direkt in die App eingefuegt. Optional korrigiert **Google Gemini** den transkribierten Text vor dem Einfuegen — optimiert fuer Programmier-Anweisungen an KI-Coding-Tools wie Claude Code.
 
 ---
 
@@ -12,7 +12,7 @@ Ein schwebendes WPF-Overlay, das sich automatisch am Rand der aktiven **Claude D
 - **Auto-Enter**: Optionaler Toggle, der den Text nach dem Einfuegen automatisch absendet (Enter-Taste)
 - **Audio-Feedback**: Kurzer Ton beim Start der Aufnahme, Doppel-Ton beim Stopp — kein Hinschauen noetig
 - **Leerzeichen zwischen Eingaben**: Bei mehreren aufeinanderfolgenden Spracheingaben wird automatisch ein Leerzeichen eingefuegt
-- **Automatische Sichtbarkeit**: Das Overlay erscheint nur, wenn Claude oder Codex im Vordergrund ist, und versteckt sich automatisch
+- **Automatische Sichtbarkeit**: Das Overlay erscheint nur, wenn Claude, Codex oder die neue kombinierte App mit dem Prozessnamen ChatGPT im Vordergrund ist, und versteckt sich automatisch
 - **Multi-Monitor**: Das Overlay positioniert sich immer auf dem Monitor der aktiven App
 - **Zeile loeschen**: X-Button loescht die aktuelle Eingabe in Claude/Codex
 - **System-Tray**: Laeuft unauffaellig im Hintergrund mit Tray-Icon
@@ -150,7 +150,7 @@ Trage mindestens deinen **Groq API-Key** ein. Die wichtigsten Einstellungen:
 | `GEMINI_API_KEY` | Nein | Google Gemini API-Key fuer Textkorrektur |
 | `GEMINI_MODEL` | Nein | Gemini-Modell (Standard: `gemini-3.1-flash-lite`) |
 | `GEMINI_THINKING_LEVEL` | Nein | Thinking-Level fuer Gemini 3.x: `LOW`, `MEDIUM` oder `HIGH` |
-| `TARGET_PROCESS_NAMES` | Nein | Kommagetrennte Prozessnamen (Standard: `Claude,Codex`) |
+| `TARGET_PROCESS_NAMES` | Nein | Kommagetrennte Prozessnamen (Standard: `Claude,Codex,ChatGPT`) |
 
 > **Wichtig:** Die `.env`-Datei enthaelt deine geheimen API-Keys. Sie darf **niemals** auf GitHub hochgeladen werden.
 
@@ -169,7 +169,7 @@ Starte das Overlay:
 .\publish\ClaudeVoiceOverlay.exe
 ```
 
-Das Overlay erscheint automatisch am rechten Rand, sobald Claude oder Codex im Vordergrund ist.
+Das Overlay erscheint automatisch am rechten Rand, sobald Claude Desktop oder die kombinierte ChatGPT-/Codex-App im Vordergrund ist.
 
 > **Hinweis:** Falls Windows Smart App Control oder ein Virenscanner die `.exe` beim ersten Start blockiert, musst du die Datei manuell erlauben (Rechtsklick → „Trotzdem ausfuehren" oder eine Ausnahme im Virenscanner hinzufuegen).
 
@@ -329,7 +329,7 @@ Wenn die macOS-Version (Swift) aktualisiert wurde, muessen folgende Schritte fue
 | `git wird nicht erkannt` | Git installieren von https://git-scm.com/download/win und Terminal neu starten |
 | `pwsh wird nicht erkannt` | PowerShell 7 installieren oder stattdessen `powershell -File publish.ps1` verwenden |
 | `.exe` wird von Windows blockiert | Smart App Control oder Virenscanner blockiert die unsignierte `.exe`. Rechtsklick → „Trotzdem ausfuehren" oder Ausnahme im Virenscanner hinzufuegen |
-| Overlay erscheint nicht | Pruefen ob Claude oder Codex wirklich im Vordergrund ist. Die Prozessnamen muessen mit `TARGET_PROCESS_NAMES` uebereinstimmen (Standard: `Claude,Codex`) |
+| Overlay erscheint nicht | Pruefen ob Claude Desktop oder die ChatGPT-/Codex-App wirklich im Vordergrund ist. Die Prozessnamen muessen mit `TARGET_PROCESS_NAMES` uebereinstimmen (Standard: `Claude,Codex,ChatGPT`) |
 | Transkription schlaegt fehl | `GROQ_API_KEY` in der `.env` pruefen. Ist der Key gueltig? Ist die `.env` neben der `.exe`? |
 | Gemini-Korrektur funktioniert nicht | `GEMINI_API_KEY` pruefen. Ohne Key wird Gemini automatisch deaktiviert (kein Fehler) |
 | Text wird nicht eingefuegt | Claude/Codex muss im Vordergrund sein. Das Overlay setzt den Text in die Zwischenablage und sendet Ctrl+V |

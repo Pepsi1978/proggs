@@ -8,7 +8,7 @@ namespace ClaudeVoiceOverlay.Services
 {
     /// <summary>
     /// Beobachtet das aktive Vordergrund-Fenster und meldet, wenn eine der
-    /// Ziel-Apps (Claude Desktop, Codex) nach vorne kommt bzw. den Fokus
+    /// Ziel-Apps (Claude Desktop oder kombinierte ChatGPT-/Codex-App) nach vorne kommt bzw. den Fokus
     /// verliert. Schwester-Klasse zu TerminalVoiceOverlay/TerminalWatcher —
     /// identische Mechanik (SetWinEventHook + PID-Cache), nur andere
     /// Ziel-Prozesse. Die oeffentliche API (AppActivated/AppDeactivated,
@@ -42,11 +42,13 @@ namespace ClaudeVoiceOverlay.Services
 
         public AppWatcher(string[]? processNames = null)
         {
-            _targetProcessNames = processNames ?? new[] { "Claude", "Codex" };
+            _targetProcessNames = processNames ?? new[] { "Claude", "Codex", "ChatGPT" };
         }
 
         public void Start()
         {
+            DiagLog.Write("AppWatcher", "starting", ("targets", string.Join(",", _targetProcessNames)));
+
             // Must store delegate in a field to prevent GC
             _winEventDelegate = OnWinEvent;
 
@@ -59,7 +61,10 @@ namespace ClaudeVoiceOverlay.Services
                 Win32.WINEVENT_OUTOFCONTEXT | Win32.WINEVENT_SKIPOWNPROCESS);
 
             if (_hookHandle == IntPtr.Zero)
+            {
                 Console.WriteLine("AppWatcher: SetWinEventHook fehlgeschlagen");
+                DiagLog.Write("AppWatcher", "hook_failed");
+            }
 
             // Check initial state
             CheckForegroundWindow(Win32.GetForegroundWindow());
@@ -87,6 +92,7 @@ namespace ClaudeVoiceOverlay.Services
             if (IsTargetAppWindow(hwnd))
             {
                 _lastAppHwnd = hwnd;
+                DiagLog.Write("AppWatcher", "target_foreground", ("hwnd", $"0x{hwnd.ToInt64():X}"));
                 Application.Current?.Dispatcher.BeginInvoke(() => AppActivated?.Invoke(hwnd));
             }
             else
@@ -118,6 +124,7 @@ namespace ClaudeVoiceOverlay.Services
                     if (name.Equals(target, StringComparison.OrdinalIgnoreCase))
                     {
                         isTarget = true;
+                        DiagLog.Write("AppWatcher", "process_matched", ("process", name), ("pid", pid), ("target", target));
                         break;
                     }
                 }

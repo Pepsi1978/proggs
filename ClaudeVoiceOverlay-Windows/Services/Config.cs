@@ -22,7 +22,7 @@ namespace ClaudeVoiceOverlay.Services
         public int AudioSampleRate { get; }
         public int AudioChannels { get; }
 
-        // Ziel-App-Erkennung (Claude, Codex)
+        // Ziel-App-Erkennung (Claude Desktop sowie die kombinierte ChatGPT-/Codex-App)
         public string[] TargetProcessNames { get; }
 
         private Config(Dictionary<string, string> env)
@@ -44,7 +44,7 @@ namespace ClaudeVoiceOverlay.Services
             AudioChannels = GetInt(env, "AUDIO_CHANNELS", 1);
 
             // Ziel-App-Erkennung
-            var processNames = Get(env, "TARGET_PROCESS_NAMES", "Claude,Codex");
+            var processNames = Get(env, "TARGET_PROCESS_NAMES", "Claude,Codex,ChatGPT");
             TargetProcessNames = processNames.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
         }
 
