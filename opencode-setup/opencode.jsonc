@@ -25,11 +25,17 @@
   // Punkt 4 — autonom arbeiten, ohne staendige Nachfragen (Franks bypassPermissions-Aequivalent).
   // ROOT CAUSE der Nachfragen: OpenCode-Defaults sind groesstenteils "allow", ABER
   // doom_loop/external_directory stehen auf "ask" und .env-Reads auf "deny" (Almanach §40).
-  // Mit Wildcard "*":"allow" wird JEDES Tool ohne Rueckfrage erlaubt (letzte passende Regel
-  // gewinnt; Keys MUESSEN lowercase sein — PascalCase wird STILL ignoriert, Almanach §18).
+  // Der String "allow" ist laut offiziellem Schema die Kurzform fuer ALLE Permissions.
   // ACHTUNG: erlaubt damit auch .env-Reads und externe Verzeichnisse — bewusst gewollt.
-  "permission": {
-    "*": "allow"
+  "permission": "allow",
+
+  // Agent-spezifische Permissions gewinnen gegen den globalen Wert. Deshalb auch alle
+  // eingebauten Arbeits-Agents explizit freigeben, damit ein Agentwechsel kein "ask" reaktiviert.
+  "agent": {
+    "build": { "permission": "allow" },
+    "plan": { "permission": "allow" },
+    "general": { "permission": "allow" },
+    "explore": { "permission": "allow" }
   },
 
   // Punkt 5 — IMMER im Build-Modus starten (voller Zugriff), nie im Plan-Agent.
