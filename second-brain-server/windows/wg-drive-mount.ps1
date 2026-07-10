@@ -129,4 +129,20 @@ foreach ($d in $map.Keys) {
     if ($code -eq 0) { Log "$d war nicht verbunden -> mount OK ($remote)" }
     else { Log "$d mount FEHLGESCHLAGEN: $(ErrText $code) [$remote]" }
 }
+
+# Explorer-Anzeigenamen setzen (Frank 2026-07-10): "Gedanken (Z:)" / "Daten (Y:)" statt
+# "gedanken (\\10.8.0.1) (Z:)". Der String-Wert _LabelFromReg unter
+# MountPoints2\##host#share ueberschreibt den im Explorer angezeigten Namen UND blendet den
+# UNC-Pfad aus. Liegt in HKCU -> bleibt ueber Neustarts. Hier bei JEDEM Mount idempotent gesetzt,
+# damit das Label unverlierbar ist, selbst wenn der MountPoints2-Cache mal geleert wird.
+$labels = [ordered]@{ '\\10.8.0.1\gedanken' = 'Gedanken'; '\\10.8.0.1\daten' = 'Daten' }
+$mp2 = 'HKCU:\Software\Microsoft\Windows\CurrentVersion\Explorer\MountPoints2'
+foreach ($remote in $labels.Keys) {
+    $key = Join-Path $mp2 ($remote -replace '\\', '#')
+    try {
+        if (-not (Test-Path $key)) { New-Item -Path $key -Force -ErrorAction Stop | Out-Null }
+        New-ItemProperty -Path $key -Name '_LabelFromReg' -Value $labels[$remote] -PropertyType String -Force -ErrorAction Stop | Out-Null
+        Log "Explorer-Label gesetzt: $($labels[$remote]) ($remote)"
+    } catch { Log "Label-Set FEHLER fuer $remote : $($_.Exception.Message)" }
+}
 exit 0
