@@ -6,7 +6,7 @@
 ## Das Wichtigste in einem Satz
 
 Auf dem VPS liegt **KEIN git-Repo**. Deployen heisst: geaenderte Dateien per **scp** ins
-Server-Verzeichnis hochladen und den betroffenen Dienst per **`docker compose up -d --build`**
+Server-Verzeichnis hochladen und den betroffenen Dienst per **`docker compose up -d --build --no-deps <dienst>`**
 neu bauen. Fertig. (Es gibt KEIN `git pull` auf dem Server — wer danach sucht, sucht umsonst.)
 
 ## Server-Fakten (die "wichtigen Informationen")
@@ -78,7 +78,7 @@ laeuft weiter der alte Code, obwohl die Datei auf dem Server schon neu ist.
 > `V0.x (TT.MM.JJJJ, HH:MM Uhr)`. Format:
 > `VERSION = "0.28.0 (TT.MM.JJJJ, HH:MM Uhr)"  # 0.28.0: <was deployt wurde, kurz>`.
 > Aktuelle Zeit holen: `Get-Date -Format 'dd.MM.yyyy, HH:mm'` (Windows).
-> **Danach das dashboard IMMER mit-deployen** (`docker compose up -d --build dashboard`), auch wenn nur
+> **Danach das dashboard IMMER mit-deployen** (`docker compose up -d --build --no-deps dashboard`), auch wenn nur
 > der agent ODER librarian (oder brain-api/mcp) geaendert wurde — sonst bleibt der Footer auf dem alten
 > Stand und Frank sieht nicht, dass sein Deploy angekommen ist. (Regel `version-bump-visible-always`:
 > jede Aenderung sichtbar + Timestamp.) Die Dashboard-Version ist der EINE Gesamt-Versionszaehler des
@@ -99,16 +99,22 @@ scp -i ~/SK/second-brain/id_ed25519 -r \
 
 # 2. Auf dem VPS NUR den geaenderten Dienst neu bauen + starten:
 ssh -i ~/SK/second-brain/id_ed25519 root@168.231.83.205 \
-  "cd /opt/second-brain && docker compose up -d --build dashboard"
+  "cd /opt/second-brain && docker compose up -d --build --no-deps dashboard"
 
 # 3. Verifizieren (Status healthy + neue Version):
 ssh -i ~/SK/second-brain/id_ed25519 root@168.231.83.205 \
   "cd /opt/second-brain && docker compose ps && curl -s http://10.8.0.1:8003/api/health"
 ```
 
-Fuer einen anderen Dienst einfach `dashboard` durch `brain-api`, `agent` oder `mcp` ersetzen
-(und den passenden Bau-Pfad aus der Tabelle nehmen). Mehrere Dienste gleichzeitig:
-`docker compose up -d --build brain-api mcp`.
+Fuer einen anderen Dienst einfach `dashboard` durch `brain-api`, `agent`, `librarian` oder `mcp`
+ersetzen (und den passenden Bau-Pfad aus der Tabelle nehmen). **Wichtig:** Bei einem Einzelservice-
+Deploy immer `--no-deps` verwenden. `depends_on` bleibt in `compose.yaml` fuer Boot-/Laufzeit sinnvoll,
+aber ohne `--no-deps` startet/recreated Compose auch unveraenderte Abhaengigkeiten mit (realer Vorfall:
+`librarian`-Deploy recreatete `brain-api`). Mehrere bewusst gemeinsam geaenderte Dienste gleichzeitig:
+`docker compose up -d --build --no-deps brain-api mcp`.
+
+Nur wenn Abhaengigkeiten absichtlich mitgezogen werden sollen (Erststart, geaenderte `compose.yaml`,
+geänderte Dependency oder kompletter Stack-Rollout), `--no-deps` weglassen bzw. den ganzen Stack starten.
 
 Hat sich die `compose.yaml` selbst geaendert: die compose.yaml ebenfalls hochladen
 (`scp ... compose.yaml root@...:/opt/second-brain/`), dann `docker compose up -d`.
@@ -124,7 +130,9 @@ Hat sich die `compose.yaml` selbst geaendert: die compose.yaml ebenfalls hochlad
 ## Stolperfallen (die Zeit kosten, wenn man sie nicht kennt)
 
 1. **KEIN `git pull` auf dem VPS** — `/opt/second-brain` ist kein git-Repo. Immer scp + `--build`.
-2. **`--build` ist Pflicht** — der Code ist ins Image gebacken; ohne `--build` bleibt der alte Code aktiv.
+2. **`--build --no-deps` ist Pflicht fuer Einzelservice-Deploys** — der Code ist ins Image gebacken;
+   ohne `--build` bleibt der alte Code aktiv, ohne `--no-deps` werden unveraenderte Abhaengigkeiten
+   wie `brain-api` unnoetig mitgestartet oder recreated.
 3. **Windscribe / Full-Tunnel AUS** vor dem Deploy — sonst haengt/scheitert SSH.
 4. **Ports an `10.8.0.1`**, nicht `0.0.0.0` und nicht `127.0.0.1` — vom VPS aus mit `10.8.0.1` curlen
    (das ist die eigene WireGuard-IP des Servers). Vom PC aus nur mit aktivem WireGuard.
@@ -144,4 +152,4 @@ Hat sich die `compose.yaml` selbst geaendert: die compose.yaml ebenfalls hochlad
 
 ## Faustregel
 
-> Aendern (lokal/Repo) → committen + pushen → **scp** auf den VPS → **`docker compose up -d --build <dienst>`** → Health pruefen.
+> Aendern (lokal/Repo) → committen + pushen → **scp** auf den VPS → **`docker compose up -d --build --no-deps <dienst>`** → Health pruefen.
