@@ -330,10 +330,11 @@ Subagents für spezialisierte Arbeit: `@general`, `@explore` (schnell, read-only
 11. **OpenCode ohne Tastatur kopieren/einfügen:** OpenCode fängt mit dem Default `"mouse": true` die
     Maus ab. In `~/.config/opencode/tui.json` zuerst `"mouse": false` setzen; dadurch bleibt laut
     offizieller Doku die native Terminalauswahl erhalten. Dann in Windows-Terminal-`settings.json`
-    `"copyOnSelect": true` und `"experimental.rightClickContextMenu": false` setzen. Mouse-Up kopiert,
-    Rechtsklick fügt ein; `"copyFormatting": "none"` hält Klartext. Trade-off: OpenCodes eigene
-    Mausfunktionen sind aus, Tastatur und native Terminal-Maus bleiben. `offiziell` (OpenCode TUI
-    Options; Microsoft Learn Windows Terminal Interaction Settings)
+    `"copyOnSelect": true` und `"experimental.rightClickContextMenu": false` setzen. Unter
+    `profiles.defaults` macht `"selectionBackground": "#808080"` die native Auswahl deutlich grau
+    sichtbar. Mouse-Up kopiert, Rechtsklick fügt ein; `"copyFormatting": "none"` hält Klartext.
+    Trade-off: OpenCodes eigene Mausfunktionen sind aus, Tastatur und native Terminal-Maus bleiben.
+    `offiziell` (OpenCode TUI Options; Microsoft Learn Windows Terminal Interaction und Appearance)
 
 ---
 
