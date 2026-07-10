@@ -7,7 +7,8 @@ namespace ClaudeVoiceOverlay.Services
     public sealed class RecordingCuePlayer : IDisposable
     {
         private const int SampleRate = 44100;
-        private const int DesiredLatencyMs = 40;
+        private const int DesiredLatencyMs = 100;
+        private const int OutputBufferCount = 3;
         private readonly object _lock = new();
         private readonly byte[] _startPcm = CreatePcm((880, 150));
         private readonly byte[] _stopPcm = CreatePcm((660, 120), (440, 120));
@@ -68,7 +69,7 @@ namespace ClaudeVoiceOverlay.Services
             var output = new WaveOutEvent
             {
                 DesiredLatency = DesiredLatencyMs,
-                NumberOfBuffers = 2
+                NumberOfBuffers = OutputBufferCount
             };
 
             try
@@ -79,7 +80,7 @@ namespace ClaudeVoiceOverlay.Services
                 _buffer = buffer;
                 _output = output;
                 _playbackHealthy = true;
-                DiagLog.Write("AudioCue", "output_ready", ("latencyMs", DesiredLatencyMs), ("buffers", 2));
+                DiagLog.Write("AudioCue", "output_ready", ("latencyMs", DesiredLatencyMs), ("buffers", OutputBufferCount));
             }
             catch
             {
