@@ -27,7 +27,7 @@ from typing import Any
 import httpx
 from mcp.server.fastmcp import FastMCP
 
-VERSION = "1.3.2"  # 1.3.2 (Tiefen-Debugging PERFORMANCE 2026-07-02): modul-globaler httpx.Client (_HTTP, Connection-Pool + Keep-Alive, transport retries=1 nur fuer den Verbindungsaufbau) statt frischem TCP-Handshake pro Tool-Aufruf gegen die brain-api. Verhaltensneutral. Alt: 1.3.1: get_by_title zeigt den ECHTEN aufgeloesten Titel an (data['title']) statt des Roh-Parameters -> kein doppeltes ' [Kategorie]' mehr bei toleranter Aufloesung. 1.3.0: NEUES Tool get_category_item(category, index) — narrensicheres sequentielles Einlesen einer ganzen Kategorie per Zahl-Index (1..total), OHNE Titel raten zu muessen (Frank-Wunsch 2026-06-27, fuer GANZ schwache Modelle). Jede Antwort nennt selbst den naechsten Aufruf. Loest den OpenCode/DeepSeek-Regelladefehler an der Wurzel. 1.2.0: list_memories warnt bei ready=false (Gehirn laedt nach Neustart noch -> Liste evtl. unvollstaendig; Frank 2026-06-26). 1.1.0: recall um Payload-Filter (category/date/date_from/date_to). 1.0.0: 1:1-Schema (mem0 raus).
+VERSION = "1.3.3"  # 1.3.3: Grosse parallele Volltext-Abrufe laufen stateless als direkte JSON-Antwort statt ueber den fragilen Session-/SSE-Rueckkanal; get_by_title loggt Laufzeit und Zeichenzahl. Alt: 1.3.2.
 
 # ---------------------------------------------------------------------------
 # Konfiguration (alles aus Umgebungsvariablen — Secrets nie im Code)
@@ -97,13 +97,15 @@ def _build_mcp() -> FastMCP:
             enable_dns_rebinding_protection=True,
             allowed_hosts=[f"10.8.0.1:{MCP_PORT}", "10.8.0.1", f"127.0.0.1:{MCP_PORT}", f"localhost:{MCP_PORT}"],
         )
-        m = FastMCP("second-brain", host=MCP_HOST, port=MCP_PORT, transport_security=ts)
+        m = FastMCP("second-brain", host=MCP_HOST, port=MCP_PORT, transport_security=ts,
+                    stateless_http=True, json_response=True)
         _log(logging.INFO, "MCP mit TransportSecuritySettings gestartet", allowed_host=f"10.8.0.1:{MCP_PORT}")
         return m
     except Exception as e:  # noqa: BLE001 — Security-Config darf den Container NIE crashen
         _log(logging.WARNING, "TransportSecuritySettings nicht gesetzt -> Fallback host=0.0.0.0",
              err=f"{type(e).__name__}: {e}")
-        return FastMCP("second-brain", host=MCP_HOST, port=MCP_PORT)
+        return FastMCP("second-brain", host=MCP_HOST, port=MCP_PORT,
+                       stateless_http=True, json_response=True)
 
 
 mcp = _build_mcp()
@@ -201,18 +203,24 @@ def recall(query: str, limit: int = 5, category: str = "", date: str = "",
 @mcp.tool()
 def get_by_title(title: str) -> str:
     """Hole einen Eintrag EXAKT per Titel — liefert das GANZE Dokument 1:1 (unveraendert) zurueck."""
+    t0 = time.monotonic()
     try:
         data = _get("/by-title", {"title": title, "user_id": USER_ID})
     except Exception as e:  # noqa: BLE001
         _log(logging.ERROR, "get_by_title fehlgeschlagen", exc_info=True)
         return f"Fehler beim Abrufen: {type(e).__name__}: {e}"
     if not data.get("found"):
+        _log(logging.INFO, "get_by_title ok", title=title, found=False,
+             ms=int((time.monotonic() - t0) * 1000))
         return f"Kein Eintrag mit Titel '{title}'."
     # Den ECHTEN (vom Server aufgeloesten) Titel anzeigen, nicht den evtl. verschmutzten Roh-Parameter
     # — sonst erscheint bei toleranter Aufloesung das angehaengte ' [Kategorie]' doppelt (1.16.0-Resolver).
     shown = data.get("title") or title
     cat = f" [{data['category']}]" if data.get("category") else ""
-    return f"{shown}{cat}:\n\n{data.get('text', '')}"
+    text = data.get("text", "")
+    _log(logging.INFO, "get_by_title ok", title=shown, found=True, chars=len(text),
+         ms=int((time.monotonic() - t0) * 1000))
+    return f"{shown}{cat}:\n\n{text}"
 
 
 @mcp.tool()
