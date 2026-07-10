@@ -16,6 +16,7 @@ public sealed partial class MainViewModel : ObservableObject
     private readonly ModelRegistry _registry;
     private readonly OpenRouterService _router = new();
     private readonly OpenCodeLauncherService _launcher = new();
+    private readonly OpenCodeUpdateService _updater = new();
     private CancellationTokenSource? _loadCts;
     private CancellationTokenSource? _thinkingCts;
 
@@ -26,9 +27,10 @@ public sealed partial class MainViewModel : ObservableObject
         SelectedModel = ModelGroups.FirstOrDefault(g => g.Models.Count > 0)?.Models.FirstOrDefault();
         _ = RefreshOpenRouterFreeModelsAsync();
         WorkDir = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), "proggs");
+        _ = CheckOpenCodeUpdateAsync();
 
-        var version = Assembly.GetExecutingAssembly().GetName().Version?.ToString(3) ?? "1.7.12";
-        Version = $"Version {version} (10.07.2026, 17:03 Uhr)";
+        var version = Assembly.GetExecutingAssembly().GetName().Version?.ToString(3) ?? "1.7.13";
+        Version = $"Version {version} (10.07.2026, 17:32 Uhr)";
     }
 
     public ObservableCollection<ModelGroupEntry> ModelGroups { get; } = new();
@@ -165,6 +167,15 @@ public sealed partial class MainViewModel : ObservableObject
         {
             Logger.Instance.Warn("MainViewModel", "RefreshOpenRouterFreeModelsAsync", $"OpenRouterFree bleibt bei Fallback-Liste: {ex.Message}");
         }
+    }
+
+    private async Task CheckOpenCodeUpdateAsync()
+    {
+        var result = await _updater.CheckAsync();
+        if (result.Status == "installed")
+            StatusText = result.Message;
+        else if (result.Status == "failed")
+            StatusText = $"OpenCode-Update zurückgestellt; letzter Windows-Fix bleibt aktiv.";
     }
 
     private async Task LoadProvidersAsync(ModelEntry model)

@@ -12,6 +12,11 @@
 # Die "shell"-Zeile bleibt "pwsh" (Windows). opencode-notifier.json wird mit den korrekten lokalen
 # Windows-Sound-Pfaden NEU erzeugt (BOM-frei).
 
+param(
+  [switch]$SkipWindowsFix,
+  [switch]$SkipLauncherBuild
+)
+
 $ErrorActionPreference = 'Stop'
 
 $Src = $PSScriptRoot                                  # opencode-setup\
@@ -91,7 +96,7 @@ $npm = Get-Command npm -ErrorAction SilentlyContinue
 if ($npm) {
   Push-Location $Dst
   try {
-    & npm install --silent '@opencode-ai/plugin@1.17.7' '@opentui/core@0.3.4' '@opentui/solid@0.4.0' 'solid-js@1.9.12' | Out-Null
+    & npm install --silent '@opencode-ai/plugin@1.17.15' '@opentui/core@0.4.3' '@opentui/solid@0.4.3' 'solid-js@1.9.12' | Out-Null
     if ($LASTEXITCODE -eq 0) { Ok 'TUI-Plugin-Dependencies (npm)' } else { Warn 'TUI-Plugin-Dependencies konnten nicht installiert werden' }
   } finally {
     Pop-Location
@@ -118,7 +123,29 @@ $notifier = [ordered]@{
 Write-Utf8NoBom (Join-Path $Dst 'opencode-notifier.json') ($notifier | ConvertTo-Json -Depth 5)
 Ok 'opencode-notifier.json (lokale Sound-Pfade, BOM-frei)'
 
-# --- 5) Voraussetzungs-Check (nur Hinweise; das Setup selbst ist fertig) ---
+# --- 5) Windows-Stabilitätsbuild + Launcher (auf Testzielen überspringbar) ---
+if (-not $SkipWindowsFix) {
+  $windowsFix = Join-Path $Src 'build-install-windows-mousefix.ps1'
+  & $windowsFix -Force
+  if ($LASTEXITCODE -ne 0) { throw 'Windows-Stabilitätsbuild fehlgeschlagen; bestehende Version bleibt aktiv.' }
+  Ok 'OpenCode-Windows-Fix (Maus, Full-Repaint, TUI-Variant, Auto-Update)'
+}
+
+if (-not $SkipLauncherBuild) {
+  $launcherDir = Join-Path (Split-Path $Src -Parent) 'OpenCodeLauncher'
+  $dotnet = Get-Command dotnet -ErrorAction SilentlyContinue
+  if ($dotnet -and (Test-Path -LiteralPath $launcherDir)) {
+    & dotnet build (Join-Path $launcherDir 'OpenCodeLauncher.csproj') -c Release
+    if ($LASTEXITCODE -ne 0) { throw 'OpenCode Launcher konnte nicht gebaut werden.' }
+    & (Join-Path $launcherDir 'create_shortcut.ps1')
+    if ($LASTEXITCODE -ne 0) { throw 'Launcher-Verknüpfung konnte nicht erstellt werden.' }
+    Ok 'OpenCode Launcher + Desktop-Verknüpfung'
+  } else {
+    Warn 'dotnet 8 oder OpenCodeLauncher fehlt -> Launcher nicht gebaut'
+  }
+}
+
+# --- 6) Voraussetzungs-Check (nur Hinweise; das Setup selbst ist fertig) ---
 Write-Host ''
 Write-Host '== Voraussetzungs-Check (was noch fehlt, manuell erledigen) =='
 $todo = 0

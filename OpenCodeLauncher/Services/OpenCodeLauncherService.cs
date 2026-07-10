@@ -574,8 +574,33 @@ try {
     private static string ResolveOpenCodeExecutable()
     {
         var home = Environment.GetFolderPath(Environment.SpecialFolder.UserProfile);
-        var custom = Path.Combine(home, ".local", "share", "opencode-mousefix", "opencode.exe");
-        return File.Exists(custom) ? custom : "opencode";
+        var root = Path.Combine(home, ".local", "share", "opencode-mousefix");
+        foreach (var pointerName in new[] { "current.json", "current.json.bak" })
+        {
+            var pointerPath = Path.Combine(root, pointerName);
+            try
+            {
+                using var json = JsonDocument.Parse(File.ReadAllText(pointerPath));
+                foreach (var entryName in new[] { "active", "previous" })
+                {
+                    if (!json.RootElement.TryGetProperty(entryName, out var entry)) continue;
+                    if (!entry.TryGetProperty("relativeExe", out var relativeNode)) continue;
+                    var relative = relativeNode.GetString();
+                    if (string.IsNullOrWhiteSpace(relative)) continue;
+                    var fullRoot = Path.GetFullPath(root).TrimEnd(Path.DirectorySeparatorChar) + Path.DirectorySeparatorChar;
+                    var fullPath = Path.GetFullPath(Path.Combine(root, relative));
+                    if (!fullPath.StartsWith(fullRoot, StringComparison.OrdinalIgnoreCase)) continue;
+                    if (File.Exists(fullPath)) return fullPath;
+                }
+            }
+            catch (Exception ex)
+            {
+                Logger.Instance.Warn("OpenCodeLauncherService", "ResolveOpenCodeExecutable", $"{pointerName} ist ungültig: {ex.Message}");
+            }
+        }
+
+        var legacy = Path.Combine(root, "opencode.exe");
+        return File.Exists(legacy) ? legacy : "opencode";
     }
 
     private static string? NormalizeThinkingLevel(string? thinkingLevel) => string.IsNullOrWhiteSpace(thinkingLevel)
