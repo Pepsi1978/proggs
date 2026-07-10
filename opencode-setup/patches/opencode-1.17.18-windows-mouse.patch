@@ -322,10 +322,21 @@ index e2f1e45..a90a931 100644
 +  ).toBeUndefined()
 +})
 diff --git a/packages/opencode/src/config/plugin.ts b/packages/opencode/src/config/plugin.ts
-index 60bba4d..d75fb1a 100644
+index 60bba4d..5c4d374 100644
 --- a/packages/opencode/src/config/plugin.ts
 +++ b/packages/opencode/src/config/plugin.ts
-@@ -37,6 +37,15 @@ export function pluginOptions(plugin: ConfigPluginV1.Spec): ConfigPluginV1.Optio
+@@ -3,6 +3,10 @@ import { ConfigPluginV1 } from "@opencode-ai/core/v1/config/plugin"
+ import { pathToFileURL } from "url"
+ import { isPathPluginSpec, parsePluginSpecifier, resolvePathPluginTarget } from "@/plugin/shared"
+ import path from "path"
++import { Global } from "@opencode-ai/core/global"
++import { Filesystem } from "@/util/filesystem"
++import { parse as parseJsonc } from "jsonc-parser"
++import { isRecord } from "@/util/record"
+ 
+ export type Scope = "global" | "local"
+ 
+@@ -37,6 +41,29 @@ export function pluginOptions(plugin: ConfigPluginV1.Spec): ConfigPluginV1.Optio
    return Array.isArray(plugin) ? plugin[1] : undefined
  }
  
@@ -338,10 +349,24 @@ index 60bba4d..d75fb1a 100644
 +  return enabled?.[pluginKey(plugin)] !== false
 +}
 +
++export async function loadPluginEnabled(dir = Global.Path.config): Promise<Record<string, boolean>> {
++  const result: Record<string, boolean> = {}
++  for (const file of [path.join(dir, "tui.json"), path.join(dir, "tui.jsonc")]) {
++    const text = await Filesystem.readText(file).catch(() => undefined)
++    if (!text) continue
++    const data = parseJsonc(text, undefined, { allowTrailingComma: true })
++    if (!isRecord(data) || !isRecord(data.plugin_enabled)) continue
++    for (const [id, enabled] of Object.entries(data.plugin_enabled)) {
++      if (typeof enabled === "boolean") result[id] = enabled
++    }
++  }
++  return result
++}
++
  // Path-like specs are resolved relative to the config file that declared them so merges later on do not
  // accidentally reinterpret `./plugin.ts` relative to some other directory.
  export async function resolvePluginSpec(
-@@ -66,8 +75,7 @@ export function deduplicatePluginOrigins(plugins: Origin[]): Origin[] {
+@@ -66,8 +93,7 @@ export function deduplicatePluginOrigins(plugins: Origin[]): Origin[] {
    const list: Origin[] = []
  
    for (const plugin of plugins.toReversed()) {
@@ -352,27 +377,26 @@ index 60bba4d..d75fb1a 100644
      seen.add(name)
      list.push(plugin)
 diff --git a/packages/opencode/src/plugin/index.ts b/packages/opencode/src/plugin/index.ts
-index 1558c70..ac151cc 100644
+index 1558c70..ba90f7c 100644
 --- a/packages/opencode/src/plugin/index.ts
 +++ b/packages/opencode/src/plugin/index.ts
-@@ -31,6 +31,8 @@ import type { WorkspaceAdapter } from "@/control-plane/types"
+@@ -31,6 +31,7 @@ import type { WorkspaceAdapter } from "@/control-plane/types"
  import { RuntimeFlags } from "@/effect/runtime-flags"
  import { EventV2Bridge } from "@/event-v2-bridge"
  import { InstallationChannel } from "@opencode-ai/core/installation/version"
 +import { ConfigPlugin } from "@/config/plugin"
-+import { TuiConfig } from "@/config/tui"
  
  type State = {
    hooks: Hooks[]
-@@ -174,7 +176,10 @@ const layer = Layer.effect(
+@@ -174,7 +175,10 @@ const layer = Layer.effect(
            if (init._tag === "Some") hooks.push(init.value)
          }
  
 -        const plugins = flags.pure ? [] : (cfg.plugin_origins ?? [])
-+        const tui = yield* Effect.promise(() => TuiConfig.get().catch(() => undefined))
++        const enabled = yield* Effect.promise(() => ConfigPlugin.loadPluginEnabled())
 +        const plugins = flags.pure
 +          ? []
-+          : (cfg.plugin_origins ?? []).filter((plugin) => ConfigPlugin.pluginEnabled(plugin.spec, tui?.plugin_enabled))
++          : (cfg.plugin_origins ?? []).filter((plugin) => ConfigPlugin.pluginEnabled(plugin.spec, enabled))
          if (flags.pure && cfg.plugin_origins?.length) {
          }
          if (plugins.length) yield* config.waitForDependencies()
@@ -644,10 +668,10 @@ index 4702655..cd9a9be 100644
 +  }
 +})
 diff --git a/packages/opencode/test/config/config.test.ts b/packages/opencode/test/config/config.test.ts
-index e281831..75975e4 100644
+index e281831..7976151 100644
 --- a/packages/opencode/test/config/config.test.ts
 +++ b/packages/opencode/test/config/config.test.ts
-@@ -1810,6 +1810,24 @@ describe("deduplicatePluginOrigins", () => {
+@@ -1810,6 +1810,35 @@ describe("deduplicatePluginOrigins", () => {
    )
  })
  
@@ -666,6 +690,17 @@ index e281831..75975e4 100644
 +    expect(ConfigPlugin.pluginKey(spec)).toBe(spec)
 +    expect(ConfigPlugin.pluginEnabled(spec, { [spec]: false })).toBe(false)
 +    expect(ConfigPlugin.pluginEnabled(spec, {})).toBe(true)
++  })
++
++  test("loads enabled state from global tui config without importing the TUI runtime", async () => {
++    await using tmp = await tmpdir()
++    await Bun.write(
++      path.join(tmp.path, "tui.json"),
++      JSON.stringify({ plugin_enabled: { "@mohak34/opencode-notifier": false, ignored: "no" } }),
++    )
++    expect(await ConfigPlugin.loadPluginEnabled(tmp.path)).toEqual({
++      "@mohak34/opencode-notifier": false,
++    })
 +  })
 +})
 +
