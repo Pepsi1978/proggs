@@ -1,6 +1,6 @@
 param(
     [string]$Version = "",
-    [string]$PatchRevision = "7",
+    [string]$PatchRevision = "8",
     [switch]$Force,
     [string]$InstallRoot = ""
 )
