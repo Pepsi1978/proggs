@@ -1,6 +1,6 @@
 param(
     [string]$Version = "",
-    [string]$PatchRevision = "6",
+    [string]$PatchRevision = "7",
     [switch]$Force,
     [string]$InstallRoot = ""
 )
@@ -90,6 +90,7 @@ function Publish-Candidate([string]$Built, [string]$UpstreamVersion, [string]$Cu
                 windowsMouseHybrid = "present"
                 fullRepaintRecovery = "present"
                 tuiVariant = "present"
+                runtimePluginToggle = "present"
             }
         }
         previous = $current.active
@@ -201,7 +202,7 @@ try {
         } finally { Pop-Location }
         Push-Location "packages\opencode"
         try {
-            bun test "test/cli/tui/thread.test.ts"
+            bun test "test/cli/tui/thread.test.ts" "test/cli/tui/plugin-toggle.test.ts" "test/plugin/install.test.ts" "test/config/config.test.ts"
             if ($LASTEXITCODE -ne 0) { throw "CLI-Regressionstests fehlgeschlagen." }
         } finally { Pop-Location }
 

@@ -119,7 +119,10 @@ Die rechte TUI-Seitenleiste muss danach auf beiden Windows-Rechnern dieselben Fu
 - OpenCode-Version mit `-windowsfix.<revision>`
 
 Der Windows-Build erhält zusätzlich Linksauswahl-Copy, Rechtsklick-Paste, Mausrad, anklickbare Dialoge,
-automatische Full-Repaint-Recovery und prozesslokales `--variant` für High/Medium/etc.
+automatische Full-Repaint-Recovery, prozesslokales `--variant` für High/Medium/etc. und eine vollständige
+Plugin-Verwaltung: Die Plugin-Seite zeigt TUI- und Runtime-Hook-Plugins gemeinsam an und kann beide Typen
+dauerhaft aktivieren oder deaktivieren. Runtime-Schalter werden kompatibel in `tui.json` gespeichert;
+OpenCode lädt die Server-Plugins danach automatisch neu.
 
 ## Automatische OpenCode-Updates unter Windows
 
@@ -127,7 +130,7 @@ Der Launcher prüft höchstens einmal täglich im Hintergrund die stabile npm-Ve
 Ist eine neuere Version vorhanden, wird sie nicht ungeprüft über das funktionierende Binary geschrieben:
 
 1. Exakten Git-Tag klonen und den Windows-Patch prüfen.
-2. Maus-, Variant- und Full-Repaint-Fähigkeiten sicherstellen.
+2. Maus-, Variant-, Full-Repaint- und Runtime-Plugin-Fähigkeiten sicherstellen.
 3. Vier Typechecks, fokussierte Regressionstests, Binary-Build und `--version`-Smoke-Test ausführen.
 4. Das Binary in einen unveränderlichen Versionsordner unter
    `~/.local/share/opencode-mousefix/versions/` installieren.

@@ -321,3 +321,448 @@ index e2f1e45..a90a931 100644
 +    }),
 +  ).toBeUndefined()
 +})
+diff --git a/packages/opencode/src/config/plugin.ts b/packages/opencode/src/config/plugin.ts
+index 60bba4d..d75fb1a 100644
+--- a/packages/opencode/src/config/plugin.ts
++++ b/packages/opencode/src/config/plugin.ts
+@@ -37,6 +37,15 @@ export function pluginOptions(plugin: ConfigPluginV1.Spec): ConfigPluginV1.Optio
+   return Array.isArray(plugin) ? plugin[1] : undefined
+ }
+ 
++export function pluginKey(plugin: ConfigPluginV1.Spec): string {
++  const spec = pluginSpecifier(plugin)
++  return spec.startsWith("file://") ? spec : parsePluginSpecifier(spec).pkg
++}
++
++export function pluginEnabled(plugin: ConfigPluginV1.Spec, enabled?: Record<string, boolean>): boolean {
++  return enabled?.[pluginKey(plugin)] !== false
++}
++
+ // Path-like specs are resolved relative to the config file that declared them so merges later on do not
+ // accidentally reinterpret `./plugin.ts` relative to some other directory.
+ export async function resolvePluginSpec(
+@@ -66,8 +75,7 @@ export function deduplicatePluginOrigins(plugins: Origin[]): Origin[] {
+   const list: Origin[] = []
+ 
+   for (const plugin of plugins.toReversed()) {
+-    const spec = pluginSpecifier(plugin.spec)
+-    const name = spec.startsWith("file://") ? spec : parsePluginSpecifier(spec).pkg
++    const name = pluginKey(plugin.spec)
+     if (seen.has(name)) continue
+     seen.add(name)
+     list.push(plugin)
+diff --git a/packages/opencode/src/plugin/index.ts b/packages/opencode/src/plugin/index.ts
+index 1558c70..ac151cc 100644
+--- a/packages/opencode/src/plugin/index.ts
++++ b/packages/opencode/src/plugin/index.ts
+@@ -31,6 +31,8 @@ import type { WorkspaceAdapter } from "@/control-plane/types"
+ import { RuntimeFlags } from "@/effect/runtime-flags"
+ import { EventV2Bridge } from "@/event-v2-bridge"
+ import { InstallationChannel } from "@opencode-ai/core/installation/version"
++import { ConfigPlugin } from "@/config/plugin"
++import { TuiConfig } from "@/config/tui"
+ 
+ type State = {
+   hooks: Hooks[]
+@@ -174,7 +176,10 @@ const layer = Layer.effect(
+           if (init._tag === "Some") hooks.push(init.value)
+         }
+ 
+-        const plugins = flags.pure ? [] : (cfg.plugin_origins ?? [])
++        const tui = yield* Effect.promise(() => TuiConfig.get().catch(() => undefined))
++        const plugins = flags.pure
++          ? []
++          : (cfg.plugin_origins ?? []).filter((plugin) => ConfigPlugin.pluginEnabled(plugin.spec, tui?.plugin_enabled))
+         if (flags.pure && cfg.plugin_origins?.length) {
+         }
+         if (plugins.length) yield* config.waitForDependencies()
+diff --git a/packages/opencode/src/plugin/install.ts b/packages/opencode/src/plugin/install.ts
+index f07b78b..a12613a 100644
+--- a/packages/opencode/src/plugin/install.ts
++++ b/packages/opencode/src/plugin/install.ts
+@@ -75,6 +75,16 @@ type PatchOne = Ok<{ item: PatchItem }> | PatchErr
+ 
+ export type PatchResult = Ok<{ dir: string; items: PatchItem[] }> | (PatchErr & { dir: string })
+ 
++export type PatchPluginEnabledInput = Omit<PatchInput, "spec" | "targets" | "force"> & {
++  id: string
++  enabled: boolean
++}
++
++export type PatchPluginEnabledResult =
++  | Ok<{ file: string }>
++  | Err<"invalid_json", { file: string; line: number; col: number; parse: string }>
++  | Err<"patch_failed", { file: string; error: unknown }>
++
+ const defaultInstallDeps: InstallDeps = {
+   resolve: (spec) => resolvePluginTarget(spec),
+ }
+@@ -437,3 +447,46 @@ export async function patchPluginConfig(input: PatchInput, dep: PatchDeps = defa
+     items,
+   }
+ }
++
++export async function patchPluginEnabled(
++  input: PatchPluginEnabledInput,
++  dep: PatchDeps = defaultPatchDeps,
++): Promise<PatchPluginEnabledResult> {
++  const dir = patchDir({ ...input, spec: "", targets: [] })
++  await using _ = await Flock.acquire(`plug-config:${Filesystem.resolve(path.join(dir, "tui"))}`)
++
++  const files = dep.files(dir, "tui")
++  let file = files[0]
++  for (const candidate of files) {
++    if (!(await dep.exists(candidate))) continue
++    file = candidate
++    break
++  }
++
++  const src = await dep.readText(file).catch((err: NodeJS.ErrnoException) => {
++    if (err.code === "ENOENT") return "{}"
++    return err
++  })
++  if (src instanceof Error) return { ok: false, code: "patch_failed", file, error: src }
++
++  const text = src.trim() ? src : "{}"
++  const errs: JsoncParseError[] = []
++  parseJsonc(text, errs, { allowTrailingComma: true })
++  if (errs.length) {
++    const err = errs[0]
++    const lines = text.substring(0, err.offset).split("\n")
++    return {
++      ok: false,
++      code: "invalid_json",
++      file,
++      line: lines.length,
++      col: lines[lines.length - 1].length + 1,
++      parse: printParseErrorCode(err.error),
++    }
++  }
++
++  const updated = patch(text, ["plugin_enabled", input.id], input.enabled)
++  const write = await dep.write(file, updated).catch((error: unknown) => error)
++  if (write instanceof Error) return { ok: false, code: "patch_failed", file, error: write }
++  return { ok: true, file }
++}
+diff --git a/packages/opencode/src/plugin/tui/runtime.ts b/packages/opencode/src/plugin/tui/runtime.ts
+index 2a88ad3..4c26799 100644
+--- a/packages/opencode/src/plugin/tui/runtime.ts
++++ b/packages/opencode/src/plugin/tui/runtime.ts
+@@ -23,12 +23,18 @@ import {
+   readPluginId,
+   readV1Plugin,
+   resolvePluginId,
++  pluginSource,
+   type PluginPackage,
+   type PluginSource,
+ } from "@/plugin/shared"
+ import { PluginLoader } from "@/plugin/loader"
+ import { PluginMeta } from "@/plugin/meta"
+-import { installPlugin as installModulePlugin, patchPluginConfig, readPluginManifest } from "@/plugin/install"
++import {
++  installPlugin as installModulePlugin,
++  patchPluginConfig,
++  patchPluginEnabled,
++  readPluginManifest,
++} from "@/plugin/install"
+ import { hasTheme, upsertTheme } from "@opencode-ai/tui/context/theme"
+ import { Global } from "@opencode-ai/core/global"
+ import { Filesystem } from "@/util/filesystem"
+@@ -117,10 +123,12 @@ type RuntimeState = {
+   plugins_by_id: Map<string, PluginEntry>
+   pending: Map<string, ConfigPlugin.Origin>
+   dispose_timeout_ms: number
++  config: TuiConfig.Resolved
+ }
+ 
+ const DISPOSE_TIMEOUT_MS = 5000
+ const KV_KEY = "plugin_enabled"
++const SERVER_PREFIX = "server:"
+ const EMPTY_TUI: TuiPluginModule = {
+   tui: async () => {},
+ }
+@@ -489,7 +497,7 @@ function writePluginEnabledState(api: Api, id: string, enabled: boolean) {
+ }
+ 
+ function listPluginStatus(state: RuntimeState): TuiPluginStatus[] {
+-  return state.plugins.map((plugin) => ({
++  const tui = state.plugins.map((plugin) => ({
+     id: plugin.id,
+     source: plugin.meta.source,
+     spec: plugin.meta.spec,
+@@ -497,6 +505,49 @@ function listPluginStatus(state: RuntimeState): TuiPluginStatus[] {
+     enabled: plugin.enabled,
+     active: plugin.scope !== undefined,
+   }))
++  const enabled = pluginEnabledState(state, state.config)
++  const server = (state.api.state.config.plugin ?? []).map((spec) => {
++    const item = spec as ConfigPluginV1.Spec
++    const value = ConfigPlugin.pluginSpecifier(item)
++    const key = ConfigPlugin.pluginKey(item)
++    const active = enabled[key] !== false
++    return {
++      id: `${SERVER_PREFIX}${key}`,
++      source: pluginSource(value),
++      spec: value,
++      target: value,
++      enabled: active,
++      active,
++    }
++  })
++  return [...tui, ...server]
++}
++
++async function setServerPluginEnabled(state: RuntimeState, id: string, enabled: boolean) {
++  const key = id.slice(SERVER_PREFIX.length)
++  const result = await patchPluginEnabled({
++    id: key,
++    enabled,
++    global: true,
++    directory: state.directory,
++    worktree: state.api.state.path.worktree,
++    config: state.api.state.path.config || undefined,
++  })
++  if (!result.ok) {
++    fail("failed to persist server plugin state", { id: key, error: result })
++    return false
++  }
++
++  writePluginEnabledState(state.api, key, enabled)
++  state.view.update({ status: listPluginStatus(state) })
++  const disposed = await state.api.client.global.dispose({ throwOnError: true }).then(
++    () => true,
++    (error) => {
++      fail("failed to reload server plugins", { id: key, error })
++      return false
++    },
++  )
++  return disposed
+ }
+ 
+ async function deactivatePluginEntry(state: RuntimeState, plugin: PluginEntry, persist: boolean) {
+@@ -557,6 +608,7 @@ async function activatePluginEntry(state: RuntimeState, plugin: PluginEntry, per
+ 
+ async function activatePluginById(state: RuntimeState | undefined, id: string, persist: boolean) {
+   if (!state) return false
++  if (id.startsWith(SERVER_PREFIX)) return setServerPluginEnabled(state, id, true)
+   const plugin = state.plugins_by_id.get(id)
+   if (!plugin) return false
+   return activatePluginEntry(state, plugin, persist)
+@@ -564,6 +616,7 @@ async function activatePluginById(state: RuntimeState | undefined, id: string, p
+ 
+ async function deactivatePluginById(state: RuntimeState | undefined, id: string, persist: boolean) {
+   if (!state) return false
++  if (id.startsWith(SERVER_PREFIX)) return setServerPluginEnabled(state, id, false)
+   const plugin = state.plugins_by_id.get(id)
+   if (!plugin) return false
+   return deactivatePluginEntry(state, plugin, persist)
+@@ -1068,6 +1121,7 @@ async function load(input: {
+     plugins_by_id: new Map(),
+     pending: new Map(),
+     dispose_timeout_ms: input.disposeTimeoutMs ?? DISPOSE_TIMEOUT_MS,
++    config,
+   }
+   runtime = next
+   next.view.update({
+diff --git a/packages/opencode/test/cli/tui/plugin-toggle.test.ts b/packages/opencode/test/cli/tui/plugin-toggle.test.ts
+index 4702655..cd9a9be 100644
+--- a/packages/opencode/test/cli/tui/plugin-toggle.test.ts
++++ b/packages/opencode/test/cli/tui/plugin-toggle.test.ts
+@@ -6,6 +6,7 @@ import { tmpdir } from "../../fixture/fixture"
+ import { createTuiPluginApi } from "../../fixture/tui-plugin"
+ import { createTuiResolvedConfig } from "../../fixture/tui-runtime"
+ import { TuiConfig } from "../../../src/config/tui"
++import type { HostPluginApi } from "@opencode-ai/tui/plugin/slots"
+ 
+ const { TuiPluginRuntime } = await import("../../../src/plugin/tui/runtime")
+ 
+@@ -262,3 +263,66 @@ test("loads disabled-by-default internal plugin inactive and activates on demand
+     wait.mockRestore()
+   }
+ })
++
++test("lists and toggles server plugins from the same plugin manager", async () => {
++  await using tmp = await tmpdir()
++  const wait = spyOn(TuiConfig, "waitForDependencies").mockResolvedValue()
++  const cwd = spyOn(process, "cwd").mockImplementation(() => tmp.path)
++  let disposals = 0
++  const client = {
++    global: {
++      dispose: async () => {
++        disposals += 1
++        return { data: true }
++      },
++    },
++  } as unknown as HostPluginApi["client"]
++  const api = createTuiPluginApi({
++    client,
++    state: {
++      config: { plugin: ["@mohak34/opencode-notifier@0.2.8"] },
++      path: {
++        state: path.join(tmp.path, "state"),
++        config: tmp.path,
++        worktree: tmp.path,
++        directory: tmp.path,
++      },
++    },
++  })
++  const config = createTuiResolvedConfig()
++  const id = "server:@mohak34/opencode-notifier"
++
++  try {
++    await TuiPluginRuntime.init({ api, config })
++    expect(TuiPluginRuntime.list().find((item) => item.id === id)).toMatchObject({
++      spec: "@mohak34/opencode-notifier@0.2.8",
++      enabled: true,
++      active: true,
++    })
++
++    await expect(TuiPluginRuntime.deactivatePlugin(id)).resolves.toBe(true)
++    expect(TuiPluginRuntime.list().find((item) => item.id === id)).toMatchObject({
++      enabled: false,
++      active: false,
++    })
++    const disabled = JSON.parse(await fs.readFile(path.join(tmp.path, "tui.json"), "utf8")) as {
++      plugin_enabled?: Record<string, boolean>
++    }
++    expect(disabled.plugin_enabled).toEqual({
++      "@mohak34/opencode-notifier": false,
++    })
++
++    await expect(TuiPluginRuntime.activatePlugin(id)).resolves.toBe(true)
++    const enabled = JSON.parse(await fs.readFile(path.join(tmp.path, "tui.json"), "utf8")) as {
++      plugin_enabled?: Record<string, boolean>
++    }
++    expect(enabled.plugin_enabled).toEqual({
++      "@mohak34/opencode-notifier": true,
++    })
++    expect(disposals).toBe(2)
++  } finally {
++    await TuiPluginRuntime.dispose()
++    cwd.mockRestore()
++    wait.mockRestore()
++  }
++})
+diff --git a/packages/opencode/test/config/config.test.ts b/packages/opencode/test/config/config.test.ts
+index e281831..75975e4 100644
+--- a/packages/opencode/test/config/config.test.ts
++++ b/packages/opencode/test/config/config.test.ts
+@@ -1810,6 +1810,24 @@ describe("deduplicatePluginOrigins", () => {
+   )
+ })
+ 
++describe("pluginEnabled", () => {
++  test("uses package name across pinned versions", () => {
++    expect(ConfigPlugin.pluginKey("@mohak34/opencode-notifier@0.2.8")).toBe("@mohak34/opencode-notifier")
++    expect(
++      ConfigPlugin.pluginEnabled("@mohak34/opencode-notifier@0.2.8", {
++        "@mohak34/opencode-notifier": false,
++      }),
++    ).toBe(false)
++  })
++
++  test("uses exact file URL for local plugins", () => {
++    const spec = "file:///project/.opencode/plugins/demo.js"
++    expect(ConfigPlugin.pluginKey(spec)).toBe(spec)
++    expect(ConfigPlugin.pluginEnabled(spec, { [spec]: false })).toBe(false)
++    expect(ConfigPlugin.pluginEnabled(spec, {})).toBe(true)
++  })
++})
++
+ describe("OPENCODE_DISABLE_PROJECT_CONFIG", () => {
+   it.instance(
+     "skips project config files when flag is set",
+diff --git a/packages/opencode/test/plugin/install.test.ts b/packages/opencode/test/plugin/install.test.ts
+index 6dc9175..833d00a 100644
+--- a/packages/opencode/test/plugin/install.test.ts
++++ b/packages/opencode/test/plugin/install.test.ts
+@@ -4,6 +4,7 @@ import path from "path"
+ import { parse as parseJsonc } from "jsonc-parser"
+ import { Filesystem } from "@/util/filesystem"
+ import { createPlugTask, type PlugCtx, type PlugDeps } from "../../src/cli/cmd/plug"
++import { patchPluginEnabled } from "../../src/plugin/install"
+ import { tmpdir } from "../fixture/fixture"
+ 
+ function deps(global: string, target: string | Error): PlugDeps {
+@@ -105,9 +106,48 @@ async function plugin(
+ async function read(file: string) {
+   return Filesystem.readJson<{
+     plugin?: unknown[]
++    plugin_enabled?: Record<string, boolean>
+   }>(file)
+ }
+ 
++test("patchPluginEnabled persists runtime state in tui config", async () => {
++  await using tmp = await tmpdir()
++  const global = path.join(tmp.path, "global")
++  const dep = deps(global, "unused")
++
++  const disabled = await patchPluginEnabled(
++    {
++      id: "@mohak34/opencode-notifier",
++      enabled: false,
++      global: true,
++      config: global,
++      worktree: tmp.path,
++      directory: tmp.path,
++    },
++    dep,
++  )
++  expect(disabled.ok).toBe(true)
++  expect((await read(path.join(global, "tui.jsonc"))).plugin_enabled).toEqual({
++    "@mohak34/opencode-notifier": false,
++  })
++
++  const enabled = await patchPluginEnabled(
++    {
++      id: "@mohak34/opencode-notifier",
++      enabled: true,
++      global: true,
++      config: global,
++      worktree: tmp.path,
++      directory: tmp.path,
++    },
++    dep,
++  )
++  expect(enabled.ok).toBe(true)
++  expect((await read(path.join(global, "tui.jsonc"))).plugin_enabled).toEqual({
++    "@mohak34/opencode-notifier": true,
++  })
++})
++
+ describe("plugin.install.task", () => {
+   test("writes both server and tui config entries", async () => {
+     await using tmp = await tmpdir()
+diff --git a/packages/tui/src/feature-plugins/system/plugins.tsx b/packages/tui/src/feature-plugins/system/plugins.tsx
+index 78611e0..7b2a269 100644
+--- a/packages/tui/src/feature-plugins/system/plugins.tsx
++++ b/packages/tui/src/feature-plugins/system/plugins.tsx
+@@ -15,11 +15,15 @@ function state(api: TuiPluginApi, item: TuiPluginStatus) {
+ 
+   return (
+     <span style={{ fg: item.active ? api.theme.current.success : api.theme.current.error }}>
+-      {item.active ? "active" : "inactive"}
++      {item.id.startsWith("server:") ? (item.active ? "enabled" : "disabled") : item.active ? "active" : "inactive"}
+     </span>
+   )
+ }
+ 
++function title(item: TuiPluginStatus) {
++  return item.id.startsWith("server:") ? item.id.slice("server:".length) : item.id
++}
++
+ function source(spec: string) {
+   if (!spec.startsWith("file://")) return
+   return fileURLToPath(spec)
+@@ -134,9 +138,9 @@ function Install(props: { api: TuiPluginApi }) {
+ 
+ function row(api: TuiPluginApi, item: TuiPluginStatus, width: number): DialogSelectOption<string> {
+   return {
+-    title: item.id,
++    title: title(item),
+     value: item.id,
+-    category: item.source === "internal" ? "Internal" : "External",
++    category: item.id.startsWith("server:") ? "Runtime" : item.source === "internal" ? "Internal" : "TUI",
+     description: meta(item, width),
+     footer: state(api, item),
+     disabled: item.id === id,

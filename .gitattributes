@@ -27,6 +27,7 @@
 *.md text eol=lf
 *.yml text eol=lf
 *.yaml text eol=lf
+*.patch text eol=lf whitespace=-blank-at-eol
 *.env text eol=lf
 # Binaerdateien
 *.png binary
