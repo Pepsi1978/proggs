@@ -80,7 +80,7 @@ public sealed class OpenCodeLauncherService
             if (!string.IsNullOrWhiteSpace(thinkingLevel))
             {
                 var root = ReadConfig();
-                PatchDirectModel(root, model.ProviderId, model.Slug, model.DisplayName);
+                PatchDirectModel(root, model.ProviderId, model.Slug, model.DisplayName, thinkingLevel);
                 WriteConfig(root);
                 PatchModelVariantState(modelString, thinkingLevel);
                 log.Info("OpenCodeLauncherService", "ConfigureProvider", $"Direktmodell-Thinking gesetzt: {model.ProviderId}/{model.Slug} -> {thinkingLevel}");
@@ -396,7 +396,7 @@ $ErrorActionPreference = 'Continue'
 $tabArgs = @({{PowerShellArrayLiteral(tabArgs)}})
 $fallbackArgs = @({{PowerShellArrayLiteral(fallbackArgs)}})
 try {
-    $ok = Start-WtCliRobust -LogFile {{PowerShellLiteral(log.LogPath)}} -WtPath {{PowerShellLiteral(wtPath)}} -TabArgs $tabArgs -InnerMatch 'opencode\s+-m' -FallbackPwshArgs $fallbackArgs -FallbackWorkDir {{PowerShellLiteral(workDir)}}
+    $ok = Start-WtCliRobust -LogFile {{PowerShellLiteral(log.LogPath)}} -WtPath {{PowerShellLiteral(wtPath)}} -TabArgs $tabArgs -InnerMatch {{PowerShellLiteral("opencode(?:\\.exe)?['\"]?\\s+-m")}} -FallbackPwshArgs $fallbackArgs -FallbackWorkDir {{PowerShellLiteral(workDir)}}
     if (-not $ok) { exit 2 }
 } finally {
     Remove-Item -LiteralPath $PSCommandPath -Force -ErrorAction SilentlyContinue
@@ -675,6 +675,7 @@ try {
         };
         var optionsBlock = new JsonObject { ["provider"] = providerBlock };
         ClearThinkingOptions(optionsBlock);
+        ApplyThinkingOptions(optionsBlock, "openrouter", slug, thinkingLevel);
 
         var models = JsonExtensions.EnsureObject(root).GetOrAddObject("provider").GetOrAddObject("openrouter").GetOrAddObject("models");
         var modelNode = models.GetOrAddObject(slug);
@@ -684,7 +685,7 @@ try {
         return root;
     }
 
-    private static void PatchDirectModel(JsonNode root, string providerId, string slug, string modelDisplayName)
+    private static void PatchDirectModel(JsonNode root, string providerId, string slug, string modelDisplayName, string? thinkingLevel)
     {
         var models = JsonExtensions.EnsureObject(root).GetOrAddObject("provider").GetOrAddObject(providerId).GetOrAddObject("models");
         var modelNode = models.GetOrAddObject(slug);
@@ -692,6 +693,24 @@ try {
 
         var optionsBlock = modelNode.GetOrAddObject("options");
         ClearThinkingOptions(optionsBlock);
+        ApplyThinkingOptions(optionsBlock, providerId, slug, thinkingLevel);
+    }
+
+    private static void ApplyThinkingOptions(JsonObject optionsBlock, string providerId, string slug, string? thinkingLevel)
+    {
+        thinkingLevel = NormalizeThinkingLevel(thinkingLevel);
+        if (string.IsNullOrWhiteSpace(thinkingLevel)) return;
+
+        var id = slug.Trim().ToLowerInvariant();
+        if (string.Equals(providerId, "openai", StringComparison.OrdinalIgnoreCase)
+            || id.StartsWith("openai/", StringComparison.Ordinal)
+            || id.Contains("gpt", StringComparison.Ordinal))
+        {
+            optionsBlock["reasoningEffort"] = thinkingLevel;
+            return;
+        }
+
+        optionsBlock["reasoning"] = new JsonObject { ["effort"] = thinkingLevel };
     }
 
     private static void ClearThinkingOptions(JsonObject optionsBlock)
