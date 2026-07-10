@@ -12,8 +12,6 @@ import {
 } from "./pricing"
 
 const FALLBACK_EUR_PER_USD = 0.92
-const PLUGIN_VERSION = "1.2.0"
-const PLUGIN_VERSION_TIMESTAMP = "10.07.2026, 14:01 Uhr"
 const THEME_PROFILES = [
   "aura",
   "ayu",
@@ -145,6 +143,7 @@ function applyTheme(api: TuiPluginApi, name: string): boolean {
 function ThemeSelect(props: { api: TuiPluginApi }) {
   const theme = () => props.api.theme.current
   const selected = () => props.api.theme.selected
+  const mode = () => props.api.theme.mode()
 
   const open = () => {
     const options = THEME_PROFILES.filter((name) => props.api.theme.has(name)).map((name) => ({
@@ -166,6 +165,11 @@ function ThemeSelect(props: { api: TuiPluginApi }) {
     ))
   }
 
+  const selectMode = (next: "dark" | "light") => {
+    if (mode() === next) return
+    props.api.keymap.dispatchCommand("theme.switch_mode")
+  }
+
   return (
     <box paddingTop={1}>
       <box flexDirection="row" paddingX={1} backgroundColor={theme().backgroundElement} onMouseUp={(event) => event.button === 0 && open()}>
@@ -173,7 +177,24 @@ function ThemeSelect(props: { api: TuiPluginApi }) {
         <box flexGrow={1} />
         <text fg={theme().accent}>{`${selected()} v`}</text>
       </box>
-      <text fg={theme().textMuted}>Hell/Dunkel folgt dem Terminal</text>
+      <box flexDirection="row">
+        <box
+          flexGrow={1}
+          paddingX={1}
+          backgroundColor={mode() === "dark" ? theme().backgroundElement : undefined}
+          onMouseUp={(event) => event.button === 0 && selectMode("dark")}
+        >
+          <text fg={mode() === "dark" ? theme().accent : theme().textMuted}>Dunkel</text>
+        </box>
+        <box
+          flexGrow={1}
+          paddingX={1}
+          backgroundColor={mode() === "light" ? theme().backgroundElement : undefined}
+          onMouseUp={(event) => event.button === 0 && selectMode("light")}
+        >
+          <text fg={mode() === "light" ? theme().accent : theme().textMuted}>Hell</text>
+        </box>
+      </box>
     </box>
   )
 }
@@ -338,7 +359,6 @@ function View(props: { api: TuiPluginApi; sessionID: string }) {
         />
         <Row api={props.api} label="Kosten" value={money().available ? formatEur(money().eur) : "nicht verfügbar"} />
         <ThemeSelect api={props.api} />
-        <text fg={theme().textMuted}>{`Version ${PLUGIN_VERSION} (${PLUGIN_VERSION_TIMESTAMP})`}</text>
       </box>
     </Show>
   )

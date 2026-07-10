@@ -128,7 +128,8 @@ installiert OpenCode beim Start selbst aus der `plugin`-Liste.
 - **`token-cost-sidebar/`** — lokales TUI-Plugin fuer die rechte Seitenleiste. Zeigt aktuelles Modell,
   Input-, Output-, optionale Reasoning- und Gesamttokens sowie Kosten in Euro. Ein mit der Maus
   bedienbares Dropdown wechselt zwischen den vorhandenen OpenCode-Themes und merkt sich die Auswahl;
-  deren helle oder dunkle Variante folgt automatisch dem Terminal. Das Plugin bevorzugt die von
+  direkt darunter schaltet eine kompakte Dunkel/Hell-Auswahl die Variante des gewaehlten Themes um.
+  Das Plugin bevorzugt die von
   OpenCode gespeicherte echte `cost`; bei fehlenden oder
   veralteten Nullpreisen laedt es den aktuellen Modellpreis von models.dev und beruecksichtigt
   kontextabhaengige Preisstufen. Geladen wird es ueber `tui.json` (`./plugins/token-cost-sidebar`).
