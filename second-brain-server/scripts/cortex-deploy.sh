@@ -76,7 +76,7 @@ service_of() {
   case "$1" in
     brain-api/*)  echo brain-api ;;  dashboard/*) echo dashboard ;;
     agent/*)      echo agent ;;      librarian/*) echo librarian ;;
-    mcp/*)        echo mcp ;;        *) echo "" ;;
+    mcp/*|mcp-server/*) echo mcp ;;  *) echo "" ;;
   esac
 }
 

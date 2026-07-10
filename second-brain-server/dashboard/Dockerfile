@@ -11,4 +11,4 @@ COPY static ./static
 RUN chown -R appuser:appuser /app
 USER appuser
 EXPOSE 8003
-CMD ["uvicorn", "app:app", "--host", "0.0.0.0", "--port", "8003", "--no-access-log"]
+CMD ["uvicorn", "app:app", "--host", "0.0.0.0", "--port", "8003", "--timeout-keep-alive", "620", "--no-access-log"]

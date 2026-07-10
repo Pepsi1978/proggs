@@ -28,6 +28,7 @@ import httpx
 from mcp.server.fastmcp import FastMCP
 
 VERSION = "1.4.0 (10.07.2026, 19:47 Uhr)"  # 1.4.0: Neues read-only Werkzeug get_entry_categories(doc_id) fuer den gezielten Kategorienabruf ohne Volltext. Alt: 1.3.3.
+VERSION = "1.4.1 (10.07.2026, 20:55 Uhr)"  # 1.4.1 HALF-OPEN-KEEP-ALIVE-FIX (Frank-Bug 2026-07-10, intermittierende MCP-Timeouts): uvicorn-Default timeout_keep_alive=5s schloss idle Verbindungen; die FIN-Pakete gingen ueber Docker-NAT+WireGuard teils verloren -> CLI-Clients (undici-Pool in Claude Code/mcp-remote) hielten HALF-OPEN-Sockets (bewiesen: 4x ESTABLISHED am PC vs. 0 am VPS) und liefen beim naechsten Aufruf in 'socket closed unexpectedly' bzw. -32001. Fix: uvicorn direkt mit timeout_keep_alive=MCP_KEEP_ALIVE_S (Default 620s > undici keepAliveMaxTimeout 600s) starten -> der Server schliesst idle Verbindungen NIE vor dem Client (Standard-Regel Server-KA > Client-KA); Fallback auf mcp.run() falls die SDK-App-API sich aendert. Alt: 1.4.0.
 
 # ---------------------------------------------------------------------------
 # Konfiguration (alles aus Umgebungsvariablen — Secrets nie im Code)
@@ -37,6 +38,11 @@ SB_API_KEY = os.getenv("SB_API_KEY", "")
 USER_ID = os.getenv("SB_USER_ID", "frank")
 MCP_HOST = os.getenv("MCP_HOST", "0.0.0.0")
 MCP_PORT = int(os.getenv("MCP_PORT", "8001"))
+# Server-Keep-Alive MUSS laenger sein als jeder Client-Pool-Timeout (undici keepAliveMaxTimeout
+# = 600 s in Claude Code/mcp-remote), sonst schliesst der Server idle Verbindungen zuerst und
+# die Clients behalten HALF-OPEN-Sockets im Pool (FIN geht ueber Docker-NAT+WireGuard verloren)
+# -> 'socket closed unexpectedly' / -32001 beim naechsten Tool-Aufruf (Vorfall 2026-07-10).
+MCP_KEEP_ALIVE_S = int(os.getenv("MCP_KEEP_ALIVE_S", "620"))
 
 # ---------------------------------------------------------------------------
 # Strukturiertes JSON-Logging auf stderr (Docker captured stderr -> `docker logs sb-mcp`)
@@ -375,5 +381,17 @@ def brain_health() -> str:
 # ---------------------------------------------------------------------------
 if __name__ == "__main__":
     _log(logging.INFO, "sb-mcp startet", version=VERSION, brain_url=BRAIN_URL,
-         host=MCP_HOST, port=MCP_PORT, user=USER_ID)
-    mcp.run(transport="streamable-http")
+         host=MCP_HOST, port=MCP_PORT, user=USER_ID, keep_alive_s=MCP_KEEP_ALIVE_S)
+    try:
+        # uvicorn direkt statt mcp.run(): identische App (streamable_http_app inkl. Lifespan/
+        # Session-Manager), aber mit kontrolliertem timeout_keep_alive (Default 5 s war die
+        # Ursache der Half-Open-Sockets, siehe MCP_KEEP_ALIVE_S oben).
+        import uvicorn
+        uvicorn.run(mcp.streamable_http_app(), host=MCP_HOST, port=MCP_PORT,
+                    timeout_keep_alive=MCP_KEEP_ALIVE_S)
+    except (ImportError, AttributeError) as e:
+        # Fallback: sollte die SDK-/uvicorn-API sich aendern, bleibt der Server FUNKTIONSFAEHIG
+        # (nur wieder mit kurzem Keep-Alive) statt gar nicht zu starten.
+        _log(logging.ERROR, "uvicorn-Direktstart fehlgeschlagen -> Fallback mcp.run()",
+             err=f"{type(e).__name__}: {e}")
+        mcp.run(transport="streamable-http")

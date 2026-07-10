@@ -18,4 +18,4 @@ RUN mkdir -p /app/logs /app/data && chown -R appuser:appuser /app
 USER appuser
 
 EXPOSE 8004
-CMD ["uvicorn", "app:app", "--host", "0.0.0.0", "--port", "8004", "--no-access-log"]
+CMD ["uvicorn", "app:app", "--host", "0.0.0.0", "--port", "8004", "--timeout-keep-alive", "620", "--no-access-log"]

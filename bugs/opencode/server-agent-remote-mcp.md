@@ -37,6 +37,7 @@
 | 8 | ⭐ Server-only-Agent soll NUR das Gehirn nutzen | OpenCode: global `tools:{"*":false}`-Aequivalent vermeiden — gezielt `"second-brain*": true` im Agent + andere Tools `deny`. Claude Code: MCP-Tools-nur-fuer-Subagent ist seit #6915 moeglich. | §4 |
 | 9 | Unerwartet hohe Token / teuer beim Server-Agenten | Jedes MCP-Tool-Schema laedt in JEDEN Prompt (~10-20k+ bei vielen Servern). Claude Tool Search ab 2.1.7 mildert automatisch (ihr: 2.1.187). Nicht gebrauchte MCP pro Agent deaktivieren. | §7 |
 | 10 | ⭐ `-32001 Request timed out` obwohl der Tunnel STEHT (erster recall nach Idle/Standby) | WireGuard-**Cold-Start** (~11 s Handshake nach Leerlauf) sprengt einen zu knappen Client-Timeout; der recall selbst ist schnell (~0,5 s). FIX: `PersistentKeepalive=25` (Tunnel warm) + Client-`timeout` großzügig (OpenCode + Claude `120000`; Default 30000 zu knapp). | §5 |
+| 11 | ⭐ Sporadisch „socket closed unexpectedly" / `-32001`, obwohl Tunnel warm + Server gesund (~10 % der Aufrufe, Rest ok) | **Half-Open-Keep-Alive**: uvicorn-Default `timeout_keep_alive=5 s` schloss idle Verbindungen; das FIN geht über Docker-NAT+WireGuard teils verloren → CLI-Client (undici-Pool) sendet auf TOTEM Pool-Socket. FIX serverseitig: Keep-Alive **620 s** (> undici-Max 600 s) — sb-mcp 1.4.1 + alle uvicorn-Dienste. Server darf idle NIE vor dem Client schließen. | §5d |
 
 ---
 
@@ -194,8 +195,27 @@ ohne sie dem Haupt-Agenten anzubieten. (Mechanik in der jeweiligen Agent-/Subage
   (Default 30000 war zu knapp), Claude Code per-Server `"timeout": 120000` in `.mcp.json`
   (überschreibt `MCP_TOOL_TIMEOUT`; Werte <1000 werden ignoriert). Normalfall bleibt schnell — der
   Timeout ist nur die Obergrenze. Belegt: #47780 (2026-07-10).
+- **(d) ⭐ Half-Open-Keep-Alive — sporadische Fehler bei WARMEM Tunnel (Vorfall 2026-07-10, live bewiesen):**
+  Symptom: intermittierend (~10 %) „The socket connection was closed unexpectedly" (Claude Code) bzw.
+  `-32001 Request timed out` nach „mehreren Versuchen" (OpenCode), waehrend 90 % der Aufrufe klappen;
+  Tunnel-Handshake frisch, Server gesund, der fehlgeschlagene Request taucht in `docker logs sb-mcp`
+  NIE auf (kam also nie an). **Root Cause:** uvicorn (unter FastMCP `mcp.run()`) schliesst idle
+  Keep-Alive-Verbindungen nach **5 s** (Default `timeout_keep_alive`). Das FIN geht ueber
+  Docker-Port-NAT + WireGuard-Tunnel teils verloren (Standby/Paketverlust) → der Node-Client
+  (undici-Pool in Claude Code UND OpenCodes `mcp-remote`; `keepAliveMaxTimeout` bis 600 s) behaelt
+  einen HALF-OPEN-Socket im Pool und schickt den naechsten Tool-Call auf die tote Verbindung →
+  RST („socket closed") oder Nichts (Timeout). **Forensischer Beweis:** `netstat` am PC zeigte
+  4x ESTABLISHED zu `10.8.0.1:8001`, `ss -tn` auf dem VPS gleichzeitig **0** Verbindungen.
+  **FIX (funktionserhaltend, Poka-Yoke Stufe 3):** Server-Keep-Alive IMMER laenger als jeder
+  Client-Pool-Timeout → sb-mcp 1.4.1 startet uvicorn direkt mit `timeout_keep_alive=620`
+  (env `MCP_KEEP_ALIVE_S`; 620 > undici-Max 600) statt `mcp.run()`; ebenso `--timeout-keep-alive 620`
+  in den CMDs von brain-api/agent/dashboard/librarian (gleiche Klasse: Browser/Caddy poolen auch).
+  Der Server schliesst damit idle Verbindungen praktisch nie zuerst → tote Pool-Sockets koennen
+  nicht mehr entstehen. Repro-Matrix (Node, Idle 0,2–10 s + 2/5 parallel): vorher wie nachher
+  25/25 direkt-frisch OK — der Fehler traf NUR wiederverwendete Pool-Sockets echter CLI-Clients.
 **Versionen:** mcp-sdk>=1.27 (server). **Quelle:** github.com/nicolargo/glances/issues/3467 (Host-Header-
-Allowlist, „invalid host header") · server.py (`TransportSecuritySettings`) · `server/wireguard.md`.
+Allowlist, „invalid host header") · server.py (`TransportSecuritySettings`) · `server/wireguard.md` ·
+eigener Live-Vorfall 2026-07-10 (netstat/ss-Doppelbeweis, sb-mcp-Logs), als solcher gekennzeichnet.
 
 ## 6. ⭐ Session/Reconnect: Server-Neustart killt die Streamable-HTTP-Session
 **Symptom:** Nach einem sb-mcp-/Container-Neustart (oder Idle) liefern Tool-Aufrufe
