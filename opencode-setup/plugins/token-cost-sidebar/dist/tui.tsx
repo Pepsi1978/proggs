@@ -143,7 +143,11 @@ function SidebarClock(props: { api: TuiPluginApi }) {
     if (timer) clearInterval(timer)
   })
 
-  return <text fg={theme().text}>{formatDateTime(now())}</text>
+  return (
+    <text fg={theme().text}>
+      <b>Session</b>{" "}{formatDateTime(now())}
+    </text>
+  )
 }
 
 function applyTheme(api: TuiPluginApi, name: string): boolean {

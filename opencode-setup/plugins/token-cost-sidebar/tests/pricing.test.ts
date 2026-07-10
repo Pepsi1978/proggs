@@ -142,6 +142,7 @@ describe("models.dev pricing", () => {
     expect(source).toContain("sidebar_title()")
     expect(source).toContain("return <SidebarClock api={api} />")
     expect(source).toContain("setInterval(() => setNow(new Date()), 1000)")
+    expect(source).toContain('<b>Session</b>{" "}{formatDateTime(now())}')
     expect(source).toContain('`${pad(value.getDate())}.${pad(value.getMonth() + 1)}.${value.getFullYear()} ${pad(value.getHours())}:${pad(value.getMinutes())} Uhr`')
   })
 
