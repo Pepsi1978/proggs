@@ -72,6 +72,7 @@ VERSION = "0.69.2 (10.07.2026, 11:34 Uhr)"  # 0.69.2: Tiefen-Debugging-Haertung.
 VERSION = "0.69.3 (10.07.2026, 20:13 Uhr)"  # 0.69.3: Hauptagent-Werkzeug lies_eintrags_kategorien(id) liest die vollstaendige Kategorie-Metadatenliste gezielt per doc_id ohne Volltext/Bestandsscan. Alt: 0.69.2.
 VERSION = "0.70.0 (10.07.2026, 20:24 Uhr)"  # 0.70.0 (Level-2 Gruppe A, Punkte 2+3 — Frank-Freigabe 2026-07-10): KERN-BLOECKE nach Letta-Vorbild. Neues Modul agent/coreblocks.py: 5 feste, immer praesente Wissens-Bloecke (profil/ziele/projekte/aufgaben/vorlieben, je max 2000 Zeichen) auf /logbook/Kernbloecke/ (Samba, atomar, RLock) + append-only Aenderungs-Log kernbloecke-log.jsonl (jede alte Fassung bleibt erhalten — verlustfrei). _core_knowledge_section() injiziert die gefuellten Bloecke best-effort in JEDEN Chat-System-Prompt (build_toolagent_system, VOR den Selbst-Regeln; Fehler brechen den Chat nie). Neues Hauptagent-Werkzeug aktualisiere_kernblock(block, text): selbst-editierende Bloecke (Level-2 #3) — ERSETZT den ganzen Block kompakt, nur auf Basis von Franks direkten Aussagen (Injektions-Schutz gegen Memory-Poisoning), jede Aenderung protokolliert + checkpoint. REST GET /coreblocks, PUT /coreblocks/{name} (Frank via Dashboard), GET /coreblocks/log. Dockerfile: COPY coreblocks.py. WICHTIG: Speicher-Pfad des Gehirns UNANGETASTET (Franks Vorgabe: kein ADD/UPDATE/DELETE beim Speichern — Punkt 5 bewusst NICHT gebaut).
 VERSION = "0.70.1 (10.07.2026, 21:17 Uhr)"  # 0.70.1 (Level-2 Gruppe A, Punkt 10): brain_store sendet jetzt source='chat' (Provenance) — im Dashboard-Drawer steht damit bei per Gespraech gespeicherten Eintraegen die echte Herkunft statt 'manual'. Neue Eintraege landen zudem im Kurzzeitgedaechtnis (brain-api 1.29.0 layer-Default kurzzeit); der Bibliothekar befoerdert sie nach Reife (librarian 0.12.0). Alt: 0.70.0.
+VERSION = "0.71.0 (10.07.2026, 21:39 Uhr)"  # 0.71.0 (Level-2 Gruppe A, Punkt 7): NEU brain_touch() — nach jeder Tool-Agent-Antwort mit Gedaechtnis-Nutzung werden die WIRKLICH benutzten Eintraege (bevorzugt per lade_eintrag geoeffnete, sonst die gefundenen) an brain-api /entries/touch gemeldet (access_count+1, Vergessens-Uhr zurueck). Best-effort: ein Fehler bricht die Antwort nie. Alt: 0.70.1.
 
 # ---------------------------------------------------------------------------
 # Konfiguration (alles aus Umgebungsvariablen — Secrets nie im Code)
@@ -1609,6 +1610,23 @@ def brain_store(text: str, title: str, category: str, user_id: str = USER_ID) ->
     _perf_mark("brain_http_store_result", "brain-api /store Ergebnis", status=r.status_code,
                chunks=data.get("chunks"), replaced=bool(data.get("replaced")))
     return data
+
+
+def brain_touch(doc_ids: list, user_id: str = USER_ID) -> None:
+    """Recall-Verstaerkung (Level-2 #7): registriert benutzte Eintraege (access_count+1).
+
+    Best-effort — ein Fehler hier darf NIE die Antwort gefaehrden (nur Metadaten-Statistik)."""
+    ids = [d for d in dict.fromkeys(doc_ids or []) if d][:50]
+    if not ids:
+        return
+    try:
+        r = _HTTP.post(f"{BRAIN_URL}/entries/touch", json={"doc_ids": ids, "user_id": user_id},
+                       headers=HEADERS, timeout=15.0)
+        r.raise_for_status()
+        checkpoint("recall_touch", "Benutzte Eintraege als abgerufen registriert (Recall-Verstaerkung)",
+                   ok=True, touched=(r.json() or {}).get("touched"), requested=len(ids))
+    except Exception as e:  # noqa: BLE001 — Statistik darf den Chat nie brechen
+        _log(logging.WARNING, "entries/touch fehlgeschlagen (Recall-Verstaerkung ausgesetzt)", err=str(e)[:200])
 
 
 def brain_search(query: str, limit: int, user_id: str = USER_ID,
@@ -6492,6 +6510,10 @@ def _toolagent_answer(session: dict, user_text: str, context_prompt: str = "",
                geladen=len(geladen), confidence=confidence.get("level"))
     if not answer:
         answer = "Ich habe nachgedacht, konnte aber gerade keine Antwort formulieren. Versuch es bitte gleich nochmal."
+    # Recall-Verstaerkung (Level-2 #7): die fuer DIESE Antwort benutzten Eintraege als abgerufen
+    # registrieren (bevorzugt die wirklich geoeffneten). Best-effort, gefaehrdet die Antwort nie.
+    if used_memory:
+        brain_touch([h.get("doc_id") for h in used])
     # action=recall, wenn Gedaechtnis genutzt wurde (App zeigt Meta-Zeile + Quellen-Chips); sonst smalltalk.
     return {"reply": answer, "action": "recall" if used_memory else "smalltalk",
             "pending": None, "recall_hits": len(sources),

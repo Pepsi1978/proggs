@@ -1,7 +1,15 @@
 {
-	"stand": "10.07.2026, 21:17 Uhr",
+	"stand": "10.07.2026, 21:39 Uhr",
 	"hinweis": "PFLEGE-PFLICHT: Bei JEDEM Deploy, der ein neues System/Feature einbaut, hier einen Eintrag ERGÄNZEN (neueste zuerst). SCHREIBWEISE (Dauer-Regel): leichtes, verständliches Deutsch, kurze Sätze; ALLE Fachbegriffe, Namen und Zahlen (z.B. BM25, RRF, Qdrant, ENV-Variablen, Endpunkt-Namen) BEHALTEN, aber jeden in einem kurzen Halbsatz erklären — NIE durch Weglassen vereinfachen; kompakt halten (der Hauptagent liest über das Werkzeug 'was_kann_cortex' ALLE Einträge auf einmal ein), aber vollständig genug, dass man erkennt WAS eingebaut wurde; einfache Überschrift. Ähnliche/redundante Einträge dürfen zusammengefasst werden — Datum sekundär, entscheidend ist WAS Cortex kann. Quelle des Info-Bereichs in den Dashboard-Einstellungen (GET /api/features). Verankert in DEPLOY.md.",
 	"features": [
+		{
+			"id": "recall-verstaerkung-sanftes-vergessen",
+			"eingebaut": "10.07.2026, 21:39 Uhr",
+			"dienst": "brain-api 1.30.0 + agent 0.71.0 + dashboard 0.70.0",
+			"name": "Recall-Verstärkung + sanftes Vergessen",
+			"kurz": "Oft benutzte Einträge rücken in der Suche sanft nach vorn: Jeder Abruf erhöht einen Zähler und stellt die Vergessens-Uhr zurück. Nichts wird je gelöscht oder gefiltert — Unbenutztes fällt nur relativ zurück und holt sich mit einem einzigen Abruf seinen Platz wieder.",
+			"erklaerung": "Wie beim Menschen: Was oft abgerufen wird, sitzt fester. Nach jeder Antwort, für die Cortex Gedächtnis-Einträge wirklich benutzt hat, meldet der Agent diese an den neuen brain-api-Endpunkt POST /entries/touch — der erhöht pro Eintrag den Abruf-Zähler (access_count) und setzt den Zeitpunkt des letzten Abrufs (last_accessed_at, die 'Vergessens-Uhr'). Die Suche (/search) gibt oft abgerufenen Einträgen einen SANFTEN Ranking-Bonus: maximal +5 Prozent auf den Suchwert, erreicht ab 20 Abrufen (einstellbar über das Runtime-Limit recall_boost_promille in den Qdrant-Limits; 0 schaltet es komplett aus). Ganz wichtig, so hat Frank es festgelegt: Es gibt NUR einen Bonus, KEINEN Alters-Abzug — Einträge ohne Abrufe ranken exakt wie vorher, nichts wird gelöscht oder aus der Suche gefiltert (verlustfreies MemoryBank-Muster). Das 'sanfte Vergessen' entsteht rein relativ: Häufig Gebrauchtes steigt, der Rest bleibt, wo er war."
+		},
 		{
 			"id": "gedaechtnis-ebenen-provenance",
 			"eingebaut": "10.07.2026, 21:17 Uhr",

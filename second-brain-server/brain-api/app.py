@@ -97,6 +97,11 @@ SEARCH_OVERFETCH_FACTOR = _env_int("SB_SEARCH_OVERFETCH_FACTOR", 4)
 SEARCH_DATE_OVERFETCH_FACTOR = _env_int("SB_SEARCH_DATE_OVERFETCH_FACTOR", 20)
 BM25_CANDIDATE_FACTOR = _env_int("SB_BM25_CANDIDATE_FACTOR", 4)
 BM25_MIN_CANDIDATES = _env_int("SB_BM25_MIN_CANDIDATES", 20)
+# Recall-Verstaerkung (Level-2 #7/#8): max. Ranking-Boost oft abgerufener Eintraege in Promille
+# (50 = bis zu +5% auf den Fusions-Score bei >=20 Abrufen). 0 = AUS (Ranking exakt wie ohne Feature).
+# Bewusst NUR positiver Boost, KEIN Alters-Malus: Eintraege ohne Abrufe ranken IDENTISCH wie bisher
+# (Funktionserhalt, Direktive #3); "sanftes Vergessen" entsteht relativ, nichts wird je gefiltert.
+RECALL_BOOST_PROMILLE = _env_int("SB_RECALL_BOOST_PROMILLE", 50)
 MAX_EMBED_CALLS_PER_DAY = int(os.getenv("SB_MAX_EMBED_CALLS_PER_DAY", "20000"))  # Defense-in-Depth-Cap
 # Qdrant lehnt einen Upsert-Request > ~32 MB mit 400 ab. Da der 1:1-Volltext (full_text) in JEDEM
 # Chunk haengt, kann EIN grosses Dokument (viele Chunks) ein einzelnes Upsert ueber 32 MB treiben.
@@ -116,6 +121,7 @@ DEFAULT_BRAIN_LIMITS = {
     "search_date_overfetch_factor": SEARCH_DATE_OVERFETCH_FACTOR,
     "bm25_candidate_factor": BM25_CANDIDATE_FACTOR,
     "bm25_min_candidates": BM25_MIN_CANDIDATES,
+    "recall_boost_promille": RECALL_BOOST_PROMILLE,
 }
 BRAIN_LIMIT_BOUNDS = {
     "chunk_chars": (500, 20000),
@@ -124,6 +130,7 @@ BRAIN_LIMIT_BOUNDS = {
     "search_date_overfetch_factor": (1, 50),
     "bm25_candidate_factor": (1, 20),
     "bm25_min_candidates": (1, 1000),
+    "recall_boost_promille": (0, 500),
 }
 
 
@@ -244,12 +251,13 @@ def current_brain_limits() -> dict[str, int]:
         "search_date_overfetch_factor": SEARCH_DATE_OVERFETCH_FACTOR,
         "bm25_candidate_factor": BM25_CANDIDATE_FACTOR,
         "bm25_min_candidates": BM25_MIN_CANDIDATES,
+        "recall_boost_promille": RECALL_BOOST_PROMILLE,
     }
 
 
 def apply_brain_limits(limits: dict[str, Any]) -> dict[str, int]:
     global CHUNK_CHARS, CHUNK_OVERLAP, SEARCH_OVERFETCH_FACTOR, SEARCH_DATE_OVERFETCH_FACTOR
-    global BM25_CANDIDATE_FACTOR, BM25_MIN_CANDIDATES
+    global BM25_CANDIDATE_FACTOR, BM25_MIN_CANDIDATES, RECALL_BOOST_PROMILLE
     clean = {k: _coerce_brain_limit(k, limits.get(k, DEFAULT_BRAIN_LIMITS[k])) for k in DEFAULT_BRAIN_LIMITS}
     clean["chunk_overlap"] = min(clean["chunk_overlap"], max(0, clean["chunk_chars"] - 1))
     CHUNK_CHARS = clean["chunk_chars"]
@@ -258,6 +266,7 @@ def apply_brain_limits(limits: dict[str, Any]) -> dict[str, int]:
     SEARCH_DATE_OVERFETCH_FACTOR = clean["search_date_overfetch_factor"]
     BM25_CANDIDATE_FACTOR = clean["bm25_candidate_factor"]
     BM25_MIN_CANDIDATES = clean["bm25_min_candidates"]
+    RECALL_BOOST_PROMILLE = clean["recall_boost_promille"]
     return clean
 
 
@@ -437,6 +446,7 @@ VERSION = "1.27.2 (10.07.2026, 11:34 Uhr)"  # 1.27.2: Tiefen-Debugging-Haertung.
 VERSION = "1.28.0 (10.07.2026, 19:26 Uhr)"  # 1.28.0: Neuer read-only GET /entry/categories?doc_id=... liest Kategorien gezielt per doc_id+user_id aus genau einem Chunk und nur kleinen Metadatenfeldern. Alt: 1.27.2.
 VERSION = "1.28.1 (10.07.2026, 19:40 Uhr)"  # 1.28.1: GET /entry/categories protokolliert seine gesamte Antwortzeit dauerhaft als checkpoint-Feld ms. Alt: 1.28.0.
 VERSION = "1.29.0 (10.07.2026, 21:05 Uhr)"  # 1.29.0 (Level-2 Gruppe A, Punkte 1+10 — Frank-Freigabe 2026-07-10): GEDAECHTNIS-EBENE + VERTRAUENS-LEVEL. Neues Payload-Feld layer (kurzzeit/langzeit, Keyword-Index): neue /store-Eintraege landen standardmaessig im KURZZEIT-Gedaechtnis (Arbeitsgedaechtnis); Bestand OHNE Feld gilt beim Lesen als langzeit (payload_layer() — KEINE Migration noetig, verlustfrei). Die SUCHE filtert NIE nach layer (reines Organisations-Metadatum). ALLE Payload-Rebuild-Wege (entry/category, entry/categories, PUT /entry, Papierkorb+Restore) erhalten die Ebene (Feld-Drift-Schutz qdrant.md Par. 9). NEU POST /layer/promote {min_age_days}: befoerdert Kurzzeit-Eintraege ab Mindestalter per set_payload ins Langzeitgedaechtnis (NUR das Flag — Text/Vektor/Kategorien unberuehrt; nie zurueck; idempotent; fuer den Nacht-Bibliothekar). trust (hoch/mittel) wird NICHT gespeichert, sondern deterministisch aus source abgeleitet (source_trust: manual/chat/app/dashboard=hoch, sonst mittel) und in by-title/by-category/category-item/by-parent mit ausgegeben (layer ebenso). Speicher-Pfad-Verhalten sonst UNANGETASTET (Franks Vorgabe: keine Bewertung/Ersetzung beim Speichern). Alt: 1.28.1.
+VERSION = "1.30.0 (10.07.2026, 21:39 Uhr)"  # 1.30.0 (Level-2 Gruppe A, Punkte 7+8 — Frank-Freigabe 2026-07-10): RECALL-VERSTAERKUNG + SANFTES VERGESSEN. NEU POST /entries/touch {doc_ids}: registriert einen Abruf — access_count+1 und last_accessed_at=jetzt (Vergessens-Uhr zurueckgestellt) per set_payload auf alle Chunks (reine Metadaten, Text/Vektor unberuehrt). /search boostet oft abgerufene Eintraege SANFT multiplikativ (neues Runtime-Limit recall_boost_promille, Default 50 = max +5 Prozent ab 20 Abrufen, 0 = AUS): wirkt auf den dense-Score UND den RRF-Fusions-Score. BEWUSST NUR positiver Bonus, KEIN Alters-Malus — Eintraege ohne Abrufe ranken EXAKT wie bisher (access_count=0 -> Faktor 1.0; Regressionsschutz/Funktionserhalt Direktive #3); das sanfte Vergessen entsteht relativ (Nicht-Abgerufenes faellt zurueck, weil Abgerufenes steigt), GELOESCHT oder GEFILTERT wird NIE — jeder Eintrag bleibt jederzeit auffindbar und holt sich mit einem Abruf seinen Boost zurueck (MemoryBank-Muster). Alt: 1.29.0.
 
 # Startup-Banner (Observability-First: Log-Pfad + Version EINMAL ausgeben)
 _log(logging.INFO, "brain-api startet", version=VERSION, log_path=LOG_PATH)
@@ -1319,6 +1329,36 @@ def backfill_parent(user_id: str = "frank") -> dict:
     return {"ok": True, "chunks_updated": updated, "groups": len(by_par)}
 
 
+class TouchReq(BaseModel):
+    doc_ids: list[str] = Field(..., min_length=1, max_length=50, description="doc_ids der bei einer Antwort tatsaechlich benutzten Eintraege")
+    user_id: str = Field(default="frank")
+
+
+@app.post("/entries/touch", dependencies=[Depends(require_auth)])
+def entries_touch(req: TouchReq) -> dict:
+    """Recall-Verstaerkung (Level-2 #7): registriert einen Abruf — erhoeht access_count und
+    setzt last_accessed_at (die 'Vergessens-Uhr' wird zurueckgestellt). Reine Metadaten
+    (set_payload auf alle Chunks) — Text/Vektor/Ranking-Basis bleiben unberuehrt. Idempotent
+    unkritisch (ein Doppel-Touch zaehlt schlicht +1)."""
+    _require_store()
+    now = iso_now()
+    touched = 0
+    for did in dict.fromkeys(d.strip() for d in req.doc_ids if d and d.strip()):
+        pts = _scroll(Filter(must=[FieldCondition(key="user_id", match=MatchValue(value=req.user_id)),
+                                   FieldCondition(key="doc_id", match=MatchValue(value=did))]),
+                      with_payload=["access_count"])
+        if not pts:
+            continue
+        ac = int(pts[0].payload.get("access_count") or 0) + 1
+        qc.set_payload(collection_name=COLLECTION,
+                       payload={"access_count": ac, "last_accessed_at": now},
+                       points=[p.id for p in pts], wait=False)
+        touched += 1
+    checkpoint("entries_touch", "Abruf registriert (Recall-Verstaerkung: access_count+1, Vergessens-Uhr zurueckgesetzt)",
+               ok=True, requested=len(req.doc_ids), touched=touched)
+    return {"ok": True, "touched": touched}
+
+
 class PromoteLayerReq(BaseModel):
     min_age_days: int = Field(default=14, ge=1, le=365, description="Mindestalter (Tage), ab dem ein Kurzzeit-Eintrag befoerdert wird")
     user_id: str = Field(default="frank")
@@ -1718,7 +1758,8 @@ def search(req: SearchReq) -> dict:
         collection_name=COLLECTION, query=qvec,
         query_filter=Filter(must=must),
         limit=overfetch,
-        with_payload=["doc_id", "title", "category", "categories", "created_at", "updated_at", "chunk_text"],
+        with_payload=["doc_id", "title", "category", "categories", "created_at", "updated_at", "chunk_text",
+                      "access_count"],
     ).points
 
     best: dict[str, dict] = {}
@@ -1735,7 +1776,23 @@ def search(req: SearchReq) -> dict:
                          "created_at": h.payload.get("created_at"),
                          "updated_at": h.payload.get("updated_at"),
                          "text": "",
+                         "access_count": int(h.payload.get("access_count") or 0),
                          "dense_score": float(h.score), "matched_by": ["dense"], "bm25_rank": None}
+
+    # Recall-Verstaerkung (Level-2 #7): sanfter multiplikativer Boost fuer oft abgerufene Eintraege.
+    # NUR positiv (max +RECALL_BOOST_PROMILLE/1000 bei >=20 Abrufen, log-frei gedeckelt), KEIN
+    # Alters-Malus: access_count=0 -> Faktor exakt 1.0 -> Ranking identisch wie ohne Feature
+    # (Funktionserhalt/Regressionsschutz). 0 Promille = komplett aus. NIE wird gefiltert.
+    def _recall_boost_factor(item: "dict | None") -> float:
+        if not RECALL_BOOST_PROMILLE or not item:
+            return 1.0
+        ac = int(item.get("access_count") or 0)
+        if ac <= 0:
+            return 1.0
+        return 1.0 + (RECALL_BOOST_PROMILLE / 1000.0) * min(ac, 20) / 20.0
+
+    for it in best.values():
+        it["score"] = it["score"] * _recall_boost_factor(it)
     dense_ranked = sorted(best.values(), key=lambda x: x["score"], reverse=True)
 
     # --- HYBRID (Level-2 Nr. 34): BM25-Stichwortsuche + RRF-Fusion mit der Vektorsuche ---------
@@ -1771,6 +1828,11 @@ def search(req: SearchReq) -> dict:
             bm25_used = True
             bm_ranked_ids = [c.get("doc_id") for c, _s in bm_hits]
             fused = _rrf_fuse([[d["doc_id"] for d in dense_ranked], bm_ranked_ids])
+            # Recall-Verstaerkung auch auf den fusionierten Score (BM25-only-Kandidaten ohne
+            # geladenen access_count behalten Faktor 1.0 — kein Malus, nur Bonus).
+            if RECALL_BOOST_PROMILLE:
+                for _did in list(fused.keys()):
+                    fused[_did] *= _recall_boost_factor(best.get(_did))
             # BM25-only-Treffer brauchen ein Item-Geruest; full_text wird NUR fuer die finalen
             # Top-N nachgeladen (limit=1 je doc — full_text 1:1 in jedem Chunk, OOM-sicher).
             bm_meta = {c.get("doc_id"): (c, rank) for rank, (c, _s) in enumerate(bm_hits, start=1)}
