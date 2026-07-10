@@ -129,15 +129,18 @@ public sealed class OpenCodeLauncherService
             if (!string.IsNullOrEmpty(wt))
             {
                 var tabColor = PickTerminalTabColor();
-                var robustLauncherScript = ResolveRobustLauncherScript();
+                var shell = ResolvePowerShellExecutable();
+                var robustLauncherScript = shell.IsPwsh ? ResolveRobustLauncherScript() : null;
                 if (!string.IsNullOrEmpty(robustLauncherScript))
                 {
-                    var robustProcess = LaunchViaRobustPowerShell(wt, robustLauncherScript, modelString, workDir, thinkingLevel, tabColor, log);
+                    var robustProcess = LaunchViaRobustPowerShell(wt, robustLauncherScript, shell.Path, modelString, workDir, thinkingLevel, tabColor, log);
                     log.Info("OpenCodeLauncherService", "Launch", $"robuster Windows-Terminal-Launcher gestartet (PID {robustProcess?.Id})", new { modelString, workDir, thinkingLevel, tabColor = tabColor.Name });
                     return;
                 }
 
-                log.Warn("OpenCodeLauncherService", "Launch", "start-wt-common.ps1 nicht gefunden; nutze direkten Windows-Terminal-Start ohne Retry-Wrapper");
+                log.Warn("OpenCodeLauncherService", "Launch", shell.IsPwsh
+                    ? "start-wt-common.ps1 nicht gefunden; nutze direkten Windows-Terminal-Start ohne Retry-Wrapper"
+                    : "pwsh.exe nicht gefunden; nutze Windows PowerShell ohne Retry-Wrapper");
                 psi.FileName = wt;
                 psi.ArgumentList.Add("new-tab");
                 psi.ArgumentList.Add("--tabColor");
@@ -146,16 +149,21 @@ public sealed class OpenCodeLauncherService
                 psi.ArgumentList.Add(string.IsNullOrWhiteSpace(thinkingLevel) ? $"OpenCode-{tabColor.Name}" : $"OpenCode-{tabColor.Name}-{thinkingLevel}");
                 psi.ArgumentList.Add("--startingDirectory");
                 psi.ArgumentList.Add(workDir);
-                psi.ArgumentList.Add("pwsh");
+                psi.ArgumentList.Add(shell.Path);
                 psi.ArgumentList.Add("-NoExit");
+                psi.ArgumentList.Add("-ExecutionPolicy");
+                psi.ArgumentList.Add("Bypass");
                 psi.ArgumentList.Add("-Command");
                 psi.ArgumentList.Add(BuildOpenCodeCommand(modelString, thinkingLevel));
                 log.Info("OpenCodeLauncherService", "Launch", $"Terminal-Tabfarbe gewählt: {tabColor.Name} ({tabColor.Hex})");
             }
             else
             {
-                psi.FileName = "pwsh";
+                var shell = ResolvePowerShellExecutable();
+                psi.FileName = shell.Path;
                 psi.ArgumentList.Add("-NoExit");
+                psi.ArgumentList.Add("-ExecutionPolicy");
+                psi.ArgumentList.Add("Bypass");
                 psi.ArgumentList.Add("-Command");
                 psi.ArgumentList.Add($"Set-Location -LiteralPath '{EscapePowerShellSingleQuotedValue(workDir)}'; {BuildOpenCodeCommand(modelString, thinkingLevel)}");
             }
@@ -181,11 +189,12 @@ public sealed class OpenCodeLauncherService
             var wt = ResolveWt();
             var tabColor = PickClaudeTerminalTabColor();
             var innerScript = BuildClaudeCodeStartScript(modelId, workDir, effortLevel, tabColor.Name);
-            var robustLauncherScript = ResolveRobustLauncherScript();
+            var shell = ResolvePowerShellExecutable();
+            var robustLauncherScript = shell.IsPwsh ? ResolveRobustLauncherScript() : null;
 
             if (!string.IsNullOrEmpty(wt) && !string.IsNullOrEmpty(robustLauncherScript))
             {
-                var process = LaunchClaudeCodeViaRobustPowerShell(wt, robustLauncherScript, innerScript, workDir, modelId, effortLevel, tabColor, log);
+                var process = LaunchClaudeCodeViaRobustPowerShell(wt, robustLauncherScript, shell.Path, innerScript, workDir, modelId, effortLevel, tabColor, log);
                 log.Info("OpenCodeLauncherService", "LaunchClaudeCode", $"robuster Claude-Code-Launcher gestartet (PID {process?.Id})", new { modelId, workDir, effortLevel, tabColor = tabColor.Name });
                 return;
             }
@@ -206,7 +215,7 @@ public sealed class OpenCodeLauncherService
                 psi.ArgumentList.Add(BuildClaudeCodeTitle(tabColor.Name, effortLevel));
                 psi.ArgumentList.Add("--startingDirectory");
                 psi.ArgumentList.Add(workDir);
-                psi.ArgumentList.Add("pwsh.exe");
+                psi.ArgumentList.Add(shell.Path);
                 psi.ArgumentList.Add("-NoExit");
                 psi.ArgumentList.Add("-ExecutionPolicy");
                 psi.ArgumentList.Add("Bypass");
@@ -215,7 +224,7 @@ public sealed class OpenCodeLauncherService
             }
             else
             {
-                psi.FileName = "pwsh.exe";
+                psi.FileName = shell.Path;
                 psi.ArgumentList.Add("-NoExit");
                 psi.ArgumentList.Add("-ExecutionPolicy");
                 psi.ArgumentList.Add("Bypass");
@@ -251,6 +260,30 @@ public sealed class OpenCodeLauncherService
         }
         catch { /* Fallback unten */ }
         return null;
+    }
+
+    private static PowerShellExecutable ResolvePowerShellExecutable()
+    {
+        var programFiles = Environment.GetFolderPath(Environment.SpecialFolder.ProgramFiles);
+        var pwsh = Path.Combine(programFiles, "PowerShell", "7", "pwsh.exe");
+        if (File.Exists(pwsh)) return new PowerShellExecutable(pwsh, true);
+
+        try
+        {
+            var p = Process.Start(new ProcessStartInfo("where.exe", "pwsh.exe") { UseShellExecute = false, CreateNoWindow = true, RedirectStandardOutput = true });
+            if (p != null && p.WaitForExit(2000))
+            {
+                var line = p.StandardOutput.ReadLine();
+                if (!string.IsNullOrWhiteSpace(line) && File.Exists(line.Trim())) return new PowerShellExecutable(line.Trim(), true);
+            }
+        }
+        catch { /* Fallback unten */ }
+
+        var systemRoot = Environment.GetFolderPath(Environment.SpecialFolder.Windows);
+        var windowsPowerShell = Path.Combine(systemRoot, "System32", "WindowsPowerShell", "v1.0", "powershell.exe");
+        return File.Exists(windowsPowerShell)
+            ? new PowerShellExecutable(windowsPowerShell, false)
+            : new PowerShellExecutable("powershell.exe", false);
     }
 
     private static TerminalTabColor PickTerminalTabColor()
@@ -329,6 +362,7 @@ public sealed class OpenCodeLauncherService
     private static Process? LaunchViaRobustPowerShell(
         string wtPath,
         string robustLauncherScript,
+        string powerShellPath,
         string modelString,
         string workDir,
         string? thinkingLevel,
@@ -343,7 +377,7 @@ public sealed class OpenCodeLauncherService
             "--tabColor", tabColor.Hex,
             "--title", title,
             "--startingDirectory", workDir,
-            "pwsh.exe",
+            powerShellPath,
             "-NoExit",
             "-ExecutionPolicy", "Bypass",
             "-Command", command
@@ -370,11 +404,9 @@ try {
 """;
         File.WriteAllText(tempScript, script, new UTF8Encoding(encoderShouldEmitUTF8Identifier: false));
 
-        var pwshExe = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ProgramFiles), "PowerShell", "7", "pwsh.exe");
-        if (!File.Exists(pwshExe)) pwshExe = "pwsh.exe";
         var psi = new ProcessStartInfo
         {
-            FileName = pwshExe,
+            FileName = powerShellPath,
             UseShellExecute = false,
             CreateNoWindow = true,
             WorkingDirectory = workDir,
@@ -390,6 +422,7 @@ try {
     private static Process? LaunchClaudeCodeViaRobustPowerShell(
         string wtPath,
         string robustLauncherScript,
+        string powerShellPath,
         string innerScript,
         string workDir,
         string modelId,
@@ -404,7 +437,7 @@ try {
             "--tabColor", tabColor.Hex,
             "--title", title,
             "--startingDirectory", workDir,
-            "pwsh.exe",
+            powerShellPath,
             "-NoExit",
             "-ExecutionPolicy", "Bypass",
             "-File", innerScript
@@ -431,11 +464,9 @@ try {
 """;
         File.WriteAllText(tempScript, script, new UTF8Encoding(encoderShouldEmitUTF8Identifier: false));
 
-        var pwshExe = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ProgramFiles), "PowerShell", "7", "pwsh.exe");
-        if (!File.Exists(pwshExe)) pwshExe = "pwsh.exe";
         var psi = new ProcessStartInfo
         {
-            FileName = pwshExe,
+            FileName = powerShellPath,
             UseShellExecute = false,
             CreateNoWindow = true,
             WorkingDirectory = workDir,
@@ -464,11 +495,14 @@ if (Test-Path $profilePath) {
     . $profilePath
 }
 
-$focusKiller = Start-ThreadJob -ScriptBlock {
-    $esc = [char]0x1B
-    while ($true) {
-        Start-Sleep -Seconds 1
-        try { [Console]::Write("$esc[?1004l") } catch { break }
+$focusKiller = $null
+if (Get-Command Start-ThreadJob -ErrorAction SilentlyContinue) {
+    $focusKiller = Start-ThreadJob -ScriptBlock {
+        $esc = [char]0x1B
+        while ($true) {
+            Start-Sleep -Seconds 1
+            try { [Console]::Write("$esc[?1004l") } catch { break }
+        }
     }
 }
 
@@ -671,6 +705,8 @@ try {
 }
 
 internal sealed record TerminalTabColor(string Name, string Hex);
+
+internal sealed record PowerShellExecutable(string Path, bool IsPwsh);
 
 internal sealed class TabColorState
 {

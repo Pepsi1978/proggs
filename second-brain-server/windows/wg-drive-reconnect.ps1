@@ -35,7 +35,10 @@ try {
 
 # 2) WireGuard-Dienst SICHERSTELLEN - der Tunnel-Dienst startet beim Booten manchmal nicht von selbst.
 # Dieser Task laeuft erhoeht, darf den Dienst also starten + Auto-Wiederherstellung setzen.
-$svc = 'WireGuardTunnel$pc'
+# Tunnel-Dienstname dynamisch ermitteln (WireGuardTunnel$<Tunnelname>) - kein hartcodierter
+# Rechner-Tunnelname mehr, laeuft so auf jedem Client (POWER-PC='pc', CODI='secondbrain', ...).
+$svc = (Get-Service -Name 'WireGuardTunnel$*' -ErrorAction SilentlyContinue | Select-Object -First 1).Name
+if (-not $svc) { $svc = 'WireGuardTunnel$pc' }
 try {
     $s = Get-Service -Name $svc -ErrorAction Stop
     Log "WireGuard-Dienst Status: $($s.Status)"
