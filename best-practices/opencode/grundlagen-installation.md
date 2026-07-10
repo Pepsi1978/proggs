@@ -327,13 +327,14 @@ Subagents für spezialisierte Arbeit: `@general`, `@explore` (schnell, read-only
 8. **Windows-Keybind-Defaults:** `input_undo` enthält `ctrl+z`; `terminal_suspend` ist `none`. `offiziell`
 9. **Node.js erforderlich** für den npm-Weg (`node -v` prüfen). `extern`
 10. **Desktop-App braucht WebView2-Runtime** (blankes Fenster → WebView2 installieren). `offiziell`
-11. **OpenCode ohne Tastatur kopieren/einfügen:** OpenCode fängt mit dem Default `"mouse": true` die
-    Maus ab. In `~/.config/opencode/tui.json` zuerst `"mouse": false` setzen; dadurch bleibt laut
-    offizieller Doku die native Terminalauswahl erhalten. Dann in Windows-Terminal-`settings.json`
-    `"copyOnSelect": true` und `"experimental.rightClickContextMenu": false` setzen. Unter
-    `profiles.defaults` macht `"selectionBackground": "#808080"` die native Auswahl deutlich grau
-    sichtbar. Mouse-Up kopiert, Rechtsklick fügt ein; `"copyFormatting": "none"` hält Klartext.
-    Trade-off: OpenCodes eigene Mausfunktionen sind aus, Tastatur und native Terminal-Maus bleiben.
+11. **OpenCode-Mausmodus bewusst wählen:** Für anklickbare Confirm-/Allow-Dialoge muss
+    `~/.config/opencode/tui.json` `"mouse": true` enthalten. `"mouse": false` übergibt die Maus
+    vollständig an Windows Terminal und verbessert mit `"copyOnSelect": true` sowie
+    `"experimental.rightClickContextMenu": false` native Auswahl und Rechtsklick-Einfügen, deaktiviert
+    aber zugleich ALLE OpenCode-Mausfunktionen. `"selectionBackground": "#808080"` und
+    `"copyFormatting": "none"` können unabhängig davon bestehen bleiben. OpenCode 1.17.18 bietet
+    keinen getrennten Modus für native Textauswahl und anklickbare TUI-Elemente; Confirm-Klicks haben
+    Vorrang, wenn beide Arbeitsweisen benötigt werden.
     `offiziell` (OpenCode TUI Options; Microsoft Learn Windows Terminal Interaction und Appearance)
 
 ---

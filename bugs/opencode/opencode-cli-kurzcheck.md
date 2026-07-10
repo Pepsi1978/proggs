@@ -12,7 +12,7 @@
 | # | Signal / Situation | Sofort-Regel | Volltext |
 |---|--------------------|--------------|----------|
 | 1 | ⭐ Windows nativ: npm-Wrapper, kaputte Umlaute, Paste tot, Bun-Segfault | Offiziell **WSL nutzen** (`opencode.ai/docs/windows-wsl`). Nativ ist Fallback. | §1, §2, §12 |
-| 1a | Windows Terminal: Markieren/Rechtsklick wird von OpenCode abgefangen oder Auswahl ist kaum sichtbar | OpenCode-`tui.json`: `"mouse": false`; Terminal: `"copyOnSelect": true`, `"experimental.rightClickContextMenu": false`, Profil-`"selectionBackground": "#808080"`. | §2 (#10a) |
+| 1a | Windows Terminal: Maus-Kopieren und anklickbare Confirm-Dialoge kollidieren | Für Confirm-/Allow-Klicks OpenCode-`tui.json` auf `"mouse": true` lassen. `"mouse": false` verbessert native Auswahl/Rechtsklick, deaktiviert aber ALLE OpenCode-Mausfunktionen. | §2 (#10a) |
 | 2 | ⭐ Kontext/Token läuft voll, viele MCP-Server aktiv | Jeder MCP lädt sein Tool-Schema in JEDEN Prompt (GitHub-MCP ~15–20k Tok; Extrem 147k). **KEIN natives Lazy-Loading** (Stand 1.17.11, anders als Claude Code) → manuelle Per-Agent-Auslagerung ist der EINZIGE Hebel: global `"tools":{"servername*":false}`, im Agent `true`. | §8 (#56) |
 | 3 | ⭐ Agent ändert/committet ungefragt | Defaults sind permissiv (`edit`/`bash` = allow). `permission: {edit:"ask", bash:"ask"}`. Permission-Keys **nur lowercase** — PascalCase (`"Bash"`) wird STILL ignoriert! | §6 |
 | 4 | ⭐ OpenCode startet nicht: `ConfigInvalidError unrecognized keys` | Top-Level-Config ist **strict** → nur dokumentierte Keys. Anweisungen via `instructions`/`AGENTS.md`, nicht erfundene Keys. `opencode debug config`. | §3 |
