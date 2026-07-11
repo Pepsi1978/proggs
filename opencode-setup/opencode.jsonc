@@ -44,6 +44,14 @@
   // Umschalten in der TUI weiterhin per Tab (agent_cycle); dies setzt nur den Start-Default.
   "default_agent": "build",
 
+  // Kleinmodell fuer Nebenaufgaben (Session-Titel, Zusammenfassungen) EXPLIZIT setzen.
+  // ROOT CAUSE (Almanach #14a, 2026-07-11): ohne small_model waehlt OpenCode automatisch
+  // ein Katalog-Modell (gpt-5.6-luna-pro), das Franks OpenAI-Zugang nicht kennt ->
+  // "AI_APICallError: Model not found gpt-5.6-luna" bei praktisch JEDER neuen Session
+  // (43x in 4 Tagen). Der unbehandelte Fehler leakte als Bun-Stack-Trace auf stderr
+  // und zerstoerte das TUI-Rendering. gpt-5.5-fast ist eingerichtet + real genutzt.
+  "small_model": "openai/gpt-5.5-fast",
+
   // Punkt 6 — Plugins (extern, Quellcode vor Install geprueft 2026-07-10):
   //  - @mohak34/opencode-notifier (v0.2.8, MIT): Ton + System-Notification bei
   //    Session-/Unteraufgaben-Abschluss, permission, question, plan_exit und error.
