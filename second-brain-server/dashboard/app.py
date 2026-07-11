@@ -60,6 +60,7 @@ VERSION = "0.74.0 (11.07.2026, 13:25 Uhr)"  # 0.74.0: Sichtbarer Bump zum vollst
 VERSION = "0.74.1 (11.07.2026, 19:33 Uhr)"  # 0.74.1: Sichtbarer Bump zum Regel-Intent-Fix in agent 0.74.1; philosophische Texte mit dem Wort Regeln und verneinte Regelauftraege werden nicht mehr fehlklassifiziert. Alt: 0.74.0.
 VERSION = "0.74.2 (11.07.2026, 19:41 Uhr)"  # 0.74.2: Sichtbarer Bump zum Bibliothekar-Fix: bereits vorhandene Kategorien erzeugen keine identischen Vorher-/Nachher-Vorschlaege mehr. Alt: 0.74.1.
 VERSION = "0.74.3 (11.07.2026, 19:51 Uhr)"  # 0.74.3: Kategorie-Ergaenzungen sind serverseitig atomar; Bibliothekar-Vorschauen laden den aktuellen Ist-Zustand ohne langlebigen Cache. Alt: 0.74.2.
+VERSION = "0.74.4 (11.07.2026, 20:09 Uhr)"  # 0.74.4: Kategorie-Dropdowns waehlen dynamisch die sichtbare Richtung und bleiben auch bei grossen Chat-Eingaben im Viewport. Alt: 0.74.3.
 BRAIN_URL = os.getenv("BRAIN_URL", "http://brain-api:8000").rstrip("/")
 AGENT_URL = os.getenv("AGENT_URL", "http://agent:8002").rstrip("/")
 SB_API_KEY = os.getenv("SB_API_KEY", "")

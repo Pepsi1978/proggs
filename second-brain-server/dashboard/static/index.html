@@ -712,7 +712,10 @@ button{font-family:inherit;cursor:pointer}
 /* Kategorie-Dropdown (Gespräch): Blase breiter — von der Trigger-Linkkante bis zur Mikrofon-Rechtkante
    (= +100px: X-Button 42 + Mikrofon 42 + 2x gap 8). Und 30% hoeher (340 -> 442) fuer besseren Ueberblick. */
 .cs-compact .cs-panel{right:auto;width:calc(100% + 100px);max-height:442px}
-.cs.open .cs-panel{display:block;animation:rise .18s var(--ease) both}
+.cs.open .cs-panel{display:block}
+.cs.open .cs-panel.up{animation:rise .18s var(--ease) both}
+.cs.open .cs-panel.down{animation:csDrop .18s var(--ease) both}
+@keyframes csDrop{from{opacity:0;transform:translateY(-14px)}to{opacity:1;transform:none}}
 .cs-opt{padding:9px 12px;border-radius:10px;font-size:13.5px;color:var(--text-dim);cursor:pointer;
   white-space:nowrap;overflow:hidden;text-overflow:ellipsis;transition:background .15s,color .15s}
 .cs-opt:hover{background:var(--surface-2);color:var(--text)}
@@ -3430,6 +3433,32 @@ button{font-family:inherit;cursor:pointer}
       return `<option value="${escapeHtml(c.name)}" data-cat="1" data-trigger="${escapeHtml(trig)}"${c.empty?' data-empty="1"':''}>${escapeHtml(c.name)}</option>`;
     }).join("");
   }
+  const CS_VIEWPORT_GAP = 12, CS_PANEL_GAP = 6;
+  function chooseCSPlacement(rect, viewportHeight, desiredHeight, preferUp){
+    const roomUp = Math.max(0, rect.top - CS_VIEWPORT_GAP - CS_PANEL_GAP);
+    const roomDown = Math.max(0, viewportHeight - rect.bottom - CS_VIEWPORT_GAP - CS_PANEL_GAP);
+    const preferredRoom = preferUp ? roomUp : roomDown;
+    const otherRoom = preferUp ? roomDown : roomUp;
+    const usePreferred = desiredHeight <= preferredRoom || preferredRoom >= otherRoom;
+    const direction = usePreferred ? (preferUp ? "up" : "down") : (preferUp ? "down" : "up");
+    const available = direction === "up" ? roomUp : roomDown;
+    return {direction, maxHeight:Math.max(0, Math.floor(Math.min(desiredHeight, available)))};
+  }
+  function positionCS(ref){
+    if(!ref || !ref.cs.classList.contains("open")) return;
+    const triggerRect = ref.trigger.getBoundingClientRect();
+    if(triggerRect.bottom <= CS_VIEWPORT_GAP || triggerRect.top >= window.innerHeight - CS_VIEWPORT_GAP){
+      ref.cs.classList.remove("open");
+      return;
+    }
+    ref.panel.style.maxHeight = "";
+    const configuredMax = parseFloat(getComputedStyle(ref.panel).maxHeight);
+    const desiredHeight = Math.min(ref.panel.scrollHeight, Number.isFinite(configuredMax) ? configuredMax : ref.panel.scrollHeight);
+    const placement = chooseCSPlacement(triggerRect, window.innerHeight, desiredHeight, ref.preferUp);
+    ref.panel.classList.toggle("up", placement.direction === "up");
+    ref.panel.classList.toggle("down", placement.direction === "down");
+    ref.panel.style.maxHeight = placement.maxHeight + "px";
+  }
   function enhanceSelect(sel, opts){
     opts = opts || {};
     if(!sel) return;
@@ -3447,12 +3476,13 @@ button{font-family:inherit;cursor:pointer}
     panel.className = "cs-panel " + (opts.up ? "up" : "down");
     cs.appendChild(trigger); cs.appendChild(panel);
     sel.parentNode.insertBefore(cs, sel.nextSibling);
-    sel._cs = {cs, trigger, panel, valueEl: trigger.querySelector(".cs-value")};
+    sel._cs = {cs, trigger, panel, valueEl: trigger.querySelector(".cs-value"), preferUp:!!opts.up};
+    cs._csRef = sel._cs;
     trigger.addEventListener("click", e=>{
       e.stopPropagation();
       const isOpen = cs.classList.contains("open");
       closeAllCS();
-      if(!isOpen) cs.classList.add("open");
+      if(!isOpen){ cs.classList.add("open"); positionCS(sel._cs); }
     });
     syncCS(sel);
   }
@@ -3544,9 +3574,13 @@ button{font-family:inherit;cursor:pointer}
       }
     };
     walk(root, 0);
+    if(ref.cs.classList.contains("open")) positionCS(ref);
   }
   function closeAllCS(){ document.querySelectorAll(".cs.open").forEach(c=>c.classList.remove("open")); }
+  function repositionOpenCS(){ document.querySelectorAll(".cs.open").forEach(c=>positionCS(c._csRef)); }
   document.addEventListener("click", closeAllCS);
+  document.addEventListener("scroll", repositionOpenCS, true);
+  window.addEventListener("resize", repositionOpenCS);
 
   /* tree = { "2026": {"06": 12, "05": 3}, ... }  (Jahr -> Monat -> Anzahl).
      onPick(jahr, monat) lädt einen Monat; onClear() blendet die Einträge wieder aus (Toggle/Zuklappen). */
