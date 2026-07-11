@@ -184,35 +184,41 @@
             Width="96" Height="612">
         <StackPanel>
 
-            <!-- Section 1: Stern (always-on prefix) + Orientierungs-Umschalter.
-                 Stern etwas kleiner (34 statt 40) und leicht nach links, daneben
-                 der neue ⇄-Button zum Drehen zwischen vertikal/horizontal. -->
-            <!-- Padding so gewaehlt, dass die Sektion exakt 63px hoch bleibt
-                 (21 + 34 Button-Reihe + 8), obwohl der Stern jetzt kleiner ist.
-                 Sonst waere der Gesamt-Inhalt kuerzer als die feste Fensterhoehe
-                 (612) → schwarze Luecke unten + verschobener Mic (Auto-Hide-Versatz). -->
-            <Border Background="#B31F1B15" CornerRadius="34,34,0,0" Padding="0,21,0,8">
-                <StackPanel x:Name="Section1Panel" Orientation="Horizontal" HorizontalAlignment="Center">
-                    <Button x:Name="UltrathinkButton"
+            <!-- Section 1: Enter + Speichern-Diskette. Der vollständige frühere
+                 untere Randbereich sitzt jetzt oben. 17 + 40 + 6 = 63px hält
+                 Fensterhöhe und Mic-Geometrie unverändert. -->
+            <Border Background="#B31A1A1A" CornerRadius="34,34,0,0" Padding="0,17,0,6">
+                <Grid HorizontalAlignment="Center">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="52"/>
+                        <ColumnDefinition Width="Auto"/>
+                    </Grid.ColumnDefinitions>
+
+                    <Button x:Name="EnterButton"
+                            Grid.Column="0"
                             Style="{StaticResource CircleButton}"
-                            Width="34" Height="34"
-                            Click="BtnUltrathink_Click"
-                            ToolTip="Promptboard">
-                        <Viewbox Width="17" Height="17">
-                            <Path x:Name="UltrathinkStar" Fill="#8B7355"
-                                  Data="M12,1 L15.09,7.26 L22,8.27 L17,13.14 L18.18,20.02 L12,16.77 L5.82,20.02 L7,13.14 L2,8.27 L8.91,7.26 Z"/>
-                        </Viewbox>
+                            HorizontalAlignment="Center"
+                            Click="BtnAutoEnter_Click"
+                            ToolTip="Auto-Enter">
+                        <TextBlock Text="&#x23CE;" FontSize="18" Foreground="White"/>
                     </Button>
 
-                    <Button x:Name="OrientationToggleButton"
-                            Style="{StaticResource CircleButton}"
-                            Width="34" Height="34"
-                            Margin="5,0,0,0"
-                            Click="BtnOrientationToggle_Click"
-                            ToolTip="Layout drehen (vertikal ↔ horizontal)">
-                        <TextBlock Text="&#x21C4;" FontSize="15" Foreground="White"/>
+                    <Button x:Name="SaveButton"
+                            Grid.Column="1"
+                            Style="{StaticResource SaveButton}"
+                            VerticalAlignment="Center"
+                            Margin="2,0,0,0"
+                            Click="BtnSavePosition_Click"
+                            ToolTip="Position dieser Ausrichtung merken (gilt bis zum Neustart)">
+                        <TextBlock x:Name="SaveIcon"
+                                   Text="&#xE74E;"
+                                   FontFamily="Segoe MDL2 Assets"
+                                   FontSize="16"
+                                   Foreground="White"
+                                   HorizontalAlignment="Center"
+                                   VerticalAlignment="Center"/>
                     </Button>
-                </StackPanel>
+                </Grid>
             </Border>
 
             <Border Background="#FF000000" Height="1"/>
@@ -487,55 +493,39 @@
 
             <Border Background="#FF000000" Height="1"/>
 
-            <!-- Section 7: Enter (confirm, neutral) + Speichern-Diskette.
-                 Gleiche Grid-Struktur wie Section 4 (X + Profil-Kachel): Enter
-                 sitzt zentriert in der 52px-Spalte → exakt auf der Achse der
-                 anderen runden Buttons. Die Diskette sitzt rechts daneben in der
-                 Auto-Spalte (wie die Profil-Kacheln), damit Enter NICHT nach
-                 aussen wandert (Frank-Wunsch 2026-05-25). Diskette 28px + 2px
-                 Margin = 30px Spaltenbreite — identisch zu den Profil-Spalten,
-                 daher exakt dieselbe Enter-Achse. -->
-            <Border Background="#B31A1A1A" CornerRadius="0,0,34,34" Padding="0,6,0,17">
-                <Grid HorizontalAlignment="Center">
-                    <Grid.ColumnDefinitions>
-                        <ColumnDefinition Width="52"/>
-                        <ColumnDefinition Width="Auto"/>
-                    </Grid.ColumnDefinitions>
-
-                    <Button x:Name="EnterButton"
-                            Grid.Column="0"
+            <!-- Section 7: Stern + Orientierungs-Umschalter. Der vollständige
+                 frühere obere Randbereich sitzt jetzt unten. 8 + 34 + 21 = 63px. -->
+            <Border Background="#B31F1B15" CornerRadius="0,0,34,34" Padding="0,8,0,21">
+                <StackPanel x:Name="Section1Panel" Orientation="Horizontal" HorizontalAlignment="Center">
+                    <Button x:Name="UltrathinkButton"
                             Style="{StaticResource CircleButton}"
-                            HorizontalAlignment="Center"
-                            Click="BtnAutoEnter_Click"
-                            ToolTip="Auto-Enter">
-                        <TextBlock Text="&#x23CE;" FontSize="18" Foreground="White"/>
+                            Width="34" Height="34"
+                            Click="BtnUltrathink_Click"
+                            ToolTip="Promptboard">
+                        <Viewbox Width="17" Height="17">
+                            <Path x:Name="UltrathinkStar" Fill="#8B7355"
+                                  Data="M12,1 L15.09,7.26 L22,8.27 L17,13.14 L18.18,20.02 L12,16.77 L5.82,20.02 L7,13.14 L2,8.27 L8.91,7.26 Z"/>
+                        </Viewbox>
                     </Button>
 
-                    <Button x:Name="SaveButton"
-                            Grid.Column="1"
-                            Style="{StaticResource SaveButton}"
-                            VerticalAlignment="Center"
-                            Margin="2,0,0,0"
-                            Click="BtnSavePosition_Click"
-                            ToolTip="Position dieser Ausrichtung merken (gilt bis zum Neustart)">
-                        <TextBlock x:Name="SaveIcon"
-                                   Text="&#xE74E;"
-                                   FontFamily="Segoe MDL2 Assets"
-                                   FontSize="16"
-                                   Foreground="White"
-                                   HorizontalAlignment="Center"
-                                   VerticalAlignment="Center"/>
+                    <Button x:Name="OrientationToggleButton"
+                            Style="{StaticResource CircleButton}"
+                            Width="34" Height="34"
+                            Margin="5,0,0,0"
+                            Click="BtnOrientationToggle_Click"
+                            ToolTip="Layout drehen (vertikal ↔ horizontal)">
+                        <TextBlock Text="&#x21C4;" FontSize="15" Foreground="White"/>
                     </Button>
-                </Grid>
+                </StackPanel>
             </Border>
 
         </StackPanel>
     </Border>
 
-    <!-- HorizontalView: horizontale Leiste (rechts→links). Wird zur Laufzeit
+    <!-- HorizontalView: horizontale Leiste. Wird zur Laufzeit
          durch Umhaengen DERSELBEN Button-Instanzen (kein Duplikat) befuellt;
          HBar ist eine horizontale StackPanel. Nur im Horizontal-Modus sichtbar.
-         Die vertikale FullView bleibt davon voellig unberuehrt (Fallback). -->
+         Die vertikale FullView bleibt Standard und Fallback. -->
     <Border x:Name="HorizontalView"
             CornerRadius="36"
             Background="{x:Null}"
