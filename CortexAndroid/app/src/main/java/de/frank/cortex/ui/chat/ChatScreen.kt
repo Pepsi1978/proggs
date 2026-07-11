@@ -39,6 +39,11 @@ import androidx.compose.ui.draw.scale
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.role
+import androidx.compose.ui.semantics.selected
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -82,12 +87,14 @@ fun ChatScreen(vm: ChatViewModel = viewModel()) {
     val emptyTitle = when (uiState.contextMode) {
         SettingsStore.CONTEXT_MODE_SMALLTALK -> "Smalltalk-Modus ist aktiv."
         SettingsStore.CONTEXT_MODE_SAVE -> "Speichermodus ist aktiv."
+        SettingsStore.CONTEXT_MODE_RULE -> "Regelmodus ist aktiv."
         SettingsStore.CONTEXT_MODE_SEARCH -> "Suchmodus ist aktiv."
         else -> "Dein Speicher hört zu."
     }
     val emptySubtitle = when (uiState.contextMode) {
         SettingsStore.CONTEXT_MODE_SMALLTALK -> "Sag oder tippe etwas — ich plaudere nur mit dir und speichere oder suche nichts."
         SettingsStore.CONTEXT_MODE_SAVE -> "Sag oder tippe etwas — ich behandle es als Information zum Ablegen."
+        SettingsStore.CONTEXT_MODE_RULE -> "Sag oder tippe eine Regel — nur die Regeldatei des Hauptagenten wird vorbereitet."
         SettingsStore.CONTEXT_MODE_SEARCH -> "Frag oder tippe ein Thema — ich suche gezielt in deinem Gedächtnis."
         else -> "Sag oder tippe etwas — ich lege es ab oder schlage es nach."
     }
@@ -553,11 +560,14 @@ private fun ChatBubble(
 ) {
     val isDark = MaterialTheme.colorScheme.background == DarkBg
     val canEditStoreText = !message.isUser && message.memoryEditable && !message.memoryText.isNullOrBlank()
+    val canEditRuleText = !message.isUser && message.action == "rule_confirm"
     val initialEditableText = remember(message.memoryText, message.text) {
         message.memoryText?.trim().orEmpty().ifBlank { message.text.trim() }
     }
     var isEditingStoreText by rememberSaveable(message.id) { mutableStateOf(false) }
     var editedStoreText by rememberSaveable(message.id) { mutableStateOf(initialEditableText) }
+    var isEditingRuleText by rememberSaveable(message.id) { mutableStateOf(false) }
+    var editedRuleText by rememberSaveable(message.id) { mutableStateOf(message.text.trim()) }
 
     Column(
         modifier = Modifier.fillMaxWidth(),
@@ -647,6 +657,9 @@ private fun ChatBubble(
                 }
                 "recall" -> "\u21B3 nachgeschlagen \u00B7 ${message.recallHits ?: 0} Treffer"
                 "save_confirm", "store_clarify", "memory_edit_confirm", "memory_dialog" -> "\u21B3 Rückfrage\u2026"
+                "rule_confirm" -> "\u21B3 Regel-Vorschlag · Ja / Nein / Bearbeiten"
+                "rule_saved" -> "\u21B3 Regel übernommen"
+                "rule_cancelled" -> "\u21B3 keine Regel angelegt"
                 "cancel" -> "\u21B3 nicht gespeichert"
                 else -> null
             }
@@ -654,6 +667,8 @@ private fun ChatBubble(
                 "store", "memory_updated" -> Mint
                 "recall" -> Iris
                 "save_confirm", "store_clarify", "memory_edit_confirm", "memory_dialog" -> Amber
+                "rule_confirm" -> Amber
+                "rule_saved" -> Mint
                 "cancel" -> MaterialTheme.colorScheme.onSurfaceVariant
                 else -> MaterialTheme.colorScheme.onSurfaceVariant
             }
@@ -677,7 +692,49 @@ private fun ChatBubble(
             ) {
                 message.options.forEach { option ->
                     OptionChip(label = option.label, isDark = isDark) {
-                        onOptionClick(option)
+                        if (canEditRuleText && option.send == "regel bearbeiten") {
+                            editedRuleText = message.text.trim()
+                            isEditingRuleText = true
+                        } else {
+                            onOptionClick(option)
+                        }
+                    }
+                }
+            }
+        }
+
+        if (canEditRuleText && isEditingRuleText) {
+            Surface(
+                shape = RoundedCornerShape(14.dp),
+                color = if (isDark) DarkField else LightField,
+                border = BorderStroke(1.dp, Amber.copy(alpha = 0.55f)),
+                modifier = Modifier.padding(top = 8.dp).fillMaxWidth()
+            ) {
+                Column(Modifier.padding(12.dp)) {
+                    BasicTextField(
+                        value = editedRuleText,
+                        onValueChange = { editedRuleText = it.take(240) },
+                        modifier = Modifier.fillMaxWidth().defaultMinSize(minHeight = 84.dp),
+                        textStyle = LocalTextStyle.current.copy(
+                            fontSize = 14.5.sp,
+                            lineHeight = 21.7.sp,
+                            color = MaterialTheme.colorScheme.onSurface
+                        ),
+                        minLines = 3,
+                        maxLines = 6
+                    )
+                    Row(Modifier.padding(top = 8.dp)) {
+                        OptionChip(
+                            label = "Bearbeitung bestätigen",
+                            isDark = isDark,
+                            tint = Mint
+                        ) {
+                            val text = editedRuleText.trim()
+                            if (text.isNotEmpty()) {
+                                onOptionClick(ChatOption("Regel speichern", "regel speichern: $text"))
+                                isEditingRuleText = false
+                            }
+                        }
                     }
                 }
             }
@@ -951,14 +1008,13 @@ private fun ChatInputBlock(
                 onModeChange = onContextModeChange,
                 responseSize = responseSize,
                 onResponseSizeChange = onResponseSizeChange,
-                onOpenContextPrompts = onOpenContextPrompts,
                 isDark = isDark
             )
 
             Spacer(Modifier.height(8.dp))
 
-            // Title + Category row
-            Row(
+            // Titel und Kategorie gehören nur zu Gedächtniseinträgen, nie zur Regeldatei.
+            if (contextMode != SettingsStore.CONTEXT_MODE_RULE) Row(
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.spacedBy(8.dp),
                 modifier = Modifier.fillMaxWidth()
@@ -1014,7 +1070,7 @@ private fun ChatInputBlock(
                 )
             }
 
-            Spacer(Modifier.height(8.dp))
+            if (contextMode != SettingsStore.CONTEXT_MODE_RULE) Spacer(Modifier.height(8.dp))
 
             // Textarea
             Surface(
@@ -1040,8 +1096,12 @@ private fun ChatInputBlock(
                     maxLines = 5,
                     decorationBox = { inner ->
                         if (text.isEmpty()) {
-                            Text("Ablegen oder nachschlagen\u2026", fontSize = 14.5.sp,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant)
+                            Text(
+                                if (contextMode == SettingsStore.CONTEXT_MODE_RULE) "Regel für den Hauptagenten\u2026"
+                                else "Ablegen oder nachschlagen\u2026",
+                                fontSize = 14.5.sp,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
                         }
                         inner()
                     }
@@ -1051,10 +1111,14 @@ private fun ChatInputBlock(
             Spacer(Modifier.height(9.dp))
 
             // Action row
-            Row(
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(9.dp)
-            ) {
+            BoxWithConstraints(Modifier.fillMaxWidth()) {
+                val actionRowWidth = maxWidth
+                val actionGap = ((actionRowWidth - 288.dp) / 5).coerceIn(0.dp, 9.dp)
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(actionGap)
+                ) {
                 // Clear (dunkles Orange wie Lautsprecher/Mikro)
                 ActionButton(
                     icon = { Icon(Icons.AutoMirrored.Filled.Backspace, null, Modifier.size(20.dp)) },
@@ -1067,26 +1131,66 @@ private fun ChatInputBlock(
                 // G - Improve (mint, 38x38, radius 11)
                 Box(
                     modifier = Modifier
-                        .size(38.dp)
-                        .clip(RoundedCornerShape(11.dp))
-                        .background(Mint.copy(alpha = 0.13f))
-                        .border(1.dp, Mint.copy(alpha = 0.30f), RoundedCornerShape(11.dp))
+                        .size(48.dp)
                         .clickable(enabled = text.isNotBlank() && !isImproving, onClick = onImprove),
                     contentAlignment = Alignment.Center
                 ) {
-                    if (isImproving) {
-                        CircularProgressIndicator(
-                            modifier = Modifier.size(20.dp),
-                            strokeWidth = 2.dp,
-                            color = Mint
-                        )
-                    } else {
-                        Text("G", fontFamily = SpaceGrotesk, fontWeight = FontWeight.Bold,
-                            fontSize = 18.sp, color = Mint)
+                    Box(
+                        modifier = Modifier
+                            .size(38.dp)
+                            .clip(RoundedCornerShape(11.dp))
+                            .background(Mint.copy(alpha = 0.13f))
+                            .border(1.dp, Mint.copy(alpha = 0.30f), RoundedCornerShape(11.dp)),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        if (isImproving) {
+                            CircularProgressIndicator(
+                                modifier = Modifier.size(20.dp),
+                                strokeWidth = 2.dp,
+                                color = Mint
+                            )
+                        } else {
+                            Text("G", fontFamily = SpaceGrotesk, fontWeight = FontWeight.Bold,
+                                fontSize = 18.sp, color = Mint)
+                        }
                     }
                 }
 
-                Spacer(Modifier.weight(1f))
+                // K - Kontext-Prompts. Bewusst neben G statt in der Modusleiste, damit dort
+                // Lupe, R, Diskette und Automatik als fachlich getrennte Modi zusammenstehen.
+                Box(
+                    modifier = Modifier
+                        .size(48.dp)
+                        .semantics {
+                            contentDescription = "Kontext-Prompts öffnen"
+                            role = Role.Button
+                        }
+                        .clickable(onClick = onOpenContextPrompts),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Box(
+                        modifier = Modifier
+                            .size(38.dp)
+                            .clip(RoundedCornerShape(11.dp))
+                            .background(if (isDark) DarkField else LightField)
+                            .border(
+                                1.dp,
+                                if (isDark) DarkFieldBorder else LightFieldBorder,
+                                RoundedCornerShape(11.dp)
+                            ),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Text(
+                            "K",
+                            fontFamily = SpaceGrotesk,
+                            fontWeight = FontWeight.Bold,
+                            fontSize = 15.sp,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
+                }
+
+                if (actionRowWidth >= 342.dp) Spacer(Modifier.weight(1f))
 
                 // TTS toggle (38x38): AN = orange, AUS = grau — so ist auf einen Blick erkennbar,
                 // dass das Vorlesen ausgeschaltet ist (Frank-Wunsch 2026-07-02).
@@ -1115,18 +1219,25 @@ private fun ChatInputBlock(
                 // Send (44x44, radius 13, solid orange + shadow)
                 Box(
                     modifier = Modifier
-                        .size(44.dp)
-                        .clip(RoundedCornerShape(13.dp))
-                        .background(Orange)
+                        .size(48.dp)
                         .clickable(enabled = text.isNotBlank(), onClick = onSend),
                     contentAlignment = Alignment.Center
                 ) {
-                    Icon(
-                        Icons.AutoMirrored.Filled.Send,
-                        contentDescription = "Senden",
-                        tint = Color.White,
-                        modifier = Modifier.size(22.dp)
-                    )
+                    Box(
+                        modifier = Modifier
+                            .size(44.dp)
+                            .clip(RoundedCornerShape(13.dp))
+                            .background(Orange),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Icon(
+                            Icons.AutoMirrored.Filled.Send,
+                            contentDescription = "Senden",
+                            tint = Color.White,
+                            modifier = Modifier.size(22.dp)
+                        )
+                    }
+                }
                 }
             }
         }
@@ -1397,19 +1508,19 @@ private fun contextPromptTitle(text: String): String {
     return title.ifBlank { "Prompt" }
 }
 
+@OptIn(ExperimentalLayoutApi::class)
 @Composable
 private fun ContextModeBar(
     selectedMode: String,
     onModeChange: (String) -> Unit,
     responseSize: String,
     onResponseSizeChange: (String) -> Unit,
-    onOpenContextPrompts: () -> Unit,
     isDark: Boolean
 ) {
-    Row(
+    FlowRow(
         modifier = Modifier.fillMaxWidth(),
         horizontalArrangement = Arrangement.SpaceBetween,
-        verticalAlignment = Alignment.CenterVertically
+        verticalArrangement = Arrangement.spacedBy(4.dp)
     ) {
         Row(
             horizontalArrangement = Arrangement.spacedBy(4.dp),
@@ -1442,35 +1553,19 @@ private fun ContextModeBar(
             }
         }
 
-        Box(
-            modifier = Modifier
-                .size(38.dp)
-                .clip(RoundedCornerShape(11.dp))
-                .background(if (isDark) DarkField else LightField)
-                .border(
-                    1.dp,
-                    if (isDark) DarkFieldBorder else LightFieldBorder,
-                    RoundedCornerShape(11.dp)
-                )
-                .clickable(onClick = onOpenContextPrompts),
-            contentAlignment = Alignment.Center
-        ) {
-            Text("K", fontFamily = SpaceGrotesk, fontWeight = FontWeight.Bold, fontSize = 15.sp,
-                color = MaterialTheme.colorScheme.onSurfaceVariant)
-        }
-
         // Smalltalk-Knopf bewusst ENTFERNT (Frank-Wunsch 2026-07-02): Smalltalk erkennt der
-        // Router im Auto-Modus selbst — es bleiben Suchen, Speichern und Automatisch (KI).
+        // Router im Auto-Modus selbst. Regeln laufen ausschließlich über den R-Modus.
         val items = listOf(
-            Triple(SettingsStore.CONTEXT_MODE_SEARCH, Icons.Default.Search, "Suchen"),
-            Triple(SettingsStore.CONTEXT_MODE_SAVE, Icons.Default.Save, "Speichern"),
-            Triple(SettingsStore.CONTEXT_MODE_AUTO, Icons.Default.AutoAwesome, "Automatisch")
+            SettingsStore.CONTEXT_MODE_SEARCH to "Suchen",
+            SettingsStore.CONTEXT_MODE_RULE to "Regeln",
+            SettingsStore.CONTEXT_MODE_SAVE to "Speichern",
+            SettingsStore.CONTEXT_MODE_AUTO to "Automatisch"
         )
         Row(
             horizontalArrangement = Arrangement.spacedBy(4.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            items.forEach { (mode, icon, label) ->
+            items.forEach { (mode, label) ->
                 val active = selectedMode == mode
                 val tint = if (active) Orange else MaterialTheme.colorScheme.onSurfaceVariant
                 Box(
@@ -1483,10 +1578,24 @@ private fun ContextModeBar(
                             if (active) Orange.copy(alpha = 0.52f) else if (isDark) DarkFieldBorder else LightFieldBorder,
                             RoundedCornerShape(11.dp)
                         )
+                        .semantics {
+                            contentDescription = label
+                            role = Role.Button
+                            selected = active
+                        }
                         .clickable { onModeChange(mode) },
                     contentAlignment = Alignment.Center
                 ) {
-                    Icon(icon, contentDescription = label, tint = tint, modifier = Modifier.size(20.dp))
+                    when (mode) {
+                        SettingsStore.CONTEXT_MODE_SEARCH ->
+                            Icon(Icons.Default.Search, contentDescription = null, tint = tint, modifier = Modifier.size(20.dp))
+                        SettingsStore.CONTEXT_MODE_SAVE ->
+                            Icon(Icons.Default.Save, contentDescription = null, tint = tint, modifier = Modifier.size(20.dp))
+                        SettingsStore.CONTEXT_MODE_RULE ->
+                            Text("R", fontFamily = SpaceGrotesk, fontWeight = FontWeight.Bold, fontSize = 16.sp, color = tint)
+                        else ->
+                            Icon(Icons.Default.AutoAwesome, contentDescription = null, tint = tint, modifier = Modifier.size(20.dp))
+                    }
                 }
             }
         }
@@ -1531,16 +1640,22 @@ private fun ActionButton(
 ) {
     Box(
         modifier = Modifier
-            .size(38.dp)
-            .clip(RoundedCornerShape(11.dp))
-            .background(bg)
-            .border(1.dp, border, RoundedCornerShape(11.dp))
+            .size(48.dp)
             .clickable(onClick = onClick),
         contentAlignment = Alignment.Center
     ) {
-        CompositionLocalProvider(LocalContentColor provides tint) {
-            ProvideTextStyle(LocalTextStyle.current.copy(color = tint)) {
-                icon()
+        Box(
+            modifier = Modifier
+                .size(38.dp)
+                .clip(RoundedCornerShape(11.dp))
+                .background(bg)
+                .border(1.dp, border, RoundedCornerShape(11.dp)),
+            contentAlignment = Alignment.Center
+        ) {
+            CompositionLocalProvider(LocalContentColor provides tint) {
+                ProvideTextStyle(LocalTextStyle.current.copy(color = tint)) {
+                    icon()
+                }
             }
         }
     }

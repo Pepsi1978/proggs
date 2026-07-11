@@ -23,10 +23,16 @@ def load_distillation_namespace() -> dict:
         "_MEMORY_COMMAND_SUFFIX_RE",
         "_MEMORY_COURTESY_SUFFIX_RE",
         "_MEMORY_AMBIGUOUS_SAVE_PREFIX_RE",
+        "_MEMORY_VERBATIM_RE",
+        "_MEMORY_SAVE_ACTION_RE",
+        "_MEMORY_SAVE_INPUT_OPENER_RE",
         "_MEMORY_TIME_TOKEN_RE",
         "_MEMORY_NEGATION_TOKEN_RE",
         "_MEMORY_UNCERTAINTY_TOKEN_RE",
         "_has_spoken_save_command",
+        "_has_verbatim_save_signal",
+        "_verbatim_memory_content",
+        "_is_save_input_opener",
         "_is_definite_save_request",
         "_pending_confirmation_intent",
         "_looks_like_save_request",
@@ -56,7 +62,7 @@ def load_distillation_namespace() -> dict:
         "_extract_json": lambda value: value,
         "_log": lambda *args, **kwargs: logs.append((args, kwargs)),
         "checkpoint": lambda *args, **kwargs: checkpoints.append((args, kwargs)),
-        "_norm_context_mode": lambda value: value if value in {"auto", "save", "search", "smalltalk"} else "auto",
+        "_norm_context_mode": lambda value: value if value in {"auto", "save", "rule", "search", "smalltalk"} else "auto",
         "_now_local": lambda: datetime(2026, 7, 10, 12, 0),
         "_history_text": lambda session: "(leer)",
         "CONTEXT_PROMPT_MAX_CHARS": 4000,
@@ -246,8 +252,24 @@ def main() -> int:
         check(distill(ambiguous, preserve_verbatim=not has_command(ambiguous)) == ambiguous,
               "Mehrdeutige Doppelpunkt-Dokumente bleiben im expliziten Speicherpfad 1:1")
     check(pending_intent("ja, genau so", {"mode": "save_confirm"}) == "confirm_yes" and
-          pending_intent("doch nicht", {"mode": "save_confirm"}) == "confirm_no",
-          "Eindeutige Speicher-Bestätigungen funktionieren ohne Router-LLM")
+           pending_intent("doch nicht", {"mode": "save_confirm"}) == "confirm_no",
+           "Eindeutige Speicher-Bestätigungen funktionieren ohne Router-LLM")
+    check(pending_intent("Keine Regeln anlegen.", {"mode": "rule_confirm"}) == "confirm_no" and
+          pending_intent("regel ja", {"mode": "rule_confirm"}) == "confirm_yes",
+          "Regel-Bestätigungen und natürlich formulierte Ablehnung funktionieren deterministisch")
+    opener = ns["_is_save_input_opener"]
+    check(opener("Kannst du etwas von mir abspeichern im Gedächtnis?") and
+          opener("Ich möchte dir einen Text zum Speichern geben."),
+          "Angekündigte Speicherinhalte eröffnen einen eigenen Folgeturn-Zustand")
+    check(not opener("Kannst du speichern, dass ich morgen komme?") and
+          not opener("Kannst du etwas speichern: Ich komme morgen."),
+          "Speicherwünsche mit bereits vorhandenem Inhalt werden nicht als leerer Auftakt behandelt")
+    verbatim = ns["_verbatim_memory_content"]
+    exact_body = "Vielleicht komme ich morgen nicht?\nZeile 2 bleibt exakt."
+    check(verbatim("Speichere das bitte wortwörtlich: " + exact_body) == exact_body,
+          "Wortwörtlicher Doppelpunkt-Auftrag entfernt nur die Befehlshülle")
+    check(ns["_is_definite_save_request"]("Kannst du das bitte wortwörtlich speichern: " + exact_body),
+          "Freie wortwörtliche Speicherform wird sicher als Save erkannt")
     check(distill(exact, "", preserve_verbatim=True) == exact and calls == 0,
           "Explizite Dokument-Speicherung bleibt wortgetreu und ohne LLM")
     long_document = "A" * 4001
@@ -286,6 +308,11 @@ def main() -> int:
         "_memory_followup_candidate(user_text, session[\"last_memory\"])",
         "memory_edit: bool",
         '"memory_text": outcome.get("memory_text")',
+        'pending.get("mode") == "save_input"',
+        '"action": "save_input"',
+        "if force_memory_content:",
+        "elif _has_verbatim_save_signal(user_text):",
+        'mode == "rule"',
     )
     for needle in required_flow:
         check(needle in APP_SOURCE, f"Speicherfluss nicht vollständig verdrahtet: {needle}")
@@ -293,6 +320,8 @@ def main() -> int:
           "Bestätigungsfrage kann nicht auf das alte Router-Zitat zurückfallen")
     check("Router-Fehler; eindeutiger Speicherwunsch bleibt im sicheren Speicherpfad" in APP_SOURCE,
           "Provider- und JSON-Fehler des Routers behalten eindeutige Speicherwünsche im Speicherpfad")
+    check("rules.is_rule_request(user_text)" not in APP_SOURCE,
+          "Automatik, Suche und Speichern können keine Regelheuristik mehr auslösen")
 
     dashboard_source = (ROOT / "dashboard" / "app.py").read_text(encoding="utf-8")
     dashboard_tree = ast.parse(dashboard_source)

@@ -62,6 +62,7 @@ object SettingsStore {
     const val CONTEXT_MODE_AUTO = "auto"
     const val CONTEXT_MODE_SMALLTALK = "smalltalk"
     const val CONTEXT_MODE_SAVE = "save"
+    const val CONTEXT_MODE_RULE = "rule"
     const val CONTEXT_MODE_SEARCH = "search"
 
     const val RESPONSE_SIZE_AUTO = "auto"
@@ -84,6 +85,10 @@ object SettingsStore {
             Du bist jetzt im Speichermodus. Frank möchte dir Informationen geben, die ins Gedächtnis sollen.
             Interpretiere seine Eingabe als zu speichernde Information, reagiere intelligent im Speicherkontext
             und frage wie gewohnt vor dem endgültigen Ablegen kurz nach.
+        """.trimIndent()
+        CONTEXT_MODE_RULE -> """
+            Du bist jetzt im Regelmodus. Franks Eingabe ist ausschließlich eine neue dauerhafte Verhaltensregel
+            für den Cortex-Hauptagenten. Erstelle keinen Gedächtniseintrag und starte keine Suche.
         """.trimIndent()
         CONTEXT_MODE_SEARCH -> """
             Du bist jetzt im Suchmodus. Frank möchte etwas aus seinem Gedächtnis wissen.
@@ -352,6 +357,23 @@ object SettingsStore {
                 else -> RESPONSE_SIZE_AUTO
             }
         ).apply()
+
+    val contextModeRevision: Int
+        get() = plain.getInt("context_mode_revision", 0).coerceAtLeast(0)
+
+    val contextMode: String
+        get() = plain.getString("context_mode", CONTEXT_MODE_AUTO)
+            ?.takeIf { it in setOf(CONTEXT_MODE_AUTO, CONTEXT_MODE_SMALLTALK, CONTEXT_MODE_SAVE, CONTEXT_MODE_RULE, CONTEXT_MODE_SEARCH) }
+            ?: CONTEXT_MODE_AUTO
+
+    fun advanceContextModeRevision(mode: String): Int {
+        val next = if (contextModeRevision == Int.MAX_VALUE) 1 else contextModeRevision + 1
+        plain.edit()
+            .putInt("context_mode_revision", next)
+            .putString("context_mode", mode)
+            .apply()
+        return next
+    }
 
     var recordingToneEnabled: Boolean
         get() = plain.getBoolean("recording_tone_enabled", true)

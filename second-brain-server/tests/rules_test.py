@@ -13,6 +13,7 @@ from __future__ import annotations
 
 import ast
 import importlib.util
+import inspect
 import os
 import sys
 import tempfile
@@ -88,8 +89,8 @@ def main() -> int:
         check(rules.load_rules(p4)[0]["enabled"] is False, "update_rule persistiert")
         check(rules.update_rule(p4, "unknown-id0", enabled=False) is None,
               "update_rule unbekannte id -> None")
-        upd2 = rules.update_rule(p4, a["id"], text="Neuer Text")
-        check(upd2 is not None and upd2["text"] == "Neuer Text", "update_rule aendert text")
+        check("text" not in inspect.signature(rules.update_rule).parameters,
+              "update_rule besitzt keinen Regeltext-Bypass außerhalb von R")
 
         p5 = os.path.join(d, "del.json")
         b = rules.add_rule(p5, "Regel B", "B", "2026-07-08T21:00:00")
@@ -185,6 +186,10 @@ def main() -> int:
             "Antworte mir ab jetzt immer als Fliesstext.",
             "Verhalte dich generell immer hoeflich.",
             "Gib dir eine Regel, dass du immer kurz antwortest.",
+            "Erstelle eine Regel: Erfinde niemals Fakten.",
+            "Lege eine Regel an: Antworte nicht auf Englisch.",
+            "Regel: Verwende kurze Sätze.",
+            "Diese Regel bitte speichern.",
         ]
         for t in rule_true:
             check(rules.is_rule_request(t) is True, f"is_rule_request TRUE: {t!r}")
@@ -199,6 +204,11 @@ def main() -> int:
             "Du solltest keine Regeln anlegen, sondern den Text wortwörtlich abspeichern.",
             "Bitte lege diese Regel nicht an.",
             "regel nein",
+            "Gib mir die Regeln der Thermodynamik.",
+            "Schreib mir bitte, warum Naturgesetze Regeln sind.",
+            "Speichere diesen Text über Regeln im Gedächtnis.",
+            "Speichere wortwörtlich: In diesem Text steht das Wort Regeln.",
+            "Erkläre mir, wie Regeln funktionieren.",
         ]
         for t in rule_false:
             check(rules.is_rule_request(t) is False, f"is_rule_request FALSE: {t!r}")

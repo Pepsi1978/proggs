@@ -61,6 +61,7 @@ VERSION = "0.74.1 (11.07.2026, 19:33 Uhr)"  # 0.74.1: Sichtbarer Bump zum Regel-
 VERSION = "0.74.2 (11.07.2026, 19:41 Uhr)"  # 0.74.2: Sichtbarer Bump zum Bibliothekar-Fix: bereits vorhandene Kategorien erzeugen keine identischen Vorher-/Nachher-Vorschlaege mehr. Alt: 0.74.1.
 VERSION = "0.74.3 (11.07.2026, 19:51 Uhr)"  # 0.74.3: Kategorie-Ergaenzungen sind serverseitig atomar; Bibliothekar-Vorschauen laden den aktuellen Ist-Zustand ohne langlebigen Cache. Alt: 0.74.2.
 VERSION = "0.74.4 (11.07.2026, 20:09 Uhr)"  # 0.74.4: Kategorie-Dropdowns waehlen dynamisch die sichtbare Richtung und bleiben auch bei grossen Chat-Eingaben im Viewport. Alt: 0.74.3.
+VERSION = "0.75.0 (11.07.2026, 22:47 Uhr)"  # 0.75.0: Eigener R-Modus fuer Regeln; Automatik, Lupe und Diskette koennen keine Regeldatei mehr aendern. Alt: 0.74.4.
 BRAIN_URL = os.getenv("BRAIN_URL", "http://brain-api:8000").rstrip("/")
 AGENT_URL = os.getenv("AGENT_URL", "http://agent:8002").rstrip("/")
 SB_API_KEY = os.getenv("SB_API_KEY", "")
@@ -678,24 +679,10 @@ def api_get_rules() -> dict:
     return _aget("/rules")
 
 
-@app.post("/api/rules")
-async def api_add_rule(request: Request) -> dict:
-    body = await request.json()
-    try:
-        return await asyncio.to_thread(_apost, "/rules", {"text": (body.get("text") or "")})
-    except httpx.HTTPStatusError as e:
-        detail = "Regel konnte nicht angelegt werden."
-        try:
-            detail = e.response.json().get("detail", detail)
-        except Exception:  # noqa: BLE001
-            pass
-        raise HTTPException(status_code=e.response.status_code, detail=detail)
-
-
 @app.put("/api/rules/{rule_id}")
 async def api_update_rule(rule_id: str, request: Request) -> dict:
     body = await request.json()
-    payload = {k: body.get(k) for k in ("enabled", "text") if k in body and body.get(k) is not None}
+    payload = {"enabled": body.get("enabled")} if body.get("enabled") is not None else {}
     return await asyncio.to_thread(_aput, f"/rules/{rule_id}", payload)
 
 
@@ -1051,8 +1038,8 @@ async def api_store(request: Request) -> dict:
     """Direkter 1:1-Speicher-Proxy ans Gehirn. Der Browser ruft nur das Dashboard auf; der interne
     SB_API_KEY bleibt serverseitig. Titelgleiche Eintraege ersetzen sich wie bei brain-api /store."""
     body = await request.json()
-    text = (body.get("text") or "").strip()
-    if not text:
+    text = body.get("text") or ""
+    if not text.strip():
         return JSONResponse(status_code=400, content={"ok": False, "detail": "text erforderlich"})
     if len(text) > MAX_STORE_CHARS:
         return JSONResponse(status_code=413, content={"ok": False, "detail": f"Text zu lang ({len(text)} Zeichen)"})
@@ -1076,8 +1063,8 @@ async def api_chat(request: Request) -> dict:
     Der synchrone httpx-Call laeuft via asyncio.to_thread, damit ein langer recall (zwei
     LLM-Aufrufe, bis ~60s) den Event-Loop NICHT blockiert (bugs/server/fastapi.md §1)."""
     body = await request.json()
-    text = (body.get("text") or "").strip()
-    if not text:
+    text = body.get("text") or ""
+    if not text.strip():
         return {"ok": False, "reply": "Leere Nachricht — schreib mir was zum Ablegen oder eine Frage."}
     # Eingabe-Limit (fastapi §8) gegen OOM — GROSSZUEGIG und NIE still kuerzen: bei Ueberschreitung
     # LAUT ablehnen (klare Meldung, NICHTS gespeichert), damit nie wieder Text unbemerkt verloren geht.
@@ -1097,8 +1084,12 @@ async def api_chat(request: Request) -> dict:
     if ttl:                       # im Sendefeld eingetippter Titel (Override) an den Agenten durchreichen
         payload["title"] = ttl[:200]
     cm = (body.get("context_mode") or "").strip().lower()
-    if cm in ("auto", "save", "search"):
+    if cm in ("auto", "save", "rule", "search"):
         payload["context_mode"] = cm
+    try:
+        payload["context_mode_revision"] = max(0, int(body.get("context_mode_revision") or 0))
+    except (TypeError, ValueError):
+        payload["context_mode_revision"] = 0
     rs = (body.get("response_size") or "").strip().lower()
     if rs in ("auto", "s", "m", "xl"):    # A/S/M/XL-Profil: Agent haengt den zentralen Prompt an + staffelt Tavily
         payload["response_size"] = rs

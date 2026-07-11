@@ -77,6 +77,7 @@ VERSION = "0.72.0 (10.07.2026, 22:00 Uhr)"  # 0.72.0 (Level-2 Gruppe A, Punkt 4)
 VERSION = "0.73.0 (10.07.2026, 22:34 Uhr)"  # 0.73.0 (Level-2 Gruppe A, Punkt 9 — Frank-Freigabe 2026-07-10): META-GEDAECHTNIS. NEU POST /feedback (vote hoch/runter + Frage-/Antwort-Vorschau + optionaler Kommentar) -> append-only /logbook/Feedback/feedback.jsonl (GETRENNT vom Inhalts-Gehirn, secret-maskiert via _redact_log) + GET /feedback (neueste zuerst, mit hoch/runter-Zaehlern) fuer die Nacht-Auswertung des Bibliothekars. Alt: 0.72.0.
 VERSION = "0.74.0 (11.07.2026, 13:25 Uhr)"  # 0.74.0: Speicherentwuerfe werden aus formellen Befehlen faktengetreu formuliert und zeigen Kategorie, Titel und Volltext. Der letzte Eintrag bleibt session- und neustartfest zitier-/editierbar; freie Folgebefehle koennen Text, Titel und bis zu 12 Kategorien nach erneuter Bestaetigung aendern. Explizite App-Edits schreiben per doc_id und liefern den exakten Servertext als Quittung. Disketten- und Automatikmodus nutzen dieselbe Zustandsmaschine. Alt: 0.73.0.
 VERSION = "0.74.1 (11.07.2026, 19:33 Uhr)"  # 0.74.1: Regel-Intent verlangt jetzt einen ausdruecklichen Regelauftrag; erwaehnte oder verneinte Regeln bleiben normaler Speicherinhalt. Alt: 0.74.0.
+VERSION = "0.75.0 (11.07.2026, 22:47 Uhr)"  # 0.75.0: Regeln sind aus Automatik, Suche und Speichern ausgegliedert und laufen nur noch ueber den expliziten R-Modus; mehrturnige 1:1-Speicherankuendigungen bleiben als save_input gebunden. Alt: 0.74.1.
 
 # ---------------------------------------------------------------------------
 # Konfiguration (alles aus Umgebungsvariablen — Secrets nie im Code)
@@ -2562,7 +2563,7 @@ Du bist der Hauptagent von Cortex, Franks zweitem Gehirn — sein direkter Gespr
 Schreibe IMMER mit echten Umlauten (ä, ö, ü, ß), niemals ae/oe/ue/ss. Das gilt besonders für 'reply' und 'quote'.
 
 # ROUTEN — WELCHE ABSICHT?
-- KONTEXTMODUS: Wenn in der Nachricht ein Abschnitt 'AKTIVER KONTEXTMODUS' steht, ist das Franks bewusst gewaehlter Arbeitsmodus. Befolge ihn vorrangig innerhalb dieses Schemas: Smalltalk-Modus -> smalltalk, Speichermodus -> save, Suchmodus -> query. Auto/kein Modus -> entscheide wie gewohnt.
+- KONTEXTMODUS: Wenn in der Nachricht ein Abschnitt 'AKTIVER KONTEXTMODUS' steht, ist das Franks bewusst gewaehlter Arbeitsmodus. Befolge ihn vorrangig: Smalltalk-Modus -> smalltalk, Speichermodus -> save, Suchmodus -> query. Der Regelmodus wird vor diesem Router ausschließlich im Servercode verarbeitet. Auto/kein Modus -> entscheide wie gewohnt.
 - SPEICHERN ('merk dir', 'speicher das ab', 'notier', oder Frank nennt einfach einen Fakt/eine Info über sich, seinen Alltag, seine Pläne) -> intent='save'. Du speicherst NICHT sofort (siehe unten).
 - BESTÄTIGUNG: Steht unten ein 'OFFENER PUNKT' (du hast gerade eine Speicher-Rückfrage gestellt), ist Franks Nachricht die Antwort darauf. Zustimmung ('ja', 'genau', 'mach', 'passt', 'jep') -> intent='confirm_yes'. Ablehnung ('nein', 'lass', 'doch nicht', 'abbrechen') -> intent='confirm_no'. Nennt er stattdessen etwas völlig Neues -> normal behandeln (save/query/smalltalk).
 - NACHSCHLAGEN ('Was weiß ich über X?', 'Was habe ich zu Y notiert?', 'Wann habe ich Z gemacht?', 'Erinnerst du dich an …?') -> intent='query', setze 'query' auf die inhaltlichen Suchstichworte (nicht die ganze Frage). 'reply' bleibt leer — die Antwort formulierst du erst, wenn dir die Treffer vorliegen.
@@ -2805,7 +2806,9 @@ Wenn der User-Block einen Abschnitt 'AKTIVER KONTEXTMODUS' enthält, ist das ein
 - auto: normal entscheiden wie bisher.
 - smalltalk: nur normal mit Frank sprechen; nichts speichern, nichts im Gedächtnis suchen.
 - save: Franks Eingabe als Speicherabsicht behandeln und wie gewohnt vor dem Ablegen bestätigen lassen.
+- rule: Franks Eingabe ausschließlich als neue Verhaltensregel behandeln und vor dem Eintragen in die Regeldatei bestätigen lassen.
 - search: Franks Eingabe als Gedächtnis-Suche behandeln und Suchstichworte formulieren.
+Nur rule darf neue Verhaltensregeln erzeugen. Auto, smalltalk, save und search dürfen niemals eine Regeldatei ändern.
 Der Server erzwingt diese Modi zusätzlich im Code; dieser Abschnitt macht die Entscheidung für dich transparent."""
 
 
@@ -3039,6 +3042,9 @@ def build_ui_context_prompt(context_mode: str | None, response_size: str | None,
     parts: list[str] = []
     if mode in ("save", "search"):
         parts.append(load_context_prompts()[0][mode])
+    elif mode == "rule":
+        parts.append("Regelmodus: Formuliere Franks Eingabe ausschließlich als dauerhafte Verhaltensregel. "
+                     "Lege keinen Gedächtniseintrag an und starte keine Suche.")
     parts.append(load_size_prompts()[0][rsize])
     active_user_prompts = [p for p in load_user_context_prompts()[0] if p.get("enabled") and (p.get("text") or "").strip()]
     if active_user_prompts:
@@ -3225,6 +3231,21 @@ _MEMORY_COURTESY_SUFFIX_RE = re.compile(
     re.IGNORECASE,
 )
 _MEMORY_AMBIGUOUS_SAVE_PREFIX_RE = re.compile(r"^\s*speicher\s*:\s*\S", re.IGNORECASE)
+_MEMORY_VERBATIM_RE = re.compile(
+    r"\b(?:wortwörtlich|wortgetreu|unverändert|eins\s+zu\s+eins|genau\s+so)\b|\b1\s*:\s*1\b",
+    re.IGNORECASE,
+)
+_MEMORY_SAVE_ACTION_RE = re.compile(
+    r"\b(?:speicher(?:e|n|st)?|abspeicher(?:e|n|st)?|notier(?:e|en|st)?|ablegen)\b",
+    re.IGNORECASE,
+)
+_MEMORY_SAVE_INPUT_OPENER_RE = re.compile(
+    r"^(?:(?:kannst|könntest|würdest)\s+du\s+|ich\s+möchte\s+dir\s+)"
+    r"(?:bitte\s+)?(?:etwas|einen\s+text|eine\s+information)\b.{0,60}"
+    r"\b(?:speichern|abspeichern|notieren|zum\s+speichern\s+geben)\b"
+    r"(?:\s+(?:ins|im)\s+(?:meinem\s+)?gedächtnis)?[?.!]*$",
+    re.IGNORECASE,
+)
 _MEMORY_TIME_TOKEN_RE = re.compile(
     r"\b(?:heute|morgen|übermorgen|gestern|vorgestern|"
     r"montag|dienstag|mittwoch|donnerstag|freitag|samstag|sonntag|"
@@ -3246,11 +3267,38 @@ def _has_spoken_save_command(text: str) -> bool:
     return bool(_MEMORY_COMMAND_PREFIX_RE.search(value) or _MEMORY_COMMAND_SUFFIX_RE.search(value))
 
 
+def _has_verbatim_save_signal(text: str) -> bool:
+    return bool(_MEMORY_VERBATIM_RE.search(text or ""))
+
+
+def _verbatim_memory_content(text: str) -> str:
+    """Entfernt bei explizitem 1:1-Auftrag nur die Befehlshülle, nie den Dokumentinhalt."""
+    source = (text or "").strip()
+    if not source:
+        return ""
+    head, sep, body = source.partition(":")
+    if sep and body.strip() and _has_verbatim_save_signal(head) and _MEMORY_SAVE_ACTION_RE.search(head):
+        return body.strip()
+    cleaned = _MEMORY_COMMAND_PREFIX_RE.sub("", source, count=1)
+    cleaned = _MEMORY_COMMAND_SUFFIX_RE.sub("", cleaned, count=1).strip(" \t\r\n,;:-")
+    return cleaned or source
+
+
+def _is_save_input_opener(text: str) -> bool:
+    """Erkennt einen angekündigten Speicherwunsch, der den eigentlichen Inhalt erst im nächsten Turn liefert."""
+    value = (text or "").strip()
+    if not value or len(value) > 180 or ":" in value or "\n" in value or re.search(r"\bdass\b", value, re.IGNORECASE):
+        return False
+    return bool(_MEMORY_SAVE_INPUT_OPENER_RE.fullmatch(value))
+
+
 def _is_definite_save_request(text: str) -> bool:
     if _has_spoken_save_command(text):
         return True
     low = (text or "").strip().lower()
-    return bool(re.search(r"\b(ins\s+ged[äa]chtnis|ablegen|lege?\s+.*\bab)\b", low))
+    if _has_verbatim_save_signal(text) and _MEMORY_SAVE_ACTION_RE.search(text or ""):
+        return True
+    return bool(re.search(r"\b((?:ins|im)\s+ged[äa]chtnis|ablegen|abspeichern|lege?\s+.*\bab)\b", low))
 
 
 def _looks_like_save_request(text: str, context_mode: str = "auto") -> bool:
@@ -3262,9 +3310,17 @@ def _looks_like_save_request(text: str, context_mode: str = "auto") -> bool:
 
 def _pending_confirmation_intent(text: str, pending: dict | None) -> str:
     """Eindeutiges Ja/Nein braucht für einen offenen Speicher-Dialog keinen LLM-Router."""
-    if not pending or pending.get("mode") not in {"save_confirm", "store_clarify", "memory_edit_confirm"}:
+    if not pending or pending.get("mode") not in {"save_confirm", "store_clarify", "memory_edit_confirm", "rule_confirm"}:
         return ""
     value = (text or "").strip().casefold()
+    if pending.get("mode") == "rule_confirm":
+        if re.fullmatch(r"(?:regel\s+ja|ja)(?:\s*,?\s*(?:bitte|genau|so|das))*[.!]*", value):
+            return "confirm_yes"
+        if (re.fullmatch(r"(?:regel\s+nein|nein|nee|nö|abbrechen|stopp|doch\s+nicht|lass(?:\s+es)?)(?:\s+bitte)?[.!]*", value)
+                or re.search(r"\bkeine?\s+regel(?:n)?\s+(?:anlegen|erstellen|übernehmen|uebernehmen|speichern)\b", value)
+                or re.search(r"\bregel(?:n)?\s+(?:bitte\s+)?nicht\s+(?:anlegen|erstellen|übernehmen|uebernehmen|speichern)\b", value)):
+            return "confirm_no"
+        return ""
     if re.fullmatch(r"(?:ja|jep|jo|genau|passt|okay|ok|mach(?:en)?)(?:\s*,?\s*(?:bitte|genau|so|das))*[.!]*", value):
         return "confirm_yes"
     if re.fullmatch(r"(?:nein|nee|nö|abbrechen|stopp|doch\s+nicht|lass(?:\s+es)?)(?:\s+bitte)?[.!]*", value):
@@ -3544,7 +3600,7 @@ def _history_text(session: dict) -> str:
 
 def _norm_context_mode(mode: str | None) -> str:
     m = (mode or "auto").strip().lower()
-    return m if m in {"auto", "smalltalk", "save", "search"} else "auto"
+    return m if m in {"auto", "smalltalk", "save", "rule", "search"} else "auto"
 
 
 def _intent_text(s: str) -> str:
@@ -3618,6 +3674,11 @@ def hauptagent_route(session: dict, user_text: str, pending: dict | None, contex
                        f"\"{pending.get('frage', '')}\". Seine aktuelle Nachricht ist die Antwort darauf "
                        "(Zustimmung/'ja'/'mach'/'neu anlegen' -> confirm_yes, Ablehnung/'nein'/'Sonstiges' -> confirm_no, "
                        "etwas voellig Neues -> save/query/smalltalk).")
+    elif pending and pending.get("mode") == "rule_confirm":
+        pending_txt = (f"Du hast Frank gerade diese dauerhafte Regel vorgeschlagen: "
+                       f"\"{pending.get('rule_text', '')}\". Seine aktuelle Nachricht entscheidet darüber "
+                       "(Zustimmung -> confirm_yes, Ablehnung/keine Regel anlegen -> confirm_no, "
+                       "Bearbeitungswunsch -> smalltalk; der Server behandelt ihn danach deterministisch).")
     now = _now_local()
     _wd = ["Montag", "Dienstag", "Mittwoch", "Donnerstag", "Freitag", "Samstag", "Sonntag"][now.weekday()]
     now_line = (f"AKTUELLER ZEITPUNKT: {_wd}, {now.strftime('%d.%m.%Y')}, {now.strftime('%H:%M')} Uhr "
@@ -4856,7 +4917,8 @@ class ChatReq(BaseModel):
     category: str | None = Field(default=None, max_length=120, description="Im Dashboard gewaehlte Kategorie (Override, tiefe Pfade A/B/C/...); leer = Agent entscheidet")
     title: str | None = Field(default=None, max_length=200, description="Im Dashboard eingetippter Titel (Override); leer = Speicheragent vergibt den Titel")
     store_timestamp: bool = Field(default=False, description="Cortex-Gespraech: beim finalen Speichern Datum+Uhrzeit bis Sekunden in den Text schreiben")
-    context_mode: str | None = Field(default="auto", max_length=20, description="UI-Kontextmodus: auto | smalltalk | save | search")
+    context_mode: str | None = Field(default="auto", max_length=20, description="UI-Kontextmodus: auto | smalltalk | save | rule | search")
+    context_mode_revision: int = Field(default=0, ge=0, description="Monotone Client-Revision; bindet Regelbestätigungen an den unveränderten R-Modus")
     context_prompt: str | None = Field(default=None, description="Zusatzprompt des gewaehlten Kontextmodus aus der Handy-App; Limit ist context_prompt_max_chars")
     response_size: str | None = Field(default=None, max_length=8, description="Antwortlaengen-Profil auto|s|m|xl — steuert zusaetzlich die Tavily-Suchtiefe (xl = advanced)")
     request_id: str | None = Field(default=None, max_length=64, description="Idempotency-Key der App (UUID pro Nutzer-Intent) — Duplikate (Tunnel-Abriss-Retry, Stream-Fallback) werden nur EINMAL verarbeitet")
@@ -5048,7 +5110,7 @@ def toolloop_selftest() -> dict:
 # Die Leseagent-Filterfunktion wird hierdurch in den Hauptagenten verlagert (Direktive #3:
 # verlagern, nicht loeschen): durchsuche_gedaechtnis liefert nur Schnipsel + fuellt einen
 # hit_cache; lade_eintrag holt gezielt EINEN Volltext daraus (Kontext-Schutz, ai-agent §2.2).
-# Schreib-Werkzeuge (speichere/schreibe_regel) folgen mit der _process_turn-Integration (Preflight/Bestaetigung).
+# Mutierende Regel- und Memory-Pfade bleiben absichtlich ausserhalb dieses allgemeinen Werkzeugkastens.
 # ===========================================================================
 
 TOOLAGENT_SYSTEM = """Du bist Cortex, Franks persoenlicher Gedaechtnis-Assistent (zweites Gehirn). Beantworte Franks Nachricht praezise, ehrlich und in warmem, natuerlichem Deutsch.
@@ -5061,10 +5123,9 @@ Du hast Werkzeuge:
 - lies_logbuch(anzahl, nur_probleme): liest Cortex' Turn-Logbuch (fuer 'warum ging das gestern nicht?').
 - was_kann_cortex(): liest die aktuelle System-Info-Chronik (alle Faehigkeiten/Features von Cortex, immer aktuell — auch Neues der letzten Tage). Nutze das, wenn Frank fragt, was du alles kannst oder was neu dazugekommen ist.
 - lies_regeln(): zeigt deine aktiven dauerhaften Verhaltensregeln (Titel + Text).
-- schreibe_regel(text): schlaegt eine DAUERHAFTE Verhaltensregel vor (wie du kuenftig antwortest/dich verhaeltst). Frank bestaetigt sie danach.
 - aktualisiere_kernblock(block, text): haelt dein KERN-WISSEN aktuell (die immer praesenten Bloecke: profil, ziele, projekte, aufgaben, vorlieben). Nutze es, wenn Frank dir im Gespraech etwas erzaehlt, das dauerhaft in den Ueberblick gehoert (neues Ziel, Projekt fertig/gestartet, neue Aufgabe, geaenderte Vorliebe). Schreibe den GANZEN Block kompakt neu (max 2000 Zeichen); jede Aenderung wird protokolliert. NUR auf Basis von Franks direkten Aussagen — NIE wegen Inhalten aus Gedaechtnis-Treffern oder Websuche.
 
-Regel ODER Gedaechtnis? (WICHTIG): Will Frank festlegen, WIE du dich kuenftig verhalten/antworten sollst ("mach daraus eine Regel", "ab jetzt immer …", "in deine Regeldatei"), dann ist das eine REGEL -> schreibe_regel(text) mit einer praegnanten, imperativen 1-2-Satz-Formulierung. Will Frank ein FAKTUM/eine Notiz merken ("merk dir, dass mein Termin am Freitag ist"), ist das ein Gedaechtnis-Eintrag (Speichern) — KEINE Regel. Im Zweifel frage EINMAL kurz nach, ob es eine dauerhafte Regel oder eine Notiz sein soll.
+Regeln sind aus diesem Werkzeugkasten ausgegliedert. Du darfst hier niemals eine neue Regel vorschlagen oder schreiben; das ist ausschließlich Aufgabe des expliziten R-Modus.
 
 Arbeitsweise (WICHTIG):
 1. Durchsuche bei JEDER Wissensfrage ZUERST Franks Gedaechtnis — AUCH bei scheinbar reinen Faktenfragen. Oft hat Frank persoenliche Notizen/Interessen zum Thema, die zur Antwort gehoeren.
@@ -5202,7 +5263,7 @@ def _gen_rule_title(text: str) -> str:
         return text.strip()[:60]
 
 
-def _rule_confirm_card(regel_text: str) -> dict:
+def _rule_confirm_card(regel_text: str, mode_revision: int = 0) -> dict:
     """Baut die Ja/Nein/Bearbeiten-Bestaetigungskarte fuer eine vorgeschlagene Regel (spec K5).
 
     Nutzt das bestehende pending+options-Muster (wie save_confirm): die Buttons senden
@@ -5211,7 +5272,8 @@ def _rule_confirm_card(regel_text: str) -> dict:
             "options": [{"label": "Ja", "send": "regel ja"},
                         {"label": "Nein", "send": "regel nein"},
                         {"label": "Bearbeiten", "send": "regel bearbeiten"}],
-            "pending": {"mode": "rule_confirm", "rule_text": regel_text}}
+            "pending": {"mode": "rule_confirm", "rule_text": regel_text,
+                        "mode_revision": max(0, int(mode_revision or 0))}}
 
 
 def build_agent_tools(user_id: str = USER_ID, session: "dict | None" = None,
@@ -5350,17 +5412,6 @@ def build_agent_tools(user_id: str = USER_ID, session: "dict | None" = None,
         return json.dumps({"regeln": [{"titel": r.get("titel"), "text": r.get("text")} for r in rs]},
                           ensure_ascii=False)
 
-    def _schreibe_regel(args: dict) -> str:
-        text = str(args.get("text") or "").strip()
-        if not text:
-            return json.dumps({"fehler": "Kein Regeltext angegeben."}, ensure_ascii=False)
-        # NICHT direkt anlegen: nur als Kandidat vormerken. _toolagent_answer wandelt das in eine
-        # Ja/Nein/Bearbeiten-Bestaetigungskarte (spec K5) — Frank bestaetigt, bevor die Regel aktiv wird.
-        state["rule_candidate"] = text[:240]
-        return json.dumps({"status": "vorschlag_bereit",
-                           "hinweis": "Regel wird Frank zur Bestaetigung vorgelegt (Ja/Nein/Bearbeiten)."},
-                          ensure_ascii=False)
-
     def _kernblock(args: dict) -> str:
         # Level-2 #3: selbst-editierende Kern-Bloecke. Der Agent darf schreiben — aber nur in den
         # GETRENNTEN Kernblock-Speicher (nie ins Inhalts-Gehirn), mit Aenderungs-Log (jede alte
@@ -5427,17 +5478,6 @@ def build_agent_tools(user_id: str = USER_ID, session: "dict | None" = None,
                          "Nutze das, wenn Frank fragt, welche Regeln du befolgst, oder um eine Dublette "
                          "zu vermeiden, bevor du eine neue Regel vorschlaegst."),
          "parameters": {"type": "object", "properties": {}, "additionalProperties": False}},
-        {"type": "function", "name": "schreibe_regel",
-         "description": ("Schlaegt eine DAUERHAFTE Verhaltensregel vor, die bestimmt, WIE du kuenftig "
-                         "antwortest oder dich verhaeltst (Antwortformat, Ton, Vorgehen). NUR dafuer — "
-                         "NICHT fuer Faktenwissen, Notizen oder Termine (das gehoert ins Gedaechtnis, "
-                         "dafuer ist die Speicher-Funktion). Formuliere die Regel praezise und imperativ "
-                         "in maximal 1-2 kurzen Saetzen, ohne Beispiele. Die Regel wird Frank zur "
-                         "Bestaetigung vorgelegt (Ja/Nein/Bearbeiten), nicht sofort aktiviert."),
-         "parameters": {"type": "object",
-                        "properties": {"text": {"type": "string",
-                                                "description": "die praegnant formulierte Regel (1-2 kurze Saetze)"}},
-                        "required": ["text"], "additionalProperties": False}},
         {"type": "function", "name": "aktualisiere_kernblock",
          "description": ("Aktualisiert EINEN Kern-Block deines immer praesenten KERN-WISSENS ueber Frank "
                          "(profil, ziele, projekte, aufgaben, vorlieben). Nutze das, wenn Frank dir im "
@@ -5459,7 +5499,7 @@ def build_agent_tools(user_id: str = USER_ID, session: "dict | None" = None,
     handlers = {"durchsuche_gedaechtnis": _durchsuche, "lade_eintrag": _lade,
                 "lies_eintrags_kategorien": _kategorien,
                 "web_suche": _web, "lies_logbuch": _logbuch, "was_kann_cortex": _was_kann,
-                "lies_regeln": _lies_regeln, "schreibe_regel": _schreibe_regel,
+                "lies_regeln": _lies_regeln,
                 "aktualisiere_kernblock": _kernblock}
     return tools, handlers, state
 
@@ -5544,15 +5584,10 @@ def toolagent_test(q: str) -> dict:
 
 
 # --- Selbst-Regeln des Agenten (Z:\Logbuch\Regeln\regeln.json) — spec 2026-07-08 ----------
-# CRUD fuer die dauerhaften Verhaltensregeln. Anzeige/Verwaltung im Dashboard-Einstellungen-Tab
-# (ueber den Dashboard-Proxy /api/rules). Anlegen per Chat laeuft ueber den rule_confirm-Flow.
-class RuleCreateReq(BaseModel):
-    text: str = Field(..., min_length=1, max_length=2000, description="Regeltext (praegnant, imperativ)")
-
-
+# Anzeige und nicht-textliche Verwaltung im Dashboard. Anlegen oder Umformulieren läuft
+# ausschließlich über den bestätigungspflichtigen R-Modus im Chat.
 class RuleUpdateReq(BaseModel):
     enabled: "bool | None" = Field(default=None, description="Regel aktivieren/deaktivieren")
-    text: "str | None" = Field(default=None, max_length=2000, description="Neuer Regeltext")
 
 
 @app.get("/rules", dependencies=[Depends(require_auth)])
@@ -5560,23 +5595,11 @@ def api_get_rules() -> dict:
     return {"rules": rules.load_rules(rules.rules_path())}
 
 
-@app.post("/rules", dependencies=[Depends(require_auth)])
-def api_add_rule(req: RuleCreateReq) -> dict:
-    text = req.text.strip()
-    if not text:
-        raise HTTPException(status_code=400, detail="Regeltext fehlt.")
-    try:
-        rule = rules.add_rule(rules.rules_path(), text, _gen_rule_title(text),
-                              _now_local().isoformat(timespec="seconds"))
-    except rules.RuleLimitError:
-        raise HTTPException(status_code=409, detail="Regel-Limit (40) erreicht — bitte zuerst eine Regel löschen.")
-    checkpoint("rule_added", "Regel manuell im Dashboard angelegt", ok=True, titel=rule.get("titel"), rid=rule.get("id"))
-    return rule
-
-
 @app.put("/rules/{rule_id}", dependencies=[Depends(require_auth)])
 def api_update_rule(rule_id: str, req: RuleUpdateReq) -> dict:
-    upd = rules.update_rule(rules.rules_path(), rule_id, enabled=req.enabled, text=req.text)
+    if req.enabled is None:
+        raise HTTPException(status_code=400, detail="Nur Aktivieren oder Deaktivieren ist hier erlaubt; Regeltexte laufen über R.")
+    upd = rules.update_rule(rules.rules_path(), rule_id, enabled=req.enabled)
     if upd is None:
         raise HTTPException(status_code=404, detail="Regel nicht gefunden.")
     checkpoint("rule_updated", "Regel geaendert (Dashboard)", ok=True, rid=rule_id, enabled=upd.get("enabled"))
@@ -6709,7 +6732,7 @@ def entities_overview() -> dict:
 
 
 def _toolagent_answer(session: dict, user_text: str, context_prompt: str = "",
-                      response_size: str = "m", on_delta=None) -> dict:
+                      response_size: str = "m", on_delta=None, search_only: bool = False) -> dict:
     """SCHRITT-2-UMBAU (Werkzeugkasten im echten Chat): Statt der Router-intent-Verzweigung
     (query/query_internet/internet/smalltalk) beantwortet EIN Hauptagent die Frage selbst per
     Werkzeugen — er durchsucht Franks Gedaechtnis, laedt gezielt Volltexte, sucht bei Bedarf im Web,
@@ -6723,6 +6746,10 @@ def _toolagent_answer(session: dict, user_text: str, context_prompt: str = "",
     with _perf_span("toolagent_build_tools", "Tool-Agent Werkzeugkasten bauen", response_size=response_size):
         tools, handlers, state = build_agent_tools(session=session, context_prompt=context_prompt,
                                                    response_size=response_size)
+        if search_only:
+            allowed = {"durchsuche_gedaechtnis", "lade_eintrag", "lies_eintrags_kategorien"}
+            tools = [tool for tool in tools if tool.get("name") in allowed]
+            handlers = {name: handler for name, handler in handlers.items() if name in allowed}
     # Verlauf + UI-Kontext als Text-Praefix (spiegelt hauptagent_answer 1:1: der Agent sieht das
     # bisherige Gespraech -> Follow-up-Fragen wie "und was noch dazu?" behalten den Bezug). Die
     # aktuelle Nachricht zusaetzlich explizit, damit sie nie im Verlauf untergeht.
@@ -6734,8 +6761,15 @@ def _toolagent_answer(session: dict, user_text: str, context_prompt: str = "",
         )
     try:
         with _perf_span("toolagent_codex_loop", "Tool-Agent Codex/GPT-Loop", model=ROLE_MODELS["haupt"], tools=len(tools)):
+            system = build_toolagent_system()
+            if search_only:
+                system = _with_self_rules(
+                    "Du bist Cortex im reinen Suchmodus. Durchsuche ausschließlich Franks Qdrant-Gedächtnis "
+                    "mit den bereitgestellten Lese-Werkzeugen. Nutze kein Web, kein Logbuch und keine "
+                    "schreibenden Werkzeuge. Antworte nur aus gefundenen Einträgen; wenn nichts passt, sage das ehrlich."
+                )
             r = codex_generate_tools(
-                build_toolagent_system(), user_input, tools=tools, tool_handlers=handlers,
+                system, user_input, tools=tools, tool_handlers=handlers,
                 model=ROLE_MODELS["haupt"], reasoning_effort=ROLE_REASONING.get("haupt", "high"),
                 max_turns=8, max_seconds=240.0, on_delta=on_delta,
             )
@@ -6743,12 +6777,6 @@ def _toolagent_answer(session: dict, user_text: str, context_prompt: str = "",
         _log(logging.ERROR, "Tool-Agent (Hauptagent) fehlgeschlagen", exc_info=True)
         return {"reply": f"Beim Nachdenken ist gerade etwas schiefgegangen ({type(e).__name__}). Versuch es bitte gleich nochmal.",
                 "action": "error", "pending": None}
-    # Hat der Agent per schreibe_regel eine Regel vorgeschlagen? Dann statt normaler Antwort die
-    # Ja/Nein/Bearbeiten-Bestaetigungskarte zeigen (spec K5), nicht die (leere) Chat-Antwort.
-    if state.get("rule_candidate"):
-        checkpoint("rule_confirm", "Agent schlug per schreibe_regel eine Regel vor -> Bestaetigungskarte",
-                   ok=True, regel=str(state.get("rule_candidate"))[:120])
-        return _rule_confirm_card(str(state["rule_candidate"]))
     with _perf_span("toolagent_sources", "Tool-Agent Quellen und Confidence bauen", loaded=len(state.get("geladen") or []), hits=len(state.get("hits") or {})):
         answer = (r.get("text") or "").strip()
     # Quellen-Chips: bevorzugt die Eintraege, die der Agent WIRKLICH per lade_eintrag geoeffnet hat;
@@ -6770,7 +6798,7 @@ def _toolagent_answer(session: dict, user_text: str, context_prompt: str = "",
         answer = "Ich habe nachgedacht, konnte aber gerade keine Antwort formulieren. Versuch es bitte gleich nochmal."
     # Recall-Verstaerkung (Level-2 #7): die fuer DIESE Antwort benutzten Eintraege als abgerufen
     # registrieren (bevorzugt die wirklich geoeffneten). Best-effort, gefaehrdet die Antwort nie.
-    if used_memory:
+    if used_memory and not search_only:
         brain_touch([h.get("doc_id") for h in used])
     # action=recall, wenn Gedaechtnis genutzt wurde (App zeigt Meta-Zeile + Quellen-Chips); sonst smalltalk.
     return {"reply": answer, "action": "recall" if used_memory else "smalltalk",
@@ -6911,9 +6939,44 @@ def _auto_parallel_answer(session: dict, user_text: str, context_prompt: str = "
             "pending": None, "recall_hits": len(hits), "sources": sources, "confidence": confidence}
 
 
+def _process_rule_turn(user_text: str, pending: dict | None, mode_revision: int) -> dict:
+    """Vollständig lokaler R-Pfad; benötigt weder Qdrant-Kategorien noch den normalen Router."""
+    if not pending or pending.get("mode") != "rule_confirm":
+        regel = _formuliere_regel(user_text)
+        checkpoint("rule_confirm", "Expliziter Regelmodus -> lokaler Entwurf ohne Brain-Abruf",
+                   ok=bool(regel), quelle=user_text[:120], regel=regel[:120])
+        return _rule_confirm_card(regel, mode_revision)
+    if int(pending.get("mode_revision", -1)) != mode_revision:
+        return {"reply": "Der Regelentwurf ist nach dem Moduswechsel abgelaufen. Öffne R und sende ihn erneut.",
+                "action": "rule_cancelled", "pending": None}
+    low = user_text.strip().lower()
+    edited = re.match(r"^\s*regel speichern:\s*(.+)$", user_text, re.IGNORECASE | re.DOTALL)
+    if edited:
+        return _rule_confirm_card(edited.group(1).strip()[:240], mode_revision)
+    intent = _pending_confirmation_intent(user_text, pending)
+    if intent == "confirm_yes" or re.search(r"\bregel ja\b", low) or re.fullmatch(r"\s*ja[.! ]*", low):
+        try:
+            neu = rules.add_rule(rules.rules_path(), pending.get("rule_text", ""),
+                                 _gen_rule_title(pending.get("rule_text", "")),
+                                 _now_local().isoformat(timespec="seconds"))
+            checkpoint("rule_saved", "Selbst-Regel nach Franks Ja übernommen", ok=True,
+                       titel=neu.get("titel"), rid=neu.get("id"))
+            return {"reply": f"Regel übernommen: „{neu.get('titel')}“.", "action": "rule_saved", "pending": None}
+        except rules.RuleLimitError:
+            return {"reply": "Regel-Limit (40) erreicht — bitte zuerst eine Regel löschen.",
+                    "action": "error", "pending": None}
+    if intent == "confirm_no" or re.search(r"\bregel nein\b", low) or re.fullmatch(r"\s*nein[.! ]*", low):
+        return {"reply": "Alles klar, ich lege keine Regel an.", "action": "rule_cancelled", "pending": None}
+    if re.search(r"\bregel bearbeiten\b", low):
+        return _rule_confirm_card(pending.get("rule_text", ""), mode_revision)
+    regel = _formuliere_regel(user_text)
+    return _rule_confirm_card(regel, mode_revision)
+
+
 def _process_turn(session: dict, user_text: str, pending: dict | None, category: str = "", title: str = "", store_timestamp: bool = False, context_mode: str = "auto", context_prompt: str = "", response_size: str = "m", on_delta=None,
                   memory_edit: bool = False, memory_doc_id: str = "",
-                  memory_categories: list[str] | None = None) -> dict:
+                  memory_categories: list[str] | None = None,
+                  context_mode_revision: int = 0) -> dict:
     """Ein Gespraechszug — laeuft komplett synchron (LLM + brain) und wird vom async-Handler per
     asyncio.to_thread aufgerufen, damit der Event-Loop NICHT blockiert (fastapi §1 / ai-agent §3.1).
     Liest nur session['messages'] (Verlauf), MUTIERT die Session nicht — gibt 'pending' zum Setzen zurueck.
@@ -6921,6 +6984,10 @@ def _process_turn(session: dict, user_text: str, pending: dict | None, category:
     'category' = im Dashboard-Dropdown GEWAEHLTE Kategorie (Override); leer = Speicheragent entscheidet."""
     _perf_mark("process_turn_start", "Gesamter synchroner Agent-Turn startet", user_text_len=len(user_text),
                pending=bool(pending), mode=context_mode, response_size=response_size)
+    mode = _norm_context_mode(context_mode)
+    mode_revision = max(0, int(context_mode_revision or 0))
+    if mode == "rule":
+        return _process_rule_turn(user_text, pending, mode_revision)
     # Verlaufs-Komprimierung (Frank-Wunsch 2026-07-08): ab HISTORY_COMPRESS_AT Gesamt-Nachrichten den
     # Verlauf kumulativ ueber den Hauptagenten verdichten (best-effort — gefaehrdet den Turn nie).
     _maybe_compress_history(session)
@@ -6930,6 +6997,24 @@ def _process_turn(session: dict, user_text: str, pending: dict | None, category:
             registry_cats = load_registry()
         categories = sorted((set(payload_cats) | set(registry_cats)) - {CONV_CATEGORY})   # VOLLE Liste (inkl. leerer) -> Speicheragent
     _perf_mark("process_categories_result", "Kategorien fuer Turn bereit", payload_categories=len(payload_cats), total_categories=len(categories))
+    search_only = mode == "search"
+    if search_only:
+        # Die Lupe ist eine harte read-only Grenze. Offene Mutationen werden beim bewussten
+        # Moduswechsel verworfen; Titel/Kategorie und memory_edit duerfen keinen Write-Pfad erreichen.
+        if pending or memory_edit:
+            checkpoint("search_boundary", "Suchmodus verwirft offenen mutierenden Zustand", ok=True,
+                       pending=(pending or {}).get("mode"), memory_edit=bool(memory_edit))
+        pending = None
+        memory_edit = False
+        memory_doc_id = ""
+        memory_categories = None
+        category = ""
+        title = ""
+    elif mode != "rule" and pending and pending.get("mode") == "rule_confirm":
+        # Ein Regelentwurf existiert nur innerhalb von R. Jeder bewusste Moduswechsel verwirft ihn,
+        # statt normale Gespräche oder den Speichermodus mit einer alten Bestätigung zu blockieren.
+        checkpoint("rule_boundary", "Moduswechsel verwirft offenen Regelentwurf", ok=True, mode=mode)
+        pending = None
     if memory_edit:
         edit_categories = list(dict.fromkeys(c.strip() for c in (memory_categories or []) if c and c.strip()))
         if memory_doc_id:
@@ -6950,9 +7035,24 @@ def _process_turn(session: dict, user_text: str, pending: dict | None, category:
         return {"reply": "Dieser ältere Entwurf ist serverseitig nicht mehr offen. Bitte sende den Text erneut mit der Diskette.",
                 "action": "error", "pending": None}
 
+    # Eine eindeutige Antwort auf einen offenen Entwurf hat Vorrang vor Metadaten, die Clients bei
+    # jedem Turn erneut mitsenden. Nur anderer Inhalt mit Titel/Kategorie ersetzt das alte Pending.
+    pending_intent = _pending_confirmation_intent(user_text, pending)
+    explicit_save = (not pending_intent and
+                     bool((title or "").strip() or (category or "").strip()) and bool(user_text.strip()))
+    awaiting_save_input = bool(pending and pending.get("mode") == "save_input")
+    force_memory_content = awaiting_save_input
+    if awaiting_save_input:
+        if re.fullmatch(r"\s*(?:nein|nee|nö|abbrechen|stopp|doch\s+nicht|lass(?:\s+es)?)(?:\s+bitte)?[.!]*\s*",
+                        user_text, re.IGNORECASE):
+            return {"reply": "Alles klar, ich speichere nichts.", "action": "cancel", "pending": None}
+        category = category or pending.get("category", "")
+        title = title or pending.get("title", "")
+        store_timestamp = bool(pending.get("store_timestamp", store_timestamp))
+
     # Freier Folgedialog bleibt in Disketten- UND Automatikmodus am letzten Entwurf/Eintrag haften.
     # Jede natürliche Änderung wird erst als vollständiger neuer Zustand gezeigt und erneut bestätigt.
-    if pending and pending.get("mode") == "memory_edit_confirm":
+    if not explicit_save and pending and pending.get("mode") == "memory_edit_confirm":
         follow_intent = _pending_confirmation_intent(user_text, pending)
         if follow_intent == "confirm_yes":
             draft_cats = pending.get("categories") or list(filter(None, [pending.get("category")]))
@@ -6968,11 +7068,11 @@ def _process_turn(session: dict, user_text: str, pending: dict | None, category:
         followup = _memory_followup_candidate(user_text, pending)
         if followup is not None:
             return followup
-    elif pending and pending.get("mode") in {"save_confirm", "store_clarify"}:
+    elif not explicit_save and pending and pending.get("mode") in {"save_confirm", "store_clarify"}:
         followup = _memory_followup_candidate(user_text, pending)
         if followup is not None:
             return followup
-    elif session.get("last_memory"):
+    elif mode != "rule" and not search_only and not explicit_save and not awaiting_save_input and session.get("last_memory"):
         followup = _memory_followup_candidate(user_text, session["last_memory"])
         if followup is not None:
             return followup
@@ -6980,24 +7080,33 @@ def _process_turn(session: dict, user_text: str, pending: dict | None, category:
     # Speicher-Signal — dann den Router NICHT ueber den (evtl. riesigen) Text raten lassen: grosse
     # Pastes sprengen sonst sein JSON-Budget (max_tokens) und enden faelschlich als "nicht verstanden".
     # Direkt als save behandeln; der volle user_text wird zum quote (1:1 gespeichert).
-    explicit_save = (not pending) and bool((title or "").strip() or (category or "").strip()) and bool(user_text.strip())
-    pending_intent = _pending_confirmation_intent(user_text, pending)
-    if pending_intent:
+    if not search_only and not pending and _is_save_input_opener(user_text):
+        checkpoint("save_input", "Speicherwunsch ohne Inhalt erkannt; naechsten Turn wortwoertlich erwarten",
+                   ok=True, category=category or "(auto)", titel=title or "(auto)")
+        return {"reply": "Ja, gern. Schick mir jetzt den Text, den ich wortwörtlich speichern soll.",
+                "action": "save_input",
+                "pending": {"mode": "save_input", "category": category, "title": title,
+                            "store_timestamp": bool(store_timestamp)}}
+    if search_only:
+        route = {"intent": "query", "quote": "", "query": user_text.strip(), "web_query": "", "reply": ""}
+        checkpoint("route", "Harte Suchgrenze erzwingt query und verhindert Mutationen", ok=True, route="query")
+    elif pending_intent:
         route = {"intent": pending_intent, "quote": "", "query": "", "web_query": "", "reply": ""}
         checkpoint("route", "Eindeutige Speicher-Bestätigung deterministisch erkannt", ok=True, route=pending_intent)
-    elif explicit_save:
+    elif mode == "save":
         route = {"intent": "save", "quote": "", "query": "", "web_query": "", "reply": ""}
-        checkpoint("route", "Explizite Speicher-Felder (Titel/Kategorie) -> direkt save, Router uebersprungen", ok=True, route="save")
+        checkpoint("route", "Harte Diskettengrenze erzwingt Memory und verhindert Tool-Routing",
+                   ok=True, route="save")
+    elif explicit_save or awaiting_save_input:
+        route = {"intent": "save", "quote": "", "query": "", "web_query": "", "reply": ""}
+        checkpoint("route", "Expliziter oder erwarteter Dokumentinhalt -> direkt save, Router uebersprungen",
+                   ok=True, route="save", awaiting=awaiting_save_input)
     elif (active_agent_profile_id() == ACTIVE_PROFILE_PARALLEL
           and _norm_context_mode(context_mode) == "auto"
           and not pending
           and not _looks_like_save_request(user_text, context_mode)):
         checkpoint("profile_route", "Aktives Profil ueberspringt Router fuer normale Auto-Frage",
                    ok=True, profile=ACTIVE_PROFILE_PARALLEL)
-        if rules.is_rule_request(user_text):
-            regel = _formuliere_regel(user_text)
-            checkpoint("rule_confirm", "Regel-Wunsch per Profil-Fastpath erkannt -> Bestaetigung", ok=bool(regel), regel=regel[:120])
-            return _rule_confirm_card(regel)
         if projektstand_question(user_text):
             _ps = _projektstand_recall(session, user_text, {"intent": "query"}, context_prompt, on_delta)
             if _ps is not None:
@@ -7104,39 +7213,6 @@ def _process_turn(session: dict, user_text: str, pending: dict | None, category:
             return _store_final(pending.get("quote", ""), cat, pending.get("title", ""), pending.get("replace_title", ""), bool(pending.get("store_timestamp")))
         # sonst (etwas Neues): pending verfaellt, normale Behandlung unten
 
-    # 1c) Antwort auf eine offene Regel-Bestaetigung (Ja / Nein / Bearbeiten->Speichern)? (spec K5)
-    #     Buttons senden deterministische Trigger-Woerter -> per Regex erkennen (wie save_confirm),
-    #     damit nicht das LLM ueber "ja"/"nein" raten muss.
-    if pending and pending.get("mode") == "rule_confirm":
-        low = user_text.strip().lower()
-        m = re.match(r"^\s*regel speichern:\s*(.+)$", user_text, re.IGNORECASE | re.DOTALL)
-        if m:   # bearbeiteter Text -> erneut zur Bestaetigung zeigen (Ja/Nein/Bearbeiten)
-            return _rule_confirm_card(m.group(1).strip()[:240])
-        if re.search(r"\bregel ja\b", low) or re.fullmatch(r"\s*ja[.! ]*", low):
-            try:
-                neu = rules.add_rule(rules.rules_path(), pending.get("rule_text", ""),
-                                     _gen_rule_title(pending.get("rule_text", "")),
-                                     _now_local().isoformat(timespec="seconds"))
-                checkpoint("rule_saved", "Selbst-Regel nach Franks Ja uebernommen", ok=True,
-                           titel=neu.get("titel"), rid=neu.get("id"))
-                return {"reply": f"Regel übernommen: „{neu.get('titel')}“.", "action": "rule_saved", "pending": None}
-            except rules.RuleLimitError:
-                return {"reply": "Regel-Limit (40) erreicht — bitte zuerst eine Regel löschen.",
-                        "action": "error", "pending": None}
-        if re.search(r"\bregel nein\b", low) or re.fullmatch(r"\s*nein[.! ]*", low):
-            return {"reply": "Alles klar, ich lege keine Regel an.", "action": "rule_cancelled", "pending": None}
-        if re.search(r"\bregel bearbeiten\b", low):
-            return _rule_confirm_card(pending.get("rule_text", ""))
-        # sonst (etwas Neues): pending verfaellt, normale Behandlung unten
-
-    # 1d) DETERMINISTISCH (spec K3a): Regel-Wunsch (Verhaltensregel) VOR intent==save abfangen, damit
-    #     "gib dir eine Regel, dass du immer …" nicht faelschlich als Gedaechtnis-Eintrag landet.
-    if not pending and rules.is_rule_request(user_text):
-        regel = _formuliere_regel(user_text)
-        checkpoint("rule_confirm", "Regel-Wunsch erkannt -> Vorschlag zur Bestaetigung (Ja/Nein/Bearbeiten)",
-                   ok=bool(regel), quelle=user_text[:120], regel=regel[:120])
-        return _rule_confirm_card(regel)
-
     # 2) Neue Speicher-Absicht -> NICHT speichern, sondern die destillierte Aussage zurueckfragen.
     #    Hat Frank eine Kategorie gewaehlt, wird sie im pending gemerkt UND in der Rueckfrage genannt.
     if intent == "save":
@@ -7144,8 +7220,13 @@ def _process_turn(session: dict, user_text: str, pending: dict | None, category:
         # Titel/Kategorie kennzeichnen oft eingefuegte Dokumente. Diese bleiben 1:1, ausser Franks
         # Text enthaelt selbst einen gesprochenen Speicherbefehl; der UI-Kontextmodus allein reicht
         # bewusst NICHT als Destillationssignal.
-        preserve_verbatim = explicit_save and not _has_spoken_save_command(user_text)
-        quote = _distill_memory_statement(user_text, router_quote, preserve_verbatim=preserve_verbatim)
+        if force_memory_content:
+            quote = user_text
+        elif _has_verbatim_save_signal(user_text):
+            quote = _verbatim_memory_content(user_text)
+        else:
+            preserve_verbatim = explicit_save and not _has_spoken_save_command(user_text)
+            quote = _distill_memory_statement(user_text, router_quote, preserve_verbatim=preserve_verbatim)
         cat_key = _cat_key(category) if category else ""
         t = (title or "").strip()
         try:
@@ -7208,7 +7289,7 @@ def _process_turn(session: dict, user_text: str, pending: dict | None, category:
     # weil der Router die automatischen Session-Protokolle nicht kennt. Gibt es (noch) kein
     # Session-Wissen -> weich zurueck in die normale Abrufkette (funktionserhaltend, Muster
     # parse_time_range: erst gezielt, dann Netz).
-    if intent in ("query", "smalltalk") and not pending and projektstand_question(user_text):
+    if not search_only and intent in ("query", "smalltalk") and not pending and projektstand_question(user_text):
         _ps = _projektstand_recall(session, user_text, route, context_prompt, on_delta)
         if _ps is not None:
             return _ps
@@ -7232,7 +7313,17 @@ def _process_turn(session: dict, user_text: str, pending: dict | None, category:
     #     Speicher-Sicherheit (oben) bleiben unangetastet; die deterministischen Spezial-Antworten
     #     (Projektstand, Kategorie-Gesamt/-Zaehlung) sind bereits davor abgehandelt. So loest der
     #     Umbau den Star-Trek-Bug im echten Chat, ohne Franks Speicher-Sicherheit zu riskieren.
-    return _toolagent_answer(session, user_text, context_prompt, response_size, on_delta)
+    return _toolagent_answer(session, user_text, context_prompt, response_size, on_delta,
+                             search_only=search_only)
+
+
+_SUCCESSFUL_CHAT_ACTIONS = frozenset({
+    "save_input", "save_confirm", "store", "store_clarify", "cancel",
+    "recall", "recall_full", "internet", "smalltalk",
+    "memory_dialog", "memory_show", "memory_edit_confirm", "memory_updated",
+    "category_count", "category_full",
+    "rule_confirm", "rule_saved", "rule_cancelled",
+})
 
 
 @app.post("/chat", dependencies=[Depends(require_auth)])
@@ -7289,6 +7380,7 @@ async def chat(req: ChatReq) -> dict:
             req.memory_edit,
             (req.memory_doc_id or "").strip(),
             req.memory_categories,
+            req.context_mode_revision,
         )
         outcome = await asyncio.to_thread(_enforce_self_rules_on_outcome, outcome)
 
@@ -7310,7 +7402,7 @@ async def chat(req: ChatReq) -> dict:
         raise
 
     checkpoint("chat", "Hauptagent routet: speichern (nach Bestaetigung), nachschlagen oder reden",
-               ok=(outcome.get("action") in ("save_confirm", "store", "cancel", "recall", "internet", "smalltalk")),
+               ok=(outcome.get("action") in _SUCCESSFUL_CHAT_ACTIONS),
                action=outcome.get("action"), category=outcome.get("category"),
                stored=outcome.get("stored", False), replaced=outcome.get("replaced", False),
                recall_hits=outcome.get("recall_hits"), ms=int((time.time() - t0) * 1000))
@@ -7396,6 +7488,7 @@ async def chat_stream(req: ChatReq) -> StreamingResponse:
         (req.category or "").strip(), (req.title or "").strip(), req.store_timestamp,
         _norm_context_mode(req.context_mode), cprompt,
         rsize, on_delta, req.memory_edit, (req.memory_doc_id or "").strip(), req.memory_categories,
+        req.context_mode_revision,
     ))
 
     # Finalisierung (Session-Update + Snapshot + Dedup-Ablage) laeuft DISCONNECT-FEST als
@@ -7439,7 +7532,7 @@ async def chat_stream(req: ChatReq) -> StreamingResponse:
             if rid:
                 await _dedup_store(rid, response)
             checkpoint("chat_stream", "Streaming-Chat abgeschlossen (identische Pipeline wie /chat)",
-                       ok=(outcome.get("action") in ("save_confirm", "store", "cancel", "recall", "internet", "smalltalk")),
+                       ok=(outcome.get("action") in _SUCCESSFUL_CHAT_ACTIONS),
                        action=outcome.get("action"), ms=int((time.time() - t0) * 1000))
             try:
                 await asyncio.to_thread(_trace_finish, tr, response, int((time.time() - t0) * 1000))

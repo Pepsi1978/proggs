@@ -1045,10 +1045,11 @@ button{font-family:inherit;cursor:pointer}
                 <option value="">Auto-Kategorie</option>
                 <option value="__new__">➕ Neue Kategorie…</option>
               </select>
-              <div class="chat-mode" id="chatModeBar" title="Modus: Suchen · Speichern · Automatisch. Nutzt dieselben Modus-Prompts wie die Android-App.">
+              <div class="chat-mode" id="chatModeBar" title="Modus: Suchen · Regeln · Speichern · Automatisch. Regeln werden ausschließlich im R-Modus angelegt.">
                 <button type="button" class="chat-mode-btn" data-mode="search" aria-label="Suchmodus" title="Suchmodus">
                   <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><circle cx="11" cy="11" r="7"/><path d="m21 21-4.3-4.3"/></svg>
                 </button>
+                <button type="button" class="chat-mode-btn" data-mode="rule" aria-label="Regelmodus" title="Regelmodus: nur Regeln für den Hauptagenten">R</button>
                 <button type="button" class="chat-mode-btn" data-mode="save" aria-label="Speichermodus" title="Speichermodus">
                   <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2Z"/><path d="M17 21v-8H7v8"/><path d="M7 3v5h8"/></svg>
                 </button>
@@ -1271,15 +1272,8 @@ button{font-family:inherit;cursor:pointer}
         <div class="set-row">
           <div class="card set-section">
             <h3><span class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6M8 13h8M8 17h5"/></svg></span>Selbst-Regeln des Agenten</h3>
-            <p class="set-desc">Dauerhafte Verhaltensregeln, die der Hauptagent in <b>jedem</b> Gespräch befolgt (z.B. „antworte als gut vorlesbarer Fließtext"). Der Agent legt sie nach deiner Bestätigung im Chat an; hier kannst du sie an/aus schalten, bearbeiten, löschen oder selbst eine hinzufügen. Sie liegen extern auf <b>Z:\Logbuch\Regeln</b>.</p>
+            <p class="set-desc">Dauerhafte Verhaltensregeln, die der Hauptagent in <b>jedem</b> Gespräch befolgt (z.B. „antworte als gut vorlesbarer Fließtext"). Neue oder geänderte Regeltexte laufen ausschließlich über den R-Modus im Chat und werden erst nach deiner Bestätigung aktiv. Hier kannst du Regeln an/aus schalten oder löschen. Sie liegen extern auf <b>Z:\Logbuch\Regeln</b>.</p>
             <div id="chatRulesList"></div>
-            <div style="margin-top:14px">
-              <textarea id="chatRuleNew" class="lib-own" style="min-height:60px;width:100%;box-sizing:border-box" placeholder="Neue Regel — kurz und klar formulieren …"></textarea>
-              <div class="lib-run-line" style="margin-top:8px">
-                <button id="chatRuleAdd" class="btn btn-sm btn-primary" type="button">Regel hinzufügen</button>
-                <span id="chatRuleState" class="set-desc"></span>
-              </div>
-            </div>
           </div>
         </div>
         <div class="set-row">
@@ -4385,8 +4379,8 @@ button{font-family:inherit;cursor:pointer}
   async function sendChat(){
     if(chatBusy) return;
     const ta = document.getElementById("chatText");
-    const text = ta.value.trim();
-    if(!text) return;
+    const text = ta.value;
+    if(!text.trim()) return;
     document.querySelectorAll(".chat-opts").forEach(e=>e.remove());   // alte Antwort-Knöpfe weg
     chatBusy = true;
     document.getElementById("chatSend").disabled = true;
@@ -4398,7 +4392,7 @@ button{font-family:inherit;cursor:pointer}
       const cat = (catSel && catSel.value && catSel.value!=="__new__") ? catSel.value : "";
       const titEl = document.getElementById("chatTitle");
       const titV = titEl ? titEl.value.trim() : "";
-      const r = await apiSend("/api/chat","POST",{text, session_id:chatSession, category:cat, title:titV, response_size:chatSize, context_mode:chatMode});
+      const r = await apiSend("/api/chat","POST",{text, session_id:chatSession, category:cat, title:titV, response_size:chatSize, context_mode:chatMode, context_mode_revision:chatModeRevision});
       typing.remove();
       if(titEl && (r.action==="save_confirm" || r.action==="store_clarify" || r.action==="store")) titEl.value = "";   // Titel nur leeren, wenn der Server den Speicher-Vorgang erkannt hat (Server haelt ihn im pending) — sonst fuer den naechsten Versuch behalten
       let meta = "";
@@ -4443,15 +4437,21 @@ button{font-family:inherit;cursor:pointer}
     paint();
   })();
 
-  /* Modus-Auswahl: Suchen / Speichern / KI-Automatik, synchron zu den zentralen Modus-Prompts. */
+  /* Modus-Auswahl: Suchen / Regeln / Speichern / KI-Automatik. */
   let chatMode = localStorage.getItem("chatMode") || "auto";
+  let chatModeRevision = Math.max(0, parseInt(localStorage.getItem("chatModeRevision") || "0", 10) || 0);
   (function initChatMode(){
     const host = document.getElementById("chatModeBar"); if(!host) return;
     const btns = host.querySelectorAll(".chat-mode-btn");
-    if(!["auto","save","search"].includes(chatMode)) chatMode = "auto";
+    if(!["auto","save","rule","search"].includes(chatMode)) chatMode = "auto";
     const paint = ()=> btns.forEach(b=> b.classList.toggle("active", b.dataset.mode===chatMode));
     btns.forEach(b=> b.addEventListener("click", ()=>{
-      chatMode = b.dataset.mode;
+      const nextMode = b.dataset.mode;
+      if(nextMode !== chatMode){
+        chatModeRevision += 1;
+        localStorage.setItem("chatModeRevision", String(chatModeRevision));
+      }
+      chatMode = nextMode;
       localStorage.setItem("chatMode", chatMode);
       paint();
     }));
@@ -5295,14 +5295,13 @@ button{font-family:inherit;cursor:pointer}
   function renderChatRules(list){
     const box=document.getElementById("chatRulesList"); if(!box) return;
     box.innerHTML="";
-    if(!list.length){ box.innerHTML='<p class="set-desc">Noch keine Regeln — der Agent legt sie nach deiner Bestätigung an, oder füge unten selbst eine hinzu.</p>'; return; }
+    if(!list.length){ box.innerHTML='<p class="set-desc">Noch keine Regeln — wähle im Chat R, formuliere eine Regel und bestätige den Entwurf.</p>'; return; }
     list.forEach(t=>{
       const wrap=document.createElement("div"); wrap.style.borderBottom="1px solid var(--border)";
       const row=document.createElement("div"); row.className="lib-taskrow"; row.style.borderBottom="none";
       const meta=(t.created_at? "Angelegt am "+String(t.created_at).slice(0,10):"");
       const titel=(t.titel && String(t.titel).trim()) ? t.titel : (t.text||"").slice(0,40);
       row.innerHTML='<div class="nm"><b>'+escapeHtml(titel)+'</b><span>'+escapeHtml(meta)+'</span></div>';
-      const editB=document.createElement("button"); editB.className="btn btn-sm"; editB.textContent="Bearbeiten";
       const sw=document.createElement("input"); sw.type="checkbox"; sw.className="lib-sw"; sw.checked=t.enabled!==false; sw.title="Regel an/aus";
       sw.addEventListener("change", async()=>{
         try{ await apiSend("/api/rules/"+encodeURIComponent(t.id),"PUT",{enabled:sw.checked}); }
@@ -5315,49 +5314,12 @@ button{font-family:inherit;cursor:pointer}
         try{ await apiSend("/api/rules/"+encodeURIComponent(t.id),"DELETE",{}); loadChatRules(); }
         catch(e){ alert("Fehler: "+e.message); }
       });
-      row.appendChild(editB); row.appendChild(sw); row.appendChild(del);
+      row.appendChild(sw); row.appendChild(del);
       wrap.appendChild(row);
-      const ed=document.createElement("div"); ed.style.cssText="display:none;padding:0 0 12px";
-      const eta=document.createElement("textarea"); eta.className="lib-own"; eta.style.cssText="min-height:80px;width:100%;box-sizing:border-box"; eta.value=t.text||"";
-      const er=document.createElement("div"); er.className="lib-run-line";
-      const esave=document.createElement("button"); esave.className="btn btn-sm btn-primary"; esave.textContent="Speichern";
-      const estate=document.createElement("span"); estate.className="set-desc";
-      er.appendChild(esave); er.appendChild(estate);
-      ed.appendChild(eta); ed.appendChild(er);
-      wrap.appendChild(ed);
-      editB.addEventListener("click",()=>{
-        const open=ed.style.display==="none";
-        ed.style.display=open?"block":"none";
-        editB.textContent=open?"Zuklappen":"Bearbeiten";
-      });
-      esave.addEventListener("click", async()=>{
-        const v=(eta.value||"").trim();
-        if(v.length<3){ estate.textContent="Regel-Text ist zu kurz."; return; }
-        try{
-          const rr=await apiSend("/api/rules/"+encodeURIComponent(t.id),"PUT",{text:v});
-          t.text=v; if(rr && rr.titel) t.titel=rr.titel;
-          const b=row.querySelector(".nm b"); if(b) b.textContent=(t.titel||v.slice(0,40));
-          estate.textContent="✓ Gespeichert — gilt ab dem nächsten Gespräch.";
-        }catch(e){ estate.textContent="Fehler: "+e.message; }
-      });
       box.appendChild(wrap);
     });
   }
-  function _bindChatRuleAdd(){
-    const btn=document.getElementById("chatRuleAdd"); if(!btn || btn._bound) return; btn._bound=true;
-    btn.addEventListener("click", async()=>{
-      const ta=document.getElementById("chatRuleNew"); const st=document.getElementById("chatRuleState");
-      const v=((ta&&ta.value)||"").trim();
-      if(v.length<3){ if(st) st.textContent="Regel-Text ist zu kurz."; return; }
-      try{
-        await apiSend("/api/rules","POST",{text:v});
-        if(ta) ta.value=""; if(st) st.textContent="✓ Regel hinzugefügt.";
-        loadChatRules();
-      }catch(e){ if(st) st.textContent="Konnte nicht anlegen (evtl. Limit erreicht)."; }
-    });
-  }
   async function loadChatRules(){
-    _bindChatRuleAdd();
     try{ const r=await api("/api/rules"); renderChatRules((r&&r.rules)||[]); }
     catch(e){ /* Chronik ist optional — der Rest der Einstellungen laedt unabhaengig weiter */ }
   }

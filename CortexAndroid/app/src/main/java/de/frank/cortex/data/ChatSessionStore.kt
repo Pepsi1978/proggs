@@ -4,7 +4,10 @@ import android.content.ContentValues
 import android.content.Context
 import android.database.sqlite.SQLiteDatabase
 import android.database.sqlite.SQLiteOpenHelper
+import de.frank.cortex.data.model.ChatOption
 import de.frank.cortex.observability.CortexLog
+import org.json.JSONArray
+import org.json.JSONObject
 
 data class ChatSessionSummary(
     val id: String,
@@ -27,6 +30,7 @@ data class StoredChatMessage(
     val storedText: String? = null,
     val memoryEditable: Boolean = false,
     val recallHits: Int?,
+    val options: List<ChatOption> = emptyList(),
     val stored: Boolean,
     val timestamp: Long
 )
@@ -41,6 +45,7 @@ data class OutboxItem(
     val category: String?,
     val title: String?,
     val contextMode: String,
+    val contextModeRevision: Int = 0,
     val responseSize: String,
     val requestId: String,
     val createdAt: Long,
@@ -91,7 +96,7 @@ object ChatSessionStore {
 
     fun loadMessages(sessionId: String): List<StoredChatMessage> = helper.readableDatabase.query(
         "messages",
-        arrayOf("id", "text", "is_user", "action", "category", "title", "categories", "doc_id", "memory_text", "stored_text", "memory_editable", "recall_hits", "stored", "timestamp"),
+        arrayOf("id", "text", "is_user", "action", "category", "title", "categories", "doc_id", "memory_text", "stored_text", "memory_editable", "recall_hits", "options", "stored", "timestamp"),
         "session_id = ?",
         arrayOf(sessionId),
         null,
@@ -114,8 +119,9 @@ object ChatSessionStore {
                         storedText = cursor.getStringOrNull(9),
                         memoryEditable = cursor.getInt(10) == 1,
                         recallHits = if (cursor.isNull(11)) null else cursor.getInt(11),
-                        stored = cursor.getInt(12) == 1,
-                        timestamp = cursor.getLong(13)
+                        options = decodeOptions(cursor.getStringOrNull(12)),
+                        stored = cursor.getInt(13) == 1,
+                        timestamp = cursor.getLong(14)
                     )
                 )
             }
@@ -146,6 +152,7 @@ object ChatSessionStore {
                 put("category", item.category)
                 put("title", item.title)
                 put("context_mode", item.contextMode)
+                put("context_mode_revision", item.contextModeRevision)
                 put("response_size", item.responseSize)
                 put("request_id", item.requestId)
                 put("memory_edit", if (item.memoryEdit) 1 else 0)
@@ -159,7 +166,7 @@ object ChatSessionStore {
 
     fun listOutbox(): List<OutboxItem> = helper.readableDatabase.query(
         "outbox",
-        arrayOf("id", "session_id", "text", "category", "title", "context_mode", "response_size", "request_id", "memory_edit", "memory_doc_id", "memory_categories", "created_at"),
+        arrayOf("id", "session_id", "text", "category", "title", "context_mode", "context_mode_revision", "response_size", "request_id", "memory_edit", "memory_doc_id", "memory_categories", "created_at"),
         null, null, null, null,
         "created_at ASC"
     ).use { cursor ->
@@ -173,12 +180,13 @@ object ChatSessionStore {
                         category = cursor.getStringOrNull(3),
                         title = cursor.getStringOrNull(4),
                         contextMode = cursor.getString(5),
-                        responseSize = cursor.getString(6),
-                        requestId = cursor.getString(7),
-                        memoryEdit = cursor.getInt(8) == 1,
-                        memoryDocId = cursor.getStringOrNull(9),
-                        memoryCategories = decodeCategories(cursor.getStringOrNull(10)),
-                        createdAt = cursor.getLong(11)
+                        contextModeRevision = cursor.getInt(6),
+                        responseSize = cursor.getString(7),
+                        requestId = cursor.getString(8),
+                        memoryEdit = cursor.getInt(9) == 1,
+                        memoryDocId = cursor.getStringOrNull(10),
+                        memoryCategories = decodeCategories(cursor.getStringOrNull(11)),
+                        createdAt = cursor.getLong(12)
                     )
                 )
             }
@@ -252,6 +260,7 @@ object ChatSessionStore {
                     put("stored_text", message.storedText)
                     put("memory_editable", if (message.memoryEditable) 1 else 0)
                     put("recall_hits", message.recallHits)
+                    put("options", encodeOptions(message.options))
                     put("stored", if (message.stored) 1 else 0)
                     put("timestamp", message.timestamp)
                 },
@@ -325,6 +334,7 @@ object ChatSessionStore {
             category TEXT,
             title TEXT,
             context_mode TEXT NOT NULL,
+            context_mode_revision INTEGER NOT NULL DEFAULT 0,
             response_size TEXT NOT NULL,
             request_id TEXT NOT NULL,
             memory_edit INTEGER NOT NULL DEFAULT 0,
@@ -341,7 +351,7 @@ object ChatSessionStore {
         )
     """
 
-    private class Helper(context: Context) : SQLiteOpenHelper(context, "cortex_chat_sessions.db", null, 4) {
+    private class Helper(context: Context) : SQLiteOpenHelper(context, "cortex_chat_sessions.db", null, 6) {
         override fun onConfigure(db: SQLiteDatabase) {
             // Statt einmaligem "PRAGMA foreign_keys=ON" in init(): das Pragma gilt nur pro
             // Connection — onConfigure setzt es garantiert fuer JEDE Connection des Helpers.
@@ -375,6 +385,7 @@ object ChatSessionStore {
                     stored_text TEXT,
                     memory_editable INTEGER NOT NULL DEFAULT 0,
                     recall_hits INTEGER,
+                    options TEXT,
                     stored INTEGER NOT NULL,
                     timestamp INTEGER NOT NULL,
                     FOREIGN KEY(session_id) REFERENCES sessions(id) ON DELETE CASCADE
@@ -410,6 +421,12 @@ object ChatSessionStore {
                     db.execSQL("ALTER TABLE outbox ADD COLUMN memory_categories TEXT")
                 }
             }
+            if (oldVersion in 2..4) {
+                db.execSQL("ALTER TABLE outbox ADD COLUMN context_mode_revision INTEGER NOT NULL DEFAULT 0")
+            }
+            if (oldVersion < 6) {
+                db.execSQL("ALTER TABLE messages ADD COLUMN options TEXT")
+            }
         }
     }
 
@@ -419,6 +436,30 @@ object ChatSessionStore {
 
     private fun decodeCategories(value: String?): List<String> =
         value?.split('\u001F')?.map(String::trim)?.filter(String::isNotEmpty)?.distinct().orEmpty()
+
+    private fun encodeOptions(options: List<ChatOption>): String? = options.takeIf { it.isNotEmpty() }?.let { list ->
+        JSONArray().apply {
+            list.forEach { option -> put(JSONObject().put("label", option.label).put("send", option.send)) }
+        }.toString()
+    }
+
+    private fun decodeOptions(value: String?): List<ChatOption> {
+        if (value.isNullOrBlank()) return emptyList()
+        return try {
+            val array = JSONArray(value)
+            buildList {
+                for (index in 0 until array.length()) {
+                    val item = array.optJSONObject(index) ?: return emptyList()
+                    val label = item.opt("label")
+                    val send = item.opt("send")
+                    if (label !is String || send !is String) return emptyList()
+                    add(ChatOption(label, send))
+                }
+            }
+        } catch (_: Exception) {
+            emptyList()
+        }
+    }
 }
 
 private fun android.database.Cursor.getStringOrNull(index: Int): String? =

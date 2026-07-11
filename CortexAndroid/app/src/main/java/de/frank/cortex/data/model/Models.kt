@@ -13,6 +13,7 @@ data class ChatRequest(
     val title: String? = null,
     val store_timestamp: Boolean = true,
     val context_mode: String? = null,
+    val context_mode_revision: Int = 0,
     val context_prompt: String? = null,
     // S/M/XL-Profil explizit mitschicken — steuert serverseitig auch die Tavily-Suchtiefe
     // (xl = advanced-Tiefensuche mit mehr Treffern, Frank-Wunsch 2026-07-02).

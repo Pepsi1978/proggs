@@ -70,7 +70,8 @@ data class ChatUiState(
     val speakingMessageId: String? = null,
     val isImproving: Boolean = false,
     val isGeneratingTitle: Boolean = false,
-    val contextMode: String = SettingsStore.CONTEXT_MODE_AUTO,
+    val contextMode: String = SettingsStore.contextMode,
+    val contextModeRevision: Int = SettingsStore.contextModeRevision,
     val responseSize: String = SettingsStore.RESPONSE_SIZE_AUTO,
     val userContextPrompts: List<UserContextPrompt> = emptyList(),
     val improvingContextPromptId: String? = null
@@ -404,10 +405,9 @@ class ChatViewModel : ViewModel() {
             val rawAccum = StringBuilder()
             try {
                 if (WireGuardManager.state.value != TunnelState.CONNECTED) {
-                    // Offline-Outbox (Frank-Wunsch 2026-07-02): SPEICHER-Auftraege gehen ohne
-                    // VPN nicht verloren, sondern werden gemerkt und beim naechsten Tunnel-
-                    // Aufbau automatisch gesendet. Andere Modi verhalten sich wie bisher.
-                    if (state.contextMode == SettingsStore.CONTEXT_MODE_SAVE) {
+                    // Mutierende Speicher- und Regelauftraege gehen ohne VPN nicht verloren,
+                    // sondern werden beim naechsten Tunnel-Aufbau im urspruenglichen Modus gesendet.
+                    if (state.contextMode in setOf(SettingsStore.CONTEXT_MODE_SAVE, SettingsStore.CONTEXT_MODE_RULE)) {
                         val item = de.frank.cortex.data.OutboxItem(
                             id = UUID.randomUUID().toString(),
                             sessionId = sessionId,
@@ -415,6 +415,7 @@ class ChatViewModel : ViewModel() {
                             category = state.selectedCategory,
                             title = state.titleOverride.ifBlank { null },
                             contextMode = state.contextMode,
+                            contextModeRevision = state.contextModeRevision,
                             responseSize = state.responseSize,
                             requestId = UUID.randomUUID().toString(),
                             createdAt = System.currentTimeMillis()
@@ -429,10 +430,11 @@ class ChatViewModel : ViewModel() {
                             }
                         }
                         if (queued) {
-                            CortexLog.info("ChatVM", "outbox", "Speicher-Auftrag gemerkt (kein VPN)",
-                                mapOf("chars" to text.length, "session_id" to sessionId))
+                            val queuedKind = if (state.contextMode == SettingsStore.CONTEXT_MODE_RULE) "Regel-Auftrag" else "Speicher-Auftrag"
+                            CortexLog.info("ChatVM", "outbox", "$queuedKind gemerkt (kein VPN)",
+                                mapOf("chars" to text.length, "session_id" to sessionId, "mode" to state.contextMode))
                             val notice = ChatMessage(
-                                text = "📮 Kein VPN — dein Speicher-Auftrag ist gemerkt und wird automatisch gesendet, sobald der Tunnel steht.",
+                                text = "Kein VPN — dein $queuedKind ist gemerkt und wird automatisch gesendet, sobald der Tunnel steht.",
                                 isUser = false,
                                 action = "outbox"
                             )
@@ -452,6 +454,7 @@ class ChatViewModel : ViewModel() {
                     category = state.selectedCategory,
                     title = state.titleOverride.ifBlank { null },
                     context_mode = state.contextMode,
+                    context_mode_revision = state.contextModeRevision,
                     context_prompt = buildContextPrompt(state.contextMode, state.responseSize),
                     response_size = state.responseSize,
                     // EIN Key pro Nutzer-Intent: Stream und /chat-Fallback nutzen dasselbe
@@ -634,6 +637,18 @@ class ChatViewModel : ViewModel() {
                 CortexLog.info("ChatVM", "outboxFlush", "Sende gemerkte Speicher-Auftraege", mapOf("count" to items.size))
                 for (item in items) {
                     if (WireGuardManager.state.value != TunnelState.CONNECTED) break
+                    if (item.contextMode == SettingsStore.CONTEXT_MODE_RULE &&
+                        item.contextModeRevision != SettingsStore.contextModeRevision
+                    ) {
+                        withContext(Dispatchers.IO) { ChatSessionStore.deleteOutboxItem(item.id) }
+                        CortexLog.info(
+                            "ChatVM", "outboxFlush",
+                            "Veralteten Regel-Auftrag nach Moduswechsel verworfen",
+                            mapOf("queued_revision" to item.contextModeRevision,
+                                "current_revision" to SettingsStore.contextModeRevision)
+                        )
+                        continue
+                    }
                     try {
                         val response = ApiClient.agentApi().chat(
                             ChatRequest(
@@ -642,6 +657,7 @@ class ChatViewModel : ViewModel() {
                                 category = item.category,
                                 title = item.title,
                                 context_mode = item.contextMode,
+                                context_mode_revision = item.contextModeRevision,
                                 context_prompt = buildContextPrompt(item.contextMode, item.responseSize),
                                 response_size = item.responseSize,
                                 request_id = item.requestId,
@@ -912,6 +928,7 @@ class ChatViewModel : ViewModel() {
                         category = category,
                         title = title,
                         contextMode = SettingsStore.CONTEXT_MODE_SAVE,
+                            contextModeRevision = state.contextModeRevision,
                             responseSize = state.responseSize,
                             requestId = UUID.randomUUID().toString(),
                             memoryEdit = true,
@@ -950,6 +967,7 @@ class ChatViewModel : ViewModel() {
                             category = category,
                             title = title,
                             context_mode = SettingsStore.CONTEXT_MODE_SAVE,
+                            context_mode_revision = state.contextModeRevision,
                             context_prompt = buildContextPrompt(SettingsStore.CONTEXT_MODE_SAVE, state.responseSize),
                             response_size = state.responseSize,
                             request_id = UUID.randomUUID().toString(),
@@ -1250,7 +1268,21 @@ class ChatViewModel : ViewModel() {
     }
 
     fun updateContextMode(mode: String) {
-        _uiState.update { it.copy(contextMode = mode) }
+        val normalized = when (mode) {
+            SettingsStore.CONTEXT_MODE_AUTO,
+            SettingsStore.CONTEXT_MODE_SMALLTALK,
+            SettingsStore.CONTEXT_MODE_SAVE,
+            SettingsStore.CONTEXT_MODE_RULE,
+            SettingsStore.CONTEXT_MODE_SEARCH -> mode
+            else -> SettingsStore.CONTEXT_MODE_AUTO
+        }
+        _uiState.update {
+            if (it.contextMode == normalized) it
+            else it.copy(
+                contextMode = normalized,
+                contextModeRevision = SettingsStore.advanceContextModeRevision(normalized)
+            )
+        }
     }
 
     fun updateResponseSize(size: String) {
@@ -1743,6 +1775,7 @@ private fun ChatMessage.toStoredMessage(): StoredChatMessage = StoredChatMessage
     storedText = storedText,
     memoryEditable = memoryEditable,
     recallHits = recallHits,
+    options = options.orEmpty(),
     stored = stored,
     timestamp = timestamp
 )
@@ -1760,7 +1793,7 @@ private fun StoredChatMessage.toChatMessage(): ChatMessage = ChatMessage(
     storedText = storedText,
     memoryEditable = memoryEditable,
     recallHits = recallHits,
-    options = null,
+    options = options.takeIf { it.isNotEmpty() },
     stored = stored,
     timestamp = timestamp
 )

@@ -95,17 +95,14 @@ def add_rule(path: str, text: str, titel: str, now_iso: str) -> dict:
         return rule
 
 
-def update_rule(path: str, rule_id: str, *, enabled=None, text=None):
-    """Toggle enabled and/or replace text. Returns the rule or None if unknown."""
+def update_rule(path: str, rule_id: str, *, enabled: bool):
+    """Toggle enabled. Rule text is immutable outside the confirmed R-mode creation path."""
     with _LOCK:   # whole read-modify-write cycle
         rules = load_rules(path)
         hit = None
         for r in rules:
             if r.get("id") == rule_id:
-                if enabled is not None:
-                    r["enabled"] = bool(enabled)
-                if text is not None:
-                    r["text"] = text.strip()
+                r["enabled"] = bool(enabled)
                 hit = r
                 break
         if hit is None:
@@ -158,20 +155,47 @@ def inject_into_system_prompt(system: str, rule_items: list) -> str:
 # ("ab jetzt / generell / grundsaetzlich ... immer ...").
 _RULE_REQUEST = [
     re.compile(
-        r"\b(?:mach(?:e)?|erstell(?:e)?|leg(?:e)?|schreib(?:e)?|speicher(?:e)?|notier(?:e)?|"
-        r"merk(?:e)?|gib)\b.{0,80}\bregel(?:datei|n)?\b",
+        r"\b(?:mach(?:e)?)\s+(?:dir\s+)?(?:bitte\s+)?(?:daraus|das|dies)\s+"
+        r"(?:bitte\s+)?(?:eine|zur)\s+regel\b",
         re.IGNORECASE,
     ),
     re.compile(
-        r"\bregel(?:datei|n)?\b.{0,40}\b(?:anleg(?:en|e)?|erstell(?:en|e)?|schreib(?:en|e)?|"
-        r"speicher(?:n|e)?|notier(?:en|e)?|übernimm(?:st|en)?|uebernimm(?:st|en)?)\b",
+        r"\b(?:erstell(?:e)?|leg(?:e)?|gib|schreib(?:e)?|speicher(?:e)?|notier(?:e)?)\s+"
+        r"(?:(?:mir|dir)\s+)?(?:bitte\s+)?(?:eine|die|diese|folgende)\s+"
+        r"(?:dauerhafte\s+)?regel\b",
+        re.IGNORECASE,
+    ),
+    re.compile(r"\b(?:merk|merke)\s+(?:du\s+)?dir\b.{0,40}\bals\s+regel\b", re.IGNORECASE),
+    re.compile(
+        r"\b(?:schreib(?:e)?|speicher(?:e)?|notier(?:e)?|übernimm|uebernimm)\b.{0,50}"
+        r"\b(?:in|als)\s+(?:deine[rn]?\s+|die\s+)?regeldatei\b",
+        re.IGNORECASE,
+    ),
+    re.compile(r"^\s*(?:regel|dauerhafte\s+regel)\s*:\s*\S", re.IGNORECASE),
+    re.compile(
+        r"^\s*(?:diese|die|folgende)\s+regel\b.{0,30}\b"
+        r"(?:anlegen|erstellen|übernehmen|uebernehmen|speichern|notieren)\b",
         re.IGNORECASE,
     ),
     re.compile(r"\b(?:dauerhafte?|verbindliche?)\s+regel\b.{0,30}\b(?:für|fuer|fur)\s+dich\b", re.IGNORECASE),
 ]
 _RULE_NEGATION = [
-    re.compile(r"\b(?:kein(?:e|en|er|es)?|nicht|niemals)\b.{0,50}\bregel(?:datei|n)?\b", re.IGNORECASE),
-    re.compile(r"\bregel(?:datei|n)?\b.{0,50}\b(?:nicht|niemals)\b", re.IGNORECASE),
+    re.compile(
+        r"\b(?:kein(?:e|en)?\s+regel(?:n)?|regel(?:n)?\s+(?:bitte\s+)?(?:nicht|niemals))\b"
+        r".{0,25}\b(?:anlegen|erstellen|übernehmen|uebernehmen|speichern|notieren)\b",
+        re.IGNORECASE,
+    ),
+    re.compile(
+        r"\b(?:leg(?:e)?|erstell(?:e)?|übernimm|uebernimm|speicher(?:e)?|notier(?:e)?)\b"
+        r".{0,20}\bkeine?\s+regel(?:n)?\b",
+        re.IGNORECASE,
+    ),
+    re.compile(
+        r"\b(?:leg(?:e)?|erstell(?:e)?|übernimm|uebernimm|speicher(?:e)?|notier(?:e)?)\b"
+        r".{0,25}\bregel(?:n)?\b.{0,10}\bnicht\b(?:\s+an)?",
+        re.IGNORECASE,
+    ),
+    re.compile(r"^\s*regel\s+nein\s*[.!]*$", re.IGNORECASE),
 ]
 _DURABLE_ALWAYS = [
     re.compile(
