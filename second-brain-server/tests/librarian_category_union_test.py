@@ -3,8 +3,13 @@
 from __future__ import annotations
 
 import ast
+import copy
 import sys
+import threading
+import time
+from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
+from types import SimpleNamespace
 
 
 for _stream in (sys.stdout, sys.stderr):
@@ -17,6 +22,8 @@ for _stream in (sys.stdout, sys.stderr):
 ROOT = Path(__file__).resolve().parents[1]
 APP_PATH = ROOT / "librarian" / "app.py"
 APP_SOURCE = APP_PATH.read_text(encoding="utf-8")
+BRAIN_PATH = ROOT / "brain-api" / "app.py"
+BRAIN_SOURCE = BRAIN_PATH.read_text(encoding="utf-8")
 
 
 def load_functions() -> dict:
@@ -35,38 +42,105 @@ def check(condition: bool, message: str) -> None:
         raise AssertionError(message)
 
 
+def load_atomic_endpoint() -> dict:
+    tree = ast.parse(BRAIN_SOURCE)
+    selected: list[ast.stmt] = []
+    for node in tree.body:
+        if isinstance(node, ast.Assign) and any(
+            isinstance(target, ast.Name) and target.id in {"_ENTRY_WRITE_LOCK", "ENTRY_WRITE_LOCK_TIMEOUT_S"}
+            for target in node.targets
+        ):
+            selected.append(node)
+        elif isinstance(node, ast.FunctionDef) and node.name == "serialized_entry_write":
+            selected.append(node)
+        elif isinstance(node, ast.FunctionDef) and node.name == "add_entry_category":
+            endpoint = copy.deepcopy(node)
+            endpoint.decorator_list = [ast.Name(id="serialized_entry_write", ctx=ast.Load())]
+            ast.fix_missing_locations(endpoint)
+            selected.append(endpoint)
+
+    class HttpError(Exception):
+        def __init__(self, **kwargs):
+            super().__init__(kwargs.get("detail"))
+
+    namespace = {
+        "threading": threading,
+        "wraps": __import__("functools").wraps,
+        "HTTPException": HttpError,
+        "AddEntryCategoryReq": object,
+    }
+    exec(compile(ast.Module(body=selected, type_ignores=[]), str(BRAIN_PATH), "exec"), namespace)
+    return namespace
+
+
 def main() -> int:
     ns = load_functions()
-    written: list[tuple[str, list[str]]] = []
-    reads: list[str] = []
-    ns["brain_get_categories"] = lambda doc_id: reads.append(doc_id) or ["A", "B", "C", "D"]
-    ns["brain_list"] = lambda: (_ for _ in ()).throw(AssertionError("/list darf nicht aufgerufen werden"))
-    ns["brain_by_category"] = lambda category: (_ for _ in ()).throw(AssertionError("/by-category darf nicht aufgerufen werden"))
-    ns["brain_set_categories"] = lambda doc_id, categories: (
-        written.append((doc_id, list(categories))) or
-        {"ok": True, "doc_id": doc_id, "categories": list(categories)}
-    )
+    calls: list[tuple[str, dict]] = []
+
+    class Response:
+        def __init__(self, data: dict):
+            self.data = data
+
+        def raise_for_status(self):
+            return None
+
+        def json(self):
+            return self.data
+
+    class Http:
+        next_response = {"ok": True, "doc_id": "doc-1", "categories": ["A", "B", "C", "D", "E"], "added": True}
+
+        def post(self, url: str, **kwargs):
+            calls.append((url, kwargs["json"]))
+            return Response(self.next_response)
+
+    ns.update({"_HTTP": Http(), "BRAIN_URL": "http://brain", "USER_ID": "frank", "HEADERS": {}})
 
     result = ns["brain_add_category"]("doc-1", "E")
     check(result["categories"] == ["A", "B", "C", "D", "E"],
           "vier bestehende Kategorien plus Vorschlag ergeben fuenf")
-    check(written[-1] == ("doc-1", ["A", "B", "C", "D", "E"]),
-          "der Multi-Category-Endpunkt erhaelt die vollstaendige Union")
-    check(reads == ["doc-1"], "Bestand wird genau einmal gezielt per doc_id gelesen")
+    check(calls == [("http://brain/entry/categories/add",
+                     {"doc_id": "doc-1", "category": "E", "user_id": "frank"})],
+          "Bibliothekar delegiert die Union in einem atomaren Serveraufruf")
 
-    ns["brain_add_category"]("doc-1", "b")
-    check(len(written) == 1,
-          "Gross-/Kleinschreibung erzeugt weder Duplikat noch unnoetigen Schreibzugriff")
+    brain_source = (ROOT / "brain-api" / "app.py").read_text(encoding="utf-8")
+    check('@app.post("/entry/categories/add"' in brain_source
+          and "def add_entry_category" in brain_source
+          and "@serialized_entry_write\ndef add_entry_category" in brain_source,
+          "brain-api serialisiert Lesen und Ergaenzen unter demselben Schreib-Lock")
+    check("current + [proposed]" in brain_source and 'result["added"] = True' in brain_source,
+          "atomarer Endpoint erhaelt den aktuellen Bestand und meldet echte Aenderungen")
 
-    ns["brain_get_categories"] = lambda doc_id: (_ for _ in ()).throw(RuntimeError("nicht lesbar"))
-    before = len(written)
-    try:
-        ns["brain_add_category"]("doc-1", "E")
-    except RuntimeError:
-        pass
-    else:
-        raise AssertionError("fehlender Bestand muss den Schreibvorgang abbrechen")
-    check(len(written) == before, "ohne gelesenen Bestand wird nichts ueberschrieben")
+    atomic = load_atomic_endpoint()
+    state = {"categories": ["A"]}
+    atomic.update({
+        "_require_store": lambda: None,
+        "Filter": lambda **kwargs: kwargs,
+        "FieldCondition": lambda **kwargs: kwargs,
+        "MatchValue": lambda **kwargs: kwargs,
+        "_scroll": lambda *args, **kwargs: [SimpleNamespace(payload={"categories": list(state["categories"])})],
+        "cats_from_payload": lambda payload: list(payload.get("categories") or []),
+        "canonical_category": lambda value: value.strip(),
+        "category_key": lambda value: value.strip().casefold(),
+        "EntryCategoriesReq": lambda **kwargs: SimpleNamespace(**kwargs),
+    })
+
+    def set_categories(req):
+        time.sleep(0.02)
+        state["categories"] = list(req.categories)
+        return {"ok": True, "doc_id": req.doc_id, "categories": list(req.categories)}
+
+    atomic["set_entry_categories"] = set_categories
+    with ThreadPoolExecutor(max_workers=2) as pool:
+        results = list(pool.map(
+            atomic["add_entry_category"],
+            [SimpleNamespace(doc_id="doc-1", category="B", user_id="frank"),
+             SimpleNamespace(doc_id="doc-1", category="C", user_id="frank")],
+        ))
+    check(state["categories"] == ["A", "B", "C"],
+          "zwei parallele Ergaenzungen bleiben durch den Schreib-Lock beide erhalten")
+    check(all(result["added"] is True for result in results),
+          "beide parallelen neuen Kategorien werden als hinzugefuegt gemeldet")
 
     ns["_action_targets_phone_only"] = lambda action, item: False
     ns["brain_add_category"] = lambda doc_id, category: {

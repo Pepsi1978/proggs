@@ -64,6 +64,7 @@ VERSION = "0.12.0 (10.07.2026, 21:17 Uhr)"  # 0.12.0 (Level-2 Gruppe A, Punkt 1 
 VERSION = "0.13.0 (10.07.2026, 22:12 Uhr)"  # 0.13.0 (Level-2 Gruppe A, Punkt 6 — Frank-Freigabe 2026-07-10): NEU Standard-Nachtaufgabe EPISODEN-DESTILLATION (DISTILL_SYSTEM + _task_destillation, laeuft nach dem Luecken-Detektor): destilliert aus den Gespraechen der letzten 14 Tage max 3 DAUERHAFTE Fakten-Kandidaten (nur woertlich von Frank Gesagtes, mit Kurz-Beleg; keine Tageszustaende). Jeder Kandidat wird semantisch gegen den Bestand dedupliziert (>=0.66 Aehnlichkeit als Nicht-Gespraechs-Eintrag -> kein Vorschlag) und landet als Ja/Nein-Fund im Morgen-Report — gespeichert wird ERST nach Franks Ja (Aktionstyp neu, source=librarian, layer=kurzzeit; Originale bleiben 1:1). Eigene Bilanz-Zeile. Alt: 0.12.0.
 VERSION = "0.14.0 (10.07.2026, 22:34 Uhr)"  # 0.14.0 (Level-2 Gruppe A, Punkt 9): NEU Standard-Nachtaufgabe META-GEDAECHTNIS-AUSWERTUNG (META_SYSTEM + _task_meta): liest Franks Daumen-runter-Feedback der letzten 14 Tage (agent GET /feedback), findet WIEDERKEHRENDE Muster (>=2 Faelle, max 2 pro Nacht, Einzelfaelle zaehlen nicht) und legt je Muster einen Morgen-Report-Fund mit vorformuliertem SELBST-REGEL-Vorschlag an — OHNE Auto-Aktion: aktiviert wird eine Regel NUR ueber den bestehenden bestaetigten Regel-Weg (Chat mach daraus eine Regel / Einstellungen). Eigene Bilanz-Zeile. Alt: 0.13.0.
 VERSION = "0.14.1 (11.07.2026, 19:41 Uhr)"  # 0.14.1: Zusaetzliche Kategorie-Vorschlaege kennen alle vorhandenen Kategorien; deterministischer No-op-Guard verwirft bereits vergebene Kategorien. Alt: 0.14.0.
+VERSION = "0.14.2 (11.07.2026, 19:51 Uhr)"  # 0.14.2: Kategorie-Ergaenzungen nutzen den atomaren brain-api-Endpoint statt clientseitigem Read-Modify-Write. Alt: 0.14.1.
 AGENT_URL = os.getenv("AGENT_URL", "http://agent:8002").rstrip("/")   # LLM-Durchgriff fuer Codex/GPT (agent 0.52.0)
 # Stille Notbremse gegen Endlosschleifen, wenn 'Ohne Begrenzung' aktiv ist (Almanach ai-agent §2.1:
 # ein Cap muss STOPPEN koennen). 5000 Calls erreicht ehrliche Nacht-Arbeit nie — nur ein Amoklauf.
@@ -541,28 +542,15 @@ def brain_get_categories(doc_id: str) -> list[str]:
 
 
 def brain_add_category(doc_id: str, category: str) -> dict:
-    """Ergaenzt genau eine Kategorie, ohne vorhandene Multi-Category-Zuordnungen zu verlieren."""
+    """Ergaenzt genau eine Kategorie atomar in der brain-api."""
     new_category = (category or "").strip()
     if not doc_id or not new_category:
         raise ValueError("doc_id und Kategorie erforderlich")
-
-    current = brain_get_categories(doc_id)
-
-    if any(new_category.casefold() == value.casefold() for value in current):
-        return {"ok": True, "doc_id": doc_id, "categories": current, "added": False}
-
-    categories: list[str] = []
-    seen: set[str] = set()
-    for value in current + [new_category]:
-        key = value.casefold()
-        if key not in seen:
-            seen.add(key)
-            categories.append(value)
-    if len(categories) > 12:
-        raise ValueError("Ein Eintrag kann hoechstens 12 Kategorien haben")
-    result = brain_set_categories(doc_id, categories)
-    result["added"] = True
-    return result
+    r = _HTTP.post(f"{BRAIN_URL}/entry/categories/add",
+                   json={"doc_id": doc_id, "category": new_category, "user_id": USER_ID},
+                   headers=HEADERS, timeout=180.0)
+    r.raise_for_status()
+    return r.json()
 
 
 def brain_rename_category(old: str, new: str) -> dict:

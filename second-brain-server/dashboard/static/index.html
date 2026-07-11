@@ -4648,17 +4648,13 @@ button{font-family:inherit;cursor:pointer}
     return d;
   }
   let libDay=null, libSel={}, libOverrides={}, libNightPoll=null, libProcPoll=null, libIv=[], libIvTask=null;
-  const libCategoryPreviewCache=new Map();
 
   async function loadLibCategoryPreview(box,it){
     const docId=((it.aktion||{}).doc_id||"").trim();
     const proposed=((it.aktion||{}).kategorie||"").trim();
     if(!docId||!proposed){ box.textContent="Kategorien-Vorschau nicht verfügbar."; return; }
     try{
-      if(!libCategoryPreviewCache.has(docId)){
-        libCategoryPreviewCache.set(docId, api("/api/entry/categories?doc_id="+encodeURIComponent(docId)));
-      }
-      const data=await libCategoryPreviewCache.get(docId);
+      const data=await api("/api/entry/categories?doc_id="+encodeURIComponent(docId));
       const before=(data.categories||[]).filter(c=>typeof c==="string"&&c.trim()).map(c=>c.trim());
       const seen=new Set(before.map(c=>c.toLocaleLowerCase("de-DE")));
       const alreadyPresent=seen.has(proposed.toLocaleLowerCase("de-DE"));

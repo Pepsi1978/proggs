@@ -69,6 +69,10 @@ def main() -> int:
           "brain-api protokolliert die gesamte Endpoint-Antwortzeit dauerhaft in Millisekunden")
 
     source = INDEX_PATH.read_text(encoding="utf-8")
+    check("libCategoryPreviewCache" not in source,
+          "Bibliothekar-Vorschau cached keinen veralteten Kategorienbestand")
+    check('const data=await api("/api/entry/categories?doc_id="+encodeURIComponent(docId))' in source,
+          "jede Vorschau liest den aktuellen Ist-Zustand")
     check("<b>Vorher</b>" in source and "<b>Nachher</b>" in source,
           "Bibliothekar zeigt beide Vorschau-Zeilen")
     check("alreadyPresent=seen.has(proposed.toLocaleLowerCase" in source and "after.push(proposed)" in source,

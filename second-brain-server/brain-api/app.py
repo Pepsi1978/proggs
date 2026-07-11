@@ -450,6 +450,7 @@ VERSION = "1.29.0 (10.07.2026, 21:05 Uhr)"  # 1.29.0 (Level-2 Gruppe A, Punkte 1
 VERSION = "1.30.0 (10.07.2026, 21:39 Uhr)"  # 1.30.0 (Level-2 Gruppe A, Punkte 7+8 — Frank-Freigabe 2026-07-10): RECALL-VERSTAERKUNG + SANFTES VERGESSEN. NEU POST /entries/touch {doc_ids}: registriert einen Abruf — access_count+1 und last_accessed_at=jetzt (Vergessens-Uhr zurueckgestellt) per set_payload auf alle Chunks (reine Metadaten, Text/Vektor unberuehrt). /search boostet oft abgerufene Eintraege SANFT multiplikativ (neues Runtime-Limit recall_boost_promille, Default 50 = max +5 Prozent ab 20 Abrufen, 0 = AUS): wirkt auf den dense-Score UND den RRF-Fusions-Score. BEWUSST NUR positiver Bonus, KEIN Alters-Malus — Eintraege ohne Abrufe ranken EXAKT wie bisher (access_count=0 -> Faktor 1.0; Regressionsschutz/Funktionserhalt Direktive #3); das sanfte Vergessen entsteht relativ (Nicht-Abgerufenes faellt zurueck, weil Abgerufenes steigt), GELOESCHT oder GEFILTERT wird NIE — jeder Eintrag bleibt jederzeit auffindbar und holt sich mit einem Abruf seinen Boost zurueck (MemoryBank-Muster). Alt: 1.29.0.
 VERSION = "1.31.0 (10.07.2026, 22:00 Uhr)"  # 1.31.0 (Level-2 Gruppe A, Punkt 4 — Frank-Freigabe 2026-07-10): BI-TEMPORALE FAKTEN. Optionale Payload-Felder valid_from/valid_until (YYYY-MM-DD), gesetzt AUSSCHLIESSLICH manuell ueber NEU PUT /entry/validity (Dashboard-Drawer) — NIE automatisch (Franks Vorgabe: kein automatisches Bewerten/Ersetzen). NICHTS wird geloescht oder gefiltert: abgelaufene Eintraege bleiben voll auffindbar, /search + by-title geben die Gueltigkeit nur als Kennzeichnung mit (der Agent sagt dann galt bis X). Alle Rebuild-Wege (Kategorie-Wechsel, PUT /entry, Papierkorb+Restore) ERHALTEN die Felder (Feld-Drift-Schutz qdrant.md Par. 9). Leeres Feld entfernt die Grenze (delete_payload). Wer will, fragt historisch (Wo wohnte ich 2024?) und aktuell (Wo wohne ich?) — beides bleibt beantwortbar. Alt: 1.30.0.
 VERSION = "1.32.0 (11.07.2026, 13:25 Uhr)"  # 1.32.0: PUT /entry erzeugt Chunks und Embeddings vollständig VOR jeder Löschung, schreibt und verifiziert den neuen Stand zuerst und entfernt erst danach alte doc_id-/Rest-Chunks. Ein Embedding-, Budget- oder Upsert-Fehler kann den bisherigen Eintrag dadurch nicht mehr vorzeitig löschen. Alt: 1.31.0.
+VERSION = "1.32.1 (11.07.2026, 19:51 Uhr)"  # 1.32.1: Atomare additive Kategorie-Zuordnung unter dem globalen Eintrags-Schreib-Lock verhindert verlorene parallele Ergänzungen. Alt: 1.32.0.
 
 # Startup-Banner (Observability-First: Log-Pfad + Version EINMAL ausgeben)
 _log(logging.INFO, "brain-api startet", version=VERSION, log_path=LOG_PATH)
@@ -1014,6 +1015,12 @@ class UpdateReq(BaseModel):
 class EntryCategoriesReq(BaseModel):
     doc_id: str = Field(..., min_length=1, description="ID des Eintrags, dessen Kategorie-Liste gesetzt wird")
     categories: list[str] = Field(..., min_length=1, max_length=12, description="Vollstaendige neue Kategorie-Liste (Multi-Category, 1:1 deutsche Rechtschreibung). Re-Embed, da die Kategorien den Vektor mitpraegen.")
+    user_id: str = Field(default="frank")
+
+
+class AddEntryCategoryReq(BaseModel):
+    doc_id: str = Field(..., min_length=1, description="ID des Eintrags, der eine weitere Kategorie erhaelt")
+    category: str = Field(..., min_length=1, max_length=120, description="Zusaetzliche Kategorie; vorhandene Kategorien bleiben erhalten")
     user_id: str = Field(default="frank")
 
 
@@ -1719,6 +1726,32 @@ def set_entry_categories(req: EntryCategoriesReq) -> dict:
                ok=applied, doc_id=req.doc_id, categories=cats, parents=parents, chunks=len(chunks),
                ms=int((time.time() - t0) * 1000))
     return {"ok": True, "doc_id": req.doc_id, "categories": cats, "parents": parents}
+
+
+@app.post("/entry/categories/add", dependencies=[Depends(require_auth)])
+@serialized_entry_write
+def add_entry_category(req: AddEntryCategoryReq) -> dict:
+    """Ergaenzt genau eine Kategorie atomar; parallele Additionen koennen sich nicht ueberschreiben."""
+    _require_store()
+    pts = _scroll(Filter(must=[
+        FieldCondition(key="doc_id", match=MatchValue(value=req.doc_id)),
+        FieldCondition(key="user_id", match=MatchValue(value=req.user_id)),
+    ]), limit=1, with_payload=["doc_id", "category", "categories"])
+    if not pts:
+        raise HTTPException(status_code=404, detail="Eintrag nicht gefunden")
+    current = cats_from_payload(pts[0].payload or {})
+    proposed = canonical_category(req.category)
+    if not proposed:
+        raise HTTPException(status_code=400, detail="Kategorie erforderlich")
+    if any(category_key(proposed) == category_key(value) for value in current):
+        return {"ok": True, "doc_id": req.doc_id, "categories": current, "added": False}
+    if len(current) >= 12:
+        raise HTTPException(status_code=400, detail="Ein Eintrag kann hoechstens 12 Kategorien haben")
+    result = set_entry_categories(EntryCategoriesReq(
+        doc_id=req.doc_id, categories=current + [proposed], user_id=req.user_id
+    ))
+    result["added"] = True
+    return result
 
 
 @app.post("/purge", dependencies=[Depends(require_auth)])
@@ -2551,5 +2584,5 @@ def entities_delete(name: str, user_id: str = "frank") -> dict:
 @app.get("/")
 def root() -> dict:
     return {"service": "Second Brain — brain-api (1:1-Speicher)", "version": VERSION,
-            "endpoints": ["/health", "/store", "/by-title", "/by-category", "/by-parent", "/by-date", "/search", "/list", "/entry", "/entry/categories", "/reembed-all", "/forget",
+            "endpoints": ["/health", "/store", "/by-title", "/by-category", "/by-parent", "/by-date", "/search", "/list", "/entry", "/entry/categories", "/entry/categories/add", "/reembed-all", "/forget",
                           "/entities/upsert", "/entities/find", "/entities/list", "/entities/docs", "/entities/unlink"]}
