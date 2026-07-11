@@ -250,9 +250,12 @@ try {
             # plugin-toggle spies on process-global state (process.cwd, TuiConfig) and flaked when
             # sharing a run with other suites (2026-07-11: 1 fail in-suite, 3/3 pass standalone).
             # Same isolation reasoning as thread.test.ts above — all tests still run.
-            bun test "test/cli/tui/plugin-toggle.test.ts"
+            # --timeout 15000 lifts bun's 5 s default: under full build load the machine is busy
+            # (config Git-Bash-path test needed 6.5 s on 2026-07-11); tests with an explicit
+            # per-test timeout keep their own value.
+            bun test --timeout 15000 "test/cli/tui/plugin-toggle.test.ts"
             if ($LASTEXITCODE -ne 0) { throw "Plugin-Toggle-Regressionstest fehlgeschlagen." }
-            bun test "test/plugin/install.test.ts" "test/config/config.test.ts"
+            bun test --timeout 15000 "test/plugin/install.test.ts" "test/config/config.test.ts"
             if ($LASTEXITCODE -ne 0) { throw "CLI-Regressionstests fehlgeschlagen." }
         } finally { Pop-Location }
 
