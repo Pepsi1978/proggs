@@ -119,6 +119,27 @@ public sealed class OpenCodeLauncherService
 
             // Bevorzugt Windows Terminal (AppX, evtl. nicht im PATH) — Fallback: eigene Konsole.
             var wt = ResolveWt();
+            var tabColor = PickTerminalTabColor();
+            // WICHTIG: opencode wird über ein Temp-Script (-File) gestartet, NICHT über einen
+            // inline "-Command"-String. Ein solcher String enthielte das Semikolon aus
+            // "$env:OPENCODE_CONFIG='...'; & opencode ...". Windows Terminal deutet ';' in seiner
+            // Argumentliste als eigenen Kommando-Trenner und versucht den Teil dahinter als
+            // separates Programm zu starten (Fehler 0x80070002 "Die angegebene Datei wurde nicht
+            // gefunden") — es öffnen sich ein leeres pwsh-Fenster (Teil vor ';') und ein
+            // Fehler-Fenster (Teil danach), bis der Konsolen-Fallback ohne wt greift. Ein
+            // -File-Script hat kein ';' in der wt-Argumentliste und ist immun (gleiche Technik
+            // wie der bereits funktionierende Claude-Code-Weg).
+            var innerScript = BuildOpenCodeStartScript(modelString, workDir, thinkingLevel, profileConfigPath);
+            var shell = ResolvePowerShellExecutable();
+            var robustLauncherScript = shell.IsPwsh ? ResolveRobustLauncherScript() : null;
+
+            if (!string.IsNullOrEmpty(wt) && !string.IsNullOrEmpty(robustLauncherScript))
+            {
+                var robustProcess = LaunchOpenCodeViaRobustPowerShell(wt, robustLauncherScript, shell.Path, innerScript, workDir, modelString, thinkingLevel, tabColor, log);
+                log.Info("OpenCodeLauncherService", "Launch", $"robuster Windows-Terminal-Launcher gestartet (PID {robustProcess?.Id})", new { modelString, workDir, thinkingLevel, tabColor = tabColor.Name });
+                return;
+            }
+
             var psi = new ProcessStartInfo
             {
                 UseShellExecute = false,
@@ -128,16 +149,6 @@ public sealed class OpenCodeLauncherService
 
             if (!string.IsNullOrEmpty(wt))
             {
-                var tabColor = PickTerminalTabColor();
-                var shell = ResolvePowerShellExecutable();
-                var robustLauncherScript = shell.IsPwsh ? ResolveRobustLauncherScript() : null;
-                if (!string.IsNullOrEmpty(robustLauncherScript))
-                {
-                    var robustProcess = LaunchViaRobustPowerShell(wt, robustLauncherScript, shell.Path, modelString, workDir, thinkingLevel, profileConfigPath, tabColor, log);
-                    log.Info("OpenCodeLauncherService", "Launch", $"robuster Windows-Terminal-Launcher gestartet (PID {robustProcess?.Id})", new { modelString, workDir, thinkingLevel, tabColor = tabColor.Name });
-                    return;
-                }
-
                 log.Warn("OpenCodeLauncherService", "Launch", shell.IsPwsh
                     ? "start-wt-common.ps1 nicht gefunden; nutze direkten Windows-Terminal-Start ohne Retry-Wrapper"
                     : "pwsh.exe nicht gefunden; nutze Windows PowerShell ohne Retry-Wrapper");
@@ -153,19 +164,18 @@ public sealed class OpenCodeLauncherService
                 psi.ArgumentList.Add("-NoExit");
                 psi.ArgumentList.Add("-ExecutionPolicy");
                 psi.ArgumentList.Add("Bypass");
-                psi.ArgumentList.Add("-Command");
-                psi.ArgumentList.Add(BuildOpenCodeCommand(modelString, thinkingLevel, profileConfigPath));
+                psi.ArgumentList.Add("-File");
+                psi.ArgumentList.Add(innerScript);
                 log.Info("OpenCodeLauncherService", "Launch", $"Terminal-Tabfarbe gewählt: {tabColor.Name} ({tabColor.Hex})");
             }
             else
             {
-                var shell = ResolvePowerShellExecutable();
                 psi.FileName = shell.Path;
                 psi.ArgumentList.Add("-NoExit");
                 psi.ArgumentList.Add("-ExecutionPolicy");
                 psi.ArgumentList.Add("Bypass");
-                psi.ArgumentList.Add("-Command");
-                psi.ArgumentList.Add($"Set-Location -LiteralPath '{EscapePowerShellSingleQuotedValue(workDir)}'; {BuildOpenCodeCommand(modelString, thinkingLevel, profileConfigPath)}");
+                psi.ArgumentList.Add("-File");
+                psi.ArgumentList.Add(innerScript);
             }
 
             var p = Process.Start(psi);
@@ -359,19 +369,18 @@ public sealed class OpenCodeLauncherService
         return File.Exists(repoMirror) ? repoMirror : null;
     }
 
-    private static Process? LaunchViaRobustPowerShell(
+    private static Process? LaunchOpenCodeViaRobustPowerShell(
         string wtPath,
         string robustLauncherScript,
         string powerShellPath,
-        string modelString,
+        string innerScript,
         string workDir,
+        string modelString,
         string? thinkingLevel,
-        string profileConfigPath,
         TerminalTabColor tabColor,
         Logger log)
     {
         var title = string.IsNullOrWhiteSpace(thinkingLevel) ? $"OpenCode-{tabColor.Name}" : $"OpenCode-{tabColor.Name}-{thinkingLevel}";
-        var command = BuildOpenCodeCommand(modelString, thinkingLevel, profileConfigPath);
         var tabArgs = new[]
         {
             "new-tab",
@@ -381,13 +390,13 @@ public sealed class OpenCodeLauncherService
             powerShellPath,
             "-NoExit",
             "-ExecutionPolicy", "Bypass",
-            "-Command", command
+            "-File", innerScript
         };
         var fallbackArgs = new[]
         {
             "-NoExit",
             "-ExecutionPolicy", "Bypass",
-            "-Command", command
+            "-File", innerScript
         };
 
         var tempScript = Path.Combine(Path.GetTempPath(), $"opencode-launcher-wt-{Guid.NewGuid():N}.ps1");
@@ -397,7 +406,7 @@ $ErrorActionPreference = 'Continue'
 $tabArgs = @({{PowerShellArrayLiteral(tabArgs)}})
 $fallbackArgs = @({{PowerShellArrayLiteral(fallbackArgs)}})
 try {
-    $ok = Start-WtCliRobust -LogFile {{PowerShellLiteral(log.LogPath)}} -WtPath {{PowerShellLiteral(wtPath)}} -TabArgs $tabArgs -InnerMatch {{PowerShellLiteral("opencode(?:\\.exe)?['\"]?\\s+-m")}} -FallbackPwshArgs $fallbackArgs -FallbackWorkDir {{PowerShellLiteral(workDir)}}
+    $ok = Start-WtCliRobust -LogFile {{PowerShellLiteral(log.LogPath)}} -WtPath {{PowerShellLiteral(wtPath)}} -TabArgs $tabArgs -InnerMatch 'opencode-launcher-opencode-run-' -FallbackPwshArgs $fallbackArgs -FallbackWorkDir {{PowerShellLiteral(workDir)}}
     if (-not $ok) { exit 2 }
 } finally {
     Remove-Item -LiteralPath $PSCommandPath -Force -ErrorAction SilentlyContinue
@@ -417,6 +426,7 @@ try {
         psi.ArgumentList.Add("Bypass");
         psi.ArgumentList.Add("-File");
         psi.ArgumentList.Add(tempScript);
+        log.Info("OpenCodeLauncherService", "LaunchOpenCodeViaRobustPowerShell", "OpenCode-Start vorbereitet", new { modelString, thinkingLevel, tabColor = tabColor.Name });
         return Process.Start(psi);
     }
 
@@ -560,17 +570,41 @@ try {
 
     private static string PowerShellLiteral(string value) => $"'{EscapePowerShellSingleQuotedValue(value)}'";
 
-    private static string BuildOpenCodeCommand(string modelString, string? thinkingLevel, string profileConfigPath)
+    /// <summary>
+    /// Schreibt ein Temp-Script, das die Profil-Config setzt und opencode startet, und gibt
+    /// dessen Pfad zurück. Bewusst ein -File-Script statt eines inline "-Command"-Strings:
+    /// Der Command enthielte das Semikolon aus "$env:OPENCODE_CONFIG='...'; & opencode ...",
+    /// und Windows Terminal deutet ';' in seiner Argumentliste als eigenen Kommando-Trenner
+    /// (der Teil dahinter wird als separates Programm gestartet → Fehler 0x80070002
+    /// "Die angegebene Datei wurde nicht gefunden"). Ein -File-Script hat kein ';' in der
+    /// wt-Argumentliste und ist damit immun — dieselbe Technik wie der Claude-Code-Weg.
+    /// $env:OPENCODE_CONFIG und der opencode-Aufruf stehen auf getrennten Zeilen (kein ';').
+    /// </summary>
+    private static string BuildOpenCodeStartScript(string modelString, string workDir, string? thinkingLevel, string profileConfigPath)
     {
+        thinkingLevel = NormalizeThinkingLevel(thinkingLevel);
         var executable = ResolveOpenCodeExecutable();
-        var command = Path.IsPathFullyQualified(executable)
+        var invoke = Path.IsPathFullyQualified(executable)
             ? $"& '{EscapePowerShellSingleQuotedValue(executable)}'"
             : executable;
         var variant = Path.IsPathFullyQualified(executable) && !string.IsNullOrWhiteSpace(thinkingLevel)
             ? $" --variant '{EscapePowerShellSingleQuotedValue(thinkingLevel)}'"
             : string.Empty;
-        var config = EscapePowerShellSingleQuotedValue(profileConfigPath);
-        return $"$env:OPENCODE_CONFIG = '{config}'; {command} -m '{EscapePowerShellSingleQuotedValue(modelString)}'{variant}";
+        var openCodeInvocation = $"{invoke} -m '{EscapePowerShellSingleQuotedValue(modelString)}'{variant}";
+
+        var tempScript = Path.Combine(Path.GetTempPath(), $"opencode-launcher-opencode-run-{Guid.NewGuid():N}.ps1");
+        var script = $$"""
+$ErrorActionPreference = 'Continue'
+Set-Location -LiteralPath {{PowerShellLiteral(workDir)}}
+$env:OPENCODE_CONFIG = {{PowerShellLiteral(profileConfigPath)}}
+try {
+    {{openCodeInvocation}}
+} finally {
+    Remove-Item -LiteralPath $PSCommandPath -Force -ErrorAction SilentlyContinue
+}
+""";
+        File.WriteAllText(tempScript, script, new UTF8Encoding(encoderShouldEmitUTF8Identifier: false));
+        return tempScript;
     }
 
     private static string ResolveOpenCodeExecutable()
