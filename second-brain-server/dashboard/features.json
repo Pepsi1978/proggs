@@ -1,7 +1,15 @@
 {
-	"stand": "10.07.2026, 22:34 Uhr",
+	"stand": "11.07.2026, 13:25 Uhr",
 	"hinweis": "PFLEGE-PFLICHT: Bei JEDEM Deploy, der ein neues System/Feature einbaut, hier einen Eintrag ERGÄNZEN (neueste zuerst). SCHREIBWEISE (Dauer-Regel): leichtes, verständliches Deutsch, kurze Sätze; ALLE Fachbegriffe, Namen und Zahlen (z.B. BM25, RRF, Qdrant, ENV-Variablen, Endpunkt-Namen) BEHALTEN, aber jeden in einem kurzen Halbsatz erklären — NIE durch Weglassen vereinfachen; kompakt halten (der Hauptagent liest über das Werkzeug 'was_kann_cortex' ALLE Einträge auf einmal ein), aber vollständig genug, dass man erkennt WAS eingebaut wurde; einfache Überschrift. Ähnliche/redundante Einträge dürfen zusammengefasst werden — Datum sekundär, entscheidend ist WAS Cortex kann. Quelle des Info-Bereichs in den Dashboard-Einstellungen (GET /api/features). Verankert in DEPLOY.md.",
 	"features": [
+		{
+			"id": "nachbearbeitbarer-speicherdialog",
+			"eingebaut": "11.07.2026, 13:25 Uhr",
+			"dienst": "brain-api 1.32.0 + agent 0.74.0 + Cortex Android 0.6.8 + dashboard 0.74.0",
+			"name": "Nachbearbeitbarer Speicherdialog mit Volltextbeleg",
+			"kurz": "Gesprochene Speicherbefehle werden zu faktengetreuen Einträgen formuliert; vor und nach dem Speichern sind Kategorie, Titel und Volltext sichtbar. Der zuletzt gespeicherte Eintrag bleibt im Gespräch zitier- und bearbeitbar, einschließlich zusätzlicher Kategorien.",
+			"erklaerung": "Der Speicherdialog ist jetzt eine fortlaufende Zustandsmaschine statt einer starren Ja/Nein-Sackgasse. Formelle Hüllen wie 'Bitte speichern Sie unter Geräte ab, dass …' sowie Höflichkeitsfloskeln werden entfernt; Namen, Zahlen, Zeiten, Eigenschaften, Negationen und Unsicherheiten bleiben geschützt. Vor dem Schreiben zeigt Cortex den vollständigen vorgesehenen Text, den Titel und alle Kategorien. Nach der brain-api-Quittung zeigt es den tatsächlich gespeicherten Volltext und die doc_id hält den Eintrag eindeutig fest. Über 'Editieren' kann der Text in Vorschau-, Dubletten- und Erfolgszuständen geändert und mit 'Speichern' übernommen werden. Im weiteren Gespräch versteht der Agent Befehle wie 'zitiere den Eintrag', 'ändere den Titel' oder 'füge Kategorie X hinzu'; jede freie Änderung wird als vollständiger neuer Zustand angezeigt und erst nach einem weiteren Ja per PUT /entry geschrieben. Bis zu 12 Mehrfachkategorien bleiben erhalten. last_memory wird mit der Agent-Session auf Platte gespiegelt, daher überlebt der Bezug einen Agent-Neustart. Diskettenmodus und Automatikmodus nutzen dieselbe Speziallogik; direkte 1:1-Schreiber wie EntropieReductor bleiben unverändert."
+		},
 		{
 			"id": "meta-gedaechtnis-feedback",
 			"eingebaut": "10.07.2026, 22:34 Uhr",

@@ -21,6 +21,11 @@ data class StoredChatMessage(
     val action: String?,
     val category: String?,
     val title: String?,
+    val categories: List<String> = emptyList(),
+    val docId: String? = null,
+    val memoryText: String? = null,
+    val storedText: String? = null,
+    val memoryEditable: Boolean = false,
     val recallHits: Int?,
     val stored: Boolean,
     val timestamp: Long
@@ -38,7 +43,10 @@ data class OutboxItem(
     val contextMode: String,
     val responseSize: String,
     val requestId: String,
-    val createdAt: Long
+    val createdAt: Long,
+    val memoryEdit: Boolean = false,
+    val memoryDocId: String? = null,
+    val memoryCategories: List<String> = emptyList()
 )
 
 data class PendingSessionEnd(
@@ -83,7 +91,7 @@ object ChatSessionStore {
 
     fun loadMessages(sessionId: String): List<StoredChatMessage> = helper.readableDatabase.query(
         "messages",
-        arrayOf("id", "text", "is_user", "action", "category", "title", "recall_hits", "stored", "timestamp"),
+        arrayOf("id", "text", "is_user", "action", "category", "title", "categories", "doc_id", "memory_text", "stored_text", "memory_editable", "recall_hits", "stored", "timestamp"),
         "session_id = ?",
         arrayOf(sessionId),
         null,
@@ -100,9 +108,14 @@ object ChatSessionStore {
                         action = cursor.getStringOrNull(3),
                         category = cursor.getStringOrNull(4),
                         title = cursor.getStringOrNull(5),
-                        recallHits = if (cursor.isNull(6)) null else cursor.getInt(6),
-                        stored = cursor.getInt(7) == 1,
-                        timestamp = cursor.getLong(8)
+                        categories = decodeCategories(cursor.getStringOrNull(6)),
+                        docId = cursor.getStringOrNull(7),
+                        memoryText = cursor.getStringOrNull(8),
+                        storedText = cursor.getStringOrNull(9),
+                        memoryEditable = cursor.getInt(10) == 1,
+                        recallHits = if (cursor.isNull(11)) null else cursor.getInt(11),
+                        stored = cursor.getInt(12) == 1,
+                        timestamp = cursor.getLong(13)
                     )
                 )
             }
@@ -135,6 +148,9 @@ object ChatSessionStore {
                 put("context_mode", item.contextMode)
                 put("response_size", item.responseSize)
                 put("request_id", item.requestId)
+                put("memory_edit", if (item.memoryEdit) 1 else 0)
+                put("memory_doc_id", item.memoryDocId)
+                put("memory_categories", encodeCategories(item.memoryCategories))
                 put("created_at", item.createdAt)
             },
             SQLiteDatabase.CONFLICT_REPLACE
@@ -143,7 +159,7 @@ object ChatSessionStore {
 
     fun listOutbox(): List<OutboxItem> = helper.readableDatabase.query(
         "outbox",
-        arrayOf("id", "session_id", "text", "category", "title", "context_mode", "response_size", "request_id", "created_at"),
+        arrayOf("id", "session_id", "text", "category", "title", "context_mode", "response_size", "request_id", "memory_edit", "memory_doc_id", "memory_categories", "created_at"),
         null, null, null, null,
         "created_at ASC"
     ).use { cursor ->
@@ -159,7 +175,10 @@ object ChatSessionStore {
                         contextMode = cursor.getString(5),
                         responseSize = cursor.getString(6),
                         requestId = cursor.getString(7),
-                        createdAt = cursor.getLong(8)
+                        memoryEdit = cursor.getInt(8) == 1,
+                        memoryDocId = cursor.getStringOrNull(9),
+                        memoryCategories = decodeCategories(cursor.getStringOrNull(10)),
+                        createdAt = cursor.getLong(11)
                     )
                 )
             }
@@ -227,6 +246,11 @@ object ChatSessionStore {
                     put("action", message.action)
                     put("category", message.category)
                     put("title", message.title)
+                    put("categories", encodeCategories(message.categories))
+                    put("doc_id", message.docId)
+                    put("memory_text", message.memoryText)
+                    put("stored_text", message.storedText)
+                    put("memory_editable", if (message.memoryEditable) 1 else 0)
                     put("recall_hits", message.recallHits)
                     put("stored", if (message.stored) 1 else 0)
                     put("timestamp", message.timestamp)
@@ -303,6 +327,9 @@ object ChatSessionStore {
             context_mode TEXT NOT NULL,
             response_size TEXT NOT NULL,
             request_id TEXT NOT NULL,
+            memory_edit INTEGER NOT NULL DEFAULT 0,
+            memory_doc_id TEXT,
+            memory_categories TEXT,
             created_at INTEGER NOT NULL
         )
     """
@@ -314,7 +341,7 @@ object ChatSessionStore {
         )
     """
 
-    private class Helper(context: Context) : SQLiteOpenHelper(context, "cortex_chat_sessions.db", null, 3) {
+    private class Helper(context: Context) : SQLiteOpenHelper(context, "cortex_chat_sessions.db", null, 4) {
         override fun onConfigure(db: SQLiteDatabase) {
             // Statt einmaligem "PRAGMA foreign_keys=ON" in init(): das Pragma gilt nur pro
             // Connection — onConfigure setzt es garantiert fuer JEDE Connection des Helpers.
@@ -342,6 +369,11 @@ object ChatSessionStore {
                     action TEXT,
                     category TEXT,
                     title TEXT,
+                    categories TEXT,
+                    doc_id TEXT,
+                    memory_text TEXT,
+                    stored_text TEXT,
+                    memory_editable INTEGER NOT NULL DEFAULT 0,
                     recall_hits INTEGER,
                     stored INTEGER NOT NULL,
                     timestamp INTEGER NOT NULL,
@@ -366,8 +398,27 @@ object ChatSessionStore {
             if (oldVersion < 3) {
                 db.execSQL(PENDING_SESSION_END_TABLE_SQL.trimIndent())
             }
+            if (oldVersion < 4) {
+                db.execSQL("ALTER TABLE messages ADD COLUMN categories TEXT")
+                db.execSQL("ALTER TABLE messages ADD COLUMN doc_id TEXT")
+                db.execSQL("ALTER TABLE messages ADD COLUMN memory_text TEXT")
+                db.execSQL("ALTER TABLE messages ADD COLUMN stored_text TEXT")
+                db.execSQL("ALTER TABLE messages ADD COLUMN memory_editable INTEGER NOT NULL DEFAULT 0")
+                if (oldVersion >= 2) {
+                    db.execSQL("ALTER TABLE outbox ADD COLUMN memory_edit INTEGER NOT NULL DEFAULT 0")
+                    db.execSQL("ALTER TABLE outbox ADD COLUMN memory_doc_id TEXT")
+                    db.execSQL("ALTER TABLE outbox ADD COLUMN memory_categories TEXT")
+                }
+            }
         }
     }
+
+    private fun encodeCategories(categories: List<String>): String? =
+        categories.map(String::trim).filter(String::isNotEmpty).distinct().take(12)
+            .takeIf { it.isNotEmpty() }?.joinToString("\u001F")
+
+    private fun decodeCategories(value: String?): List<String> =
+        value?.split('\u001F')?.map(String::trim)?.filter(String::isNotEmpty)?.distinct().orEmpty()
 }
 
 private fun android.database.Cursor.getStringOrNull(index: Int): String? =

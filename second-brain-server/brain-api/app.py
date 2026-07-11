@@ -49,6 +49,7 @@ import unicodedata
 import uuid
 from concurrent.futures import ThreadPoolExecutor
 from datetime import date, datetime, timedelta, timezone
+from functools import wraps
 from logging.handlers import RotatingFileHandler
 from pathlib import Path
 from typing import Any
@@ -448,6 +449,7 @@ VERSION = "1.28.1 (10.07.2026, 19:40 Uhr)"  # 1.28.1: GET /entry/categories prot
 VERSION = "1.29.0 (10.07.2026, 21:05 Uhr)"  # 1.29.0 (Level-2 Gruppe A, Punkte 1+10 — Frank-Freigabe 2026-07-10): GEDAECHTNIS-EBENE + VERTRAUENS-LEVEL. Neues Payload-Feld layer (kurzzeit/langzeit, Keyword-Index): neue /store-Eintraege landen standardmaessig im KURZZEIT-Gedaechtnis (Arbeitsgedaechtnis); Bestand OHNE Feld gilt beim Lesen als langzeit (payload_layer() — KEINE Migration noetig, verlustfrei). Die SUCHE filtert NIE nach layer (reines Organisations-Metadatum). ALLE Payload-Rebuild-Wege (entry/category, entry/categories, PUT /entry, Papierkorb+Restore) erhalten die Ebene (Feld-Drift-Schutz qdrant.md Par. 9). NEU POST /layer/promote {min_age_days}: befoerdert Kurzzeit-Eintraege ab Mindestalter per set_payload ins Langzeitgedaechtnis (NUR das Flag — Text/Vektor/Kategorien unberuehrt; nie zurueck; idempotent; fuer den Nacht-Bibliothekar). trust (hoch/mittel) wird NICHT gespeichert, sondern deterministisch aus source abgeleitet (source_trust: manual/chat/app/dashboard=hoch, sonst mittel) und in by-title/by-category/category-item/by-parent mit ausgegeben (layer ebenso). Speicher-Pfad-Verhalten sonst UNANGETASTET (Franks Vorgabe: keine Bewertung/Ersetzung beim Speichern). Alt: 1.28.1.
 VERSION = "1.30.0 (10.07.2026, 21:39 Uhr)"  # 1.30.0 (Level-2 Gruppe A, Punkte 7+8 — Frank-Freigabe 2026-07-10): RECALL-VERSTAERKUNG + SANFTES VERGESSEN. NEU POST /entries/touch {doc_ids}: registriert einen Abruf — access_count+1 und last_accessed_at=jetzt (Vergessens-Uhr zurueckgestellt) per set_payload auf alle Chunks (reine Metadaten, Text/Vektor unberuehrt). /search boostet oft abgerufene Eintraege SANFT multiplikativ (neues Runtime-Limit recall_boost_promille, Default 50 = max +5 Prozent ab 20 Abrufen, 0 = AUS): wirkt auf den dense-Score UND den RRF-Fusions-Score. BEWUSST NUR positiver Bonus, KEIN Alters-Malus — Eintraege ohne Abrufe ranken EXAKT wie bisher (access_count=0 -> Faktor 1.0; Regressionsschutz/Funktionserhalt Direktive #3); das sanfte Vergessen entsteht relativ (Nicht-Abgerufenes faellt zurueck, weil Abgerufenes steigt), GELOESCHT oder GEFILTERT wird NIE — jeder Eintrag bleibt jederzeit auffindbar und holt sich mit einem Abruf seinen Boost zurueck (MemoryBank-Muster). Alt: 1.29.0.
 VERSION = "1.31.0 (10.07.2026, 22:00 Uhr)"  # 1.31.0 (Level-2 Gruppe A, Punkt 4 — Frank-Freigabe 2026-07-10): BI-TEMPORALE FAKTEN. Optionale Payload-Felder valid_from/valid_until (YYYY-MM-DD), gesetzt AUSSCHLIESSLICH manuell ueber NEU PUT /entry/validity (Dashboard-Drawer) — NIE automatisch (Franks Vorgabe: kein automatisches Bewerten/Ersetzen). NICHTS wird geloescht oder gefiltert: abgelaufene Eintraege bleiben voll auffindbar, /search + by-title geben die Gueltigkeit nur als Kennzeichnung mit (der Agent sagt dann galt bis X). Alle Rebuild-Wege (Kategorie-Wechsel, PUT /entry, Papierkorb+Restore) ERHALTEN die Felder (Feld-Drift-Schutz qdrant.md Par. 9). Leeres Feld entfernt die Grenze (delete_payload). Wer will, fragt historisch (Wo wohnte ich 2024?) und aktuell (Wo wohne ich?) — beides bleibt beantwortbar. Alt: 1.30.0.
+VERSION = "1.32.0 (11.07.2026, 13:25 Uhr)"  # 1.32.0: PUT /entry erzeugt Chunks und Embeddings vollständig VOR jeder Löschung, schreibt und verifiziert den neuen Stand zuerst und entfernt erst danach alte doc_id-/Rest-Chunks. Ein Embedding-, Budget- oder Upsert-Fehler kann den bisherigen Eintrag dadurch nicht mehr vorzeitig löschen. Alt: 1.31.0.
 
 # Startup-Banner (Observability-First: Log-Pfad + Version EINMAL ausgeben)
 _log(logging.INFO, "brain-api startet", version=VERSION, log_path=LOG_PATH)
@@ -731,8 +733,18 @@ def point_id(doc_id: str, idx: int) -> str:
 
 def _delete_doc(doc_id: str) -> None:
     qc.delete(collection_name=COLLECTION,
-              points_selector=Filter(must=[FieldCondition(key="doc_id", match=MatchValue(value=doc_id))]))
+              points_selector=Filter(must=[FieldCondition(key="doc_id", match=MatchValue(value=doc_id))]),
+              wait=True)
     _bm25_invalidate()   # Hybrid-Suche: geloeschte Eintraege sofort aus dem Stichwort-Index
+
+
+def _restore_doc_snapshot(doc_id: str, snapshot: list) -> None:
+    """Rollback eines Dokument-Rebuilds aus Payload+Vektor-Snapshot; leer bedeutet Ziel entfernen."""
+    _delete_doc(doc_id)
+    if snapshot:
+        restored = [PointStruct(id=p.id, vector=p.vector, payload=dict(p.payload or {})) for p in snapshot]
+        _upsert_batched(restored, wait=True)
+    _bm25_invalidate()
 
 
 # --- Papierkorb (Soft-Delete): thread-sicher + atomar (Handler laufen im Threadpool, fastapi §1) -----
@@ -761,7 +773,8 @@ def _trash_save(items: list[dict]) -> None:
     os.replace(tmp, TRASH_PATH)
 
 
-def _scroll(flt: "Filter | None", limit: "int | None" = None, with_payload=True, page: int = 1000) -> list:
+def _scroll(flt: "Filter | None", limit: "int | None" = None, with_payload=True, page: int = 1000,
+            with_vectors: bool = False) -> list:
     # Paginiert ueber ALLE passenden Punkte (Frank 2026-06-26: 'vollstaendig abrufen' — auch >10.000
     # Chunks, die ein EINZELNER scroll-Aufruf still abschneiden wuerde). limit=None -> ALLE (in
     # page-grossen Seiten via next_page_offset). limit=N -> hoechstens N (z.B. by-title limit=1).
@@ -775,7 +788,7 @@ def _scroll(flt: "Filter | None", limit: "int | None" = None, with_payload=True,
         if want <= 0:
             break
         pts, off = qc.scroll(collection_name=COLLECTION, scroll_filter=flt, limit=want,
-                             offset=off, with_payload=with_payload)
+                             offset=off, with_payload=with_payload, with_vectors=with_vectors)
         out.extend(pts)
         if off is None or not pts:
             break
@@ -1041,6 +1054,24 @@ class PurgeReq(BaseModel):
 # ---------------------------------------------------------------------------
 app = FastAPI(title="Second Brain — brain-api (1:1-Speicher)", version=VERSION)
 
+# Ein gemeinsamer reentranter Lock schützt Snapshot/Rebuild/Rollback vor parallelen Schreibwegen.
+# RLock ist nötig, weil Restore-/Hilfswege intern weitere geschützte Funktionen aufrufen können.
+_ENTRY_WRITE_LOCK = threading.RLock()
+ENTRY_WRITE_LOCK_TIMEOUT_S = 15.0
+
+
+def serialized_entry_write(func):
+    @wraps(func)
+    def wrapped(*args, **kwargs):
+        acquired = _ENTRY_WRITE_LOCK.acquire(timeout=ENTRY_WRITE_LOCK_TIMEOUT_S)
+        if not acquired:
+            raise HTTPException(status_code=503, detail="Ein anderer Speichervorgang läuft noch; bitte gleich erneut versuchen")
+        try:
+            return func(*args, **kwargs)
+        finally:
+            _ENTRY_WRITE_LOCK.release()
+    return wrapped
+
 
 @app.exception_handler(Exception)
 async def unhandled(request: Request, exc: Exception) -> JSONResponse:
@@ -1098,6 +1129,7 @@ def put_limits(req: LimitsReq) -> dict:
 
 
 @app.post("/store", dependencies=[Depends(require_auth)])
+@serialized_entry_write
 def store(req: StoreReq) -> dict:
     """Speichert Text WORTWOERTLICH 1:1. Mit Titel: ersetzt einen vorhandenen Eintrag gleichen Titels."""
     _require_store()
@@ -1306,6 +1338,7 @@ def by_parent(parent: str, user_id: str = "frank") -> dict:
 
 
 @app.post("/backfill-parent", dependencies=[Depends(require_auth)])
+@serialized_entry_write
 def backfill_parent(user_id: str = "frank") -> dict:
     """Einmal-Migration: setzt das 'parent'-Feld (Hauptkategorie vor dem '/') auf ALLEN bestehenden
     Eintraegen per set_payload (KEIN Re-Embed — billig). Macht 'alles unter Haupt' auch fuer den
@@ -1343,6 +1376,7 @@ _VALIDITY_DATE_RE = re.compile(r"^\d{4}-\d{2}-\d{2}$")
 
 
 @app.put("/entry/validity", dependencies=[Depends(require_auth)])
+@serialized_entry_write
 def entry_validity(req: ValidityReq) -> dict:
     """Bi-temporale Fakten (Level-2 #4): setzt gueltig-ab/gueltig-bis EINES Eintrags.
 
@@ -1384,6 +1418,7 @@ class TouchReq(BaseModel):
 
 
 @app.post("/entries/touch", dependencies=[Depends(require_auth)])
+@serialized_entry_write
 def entries_touch(req: TouchReq) -> dict:
     """Recall-Verstaerkung (Level-2 #7): registriert einen Abruf — erhoeht access_count und
     setzt last_accessed_at (die 'Vergessens-Uhr' wird zurueckgestellt). Reine Metadaten
@@ -1414,6 +1449,7 @@ class PromoteLayerReq(BaseModel):
 
 
 @app.post("/layer/promote", dependencies=[Depends(require_auth)])
+@serialized_entry_write
 def promote_layer(req: PromoteLayerReq) -> dict:
     """Befoerdert bewaehrte Kurzzeit-Eintraege ins Langzeitgedaechtnis (Level-2 #1, Nacht-Task).
 
@@ -1473,6 +1509,7 @@ def category_counts(user_id: str = "frank") -> dict:
 
 
 @app.post("/rename-category", dependencies=[Depends(require_auth)])
+@serialized_entry_write
 def rename_category(req: RenameCategoryReq) -> dict:
     """Benennt eine Kategorie in ALLEN Payloads um (set_payload — der Vektor bleibt unangetastet,
     KEIN Re-Embedding). Existiert 'new' bereits, ist das Ergebnis ein Merge (alle 'old'-Eintraege
@@ -1519,6 +1556,7 @@ def rename_category(req: RenameCategoryReq) -> dict:
 
 
 @app.post("/detach-category", dependencies=[Depends(require_auth)])
+@serialized_entry_write
 def detach_category(req: DetachCategoryReq) -> dict:
     """Loescht die KATEGORIE, nicht die Eintraege: setzt category auf '' bei allen Eintraegen
     dieser Kategorie. Die Eintraege (Vektoren + Volltext) bleiben vollstaendig erhalten — nur das
@@ -1562,6 +1600,7 @@ def detach_category(req: DetachCategoryReq) -> dict:
 
 
 @app.post("/entry/category", dependencies=[Depends(require_auth)])
+@serialized_entry_write
 def set_entry_category(req: EntryCategoryReq) -> dict:
     """Aendert die Kategorie EINES Eintrags (per doc_id). Da die Kategorie das EMBEDDING mitpraegt
     (metadata-enriched, best-practices/server/rag-retrieval.md §4), reicht set_payload NICHT mehr —
@@ -1633,6 +1672,7 @@ def get_entry_categories(doc_id: str, user_id: str = "frank") -> dict:
 
 
 @app.post("/entry/categories", dependencies=[Depends(require_auth)])
+@serialized_entry_write
 def set_entry_categories(req: EntryCategoriesReq) -> dict:
     """Setzt die VOLLSTAENDIGE Kategorie-Liste EINES Eintrags (Multi-Category, hinter dem Drawer-Plus).
     Da die Kategorien das EMBEDDING mitpraegen, wird FRISCH neu eingebettet (full_text/Titel/created_at
@@ -1682,6 +1722,7 @@ def set_entry_categories(req: EntryCategoriesReq) -> dict:
 
 
 @app.post("/purge", dependencies=[Depends(require_auth)])
+@serialized_entry_write
 def purge_user(req: PurgeReq) -> dict:
     """HARTES Loeschen ALLER Eintraege eines TEST-Nutzers (qc.delete, KEIN Papierkorb) — fuer die
     Eval-Aufraeumung. SCHUTZ: nur user_ids die mit 'eval' beginnen; 'frank' und alles andere ist
@@ -1969,6 +2010,7 @@ def list_docs(user_id: str = "frank", limit: int = 500) -> dict:
 
 
 @app.delete("/by-title", dependencies=[Depends(require_auth)])
+@serialized_entry_write
 def forget(title: str, user_id: str = "frank") -> dict:
     """Loescht den Eintrag mit diesem Titel komplett."""
     _require_store()
@@ -1984,6 +2026,7 @@ def forget(title: str, user_id: str = "frank") -> dict:
 
 
 @app.delete("/entry", dependencies=[Depends(require_auth)])
+@serialized_entry_write
 def delete_entry(doc_id: str, user_id: str = "frank") -> dict:
     """Soft-Delete: verschiebt den Eintrag in den Papierkorb (trash.json — 1:1-Text + Metadaten +
     deleted_at) und entfernt ihn aus dem aktiven Gehirn (Qdrant). So bleibt er im Dashboard
@@ -2021,6 +2064,7 @@ def delete_entry(doc_id: str, user_id: str = "frank") -> dict:
 
 
 @app.put("/entry", dependencies=[Depends(require_auth)])
+@serialized_entry_write
 def update_entry(req: UpdateReq) -> dict:
     """Ersetzt einen bestehenden Eintrag (per doc_id) 1:1 durch neuen Text: die alten Vektoren/Chunks
     werden GELOESCHT, der neue Text frisch embedded und unter DERSELBEN doc_id gespeichert. Titel,
@@ -2049,10 +2093,6 @@ def update_entry(req: UpdateReq) -> dict:
     if title_changed and title:
         target_doc_id = make_doc_id(req.user_id, title)
 
-    _delete_doc(req.doc_id)  # alte Vektoren komplett raus (alle Chunks der bisherigen doc_id)
-    if target_doc_id != req.doc_id:
-        _delete_doc(target_doc_id)  # Ziel-Titel evtl. schon belegt -> dessen Chunks ersetzen (wie /store)
-
     parents = category_parents(cats)
     parent = parents[0] if parents else ""
     chunks = chunk_text(req.text)
@@ -2066,14 +2106,58 @@ def update_entry(req: UpdateReq) -> dict:
             "chunk_index": i, "chunk_count": len(chunks), "chunk_text": ch,
             "full_text": req.text, "created_at": created_at, "updated_at": now, "source": source, "layer": layer, **validity,
         }))
-    _upsert_batched(points)
+    # Datenintegrität: Vollständige Payload+Vektor-Snapshots erlauben Rollback auch dann, wenn ein
+    # Mehrbatch-Upsert oder das Restchunk-Cleanup mittendrin scheitert. Erst wenn ALLE erwarteten
+    # Chunk-IDs mit dem neuen Volltext vorhanden und alle fremden IDs entfernt sind, wird bei einer
+    # Titelmigration die alte doc_id gelöscht.
+    source_filter = Filter(must=[FieldCondition(key="doc_id", match=MatchValue(value=req.doc_id))])
+    target_filter = Filter(must=[FieldCondition(key="doc_id", match=MatchValue(value=target_doc_id))])
+    source_snapshot = _scroll(source_filter, with_vectors=True)
+    target_snapshot = source_snapshot if target_doc_id == req.doc_id else _scroll(target_filter, with_vectors=True)
+    expected_ids = {p.id for p in points}
+    try:
+        _upsert_batched(points, wait=True)
+        current = _scroll(target_filter, with_payload=["chunk_index", "chunk_count", "full_text"])
+        current_by_id = {p.id: p for p in current}
+        expected_ok = expected_ids.issubset(current_by_id) and all(
+            (current_by_id[p.id].payload or {}).get("chunk_index") == i
+            and (current_by_id[p.id].payload or {}).get("chunk_count") == len(chunks)
+            and (current_by_id[p.id].payload or {}).get("full_text") == req.text
+            for i, p in enumerate(points)
+        )
+        if not expected_ok:
+            raise RuntimeError("nicht alle neuen Chunks wurden verifiziert")
 
-    replaced_ok = bool(points) and points[0].payload["full_text"] == req.text
-    # Sonde: nach einer Titel-Migration darf die alte doc_id NICHT mehr existieren (kein Geist-Duplikat)
-    if title_changed and target_doc_id != req.doc_id:
-        leftover = _scroll(Filter(must=[FieldCondition(key="doc_id", match=MatchValue(value=req.doc_id))]),
-                           limit=1, with_payload=False)   # nur Existenz-Probe, kein Payload noetig
-        probe(not leftover, "Alte doc_id nach Titel-Migration noch vorhanden", old_doc_id=req.doc_id, new_doc_id=target_doc_id)
+        stale_ids = [p.id for p in current if p.id not in expected_ids]
+        if stale_ids:
+            qc.delete(collection_name=COLLECTION, points_selector=stale_ids, wait=True)
+        final_points = _scroll(target_filter, with_payload=["chunk_index", "chunk_count", "full_text"])
+        replaced_ok = ({p.id for p in final_points} == expected_ids and len(final_points) == len(chunks)
+                       and all((p.payload or {}).get("full_text") == req.text for p in final_points))
+        if not replaced_ok:
+            raise RuntimeError("finale Chunk-Menge stimmt nicht")
+
+        if target_doc_id != req.doc_id:
+            _delete_doc(req.doc_id)
+            if _scroll(source_filter, limit=1, with_payload=False):
+                raise RuntimeError("alte doc_id nach Titelmigration noch vorhanden")
+        _bm25_invalidate()
+    except Exception as update_exc:  # noqa: BLE001 — jeder Teilfehler stellt beide Dokumente wieder her
+        rollback_errors = []
+        try:
+            _restore_doc_snapshot(target_doc_id, target_snapshot)
+        except Exception as rollback_exc:  # noqa: BLE001
+            rollback_errors.append(f"Ziel: {type(rollback_exc).__name__}")
+        if target_doc_id != req.doc_id:
+            try:
+                _restore_doc_snapshot(req.doc_id, source_snapshot)
+            except Exception as rollback_exc:  # noqa: BLE001
+                rollback_errors.append(f"Quelle: {type(rollback_exc).__name__}")
+        _log(logging.ERROR, "PUT /entry fehlgeschlagen; Rollback ausgeführt",
+             error=type(update_exc).__name__, rollback_errors=rollback_errors, exc_info=True)
+        if rollback_errors:
+            raise HTTPException(status_code=500, detail="Aktualisierung und Rollback fehlgeschlagen; Serverprotokoll prüfen") from update_exc
+        raise HTTPException(status_code=503, detail="Aktualisierung nicht verifiziert; bisheriger Eintrag wurde wiederhergestellt") from update_exc
     checkpoint("update_entry", "Alten Vektor loeschen + neuen Text 1:1 speichern (Titel-Aenderung -> neue doc_id)",
                ok=replaced_ok, doc_id=target_doc_id, old_doc_id=req.doc_id if title_changed else None,
                title=title or None, title_changed=title_changed, chunks=len(chunks),
@@ -2094,6 +2178,7 @@ def trash_list(user_id: str = "frank") -> dict:
 
 
 @app.put("/trash", dependencies=[Depends(require_auth)])
+@serialized_entry_write
 def trash_edit(req: TrashEditReq) -> dict:
     """Aendert den Text eines Eintrags IM Papierkorb (vor der Wiederherstellung). Kein Embedding —
     der Papierkorb ist nicht durchsuchbar; das Re-Embed passiert erst beim Wiederherstellen."""
@@ -2116,6 +2201,7 @@ def trash_edit(req: TrashEditReq) -> dict:
 
 
 @app.delete("/trash/all", dependencies=[Depends(require_auth)])
+@serialized_entry_write
 def trash_empty(user_id: str = "frank") -> dict:
     """Leert den Papierkorb dieses Nutzers KOMPLETT und UNWIDERRUFLICH (Frank-Wunsch: 'Papierkorb leeren').
     Reiner Textspeicher — es gibt keine Vektoren mehr zu loeschen (die wurden beim Soft-Delete entfernt).
@@ -2131,6 +2217,7 @@ def trash_empty(user_id: str = "frank") -> dict:
 
 
 @app.post("/trash/restore", dependencies=[Depends(require_auth)])
+@serialized_entry_write
 def trash_restore(req: RestoreReq) -> dict:
     """Stellt einen Papierkorb-Eintrag wieder her: der (ggf. editierte) Text wird frisch embedded und
     unter der URSPRUENGLICHEN doc_id ins Gehirn gespeichert (created_at erhalten), dann aus dem
@@ -2185,6 +2272,7 @@ class ReembedReq(BaseModel):
 
 
 @app.post("/reembed-all", dependencies=[Depends(require_auth)])
+@serialized_entry_write
 def reembed_all(req: ReembedReq) -> dict:
     """Einmaliger Wartungslauf: bettet ALLE bestehenden Punkte mit dem AKTUELLEN embed_input-Schema
     (Titel + Kategorie im Praefix) NEU ein. full_text, Titel, Kategorie, parent, doc_id, created_at und

@@ -20,7 +20,10 @@ data class ChatRequest(
     // Idempotency-Key (UUID pro Nutzer-Intent): Stream-Versuch und /chat-Fallback tragen
     // DENSELBEN Key — der Server (agent 0.48.0) verarbeitet Duplikate nur EINMAL
     // (verhindert Doppel-Speicherung nach Tunnel-Abriss, Frank-Wunsch 2026-07-02).
-    val request_id: String? = null
+    val request_id: String? = null,
+    val memory_edit: Boolean = false,
+    val memory_doc_id: String? = null,
+    val memory_categories: List<String>? = null
 )
 
 @JsonClass(generateAdapter = true)
@@ -34,6 +37,11 @@ data class ChatResponse(
     val session_id: String?,
     val category: String?,
     val title: String?,
+    val categories: List<String>? = null,
+    val doc_id: String? = null,
+    val memory_text: String? = null,
+    val stored_text: String? = null,
+    val memory_editable: Boolean = false,
     val stored: Boolean = false,
     val replaced: Boolean = false,
     val recall_hits: Int? = null,

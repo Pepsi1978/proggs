@@ -21,6 +21,7 @@ def load_distillation_namespace() -> dict:
         "MEMORY_DISTILL_SYSTEM",
         "_MEMORY_COMMAND_PREFIX_RE",
         "_MEMORY_COMMAND_SUFFIX_RE",
+        "_MEMORY_COURTESY_SUFFIX_RE",
         "_MEMORY_AMBIGUOUS_SAVE_PREFIX_RE",
         "_MEMORY_TIME_TOKEN_RE",
         "_MEMORY_NEGATION_TOKEN_RE",
@@ -182,6 +183,7 @@ def main() -> int:
         "Speicher Peters Nummer.",
         "Speicher ab: Ich komme morgen.",
         "Speicher diese Information.",
+        'Bitte speichern Sie unter "Geräte" ab, dass ich mir die Amazfit T-Rex 3 Pro gekauft habe.',
     )
     check(all(has_command(value) for value in command_variants),
           "Natürliche Präfix- und Suffixvarianten werden als Speicherbefehle erkannt")
@@ -195,6 +197,20 @@ def main() -> int:
     for value, expected in expected_fallbacks.items():
         check(ns["_fallback_memory_statement"](value) == expected,
               f"Provider-Fallback bleibt kohärent und faktenidentisch: {value}")
+
+    amazfit_source = ('Bitte speichern Sie unter "Geräte" ab, dass ich mir die Amazfit T-Rex 3 Pro gekauft habe. '
+                      'Diese Uhr verfügt über einen Lautsprecher, ermöglicht Bluetooth-Telefonie und hat eine '
+                      'richtige Taschenlampe (Notlicht) integriert. Außerdem ist sie leichter als das '
+                      'Vorgängermodell. Vielen Dank.')
+    amazfit_statement = ('Ich habe mir die Amazfit T-Rex 3 Pro gekauft. Diese Uhr verfügt über einen Lautsprecher, '
+                         'ermöglicht Bluetooth-Telefonie und hat eine richtige Taschenlampe (Notlicht) integriert. '
+                         'Außerdem ist sie leichter als das Vorgängermodell.')
+    ns["llm_generate"] = lambda *args, **kwargs: response(amazfit_statement)
+    amazfit_fallback = ns["_fallback_memory_statement"](amazfit_source)
+    check(not amazfit_fallback.startswith("Ich mir die Amazfit"),
+          f"Formelle Speicherhülle darf keinen verstümmelten Rest erzeugen: {amazfit_fallback!r}")
+    check(distill(amazfit_source) == amazfit_statement,
+          "Formeller Speicherauftrag mit Kategorie und Höflichkeitsform wird zur eigenständigen Aussage")
     false_positives = (
         "Speicherplatz ist fast voll.",
         "Speicheroptimierung ist aktiviert.",
@@ -267,6 +283,9 @@ def main() -> int:
         "pending\": {\"mode\": \"save_confirm\", \"quote\": quote",
         "Vor dem Speichern destillierte Aussage zurueckfragen",
         "_do_store(pending.get(\"quote\", \"\"), categories",
+        "_memory_followup_candidate(user_text, session[\"last_memory\"])",
+        "memory_edit: bool",
+        '"memory_text": outcome.get("memory_text")',
     )
     for needle in required_flow:
         check(needle in APP_SOURCE, f"Speicherfluss nicht vollständig verdrahtet: {needle}")

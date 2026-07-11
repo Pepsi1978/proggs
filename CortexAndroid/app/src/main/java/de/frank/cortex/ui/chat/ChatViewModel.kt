@@ -42,6 +42,11 @@ data class ChatMessage(
     val action: String? = null,
     val category: String? = null,
     val title: String? = null,
+    val categories: List<String> = emptyList(),
+    val docId: String? = null,
+    val memoryText: String? = null,
+    val storedText: String? = null,
+    val memoryEditable: Boolean = false,
     val recallHits: Int? = null,
     val options: List<ChatOption>? = null,
     val stored: Boolean = false,
@@ -529,19 +534,8 @@ class ChatViewModel : ViewModel() {
                     ch.close()
                 }
 
-                val finalText = response.reply
                 val existingId = streamedMsgId
-                val agentMsg = ChatMessage(
-                    id = existingId ?: UUID.randomUUID().toString(),
-                    text = finalText,
-                    isUser = false,
-                    action = response.action,
-                    category = response.category,
-                    title = response.title,
-                    recallHits = response.recall_hits,
-                    options = response.options,
-                    stored = response.stored
-                )
+                val agentMsg = response.toChatMessage(existingId ?: UUID.randomUUID().toString())
 
                 _uiState.update { st ->
                     st.copy(
@@ -650,19 +644,14 @@ class ChatViewModel : ViewModel() {
                                 context_mode = item.contextMode,
                                 context_prompt = buildContextPrompt(item.contextMode, item.responseSize),
                                 response_size = item.responseSize,
-                                request_id = item.requestId
+                                request_id = item.requestId,
+                                memory_edit = item.memoryEdit,
+                                memory_doc_id = item.memoryDocId,
+                                memory_categories = item.memoryCategories
                             )
                         )
-                        val agentMsg = ChatMessage(
-                            text = response.reply,
-                            isUser = false,
-                            action = response.action,
-                            category = response.category,
-                            title = response.title,
-                            recallHits = response.recall_hits,
-                            options = response.options,
-                            stored = response.stored
-                        )
+                        check(response.action != "error") { response.reply.ifBlank { "Server hat den Speicherauftrag nicht bestätigt" } }
+                        val agentMsg = response.toChatMessage()
                         updateSessionsAfterPersist(item.sessionId, agentMsg)
                         // Ist die betroffene Session gerade offen: Antwort auch live anzeigen.
                         if (_uiState.value.sessionId == item.sessionId) {
@@ -899,12 +888,16 @@ class ChatViewModel : ViewModel() {
         val sessionId = state.sessionId
         val category = source.category ?: state.selectedCategory
         val title = source.title ?: state.titleOverride.ifBlank { null }
+        val categories = source.categories.ifEmpty { listOfNotNull(category) }
         val userMsg = ChatMessage(
             text = text,
             isUser = true,
             action = "store_edit",
             category = category,
-            title = title
+            title = title,
+            categories = categories,
+            docId = source.docId,
+            memoryText = text
         )
         _uiState.update { it.copy(messages = it.messages + userMsg, isLoading = true, error = null) }
 
@@ -919,9 +912,12 @@ class ChatViewModel : ViewModel() {
                         category = category,
                         title = title,
                         contextMode = SettingsStore.CONTEXT_MODE_SAVE,
-                        responseSize = state.responseSize,
-                        requestId = UUID.randomUUID().toString(),
-                        createdAt = System.currentTimeMillis()
+                            responseSize = state.responseSize,
+                            requestId = UUID.randomUUID().toString(),
+                            memoryEdit = true,
+                            memoryDocId = source.docId,
+                            memoryCategories = categories,
+                            createdAt = System.currentTimeMillis()
                     )
                     val queued = withContext(Dispatchers.IO) {
                         try {
@@ -956,20 +952,14 @@ class ChatViewModel : ViewModel() {
                             context_mode = SettingsStore.CONTEXT_MODE_SAVE,
                             context_prompt = buildContextPrompt(SettingsStore.CONTEXT_MODE_SAVE, state.responseSize),
                             response_size = state.responseSize,
-                            request_id = UUID.randomUUID().toString()
+                            request_id = UUID.randomUUID().toString(),
+                            memory_edit = true,
+                            memory_doc_id = source.docId,
+                            memory_categories = categories
                         )
                     )
                 }
-                val agentMsg = ChatMessage(
-                    text = response.reply,
-                    isUser = false,
-                    action = response.action,
-                    category = response.category,
-                    title = response.title,
-                    recallHits = response.recall_hits,
-                    options = response.options,
-                    stored = response.stored
-                )
+                val agentMsg = response.toChatMessage()
                 _uiState.update { st ->
                     st.copy(
                         messages = st.messages + agentMsg,
@@ -1723,6 +1713,23 @@ class ChatViewModel : ViewModel() {
     }
 }
 
+private fun ChatResponse.toChatMessage(id: String = UUID.randomUUID().toString()): ChatMessage = ChatMessage(
+    id = id,
+    text = reply,
+    isUser = false,
+    action = action,
+    category = category,
+    title = title,
+    categories = categories ?: listOfNotNull(category),
+    docId = doc_id,
+    memoryText = memory_text,
+    storedText = stored_text,
+    memoryEditable = memory_editable,
+    recallHits = recall_hits,
+    options = options,
+    stored = stored
+)
+
 private fun ChatMessage.toStoredMessage(): StoredChatMessage = StoredChatMessage(
     id = id,
     text = text,
@@ -1730,6 +1737,11 @@ private fun ChatMessage.toStoredMessage(): StoredChatMessage = StoredChatMessage
     action = action,
     category = category,
     title = title,
+    categories = categories,
+    docId = docId,
+    memoryText = memoryText,
+    storedText = storedText,
+    memoryEditable = memoryEditable,
     recallHits = recallHits,
     stored = stored,
     timestamp = timestamp
@@ -1742,6 +1754,11 @@ private fun StoredChatMessage.toChatMessage(): ChatMessage = ChatMessage(
     action = action,
     category = category,
     title = title,
+    categories = categories,
+    docId = docId,
+    memoryText = memoryText,
+    storedText = storedText,
+    memoryEditable = memoryEditable,
     recallHits = recallHits,
     options = null,
     stored = stored,

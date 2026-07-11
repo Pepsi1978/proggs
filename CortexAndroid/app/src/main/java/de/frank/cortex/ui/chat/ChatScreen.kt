@@ -542,12 +542,6 @@ private val wordSplitRegex = Regex("\\s+")
 private fun countWords(text: String): Int =
     text.trim().split(wordSplitRegex).count { it.isNotBlank() }
 
-private val quotedStoreTextRegex = Regex("[„\"]([^„“\"]+)[“\"]")
-
-private fun extractEditableStoreText(messageText: String): String =
-    quotedStoreTextRegex.findAll(messageText).map { it.groupValues[1] }.lastOrNull()?.trim()
-        ?: messageText.trim()
-
 @Composable
 private fun ChatBubble(
     message: ChatMessage,
@@ -558,8 +552,10 @@ private fun ChatBubble(
     onEditedStoreSave: (ChatMessage, String) -> Unit
 ) {
     val isDark = MaterialTheme.colorScheme.background == DarkBg
-    val canEditStoreText = !message.isUser && message.action in setOf("save_confirm", "store_clarify")
-    val initialEditableText = remember(message.text) { extractEditableStoreText(message.text) }
+    val canEditStoreText = !message.isUser && message.memoryEditable && !message.memoryText.isNullOrBlank()
+    val initialEditableText = remember(message.memoryText, message.text) {
+        message.memoryText?.trim().orEmpty().ifBlank { message.text.trim() }
+    }
     var isEditingStoreText by rememberSaveable(message.id) { mutableStateOf(false) }
     var editedStoreText by rememberSaveable(message.id) { mutableStateOf(initialEditableText) }
 
@@ -644,16 +640,20 @@ private fun ChatBubble(
         // Meta line
         if (!message.isUser && message.action != null) {
             val metaText = when (message.action) {
-                "store" -> "\u21B3 abgelegt in \u201E${message.category ?: "Unkategorisiert"}\u201C"
+                "store", "memory_updated", "memory_show" -> {
+                    val categories = message.categories.ifEmpty { listOfNotNull(message.category) }
+                    val place = categories.joinToString(", ").ifBlank { "Unkategorisiert" }
+                    "\u21B3 ${if (message.action == "memory_updated") "aktualisiert" else if (message.action == "memory_show") "aktueller Stand" else "abgelegt"} in \u201E$place\u201C · \u201E${message.title ?: "Ohne Titel"}\u201C"
+                }
                 "recall" -> "\u21B3 nachgeschlagen \u00B7 ${message.recallHits ?: 0} Treffer"
-                "save_confirm", "store_clarify" -> "\u21B3 Rückfrage\u2026"
+                "save_confirm", "store_clarify", "memory_edit_confirm", "memory_dialog" -> "\u21B3 Rückfrage\u2026"
                 "cancel" -> "\u21B3 nicht gespeichert"
                 else -> null
             }
             val metaColor = when (message.action) {
-                "store" -> Mint
+                "store", "memory_updated" -> Mint
                 "recall" -> Iris
-                "save_confirm", "store_clarify" -> Amber
+                "save_confirm", "store_clarify", "memory_edit_confirm", "memory_dialog" -> Amber
                 "cancel" -> MaterialTheme.colorScheme.onSurfaceVariant
                 else -> MaterialTheme.colorScheme.onSurfaceVariant
             }
@@ -680,19 +680,22 @@ private fun ChatBubble(
                         onOptionClick(option)
                     }
                 }
-                if (canEditStoreText) {
-                    OptionChip(
-                        label = if (isEditingStoreText) "Speichern" else "Editieren",
-                        isDark = isDark,
-                        tint = if (isEditingStoreText) Mint else Amber
-                    ) {
-                        if (isEditingStoreText) {
-                            onEditedStoreSave(message, editedStoreText)
-                            isEditingStoreText = false
-                        } else {
-                            editedStoreText = initialEditableText
-                            isEditingStoreText = true
-                        }
+            }
+        }
+
+        if (canEditStoreText) {
+            Row(modifier = Modifier.padding(top = 5.dp)) {
+                OptionChip(
+                    label = if (isEditingStoreText) "Speichern" else "Editieren",
+                    isDark = isDark,
+                    tint = if (isEditingStoreText) Mint else Amber
+                ) {
+                    if (isEditingStoreText) {
+                        onEditedStoreSave(message, editedStoreText)
+                        isEditingStoreText = false
+                    } else {
+                        editedStoreText = initialEditableText
+                        isEditingStoreText = true
                     }
                 }
             }
