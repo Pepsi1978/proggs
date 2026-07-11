@@ -14,6 +14,8 @@ namespace OpenCodeLauncher.Services;
 /// </summary>
 public sealed class ModelRegistry
 {
+    private const string Gpt56SolSlug = "gpt-5.6-sol";
+
     private static readonly string Dir = Path.Combine(
         Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData),
         "OpenCodeLauncher");
@@ -276,7 +278,8 @@ public sealed class ModelRegistry
             group.ProviderId = defaults.ProviderId;
             group.ProviderName = defaults.ProviderName;
             group.Title = defaults.Title;
-            if (group.Models.Count == 0 || group.Models.All(m => string.IsNullOrWhiteSpace(m.Slug)))
+            if ((group.Models.Count == 0 || group.Models.All(m => string.IsNullOrWhiteSpace(m.Slug))) &&
+                !string.Equals(group.Id, "openai", StringComparison.OrdinalIgnoreCase))
             {
                 group.Models.Clear();
                 foreach (var model in defaults.Models) group.Models.Add(model);
@@ -305,6 +308,14 @@ public sealed class ModelRegistry
                 .Where(slug => !string.IsNullOrWhiteSpace(slug))
                 .Distinct(StringComparer.OrdinalIgnoreCase)
                 .ToList();
+
+            if (string.Equals(group.Id, "openai", StringComparison.OrdinalIgnoreCase) &&
+                !group.KnownSyncedModelSlugs.Contains(Gpt56SolSlug, StringComparer.OrdinalIgnoreCase))
+            {
+                if (!group.Models.Any(model => string.Equals(model.Slug, Gpt56SolSlug, StringComparison.OrdinalIgnoreCase)))
+                    group.Models.Add(Model(Gpt56SolSlug, "GPT-5.6 Sol Fast", "openai", "OpenAI"));
+                AddUnique(group.KnownSyncedModelSlugs, Gpt56SolSlug);
+            }
         }
     }
 
@@ -366,6 +377,7 @@ public sealed class ModelRegistry
             Model("gpt-5.4-mini-fast", "GPT-5.4 Mini Fast", "openai", "OpenAI"),
             Model("gpt-5.5", "GPT-5.5", "openai", "OpenAI"),
             Model("gpt-5.5-fast", "GPT-5.5 Fast", "openai", "OpenAI"),
+            Model(Gpt56SolSlug, "GPT-5.6 Sol Fast", "openai", "OpenAI"),
         }),
         CreateGroup("opencode-go", "OpenCode-Go", "opencode-go", "OpenCode-Go", new[]
         {

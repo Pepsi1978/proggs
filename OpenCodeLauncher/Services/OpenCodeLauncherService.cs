@@ -77,13 +77,19 @@ public sealed class OpenCodeLauncherService
 
         if (!string.Equals(model.ProviderId, "openrouter", StringComparison.OrdinalIgnoreCase))
         {
-            if (!string.IsNullOrWhiteSpace(thinkingLevel))
+            var usesPriorityServiceTier = UsesPriorityServiceTier(model.ProviderId, model.Slug);
+            if (!string.IsNullOrWhiteSpace(thinkingLevel) || usesPriorityServiceTier)
             {
                 var root = ReadConfig();
                 PatchDirectModel(root, model.ProviderId, model.Slug, model.DisplayName, thinkingLevel);
                 WriteConfig(root);
-                PatchModelVariantState(modelString, thinkingLevel);
-                log.Info("OpenCodeLauncherService", "ConfigureProvider", $"Direktmodell-Thinking gesetzt: {model.ProviderId}/{model.Slug} -> {thinkingLevel}");
+                if (!string.IsNullOrWhiteSpace(thinkingLevel)) PatchModelVariantState(modelString, thinkingLevel);
+                log.Info("OpenCodeLauncherService", "ConfigureProvider", "Direktmodell-Optionen gesetzt", new
+                {
+                    model = modelString,
+                    thinkingLevel,
+                    serviceTier = usesPriorityServiceTier ? "priority" : null
+                });
             }
             log.Info("OpenCodeLauncherService", "ConfigureProvider", $"Direktmodell ohne OpenRouter-Routing: {modelString}");
             return modelString;
@@ -799,8 +805,21 @@ try {
         modelNode["name"] = modelDisplayName;
 
         var optionsBlock = modelNode.GetOrAddObject("options");
-        ClearThinkingOptions(optionsBlock);
-        ApplyThinkingOptions(optionsBlock, providerId, slug, thinkingLevel);
+        if (!string.IsNullOrWhiteSpace(thinkingLevel))
+        {
+            ClearThinkingOptions(optionsBlock);
+            ApplyThinkingOptions(optionsBlock, providerId, slug, thinkingLevel);
+        }
+        if (UsesPriorityServiceTier(providerId, slug)) optionsBlock["serviceTier"] = "priority";
+    }
+
+    private static bool UsesPriorityServiceTier(string providerId, string slug)
+    {
+        if (!string.Equals(providerId, "openai", StringComparison.OrdinalIgnoreCase)) return false;
+
+        var modelId = slug.Trim();
+        if (modelId.StartsWith("openai/", StringComparison.OrdinalIgnoreCase)) modelId = modelId["openai/".Length..];
+        return string.Equals(modelId, "gpt-5.6-sol", StringComparison.OrdinalIgnoreCase);
     }
 
     private static void ApplyThinkingOptions(JsonObject optionsBlock, string providerId, string slug, string? thinkingLevel)
