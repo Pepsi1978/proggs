@@ -199,7 +199,15 @@
 
 **Sofort-Workaround:** Fenster kurz Verkleinern→Maximieren (Full Repaint), wie #14.
 
-**Status:** Diagnose abgeschlossen 2026-07-11; Fixes 1–3 offen.
+**Status (2026-07-11, 21:27):** Alle 3 Ebenen UMGESETZT.
+1. Launcher **v1.11.0** (#47829/#47830): Startskript leitet stderr in `~/.local/share/opencode/log/stderr/opencode-stderr-<ts>-<pid>.log` um (pro Prozess eigene Datei — parallele Fenster kollisionsfrei); Wächter meldet nicht-leere Protokolle beim nächsten Start und löscht leere; TEMP-Fallback falls Log-Verzeichnis fehlt. Mechanismus per Fake-Prozess verifiziert (stderr→Datei, stdout bleibt am TTY).
+2. **`1.17.18-windowsfix.9`** (#47831, aktiv seit 2026-07-11): TUI-Command-Handler installiert `unhandledRejection`/`uncaughtException`-Handler, die nach `~/.local/share/opencode/log/tui-crash.log` schreiben (Capability `tuiErrorHandlers`; Marker im Binary verifiziert). Upstream-Issue bei anomalyco/opencode noch offen.
+3. `small_model: "openai/gpt-5.5-fast"` (#47828): Log-verifiziert — Titel-Agent lief nach dem Fix mit gpt-5.5-fast fehlerfrei statt `Model not found gpt-5.6-luna`.
+Langzeitbeobachtung offen: tritt die Korruption in realen Sessions noch auf? Bei erneutem Auftreten zuerst `stderr/`-Logs + `tui-crash.log` lesen (dort steht jetzt der Täter).
+
+**⚠️ Beifang — zwei FLAKY Tests im windowsfix-Buildprozess (2026-07-11, beide NICHT patch-bedingt):**
+(a) `test/cli/tui/plugin-toggle.test.ts` failt sporadisch, wenn er sich einen `bun test`-Aufruf mit anderen Suites teilt (spyOn auf `process.cwd`/`TuiConfig`); standalone 3/3 grün → Build-Skript isoliert ihn jetzt (#47832).
+(b) `test/config/config.test.ts` „Git Bash and MSYS2 paths"-Test brauchte unter Build-Last 6,5 s > bun-Default-Timeout 5 s → Build-Skript hebt den Default auf `--timeout 15000` (#47833; Tests mit explizitem eigenen Timeout behalten ihren Wert).
 
 **Quelle:** eigener Vorfall (Frank, 3 Screenshots 2026-07-10/11) + lokale Quellcode-Analyse des 1.17.18-Klons (`cli/tui/worker.ts`, `packages/tui/`) + `~/.local/share/opencode/log/opencode.log`.
 
