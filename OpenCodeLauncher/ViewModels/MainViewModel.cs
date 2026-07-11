@@ -56,7 +56,7 @@ public sealed partial class MainViewModel : ObservableObject
         _ = CheckOpenCodeUpdateAsync();
 
         var version = Assembly.GetExecutingAssembly().GetName().Version?.ToString(3) ?? "1.10.0";
-        Version = $"Version {version} (11.07.2026, 14:10 Uhr)";
+        Version = $"Version {version} (11.07.2026, 13:54 Uhr)";
     }
 
     public ObservableCollection<ModelGroupEntry> ModelGroups { get; } = new();
