@@ -42,6 +42,8 @@ import androidx.fragment.app.FragmentActivity
 import de.frank.cortex.BuildConfig
 import de.frank.cortex.audio.PcmPlayer
 import de.frank.cortex.data.SettingsStore
+import de.frank.cortex.data.TtsUsage
+import de.frank.cortex.data.TtsUsageStore
 import de.frank.cortex.data.model.*
 import de.frank.cortex.network.ApiClient
 import de.frank.cortex.observability.CortexLog
@@ -72,6 +74,8 @@ fun SettingsScreen(
     var ttsProvider by remember { mutableStateOf(SettingsStore.ttsProvider) }
     var ttsVoice by remember { mutableStateOf(SettingsStore.ttsVoice.removePrefix("de-DE-Chirp3-HD-")) }
     var edgeTtsVoice by remember { mutableStateOf(SettingsStore.edgeTtsVoice) }
+    val ttsUsage by TtsUsageStore.usage.collectAsState()
+    LaunchedEffect(Unit) { TtsUsageStore.refreshMonth() }
     var recordingToneEnabled by remember { mutableStateOf(SettingsStore.recordingToneEnabled) }
     var recordingToneVolume by remember { mutableStateOf(SettingsStore.recordingToneVolume) }
     var biometricLockEnabled by remember { mutableStateOf(SettingsStore.biometricLockEnabled) }
@@ -560,6 +564,7 @@ fun SettingsScreen(
                         fontSize = 11.sp,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
+                    TtsUsageIndicator(ttsUsage)
                 }
 
                 HorizontalDivider(color = MaterialTheme.colorScheme.outline, modifier = Modifier.padding(horizontal = 14.dp))
@@ -1954,6 +1959,33 @@ private val edgeVoices = listOf(
 
 private fun edgeVoiceLabelFor(id: String): String = edgeVoices.firstOrNull { it.id == id }?.short ?: id
 private fun edgeVoiceShortFor(id: String): String = edgeVoices.firstOrNull { it.id == id }?.short ?: "die Stimme"
+
+@Composable
+private fun TtsUsageIndicator(usage: TtsUsage) {
+    val used = usage.charsThisMonth.coerceAtMost(usage.limit)
+    val fraction = if (usage.limit > 0L) used.toFloat() / usage.limit.toFloat() else 0f
+    val usedText = String.format(java.util.Locale.GERMANY, "%,d", usage.charsThisMonth)
+    val limitText = String.format(java.util.Locale.GERMANY, "%,d", usage.limit)
+
+    Column(modifier = Modifier.fillMaxWidth().padding(top = 4.dp)) {
+        Text(
+            "Chirp 3 HD: $usedText von $limitText Zeichen · ${usage.percentFree} % frei",
+            fontSize = 11.sp,
+            fontWeight = FontWeight.Medium,
+            color = MaterialTheme.colorScheme.onSurfaceVariant
+        )
+        Spacer(Modifier.height(6.dp))
+        Box(
+            modifier = Modifier.fillMaxWidth().height(6.dp).clip(RoundedCornerShape(3.dp))
+                .background(MaterialTheme.colorScheme.outline.copy(alpha = 0.35f))
+        ) {
+            Box(
+                modifier = Modifier.fillMaxWidth(fraction.coerceIn(0f, 1f)).height(6.dp)
+                    .clip(RoundedCornerShape(3.dp)).background(Orange)
+            )
+        }
+    }
+}
 
 @Composable
 private fun TtsEngineChip(

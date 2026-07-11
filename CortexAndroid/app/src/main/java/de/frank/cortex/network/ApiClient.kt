@@ -2,6 +2,7 @@ package de.frank.cortex.network
 
 import com.squareup.moshi.Moshi
 import de.frank.cortex.data.SettingsStore
+import de.frank.cortex.data.TtsUsageStore
 import de.frank.cortex.data.model.*
 import de.frank.cortex.observability.CortexLog
 import kotlinx.coroutines.Dispatchers
@@ -561,6 +562,7 @@ object ApiClient {
                 "pcm_bytes" to pcm.size,
                 "elapsed_ms" to (System.currentTimeMillis() - startedAt)
             ))
+            TtsUsageStore.addSuccessfulSynthesis(text.length)
             return pcm
         }
     }

@@ -29,6 +29,7 @@ class CortexApp : Application() {
 
         // SettingsStore initialisieren
         de.frank.cortex.data.SettingsStore.init(this)
+        de.frank.cortex.data.TtsUsageStore.init(this)
 
         // Lokale Chat-Sessions initialisieren
         de.frank.cortex.data.ChatSessionStore.init(this)
