@@ -70,6 +70,7 @@ data class SecondBrainSyncRow(
     val bodyLabel: String,
     val body: String,
     val summary: String? = null,
+    val contentRevision: Int? = null,
 )
 
 private data class SecondBrainSyncTarget(
@@ -123,7 +124,11 @@ class SecondBrainIdeaConnector @Inject constructor(
                                 TAG,
                                 "CHECKPOINT step=observerEmission area=${target.area.key} enabled=true rows=${rows.size}",
                             )
-                            syncRows(target, rows, reason = "Automatischer ${target.area.label}-Sync")
+                            syncRowsWithRetry(
+                                target,
+                                rows,
+                                reason = "Automatischer ${target.area.label}-Sync",
+                            )
                         } else {
                             Diag.d(DiagnosticArea.SECOND_BRAIN, TAG, "CHECKPOINT step=observerEmission area=${target.area.key} enabled=false")
                         }
@@ -143,17 +148,19 @@ class SecondBrainIdeaConnector @Inject constructor(
     }
 
     fun retryPendingUploads(scope: CoroutineScope, areaKey: String? = null) {
-        scope.launch(Dispatchers.IO) {
-            if (secrets.secondBrainApiKey.orEmpty().isBlank()) return@launch
-            repeat(PUSH_RETRIES) { attempt ->
-                var hadNetworkError = false
-                for (target in selectedTargets(areaKey)) {
-                    if (!settings.secondBrainConnectorEnabledFlow(target.area.key).first()) continue
-                    hadNetworkError = syncRows(target, target.loadRows(), reason = "Nachhol-Upload ${target.area.label}") || hadNetworkError
-                }
-                if (!hadNetworkError) return@launch
-                if (attempt < PUSH_RETRIES - 1) delay(PUSH_RETRY_DELAY_MS)
-            }
+        scope.launch(Dispatchers.IO) { retryPendingUploadsNow(areaKey) }
+    }
+
+    /** Retry-Pfad fuer Speichern und Lifecycle-Flush; kehrt erst nach Erfolg/Retry-Ende zurueck. */
+    suspend fun retryPendingUploadsNow(areaKey: String? = null) {
+        if (secrets.secondBrainApiKey.orEmpty().isBlank()) return
+        for (target in selectedTargets(areaKey)) {
+            if (!settings.secondBrainConnectorEnabledFlow(target.area.key).first()) continue
+            syncRowsWithRetry(
+                target,
+                target.loadRows(),
+                reason = "Nachhol-Upload ${target.area.label}",
+            )
         }
     }
 
@@ -386,6 +393,7 @@ class SecondBrainIdeaConnector @Inject constructor(
                     idempotencyKey = "entropy-${target.area.key}-${row.id}-$stamp",
                     request = request,
                 )
+                check(response.ok) { "Second Brain hat den Eintrag nicht bestätigt" }
                 settings.markSecondBrainSynced(target.area.key, row.id, stamp)
                 settings.setSecondBrainTitle(target.area.key, row.id, title)
                 knownStamps.removeAll { it.startsWith("${row.id}:") }
@@ -409,6 +417,22 @@ class SecondBrainIdeaConnector @Inject constructor(
         )
         Diag.i(DiagnosticArea.SECOND_BRAIN, TAG, "CHECKPOINT step=syncComplete area=${target.area.key} expected=all_pending_synced actual=synced=$synced,deleted=$deleted,pending=${pending.size} ok=${synced == pending.size} reason=$reason")
         return deletionNetworkError
+    }
+
+    private suspend fun syncRowsWithRetry(
+        target: SecondBrainSyncTarget,
+        initialRows: List<SecondBrainSyncRow>,
+        reason: String,
+    ) {
+        var rows = initialRows
+        repeat(PUSH_RETRIES) { attempt ->
+            val hadNetworkError = syncRows(target, rows, reason)
+            if (!hadNetworkError) return
+            if (attempt < PUSH_RETRIES - 1) {
+                delay(PUSH_RETRY_DELAY_MS)
+                rows = target.loadRows()
+            }
+        }
     }
 
     private fun buildTargets(): List<SecondBrainSyncTarget> = listOf(
@@ -481,6 +505,7 @@ class SecondBrainIdeaConnector @Inject constructor(
             bodyLabel = "Idee",
             body = ideaText,
             summary = row.idea.summary?.takeIf { it.isNotBlank() }?.trim(),
+            contentRevision = ideaText.hashCode(),
         )
     }
 
@@ -574,15 +599,19 @@ class SecondBrainIdeaConnector @Inject constructor(
         return entry.toEntropySyncRow()
     }
 
-    private fun TagebuchEntry.toLearningSyncRow(): SecondBrainSyncRow = SecondBrainSyncRow(
-        id = id,
-        createdAtMs = timestampMs,
-        updatedAtMs = updatedAt.takeIf { it > 0L } ?: timestampMs,
-        title = title.trim().ifBlank { text.trim().shortTitle("Lernen", id) },
-        bodyLabel = "Lernen",
-        body = preferredSecondBrainText(text, improvedText),
-        summary = summary?.takeIf { it.isNotBlank() }?.trim(),
-    )
+    private fun TagebuchEntry.toLearningSyncRow(): SecondBrainSyncRow {
+        val learningText = preferredSecondBrainText(text, improvedText)
+        return SecondBrainSyncRow(
+            id = id,
+            createdAtMs = timestampMs,
+            updatedAtMs = updatedAt.takeIf { it > 0L } ?: timestampMs,
+            title = title.trim().ifBlank { text.trim().shortTitle("Lernen", id) },
+            bodyLabel = "Lernen",
+            body = learningText,
+            summary = summary?.takeIf { it.isNotBlank() }?.trim(),
+            contentRevision = learningText.hashCode(),
+        )
+    }
 
     private suspend fun insertLearningFromBrain(item: SecondBrainCategoryItem): SecondBrainSyncRow {
         val ts = parseIsoToMs(item.createdAt)
@@ -657,7 +686,7 @@ class SecondBrainIdeaConnector @Inject constructor(
         return base.ifBlank { "$prefix ${id.take(8)}" }
     }
 
-    private fun syncStamp(row: SecondBrainSyncRow): String = "${row.id}:${maxOf(row.createdAtMs, row.updatedAtMs)}"
+    private fun syncStamp(row: SecondBrainSyncRow): String = secondBrainSyncStamp(row)
 
     private fun brainTitle(target: SecondBrainSyncTarget, row: SecondBrainSyncRow): String {
         val displayTitle = row.title.trim().ifBlank { "${row.bodyLabel} ${row.id.take(8)}" }
@@ -731,3 +760,13 @@ private const val LEARNING_TITLE_MARKER = " · Lernen · "
 /** Fuer Lernen und Ideen verlaesst nur die beste vorhandene Textfassung das Handy. */
 internal fun preferredSecondBrainText(originalText: String, improvedText: String?): String =
     improvedText?.takeIf { it.isNotBlank() }?.trim() ?: originalText.trim()
+
+internal fun secondBrainSyncStamp(row: SecondBrainSyncRow): String = buildString {
+    append(row.id)
+    append(':')
+    append(maxOf(row.createdAtMs, row.updatedAtMs))
+    row.contentRevision?.let {
+        append(':')
+        append(it)
+    }
+}

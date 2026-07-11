@@ -28,6 +28,7 @@ import de.frank.entropyreducer.data.settings.EncryptedSecretsStore
 import de.frank.entropyreducer.data.settings.ThemeMode
 import de.frank.entropyreducer.data.tts.TtsUsageBackup
 import de.frank.entropyreducer.domain.usecase.SyncEntriesUseCase
+import de.frank.entropyreducer.di.ApplicationScope
 import de.frank.entropyreducer.presentation.launch.LaunchScreen
 import de.frank.entropyreducer.presentation.navigation.AppNavGraph
 import de.frank.entropyreducer.presentation.theme.EntropieReductorTheme
@@ -38,6 +39,7 @@ import de.frank.entropyreducer.workers.BackgroundScheduler
 import java.util.UUID
 import javax.inject.Inject
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.first
@@ -64,6 +66,10 @@ class MainActivity : ComponentActivity() {
 
     @Inject
     lateinit var secondBrainIdeaConnector: de.frank.entropyreducer.data.remote.brain.SecondBrainIdeaConnector
+
+    @Inject
+    @ApplicationScope
+    lateinit var applicationScope: CoroutineScope
 
     private val vpnPermissionLauncher =
         registerForActivityResult(ActivityResultContracts.StartActivityForResult()) { result ->
@@ -133,7 +139,15 @@ class MainActivity : ComponentActivity() {
     }
 
     override fun onStop() {
-        lifecycleScope.launch(Dispatchers.IO) { secondBrainVpnConnector.disconnect() }
+        applicationScope.launch(Dispatchers.IO) {
+            try {
+                secondBrainIdeaConnector.retryPendingUploadsNow()
+            } finally {
+                if (!lifecycle.currentState.isAtLeast(androidx.lifecycle.Lifecycle.State.STARTED)) {
+                    secondBrainVpnConnector.disconnect()
+                }
+            }
+        }
         super.onStop()
     }
 

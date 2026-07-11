@@ -52,4 +52,23 @@ class LearningBrainTitleTest {
         assertThat(preferredSecondBrainText("Originalfassung", "   "))
             .isEqualTo("Originalfassung")
     }
+
+    @Test
+    fun `changed preferred text invalidates sync stamp even with unchanged timestamps`() {
+        val base = SecondBrainSyncRow(
+            id = "59ced6c9-c6ef-4f62-9708-80b01675a547",
+            createdAtMs = 100L,
+            updatedAtMs = 100L,
+            title = "Erkenntnis",
+            bodyLabel = "Lernen",
+            body = "Originalfassung",
+            contentRevision = "Originalfassung".hashCode(),
+        )
+        val improved = base.copy(
+            body = "Verbesserte Fassung",
+            contentRevision = "Verbesserte Fassung".hashCode(),
+        )
+
+        assertThat(secondBrainSyncStamp(improved)).isNotEqualTo(secondBrainSyncStamp(base))
+    }
 }

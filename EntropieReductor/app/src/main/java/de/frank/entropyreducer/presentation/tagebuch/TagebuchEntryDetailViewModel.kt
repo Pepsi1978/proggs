@@ -5,16 +5,23 @@ import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.viewModelScope
 import dagger.hilt.android.lifecycle.HiltViewModel
+import de.frank.entropyreducer.data.diagnostics.Diag
+import de.frank.entropyreducer.data.diagnostics.DiagnosticArea
+import de.frank.entropyreducer.data.remote.brain.SecondBrainIdeaConnector
+import de.frank.entropyreducer.di.ApplicationScope
 import de.frank.entropyreducer.domain.tts.TtsPlayer
 import de.frank.entropyreducer.domain.tts.TtsResult
 import java.util.UUID
 import javax.inject.Inject
 import kotlinx.coroutines.Job
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.flowOf
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 
@@ -43,6 +50,8 @@ constructor(
     application: Application,
     savedStateHandle: SavedStateHandle,
     private val ttsPlayer: TtsPlayer,
+    private val secondBrainConnector: SecondBrainIdeaConnector,
+    @ApplicationScope private val applicationScope: CoroutineScope,
 ) : AndroidViewModel(application) {
 
     private val entryId: String = savedStateHandle.get<String>("entryId") ?: ""
@@ -126,13 +135,28 @@ constructor(
      */
     fun setImprovedText(improved: String) {
         if (entryId.isBlank()) return
-        viewModelScope.launch {
-            updateTagebuchEntry(
-                ctx,
-                entryId,
-                improvedText = improved,
-                isImproved = true,
-            )
+        applicationScope.launch {
+            try {
+                updateTagebuchEntry(
+                    ctx,
+                    entryId,
+                    improvedText = improved,
+                    isImproved = true,
+                )
+                val area = tagebuchEntryFlow(ctx, entryId).first()?.area
+                val areaKey = if (area == TagebuchArea.LEARNING) "learning" else "entropy"
+                secondBrainConnector.retryPendingUploadsNow(areaKey)
+            } catch (cancellation: CancellationException) {
+                throw cancellation
+            } catch (error: Exception) {
+                Diag.e(
+                    DiagnosticArea.SECOND_BRAIN,
+                    "LearningImproveSync",
+                    "CHECKPOINT step=improvedTextSync expected=saved_and_synced actual=error ok=false id=$entryId message=${error.message}",
+                    error,
+                )
+                errorFlow.value = error.message ?: "Verbesserte Fassung konnte nicht synchronisiert werden."
+            }
         }
     }
 
