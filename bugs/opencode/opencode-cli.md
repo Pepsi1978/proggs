@@ -200,7 +200,7 @@
 **Sofort-Workaround:** Fenster kurz Verkleinern→Maximieren (Full Repaint), wie #14.
 
 **Status (2026-07-11, 21:27):** Alle 3 Ebenen UMGESETZT.
-1. Launcher **v1.11.0** (#47829/#47830): Startskript leitet stderr in `~/.local/share/opencode/log/stderr/opencode-stderr-<ts>-<pid>.log` um (pro Prozess eigene Datei — parallele Fenster kollisionsfrei); Wächter meldet nicht-leere Protokolle beim nächsten Start und löscht leere; TEMP-Fallback falls Log-Verzeichnis fehlt. Mechanismus per Fake-Prozess verifiziert (stderr→Datei, stdout bleibt am TTY).
+1. Launcher **ab v1.11.0, Stand v1.14.0** (#47829/#47830): Startskript leitet stderr in `~/.local/share/opencode/log/stderr/opencode-stderr-<ts>-<pid>.log` um (pro Prozess eigene Datei — parallele Fenster kollisionsfrei); Wächter meldet nicht-leere Protokolle beim nächsten Start und löscht leere; TEMP-Fallback falls Log-Verzeichnis fehlt. Mechanismus per Fake-Prozess verifiziert (stderr→Datei, stdout bleibt am TTY).
 2. **`1.17.18-windowsfix.9`** (#47831, aktiv seit 2026-07-11): TUI-Command-Handler installiert `unhandledRejection`/`uncaughtException`-Handler, die nach `~/.local/share/opencode/log/tui-crash.log` schreiben (Capability `tuiErrorHandlers`; Marker im Binary verifiziert). Upstream-Issue bei anomalyco/opencode noch offen.
 3. `small_model: "openai/gpt-5.5-fast"` (#47828): Log-verifiziert — Titel-Agent lief nach dem Fix mit gpt-5.5-fast fehlerfrei statt `Model not found gpt-5.6-luna`.
 Langzeitbeobachtung offen: tritt die Korruption in realen Sessions noch auf? Bei erneutem Auftreten zuerst `stderr/`-Logs + `tui-crash.log` lesen (dort steht jetzt der Täter).
