@@ -93,14 +93,14 @@
                                 <RowDefinition Height="*"/>
                             </Grid.RowDefinitions>
                             <Border HorizontalAlignment="Left"
-                                    Background="{DynamicResource SurfaceBg}"
-                                    BorderBrush="{DynamicResource BorderBrushSoft}"
-                                    BorderThickness="1"
-                                    CornerRadius="12"
-                                    Padding="5">
+                                    Background="Transparent"
+                                    BorderThickness="0"
+                                    Padding="2"
+                                    ClipToBounds="False">
                                 <TabPanel IsItemsHost="True"
                                           KeyboardNavigation.TabIndex="1"
-                                          Background="Transparent"/>
+                                          Background="Transparent"
+                                          ClipToBounds="False"/>
                             </Border>
                             <Border Grid.Row="1"
                                     Margin="0,12,0,0"
@@ -124,15 +124,15 @@
             <Setter Property="Foreground" Value="{DynamicResource MutedBrush}"/>
             <Setter Property="FontWeight" Value="SemiBold"/>
             <Setter Property="Padding" Value="18,8"/>
-            <Setter Property="Margin" Value="0,0,5,0"/>
+            <Setter Property="Margin" Value="0,0,14,0"/>
             <Setter Property="MinWidth" Value="132"/>
             <Setter Property="FocusVisualStyle" Value="{x:Null}"/>
             <Setter Property="Template">
                 <Setter.Value>
                     <ControlTemplate TargetType="TabItem">
-                        <Border x:Name="TabBorder" Background="Transparent"
-                                BorderBrush="Transparent" BorderThickness="1"
-                                CornerRadius="8" Padding="{TemplateBinding Padding}"
+                        <Border x:Name="TabBorder" Background="{DynamicResource SurfaceBg}"
+                                BorderBrush="{DynamicResource BorderBrushSoft}" BorderThickness="1"
+                                CornerRadius="12" Padding="{TemplateBinding Padding}"
                                 SnapsToDevicePixels="True">
                             <ContentPresenter ContentSource="Header" HorizontalAlignment="Center"/>
                         </Border>
