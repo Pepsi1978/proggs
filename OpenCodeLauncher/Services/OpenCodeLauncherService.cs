@@ -22,6 +22,9 @@ namespace OpenCodeLauncher.Services;
 /// </summary>
 public sealed class OpenCodeLauncherService
 {
+    private const string Gpt56SolSlug = "gpt-5.6-sol";
+    private const string Gpt56SolFastSlug = "gpt-5.6-sol-fast";
+
     private static readonly TerminalTabColor[] TerminalTabColors =
     [
         new("black", "#0C0C0C"),
@@ -78,7 +81,7 @@ public sealed class OpenCodeLauncherService
         if (!string.Equals(model.ProviderId, "openrouter", StringComparison.OrdinalIgnoreCase))
         {
             var usesPriorityServiceTier = UsesPriorityServiceTier(model.ProviderId, model.Slug);
-            if (!string.IsNullOrWhiteSpace(thinkingLevel) || usesPriorityServiceTier)
+            if (!string.IsNullOrWhiteSpace(thinkingLevel) || IsGpt56SolModel(model.ProviderId, model.Slug))
             {
                 var root = ReadConfig();
                 PatchDirectModel(root, model.ProviderId, model.Slug, model.DisplayName, thinkingLevel);
@@ -810,7 +813,24 @@ try {
             ClearThinkingOptions(optionsBlock);
             ApplyThinkingOptions(optionsBlock, providerId, slug, thinkingLevel);
         }
-        if (UsesPriorityServiceTier(providerId, slug)) optionsBlock["serviceTier"] = "priority";
+        if (IsGpt56SolModel(providerId, slug)) NormalizeExistingGpt56SolModels(models);
+    }
+
+    private static void NormalizeExistingGpt56SolModels(JsonObject models)
+    {
+        if (models[Gpt56SolSlug] is JsonObject normal)
+        {
+            normal["name"] = "GPT-5.6 Sol";
+            normal.Remove("id");
+            normal.GetOrAddObject("options").Remove("serviceTier");
+        }
+
+        if (models[Gpt56SolFastSlug] is JsonObject fast)
+        {
+            fast["id"] = Gpt56SolSlug;
+            fast["name"] = "GPT-5.6 Sol Fast";
+            fast.GetOrAddObject("options")["serviceTier"] = "priority";
+        }
     }
 
     private static bool UsesPriorityServiceTier(string providerId, string slug)
@@ -819,7 +839,17 @@ try {
 
         var modelId = slug.Trim();
         if (modelId.StartsWith("openai/", StringComparison.OrdinalIgnoreCase)) modelId = modelId["openai/".Length..];
-        return string.Equals(modelId, "gpt-5.6-sol", StringComparison.OrdinalIgnoreCase);
+        return string.Equals(modelId, Gpt56SolFastSlug, StringComparison.OrdinalIgnoreCase);
+    }
+
+    private static bool IsGpt56SolModel(string providerId, string slug)
+    {
+        if (!string.Equals(providerId, "openai", StringComparison.OrdinalIgnoreCase)) return false;
+
+        var modelId = slug.Trim();
+        if (modelId.StartsWith("openai/", StringComparison.OrdinalIgnoreCase)) modelId = modelId["openai/".Length..];
+        return string.Equals(modelId, Gpt56SolSlug, StringComparison.OrdinalIgnoreCase) ||
+               string.Equals(modelId, Gpt56SolFastSlug, StringComparison.OrdinalIgnoreCase);
     }
 
     private static void ApplyThinkingOptions(JsonObject optionsBlock, string providerId, string slug, string? thinkingLevel)
