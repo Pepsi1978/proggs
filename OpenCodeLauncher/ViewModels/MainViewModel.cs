@@ -38,16 +38,16 @@ public sealed partial class MainViewModel : ObservableObject
             Id = "minimal",
             DisplayName = "Minimal",
             Description = "Wenig Kontext, maximale Freiheit",
-            Status = "FOLGT",
-            IsEnabled = false
+            Status = "VORBEREITET",
+            IsEnabled = true
         });
         Profiles.Add(new InstructionProfileEntry
         {
             Id = "strict",
             DisplayName = "Strikt",
             Description = "Mehr Kontrolle und Absicherung",
-            Status = "FOLGT",
-            IsEnabled = false
+            Status = "VORBEREITET",
+            IsEnabled = true
         });
         SelectedProfile = Profiles[0];
         SelectedModel = ModelGroups.FirstOrDefault(g => g.Models.Count > 0)?.Models.FirstOrDefault();
@@ -55,8 +55,8 @@ public sealed partial class MainViewModel : ObservableObject
         WorkDir = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), "proggs");
         _ = CheckOpenCodeUpdateAsync();
 
-        var version = Assembly.GetExecutingAssembly().GetName().Version?.ToString(3) ?? "1.8.0";
-        Version = $"Version {version} (11.07.2026, 11:57 Uhr)";
+        var version = Assembly.GetExecutingAssembly().GetName().Version?.ToString(3) ?? "1.9.0";
+        Version = $"Version {version} (11.07.2026, 12:20 Uhr)";
     }
 
     public ObservableCollection<ModelGroupEntry> ModelGroups { get; } = new();
@@ -81,6 +81,7 @@ public sealed partial class MainViewModel : ObservableObject
     [ObservableProperty] private bool _hasLastError;
     [ObservableProperty] private InstructionProfileEntry? _selectedProfile;
     [ObservableProperty] private string _profileContextText = "OpenCode · AGENTS.md";
+    [ObservableProperty] private bool _canEditSelectedProfile = true;
 
     partial void OnSelectedModelChanged(ModelEntry? value)
     {
@@ -197,6 +198,12 @@ public sealed partial class MainViewModel : ObservableObject
         {
             Logger.Instance.Warn("MainViewModel", "RefreshOpenRouterFreeModelsAsync", $"OpenRouterFree bleibt bei Fallback-Liste: {ex.Message}");
         }
+    }
+
+    partial void OnSelectedProfileChanged(InstructionProfileEntry? value)
+    {
+        CanEditSelectedProfile = string.Equals(value?.Id, "standard", StringComparison.Ordinal);
+        if (value != null) StatusText = $"Profil {value.DisplayName} ausgewählt.";
     }
 
     private async Task CheckOpenCodeUpdateAsync()
@@ -361,6 +368,16 @@ public sealed partial class MainViewModel : ObservableObject
             StatusText = "Bitte Modell und Provider wählen.";
             return;
         }
+        if (SelectedProfile == null)
+        {
+            StatusText = "Bitte ein Profil wählen.";
+            return;
+        }
+        if (!string.Equals(SelectedProfile.Id, "standard", StringComparison.Ordinal))
+        {
+            StatusText = $"Profil {SelectedProfile.DisplayName} ist auswählbar, aber noch nicht eingerichtet.";
+            return;
+        }
         if (!Directory.Exists(WorkDir))
         {
             StatusText = "Arbeitsverzeichnis existiert nicht.";
@@ -369,20 +386,33 @@ public sealed partial class MainViewModel : ObservableObject
         try
         {
             var thinkingLevel = SelectedThinkingOption?.CommandValue;
-            if (IsClaudeCodeModel(SelectedModel))
+            var isClaudeCode = IsClaudeCodeModel(SelectedModel);
+            var profileDocuments = _profiles.LoadStandard(isClaudeCode, WorkDir);
+            Logger.Instance.Info("MainViewModel", "Start", "Vollständige Startauswahl geprüft", new
+            {
+                model = SelectedModel.ModelString,
+                provider = SelectedProvider.ProviderName,
+                providerSlug = SelectedProvider.ProviderSlug,
+                thinkingLevel,
+                profile = SelectedProfile.Id,
+                profileGlobal = profileDocuments.GlobalPath,
+                profileProject = profileDocuments.ProjectPath,
+                workDir = WorkDir
+            });
+            if (isClaudeCode)
             {
                 _launcher.LaunchClaudeCode(SelectedModel.Slug, WorkDir, thinkingLevel);
                 StatusText = string.IsNullOrWhiteSpace(thinkingLevel)
-                    ? $"Claude Code gestartet: {SelectedModel.DisplayName}"
-                    : $"Claude Code gestartet: {SelectedModel.DisplayName} · Effort {SelectedThinkingOption?.DisplayName}";
+                    ? $"Claude Code gestartet: {SelectedModel.DisplayName} · Profil {SelectedProfile.DisplayName}"
+                    : $"Claude Code gestartet: {SelectedModel.DisplayName} · Effort {SelectedThinkingOption?.DisplayName} · Profil {SelectedProfile.DisplayName}";
                 return;
             }
 
             var modelString = _launcher.ConfigureProvider(SelectedModel, SelectedProvider, Providers, thinkingLevel);
             _launcher.Launch(modelString, WorkDir, thinkingLevel);
             StatusText = string.IsNullOrWhiteSpace(thinkingLevel)
-                ? $"OpenCode gestartet: {SelectedModel.DisplayName} via {SelectedProvider.ProviderName}"
-                : $"OpenCode gestartet: {SelectedModel.DisplayName} via {SelectedProvider.ProviderName} · Thinking {SelectedThinkingOption?.DisplayName}";
+                ? $"OpenCode gestartet: {SelectedModel.DisplayName} via {SelectedProvider.ProviderName} · Profil {SelectedProfile.DisplayName}"
+                : $"OpenCode gestartet: {SelectedModel.DisplayName} via {SelectedProvider.ProviderName} · Thinking {SelectedThinkingOption?.DisplayName} · Profil {SelectedProfile.DisplayName}";
         }
         catch (Exception ex)
         {

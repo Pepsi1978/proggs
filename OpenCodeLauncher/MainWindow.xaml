@@ -603,6 +603,7 @@
                                 <TextBlock Text="{Binding ProfileContextText}" FontSize="11" Foreground="{DynamicResource DimBrush}" Margin="0,3,0,0"/>
                             </StackPanel>
                             <Button Style="{StaticResource GhostBtn}" Content="Bearbeiten" DockPanel.Dock="Right" Padding="11,6" FontSize="12"
+                                    IsEnabled="{Binding CanEditSelectedProfile}"
                                     Command="{Binding EditProfileCommand}"/>
                         </DockPanel>
 
