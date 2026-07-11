@@ -34,4 +34,22 @@ class LearningBrainTitleTest {
         assertThat(parsed.displayTitle).isEqualTo("Externes Wissen")
         assertThat(parsed.rowId).isNull()
     }
+
+    @Test
+    fun `improved text is always preferred even when it is not selected on phone`() {
+        val selected = preferredSecondBrainText(
+            originalText = "Rohe Originalfassung",
+            improvedText = "  Klare verbesserte Fassung  ",
+        )
+
+        assertThat(selected).isEqualTo("Klare verbesserte Fassung")
+    }
+
+    @Test
+    fun `original text is used only when no improved text exists`() {
+        assertThat(preferredSecondBrainText("  Originalfassung  ", null))
+            .isEqualTo("Originalfassung")
+        assertThat(preferredSecondBrainText("Originalfassung", "   "))
+            .isEqualTo("Originalfassung")
+    }
 }

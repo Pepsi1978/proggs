@@ -472,7 +472,7 @@ class SecondBrainIdeaConnector @Inject constructor(
         }.toIdeaRows()
 
     private fun List<IdeaWithFollowups>.toIdeaRows(): List<SecondBrainSyncRow> = map { row ->
-        val ideaText = row.idea.improvedText?.takeIf { it.isNotBlank() }?.trim() ?: row.idea.text.trim()
+        val ideaText = preferredSecondBrainText(row.idea.text, row.idea.improvedText)
         SecondBrainSyncRow(
             id = row.idea.id,
             createdAtMs = row.idea.timestampMs,
@@ -580,7 +580,7 @@ class SecondBrainIdeaConnector @Inject constructor(
         updatedAtMs = updatedAt.takeIf { it > 0L } ?: timestampMs,
         title = title.trim().ifBlank { text.trim().shortTitle("Lernen", id) },
         bodyLabel = "Lernen",
-        body = (improvedText?.takeIf { isImproved && it.isNotBlank() } ?: text).trim(),
+        body = preferredSecondBrainText(text, improvedText),
         summary = summary?.takeIf { it.isNotBlank() }?.trim(),
     )
 
@@ -727,3 +727,7 @@ internal fun parseLearningBrainTitle(title: String?): LearningBrainTitleParts {
 }
 
 private const val LEARNING_TITLE_MARKER = " · Lernen · "
+
+/** Fuer Lernen und Ideen verlaesst nur die beste vorhandene Textfassung das Handy. */
+internal fun preferredSecondBrainText(originalText: String, improvedText: String?): String =
+    improvedText?.takeIf { it.isNotBlank() }?.trim() ?: originalText.trim()
