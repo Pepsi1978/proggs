@@ -156,7 +156,23 @@ def inject_into_system_prompt(system: str, rule_items: list) -> str:
 # A behaviour rule is meant when the message either names "Regel" together with
 # intent to write/remember it, OR expresses a durable behaviour instruction
 # ("ab jetzt / generell / grundsaetzlich ... immer ...").
-_RULE_WORD = re.compile(r"\bregel(datei|n)?\b", re.IGNORECASE)
+_RULE_REQUEST = [
+    re.compile(
+        r"\b(?:mach(?:e)?|erstell(?:e)?|leg(?:e)?|schreib(?:e)?|speicher(?:e)?|notier(?:e)?|"
+        r"merk(?:e)?|gib)\b.{0,80}\bregel(?:datei|n)?\b",
+        re.IGNORECASE,
+    ),
+    re.compile(
+        r"\bregel(?:datei|n)?\b.{0,40}\b(?:anleg(?:en|e)?|erstell(?:en|e)?|schreib(?:en|e)?|"
+        r"speicher(?:n|e)?|notier(?:en|e)?|übernimm(?:st|en)?|uebernimm(?:st|en)?)\b",
+        re.IGNORECASE,
+    ),
+    re.compile(r"\b(?:dauerhafte?|verbindliche?)\s+regel\b.{0,30}\b(?:für|fuer|fur)\s+dich\b", re.IGNORECASE),
+]
+_RULE_NEGATION = [
+    re.compile(r"\b(?:kein(?:e|en|er|es)?|nicht|niemals)\b.{0,50}\bregel(?:datei|n)?\b", re.IGNORECASE),
+    re.compile(r"\bregel(?:datei|n)?\b.{0,50}\b(?:nicht|niemals)\b", re.IGNORECASE),
+]
 _DURABLE_ALWAYS = [
     re.compile(
         r"\b(ab jetzt|ab sofort|von nun an|kuenftig|künftig|in zukunft|generell|"
@@ -175,7 +191,9 @@ def is_rule_request(text: str) -> bool:
     t = (text or "").strip()
     if not t:
         return False
-    if _RULE_WORD.search(t):
+    if any(pat.search(t) for pat in _RULE_NEGATION):
+        return False
+    if any(pat.search(t) for pat in _RULE_REQUEST):
         return True
     for pat in _DURABLE_ALWAYS:
         if pat.search(t):

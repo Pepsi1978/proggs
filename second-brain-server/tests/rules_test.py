@@ -181,6 +181,7 @@ def main() -> int:
             "Schreib das bitte in deine Regeldatei.",
             "Das ist eine dauerhafte Regel fuer dich.",
             "Merk dir das als Regel.",
+            "Lege bitte eine Regel an.",
             "Antworte mir ab jetzt immer als Fliesstext.",
             "Verhalte dich generell immer hoeflich.",
             "Gib dir eine Regel, dass du immer kurz antwortest.",
@@ -194,6 +195,10 @@ def main() -> int:
             "Leg das in meinem Gedaechtnis ab.",
             "Wie spaet ist es?",
             "Was kannst du alles?",
+            "Das Wunder besteht darin, dass es überhaupt Regeln und Sein gibt.",
+            "Du solltest keine Regeln anlegen, sondern den Text wortwörtlich abspeichern.",
+            "Bitte lege diese Regel nicht an.",
+            "regel nein",
         ]
         for t in rule_false:
             check(rules.is_rule_request(t) is False, f"is_rule_request FALSE: {t!r}")
