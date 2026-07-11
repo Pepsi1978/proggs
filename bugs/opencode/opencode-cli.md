@@ -4,7 +4,8 @@
 > bewährten, **funktionserhaltenden** Lösungen — damit der Fehler gar nicht erst passiert.
 >
 > **Stand:** recherchiert am 2026-06-18 für **OpenCode CLI v1.17.8**, lokal ergänzt am 2026-07-10
-> um den bestätigten Windows-Mausfix für **OpenCode CLI v1.17.18** (Repo `anomalyco/opencode`,
+> um den bestätigten Windows-Mausfix und am 2026-07-11 um den stderr-Stack-Trace-Leak (#14a)
+> für **OpenCode CLI v1.17.18** (Repo `anomalyco/opencode`,
 > früher `sst/opencode`; Doku `opencode.ai`). Recherche: 7 parallele Researcher (offizielle Doku +
 > Changelog v1.1.64→v1.17.8, GitHub-Issues, Community, Plattform-Fallen, Config/AGENTS.md,
 > Agents/Plugins/MCP/Skills, Token/Provider/OpenRouter). Quellen je Eintrag verlinkt.
@@ -41,6 +42,7 @@
 | 15 | ⭐ Direkter Python-Call an Go-Gateway/OpenRouter → Cloudflare 403/„1010" | urllib-Default-UA wird geblockt → `User-Agent: curl/8.5.0` setzen (so `mm/or-research _post()`). Erinnerung: `/messages`=`x-api-key`, Thinking `{type:enabled,budget_tokens:N}` (NICHT `adaptive` — das nur bei `/chat/completions`) | §14.6–14.8 |
 | 16 | ⭐ Plugin deinstallieren / Plugin kommt nach Neustart wieder („loading plugins") | Es gibt **KEIN** `plugin remove`. Eintrag steht in MEHREREN Config-Dateien (auch `tui.json`, nicht nur `opencode.jsonc`) → **alle** entfernen; OpenCode **schließen** (sonst regeneriert es Cache+Config sofort); Cache `~/.cache/opencode/packages/<scope>` + plugin-eigene Config (z.B. `dcp.jsonc`) löschen; ggf. `~/.config/opencode/package.json` zurücksetzen (append-only). | §7 (#55d) |
 | 17 | ⭐ TUI sieht komplett kaputt aus (linke Spalte voller `??`/`M`, `[plugin] …`-Zeilen bluten rein) | Ein Plugin schreibt direkt aufs Terminal — Plugins laufen IM TUI-Prozess. Ursache: `$`-Shell-Aufruf **ohne `.quiet()`** (Bun echoed stdout ans TTY, z.B. `git status --porcelain`) und/oder `console.*` (schreibt auf stderr). **FIX:** an JEDEN `$`-Aufruf `.quiet()`; NIE `console.*`, nur `client.app.log`. | §6 (#48a) |
+| 18 | ⭐ TUI zerfällt sporadisch (Fragmente an falschen Positionen, Statuszeile vermischt), unten rohe `at … (B:/~BUN/root/chunk-…)`-Stack-Traces; Fenster-Resize heilt kurzfristig | Unbehandelte Fehler im TUI-Hauptthread (kein `unhandledRejection`/`uncaughtException`-Handler) → Bun druckt Stack-Trace auf stderr = TTY der TUI; Diff-Renderer merkt nichts. **FIX:** stderr beim Start in Log-Datei umleiten + Handler im TUI-Entry + Fehler-Trigger abstellen (`small_model` explizit setzen). | §2 (#14a) |
 
 ---
 
@@ -176,6 +178,30 @@
 **Sofort-Workaround für ältere Binaries:** Terminal-Fenster kurz resizen, um ein Full Repaint zu erzwingen.
 
 **Quelle:** lokal auf OpenCode 1.17.18, OpenTUI 0.4.3 und Windows Terminal 1.24.11321.0 reproduziert · https://github.com/anomalyco/opencode/issues/15388 · https://github.com/anomalyco/opencode/issues/16327
+
+### 14a. ⭐ TUI korrumpiert durch ROHE Stack-Traces unbehandelter Fehler (stderr-Leak in den TUI-Bildschirm)
+
+**Symptom:** Sporadisch (real ~4-5 von 10 Fenstern mindestens einmal) zerfällt das TUI: Content-Bereich verschoben, Sidebar-Werte (Token-Zahlen, LSP-Liste) als versprengte Fragmente auf schwarzem Grund, Statuszeile mit Fremdtext vermischt. Am unteren Rand stehen ROHE Bun-Stack-Traces: `at new Promise (1:11)` / `at send (B:/~BUN/root/chunk-….js:69:2131)` / `at ~effect/Effect/evaluate (…:25:4492)` / `at runLoop` / `at evaluate`. Ein Fenster-Resize (Verkleinern→Maximieren) stellt das Bild sofort vollständig wieder her — aber nur bis zum nächsten Fehler-Event. NICHT identisch mit #14 (dort lehnt der Renderer selbst Frames ab; der `fullRepaintRecovery`-Fix aus windowsfix.6+ greift hier NICHT, weil der Renderer die fremden Bytes nie sieht).
+
+**Root Cause (Quellcode-Analyse 2026-07-11, Kette aus 3 Gliedern):**
+1. **Wiederkehrende Laufzeitfehler als Trigger:** OpenCode wählt ohne explizites `small_model` automatisch ein Kleinmodell; beim openai-Provider wählte es `gpt-5.6-luna-pro`, das der Provider nicht kennt → `AI_APICallError: Model not found gpt-5.6-luna` bei praktisch JEDER neuen Session (agent=title; 43× in 4 Tagen Log). Dazu `ProviderHeaderTimeoutError … 10000ms` (33×) und MCP-Timeouts.
+2. **TUI-Hauptthread ist ungeschützt:** Nur der Server-Worker (`packages/opencode/src/cli/tui/worker.ts`) installiert No-Op-Handler für `unhandledRejection`/`uncaughtException`; im TUI-Hauptthread (`packages/tui/`) existiert KEIN solcher Handler → Bun druckt jeden unbehandelten Fehler (aus Effect-Fibers, erkennbar an `~effect/Effect/evaluate`/`runLoop`-Frames) mit vollem Stack auf **stderr**.
+3. **stderr = TTY der TUI:** Der Start (Launcher-Skript `& opencode.exe -m …` ohne Umleitung) lässt stderr direkt ins Terminal laufen. Die fremden Bytes verschieben Cursor/Scroll-Zustand; der OpenTUI-Diff-Renderer hält seinen Puffer weiter für aktuell → Bild bleibt korrupt, bis ein Full Repaint erzwungen wird (Resize).
+
+**Beweis:** Stack-Positionen in zwei verschiedenen Builds identisch (`69:2131`, `67:13392`, `67:13895`, `25:4492`, `25:2045`, `25:1435`, `25:5664` in windowsfix.6/7 `chunk-1x390gm7`/`chunk-kt6t9jpj` UND windowsfix.8 `chunk-s76h5xya`/`chunk-a5758kqj`) = derselbe Code-Pfad, kein Zufall. Resize-Heilung vom Benutzer bestätigt (Full-Repaint-Mechanik wie #14).
+
+**Versionen:** OpenCode 1.17.18 (windowsfix.6–8), OpenTUI 0.4.3, Windows Terminal, beobachtet 2026-07-10/11. Upstream-Problem (fehlender TUI-Thread-Handler) betrifft auch offizielle Builds.
+
+**FIX (Defense in Depth, funktionserhaltend, alle 3 Ebenen):**
+1. **Launcher (Poka-Yoke Stufe 3, eliminiert die ganze Klasse):** stderr beim OpenCode-Start in eine Log-Datei umleiten (z.B. `2>> ~/.local/share/opencode/log/opencode-stderr.log` im generierten Startskript `BuildOpenCodeStartScript`, OpenCodeLauncher) — Fehler bleiben vollständig lesbar (verlustfrei), erreichen aber nie das TTY.
+2. **windowsfix.9 (Root-Cause-nah):** im TUI-Entry `unhandledRejection`/`uncaughtException`-Handler installieren, die in die opencode.log schreiben (NICHT stumm schlucken — Observability erhalten), analog zum Server-Worker.
+3. **Trigger abstellen:** existierendes `small_model` explizit in `~/.config/opencode/opencode.jsonc` setzen, damit die automatische (falsche) Kleinmodell-Wahl entfällt; MCP-Timeout-Quellen (second-brain Half-Open-Keep-Alive) separat im Blick behalten.
+
+**Sofort-Workaround:** Fenster kurz Verkleinern→Maximieren (Full Repaint), wie #14.
+
+**Status:** Diagnose abgeschlossen 2026-07-11; Fixes 1–3 offen.
+
+**Quelle:** eigener Vorfall (Frank, 3 Screenshots 2026-07-10/11) + lokale Quellcode-Analyse des 1.17.18-Klons (`cli/tui/worker.ts`, `packages/tui/`) + `~/.local/share/opencode/log/opencode.log`.
 
 ### 15. TUI-Freeze (Spinlock) — Prozess läuft nach Terminal-Schließen weiter
 **Symptom:** TUI komplett unresponsive; nach Terminal-Schließen läuft `opencode` mit CPU-Last weiter.
