@@ -27,18 +27,18 @@ public sealed partial class MainViewModel : ObservableObject
         foreach (var g in _registry.Groups) ModelGroups.Add(g);
         Profiles.Add(new InstructionProfileEntry
         {
-            Id = "standard",
-            DisplayName = "Standard",
-            Description = "Aktuelle globale und Projektregeln",
-            Status = "AKTIV",
-            IsEnabled = true
-        });
-        Profiles.Add(new InstructionProfileEntry
-        {
             Id = "minimal",
             DisplayName = "Minimal",
             Description = "Wenig Kontext, maximale Freiheit",
             Status = "VORBEREITET",
+            IsEnabled = true
+        });
+        Profiles.Add(new InstructionProfileEntry
+        {
+            Id = "standard",
+            DisplayName = "Standard",
+            Description = "Aktuelle globale und Projektregeln",
+            Status = "AKTIV",
             IsEnabled = true
         });
         Profiles.Add(new InstructionProfileEntry
@@ -49,14 +49,14 @@ public sealed partial class MainViewModel : ObservableObject
             Status = "VORBEREITET",
             IsEnabled = true
         });
-        SelectedProfile = Profiles[0];
+        SelectedProfile = Profiles.Single(profile => profile.Id == "standard");
         SelectedModel = ModelGroups.FirstOrDefault(g => g.Models.Count > 0)?.Models.FirstOrDefault();
         _ = RefreshOpenRouterFreeModelsAsync();
         WorkDir = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), "proggs");
         _ = CheckOpenCodeUpdateAsync();
 
-        var version = Assembly.GetExecutingAssembly().GetName().Version?.ToString(3) ?? "1.9.3";
-        Version = $"Version {version} (11.07.2026, 12:47 Uhr)";
+        var version = Assembly.GetExecutingAssembly().GetName().Version?.ToString(3) ?? "1.9.4";
+        Version = $"Version {version} (11.07.2026, 12:59 Uhr)";
     }
 
     public ObservableCollection<ModelGroupEntry> ModelGroups { get; } = new();
