@@ -15,6 +15,7 @@ namespace OpenCodeLauncher.Services;
 public sealed class ModelRegistry
 {
     private const string Gpt56SolSlug = "gpt-5.6-sol";
+    private const string Gpt56SolLegacyFastSlug = "gpt-5.6-sol-fast";
 
     private static readonly string Dir = Path.Combine(
         Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData),
@@ -300,6 +301,23 @@ public sealed class ModelRegistry
                 model.ProviderName = group.ProviderName;
                 if (string.IsNullOrWhiteSpace(model.DisplayName)) model.DisplayName = ToDisplayName(model.Slug);
             }
+
+            if (string.Equals(group.Id, "openai", StringComparison.OrdinalIgnoreCase))
+            {
+                var solEntries = group.Models.Where(model =>
+                    string.Equals(model.Slug, Gpt56SolSlug, StringComparison.OrdinalIgnoreCase) ||
+                    string.Equals(model.Slug, Gpt56SolLegacyFastSlug, StringComparison.OrdinalIgnoreCase)).ToList();
+                if (solEntries.Count > 0)
+                {
+                    var canonical = solEntries.FirstOrDefault(model =>
+                        string.Equals(model.Slug, Gpt56SolSlug, StringComparison.OrdinalIgnoreCase)) ?? solEntries[0];
+                    canonical.Slug = Gpt56SolSlug;
+                    canonical.DisplayName = "GPT-5.6 Sol Fast";
+                    foreach (var duplicate in solEntries.Where(model => !ReferenceEquals(model, canonical)))
+                        group.Models.Remove(duplicate);
+                }
+            }
+
             group.HiddenModelSlugs = group.HiddenModelSlugs
                 .Where(slug => !string.IsNullOrWhiteSpace(slug))
                 .Distinct(StringComparer.OrdinalIgnoreCase)
