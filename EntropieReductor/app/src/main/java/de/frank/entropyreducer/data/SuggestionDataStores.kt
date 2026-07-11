@@ -105,9 +105,9 @@ suspend fun restoreTaskSuggestions(
     // Frank-Wunsch 2026-06-20: Vorschlags-Tombstones (angenommene/verworfene Vorschlaege). Eine ID
     // hier -> der Vorschlag ist geloescht und darf NICHT wieder eingespielt werden.
     deletedAt: Map<String, Long> = emptyMap(),
-    // Bugfix 2026-06-20: IDs per Tombstone GELOESCHTER Ideen. Ein Vorschlag, dessen Quell-Idee
-    // (rootId) geloescht wurde, ist VERWAIST -> genau wie ein angenommener Vorschlag verbraucht.
-    ideaDeletedAt: Set<String> = emptySet(),
+    // IDs geloeschter Quell-Eintraege (Ideen oder Lernen). Ein daraus abgeleiteter Vorschlag ist
+    // verwaist und darf nicht wiederhergestellt werden.
+    sourceDeletedIds: Set<String> = emptySet(),
 ): Int {
     val dao = taskSuggestionDaoFrom(context)
     val entryDao = entropyEntryDaoFrom(context)
@@ -122,7 +122,7 @@ suspend fun restoreTaskSuggestions(
             ex.id in deletedAt -> "Tombstone (geloescht/angenommen)"
             PhoneContentGuard.isSecondBrainWorkArtifact(ex.title, ex.description) -> "Second-Brain-Artefakt"
             isIdeaAlreadyAccepted(entryDao, habitDao, ex.rootId) -> "Idee angenommen (Kette weiter)"
-            isRootIdeaDeleted(ex.rootId, ideaDeletedAt) -> "Idee geloescht (verwaist)"
+            isRootSourceDeleted(ex.rootId, sourceDeletedIds) -> "Quelle geloescht (verwaist)"
             else -> null
         }
         if (reason != null) {
@@ -142,7 +142,7 @@ suspend fun restoreTaskSuggestions(
             it.id in deletedAt ||
             PhoneContentGuard.isSecondBrainWorkArtifact(it.title, it.description) ||
             isIdeaAlreadyAccepted(entryDao, habitDao, it.rootId) ||
-            isRootIdeaDeleted(it.rootId, ideaDeletedAt)
+            isRootSourceDeleted(it.rootId, sourceDeletedIds)
     }
     if (toAdd.isEmpty()) return 0
     // Backup-DTO hat keinen Zeitstempel — Reihenfolge stabil halten (wie der Migrator). Schema v18
@@ -187,16 +187,16 @@ private suspend fun isIdeaAlreadyAccepted(
  * VOR der Idee geloescht wurde (dann ist countByRootId=0 und nur der Idee-Tombstone zeigt es noch an).
  * rootId==null (Alt-Vorschlag ohne Herkunft) -> nicht filterbar (false), wie bisher.
  */
-private fun isRootIdeaDeleted(rootId: String?, ideaDeletedAt: Set<String>): Boolean =
-    !rootId.isNullOrBlank() && rootId in ideaDeletedAt
+private fun isRootSourceDeleted(rootId: String?, sourceDeletedIds: Set<String>): Boolean =
+    !rootId.isNullOrBlank() && rootId in sourceDeletedIds
 
 /** Spielt Gewohnheitsvorschlaege aus dem Backup in Room ein (nur fehlende IDs, lokale gewinnen). */
 suspend fun restoreGewohnheitSuggestions(
     context: Context,
     incoming: List<BackupMental>,
     deletedAt: Map<String, Long> = emptyMap(),
-    // Bugfix 2026-06-20: IDs per Tombstone GELOESCHTER Ideen (siehe restoreTaskSuggestions).
-    ideaDeletedAt: Set<String> = emptySet(),
+    // IDs geloeschter Quell-Eintraege (Ideen oder Lernen), siehe restoreTaskSuggestions.
+    sourceDeletedIds: Set<String> = emptySet(),
 ): Int {
     val dao = habitSuggestionDaoFrom(context)
     val entryDao = entropyEntryDaoFrom(context)
@@ -209,7 +209,7 @@ suspend fun restoreGewohnheitSuggestions(
             ex.id in deletedAt -> "Tombstone (geloescht/angenommen)"
             PhoneContentGuard.isSecondBrainWorkArtifact(null, ex.text) -> "Second-Brain-Artefakt"
             isIdeaAlreadyAccepted(entryDao, habitDao, ex.rootId) -> "Idee angenommen (Kette weiter)"
-            isRootIdeaDeleted(ex.rootId, ideaDeletedAt) -> "Idee geloescht (verwaist)"
+            isRootSourceDeleted(ex.rootId, sourceDeletedIds) -> "Quelle geloescht (verwaist)"
             else -> null
         }
         if (reason != null) {
@@ -228,7 +228,7 @@ suspend fun restoreGewohnheitSuggestions(
             it.id in deletedAt ||
             PhoneContentGuard.isSecondBrainWorkArtifact(null, it.text) ||
             isIdeaAlreadyAccepted(entryDao, habitDao, it.rootId) ||
-            isRootIdeaDeleted(it.rootId, ideaDeletedAt)
+            isRootSourceDeleted(it.rootId, sourceDeletedIds)
     }
     if (toAdd.isEmpty()) return 0
     // Reihenfolge stabil halten. Schema v18 (2026-06-20): Herkunft aus dem Backup wiederherstellen
@@ -259,7 +259,11 @@ suspend fun restoreGewohnheitSuggestions(
  */
 suspend fun healOrphanedSuggestions(context: Context) {
     val tombstones = tombstonesForBackup(context)
-    val ideaDeleted = tombstones.filter { it.type == TombstoneType.IDEE }.map { it.id }.toSet()
+    val sourceDeleted =
+        tombstones
+            .filter { it.type == TombstoneType.IDEE || it.type == TombstoneType.TAGEBUCH }
+            .map { it.id }
+            .toSet()
     val taskSugDeleted =
         tombstones.filter { it.type == TombstoneType.TASK_SUGGESTION }.map { it.id }.toSet()
     val habitSugDeleted =
@@ -273,7 +277,7 @@ suspend fun healOrphanedSuggestions(context: Context) {
             ex.id in taskSugDeleted -> "Tombstone (geloescht/angenommen)"
             PhoneContentGuard.isSecondBrainWorkArtifact(ex.title, ex.description) -> "Second-Brain-Artefakt"
             isIdeaAlreadyAccepted(entryDao, habitDao, ex.rootId) -> "Idee angenommen (Kette weiter)"
-            isRootIdeaDeleted(ex.rootId, ideaDeleted) -> "Idee geloescht (verwaist)"
+            isRootSourceDeleted(ex.rootId, sourceDeleted) -> "Quelle geloescht (verwaist)"
             else -> null
         }
         if (reason != null) {
@@ -291,7 +295,7 @@ suspend fun healOrphanedSuggestions(context: Context) {
             ex.id in habitSugDeleted -> "Tombstone (geloescht/angenommen)"
             PhoneContentGuard.isSecondBrainWorkArtifact(null, ex.text) -> "Second-Brain-Artefakt"
             isIdeaAlreadyAccepted(entryDao, habitDao, ex.rootId) -> "Idee angenommen (Kette weiter)"
-            isRootIdeaDeleted(ex.rootId, ideaDeleted) -> "Idee geloescht (verwaist)"
+            isRootSourceDeleted(ex.rootId, sourceDeleted) -> "Quelle geloescht (verwaist)"
             else -> null
         }
         if (reason != null) {

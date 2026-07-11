@@ -17,6 +17,7 @@ import de.frank.entropyreducer.data.remote.GeminiRequest
 import de.frank.entropyreducer.data.settings.AppSettings
 import de.frank.entropyreducer.data.settings.EncryptedSecretsStore
 import de.frank.entropyreducer.presentation.ideen.IdeenEntry
+import de.frank.entropyreducer.presentation.tagebuch.TagebuchEntry
 import javax.inject.Inject
 import javax.inject.Singleton
 import kotlinx.coroutines.flow.first
@@ -109,11 +110,42 @@ class GenerateSuggestionsUseCase @Inject constructor(
     suspend fun generateSuggestions(
         ideas: List<IdeenEntry>,
         processedIds: Set<String>,
+    ): Result<Pair<SuggestionResult, Set<String>>> =
+        generateSuggestionsForSources(
+            sources = ideas.map { SuggestionSource(it.id, it.text, OriginType.IDEA) },
+            processedIds = processedIds,
+            systemPrompt = COMBINED_SYSTEM_PROMPT,
+            inputLabel = "Ideen",
+        )
+
+    /** Dieselbe Vorschlags-Pipeline fuer Lerneintraege, mit Umsetzungsfokus fuer Erkenntnisse. */
+    suspend fun generateLearningSuggestions(
+        entries: List<TagebuchEntry>,
+        processedIds: Set<String>,
+    ): Result<Pair<SuggestionResult, Set<String>>> =
+        generateSuggestionsForSources(
+            sources = entries.map {
+                SuggestionSource(
+                    id = it.id,
+                    text = it.improvedText?.takeIf(String::isNotBlank) ?: it.text,
+                    originType = OriginType.LEARNING,
+                )
+            },
+            processedIds = processedIds,
+            systemPrompt = LEARNING_SYSTEM_PROMPT,
+            inputLabel = "Lerneintraege",
+        )
+
+    private suspend fun generateSuggestionsForSources(
+        sources: List<SuggestionSource>,
+        processedIds: Set<String>,
+        systemPrompt: String,
+        inputLabel: String,
     ): Result<Pair<SuggestionResult, Set<String>>> {
         val apiKey = secrets.geminiApiKey
             ?: return Result.failure(IllegalArgumentException("Bitte Gemini-API-Key in den Einstellungen hinterlegen."))
 
-        if (ideas.isEmpty()) return Result.success(SuggestionResult(emptyList(), emptyList()) to processedIds)
+        if (sources.isEmpty()) return Result.success(SuggestionResult(emptyList(), emptyList()) to processedIds)
 
         // Dedup-Ablösung (Frank-Wahl "alte Liste als Schutz behalten"): Eine Idee wird NICHT erneut
         // verarbeitet, wenn aus ihr bereits ein Vorschlag hervorging — erkennbar an der Herkunfts-Kette
@@ -128,17 +160,17 @@ class GenerateSuggestionsUseCase @Inject constructor(
         var skipProcessedList = 0
         var skipChain = 0
         var skipAccepted = 0
-        val newIdeas = buildList {
-            for (idea in ideas) {
-                if (idea.id in processedIds) {
+        val newSources = buildList {
+            for (source in sources) {
+                if (source.id in processedIds) {
                     skipProcessedList++
                     continue
                 }
-                if (taskSuggestionDao.countByOriginId(idea.id) > 0) {
+                if (taskSuggestionDao.countByOriginId(source.id) > 0) {
                     skipChain++
                     continue
                 }
-                if (habitSuggestionDao.countByOriginId(idea.id) > 0) {
+                if (habitSuggestionDao.countByOriginId(source.id) > 0) {
                     skipChain++
                     continue
                 }
@@ -149,31 +181,31 @@ class GenerateSuggestionsUseCase @Inject constructor(
                 // Endpunkte pruefen (countByRootId) -> die Idee bleibt dedupliziert, auch nachdem ihr
                 // Vorschlag verbraucht wurde. Cross-device robust, weil entropy_entries ihre rootId ab
                 // Backup-Schema v19 mitnehmen (habits-Backup ist separate Folgeaufgabe).
-                if (entropyEntryDao.countByRootId(idea.id) > 0) {
+                if (entropyEntryDao.countByRootId(source.id) > 0) {
                     skipAccepted++
                     continue
                 }
-                if (habitDao.countByRootId(idea.id) > 0) {
+                if (habitDao.countByRootId(source.id) > 0) {
                     skipAccepted++
                     continue
                 }
-                add(idea)
+                add(source)
             }
         }
         Diag.i(
             DiagnosticArea.AGENTIC,
             TAG,
-            "CHECKPOINT Dedup: ideasTotal=${ideas.size} skipProcessedList=$skipProcessedList " +
-                "skipChain=$skipChain skipAccepted=$skipAccepted toProcess=${newIdeas.size}",
+            "CHECKPOINT Dedup: sourcesTotal=${sources.size} skipProcessedList=$skipProcessedList " +
+                "skipChain=$skipChain skipAccepted=$skipAccepted toProcess=${newSources.size}",
         )
-        if (newIdeas.isEmpty()) {
+        if (newSources.isEmpty()) {
             Diag.i(DiagnosticArea.AGENTIC, TAG, "CHECKPOINT Dedup: nichts Neues -> kein Gemini-Aufruf")
             return Result.success(SuggestionResult(emptyList(), emptyList()) to processedIds)
         }
 
         // ID-Architektur Etappe 2d: Ideen nummeriert (Index in newIdeas), damit die KI pro Vorschlag
         // die Quell-Idee per sourceIndex zurueckgeben kann -> Herkunft Idee -> Vorschlag.
-        val ideenText = newIdeas.mapIndexed { index, idea -> "$index: ${idea.text}" }.joinToString("\n")
+        val sourceText = newSources.mapIndexed { index, source -> "$index: ${source.text}" }.joinToString("\n")
         val model = settings.geminiModelFlow.first()
 
         val response = gemini.generateContent(
@@ -181,12 +213,12 @@ class GenerateSuggestionsUseCase @Inject constructor(
             apiKey = apiKey,
             request = GeminiRequest(
                 systemInstruction = GeminiContent(
-                    parts = listOf(GeminiPart(COMBINED_SYSTEM_PROMPT)),
+                    parts = listOf(GeminiPart(systemPrompt)),
                 ),
                 contents = listOf(
                     GeminiContent(
                         role = "user",
-                        parts = listOf(GeminiPart("Hier sind meine Ideen:\n\n$ideenText")),
+                        parts = listOf(GeminiPart("Hier sind meine $inputLabel:\n\n$sourceText")),
                     ),
                 ),
                 generationConfig = GeminiGenerationConfig(
@@ -200,7 +232,7 @@ class GenerateSuggestionsUseCase @Inject constructor(
             ?.firstOrNull()?.content?.parts?.firstOrNull()?.text?.trim()
             ?: return Result.failure(IllegalStateException("Leere Antwort von Gemini"))
 
-        val result = parseCombinedJson(json, newIdeas)
+        val result = parseCombinedJson(json, newSources)
 
         // Live-Logik-Sonde (Checkpoint): bestaetigt das Origin-Tracking. Erwartet: jeder erzeugte
         // Vorschlag traegt eine Herkunft (originId = Quell-Idee). originId=NULL! markiert die
@@ -230,7 +262,7 @@ class GenerateSuggestionsUseCase @Inject constructor(
             )
         }
 
-        val updatedProcessedIds = processedIds + newIdeas.map { it.id }
+        val updatedProcessedIds = processedIds + newSources.map { it.id }
 
         return Result.success(result to updatedProcessedIds)
     }
@@ -239,7 +271,7 @@ class GenerateSuggestionsUseCase @Inject constructor(
     // Parsing
     // ========================================================================
 
-    private fun parseCombinedJson(raw: String, newIdeas: List<IdeenEntry>): SuggestionResult {
+    private fun parseCombinedJson(raw: String, newSources: List<SuggestionSource>): SuggestionResult {
         return runCatching {
             val obj = JSONObject(raw)
 
@@ -256,17 +288,17 @@ class GenerateSuggestionsUseCase @Inject constructor(
                     // die origin=NULL-Luecke. Bei mehreren Ideen bleibt sie null (eine falsche Zuordnung
                     // waere schlimmer als keine).
                     val sourceIdx = if (o.has("sourceIndex")) o.optInt("sourceIndex", -1) else -1
-                    val sourceIdea = newIdeas.getOrNull(sourceIdx) ?: newIdeas.singleOrNull()
+                    val source = newSources.getOrNull(sourceIdx) ?: newSources.singleOrNull()
                     add(
                         AutoTaskSuggestion(
                             id = java.util.UUID.randomUUID().toString(),
                             title = title.take(60),
                             description = description.take(500),
-                            originId = sourceIdea?.id,
-                            originType = sourceIdea?.let { OriginType.IDEA },
+                            originId = source?.id,
+                            originType = source?.originType,
                             // Die Idee ist aktuell immer Ursprung der Kette (Entropie->Idee erst Stufe 5)
                             // -> rootId = die Idee selbst.
-                            rootId = sourceIdea?.id,
+                            rootId = source?.id,
                         )
                     )
                 }
@@ -280,14 +312,14 @@ class GenerateSuggestionsUseCase @Inject constructor(
                     val text = o.optString("text").takeIf { it.isNotBlank() } ?: continue
                     // KI-Aussetzer-Fallback (Frank-Wunsch 2026-06-20): nur 1 Idee verarbeitet -> eindeutig.
                     val sourceIdx = if (o.has("sourceIndex")) o.optInt("sourceIndex", -1) else -1
-                    val sourceIdea = newIdeas.getOrNull(sourceIdx) ?: newIdeas.singleOrNull()
+                    val source = newSources.getOrNull(sourceIdx) ?: newSources.singleOrNull()
                     add(
                         AutoHabitSuggestion(
                             id = java.util.UUID.randomUUID().toString(),
                             text = text,
-                            originId = sourceIdea?.id,
-                            originType = sourceIdea?.let { OriginType.IDEA },
-                            rootId = sourceIdea?.id,
+                            originId = source?.id,
+                            originType = source?.originType,
+                            rootId = source?.id,
                         )
                     )
                 }
@@ -378,5 +410,22 @@ Wenn beides leer: {"tasks": [], "habits": []}
 
 WICHTIG: Verwende echte deutsche Umlaute (ä, ö, ü, ß).
 """
+
+        private const val LEARNING_SYSTEM_PROMPT = COMBINED_SYSTEM_PROMPT + """
+
+=== ZUSATZREGELN FUER LERNEINTRAEGE ===
+Die Eintraege beschreiben Erkenntnisse, die der Nutzer praktisch umsetzen moechte.
+- Laesst sich eine Erkenntnis wiederholt im Alltag anwenden, formuliere daraus bevorzugt eine GEWOHNHEIT, auch wenn das Wiederholungssignal nur sinngemaess enthalten ist.
+- Formuliere die Gewohnheit als konkrete, dauerhaft wiederholbare Ich-Handlung. Erhalte alle relevanten Informationen und erfinde keine fremden Details.
+- Verlangt die Erkenntnis stattdessen einen einmaligen konkreten Umsetzungsschritt, formuliere eine AUFGABE.
+- Ist die Erkenntnis rein faktisch und ergibt sich daraus keine konkrete persoenliche Handlung, ordne sie NICHTS zu.
+- Auch hier gilt exklusiv: genau AUFGABE oder GEWOHNHEIT oder NICHTS, niemals mehrere Ergebnisse fuer denselben Lerneintrag.
+"""
     }
+
+    private data class SuggestionSource(
+        val id: String,
+        val text: String,
+        val originType: String,
+    )
 }

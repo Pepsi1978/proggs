@@ -67,6 +67,7 @@ import de.frank.entropyreducer.presentation.components.VoiceCaptureViewModel
 import de.frank.entropyreducer.presentation.components.rememberMicPermissionState
 import de.frank.entropyreducer.presentation.navigation.CosmosBottomBar
 import de.frank.entropyreducer.presentation.navigation.Routes
+import de.frank.entropyreducer.presentation.ideen.AutoSuggestionViewModel
 import de.frank.entropyreducer.presentation.theme.LocalCosmos
 import java.time.Instant
 import java.time.LocalDateTime
@@ -136,6 +137,11 @@ fun TagebuchScreen(
     // Wird nach jedem neuen Eintrag asynchron erzeugt — Detail-Screen zeigt sie als
     // Bullet-Points statt eines leeren Platzhalters.
     val summaryVm: TagebuchSummaryViewModel = hiltViewModel(key = "tagebuch-${area.name}-summary")
+    val autoSuggestionVm: AutoSuggestionViewModel =
+        hiltViewModel(key = "tagebuch-${area.name}-suggestions")
+    LaunchedEffect(area) {
+        if (area == TagebuchArea.LEARNING) autoSuggestionVm.triggerLearningSuggestions()
+    }
     var pendingTranscript by remember { mutableStateOf<String?>(null) }
     val micPermission =
         rememberMicPermissionState(
@@ -164,7 +170,10 @@ fun TagebuchScreen(
             } else {
                 base
             }
-        scope.launch { addTagebuchEntry(context, entry) }
+        scope.launch {
+            addTagebuchEntry(context, entry)
+            if (area == TagebuchArea.LEARNING) autoSuggestionVm.triggerLearningSuggestions()
+        }
         // Titel/Zusammenfassung aus dem primaer angezeigten Text ableiten (bessere Qualitaet).
         val primaryText = if (preferImproved && !improved.isNullOrBlank()) improved else rawText
         titleVm.generateTitle(primaryText) { newTitle ->
@@ -963,6 +972,16 @@ internal suspend fun deleteTagebuchEntry(context: Context, id: String, propagate
     }
     // Frank-Wunsch 2026-06-20: Loeschung propagieren (Tombstone). propagate=false: Restore-Cleanup.
     if (propagate) {
+        // Lerneintraege koennen Vorschlaege erzeugen. Beim Loeschen darf kein abgeleiteter,
+        // nun verwaister Vorschlag lokal oder nach einem Restore sichtbar bleiben.
+        val habitSuggestionDao = de.frank.entropyreducer.data.local.habitSuggestionDaoFrom(context)
+        for (suggestion in habitSuggestionDao.getAllForBackup()) {
+            if (suggestion.rootId == id) habitSuggestionDao.deleteById(suggestion.id)
+        }
+        val taskSuggestionDao = de.frank.entropyreducer.data.local.taskSuggestionDaoFrom(context)
+        for (suggestion in taskSuggestionDao.getAllForBackup()) {
+            if (suggestion.rootId == id) taskSuggestionDao.deleteById(suggestion.id)
+        }
         de.frank.entropyreducer.data.markDeleted(
             context, de.frank.entropyreducer.data.TombstoneType.TAGEBUCH, id)
         de.frank.entropyreducer.data.remote.drive.triggerDriveBackup(

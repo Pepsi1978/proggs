@@ -592,9 +592,12 @@ constructor(
             // verwaist und duerfen nicht (wieder) eingespielt werden. Greift auch, wenn die abgeleitete
             // Gewohnheit/Aufgabe VOR der Idee geloescht wurde (dann ist countByRootId=0 und nur der
             // Idee-Tombstone zeigt die Loeschung noch an).
-            val ideaDeletedIds =
+            val sourceDeletedIds =
                 allTombstones
-                    .filter { it.type == de.frank.entropyreducer.data.TombstoneType.IDEE }
+                    .filter {
+                        it.type == de.frank.entropyreducer.data.TombstoneType.IDEE ||
+                            it.type == de.frank.entropyreducer.data.TombstoneType.TAGEBUCH
+                    }
                     .map { it.id }
                     .toSet()
             val taskSuggestionDeletedAt =
@@ -606,7 +609,7 @@ constructor(
                     appContext,
                     payload.taskSuggestions,
                     taskSuggestionDeletedAt,
-                    ideaDeletedIds,
+                    sourceDeletedIds,
                 )
             val habitSuggestionDeletedAt =
                 allTombstones
@@ -617,7 +620,7 @@ constructor(
                     appContext,
                     payload.gewohnheitSuggestions,
                     habitSuggestionDeletedAt,
-                    ideaDeletedIds,
+                    sourceDeletedIds,
                 )
         }
 

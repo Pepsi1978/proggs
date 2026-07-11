@@ -15,6 +15,7 @@ object OriginType {
     const val TASK = "TASK"
     const val HABIT = "HABIT"
     const val ENTROPY = "ENTROPY"
+    const val LEARNING = "LEARNING"
     const val THESE = "THESE"
     const val JOURNAL = "JOURNAL"
 
