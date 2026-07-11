@@ -455,10 +455,13 @@ public sealed partial class MainViewModel : ObservableObject
         try
         {
             var documents = _profiles.LoadStandard(isClaudeCode, WorkDir);
-            var edited = ShowProfileEditorDialog(documents, isClaudeCode);
-            if (edited == null) return;
+            var editor = new ProfileEditorWindow(documents, isClaudeCode)
+            {
+                Owner = Application.Current.MainWindow
+            };
+            if (editor.ShowDialog() != true) return;
 
-            _profiles.SaveStandard(isClaudeCode, WorkDir, edited.Value.GlobalText, edited.Value.ProjectText);
+            _profiles.SaveStandard(isClaudeCode, WorkDir, editor.GlobalText, editor.ProjectText);
             StatusText = $"Standardprofil für {(isClaudeCode ? "Claude Code" : "OpenCode")} gespeichert.";
             Logger.Instance.Info("MainViewModel", "EditProfile", "Standardprofil gespeichert", new
             {
@@ -694,103 +697,6 @@ public sealed partial class MainViewModel : ObservableObject
         root.Child = sp;
         w.Content = root;
         return w.ShowDialog() == true;
-    }
-
-    private static (string GlobalText, string ProjectText)? ShowProfileEditorDialog(InstructionProfileDocuments documents, bool isClaudeCode)
-    {
-        var w = new Window
-        {
-            Title = $"Standardprofil bearbeiten · {(isClaudeCode ? "Claude Code" : "OpenCode")}",
-            Width = 1040,
-            Height = 760,
-            MinWidth = 760,
-            MinHeight = 520,
-            WindowStartupLocation = WindowStartupLocation.CenterScreen,
-            Background = Application.Current.TryFindResource("WindowBg") as System.Windows.Media.Brush
-                ?? new System.Windows.Media.SolidColorBrush(System.Windows.Media.Color.FromRgb(24, 22, 34))
-        };
-
-        var root = new System.Windows.Controls.Grid { Margin = new Thickness(18) };
-        root.RowDefinitions.Add(new System.Windows.Controls.RowDefinition { Height = GridLength.Auto });
-        root.RowDefinitions.Add(new System.Windows.Controls.RowDefinition { Height = new GridLength(1, GridUnitType.Star) });
-        root.RowDefinitions.Add(new System.Windows.Controls.RowDefinition { Height = GridLength.Auto });
-
-        var intro = new System.Windows.Controls.TextBlock
-        {
-            Text = "GLOBAL und PROJEKT bilden gemeinsam dieses Profil. Änderungen gelten für neu gestartete Sessions.",
-            TextWrapping = TextWrapping.Wrap,
-            Margin = new Thickness(0, 0, 0, 14)
-        };
-        intro.SetResourceReference(System.Windows.Controls.TextBlock.ForegroundProperty, "MutedBrush");
-        root.Children.Add(intro);
-
-        var globalEditor = CreateProfileTextBox(documents.GlobalText);
-        var projectEditor = CreateProfileTextBox(documents.ProjectText);
-        var tabs = new System.Windows.Controls.TabControl();
-        tabs.Items.Add(CreateProfileTab("GLOBAL", documents.GlobalPath, globalEditor));
-        tabs.Items.Add(CreateProfileTab("PROJEKT", documents.ProjectPath, projectEditor));
-        System.Windows.Controls.Grid.SetRow(tabs, 1);
-        root.Children.Add(tabs);
-
-        var buttons = new System.Windows.Controls.StackPanel
-        {
-            Orientation = System.Windows.Controls.Orientation.Horizontal,
-            HorizontalAlignment = HorizontalAlignment.Right,
-            Margin = new Thickness(0, 14, 0, 0)
-        };
-        var cancel = DialogButton("Abbrechen", false);
-        var save = DialogButton("Profil speichern", true);
-        cancel.Click += (_, _) => { w.DialogResult = false; w.Close(); };
-        save.Click += (_, _) => { w.DialogResult = true; w.Close(); };
-        buttons.Children.Add(cancel);
-        buttons.Children.Add(save);
-        System.Windows.Controls.Grid.SetRow(buttons, 2);
-        root.Children.Add(buttons);
-        w.Content = root;
-
-        return w.ShowDialog() == true ? (globalEditor.Text, projectEditor.Text) : null;
-    }
-
-    private static System.Windows.Controls.TabItem CreateProfileTab(string header, string path, System.Windows.Controls.TextBox editor)
-    {
-        var panel = new System.Windows.Controls.Grid { Margin = new Thickness(10) };
-        panel.RowDefinitions.Add(new System.Windows.Controls.RowDefinition { Height = GridLength.Auto });
-        panel.RowDefinitions.Add(new System.Windows.Controls.RowDefinition { Height = new GridLength(1, GridUnitType.Star) });
-        var pathText = new System.Windows.Controls.TextBlock
-        {
-            Text = path,
-            FontFamily = new System.Windows.Media.FontFamily("Cascadia Code, Consolas"),
-            FontSize = 11,
-            TextTrimming = TextTrimming.CharacterEllipsis,
-            Margin = new Thickness(0, 0, 0, 9)
-        };
-        pathText.SetResourceReference(System.Windows.Controls.TextBlock.ForegroundProperty, "DimBrush");
-        panel.Children.Add(pathText);
-        System.Windows.Controls.Grid.SetRow(editor, 1);
-        panel.Children.Add(editor);
-        return new System.Windows.Controls.TabItem { Header = header, Content = panel };
-    }
-
-    private static System.Windows.Controls.TextBox CreateProfileTextBox(string text)
-    {
-        var editor = new System.Windows.Controls.TextBox
-        {
-            Text = text,
-            AcceptsReturn = true,
-            AcceptsTab = true,
-            TextWrapping = TextWrapping.NoWrap,
-            VerticalScrollBarVisibility = System.Windows.Controls.ScrollBarVisibility.Auto,
-            HorizontalScrollBarVisibility = System.Windows.Controls.ScrollBarVisibility.Auto,
-            FontFamily = new System.Windows.Media.FontFamily("Cascadia Code, Consolas"),
-            FontSize = 13,
-            Padding = new Thickness(12),
-            BorderThickness = new Thickness(1)
-        };
-        editor.SetResourceReference(System.Windows.Controls.TextBox.BackgroundProperty, "SurfaceBg");
-        editor.SetResourceReference(System.Windows.Controls.TextBox.ForegroundProperty, "TextBrush");
-        editor.SetResourceReference(System.Windows.Controls.TextBox.CaretBrushProperty, "TextBrush");
-        editor.SetResourceReference(System.Windows.Controls.TextBox.BorderBrushProperty, "BorderBrushStrong");
-        return editor;
     }
 
     private static System.Windows.Controls.Button DialogButton(string text, bool accent)
