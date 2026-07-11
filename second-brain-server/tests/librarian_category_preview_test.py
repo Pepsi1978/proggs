@@ -71,8 +71,11 @@ def main() -> int:
     source = INDEX_PATH.read_text(encoding="utf-8")
     check("<b>Vorher</b>" in source and "<b>Nachher</b>" in source,
           "Bibliothekar zeigt beide Vorschau-Zeilen")
-    check("if(!seen.has(proposed.toLocaleLowerCase" in source and "after.push(proposed)" in source,
+    check("alreadyPresent=seen.has(proposed.toLocaleLowerCase" in source and "after.push(proposed)" in source,
           "Frontend bildet die additive Union ohne Duplikat")
+    check("Dieser alte Vorschlag kann verworfen werden" in source
+          and 'data-lib-role="accept"' in source and "accept.disabled=true" in source,
+          "bereits gespeicherte No-op-Vorschlaege werden erklaert und sind nicht ausfuehrbar")
     check('it.aktion.typ==="kategorie"' in source and "loadLibCategoryPreview(preview,it)" in source,
           "Vorschau wird nur fuer Kategorie-Aktionen geladen")
 

@@ -63,6 +63,7 @@ VERSION = "0.11.5 (10.07.2026, 19:38 Uhr)"  # 0.11.5: Additive Kategorie-Aktione
 VERSION = "0.12.0 (10.07.2026, 21:17 Uhr)"  # 0.12.0 (Level-2 Gruppe A, Punkt 1 — Frank-Freigabe 2026-07-10): NEU Standard-Nachtaufgabe GEDAECHTNIS-BEFOERDERUNG (zweite AUTO-Aufgabe neben Nachzuegler, laeuft ZUERST): ruft brain-api POST /layer/promote und befoerdert bewaehrte Kurzzeit-Eintraege (aelter als befoerderung_min_age_days, Default 14) ins Langzeitgedaechtnis. Deterministisch, KEIN LLM, inhaltsneutral — es wird NUR das layer-Etikett gesetzt, Text/Vektor/Kategorien bleiben 1:1 (Franks Vorgabe: nie Eintraege veraendern). Eigene Bilanz-Zeile (auch: nichts faellig) + report.auto.befoerderung (Anzahl + Titel) fuer den Morgen-Report. Toggle erscheint automatisch in den Einstellungen (standard_tasks dynamisch). Alt: 0.11.5.
 VERSION = "0.13.0 (10.07.2026, 22:12 Uhr)"  # 0.13.0 (Level-2 Gruppe A, Punkt 6 — Frank-Freigabe 2026-07-10): NEU Standard-Nachtaufgabe EPISODEN-DESTILLATION (DISTILL_SYSTEM + _task_destillation, laeuft nach dem Luecken-Detektor): destilliert aus den Gespraechen der letzten 14 Tage max 3 DAUERHAFTE Fakten-Kandidaten (nur woertlich von Frank Gesagtes, mit Kurz-Beleg; keine Tageszustaende). Jeder Kandidat wird semantisch gegen den Bestand dedupliziert (>=0.66 Aehnlichkeit als Nicht-Gespraechs-Eintrag -> kein Vorschlag) und landet als Ja/Nein-Fund im Morgen-Report — gespeichert wird ERST nach Franks Ja (Aktionstyp neu, source=librarian, layer=kurzzeit; Originale bleiben 1:1). Eigene Bilanz-Zeile. Alt: 0.12.0.
 VERSION = "0.14.0 (10.07.2026, 22:34 Uhr)"  # 0.14.0 (Level-2 Gruppe A, Punkt 9): NEU Standard-Nachtaufgabe META-GEDAECHTNIS-AUSWERTUNG (META_SYSTEM + _task_meta): liest Franks Daumen-runter-Feedback der letzten 14 Tage (agent GET /feedback), findet WIEDERKEHRENDE Muster (>=2 Faelle, max 2 pro Nacht, Einzelfaelle zaehlen nicht) und legt je Muster einen Morgen-Report-Fund mit vorformuliertem SELBST-REGEL-Vorschlag an — OHNE Auto-Aktion: aktiviert wird eine Regel NUR ueber den bestehenden bestaetigten Regel-Weg (Chat mach daraus eine Regel / Einstellungen). Eigene Bilanz-Zeile. Alt: 0.13.0.
+VERSION = "0.14.1 (11.07.2026, 19:41 Uhr)"  # 0.14.1: Zusaetzliche Kategorie-Vorschlaege kennen alle vorhandenen Kategorien; deterministischer No-op-Guard verwirft bereits vergebene Kategorien. Alt: 0.14.0.
 AGENT_URL = os.getenv("AGENT_URL", "http://agent:8002").rstrip("/")   # LLM-Durchgriff fuer Codex/GPT (agent 0.52.0)
 # Stille Notbremse gegen Endlosschleifen, wenn 'Ohne Begrenzung' aktiv ist (Almanach ai-agent §2.1:
 # ein Cap muss STOPPEN koennen). 5000 Calls erreicht ehrliche Nacht-Arbeit nie — nur ein Amoklauf.
@@ -547,6 +548,9 @@ def brain_add_category(doc_id: str, category: str) -> dict:
 
     current = brain_get_categories(doc_id)
 
+    if any(new_category.casefold() == value.casefold() for value in current):
+        return {"ok": True, "doc_id": doc_id, "categories": current, "added": False}
+
     categories: list[str] = []
     seen: set[str] = set()
     for value in current + [new_category]:
@@ -556,7 +560,9 @@ def brain_add_category(doc_id: str, category: str) -> dict:
             categories.append(value)
     if len(categories) > 12:
         raise ValueError("Ein Eintrag kann hoechstens 12 Kategorien haben")
-    return brain_set_categories(doc_id, categories)
+    result = brain_set_categories(doc_id, categories)
+    result["added"] = True
+    return result
 
 
 def brain_rename_category(old: str, new: str) -> dict:
@@ -972,7 +978,10 @@ def _custom_entry_block(doc_id: str, entry: dict, limit: int = 2500) -> "tuple[s
     if truncated:
         body += ("\n[ENDE DES GEKUERZTEN AUSZUGS — diesen Eintrag NICHT per update/merge "
                  "aktualisieren, ohne den vollstaendigen Text gezielt zu laden.]")
-    return (f"doc_id={doc_id} | Titel: {entry['title']} | Kategorie: {entry['category']} | {marker}\n{body}",
+    categories = [c.strip() for c in (entry.get("categories") or []) if isinstance(c, str) and c.strip()]
+    if not categories and (entry.get("category") or "").strip():
+        categories = [entry["category"].strip()]
+    return (f"doc_id={doc_id} | Titel: {entry['title']} | Kategorien: {', '.join(categories) or '-'} | {marker}\n{body}",
             truncated)
 
 
@@ -984,6 +993,19 @@ def _custom_action_needs_complete_source(aktion: dict, truncated_doc_ids: set[st
     doc_ids = [str(aktion.get("doc_id") or "").strip()]
     doc_ids.extend(str(d or "").strip() for d in (aktion.get("doc_ids") or []))
     return any(d and d in truncated_doc_ids for d in doc_ids)
+
+
+def _category_action_is_noop(aktion: dict, entries: dict[str, dict]) -> bool:
+    """Verwirft additive Kategorie-Aktionen, die am Ziel bereits erfuellt sind."""
+    if (aktion.get("typ") or "").strip().casefold() != "kategorie":
+        return False
+    doc_id = str(aktion.get("doc_id") or "").strip()
+    proposed = str(aktion.get("kategorie") or "").strip().casefold()
+    entry = entries.get(doc_id) or {}
+    categories = [c for c in (entry.get("categories") or []) if isinstance(c, str)]
+    if not categories and entry.get("category"):
+        categories = [entry["category"]]
+    return bool(doc_id and proposed and any(proposed == c.strip().casefold() for c in categories))
 
 
 def _all_entries_with_text() -> dict[str, dict]:
@@ -1535,7 +1557,7 @@ def _task_custom(cfg: dict, st: dict, budget: NightBudget, entries: dict, report
     definition = (task.get("definition") or "").strip()
     if not definition or not budget.take():
         return
-    meta_lines = [f"- {did} | {e['title'] or '(ohne Titel)'} | {e['category'] or '-'} | {(e.get('created_at') or '')[:10]}"
+    meta_lines = [f"- {did} | {e['title'] or '(ohne Titel)'} | {', '.join(e.get('categories') or [e['category']]) or '-'} | {(e.get('created_at') or '')[:10]}"
                   for did, e in entries.items() if _is_worklike(e)]
     meta_blob = "\n".join(meta_lines[:800])
     try:
@@ -1577,6 +1599,10 @@ def _task_custom(cfg: dict, st: dict, budget: NightBudget, entries: dict, report
             continue
         raw_aktion = f.get("aktion")
         aktion: dict = raw_aktion if isinstance(raw_aktion, dict) else {"typ": "hinweis"}
+        if _category_action_is_noop(aktion, entries):
+            _log(logging.INFO, "Identischer Kategorie-Vorschlag verworfen",
+                 task=tname, doc_id=aktion.get("doc_id"), kategorie=aktion.get("kategorie"))
+            continue
         empfehlung = (f.get("empfehlung") or "Siehe Beschreibung.").strip()
         if _custom_action_needs_complete_source(aktion, truncated_docs):
             aktion = {"typ": "hinweis"}
@@ -1945,6 +1971,8 @@ def _execute_action(aktion: dict, item: "dict | None" = None) -> str:
         return f"Eintrag aktualisiert („{r.get('title') or aktion.get('doc_id')}“)."
     if typ == "kategorie":
         r = brain_add_category(aktion.get("doc_id") or "", (aktion.get("kategorie") or "").strip())
+        if not r.get("added", True):
+            return f"Keine Änderung: Kategorie „{aktion.get('kategorie')}“ war bereits vorhanden."
         return f"Kategorie „{aktion.get('kategorie')}“ hinzugefügt · jetzt {len(r.get('categories') or [])} Kategorien."
     if typ == "kategorie_umbenennen":
         brain_rename_category((aktion.get("alt") or "").strip(), (aktion.get("neu") or "").strip())

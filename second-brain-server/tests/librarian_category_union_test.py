@@ -22,7 +22,7 @@ APP_SOURCE = APP_PATH.read_text(encoding="utf-8")
 def load_functions() -> dict:
     tree = ast.parse(APP_SOURCE)
     wanted = {"brain_add_category", "_execute_action", "_custom_entry_block",
-              "_custom_action_needs_complete_source"}
+              "_custom_action_needs_complete_source", "_category_action_is_noop"}
     selected: list[ast.stmt] = [node for node in tree.body
                                 if isinstance(node, ast.FunctionDef) and node.name in wanted]
     namespace: dict = {}
@@ -55,8 +55,8 @@ def main() -> int:
     check(reads == ["doc-1"], "Bestand wird genau einmal gezielt per doc_id gelesen")
 
     ns["brain_add_category"]("doc-1", "b")
-    check(written[-1][1] == ["A", "B", "C", "D"],
-          "Gross-/Kleinschreibung erzeugt keine doppelte Kategorie")
+    check(len(written) == 1,
+          "Gross-/Kleinschreibung erzeugt weder Duplikat noch unnoetigen Schreibzugriff")
 
     ns["brain_get_categories"] = lambda doc_id: (_ for _ in ()).throw(RuntimeError("nicht lesbar"))
     before = len(written)
@@ -79,10 +79,22 @@ def main() -> int:
           "Bibliothekar-Aktion meldet die additive Zuordnung korrekt")
 
     block, truncated = ns["_custom_entry_block"](
-        "doc-2", {"title": "Langer Eintrag", "category": "Cortex", "text": "x" * 30}, 10
+        "doc-2", {"title": "Langer Eintrag", "category": "Drohnen",
+                  "categories": ["Drohnen", "Geräte", "Interessen", "Hobbys"],
+                  "text": "x" * 30}, 10
     )
     check(truncated is True and "GEKUERZTER AUSZUG" in block,
           "eigene Aufgaben markieren gekuerzte Eintragstexte sichtbar")
+    check("Kategorien: Drohnen, Geräte, Interessen, Hobbys" in block,
+          "eigene Aufgaben erhalten alle vorhandenen Kategorien als Modellkontext")
+    entries = {"doc-2": {"category": "Drohnen",
+                          "categories": ["Drohnen", "Geräte", "Interessen", "Hobbys"]}}
+    check(ns["_category_action_is_noop"](
+        {"typ": "kategorie", "doc_id": "doc-2", "kategorie": "geräte"}, entries
+    ) is True, "bereits vorhandene Kategorie wird deterministisch als No-op erkannt")
+    check(ns["_category_action_is_noop"](
+        {"typ": "kategorie", "doc_id": "doc-2", "kategorie": "Technik"}, entries
+    ) is False, "wirklich neue Kategorie bleibt als Vorschlag erlaubt")
     check(ns["_custom_action_needs_complete_source"](
         {"typ": "update", "doc_id": "doc-2", "text": "unvollstaendig"}, {"doc-2"}
     ) is True, "Update auf gekuerztem Zieltext wird blockiert")

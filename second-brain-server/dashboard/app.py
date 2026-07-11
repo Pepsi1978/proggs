@@ -58,6 +58,7 @@ VERSION = "0.72.0 (10.07.2026, 22:12 Uhr)"  # 0.72.0 (Level-2 Gruppe A, Punkt 6)
 VERSION = "0.73.0 (10.07.2026, 22:34 Uhr)"  # 0.73.0 (Level-2 Gruppe A, Punkt 9): DAUMEN HOCH/RUNTER unter jeder echten Chat-Antwort (recall/smalltalk; SVG-Buttons, bei runter optionales Inline-Kommentarfeld statt nativem prompt) -> NEU Proxy POST /api/feedback -> agent /feedback. Gehoert zu agent 0.73.0 + librarian 0.14.0. features.json-Eintrag meta-gedaechtnis-feedback. Alt: 0.72.0.
 VERSION = "0.74.0 (11.07.2026, 13:25 Uhr)"  # 0.74.0: Sichtbarer Bump zum vollständig nachbearbeitbaren Speicherdialog in brain-api 1.32.0, agent 0.74.0 und Cortex Android 0.6.8: faktengetreue Vorschlaege, verlustarme Updates, Volltextquittung, Editieren in allen Schritten und freie Folgeaenderungen an Text, Titel und Mehrfachkategorien. Alt: 0.73.0.
 VERSION = "0.74.1 (11.07.2026, 19:33 Uhr)"  # 0.74.1: Sichtbarer Bump zum Regel-Intent-Fix in agent 0.74.1; philosophische Texte mit dem Wort Regeln und verneinte Regelauftraege werden nicht mehr fehlklassifiziert. Alt: 0.74.0.
+VERSION = "0.74.2 (11.07.2026, 19:41 Uhr)"  # 0.74.2: Sichtbarer Bump zum Bibliothekar-Fix: bereits vorhandene Kategorien erzeugen keine identischen Vorher-/Nachher-Vorschlaege mehr. Alt: 0.74.1.
 BRAIN_URL = os.getenv("BRAIN_URL", "http://brain-api:8000").rstrip("/")
 AGENT_URL = os.getenv("AGENT_URL", "http://agent:8002").rstrip("/")
 SB_API_KEY = os.getenv("SB_API_KEY", "")

@@ -4661,8 +4661,16 @@ button{font-family:inherit;cursor:pointer}
       const data=await libCategoryPreviewCache.get(docId);
       const before=(data.categories||[]).filter(c=>typeof c==="string"&&c.trim()).map(c=>c.trim());
       const seen=new Set(before.map(c=>c.toLocaleLowerCase("de-DE")));
+      const alreadyPresent=seen.has(proposed.toLocaleLowerCase("de-DE"));
+      if(alreadyPresent){
+        box.innerHTML='<div class="lib-cat-preview-row"><b>Keine Änderung</b><span class="set-desc">„'
+          +escapeHtml(proposed)+'“ ist bereits vorhanden. Dieser alte Vorschlag kann verworfen werden.</span></div>';
+        const accept=box.closest(".lib-item")?.querySelector('button[data-lib-role="accept"]');
+        if(accept){ accept.disabled=true; accept.textContent="Schon vorhanden"; accept.title="Es gibt nichts umzusetzen."; }
+        return;
+      }
       const after=before.slice();
-      if(!seen.has(proposed.toLocaleLowerCase("de-DE"))) after.push(proposed);
+      after.push(proposed);
       const chips=(cats,markNew)=>cats.length
         ? cats.map(c=>'<span class="lib-preview-chip'+(markNew&&c===proposed&&!seen.has(proposed.toLocaleLowerCase("de-DE"))?' new':'')+'">'+escapeHtml(c)+'</span>').join("")
         : '<span class="set-desc">ohne Kategorie</span>';
@@ -4864,6 +4872,7 @@ button{font-family:inherit;cursor:pointer}
 
     const row=document.createElement("div"); row.className="lib-choice";
     const bJa=document.createElement("button"); bJa.textContent=it.ja_label||"Ja";
+    bJa.dataset.libRole="accept";
     const bNein=document.createElement("button"); bNein.textContent=it.nein_label||"Nein";
     const bEig=document.createElement("button"); bEig.textContent="Eigener Vorschlag";
     const ta=document.createElement("textarea"); ta.className="lib-own"; ta.style.display="none";
