@@ -154,7 +154,8 @@ public sealed class InstructionProfileService
         if (!string.IsNullOrWhiteSpace(active) && !IsLauncherBootstrap(active))
             return active;
 
-        var templatePath = Path.Combine(AppContext.BaseDirectory, "Profiles", "OpenCode", profileId, fileName);
+        var assemblyDirectory = Path.GetDirectoryName(typeof(InstructionProfileService).Assembly.Location)!;
+        var templatePath = Path.Combine(assemblyDirectory, "Profiles", "OpenCode", profileId, fileName);
         var template = ReadText(templatePath);
         if (string.IsNullOrWhiteSpace(template))
             throw new FileNotFoundException($"Standardprofil-Vorlage nicht gefunden: {templatePath}", templatePath);
