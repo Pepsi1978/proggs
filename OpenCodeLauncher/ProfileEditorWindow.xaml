@@ -79,71 +79,30 @@
             </Setter>
         </Style>
 
-        <Style x:Key="ProfileTabControl" TargetType="TabControl">
-            <Setter Property="Background" Value="Transparent"/>
-            <Setter Property="BorderThickness" Value="0"/>
-            <Setter Property="HorizontalContentAlignment" Value="Stretch"/>
-            <Setter Property="VerticalContentAlignment" Value="Stretch"/>
-            <Setter Property="Template">
-                <Setter.Value>
-                    <ControlTemplate TargetType="TabControl">
-                        <Grid KeyboardNavigation.TabNavigation="Local">
-                            <Grid.RowDefinitions>
-                                <RowDefinition Height="Auto"/>
-                                <RowDefinition Height="*"/>
-                            </Grid.RowDefinitions>
-                            <Border HorizontalAlignment="Left"
-                                    Background="Transparent"
-                                    BorderThickness="0"
-                                    Padding="2"
-                                    ClipToBounds="False">
-                                <TabPanel IsItemsHost="True"
-                                          KeyboardNavigation.TabIndex="1"
-                                          Background="Transparent"
-                                          ClipToBounds="False"/>
-                            </Border>
-                            <Border Grid.Row="1"
-                                    Margin="0,12,0,0"
-                                    Background="{DynamicResource SurfaceBg}"
-                                    BorderBrush="{DynamicResource BorderBrushSoft}"
-                                    BorderThickness="1"
-                                    CornerRadius="12"
-                                    Padding="14">
-                                <ContentPresenter x:Name="PART_SelectedContentHost"
-                                                  ContentSource="SelectedContent"
-                                                  HorizontalAlignment="{TemplateBinding HorizontalContentAlignment}"
-                                                  VerticalAlignment="{TemplateBinding VerticalContentAlignment}"/>
-                            </Border>
-                        </Grid>
-                    </ControlTemplate>
-                </Setter.Value>
-            </Setter>
-        </Style>
-
-        <Style TargetType="TabItem">
+        <Style x:Key="ProfileSectionButton" TargetType="RadioButton">
             <Setter Property="Foreground" Value="{DynamicResource MutedBrush}"/>
             <Setter Property="FontWeight" Value="SemiBold"/>
             <Setter Property="Padding" Value="18,8"/>
-            <Setter Property="Margin" Value="0,0,14,0"/>
             <Setter Property="MinWidth" Value="132"/>
+            <Setter Property="Cursor" Value="Hand"/>
             <Setter Property="FocusVisualStyle" Value="{x:Null}"/>
             <Setter Property="Template">
                 <Setter.Value>
-                    <ControlTemplate TargetType="TabItem">
-                        <Border x:Name="TabBorder" Background="{DynamicResource SurfaceBg}"
+                    <ControlTemplate TargetType="RadioButton">
+                        <Border x:Name="ButtonBorder" Background="{DynamicResource SurfaceBg}"
                                 BorderBrush="{DynamicResource BorderBrushSoft}" BorderThickness="1"
                                 CornerRadius="12" Padding="{TemplateBinding Padding}"
                                 SnapsToDevicePixels="True">
-                            <ContentPresenter ContentSource="Header" HorizontalAlignment="Center"/>
+                            <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
                         </Border>
                         <ControlTemplate.Triggers>
-                            <Trigger Property="IsSelected" Value="True">
-                                <Setter TargetName="TabBorder" Property="Background" Value="{DynamicResource SelectedBg}"/>
-                                <Setter TargetName="TabBorder" Property="BorderBrush" Value="{DynamicResource SelectedBorderBrush}"/>
+                            <Trigger Property="IsChecked" Value="True">
+                                <Setter TargetName="ButtonBorder" Property="Background" Value="{DynamicResource SelectedBg}"/>
+                                <Setter TargetName="ButtonBorder" Property="BorderBrush" Value="{DynamicResource SelectedBorderBrush}"/>
                                 <Setter Property="Foreground" Value="{DynamicResource AccentBrush}"/>
                             </Trigger>
                             <Trigger Property="IsMouseOver" Value="True">
-                                <Setter TargetName="TabBorder" Property="Background" Value="{DynamicResource HoverBg}"/>
+                                <Setter TargetName="ButtonBorder" Property="Background" Value="{DynamicResource HoverBg}"/>
                             </Trigger>
                         </ControlTemplate.Triggers>
                     </ControlTemplate>
@@ -207,32 +166,71 @@
                     <TextBlock Text="GLOBAL und PROJEKT bilden gemeinsam dieses Profil. Änderungen gelten für neu gestartete Sessions."
                                Foreground="{DynamicResource MutedBrush}" TextWrapping="Wrap" Margin="2,0,2,14"/>
 
-                    <TabControl Grid.Row="1" Style="{StaticResource ProfileTabControl}">
-                        <TabItem Header="GLOBAL">
+                    <Grid Grid.Row="1">
+                        <Grid.RowDefinitions>
+                            <RowDefinition Height="Auto"/>
+                            <RowDefinition Height="12"/>
+                            <RowDefinition Height="*"/>
+                        </Grid.RowDefinitions>
+
+                        <StackPanel Orientation="Horizontal" Margin="2,0,0,0">
+                            <RadioButton x:Name="GlobalTab" GroupName="ProfileSection" IsChecked="True"
+                                         Style="{StaticResource ProfileSectionButton}" Content="GLOBAL" Margin="0,0,14,0"/>
+                            <RadioButton x:Name="ProjectTab" GroupName="ProfileSection"
+                                         Style="{StaticResource ProfileSectionButton}" Content="PROJEKT"/>
+                        </StackPanel>
+
+                        <Border Grid.Row="2"
+                                Background="{DynamicResource SurfaceBg}"
+                                BorderBrush="{DynamicResource BorderBrushSoft}"
+                                BorderThickness="1"
+                                CornerRadius="12"
+                                Padding="14">
                             <Grid>
-                                <Grid.RowDefinitions>
-                                    <RowDefinition Height="Auto"/>
-                                    <RowDefinition Height="*"/>
-                                </Grid.RowDefinitions>
-                                <TextBlock x:Name="GlobalPathText" FontFamily="Cascadia Code, Consolas, monospace"
-                                           FontSize="11" Foreground="{DynamicResource DimBrush}" TextTrimming="CharacterEllipsis"
-                                           Margin="2,0,2,9"/>
-                                <TextBox x:Name="GlobalEditor" Grid.Row="1" Style="{StaticResource ProfileTextEditor}"/>
+                                <Grid x:Name="GlobalPanel">
+                                    <Grid.Style>
+                                        <Style TargetType="Grid">
+                                            <Setter Property="Visibility" Value="Collapsed"/>
+                                            <Style.Triggers>
+                                                <DataTrigger Binding="{Binding IsChecked, ElementName=GlobalTab}" Value="True">
+                                                    <Setter Property="Visibility" Value="Visible"/>
+                                                </DataTrigger>
+                                            </Style.Triggers>
+                                        </Style>
+                                    </Grid.Style>
+                                    <Grid.RowDefinitions>
+                                        <RowDefinition Height="Auto"/>
+                                        <RowDefinition Height="*"/>
+                                    </Grid.RowDefinitions>
+                                    <TextBlock x:Name="GlobalPathText" FontFamily="Cascadia Code, Consolas, monospace"
+                                               FontSize="11" Foreground="{DynamicResource DimBrush}" TextTrimming="CharacterEllipsis"
+                                               Margin="2,0,2,9"/>
+                                    <TextBox x:Name="GlobalEditor" Grid.Row="1" Style="{StaticResource ProfileTextEditor}"/>
+                                </Grid>
+
+                                <Grid x:Name="ProjectPanel">
+                                    <Grid.Style>
+                                        <Style TargetType="Grid">
+                                            <Setter Property="Visibility" Value="Collapsed"/>
+                                            <Style.Triggers>
+                                                <DataTrigger Binding="{Binding IsChecked, ElementName=ProjectTab}" Value="True">
+                                                    <Setter Property="Visibility" Value="Visible"/>
+                                                </DataTrigger>
+                                            </Style.Triggers>
+                                        </Style>
+                                    </Grid.Style>
+                                    <Grid.RowDefinitions>
+                                        <RowDefinition Height="Auto"/>
+                                        <RowDefinition Height="*"/>
+                                    </Grid.RowDefinitions>
+                                    <TextBlock x:Name="ProjectPathText" FontFamily="Cascadia Code, Consolas, monospace"
+                                               FontSize="11" Foreground="{DynamicResource DimBrush}" TextTrimming="CharacterEllipsis"
+                                               Margin="2,0,2,9"/>
+                                    <TextBox x:Name="ProjectEditor" Grid.Row="1" Style="{StaticResource ProfileTextEditor}"/>
+                                </Grid>
                             </Grid>
-                        </TabItem>
-                        <TabItem Header="PROJEKT">
-                            <Grid>
-                                <Grid.RowDefinitions>
-                                    <RowDefinition Height="Auto"/>
-                                    <RowDefinition Height="*"/>
-                                </Grid.RowDefinitions>
-                                <TextBlock x:Name="ProjectPathText" FontFamily="Cascadia Code, Consolas, monospace"
-                                           FontSize="11" Foreground="{DynamicResource DimBrush}" TextTrimming="CharacterEllipsis"
-                                           Margin="2,0,2,9"/>
-                                <TextBox x:Name="ProjectEditor" Grid.Row="1" Style="{StaticResource ProfileTextEditor}"/>
-                            </Grid>
-                        </TabItem>
-                    </TabControl>
+                        </Border>
+                    </Grid>
 
                     <StackPanel Grid.Row="2" Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,14,0,0">
                         <Button Style="{StaticResource EditorButton}" Content="Abbrechen" Margin="0,0,8,0" Click="Cancel_Click"/>
