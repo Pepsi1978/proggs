@@ -1202,25 +1202,19 @@ namespace TerminalVoiceOverlay.Views
             }
         }
 
-        // Baut die horizontale Leiste (rechts→links). HBar fuellt sich
-        // links→rechts, daher Enter zuerst und der Stern zuletzt (= ganz rechts).
+        // Baut die horizontale Leiste. Die komplette Stern-/Toggle-Randgruppe
+        // sitzt links, die komplette Enter-/Speichern-Randgruppe rechts.
         private void BuildHorizontalLayout()
         {
             HBar.Children.Clear();
-            // Reihenfolge rechts→links = vertikal oben→unten. HBar fuellt links→
-            // rechts, daher: Enter ganz links, Stern ganz rechts. INNERHALB jeder
-            // Gruppe ist die Reihenfolge ebenfalls gespiegelt (das vertikal obere
-            // Symbol erscheint rechts) — daher die Arrays in umgekehrter Reihenfolge.
+            // Die Randgruppen werden als Ganzes gespiegelt. Dadurch wandern ihre
+            // individuellen Breiten, Hintergründe und Button-Funktionen mit.
             // Pro Gruppe die gleiche Sektionsfarbe wie vertikal (mit 70% Deckkraft,
             // Alpha B3) + senkrechte Trennstriche dazwischen — 1:1-Optik zum
             // vertikalen Layout, nur um 90° gedreht.
-            // Enter als Symbol in der oberen Reihe (auf der Symbol-Achse der
-            // anderen runden Buttons) + Diskette als "Kachel" in der unteren
-            // Reihe darunter — analog zum vertikalen Modus, wo Enter auf der
-            // Button-Achse sitzt und die Diskette in der Profil-Spalte daneben
-            // (Frank-Wunsch 2026-05-25). MakeHGroup setzt die Diskette dabei auf
-            // die Kachel-Groesse (30x22) und zentriert Enter in der 52px-Reihe.
-            HBar.Children.Add(MakeHGroup(new[] { EnterButton }, new[] { SaveButton }, "#B31A1A1A", new CornerRadius(34, 0, 0, 34)));
+            // Stern + Wechsel-Button UNTEREINANDER (Stern oben, Toggle unten),
+            // beide in Standard-Rundgröße und vertikal mittig.
+            HBar.Children.Add(MakeHStackGroup(UltrathinkButton, OrientationToggleButton, "#B31F1B15", new CornerRadius(34, 0, 0, 34)));
             HBar.Children.Add(MakeVDivider());
             HBar.Children.Add(MakeHGroup(new[] { InsertScreenshotButton, ScreenshotButton }, new[] { Profile10Button, Profile9Button }, "#B3151B15", new CornerRadius(0)));
             HBar.Children.Add(MakeVDivider());
@@ -1232,9 +1226,9 @@ namespace TerminalVoiceOverlay.Views
             HBar.Children.Add(MakeVDivider());
             HBar.Children.Add(MakeHGroup(new[] { BtwButton, MicButton }, new[] { Profile3Button, Profile2Button, Profile1Button }, "#B31F1C15", new CornerRadius(0)));
             HBar.Children.Add(MakeVDivider());
-            // Stern + Wechsel-Button UNTEREINANDER (Stern oben, Toggle unten),
-            // beide in Standard-Rundgroesse, vertikal mittig — statt nebeneinander.
-            HBar.Children.Add(MakeHStackGroup(UltrathinkButton, OrientationToggleButton, "#B31F1B15", new CornerRadius(0, 34, 34, 0)));
+            // Enter oben + Diskette darunter. MakeHGroup behält die bisherige
+            // Breite dieser Randgruppe und setzt nur ihre Position nach rechts.
+            HBar.Children.Add(MakeHGroup(new[] { EnterButton }, new[] { SaveButton }, "#B31A1A1A", new CornerRadius(0, 34, 34, 0)));
         }
 
         // Senkrechter Trennstrich zwischen den horizontalen Sektionen — das
