@@ -55,8 +55,8 @@ public sealed partial class MainViewModel : ObservableObject
         WorkDir = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), "proggs");
         _ = CheckOpenCodeUpdateAsync();
 
-        var version = Assembly.GetExecutingAssembly().GetName().Version?.ToString(3) ?? "1.9.4";
-        Version = $"Version {version} (11.07.2026, 12:59 Uhr)";
+        var version = Assembly.GetExecutingAssembly().GetName().Version?.ToString(3) ?? "1.9.5";
+        Version = $"Version {version} (11.07.2026, 13:10 Uhr)";
     }
 
     public ObservableCollection<ModelGroupEntry> ModelGroups { get; } = new();
@@ -85,6 +85,7 @@ public sealed partial class MainViewModel : ObservableObject
 
     partial void OnSelectedModelChanged(ModelEntry? value)
     {
+        SelectedProfile = Profiles.FirstOrDefault(profile => profile.Id == "standard");
         SelectedProvider = null;
         Providers.Clear();
         SelectedThinkingOption = null;
