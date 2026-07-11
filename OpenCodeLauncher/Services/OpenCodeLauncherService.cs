@@ -593,13 +593,45 @@ try {
         var openCodeInvocation = $"{invoke} -m '{EscapePowerShellSingleQuotedValue(modelString)}'{variant}";
 
         var tempScript = Path.Combine(Path.GetTempPath(), $"opencode-launcher-opencode-run-{Guid.NewGuid():N}.ps1");
+        // stderr MUST be redirected to a per-process file: unhandled Bun/Effect errors in the
+        // OpenCode TUI main thread print raw stack traces to stderr, which is the same TTY the
+        // TUI renders on — foreign bytes corrupt the diff-rendered screen until a full repaint
+        // (bugs/opencode/opencode-cli.md #14a). stdout/stdin stay on the console so the TUI,
+        // mouse handling and prompts keep working. Empty logs are deleted afterwards; non-empty
+        // ones are announced (watchdog) so errors stay observable instead of hidden.
         var script = $$"""
 $ErrorActionPreference = 'Continue'
 Set-Location -LiteralPath {{PowerShellLiteral(workDir)}}
 $env:OPENCODE_CONFIG = {{PowerShellLiteral(profileConfigPath)}}
+$stderrDir = Join-Path $env:USERPROFILE '.local\share\opencode\log\stderr'
 try {
-    {{openCodeInvocation}}
+    New-Item -ItemType Directory -Force -Path $stderrDir | Out-Null
+    $old = @(Get-ChildItem -LiteralPath $stderrDir -Filter 'opencode-stderr-*.log' -File -ErrorAction SilentlyContinue)
+    foreach ($f in @($old | Where-Object Length -eq 0)) {
+        Remove-Item -LiteralPath $f.FullName -Force -ErrorAction SilentlyContinue
+    }
+    $oldNonEmpty = @($old | Where-Object Length -gt 0)
+    if ($oldNonEmpty.Count -gt 0) {
+        $newest = $oldNonEmpty | Sort-Object LastWriteTime -Descending | Select-Object -First 1
+        Write-Host ("[stderr-Waechter] {0} Fehlerprotokoll(e) frueherer OpenCode-Laeufe - neuestes: {1}" -f $oldNonEmpty.Count, $newest.FullName) -ForegroundColor Yellow
+        Get-Content -LiteralPath $newest.FullName -TotalCount 2 -ErrorAction SilentlyContinue | ForEach-Object { Write-Host ('  ' + $_) -ForegroundColor DarkYellow }
+    }
+} catch {
+    Write-Host ('[stderr-Waechter] Vorpruefung uebersprungen: ' + $_.Exception.Message) -ForegroundColor DarkYellow
+}
+$stderrLog = Join-Path $stderrDir ('opencode-stderr-{0:yyyyMMdd-HHmmss}-{1}.log' -f (Get-Date), $PID)
+try {
+    {{openCodeInvocation}} 2>>$stderrLog
 } finally {
+    try {
+        if (Test-Path -LiteralPath $stderrLog) {
+            if ((Get-Item -LiteralPath $stderrLog).Length -eq 0) {
+                Remove-Item -LiteralPath $stderrLog -Force -ErrorAction SilentlyContinue
+            } else {
+                Write-Host ('[stderr-Waechter] Dieser Lauf hatte Fehlerausgaben: ' + $stderrLog) -ForegroundColor Yellow
+            }
+        }
+    } catch {}
     Remove-Item -LiteralPath $PSCommandPath -Force -ErrorAction SilentlyContinue
 }
 """;
