@@ -1,6 +1,4 @@
-using System.IO;
 using System.Net.Http;
-using System.Net.Http.Headers;
 using System.Text.Json;
 using System.Text.RegularExpressions;
 using OpenCodeLauncher.Models;
@@ -26,32 +24,6 @@ public sealed class OpenRouterService
         }
     };
 
-    private readonly string? _apiKey;
-
-    public OpenRouterService()
-    {
-        _apiKey = ResolveApiKey();
-    }
-
-    private static string? ResolveApiKey()
-    {
-        try
-        {
-            var env = Environment.GetEnvironmentVariable("OPENROUTER_API_KEY");
-            if (!string.IsNullOrWhiteSpace(env)) return env;
-
-            var home = Environment.GetFolderPath(Environment.SpecialFolder.UserProfile);
-            var keyFile = Path.Combine(home, "SK", "ClaudeCodeOpenRouter", "openrouter.key");
-            if (File.Exists(keyFile))
-            {
-                var k = File.ReadAllText(keyFile).Trim();
-                if (!string.IsNullOrEmpty(k)) return k;
-            }
-        }
-        catch { /* ohne Key läuft /endpoints auch (public read) */ }
-        return null;
-    }
-
     /// <summary>Liefert den Modell-Anzeigenamen (data.name) oder null.</summary>
     public async Task<(string? displayName, List<ProviderEntry> providers)> GetProvidersAsync(string slug, CancellationToken ct = default)
     {
@@ -59,7 +31,6 @@ public sealed class OpenRouterService
         try
         {
             using var req = new HttpRequestMessage(HttpMethod.Get, $"{BaseUrl}/models/{slug}/endpoints");
-            if (_apiKey != null) req.Headers.Authorization = new AuthenticationHeaderValue("Bearer", _apiKey);
 
             using var resp = await Http.SendAsync(req, ct).ConfigureAwait(false);
             resp.EnsureSuccessStatusCode();
@@ -103,7 +74,6 @@ public sealed class OpenRouterService
         try
         {
             using var req = new HttpRequestMessage(HttpMethod.Get, $"{BaseUrl}/models");
-            if (_apiKey != null) req.Headers.Authorization = new AuthenticationHeaderValue("Bearer", _apiKey);
 
             using var resp = await Http.SendAsync(req, ct).ConfigureAwait(false);
             resp.EnsureSuccessStatusCode();
@@ -138,7 +108,6 @@ public sealed class OpenRouterService
         try
         {
             using var req = new HttpRequestMessage(HttpMethod.Get, $"{BaseUrl}/models");
-            if (_apiKey != null) req.Headers.Authorization = new AuthenticationHeaderValue("Bearer", _apiKey);
 
             using var resp = await Http.SendAsync(req, ct).ConfigureAwait(false);
             resp.EnsureSuccessStatusCode();
