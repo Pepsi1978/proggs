@@ -17,6 +17,7 @@ public sealed partial class MainViewModel : ObservableObject
     private readonly OpenRouterService _router = new();
     private readonly OpenCodeLauncherService _launcher = new();
     private readonly OpenCodeUpdateService _updater = new();
+    private readonly InstructionProfileService _profiles = new();
     private CancellationTokenSource? _loadCts;
     private CancellationTokenSource? _thinkingCts;
 
@@ -24,18 +25,44 @@ public sealed partial class MainViewModel : ObservableObject
     {
         _registry = ModelRegistry.Load();
         foreach (var g in _registry.Groups) ModelGroups.Add(g);
+        Profiles.Add(new InstructionProfileEntry
+        {
+            Id = "standard",
+            DisplayName = "Standard",
+            Description = "Aktuelle globale und Projektregeln",
+            Status = "AKTIV",
+            IsEnabled = true
+        });
+        Profiles.Add(new InstructionProfileEntry
+        {
+            Id = "minimal",
+            DisplayName = "Minimal",
+            Description = "Wenig Kontext, maximale Freiheit",
+            Status = "FOLGT",
+            IsEnabled = false
+        });
+        Profiles.Add(new InstructionProfileEntry
+        {
+            Id = "strict",
+            DisplayName = "Strikt",
+            Description = "Mehr Kontrolle und Absicherung",
+            Status = "FOLGT",
+            IsEnabled = false
+        });
+        SelectedProfile = Profiles[0];
         SelectedModel = ModelGroups.FirstOrDefault(g => g.Models.Count > 0)?.Models.FirstOrDefault();
         _ = RefreshOpenRouterFreeModelsAsync();
         WorkDir = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), "proggs");
         _ = CheckOpenCodeUpdateAsync();
 
-        var version = Assembly.GetExecutingAssembly().GetName().Version?.ToString(3) ?? "1.7.14";
-        Version = $"Version {version} (10.07.2026, 17:40 Uhr)";
+        var version = Assembly.GetExecutingAssembly().GetName().Version?.ToString(3) ?? "1.8.0";
+        Version = $"Version {version} (11.07.2026, 11:57 Uhr)";
     }
 
     public ObservableCollection<ModelGroupEntry> ModelGroups { get; } = new();
     public ObservableCollection<ProviderEntry> Providers { get; } = new();
     public ObservableCollection<ThinkingOptionEntry> ThinkingOptions { get; } = new();
+    public ObservableCollection<InstructionProfileEntry> Profiles { get; } = new();
 
     [ObservableProperty] private ModelEntry? _selectedModel;
     [ObservableProperty] private ProviderEntry? _selectedProvider;
@@ -52,6 +79,8 @@ public sealed partial class MainViewModel : ObservableObject
     [ObservableProperty] private string _lastErrorDetails = "Noch kein Fehler protokolliert.";
     [ObservableProperty] private string _lastErrorPath = string.Empty;
     [ObservableProperty] private bool _hasLastError;
+    [ObservableProperty] private InstructionProfileEntry? _selectedProfile;
+    [ObservableProperty] private string _profileContextText = "OpenCode · AGENTS.md";
 
     partial void OnSelectedModelChanged(ModelEntry? value)
     {
@@ -61,6 +90,7 @@ public sealed partial class MainViewModel : ObservableObject
         ThinkingOptions.Clear();
         ThinkingTitle = IsClaudeCodeModel(value) ? "EFFORT" : "THINKING";
         ThinkingSubtitle = IsClaudeCodeModel(value) ? "Claude-Code-Level" : "Reasoning-Level";
+        ProfileContextText = IsClaudeCodeModel(value) ? "Claude Code · CLAUDE.md" : "OpenCode · AGENTS.md";
         UpdateThinkingState("Lade Thinking …");
         if (value != null) _ = LoadThinkingOptionsAsync(value);
         if (value != null) _ = LoadProvidersAsync(value);
@@ -417,6 +447,34 @@ public sealed partial class MainViewModel : ObservableObject
     }
 
     [RelayCommand]
+    private void EditProfile()
+    {
+        if (SelectedProfile is not { IsEnabled: true } || SelectedModel == null) return;
+
+        var isClaudeCode = IsClaudeCodeModel(SelectedModel);
+        try
+        {
+            var documents = _profiles.LoadStandard(isClaudeCode, WorkDir);
+            var edited = ShowProfileEditorDialog(documents, isClaudeCode);
+            if (edited == null) return;
+
+            _profiles.SaveStandard(isClaudeCode, WorkDir, edited.Value.GlobalText, edited.Value.ProjectText);
+            StatusText = $"Standardprofil für {(isClaudeCode ? "Claude Code" : "OpenCode")} gespeichert.";
+            Logger.Instance.Info("MainViewModel", "EditProfile", "Standardprofil gespeichert", new
+            {
+                cli = isClaudeCode ? "claude" : "opencode",
+                documents.GlobalPath,
+                documents.ProjectPath
+            });
+        }
+        catch (Exception ex)
+        {
+            StatusText = $"Profil konnte nicht gespeichert werden: {ex.Message}";
+            Logger.Instance.Error("MainViewModel", "EditProfile", ex, new { WorkDir, model = SelectedModel.ModelString });
+        }
+    }
+
+    [RelayCommand]
     private void OpenLogFolder()
     {
         var folder = string.IsNullOrWhiteSpace(LastErrorPath)
@@ -636,6 +694,103 @@ public sealed partial class MainViewModel : ObservableObject
         root.Child = sp;
         w.Content = root;
         return w.ShowDialog() == true;
+    }
+
+    private static (string GlobalText, string ProjectText)? ShowProfileEditorDialog(InstructionProfileDocuments documents, bool isClaudeCode)
+    {
+        var w = new Window
+        {
+            Title = $"Standardprofil bearbeiten · {(isClaudeCode ? "Claude Code" : "OpenCode")}",
+            Width = 1040,
+            Height = 760,
+            MinWidth = 760,
+            MinHeight = 520,
+            WindowStartupLocation = WindowStartupLocation.CenterScreen,
+            Background = Application.Current.TryFindResource("WindowBg") as System.Windows.Media.Brush
+                ?? new System.Windows.Media.SolidColorBrush(System.Windows.Media.Color.FromRgb(24, 22, 34))
+        };
+
+        var root = new System.Windows.Controls.Grid { Margin = new Thickness(18) };
+        root.RowDefinitions.Add(new System.Windows.Controls.RowDefinition { Height = GridLength.Auto });
+        root.RowDefinitions.Add(new System.Windows.Controls.RowDefinition { Height = new GridLength(1, GridUnitType.Star) });
+        root.RowDefinitions.Add(new System.Windows.Controls.RowDefinition { Height = GridLength.Auto });
+
+        var intro = new System.Windows.Controls.TextBlock
+        {
+            Text = "GLOBAL und PROJEKT bilden gemeinsam dieses Profil. Änderungen gelten für neu gestartete Sessions.",
+            TextWrapping = TextWrapping.Wrap,
+            Margin = new Thickness(0, 0, 0, 14)
+        };
+        intro.SetResourceReference(System.Windows.Controls.TextBlock.ForegroundProperty, "MutedBrush");
+        root.Children.Add(intro);
+
+        var globalEditor = CreateProfileTextBox(documents.GlobalText);
+        var projectEditor = CreateProfileTextBox(documents.ProjectText);
+        var tabs = new System.Windows.Controls.TabControl();
+        tabs.Items.Add(CreateProfileTab("GLOBAL", documents.GlobalPath, globalEditor));
+        tabs.Items.Add(CreateProfileTab("PROJEKT", documents.ProjectPath, projectEditor));
+        System.Windows.Controls.Grid.SetRow(tabs, 1);
+        root.Children.Add(tabs);
+
+        var buttons = new System.Windows.Controls.StackPanel
+        {
+            Orientation = System.Windows.Controls.Orientation.Horizontal,
+            HorizontalAlignment = HorizontalAlignment.Right,
+            Margin = new Thickness(0, 14, 0, 0)
+        };
+        var cancel = DialogButton("Abbrechen", false);
+        var save = DialogButton("Profil speichern", true);
+        cancel.Click += (_, _) => { w.DialogResult = false; w.Close(); };
+        save.Click += (_, _) => { w.DialogResult = true; w.Close(); };
+        buttons.Children.Add(cancel);
+        buttons.Children.Add(save);
+        System.Windows.Controls.Grid.SetRow(buttons, 2);
+        root.Children.Add(buttons);
+        w.Content = root;
+
+        return w.ShowDialog() == true ? (globalEditor.Text, projectEditor.Text) : null;
+    }
+
+    private static System.Windows.Controls.TabItem CreateProfileTab(string header, string path, System.Windows.Controls.TextBox editor)
+    {
+        var panel = new System.Windows.Controls.Grid { Margin = new Thickness(10) };
+        panel.RowDefinitions.Add(new System.Windows.Controls.RowDefinition { Height = GridLength.Auto });
+        panel.RowDefinitions.Add(new System.Windows.Controls.RowDefinition { Height = new GridLength(1, GridUnitType.Star) });
+        var pathText = new System.Windows.Controls.TextBlock
+        {
+            Text = path,
+            FontFamily = new System.Windows.Media.FontFamily("Cascadia Code, Consolas"),
+            FontSize = 11,
+            TextTrimming = TextTrimming.CharacterEllipsis,
+            Margin = new Thickness(0, 0, 0, 9)
+        };
+        pathText.SetResourceReference(System.Windows.Controls.TextBlock.ForegroundProperty, "DimBrush");
+        panel.Children.Add(pathText);
+        System.Windows.Controls.Grid.SetRow(editor, 1);
+        panel.Children.Add(editor);
+        return new System.Windows.Controls.TabItem { Header = header, Content = panel };
+    }
+
+    private static System.Windows.Controls.TextBox CreateProfileTextBox(string text)
+    {
+        var editor = new System.Windows.Controls.TextBox
+        {
+            Text = text,
+            AcceptsReturn = true,
+            AcceptsTab = true,
+            TextWrapping = TextWrapping.NoWrap,
+            VerticalScrollBarVisibility = System.Windows.Controls.ScrollBarVisibility.Auto,
+            HorizontalScrollBarVisibility = System.Windows.Controls.ScrollBarVisibility.Auto,
+            FontFamily = new System.Windows.Media.FontFamily("Cascadia Code, Consolas"),
+            FontSize = 13,
+            Padding = new Thickness(12),
+            BorderThickness = new Thickness(1)
+        };
+        editor.SetResourceReference(System.Windows.Controls.TextBox.BackgroundProperty, "SurfaceBg");
+        editor.SetResourceReference(System.Windows.Controls.TextBox.ForegroundProperty, "TextBrush");
+        editor.SetResourceReference(System.Windows.Controls.TextBox.CaretBrushProperty, "TextBrush");
+        editor.SetResourceReference(System.Windows.Controls.TextBox.BorderBrushProperty, "BorderBrushStrong");
+        return editor;
     }
 
     private static System.Windows.Controls.Button DialogButton(string text, bool accent)
