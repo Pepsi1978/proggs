@@ -64,6 +64,7 @@ private val KEY_RANDOM_PLAYBACK = booleanPreferencesKey("random_playback")
 
 data class MentalTtsUiState(
     val isPlaying: Boolean = false,
+    val isPaused: Boolean = false,
     /** Wie oft der Anker (Satz 1) vor jedem Folgesatz vorgelesen wird (1..10). */
     val ankerCount: Int = 1,
     /** Wie oft jeder Folgesatz vorgelesen wird (1..10). */
@@ -135,12 +136,13 @@ class MentalTtsViewModel
         combine(
             settingsFlow,
             appSettings.ttsAutoStopMinutesFlow,
-            playback.isPlayingFlow,
+            combine(playback.isPlayingFlow, playback.isPausedFlow) { playing, paused -> playing to paused },
             playback.autoStopEndsAtWallClockMsFlow,
             playback.errorFlow,
-        ) { s, autoStopMinutes, playing, autoStopEndsAt, err ->
+        ) { s, autoStopMinutes, playbackState, autoStopEndsAt, err ->
                 MentalTtsUiState(
-                    isPlaying = playing,
+                    isPlaying = playbackState.first,
+                    isPaused = playbackState.second,
                     ankerCount = s.anker,
                     folgeCount = s.folge,
                     loop = s.loop,
@@ -215,6 +217,14 @@ class MentalTtsViewModel
 
     fun stop() {
         playback.stop()
+    }
+
+    fun pause() {
+        playback.pause()
+    }
+
+    fun resume() {
+        playback.resume()
     }
 
     override fun onCleared() {

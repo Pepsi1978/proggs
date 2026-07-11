@@ -58,6 +58,8 @@ class TtsPlayer @Inject constructor(
     }
 
     @Volatile private var mediaPlayer: MediaPlayer? = null
+    @Volatile private var preparedPlayer: MediaPlayer? = null
+    @Volatile private var pauseRequested = false
 
     /**
      * Synthetisiert `text` und spielt das Ergebnis ab.
@@ -101,6 +103,33 @@ class TtsPlayer @Inject constructor(
 
     /** Stoppt die laufende Wiedergabe. Nach `stop()` ist sofort eine neue möglich. */
     fun stop() {
+        pauseRequested = false
+        releaseCurrentPlayer()
+    }
+
+    /** Pausiert den aktuellen Clip an seiner exakten MediaPlayer-Position. */
+    fun pause() {
+        pauseRequested = true
+        val mp = mediaPlayer ?: return
+        try {
+            if (mp.isPlaying) mp.pause()
+        } catch (e: IllegalStateException) {
+            Diag.e(DiagnosticArea.GOOGLE_TTS, TAG, "TTS-Pause fehlgeschlagen: ${e.message}", e)
+        }
+    }
+
+    /** Setzt einen pausierten oder während der Vorbereitung angehaltenen Clip fort. */
+    fun resume() {
+        pauseRequested = false
+        val mp = mediaPlayer ?: return
+        try {
+            if (preparedPlayer === mp && !mp.isPlaying) mp.start()
+        } catch (e: IllegalStateException) {
+            Diag.e(DiagnosticArea.GOOGLE_TTS, TAG, "TTS-Fortsetzen fehlgeschlagen: ${e.message}", e)
+        }
+    }
+
+    private fun releaseCurrentPlayer() {
         val mp = mediaPlayer
         // Bugfix 2026-07-03 (TTS-Almanach AC4): Listener VOR release() nullen — ein noch
         // gequeutes onPrepared koennte sonst player.start() auf dem released Player aufrufen
@@ -114,6 +143,7 @@ class TtsPlayer @Inject constructor(
             // Player schon released — ignorieren
         }
         mp?.release()
+        if (preparedPlayer === mp) preparedPlayer = null
         if (mediaPlayer === mp) mediaPlayer = null
     }
 
@@ -210,7 +240,7 @@ class TtsPlayer @Inject constructor(
      */
     suspend fun playCachedFileAwait(file: File): Unit = suspendCancellableCoroutine { cont ->
         // Vorherige Wiedergabe sauber beenden (loescht keine Sequenz-Datei).
-        stop()
+        releaseCurrentPlayer()
         val mp = MediaPlayer()
         cont.invokeOnCancellation {
             try {
@@ -219,12 +249,17 @@ class TtsPlayer @Inject constructor(
                 // Player bereits released — ignorieren
             }
             mp.release()
+            if (preparedPlayer === mp) preparedPlayer = null
             if (mediaPlayer === mp) mediaPlayer = null
         }
         try {
             mp.setDataSource(file.absolutePath)
-            mp.setOnPreparedListener { it.start() }
+            mp.setOnPreparedListener {
+                preparedPlayer = it
+                if (!pauseRequested) it.start()
+            }
             mp.setOnCompletionListener {
+                if (preparedPlayer === mp) preparedPlayer = null
                 if (cont.isActive) cont.resume(Unit)
             }
             mp.setOnErrorListener { _, what, extra ->
@@ -232,6 +267,7 @@ class TtsPlayer @Inject constructor(
                 // Bugfix 2026-07-03 (TTS-Almanach AC1): fehlerhaften Player sofort freigeben,
                 // statt ihn bis zum naechsten stop() im Feld zu halten.
                 mp.release()
+                if (preparedPlayer === mp) preparedPlayer = null
                 if (mediaPlayer === mp) mediaPlayer = null
                 if (cont.isActive) {
                     cont.resumeWithException(IllegalStateException("MediaPlayer error $what/$extra"))
@@ -244,6 +280,7 @@ class TtsPlayer @Inject constructor(
             throw cancellation
         } catch (e: Exception) {
             mp.release()
+            if (preparedPlayer === mp) preparedPlayer = null
             if (mediaPlayer === mp) mediaPlayer = null
             if (cont.isActive) cont.resumeWithException(e)
         }
@@ -278,9 +315,12 @@ class TtsPlayer @Inject constructor(
         try {
             mp.setDataSource(file.absolutePath)
             mp.setOnPreparedListener { player ->
+                preparedPlayer = player
                 if (mediaPlayer === player) {
-                    player.start()
-                    onPlaybackStart?.invoke()
+                    if (!pauseRequested) {
+                        player.start()
+                        onPlaybackStart?.invoke()
+                    }
                 }
             }
             mp.setOnCompletionListener {
@@ -296,6 +336,7 @@ class TtsPlayer @Inject constructor(
             mp.prepareAsync()
         } catch (e: Exception) {
             try { mp.release() } catch (_: Exception) { /* ignore */ }
+            if (preparedPlayer === mp) preparedPlayer = null
             if (mediaPlayer === mp) mediaPlayer = null
             throw e
         }
@@ -305,6 +346,7 @@ class TtsPlayer @Inject constructor(
         try {
             mp.release()
         } catch (_: Exception) { /* ignore */ }
+        if (preparedPlayer === mp) preparedPlayer = null
         if (mediaPlayer === mp) mediaPlayer = null
         if (file.exists()) file.delete()
     }

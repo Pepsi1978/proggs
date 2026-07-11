@@ -23,6 +23,8 @@ import androidx.compose.material.icons.outlined.ArrowDropDown
 import androidx.compose.material.icons.outlined.Check
 import androidx.compose.material.icons.outlined.Delete
 import androidx.compose.material.icons.outlined.LooksOne
+import androidx.compose.material.icons.outlined.Pause
+import androidx.compose.material.icons.outlined.PlayArrow
 import androidx.compose.material.icons.outlined.Psychology
 import androidx.compose.material.icons.outlined.Repeat
 import androidx.compose.material.icons.outlined.Save
@@ -384,6 +386,13 @@ fun MentalBoardScreen(
                     verticalArrangement = Arrangement.spacedBy(10.dp),
                 ) {
                     if (ttsState.isPlaying) {
+                        item(key = "tts_playback_controls") {
+                            MentalPlaybackControls(
+                                isPaused = ttsState.isPaused,
+                                onPlay = ttsVm::resume,
+                                onPause = ttsVm::pause,
+                            )
+                        }
                         item(key = "tts_auto_stop_info") {
                             TtsAutoStopInfo(ttsState.autoStopEndsAtWallClockMs)
                         }
@@ -459,6 +468,59 @@ fun MentalBoardScreen(
                 editTarget = null
             },
         )
+    }
+}
+
+@Composable
+private fun MentalPlaybackControls(
+    isPaused: Boolean,
+    onPlay: () -> Unit,
+    onPause: () -> Unit,
+) {
+    val cosmos = LocalCosmos.current
+    val orange = Color(0xFFFF9800)
+    val cardBg = if (cosmos.isDark) Color(0xFF1D1A16) else Color.White
+    Row(
+        modifier =
+            Modifier.fillMaxWidth()
+                .height(58.dp)
+                .clip(RoundedCornerShape(14.dp))
+                .background(cardBg)
+                .padding(horizontal = 14.dp),
+        horizontalArrangement = Arrangement.Center,
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        IconButton(
+            onClick = onPlay,
+            enabled = isPaused,
+            modifier =
+                Modifier.size(46.dp)
+                    .clip(RoundedCornerShape(23.dp))
+                    .background(if (!isPaused) orange.copy(alpha = 0.18f) else Color.Transparent),
+        ) {
+            Icon(
+                imageVector = Icons.Outlined.PlayArrow,
+                contentDescription = "Vorlesen fortsetzen",
+                tint = if (!isPaused) orange else cosmos.textSecondary,
+                modifier = Modifier.size(28.dp),
+            )
+        }
+        Spacer(Modifier.size(22.dp))
+        IconButton(
+            onClick = onPause,
+            enabled = !isPaused,
+            modifier =
+                Modifier.size(46.dp)
+                    .clip(RoundedCornerShape(23.dp))
+                    .background(if (isPaused) orange.copy(alpha = 0.18f) else Color.Transparent),
+        ) {
+            Icon(
+                imageVector = Icons.Outlined.Pause,
+                contentDescription = "Vorlesen pausieren",
+                tint = if (isPaused) orange else cosmos.textSecondary,
+                modifier = Modifier.size(28.dp),
+            )
+        }
     }
 }
 

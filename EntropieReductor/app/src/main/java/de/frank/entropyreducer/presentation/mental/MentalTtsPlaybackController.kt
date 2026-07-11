@@ -61,9 +61,14 @@ constructor(
     private val lock = Any()
     private var playbackJob: Job? = null
     private var wakeLock: PowerManager.WakeLock? = null
+    private var playbackLabel: String? = null
+    private var autoStopCountdown: PausableCountdown? = null
 
     private val _isPlayingFlow = MutableStateFlow(false)
     val isPlayingFlow: StateFlow<Boolean> = _isPlayingFlow
+
+    private val _isPausedFlow = MutableStateFlow(false)
+    val isPausedFlow: StateFlow<Boolean> = _isPausedFlow
 
     private val _errorFlow = MutableStateFlow<String?>(null)
     val errorFlow: StateFlow<String?> = _errorFlow
@@ -155,7 +160,38 @@ constructor(
         ttsPlayer.clearSequenceCache()
         stopBackgroundPlaybackProtection()
         _autoStopEndsAtWallClockMsFlow.value = null
+        _isPausedFlow.value = false
         _isPlayingFlow.value = false
+        synchronized(lock) {
+            autoStopCountdown = null
+            playbackLabel = null
+        }
+    }
+
+    fun pause() {
+        if (!_isPlayingFlow.value || _isPausedFlow.value) return
+        synchronized(lock) { autoStopCountdown?.pause() }
+        _isPausedFlow.value = true
+        _autoStopEndsAtWallClockMsFlow.value = null
+        ttsPlayer.pause()
+        stopBackgroundPlaybackProtection()
+        Diag.d(DiagnosticArea.GOOGLE_TTS, TAG, "Vorlesen pausiert; Auto-Stop-Zeit eingefroren")
+    }
+
+    fun resume() {
+        if (!_isPlayingFlow.value || !_isPausedFlow.value) return
+        val (label, remainingMs) = synchronized(lock) {
+            val countdown = autoStopCountdown ?: return
+            countdown.resume()
+            (playbackLabel ?: "Mental") to countdown.remainingMs()
+        }
+        _autoStopEndsAtWallClockMsFlow.value = System.currentTimeMillis() + remainingMs
+        _isPausedFlow.value = false
+        runCatching { TtsPlaybackService.start(context, label) }
+            .onFailure { Diag.e(DiagnosticArea.GOOGLE_TTS, TAG, "$label-Foreground-Service konnte nicht fortgesetzt werden: ${it.message}", it) }
+        startBackgroundPlaybackProtection(label, remainingMs)
+        ttsPlayer.resume()
+        Diag.d(DiagnosticArea.GOOGLE_TTS, TAG, "Vorlesen fortgesetzt; verbleibende Auto-Stop-Zeit=${remainingMs / 1_000}s")
     }
 
     private fun markAutoStopDeadline(label: String, autoStopMinutes: Int): Long {
@@ -169,6 +205,10 @@ constructor(
             "$label-Vorlesen gestartet: Auto-Stop=$autoStopMinutes Minuten, aktiv bis $endTime Uhr",
         )
         startBackgroundPlaybackProtection(label, autoStopMs)
+        synchronized(lock) {
+            playbackLabel = label
+            autoStopCountdown = PausableCountdown(autoStopMs)
+        }
         return autoStopMs
     }
 
@@ -202,7 +242,12 @@ constructor(
                         ttsPlayer.clearSequenceCache()
                         stopBackgroundPlaybackProtection()
                         _autoStopEndsAtWallClockMsFlow.value = null
+                        _isPausedFlow.value = false
                         _isPlayingFlow.value = false
+                        synchronized(lock) {
+                            autoStopCountdown = null
+                            playbackLabel = null
+                        }
                     }
                 }
             }
@@ -297,21 +342,23 @@ constructor(
                 "repeat=$gewohnheitRepeat gewohnheitPauseMs=$gewohnheitPauseMs)",
         )
 
-        val deadline = SystemClock.elapsedRealtime() + autoStopMs
         do {
             val sequence = if (randomPlayback) (mentalBlocks + gewohnheitBlocks).shuffled().flatten() else orderedSequence
             for ((index, step) in sequence.withIndex()) {
                 currentCoroutineContext().ensureActive()
-                if (SystemClock.elapsedRealtime() >= deadline) {
+                awaitResumed()
+                if (autoStopReached()) {
                     Diag.d(DiagnosticArea.GOOGLE_TTS, TAG, "${autoStopMs / 60_000}-Minuten-Grenze erreicht - automatischer Stop")
                     return
                 }
                 val file = ttsPlayer.synthesizeToCache(step.text, forceFresh = true)
+                awaitResumed()
+                if (autoStopReached()) return
                 withContext(Dispatchers.Main) { ttsPlayer.playCachedFileAwait(file) }
                 val isLastOfRun = index == sequence.lastIndex
-                if (!isLastOfRun || loop) delay(step.pauseMs)
+                if (!isLastOfRun || loop) delayWhileActive(step.pauseMs)
             }
-        } while (loop && SystemClock.elapsedRealtime() < deadline)
+        } while (loop && !autoStopReached())
     }
 
     private suspend fun runGewohnheitSequence(
@@ -331,22 +378,44 @@ constructor(
             "Sequenz gebildet: ${orderedSequence.size} Sätze (sätze=${texts.size} repeat=$repeat loop=$loop random=$randomPlayback pauseMs=$pauseMs)",
         )
 
-        val deadline = SystemClock.elapsedRealtime() + autoStopMs
         do {
             val sequence = if (randomPlayback) blocks.shuffled().flatten() else orderedSequence
             for ((index, step) in sequence.withIndex()) {
                 currentCoroutineContext().ensureActive()
-                if (SystemClock.elapsedRealtime() >= deadline) {
+                awaitResumed()
+                if (autoStopReached()) {
                     Diag.d(DiagnosticArea.GOOGLE_TTS, TAG, "${autoStopMs / 60_000}-Minuten-Grenze erreicht - automatischer Stop")
                     return
                 }
                 val file = ttsPlayer.synthesizeToCache(step.text, forceFresh = true)
+                awaitResumed()
+                if (autoStopReached()) return
                 withContext(Dispatchers.Main) { ttsPlayer.playCachedFileAwait(file) }
                 val isLastOfRun = index == sequence.lastIndex
-                if (!isLastOfRun || loop) delay(step.pauseMs)
+                if (!isLastOfRun || loop) delayWhileActive(step.pauseMs)
             }
-        } while (loop && SystemClock.elapsedRealtime() < deadline)
+        } while (loop && !autoStopReached())
     }
+
+    private suspend fun awaitResumed() {
+        _isPausedFlow.first { paused -> !paused }
+        currentCoroutineContext().ensureActive()
+    }
+
+    private suspend fun delayWhileActive(durationMs: Long) {
+        var remainingMs = durationMs
+        while (remainingMs > 0L) {
+            awaitResumed()
+            val sliceMs = minOf(remainingMs, 100L)
+            val startedAt = SystemClock.elapsedRealtime()
+            delay(sliceMs)
+            if (!_isPausedFlow.value) {
+                remainingMs -= (SystemClock.elapsedRealtime() - startedAt).coerceAtMost(sliceMs)
+            }
+        }
+    }
+
+    private fun autoStopReached(): Boolean = synchronized(lock) { autoStopCountdown?.isExpired() == true }
 
     private fun buildOrderedMentalSteps(texts: List<String>, anker: Int, folge: Int, pauseMs: Long): List<SpokenStep> {
         if (texts.isEmpty()) return emptyList()
@@ -391,4 +460,39 @@ constructor(
     )
 
     private data class SpokenStep(val text: String, val pauseMs: Long)
+}
+
+internal class PausableCountdown(
+    private val totalMs: Long,
+    private val nowMs: () -> Long = SystemClock::elapsedRealtime,
+) {
+    private var remainingMs = totalMs.coerceAtLeast(0L)
+    private var activeSinceMs: Long? = nowMs()
+
+    @Synchronized
+    fun pause() {
+        updateRemaining()
+        activeSinceMs = null
+    }
+
+    @Synchronized
+    fun resume() {
+        if (remainingMs > 0L && activeSinceMs == null) activeSinceMs = nowMs()
+    }
+
+    @Synchronized
+    fun remainingMs(): Long {
+        updateRemaining()
+        return remainingMs
+    }
+
+    @Synchronized
+    fun isExpired(): Boolean = remainingMs() <= 0L
+
+    private fun updateRemaining() {
+        val activeSince = activeSinceMs ?: return
+        val now = nowMs()
+        remainingMs = (remainingMs - (now - activeSince).coerceAtLeast(0L)).coerceAtLeast(0L)
+        activeSinceMs = now
+    }
 }
