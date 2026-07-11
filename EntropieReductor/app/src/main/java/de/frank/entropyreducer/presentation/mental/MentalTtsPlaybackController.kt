@@ -63,6 +63,7 @@ constructor(
     private var wakeLock: PowerManager.WakeLock? = null
     private var playbackLabel: String? = null
     private var autoStopCountdown: PausableCountdown? = null
+    private var countdownTickerJob: Job? = null
 
     private val _isPlayingFlow = MutableStateFlow(false)
     val isPlayingFlow: StateFlow<Boolean> = _isPlayingFlow
@@ -75,6 +76,9 @@ constructor(
 
     private val _autoStopEndsAtWallClockMsFlow = MutableStateFlow<Long?>(null)
     val autoStopEndsAtWallClockMsFlow: StateFlow<Long?> = _autoStopEndsAtWallClockMsFlow
+
+    private val _autoStopRemainingMsFlow = MutableStateFlow<Long?>(null)
+    val autoStopRemainingMsFlow: StateFlow<Long?> = _autoStopRemainingMsFlow
 
     fun dismissError() {
         _errorFlow.value = null
@@ -160,9 +164,12 @@ constructor(
         ttsPlayer.clearSequenceCache()
         stopBackgroundPlaybackProtection()
         _autoStopEndsAtWallClockMsFlow.value = null
+        _autoStopRemainingMsFlow.value = null
         _isPausedFlow.value = false
         _isPlayingFlow.value = false
         synchronized(lock) {
+            countdownTickerJob?.cancel()
+            countdownTickerJob = null
             autoStopCountdown = null
             playbackLabel = null
         }
@@ -173,6 +180,7 @@ constructor(
         synchronized(lock) { autoStopCountdown?.pause() }
         _isPausedFlow.value = true
         _autoStopEndsAtWallClockMsFlow.value = null
+        _autoStopRemainingMsFlow.value = synchronized(lock) { autoStopCountdown?.remainingMs() }
         ttsPlayer.pause()
         stopBackgroundPlaybackProtection()
         Diag.d(DiagnosticArea.GOOGLE_TTS, TAG, "Vorlesen pausiert; Auto-Stop-Zeit eingefroren")
@@ -186,6 +194,7 @@ constructor(
             (playbackLabel ?: "Mental") to countdown.remainingMs()
         }
         _autoStopEndsAtWallClockMsFlow.value = System.currentTimeMillis() + remainingMs
+        _autoStopRemainingMsFlow.value = remainingMs
         _isPausedFlow.value = false
         runCatching { TtsPlaybackService.start(context, label) }
             .onFailure { Diag.e(DiagnosticArea.GOOGLE_TTS, TAG, "$label-Foreground-Service konnte nicht fortgesetzt werden: ${it.message}", it) }
@@ -209,7 +218,22 @@ constructor(
             playbackLabel = label
             autoStopCountdown = PausableCountdown(autoStopMs)
         }
+        _autoStopRemainingMsFlow.value = autoStopMs
+        startCountdownTicker()
         return autoStopMs
+    }
+
+    private fun startCountdownTicker() {
+        synchronized(lock) {
+            countdownTickerJob?.cancel()
+            countdownTickerJob = applicationScope.launch {
+                while (_isPlayingFlow.value) {
+                    _autoStopRemainingMsFlow.value =
+                        synchronized(lock) { autoStopCountdown?.remainingMs() }
+                    delay(1_000L)
+                }
+            }
+        }
     }
 
     private fun startPlayback(label: String, block: suspend () -> Unit) {
@@ -242,9 +266,12 @@ constructor(
                         ttsPlayer.clearSequenceCache()
                         stopBackgroundPlaybackProtection()
                         _autoStopEndsAtWallClockMsFlow.value = null
+                        _autoStopRemainingMsFlow.value = null
                         _isPausedFlow.value = false
                         _isPlayingFlow.value = false
                         synchronized(lock) {
+                            countdownTickerJob?.cancel()
+                            countdownTickerJob = null
                             autoStopCountdown = null
                             playbackLabel = null
                         }

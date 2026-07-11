@@ -80,6 +80,7 @@ data class MentalTtsUiState(
     /** Globale Sicherheitsgrenze fuer automatischen Vorlese-Stop (15..120 Minuten). */
     val autoStopMinutes: Int = AppSettings.DEFAULT_TTS_AUTO_STOP_MINUTES,
     val autoStopEndsAtWallClockMs: Long? = null,
+    val autoStopRemainingMs: Long? = null,
     val error: String? = null,
 )
 
@@ -132,17 +133,26 @@ class MentalTtsViewModel
             )
         }
 
+    private val playbackState =
+        combine(
+            playback.isPlayingFlow,
+            playback.isPausedFlow,
+            playback.autoStopEndsAtWallClockMsFlow,
+            playback.autoStopRemainingMsFlow,
+        ) { playing, paused, autoStopEndsAt, autoStopRemainingMs ->
+            PlaybackState(playing, paused, autoStopEndsAt, autoStopRemainingMs)
+        }
+
     val uiState: StateFlow<MentalTtsUiState> =
         combine(
             settingsFlow,
             appSettings.ttsAutoStopMinutesFlow,
-            combine(playback.isPlayingFlow, playback.isPausedFlow) { playing, paused -> playing to paused },
-            playback.autoStopEndsAtWallClockMsFlow,
+            playbackState,
             playback.errorFlow,
-        ) { s, autoStopMinutes, playbackState, autoStopEndsAt, err ->
+        ) { s, autoStopMinutes, playbackState, err ->
                 MentalTtsUiState(
-                    isPlaying = playbackState.first,
-                    isPaused = playbackState.second,
+                    isPlaying = playbackState.isPlaying,
+                    isPaused = playbackState.isPaused,
                     ankerCount = s.anker,
                     folgeCount = s.folge,
                     loop = s.loop,
@@ -150,7 +160,8 @@ class MentalTtsViewModel
                     randomPlayback = s.randomPlayback,
                     pauseSeconds = s.pauseSeconds,
                     autoStopMinutes = autoStopMinutes,
-                    autoStopEndsAtWallClockMs = autoStopEndsAt,
+                    autoStopEndsAtWallClockMs = playbackState.autoStopEndsAtWallClockMs,
+                    autoStopRemainingMs = playbackState.autoStopRemainingMs,
                     error = err,
                 )
             }
@@ -159,6 +170,13 @@ class MentalTtsViewModel
                 started = SharingStarted.WhileSubscribed(5_000),
                 initialValue = MentalTtsUiState(),
             )
+
+    private data class PlaybackState(
+        val isPlaying: Boolean,
+        val isPaused: Boolean,
+        val autoStopEndsAtWallClockMs: Long?,
+        val autoStopRemainingMs: Long?,
+    )
 
     /* ----------------------------- Einstellungen ----------------------------- */
 

@@ -28,6 +28,7 @@ import androidx.compose.material.icons.outlined.PlayArrow
 import androidx.compose.material.icons.outlined.Psychology
 import androidx.compose.material.icons.outlined.Repeat
 import androidx.compose.material.icons.outlined.Save
+import androidx.compose.material.icons.outlined.Schedule
 import androidx.compose.material.icons.outlined.Stop
 import androidx.compose.material.icons.outlined.VolumeUp
 import androidx.compose.material3.AlertDialog
@@ -68,6 +69,7 @@ import de.frank.entropyreducer.presentation.components.MicState
 import de.frank.entropyreducer.presentation.navigation.CosmosBottomBar
 import de.frank.entropyreducer.presentation.navigation.Routes
 import de.frank.entropyreducer.presentation.theme.LocalCosmos
+import java.util.Locale
 import java.util.UUID
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.distinctUntilChanged
@@ -379,50 +381,57 @@ fun MentalBoardScreen(
             if (displayed.isEmpty()) {
                 EmptyState()
             } else {
-                LazyColumn(
-                    state = lazyListState,
-                    modifier = Modifier.fillMaxSize(),
-                    contentPadding = PaddingValues(start = 16.dp, top = 16.dp, end = 16.dp, bottom = 160.dp),
-                    verticalArrangement = Arrangement.spacedBy(10.dp),
-                ) {
+                Column(modifier = Modifier.fillMaxSize()) {
                     if (ttsState.isPlaying) {
-                        item(key = "tts_playback_controls") {
+                        Column(
+                            modifier = Modifier.fillMaxWidth().padding(start = 16.dp, top = 16.dp, end = 16.dp),
+                            verticalArrangement = Arrangement.spacedBy(10.dp),
+                        ) {
                             MentalPlaybackControls(
                                 isPaused = ttsState.isPaused,
                                 onPlay = ttsVm::resume,
                                 onPause = ttsVm::pause,
                             )
-                        }
-                        item(key = "tts_auto_stop_info") {
-                            TtsAutoStopInfo(ttsState.autoStopEndsAtWallClockMs)
-                        }
-                    }
-                    items(displayed, key = { it.id }) { mental ->
-                        ReorderableItem(reorderState, key = mental.id) { isDragging ->
-                            val position = displayed.indexOfFirst { it.id == mental.id } + 1
-                            MentalRow(
-                                position = position,
-                                text = mental.text,
-                                isDragging = isDragging,
-                                onClick = { editTarget = mental },
-                                dragModifier =
-                                    Modifier.longPressDraggableHandle(
-                                        onDragStopped = {
-                                            // Gezogene Reihenfolge persistieren; der Flow liefert
-                                            // sie danach als `stored` zurueck (siehe LaunchedEffect
-                                            // oben, der dragOrder dann freigibt).
-                                            dragOrder?.let { order ->
-                                                scope.launch { reorderMentals(context, order) }
-                                            }
-                                        }
-                                    ),
+                            MentalRemainingTime(
+                                remainingMs = ttsState.autoStopRemainingMs,
+                                isPaused = ttsState.isPaused,
                             )
                         }
                     }
-                    // Frank-Wunsch 2026-07-03: Immer UNTER dem letzten Satz — egal wie viele es sind
-                    // — der TTS-Verbrauch des Monats (Chirp 3 HD, 1-Mio-Gratis-Kontingent).
-                    item(key = "tts_usage_footer") {
-                        TtsUsageFooter(usage = ttsUsage)
+                    LazyColumn(
+                        state = lazyListState,
+                        modifier = Modifier.weight(1f).fillMaxWidth(),
+                        contentPadding =
+                            PaddingValues(
+                                start = 16.dp,
+                                top = if (ttsState.isPlaying) 10.dp else 16.dp,
+                                end = 16.dp,
+                                bottom = 160.dp,
+                            ),
+                        verticalArrangement = Arrangement.spacedBy(10.dp),
+                    ) {
+                        items(displayed, key = { it.id }) { mental ->
+                            ReorderableItem(reorderState, key = mental.id) { isDragging ->
+                                val position = displayed.indexOfFirst { it.id == mental.id } + 1
+                                MentalRow(
+                                    position = position,
+                                    text = mental.text,
+                                    isDragging = isDragging,
+                                    onClick = { editTarget = mental },
+                                    dragModifier =
+                                        Modifier.longPressDraggableHandle(
+                                            onDragStopped = {
+                                                dragOrder?.let { order ->
+                                                    scope.launch { reorderMentals(context, order) }
+                                                }
+                                            }
+                                        ),
+                                )
+                            }
+                        }
+                        item(key = "tts_usage_footer") {
+                            TtsUsageFooter(usage = ttsUsage)
+                        }
                     }
                 }
             }
@@ -521,6 +530,41 @@ private fun MentalPlaybackControls(
                 modifier = Modifier.size(28.dp),
             )
         }
+    }
+}
+
+@Composable
+private fun MentalRemainingTime(remainingMs: Long?, isPaused: Boolean) {
+    val cosmos = LocalCosmos.current
+    val orange = Color(0xFFFF9800)
+    val totalSeconds = ((remainingMs ?: 0L) + 999L) / 1_000L
+    val hours = totalSeconds / 3_600L
+    val minutes = (totalSeconds % 3_600L) / 60L
+    val seconds = totalSeconds % 60L
+    val formatted =
+        if (hours > 0L) {
+            String.format(Locale.GERMANY, "%d:%02d:%02d", hours, minutes, seconds)
+        } else {
+            String.format(Locale.GERMANY, "%02d:%02d", minutes, seconds)
+        }
+    Row(
+        modifier =
+            Modifier.fillMaxWidth()
+                .height(50.dp)
+                .clip(RoundedCornerShape(14.dp))
+                .background(orange.copy(alpha = if (cosmos.isDark) 0.18f else 0.12f))
+                .padding(horizontal = 14.dp),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.Center,
+    ) {
+        Icon(Icons.Outlined.Schedule, contentDescription = null, tint = orange)
+        Spacer(Modifier.size(8.dp))
+        Text(
+            text = if (isPaused) "Pausiert · noch $formatted" else "Verbleibende Abspielzeit: $formatted",
+            color = orange,
+            fontWeight = FontWeight.SemiBold,
+            style = MaterialTheme.typography.bodyMedium,
+        )
     }
 }
 
