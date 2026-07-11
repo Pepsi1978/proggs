@@ -65,9 +65,14 @@ Copy-Item (Join-Path $Src 'tui.json') (Join-Path $Dst 'tui.json') -Force
 Ok 'tui.json (TUI-Plugins)'
 
 # --- 3) Globale Regeln, Agents, Plugins ---
-Backup (Join-Path $Dst 'AGENTS.md')
-Copy-Item (Join-Path $Src 'AGENTS-global.md') (Join-Path $Dst 'AGENTS.md') -Force
-Ok 'AGENTS.md (globale Regeln)'
+$agentsPath = Join-Path $Dst 'AGENTS.md'
+if (Test-Path $agentsPath) {
+  Backup $agentsPath
+  Warn 'vorhandene AGENTS.md beibehalten (wird vom Launcher verlustfrei migriert)'
+} else {
+  Copy-Item (Join-Path $Src 'AGENTS-global.md') $agentsPath
+  Ok 'AGENTS.md (Standardvorlage fuer die erste Profilmigration)'
+}
 
 $agents = Get-ChildItem (Join-Path $Src 'agents') -Filter *.md -ErrorAction SilentlyContinue
 if ($agents) { $agents | Copy-Item -Destination (Join-Path $Dst 'agents') -Force; Ok 'agents/' } else { Warn 'keine agents/*.md' }

@@ -11,9 +11,9 @@
     <AssemblyName>OpenCodeLauncher</AssemblyName>
     <ApplicationManifest>app.manifest</ApplicationManifest>
     <ApplicationIcon>app.ico</ApplicationIcon>
-    <Version>1.9.5</Version>
-    <FileVersion>1.9.5.0</FileVersion>
-    <AssemblyVersion>1.9.5.0</AssemblyVersion>
+    <Version>1.10.0</Version>
+    <FileVersion>1.10.0.0</FileVersion>
+    <AssemblyVersion>1.10.0.0</AssemblyVersion>
     <Company>Pepsi1978</Company>
     <Product>OpenCode Launcher</Product>
     <Copyright>© 2026 Pepsi1978</Copyright>
@@ -25,6 +25,11 @@
 
   <ItemGroup>
     <PackageReference Include="CommunityToolkit.Mvvm" Version="8.3.2" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Content Include="..\opencode-setup\AGENTS-global.md" Link="Profiles\OpenCode\standard\global.md" CopyToOutputDirectory="PreserveNewest" />
+    <Content Include="Profiles\OpenCode\standard\project.md" CopyToOutputDirectory="PreserveNewest" />
   </ItemGroup>
 
 </Project>

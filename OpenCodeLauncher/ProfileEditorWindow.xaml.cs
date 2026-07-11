@@ -9,11 +9,11 @@ public partial class ProfileEditorWindow : Window
     public string GlobalText => GlobalEditor.Text;
     public string ProjectText => ProjectEditor.Text;
 
-    public ProfileEditorWindow(InstructionProfileDocuments documents, bool isClaudeCode)
+    public ProfileEditorWindow(InstructionProfileDocuments documents, bool isClaudeCode, string profileName)
     {
         InitializeComponent();
-        TitleText.Text = "Standardprofil bearbeiten";
-        CliText.Text = isClaudeCode ? "Claude Code · CLAUDE.md" : "OpenCode · AGENTS.md";
+        TitleText.Text = $"Profil {profileName} bearbeiten";
+        CliText.Text = isClaudeCode ? "Claude Code · CLAUDE.md" : "OpenCode · Profilquellen";
         GlobalPathText.Text = documents.GlobalPath;
         ProjectPathText.Text = documents.ProjectPath;
         GlobalEditor.Text = documents.GlobalText;

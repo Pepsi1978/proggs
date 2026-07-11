@@ -109,7 +109,7 @@ public sealed class OpenCodeLauncherService
     }
 
     /// <summary>Startet opencode in einem neuen Windows-Terminal-Fenster.</summary>
-    public void Launch(string modelString, string workDir, string? thinkingLevel)
+    public void Launch(string modelString, string workDir, string? thinkingLevel, string profileConfigPath)
     {
         var log = Logger.Instance;
         thinkingLevel = NormalizeThinkingLevel(thinkingLevel);
@@ -133,7 +133,7 @@ public sealed class OpenCodeLauncherService
                 var robustLauncherScript = shell.IsPwsh ? ResolveRobustLauncherScript() : null;
                 if (!string.IsNullOrEmpty(robustLauncherScript))
                 {
-                    var robustProcess = LaunchViaRobustPowerShell(wt, robustLauncherScript, shell.Path, modelString, workDir, thinkingLevel, tabColor, log);
+                    var robustProcess = LaunchViaRobustPowerShell(wt, robustLauncherScript, shell.Path, modelString, workDir, thinkingLevel, profileConfigPath, tabColor, log);
                     log.Info("OpenCodeLauncherService", "Launch", $"robuster Windows-Terminal-Launcher gestartet (PID {robustProcess?.Id})", new { modelString, workDir, thinkingLevel, tabColor = tabColor.Name });
                     return;
                 }
@@ -154,7 +154,7 @@ public sealed class OpenCodeLauncherService
                 psi.ArgumentList.Add("-ExecutionPolicy");
                 psi.ArgumentList.Add("Bypass");
                 psi.ArgumentList.Add("-Command");
-                psi.ArgumentList.Add(BuildOpenCodeCommand(modelString, thinkingLevel));
+                psi.ArgumentList.Add(BuildOpenCodeCommand(modelString, thinkingLevel, profileConfigPath));
                 log.Info("OpenCodeLauncherService", "Launch", $"Terminal-Tabfarbe gewählt: {tabColor.Name} ({tabColor.Hex})");
             }
             else
@@ -165,7 +165,7 @@ public sealed class OpenCodeLauncherService
                 psi.ArgumentList.Add("-ExecutionPolicy");
                 psi.ArgumentList.Add("Bypass");
                 psi.ArgumentList.Add("-Command");
-                psi.ArgumentList.Add($"Set-Location -LiteralPath '{EscapePowerShellSingleQuotedValue(workDir)}'; {BuildOpenCodeCommand(modelString, thinkingLevel)}");
+                psi.ArgumentList.Add($"Set-Location -LiteralPath '{EscapePowerShellSingleQuotedValue(workDir)}'; {BuildOpenCodeCommand(modelString, thinkingLevel, profileConfigPath)}");
             }
 
             var p = Process.Start(psi);
@@ -366,11 +366,12 @@ public sealed class OpenCodeLauncherService
         string modelString,
         string workDir,
         string? thinkingLevel,
+        string profileConfigPath,
         TerminalTabColor tabColor,
         Logger log)
     {
         var title = string.IsNullOrWhiteSpace(thinkingLevel) ? $"OpenCode-{tabColor.Name}" : $"OpenCode-{tabColor.Name}-{thinkingLevel}";
-        var command = BuildOpenCodeCommand(modelString, thinkingLevel);
+        var command = BuildOpenCodeCommand(modelString, thinkingLevel, profileConfigPath);
         var tabArgs = new[]
         {
             "new-tab",
@@ -559,7 +560,7 @@ try {
 
     private static string PowerShellLiteral(string value) => $"'{EscapePowerShellSingleQuotedValue(value)}'";
 
-    private static string BuildOpenCodeCommand(string modelString, string? thinkingLevel)
+    private static string BuildOpenCodeCommand(string modelString, string? thinkingLevel, string profileConfigPath)
     {
         var executable = ResolveOpenCodeExecutable();
         var command = Path.IsPathFullyQualified(executable)
@@ -568,7 +569,8 @@ try {
         var variant = Path.IsPathFullyQualified(executable) && !string.IsNullOrWhiteSpace(thinkingLevel)
             ? $" --variant '{EscapePowerShellSingleQuotedValue(thinkingLevel)}'"
             : string.Empty;
-        return $"{command} -m '{EscapePowerShellSingleQuotedValue(modelString)}'{variant}";
+        var config = EscapePowerShellSingleQuotedValue(profileConfigPath);
+        return $"$env:OPENCODE_CONFIG = '{config}'; {command} -m '{EscapePowerShellSingleQuotedValue(modelString)}'{variant}";
     }
 
     private static string ResolveOpenCodeExecutable()

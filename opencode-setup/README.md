@@ -14,7 +14,7 @@
 
 | Ebene | Datei (Betrieb) | Im Repo? | Spiegelung hier | Vom Installer kopiert? |
 |-------|-----------------|----------|-----------------|------------------------|
-| 1. Globale Regeln | `~/.config/opencode/AGENTS.md` | nein (lokal) | **`AGENTS-global.md`** | ja |
+| 1. Globale Regeln | `~/.config/opencode/AGENTS.md` | nein (lokal) | **`AGENTS-global.md`**; unter Windows nach erfolgreicher Profilmigration ein kleiner Bootstrap | ja |
 | 2. Globale Config | `~/.config/opencode/opencode.jsonc` | nein (lokal) | **`opencode.jsonc`** | ja (shell angepasst) |
 | 2b. Globale Agents | `~/.config/opencode/agents/*.md` | nein (lokal) | **`agents/`** (z.B. `researcher.md`) | ja |
 | 2c. Globale Plugins | `~/.config/opencode/plugins/*.js` + Plugin-Pakete | nein (lokal) | **`plugins/`** (z.B. `tool-first-guard.js`, `token-cost-sidebar/`) | ja |
@@ -24,10 +24,17 @@
 | 2e. Notifier-Config | `~/.config/opencode/opencode-notifier.json` | nein (lokal) | — (Installer **generiert** sie mit lokalen Pfaden) | ja (erzeugt) |
 | 2f. Windows-Fix-Binary | `~/.local/share/opencode-mousefix/versions/*/opencode.exe` | nein (lokal) | Patch + Buildskript | ja (gebaut) |
 | 2g. OpenCode Launcher | `~/proggs/OpenCodeLauncher/bin/Release/.../OpenCodeLauncher.exe` | **ja** (Quellcode) | `OpenCodeLauncher/` | ja (gebaut + Shortcut) |
-| 3. Projekt-Regeln | `~/proggs/AGENTS.md` | **ja** | (liegt schon im Repo) | — |
+| 3. Projektbasis | `~/proggs/AGENTS.md` | **ja** | (liegt schon im Repo) | — |
+| 3b. OpenCode-Profile | `%APPDATA%\OpenCodeLauncher\profiles\opencode\<profil>\` | nein (lokal) | Standardvorlagen im `OpenCodeLauncher` | beim ersten Profilzugriff erzeugt |
 | 4. Projekt-CLAUDE.md | `~/proggs/CLAUDE.md` | **ja** | (liegt schon im Repo) | — |
 
-**Nicht in einer Datei (kommt zentral vom Server):** Die globale `AGENTS.md` weist OpenCode an, zu
+**OpenCode-Launcher unter Windows:** Die globale und die Projekt-`AGENTS.md` bleiben klein. Der Launcher
+erzeugt für Minimal, Standard und Strikt getrennte Quelldateien und lädt beim Start unveränderliche
+Sitzungssnapshots über `OPENCODE_CONFIG`. Das bestehende Standardprofil wird bei der ersten Migration
+verlustfrei übernommen; erst danach ersetzt der Launcher die globale Datei durch den Bootstrap. Claude
+Code ist davon nicht betroffen.
+
+**Nicht in einer Profildatei (kommt zentral vom Server):** Das Standardprofil weist OpenCode an, zu
 Session-Beginn alle Arbeitsregeln aus dem **zweiten Gehirn** zu laden (`second-brain`-MCP, Kategorie
 `Programmierung/Rules`, per Nummer iteriert). Diese Regeln liegen also zentral — auf jedem Rechner
 identisch, ohne Kopieren. Dafuer muss der WireGuard-Tunnel stehen (siehe Voraussetzungen).
@@ -67,7 +74,7 @@ Voraussetzungen fehlt; eine bereits aktive funktionierende Version bleibt dabei 
 ```sh
 git clone https://github.com/Pepsi1978/proggs ~/proggs
 ```
-Damit sind Projekt-`AGENTS.md` + `CLAUDE.md` (Ebene 3+4) automatisch da.
+Damit sind Projektbasis (`AGENTS.md`) + `CLAUDE.md` (Ebene 3+4) automatisch da.
 
 ### Schritt 3 — Das Installer-Skript ausfuehren (DER eine Befehl)
 
@@ -149,7 +156,7 @@ Themes, Mausfix, Rendererfix und Reasoning-Stufe bei Updates nicht still verlore
 1. Prueft, ob `opencode` im PATH ist (nur Hinweis, kein Abbruch).
 2. Legt `~/.config/opencode/{agents,plugins,sounds}` an und sichert vorhandene Dateien nach `.backup-<zeit>/`.
 3. Kopiert `opencode.jsonc` — auf **macOS/Linux** wird `"shell": "pwsh"` → `"bash"` ersetzt; auf **Windows** bleibt `pwsh`; kopiert außerdem `tui.json` fuer TUI-Plugins.
-4. Kopiert `AGENTS-global.md` → `AGENTS.md`, alle `agents/*.md`, alle `plugins/*.js`, Plugin-Paket-Verzeichnisse, installiert die TUI-Plugin-Dependencies per `npm`, alle `sounds/*.wav`, alle `skill/<name>/SKILL.md` (OpenCode-Skills wie `session-opencode`).
+4. Legt `AGENTS-global.md` nur auf frischen Installationen als `AGENTS.md` an. Eine vorhandene lokale Datei bleibt erhalten, damit der Windows-Launcher genau diesen Ist-Zustand beim ersten Profilzugriff verlustfrei migriert und erst danach den Bootstrap setzt. Außerdem werden Agents, Plugins, TUI-Plugin-Dependencies, Sounds und Skills installiert.
 5. **Erzeugt** `opencode-notifier.json` neu mit den korrekten lokalen Sound-Pfaden (Windows BOM-frei).
    Abschluss-, Unteraufgaben-, Freigabe-, Frage-, Plan- und Fehlerereignisse melden sich auch dann,
    wenn OpenCode gerade fokussiert ist; Start- und Nachrichteneingangs-Ereignisse bleiben stumm.
