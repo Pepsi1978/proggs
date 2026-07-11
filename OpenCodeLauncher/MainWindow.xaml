@@ -594,6 +594,7 @@
                     <Grid Margin="14,15,14,12">
                         <Grid.RowDefinitions>
                             <RowDefinition Height="Auto"/>
+                            <RowDefinition Height="Auto"/>
                             <RowDefinition Height="*"/>
                         </Grid.RowDefinitions>
                         <DockPanel Grid.Row="0" Margin="4,0,4,12" LastChildFill="False">
@@ -609,6 +610,8 @@
                                  Style="{x:Null}"
                                  Background="Transparent"
                                  BorderThickness="0"
+                                 Height="116"
+                                 VerticalAlignment="Top"
                                  ItemsSource="{Binding Profiles}"
                                  SelectedItem="{Binding SelectedProfile, Mode=TwoWay}"
                                  ScrollViewer.HorizontalScrollBarVisibility="Disabled">
