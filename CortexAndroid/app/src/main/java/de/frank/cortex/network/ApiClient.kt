@@ -6,6 +6,7 @@ import de.frank.cortex.data.TtsUsageStore
 import de.frank.cortex.data.model.*
 import de.frank.cortex.observability.CortexLog
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.withContext
 import android.util.Base64
@@ -40,6 +41,14 @@ class GeminiRateLimitException(message: String, val retryAfterMs: Long?) : Excep
  * Nutzer eine klare, umsetzbare Meldung zeigt, statt still nichts vorzulesen.
  */
 class GeminiTtsAccessException(message: String) : Exception(message)
+
+class ChatStreamException(
+    cause: Throwable,
+    val headersReceived: Boolean,
+    val anyEventReceived: Boolean,
+    val deltaReceived: Boolean,
+    val doneReceived: Boolean,
+) : IOException(cause.message ?: cause.javaClass.simpleName, cause)
 
 object ApiClient {
 
@@ -214,7 +223,9 @@ object ApiClient {
     private val streamingClient: OkHttpClient by lazy {
         authClient.newBuilder()
             .callTimeout(600, TimeUnit.SECONDS)
-            .readTimeout(120, TimeUnit.SECONDS)
+            // Der Server sendet alle 15 s einen Heartbeat. 60 s erkennt einen wirklich toten
+            // Kanal schnell, ohne lange Web-/Reasoning-Phasen als Fehler zu behandeln.
+            .readTimeout(60, TimeUnit.SECONDS)
             .build()
     }
 
@@ -225,32 +236,93 @@ object ApiClient {
      */
     suspend fun chatStream(request: ChatRequest, onDelta: (String) -> Unit): ChatResponse =
         withContext(Dispatchers.IO) {
+            val startedAt = System.currentTimeMillis()
+            val requestId = request.request_id.orEmpty()
+            var headersReceived = false
+            var anyEventReceived = false
+            var deltaReceived = false
+            var doneReceived = false
+            var eventCount = 0
+            var deltaCount = 0
+            var heartbeatCount = 0
+            CortexLog.info("ChatStream", "start", "SSE-Chat gestartet",
+                mapOf("request_id" to requestId.take(12)))
             val body = chatRequestAdapter.toJson(request).toRequestBody(jsonMediaType)
             val httpReq = Request.Builder()
                 .url(SettingsStore.agentUrl() + "/chat/stream")
                 .post(body)
                 .build()
-            executeCancellable(streamingClient, httpReq).use { resp ->
-                if (!resp.isSuccessful) {
-                    val err = resp.body?.string().orEmpty().take(300)
-                    throw Exception("Stream-HTTP ${resp.code}: $err")
-                }
-                val source = resp.body?.source() ?: throw Exception("Leerer Stream-Body")
-                var final: ChatResponse? = null
-                while (true) {
-                    ensureActive()
-                    val line = source.readUtf8Line() ?: break
-                    if (!line.startsWith("data:")) continue
-                    val payload = line.removePrefix("data:").trim()
-                    if (payload.isEmpty()) continue
-                    val evt = JSONObject(payload)
-                    when (evt.optString("type")) {
-                        "delta" -> evt.optString("text").takeIf { it.isNotEmpty() }?.let(onDelta)
-                        "done" -> final = chatResponseAdapter.fromJson(evt.getJSONObject("response").toString())
-                        "error" -> throw Exception("Agent-Stream-Fehler: ${evt.optString("message")}")
+            try {
+                executeCancellable(streamingClient, httpReq).use { resp ->
+                    headersReceived = true
+                    CortexLog.info("ChatStream", "headers", "SSE-Header empfangen",
+                        mapOf("request_id" to requestId.take(12), "status" to resp.code,
+                            "elapsed_ms" to (System.currentTimeMillis() - startedAt)))
+                    if (!resp.isSuccessful) {
+                        val err = resp.body?.string().orEmpty().take(300)
+                        throw IOException("Stream-HTTP ${resp.code}: $err")
                     }
+                    val source = resp.body?.source() ?: throw IOException("Leerer Stream-Body")
+                    while (true) {
+                        ensureActive()
+                        val line = source.readUtf8Line() ?: break
+                        if (!line.startsWith("data:")) continue
+                        val payload = line.removePrefix("data:").trim()
+                        if (payload.isEmpty()) continue
+                        val evt = JSONObject(payload)
+                        val type = evt.optString("type")
+                        eventCount++
+                        if (!anyEventReceived) {
+                            anyEventReceived = true
+                            CortexLog.info("ChatStream", "firstEvent", "Erstes SSE-Event empfangen",
+                                mapOf("request_id" to requestId.take(12), "type" to type,
+                                    "elapsed_ms" to (System.currentTimeMillis() - startedAt)))
+                        }
+                        when (type) {
+                            "ready" -> Unit
+                            "heartbeat" -> {
+                                heartbeatCount++
+                                CortexLog.info("ChatStream", "heartbeat", "SSE-Heartbeat empfangen",
+                                    mapOf("request_id" to requestId.take(12), "count" to heartbeatCount,
+                                        "elapsed_ms" to (System.currentTimeMillis() - startedAt)))
+                            }
+                            "delta" -> evt.optString("text").takeIf { it.isNotEmpty() }?.let {
+                                if (!deltaReceived) {
+                                    CortexLog.info("ChatStream", "firstDelta", "Erstes SSE-Textdelta empfangen",
+                                        mapOf("request_id" to requestId.take(12),
+                                            "elapsed_ms" to (System.currentTimeMillis() - startedAt)))
+                                }
+                                deltaReceived = true
+                                deltaCount++
+                                onDelta(it)
+                            }
+                            "done" -> {
+                                val result = chatResponseAdapter.fromJson(evt.getJSONObject("response").toString())
+                                    ?: throw IOException("Done-Event ohne gültige Antwort")
+                                doneReceived = true
+                                CortexLog.info("ChatStream", "done", "SSE-Abschluss empfangen",
+                                    mapOf("request_id" to requestId.take(12),
+                                        "elapsed_ms" to (System.currentTimeMillis() - startedAt),
+                                        "events" to eventCount, "deltas" to deltaCount,
+                                        "heartbeats" to heartbeatCount))
+                                return@withContext result
+                            }
+                            "error" -> throw IOException("Agent-Stream-Fehler: ${evt.optString("message")}")
+                        }
+                    }
+                    throw IOException("Stream endete ohne Abschluss-Event")
                 }
-                final ?: throw Exception("Stream endete ohne Abschluss-Event")
+            } catch (e: CancellationException) {
+                throw e
+            } catch (e: ChatStreamException) {
+                throw e
+            } catch (e: Exception) {
+                CortexLog.warn("ChatStream", "failure", "SSE-Chat fehlgeschlagen: ${e.message}",
+                    mapOf("request_id" to requestId.take(12),
+                        "elapsed_ms" to (System.currentTimeMillis() - startedAt),
+                        "headers" to headersReceived, "events" to anyEventReceived,
+                        "delta" to deltaReceived, "done" to doneReceived))
+                throw ChatStreamException(e, headersReceived, anyEventReceived, deltaReceived, doneReceived)
             }
         }
 

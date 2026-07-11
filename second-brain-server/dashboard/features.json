@@ -1,7 +1,15 @@
 {
-	"stand": "11.07.2026, 22:47 Uhr",
+	"stand": "11.07.2026, 22:57 Uhr",
 	"hinweis": "PFLEGE-PFLICHT: Bei JEDEM Deploy, der ein neues System/Feature einbaut, hier einen Eintrag ERGÄNZEN (neueste zuerst). SCHREIBWEISE (Dauer-Regel): leichtes, verständliches Deutsch, kurze Sätze; ALLE Fachbegriffe, Namen und Zahlen (z.B. BM25, RRF, Qdrant, ENV-Variablen, Endpunkt-Namen) BEHALTEN, aber jeden in einem kurzen Halbsatz erklären — NIE durch Weglassen vereinfachen; kompakt halten (der Hauptagent liest über das Werkzeug 'was_kann_cortex' ALLE Einträge auf einmal ein), aber vollständig genug, dass man erkennt WAS eingebaut wurde; einfache Überschrift. Ähnliche/redundante Einträge dürfen zusammengefasst werden — Datum sekundär, entscheidend ist WAS Cortex kann. Quelle des Info-Bereichs in den Dashboard-Einstellungen (GET /api/features). Verankert in DEPLOY.md.",
 	"features": [
+		{
+			"id": "verlustfreie-chat-beschleunigung",
+			"eingebaut": "11.07.2026, 22:57 Uhr",
+			"dienst": "agent 0.76.0 + dashboard 0.76.0 + Cortex Android 0.7.1",
+			"name": "Schneller Chat ohne Wissensverlust",
+			"kurz": "Lange Webantworten bleiben per SSE-Heartbeat verbunden und nutzen Websuche plus Gedächtnis in einem Antwortlauf. Gute direkte Gedächtnistreffer sparen Multi-Query; bei schwachen Treffern wird automatisch vollständig erweitert.",
+			"erklaerung": "Der Endpunkt POST /chat/stream sendet sofort ein ready-Event und danach spätestens alle 15 Sekunden ein heartbeat-Event. Die Android-App misst Header, erstes Event, erstes Textdelta und done und beendet den Aufruf direkt bei done, statt auf das Schließen der Verbindung zu warten. Beim Profil 'Sofort Web + Gedächtnis' sieht der modellnative Weblauf die relevanten Qdrant-Treffer direkt und formuliert daraus die endgültige Antwort; die frühere zweite Vollsynthese entfällt. Smart Recall startet mit der Originalfrage. Bei starken oder exakten Treffern bleibt es bei dieser Suche; bei schwachen, leeren oder ausdrücklich vollständigen Anfragen läuft weiterhin Multi-Query mit RRF-Fusion, sodass keine Suchfähigkeit verloren geht. Aktive Selbst-Regeln stehen weiterhin im System-Prompt und direkt vor der Ausgabe; ein kurzer Konformitätscheck formuliert nur bei einem erkannten Verstoß neu. Reine Grüße nutzen einen engen Schnellpfad, Grüße mit Sachfrage nicht. TTS bleibt reihenfolgestabil und protokolliert Synthese- und Wiedergabedauer je Chunk getrennt."
+		},
 		{
 			"id": "isolierter-regelmodus",
 			"eingebaut": "11.07.2026, 22:47 Uhr",

@@ -11,6 +11,7 @@ import de.frank.cortex.data.SettingsStore
 import de.frank.cortex.data.StoredChatMessage
 import de.frank.cortex.data.UserContextPrompt
 import de.frank.cortex.network.ApiClient
+import de.frank.cortex.network.ChatStreamException
 import de.frank.cortex.network.GeminiRateLimitException
 import de.frank.cortex.network.GeminiTtsAccessException
 import de.frank.cortex.observability.CortexLog
@@ -519,9 +520,17 @@ class ChatViewModel : ViewModel() {
                     throw e
                 } catch (e: Exception) {
                     ttsChannel?.close()
-                    if (rawAccum.isEmpty()) {
+                    val streamFailure = e as? ChatStreamException
+                    val safeFallback = rawAccum.isEmpty() &&
+                        streamFailure?.deltaReceived != true && streamFailure?.doneReceived != true &&
+                        !request.request_id.isNullOrBlank()
+                    if (safeFallback) {
                         // Noch nichts empfangen -> gefahrloser Fallback auf den bisherigen Weg.
-                        CortexLog.warn("ChatVM", "sendMessage", "Streaming fehlgeschlagen -> klassischer /chat: ${e.message}")
+                        CortexLog.warn("ChatVM", "sendMessage", "Streaming fehlgeschlagen -> klassischer /chat: ${e.message}",
+                            mapOf("request_id" to request.request_id.orEmpty().take(12),
+                                "headers" to (streamFailure?.headersReceived ?: false),
+                                "events" to (streamFailure?.anyEventReceived ?: false),
+                                "same_request_id" to true))
                         ttsChannel = null
                         ApiClient.agentApi().chat(request)
                     } else {
@@ -1379,8 +1388,14 @@ class ChatViewModel : ViewModel() {
                     fun enqueue(index: Int) {
                         if (index in chunks.indices && pending[index] == null) {
                             pending[index] = async(Dispatchers.IO) {
-                                if (isEdge) synthesizeEdgeChunk(chunks[index], voice, index)
+                                val started = System.currentTimeMillis()
+                                val audio = if (isEdge) synthesizeEdgeChunk(chunks[index], voice, index)
                                 else synthesizeTtsChunk(chunks[index], voice, index)
+                                CortexLog.info("ChatVM", "ttsSynth", "TTS-Chunk synthetisiert",
+                                    mapOf("index" to index, "chunk_len" to chunks[index].length,
+                                        "audio_bytes" to (audio?.size ?: 0),
+                                        "elapsed_ms" to (System.currentTimeMillis() - started)))
+                                audio
                             }
                         }
                     }
@@ -1438,12 +1453,16 @@ class ChatViewModel : ViewModel() {
                                 mapOf("elapsed_ms" to (System.currentTimeMillis() - ttsStartedAt), "chunk_len" to chunk.length))
                             firstAudioLogged = true
                         }
+                        val playStarted = System.currentTimeMillis()
                         if (isEdge) {
                             mp3Player.playAndAwait(audio, rate)
                         } else {
                             playerReady?.await() // no-op sobald der Track laengst steht
                             pcmPlayer.writeAndAwait(audio)
                         }
+                        CortexLog.info("ChatVM", "ttsPlay", "TTS-Chunk abgespielt",
+                            mapOf("index" to index, "audio_bytes" to audio.size,
+                                "elapsed_ms" to (System.currentTimeMillis() - playStarted)))
                     }
                 }
                 CortexLog.info("ChatVM", "speakResponse", "TTS abgeschlossen",
@@ -1486,16 +1505,21 @@ class ChatViewModel : ViewModel() {
                     mapOf("voice" to voice, "rate" to rate, "engine" to if (isEdge) "edge" else "chirp"))
                 coroutineScope {
                     val playerReady = if (isEdge) null else async(Dispatchers.IO) { pcmPlayer.start(rate) }
-                    val audioChannel = Channel<ByteArray?>(2)   // Puffer 2 = Prefetch waehrend des Abspielens
+                    val audioChannel = Channel<ByteArray?>(TTS_PREFETCH_AHEAD)
                     val synthJob = launch(Dispatchers.IO) {
                         var index = 0
                         try {
                             for (para in textChannel) {
                                 for (chunk in chunkText(para)) {
-                                    audioChannel.send(
-                                        if (isEdge) synthesizeEdgeChunk(chunk, voice, index)
-                                        else synthesizeTtsChunk(chunk, voice, index)
-                                    )
+                                    val synthStarted = System.currentTimeMillis()
+                                    val audio = if (isEdge) synthesizeEdgeChunk(chunk, voice, index)
+                                    else synthesizeTtsChunk(chunk, voice, index)
+                                    CortexLog.info("ChatVM", "streamTtsSynth", "Streaming-TTS-Chunk synthetisiert",
+                                        mapOf("index" to index, "chunk_len" to chunk.length,
+                                            "audio_bytes" to (audio?.size ?: 0),
+                                            "elapsed_ms" to (System.currentTimeMillis() - synthStarted),
+                                            "prefetch_limit" to TTS_PREFETCH_AHEAD))
+                                    audioChannel.send(audio)
                                     index++
                                 }
                             }
@@ -1504,7 +1528,9 @@ class ChatViewModel : ViewModel() {
                         }
                     }
                     var firstAudioLogged = false
+                    var playIndex = 0
                     for (audio in audioChannel) {
+                        val currentIndex = playIndex++
                         if (speechGeneration != generation) break
                         if (audio == null || audio.isEmpty()) {
                             if (ttsAccessDenied) {
@@ -1521,8 +1547,12 @@ class ChatViewModel : ViewModel() {
                             CortexLog.info("ChatVM", "streamSpeech", "Erster Ton (erster fertiger Absatz)")
                             firstAudioLogged = true
                         }
+                        val playStarted = System.currentTimeMillis()
                         if (isEdge) mp3Player.playAndAwait(audio, rate)
                         else { playerReady?.await(); pcmPlayer.writeAndAwait(audio) }
+                        CortexLog.info("ChatVM", "streamTtsPlay", "Streaming-TTS-Chunk abgespielt",
+                            mapOf("index" to currentIndex, "audio_bytes" to audio.size,
+                                "elapsed_ms" to (System.currentTimeMillis() - playStarted)))
                     }
                     synthJob.cancel()
                 }

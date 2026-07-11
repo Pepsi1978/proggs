@@ -24,7 +24,7 @@ for expected in (
     '"memory_web_influence": MEMORY_WEB_INFLUENCE',
     'MEMORY_WEB_INFLUENCE = save_memory_web_influence(req.memory_web_influence)',
     'build_hauptagent_recall_internet_prompt()',
-    'TOOLAGENT_SYSTEM + "\\n\\n" + memory_web_influence_prompt()',
+    '"\\n\\n" + memory_web_influence_prompt()',
     'system += "\\n\\n" + memory_web_influence_prompt()',
     'DIESE STUFE GILT NUR, WENN',
     'Bei reinen Gedächtnis-, reinen Web- oder Smalltalk-Antworten',
