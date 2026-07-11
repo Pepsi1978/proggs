@@ -1,6 +1,6 @@
 param(
     [string]$Version = "",
-    [string]$PatchRevision = "8",
+    [string]$PatchRevision = "9",
     [switch]$Force,
     [string]$InstallRoot = ""
 )
@@ -91,6 +91,7 @@ function Publish-Candidate([string]$Built, [string]$UpstreamVersion, [string]$Cu
                 fullRepaintRecovery = "present"
                 tuiVariant = "present"
                 runtimePluginToggle = "present"
+                tuiErrorHandlers = "present"
             }
         }
         previous = $current.active
@@ -189,6 +190,47 @@ try {
             Write-Utf8NoBom $openTuiBundle ($rendererSource.Replace($needle, $replacement))
         } elseif (-not $rendererSource.Contains($replacement)) {
             throw "OpenTUI-Full-Repaint-Recovery ist weder vorhanden noch sicher patchbar."
+        }
+
+        # windowsfix.9: process-level error handlers for the TUI MAIN thread (almanac #14a).
+        # Unhandled errors printed raw Bun stack traces to stderr — the TTY the TUI renders
+        # on — corrupting the diff-rendered screen until a manual resize. The server worker
+        # (cli/tui/worker.ts) already installs handlers; the main thread had NONE. Log to a
+        # file instead of swallowing so errors stay observable.
+        $tuiCmdPath = Join-Path $workDir "packages\opencode\src\cli\cmd\tui.ts"
+        $tuiCmdSource = [IO.File]::ReadAllText($tuiCmdPath)
+        $tuiNewline = if ($tuiCmdSource.Contains("`r`n")) { "`r`n" } else { "`n" }
+        $handlerAnchor = "  handler: async (args) => {${tuiNewline}    if (args.replay === true) {"
+        $handlerMarker = "windowsfix: unhandled errors in the TUI main thread"
+        $handlerInjection = @(
+            "  handler: async (args) => {"
+            "    // windowsfix: unhandled errors in the TUI main thread must never reach stderr —"
+            "    // stderr is the TTY the TUI renders on; raw stack traces corrupt the diff-rendered"
+            "    // screen until a full repaint (bugs/opencode/opencode-cli.md #14a). Mirror the"
+            "    // server worker's process-level handlers, but log to a file (stay observable)."
+            "    {"
+            "      const fs = await import(`"node:fs`")"
+            "      const os = await import(`"node:os`")"
+            "      const crashLog = path.join(os.homedir(), `".local`", `"share`", `"opencode`", `"log`", `"tui-crash.log`")"
+            "      const logUnhandled = (kind: string, error: unknown) => {"
+            "        try {"
+            "          fs.mkdirSync(path.dirname(crashLog), { recursive: true })"
+            "          const text = error instanceof Error ? (error.stack ?? error.message) : String(error)"
+            "          fs.appendFileSync(crashLog, new Date().toISOString() + `" `" + kind + `": `" + text + `"\n`")"
+            "        } catch {"
+            "          // last resort: swallowing here is deliberate — a failing crash logger"
+            "          // must never take down or corrupt the TUI it protects"
+            "        }"
+            "      }"
+            "      process.on(`"unhandledRejection`", (error) => logUnhandled(`"unhandledRejection`", error))"
+            "      process.on(`"uncaughtException`", (error) => logUnhandled(`"uncaughtException`", error))"
+            "    }"
+            "    if (args.replay === true) {"
+        ) -join $tuiNewline
+        if ($tuiCmdSource.Contains($handlerAnchor)) {
+            Write-Utf8NoBom $tuiCmdPath ($tuiCmdSource.Replace($handlerAnchor, $handlerInjection))
+        } elseif (-not $tuiCmdSource.Contains($handlerMarker)) {
+            throw "TUI-Error-Handler-Patch ist weder vorhanden noch sicher anwendbar."
         }
 
         foreach ($package in @("core", "plugin", "tui", "opencode")) {
