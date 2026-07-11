@@ -619,6 +619,7 @@ try {
 } catch {
     Write-Host ('[stderr-Waechter] Vorpruefung uebersprungen: ' + $_.Exception.Message) -ForegroundColor DarkYellow
 }
+if (-not (Test-Path -LiteralPath $stderrDir)) { $stderrDir = $env:TEMP }
 $stderrLog = Join-Path $stderrDir ('opencode-stderr-{0:yyyyMMdd-HHmmss}-{1}.log' -f (Get-Date), $PID)
 try {
     {{openCodeInvocation}} 2>>$stderrLog
