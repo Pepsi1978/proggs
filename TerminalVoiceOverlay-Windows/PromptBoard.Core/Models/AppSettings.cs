@@ -59,21 +59,17 @@ public class AppSettings : BaseEntity
     public string SeparatorTemplate { get; set; } = "\n\n;\n\n";
 
     /// <summary>
-    /// When true, the overlay position saved via the in-overlay diskette button
-    /// survives an app/PC restart (the last saved spot becomes the default).
-    /// When false (default), restarts fall back to the canonical default
-    /// positions and the saved spots only live for the running session.
-    /// Toggled by a checkbox in the settings dialog.
+    /// Legacy setting retained so existing SQLite schemas remain compatible.
+    /// Position persistence is now controlled exclusively by the diskette:
+    /// non-null coordinates are loaded at every start.
     /// </summary>
     public bool PersistOverlayPosition { get; set; } = false;
 
     /// <summary>
     /// Last saved overlay position per orientation (expanded-view Left/Top in
-    /// WPF DIPs). Null = nothing saved for that orientation. Only applied at
-    /// startup when <see cref="PersistOverlayPosition"/> is true; otherwise the
-    /// canonical default position is used. Written by the overlay's diskette
-    /// button regardless of the flag so the last spot is remembered if the user
-    /// enables persistence later.
+    /// WPF DIPs). Null = nothing saved for that orientation and selects the
+    /// canonical default position. Written and cleared by the overlay's
+    /// diskette button.
     /// </summary>
     public double? OverlayVerticalLeft { get; set; }
 

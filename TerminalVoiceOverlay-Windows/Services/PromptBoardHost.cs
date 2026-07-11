@@ -120,11 +120,9 @@ public static class PromptBoardHost
             // switches. First-run installs get it from EnsureCreated.
             EnsureOrientationColumn();
 
-            // Overlay position persistence (diskette button). Same idempotent
-            // ALTER pattern: existing DBs get PersistOverlayPosition (DEFAULT 0 =
-            // off, classic behaviour) plus four nullable REAL columns for the
-            // saved per-orientation positions. First-run installs get them from
-            // EnsureCreated via the model properties.
+            // Overlay position persistence (diskette button). Existing DBs get
+            // the legacy flag for schema compatibility plus four nullable REAL
+            // columns. Non-null coordinates are always restored at startup.
             EnsurePersistPositionColumns();
 
             // The AppSettingsRepository self-bootstraps the singleton

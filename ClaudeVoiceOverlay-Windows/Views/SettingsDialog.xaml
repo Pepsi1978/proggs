@@ -140,12 +140,8 @@
                                        Text="Aus = das Overlay bleibt immer voll sichtbar. Wirkt nach dem nächsten Overlay-Neustart."/>
                             <CheckBox x:Name="HorizontalCheck" Style="{StaticResource DarkCheck}"
                                       Content="Horizontal anzeigen (Leiste unten statt Streifen rechts)" Margin="0,0,0,4"/>
-                            <TextBlock Style="{StaticResource Hint}" Margin="0,0,0,12"
-                                       Text="Wirkt nach dem nächsten Overlay-Neustart. Schneller umschalten: der ⇄-Knopf direkt im Overlay neben dem Stern."/>
-                            <CheckBox x:Name="PersistPositionCheck" Style="{StaticResource DarkCheck}"
-                                      Content="Gemerkte Position beim Neustart behalten" Margin="0,0,0,4"/>
                             <TextBlock Style="{StaticResource Hint}"
-                                       Text="An = die zuletzt mit der Diskette gemerkte Position gilt auch nach App-/PC-Neustart (pro Ausrichtung). Aus = nach dem Neustart gelten wieder die Standardpositionen."/>
+                                        Text="Wirkt nach dem nächsten Overlay-Neustart. Schneller umschalten: der ⇄-Knopf direkt im Overlay neben dem Stern."/>
                         </StackPanel>
                     </Border>
 

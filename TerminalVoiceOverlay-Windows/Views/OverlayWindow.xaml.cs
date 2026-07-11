@@ -747,17 +747,13 @@ namespace TerminalVoiceOverlay.Views
                 startupHorizontal = string.Equals(settings?.Orientation, "horizontal",
                     StringComparison.OrdinalIgnoreCase);
 
-                // Persistierte Diskette-Positionen NUR laden wenn der Benutzer
-                // das Haekchen gesetzt hat. Sonst gelten die kanonischen
-                // Standardpositionen (Felder bleiben null). Beide Koordinaten
-                // muessen vorhanden sein, sonst ignorieren.
-                if (settings?.PersistOverlayPosition == true)
-                {
-                    if (settings.OverlayVerticalLeft is double vl && settings.OverlayVerticalTop is double vt)
-                        _savedVerticalPos = new Point(vl, vt);
-                    if (settings.OverlayHorizontalLeft is double hl && settings.OverlayHorizontalTop is double ht)
-                        _savedHorizontalPos = new Point(hl, ht);
-                }
+                // Die Diskette ist die einzige Positions-Persistenzsteuerung:
+                // gespeicherte Koordinaten werden bei jedem Start geladen, null
+                // bedeutet fuer die jeweilige Ausrichtung Standardposition.
+                if (settings?.OverlayVerticalLeft is double vl && settings.OverlayVerticalTop is double vt)
+                    _savedVerticalPos = new Point(vl, vt);
+                if (settings?.OverlayHorizontalLeft is double hl && settings.OverlayHorizontalTop is double ht)
+                    _savedHorizontalPos = new Point(hl, ht);
             }
             catch (Exception ex)
             {
@@ -1567,12 +1563,9 @@ namespace TerminalVoiceOverlay.Views
 
         /// <summary>
         /// Schreibt die aktuell gemerkten Diskette-Positionen (oder null beim
-        /// Loeschen) in die DB. Wird bei JEDEM Speichern/Loeschen aufgerufen —
-        /// unabhaengig vom PersistOverlayPosition-Haekchen. Das Haekchen steuert
-        /// nur, ob die Werte beim naechsten Start GELADEN werden (siehe
-        /// InitAutoHide); so bleibt die zuletzt gemerkte Position erhalten falls
-        /// der Benutzer die Persistenz spaeter einschaltet. Fire-and-forget;
-        /// Fehler werden geloggt, nie der Klick blockiert.
+        /// Loeschen) in die DB. Die gespeicherten Werte werden beim naechsten
+        /// Start automatisch geladen. Fire-and-forget; Fehler werden geloggt,
+        /// nie der Klick blockiert.
         /// </summary>
         private async void PersistSavedPositionsToDb()
         {
@@ -1875,7 +1868,8 @@ namespace TerminalVoiceOverlay.Views
         /// Die Diskette ist nur in der ausgeklappten Ansicht sichtbar, daher ist
         /// Left/Top hier immer die ausgeklappte Position — genau das, was die
         /// Positions-Logik (Collapse-Offset, Wiedereinblenden, Wechsel) erwartet.
-        /// (Nur RAM — die DB-Persistenz fuer den Neustart kommt separat dazu.)
+        /// Die Position wird zugleich in der DB gespeichert und ueberlebt damit
+        /// App- und PC-Neustarts.
         /// </summary>
         private void BtnSavePosition_Click(object sender, RoutedEventArgs e)
         {
@@ -1896,7 +1890,7 @@ namespace TerminalVoiceOverlay.Views
                 if (_isHorizontal) _savedHorizontalPos = pos;
                 else               _savedVerticalPos   = pos;
                 _manuallyPositioned = true;
-                PersistSavedPositionsToDb();     // DB aktualisieren (gilt beim Start nur wenn Haekchen an)
+                PersistSavedPositionsToDb();     // DB aktualisieren; gilt beim naechsten Start
                 FlashSaveStored();               // Aufblitzen → bleibt dezent gruen
             }
             _usedSinceExpand = true; // zaehlt als Interaktion → normaler Auto-Hide-Rhythmus

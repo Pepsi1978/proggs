@@ -2658,7 +2658,6 @@ public partial class PromptBoardPanel : Window
             latest.SeparatorTemplate = result.SeparatorTemplate;
             latest.AutoHide = result.AutoHide;
             latest.Orientation = result.Orientation;
-            latest.PersistOverlayPosition = result.PersistOverlayPosition;
             await repo.UpdateAsync(latest);
         }
         catch (Exception ex)
