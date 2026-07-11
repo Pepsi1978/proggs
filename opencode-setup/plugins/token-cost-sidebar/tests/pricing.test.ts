@@ -47,6 +47,11 @@ describe("models.dev pricing", () => {
     expect(findCatalogModel(catalog, "openai", "other")).toBeUndefined()
   })
 
+  test("uses GPT-5.6 Sol pricing for the Fast launcher alias", () => {
+    const catalog = { openai: { models: { "gpt-5.6-sol": model } } }
+    expect(findCatalogModel(catalog, "openai", "gpt-5.6-sol-fast")).toBe(model)
+  })
+
   test("normalizes per-million base prices", () => {
     expect(readPricing(model, 100_000)).toEqual({
       input: 0.000005,
