@@ -184,7 +184,7 @@
             Width="96" Height="612">
         <StackPanel>
 
-            <!-- Section 1: Enter + Speichern-Diskette. Der vollständige frühere
+            <!-- Section 1: Enter + Orientierungs-Umschalter. Der vollständige frühere
                  untere Randbereich sitzt jetzt oben. 17 + 40 + 6 = 63px hält
                  Fensterhöhe und Mic-Geometrie unverändert. -->
             <Border Background="#B31A1A1A" CornerRadius="34,34,0,0" Padding="0,17,0,6">
@@ -203,20 +203,15 @@
                         <TextBlock Text="&#x23CE;" FontSize="18" Foreground="White"/>
                     </Button>
 
-                    <Button x:Name="SaveButton"
+                    <Button x:Name="OrientationToggleButton"
                             Grid.Column="1"
-                            Style="{StaticResource SaveButton}"
+                            Style="{StaticResource CircleButton}"
+                            Width="34" Height="34"
                             VerticalAlignment="Center"
                             Margin="2,0,0,0"
-                            Click="BtnSavePosition_Click"
-                            ToolTip="Position dieser Ausrichtung merken (gilt bis zum Neustart)">
-                        <TextBlock x:Name="SaveIcon"
-                                   Text="&#xE74E;"
-                                   FontFamily="Segoe MDL2 Assets"
-                                   FontSize="16"
-                                   Foreground="White"
-                                   HorizontalAlignment="Center"
-                                   VerticalAlignment="Center"/>
+                            Click="BtnOrientationToggle_Click"
+                            ToolTip="Layout drehen (vertikal ↔ horizontal)">
+                        <TextBlock Text="&#x21C4;" FontSize="15" Foreground="White"/>
                     </Button>
                 </Grid>
             </Border>
@@ -493,7 +488,7 @@
 
             <Border Background="#FF000000" Height="1"/>
 
-            <!-- Section 7: Stern + Orientierungs-Umschalter. Der vollständige
+            <!-- Section 7: Stern + Speichern-Diskette. Der vollständige
                  frühere obere Randbereich sitzt jetzt unten. 8 + 34 + 21 = 63px. -->
             <Border Background="#B31F1B15" CornerRadius="0,0,34,34" Padding="0,8,0,21">
                 <StackPanel x:Name="Section1Panel" Orientation="Horizontal" HorizontalAlignment="Center">
@@ -508,13 +503,19 @@
                         </Viewbox>
                     </Button>
 
-                    <Button x:Name="OrientationToggleButton"
-                            Style="{StaticResource CircleButton}"
-                            Width="34" Height="34"
+                    <Button x:Name="SaveButton"
+                            Style="{StaticResource SaveButton}"
+                            VerticalAlignment="Center"
                             Margin="5,0,0,0"
-                            Click="BtnOrientationToggle_Click"
-                            ToolTip="Layout drehen (vertikal ↔ horizontal)">
-                        <TextBlock Text="&#x21C4;" FontSize="15" Foreground="White"/>
+                            Click="BtnSavePosition_Click"
+                            ToolTip="Position dieser Ausrichtung merken (gilt bis zum Neustart)">
+                        <TextBlock x:Name="SaveIcon"
+                                   Text="&#xE74E;"
+                                   FontFamily="Segoe MDL2 Assets"
+                                   FontSize="16"
+                                   Foreground="White"
+                                   HorizontalAlignment="Center"
+                                   VerticalAlignment="Center"/>
                     </Button>
                 </StackPanel>
             </Border>

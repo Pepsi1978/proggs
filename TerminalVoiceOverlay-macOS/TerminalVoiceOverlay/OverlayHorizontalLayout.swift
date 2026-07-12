@@ -391,15 +391,15 @@ extension OverlayPanel {
 
     private func makeHBarSections() -> [HBarSection] {
         // Reihenfolge LINKS→RECHTS:
-        // S7 (Enter+Diskette), S6, S5, S4, S3, S2, S1 (Stern+Orientation)
+        // S7 (Enter+Umschalter), S6, S5, S4, S3, S2, S1 (Stern+Diskette)
         // Inhalts-Reihenfolge innerhalb jeder Sektion = rechts→links wie
         // vertikal oben→unten (Windows Z. 1187).
 
         let s7 = HBarSection(
-            backgroundHex: "#B31A1A1A",  // S7 = Enter oben + Save unten (MakeHGroup)
+            backgroundHex: "#B31A1A1A",  // S7 = Enter oben + Umschalter unten (MakeHGroup)
             width: 56,
             upperButtons: [.action(\.enterButton, HBarLayout.actionButtonSize)],
-            lowerButtons: [.saveExtra(HBarLayout.saveButtonHSize)],  // 30×22
+            lowerButtons: [.orientationToggleExtra(HBarLayout.saveButtonHSize)],  // 30×22
             cornerMode: .leftRounded)
 
         // Sektion-Widths: Mindestbreite = Content + 2×sectionInnerPadX (=16),
@@ -468,7 +468,7 @@ extension OverlayPanel {
             cornerMode: .middle)
 
         // S1 ist die Spezial-Sektion (MakeHStackGroup in Windows):
-        // Stern 34×34 OBEN + ⇄ 34×34 UNTEN, 4 px-Abstand. Beide Buttons sind
+        // Stern 34×34 OBEN + Diskette 34×34 UNTEN, 4 px-Abstand. Beide Buttons sind
         // zu hoch fuer die 22-px-lower-Reihe, deshalb positioniert
         // positionExtraButtonsHorizontal() sie direkt anhand der gemerkten
         // s1-Sektion-Position. Slots leer halten.

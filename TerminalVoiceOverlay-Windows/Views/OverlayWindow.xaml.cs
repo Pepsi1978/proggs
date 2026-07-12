@@ -1208,9 +1208,9 @@ namespace TerminalVoiceOverlay.Views
             // Pro Gruppe die gleiche Sektionsfarbe wie vertikal (mit 70% Deckkraft,
             // Alpha B3) + senkrechte Trennstriche dazwischen — 1:1-Optik zum
             // vertikalen Layout, nur um 90° gedreht.
-            // Stern + Wechsel-Button UNTEREINANDER (Stern oben, Toggle unten),
+            // Stern + Diskette UNTEREINANDER (Stern oben, Diskette unten),
             // beide in Standard-Rundgröße und vertikal mittig.
-            HBar.Children.Add(MakeHStackGroup(UltrathinkButton, OrientationToggleButton, "#B31F1B15", new CornerRadius(34, 0, 0, 34)));
+            HBar.Children.Add(MakeHStackGroup(UltrathinkButton, SaveButton, "#B31F1B15", new CornerRadius(34, 0, 0, 34)));
             HBar.Children.Add(MakeVDivider());
             HBar.Children.Add(MakeHGroup(new[] { InsertScreenshotButton, ScreenshotButton }, new[] { Profile10Button, Profile9Button }, "#B3151B15", new CornerRadius(0)));
             HBar.Children.Add(MakeVDivider());
@@ -1222,9 +1222,9 @@ namespace TerminalVoiceOverlay.Views
             HBar.Children.Add(MakeVDivider());
             HBar.Children.Add(MakeHGroup(new[] { BtwButton, MicButton }, new[] { Profile3Button, Profile2Button, Profile1Button }, "#B31F1C15", new CornerRadius(0)));
             HBar.Children.Add(MakeVDivider());
-            // Enter oben + Diskette darunter. MakeHGroup behält die bisherige
+            // Enter oben + Umschalter darunter. MakeHGroup behält die bisherige
             // Breite dieser Randgruppe und setzt nur ihre Position nach rechts.
-            HBar.Children.Add(MakeHGroup(new[] { EnterButton }, new[] { SaveButton }, "#B31A1A1A", new CornerRadius(0, 34, 34, 0)));
+            HBar.Children.Add(MakeHGroup(new[] { EnterButton }, new[] { OrientationToggleButton }, "#B31A1A1A", new CornerRadius(0, 34, 34, 0)));
         }
 
         // Senkrechter Trennstrich zwischen den horizontalen Sektionen — das
@@ -1273,7 +1273,7 @@ namespace TerminalVoiceOverlay.Views
             };
         }
 
-        // Spezial-Gruppe fuer Stern + Wechsel-Button im HORIZONTAL-Modus: beide
+        // Spezial-Gruppe fuer Stern + Diskette im HORIZONTAL-Modus: beide
         // Buttons UNTEREINANDER (statt nebeneinander) in Standard-Rundgroesse
         // (40x40), vertikal mittig in der Leiste, ohne Zahlen-Slot. Im vertikalen
         // Modus bleiben sie nebeneinander (XAML Section1Panel) — RestoreVerticalLayout

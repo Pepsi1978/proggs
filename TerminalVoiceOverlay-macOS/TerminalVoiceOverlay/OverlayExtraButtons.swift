@@ -6,12 +6,12 @@ import AppKit
 // die bestehende init()-Logik unveraendert bleibt.
 //
 // OrientationToggleButton (34x34, Symbol ⇄): toggelt vertikal <-> horizontal
-//   - S1 vertikal: neben dem Stern (positioniert in applyVerticalLayout)
-//   - S1 horizontal: gleiche Sektion, neben dem Stern
+//   - S7 vertikal: neben dem Enter (positioniert in applyVerticalLayout)
+//   - S7 horizontal: gleiche Sektion, unter dem Enter
 //
 // SaveButton (28x28, Symbol 💾): merkt die aktuelle Position pro Orientation
-//   - S7 vertikal: neben dem Enter
-//   - S7 horizontal: gleiche Sektion, neben dem Enter
+//   - S1 vertikal: neben dem Stern
+//   - S1 horizontal: gleiche Sektion, unter dem Stern
 
 extension OverlayPanel {
 
@@ -133,19 +133,19 @@ extension OverlayPanel {
     /// Windows-XAML OverlayWindow.xaml:
     ///
     /// **S1** (Section1Panel, Padding 0,21,0,8): StackPanel Horizontal,
-    /// HorizontalAlignment=Center. Stern 34×34, ⇄ 34×34 mit Margin 5,0,0,0.
+    /// HorizontalAlignment=Center. Stern 34×34, Diskette 34×34 mit Margin 5,0,0,0.
     /// Total breite 34+5+34 = 73, zentriert in 96px Panel → x_origin = 11.
     ///
     /// **S7** (Padding 0,6,0,17): Grid mit Spalten 52 + Auto, HorizontalAlignment
-    /// Center. Enter 40×40 zentriert in 52-Spalte, Save 28×28 in Auto-Spalte
-    /// mit Margin 2,0,0,0. Grid-Breite = 52+2+28 = 82, zentriert → x_origin = 7.
+    /// Center. Enter 40×40 zentriert in 52-Spalte, ⇄ 40×40 in Auto-Spalte
+    /// mit Margin 2,0,0,0. Grid-Breite = 52+2+40 = 94, zentriert → x_origin = 1.
     func positionExtraButtonsVertical() {
         // S1: y=547..610 (h=63). WPF padding top 21 + bot 8.
         // macOS-Y (unten=0): Buttons-Unterkante = 547 + 8 = 555.
         ultrathinkButton.buttonWidth  = 34
         ultrathinkButton.buttonHeight = 34
         ultrathinkButton.frame        = NSRect(x: 11, y: 555, width: 34, height: 34)
-        orientationToggleButton.frame = NSRect(x: 50, y: 555, width: 34, height: 34)
+        saveButton.frame              = NSRect(x: 50, y: 555, width: 34, height: 34)
         // Stern als exakter XAML-Pentagram-Path (1:1 Windows-XAML Z. 202-204).
         // Wird mit labelColor (starMuted/starGold) eingefaerbt via RoundButton.draw.
         if ultrathinkButton.symbolImage == nil {
@@ -159,20 +159,15 @@ extension OverlayPanel {
         ultrathinkButton.needsDisplay = true
 
         // S7: y=0..65 (nach Pillenenden-Fix). WPF padding top 6 + bot 17.
-        // macOS-Y: Enter-Unterkante = 2 + 17 = 19. Save 36×36 vertikal zentriert
-        // zu Enter (40): Save-Unterkante = 19 + (40-36)/2 = 21.
-        // X: Enter endet bei 13+40=53, Save mit kleinem Margin 2 → x=55.
-        // Save endet bei 55+36=91 → 5 px rechtes Polster im 96er Panel.
+        // X: Enter endet bei 13+40=53, ⇄ mit kleinem Margin 2 → x=55.
         enterButton.frame = NSRect(x: 13, y: 19, width: 40, height: 40)
-        saveButton.frame  = NSRect(x: 55, y: 21, width: 36, height: 36)
+        orientationToggleButton.frame = NSRect(x: 55, y: 19, width: 40, height: 40)
 
         orientationToggleButton.alphaValue = 1.0
         saveButton.alphaValue = 1.0
 
-        // Vertikal ist die Diskette 36×36 — Standard-Scale (36×0.5 = 18).
-        // Explizit zuruecksetzen, falls vorher der horizontale 0.62-Wert aktiv
-        // war (Orientation-Wechsel).
-        saveButton.symbolScaleFactor = 0.5
+        // Die Diskette sitzt beim Stern in einem 34×34-Slot.
+        saveButton.symbolScaleFactor = 0.53
         saveButton.needsDisplay = true
 
         // 30% Durchsichtigkeit auf den Sektions-Hintergruenden (B3-Alpha in Windows).
@@ -203,8 +198,8 @@ extension OverlayPanel {
     }
 
     /// Positioniert die Extra-Buttons in der horizontalen Leiste.
-    /// Save wird automatisch in S7 ueber die Slot-Mechanik platziert
-    /// (.saveExtra in der lower-Reihe). Stern + ⇄ in S1 brauchen
+    /// Der Umschalter wird automatisch in S7 ueber die Slot-Mechanik platziert
+    /// (.orientationToggleExtra in der lower-Reihe). Stern + Diskette in S1 brauchen
     /// Spezial-Behandlung: beide 34×34 ÜBEREINANDER (MakeHStackGroup auf
     /// Windows), Slot-Mechanik kann das nicht (lower-Row ist nur 22 hoch).
     /// `s1Origin` + `s1Width` werden von applyHorizontalLayout uebergeben.
@@ -214,23 +209,21 @@ extension OverlayPanel {
         ultrathinkButton.buttonHeight = 34
 
         // S1-Sektion: 50 breit, 92 hoch. Padding 6 oben/unten.
-        // Stack: Stern oben + 4 px Margin + ⇄ unten. Total 34+4+34 = 72.
+        // Stack: Stern oben + 4 px Margin + Diskette unten. Total 34+4+34 = 72.
         // Free space innerhalb 92 - 12 padding = 80. (80-72)/2 = 4 zusaetzlich.
         // macOS-Y (unten=0):
-        //   ⇄    untere Kante = padding 6 + 4 = 10
+        //   Diskette untere Kante = padding 6 + 4 = 10
         //   Stern untere Kante = 10 + 34 + 4 (margin) = 48
         let stackX = s1Origin.x + (s1Width - 34) / 2
         ultrathinkButton.frame        = NSRect(x: stackX, y: 48, width: 34, height: 34)
-        orientationToggleButton.frame = NSRect(x: stackX, y: 10, width: 34, height: 34)
+        saveButton.frame              = NSRect(x: stackX, y: 10, width: 34, height: 34)
         ultrathinkButton.needsDisplay = true
 
         orientationToggleButton.alphaValue = 1.0
         saveButton.alphaValue = 1.0
 
-        // Diskette ist horizontal quadratisch (30×30). RoundButton skaliert das
-        // Symbol relativ zu bounds — mit 0.62 wird das Symbol ~18×18 (so gross
-        // wie im vertikalen 36×36-Layout) und nicht mehr gequetscht.
-        saveButton.symbolScaleFactor = 0.62
+        // Die Diskette bleibt im 34×34-Slot der Stern-Sektion.
+        saveButton.symbolScaleFactor = 0.53
         saveButton.needsDisplay = true
 
         // Save-Diskette einfaerben: gruen wenn eine horizontale Position
