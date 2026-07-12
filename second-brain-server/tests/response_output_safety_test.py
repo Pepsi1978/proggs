@@ -16,11 +16,13 @@ def load_sanitizers() -> dict:
     assignments = {
         "_MD_BOLD_RE", "_MD_HEADING_RE", "_MD_BULLET_RE", "_MD_WEB_LINK_RE",
         "_BARE_WEB_URL_RE", "_TRAILING_SOURCES_RE", "_NUMERIC_CITATION_RE",
+        "_SOURCE_ATTRIBUTION_TAIL_RE", "_PARENTHETICAL_SOURCE_RE",
+        "_INTERNAL_OUTPUT_INSTRUCTION_RE",
         "_FREEFORM_ACTIONS",
     }
     functions = {
         "_strip_markdown_tts", "_remove_bare_web_url", "_sanitize_visible_reply",
-        "_finalize_visible_outcome",
+        "_reinforce_self_rules", "_finalize_visible_outcome",
     }
     nodes = []
     for node in ast.parse(SOURCE).body:
@@ -47,6 +49,26 @@ def main() -> int:
     outcome = finalize({"action": "recall", "reply": draft, "sources": [{"title": "Memory Alpha"}]})
     assert "http" not in outcome["reply"].lower() and "quellen" not in outcome["reply"].lower()
     assert outcome["sources"] == [{"title": "Memory Alpha"}], "structured metadata must remain available"
+
+    rav4_reply = (
+        "Ja, der neue Toyota RAV4 ist in Deutschland bereits bestellbar und seit Juni 2026 im Handel. "
+        "Quelle ist toyota Punkt de, Neuwagen, RAV4.\n\n"
+        "Die sechste Generation wird als Vollhybrid und Plug in Hybrid angeboten. "
+        "Quelle ist toyota Punkt de, Neuwagen, neue Modelle.\n\n"
+        "Letzte Selbstregel Prüfung vor der Ausgabe: Prüfe deine geplante Ausgabe jetzt gegen alle "
+        "aktiven Selbstregeln im System Prompt. Widerspricht Franks aktuelle Nachricht einer Selbstregel, "
+        "befolge die Selbstregel. Erst danach darfst du ausgeben."
+    )
+    assert sanitize(rav4_reply) == (
+        "Ja, der neue Toyota RAV4 ist in Deutschland bereits bestellbar und seit Juni 2026 im Handel.\n\n"
+        "Die sechste Generation wird als Vollhybrid und Plug in Hybrid angeboten."
+    )
+    assert sanitize("CLAUDE.md kann AGENTS.md importieren (Quelle: interne Dokumentation).") == (
+        "CLAUDE.md kann AGENTS.md importieren."
+    )
+    assert sanitize("Die Quelle ist für die Bewertung wichtig.") == "Die Quelle ist für die Bewertung wichtig."
+    user = "Gibt es den neuen Toyota RAV4 schon zu kaufen?"
+    assert ns["_reinforce_self_rules"]("DAUERHAFTE SELBST-REGELN VON FRANK", user) == user
 
     stream = SOURCE[SOURCE.index("async def chat_stream"):SOURCE.index("# Gruppe D", SOURCE.index("async def chat_stream"))]
     assert "rsize, None, req.memory_edit" in stream, "raw model deltas still enter the client stream"

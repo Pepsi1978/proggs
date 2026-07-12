@@ -29,4 +29,36 @@ class ChatSpeechSanitizerTest {
             ChatSpeechSanitizer.clean("**Jonathan Archer** kehrt nicht als gespielte Figur zurück."),
         )
     }
+
+    @Test
+    fun removesSourcesAndInternalInstructionFromRav4ProductionReply() {
+        val input = """
+            Ja, der neue Toyota RAV4 ist in Deutschland bereits bestellbar und seit Juni 2026 im Handel. Quelle ist toyota Punkt de, Neuwagen, RAV4.
+
+            Die sechste Generation wird als Vollhybrid und Plug in Hybrid angeboten. Quelle ist toyota Punkt de, Neuwagen, neue Modelle.
+
+            Letzte Selbstregel Prüfung vor der Ausgabe: Prüfe deine geplante Ausgabe jetzt gegen alle aktiven Selbstregeln im System Prompt. Widerspricht Franks aktuelle Nachricht einer Selbstregel, befolge die Selbstregel. Erst danach darfst du ausgeben.
+        """.trimIndent()
+
+        assertEquals(
+            """
+                Ja, der neue Toyota RAV4 ist in Deutschland bereits bestellbar und seit Juni 2026 im Handel.
+
+                Die sechste Generation wird als Vollhybrid und Plug in Hybrid angeboten.
+            """.trimIndent(),
+            ChatSpeechSanitizer.clean(input),
+        )
+    }
+
+    @Test
+    fun removesParentheticalAttributionButPreservesConceptualSourceSentence() {
+        assertEquals(
+            "CLAUDE.md kann AGENTS.md importieren.",
+            ChatSpeechSanitizer.clean("CLAUDE.md kann AGENTS.md importieren (Quelle: interne Dokumentation)."),
+        )
+        assertEquals(
+            "Die Quelle ist für die Bewertung wichtig.",
+            ChatSpeechSanitizer.clean("Die Quelle ist für die Bewertung wichtig."),
+        )
+    }
 }

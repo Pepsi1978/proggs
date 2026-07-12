@@ -63,6 +63,7 @@ VERSION = "0.74.3 (11.07.2026, 19:51 Uhr)"  # 0.74.3: Kategorie-Ergaenzungen sin
 VERSION = "0.74.4 (11.07.2026, 20:09 Uhr)"  # 0.74.4: Kategorie-Dropdowns waehlen dynamisch die sichtbare Richtung und bleiben auch bei grossen Chat-Eingaben im Viewport. Alt: 0.74.3.
 VERSION = "0.75.0 (11.07.2026, 22:47 Uhr)"  # 0.75.0: Eigener R-Modus fuer Regeln; Automatik, Lupe und Diskette koennen keine Regeldatei mehr aendern. Alt: 0.74.4.
 VERSION = "0.76.1 (12.07.2026, 10:51 Uhr)"  # 0.76.1: Sichtbarer Bump zum Quellen-/TTS-Fix in agent 0.76.1 und Cortex Android 0.7.2: Anzeige, Persistenz und Vorlesen erhalten exakt dieselbe quellenfreie Antwort. Alt: 0.76.0.
+VERSION = "0.76.6 (12.07.2026, 16:41 Uhr)"  # 0.76.6: Sichtbarer Bump zum vollstaendigen Quellen- und internen Prueftext-Filter in agent 0.76.4 und Cortex Android 0.7.7. Alt: 0.76.1.
 BRAIN_URL = os.getenv("BRAIN_URL", "http://brain-api:8000").rstrip("/")
 AGENT_URL = os.getenv("AGENT_URL", "http://agent:8002").rstrip("/")
 SB_API_KEY = os.getenv("SB_API_KEY", "")

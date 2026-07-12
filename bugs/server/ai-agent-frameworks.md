@@ -474,6 +474,16 @@ parenthetische Quellenangaben muessen vor Anzeige, Persistenz und TTS entfernt w
 wendet denselben Filter als zweite TTS-Schicht an. Ein Regressionstest muss das echte natuerlichsprachige
 Produktionsmuster enthalten und zugleich normale Saetze ueber das Konzept einer Quelle erhalten.
 
+**Nachfolgevorfall 2026-07-12, 16:33 Uhr:** Nach einem bewussten Rollback auf einen aelteren Cortex-Stand
+erschienen beim RAV4-Turn erneut zwei Attributionen (`Quelle ist toyota Punkt de`) und zusaetzlich die
+interne Anweisung `Letzte Selbstregel Pruefung vor der Ausgabe`. Der zweite Leak hatte eine eigene Ursache:
+Die Funktion `_reinforce_self_rules` haengte internen Steuertext an den User-Prompt; ein nachgelagerter
+Regel-Rewriter mit Erhaltungspflicht konnte diesen Prompt-Echo als Antwort konservieren. Interne
+Steueranweisungen duerfen daher nie im Nutzdatenkanal liegen. Zusaetzlich muss der kanonische Finalisierer
+sowohl Quellenlabel als auch bekannte interne Meta-Textklassen entfernen. Der Client bereinigt empfangene
+und bereits persistierte Agentenantworten erneut. Permanenter Regressionstest ist der wortgleiche
+RAV4-Produktivtext, nicht nur ein kuenstliches URL-Beispiel.
+
 ---
 
 ## Fix-Status (was ist schon gefixt? — hart per `gh` am 2026-06-24)

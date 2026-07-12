@@ -13,14 +13,32 @@ internal object ChatSpeechSanitizer {
         "^\\s*(?:quellen?|sources?|references?|weiterf(?:ü|ue)hrende\\s+links?)\\s*:?.*$",
         setOf(RegexOption.IGNORE_CASE, RegexOption.MULTILINE, RegexOption.DOT_MATCHES_ALL),
     )
+    private val sourceAttributionTailRegex = Regex(
+        "(?:^|(?<=[.!?]))[ \\t]*(?:[-–—]\\s*)?" +
+            "(?:quelle(?:n)?|sources?|references?)\\s*(?::|ist|sind|war|waren)?\\s+[^\\n]*",
+        setOf(RegexOption.IGNORE_CASE, RegexOption.MULTILINE),
+    )
+    private val parentheticalSourceRegex = Regex(
+        "\\s*\\((?:quelle(?:n)?|sources?|references?)\\s*(?::|ist|sind|war|waren)?\\s+[^)\\n]+\\)",
+        RegexOption.IGNORE_CASE,
+    )
+    private val internalOutputInstructionRegex = Regex(
+        "(?:^|\\n)\\s*(?:letzte|abschlie(?:ß|ss)ende|finale)\\s+" +
+            "(?:selbstregel|regel)[ -]?(?:prüfung|pruefung|check)\\b[^\\n]*" +
+            "|(?:^|\\n)\\s*prüfe deine geplante ausgabe jetzt gegen alle aktiven selbstregeln[^\\n]*",
+        RegexOption.IGNORE_CASE,
+    )
     private val numericCitationRegex = Regex("\\[(?:\\d+(?:\\s*[-,]\\s*\\d+)*)]")
 
     fun clean(text: String): String = text
+        .replace(internalOutputInstructionRegex, "")
         .replace(trailingSourcesRegex, "")
         .replace(markdownWebLinkRegex, "$1")
         .replace(bareWebUrlRegex) { match ->
             match.value.lastOrNull()?.takeIf { it in ".,;:!?" }?.toString().orEmpty()
         }
+        .replace(parentheticalSourceRegex, "")
+        .replace(sourceAttributionTailRegex, "")
         .replace(numericCitationRegex, "")
         .replace(boldRegex, "$1")
         .replace("**", "")

@@ -78,7 +78,7 @@ VERSION = "0.73.0 (10.07.2026, 22:34 Uhr)"  # 0.73.0 (Level-2 Gruppe A, Punkt 9 
 VERSION = "0.74.0 (11.07.2026, 13:25 Uhr)"  # 0.74.0: Speicherentwuerfe werden aus formellen Befehlen faktengetreu formuliert und zeigen Kategorie, Titel und Volltext. Der letzte Eintrag bleibt session- und neustartfest zitier-/editierbar; freie Folgebefehle koennen Text, Titel und bis zu 12 Kategorien nach erneuter Bestaetigung aendern. Explizite App-Edits schreiben per doc_id und liefern den exakten Servertext als Quittung. Disketten- und Automatikmodus nutzen dieselbe Zustandsmaschine. Alt: 0.73.0.
 VERSION = "0.74.1 (11.07.2026, 19:33 Uhr)"  # 0.74.1: Regel-Intent verlangt jetzt einen ausdruecklichen Regelauftrag; erwaehnte oder verneinte Regeln bleiben normaler Speicherinhalt. Alt: 0.74.0.
 VERSION = "0.75.0 (11.07.2026, 22:47 Uhr)"  # 0.75.0: Regeln sind aus Automatik, Suche und Speichern ausgegliedert und laufen nur noch ueber den expliziten R-Modus; mehrturnige 1:1-Speicherankuendigungen bleiben als save_input gebunden. Alt: 0.74.1.
-VERSION = "0.76.1 (12.07.2026, 10:51 Uhr)"  # 0.76.1: Freitext-Antworten enthalten keine Quellenbloecke oder URLs mehr; SSE liefert erst den final regelgeprueften und bereinigten Text, damit Android exakt denselben Text anzeigt und vorliest. Alt: 0.76.0.
+VERSION = "0.76.4 (12.07.2026, 16:41 Uhr)"  # 0.76.4: Quellenattributionen und interne Selbstregel-Prueftexte werden vor Anzeige, Persistenz und TTS entfernt; interne Pruefanweisungen werden nicht mehr an Nutzdaten angehaengt. Alt: 0.76.1.
 
 # ---------------------------------------------------------------------------
 # Konfiguration (alles aus Umgebungsvariablen — Secrets nie im Code)
@@ -1398,6 +1398,21 @@ _TRAILING_SOURCES_RE = re.compile(
     r"^\s*(?:quellen?|sources?|references?|weiterf(?:ü|ue)hrende\s+links?)\s*:?.*$",
     re.IGNORECASE | re.MULTILINE | re.DOTALL,
 )
+_SOURCE_ATTRIBUTION_TAIL_RE = re.compile(
+    r"(?:^|(?<=[.!?]))[ \t]*(?:[-–—]\s*)?"
+    r"(?:quelle(?:n)?|sources?|references?)\s*(?::|ist|sind|war|waren)?\s+[^\n]*",
+    re.IGNORECASE | re.MULTILINE,
+)
+_PARENTHETICAL_SOURCE_RE = re.compile(
+    r"\s*\((?:quelle(?:n)?|sources?|references?)\s*(?::|ist|sind|war|waren)?\s+[^)\n]+\)",
+    re.IGNORECASE,
+)
+_INTERNAL_OUTPUT_INSTRUCTION_RE = re.compile(
+    r"(?:^|\n)\s*(?:letzte|abschlie(?:ß|ss)ende|finale)\s+"
+    r"(?:selbstregel|regel)[ -]?(?:prüfung|pruefung|check)\b[^\n]*"
+    r"|(?:^|\n)\s*prüfe deine geplante ausgabe jetzt gegen alle aktiven selbstregeln[^\n]*",
+    re.IGNORECASE,
+)
 _NUMERIC_CITATION_RE = re.compile(r"\[(?:\d+(?:\s*[-,]\s*\d+)*)]")
 
 
@@ -1419,12 +1434,15 @@ def _remove_bare_web_url(match: re.Match) -> str:
 
 
 def _sanitize_visible_reply(text: str) -> str:
-    """Entfernt Quellenanhaenge und Webadressen aus sichtbaren und gesprochenen Freitextantworten."""
+    """Entfernt Quellen und interne Steuertexte aus sichtbaren und gesprochenen Antworten."""
     if not text:
         return text
-    t = _TRAILING_SOURCES_RE.sub("", text)
+    t = _INTERNAL_OUTPUT_INSTRUCTION_RE.sub("", text)
+    t = _TRAILING_SOURCES_RE.sub("", t)
     t = _MD_WEB_LINK_RE.sub(r"\1", t)
     t = _BARE_WEB_URL_RE.sub(_remove_bare_web_url, t)
+    t = _PARENTHETICAL_SOURCE_RE.sub("", t)
+    t = _SOURCE_ATTRIBUTION_TAIL_RE.sub("", t)
     t = _NUMERIC_CITATION_RE.sub("", t)
     t = re.sub(r"[ \t]+([,.;:!?])", r"\1", t)
     t = re.sub(r"\n[ \t]+", "\n", t)
@@ -5197,18 +5215,8 @@ def _with_self_rules(system: str) -> str:
 
 
 def _reinforce_self_rules(system: str, user: str) -> str:
-    """Repeat the general rule precedence at the most recent prompt position."""
-    marker = "LETZTE SELBSTREGEL-PRÜFUNG VOR DER AUSGABE"
-    if "DAUERHAFTE SELBST-REGELN VON FRANK" not in system or marker in user:
-        return user
-    return (
-        user
-        + "\n\n"
-        + marker
-        + ": Prüfe deine geplante Ausgabe jetzt gegen ALLE aktiven Selbst-Regeln im System-Prompt. "
-          "Widerspricht Franks aktuelle Nachricht einer Selbst-Regel, befolge die Selbst-Regel. "
-          "Erst danach darfst du ausgeben. Pflicht-Schemas und geschützte Abläufe bleiben unverändert."
-    )
+    """Keep user data pristine; active rules already live in the system prompt and final audit."""
+    return user
 
 
 _FREEFORM_ACTIONS = {"recall", "internet", "smalltalk", "recall_full", "category_full"}
