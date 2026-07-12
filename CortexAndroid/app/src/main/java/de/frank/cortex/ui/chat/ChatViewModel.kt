@@ -455,6 +455,7 @@ class ChatViewModel : ViewModel() {
                                 action = "outbox"
                             )
                             _uiState.update { it.copy(isLoading = false, messages = it.messages + notice) }
+                            resetOneShotContextMode(state.contextMode, state.contextModeRevision)
                         } else {
                             _uiState.update { it.copy(isLoading = false, error = "VPN nicht aktiv — merken fehlgeschlagen") }
                         }
@@ -592,6 +593,7 @@ class ChatViewModel : ViewModel() {
                         titleOverride = if (response.action == "store") "" else st.titleOverride
                     )
                 }
+                resetOneShotContextMode(state.contextMode, state.contextModeRevision)
                 updateSessionsAfterPersist(sessionId, agentMsg)
 
                 // Sichtbare Meldung, wenn das Server-Kontextfenster (40 Nachrichten) erstmals
@@ -1340,6 +1342,20 @@ class ChatViewModel : ViewModel() {
                 contextMode = normalized,
                 contextModeRevision = SettingsStore.advanceContextModeRevision(normalized)
             )
+        }
+    }
+
+    private fun resetOneShotContextMode(requestMode: String, requestRevision: Int) {
+        if (requestMode !in setOf(
+                SettingsStore.CONTEXT_MODE_SAVE,
+                SettingsStore.CONTEXT_MODE_RULE,
+                SettingsStore.CONTEXT_MODE_SEARCH
+            )
+        ) return
+
+        val current = _uiState.value
+        if (current.contextMode == requestMode && current.contextModeRevision == requestRevision) {
+            updateContextMode(SettingsStore.CONTEXT_MODE_AUTO)
         }
     }
 
