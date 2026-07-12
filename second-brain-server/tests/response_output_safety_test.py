@@ -1,0 +1,61 @@
+#!/usr/bin/env python3
+"""Regression checks: visible reply and TTS must never consume pre-final source text."""
+from __future__ import annotations
+
+import ast
+import re
+from pathlib import Path
+
+
+ROOT = Path(__file__).resolve().parents[1]
+APP_PATH = ROOT / "agent" / "app.py"
+SOURCE = APP_PATH.read_text(encoding="utf-8")
+
+
+def load_sanitizers() -> dict:
+    assignments = {
+        "_MD_BOLD_RE", "_MD_HEADING_RE", "_MD_BULLET_RE", "_MD_WEB_LINK_RE",
+        "_BARE_WEB_URL_RE", "_TRAILING_SOURCES_RE", "_NUMERIC_CITATION_RE",
+        "_FREEFORM_ACTIONS",
+    }
+    functions = {
+        "_strip_markdown_tts", "_remove_bare_web_url", "_sanitize_visible_reply",
+        "_finalize_visible_outcome",
+    }
+    nodes = []
+    for node in ast.parse(SOURCE).body:
+        if isinstance(node, ast.Assign) and any(
+            isinstance(target, ast.Name) and target.id in assignments for target in node.targets
+        ):
+            nodes.append(node)
+        elif isinstance(node, ast.FunctionDef) and node.name in functions:
+            nodes.append(node)
+    namespace = {"re": re}
+    exec(compile(ast.Module(body=nodes, type_ignores=[]), str(APP_PATH), "exec"), namespace)
+    return namespace
+
+
+def main() -> int:
+    ns = load_sanitizers()
+    sanitize = ns["_sanitize_visible_reply"]
+    finalize = ns["_finalize_visible_outcome"]
+    draft = (
+        "Archer wird später mehrfach erwähnt [1]. Mehr: https://example.com/a/b?x=1.\n\n"
+        "Quellen:\n- [Memory Alpha](https://memory-alpha.example/archer)\n- www.example.org/source"
+    )
+    assert sanitize(draft) == "Archer wird später mehrfach erwähnt. Mehr:."
+    outcome = finalize({"action": "recall", "reply": draft, "sources": [{"title": "Memory Alpha"}]})
+    assert "http" not in outcome["reply"].lower() and "quellen" not in outcome["reply"].lower()
+    assert outcome["sources"] == [{"title": "Memory Alpha"}], "structured metadata must remain available"
+
+    stream = SOURCE[SOURCE.index("async def chat_stream"):SOURCE.index("# Gruppe D", SOURCE.index("async def chat_stream"))]
+    assert "rsize, None, req.memory_edit" in stream, "raw model deltas still enter the client stream"
+    assert "queue.put_nowait(final_reply)" in stream, "final canonical reply is not streamed"
+    assert "outcome = _finalize_visible_outcome(outcome)" in stream, "stream reply is not sanitized"
+
+    print("PASS: display, persistence and TTS share one final source-free reply")
+    return 0
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())

@@ -13,9 +13,9 @@ android {
         applicationId = "de.frank.cortex"
         minSdk = 26
         targetSdk = 35
-        versionCode = 88
-        versionName = "0.7.1"
-        buildConfigField("String", "VERSION_BUMPED_AT", "\"11.07.2026, 22:57 Uhr\"")
+        versionCode = 89
+        versionName = "0.7.2"
+        buildConfigField("String", "VERSION_BUMPED_AT", "\"12.07.2026, 10:51 Uhr\"")
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
@@ -118,4 +118,5 @@ dependencies {
     // Coroutines
     implementation(libs.coroutines.core)
     implementation(libs.coroutines.android)
+    testImplementation(kotlin("test"))
 }

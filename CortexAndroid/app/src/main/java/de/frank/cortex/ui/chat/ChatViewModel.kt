@@ -4,6 +4,8 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import de.frank.cortex.audio.MicRecorder
 import de.frank.cortex.audio.PcmPlayer
+import de.frank.cortex.audio.SpeechAnalyzer
+import de.frank.cortex.audio.WhisperHallucinationFilter
 import de.frank.cortex.data.ChatSessionStore
 import de.frank.cortex.data.ChatSessionSummary
 import de.frank.cortex.data.model.*
@@ -1357,6 +1359,8 @@ class ChatViewModel : ViewModel() {
     }
 
     private fun speakResponse(text: String, messageId: String? = null) {
+        val spokenText = ChatSpeechSanitizer.clean(text)
+        if (spokenText.isBlank()) return
         speechGeneration++
         val generation = speechGeneration
         speakJob?.cancel()
@@ -1372,11 +1376,11 @@ class ChatViewModel : ViewModel() {
             try {
                 val voice = if (isEdge) SettingsStore.edgeTtsVoice else SettingsStore.ttsVoice
                 val rate = SettingsStore.ttsRate
-                val chunks = chunkText(text)
+                val chunks = chunkText(spokenText)
                 if (chunks.isEmpty()) return@launch
                 val ttsStartedAt = System.currentTimeMillis()
                 CortexLog.info("ChatVM", "speakResponse", "TTS Pipeline startet",
-                    mapOf("len" to text.length, "chunks" to chunks.size, "voice" to voice, "rate" to rate, "engine" to if (isEdge) "edge" else "chirp"))
+                    mapOf("len" to spokenText.length, "chunks" to chunks.size, "voice" to voice, "rate" to rate, "engine" to if (isEdge) "edge" else "chirp"))
 
                 coroutineScope {
                     val pending = mutableMapOf<Int, Deferred<ByteArray?>>()
@@ -1572,19 +1576,7 @@ class ChatViewModel : ViewModel() {
         return textChannel
     }
 
-    /** Kleine lokale Variante des Server-Markdown-Strippers fuer gestreamte TTS-Absaetze
-     *  (der finale Reply kommt bereits bereinigt vom Server — die Deltas sind Rohtext).
-     *  Regexe einmalig kompiliert (vorher pro Absatz neu — unnoetige Arbeit auf dem Stream-Pfad). */
-    private val ttsBoldRegex = Regex("\\*\\*(.+?)\\*\\*")
-    private val ttsHeadingRegex = Regex("(?m)^#{1,6}\\s*")
-    private val ttsBulletRegex = Regex("(?m)^[-*•]\\s+")
-
-    private fun localTtsClean(s: String): String = s
-        .replace(ttsBoldRegex, "$1")
-        .replace("**", "")
-        .replace(ttsHeadingRegex, "")
-        .replace(ttsBulletRegex, "")
-        .trim()
+    private fun localTtsClean(s: String): String = ChatSpeechSanitizer.clean(s)
 
     private fun buildContextPrompt(contextMode: String, responseSize: String): String? {
         val modePrompt = if (contextMode == SettingsStore.CONTEXT_MODE_AUTO) "" else SettingsStore.contextPrompt(contextMode)

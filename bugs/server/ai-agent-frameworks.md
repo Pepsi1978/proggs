@@ -21,6 +21,8 @@
 > - **DIESE Datei** = der **eine serverseitige Agent auf CODE-Ebene**: Loop-Steuerung, Tool-Fehler/async,
 >   State-Concurrency/Idempotenz, Kosten-aus-der-Loop, Memory-Injection, Framework-Bugs. Ueberschneidungen
 >   (Kosten-Cap, Lethal Trifecta, Secrets) hier aus dem **Agent-Code-Blickwinkel** + Querverweis.
+> **Ergaenzt 2026-07-12:** §9.1 zu vorzeitig gestreamten Entwuerfen, die von der final sichtbaren
+> Antwort abweichen und dadurch unsichtbare Quellen an TTS weitergeben koennen (Cortex-Vorfall).
 
 ---
 
@@ -47,6 +49,7 @@
 | 13 | Pydantic-AI: `Exceeded maximum retries for ... validation` | Structured-Output-Validation-Loop (#1192/#734 NOT_PLANNED/COMPLETED); JSON-Mode erzwingen, `UsageLimits` setzen | §7 |
 | 14 | LangGraph: `operator.add`-Reducer dupliziert / Liste ueberschrieben | Reducer bewusst waehlen; bei paralleln Writes kein blindes `add` (exponentielle Duplikation); GraphRecursionError = echtes Loop-Symptom | §8 |
 | 15 | In-Memory-State bei mehreren uvicorn-Workern weg | Worker = eigener Prozess, KEIN geteilter RAM. Session/State in DB/Redis, nicht in Modul-Dict | §5.3 |
+| 16 | TTS liest URLs/Quellen, die im finalen Chattext fehlen | Nie ungepruefte Modelldeltas an irreversible Verbraucher geben; erst finalisieren, dann EINEN kanonischen Reply fuer Anzeige, Persistenz und TTS verteilen | §9.1 |
 
 ---
 
@@ -422,6 +425,40 @@ auf >= 1.2.6 aktualisieren fuer die Subgraph-/deltaChannel-Fixes.
 
 ---
 
+## 9. Ausgabe-Lifecycle / Streaming
+
+### 9.1 Rohentwurf wird gesprochen, finale Antwort zeigt ihn nicht  [ECHTER VORFALL 2026-07-11]
+**Symptom:** Die Chatblase und der gespeicherte Verlauf enthalten keine Quellenangaben, TTS liest aber
+lange Webadressen mit Slash und Sonderzeichen vor. Der Nutzer kann den gesprochenen Text optisch nirgends
+wiederfinden.
+
+**Ursache:** Der Server streamte den ungeprueften Modell-Entwurf sofort als SSE-Deltas. Android leitete
+fertige Absaetze daraus bereits an Cloud-TTS weiter. Erst danach pruefte und ueberarbeitete der Server den
+Entwurf gegen aktive Regeln und ersetzte die Chatblase mit dem finalen `reply`. Damit existierten zwei
+beobachtbare Antworten fuer denselben Turn: ein irreversibel gesprochener Rohentwurf und ein anderer
+sichtbarer/persistierter Endtext. Im echten Cortex-Turn vom 11.07.2026, 23:25 Uhr wurden 2.499 Zeichen
+synthetisiert, der finale Reply hatte nur 2.071 Zeichen; die 428 Zusatzzeichen waren im Verlauf nicht mehr
+vorhanden.
+
+**FIX (Defense in Depth):**
+- Alle Regelpruefungen und deterministischen Sanitizer VOR der Client-Ausgabe ausfuehren.
+- Genau EINEN kanonischen finalen Reply an Anzeige, Session-Persistenz, SSE und TTS verteilen.
+- URLs, Markdown-Links, numerische Zitate und nachgestellte Quellenbloecke serverseitig aus sichtbaren
+  Freitextantworten entfernen, wenn das Produkt keine Quellen im Antworttext erlaubt.
+- TTS clientseitig nochmals mit demselben Invariant absichern; direkte Blasen-Wiedergabe darf den Guard
+  nicht umgehen.
+- Permanenter Regressionstest: Rohentwurf mit URL/Quellenblock hinein, finale SSE-/Persistenz-/TTS-Ausgabe
+  ohne URL; strukturierte interne Quellenmetadaten duerfen getrennt erhalten bleiben.
+
+**Trade-off:** Tokenweises Streaming kann nicht gleichzeitig garantiert exakt dem spaeter noch
+ueberarbeiteten Endtext entsprechen. Wenn exakte Anzeige-/TTS-Gleichheit Pflicht ist, muss die Ausgabe bis
+nach der Finalisierung gepuffert werden. Heartbeats koennen die Verbindung in dieser Zeit offen halten.
+
+**Quelle:** eigener produktiver CortexAndroid-Vorfall 2026-07-11/12; App-Log, lokale SQLite-Historie und
+gespiegelter Gespraechseintrag gemeinsam abgeglichen.
+
+---
+
 ## Fix-Status (was ist schon gefixt? — hart per `gh` am 2026-06-24)
 
 | Frueherer Bug | Issue | Status (gh) | Bezug |
@@ -467,6 +504,7 @@ bewaehrte Loesung uebernommen, Herkunft im jeweiligen Eintrag markiert.
 □ 429: Exponential Backoff + FULL Jitter + Retry-After + isRetryable? (§6.2)
 □ Secrets nie im Kontext/Prompt/Log; keine Stacktraces im Prod-Response? (§6.3)
 □ Framework gewaehlt: Pydantic-AI offene message_history-Issues (§7.3) / LangGraph Reducer+Recursion (§8) geprueft?
+□ Gestreamter, sichtbarer, persistierter und gesprochener Antworttext stammt aus demselben finalisierten Reply? (§9.1)
 ```
 
 ---
@@ -481,3 +519,4 @@ bewaehrte Loesung uebernommen, Herkunft im jeweiligen Eintrag markiert.
 | orphaned tool_use → 400 | §4.1 (eigener Tool-Loop) | `agents/orchestrator-agent.md` §8.1 (Orchestrator-Sicht) |
 | Python-Encoding/async-Grundlagen | §3.1 (async-Blocking) | `claude-tooling/python-windows.md` |
 | MCP-Server bauen | — | `claude-tooling/mcp-server.md` |
+| Streaming-Entwurf vs. finale Ausgabe/TTS | §9.1 (kanonischer finaler Reply) | Android-Client als zweite Sanitizer-Schicht |

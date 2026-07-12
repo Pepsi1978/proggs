@@ -33,6 +33,7 @@
 | 13 | Intent-Checkpoints | erwartet-vs-tatsaechlich loggen (eigener Kanal) — bestaetigen, ob Logik wie gemeint ankommt | (Live-Logik-Sonden) |
 | 14 | Prompt-Injection | Gespeicherte Memory-Inhalte als UNTRUSTED; beim Recall als DATEN markieren; Lethal Trifecta brechen | §6.1 |
 | 15 | async | Blockierende Calls NIE im async-Loop (`to_thread`/`run_in_threadpool`) | §3.1 |
+| 16 | Streaming-Ausgabe | Irreversible Verbraucher wie TTS erst aus dem finalisierten kanonischen Reply speisen; Anzeige/Persistenz/Sprache duerfen nicht auseinanderlaufen | §9.1 |
 
 ---
 
@@ -108,6 +109,18 @@
 - **Do — Lethal Trifecta brechen** (private Daten + untrusted Inhalt + externe Kommunikation nicht gleichzeitig): Egress-Allowlist (kein freier Outbound), Tool-Whitelist je Intent + Parameter-Validierung, Least-Privilege/Blast-Radius, transienten vs. persistenten Kontext trennen. **Don't:** Agent mit allen Tools + allen Daten + freiem Netz. (simonwillison, OWASP, airia, teleport.)
 - **Do — Tests/Monitoring:** Memory-Persistence-Tests (injizierte Anweisungen duerfen Session-Grenzen nicht ueberleben), IPI-Fuzzing (Promptfoo), Anomalie-Monitoring auf Call-Sequenzen. (promptfoo, salt, MrDuc.)
 
+## §9 Kanonische Ausgabe nach Finalisierung
+
+- **Do — Einen finalen Reply verteilen:** Regelpruefung, Policy und deterministische Sanitizer zuerst;
+  danach exakt denselben Text an UI, Persistenz, SSE und TTS geben. **Don't:** Rohdeltas bereits sprechen
+  und die Chatblase spaeter durch einen abweichenden Endtext ersetzen. (Eigener Cortex-Vorfall; Almanach §9.1.)
+- **Do — Irreversible Senken spaet anbinden:** TTS, Benachrichtigungen und externe Publikation erst nach
+  der letzten Transformation starten. Heartbeats halten lange Finalisierung offen. **Don't:** niedrige
+  First-Token-Latenz ueber die fachliche Textidentitaet stellen.
+- **Do — Defense in Depth:** Produktvorgaben wie „keine URLs/Quellen im Antworttext" im Prompt,
+  serverseitig deterministisch und clientseitig vor TTS erzwingen. Strukturierte Quellenmetadaten koennen
+  getrennt erhalten bleiben. Regressionstest mit absichtlich quellenhaltigem Rohentwurf.
+
 ---
 
 ## 🔗 Bezugs-Tabelle: Best-Practice ↔ Bug-Almanach
@@ -122,6 +135,7 @@
 | §6 Architektur Router/Bibliothekar | §5.1 shared state, §5.3 Worker/In-Memory |
 | §7 Observability | (Direktive #2; §1/§2 sichtbar machen) |
 | §8 Prompt-Injection | §6.1 Memory-Poisoning/Lethal Trifecta |
+| §9 Kanonische Ausgabe | §9.1 Rohentwurf wird gesprochen, finale Antwort zeigt ihn nicht |
 | (async-Hinweise) | §3.1 Blocking im async-Loop |
 
 ---
@@ -138,5 +152,6 @@
 □ Router (klein/lokal) ↔ Bibliothekar (server/liest) getrennt, Modell-pro-Rolle, Audit? (§6)
 □ JSON-Logs + OTel-Tracing + Intent-Checkpoints + Token/Kosten-Tracking? (§7)
 □ Gespeicherte Memory-Inhalte UNTRUSTED, beim Recall als DATEN markiert, Lethal Trifecta gebrochen? (§8)
+□ UI, Persistenz, SSE und TTS erhalten denselben finalisierten kanonischen Reply? (§9)
 □ Keine blockierenden Calls im async-Loop (to_thread/run_in_threadpool)? (Almanach §3.1)
 ```
