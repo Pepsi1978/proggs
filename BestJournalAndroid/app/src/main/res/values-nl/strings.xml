@@ -485,7 +485,7 @@ Voor iedereen die zichzelf beter wil begrijpen en innerlijk wil groeien.</string
     <string name="achievements_unlocked_at">Ontgrendeld op %1$s</string>
     <!-- About -->
     <string name="settings_about">Over de app</string>
-    <string name="settings_about_version">Best Journal V0.21.9</string>
+    <string name="settings_about_version">Best Journal V%1$s</string>
     <string name="settings_about_desc">Jouw persoonlijke AI-dagboek</string>
     <!-- Sign-out dialog -->
     <string name="settings_sign_out_confirm">Uitloggen?</string>

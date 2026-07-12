@@ -485,7 +485,7 @@ Kendini daha iyi anlamak ve içsel olarak büyümek isteyenler için.</string>
     <string name="achievements_unlocked_at">%1$s tarihinde açıldı</string>
     <!-- About -->
     <string name="settings_about">Uygulama hakkında</string>
-    <string name="settings_about_version">Best Journal V0.21.9</string>
+    <string name="settings_about_version">Best Journal V%1$s</string>
     <string name="settings_about_desc">Kişisel YZ günlüğün</string>
     <!-- Sign-out dialog -->
     <string name="settings_sign_out_confirm">Çıkış yapılsın mı?</string>

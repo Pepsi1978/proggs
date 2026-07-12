@@ -478,7 +478,7 @@
     <string name="achievements_unlocked_at">%1$s এ আনলক হয়েছে</string>
     <!-- About -->
     <string name="settings_about">অ্যাপ সম্পর্কে</string>
-    <string name="settings_about_version">Best Journal V0.21.9</string>
+    <string name="settings_about_version">Best Journal V%1$s</string>
     <string name="settings_about_desc">তোমার ব্যক্তিগত এআই-দিনলিপি</string>
     <!-- Sign-out dialog -->
     <string name="settings_sign_out_confirm">সাইন আউট করবে?</string>

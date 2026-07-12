@@ -4024,7 +4024,12 @@ fun SettingsScreen(
                         }
                         Spacer(modifier = Modifier.height(10.dp))
                         Text(
-                            stringResource(R.string.settings_about_version),
+                            // Version aus BuildConfig (Single Source of Truth = build.gradle.kts),
+                            // damit die Anzeige nie wieder von der echten versionName abweicht.
+                            stringResource(
+                                R.string.settings_about_version,
+                                com.bestjournal.app.BuildConfig.VERSION_NAME,
+                            ),
                             style = MaterialTheme.typography.bodyMedium,
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                             textAlign = TextAlign.Center,

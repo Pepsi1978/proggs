@@ -478,7 +478,7 @@
     <string name="achievements_unlocked_at">%1$s रोजी अनलॉक</string>
     <!-- About -->
     <string name="settings_about">App बद्दल</string>
-    <string name="settings_about_version">Best Journal V0.21.9</string>
+    <string name="settings_about_version">Best Journal V%1$s</string>
     <string name="settings_about_desc">तुमची वैयक्तिक AI दैनंदिनी</string>
     <!-- Sign-out dialog -->
     <string name="settings_sign_out_confirm">साइन आउट करायचे का?</string>

@@ -478,7 +478,7 @@
     <string name="achievements_unlocked_at">Dibuka pada %1$s</string>
     <!-- About -->
     <string name="settings_about">Tentang aplikasi</string>
-    <string name="settings_about_version">Best Journal V0.21.9</string>
+    <string name="settings_about_version">Best Journal V%1$s</string>
     <string name="settings_about_desc">Jurnal AI pribadimu</string>
     <!-- Sign-out dialog -->
     <string name="settings_sign_out_confirm">Keluar?</string>

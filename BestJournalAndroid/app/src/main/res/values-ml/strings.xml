@@ -453,7 +453,7 @@
     <string name="achievements_unlocked_at">%1$s-ന് അൺലോക്ക് ചെയ്തു</string>
     <!-- About -->
     <string name="settings_about">ആപ്പിനെക്കുറിച്ച്</string>
-    <string name="settings_about_version">Best Journal V0.21.9</string>
+    <string name="settings_about_version">Best Journal V%1$s</string>
     <string name="settings_about_desc">നിങ്ങളുടെ വ്യക്തിഗത AI ഡയറി</string>
     <!-- Sign-out dialog -->
     <string name="settings_sign_out_confirm">സൈൻ ഔട്ട് ചെയ്യണോ?</string>

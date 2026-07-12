@@ -478,7 +478,7 @@
     <string name="achievements_unlocked_at">Desbloqueado el %1$s</string>
     <!-- About -->
     <string name="settings_about">Acerca de la app</string>
-    <string name="settings_about_version">Best Journal V0.21.9</string>
+    <string name="settings_about_version">Best Journal V%1$s</string>
     <string name="settings_about_desc">Tu diario personal con IA</string>
     <!-- Sign-out dialog -->
     <string name="settings_sign_out_confirm">¿Cerrar sesión?</string>

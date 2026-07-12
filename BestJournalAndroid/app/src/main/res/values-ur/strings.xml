@@ -478,7 +478,7 @@
     <string name="achievements_unlocked_at">%1$s کو حاصل ہوا</string>
     <!-- About -->
     <string name="settings_about">ایپ کے بارے میں</string>
-    <string name="settings_about_version">Best Journal V0.21.9</string>
+    <string name="settings_about_version">Best Journal V%1$s</string>
     <string name="settings_about_desc">آپ کی ذاتی AI ڈائری</string>
     <!-- Sign-out dialog -->
     <string name="settings_sign_out_confirm">سائن آؤٹ کریں؟</string>

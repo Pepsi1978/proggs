@@ -478,7 +478,7 @@
     <string name="achievements_unlocked_at">ปลดล็อกเมื่อ %1$s</string>
     <!-- About -->
     <string name="settings_about">เกี่ยวกับแอป</string>
-    <string name="settings_about_version">Best Journal V0.21.9</string>
+    <string name="settings_about_version">Best Journal V%1$s</string>
     <string name="settings_about_desc">สมุดบันทึก AI ส่วนตัวของคุณ</string>
     <!-- Sign-out dialog -->
     <string name="settings_sign_out_confirm">ออกจากระบบ?</string>

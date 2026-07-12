@@ -550,7 +550,7 @@
     <string name="achievements_unlocked_at">Freigeschaltet am %1$s</string>
     <!-- About -->
     <string name="settings_about">Über die App</string>
-    <string name="settings_about_version">Best Journal V0.21.9</string>
+    <string name="settings_about_version">Best Journal V%1$s</string>
     <string name="settings_about_desc">Dein persönliches KI-Tagebuch</string>
     <string name="settings_about_copyright" translatable="false">© Barwandt Digital Labs</string>
     <!-- Sign-out dialog -->

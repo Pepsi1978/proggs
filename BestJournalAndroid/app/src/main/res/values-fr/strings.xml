@@ -485,7 +485,7 @@ Pour ceux qui veulent mieux se connaître et grandir intérieurement.</string>
     <string name="achievements_unlocked_at">Débloqué le %1$s</string>
     <!-- About -->
     <string name="settings_about">À propos de l\'appli</string>
-    <string name="settings_about_version">Best Journal V0.21.9</string>
+    <string name="settings_about_version">Best Journal V%1$s</string>
     <string name="settings_about_desc">Ton journal intime intelligent</string>
     <!-- Sign-out dialog -->
     <string name="settings_sign_out_confirm">Se déconnecter\u202F?</string>
