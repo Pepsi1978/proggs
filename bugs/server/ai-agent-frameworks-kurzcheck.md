@@ -27,4 +27,4 @@
 | 13 | Pydantic-AI: `Exceeded maximum retries for ... validation` | Structured-Output-Validation-Loop (#1192/#734 NOT_PLANNED/COMPLETED); JSON-Mode erzwingen, `UsageLimits` setzen | §7 |
 | 14 | LangGraph: `operator.add`-Reducer dupliziert / Liste ueberschrieben | Reducer bewusst waehlen; bei paralleln Writes kein blindes `add` (exponentielle Duplikation); GraphRecursionError = echtes Loop-Symptom | §8 |
 | 15 | In-Memory-State bei mehreren uvicorn-Workern weg | Worker = eigener Prozess, KEIN geteilter RAM. Session/State in DB/Redis, nicht in Modul-Dict | §5.3 |
-| 16 | TTS liest URLs/Quellen, die im finalen Chattext fehlen | Keine ungeprueften Modelldeltas an TTS; erst finalisieren, dann EINEN kanonischen Reply fuer Anzeige, Persistenz und Sprache verteilen | §9.1 |
+| 16 | TTS liest URLs/Quellen, die im finalen Chattext fehlen | Keine ungeprueften Modelldeltas an TTS; Server muss `canonical_reply=true` bestaetigen, sonst verwirft der Client alle Deltas und nutzt nur den finalen Reply | §9.1 |

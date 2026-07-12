@@ -52,6 +52,7 @@ def main() -> int:
     assert not project("Was sagt das Internet zu meiner Vermutung über AGENTS.md?")
 
     require('yield _sse_event({"type": "ready"', AGENT, "SSE ready event missing")
+    require('"canonical_reply": True', AGENT, "SSE canonical reply capability missing")
     require('yield _sse_event({"type": "heartbeat"', AGENT, "SSE heartbeat missing")
     require('timeout=15.0', AGENT, "SSE heartbeat interval is not bounded")
     require('"native_required": True', AGENT, "Native web preflight marker missing")
@@ -59,7 +60,9 @@ def main() -> int:
     require('meta["adaptive_recall"] = "expanded"', AGENT, "Adaptive recall fallback missing")
     require('self_rules_audit', AGENT, "Short self-rule audit missing")
 
-    require('"ready" -> Unit', API, "Android does not accept SSE ready")
+    require('canonicalReplyStream = evt.optBoolean("canonical_reply", false)', API,
+            "Android does not require the canonical reply capability")
+    require('if (!canonicalReplyStream)', API, "Android does not reject unverified raw deltas")
     require('"heartbeat" ->', API, "Android does not accept SSE heartbeat")
     require('return@withContext result', API, "Android still waits for EOF after done")
     require('.readTimeout(60, TimeUnit.SECONDS)', API, "Streaming idle timeout does not match heartbeat")

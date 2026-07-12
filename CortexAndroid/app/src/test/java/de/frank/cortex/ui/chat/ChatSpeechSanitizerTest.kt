@@ -29,4 +29,19 @@ class ChatSpeechSanitizerTest {
             ChatSpeechSanitizer.clean("**Jonathan Archer** kehrt nicht als gespielte Figur zurück."),
         )
     }
+
+    @Test
+    fun removesTrailingSourceLinksWithoutSourcesHeading() {
+        val input = """
+            Die gezielte Pflege weniger Hinweise ist entscheidender als ihre bloße Menge.
+
+            [OpenAI Codex](https://openai.com/codex)
+            [Terminal Bench](https://terminal-bench.example/results)
+        """.trimIndent()
+
+        assertEquals(
+            "Die gezielte Pflege weniger Hinweise ist entscheidender als ihre bloße Menge.",
+            ChatSpeechSanitizer.clean(input),
+        )
+    }
 }

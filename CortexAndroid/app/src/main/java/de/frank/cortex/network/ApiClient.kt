@@ -230,9 +230,9 @@ object ApiClient {
     }
 
     /**
-     * POST /chat/stream — Antwort-Text kommt live als SSE-Deltas (onDelta, aus dem IO-Thread),
-     * am Ende liefert der Server die finale ChatResponse (bereinigter Reply). Die App ersetzt
-     * den gestreamten Rohtext durch diesen finalen Reply — verlorene Deltas heilen sich so selbst.
+     * POST /chat/stream — onDelta wird nur fuer einen vom Server ausdruecklich als kanonisch
+     * gekennzeichneten Finaltext aufgerufen. Alte Server-Deltas werden ignoriert; dann liest die
+     * App erst den bereinigten reply aus dem done-Event vor.
      */
     suspend fun chatStream(request: ChatRequest, onDelta: (String) -> Unit): ChatResponse =
         withContext(Dispatchers.IO) {
@@ -242,6 +242,8 @@ object ApiClient {
             var anyEventReceived = false
             var deltaReceived = false
             var doneReceived = false
+            var canonicalReplyStream = false
+            var ignoredDeltaCount = 0
             var eventCount = 0
             var deltaCount = 0
             var heartbeatCount = 0
@@ -279,7 +281,14 @@ object ApiClient {
                                     "elapsed_ms" to (System.currentTimeMillis() - startedAt)))
                         }
                         when (type) {
-                            "ready" -> Unit
+                            "ready" -> {
+                                canonicalReplyStream = evt.optBoolean("canonical_reply", false)
+                                if (!canonicalReplyStream) {
+                                    CortexLog.warn("ChatStream", "ready",
+                                        "Server bestaetigt keinen kanonischen Reply; Vorab-Deltas werden nicht angezeigt oder vorgelesen",
+                                        mapOf("request_id" to requestId.take(12)))
+                                }
+                            }
                             "heartbeat" -> {
                                 heartbeatCount++
                                 CortexLog.info("ChatStream", "heartbeat", "SSE-Heartbeat empfangen",
@@ -287,13 +296,17 @@ object ApiClient {
                                         "elapsed_ms" to (System.currentTimeMillis() - startedAt)))
                             }
                             "delta" -> evt.optString("text").takeIf { it.isNotEmpty() }?.let {
+                                deltaCount++
+                                if (!canonicalReplyStream) {
+                                    ignoredDeltaCount++
+                                    return@let
+                                }
                                 if (!deltaReceived) {
                                     CortexLog.info("ChatStream", "firstDelta", "Erstes SSE-Textdelta empfangen",
                                         mapOf("request_id" to requestId.take(12),
                                             "elapsed_ms" to (System.currentTimeMillis() - startedAt)))
                                 }
                                 deltaReceived = true
-                                deltaCount++
                                 onDelta(it)
                             }
                             "done" -> {
@@ -302,9 +315,10 @@ object ApiClient {
                                 doneReceived = true
                                 CortexLog.info("ChatStream", "done", "SSE-Abschluss empfangen",
                                     mapOf("request_id" to requestId.take(12),
-                                        "elapsed_ms" to (System.currentTimeMillis() - startedAt),
-                                        "events" to eventCount, "deltas" to deltaCount,
-                                        "heartbeats" to heartbeatCount))
+                                         "elapsed_ms" to (System.currentTimeMillis() - startedAt),
+                                         "events" to eventCount, "deltas" to deltaCount,
+                                         "ignored_deltas" to ignoredDeltaCount,
+                                         "heartbeats" to heartbeatCount))
                                 return@withContext result
                             }
                             "error" -> throw IOException("Agent-Stream-Fehler: ${evt.optString("message")}")

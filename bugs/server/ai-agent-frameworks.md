@@ -457,6 +457,14 @@ nach der Finalisierung gepuffert werden. Heartbeats koennen die Verbindung in di
 **Quelle:** eigener produktiver CortexAndroid-Vorfall 2026-07-11/12; App-Log, lokale SQLite-Historie und
 gespiegelter Gespraechseintrag gemeinsam abgeglichen.
 
+**Nachfolgevorfall 2026-07-12, 11:30 Uhr:** Die Android-App war bereits auf 0.7.3 aktualisiert, der
+produktive Agent lief aber noch auf 0.76.0. Dadurch sendete er weiterhin 250 ungepruefte Rohdeltas; TTS
+startete beim ersten Delta, waehrend der finale Regelpruefer den Entwurf spaeter wegen Markdown-Links
+veraenderte. Konsequenz: Die Client-App darf kanonische Streams nicht aus einer angenommenen Serverversion
+ableiten. Der Server muss die Eigenschaft im `ready`-Event explizit bestaetigen (`canonical_reply=true`).
+Fehlt dieses Capability-Flag, verwirft der Client ALLE Deltas und verwendet ausschliesslich den finalen
+`response.reply`. Das macht vergessene oder teilweise Deploys fail-closed.
+
 ---
 
 ## Fix-Status (was ist schon gefixt? — hart per `gh` am 2026-06-24)

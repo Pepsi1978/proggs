@@ -120,6 +120,9 @@
 - **Do — Defense in Depth:** Produktvorgaben wie „keine URLs/Quellen im Antworttext" im Prompt,
   serverseitig deterministisch und clientseitig vor TTS erzwingen. Strukturierte Quellenmetadaten koennen
   getrennt erhalten bleiben. Regressionstest mit absichtlich quellenhaltigem Rohentwurf.
+- **Do — Capability fail-closed aushandeln:** Der Server bestaetigt im Stream-Handshake explizit, dass
+  Deltas kanonisch sind. Fehlt das Flag bei altem oder teilweise deploytem Backend, verwirft der Client
+  alle Vorab-Deltas und nutzt nur den finalen Reply. **Don't:** Sicherheit aus Versionsnummern erraten.
 
 ---
 
