@@ -55,7 +55,10 @@ def main() -> int:
     check('label !is String || send !is String' in session_store and
           'val actionGap = ((actionRowWidth - 288.dp) / 5).coerceIn(0.dp, 9.dp)' in screen,
           "Optionswerte bleiben exakt und die Aktionszeile passt ihre Abstände auf schmalen Geräten an")
-    dashboard_chat_start = dashboard_app.index("async def api_chat")
+    # Seit 0.79.0 liegt die Chat-Validierung im gemeinsamen Helfer _build_chat_payload
+    # (identisch fuer /api/chat UND /api/chat/stream) — der Anker folgt dem Refactor,
+    # die Pruef-Intention (kein .strip() am Speicherinhalt) bleibt wortgleich.
+    dashboard_chat_start = dashboard_app.index("def _build_chat_payload")
     dashboard_chat = dashboard_app[dashboard_chat_start:dashboard_app.index("\n@app.", dashboard_chat_start)]
     check('const text = ta.value;' in dashboard_html and 'if(!text.trim()) return;' in dashboard_html and
           'text = body.get("text") or ""' in dashboard_chat and 'if not text.strip():' in dashboard_chat and

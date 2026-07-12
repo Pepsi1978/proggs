@@ -1,7 +1,15 @@
 {
-	"stand": "12.07.2026, 20:08 Uhr",
+	"stand": "12.07.2026, 20:19 Uhr",
 	"hinweis": "PFLEGE-PFLICHT: Bei JEDEM Deploy, der ein neues System/Feature einbaut, hier einen Eintrag ERGÄNZEN (neueste zuerst). SCHREIBWEISE (Dauer-Regel): leichtes, verständliches Deutsch, kurze Sätze; ALLE Fachbegriffe, Namen und Zahlen (z.B. BM25, RRF, Qdrant, ENV-Variablen, Endpunkt-Namen) BEHALTEN, aber jeden in einem kurzen Halbsatz erklären — NIE durch Weglassen vereinfachen; kompakt halten (der Hauptagent liest über das Werkzeug 'was_kann_cortex' ALLE Einträge auf einmal ein), aber vollständig genug, dass man erkennt WAS eingebaut wurde; einfache Überschrift. Ähnliche/redundante Einträge dürfen zusammengefasst werden — Datum sekundär, entscheidend ist WAS Cortex kann. Quelle des Info-Bereichs in den Dashboard-Einstellungen (GET /api/features). Verankert in DEPLOY.md.",
 	"features": [
+		{
+			"id": "chat-streaming-web-cockpit",
+			"eingebaut": "12.07.2026, 20:19 Uhr",
+			"dienst": "agent 0.79.0 + dashboard 0.79.0 (Web-Cockpit)",
+			"name": "Chat-Streaming im Web-Cockpit: Antwort ab dem ersten Absatz, Vorlesen ab dem ersten vollständigen Absatz",
+			"kurz": "Der Chat im Web-Cockpit nutzt jetzt denselben Streaming-Weg wie die Android-App: Die Antwort erscheint absatzweise, sobald sie fertig geprüft ist, und der Lautsprecher liest ab dem ersten vollständigen Absatz vor — nicht mehr erst am Ende. Bricht der Stream ab, springt automatisch der bisherige Weg ein.",
+			"erklaerung": "Neu ist der Endpunkt POST /api/chat/stream im Dashboard, eine Durchreiche des Agenten-Streams /chat/stream als Server-Sent-Events. Der Agent liefert dabei ausschließlich den kanonischen, regelgeprüften Endtext — das ready-Ereignis bestätigt das mit canonical_reply=true, damit Anzeige und Vorlesen den Textstücken vertrauen dürfen (Lehre aus dem Quellen-TTS-Vorfall vom 11.07.). Der Endtext wird absatzweise übertragen; das Cockpit zeigt jeden Absatz sofort an und reiht vollständige Absätze in eine neue Vorlese-Warteschlange ein, sodass Gemini-TTS mit Absatz eins beginnt, während der Rest noch ankommt. Herzschlag-Ereignisse alle 15 Sekunden halten die Verbindung durch lange Websuche- und Regelprüfungs-Phasen offen — das frühere Risiko, dass eine fertige Antwort an einem Timeout oder einer eingeschlafenen Tunnel-Verbindung verloren geht, entfällt. Turns im Turn-Logbuch messen ihre Phasen wieder (Router, Suche, Web+Antwort, neu auch die Regelprüfung als regeln_ms), und die interne Mehrfachsuche erzeugt ihre Suchvarianten jetzt parallel zur Direktsuche — bei schwachen Treffern entfallen rund vier Sekunden Wartezeit, das Suchergebnis bleibt identisch."
+		},
 		{
 			"id": "schnelle-einstellungen-config-cache",
 			"eingebaut": "12.07.2026, 20:08 Uhr",

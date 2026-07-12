@@ -4036,11 +4036,17 @@ button{font-family:inherit;cursor:pointer}
       return out.length ? out : [text];
     }
     let ttsSeq = 0;   // Sequenz-Token: eine neue Antwort bricht die laufende Vorlese-Pipeline sauber ab
-    async function speak(text){
-      if(!isOn() || !available){ if(!isOn()) console.debug("[TTS] Vorlesen AUS -> kein Text an Gemini-TTS gesendet (keine Tokens verbraucht)"); return; }   // Logik-Sonde: bei AUS geht NICHTS an Gemini
+    /* Vorlese-WARTESCHLANGE (Frank 2026-07-12, TTS-Vorgabe): Absaetze koennen einzeln eingereiht
+       werden — das Vorlesen startet ab dem ERSTEN vollstaendigen Absatz, waehrend der Rest der
+       Antwort noch eintrifft (nur kanonischer, regelgepruefter Text — ai-agent-frameworks §9.1).
+       speakReset() beendet die vorherige Antwort (frueher: ++ttsSeq direkt in speak). */
+    let ttsQueue = []; let ttsPumping = false;
+    function speakReset(){
+      ttsSeq++; ttsQueue = [];
+      if(audio){ try{ audio.pause(); }catch(_){ } audio = null; }       // vorherige Wiedergabe stoppen
+    }
+    async function speakPipeline(text, myseq){
       const clean = (text||"").trim(); if(!clean) return;
-      const myseq = ++ttsSeq;
-      if(audio){ try{ audio.pause(); }catch(_){ } }                     // vorherige Wiedergabe stoppen
       // PERFORMANCE: NICHT auf das komplette Audio des ganzen Textes warten (~11s bei langer Antwort).
       // Satz fuer Satz: der ERSTE Satz wird sofort generiert + abgespielt (~2s), der naechste wird
       // WAEHRENDDESSEN vorausgeladen (Pipelining) -> Vorlesen startet sofort, laeuft nahtlos weiter.
@@ -4066,7 +4072,26 @@ button{font-family:inherit;cursor:pointer}
         }
       }catch(_){ /* Vorlesen ist Komfort — Fehler nie hart melden */ }
     }
+    async function speakEnqueue(text){
+      if(!isOn() || !available){ if(!isOn()) console.debug("[TTS] Vorlesen AUS -> kein Text an Gemini-TTS gesendet (keine Tokens verbraucht)"); return; }   // Logik-Sonde: bei AUS geht NICHTS an Gemini
+      const clean = (text||"").trim(); if(!clean) return;
+      ttsQueue.push(clean);
+      if(ttsPumping) return;                                            // laufender Abarbeiter nimmt es mit
+      ttsPumping = true;
+      try{
+        while(ttsQueue.length){
+          const t = ttsQueue.shift();
+          await speakPipeline(t, ttsSeq);                               // Seq je Abschnitt: Reset bricht sauber ab
+        }
+      } finally { ttsPumping = false; }
+    }
+    async function speak(text){                                         // eine komplette Antwort (klassischer Weg)
+      speakReset();
+      await speakEnqueue(text);
+    }
     window.speakTTS = speak;                                            // sendChat ruft das nach jeder Antwort
+    window.speakTTSReset = speakReset;                                  // Streaming: neuer Turn beendet alte Wiedergabe
+    window.speakTTSEnqueue = speakEnqueue;                              // Streaming: fertigen Absatz einreihen
     if(testBtn) testBtn.addEventListener("click", async ()=>{
       const v = (voiceSel && voiceSel.value) || chosenVoice();
       if(voiceSel && voiceSel.value) localStorage.setItem(LS_VOICE, voiceSel.value);
@@ -4385,6 +4410,37 @@ button{font-family:inherit;cursor:pointer}
     if(saveBtn) saveBtn.addEventListener("click", saveCortexKnowledge);
     loadFeatureInfo();
   })();
+  /* SSE-Leser fuer POST /api/chat/stream (Frank 2026-07-12): kanonische Absatz-Deltas + done-Event.
+     onDelta bekommt jeden Textabschnitt; Rueckgabe ist die finale /chat-Antwort aus dem done-Event.
+     Der Agent garantiert per ready.canonical_reply, dass Deltas bereits der finale, regelgeprüfte
+     Text sind (ai-agent-frameworks §9.1) — Anzeige und Vorlesen duerfen ihnen vertrauen. */
+  async function chatStream(payload, onDelta){
+    const r = await fetch("/api/chat/stream", {method:"POST",
+      headers:{"Content-Type":"application/json", Accept:"text/event-stream"},
+      body: JSON.stringify(payload)});
+    if(!r.ok || !r.body) throw new Error("HTTP "+r.status);
+    const reader = r.body.getReader();
+    const dec = new TextDecoder();
+    let buf = "", final = null;
+    for(;;){
+      const {done, value} = await reader.read();
+      if(done) break;
+      buf += dec.decode(value, {stream:true});
+      let idx;
+      while((idx = buf.indexOf("\n\n")) >= 0){
+        const raw = buf.slice(0, idx); buf = buf.slice(idx + 2);
+        const line = raw.split("\n").find(l=> l.startsWith("data:"));
+        if(!line) continue;
+        let ev; try{ ev = JSON.parse(line.slice(5)); }catch(_){ continue; }
+        if(ev.type === "delta" && typeof ev.text === "string"){ onDelta(ev.text); }
+        else if(ev.type === "done"){ final = ev.response; }
+        else if(ev.type === "error"){ throw new Error(ev.message || "stream"); }
+      }
+      if(final) break;
+    }
+    if(!final) throw new Error("kein done-Event");
+    return final;
+  }
   async function sendChat(){
     if(chatBusy) return;
     const ta = document.getElementById("chatText");
@@ -4401,8 +4457,33 @@ button{font-family:inherit;cursor:pointer}
       const cat = (catSel && catSel.value && catSel.value!=="__new__") ? catSel.value : "";
       const titEl = document.getElementById("chatTitle");
       const titV = titEl ? titEl.value.trim() : "";
-      const r = await apiSend("/api/chat","POST",{text, session_id:chatSession, category:cat, title:titV, response_size:chatSize, context_mode:chatMode, context_mode_revision:chatModeRevision});
-      typing.remove();
+      const payload = {text, session_id:chatSession, category:cat, title:titV, response_size:chatSize, context_mode:chatMode, context_mode_revision:chatModeRevision};
+      /* Streaming zuerst: kanonische Absatz-Deltas sofort anzeigen + ab dem ersten VOLLSTAENDIGEN
+         Absatz vorlesen (TTS-Vorgabe). Scheitert der Stream BEVOR Text ankam, uebernimmt der
+         bewaehrte /api/chat-Weg (fail-closed, Verhalten exakt wie bisher). */
+      if(window.speakTTSReset) window.speakTTSReset();               // neuer Turn: alte Wiedergabe beenden
+      let bubble = null, acc = "", spokenUpto = 0;
+      const onDelta = (t)=>{
+        acc += t;
+        if(!bubble){ typing.remove(); bubble = chatAppend("agent", ""); }
+        bubble.textContent = acc;
+        const logEl = document.getElementById("chatLog"); if(logEl) logEl.scrollTop = logEl.scrollHeight;
+        const cut = acc.lastIndexOf("\n\n");                         // vollstaendige Absaetze -> vorlesen
+        if(cut > spokenUpto){
+          const seg = acc.slice(spokenUpto, cut);
+          if(window.speakTTSEnqueue && seg.trim()) window.speakTTSEnqueue(seg);
+          spokenUpto = cut;
+        }
+      };
+      let r;
+      try{
+        r = await chatStream(payload, onDelta);
+      }catch(streamErr){
+        if(bubble) throw streamErr;                                  // Text war schon sichtbar -> ehrlicher Fehler, kein Doppel
+        console.debug("[Chat] Stream nicht verfuegbar -> klassischer Weg:", String(streamErr));
+        r = await apiSend("/api/chat","POST",payload);               // Fallback: klassischer Weg (wie bisher)
+      }
+      if(typing.parentNode) typing.remove();
       if(titEl && (r.action==="save_confirm" || r.action==="store_clarify" || r.action==="store")) titEl.value = "";   // Titel nur leeren, wenn der Server den Speicher-Vorgang erkannt hat (Server haelt ihn im pending) — sonst fuer den naechsten Versuch behalten
       let meta = "";
       if(r.action==="recall") meta = "↳ nachgeschlagen" + (r.recall_hits!=null ? " · "+r.recall_hits+" Treffer" : "");
@@ -4413,8 +4494,17 @@ button{font-family:inherit;cursor:pointer}
       else if(r.action==="rule_confirm") meta = "↳ Regel-Vorschlag — Ja / Nein / Bearbeiten";
       else if(r.action==="rule_saved") meta = "↳ Regel übernommen";
       else if(r.action==="rule_cancelled") meta = "↳ keine Regel angelegt";
-      chatAppend("agent", r.reply || "(keine Antwort)", meta || null);
-      if(window.speakTTS && r.reply) window.speakTTS(r.reply);    // Antwort vorlesen (wenn Lautsprecher an)
+      const finalText = r.reply || "(keine Antwort)";
+      if(bubble){
+        bubble.textContent = finalText;                            // kanonischer Endstand (== gestreamte Deltas)
+        if(meta){ const m = document.createElement("span"); m.className = "msg-meta"; m.textContent = meta; bubble.appendChild(m); }
+        const logEl = document.getElementById("chatLog"); if(logEl) logEl.scrollTop = logEl.scrollHeight;
+        const rest = (r.reply || "").slice(spokenUpto);            // Rest ab dem letzten vorgelesenen Absatz
+        if(window.speakTTSEnqueue && rest.trim()) window.speakTTSEnqueue(rest);
+      } else {
+        chatAppend("agent", finalText, meta || null);
+        if(window.speakTTS && r.reply) window.speakTTS(r.reply);   // Antwort vorlesen (wenn Lautsprecher an)
+      }
       if(r.action==="rule_confirm"){ ruleCard(r.reply); }         // Regel-Bestätigung mit Bearbeiten
       else if(r.options && r.options.length){ chatOptions(r.options); }   // anklickbare Ja/Nein-Knöpfe
       if(r.action==="recall") chatSources(r.sources, r.confidence);   // Nr. 39: Quellen-Chips + Konfidenz
