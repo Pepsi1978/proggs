@@ -8,6 +8,7 @@
         Title="OpenCode Launcher"
         Height="860" Width="1360"
         MinHeight="600" MinWidth="960"
+        WindowState="Maximized"
         WindowStartupLocation="CenterScreen"
         Background="{DynamicResource WindowBg}"
         WindowStyle="None"
