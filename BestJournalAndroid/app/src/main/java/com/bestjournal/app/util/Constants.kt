@@ -217,7 +217,9 @@ object Constants {
     // Epoch millis when consent record was last written (audit trail).
     const val PREF_CONSENT_TIMESTAMP = "consent_timestamp"
     // Current policy version — bump on material DSE/SDK changes to force re-consent.
-    const val CURRENT_POLICY_VERSION = "3.1"
+    // 3.2 (2026-07-12): TTS legal basis corrected to Art. 49(1)(a) explicit consent
+    // (no DPA with Microsoft), purchase-status cloud function disclosed (Section 6).
+    const val CURRENT_POLICY_VERSION = "3.2"
 
     // Firebase Analytics opt-in — default false.
     // Toggle in ConsentScreen AND Settings → Datenschutz switches it at runtime.

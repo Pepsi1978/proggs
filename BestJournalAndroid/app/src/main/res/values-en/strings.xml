@@ -1310,7 +1310,7 @@ With Premium: up to 150 per day.</string>
 
 ✓ No AI training with your data
 ✓ Requests are not stored permanently
-✓ Encrypted under the EU-US Data Privacy Framework
+✓ Encrypted; transferred under the EU-US Data Privacy Framework, additionally safeguarded by the EU Standard Contractual Clauses in the Google contract
 
 Important note: Since your journal entries can contain particularly sensitive data (health, religion, personal relationships — Art. 9 GDPR), we ask for your explicit consent to AI processing here. AI outputs are suggestions, not professional advice, and do not replace a specialist.
 
@@ -1319,7 +1319,7 @@ You can change this at any time in the settings.</string>
     <string name="privacy_gate_gemini_cancel">Later</string>
 
     <string name="privacy_gate_tts_title">Enable premium voices</string>
-    <string name="privacy_gate_tts_body">With the premium voices, reading aloud sounds more natural. Your text is sent encrypted (HTTPS/TLS) to a Microsoft speech service in the USA and returned as audio.\n\n✓ Transmission solely for speech synthesis\n✓ Third-country transfer to the USA (Microsoft is certified under the EU-US Data Privacy Framework)</string>
+    <string name="privacy_gate_tts_body">With the premium voices, reading aloud sounds more natural. Your text is sent encrypted (HTTPS/TLS) to a Microsoft speech service in the USA and returned as audio.\n\nImportant: There is no contract with Microsoft for this service. The transfer relies solely on your explicit consent (Art. 49(1)(a) GDPR). Possible risks: access by U.S. authorities, and harder enforcement of your rights against Microsoft.\n\n✓ Transmission solely for speech synthesis\n✓ Revocable at any time in the settings\n\nAlternative: the local reading voice without any data transfer.</string>
     <string name="privacy_gate_tts_accept">Enable</string>
     <string name="privacy_gate_tts_cancel">Later</string>
 

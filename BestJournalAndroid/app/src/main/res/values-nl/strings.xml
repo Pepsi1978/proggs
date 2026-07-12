@@ -1168,7 +1168,7 @@ Met Premium: tot 150 per dag.</string>
 
 ✓ Geen AI-training met jouw gegevens
 ✓ Verzoeken worden niet permanent opgeslagen
-✓ Versleuteld volgens EU-US Data Privacy Framework
+✓ Versleuteld; doorgifte volgens EU-US Data Privacy Framework, aanvullend beveiligd door de EU-modelcontractbepalingen in de Google-overeenkomst
 
 Belangrijke opmerking: Omdat je dagboekentries bijzonder gevoelige gegevens kunnen bevatten (gezondheid, religie, persoonlijke relaties — Art. 9 AVG), vragen we hier om je uitdrukkelijke toestemming voor AI-verwerking. De AI-uitvoer is advies, geen professioneel advies en vervangt geen specialist.
 
@@ -1177,7 +1177,7 @@ Je kunt dit op elk moment wijzigen in de instellingen.</string>
     <string name="privacy_gate_gemini_cancel">Annuleren</string>
 
     <string name="privacy_gate_tts_title">Premium-stemmen activeren</string>
-    <string name="privacy_gate_tts_body">Met de premium-stemmen klinkt het voorlezen natuurlijker. Je tekst wordt versleuteld (HTTPS/TLS) naar een Microsoft-spraakdienst in de VS gestuurd en als audio teruggegeven.\n\n\u2713 Overdracht uitsluitend voor de spraaksynthese\n\u2713 Doorgifte naar derde land VS (Microsoft is gecertificeerd volgens het EU-US Data Privacy Framework)</string>
+    <string name="privacy_gate_tts_body">Met de premium-stemmen klinkt het voorlezen natuurlijker. Je tekst wordt versleuteld (HTTPS/TLS) naar een Microsoft-spraakdienst in de VS gestuurd en als audio teruggegeven.\n\nBelangrijk: Voor deze dienst bestaat geen overeenkomst met Microsoft. De doorgifte berust uitsluitend op je uitdrukkelijke toestemming (art. 49 lid 1 onder a) AVG). Mogelijke risico\'s: toegang door Amerikaanse autoriteiten, bemoeilijkte handhaving van je rechten tegenover Microsoft.\n\n✓ Overdracht uitsluitend voor de spraaksynthese\n✓ Op elk moment herroepbaar in de instellingen\n\nAlternatief: De lokale voorleesstem zonder enige gegevensoverdracht.</string>
     <string name="privacy_gate_tts_accept">Akkoord en voorlezen</string>
     <string name="privacy_gate_tts_cancel">Annuleren</string>
 

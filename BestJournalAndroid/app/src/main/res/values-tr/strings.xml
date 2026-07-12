@@ -1149,7 +1149,7 @@ Premium ile: günlük 150\'ye kadar.</string>
 
 ✓ Verilerinle KI eğitimi yapılmaz
 ✓ İstekler kalıcı olarak saklanmaz
-✓ AB-ABD Veri Gizliliği Çerçevesi\'ne göre şifrelenir
+✓ Şifrelenir; aktarım AB-ABD Veri Gizliliği Çerçevesi kapsamında yapılır, ayrıca Google sözleşmesindeki AB standart sözleşme maddeleriyle güvence altına alınır
 
 Önemli Not: Günlük girişlerin özellikle hassas veriler içerebileceğinden (sağlık, din, kişisel ilişkiler — GDPR Md. 9), KI işleme için açık onayını istiyoruz. KI çıktıları öneridir, profesyonel tavsiye değildir ve bir uzmanın yerini tutmaz.
 
@@ -1158,7 +1158,7 @@ Bunu istediğin zaman Ayarlar\'dan değiştirebilirsin.</string>
     <string name="privacy_gate_gemini_cancel">İptal</string>
 
     <string name="privacy_gate_tts_title">Premium sesleri etkinleştir</string>
-    <string name="privacy_gate_tts_body">Premium seslerle sesli okuma daha doğal duyulur. Metnin şifreli olarak (HTTPS/TLS) ABD\'deki bir Microsoft ses hizmetine gönderilir ve ses olarak geri döner.\n\n✓ Aktarım yalnızca ses sentezi içindir\n✓ Üçüncü ülke aktarımı ABD (Microsoft, EU-US Data Privacy Framework kapsamında sertifikalıdır)</string>
+    <string name="privacy_gate_tts_body">Premium seslerle sesli okuma daha doğal duyulur. Metnin şifreli olarak (HTTPS/TLS) ABD\'deki bir Microsoft ses hizmetine gönderilir ve ses olarak geri döner.\n\nÖnemli: Bu hizmet için Microsoft ile bir sözleşme bulunmuyor. Aktarım yalnızca açık rızana dayanır (GDPR md. 49(1)(a)). Olası riskler: ABD makamlarının erişimi, haklarını Microsoft\'a karşı kullanmanın zorlaşması.\n\n✓ Aktarım yalnızca ses sentezi içindir\n✓ İstediğin zaman Ayarlar\'dan geri alınabilir\n\nAlternatif: Hiçbir veri aktarımı olmadan yerel sesli okuma sesi.</string>
     <string name="privacy_gate_tts_accept">Kabul et ve oku</string>
     <string name="privacy_gate_tts_cancel">İptal</string>
 
