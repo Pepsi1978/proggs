@@ -2428,7 +2428,7 @@ button{font-family:inherit;cursor:pointer}
     if(!curEntry || !curEntry.doc_id){ flash("drawerStatus","Kein löschbarer Eintrag",false); return; }
     const yes = document.getElementById("deleteYes"); yes.disabled = true;
     try{
-      const r = await apiSend("/api/entry?doc_id="+encodeURIComponent(curEntry.doc_id),"DELETE");
+      const r = await apiSend("/api/entry?doc_id="+encodeURIComponent(curEntry.doc_id),"DELETE",undefined,30000);
       if(r && r.ok!==false){ closeDrawer(); loadEntries(); loadOverview(); }
       else { flash("drawerStatus",(r&&r.detail)||"Löschen fehlgeschlagen",false); }
     }catch(e){ flash("drawerStatus","Löschen fehlgeschlagen",false); }
@@ -2458,7 +2458,7 @@ button{font-family:inherit;cursor:pointer}
       const qs = new URLSearchParams();
       if(t.path) qs.set("path", t.path);
       if(t.brain_title) qs.set("title", t.brain_title);
-      const r = await apiSend("/api/logbook?"+qs.toString(), "DELETE");
+      const r = await apiSend("/api/logbook?"+qs.toString(), "DELETE", undefined, 30000);
       if(r && r.ok!==false){
         if(t.row){
           // Zeilen-Weg: Ansicht UNVERAENDERT lassen — nur die Zeile raus + Monats-Zaehler runter.
@@ -2628,10 +2628,19 @@ button{font-family:inherit;cursor:pointer}
     {path:"brain.chunk_chars",label:"Suchstück-Größe",unit:"Zeichen",kind:"Speicher/Embedding",search:"Indexierung für semantische Suche",agents:"Speicheragent schreibt, Brain-API chunked und bettet ein.",summary:"Wie lang neue Suchstücke beim Speichern werden.",explanation:"Der Volltext bleibt 1:1 gespeichert. Für Qdrant wird zusätzlich ein Suchindex aus überlappenden Chunks gebaut. Diese Größe gilt für neue, geänderte oder neu eingebettete Einträge.",down:"Nach unten: feinere Treffer und mehr Chunks; mehr Embeddings, mehr Qdrant-Punkte, mehr Overfetch nötig.",up:"Nach oben: weniger Chunks und mehr Zusammenhang; einzelne Treffer werden gröber und können mehrere Themen vermischen.",areas:"Wirkt auf zukünftige Speicherung, Re-Embed und semantische Suchqualität.",affects:"Direkt gekoppelt mit Chunk-Überlappung, Vektor-Overfetch und Qdrant-Punktzahl.",recommendation:"3200 ist als ca. 512-800-Token-Startwert präziser; alte Einträge bleiben unverändert bis Re-Embed."},
     {path:"brain.chunk_overlap",label:"Suchstück-Überlappung",unit:"Zeichen",kind:"Speicher/Embedding",search:"Indexierung für semantische Suche",agents:"Brain-API beim Speichern/Re-Embedding.",summary:"Wie stark sich benachbarte Suchstücke überschneiden.",explanation:"Überlappung verhindert, dass ein wichtiger Satz genau an der Chunk-Grenze zerschnitten wird. Sie erzeugt bewusst doppelte Suchfläche.",down:"Nach unten: weniger Qdrant-Punkte und weniger Doppelung; Grenzsätze können schlechter gefunden werden.",up:"Nach oben: stabilere Treffer über Grenzen hinweg; mehr Chunks/Redundanz und mehr Speicher-/Sucharbeit.",areas:"Wirkt auf neue oder neu eingebettete Einträge, nicht rückwirkend auf unveränderte alte Chunks.",affects:"Muss kleiner als Suchstück-Größe bleiben; beeinflusst Qdrant-Punktzahl und Overfetch-Bedarf.",recommendation:"400 Zeichen sind ca. 12,5% von 3200 und liegen im 10-20%-Best-Practice-Bereich."}
   ];
-  async function apiSend(path, method, body){
-    const r = await fetch(path,{method, headers:{"Content-Type":"application/json",Accept:"application/json"}, body:JSON.stringify(body)});
-    if(!r.ok) throw new Error(r.status);
-    return r.json();
+  async function apiSend(path, method, body, timeoutMs){
+    /* timeoutMs (optional): bricht die Anfrage nach X ms sichtbar ab, statt endlos still zu haengen
+       (Frank-Bug 2026-07-12: Loeschen ueber einen eingeschlafenen Tunnel wartete ewig ohne Feedback).
+       Ohne timeoutMs verhaelt sich apiSend exakt wie bisher (Chat & lange Aktionen unveraendert). */
+    const ctl = timeoutMs ? new AbortController() : null;
+    const timer = ctl ? setTimeout(()=>ctl.abort(), timeoutMs) : null;
+    try{
+      const r = await fetch(path,{method, headers:{"Content-Type":"application/json",Accept:"application/json"}, body:JSON.stringify(body), signal: ctl ? ctl.signal : undefined});
+      if(!r.ok) throw new Error(r.status);
+      return r.json();
+    } finally {
+      if(timer) clearTimeout(timer);
+    }
   }
   function flash(elId, text, ok=true){
     const e = document.getElementById(elId); if(!e) return;

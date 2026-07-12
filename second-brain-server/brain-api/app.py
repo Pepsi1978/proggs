@@ -451,6 +451,7 @@ VERSION = "1.30.0 (10.07.2026, 21:39 Uhr)"  # 1.30.0 (Level-2 Gruppe A, Punkte 7
 VERSION = "1.31.0 (10.07.2026, 22:00 Uhr)"  # 1.31.0 (Level-2 Gruppe A, Punkt 4 — Frank-Freigabe 2026-07-10): BI-TEMPORALE FAKTEN. Optionale Payload-Felder valid_from/valid_until (YYYY-MM-DD), gesetzt AUSSCHLIESSLICH manuell ueber NEU PUT /entry/validity (Dashboard-Drawer) — NIE automatisch (Franks Vorgabe: kein automatisches Bewerten/Ersetzen). NICHTS wird geloescht oder gefiltert: abgelaufene Eintraege bleiben voll auffindbar, /search + by-title geben die Gueltigkeit nur als Kennzeichnung mit (der Agent sagt dann galt bis X). Alle Rebuild-Wege (Kategorie-Wechsel, PUT /entry, Papierkorb+Restore) ERHALTEN die Felder (Feld-Drift-Schutz qdrant.md Par. 9). Leeres Feld entfernt die Grenze (delete_payload). Wer will, fragt historisch (Wo wohnte ich 2024?) und aktuell (Wo wohne ich?) — beides bleibt beantwortbar. Alt: 1.30.0.
 VERSION = "1.32.0 (11.07.2026, 13:25 Uhr)"  # 1.32.0: PUT /entry erzeugt Chunks und Embeddings vollständig VOR jeder Löschung, schreibt und verifiziert den neuen Stand zuerst und entfernt erst danach alte doc_id-/Rest-Chunks. Ein Embedding-, Budget- oder Upsert-Fehler kann den bisherigen Eintrag dadurch nicht mehr vorzeitig löschen. Alt: 1.31.0.
 VERSION = "1.32.1 (11.07.2026, 19:51 Uhr)"  # 1.32.1: Atomare additive Kategorie-Zuordnung unter dem globalen Eintrags-Schreib-Lock verhindert verlorene parallele Ergänzungen. Alt: 1.32.0.
+VERSION = "1.33.0 (12.07.2026, 17:56 Uhr)"  # 1.33.0 PERFORMANCE: BM25-Index-Rebuild laeuft nach Schreibwegen debounced im HINTERGRUND (statt dass die naechste Suche ihn bezahlt — vorher +~1s auf der ersten Suche nach jedem Chat-Turn, weil der Live-Gespraechs-Mirror den Index jedes Mal verwarf) + Single-Flight-Build (parallele Suchen bauen den Index nicht mehr N-fach gleichzeitig). Konsistenz unveraendert: keine Suche sieht je einen veralteten Index. Alt: 1.32.1.
 
 # Startup-Banner (Observability-First: Log-Pfad + Version EINMAL ausgeben)
 _log(logging.INFO, "brain-api startet", version=VERSION, log_path=LOG_PATH)
@@ -872,37 +873,81 @@ class _Bm25Index:
 
 _bm25_cache: dict[str, tuple[float, "_Bm25Index"]] = {}   # user_id -> (built_at, index)
 _bm25_lock = threading.Lock()
+_bm25_builds: dict[str, threading.Event] = {}              # laufender Build je user (Single-Flight)
+_bm25_warm_timer: "threading.Timer | None" = None          # debounced Hintergrund-Rebuild nach Schreibwegen
+_BM25_WARM_DEBOUNCE_S = 1.0
+_BM25_DEFAULT_USER = "frank"
 
 
 def _bm25_invalidate() -> None:
-    """Nach JEDEM Schreibweg (Upsert/Delete) den Index verwerfen — naechste Suche baut frisch."""
+    """Nach JEDEM Schreibweg (Upsert/Delete) den Index verwerfen — Konsistenz unveraendert: keine
+    Suche sieht je einen veralteten Index. NEU (Performance-Tiefendebugging 2026-07-12): der Rebuild
+    startet debounced SOFORT im Hintergrund, statt dass die NAECHSTE Suche ihn bezahlt. Vorher
+    kostete die erste Suche nach jedem Chat-Turn +~1s, weil der Live-Gespraechs-Mirror nach jedem
+    Turn schreibt und damit jedes Mal den Index verwarf (gemessen: 2,1s statt 1,1s)."""
+    global _bm25_warm_timer
     with _bm25_lock:
+        users = list(_bm25_cache.keys()) or [_BM25_DEFAULT_USER]
         _bm25_cache.clear()
+        if _bm25_warm_timer is not None:
+            _bm25_warm_timer.cancel()
+        t = threading.Timer(_BM25_WARM_DEBOUNCE_S, _bm25_warm, args=(users,))
+        t.daemon = True
+        _bm25_warm_timer = t
+        t.start()
+
+
+def _bm25_warm(users: list[str]) -> None:
+    """Hintergrund-Rebuild nach Schreibwegen (debounced) — reine Beschleunigung: schlaegt er fehl,
+    baut die naechste Suche den Index wie bisher selbst (Single-Flight verhindert Doppelarbeit)."""
+    for u in users:
+        try:
+            _bm25_index(u)
+        except Exception as e:  # noqa: BLE001 — Warm-Rebuild darf nie etwas kaputt machen
+            log.warning("BM25-Warm-Rebuild fehlgeschlagen (%s): %s", u, e)
 
 
 def _bm25_index(user_id: str) -> "_Bm25Index":
-    """Gecachter BM25-Index (TTL + Schreib-Invalidierung). Baut aus NUR chunk_text + Metadaten."""
-    now = time.monotonic()
-    with _bm25_lock:
-        hit = _bm25_cache.get(user_id)
-        if hit and now - hit[0] < BM25_TTL_S:
-            return hit[1]
-    # Build AUSSERHALB des Locks (Scroll/Bau nicht serialisieren, fastapi §2-Prinzip)
-    pts = _scroll(Filter(must=[FieldCondition(key="user_id", match=MatchValue(value=user_id))]),
-                  with_payload=["doc_id", "title", "category", "categories", "parent", "parents",
-                                "created_at", "updated_at", "chunk_text"])
-    chunks = [{
-        "doc_id": p.payload.get("doc_id"), "title": p.payload.get("title") or "",
-        "category": p.payload.get("category") or "", "categories": cats_from_payload(p.payload),
-        "parent": p.payload.get("parent") or "", "parents": p.payload.get("parents") or [],
-        "created_at": p.payload.get("created_at") or "", "updated_at": p.payload.get("updated_at"),
-        "text": p.payload.get("chunk_text") or "",
-    } for p in pts]
-    idx = _Bm25Index(chunks)
-    with _bm25_lock:
-        _bm25_cache[user_id] = (time.monotonic(), idx)
-    probe(len(chunks) < 200_000, "BM25-Index ungewoehnlich gross", chunks=len(chunks))
-    return idx
+    """Gecachter BM25-Index (TTL + Schreib-Invalidierung). Baut aus NUR chunk_text + Metadaten.
+    Single-Flight: es baut immer nur EIN Thread; parallele Suchen warten auf denselben Build,
+    statt N-fach gleichzeitig zu scrollen/tokenisieren (Thundering-Herd-Schutz)."""
+    while True:
+        with _bm25_lock:
+            hit = _bm25_cache.get(user_id)
+            if hit and time.monotonic() - hit[0] < BM25_TTL_S:
+                return hit[1]
+            ev = _bm25_builds.get(user_id)
+            if ev is None:
+                ev = threading.Event()
+                _bm25_builds[user_id] = ev
+                builder = True
+            else:
+                builder = False
+        if not builder:
+            # Ein anderer Thread baut gerade: auf dessen Ergebnis warten, dann Cache neu pruefen.
+            ev.wait(timeout=60.0)
+            continue
+        try:
+            # Build AUSSERHALB des Locks (Scroll/Bau nicht serialisieren, fastapi §2-Prinzip)
+            pts = _scroll(Filter(must=[FieldCondition(key="user_id", match=MatchValue(value=user_id))]),
+                          with_payload=["doc_id", "title", "category", "categories", "parent", "parents",
+                                        "created_at", "updated_at", "chunk_text"])
+            chunks = [{
+                "doc_id": p.payload.get("doc_id"), "title": p.payload.get("title") or "",
+                "category": p.payload.get("category") or "", "categories": cats_from_payload(p.payload),
+                "parent": p.payload.get("parent") or "", "parents": p.payload.get("parents") or [],
+                "created_at": p.payload.get("created_at") or "", "updated_at": p.payload.get("updated_at"),
+                "text": p.payload.get("chunk_text") or "",
+            } for p in pts]
+            idx = _Bm25Index(chunks)
+            with _bm25_lock:
+                _bm25_cache[user_id] = (time.monotonic(), idx)
+            probe(len(chunks) < 200_000, "BM25-Index ungewoehnlich gross", chunks=len(chunks))
+            return idx
+        finally:
+            with _bm25_lock:
+                _bm25_builds.pop(user_id, None)
+            ev.set()
 
 
 def _rrf_fuse(ranked_lists: list[list[str]], k: int = None) -> dict[str, float]:

@@ -51,7 +51,7 @@ VERSION = "0.67.8 (10.07.2026, 20:03 Uhr)"  # 0.67.8: Chronik-Fix: Das neue Kate
 VERSION = "0.67.9 (10.07.2026, 20:13 Uhr)"  # 0.67.9: Sichtbarer Bump zum agent-0.69.3-Werkzeug lies_eintrags_kategorien(id) fuer gezielte Kategorie-Metadaten. Alt: 0.67.8.
 VERSION = "0.68.0 (10.07.2026, 20:34 Uhr)"  # 0.68.0 (Level-2 Gruppe A, Punkte 2+3): KERN-WISSEN — neue Einstellungen-Karte 'Kern-Wissen (immer praesent)': 5 Kern-Bloecke (profil/ziele/projekte/aufgaben/vorlieben) ansehen + bearbeiten (PUT /api/coreblocks/{name} -> agent /coreblocks) + Aenderungs-Chronik (/api/coreblocks/log). Gehoert zu agent 0.70.0 (coreblocks.py, Prompt-Injektion, Werkzeug aktualisiere_kernblock). features.json-Eintrag kern-wissen-bloecke.
 VERSION = "0.69.0 (10.07.2026, 21:17 Uhr)"  # 0.69.0 (Level-2 Gruppe A, Punkte 1+10): HERKUNFT+EBENE IM DRAWER — neue Provenance-Zeile unter dem Datum (Quelle deutsch benannt, Ebene Kurzzeit-/Langzeitgedaechtnis, Vertrauens-Level hoch=direkt von Frank / mittel=automatisch). Kommt aus brain-api 1.29.0 (by-title liefert source/layer/trust). Gehoert zu agent 0.70.1 (source=chat beim Speichern) + librarian 0.12.0 (Befoerderungs-Nachtaufgabe). features.json-Eintrag gedaechtnis-ebenen-provenance. Alt: 0.68.0.
-VERSION = "0.69.1 (10.07.2026, 21:25 Uhr)"  # 0.69.1 HALF-OPEN-KEEP-ALIVE-DEPLOY (Stack-Bugfix #47796): alle uvicorn-Dienste (brain-api/agent/dashboard/librarian) laufen jetzt mit --timeout-keep-alive 620, sb-mcp 1.4.1 mit MCP_KEEP_ALIVE_S=620 — behebt die sporadischen MCP-Timeouts (socket closed / -32001) durch server-seitig zu frueh geschlossene idle Verbindungen (Half-Open-Sockets in den CLI-Client-Pools). Kein UI-Feature, sichtbarer Bump zum Server-Deploy. Alt: 0.69.0.
+VERSION = "0.70.0 (12.07.2026, 17:59 Uhr)"  # 0.70.0 PERFORMANCE-Tiefendebugging (Stack-Deploy): (1) Chat-Proxy-Timeout 60s -> 300s — echte Chat-Laufzeiten liegen bei 20-74s, das 60s-Cap warf fertige Antworten weg ('Antwort kommt nie an'). (2) Loesch-Aktionen im Cockpit haben jetzt einen 30s-Abbruch mit sichtbarer Fehlermeldung statt endlosem stillen Haengen. Dazu agent 0.77.0 (geloeschte Gespraeche bleiben geloescht + Selbstregel-Pruefung nach der Bereinigung) und brain-api 1.33.0 (BM25-Rebuild im Hintergrund). Alt: 0.69.1 (10.07.2026, 21:25 Uhr, Half-Open-Keep-Alive-Deploy #47796).
 VERSION = "0.70.0 (10.07.2026, 21:39 Uhr)"  # 0.70.0 (Level-2 Gruppe A, Punkte 7+8): Sichtbarer Bump zur Recall-Verstaerkung — brain-api 1.30.0 (/entries/touch + recall_boost_promille-Limit) + agent 0.71.0 (brain_touch nach jeder Gedaechtnis-Antwort). features.json-Eintrag recall-verstaerkung-sanftes-vergessen. Alt: 0.69.1.
 VERSION = "0.71.0 (10.07.2026, 22:00 Uhr)"  # 0.71.0 (Level-2 Gruppe A, Punkt 4): Drawer-Gueltigkeitszeile (gueltig ab/bis Datumsfelder + Uebernehmen -> NEU Proxy PUT /api/entry/validity -> brain /entry/validity); Provenance-Zeile zeigt galt bis X. features.json-Eintrag bi-temporale-fakten. Alt: 0.70.0.
 VERSION = "0.72.0 (10.07.2026, 22:12 Uhr)"  # 0.72.0 (Level-2 Gruppe A, Punkt 6): Sichtbarer Bump zur Episoden-Destillation des Bibliothekars (librarian 0.13.0) — Fakten-Kandidaten aus Gespraechen als Morgen-Report-Funde, Speichern erst nach Franks Ja. features.json-Eintrag episoden-destillation. Alt: 0.71.0.
@@ -202,9 +202,11 @@ def _aput(endpoint: str, payload: dict):
     return r.json()
 
 
-def _apost(endpoint: str, payload: dict):
-    # 60s: ein recall macht ZWEI LLM-Aufrufe (entscheiden + antworten) — grosszuegig timen.
-    r = _HTTP.post(f"{AGENT_URL}{endpoint}", json=payload, headers=HEADERS, timeout=60.0)
+def _apost(endpoint: str, payload: dict, timeout: float = 60.0):
+    # Default 60s; /chat nutzt 300s — gemessene echte Chat-Laufzeiten liegen bei 20-74s
+    # (Websuche + Regel-Pruefung), und ein 60s-Cap warf fertige Antworten weg (Frank-Bug 2026-07-12:
+    # 'Antwort kommt nie an' — der Agent war fertig, das Dashboard hatte schon aufgelegt).
+    r = _HTTP.post(f"{AGENT_URL}{endpoint}", json=payload, headers=HEADERS, timeout=timeout)
     r.raise_for_status()
     return r.json()
 
@@ -1096,7 +1098,7 @@ async def api_chat(request: Request) -> dict:
     if rs in ("auto", "s", "m", "xl"):    # A/S/M/XL-Profil: Agent haengt den zentralen Prompt an + staffelt Tavily
         payload["response_size"] = rs
     try:
-        return await asyncio.to_thread(_apost, "/chat", payload)
+        return await asyncio.to_thread(_apost, "/chat", payload, 300.0)
     except Exception as e:  # noqa: BLE001 — Agent offline/Fehler: sauberer Fehler statt 500
         _log(logging.WARNING, "Chat-Proxy fehlgeschlagen", err=str(e))
         return {"ok": False, "reply": "Der Agent ist gerade nicht erreichbar — versuch es bitte gleich nochmal."}

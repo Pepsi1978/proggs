@@ -79,6 +79,7 @@ VERSION = "0.74.0 (11.07.2026, 13:25 Uhr)"  # 0.74.0: Speicherentwuerfe werden a
 VERSION = "0.74.1 (11.07.2026, 19:33 Uhr)"  # 0.74.1: Regel-Intent verlangt jetzt einen ausdruecklichen Regelauftrag; erwaehnte oder verneinte Regeln bleiben normaler Speicherinhalt. Alt: 0.74.0.
 VERSION = "0.75.0 (11.07.2026, 22:47 Uhr)"  # 0.75.0: Regeln sind aus Automatik, Suche und Speichern ausgegliedert und laufen nur noch ueber den expliziten R-Modus; mehrturnige 1:1-Speicherankuendigungen bleiben als save_input gebunden. Alt: 0.74.1.
 VERSION = "0.76.4 (12.07.2026, 16:41 Uhr)"  # 0.76.4: Quellenattributionen und interne Selbstregel-Prueftexte werden vor Anzeige, Persistenz und TTS entfernt; interne Pruefanweisungen werden nicht mehr an Nutzdaten angehaengt. Alt: 0.76.1.
+VERSION = "0.77.0 (12.07.2026, 17:54 Uhr)"  # 0.77.0 PERFORMANCE-Tiefendebugging: (1) Geloeschte Gespraeche bleiben geloescht — DELETE /logbook verwirft die passende LIVE-Sitzung (Tombstone stoppt geplante Live-Mirrors, Session-Spiegel geloescht, Rest-Eintrag im Gehirn best-effort abgeraeumt); vorher schrieb der Live-Mirror das geloeschte Gespraech nach dem naechsten Turn zurueck ('Loeschen geht gar nicht'). (2) Selbstregel-Pruefung laeuft jetzt NACH der deterministischen Antwort-Bereinigung und prueft den wirklich sichtbaren Text — erspart die ~28s-LLM-Neugenerierung, die bisher fast jede Web-Antwort wegen ohnehin entfernter Markdown-Links bezahlte; Regel-Feature unveraendert aktiv. Alt: 0.76.4.
 
 # ---------------------------------------------------------------------------
 # Konfiguration (alles aus Umgebungsvariablen — Secrets nie im Code)
@@ -4774,6 +4775,47 @@ def _schedule_conversation_mirror(sid: str, snap: dict) -> None:
     _track_background_task(asyncio.create_task(_mirror_session_to_brain_now(sid, snap), context=bg_context))
 
 
+_MIRROR_TOMBSTONE_SEQ = 10**12   # Tombstone einer GELOESCHTEN Sitzung: jeder geplante Mirror wird uebersprungen
+
+
+async def _evict_live_conversation(start_label: str) -> int:
+    """Nach dem Loeschen eines Gespraechs die passende LIVE-Sitzung verwerfen (Frank-Bug 2026-07-12:
+    der Live-Mirror bzw. der Timeout-Flush schrieb das gerade geloeschte Gespraech nach dem naechsten
+    Turn sofort wieder ins Gehirn + als .txt zurueck — 'Loeschen geht gar nicht'). Verwirft NUR
+    Sitzungen, deren Start-Label EXAKT dem geloeschten Titel entspricht; alte Gespraeche und fremde
+    Sitzungen bleiben unberuehrt. Gibt die Anzahl verworfener Sitzungen zurueck."""
+    label = (start_label or "").strip()
+    if not label:
+        return 0
+    evicted: list[tuple[str, str]] = []
+    async with _lock:
+        for sid, s in list(_sessions.items()):
+            try:
+                s_title, _content, s_label = _conversation_logbook_payload(s)
+            except Exception:  # noqa: BLE001 — eine kaputte Session darf das Loeschen nicht verhindern
+                continue
+            if s_label == label:
+                _sessions.pop(sid, None)
+                evicted.append((sid, s_title))
+    for sid, s_title in evicted:
+        # Tombstone UNTER dem Mirror-Lock setzen: ein bereits geplanter Live-Mirror (laeuft als
+        # Hintergrund-Task nach der Antwort) sieht seq < Tombstone und ueberspringt still —
+        # nichts schreibt das geloeschte Gespraech zurueck. Session-Neuanlage hebt den Tombstone auf.
+        mlock = _conversation_mirror_locks.setdefault(sid, asyncio.Lock())
+        async with mlock:
+            _conversation_mirror_latest[sid] = _MIRROR_TOMBSTONE_SEQ
+        await asyncio.to_thread(_drop_session_file, sid)
+        # Rest-Race schliessen: hat ein Mirror ZWISCHEN Gehirn-Loeschung und Tombstone schon
+        # gespeichert, raeumt dieser best-effort-Forget den wiederauferstandenen Eintrag ab (idempotent).
+        try:
+            await asyncio.to_thread(brain_forget_title, s_title)
+        except Exception:  # noqa: BLE001 — best-effort; Datei- und Gehirn-Loeschung sind schon passiert
+            _log(logging.WARNING, "Nach-Eviction-Forget fehlgeschlagen", title=s_title)
+        checkpoint("logbuch_session_eviction", "Live-Sitzung nach Gespraechs-Loeschung verworfen",
+                   ok=True, session=sid, title=s_title)
+    return len(evicted)
+
+
 def flush_session_to_logbook(session: dict) -> None:
     """Schreibt den Gespraechsverlauf 1:1 ins Gehirn (Kategorie gespraeche) UND als .txt-Kopie."""
     if not session["messages"]:
@@ -5276,7 +5318,9 @@ def _enforce_self_rules_on_outcome(outcome: dict) -> dict:
             reasoning_override="low",
         ).strip()
         if revised:
-            outcome["reply"] = revised
+            # Auch die Neugenerierung durch die deterministische Bereinigung schicken — der finale
+            # Text ist damit IMMER sanitisiert, egal welcher Pfad ihn erzeugt hat (idempotent, billig).
+            outcome["reply"] = _sanitize_visible_reply(revised)
         checkpoint("self_rules_enforced", "Freie Antwort abschließend gegen aktive Selbst-Regeln geprüft",
                    ok=bool(revised), active=sum(1 for item in loaded if item.get("enabled")),
                    changed=bool(revised and revised != original), audit_only=False,
@@ -7478,6 +7522,7 @@ async def chat(req: ChatReq) -> dict:
             if session is None:
                 session = _new_session(req.user_id)
                 _sessions[sid] = session
+                _conversation_mirror_latest.pop(sid, None)   # Eviction-Tombstone einer geloeschten Vorgaenger-Sitzung aufheben
             session["messages"].append({"role": "frank", "text": req.text})
             pending = session.get("pending")
             _frank_snap = _session_snapshot(sid, session)
@@ -7509,8 +7554,12 @@ async def chat(req: ChatReq) -> dict:
             req.memory_categories,
             req.context_mode_revision,
         )
-        outcome = await asyncio.to_thread(_enforce_self_rules_on_outcome, outcome)
+        # ERST deterministisch bereinigen (Links/Markdown/Quellen), DANN Regel-Audit: der LLM-Pruefer
+        # bewertet so den wirklich sichtbaren Text. Vorher fiel fast jede Web-Antwort wegen Markdown-
+        # Links durch, die der Regex ohnehin entfernt — und bezahlte ~28s LLM-Neugenerierung
+        # (Performance-Tiefendebugging 2026-07-12, Turn 1ee4c6f07024).
         outcome = _finalize_visible_outcome(outcome)
+        outcome = await asyncio.to_thread(_enforce_self_rules_on_outcome, outcome)
 
         async with _lock:
             session["pending"] = outcome.get("pending")
@@ -7593,6 +7642,7 @@ async def chat_stream(req: ChatReq) -> StreamingResponse:
         if session is None:
             session = _new_session(req.user_id)
             _sessions[sid] = session
+            _conversation_mirror_latest.pop(sid, None)   # Eviction-Tombstone einer geloeschten Vorgaenger-Sitzung aufheben
         session["messages"].append({"role": "frank", "text": req.text})
         pending = session.get("pending")
         _frank_snap = _session_snapshot(sid, session)
@@ -7626,8 +7676,10 @@ async def chat_stream(req: ChatReq) -> StreamingResponse:
     def _on_turn_done(fut: asyncio.Future) -> None:
         async def _fin() -> None:
             try:
-                outcome = await asyncio.to_thread(_enforce_self_rules_on_outcome, fut.result())
+                # Gleiche Reihenfolge wie /chat: erst bereinigen, dann Regel-Audit (s. Kommentar dort).
+                outcome = fut.result()
                 outcome = _finalize_visible_outcome(outcome)
+                outcome = await asyncio.to_thread(_enforce_self_rules_on_outcome, outcome)
             except BaseException as e:  # noqa: BLE001 — Fehler weiterreichen, Key freigeben
                 if rid:
                     await _dedup_release(rid)
@@ -8026,11 +8078,13 @@ def _logbook_path_from_title(title: str):
 
 
 @app.delete("/logbook", dependencies=[Depends(require_auth)])
-def delete_logbook(title: str = "", path: str = "") -> dict:
+async def delete_logbook(title: str = "", path: str = "") -> dict:
     """Loescht die zu einem geloeschten Gehirn-Gespraech gehoerende .txt-Kopie von Platte Z, damit
     Logbuch (.txt) und Gehirn (Kategorie 'gespraeche') synchron bleiben. agent=uid 1000 (Schreibrecht);
     das Dashboard hat /logbook nur read-only. Identifikation per Vektor-Titel ODER direktem rel. Pfad.
-    STRENG auf .txt INNERHALB LOGBOOK_DIR begrenzt. Sync def -> Threadpool (fastapi §1)."""
+    STRENG auf .txt INNERHALB LOGBOOK_DIR begrenzt. Async, Datei-I/O via to_thread (fastapi §1).
+    NEU (Frank-Bug 2026-07-12): verwirft zusaetzlich die passende LIVE-Sitzung, damit der
+    Live-Mirror/Timeout-Flush das geloeschte Gespraech nicht sofort wieder ins Gehirn schreibt."""
     base = Path(LOGBOOK_DIR).resolve()
     target = None
     if path:
@@ -8039,16 +8093,24 @@ def delete_logbook(title: str = "", path: str = "") -> dict:
         if rel and base in cand.parents and cand.suffix.lower() == ".txt":
             target = cand
     elif title:
-        target = _logbook_path_from_title(title)
-    if target is None:
-        return {"ok": True, "deleted": False}
-    if not target.is_file():
-        return {"ok": True, "deleted": False}
-    target.unlink()
+        target = await asyncio.to_thread(_logbook_path_from_title, title)
+    # Start-Label des geloeschten Gespraechs bestimmen (Titel ohne 'Gespraech'-Praefix bzw. Datei-stem)
+    # und eine noch LAUFENDE Sitzung dazu verwerfen — sonst Resurrection durch den Live-Mirror.
+    stem = (title or "").strip()
+    for _pref in ("gespräch", "gespraech"):
+        if stem.lower().startswith(_pref):
+            stem = stem[len(_pref):].strip()
+            break
+    if not stem and target is not None:
+        stem = re.sub(r"\s+\(\d+\)$", "", target.stem)   # _unique_path-Suffix ' (2)' abstreifen
+    evicted = await _evict_live_conversation(stem)
+    if target is None or not await asyncio.to_thread(target.is_file):
+        return {"ok": True, "deleted": False, "evicted": evicted}
+    await asyncio.to_thread(target.unlink)
     checkpoint("logbuch_loeschen", "Logbuch-.txt von Platte Z geloescht (Sync mit Gehirn-Loeschung)",
-               ok=True, file=target.name)
+               ok=True, file=target.name, evicted=evicted)
     _log(logging.INFO, "Logbuch-.txt geloescht", file=target.name)
-    return {"ok": True, "deleted": True, "file": target.name}
+    return {"ok": True, "deleted": True, "file": target.name, "evicted": evicted}
 
 
 class LogbookWriteReq(BaseModel):

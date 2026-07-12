@@ -166,6 +166,11 @@ Hat sich die `compose.yaml` selbst geaendert: die compose.yaml ebenfalls hochlad
    geaenderten Code-Dateien, nie die `.env`.
 7. **Reihenfolge der Quelle der Wahrheit**: erst lokal im Repo aendern → committen + pushen → DANN
    deployen. Code im Repo allein ist noch nicht live; live wird er erst durch den scp + `--build`.
+8. **WireGuard PersistentKeepalive = 25 s (server-seitig, seit 2026-07-12):** beide Peers in
+   `/etc/wireguard/wg0.conf` tragen `PersistentKeepalive = 25`. Grund: Franks Clients haengen hinter
+   Mobilfunk-CGNAT — ohne Keepalive stirbt der NAT-Eintrag bei Inaktivitaet, der Browser reused dann
+   tote Verbindungen und das Cockpit "haengt" beim Neuladen. Bei neuen Peers den Eintrag mitgeben
+   (Laufzeit-Aenderung: `wg set wg0 peer <pubkey> persistent-keepalive 25`).
 
 ## Faustregel
 
