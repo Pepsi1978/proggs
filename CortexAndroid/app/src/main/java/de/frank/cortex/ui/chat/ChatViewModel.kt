@@ -418,7 +418,7 @@ class ChatViewModel : ViewModel() {
             // nach Session-Wechsel nicht verloren gehen).
             var streamedMsgId: String? = null
             val rawAccum = StringBuilder()
-            var streamingStartedAt: Long? = null
+            var firstResponseElapsedMs: Long? = null
             try {
                 if (WireGuardManager.state.value != TunnelState.CONNECTED) {
                     // Mutierende Speicher- und Regelauftraege gehen ohne VPN nicht verloren,
@@ -507,16 +507,16 @@ class ChatViewModel : ViewModel() {
                             (rawAccum.isNotEmpty() && rawAccum[rawAccum.length - 1] == '\n'))
                     rawAccum.append(delta)
                     val current = rawAccum.toString()
-                    if (streamingStartedAt == null && delta.isNotBlank()) {
-                        streamingStartedAt = System.currentTimeMillis()
+                    if (firstResponseElapsedMs == null && delta.isNotBlank()) {
+                        // Freeze the end-to-end latency when the first visible answer text arrives.
+                        firstResponseElapsedMs = System.currentTimeMillis() - sendStartedAt
                     }
-                    val streamingElapsedMs = streamingStartedAt?.let { System.currentTimeMillis() - it }
                     val msgId = streamedMsgId
                     if (msgId == null) {
                         val m = ChatMessage(
                             text = current,
                             isUser = false,
-                            responseTimeMs = streamingElapsedMs
+                            responseTimeMs = firstResponseElapsedMs
                         )
                         streamedMsgId = m.id
                         _uiState.update { it.copy(messages = it.messages + m, isLoading = false) }
@@ -525,7 +525,7 @@ class ChatViewModel : ViewModel() {
                             st.copy(messages = st.messages.map {
                                 if (it.id == msgId) it.copy(
                                     text = current,
-                                    responseTimeMs = streamingElapsedMs
+                                    responseTimeMs = firstResponseElapsedMs
                                 ) else it
                             })
                         }
@@ -579,7 +579,7 @@ class ChatViewModel : ViewModel() {
                 val existingId = streamedMsgId
                 val agentMsg = response.toChatMessage(
                     id = existingId ?: UUID.randomUUID().toString(),
-                    responseTimeMs = streamingStartedAt?.let { System.currentTimeMillis() - it }
+                    responseTimeMs = firstResponseElapsedMs ?: (System.currentTimeMillis() - sendStartedAt)
                 )
 
                 _uiState.update { st ->
@@ -640,7 +640,7 @@ class ChatViewModel : ViewModel() {
                     sessionId,
                     streamedMsgId,
                     rawAccum,
-                    streamingStartedAt?.let { System.currentTimeMillis() - it }
+                    firstResponseElapsedMs
                 )
                 throw e
             } catch (e: Exception) {
@@ -653,7 +653,7 @@ class ChatViewModel : ViewModel() {
                     sessionId,
                     streamedMsgId,
                     rawAccum,
-                    streamingStartedAt?.let { System.currentTimeMillis() - it }
+                    firstResponseElapsedMs
                 )
                 _uiState.update {
                     it.copy(
