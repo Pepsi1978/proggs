@@ -49,14 +49,14 @@ public sealed partial class MainViewModel : ObservableObject
             Status = "OPENCODE",
             IsEnabled = true
         });
-        SelectedProfile = Profiles.Single(profile => profile.Id == "standard");
+        SelectedProfile = Profiles.Single(profile => profile.Id == "minimal");
         SelectedModel = ModelGroups.FirstOrDefault(g => g.Models.Count > 0)?.Models.FirstOrDefault();
         _ = RefreshOpenRouterFreeModelsAsync();
         WorkDir = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), "proggs");
         _ = CheckOpenCodeUpdateAsync();
 
         var version = Assembly.GetExecutingAssembly().GetName().Version?.ToString(3) ?? "1.16.2";
-        Version = $"Version {version} (12.07.2026, 21:04 Uhr)";
+        Version = $"Version {version} (12.07.2026, 22:03 Uhr)";
     }
 
     public ObservableCollection<ModelGroupEntry> ModelGroups { get; } = new();
@@ -85,7 +85,7 @@ public sealed partial class MainViewModel : ObservableObject
 
     partial void OnSelectedModelChanged(ModelEntry? value)
     {
-        SelectedProfile = Profiles.FirstOrDefault(profile => profile.Id == "standard");
+        SelectedProfile = Profiles.FirstOrDefault(profile => profile.Id == "minimal");
         SelectedProvider = null;
         Providers.Clear();
         SelectedThinkingOption = null;
