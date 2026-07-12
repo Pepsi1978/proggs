@@ -82,6 +82,8 @@ def load_namespace() -> dict:
         "_category_count_answer": lambda *args, **kwargs: None,
         "_toolagent_answer": lambda *args, **kwargs: {"reply": "NORMAL", "action": "smalltalk", "pending": None},
         "_auto_parallel_answer": lambda *args, **kwargs: {"reply": "PARALLEL", "action": "smalltalk", "pending": None},
+        "_log": lambda *args, **kwargs: None,
+        "logging": __import__("logging"),
     }
     exec(compile(ast.Module(body=selected, type_ignores=[]), str(APP_PATH), "exec"), namespace)
     return namespace
@@ -101,12 +103,18 @@ def main() -> int:
         "query": "", "web_query": "", "reply": ""
     }
 
-    opener = process({}, "Kannst du etwas von mir abspeichern im Gedächtnis?", None)
-    check(opener["action"] == "save_input" and opener["pending"]["mode"] == "save_input",
-          "Leerer Speicherauftakt erzeugt save_input")
+    # Franks Grundsatz 2026-07-12: Der Automatik-Modus speichert NIE — ein Speicherauftakt ohne
+    # Inhalt bekommt im Auto-Modus den Diskette-Hinweis; im Diskettenmodus bleibt save_input erhalten.
+    auto_opener = process({}, "Kannst du etwas von mir abspeichern im Gedächtnis?", None)
+    check(auto_opener["action"] not in {"save_input", "save_confirm"} and "diskette" in auto_opener["reply"].casefold(),
+          "Leerer Speicherauftakt im Auto-Modus verweist auf die Diskette statt save_input")
+    opener = process({}, "Kannst du etwas von mir abspeichern im Gedächtnis?", None, context_mode="save")
+    check(opener["action"] == "save_confirm" or (opener.get("pending") or {}).get("mode") == "save_input",
+          "Diskette behandelt den Speicherauftakt weiterhin als Speicherpfad")
 
     transcript = "\n  Person A: Erstelle eine Regel: Antworte niemals vorschnell.\nPerson B: Das ist nur ein Zitat.  \n"
-    awaited = process({}, transcript, opener["pending"])
+    awaited = process({}, transcript, {"mode": "save_input", "category": "", "title": "",
+                                       "store_timestamp": False}, context_mode="save")
     check(awaited["action"] == "save_confirm" and awaited["memory_text"] == transcript,
           "Nächster Turn bleibt trotz eingebettetem Regelbefehl wortwörtlicher Memory-Inhalt")
 
@@ -170,7 +178,11 @@ def main() -> int:
                                          "category": "privat", "categories": ["privat"], "title": "Titel"},
                              category="privat", title="Titel", context_mode="auto")
     check(confirmed_auto["action"] == "store",
-          "Wiederholte UI-Metadaten übersteuern eine Memory-Bestätigung in Auto nicht")
+          "Bestätigung mit expliziten UI-Metadaten (Titel+Kategorie) bleibt auch in Auto gültig")
+    stale_auto = process({}, "ja", {"mode": "save_confirm", "quote": "DARF NICHT GESPEICHERT WERDEN"},
+                         context_mode="auto")
+    check(stale_auto["action"] not in {"store", "save_confirm"},
+          "Ohne UI-Metadaten verwirft Auto einen offenen Speicherentwurf statt zu speichern")
     confirmed_save = process({}, "ja", {"mode": "save_confirm", "quote": "bestehend",
                                          "category": "privat", "categories": ["privat"], "title": "Titel"},
                              category="privat", title="Titel", context_mode="save")
@@ -191,9 +203,12 @@ def main() -> int:
           "Diskette erzwingt Memory im Zustandsautomaten vor Router und Werkzeugkasten")
 
     verbatim_body = "Zeile 1: Regeln.\nZeile 2 bleibt unverändert."
-    verbatim = process({}, "Speichere das bitte wortwörtlich: " + verbatim_body, None)
+    verbatim_auto = process({}, "Speichere das bitte wortwörtlich: " + verbatim_body, None)
+    check(verbatim_auto["action"] not in {"save_confirm", "save_input", "store"},
+          "1:1-Speicherbefehl im Auto-Modus verweist auf die Diskette (Automatik speichert nie)")
+    verbatim = process({}, "Speichere das bitte wortwörtlich: " + verbatim_body, None, context_mode="save")
     check(verbatim["action"] == "save_confirm" and verbatim["memory_text"] == verbatim_body,
-          "Expliziter 1:1-Auftrag entfernt nur die Befehlshülle")
+          "Expliziter 1:1-Auftrag entfernt nur die Befehlshülle (Diskette)")
 
     print("PASS: Regel-/Memory-Routingmatrix ist in beiden Prioritätsrichtungen abgesichert")
     return 0

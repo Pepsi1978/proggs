@@ -294,9 +294,12 @@ def main() -> int:
     route = ns["hauptagent_route"]
     for raw_router_output in ("{}", json.dumps({"intent": "bogus"})):
         ns["llm_generate"] = lambda *args, output=raw_router_output, **kwargs: output
-        routed = route({}, source, None)
+        routed = route({}, source, None, context_mode="save")
         check(routed["intent"] == "save" and routed["quote"],
-              "Gültiges, aber unbrauchbares Router-JSON darf Speicherbefehle nicht verlieren")
+              "Gültiges, aber unbrauchbares Router-JSON darf Speicherbefehle nicht verlieren (Diskette)")
+        auto_routed = route({}, source, None)
+        check(auto_routed["intent"] != "save",
+              "Im Automatik-Modus liefert der Router NIE save (Franks Grundsatz 2026-07-12)")
     ns["llm_generate"] = lambda *args, **kwargs: json.dumps({"intent": "query", "query": source})
     check(route({}, source, None, context_mode="search")["intent"] == "query",
           "Ein bewusster Suchmodus hat Vorrang vor der Speicher-Poka-Yoke")
@@ -321,8 +324,10 @@ def main() -> int:
         check(needle in APP_SOURCE, f"Speicherfluss nicht vollständig verdrahtet: {needle}")
     check("reply = route.get(\"reply\")" not in APP_SOURCE[APP_SOURCE.index('if intent == "save":'):APP_SOURCE.index("# 3) Wissensfrage")],
           "Bestätigungsfrage kann nicht auf das alte Router-Zitat zurückfallen")
-    check("Router-Fehler; eindeutiger Speicherwunsch bleibt im sicheren Speicherpfad" in APP_SOURCE,
-          "Provider- und JSON-Fehler des Routers behalten eindeutige Speicherwünsche im Speicherpfad")
+    check("Router-Fehler; Diskettenmodus bleibt im sicheren Speicherpfad" in APP_SOURCE,
+          "Provider- und JSON-Fehler des Routers behalten den Diskettenmodus im Speicherpfad")
+    check("Auto-Modus-Sperre im Router: save -> query" in APP_SOURCE,
+          "Der Router kennt im Automatik-Modus keinen save-Intent (Franks Grundsatz 2026-07-12)")
     check("rules.is_rule_request(user_text)" not in APP_SOURCE,
           "Automatik, Suche und Speichern können keine Regelheuristik mehr auslösen")
 

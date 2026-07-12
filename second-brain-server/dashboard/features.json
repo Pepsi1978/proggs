@@ -1,7 +1,15 @@
 {
-	"stand": "12.07.2026, 20:19 Uhr",
+	"stand": "12.07.2026, 22:16 Uhr",
 	"hinweis": "PFLEGE-PFLICHT: Bei JEDEM Deploy, der ein neues System/Feature einbaut, hier einen Eintrag ERGÄNZEN (neueste zuerst). SCHREIBWEISE (Dauer-Regel): leichtes, verständliches Deutsch, kurze Sätze; ALLE Fachbegriffe, Namen und Zahlen (z.B. BM25, RRF, Qdrant, ENV-Variablen, Endpunkt-Namen) BEHALTEN, aber jeden in einem kurzen Halbsatz erklären — NIE durch Weglassen vereinfachen; kompakt halten (der Hauptagent liest über das Werkzeug 'was_kann_cortex' ALLE Einträge auf einmal ein), aber vollständig genug, dass man erkennt WAS eingebaut wurde; einfache Überschrift. Ähnliche/redundante Einträge dürfen zusammengefasst werden — Datum sekundär, entscheidend ist WAS Cortex kann. Quelle des Info-Bereichs in den Dashboard-Einstellungen (GET /api/features). Verankert in DEPLOY.md.",
 	"features": [
+		{
+			"id": "automatik-hart-read-only",
+			"eingebaut": "12.07.2026, 22:16 Uhr",
+			"dienst": "agent 0.81.0 + dashboard 0.81.0",
+			"name": "Automatik-Modus speichert nie mehr — Logik-Härtung des Agentensystems",
+			"kurz": "Im Automatik-Modus liest der Hauptagent nur noch (Gedächtnis + Web) und stellt keine Speicher-Rückfragen mehr. Speichern läuft ausschließlich über die Diskette, die Lupe sucht nur, R macht nur Regeln.",
+			"erklaerung": "Auslöser war das Gespräch am 12.07.2026 um 20:30 Uhr: Auf die Frage nach der Typenbezeichnung des Autos wollte der Agent plötzlich etwas abspeichern, weil der LLM-Router Franks Beschwerde 'Da steht doch alles im Gedächtnis drin' als Speicherwunsch fehldeutete (das Wort Gedächtnis genügte der alten Heuristik). Jetzt ist der Automatik-Modus im Zustandsautomaten hart read-only, mit drei unabhängigen Schichten: Erstens verwirft eine Auto-Grenze offene Speicher-Dialoge und beantwortet echte Speicher-Befehle wie 'Speichere bitte …' deterministisch mit dem Hinweis auf die Diskette, statt den Router raten zu lassen. Zweitens kennt der LLM-Router im Automatik-Modus den save-Intent nicht mehr — was er auch klassifiziert, wird zur Gedächtnis-Frage, auch im Fehler-Fallback. Drittens fängt eine letzte Sperre direkt vor dem Speicherpfad alles Übrige ab und protokolliert es. Nachfragen zu gespeichertem Wissen ('Warum findest du das nicht?') laufen immer als Lese-Anfrage. Vollständig unverändert bleiben: der komplette Diskette-Ablauf mit Rückfrage, Ja/Nein, Dubletten-Erkennung und Nachbearbeitung, die Lupe als reine Suche, der R-Modus für Regeln, das Dashboard-Sendefeld mit Titel und Kategorie sowie der Bearbeiten-Stift. Abgesichert durch den neuen Offline-Matrixtest auto_mode_no_store_test.py mit den wortgleichen Sätzen des Vorfalls plus angepasste Routing-, Destillations- und Eval-Prüfungen — alle grün."
+		},
 		{
 			"id": "chat-streaming-web-cockpit",
 			"eingebaut": "12.07.2026, 20:19 Uhr",

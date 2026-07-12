@@ -84,6 +84,7 @@ VERSION = "0.78.1 (12.07.2026, 19:54 Uhr)"  # 0.78.1 PERFORMANCE Handy<->Server:
 VERSION = "0.79.0 (12.07.2026, 20:19 Uhr)"  # 0.79.0 STREAMING + RADAR + PARALLEL-SUCHE (Frank-Auftraege #47862): (1) /chat/stream liefert den kanonischen finalen Text jetzt ABSATZWEISE (ready-Event traegt canonical_reply=true als Capability-Zusage, §9.1) — das Web-Cockpit zeigt die Antwort ab dem ersten Absatz und liest ab dem ersten VOLLSTAENDIGEN Absatz vor. (2) Turn-Logbuch-Phasen-Timing repariert: router_ms/suche_ms/web_antwort_ms werden im neuen Profil-/Toolagent-Fluss wieder gefuellt (profile_route/auto_parallel/toolagent als Marker), NEU regeln_ms fuer die Selbstregel-Phase — das Flaschenhals-Radar sieht wieder. (3) Multi-Query-Varianten-LLM startet PARALLEL zur Direktsuche (Ergebnis identisch, ~4s schneller bei schwachen Treffern; bewusster Preis: ein kleiner Router-Call auch bei starken Treffern). Alt: 0.78.1.
 VERSION = "0.79.1 (12.07.2026, 20:45 Uhr)"  # 0.79.1: Gedächtnis-Nachfragen werden deterministisch als Lesen geroutet; im Fragetext genannte Kategorien stehen vor semantisch ähnlichen Gesprächsprotokollen. Alt: 0.79.0.
 VERSION = "0.80.0 (12.07.2026, 21:00 Uhr)"  # 0.80.0: Gespräche werden ausschließlich im Logbuch gespeichert; Live- und Timeout-Spiegelung nach Qdrant sind entfernt. Alt: 0.79.1.
+VERSION = "0.81.0 (12.07.2026, 22:01 Uhr)"  # 0.81.0 LOGIK-HAERTUNG Agentensystem (Franks Grundsatz, Vorfall 20:30/20:31 Uhr Typenbezeichnung): Der AUTOMATIK-Modus ist jetzt HART read-only — er liest nur Gedaechtnis + Web und kann konzeptionell nicht mehr speichern oder Speicher-Rueckfragen stellen (Poka-Yoke Stufe 3 im Zustandsautomaten, 3 unabhaengige Schichten: auto_boundary verwirft offene Speicher-Dialoge + beantwortet Speicher-Imperative deterministisch mit Diskette-Hinweis; der Router kennt im Auto-Modus keinen save-Intent mehr (auch nicht im Fehler-Fallback); der save-Block leitet Reste laut geloggt zu query um). Beschwerden wie 'Da steht doch alles im Gedaechtnis drin' laufen IMMER als Gedaechtnis-Frage. Diskette/Lupe/R/Dashboard-Titel+Kategorie/Bearbeiten-Stift unveraendert. Neuer Offline-Matrixtest auto_mode_no_store_test.py. Alt: 0.80.0.
 
 # ---------------------------------------------------------------------------
 # Konfiguration (alles aus Umgebungsvariablen — Secrets nie im Code)
@@ -3923,9 +3924,11 @@ def hauptagent_route(session: dict, user_text: str, pending: dict | None, contex
             raise ValueError("kein Objekt")
     except Exception as exc:  # noqa: BLE001 — defensiv: nie crashen, sauber zurueckfallen
         _log(logging.WARNING, "Hauptagent-Routing fehlgeschlagen", error=type(exc).__name__, raw=raw[:300])
-        if (not pending and mode not in {"smalltalk", "search"}
-                and (mode == "save" or _is_definite_save_request(user_text))):
-            checkpoint("route", "Router-Fehler; eindeutiger Speicherwunsch bleibt im sicheren Speicherpfad",
+        # Franks Grundsatz 2026-07-12: NUR die Diskette (mode=save) darf in den Speicherpfad —
+        # ein Router-Fehler im Auto-Modus faellt nie mehr auf save zurueck ("im Gedaechtnis" in
+        # einer FRAGE + Router-Crash landete sonst als Speicher-Rueckfrage, Vorfall 20:31 Uhr).
+        if not pending and mode == "save":
+            checkpoint("route", "Router-Fehler; Diskettenmodus bleibt im sicheren Speicherpfad",
                        ok=False, fallback=True, error=type(exc).__name__)
             return {"intent": "save", "quote": user_text.strip(), "query": "", "web_query": "", "reply": ""}
         return {"intent": "smalltalk", "quote": "", "query": "",
@@ -3955,7 +3958,8 @@ def hauptagent_route(session: dict, user_text: str, pending: dict | None, contex
         data["quote"] = ""
     # Ein syntaktisch gueltiges, aber inhaltlich unbrauchbares Router-JSON darf einen eindeutigen
     # Speicherbefehl genauso wenig verlieren wie eine Exception. Bewusste UI-Modi haben Vorrang.
-    if (not pending and mode not in {"smalltalk", "search"}
+    # NICHT im Auto-Modus: dort gibt es keinen Speicherpfad mehr (Franks Grundsatz 2026-07-12).
+    if (not pending and mode not in {"smalltalk", "search", "auto"}
             and (mode == "save" or _is_definite_save_request(user_text)) and data["intent"] != "save"):
         old_intent = data["intent"]
         data["intent"] = "save"
@@ -3965,6 +3969,15 @@ def hauptagent_route(session: dict, user_text: str, pending: dict | None, contex
         data["reply"] = ""
         checkpoint("route", "Deterministische Korrektur: eindeutiger Speicherbefehl erzwingt save",
                    ok=True, vorher=old_intent, route="save")
+    if not pending and mode == "auto" and data.get("intent") == "save":
+        # Typisierter Route-Raum (orchestrator-Almanach §1.1/§2.6): Im Automatik-Modus gibt es
+        # KEINEN save-Intent — was das LLM auch klassifiziert, wird zur Gedaechtnis-Frage.
+        # Die Speicher-Imperative sind bereits vor dem Router deterministisch beantwortet.
+        old_intent = data["intent"]
+        data.update(intent="query", quote="", query=(data.get("query") or "").strip() or user_text.strip(),
+                    web_query=(data.get("web_query") or "").strip(), reply="")
+        checkpoint("route", "Auto-Modus-Sperre im Router: save -> query (Automatik speichert nie)",
+                   ok=True, vorher=old_intent, route="query")
     if not pending and mode == "auto" and _is_recall_request(user_text):
         old_intent = data["intent"]
         data.update(intent="query", quote="", query=user_text.strip(), web_query="", reply="")
@@ -6601,7 +6614,12 @@ def _eval_one(case: dict, sess: dict, cats: list) -> dict:
             # also_ok (Frank-Urteil 2026-07-04, Fall #76): manche Saetze sind LEGITIM doppeldeutig
             # (Tagebuch-Aussage darf auch als Speicherwunsch gedeutet werden — die Bestaetigungs-
             # Rueckfrage schuetzt ohnehin). Solche Faelle zaehlen mit beiden Deutungen als PASS.
-            out["pass"] = (intent == "smalltalk") or (intent in (case.get("also_ok") or []))
+            also_ok = list(case.get("also_ok") or [])
+            # Seit der Auto-Modus-Sperre (0.81.0) mappt der Router save -> query: Faelle, die
+            # frueher legitim als save durchgehen durften, duerfen jetzt genauso legitim query sein.
+            if "save" in also_ok and "query" not in also_ok:
+                also_ok.append("query")
+            out["pass"] = (intent == "smalltalk") or (intent in also_ok)
             if out["pass"] and intent != "smalltalk":
                 out["note"] = f"intent '{intent}' ist hier ausdruecklich mit-erlaubt (also_ok, Frank-Urteil)"
         elif kind == "store_title":
@@ -7271,6 +7289,19 @@ def _process_turn(session: dict, user_text: str, pending: dict | None, category:
         # statt normale Gespräche oder den Speichermodus mit einer alten Bestätigung zu blockieren.
         checkpoint("rule_boundary", "Moduswechsel verwirft offenen Regelentwurf", ok=True, mode=mode)
         pending = None
+    # AUTOMATIK IST HART READ-ONLY (Franks Grundsatz 2026-07-12, Vorfall 20:30 Uhr "Typenbezeichnung"):
+    # Der Hauptagent liest im Auto-Modus nur (Gedaechtnis + Web) und speichert NIE — er stellt auch
+    # keine Speicher-Rueckfragen. Speichern laeuft ausschliesslich ueber die Diskette (mode=save)
+    # oder ueber explizite UI-Signale (Dashboard-Titel/Kategorie = explicit_save, Bearbeiten-Stift =
+    # memory_edit). Gleiche Mechanik wie die Lupen-Grenze: Poka-Yoke Stufe 3 im Zustandsautomaten —
+    # der LLM-Router KANN hier keinen Speicherdialog mehr oeffnen, egal wie er klassifiziert.
+    auto_read_only = (mode == "auto" and not memory_edit
+                      and not (title or "").strip() and not (category or "").strip())
+    if auto_read_only and pending and pending.get("mode") in {
+            "save_confirm", "store_clarify", "save_input", "replace_pick", "memory_edit_confirm"}:
+        checkpoint("auto_boundary", "Automatik verwirft offenen Speicher-Dialog (Speichern nur per Diskette)",
+                   ok=True, pending=pending.get("mode"))
+        pending = None
     if memory_edit:
         edit_categories = list(dict.fromkeys(c.strip() for c in (memory_categories or []) if c and c.strip()))
         if memory_doc_id:
@@ -7328,7 +7359,10 @@ def _process_turn(session: dict, user_text: str, pending: dict | None, category:
         followup = _memory_followup_candidate(user_text, pending)
         if followup is not None:
             return followup
-    elif mode != "rule" and not search_only and not explicit_save and not awaiting_save_input and session.get("last_memory"):
+    elif mode == "save" and not explicit_save and not awaiting_save_input and session.get("last_memory"):
+        # Folgedialoge am letzten Entwurf/Eintrag gehoeren zur Diskette. Der Automatik-Modus haftet
+        # NICHT mehr am last_memory (Franks Grundsatz 2026-07-12): eine Auto-Frage wie "Aendere den
+        # Titel..." erzeugt keinen Bearbeitungs-Dialog mehr — dafuer gibt es Diskette + Stift.
         followup = _memory_followup_candidate(user_text, session["last_memory"])
         if followup is not None:
             return followup
@@ -7336,13 +7370,28 @@ def _process_turn(session: dict, user_text: str, pending: dict | None, category:
     # Speicher-Signal — dann den Router NICHT ueber den (evtl. riesigen) Text raten lassen: grosse
     # Pastes sprengen sonst sein JSON-Budget (max_tokens) und enden faelschlich als "nicht verstanden".
     # Direkt als save behandeln; der volle user_text wird zum quote (1:1 gespeichert).
-    if not search_only and not pending and _is_save_input_opener(user_text):
+    if not search_only and not auto_read_only and not pending and _is_save_input_opener(user_text):
         checkpoint("save_input", "Speicherwunsch ohne Inhalt erkannt; naechsten Turn wortwoertlich erwarten",
                    ok=True, category=category or "(auto)", titel=title or "(auto)")
         return {"reply": "Ja, gern. Schick mir jetzt den Text, den ich wortwörtlich speichern soll.",
                 "action": "save_input",
                 "pending": {"mode": "save_input", "category": category, "title": title,
                             "store_timestamp": bool(store_timestamp)}}
+    # Echte Speicher-IMPERATIVE im Auto-Modus ("speichere ...", "merk dir ...", "Speicher: ...")
+    # bekommen eine ehrliche, deterministische Antwort statt LLM-Router-Raten. Bewusst ENG gehalten
+    # (_has_spoken_save_command, nicht _is_definite_save_request): blosse Erwaehnungen wie
+    # "im Gedaechtnis" sind KEINE Befehle — genau diese breite Deutung loeste den 20:31-Vorfall aus.
+    # Nachfragen zu Gespeichertem (_is_recall_request) laufen IMMER als normale Gedaechtnis-Frage.
+    if auto_read_only and not pending and not _is_recall_request(user_text) and (
+            _has_spoken_save_command(user_text)
+            or _MEMORY_AMBIGUOUS_SAVE_PREFIX_RE.search(user_text or "")
+            or _is_save_input_opener(user_text)):
+        checkpoint("auto_boundary", "Speicherbefehl im Automatik-Modus -> Diskette-Hinweis statt Speichern",
+                   ok=True, text=user_text[:120])
+        return {"reply": ("Im Automatik-Modus speichere ich nichts — ich schaue nur ins Gedächtnis "
+                          "und ins Web. Zum Speichern tippe bitte auf die Diskette und schick mir den "
+                          "Text dort noch einmal."),
+                "action": "smalltalk", "pending": None}
     if search_only:
         route = {"intent": "query", "quote": "", "query": user_text.strip(), "web_query": "", "reply": ""}
         checkpoint("route", "Harte Suchgrenze erzwingt query und verhindert Mutationen", ok=True, route="query")
@@ -7360,7 +7409,11 @@ def _process_turn(session: dict, user_text: str, pending: dict | None, category:
     elif (active_agent_profile_id() == ACTIVE_PROFILE_PARALLEL
           and _norm_context_mode(context_mode) == "auto"
           and not pending
-          and not _looks_like_save_request(user_text, context_mode)):
+          # auto_read_only: Speicher-Imperative sind oben schon deterministisch beantwortet —
+          # ALLE uebrigen Auto-Fragen duerfen in den schnellen Web+Gedaechtnis-Pfad. Der alte
+          # _looks_like_save_request-Guard schickte Saetze mit "im Gedaechtnis" faelschlich in
+          # den LLM-Router (20:31-Vorfall); er gilt nur noch fuer UI-Speichersignal-Turns.
+          and (auto_read_only or not _looks_like_save_request(user_text, context_mode))):
         checkpoint("profile_route", "Aktives Profil ueberspringt Router fuer normale Auto-Frage",
                    ok=True, profile=ACTIVE_PROFILE_PARALLEL)
         if _is_trivial_greeting(user_text):
@@ -7478,6 +7531,18 @@ def _process_turn(session: dict, user_text: str, pending: dict | None, category:
 
     # 2) Neue Speicher-Absicht -> NICHT speichern, sondern die destillierte Aussage zurueckfragen.
     #    Hat Frank eine Kategorie gewaehlt, wird sie im pending gemerkt UND in der Rueckfrage genannt.
+    if intent == "save" and auto_read_only and not awaiting_save_input:
+        # Letzte Verteidigungsschicht (Defense in Depth, Schicht 3): egal welcher Pfad hier noch
+        # "save" liefert (LLM-Router-Ermessen, kuenftige Codepfade) — der Automatik-Modus speichert
+        # NIE. Deterministisch als Gedaechtnis-Frage weiterbehandeln + laut loggen.
+        _log(logging.WARNING, "Auto-Modus-Sperre: save-Intent im read-only Automatik-Turn abgefangen",
+             text=user_text[:120])
+        checkpoint("auto_boundary", "save-Intent im Automatik-Modus deterministisch zu query umgeleitet",
+                   ok=True, route="query")
+        intent = "query"
+        route["intent"] = "query"
+        route["query"] = (route.get("query") or "").strip() or user_text.strip()
+        route["quote"] = ""
     if intent == "save":
         router_quote = (route.get("quote") or "").strip()
         # Titel/Kategorie kennzeichnen oft eingefuegte Dokumente. Diese bleiben 1:1, ausser Franks
