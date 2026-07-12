@@ -1,7 +1,15 @@
 {
-	"stand": "12.07.2026, 19:30 Uhr",
+	"stand": "12.07.2026, 20:08 Uhr",
 	"hinweis": "PFLEGE-PFLICHT: Bei JEDEM Deploy, der ein neues System/Feature einbaut, hier einen Eintrag ERGÄNZEN (neueste zuerst). SCHREIBWEISE (Dauer-Regel): leichtes, verständliches Deutsch, kurze Sätze; ALLE Fachbegriffe, Namen und Zahlen (z.B. BM25, RRF, Qdrant, ENV-Variablen, Endpunkt-Namen) BEHALTEN, aber jeden in einem kurzen Halbsatz erklären — NIE durch Weglassen vereinfachen; kompakt halten (der Hauptagent liest über das Werkzeug 'was_kann_cortex' ALLE Einträge auf einmal ein), aber vollständig genug, dass man erkennt WAS eingebaut wurde; einfache Überschrift. Ähnliche/redundante Einträge dürfen zusammengefasst werden — Datum sekundär, entscheidend ist WAS Cortex kann. Quelle des Info-Bereichs in den Dashboard-Einstellungen (GET /api/features). Verankert in DEPLOY.md.",
 	"features": [
+		{
+			"id": "schnelle-einstellungen-config-cache",
+			"eingebaut": "12.07.2026, 20:08 Uhr",
+			"dienst": "agent 0.78.1 + dashboard 0.78.1 + Cortex Android 0.8.1",
+			"name": "Einstellungen und Modell-Listen ohne Wartezeit",
+			"kurz": "Die Agenten-Modelle in den Cortex-Android-Einstellungen erscheinen sofort statt mit langer Eieruhr. Der Server beantwortet /config aus einem Zwischenspeicher und holt die Codex-Modellliste im Hintergrund frisch.",
+			"erklaerung": "Bisher rief der Server bei jedem Abruf der Konfiguration (Endpunkt /config, den die App beim Start und bei jedem Öffnen der Einstellungen nutzt) live die Codex-Modellliste bei chatgpt.com ab — mit bis zu 12 Sekunden Wartezeit plus eventuellem Token-Refresh. Jetzt hält der Agent diese Liste in einem Zwischenspeicher mit 10 Minuten Gültigkeit: Ist der Wert älter, wird trotzdem sofort der letzte bekannte Stand geliefert und ein einzelner Hintergrund-Thread holt den neuen (das Muster heißt Stale-while-Revalidate mit Single-Flight, also nie mehrere gleichzeitige Abrufe). Beim Serverstart wird der Speicher vorgewärmt, beim Verbinden oder Trennen von Codex sofort geleert, damit die Liste immer zum echten Zustand passt. Die Android-App speichert zusätzlich die letzte /config-Antwort lokal: Beim Öffnen der Einstellungen stehen Modelle, Reasoning-Stufen, Limits und Preise sofort da, während der frische Server-Stand still im Hintergrund nachgeladen und übernommen wird. Funktion und Optik sind unverändert — nur die Wartezeit entfällt."
+		},
 		{
 			"id": "gpt-5-6-fast-modelle",
 			"eingebaut": "12.07.2026, 19:30 Uhr",

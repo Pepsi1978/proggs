@@ -234,6 +234,9 @@ class ChatViewModel : ViewModel() {
         viewModelScope.launch(Dispatchers.IO) {
             try {
                 val cfg = ApiClient.agentApi().getConfig()
+                // Den App-Start-Abruf gleich als /config-Zwischenspeicher nutzen: die Einstellungen
+                // zeigen die Agenten-Modelle dann beim Oeffnen sofort (Performance 2026-07-12).
+                ApiClient.cacheAgentConfig(cfg)
                 if (cfg.size_prompts_custom || cfg.context_prompts_custom) {
                     // Server hat gepflegte Prompts -> lokal uebernehmen (Server gewinnt).
                     cfg.size_prompts.forEach { (k, v) ->

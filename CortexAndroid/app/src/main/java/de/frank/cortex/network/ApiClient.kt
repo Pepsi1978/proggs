@@ -237,6 +237,28 @@ object ApiClient {
     fun brainApi(): BrainApi = brainApiHolder.get()
     fun dashboardApi(): DashboardApi = dashboardApiHolder.get()
 
+    // --- /config-Zwischenspeicher (Performance 2026-07-12) -------------------
+    // Die Einstellungen (und der App-Start-Sync) warteten bisher bei JEDEM Aufruf sichtbar auf
+    // GET /config. Die letzte Antwort wird jetzt lokal gespeichert: UI zeigt sie sofort,
+    // der frische Server-Stand ersetzt sie still, sobald er da ist (Stale-while-Revalidate).
+    private val agentConfigAdapter by lazy { moshi.adapter(AgentConfigResponse::class.java) }
+
+    fun cacheAgentConfig(config: AgentConfigResponse) {
+        try {
+            SettingsStore.cachedAgentConfigJson = agentConfigAdapter.toJson(config)
+        } catch (e: Exception) {   // no-cancellation-rethrow (kein suspend im try)
+            CortexLog.warn("ApiClient", "cacheAgentConfig", "Config-Cache nicht schreibbar: ${e.message}")
+        }
+    }
+
+    fun cachedAgentConfig(): AgentConfigResponse? = try {
+        SettingsStore.cachedAgentConfigJson.takeIf { it.isNotBlank() }
+            ?.let { agentConfigAdapter.fromJson(it) }
+    } catch (e: Exception) {   // no-cancellation-rethrow (kein suspend im try)
+        CortexLog.warn("ApiClient", "cachedAgentConfig", "Config-Cache nicht lesbar: ${e.message}")
+        null
+    }
+
     // --- Streaming-Chat (SSE, /chat/stream) ---------------------------------
     private val chatRequestAdapter by lazy { moshi.adapter(ChatRequest::class.java) }
     private val chatResponseAdapter by lazy { moshi.adapter(ChatResponse::class.java) }

@@ -81,6 +81,7 @@ VERSION = "0.75.0 (11.07.2026, 22:47 Uhr)"  # 0.75.0: Regeln sind aus Automatik,
 VERSION = "0.76.4 (12.07.2026, 16:41 Uhr)"  # 0.76.4: Quellenattributionen und interne Selbstregel-Prueftexte werden vor Anzeige, Persistenz und TTS entfernt; interne Pruefanweisungen werden nicht mehr an Nutzdaten angehaengt. Alt: 0.76.1.
 VERSION = "0.77.0 (12.07.2026, 17:54 Uhr)"  # 0.77.0 PERFORMANCE-Tiefendebugging: (1) Geloeschte Gespraeche bleiben geloescht — DELETE /logbook verwirft die passende LIVE-Sitzung (Tombstone stoppt geplante Live-Mirrors, Session-Spiegel geloescht, Rest-Eintrag im Gehirn best-effort abgeraeumt); vorher schrieb der Live-Mirror das geloeschte Gespraech nach dem naechsten Turn zurueck ('Loeschen geht gar nicht'). (2) Selbstregel-Pruefung laeuft jetzt NACH der deterministischen Antwort-Bereinigung und prueft den wirklich sichtbaren Text — erspart die ~28s-LLM-Neugenerierung, die bisher fast jede Web-Antwort wegen ohnehin entfernter Markdown-Links bezahlte; Regel-Feature unveraendert aktiv. Alt: 0.76.4.
 VERSION = "0.78.0 (12.07.2026, 19:30 Uhr)"  # 0.78.0: GPT-5.6 Sol, Terra und Luna stehen jeweils normal und als Fast-Auswahl bereit. Fast bleibt ein lokaler Alias auf das Basismodell und sendet service_tier=priority an jeden Codex-Responses-Aufruf, einschließlich Tool-Loop und erzwungener Abschlussrunde. Alt: 0.77.0.
+VERSION = "0.78.1 (12.07.2026, 19:54 Uhr)"  # 0.78.1 PERFORMANCE Handy<->Server: /config antwortet sofort — die Codex-Modellliste kommt aus einem 10-Min-Cache mit Stale-while-Revalidate (alter Wert sofort, EIN Hintergrund-Thread holt den neuen, Single-Flight); vorher wartete jeder /config-Aufruf (App-Start + jedes Oeffnen der Einstellungen) live auf chatgpt.com (bis 12s + Token-Refresh). Cache wird beim Serverstart vorgewaermt und bei Codex-Verbinden/Trennen invalidiert. Alt: 0.78.0.
 
 # ---------------------------------------------------------------------------
 # Konfiguration (alles aus Umgebungsvariablen — Secrets nie im Code)
@@ -554,14 +555,26 @@ def _turn_summary(tr: dict, events: "list[dict]", result: dict, total_ms: int) -
     web_query = last_val(["recall_internet"], "web_query")
     web_used = any(ev.get("step") in ("native_web", "internet_answer", "recall_internet") for ev in events)
 
-    t_route = first_t(["route"])
+    # Phasen-Marker BEIDER Fluesse (Flaschenhals-Radar-Reparatur 2026-07-12): der Agenten-Umbau
+    # ersetzte route/lese_select durch profile_route/auto_parallel/toolagent — seitdem standen
+    # router_ms/suche_ms/leseagent_ms/web_antwort_ms dauerhaft auf null (Radar blind). Alte
+    # Schluessel bleiben erhalten (verlustfrei); neue Marker fuellen sie im neuen Fluss.
+    t_route = first_t(["route", "profile_route"])
     t_search = first_t(["recall_search"])
     t_lese = first_t(["lese_select"])
+    t_answer = first_t(["auto_parallel", "toolagent", "internet_answer"])   # Antwort (inkl. Web) fertig
+    t_rules = first_t(["self_rules_enforced"])                              # Selbstregel-Pruefung fertig
+    web_antwort_ms = None
+    if t_lese is not None:
+        web_antwort_ms = total_ms - t_lese                                  # alter Fluss (Leseagent)
+    elif t_answer is not None and t_search is not None:
+        web_antwort_ms = t_answer - t_search                                # neuer Fluss: Suche -> Antwort
     timing = {
         "router_ms": t_route,
-        "suche_ms": (t_search - t_route) if (t_search is not None and t_route is not None) else None,
+        "suche_ms": (t_search - t_route) if (t_search is not None and t_route is not None) else t_search,
         "leseagent_ms": (t_lese - t_search) if (t_lese is not None and t_search is not None) else None,
-        "web_antwort_ms": (total_ms - t_lese) if t_lese is not None else None,
+        "web_antwort_ms": web_antwort_ms,
+        "regeln_ms": (t_rules - t_answer) if (t_rules is not None and t_answer is not None) else None,
         "gesamt_ms": total_ms,
     }
     return {
@@ -847,10 +860,21 @@ def _codex_headers(access_token: str) -> dict:
     return headers
 
 
-def codex_models() -> list[str]:
+# Codex-Modellliste: TTL-Cache mit Stale-while-Revalidate (Performance-Fix 2026-07-12).
+# Vorher rief JEDER /config-Aufruf (App-Start + jedes Oeffnen der Einstellungen) live
+# chatgpt.com auf (bis 12 s Timeout, davor evtl. noch ein Token-Refresh) — die App wartete
+# solange sichtbar. Jetzt: frischer Wert kommt aus dem Cache (TTL 10 Min); ist er abgelaufen,
+# wird der ALTE Wert sofort geliefert und EIN Hintergrund-Thread holt den neuen (Single-Flight).
+_CODEX_MODELS_TTL_S = 600.0
+_codex_models_cache: dict = {"models": None, "fetched_at": 0.0}
+_codex_models_flight = threading.Lock()
+
+
+def _codex_models_fetch() -> "list[str] | None":
+    """Live-Abruf der Codex-Modellliste. None = fehlgeschlagen (Aufrufer entscheidet Fallback)."""
     try:
         access = _codex_tokens(refresh_if_needed=True).get("access_token", "")
-        r = _HTTP.get(f"{CODEX_BASE_URL}/models?client_version=1.0.0", headers=_codex_headers(access), timeout=12.0)
+        r = _HTTP.get(f"{CODEX_BASE_URL}/models?client_version=1.0.0", headers=_codex_headers(access), timeout=8.0)
         if r.status_code == 200:
             data = r.json()
             rows = data.get("models") if isinstance(data, dict) else []
@@ -867,7 +891,46 @@ def codex_models() -> list[str]:
                 return out
     except Exception as e:
         _log(logging.INFO, "Codex-Modellliste nicht live abrufbar", err=str(e))
-    return CODEX_MODELS_FALLBACK if codex_connected() else []
+    return None
+
+
+def _codex_models_refresh() -> list[str]:
+    """Holt die Liste live und schreibt sie in den Cache (Fallback-Verhalten wie vor dem Cache)."""
+    fetched = _codex_models_fetch()
+    models = fetched if fetched is not None else (CODEX_MODELS_FALLBACK if codex_connected() else [])
+    _codex_models_cache["models"] = models
+    _codex_models_cache["fetched_at"] = time.monotonic()
+    return models
+
+
+def _codex_models_invalidate() -> None:
+    """Nach Codex-Verbinden/Trennen: naechster Abruf holt garantiert den echten Stand."""
+    _codex_models_cache["models"] = None
+    _codex_models_cache["fetched_at"] = 0.0
+
+
+def codex_models() -> list[str]:
+    cached = _codex_models_cache["models"]
+    if cached is not None:
+        if (time.monotonic() - _codex_models_cache["fetched_at"]) < _CODEX_MODELS_TTL_S:
+            return cached
+        # Abgelaufen: alten Wert SOFORT liefern, EIN Hintergrund-Thread aktualisiert.
+        if _codex_models_flight.acquire(blocking=False):
+            def _bg_refresh() -> None:
+                try:
+                    _codex_models_refresh()
+                except Exception as e:   # Sonde: Hintergrund-Refresh darf nie still sterben
+                    _log(logging.WARNING, "Codex-Modell-Hintergrund-Refresh fehlgeschlagen", err=str(e))
+                finally:
+                    _codex_models_flight.release()
+            threading.Thread(target=_bg_refresh, name="codex-models-refresh", daemon=True).start()
+        return cached
+    # Kalt (erster Aufruf nach Start/Invalidate): synchron holen, aber nur EIN Thread gleichzeitig.
+    with _codex_models_flight:
+        cached = _codex_models_cache["models"]
+        if cached is not None and (time.monotonic() - _codex_models_cache["fetched_at"]) < _CODEX_MODELS_TTL_S:
+            return cached
+        return _codex_models_refresh()
 
 
 def codex_connected() -> bool:
@@ -2267,6 +2330,12 @@ def _recall_search_limit(user_text: str) -> int:
     return RECALL_NORMAL_MAX
 
 
+# Kleiner, wiederverwendeter Pool fuer den vorab gestarteten Multi-Query-Varianten-LLM
+# (Frank-Auftrag 2026-07-12: Varianten-Erzeugung parallel zur Direktsuche statt danach).
+from concurrent.futures import ThreadPoolExecutor as _MQThreadPool
+_MQ_POOL = _MQThreadPool(max_workers=2, thread_name_prefix="mq")
+
+
 def smart_recall(user_text: str, query: str, user_id: str = USER_ID) -> "tuple[list[dict], dict]":
     """Die komplette Level-2-Abrufkette (Nr. 35-37) VOR dem Leseagenten:
     1. Zeitausdruck in Franks ORIGINAL-Nachricht -> created_at-Filter (weich: 0 Treffer -> ungefiltert).
@@ -2292,8 +2361,16 @@ def smart_recall(user_text: str, query: str, user_id: str = USER_ID) -> "tuple[l
             _log(logging.WARNING, "Teil-Suche fehlgeschlagen", exc_info=True)
             return []
 
-    # Erst die Originalfrage suchen. Gute direkte Treffer brauchen keinen vorgelagerten Router-LLM.
-    # Bei schwacher Grundlage eskaliert dieselbe Kette verlustfrei auf Multi-Query + RRF.
+    # Erst die Originalfrage suchen. Der Varianten-LLM startet PARALLEL dazu (Frank-Auftrag
+    # 2026-07-12): Das ERGEBNIS bleibt identisch — benutzt werden die Varianten weiterhin NUR
+    # bei schwacher Direktsuche —, aber die ~4s LLM-Wartezeit liegt dann nicht mehr obendrauf.
+    # Bewusster Preis: ein kleiner Router-LLM-Call laeuft auch bei starken Direkttreffern mit.
+    variants_future = None
+    if MULTI_QUERY_ENABLED and MULTI_QUERY_VARIANTS > 0:
+        try:
+            variants_future = _MQ_POOL.submit(contextvars.copy_context().run, multi_query_variants, query)
+        except Exception:  # noqa: BLE001 — Vorab-Start ist reine Beschleunigung; Fallback: synchron wie bisher
+            variants_future = None
     with _perf_span("smart_recall_searches", "Smart-Recall Direktsuche", queries=1):
         lists = [_one(query)]
     direct = lists[0]
@@ -2306,7 +2383,14 @@ def smart_recall(user_text: str, query: str, user_id: str = USER_ID) -> "tuple[l
         (not direct_exact and (direct_top is None or direct_top < CONF_STRONG))
     ))
     if expand:
-        variants = multi_query_variants(query)
+        if variants_future is not None:
+            try:
+                variants = variants_future.result(timeout=30.0)
+            except Exception:  # noqa: BLE001 — parallel fehlgeschlagen -> synchroner Fallback (Verhalten wie frueher)
+                _log(logging.WARNING, "Paralleler Varianten-LLM fehlgeschlagen — synchroner Fallback", exc_info=True)
+                variants = multi_query_variants(query)
+        else:
+            variants = multi_query_variants(query)
         if variants:
             queries += variants
             meta["multi_query"] = variants
@@ -5020,6 +5104,9 @@ async def lifespan(app: FastAPI):
     # der Loop haelt nur weak refs — ein untracked Task kann vom GC eingesammelt werden).
     _track_background_task(asyncio.create_task(_flush_loop()))
     _log(logging.INFO, "Flush-Loop gestartet")
+    # Codex-Modell-Cache vorwaermen (eigener Thread, blockiert den Start nicht): der ERSTE
+    # /config nach einem Deploy kommt so schon aus dem Cache statt auf chatgpt.com zu warten.
+    threading.Thread(target=codex_models, name="codex-models-warmup", daemon=True).start()
     try:
         yield
     finally:
@@ -6097,6 +6184,7 @@ def codex_auth_poll(req: CodexAuthPollReq) -> dict:
     _save_codex_auth({"tokens": {"access_token": tokens.get("access_token"), "refresh_token": tokens.get("refresh_token")},
                       "base_url": CODEX_BASE_URL, "last_refresh": _now_local().isoformat(), "auth_mode": "chatgpt"})
     _codex_pending.pop(req.auth_id, None)
+    _codex_models_invalidate()   # frisch verbunden -> Modellliste live neu holen (nicht "nicht verbunden"-Cache)
     return {"ok": True, "status": "connected", "connected": True, "models": codex_models()}
 
 
@@ -6107,6 +6195,7 @@ def codex_auth_disconnect() -> dict:
             CODEX_AUTH_FILE.unlink()
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Codex-Abmeldung fehlgeschlagen: {e}") from e
+    _codex_models_invalidate()   # getrennt -> Cache darf keine verbundene Liste mehr liefern
     return {"ok": True, "connected": False}
 
 
@@ -7739,7 +7828,17 @@ async def chat_stream(req: ChatReq) -> StreamingResponse:
                 _log(logging.WARNING, "Turn-Logbuch (Stream) fehlgeschlagen", exc_info=True)
             final_reply = str(outcome.get("reply") or "")
             if final_reply:
-                queue.put_nowait(final_reply)
+                # Kanonischen Text ABSATZWEISE ausliefern (Frank 2026-07-12: Antwort erscheint ab dem
+                # ersten Absatz, TTS startet ab dem ersten VOLLSTAENDIGEN Absatz). Der Text ist hier
+                # bereits final (nach Bereinigung + Regel-Pruefung) — Anzeige/Persistenz/TTS bleiben
+                # identisch (§9.1 kanonisch). Split mit Capture-Gruppe: Zusammensetzen ergibt 1:1 den
+                # Originaltext (kein Zeichen geht verloren).
+                absaetze = [teil for teil in re.split(r"(\n{2,})", final_reply) if teil]
+                if len(absaetze) <= 1:
+                    queue.put_nowait(final_reply)
+                else:
+                    for teil in absaetze:
+                        queue.put_nowait(teil)
             if not finalize_fut.done():
                 finalize_fut.set_result(response)
         asyncio.ensure_future(_fin())
@@ -7750,7 +7849,10 @@ async def chat_stream(req: ChatReq) -> StreamingResponse:
         try:
             # Sofort ein Body-Event senden: HTTP 200 allein beweist noch keinen lebenden SSE-Kanal.
             # Heartbeats halten danach OkHttp/Proxies während langer Web-/Reasoning-Phasen aktiv.
-            yield _sse_event({"type": "ready", "turn_id": tr.get("turn_id")})
+            # canonical_reply=true: Capability-Zusage an Clients (ai-agent-frameworks §9.1) — ALLE
+            # delta-Events dieses Streams sind bereits der FINALE, regelgeprüfte Text (keine
+            # Rohentwürfe); Anzeige/TTS dürfen ihnen vertrauen, ohne auf done zu warten.
+            yield _sse_event({"type": "ready", "turn_id": tr.get("turn_id"), "canonical_reply": True})
             _perf_mark("sse_ready_yielded", "SSE-Ready-Event ausgeliefert")
             heartbeat_count = 0
             # Bis zur vollständigen Finalisierung warten, nicht nur bis _process_turn fertig ist:

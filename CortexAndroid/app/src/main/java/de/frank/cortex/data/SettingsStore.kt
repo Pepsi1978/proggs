@@ -319,6 +319,13 @@ object SettingsStore {
         get() = plain.getString("dashboard_port", "8003") ?: "8003"
         set(value) = plain.edit().putString("dashboard_port", value).apply()
 
+    // Letzte /config-Antwort als JSON (Performance 2026-07-12): die Einstellungen zeigen den
+    // zwischengespeicherten Server-Stand SOFORT (keine Wartezeit) und aktualisieren still im
+    // Hintergrund. Enthält keine Secrets (Modelle, Prompts, Limits) — Klartext ok.
+    var cachedAgentConfigJson: String
+        get() = plain.getString("cached_agent_config", "") ?: ""
+        set(value) = plain.edit().putString("cached_agent_config", value).apply()
+
     // --- UI-Präferenzen (klartext ok) ---
 
     var themeMode: String

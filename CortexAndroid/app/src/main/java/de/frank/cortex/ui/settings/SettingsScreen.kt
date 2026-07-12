@@ -189,56 +189,80 @@ fun SettingsScreen(
         }
     }
 
+    // Wendet eine /config-Antwort auf alle Einstellungs-States an — identisch fuer den lokalen
+    // Zwischenspeicher und den frischen Server-Stand (Performance 2026-07-12).
+    fun applyServerConfig(config: de.frank.cortex.data.model.AgentConfigResponse) {
+        if (config.available.isNotEmpty()) agentModelOptions = config.available
+        if (config.reasoning_available.isNotEmpty()) reasoningOptions = config.reasoning_available
+        modelPriceLabels = config.model_prices.mapValues { (_, p) ->
+            if (p.input != null && p.output != null)
+                "\$${p.input} Input · \$${p.output} Output"
+            else "über Abo (nicht pro Token)"
+        }
+        val models = config.models
+        val reasoning = config.reasoning
+        hauptModel = models["haupt"] ?: config.model ?: agentModelOptions.first()
+        speicherModel = models["speicher"] ?: config.model ?: hauptModel
+        abfrageModel = models["abfrage"] ?: config.model ?: hauptModel
+        hauptReasoning = reasoning["haupt"] ?: "medium"
+        speicherReasoning = reasoning["speicher"] ?: "medium"
+        abfrageReasoning = reasoning["abfrage"] ?: "medium"
+        routerModel = config.router_model.ifBlank { ROUTER_AUTO }
+        routerReasoning = config.router_reasoning.ifBlank { ROUTER_AUTO }
+        tavilyEnabled = config.tavily_enabled
+        memoryWebInfluence = config.memory_web_influence.takeIf { it in setOf("light", "normal", "strong") } ?: "normal"
+        if (config.size_prompts_custom) {
+            config.size_prompts.forEach { (k, v) ->
+                if (k in setOf("auto", "s", "m", "xl") && v.isNotBlank()) SettingsStore.setResponseSizePrompt(k, v)
+            }
+        }
+        if (config.context_prompts_custom) {
+            config.context_prompts.forEach { (k, v) ->
+                if (k in setOf(SettingsStore.CONTEXT_MODE_SAVE, SettingsStore.CONTEXT_MODE_SEARCH) && v.isNotBlank()) {
+                    SettingsStore.setContextPrompt(k, v)
+                }
+            }
+        }
+        contextPromptDraft = loadEditablePrompt(selectedContextPromptMode)
+        runtimeLimits = config.limits
+        limitDrafts = limitsToDrafts(config.limits)
+        codexConnected = config.codex?.connected == true
+        codexStatus = if (codexConnected) "Server verbunden — GPT/Codex-Modelle sind auswählbar" else "Server nicht verbunden"
+    }
+
     LaunchedEffect(Unit) {
-        agentModelsLoading = true
+        // 1) Zwischengespeicherten Server-Stand SOFORT anzeigen — die Modelle stehen ohne
+        //    Wartezeit da (keine Eieruhr); der frische Stand ersetzt sie gleich still.
+        val cached = ApiClient.cachedAgentConfig()
+        if (cached != null) {
+            applyServerConfig(cached)
+            agentModelStatus = "Wird mit dem Server abgeglichen…"
+            memoryWebInfluenceStatus = "Wird mit dem Server abgeglichen…"
+            limitsStatus = "Wird mit dem Server abgeglichen…"
+        } else {
+            agentModelsLoading = true
+        }
+        // 2) Frischen Server-Stand holen und still uebernehmen.
         try {
             val config = ApiClient.agentApi().getConfig()
-            if (config.available.isNotEmpty()) agentModelOptions = config.available
-            if (config.reasoning_available.isNotEmpty()) reasoningOptions = config.reasoning_available
-            modelPriceLabels = config.model_prices.mapValues { (_, p) ->
-                if (p.input != null && p.output != null)
-                    "\$${p.input} Input · \$${p.output} Output"
-                else "über Abo (nicht pro Token)"
-            }
-            val models = config.models
-            val reasoning = config.reasoning
-            hauptModel = models["haupt"] ?: config.model ?: agentModelOptions.first()
-            speicherModel = models["speicher"] ?: config.model ?: hauptModel
-            abfrageModel = models["abfrage"] ?: config.model ?: hauptModel
-            hauptReasoning = reasoning["haupt"] ?: "medium"
-            speicherReasoning = reasoning["speicher"] ?: "medium"
-            abfrageReasoning = reasoning["abfrage"] ?: "medium"
-            routerModel = config.router_model.ifBlank { ROUTER_AUTO }
-            routerReasoning = config.router_reasoning.ifBlank { ROUTER_AUTO }
-            tavilyEnabled = config.tavily_enabled
-            memoryWebInfluence = config.memory_web_influence.takeIf { it in setOf("light", "normal", "strong") } ?: "normal"
-            memoryWebInfluenceStatus = "Aktueller Server-Stand geladen"
-            if (config.size_prompts_custom) {
-                config.size_prompts.forEach { (k, v) ->
-                    if (k in setOf("auto", "s", "m", "xl") && v.isNotBlank()) SettingsStore.setResponseSizePrompt(k, v)
-                }
-            }
-            if (config.context_prompts_custom) {
-                config.context_prompts.forEach { (k, v) ->
-                    if (k in setOf(SettingsStore.CONTEXT_MODE_SAVE, SettingsStore.CONTEXT_MODE_SEARCH) && v.isNotBlank()) {
-                        SettingsStore.setContextPrompt(k, v)
-                    }
-                }
-            }
-            contextPromptDraft = loadEditablePrompt(selectedContextPromptMode)
-            runtimeLimits = config.limits
-            limitDrafts = limitsToDrafts(config.limits)
-            limitsStatus = "Aktuelle Limits geladen"
-            codexConnected = config.codex?.connected == true
-            codexStatus = if (codexConnected) "Server verbunden — GPT/Codex-Modelle sind auswählbar" else "Server nicht verbunden"
+            applyServerConfig(config)
+            ApiClient.cacheAgentConfig(config)
             agentModelStatus = "Aktueller Server-Stand geladen"
+            memoryWebInfluenceStatus = "Aktueller Server-Stand geladen"
+            limitsStatus = "Aktuelle Limits geladen"
         } catch (e: CancellationException) {
             throw e
         } catch (e: Exception) {
             CortexLog.warn("Settings", "loadAgentModels", "Agent-Modelle nicht geladen: ${e.message}")
-            agentModelStatus = "Server-Stand nicht erreichbar"
-            memoryWebInfluenceStatus = "Server-Stand nicht erreichbar"
-            limitsStatus = "Limits nicht erreichbar"
+            if (cached != null) {
+                agentModelStatus = "Zwischengespeicherter Stand — Server gerade nicht erreichbar"
+                memoryWebInfluenceStatus = "Zwischengespeicherter Stand — Server gerade nicht erreichbar"
+                limitsStatus = "Zwischengespeicherte Limits — Server gerade nicht erreichbar"
+            } else {
+                agentModelStatus = "Server-Stand nicht erreichbar"
+                memoryWebInfluenceStatus = "Server-Stand nicht erreichbar"
+                limitsStatus = "Limits nicht erreichbar"
+            }
         } finally {
             agentModelsLoading = false
         }
@@ -466,6 +490,7 @@ fun SettingsScreen(
                                                 codexStatus = "Server verbunden — GPT/Codex-Modelle sind auswählbar"
                                                 val config = ApiClient.agentApi().getConfig()
                                                 if (config.available.isNotEmpty()) agentModelOptions = config.available
+                                                ApiClient.cacheAgentConfig(config)   // Cache bleibt synchron zum neuen Codex-Stand
                                                 codexConnecting = false
                                                 return@launch
                                             }
@@ -503,6 +528,7 @@ fun SettingsScreen(
                                         codexStatus = "Server nicht verbunden"
                                         val config = ApiClient.agentApi().getConfig()
                                         if (config.available.isNotEmpty()) agentModelOptions = config.available
+                                        ApiClient.cacheAgentConfig(config)   // Cache bleibt synchron zum getrennten Stand
                                     } catch (e: CancellationException) {
                                         throw e
                                     } catch (_: Exception) {
