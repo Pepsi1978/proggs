@@ -918,3 +918,23 @@ Fingerprints vergleichen — dann ist klar, WELCHER Rechner die installierte App
 | §9 Dependency-Resolution / Catalogs / BOM | §6 Version-Catalogs & Dependency-Management |
 | §10 Gradle Wrapper | §7 Gradle Wrapper absichern |
 | §11 Windows-Build-Fallen | §8 Windows-Build-Hygiene |
+
+---
+
+## N) Nachtrag 2026-07-12 (erlebter Vorfall, BestJournalAndroid)
+
+### N1. `IllegalArgumentException: 25.0.3` — Kotlin 2.1.0 crasht unter JDK 25 ⭐ ERLEBT
+- **Symptom:** `./gradlew assembleDebug` bricht nach ~8 s ab; "What went wrong:" zeigt NUR die nackte
+  Versionsnummer (`25.0.3`). Stacktrace: `JavaVersion.parse` in
+  `org.jetbrains.kotlin.com.intellij.util.lang.JavaVersion` via `CoreJrtFileSystem`.
+- **Ursache:** System-`JAVA_HOME` zeigt auf ein neu installiertes **JDK 25** (hier LibericaJDK-25);
+  der in Kotlin 2.1.0 eingebettete IntelliJ-Versions-Parser kann das JDK-25-Versionsformat nicht
+  parsen. Android Studio baut weiter (nutzt eigenes jbr/JDK 21) — nur CLI-Builds brechen, was wie
+  ein Code-Fehler nach dem letzten Edit aussieht.
+- **Versionen:** Kotlin 2.1.0 + Gradle 8.11.1; JDK 25 (2026). Projekt-Matrix oben verlangt JDK 21.
+- **FIX (funktionserhaltend):** CLI-Build mit dem Studio-JBR fahren:
+  `export JAVA_HOME="C:/Program Files/Android/Android Studio/jbr"` + `./gradlew --stop` (alten
+  Daemon mit falschem JDK beenden), dann bauen. Dauerhaft robuster: `org.gradle.java.home` in
+  `gradle.properties` (lokal) pinnen ODER `kotlin { jvmToolchain(21) }` mit Foojay-Resolver.
+  NIE das System-JDK-25 deinstallieren (andere Tools brauchen es) — nur den Build pinnen.
+- **Quelle:** eigener Vorfall 2026-07-12 (Session v8.1-Fixes), Stacktrace verifiziert; vgl. §1.2 JDK-Matrix.
