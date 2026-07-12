@@ -1,6 +1,7 @@
 /tools/*
 !/tools/chrome-beenden/
 !/tools/check_cancellation_rethrow.py
+!/tools/rechtssicherheit.md
 .code-search/
 .think-tank/
 .env

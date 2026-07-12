@@ -1047,3 +1047,35 @@
 | AV1–AV7 (Accessibility/Permissions-Vertiefung) | §6 (Accessibility & Berechtigungen) |
 | SV1–SV9 (PLR/Signing/Integrity-Vertiefung) | §7 (Pre-Launch-Report), §8 (Signing/Integrity) |
 | MV1–MV9 (Metadaten/16-KB-Vertiefung) | §9 (ASO/Store-Listing/targetSdk) |
+
+---
+
+## N) Nachtrag 2026-07-12 (Rechtssicherheits-Audit v8 BestJournal, 7-Researcher-Lauf)
+
+### N1. Boot-Receiver darf ab Android 15 keine dataSync-/mediaProjection-FGS starten
+- **Symptom:** App-Crash/ANR beim Geräte-Boot bzw. Play-Reject der FGS-Deklaration.
+- **Ursache:** Ab targetSdk 35+ dürfen aus `BOOT_COMPLETED` bestimmte FGS-Typen (u.a. `dataSync`, `mediaProjection`) NICHT gestartet werden.
+- **Versionen:** Android 15+, Stand 2026.
+- **FIX:** Im Boot-Receiver nur Alarme/Notifications neu planen (BestJournal macht das korrekt); Sync in WorkManager.
+- **Quelle:** https://developer.android.com/develop/background-work/services/fgs/restrictions-bg-start (offiziell, 12.07.2026)
+
+### N2. Data-Safety-Checkliste aus Vorlage nennt SDKs, die nie eingebaut wurden
+- **Symptom:** Data-Safety-Formular deklariert z.B. Crashlytics-„Crash logs", obwohl das SDK fehlt → „inaccurate declaration"-Enforcement (Google gleicht mit echtem Netzwerkverkehr ab; Vorfall BestJournal v8: Checkliste sagte Crashlytics, Gradle hat keins).
+- **Ursache:** Checklisten werden aus Vorlagen/alten Audits kopiert statt aus dem Build generiert.
+- **Versionen:** Play Console 2025/2026.
+- **FIX:** Deklaration IMMER gegen `gradle/libs.versions.toml` + merged Manifest verifizieren, nie von Hand pflegen.
+- **Quelle:** https://support.google.com/googleplay/android-developer/answer/10787469 (offiziell, 12.07.2026)
+
+### N3. Billing Library v8 Pflicht ab 31.08.2026
+- **Symptom:** Neue Einreichungen/Updates mit Billing < v8 werden ab 31.08.2026 abgelehnt (Verlängerung bis 01.11.2026 beantragbar).
+- **Ursache:** Jährliche Billing-Library-Kadenz; BestJournal ist auf 7.1.1.
+- **Versionen:** Play Billing 7.x → 8.x, Deadline 31.08.2026.
+- **FIX:** Vor der Deadline auf `billing-ktx` 8.x migrieren (Breaking Changes im Migration-Guide prüfen).
+- **Quelle:** https://developer.android.com/google/play/requirements/target-sdk + Billing-Release-Notes (offiziell, 12.07.2026)
+
+### N4. DSA-Trader-Status: Bezahl-App verlangt veröffentlichbare Telefonnummer
+- **Symptom:** EU-Sichtbarkeit/Updates blockiert, weil Trader-Deklaration unvollständig; private Telefonnummer würde im Store-Listing öffentlich.
+- **Ursache:** Seit 17.02.2025 erzwingt Play den DSA-Trader-Status; Trader = Anschrift + Telefon + E-Mail öffentlich.
+- **Versionen:** Play Console seit 02/2025, Stand 2026.
+- **FIX:** Virtuelle Rufnummer (z.B. sipgate) oder Impressumservice-Zusatz VOR dem ersten Submit besorgen.
+- **Quelle:** https://www.verasafe.com/blog/understanding-the-trader-classification-under-the-digital-services-act/ (extern, 12.07.2026)
