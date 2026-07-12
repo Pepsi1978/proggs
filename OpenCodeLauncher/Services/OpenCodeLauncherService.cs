@@ -600,10 +600,10 @@ try {
         var invoke = Path.IsPathFullyQualified(executable)
             ? $"& '{EscapePowerShellSingleQuotedValue(executable)}'"
             : executable;
-        var variant = Path.IsPathFullyQualified(executable) && !string.IsNullOrWhiteSpace(thinkingLevel)
-            ? $" --variant '{EscapePowerShellSingleQuotedValue(thinkingLevel)}'"
-            : string.Empty;
-        var openCodeInvocation = $"{invoke} -m '{EscapePowerShellSingleQuotedValue(modelString)}'{variant}";
+        // ConfigureProvider already stores the selected start level in OpenCode's native
+        // variant state. A second process-local --variant override competes with Ctrl+T,
+        // which must remain the single owner of in-session variant changes.
+        var openCodeInvocation = $"{invoke} -m '{EscapePowerShellSingleQuotedValue(modelString)}'";
 
         var tempScript = Path.Combine(Path.GetTempPath(), $"opencode-launcher-opencode-run-{Guid.NewGuid():N}.ps1");
         // stderr MUST be redirected to a per-process file: unhandled Bun/Effect errors in the
