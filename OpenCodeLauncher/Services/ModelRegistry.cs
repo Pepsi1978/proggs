@@ -16,6 +16,20 @@ public sealed class ModelRegistry
 {
     private const string Gpt56SolSlug = "gpt-5.6-sol";
     private const string Gpt56SolFastSlug = "gpt-5.6-sol-fast";
+    private const string Gpt56TerraSlug = "gpt-5.6-terra";
+    private const string Gpt56TerraFastSlug = "gpt-5.6-terra-fast";
+    private const string Gpt56LunaSlug = "gpt-5.6-luna";
+    private const string Gpt56LunaFastSlug = "gpt-5.6-luna-fast";
+
+    private static readonly (string Slug, string DisplayName)[] Gpt56Models =
+    [
+        (Gpt56SolSlug, "GPT-5.6 Sol"),
+        (Gpt56SolFastSlug, "GPT-5.6 Sol Fast"),
+        (Gpt56TerraSlug, "GPT-5.6 Terra"),
+        (Gpt56TerraFastSlug, "GPT-5.6 Terra Fast"),
+        (Gpt56LunaSlug, "GPT-5.6 Luna"),
+        (Gpt56LunaFastSlug, "GPT-5.6 Luna Fast"),
+    ];
 
     private static readonly string Dir = Path.Combine(
         Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData),
@@ -313,20 +327,18 @@ public sealed class ModelRegistry
 
             if (string.Equals(group.Id, "openai", StringComparison.OrdinalIgnoreCase))
             {
-                if (!group.KnownSyncedModelSlugs.Contains(Gpt56SolFastSlug, StringComparer.OrdinalIgnoreCase))
+                foreach (var definition in Gpt56Models)
                 {
-                    if (!group.Models.Any(model => string.Equals(model.Slug, Gpt56SolSlug, StringComparison.OrdinalIgnoreCase)))
-                        group.Models.Add(Model(Gpt56SolSlug, "GPT-5.6 Sol", "openai", "OpenAI"));
-                    if (!group.Models.Any(model => string.Equals(model.Slug, Gpt56SolFastSlug, StringComparison.OrdinalIgnoreCase)))
-                        group.Models.Add(Model(Gpt56SolFastSlug, "GPT-5.6 Sol Fast", "openai", "OpenAI"));
-                    AddUnique(group.KnownSyncedModelSlugs, Gpt56SolSlug);
-                    AddUnique(group.KnownSyncedModelSlugs, Gpt56SolFastSlug);
-                }
+                    if (!group.KnownSyncedModelSlugs.Contains(definition.Slug, StringComparer.OrdinalIgnoreCase))
+                    {
+                        if (!group.Models.Any(model => string.Equals(model.Slug, definition.Slug, StringComparison.OrdinalIgnoreCase)))
+                            group.Models.Add(Model(definition.Slug, definition.DisplayName, "openai", "OpenAI"));
+                        AddUnique(group.KnownSyncedModelSlugs, definition.Slug);
+                    }
 
-                var normal = group.Models.FirstOrDefault(model => string.Equals(model.Slug, Gpt56SolSlug, StringComparison.OrdinalIgnoreCase));
-                if (normal != null) normal.DisplayName = "GPT-5.6 Sol";
-                var fast = group.Models.FirstOrDefault(model => string.Equals(model.Slug, Gpt56SolFastSlug, StringComparison.OrdinalIgnoreCase));
-                if (fast != null) fast.DisplayName = "GPT-5.6 Sol Fast";
+                    var model = group.Models.FirstOrDefault(model => string.Equals(model.Slug, definition.Slug, StringComparison.OrdinalIgnoreCase));
+                    if (model != null) model.DisplayName = definition.DisplayName;
+                }
             }
         }
     }
@@ -391,6 +403,10 @@ public sealed class ModelRegistry
             Model("gpt-5.5-fast", "GPT-5.5 Fast", "openai", "OpenAI"),
             Model(Gpt56SolSlug, "GPT-5.6 Sol", "openai", "OpenAI"),
             Model(Gpt56SolFastSlug, "GPT-5.6 Sol Fast", "openai", "OpenAI"),
+            Model(Gpt56TerraSlug, "GPT-5.6 Terra", "openai", "OpenAI"),
+            Model(Gpt56TerraFastSlug, "GPT-5.6 Terra Fast", "openai", "OpenAI"),
+            Model(Gpt56LunaSlug, "GPT-5.6 Luna", "openai", "OpenAI"),
+            Model(Gpt56LunaFastSlug, "GPT-5.6 Luna Fast", "openai", "OpenAI"),
         }),
         CreateGroup("opencode-go", "OpenCode-Go", "opencode-go", "OpenCode-Go", new[]
         {
@@ -444,9 +460,8 @@ public sealed class ModelRegistry
         KnownSyncedModelSlugs = string.Equals(id, "openrouter-free", StringComparison.OrdinalIgnoreCase)
             ? models.Select(m => m.Slug).ToList()
             : string.Equals(id, "openai", StringComparison.OrdinalIgnoreCase)
-                ? models.Where(model =>
-                    string.Equals(model.Slug, Gpt56SolSlug, StringComparison.OrdinalIgnoreCase) ||
-                    string.Equals(model.Slug, Gpt56SolFastSlug, StringComparison.OrdinalIgnoreCase))
+                ? models.Where(model => Gpt56Models.Any(definition =>
+                    string.Equals(model.Slug, definition.Slug, StringComparison.OrdinalIgnoreCase)))
                     .Select(model => model.Slug)
                     .ToList()
             : new List<string>()
