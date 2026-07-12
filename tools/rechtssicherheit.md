@@ -50,6 +50,12 @@ Naechste Pflicht-Pruefung: 2026-08-11 (+30 Tage, Play Policies betroffen)
 | 2026-07-12 | euverify + taylorwessing | GPSR: Apps grundsaetzlich erfassbar (Kommissions-Leitlinien 11/2025), Einordnung umstritten; Kontaktangaben bereitstellen | fachanwalt | niedrig |
 | 2026-07-12 | verasafe DSA-Trader + makaka.org | Play Trader-Status: Bezahl-App = Trader → Adresse+Telefon+E-Mail oeffentlich im Listing | extern | hoch |
 | 2026-07-12 | testerscommunity | Developer Verification Enforcement ab 09/2026 (BR/SG/ID/TH zuerst); 12 Tester/14 Tage fuer neue Personal-Accounts | extern | mittel |
+| 2026-07-12 | play.google.com/intl/de_de/about/play-terms/ | Play-ToS DE: Google Commerce Ltd = Vertragspartner; digitale Inhalte = Widerrufsverzicht durch Google eingeholt; Abos = 14 Tage Widerruf | offiziell | hoch |
+| 2026-07-12 | developer.android.com/google/play/billing/deprecation-faq | Billing v7-Deadline 31.08.2026 (neue Apps + Updates), Verlaengerung 01.11.2026 beantragbar; Live-Apps laufen weiter | offiziell | hoch |
+| 2026-07-12 | support.google.com/.../answer/10840893 + Chrome-WS-Trader-FAQ + DSA Art. 30/31 | Trader: Telefonnummer wird OEFFENTLICH im EU-Listing angezeigt (SMS-verifiziert); VOIP-/virtuelle Nummer zulaessig; E-Mail allein reicht NICHT; Nicht-Trader-Privatkonto: nur E-Mail oeffentlich | offiziell/extern | hoch |
+| 2026-07-12 | dsgvo-gesetz.de/art-30 + lda.bayern.de DSK-Muss-Liste | VVT-Pflicht (Art.-30-Abs.-5-Ausnahme entfaellt bei Art.-9 + regelmaessig); DSFA-Pflicht via DSK-Positivliste "Art.-9 via mobile App + zentrale Aufbereitung" (Groesse ausdruecklich irrelevant) | offiziell | hoch |
+| 2026-07-12 | github.com/rany2/edge-tts/issues/290 + azure.microsoft.com/pricing/speech | Edge-Consumer-Endpoint: Sec-MS-GEC-Sperrwellen seit Okt/Nov 2024 (Abschalt-Risiko); Azure Speech F0 Free Tier + $4-15/1M Zeichen danach; Alternative: Google Cloud TTS Chirp 3 HD (bestehender Google-AVV deckt ab, siehe bugs/apis/tts-provider.md) | offiziell/extern | hoch |
+| 2026-07-12 | ldi.nrw.de VVT-Muster + lda.bayern.de DSFA-Muster + GDD TOMs | Kostenlose offizielle Vorlagen fuer die Compliance-Artefakte-Session | offiziell | mittel |
 
 ## Sprach-Anforderungen pro Markt (Kurzfassung)
 
