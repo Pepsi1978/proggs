@@ -391,5 +391,6 @@ data class GroqSegment(
     val end: Double?,
     val text: String?,
     val no_speech_prob: Double?,
-    val avg_logprob: Double?
+    val avg_logprob: Double?,
+    val compression_ratio: Double? = null
 )

@@ -520,6 +520,9 @@ object ApiClient {
             .addFormDataPart("model", "whisper-large-v3-turbo")
             .addFormDataPart("language", "de")
             .addFormDataPart("response_format", "verbose_json")
+            // temperature=0 als Basis der Anti-Halluzinations-Kette (Almanach §1.2 — reicht allein
+            // NICHT gegen Stille-Halluzination, aber Grundlage; die 4 Schichten liegen im ViewModel/Filter).
+            .addFormDataPart("temperature", "0")
             .build()
 
         val request = Request.Builder()
@@ -545,7 +548,8 @@ object ApiClient {
                     end = seg.optDouble("end"),
                     text = seg.optString("text"),
                     no_speech_prob = seg.optDouble("no_speech_prob"),
-                    avg_logprob = seg.optDouble("avg_logprob")
+                    avg_logprob = seg.optDouble("avg_logprob"),
+                    compression_ratio = seg.optDouble("compression_ratio")
                 )
             }
         }

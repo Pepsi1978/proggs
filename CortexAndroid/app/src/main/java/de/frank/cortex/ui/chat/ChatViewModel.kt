@@ -128,6 +128,12 @@ class ChatViewModel : ViewModel() {
     val uiState: StateFlow<ChatUiState> = _uiState.asStateFlow()
 
     private val micRecorder = MicRecorder()
+
+    // Whisper-Anti-Halluzinations-Kette (bugs/desktop/groq-transkription.md §2, 4 Schichten wie TVO):
+    // Schicht 1 (Sprachgehalt-Vorfilter) hier vor dem Senden, Schicht 2-4 im Filter.
+    private val speechAnalyzer = SpeechAnalyzer()
+    private val whisperFilter = WhisperHallucinationFilter()
+
     private val pcmPlayer = PcmPlayer()
     private val mp3Player = de.frank.cortex.audio.Mp3Player(de.frank.cortex.CortexApp.appContext)
     private val edgeSynth = de.frank.cortex.audio.EdgeTtsSynthesizer()
@@ -291,16 +297,31 @@ class ChatViewModel : ViewModel() {
                     }
                     CortexLog.info("ChatVM", "toggleRecording", "Aufnahme gestoppt", mapOf("wav_bytes" to wavBytes.size))
 
-                    // Stille-Halluzination filtern
+                    // Anti-Halluzinations-Kette (4 Schichten, bugs/desktop/groq-transkription.md §2).
+                    // Schicht 1: Sprachgehalt-Vorfilter — reine Stille gar nicht erst an Groq senden
+                    // (Whisper halluziniert Floskeln bei Stille MIT hoher Confidence). analysis == null
+                    // (Decode-Fehler) -> NICHT filtern, trotzdem senden (funktionserhaltend).
+                    val analysis = withContext(Dispatchers.IO) { speechAnalyzer.analyze(wavBytes) }
+                    if (analysis != null && analysis.voicedMs < SpeechAnalyzer.MIN_SPEECH_MS) {
+                        _uiState.update { it.copy(isTranscribing = false) }
+                        CortexLog.info(
+                            "ChatVM", "toggleRecording",
+                            "Schicht 1: Aufnahme ohne Sprachgehalt (${analysis.voicedMs} ms laut " +
+                                "< ${SpeechAnalyzer.MIN_SPEECH_MS} ms) — nicht an Groq gesendet"
+                        )
+                        return@launch
+                    }
+
+                    // Schicht 2-4: Confidence-Gate + Audio-Abgleich + Floskel-Blocklist.
                     val result = ApiClient.groqTranscribe(wavBytes)
-                    val filteredText = filterSilence(result)
+                    val filteredText = whisperFilter.filter(result, analysis)
                     if (filteredText.isNotBlank()) {
                         _uiState.update { it.copy(isTranscribing = false) }
                         // Text wird über Callback ans UI zurückgegeben
                         _transcribedText.tryEmit(filteredText)
                     } else {
                         _uiState.update { it.copy(isTranscribing = false) }
-                        CortexLog.info("ChatVM", "toggleRecording", "Stille erkannt — nichts eingefügt")
+                        CortexLog.info("ChatVM", "toggleRecording", "Stille/Halluzination erkannt — nichts eingefügt")
                     }
                 } catch (e: CancellationException) {
                     throw e
@@ -334,19 +355,6 @@ class ChatViewModel : ViewModel() {
 
     private val _improvedText = MutableSharedFlow<String>(extraBufferCapacity = 1)
     val improvedText: SharedFlow<String> = _improvedText
-
-    private fun filterSilence(result: de.frank.cortex.data.model.GroqTranscriptionResponse): String {
-        val segments = result.segments
-        if (segments.isNullOrEmpty()) return result.text.trim()
-
-        // Segmente mit hoher Stille-Wahrscheinlichkeit herausfiltern
-        val significantSegments = segments.filter { seg ->
-            val noSpeech = seg.no_speech_prob ?: 0.0
-            val avgLogprob = seg.avg_logprob ?: 0.0
-            noSpeech < 0.6 && avgLogprob > -1.0
-        }
-        return if (significantSegments.isEmpty()) "" else result.text.trim()
-    }
 
     fun loadCategories() {
         viewModelScope.launch {
