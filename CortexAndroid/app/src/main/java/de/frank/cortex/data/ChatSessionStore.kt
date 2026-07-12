@@ -32,7 +32,8 @@ data class StoredChatMessage(
     val recallHits: Int?,
     val options: List<ChatOption> = emptyList(),
     val stored: Boolean,
-    val timestamp: Long
+    val timestamp: Long,
+    val responseTimeMs: Long? = null
 )
 
 /** Ein gemerkter Speicher-Auftrag (Offline-Outbox, Frank-Wunsch 2026-07-02): wird ohne VPN
@@ -96,7 +97,7 @@ object ChatSessionStore {
 
     fun loadMessages(sessionId: String): List<StoredChatMessage> = helper.readableDatabase.query(
         "messages",
-        arrayOf("id", "text", "is_user", "action", "category", "title", "categories", "doc_id", "memory_text", "stored_text", "memory_editable", "recall_hits", "options", "stored", "timestamp"),
+        arrayOf("id", "text", "is_user", "action", "category", "title", "categories", "doc_id", "memory_text", "stored_text", "memory_editable", "recall_hits", "options", "stored", "timestamp", "response_time_ms"),
         "session_id = ?",
         arrayOf(sessionId),
         null,
@@ -121,7 +122,8 @@ object ChatSessionStore {
                         recallHits = if (cursor.isNull(11)) null else cursor.getInt(11),
                         options = decodeOptions(cursor.getStringOrNull(12)),
                         stored = cursor.getInt(13) == 1,
-                        timestamp = cursor.getLong(14)
+                        timestamp = cursor.getLong(14),
+                        responseTimeMs = if (cursor.isNull(15)) null else cursor.getLong(15)
                     )
                 )
             }
@@ -263,6 +265,7 @@ object ChatSessionStore {
                     put("options", encodeOptions(message.options))
                     put("stored", if (message.stored) 1 else 0)
                     put("timestamp", message.timestamp)
+                    put("response_time_ms", message.responseTimeMs)
                 },
                 SQLiteDatabase.CONFLICT_REPLACE
             )
@@ -351,7 +354,7 @@ object ChatSessionStore {
         )
     """
 
-    private class Helper(context: Context) : SQLiteOpenHelper(context, "cortex_chat_sessions.db", null, 6) {
+    private class Helper(context: Context) : SQLiteOpenHelper(context, "cortex_chat_sessions.db", null, 7) {
         override fun onConfigure(db: SQLiteDatabase) {
             // Statt einmaligem "PRAGMA foreign_keys=ON" in init(): das Pragma gilt nur pro
             // Connection — onConfigure setzt es garantiert fuer JEDE Connection des Helpers.
@@ -388,6 +391,7 @@ object ChatSessionStore {
                     options TEXT,
                     stored INTEGER NOT NULL,
                     timestamp INTEGER NOT NULL,
+                    response_time_ms INTEGER,
                     FOREIGN KEY(session_id) REFERENCES sessions(id) ON DELETE CASCADE
                 )
                 """.trimIndent()
@@ -426,6 +430,9 @@ object ChatSessionStore {
             }
             if (oldVersion < 6) {
                 db.execSQL("ALTER TABLE messages ADD COLUMN options TEXT")
+            }
+            if (oldVersion < 7) {
+                db.execSQL("ALTER TABLE messages ADD COLUMN response_time_ms INTEGER")
             }
         }
     }

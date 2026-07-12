@@ -53,7 +53,8 @@ data class ChatMessage(
     val recallHits: Int? = null,
     val options: List<ChatOption>? = null,
     val stored: Boolean = false,
-    val timestamp: Long = System.currentTimeMillis()
+    val timestamp: Long = System.currentTimeMillis(),
+    val responseTimeMs: Long? = null
 )
 
 data class ChatUiState(
@@ -414,6 +415,7 @@ class ChatViewModel : ViewModel() {
             // nach Session-Wechsel nicht verloren gehen).
             var streamedMsgId: String? = null
             val rawAccum = StringBuilder()
+            var streamingStartedAt: Long? = null
             try {
                 if (WireGuardManager.state.value != TunnelState.CONNECTED) {
                     // Mutierende Speicher- und Regelauftraege gehen ohne VPN nicht verloren,
@@ -502,13 +504,28 @@ class ChatViewModel : ViewModel() {
                             (rawAccum.isNotEmpty() && rawAccum[rawAccum.length - 1] == '\n'))
                     rawAccum.append(delta)
                     val current = rawAccum.toString()
+                    if (streamingStartedAt == null && delta.isNotBlank()) {
+                        streamingStartedAt = System.currentTimeMillis()
+                    }
+                    val streamingElapsedMs = streamingStartedAt?.let { System.currentTimeMillis() - it }
                     val msgId = streamedMsgId
                     if (msgId == null) {
-                        val m = ChatMessage(text = current, isUser = false)
+                        val m = ChatMessage(
+                            text = current,
+                            isUser = false,
+                            responseTimeMs = streamingElapsedMs
+                        )
                         streamedMsgId = m.id
                         _uiState.update { it.copy(messages = it.messages + m, isLoading = false) }
                     } else {
-                        _uiState.update { st -> st.copy(messages = st.messages.map { if (it.id == msgId) it.copy(text = current) else it }) }
+                        _uiState.update { st ->
+                            st.copy(messages = st.messages.map {
+                                if (it.id == msgId) it.copy(
+                                    text = current,
+                                    responseTimeMs = streamingElapsedMs
+                                ) else it
+                            })
+                        }
                     }
                     if (boundaryPossible) {
                         val boundary = rawAccum.lastIndexOf("\n\n")
@@ -557,7 +574,10 @@ class ChatViewModel : ViewModel() {
                 }
 
                 val existingId = streamedMsgId
-                val agentMsg = response.toChatMessage(existingId ?: UUID.randomUUID().toString())
+                val agentMsg = response.toChatMessage(
+                    id = existingId ?: UUID.randomUUID().toString(),
+                    responseTimeMs = streamingStartedAt?.let { System.currentTimeMillis() - it }
+                )
 
                 _uiState.update { st ->
                     st.copy(
@@ -613,7 +633,12 @@ class ChatViewModel : ViewModel() {
 
             } catch (e: CancellationException) {
                 // App/ViewModel wird beendet: die bereits gestreamte TEIL-Antwort trotzdem sichern.
-                persistPartialStreamedReply(sessionId, streamedMsgId, rawAccum)
+                persistPartialStreamedReply(
+                    sessionId,
+                    streamedMsgId,
+                    rawAccum,
+                    streamingStartedAt?.let { System.currentTimeMillis() - it }
+                )
                 throw e
             } catch (e: Exception) {
                 CortexLog.error("ChatVM", "sendMessage", "Fehler: ${e.message}")
@@ -621,7 +646,12 @@ class ChatViewModel : ViewModel() {
                 // Nachricht in der Session-Historie gespeichert (Frank-Wunsch 2026-07-02).
                 // Bei Erfolg ueberschreibt die finale Antwort denselben Datensatz (gleiche id,
                 // CONFLICT_REPLACE) — hier bleibt eben der Teilstand erhalten.
-                persistPartialStreamedReply(sessionId, streamedMsgId, rawAccum)
+                persistPartialStreamedReply(
+                    sessionId,
+                    streamedMsgId,
+                    rawAccum,
+                    streamingStartedAt?.let { System.currentTimeMillis() - it }
+                )
                 _uiState.update {
                     it.copy(
                         isLoading = false,
@@ -760,7 +790,12 @@ class ChatViewModel : ViewModel() {
     /** Sichert eine mittendrin abgebrochene Streaming-Antwort in der Session-Historie.
      *  NonCancellable: laeuft auch dann zu Ende, wenn die aufrufende Coroutine gerade
      *  gecancelt wird (z.B. App-Ende) — genau dann ist das Sichern am wichtigsten. */
-    private suspend fun persistPartialStreamedReply(sessionId: String, messageId: String?, rawAccum: StringBuilder) {
+    private suspend fun persistPartialStreamedReply(
+        sessionId: String,
+        messageId: String?,
+        rawAccum: StringBuilder,
+        responseTimeMs: Long?
+    ) {
         if (messageId == null) return
         val partial = rawAccum.toString().trim()
         if (partial.isBlank()) return
@@ -777,7 +812,8 @@ class ChatViewModel : ViewModel() {
                         title = null,
                         recallHits = null,
                         stored = false,
-                        timestamp = System.currentTimeMillis()
+                        timestamp = System.currentTimeMillis(),
+                        responseTimeMs = responseTimeMs
                     )
                 )
                 CortexLog.info("ChatVM", "persistPartial", "Abgebrochene Streaming-Antwort gesichert",
@@ -1775,7 +1811,10 @@ class ChatViewModel : ViewModel() {
     }
 }
 
-private fun ChatResponse.toChatMessage(id: String = UUID.randomUUID().toString()): ChatMessage = ChatMessage(
+private fun ChatResponse.toChatMessage(
+    id: String = UUID.randomUUID().toString(),
+    responseTimeMs: Long? = null
+): ChatMessage = ChatMessage(
     id = id,
     text = ChatSpeechSanitizer.clean(reply),
     isUser = false,
@@ -1789,7 +1828,8 @@ private fun ChatResponse.toChatMessage(id: String = UUID.randomUUID().toString()
     memoryEditable = memory_editable,
     recallHits = recall_hits,
     options = options,
-    stored = stored
+    stored = stored,
+    responseTimeMs = responseTimeMs
 )
 
 private fun ChatMessage.toStoredMessage(): StoredChatMessage = StoredChatMessage(
@@ -1807,7 +1847,8 @@ private fun ChatMessage.toStoredMessage(): StoredChatMessage = StoredChatMessage
     recallHits = recallHits,
     options = options.orEmpty(),
     stored = stored,
-    timestamp = timestamp
+    timestamp = timestamp,
+    responseTimeMs = responseTimeMs
 )
 
 private fun StoredChatMessage.toChatMessage(): ChatMessage = ChatMessage(
@@ -1825,5 +1866,6 @@ private fun StoredChatMessage.toChatMessage(): ChatMessage = ChatMessage(
     recallHits = recallHits,
     options = options.takeIf { it.isNotEmpty() },
     stored = stored,
-    timestamp = timestamp
+    timestamp = timestamp,
+    responseTimeMs = responseTimeMs
 )

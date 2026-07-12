@@ -549,6 +549,16 @@ private val wordSplitRegex = Regex("\\s+")
 private fun countWords(text: String): Int =
     text.trim().split(wordSplitRegex).count { it.isNotBlank() }
 
+private fun formatResponseTime(responseTimeMs: Long): String {
+    val seconds = responseTimeMs / 1_000.0
+    return if (seconds < 60) {
+        String.format(Locale.GERMANY, "%.1f s", seconds)
+    } else {
+        val minutes = (seconds / 60).toInt()
+        String.format(Locale.GERMANY, "%d min %.1f s", minutes, seconds % 60)
+    }
+}
+
 @Composable
 private fun ChatBubble(
     message: ChatMessage,
@@ -636,12 +646,22 @@ private fun ChatBubble(
                         // remember(text): der O(n)-Split laeuft nur bei Text-Aenderung, nicht bei
                         // jeder Recomposition (z.B. isSpeaking-Wechsel).
                         val wordCount = remember(message.text) { countWords(message.text) }
-                        Text(
-                            text = "($wordCount Wörter)",
-                            fontFamily = JetBrainsMono,
-                            fontSize = 10.sp,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
+                        Column(horizontalAlignment = Alignment.End) {
+                            Text(
+                                text = "($wordCount Wörter)",
+                                fontFamily = JetBrainsMono,
+                                fontSize = 10.sp,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                            message.responseTimeMs?.let { responseTimeMs ->
+                                Text(
+                                    text = formatResponseTime(responseTimeMs),
+                                    fontFamily = JetBrainsMono,
+                                    fontSize = 10.sp,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                            }
+                        }
                     }
                 }
             }
