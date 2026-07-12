@@ -12,9 +12,8 @@ Ein Eingang, ein editierbarer Prompt — pro Nachricht entscheidet der Agent sel
 Beide Koepfe nutzen DENSELBEN editierbaren System-Prompt (ein Fenster im Dashboard); nur der
 geschuetzte JSON-SCHEMA_BLOCK gilt fuer die Entscheidung (Aufruf 1), nicht fuer die Antwort (Aufruf 2).
 
-Gespraech: Kurzzeit-Gedaechtnis pro Sitzung (30 min Inaktivitaet). Danach Logbuch ZWEIFACH:
-  (1) 1:1 ins Gehirn (Kategorie 'gespraeche')
-  (2) als .txt-Sicherheitskopie auf der Samba-Platte Gedanken: /srv/samba/gedanken/Logbuch/JJJJ/MM/
+Gespraech: Kurzzeit-Gedaechtnis pro Sitzung (30 min Inaktivitaet). Danach ausschließlich als
+.txt-Datei auf der Samba-Platte Gedanken: /srv/samba/gedanken/Logbuch/JJJJ/MM/
       Dateiname "TT.MM.JJJJ - H.MM Uhr.txt", Inhalt: Kategorie-Zeile + Datum/Uhrzeit + Verlauf
       (klar getrennt Frank: / Agent:).
 
@@ -83,6 +82,8 @@ VERSION = "0.77.0 (12.07.2026, 17:54 Uhr)"  # 0.77.0 PERFORMANCE-Tiefendebugging
 VERSION = "0.78.0 (12.07.2026, 19:30 Uhr)"  # 0.78.0: GPT-5.6 Sol, Terra und Luna stehen jeweils normal und als Fast-Auswahl bereit. Fast bleibt ein lokaler Alias auf das Basismodell und sendet service_tier=priority an jeden Codex-Responses-Aufruf, einschließlich Tool-Loop und erzwungener Abschlussrunde. Alt: 0.77.0.
 VERSION = "0.78.1 (12.07.2026, 19:54 Uhr)"  # 0.78.1 PERFORMANCE Handy<->Server: /config antwortet sofort — die Codex-Modellliste kommt aus einem 10-Min-Cache mit Stale-while-Revalidate (alter Wert sofort, EIN Hintergrund-Thread holt den neuen, Single-Flight); vorher wartete jeder /config-Aufruf (App-Start + jedes Oeffnen der Einstellungen) live auf chatgpt.com (bis 12s + Token-Refresh). Cache wird beim Serverstart vorgewaermt und bei Codex-Verbinden/Trennen invalidiert. Alt: 0.78.0.
 VERSION = "0.79.0 (12.07.2026, 20:19 Uhr)"  # 0.79.0 STREAMING + RADAR + PARALLEL-SUCHE (Frank-Auftraege #47862): (1) /chat/stream liefert den kanonischen finalen Text jetzt ABSATZWEISE (ready-Event traegt canonical_reply=true als Capability-Zusage, §9.1) — das Web-Cockpit zeigt die Antwort ab dem ersten Absatz und liest ab dem ersten VOLLSTAENDIGEN Absatz vor. (2) Turn-Logbuch-Phasen-Timing repariert: router_ms/suche_ms/web_antwort_ms werden im neuen Profil-/Toolagent-Fluss wieder gefuellt (profile_route/auto_parallel/toolagent als Marker), NEU regeln_ms fuer die Selbstregel-Phase — das Flaschenhals-Radar sieht wieder. (3) Multi-Query-Varianten-LLM startet PARALLEL zur Direktsuche (Ergebnis identisch, ~4s schneller bei schwachen Treffern; bewusster Preis: ein kleiner Router-Call auch bei starken Treffern). Alt: 0.78.1.
+VERSION = "0.79.1 (12.07.2026, 20:45 Uhr)"  # 0.79.1: Gedächtnis-Nachfragen werden deterministisch als Lesen geroutet; im Fragetext genannte Kategorien stehen vor semantisch ähnlichen Gesprächsprotokollen. Alt: 0.79.0.
+VERSION = "0.80.0 (12.07.2026, 21:00 Uhr)"  # 0.80.0: Gespräche werden ausschließlich im Logbuch gespeichert; Live- und Timeout-Spiegelung nach Qdrant sind entfernt. Alt: 0.79.1.
 
 # ---------------------------------------------------------------------------
 # Konfiguration (alles aus Umgebungsvariablen — Secrets nie im Code)
@@ -2311,6 +2312,21 @@ def _rrf_fuse_hits(hit_lists: list[list[dict]], k: int = 60) -> list[dict]:
     return [meta[did] for did, _s in order]
 
 
+def _prioritize_named_categories(user_text: str, hits: list[dict]) -> list[dict]:
+    """Zieht ausdrücklich genannte Kategorien vor, ohne Treffer zu löschen oder Scores zu verändern."""
+    words = set(re.findall(r"[\wäöüß-]+", (user_text or "").casefold()))
+    if not words:
+        return hits
+
+    def named(hit: dict) -> bool:
+        category = str(hit.get("category") or "")
+        parts = re.findall(r"[\wäöüß-]+", category.casefold())
+        return bool(parts) and all(part in words for part in parts)
+
+    preferred = [hit for hit in hits if named(hit)]
+    return preferred + [hit for hit in hits if not named(hit)] if preferred else hits
+
+
 # --- Nr. 36 (Abfrage-Seite): "Alles ueber X"-Erkennung ---------------------------------------------
 # 0.51.1 (Eval-Fund #112, Root Cause per Regex-Test bewiesen): 'zu' matchte NICHT die gebeugten
 # Formen 'zur'/'zum' ("Zeig mir alles ZUR Quorbanit-Kartusche" -> keine Erkennung) -> zu[rm]?
@@ -2424,6 +2440,7 @@ def smart_recall(user_text: str, query: str, user_id: str = USER_ID) -> "tuple[l
         _perf_mark("smart_recall_expanded", "Multi-Query-Fallback vollständig ausgeführt", lists=len(lists))
     with _perf_span("smart_recall_rrf", "RRF-Fusion der Suchvarianten", lists=len(lists), raw_hits=sum(len(x) for x in lists)):
         hits = _rrf_fuse_hits(lists) if len(lists) > 1 else list(lists[0])
+    hits = _prioritize_named_categories(user_text, hits)
 
     # Weicher Zeit-Fallback (rag-retrieval §2): lieber ehrlich 'im Zeitraum nichts, aber generell X'
     # als ein falsches 'nichts gespeichert' — der Filter grenzt ein, er darf nicht verschlucken.
@@ -2630,8 +2647,6 @@ def all_categories() -> list[str]:
 _sessions: dict[str, dict] = {}
 _lock = asyncio.Lock()
 _background_tasks: set[asyncio.Task] = set()
-_conversation_mirror_locks: dict[str, asyncio.Lock] = {}
-_conversation_mirror_latest: dict[str, int] = {}
 
 # ---------------------------------------------------------------------------
 # Idempotenz (Frank-Wunsch 2026-07-02, Almanach ai-agent §5.2 / BP §4): Die App schickt pro
@@ -3491,6 +3506,19 @@ def _looks_like_save_request(text: str, context_mode: str = "auto") -> bool:
     return _is_definite_save_request(text) or bool(_MEMORY_AMBIGUOUS_SAVE_PREFIX_RE.search(text or ""))
 
 
+_MEMORY_RECALL_REFERENCE_RE = re.compile(
+    r"\b(?:ged[äa]chtnis|gespeichert|abgespeichert|notiert)\b|\bsteht\b.{0,100}\bdrin\b", re.IGNORECASE)
+_MEMORY_RECALL_ACTION_RE = re.compile(
+    r"\b(?:such(?:e|en|st)?|find(?:e|en|est)?|nachschau(?:en|st)?|nachseh(?:en|st)?|"
+    r"noch\s+mal|warum\s+find|steht\s+doch|steht\s+.*\bdrin)\b", re.IGNORECASE)
+
+
+def _is_recall_request(text: str) -> bool:
+    """Erkennt Korrekturen/Nachfragen zu bereits gespeichertem Wissen, nie neue Speicherbefehle."""
+    return (bool(_MEMORY_RECALL_REFERENCE_RE.search(text or ""))
+            and bool(_MEMORY_RECALL_ACTION_RE.search(text or "")))
+
+
 def _pending_confirmation_intent(text: str, pending: dict | None) -> str:
     """Eindeutiges Ja/Nein braucht für einen offenen Speicher-Dialog keinen LLM-Router."""
     if not pending or pending.get("mode") not in {"save_confirm", "store_clarify", "memory_edit_confirm", "rule_confirm"}:
@@ -3937,6 +3965,11 @@ def hauptagent_route(session: dict, user_text: str, pending: dict | None, contex
         data["reply"] = ""
         checkpoint("route", "Deterministische Korrektur: eindeutiger Speicherbefehl erzwingt save",
                    ok=True, vorher=old_intent, route="save")
+    if not pending and mode == "auto" and _is_recall_request(user_text):
+        old_intent = data["intent"]
+        data.update(intent="query", quote="", query=user_text.strip(), web_query="", reply="")
+        checkpoint("route", "Deterministische Korrektur: Nachfrage zu gespeichertem Wissen erzwingt Lesen",
+                   ok=True, vorher=old_intent, route="query")
     # Poka-Yoke: Wenn Frank oder ein Zusatzprompt eine KETTE verlangt, darf der Ein-Intent-Router
     # nicht den zweiten Schritt verschlucken. Darum korrigiert der Code query/internet/smalltalk
     # in die Composite-Route und belegt fehlende Queries defensiv aus Franks Originaltext.
@@ -4750,7 +4783,7 @@ def hauptagent_answer_recall_internet(session: dict, question: str, selected: li
 
 
 # ---------------------------------------------------------------------------
-# Logbuch: Gespraech ZWEIFACH sichern (Gehirn + .txt auf der Samba-Platte)
+# Logbuch: Gespräche ausschließlich als .txt auf der Samba-Platte sichern
 # ---------------------------------------------------------------------------
 def _unique_path(folder: Path, base: str) -> Path:
     p = folder / f"{base}.txt"
@@ -4771,7 +4804,7 @@ def _coerce_session_start(value) -> datetime:
 
 
 def _conversation_logbook_payload(session: dict) -> tuple[str, str, str]:
-    """Einheitlicher 1:1-Text fuer Live-Mirror und Timeout-Flush; gleicher Titel ersetzt im Brain."""
+    """Einheitlicher 1:1-Text für Session-Persistenz und Logbuch-Datei."""
     start = _coerce_session_start(session.get("start_local"))
     date_str = start.strftime("%d.%m.%Y")
     time_str = f"{start.hour}.{start.minute:02d} Uhr"
@@ -4854,53 +4887,9 @@ def cleanup_old_smoke_conversations(user_id: str = USER_ID) -> dict:
             "titles": deleted, "errors": errors[:10]}
 
 
-async def _mirror_session_to_brain_now(sid: str, snap: dict) -> None:
-    """Spiegelt einen fertigen Turn sofort ins Gehirn; alter Timeout-Flush bleibt Fallback."""
-    if not snap.get("messages"):
-        return
-    seq = int(snap.get("conversation_mirror_seq") or 0)
-    lock = _conversation_mirror_locks.setdefault(sid, asyncio.Lock())
-    async with lock:
-        if seq and seq < _conversation_mirror_latest.get(sid, 0):
-            _log(logging.INFO, "Veralteter Gesprächs-Mirror übersprungen", session=sid, seq=seq)
-            return
-        title, content, start_label = _conversation_logbook_payload(snap)
-        try:
-            stored = await asyncio.to_thread(
-                brain_store,
-                content,
-                title,
-                CONV_CATEGORY,
-                snap.get("user_id") or USER_ID,
-            )
-            checkpoint("logbuch_live", "Gespräch direkt nach Turn ins Gehirn gespiegelt",
-                       ok=bool(stored.get("doc_id")), brain=True,
-                       nachrichten=len(snap.get("messages") or []), start=start_label,
-                       doc_id=stored.get("doc_id"))
-        except Exception:  # noqa: BLE001 — Timeout-Flush bleibt als reaktive Schutzschicht
-            _log(logging.ERROR, "Live-Gesprächs-Mirror ins Gehirn fehlgeschlagen", exc_info=True, session=sid)
-
-
-def _schedule_conversation_mirror(sid: str, snap: dict) -> None:
-    if not snap.get("messages"):
-        return
-    seq = int(snap.get("conversation_mirror_seq") or 0)
-    if seq:
-        _conversation_mirror_latest[sid] = max(_conversation_mirror_latest.get(sid, 0), seq)
-    # Der Mirror läuft nach der Antwort weiter. Er darf den aktiven Turn-Trace nicht erben,
-    # sonst landen Hintergrund-Spans halb in bereits abgeschlossenen Trace-Dateien.
-    bg_context = contextvars.copy_context()
-    bg_context.run(_current_trace.set, None)
-    _track_background_task(asyncio.create_task(_mirror_session_to_brain_now(sid, snap), context=bg_context))
-
-
-_MIRROR_TOMBSTONE_SEQ = 10**12   # Tombstone einer GELOESCHTEN Sitzung: jeder geplante Mirror wird uebersprungen
-
-
 async def _evict_live_conversation(start_label: str) -> int:
-    """Nach dem Loeschen eines Gespraechs die passende LIVE-Sitzung verwerfen (Frank-Bug 2026-07-12:
-    der Live-Mirror bzw. der Timeout-Flush schrieb das gerade geloeschte Gespraech nach dem naechsten
-    Turn sofort wieder ins Gehirn + als .txt zurueck — 'Loeschen geht gar nicht'). Verwirft NUR
+    """Nach dem Löschen eines Gesprächs die passende LIVE-Sitzung verwerfen, damit der Timeout-Flush
+    die Logbuch-Datei nicht erneut anlegt. Verwirft NUR
     Sitzungen, deren Start-Label EXAKT dem geloeschten Titel entspricht; alte Gespraeche und fremde
     Sitzungen bleiben unberuehrt. Gibt die Anzahl verworfener Sitzungen zurueck."""
     label = (start_label or "").strip()
@@ -4917,26 +4906,14 @@ async def _evict_live_conversation(start_label: str) -> int:
                 _sessions.pop(sid, None)
                 evicted.append((sid, s_title))
     for sid, s_title in evicted:
-        # Tombstone UNTER dem Mirror-Lock setzen: ein bereits geplanter Live-Mirror (laeuft als
-        # Hintergrund-Task nach der Antwort) sieht seq < Tombstone und ueberspringt still —
-        # nichts schreibt das geloeschte Gespraech zurueck. Session-Neuanlage hebt den Tombstone auf.
-        mlock = _conversation_mirror_locks.setdefault(sid, asyncio.Lock())
-        async with mlock:
-            _conversation_mirror_latest[sid] = _MIRROR_TOMBSTONE_SEQ
         await asyncio.to_thread(_drop_session_file, sid)
-        # Rest-Race schliessen: hat ein Mirror ZWISCHEN Gehirn-Loeschung und Tombstone schon
-        # gespeichert, raeumt dieser best-effort-Forget den wiederauferstandenen Eintrag ab (idempotent).
-        try:
-            await asyncio.to_thread(brain_forget_title, s_title)
-        except Exception:  # noqa: BLE001 — best-effort; Datei- und Gehirn-Loeschung sind schon passiert
-            _log(logging.WARNING, "Nach-Eviction-Forget fehlgeschlagen", title=s_title)
         checkpoint("logbuch_session_eviction", "Live-Sitzung nach Gespraechs-Loeschung verworfen",
                    ok=True, session=sid, title=s_title)
     return len(evicted)
 
 
 def flush_session_to_logbook(session: dict) -> None:
-    """Schreibt den Gespraechsverlauf 1:1 ins Gehirn (Kategorie gespraeche) UND als .txt-Kopie."""
+    """Schreibt den Gesprächsverlauf 1:1 ausschließlich als Logbuch-.txt; niemals nach Qdrant."""
     if not session["messages"]:
         return
     title, content, start_label = _conversation_logbook_payload(session)
@@ -4953,15 +4930,8 @@ def flush_session_to_logbook(session: dict) -> None:
     except Exception:  # noqa: BLE001 — .txt-Kopie darf das Gehirn-Logbuch nicht verhindern
         _log(logging.ERROR, "Logbuch-.txt fehlgeschlagen", exc_info=True)
 
-    brain_ok = False
-    try:
-        brain_store(text=content, title=title, category=CONV_CATEGORY)
-        brain_ok = True
-    except Exception:  # noqa: BLE001
-        _log(logging.ERROR, "Logbuch ins Gehirn fehlgeschlagen", exc_info=True)
-
-    checkpoint("logbuch", "Gespraech ZWEIFACH gesichert (Gehirn + .txt-Kopie)",
-               ok=(txt_ok or brain_ok), txt=txt_ok, brain=brain_ok,
+    checkpoint("logbuch", "Gespräch ausschließlich als Logbuch-.txt gesichert",
+               ok=txt_ok, txt=txt_ok, brain=False,
                nachrichten=len(session["messages"]), start=start_label)
 
 
@@ -4988,8 +4958,7 @@ def _session_snapshot(sid: str, session: dict) -> dict:
             "start_local": session["start_local"].isoformat(),
             "messages": list(session["messages"]), "pending": session.get("pending"),
             "last_memory": session.get("last_memory"),
-            "context_limit_notified": bool(session.get("context_limit_notified")),
-            "conversation_mirror_seq": int(session.get("conversation_mirror_seq") or 0)}
+            "context_limit_notified": bool(session.get("context_limit_notified"))}
 
 
 def _apply_memory_outcome(session: dict, outcome: dict) -> None:
@@ -5038,9 +5007,8 @@ def _load_persisted_sessions() -> dict:
                              "messages": d.get("messages") or [],
                              "pending": d.get("pending"),
                              "last_memory": d.get("last_memory"),
-                            "context_limit_notified": bool(d.get("context_limit_notified")),
-                            "conversation_mirror_seq": int(d.get("conversation_mirror_seq") or 0),
-                            "last_activity": time.monotonic()}
+                             "context_limit_notified": bool(d.get("context_limit_notified")),
+                             "last_activity": time.monotonic()}
             except Exception:  # noqa: BLE001 — eine kaputte Datei darf den Start nicht verhindern
                 _log(logging.WARNING, "Session-Datei nicht lesbar — uebersprungen", file=str(f))
     except Exception:  # noqa: BLE001
@@ -7646,7 +7614,6 @@ async def chat(req: ChatReq) -> dict:
             if session is None:
                 session = _new_session(req.user_id)
                 _sessions[sid] = session
-                _conversation_mirror_latest.pop(sid, None)   # Eviction-Tombstone einer geloeschten Vorgaenger-Sitzung aufheben
             session["messages"].append({"role": "frank", "text": req.text})
             pending = session.get("pending")
             _frank_snap = _session_snapshot(sid, session)
@@ -7690,11 +7657,9 @@ async def chat(req: ChatReq) -> dict:
             _apply_memory_outcome(session, outcome)
             session["messages"].append({"role": "agent", "text": outcome.get("reply", "")})
             session["last_activity"] = time.monotonic()
-            session["conversation_mirror_seq"] = int(session.get("conversation_mirror_seq") or 0) + 1
             limit_hit = _mark_context_limit(session)
             snap = _session_snapshot(sid, session)
         await asyncio.to_thread(_write_session_snapshot, snap)   # Spiegel ausserhalb des Locks (fastapi §2)
-        _schedule_conversation_mirror(sid, snap)
     except BaseException:
         # Erstverarbeitung fehlgeschlagen/abgebrochen: request_id freigeben, damit ein
         # ehrlicher Retry neu rechnen darf (sonst blockiert der Key bis zum TTL-Ablauf).
@@ -7766,7 +7731,6 @@ async def chat_stream(req: ChatReq) -> StreamingResponse:
         if session is None:
             session = _new_session(req.user_id)
             _sessions[sid] = session
-            _conversation_mirror_latest.pop(sid, None)   # Eviction-Tombstone einer geloeschten Vorgaenger-Sitzung aufheben
         session["messages"].append({"role": "frank", "text": req.text})
         pending = session.get("pending")
         _frank_snap = _session_snapshot(sid, session)
@@ -7815,11 +7779,9 @@ async def chat_stream(req: ChatReq) -> StreamingResponse:
                 _apply_memory_outcome(session, outcome)
                 session["messages"].append({"role": "agent", "text": outcome.get("reply", "")})
                 session["last_activity"] = time.monotonic()
-                session["conversation_mirror_seq"] = int(session.get("conversation_mirror_seq") or 0) + 1
                 limit_hit = _mark_context_limit(session)
                 snap = _session_snapshot(sid, session)
             await asyncio.to_thread(_write_session_snapshot, snap)   # Antwort deploy-/crash-sicher spiegeln
-            _schedule_conversation_mirror(sid, snap)
             response = {
                 "ok": True, "reply": outcome.get("reply", ""), "action": outcome.get("action"),
                 "session_id": sid, "category": outcome.get("category"), "title": outcome.get("title"),

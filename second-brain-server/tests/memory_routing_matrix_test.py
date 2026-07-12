@@ -28,12 +28,12 @@ def load_namespace() -> dict:
     assignment_names = {
         "_MEMORY_COMMAND_PREFIX_RE", "_MEMORY_COMMAND_SUFFIX_RE", "_MEMORY_COURTESY_SUFFIX_RE",
         "_MEMORY_AMBIGUOUS_SAVE_PREFIX_RE", "_MEMORY_VERBATIM_RE", "_MEMORY_SAVE_ACTION_RE",
-        "_MEMORY_SAVE_INPUT_OPENER_RE",
+        "_MEMORY_SAVE_INPUT_OPENER_RE", "_MEMORY_RECALL_REFERENCE_RE", "_MEMORY_RECALL_ACTION_RE",
     }
     function_names = {
         "_has_spoken_save_command", "_has_verbatim_save_signal", "_verbatim_memory_content",
         "_is_save_input_opener", "_is_definite_save_request", "_pending_confirmation_intent",
-        "_process_rule_turn", "_process_turn",
+        "_is_recall_request", "_process_rule_turn", "_process_turn",
     }
     selected = []
     for node in ast.parse(APP_SOURCE).body:
@@ -112,6 +112,12 @@ def main() -> int:
 
     normal = process({}, "Gib mir die Regeln der Thermodynamik.", None)
     check(normal["action"] == "smalltalk", "Wissensfrage mit 'Regeln' bleibt normaler Dialog")
+
+    for recall_text in (
+        "Da steht doch alles im Gedächtnis drin. Warum findest du das nicht?",
+        "Es steht doch etwas über mein Auto drin. Kannst du nicht noch mal suchen?",
+    ):
+        check(ns["_is_recall_request"](recall_text), "Nachfrage zu gespeichertem Wissen wird als Recall erkannt")
 
     auto_rule_words = process({}, "Erstelle eine Regel: Erfinde niemals Fakten.", None)
     check(auto_rule_words["action"] == "smalltalk", "Automatik darf trotz Regelwörtern keine Regel anlegen")
