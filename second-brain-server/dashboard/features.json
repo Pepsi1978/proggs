@@ -1,7 +1,15 @@
 {
-	"stand": "11.07.2026, 22:57 Uhr",
+	"stand": "12.07.2026, 11:11 Uhr",
 	"hinweis": "PFLEGE-PFLICHT: Bei JEDEM Deploy, der ein neues System/Feature einbaut, hier einen Eintrag ERGÄNZEN (neueste zuerst). SCHREIBWEISE (Dauer-Regel): leichtes, verständliches Deutsch, kurze Sätze; ALLE Fachbegriffe, Namen und Zahlen (z.B. BM25, RRF, Qdrant, ENV-Variablen, Endpunkt-Namen) BEHALTEN, aber jeden in einem kurzen Halbsatz erklären — NIE durch Weglassen vereinfachen; kompakt halten (der Hauptagent liest über das Werkzeug 'was_kann_cortex' ALLE Einträge auf einmal ein), aber vollständig genug, dass man erkennt WAS eingebaut wurde; einfache Überschrift. Ähnliche/redundante Einträge dürfen zusammengefasst werden — Datum sekundär, entscheidend ist WAS Cortex kann. Quelle des Info-Bereichs in den Dashboard-Einstellungen (GET /api/features). Verankert in DEPLOY.md.",
 	"features": [
+		{
+			"id": "bibliothekar-eintragsbezug",
+			"eingebaut": "12.07.2026, 11:11 Uhr",
+			"dienst": "brain-api 1.32.2 + librarian 0.14.3 + dashboard 0.76.2",
+			"name": "Bibliothekar zeigt den betroffenen Eintrag",
+			"kurz": "Jeder Bibliothekar-Fund nennt seine betroffenen Gehirn-Einträge und zeigt sie auf Klick in einer aufklappbaren Volltextansicht.",
+			"erklaerung": "Eigene Nachtaufgaben geben pro Fund jetzt die doc_ids aller betroffenen Quell-Einträge zurück; der Bibliothekar speichert Titel, Kategorie und einen Textauszug dauerhaft im Tages-Report. Für bereits vorhandene Reports ohne diesen Kontext erkennt das Dashboard die doc_id aus der Aktion und lädt den ganzen Eintrag beim ersten Aufklappen über den neuen read-only-Endpunkt GET /by-id der brain-api. Der Abruf ist auf die exakte doc_id und den aktuellen user_id begrenzt. Dadurch ist auch bei Kategorien-Vorschlägen sofort eindeutig, welcher gespeicherte Eintrag gemeint ist; der Eintragstext bleibt unverändert und die Ansicht führt keine Aktion aus."
+		},
 		{
 			"id": "verlustfreie-chat-beschleunigung",
 			"eingebaut": "11.07.2026, 22:57 Uhr",

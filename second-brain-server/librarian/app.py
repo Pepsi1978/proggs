@@ -65,6 +65,7 @@ VERSION = "0.13.0 (10.07.2026, 22:12 Uhr)"  # 0.13.0 (Level-2 Gruppe A, Punkt 6 
 VERSION = "0.14.0 (10.07.2026, 22:34 Uhr)"  # 0.14.0 (Level-2 Gruppe A, Punkt 9): NEU Standard-Nachtaufgabe META-GEDAECHTNIS-AUSWERTUNG (META_SYSTEM + _task_meta): liest Franks Daumen-runter-Feedback der letzten 14 Tage (agent GET /feedback), findet WIEDERKEHRENDE Muster (>=2 Faelle, max 2 pro Nacht, Einzelfaelle zaehlen nicht) und legt je Muster einen Morgen-Report-Fund mit vorformuliertem SELBST-REGEL-Vorschlag an — OHNE Auto-Aktion: aktiviert wird eine Regel NUR ueber den bestehenden bestaetigten Regel-Weg (Chat mach daraus eine Regel / Einstellungen). Eigene Bilanz-Zeile. Alt: 0.13.0.
 VERSION = "0.14.1 (11.07.2026, 19:41 Uhr)"  # 0.14.1: Zusaetzliche Kategorie-Vorschlaege kennen alle vorhandenen Kategorien; deterministischer No-op-Guard verwirft bereits vergebene Kategorien. Alt: 0.14.0.
 VERSION = "0.14.2 (11.07.2026, 19:51 Uhr)"  # 0.14.2: Kategorie-Ergaenzungen nutzen den atomaren brain-api-Endpoint statt clientseitigem Read-Modify-Write. Alt: 0.14.1.
+VERSION = "0.14.3 (12.07.2026, 11:11 Uhr)"  # 0.14.3: Eigene Funde speichern ihre betroffenen Quell-Eintraege fuer die aufklappbare Report-Anzeige. Alt: 0.14.2.
 AGENT_URL = os.getenv("AGENT_URL", "http://agent:8002").rstrip("/")   # LLM-Durchgriff fuer Codex/GPT (agent 0.52.0)
 # Stille Notbremse gegen Endlosschleifen, wenn 'Ohne Begrenzung' aktiv ist (Almanach ai-agent §2.1:
 # ein Cap muss STOPPEN koennen). 5000 Calls erreicht ehrliche Nacht-Arbeit nie — nur ein Amoklauf.
@@ -789,7 +790,7 @@ definierte Zusatzaufgabe aus. Du bekommst die Aufgaben-Definition und die angefo
 Texte. Lange Eintraege koennen ausdruecklich als GEKUERZTER AUSZUG markiert sein. Erzeuge daraus
 FUNDE als Vorschlaege fuer Frank (er bestaetigt morgens per Klick).
 Jeder Fund braucht: beschreibung (was gefunden wurde, leichtes Deutsch), empfehlung (was zu tun
-waere) und optional eine ausfuehrbare aktion. Erlaubte aktion-Typen:
+waere), doc_ids (alle betroffenen Quell-Eintraege aus der Eingabe) und optional eine ausfuehrbare aktion. Erlaubte aktion-Typen:
 - {{"typ":"update","doc_id":"...","text":"neuer VOLLSTAENDIGER Volltext","titel":"optional neuer Titel"}}
 - {{"typ":"papierkorb","doc_id":"..."}}
 - {{"typ":"kategorie","doc_id":"...","kategorie":"Haupt/Unter"}} (fuegt diese Kategorie ZUSAETZLICH hinzu; bestehende Kategorien bleiben erhalten)
@@ -800,7 +801,7 @@ KEINE update- oder merge-Aktion vorschlagen, weil der neue Volltext sonst unvoll
 Schlage dann nur einen Hinweis vor und sage, dass der vollstaendige Text gezielt geladen werden muss.
 Maximal 6 Funde. Keine Funde -> leere Liste.
 {_UNTRUSTED}
-Antworte NUR mit diesem JSON: {{"funde":[{{"titel":"kurz","beschreibung":"...","empfehlung":"...","aktion":{{...}}}}]}}"""
+Antworte NUR mit diesem JSON: {{"funde":[{{"titel":"kurz","beschreibung":"...","empfehlung":"...","doc_ids":["..."],"aktion":{{...}}}}]}}"""
 
 INTERVIEW_SYSTEM = f"""Du bist der Nachtschicht-Bibliothekar von Franks zweitem Gehirn und hilfst ihm,
 eine NEUE oder BESTEHENDE Nacht-Aufgabe zu definieren oder zu verbessern. Fuehre ein kurzes,
@@ -1598,9 +1599,18 @@ def _task_custom(cfg: dict, st: dict, budget: NightBudget, entries: dict, report
                           "gekuerzten Auszug; die ausfuehrbare Aktualisierung wurde deshalb "
                           "blockiert. Bitte den vollstaendigen Text gezielt laden und danach "
                           "aktualisieren.")
+        context_ids = [str(d).strip() for d in (f.get("doc_ids") or []) if str(d).strip() in entries]
+        for action_id in [aktion.get("doc_id"), *(aktion.get("doc_ids") or [])]:
+            action_id = str(action_id or "").strip()
+            if action_id in entries and action_id not in context_ids:
+                context_ids.append(action_id)
+        kontext = [{"doc_id": did, "titel": entries[did].get("title") or did,
+                    "kategorie": entries[did].get("category") or "",
+                    "auszug": _excerpt(entries[did].get("text", ""), 700)}
+                   for did in context_ids[:12]]
         item = _new_item("custom", key, f"{tname}: {(f.get('titel') or 'Fund').strip()[:120]}",
                          besch, empfehlung,
-                         aktion, [], ja_label="Umsetzen", nein_label="Verwerfen")
+                         aktion, kontext, ja_label="Umsetzen", nein_label="Verwerfen")
         item["taskname"] = tname
         report["items"].append(item)
         _mark_finding(st, key, "offen")
