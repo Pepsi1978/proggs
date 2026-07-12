@@ -15,8 +15,9 @@ SOURCE = APP_PATH.read_text(encoding="utf-8")
 def load_sanitizers() -> dict:
     assignments = {
         "_MD_BOLD_RE", "_MD_HEADING_RE", "_MD_BULLET_RE", "_MD_WEB_LINK_RE",
-        "_BARE_WEB_URL_RE", "_TRAILING_SOURCES_RE", "_NUMERIC_CITATION_RE",
+        "_BARE_WEB_URL_RE", "_BARE_DOMAIN_RE", "_TRAILING_SOURCES_RE", "_NUMERIC_CITATION_RE",
         "_SOURCE_ATTRIBUTION_TAIL_RE", "_PARENTHETICAL_SOURCE_RE",
+        "_ARTICLE_SOURCE_ATTRIBUTION_RE",
         "_INTERNAL_OUTPUT_INSTRUCTION_RE",
         "_FREEFORM_ACTIONS",
     }
@@ -67,6 +68,17 @@ def main() -> int:
         "CLAUDE.md kann AGENTS.md importieren."
     )
     assert sanitize("Die Quelle ist für die Bewertung wichtig.") == "Die Quelle ist für die Bewertung wichtig."
+    vehicle_reply = (
+        "In deinem Gedächtnis steht zu deinem Auto: Toyota C-HR, Baujahr 2019, mit der KBA-Nummer 5013-AKY.\n\n"
+        "Für den Kauf von Kfz-Teilen kannst du daher angeben: HSN 5013 und TSN AKY.\n\n"
+        "Aktuell finde ich dazu ebenfalls die Bestätigung. Die Quelle ist dieversicherer.de."
+    )
+    assert sanitize(vehicle_reply) == (
+        "In deinem Gedächtnis steht zu deinem Auto: Toyota C-HR, Baujahr 2019, mit der KBA-Nummer 5013-AKY.\n\n"
+        "Für den Kauf von Kfz-Teilen kannst du daher angeben: HSN 5013 und TSN AKY.\n\n"
+        "Aktuell finde ich dazu ebenfalls die Bestätigung."
+    )
+    assert sanitize("Die Angaben wurden bestätigt. dieversicherer.de") == "Die Angaben wurden bestätigt."
     user = "Gibt es den neuen Toyota RAV4 schon zu kaufen?"
     assert ns["_reinforce_self_rules"]("DAUERHAFTE SELBST-REGELN VON FRANK", user) == user
 

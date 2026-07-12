@@ -1481,6 +1481,10 @@ _MD_HEADING_RE = re.compile(r"^\s{0,3}#{1,6}\s+", re.MULTILINE)
 _MD_BULLET_RE = re.compile(r"^\s{0,3}[-*•]\s+", re.MULTILINE)
 _MD_WEB_LINK_RE = re.compile(r"\[([^\]]+)]\((?:https?://|www\.)[^\s)]+(?:\s+\"[^\"]*\")?\)", re.IGNORECASE)
 _BARE_WEB_URL_RE = re.compile(r"\b(?:https?://|www\.)[^\s<>()]+", re.IGNORECASE)
+_BARE_DOMAIN_RE = re.compile(
+    r"\b(?:[a-z0-9](?:[a-z0-9-]{0,62}[a-z0-9])?\.)+(?:de|com|org|net|eu|info|io|ai|co\.uk)\b[^\s<>()]*",
+    re.IGNORECASE,
+)
 _TRAILING_SOURCES_RE = re.compile(
     r"^\s*(?:quellen?|sources?|references?|weiterf(?:ü|ue)hrende\s+links?)\s*:?.*$",
     re.IGNORECASE | re.MULTILINE | re.DOTALL,
@@ -1488,6 +1492,12 @@ _TRAILING_SOURCES_RE = re.compile(
 _SOURCE_ATTRIBUTION_TAIL_RE = re.compile(
     r"(?:^|(?<=[.!?]))[ \t]*(?:[-–—]\s*)?"
     r"(?:quelle(?:n)?|sources?|references?)\s*(?::|ist|sind|war|waren)?\s+[^\n]*",
+    re.IGNORECASE | re.MULTILINE,
+)
+_ARTICLE_SOURCE_ATTRIBUTION_RE = re.compile(
+    r"(?:^|(?<=[.!?]))[ \t]*(?:die\s+)?quelle\s*(?::|ist|war)\s+"
+    r"(?:https?://|www\.)?"
+    r"(?:[a-z0-9](?:[a-z0-9-]{0,62}[a-z0-9])?\.)+(?:de|com|org|net|eu|info|io|ai|co\.uk)\b[^\n]*",
     re.IGNORECASE | re.MULTILINE,
 )
 _PARENTHETICAL_SOURCE_RE = re.compile(
@@ -1526,10 +1536,12 @@ def _sanitize_visible_reply(text: str) -> str:
         return text
     t = _INTERNAL_OUTPUT_INSTRUCTION_RE.sub("", text)
     t = _TRAILING_SOURCES_RE.sub("", t)
+    t = _ARTICLE_SOURCE_ATTRIBUTION_RE.sub("", t)
     t = _MD_WEB_LINK_RE.sub(r"\1", t)
     t = _BARE_WEB_URL_RE.sub(_remove_bare_web_url, t)
     t = _PARENTHETICAL_SOURCE_RE.sub("", t)
     t = _SOURCE_ATTRIBUTION_TAIL_RE.sub("", t)
+    t = _BARE_DOMAIN_RE.sub(_remove_bare_web_url, t)
     t = _NUMERIC_CITATION_RE.sub("", t)
     t = re.sub(r"[ \t]+([,.;:!?])", r"\1", t)
     t = re.sub(r"\n[ \t]+", "\n", t)

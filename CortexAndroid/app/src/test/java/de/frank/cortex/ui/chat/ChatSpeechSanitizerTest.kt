@@ -61,4 +61,27 @@ class ChatSpeechSanitizerTest {
             ChatSpeechSanitizer.clean("Die Quelle ist für die Bewertung wichtig."),
         )
     }
+
+    @Test
+    fun removesSourceAttributionFromVehicleReplyAndStandaloneDomains() {
+        val input = """
+            In deinem Gedächtnis steht zu deinem Auto: Toyota C-HR, Baujahr 2019, mit der KBA-Nummer 5013-AKY.
+
+            Für den Kauf von Kfz-Teilen kannst du daher angeben: HSN 5013 und TSN AKY.
+
+            Aktuell finde ich dazu ebenfalls die Bestätigung. Die Quelle ist dieversicherer.de.
+        """.trimIndent()
+
+        assertEquals(
+            """
+                In deinem Gedächtnis steht zu deinem Auto: Toyota C-HR, Baujahr 2019, mit der KBA-Nummer 5013-AKY.
+
+                Für den Kauf von Kfz-Teilen kannst du daher angeben: HSN 5013 und TSN AKY.
+
+                Aktuell finde ich dazu ebenfalls die Bestätigung.
+            """.trimIndent(),
+            ChatSpeechSanitizer.clean(input),
+        )
+        assertEquals("Die Angaben wurden bestätigt.", ChatSpeechSanitizer.clean("Die Angaben wurden bestätigt. dieversicherer.de"))
+    }
 }
