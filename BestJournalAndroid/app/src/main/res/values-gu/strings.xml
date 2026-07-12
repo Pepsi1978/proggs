@@ -1094,12 +1094,12 @@ Premium સાથે: દરરોજ 150 સુધી.</string>
     <string name="privacy_gate_groq_local">તેના બદલે સ્થાનિક રીતે ટ્રાન્સક્રાઇબ કરો</string>
 
     <string name="privacy_gate_gemini_title">ટેક્સ્ટ Google Gemini ને મોકલવો?</string>
-    <string name="privacy_gate_gemini_body">સારું છે કે તમે Best Journal ની સ્માર્ટ સુવિધાઓ વાપરવા ઇચ્છો છો! સારાંશ, સ્મૃતિ, Dashboard અંતર્દૃષ્ટિ અને ટેક્સ્ટ સુધારણા માટે તમારા ટેક્સ્ટ એન્ક્રિપ્ટ કરીને Google Gemini ને મોકલવામાં આવે છે.\\n\\n✓ તમારા ડેટા સાથે AI ટ્રેઇનિંગ નહીં\\n✓ વિનંતીઓ કાયમ સ્ટોર થતી નથી\\n✓ EU-US Data Privacy Framework અનુસાર એન્ક્રિપ્ટ\\n\\nમહત્ત્વની નોંધ: તમારી ડાયરી એન્ટ્રીઓમાં ખૂબ સંવેદનશીલ ડેટા (સ્વાસ્થ્ય, ધર્મ, વ્યક્તિગત સંબંધો — GDPR Art. 9) હોઈ શકે, તેથી અમે AI પ્રક્રિયા માટે તમારી સ્પષ્ટ સંમતિ માંગીએ છીએ. AI આઉટપુટ સૂચનો છે, વ્યાવસાયિક સલાહ નથી.\\n\\nતમે આ ગમે ત્યારે Settings માં બદલી શકો છો.</string>
+    <string name="privacy_gate_gemini_body">સારું છે કે તમે Best Journal ની સ્માર્ટ સુવિધાઓ વાપરવા ઇચ્છો છો! સારાંશ, સ્મૃતિ, Dashboard અંતર્દૃષ્ટિ અને ટેક્સ્ટ સુધારણા માટે તમારા ટેક્સ્ટ એન્ક્રિપ્ટ કરીને Google Gemini ને મોકલવામાં આવે છે.\\n\\n✓ તમારા ડેટા સાથે AI ટ્રેઇનિંગ નહીં\\n✓ વિનંતીઓ કાયમ સ્ટોર થતી નથી\\n✓ એન્ક્રિપ્ટ; EU-US Data Privacy Framework અનુસાર સ્થાનાંતર, વધુમાં Google કરારમાંની EU માનક કરાર કલમો દ્વારા સુરક્ષિત\\n\\nમહત્ત્વની નોંધ: તમારી ડાયરી એન્ટ્રીઓમાં ખૂબ સંવેદનશીલ ડેટા (સ્વાસ્થ્ય, ધર્મ, વ્યક્તિગત સંબંધો — GDPR Art. 9) હોઈ શકે, તેથી અમે AI પ્રક્રિયા માટે તમારી સ્પષ્ટ સંમતિ માંગીએ છીએ. AI આઉટપુટ સૂચનો છે, વ્યાવસાયિક સલાહ નથી.\\n\\nતમે આ ગમે ત્યારે Settings માં બદલી શકો છો.</string>
     <string name="privacy_gate_gemini_accept">સંમત અને મોકલો</string>
     <string name="privacy_gate_gemini_cancel">રદ કરો</string>
 
     <string name="privacy_gate_tts_title">Premium અવાજો ચાલુ કરો</string>
-    <string name="privacy_gate_tts_body">Premium અવાજો સાથે વાચન વધુ કુદરતી લાગે છે. તમારું લખાણ એન્ક્રિપ્ટ કરીને (HTTPS/TLS) USA માં Microsoft ની વાણી-સેવાને મોકલાય છે અને ઑડિયો તરીકે પાછું મળે છે.\n\n✓ સ્થાનાંતર માત્ર વાણી-સંશ્લેષણ માટે\n✓ ત્રીજા-દેશ સ્થાનાંતર USA (Microsoft એ EU-US Data Privacy Framework અનુસાર પ્રમાણિત છે)</string>
+    <string name="privacy_gate_tts_body">Premium અવાજો સાથે વાચન વધુ કુદરતી લાગે છે. તમારું લખાણ એન્ક્રિપ્ટ કરીને (HTTPS/TLS) USA માં Microsoft ની વાણી-સેવાને મોકલાય છે અને ઑડિયો તરીકે પાછું મળે છે.\n\nમહત્ત્વનું: આ સેવા માટે Microsoft સાથે કોઈ કરાર નથી. આ સ્થાનાંતર માત્ર તમારી સ્પષ્ટ સંમતિ (GDPR કલમ 49(1)(a)) પર જ આધારિત છે. શક્ય જોખમો: US સત્તાવાળાઓ દ્વારા પ્રવેશ, Microsoft સામે તમારા અધિકારોનું અમલીકરણ મુશ્કેલ.\n\n✓ સ્થાનાંતર માત્ર વાણી-સંશ્લેષણ માટે\n✓ ગમે ત્યારે Settings માં રદ કરી શકાય\n\nવિકલ્પ: કોઈપણ ડેટા સ્થાનાંતર વગરનો સ્થાનિક વાચન-અવાજ.</string>
     <string name="privacy_gate_tts_accept">સંમત અને વાંચો</string>
     <string name="privacy_gate_tts_cancel">રદ કરો</string>
 

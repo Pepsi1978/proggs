@@ -1135,12 +1135,12 @@ Premium: 하루 최대 150회.</string>
     <string name="privacy_gate_groq_local">로컬로 전사하기</string>
 
     <string name="privacy_gate_gemini_title">텍스트를 Google Gemini에 보낼까요?</string>
-    <string name="privacy_gate_gemini_body">Best Journal의 스마트 기능을 사용해 주셔서 감사해요! 요약, 회고, 대시보드 인사이트, 텍스트 개선을 위해 암호화된 텍스트가 Google Gemini로 전송돼요.\n\n✓ 내 데이터로 AI 학습 없음\n✓ 요청 영구 저장 없음\n✓ EU-US 데이터 개인정보 보호 프레임워크에 따른 암호화\n\n중요 안내: 일기에는 민감한 정보(건강, 종교, 개인 관계 — GDPR 제9조)가 포함될 수 있어 AI 처리에 대한 명시적 동의를 요청해요. AI 결과는 제안이며 전문적 조언이 아니에요.\n\n언제든지 설정에서 변경할 수 있어요.</string>
+    <string name="privacy_gate_gemini_body">Best Journal의 스마트 기능을 사용해 주셔서 감사해요! 요약, 회고, 대시보드 인사이트, 텍스트 개선을 위해 암호화된 텍스트가 Google Gemini로 전송돼요.\n\n✓ 내 데이터로 AI 학습 없음\n✓ 요청 영구 저장 없음\n✓ 암호화; EU-US 데이터 개인정보 보호 프레임워크에 따라 전송, Google 계약의 EU 표준계약조항으로 추가 보호\n\n중요 안내: 일기에는 민감한 정보(건강, 종교, 개인 관계 — GDPR 제9조)가 포함될 수 있어 AI 처리에 대한 명시적 동의를 요청해요. AI 결과는 제안이며 전문적 조언이 아니에요.\n\n언제든지 설정에서 변경할 수 있어요.</string>
     <string name="privacy_gate_gemini_accept">동의하고 전송</string>
     <string name="privacy_gate_gemini_cancel">취소</string>
 
     <string name="privacy_gate_tts_title">프리미엄 음성 켜기</string>
-    <string name="privacy_gate_tts_body">프리미엄 음성을 쓰면 읽어주기가 더 자연스럽게 들려요. 당신의 텍스트가 암호화되어(HTTPS/TLS) 미국의 Microsoft 음성 서비스로 전송되고 오디오로 반환돼요.\n\n✓ 전송은 오직 음성 합성을 위한 것이에요\n✓ 제3국(미국) 이전(Microsoft는 EU-US Data Privacy Framework 인증을 받았어요)</string>
+    <string name="privacy_gate_tts_body">프리미엄 음성을 쓰면 읽어주기가 더 자연스럽게 들려요. 당신의 텍스트가 암호화되어(HTTPS/TLS) 미국의 Microsoft 음성 서비스로 전송되고 오디오로 반환돼요.\n\n중요: 이 서비스는 Microsoft와 계약이 없어요. 전송은 오직 당신의 명시적 동의(GDPR 제49조 제1항 (a))에만 근거해요. 가능한 위험: 미국 당국의 접근, Microsoft에 대한 권리 행사의 어려움이에요.\n\n✓ 전송은 오직 음성 합성을 위한 것이에요\n✓ 언제든지 설정에서 철회할 수 있어요\n\n대안: 데이터 전송이 전혀 없는 로컬 읽어주기 음성이 있어요.</string>
     <string name="privacy_gate_tts_accept">동의하고 읽어주기</string>
     <string name="privacy_gate_tts_cancel">취소</string>
 

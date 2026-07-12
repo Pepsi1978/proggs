@@ -1135,12 +1135,12 @@
     <string name="privacy_gate_groq_local">改為本機轉錄</string>
 
     <string name="privacy_gate_gemini_title">將文字傳送到 Google Gemini?</string>
-    <string name="privacy_gate_gemini_body">很高興你想使用 Best Journal 的智慧功能！為了提供摘要、回顧、儀表板洞察與文字改善，你的內容將以加密方式傳送至 Google Gemini。\n\n✓ 不使用你的資料進行 AI 訓練\n✓ 請求不會永久儲存\n✓ 依據歐美資料隱私框架加密\n\n重要提醒：由於你的日記條目可能包含特別敏感的資訊（健康、宗教、個人關係），在此我們需要你明確同意 AI 處理。AI 輸出僅供參考，並非專業建議，無法取代專業人士。\n\n你可以隨時在設定中變更此選項。</string>
+    <string name="privacy_gate_gemini_body">很高興你想使用 Best Journal 的智慧功能！為了提供摘要、回顧、儀表板洞察與文字改善，你的內容將以加密方式傳送至 Google Gemini。\n\n✓ 不使用你的資料進行 AI 訓練\n✓ 請求不會永久儲存\n✓ 已加密；依據 EU-US Data Privacy Framework 傳輸，並由 Google 合約中的歐盟標準契約條款額外保障\n\n重要提醒：由於你的日記條目可能包含特別敏感的資訊（健康、宗教、個人關係），在此我們需要你明確同意 AI 處理。AI 輸出僅供參考，並非專業建議，無法取代專業人士。\n\n你可以隨時在設定中變更此選項。</string>
     <string name="privacy_gate_gemini_accept">同意並傳送</string>
     <string name="privacy_gate_gemini_cancel">取消</string>
 
     <string name="privacy_gate_tts_title">啟用進階版語音</string>
-    <string name="privacy_gate_tts_body">使用進階版語音會讓朗讀聽起來更自然。你的文字會加密（HTTPS/TLS）傳送到位於美國的 Microsoft 語音服務，並以音訊形式回傳。\n\n✓ 傳輸僅用於語音合成\n✓ 第三國傳輸至美國（Microsoft 已通過 EU-US Data Privacy Framework 認證）</string>
+    <string name="privacy_gate_tts_body">使用進階版語音會讓朗讀聽起來更自然。你的文字會加密（HTTPS/TLS）傳送到位於美國的 Microsoft 語音服務，並以音訊形式回傳。\n\n重要提醒：本服務未與 Microsoft 簽訂任何合約，此傳輸僅依據你的明確同意進行（GDPR 第49條第1項（a）款）。可能的風險：美國政府機關存取資料、較難對 Microsoft 主張你的權利。\n\n✓ 傳輸僅用於語音合成\n✓ 可隨時在設定中撤回\n\n替代方案：本機朗讀語音，完全不會傳輸任何資料。</string>
     <string name="privacy_gate_tts_accept">同意並朗讀</string>
     <string name="privacy_gate_tts_cancel">取消</string>
 

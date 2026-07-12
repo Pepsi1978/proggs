@@ -1149,7 +1149,7 @@ Com Premium: até 150 por dia.</string>
 
 ✓ Sem treinamento de IA com seus dados
 ✓ As solicitações não são armazenadas permanentemente
-✓ Criptografado conforme o EU-US Data Privacy Framework
+✓ Criptografado; transmissão conforme o EU-US Data Privacy Framework, adicionalmente protegida pelas cláusulas contratuais padrão da UE no contrato com o Google
 
 Aviso importante: Como suas entradas de diário podem conter dados especialmente sensíveis (saúde, religião, relacionamentos pessoais — Art. 9 LGPD), pedimos aqui o seu consentimento expresso para o processamento por IA. Os resultados da IA são sugestões, não aconselhamento profissional e não substituem um especialista.
 
@@ -1158,7 +1158,7 @@ Você pode alterar isso a qualquer momento nas configurações.</string>
     <string name="privacy_gate_gemini_cancel">Cancelar</string>
 
     <string name="privacy_gate_tts_title">Ativar vozes Premium</string>
-    <string name="privacy_gate_tts_body">Com as vozes Premium, a leitura em voz alta soa mais natural. O seu texto é enviado de forma criptografada (HTTPS/TLS) a um serviço de voz da Microsoft nos EUA e devolvido como áudio.\n\n✓ Transmissão exclusivamente para a síntese de voz\n✓ Transferência a país terceiro EUA (a Microsoft é certificada pelo EU-US Data Privacy Framework)</string>
+    <string name="privacy_gate_tts_body">Com as vozes Premium, a leitura em voz alta soa mais natural. O seu texto é enviado de forma criptografada (HTTPS/TLS) a um serviço de voz da Microsoft nos EUA e devolvido como áudio.\n\nImportante: Para esse serviço não existe contrato com a Microsoft. A transmissão baseia-se exclusivamente no seu consentimento explícito (art. 49(1)(a) do GDPR). Riscos possíveis: acesso por autoridades dos EUA, dificuldade em fazer valer os seus direitos perante a Microsoft.\n\n✓ Transmissão exclusivamente para a síntese de voz\n✓ Revogável a qualquer momento nas configurações\n\nAlternativa: a voz de leitura local, sem nenhuma transmissão de dados.</string>
     <string name="privacy_gate_tts_accept">Concordar e ler</string>
     <string name="privacy_gate_tts_cancel">Cancelar</string>
 
