@@ -64,6 +64,7 @@ VERSION = "0.74.4 (11.07.2026, 20:09 Uhr)"  # 0.74.4: Kategorie-Dropdowns waehle
 VERSION = "0.75.0 (11.07.2026, 22:47 Uhr)"  # 0.75.0: Eigener R-Modus fuer Regeln; Automatik, Lupe und Diskette koennen keine Regeldatei mehr aendern. Alt: 0.74.4.
 VERSION = "0.76.1 (12.07.2026, 10:51 Uhr)"  # 0.76.1: Sichtbarer Bump zum Quellen-/TTS-Fix in agent 0.76.1 und Cortex Android 0.7.2: Anzeige, Persistenz und Vorlesen erhalten exakt dieselbe quellenfreie Antwort. Alt: 0.76.0.
 VERSION = "0.76.2 (12.07.2026, 11:11 Uhr)"  # 0.76.2: Bibliothekar-Funde zeigen den betroffenen Gehirn-Eintrag immer in einer aufklappbaren Volltextansicht, auch in bereits gespeicherten Reports. Alt: 0.76.1.
+VERSION = "0.76.3 (12.07.2026, 11:17 Uhr)"  # 0.76.3: Eigene Nachtaufgaben vergleichen ausgewaehlte Cortex-Eintraege mit ihren vollstaendigen Texten statt gekuerzten 2500-Zeichen-Auszugen. Alt: 0.76.2.
 BRAIN_URL = os.getenv("BRAIN_URL", "http://brain-api:8000").rstrip("/")
 AGENT_URL = os.getenv("AGENT_URL", "http://agent:8002").rstrip("/")
 SB_API_KEY = os.getenv("SB_API_KEY", "")

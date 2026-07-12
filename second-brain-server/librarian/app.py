@@ -66,6 +66,7 @@ VERSION = "0.14.0 (10.07.2026, 22:34 Uhr)"  # 0.14.0 (Level-2 Gruppe A, Punkt 9)
 VERSION = "0.14.1 (11.07.2026, 19:41 Uhr)"  # 0.14.1: Zusaetzliche Kategorie-Vorschlaege kennen alle vorhandenen Kategorien; deterministischer No-op-Guard verwirft bereits vergebene Kategorien. Alt: 0.14.0.
 VERSION = "0.14.2 (11.07.2026, 19:51 Uhr)"  # 0.14.2: Kategorie-Ergaenzungen nutzen den atomaren brain-api-Endpoint statt clientseitigem Read-Modify-Write. Alt: 0.14.1.
 VERSION = "0.14.3 (12.07.2026, 11:11 Uhr)"  # 0.14.3: Eigene Funde speichern ihre betroffenen Quell-Eintraege fuer die aufklappbare Report-Anzeige. Alt: 0.14.2.
+VERSION = "0.14.4 (12.07.2026, 11:17 Uhr)"  # 0.14.4: Eigene Nachtaufgaben erhalten die ausgewaehlten Eintraege als echte Volltexte statt als auf 2500 Zeichen gekuerzte Auszuege. Alt: 0.14.3.
 AGENT_URL = os.getenv("AGENT_URL", "http://agent:8002").rstrip("/")   # LLM-Durchgriff fuer Codex/GPT (agent 0.52.0)
 # Stille Notbremse gegen Endlosschleifen, wenn 'Ohne Begrenzung' aktiv ist (Almanach ai-agent §2.1:
 # ein Cap muss STOPPEN koennen). 5000 Calls erreicht ehrliche Nacht-Arbeit nie — nur ein Amoklauf.
@@ -787,8 +788,7 @@ Antworte NUR mit diesem JSON: {{"doc_ids":["..."]}}"""
 
 CUSTOM_RUN_SYSTEM = f"""Du bist der Nachtschicht-Bibliothekar und fuehrst eine von Frank selbst
 definierte Zusatzaufgabe aus. Du bekommst die Aufgaben-Definition und die angeforderten Eintrags-
-Texte. Lange Eintraege koennen ausdruecklich als GEKUERZTER AUSZUG markiert sein. Erzeuge daraus
-FUNDE als Vorschlaege fuer Frank (er bestaetigt morgens per Klick).
+Volltexte. Erzeuge daraus FUNDE als Vorschlaege fuer Frank (er bestaetigt morgens per Klick).
 Jeder Fund braucht: beschreibung (was gefunden wurde, leichtes Deutsch), empfehlung (was zu tun
 waere), doc_ids (alle betroffenen Quell-Eintraege aus der Eingabe) und optional eine ausfuehrbare aktion. Erlaubte aktion-Typen:
 - {{"typ":"update","doc_id":"...","text":"neuer VOLLSTAENDIGER Volltext","titel":"optional neuer Titel"}}
@@ -958,12 +958,12 @@ def _excerpt(text: str, n: int = 700) -> str:
     return t[:n] + ("…" if len(t) > n else "")
 
 
-def _custom_entry_block(doc_id: str, entry: dict, limit: int = 2500) -> "tuple[str, bool]":
-    """Prompt-Block fuer eigene Aufgaben; markiert Kuerzung, damit kein Update daraus entsteht."""
+def _custom_entry_block(doc_id: str, entry: dict, limit: "int | None" = None) -> "tuple[str, bool]":
+    """Prompt-Block fuer eigene Aufgaben; standardmaessig mit dem vollstaendigen Text."""
     text = (entry.get("text") or "").strip()
-    truncated = len(text) > limit
+    truncated = limit is not None and len(text) > limit
     marker = "GEKUERZTER AUSZUG" if truncated else "VOLLSTAENDIGER TEXT"
-    body = text[:limit]
+    body = text[:limit] if limit is not None else text
     if truncated:
         body += ("\n[ENDE DES GEKUERZTEN AUSZUGS — diesen Eintrag NICHT per update/merge "
                  "aktualisieren, ohne den vollstaendigen Text gezielt zu laden.]")
@@ -1560,7 +1560,7 @@ def _task_custom(cfg: dict, st: dict, budget: NightBudget, entries: dict, report
     text_blocks: list[str] = []
     truncated_docs: set[str] = set()
     for d in picked:
-        block, truncated = _custom_entry_block(d, entries[d], 2500)
+        block, truncated = _custom_entry_block(d, entries[d])
         text_blocks.append(block)
         if truncated:
             truncated_docs.add(d)
