@@ -23,6 +23,9 @@
 >   (Kosten-Cap, Lethal Trifecta, Secrets) hier aus dem **Agent-Code-Blickwinkel** + Querverweis.
 > **Ergaenzt 2026-07-12:** §9.1 zu vorzeitig gestreamten Entwuerfen, die von der final sichtbaren
 > Antwort abweichen und dadurch unsichtbare Quellen an TTS weitergeben koennen (Cortex-Vorfall).
+> **Ergaenzt 2026-07-12 abends (Performance-Tiefendebugging):** NEU §9.2 Live-Mirror/Timeout-Flush
+> einer aktiven Session macht Loeschungen rueckgaengig — Delete-Pfade muessen Session-Eviction +
+> Mirror-Tombstone + Rest-Abraeumung machen (Kurzcheck #17).
 
 ---
 
@@ -50,6 +53,7 @@
 | 14 | LangGraph: `operator.add`-Reducer dupliziert / Liste ueberschrieben | Reducer bewusst waehlen; bei paralleln Writes kein blindes `add` (exponentielle Duplikation); GraphRecursionError = echtes Loop-Symptom | §8 |
 | 15 | In-Memory-State bei mehreren uvicorn-Workern weg | Worker = eigener Prozess, KEIN geteilter RAM. Session/State in DB/Redis, nicht in Modul-Dict | §5.3 |
 | 16 | TTS liest URLs/Quellen, die im finalen Chattext fehlen | Nie ungepruefte Modelldeltas an irreversible Verbraucher geben; erst finalisieren, dann EINEN kanonischen Reply fuer Anzeige, Persistenz und TTS verteilen | §9.1 |
+| 17 | ⭐ Geloeschter Eintrag "aufersteht" nach dem naechsten Turn | Live-Mirror/Timeout-Flush einer AKTIVEN Session schreibt den ganzen Verlauf erneut → Loeschen wirkt kaputt. Jeder Delete-Pfad MUSS die passende Live-Session evicten + geplante Mirrors per Tombstone stoppen + einen zwischenzeitlich gelandeten Rest best-effort abraeumen | §9.2 |
 
 ---
 
@@ -483,6 +487,31 @@ Steueranweisungen duerfen daher nie im Nutzdatenkanal liegen. Zusaetzlich muss d
 sowohl Quellenlabel als auch bekannte interne Meta-Textklassen entfernen. Der Client bereinigt empfangene
 und bereits persistierte Agentenantworten erneut. Permanenter Regressionstest ist der wortgleiche
 RAV4-Produktivtext, nicht nur ein kuenstliches URL-Beispiel.
+
+### 9.2 Geloeschter Eintrag "aufersteht" — Live-Mirror/Flush einer aktiven Session schreibt ihn zurueck  [ECHTER VORFALL 2026-07-12]
+**Symptom:** Der Nutzer loescht einen vom Agenten gespiegelten Eintrag (z.B. das laufende Gespraech) —
+Sekunden bis Minuten spaeter steht er wieder da (Datei UND Vektor-Store). Loeschen wirkt "kaputt"; der
+Nutzer klickt mehrfach (im Log: doppelte DELETEs derselben doc_id). Cortex-Live-Log: 16:51 Uhr
+`.txt` geloescht, 16:57 Uhr dieselbe Datei vom Mirror neu geschrieben.
+
+**Ursache:** Ein Live-Mirror (nach jedem Turn) bzw. ein Timeout-Flush spiegelt den GESAMTEN
+Session-Verlauf unter demselben Titel/derselben doc_id erneut in die Persistenz. Der Delete-Pfad
+loeschte nur die Persistenz (Datei + Vektor-Store), liess aber die IN-MEMORY-Session unberuehrt —
+der naechste Turn oder der Inaktivitaets-Flush stellte alles wieder her. Strukturell: jede
+Hintergrund-Spiegelung, die aus einem lebenden State reproduziert, macht Loeschungen rueckgaengig.
+
+**FIX (funktionserhaltend, agent 0.77.0):**
+- Jeder Delete-Pfad evict die passende LIVE-Session (Match ueber das Start-Label/den Titel des
+  Eintrags; fremde/aeltere Sessions bleiben unberuehrt).
+- Bereits GEPLANTE Mirror-Tasks per Tombstone stoppen (Sequenznummer auf Sentinel setzen, unter dem
+  Mirror-Lock — der queued Task sieht `seq < Tombstone` und ueberspringt). Session-Neuanlage hebt den
+  Tombstone wieder auf.
+- Rest-Race schliessen: hat ein Mirror ZWISCHEN Persistenz-Loeschung und Tombstone schon gespeichert,
+  den Eintrag nach dem Tombstone best-effort erneut loeschen (idempotent).
+- Verifikation: loeschen → naechster Turn → Eintrag bleibt weg (neuer Turn beginnt als NEUES Gespraech).
+
+**Quelle:** eigener produktiver Cortex-Vorfall 2026-07-12 (Performance-Tiefendebugging #47856);
+Dashboard-/Agent-Logs + Live-Roundtrip-Test auf dem VPS.
 
 ---
 

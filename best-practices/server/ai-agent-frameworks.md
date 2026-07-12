@@ -34,6 +34,7 @@
 | 14 | Prompt-Injection | Gespeicherte Memory-Inhalte als UNTRUSTED; beim Recall als DATEN markieren; Lethal Trifecta brechen | §6.1 |
 | 15 | async | Blockierende Calls NIE im async-Loop (`to_thread`/`run_in_threadpool`) | §3.1 |
 | 16 | Streaming-Ausgabe | Irreversible Verbraucher wie TTS erst aus dem finalisierten kanonischen Reply speisen; Anzeige/Persistenz/Sprache duerfen nicht auseinanderlaufen | §9.1 |
+| 17 | Live-Mirror/Hintergrund-Flush + Loeschung | Wer aus lebendem Session-State in die Persistenz spiegelt, muss im Delete-Pfad die Live-Session evicten, geplante Mirrors per Tombstone stoppen und einen zwischenzeitlich gelandeten Rest idempotent abraeumen — sonst "aufersteht" der geloeschte Eintrag | §9.2 |
 
 ---
 
