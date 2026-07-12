@@ -170,6 +170,12 @@ def main() -> int:
         out = run(answer, pending=dict(stale), context_mode="auto")
         check(out["action"] not in STORE_ACTIONS and not ns["_STORE_CALLS"],
               f"Auto-Turn auf altes save_confirm darf nicht speichern: {answer!r} -> {out['action']}")
+    # E2E-Fund 2026-07-12 ("claimed but didn't do"): Ein pures Ja auf die verworfene Rueckfrage
+    # bekommt eine EHRLICHE deterministische Absage — nie eine LLM-Antwort, die Ablage behauptet.
+    honest = run("ja", pending=dict(stale), context_mode="auto")
+    check(honest["action"] == "cancel" and "nichts gespeichert" in honest["reply"].casefold()
+          and "abgelegt" not in honest["reply"].casefold(),
+          "Ja auf verworfene Speicher-Rueckfrage antwortet ehrlich 'nichts gespeichert'")
     out = run("ja", pending={"mode": "save_input", "category": "", "title": "", "store_timestamp": False})
     check(out["action"] not in STORE_ACTIONS and not ns["_STORE_CALLS"],
           "Auto-Turn auf altes save_input darf keinen wortwörtlichen Store binden")

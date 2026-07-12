@@ -85,6 +85,7 @@ VERSION = "0.79.0 (12.07.2026, 20:19 Uhr)"  # 0.79.0 STREAMING + RADAR + PARALLE
 VERSION = "0.79.1 (12.07.2026, 20:45 Uhr)"  # 0.79.1: Gedächtnis-Nachfragen werden deterministisch als Lesen geroutet; im Fragetext genannte Kategorien stehen vor semantisch ähnlichen Gesprächsprotokollen. Alt: 0.79.0.
 VERSION = "0.80.0 (12.07.2026, 21:00 Uhr)"  # 0.80.0: Gespräche werden ausschließlich im Logbuch gespeichert; Live- und Timeout-Spiegelung nach Qdrant sind entfernt. Alt: 0.79.1.
 VERSION = "0.81.0 (12.07.2026, 22:01 Uhr)"  # 0.81.0 LOGIK-HAERTUNG Agentensystem (Franks Grundsatz, Vorfall 20:30/20:31 Uhr Typenbezeichnung): Der AUTOMATIK-Modus ist jetzt HART read-only — er liest nur Gedaechtnis + Web und kann konzeptionell nicht mehr speichern oder Speicher-Rueckfragen stellen (Poka-Yoke Stufe 3 im Zustandsautomaten, 3 unabhaengige Schichten: auto_boundary verwirft offene Speicher-Dialoge + beantwortet Speicher-Imperative deterministisch mit Diskette-Hinweis; der Router kennt im Auto-Modus keinen save-Intent mehr (auch nicht im Fehler-Fallback); der save-Block leitet Reste laut geloggt zu query um). Beschwerden wie 'Da steht doch alles im Gedaechtnis drin' laufen IMMER als Gedaechtnis-Frage. Diskette/Lupe/R/Dashboard-Titel+Kategorie/Bearbeiten-Stift unveraendert. Neuer Offline-Matrixtest auto_mode_no_store_test.py. Alt: 0.80.0.
+VERSION = "0.81.1 (12.07.2026, 22:30 Uhr)"  # 0.81.1 EHRLICHKEITS-FIX (E2E-Fund, orchestrator §4.5 'claimed but didn't do'): Ein pures Ja/Nein auf eine soeben von der Auto-Grenze verworfene Speicher-Rueckfrage bekommt eine DETERMINISTISCHE ehrliche Absage ('Ich habe nichts gespeichert — ... Diskette') statt in den Recall zu laufen, wo das Antwort-LLM anhand des Verlaufs faelschlich 'habe ich abgelegt' behauptete. Live-E2E 8/8 + Offline-Suite 10/10 gruen. Alt: 0.81.0.
 
 # ---------------------------------------------------------------------------
 # Konfiguration (alles aus Umgebungsvariablen — Secrets nie im Code)
@@ -7302,6 +7303,19 @@ def _process_turn(session: dict, user_text: str, pending: dict | None, category:
         checkpoint("auto_boundary", "Automatik verwirft offenen Speicher-Dialog (Speichern nur per Diskette)",
                    ok=True, pending=pending.get("mode"))
         pending = None
+        # Ein pures Ja/Nein war die Antwort auf die soeben verworfene Rueckfrage. Ehrlich und
+        # deterministisch antworten — sonst sieht das Antwort-LLM die alte Rueckfrage im Verlauf
+        # und behauptet faelschlich 'habe ich abgelegt' (E2E-Fund 2026-07-12, orchestrator §4.5
+        # "claimed but didn't do"): es wird NIE etwas gespeichert, das darf auch nie so klingen.
+        if re.fullmatch(r"(?:ja|jep|jo|genau|passt|okay|ok|mach(?:en)?|nein|nee|nö|abbrechen|stopp|"
+                        r"doch\s+nicht|lass(?:\s+es)?|ersetzen|speichern?)(?:\s*,?\s*(?:bitte|genau|so|das))*[.!]*",
+                        user_text.strip(), re.IGNORECASE):
+            checkpoint("auto_boundary", "Ja/Nein auf verworfene Speicher-Rueckfrage -> ehrliche Absage",
+                       ok=True, text=user_text[:60])
+            return {"reply": ("Ich habe nichts gespeichert — die offene Speicher-Rückfrage ist mit dem "
+                              "Wechsel in den Automatik-Modus verfallen. Zum Speichern schick mir den "
+                              "Text bitte noch einmal über die Diskette."),
+                    "action": "cancel", "pending": None}
     if memory_edit:
         edit_categories = list(dict.fromkeys(c.strip() for c in (memory_categories or []) if c and c.strip()))
         if memory_doc_id:
