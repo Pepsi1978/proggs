@@ -465,6 +465,15 @@ ableiten. Der Server muss die Eigenschaft im `ready`-Event explizit bestaetigen 
 Fehlt dieses Capability-Flag, verwirft der Client ALLE Deltas und verwendet ausschliesslich den finalen
 `response.reply`. Das macht vergessene oder teilweise Deploys fail-closed.
 
+**Nachfolgevorfall 2026-07-12, 11:49 Uhr:** Der kanonische finale Reply selbst enthielt mehrfach
+natuerlich formulierte Quellenattributionen wie `Quelle OpenAI Harness Engineering.` und
+`Quelle arXiv Studie 2602.11988.`. Das Modell ignorierte damit die Prompt-Regel, waehrend der
+deterministische Sanitizer nur URLs, Zitationsnummern und Quellenbloecke erkannte. Quellenfreiheit darf
+nicht nur ueber bekannte technische Syntax definiert werden: Auch Quellenlabel am Satz-/Zeilenende und
+parenthetische Quellenangaben muessen vor Anzeige, Persistenz und TTS entfernt werden. Der Android-Client
+wendet denselben Filter als zweite TTS-Schicht an. Ein Regressionstest muss das echte natuerlichsprachige
+Produktionsmuster enthalten und zugleich normale Saetze ueber das Konzept einer Quelle erhalten.
+
 ---
 
 ## Fix-Status (was ist schon gefixt? — hart per `gh` am 2026-06-24)

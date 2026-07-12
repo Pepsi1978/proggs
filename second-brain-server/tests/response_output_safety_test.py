@@ -16,7 +16,7 @@ def load_sanitizers() -> dict:
     assignments = {
         "_MD_BOLD_RE", "_MD_HEADING_RE", "_MD_BULLET_RE", "_MD_WEB_LINK_RE",
         "_BARE_WEB_URL_RE", "_TRAILING_SOURCES_RE", "_TRAILING_MARKDOWN_LINKS_RE",
-        "_NUMERIC_CITATION_RE",
+        "_SOURCE_ATTRIBUTION_TAIL_RE", "_PARENTHETICAL_SOURCE_RE", "_NUMERIC_CITATION_RE",
         "_FREEFORM_ACTIONS",
     }
     functions = {
@@ -54,6 +54,19 @@ def main() -> int:
         "[Terminal Bench](https://terminal-bench.example/results)"
     )
     assert sanitize(links_only) == "Die Pflege weniger Hinweise ist entscheidender als ihre bloße Menge."
+    natural_attributions = (
+        "OpenAI nennt ungefähr hundert Zeilen als grobe Obergrenze. Quelle OpenAI Harness Engineering.\n\n"
+        "Die Schlussfolgerung ist, Kontextdateien minimal zu halten. Quelle arXiv Studie 2602.11988.\n\n"
+        "Ein kurzer Hinweis kann teure Irrwege verhindern. Quelle: Anthropic Dokumentation.\n\n"
+        "CLAUDE.md kann AGENTS.md importieren (Quelle Claude Code Memory Dokumentation)."
+    )
+    assert sanitize(natural_attributions) == (
+        "OpenAI nennt ungefähr hundert Zeilen als grobe Obergrenze.\n\n"
+        "Die Schlussfolgerung ist, Kontextdateien minimal zu halten.\n\n"
+        "Ein kurzer Hinweis kann teure Irrwege verhindern.\n\n"
+        "CLAUDE.md kann AGENTS.md importieren."
+    )
+    assert sanitize("Die Quelle ist für die Bewertung wichtig.") == "Die Quelle ist für die Bewertung wichtig."
 
     stream = SOURCE[SOURCE.index("async def chat_stream"):SOURCE.index("# Gruppe D", SOURCE.index("async def chat_stream"))]
     assert "rsize, None, req.memory_edit" in stream, "raw model deltas still enter the client stream"

@@ -66,6 +66,7 @@ VERSION = "0.76.1 (12.07.2026, 10:51 Uhr)"  # 0.76.1: Sichtbarer Bump zum Quelle
 VERSION = "0.76.2 (12.07.2026, 11:11 Uhr)"  # 0.76.2: Bibliothekar-Funde zeigen den betroffenen Gehirn-Eintrag immer in einer aufklappbaren Volltextansicht, auch in bereits gespeicherten Reports. Alt: 0.76.1.
 VERSION = "0.76.3 (12.07.2026, 11:17 Uhr)"  # 0.76.3: Eigene Nachtaufgaben vergleichen ausgewaehlte Cortex-Eintraege mit ihren vollstaendigen Texten statt gekuerzten 2500-Zeichen-Auszugen. Alt: 0.76.2.
 VERSION = "0.76.4 (12.07.2026, 11:42 Uhr)"  # 0.76.4: Sichtbarer Bump zum kanonischen SSE-Handshake in agent 0.76.2 und Cortex Android 0.7.4; alte Server koennen keine Rohentwuerfe mehr an TTS geben. Alt: 0.76.3.
+VERSION = "0.76.5 (12.07.2026, 11:59 Uhr)"  # 0.76.5: Sichtbarer Bump zum Quellenattributions-Fix in agent 0.76.3 und Cortex Android 0.7.5. Alt: 0.76.4.
 BRAIN_URL = os.getenv("BRAIN_URL", "http://brain-api:8000").rstrip("/")
 AGENT_URL = os.getenv("AGENT_URL", "http://agent:8002").rstrip("/")
 SB_API_KEY = os.getenv("SB_API_KEY", "")

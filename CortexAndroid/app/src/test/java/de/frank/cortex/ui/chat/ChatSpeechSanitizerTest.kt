@@ -44,4 +44,38 @@ class ChatSpeechSanitizerTest {
             ChatSpeechSanitizer.clean(input),
         )
     }
+
+    @Test
+    fun removesNaturalLanguageSourceAttributionsFromProductionReplyPattern() {
+        val input = """
+            OpenAI nennt ungefähr hundert Zeilen als grobe Obergrenze. Quelle OpenAI Harness Engineering.
+
+            Die Schlussfolgerung ist, Kontextdateien minimal zu halten. Quelle arXiv Studie 2602 Punkt 11988.
+
+            Ein kurzer Hinweis kann teure Irrwege verhindern. Quelle: Anthropic Dokumentation.
+
+            CLAUDE.md kann AGENTS.md importieren (Quelle Claude Code Memory Dokumentation).
+        """.trimIndent()
+
+        assertEquals(
+            """
+                OpenAI nennt ungefähr hundert Zeilen als grobe Obergrenze.
+
+                Die Schlussfolgerung ist, Kontextdateien minimal zu halten.
+
+                Ein kurzer Hinweis kann teure Irrwege verhindern.
+
+                CLAUDE.md kann AGENTS.md importieren.
+            """.trimIndent(),
+            ChatSpeechSanitizer.clean(input),
+        )
+    }
+
+    @Test
+    fun preservesNormalSentenceAboutAConceptualSource() {
+        assertEquals(
+            "Die Quelle ist für die Bewertung wichtig.",
+            ChatSpeechSanitizer.clean("Die Quelle ist für die Bewertung wichtig."),
+        )
+    }
 }
