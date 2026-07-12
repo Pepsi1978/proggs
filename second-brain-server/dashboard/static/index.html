@@ -4709,22 +4709,6 @@ button{font-family:inherit;cursor:pointer}
     }catch(e){ box.textContent="Kategorien-Vorschau nicht ladbar: "+e.message; }
   }
 
-  function libActionDocIds(it){
-    const action=it.aktion||{};
-    return [action.doc_id,...(Array.isArray(action.doc_ids)?action.doc_ids:[])]
-      .map(id=>String(id||"").trim()).filter((id,i,all)=>id&&all.indexOf(id)===i);
-  }
-
-  async function loadLibEntryContext(box,docIds){
-    try{
-      const entries=await Promise.all(docIds.map(id=>api("/api/entry-by-id?doc_id="+encodeURIComponent(id))));
-      const found=entries.filter(entry=>entry&&entry.found);
-      if(!found.length){ box.textContent="Der betroffene Eintrag wurde nicht gefunden."; return; }
-      box.innerHTML=found.map(entry=>'<div class="k"><b>'+escapeHtml(entry.title||entry.doc_id||"?")+'</b>'
-        +(entry.category?(' · '+escapeHtml(entry.category)):'')+'\n'+escapeHtml(entry.text||"")+'</div>').join("");
-    }catch(e){ box.textContent="Eintrag nicht ladbar: "+e.message; }
-  }
-
   function libFmtDay(d){ const p=(d||"").split("-"); return p.length===3 ? p[2]+"."+p[1]+"."+p[0] : d; }
   function libBadge(days){
     const open=(days||[]).reduce((s,d)=>s+(d.offen||0),0);
@@ -4860,16 +4844,6 @@ button{font-family:inherit;cursor:pointer}
         +((m.von!=="frank"&&i===dlg.length-1)?" frage":"")+'">'+escapeHtml(m.text||"")+'</div>').join("")+'</div>';
     }
     card.innerHTML=h;
-
-    const fallbackDocIds=(it.kontext||[]).length ? [] : libActionDocIds(it);
-    if(fallbackDocIds.length){
-      const det=document.createElement("details"); det.className="lib-ctx";
-      const sum=document.createElement("summary"); sum.textContent=fallbackDocIds.length===1
-        ? "Betroffenen Eintrag ansehen" : "Betroffene Einträge ansehen";
-      const content=document.createElement("div"); content.className="k"; content.textContent="Eintrag wird geladen …";
-      det.appendChild(sum); det.appendChild(content); card.appendChild(det);
-      det.addEventListener("toggle",()=>{ if(det.open&&!det.dataset.loaded){ det.dataset.loaded="1"; loadLibEntryContext(content,fallbackDocIds); } });
-    }
 
     /* Zusammenfuehrungs-Vorschlaege (Frank-Wunsch 05.07.): Volltext lesen + editieren
        (eigener Uebernehmen-Knopf — ohne Druecken gilt der Original-Vorschlag) und die

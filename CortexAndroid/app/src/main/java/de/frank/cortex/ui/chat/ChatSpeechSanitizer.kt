@@ -13,31 +13,14 @@ internal object ChatSpeechSanitizer {
         "^\\s*(?:quellen?|sources?|references?|weiterf(?:ü|ue)hrende\\s+links?)\\s*:?.*$",
         setOf(RegexOption.IGNORE_CASE, RegexOption.MULTILINE, RegexOption.DOT_MATCHES_ALL),
     )
-    private val trailingMarkdownLinksRegex = Regex(
-        "(?:\\n\\s*)+(?:(?:[-*•]\\s*)?\\[[^]\\n]+]\\((?:https?://|www\\.)[^)\\n]+\\)\\s*)+$",
-        RegexOption.IGNORE_CASE,
-    )
-    private val sourceAttributionTailRegex = Regex(
-        "(?:^|(?<=[.!?]))[ \\t]*(?:[-–—]\\s*)?" +
-            "(?:quelle(?:n)?|sources?|references?)\\s*:?\\s+" +
-            "(?!ist\\b|sind\\b|war\\b|waren\\b)[^\\n]*",
-        setOf(RegexOption.IGNORE_CASE, RegexOption.MULTILINE),
-    )
-    private val parentheticalSourceRegex = Regex(
-        "\\s*\\((?:quelle(?:n)?|sources?|references?)\\s*:?\\s+[^)\\n]+\\)",
-        RegexOption.IGNORE_CASE,
-    )
     private val numericCitationRegex = Regex("\\[(?:\\d+(?:\\s*[-,]\\s*\\d+)*)]")
 
     fun clean(text: String): String = text
         .replace(trailingSourcesRegex, "")
-        .replace(trailingMarkdownLinksRegex, "")
         .replace(markdownWebLinkRegex, "$1")
         .replace(bareWebUrlRegex) { match ->
             match.value.lastOrNull()?.takeIf { it in ".,;:!?" }?.toString().orEmpty()
         }
-        .replace(parentheticalSourceRegex, "")
-        .replace(sourceAttributionTailRegex, "")
         .replace(numericCitationRegex, "")
         .replace(boldRegex, "$1")
         .replace("**", "")

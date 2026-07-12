@@ -78,7 +78,7 @@ VERSION = "0.73.0 (10.07.2026, 22:34 Uhr)"  # 0.73.0 (Level-2 Gruppe A, Punkt 9 
 VERSION = "0.74.0 (11.07.2026, 13:25 Uhr)"  # 0.74.0: Speicherentwuerfe werden aus formellen Befehlen faktengetreu formuliert und zeigen Kategorie, Titel und Volltext. Der letzte Eintrag bleibt session- und neustartfest zitier-/editierbar; freie Folgebefehle koennen Text, Titel und bis zu 12 Kategorien nach erneuter Bestaetigung aendern. Explizite App-Edits schreiben per doc_id und liefern den exakten Servertext als Quittung. Disketten- und Automatikmodus nutzen dieselbe Zustandsmaschine. Alt: 0.73.0.
 VERSION = "0.74.1 (11.07.2026, 19:33 Uhr)"  # 0.74.1: Regel-Intent verlangt jetzt einen ausdruecklichen Regelauftrag; erwaehnte oder verneinte Regeln bleiben normaler Speicherinhalt. Alt: 0.74.0.
 VERSION = "0.75.0 (11.07.2026, 22:47 Uhr)"  # 0.75.0: Regeln sind aus Automatik, Suche und Speichern ausgegliedert und laufen nur noch ueber den expliziten R-Modus; mehrturnige 1:1-Speicherankuendigungen bleiben als save_input gebunden. Alt: 0.74.1.
-VERSION = "0.76.3 (12.07.2026, 11:59 Uhr)"  # 0.76.3: Natuerlich formulierte Quellenattributionen wie "Quelle OpenAI" werden aus Anzeige, Persistenz und TTS entfernt. Alt: 0.76.2.
+VERSION = "0.76.1 (12.07.2026, 10:51 Uhr)"  # 0.76.1: Freitext-Antworten enthalten keine Quellenbloecke oder URLs mehr; SSE liefert erst den final regelgeprueften und bereinigten Text, damit Android exakt denselben Text anzeigt und vorliest. Alt: 0.76.0.
 
 # ---------------------------------------------------------------------------
 # Konfiguration (alles aus Umgebungsvariablen — Secrets nie im Code)
@@ -1398,20 +1398,6 @@ _TRAILING_SOURCES_RE = re.compile(
     r"^\s*(?:quellen?|sources?|references?|weiterf(?:ü|ue)hrende\s+links?)\s*:?.*$",
     re.IGNORECASE | re.MULTILINE | re.DOTALL,
 )
-_TRAILING_MARKDOWN_LINKS_RE = re.compile(
-    r"(?:\n\s*)+(?:(?:[-*•]\s*)?\[[^\]\n]+\]\((?:https?://|www\.)[^)\n]+\)\s*)+$",
-    re.IGNORECASE,
-)
-_SOURCE_ATTRIBUTION_TAIL_RE = re.compile(
-    r"(?:^|(?<=[.!?]))[ \t]*(?:[-–—]\s*)?"
-    r"(?:quelle(?:n)?|sources?|references?)\s*:?\s+"
-    r"(?!ist\b|sind\b|war\b|waren\b)[^\n]*",
-    re.IGNORECASE | re.MULTILINE,
-)
-_PARENTHETICAL_SOURCE_RE = re.compile(
-    r"\s*\((?:quelle(?:n)?|sources?|references?)\s*:?\s+[^)\n]+\)",
-    re.IGNORECASE,
-)
 _NUMERIC_CITATION_RE = re.compile(r"\[(?:\d+(?:\s*[-,]\s*\d+)*)]")
 
 
@@ -1437,11 +1423,8 @@ def _sanitize_visible_reply(text: str) -> str:
     if not text:
         return text
     t = _TRAILING_SOURCES_RE.sub("", text)
-    t = _TRAILING_MARKDOWN_LINKS_RE.sub("", t)
     t = _MD_WEB_LINK_RE.sub(r"\1", t)
     t = _BARE_WEB_URL_RE.sub(_remove_bare_web_url, t)
-    t = _PARENTHETICAL_SOURCE_RE.sub("", t)
-    t = _SOURCE_ATTRIBUTION_TAIL_RE.sub("", t)
     t = _NUMERIC_CITATION_RE.sub("", t)
     t = re.sub(r"[ \t]+([,.;:!?])", r"\1", t)
     t = re.sub(r"\n[ \t]+", "\n", t)
@@ -7685,8 +7668,7 @@ async def chat_stream(req: ChatReq) -> StreamingResponse:
         try:
             # Sofort ein Body-Event senden: HTTP 200 allein beweist noch keinen lebenden SSE-Kanal.
             # Heartbeats halten danach OkHttp/Proxies während langer Web-/Reasoning-Phasen aktiv.
-            yield _sse_event({"type": "ready", "turn_id": tr.get("turn_id"),
-                              "canonical_reply": True})
+            yield _sse_event({"type": "ready", "turn_id": tr.get("turn_id")})
             _perf_mark("sse_ready_yielded", "SSE-Ready-Event ausgeliefert")
             heartbeat_count = 0
             # Bis zur vollständigen Finalisierung warten, nicht nur bis _process_turn fertig ist:

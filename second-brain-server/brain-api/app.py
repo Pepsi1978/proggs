@@ -451,7 +451,6 @@ VERSION = "1.30.0 (10.07.2026, 21:39 Uhr)"  # 1.30.0 (Level-2 Gruppe A, Punkte 7
 VERSION = "1.31.0 (10.07.2026, 22:00 Uhr)"  # 1.31.0 (Level-2 Gruppe A, Punkt 4 — Frank-Freigabe 2026-07-10): BI-TEMPORALE FAKTEN. Optionale Payload-Felder valid_from/valid_until (YYYY-MM-DD), gesetzt AUSSCHLIESSLICH manuell ueber NEU PUT /entry/validity (Dashboard-Drawer) — NIE automatisch (Franks Vorgabe: kein automatisches Bewerten/Ersetzen). NICHTS wird geloescht oder gefiltert: abgelaufene Eintraege bleiben voll auffindbar, /search + by-title geben die Gueltigkeit nur als Kennzeichnung mit (der Agent sagt dann galt bis X). Alle Rebuild-Wege (Kategorie-Wechsel, PUT /entry, Papierkorb+Restore) ERHALTEN die Felder (Feld-Drift-Schutz qdrant.md Par. 9). Leeres Feld entfernt die Grenze (delete_payload). Wer will, fragt historisch (Wo wohnte ich 2024?) und aktuell (Wo wohne ich?) — beides bleibt beantwortbar. Alt: 1.30.0.
 VERSION = "1.32.0 (11.07.2026, 13:25 Uhr)"  # 1.32.0: PUT /entry erzeugt Chunks und Embeddings vollständig VOR jeder Löschung, schreibt und verifiziert den neuen Stand zuerst und entfernt erst danach alte doc_id-/Rest-Chunks. Ein Embedding-, Budget- oder Upsert-Fehler kann den bisherigen Eintrag dadurch nicht mehr vorzeitig löschen. Alt: 1.31.0.
 VERSION = "1.32.1 (11.07.2026, 19:51 Uhr)"  # 1.32.1: Atomare additive Kategorie-Zuordnung unter dem globalen Eintrags-Schreib-Lock verhindert verlorene parallele Ergänzungen. Alt: 1.32.0.
-VERSION = "1.32.2 (12.07.2026, 11:11 Uhr)"  # 1.32.2: Read-only Volltextabruf per doc_id fuer Bibliothekar-Reports. Alt: 1.32.1.
 
 # Startup-Banner (Observability-First: Log-Pfad + Version EINMAL ausgeben)
 _log(logging.INFO, "brain-api startet", version=VERSION, log_path=LOG_PATH)
@@ -1240,33 +1239,6 @@ def by_title(title: str, user_id: str = "frank") -> dict:
             "valid_until": points[0].payload.get("valid_until") or None,
             "created_at": points[0].payload.get("created_at"),
             "updated_at": points[0].payload.get("updated_at"), "text": full}
-
-
-@app.get("/by-id", dependencies=[Depends(require_auth)])
-def by_id(doc_id: str, user_id: str = "frank") -> dict:
-    """Gezielter read-only Abruf eines ganzen Eintrags per doc_id."""
-    _require_store()
-    points = _scroll(Filter(must=[
-        FieldCondition(key="doc_id", match=MatchValue(value=doc_id)),
-        FieldCondition(key="user_id", match=MatchValue(value=user_id)),
-    ]), limit=1)
-    if not points:
-        checkpoint("by_id", "Abruf per doc_id", ok=False, found=False, doc_id=doc_id)
-        return {"ok": True, "found": False, "doc_id": doc_id, "text": None}
-    payload = points[0].payload
-    full = payload.get("full_text", "")
-    checkpoint("by_id", "Abruf per doc_id gibt das GANZE Dokument 1:1 zurueck", ok=bool(full),
-               doc_id=doc_id, chars=len(full))
-    return {"ok": True, "found": True, "title": payload.get("title") or None, "doc_id": doc_id,
-            "category": payload.get("category") or None,
-            "categories": cats_from_payload(payload),
-            "source": payload.get("source") or None,
-            "layer": payload_layer(payload),
-            "trust": source_trust(payload.get("source")),
-            "valid_from": payload.get("valid_from") or None,
-            "valid_until": payload.get("valid_until") or None,
-            "created_at": payload.get("created_at"),
-            "updated_at": payload.get("updated_at"), "text": full}
 
 
 @app.get("/by-category", dependencies=[Depends(require_auth)])

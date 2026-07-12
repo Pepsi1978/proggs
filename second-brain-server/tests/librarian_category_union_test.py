@@ -179,26 +179,6 @@ def main() -> int:
         {"typ": "hinweis"}, {"doc-2"}
     ) is False, "Hinweise bleiben trotz gekuerzter Quelle erlaubt")
 
-    overview = "ANFANG-GESAMT " + ("a" * 4100) + " MITTE-GESAMT " + ("b" * 4100) + " ENDE-GESAMT"
-    project = "ANFANG-PROJEKT " + ("c" * 4900) + " MITTE-PROJEKT " + ("d" * 4900) + " ENDE-PROJEKT"
-    overview_block, overview_truncated = ns["_custom_entry_block"](
-        "overview", {"title": "Technischer Gesamtüberblick", "category": "Cortex", "text": overview}
-    )
-    project_block, project_truncated = ns["_custom_entry_block"](
-        "project", {"title": "Projektbeschreibung", "category": "Programmierung/Projekte/Second Brain", "text": project}
-    )
-    check(not overview_truncated and all(marker in overview_block for marker in
-                                         ("ANFANG-GESAMT", "MITTE-GESAMT", "ENDE-GESAMT")),
-          "technischer Gesamtueberblick erreicht die eigene Nachtaufgabe vollstaendig")
-    check(not project_truncated and all(marker in project_block for marker in
-                                        ("ANFANG-PROJEKT", "MITTE-PROJEKT", "ENDE-PROJEKT")),
-          "Projektbeschreibung erreicht die eigene Nachtaufgabe vollstaendig")
-    check("GEKUERZTER AUSZUG" not in overview_block + project_block,
-          "der regulaere Aufgabenlauf kennzeichnet echte Volltexte nicht mehr als Auszug")
-    check("_custom_entry_block(d, entries[d])" in APP_SOURCE
-          and "_custom_entry_block(d, entries[d], 2500)" not in APP_SOURCE,
-          "der echte Nachtlauf nutzt den ungekürzten Standardpfad")
-
     print("PASS: Bibliothekar ergaenzt Kategorien verlustfrei")
     return 0
 

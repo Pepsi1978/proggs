@@ -1777,7 +1777,7 @@ class ChatViewModel : ViewModel() {
 
 private fun ChatResponse.toChatMessage(id: String = UUID.randomUUID().toString()): ChatMessage = ChatMessage(
     id = id,
-    text = ChatSpeechSanitizer.clean(reply),
+    text = reply,
     isUser = false,
     action = action,
     category = category,
@@ -1812,7 +1812,7 @@ private fun ChatMessage.toStoredMessage(): StoredChatMessage = StoredChatMessage
 
 private fun StoredChatMessage.toChatMessage(): ChatMessage = ChatMessage(
     id = id,
-    text = if (isUser) text else ChatSpeechSanitizer.clean(text),
+    text = text,
     isUser = isUser,
     action = action,
     category = category,
