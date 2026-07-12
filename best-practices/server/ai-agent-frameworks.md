@@ -35,6 +35,8 @@
 | 15 | async | Blockierende Calls NIE im async-Loop (`to_thread`/`run_in_threadpool`) | §3.1 |
 | 16 | Streaming-Ausgabe | Irreversible Verbraucher wie TTS erst aus dem finalisierten kanonischen Reply speisen; Anzeige/Persistenz/Sprache duerfen nicht auseinanderlaufen | §9.1 |
 | 17 | Live-Mirror/Hintergrund-Flush + Loeschung | Wer aus lebendem Session-State in die Persistenz spiegelt, muss im Delete-Pfad die Live-Session evicten, geplante Mirrors per Tombstone stoppen und einen zwischenzeitlich gelandeten Rest idempotent abraeumen — sonst "aufersteht" der geloeschte Eintrag | §9.2 |
+| 18 | Modus-Design (read-only / nur-Suche / nur-Schreiben) | Jede Modus-Absicht als GRENZE im Zustandsautomaten bauen: Pendings fremder Modi verwerfen, Route-Raum pro Modus typisiert verkleinern (Schreib-Intents existieren im Lese-Modus nicht), letzte Sperre vor dem Schreibpfad — nie nur Prompt/Heuristik. Erkennungs-Regexe fuer Befehle ENG halten (Imperative), Erwaehnungen sind keine Befehle | §9.3 |
+| 19 | Verworfene Bestaetigungs-Dialoge | Nach serverseitigem Verwerfen eines bestaetigungspflichtigen Dialogs das direkt folgende Ja/Nein deterministisch ehrlich beantworten — nie das Antwort-LLM den Verlauf deuten lassen (es "bestaetigt" sonst die nie ausgefuehrte Aktion) | §9.4 |
 
 ---
 

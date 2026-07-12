@@ -26,6 +26,9 @@
 > **Ergaenzt 2026-07-12 abends (Performance-Tiefendebugging):** NEU §9.2 Live-Mirror/Timeout-Flush
 > einer aktiven Session macht Loeschungen rueckgaengig — Delete-Pfade muessen Session-Eviction +
 > Mirror-Tombstone + Rest-Abraeumung machen (Kurzcheck #17).
+> **Ergaenzt 2026-07-12 nachts (Logik-Tiefendebugging Agentensystem):** NEU §9.3 Read-only-Modus wird
+> von Schluesselwort-Heuristik + LLM-Router unterlaufen (Modus-Grenze gehoert in den Zustandsautomaten,
+> Kurzcheck #18) und §9.4 "claimed but didn't do" nach verworfenem Bestaetigungs-Dialog (Kurzcheck #19).
 
 ---
 
@@ -54,6 +57,8 @@
 | 15 | In-Memory-State bei mehreren uvicorn-Workern weg | Worker = eigener Prozess, KEIN geteilter RAM. Session/State in DB/Redis, nicht in Modul-Dict | §5.3 |
 | 16 | TTS liest URLs/Quellen, die im finalen Chattext fehlen | Nie ungepruefte Modelldeltas an irreversible Verbraucher geben; erst finalisieren, dann EINEN kanonischen Reply fuer Anzeige, Persistenz und TTS verteilen | §9.1 |
 | 17 | ⭐ Geloeschter Eintrag "aufersteht" nach dem naechsten Turn | Live-Mirror/Timeout-Flush einer AKTIVEN Session schreibt den ganzen Verlauf erneut → Loeschen wirkt kaputt. Jeder Delete-Pfad MUSS die passende Live-Session evicten + geplante Mirrors per Tombstone stoppen + einen zwischenzeitlich gelandeten Rest best-effort abraeumen | §9.2 |
+| 18 | ⭐ Read-only-Modus stellt ploetzlich Speicher-/Schreib-Rueckfragen | Breite Schluesselwort-Regex ("im Gedaechtnis") + LLM-Router-Ermessen unterlaufen die Modus-Absicht. Modus-Grenze HART im Zustandsautomaten (Pendings verwerfen, Route-Raum ohne Schreib-Intents, letzte Sperre vor dem Schreibpfad) — nie nur per Prompt/Heuristik | §9.3 |
+| 19 | Agent behauptet "habe ich gespeichert/erledigt" nach verworfenem Dialog | Ein Ja/Nein auf eine soeben verworfene Rueckfrage erreicht das Antwort-LLM, das aus dem VERLAUF die Aktion als erledigt "bestaetigt". Verworfene Dialoge deterministisch ehrlich beantworten, bevor ein LLM den Verlauf deuten kann | §9.4 |
 
 ---
 
@@ -512,6 +517,50 @@ Hintergrund-Spiegelung, die aus einem lebenden State reproduziert, macht Loeschu
 
 **Quelle:** eigener produktiver Cortex-Vorfall 2026-07-12 (Performance-Tiefendebugging #47856);
 Dashboard-/Agent-Logs + Live-Roundtrip-Test auf dem VPS.
+
+### 9.3 Read-only-Modus wird von Schluesselwort-Heuristik + LLM-Router unterlaufen  [ECHTER VORFALL 2026-07-12, 20:31 Uhr]
+**Symptom:** Im Automatik-Modus (soll nur lesen: Gedaechtnis + Web) stellt der Agent ploetzlich eine
+Speicher-Rueckfrage. Ausloeser war die NUTZER-BESCHWERDE "Da steht doch alles im Gedaechtnis drin.
+Warum findest du das nicht?" — der Nutzer musste zweimal "nein" sagen, um nicht zu speichern.
+
+**Ursache (zwei Schichten):** (1) Eine breite Speicher-Erkennungs-Regex wertete die blosse ERWAEHNUNG
+von "im Gedaechtnis" als definitiven Speicherbefehl und lenkte den Satz aus dem schnellen Lese-Pfad in
+den LLM-Router. (2) Der LLM-Router klassifizierte die Beschwerde als save — LLM-Routing ist
+nicht-deterministisch (orchestrator-Almanach §1.1/§2.6), und es gab KEINE strukturelle Grenze, die den
+Speicherpfad im Lese-Modus verhindert haette. Prompt-Anweisungen ("speichere nichts") reichen nicht:
+sie verlieren gegen Heuristik-Umleitungen und Router-Ermessen.
+
+**FIX (funktionserhaltend, agent 0.81.0 — Poka-Yoke Stufe 3, drei UNABHAENGIGE Schichten):**
+- **Modus-Grenze im Zustandsautomaten:** Der Lese-Modus verwirft offene Schreib-Dialoge (Pendings)
+  und beantwortet echte Schreib-IMPERATIVE ("speichere ...") deterministisch mit einem Hinweis auf den
+  Schreib-Modus — ENGE Imperativ-Regex, nicht die breite Erwaehnungs-Regex (genau die war der Bug).
+- **Typisierter Route-Raum:** Der Router kennt im Lese-Modus den Schreib-Intent nicht — was das LLM
+  auch klassifiziert (inkl. Exception-Fallback), wird deterministisch zur Lese-Anfrage.
+- **Letzte Sperre vor dem Schreibpfad:** Rest-Intents werden laut geloggt zu query umgeleitet.
+- Nachfragen zu Gespeichertem ("warum findest du das nicht", "steht doch drin") IMMER als Lese-Anfrage
+  klassifizieren (deterministische Recall-Korrektur VOR jedem Schreib-Zweig).
+- Regressionstest mit den WORTGLEICHEN Vorfalls-Saetzen (auto_mode_no_store_test.py), Router als
+  Worst-Case-Stub ("alles ist save") — die Zustandsautomat-Schicht muss allein standhalten.
+
+**Merksatz:** Eine Modus-Absicht (read-only, nur-Suche, nur-Regeln) gehoert als GRENZE in den
+Zustandsautomaten, nie nur in Prompt oder Heuristik — der Route-Raum selbst wird pro Modus verkleinert.
+**Quelle:** eigener produktiver Cortex-Vorfall 2026-07-12 20:31 Uhr (Turn-Logbuch + Live-E2E auf dem VPS, #47866).
+
+### 9.4 "Claimed but didn't do": Ja/Nein auf verworfenen Dialog laesst das LLM Erfolg behaupten  [ECHTER VORFALL 2026-07-12]
+**Symptom:** Nutzer bestaetigt mit "ja" eine Speicher-Rueckfrage, die der Server (wegen Moduswechsel)
+gerade verworfen hat. Es wird korrekt NICHTS gespeichert — aber die Antwort lautet "Alles klar, ich
+habe den Eintrag wie vorgeschlagen abgelegt." Das Antwort-LLM sah die alte Rueckfrage im
+Gespraechsverlauf und "bestaetigte" die nie ausgefuehrte Aktion (orchestrator-Almanach §4.5).
+
+**Ursache:** Das verworfene Pending existierte im Code nicht mehr, wohl aber im VERLAUF, den das
+Antwort-LLM liest. Ein pures "ja" ohne offenes Pending lief als normale Frage in den Antwortlauf.
+
+**FIX (agent 0.81.1):** Wo eine Grenze einen Dialog verwirft, wird ein direkt folgendes pures
+Ja/Nein/Abbruch-Wort DETERMINISTISCH ehrlich beantwortet ("Ich habe nichts gespeichert — ...")
+BEVOR irgendein LLM den Verlauf deuten kann. Regel verallgemeinert: Nach jedem serverseitigen
+Verwerfen eines bestaetigungspflichtigen Dialogs darf die Bestaetigungs-Antwort des Nutzers nie
+beim Antwort-LLM landen. E2E-Test prueft den Reply-WORTLAUT (kein "abgelegt"), nicht nur die Action.
+**Quelle:** eigener Live-E2E-Fund 2026-07-12 (#47867), agent 0.81.1.
 
 ---
 
