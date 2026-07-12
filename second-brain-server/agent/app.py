@@ -80,6 +80,7 @@ VERSION = "0.74.1 (11.07.2026, 19:33 Uhr)"  # 0.74.1: Regel-Intent verlangt jetz
 VERSION = "0.75.0 (11.07.2026, 22:47 Uhr)"  # 0.75.0: Regeln sind aus Automatik, Suche und Speichern ausgegliedert und laufen nur noch ueber den expliziten R-Modus; mehrturnige 1:1-Speicherankuendigungen bleiben als save_input gebunden. Alt: 0.74.1.
 VERSION = "0.76.4 (12.07.2026, 16:41 Uhr)"  # 0.76.4: Quellenattributionen und interne Selbstregel-Prueftexte werden vor Anzeige, Persistenz und TTS entfernt; interne Pruefanweisungen werden nicht mehr an Nutzdaten angehaengt. Alt: 0.76.1.
 VERSION = "0.77.0 (12.07.2026, 17:54 Uhr)"  # 0.77.0 PERFORMANCE-Tiefendebugging: (1) Geloeschte Gespraeche bleiben geloescht — DELETE /logbook verwirft die passende LIVE-Sitzung (Tombstone stoppt geplante Live-Mirrors, Session-Spiegel geloescht, Rest-Eintrag im Gehirn best-effort abgeraeumt); vorher schrieb der Live-Mirror das geloeschte Gespraech nach dem naechsten Turn zurueck ('Loeschen geht gar nicht'). (2) Selbstregel-Pruefung laeuft jetzt NACH der deterministischen Antwort-Bereinigung und prueft den wirklich sichtbaren Text — erspart die ~28s-LLM-Neugenerierung, die bisher fast jede Web-Antwort wegen ohnehin entfernter Markdown-Links bezahlte; Regel-Feature unveraendert aktiv. Alt: 0.76.4.
+VERSION = "0.78.0 (12.07.2026, 19:30 Uhr)"  # 0.78.0: GPT-5.6 Sol, Terra und Luna stehen jeweils normal und als Fast-Auswahl bereit. Fast bleibt ein lokaler Alias auf das Basismodell und sendet service_tier=priority an jeden Codex-Responses-Aufruf, einschließlich Tool-Loop und erzwungener Abschlussrunde. Alt: 0.77.0.
 
 # ---------------------------------------------------------------------------
 # Konfiguration (alles aus Umgebungsvariablen — Secrets nie im Code)
@@ -249,7 +250,17 @@ MODEL_PRICES = {
     "gpt-5.3-codex":          {"input": 1.75, "output": 14.00},
     "gpt-5.3-codex-spark":    {"input": 1.75, "output": 14.00},
 }
-CODEX_MODELS_FALLBACK = ["gpt-5.5", "gpt-5.4", "gpt-5.4-mini", "gpt-5.3-codex", "gpt-5.3-codex-spark"]
+CODEX_GPT56_MODELS = [
+    "gpt-5.6-sol", "gpt-5.6-sol-fast",
+    "gpt-5.6-terra", "gpt-5.6-terra-fast",
+    "gpt-5.6-luna", "gpt-5.6-luna-fast",
+]
+CODEX_FAST_MODEL_ALIASES = {
+    "gpt-5.6-sol-fast": "gpt-5.6-sol",
+    "gpt-5.6-terra-fast": "gpt-5.6-terra",
+    "gpt-5.6-luna-fast": "gpt-5.6-luna",
+}
+CODEX_MODELS_FALLBACK = CODEX_GPT56_MODELS + ["gpt-5.5", "gpt-5.4", "gpt-5.4-mini", "gpt-5.3-codex", "gpt-5.3-codex-spark"]
 CODEX_OAUTH_CLIENT_ID = os.getenv("CODEX_OAUTH_CLIENT_ID", "app_EMoamEEZ73f0CkXaXp7hrann")
 CODEX_AUTH_ISSUER = os.getenv("CODEX_AUTH_ISSUER", "https://auth.openai.com").rstrip("/")
 CODEX_TOKEN_URL = os.getenv("CODEX_TOKEN_URL", "https://auth.openai.com/oauth/token")
@@ -714,6 +725,16 @@ def _codex_slug(model: str) -> str:
     return m.split("/", 1)[1] if "/" in m and (m.startswith("openai-codex/") or m.startswith("codex/")) else m
 
 
+def _codex_model_request_fields(model: str) -> dict[str, str]:
+    """Fast ist nur ein lokaler Auswahl-Alias; das Backend bekommt Basismodell + Priority-Tier."""
+    slug = _codex_slug(model)
+    base_model = CODEX_FAST_MODEL_ALIASES.get(slug.lower())
+    fields = {"model": base_model or slug}
+    if base_model:
+        fields["service_tier"] = "priority"
+    return fields
+
+
 def _is_gemini(model: str) -> bool:
     """True fuer Google-Gemini-Modelle (google.genai-Pfad)."""
     return (model or "").strip().lower().startswith("gemini")
@@ -888,8 +909,9 @@ def codex_generate(system: str, user: str, model: str, max_tokens: int, temperat
                    on_delta=None) -> str:
     user = _reinforce_self_rules(system, user)
     access = _codex_tokens(refresh_if_needed=True).get("access_token", "")
+    model_fields = _codex_model_request_fields(model)
     body: dict[str, Any] = {
-        "model": _codex_slug(model),
+        **model_fields,
         "instructions": system,
         "input": [{"role": "user", "content": user}],
         "store": False,
@@ -910,7 +932,7 @@ def codex_generate(system: str, user: str, model: str, max_tokens: int, temperat
     delta_count = 0
     first_event_seen = False
     first_delta_seen = False
-    with _perf_span("codex_stream", "Codex/GPT Responses-Stream", model=model, web=bool(web_tool_type), tool=web_tool_type or "", max_tokens=max_tokens, reasoning=effort):
+    with _perf_span("codex_stream", "Codex/GPT Responses-Stream", model=model, service_tier=model_fields.get("service_tier", ""), web=bool(web_tool_type), tool=web_tool_type or "", max_tokens=max_tokens, reasoning=effort):
         with _HTTP.stream("POST", f"{CODEX_BASE_URL}/responses", json=body, headers=_codex_headers(access), timeout=timeout) as r:
             _perf_mark("codex_headers_received", "Codex/GPT HTTP-Header erhalten",
                        ms=int((time.monotonic() - req_t0) * 1000), status=r.status_code,
@@ -1045,7 +1067,7 @@ def codex_generate_tools(
     access = _codex_tokens(refresh_if_needed=True).get("access_token", "")
     headers = _codex_headers(access)
     effort = _sanitize_reasoning_effort(reasoning_effort, model)
-    slug = _codex_slug(model)
+    model_fields = _codex_model_request_fields(model)
     # Responses-API mit store:false -> vollstaendigen Verlauf jede Runde mitsenden.
     input_items: "list[dict]" = [{"role": "user", "content": user}]
     tool_calls_log: "list[dict]" = []
@@ -1077,7 +1099,7 @@ def codex_generate_tools(
             first_event_seen = False
             first_delta_seen = False
             try:
-                with _perf_span("codex_tool_stream", "Codex/GPT Tool-Loop Stream", model=model, phase=phase, attempt=attempt + 1, input_items=len(req_body.get("input") or []), tools=len(req_body.get("tools") or []), tool_choice=str(req_body.get("tool_choice") or "")):
+                with _perf_span("codex_tool_stream", "Codex/GPT Tool-Loop Stream", model=model, service_tier=str(req_body.get("service_tier") or ""), phase=phase, attempt=attempt + 1, input_items=len(req_body.get("input") or []), tools=len(req_body.get("tools") or []), tool_choice=str(req_body.get("tool_choice") or "")):
                     with _HTTP.stream("POST", f"{CODEX_BASE_URL}/responses", json=req_body,
                                       headers=headers, timeout=timeout) as r:
                         _perf_mark("codex_tool_headers_received", "Codex/GPT Tool-Loop HTTP-Header erhalten",
@@ -1171,7 +1193,7 @@ def codex_generate_tools(
             stopped = "max_seconds"
             break
         body: "dict[str, Any]" = {
-            "model": slug,
+            **model_fields,
             "instructions": system,
             "input": input_items,
             "tools": tools,
@@ -1284,7 +1306,7 @@ def codex_generate_tools(
     # Hard-Stop (max_turns/max_seconds) OHNE finalen Klartext -> eine finale Runde OHNE Werkzeuge erzwingen.
     if not final_text:
         forced = {
-            "model": slug,
+            **model_fields,
             "instructions": system + "\n\nBeende JETZT: antworte dem Nutzer in Klartext, "
                                       "ohne weitere Werkzeuge aufzurufen.",
             "input": input_items,

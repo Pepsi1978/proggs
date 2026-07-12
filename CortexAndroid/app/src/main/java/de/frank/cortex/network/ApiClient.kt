@@ -50,6 +50,29 @@ class ChatStreamException(
     val doneReceived: Boolean,
 ) : IOException(cause.message ?: cause.javaClass.simpleName, cause)
 
+internal val CODEX_GPT56_MODELS = listOf(
+    "gpt-5.6-sol", "gpt-5.6-sol-fast",
+    "gpt-5.6-terra", "gpt-5.6-terra-fast",
+    "gpt-5.6-luna", "gpt-5.6-luna-fast",
+)
+
+private val CODEX_FAST_MODEL_ALIASES = mapOf(
+    "gpt-5.6-sol-fast" to "gpt-5.6-sol",
+    "gpt-5.6-terra-fast" to "gpt-5.6-terra",
+    "gpt-5.6-luna-fast" to "gpt-5.6-luna",
+)
+
+internal data class CodexModelRequestConfig(val model: String, val serviceTier: String?)
+
+internal fun codexModelRequestConfig(selectedModel: String): CodexModelRequestConfig {
+    val selected = selectedModel.trim()
+    val baseModel = CODEX_FAST_MODEL_ALIASES[selected.lowercase()]
+    return CodexModelRequestConfig(
+        model = baseModel ?: selected,
+        serviceTier = if (baseModel != null) "priority" else null,
+    )
+}
+
 object ApiClient {
 
     private val jsonMediaType = "application/json; charset=utf-8".toMediaType()
@@ -57,7 +80,7 @@ object ApiClient {
     private const val CODEX_TOKEN_URL = "https://auth.openai.com/oauth/token"
     private const val CODEX_BASE_URL = "https://chatgpt.com/backend-api/codex"
     private const val CODEX_CLIENT_ID = "app_EMoamEEZ73f0CkXaXp7hrann"
-    private val codexFallbackModels = listOf("gpt-5.5", "gpt-5.4", "gpt-5.4-mini", "gpt-5.3-codex", "gpt-5.3-codex-spark")
+    private val codexFallbackModels = CODEX_GPT56_MODELS + listOf("gpt-5.5", "gpt-5.4", "gpt-5.4-mini", "gpt-5.3-codex", "gpt-5.3-codex-spark")
 
     // --- Moshi Singleton (Best Practice §1.7 / §2.1) ---
     private val moshi: Moshi = Moshi.Builder().build()
@@ -420,11 +443,13 @@ object ApiClient {
     suspend fun codexGenerate(text: String, model: String = SettingsStore.codexModel, reasoning: String = SettingsStore.codexReasoning): String {
         val access = codexAccessToken()
         val effort = reasoning.lowercase().takeIf { it in setOf("minimal", "low", "medium", "high", "xhigh") }
+        val modelConfig = codexModelRequestConfig(model)
         val body = JSONObject()
-            .put("model", model)
+            .put("model", modelConfig.model)
             .put("instructions", "Du bist Cortex direkt auf Franks Handy. Antworte präzise, deutsch und ohne erfundene Fakten. Du hast in diesem Handy-Modus keinen direkten Zugriff auf das Second Brain; sage das ehrlich, wenn Speicher- oder Suchfunktionen nötig wären.")
             .put("input", text)
             .put("max_output_tokens", 4096)
+        modelConfig.serviceTier?.let { body.put("service_tier", it) }
         if (effort != null) body.put("reasoning", JSONObject().put("effort", effort))
         val request = Request.Builder()
             .url("$CODEX_BASE_URL/responses")

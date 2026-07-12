@@ -1,7 +1,15 @@
 {
-	"stand": "12.07.2026, 18:12 Uhr",
+	"stand": "12.07.2026, 19:30 Uhr",
 	"hinweis": "PFLEGE-PFLICHT: Bei JEDEM Deploy, der ein neues System/Feature einbaut, hier einen Eintrag ERGÄNZEN (neueste zuerst). SCHREIBWEISE (Dauer-Regel): leichtes, verständliches Deutsch, kurze Sätze; ALLE Fachbegriffe, Namen und Zahlen (z.B. BM25, RRF, Qdrant, ENV-Variablen, Endpunkt-Namen) BEHALTEN, aber jeden in einem kurzen Halbsatz erklären — NIE durch Weglassen vereinfachen; kompakt halten (der Hauptagent liest über das Werkzeug 'was_kann_cortex' ALLE Einträge auf einmal ein), aber vollständig genug, dass man erkennt WAS eingebaut wurde; einfache Überschrift. Ähnliche/redundante Einträge dürfen zusammengefasst werden — Datum sekundär, entscheidend ist WAS Cortex kann. Quelle des Info-Bereichs in den Dashboard-Einstellungen (GET /api/features). Verankert in DEPLOY.md.",
 	"features": [
+		{
+			"id": "gpt-5-6-fast-modelle",
+			"eingebaut": "12.07.2026, 19:30 Uhr",
+			"dienst": "agent 0.78.0 + dashboard 0.78.0 + Cortex Android 0.8.0",
+			"name": "GPT-5.6 Sol, Terra und Luna mit Fast-Modus",
+			"kurz": "In den Agenten-Dropdowns stehen GPT-5.6 Sol, Terra und Luna jetzt jeweils normal und als Fast-Auswahl bereit. Fast nutzt dasselbe Basismodell und fordert mit service_tier=priority die schnellere Verarbeitung an.",
+			"erklaerung": "Dashboard und Cortex Android erhalten dieselben sechs Auswahlwerte: gpt-5.6-sol, gpt-5.6-sol-fast, gpt-5.6-terra, gpt-5.6-terra-fast, gpt-5.6-luna und gpt-5.6-luna-fast. Die drei Namen mit -fast sind nur lokale, gut erkennbare Aliase und werden niemals als erfundene API-Modellnamen gesendet. Der Chat-Agent entfernt -fast vor jedem Codex-Responses-Aufruf, sendet das jeweilige Basismodell und ergänzt service_tier=priority. Das gilt auch für den Werkzeug-Loop und seine erzwungene Abschlussrunde. Normale Auswahlen senden keinen service_tier und behalten das bisherige Verhalten."
+		},
 		{
 			"id": "performance-tiefendebugging-2026-07-12",
 			"eingebaut": "12.07.2026, 18:12 Uhr",

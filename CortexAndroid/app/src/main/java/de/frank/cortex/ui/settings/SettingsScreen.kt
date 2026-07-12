@@ -46,6 +46,7 @@ import de.frank.cortex.data.TtsUsage
 import de.frank.cortex.data.TtsUsageStore
 import de.frank.cortex.data.model.*
 import de.frank.cortex.network.ApiClient
+import de.frank.cortex.network.CODEX_GPT56_MODELS
 import de.frank.cortex.observability.CortexLog
 import de.frank.cortex.ui.theme.*
 import de.frank.cortex.vpn.WireGuardManager
@@ -82,7 +83,7 @@ fun SettingsScreen(
     var wgConfig by remember { mutableStateOf(SettingsStore.wgConfig) }
     val screenScope = rememberCoroutineScope()
     var agentModelOptions by remember {
-        mutableStateOf(listOf("gemini-3.1-flash-lite", "gemini-3.5-flash", "gemini-3-flash-preview", "gemini-2.5-flash", "minimax/minimax-m3"))
+        mutableStateOf(listOf("gemini-3.1-flash-lite", "gemini-3.5-flash", "gemini-3-flash-preview", "gemini-2.5-flash", "minimax/minimax-m3") + CODEX_GPT56_MODELS)
     }
     var hauptModel by remember { mutableStateOf(agentModelOptions.first()) }
     var speicherModel by remember { mutableStateOf(agentModelOptions.first()) }
