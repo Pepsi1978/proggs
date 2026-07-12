@@ -63,15 +63,16 @@ Quelle: Researcher #3 (v5-Audit) auf Basis aktueller Google Play Data Safety For
 
 ### 1.4 App info & performance
 
+> **KORRIGIERT (Audit v8, 2026-07-12):** Firebase **Crashlytics ist NICHT eingebaut**
+> (kein Eintrag in `gradle/libs.versions.toml`). Die fruehere Zeile "Crash logs: Yes
+> (Firebase Crashlytics)" war eine Vorlagen-Altlast und haette beim Submit eine
+> Falschdeklaration erzeugt.
+
 | Feld | Wert |
 |------|------|
 | Category | App info & performance |
 | Subcategory | **Crash logs** |
-| Is this data collected? | Yes (Firebase Crashlytics) |
-| Is this data shared? | No (Firebase processes as service provider) |
-| Is this data optional? | Standard operational |
-| Encrypted? | Yes |
-| Purposes | App functionality, Crash analytics |
+| Is this data collected? | **No** (kein Crashlytics-SDK; Play sammelt eigene Vitals unabhaengig von der App) |
 
 ### 1.5 Files & documents
 
@@ -180,8 +181,9 @@ Japan bleibt aktiver Markt nach NB6-Volltext-Fix.
 
 Pflicht seit 2024 im Play Console:
 
-- **URL:** https://github.com/Pepsi1978/BestJournal (README.md hat "Account-Loeschung"-Abschnitt) — ODER direkt: `mailto:dev.app.support@gmail.com?subject=Kontoloeschung%20Best%20Journal`
+- **URL (verifiziert erreichbar, Audit v8 2026-07-12):** `https://pepsi1978.github.io/proggs/bestjournal/account-deletion.html` (Quelle im Repo: `proggs/docs/bestjournal/account-deletion.html`, GitHub Pages)
 - **In-App:** Settings → Konto → Konto loeschen (funktional seit Fix #1699)
+- Veraltete Angaben (GitHub-README / mailto / `pepsi1978.github.io/bestjournal-deletion/` = 404) NICHT mehr verwenden.
 
 ---
 
@@ -189,8 +191,8 @@ Pflicht seit 2024 im Play Console:
 
 Pflicht im Play Store Listing:
 
-- **URL:** Direkt-Link zum GitHub-Repo oder zu einer gehosteten Version.
-- Empfehlung: GitHub Pages mit `privacy.html` — der Volltext EN wird als oeffentliche Seite unter einer stabilen URL erreichbar gemacht.
+- **URL (verifiziert erreichbar, Audit v8 2026-07-12):** `https://pepsi1978.github.io/proggs/bestjournal/privacy-en.html` (Uebersichtsseite: `https://pepsi1978.github.io/proggs/bestjournal/` mit de/en/ko + AGB + Impressum + Account-Deletion; Quelle: `proggs/docs/bestjournal/`)
+- Diese URLs sind identisch mit den in der App verlinkten (strings.xml:1475-1486, "Online-Version").
 
 ---
 

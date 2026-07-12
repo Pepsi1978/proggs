@@ -87,6 +87,7 @@ Naechste Pflicht-Pruefung: 2026-08-11 (+30 Tage, Play Policies betroffen)
 | Datum | App | Version | Status | Blocker | Hoch | Commit/Notiz |
 |---|---|---|---|---:|---:|---|
 | 2026-07-12 | BestJournalAndroid | 0.21.16 (vc 297) | BEDINGT (Fix E1 + 6 HOCH → dann anwaltsreif) | 1 | 6 | v8-Bericht `docs/audit/RECHTSSICHERHEIT-AUDIT-2026-07-12-v8.md`; Regressionen seit v7: Verzichts-Dialog entfernt (D1/D2), DSE nicht nachgefuehrt (C2); neu: E1 URLs 404, E3 Trader-Telefon, C1 Edge-TTS, TH-Ausschluss-Empfehlung |
+| 2026-07-12 | BestJournalAndroid | 0.21.16 (vc 297) | **v8.1-REVISION nach Frank-Re-Check: 0 BLOCKER, 3 HOCH** (C1 TTS-AVV, C3 Artefakte, E3 Trader-Telefon) | 0 | 3 | E1 ENTKRAEFTET (App verlinkt existierende Pages-Seite `pepsi1978.github.io/proggs/bestjournal/`, Quelle `docs/bestjournal/`); D1+D2 ENTKRAEFTET (Google Commerce Ltd = Vertragspartner, holt Widerrufsverzicht bei digitalen Inhalten selbst ein, Abos 14 Tage via Google); E2 direkt behoben (Checkliste korrigiert); C2 auf MITTEL (Functions verarbeitet nur Purchase-Token, EU) |
 
 ## Wiederverwendbare Befundmuster
 
@@ -98,6 +99,9 @@ Naechste Pflicht-Pruefung: 2026-08-11 (+30 Tage, Play Policies betroffen)
 | Inoffizielle Gratis-Endpoints (Edge-TTS) ohne AVV fuer sensible Daten | Apps mit Cloud-TTS/AI | Offizielles API-Produkt mit DPA oder On-Device |
 | Skill-Skript check-compliance-artifacts.sh liefert False-Positives, wenn alte Audit-Berichte im Repo liegen (Keyword-Match) | rechtssicherheit-Skill | Skript sollte docs/audit/ + Berichts-Dateien excluden; bis dahin manuell verifizieren |
 | DPF-only-Transfergrundlage in Gate-Texten | Apps mit US-Cloud | "DPF + SCC (DPA) + TIA" formulieren — DPF politisch volatil |
+| Audit testet Doku-/Checklisten-URLs statt der in der App verlinkten URLs → falscher 404-Blocker | Audit-Methodik | IMMER zuerst `grep https://` in strings.xml/Code, DANN WebFetch auf genau diese URLs; Doku-URLs nur als Sekundaerquelle |
+| Fernabsatz-Pflichten (Widerruf, § 312j-Button) dem Entwickler zugerechnet, obwohl Google Commerce Ltd. Vertragspartner ist | Play-Billing-Apps | Play-ToS pruefen: Google ist Verkaeufer, holt Widerrufsverzicht bei digitalen Inhalten selbst ein (Abos: 14 Tage via Google); Entwickler-AGB muessen nur konsistent dazu sein |
+| Interne Compliance-Artefakte (VVT/DSFA/TIA) mit App-Inhalten verwechselt | Solo-Devs | Erklaeren: interne Unternehmer-Dokumente, groesstenteils aus vorhandener DSE ableitbar (Speicherdauer-Tabelle → Loeschkonzept, Sicherheits-Sektion → TOMs) |
 
 ## Muster-Klauseln (Kernpunkte, mit Quelle — Anwalt formuliert final)
 

@@ -27,16 +27,35 @@ und die Widerrufs-Implementierung verbindlich prüfen.
 - **Sensible Daten:** Tagebuchinhalte = potenziell Art. 9 DSGVO (Gesundheit, Religion, Beziehungen); explizite Einwilligung via Privacy-Gates vorhanden
 - **Feature-Gates:** Kein UGC, keine Ads, keine Kinder-Zielgruppe (13+), Health-Grenzfall Mood/Reflexion, KI ja (Gemini/Groq), Abo ja, kein Standort (seit v7 entfernt)
 
-## Gesamtstatus
+## Gesamtstatus (REVIDIERT v8.1 — 12.07.2026, nach Frank-Re-Check)
 
 | Dimension | Wert |
 |-----------|------|
-| **Release-Empfehlung** | **BEDINGT — 1 BLOCKER (Hosting der Pflicht-URLs) + 6 HOCH vor Submit beheben, dann TECHNISCH OK NACH ANWALTSPRÜFUNG** |
-| 🔴 BLOCKER | **1** (E1 Pflicht-URLs nicht gehostet) |
-| 🟠 HOCH | **6** (D1 Widerrufsbelehrung, C1 Edge-TTS, C2 DSE veraltet, C3 Compliance-Artefakte, E2 Data-Safety-Checkliste, E3 Trader-Status/Telefon) |
-| 🟡 MITTEL | **9** |
-| 🟢 NIEDRIG | **3** |
-| Compliance-Reife | Weiterhin **sehr hoch** im Marktvergleich — aber 2 Regressionen seit v7 (Paywall-Verzichts-Dialog entfernt, DSE nicht nachgeführt) |
+| **Release-Empfehlung** | **3 HOCH-Punkte vor Submit beheben (C1 TTS, C3 Artefakte, E3 Trader-Telefon), dann TECHNISCH OK NACH ANWALTSPRÜFUNG** |
+| 🔴 BLOCKER | **0** (E1 war ein Audit-Fehler — siehe Revision) |
+| 🟠 HOCH | **3** (C1 Edge-TTS-AVV, C3 Compliance-Artefakte, E3 Trader-Telefonnummer) |
+| 🟡 MITTEL | **6** (C2 DSE-Update, C4 MHMDA, E4 Billing v8, E5 Health-Declaration, Z1 Thailand, Z2 Japan) |
+| 🟢 NIEDRIG | **8** (inkl. herabgestufter/erledigter Punkte) |
+| Compliance-Reife | **Sehr hoch** — deutlich besser als in v8.0 dargestellt |
+
+## REVISION v8.1 (12.07.2026) — Ergebnis der Nachprüfung mit Frank
+
+| Finding | v8.0 | v8.1 | Begründung |
+|---|---|---|---|
+| **E1** Pflicht-URLs | 🔴 BLOCKER | ✅ **ENTKRÄFTET** (Rest: 🟢 Doku) | Die App verlinkt `https://pepsi1978.github.io/proggs/bestjournal/` (strings.xml:1475-1486) — Seite EXISTIERT mit Privacy/AGB/Impressum (de/en/ko) + vollständiger `account-deletion.html` (Löschwege, Fristen, Datenkategorien). Audit-Fehler: Ich hatte nur die veraltete URL aus `data-safety-checklist.md` getestet statt die echten App-Links. Checkliste ist jetzt korrigiert. Quelle der Seiten: `proggs/docs/bestjournal/`. |
+| **D1** Widerrufsbelehrung | 🟠 HOCH | ✅ **ENTKRÄFTET** (ℹ️ Anwalt bestätigen) | Google-Play-ToS (Primärquelle, de-Fassung): Vertragspartner ist **Google Commerce Limited**; beim Kauf digitaler Inhalte (= Lifetime) holt GOOGLE den Widerrufsverzicht selbst ein ("…bestätigen, dass Sie folglich auf Ihr gesetzliches Widerrufsrecht verzichten"); bei Abos gewährt Google 14 Tage Widerruf. Die NB-Klausel Abschnitt 16 beschreibt also korrekt den realen Google-Kaufprozess; NB 5.5 (14 Tage für Abos) passt ebenfalls. Kein Widerspruch Text↔Realität. Empfehlung: Anwalt die Google-Commerce-Konstruktion einmal bestätigen lassen. |
+| **D2** § 312j Button-Lösung | 🟡 MITTEL | ✅ **ENTKRÄFTET** (ℹ️) | Folgt aus D1: Bestellabschluss findet bei Google Commerce Ltd. statt — Button-Lösung/Pflichtinfos im Checkout sind Googles Verantwortung als Verkäufer. |
+| **E2** Data-Safety-Checkliste | 🟠 HOCH | ✅ **BEHOBEN** (in dieser Session) | Kein Live-Fehler — die App hat kein Crashlytics, nur die Repo-Checkliste (Submit-Vorlage) war falsch. Crashlytics-Zeile + beide URLs am 12.07.2026 korrigiert. |
+| **C1** Edge-TTS | 🟠 HOCH | 🟠 **BESTÄTIGT, präzisiert** | Transparenz ist DA (DSE beschreibt MS-TTS mit Einwilligung + DPF + SCC) — Franks Einwand berechtigt. Verbleibender Kern: Die **SCC-Behauptung stimmt vertraglich nicht** (für den inoffiziellen `speech.platform.bing.com`-Consumer-Endpoint existiert kein Vertrag/AVV mit Microsoft) + Endpoint kann jederzeit gesperrt werden. Funktionserhaltender Fix, der Cloud-TTS BEHÄLT: auf offizielles **Azure Speech** umstellen (Free Tier 0,5 Mio. Zeichen/Monat; dann stimmen DPA/SCC wirklich; Gate-/DSE-Texte bleiben fast identisch). |
+| **C2** DSE veraltet | 🟠 HOCH | 🟡 **MITTEL, bestätigt** | Firebase Functions verarbeitet NUR den Purchase-Token + Produkt-ID (Play-Abo-Verifikation, `functions/index.js`, EU-Region) — keine Inhalte, keine Analytics. Franks Einschätzung ("nichts Großartiges") stimmt weitgehend; trotzdem fehlt der Dienst in DSE (App + gehostete Version, beide Stand 20.04.). Kleiner Absatz + POLICY_VERSION-Bump reicht. |
+| **C3** Compliance-Artefakte | 🟠 HOCH | 🟠 **BESTÄTIGT, erklärt** | VVT/DSFA/TIA sind INTERNE Unternehmer-Dokumente (nicht App-Inhalte) — können nicht "in der App drin" sein. Große Teile lassen sich aus der exzellenten DSE ableiten (Speicherdauer-Tabelle → Löschkonzept; Sicherheits-Sektion → TOMs). 1 Session Aufwand. Kein Abmahnrisiko, reines Behörden-Prüfrisiko. |
+| **E3** Trader-Telefon | 🟠 HOCH | 🟠 **BESTÄTIGT** | Impressum ist vollständig (Telefon dort nicht nötig, EuGH). ABER: Play-Console-Trader-Verifikation (DSA Art. 30/31) verlangt separat Adresse + **Telefonnummer** + E-Mail; wird im Store-Listing angezeigt. Virtuelle Nummer vor Submit besorgen. |
+| **C5** DPF-Absicherung | 🟡 MITTEL | 🟢 **NIEDRIG** | DSE enthält bereits 8× "Standardvertragsklauseln" (DPF+SCC-Doppelabsicherung textlich vorhanden). Nur die kurzen Gate-Texte (Gemini) könnten "+ SCC" ergänzen. |
+| **D3** PAngV-Rabatte | 🟡 MITTEL | 🟢 **NIEDRIG** | Preise/Rabatte werden von Google Play als Verkäufer abgewickelt; In-App-Rabatt-CLAIMS bei künftigen Aktionen weiter beachten. |
+| **Z3** Singapur DPO | 🟡 MITTEL | 🟢 **NIEDRIG** | DSE-Aussage "kein DSB erforderlich" ist für DE korrekt; SG-PDPA-DPO ist ein separates Konzept — 1 Satz in EN-Policy ergänzen. |
+| C4, E4, E5, Z1, Z2 | 🟡 | 🟡 **unverändert** | MHMDA-Opt-ins, Billing v8 (31.08.2026), Health-Declaration/Org-Account-Frage, Thailand-Ausschluss, Japan-Rep — alle recherche-basiert bestätigt. |
+
+**Lerneffekt für künftige Audits (in Wissensbasis übernommen):** (1) IMMER die tatsächlich in der App verlinkten URLs testen, nie nur Doku-Dateien. (2) Bei Play-Billing-Apps zuerst die Google-Commerce-Vertragskonstruktion prüfen, bevor Fernabsatz-Pflichten dem Entwickler zugerechnet werden.
 
 **Kernaussage:** Die App hat ein überdurchschnittliches Compliance-Fundament (Consent-First-Architektur, Privacy-Gates pro Cloud-Dienst, § 356a-Widerrufsbutton, KI-Badges, saubere Werbeaussagen). Die gefährlichsten Punkte sind KEINE fehlenden Dokumente, sondern **Drift**: Der Code wurde weiterentwickelt (Paywall-Redesign, Firebase Functions), die Rechtstexte und Submit-Dokumente hinken hinterher.
 
