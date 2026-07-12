@@ -10,6 +10,12 @@
 > (`Read` mit `limit=80`). Volltext bei Fehlern im Bereich (Stufe B) und vor
 > Hochrisiko-Arbeit (Stufe C).
 
+> **⭐ PFLICHT-KANON:** Jedes Groq/Whisper-large-v3(-turbo)-Diktat baut IMMER **alle vier**
+> Anti-Halluzinations-Schichten ein (1 Vorfilter · 2 Confidence-Gate · 3 Audio-Abgleich · 4 Floskel-
+> Blocklist), nie eine Teilmenge — alle funktionserhaltend. Kanonische Referenz: TVO
+> `GroqWhisperClient.cs` (C#) bzw. CortexAndroid `SpeechAnalyzer.kt`+`WhisperHallucinationFilter.kt`
+> (Kotlin). Details: Volltext-Abschnitt „Der 4-Schichten-Standard-Kanon".
+
 | # | Situation | Best Practice (Kurzform) | Volltext |
 |---|-----------|--------------------------|----------|
 | 1 | Clip an Groq senden | Nie rohe Stille — Sprachgehalt-/VAD-Vorfilter VOR dem Request | §1 |

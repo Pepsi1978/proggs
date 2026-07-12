@@ -34,6 +34,30 @@ Client-Kontext: Always-On-Voice-App VoiceAgent (.NET 10, WPF, NAudio, 16 kHz mon
 
 ---
 
+## ⭐ Der 4-Schichten-Standard-Kanon (PFLICHT bei JEDEM Groq/Whisper-large-v3-Projekt)
+
+> **Verbindliche Referenz (Frank-Wunsch 2026-07-12):** Whisper (Groq `large-v3` UND `large-v3-turbo`)
+> halluziniert bei Stille Floskeln ("Vielen Dank", "Untertitel des ZDF") und haengt nach End-Pausen
+> Woerter an ("Ja") — beides MIT hoher Confidence. `temperature=0` allein reicht NICHT. Jede App mit
+> Groq-Whisper-Diktat baut daher IMMER **alle vier** Schichten ein, nie eine Teilmenge. Alle vier sind
+> **funktionserhaltend**: echte (auch leise/kurze) Sprache wird NIE verworfen.
+
+| Schicht | Was | Kernregel |
+|---------|-----|-----------|
+| **1 — Sprachgehalt-Vorfilter** | VOR dem Senden: Voiced-Zeit der Aufnahme messen (RMS pro 20-ms-Frame, `rms ≥ 0.015`) | `< 150 ms` laute Zeit → gar nicht erst an Groq senden (nur absolute Zeit, keine Ratio — Denkpausen erlaubt) |
+| **2 — Confidence-Gate** | pro Segment aus `verbose_json` verwerfen | `no_speech_prob>0.6` **UND** `avg_logprob<-1.0` (nie ODER!); `compression_ratio>2.4`; Mini-Noise (`dauer<0.4s` UND `no_speech>0.6`). Text aus den BEHALTENEN Segmenten NEU zusammensetzen — nie den Roh-Text durchreichen |
+| **3 — Segment-Audio-Abgleich** | Segment-Zeitfenster gegen die eigene Voiced-Timeline | `< 10 %` laute Frames im Fenster = Trailing-Halluzination. **Drift-Sicherung:** wuerde Schicht 3 ALLES verwerfen, die Schicht-2-Ergebnisse behalten (Whisper-Timestamps driften) |
+| **4 — Floskel-Blocklist** | letzter Filter an ALLEN Ausgaengen | Floskel NUR verwerfen bei DREI Signalen zugleich: kurz (`≤6 Woerter`/`≤64 Zeichen`) + normalisierter EXAKTER Match (`==`, nicht contains) + Stille-Kontext (`voicedMs<600`). Ohne Voiced-Timeline NICHT verwerfen |
+
+**Kanonische Referenz-Implementierungen (kopieren statt neu erfinden):**
+- **C# / .NET (Vollversion, alle 4):** `TerminalVoiceOverlay-Windows/Services/GroqWhisperClient.cs` (+ macOS/CVO-Pendants).
+- **Kotlin / Android (Vollversion, alle 4):** `CortexAndroid/.../audio/SpeechAnalyzer.kt` + `WhisperHallucinationFilter.kt` (WAV-PCM16 direkt, kein MediaCodec).
+- **Kotlin / Android (3-Schichten-Variante, M4A via MediaCodec):** `EntropieReductor/.../TranscribeAudioUseCase.kt`, `BestJournalFrank/.../TranscriptionRepository.kt` — bei neuen Projekten die **4-Schichten**-Fassung bevorzugen (Blocklist ergaenzen).
+
+Gegenstueck (Fehlermodi jeder Schicht): [`bugs/desktop/groq-transkription.md`](../../bugs/desktop/groq-transkription.md) §2.
+
+---
+
 ## 1. Aufnahme & Audio-Preprocessing (Client) — die wirksamste Schicht
 
 - **16 kHz mono PCM16** direkt aufnehmen (Groq + Whisper downsamplen ohnehin darauf; hoehere Rate/
