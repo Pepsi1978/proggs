@@ -1,7 +1,15 @@
 {
-	"stand": "13.07.2026, 11:12 Uhr",
+	"stand": "13.07.2026, 13:17 Uhr",
 	"hinweis": "PFLEGE-PFLICHT: Bei JEDEM Deploy, der ein neues System/Feature einbaut, hier einen Eintrag ERGÄNZEN (neueste zuerst). SCHREIBWEISE (Dauer-Regel): leichtes, verständliches Deutsch, kurze Sätze; ALLE Fachbegriffe, Namen und Zahlen (z.B. BM25, RRF, Qdrant, ENV-Variablen, Endpunkt-Namen) BEHALTEN, aber jeden in einem kurzen Halbsatz erklären — NIE durch Weglassen vereinfachen; kompakt halten (der Hauptagent liest über das Werkzeug 'was_kann_cortex' ALLE Einträge auf einmal ein), aber vollständig genug, dass man erkennt WAS eingebaut wurde; einfache Überschrift. Ähnliche/redundante Einträge dürfen zusammengefasst werden — Datum sekundär, entscheidend ist WAS Cortex kann. Quelle des Info-Bereichs in den Dashboard-Einstellungen (GET /api/features). Verankert in DEPLOY.md.",
 	"features": [
+		{
+			"id": "bibliothekar-quell-eintraege-aufklappbar",
+			"eingebaut": "13.07.2026, 13:17 Uhr",
+			"dienst": "brain-api 1.34.0 + dashboard 0.82.0",
+			"name": "Bibliothekar-Vorschläge zeigen den echten betroffenen Eintrag",
+			"kurz": "Jeder gespeicherte Eintrag hinter einem Vorschlag lässt sich direkt aufklappen. Der vollständige Originaltext erscheint in der Vorschlagskarte.",
+			"erklaerung": "Unter jedem Bibliothekar-Vorschlag steht jetzt ein aufklappbarer Bereich für die betroffenen Einträge. Beim Aufklappen lädt Cortex den vollständigen Originaltext gezielt über die eindeutige doc_id (die interne Eintragskennung), nicht über einen geratenen Titel und nicht durch das Durchsuchen des Bestands. Das gilt auch für Kategorie-Ergänzungen sowie für individuelle Nachtaufgaben, deren Vorschlag bisher keinen sichtbaren Kontextblock besaß. Gibt es mehrere Quellen, etwa bei einer Dublette, erscheint jede einzeln. Noch nicht gespeicherte Vorschau-Einträge zeigen weiterhin ihren vorgeschlagenen Text, weil es dafür naturgemäß keine doc_id gibt."
+		},
 		{
 			"id": "automatik-hart-read-only",
 			"eingebaut": "12.07.2026, 22:16 Uhr",

@@ -71,7 +71,7 @@ VERSION = "0.79.0 (12.07.2026, 20:19 Uhr)"  # 0.79.0 CHAT-STREAMING im Web-Cockp
 VERSION = "0.79.1 (12.07.2026, 20:45 Uhr)"  # 0.79.1: Sichtbarer Bump zum agent-0.79.1-Fix: Gedächtnis-Nachfragen bleiben Lesebefehle, und genannte Kategorien werden vor ähnlichen Gesprächsprotokollen priorisiert. Alt: 0.79.0.
 VERSION = "0.80.0 (12.07.2026, 21:00 Uhr)"  # 0.80.0: Gespräche bleiben im Logbuch, werden aber nicht mehr live oder beim Sitzungsabschluss nach Qdrant gespiegelt. Alt: 0.79.1.
 VERSION = "0.81.0 (12.07.2026, 22:16 Uhr)"  # 0.81.0 LOGIK-HAERTUNG (agent 0.81.0): Der Automatik-Modus ist hart read-only — er kann konzeptionell nicht mehr speichern oder Speicher-Rueckfragen stellen (3 unabhaengige Code-Schichten; Vorfall 20:30/20:31 Uhr 'Typenbezeichnung des Autos' -> Beschwerden wie 'Da steht doch alles im Gedaechtnis drin' laufen IMMER als Gedaechtnis-Frage, Speicher-Imperative bekommen den Diskette-Hinweis). Diskette/Lupe/R/Titel+Kategorie/Bearbeiten-Stift unveraendert. Alt: 0.80.0.
-VERSION = "0.81.2 (13.07.2026, 11:12 Uhr)"  # 0.81.2: Automatische Programmier-Session-Speicherung fuer Claude Code und OpenCode vollstaendig entfernt; der Server besitzt keinen /session-log-Ingestionsweg mehr. Alt: 0.81.0.
+VERSION = "0.82.0 (13.07.2026, 13:17 Uhr)"  # 0.82.0: Bibliothekar-Vorschlaege zeigen den jeweils betroffenen Eintrag jetzt als aufklappbare Quelle mit Volltext. Jeder bekannte doc_id wird direkt ueber brain-api /by-id geladen, auch bei Kategorie-Ergaenzungen und individuellen Nachtaufgaben ohne Kontextblock; keine Titelraten oder Bestandsscans. Alt: 0.81.2.
 BRAIN_URL = os.getenv("BRAIN_URL", "http://brain-api:8000").rstrip("/")
 AGENT_URL = os.getenv("AGENT_URL", "http://agent:8002").rstrip("/")
 SB_API_KEY = os.getenv("SB_API_KEY", "")
@@ -468,8 +468,15 @@ def entries_by_parent(parent: str = "", limit: int = 200) -> dict:
 
 
 @app.get("/api/entry")
-def entry(title: str) -> dict:
-    return _bget("/by-title", title=title, user_id=USER_ID)
+def entry(title: str = "", doc_id: str = "") -> dict:
+    """Volltext fuer Drawer und Bibliothekar-Quellen: Titel oder die eindeutige doc_id."""
+    doc_id = doc_id.strip()
+    title = title.strip()
+    if doc_id:
+        return _bget("/by-id", doc_id=doc_id, user_id=USER_ID)
+    if title:
+        return _bget("/by-title", title=title, user_id=USER_ID)
+    return JSONResponse(status_code=400, content={"ok": False, "detail": "title oder doc_id erforderlich"})
 
 
 def _logbook_when(stem: str, txt: str) -> str:

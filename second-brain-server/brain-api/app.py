@@ -446,13 +446,14 @@ VERSION = "1.27.1 (08.07.2026, 20:14 Uhr)"  # 1.27.1: FIX Kategorie-Doppelung Ge
 VERSION = "1.27.2 (10.07.2026, 11:34 Uhr)"  # 1.27.2: Tiefen-Debugging-Haertung. Gemini-Embedding-Calls mit 60s-Timeout + Backoff-Retry (nur transiente 429/5xx/Netzfehler); Bearer-Vergleich konstantzeitig (hmac.compare_digest); limit=0-Zaehlpfad dedupliziert ueber chunk_index=0 + serverseitiges qc.count (identisches Ergebnis, ~5x weniger Scan); created_at-None-Guard in /by-date; Embedding-Tages-Cap liest unter Lock. Alt: 1.27.1.
 VERSION = "1.28.0 (10.07.2026, 19:26 Uhr)"  # 1.28.0: Neuer read-only GET /entry/categories?doc_id=... liest Kategorien gezielt per doc_id+user_id aus genau einem Chunk und nur kleinen Metadatenfeldern. Alt: 1.27.2.
 VERSION = "1.28.1 (10.07.2026, 19:40 Uhr)"  # 1.28.1: GET /entry/categories protokolliert seine gesamte Antwortzeit dauerhaft als checkpoint-Feld ms. Alt: 1.28.0.
-VERSION = "1.29.0 (10.07.2026, 21:05 Uhr)"  # 1.29.0 (Level-2 Gruppe A, Punkte 1+10 — Frank-Freigabe 2026-07-10): GEDAECHTNIS-EBENE + VERTRAUENS-LEVEL. Neues Payload-Feld layer (kurzzeit/langzeit, Keyword-Index): neue /store-Eintraege landen standardmaessig im KURZZEIT-Gedaechtnis (Arbeitsgedaechtnis); Bestand OHNE Feld gilt beim Lesen als langzeit (payload_layer() — KEINE Migration noetig, verlustfrei). Die SUCHE filtert NIE nach layer (reines Organisations-Metadatum). ALLE Payload-Rebuild-Wege (entry/category, entry/categories, PUT /entry, Papierkorb+Restore) erhalten die Ebene (Feld-Drift-Schutz qdrant.md Par. 9). NEU POST /layer/promote {min_age_days}: befoerdert Kurzzeit-Eintraege ab Mindestalter per set_payload ins Langzeitgedaechtnis (NUR das Flag — Text/Vektor/Kategorien unberuehrt; nie zurueck; idempotent; fuer den Nacht-Bibliothekar). trust (hoch/mittel) wird NICHT gespeichert, sondern deterministisch aus source abgeleitet (source_trust: manual/chat/app/dashboard=hoch, sonst mittel) und in by-title/by-category/category-item/by-parent mit ausgegeben (layer ebenso). Speicher-Pfad-Verhalten sonst UNANGETASTET (Franks Vorgabe: keine Bewertung/Ersetzung beim Speichern). Alt: 1.28.1.
+VERSION = "1.34.0 (13.07.2026, 13:17 Uhr)"  # 1.34.0: NEU GET /by-id fuer direkte, vollstaendige Eintragsabrufe per doc_id. Das Dashboard nutzt ihn fuer die aufklappbaren Quellen in Bibliothekar-Vorschlaegen: auch Vorschlaege ohne Titel oder Kontextblock zeigen dadurch stets den echten Ziel-Eintrag, ohne Titelraten oder Bestandsscan. Alt: 1.29.0.
 VERSION = "1.30.0 (10.07.2026, 21:39 Uhr)"  # 1.30.0 (Level-2 Gruppe A, Punkte 7+8 — Frank-Freigabe 2026-07-10): RECALL-VERSTAERKUNG + SANFTES VERGESSEN. NEU POST /entries/touch {doc_ids}: registriert einen Abruf — access_count+1 und last_accessed_at=jetzt (Vergessens-Uhr zurueckgestellt) per set_payload auf alle Chunks (reine Metadaten, Text/Vektor unberuehrt). /search boostet oft abgerufene Eintraege SANFT multiplikativ (neues Runtime-Limit recall_boost_promille, Default 50 = max +5 Prozent ab 20 Abrufen, 0 = AUS): wirkt auf den dense-Score UND den RRF-Fusions-Score. BEWUSST NUR positiver Bonus, KEIN Alters-Malus — Eintraege ohne Abrufe ranken EXAKT wie bisher (access_count=0 -> Faktor 1.0; Regressionsschutz/Funktionserhalt Direktive #3); das sanfte Vergessen entsteht relativ (Nicht-Abgerufenes faellt zurueck, weil Abgerufenes steigt), GELOESCHT oder GEFILTERT wird NIE — jeder Eintrag bleibt jederzeit auffindbar und holt sich mit einem Abruf seinen Boost zurueck (MemoryBank-Muster). Alt: 1.29.0.
 VERSION = "1.31.0 (10.07.2026, 22:00 Uhr)"  # 1.31.0 (Level-2 Gruppe A, Punkt 4 — Frank-Freigabe 2026-07-10): BI-TEMPORALE FAKTEN. Optionale Payload-Felder valid_from/valid_until (YYYY-MM-DD), gesetzt AUSSCHLIESSLICH manuell ueber NEU PUT /entry/validity (Dashboard-Drawer) — NIE automatisch (Franks Vorgabe: kein automatisches Bewerten/Ersetzen). NICHTS wird geloescht oder gefiltert: abgelaufene Eintraege bleiben voll auffindbar, /search + by-title geben die Gueltigkeit nur als Kennzeichnung mit (der Agent sagt dann galt bis X). Alle Rebuild-Wege (Kategorie-Wechsel, PUT /entry, Papierkorb+Restore) ERHALTEN die Felder (Feld-Drift-Schutz qdrant.md Par. 9). Leeres Feld entfernt die Grenze (delete_payload). Wer will, fragt historisch (Wo wohnte ich 2024?) und aktuell (Wo wohne ich?) — beides bleibt beantwortbar. Alt: 1.30.0.
 VERSION = "1.32.0 (11.07.2026, 13:25 Uhr)"  # 1.32.0: PUT /entry erzeugt Chunks und Embeddings vollständig VOR jeder Löschung, schreibt und verifiziert den neuen Stand zuerst und entfernt erst danach alte doc_id-/Rest-Chunks. Ein Embedding-, Budget- oder Upsert-Fehler kann den bisherigen Eintrag dadurch nicht mehr vorzeitig löschen. Alt: 1.31.0.
 VERSION = "1.32.1 (11.07.2026, 19:51 Uhr)"  # 1.32.1: Atomare additive Kategorie-Zuordnung unter dem globalen Eintrags-Schreib-Lock verhindert verlorene parallele Ergänzungen. Alt: 1.32.0.
 VERSION = "1.33.0 (12.07.2026, 17:56 Uhr)"  # 1.33.0 PERFORMANCE: BM25-Index-Rebuild laeuft nach Schreibwegen debounced im HINTERGRUND (statt dass die naechste Suche ihn bezahlt — vorher +~1s auf der ersten Suche nach jedem Chat-Turn, weil der Live-Gespraechs-Mirror den Index jedes Mal verwarf) + Single-Flight-Build (parallele Suchen bauen den Index nicht mehr N-fach gleichzeitig). Konsistenz unveraendert: keine Suche sieht je einen veralteten Index. Alt: 1.32.1.
 VERSION = "1.33.1 (13.07.2026, 11:12 Uhr)"  # 1.33.1: Letzte Schutzschicht gegen automatische Programmier-Session-Eintraege. /store lehnt Titel/Text-Muster von Claude-Code- und OpenCode-Session-Protokollen unter Programmierung/Sessions ab. Alt: 1.33.0.
+VERSION = "1.34.0 (13.07.2026, 13:17 Uhr)"  # 1.34.0: NEU GET /by-id fuer direkte, vollstaendige Eintragsabrufe per doc_id. Das Dashboard nutzt ihn fuer die aufklappbaren Quellen in Bibliothekar-Vorschlaegen: auch Vorschlaege ohne Titel oder Kontextblock zeigen dadurch stets den echten Ziel-Eintrag, ohne Titelraten oder Bestandsscan. Alt: 1.33.1.
 
 # Startup-Banner (Observability-First: Log-Pfad + Version EINMAL ausgeben)
 _log(logging.INFO, "brain-api startet", version=VERSION, log_path=LOG_PATH)
@@ -1302,6 +1303,37 @@ def by_title(title: str, user_id: str = "frank") -> dict:
             "valid_until": points[0].payload.get("valid_until") or None,
             "created_at": points[0].payload.get("created_at"),
             "updated_at": points[0].payload.get("updated_at"), "text": full}
+
+
+@app.get("/by-id", dependencies=[Depends(require_auth)])
+def by_id(doc_id: str, user_id: str = "frank") -> dict:
+    """Direkter Volltextabruf eines bekannten Eintrags ohne Titelauflösung oder Bestandsscan."""
+    _require_store()
+    doc_id = (doc_id or "").strip()
+    if not doc_id:
+        raise HTTPException(status_code=400, detail="doc_id erforderlich")
+    points = _scroll(Filter(must=[
+        FieldCondition(key="user_id", match=MatchValue(value=user_id)),
+        FieldCondition(key="doc_id", match=MatchValue(value=doc_id)),
+    ]), limit=1)
+    if not points:
+        checkpoint("by_id", "Abruf per doc_id", ok=False, found=False, doc_id=doc_id)
+        return {"ok": True, "found": False, "doc_id": doc_id, "text": None}
+    payload = points[0].payload
+    full = payload.get("full_text", "")
+    checkpoint("by_id", "Abruf per doc_id gibt das GANZE Dokument 1:1 zurueck", ok=bool(full),
+               doc_id=doc_id, chars=len(full))
+    return {"ok": True, "found": True, "doc_id": doc_id,
+            "title": payload.get("title") or None,
+            "category": payload.get("category") or None,
+            "categories": cats_from_payload(payload),
+            "source": payload.get("source") or None,
+            "layer": payload_layer(payload),
+            "trust": source_trust(payload.get("source")),
+            "valid_from": payload.get("valid_from") or None,
+            "valid_until": payload.get("valid_until") or None,
+            "created_at": payload.get("created_at"),
+            "updated_at": payload.get("updated_at"), "text": full}
 
 
 @app.get("/by-category", dependencies=[Depends(require_auth)])

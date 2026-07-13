@@ -1096,6 +1096,10 @@ button{font-family:inherit;cursor:pointer}
         .lib-ctx{margin-top:8px;font-size:12.5px}
         .lib-ctx summary{cursor:pointer;color:var(--text-faint)}
         .lib-ctx .k{border-left:3px solid var(--border);padding:6px 10px;margin:6px 0;color:var(--text-dim);white-space:pre-wrap;word-break:break-word}
+        .lib-source{margin:7px 0;border-left:3px solid var(--accent);border-radius:0 9px 9px 0;background:var(--surface)}
+        .lib-source summary{padding:8px 10px;color:var(--accent);font-weight:600}
+        .lib-source-body{padding:0 10px 10px;color:var(--text-dim);white-space:pre-wrap;word-break:break-word}
+        .lib-source-meta{display:block;margin-top:3px;color:var(--text-faint);font-size:11.5px;font-weight:400}
         .lib-choice{display:flex;gap:8px;flex-wrap:wrap;margin-top:10px}
         .lib-choice .btn.sel-ja{background:rgba(90,208,160,.16);border-color:var(--good);color:var(--good)}
         .lib-choice .btn.sel-nein{background:rgba(242,105,142,.14);border-color:#F2698E;color:#F2698E}
@@ -4782,6 +4786,49 @@ button{font-family:inherit;cursor:pointer}
   }
   let libDay=null, libSel={}, libOverrides={}, libNightPoll=null, libProcPoll=null, libIv=[], libIvTask=null;
 
+  function libSourceEntries(it){
+    const entries=[];
+    const seen=new Set();
+    const add=(source)=>{
+      if(!source) return;
+      const docId=String(source.doc_id||"").trim();
+      const title=String(source.titel||source.title||"").trim();
+      const key=docId||title;
+      if(!key||seen.has(key)) return;
+      seen.add(key); entries.push({doc_id:docId,title,category:source.kategorie||source.category||"",excerpt:source.auszug||""});
+    };
+    (it.kontext||[]).forEach(add);
+    const action=it.aktion||{};
+    add({doc_id:action.doc_id});
+    (action.doc_ids||[]).forEach(doc_id=>add({doc_id}));
+    (action.zuordnung||[]).forEach(z=>add({doc_id:z.doc_id,category:z.unter}));
+    return entries;
+  }
+
+  function libSourceDetails(source){
+    const det=document.createElement("details"); det.className="lib-source";
+    const summary=document.createElement("summary");
+    summary.textContent=source.title||"Betroffenen Eintrag anzeigen";
+    if(source.category){ const meta=document.createElement("span"); meta.className="lib-source-meta"; meta.textContent=source.category; summary.appendChild(meta); }
+    const body=document.createElement("div"); body.className="lib-source-body";
+    body.textContent=source.excerpt||"Eintrag wird beim Aufklappen geladen …";
+    det.append(summary,body);
+    let loaded=false;
+    det.addEventListener("toggle",async()=>{
+      if(!det.open||loaded) return;
+      if(!source.doc_id){ loaded=true; return; }
+      body.textContent="Eintrag wird geladen …";
+      try{
+        const full=await api("/api/entry?doc_id="+encodeURIComponent(source.doc_id));
+        if(!full.found){ body.textContent="Der Eintrag ist nicht mehr vorhanden."; return; }
+        if(full.title) summary.firstChild.textContent=full.title;
+        body.textContent=full.text||"Der Eintrag hat keinen Text.";
+        loaded=true;
+      }catch(e){ body.textContent="Eintrag konnte nicht geladen werden: "+e.message; }
+    });
+    return det;
+  }
+
   async function loadLibCategoryPreview(box,it){
     const docId=((it.aktion||{}).doc_id||"").trim();
     const proposed=((it.aktion||{}).kategorie||"").trim();
@@ -4933,16 +4980,24 @@ button{font-family:inherit;cursor:pointer}
     let h='<h4><span class="lib-task-chip">'+escapeHtml(it.taskname||it.task||"")+'</span>'+escapeHtml(it.titel||"Fund")+'</h4>';
     h+='<p>'+escapeHtml(it.beschreibung||"")+'</p>';
     h+='<p class="emp"><b>Empfehlung:</b> '+escapeHtml(it.empfehlung||"")+'</p>';
-    if((it.kontext||[]).length){
-      h+='<details class="lib-ctx"><summary>Beteiligte Einträge ansehen</summary>'
-        +(it.kontext||[]).map(k=>'<div class="k"><b>'+escapeHtml(k.titel||k.doc_id||"?")+'</b>'+(k.kategorie?(' · '+escapeHtml(k.kategorie)):'')+'\n'+escapeHtml(k.auszug||"")+'</div>').join("")
-        +'</details>';
-    }
     if(dlg.length){
       h+='<div class="lib-dialog">'+dlg.map((m,i)=>'<div class="lib-msg '+(m.von==="frank"?"frank":"bib")
         +((m.von!=="frank"&&i===dlg.length-1)?" frage":"")+'">'+escapeHtml(m.text||"")+'</div>').join("")+'</div>';
     }
     card.innerHTML=h;
+
+    const sources=libSourceEntries(it);
+    if(sources.length){
+      if(sources.length===1){ card.appendChild(libSourceDetails(sources[0])); }
+      else{
+      const sourceBox=document.createElement("details"); sourceBox.className="lib-ctx";
+      const sourceSummary=document.createElement("summary");
+      sourceSummary.textContent="Betroffene Einträge aufklappen";
+      sourceBox.appendChild(sourceSummary);
+      sources.forEach(source=>sourceBox.appendChild(libSourceDetails(source)));
+      card.appendChild(sourceBox);
+      }
+    }
 
     /* Zusammenfuehrungs-Vorschlaege (Frank-Wunsch 05.07.): Volltext lesen + editieren
        (eigener Uebernehmen-Knopf — ohne Druecken gilt der Original-Vorschlag) und die
