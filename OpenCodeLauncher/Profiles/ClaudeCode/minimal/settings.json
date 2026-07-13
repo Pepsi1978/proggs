@@ -4,7 +4,8 @@
   "skipDangerousModePermissionPrompt": true,
   "claudeMdExcludes": [
     "**/proggs/CLAUDE.md",
-    "**/proggs/CLAUDE.local.md"
+    "**/proggs/CLAUDE.local.md",
+    "**/.claude/rules/**"
   ],
   "statusLine": {
     "type": "command",
