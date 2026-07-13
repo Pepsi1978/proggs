@@ -19,7 +19,7 @@ import javax.inject.Singleton
  * Hintergrundfarbe aus einer 30er-Palette bekommen. Die Auswahl soll
  * App-Neustarts ueberleben.
  *
- * Format: Eine pipe-separierte Liste "cardId:colorIndex|cardId:colorIndex"
+ * Format: Eine pipe-separierte Liste "cardId:colorIndex|dark/cardId:colorIndex"
  * im einzigen String-Key des DataStore. Robust gegen Datenmuell — ungueltige
  * Eintraege werden beim Lesen ignoriert.
  */
@@ -46,12 +46,13 @@ class CardColorRepository @Inject constructor(
         }
 
     /**
-     * Setzt die Farbe fuer eine Karte. Wenn [colorIndex] 0 ist, wird der
+     * Setzt die Farbe fuer eine Karte im gewaehlten Theme. Wenn [colorIndex] 0 ist, wird der
      * Eintrag entfernt (Standard = kein Override). Bei Index ausserhalb
      * 0..29 wird der Aufruf ignoriert.
      */
-    suspend fun setCardColor(cardId: String, colorIndex: Int) {
+    suspend fun setCardColor(cardId: String, colorIndex: Int, isDark: Boolean = false) {
         if (cardId.isBlank() || colorIndex < 0 || colorIndex > 29) return
+        val themeCardId = cardColorIdForTheme(cardId, isDark)
         context.cardColorStore.edit { prefs ->
             val raw = prefs[KEY_COLORS] ?: ""
             val current =
@@ -64,9 +65,9 @@ class CardColorRepository @Inject constructor(
                     .toMap()
                     .toMutableMap()
             if (colorIndex == 0) {
-                current.remove(cardId)
+                current.remove(themeCardId)
             } else {
-                current[cardId] = colorIndex
+                current[themeCardId] = colorIndex
             }
             prefs[KEY_COLORS] = current.entries.joinToString("|") { "${it.key}:${it.value}" }
         }
@@ -81,3 +82,11 @@ class CardColorRepository @Inject constructor(
         val KEY_COLORS = stringPreferencesKey("card_color_indices")
     }
 }
+
+/** Trennt Farboverrides fuer Hell- und Dunkelmodus, ohne alte Hellmodus-Keys zu migrieren. */
+fun cardColorIdForTheme(cardId: String, isDark: Boolean): String =
+    if (isDark) "dark/$cardId" else cardId
+
+/** Liefert den fuer das aktive Theme gespeicherten Index oder den Standard (0). */
+fun cardColorIndexForTheme(colors: Map<String, Int>, cardId: String, isDark: Boolean): Int =
+    colors[cardColorIdForTheme(cardId, isDark)] ?: 0

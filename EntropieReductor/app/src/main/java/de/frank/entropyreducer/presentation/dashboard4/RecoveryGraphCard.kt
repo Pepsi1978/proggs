@@ -137,8 +137,8 @@ internal fun RecoveryGraphCard(
             val cardColors = rememberCardColors()
             Column(modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp)) {
                 ColorPaletteBar(
-                    selectedIndex = cardColors.colors[BiomarkerCardId.RECOVERY_GRAPH] ?: 0,
-                    onPick = { idx -> cardColors.setColor(BiomarkerCardId.RECOVERY_GRAPH, idx) },
+                    selectedIndex = cardColors.colorFor(BiomarkerCardId.RECOVERY_GRAPH, cosmos.isDark),
+                    onPick = { idx -> cardColors.setColor(BiomarkerCardId.RECOVERY_GRAPH, idx, cosmos.isDark) },
                 )
                 Spacer(Modifier.height(12.dp))
             }

@@ -96,8 +96,8 @@ fun AmazfitTrainingsScreen(
         ) {
             item {
                 ColorPaletteBar(
-                    selectedIndex = cardColorAccess.colors[trainingsCardId] ?: 0,
-                    onPick = { idx -> cardColorAccess.setColor(trainingsCardId, idx) },
+                    selectedIndex = cardColorAccess.colorFor(trainingsCardId, cosmos.isDark),
+                    onPick = { idx -> cardColorAccess.setColor(trainingsCardId, idx, cosmos.isDark) },
                 )
             }
             // Header mit T-Rex-3-Marker + Anzahl Trainings

@@ -8,6 +8,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import dagger.hilt.android.lifecycle.HiltViewModel
 import de.frank.entropyreducer.data.repository.CardColorRepository
+import de.frank.entropyreducer.data.repository.cardColorIndexForTheme
 import javax.inject.Inject
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
@@ -38,13 +39,13 @@ class CardColorViewModel @Inject constructor(
             emptyMap(),
         )
 
-    fun setCardColor(cardId: String, colorIndex: Int) {
-        viewModelScope.launch { repo.setCardColor(cardId, colorIndex) }
+    fun setCardColor(cardId: String, colorIndex: Int, isDark: Boolean = false) {
+        viewModelScope.launch { repo.setCardColor(cardId, colorIndex, isDark) }
     }
 
-    fun setCardColors(cardIds: List<String>, colorIndex: Int) {
+    fun setCardColors(cardIds: List<String>, colorIndex: Int, isDark: Boolean = false) {
         viewModelScope.launch {
-            cardIds.forEach { id -> repo.setCardColor(id, colorIndex) }
+            cardIds.forEach { id -> repo.setCardColor(id, colorIndex, isDark) }
         }
     }
 }
@@ -59,13 +60,22 @@ fun rememberCardColors(): CardColorAccess {
     val colors by vm.cardColors.collectAsStateWithLifecycle()
     return CardColorAccess(
         colors = colors,
-        setColor = { id, idx -> vm.setCardColor(id, idx) },
-        setColors = { ids, idx -> vm.setCardColors(ids, idx) },
+        saveColor = { id, idx, isDark -> vm.setCardColor(id, idx, isDark) },
+        saveColors = { ids, idx, isDark -> vm.setCardColors(ids, idx, isDark) },
     )
 }
 
 data class CardColorAccess(
     val colors: Map<String, Int>,
-    val setColor: (String, Int) -> Unit,
-    val setColors: (List<String>, Int) -> Unit,
-)
+    private val saveColor: (String, Int, Boolean) -> Unit,
+    private val saveColors: (List<String>, Int, Boolean) -> Unit,
+) {
+    fun colorFor(cardId: String, isDark: Boolean): Int =
+        cardColorIndexForTheme(colors, cardId, isDark)
+
+    fun setColor(cardId: String, colorIndex: Int, isDark: Boolean) =
+        saveColor(cardId, colorIndex, isDark)
+
+    fun setColors(cardIds: List<String>, colorIndex: Int, isDark: Boolean) =
+        saveColors(cardIds, colorIndex, isDark)
+}

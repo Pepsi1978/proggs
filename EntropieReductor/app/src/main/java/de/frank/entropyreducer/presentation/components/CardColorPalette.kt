@@ -78,14 +78,28 @@ val LIGHT_CARD_COLORS: List<Color> =
         Color(0xFFFFFAF0), // 29 — pastell-elfenbein
     )
 
+/** 30 dunkle, kontrastreiche Entsprechungen zur [LIGHT_CARD_COLORS]-Palette. */
+val DARK_CARD_COLORS: List<Color> =
+    listOf(
+        Color(0xFF1F1A17), Color(0xFF3A3211), Color(0xFF3B1825), Color(0xFF152C42),
+        Color(0xFF183A24), Color(0xFF402514), Color(0xFF2D1D42), Color(0xFF123A3E),
+        Color(0xFF321C3D), Color(0xFF421A1F), Color(0xFF123638), Color(0xFF38360F),
+        Color(0xFF263A13), Color(0xFF422018), Color(0xFF20284A), Color(0xFF30380E),
+        Color(0xFF3C2D16), Color(0xFF123246), Color(0xFF422A17), Color(0xFF193B21),
+        Color(0xFF14382B), Color(0xFF3D1C30), Color(0xFF36251E), Color(0xFF3D3518),
+        Color(0xFF10363A), Color(0xFF402126), Color(0xFF172F44), Color(0xFF35311D),
+        Color(0xFF2D2D2D), Color(0xFF3B2D1D),
+    )
+
 /**
- * Mappt einen gespeicherten Farb-Index auf die zugehoerige [Color] aus der
- * [LIGHT_CARD_COLORS]-Palette. Index 0 oder ausserhalb der Range → null,
+ * Mappt einen gespeicherten Farb-Index auf die zum aktiven Theme passende
+ * [Color]. Index 0 oder ausserhalb der Range → null,
  * was bedeutet "kein Override, Standard-Hintergrund nutzen".
  */
-fun cardColorOverrideForIndex(index: Int?): Color? {
-    if (index == null || index <= 0 || index >= LIGHT_CARD_COLORS.size) return null
-    return LIGHT_CARD_COLORS[index]
+fun cardColorOverrideForIndex(index: Int?, isDark: Boolean): Color? {
+    val colors = if (isDark) DARK_CARD_COLORS else LIGHT_CARD_COLORS
+    if (index == null || index <= 0 || index >= colors.size) return null
+    return colors[index]
 }
 
 /**
@@ -107,7 +121,7 @@ fun ColorPaletteBar(
     val cosmos = LocalCosmos.current
     var dialogOpen by remember { mutableStateOf(false) }
     val currentColor =
-        cardColorOverrideForIndex(selectedIndex) ?: cosmos.glassBg
+        cardColorOverrideForIndex(selectedIndex, cosmos.isDark) ?: cosmos.glassBg
 
     // Frank-Wunsch 2026-05-18 (Folgeauftrag 4): Label + Farbsymbol gehoeren
     // visuell zusammen — beide bündig rechts an der Kante. Vorher war das
@@ -161,35 +175,46 @@ private fun ColorPaletteDialog(
     onDismiss: () -> Unit,
 ) {
     val cosmos = LocalCosmos.current
+    val colors = if (cosmos.isDark) DARK_CARD_COLORS else LIGHT_CARD_COLORS
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text("Hintergrundfarbe waehlen") },
+        title = {
+            Text(if (cosmos.isDark) "Dunkle Hintergrundfarbe waehlen" else "Helle Hintergrundfarbe waehlen")
+        },
         text = {
-            LazyVerticalGrid(
-                columns = GridCells.Fixed(5),
-                modifier =
-                    Modifier.fillMaxWidth()
-                        .heightIn(min = 240.dp, max = 360.dp),
-                horizontalArrangement = Arrangement.spacedBy(10.dp),
-                verticalArrangement = Arrangement.spacedBy(10.dp),
-            ) {
-                items(count = LIGHT_CARD_COLORS.size, key = { it }) { idx ->
-                    val color = LIGHT_CARD_COLORS[idx]
-                    val isSelected = idx == selectedIndex
-                    Box(
-                        modifier =
-                            Modifier.size(44.dp)
-                                .clip(CircleShape)
-                                .background(color)
-                                .border(
-                                    width = if (isSelected) 3.dp else 1.dp,
-                                    color =
-                                        if (isSelected) cosmos.textPrimary
-                                        else cosmos.glassBorder,
-                                    shape = CircleShape,
-                                )
-                                .clickable { onPick(idx) },
-                    )
+            Column {
+                Text(
+                    text = "Erster Kreis: Standardfarbe wiederherstellen",
+                    style = MaterialTheme.typography.labelSmall,
+                    color = cosmos.textSecondary,
+                )
+                Spacer(Modifier.height(8.dp))
+                LazyVerticalGrid(
+                    columns = GridCells.Fixed(5),
+                    modifier =
+                        Modifier.fillMaxWidth()
+                            .heightIn(min = 240.dp, max = 360.dp),
+                    horizontalArrangement = Arrangement.spacedBy(10.dp),
+                    verticalArrangement = Arrangement.spacedBy(10.dp),
+                ) {
+                    items(count = colors.size, key = { it }) { idx ->
+                        val color = if (idx == 0) cosmos.glassBg else colors[idx]
+                        val isSelected = idx == selectedIndex
+                        Box(
+                            modifier =
+                                Modifier.size(44.dp)
+                                    .clip(CircleShape)
+                                    .background(color)
+                                    .border(
+                                        width = if (isSelected) 3.dp else 1.dp,
+                                        color =
+                                            if (isSelected) cosmos.textPrimary
+                                            else cosmos.glassBorder,
+                                        shape = CircleShape,
+                                    )
+                                    .clickable { onPick(idx) },
+                        )
+                    }
                 }
             }
         },

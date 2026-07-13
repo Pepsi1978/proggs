@@ -77,7 +77,10 @@ fun BiomarkerDetailScreen(
     // visuell darstellen — eine gemeinsame Farbe haelt das Layout konsistent.
     val cardIdsForMetric = cardIdsForMetricKey(metricKey)
     val selectedColorIndex =
-        cardIdsForMetric.firstNotNullOfOrNull { id -> cardColors[id] } ?: 0
+        cardIdsForMetric.firstNotNullOfOrNull { id ->
+            de.frank.entropyreducer.data.repository.cardColorIndexForTheme(cardColors, id, cosmos.isDark)
+                .takeIf { it != 0 }
+        } ?: 0
 
     val now = System.currentTimeMillis()
     val cutoff = when (range) {
@@ -124,7 +127,7 @@ fun BiomarkerDetailScreen(
                 ColorPaletteBar(
                     selectedIndex = selectedColorIndex,
                     onPick = { idx ->
-                        cardIdsForMetric.forEach { id -> vm.setCardColor(id, idx) }
+                        cardIdsForMetric.forEach { id -> vm.setCardColor(id, idx, cosmos.isDark) }
                     },
                 )
             }

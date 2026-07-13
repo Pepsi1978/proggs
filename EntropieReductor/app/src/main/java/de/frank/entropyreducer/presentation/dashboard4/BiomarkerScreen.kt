@@ -317,7 +317,12 @@ fun BiomarkerHostScreen(
                         // Card lesen automatisch den Override.
                         val cardOverride =
                             de.frank.entropyreducer.presentation.components
-                                .cardColorOverrideForIndex(cardColorMap[id])
+                                .cardColorOverrideForIndex(
+                                    de.frank.entropyreducer.data.repository.cardColorIndexForTheme(
+                                        cardColorMap, id, cosmos.isDark
+                                    ),
+                                    cosmos.isDark,
+                                )
                         androidx.compose.runtime.CompositionLocalProvider(
                             de.frank.entropyreducer.presentation.components
                                 .LocalCardBackgroundOverride provides cardOverride

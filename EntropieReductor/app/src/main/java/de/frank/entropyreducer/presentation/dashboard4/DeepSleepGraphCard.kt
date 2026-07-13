@@ -148,8 +148,8 @@ internal fun DeepSleepGraphCard(
             val cardColors = rememberCardColors()
             Column(modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp)) {
                 ColorPaletteBar(
-                    selectedIndex = cardColors.colors[BiomarkerCardId.SLEEP_DEEP_GRAPH] ?: 0,
-                    onPick = { idx -> cardColors.setColor(BiomarkerCardId.SLEEP_DEEP_GRAPH, idx) },
+                    selectedIndex = cardColors.colorFor(BiomarkerCardId.SLEEP_DEEP_GRAPH, cosmos.isDark),
+                    onPick = { idx -> cardColors.setColor(BiomarkerCardId.SLEEP_DEEP_GRAPH, idx, cosmos.isDark) },
                 )
                 Spacer(Modifier.height(12.dp))
                 // Interaktiver Linien-Verlauf wie beim HRV-Verlauf (Frank-Wunsch

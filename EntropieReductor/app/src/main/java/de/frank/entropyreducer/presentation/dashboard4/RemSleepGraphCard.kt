@@ -149,9 +149,9 @@ internal fun RemSleepGraphCard(
             val cardColors = rememberCardColors()
             Column(modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp)) {
                 ColorPaletteBar(
-                    selectedIndex = cardColors.colors[BiomarkerCardId.SLEEP_REM_GRAPH] ?: 0,
+                    selectedIndex = cardColors.colorFor(BiomarkerCardId.SLEEP_REM_GRAPH, cosmos.isDark),
                     onPick = { idx ->
-                        cardColors.setColor(BiomarkerCardId.SLEEP_REM_GRAPH, idx)
+                        cardColors.setColor(BiomarkerCardId.SLEEP_REM_GRAPH, idx, cosmos.isDark)
                     },
                 )
                 Spacer(Modifier.height(12.dp))

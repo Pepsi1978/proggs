@@ -283,8 +283,8 @@ constructor(
         )
 
     /** Setzt die Hintergrundfarbe einer Karte. Index 0 = Standard (Override entfernt). */
-    fun setCardColor(cardId: String, colorIndex: Int) {
-        viewModelScope.launch { cardColorRepo.setCardColor(cardId, colorIndex) }
+    fun setCardColor(cardId: String, colorIndex: Int, isDark: Boolean = false) {
+        viewModelScope.launch { cardColorRepo.setCardColor(cardId, colorIndex, isDark) }
     }
 
     init {

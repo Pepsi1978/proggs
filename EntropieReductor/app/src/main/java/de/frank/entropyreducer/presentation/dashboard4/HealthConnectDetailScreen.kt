@@ -282,8 +282,8 @@ fun HealthConnectDetailScreen(
         ) {
             item {
                 ColorPaletteBar(
-                    selectedIndex = cardColorAccess.colors[targetCardId] ?: 0,
-                    onPick = { idx -> cardColorAccess.setColor(targetCardId, idx) },
+                    selectedIndex = cardColorAccess.colorFor(targetCardId, cosmos.isDark),
+                    onPick = { idx -> cardColorAccess.setColor(targetCardId, idx, cosmos.isDark) },
                 )
             }
             item {

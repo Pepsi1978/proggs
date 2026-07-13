@@ -127,7 +127,7 @@ fun OuraDetailScreen(
     // Oura-Detail-Screen (Readiness, Schlaf-Score, Aktivitaet, Resilienz).
     val cardColorAccess = rememberCardColors()
     val ouraCardId = metricKey
-    val ouraColorIndex = cardColorAccess.colors[ouraCardId] ?: 0
+    val ouraColorIndex = cardColorAccess.colorFor(ouraCardId, cosmos.isDark)
 
     CosmosScaffold(
         title = title,
@@ -145,7 +145,7 @@ fun OuraDetailScreen(
             item {
                 ColorPaletteBar(
                     selectedIndex = ouraColorIndex,
-                    onPick = { idx -> cardColorAccess.setColor(ouraCardId, idx) },
+                    onPick = { idx -> cardColorAccess.setColor(ouraCardId, idx, cosmos.isDark) },
                 )
             }
             item {

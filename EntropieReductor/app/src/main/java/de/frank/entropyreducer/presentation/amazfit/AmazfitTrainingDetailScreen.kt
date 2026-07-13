@@ -247,8 +247,8 @@ fun AmazfitTrainingDetailScreen(
             ) {
                 item {
                     ColorPaletteBar(
-                        selectedIndex = cardColorAccess.colors[heroCardId] ?: 0,
-                        onPick = { idx -> cardColorAccess.setColor(heroCardId, idx) },
+                        selectedIndex = cardColorAccess.colorFor(heroCardId, cosmos.isDark),
+                        onPick = { idx -> cardColorAccess.setColor(heroCardId, idx, cosmos.isDark) },
                     )
                 }
                 if (w == null) {

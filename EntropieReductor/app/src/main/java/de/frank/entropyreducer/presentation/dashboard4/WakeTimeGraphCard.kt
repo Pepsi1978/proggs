@@ -146,9 +146,9 @@ internal fun WakeTimeGraphCard(
             val cardColors = rememberCardColors()
             Column(modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp)) {
                 ColorPaletteBar(
-                    selectedIndex = cardColors.colors[BiomarkerCardId.SLEEP_WAKE_GRAPH] ?: 0,
+                    selectedIndex = cardColors.colorFor(BiomarkerCardId.SLEEP_WAKE_GRAPH, cosmos.isDark),
                     onPick = { idx ->
-                        cardColors.setColor(BiomarkerCardId.SLEEP_WAKE_GRAPH, idx)
+                        cardColors.setColor(BiomarkerCardId.SLEEP_WAKE_GRAPH, idx, cosmos.isDark)
                     },
                 )
                 Spacer(Modifier.height(12.dp))
