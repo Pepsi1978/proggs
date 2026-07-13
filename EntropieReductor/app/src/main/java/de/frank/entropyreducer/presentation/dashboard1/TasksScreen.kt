@@ -87,7 +87,6 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.rememberUpdatedState
-import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -222,10 +221,11 @@ fun TasksScreen(
         }
     }
 
-    // Sehr hoch/Hoch/Mittel/Gering bleiben immer sichtbar. Später/Loop/Erledigt/
-    // KI-Vorschläge bleiben als optionale Akkordeonbereiche unter den Hauptbereichen.
-    // Der Schluessel ist der Sektions-Name (bucket.name bzw. SECTION_LOOP/SECTION_ERLEDIGT).
-    var expandedSection by rememberSaveable { mutableStateOf<String?>(TimeBucket.HEUTE.name) }
+    // Prioritaetsbereiche starten pro App-Sitzung alle offen. Der Zustand wird bewusst
+    // nicht persistiert, damit ein App-Neustart wieder die vollstaendige Ansicht zeigt.
+    var expandedBuckets by remember { mutableStateOf(ALL_TIME_BUCKETS.toSet()) }
+    // Loop, Erledigt und KI-Vorschlaege bleiben optionale Akkordeonbereiche.
+    var expandedSection by remember { mutableStateOf<String?>(null) }
 
     // Frank-Wunsch 2026-05-22 (Sprint 6 Iteration): Mic-Tap oeffnet jetzt die
     // einheitliche MicCaptureActions ueber der BottomBar — zwei runde Buttons
@@ -315,9 +315,16 @@ fun TasksScreen(
         // 1) Scroll zur Aufgabe (beide Aktionen — FOCUS und RESCHEDULE). Mit dem
         // Akkordeon (Frank-Wunsch 2026-05-24) muss der Block der Aufgabe zuerst
         // aufgeklappt werden, sonst ist die Karte nicht gerendert.
-        val location = computeTaskLocation(state = state, taskId = link.taskId)
+        val targetBucket = ALL_TIME_BUCKETS.firstOrNull { bucket ->
+            state.entriesByBucket[bucket].orEmpty().any { it.id == link.taskId }
+        }
+        if (targetBucket != null) expandedBuckets = expandedBuckets + targetBucket
+        val location = computeTaskLocation(
+            state = state,
+            taskId = link.taskId,
+            expandedBuckets = expandedBuckets,
+        )
         if (location != null) {
-            expandedSection = location.first
             runCatching { listState.animateScrollToItem(location.second, scrollOffset = -120) }
         }
 
@@ -562,11 +569,10 @@ fun TasksScreen(
                         // PERFORMANCE 2026-05-09: Sortierung+Filter laufen jetzt im
                         // ViewModel (TasksViewModel.kt), nicht mehr hier — die Lists
                         // sind beim Eintreffen schon sortiert und gefiltert.
-                        // Sehr hoch/Hoch/Mittel/Gering sind immer offen. Später bleibt optional.
+                        // Alle Prioritaetsbereiche starten offen und lassen sich einzeln einklappen.
                         ALL_TIME_BUCKETS.forEach { bucket ->
                             val list = state.entriesByBucket[bucket].orEmpty()
-                            val alwaysOpen = bucket in ALWAYS_VISIBLE_BUCKETS
-                            val sectionExpanded = alwaysOpen || expandedSection == bucket.name
+                            val sectionExpanded = bucket in expandedBuckets
                             item(key = "header-${bucket.name}", contentType = "bucket-header") {
                                 BucketHeader(
                                     bucket = bucket,
@@ -574,8 +580,10 @@ fun TasksScreen(
                                     expanded = sectionExpanded,
                                     isDropTarget = dragState?.targetBucket == bucket,
                                     onToggle = {
-                                        if (!alwaysOpen) {
-                                            expandedSection = if (sectionExpanded) null else bucket.name
+                                        expandedBuckets = if (sectionExpanded) {
+                                            expandedBuckets - bucket
+                                        } else {
+                                            expandedBuckets + bucket
                                         }
                                     },
                                 )
@@ -2430,8 +2438,6 @@ private fun KiSuggestionCard(
 // Performance-Audit Loop 8 (2026-05-10): Top-level Liste statt .values()-Array
 // pro Recomposition. TimeBucket wird in zwei verschiedenen Tab-Reihen iteriert.
 private val ALL_TIME_BUCKETS: List<TimeBucket> = TimeBucket.entries.toList()
-private val ALWAYS_VISIBLE_BUCKETS: Set<TimeBucket> =
-    setOf(TimeBucket.HEUTE, TimeBucket.MORGEN, TimeBucket.FREIBLOCK, TimeBucket.GERING)
 
 private data class TaskDragState(
     val entry: EntropyEntryEntity,
@@ -2483,10 +2489,14 @@ private fun formatBackupTime(epochMs: Long): String {
 
 /**
  * Findet den Aufgabenblock der die Aufgabe enthaelt und berechnet den LazyColumn-Index.
- * Sehr hoch/Hoch/Mittel/Gering sind immer offen; optionale Bereiche werden vom Aufrufer vor dem
- * Scrollen geöffnet. Liefert (Sektions-Schluessel, Item-Index) oder null.
+ * Beruecksichtigt die aktuell aufgeklappten Prioritaetsbereiche. Liefert
+ * (Sektions-Schluessel, Item-Index) oder null.
  */
-private fun computeTaskLocation(state: TasksUiState, taskId: String): Pair<String, Int>? {
+private fun computeTaskLocation(
+    state: TasksUiState,
+    taskId: String,
+    expandedBuckets: Set<TimeBucket>,
+): Pair<String, Int>? {
     val isEmpty =
         state.entriesByBucket.values.all { it.isEmpty() } && state.resolvedEntries.isEmpty()
     if (isEmpty) return null
@@ -2498,7 +2508,7 @@ private fun computeTaskLocation(state: TasksUiState, taskId: String): Pair<Strin
             return bucket.name to (index + 1 + pos)
         }
         index += 1
-        if (bucket in ALWAYS_VISIBLE_BUCKETS) index += list.size
+        if (bucket in expandedBuckets) index += maxOf(list.size, 1)
     }
     return null
 }

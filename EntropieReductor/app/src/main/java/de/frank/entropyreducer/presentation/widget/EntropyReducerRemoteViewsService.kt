@@ -102,15 +102,14 @@ class EntropyReducerRemoteViewsFactory(
                 recurringDao.observeAll().first()
             }.getOrDefault(emptyList())
 
-            // Akkordeon wie in der App: Sehr hoch/Hoch/Mittel/Gering sind immer offen.
-            // Später, Loop und Erledigt bleiben optionale Bereiche mit genau einem offenen Block.
-            val expandedName = WidgetExpandState.get()
+            // Alle Prioritaetsbereiche starten offen und lassen sich einzeln einklappen.
+            // Loop und Erledigt bleiben optionale Bereiche.
             val list = mutableListOf<WidgetListItem>()
 
             // 1.-5. Prioritätsbereiche
             bucketsToShow.forEach { bucket ->
                 val tasks = grouped[bucket].orEmpty()
-                val isExpanded = bucket in ALWAYS_OPEN_BUCKETS || expandedName == bucket.name
+                val isExpanded = WidgetExpandState.isExpanded(bucket.name)
                 list.add(
                     WidgetListItem.SectionHeader(
                         key = bucket.name,
@@ -125,7 +124,7 @@ class EntropyReducerRemoteViewsFactory(
             }
 
             // 5. Loop
-            val loopExpanded = expandedName == SECTION_LOOP
+            val loopExpanded = WidgetExpandState.isExpanded(SECTION_LOOP)
             list.add(
                 WidgetListItem.SectionHeader(
                     key = SECTION_LOOP,
@@ -139,7 +138,7 @@ class EntropyReducerRemoteViewsFactory(
             if (loopExpanded) templates.forEach { list.add(WidgetListItem.Loop(it)) }
 
             // 6. Erledigt
-            val resolvedExpanded = expandedName == SECTION_ERLEDIGT
+            val resolvedExpanded = WidgetExpandState.isExpanded(SECTION_ERLEDIGT)
             list.add(
                 WidgetListItem.SectionHeader(
                     key = SECTION_ERLEDIGT,
@@ -365,23 +364,24 @@ object WidgetCheckState {
 }
 
 /**
- * Akkordeon-State des Widgets: Sehr hoch/Hoch/Mittel/Gering sind immer offen.
- * Dieser State gilt nur für die optionalen Bereiche Später, Loop und Erledigt.
+ * Akkordeon-State des Widgets. Die fuenf Prioritaetsbereiche starten offen und
+ * bleiben nur fuer die aktuelle App-Sitzung im vom Nutzer gewaehlten Zustand.
  */
 object WidgetExpandState {
     @Volatile
-    private var expanded: String? = TimeBucket.HEUTE.name
-    fun get(): String? = expanded
-    fun toggle(bucketName: String) {
-        if (ALWAYS_OPEN_BUCKET_NAMES.contains(bucketName)) return
-        expanded = if (expanded == bucketName) null else bucketName
+    private var expanded: Set<String> = TimeBucket.entries.map { it.name }.toSet()
+
+    fun isExpanded(sectionName: String): Boolean = sectionName in expanded
+
+    @Synchronized
+    fun toggle(sectionName: String) {
+        expanded = if (sectionName in expanded) {
+            expanded - sectionName
+        } else {
+            expanded + sectionName
+        }
     }
 }
-
-internal val ALWAYS_OPEN_BUCKETS: Set<TimeBucket> =
-    setOf(TimeBucket.HEUTE, TimeBucket.MORGEN, TimeBucket.FREIBLOCK, TimeBucket.GERING)
-
-private val ALWAYS_OPEN_BUCKET_NAMES: Set<String> = ALWAYS_OPEN_BUCKETS.map { it.name }.toSet()
 
 internal val ALL_BUCKETS = listOf(
     TimeBucket.HEUTE,
