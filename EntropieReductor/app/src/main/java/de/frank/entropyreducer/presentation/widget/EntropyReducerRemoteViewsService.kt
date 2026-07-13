@@ -20,7 +20,6 @@ import de.frank.entropyreducer.domain.model.EntropyCategory
 import de.frank.entropyreducer.domain.model.EntryStatus
 import de.frank.entropyreducer.domain.model.TimeBucket
 import de.frank.entropyreducer.domain.model.priorityBucketForScore
-import de.frank.entropyreducer.presentation.priorityRampArgb
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.runBlocking
 
@@ -228,27 +227,26 @@ class EntropyReducerRemoteViewsFactory(
 
     private fun buildLoopCard(template: RecurringTemplateEntity): RemoteViews {
         val views = RemoteViews(context.packageName, R.layout.widget_item_loop)
-        // Verlaufs-Hintergrund nach Prioritaet (gleiche Rampe wie Aufgaben/App).
+        // Die Loop-Karte nimmt die Standardfarbe ihres Zielbereichs an.
+        val bucket = template.targetBucket ?: priorityBucketForScore(template.priorityScore.toDouble())
         views.setColorStateList(
             R.id.loop_card_root,
             "setBackgroundTintList",
-            android.content.res.ColorStateList.valueOf(priorityRampArgb(template.priorityScore.toDouble())),
+            android.content.res.ColorStateList.valueOf(bucketColor(palette, bucket)),
         )
         views.setInt(R.id.loop_icon, "setColorFilter", palette.textPrimary)
         views.setTextViewText(R.id.loop_title, template.title)
         views.setTextColor(R.id.loop_title, palette.textPrimary)
 
-        // Tag-Perle: "KI" (automatisch) oder der vorgegebene Tag.
-        val bucketText = template.targetBucket?.let { bucketLabel(it) } ?: "KI"
-        views.setTextViewText(R.id.loop_bucket_pill, bucketText)
-        views.setColorStateList(R.id.loop_bucket_pill, "setBackgroundTintList", android.content.res.ColorStateList.valueOf(palette.pearlBg))
-        views.setTextColor(R.id.loop_bucket_pill, palette.pearlText)
+        views.setTextViewText(R.id.loop_add_button, "Hinzufügen")
+        views.setColorStateList(R.id.loop_add_button, "setBackgroundTintList", android.content.res.ColorStateList.valueOf(0xFFFFFFFF.toInt()))
+        views.setTextColor(R.id.loop_add_button, 0xFF000000.toInt())
 
         // FillIns (EXTRA_TASK_ID traegt die Template-ID):
-        //  - Karte      → ACTION_OPEN: oeffnet die App (Aktiv/Inaktiv bleibt dort)
-        //  - Tag-Perle  → ACTION_SET_LOOP_BUCKET: App + Tag-Auswahl dieser Vorlage
+        //  - Karte       → ACTION_OPEN: oeffnet die App
+        //  - Hinzufuegen → App + Bereichsauswahl fuer diese Vorlage
         views.setOnClickFillInIntent(R.id.loop_card_root, fillIn(template.id, WidgetIntents.ACTION_OPEN))
-        views.setOnClickFillInIntent(R.id.loop_bucket_pill, fillIn(template.id, WidgetIntents.ACTION_SET_LOOP_BUCKET))
+        views.setOnClickFillInIntent(R.id.loop_add_button, fillIn(template.id, WidgetIntents.ACTION_ADD_LOOP_TASK))
         return views
     }
 
@@ -260,15 +258,12 @@ class EntropyReducerRemoteViewsFactory(
         // Effektive Prioritaet wie in der App: manueller Wert hat Vorrang vor KI.
         val effectivePriority = entry.manualPriorityScore ?: entry.priorityScore
 
-        // Karten-Hintergrund: horizontaler Verlauf in der Prioritaetsfarbe. Das
-        // Basis-Drawable (weiss 20%→100%) wird mit der EXAKT gleichen Rampe wie in
-        // der App getoent (priorityRampArgb ruft dieselbe Funktion auf). SRC_IN-Tint
-        // erhaelt den Alpha-Verlauf → links dezent, rechts volle Farbe.
-        val rampColor = priorityRampArgb(effectivePriority)
+        // Karten eines Bereichs nutzen dessen Standardfarbe, unabhaengig vom exakten Punktwert.
+        val bucket = priorityBucketForScore(effectivePriority)
         views.setColorStateList(
             R.id.task_card_root,
             "setBackgroundTintList",
-            android.content.res.ColorStateList.valueOf(rampColor),
+            android.content.res.ColorStateList.valueOf(bucketColor(palette, bucket)),
         )
 
         // Haekchen: normalerweise leeres Quadrat mit deutlicher dunkler Umrandung

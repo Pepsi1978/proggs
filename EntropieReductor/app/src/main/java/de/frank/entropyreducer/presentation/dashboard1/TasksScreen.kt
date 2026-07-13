@@ -125,7 +125,6 @@ import de.frank.entropyreducer.presentation.components.GlassCard
 import de.frank.entropyreducer.presentation.components.LocalMicActionsOpen
 import de.frank.entropyreducer.presentation.components.ThemeToggleIcon
 import de.frank.entropyreducer.presentation.navigation.CosmosBottomBar
-import de.frank.entropyreducer.presentation.priorityRampColor
 import de.frank.entropyreducer.presentation.recurring.RecurringTemplatesViewModel
 import de.frank.entropyreducer.presentation.recurring.TemplateAsTaskCard
 import de.frank.entropyreducer.presentation.theme.CosmosColors
@@ -174,6 +173,9 @@ fun TasksScreen(
     // Lokaler State für den Prioritätsbereich-Picker — speichert nur die Entry-ID, der
     // tatsächliche Eintrag wird aus dem aktuellen State frisch nachgelesen.
     var bucketPickerEntryId by remember { mutableStateOf<String?>(null) }
+    // Ein Widget-Tap auf "Hinzufügen" einer Loop-Vorlage öffnet diesen Picker,
+    // damit die neue Aufgabe direkt in einen der fünf Prioritätsbereiche kommt.
+    var loopAddPickerTemplateId by remember { mutableStateOf<String?>(null) }
     var dragState by remember { mutableStateOf<TaskDragState?>(null) }
     var contentOriginInWindow by remember { mutableStateOf(Offset.Zero) }
     var listBoundsInWindow by remember { mutableStateOf(Rect(0f, 0f, 0f, 0f)) }
@@ -348,7 +350,8 @@ fun TasksScreen(
         de.frank.entropyreducer.presentation.widget.WidgetDeepLinkBus.clear()
     }
 
-    // Alte Widget-Taps auf entfernte Loop-Prioritäts-/Bucket-Pillen öffnen nur noch den Loop-Block.
+    // Widget-Taps auf Loop-Vorlagen öffnen den Loop-Block. "Hinzufügen" zeigt direkt
+    // den Bereichs-Picker für genau diese Vorlage.
     LaunchedEffect(widgetDeepLink, recurringTemplates) {
         val link = widgetDeepLink ?: return@LaunchedEffect
         val isLoopAction =
@@ -356,11 +359,19 @@ fun TasksScreen(
                 de.frank.entropyreducer.presentation.widget.WidgetIntents
                     .ACTION_SET_LOOP_PRIORITY ||
                 link.action ==
-                    de.frank.entropyreducer.presentation.widget.WidgetIntents.ACTION_SET_LOOP_BUCKET
+                    de.frank.entropyreducer.presentation.widget.WidgetIntents.ACTION_SET_LOOP_BUCKET ||
+                link.action ==
+                    de.frank.entropyreducer.presentation.widget.WidgetIntents.ACTION_ADD_LOOP_TASK
         if (!isLoopAction) return@LaunchedEffect
         // Warten bis die Vorlagen geladen sind (z.B. App-Start direkt aus dem Widget).
         if (recurringTemplates.none { it.id == link.taskId }) return@LaunchedEffect
         expandedSection = SECTION_LOOP
+        if (
+            link.action ==
+                de.frank.entropyreducer.presentation.widget.WidgetIntents.ACTION_ADD_LOOP_TASK
+        ) {
+            loopAddPickerTemplateId = link.taskId
+        }
         de.frank.entropyreducer.presentation.widget.WidgetDeepLinkBus.clear()
     }
 
@@ -894,6 +905,19 @@ fun TasksScreen(
             // allActive zunaechst leer (Tasks laden noch) — wir warten bis sie
             // da sind, statt das Sheet vorzeitig zu schliessen.
             bucketPickerEntryId = null
+        }
+    }
+
+    loopAddPickerTemplateId?.let { id ->
+        val template = recurringTemplates.firstOrNull { it.id == id }
+        if (template != null) {
+            LoopAddBucketPickerSheet(
+                template = template,
+                onPick = { bucket -> recurringVm.addToTasks(template, bucket) },
+                onClose = { loopAddPickerTemplateId = null },
+            )
+        } else if (recurringTemplates.isNotEmpty()) {
+            loopAddPickerTemplateId = null
         }
     }
 }
@@ -1573,52 +1597,6 @@ private fun bucketAccent(bucket: TimeBucket): Color =
     }
 
 /**
- * Liefert die ganz leichte Hintergrund-Toenung der Aufgabenkarte je nach Bucket (Frank-Wunsch
- * 2026-05-10, zweite Iteration). GlassCard rendert die Farbe als Linear-Gradient von oben-links
- * (transparent) nach unten-rechts (voller Tint). Frank wollte das Orange/Gelb/Gruen/Blau dezenter —
- * daher hier zusaetzlich der Endwert-Alpha um ~25% reduziert (light: 0.18→0.14, dark: 0.12→0.10).
- * Zusammen mit dem Verlauf wirkt das Orange jetzt sehr zurueckhaltend und nur in der unteren
- * rechten Card-Ecke schwach erkennbar.
- * - HEUTE = Orange-Stich
- * - MORGEN = Gelb-Stich
- * - FREIBLOCK = Gruen-Stich
- * - SPAETER = Blau-Stich
- */
-/**
- * Frank-Wunsch 2026-05-22 (vierte Iteration): Karten-Hintergrund folgt jetzt der
- * priorityScore-Farbe statt dem Time-Bucket. So sieht Frank auf einen Blick wie wichtig eine
- * Aufgabe ist, ohne die Prio-Zahl rechts ablesen zu muessen.
- *
- * Skala identisch zu priorityColor() in dieser Datei (Konsistenz mit der grossen Prio-Zahl rechts
- * auf der Karte):
- * - 80-100 Rot (sehr hohe Prio)
- * - 60-80 Orange
- * - 40-60 Gelb
- * - 20-40 Gruen
- * - 0-20 Blau (geringste Prio)
- *
- * Alpha leicht hoeher als der frueher Bucket-Tint (light: 0.18, dark: 0.14), damit der
- * Farbunterschied zwischen 35/55/85 deutlich sichtbar ist — Frank will den Stich wirklich erkennen
- * koennen.
- */
-private fun priorityCardTint(score: Double, isDark: Boolean): Color {
-    val base =
-        when {
-            score >= 80.0 -> CosmosColors.PriorityRed
-            score >= 60.0 -> CosmosColors.PriorityOrange
-            score >= 40.0 -> CosmosColors.PriorityYellow
-            score >= 20.0 -> CosmosColors.PriorityGreen
-            else -> CosmosColors.PriorityBlue
-        }
-    return base.copy(alpha = if (isDark) 0.14f else 0.18f)
-}
-
-// Prioritaets-Farbrampe (kontinuierlich, 5%-Schritte, drei Familien Gruen→Gelb→Rot)
-// ausgelagert nach presentation/PriorityRamp.kt — SINGLE SOURCE. App-Karte UND
-// Home-Screen-Widget nutzen dieselbe Funktion, damit die Farben bit-identisch sind
-// (Frank-Wunsch 2026-05-31). priorityRampColor() kommt jetzt via Import oben.
-
-/**
  * Frank-Wunsch 2026-06-01: Erledigungs-Zeitpunkt menschenlesbar (Tag + Uhrzeit) — z.B. "01.06.2026
  * um 12:38". Quelle ist resolvedAt, das jeder Erledigen-Pfad setzt.
  */
@@ -1720,13 +1698,13 @@ private fun EntropyEntryCard(
     val cardAlpha = if (isResolved) 0.55f else 1f
     val effectivePriority = entry.manualPriorityScore ?: entry.priorityScore
 
-    // Frank-Wunsch 2026-05-31: Karten-Hintergrund ist ein kraeftiger horizontaler
-    // Verlauf in der Prioritaetsfarbe — links dezent, rechts die volle Farbe.
-    // Die Farbe allein (Dunkelrot=hoch … Hellgruen=niedrig, kein Blau) macht die
-    // Prioritaet sofort sichtbar; eine Prio-Zahl ist nicht mehr noetig.
-    val ramp = priorityRampColor(effectivePriority)
+    // Alle Karten eines sichtbaren Prioritaetsbereichs nutzen exakt dessen Standardfarbe.
+    // Der genaue Punktwert innerhalb des Bereichs aendert die Kartenfarbe nicht mehr.
+    val standardColor = bucketAccent(priorityBucketForScore(effectivePriority))
     val priorityBrush =
-        remember(ramp) { Brush.horizontalGradient(colors = listOf(ramp.copy(alpha = 0.20f), ramp)) }
+        remember(standardColor) {
+            Brush.horizontalGradient(colors = listOf(standardColor.copy(alpha = 0.20f), standardColor))
+        }
     GlassCard(
         modifier =
             modifier.fillMaxWidth().clickable(onClick = onClick).graphicsLayer {
@@ -1923,6 +1901,58 @@ private fun BucketPickerSheet(
             Spacer(Modifier.height(4.dp))
             val effectiveBucket = priorityBucketForScore(entry.manualPriorityScore ?: entry.priorityScore)
             ALL_TIME_BUCKETS.filterNot { it == effectiveBucket }.forEach { bucket ->
+                BucketOptionRow(
+                    bucket = bucket,
+                    label = bucketLabelLong(bucket),
+                    description = bucketDescription(bucket),
+                    onClick = {
+                        onPick(bucket)
+                        onClose()
+                    },
+                )
+            }
+            Spacer(Modifier.height(8.dp))
+        }
+    }
+}
+
+/** Bereichsauswahl fuer eine Loop-Vorlage, geoeffnet ueber den Hinzufuegen-Button im Widget. */
+@OptIn(androidx.compose.material3.ExperimentalMaterial3Api::class)
+@Composable
+private fun LoopAddBucketPickerSheet(
+    template: de.frank.entropyreducer.data.local.entities.RecurringTemplateEntity,
+    onPick: (TimeBucket) -> Unit,
+    onClose: () -> Unit,
+) {
+    val cosmos = LocalCosmos.current
+    val sheetState = androidx.compose.material3.rememberModalBottomSheetState(skipPartiallyExpanded = true)
+    val bottomInset = WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding()
+    androidx.compose.material3.ModalBottomSheet(
+        onDismissRequest = onClose,
+        sheetState = sheetState,
+        containerColor = MaterialTheme.colorScheme.surface,
+        contentWindowInsets = { WindowInsets(0) },
+    ) {
+        Column(
+            modifier = Modifier.fillMaxWidth()
+                .padding(horizontal = 16.dp, vertical = 8.dp)
+                .padding(bottom = bottomInset + 16.dp),
+            verticalArrangement = Arrangement.spacedBy(10.dp),
+        ) {
+            Text(
+                "Hinzufügen zu",
+                style = MaterialTheme.typography.titleLarge,
+                color = cosmos.textPrimary,
+                fontWeight = FontWeight.SemiBold,
+            )
+            Text(
+                text = "\"${template.title}\"",
+                color = cosmos.textSecondary,
+                style = MaterialTheme.typography.labelMedium,
+                maxLines = 2,
+            )
+            Spacer(Modifier.height(4.dp))
+            ALL_TIME_BUCKETS.forEach { bucket ->
                 BucketOptionRow(
                     bucket = bucket,
                     label = bucketLabelLong(bucket),

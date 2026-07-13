@@ -32,6 +32,7 @@ object WidgetIntents {
      */
     const val ACTION_SET_LOOP_PRIORITY = "set_loop_priority"
     const val ACTION_SET_LOOP_BUCKET = "set_loop_bucket"
+    const val ACTION_ADD_LOOP_TASK = "add_loop_task"
     const val ACTION_SETTINGS = "settings"
     const val ACTION_OPEN = "open"
 

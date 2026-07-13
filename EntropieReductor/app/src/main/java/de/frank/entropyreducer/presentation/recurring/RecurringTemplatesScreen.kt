@@ -41,14 +41,15 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import de.frank.entropyreducer.data.local.entities.RecurringTemplateEntity
 import de.frank.entropyreducer.domain.model.TimeBucket
+import de.frank.entropyreducer.domain.model.priorityBucketForScore
 import de.frank.entropyreducer.presentation.components.CosmosScaffold
 import de.frank.entropyreducer.presentation.components.GlassCard
 import de.frank.entropyreducer.presentation.components.MicCaptureActions
 import de.frank.entropyreducer.presentation.components.MicState
 import de.frank.entropyreducer.presentation.navigation.CosmosBottomBar
 import de.frank.entropyreducer.presentation.navigation.Routes
-import de.frank.entropyreducer.presentation.priorityRampColor
 import de.frank.entropyreducer.presentation.theme.LocalCosmos
+import de.frank.entropyreducer.presentation.theme.CosmosColors
 import de.frank.entropyreducer.presentation.theme.color
 
 /**
@@ -174,10 +175,12 @@ internal fun TemplateAsTaskCard(
 
     var addMenuOpen by remember(template.id) { mutableStateOf(false) }
 
-    val effectivePriority = template.priorityScore.toDouble()
-    val ramp = priorityRampColor(effectivePriority)
+    val bucket = template.targetBucket ?: priorityBucketForScore(template.priorityScore.toDouble())
+    val standardColor = loopBucketColor(bucket)
     val priorityBrush =
-        remember(ramp) { Brush.horizontalGradient(colors = listOf(ramp.copy(alpha = 0.20f), ramp)) }
+        remember(standardColor) {
+            Brush.horizontalGradient(colors = listOf(standardColor.copy(alpha = 0.20f), standardColor))
+        }
 
     GlassCard(
         modifier = Modifier.fillMaxWidth().clickable(onClick = onOpenDetail),
@@ -259,6 +262,15 @@ internal fun loopBucketLabel(b: TimeBucket): String =
         TimeBucket.FREIBLOCK -> "Mittel"
         TimeBucket.GERING -> "Gering"
         TimeBucket.SPAETER -> "Später"
+    }
+
+private fun loopBucketColor(bucket: TimeBucket): Color =
+    when (bucket) {
+        TimeBucket.HEUTE -> CosmosColors.PriorityRed
+        TimeBucket.MORGEN -> CosmosColors.PriorityOrange
+        TimeBucket.FREIBLOCK -> CosmosColors.PriorityYellow
+        TimeBucket.GERING -> CosmosColors.PriorityGreen
+        TimeBucket.SPAETER -> CosmosColors.PriorityBlue
     }
 
 /** Inline-Items-Helper fuer LazyColumn. */
