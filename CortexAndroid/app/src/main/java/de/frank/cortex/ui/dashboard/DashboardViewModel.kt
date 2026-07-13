@@ -76,6 +76,20 @@ class DashboardViewModel : ViewModel() {
     }
 
     init {
+        // Zwischengespeicherte Übersicht SOFORT anzeigen (Performance 2026-07-13): Beim Neustart
+        // stand oben ewig „0 Einträge", weil totalEntries/Kategorien/Vitals erst nach VPN-Connect +
+        // Server-Roundtrip kamen. Der lokale Snapshot füllt die Zahlen sofort; refreshAll ersetzt
+        // sie still, sobald der Server antwortet (Stale-while-Revalidate).
+        ApiClient.cachedDashboard()?.let { cached ->
+            _uiState.update {
+                it.copy(
+                    totalEntries = cached.totalEntries,
+                    categoryCounts = cached.categoryCounts,
+                    overview = cached.overview,
+                    health = cached.health
+                )
+            }
+        }
         startAutoRefresh()
         // Sofort aktualisieren, sobald das VPN verbunden ist (statt bis zu 20 s aufs Poll-Intervall zu
         // warten) — aber nur wenn das Dashboard gerade sichtbar ist (nicht im Hintergrund/Chat).
@@ -121,6 +135,17 @@ class DashboardViewModel : ViewModel() {
                 healthDeferred.join()
 
                 _uiState.update { it.copy(isLoading = false, error = null, isConnected = true) }
+                // Frische Übersicht für den nächsten Start persistieren (nur nach Erfolg).
+                _uiState.value.let { s ->
+                    ApiClient.cacheDashboard(
+                        DashboardSnapshot(
+                            totalEntries = s.totalEntries,
+                            categoryCounts = s.categoryCounts,
+                            overview = s.overview,
+                            health = s.health
+                        )
+                    )
+                }
             } catch (e: CancellationException) {
                 throw e
             } catch (e: Exception) {

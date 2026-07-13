@@ -353,6 +353,19 @@ data class VitalsResponse(
     val server: ServerOverview?
 )
 
+// Persistenter Dashboard-Zwischenspeicher (Performance 2026-07-13): Beim App-Neustart stand
+// oben ewig „0 Einträge", weil totalEntries/categoryCounts/overview erst NACH VPN-Connect +
+// Server-Roundtrip kamen. Die letzte erfolgreiche Übersicht wird jetzt lokal gespeichert und
+// beim Start SOFORT angezeigt; der frische Server-Stand ersetzt sie still (Stale-while-Revalidate,
+// gleiches Muster wie der /config-Cache). Enthält keine Secrets — Klartext ok.
+@JsonClass(generateAdapter = true)
+data class DashboardSnapshot(
+    val totalEntries: Int,
+    val categoryCounts: Map<String, Int>,
+    val overview: OverviewResponse?,
+    val health: HealthResponse?
+)
+
 @JsonClass(generateAdapter = true)
 data class BrainOverview(
     val status: String?,

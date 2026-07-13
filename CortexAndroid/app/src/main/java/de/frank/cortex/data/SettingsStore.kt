@@ -326,6 +326,13 @@ object SettingsStore {
         get() = plain.getString("cached_agent_config", "") ?: ""
         set(value) = plain.edit().putString("cached_agent_config", value).apply()
 
+    // Letzte Dashboard-Übersicht als JSON (Performance 2026-07-13): totalEntries, Kategorie-Zähler
+    // und Vitals werden beim Start SOFORT gezeigt (kein „0 Einträge" mehr, bis der Server antwortet).
+    // Enthält keine Secrets — Klartext ok.
+    var cachedDashboardJson: String
+        get() = plain.getString("cached_dashboard", "") ?: ""
+        set(value) = plain.edit().putString("cached_dashboard", value).apply()
+
     // --- UI-Präferenzen (klartext ok) ---
 
     var themeMode: String

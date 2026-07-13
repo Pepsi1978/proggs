@@ -259,6 +259,28 @@ object ApiClient {
         null
     }
 
+    // --- Dashboard-Zwischenspeicher (Performance 2026-07-13) ------------------
+    // Beim Neustart stand oben ewig „0 Einträge", bis VPN-Connect + Server-Roundtrip durch waren.
+    // Die letzte Übersicht wird lokal gespeichert: UI zeigt sie sofort, frische Daten ersetzen sie
+    // still (Stale-while-Revalidate, gleiches Muster wie der /config-Cache).
+    private val dashboardSnapshotAdapter by lazy { moshi.adapter(DashboardSnapshot::class.java) }
+
+    fun cacheDashboard(snapshot: DashboardSnapshot) {
+        try {
+            SettingsStore.cachedDashboardJson = dashboardSnapshotAdapter.toJson(snapshot)
+        } catch (e: Exception) {   // no-cancellation-rethrow (kein suspend im try)
+            CortexLog.warn("ApiClient", "cacheDashboard", "Dashboard-Cache nicht schreibbar: ${e.message}")
+        }
+    }
+
+    fun cachedDashboard(): DashboardSnapshot? = try {
+        SettingsStore.cachedDashboardJson.takeIf { it.isNotBlank() }
+            ?.let { dashboardSnapshotAdapter.fromJson(it) }
+    } catch (e: Exception) {   // no-cancellation-rethrow (kein suspend im try)
+        CortexLog.warn("ApiClient", "cachedDashboard", "Dashboard-Cache nicht lesbar: ${e.message}")
+        null
+    }
+
     // --- Streaming-Chat (SSE, /chat/stream) ---------------------------------
     private val chatRequestAdapter by lazy { moshi.adapter(ChatRequest::class.java) }
     private val chatResponseAdapter by lazy { moshi.adapter(ChatResponse::class.java) }
