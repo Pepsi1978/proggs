@@ -1,6 +1,7 @@
 package de.frank.entropyreducer
 
 import android.app.Application
+import android.content.res.Configuration as AndroidConfiguration
 import androidx.hilt.work.HiltWorkerFactory
 import androidx.lifecycle.DefaultLifecycleObserver
 import androidx.lifecycle.LifecycleOwner
@@ -19,6 +20,7 @@ import de.frank.entropyreducer.data.repository.OuraRepository
 import de.frank.entropyreducer.data.settings.AppSettings
 import de.frank.entropyreducer.di.ApplicationScope
 import de.frank.entropyreducer.domain.usecase.ForegroundSyncManager
+import de.frank.entropyreducer.presentation.widget.WidgetSystemThemeRefreshCoordinator
 import de.frank.entropyreducer.workers.BackgroundScheduler
 import javax.inject.Inject
 import kotlinx.coroutines.CoroutineScope
@@ -94,6 +96,7 @@ class EntropyReducerApp : Application(), Configuration.Provider {
      * super.onCreate() via Hilt-DAO geschrieben.
      */
     private var rescuedData: InitialDataMigrator.RescuedData? = null
+    private var lastSystemNightMode: Int = AndroidConfiguration.UI_MODE_NIGHT_UNDEFINED
 
     override val workManagerConfiguration: Configuration
         get() =
@@ -118,6 +121,7 @@ class EntropyReducerApp : Application(), Configuration.Provider {
         rescuedData = InitialDataMigrator.readOldDataPreHilt(this)
 
         super.onCreate()
+        lastSystemNightMode = resources.configuration.uiMode and AndroidConfiguration.UI_MODE_NIGHT_MASK
 
         // Logging-Vereinheitlichung 2026-06-12: ab hier laufen ALLE Diag.x()-Aufrufe der App
         // durch die drei Diagnose-Schichten (Room-DB, Logcat, JSONL). Vor diesem Punkt
@@ -372,5 +376,28 @@ class EntropyReducerApp : Application(), Configuration.Provider {
                 }
             },
         )
+    }
+
+    override fun onConfigurationChanged(newConfig: AndroidConfiguration) {
+        super.onConfigurationChanged(newConfig)
+        val currentNightMode = newConfig.uiMode and AndroidConfiguration.UI_MODE_NIGHT_MASK
+        if (currentNightMode == lastSystemNightMode) return
+        lastSystemNightMode = currentNightMode
+
+        applicationScope.launch {
+            runCatching {
+                WidgetSystemThemeRefreshCoordinator.refreshIfNeeded(
+                    context = this@EntropyReducerApp,
+                    mode = appSettings.readWidgetThemeModeOnce(),
+                )
+            }.onFailure {
+                Diag.e(
+                    DiagnosticArea.APP,
+                    "EntropyReducerApp",
+                    "Widget-System-Theme konnte nicht aktualisiert werden",
+                    it,
+                )
+            }
+        }
     }
 }

@@ -11,6 +11,8 @@ import dagger.hilt.InstallIn
 import dagger.hilt.android.EntryPointAccessors
 import dagger.hilt.components.SingletonComponent
 import de.frank.entropyreducer.R
+import de.frank.entropyreducer.data.diagnostics.Diag
+import de.frank.entropyreducer.data.diagnostics.DiagnosticArea
 import de.frank.entropyreducer.data.local.dao.EntropyEntryDao
 import de.frank.entropyreducer.data.local.dao.RecurringTemplateDao
 import de.frank.entropyreducer.data.local.entities.EntropyEntryEntity
@@ -151,6 +153,18 @@ class EntropyReducerRemoteViewsFactory(
             if (resolvedExpanded) resolved.forEach { list.add(WidgetListItem.Task(it, resolved = true)) }
 
             items = list
+
+            // The launcher starts this service when a cached widget becomes visible again.
+            runCatching {
+                WidgetSystemThemeRefreshCoordinator.refreshIfNeeded(context, themeMode)
+            }.onFailure {
+                Diag.e(
+                    DiagnosticArea.APP,
+                    "EntropyReducerRemoteViewsFactory",
+                    "Widget-System-Theme beim Host-Bind konnte nicht aktualisiert werden",
+                    it,
+                )
+            }
         }
     }
 
