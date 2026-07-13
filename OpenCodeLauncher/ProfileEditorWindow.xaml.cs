@@ -20,7 +20,7 @@ public partial class ProfileEditorWindow : Window
     public string GlobalText => GlobalEditor.Text;
     public string ProjectText => ProjectEditor.Text;
 
-    public ProfileEditorWindow(InstructionProfileDocuments documents, bool isClaudeCode, string profileName)
+    public ProfileEditorWindow(InstructionProfileDocuments documents, bool isClaudeCode, string profileName, bool singleDocument = false)
     {
         InitializeComponent();
         TitleText.Text = $"Profil {profileName} bearbeiten";
@@ -29,6 +29,12 @@ public partial class ProfileEditorWindow : Window
         ProjectPathText.Text = documents.ProjectPath;
         GlobalEditor.Text = documents.GlobalText;
         ProjectEditor.Text = documents.ProjectText;
+        if (singleDocument)
+        {
+            // Minimal-Profil: es gibt nur die eine globale CLAUDE.md, kein Projekt-Dokument.
+            ProjectTab.Visibility = Visibility.Collapsed;
+            GlobalTab.Content = "CLAUDE.md";
+        }
         StateChanged += (_, _) => UpdateMaximizeButton();
         SourceInitialized += (_, _) =>
         {

@@ -14,7 +14,12 @@ public sealed class InstructionProfileService
 
     public InstructionProfileDocuments LoadProfile(bool isClaudeCode, string profileId, string workDir)
     {
-        if (isClaudeCode) return LoadClaudeStandard(workDir);
+        if (isClaudeCode)
+        {
+            return string.Equals(profileId, "minimal", StringComparison.Ordinal)
+                ? LoadClaudeMinimal()
+                : LoadClaudeStandard(workDir);
+        }
 
         EnsureOpenCodeProfiles(workDir);
         var paths = GetOpenCodeProfilePaths(profileId, workDir);
@@ -32,8 +37,17 @@ public sealed class InstructionProfileService
 
         if (isClaudeCode)
         {
+            if (string.Equals(profileId, "minimal", StringComparison.Ordinal))
+            {
+                // Minimal kennt nur EINE Datei (die globale CLAUDE.md im Repo-Config-Ordner).
+                // Immer schreiben, auch wenn leer -- so kann der Nutzer den Kontext bewusst leeren.
+                var minimal = LoadClaudeMinimal();
+                WriteText(minimal.GlobalPath, globalText);
+                return;
+            }
+
             if (!string.Equals(profileId, "standard", StringComparison.Ordinal))
-                throw new InvalidOperationException("Claude Code unterstützt derzeit nur das Standardprofil.");
+                throw new InvalidOperationException("Claude Code unterstützt derzeit nur Minimal und Standard.");
 
             var documents = LoadClaudeStandard(workDir);
             WriteIfNeeded(documents.GlobalPath, globalText);
@@ -125,6 +139,42 @@ public sealed class InstructionProfileService
             ReadText(globalPath),
             projectPath,
             ReadText(projectPath));
+    }
+
+    /// <summary>
+    /// Config-Ordner des Claude-Minimal-Profils. Liegt bewusst IM Repo (~/proggs/claude-profiles/minimal),
+    /// damit die CLAUDE.md (und spaeter selbst erstellte Hooks/Rules/settings) ueber git auf allen
+    /// Rechnern identisch sind. Laufzeit-Dateien + Login-Token werden von der dortigen .gitignore
+    /// vom Repo ferngehalten.
+    /// </summary>
+    public static string ResolveClaudeMinimalConfigDir()
+    {
+        var home = Environment.GetFolderPath(Environment.SpecialFolder.UserProfile);
+        return Path.Combine(home, "proggs", "claude-profiles", "minimal");
+    }
+
+    private static InstructionProfileDocuments LoadClaudeMinimal()
+    {
+        var claudeMd = Path.Combine(ResolveClaudeMinimalConfigDir(), "CLAUDE.md");
+        // Minimal hat nur eine globale Datei; kein projektspezifisches Dokument.
+        return new InstructionProfileDocuments(claudeMd, ReadText(claudeMd), string.Empty, string.Empty);
+    }
+
+    /// <summary>
+    /// Stellt den Claude-Config-Ordner fuer das gewaehlte Profil bereit und gibt den Pfad zurueck,
+    /// der als CLAUDE_CONFIG_DIR gesetzt werden soll. Fuer "standard" wird null zurueckgegeben
+    /// (normales ~/.claude), fuer "minimal" der Repo-Config-Ordner (bei Bedarf inkl. leerer CLAUDE.md).
+    /// </summary>
+    public string? EnsureClaudeConfigDir(string profileId)
+    {
+        if (!string.Equals(profileId, "minimal", StringComparison.Ordinal)) return null;
+
+        var dir = ResolveClaudeMinimalConfigDir();
+        Directory.CreateDirectory(dir);
+        var claudeMd = Path.Combine(dir, "CLAUDE.md");
+        if (!File.Exists(claudeMd))
+            WriteText(claudeMd, "<!-- Minimal-Profil fuer Claude Code. Trage hier eigene Anweisungen ein. -->\n");
+        return dir;
     }
 
     private static (string GlobalPath, string ProjectPath) GetOpenCodeProfilePaths(string profileId, string workDir)

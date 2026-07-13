@@ -1,0 +1,25 @@
+# Minimal-Profil = Claude-Code-Config-Ordner (CLAUDE_CONFIG_DIR).
+# Claude legt hier NEBEN der Konfiguration auch den Login-Token (.credentials.json),
+# Sitzungs-Historie, projects/, todos/, Logs usw. ab. Diese duerfen NIEMALS ins Repo.
+#
+# Strategie (sicherste): erst ALLES ignorieren, dann NUR die bewusst versionierte
+# Konfiguration wieder einschliessen. Eine Secret-/Token-Datei wird hier NIE per '!'
+# wieder eingeschlossen -> sie bleibt durch '*' garantiert lokal (Secrets-Regel).
+
+*
+
+# --- Bewusst versionierte, geteilte Konfiguration (cross-machine) ---
+!.gitignore
+!CLAUDE.md
+!README.md
+!settings.json
+!rules/
+!rules/**
+!hooks/
+!hooks/**
+!skills/
+!skills/**
+!agents/
+!agents/**
+!commands/
+!commands/**

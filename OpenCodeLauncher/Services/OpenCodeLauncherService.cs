@@ -202,7 +202,11 @@ public sealed class OpenCodeLauncherService
     }
 
     /// <summary>Startet Claude Code wie die Desktop-Verknüpfung, aber mit gewähltem Modell und Effort.</summary>
-    public void LaunchClaudeCode(string modelId, string workDir, string? effortLevel)
+    /// <param name="claudeConfigDir">
+    /// Wenn gesetzt, wird CLAUDE_CONFIG_DIR auf diesen Ordner gezeigt (Minimal-Profil: frisches,
+    /// leeres Profil im Repo). Bei null startet Claude mit dem normalen ~/.claude (Standard-Profil).
+    /// </param>
+    public void LaunchClaudeCode(string modelId, string workDir, string? effortLevel, string? claudeConfigDir = null)
     {
         var log = Logger.Instance;
         effortLevel = NormalizeThinkingLevel(effortLevel);
@@ -211,7 +215,7 @@ public sealed class OpenCodeLauncherService
             Directory.CreateDirectory(workDir);
             var wt = ResolveWt();
             var tabColor = PickClaudeTerminalTabColor();
-            var innerScript = BuildClaudeCodeStartScript(modelId, workDir, effortLevel, tabColor.Name);
+            var innerScript = BuildClaudeCodeStartScript(modelId, workDir, effortLevel, tabColor.Name, claudeConfigDir);
             var shell = ResolvePowerShellExecutable();
             var robustLauncherScript = shell.IsPwsh ? ResolveRobustLauncherScript() : null;
 
@@ -504,7 +508,7 @@ try {
         return Process.Start(psi);
     }
 
-    private static string BuildClaudeCodeStartScript(string modelId, string workDir, string? effortLevel, string colorName)
+    private static string BuildClaudeCodeStartScript(string modelId, string workDir, string? effortLevel, string colorName, string? claudeConfigDir)
     {
         effortLevel = NormalizeThinkingLevel(effortLevel);
         var tempScript = Path.Combine(Path.GetTempPath(), $"opencode-launcher-claude-code-{Guid.NewGuid():N}.ps1");
@@ -531,6 +535,13 @@ if (Get-Command Start-ThreadJob -ErrorAction SilentlyContinue) {
 }
 
 try {
+    # Minimal-Profil: eigener, frischer Config-Ordner (keine Rules/Hooks/Memory/Almanach).
+    # Leer -> Standard-Profil (~/.claude) bleibt unveraendert.
+    $claudeConfigDir = {{PowerShellLiteral(claudeConfigDir ?? string.Empty)}}
+    if ($claudeConfigDir) {
+        New-Item -ItemType Directory -Force -Path $claudeConfigDir | Out-Null
+        $env:CLAUDE_CONFIG_DIR = $claudeConfigDir
+    }
     $sessionSettings = {{PowerShellLiteral(tempSettings)}}
     $claudeArgs = @('--dangerously-skip-permissions', '--settings', $sessionSettings, '--model', {{PowerShellLiteral(modelId)}})
     $effort = {{PowerShellLiteral(effortLevel ?? string.Empty)}}
