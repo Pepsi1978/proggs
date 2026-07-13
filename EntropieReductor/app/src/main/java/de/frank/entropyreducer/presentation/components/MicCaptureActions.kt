@@ -283,7 +283,7 @@ private fun TextInputDialog(
                     placeholder = { Text("Was steht an?") },
                 )
                 if (onImprove != null) {
-                    Row {
+                    Column {
                         TextButton(
                             onClick = {
                                 if (improving) return@TextButton

@@ -2,7 +2,6 @@ package de.frank.entropyreducer.presentation.dashboard1
 
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -103,7 +102,7 @@ fun TaskCaptureReviewDialog(
                     colors = fieldColors,
                 )
                 // "Mit KI verbessern" — wertet den Text per Gemini auf.
-                Row {
+                Column {
                     TextButton(
                         onClick = {
                             if (improving) return@TextButton
