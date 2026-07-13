@@ -37,8 +37,7 @@ function customSiteInfo(url) {
 	};
 }
 
-async function enableCustomSite(tabId, url) {
-	const site = customSiteInfo(url);
+async function registerCustomContentScript(site) {
 	try {
 		await chrome.scripting.unregisterContentScripts({ ids: [site.scriptId] });
 	} catch {
@@ -54,6 +53,31 @@ async function enableCustomSite(tabId, url) {
 			persistAcrossSessions: true,
 		},
 	]);
+}
+
+async function injectCustomContentScript(tabId) {
+	await chrome.scripting.insertCSS({
+		target: { tabId },
+		files: ["src/overlay.css"],
+	});
+	await chrome.scripting.executeScript({
+		target: { tabId },
+		files: CONTENT_SCRIPT_FILES,
+		injectImmediately: true,
+	});
+}
+
+function pageHasOverlay(tabId) {
+	return new Promise((resolve) => {
+		chrome.tabs.sendMessage(tabId, { type: "OV_GET_PAGE_STATE" }, (state) => {
+			resolve(!chrome.runtime.lastError && !!state);
+		});
+	});
+}
+
+async function enableCustomSite(tabId, url) {
+	const site = customSiteInfo(url);
+	await registerCustomContentScript(site);
 
 	const stored = await chrome.storage.local.get("ovCustomHosts");
 	const hosts = Array.isArray(stored.ovCustomHosts) ? stored.ovCustomHosts : [];
@@ -62,17 +86,45 @@ async function enableCustomSite(tabId, url) {
 	}
 
 	if (Number.isInteger(tabId)) {
-		await chrome.scripting.insertCSS({
-			target: { tabId },
-			files: ["src/overlay.css"],
-		});
-		await chrome.scripting.executeScript({
-			target: { tabId },
-			files: CONTENT_SCRIPT_FILES,
-			injectImmediately: true,
-		});
+		await injectCustomContentScript(tabId);
 	}
 	return { ok: true, host: site.host };
+}
+
+// Dynamische Content-Scripts sollen zwar persistent sein, werden bei einer
+// Erweiterungsaktualisierung aber nicht auf jeder Chrome-Version erhalten.
+// Die gespeicherte Freigabeliste ist daher die autoritative Quelle und baut
+// die Registrierung beim Browser- oder Worker-Start erneut auf.
+async function restoreCustomSiteScripts() {
+	const stored = await chrome.storage.local.get("ovCustomHosts");
+	const hosts = Array.isArray(stored.ovCustomHosts) ? stored.ovCustomHosts : [];
+	const enabledHosts = new Set(
+		hosts.map((value) => String(value || "").toLowerCase()).filter(Boolean),
+	);
+	for (const host of enabledHosts) {
+		if (!host) continue;
+		for (const protocol of ["https:", "http:"]) {
+			const site = customSiteInfo(`${protocol}//${host}/`);
+			const granted = await chrome.permissions.contains({ origins: [site.matchPattern] });
+			if (granted) await registerCustomContentScript(site);
+		}
+	}
+
+	// Chrome stellt Tabs teils vor dynamischen Scripts wieder her. Dann gibt es
+	// noch keinen Listener, obwohl die Domain dauerhaft freigegeben ist.
+	const tabs = await chrome.tabs.query({});
+	for (const tab of tabs) {
+		if (!Number.isInteger(tab.id) || !tab.url) continue;
+		let site;
+		try {
+			site = customSiteInfo(tab.url);
+		} catch {
+			continue;
+		}
+		if (!enabledHosts.has(site.host) || (await pageHasOverlay(tab.id))) continue;
+		const granted = await chrome.permissions.contains({ origins: [site.matchPattern] });
+		if (granted) await injectCustomContentScript(tab.id);
+	}
 }
 
 async function disableCustomSite(url) {
@@ -426,3 +478,12 @@ function reloadActiveTabsAfterUpdate() {
 }
 
 reloadActiveTabsAfterUpdate();
+
+restoreCustomSiteScripts().catch((error) =>
+	console.warn("[Overlays] custom-site restore:", error),
+);
+chrome.runtime.onStartup.addListener(() => {
+	restoreCustomSiteScripts().catch((error) =>
+		console.warn("[Overlays] custom-site startup restore:", error),
+	);
+});

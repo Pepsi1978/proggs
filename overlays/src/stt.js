@@ -125,6 +125,15 @@
 		}
 	}
 
+	function settleMicIdle() {
+		setMicState("idle");
+		// Manche reaktive Webseiten ersetzen das Eingabefeld kurz nach dem Einfuegen.
+		// Der zweite Reset trifft dann den vom Watchdog neu aufgebauten Mic-Button.
+		setTimeout(() => {
+			if (!wantsRecording) setMicState("idle");
+		}, 600);
+	}
+
 	// ── Live-Vorschau ──
 	function setLivePreviewWaiting() {
 		if (!livePreviewEl) return;
@@ -315,7 +324,13 @@
 			OV.toast("🤫 Keine Sprache erkannt — nichts gesendet.", 2000);
 			return;
 		}
-		transcribe(audioBlob, analysis);
+		void transcribe(audioBlob, analysis).catch((error) => {
+			console.warn("[Overlays] Transkription konnte nicht sauber abgeschlossen werden:", error);
+			removeLivePreview();
+			setMicState("error", "Transkription unvollstaendig");
+			OV.toast("⚠️ Transkription beendet, Status wird zurueckgesetzt.", 3500);
+			setTimeout(settleMicIdle, 2500);
+		});
 	}
 
 	async function transcribe(audioBlob, analysis) {
@@ -374,7 +389,7 @@
 			text = (res.text || "").trim();
 		}
 		if (!text) {
-			setMicState("idle");
+			settleMicIdle();
 			removeLivePreview();
 			OV.toast("⚠️ Keine Sprache erkannt.", 3000);
 			return;
@@ -425,7 +440,7 @@
 		if (ok) {
 			// Neue Spracheingabe -> alter Gemini-Snapshot (Original/Korrektur) ist hinfaellig.
 			OV.actions?.resetGeminiSnapshot?.();
-			setMicState("idle");
+			settleMicIdle();
 			const preview = text.length > 80 ? text.slice(0, 80) + "…" : text;
 			OV.toast(
 				corrected ? "✨ Korrigiert & eingefuegt" : "✅ " + preview,
