@@ -7,7 +7,10 @@ import de.frank.cortex.data.model.*
 import de.frank.cortex.observability.CortexLog
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.awaitCancellation
+import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.ensureActive
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import android.util.Base64
 import okhttp3.MediaType.Companion.toMediaType
@@ -199,16 +202,16 @@ object ApiClient {
         private val urlProvider: () -> String,
         private val create: (String) -> T
     ) {
-        @Volatile private var boundUrl: String? = null
-        @Volatile private var instance: T? = null
+        // EIN @Volatile-Paar statt zweier getrennter Felder: ein lock-freier Leser konnte sonst
+        // die neue Instanz zusammen mit der ALTEN URL sehen (nicht-atomare Publikation).
+        @Volatile private var bound: Pair<String, T>? = null
         fun get(): T {
             val url = urlProvider()
-            instance?.let { if (boundUrl == url) return it }
+            bound?.let { if (it.first == url) return it.second }
             synchronized(this) {
-                instance?.let { if (boundUrl == url) return it }
+                bound?.let { if (it.first == url) return it.second }
                 val fresh = create(url)
-                instance = fresh
-                boundUrl = url
+                bound = url to fresh
                 return fresh
             }
         }
@@ -232,10 +235,26 @@ object ApiClient {
         buildRetrofit(it, dashboardClient).create(DashboardApi::class.java)
     }
 
+    // /chat-Fallback (und Outbox-Flush): der Server sendet bis zur fertigen Antwort KEIN Byte —
+    // lange Läufe (Tool-Loop bis 240 s + Selbstregel-Audit + Dedup-Wartefenster 240 s) sprengten
+    // das 120s-readTimeout des authClient, obwohl der Streaming-Pfad dieselbe Antwort mit seinem
+    // 600s-Dach geliefert hätte. Eigener Client mit demselben Gesamt-Dach wie das Streaming.
+    private val chatFallbackClient: OkHttpClient by lazy {
+        authClient.newBuilder()
+            .callTimeout(600, TimeUnit.SECONDS)
+            .readTimeout(600, TimeUnit.SECONDS)
+            .build()
+    }
+    private val agentChatFallbackHolder = UrlBoundApi({ SettingsStore.agentUrl() }) {
+        buildRetrofit(it, chatFallbackClient).create(AgentApi::class.java)
+    }
+
     // --- Service-Interfaces ---
     fun agentApi(): AgentApi = agentApiHolder.get()
     fun brainApi(): BrainApi = brainApiHolder.get()
     fun dashboardApi(): DashboardApi = dashboardApiHolder.get()
+    /** Nur fuer POST /chat als Stream-Fallback bzw. Outbox-Flush (grosses Timeout-Dach). */
+    fun agentChatFallbackApi(): AgentApi = agentChatFallbackHolder.get()
 
     // --- /config-Zwischenspeicher (Performance 2026-07-12) -------------------
     // Die Einstellungen (und der App-Start-Sync) warteten bisher bei JEDEM Aufruf sichtbar auf
@@ -319,8 +338,20 @@ object ApiClient {
                 .url(SettingsStore.agentUrl() + "/chat/stream")
                 .post(body)
                 .build()
+            val call = streamingClient.newCall(httpReq)
             try {
-                executeCancellable(streamingClient, httpReq).use { resp ->
+                coroutineScope {
+                // Watcher bricht den Socket bei Cancel SOFORT ab: readUtf8Line() blockiert sonst
+                // weiter, bis der naechste Heartbeat (bis 15 s) bzw. das readTimeout (60 s) greift.
+                val watcher = launch {
+                    try {
+                        awaitCancellation()
+                    } finally {
+                        call.cancel()
+                    }
+                }
+                try {
+                executeCancellable(call).use { resp ->
                     headersReceived = true
                     CortexLog.info("ChatStream", "headers", "SSE-Header empfangen",
                         mapOf("request_id" to requestId.take(12), "status" to resp.code,
@@ -372,12 +403,16 @@ object ApiClient {
                                         "elapsed_ms" to (System.currentTimeMillis() - startedAt),
                                         "events" to eventCount, "deltas" to deltaCount,
                                         "heartbeats" to heartbeatCount))
-                                return@withContext result
+                                return@coroutineScope result
                             }
                             "error" -> throw IOException("Agent-Stream-Fehler: ${evt.optString("message")}")
                         }
                     }
                     throw IOException("Stream endete ohne Abschluss-Event")
+                }
+                } finally {
+                    watcher.cancel()
+                }
                 }
             } catch (e: CancellationException) {
                 throw e
@@ -399,9 +434,8 @@ object ApiClient {
             .url("$CODEX_AUTH_ISSUER/api/accounts/deviceauth/usercode")
             .post(body.toRequestBody(jsonMediaType))
             .build()
-        val response = withContext(Dispatchers.IO) { secretExternalClient.newCall(request).execute() }
-        val responseBody = response.body?.string().orEmpty()
-        if (!response.isSuccessful) throw Exception("Codex Device-Code-Start HTTP ${response.code}: $responseBody")
+        val (code, responseBody) = executeForString(secretExternalClient, request)
+        if (code !in 200..299) throw Exception("Codex Device-Code-Start HTTP $code: $responseBody")
         val json = JSONObject(responseBody)
         val userCode = json.optString("user_code")
         val authId = json.optString("device_auth_id")
@@ -422,10 +456,9 @@ object ApiClient {
             .url("$CODEX_AUTH_ISSUER/api/accounts/deviceauth/token")
             .post(body.toRequestBody(jsonMediaType))
             .build()
-        val response = withContext(Dispatchers.IO) { secretExternalClient.newCall(request).execute() }
-        val responseBody = response.body?.string().orEmpty()
-        if (response.code == 403 || response.code == 404) return CodexAuthPollResponse(ok = true, status = "pending")
-        if (!response.isSuccessful) throw Exception("Codex Device-Code-Poll HTTP ${response.code}: $responseBody")
+        val (code, responseBody) = executeForString(secretExternalClient, request)
+        if (code == 403 || code == 404) return CodexAuthPollResponse(ok = true, status = "pending")
+        if (code !in 200..299) throw Exception("Codex Device-Code-Poll HTTP $code: $responseBody")
 
         val codeJson = JSONObject(responseBody)
         val authorizationCode = codeJson.optString("authorization_code")
@@ -444,9 +477,8 @@ object ApiClient {
             .header("Content-Type", "application/x-www-form-urlencoded")
             .post(form.toRequestBody("application/x-www-form-urlencoded".toMediaType()))
             .build()
-        val tokenResponse = withContext(Dispatchers.IO) { secretExternalClient.newCall(tokenRequest).execute() }
-        val tokenBody = tokenResponse.body?.string().orEmpty()
-        if (!tokenResponse.isSuccessful) throw Exception("Codex Token-Austausch HTTP ${tokenResponse.code}: $tokenBody")
+        val (tokenCode, tokenBody) = executeForString(secretExternalClient, tokenRequest)
+        if (tokenCode !in 200..299) throw Exception("Codex Token-Austausch HTTP $tokenCode: $tokenBody")
         val tokenJson = JSONObject(tokenBody)
         val accessToken = tokenJson.optString("access_token")
         if (accessToken.isBlank()) throw Exception("Codex Token-Antwort ohne access_token")
@@ -464,9 +496,8 @@ object ApiClient {
             .get()
             .build()
         return try {
-            val response = withContext(Dispatchers.IO) { secretExternalClient.newCall(request).execute() }
-            val body = response.body?.string().orEmpty()
-            if (!response.isSuccessful) return codexFallbackModels
+            val (code, body) = executeForString(secretExternalClient, request)
+            if (code !in 200..299) return codexFallbackModels
             val arr = JSONObject(body).optJSONArray("models") ?: return codexFallbackModels
             buildList {
                 for (i in 0 until arr.length()) {
@@ -500,9 +531,8 @@ object ApiClient {
             .headers(codexHeaders(access))
             .post(body.toString().toRequestBody(jsonMediaType))
             .build()
-        val response = withContext(Dispatchers.IO) { secretExternalClient.newCall(request).execute() }
-        val responseBody = response.body?.string().orEmpty()
-        if (!response.isSuccessful) throw Exception("Codex-Fehler ${response.code}: $responseBody")
+        val (code, responseBody) = executeForString(secretExternalClient, request)
+        if (code !in 200..299) throw Exception("Codex-Fehler $code: $responseBody")
         return extractCodexText(JSONObject(responseBody)).ifBlank { throw Exception("Codex lieferte leeren Text") }
     }
 
@@ -522,9 +552,8 @@ object ApiClient {
             .header("Content-Type", "application/x-www-form-urlencoded")
             .post(form.toRequestBody("application/x-www-form-urlencoded".toMediaType()))
             .build()
-        val response = withContext(Dispatchers.IO) { secretExternalClient.newCall(request).execute() }
-        val body = response.body?.string().orEmpty()
-        if (!response.isSuccessful) throw Exception("Codex Refresh HTTP ${response.code}: $body")
+        val (code, body) = executeForString(secretExternalClient, request)
+        if (code !in 200..299) throw Exception("Codex Refresh HTTP $code: $body")
         val json = JSONObject(body)
         val access = json.optString("access_token")
         if (access.isBlank()) throw Exception("Codex Refresh ohne access_token")
@@ -578,7 +607,16 @@ object ApiClient {
 
     // --- Groq STT (direkt über OkHttp, multipart) ---
 
-    suspend fun groqTranscribe(wavBytes: ByteArray): GroqTranscriptionResponse {
+    // optDouble liefert bei fehlendem Feld NaN (nicht null!) — alle Schwellwert-Vergleiche im
+    // WhisperHallucinationFilter liefen mit NaN still auf false und die Anti-Halluzinations-
+    // Schichten waeren lautlos deaktiviert gewesen.
+    private fun JSONObject.optDoubleOrNull(name: String): Double? =
+        optDouble(name).takeUnless { it.isNaN() }
+
+    // Komplett auf IO: vorher lief nur execute() auf IO, aber body().string() (Socket-Read!)
+    // und das Parsen aller verbose_json-Segmente auf dem Aufrufer-Thread — im Chat war das der
+    // Main-Thread (Jank/ANR-Risiko nach jedem Aufnahme-Stopp).
+    suspend fun groqTranscribe(wavBytes: ByteArray): GroqTranscriptionResponse = withContext(Dispatchers.IO) {
         val key = SettingsStore.groqApiKey
         val body = MultipartBody.Builder()
             .setType(MultipartBody.FORM)
@@ -600,11 +638,11 @@ object ApiClient {
             .post(body)
             .build()
 
-        val response = withContext(Dispatchers.IO) { externalClient.newCall(request).execute() }
-        val responseBody = response.body?.string() ?: throw Exception("Leere Groq-Antwort")
+        val (code, responseBody) = executeForString(externalClient, request)
+        if (responseBody.isEmpty()) throw Exception("Leere Groq-Antwort")
 
-        if (!response.isSuccessful) {
-            throw Exception("Groq-Fehler ${response.code}: $responseBody")
+        if (code !in 200..299) {
+            throw Exception("Groq-Fehler $code: $responseBody")
         }
 
         val json = JSONObject(responseBody)
@@ -613,18 +651,18 @@ object ApiClient {
             (0 until arr.length()).map { i ->
                 val seg = arr.getJSONObject(i)
                 GroqSegment(
-                    start = seg.optDouble("start"),
-                    end = seg.optDouble("end"),
+                    start = seg.optDoubleOrNull("start"),
+                    end = seg.optDoubleOrNull("end"),
                     text = seg.optString("text"),
-                    no_speech_prob = seg.optDouble("no_speech_prob"),
-                    avg_logprob = seg.optDouble("avg_logprob"),
-                    compression_ratio = seg.optDouble("compression_ratio")
+                    no_speech_prob = seg.optDoubleOrNull("no_speech_prob"),
+                    avg_logprob = seg.optDoubleOrNull("avg_logprob"),
+                    compression_ratio = seg.optDoubleOrNull("compression_ratio")
                 )
             }
         }
 
         CortexLog.info("Groq", "transcribe", "Transkription erhalten", mapOf("text_length" to text.length))
-        return GroqTranscriptionResponse(text = text, segments = segments)
+        GroqTranscriptionResponse(text = text, segments = segments)
     }
 
     // --- Google Cloud Text-to-Speech (Chirp 3: HD) ---
@@ -636,7 +674,9 @@ object ApiClient {
     // Voraussetzung: "Cloud Text-to-Speech API" im Projekt des API-Keys aktiviert.
     private const val CHIRP3_VOICE_PREFIX = "de-DE-Chirp3-HD-"
 
-    suspend fun geminiTts(text: String, voice: String = SettingsStore.ttsVoice): ByteArray {
+    // Komplett auf IO: body().string() liest die grosse Base64-Audio-Antwort blockierend vom
+    // Socket — im Settings-Stimmen-Test lief das auf dem Main-Thread (NetworkOnMainThreadException).
+    suspend fun geminiTts(text: String, voice: String = SettingsStore.ttsVoice): ByteArray = withContext(Dispatchers.IO) {
         // Dedizierter Google-TTS-Schluessel falls gesetzt, sonst Fallback auf den Gemini-Schluessel.
         val key = SettingsStore.ttsApiKey
         if (key.isBlank()) throw IllegalStateException("TTS-Schlüssel fehlt (Google-TTS- oder Gemini-Schlüssel setzen)")
@@ -708,14 +748,16 @@ object ApiClient {
                 "elapsed_ms" to (System.currentTimeMillis() - startedAt)
             ))
             TtsUsageStore.addSuccessfulSynthesis(text.length)
-            return pcm
+            return@withContext pcm
         }
     }
 
     private suspend fun executeCancellable(client: OkHttpClient, request: Request): Response =
+        executeCancellable(client.newCall(request))
+
+    private suspend fun executeCancellable(call: okhttp3.Call): Response =
         withContext(Dispatchers.IO) {
             suspendCancellableCoroutine { continuation ->
-                val call = client.newCall(request)
                 continuation.invokeOnCancellation { call.cancel() }
                 try {
                     val response = call.execute()
@@ -731,6 +773,17 @@ object ApiClient {
                 } catch (e: Exception) {   // no-cancellation-rethrow (kein suspend im try)
                     if (continuation.isActive) continuation.resumeWithException(e)
                 }
+            }
+        }
+
+    /** Cancellable ausfuehren, Body als String lesen, Response sicher schliessen — alles auf IO.
+     *  Ersetzt die frueheren blockierenden `client.newCall(request).execute()`-Aufrufe, die ein
+     *  Coroutine-Cancel NICHT abbrach (Call lief bis zum callTimeout weiter) und deren
+     *  body().string() teils auf dem Main-Thread las. */
+    private suspend fun executeForString(client: OkHttpClient, request: Request): Pair<Int, String> =
+        withContext(Dispatchers.IO) {
+            executeCancellable(client, request).use { resp ->
+                resp.code to resp.body?.string().orEmpty()
             }
         }
 
@@ -772,11 +825,11 @@ object ApiClient {
             .post(body.toRequestBody(jsonMediaType))
             .build()
 
-        val response = withContext(Dispatchers.IO) { externalClient.newCall(request).execute() }
-        val responseBody = response.body?.string() ?: throw Exception("Leere Gemini-Antwort")
+        val (code, responseBody) = executeForString(externalClient, request)
+        if (responseBody.isEmpty()) throw Exception("Leere Gemini-Antwort")
 
-        if (!response.isSuccessful) {
-            throw Exception("Gemini-Fehler ${response.code}: $responseBody")
+        if (code !in 200..299) {
+            throw Exception("Gemini-Fehler $code: $responseBody")
         }
 
         val json = JSONObject(responseBody)
@@ -835,9 +888,9 @@ object ApiClient {
             .post(body.toRequestBody(jsonMediaType))
             .build()
 
-        val response = withContext(Dispatchers.IO) { externalClient.newCall(request).execute() }
-        val responseBody = response.body?.string() ?: throw Exception("Leere Gemini-Antwort")
-        if (!response.isSuccessful) throw Exception("Gemini-Fehler ${response.code}: $responseBody")
+        val (code, responseBody) = executeForString(externalClient, request)
+        if (responseBody.isEmpty()) throw Exception("Leere Gemini-Antwort")
+        if (code !in 200..299) throw Exception("Gemini-Fehler $code: $responseBody")
 
         val json = JSONObject(responseBody)
         val candidate = json.optJSONArray("candidates")?.optJSONObject(0)
@@ -882,7 +935,7 @@ object ApiClient {
             "generationConfig": {
                 "thinkingConfig": {"thinkingBudget": 64},
                 "temperature": ${if (attempt > 1) "0.55" else "0.15"},
-                "maxOutputTokens": 64
+                "maxOutputTokens": 128
             }
         }
         """.trimIndent()
@@ -893,11 +946,11 @@ object ApiClient {
             .post(body.toRequestBody(jsonMediaType))
             .build()
 
-        val response = withContext(Dispatchers.IO) { externalClient.newCall(request).execute() }
-        val responseBody = response.body?.string() ?: throw Exception("Leere Gemini-Antwort")
+        val (code, responseBody) = executeForString(externalClient, request)
+        if (responseBody.isEmpty()) throw Exception("Leere Gemini-Antwort")
 
-        if (!response.isSuccessful) {
-            throw Exception("Gemini-Fehler ${response.code}: $responseBody")
+        if (code !in 200..299) {
+            throw Exception("Gemini-Fehler $code: $responseBody")
         }
 
         val json = JSONObject(responseBody)

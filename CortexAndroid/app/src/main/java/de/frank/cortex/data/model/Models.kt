@@ -106,6 +106,29 @@ data class HealthResponse(
     val embed_model: String?
 )
 
+// Agent-/health sendet {"status","version",...} OHNE "ok" — SimpleResponse als Rueckgabetyp
+// wuerde bei der ersten Nutzung mit JsonDataException scheitern (Pflichtfeld ok fehlt).
+@JsonClass(generateAdapter = true)
+data class AgentHealthResponse(
+    val status: String? = null,
+    val version: String? = null
+)
+
+// /by-title antwortet mit {"ok","found","title","text",...} und laesst doc_id bei found=false
+// komplett weg — der fruehere Rueckgabetyp BrainEntry (doc_id pflicht) crashte dann beim Parsen.
+@JsonClass(generateAdapter = true)
+data class ByTitleResponse(
+    val ok: Boolean = false,
+    val found: Boolean = false,
+    val doc_id: String? = null,
+    val title: String? = null,
+    val text: String? = null,
+    val category: String? = null,
+    val categories: List<String>? = null,
+    val created_at: String? = null,
+    val updated_at: String? = null
+)
+
 @JsonClass(generateAdapter = true)
 data class SearchRequest(
     val query: String,
@@ -279,7 +302,11 @@ data class WebsearchToggleCurrent(
 @JsonClass(generateAdapter = true)
 data class RuntimeLimits(
     val agent: AgentRuntimeLimits = AgentRuntimeLimits(),
-    val brain: BrainRuntimeLimits = BrainRuntimeLimits()
+    // Nullable: /config liefert brain=null, wenn die brain-api beim Abruf nicht erreichbar war.
+    // Frueher fuellte Moshi bei "{}" still die App-DEFAULTS ein — die sahen aus wie der echte
+    // Server-Stand und wurden beim naechsten Limits-Speichern zurueckgeschrieben (Lost Update
+    // ueber Franks tatsaechlich konfigurierte Brain-Limits).
+    val brain: BrainRuntimeLimits? = null
 )
 
 @JsonClass(generateAdapter = true)
@@ -341,7 +368,10 @@ data class CodexAuthPollResponse(
 
 @JsonClass(generateAdapter = true)
 data class OverviewResponse(
-    val total: Int,
+    // Nullable: /api/overview liefert total=null, wenn die brain-api gerade nicht antwortet
+    // (der Server degradiert absichtlich) — non-nullable liess Moshi hier die GANZE Antwort
+    // verwerfen, und das Dashboard war genau im Stoerungsfall blind.
+    val total: Int? = null,
     val brain: BrainOverview?,
     val agent: AgentOverview?,
     val server: ServerOverview?

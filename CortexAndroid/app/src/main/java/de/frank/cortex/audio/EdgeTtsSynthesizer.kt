@@ -29,6 +29,10 @@ class EdgeTtsSynthesizer {
     private val client = OkHttpClient.Builder()
         .connectTimeout(15, TimeUnit.SECONDS)
         .readTimeout(30, TimeUnit.SECONDS)
+        // readTimeout greift bei OkHttp-WebSockets nach dem Handshake NICHT mehr — erst der
+        // Ping-Rahmen erkennt eine halbtote Verbindung (Netzwechsel WLAN->Mobilfunk) und feuert
+        // onFailure, statt die Synthese unbegrenzt haengen zu lassen.
+        .pingInterval(15, TimeUnit.SECONDS)
         .build()
 
     private companion object {
@@ -54,8 +58,18 @@ class EdgeTtsSynthesizer {
     /**
      * Synthetisiert [text] mit [voice] (voller Name, z.B. de-DE-SeraphinaMultilingualNeural) und
      * gibt die MP3-Bytes zurueck. Wirft bei Fehler/Cancel. Abbrechbar (WebSocket wird gecancelt).
+     * Hartes 45s-Dach: antwortet der Dienst nach onOpen nie (weder turn.end noch onFailure),
+     * hing die Vorlese-Pipeline sonst unbegrenzt mit isSpeaking=true fest.
      */
-    suspend fun synthesize(text: String, voice: String): ByteArray = suspendCancellableCoroutine { cont ->
+    suspend fun synthesize(text: String, voice: String): ByteArray = try {
+        kotlinx.coroutines.withTimeout(45_000) { synthesizeInternal(text, voice) }
+    } catch (e: kotlinx.coroutines.TimeoutCancellationException) {
+        // Als IOException statt CancellationException melden: Aufrufer sollen das als FEHLER
+        // behandeln (Fallback/Meldung), nicht als stilles Abbrechen der eigenen Coroutine.
+        throw java.io.IOException("Edge-TTS-Timeout nach 45 s (keine Antwort vom Dienst)")
+    }
+
+    private suspend fun synthesizeInternal(text: String, voice: String): ByteArray = suspendCancellableCoroutine { cont ->
         val connectionId = UUID.randomUUID().toString().replace("-", "")
         val requestId = UUID.randomUUID().toString().replace("-", "")
         val secMsGec = generateSecMsGec()

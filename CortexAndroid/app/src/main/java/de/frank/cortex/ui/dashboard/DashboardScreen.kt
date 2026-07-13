@@ -84,6 +84,8 @@ fun DashboardScreen(vm: DashboardViewModel = viewModel()) {
             editText = uiState.editText,
             editTitle = uiState.editTitle,
             categories = uiState.categories,
+            error = uiState.error,
+            onDismissError = vm::clearError,
             onEditTextChange = vm::updateEditText,
             onEditTitleChange = vm::updateEditTitle,
             onCreateCategory = vm::createCategory,
@@ -106,8 +108,18 @@ fun DashboardScreen(vm: DashboardViewModel = viewModel()) {
         contentPadding = PaddingValues(horizontal = 16.dp, vertical = 6.dp),
         verticalArrangement = Arrangement.spacedBy(14.dp)
     ) {
+        // Feste Items brauchen stabile Keys: Das Vitals-Item erscheint erst, wenn overview da ist —
+        // ohne Keys verschob das die positionale Identität aller folgenden Items und das Suchfeld
+        // verlor mitten im Tippen den Fokus (Tastatur klappte zu).
+        // Fehler-Banner (Löschen/Speichern/Refresh fehlgeschlagen) — war vorher unsichtbar.
+        uiState.error?.let { message ->
+            item(key = "error") {
+                ErrorBanner(message = message, onDismiss = vm::clearError)
+            }
+        }
+
         // Spectrum Card (exakt wie Design)
-        item {
+        item(key = "spectrum") {
             SpectrumCard(
                 totalEntries = uiState.totalEntries,
                 categoryCounts = uiState.categoryCounts,
@@ -123,13 +135,13 @@ fun DashboardScreen(vm: DashboardViewModel = viewModel()) {
 
         // Vitals 2x2 Grid
         uiState.overview?.let { overview ->
-            item {
+            item(key = "vitals") {
                 VitalsGrid(overview = overview)
             }
         }
 
         // Search Bar
-        item {
+        item(key = "search") {
             SearchBar(
                 query = uiState.searchQuery,
                 onQueryChange = { vm.updateSearchQuery(it); vm.search(it) },
@@ -142,8 +154,12 @@ fun DashboardScreen(vm: DashboardViewModel = viewModel()) {
         else if (uiState.selectedCategory != null) uiState.browseResults
         else emptyList()
 
-        if (displayItems.isEmpty() && (uiState.searchQuery.isNotBlank() || uiState.selectedCategory != null)) {
-            item {
+        // Bei aktivem Fehlerbanner KEIN "Nichts gefunden." dazu: die Doppelaussage
+        // (Fehler + vermeintlich leere Kategorie) war faktisch falsch.
+        if (displayItems.isEmpty() && uiState.error == null &&
+            (uiState.searchQuery.isNotBlank() || uiState.selectedCategory != null)
+        ) {
+            item(key = "empty") {
                 Column(
                     modifier = Modifier.fillMaxWidth().padding(vertical = 30.dp),
                     horizontalAlignment = Alignment.CenterHorizontally
@@ -307,7 +323,14 @@ private fun SpectrumCard(
                                     if (categoryPath.isEmpty()) {
                                         onDrillInto(name)
                                     } else {
-                                        onCategoryClick(if (selectedCategory == name) null else name)
+                                        // Im Drilldown ist `name` nur der nackte Sub-Name — fuer
+                                        // by-category/by-parent braucht es den VOLLEN Pfad, sonst
+                                        // wird eine nicht existierende Top-Level-Kategorie abgefragt
+                                        // ("Nichts gefunden."). Toggle-aus waehlt wieder die Eltern-
+                                        // Ebene (statt null, das den Breadcrumb inkonsistent liesse).
+                                        val fullPath = (categoryPath + name).joinToString("/")
+                                        val parentPath = categoryPath.joinToString("/")
+                                        onCategoryClick(if (selectedCategory == fullPath) parentPath else fullPath)
                                     }
                                 }
                         )
@@ -381,13 +404,7 @@ private fun SpectrumCard(
                         Row(
                             modifier = Modifier
                                 .fillMaxWidth()
-                                .clickable {
-                                    if (categoryPath.isEmpty()) {
-                                        onDrillInto(name)
-                                    } else {
-                                        onDrillInto(name)
-                                    }
-                                }
+                                .clickable { onDrillInto(name) }
                                 .padding(
                                     vertical = (7f * categoryZoom).dp,
                                     horizontal = 6.dp
@@ -736,6 +753,40 @@ private fun EntryCard(entry: BrainEntry, onClick: () -> Unit) {
     }
 }
 
+/** Fehlermeldungen aus dem ViewModel sichtbar machen — vorher liefen Lösch-/Speicher-Fehler
+ *  ins Leere und der Nutzer sah kommentarlos nichts passieren. */
+@Composable
+private fun ErrorBanner(message: String, onDismiss: () -> Unit) {
+    Surface(
+        modifier = Modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(14.dp),
+        color = Rose.copy(alpha = 0.12f),
+        border = BorderStroke(1.dp, Rose.copy(alpha = 0.32f))
+    ) {
+        Row(
+            modifier = Modifier.padding(horizontal = 14.dp, vertical = 10.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(9.dp)
+        ) {
+            Icon(Icons.Default.ErrorOutline, contentDescription = null,
+                tint = Rose, modifier = Modifier.size(18.dp))
+            Text(
+                text = message,
+                fontSize = 12.5.sp,
+                color = MaterialTheme.colorScheme.onSurface,
+                lineHeight = 17.sp,
+                modifier = Modifier.weight(1f)
+            )
+            Icon(
+                Icons.Default.Close,
+                contentDescription = "Fehlermeldung schließen",
+                tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.size(16.dp).clickable(onClick = onDismiss)
+            )
+        }
+    }
+}
+
 @OptIn(ExperimentalFoundationApi::class, ExperimentalLayoutApi::class)
 @Composable
 private fun EntryDetailScreen(
@@ -744,6 +795,8 @@ private fun EntryDetailScreen(
     editText: String,
     editTitle: String,
     categories: List<CategoryInfo>,
+    error: String?,
+    onDismissError: () -> Unit,
     onEditTextChange: (String) -> Unit,
     onEditTitleChange: (String) -> Unit,
     onCreateCategory: (String) -> Unit,
@@ -785,7 +838,16 @@ private fun EntryDetailScreen(
         contentPadding = PaddingValues(start = 20.dp, top = 20.dp, end = 20.dp, bottom = 36.dp),
         verticalArrangement = Arrangement.spacedBy(13.dp)
     ) {
-        item {
+        error?.let { message ->
+            item(key = "detail_error") {
+                ErrorBanner(message = message, onDismiss = onDismissError)
+            }
+        }
+
+        // Stabile Keys fuer ALLE Items: das bedingte Error-Banner verschob sonst die positionale
+        // Identitaet der folgenden Items — die BasicTextFields verloren beim Erscheinen/
+        // Verschwinden des Banners mitten im Tippen Fokus und Tastatur.
+        item(key = "detail_cats") {
             Row(verticalAlignment = Alignment.Top) {
                 val cats = entry.categories?.takeIf { it.isNotEmpty() } ?: listOfNotNull(entry.category)
                 val canRemove = cats.size > 1
@@ -815,7 +877,7 @@ private fun EntryDetailScreen(
             }
         }
 
-        item {
+        item(key = "detail_title") {
             if (isEditing) {
                 Surface(
                     shape = RoundedCornerShape(14.dp),
@@ -855,7 +917,7 @@ private fun EntryDetailScreen(
             }
         }
 
-        item {
+        item(key = "detail_meta") {
             Text(
                 text = formatEntryTimestamp(entry.updated_at ?: entry.created_at),
                 fontFamily = JetBrainsMono,
@@ -864,7 +926,7 @@ private fun EntryDetailScreen(
             )
         }
 
-        item {
+        item(key = "detail_actions") {
             Column(verticalArrangement = Arrangement.spacedBy(9.dp)) {
                 Row(horizontalArrangement = Arrangement.spacedBy(9.dp)) {
                     DetailButton(
@@ -932,7 +994,7 @@ private fun EntryDetailScreen(
             }
         }
 
-        item {
+        item(key = "detail_body") {
             if (isEditing) {
                 Surface(
                     shape = RoundedCornerShape(14.dp),
@@ -962,8 +1024,10 @@ private fun EntryDetailScreen(
                     color = if (isDark) DarkField else LightField,
                     border = BorderStroke(1.dp, if (isDark) DarkFieldBorder else LightFieldBorder)
                 ) {
+                    // Leseansicht zeigt den GESPEICHERTEN Text (entry.text), nicht den Editor-
+                    // Entwurf — sonst wirkte ein abgebrochener Edit wie gespeichert.
                     Text(
-                        text = editText,
+                        text = entry.text ?: "",
                         modifier = Modifier.padding(15.dp),
                         fontFamily = JetBrainsMono,
                         fontSize = 13.sp,
@@ -1042,7 +1106,10 @@ private fun DetailButton(
 private fun formatEntryTimestamp(raw: String?): String {
     if (raw.isNullOrBlank()) return "Datum unbekannt"
     return try {
-        val normalized = if (raw.endsWith("Z") || raw.contains("+")) raw else raw + "Z"
+        // Offset-Erkennung inkl. NEGATIVER Offsets (-05:00): ein blindes "+Z" darauf ergaebe
+        // einen unparsebaren String und damit den haesslichen Roh-Fallback.
+        val hasOffset = raw.endsWith("Z") || Regex("[+-]\\d{2}:?\\d{2}$").containsMatchIn(raw)
+        val normalized = if (hasOffset) raw else raw + "Z"
         // Server liefert UTC — fuer die Anzeige in die lokale Zeitzone (Europe/Berlin) umrechnen,
         // sonst steht die Uhrzeit 1-2 Stunden falsch da.
         val dt = OffsetDateTime.parse(normalized).atZoneSameInstant(java.time.ZoneId.systemDefault())

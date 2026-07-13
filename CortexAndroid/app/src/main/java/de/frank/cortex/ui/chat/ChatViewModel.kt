@@ -138,8 +138,13 @@ class ChatViewModel : ViewModel() {
     private val pcmPlayer = PcmPlayer()
     private val mp3Player = de.frank.cortex.audio.Mp3Player(de.frank.cortex.CortexApp.appContext)
     private val edgeSynth = de.frank.cortex.audio.EdgeTtsSynthesizer()
+    // speechGeneration/speakJob werden von Main (stopSpeaking/toggleTts) UND vom IO-Thread
+    // (handleDelta -> startStreamingSpeech) mutiert: AtomicInteger + Lock statt plain Int,
+    // sonst konnte ein verlorenes Inkrement den Abbruch-Vergleich aushebeln (gestopptes
+    // Vorlesen sprach weiter bzw. zwei Pipelines ueberlappten).
+    private val speechLock = Any()
     private var speakJob: Job? = null
-    private var speechGeneration = 0
+    private val speechGeneration = java.util.concurrent.atomic.AtomicInteger(0)
     private var lastTitleSource: String? = null
     private var titleAttempt = 0
 
@@ -210,7 +215,13 @@ class ChatViewModel : ViewModel() {
     )
 
     private fun syncUserContextPromptsToServer(prompts: List<UserContextPrompt>, debounceMs: Long = 600L) {
-        if (WireGuardManager.state.value != TunnelState.CONNECTED) return
+        if (WireGuardManager.state.value != TunnelState.CONNECTED) {
+            // Offline-Aenderung vormerken: beim naechsten Connect schiebt syncSizePromptsWithServer
+            // die LOKALEN Prompts zum Server, statt sie vom (alten) Server-Stand ueberschreiben
+            // zu lassen — vorher ging jeder Offline-Edit beim naechsten Start still verloren.
+            SettingsStore.pendingUserContextPromptSync = true
+            return
+        }
         userContextPromptSyncJob?.cancel()
         userContextPromptSyncJob = viewModelScope.launch(Dispatchers.IO) {
             if (debounceMs > 0) delay(debounceMs)
@@ -218,12 +229,17 @@ class ChatViewModel : ViewModel() {
                 ApiClient.agentApi().updateConfig(
                     AgentConfigRequest(user_context_prompts = prompts.map { it.toAgentPrompt() })
                 )
+                SettingsStore.pendingUserContextPromptSync = false
                 CortexLog.info("ChatVM", "syncUserContextPrompts", "Kontext-Prompts zum Server synchronisiert",
                     mapOf("count" to prompts.size))
             } catch (e: CancellationException) {
+                // Scope stirbt mitten im Sync (App-Ende): vormerken, sonst gewinnt beim
+                // naechsten Start der alte Server-Stand und die Aenderung ist weg.
+                SettingsStore.pendingUserContextPromptSync = true
                 throw e
             } catch (e: Exception) {
-                CortexLog.warn("ChatVM", "syncUserContextPrompts", "Kontext-Prompt-Sync fehlgeschlagen: ${e.message}")
+                SettingsStore.pendingUserContextPromptSync = true
+                CortexLog.warn("ChatVM", "syncUserContextPrompts", "Kontext-Prompt-Sync fehlgeschlagen (wird nachgeholt): ${e.message}")
             }
         }
     }
@@ -237,7 +253,25 @@ class ChatViewModel : ViewModel() {
                 // Den App-Start-Abruf gleich als /config-Zwischenspeicher nutzen: die Einstellungen
                 // zeigen die Agenten-Modelle dann beim Oeffnen sofort (Performance 2026-07-12).
                 ApiClient.cacheAgentConfig(cfg)
-                if (cfg.size_prompts_custom || cfg.context_prompts_custom) {
+                // Offline getaetigte lokale Aenderungen haben VORRANG: erst hochschieben, dann
+                // gilt wieder "Server gewinnt". Ohne diese Reihenfolge ueberschrieb der alte
+                // Server-Stand jede Offline-Aenderung still und endgueltig.
+                val pushEditablePrompts = SettingsStore.pendingEditablePromptSync
+                if (pushEditablePrompts) {
+                    ApiClient.agentApi().updateConfig(
+                        AgentConfigRequest(
+                            size_prompt_auto = SettingsStore.responseSizePrompt("auto"),
+                            size_prompt_s = SettingsStore.responseSizePrompt("s"),
+                            size_prompt_m = SettingsStore.responseSizePrompt("m"),
+                            size_prompt_xl = SettingsStore.responseSizePrompt("xl"),
+                            context_prompt_save = SettingsStore.contextPrompt(SettingsStore.CONTEXT_MODE_SAVE),
+                            context_prompt_search = SettingsStore.contextPrompt(SettingsStore.CONTEXT_MODE_SEARCH)
+                        )
+                    )
+                    SettingsStore.pendingEditablePromptSync = false
+                    CortexLog.info("ChatVM", "syncSizePrompts", "Offline geaenderte Modus-/Groessen-Prompts zum Server nachgesendet")
+                }
+                if (!pushEditablePrompts && (cfg.size_prompts_custom || cfg.context_prompts_custom)) {
                     // Server hat gepflegte Prompts -> lokal uebernehmen (Server gewinnt).
                     cfg.size_prompts.forEach { (k, v) ->
                         if (k in setOf("auto", "s", "m", "xl") && v.isNotBlank()) SettingsStore.setResponseSizePrompt(k, v)
@@ -249,7 +283,17 @@ class ChatViewModel : ViewModel() {
                     }
                     CortexLog.info("ChatVM", "syncSizePrompts", "Zentrale Modus- und A/S/M/XL-Prompts vom Server uebernommen")
                 }
-                if (cfg.user_context_prompts_custom) {
+                val pushUserPrompts = SettingsStore.pendingUserContextPromptSync
+                if (pushUserPrompts) {
+                    val localPrompts = SettingsStore.userContextPrompts()
+                    ApiClient.agentApi().updateConfig(
+                        AgentConfigRequest(user_context_prompts = localPrompts.map { it.toAgentPrompt() })
+                    )
+                    SettingsStore.pendingUserContextPromptSync = false
+                    CortexLog.info("ChatVM", "syncSizePrompts", "Offline geaenderte Kontext-Prompts zum Server nachgesendet",
+                        mapOf("count" to localPrompts.size))
+                }
+                if (!pushUserPrompts && cfg.user_context_prompts_custom) {
                     val serverPrompts = cfg.user_context_prompts.map { it.toLocalPrompt() }
                     SettingsStore.setUserContextPrompts(serverPrompts)
                     _uiState.update { it.copy(userContextPrompts = serverPrompts) }
@@ -289,6 +333,10 @@ class ChatViewModel : ViewModel() {
 
     fun toggleRecording() {
         CortexLog.info("ChatVM", "toggleRecording", "toggleRecording aufgerufen, isRecording=${micRecorder.isRecording()}")
+        // Waehrend die Transkription des letzten Stopps laeuft, weitere Tipps ignorieren:
+        // ein schneller Doppel-Tipp startete sonst sofort eine NEUE ungewollte Aufnahme
+        // (der Recorder war schon gestoppt -> Start-Zweig), waehrend die erste noch lief.
+        if (_uiState.value.isTranscribing) return
         if (micRecorder.isRecording()) {
             // Stoppen + transkribieren
             _uiState.update { it.copy(isRecording = false, isTranscribing = true) }
@@ -378,7 +426,12 @@ class ChatViewModel : ViewModel() {
     fun createCategory(name: String) {
         viewModelScope.launch {
             try {
-                if (WireGuardManager.state.value != TunnelState.CONNECTED) return@launch
+                if (WireGuardManager.state.value != TunnelState.CONNECTED) {
+                    // Sichtbares Feedback statt stillem Abbruch: der Nutzer glaubte sonst,
+                    // die Kategorie sei angelegt worden.
+                    _uiState.update { it.copy(error = "VPN nicht aktiv — Kategorie konnte nicht angelegt werden") }
+                    return@launch
+                }
                 ApiClient.agentApi().createCategory(CreateCategoryRequest(name))
                 loadCategories()
                 _uiState.update { it.copy(selectedCategory = name) }
@@ -424,14 +477,20 @@ class ChatViewModel : ViewModel() {
                     // Mutierende Speicher- und Regelauftraege gehen ohne VPN nicht verloren,
                     // sondern werden beim naechsten Tunnel-Aufbau im urspruenglichen Modus gesendet.
                     if (state.contextMode in setOf(SettingsStore.CONTEXT_MODE_SAVE, SettingsStore.CONTEXT_MODE_RULE)) {
+                        // ERST den One-Shot-Modus zuruecksetzen (erhoeht die globale Revision),
+                        // DANN den Auftrag mit der frischen Revision einreihen. Umgekehrt trug
+                        // das Item immer die schon ueberholte Revision und flushOutbox verwarf
+                        // jeden offline gemerkten Regel-Auftrag als "veraltet" — stiller
+                        // Datenverlust trotz gegenteiliger Zusage in der Chat-Notiz.
+                        resetOneShotContextMode(state.contextMode, state.contextModeRevision)
                         val item = de.frank.cortex.data.OutboxItem(
                             id = UUID.randomUUID().toString(),
                             sessionId = sessionId,
                             text = text,
                             category = state.selectedCategory,
-                            title = state.titleOverride.ifBlank { null },
+                            title = state.titleOverride.take(200).ifBlank { null },
                             contextMode = state.contextMode,
-                            contextModeRevision = state.contextModeRevision,
+                            contextModeRevision = SettingsStore.contextModeRevision,
                             responseSize = state.responseSize,
                             requestId = UUID.randomUUID().toString(),
                             createdAt = System.currentTimeMillis()
@@ -454,8 +513,14 @@ class ChatViewModel : ViewModel() {
                                 isUser = false,
                                 action = "outbox"
                             )
-                            _uiState.update { it.copy(isLoading = false, messages = it.messages + notice) }
-                            resetOneShotContextMode(state.contextMode, state.contextModeRevision)
+                            _uiState.update {
+                                if (it.sessionId != sessionId) it.copy(isLoading = false)
+                                else it.copy(isLoading = false, messages = it.messages + notice)
+                            }
+                            // Notiz auch persistieren: nach Session-Wechsel/Neustart stand die
+                            // eigene Nachricht sonst ohne jede Erklaerung in der Historie.
+                            // (Modus-Reset passierte bereits VOR dem Einreihen, siehe oben.)
+                            updateSessionsAfterPersist(sessionId, notice)
                         } else {
                             _uiState.update { it.copy(isLoading = false, error = "VPN nicht aktiv — merken fehlgeschlagen") }
                         }
@@ -469,7 +534,8 @@ class ChatViewModel : ViewModel() {
                     text = text,
                     session_id = sessionId,
                     category = state.selectedCategory,
-                    title = state.titleOverride.ifBlank { null },
+                    // Server validiert title mit max. 200 Zeichen (422 bei mehr).
+                    title = state.titleOverride.take(200).ifBlank { null },
                     context_mode = state.contextMode,
                     context_mode_revision = state.contextModeRevision,
                     context_prompt = buildContextPrompt(state.contextMode, state.responseSize),
@@ -498,11 +564,14 @@ class ChatViewModel : ViewModel() {
                 var ttsChannel: Channel<String>? = null
                 val ttsWanted = SettingsStore.ttsEnabled
 
+                // Vorwaerts-Cursor fuer die Absatzgrenzen-Suche: lastIndexOf ueber den GANZEN
+                // Puffer war bei Antworten ohne "\n\n" (lange Bullet-Listen) O(n) pro Delta und
+                // damit O(n^2) pro Antwort — jetzt wird jede Pufferstelle nur einmal gescannt.
+                var boundaryScanFrom = 0
+
                 fun handleDelta(delta: String) {
-                    // Fuer die Absatzgrenzen-Pruefung unten: eine NEUE "\n\n"-Grenze kann nur
-                    // entstehen, wenn dieses Delta ein '\n' enthaelt oder direkt an ein '\n'
-                    // anschliesst. Nur dann lohnt die lastIndexOf-Suche — vorher lief sie bei
-                    // JEDEM Delta ueber den kompletten Puffer (O(n) pro Delta, O(n^2) pro Antwort).
+                    // Eine NEUE "\n\n"-Grenze kann nur entstehen, wenn dieses Delta ein '\n'
+                    // enthaelt oder direkt an ein '\n' anschliesst.
                     val boundaryPossible = ttsWanted &&
                         (delta.indexOf('\n') >= 0 ||
                             (rawAccum.isNotEmpty() && rawAccum[rawAccum.length - 1] == '\n'))
@@ -520,23 +589,53 @@ class ChatViewModel : ViewModel() {
                             responseTimeMs = firstResponseElapsedMs
                         )
                         streamedMsgId = m.id
-                        _uiState.update { it.copy(messages = it.messages + m, isLoading = false) }
+                        // Nur in die UI haengen, wenn Frank noch in DIESER Session ist — sonst
+                        // erschien die Antwort der alten Frage mitten im neuen/fremden Chat.
+                        _uiState.update {
+                            if (it.sessionId != sessionId) it
+                            else it.copy(messages = it.messages + m, isLoading = false)
+                        }
                     } else {
                         _uiState.update { st ->
-                            st.copy(messages = st.messages.map {
-                                if (it.id == msgId) it.copy(
-                                    text = current,
-                                    responseTimeMs = firstResponseElapsedMs
-                                ) else it
-                            })
+                            when {
+                                st.sessionId != sessionId -> st
+                                // Kehrt Frank WAEHREND des Streams in die Ursprungs-Session
+                                // zurueck, fehlt die Bubble (selectSession laedt aus dem Store,
+                                // wo die Teil-Antwort noch nicht liegt) — dann wieder anhaengen
+                                // statt ins Leere zu mappen.
+                                st.messages.none { it.id == msgId } -> st.copy(
+                                    messages = st.messages + ChatMessage(
+                                        id = msgId,
+                                        text = current,
+                                        isUser = false,
+                                        responseTimeMs = firstResponseElapsedMs
+                                    )
+                                )
+                                else -> st.copy(messages = st.messages.map {
+                                    if (it.id == msgId) it.copy(
+                                        text = current,
+                                        responseTimeMs = firstResponseElapsedMs
+                                    ) else it
+                                })
+                            }
                         }
                     }
                     if (boundaryPossible) {
-                        val boundary = rawAccum.lastIndexOf("\n\n")
+                        var boundary = -1
+                        var idx = rawAccum.indexOf("\n\n", maxOf(spokenUpTo, boundaryScanFrom))
+                        while (idx >= 0) {
+                            boundary = idx
+                            idx = rawAccum.indexOf("\n\n", idx + 2)
+                        }
+                        // Ein '\n' am Pufferende kann mit dem naechsten Delta noch eine Grenze bilden.
+                        boundaryScanFrom = maxOf(0, rawAccum.length - 1)
                         if (boundary > spokenUpTo) {
                             val ready = rawAccum.substring(spokenUpTo, boundary).trim()
                             spokenUpTo = boundary + 2
-                            if (ready.isNotBlank()) {
+                            // LIVE pruefen (nicht nur den Sende-Beginn-Snapshot ttsWanted):
+                            // schaltet Frank das Vorlesen aus, BEVOR der erste Absatz fertig
+                            // ist, darf hier keine neue Vorlese-Pipeline mehr starten.
+                            if (ready.isNotBlank() && SettingsStore.ttsEnabled) {
                                 val ch = ttsChannel ?: startStreamingSpeech().also { ttsChannel = it }
                                 ch.trySend(localTtsClean(ready))
                             }
@@ -563,7 +662,9 @@ class ChatViewModel : ViewModel() {
                                 "events" to (streamFailure?.anyEventReceived ?: false),
                                 "same_request_id" to true))
                         ttsChannel = null
-                        ApiClient.agentApi().chat(request)
+                        // Fallback-Client mit 600s-Dach: /chat sendet bis zur fertigen Antwort
+                        // KEIN Byte — lange Server-Laeufe sprengten das 120s-readTimeout.
+                        ApiClient.agentChatFallbackApi().chat(request)
                     } else {
                         throw e
                     }
@@ -584,8 +685,13 @@ class ChatViewModel : ViewModel() {
                 )
 
                 _uiState.update { st ->
-                    st.copy(
-                        messages = if (existingId != null)
+                    // Session-Guard: Antwort nur in die UI der URSPRUNGS-Session haengen —
+                    // persistiert wird sie unten ohnehin korrekt dorthin. Fehlt die Streaming-
+                    // Bubble (Session zwischenzeitlich verlassen und wieder geoeffnet), wird
+                    // die finale Antwort ANGEHAENGT statt ins Leere gemappt.
+                    if (st.sessionId != sessionId) st
+                    else st.copy(
+                        messages = if (existingId != null && st.messages.any { it.id == existingId })
                             st.messages.map { if (it.id == existingId) agentMsg else it }
                         else
                             st.messages + agentMsg,
@@ -604,7 +710,10 @@ class ChatViewModel : ViewModel() {
                         isUser = false,
                         action = "context_limit"
                     )
-                    _uiState.update { it.copy(messages = it.messages + notice) }
+                    _uiState.update {
+                        if (it.sessionId != sessionId) it
+                        else it.copy(messages = it.messages + notice)
+                    }
                     updateSessionsAfterPersist(sessionId, notice)
                 }
 
@@ -691,20 +800,17 @@ class ChatViewModel : ViewModel() {
                 CortexLog.info("ChatVM", "outboxFlush", "Sende gemerkte Speicher-Auftraege", mapOf("count" to items.size))
                 for (item in items) {
                     if (WireGuardManager.state.value != TunnelState.CONNECTED) break
-                    if (item.contextMode == SettingsStore.CONTEXT_MODE_RULE &&
-                        item.contextModeRevision != SettingsStore.contextModeRevision
-                    ) {
-                        withContext(Dispatchers.IO) { ChatSessionStore.deleteOutboxItem(item.id) }
-                        CortexLog.info(
-                            "ChatVM", "outboxFlush",
-                            "Veralteten Regel-Auftrag nach Moduswechsel verworfen",
-                            mapOf("queued_revision" to item.contextModeRevision,
-                                "current_revision" to SettingsStore.contextModeRevision)
-                        )
-                        continue
-                    }
+                    // BEWUSST KEINE Revisions-Pruefung mehr: Der globale Revisionszaehler steigt
+                    // bei JEDEM Moduswechsel (auch dem Auto-Reset nach dem Einreihen) — der
+                    // fruehere Gleichheits-Vergleich verwarf damit praktisch jeden gemerkten
+                    // Regel-Auftrag als "veraltet" (stiller Datenverlust trotz Chat-Zusage).
+                    // Ein eingereihtes Item IST ein bestaetigter Sende-Wunsch; die Bindung von
+                    // Regel-BESTAETIGUNGEN an den unveraenderten R-Modus macht der Server selbst
+                    // (context_mode_revision im Request bleibt dafuer erhalten).
                     try {
-                        val response = ApiClient.agentApi().chat(
+                        // Fallback-Client (600s-Dach): auch Outbox-Auftraege koennen serverseitig
+                        // lange laufen — das 120s-readTimeout des Standard-Clients riss sonst ab.
+                        val response = ApiClient.agentChatFallbackApi().chat(
                             ChatRequest(
                                 text = item.text,
                                 session_id = item.sessionId,
@@ -720,7 +826,24 @@ class ChatViewModel : ViewModel() {
                                 memory_categories = item.memoryCategories
                             )
                         )
-                        check(response.action != "error") { response.reply.ifBlank { "Server hat den Speicherauftrag nicht bestätigt" } }
+                        if (response.action == "error") {
+                            // Server hat den Auftrag verarbeitet und ABGELEHNT: erneutes Senden
+                            // schluege deterministisch wieder fehl — die Poison-Message blockierte
+                            // frueher fuer immer ALLE nachfolgenden Auftraege (break ohne Verwerfen).
+                            withContext(Dispatchers.IO) { ChatSessionStore.deleteOutboxItem(item.id) }
+                            val failNotice = ChatMessage(
+                                text = "❌ Gemerkter Auftrag wurde vom Server abgelehnt und verworfen: ${response.reply.ifBlank { "unbekannter Grund" }}",
+                                isUser = false,
+                                action = "outbox_error"
+                            )
+                            updateSessionsAfterPersist(item.sessionId, failNotice)
+                            if (_uiState.value.sessionId == item.sessionId) {
+                                _uiState.update { it.copy(messages = it.messages + failNotice) }
+                            }
+                            CortexLog.warn("ChatVM", "outboxFlush", "Auftrag vom Server abgelehnt — verworfen",
+                                mapOf("session_id" to item.sessionId))
+                            continue
+                        }
                         val agentMsg = response.toChatMessage()
                         updateSessionsAfterPersist(item.sessionId, agentMsg)
                         // Ist die betroffene Session gerade offen: Antwort auch live anzeigen.
@@ -840,7 +963,9 @@ class ChatViewModel : ViewModel() {
             _uiState.update { it.copy(error = "Prompt ist leer") }
             return
         }
-        val updated = SettingsStore.userContextPrompts() + UserContextPrompt(
+        // UI-State ist die Quelle (nicht der Store): waehrend ein Tipp-Debounce laeuft, ist der
+        // Store veraltet — ein Lesen von dort haette den gerade getippten Text verworfen.
+        val updated = _uiState.value.userContextPrompts + UserContextPrompt(
             id = UUID.randomUUID().toString(),
             text = trimmed,
             enabled = true,
@@ -859,17 +984,27 @@ class ChatViewModel : ViewModel() {
         )
     }
 
+    private var promptPersistJob: Job? = null
+
     fun updateUserContextPrompt(id: String, text: String) {
-        val updated = SettingsStore.userContextPrompts().map {
+        // Pro TASTENDRUCK nur den UI-State aktualisieren; die JSON-Serialisierung der ganzen
+        // Liste in die SharedPreferences (+ Server-Sync) laeuft entprellt hinterher — vorher
+        // ruckelte die Eingabe bei mehreren langen Prompts spuerbar.
+        val updated = _uiState.value.userContextPrompts.map {
             if (it.id == id) it.copy(text = text) else it
         }
-        SettingsStore.setUserContextPrompts(updated)
         _uiState.update { it.copy(userContextPrompts = updated) }
-        syncUserContextPromptsToServer(updated)
+        promptPersistJob?.cancel()
+        promptPersistJob = viewModelScope.launch {
+            delay(400)
+            val current = _uiState.value.userContextPrompts
+            SettingsStore.setUserContextPrompts(current)
+            syncUserContextPromptsToServer(current, debounceMs = 0L)
+        }
     }
 
     fun toggleUserContextPrompt(id: String, enabled: Boolean) {
-        val updated = SettingsStore.userContextPrompts().map {
+        val updated = _uiState.value.userContextPrompts.map {
             if (it.id == id) it.copy(enabled = enabled) else it
         }
         SettingsStore.setUserContextPrompts(updated)
@@ -878,7 +1013,7 @@ class ChatViewModel : ViewModel() {
     }
 
     fun improveUserContextPrompt(id: String) {
-        val prompt = SettingsStore.userContextPrompts().firstOrNull { it.id == id } ?: return
+        val prompt = _uiState.value.userContextPrompts.firstOrNull { it.id == id } ?: return
         val original = prompt.text.trim()
         if (original.isBlank()) {
             _uiState.update { it.copy(error = "Prompt ist leer") }
@@ -904,7 +1039,7 @@ class ChatViewModel : ViewModel() {
                 """.trimIndent()
                 val improved = withContext(Dispatchers.IO) { ApiClient.geminiImprove(original, extra) }.trim()
                 if (improved.isBlank()) throw IllegalStateException("Gemini hat leeren Text zurückgegeben")
-                val updated = SettingsStore.userContextPrompts().map {
+                val updated = _uiState.value.userContextPrompts.map {
                     if (it.id == id) it.copy(text = improved, originalText = it.originalText ?: original) else it
                 }
                 SettingsStore.setUserContextPrompts(updated)
@@ -933,7 +1068,7 @@ class ChatViewModel : ViewModel() {
     }
 
     fun restoreUserContextPromptOriginal(id: String) {
-        val prompts = SettingsStore.userContextPrompts()
+        val prompts = _uiState.value.userContextPrompts
         val prompt = prompts.firstOrNull { it.id == id } ?: return
         val original = prompt.originalText?.trim().orEmpty()
         if (original.isBlank()) {
@@ -947,7 +1082,7 @@ class ChatViewModel : ViewModel() {
     }
 
     fun deleteUserContextPrompt(id: String) {
-        val updated = SettingsStore.userContextPrompts().filterNot { it.id == id }
+        val updated = _uiState.value.userContextPrompts.filterNot { it.id == id }
         SettingsStore.setUserContextPrompts(updated)
         _uiState.update { it.copy(userContextPrompts = updated) }
         syncUserContextPromptsToServer(updated, debounceMs = 0L)
@@ -1020,7 +1155,7 @@ class ChatViewModel : ViewModel() {
                 }
 
                 val response = withContext(Dispatchers.IO) {
-                    ApiClient.agentApi().chat(
+                    ApiClient.agentChatFallbackApi().chat(
                         ChatRequest(
                             text = text,
                             session_id = sessionId,
@@ -1039,7 +1174,8 @@ class ChatViewModel : ViewModel() {
                 }
                 val agentMsg = response.toChatMessage()
                 _uiState.update { st ->
-                    st.copy(
+                    if (st.sessionId != sessionId) st.copy(isLoading = false)
+                    else st.copy(
                         messages = st.messages + agentMsg,
                         isLoading = false,
                         titleOverride = if (response.action == "store") "" else st.titleOverride
@@ -1402,9 +1538,11 @@ class ChatViewModel : ViewModel() {
 
     /** Bricht laufendes Vorlesen sofort ab (Lautsprecher-Knopf). */
     fun stopSpeaking() {
-        speechGeneration++
-        speakJob?.cancel()
-        speakJob = null
+        synchronized(speechLock) {
+            speechGeneration.incrementAndGet()
+            speakJob?.cancel()
+            speakJob = null
+        }
         pcmPlayer.stop()
         mp3Player.stop()
         _uiState.update { it.copy(isSpeaking = false, speakingMessageId = null) }
@@ -1412,9 +1550,23 @@ class ChatViewModel : ViewModel() {
 
     override fun onCleared() {
         super.onCleared()
-        speakJob?.cancel()
+        // Ausstehende Prompt-Persistenz noch sichern (Debounce-Job stirbt gleich mit dem Scope)
+        // und den Server-Sync vormerken — sonst ueberschrieb der alte Server-Stand die letzte
+        // lokale Aenderung beim naechsten Start still.
+        if (promptPersistJob?.isActive == true) {
+            promptPersistJob?.cancel()
+            SettingsStore.setUserContextPrompts(_uiState.value.userContextPrompts)
+            SettingsStore.pendingUserContextPromptSync = true
+        }
+        synchronized(speechLock) {
+            speakJob?.cancel()
+            speakJob = null
+        }
         pcmPlayer.stop()
         mp3Player.stop()
+        // Laufende Aufnahme freigeben: sonst blieb das Mikrofon (inkl. gruenem Privacy-
+        // Indikator) nach dem App-Ende bis zum Prozess-Tod belegt.
+        micRecorder.release()
     }
 
     fun clearError() {
@@ -1424,11 +1576,18 @@ class ChatViewModel : ViewModel() {
     private fun speakResponse(text: String, messageId: String? = null) {
         val spokenText = ChatSpeechSanitizer.clean(text)
         if (spokenText.isBlank()) return
-        speechGeneration++
-        val generation = speechGeneration
-        speakJob?.cancel()
-        speakJob = viewModelScope.launch {
+        val generation: Int
+        synchronized(speechLock) {
+            generation = speechGeneration.incrementAndGet()
+            speakJob?.cancel()
+            speakJob = viewModelScope.launch {
             _uiState.update { it.copy(isSpeaking = true, speakingMessageId = messageId) }
+            // BEIDE Player defensiv stoppen: die alte Generation raeumt wegen des Generation-
+            // Guards im finally nichts auf — lief sie auf dem JEWEILS ANDEREN Motor (Provider-
+            // Wechsel Chirp<->Edge), stoppte ihn sonst niemand und ein AudioTrack blieb
+            // ungereleased im PLAYING-Zustand haengen.
+            pcmPlayer.stop()
+            mp3Player.stop()
             // Frischer Session-Start: alten Rate-Limit-Zaun/Flag zuruecksetzen, sonst wuerde eine
             // vorige (erschoepfte) Session diese sofort faelschlich bremsen/abbrechen.
             ttsRateLimitedUntil = 0L
@@ -1481,7 +1640,7 @@ class ChatViewModel : ViewModel() {
                     chunks.forEachIndexed { index, chunk ->
                         val audio = pending.remove(index)?.await()
                         enqueue(index + TTS_PREFETCH_AHEAD + 1)
-                        if (speechGeneration != generation) {
+                        if (speechGeneration.get() != generation) {
                             cancelPending()
                             return@coroutineScope
                         }
@@ -1539,11 +1698,12 @@ class ChatViewModel : ViewModel() {
             } catch (e: Exception) {
                 CortexLog.error("ChatVM", "speakResponse", "TTS fehlgeschlagen: ${e.message}")
             } finally {
-                if (speechGeneration == generation) {
+                if (speechGeneration.get() == generation) {
                     pcmPlayer.stop()
                     mp3Player.stop()
                     _uiState.update { it.copy(isSpeaking = false, speakingMessageId = null) }
                 }
+            }
             }
         }
     }
@@ -1555,12 +1715,16 @@ class ChatViewModel : ViewModel() {
      * Synthese laeuft dem Abspielen ueber einen kleinen Audio-Puffer voraus (Prefetch wie speakResponse).
      */
     private fun startStreamingSpeech(): Channel<String> {
-        speechGeneration++
-        val generation = speechGeneration
-        speakJob?.cancel()
         val textChannel = Channel<String>(Channel.UNLIMITED)
-        speakJob = viewModelScope.launch {
+        val generation: Int
+        synchronized(speechLock) {
+            generation = speechGeneration.incrementAndGet()
+            speakJob?.cancel()
+            speakJob = viewModelScope.launch {
             _uiState.update { it.copy(isSpeaking = true, speakingMessageId = null) }
+            // Defensiv beide Player stoppen (Provider-Wechsel-Leck, siehe speakResponse).
+            pcmPlayer.stop()
+            mp3Player.stop()
             ttsRateLimitedUntil = 0L
             ttsRateLimitExhausted = false
             ttsAccessDenied = false
@@ -1598,7 +1762,7 @@ class ChatViewModel : ViewModel() {
                     var playIndex = 0
                     for (audio in audioChannel) {
                         val currentIndex = playIndex++
-                        if (speechGeneration != generation) break
+                        if (speechGeneration.get() != generation) break
                         if (audio == null || audio.isEmpty()) {
                             if (ttsAccessDenied) {
                                 _uiState.update { it.copy(error = "Vorlesen nicht möglich: Cloud Text-to-Speech API ist für deinen Schlüssel nicht freigeschaltet.") }
@@ -1629,11 +1793,12 @@ class ChatViewModel : ViewModel() {
                 CortexLog.error("ChatVM", "streamSpeech", "Streaming-TTS fehlgeschlagen: ${e.message}")
             } finally {
                 textChannel.close()
-                if (speechGeneration == generation) {
+                if (speechGeneration.get() == generation) {
                     pcmPlayer.stop()
                     mp3Player.stop()
                     _uiState.update { it.copy(isSpeaking = false, speakingMessageId = null) }
                 }
+            }
             }
         }
         return textChannel
@@ -1648,7 +1813,23 @@ class ChatViewModel : ViewModel() {
             .filter { it.enabled && it.text.isNotBlank() }
             .mapIndexed { index, prompt -> "Zusatz-Prompt ${index + 1}:\n${prompt.text.trim()}" }
             .joinToString("\n\n")
-        return listOf(modePrompt, sizePrompt, activeUserPrompts).filter { it.isNotBlank() }.joinToString("\n\n").ifBlank { null }
+        val combined = listOf(modePrompt, sizePrompt, activeUserPrompts)
+            .filter { it.isNotBlank() }
+            .joinToString("\n\n")
+            .ifBlank { return null }
+        // Server lehnt context_prompt > limits.agent.context_prompt_max_chars HART mit 422 ab
+        // (bewusst keine serverseitige Kuerzung) — ohne lokalen Deckel machten zwei bis drei
+        // laengere aktive Zusatz-Prompts JEDE Chat-Nachricht kaputt ("HTTP 422").
+        // KEIN kuenstlicher Mindestwert: der Server akzeptiert auch kleinere konfigurierte
+        // Limits — ein Client-Floor ueber dem Server-Limit erzeugte genau die 422er, die die
+        // Kappung verhindern soll.
+        val maxChars = (ApiClient.cachedAgentConfig()?.limits?.agent?.context_prompt_max_chars ?: 4000)
+            .coerceAtLeast(0)
+        if (combined.length > maxChars) {
+            CortexLog.warn("ChatVM", "buildContextPrompt",
+                "Kontext-Prompt auf $maxChars Zeichen gekappt (war ${combined.length})")
+        }
+        return combined.take(maxChars)
     }
 
     private suspend fun synthesizeTtsChunk(chunk: String, voice: String, index: Int): ByteArray? {
@@ -1696,8 +1877,6 @@ class ChatViewModel : ViewModel() {
                     return null
                 }
                 delay(backoff)
-            } catch (e: CancellationException) {
-                throw e
             } catch (e: Exception) {
                 lastError = e.message
                 contentAttempts++

@@ -1489,13 +1489,24 @@ _BARE_DOMAIN_RE = re.compile(
     r"\b(?:[a-z0-9](?:[a-z0-9-]{0,62}[a-z0-9])?\.)+(?:de|com|org|net|eu|info|io|ai|co\.uk)\b[^\s<>()]*",
     re.IGNORECASE,
 )
-_TRAILING_SOURCES_RE = re.compile(
-    r"^\s*(?:quellen?|sources?|references?|weiterf(?:ü|ue)hrende\s+links?)\s*:?.*$",
-    re.IGNORECASE | re.MULTILINE | re.DOTALL,
+# Quellen-BLOCK (reine Ueberschrift-Zeile wie "Quellen:") bis zum Textende entfernen.
+# Frueher matchte hier auch "Quellensteuer..." (keine Wortgrenze!) und loeschte per DOTALL
+# die KOMPLETTE Antwort; eine Quellen-Zeile MITTEN im Text riss zudem alle Folgeabsaetze mit.
+# Jetzt: Block-Loescher nur bei reiner Ueberschrift-Zeile, Inline-Zeile loescht nur sich selbst.
+# (Identische Logik wie ChatSpeechSanitizer.kt in der Android-App, 2026-07-14.)
+_TRAILING_SOURCES_BLOCK_RE = re.compile(
+    r"(?:^|\n)\s*(?:quellen?|sources?|references?|weiterf(?:ü|ue)hrende\s+links?)\s*:?\s*(?:\n|$).*\Z",
+    re.IGNORECASE | re.DOTALL,
+)
+_INLINE_SOURCES_LINE_RE = re.compile(
+    r"^[ \t]*(?:quellen?|sources?|references?|weiterf(?:ü|ue)hrende\s+links?)\s*:[^\n]*$",
+    re.IGNORECASE | re.MULTILINE,
 )
 _SOURCE_ATTRIBUTION_TAIL_RE = re.compile(
+    # Nur ":"-Formen ODER die SINGULAR-Kopula ("Quelle ist/war ..."): die fruehere optionale
+    # Gruppe frass auch normale Inhaltssaetze wie "Quellen sind Materialien, aus denen ...".
     r"(?:^|(?<=[.!?]))[ \t]*(?:[-–—]\s*)?"
-    r"(?:quelle(?:n)?|sources?|references?)\s*(?::|ist|sind|war|waren)?\s+[^\n]*",
+    r"(?:(?:quelle(?:n)?|sources?|references?)\s*:|(?:quelle|source)\s+(?:ist|war|is|was))\s+[^\n]*",
     re.IGNORECASE | re.MULTILINE,
 )
 _ARTICLE_SOURCE_ATTRIBUTION_RE = re.compile(
@@ -1539,7 +1550,8 @@ def _sanitize_visible_reply(text: str) -> str:
     if not text:
         return text
     t = _INTERNAL_OUTPUT_INSTRUCTION_RE.sub("", text)
-    t = _TRAILING_SOURCES_RE.sub("", t)
+    t = _TRAILING_SOURCES_BLOCK_RE.sub("", t)
+    t = _INLINE_SOURCES_LINE_RE.sub("", t)
     t = _ARTICLE_SOURCE_ATTRIBUTION_RE.sub("", t)
     t = _MD_WEB_LINK_RE.sub(r"\1", t)
     t = _BARE_WEB_URL_RE.sub(_remove_bare_web_url, t)
@@ -3652,20 +3664,27 @@ def save_agent_limits(update: dict[str, Any]) -> dict[str, int]:
         return clean
 
 
-def get_brain_limits() -> dict:
+def get_brain_limits() -> dict | None:
+    """None = brain-api gerade nicht erreichbar. Bewusst NICHT {} zurueckgeben: Ein leeres
+    Dict fuellte die Android-App still mit ihren eigenen Default-Werten, zeigte sie als
+    vermeintlichen Server-Stand an und schrieb sie beim naechsten Limits-Speichern zurueck —
+    Franks tatsaechlich konfigurierte Brain-Limits gingen dabei verloren (Lost Update)."""
     try:
         r = _HTTP.get(f"{BRAIN_URL}/limits", headers=HEADERS, timeout=8.0)
         if r.status_code == 200:
             data = r.json()
-            return data.get("limits") if isinstance(data.get("limits"), dict) else {}
+            return data.get("limits") if isinstance(data.get("limits"), dict) else None
         _log(logging.WARNING, "Brain-API-Limits nicht ladbar", status=r.status_code)
     except Exception as e:  # noqa: BLE001
         _log(logging.WARNING, "Brain-API-Limits nicht erreichbar", err=f"{type(e).__name__}: {e}")
-    return {}
+    return None
 
 
 def save_brain_limits(update: dict[str, Any]) -> dict:
-    r = _HTTP.put(f"{BRAIN_URL}/limits", json={"limits": update}, headers=HEADERS, timeout=15.0)
+    try:
+        r = _HTTP.put(f"{BRAIN_URL}/limits", json={"limits": update}, headers=HEADERS, timeout=15.0)
+    except Exception as e:  # noqa: BLE001 — Netzwerkfehler als sauberes 502 statt unbehandeltem 500
+        raise HTTPException(status_code=502, detail=f"Brain-API-Limits nicht gespeichert: {type(e).__name__}") from e
     if r.status_code != 200:
         raise HTTPException(status_code=502, detail=f"Brain-API-Limits nicht gespeichert: HTTP {r.status_code}")
     data = r.json()
@@ -5250,7 +5269,10 @@ IMPROVE_SYSTEM = (
 def health() -> dict:
     brain = "unreachable"
     try:
-        r = _HTTP.get(f"{BRAIN_URL}/health", timeout=8.0)
+        # 3 s statt 8 s: das Dashboard fragt diesen Endpunkt mit 5 s (vitals) bzw. 8 s (overview)
+        # Timeout ab — ein laengerer innerer Brain-Check liess /health insgesamt >5 s dauern und
+        # die Agent-Kachel flackerte faelschlich auf "offline", obwohl nur brain langsam war.
+        r = _HTTP.get(f"{BRAIN_URL}/health", timeout=3.0)
         brain = r.json().get("status", "?") if r.status_code == 200 else f"http {r.status_code}"
     except Exception as e:  # noqa: BLE001
         brain = f"{type(e).__name__}"
@@ -6151,13 +6173,24 @@ def codex_auth_poll(req: CodexAuthPollReq) -> dict:
     if time.time() > pending["expires_at"]:
         _codex_pending.pop(req.auth_id, None)
         return {"ok": False, "status": "expired", "connected": codex_connected()}
-    poll = _HTTP.post(
-        f"{CODEX_AUTH_ISSUER}/api/accounts/deviceauth/token",
-        json={"device_auth_id": pending["device_auth_id"], "user_code": pending["user_code"]},
-        headers={"Content-Type": "application/json"},
-        timeout=15.0,
-    )
+    try:
+        poll = _HTTP.post(
+            f"{CODEX_AUTH_ISSUER}/api/accounts/deviceauth/token",
+            json={"device_auth_id": pending["device_auth_id"], "user_code": pending["user_code"]},
+            headers={"Content-Type": "application/json"},
+            timeout=15.0,
+        )
+    except Exception as e:  # noqa: BLE001
+        # Netzwerkfehler beim Poll ist TRANSIENT: weiterpollen lassen statt HTTP 500,
+        # das den Verbindungsassistenten der App hart abbrach.
+        _log(logging.WARNING, "Codex-Poll transient fehlgeschlagen", err=f"{type(e).__name__}: {e}")
+        return {"ok": True, "status": "pending", "connected": False}
     if poll.status_code in {403, 404}:
+        return {"ok": True, "status": "pending", "connected": False}
+    if poll.status_code == 429 or poll.status_code >= 500:
+        # OpenAI drosselt/stolpert gerade: fuer den Client ist das "noch nicht fertig",
+        # kein Abbruchgrund (vorher: raise_for_status -> HTTP 500 -> Assistent brach ab).
+        _log(logging.WARNING, "Codex-Poll vom Auth-Server gedrosselt/gestoert", status=poll.status_code)
         return {"ok": True, "status": "pending", "connected": False}
     poll.raise_for_status()
     code_data = poll.json()

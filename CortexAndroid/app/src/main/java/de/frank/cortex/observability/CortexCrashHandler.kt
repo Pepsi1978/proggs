@@ -19,6 +19,9 @@ class CortexCrashHandler(
                 trace = throwable.stackTraceToString()
             )
             Log.e(CortexLog.TAG, "ABSTURZ", throwable)
+            // Synchron flushen: der Default-Handler killt den Prozess gleich — der Crash-Eintrag
+            // laege sonst noch in der asynchronen Schreib-Queue und ginge verloren.
+            CortexLog.flushBlocking(2000)
         } catch (_: Exception) {
             // Logging darf den Crash-Handler nie selbst crashen
         }

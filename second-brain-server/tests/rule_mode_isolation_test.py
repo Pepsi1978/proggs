@@ -43,9 +43,15 @@ def main() -> int:
     check('pending.get("mode_revision", -1)' in agent and "context_mode_revision" in dashboard_app and
           "chatModeRevision" in dashboard_html and "contextModeRevision" in viewmodel,
           "Dashboard, Android und Server binden Regelbestätigungen an dieselbe Modus-Revision")
-    check("item.contextModeRevision != SettingsStore.contextModeRevision" in viewmodel and
-          '"Veralteten Regel-Auftrag nach Moduswechsel verworfen"' in viewmodel,
-          "Android verwirft veraltete R-Outbox-Einträge vor dem Flush")
+    # Seit 2026-07-14 verwirft der Android-Flush Outbox-Eintraege NICHT mehr per Revisions-
+    # Vergleich: der globale Zaehler stieg bei JEDEM Moduswechsel (auch dem Auto-Reset direkt
+    # nach dem Einreihen) und loeschte gemerkte Regel-Auftraege still — trotz gegenteiliger
+    # Chat-Zusage. Ein eingereihtes Item ist ein bestaetigter Sende-Wunsch; die Bindung von
+    # Regel-BESTAETIGUNGEN an die Modus-Revision erzwingt der Server selbst (mode_revision).
+    check("BEWUSST KEINE Revisions-Pruefung mehr" in viewmodel and
+          "context_mode_revision = item.contextModeRevision" in viewmodel and
+          '"Veralteten Regel-Auftrag nach Moduswechsel verworfen"' not in viewmodel,
+          "Android sendet gemerkte R-Outbox-Aufträge zuverlässig nach (kein stilles Verwerfen)")
     session_store = (REPO / "CortexAndroid" / "app" / "src" / "main" / "java" / "de" / "frank" / "cortex" / "data" / "ChatSessionStore.kt").read_text(encoding="utf-8")
     check('val options: List<ChatOption> = emptyList()' in session_store and
           'put("options", encodeOptions(message.options))' in session_store and

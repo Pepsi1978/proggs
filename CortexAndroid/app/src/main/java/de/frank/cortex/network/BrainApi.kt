@@ -26,11 +26,13 @@ interface BrainApi {
         @Query("user_id") userId: String = "frank"
     ): EntriesResponse
 
+    // Eigenes Modell: /by-title antwortet bei found=false OHNE doc_id — BrainEntry (doc_id
+    // pflicht) haette beim ersten echten Aufruf mit JsonDataException versagt.
     @GET("/by-title")
     suspend fun byTitle(
         @Query("title") title: String,
         @Query("user_id") userId: String = "frank"
-    ): BrainEntry
+    ): ByTitleResponse
 
     @PUT("/entry")
     suspend fun updateEntry(@Body request: UpdateEntryRequest): SimpleResponse

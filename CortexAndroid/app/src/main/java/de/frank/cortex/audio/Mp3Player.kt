@@ -26,19 +26,21 @@ class Mp3Player(private val context: Context) {
     @Volatile private var playing = false
     private var counter = 0
 
+    // stop() muss einen wartenden playAndAwait-Aufrufer AUFWECKEN: MediaPlayer.stop()+release()
+    // feuert weder onCompletion noch onError — die geparkte Coroutine hing sonst fuer immer
+    // (und ihr finally mit dem Temp-Datei-Delete lief nie).
+    @Volatile private var finishActive: (() -> Unit)? = null
+
     suspend fun playAndAwait(mp3Data: ByteArray, speed: Float = 1.0f) {
         if (mp3Data.isEmpty()) return
         stop() // evtl. Reste sicher beenden
 
         // MediaPlayer braucht eine Datei-/FD-Quelle. Pro Haeppchen eine eigene Temp-Datei, damit
-        // sich aufeinanderfolgende Haeppchen nicht in die Quere kommen.
-        val file = withContext(Dispatchers.IO) {
-            val f = File(context.cacheDir, "edge_tts_${counter++}.mp3")
-            f.writeBytes(mp3Data)
-            f
-        }
-
+        // sich aufeinanderfolgende Haeppchen nicht in die Quere kommen. Pfad VOR dem try bilden,
+        // Delete im finally — so bleibt auch bei Cancel WAEHREND des Schreibens nichts liegen.
+        val file = File(context.cacheDir, "edge_tts_${counter++}.mp3")
         try {
+            withContext(Dispatchers.IO) { file.writeBytes(mp3Data) }
             suspendCancellableCoroutine<Unit> { cont ->
                 val mp = MediaPlayer()
                 player = mp
@@ -50,6 +52,7 @@ class Mp3Player(private val context: Context) {
                         if (cont.isActive) cont.resume(Unit)
                     }
                 }
+                finishActive = { finishOnce() }
                 try {
                     mp.setDataSource(file.absolutePath)
                     mp.setOnPreparedListener {
@@ -60,7 +63,12 @@ class Mp3Player(private val context: Context) {
                         } catch (e: Exception) {   // no-cancellation-rethrow (kein suspend im try)
                             CortexLog.warn("Mp3Player", "playAndAwait", "Tempo nicht setzbar: ${e.message}")
                         }
-                        mp.start()
+                        try {
+                            mp.start()
+                        } catch (e: Exception) {   // Player zwischen prepare und Callback gestoppt/released
+                            CortexLog.warn("Mp3Player", "playAndAwait", "start nach prepare nicht möglich: ${e.message}")
+                            finishOnce()
+                        }
                     }
                     mp.setOnCompletionListener { finishOnce() }
                     mp.setOnErrorListener { _, what, extra ->
@@ -79,6 +87,7 @@ class Mp3Player(private val context: Context) {
                 }
             }
         } finally {
+            finishActive = null
             try { player?.release() } catch (_: Exception) {}
             player = null
             playing = false
@@ -86,13 +95,14 @@ class Mp3Player(private val context: Context) {
         }
     }
 
-    /** Bricht laufende Wiedergabe SOFORT ab. */
+    /** Bricht laufende Wiedergabe SOFORT ab und weckt einen wartenden playAndAwait-Aufrufer. */
     fun stop() {
         playing = false
         val p = player
         player = null
         try { p?.stop() } catch (_: Exception) {}
         try { p?.release() } catch (_: Exception) {}
+        finishActive?.invoke()
     }
 
     fun isPlaying(): Boolean = playing

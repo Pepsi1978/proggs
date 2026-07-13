@@ -30,7 +30,16 @@ object WireGuardManager {
     private var backend: GoBackend? = null
     private var tunnel: Tunnel? = null
     private var config: Config? = null
-    private var lastError: String? = null
+    // @Volatile: wird von IO-Threads geschrieben und vom Main-Thread (UI) gelesen.
+    @Volatile private var lastError: String? = null
+    // Verhindert PARALLELE connect-Läufe (Doppel-Tap auf die Pill im CONNECTING-Zustand,
+    // VPN-Toggle + onStart-Trigger): zwei konkurrierende backend.setState(UP) racen sonst
+    // auf _state/lastError und der zweite kann den ersten faelschlich auf ERROR setzen.
+    private val connectInFlight = java.util.concurrent.atomic.AtomicBoolean(false)
+    // disconnect() waehrend eines laufenden Connect-Versuchs (z.B. Tipp auf "Verbinde…" = Abbruch
+    // oder App geht in den Hintergrund): ohne dieses Signal fuehrte der Retry nach dem delay(500)
+    // den Aufbau trotzdem zu Ende und ueberschrieb den gewollten Disconnect (Tunnel blieb an).
+    @Volatile private var abortConnect = false
 
     private val tunnelImpl = object : Tunnel {
         override fun getName(): String = "cortex"
@@ -54,6 +63,22 @@ object WireGuardManager {
             _state.value = TunnelState.ERROR
             lastError = e.message
         }
+    }
+
+    /** Reine VALIDIERUNG ohne Seiteneffekt — ersetzt NICHT die aktive Konfiguration.
+     *  (parseConfig uebernahm frueher bei jedem parsebaren Tipp-Zwischenstand im Settings-
+     *  Editor sofort die aktive Tunnel-Config.) */
+    fun validateConfig(configText: String): Boolean = try {
+        Config.parse(BufferedReader(StringReader(configText)))
+        true
+    } catch (_: Exception) {   // no-cancellation-rethrow (kein suspend im try)
+        false
+    }
+
+    /** Entfernt die aktive Konfiguration (z.B. wenn Frank die Config in den Settings loescht). */
+    fun clearConfig() {
+        config = null
+        CortexLog.info("WireGuard", "clearConfig", "Konfiguration entfernt")
     }
 
     fun parseConfig(configText: String): Boolean {
@@ -86,6 +111,20 @@ object WireGuardManager {
      * VORAUSSETZUNG: Die Android-VPN-Erlaubnis ist erteilt (MainActivity ruft VpnService.prepare).
      */
     fun connect() {
+        // Ohne erteilte Android-VPN-Erlaubnis wuerde setState(UP) nur kryptisch scheitern.
+        // Der Consent-Dialog kann nur aus der MainActivity gestartet werden (VpnService.prepare
+        // + Activity-Result) — Aufrufer ohne Activity (z.B. "VPN aktivieren"-Overlay) bekommen
+        // hier eine KLARE Meldung statt "Verbindungsfehler: unbekannt".
+        try {
+            if (android.net.VpnService.prepare(de.frank.cortex.CortexApp.appContext) != null) {
+                lastError = "VPN-Berechtigung fehlt — bitte über die VPN-Pille oben verbinden und den Android-Dialog bestätigen."
+                _state.value = TunnelState.ERROR
+                CortexLog.warn("WireGuard", "connect", "VPN-Erlaubnis fehlt — Consent-Dialog noetig (nur ueber MainActivity moeglich)")
+                return
+            }
+        } catch (e: Exception) {   // no-cancellation-rethrow (kein suspend im try)
+            CortexLog.warn("WireGuard", "connect", "VPN-Consent-Pruefung fehlgeschlagen: ${e.message}")
+        }
         scope.launch {
             connectInternal()
         }
@@ -109,59 +148,95 @@ object WireGuardManager {
             return@withContext false
         }
         if (_state.value == TunnelState.CONNECTED) return@withContext true
-
-        _state.value = TunnelState.CONNECTING
-        CortexLog.checkpoint(
-            step = "vpn_connect",
-            intent = "Tunnel starten",
-            expected = "connected",
-            actual = "connecting",
-            ok = false
-        )
-
-        var lastEx: Exception? = null
-        repeat(2) { attempt ->
-            try {
-                currentBackend.setState(currentTunnel, Tunnel.State.UP, currentConfig)
-                _state.value = TunnelState.CONNECTED
-                lastError = null
-                CortexLog.checkpoint(
-                    step = "vpn_connect",
-                    intent = "Tunnel starten",
-                    expected = "connected",
-                    actual = "connected",
-                    ok = true
-                )
-                CortexLog.info("WireGuard", "connect", "Tunnel verbunden (Versuch ${attempt + 1})")
-                return@withContext true
-            } catch (e: Exception) {   // no-cancellation-rethrow (kein suspend im try)
-                lastEx = e
-                CortexLog.warn("WireGuard", "connect", "Versuch ${attempt + 1} fehlgeschlagen: ${e.message}")
-                delay(500)
+        // Bereits ein Connect unterwegs? Dann NICHT parallel ein zweites setState(UP) starten —
+        // aber einen evtl. gesetzten Abbruch-Wunsch ZURUECKNEHMEN: der laufende Versuch fuehrt
+        // den Aufbau dann zu Ende. Sonst verpuffte ein "Verbinden"-Tipp im 0,5-2s-Auslauffenster
+        // nach einem Abbruch komplett lautlos.
+        if (!connectInFlight.compareAndSet(false, true)) {
+            if (abortConnect) {
+                abortConnect = false
+                _state.value = TunnelState.CONNECTING
+                CortexLog.info("WireGuard", "connect", "Neuer Verbinden-Wunsch uebernimmt den noch laufenden Versuch")
             }
+            return@withContext false
         }
 
-        val e = lastEx
-        CortexLog.error("WireGuard", "connect", "Verbindungsfehler: ${e?.message}")
-        _state.value = TunnelState.ERROR
-        lastError = when {
-            e?.message?.contains("VPN_NOT_AUTHORIZED") == true ->
-                "VPN-Berechtigung erforderlich — bitte Android-Dialog bestätigen."
-            e?.message?.contains("VPN", ignoreCase = true) == true ->
-                "Ein anderes VPN ist aktiv — bitte erst trennen."
-            else -> "Verbindungsfehler: ${e?.message ?: "unbekannt"}"
+        try {
+            abortConnect = false
+            _state.value = TunnelState.CONNECTING
+            CortexLog.checkpoint(
+                step = "vpn_connect",
+                intent = "Tunnel starten",
+                expected = "connected",
+                actual = "connecting",
+                ok = false
+            )
+
+            var lastEx: Exception? = null
+            repeat(2) { attempt ->
+                if (abortConnect) {
+                    CortexLog.info("WireGuard", "connect", "Verbindungsaufbau auf Wunsch abgebrochen")
+                    _state.value = TunnelState.DISCONNECTED
+                    return@withContext false
+                }
+                try {
+                    currentBackend.setState(currentTunnel, Tunnel.State.UP, currentConfig)
+                    if (abortConnect) {
+                        // Disconnect kam GENAU waehrend des Aufbaus: sofort wieder abbauen,
+                        // statt den gewollten Trenn-Zustand zu ueberschreiben.
+                        try { currentBackend.setState(currentTunnel, Tunnel.State.DOWN, null) } catch (_: Exception) {}
+                        _state.value = TunnelState.DISCONNECTED
+                        CortexLog.info("WireGuard", "connect", "Aufbau nach Disconnect-Wunsch sofort wieder getrennt")
+                        return@withContext false
+                    }
+                    _state.value = TunnelState.CONNECTED
+                    lastError = null
+                    CortexLog.checkpoint(
+                        step = "vpn_connect",
+                        intent = "Tunnel starten",
+                        expected = "connected",
+                        actual = "connected",
+                        ok = true
+                    )
+                    CortexLog.info("WireGuard", "connect", "Tunnel verbunden (Versuch ${attempt + 1})")
+                    return@withContext true
+                } catch (e: Exception) {   // no-cancellation-rethrow (kein suspend im try)
+                    lastEx = e
+                    CortexLog.warn("WireGuard", "connect", "Versuch ${attempt + 1} fehlgeschlagen: ${e.message}")
+                    // Nur ZWISCHEN den Versuchen warten — nach dem letzten verzoegerte das
+                    // delay die Fehleranzeige grundlos um 500 ms.
+                    if (attempt == 0) delay(500)
+                }
+            }
+
+            val e = lastEx
+            CortexLog.error("WireGuard", "connect", "Verbindungsfehler: ${e?.message}")
+            // lastError VOR dem State publizieren: UI-Collector reagieren auf ERROR und rufen
+            // sofort getLastError() — vorher lasen sie den alten/null-Fehlertext.
+            lastError = when {
+                e?.message?.contains("VPN_NOT_AUTHORIZED") == true ->
+                    "VPN-Berechtigung erforderlich — bitte Android-Dialog bestätigen."
+                e?.message?.contains("VPN", ignoreCase = true) == true ->
+                    "Ein anderes VPN ist aktiv — bitte erst trennen."
+                else -> "Verbindungsfehler: ${e?.message ?: "unbekannt"}"
+            }
+            _state.value = TunnelState.ERROR
+            CortexLog.checkpoint(
+                step = "vpn_connect",
+                intent = "Tunnel starten",
+                expected = "connected",
+                actual = "error",
+                ok = false
+            )
+            false
+        } finally {
+            connectInFlight.set(false)
         }
-        CortexLog.checkpoint(
-            step = "vpn_connect",
-            intent = "Tunnel starten",
-            expected = "connected",
-            actual = "error",
-            ok = false
-        )
-        false
     }
 
     suspend fun disconnect(): Boolean = withContext(Dispatchers.IO) {
+        // Laufenden Connect-Versuch (Retry-Fenster) mit abbrechen.
+        abortConnect = true
         val currentBackend = backend
         val currentTunnel = tunnel
 
@@ -178,16 +253,16 @@ object WireGuardManager {
             true
         } catch (e: Exception) {   // no-cancellation-rethrow (kein suspend im try)
             CortexLog.error("WireGuard", "disconnect", "Trenn-Fehler: ${e.message}")
-            _state.value = TunnelState.ERROR
             lastError = e.message
+            _state.value = TunnelState.ERROR
             false
         }
     }
 
     /** Wird von MainActivity aufgerufen, wenn der Benutzer den Android-VPN-Dialog ablehnt. */
     fun reportConsentDenied() {
-        _state.value = TunnelState.ERROR
         lastError = "VPN-Berechtigung abgelehnt \u2014 zum Verbinden im Android-Dialog auf \u201EZulassen\u201C tippen."
+        _state.value = TunnelState.ERROR
         CortexLog.warn("WireGuard", "consent", "VPN-Berechtigung abgelehnt")
     }
 

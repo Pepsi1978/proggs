@@ -63,6 +63,42 @@ class ChatSpeechSanitizerTest {
     }
 
     @Test
+    fun preservesAnswersStartingWithQuellenCompoundWords() {
+        // Regression: "Quellensteuer..." wurde frueher als Quellen-Zeile erkannt und die
+        // KOMPLETTE Antwort geloescht (fehlende Wortgrenze + DOT_MATCHES_ALL).
+        val input = "Quellensteuer ist eine Steuer, die direkt an der Quelle einbehalten wird."
+        assertEquals(input, ChatSpeechSanitizer.clean(input))
+    }
+
+    @Test
+    fun preservesConceptualPluralQuellenSentence() {
+        // Regression: "Quellen sind <Inhalt>" ist ein normaler Inhaltssatz — die Plural-Kopula
+        // loeschte frueher die komplette Kernaussage aus Anzeige, Speicherung und Vorlesen.
+        val input = "Quellen sind Materialien, aus denen Historiker Erkenntnisse gewinnen."
+        assertEquals(input, ChatSpeechSanitizer.clean(input))
+    }
+
+    @Test
+    fun keepsContentAfterInlineSourcesLine() {
+        // Regression: eine Quellen-Zeile MITTEN im Text loeschte frueher auch alle Folgeabsaetze.
+        val input = """
+            Erster Absatz mit Inhalt.
+
+            Quellen: Beispielbuch Seite 12
+
+            Zweiter Absatz, der erhalten bleiben muss.
+        """.trimIndent()
+        assertEquals(
+            """
+                Erster Absatz mit Inhalt.
+
+                Zweiter Absatz, der erhalten bleiben muss.
+            """.trimIndent(),
+            ChatSpeechSanitizer.clean(input),
+        )
+    }
+
+    @Test
     fun removesSourceAttributionFromVehicleReplyAndStandaloneDomains() {
         val input = """
             In deinem Gedächtnis steht zu deinem Auto: Toyota C-HR, Baujahr 2019, mit der KBA-Nummer 5013-AKY.

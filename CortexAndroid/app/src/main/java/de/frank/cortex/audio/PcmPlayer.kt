@@ -80,6 +80,13 @@ class PcmPlayer {
         framesWrittenTotal = 0L
         track = newTrack
         playing = true
+        // withContext wirft eine Cancellation erst BEIM VERLASSEN des Blocks: wurde die Coroutine
+        // waehrend des Aufbaus gecancelt (stopSpeaking direkt nach dem Start), lief pcmPlayer.stop()
+        // bereits ins Leere (track war noch null) und der frisch gebaute Track bliebe sonst
+        // ungereleased im PLAYING-Zustand haengen (belegt einen der globalen AudioTrack-Slots).
+        if (!isActive) {
+            stop()
+        }
     }
 
     /**

@@ -46,17 +46,35 @@ import de.frank.cortex.ui.theme.*
 import de.frank.cortex.vpn.TunnelState
 import de.frank.cortex.vpn.WireGuardManager
 
-class MainActivity : FragmentActivity() {
+/** Prozessweiter Sperr-Zustand: als Activity-Felder gingen diese Flags bei jeder Rotation/
+ *  Theme-Aenderung verloren — der BiometricPrompt poppte dann bei JEDER Rotation erneut auf,
+ *  obwohl die App nie den Vordergrund verlassen hatte. */
+internal object AppLockState {
+    var authenticatedThisForeground = false
+    var appUnlocked by mutableStateOf(false)
+    // true = fuer DIESEN Vordergrund-Aufenthalt lief authenticateThenConnect bereits.
+    // Der ProcessLifecycleOwner liefert neuen Observern bei Activity-Recreation (Rotation/
+    // Theme-Wechsel) ein Catch-up-onStart nach — ohne dieses Flag poppte der BiometricPrompt
+    // bei jeder Rotation erneut auf und ein bewusst getrenntes VPN verband sich ungefragt neu.
+    var foregroundAuthHandled = false
+    // true, solange der eigene Auth-Prompt laeuft. Auf API 26-28 oeffnet der Geraetesperre-
+    // Pfad eine FREMDE Fullscreen-Activity (Keyguard) — der ProcessLifecycle-onStop wertete
+    // das als "App verlassen", setzte alle Flags zurueck und trennte das VPN: Endlosschleife
+    // der PIN-Abfrage. Der CortexApp-Observer ueberspringt Reset+Disconnect, solange true.
+    var authInProgress = false
+}
 
-    private var authenticatedThisForeground = false
-    private var appUnlocked by mutableStateOf(false)
+class MainActivity : FragmentActivity() {
 
     // Android-VPN-Erlaubnis: Ergebnis des System-Dialogs (einmalig pro Installation).
     private val vpnConsentLauncher = registerForActivityResult(
         ActivityResultContracts.StartActivityForResult()
     ) { result ->
         if (result.resultCode == RESULT_OK) {
-            lifecycleScope.launch { WireGuardManager.connect() }
+            // connect() ist nicht-suspendierend (launcht intern) — der fruehere
+            // lifecycleScope-Wrapper war unnoetig und lief auf einer zerstoerten
+            // Activity (Rotation waehrend des Prompts) nie.
+            WireGuardManager.connect()
         } else {
             WireGuardManager.reportConsentDenied()
         }
@@ -69,47 +87,51 @@ class MainActivity : FragmentActivity() {
         if (prepareIntent != null) {
             vpnConsentLauncher.launch(prepareIntent)
         } else {
-            lifecycleScope.launch { WireGuardManager.connect() }
+            WireGuardManager.connect()
         }
     }
 
+    // In onCreate (re-)erstellt statt ad-hoc: androidx.biometric legt den Callback im
+    // Activity-scoped (Rotation UEBERLEBENDEN) BiometricViewModel ab — ein ad-hoc erzeugter
+    // Prompt hielt nach einer Rotation die ZERSTOERTE Activity fest: der Success-Callback
+    // lief dann auf deren gecanceltem lifecycleScope (VPN verband nie) bzw. crashte am
+    // deregistrierten Consent-Launcher. Die Neu-Erstellung in onCreate bindet den Callback
+    // immer an die aktuelle Activity (dokumentiertes androidx-Muster).
+    private lateinit var biometricPrompt: BiometricPrompt
+
     private fun authenticateThenConnect() {
         if (!SettingsStore.biometricLockEnabled) {
-            appUnlocked = true
+            AppLockState.appUnlocked = true
             startVpn()
             return
         }
-        if (authenticatedThisForeground) {
-            appUnlocked = true
+        if (AppLockState.authenticatedThisForeground) {
+            AppLockState.appUnlocked = true
             startVpn()
             return
         }
-        appUnlocked = false
+        AppLockState.appUnlocked = false
         val available = BiometricManager.from(this).canAuthenticate(
             BiometricManager.Authenticators.BIOMETRIC_STRONG or BiometricManager.Authenticators.DEVICE_CREDENTIAL
         )
-        if (available != BiometricManager.BIOMETRIC_SUCCESS) return
+        if (available != BiometricManager.BIOMETRIC_SUCCESS) {
+            // Keine Biometrie/Geraetesperre (mehr) verfuegbar: NICHT stumm aussperren — vorher
+            // blieb die App dauerhaft auf der LockedScreen haengen ("Entsperren" tat nichts).
+            // Ohne einrichtbare Sperre schuetzt der Lock ohnehin nichts -> entsperren + melden.
+            de.frank.cortex.observability.CortexLog.warn(
+                "MainActivity", "auth",
+                "Biometrie/Geraetesperre nicht verfuegbar (Code $available) — Sperre uebersprungen"
+            )
+            android.widget.Toast.makeText(
+                this,
+                "Biometrie/Gerätesperre nicht verfügbar — Sperre übersprungen",
+                android.widget.Toast.LENGTH_LONG
+            ).show()
+            AppLockState.appUnlocked = true
+            startVpn()
+            return
+        }
 
-        val prompt = BiometricPrompt(
-            this,
-            ContextCompat.getMainExecutor(this),
-            object : BiometricPrompt.AuthenticationCallback() {
-                override fun onAuthenticationSucceeded(result: BiometricPrompt.AuthenticationResult) {
-                    authenticatedThisForeground = true
-                    appUnlocked = true
-                    startVpn()
-                }
-
-                override fun onAuthenticationError(errorCode: Int, errString: CharSequence) {
-                    appUnlocked = false
-                    lifecycleScope.launch { WireGuardManager.disconnect() }
-                }
-
-                override fun onAuthenticationFailed() {
-                    appUnlocked = false
-                }
-            }
-        )
         val info = BiometricPrompt.PromptInfo.Builder()
             .setTitle("Cortex entsperren")
             .setSubtitle("Fingerabdruck oder Gerätesperre verwenden")
@@ -117,22 +139,26 @@ class MainActivity : FragmentActivity() {
                 BiometricManager.Authenticators.BIOMETRIC_STRONG or BiometricManager.Authenticators.DEVICE_CREDENTIAL
             )
             .build()
-        prompt.authenticate(info)
+        AppLockState.authInProgress = true
+        biometricPrompt.authenticate(info)
     }
 
     // Als Feld gehalten, damit er in onDestroy wieder ABGEMELDET werden kann. Vorher wurde bei
     // jeder Activity-Recreation (Rotation, System-Theme, Prozess-Restore) ein NEUER anonymer
     // Observer am ProcessLifecycleOwner registriert und nie entfernt — jeder alte hielt die
     // zerstoerte Activity fest (Leak) und Auth/Disconnect liefen mehrfach.
+    // NUR onStart lebt hier (braucht die Activity fuer BiometricPrompt/VpnService.prepare);
+    // der Hintergrund-Disconnect liegt in CortexApp: Der ProcessLifecycle-onStop kommt ~700 ms
+    // NACH Activity.onStop — wurde die Activity gefinished (Back auf Android 8-11), war dieser
+    // Observer schon entfernt und der Tunnel blieb dauerhaft verbunden.
     private val processLifecycleObserver = object : DefaultLifecycleObserver {
         override fun onStart(owner: LifecycleOwner) {
-            authenticateThenConnect()
-        }
-
-        override fun onStop(owner: LifecycleOwner) {
-            authenticatedThisForeground = false
-            appUnlocked = false
-            lifecycleScope.launch { WireGuardManager.disconnect() }
+            // Nur beim ECHTEN Vordergrund-Eintritt (CortexApp-onStop setzt das Flag zurueck),
+            // nicht beim Catch-up-onStart nach einer Activity-Recreation.
+            if (!AppLockState.foregroundAuthHandled) {
+                AppLockState.foregroundAuthHandled = true
+                authenticateThenConnect()
+            }
         }
     }
 
@@ -144,6 +170,40 @@ class MainActivity : FragmentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
+
+        // Mit aktiver Biometrie-Sperre auch das Recents-Thumbnail schuetzen: der System-
+        // Screenshot entsteht beim Verlassen der App (appUnlocked ist da noch true) und zeigte
+        // sonst den kompletten entsperrten Inhalt in der Task-Uebersicht.
+        if (SettingsStore.biometricLockEnabled) {
+            window.setFlags(
+                android.view.WindowManager.LayoutParams.FLAG_SECURE,
+                android.view.WindowManager.LayoutParams.FLAG_SECURE
+            )
+        }
+
+        biometricPrompt = BiometricPrompt(
+            this,
+            ContextCompat.getMainExecutor(this),
+            object : BiometricPrompt.AuthenticationCallback() {
+                override fun onAuthenticationSucceeded(result: BiometricPrompt.AuthenticationResult) {
+                    AppLockState.authInProgress = false
+                    AppLockState.authenticatedThisForeground = true
+                    AppLockState.appUnlocked = true
+                    startVpn()
+                }
+
+                override fun onAuthenticationError(errorCode: Int, errString: CharSequence) {
+                    AppLockState.authInProgress = false
+                    AppLockState.appUnlocked = false
+                    lifecycleScope.launch { WireGuardManager.disconnect() }
+                }
+
+                override fun onAuthenticationFailed() {
+                    // Einzelner Fehlversuch — der Prompt laeuft weiter (authInProgress bleibt true).
+                    AppLockState.appUnlocked = false
+                }
+            }
+        )
 
         ProcessLifecycleOwner.get().lifecycle.addObserver(processLifecycleObserver)
 
@@ -157,11 +217,24 @@ class MainActivity : FragmentActivity() {
             }
             val vpnState by WireGuardManager.state.collectAsStateWithLifecycle()
 
+            // Statusbar-Icons dem APP-Theme folgen lassen: enableEdgeToEdge() mit Defaults nahm
+            // das SYSTEM-Theme — bei hellem System-Theme und dunkler App (App-Default!) waren
+            // Uhr/Batterie auf dunklem Hintergrund praktisch unsichtbar.
+            LaunchedEffect(isDark) {
+                val transparent = android.graphics.Color.TRANSPARENT
+                enableEdgeToEdge(
+                    statusBarStyle = if (isDark) androidx.activity.SystemBarStyle.dark(transparent)
+                    else androidx.activity.SystemBarStyle.light(transparent, transparent),
+                    navigationBarStyle = if (isDark) androidx.activity.SystemBarStyle.dark(transparent)
+                    else androidx.activity.SystemBarStyle.light(transparent, transparent)
+                )
+            }
+
             CortexTheme(darkTheme = isDark) {
-                if (SettingsStore.biometricLockEnabled && !appUnlocked) {
-                    LockedScreen(isDark = isDark, onUnlock = { authenticateThenConnect() })
-                    return@CortexTheme
-                }
+                // LockedScreen als OVERLAY statt frueher Return: der fruehe Return warf den
+                // kompletten NavHost samt Back-Stack und Screen-State weg — nach jedem
+                // Hintergrund-Wechsel landete man wieder auf "Chat" mit leerem Zustand.
+                Box(Modifier.fillMaxSize()) {
 
                 val navController = rememberNavController()
                 val navBackStackEntry by navController.currentBackStackEntryAsState()
@@ -184,6 +257,7 @@ class MainActivity : FragmentActivity() {
                                 else lifecycleScope.launch { WireGuardManager.disconnect() }
                             },
                             showNewChat = currentRoute == Screen.Chat.route,
+                            showSessions = currentRoute == Screen.Chat.route,
                             onNewChat = { ChatCommands.requestNewChat() },
                             onOpenSessions = { ChatCommands.requestOpenSessions() }
                         )
@@ -263,6 +337,11 @@ class MainActivity : FragmentActivity() {
                         modifier = Modifier.padding(innerPadding)
                     )
                 }
+
+                if (SettingsStore.biometricLockEnabled && !AppLockState.appUnlocked) {
+                    LockedScreen(isDark = isDark, onUnlock = { authenticateThenConnect() })
+                }
+                }
             }
         }
     }
@@ -279,6 +358,16 @@ private fun LockedScreen(isDark: Boolean, onUnlock: () -> Unit) {
     Box(
         modifier = Modifier
             .fillMaxSize()
+            // Klick-Schlucker: als Overlay ueber dem NavHost muessen Touches hier enden,
+            // sonst waere die gesperrte App darunter weiter bedienbar.
+            .clickable(
+                interactionSource = remember { androidx.compose.foundation.interaction.MutableInteractionSource() },
+                indication = null,
+                onClick = {}
+            )
+            // OPAKE Grundflaeche ZUERST: der radiale Verlauf beginnt mit Alpha 0,20 — als
+            // Overlay schien der zu schuetzende App-Inhalt sonst in der Bildschirmmitte durch.
+            .background(bg)
             .background(
                 Brush.radialGradient(
                     colors = listOf(Iris.copy(alpha = 0.20f), bg),

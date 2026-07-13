@@ -50,7 +50,12 @@ object SettingsStore {
     private lateinit var dataStore: DataStore<Preferences>
     private var aead: Aead? = null
     private val secretCache = ConcurrentHashMap<String, String>()
-    private val storeScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
+    // limitedParallelism(1): Writes desselben Keys muessen den DataStore in AUFRUF-ReihENFOLGE
+    // erreichen — auf dem Multi-Thread-IO-Pool konnten zwei schnelle setSecret-Aufrufe
+    // (SecretRow schreibt pro Tastendruck) vertauscht ankommen und ein aelterer Zwischenstand
+    // blieb persistiert (fiel erst nach App-Neustart auf).
+    @OptIn(kotlinx.coroutines.ExperimentalCoroutinesApi::class)
+    private val storeScope = CoroutineScope(SupervisorJob() + Dispatchers.IO.limitedParallelism(1))
 
     private val SECRET_KEYS = listOf(
         "sb_api_key", "groq_api_key", "gemini_api_key", "google_tts_api_key",
@@ -147,10 +152,13 @@ object SettingsStore {
     }
 
     /** Tink-AEAD mit Keystore-Master-Key. Bei korruptem Keyset (z.B. Keystore-Reset) wird das
-     *  Keyset einmal verworfen und frisch aufgebaut — die App darf am Start nie crashen. */
+     *  Keyset verworfen und frisch aufgebaut — die App darf am Start nie crashen.
+     *  WICHTIG: Der erste Fehlversuch loescht NICHTS — der Android-Keystore ist direkt nach
+     *  Boot/Unlock gelegentlich kurz nicht verfuegbar (transient). Ein sofortiges clear()
+     *  haette dann ALLE gespeicherten Secrets dauerhaft unentschluesselbar gemacht. */
     private fun buildAead(context: Context): Aead? {
         AeadConfig.register()
-        repeat(2) { attempt ->
+        repeat(3) { attempt ->
             try {
                 return AndroidKeysetManager.Builder()
                     .withSharedPref(context, "cortex_tink_keyset", "cortex_tink_prefs")
@@ -161,7 +169,12 @@ object SettingsStore {
                     .getPrimitive(Aead::class.java)
             } catch (e: Exception) {   // no-cancellation-rethrow (kein suspend im try)
                 CortexLog.error("SettingsStore", "buildAead", "Tink-Init fehlgeschlagen (Versuch ${attempt + 1}): ${e.message}")
-                context.getSharedPreferences("cortex_tink_prefs", Context.MODE_PRIVATE).edit().clear().apply()
+                when (attempt) {
+                    // Versuch 1 -> transient annehmen: kurz warten, OHNE clear() erneut versuchen.
+                    0 -> Thread.sleep(150)
+                    // Versuch 2 -> Keyset vermutlich wirklich korrupt: verwerfen + frisch aufbauen.
+                    1 -> context.getSharedPreferences("cortex_tink_prefs", Context.MODE_PRIVATE).edit().clear().apply()
+                }
             }
         }
         return null   // Notlauf: Secrets nur in-memory fuer diese Sitzung (Fehler ist geloggt)
@@ -188,17 +201,32 @@ object SettingsStore {
                 }
             }
             // Synchron persistieren (Migration ist der eine Moment, wo Warten korrekt ist).
+            // Erfolg PRO KEY pruefen: bei aead == null (Tink-Notlauf) wurde frueher NICHTS
+            // geschrieben, die Altdatei aber trotzdem geloescht -> alle Keys nach dem
+            // naechsten Neustart endgueltig weg. Jetzt: Altdatei nur loeschen + Flag nur
+            // setzen, wenn wirklich ALLE Werte verschluesselt im DataStore gelandet sind.
+            var persisted = 0
             runBlocking {
                 dataStore.edit { store ->
                     secretCache.forEach { (key, value) ->
-                        encryptSecret(key, value)?.let { store[stringPreferencesKey(key)] = it }
+                        encryptSecret(key, value)?.let {
+                            store[stringPreferencesKey(key)] = it
+                            persisted++
+                        }
                     }
-                    store[booleanPreferencesKey(MIGRATED_FLAG)] = true
+                    if (persisted == secretCache.size) {
+                        store[booleanPreferencesKey(MIGRATED_FLAG)] = true
+                    }
                 }
             }
-            context.deleteSharedPreferences(ENCRYPTED_PREFS)
-            CortexLog.info("SettingsStore", "migrate", "Secrets von EncryptedSharedPreferences uebernommen",
-                mapOf("moved" to moved))
+            if (persisted == secretCache.size) {
+                context.deleteSharedPreferences(ENCRYPTED_PREFS)
+                CortexLog.info("SettingsStore", "migrate", "Secrets von EncryptedSharedPreferences uebernommen",
+                    mapOf("moved" to moved))
+            } else {
+                CortexLog.error("SettingsStore", "migrate",
+                    "Migration unvollstaendig ($persisted/${secretCache.size} persistiert) — Altdatei bleibt, naechster Start versucht es erneut")
+            }
         } catch (e: Exception) {   // no-cancellation-rethrow (kein suspend im try)
             // Alte Datei fehlt/korrupt (frische Installation oder Keystore-Reset): nichts zu
             // uebernehmen — Flag setzen, damit nicht bei jedem Start erneut versucht wird.
@@ -240,8 +268,16 @@ object SettingsStore {
             try {
                 val encoded = encryptSecret(key, value)
                 dataStore.edit { store ->
-                    if (encoded != null) store[stringPreferencesKey(key)] = encoded
-                    else store.remove(stringPreferencesKey(key))
+                    when {
+                        encoded != null -> store[stringPreferencesKey(key)] = encoded
+                        // Leeren Wert bewusst entfernen (Loeschen eines Keys).
+                        value.isEmpty() -> store.remove(stringPreferencesKey(key))
+                        // Encrypt-FEHLER (aead-Notlauf): den letzten guten persistierten Wert
+                        // BEHALTEN statt ihn zu loeschen — sonst zerstoerte ein Schreibfehler
+                        // auch noch den funktionierenden alten Stand.
+                        else -> CortexLog.error("SettingsStore", "setSecret",
+                            "Verschluesseln fehlgeschlagen ($key) — alter persistierter Wert bleibt erhalten")
+                    }
                 }
             } catch (e: CancellationException) {
                 throw e
@@ -332,6 +368,18 @@ object SettingsStore {
     var cachedDashboardJson: String
         get() = plain.getString("cached_dashboard", "") ?: ""
         set(value) = plain.edit().putString("cached_dashboard", value).apply()
+
+    // --- Sync-Vormerkungen (Offline-Aenderungen an Prompts nachsenden) ---
+    // true = lokale Prompt-Aenderung konnte nicht zum Server (kein VPN / PUT-Fehler): beim
+    // naechsten Connect werden die LOKALEN Prompts hochgeschoben, statt sie vom alten
+    // Server-Stand ueberschreiben zu lassen (sonst war jeder Offline-Edit still verloren).
+    var pendingUserContextPromptSync: Boolean
+        get() = plain.getBoolean("pending_user_context_prompt_sync", false)
+        set(value) = plain.edit().putBoolean("pending_user_context_prompt_sync", value).apply()
+
+    var pendingEditablePromptSync: Boolean
+        get() = plain.getBoolean("pending_editable_prompt_sync", false)
+        set(value) = plain.edit().putBoolean("pending_editable_prompt_sync", value).apply()
 
     // --- UI-Präferenzen (klartext ok) ---
 

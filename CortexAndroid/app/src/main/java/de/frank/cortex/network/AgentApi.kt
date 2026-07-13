@@ -17,8 +17,10 @@ interface AgentApi {
     @POST("/categories")
     suspend fun createCategory(@Body request: CreateCategoryRequest): CreateCategoryResponse
 
+    // Eigenes Modell: Agent-/health sendet KEIN "ok"-Feld — SimpleResponse haette beim ersten
+    // echten Aufruf mit JsonDataException (Pflichtfeld fehlt) versagt.
     @GET("/health")
-    suspend fun health(): SimpleResponse
+    suspend fun health(): AgentHealthResponse
 
     @GET("/config")
     suspend fun getConfig(): AgentConfigResponse

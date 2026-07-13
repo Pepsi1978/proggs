@@ -1095,20 +1095,24 @@ class RestoreReq(BaseModel):
     user_id: str = Field(default="frank")
 
 
+# max_length 120 (statt 60): Der Agent (POST /categories, CategoryReq) erlaubt Kategorienamen
+# bis 120 Zeichen — eine dort angelegte 61-120-Zeichen-Kategorie liess sich hier sonst nicht
+# zuordnen/umbenennen (422), obwohl sie in der Registry existierte. Agent-Registry = Quelle
+# der Wahrheit fuer Namen, brain-api zieht gleich.
 class RenameCategoryReq(BaseModel):
-    old: str = Field(..., min_length=1, max_length=60, description="Bisheriger Kategorie-Name (exakter Payload-Wert)")
-    new: str = Field(..., min_length=1, max_length=60, description="Neuer Kategorie-Name (1:1, deutsche Rechtschreibung)")
+    old: str = Field(..., min_length=1, max_length=120, description="Bisheriger Kategorie-Name (exakter Payload-Wert)")
+    new: str = Field(..., min_length=1, max_length=120, description="Neuer Kategorie-Name (1:1, deutsche Rechtschreibung)")
     user_id: str = Field(default="frank")
 
 
 class DetachCategoryReq(BaseModel):
-    name: str = Field(..., min_length=1, max_length=60, description="Kategorie, deren Etikett von allen Eintraegen entfernt wird (Eintraege bleiben)")
+    name: str = Field(..., min_length=1, max_length=120, description="Kategorie, deren Etikett von allen Eintraegen entfernt wird (Eintraege bleiben)")
     user_id: str = Field(default="frank")
 
 
 class EntryCategoryReq(BaseModel):
     doc_id: str = Field(..., min_length=1, description="ID des Eintrags, dessen Kategorie geaendert wird")
-    category: str = Field(default="", max_length=60, description="Neue Kategorie (1:1, deutsche Rechtschreibung). Leer = Etikett entfernen.")
+    category: str = Field(default="", max_length=120, description="Neue Kategorie (1:1, deutsche Rechtschreibung). Leer = Etikett entfernen.")
     user_id: str = Field(default="frank")
 
 

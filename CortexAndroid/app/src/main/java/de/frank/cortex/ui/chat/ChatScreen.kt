@@ -64,15 +64,28 @@ import java.util.Locale
 
 private enum class TranscriptionTarget { ChatInput, ContextPrompt }
 
+// Saver fuers rememberSaveable: bei Rotation waehrend einer laufenden Aufnahme fiel das Ziel
+// sonst auf ChatInput zurueck und das Transkript landete im falschen Feld.
+private val transcriptionTargetSaver = androidx.compose.runtime.saveable.Saver<TranscriptionTarget, String>(
+    save = { it.name },
+    restore = { name -> TranscriptionTarget.entries.firstOrNull { it.name == name } ?: TranscriptionTarget.ChatInput }
+)
+
 @Composable
 fun ChatScreen(vm: ChatViewModel = viewModel()) {
     val uiState by vm.uiState.collectAsStateWithLifecycle()
     val vpnState by WireGuardManager.state.collectAsStateWithLifecycle()
     var inputText by rememberSaveable { mutableStateOf("") }
     var isContextPromptDialogOpen by rememberSaveable { mutableStateOf(false) }
-    var contextPromptDraft by remember { mutableStateOf("") }
-    var transcriptionTarget by remember { mutableStateOf(TranscriptionTarget.ChatInput) }
-    var pendingMicTarget by remember { mutableStateOf(TranscriptionTarget.ChatInput) }
+    // rememberSaveable: der Dialog-Offen-Zustand ueberlebte die Rotation, der getippte
+    // Entwurf und das Diktier-Ziel aber nicht — ein langer Prompt-Entwurf war einfach weg.
+    var contextPromptDraft by rememberSaveable { mutableStateOf("") }
+    var transcriptionTarget by rememberSaveable(stateSaver = transcriptionTargetSaver) {
+        mutableStateOf(TranscriptionTarget.ChatInput)
+    }
+    var pendingMicTarget by rememberSaveable(stateSaver = transcriptionTargetSaver) {
+        mutableStateOf(TranscriptionTarget.ChatInput)
+    }
     val listState = rememberLazyListState()
     val drawerState = rememberDrawerState(
         initialValue = DrawerValue.Closed,
@@ -83,7 +96,16 @@ fun ChatScreen(vm: ChatViewModel = viewModel()) {
     )
     val context = LocalContext.current
     val toneVolume = SettingsStore.recordingToneVolume
-    val recordingTone = remember(toneVolume) { ToneGenerator(AudioManager.STREAM_MUSIC, (toneVolume * 100).toInt()) }
+    // try/catch: der ToneGenerator-Konstruktor kann bei Ressourcenmangel eine RuntimeException
+    // werfen — ungefangen crashte das die Komposition. Ohne Ton geht die Aufnahme trotzdem.
+    val recordingTone = remember(toneVolume) {
+        try {
+            ToneGenerator(AudioManager.STREAM_MUSIC, Math.round(toneVolume * 100f))
+        } catch (e: Exception) {
+            CortexLog.warn("ChatScreen", "recordingTone", "ToneGenerator nicht verfügbar: ${e.message}")
+            null
+        }
+    }
     val emptyTitle = when (uiState.contextMode) {
         SettingsStore.CONTEXT_MODE_SMALLTALK -> "Smalltalk-Modus ist aktiv."
         SettingsStore.CONTEXT_MODE_SAVE -> "Speichermodus ist aktiv."
@@ -102,7 +124,7 @@ fun ChatScreen(vm: ChatViewModel = viewModel()) {
     fun playRecordingTone() {
         if (!SettingsStore.recordingToneEnabled) return
         try {
-            recordingTone.startTone(ToneGenerator.TONE_PROP_ACK, 180)
+            recordingTone?.startTone(ToneGenerator.TONE_PROP_ACK, 180)
         } catch (e: Exception) {
             CortexLog.warn("ChatScreen", "recordingTone", "Aufnahmeton fehlgeschlagen: ${e.message}")
         }
@@ -112,7 +134,7 @@ fun ChatScreen(vm: ChatViewModel = viewModel()) {
         if (existing.isBlank()) text else "$existing $text"
 
     DisposableEffect(recordingTone) {
-        onDispose { recordingTone.release() }
+        onDispose { recordingTone?.release() }
     }
 
     // Berechtigung für Mikrofon
@@ -171,7 +193,9 @@ fun ChatScreen(vm: ChatViewModel = viewModel()) {
         }
     }
 
-    LaunchedEffect(uiState.messages.size) {
+    // Auch bei SESSION-Wechsel ans Ende scrollen: haengt der Key nur an der Anzahl, blieb die
+    // Liste beim Wechsel zwischen zwei gleich langen Sessions mitten in der alten Position stehen.
+    LaunchedEffect(uiState.sessionId, uiState.messages.size) {
         if (uiState.messages.isNotEmpty()) {
             listState.animateScrollToItem(uiState.messages.size - 1)
         }
@@ -321,7 +345,9 @@ fun ChatScreen(vm: ChatViewModel = viewModel()) {
                 },
                 onSend = {
                     vm.sendMessage(inputText)
-                    inputText = ""
+                    // Nur leeren, wenn die Nachricht auch angenommen wurde: bei der
+                    // 500.000-Zeichen-Ablehnung ging der Entwurf sonst trotzdem verloren.
+                    if (inputText.length <= 500000) inputText = ""
                 },
                 onClear = {
                     inputText = ""

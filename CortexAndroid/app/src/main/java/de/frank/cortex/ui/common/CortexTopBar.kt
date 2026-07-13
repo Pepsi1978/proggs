@@ -36,6 +36,7 @@ fun CortexTopBar(
     vpnState: TunnelState,
     onVpnToggle: (Boolean) -> Unit,
     showNewChat: Boolean = false,
+    showSessions: Boolean = true,
     onNewChat: () -> Unit = {},
     onOpenSessions: () -> Unit = {}
 ) {
@@ -50,7 +51,11 @@ fun CortexTopBar(
             .padding(horizontal = 14.dp, vertical = 8.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
-        // Speicher-Icon Container (38x38, radius 12, gradient + glow)
+        // Speicher-Icon Container (38x38, radius 12, gradient + glow).
+        // Nur auf dem Chat-Tab zeigen (wie der Neuer-Chat-Knopf): Der Klick emittiert ein
+        // ChatCommands-Event ohne Replay — ausserhalb des Chats gibt es keinen Collector,
+        // der Knopf war dort ein toter Klick ohne jedes Feedback.
+        if (showSessions) {
         Box(
             modifier = Modifier
                 .size(38.dp)
@@ -73,6 +78,7 @@ fun CortexTopBar(
                 tint = Iris,
                 modifier = Modifier.size(22.dp)
             )
+        }
         }
 
         if (showNewChat) {
@@ -123,9 +129,11 @@ fun CortexTopBar(
             )
         }
 
-        // VPN Pill
-        VpnPill(state = vpnState, onClick = {
-            onVpnToggle(vpnState != TunnelState.CONNECTED)
+        // VPN Pill. Tipp im CONNECTING-Zustand = ABBRECHEN (disconnect): vorher startete jeder
+        // ungeduldige Tipp auf "Verbinde…" einen weiteren parallelen Connect-Versuch, und ein
+        // haengender Aufbau liess sich gar nicht abbrechen.
+        VpnPill(state = vpnState, isDark = isDark, onClick = {
+            onVpnToggle(vpnState != TunnelState.CONNECTED && vpnState != TunnelState.CONNECTING)
         })
 
         Spacer(Modifier.width(10.dp))
@@ -162,7 +170,7 @@ fun CortexTopBar(
 }
 
 @Composable
-private fun VpnPill(state: TunnelState, onClick: () -> Unit) {
+private fun VpnPill(state: TunnelState, isDark: Boolean, onClick: () -> Unit) {
     val (label, dotColor, fgColor, bgColor, borderColor) = when (state) {
         TunnelState.CONNECTED -> VpnStyle(
             "Verbunden", Mint, Mint,
@@ -172,9 +180,14 @@ private fun VpnPill(state: TunnelState, onClick: () -> Unit) {
             "Verbinde\u2026", Amber, Amber,
             Amber.copy(alpha = 0.14f), Amber.copy(alpha = 0.40f)
         )
-        TunnelState.DISCONNECTED -> VpnStyle(
+        // Theme-abhaengig: die festen Dark-Farben waren im Light-Theme praktisch unsichtbar
+        // (weisser 5%-Hintergrund auf weisser Surface, Text mit ~2,5:1-Kontrast).
+        TunnelState.DISCONNECTED -> if (isDark) VpnStyle(
             "Getrennt", DarkMuted, DarkMuted,
             DarkChip, DarkChipBorder
+        ) else VpnStyle(
+            "Getrennt", LightMuted, LightMuted,
+            LightChip, LightChipBorder
         )
         TunnelState.ERROR -> VpnStyle(
             "Fehler", Rose, Rose,
@@ -221,12 +234,15 @@ private fun VpnPill(state: TunnelState, onClick: () -> Unit) {
                         repeatMode = RepeatMode.Restart
                     ), label = "pulse_scale"
                 )
+                // scale VOR clip/background: graphicsLayer-Scale wirkt nur auf Modifier rechts
+                // davon — am Kettenende skalierte es nichts und der expandierende Ring blieb
+                // ein statischer 9-dp-Punkt mit pulsierendem Alpha.
                 Box(
                     modifier = Modifier
                         .size(9.dp)
+                        .scale(pulseScale)
                         .clip(CircleShape)
                         .background(dotColor.copy(alpha = pulseAlpha))
-                        .scale(pulseScale)
                 )
             }
         }

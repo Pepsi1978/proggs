@@ -1,6 +1,9 @@
 <?xml version="1.0" encoding="utf-8"?>
+<!-- Cleartext (HTTP) global erlauben: Der Server-Host ist in den Einstellungen FREI konfigurierbar
+     (Standard 10.8.0.1 im WireGuard-Tunnel). Die alte Nur-10.8.0.1-Freigabe blockierte nach jeder
+     Host-Aenderung (z.B. Heimnetz-IP) saemtliche Requests mit "CLEARTEXT not permitted" — ohne
+     verstaendliche Fehlermeldung. Alle externen Dienste (Groq/Gemini/OpenAI/Edge) nutzen ohnehin
+     ausschliesslich HTTPS; HTTP-Ziele sind nur die privaten Server-URLs aus den Einstellungen. -->
 <network-security-config>
-    <domain-config cleartextTrafficPermitted="true">
-        <domain includeSubdomains="false">10.8.0.1</domain>
-    </domain-config>
+    <base-config cleartextTrafficPermitted="true" />
 </network-security-config>

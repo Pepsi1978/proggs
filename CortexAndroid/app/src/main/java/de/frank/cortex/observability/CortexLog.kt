@@ -96,6 +96,17 @@ object CortexLog {
     // wird die Datei zu .1 rotiert (eine Generation reicht — die aeltere wird ersetzt).
     private const val MAX_LOG_BYTES = 5L * 1024 * 1024
 
+    /** Blockiert, bis alle bisher eingereihten Log-Zeilen auf Platte sind (max. [timeoutMs]).
+     *  Nur fuer den Crash-Pfad: der Default-Handler killt den Prozess direkt danach — ohne
+     *  Flush laege genau der wichtigste Eintrag (der Crash) noch in der Executor-Queue. */
+    fun flushBlocking(timeoutMs: Long = 2000) {
+        try {
+            writeExecutor.submit {}.get(timeoutMs, java.util.concurrent.TimeUnit.MILLISECONDS)
+        } catch (e: Exception) {
+            Log.e(TAG, "Log-Flush fehlgeschlagen: ${e.message}")
+        }
+    }
+
     private fun writeToFile(line: String) {
         if (!::logFile.isInitialized) return
         try {

@@ -25,6 +25,7 @@ import androidx.compose.material.icons.automirrored.filled.Login
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -110,11 +111,20 @@ fun SettingsScreen(
     var limitsSaving by remember { mutableStateOf(false) }
     var limitsStatus by remember { mutableStateOf("Server-Stand wird geladen") }
     var codexConnected by remember { mutableStateOf(false) }
-    var codexStatus by remember { mutableStateOf("Server-Codex-Status wird geladen") }
-    var codexUserCode by remember { mutableStateOf("") }
-    var codexAuthId by remember { mutableStateOf("") }
+    // rememberSaveable: laufender Auth-Zwischenstand (Code!) und Prompt-Auswahl duerfen eine
+    // Rotation/Theme-Aenderung nicht verlieren — der grosse Eingabe-Code war sonst einfach weg.
+    var codexStatus by rememberSaveable { mutableStateOf("Server-Codex-Status wird geladen") }
+    var codexUserCode by rememberSaveable { mutableStateOf("") }
+    var codexAuthId by rememberSaveable { mutableStateOf("") }
     var codexConnecting by remember { mutableStateOf(false) }
-    var selectedContextPromptMode by remember { mutableStateOf(SettingsStore.RESPONSE_SIZE_AUTO) }
+    var selectedContextPromptMode by rememberSaveable { mutableStateOf(SettingsStore.RESPONSE_SIZE_AUTO) }
+    // Zaehlt lokale Bearbeitungen an Modellen/Schaltern/Limits: eine LANGSAM eintreffende
+    // GET-/config-Antwort darf danach getaetigte Eingaben nicht mehr zuruecksetzen.
+    var configEditGeneration by remember { mutableIntStateOf(0) }
+    // true, sobald irgendein echter Server-Stand (Cache oder frisch) angewendet wurde. Ohne
+    // diesen Zustand sendeten die Speichern-Buttons App-DEFAULTS als vermeintlichen Ist-Stand
+    // und ueberschrieben Franks echte Server-Konfiguration (Modelle/Limits).
+    var configLoaded by remember { mutableStateOf(false) }
     fun loadEditablePrompt(key: String): String = when (key) {
         SettingsStore.RESPONSE_SIZE_AUTO,
         SettingsStore.RESPONSE_SIZE_SHORT,
@@ -130,22 +140,27 @@ fun SettingsScreen(
             SettingsStore.RESPONSE_SIZE_XL -> {
                 SettingsStore.setResponseSizePrompt(key, prompt)
                 // Zentral zum Server syncen: Dashboard nutzt DENSELBEN Prompt.
-                // Best effort — offline bleibt der lokale Stand, Sync holt es beim
-                // naechsten App-Start nach (ChatViewModel.syncSizePromptsWithServer).
+                // NonCancellable: der PUT muss auch dann zu Ende laufen, wenn Frank sofort den
+                // Tab wechselt (screenScope wird dabei gecancelt). Schlaegt er fehl, wird die
+                // Aenderung per pendingEditablePromptSync beim naechsten Connect NACHGESENDET —
+                // vorher setzte "Server gewinnt" den Prompt beim naechsten Start still zurueck.
                 screenScope.launch {
                     try {
-                        ApiClient.agentApi().updateConfig(
-                            de.frank.cortex.data.model.AgentConfigRequest(
-                                size_prompt_auto = if (key == SettingsStore.RESPONSE_SIZE_AUTO) prompt else null,
-                                size_prompt_s = if (key == SettingsStore.RESPONSE_SIZE_SHORT) prompt else null,
-                                size_prompt_m = if (key == SettingsStore.RESPONSE_SIZE_MEDIUM) prompt else null,
-                                size_prompt_xl = if (key == SettingsStore.RESPONSE_SIZE_XL) prompt else null
+                        kotlinx.coroutines.withContext(kotlinx.coroutines.NonCancellable) {
+                            ApiClient.agentApi().updateConfig(
+                                de.frank.cortex.data.model.AgentConfigRequest(
+                                    size_prompt_auto = if (key == SettingsStore.RESPONSE_SIZE_AUTO) prompt else null,
+                                    size_prompt_s = if (key == SettingsStore.RESPONSE_SIZE_SHORT) prompt else null,
+                                    size_prompt_m = if (key == SettingsStore.RESPONSE_SIZE_MEDIUM) prompt else null,
+                                    size_prompt_xl = if (key == SettingsStore.RESPONSE_SIZE_XL) prompt else null
+                                )
                             )
-                        )
+                        }
                     } catch (e: CancellationException) {
                         throw e
                     } catch (e: Exception) {
-                        CortexLog.warn("Settings", "syncSizePrompt", "Server-Sync fehlgeschlagen (lokal gespeichert): ${e.message}")
+                        SettingsStore.pendingEditablePromptSync = true
+                        CortexLog.warn("Settings", "syncSizePrompt", "Server-Sync fehlgeschlagen (lokal gespeichert, wird nachgeholt): ${e.message}")
                     }
                 }
             }
@@ -153,23 +168,26 @@ fun SettingsScreen(
                 SettingsStore.setContextPrompt(key, prompt)
                 screenScope.launch {
                     try {
-                        ApiClient.agentApi().updateConfig(
-                            de.frank.cortex.data.model.AgentConfigRequest(
-                                context_prompt_save = if (key == SettingsStore.CONTEXT_MODE_SAVE) prompt else null,
-                                context_prompt_search = if (key == SettingsStore.CONTEXT_MODE_SEARCH) prompt else null
+                        kotlinx.coroutines.withContext(kotlinx.coroutines.NonCancellable) {
+                            ApiClient.agentApi().updateConfig(
+                                de.frank.cortex.data.model.AgentConfigRequest(
+                                    context_prompt_save = if (key == SettingsStore.CONTEXT_MODE_SAVE) prompt else null,
+                                    context_prompt_search = if (key == SettingsStore.CONTEXT_MODE_SEARCH) prompt else null
+                                )
                             )
-                        )
+                        }
                     } catch (e: CancellationException) {
                         throw e
                     } catch (e: Exception) {
-                        CortexLog.warn("Settings", "syncContextPrompt", "Server-Sync fehlgeschlagen (lokal gespeichert): ${e.message}")
+                        SettingsStore.pendingEditablePromptSync = true
+                        CortexLog.warn("Settings", "syncContextPrompt", "Server-Sync fehlgeschlagen (lokal gespeichert, wird nachgeholt): ${e.message}")
                     }
                 }
             }
         }
     }
-    var contextPromptDraft by remember { mutableStateOf(loadEditablePrompt(selectedContextPromptMode)) }
-    var contextPromptEditing by remember { mutableStateOf(false) }
+    var contextPromptDraft by rememberSaveable { mutableStateOf(loadEditablePrompt(selectedContextPromptMode)) }
+    var contextPromptEditing by rememberSaveable { mutableStateOf(false) }
 
     val filePicker = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.GetContent()
@@ -189,9 +207,11 @@ fun SettingsScreen(
         }
     }
 
-    // Wendet eine /config-Antwort auf alle Einstellungs-States an — identisch fuer den lokalen
-    // Zwischenspeicher und den frischen Server-Stand (Performance 2026-07-12).
-    fun applyServerConfig(config: de.frank.cortex.data.model.AgentConfigResponse) {
+    // Wendet eine /config-Antwort auf alle Einstellungs-States an — fuer den lokalen
+    // Zwischenspeicher (fromCache=true) und den frischen Server-Stand (Performance 2026-07-12).
+    // fromCache: der Cache darf lokale PROMPTS nicht persistieren — er kann aelter sein als
+    // eine offline getaetigte lokale Aenderung (die sonst still ueberschrieben wurde).
+    fun applyServerConfig(config: de.frank.cortex.data.model.AgentConfigResponse, fromCache: Boolean = false) {
         if (config.available.isNotEmpty()) agentModelOptions = config.available
         if (config.reasoning_available.isNotEmpty()) reasoningOptions = config.reasoning_available
         modelPriceLabels = config.model_prices.mapValues { (_, p) ->
@@ -211,23 +231,30 @@ fun SettingsScreen(
         routerReasoning = config.router_reasoning.ifBlank { ROUTER_AUTO }
         tavilyEnabled = config.tavily_enabled
         memoryWebInfluence = config.memory_web_influence.takeIf { it in setOf("light", "normal", "strong") } ?: "normal"
-        if (config.size_prompts_custom) {
+        // Prompts nur vom FRISCHEN Server-Stand uebernehmen und nur, wenn keine lokale
+        // Offline-Aenderung auf ihren Upload wartet (pendingEditablePromptSync).
+        val promptsPullAllowed = !fromCache && !SettingsStore.pendingEditablePromptSync
+        if (promptsPullAllowed && config.size_prompts_custom) {
             config.size_prompts.forEach { (k, v) ->
                 if (k in setOf("auto", "s", "m", "xl") && v.isNotBlank()) SettingsStore.setResponseSizePrompt(k, v)
             }
         }
-        if (config.context_prompts_custom) {
+        if (promptsPullAllowed && config.context_prompts_custom) {
             config.context_prompts.forEach { (k, v) ->
                 if (k in setOf(SettingsStore.CONTEXT_MODE_SAVE, SettingsStore.CONTEXT_MODE_SEARCH) && v.isNotBlank()) {
                     SettingsStore.setContextPrompt(k, v)
                 }
             }
         }
-        contextPromptDraft = loadEditablePrompt(selectedContextPromptMode)
+        // NIE den Entwurf ueberschreiben, waehrend Frank gerade darin tippt.
+        if (!contextPromptEditing) {
+            contextPromptDraft = loadEditablePrompt(selectedContextPromptMode)
+        }
         runtimeLimits = config.limits
         limitDrafts = limitsToDrafts(config.limits)
         codexConnected = config.codex?.connected == true
         codexStatus = if (codexConnected) "Server verbunden — GPT/Codex-Modelle sind auswählbar" else "Server nicht verbunden"
+        configLoaded = true
     }
 
     LaunchedEffect(Unit) {
@@ -235,21 +262,35 @@ fun SettingsScreen(
         //    Wartezeit da (keine Eieruhr); der frische Stand ersetzt sie gleich still.
         val cached = ApiClient.cachedAgentConfig()
         if (cached != null) {
-            applyServerConfig(cached)
+            applyServerConfig(cached, fromCache = true)
             agentModelStatus = "Wird mit dem Server abgeglichen…"
             memoryWebInfluenceStatus = "Wird mit dem Server abgeglichen…"
             limitsStatus = "Wird mit dem Server abgeglichen…"
         } else {
             agentModelsLoading = true
         }
-        // 2) Frischen Server-Stand holen und still uebernehmen.
+        // 2) Frischen Server-Stand holen und still uebernehmen — aber NUR, wenn Frank in der
+        //    Zwischenzeit nichts lokal geaendert hat (sonst setzte die langsame Antwort seine
+        //    gerade getaetigte Auswahl kommentarlos zurueck).
+        val editGenerationBeforeGet = configEditGeneration
         try {
             val config = ApiClient.agentApi().getConfig()
-            applyServerConfig(config)
             ApiClient.cacheAgentConfig(config)
-            agentModelStatus = "Aktueller Server-Stand geladen"
-            memoryWebInfluenceStatus = "Aktueller Server-Stand geladen"
-            limitsStatus = "Aktuelle Limits geladen"
+            if (configEditGeneration == editGenerationBeforeGet) {
+                applyServerConfig(config)
+                agentModelStatus = "Aktueller Server-Stand geladen"
+                memoryWebInfluenceStatus = "Aktueller Server-Stand geladen"
+                limitsStatus = "Aktuelle Limits geladen"
+            } else {
+                // Ehrlicher Status: die Antwort wurde wegen einer lokalen Bearbeitung verworfen —
+                // "geladen" zu behaupten (und configLoaded=false zu lassen) hinterliess sonst
+                // dauerhaft ausgegraute Speichern-Buttons bei gegenteiliger Statuszeile.
+                CortexLog.info("Settings", "loadAgentModels", "GET /config verworfen — lokale Bearbeitung war schneller")
+                val hint = "Lokale Änderung aktiv — Server-Stand nicht übernommen (Einstellungen erneut öffnen)"
+                agentModelStatus = hint
+                memoryWebInfluenceStatus = hint
+                limitsStatus = hint
+            }
         } catch (e: CancellationException) {
             throw e
         } catch (e: Exception) {
@@ -265,6 +306,17 @@ fun SettingsScreen(
             }
         } finally {
             agentModelsLoading = false
+        }
+    }
+
+    // Nach Activity-Recreation (Rotation/Theme) ueberlebt der Auth-Code per rememberSaveable,
+    // aber die Poll-Schleife (screenScope) ist tot — der Code wuerde gross angezeigt, waehrend
+    // NIEMAND mehr pollt und die Verbindung nie zustande kommen kann. Ehrlich aufraeumen.
+    LaunchedEffect(Unit) {
+        if (codexUserCode.isNotBlank() && !codexConnecting) {
+            codexUserCode = ""
+            codexAuthId = ""
+            codexStatus = "Verbindungsvorgang unterbrochen — bitte erneut auf Verbinden tippen"
         }
     }
 
@@ -367,7 +419,22 @@ fun SettingsScreen(
                         value = wgConfig,
                         onValueChange = {
                             wgConfig = it
-                            if (WireGuardManager.parseConfig(it)) SettingsStore.wgConfig = it
+                            when {
+                                // Loeschen explizit erlauben: vorher blieb die alte Config
+                                // persistiert (und nach Neustart AKTIV), obwohl der Editor
+                                // leer aussah — Entfernen war unmoeglich.
+                                it.isBlank() -> {
+                                    SettingsStore.wgConfig = ""
+                                    WireGuardManager.clearConfig()
+                                }
+                                // Erst VALIDIEREN (ohne Seiteneffekt), dann uebernehmen:
+                                // parseConfig ersetzte sonst bei jedem parsebaren Tipp-
+                                // Zwischenstand sofort die AKTIVE Tunnel-Konfiguration.
+                                WireGuardManager.validateConfig(it) -> {
+                                    SettingsStore.wgConfig = it
+                                    WireGuardManager.parseConfig(it)
+                                }
+                            }
                         },
                         modifier = Modifier.fillMaxWidth().heightIn(min = 60.dp).padding(10.dp),
                         textStyle = LocalTextStyle.current.copy(
@@ -397,21 +464,39 @@ fun SettingsScreen(
                 ) {
                     Text("Server-Host", fontSize = 13.5.sp, color = MaterialTheme.colorScheme.onSurfaceVariant,
                         modifier = Modifier.width(96.dp))
-                    SettingsTextField(serverHost, { serverHost = it; SettingsStore.serverHost = it },
-                        Modifier.weight(1f))
+                    // Nur GUELTIGE Werte persistieren: ein leerer Host oder Whitespace erzeugte
+                    // eine unbrauchbare Basis-URL — Retrofit warf dann bei JEDEM Aufruf eine
+                    // IllegalArgumentException und Chat/Dashboard/Sync waren komplett tot.
+                    SettingsTextField(serverHost, { input ->
+                        serverHost = input
+                        // Nur Hostname/IP-Zeichen zulassen: "http://host" oder "host:port" bauten
+                        // sonst weiterhin eine unbrauchbare Basis-URL (IllegalArgumentException
+                        // bei jedem Request), obwohl die Validierung genau das verhindern soll.
+                        input.trim().takeIf { it.isNotEmpty() && it.matches(Regex("[A-Za-z0-9.\\-]+")) }
+                            ?.let { SettingsStore.serverHost = it }
+                    }, Modifier.weight(1f))
                 }
 
-                // Ports row
+                // Ports row (nur Ziffern, 1-65535 — ungueltige Zwischenstaende bleiben lokal)
                 Row(
                     modifier = Modifier.padding(start = 14.dp, end = 14.dp, bottom = 14.dp),
                     horizontalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
-                    SettingsTextField(agentPort, { agentPort = it; SettingsStore.agentPort = it },
-                        Modifier.weight(1f), center = true, hint = "Agent")
-                    SettingsTextField(brainPort, { brainPort = it; SettingsStore.brainPort = it },
-                        Modifier.weight(1f), center = true, hint = "Brain")
-                    SettingsTextField(dashboardPort, { dashboardPort = it; SettingsStore.dashboardPort = it },
-                        Modifier.weight(1f), center = true, hint = "Dashboard")
+                    SettingsTextField(agentPort, { input ->
+                        agentPort = input.filter { it.isDigit() }.take(5)
+                        agentPort.toIntOrNull()?.takeIf { it in 1..65535 }
+                            ?.let { SettingsStore.agentPort = it.toString() }
+                    }, Modifier.weight(1f), center = true, hint = "Agent")
+                    SettingsTextField(brainPort, { input ->
+                        brainPort = input.filter { it.isDigit() }.take(5)
+                        brainPort.toIntOrNull()?.takeIf { it in 1..65535 }
+                            ?.let { SettingsStore.brainPort = it.toString() }
+                    }, Modifier.weight(1f), center = true, hint = "Brain")
+                    SettingsTextField(dashboardPort, { input ->
+                        dashboardPort = input.filter { it.isDigit() }.take(5)
+                        dashboardPort.toIntOrNull()?.takeIf { it in 1..65535 }
+                            ?.let { SettingsStore.dashboardPort = it.toString() }
+                    }, Modifier.weight(1f), center = true, hint = "Dashboard")
                 }
             }
         }
@@ -481,26 +566,53 @@ fun SettingsScreen(
                                         codexUserCode = start.user_code
                                         codexStatus = "Browser öffnen und Code eingeben"
                                         context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(start.verification_uri)))
-                                        repeat((start.expires_in / start.interval).coerceAtMost(180)) {
-                                            delay((start.interval.coerceAtLeast(3) * 1000).toLong())
-                                            val poll = ApiClient.agentApi().pollCodexAuth(de.frank.cortex.data.model.CodexAuthPollRequest(codexAuthId))
-                                            if (poll.status == "connected") {
-                                                codexConnected = true
-                                                codexUserCode = ""
-                                                codexStatus = "Server verbunden — GPT/Codex-Modelle sind auswählbar"
+                                        // interval VOR der Division absichern (interval=0 wuerde crashen) und
+                                        // JEDE Poll-Runde einzeln fehlertolerant machen: der Browser-Wechsel
+                                        // trennt das VPN (App im Hintergrund) — ein einzelner fehlgeschlagener
+                                        // Poll darf den ganzen Auth-Vorgang nicht mehr abbrechen; nach der
+                                        // Rueckkehr in die App verbindet das VPN neu und der Poll greift wieder.
+                                        val pollInterval = start.interval.coerceAtLeast(3)
+                                        // Poll-Schleife liefert nur das ERGEBNIS; der getConfig-
+                                        // Abgleich passiert danach in einem EIGENEN try: ein
+                                        // transienter /config-Fehler nach dem Erfolg lief sonst
+                                        // in den Poll-catch, pollte weiter (Server hat die
+                                        // auth_id nach Erfolg entfernt) und meldete garantiert
+                                        // "Code abgelaufen" — obwohl die Verbindung stand.
+                                        var outcome = "timeout"
+                                        var round = 0
+                                        val maxRounds = (start.expires_in / pollInterval).coerceAtMost(180)
+                                        while (round < maxRounds && outcome == "timeout") {
+                                            round++
+                                            delay((pollInterval * 1000).toLong())
+                                            try {
+                                                val poll = ApiClient.agentApi().pollCodexAuth(de.frank.cortex.data.model.CodexAuthPollRequest(codexAuthId))
+                                                when (poll.status) {
+                                                    "connected" -> outcome = "connected"
+                                                    "expired" -> outcome = "expired"
+                                                }
+                                            } catch (e: CancellationException) {
+                                                throw e
+                                            } catch (e: Exception) {
+                                                CortexLog.warn("Settings", "codexAuth", "Poll-Runde fehlgeschlagen (weiter bis Ablauf): ${e.message}")
+                                            }
+                                        }
+                                        if (outcome == "connected") {
+                                            codexConnected = true
+                                            codexUserCode = ""
+                                            codexStatus = "Server verbunden — GPT/Codex-Modelle sind auswählbar"
+                                            try {
                                                 val config = ApiClient.agentApi().getConfig()
                                                 if (config.available.isNotEmpty()) agentModelOptions = config.available
                                                 ApiClient.cacheAgentConfig(config)   // Cache bleibt synchron zum neuen Codex-Stand
-                                                codexConnecting = false
-                                                return@launch
+                                            } catch (e: CancellationException) {
+                                                throw e
+                                            } catch (e: Exception) {
+                                                CortexLog.warn("Settings", "codexAuth", "Modell-Abgleich nach Verbindung fehlgeschlagen (nur Anzeige betroffen): ${e.message}")
                                             }
-                                            if (poll.status == "expired") {
-                                                codexUserCode = ""
-                                                codexStatus = "Code abgelaufen"
-                                                codexConnecting = false
-                                                return@launch
-                                            }
+                                            codexConnecting = false
+                                            return@launch
                                         }
+                                        codexUserCode = ""
                                         codexStatus = "Code abgelaufen"
                                     } catch (e: CancellationException) {
                                         throw e
@@ -526,9 +638,18 @@ fun SettingsScreen(
                                         codexConnected = false
                                         codexUserCode = ""
                                         codexStatus = "Server nicht verbunden"
-                                        val config = ApiClient.agentApi().getConfig()
-                                        if (config.available.isNotEmpty()) agentModelOptions = config.available
-                                        ApiClient.cacheAgentConfig(config)   // Cache bleibt synchron zum getrennten Stand
+                                        // Eigenes try: schlaegt nur der Config-Refresh fehl, ist das
+                                        // Trennen trotzdem gelungen — der Toast "Trennen fehlgeschlagen"
+                                        // waere falsch (und der Cache wird beim naechsten GET korrigiert).
+                                        try {
+                                            val config = ApiClient.agentApi().getConfig()
+                                            if (config.available.isNotEmpty()) agentModelOptions = config.available
+                                            ApiClient.cacheAgentConfig(config)   // Cache bleibt synchron zum getrennten Stand
+                                        } catch (e: CancellationException) {
+                                            throw e
+                                        } catch (e: Exception) {
+                                            CortexLog.warn("Settings", "codexDisconnect", "Config-Refresh nach Trennen fehlgeschlagen: ${e.message}")
+                                        }
                                     } catch (e: CancellationException) {
                                         throw e
                                     } catch (_: Exception) {
@@ -612,6 +733,10 @@ fun SettingsScreen(
                     val edgeSynth = remember { de.frank.cortex.audio.EdgeTtsSynthesizer() }
                     val edgeMp3Player = remember { de.frank.cortex.audio.Mp3Player(context) }
                     val scope = rememberCoroutineScope()
+                    // Vorherigen Test-Job CANCELN, nicht nur den Player stoppen: steckte Test A
+                    // noch in der Synthese, unterbrach sein verspaetetes playAndAwait sonst die
+                    // laengst laufende Wiedergabe von Test B (falsche Stimme erklang zuletzt).
+                    var voiceTestJob by remember { mutableStateOf<kotlinx.coroutines.Job?>(null) }
 
                     Surface(
                         shape = RoundedCornerShape(9.dp),
@@ -636,7 +761,8 @@ fun SettingsScreen(
                             },
                             onDismiss = { showVoiceDialog = false },
                             onTestVoice = { voice ->
-                                scope.launch {
+                                voiceTestJob?.cancel()
+                                voiceTestJob = scope.launch {
                                     try {
                                         pcmPlayer.stop()
                                         val label = voiceLabelFor(voice)
@@ -665,7 +791,8 @@ fun SettingsScreen(
                             },
                             onDismiss = { showEdgeVoiceDialog = false },
                             onTestVoice = { voiceId ->
-                                scope.launch {
+                                voiceTestJob?.cancel()
+                                voiceTestJob = scope.launch {
                                     try {
                                         edgeMp3Player.stop()
                                         val short = edgeVoiceShortFor(voiceId)
@@ -766,7 +893,8 @@ fun SettingsScreen(
                     ) {
                         Text("Lautstärke", fontSize = 14.sp, modifier = Modifier.weight(1f))
                         Text(
-                            "${(recordingToneVolume * 100).toInt()}%",
+                            // Math.round statt toInt: 0.45f*100 = 44.999… zeigte sonst "44%".
+                            "${Math.round(recordingToneVolume * 100f)}%",
                             fontFamily = JetBrainsMono,
                             fontSize = 12.sp,
                             color = MaterialTheme.colorScheme.onSurfaceVariant
@@ -812,6 +940,19 @@ fun SettingsScreen(
                         .clickable {
                             biometricLockEnabled = !biometricLockEnabled
                             SettingsStore.biometricLockEnabled = biometricLockEnabled
+                            // Recents-Thumbnail-Schutz sofort mitschalten (sonst erst ab dem
+                            // naechsten App-Start): FLAG_SECURE verhindert, dass die Task-
+                            // Uebersicht den entsperrten Inhalt zeigt.
+                            (context as? FragmentActivity)?.window?.let { win ->
+                                if (biometricLockEnabled) {
+                                    win.setFlags(
+                                        android.view.WindowManager.LayoutParams.FLAG_SECURE,
+                                        android.view.WindowManager.LayoutParams.FLAG_SECURE
+                                    )
+                                } else {
+                                    win.clearFlags(android.view.WindowManager.LayoutParams.FLAG_SECURE)
+                                }
+                            }
                         }
                 ) {
                     Box(
@@ -855,9 +996,9 @@ fun SettingsScreen(
                     }
                 }
 
-                AgentModelDropdown("Hauptagent", hauptModel, agentModelOptions, isDark, priceLabels = modelPriceLabels) { hauptModel = it }
+                AgentModelDropdown("Hauptagent", hauptModel, agentModelOptions, isDark, priceLabels = modelPriceLabels) { hauptModel = it; configEditGeneration++ }
                 if (modelSupportsReasoning(hauptModel)) {
-                    AgentModelDropdown("Thinking", hauptReasoning, reasoningOptions, isDark) { hauptReasoning = it }
+                    AgentModelDropdown("Thinking", hauptReasoning, reasoningOptions, isDark) { hauptReasoning = it; configEditGeneration++ }
                 }
                 // Router (Schritt 1): darf ein eigenes (schnelles) Modell + eigenes Thinking nutzen;
                 // "auto (wie Hauptagent)" = exakt bisheriges Verhalten. Die Antwort (Schritt 2)
@@ -865,18 +1006,18 @@ fun SettingsScreen(
                 AgentModelDropdown(
                     "Router", routerModel, listOf(ROUTER_AUTO) + agentModelOptions, isDark,
                     priceLabels = modelPriceLabels + (ROUTER_AUTO to "übernimmt Modell + Thinking vom Hauptagenten")
-                ) { routerModel = it }
+                ) { routerModel = it; configEditGeneration++ }
                 val effectiveRouterModel = if (routerModel == ROUTER_AUTO) hauptModel else routerModel
                 if (routerModel != ROUTER_AUTO && modelSupportsReasoning(effectiveRouterModel)) {
-                    AgentModelDropdown("Thinking", routerReasoning, listOf(ROUTER_AUTO) + reasoningOptions, isDark) { routerReasoning = it }
+                    AgentModelDropdown("Thinking", routerReasoning, listOf(ROUTER_AUTO) + reasoningOptions, isDark) { routerReasoning = it; configEditGeneration++ }
                 }
-                AgentModelDropdown("Speicheragent", speicherModel, agentModelOptions, isDark, priceLabels = modelPriceLabels) { speicherModel = it }
+                AgentModelDropdown("Speicheragent", speicherModel, agentModelOptions, isDark, priceLabels = modelPriceLabels) { speicherModel = it; configEditGeneration++ }
                 if (modelSupportsReasoning(speicherModel)) {
-                    AgentModelDropdown("Thinking", speicherReasoning, reasoningOptions, isDark) { speicherReasoning = it }
+                    AgentModelDropdown("Thinking", speicherReasoning, reasoningOptions, isDark) { speicherReasoning = it; configEditGeneration++ }
                 }
-                AgentModelDropdown("Abfrageagent", abfrageModel, agentModelOptions, isDark, priceLabels = modelPriceLabels) { abfrageModel = it }
+                AgentModelDropdown("Abfrageagent", abfrageModel, agentModelOptions, isDark, priceLabels = modelPriceLabels) { abfrageModel = it; configEditGeneration++ }
                 if (modelSupportsReasoning(abfrageModel)) {
-                    AgentModelDropdown("Thinking", abfrageReasoning, reasoningOptions, isDark) { abfrageReasoning = it }
+                    AgentModelDropdown("Thinking", abfrageReasoning, reasoningOptions, isDark) { abfrageReasoning = it; configEditGeneration++ }
                 }
 
                 Row(
@@ -900,7 +1041,7 @@ fun SettingsScreen(
                     Text(if (tavilyEnabled) "An" else "Aus", fontSize = 12.sp, fontWeight = FontWeight.Bold, color = if (tavilyEnabled) Orange else MaterialTheme.colorScheme.onSurfaceVariant)
                     Switch(
                         checked = tavilyEnabled,
-                        onCheckedChange = { tavilyEnabled = it },
+                        onCheckedChange = { tavilyEnabled = it; configEditGeneration++ },
                         colors = SwitchDefaults.colors(checkedThumbColor = Color.White, checkedTrackColor = Orange)
                     )
                 }
@@ -969,19 +1110,31 @@ fun SettingsScreen(
                             screenScope.launch {
                                 agentModelsSaving = true
                                 try {
-                                    ApiClient.agentApi().updateConfig(
-                                        de.frank.cortex.data.model.AgentConfigRequest(
-                                            haupt_model = hauptModel,
-                                            speicher_model = speicherModel,
-                                            abfrage_model = abfrageModel,
-                                            haupt_reasoning = hauptReasoning,
-                                            speicher_reasoning = speicherReasoning,
-                                            abfrage_reasoning = abfrageReasoning,
-                                            router_model = if (routerModel == ROUTER_AUTO) "auto" else routerModel,
-                                            router_reasoning = if (routerReasoning == ROUTER_AUTO) "auto" else routerReasoning,
-                                            tavily_enabled = tavilyEnabled
+                                    // NonCancellable: sofortiger Tab-Wechsel nach "Speichern" cancelt den
+                                    // screenScope — der PUT muss trotzdem zu Ende laufen (vorher kamen die
+                                    // Modelle nie auf dem Server an, ohne jedes Feedback).
+                                    kotlinx.coroutines.withContext(kotlinx.coroutines.NonCancellable) {
+                                        ApiClient.agentApi().updateConfig(
+                                            de.frank.cortex.data.model.AgentConfigRequest(
+                                                haupt_model = hauptModel,
+                                                speicher_model = speicherModel,
+                                                abfrage_model = abfrageModel,
+                                                haupt_reasoning = hauptReasoning,
+                                                speicher_reasoning = speicherReasoning,
+                                                abfrage_reasoning = abfrageReasoning,
+                                                router_model = if (routerModel == ROUTER_AUTO) "auto" else routerModel,
+                                                router_reasoning = if (routerReasoning == ROUTER_AUTO) "auto" else routerReasoning,
+                                                tavily_enabled = tavilyEnabled
+                                            )
                                         )
-                                    )
+                                        // /config-Cache konsistent halten: sonst zeigte der naechste
+                                        // Oeffnen-Vorgang (bzw. offline dauerhaft) die ALTEN Modelle.
+                                        try {
+                                            ApiClient.cacheAgentConfig(ApiClient.agentApi().getConfig())
+                                        } catch (inner: Exception) {
+                                            CortexLog.warn("Settings", "saveAgentModels", "Cache-Refresh nach Speichern fehlgeschlagen: ${inner.message}")
+                                        }
+                                    }
                                     agentModelStatus = "Modelle gespeichert"
                                 } catch (e: CancellationException) {
                                     throw e
@@ -994,7 +1147,9 @@ fun SettingsScreen(
                                 }
                             }
                         },
-                        enabled = !agentModelsSaving,
+                        // configLoaded: ohne je geladenen Server-Stand wuerden hier App-Defaults
+                        // als vermeintlicher Ist-Stand gesendet und Franks Konfiguration ersetzt.
+                        enabled = !agentModelsSaving && configLoaded,
                         shape = RoundedCornerShape(12.dp),
                         colors = ButtonDefaults.buttonColors(containerColor = Orange)
                     ) {
@@ -1015,15 +1170,31 @@ fun SettingsScreen(
             drafts = limitDrafts,
             status = limitsStatus,
             saving = limitsSaving,
-            onDraftChange = { key, value -> limitDrafts = limitDrafts + (key to value.filter { it.isDigit() }.take(7)) },
+            saveEnabled = configLoaded,
+            brainAvailable = runtimeLimits.brain != null,
+            onDraftChange = { key, value ->
+                configEditGeneration++
+                limitDrafts = limitDrafts + (key to value.filter { it.isDigit() }.take(7))
+            },
             onSave = {
                 screenScope.launch {
                     limitsSaving = true
                     try {
                         val next = draftsToLimits(runtimeLimits, limitDrafts)
-                        val response = ApiClient.agentApi().updateConfig(
-                            AgentConfigRequest(limits = next)
-                        )
+                        val response = kotlinx.coroutines.withContext(kotlinx.coroutines.NonCancellable) {
+                            val r = ApiClient.agentApi().updateConfig(
+                                AgentConfigRequest(limits = next)
+                            )
+                            // /config-Cache aktualisieren: buildContextPrompt kappt gegen den
+                            // GECACHTEN Wert — ein gesenktes context_prompt_max_chars griffe
+                            // sonst erst beim naechsten Cache-Refresh (422er bis dahin).
+                            try {
+                                ApiClient.cacheAgentConfig(ApiClient.agentApi().getConfig())
+                            } catch (inner: Exception) {
+                                CortexLog.warn("Settings", "saveLimits", "Cache-Refresh nach Speichern fehlgeschlagen: ${inner.message}")
+                            }
+                            r
+                        }
                         runtimeLimits = response.limits
                         limitDrafts = limitsToDrafts(response.limits)
                         limitsStatus = "Limits gespeichert und sofort aktiv"
@@ -1108,6 +1279,7 @@ fun SettingsScreen(
                             onClick = {
                                 saveEditablePrompt(selectedContextPromptMode, contextPromptDraft)
                                 contextPromptEditing = false
+                                configEditGeneration++   // spaete GET-Antwort darf den gespeicherten Prompt nicht zuruecksetzen
                                 Toast.makeText(context, "Prompt gespeichert", Toast.LENGTH_SHORT).show()
                             },
                             shape = RoundedCornerShape(12.dp),
@@ -1178,12 +1350,24 @@ fun SettingsScreen(
                                 if (!active) {
                                     val previous = memoryWebInfluence
                                     memoryWebInfluence = id
+                                    configEditGeneration++   // spaete GET-Antwort darf die Wahl nicht zuruecksetzen
                                     memoryWebInfluenceSaving = true
                                     screenScope.launch {
                                         try {
-                                            val response = ApiClient.agentApi().updateConfig(
-                                                AgentConfigRequest(memory_web_influence = id)
-                                            )
+                                            val response = kotlinx.coroutines.withContext(kotlinx.coroutines.NonCancellable) {
+                                                val r = ApiClient.agentApi().updateConfig(
+                                                    AgentConfigRequest(memory_web_influence = id)
+                                                )
+                                                // Cache konsistent halten (wie bei Modellen/Limits):
+                                                // sonst zeigte das naechste Oeffnen der Einstellungen
+                                                // wieder den ALTEN Einfluss-Wert aus dem Zwischenspeicher.
+                                                try {
+                                                    ApiClient.cacheAgentConfig(ApiClient.agentApi().getConfig())
+                                                } catch (inner: Exception) {
+                                                    CortexLog.warn("Settings", "saveMemoryWebInfluence", "Cache-Refresh nach Speichern fehlgeschlagen: ${inner.message}")
+                                                }
+                                                r
+                                            }
                                             memoryWebInfluence = response.memory_web_influence.takeIf {
                                                 it in setOf("light", "normal", "strong")
                                             } ?: "normal"
@@ -1488,32 +1672,36 @@ private val runtimeLimitItems = listOf(
     )
 )
 
-private fun limitsToDrafts(limits: RuntimeLimits): Map<String, String> = mapOf(
-    "agent.dedup_candidates" to limits.agent.dedup_candidates.toString(),
-    "agent.history_max" to limits.agent.history_max.toString(),
-    "agent.history_compress_at" to limits.agent.history_compress_at.toString(),
-    "agent.recall_full_limit" to limits.agent.recall_full_limit.toString(),
-    "agent.multi_query_variants" to limits.agent.multi_query_variants.toString(),
-    "agent.entity_extract_chars" to limits.agent.entity_extract_chars.toString(),
-    "agent.entity_docs_limit" to limits.agent.entity_docs_limit.toString(),
-    "agent.lese_snippet_chars" to limits.agent.lese_snippet_chars.toString(),
-    "agent.answer_snippet_limit" to limits.agent.answer_snippet_limit.toString(),
-    "agent.source_chip_limit" to limits.agent.source_chip_limit.toString(),
-    "agent.answer_hit_chars" to limits.agent.answer_hit_chars.toString(),
-    "agent.answer_total_chars" to limits.agent.answer_total_chars.toString(),
-    "agent.answer_max_tokens" to limits.agent.answer_max_tokens.toString(),
-    "agent.recall_working_cache_threshold" to limits.agent.recall_working_cache_threshold.toString(),
-    "agent.recall_normal_max" to limits.agent.recall_normal_max.toString(),
-    "agent.full_category_batch_chars" to limits.agent.full_category_batch_chars.toString(),
-    "agent.context_prompt_max_chars" to limits.agent.context_prompt_max_chars.toString(),
-    "agent.chat_text_max_chars" to limits.agent.chat_text_max_chars.toString(),
-    "brain.chunk_chars" to limits.brain.chunk_chars.toString(),
-    "brain.chunk_overlap" to limits.brain.chunk_overlap.toString(),
-    "brain.search_overfetch_factor" to limits.brain.search_overfetch_factor.toString(),
-    "brain.search_date_overfetch_factor" to limits.brain.search_date_overfetch_factor.toString(),
-    "brain.bm25_candidate_factor" to limits.brain.bm25_candidate_factor.toString(),
-    "brain.bm25_min_candidates" to limits.brain.bm25_min_candidates.toString()
-)
+private fun limitsToDrafts(limits: RuntimeLimits): Map<String, String> = buildMap {
+    put("agent.dedup_candidates", limits.agent.dedup_candidates.toString())
+    put("agent.history_max", limits.agent.history_max.toString())
+    put("agent.history_compress_at", limits.agent.history_compress_at.toString())
+    put("agent.recall_full_limit", limits.agent.recall_full_limit.toString())
+    put("agent.multi_query_variants", limits.agent.multi_query_variants.toString())
+    put("agent.entity_extract_chars", limits.agent.entity_extract_chars.toString())
+    put("agent.entity_docs_limit", limits.agent.entity_docs_limit.toString())
+    put("agent.lese_snippet_chars", limits.agent.lese_snippet_chars.toString())
+    put("agent.answer_snippet_limit", limits.agent.answer_snippet_limit.toString())
+    put("agent.source_chip_limit", limits.agent.source_chip_limit.toString())
+    put("agent.answer_hit_chars", limits.agent.answer_hit_chars.toString())
+    put("agent.answer_total_chars", limits.agent.answer_total_chars.toString())
+    put("agent.answer_max_tokens", limits.agent.answer_max_tokens.toString())
+    put("agent.recall_working_cache_threshold", limits.agent.recall_working_cache_threshold.toString())
+    put("agent.recall_normal_max", limits.agent.recall_normal_max.toString())
+    put("agent.full_category_batch_chars", limits.agent.full_category_batch_chars.toString())
+    put("agent.context_prompt_max_chars", limits.agent.context_prompt_max_chars.toString())
+    put("agent.chat_text_max_chars", limits.agent.chat_text_max_chars.toString())
+    // brain == null: brain-api war beim /config-Abruf nicht erreichbar — dann KEINE Drafts
+    // aus App-Defaults erfinden (sie wuerden beim Speichern Franks echte Server-Limits ersetzen).
+    limits.brain?.let { brain ->
+        put("brain.chunk_chars", brain.chunk_chars.toString())
+        put("brain.chunk_overlap", brain.chunk_overlap.toString())
+        put("brain.search_overfetch_factor", brain.search_overfetch_factor.toString())
+        put("brain.search_date_overfetch_factor", brain.search_date_overfetch_factor.toString())
+        put("brain.bm25_candidate_factor", brain.bm25_candidate_factor.toString())
+        put("brain.bm25_min_candidates", brain.bm25_min_candidates.toString())
+    }
+}
 
 private fun limitInt(drafts: Map<String, String>, key: String, fallback: Int): Int =
     drafts[key]?.toIntOrNull() ?: fallback
@@ -1539,14 +1727,18 @@ private fun draftsToLimits(current: RuntimeLimits, drafts: Map<String, String>):
         context_prompt_max_chars = limitInt(drafts, "agent.context_prompt_max_chars", current.agent.context_prompt_max_chars),
         chat_text_max_chars = limitInt(drafts, "agent.chat_text_max_chars", current.agent.chat_text_max_chars)
     ),
-    brain = BrainRuntimeLimits(
-        chunk_chars = limitInt(drafts, "brain.chunk_chars", current.brain.chunk_chars),
-        chunk_overlap = limitInt(drafts, "brain.chunk_overlap", current.brain.chunk_overlap),
-        search_overfetch_factor = limitInt(drafts, "brain.search_overfetch_factor", current.brain.search_overfetch_factor),
-        search_date_overfetch_factor = limitInt(drafts, "brain.search_date_overfetch_factor", current.brain.search_date_overfetch_factor),
-        bm25_candidate_factor = limitInt(drafts, "brain.bm25_candidate_factor", current.brain.bm25_candidate_factor),
-        bm25_min_candidates = limitInt(drafts, "brain.bm25_min_candidates", current.brain.bm25_min_candidates)
-    )
+    // Kein bekannter Brain-Stand -> auch KEINE Brain-Limits mitsenden (Moshi laesst null-Felder
+    // weg, der Server aendert dann nichts an den Brain-Limits).
+    brain = current.brain?.let { brain ->
+        BrainRuntimeLimits(
+            chunk_chars = limitInt(drafts, "brain.chunk_chars", brain.chunk_chars),
+            chunk_overlap = limitInt(drafts, "brain.chunk_overlap", brain.chunk_overlap),
+            search_overfetch_factor = limitInt(drafts, "brain.search_overfetch_factor", brain.search_overfetch_factor),
+            search_date_overfetch_factor = limitInt(drafts, "brain.search_date_overfetch_factor", brain.search_date_overfetch_factor),
+            bm25_candidate_factor = limitInt(drafts, "brain.bm25_candidate_factor", brain.bm25_candidate_factor),
+            bm25_min_candidates = limitInt(drafts, "brain.bm25_min_candidates", brain.bm25_min_candidates)
+        )
+    }
 )
 
 @Composable
@@ -1555,6 +1747,8 @@ private fun LimitSettingsCard(
     drafts: Map<String, String>,
     status: String,
     saving: Boolean,
+    saveEnabled: Boolean = true,
+    brainAvailable: Boolean = true,
     onDraftChange: (String, String) -> Unit,
     onSave: () -> Unit
 ) {
@@ -1596,6 +1790,10 @@ private fun LimitSettingsCard(
                     value = drafts[item.key].orEmpty(),
                     isDark = isDark,
                     expanded = expandedKey == item.key,
+                    // Brain-Felder sperren, solange kein echter Brain-Server-Stand vorliegt:
+                    // Eingaben wuerden beim Speichern verworfen (brain=null wird nicht gesendet),
+                    // die App meldete aber trotzdem Erfolg — stiller Eingabeverlust.
+                    enabled = brainAvailable || !item.key.startsWith("brain."),
                     onValueChange = { onDraftChange(item.key, it) },
                     onToggle = { expandedKey = if (expandedKey == item.key) null else item.key }
                 )
@@ -1612,7 +1810,7 @@ private fun LimitSettingsCard(
                 Text(status, fontSize = 11.5.sp, color = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.weight(1f))
                 Button(
                     onClick = onSave,
-                    enabled = !saving,
+                    enabled = !saving && saveEnabled,
                     shape = RoundedCornerShape(12.dp),
                     colors = ButtonDefaults.buttonColors(containerColor = Orange)
                 ) {
@@ -1633,6 +1831,7 @@ private fun LimitRow(
     value: String,
     isDark: Boolean,
     expanded: Boolean,
+    enabled: Boolean = true,
     onValueChange: (String) -> Unit,
     onToggle: () -> Unit
 ) {
@@ -1644,7 +1843,11 @@ private fun LimitRow(
         ) {
             Column(modifier = Modifier.weight(1f)) {
                 Text(item.label, fontSize = 13.5.sp, fontWeight = FontWeight.SemiBold)
-                Text(item.summary, fontSize = 11.sp, lineHeight = 15.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                Text(
+                    if (enabled) item.summary else "Brain-API nicht erreichbar — Wert gesperrt, bis der Server-Stand geladen ist.",
+                    fontSize = 11.sp, lineHeight = 15.sp,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
             }
             Surface(
                 shape = RoundedCornerShape(10.dp),
@@ -1655,6 +1858,7 @@ private fun LimitRow(
                 BasicTextField(
                     value = value,
                     onValueChange = onValueChange,
+                    readOnly = !enabled,
                     modifier = Modifier.padding(horizontal = 10.dp, vertical = 9.dp),
                     singleLine = true,
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),

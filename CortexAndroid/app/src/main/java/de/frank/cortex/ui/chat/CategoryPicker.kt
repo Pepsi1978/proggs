@@ -97,8 +97,10 @@ fun CategoryPickerPill(
 ) {
     var open by remember { mutableStateOf(false) }
     val expanded = remember { mutableStateListOf<String>() }
-    // dialogParent: null = kein Dialog; "" = neue Hauptkategorie; "a/b" = neue Unterkategorie darunter
-    var dialogParent by remember { mutableStateOf<String?>(null) }
+    // dialogParent: null = kein Dialog; "" = neue Hauptkategorie; "a/b" = neue Unterkategorie darunter.
+    // rememberSaveable wie newName: sonst verschwand der Anlege-Dialog bei Rotation, waehrend
+    // die Eingabe (newName) inkonsistent erhalten blieb.
+    var dialogParent by rememberSaveable { mutableStateOf<String?>(null) }
     var newName by rememberSaveable { mutableStateOf("") }
 
     val tree = remember(categories) { buildCategoryTree(categories) }

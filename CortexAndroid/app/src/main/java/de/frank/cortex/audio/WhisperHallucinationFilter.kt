@@ -71,8 +71,11 @@ class WhisperHallucinationFilter {
                 if (!hasSpeech) {
                     CortexLog.warn(
                         "WhisperFilter", "layer3",
+                        // Nutzertext als %s-ARGUMENT, nie in den Format-String interpolieren:
+                        // ein "%" im gesprochenen Text (z.B. "100 %") crashte sonst format()
+                        // und die GESAMTE Transkription ging verloren.
                         "Schicht 3: Segment ohne Schall im Zeitfenster verworfen " +
-                            "('${seg.text?.trim()?.take(60)}', %.1f-%.1f s)".format(start, end),
+                            "('%s', %.1f-%.1f s)".format(seg.text?.trim()?.take(60), start, end),
                     )
                 }
                 hasSpeech
@@ -134,14 +137,16 @@ class WhisperHallucinationFilter {
         return analysis.voicedMs < SILENCE_CONTEXT_MAX_VOICED_MS
     }
 
-    /** lowercase, Satzzeichen/Ziffern entfernt (Umlaute bleiben), Whitespace kollabiert. */
+    /** lowercase, Nicht-Buchstaben werden zu Leerzeichen (Umlaute bleiben), Whitespace kollabiert.
+     *  WICHTIG: Satzzeichen als TRENNER behandeln, nicht loeschen — "Amara.org" muss zu
+     *  "amara org" normalisieren, sonst matcht der Blocklist-Eintrag
+     *  "untertitel der amara org community" nie (toter Eintrag, Halluzination rutschte durch). */
     private fun normalizeFloskel(s: String): String {
         val sb = StringBuilder(s.length)
         for (c in s.lowercase()) {
             when {
                 c.isLetter() -> sb.append(c)
-                c.isWhitespace() -> sb.append(' ')
-                // Satzzeichen, Ziffern, Symbole weglassen
+                else -> sb.append(' ')
             }
         }
         return sb.toString().split(' ').filter { it.isNotEmpty() }.joinToString(" ")
@@ -158,8 +163,10 @@ class WhisperHallucinationFilter {
         /** Schicht 2: Mini-Noise — sehr kurze Segmente mit Stille-Verdacht. */
         private const val MINI_NOISE_MAX_SEC = 0.4
 
-        /** Schicht 4: Floskel gilt nur bei kurzer Ausgabe + sprach-armem Clip. */
-        private const val FLOSKEL_MAX_WORDS = 6
+        /** Schicht 4: Floskel gilt nur bei kurzer Ausgabe + sprach-armem Clip.
+         *  8 statt 6: der laengste Blocklist-Eintrag ("untertitel im auftrag des zdf für funk")
+         *  hat 7 Woerter und war mit Limit 6 nie erreichbar (toter Eintrag). */
+        private const val FLOSKEL_MAX_WORDS = 8
         private const val FLOSKEL_MAX_CHARS = 64
         private const val SILENCE_CONTEXT_MAX_VOICED_MS = 600
 

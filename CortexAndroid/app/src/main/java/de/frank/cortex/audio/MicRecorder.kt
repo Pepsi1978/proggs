@@ -15,20 +15,25 @@ import java.nio.ByteOrder
 
 class MicRecorder {
 
-    private var recorder: AudioRecord? = null
+    @Volatile private var recorder: AudioRecord? = null
     private var recordingJob: Job? = null
     private val buffer = ByteArrayOutputStream()
-    private var isRecording = false
+    // AtomicBoolean statt plain Boolean: wird von Main (toggle) und IO (Loop/stop-Body)
+    // gleichzeitig genutzt; compareAndSet macht Doppel-stop() eindeutig (nur EINER liefert Daten).
+    private val recording = java.util.concurrent.atomic.AtomicBoolean(false)
     private var startedAtMs = 0L
 
     companion object {
         const val SAMPLE_RATE = 16000
         const val CHANNEL = AudioFormat.CHANNEL_IN_MONO
         const val ENCODING = AudioFormat.ENCODING_PCM_16BIT
+        // Sicherheitsdeckel ~10 Minuten (16 kHz * 2 Byte, mono): ohne Limit wuchs der Puffer bei
+        // vergessener Aufnahme unbegrenzt (~115 MB/h) Richtung OOM.
+        private const val MAX_BUFFER_BYTES = SAMPLE_RATE * 2 * 60 * 10
     }
 
     fun start(scope: CoroutineScope): Boolean {
-        if (isRecording) return true
+        if (recording.get()) return true
         if (ContextCompat.checkSelfPermission(CortexApp.appContext, Manifest.permission.RECORD_AUDIO) !=
             PackageManager.PERMISSION_GRANTED
         ) {
@@ -76,15 +81,32 @@ class MicRecorder {
             recorder = null
             return false
         }
-        isRecording = true
+        recording.set(true)
         startedAtMs = System.currentTimeMillis()
 
         recordingJob = scope.launch(Dispatchers.IO) {
             val readBuffer = ByteArray(bufferSize)
-            while (isActive && isRecording) {
-                val read = recorder?.read(readBuffer, 0, readBuffer.size) ?: 0
-                if (read > 0) {
-                    buffer.write(readBuffer, 0, read)
+            try {
+                while (isActive && recording.get()) {
+                    val read = recorder?.read(readBuffer, 0, readBuffer.size) ?: 0
+                    if (read > 0) {
+                        if (buffer.size() + read > MAX_BUFFER_BYTES) {
+                            CortexLog.warn("MicRecorder", "record", "Max. Aufnahmepuffer erreicht — es wird nichts weiter gepuffert")
+                            break
+                        }
+                        buffer.write(readBuffer, 0, read)
+                    } else if (read < 0) {
+                        // Fehlercode (z.B. ERROR_DEAD_OBJECT, wenn eine andere App das Mikrofon
+                        // uebernimmt): ohne break drehte die Schleife als heisser Busy-Loop weiter.
+                        CortexLog.error("MicRecorder", "record", "AudioRecord.read-Fehler: $read — Loop beendet")
+                        break
+                    }
+                }
+            } finally {
+                // Stirbt der Scope (ViewModel-Ende) OHNE stop(): Recorder freigeben, sonst bleibt
+                // das Mikrofon (inkl. Privacy-Indikator) bis zum Prozess-Tod belegt.
+                if (!isActive && recording.get()) {
+                    release()
                 }
             }
         }
@@ -94,9 +116,10 @@ class MicRecorder {
     }
 
     suspend fun stop(): ByteArray? {
-        if (!isRecording) return null
+        // compareAndSet: zwei parallele stop()-Aufrufe (Doppel-Tipp) lasen sonst beide den Puffer
+        // aus und dieselbe Aufnahme wurde doppelt transkribiert — jetzt gewinnt genau einer.
+        if (!recording.compareAndSet(true, false)) return null
 
-        isRecording = false
         recordingJob?.cancelAndJoin()
         recordingJob = null
 
@@ -124,7 +147,19 @@ class MicRecorder {
         return if (pcmData.isNotEmpty()) pcmDataToWav(pcmData) else null
     }
 
-    fun isRecording(): Boolean = isRecording
+    fun isRecording(): Boolean = recording.get()
+
+    /** Synchrones Aufraeumen (z.B. onCleared): beendet den Lese-Job und gibt den AudioRecord
+     *  sofort frei — ohne diese Freigabe blieb das Mikrofon nach App-Ende belegt. */
+    fun release() {
+        recording.set(false)
+        recordingJob?.cancel()
+        recordingJob = null
+        val activeRecorder = recorder
+        recorder = null
+        try { activeRecorder?.stop() } catch (_: Exception) {}
+        try { activeRecorder?.release() } catch (_: Exception) {}
+    }
 
     private fun pcmDataToWav(pcmData: ByteArray): ByteArray {
         val totalDataLen = pcmData.size + 36

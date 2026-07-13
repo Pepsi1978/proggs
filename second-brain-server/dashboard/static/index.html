@@ -2636,6 +2636,11 @@ button{font-family:inherit;cursor:pointer}
   /* ── Einstellungen: Modell + System-Prompt laden / speichern / zurücksetzen ── */
   let promptDefault = "", promptRole = "haupt";
   let runtimeLimitsState = {agent:{}, brain:{}};
+  // false = /api/config lieferte limits.brain=null (brain-api gerade nicht erreichbar).
+  // Dann duerfen die Brain-Felder weder editierbar sein noch beim Speichern mitgesendet
+  // werden — sonst ueberschrieben die FRONTEND-Defaults Franks echte Server-Limits
+  // (Lost Update; dieselbe Fehlerklasse wurde in der Android-App bereits geschlossen).
+  let runtimeLimitsBrainKnown = true;
   let modePromptState = {size:{}, context:{}};
   let selectedModePrompt = "size_auto";
   let userContextPrompts = [];
@@ -3089,12 +3094,15 @@ button{font-family:inherit;cursor:pointer}
     limits[group][key]=value;
   }
   function renderRuntimeLimits(limits){
+    runtimeLimitsBrainKnown = !!(limits && limits.brain);
     runtimeLimitsState = cloneRuntimeLimits(limits);
     const list = document.getElementById("runtimeLimitList"); if(!list) return;
     list.innerHTML = RUNTIME_LIMIT_FIELDS.map(f=>{
       const id = "limit-" + f.path.replace(/\./g,"-");
+      const brainLocked = !runtimeLimitsBrainKnown && f.path.startsWith("brain.");
       const rec = runtimeLimitRecommendation && runtimeLimitRecommendation.recommended ? limitValue(runtimeLimitRecommendation.recommended, f.path) : null;
-      const recTxt = rec==null ? "Empfehlung: noch nicht ermittelt" : `Empfehlung: ${rec} ${f.unit.replace(/·.*$/,'').trim()}`;
+      const recTxt = brainLocked ? "Brain-API nicht erreichbar — Feld gesperrt" :
+        (rec==null ? "Empfehlung: noch nicht ermittelt" : `Empfehlung: ${rec} ${f.unit.replace(/·.*$/,'').trim()}`);
       return `<div class="limit-card">
         <div class="limit-card-top">
           <div style="flex:1;min-width:0">
@@ -3103,7 +3111,7 @@ button{font-family:inherit;cursor:pointer}
             <div class="limit-tags"><span class="limit-tag">${escapeHtml(f.kind)}</span><span class="limit-tag">${escapeHtml(f.search)}</span></div>
           </div>
           <div>
-            <input id="${id}" data-limit-path="${escapeHtml(f.path)}" inputmode="numeric" pattern="[0-9]*" value="${limitValue(runtimeLimitsState,f.path)}" />
+            <input id="${id}" data-limit-path="${escapeHtml(f.path)}" inputmode="numeric" pattern="[0-9]*" value="${brainLocked ? "" : limitValue(runtimeLimitsState,f.path)}" ${brainLocked ? "disabled" : ""} />
             <div class="limit-unit">${escapeHtml(f.unit)}</div>
             <div class="limit-rec" data-limit-rec="${escapeHtml(f.path)}">${escapeHtml(recTxt)}</div>
           </div>
@@ -3128,10 +3136,14 @@ button{font-family:inherit;cursor:pointer}
   function collectRuntimeLimits(){
     const next = cloneRuntimeLimits(runtimeLimitsState);
     document.querySelectorAll("input[data-limit-path]").forEach(inp=>{
+      if(inp.disabled) return;   // gesperrte Brain-Felder nicht einsammeln
       const fallback = limitValue(next, inp.dataset.limitPath);
       const n = parseInt(inp.value,10);
       setLimitValue(next, inp.dataset.limitPath, Number.isFinite(n) ? n : fallback);
     });
+    // Kein bekannter Brain-Server-Stand -> brain WEGLASSEN: der Agent aendert dann nichts an
+    // den Brain-Limits, statt Frontend-Defaults als vermeintlichen Ist-Stand zu speichern.
+    if(!runtimeLimitsBrainKnown) delete next.brain;
     return next;
   }
   async function saveRuntimeLimits(){
@@ -3150,6 +3162,8 @@ button{font-family:inherit;cursor:pointer}
     RUNTIME_LIMIT_FIELDS.forEach(f=>{
       const el = document.querySelector(`[data-limit-rec="${f.path}"]`);
       if(!el) return;
+      // Gesperrte Brain-Felder behalten ihren "gesperrt"-Hinweis (keine Empfehlung darueber).
+      if(!runtimeLimitsBrainKnown && f.path.startsWith("brain.")) return;
       const value = limitValue(rec.recommended, f.path);
       el.textContent = `Empfehlung: ${value} ${f.unit.replace(/·.*$/,'').trim()}`;
     });

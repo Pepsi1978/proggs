@@ -15,7 +15,8 @@ SOURCE = APP_PATH.read_text(encoding="utf-8")
 def load_sanitizers() -> dict:
     assignments = {
         "_MD_BOLD_RE", "_MD_HEADING_RE", "_MD_BULLET_RE", "_MD_WEB_LINK_RE",
-        "_BARE_WEB_URL_RE", "_BARE_DOMAIN_RE", "_TRAILING_SOURCES_RE", "_NUMERIC_CITATION_RE",
+        "_BARE_WEB_URL_RE", "_BARE_DOMAIN_RE", "_TRAILING_SOURCES_BLOCK_RE",
+        "_INLINE_SOURCES_LINE_RE", "_NUMERIC_CITATION_RE",
         "_SOURCE_ATTRIBUTION_TAIL_RE", "_PARENTHETICAL_SOURCE_RE",
         "_ARTICLE_SOURCE_ATTRIBUTION_RE",
         "_INTERNAL_OUTPUT_INSTRUCTION_RE",
@@ -68,6 +69,16 @@ def main() -> int:
         "CLAUDE.md kann AGENTS.md importieren."
     )
     assert sanitize("Die Quelle ist für die Bewertung wichtig.") == "Die Quelle ist für die Bewertung wichtig."
+    # Regression 2026-07-14 (Fehlerklasse aus der Android-App, hier gespiegelt):
+    # (a) "Quellensteuer..." ist KEINE Quellen-Zeile — frueher loeschte DOTALL die ganze Antwort.
+    quellensteuer = "Quellensteuer ist eine Steuer, die direkt an der Quelle einbehalten wird."
+    assert sanitize(quellensteuer) == quellensteuer
+    # (b) Eine Quellen-Zeile MITTEN im Text darf Folgeabsaetze nicht mitreissen.
+    mid_sources = "Erster Absatz mit Inhalt.\n\nQuellen: Beispielbuch Seite 12\n\nZweiter Absatz bleibt."
+    assert sanitize(mid_sources) == "Erster Absatz mit Inhalt.\n\nZweiter Absatz bleibt."
+    # (c) "Quellen sind <Inhalt>" ist ein normaler Inhaltssatz (Plural-Kopula), keine Attribution.
+    plural = "Quellen sind Materialien, aus denen Historiker Erkenntnisse gewinnen."
+    assert sanitize(plural) == plural
     vehicle_reply = (
         "In deinem Gedächtnis steht zu deinem Auto: Toyota C-HR, Baujahr 2019, mit der KBA-Nummer 5013-AKY.\n\n"
         "Für den Kauf von Kfz-Teilen kannst du daher angeben: HSN 5013 und TSN AKY.\n\n"
@@ -82,7 +93,10 @@ def main() -> int:
     user = "Gibt es den neuen Toyota RAV4 schon zu kaufen?"
     assert ns["_reinforce_self_rules"]("DAUERHAFTE SELBST-REGELN VON FRANK", user) == user
 
-    stream = SOURCE[SOURCE.index("async def chat_stream"):SOURCE.index("# Gruppe D", SOURCE.index("async def chat_stream"))]
+    # Anker-Fix 2026-07-14: Der fruehere End-Anker "# Gruppe D" liegt seit einer Code-
+    # Umsortierung VOR chat_stream — der Slice endet jetzt robust am naechsten @app.-Endpunkt.
+    stream_start = SOURCE.index("async def chat_stream")
+    stream = SOURCE[stream_start:SOURCE.index("\n@app.", stream_start)]
     assert "rsize, None, req.memory_edit" in stream, "raw model deltas still enter the client stream"
     assert "queue.put_nowait(final_reply)" in stream, "final canonical reply is not streamed"
     assert "outcome = _finalize_visible_outcome(outcome)" in stream, "stream reply is not sanitized"

@@ -15,7 +15,6 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.blur
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.text.font.FontWeight
@@ -26,11 +25,12 @@ import de.frank.cortex.ui.theme.*
 
 @Composable
 fun VpnSleepOverlay(onActivateVpn: () -> Unit) {
+    // KEIN .blur auf dem Overlay selbst: das blurte den EIGENEN Inhalt (Titel, Text, Button)
+    // statt des dahinterliegenden Screens — der komplette Overlay-Text war unscharf (ab API 31).
     Box(
         modifier = Modifier
             .fillMaxSize()
-            .background(MaterialTheme.colorScheme.background.copy(alpha = 0.78f))
-            .blur(3.dp),
+            .background(MaterialTheme.colorScheme.background.copy(alpha = 0.78f)),
         contentAlignment = Alignment.Center
     ) {
         Column(
