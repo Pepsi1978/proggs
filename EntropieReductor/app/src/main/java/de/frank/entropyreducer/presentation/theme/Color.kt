@@ -84,25 +84,24 @@ object CosmosColors {
     // Frank-Wunsch 2026-05-10: geringste Prio ist Blau (kuehlste Farbe), Gruen liegt davor.
     // FUNKTIONAL, unveraendert.
     val PriorityRed = Color(0xFFEF4444) // 80-100  (sehr wichtig)
-    val PriorityOrange = Color(0xFFFB923C) // 60-80
-    val PriorityYellow = Color(0xFFFBBF24) // 40-60
+    val PriorityOrange = Color(0xFFF97316) // 60-80
+    val PriorityYellow = Color(0xFFFACC15) // 40-60
     val PriorityGreen = Color(0xFF22C55E) // 20-40
-    val PriorityBlue = Color(0xFF60A5FA) // 0-20    (geringste Prio)
+    val PriorityBlue = Color(0xFF3B82F6) // 0-20    (geringste Prio)
 
     // Bucket-Toenung fuer Aufgabenkarten (Frank-Wunsch 2026-05-10).
     // Volle Saettigung — die Alpha wird beim Anwenden gesetzt (siehe bucketCardTint
     // in TasksScreen.kt), damit die Toenung in beiden Modi nur "ganz leicht" ist.
-    //  - HEUTE      = Rosa/Pink (Frank-Aenderung 2026-05-10: vorher Orange,
-    //                 unterschied sich aber zu wenig vom Gelb der Morgen-Karten;
-    //                 Rosa bleibt warm/dringend, ist aber klar abgegrenzt)
-    //  - MORGEN     = Gelb (vorbereitend)
-    //  - FREIBLOCK  = Gruen (Schichtblock, ruhig)
+    //  - HEUTE      = Rot
+    //  - MORGEN     = Orange
+    //  - FREIBLOCK  = Gelb
+    //  - GERING     = Gruen
     //  - SPAETER    = Blau (kuehl, kein Datum)
-    // FUNKTIONAL, unveraendert.
-    val BucketHeuteTint = Color(0xFFF472B6) // Tailwind pink-400 — klar von Gelb unterschieden
-    val BucketMorgenTint = Color(0xFFFBBF24)
-    val BucketFreiblockTint = Color(0xFF22C55E)
-    val BucketSpaeterTint = Color(0xFF60A5FA)
+    val BucketHeuteTint = PriorityRed
+    val BucketMorgenTint = PriorityOrange
+    val BucketFreiblockTint = PriorityYellow
+    val BucketGeringTint = PriorityGreen
+    val BucketSpaeterTint = PriorityBlue
 
     // Kategorie-Farben — FUNKTIONAL, unveraendert
     val CatPhysical = Color(0xFFF87171)
