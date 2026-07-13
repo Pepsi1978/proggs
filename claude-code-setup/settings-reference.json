@@ -114,7 +114,8 @@
 					},
 					{
 						"type": "command",
-						"command": "pwsh -NoProfile -File \"$USERPROFILE/.claude/hooks/task-ledger-prompt.ps1\""
+						"command": "pwsh -NoProfile -File \"$USERPROFILE/.claude/hooks/task-ledger-prompt.ps1\"",
+						"timeout": 8
 					},
 					{
 						"type": "command",
@@ -204,7 +205,8 @@
 				"hooks": [
 					{
 						"type": "command",
-						"command": "pwsh -NoProfile -ExecutionPolicy Bypass -File \"$USERPROFILE/.claude/hooks/research-approval.ps1\""
+						"command": "pwsh -NoProfile -ExecutionPolicy Bypass -File \"$USERPROFILE/.claude/hooks/research-approval.ps1\"",
+						"timeout": 8
 					}
 				]
 			}
@@ -221,16 +223,6 @@
 			}
 		],
 		"PostToolUse": [
-			{
-				"matcher": "Read|WebFetch|Bash|Grep|Task",
-				"hooks": [
-					{
-						"type": "command",
-						"command": "python3 \"$USERPROFILE/.claude/hooks/prompt-injection-defender/post-tool-defender.py\"",
-						"timeout": 5
-					}
-				]
-			},
 			{
 				"matcher": "Edit|Write",
 				"hooks": [
