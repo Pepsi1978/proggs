@@ -278,6 +278,23 @@ constructor(
         }
     }
 
+    /** Speichert den von Frank bearbeiteten Aufgabentext für alle weiteren Ansichten. */
+    fun updateTaskText(newText: String) {
+        val clean = newText.trim()
+        viewModelScope.launch {
+            val current = entries.get(entryId) ?: return@launch
+            if (current.rawTranscript == clean && current.description == clean) return@launch
+            entries.update(
+                current.copy(
+                    rawTranscript = clean,
+                    description = clean,
+                    updatedAt = System.currentTimeMillis(),
+                )
+            )
+            reloadTrigger.value = System.currentTimeMillis()
+        }
+    }
+
     /** Löscht den Eintrag (Nachträge fliegen per ForeignKey CASCADE automatisch mit). */
     fun deleteEntry() {
         viewModelScope.launch {

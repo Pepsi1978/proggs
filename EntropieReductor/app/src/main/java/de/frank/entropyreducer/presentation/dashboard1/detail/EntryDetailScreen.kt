@@ -141,6 +141,9 @@ fun EntryDetailScreen(onBack: () -> Unit, viewModel: EntryDetailViewModel = hilt
             // Der gespeicherte Titel erscheint dank gemeinsamer DB auch in der Liste.
             var editingTitle by remember(entry.id) { mutableStateOf(false) }
             var titleDraft by remember(entry.id) { mutableStateOf(entry.title) }
+            var editingText by remember(entry.id) { mutableStateOf(false) }
+            var textDraft by
+                remember(entry.id) { mutableStateOf(entry.rawTranscript.ifBlank { entry.description }) }
 
             Column(
                 modifier =
@@ -200,12 +203,55 @@ fun EntryDetailScreen(onBack: () -> Unit, viewModel: EntryDetailViewModel = hilt
                             )
                         }
                         val taskText = entry.rawTranscript.ifBlank { entry.description }
-                        if (taskText.isNotBlank() && taskText != entry.title) {
+                        if (editingText) {
+                            Spacer(Modifier.height(6.dp))
+                            androidx.compose.material3.OutlinedTextField(
+                                value = textDraft,
+                                onValueChange = { textDraft = it },
+                                modifier = Modifier.fillMaxWidth(),
+                                minLines = 3,
+                                textStyle = MaterialTheme.typography.bodyMedium,
+                                colors =
+                                    androidx.compose.material3.OutlinedTextFieldDefaults.colors(
+                                        focusedTextColor = cosmos.textPrimary,
+                                        unfocusedTextColor = cosmos.textPrimary,
+                                        focusedBorderColor = LocalCosmos.current.accent,
+                                        unfocusedBorderColor = cosmos.glassBorder,
+                                        cursorColor = LocalCosmos.current.accent,
+                                    ),
+                                trailingIcon = {
+                                    IconButton(
+                                        onClick = {
+                                            viewModel.updateTaskText(textDraft)
+                                            editingText = false
+                                        }
+                                    ) {
+                                        Icon(
+                                            imageVector = Icons.Outlined.Check,
+                                            contentDescription = "Aufgabentext speichern",
+                                            tint = LocalCosmos.current.accent,
+                                        )
+                                    }
+                                },
+                            )
+                        } else {
                             Spacer(Modifier.height(6.dp))
                             Text(
-                                text = taskText,
+                                text =
+                                    taskText.takeIf { it.isNotBlank() && it != entry.title }
+                                        ?: "Aufgabentext hinzufügen",
                                 style = MaterialTheme.typography.bodyMedium,
-                                color = cosmos.textPrimary,
+                                color =
+                                    if (taskText.isNotBlank() && taskText != entry.title) {
+                                        cosmos.textPrimary
+                                    } else {
+                                        cosmos.textSecondary
+                                    },
+                                modifier =
+                                    Modifier.clickable {
+                                        textDraft = taskText
+                                        editingText = true
+                                    },
                             )
                         }
                     }
