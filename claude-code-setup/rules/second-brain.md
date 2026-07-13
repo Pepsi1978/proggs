@@ -1,4 +1,4 @@
-# Second Brain (Cortex): Speichern, Mitlernen & Laden (KRITISCH)
+# Second Brain (Cortex): Speichern & Laden (KRITISCH)
 
 > `second-brain`-MCP. **Volltext: `claude-code-setup/docs/rules/second-brain.md`.**
 
@@ -8,9 +8,8 @@ Bugfix FUNKTIONIERT -> Eintrag unter `bugfixes/<unterkategorie>`, Titel `Bugfix 
 unsicher -> EINMAL fragen, erst bei Ja). Ergaenzt lokale Doku `~/proggs/bugs/`. Inhalt: Symptom, Root
 Cause, Fix, Verifikation, Funktionalitaets-Diff.
 
-## 2. Session-Mitlernen + Entscheidungs-Rueckfluss
-Automatisch: SessionEnd-Hook `session-brain-summary` -> `Programmierung/Sessions`. Manuell (PFLICHT):
-echte Grundsatz-Entscheidung -> am ENDE der Aufgabe "ins Gehirn merken?" -> bei Ja `remember` unter
+## 2. Entscheidungs-Rueckfluss
+Echte Grundsatz-Entscheidung -> am ENDE der Aufgabe "ins Gehirn merken?" -> bei Ja `remember` unter
 `Programmierung/Entscheidungen`. NIEMALS automatisch (Frank bestaetigt jede).
 
 ## 3. IMMER EINZELN laden

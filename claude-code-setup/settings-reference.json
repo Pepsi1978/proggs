@@ -450,16 +450,6 @@
 						"async": true
 					}
 				]
-			},
-			{
-				"hooks": [
-					{
-						"type": "command",
-						"command": "pwsh -ExecutionPolicy Bypass -File \"$USERPROFILE/.claude/hooks/session-brain-summary.ps1\"",
-						"timeout": 30,
-						"async": true
-					}
-				]
 			}
 		]
 	},

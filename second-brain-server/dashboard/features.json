@@ -1,5 +1,5 @@
 {
-	"stand": "12.07.2026, 22:16 Uhr",
+	"stand": "13.07.2026, 11:12 Uhr",
 	"hinweis": "PFLEGE-PFLICHT: Bei JEDEM Deploy, der ein neues System/Feature einbaut, hier einen Eintrag ERGÄNZEN (neueste zuerst). SCHREIBWEISE (Dauer-Regel): leichtes, verständliches Deutsch, kurze Sätze; ALLE Fachbegriffe, Namen und Zahlen (z.B. BM25, RRF, Qdrant, ENV-Variablen, Endpunkt-Namen) BEHALTEN, aber jeden in einem kurzen Halbsatz erklären — NIE durch Weglassen vereinfachen; kompakt halten (der Hauptagent liest über das Werkzeug 'was_kann_cortex' ALLE Einträge auf einmal ein), aber vollständig genug, dass man erkennt WAS eingebaut wurde; einfache Überschrift. Ähnliche/redundante Einträge dürfen zusammengefasst werden — Datum sekundär, entscheidend ist WAS Cortex kann. Quelle des Info-Bereichs in den Dashboard-Einstellungen (GET /api/features). Verankert in DEPLOY.md.",
 	"features": [
 		{
@@ -265,14 +265,6 @@
 			"name": "Cortex Wissen speichern: Feature-Chronik als eigene Gehirn-Einträge ablegen",
 			"kurz": "Der Button 'Cortex Wissen speichern' (Einstellungen -> System-Info) legt jeden Punkt aus 'Was Cortex kann' als eigenen Eintrag in der Kategorie 'Cortex' ab, mit Titelpräfix 'Cortex Wissen:'.",
 			"erklaerung": "Der Button liest dieselbe Feature-Chronik wie das aufklappbare Akkordeon und speichert jeden Punkt als eigenen Gehirn-Eintrag. Titel: 'Cortex Wissen: <Überschrift>'; Text: Dienst, Einbauzeit, Kurzbeschreibung und Erklärung. Jeder Text beginnt mit einer Mini-Beschreibung, dass dies Cortex-Wissen ist und wie Cortex funktioniert — damit die Bedeutungssuche Fragen wie 'Was kann Cortex schon?' sicher trifft. Gespeichert wird über den Dashboard-Proxy POST /api/store, damit der Browser den geheimen Serverschlüssel SB_API_KEY nie sieht. Gleiche Titel ersetzen alte Versionen sauber statt Dubletten anzulegen."
-		},
-		{
-			"id": "session-mitlernen",
-			"eingebaut": "05.07.2026, 14.38 Uhr",
-			"dienst": "agent 0.53.0 + SessionEnd-Hook auf Franks PC (Gruppe D 27/28/31/32)",
-			"name": "Session-Mitlernen: Programmier-Sessions fließen automatisch ins Gehirn",
-			"kurz": "Am Ende jeder Claude-Code-Session landet automatisch ein verdichtetes Protokoll (gemacht/entschieden/gelernt) unter Programmierung/Sessions; der Kern-Block 'Woran Frank gerade baut' wird nachgezogen.",
-			"erklaerung": "Ein SessionEnd-Hook (kleines Programm, das beim Sitzungsende automatisch startet) sammelt Franks Eingaben aus dem Transkript, git-Commits und geänderte Dateien (Geheimnisse vorher entfernt) und schickt sie über das WireGuard-VPN (verschlüsselte Serververbindung) an den neuen Endpunkt /session-log. Der destilliert im Hintergrund per KI (Speicheragent-Modell) ein Protokoll: Zusammenfassung, Entscheidungen, Gelerntes, Commit-Liste und ein durchsuchbarer Auszug der Eingaben (Episoden-Gedächtnis). Eintrag 'Session Claude Code <Projekt> — Datum Uhrzeit' unter Programmierung/Sessions. Danach pflegt derselbe Lauf den Kern-Block 'Woran Frank gerade baut' [Programmierung/Kern-Blöcke]. Fragen wie 'Woran habe ich zuletzt gearbeitet?' beantwortet der Agent chronologisch mit anklickbaren Quellen. OpenCode speist im gleichen Format ein; ein Format-Wächter meldet, falls Claude Code sein Transkript-Format ändert."
 		},
 		{
 			"id": "reibungs-detektor",

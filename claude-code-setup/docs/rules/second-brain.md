@@ -1,7 +1,7 @@
-# Second Brain (Cortex): Speichern, Mitlernen & Laden (KRITISCH)
+# Second Brain (Cortex): Speichern & Laden (KRITISCH)
 
 > Zentrales Fehler-/Wissens-Gedaechtnis ueber alle Werkzeuge (Claude Code + OpenCode/Codex) via
-> `second-brain`-MCP. Drei Aspekte: Bugfixes ablegen (§1), Session-Mitlernen + Entscheidungen (§2),
+> `second-brain`-MCP. Drei Aspekte: Bugfixes ablegen (§1), Entscheidungen (§2),
 > immer einzeln laden (§3).
 
 ## 1. Funktionierende Bugfixes ablegen (ergaenzt Direktive #3)
@@ -21,13 +21,9 @@ Stelle> … Verwandte Pruefung … Verifikation … Funktionalitaets-Diff … [P
 EINEM Satz: "Im Gehirn dokumentiert: <Titel> [<Kategorie>]." MCP nicht verbunden → Eintrag nicht
 verlieren, kurz melden, auf die lokale Bug-Doku ausweichen.
 
-## 2. Session-Mitlernen (Gruppe D, automatisch) + Entscheidungs-Rueckfluss (manuell)
+## 2. Entscheidungs-Rueckfluss (manuell)
 
-**Automatisch (nur kennen):** SessionEnd-Hook `session-brain-summary` sammelt Franks Prompts + Commits +
-geaenderte Dateien (Secrets redaktiert) → `POST /session-log` → verdichtet zu "gemacht/entschieden/
-gelernt" unter `Programmierung/Sessions` (Titel `Session <CLI> <Projekt> — YYYY-MM-DD HH:MM`). Dazu:
-Kern-Block "Woran Frank gerade baut", Projektstand-Recall, Cross-CLI (OpenCode gleiches Schema).
-**Manuell (PFLICHT):** Faellt eine echte Grundsatz-Entscheidung, am ENDE der Aufgabe (nie mittendrin)
+Faellt eine echte Grundsatz-Entscheidung, am ENDE der Aufgabe (nie mittendrin)
 vorschlagen: "Soll ich diese Entscheidung ins Gehirn merken? [Entscheidung + Begruendung, je 1 Satz]".
 Bei Ja: `remember`, Titel `Entscheidung <Bereich>: <Kurz> <YYYY-MM-DD>`, Kategorie
 `Programmierung/Entscheidungen`, Inhalt = Entscheidung + verworfene Alternative + Begruendung. NIEMALS
@@ -49,6 +45,6 @@ laedt lokal aus `~/.claude/rules/` — aber sobald es SELBST Second-Brain-Daten 
 ## Was NIEMALS
 
 Unbestaetigten Bugfix speichern · Bugfix-Format/Titel-Schema abwandeln · blind neue Unterkategorie
-anlegen · eine Grundsatz-Entscheidung ohne Franks Ja speichern oder den Vorschlag weglassen · den
-SessionEnd-Hook ohne Auftrag deaktivieren · `get_by_category` auf eine grosse Kategorie · "N Regeln
+anlegen · eine Grundsatz-Entscheidung ohne Franks Ja speichern oder den Vorschlag weglassen ·
+`get_by_category` auf eine grosse Kategorie · "N Regeln
 eingelesen" bestaetigen ohne die Einzelabrufe.

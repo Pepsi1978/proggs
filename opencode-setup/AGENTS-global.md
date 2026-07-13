@@ -104,22 +104,3 @@ Vor echter Arbeit an einem technischen Bereich (nicht bei Planung oder Kleinkram
 3. Tritt ein Fehler auf, den passenden Volltext einzeln per `get_by_title`/`recall` lesen.
 Gibt es keinen passenden Eintrag, Frank kurz melden. Nie große Kategorien gesammelt laden. Hintergrund:
 `bugs/SYSTEM.md` und `best-practices/`.
-
-### 10. Session-Ende ins Gehirn (PFLICHT)
-Endet eine substanzielle Arbeitsphase nach Commit+Push, genau einmal echte lokale Zeit abfragen und per
-`second-brain_remember` speichern:
-- Titel: `Session OpenCode <Projekt-Ordnername> — YYYY-MM-DD HH:MM`
-- Kategorie: `Programmierung/Sessions`
-- Text:
-  ```
-  Automatisches Session-Protokoll — OpenCode, Projekt <name>
-  ## Zusammenfassung
-  <5-10 Sätze: was wurde gemacht und warum; nur Tatsachen>
-  ## Entscheidungen
-  - <Entscheidung mit Begründung; Abschnitt ohne Inhalt weglassen>
-  ## Gelernt
-  - <Erkenntnis/Fehlerursache; Abschnitt ohne Inhalt weglassen>
-  ## Commits
-  - <git log --oneline der Session-Commits>
-  ```
-Mini-Sessions ohne Commit und Substanz nicht speichern.

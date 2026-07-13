@@ -452,6 +452,7 @@ VERSION = "1.31.0 (10.07.2026, 22:00 Uhr)"  # 1.31.0 (Level-2 Gruppe A, Punkt 4 
 VERSION = "1.32.0 (11.07.2026, 13:25 Uhr)"  # 1.32.0: PUT /entry erzeugt Chunks und Embeddings vollständig VOR jeder Löschung, schreibt und verifiziert den neuen Stand zuerst und entfernt erst danach alte doc_id-/Rest-Chunks. Ein Embedding-, Budget- oder Upsert-Fehler kann den bisherigen Eintrag dadurch nicht mehr vorzeitig löschen. Alt: 1.31.0.
 VERSION = "1.32.1 (11.07.2026, 19:51 Uhr)"  # 1.32.1: Atomare additive Kategorie-Zuordnung unter dem globalen Eintrags-Schreib-Lock verhindert verlorene parallele Ergänzungen. Alt: 1.32.0.
 VERSION = "1.33.0 (12.07.2026, 17:56 Uhr)"  # 1.33.0 PERFORMANCE: BM25-Index-Rebuild laeuft nach Schreibwegen debounced im HINTERGRUND (statt dass die naechste Suche ihn bezahlt — vorher +~1s auf der ersten Suche nach jedem Chat-Turn, weil der Live-Gespraechs-Mirror den Index jedes Mal verwarf) + Single-Flight-Build (parallele Suchen bauen den Index nicht mehr N-fach gleichzeitig). Konsistenz unveraendert: keine Suche sieht je einen veralteten Index. Alt: 1.32.1.
+VERSION = "1.33.1 (13.07.2026, 11:12 Uhr)"  # 1.33.1: Letzte Schutzschicht gegen automatische Programmier-Session-Eintraege. /store lehnt Titel/Text-Muster von Claude-Code- und OpenCode-Session-Protokollen unter Programmierung/Sessions ab. Alt: 1.33.0.
 
 # Startup-Banner (Observability-First: Log-Pfad + Version EINMAL ausgeben)
 _log(logging.INFO, "brain-api startet", version=VERSION, log_path=LOG_PATH)
@@ -1033,6 +1034,19 @@ class StoreReq(BaseModel):
     user_id: str = Field(default="frank", description="Besitzer (aktuell immer 'frank')")
 
 
+def _is_automatic_programming_session(req: StoreReq) -> bool:
+    """Blockiert nur die abgeschafften CLI-Session-Protokolle, nicht historische oder manuelle Daten."""
+    categories = norm_cats(req.categories, req.category)
+    in_sessions = any(cat.casefold() == "programmierung/sessions" for cat in categories)
+    if not in_sessions:
+        return False
+    title = (req.title or "").strip()
+    text = (req.text or "").lstrip()
+    return bool(re.match(r"^Session\s+(Claude Code|OpenCode)\b", title, re.IGNORECASE)) or text.startswith(
+        ("Automatisches Session-Protokoll — Claude Code", "Automatisches Session-Protokoll — OpenCode")
+    )
+
+
 class SearchReq(BaseModel):
     query: str = Field(..., min_length=1)
     user_id: str = Field(default="frank")
@@ -1184,6 +1198,10 @@ def put_limits(req: LimitsReq) -> dict:
 @serialized_entry_write
 def store(req: StoreReq) -> dict:
     """Speichert Text WORTWOERTLICH 1:1. Mit Titel: ersetzt einen vorhandenen Eintrag gleichen Titels."""
+    if _is_automatic_programming_session(req):
+        _log(logging.WARNING, "Automatisches Programmier-Session-Protokoll abgelehnt",
+             title=(req.title or "")[:200], category=req.category)
+        raise HTTPException(status_code=403, detail="Automatische Programmier-Session-Protokolle sind deaktiviert")
     _require_store()
     doc_id = make_doc_id(req.user_id, req.title)
     now = iso_now()
