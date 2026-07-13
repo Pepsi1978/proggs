@@ -87,35 +87,10 @@ Profilsnapshot §3 + brain `Programmierung/Rules`.
 - Cross-platform: .ps1 hooks need .sh counterpart (and vice versa)
 - Do not leave project files untracked. Anything an agent creates or edits in the repo must be committed and pushed to GitHub, except secrets/local/generated files which must be explicitly ignored or replaced with a safe template.
 
-# Funktionierende Bugfixes ins zweite Gehirn (Cortex/Second Brain) abspeichern (KRITISCH)
+# Bugfixes niemals ins zweite Gehirn speichern (KRITISCH)
 
-> Gilt fuer JEDES Modell unter OpenCode (auch schwache). Ergaenzt **Direktive #3 (Resilient
-> Bugfixing)** — die VOR jedem Bugfix gilt (Root Cause finden, funktionserhaltend fixen, verifizieren).
-> Diese Regel ist der Ablage-Schritt DANACH. Gesetzt 2026-06-26 (Frank). Codex hat das Format
-> eingefuehrt; ab jetzt machen es ALLE CLIs gleich, damit ein gemeinsames Fehler-Gedaechtnis entsteht.
-
-**Die Regel:** Sobald ein Bugfix **bestaetigt FUNKTIONIERT**, schreibe ihn als EINEN Eintrag ueber den
-`second-brain`-MCP (`remember`) ins Gehirn — im festen Format, unter `bugfixes/<passende Unterkategorie>`.
-
-**Wann gilt "funktioniert"? (entscheidend — nur funktionierende Fixes ablegen)**
-- Hast du es OBJEKTIV verifiziert (Build gruen, Tests ok, Deploy `healthy`, Symptom reproduzierbar weg)
-  → speichern.
-- Kann es nur der Benutzer beurteilen (Optik/Gefuehl) ODER bist du unsicher → EINMAL kurz fragen
-  **"Hat der Fix funktioniert?"** → erst bei **Ja** speichern.
-- Default = NICHT speichern, bis bestaetigt. So muss nie etwas geloescht werden. (Sagt der Benutzer
-  spaeter "doch nicht funktioniert": den Eintrag per `forget` entfernen, nach echtem Fix neu schreiben.)
-
-**Titel:** `Bugfix <App> <Bereich> <YYYY-MM-DD HH:MM>` — fuer einen Menschen sofort verstaendlich.
-`<HH:MM>` = aktuelle LOKALE Uhrzeit (Europe/Berlin, 24h) im Moment des Speicherns -> sofort sichtbar,
-WANN genau der Fix ins Gehirn kam (nicht nur an welchem Tag); macht Fixes am selben Bereich eindeutig.
-
-**Kategorie:** `bugfixes/<unterkategorie>` — per gezieltem `recall` prüfen, ob eine passende bestehende
-Unterkategorie existiert; nur sonst eine neue sprechende anlegen.
-
-**Inhalt:** `Bugfix <YYYY-MM-DD HH:MM>: <App> <Bereich>. Symptom: … Root Cause: … Fix: … Verwandte Pruefung: …
-Verifikation: … Funktionalitaets-Diff: … [Poka-Yoke: …]` (dieselben Bausteine wie Direktive #3).
-
-**Danach** dem Benutzer in einem Satz melden: "Im Gehirn dokumentiert: <Titel> [<Kategorie>]."
-
-**NIEMALS:** unbestaetigte Fixes speichern · den Doku-Schritt weglassen · abweichendes Titel-Format ·
-blind neue Unterkategorie trotz passender vorhandener · kryptische Titel.
+Bugfixes ausschließlich lokal in `.claude/agent-memory/shared/bug-cases.jsonl`, `bugs/` und bei Bedarf
+`best-practices/` dokumentieren. Auch nach erfolgreicher Verifikation NIEMALS den `second-brain`-MCP-
+Aufruf `remember` dafür verwenden und im Second Brain weder `bugfixes` noch eine Unterkategorie davon
+anlegen oder befüllen. Direktive #3 bleibt für Root Cause, funktionserhaltenden Fix und Verifikation
+vollständig aktiv; nur die redundante Ablage einzelner Fix-Akten im Second Brain entfällt.

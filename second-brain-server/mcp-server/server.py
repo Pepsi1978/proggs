@@ -29,6 +29,7 @@ from mcp.server.fastmcp import FastMCP
 
 VERSION = "1.4.0 (10.07.2026, 19:47 Uhr)"  # 1.4.0: Neues read-only Werkzeug get_entry_categories(doc_id) fuer den gezielten Kategorienabruf ohne Volltext. Alt: 1.3.3.
 VERSION = "1.4.1 (10.07.2026, 20:55 Uhr)"  # 1.4.1 HALF-OPEN-KEEP-ALIVE-FIX (Frank-Bug 2026-07-10, intermittierende MCP-Timeouts): uvicorn-Default timeout_keep_alive=5s schloss idle Verbindungen; die FIN-Pakete gingen ueber Docker-NAT+WireGuard teils verloren -> CLI-Clients (undici-Pool in Claude Code/mcp-remote) hielten HALF-OPEN-Sockets (bewiesen: 4x ESTABLISHED am PC vs. 0 am VPS) und liefen beim naechsten Aufruf in 'socket closed unexpectedly' bzw. -32001. Fix: uvicorn direkt mit timeout_keep_alive=MCP_KEEP_ALIVE_S (Default 620s > undici keepAliveMaxTimeout 600s) starten -> der Server schliesst idle Verbindungen NIE vor dem Client (Standard-Regel Server-KA > Client-KA); Fallback auf mcp.run() falls die SDK-App-API sich aendert. Alt: 1.4.0.
+VERSION = "1.4.2 (13.07.2026, 13:24 Uhr)"  # 1.4.2: remember blockiert die entfernte Kategorie bugfixes samt Unterpfaden deterministisch. Alt: 1.4.1.
 
 # ---------------------------------------------------------------------------
 # Konfiguration (alles aus Umgebungsvariablen — Secrets nie im Code)
@@ -142,11 +143,20 @@ def _delete(path: str, params: dict | None = None) -> dict:
 # MCP-Werkzeuge (was Claude Code / OpenCode aufrufen koennen)
 # Wenige klare Workflow-Tools, snake_case (Best Practice B6/C1). Speicher ist 1:1 — kein Extrahieren.
 # ---------------------------------------------------------------------------
+def _is_bugfix_category(category: str) -> bool:
+    root = (category or "").strip().replace("\\", "/").split("/", 1)[0].strip().casefold()
+    return root == "bugfixes"
+
+
 @mcp.tool()
 def remember(text: str, title: str = "", category: str = "") -> str:
     """Speichere einen Text WORTWOERTLICH 1:1 im zweiten Gehirn. Der Text wird unveraendert abgelegt,
     keine KI bearbeitet ihn. Optional ein Titel (gleicher Titel ERSETZT den alten Eintrag — so
     aktualisierst du z.B. 'Direktive 1') und eine Kategorie (z.B. 'mentals', 'direktiven')."""
+    if _is_bugfix_category(category):
+        _log(logging.WARNING, "remember blockiert", category=category, reason="bugfixes-Kategorie entfernt")
+        return ("Speichern abgelehnt: Bugfixes werden ausschließlich lokal in bug-cases.jsonl, bugs/ "
+                "und best-practices/ dokumentiert; die Second-Brain-Kategorie bugfixes ist gesperrt.")
     payload = {"text": text, "user_id": USER_ID}
     if title.strip():
         payload["title"] = title.strip()

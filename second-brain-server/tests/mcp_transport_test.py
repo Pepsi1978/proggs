@@ -53,7 +53,29 @@ def main() -> int:
         print("FAIL: get_entry_categories-Werkzeug unvollstaendig: " + ", ".join(missing_category))
         return 1
 
-    print("PASS: MCP nutzt stateless JSON, misst Volltextabrufe und liest Kategorien gezielt")
+    guard = next(
+        node for node in tree.body
+        if isinstance(node, ast.FunctionDef) and node.name == "_is_bugfix_category"
+    )
+    namespace: dict = {}
+    exec(compile(ast.Module(body=[guard], type_ignores=[]), str(server_path), "exec"), namespace)
+    is_blocked = namespace["_is_bugfix_category"]
+    blocked = ("bugfixes", "Bugfixes/OpenCode", " bugfixes / android ", r"bugfixes\server")
+    allowed = ("bug-cases", "Programmierung/Almanache", "", "bugfix")
+    if not all(is_blocked(value) for value in blocked) or any(is_blocked(value) for value in allowed):
+        print("FAIL: Bugfix-Kategorie-Sperre ist zu weit oder umgehbar")
+        return 1
+
+    remember_function = next(
+        node for node in tree.body
+        if isinstance(node, ast.FunctionDef) and node.name == "remember"
+    )
+    remember_source = ast.get_source_segment(source, remember_function) or ""
+    if "_is_bugfix_category(category)" not in remember_source or remember_source.index("_is_bugfix_category") > remember_source.index("_post"):
+        print("FAIL: remember muss bugfixes vor dem brain-api-Aufruf blockieren")
+        return 1
+
+    print("PASS: MCP nutzt stateless JSON, misst Volltextabrufe, liest Kategorien gezielt und blockiert bugfixes")
     return 0
 
 

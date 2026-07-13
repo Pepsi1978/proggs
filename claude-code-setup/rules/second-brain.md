@@ -2,11 +2,10 @@
 
 > `second-brain`-MCP. **Volltext: `claude-code-setup/docs/rules/second-brain.md`.**
 
-## 1. Funktionierende Bugfixes (Direktive #3)
-Bugfix FUNKTIONIERT -> Eintrag unter `bugfixes/<unterkategorie>`, Titel `Bugfix <App> <Bereich>
-<YYYY-MM-DD HH:MM>` (echte Uhr Europe/Berlin). Nur bestaetigte Fixes (objektiv -> direkt; nur-Benutzer/
-unsicher -> EINMAL fragen, erst bei Ja). Ergaenzt lokale Doku `~/proggs/bugs/`. Inhalt: Symptom, Root
-Cause, Fix, Verifikation, Funktionalitaets-Diff.
+## 1. Bugfixes bleiben lokal (Direktive #3)
+Bugfixes ausschließlich in `.claude/agent-memory/shared/bug-cases.jsonl`, `~/proggs/bugs/` und bei
+Bedarf `~/proggs/best-practices/` dokumentieren. Für Bugfixes NIEMALS `second-brain` `remember`
+verwenden und weder `bugfixes` noch eine Unterkategorie davon im Gehirn anlegen oder befüllen.
 
 ## 2. Entscheidungs-Rueckfluss
 Echte Grundsatz-Entscheidung -> am ENDE der Aufgabe "ins Gehirn merken?" -> bei Ja `remember` unter
@@ -18,6 +17,6 @@ Echte Grundsatz-Entscheidung -> am ENDE der Aufgabe "ins Gehirn merken?" -> bei 
 Eintrag -> `get_by_title`. `get_by_category` NUR fuer kleine Kategorien.
 
 ## Was NIEMALS
-- Unbestaetigten Bugfix speichern - Format/Titel-Schema abwandeln - Grundsatz-Entscheidung ohne Franks Ja
-  speichern oder Vorschlag weglassen - `get_by_category` auf grosse Kategorie - "N Regeln eingelesen"
-  bestaetigen ohne Einzelabrufe.
+- Bugfixes ins Second Brain speichern oder dort `bugfixes`-Kategorien anlegen - Grundsatz-Entscheidung
+  ohne Franks Ja speichern oder Vorschlag weglassen - `get_by_category` auf grosse Kategorie - "N Regeln
+  eingelesen" bestaetigen ohne Einzelabrufe.

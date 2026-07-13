@@ -84,9 +84,9 @@ proportionale Orientierung, keine pauschale Blockerliste oder Scope-Erlaubnis. I
 aktiven Modus gewichten; nur auftragsbezogene Risiken, Build-/Testfehler, Sicherheit, Datenverlust und
 echte Regressionen blockieren, alles andere höchstens vorschlagen.
 
-Nach objektiv bestätigtem Bugfix zusätzlich einzeln per `second-brain_remember` dokumentieren: Titel
-`Bugfix <App> <Bereich> <YYYY-MM-DD HH:MM>`, passende Kategorie `bugfixes/<unterkategorie>`; bei nur
-subjektiv prüfbaren Fixes vorher einmal „Hat der Fix funktioniert?“ fragen.
+Bugfixes ausschließlich lokal in `.claude/agent-memory/shared/bug-cases.jsonl`, `bugs/` und bei Bedarf
+`best-practices/` dokumentieren. Für Bugfixes NIEMALS `second-brain_remember` verwenden und im Second
+Brain weder `bugfixes` noch eine Unterkategorie davon anlegen oder befüllen.
 
 ### 8. Anti-Halluzination (KRITISCH)
 1. Bei Unsicherheit „Ich weiß es nicht“ statt raten.

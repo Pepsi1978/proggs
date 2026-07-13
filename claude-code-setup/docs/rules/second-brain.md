@@ -1,25 +1,19 @@
 # Second Brain (Cortex): Speichern & Laden (KRITISCH)
 
-> Zentrales Fehler-/Wissens-Gedaechtnis ueber alle Werkzeuge (Claude Code + OpenCode/Codex) via
-> `second-brain`-MCP. Drei Aspekte: Bugfixes ablegen (§1), Entscheidungen (§2),
+> Zentrales Wissens-Gedaechtnis ueber alle Werkzeuge (Claude Code + OpenCode/Codex) via
+> `second-brain`-MCP. Drei Aspekte: Bugfixes lokal halten (§1), Entscheidungen (§2),
 > immer einzeln laden (§3).
 
-## 1. Funktionierende Bugfixes ablegen (ergaenzt Direktive #3)
+## 1. Bugfixes ausschließlich lokal dokumentieren (ergaenzt Direktive #3)
 
-Sobald ein Bugfix als FUNKTIONIEREND gilt → als ein Eintrag ins Second Brain, festes Format, unter
-`bugfixes/<unterkategorie>`, Titel inkl. Datum UND Uhrzeit. Nur bestaetigte Fixes. Ergaenzt (ersetzt
-nicht) die lokale Bug-Doku `~/proggs/bugs/` (Gehirn = reaktiv abrufbare Fall-Akte).
-**Wann FUNKTIONIEREND:** objektiv verifizierbar (Build gruen, Tests bestanden, Deploy healthy, Symptom
-reproduzierbar WEG) → selbst verifizieren + direkt speichern. Nur-Benutzer-beurteilbar (Optik/UI) oder
-unsicher → EINMAL fragen "Hat der Fix funktioniert?", erst bei Ja speichern. Default: nicht speichern bis
-bestaetigt; spaeteres "hat nicht funktioniert" → per `forget` entfernen, nach echtem Fix neu schreiben.
-**Format:** Titel `Bugfix <App> <Bereich> <YYYY-MM-DD HH:MM>` (lokale Uhr Europe/Berlin im Moment des
-Speicherns). Kategorie `bugfixes/<unterkategorie>` — ZUERST pruefen ob eine passende existiert
-(`list_memories`/`get_by_category`), nur sonst neue sprechende anlegen. Inhalt (Klartext): `Bugfix
-<Datum HH:MM>: <App> <Bereich>. Symptom … Root Cause <konkret: Datei/Funktion/CSS-Klasse> … Fix <was +
-Stelle> … Verwandte Pruefung … Verifikation … Funktionalitaets-Diff … [Poka-Yoke]`. Danach Frank in
-EINEM Satz: "Im Gehirn dokumentiert: <Titel> [<Kategorie>]." MCP nicht verbunden → Eintrag nicht
-verlieren, kurz melden, auf die lokale Bug-Doku ausweichen.
+Bugfixes werden NICHT im Second Brain abgelegt. Root Cause, Fix, Verifikation, verwandte Prüfung und
+Poka-Yoke bleiben dauerhaft in `.claude/agent-memory/shared/bug-cases.jsonl`, `~/proggs/bugs/` und bei
+Bedarf `~/proggs/best-practices/` erhalten. Diese lokalen Quellen sind versioniert beziehungsweise für
+die automatische Bug-Erkennung strukturiert und vermeiden redundante Einzelakten im Gehirn.
+
+Für Bugfixes gilt daher ausnahmslos: `second-brain` `remember` nicht aufrufen, keine Kategorie
+`bugfixes` und keine Unterkategorie davon anlegen oder befüllen. Die Qualitäts- und Lernpflichten der
+Direktiven #2 und #3 bleiben vollständig bestehen; nur das Second Brain ist kein Bugfix-Ablageort mehr.
 
 ## 2. Entscheidungs-Rueckfluss (manuell)
 
@@ -44,7 +38,7 @@ laedt lokal aus `~/.claude/rules/` — aber sobald es SELBST Second-Brain-Daten 
 
 ## Was NIEMALS
 
-Unbestaetigten Bugfix speichern · Bugfix-Format/Titel-Schema abwandeln · blind neue Unterkategorie
-anlegen · eine Grundsatz-Entscheidung ohne Franks Ja speichern oder den Vorschlag weglassen ·
+Bugfixes ins Second Brain speichern · dort `bugfixes` oder eine Unterkategorie anlegen · eine
+Grundsatz-Entscheidung ohne Franks Ja speichern oder den Vorschlag weglassen ·
 `get_by_category` auf eine grosse Kategorie · "N Regeln
 eingelesen" bestaetigen ohne die Einzelabrufe.

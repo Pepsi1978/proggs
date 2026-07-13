@@ -47,7 +47,9 @@ Volltext (s.o.). Daneben: `Programmierung/Rules` (Arbeitsregeln), `Programmierun
 AGENTS.md/Regel/Konfig -> Kurzcheck+Volltext unter Claude Tooling ODER Opencode; Python-Skript -> Claude Tooling.
 
 ## Nach der Aufgabe
-Jeden NEU erlebten Bug/jede neue Erkenntnis melden, damit sie ins Gehirn nachgezogen wird.
+Jeden NEU erlebten Bug lokal in `.claude/agent-memory/shared/bug-cases.jsonl`, `bugs/` und bei Bedarf
+`best-practices/` dokumentieren. Einzelne Bugfixes NIEMALS ins Second Brain schreiben und dort weder
+`bugfixes` noch eine Unterkategorie davon anlegen oder befüllen.
 
 ## NIEMALS
 - An einem Bereich mit vorhandenem Kurzcheck arbeiten, ohne ihn gelesen zu haben (Stufe A).
