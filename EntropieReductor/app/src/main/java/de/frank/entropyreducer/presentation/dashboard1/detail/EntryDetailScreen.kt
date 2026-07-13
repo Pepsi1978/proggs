@@ -56,11 +56,8 @@ import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import de.frank.entropyreducer.data.local.entities.EntropyEntryFollowupEntity
-import de.frank.entropyreducer.presentation.components.EntropyCategoryPill
 import de.frank.entropyreducer.presentation.components.GlassCard
 import de.frank.entropyreducer.presentation.components.WhisperMicButton
-import de.frank.entropyreducer.presentation.dashboard1.CategoryIconCircle
-import de.frank.entropyreducer.presentation.dashboard1.SeverityRainbowBar
 import de.frank.entropyreducer.presentation.theme.CosmosColors
 import de.frank.entropyreducer.presentation.theme.LocalCosmos
 import de.frank.entropyreducer.presentation.theme.color
@@ -153,183 +150,54 @@ fun EntryDetailScreen(onBack: () -> Unit, viewModel: EntryDetailViewModel = hilt
                         .padding(bottom = bottomInset + 80.dp),
                 verticalArrangement = Arrangement.spacedBy(12.dp),
             ) {
-                // ── 1. Hero-Karte mit Kategorie + Title + Beschreibung + Prio + Severity ──
-                // Zusammenfassung-Karte oben raus (Frank-Wunsch 2026-05-22) — Title +
-                // Beschreibung sind jetzt direkt in der Hero-Karte, keine doppelte Anzeige.
+                // Die Detailansicht zeigt bewusst nur den editierbaren Aufgabentitel.
                 GlassCard(modifier = Modifier.fillMaxWidth()) {
                     Column {
-                        Row(verticalAlignment = Alignment.Top) {
-                            CategoryIconCircle(
-                                category = entry.category,
-                                tint = entry.category.color(),
+                        if (editingTitle) {
+                            androidx.compose.material3.OutlinedTextField(
+                                value = titleDraft,
+                                onValueChange = { titleDraft = it },
+                                singleLine = true,
+                                modifier = Modifier.fillMaxWidth(),
+                                textStyle =
+                                    MaterialTheme.typography.titleMedium.copy(
+                                        fontWeight = FontWeight.Bold
+                                    ),
+                                colors =
+                                    androidx.compose.material3.OutlinedTextFieldDefaults.colors(
+                                        focusedTextColor = cosmos.textPrimary,
+                                        unfocusedTextColor = cosmos.textPrimary,
+                                        focusedBorderColor = LocalCosmos.current.accent,
+                                        unfocusedBorderColor = cosmos.glassBorder,
+                                        cursorColor = LocalCosmos.current.accent,
+                                    ),
+                                trailingIcon = {
+                                    IconButton(
+                                        onClick = {
+                                            viewModel.updateTitle(titleDraft)
+                                            editingTitle = false
+                                        }
+                                    ) {
+                                        Icon(
+                                            imageVector = Icons.Outlined.Check,
+                                            contentDescription = "Titel speichern",
+                                            tint = LocalCosmos.current.accent,
+                                        )
+                                    }
+                                },
                             )
-                            Spacer(Modifier.width(12.dp))
-                            Column(modifier = Modifier.weight(1f)) {
-                                EntropyCategoryPill(entry.category)
-                                Spacer(Modifier.height(6.dp))
-                                if (editingTitle) {
-                                    androidx.compose.material3.OutlinedTextField(
-                                        value = titleDraft,
-                                        onValueChange = { titleDraft = it },
-                                        singleLine = true,
-                                        modifier = Modifier.fillMaxWidth(),
-                                        textStyle =
-                                            MaterialTheme.typography.titleMedium.copy(
-                                                fontWeight = FontWeight.Bold
-                                            ),
-                                        colors =
-                                            androidx.compose.material3.OutlinedTextFieldDefaults
-                                                .colors(
-                                                    focusedTextColor = cosmos.textPrimary,
-                                                    unfocusedTextColor = cosmos.textPrimary,
-                                                    focusedBorderColor = LocalCosmos.current.accent,
-                                                    unfocusedBorderColor = cosmos.glassBorder,
-                                                    cursorColor = LocalCosmos.current.accent,
-                                                ),
-                                        trailingIcon = {
-                                            IconButton(
-                                                onClick = {
-                                                    viewModel.updateTitle(titleDraft)
-                                                    editingTitle = false
-                                                }
-                                            ) {
-                                                Icon(
-                                                    imageVector = Icons.Outlined.Check,
-                                                    contentDescription = "Titel speichern",
-                                                    tint = LocalCosmos.current.accent,
-                                                )
-                                            }
-                                        },
-                                    )
-                                } else {
-                                    Text(
-                                        text = entry.title,
-                                        style = MaterialTheme.typography.titleMedium,
-                                        color = cosmos.textPrimary,
-                                        fontWeight = FontWeight.Bold,
-                                        modifier =
-                                            Modifier.clickable {
-                                                titleDraft = entry.title
-                                                editingTitle = true
-                                            },
-                                    )
-                                }
-                                if (entry.description.isNotBlank()) {
-                                    Spacer(Modifier.height(4.dp))
-                                    Text(
-                                        text = entry.description,
-                                        style = MaterialTheme.typography.bodyMedium,
-                                        color = cosmos.textSecondary,
-                                    )
-                                }
-                            }
-                            Column(horizontalAlignment = Alignment.End) {
-                                Text(
-                                    "${entry.priorityScore.toInt()}",
-                                    color = priorityColor(entry.priorityScore),
-                                    fontSize = 32.sp,
-                                    fontWeight = FontWeight.Bold,
-                                )
-                                Text(
-                                    "Prio",
-                                    color = cosmos.textSecondary,
-                                    style = MaterialTheme.typography.labelSmall,
-                                )
-                            }
-                        }
-                        Spacer(Modifier.height(10.dp))
-                        Text(
-                            "Schweregrad: ${severityLabel(entry.severity)} (${entry.severity}/10)",
-                            style = MaterialTheme.typography.labelMedium,
-                            color = cosmos.textSecondary,
-                        )
-                        Spacer(Modifier.height(6.dp))
-                        SeverityRainbowBar(severity = entry.severity)
-                    }
-                }
-
-                // Tags-Sektion entfernt 2026-05-22 (Frank-Wunsch zweite Iteration) —
-                // die Pillen waren visuelles Rauschen ohne aktiven Nutzen.
-
-                // ── 1a. Ausfuehrlicher Originaltext (Frank-Wunsch 2026-05-22 dritte Iteration) ──
-                // Wenn Frank die Aufgabe eingesprochen oder ausfuehrlich eingegeben hat,
-                // soll der komplette Originaltext sichtbar sein — nicht nur die kurze
-                // Description aus der Hero-Karte. Nur anzeigen wenn rawTranscript
-                // tatsaechlich AUSFUEHRLICHER ist als die description (sonst doppelte
-                // Anzeige).
-                val showFullText =
-                    entry.rawTranscript.isNotBlank() &&
-                        entry.rawTranscript != entry.description &&
-                        entry.rawTranscript.length > entry.description.length
-                if (showFullText) {
-                    GlassCard(modifier = Modifier.fillMaxWidth()) {
-                        Column {
+                        } else {
                             Text(
-                                "Ausfuehrliche Beschreibung",
-                                style = MaterialTheme.typography.titleSmall,
-                                color = LocalCosmos.current.accentForscher,
-                                fontWeight = FontWeight.SemiBold,
-                            )
-                            Spacer(Modifier.height(6.dp))
-                            Text(
-                                text = entry.rawTranscript,
-                                style = MaterialTheme.typography.bodyMedium,
+                                text = entry.title,
+                                style = MaterialTheme.typography.titleMedium,
                                 color = cosmos.textPrimary,
+                                fontWeight = FontWeight.Bold,
+                                modifier =
+                                    Modifier.clickable {
+                                        titleDraft = entry.title
+                                        editingTitle = true
+                                    },
                             )
-                        }
-                    }
-                }
-
-                // ── 2. Frist-Bereich (Frank-Wunsch 2026-05-22 dritte Iteration) ──
-                // Kalendersymbol zum Setzen einer Deadline. Kurze Restzeit erhoeht
-                // die Prio progressiv, < 24h hebt sie auf mindestens 95 an.
-                DueDateCard(dueAtMs = entry.dueAtMs, onChange = viewModel::setDueDate)
-
-                // ── 3. Zeitaufwand-Regler (Frank-Wunsch 2026-05-22) ──
-                // Exponentiell skalierter Schieberegler (5 min … 4 Wochen) plus
-                // manuelle Eingabe. Wert wird vom Briefing beruecksichtigt um zu
-                // pruefen ob die Aufgaben des Tages in die verfuegbare Zeit passen.
-                // Live-Anzeige waehrend des Schiebens + KI-Schaetzung-Indikator
-                // wenn der aktuelle Wert von der KI stammt (Frank-Wunsch 2026-05-22
-                // zweite Iteration).
-                DurationEstimateCard(
-                    currentMinutes = entry.estimatedDurationMinutes,
-                    isAiEstimate =
-                        entry.estimatedDurationMinutes != null && !entry.durationManuallySet,
-                    onChange = viewModel::setEstimatedDuration,
-                )
-
-                // ── 4. KI-Begründung + KI-Notizen ──
-                if (entry.priorityReason.isNotBlank() || !entry.aiNotes.isNullOrBlank()) {
-                    GlassCard(modifier = Modifier.fillMaxWidth()) {
-                        Column {
-                            Text(
-                                "KI-Begründung",
-                                style = MaterialTheme.typography.titleSmall,
-                                color = LocalCosmos.current.accentForscher,
-                                fontWeight = FontWeight.SemiBold,
-                            )
-                            Spacer(Modifier.height(4.dp))
-                            Text(
-                                text = entry.priorityReason.ifBlank { "(keine Begründung)" },
-                                style = MaterialTheme.typography.bodySmall,
-                                color = cosmos.textPrimary,
-                            )
-                            if (!entry.aiNotes.isNullOrBlank()) {
-                                Spacer(Modifier.height(10.dp))
-                                Text(
-                                    "KI-Notizen",
-                                    style = MaterialTheme.typography.titleSmall,
-                                    color = LocalCosmos.current.accentForscher,
-                                    fontWeight = FontWeight.SemiBold,
-                                )
-                                Spacer(Modifier.height(4.dp))
-                                Text(
-                                    text = entry.aiNotes!!,
-                                    style = MaterialTheme.typography.bodySmall,
-                                    color = cosmos.textPrimary,
-                                )
-                            }
                         }
                     }
                 }
