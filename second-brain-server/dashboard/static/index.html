@@ -755,6 +755,10 @@ button{font-family:inherit;cursor:pointer}
 .cat-subadd{display:flex;gap:8px;align-items:center;margin-top:10px;padding:11px;border-radius:12px;
   background:var(--surface-2);border:1px solid var(--border-soft)}
 .cat-subadd .cat-subadd-prefix{font-size:13px;color:var(--text-dim);flex:none}
+.cat-bar-controls{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-top:10px}
+.cat-bar-controls select{min-width:210px;max-width:100%;height:38px;padding:0 32px 0 12px;border:1px solid var(--border);
+  border-radius:10px;background:var(--surface-2);color:var(--text-dim);font:13px inherit}
+.cat-bar-controls select:focus{outline:none;border-color:var(--accent);box-shadow:0 0 0 3px rgba(244,166,90,.14)}
 /* Hierarchie in den schönen Dropdowns (Gespräch + Drawer): Haupt fett, Unter eingerückt */
 .cs-opt.cs-main{font-weight:600}
 .cs-opt.cs-sub{padding-left:30px;position:relative;font-weight:500}
@@ -1509,6 +1513,13 @@ button{font-family:inherit;cursor:pointer}
           <h3><span class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M3 7h6l2 2h10v9a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1z"/><path d="M3 7V5a1 1 0 0 1 1-1h4l2 2"/></svg></span>Kategorien</h3>
           <p class="set-desc">Deine Kategorien als Baum — eine Hauptkategorie anklicken klappt ihre Unterkategorien auf. Wähle eine Zeile, um sie umzubenennen, zusammenzuführen oder zu löschen; mit <b>+ Unter</b> legst du Unterkategorien an (z.B. Programmieren › Best-Practices). <b>Löschen entfernt nur das Etikett — deine Einträge bleiben immer erhalten.</b></p>
           <div id="catMgrTree" class="cat-tree" aria-label="Kategorie-Baum"></div>
+          <div class="cat-bar-controls">
+            <button class="btn" id="catBarToggleBtn" type="button" disabled>Ausblenden</button>
+            <select id="catHiddenSelect" aria-label="Aus dem Gedächtnis-Spektrum ausgeblendete Kategorien">
+              <option value="">Ausgeblendete Kategorien</option>
+            </select>
+          </div>
+          <p class="muted-note" id="catBarHint" style="margin:8px 0 0">Blendet die gewählte Hauptkategorie nur im Gedächtnis-Spektrum oben aus. Kategorien, Legende und Einträge bleiben erhalten.</p>
           <div id="catRenameWrap" style="display:none;margin-top:10px">
             <input id="catRenameInput" class="cat-input" type="text" maxlength="60" placeholder="Neuer Name…" />
           </div>
@@ -1834,6 +1845,39 @@ button{font-family:inherit;cursor:pointer}
 
   /* ── Übersicht ────────────────────────────────────────────────────────── */
   let lastTotal = 0;
+  let hiddenOverviewBarCategories = new Set();
+  let overviewBarRoots = [];
+  let overviewBarPreferencesSaving = false;
+  function overviewBarCategoryKey(name){ return (name||"").trim().toLocaleLowerCase("de"); }
+  function isOverviewBarCategoryHidden(name){ return hiddenOverviewBarCategories.has(overviewBarCategoryKey(name)); }
+  async function loadOverviewBarPreferences(){
+    try{
+      const data = await api("/api/overview/preferences");
+      hiddenOverviewBarCategories = new Set((data.hidden_categories||[]).map(overviewBarCategoryKey).filter(Boolean));
+      if(LAST_OVERVIEW) renderOverview(LAST_OVERVIEW);
+      updateCatBarActions();
+    }catch(_){
+      // Das Spektrum bleibt voll sichtbar, wenn die optionale Anzeige-Einstellung nicht erreichbar ist.
+    }
+  }
+  async function saveOverviewBarPreferences(next){
+    const before = hiddenOverviewBarCategories;
+    hiddenOverviewBarCategories = next;
+    if(LAST_OVERVIEW) renderOverview(LAST_OVERVIEW);
+    updateCatBarActions();
+    try{
+      const data = await apiSend("/api/overview/preferences","PUT",{hidden_categories:[...next]});
+      hiddenOverviewBarCategories = new Set((data.hidden_categories||[]).map(overviewBarCategoryKey).filter(Boolean));
+      if(LAST_OVERVIEW) renderOverview(LAST_OVERVIEW);
+      updateCatBarActions();
+      return true;
+    }catch(_){
+      hiddenOverviewBarCategories = before;
+      if(LAST_OVERVIEW) renderOverview(LAST_OVERVIEW);
+      updateCatBarActions();
+      return false;
+    }
+  }
   function animateNum(el,to){
     const from = lastTotal, dur = 900, t0 = performance.now();
     (function step(now){
@@ -1854,6 +1898,11 @@ button{font-family:inherit;cursor:pointer}
     buildColors(countCats);
     const ovRoot = buildPathTree(cats);   // Pfadbaum beliebiger Tiefe
     const tops = overviewSortedKids(ovRoot).map(n=>({n, total:catNodeTotal(n)}));
+    overviewBarRoots = tops.map(({n})=>n.path);
+    const knownBarRoots = new Set(overviewBarRoots.map(overviewBarCategoryKey));
+    const staleHidden = [...hiddenOverviewBarCategories].filter(name=>knownBarRoots.has(name));
+    if(staleHidden.length !== hiddenOverviewBarCategories.size) hiddenOverviewBarCategories = new Set(staleHidden);
+    const visibleTops = tops.filter(({n})=>!isOverviewBarCategoryHidden(n.path));
     const total = d.total ?? cats.reduce((s,c)=>s+c.count,0);
     animateNum(document.getElementById("totalNum"), total);
     renderChips(cats);   // Kategorie-Chips fürs Gehirn aus denselben Daten
@@ -1880,7 +1929,8 @@ button{font-family:inherit;cursor:pointer}
     /* Stapelbalken — nach oberster Kategorie-Ebene aggregiert (tiefere zählen mit hinein) */
     const bar = document.getElementById("bar");
     bar.innerHTML = "";
-    tops.forEach((g,i)=>{
+    const barTotal = visibleTops.reduce((sum,g)=>sum+g.total,0);
+    visibleTops.forEach((g,i)=>{
       const seg = document.createElement("div");
       seg.className = "seg";
       seg.style.background = colorFor(g.n.path);
@@ -1890,7 +1940,7 @@ button{font-family:inherit;cursor:pointer}
       seg.innerHTML = `<div class="seg-tip"><span class="c">${escapeHtml(cap(g.n.seg))}</span> · <b>${g.total}</b>${subTip}</div>`;
       seg.addEventListener("click",()=> goToParent(g.n.path));
       bar.appendChild(seg);
-      requestAnimationFrame(()=>{ setTimeout(()=> seg.style.width = (total?(g.total/total*100):0)+"%", 30+i*40); });
+      requestAnimationFrame(()=>{ setTimeout(()=> seg.style.width = (barTotal?(g.total/barTotal*100):0)+"%", 30+i*40); });
     });
 
     /* Legende — aufklappbarer Baum BELIEBIGER Tiefe; je oberster Kategorie eine Grid-Zelle */
@@ -1922,6 +1972,7 @@ button{font-family:inherit;cursor:pointer}
       renderLegNode(n, 0, grp);
       leg.appendChild(grp);
     });
+    updateCatBarActions();
 
     /* Vitals */
     const ag = d.agent||{}, ok = ag.status==="ok";
@@ -3224,6 +3275,24 @@ button{font-family:inherit;cursor:pointer}
     document.getElementById("catRenameBtn").disabled = !exists;
     document.getElementById("catDeleteBtn").disabled = !exists;
     document.getElementById("catSubBtn").disabled = !catSelected;   // jede Auswahl reicht (Unter -> deren Haupt)
+    updateCatBarActions();
+  }
+  function updateCatBarActions(){
+    const button = document.getElementById("catBarToggleBtn");
+    const select = document.getElementById("catHiddenSelect");
+    const hint = document.getElementById("catBarHint");
+    if(!button || !select || !hint) return;
+    const root = catParentOf(catSelected);
+    const visibleInBar = overviewBarRoots.some(name=>overviewBarCategoryKey(name)===overviewBarCategoryKey(root));
+    const hidden = isOverviewBarCategoryHidden(root);
+    button.disabled = !visibleInBar || overviewBarPreferencesSaving;
+    button.textContent = hidden ? "Einblenden" : "Ausblenden";
+    hint.textContent = visibleInBar
+      ? `„${cap(root)}“ wird nur im Gedächtnis-Spektrum oben ${hidden ? "ausgeblendet" : "angezeigt"}. Kategorien, Legende und Einträge bleiben erhalten.`
+      : "Wähle eine Kategorie, die im Gedächtnis-Spektrum oben erscheint. Kategorien, Legende und Einträge bleiben erhalten.";
+    const hiddenRoots = overviewBarRoots.filter(isOverviewBarCategoryHidden).sort((a,b)=>a.localeCompare(b,"de"));
+    select.innerHTML = `<option value="">Ausgeblendete Kategorien (${hiddenRoots.length})</option>`
+      + hiddenRoots.map(name=>`<option value="${escapeHtml(name)}">${escapeHtml(cap(name))}</option>`).join("");
   }
   async function loadCatManager(){
     const tree = document.getElementById("catMgrTree"); if(!tree) return;
@@ -3312,6 +3381,31 @@ button{font-family:inherit;cursor:pointer}
     document.getElementById("catRenameInput").addEventListener("keydown", e=>{
       if(e.key==="Enter"){ e.preventDefault(); document.getElementById("catSaveBtn").click(); }
       if(e.key==="Escape"){ catRenameMode(false); }
+    });
+    document.getElementById("catBarToggleBtn").addEventListener("click", async ()=>{
+      if(overviewBarPreferencesSaving) return;
+      const root = catParentOf(catSelected);
+      if(!root || !overviewBarRoots.some(name=>overviewBarCategoryKey(name)===overviewBarCategoryKey(root))) return;
+      const next = new Set(hiddenOverviewBarCategories);
+      const key = overviewBarCategoryKey(root);
+      if(next.has(key)) next.delete(key); else next.add(key);
+      overviewBarPreferencesSaving = true;
+      updateCatBarActions();
+      try{
+        const ok = await saveOverviewBarPreferences(next);
+        flash("catMgrStatus", ok ? `Balken: „${cap(root)}“ ${next.has(key) ? "ausgeblendet" : "eingeblendet"}` : "Einstellung konnte nicht gespeichert werden", ok);
+      }finally{
+        overviewBarPreferencesSaving = false;
+        updateCatBarActions();
+      }
+    });
+    document.getElementById("catHiddenSelect").addEventListener("change", e=>{
+      const root = e.target.value;
+      if(!root) return;
+      catSelected = root;
+      catExpanded.add(root);
+      renderCatTree(); updateCatActions();
+      e.target.value = "";
     });
   })();
 
@@ -4755,6 +4849,7 @@ button{font-family:inherit;cursor:pointer}
     // Sonst startet loadLibrarian() beim Reload auf #librarian zu frueh und Listen bleiben leer.
     setTimeout(()=>{ if(tab!==activeTab) setTab(tab); },0);
   })();
+  loadOverviewBarPreferences();
   loadOverview();
   /* 20s-Poll (Performance 2026-07-02): laeuft bewusst auf JEDEM Dashboard-Tab (haelt den
      Verbindungs-Status + die Rail-Daten aktuell), aber NICHT mehr bei verstecktem BROWSER-Tab —

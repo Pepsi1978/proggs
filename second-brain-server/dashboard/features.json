@@ -1,7 +1,15 @@
 {
-	"stand": "13.07.2026, 13:17 Uhr",
+	"stand": "13.07.2026, 13:43 Uhr",
 	"hinweis": "PFLEGE-PFLICHT: Bei JEDEM Deploy, der ein neues System/Feature einbaut, hier einen Eintrag ERGÄNZEN (neueste zuerst). SCHREIBWEISE (Dauer-Regel): leichtes, verständliches Deutsch, kurze Sätze; ALLE Fachbegriffe, Namen und Zahlen (z.B. BM25, RRF, Qdrant, ENV-Variablen, Endpunkt-Namen) BEHALTEN, aber jeden in einem kurzen Halbsatz erklären — NIE durch Weglassen vereinfachen; kompakt halten (der Hauptagent liest über das Werkzeug 'was_kann_cortex' ALLE Einträge auf einmal ein), aber vollständig genug, dass man erkennt WAS eingebaut wurde; einfache Überschrift. Ähnliche/redundante Einträge dürfen zusammengefasst werden — Datum sekundär, entscheidend ist WAS Cortex kann. Quelle des Info-Bereichs in den Dashboard-Einstellungen (GET /api/features). Verankert in DEPLOY.md.",
 	"features": [
+		{
+			"id": "spektrum-kategorien-ausblenden",
+			"eingebaut": "13.07.2026, 13:43 Uhr",
+			"dienst": "dashboard 0.83.0",
+			"name": "Kategorien im Gedächtnis-Spektrum gezielt ausblenden",
+			"kurz": "In Einstellungen > Kategorien kann jede Hauptkategorie nur aus dem farbigen Balken der Übersicht ausgeblendet und dort wieder eingeblendet werden. Kategorien, Legende und Einträge bleiben unverändert sichtbar.",
+			"erklaerung": "Unter Einstellungen > Kategorien steht nach Auswahl einer Kategorie der Knopf Ausblenden oder Einblenden. Er steuert ausschließlich das zugehörige oberste Segment im farbigen Gedächtnis-Spektrum der Übersicht; eine Unterkategorie steuert dabei ihre Hauptkategorie. Daneben zeigt ein Dropdown alle gerade ausgeblendeten Kategorien und wählt sie mit einem Klick wieder aus. Die Auswahl liegt serverseitig in dashboard-data/overview-preferences.json und bleibt deshalb nach Neuladen, Browserwechsel und Dashboard-Neustart erhalten. Weder Qdrant noch die Kategorie-Struktur oder Einträge werden verändert: Die Legende unter dem Balken, der Kategorienbaum und alle Eintragsansichten zeigen weiterhin alles."
+		},
 		{
 			"id": "bibliothekar-quell-eintraege-aufklappbar",
 			"eingebaut": "13.07.2026, 13:17 Uhr",

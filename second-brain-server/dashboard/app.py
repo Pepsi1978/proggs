@@ -71,7 +71,7 @@ VERSION = "0.79.0 (12.07.2026, 20:19 Uhr)"  # 0.79.0 CHAT-STREAMING im Web-Cockp
 VERSION = "0.79.1 (12.07.2026, 20:45 Uhr)"  # 0.79.1: Sichtbarer Bump zum agent-0.79.1-Fix: Gedächtnis-Nachfragen bleiben Lesebefehle, und genannte Kategorien werden vor ähnlichen Gesprächsprotokollen priorisiert. Alt: 0.79.0.
 VERSION = "0.80.0 (12.07.2026, 21:00 Uhr)"  # 0.80.0: Gespräche bleiben im Logbuch, werden aber nicht mehr live oder beim Sitzungsabschluss nach Qdrant gespiegelt. Alt: 0.79.1.
 VERSION = "0.81.0 (12.07.2026, 22:16 Uhr)"  # 0.81.0 LOGIK-HAERTUNG (agent 0.81.0): Der Automatik-Modus ist hart read-only — er kann konzeptionell nicht mehr speichern oder Speicher-Rueckfragen stellen (3 unabhaengige Code-Schichten; Vorfall 20:30/20:31 Uhr 'Typenbezeichnung des Autos' -> Beschwerden wie 'Da steht doch alles im Gedaechtnis drin' laufen IMMER als Gedaechtnis-Frage, Speicher-Imperative bekommen den Diskette-Hinweis). Diskette/Lupe/R/Titel+Kategorie/Bearbeiten-Stift unveraendert. Alt: 0.80.0.
-VERSION = "0.82.0 (13.07.2026, 13:17 Uhr)"  # 0.82.0: Bibliothekar-Vorschlaege zeigen den jeweils betroffenen Eintrag jetzt als aufklappbare Quelle mit Volltext. Jeder bekannte doc_id wird direkt ueber brain-api /by-id geladen, auch bei Kategorie-Ergaenzungen und individuellen Nachtaufgaben ohne Kontextblock; keine Titelraten oder Bestandsscans. Alt: 0.81.2.
+VERSION = "0.83.0 (13.07.2026, 13:43 Uhr)"  # 0.83.0: Kategorien koennen dauerhaft NUR aus dem Gedächtnis-Spektrum-Balken ausgeblendet werden. Die Wahl liegt serverseitig in dashboard-data und laesst Legende, Kategorienbaum und Eintraege unveraendert.
 BRAIN_URL = os.getenv("BRAIN_URL", "http://brain-api:8000").rstrip("/")
 AGENT_URL = os.getenv("AGENT_URL", "http://agent:8002").rstrip("/")
 SB_API_KEY = os.getenv("SB_API_KEY", "")
@@ -241,6 +241,7 @@ async def unhandled(request: Request, exc: Exception) -> JSONResponse:
 
 FEATURES_SEED_FILE = Path(__file__).parent / "features.json"   # Seed im Image; editierbare Kopie lebt persistent in /app/data
 FEATURES_FILE = Path(os.getenv("DASH_FEATURES_FILE", str(FEATURES_SEED_FILE)))
+OVERVIEW_PREFERENCES_FILE = Path(os.getenv("DASH_OVERVIEW_PREFERENCES_FILE", "/app/data/overview-preferences.json"))
 
 
 def _read_features_data() -> dict:
@@ -284,6 +285,38 @@ def _write_features_data(data: dict) -> None:
     os.replace(tmp, FEATURES_FILE)
 
 
+def _overview_preferences(data: object) -> dict:
+    """Kleine, nutzerbezogene Dashboard-Wahl normalisieren; Kategorien selbst bleiben unberuehrt."""
+    raw = data.get("hidden_categories", []) if isinstance(data, dict) else []
+    hidden: list[str] = []
+    seen: set[str] = set()
+    if isinstance(raw, list):
+        for name in raw:
+            cleaned = str(name or "").strip()[:120]
+            key = cleaned.casefold()
+            if cleaned and key not in seen:
+                hidden.append(cleaned)
+                seen.add(key)
+    return {"hidden_categories": hidden[:100]}
+
+
+def _read_overview_preferences() -> dict:
+    try:
+        if not OVERVIEW_PREFERENCES_FILE.exists():
+            return {"hidden_categories": []}
+        return _overview_preferences(json.loads(OVERVIEW_PREFERENCES_FILE.read_text(encoding="utf-8")))
+    except Exception as e:  # noqa: BLE001 — eine defekte Anzeige-Einstellung darf das Dashboard nie brechen
+        _log(logging.WARNING, "Uebersicht-Einstellungen nicht lesbar", err=type(e).__name__)
+        return {"hidden_categories": []}
+
+
+def _write_overview_preferences(data: dict) -> None:
+    OVERVIEW_PREFERENCES_FILE.parent.mkdir(parents=True, exist_ok=True)
+    tmp = OVERVIEW_PREFERENCES_FILE.with_suffix(".tmp")
+    tmp.write_text(json.dumps(_overview_preferences(data), ensure_ascii=False, indent=2), encoding="utf-8", newline="\n")
+    os.replace(tmp, OVERVIEW_PREFERENCES_FILE)
+
+
 @app.get("/api/features")
 def api_features() -> dict:
     """Feature-Chronik fuer den Info-Bereich in den Einstellungen (Frank-Wunsch 2026-07-04):
@@ -298,6 +331,24 @@ def api_features() -> dict:
     except Exception as e:  # noqa: BLE001
         _log(logging.WARNING, "features.json nicht lesbar", err=str(e))
         return {"ok": False, "count": 0, "features": [], "error": f"{type(e).__name__}"}
+
+
+@app.get("/api/overview/preferences")
+def api_get_overview_preferences() -> dict:
+    """Nur Anzeige-Vorlieben: ausgeblendete Balken-Segmente, nie Kategorien oder Eintraege."""
+    return {"ok": True, **_read_overview_preferences()}
+
+
+@app.put("/api/overview/preferences")
+async def api_put_overview_preferences(request: Request) -> dict:
+    try:
+        preferences = _overview_preferences(await request.json())
+        await asyncio.to_thread(_write_overview_preferences, preferences)
+        _log(logging.INFO, "Uebersicht-Balkenwahl gespeichert", hidden=len(preferences["hidden_categories"]))
+        return {"ok": True, **preferences}
+    except Exception as e:  # noqa: BLE001
+        _log(logging.WARNING, "Uebersicht-Balkenwahl nicht speicherbar", err=type(e).__name__)
+        return JSONResponse(status_code=500, content={"ok": False, "detail": "Einstellung konnte nicht gespeichert werden"})
 
 
 @app.put("/api/features/{feature_id}")
