@@ -150,7 +150,7 @@ fun EntryDetailScreen(onBack: () -> Unit, viewModel: EntryDetailViewModel = hilt
                         .padding(bottom = bottomInset + 80.dp),
                 verticalArrangement = Arrangement.spacedBy(12.dp),
             ) {
-                // Die Detailansicht zeigt bewusst nur den editierbaren Aufgabentitel.
+                // Der ursprünglich eingegebene Aufgabentext bleibt unter dem Titel sichtbar.
                 GlassCard(modifier = Modifier.fillMaxWidth()) {
                     Column {
                         if (editingTitle) {
@@ -197,6 +197,15 @@ fun EntryDetailScreen(onBack: () -> Unit, viewModel: EntryDetailViewModel = hilt
                                         titleDraft = entry.title
                                         editingTitle = true
                                     },
+                            )
+                        }
+                        val taskText = entry.rawTranscript.ifBlank { entry.description }
+                        if (taskText.isNotBlank() && taskText != entry.title) {
+                            Spacer(Modifier.height(6.dp))
+                            Text(
+                                text = taskText,
+                                style = MaterialTheme.typography.bodyMedium,
+                                color = cosmos.textPrimary,
                             )
                         }
                     }
