@@ -79,6 +79,29 @@
             </Setter>
         </Style>
 
+        <Style x:Key="EditorMaximizeButton" TargetType="Button">
+            <Setter Property="Width" Value="40"/>
+            <Setter Property="Height" Value="32"/>
+            <Setter Property="Background" Value="Transparent"/>
+            <Setter Property="Foreground" Value="{DynamicResource MutedBrush}"/>
+            <Setter Property="BorderThickness" Value="0"/>
+            <Setter Property="Cursor" Value="Hand"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Button">
+                        <Border x:Name="Border" Background="{TemplateBinding Background}" CornerRadius="7">
+                            <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="Border" Property="Background" Value="{DynamicResource HoverBg}"/>
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
         <Style x:Key="ProfileSectionButton" TargetType="RadioButton">
             <Setter Property="Foreground" Value="{DynamicResource MutedBrush}"/>
             <Setter Property="FontWeight" Value="SemiBold"/>
@@ -121,9 +144,9 @@
             <Setter Property="FontSize" Value="13"/>
             <Setter Property="AcceptsReturn" Value="True"/>
             <Setter Property="AcceptsTab" Value="True"/>
-            <Setter Property="TextWrapping" Value="NoWrap"/>
+            <Setter Property="TextWrapping" Value="Wrap"/>
             <Setter Property="VerticalScrollBarVisibility" Value="Auto"/>
-            <Setter Property="HorizontalScrollBarVisibility" Value="Auto"/>
+            <Setter Property="HorizontalScrollBarVisibility" Value="Disabled"/>
         </Style>
     </Window.Resources>
 
@@ -151,7 +174,10 @@
                         <TextBlock x:Name="CliText" FontSize="11" Foreground="{DynamicResource DimBrush}" Margin="0,2,0,0"/>
                     </StackPanel>
                 </StackPanel>
-                <Button Grid.Column="1" Style="{StaticResource EditorCloseButton}" Content="✕" Margin="0,0,10,0" Click="Cancel_Click"/>
+                <StackPanel Grid.Column="1" Orientation="Horizontal" Margin="0,0,10,0">
+                    <Button x:Name="MaximizeButton" Style="{StaticResource EditorMaximizeButton}" Content="▢" Click="Maximize_Click"/>
+                    <Button Style="{StaticResource EditorCloseButton}" Content="✕" Click="Cancel_Click"/>
+                </StackPanel>
             </Grid>
 
             <Border Grid.Row="1" Margin="16" Background="{DynamicResource PanelBg}"

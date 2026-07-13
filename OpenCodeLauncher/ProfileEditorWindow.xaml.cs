@@ -18,6 +18,7 @@ public partial class ProfileEditorWindow : Window
         ProjectPathText.Text = documents.ProjectPath;
         GlobalEditor.Text = documents.GlobalText;
         ProjectEditor.Text = documents.ProjectText;
+        StateChanged += (_, _) => UpdateMaximizeButton();
     }
 
     private void TitleBar_MouseLeftButtonDown(object sender, MouseButtonEventArgs e)
@@ -33,6 +34,16 @@ public partial class ProfileEditorWindow : Window
     {
         DialogResult = true;
         Close();
+    }
+
+    private void Maximize_Click(object sender, RoutedEventArgs e)
+    {
+        WindowState = WindowState == WindowState.Maximized ? WindowState.Normal : WindowState.Maximized;
+    }
+
+    private void UpdateMaximizeButton()
+    {
+        MaximizeButton.Content = WindowState == WindowState.Maximized ? "❐" : "▢";
     }
 
     private void Cancel_Click(object sender, RoutedEventArgs e)
