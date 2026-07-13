@@ -178,7 +178,8 @@ data class SetCategoriesResponse(
 @JsonClass(generateAdapter = true)
 data class SimpleResponse(
     val ok: Boolean,
-    val message: String? = null
+    val message: String? = null,
+    val deleted: Boolean? = null
 )
 
 @JsonClass(generateAdapter = true)

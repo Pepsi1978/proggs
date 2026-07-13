@@ -38,6 +38,14 @@ data class DashboardUiState(
     val subcategories: Map<String, Int> = emptyMap()
 )
 
+internal fun DashboardUiState.withoutEntry(docId: String) = copy(
+    selectedEntry = selectedEntry?.takeUnless { it.doc_id == docId },
+    isEditing = false,
+    browseResults = browseResults.filterNot { it.doc_id == docId },
+    searchResults = searchResults.filterNot { it.doc_id == docId },
+    error = null
+)
+
 class DashboardViewModel : ViewModel() {
 
     private val _uiState = MutableStateFlow(DashboardUiState())
@@ -520,10 +528,17 @@ class DashboardViewModel : ViewModel() {
         val entry = _uiState.value.selectedEntry ?: return
         viewModelScope.launch {
             try {
-                ApiClient.brainApi().deleteEntry(entry.doc_id)
-                _uiState.update { it.copy(selectedEntry = null) }
+                val response = ApiClient.brainApi().deleteEntry(entry.doc_id)
+                if (!response.ok || response.deleted != true) {
+                    val detail = response.message ?: "Der Eintrag wurde auf dem Server nicht gefunden."
+                    CortexLog.warn("DashboardVM", "deleteEntry", "Löschung nicht bestätigt: $detail", mapOf("doc_id" to entry.doc_id))
+                    _uiState.update { it.copy(error = "Löschen fehlgeschlagen: $detail") }
+                    return@launch
+                }
+                _uiState.update { it.withoutEntry(entry.doc_id) }
                 CortexLog.info("DashboardVM", "deleteEntry", "Eintrag gelöscht: ${entry.doc_id}")
                 refreshAll()
+                _uiState.value.selectedCategory?.let(::browseCategory)
             } catch (e: CancellationException) {
                 throw e
             } catch (e: Exception) {
