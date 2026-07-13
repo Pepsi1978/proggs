@@ -5,6 +5,7 @@
         Title="Standardprofil bearbeiten"
         Width="1040" Height="760"
         MinWidth="760" MinHeight="520"
+        WindowState="Maximized"
         WindowStartupLocation="CenterOwner"
         WindowStyle="None"
         ResizeMode="CanResize"
