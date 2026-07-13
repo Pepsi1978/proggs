@@ -23,6 +23,7 @@
 		whisperModel: "whisper-large-v3-turbo",
 		whisperLang: "de",
 		ovDisabledHosts: [],
+		ovCustomHosts: [],
 	};
 
 	const cache = { ...DEFAULTS };

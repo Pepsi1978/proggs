@@ -1,8 +1,8 @@
 {
 	"manifest_version": 3,
 	"name": "Overlays (Voice + Tools)",
-	"version": "0.6.8",
-	"version_name": "0.6.8 (13.07.2026, 09:37 Uhr)",
+	"version": "0.6.9",
+	"version_name": "0.6.9 (13.07.2026, 09:53 Uhr)",
 	"description": "Universelles Overlay fuer mehrere Webseiten. Spracheingabe (Whisper), Prompt-Builder und Tools. Buttons pro Seite ueber eine zentrale Registry konfigurierbar.",
 	"permissions": ["storage", "clipboardRead", "clipboardWrite", "sidePanel", "tabs", "scripting"],
 	"optional_host_permissions": ["http://*/*", "https://*/*"],
