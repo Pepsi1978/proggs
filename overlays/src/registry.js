@@ -25,6 +25,8 @@
 	const RIGHT = ["mic", "enter", "promptFrank", "copy"];
 	const RIGHT_MEM = [...RIGHT, "memory"]; // Memory ganz oben rechts
 	const LEFT = ["clear", "gemini", "promptGeneral", "paste"];
+	const GENERIC_RIGHT = ["mic", "copy"];
+	const GENERIC_LEFT = ["clear", "paste"];
 
 	// Standard-Position fuer KI-Chat-Overlays (unten rechts, ueber dem Eingabefeld).
 	const CHAT_POS = { right: 16, bottom: 124, shiftLeft: 11.34 };
@@ -135,4 +137,13 @@
 		}
 		return null;
 	};
+
+	// Fuer vom Nutzer explizit freigegebene Webseiten: die Funktionen, die mit
+	// beliebigen normalen Eingabefeldern funktionieren, ohne Chat-spezifische Annahmen.
+	OV.createGenericProfile = () => ({
+		id: "generic",
+		label: "Diese Webseite",
+		uiPos: { right: 16, bottom: 96 },
+		layout: { right: GENERIC_RIGHT, left: GENERIC_LEFT },
+	});
 })();

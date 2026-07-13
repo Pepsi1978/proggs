@@ -10,6 +10,86 @@
 
 const GROQ_URL = "https://api.groq.com/openai/v1/audio/transcriptions";
 const REQUEST_TIMEOUT_MS = 120000;
+const CONTENT_SCRIPT_FILES = [
+	"src/storage.js",
+	"src/toast.js",
+	"src/icons.js",
+	"src/editable.js",
+	"src/stt.js",
+	"src/gemini.js",
+	"src/actions.js",
+	"src/ui.js",
+	"src/registry.js",
+	"src/content.js",
+];
+
+function customSiteInfo(url) {
+	const pageUrl = new URL(url);
+	if (pageUrl.protocol !== "http:" && pageUrl.protocol !== "https:")
+		throw new Error("Nur HTTP- und HTTPS-Webseiten werden unterstuetzt.");
+	const host = pageUrl.hostname.toLowerCase();
+	return {
+		host,
+		matchPattern: `${pageUrl.protocol}//${host}/*`,
+		// Hostnamen bestehen nur aus sicheren Zeichen; Punkte/Doppelpunkte werden
+		// ersetzt, damit die ID auch bei IPv6 und lokalen Hosts eindeutig bleibt.
+		scriptId: `ov_custom_${pageUrl.protocol.slice(0, -1)}_${host.replace(/[^a-z0-9]/gi, "_")}`,
+	};
+}
+
+async function enableCustomSite(tabId, url) {
+	const site = customSiteInfo(url);
+	try {
+		await chrome.scripting.unregisterContentScripts({ ids: [site.scriptId] });
+	} catch {
+		// Noch nicht registriert ist beim ersten Aktivieren der Normalfall.
+	}
+	await chrome.scripting.registerContentScripts([
+		{
+			id: site.scriptId,
+			matches: [site.matchPattern],
+			css: ["src/overlay.css"],
+			js: CONTENT_SCRIPT_FILES,
+			runAt: "document_idle",
+			persistAcrossSessions: true,
+		},
+	]);
+
+	const stored = await chrome.storage.local.get("ovCustomHosts");
+	const hosts = Array.isArray(stored.ovCustomHosts) ? stored.ovCustomHosts : [];
+	if (!hosts.includes(site.host)) {
+		await chrome.storage.local.set({ ovCustomHosts: [...hosts, site.host] });
+	}
+
+	if (Number.isInteger(tabId)) {
+		await chrome.scripting.insertCSS({
+			target: { tabId },
+			files: ["src/overlay.css"],
+		});
+		await chrome.scripting.executeScript({
+			target: { tabId },
+			files: CONTENT_SCRIPT_FILES,
+			injectImmediately: true,
+		});
+	}
+	return { ok: true, host: site.host };
+}
+
+async function disableCustomSite(url) {
+	const site = customSiteInfo(url);
+	const stored = await chrome.storage.local.get("ovCustomHosts");
+	const hosts = Array.isArray(stored.ovCustomHosts) ? stored.ovCustomHosts : [];
+	await chrome.storage.local.set({
+		ovCustomHosts: hosts.filter((host) => host !== site.host),
+	});
+	try {
+		await chrome.scripting.unregisterContentScripts({ ids: [site.scriptId] });
+	} catch {
+		// Die Registrierung kann bereits durch ein Update entfernt worden sein.
+	}
+	await chrome.permissions.remove({ origins: [site.matchPattern] });
+	return { ok: true, host: site.host };
+}
 
 async function getKey(name) {
 	const obj = await chrome.storage.local.get(name);
@@ -292,6 +372,18 @@ chrome.runtime.onMessage.addListener((msg, _sender, sendResponse) => {
 	}
 	if (msg.type === "geminiGenerate") {
 		geminiGenerate(msg).then(sendResponse);
+		return true;
+	}
+	if (msg.type === "OV_ENABLE_CUSTOM_SITE") {
+		enableCustomSite(msg.tabId, msg.url)
+			.then(sendResponse)
+			.catch((error) => sendResponse({ ok: false, error: String(error?.message || error) }));
+		return true;
+	}
+	if (msg.type === "OV_DISABLE_CUSTOM_SITE") {
+		disableCustomSite(msg.url)
+			.then(sendResponse)
+			.catch((error) => sendResponse({ ok: false, error: String(error?.message || error) }));
 		return true;
 	}
 	return false;

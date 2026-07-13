@@ -8,13 +8,7 @@
 	const OV = window.__chromeOverlays__;
 	if (!OV || OV.__booted) return;
 
-	const host = location.hostname;
-	const profile = OV.findProfile(host);
-	if (!profile) return; // diese Seite hat kein Overlay-Profil
-
-	OV.__booted = true;
-	OV.activeProfile = profile;
-
+	const host = location.hostname.toLowerCase();
 	await OV.storage.load();
 
 	function normalizeHostList(list) {
@@ -35,6 +29,18 @@
 		);
 	}
 
+	function customPageEnabled() {
+		return normalizeHostList(OV.storage.get("ovCustomHosts", [])).includes(host);
+	}
+
+	const standardProfile = OV.findProfile(host);
+	const isCustomProfile = !standardProfile && customPageEnabled();
+	const profile = standardProfile || (isCustomProfile ? OV.createGenericProfile() : null);
+	if (!profile) return; // diese Seite wurde nicht fuer ein Overlay freigegeben
+
+	OV.__booted = true;
+	OV.activeProfile = profile;
+
 	try {
 		chrome.runtime.onMessage.addListener((msg, _sender, sendResponse) => {
 			if (!msg || msg.type !== "OV_GET_PAGE_STATE") return;
@@ -42,6 +48,7 @@
 				host: host.toLowerCase(),
 				profile: profile.label,
 				disabled: pageDisabled(),
+				custom: isCustomProfile,
 			});
 		});
 	} catch (e) {
@@ -50,9 +57,14 @@
 
 	try {
 		chrome.storage.onChanged.addListener(async (changes, area) => {
-			if (area !== "local" || !changes.ovDisabledHosts) return;
+			if (
+				area !== "local" ||
+				(!changes.ovDisabledHosts && !changes.ovCustomHosts)
+			)
+				return;
 			await OV.storage.load();
-			if (pageDisabled()) OV.ui.removeOverlay(profile);
+			if (pageDisabled() || (!standardProfile && !customPageEnabled()))
+				OV.ui.removeOverlay(profile);
 			else boot();
 		});
 	} catch (e) {

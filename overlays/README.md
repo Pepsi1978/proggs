@@ -24,6 +24,12 @@ G (Gemini-Korrektur) · ✨ Prompt (Frank) · 🪄 Prompt (allgemein) · ggf. �
 
 Welche Buttons auf welcher Seite erscheinen, steht in **`src/registry.js`** — eine Liste pro Seite.
 
+Auf jeder anderen HTTP(S)-Webseite kann das Basis-Overlay direkt ueber das Erweiterungs-Icon
+und **"Overlay auf dieser Webseite aktiv"** eingeschaltet werden. Chrome fragt dabei einmalig
+nach der Berechtigung fuer genau diese Domain. Das Basis-Overlay bietet Spracheingabe,
+Einfuegen, Kopieren und Leeren fuer normale Eingabefelder; denselben Schalter wieder zu
+deaktivieren entfernt die Domain-Berechtigung wieder.
+
 ---
 
 ## Installation (entpackte Erweiterung)

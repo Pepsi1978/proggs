@@ -8,6 +8,8 @@
 const FIELDS = ["groqKey", "geminiKey", "geminiModel"];
 
 let currentPageHost = "";
+let currentPageTab = null;
+let currentPageIsCustom = false;
 
 function normalizeHostList(list) {
 	return Array.isArray(list)
@@ -46,6 +48,32 @@ function hostFromUrl(url) {
 	}
 }
 
+function originPatternFromUrl(url) {
+	try {
+		const u = new URL(url || "");
+		if (u.protocol !== "http:" && u.protocol !== "https:") return "";
+		return `${u.protocol}//${u.hostname}/*`;
+	} catch (_) {
+		return "";
+	}
+}
+
+function sendMessage(message) {
+	return new Promise((resolve) => {
+		try {
+			chrome.runtime.sendMessage(message, (response) => {
+				if (chrome.runtime.lastError) {
+					resolve({ ok: false, error: chrome.runtime.lastError.message });
+					return;
+				}
+				resolve(response || { ok: false, error: "Keine Antwort der Erweiterung." });
+			});
+		} catch (error) {
+			resolve({ ok: false, error: String(error?.message || error) });
+		}
+	});
+}
+
 function requestPageState(tabId) {
 	return new Promise((resolve) => {
 		if (tabId == null) {
@@ -70,17 +98,21 @@ async function loadCurrentPageToggle() {
 	const cb = document.getElementById("currentSiteEnabled");
 	const hint = document.getElementById("currentSiteHint");
 	const tab = await getActiveTab();
+	currentPageTab = tab || null;
 	currentPageHost = hostFromUrl(tab && tab.url);
 	let profile = "";
+	let state = null;
 	if (tab && tab.id != null) {
-		const state = await requestPageState(tab.id);
+		state = await requestPageState(tab.id);
 		if (!currentPageHost && state && state.host) {
 			currentPageHost = String(state.host).toLowerCase();
 		}
 		profile = state && state.profile ? ` (${state.profile})` : "";
 	}
-	const data = await chrome.storage.local.get("ovDisabledHosts");
+	currentPageIsCustom = !!(state && state.custom);
+	const data = await chrome.storage.local.get(["ovDisabledHosts", "ovCustomHosts"]);
 	const disabled = normalizeHostList(data.ovDisabledHosts).includes(currentPageHost);
+	const customEnabled = normalizeHostList(data.ovCustomHosts).includes(currentPageHost);
 	if (!currentPageHost) {
 		cb.checked = false;
 		cb.disabled = true;
@@ -88,8 +120,10 @@ async function loadCurrentPageToggle() {
 		return;
 	}
 	cb.disabled = false;
-	cb.checked = !disabled;
-	hint.textContent = `Aktuelle Webseite: ${currentPageHost}${profile}`;
+	cb.checked = state && !currentPageIsCustom ? !disabled : customEnabled;
+	hint.textContent = state && !currentPageIsCustom
+		? `Aktuelle Webseite: ${currentPageHost}${profile}`
+		: `Aktuelle Webseite: ${currentPageHost} (Basis-Overlay mit Spracheingabe und Einfuegen)`;
 }
 
 async function load() {
@@ -112,13 +146,60 @@ document.getElementById("save").addEventListener("click", save);
 
 document.getElementById("currentSiteEnabled").addEventListener("change", async (e) => {
 	if (!currentPageHost) return;
-	const data = await chrome.storage.local.get("ovDisabledHosts");
-	const hosts = normalizeHostList(data.ovDisabledHosts);
-	const idx = hosts.indexOf(currentPageHost);
-	if (e.target.checked && idx >= 0) hosts.splice(idx, 1);
-	if (!e.target.checked && idx < 0) hosts.push(currentPageHost);
-	await chrome.storage.local.set({ ovDisabledHosts: hosts });
-	loadCurrentPageToggle();
+	const tabUrl = currentPageTab && currentPageTab.url;
+	const originPattern = originPatternFromUrl(tabUrl);
+	const hint = document.getElementById("currentSiteHint");
+
+	// Bereits geplante Seiten behalten ihre bisherige Sperrliste. Unbekannte
+	// Seiten erhalten dagegen nur nach dem Haken eine eigene Host-Berechtigung.
+	if (!currentPageIsCustom && (await requestPageState(currentPageTab?.id))) {
+		const data = await chrome.storage.local.get("ovDisabledHosts");
+		const hosts = normalizeHostList(data.ovDisabledHosts);
+		const idx = hosts.indexOf(currentPageHost);
+		if (e.target.checked && idx >= 0) hosts.splice(idx, 1);
+		if (!e.target.checked && idx < 0) hosts.push(currentPageHost);
+		await chrome.storage.local.set({ ovDisabledHosts: hosts });
+		loadCurrentPageToggle();
+		return;
+	}
+
+	if (!tabUrl || !originPattern) {
+		e.target.checked = false;
+		hint.textContent = "Diese Seite kann nicht fuer ein Overlay freigegeben werden.";
+		return;
+	}
+
+	if (!e.target.checked) {
+		const result = await sendMessage({ type: "OV_DISABLE_CUSTOM_SITE", url: tabUrl });
+		if (!result.ok) {
+			e.target.checked = true;
+			hint.textContent = `Deaktivieren fehlgeschlagen: ${result.error}`;
+			return;
+		}
+		currentPageIsCustom = false;
+		await loadCurrentPageToggle();
+		return;
+	}
+
+	const alreadyGranted = await chrome.permissions.contains({ origins: [originPattern] });
+	const granted = alreadyGranted || (await chrome.permissions.request({ origins: [originPattern] }));
+	if (!granted) {
+		e.target.checked = false;
+		hint.textContent = "Keine Berechtigung erteilt. Das Overlay bleibt auf dieser Webseite aus.";
+		return;
+	}
+	const result = await sendMessage({
+		type: "OV_ENABLE_CUSTOM_SITE",
+		tabId: currentPageTab.id,
+		url: tabUrl,
+	});
+	if (!result.ok) {
+		e.target.checked = false;
+		hint.textContent = `Aktivieren fehlgeschlagen: ${result.error}`;
+		return;
+	}
+	currentPageIsCustom = true;
+	hint.textContent = `Overlay ist auf ${currentPageHost} aktiv.`;
 });
 
 // ── Overlay verschiebbar (1:1 wie beim Vorlese-Overlay) ──
