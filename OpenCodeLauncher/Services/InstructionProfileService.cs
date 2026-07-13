@@ -142,15 +142,16 @@ public sealed class InstructionProfileService
     }
 
     /// <summary>
-    /// Config-Ordner des Claude-Minimal-Profils. Liegt bewusst IM Repo (~/proggs/claude-profiles/minimal),
-    /// damit die CLAUDE.md (und spaeter selbst erstellte Hooks/Rules/settings) ueber git auf allen
-    /// Rechnern identisch sind. Laufzeit-Dateien + Login-Token werden von der dortigen .gitignore
-    /// vom Repo ferngehalten.
+    /// Config-Ordner des Claude-Minimal-Profils. Liegt bewusst IM Repo neben den OpenCode-Profilen
+    /// (~/proggs/OpenCodeLauncher/Profiles/ClaudeCode/minimal), damit die CLAUDE.md (und spaeter selbst
+    /// erstellte Hooks/Rules/settings) ueber git auf allen Rechnern identisch sind. Laufzeit-Dateien +
+    /// Login-Token werden von der dortigen .gitignore vom Repo ferngehalten; der Build schliesst den
+    /// Ordner ueber die .csproj aus.
     /// </summary>
     public static string ResolveClaudeMinimalConfigDir()
     {
         var home = Environment.GetFolderPath(Environment.SpecialFolder.UserProfile);
-        return Path.Combine(home, "proggs", "claude-profiles", "minimal");
+        return Path.Combine(home, "proggs", "OpenCodeLauncher", "Profiles", "ClaudeCode", "minimal");
     }
 
     private static InstructionProfileDocuments LoadClaudeMinimal()

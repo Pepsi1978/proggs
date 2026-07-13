@@ -5,4 +5,4 @@
      settings.json, landet sie im selben Ordner und wird ueber git auf alle Rechner verteilt.
      Trage unten deine eigenen Anweisungen ein.
      Hinweis: HTML-Kommentare wie dieser werden NICHT an Claude geladen (nur Notiz beim Oeffnen).
-     Config-Ordner: ~/proggs/claude-profiles/minimal/ -->
+     Config-Ordner: ~/proggs/OpenCodeLauncher/Profiles/ClaudeCode/minimal/ -->

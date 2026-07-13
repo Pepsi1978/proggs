@@ -11,9 +11,9 @@
     <AssemblyName>OpenCodeLauncher</AssemblyName>
     <ApplicationManifest>app.manifest</ApplicationManifest>
     <ApplicationIcon>app.ico</ApplicationIcon>
-    <Version>1.17.0</Version>
-    <FileVersion>1.17.0.0</FileVersion>
-    <AssemblyVersion>1.17.0.0</AssemblyVersion>
+    <Version>1.17.1</Version>
+    <FileVersion>1.17.1.0</FileVersion>
+    <AssemblyVersion>1.17.1.0</AssemblyVersion>
     <Company>Pepsi1978</Company>
     <Product>OpenCode Launcher</Product>
     <Copyright>© 2026 Pepsi1978</Copyright>
@@ -30,6 +30,17 @@
   <ItemGroup>
     <Content Include="..\opencode-setup\AGENTS-global.md" Link="Profiles\OpenCode\standard\global.md" CopyToOutputDirectory="PreserveNewest" />
     <Content Include="Profiles\OpenCode\standard\project.md" CopyToOutputDirectory="PreserveNewest" />
+  </ItemGroup>
+
+  <!-- Profiles\ClaudeCode ist ein LIVE Claude-Code-Config-Ordner (CLAUDE_CONFIG_DIR), kein
+       Assembly-Inhalt. Vom Build-Globbing ausschliessen, damit Laufzeit-Dateien (Login-Token,
+       projects/, sessions/) niemals kompiliert oder in den Publish-Output gebuendelt werden. -->
+  <ItemGroup>
+    <Compile Remove="Profiles\ClaudeCode\**" />
+    <Page Remove="Profiles\ClaudeCode\**" />
+    <None Remove="Profiles\ClaudeCode\**" />
+    <Content Remove="Profiles\ClaudeCode\**" />
+    <EmbeddedResource Remove="Profiles\ClaudeCode\**" />
   </ItemGroup>
 
 </Project>

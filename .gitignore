@@ -49,3 +49,8 @@ BestJournalFrank/Screenshots/
 **/node_modul
 # Cowork-Robustheits-Testdatei (nur temporaer, nie tracken)
 cowork-robustness-test.txt
+
+# Alter Claude-Minimal-Profil-Ordner (umgezogen nach OpenCodeLauncher/Profiles/ClaudeCode/minimal).
+# Nur noch lokaler Laufzeit-Rest einer evtl. laufenden Session; nie tracken. Kann geloescht
+# werden, sobald keine alte Minimal-Session mehr laeuft.
+/claude-profiles/
