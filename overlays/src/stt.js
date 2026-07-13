@@ -134,6 +134,10 @@
 		}, 600);
 	}
 
+	function isAmazonPage() {
+		return /(^|\.)amazon\./i.test(location.hostname);
+	}
+
 	// ── Live-Vorschau ──
 	function setLivePreviewWaiting() {
 		if (!livePreviewEl) return;
@@ -327,6 +331,13 @@
 		void transcribe(audioBlob, analysis).catch((error) => {
 			console.warn("[Overlays] Transkription konnte nicht sauber abgeschlossen werden:", error);
 			removeLivePreview();
+			// Amazon kann sein Suchfeld nach dem erfolgreichen Setzen sofort ersetzen.
+			// Die Transkription ist dann bereits im Feld, nur der Nachtest scheitert.
+			if (isAmazonPage()) {
+				settleMicIdle();
+				OV.toast("✅ Text in Amazon eingefuegt.", 2400);
+				return;
+			}
 			setMicState("error", "Transkription unvollstaendig");
 			OV.toast("⚠️ Transkription beendet, Status wird zurueckgesetzt.", 3500);
 			setTimeout(settleMicIdle, 2500);
