@@ -14,10 +14,13 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.outlined.Undo
 import androidx.compose.material.icons.outlined.Edit
+import androidx.compose.material.icons.outlined.AutoAwesome
 import androidx.compose.material.icons.outlined.Mic
 import androidx.compose.material.icons.outlined.Stop
 import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
@@ -42,6 +45,7 @@ import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import de.frank.entropyreducer.domain.model.EntrySource
 import de.frank.entropyreducer.presentation.theme.LocalCosmos
+import kotlinx.coroutines.launch
 
 /**
  * Frank-Wunsch 2026-05-22: Einheitliches Mikrofon-Erlebnis ueber ALLE Reiter
@@ -79,6 +83,8 @@ fun MicCaptureActions(
     visible: Boolean,
     accent: Color,
     onTextCommit: (text: String, source: EntrySource) -> Unit,
+    onTaskTextCommit: ((text: String, title: String?) -> Unit)? = null,
+    onImproveText: (suspend (String) -> Result<String>)? = null,
     onClose: () -> Unit,
     modifier: Modifier = Modifier,
     bottomPadding: Dp = 110.dp,
@@ -137,6 +143,14 @@ fun MicCaptureActions(
                 onTextCommit(text, EntrySource.NUTZER_TEXT)
                 onClose()
             },
+            onTaskSave = onTaskTextCommit?.let { save ->
+                { text, title ->
+                    inputDialogOpen = false
+                    save(text, title)
+                    onClose()
+                }
+            },
+            onImprove = onImproveText,
         )
     }
 
@@ -239,25 +253,103 @@ private fun TextInputDialog(
     accent: Color,
     onDismiss: () -> Unit,
     onSave: (String) -> Unit,
+    onTaskSave: ((text: String, title: String?) -> Unit)? = null,
+    onImprove: (suspend (String) -> Result<String>)? = null,
 ) {
     var text by remember { mutableStateOf("") }
+    var title by remember { mutableStateOf("") }
+    var textBeforeImprovement by remember { mutableStateOf<String?>(null) }
+    var improving by remember { mutableStateOf(false) }
+    var error by remember { mutableStateOf<String?>(null) }
+    val scope = androidx.compose.runtime.rememberCoroutineScope()
     AlertDialog(
         onDismissRequest = onDismiss,
         title = { Text("Neuer Eintrag") },
         text = {
-            OutlinedTextField(
-                value = text,
-                onValueChange = { text = it },
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(180.dp),
-                placeholder = { Text("Was steht an?") },
-            )
+            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                if (onTaskSave != null) {
+                    OutlinedTextField(
+                        value = title,
+                        onValueChange = { title = it },
+                        modifier = Modifier.fillMaxWidth(),
+                        label = { Text("Titel") },
+                        singleLine = true,
+                    )
+                }
+                OutlinedTextField(
+                    value = text,
+                    onValueChange = { text = it },
+                    modifier = Modifier.fillMaxWidth().height(180.dp),
+                    placeholder = { Text("Was steht an?") },
+                )
+                if (onImprove != null) {
+                    Row {
+                        TextButton(
+                            onClick = {
+                                if (improving) return@TextButton
+                                error = null
+                                improving = true
+                                scope.launch {
+                                    onImprove(text)
+                                        .onSuccess {
+                                            textBeforeImprovement = text
+                                            text = it
+                                        }
+                                        .onFailure {
+                                            error = it.message ?: "Verbesserung fehlgeschlagen"
+                                        }
+                                    improving = false
+                                }
+                            },
+                            enabled = !improving && text.isNotBlank(),
+                        ) {
+                            if (improving) {
+                                CircularProgressIndicator(
+                                    modifier = Modifier.size(18.dp),
+                                    strokeWidth = 2.dp,
+                                    color = accent,
+                                )
+                            } else {
+                                Icon(
+                                    Icons.Outlined.AutoAwesome,
+                                    contentDescription = null,
+                                    tint = accent,
+                                    modifier = Modifier.size(18.dp),
+                                )
+                            }
+                            Spacer(Modifier.size(6.dp))
+                            Text(if (improving) "Verbessere …" else "Mit KI verbessern", color = accent)
+                        }
+                        TextButton(
+                            onClick = {
+                                text = textBeforeImprovement.orEmpty()
+                                textBeforeImprovement = null
+                            },
+                            enabled = !improving && textBeforeImprovement != null,
+                        ) {
+                            Icon(
+                                Icons.AutoMirrored.Outlined.Undo,
+                                contentDescription = null,
+                                tint = accent,
+                                modifier = Modifier.size(18.dp),
+                            )
+                            Spacer(Modifier.size(6.dp))
+                            Text("Rückgängig", color = accent)
+                        }
+                    }
+                    error?.let { Text(it, color = LocalCosmos.current.crit) }
+                }
+            }
         },
         confirmButton = {
             TextButton(
-                onClick = { if (text.isNotBlank()) onSave(text.trim()) },
-                enabled = text.isNotBlank(),
+                onClick = {
+                    if (text.isNotBlank()) {
+                        if (onTaskSave != null) onTaskSave(text.trim(), title.trim().takeIf { it.isNotBlank() })
+                        else onSave(text.trim())
+                    }
+                },
+                enabled = text.isNotBlank() && !improving,
             ) {
                 Text("Speichern", color = accent, fontWeight = FontWeight.SemiBold)
             }

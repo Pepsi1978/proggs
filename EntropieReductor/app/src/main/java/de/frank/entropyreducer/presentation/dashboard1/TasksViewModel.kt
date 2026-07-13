@@ -813,6 +813,18 @@ class TasksViewModel @Inject constructor(
      */
     suspend fun improveTranscript(text: String): Result<String> = improveText(text)
 
+    /** Liefert den KI-Titel fuer den Prüf-Dialog; bei einem API-Fehler bleibt ein kurzer Fallback speicherbar. */
+    suspend fun generateTaskTitle(text: String): String =
+        process.generateTitle(text).getOrElse { fallbackTaskTitle(text) }
+
+    private fun fallbackTaskTitle(text: String): String =
+        text.trim()
+            .split(Regex("\\s+"))
+            .filter { it.isNotBlank() }
+            .take(3)
+            .joinToString(" ")
+            .ifBlank { "Neue Aufgabe" }
+
     /**
      * @param manualTitle optionaler, manuell eingetippter Titel aus dem
      *   Review-Fenster. Leer/null → KI erstellt den Titel.

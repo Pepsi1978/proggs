@@ -321,6 +321,46 @@ class ProcessEntryUseCase @Inject constructor(
         }
     }
 
+    /** Erstellt vor dem Speichern einen editierbaren, kurzen KI-Titel fuer eine Aufgabe. */
+    suspend fun generateTitle(transcript: String): Result<String> {
+        val text = transcript.trim()
+        if (text.isBlank()) return Result.success("")
+        val key = secrets.geminiApiKey
+            ?: return Result.failure(IllegalStateException("Kein Gemini-Key hinterlegt"))
+        val model = settings.geminiModelFlow.first()
+        return try {
+            val response = gemini.generateContent(
+                model = model,
+                apiKey = key,
+                request = GeminiRequest(
+                    systemInstruction = GeminiContent(parts = listOf(GeminiPart(TITLE_PROMPT))),
+                    contents = listOf(
+                        GeminiContent(role = "user", parts = listOf(GeminiPart(text))),
+                    ),
+                    generationConfig = GeminiGenerationConfig(temperature = 0.2),
+                ),
+            )
+            val raw = response.candidates
+                ?.firstOrNull()
+                ?.content
+                ?.parts
+                ?.firstOrNull()
+                ?.text
+                ?.let(::stripMarkdownCodeFence)
+                ?.trim()
+                ?.trim('"', '\'', '.', ' ')
+            if (raw.isNullOrBlank()) {
+                Result.failure(IllegalStateException("Leere KI-Antwort fuer Titel"))
+            } else {
+                Result.success(limitToThreeWords(raw))
+            }
+        } catch (cancellation: kotlinx.coroutines.CancellationException) {
+            throw cancellation
+        } catch (t: Throwable) {
+            Result.failure(t)
+        }
+    }
+
     /**
      * Frank-Wunsch 2026-05-22 (dritte Iteration): formatiert eine Liste manuell
      * bestaetigter Dauer-Werte als Few-Shot fuer die Gemini-Anfrage. Die KI
@@ -721,6 +761,11 @@ WICHTIGE REGELN:
 
         private const val BASE_PROMPT =
             "Deine Aufgabe: Wandle die folgende gesprochene Notiz des Nutzers in einen strukturierten Entropie-Eintrag um."
+
+        private const val TITLE_PROMPT =
+            "Erstelle fuer die Aufgabe einen kurzen deutschen Titel. Gib AUSSCHLIESSLICH " +
+                "maximal drei praegnante Woerter zurueck, die den Kern der Aufgabe beschreiben. " +
+                "Keine Anfuehrungszeichen, keine Satzzeichen, keine Erklaerung."
 
         private val TAIL_INSTRUCTION = """
 Antworte AUSSCHLIESSLICH in JSON, ohne Markdown-Codeblock, ohne Einleitung, ohne Schluss:

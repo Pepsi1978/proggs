@@ -2,12 +2,14 @@ package de.frank.entropyreducer.presentation.dashboard1
 
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.outlined.Undo
 import androidx.compose.material.icons.outlined.AutoAwesome
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.CircularProgressIndicator
@@ -45,6 +47,7 @@ import kotlinx.coroutines.launch
 @Composable
 fun TaskCaptureReviewDialog(
     initialTranscript: String,
+    initialTitle: String,
     accent: Color,
     onImprove: suspend (String) -> Result<String>,
     onSave: (text: String, manualTitle: String?) -> Unit,
@@ -52,9 +55,10 @@ fun TaskCaptureReviewDialog(
 ) {
     val cosmos = LocalCosmos.current
     val scope = rememberCoroutineScope()
-    // remember(initialTranscript): bei einem neuen Transkript starten die Felder frisch.
+    // Bei einem neuen Transkript starten die Felder frisch.
     var text by remember(initialTranscript) { mutableStateOf(initialTranscript) }
-    var title by remember(initialTranscript) { mutableStateOf("") }
+    var title by remember(initialTranscript) { mutableStateOf(initialTitle) }
+    var textBeforeImprovement by remember(initialTranscript) { mutableStateOf<String?>(null) }
     var improving by remember(initialTranscript) { mutableStateOf(false) }
     var error by remember(initialTranscript) { mutableStateOf<String?>(null) }
 
@@ -81,14 +85,11 @@ fun TaskCaptureReviewDialog(
         },
         text = {
             Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
-                // Optionaler Titel — leer lassen heisst: KI erstellt den Titel.
+                // Der KI-Titel ist direkt editierbar, bevor die Aufgabe gespeichert wird.
                 OutlinedTextField(
                     value = title,
                     onValueChange = { title = it },
-                    label = { Text("Titel (optional)", color = cosmos.textSecondary) },
-                    placeholder = {
-                        Text("Leer lassen → KI erstellt den Titel", color = cosmos.textSecondary)
-                    },
+                    label = { Text("Titel", color = cosmos.textSecondary) },
                     singleLine = true,
                     modifier = Modifier.fillMaxWidth(),
                     colors = fieldColors,
@@ -102,41 +103,62 @@ fun TaskCaptureReviewDialog(
                     colors = fieldColors,
                 )
                 // "Mit KI verbessern" — wertet den Text per Gemini auf.
-                TextButton(
-                    onClick = {
-                        if (improving) return@TextButton
-                        error = null
-                        improving = true
-                        scope.launch {
-                            onImprove(text)
-                                .onSuccess { text = it }
-                                .onFailure {
-                                    error =
-                                        it.message?.takeIf { m -> m.isNotBlank() }
-                                            ?: "Verbesserung fehlgeschlagen"
-                                }
-                            improving = false
+                Row {
+                    TextButton(
+                        onClick = {
+                            if (improving) return@TextButton
+                            error = null
+                            improving = true
+                            scope.launch {
+                                onImprove(text)
+                                    .onSuccess {
+                                        textBeforeImprovement = text
+                                        text = it
+                                    }
+                                    .onFailure {
+                                        error =
+                                            it.message?.takeIf { m -> m.isNotBlank() }
+                                                ?: "Verbesserung fehlgeschlagen"
+                                    }
+                                improving = false
+                            }
+                        },
+                        enabled = !improving && text.isNotBlank(),
+                    ) {
+                        if (improving) {
+                            CircularProgressIndicator(
+                                modifier = Modifier.size(18.dp),
+                                strokeWidth = 2.dp,
+                                color = accent,
+                            )
+                            Spacer(Modifier.width(8.dp))
+                            Text("Verbessere …", color = accent)
+                        } else {
+                            Icon(
+                                imageVector = Icons.Outlined.AutoAwesome,
+                                contentDescription = null,
+                                tint = accent,
+                                modifier = Modifier.size(18.dp),
+                            )
+                            Spacer(Modifier.width(8.dp))
+                            Text("Mit KI verbessern", color = accent, fontWeight = FontWeight.SemiBold)
                         }
-                    },
-                    enabled = !improving && text.isNotBlank(),
-                ) {
-                    if (improving) {
-                        CircularProgressIndicator(
-                            modifier = Modifier.size(18.dp),
-                            strokeWidth = 2.dp,
-                            color = accent,
-                        )
-                        Spacer(Modifier.width(8.dp))
-                        Text("Verbessere …", color = accent)
-                    } else {
+                    }
+                    TextButton(
+                        onClick = {
+                            text = textBeforeImprovement.orEmpty()
+                            textBeforeImprovement = null
+                        },
+                        enabled = !improving && textBeforeImprovement != null,
+                    ) {
                         Icon(
-                            imageVector = Icons.Outlined.AutoAwesome,
+                            imageVector = Icons.AutoMirrored.Outlined.Undo,
                             contentDescription = null,
                             tint = accent,
                             modifier = Modifier.size(18.dp),
                         )
-                        Spacer(Modifier.width(8.dp))
-                        Text("Mit KI verbessern", color = accent, fontWeight = FontWeight.SemiBold)
+                        Spacer(Modifier.width(6.dp))
+                        Text("Rückgängig", color = accent)
                     }
                 }
                 error?.let {

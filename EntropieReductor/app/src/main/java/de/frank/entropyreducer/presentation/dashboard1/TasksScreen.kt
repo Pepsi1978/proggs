@@ -239,7 +239,7 @@ fun TasksScreen(
     // Frank-Wunsch 2026-05-31: Nach dem Einsprechen einer Aufgabe erscheint ein
     // Review-Fenster mit dem transkribierten Text. Hier wird das aktuelle
     // Transkript gehalten; null = kein Fenster offen.
-    var reviewTranscript by remember { mutableStateOf<String?>(null) }
+    var reviewDraft by remember { mutableStateOf<TaskReviewDraft?>(null) }
 
     // Frank-Wunsch 2026-05-11: Widget muss frisch werden wenn sich Aufgaben
     // aendern (Bucket umsortiert, Karte erledigt, neue Karte). Ohne diesen
@@ -844,17 +844,30 @@ fun TasksScreen(
                 visible = micActions.isOpen,
                 accent = micAccent,
                 onTextCommit = { text, source -> vm.processCapturedText(text, source) },
+                onTaskTextCommit = { text, title ->
+                    vm.processCapturedText(
+                        text,
+                        de.frank.entropyreducer.domain.model.EntrySource.NUTZER_TEXT,
+                        title,
+                    )
+                },
+                onImproveText = vm::improveTranscript,
                 onClose = { micActions.close() },
                 // Frank-Wunsch 2026-05-31: eingesprochene Aufgaben erst im
                 // Review-Fenster pruefen/verbessern/benennen, dann speichern.
-                onReviewTranscript = { reviewTranscript = it },
+                onReviewTranscript = { transcript ->
+                    scope.launch {
+                        reviewDraft = TaskReviewDraft(transcript, vm.generateTaskTitle(transcript))
+                    }
+                },
                 modifier = Modifier.align(Alignment.BottomCenter),
             )
 
             // Review-Fenster nach der Transkription (Frank-Wunsch 2026-05-31).
-            reviewTranscript?.let { transcript ->
+            reviewDraft?.let { draft ->
                 TaskCaptureReviewDialog(
-                    initialTranscript = transcript,
+                    initialTranscript = draft.transcript,
+                    initialTitle = draft.title,
                     accent = micAccent,
                     onImprove = { text -> vm.improveTranscript(text) },
                     onSave = { text, manualTitle ->
@@ -863,9 +876,9 @@ fun TasksScreen(
                             de.frank.entropyreducer.domain.model.EntrySource.NUTZER_MIC,
                             manualTitle,
                         )
-                        reviewTranscript = null
+                        reviewDraft = null
                     },
-                    onDismiss = { reviewTranscript = null },
+                    onDismiss = { reviewDraft = null },
                 )
             }
         }
@@ -921,6 +934,11 @@ fun TasksScreen(
         }
     }
 }
+
+private data class TaskReviewDraft(
+    val transcript: String,
+    val title: String,
+)
 
 @Composable
 private fun MethodPromptDialog(
