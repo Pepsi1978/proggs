@@ -14,15 +14,11 @@ import dagger.hilt.components.SingletonComponent
 import de.frank.entropyreducer.R
 import de.frank.entropyreducer.data.local.dao.EntropyEntryDao
 import de.frank.entropyreducer.data.settings.AppSettings
-import de.frank.entropyreducer.data.settings.ThemeMode
 import de.frank.entropyreducer.domain.model.EntryStatus
 import de.frank.entropyreducer.domain.model.TimeBucket
 import de.frank.entropyreducer.domain.model.priorityBucketForScore
 import de.frank.entropyreducer.presentation.MainActivity
-import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.first
-import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
 
 /**
@@ -48,30 +44,6 @@ class EntropyReducerWidgetReceiver : AppWidgetProvider() {
     interface WidgetEntryPoint {
         fun appSettings(): AppSettings
         fun entryDao(): EntropyEntryDao
-    }
-
-    override fun onReceive(context: Context, intent: Intent) {
-        if (intent.action == Intent.ACTION_CONFIGURATION_CHANGED) {
-            val pending = goAsync()
-            val appContext = context.applicationContext
-            CoroutineScope(Dispatchers.IO).launch {
-                try {
-                    val settings = EntryPointAccessors
-                        .fromApplication(appContext, WidgetEntryPoint::class.java)
-                        .appSettings()
-                    if (shouldRefreshWidgetForConfigurationChange(
-                            settings.readWidgetThemeModeOnce(),
-                        )
-                    ) {
-                        WidgetUpdater.updateAll(appContext)
-                    }
-                } finally {
-                    pending.finish()
-                }
-            }
-            return
-        }
-        super.onReceive(context, intent)
     }
 
     override fun onUpdate(
@@ -211,9 +183,6 @@ class EntropyReducerWidgetReceiver : AppWidgetProvider() {
         )
     }
 }
-
-internal fun shouldRefreshWidgetForConfigurationChange(mode: ThemeMode): Boolean =
-    mode == ThemeMode.SYSTEM
 
 // applyAlpha lebt jetzt nur in EntropyReducerRemoteViewsService.kt als
 // internal — wird hier ueber Package-Import (selbe package) genutzt.
