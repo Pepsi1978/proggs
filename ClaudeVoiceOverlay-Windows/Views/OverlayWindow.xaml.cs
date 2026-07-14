@@ -4863,7 +4863,15 @@ namespace ClaudeVoiceOverlay.Views
                         Console.WriteLine("PTT: keydown — start recording");
                         Dispatcher.BeginInvoke(new Action(() =>
                         {
-                            try { BtnMic_Click(this, new RoutedEventArgs()); }
+                            try
+                            {
+                                BtnMic_Click(this, new RoutedEventArgs());
+                                if (_micState != RecordingState.Recording)
+                                {
+                                    _pttRecording = false;
+                                    _pttToggleMode = false;
+                                }
+                            }
                             catch (Exception ex) { Console.WriteLine($"PTT start error: {ex.Message}"); }
                         }));
                     }
