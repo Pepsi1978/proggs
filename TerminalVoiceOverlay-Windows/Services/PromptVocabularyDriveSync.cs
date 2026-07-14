@@ -7,8 +7,10 @@ using System.Threading.Tasks;
 using Google.Apis.Auth.OAuth2;
 using Google.Apis.Auth.OAuth2.Flows;
 using Google.Apis.Auth.OAuth2.Responses;
+using Google.Apis.Download;
 using Google.Apis.Drive.v3;
 using Google.Apis.Services;
+using Google.Apis.Upload;
 using Google.Apis.Util.Store;
 using Microsoft.Extensions.Logging;
 using DriveFile = Google.Apis.Drive.v3.Data.File;
@@ -33,6 +35,7 @@ public sealed class PromptVocabularyDriveSync
     public const string VocabularyFileName = "personal-vocabulary.txt";
     private const string AppDataFolderSpace = "appDataFolder";
 
+    private static readonly SemaphoreSlim SyncGate = new(1, 1);
     private readonly PromptBoardSecretStore _secrets;
     private readonly ILogger<PromptVocabularyDriveSync>? _logger;
 
@@ -59,53 +62,94 @@ public sealed class PromptVocabularyDriveSync
     /// </summary>
     public async Task UploadAsync(CancellationToken ct = default)
     {
-        var localPath = LocalPath;
-        if (!File.Exists(localPath)) return;
-        var bytes = await File.ReadAllBytesAsync(localPath, ct).ConfigureAwait(false);
-
-        var drive = await BuildDriveAsync(ct).ConfigureAwait(false);
-        var ids = await FindAllAsync(drive, VocabularyFileName, ct).ConfigureAwait(false);
-
-        using var content = new MemoryStream(bytes);
-        if (ids.Count == 0)
+        await SyncGate.WaitAsync(ct).ConfigureAwait(false);
+        try
         {
-            var meta = new DriveFile
-            {
-                Name = VocabularyFileName,
-                Parents = new[] { AppDataFolderSpace },
-            };
-            var create = drive.Files.Create(meta, content, "text/plain");
-            create.Fields = "id";
-            await create.UploadAsync(ct).ConfigureAwait(false);
-        }
-        else
-        {
-            var keep = ids[0];
-            var update = drive.Files.Update(new DriveFile(), keep, content, "text/plain");
-            update.Fields = "id";
-            await update.UploadAsync(ct).ConfigureAwait(false);
+            var localPath = LocalPath;
+            if (!File.Exists(localPath)) return;
+            var bytes = await File.ReadAllBytesAsync(localPath, ct).ConfigureAwait(false);
+            var localText = Encoding.UTF8.GetString(bytes);
 
-            for (int i = 1; i < ids.Count; i++)
+            using var drive = await BuildDriveAsync(ct).ConfigureAwait(false);
+            var ids = await FindAllAsync(drive, VocabularyFileName, ct).ConfigureAwait(false);
+
+            if (ids.Count > 0)
             {
-                try { await drive.Files.Delete(ids[i]).ExecuteAsync(ct).ConfigureAwait(false); }
-                catch (Exception ex)
+                using var cloudBuffer = new MemoryStream();
+                EnsureDownloadCompleted(
+                    await drive.Files.Get(ids[0]).DownloadAsync(cloudBuffer, ct).ConfigureAwait(false));
+                var merged = MergeVocabularies(localText, Encoding.UTF8.GetString(cloudBuffer.ToArray()));
+                bytes = Encoding.UTF8.GetBytes(merged);
+            }
+
+            using var content = new MemoryStream(bytes);
+            if (ids.Count == 0)
+            {
+                var meta = new DriveFile
                 {
-                    _logger?.LogWarning(ex, "Vocab dup-cleanup failed for {Id}", ids[i]);
+                    Name = VocabularyFileName,
+                    Parents = new[] { AppDataFolderSpace },
+                };
+                var create = drive.Files.Create(meta, content, "text/plain");
+                create.Fields = "id";
+                EnsureUploadCompleted(await create.UploadAsync(ct).ConfigureAwait(false));
+            }
+            else
+            {
+                var keep = ids[0];
+                var update = drive.Files.Update(new DriveFile(), keep, content, "text/plain");
+                update.Fields = "id";
+                EnsureUploadCompleted(await update.UploadAsync(ct).ConfigureAwait(false));
+
+                for (int i = 1; i < ids.Count; i++)
+                {
+                    try { await drive.Files.Delete(ids[i]).ExecuteAsync(ct).ConfigureAwait(false); }
+                    catch (Exception ex)
+                    {
+                        _logger?.LogWarning(ex, "Vocab dup-cleanup failed for {Id}", ids[i]);
+                    }
                 }
             }
+        }
+        finally
+        {
+            SyncGate.Release();
         }
     }
 
     /// <summary>Holt die aktuellste Vokabular-Datei aus Drive. Null wenn keine vorhanden ist.</summary>
     public async Task<string?> DownloadAsync(CancellationToken ct = default)
     {
-        var drive = await BuildDriveAsync(ct).ConfigureAwait(false);
-        var ids = await FindAllAsync(drive, VocabularyFileName, ct).ConfigureAwait(false);
-        if (ids.Count == 0) return null;
+        await SyncGate.WaitAsync(ct).ConfigureAwait(false);
+        try
+        {
+            using var drive = await BuildDriveAsync(ct).ConfigureAwait(false);
+            var ids = await FindAllAsync(drive, VocabularyFileName, ct).ConfigureAwait(false);
+            if (ids.Count == 0) return null;
 
-        using var buffer = new MemoryStream();
-        await drive.Files.Get(ids[0]).DownloadAsync(buffer, ct).ConfigureAwait(false);
-        return Encoding.UTF8.GetString(buffer.ToArray());
+            using var buffer = new MemoryStream();
+            EnsureDownloadCompleted(
+                await drive.Files.Get(ids[0]).DownloadAsync(buffer, ct).ConfigureAwait(false));
+            return Encoding.UTF8.GetString(buffer.ToArray());
+        }
+        finally
+        {
+            SyncGate.Release();
+        }
+    }
+
+    private static void EnsureUploadCompleted(IUploadProgress progress)
+    {
+        progress.ThrowOnFailure();
+        if (progress.Status != UploadStatus.Completed)
+            throw new IOException($"Google Drive upload did not complete: {progress.Status}");
+    }
+
+    private static void EnsureDownloadCompleted(IDownloadProgress progress)
+    {
+        progress.ThrowOnFailure();
+        if (progress.Status != DownloadStatus.Completed)
+            throw new IOException($"Google Drive download did not complete: {progress.Status}");
     }
 
     /// <summary>
