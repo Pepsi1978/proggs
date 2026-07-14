@@ -21,6 +21,10 @@
 > **Update 2026-07-10:** Eigener Windows-Vorfall ergänzt: kurze UI-Tonsignale hatten trotz vorab
 > geladener WAVs 1–3 s Ausgabelatenz. Ein dauerhaft offener NAudio-PCM-Ausgang beseitigte die
 > Geräte-Startlatenz; `40 ms / 2 Buffer` stotterte auf Realtek, `100 ms / 3 Buffer` war schnell und flüssig.
+>
+> **Update 2026-07-14:** Eigener TVO/CVO-Vorfall ergänzt: `WaveInEvent.StopRecording()` kann den
+> WPF-Dispatcher unbegrenzt blockieren, obwohl der Prozess weiterläuft. Stop und Cleanup müssen
+> außerhalb des UI-Threads laufen und jeweils ein hartes Timeout besitzen.
 
 ---
 
@@ -49,6 +53,7 @@
 | 15 | Haengender STT friert Turn 60 s ein | Groq-Timeout auf 5–10 s, EIN statischer HttpClient | §6.2 |
 | 16 | Diktat-Live-Vorschau ueberschreibt finale Fassung / springt im Feld ⭐⭐ | Vorschau getrennt vom Zielfeld; `previewActive`-Riegel: nach Stopp schreibt NUR die finale Engine | §7 |
 | 17 | Kurzer Start-/Stoppton kommt Sekunden später oder stottert ⭐⭐ | Output dauerhaft offen halten; PCM puffern; Latenz nicht unter die Treibergrenze drücken | §4.4 |
+| 18 | Stop-Klick friert das Overlay ein, Prozess lebt weiter ⭐⭐ | `StopRecording()` nie auf dem UI-Thread; Stop, Event-Wartezeit und Cleanup separat begrenzen | §3.2 |
 
 ---
 
@@ -174,6 +179,15 @@ nicht mehr existierendes Geraet.
 disposen; nach `StopRecording()` auf `RecordingStopped` warten; Geraetewechsel ueber
 `IMMNotificationClient` proaktiv erkennen und mit 200–500 ms Debounce GEORDNET neu starten,
 bevor ein blockierender WinMM-Call passiert; Stop mit Timeout in eigenem Thread kapseln.
+
+**Eigener Vorfall TVO/CVO 2026-07-14:** Nach `stop_clicked` blieb die Diagnose ohne
+`recording_stop`, die temporäre WAV blieb liegen und beide Prozesse liefen weiter. Ursache war ein
+unbegrenzt auf dem WPF-Dispatcher ausgeführtes `StopRecording()`. Der robuste Ablauf führt den
+nativen Stop außerhalb des UI-Threads aus, begrenzt den Stop-Aufruf und die Wartezeit auf
+`RecordingStopped` getrennt und gibt den logischen Recorder-Zustand idempotent frei. Auch
+Startfehler-Cleanup darf nicht synchron auf dem Dispatcher blockieren. Ein Timeout muss die UI
+freigeben; die native Operation kann unter .NET nicht sicher abgebrochen werden und wird deshalb
+nur noch im Hintergrund fertiggestellt.
 **Quelle:** naudio/NAudio#1150 · #657 · #1084 · #1203 (alle gh-verifiziert OPEN).
 
 ### 3.3 `WaveInEvent` belegt dauerhaft einen ThreadPool-Thread

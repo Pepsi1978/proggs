@@ -29,3 +29,4 @@
 | 15 | Haengender STT friert Turn 60 s ein | Groq-Timeout auf 5–10 s, EIN statischer HttpClient | §6.2 |
 | 16 | Diktat-Live-Vorschau ueberschreibt finale Fassung / springt im Feld ⭐⭐ | Vorschau getrennt vom Zielfeld; `previewActive`-Riegel: nach Stopp schreibt NUR die finale Engine | §7 |
 | 17 | Kurzer Start-/Stoppton kommt Sekunden später oder stottert ⭐⭐ | Output dauerhaft offen halten; PCM puffern; Latenz nicht unter die Treibergrenze drücken | §4.4 |
+| 18 | Stop-Klick friert das Overlay ein, Prozess lebt weiter ⭐⭐ | `StopRecording()` nie auf dem UI-Thread; Stop, Event-Wartezeit und Cleanup separat begrenzen | §3.2 |
