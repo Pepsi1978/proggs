@@ -72,6 +72,8 @@ namespace TerminalVoiceOverlay.Views
         // ── State ──
         private RecordingState _micState    = RecordingState.Idle;
         private bool _isProcessing          = false;
+        private bool _mainStopInProgress    = false;
+        private bool _btwStopInProgress     = false;
         private long _voiceTurnSeq          = 0;
         private bool isBtwRecording         = false;
         private bool geminiEnabled          = false;  // Default = Gemini-Korrektur AUS (Whisper-roh), KEIN Profil aktiv (Frank-Wunsch 2026-06-22: beim Start kein Profil voreingestellt). Profil-Klick oder G-Button schaltet Gemini ein. Ohne Gemini-API-Key bleibt es ohnehin false.
@@ -2518,37 +2520,41 @@ namespace TerminalVoiceOverlay.Views
             // Ignore if BTW mic is active
             if (isBtwRecording) return;
             if (_isProcessing)  return;
+            if (_mainStopInProgress) return;
 
             if (_micState == RecordingState.Recording)
             {
-                string turnId = System.Threading.Interlocked.Increment(ref _voiceTurnSeq).ToString();
-                var targetHwnd = _mainRecordingTargetHwnd;
-                var turnSw = Stopwatch.StartNew();
-                DiagLog.Write("VoiceTurn", "stop_clicked", ("turn", turnId), ("kind", "main"), ("autoEnter", autoEnterEnabled), ("gemini", geminiEnabled), ("profile", _activeProfile));
-                // ── Stop recording ──
-                var wavFile = await _audioRecorder.StopAsync();
-                _recordingCuePlayer.PlayStop();
-                _pulseTimer.Stop();
-                _pulseBright = false;
-
-                if (wavFile == null)
+                _mainStopInProgress = true;
+                try
                 {
-                    DiagLog.Warn("VoiceTurn", "wav_null", ("turn", turnId), ("kind", "main"));
-                    SetMicState(RecordingState.Idle);
-                    return;
-                }
+                    string turnId = System.Threading.Interlocked.Increment(ref _voiceTurnSeq).ToString();
+                    var targetHwnd = _mainRecordingTargetHwnd;
+                    var turnSw = Stopwatch.StartNew();
+                    DiagLog.Write("VoiceTurn", "stop_clicked", ("turn", turnId), ("kind", "main"), ("autoEnter", autoEnterEnabled), ("gemini", geminiEnabled), ("profile", _activeProfile));
+                    // ── Stop recording ──
+                    var wavFile = await _audioRecorder.StopAsync();
+                    _recordingCuePlayer.PlayStop();
+                    _pulseTimer.Stop();
+                    _pulseBright = false;
+
+                    if (wavFile == null)
+                    {
+                        DiagLog.Warn("VoiceTurn", "wav_null", ("turn", turnId), ("kind", "main"));
+                        SetMicState(RecordingState.Idle);
+                        return;
+                    }
                 long wavBytes = 0;
                 try { wavBytes = new FileInfo(wavFile).Length; } catch { }
                 long wavMs = EstimateWavDurationMs(wavFile);
                 DiagLog.Write("VoiceTurn", "wav_ready", ("turn", turnId), ("kind", "main"), ("wavBytes", wavBytes), ("wavMs", wavMs));
 
-                _isProcessing = true;
-                SetMicState(RecordingState.Processing);
-                Console.WriteLine("Recording stopped, transcribing...");
+                    _isProcessing = true;
+                    SetMicState(RecordingState.Processing);
+                    Console.WriteLine("Recording stopped, transcribing...");
 
-                try
-                {
-                    var sttSw = Stopwatch.StartNew();
+                    try
+                    {
+                        var sttSw = Stopwatch.StartNew();
                     DiagLog.Write("VoiceTurn", "stt_start", ("turn", turnId), ("kind", "main"), ("wavBytes", wavBytes), ("wavMs", wavMs));
                     var transcript = await _groqClient.TranscribeAsync(wavFile);
                     DiagLog.Perf("VoiceTurn", "stt_done", sttSw, ("turn", turnId), ("kind", "main"), ("chars", transcript.Length), ("preview", SafeLogPreview(transcript)));
@@ -2641,22 +2647,27 @@ namespace TerminalVoiceOverlay.Views
                         if (autoEnterEnabled)
                             hasPastedText = false;
                     }
-                }
-                catch (Exception ex)
-                {
-                    Console.WriteLine($"Transcription error: {ex.Message}");
-                    DiagLog.Error("VoiceTurn", "turn_failed", ex, ("turn", turnId), ("kind", "main"), ("ms", turnSw.ElapsedMilliseconds));
-                    SetMicState(RecordingState.Error);
+                    }
+                    catch (Exception ex)
+                    {
+                        Console.WriteLine($"Transcription error: {ex.Message}");
+                        DiagLog.Error("VoiceTurn", "turn_failed", ex, ("turn", turnId), ("kind", "main"), ("ms", turnSw.ElapsedMilliseconds));
+                        SetMicState(RecordingState.Error);
+                    }
+                    finally
+                    {
+                        _isProcessing = false;
+                        _mainRecordingTargetHwnd = IntPtr.Zero;
+                        DiagLog.Perf("VoiceTurn", "turn_total", turnSw, ("turn", turnId), ("kind", "main"));
+                        ScheduleReset();
+
+                        try { if (wavFile != null) File.Delete(wavFile); }
+                        catch { /* ignore */ }
+                    }
                 }
                 finally
                 {
-                    _isProcessing = false;
-                    _mainRecordingTargetHwnd = IntPtr.Zero;
-                    DiagLog.Perf("VoiceTurn", "turn_total", turnSw, ("turn", turnId), ("kind", "main"));
-                    ScheduleReset();
-
-                    try { if (wavFile != null) File.Delete(wavFile); }
-                    catch { /* ignore */ }
+                    _mainStopInProgress = false;
                 }
             }
             else
@@ -2691,38 +2702,42 @@ namespace TerminalVoiceOverlay.Views
             // Ignore if main mic is active
             if (_micState == RecordingState.Recording) return;
             if (_isProcessing) return;
+            if (_btwStopInProgress) return;
 
             if (isBtwRecording)
             {
-                string turnId = System.Threading.Interlocked.Increment(ref _voiceTurnSeq).ToString();
-                var targetHwnd = _btwRecordingTargetHwnd;
-                var turnSw = Stopwatch.StartNew();
-                DiagLog.Write("VoiceTurn", "stop_clicked", ("turn", turnId), ("kind", "btw"), ("autoEnter", autoEnterEnabled), ("gemini", geminiEnabled), ("profile", _activeProfile));
-                // ── Stop BTW recording ──
-                var wavFile = await _audioRecorder.StopAsync();
-                _recordingCuePlayer.PlayStop();
-                _btwPulseTimer.Stop();
-                _btwPulseBright = false;
-                isBtwRecording = false;
-
-                if (wavFile == null)
+                _btwStopInProgress = true;
+                try
                 {
-                    DiagLog.Warn("VoiceTurn", "wav_null", ("turn", turnId), ("kind", "btw"));
-                    SetBtwMicState(RecordingState.Idle);
-                    return;
-                }
+                    string turnId = System.Threading.Interlocked.Increment(ref _voiceTurnSeq).ToString();
+                    var targetHwnd = _btwRecordingTargetHwnd;
+                    var turnSw = Stopwatch.StartNew();
+                    DiagLog.Write("VoiceTurn", "stop_clicked", ("turn", turnId), ("kind", "btw"), ("autoEnter", autoEnterEnabled), ("gemini", geminiEnabled), ("profile", _activeProfile));
+                    // ── Stop BTW recording ──
+                    var wavFile = await _audioRecorder.StopAsync();
+                    _recordingCuePlayer.PlayStop();
+                    _btwPulseTimer.Stop();
+                    _btwPulseBright = false;
+                    isBtwRecording = false;
+
+                    if (wavFile == null)
+                    {
+                        DiagLog.Warn("VoiceTurn", "wav_null", ("turn", turnId), ("kind", "btw"));
+                        SetBtwMicState(RecordingState.Idle);
+                        return;
+                    }
                 long wavBytes = 0;
                 try { wavBytes = new FileInfo(wavFile).Length; } catch { }
                 long wavMs = EstimateWavDurationMs(wavFile);
                 DiagLog.Write("VoiceTurn", "wav_ready", ("turn", turnId), ("kind", "btw"), ("wavBytes", wavBytes), ("wavMs", wavMs));
 
-                _isProcessing = true;
-                SetBtwMicState(RecordingState.Processing);
-                Console.WriteLine("BTW recording stopped, transcribing...");
+                    _isProcessing = true;
+                    SetBtwMicState(RecordingState.Processing);
+                    Console.WriteLine("BTW recording stopped, transcribing...");
 
-                try
-                {
-                    var sttSw = Stopwatch.StartNew();
+                    try
+                    {
+                        var sttSw = Stopwatch.StartNew();
                     DiagLog.Write("VoiceTurn", "stt_start", ("turn", turnId), ("kind", "btw"), ("wavBytes", wavBytes), ("wavMs", wavMs));
                     var transcript = await _groqClient.TranscribeAsync(wavFile);
                     DiagLog.Perf("VoiceTurn", "stt_done", sttSw, ("turn", turnId), ("kind", "btw"), ("chars", transcript.Length), ("preview", SafeLogPreview(transcript)));
@@ -2777,26 +2792,31 @@ namespace TerminalVoiceOverlay.Views
                     hasPastedText = !autoEnterEnabled;
                     if (autoEnterEnabled)
                         hasPastedText = false;
-                }
-                catch (Exception ex)
-                {
-                    Console.WriteLine($"BTW transcription error: {ex.Message}");
-                    DiagLog.Error("VoiceTurn", "turn_failed", ex, ("turn", turnId), ("kind", "btw"), ("ms", turnSw.ElapsedMilliseconds));
-                    SetBtwMicState(RecordingState.Error);
+                    }
+                    catch (Exception ex)
+                    {
+                        Console.WriteLine($"BTW transcription error: {ex.Message}");
+                        DiagLog.Error("VoiceTurn", "turn_failed", ex, ("turn", turnId), ("kind", "btw"), ("ms", turnSw.ElapsedMilliseconds));
+                        SetBtwMicState(RecordingState.Error);
+                    }
+                    finally
+                    {
+                        _isProcessing = false;
+                        _btwRecordingTargetHwnd = IntPtr.Zero;
+                        DiagLog.Perf("VoiceTurn", "turn_total", turnSw, ("turn", turnId), ("kind", "btw"));
+
+                        // Reset BTW button to idle after 3 s
+                        await Task.Delay(3000);
+                        if (!isBtwRecording)
+                            SetBtwMicState(RecordingState.Idle);
+
+                        try { if (wavFile != null) File.Delete(wavFile); }
+                        catch { /* ignore */ }
+                    }
                 }
                 finally
                 {
-                    _isProcessing = false;
-                    _btwRecordingTargetHwnd = IntPtr.Zero;
-                    DiagLog.Perf("VoiceTurn", "turn_total", turnSw, ("turn", turnId), ("kind", "btw"));
-
-                    // Reset BTW button to idle after 3 s
-                    await Task.Delay(3000);
-                    if (!isBtwRecording)
-                        SetBtwMicState(RecordingState.Idle);
-
-                    try { if (wavFile != null) File.Delete(wavFile); }
-                    catch { /* ignore */ }
+                    _btwStopInProgress = false;
                 }
             }
             else

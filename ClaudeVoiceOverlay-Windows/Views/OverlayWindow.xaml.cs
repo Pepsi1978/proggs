@@ -75,6 +75,8 @@ namespace ClaudeVoiceOverlay.Views
         // ── State ──
         private RecordingState _micState    = RecordingState.Idle;
         private bool _isProcessing          = false;
+        private bool _mainStopInProgress    = false;
+        private bool _btwStopInProgress     = false;
         private bool isBtwRecording         = false;
         private bool geminiEnabled          = false;  // Default = Gemini-Korrektur AUS (Whisper-roh), KEIN Profil aktiv (Frank-Wunsch 2026-06-22: beim Start kein Profil voreingestellt). Profil-Klick oder G-Button schaltet Gemini ein. Ohne Gemini-API-Key bleibt es ohnehin false.
         private bool autoEnterEnabled       = true;  // macOS default (was false in Windows)
@@ -2486,29 +2488,33 @@ namespace ClaudeVoiceOverlay.Views
             // Ignore if BTW mic is active
             if (isBtwRecording) return;
             if (_isProcessing)  return;
+            if (_mainStopInProgress) return;
 
             if (_micState == RecordingState.Recording)
             {
-                var targetHwnd = _mainRecordingTargetHwnd;
-                // ── Stop recording ──
-                var wavFile = await _audioRecorder.StopAsync();
-                _recordingCuePlayer.PlayStop();
-                _pulseTimer.Stop();
-                _pulseBright = false;
-
-                if (wavFile == null)
-                {
-                    SetMicState(RecordingState.Idle);
-                    return;
-                }
-
-                _isProcessing = true;
-                SetMicState(RecordingState.Processing);
-                Console.WriteLine("Recording stopped, transcribing...");
-
+                _mainStopInProgress = true;
                 try
                 {
-                    var transcript = await _groqClient.TranscribeAsync(wavFile);
+                    var targetHwnd = _mainRecordingTargetHwnd;
+                    // ── Stop recording ──
+                    var wavFile = await _audioRecorder.StopAsync();
+                    _recordingCuePlayer.PlayStop();
+                    _pulseTimer.Stop();
+                    _pulseBright = false;
+
+                    if (wavFile == null)
+                    {
+                        SetMicState(RecordingState.Idle);
+                        return;
+                    }
+
+                    _isProcessing = true;
+                    SetMicState(RecordingState.Processing);
+                    Console.WriteLine("Recording stopped, transcribing...");
+
+                    try
+                    {
+                        var transcript = await _groqClient.TranscribeAsync(wavFile);
                     Console.WriteLine($"Transcript: {SafeLogPreview(transcript)}");
                     lastRawTranscript = transcript;
                     // Re-Correct-Cache: Roh-Whisper-Text + Zeitstempel merken,
@@ -2586,20 +2592,25 @@ namespace ClaudeVoiceOverlay.Views
                         if (autoEnterEnabled)
                             hasPastedText = false;
                     }
-                }
-                catch (Exception ex)
-                {
-                    Console.WriteLine($"Transcription error: {ex.Message}");
-                    SetMicState(RecordingState.Error);
+                    }
+                    catch (Exception ex)
+                    {
+                        Console.WriteLine($"Transcription error: {ex.Message}");
+                        SetMicState(RecordingState.Error);
+                    }
+                    finally
+                    {
+                        _isProcessing = false;
+                        _mainRecordingTargetHwnd = IntPtr.Zero;
+                        ScheduleReset();
+
+                        try { if (wavFile != null) File.Delete(wavFile); }
+                        catch { /* ignore */ }
+                    }
                 }
                 finally
                 {
-                    _isProcessing = false;
-                    _mainRecordingTargetHwnd = IntPtr.Zero;
-                    ScheduleReset();
-
-                    try { if (wavFile != null) File.Delete(wavFile); }
-                    catch { /* ignore */ }
+                    _mainStopInProgress = false;
                 }
             }
             else
@@ -2634,30 +2645,34 @@ namespace ClaudeVoiceOverlay.Views
             // Ignore if main mic is active
             if (_micState == RecordingState.Recording) return;
             if (_isProcessing) return;
+            if (_btwStopInProgress) return;
 
             if (isBtwRecording)
             {
-                var targetHwnd = _btwRecordingTargetHwnd;
-                // ── Stop BTW recording ──
-                var wavFile = await _audioRecorder.StopAsync();
-                _recordingCuePlayer.PlayStop();
-                _btwPulseTimer.Stop();
-                _btwPulseBright = false;
-                isBtwRecording = false;
-
-                if (wavFile == null)
-                {
-                    SetBtwMicState(RecordingState.Idle);
-                    return;
-                }
-
-                _isProcessing = true;
-                SetBtwMicState(RecordingState.Processing);
-                Console.WriteLine("BTW recording stopped, transcribing...");
-
+                _btwStopInProgress = true;
                 try
                 {
-                    var transcript = await _groqClient.TranscribeAsync(wavFile);
+                    var targetHwnd = _btwRecordingTargetHwnd;
+                    // ── Stop BTW recording ──
+                    var wavFile = await _audioRecorder.StopAsync();
+                    _recordingCuePlayer.PlayStop();
+                    _btwPulseTimer.Stop();
+                    _btwPulseBright = false;
+                    isBtwRecording = false;
+
+                    if (wavFile == null)
+                    {
+                        SetBtwMicState(RecordingState.Idle);
+                        return;
+                    }
+
+                    _isProcessing = true;
+                    SetBtwMicState(RecordingState.Processing);
+                    Console.WriteLine("BTW recording stopped, transcribing...");
+
+                    try
+                    {
+                        var transcript = await _groqClient.TranscribeAsync(wavFile);
                     Console.WriteLine($"BTW transcript: {SafeLogPreview(transcript)}");
                     // Re-Correct-Cache fuer die BTW-Spur ebenfalls fuellen
                     _lastCorrectableRaw = transcript;
@@ -2701,24 +2716,29 @@ namespace ClaudeVoiceOverlay.Views
                     hasPastedText = !autoEnterEnabled;
                     if (autoEnterEnabled)
                         hasPastedText = false;
-                }
-                catch (Exception ex)
-                {
-                    Console.WriteLine($"BTW transcription error: {ex.Message}");
-                    SetBtwMicState(RecordingState.Error);
+                    }
+                    catch (Exception ex)
+                    {
+                        Console.WriteLine($"BTW transcription error: {ex.Message}");
+                        SetBtwMicState(RecordingState.Error);
+                    }
+                    finally
+                    {
+                        _isProcessing = false;
+                        _btwRecordingTargetHwnd = IntPtr.Zero;
+
+                        // Reset BTW button to idle after 3 s
+                        await Task.Delay(3000);
+                        if (!isBtwRecording)
+                            SetBtwMicState(RecordingState.Idle);
+
+                        try { if (wavFile != null) File.Delete(wavFile); }
+                        catch { /* ignore */ }
+                    }
                 }
                 finally
                 {
-                    _isProcessing = false;
-                    _btwRecordingTargetHwnd = IntPtr.Zero;
-
-                    // Reset BTW button to idle after 3 s
-                    await Task.Delay(3000);
-                    if (!isBtwRecording)
-                        SetBtwMicState(RecordingState.Idle);
-
-                    try { if (wavFile != null) File.Delete(wavFile); }
-                    catch { /* ignore */ }
+                    _btwStopInProgress = false;
                 }
             }
             else

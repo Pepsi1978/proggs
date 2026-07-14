@@ -42,6 +42,12 @@ function Get-TargetOverlayProcesses {
     })
 }
 
+function Get-TargetUiProcesses {
+    @(Get-TargetOverlayProcesses | Where-Object {
+        $_.CommandLine -and $_.CommandLine -match '(?:^|\s)--run(?:\s|$)'
+    })
+}
+
 function Stop-TargetOverlayProcesses {
     for ($i = 0; $i -lt $maxAttempts; $i++) {
         $processes = @(Get-TargetOverlayProcesses)
@@ -163,16 +169,30 @@ try {
         throw "Konnte die EXE nach $maxAttempts Versuchen nicht ersetzen."
     }
 
+    # Step 4: Keep the backup until one concrete new UI process stays alive.
     Write-Host "4/4 Starte neue Version..." -ForegroundColor Cyan
     Stop-TargetOverlayProcesses
     $startedProcess = Start-Process -FilePath $exePath -PassThru -ErrorAction Stop
-    $newProcessId = $startedProcess.Id
+    $watchdogProcessId = $startedProcess.Id
+    $uiProcessId = $null
 
     for ($i = 0; $i -lt 6; $i++) {
         Start-Sleep -Milliseconds 500
-        $stableProcess = @(Get-TargetOverlayProcesses | Where-Object { $_.ProcessId -eq $newProcessId })
+        $uiProcess = @(Get-TargetUiProcesses | Select-Object -First 1)
+        if ($uiProcess.Count -gt 0) {
+            $uiProcessId = $uiProcess[0].ProcessId
+            break
+        }
+    }
+    if ($null -eq $uiProcessId) {
+        throw "Die neue EXE startete keinen UI-Prozess mit --run (Watchdog-PID: $watchdogProcessId)."
+    }
+
+    for ($i = 0; $i -lt 6; $i++) {
+        Start-Sleep -Milliseconds 500
+        $stableProcess = @(Get-TargetUiProcesses | Where-Object { $_.ProcessId -eq $uiProcessId })
         if ($stableProcess.Count -eq 0) {
-            throw "Die neue EXE blieb nicht stabil aktiv (PID: $newProcessId)."
+            throw "Der neue UI-Prozess blieb nicht stabil aktiv (PID: $uiProcessId, Watchdog-PID: $watchdogProcessId)."
         }
     }
 
@@ -183,7 +203,7 @@ try {
     } catch {
         Write-Host "   WARNUNG: Verifiziertes Backup konnte nicht entfernt werden: $($_.Exception.Message)" -ForegroundColor Yellow
     }
-    Write-Host "`nUpdate erfolgreich! Neue Version laeuft stabil (PID: $newProcessId)" -ForegroundColor Green
+    Write-Host "`nUpdate erfolgreich! Neue UI laeuft stabil (PID: $uiProcessId)" -ForegroundColor Green
 } catch {
     $updateError = $_.Exception.Message
     $rollbackError = $null

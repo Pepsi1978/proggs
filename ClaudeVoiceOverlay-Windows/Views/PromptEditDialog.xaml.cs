@@ -44,6 +44,7 @@ public partial class PromptEditDialog : Window
     /// ausschliesslich seine EIGENE Aufnahme an.
     /// </summary>
     private bool _recordingStartedHere;
+    private bool _stopInProgress;
 
     /// <summary>
     /// True while the short-label field still holds an auto-generated value
@@ -157,16 +158,24 @@ public partial class PromptEditDialog : Window
             // wuerde das Schliessen des Editier-Dialogs die laufende Overlay-
             // Aufnahme abwuergen (geteilter AudioRecorder).
             string? wavPath = null;
+            var recorder = VoiceServiceProvider.Recorder;
+            if (_stopInProgress || !_recordingStartedHere || recorder?.IsRecording != true)
+            {
+                _pulseTimer?.Stop();
+                return;
+            }
+            _stopInProgress = true;
             try
             {
-                if (_recordingStartedHere && VoiceServiceProvider.Recorder?.IsRecording == true)
-                    wavPath = await VoiceServiceProvider.Recorder.StopAsync();
+                wavPath = await recorder.StopAsync();
             }
             catch (Exception ex) { DiagLog.Write("PromptEditMic", "close_stop_failed", ("error", ex.ToString())); }
             finally
             {
                 if (!string.IsNullOrEmpty(wavPath)) TryDeleteFile(wavPath);
                 _pulseTimer?.Stop();
+                _recordingStartedHere = false;
+                _stopInProgress = false;
             }
         };
     }
@@ -374,6 +383,7 @@ public partial class PromptEditDialog : Window
             ShowStatus("Mic-Aufnahme nicht verfuegbar (kein GROQ_API_KEY in .env).");
             return;
         }
+        if (_stopInProgress) return;
 
         // Der AudioRecorder ist prozessweit geteilt. Laeuft bereits eine
         // Aufnahme, die NICHT dieser Dialog gestartet hat (z.B. die Voice-
@@ -388,6 +398,7 @@ public partial class PromptEditDialog : Window
         if (recorder.IsRecording)
         {
             // ── Stop & transcribe ──
+            _stopInProgress = true;
             StopPulse();
             BtnMic.Background = MicTranscribing;
             ShowStatus("Transkribiere...");
@@ -395,9 +406,6 @@ public partial class PromptEditDialog : Window
             try
             {
                 wavPath = await recorder.StopAsync();
-                // Unsere Aufnahme ist beendet — Eigentum freigeben, damit ein
-                // spaeterer Closed-Handler sie nicht erneut anzufassen versucht.
-                _recordingStartedHere = false;
                 if (string.IsNullOrEmpty(wavPath))
                 {
                     ShowStatus("Aufnahme leer.");
@@ -421,6 +429,8 @@ public partial class PromptEditDialog : Window
                 BtnMic.Background = MicIdle;
                 if (!string.IsNullOrEmpty(wavPath))
                     TryDeleteFile(wavPath);
+                _recordingStartedHere = false;
+                _stopInProgress = false;
             }
             return;
         }

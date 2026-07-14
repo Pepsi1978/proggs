@@ -413,18 +413,27 @@ namespace ClaudeVoiceOverlay
             catch
             {
                 // Schon beim ersten Lookup tot — sofort restarten, keine Subscription noetig.
-                RestartWatchdog();
+                var replacement = RestartWatchdog();
+                if (replacement is not null) MonitorWatchdog(replacement.Id);
                 return;
             }
 
             try
             {
+                int restartHandled = 0;
+                void RestartOnce()
+                {
+                    if (Interlocked.Exchange(ref restartHandled, 1) != 0) return;
+                    try { watchdog.Dispose(); } catch { /* tolerant */ }
+                    var replacement = RestartWatchdog();
+                    if (replacement is not null) MonitorWatchdog(replacement.Id);
+                }
+
                 watchdog.EnableRaisingEvents = true;
                 watchdog.Exited += (_, _) =>
                 {
                     Console.WriteLine("Overlay: watchdog died, restarting...");
-                    RestartWatchdog();
-                    try { watchdog.Dispose(); } catch { /* tolerant */ }
+                    RestartOnce();
                 };
 
                 // Race-Schutz: Watchdog kann zwischen GetProcessById und
@@ -434,8 +443,7 @@ namespace ClaudeVoiceOverlay
                 if (watchdog.HasExited)
                 {
                     Console.WriteLine("Overlay: watchdog already dead at subscribe time, restarting...");
-                    RestartWatchdog();
-                    try { watchdog.Dispose(); } catch { /* tolerant */ }
+                    RestartOnce();
                 }
             }
             catch (Exception ex)
@@ -449,11 +457,11 @@ namespace ClaudeVoiceOverlay
             }
         }
 
-        private static void RestartWatchdog()
+        private static Process? RestartWatchdog()
         {
             try
             {
-                Process.Start(new ProcessStartInfo
+                return Process.Start(new ProcessStartInfo
                 {
                     FileName = Environment.ProcessPath!,
                     UseShellExecute = true
@@ -462,10 +470,11 @@ namespace ClaudeVoiceOverlay
             catch (Exception ex)
             {
                 LogCrash("RestartWatchdog", ex);
+                return null;
             }
         }
 
-        private static void FallbackPolling(int watchdogPid)
+        private void FallbackPolling(int watchdogPid)
         {
             Task.Run(() =>
             {
@@ -479,7 +488,8 @@ namespace ClaudeVoiceOverlay
                     catch
                     {
                         Console.WriteLine("Overlay: watchdog died (fallback path), restarting...");
-                        RestartWatchdog();
+                        var replacement = RestartWatchdog();
+                        if (replacement is not null) MonitorWatchdog(replacement.Id);
                         break;
                     }
                 }

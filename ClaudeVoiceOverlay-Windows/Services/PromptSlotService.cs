@@ -45,12 +45,14 @@ public sealed class PromptSlotEntry
 /// <summary>
 /// Liest und schreibt die 30 Prompt-Zwischenspeicher-Slots aus einer JSON-Datei.
 /// Voellig analog zum <see cref="PromptHistoryService"/>: SemaphoreSlim-Gate,
-/// atomares Schreiben (Temp-Datei + File.Move overwrite), camelCase-JSON
+/// app-uebergreifender Named Mutex und atomares Schreiben, camelCase-JSON
 /// kompatibel zur macOS-Seite. Die Datei wird nach jedem Speichern/Loeschen
 /// sofort zu Google Drive gespiegelt (<c>prompt-slots.json</c> im appDataFolder).
 /// </summary>
 public sealed class PromptSlotService
 {
+    private const string StoreMutexName = @"Local\PromptBoard.PromptSlotStore";
+
     // 30 Slots, in der UI als zwei Reihen dargestellt (1…15 oben, 16…30 unten).
     // Zentrale Quelle fuer UI-Aufbau, Validierung und Cloud-Merge — bytegenau
     // synchron zur macOS-Variante (PromptSlotStore.slotCount).
@@ -59,6 +61,7 @@ public sealed class PromptSlotService
     private readonly string _baseDir;
     private readonly string _slotsFilePath;
     private readonly SemaphoreSlim _gate = new(1, 1);
+    private readonly Mutex _storeMutex = new(false, StoreMutexName);
 
     private static readonly JsonSerializerOptions JsonOptions = new()
     {
@@ -90,14 +93,17 @@ public sealed class PromptSlotService
         await _gate.WaitAsync(ct).ConfigureAwait(false);
         try
         {
-            var entries = await LoadUnlockedAsync(ct).ConfigureAwait(false);
-            var map = new Dictionary<int, string>();
-            foreach (var e in entries)
+            return WithStoreMutex(ct, () =>
             {
-                if (!string.IsNullOrEmpty(e.Text) && e.Number is >= 1 and <= SlotCount)
-                    map[e.Number] = e.Text;
-            }
-            return map;
+                var entries = LoadUnlocked(ct);
+                var map = new Dictionary<int, string>();
+                foreach (var e in entries)
+                {
+                    if (!string.IsNullOrEmpty(e.Text) && e.Number is >= 1 and <= SlotCount)
+                        map[e.Number] = e.Text;
+                }
+                return map;
+            });
         }
         finally { _gate.Release(); }
     }
@@ -112,18 +118,21 @@ public sealed class PromptSlotService
         await _gate.WaitAsync(ct).ConfigureAwait(false);
         try
         {
-            var entries = await LoadUnlockedAsync(ct).ConfigureAwait(false);
-            var map = new Dictionary<int, string>();
-            var times = new Dictionary<int, DateTime>();
-            foreach (var e in entries)
+            return WithStoreMutex(ct, () =>
             {
-                if (!string.IsNullOrEmpty(e.Text) && e.Number is >= 1 and <= SlotCount)
+                var entries = LoadUnlocked(ct);
+                var map = new Dictionary<int, string>();
+                var times = new Dictionary<int, DateTime>();
+                foreach (var e in entries)
                 {
-                    map[e.Number] = e.Text;
-                    times[e.Number] = e.UpdatedAt;
+                    if (!string.IsNullOrEmpty(e.Text) && e.Number is >= 1 and <= SlotCount)
+                    {
+                        map[e.Number] = e.Text;
+                        times[e.Number] = e.UpdatedAt;
+                    }
                 }
-            }
-            return (map, times);
+                return (map, times);
+            });
         }
         finally { _gate.Release(); }
     }
@@ -140,22 +149,25 @@ public sealed class PromptSlotService
         await _gate.WaitAsync(ct).ConfigureAwait(false);
         try
         {
-            var entries = await LoadUnlockedAsync(ct).ConfigureAwait(false);
-            var map = new Dictionary<int, string>();
-            var times = new Dictionary<int, DateTime>();
-            var summaries = new Dictionary<int, string>();
-            var priorities = new Dictionary<int, int>();
-            foreach (var e in entries)
+            return WithStoreMutex(ct, () =>
             {
-                if (!string.IsNullOrEmpty(e.Text) && e.Number is >= 1 and <= SlotCount)
+                var entries = LoadUnlocked(ct);
+                var map = new Dictionary<int, string>();
+                var times = new Dictionary<int, DateTime>();
+                var summaries = new Dictionary<int, string>();
+                var priorities = new Dictionary<int, int>();
+                foreach (var e in entries)
                 {
-                    map[e.Number] = e.Text;
-                    times[e.Number] = e.UpdatedAt;
-                    if (!string.IsNullOrWhiteSpace(e.Summary)) summaries[e.Number] = e.Summary;
-                    if (e.Priority != 0) priorities[e.Number] = e.Priority;
+                    if (!string.IsNullOrEmpty(e.Text) && e.Number is >= 1 and <= SlotCount)
+                    {
+                        map[e.Number] = e.Text;
+                        times[e.Number] = e.UpdatedAt;
+                        if (!string.IsNullOrWhiteSpace(e.Summary)) summaries[e.Number] = e.Summary;
+                        if (e.Priority != 0) priorities[e.Number] = e.Priority;
+                    }
                 }
-            }
-            return (map, times, summaries, priorities);
+                return (map, times, summaries, priorities);
+            });
         }
         finally { _gate.Release(); }
     }
@@ -164,7 +176,7 @@ public sealed class PromptSlotService
     public async Task<List<PromptSlotEntry>> LoadEntriesAsync(CancellationToken ct = default)
     {
         await _gate.WaitAsync(ct).ConfigureAwait(false);
-        try { return await LoadUnlockedAsync(ct).ConfigureAwait(false); }
+        try { return WithStoreMutex(ct, () => LoadUnlocked(ct)); }
         finally { _gate.Release(); }
     }
 
@@ -175,17 +187,20 @@ public sealed class PromptSlotService
         await _gate.WaitAsync(ct).ConfigureAwait(false);
         try
         {
-            var entries = await LoadUnlockedAsync(ct).ConfigureAwait(false);
-            int idx = entries.FindIndex(e => e.Number == number);
-            // Neuer Text -> alte Summary ist ungueltig und wird geleert. Die
-            // frische 6-8-Wort-Zusammenfassung holt der Aufrufer gleich danach
-            // per Gemini und schreibt sie ueber SetSummaryAsync nach. Die
-            // Prioritaet (farbige Einfaerbung) gehoert zum SLOT, nicht zum Text,
-            // und bleibt beim Ueberschreiben erhalten (Frank-Wunsch 2026-06-16).
-            int priority = idx >= 0 ? entries[idx].Priority : 0;
-            var entry = new PromptSlotEntry { Number = number, Text = text ?? string.Empty, UpdatedAt = DateTime.UtcNow, Summary = string.Empty, Priority = priority };
-            if (idx >= 0) entries[idx] = entry; else entries.Add(entry);
-            await SaveUnlockedAsync(entries, ct).ConfigureAwait(false);
+            WithStoreMutex(ct, () =>
+            {
+                var entries = LoadUnlocked(ct);
+                int idx = entries.FindIndex(e => e.Number == number);
+                // Neuer Text -> alte Summary ist ungueltig und wird geleert. Die
+                // frische 6-8-Wort-Zusammenfassung holt der Aufrufer gleich danach
+                // per Gemini und schreibt sie ueber SetSummaryAsync nach. Die
+                // Prioritaet (farbige Einfaerbung) gehoert zum SLOT, nicht zum Text,
+                // und bleibt beim Ueberschreiben erhalten (Frank-Wunsch 2026-06-16).
+                int priority = idx >= 0 ? entries[idx].Priority : 0;
+                var entry = new PromptSlotEntry { Number = number, Text = text ?? string.Empty, UpdatedAt = DateTime.UtcNow, Summary = string.Empty, Priority = priority };
+                if (idx >= 0) entries[idx] = entry; else entries.Add(entry);
+                SaveUnlocked(entries, ct);
+            });
         }
         finally { _gate.Release(); }
     }
@@ -205,16 +220,19 @@ public sealed class PromptSlotService
         await _gate.WaitAsync(ct).ConfigureAwait(false);
         try
         {
-            var entries = await LoadUnlockedAsync(ct).ConfigureAwait(false);
-            int idx = entries.FindIndex(e => e.Number == number);
-            if (idx < 0) return;
-            var e = entries[idx];
-            if (string.IsNullOrEmpty(e.Text)) return;                    // Tombstone
-            if (!string.Equals(e.Text, forText, StringComparison.Ordinal)) return; // Text inzwischen geaendert
-            e.Summary = summary ?? string.Empty;
-            e.UpdatedAt = DateTime.UtcNow;
-            entries[idx] = e;
-            await SaveUnlockedAsync(entries, ct).ConfigureAwait(false);
+            WithStoreMutex(ct, () =>
+            {
+                var entries = LoadUnlocked(ct);
+                int idx = entries.FindIndex(e => e.Number == number);
+                if (idx < 0) return;
+                var e = entries[idx];
+                if (string.IsNullOrEmpty(e.Text)) return;                    // Tombstone
+                if (!string.Equals(e.Text, forText, StringComparison.Ordinal)) return; // Text inzwischen geaendert
+                e.Summary = summary ?? string.Empty;
+                e.UpdatedAt = DateTime.UtcNow;
+                entries[idx] = e;
+                SaveUnlocked(entries, ct);
+            });
         }
         finally { _gate.Release(); }
     }
@@ -234,15 +252,18 @@ public sealed class PromptSlotService
         await _gate.WaitAsync(ct).ConfigureAwait(false);
         try
         {
-            var entries = await LoadUnlockedAsync(ct).ConfigureAwait(false);
-            int idx = entries.FindIndex(e => e.Number == number);
-            if (idx < 0) return;
-            var e = entries[idx];
-            if (string.IsNullOrEmpty(e.Text)) return;   // Tombstone -> keine Prioritaet
-            e.Priority = priority;
-            e.UpdatedAt = DateTime.UtcNow;
-            entries[idx] = e;
-            await SaveUnlockedAsync(entries, ct).ConfigureAwait(false);
+            WithStoreMutex(ct, () =>
+            {
+                var entries = LoadUnlocked(ct);
+                int idx = entries.FindIndex(e => e.Number == number);
+                if (idx < 0) return;
+                var e = entries[idx];
+                if (string.IsNullOrEmpty(e.Text)) return;   // Tombstone -> keine Prioritaet
+                e.Priority = priority;
+                e.UpdatedAt = DateTime.UtcNow;
+                entries[idx] = e;
+                SaveUnlocked(entries, ct);
+            });
         }
         finally { _gate.Release(); }
     }
@@ -257,11 +278,14 @@ public sealed class PromptSlotService
         await _gate.WaitAsync(ct).ConfigureAwait(false);
         try
         {
-            var entries = await LoadUnlockedAsync(ct).ConfigureAwait(false);
-            var tombstone = new PromptSlotEntry { Number = number, Text = string.Empty, UpdatedAt = DateTime.UtcNow };
-            int idx = entries.FindIndex(e => e.Number == number);
-            if (idx >= 0) entries[idx] = tombstone; else entries.Add(tombstone);
-            await SaveUnlockedAsync(entries, ct).ConfigureAwait(false);
+            WithStoreMutex(ct, () =>
+            {
+                var entries = LoadUnlocked(ct);
+                var tombstone = new PromptSlotEntry { Number = number, Text = string.Empty, UpdatedAt = DateTime.UtcNow };
+                int idx = entries.FindIndex(e => e.Number == number);
+                if (idx >= 0) entries[idx] = tombstone; else entries.Add(tombstone);
+                SaveUnlocked(entries, ct);
+            });
         }
         finally { _gate.Release(); }
     }
@@ -289,54 +313,57 @@ public sealed class PromptSlotService
         await _gate.WaitAsync(ct).ConfigureAwait(false);
         try
         {
-            var entries = await LoadUnlockedAsync(ct).ConfigureAwait(false);
-
-            string TextOf(int n)
+            WithStoreMutex(ct, () =>
             {
-                var e = entries.FirstOrDefault(x => x.Number == n);
-                return e?.Text ?? string.Empty;
-            }
-            string SummaryOf(int n)
-            {
-                var e = entries.FirstOrDefault(x => x.Number == n);
-                return e?.Summary ?? string.Empty;
-            }
-            int PriorityOf(int n)
-            {
-                var e = entries.FirstOrDefault(x => x.Number == n);
-                return e?.Priority ?? 0;
-            }
+                var entries = LoadUnlocked(ct);
 
-            string fromText = TextOf(from);
-            // Nichts zu verschieben, wenn die Quelle leer ist (Tombstone/unbelegt).
-            if (string.IsNullOrEmpty(fromText)) return;
-            string toText = TextOf(to); // leer => Move, belegt => Swap
+                string TextOf(int n)
+                {
+                    var e = entries.FirstOrDefault(x => x.Number == n);
+                    return e?.Text ?? string.Empty;
+                }
+                string SummaryOf(int n)
+                {
+                    var e = entries.FirstOrDefault(x => x.Number == n);
+                    return e?.Summary ?? string.Empty;
+                }
+                int PriorityOf(int n)
+                {
+                    var e = entries.FirstOrDefault(x => x.Number == n);
+                    return e?.Priority ?? 0;
+                }
 
-            // Summaries reisen mit dem Text mit, damit der Hover-Tooltip nach
-            // Verschieben/Tauschen weiter zum richtigen Prompt passt.
-            string fromSummary = SummaryOf(from);
-            string toSummary = SummaryOf(to);
+                string fromText = TextOf(from);
+                // Nichts zu verschieben, wenn die Quelle leer ist (Tombstone/unbelegt).
+                if (string.IsNullOrEmpty(fromText)) return;
+                string toText = TextOf(to); // leer => Move, belegt => Swap
 
-            // Prioritaet reist mit dem Prompt mit (wie die Summary), damit die
-            // farbige Einfaerbung nach Verschieben/Tauschen am richtigen Slot bleibt.
-            int fromPriority = PriorityOf(from);
-            int toPriority = PriorityOf(to);
+                // Summaries reisen mit dem Text mit, damit der Hover-Tooltip nach
+                // Verschieben/Tauschen weiter zum richtigen Prompt passt.
+                string fromSummary = SummaryOf(from);
+                string toSummary = SummaryOf(to);
 
-            var now = DateTime.UtcNow;
+                // Prioritaet reist mit dem Prompt mit (wie die Summary), damit die
+                // farbige Einfaerbung nach Verschieben/Tauschen am richtigen Slot bleibt.
+                int fromPriority = PriorityOf(from);
+                int toPriority = PriorityOf(to);
 
-            void Upsert(int number, string text, string summary, int priority)
-            {
-                var entry = new PromptSlotEntry { Number = number, Text = text ?? string.Empty, UpdatedAt = now, Summary = summary ?? string.Empty, Priority = priority };
-                int idx = entries.FindIndex(x => x.Number == number);
-                if (idx >= 0) entries[idx] = entry; else entries.Add(entry);
-            }
+                var now = DateTime.UtcNow;
 
-            Upsert(to, fromText, fromSummary, fromPriority);   // Ziel bekommt den gezogenen Prompt + Summary + Prioritaet
-            Upsert(from, toText, toSummary, toPriority);       // Quelle bekommt den alten Ziel-Text + Summary + Prioritaet (leer = Tombstone = Move)
+                void Upsert(int number, string text, string summary, int priority)
+                {
+                    var entry = new PromptSlotEntry { Number = number, Text = text ?? string.Empty, UpdatedAt = now, Summary = summary ?? string.Empty, Priority = priority };
+                    int idx = entries.FindIndex(x => x.Number == number);
+                    if (idx >= 0) entries[idx] = entry; else entries.Add(entry);
+                }
 
-            await SaveUnlockedAsync(entries, ct).ConfigureAwait(false);
-            Console.WriteLine(
-                $"PromptSlot move {from}->{to} ({(string.IsNullOrEmpty(toText) ? "move" : "swap")})");
+                Upsert(to, fromText, fromSummary, fromPriority);   // Ziel bekommt den gezogenen Prompt + Summary + Prioritaet
+                Upsert(from, toText, toSummary, toPriority);       // Quelle bekommt den alten Ziel-Text + Summary + Prioritaet (leer = Tombstone = Move)
+
+                SaveUnlocked(entries, ct);
+                Console.WriteLine(
+                    $"PromptSlot move {from}->{to} ({(string.IsNullOrEmpty(toText) ? "move" : "swap")})");
+            });
         }
         finally { _gate.Release(); }
     }
@@ -346,39 +373,106 @@ public sealed class PromptSlotService
     {
         var list = entries.Where(e => e is not null).ToList();
         await _gate.WaitAsync(ct).ConfigureAwait(false);
-        try { await SaveUnlockedAsync(list, ct).ConfigureAwait(false); }
+        try { WithStoreMutex(ct, () => SaveUnlocked(list, ct)); }
         finally { _gate.Release(); }
     }
 
-    // ── Interne Helpers (laufen alle innerhalb des Semaphors) ──
+    // ── Interne Helpers (laufen alle innerhalb des Semaphors und Named Mutex) ──
 
-    private async Task<List<PromptSlotEntry>> LoadUnlockedAsync(CancellationToken ct)
+    private List<PromptSlotEntry> LoadUnlocked(CancellationToken ct)
     {
         if (!File.Exists(_slotsFilePath)) return new List<PromptSlotEntry>();
         try
         {
-            await using var stream = File.OpenRead(_slotsFilePath);
-            var list = await JsonSerializer.DeserializeAsync<List<PromptSlotEntry>>(
-                stream, JsonOptions, ct).ConfigureAwait(false);
-            return list ?? new List<PromptSlotEntry>();
+            ct.ThrowIfCancellationRequested();
+            using var stream = File.OpenRead(_slotsFilePath);
+            var list = JsonSerializer.Deserialize<List<PromptSlotEntry>>(stream, JsonOptions);
+            return list ?? throw new JsonException("PromptSlot JSON contained null.");
         }
-        catch (Exception ex)
+        catch (Exception ex) when (ex is IOException or JsonException or UnauthorizedAccessException)
         {
             Console.WriteLine($"PromptSlot load failed: {ex.Message}");
-            return new List<PromptSlotEntry>();
+            throw;
         }
     }
 
-    private async Task SaveUnlockedAsync(List<PromptSlotEntry> entries, CancellationToken ct)
+    private void SaveUnlocked(List<PromptSlotEntry> entries, CancellationToken ct)
     {
         // Stabile Reihenfolge nach Slot-Nummer fuer deterministisches JSON
         // (kleinere Drive-Diffs, leichteres Debuggen).
         var sorted = entries.OrderBy(e => e.Number).ToList();
-        string tmp = _slotsFilePath + ".tmp";
-        await using (var stream = File.Create(tmp))
+        string tmp = $"{_slotsFilePath}.{Guid.NewGuid():N}.tmp";
+        try
         {
-            await JsonSerializer.SerializeAsync(stream, sorted, JsonOptions, ct).ConfigureAwait(false);
+            ct.ThrowIfCancellationRequested();
+            using (var stream = new FileStream(tmp, FileMode.CreateNew, FileAccess.Write, FileShare.None))
+            {
+                JsonSerializer.Serialize(stream, sorted, JsonOptions);
+                stream.Flush(flushToDisk: true);
+            }
+            ct.ThrowIfCancellationRequested();
+
+            if (File.Exists(_slotsFilePath))
+                File.Replace(tmp, _slotsFilePath, destinationBackupFileName: null);
+            else
+                File.Move(tmp, _slotsFilePath);
         }
-        File.Move(tmp, _slotsFilePath, overwrite: true);
+        finally
+        {
+            TryDeleteTemporaryFile(tmp);
+        }
+    }
+
+    private T WithStoreMutex<T>(CancellationToken ct, Func<T> action)
+    {
+        bool ownsMutex = false;
+        try
+        {
+            try
+            {
+                if (ct.CanBeCanceled)
+                {
+                    int signaled = WaitHandle.WaitAny(new WaitHandle[] { _storeMutex, ct.WaitHandle });
+                    if (signaled == 1) ct.ThrowIfCancellationRequested();
+                }
+                else
+                {
+                    _storeMutex.WaitOne();
+                }
+            }
+            catch (AbandonedMutexException ex)
+            {
+                Console.WriteLine($"PromptSlot recovered abandoned store mutex: {ex.Message}");
+            }
+
+            ownsMutex = true;
+            ct.ThrowIfCancellationRequested();
+            return action();
+        }
+        finally
+        {
+            if (ownsMutex) _storeMutex.ReleaseMutex();
+        }
+    }
+
+    private void WithStoreMutex(CancellationToken ct, Action action)
+    {
+        WithStoreMutex<object?>(ct, () =>
+        {
+            action();
+            return null;
+        });
+    }
+
+    private static void TryDeleteTemporaryFile(string path)
+    {
+        try
+        {
+            File.Delete(path);
+        }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+        {
+            Console.WriteLine($"PromptSlot temp cleanup failed: {ex.Message}");
+        }
     }
 }

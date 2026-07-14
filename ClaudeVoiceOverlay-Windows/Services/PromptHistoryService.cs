@@ -44,20 +44,22 @@ public sealed class PromptHistoryEntry
 /// aktuellste Eintrag oben, damit der Benutzer beim Oeffnen sofort die
 /// neuesten archivierten Prompts sieht.
 ///
-/// Thread-sicherheit: Alle Lese-/Schreibpfade gehen durch denselben
-/// SemaphoreSlim. Atomares Schreiben mit Temp-Datei + Replace, damit ein
-/// Crash mitten im Schreiben niemals eine korrupte history.json hinterlaesst.
+/// Thread- und Prozesssicherheit: Alle Lese-/Schreibpfade gehen durch denselben
+/// SemaphoreSlim und einen app-uebergreifenden Named Mutex. Atomares Schreiben
+/// mit Temp-Datei + Replace verhindert eine korrupte history.json bei Abstuerzen.
 /// </summary>
 public sealed class PromptHistoryService
 {
     private const int MaxActiveEntries = 100;
     private const int MaxEntriesPerArchive = 500;
     private const string ArchiveFolderName = "Terminal Archiv";
+    private const string StoreMutexName = @"Local\PromptBoard.PromptHistoryStore";
 
     private readonly string _baseDir;
     private readonly string _historyFilePath;
     private readonly string _archiveDir;
     private readonly SemaphoreSlim _gate = new(1, 1);
+    private readonly Mutex _storeMutex = new(false, StoreMutexName);
 
     private static readonly JsonSerializerOptions JsonOptions = new()
     {
@@ -88,20 +90,20 @@ public sealed class PromptHistoryService
 
     /// <summary>
     /// Liest die aktive Historie. Neuester Eintrag steht an Index 0.
-    /// Ein fehlendes oder kaputtes JSON liefert eine leere Liste — die
-    /// Historie ist Add-Only-Wissen, korrupte Eintraege werden nicht in
-    /// das laufende Programm geschleppt.
+    /// Eine fehlende Datei liefert eine leere Liste. I/O- und JSON-Fehler
+    /// werden kontrolliert an den Aufrufer gemeldet, damit eine nachfolgende
+    /// Mutation niemals versehentlich einen leeren Bestand speichert.
     /// </summary>
     public async Task<List<PromptHistoryEntry>> LoadAsync(CancellationToken ct = default)
     {
         await _gate.WaitAsync(ct).ConfigureAwait(false);
         try
         {
-            return (await LoadUnlockedAsync(ct).ConfigureAwait(false))
+            return WithStoreMutex(ct, () => LoadUnlocked(ct)
                 .Where(e => e.ArchivedAt is null)
                 .OrderByDescending(e => e.Timestamp)
                 .Take(MaxActiveEntries)
-                .ToList();
+                .ToList());
         }
         finally { _gate.Release(); }
     }
@@ -112,7 +114,7 @@ public sealed class PromptHistoryService
         await _gate.WaitAsync(ct).ConfigureAwait(false);
         try
         {
-            return await LoadUnlockedAsync(ct).ConfigureAwait(false);
+            return WithStoreMutex(ct, () => LoadUnlocked(ct));
         }
         finally { _gate.Release(); }
     }
@@ -141,12 +143,15 @@ public sealed class PromptHistoryService
         await _gate.WaitAsync(ct).ConfigureAwait(false);
         try
         {
-            var entries = await LoadUnlockedAsync(ct).ConfigureAwait(false);
-            entries.Insert(0, entry);
+            return WithStoreMutex(ct, () =>
+            {
+                var entries = LoadUnlocked(ct);
+                entries.Insert(0, entry);
 
-            ArchiveOverflowUnlocked(entries);
-            await SaveUnlockedAsync(entries, ct).ConfigureAwait(false);
-            return entry;
+                ArchiveOverflowUnlocked(entries);
+                SaveUnlocked(entries, ct);
+                return entry;
+            });
         }
         finally { _gate.Release(); }
     }
@@ -169,8 +174,11 @@ public sealed class PromptHistoryService
         await _gate.WaitAsync(ct).ConfigureAwait(false);
         try
         {
-            ArchiveOverflowUnlocked(allEntries);
-            await SaveUnlockedAsync(allEntries, ct).ConfigureAwait(false);
+            WithStoreMutex(ct, () =>
+            {
+                ArchiveOverflowUnlocked(allEntries);
+                SaveUnlocked(allEntries, ct);
+            });
         }
         finally { _gate.Release(); }
     }
@@ -188,14 +196,17 @@ public sealed class PromptHistoryService
         await _gate.WaitAsync(ct).ConfigureAwait(false);
         try
         {
-            var entries = await LoadUnlockedAsync(ct).ConfigureAwait(false);
-            var match = entries.FirstOrDefault(e => e.Id == entryId);
-            if (match is null) return;
-            match.Title = string.IsNullOrWhiteSpace(newTitle)
-                ? GeminiClient.FallbackTitleFromText(match.Text)
-                : newTitle.Trim();
-            match.UpdatedAt = DateTime.UtcNow;
-            await SaveUnlockedAsync(entries, ct).ConfigureAwait(false);
+            WithStoreMutex(ct, () =>
+            {
+                var entries = LoadUnlocked(ct);
+                var match = entries.FirstOrDefault(e => e.Id == entryId);
+                if (match is null) return;
+                match.Title = string.IsNullOrWhiteSpace(newTitle)
+                    ? GeminiClient.FallbackTitleFromText(match.Text)
+                    : newTitle.Trim();
+                match.UpdatedAt = DateTime.UtcNow;
+                SaveUnlocked(entries, ct);
+            });
         }
         finally { _gate.Release(); }
     }
@@ -214,21 +225,24 @@ public sealed class PromptHistoryService
         await _gate.WaitAsync(ct).ConfigureAwait(false);
         try
         {
-            var entries = await LoadUnlockedAsync(ct).ConfigureAwait(false);
-            var match = entries.FirstOrDefault(e => e.Id == entryId);
-            if (match is null) return;
-            match.Text = newText ?? string.Empty;
-            match.UpdatedAt = DateTime.UtcNow;
-            await SaveUnlockedAsync(entries, ct).ConfigureAwait(false);
+            WithStoreMutex(ct, () =>
+            {
+                var entries = LoadUnlocked(ct);
+                var match = entries.FirstOrDefault(e => e.Id == entryId);
+                if (match is null) return;
+                match.Text = newText ?? string.Empty;
+                match.UpdatedAt = DateTime.UtcNow;
+                SaveUnlocked(entries, ct);
+            });
         }
         finally { _gate.Release(); }
     }
 
     // ─────────────────────────────────────────────────────────────────────
-    // Interne Helpers (laufen alle innerhalb des Semaphors)
+    // Interne Helpers (laufen alle innerhalb des Semaphors und Named Mutex)
     // ─────────────────────────────────────────────────────────────────────
 
-    private async Task<List<PromptHistoryEntry>> LoadUnlockedAsync(CancellationToken ct)
+    private List<PromptHistoryEntry> LoadUnlocked(CancellationToken ct)
     {
         if (!File.Exists(_historyFilePath))
         {
@@ -236,32 +250,93 @@ public sealed class PromptHistoryService
         }
         try
         {
-            await using var stream = File.OpenRead(_historyFilePath);
-            var list = await JsonSerializer.DeserializeAsync<List<PromptHistoryEntry>>(
-                stream, JsonOptions, ct).ConfigureAwait(false);
-            return list ?? new List<PromptHistoryEntry>();
+            ct.ThrowIfCancellationRequested();
+            using var stream = File.OpenRead(_historyFilePath);
+            var list = JsonSerializer.Deserialize<List<PromptHistoryEntry>>(stream, JsonOptions);
+            return list ?? throw new JsonException("PromptHistory JSON contained null.");
         }
-        catch (Exception ex)
+        catch (Exception ex) when (ex is IOException or JsonException or UnauthorizedAccessException)
         {
             Console.WriteLine($"PromptHistory load failed: {ex.Message}");
-            return new List<PromptHistoryEntry>();
+            throw;
         }
     }
 
-    private async Task SaveUnlockedAsync(
-        List<PromptHistoryEntry> entries, CancellationToken ct)
+    private void SaveUnlocked(List<PromptHistoryEntry> entries, CancellationToken ct)
     {
-        // Atomares Schreiben: Erst in eine Temp-Datei im selben Ordner,
-        // dann mit File.Move(overwrite=true) ueber das Original. Wenn das
-        // Programm mitten im Schreiben crasht, bleibt entweder das alte
-        // oder das neue JSON bestehen — niemals etwas Halbgares dazwischen.
-        string tmp = _historyFilePath + ".tmp";
-        await using (var stream = File.Create(tmp))
+        string tmp = $"{_historyFilePath}.{Guid.NewGuid():N}.tmp";
+        try
         {
-            await JsonSerializer.SerializeAsync(stream, entries, JsonOptions, ct)
-                .ConfigureAwait(false);
+            ct.ThrowIfCancellationRequested();
+            using (var stream = new FileStream(tmp, FileMode.CreateNew, FileAccess.Write, FileShare.None))
+            {
+                JsonSerializer.Serialize(stream, entries, JsonOptions);
+                stream.Flush(flushToDisk: true);
+            }
+            ct.ThrowIfCancellationRequested();
+
+            if (File.Exists(_historyFilePath))
+                File.Replace(tmp, _historyFilePath, destinationBackupFileName: null);
+            else
+                File.Move(tmp, _historyFilePath);
         }
-        File.Move(tmp, _historyFilePath, overwrite: true);
+        finally
+        {
+            TryDeleteTemporaryFile(tmp);
+        }
+    }
+
+    private T WithStoreMutex<T>(CancellationToken ct, Func<T> action)
+    {
+        bool ownsMutex = false;
+        try
+        {
+            try
+            {
+                if (ct.CanBeCanceled)
+                {
+                    int signaled = WaitHandle.WaitAny(new WaitHandle[] { _storeMutex, ct.WaitHandle });
+                    if (signaled == 1) ct.ThrowIfCancellationRequested();
+                }
+                else
+                {
+                    _storeMutex.WaitOne();
+                }
+            }
+            catch (AbandonedMutexException ex)
+            {
+                Console.WriteLine($"PromptHistory recovered abandoned store mutex: {ex.Message}");
+            }
+
+            ownsMutex = true;
+            ct.ThrowIfCancellationRequested();
+            return action();
+        }
+        finally
+        {
+            if (ownsMutex) _storeMutex.ReleaseMutex();
+        }
+    }
+
+    private void WithStoreMutex(CancellationToken ct, Action action)
+    {
+        WithStoreMutex<object?>(ct, () =>
+        {
+            action();
+            return null;
+        });
+    }
+
+    private static void TryDeleteTemporaryFile(string path)
+    {
+        try
+        {
+            File.Delete(path);
+        }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+        {
+            Console.WriteLine($"PromptHistory temp cleanup failed: {ex.Message}");
+        }
     }
 
     private void AppendToArchiveUnlocked(PromptHistoryEntry entry)
