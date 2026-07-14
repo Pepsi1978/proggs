@@ -5,6 +5,7 @@ using System.IO;
 using System.Linq;
 using System.Text.Json;
 using System.Text.RegularExpressions;
+using System.Threading;
 using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Controls;
@@ -175,6 +176,7 @@ public partial class PromptBoardPanel : Window
     /// <summary>Auto-backup debounce window — many quick edits collapse into one upload.</summary>
     private static readonly TimeSpan AutoBackupDelay = TimeSpan.FromSeconds(2);
     private DispatcherTimer? _autoBackupTimer;
+    private readonly SemaphoreSlim _autoBackupGate = new(1, 1);
 
     // ── Drag-and-drop arming state ──
     private System.Windows.Point _dragArmStartPoint;
@@ -2709,6 +2711,7 @@ public partial class PromptBoardPanel : Window
     /// </summary>
     private async Task RunAutoBackupIfConnectedAsync()
     {
+        await _autoBackupGate.WaitAsync();
         try
         {
             using var scope = PromptBoardHost.Services.CreateScope();
@@ -2726,6 +2729,10 @@ public partial class PromptBoardPanel : Window
         catch (Exception ex)
         {
             Console.WriteLine($"[PBPanel] auto-backup failed: {ex.Message}");
+        }
+        finally
+        {
+            _autoBackupGate.Release();
         }
     }
 
