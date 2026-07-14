@@ -3693,7 +3693,8 @@ namespace ClaudeVoiceOverlay.Views
                 // Force-Return uebersteuert das autoEnter-Toggle wenn der
                 // Submit aus einem expliziten Enter-Button-Klick kommt.
                 bool effectiveAutoEnter = autoEnterEnabled || _forceReturnOnNextSubmit;
-                await AppController.PasteTextAsync(final, targetHwnd, effectiveAutoEnter);
+                if (!await AppController.PasteTextAsync(final, targetHwnd, effectiveAutoEnter))
+                    return false;
                 _forceReturnOnNextSubmit = false;
                 Console.WriteLine($"Input submit: {final.Length} chars (autoEnter={effectiveAutoEnter}).");
                 hasPastedText = !effectiveAutoEnter;

@@ -44,7 +44,7 @@ namespace ClaudeVoiceOverlay.Services
 
         // ── Oeffentliche API: Async-Wrapper (haelt Win32-Sleeps vom UI-Thread) ──
 
-        public static Task PasteTextAsync(string text, IntPtr appHwnd, bool autoEnter = false)
+        public static Task<bool> PasteTextAsync(string text, IntPtr appHwnd, bool autoEnter = false)
             => Task.Run(() => PasteText(text, appHwnd, autoEnter));
 
         public static Task ClearLineAsync(IntPtr appHwnd)     => Task.Run(() => ClearLine(appHwnd));
@@ -55,7 +55,7 @@ namespace ClaudeVoiceOverlay.Services
 
         // ── Oeffentliche API: synchrone Einstiegspunkte (laufen auf STA-Worker) ──
 
-        public static void PasteText(string text, IntPtr appHwnd, bool autoEnter = false)
+        public static bool PasteText(string text, IntPtr appHwnd, bool autoEnter = false)
             => RunOnStaThread(() => PasteTextCore(text, appHwnd, autoEnter));
 
         // Bei Electron-Feldern leeren ClearLine und ClearAllInput identisch das
@@ -79,7 +79,7 @@ namespace ClaudeVoiceOverlay.Services
 
         private static long _clipboardGen;
 
-        private static void PasteTextCore(string text, IntPtr appHwnd, bool autoEnter)
+        private static bool PasteTextCore(string text, IntPtr appHwnd, bool autoEnter)
         {
             long myGen = Interlocked.Increment(ref _clipboardGen);
             DiagLog.Write("Paste", "PasteText START",
@@ -91,42 +91,54 @@ namespace ClaudeVoiceOverlay.Services
             if (!SetClipboardText(text, out previous))
             {
                 DiagLog.Write("Paste", "ABBRUCH: Clipboard.SetText fehlgeschlagen");
-                return;
+                return false;
             }
 
-            // 2. Ziel aktivieren + Eingabefeld per UIA finden/fokussieren (positions-unabhaengig)
-            FocusTarget(appHwnd);
+            try
+            {
+                // 2. Ziel aktivieren + Eingabefeld per UIA finden/fokussieren (positions-unabhaengig)
+                if (!FocusTarget(appHwnd)) return false;
 
             // 2b. LIVE-LOGIK-SONDE (Intent-Verifikation, observability-live-logic-probes):
             //     Sitzt der Tastaturfokus JETZT wirklich auf einem echten Eingabefeld (erwartet)
             //     oder noch auf Button/Seiten-Root (tatsaechlich)? CHECKPOINT 'erwartet vs. ist'
             //     -> ok:false bedeutet, Strg+V wird gleich verpuffen. Live mitlesbar:
             //     Get-Content "$env:LOCALAPPDATA\ClaudeVoiceOverlay\diag.log" -Wait -Tail 30
-            VerifyFocusCheckpoint("Fokus nach FocusTarget (vor Strg+V)");
+                if (!VerifyFocusCheckpoint("Fokus nach FocusTarget (vor Strg+V)")) return false;
 
             // 3. Gehaltene Hotkey-Modifier neutralisieren, sonst kommt "Win+Alt+Ctrl+V" an
-            ReleaseHeldModifiers();
+                ReleaseHeldModifiers();
 
             // 4. Echtes Strg+V mit Hardware-Scancodes
-            bool pasted = SendCtrlVScancode();
-            DiagLog.Write("Paste", "Strg+V gesendet", ("sent", pasted), ("autoEnter", autoEnter));
+                bool pasted = SendCtrlVScancode();
+                DiagLog.Write("Paste", "Strg+V gesendet", ("sent", pasted), ("autoEnter", autoEnter));
+                if (!pasted) return false;
 
             // 5. Optionales Enter (separat, nach kurzer Verzoegerung)
-            if (autoEnter)
-            {
-                Thread.Sleep(300);
-                SendKeyScancode(VK_RETURN);
-            }
-
-            // 6. Vorherigen Clipboard-Inhalt verzoegert wiederherstellen (Generationsschutz)
-            if (previous != null)
-            {
-                var prev = previous;
-                Task.Delay(600).ContinueWith(_ =>
+                if (autoEnter)
                 {
-                    if (Interlocked.Read(ref _clipboardGen) != myGen) return; // neuerer Paste aktiv
-                    RunOnStaThread(() => { try { Clipboard.SetText(prev); } catch { /* tolerant */ } });
-                });
+                    Thread.Sleep(300);
+                    if (!FocusTarget(appHwnd) || !SendKeyScancode(VK_RETURN)) return false;
+                }
+
+                return true;
+            }
+            finally
+            {
+                // 6. Vorherigen Clipboard-Inhalt auch bei Fokus-/Sendefehlern wiederherstellen.
+                if (previous != null)
+                {
+                    var prev = previous;
+                    Task.Delay(600).ContinueWith(_ =>
+                    {
+                        if (Interlocked.Read(ref _clipboardGen) != myGen) return;
+                        RunOnStaThread(() =>
+                        {
+                            try { Clipboard.SetText(prev); }
+                            catch (Exception ex) { DiagLog.Write("Paste", "Clipboard-Restore fehlgeschlagen", ("err", ex.Message)); }
+                        });
+                    });
+                }
             }
         }
 
@@ -142,27 +154,27 @@ namespace ClaudeVoiceOverlay.Services
         // ── Ziel aktivieren + Eingabefeld fokussieren ───────────────────────
 
         /// <summary>Aktiviert die Ziel-App und fokussiert ihr aktives Eingabefeld per UIA.</summary>
-        private static void FocusTarget(IntPtr appHwnd)
+        private static bool FocusTarget(IntPtr appHwnd)
         {
-            ActivateTarget(appHwnd);
+            if (!ActivateTarget(appHwnd)) return false;
             Thread.Sleep(50);              // SetForegroundWindow ist asynchron
-            FocusInputFieldUia(appHwnd);   // positions-unabhaengig (UIA), best effort
+            return FocusInputFieldUia(appHwnd);
         }
 
         /// <summary>
         /// Bringt die Ziel-App legal in den Vordergrund (AllowSetForegroundWindow +
         /// AttachThreadInput-Leihe). Stellt minimierte Fenster wieder her.
         /// </summary>
-        private static void ActivateTarget(IntPtr appHwnd)
+        private static bool ActivateTarget(IntPtr appHwnd)
         {
-            if (appHwnd == IntPtr.Zero) return;
+            if (appHwnd == IntPtr.Zero || !Win32.IsWindow(appHwnd)) return false;
 
             if (Win32.IsIconic(appHwnd))
                 Win32.ShowWindow(appHwnd, Win32.SW_RESTORE);
 
             var currentFg = Win32.GetForegroundWindow();
             if (IsOwnedByProcess(currentFg, appHwnd))
-                return; // schon vorne
+                return true; // schon vorne
 
             uint ourThread = Win32.GetCurrentThreadId();
             uint targetThread = Win32.GetWindowThreadProcessId(appHwnd, out uint targetPid);
@@ -179,6 +191,7 @@ namespace ClaudeVoiceOverlay.Services
                 if (!ok)
                     Console.WriteLine("[AppController] SetForegroundWindow=false (Foreground-Lock?)");
                 Thread.Sleep(120);
+                return IsOwnedByProcess(Win32.GetForegroundWindow(), appHwnd);
             }
             finally
             {
@@ -339,7 +352,7 @@ namespace ClaudeVoiceOverlay.Services
         /// in den Diagnose-Kanal — getrennt vom Fehler-Log, damit der Logik-Strang live verfolgbar
         /// bleibt. ok:false heisst: das gleich folgende Strg+V landet im Leeren. Best-effort, werf-frei.
         /// </summary>
-        private static void VerifyFocusCheckpoint(string step)
+        private static bool VerifyFocusCheckpoint(string step)
         {
             try
             {
@@ -350,10 +363,12 @@ namespace ClaudeVoiceOverlay.Services
                     ("expected", "usable input field"),
                     ("actual", Describe(focused)),
                     ("ok", ok));
+                return ok;
             }
             catch (Exception ex)
             {
                 DiagLog.Write("CHECKPOINT", step + " — Sonde warf", ("err", ex.GetType().Name));
+                return false;
             }
         }
 
@@ -581,6 +596,23 @@ namespace ClaudeVoiceOverlay.Services
             t.Join();
             if (captured != null)
                 Console.WriteLine($"[AppController] STA-Thread-Fehler: {captured.GetType().Name}: {captured.Message}");
+        }
+
+        private static T RunOnStaThread<T>(Func<T> action)
+        {
+            Exception? captured = null;
+            T? result = default;
+            var t = new Thread(() =>
+            {
+                try { result = action(); }
+                catch (Exception ex) { captured = ex; }
+            });
+            t.IsBackground = true;
+            t.SetApartmentState(ApartmentState.STA);
+            t.Start();
+            t.Join();
+            if (captured != null) throw captured;
+            return result!;
         }
     }
 }
