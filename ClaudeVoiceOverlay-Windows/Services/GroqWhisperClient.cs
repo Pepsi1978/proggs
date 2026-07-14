@@ -60,7 +60,7 @@ namespace ClaudeVoiceOverlay.Services
         // im Clip ist. Konservativ: trennt reine Stille (~0 ms laut) von echter kurzer Sprache wie
         // "ja"/"stop" (>150 ms laut). Nur ABSOLUTE laute Zeit (keine Ratio) -> echte Aufnahmen mit
         // langen Denkpausen bleiben erhalten (sie haben echte Sprache irgendwo drin).
-        private const double SpeechRmsThreshold = 0.015;  // RMS ueber diesem Wert gilt als "laut"
+        private const double SpeechRmsThreshold = 0.008;  // Leise Sprache zulassen; 150-ms-Mindestdauer blockt einzelne Klicks
         private const int    MinSpeechMs        = 150;    // Mindest-Summe lauter Zeit, sonst nicht senden
 
         // ----- Segment-Audio-Abgleich (Schicht 3, Almanach §2.3 "zweite Luecke") -----
@@ -125,14 +125,17 @@ namespace ClaudeVoiceOverlay.Services
             // Disk-I/O. Die Bytes werden im Aufruf nicht mutiert, also ist
             // Sharing zwischen Versuchen sicher.
             byte[] fileBytes = await File.ReadAllBytesAsync(wavFilePath);
-            // Schicht 1 (Sprachinhalt-Vorfilter): Aufnahme ohne erkennbaren Sprachinhalt gar nicht
-            // erst senden. Faengt "Knopf gedrueckt, nichts gesagt" -> Whisper haette sonst Stille als
-            // Floskel halluziniert. Werfen statt leer zurueckgeben -> der Aufrufer-catch behandelt es
-            // wie die bisherige "leere Antwort" und tippt NICHTS (kein einsames " ; ").
-            if (!HasSpeechContent(fileBytes))
-                throw new Exception("Aufnahme ohne erkennbaren Sprachinhalt — nicht an Groq gesendet (Stille-Schutz)");
             try
             {
+                // Schicht 1 (Sprachinhalt-Vorfilter): Aufnahme ohne erkennbaren Sprachinhalt gar nicht
+                // erst senden. Faengt "Knopf gedrueckt, nichts gesagt" -> Whisper haette sonst Stille als
+                // Floskel halluziniert. Werfen statt leer zurueckgeben -> der Aufrufer-catch behandelt es
+                // wie die bisherige "leere Antwort" und tippt NICHTS (kein einsames " ; ").
+                if (!HasSpeechContent(fileBytes))
+                {
+                    DiagLog.Write("Groq", "prefilter_rejected", ("bytes", fileBytes.Length));
+                    throw new Exception("Aufnahme ohne erkennbaren Sprachinhalt — nicht an Groq gesendet (Stille-Schutz)");
+                }
                 var text = await TranscribeWithRetry(fileBytes, 0).ConfigureAwait(false);
                 DiagLog.Write("Groq", "transcribe_done", ("chars", text.Length));
                 return text;
