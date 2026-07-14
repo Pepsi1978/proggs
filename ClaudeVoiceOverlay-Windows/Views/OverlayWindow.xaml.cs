@@ -2613,7 +2613,7 @@ namespace ClaudeVoiceOverlay.Views
                 _resetTimer.Stop();
                 try
                 {
-                    _audioRecorder.Start();
+                    if (!_audioRecorder.Start()) return;
                     _mainRecordingTargetHwnd = _appWatcher.ActiveAppHwnd;
                     SetMicState(RecordingState.Recording);
                     _recordingCuePlayer.PlayStart();
@@ -2726,8 +2726,8 @@ namespace ClaudeVoiceOverlay.Views
                 // ── Start BTW recording ──
                 try
                 {
+                    if (!_audioRecorder.Start()) return;
                     isBtwRecording = true;
-                    _audioRecorder.Start();
                     _btwRecordingTargetHwnd = _appWatcher.ActiveAppHwnd;
                     SetBtwMicState(RecordingState.Recording);
                     _recordingCuePlayer.PlayStart();

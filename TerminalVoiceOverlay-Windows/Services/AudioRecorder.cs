@@ -41,7 +41,7 @@ namespace TerminalVoiceOverlay.Services
             _channels = channels;
         }
 
-        public void Start()
+        public bool Start()
         {
             var setupSw = Stopwatch.StartNew();
             string tempFile = Path.Combine(Path.GetTempPath(), $"tvo_recording_{Guid.NewGuid():N}.wav");
@@ -54,7 +54,7 @@ namespace TerminalVoiceOverlay.Services
                 lock (_stateLock)
                 {
                     ObjectDisposedException.ThrowIf(_disposed, this);
-                    if (_session != null) return;
+                    if (_session != null) return false;
 
                     var waveFormat = new WaveFormat(_sampleRate, 16, _channels);
                     writer = new WaveFileWriter(tempFile, waveFormat);
@@ -79,6 +79,7 @@ namespace TerminalVoiceOverlay.Services
 
                 Console.WriteLine($"AudioRecorder: Aufnahme gestartet ({_sampleRate}Hz, {_channels}ch)");
                 DiagLog.Write("Audio", "recording_start", ("setupMs", setupSw.ElapsedMilliseconds), ("sampleRate", _sampleRate), ("channels", _channels), ("path", tempFile));
+                return true;
             }
             catch (Exception ex)
             {

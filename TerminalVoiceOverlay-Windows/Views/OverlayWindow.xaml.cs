@@ -2670,7 +2670,7 @@ namespace TerminalVoiceOverlay.Views
                 _resetTimer.Stop();
                 try
                 {
-                    _audioRecorder.Start();
+                    if (!_audioRecorder.Start()) return;
                     _mainRecordingTargetHwnd = _terminalWatcher.ActiveTerminalHwnd;
                     SetMicState(RecordingState.Recording);
                     _recordingCuePlayer.PlayStart();
@@ -2804,8 +2804,8 @@ namespace TerminalVoiceOverlay.Views
                 // ── Start BTW recording ──
                 try
                 {
+                    if (!_audioRecorder.Start()) return;
                     isBtwRecording = true;
-                    _audioRecorder.Start();
                     _btwRecordingTargetHwnd = _terminalWatcher.ActiveTerminalHwnd;
                     SetBtwMicState(RecordingState.Recording);
                     _recordingCuePlayer.PlayStart();
