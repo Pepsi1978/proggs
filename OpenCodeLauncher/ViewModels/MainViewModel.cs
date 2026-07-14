@@ -55,8 +55,8 @@ public sealed partial class MainViewModel : ObservableObject
         WorkDir = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), "proggs");
         _ = CheckOpenCodeUpdateAsync();
 
-        var version = Assembly.GetExecutingAssembly().GetName().Version?.ToString(3) ?? "1.17.2";
-        Version = $"Version {version} (14.07.2026, 10.59 Uhr)";
+        var version = Assembly.GetExecutingAssembly().GetName().Version?.ToString(3) ?? "1.17.3";
+        Version = $"Version {version} (14.07.2026, 11.05 Uhr)";
     }
 
     public ObservableCollection<ModelGroupEntry> ModelGroups { get; } = new();
@@ -257,7 +257,12 @@ public sealed partial class MainViewModel : ObservableObject
             if (!string.IsNullOrWhiteSpace(displayName) && displayName != model.DisplayName)
             {
                 // Anzeigename aus API übernehmen, falls Liste ihn noch als Slug zeigt.
-                model.DisplayName = displayName.Replace($"{model.Slug.Split('/')[0]}: ", "");
+                // Author-Präfix ("Z-AI: ") case-insensitiv entfernen: der Slug-Author ist klein-,
+                // der API-Name großgeschrieben — ein case-sensitives Replace ließe den Präfix stehen.
+                var authorPrefix = $"{model.Slug.Split('/')[0]}: ";
+                model.DisplayName = displayName.StartsWith(authorPrefix, StringComparison.OrdinalIgnoreCase)
+                    ? displayName[authorPrefix.Length..]
+                    : displayName;
             }
             Providers.Clear();
             foreach (var p in providers) Providers.Add(p);
@@ -278,7 +283,10 @@ public sealed partial class MainViewModel : ObservableObject
         }
         finally
         {
-            IsLoading = false;
+            // Nur der aktuelle (nicht abgelöste) Ladevorgang darf die Ladeanzeige zurücksetzen —
+            // sonst löscht ein per Modellwechsel abgebrochener Vorgang sie, während der nachfolgende
+            // Ladevorgang noch läuft (Ladeanzeige würde vorzeitig verschwinden).
+            if (!ct.IsCancellationRequested) IsLoading = false;
         }
     }
 

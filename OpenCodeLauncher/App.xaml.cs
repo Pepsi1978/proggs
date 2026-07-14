@@ -53,6 +53,9 @@ public partial class App : Application
     protected override void OnExit(ExitEventArgs e)
     {
         _activationListenerCts?.Cancel();
+        // Den blockierenden WaitOne()-Listener aufwecken, damit er den Cancel-Token sieht und die
+        // Schleife sauber verlässt, BEVOR das Handle disposed wird (sonst ObjectDisposedException-Race).
+        try { _activationEvent?.Set(); } catch (ObjectDisposedException) { }
         _activationEvent?.Dispose();
         _activationListenerCts?.Dispose();
         if (_ownsSingleInstanceMutex)
