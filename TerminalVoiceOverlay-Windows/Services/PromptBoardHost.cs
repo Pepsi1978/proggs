@@ -74,77 +74,87 @@ public static class PromptBoardHost
             // singleton-captured DbContext still held the empty original row.
             services.AddTransient<IGoogleDriveBackupService, GoogleDriveBackupService>();
 
-            _provider = services.BuildServiceProvider();
-
-            // Schema bootstrap. Mirrors PromptBoardStore.createSchemaIfNeeded()
-            // on macOS (PromptBoardStore.swift:49). Without this the DB file
-            // gets created empty by SqliteConnection but no tables exist —
-            // every read/write then crashes with "no such table: ...".
-            // EnsureCreated is idempotent: it only creates tables that are
-            // missing, so it's safe to call on every startup.
-            using (var scope = _provider.CreateScope())
+            var provider = services.BuildServiceProvider();
+            try
             {
-                var ctx = scope.ServiceProvider.GetRequiredService<PromptBoardDbContext>();
-                ctx.Database.EnsureCreated();
+                // Schema bootstrap. Mirrors PromptBoardStore.createSchemaIfNeeded()
+                // on macOS (PromptBoardStore.swift:49). Without this the DB file
+                // gets created empty by SqliteConnection but no tables exist —
+                // every read/write then crashes with "no such table: ...".
+                // EnsureCreated is idempotent: it only creates tables that are
+                // missing, so it's safe to call on every startup.
+                using (var scope = provider.CreateScope())
+                {
+                    var ctx = scope.ServiceProvider.GetRequiredService<PromptBoardDbContext>();
+                    ctx.Database.EnsureCreated();
+                }
+
+                // Idempotent schema migration for older Windows DBs that
+                // pre-date the per-prompt Pre/Post split (#1820 macOS, this
+                // commit Windows). SQLite throws on duplicate-column ALTER
+                // TABLE, which we swallow because we just want "the columns
+                // exist" — exactly mirrors the macOS approach.
+                EnsurePrePostColumns();
+
+                // Strg+1..9 prompt hotkeys (this feature). Same idempotent
+                // ALTER pattern: the column starts NULL on every existing
+                // row so prior installs upgrade silently with all hotkeys
+                // unassigned, exactly as if no one had ever set one.
+                EnsureHotkeyColumn();
+
+                // Win+Alt+<letter> prompt hotkeys (A-Z). Same idempotent ALTER
+                // pattern as HotkeyNumber. Adds the column + index to legacy
+                // SQLite files that pre-date this feature; first-run installs
+                // already have it from EnsureCreated.
+                EnsureHotkeyLetterColumn();
+
+                // Overlay auto-hide toggle. Same idempotent ALTER pattern: existing
+                // SQLite files that pre-date the auto-hide feature get the column
+                // added with DEFAULT 1 (auto-hide on), so prior installs upgrade
+                // silently with the feature enabled. First-run installs already
+                // have it from EnsureCreated via the model property.
+                EnsureAutoHideColumn();
+
+                // Overlay orientation (vertical/horizontal). Same idempotent ALTER
+                // pattern: existing DBs get the column with DEFAULT 'vertical', so
+                // prior installs keep the classic vertical pill until the user
+                // switches. First-run installs get it from EnsureCreated.
+                EnsureOrientationColumn();
+
+                // Overlay position persistence (diskette button). Existing DBs get
+                // the legacy flag for schema compatibility plus four nullable REAL
+                // columns. Non-null coordinates are always restored at startup.
+                EnsurePersistPositionColumns();
+
+                // Existing databases still carry the former non-unique index.
+                // Normalize legacy duplicates before enforcing the invariant.
+                EnsureSingleActiveAiPromptIndex();
+
+                // The AppSettingsRepository self-bootstraps the singleton
+                // row on first GetAsync() call, so no explicit seeding here.
+
+                // One-time migration: fill missing Google OAuth fields in the SK
+                // file from legacy AppSettings, then null them in the DB so they
+                // don't leak into the Drive backup JSON.
+                MigrateGoogleSecretsToSk(provider);
+
+                // Strg+1..9 Hotkeys SOFORT scharfschalten, ohne dass der Benutzer
+                // erst das Prompt-Board oeffnen muss. Frueher wurde die
+                // HotkeyRegistry ausschliesslich vom PromptBoardPanel.Render()
+                // befuellt — solange das Panel nie sichtbar war, blieb die
+                // Registry leer und der Low-Level-Keyboard-Hook in OverlayWindow
+                // hat alle Strg+1..9-Tastendruecke durchgereicht. Jetzt laden
+                // wir den initialen Stand direkt aus der DB, danach
+                // ueberschreibt jeder Panel-Render die Werte weiterhin im
+                // Normalbetrieb.
+                LoadHotkeyRegistryFromDb(provider);
+                _provider = provider;
             }
-
-            // Idempotent schema migration for older Windows DBs that
-            // pre-date the per-prompt Pre/Post split (#1820 macOS, this
-            // commit Windows). SQLite throws on duplicate-column ALTER
-            // TABLE, which we swallow because we just want "the columns
-            // exist" — exactly mirrors the macOS approach.
-            EnsurePrePostColumns();
-
-            // Strg+1..9 prompt hotkeys (this feature). Same idempotent
-            // ALTER pattern: the column starts NULL on every existing
-            // row so prior installs upgrade silently with all hotkeys
-            // unassigned, exactly as if no one had ever set one.
-            EnsureHotkeyColumn();
-
-            // Win+Alt+<letter> prompt hotkeys (A-Z). Same idempotent ALTER
-            // pattern as HotkeyNumber. Adds the column + index to legacy
-            // SQLite files that pre-date this feature; first-run installs
-            // already have it from EnsureCreated.
-            EnsureHotkeyLetterColumn();
-
-            // Overlay auto-hide toggle. Same idempotent ALTER pattern: existing
-            // SQLite files that pre-date the auto-hide feature get the column
-            // added with DEFAULT 1 (auto-hide on), so prior installs upgrade
-            // silently with the feature enabled. First-run installs already
-            // have it from EnsureCreated via the model property.
-            EnsureAutoHideColumn();
-
-            // Overlay orientation (vertical/horizontal). Same idempotent ALTER
-            // pattern: existing DBs get the column with DEFAULT 'vertical', so
-            // prior installs keep the classic vertical pill until the user
-            // switches. First-run installs get it from EnsureCreated.
-            EnsureOrientationColumn();
-
-            // Overlay position persistence (diskette button). Existing DBs get
-            // the legacy flag for schema compatibility plus four nullable REAL
-            // columns. Non-null coordinates are always restored at startup.
-            EnsurePersistPositionColumns();
-
-            // The AppSettingsRepository self-bootstraps the singleton
-            // row on first GetAsync() call, so no explicit seeding here.
-
-            // One-time migration: copy any Google OAuth secrets from the
-            // legacy AppSettings table into the SK file, then null them in
-            // the DB so they don't leak into the Drive backup JSON.
-            // Idempotent: skipped on subsequent runs because the SK file
-            // already holds the values.
-            MigrateGoogleSecretsToSk();
-
-            // Strg+1..9 Hotkeys SOFORT scharfschalten, ohne dass der Benutzer
-            // erst das Prompt-Board oeffnen muss. Frueher wurde die
-            // HotkeyRegistry ausschliesslich vom PromptBoardPanel.Render()
-            // befuellt — solange das Panel nie sichtbar war, blieb die
-            // Registry leer und der Low-Level-Keyboard-Hook in OverlayWindow
-            // hat alle Strg+1..9-Tastendruecke durchgereicht. Jetzt laden
-            // wir den initialen Stand direkt aus der DB, danach
-            // ueberschreibt jeder Panel-Render die Werte weiterhin im
-            // Normalbetrieb.
-            LoadHotkeyRegistryFromDb();
+            catch
+            {
+                provider.Dispose();
+                throw;
+            }
         }
     }
 
@@ -157,11 +167,11 @@ public static class PromptBoardHost
     /// niemals blockieren — die Hotkeys bleiben in dem Fall einfach inert,
     /// genau wie vor diesem Fix.
     /// </summary>
-    private static void LoadHotkeyRegistryFromDb()
+    private static void LoadHotkeyRegistryFromDb(IServiceProvider provider)
     {
         try
         {
-            using var scope = _provider!.CreateScope();
+            using var scope = provider.CreateScope();
             var ctx = scope.ServiceProvider.GetRequiredService<PromptBoardDbContext>();
             // Beide Hotkey-Spalten in EINER Abfrage holen: ein Prompt kann
             // sowohl HotkeyNumber als auch HotkeyLetter gesetzt haben, und
@@ -216,14 +226,13 @@ public static class PromptBoardHost
         }
     }
 
-    private static void MigrateGoogleSecretsToSk()
+    private static void MigrateGoogleSecretsToSk(IServiceProvider provider)
     {
         try
         {
-            using var scope = _provider!.CreateScope();
+            using var scope = provider.CreateScope();
             var store = scope.ServiceProvider.GetRequiredService<PromptBoardSecretStore>();
-            if (store.HasAnyValue())
-                return; // already migrated — SK file is the source of truth
+            var skSecrets = store.Load();
 
             // Frueher: repo.GetAsync().GetAwaiter().GetResult() — Sync-Over-Async
             // mitten im synchronen Initialize-Pfad. Funktional unproblematisch
@@ -243,17 +252,18 @@ public static class PromptBoardHost
             var hasDbSecrets =
                 !string.IsNullOrEmpty(dbSettings.GoogleClientId)
                 || !string.IsNullOrEmpty(dbSettings.GoogleClientSecret)
-                || !string.IsNullOrEmpty(dbSettings.GoogleOAuthRefreshToken);
+                || !string.IsNullOrEmpty(dbSettings.GoogleOAuthRefreshToken)
+                || !string.IsNullOrEmpty(dbSettings.GoogleAccountEmail);
             if (!hasDbSecrets) return;
 
             // Copy DB → SK first. Only null the DB columns once the SK
             // write succeeded — otherwise a corrupted SK file would
             // permanently lose the user's OAuth refresh token.
             store.Save(new Secrets(
-                GoogleClientId:           dbSettings.GoogleClientId,
-                GoogleClientSecret:       dbSettings.GoogleClientSecret,
-                GoogleOAuthRefreshToken:  dbSettings.GoogleOAuthRefreshToken,
-                GoogleAccountEmail:       dbSettings.GoogleAccountEmail));
+                GoogleClientId:           skSecrets.GoogleClientId ?? dbSettings.GoogleClientId,
+                GoogleClientSecret:       skSecrets.GoogleClientSecret ?? dbSettings.GoogleClientSecret,
+                GoogleOAuthRefreshToken:  skSecrets.GoogleOAuthRefreshToken ?? dbSettings.GoogleOAuthRefreshToken,
+                GoogleAccountEmail:       skSecrets.GoogleAccountEmail ?? dbSettings.GoogleAccountEmail));
 
             dbSettings.GoogleClientId = null;
             dbSettings.GoogleClientSecret = null;
@@ -261,13 +271,45 @@ public static class PromptBoardHost
             dbSettings.GoogleAccountEmail = null;
             ctx.SaveChanges();
         }
-        catch
+        catch (Exception ex) when (ex is not SqliteException)
         {
             // Migration is best-effort; never crash startup over it. If it
             // fails the user will still see and edit their secrets through
             // the settings dialog — they just won't move out of the DB
             // until the next successful pass.
+            Console.WriteLine($"Google secret migration failed: {ex.Message}");
         }
+    }
+
+    private static void EnsureSingleActiveAiPromptIndex()
+    {
+        using var conn = new SqliteConnection($"Data Source={DbPath}");
+        conn.Open();
+        using var tx = conn.BeginTransaction();
+        using var cmd = conn.CreateCommand();
+        cmd.Transaction = tx;
+
+        cmd.CommandText = """
+            UPDATE Prompts
+            SET IsActiveForImprovement = 0
+            WHERE IsActiveForImprovement = 1
+              AND Id NOT IN (
+                  SELECT Id FROM Prompts
+                  WHERE IsActiveForImprovement = 1
+                  ORDER BY UpdatedAt DESC, Id
+                  LIMIT 1
+              )
+            """;
+        cmd.ExecuteNonQuery();
+        cmd.CommandText = "DROP INDEX IF EXISTS IX_Prompts_IsActiveForImprovement";
+        cmd.ExecuteNonQuery();
+        cmd.CommandText = """
+            CREATE UNIQUE INDEX IX_Prompts_IsActiveForImprovement
+            ON Prompts (IsActiveForImprovement)
+            WHERE IsActiveForImprovement = 1
+            """;
+        cmd.ExecuteNonQuery();
+        tx.Commit();
     }
 
     private static void EnsurePrePostColumns()
@@ -279,12 +321,9 @@ public static class PromptBoardHost
             TryRun(conn, "ALTER TABLE Prompts ADD COLUMN IsPrePrompt INTEGER NOT NULL DEFAULT 1");
             TryRun(conn, "ALTER TABLE Prompts ADD COLUMN IsPostPrompt INTEGER NOT NULL DEFAULT 0");
         }
-        catch
+        catch (SqliteException ex) when (IsDuplicateColumnError(ex))
         {
-            // Database might not exist yet on first run — EF-Core will
-            // create it from the model below with the columns already
-            // in place. Either way, never block startup over the
-            // migration check.
+            // Already migrated.
         }
     }
 
@@ -300,10 +339,9 @@ public static class PromptBoardHost
             TryRun(conn, "ALTER TABLE Prompts ADD COLUMN HotkeyNumber INTEGER NULL");
             TryRun(conn, "CREATE INDEX IF NOT EXISTS IX_Prompts_HotkeyNumber ON Prompts (HotkeyNumber)");
         }
-        catch
+        catch (SqliteException ex) when (IsDuplicateColumnError(ex))
         {
-            // First-run case: EF-Core EnsureCreated will have created
-            // the column from the model already. Never block startup.
+            // Already migrated.
         }
     }
 
@@ -319,10 +357,9 @@ public static class PromptBoardHost
             TryRun(conn, "ALTER TABLE Prompts ADD COLUMN HotkeyLetter TEXT NULL");
             TryRun(conn, "CREATE INDEX IF NOT EXISTS IX_Prompts_HotkeyLetter ON Prompts (HotkeyLetter)");
         }
-        catch
+        catch (SqliteException ex) when (IsDuplicateColumnError(ex))
         {
-            // First-run case: EF-Core EnsureCreated will have created
-            // the column from the model already. Never block startup.
+            // Already migrated.
         }
     }
 
@@ -337,10 +374,9 @@ public static class PromptBoardHost
             // as the EF Core convention for the AppSettings.AutoHide property.
             TryRun(conn, "ALTER TABLE AppSettings ADD COLUMN AutoHide INTEGER NOT NULL DEFAULT 1");
         }
-        catch
+        catch (SqliteException ex) when (IsDuplicateColumnError(ex))
         {
-            // First-run case: EF-Core EnsureCreated will have created
-            // the column from the model already. Never block startup.
+            // Already migrated.
         }
     }
 
@@ -355,10 +391,9 @@ public static class PromptBoardHost
             // convention (AppSettings.Orientation).
             TryRun(conn, "ALTER TABLE AppSettings ADD COLUMN Orientation TEXT NOT NULL DEFAULT 'vertical'");
         }
-        catch
+        catch (SqliteException ex) when (IsDuplicateColumnError(ex))
         {
-            // First-run case: EF-Core EnsureCreated will have created
-            // the column from the model already. Never block startup.
+            // Already migrated.
         }
     }
 
@@ -376,10 +411,9 @@ public static class PromptBoardHost
             TryRun(conn, "ALTER TABLE AppSettings ADD COLUMN OverlayHorizontalLeft REAL NULL");
             TryRun(conn, "ALTER TABLE AppSettings ADD COLUMN OverlayHorizontalTop REAL NULL");
         }
-        catch
+        catch (SqliteException ex) when (IsDuplicateColumnError(ex))
         {
-            // First-run case: EF-Core EnsureCreated will have created
-            // the columns from the model already. Never block startup.
+            // Already migrated.
         }
     }
 
@@ -391,8 +425,15 @@ public static class PromptBoardHost
             cmd.CommandText = sql;
             cmd.ExecuteNonQuery();
         }
-        catch (SqliteException) { /* duplicate column — already migrated */ }
+        catch (SqliteException ex) when (IsDuplicateColumnError(ex))
+        {
+            // Duplicate column means this migration already ran.
+        }
     }
+
+    private static bool IsDuplicateColumnError(SqliteException ex) =>
+        ex.SqliteErrorCode == 1
+        && ex.Message.Contains("duplicate column name", StringComparison.OrdinalIgnoreCase);
 
     public static T Get<T>() where T : notnull => Services.GetRequiredService<T>();
 }
