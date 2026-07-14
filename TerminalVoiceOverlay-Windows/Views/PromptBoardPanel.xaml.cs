@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Globalization;
 using System.IO;
 using System.Linq;
+using System.Security.Cryptography;
 using System.Text.Json;
 using System.Text.RegularExpressions;
 using System.Threading;
@@ -205,6 +206,10 @@ public partial class PromptBoardPanel : Window
         Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
         "PromptBoard",
         "last-sync.txt");
+    private static readonly string LastSyncFingerprintFilePath = Path.Combine(
+        Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
+        "PromptBoard",
+        "last-sync.sha256");
 
     /// <summary>
     /// Fixed palette: distinct color per category by index. Deterministic so
@@ -2724,7 +2729,7 @@ public partial class PromptBoardPanel : Window
             var json = await BuildBackupJsonAsync();
             await drive.UploadAsync(json);
             Console.WriteLine("[PBPanel] auto-backup uploaded");
-            RecordSuccessfulSync();
+            RecordSuccessfulSync(json);
         }
         catch (Exception ex)
         {
@@ -2742,16 +2747,14 @@ public partial class PromptBoardPanel : Window
     /// Persists "now" as the last successful Drive backup time and refreshes
     /// the muted sync badge in the header.
     /// </summary>
-    private void RecordSuccessfulSync()
+    private void RecordSuccessfulSync(string backupJson)
     {
         var now = DateTime.UtcNow;
         _ = Task.Run(() =>
         {
             try
             {
-                Directory.CreateDirectory(Path.GetDirectoryName(LastSyncFilePath)!);
-                File.WriteAllText(LastSyncFilePath,
-                    now.ToString("o", CultureInfo.InvariantCulture));
+                WriteLastSync(now, backupJson);
             }
             catch (Exception ex)
             {
@@ -2771,10 +2774,11 @@ public partial class PromptBoardPanel : Window
     /// </summary>
     public void MarkSyncedNow()
     {
+        var now = DateTime.UtcNow;
         if (Dispatcher.CheckAccess())
-            RecordSuccessfulSync();
+            RefreshSyncLabel(now);
         else
-            Dispatcher.BeginInvoke(new Action(RecordSuccessfulSync));
+            Dispatcher.BeginInvoke(new Action(() => RefreshSyncLabel(now)));
     }
 
     /// <summary>
@@ -2843,7 +2847,7 @@ public partial class PromptBoardPanel : Window
             }
 
             await drive.UploadAsync(json);
-            RecordSuccessfulSync();
+            RecordSuccessfulSync(json);
             var email = await drive.GetAccountEmailAsync();
             MessageBox.Show($"Backup bei Google Drive gespeichert ({email}).",
                 "PromptBoard", MessageBoxButton.OK, MessageBoxImage.Information);
@@ -2890,7 +2894,7 @@ public partial class PromptBoardPanel : Window
             // Mark the remote ExportedAt as our local sync time so the launch
             // check doesn't immediately re-restore it next start.
             var remote = BackupExportedAtUtc(json);
-            if (remote is not null) WriteLastSync(remote.Value);
+            if (remote is not null) WriteLastSync(remote.Value, json);
             RefreshSyncLabel();
             MessageBox.Show("Google-Drive-Backup eingespielt.",
                 "PromptBoard", MessageBoxButton.OK, MessageBoxImage.Information);
@@ -2951,6 +2955,17 @@ public partial class PromptBoardPanel : Window
         };
 
         return JsonSerializer.Serialize(backup, new JsonSerializerOptions { WriteIndented = true });
+    }
+
+    public static async Task<string> BuildBackupFingerprintAsync() =>
+        BackupFingerprint(await BuildBackupJsonAsync());
+
+    public static string BackupFingerprint(string json)
+    {
+        var backup = JsonSerializer.Deserialize<BackupData>(json)
+            ?? throw new InvalidOperationException("Backup-Datei konnte nicht gelesen werden.");
+        backup.ExportedAt = default;
+        return Convert.ToHexString(SHA256.HashData(JsonSerializer.SerializeToUtf8Bytes(backup)));
     }
 
     /// <summary>
@@ -3065,13 +3080,15 @@ public partial class PromptBoardPanel : Window
         catch { return null; }
     }
 
-    public static void WriteLastSync(DateTime utc)
+    public static void WriteLastSync(DateTime utc, string? backupJson = null)
     {
         try
         {
             Directory.CreateDirectory(Path.GetDirectoryName(LastSyncFilePath)!);
             File.WriteAllText(LastSyncFilePath,
                 utc.ToUniversalTime().ToString("o", CultureInfo.InvariantCulture));
+            if (backupJson is not null)
+                File.WriteAllText(LastSyncFingerprintFilePath, BackupFingerprint(backupJson));
         }
         catch (Exception ex)
         {
@@ -3080,6 +3097,21 @@ public partial class PromptBoardPanel : Window
     }
 
     public static DateTime? ReadLastSyncUtc() => ReadLastSync()?.ToUniversalTime();
+
+    public static string? ReadLastSyncFingerprint()
+    {
+        try
+        {
+            return File.Exists(LastSyncFingerprintFilePath)
+                ? File.ReadAllText(LastSyncFingerprintFilePath).Trim()
+                : null;
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"[PBPanel] read last-sync fingerprint failed: {ex.Message}");
+            return null;
+        }
+    }
 
     private async Task ExportAsync()
     {

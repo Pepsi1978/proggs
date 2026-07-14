@@ -599,6 +599,15 @@ namespace ClaudeVoiceOverlay
         {
             try
             {
+                var localBeforeDownload = await PromptBoardPanel.BuildBackupFingerprintAsync();
+                var lastSynced = PromptBoardPanel.ReadLastSyncFingerprint();
+                if (lastSynced is not null &&
+                    !string.Equals(localBeforeDownload, lastSynced, StringComparison.Ordinal))
+                {
+                    Console.WriteLine("[App] launch-restore skipped (local PromptBoard changes pending)");
+                    return;
+                }
+
                 using var scope = PromptBoardHost.Services.CreateScope();
                 var drive = scope.ServiceProvider.GetRequiredService<IGoogleDriveBackupService>();
                 if (!await drive.IsAuthenticatedAsync())
@@ -626,8 +635,14 @@ namespace ClaudeVoiceOverlay
                 // doesn't trigger a self-restore race.
                 if (remote.Value > local.AddSeconds(2))
                 {
+                    var localAfterDownload = await PromptBoardPanel.BuildBackupFingerprintAsync();
+                    if (!string.Equals(localBeforeDownload, localAfterDownload, StringComparison.Ordinal))
+                    {
+                        Console.WriteLine("[App] launch-restore skipped (PromptBoard changed during download)");
+                        return;
+                    }
                     await PromptBoardPanel.ApplyBackupJsonAsync(json);
-                    PromptBoardPanel.WriteLastSync(remote.Value);
+                    PromptBoardPanel.WriteLastSync(remote.Value, json);
                     Console.WriteLine($"[App] launch-restore applied remote backup from {remote.Value:o}");
                 }
                 else
