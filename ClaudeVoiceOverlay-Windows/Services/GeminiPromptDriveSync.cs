@@ -7,8 +7,10 @@ using System.Threading.Tasks;
 using Google.Apis.Auth.OAuth2;
 using Google.Apis.Auth.OAuth2.Flows;
 using Google.Apis.Auth.OAuth2.Responses;
+using Google.Apis.Download;
 using Google.Apis.Drive.v3;
 using Google.Apis.Services;
+using Google.Apis.Upload;
 using Google.Apis.Util.Store;
 using DriveFile = Google.Apis.Drive.v3.Data.File;
 
@@ -32,7 +34,10 @@ public sealed class GeminiPromptDriveSync
     private const string BundleFileName = "gemini-prompts-bundle.json";
     private const string AppDataFolderSpace = "appDataFolder";
     private const string SyncMarkerFileName = ".gemini-prompts-synced";
+    private const string DirtyMarkerFileName = ".gemini-prompts-dirty";
 
+    private static readonly SemaphoreSlim SyncGate = new(1, 1);
+    private static readonly object DirtyMarkerGate = new();
     private readonly PromptBoardSecretStore _secrets;
 
     public GeminiPromptDriveSync(PromptBoardSecretStore secrets)
@@ -63,6 +68,7 @@ public sealed class GeminiPromptDriveSync
     }
 
     private static string MarkerPath => Path.Combine(SkDir, SyncMarkerFileName);
+    private static string DirtyMarkerPath => Path.Combine(SkDir, DirtyMarkerFileName);
 
     private static string ReadMarker()
     {
@@ -72,8 +78,35 @@ public sealed class GeminiPromptDriveSync
 
     private static void WriteMarker(string savedAt)
     {
-        try { Directory.CreateDirectory(SkDir); File.WriteAllText(MarkerPath, savedAt); }
-        catch { /* best-effort */ }
+        Directory.CreateDirectory(SkDir);
+        File.WriteAllText(MarkerPath, savedAt);
+    }
+
+    private static void MarkDirty()
+    {
+        lock (DirtyMarkerGate)
+        {
+            Directory.CreateDirectory(SkDir);
+            File.WriteAllText(DirtyMarkerPath, Guid.NewGuid().ToString("N"));
+        }
+    }
+
+    private static string ReadDirtyMarker()
+    {
+        lock (DirtyMarkerGate)
+        {
+            return File.Exists(DirtyMarkerPath) ? File.ReadAllText(DirtyMarkerPath).Trim() : "";
+        }
+    }
+
+    private static void ClearDirtyMarker(string uploadedGeneration)
+    {
+        if (string.IsNullOrEmpty(uploadedGeneration)) return;
+        lock (DirtyMarkerGate)
+        {
+            if (string.Equals(ReadDirtyMarker(), uploadedGeneration, StringComparison.Ordinal))
+                File.Delete(DirtyMarkerPath);
+        }
     }
 
     private static Bundle BuildLocalBundle(string savedAt)
@@ -82,10 +115,9 @@ public sealed class GeminiPromptDriveSync
         foreach (var name in SyncedFileNames())
         {
             var p = Path.Combine(SkDir, name);
-            if (File.Exists(p))
-            {
-                try { b.files[name] = File.ReadAllText(p); } catch { /* skip unreadable */ }
-            }
+            try { b.files[name] = File.ReadAllText(p); }
+            catch (FileNotFoundException) { }
+            catch (DirectoryNotFoundException) { }
         }
         return b;
     }
@@ -93,14 +125,26 @@ public sealed class GeminiPromptDriveSync
     /// <summary>Laedt den aktuellen lokalen Stand SOFORT zu Drive hoch (savedAt = jetzt).</summary>
     public async Task UploadAsync(CancellationToken ct = default)
     {
-        // Sekunden-genaues ISO-8601-UTC — IDENTISCHES Format auf Windows UND Mac,
-        // damit der lexikographische LWW-Vergleich cross-platform korrekt ist.
-        var savedAt = DateTime.UtcNow.ToString("yyyy-MM-ddTHH:mm:ss'Z'");
+        await SyncGate.WaitAsync(ct).ConfigureAwait(false);
+        try
+        {
+            await UploadCoreAsync(ct).ConfigureAwait(false);
+        }
+        finally
+        {
+            SyncGate.Release();
+        }
+    }
+
+    private async Task UploadCoreAsync(CancellationToken ct)
+    {
+        var savedAt = DateTimeOffset.UtcNow.ToString("O");
+        var dirtyGeneration = ReadDirtyMarker();
         var bundle = BuildLocalBundle(savedAt);
         if (bundle.files.Count == 0) return; // lokal nichts vorhanden — nichts zu sichern
 
         var json = JsonSerializer.SerializeToUtf8Bytes(bundle);
-        var drive = await BuildDriveAsync(ct).ConfigureAwait(false);
+        using var drive = await BuildDriveAsync(ct).ConfigureAwait(false);
         var ids = await FindAllAsync(drive, BundleFileName, ct).ConfigureAwait(false);
 
         using var content = new MemoryStream(json);
@@ -109,13 +153,13 @@ public sealed class GeminiPromptDriveSync
             var meta = new DriveFile { Name = BundleFileName, Parents = new[] { AppDataFolderSpace } };
             var create = drive.Files.Create(meta, content, "application/json");
             create.Fields = "id";
-            await create.UploadAsync(ct).ConfigureAwait(false);
+            EnsureUploadCompleted(await create.UploadAsync(ct).ConfigureAwait(false));
         }
         else
         {
             var update = drive.Files.Update(new DriveFile(), ids[0], content, "application/json");
             update.Fields = "id";
-            await update.UploadAsync(ct).ConfigureAwait(false);
+            EnsureUploadCompleted(await update.UploadAsync(ct).ConfigureAwait(false));
             for (int i = 1; i < ids.Count; i++)
             {
                 try { await drive.Files.Delete(ids[i]).ExecuteAsync(ct).ConfigureAwait(false); }
@@ -123,6 +167,7 @@ public sealed class GeminiPromptDriveSync
             }
         }
         WriteMarker(savedAt);
+        ClearDirtyMarker(dirtyGeneration);
         UploadSucceeded?.Invoke();
     }
 
@@ -137,34 +182,158 @@ public sealed class GeminiPromptDriveSync
     /// </summary>
     public async Task SyncFromCloudAsync(CancellationToken ct = default)
     {
-        var drive = await BuildDriveAsync(ct).ConfigureAwait(false);
+        await SyncGate.WaitAsync(ct).ConfigureAwait(false);
+        try
+        {
+            await SyncFromCloudCoreAsync(ct).ConfigureAwait(false);
+        }
+        finally
+        {
+            SyncGate.Release();
+        }
+    }
+
+    private async Task SyncFromCloudCoreAsync(CancellationToken ct)
+    {
+        if (!string.IsNullOrEmpty(ReadDirtyMarker()))
+        {
+            await UploadCoreAsync(ct).ConfigureAwait(false);
+            return;
+        }
+
+        using var drive = await BuildDriveAsync(ct).ConfigureAwait(false);
         var ids = await FindAllAsync(drive, BundleFileName, ct).ConfigureAwait(false);
         if (ids.Count == 0)
         {
-            await UploadAsync(ct).ConfigureAwait(false); // Saat
+            await UploadCoreAsync(ct).ConfigureAwait(false); // Saat
             return;
         }
 
         using var buffer = new MemoryStream();
-        await drive.Files.Get(ids[0]).DownloadAsync(buffer, ct).ConfigureAwait(false);
+        EnsureDownloadCompleted(
+            await drive.Files.Get(ids[0]).DownloadAsync(buffer, ct).ConfigureAwait(false));
         Bundle? cloud;
         try { cloud = JsonSerializer.Deserialize<Bundle>(buffer.ToArray()); }
-        catch { return; }
+        catch (JsonException ex) { throw new InvalidDataException("Google Drive bundle is not valid JSON.", ex); }
         if (cloud is null || string.IsNullOrEmpty(cloud.savedAt)) return;
 
-        // LWW: nur ein WIRKLICH neueres Cloud-Bundle ueberschreibt lokal.
-        // ISO-8601-UTC ("o") ist lexikographisch == chronologisch sortierbar.
-        if (string.CompareOrdinal(cloud.savedAt, ReadMarker()) <= 0) return;
+        if (!IsNewerThanMarker(cloud.savedAt, ReadMarker())) return;
 
-        Directory.CreateDirectory(SkDir);
-        foreach (var kv in cloud.files)
-        {
-            var safe = Path.GetFileName(kv.Key); // kein Pfad-Trick
-            if (string.IsNullOrEmpty(safe)) continue;
-            try { File.WriteAllText(Path.Combine(SkDir, safe), kv.Value); }
-            catch { /* skip unwritable */ }
-        }
+        ApplyCloudFiles(cloud.files);
         WriteMarker(cloud.savedAt);
+    }
+
+    private static void ApplyCloudFiles(Dictionary<string, string> files)
+    {
+        Directory.CreateDirectory(SkDir);
+        var allowed = new HashSet<string>(SyncedFileNames(), StringComparer.OrdinalIgnoreCase);
+        var desired = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+        foreach (var kv in files)
+        {
+            if (!allowed.Contains(kv.Key) || !string.Equals(Path.GetFileName(kv.Key), kv.Key, StringComparison.Ordinal))
+                throw new InvalidDataException($"Bundle contains an unsupported file name: {kv.Key}");
+            if (!desired.TryAdd(kv.Key, kv.Value))
+                throw new InvalidDataException($"Duplicate bundle target: {kv.Key}");
+        }
+
+        var temps = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+        var backups = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+        var existed = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        try
+        {
+            foreach (var kv in desired)
+            {
+                var target = Path.Combine(SkDir, kv.Key);
+                var temp = target + $".{Guid.NewGuid():N}.tmp";
+                File.WriteAllText(temp, kv.Value);
+                temps[target] = temp;
+            }
+
+            foreach (var name in allowed)
+            {
+                var target = Path.Combine(SkDir, name);
+                if (!File.Exists(target)) continue;
+                var backup = target + $".{Guid.NewGuid():N}.bak";
+                File.Copy(target, backup);
+                backups[target] = backup;
+                existed.Add(target);
+            }
+
+            foreach (var name in allowed)
+            {
+                var target = Path.Combine(SkDir, name);
+                if (temps.TryGetValue(target, out var temp))
+                {
+                    if (File.Exists(target)) File.Replace(temp, target, destinationBackupFileName: null);
+                    else File.Move(temp, target);
+                }
+                else
+                {
+                    File.Delete(target);
+                }
+            }
+        }
+        catch (Exception applyError)
+        {
+            var rollbackErrors = new List<Exception>();
+            foreach (var name in allowed)
+            {
+                var target = Path.Combine(SkDir, name);
+                try
+                {
+                    if (existed.Contains(target)) File.Copy(backups[target], target, overwrite: true);
+                    else File.Delete(target);
+                }
+                catch (Exception ex) { rollbackErrors.Add(ex); }
+            }
+            if (rollbackErrors.Count > 0)
+            {
+                rollbackErrors.Insert(0, applyError);
+                throw new AggregateException("Bundle apply and rollback failed.", rollbackErrors);
+            }
+            throw;
+        }
+        finally
+        {
+            foreach (var path in temps.Values)
+                TryDeleteTempFile(path);
+            foreach (var path in backups.Values)
+                TryDeleteTempFile(path);
+        }
+    }
+
+    private static bool IsNewerThanMarker(string cloudSavedAt, string marker)
+    {
+        if (!DateTimeOffset.TryParse(cloudSavedAt, out var cloudTime))
+            throw new InvalidDataException($"Bundle has an invalid savedAt value: {cloudSavedAt}");
+        if (string.IsNullOrWhiteSpace(marker)) return true;
+        return !DateTimeOffset.TryParse(marker, out var markerTime) || cloudTime > markerTime;
+    }
+
+    private static void TryDeleteTempFile(string path)
+    {
+        try
+        {
+            File.Delete(path);
+        }
+        catch (Exception ex)
+        {
+            DiagLog.Write("GeminiPromptSync", "temp cleanup failed", ("path", path), ("err", ex.Message));
+        }
+    }
+
+    private static void EnsureUploadCompleted(IUploadProgress progress)
+    {
+        progress.ThrowOnFailure();
+        if (progress.Status != UploadStatus.Completed)
+            throw new IOException($"Google Drive upload did not complete: {progress.Status}");
+    }
+
+    private static void EnsureDownloadCompleted(IDownloadProgress progress)
+    {
+        progress.ThrowOnFailure();
+        if (progress.Status != DownloadStatus.Completed)
+            throw new IOException($"Google Drive download did not complete: {progress.Status}");
     }
 
     // ── Fire-and-forget statische Wrapper (Editor-/Schalter-Save, App-Start) ──
@@ -172,6 +341,12 @@ public sealed class GeminiPromptDriveSync
     /// <summary>Nach jedem Speichern eines Prompts/Schalters aufrufen.</summary>
     public static void TryUpload()
     {
+        try { MarkDirty(); }
+        catch (Exception ex)
+        {
+            DiagLog.Write("GeminiPromptSync", "dirty marker failed", ("err", ex.Message));
+            return;
+        }
         _ = Task.Run(async () =>
         {
             try
