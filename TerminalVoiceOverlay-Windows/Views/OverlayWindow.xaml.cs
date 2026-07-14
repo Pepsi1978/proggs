@@ -3843,6 +3843,7 @@ namespace TerminalVoiceOverlay.Views
                     if (!string.IsNullOrWhiteSpace(aiTitle))
                     {
                         await _historyService.UpdateTitleAsync(entry.Id, aiTitle);
+                        _ = TryUploadHistoryAsync();
                         // Nochmal re-rendern — der KI-Titel hat den
                         // Fallback-Titel ueberschrieben (oder ihn bestaetigt).
                         if (_promptPanel is not null)
