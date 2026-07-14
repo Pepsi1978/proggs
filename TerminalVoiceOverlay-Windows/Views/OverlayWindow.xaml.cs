@@ -4021,7 +4021,7 @@ namespace TerminalVoiceOverlay.Views
                     Console.WriteLine("No cloud history yet — nothing to merge.");
                     return;
                 }
-                var local = await _historyService.LoadAsync();
+                var local = await _historyService.LoadAllAsync();
                 var merged = PromptHistoryDriveSync.MergeEntries(local, cloud);
                 bool unchanged = merged.Count == local.Count && merged
                     .Zip(local, (cloudEntry, localEntry) =>
@@ -4029,7 +4029,8 @@ namespace TerminalVoiceOverlay.Views
                         string.Equals(cloudEntry.Title, localEntry.Title, StringComparison.Ordinal) &&
                         string.Equals(cloudEntry.Text, localEntry.Text, StringComparison.Ordinal) &&
                         cloudEntry.Timestamp == localEntry.Timestamp &&
-                        cloudEntry.UpdatedAt == localEntry.UpdatedAt)
+                        cloudEntry.UpdatedAt == localEntry.UpdatedAt &&
+                        cloudEntry.ArchivedAt == localEntry.ArchivedAt)
                     .All(equal => equal);
                 if (unchanged)
                 {
@@ -4037,6 +4038,7 @@ namespace TerminalVoiceOverlay.Views
                     return;
                 }
                 await _historyService.ReplaceAllAsync(merged);
+                await TryUploadHistoryAsync();
                 Console.WriteLine($"Cloud history merged: {merged.Count - local.Count} new entries or revised content.");
             }
             catch (Exception ex)

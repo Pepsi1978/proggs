@@ -242,9 +242,20 @@ public sealed class PromptHistoryDriveSync
             foreach (var e in cloud)
             {
                 if (e is null || string.IsNullOrEmpty(e.Id)) continue;
-                if (!merged.TryGetValue(e.Id, out var existing) ||
-                    EffectiveUpdatedAt(e) > EffectiveUpdatedAt(existing))
+                if (!merged.TryGetValue(e.Id, out var existing))
+                {
                     merged[e.Id] = e;
+                    continue;
+                }
+
+                var winner = EffectiveUpdatedAt(e) > EffectiveUpdatedAt(existing) ? e : existing;
+                var archivedAt = Max(existing.ArchivedAt, e.ArchivedAt);
+                if (archivedAt is not null)
+                {
+                    winner.ArchivedAt = archivedAt;
+                    if (winner.UpdatedAt < archivedAt.Value) winner.UpdatedAt = archivedAt.Value;
+                }
+                merged[e.Id] = winner;
             }
         }
         return merged.Values
@@ -252,6 +263,14 @@ public sealed class PromptHistoryDriveSync
             .ToList();
     }
 
-    private static DateTime EffectiveUpdatedAt(PromptHistoryEntry entry) =>
-        entry.UpdatedAt == default ? entry.Timestamp : entry.UpdatedAt;
+    private static DateTime EffectiveUpdatedAt(PromptHistoryEntry entry)
+    {
+        var updatedAt = entry.UpdatedAt == default ? entry.Timestamp : entry.UpdatedAt;
+        return entry.ArchivedAt is { } archivedAt && archivedAt > updatedAt
+            ? archivedAt
+            : updatedAt;
+    }
+
+    private static DateTime? Max(DateTime? left, DateTime? right) =>
+        left is null ? right : right is null || left >= right ? left : right;
 }

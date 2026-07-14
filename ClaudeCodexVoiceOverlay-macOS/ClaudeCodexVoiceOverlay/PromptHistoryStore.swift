@@ -10,6 +10,8 @@ struct PBHistoryEntry: Codable, Equatable {
     var text: String
     var title: String
     var timestamp: Date
+    var updatedAt: Date? = nil
+    var archivedAt: Date? = nil
 }
 
 /// Liest und schreibt die Prompt-Historie aus einer JSON-Datei. Bei mehr
@@ -76,6 +78,18 @@ final class PromptHistoryStore {
     func load(completion: @escaping ([PBHistoryEntry]) -> Void) {
         queue.async { [weak self] in
             guard let self = self else { completion([]); return }
+            let entries = Array(self.loadUnlocked()
+                .filter { $0.archivedAt == nil }
+                .sorted { $0.timestamp > $1.timestamp }
+                .prefix(Self.maxActiveEntries))
+            DispatchQueue.main.async { completion(entries) }
+        }
+    }
+
+    /// Liest aktive Einträge und Archiv-Tombstones für einen verlustfreien Cloud-Merge.
+    func loadAll(completion: @escaping ([PBHistoryEntry]) -> Void) {
+        queue.async { [weak self] in
+            guard let self = self else { completion([]); return }
             let entries = self.loadUnlocked()
             DispatchQueue.main.async { completion(entries) }
         }
@@ -89,11 +103,13 @@ final class PromptHistoryStore {
         let safeTitle = title.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
             ? GeminiClient.fallbackTitle(from: text)
             : title.trimmingCharacters(in: .whitespacesAndNewlines)
+        let now = Date()
         let entry = PBHistoryEntry(
             id: UUID().uuidString,
             text: text,
             title: safeTitle,
-            timestamp: Date()
+            timestamp: now,
+            updatedAt: now
         )
 
         queue.async { [weak self] in
@@ -101,15 +117,7 @@ final class PromptHistoryStore {
             var entries = self.loadUnlocked()
             entries.insert(entry, at: 0)
 
-            // Wenn die aktive Liste die Schwelle ueberschreitet, wandert
-            // der jeweils aelteste Eintrag ins Archiv. Schleife fuer den
-            // unwahrscheinlichen Fall mehrerer Eintraege auf einmal
-            // (z.B. nach einem Crash-Recovery).
-            while entries.count > Self.maxActiveEntries {
-                let oldest = entries.removeLast()
-                self.appendToArchiveUnlocked(oldest)
-            }
-
+            self.archiveOverflowUnlocked(&entries)
             self.saveUnlocked(entries)
             DispatchQueue.main.async { completion(entry) }
         }
@@ -123,12 +131,8 @@ final class PromptHistoryStore {
     func replaceAll(entries: [PBHistoryEntry], completion: @escaping () -> Void) {
         queue.async { [weak self] in
             guard let self = self else { return }
-            var sorted = entries
-                .sorted { $0.timestamp > $1.timestamp }
-            while sorted.count > Self.maxActiveEntries {
-                let oldest = sorted.removeLast()
-                self.appendToArchiveUnlocked(oldest)
-            }
+            var sorted = entries.sorted { $0.timestamp > $1.timestamp }
+            self.archiveOverflowUnlocked(&sorted)
             self.saveUnlocked(sorted)
             DispatchQueue.main.async { completion() }
         }
@@ -157,6 +161,7 @@ final class PromptHistoryStore {
         let decoder = JSONDecoder()
         decoder.dateDecodingStrategy = .custom { decoder in
             let str = try decoder.singleValueContainer().decode(String.self)
+            if str.hasPrefix("0001-01-01") { return Date(timeIntervalSince1970: 0) }
             let f1 = ISO8601DateFormatter()
             f1.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
             if let d = f1.date(from: str) { return d }
@@ -173,11 +178,32 @@ final class PromptHistoryStore {
             cloud = parsed
         }
         var byId: [String: PBHistoryEntry] = [:]
-        for e in local where !e.id.isEmpty { byId[e.id] = e }
+        for e in local where !e.id.isEmpty { byId[e.id.lowercased()] = e }
         for e in cloud where !e.id.isEmpty {
-            if byId[e.id] == nil { byId[e.id] = e }
+            let key = e.id.lowercased()
+            if let existing = byId[key] {
+                byId[key] = mergeRevision(existing, e)
+            } else {
+                byId[key] = e
+            }
         }
         return byId.values.sorted { $0.timestamp > $1.timestamp }
+    }
+
+    private static func mergeRevision(_ left: PBHistoryEntry, _ right: PBHistoryEntry) -> PBHistoryEntry {
+        var winner = effectiveUpdatedAt(right) > effectiveUpdatedAt(left) ? right : left
+        let archivedAt = [left.archivedAt, right.archivedAt].compactMap { $0 }.max()
+        if let archivedAt {
+            winner.archivedAt = archivedAt
+            if (winner.updatedAt ?? winner.timestamp) < archivedAt {
+                winner.updatedAt = archivedAt
+            }
+        }
+        return winner
+    }
+
+    private static func effectiveUpdatedAt(_ entry: PBHistoryEntry) -> Date {
+        max(entry.updatedAt ?? entry.timestamp, entry.archivedAt ?? entry.timestamp)
     }
 
     /// Aktualisiert den Titel eines bestehenden Eintrags. Wird vom
@@ -193,6 +219,7 @@ final class PromptHistoryStore {
             entries[idx].title = cleaned.isEmpty
                 ? GeminiClient.fallbackTitle(from: entries[idx].text)
                 : cleaned
+            entries[idx].updatedAt = Date()
             self.saveUnlocked(entries)
         }
     }
@@ -215,6 +242,7 @@ final class PromptHistoryStore {
             var entries = self.loadUnlocked()
             if let idx = entries.firstIndex(where: { $0.id == entryId }) {
                 entries[idx].text = newText
+                entries[idx].updatedAt = Date()
                 self.saveUnlocked(entries)
             }
             DispatchQueue.main.async { completion() }
@@ -232,6 +260,7 @@ final class PromptHistoryStore {
             let decoder = JSONDecoder()
             decoder.dateDecodingStrategy = .custom { decoder in
                 let str = try decoder.singleValueContainer().decode(String.self)
+                if str.hasPrefix("0001-01-01") { return Date(timeIntervalSince1970: 0) }
                 if let d = Self.isoFormatter.date(from: str) { return d }
                 // Fallback ohne Bruchteilssekunden
                 let f = ISO8601DateFormatter()
@@ -285,6 +314,15 @@ final class PromptHistoryStore {
             existing = []
         }
 
+        let idMarker = "<!-- prompt-history-id: \(entry.id) -->"
+        let legacyBlock = formatEntryAsMarkdown(entry, includeId: false)
+        if existing.contains(where: { url in
+            guard let content = try? String(contentsOf: url, encoding: .utf8) else { return false }
+            return content.localizedCaseInsensitiveContains(idMarker) || content.contains(legacyBlock)
+        }) {
+            return
+        }
+
         let target: URL
         if existing.isEmpty {
             target = archiveDirURL.appendingPathComponent("archive-001.md")
@@ -300,7 +338,7 @@ final class PromptHistoryStore {
             }
         }
 
-        let newBlock = formatEntryAsMarkdown(entry)
+        let newBlock = formatEntryAsMarkdown(entry, includeId: true)
         let oldContent: String
         if FileManager.default.fileExists(atPath: target.path),
            let existing = try? String(contentsOf: target, encoding: .utf8) {
@@ -328,10 +366,29 @@ final class PromptHistoryStore {
         return Int(suffix) ?? 0
     }
 
-    private func formatEntryAsMarkdown(_ e: PBHistoryEntry) -> String {
+    private func archiveOverflowUnlocked(_ entries: inout [PBHistoryEntry]) {
+        let overflowIds = Set(entries
+            .filter { $0.archivedAt == nil }
+            .sorted { $0.timestamp > $1.timestamp }
+            .dropFirst(Self.maxActiveEntries)
+            .map { $0.id.lowercased() })
+
+        for index in entries.indices where overflowIds.contains(entries[index].id.lowercased()) {
+            let archivedAt = Date()
+            entries[index].archivedAt = archivedAt
+            if (entries[index].updatedAt ?? entries[index].timestamp) < archivedAt {
+                entries[index].updatedAt = archivedAt
+            }
+            appendToArchiveUnlocked(entries[index])
+        }
+        entries.sort { $0.timestamp > $1.timestamp }
+    }
+
+    private func formatEntryAsMarkdown(_ e: PBHistoryEntry, includeId: Bool) -> String {
         let when = Self.displayFormatter.string(from: e.timestamp)
         let title = e.title.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
             ? "Ohne Titel" : e.title
-        return "## \(when) — \(title)\n\n\(e.text)\n\n---\n\n"
+        let marker = includeId ? "<!-- prompt-history-id: \(e.id) -->\n" : ""
+        return "## \(when) — \(title)\n\(marker)\n\(e.text)\n\n---\n\n"
     }
 }

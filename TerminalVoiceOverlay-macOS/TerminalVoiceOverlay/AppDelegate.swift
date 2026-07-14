@@ -769,14 +769,15 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
                     tvoDebug("[App] no cloud history yet — nothing to merge")
                     return
                 }
-                PromptHistoryStore.shared.load { local in
+                PromptHistoryStore.shared.loadAll { local in
                     let merged = PromptHistoryStore.merge(local: local, cloudJson: cloudJson)
-                    if merged.count == local.count {
-                        tvoDebug("[App] cloud history merge: no new entries")
+                    if merged == local {
+                        tvoDebug("[App] cloud history merge: no changes")
                         return
                     }
                     PromptHistoryStore.shared.replaceAll(entries: merged) {
                         tvoDebug("[App] cloud history merged: +\(merged.count - local.count) entries")
+                        self?.uploadHistoryToCloud()
                         // Offene Historie-Ansicht direkt aktualisieren.
                         self?.promptBoardPanel?.reloadHistory()
                     }

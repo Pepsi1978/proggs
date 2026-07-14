@@ -30,6 +30,9 @@ public sealed class PromptHistoryEntry
 
     /// <summary>UTC-Revision für konfliktfreie geräteübergreifende Bearbeitungen.</summary>
     public DateTime UpdatedAt { get; set; }
+
+    /// <summary>Monotone Archiv-Tombstone; archivierte IDs dürfen nicht wieder aktiv werden.</summary>
+    public DateTime? ArchivedAt { get; set; }
 }
 
 /// <summary>
@@ -94,6 +97,21 @@ public sealed class PromptHistoryService
         await _gate.WaitAsync(ct).ConfigureAwait(false);
         try
         {
+            return (await LoadUnlockedAsync(ct).ConfigureAwait(false))
+                .Where(e => e.ArchivedAt is null)
+                .OrderByDescending(e => e.Timestamp)
+                .Take(MaxActiveEntries)
+                .ToList();
+        }
+        finally { _gate.Release(); }
+    }
+
+    /// <summary>Lädt aktive Einträge und Archiv-Tombstones für einen verlustfreien Cloud-Merge.</summary>
+    public async Task<List<PromptHistoryEntry>> LoadAllAsync(CancellationToken ct = default)
+    {
+        await _gate.WaitAsync(ct).ConfigureAwait(false);
+        try
+        {
             return await LoadUnlockedAsync(ct).ConfigureAwait(false);
         }
         finally { _gate.Release(); }
@@ -126,17 +144,7 @@ public sealed class PromptHistoryService
             var entries = await LoadUnlockedAsync(ct).ConfigureAwait(false);
             entries.Insert(0, entry);
 
-            // Wenn die aktive Liste die Schwelle ueberschreitet, wandert
-            // der jeweils aelteste Eintrag ins Archiv. Schleife fuer den
-            // unwahrscheinlichen Fall, dass mehrere Eintraege auf einmal
-            // aufgelaufen sind (z.B. nach einem Crash-Recovery).
-            while (entries.Count > MaxActiveEntries)
-            {
-                var oldest = entries[^1];
-                entries.RemoveAt(entries.Count - 1);
-                AppendToArchiveUnlocked(oldest);
-            }
-
+            ArchiveOverflowUnlocked(entries);
             await SaveUnlockedAsync(entries, ct).ConfigureAwait(false);
             return entry;
         }
@@ -153,7 +161,7 @@ public sealed class PromptHistoryService
     public async Task ReplaceAllAsync(
         IEnumerable<PromptHistoryEntry> entries, CancellationToken ct = default)
     {
-        var sorted = entries
+        var allEntries = entries
             .Where(e => e is not null)
             .OrderByDescending(e => e.Timestamp)
             .ToList();
@@ -161,13 +169,8 @@ public sealed class PromptHistoryService
         await _gate.WaitAsync(ct).ConfigureAwait(false);
         try
         {
-            while (sorted.Count > MaxActiveEntries)
-            {
-                var oldest = sorted[^1];
-                sorted.RemoveAt(sorted.Count - 1);
-                AppendToArchiveUnlocked(oldest);
-            }
-            await SaveUnlockedAsync(sorted, ct).ConfigureAwait(false);
+            ArchiveOverflowUnlocked(allEntries);
+            await SaveUnlockedAsync(allEntries, ct).ConfigureAwait(false);
         }
         finally { _gate.Release(); }
     }
@@ -270,6 +273,18 @@ public sealed class PromptHistoryService
             .OrderBy(p => p, StringComparer.OrdinalIgnoreCase)
             .ToList();
 
+        string idMarker = $"<!-- prompt-history-id: {entry.Id} -->";
+        string legacyBlock = FormatEntryAsMarkdown(entry, includeId: false);
+        if (existing.Any(path =>
+            {
+                string content = File.ReadAllText(path, Encoding.UTF8);
+                return content.Contains(idMarker, StringComparison.OrdinalIgnoreCase) ||
+                       content.Contains(legacyBlock, StringComparison.Ordinal);
+            }))
+        {
+            return;
+        }
+
         string targetFile;
         if (existing.Count == 0)
         {
@@ -293,7 +308,7 @@ public sealed class PromptHistoryService
         // Neueste oben in der Datei: vorhandenen Inhalt lesen, neuen Block
         // davor einfuegen, alles zurueckschreiben. Bei einer 500-Eintraege-
         // Datei sind das im Worst Case ein paar hundert KB — vernachlaessigbar.
-        string newBlock = FormatEntryAsMarkdown(entry);
+        string newBlock = FormatEntryAsMarkdown(entry, includeId: true);
         string oldContent = File.Exists(targetFile)
             ? File.ReadAllText(targetFile, Encoding.UTF8)
             : string.Empty;
@@ -320,13 +335,34 @@ public sealed class PromptHistoryService
         return int.TryParse(name[(dash + 1)..], out int n) ? n : 0;
     }
 
-    private static string FormatEntryAsMarkdown(PromptHistoryEntry e)
+    private void ArchiveOverflowUnlocked(List<PromptHistoryEntry> entries)
+    {
+        var overflow = entries
+            .Where(e => e.ArchivedAt is null)
+            .OrderByDescending(e => e.Timestamp)
+            .Skip(MaxActiveEntries)
+            .ToList();
+
+        foreach (var entry in overflow)
+        {
+            var archivedAt = DateTime.UtcNow;
+            entry.ArchivedAt = archivedAt;
+            if (entry.UpdatedAt < archivedAt) entry.UpdatedAt = archivedAt;
+            AppendToArchiveUnlocked(entry);
+        }
+
+        entries.Sort((a, b) => b.Timestamp.CompareTo(a.Timestamp));
+    }
+
+    private static string FormatEntryAsMarkdown(PromptHistoryEntry e, bool includeId)
     {
         var local = e.Timestamp.ToLocalTime();
         string when = local.ToString("yyyy-MM-dd HH:mm");
         string title = string.IsNullOrWhiteSpace(e.Title) ? "Ohne Titel" : e.Title;
         var sb = new StringBuilder();
         sb.Append("## ").Append(when).Append(" — ").Append(title).Append('\n');
+        if (includeId)
+            sb.Append("<!-- prompt-history-id: ").Append(e.Id).Append(" -->").Append('\n');
         sb.Append('\n');
         sb.Append(e.Text ?? string.Empty).Append('\n');
         sb.Append('\n');
