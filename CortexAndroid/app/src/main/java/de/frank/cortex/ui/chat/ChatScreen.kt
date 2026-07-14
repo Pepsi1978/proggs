@@ -344,10 +344,9 @@ fun ChatScreen(vm: ChatViewModel = viewModel()) {
                     }
                 },
                 onSend = {
-                    vm.sendMessage(inputText)
-                    // Nur leeren, wenn die Nachricht auch angenommen wurde: bei der
-                    // 500.000-Zeichen-Ablehnung ging der Entwurf sonst trotzdem verloren.
-                    if (inputText.length <= 500000) inputText = ""
+                    // Nur leeren, wenn sendMessage die Nachricht angenommen hat. Abgelehnt
+                    // (zu lang / offline im Nicht-Outbox-Modus) bleibt der Entwurf stehen.
+                    if (vm.sendMessage(inputText)) inputText = ""
                 },
                 onClear = {
                     inputText = ""

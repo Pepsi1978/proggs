@@ -1669,6 +1669,13 @@ private val runtimeLimitItems = listOf(
         "Zeichen",
         "Wie stark sich benachbarte Suchstücke überschneiden.",
         "Überlappung verhindert, dass ein wichtiger Satz genau an einer Chunk-Grenze zerschnitten wird. Größer ist sicherer für zusammenhängende Sätze, erzeugt aber mehr doppelte Suchfläche. Kleiner spart Speicher und Embedding-Aufwand, kann aber Grenzfälle verschlechtern. Der Wert muss kleiner als die Suchstück-Größe sein; der Server sichert das ab."
+    ),
+    LimitItem(
+        "brain.recall_boost_promille",
+        "Recall-Boost (Promille)",
+        "Promille",
+        "Zusätzlicher Recall-Spielraum für die Vektorsuche in Promille.",
+        "Ein kleiner Aufschlag in Promille, der die Trefferabdeckung (Recall) der Vektorsuche leicht erhöht, indem etwas breiter gesucht wird. Größer findet mehr Grenzfälle, kann aber unschärfere Treffer zulassen; kleiner bleibt präziser. 0 lässt das Verhalten unverändert."
     )
 )
 
@@ -1700,6 +1707,7 @@ private fun limitsToDrafts(limits: RuntimeLimits): Map<String, String> = buildMa
         put("brain.search_date_overfetch_factor", brain.search_date_overfetch_factor.toString())
         put("brain.bm25_candidate_factor", brain.bm25_candidate_factor.toString())
         put("brain.bm25_min_candidates", brain.bm25_min_candidates.toString())
+        put("brain.recall_boost_promille", (brain.recall_boost_promille ?: 0).toString())
     }
 }
 
@@ -1736,7 +1744,8 @@ private fun draftsToLimits(current: RuntimeLimits, drafts: Map<String, String>):
             search_overfetch_factor = limitInt(drafts, "brain.search_overfetch_factor", brain.search_overfetch_factor),
             search_date_overfetch_factor = limitInt(drafts, "brain.search_date_overfetch_factor", brain.search_date_overfetch_factor),
             bm25_candidate_factor = limitInt(drafts, "brain.bm25_candidate_factor", brain.bm25_candidate_factor),
-            bm25_min_candidates = limitInt(drafts, "brain.bm25_min_candidates", brain.bm25_min_candidates)
+            bm25_min_candidates = limitInt(drafts, "brain.bm25_min_candidates", brain.bm25_min_candidates),
+            recall_boost_promille = limitInt(drafts, "brain.recall_boost_promille", brain.recall_boost_promille ?: 0)
         )
     }
 )

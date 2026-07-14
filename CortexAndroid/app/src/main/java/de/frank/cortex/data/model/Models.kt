@@ -103,7 +103,11 @@ data class HealthResponse(
     val status: String?,
     val version: String?,
     val points: Int?,
-    val embed_model: String?
+    val embed_model: String?,
+    // Qdrant-Collection-Aufbau nach einem Neustart: ready=false + collection_status ("grey"/"green"/…)
+    // signalisieren, dass das Gehirn noch laedt (Treffer sind dann noch nicht vollstaendig).
+    val ready: Boolean? = null,
+    val collection_status: String? = null
 )
 
 // Agent-/health sendet {"status","version",...} OHNE "ok" — SimpleResponse als Rueckgabetyp
@@ -161,7 +165,11 @@ data class BrainEntry(
 data class EntriesResponse(
     val ok: Boolean,
     val count: Int,
-    val items: List<BrainEntry>
+    val items: List<BrainEntry>,
+    // Gehirn (Qdrant-Collection) laedt nach einem Server-Neustart evtl. noch: ready=false heisst,
+    // die (leere/unvollstaendige) Trefferliste ist NICHT endgueltig. total = Gesamtzahl serverseitig.
+    val ready: Boolean? = null,
+    val total: Int? = null
 )
 
 @JsonClass(generateAdapter = true)
@@ -338,7 +346,8 @@ data class BrainRuntimeLimits(
     val search_overfetch_factor: Int = 4,
     val search_date_overfetch_factor: Int = 20,
     val bm25_candidate_factor: Int = 4,
-    val bm25_min_candidates: Int = 20
+    val bm25_min_candidates: Int = 20,
+    val recall_boost_promille: Int? = null
 )
 
 @JsonClass(generateAdapter = true)

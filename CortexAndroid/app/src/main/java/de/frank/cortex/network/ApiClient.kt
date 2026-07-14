@@ -53,6 +53,7 @@ class ChatStreamException(
     val doneReceived: Boolean,
 ) : IOException(cause.message ?: cause.javaClass.simpleName, cause)
 
+// Vom Server auswaehlbare GPT-5.6-Codex-Modelle (Modell-Picker in den Einstellungen).
 internal val CODEX_GPT56_MODELS = listOf(
     "gpt-5.6-sol", "gpt-5.6-sol-fast",
     "gpt-5.6-terra", "gpt-5.6-terra-fast",
@@ -79,11 +80,6 @@ internal fun codexModelRequestConfig(selectedModel: String): CodexModelRequestCo
 object ApiClient {
 
     private val jsonMediaType = "application/json; charset=utf-8".toMediaType()
-    private const val CODEX_AUTH_ISSUER = "https://auth.openai.com"
-    private const val CODEX_TOKEN_URL = "https://auth.openai.com/oauth/token"
-    private const val CODEX_BASE_URL = "https://chatgpt.com/backend-api/codex"
-    private const val CODEX_CLIENT_ID = "app_EMoamEEZ73f0CkXaXp7hrann"
-    private val codexFallbackModels = CODEX_GPT56_MODELS + listOf("gpt-5.5", "gpt-5.4", "gpt-5.4-mini", "gpt-5.3-codex", "gpt-5.3-codex-spark")
 
     // --- Moshi Singleton (Best Practice §1.7 / §2.1) ---
     private val moshi: Moshi = Moshi.Builder().build()
@@ -178,16 +174,6 @@ object ApiClient {
             .callTimeout(60, TimeUnit.SECONDS)
             .connectTimeout(15, TimeUnit.SECONDS)
             .readTimeout(45, TimeUnit.SECONDS)
-            .retryOnConnectionFailure(true)
-            .build()
-    }
-
-    // Token-Antworten dürfen nie im Log landen, deshalb kein BODY-Logging für OAuth/Codex.
-    private val secretExternalClient: OkHttpClient by lazy {
-        OkHttpClient.Builder()
-            .callTimeout(120, TimeUnit.SECONDS)
-            .connectTimeout(30, TimeUnit.SECONDS)
-            .readTimeout(60, TimeUnit.SECONDS)
             .retryOnConnectionFailure(true)
             .build()
     }
@@ -427,183 +413,6 @@ object ApiClient {
                 throw ChatStreamException(e, headersReceived, anyEventReceived, deltaReceived, doneReceived)
             }
         }
-
-    suspend fun codexStartDeviceAuth(): CodexAuthStartResponse {
-        val body = """{"client_id":${JSONObject.quote(CODEX_CLIENT_ID)}}"""
-        val request = Request.Builder()
-            .url("$CODEX_AUTH_ISSUER/api/accounts/deviceauth/usercode")
-            .post(body.toRequestBody(jsonMediaType))
-            .build()
-        val (code, responseBody) = executeForString(secretExternalClient, request)
-        if (code !in 200..299) throw Exception("Codex Device-Code-Start HTTP $code: $responseBody")
-        val json = JSONObject(responseBody)
-        val userCode = json.optString("user_code")
-        val authId = json.optString("device_auth_id")
-        if (userCode.isBlank() || authId.isBlank()) throw Exception("Codex Device-Code-Antwort unvollständig")
-        return CodexAuthStartResponse(
-            ok = true,
-            auth_id = authId,
-            user_code = userCode,
-            verification_uri = "$CODEX_AUTH_ISSUER/codex/device",
-            expires_in = 900,
-            interval = maxOf(3, json.optInt("interval", 5))
-        )
-    }
-
-    suspend fun codexPollDeviceAuth(authId: String, userCode: String): CodexAuthPollResponse {
-        val body = """{"device_auth_id":${JSONObject.quote(authId)},"user_code":${JSONObject.quote(userCode)}}"""
-        val request = Request.Builder()
-            .url("$CODEX_AUTH_ISSUER/api/accounts/deviceauth/token")
-            .post(body.toRequestBody(jsonMediaType))
-            .build()
-        val (code, responseBody) = executeForString(secretExternalClient, request)
-        if (code == 403 || code == 404) return CodexAuthPollResponse(ok = true, status = "pending")
-        if (code !in 200..299) throw Exception("Codex Device-Code-Poll HTTP $code: $responseBody")
-
-        val codeJson = JSONObject(responseBody)
-        val authorizationCode = codeJson.optString("authorization_code")
-        val codeVerifier = codeJson.optString("code_verifier")
-        if (authorizationCode.isBlank() || codeVerifier.isBlank()) throw Exception("Codex Authorization-Code unvollständig")
-
-        val form = listOf(
-            "grant_type=authorization_code",
-            "code=${java.net.URLEncoder.encode(authorizationCode, "UTF-8")}",
-            "redirect_uri=${java.net.URLEncoder.encode("$CODEX_AUTH_ISSUER/deviceauth/callback", "UTF-8")}",
-            "client_id=${java.net.URLEncoder.encode(CODEX_CLIENT_ID, "UTF-8")}",
-            "code_verifier=${java.net.URLEncoder.encode(codeVerifier, "UTF-8")}"
-        ).joinToString("&")
-        val tokenRequest = Request.Builder()
-            .url(CODEX_TOKEN_URL)
-            .header("Content-Type", "application/x-www-form-urlencoded")
-            .post(form.toRequestBody("application/x-www-form-urlencoded".toMediaType()))
-            .build()
-        val (tokenCode, tokenBody) = executeForString(secretExternalClient, tokenRequest)
-        if (tokenCode !in 200..299) throw Exception("Codex Token-Austausch HTTP $tokenCode: $tokenBody")
-        val tokenJson = JSONObject(tokenBody)
-        val accessToken = tokenJson.optString("access_token")
-        if (accessToken.isBlank()) throw Exception("Codex Token-Antwort ohne access_token")
-        SettingsStore.codexAccessToken = accessToken
-        val refreshToken = tokenJson.optString("refresh_token")
-        if (refreshToken.isNotBlank()) SettingsStore.codexRefreshToken = refreshToken
-        return CodexAuthPollResponse(ok = true, status = "connected", connected = true, models = codexFallbackModels)
-    }
-
-    suspend fun codexModels(): List<String> {
-        val access = codexAccessToken()
-        val request = Request.Builder()
-            .url("$CODEX_BASE_URL/models?client_version=1.0.0")
-            .headers(codexHeaders(access))
-            .get()
-            .build()
-        return try {
-            val (code, body) = executeForString(secretExternalClient, request)
-            if (code !in 200..299) return codexFallbackModels
-            val arr = JSONObject(body).optJSONArray("models") ?: return codexFallbackModels
-            buildList {
-                for (i in 0 until arr.length()) {
-                    val item = arr.optJSONObject(i) ?: continue
-                    val slug = item.optString("slug")
-                    val visibility = item.optString("visibility").lowercase()
-                    if (slug.isNotBlank() && visibility !in setOf("hide", "hidden")) add(slug)
-                }
-                codexFallbackModels.forEach { if (!contains(it)) add(it) }
-            }.ifEmpty { codexFallbackModels }
-        } catch (e: kotlinx.coroutines.CancellationException) {
-            throw e
-        } catch (_: Exception) {
-            codexFallbackModels
-        }
-    }
-
-    suspend fun codexGenerate(text: String, model: String = SettingsStore.codexModel, reasoning: String = SettingsStore.codexReasoning): String {
-        val access = codexAccessToken()
-        val effort = reasoning.lowercase().takeIf { it in setOf("minimal", "low", "medium", "high", "xhigh") }
-        val modelConfig = codexModelRequestConfig(model)
-        val body = JSONObject()
-            .put("model", modelConfig.model)
-            .put("instructions", "Du bist Cortex direkt auf Franks Handy. Antworte präzise, deutsch und ohne erfundene Fakten. Du hast in diesem Handy-Modus keinen direkten Zugriff auf das Second Brain; sage das ehrlich, wenn Speicher- oder Suchfunktionen nötig wären.")
-            .put("input", text)
-            .put("max_output_tokens", 4096)
-        modelConfig.serviceTier?.let { body.put("service_tier", it) }
-        if (effort != null) body.put("reasoning", JSONObject().put("effort", effort))
-        val request = Request.Builder()
-            .url("$CODEX_BASE_URL/responses")
-            .headers(codexHeaders(access))
-            .post(body.toString().toRequestBody(jsonMediaType))
-            .build()
-        val (code, responseBody) = executeForString(secretExternalClient, request)
-        if (code !in 200..299) throw Exception("Codex-Fehler $code: $responseBody")
-        return extractCodexText(JSONObject(responseBody)).ifBlank { throw Exception("Codex lieferte leeren Text") }
-    }
-
-    private suspend fun codexAccessToken(): String {
-        val access = SettingsStore.codexAccessToken
-        if (access.isBlank()) throw IllegalStateException("Codex ist auf dem Handy nicht verbunden")
-        val exp = jwtExp(access)
-        return if (exp > 0 && exp - (System.currentTimeMillis() / 1000L) < 120) refreshCodexTokens() else access
-    }
-
-    private suspend fun refreshCodexTokens(): String {
-        val refresh = SettingsStore.codexRefreshToken
-        if (refresh.isBlank()) throw IllegalStateException("Codex refresh_token fehlt — bitte neu verbinden")
-        val form = "grant_type=refresh_token&refresh_token=${java.net.URLEncoder.encode(refresh, "UTF-8")}&client_id=${java.net.URLEncoder.encode(CODEX_CLIENT_ID, "UTF-8")}"
-        val request = Request.Builder()
-            .url(CODEX_TOKEN_URL)
-            .header("Content-Type", "application/x-www-form-urlencoded")
-            .post(form.toRequestBody("application/x-www-form-urlencoded".toMediaType()))
-            .build()
-        val (code, body) = executeForString(secretExternalClient, request)
-        if (code !in 200..299) throw Exception("Codex Refresh HTTP $code: $body")
-        val json = JSONObject(body)
-        val access = json.optString("access_token")
-        if (access.isBlank()) throw Exception("Codex Refresh ohne access_token")
-        SettingsStore.codexAccessToken = access
-        val newRefresh = json.optString("refresh_token")
-        if (newRefresh.isNotBlank()) SettingsStore.codexRefreshToken = newRefresh
-        return access
-    }
-
-    private fun codexHeaders(access: String): okhttp3.Headers {
-        val builder = okhttp3.Headers.Builder()
-            .add("Authorization", "Bearer $access")
-            .add("Content-Type", "application/json")
-            .add("Accept", "application/json")
-            .add("User-Agent", "codex_cli_rs/0.0.0 (Cortex Android)")
-            .add("originator", "codex_cli_rs")
-        codexAccountId(access).takeIf { it.isNotBlank() }?.let { builder.add("ChatGPT-Account-ID", it) }
-        return builder.build()
-    }
-
-    private fun jwtPayload(token: String): JSONObject? = try {
-        val part = token.split(".").getOrNull(1).orEmpty()
-        val decoded = Base64.decode(part, Base64.URL_SAFE or Base64.NO_WRAP or Base64.NO_PADDING)
-        JSONObject(String(decoded, Charsets.UTF_8))
-    } catch (_: Exception) {   // no-cancellation-rethrow (kein suspend im try)
-        null
-    }
-
-    private fun jwtExp(token: String): Long = jwtPayload(token)?.optLong("exp", 0L) ?: 0L
-
-    private fun codexAccountId(token: String): String = jwtPayload(token)
-        ?.optJSONObject("https://api.openai.com/auth")
-        ?.optString("chatgpt_account_id")
-        .orEmpty()
-
-    private fun extractCodexText(json: JSONObject): String {
-        json.optString("output_text").takeIf { it.isNotBlank() }?.let { return it.trim() }
-        val output = json.optJSONArray("output") ?: return ""
-        val parts = mutableListOf<String>()
-        for (i in 0 until output.length()) {
-            val item = output.optJSONObject(i) ?: continue
-            val content = item.optJSONArray("content") ?: continue
-            for (j in 0 until content.length()) {
-                val c = content.optJSONObject(j) ?: continue
-                val t = c.optString("text", c.optString("output_text"))
-                if (t.isNotBlank()) parts.add(t)
-            }
-        }
-        return parts.joinToString("").trim()
-    }
 
     // --- Groq STT (direkt über OkHttp, multipart) ---
 

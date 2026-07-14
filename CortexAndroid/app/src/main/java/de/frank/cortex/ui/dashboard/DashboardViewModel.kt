@@ -148,6 +148,7 @@ class DashboardViewModel : ViewModel() {
         const val REFRESH_ERROR = "Server nicht erreichbar"
         const val SEARCH_ERROR = "Suche fehlgeschlagen — Server nicht erreichbar"
         const val BROWSE_ERROR = "Kategorie konnte nicht geladen werden — Server nicht erreichbar"
+        const val BRAIN_LOADING_NOTICE = "Gehirn lädt noch — gleich erneut versuchen"
     }
 
     // Waehrend ein Refresh laeuft angeforderte weitere Refreshes (z.B. nach deleteEntry) nicht
@@ -177,16 +178,21 @@ class DashboardViewModel : ViewModel() {
             // Parallele Aufrufe; jede Lade-Funktion meldet Erfolg/Fehler zurueck, denn sie
             // fangen ihre Exceptions selbst — sonst saehe dieser Block IMMER Erfolg und
             // meldete "verbunden", obwohl der Server komplett down ist.
-            val results = coroutineScope {
-                listOf(
+            // loadHealth SEPARAT referenzierbar halten: sein Erfolg (freshHealth) sagt, ob health
+            // in DIESEM Zyklus FRISCH geladen wurde. Nur dann darf sein ready-Wert unten den
+            // Persist-Guard passieren — ein getimeouteter/fehlgeschlagener health-Call liesse sonst
+            // den STALE ready==true (aus einem frueheren Zyklus) durchgehen und ueberschriebe den
+            // letzten guten Cache mit den 0-Zahlen eines gerade neu startenden Brains.
+            val (anySuccess, freshHealth) = coroutineScope {
+                val healthDeferred = async { loadHealth() }
+                val results = listOf(
                     async { loadCategoryCounts() },
                     async { loadCategories() },
                     async { loadOverview() },
-                    async { loadHealth() }
+                    healthDeferred
                 ).awaitAll()
+                results.any { it } to healthDeferred.await()
             }
-
-            val anySuccess = results.any { it }
             _uiState.update {
                 it.copy(
                     isLoading = false,
@@ -199,14 +205,23 @@ class DashboardViewModel : ViewModel() {
             // sonst würde ein Totalausfall den letzten guten Cache überschreiben).
             if (anySuccess) {
                 _uiState.value.let { s ->
-                    ApiClient.cacheDashboard(
-                        DashboardSnapshot(
-                            totalEntries = s.totalEntries,
-                            categoryCounts = s.categoryCounts,
-                            overview = s.overview,
-                            health = s.health
+                    // Nur persistieren, wenn health in DIESEM Refresh-Zyklus FRISCH geladen wurde
+                    // (freshHealth) UND ready war. Ein "Gehirn lädt"-Zustand ist HTTP 200 (Erfolg)
+                    // und category-counts hat kein ready-Feld — ein zu niedriger total_distinct
+                    // wuerde sonst den letzten guten Cache ueberschreiben. Frueher genuegte ein
+                    // STALE health.ready==true (health-Call getimeoutet, alter Wert blieb stehen),
+                    // um den Guard zu passieren; deshalb zusaetzlich freshHealth verlangen.
+                    // ready==null (aelterer Server ohne Feld) => wie bisher persistieren (Abwaertskompat).
+                    if (freshHealth && s.health?.ready != false) {
+                        ApiClient.cacheDashboard(
+                            DashboardSnapshot(
+                                totalEntries = s.totalEntries,
+                                categoryCounts = s.categoryCounts,
+                                overview = s.overview,
+                                health = s.health
+                            )
                         )
-                    )
+                    }
                 }
             }
         } catch (e: CancellationException) {
@@ -306,7 +321,28 @@ class DashboardViewModel : ViewModel() {
     private suspend fun loadHealth(): Boolean {
         try {
             val health = ApiClient.brainApi().health()
-            _uiState.update { it.copy(health = health) }
+            // Gehirn (Qdrant-Collection) laedt nach einem Server-Neustart evtl. noch: ready==false
+            // heisst, die niedrigen/0-Zahlen der Uebersicht (totalEntries/Vitals aus category-counts)
+            // sind NICHT endgueltig -> gleichen Lade-Hinweis wie im Browse-Pfad setzen (statt still
+            // eine 0 als final zu zeigen; genau das Symptom, das Loop 1 beheben wollte). Wird das
+            // Gehirn wieder ready, raeumt dieser Kanal seinen EIGENEN Hinweis wieder weg.
+            _uiState.update {
+                it.copy(
+                    health = health,
+                    error = when {
+                        // Lade-Hinweis nur setzen, wenn KEIN fremder Aktions-/Such-/Browse-Fehler
+                        // ansteht (Pro-Kanal-Prinzip, Companion oben): ein Routine-Poll darf
+                        // "Löschen fehlgeschlagen" o.ae. nicht wegwischen. Frei = null oder bereits
+                        // refresh-eigen (Notice/REFRESH_ERROR) — nur das darf der Notice ersetzen.
+                        health.ready == false ->
+                            if (it.error == null || it.error == BRAIN_LOADING_NOTICE || it.error == REFRESH_ERROR)
+                                BRAIN_LOADING_NOTICE
+                            else it.error
+                        // Gehirn wieder ready: NUR den eigenen Hinweis wegraeumen (fremde Fehler bleiben).
+                        else -> it.error.takeUnless { msg -> msg == BRAIN_LOADING_NOTICE }
+                    }
+                )
+            }
             return true
         } catch (e: CancellationException) {
             throw e
@@ -478,7 +514,8 @@ class DashboardViewModel : ViewModel() {
                 // zeigte die App sonst faelschlich "Nichts gefunden.", als waere die Kategorie leer.
                 val exactDeferred = async {
                     try {
-                        ApiClient.brainApi().byCategory(category).items
+                        // Ganze Antwort (nicht nur .items): ready signalisiert, ob das Gehirn noch laedt.
+                        ApiClient.brainApi().byCategory(category)
                     } catch (e: CancellationException) {
                         throw e
                     } catch (e: Exception) {
@@ -496,8 +533,18 @@ class DashboardViewModel : ViewModel() {
                         null
                     }
                 }
-                val exactItems = exactDeferred.await()
+                val exactResp = exactDeferred.await()
                 val childItems = childDeferred.await()
+                val exactItems = exactResp?.items
+                // Gehirn (Qdrant-Collection) laedt nach einem Server-Neustart evtl. noch: ready==false
+                // heisst, die (leere/unvollstaendige) Trefferliste ist NICHT endgueltig -> Hinweis
+                // zeigen statt "Nichts gefunden.", damit Frank gleich erneut oeffnet.
+                if (exactResp?.ready == false) {
+                    if (_uiState.value.selectedCategory == category) {
+                        _uiState.update { it.copy(error = BRAIN_LOADING_NOTICE, browseResults = emptyList()) }
+                    }
+                    return@launch
+                }
                 if (exactItems == null && childItems == null) {
                     if (_uiState.value.selectedCategory == category) {
                         // Auch die Liste leeren: sonst standen die Eintraege der VORHERIGEN

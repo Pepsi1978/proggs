@@ -432,10 +432,13 @@ class ChatViewModel : ViewModel() {
                     _uiState.update { it.copy(error = "VPN nicht aktiv — Kategorie konnte nicht angelegt werden") }
                     return@launch
                 }
-                ApiClient.agentApi().createCategory(CreateCategoryRequest(name))
+                val response = ApiClient.agentApi().createCategory(CreateCategoryRequest(name))
+                // Kanonischen key aus der Antwort uebernehmen (Server normalisiert evtl.), damit der
+                // ausgewaehlte Kategorie-String exakt dem entspricht, den by-category filtert.
+                val key = response.key?.takeIf { it.isNotBlank() } ?: name
                 loadCategories()
-                _uiState.update { it.copy(selectedCategory = name) }
-                CortexLog.info("ChatVM", "createCategory", "Kategorie erstellt: $name")
+                _uiState.update { it.copy(selectedCategory = key) }
+                CortexLog.info("ChatVM", "createCategory", "Kategorie erstellt: $key")
             } catch (e: CancellationException) {
                 throw e
             } catch (e: Exception) {
@@ -445,14 +448,28 @@ class ChatViewModel : ViewModel() {
         }
     }
 
-    fun sendMessage(text: String) {
-        if (text.isBlank()) return
-        if (text.length > 500000) {
-            _uiState.update { it.copy(error = "Text zu lang (max. 500.000 Zeichen)") }
-            return
+    /** @return true, wenn die Nachricht angenommen wurde (Eingabefeld darf geleert werden);
+     *  false bei Ablehnung (Entwurf im Eingabefeld behalten). */
+    fun sendMessage(text: String): Boolean {
+        if (text.isBlank()) return true
+        // Server-Sicherheitsdeckel statt hartkodierter 500k (Fallback 500_000, wenn /config-Cache leer).
+        val maxChars = ApiClient.cachedAgentConfig()?.limits?.agent?.chat_text_max_chars ?: 500_000
+        if (text.length > maxChars) {
+            _uiState.update { it.copy(error = "Text zu lang (max. ${String.format(java.util.Locale.GERMANY, "%,d", maxChars)} Zeichen)") }
+            return false
         }
 
         val state = _uiState.value
+        // Offline UND Nicht-Outbox-Modus (z.B. Suche/Auto/Smalltalk): der Auftrag kann weder gesendet
+        // noch — wie Speicher-/Regel-Auftraege — gemerkt werden. Daher NICHT als gesendete Nachricht
+        // darstellen/persistieren und den Entwurf im Eingabefeld behalten (analog zur Laengen-Ablehnung).
+        val offlineNonOutbox = WireGuardManager.state.value != TunnelState.CONNECTED &&
+            state.contextMode !in setOf(SettingsStore.CONTEXT_MODE_SAVE, SettingsStore.CONTEXT_MODE_RULE)
+        if (offlineNonOutbox) {
+            _uiState.update { it.copy(error = "VPN nicht aktiv") }
+            return false
+        }
+
         val sessionId = state.sessionId
         val isFirstMessage = state.messages.isEmpty()
 
@@ -522,6 +539,11 @@ class ChatViewModel : ViewModel() {
                             // (Modus-Reset passierte bereits VOR dem Einreihen, siehe oben.)
                             updateSessionsAfterPersist(sessionId, notice)
                         } else {
+                            // Einreihen fehlgeschlagen: den zuvor (fuer die frische Revision) zurueck-
+                            // gesetzten One-Shot-Modus wiederherstellen, damit Franks Speicher-/Regel-
+                            // Wahl nicht still verloren geht und der naechste Versuch wieder im richtigen
+                            // Modus laeuft (die Reset-vor-Einreihen-Reihenfolge bleibt bewusst erhalten).
+                            updateContextMode(state.contextMode)
                             _uiState.update { it.copy(isLoading = false, error = "VPN nicht aktiv — merken fehlgeschlagen") }
                         }
                     } else {
@@ -774,6 +796,7 @@ class ChatViewModel : ViewModel() {
                 }
             }
         }
+        return true
     }
 
     // Schutz gegen parallele Flush-Laeufe (mehrere CONNECTED-Events kurz nacheinander).

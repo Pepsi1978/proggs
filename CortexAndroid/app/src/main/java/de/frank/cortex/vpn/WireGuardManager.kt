@@ -157,8 +157,22 @@ object WireGuardManager {
                 abortConnect = false
                 _state.value = TunnelState.CONNECTING
                 CortexLog.info("WireGuard", "connect", "Neuer Verbinden-Wunsch uebernimmt den noch laufenden Versuch")
+                return@withContext false
             }
-            return@withContext false
+            // Der laufende Versuch koennte GENAU JETZT final fehlschlagen und den Flag im finally
+            // wieder freigeben — dann darf dieser Tipp den Aufbau doch noch uebernehmen, statt lautlos
+            // zu verpuffen (der In-Flight-Versuch wuerde sonst gleich mit ERROR ueberschreiben). Kurze
+            // CAS-Retry-Schleife, solange der Zustand bereits ERROR/DISCONNECTED ist.
+            var acquired = false
+            var attempts = 0
+            while (attempts < 10) {
+                val st = _state.value
+                if (st != TunnelState.ERROR && st != TunnelState.DISCONNECTED) break
+                if (connectInFlight.compareAndSet(false, true)) { acquired = true; break }
+                delay(25)
+                attempts++
+            }
+            if (!acquired) return@withContext false
         }
 
         try {

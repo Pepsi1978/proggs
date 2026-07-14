@@ -449,24 +449,11 @@ object SettingsStore {
         get() = plain.getBoolean("biometric_lock_enabled", false)
         set(value) = plain.edit().putBoolean("biometric_lock_enabled", value).apply()
 
-    var codexLocalEnabled: Boolean
-        get() = plain.getBoolean("codex_local_enabled", false)
-        set(value) = plain.edit().putBoolean("codex_local_enabled", value).apply()
-
-    var codexModel: String
-        get() = plain.getString("codex_model", "gpt-5.5") ?: "gpt-5.5"
-        set(value) = plain.edit().putString("codex_model", value).apply()
-
-    var codexReasoning: String
-        get() = plain.getString("codex_reasoning", "medium") ?: "medium"
-        set(value) = plain.edit().putString("codex_reasoning", value).apply()
-
     val codexConnected: Boolean
         get() = codexAccessToken.isNotBlank()
 
     fun clearCodexAuth() {
         removeSecrets("codex_access_token", "codex_refresh_token")
-        codexLocalEnabled = false
     }
 
     fun contextPrompt(mode: String): String = plain.getString("context_prompt_$mode", null)
