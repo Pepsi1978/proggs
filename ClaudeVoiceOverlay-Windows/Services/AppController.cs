@@ -42,58 +42,93 @@ namespace ClaudeVoiceOverlay.Services
         private const ushort VK_BACKSPACE = 0x08;
         private const ushort VK_RETURN    = 0x0D;
 
+        private static readonly object InputSequenceGate = new();
+
         // ── Oeffentliche API: Async-Wrapper (haelt Win32-Sleeps vom UI-Thread) ──
 
         public static Task<bool> PasteTextAsync(string text, IntPtr appHwnd, bool autoEnter = false)
             => Task.Run(() => PasteText(text, appHwnd, autoEnter));
 
-        public static Task ClearLineAsync(IntPtr appHwnd)     => Task.Run(() => ClearLine(appHwnd));
-        public static Task ClearAllInputAsync(IntPtr appHwnd) => Task.Run(() => ClearAllInput(appHwnd));
-        public static Task CopySelectionAsync(IntPtr appHwnd) => Task.Run(() => CopySelection(appHwnd));
-        public static Task PasteClipboardAsync(IntPtr appHwnd)=> Task.Run(() => PasteClipboard(appHwnd));
-        public static Task PressReturnAsync(IntPtr appHwnd)   => Task.Run(() => PressReturn(appHwnd));
+        public static Task<bool> ClearLineAsync(IntPtr appHwnd)     => Task.Run(() => ClearLine(appHwnd));
+        public static Task<bool> ClearAllInputAsync(IntPtr appHwnd) => Task.Run(() => ClearAllInput(appHwnd));
+        public static Task<bool> CopySelectionAsync(IntPtr appHwnd) => Task.Run(() => CopySelection(appHwnd));
+        public static Task<bool> PasteClipboardAsync(IntPtr appHwnd, bool autoEnter = false)
+            => Task.Run(() => PasteClipboard(appHwnd, autoEnter));
+        public static Task<bool> PressReturnAsync(IntPtr appHwnd)   => Task.Run(() => PressReturn(appHwnd));
 
         // ── Oeffentliche API: synchrone Einstiegspunkte (laufen auf STA-Worker) ──
 
         public static bool PasteText(string text, IntPtr appHwnd, bool autoEnter = false)
-            => RunOnStaThread(() => PasteTextCore(text, appHwnd, autoEnter));
+        {
+            lock (InputSequenceGate)
+                return RunOnStaThread(() => PasteTextCore(text, appHwnd, autoEnter));
+        }
 
         // Bei Electron-Feldern leeren ClearLine und ClearAllInput identisch das
         // gesamte contenteditable (Strg+A + Backspace) — es gibt keine Terminal-
         // "Zeile". API getrennt fuer OverlayWindow-Kompatibilitaet.
-        public static void ClearLine(IntPtr appHwnd)     => RunOnStaThread(() => ClearInputCore(appHwnd));
-        public static void ClearAllInput(IntPtr appHwnd) => RunOnStaThread(() => ClearInputCore(appHwnd));
+        public static bool ClearLine(IntPtr appHwnd)
+        {
+            lock (InputSequenceGate)
+                return RunOnStaThread(() => ClearInputCore(appHwnd));
+        }
 
-        public static void CopySelection(IntPtr appHwnd)
-            => RunOnStaThread(() => { ActivateTarget(appHwnd); Thread.Sleep(40); SendComboScancode(Win32.VK_CONTROL, VK_C); });
+        public static bool ClearAllInput(IntPtr appHwnd)
+        {
+            lock (InputSequenceGate)
+                return RunOnStaThread(() => ClearInputCore(appHwnd));
+        }
 
-        public static void PasteClipboard(IntPtr appHwnd)
-            => RunOnStaThread(() => { FocusTarget(appHwnd); ReleaseHeldModifiers(); SendCtrlVScancode(); });
+        public static bool CopySelection(IntPtr appHwnd)
+        {
+            lock (InputSequenceGate)
+                return RunOnStaThread(() =>
+                {
+                    if (!ActivateTarget(appHwnd)) return false;
+                    Thread.Sleep(40);
+                    return SendComboScancode(Win32.VK_CONTROL, VK_C);
+                });
+        }
 
-        public static void PressReturn(IntPtr appHwnd)
-            => RunOnStaThread(() => { FocusTarget(appHwnd); Thread.Sleep(40); SendKeyScancode(VK_RETURN); });
+        public static bool PasteClipboard(IntPtr appHwnd, bool autoEnter = false)
+        {
+            lock (InputSequenceGate)
+                return RunOnStaThread(() => PasteClipboardCore(appHwnd, autoEnter));
+        }
 
-        public static void SendReturn() => RunOnStaThread(() => SendKeyScancode(VK_RETURN));
+        public static bool PressReturn(IntPtr appHwnd)
+        {
+            lock (InputSequenceGate)
+                return RunOnStaThread(() =>
+                {
+                    if (!FocusTarget(appHwnd)) return false;
+                    Thread.Sleep(40);
+                    return SendKeyScancode(VK_RETURN);
+                });
+        }
+
+        public static bool SendReturn()
+        {
+            lock (InputSequenceGate)
+                return RunOnStaThread(() => SendKeyScancode(VK_RETURN));
+        }
 
         // ── Kern-Abläufe ────────────────────────────────────────────────────
 
-        private static long _clipboardGen;
-
         private static bool PasteTextCore(string text, IntPtr appHwnd, bool autoEnter)
         {
-            long myGen = Interlocked.Increment(ref _clipboardGen);
             DiagLog.Write("Paste", "PasteText START",
                 ("hwnd", "0x" + appHwnd.ToInt64().ToString("X")),
                 ("len", text.Length), ("autoEnter", autoEnter));
 
             // 1. Zwischenablage setzen (STA-Thread → direkter Clipboard-Zugriff) + verifizieren
-            string? previous = null;
-            if (!SetClipboardText(text, out previous))
+            if (!SetClipboardText(text, out IDataObject? previous, out uint ownedClipboardSequence))
             {
                 DiagLog.Write("Paste", "ABBRUCH: Clipboard.SetText fehlgeschlagen");
                 return false;
             }
 
+            bool pasteSent = false;
             try
             {
                 // 2. Ziel aktivieren + Eingabefeld per UIA finden/fokussieren (positions-unabhaengig)
@@ -113,6 +148,7 @@ namespace ClaudeVoiceOverlay.Services
                 bool pasted = SendCtrlVScancode();
                 DiagLog.Write("Paste", "Strg+V gesendet", ("sent", pasted), ("autoEnter", autoEnter));
                 if (!pasted) return false;
+                pasteSent = true;
 
             // 5. Optionales Enter (separat, nach kurzer Verzoegerung)
                 if (autoEnter)
@@ -125,30 +161,31 @@ namespace ClaudeVoiceOverlay.Services
             }
             finally
             {
-                // 6. Vorherigen Clipboard-Inhalt auch bei Fokus-/Sendefehlern wiederherstellen.
-                if (previous != null)
-                {
-                    var prev = previous;
-                    Task.Delay(600).ContinueWith(_ =>
-                    {
-                        if (Interlocked.Read(ref _clipboardGen) != myGen) return;
-                        RunOnStaThread(() =>
-                        {
-                            try { Clipboard.SetText(prev); }
-                            catch (Exception ex) { DiagLog.Write("Paste", "Clipboard-Restore fehlgeschlagen", ("err", ex.Message)); }
-                        });
-                    });
-                }
+                // Chromium muss den Clipboard-Inhalt vor der Wiederherstellung konsumieren.
+                if (pasteSent) Thread.Sleep(600);
+                RestoreClipboard(previous, ownedClipboardSequence);
             }
         }
 
-        private static void ClearInputCore(IntPtr appHwnd)
+        private static bool PasteClipboardCore(IntPtr appHwnd, bool autoEnter)
         {
-            FocusTarget(appHwnd);
+            if (!FocusTarget(appHwnd)) return false;
             ReleaseHeldModifiers();
-            SendComboScancode(Win32.VK_CONTROL, VK_A); // alles markieren
+            if (!SendCtrlVScancode()) return false;
+
+            if (!autoEnter) return true;
+
+            Thread.Sleep(300);
+            return FocusTarget(appHwnd) && SendKeyScancode(VK_RETURN);
+        }
+
+        private static bool ClearInputCore(IntPtr appHwnd)
+        {
+            if (!FocusTarget(appHwnd)) return false;
+            ReleaseHeldModifiers();
+            if (!SendComboScancode(Win32.VK_CONTROL, VK_A)) return false; // alles markieren
             Thread.Sleep(40);
-            SendKeyScancode(VK_BACKSPACE);             // loeschen
+            return SendKeyScancode(VK_BACKSPACE);      // loeschen
         }
 
         // ── Ziel aktivieren + Eingabefeld fokussieren ───────────────────────
@@ -539,17 +576,18 @@ namespace ClaudeVoiceOverlay.Services
 
         // ── Zwischenablage (auf STA-Thread, mit Retry gegen CLIPBRD_E_CANT_OPEN) ──
 
-        private static bool SetClipboardText(string text, out string? previous)
+        private static bool SetClipboardText(string text, out IDataObject? previous, out uint ownedSequence)
         {
             previous = null;
+            ownedSequence = 0;
             for (int attempt = 1; attempt <= 6; attempt++)
             {
                 try
                 {
-                    if (Clipboard.ContainsText())
-                        previous = Clipboard.GetText();
+                    previous = Clipboard.GetDataObject();
                     // copy:true → OLE-Flush, Inhalt bleibt nach Tool-Ende erhalten
                     Clipboard.SetDataObject(text, true);
+                    ownedSequence = Win32.GetClipboardSequenceNumber();
                     return true;
                 }
                 catch (Exception ex) when (attempt < 6)
@@ -564,6 +602,37 @@ namespace ClaudeVoiceOverlay.Services
                 }
             }
             return false;
+        }
+
+        private static void RestoreClipboard(IDataObject? previous, uint ownedSequence)
+        {
+            for (int attempt = 1; attempt <= 6; attempt++)
+            {
+                try
+                {
+                    if (Win32.GetClipboardSequenceNumber() != ownedSequence)
+                    {
+                        DiagLog.Write("Paste", "Clipboard-Restore uebersprungen: extern geaendert");
+                        return;
+                    }
+
+                    if (previous == null)
+                        Clipboard.Clear();
+                    else
+                        Clipboard.SetDataObject(previous, true);
+                    return;
+                }
+                catch (Exception ex) when (attempt < 6)
+                {
+                    Thread.Sleep(40 * attempt);
+                    Console.WriteLine($"[AppController] Clipboard-Restore busy ({attempt}/6): {ex.GetType().Name}");
+                }
+                catch (Exception ex)
+                {
+                    DiagLog.Write("Paste", "Clipboard-Restore fehlgeschlagen", ("err", ex.Message));
+                    return;
+                }
+            }
         }
 
         // ── Helfer ──────────────────────────────────────────────────────────
@@ -582,22 +651,6 @@ namespace ClaudeVoiceOverlay.Services
         /// Thread (Deadlock-Schutz). Aufrufer (Task.Run oder UI) blockiert nur per
         /// Join — kein Message-Pump-Deadlock.
         /// </summary>
-        private static void RunOnStaThread(Action action)
-        {
-            Exception? captured = null;
-            var t = new Thread(() =>
-            {
-                try { action(); }
-                catch (Exception ex) { captured = ex; }
-            });
-            t.IsBackground = true;
-            t.SetApartmentState(ApartmentState.STA);
-            t.Start();
-            t.Join();
-            if (captured != null)
-                Console.WriteLine($"[AppController] STA-Thread-Fehler: {captured.GetType().Name}: {captured.Message}");
-        }
-
         private static T RunOnStaThread<T>(Func<T> action)
         {
             Exception? captured = null;

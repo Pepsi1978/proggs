@@ -2767,9 +2767,9 @@ namespace ClaudeVoiceOverlay.Views
                 // Async-Pfad: ClearLine + PasteText laufen auf Background-Thread,
                 // UI bleibt reaktiv waehrend der Win32-Sleeps. Reentrancy-Guard
                 // _whisperUndoBusy verhindert Doppel-Klick.
-                await AppController.ClearLineAsync(_appWatcher.ActiveAppHwnd);
+                if (!await AppController.ClearLineAsync(_appWatcher.ActiveAppHwnd)) return;
                 await Task.Delay(100);
-                await AppController.PasteTextAsync(textToPaste, _appWatcher.ActiveAppHwnd);
+                if (!await AppController.PasteTextAsync(textToPaste, _appWatcher.ActiveAppHwnd)) return;
                 hasPastedText = true;
                 Console.WriteLine($"Whisper raw text inserted: {SafeLogPreview(textToPaste)}");
             }
@@ -3233,7 +3233,7 @@ namespace ClaudeVoiceOverlay.Views
                 try
                 {
                     if (Interlocked.Read(ref _reCorrectGeneration) != generation) return;
-                    await AppController.ClearAllInputAsync(targetHwnd);
+                    if (!await AppController.ClearAllInputAsync(targetHwnd)) return;
                     await Task.Delay(120);
                     if (!await AppController.PasteTextAsync(corrected, targetHwnd, autoEnterEnabled)) return;
                 }
@@ -3677,7 +3677,11 @@ namespace ClaudeVoiceOverlay.Views
                 // Async-Variante: blockiert UI nicht waehrend Win32-Foreground-
                 // Sleeps. Alle Folgeschritte (Console-Log) sind nach await
                 // garantiert sequentiell.
-                await AppController.PasteTextAsync(text, _appWatcher.ActiveAppHwnd, autoEnterEnabled);
+                if (!await AppController.PasteTextAsync(text, _appWatcher.ActiveAppHwnd, autoEnterEnabled))
+                {
+                    Console.WriteLine("Panel insert failed: target focus or input injection failed.");
+                    return;
+                }
                 Console.WriteLine($"Panel prompt inserted: {text.Length} chars.");
             }
             catch (Exception ex)
@@ -4168,7 +4172,7 @@ namespace ClaudeVoiceOverlay.Views
 
             // Async: BringToForeground macht Thread.Sleep(200) — UI war
             // sonst pro Klick 200 ms eingefroren.
-            await AppController.CopySelectionAsync(hwnd);
+            bool copied = await AppController.CopySelectionAsync(hwnd);
 
             _ = Task.Run(async () =>
             {
@@ -4176,7 +4180,9 @@ namespace ClaudeVoiceOverlay.Views
                 Dispatcher.Invoke(() => CopyButton.Background = BtnCopy);
             });
 
-            Console.WriteLine("Copy: Ctrl+C sent to terminal");
+            Console.WriteLine(copied
+                ? "Copy: Ctrl+C sent to target app"
+                : "Copy skipped: target focus failed");
         }
 
         /// <summary>P button — paste clipboard content into command line via Ctrl+V.
@@ -4189,23 +4195,17 @@ namespace ClaudeVoiceOverlay.Views
             PasteButton.Background = BtnIdle;
 
             // Async-Variante: gleicher 200-ms-Block wie CopySelection.
-            await AppController.PasteClipboardAsync(hwnd);
-            hasPastedText = true;
-
-            if (autoEnterEnabled)
+            bool pasted = await AppController.PasteClipboardAsync(hwnd, autoEnterEnabled);
+            if (pasted)
             {
-                // Small delay then send Enter
-                _ = Task.Run(() =>
-                {
-                    System.Threading.Thread.Sleep(300);
-                    AppController.PressReturn(hwnd);
-                });
-                hasPastedText = false;
-                Console.WriteLine("Paste+Enter: Ctrl+V → Return sent to terminal");
+                hasPastedText = !autoEnterEnabled;
+                Console.WriteLine(autoEnterEnabled
+                    ? "Paste+Enter: Ctrl+V → Return sent to target app"
+                    : "Paste: Ctrl+V sent to target app");
             }
             else
             {
-                Console.WriteLine("Paste: Ctrl+V sent to terminal");
+                Console.WriteLine("Paste sequence failed: target focus or input injection failed");
             }
 
             _ = Task.Run(async () =>
@@ -4408,7 +4408,12 @@ namespace ClaudeVoiceOverlay.Views
             var hwnd = _appWatcher.ActiveAppHwnd;
             // Async-Variante: blockiert UI nicht waehrend Win32-Foreground-
             // Sleeps. Folgender Erfolgs-Flash und Logging laufen nach await.
-            await AppController.PasteTextAsync(toPaste, hwnd, autoEnter: false);
+            if (!await AppController.PasteTextAsync(toPaste, hwnd, autoEnter: false))
+            {
+                LogScreenshot($"InsertScreenshot: PasteText FAILED for '{toPaste}'");
+                InsertScreenshotButton.Background = BtnX;
+                return;
+            }
 
             LogScreenshot($"InsertScreenshot: PasteText OK for '{toPaste}'");
 

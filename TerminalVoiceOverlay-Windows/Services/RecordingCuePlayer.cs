@@ -20,7 +20,16 @@ namespace TerminalVoiceOverlay.Services
         public RecordingCuePlayer()
         {
             lock (_lock)
-                InitializeOutput();
+            {
+                try
+                {
+                    InitializeOutput();
+                }
+                catch (Exception ex)
+                {
+                    DiagLog.Write("AudioCue", "output_init_failed", ("err", ex.Message), ("type", ex.GetType().Name));
+                }
+            }
         }
 
         public void PlayStart() => Play(_startPcm, "start");

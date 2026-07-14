@@ -9,8 +9,10 @@ using System.Threading.Tasks;
 using Google.Apis.Auth.OAuth2;
 using Google.Apis.Auth.OAuth2.Flows;
 using Google.Apis.Auth.OAuth2.Responses;
+using Google.Apis.Download;
 using Google.Apis.Drive.v3;
 using Google.Apis.Services;
+using Google.Apis.Upload;
 using Google.Apis.Util.Store;
 using Microsoft.Extensions.Logging;
 using PromptBoard.Core.Models;
@@ -111,14 +113,14 @@ public sealed class GoogleDriveBackupService : IGoogleDriveBackupService
             };
             var create = drive.Files.Create(metadata, content, "application/json");
             create.Fields = "id";
-            await create.UploadAsync(ct);
+            EnsureUploadCompleted(await create.UploadAsync(ct));
         }
         else
         {
             var keepId = existingIds[0];
             var update = drive.Files.Update(new DriveFile(), keepId, content, "application/json");
             update.Fields = "id";
-            await update.UploadAsync(ct);
+            EnsureUploadCompleted(await update.UploadAsync(ct));
 
             // Fire-and-forget cleanup of duplicates. Errors are logged but
             // don't fail the upload — losing a stale duplicate is not fatal.
@@ -145,13 +147,27 @@ public sealed class GoogleDriveBackupService : IGoogleDriveBackupService
         if (ids.Count == 0) return null;
 
         using var buffer = new MemoryStream();
-        await drive.Files.Get(ids[0]).DownloadAsync(buffer, ct);
+        EnsureDownloadCompleted(await drive.Files.Get(ids[0]).DownloadAsync(buffer, ct));
         return Encoding.UTF8.GetString(buffer.ToArray());
     }
 
     public Task<string?> GetAccountEmailAsync(CancellationToken ct = default)
     {
         return Task.FromResult(_secrets.Load().GoogleAccountEmail);
+    }
+
+    private static void EnsureUploadCompleted(IUploadProgress progress)
+    {
+        progress.ThrowOnFailure();
+        if (progress.Status != UploadStatus.Completed)
+            throw new IOException($"Google Drive upload did not complete: {progress.Status}");
+    }
+
+    private static void EnsureDownloadCompleted(IDownloadProgress progress)
+    {
+        progress.ThrowOnFailure();
+        if (progress.Status != DownloadStatus.Completed)
+            throw new IOException($"Google Drive download did not complete: {progress.Status}");
     }
 
     // ── internals ─────────────────────────────────
