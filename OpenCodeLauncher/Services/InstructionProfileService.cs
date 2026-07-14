@@ -84,17 +84,14 @@ public sealed class InstructionProfileService
 
         if (string.Equals(profileId, "minimal", StringComparison.Ordinal))
         {
-            // Minimal laedt AUSSCHLIESSLICH die eine Minimal-Datei. Kein zweites Dokument, keine
-            // weiteren Regeln. Die zwangsweise von OpenCode gelesenen AGENTS.md (Projekt + global)
-            // werden beim Start ueber das Launch-Script fuer die Sessiondauer ausgeblendet.
+            // Minimal laedt AUSSCHLIESSLICH die eine Minimal-Datei -- und zwar ueber die Projekt-
+            // AGENTS.md, deren Inhalt ActivateProjectAgents() zuvor auf minimal.md gesetzt hat.
+            // Deshalb braucht die Session-Config KEINE instructions (sonst doppelt). Sie existiert
+            // nur, weil OPENCODE_CONFIG auf eine gueltige Datei zeigen muss.
             var minimalSource = EnsureOpenCodeMinimalSource();
-            var minimalSnapshot = Path.Combine(sessionRoot, "minimal.md");
-            WriteText(minimalSnapshot, ReadText(minimalSource));
-
             var minimalConfig = new Dictionary<string, object>
             {
-                ["$schema"] = "https://opencode.ai/config.json",
-                ["instructions"] = new[] { minimalSnapshot }
+                ["$schema"] = "https://opencode.ai/config.json"
             };
             WriteText(configPath, JsonSerializer.Serialize(minimalConfig, jsonOptions));
             DeleteOldSessions(Path.GetDirectoryName(sessionRoot)!);
@@ -103,7 +100,7 @@ public sealed class InstructionProfileService
                 profileId,
                 minimalSource,
                 string.Empty,
-                minimalSnapshot,
+                Path.Combine(workDir, "AGENTS.md"),
                 string.Empty,
                 configPath);
         }
@@ -138,13 +135,15 @@ public sealed class InstructionProfileService
 
         var standard = GetOpenCodeProfilePaths("standard", workDir);
         var activeGlobal = GetOpenCodeGlobalAgentsPath();
-        var activeProject = Path.Combine(workDir, "AGENTS.md");
         var standardGlobal = AddProfileHeading(ReadSeedText(activeGlobal, "standard", "global.md"), "Standard")
             .Replace(
                 "> Wird bei jedem OpenCode-Start aus `~/.config/opencode/AGENTS.md` geladen. Diese kompakte Datei\n> enthält die immer geltenden Kernregeln; die ausführlichen Arbeitsregeln liegen im zweiten Gehirn.",
                 "> Wird vom OpenCode Launcher als unveränderlicher Sitzungssnapshot geladen. Die ausführlichen Arbeitsregeln liegen im zweiten Gehirn.",
                 StringComparison.Ordinal);
-        var standardProject = AddProfileHeading(ReadProjectSeedText(activeProject, workDir), "Standard");
+        // Seed aus der stabilen Basis-Vorlage lesen, NICHT aus der live AGENTS.md: deren Inhalt
+        // setzt ActivateProjectAgents() je Profil (bei Minimal = minimal.md) und waere kein
+        // verlaesslicher Standard-Seed mehr.
+        var standardProject = AddProfileHeading(ReadProjectSeedText(ResolveProjectAgentsBaseTemplatePath(), workDir), "Standard");
 
         CreateIfMissing(standard.GlobalPath, standardGlobal);
         CreateIfMissing(standard.ProjectPath, standardProject);
@@ -161,8 +160,10 @@ public sealed class InstructionProfileService
             .Replace("# OpenCode-Profil: Standard", "# OpenCode-Profil: Strikt", StringComparison.Ordinal)
             .TrimEnd() + "\n\n## Strikte Projektprüfung\n\n- Prüfe bei Änderungen die direkt betroffenen Aufrufer und Regressionen.\n- Schließe die Aufgabe erst nach nachvollziehbarer Verifikation ab.\n");
 
-        WriteIfChanged(activeGlobal,
-            "# OpenCode Launcher\n\nDie ausführlichen globalen Regeln werden vom OpenCode Launcher als ausgewähltes Profil sitzungsbezogen geladen.\n");
+        // Globale AGENTS.md bewusst LEER halten: der Profil-Kontext kommt ausschliesslich ueber die
+        // Projekt-AGENTS.md (ActivateProjectAgents) bzw. die Standard-Snapshots. So laedt OpenCode
+        // (und ein evtl. `instructions`-Verweis in der globalen opencode.jsonc) hier nichts hinzu.
+        WriteIfChanged(activeGlobal, string.Empty);
     }
 
     private static InstructionProfileDocuments LoadClaudeStandard(string workDir)
@@ -208,6 +209,41 @@ public sealed class InstructionProfileService
         CreateIfMissing(path,
             "# OpenCode-Profil: Minimal\n\nArbeite selbstständig am konkreten Benutzerauftrag. Prüfe Dateien und Projektzustand mit Werkzeugen, statt zu raten. Beschränke Änderungen auf den Auftrag und erhalte bestehende Funktionalität.\n");
         return path;
+    }
+
+    /// <summary>
+    /// Versionierte Basis-Vorlage fuer die Projekt-AGENTS.md (Repo-Kopie der urspruenglichen
+    /// ~/proggs/AGENTS.md). Wird bei Nicht-Minimal-Profilen in die aktive AGENTS.md geschrieben.
+    /// </summary>
+    public static string ResolveProjectAgentsBaseTemplatePath()
+    {
+        var home = Environment.GetFolderPath(Environment.SpecialFolder.UserProfile);
+        return Path.Combine(home, "proggs", "OpenCodeLauncher", "Profiles", "OpenCode", "standard", "agents-base.md");
+    }
+
+    /// <summary>
+    /// Setzt den Inhalt der Projekt-AGENTS.md (im Arbeitsverzeichnis) passend zum gewaehlten Profil,
+    /// BEVOR OpenCode gestartet wird. OpenCode liest die AGENTS.md im Arbeitsverzeichnis immer ein
+    /// (kein Abschalt-Flag); statt sie zu verstecken, kontrollieren wir ihren Inhalt:
+    /// Minimal -> exakt die minimal.md; Standard/Strikt -> die Basis-Vorlage. Deterministisch bei
+    /// jedem Start, ohne Umbenennen/Restore -- die Datei existiert immer mit gueltigem Inhalt.
+    /// </summary>
+    public void ActivateProjectAgents(string profileId, string workDir)
+    {
+        if (!Directory.Exists(workDir))
+            throw new DirectoryNotFoundException($"Arbeitsverzeichnis nicht gefunden: {workDir}");
+
+        var target = Path.Combine(workDir, "AGENTS.md");
+        if (string.Equals(profileId, "minimal", StringComparison.Ordinal))
+        {
+            WriteText(target, ReadText(EnsureOpenCodeMinimalSource()));
+            return;
+        }
+
+        // Nicht-Minimal: Basis-Vorlage zuruecklegen. Fehlt/leer die Vorlage, bestehende Datei behalten.
+        var baseContent = ReadText(ResolveProjectAgentsBaseTemplatePath());
+        if (!string.IsNullOrWhiteSpace(baseContent))
+            WriteText(target, baseContent);
     }
 
     private static InstructionProfileDocuments LoadClaudeMinimal()

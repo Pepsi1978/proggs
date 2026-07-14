@@ -55,8 +55,8 @@ public sealed partial class MainViewModel : ObservableObject
         WorkDir = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), "proggs");
         _ = CheckOpenCodeUpdateAsync();
 
-        var version = Assembly.GetExecutingAssembly().GetName().Version?.ToString(3) ?? "1.17.13";
-        Version = $"Version {version} (14.07.2026, 21.26 Uhr)";
+        var version = Assembly.GetExecutingAssembly().GetName().Version?.ToString(3) ?? "1.17.14";
+        Version = $"Version {version} (14.07.2026, 21.39 Uhr)";
     }
 
     public ObservableCollection<ModelGroupEntry> ModelGroups { get; } = new();
@@ -444,6 +444,9 @@ public sealed partial class MainViewModel : ObservableObject
                 return;
             }
 
+            // Projekt-AGENTS.md passend zum Profil setzen (Minimal -> nur minimal.md), BEVOR die
+            // Session vorbereitet und OpenCode gestartet wird.
+            _profiles.ActivateProjectAgents(SelectedProfile.Id, WorkDir);
             var profileSession = _profiles.PrepareOpenCodeSession(SelectedProfile.Id, WorkDir);
             var modelString = _launcher.ConfigureProvider(SelectedModel, SelectedProvider, Providers, thinkingLevel);
             var minimalIsolation = string.Equals(SelectedProfile.Id, "minimal", StringComparison.Ordinal);

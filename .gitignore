@@ -54,3 +54,6 @@ cowork-robustness-test.txt
 # Nur noch lokaler Laufzeit-Rest einer evtl. laufenden Session; nie tracken. Kann geloescht
 # werden, sobald keine alte Minimal-Session mehr laeuft.
 /claude-profiles/
+
+# proggs/AGENTS.md wird vom OpenCode Launcher pro Profil erzeugt (Quelle: Profiles/OpenCode/standard/agents-base.md + minimal.md)
+/AGENTS.md
