@@ -30,6 +30,7 @@ from mcp.server.fastmcp import FastMCP
 VERSION = "1.4.0 (10.07.2026, 19:47 Uhr)"  # 1.4.0: Neues read-only Werkzeug get_entry_categories(doc_id) fuer den gezielten Kategorienabruf ohne Volltext. Alt: 1.3.3.
 VERSION = "1.4.1 (10.07.2026, 20:55 Uhr)"  # 1.4.1 HALF-OPEN-KEEP-ALIVE-FIX (Frank-Bug 2026-07-10, intermittierende MCP-Timeouts): uvicorn-Default timeout_keep_alive=5s schloss idle Verbindungen; die FIN-Pakete gingen ueber Docker-NAT+WireGuard teils verloren -> CLI-Clients (undici-Pool in Claude Code/mcp-remote) hielten HALF-OPEN-Sockets (bewiesen: 4x ESTABLISHED am PC vs. 0 am VPS) und liefen beim naechsten Aufruf in 'socket closed unexpectedly' bzw. -32001. Fix: uvicorn direkt mit timeout_keep_alive=MCP_KEEP_ALIVE_S (Default 620s > undici keepAliveMaxTimeout 600s) starten -> der Server schliesst idle Verbindungen NIE vor dem Client (Standard-Regel Server-KA > Client-KA); Fallback auf mcp.run() falls die SDK-App-API sich aendert. Alt: 1.4.0.
 VERSION = "1.4.2 (13.07.2026, 13:24 Uhr)"  # 1.4.2: remember blockiert die entfernte Kategorie bugfixes samt Unterpfaden deterministisch. Alt: 1.4.1.
+VERSION = "1.4.3 (14.07.2026, 13:08 Uhr)"  # 1.4.3 TRACEBACK-FIX: _log() versenkte exc_info im **ctx (ging nie an log.log) -> der 'trace'-Zweig im JsonFormatter blieb tot, Fehler-Logs (remember/recall/... except mit exc_info=True) hatten NIE einen Stacktrace. Jetzt exc_info=ctx.pop('exc_info', None) und an log.log durchgereicht. Alt: 1.4.2.
 
 # ---------------------------------------------------------------------------
 # Konfiguration (alles aus Umgebungsvariablen — Secrets nie im Code)
@@ -73,7 +74,10 @@ log.addHandler(_h)
 
 
 def _log(level: int, msg: str, **ctx: Any) -> None:
-    log.log(level, msg, extra={"ctx": ctx} if ctx else None)
+    # exc_info NICHT im ctx versenken: an log.log durchreichen, damit der JsonFormatter den
+    # Traceback ("trace") ausgibt (Aufrufer nutzen exc_info=True in den except-Zweigen).
+    exc_info = ctx.pop("exc_info", None)
+    log.log(level, msg, exc_info=exc_info, extra={"ctx": ctx} if ctx else None)
 
 
 def probe(condition: bool, msg: str, **ctx: Any) -> bool:

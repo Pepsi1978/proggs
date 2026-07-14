@@ -26,10 +26,17 @@ write_status() {  # state, detail
 TOKEN="$(cat "$TOKENFILE" 2>/dev/null)"
 rm -f "$TOKENFILE" 2>/dev/null || true     # Secret sofort entfernen (nur transient im Steuer-Ordner)
 
+# rclone authorize gibt das Token oft mit NOTICE-/Marker-Zeilen drumherum aus (z.B.
+# "Paste the following ... --->\n{...}\n<---End paste"). Nur das JSON-Objekt herausziehen und
+# auf EINE Zeile bringen — mehrzeilig waere die rclone.conf ungueltig (token = {...} muss einzeilig sein).
+TOKEN_JSON="$(printf '%s' "$TOKEN" | tr -d '\r\n' | grep -o '{.*}' | tail -1)"
+
 # Token plausibel? (rclone-authorize liefert JSON mit access_token + refresh_token)
-if ! printf '%s' "$TOKEN" | grep -q 'access_token'; then
-  write_status "fehler" "Token ungueltig — bitte die komplette Ausgabe von 'rclone authorize drive' einfuegen"
-  logj "Token ungueltig"; exit 0
+# Bei Nicht-Fund: bestehende rclone.conf NICHT anfassen (eine Fehleingabe darf die
+# funktionierende Verbindung nicht zerstoeren) -> nur Status/Log, dann sauberer Abbruch.
+if [ -z "$TOKEN_JSON" ] || ! printf '%s' "$TOKEN_JSON" | grep -q 'access_token'; then
+  write_status "fehler" "Token ungueltig — bitte die komplette Ausgabe von 'rclone authorize drive' (inkl. der {...}-Zeile) einfuegen"
+  logj "Token ungueltig/kein JSON-Objekt gefunden — bestehende rclone.conf unangetastet"; exit 0
 fi
 
 # rclone.conf direkt schreiben (deterministisch). Built-in Client-ID reicht fuer privaten Gebrauch.
@@ -38,7 +45,7 @@ umask 077
   printf '[%s]\n' "$REMOTE_NAME"
   printf 'type = drive\n'
   printf 'scope = drive\n'
-  printf 'token = %s\n' "$TOKEN"
+  printf 'token = %s\n' "$TOKEN_JSON"
 } > "$RCLONE_CONF"
 chmod 600 "$RCLONE_CONF" 2>/dev/null || true
 

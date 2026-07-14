@@ -29,8 +29,24 @@ EXCLUDES=(--exclude ".gdrive-backup-status.json" --exclude ".backup-trigger" --e
 
 mkdir -p "$(dirname "$LOG")" "$CONTROL" 2>/dev/null || true
 
+# Minimal-JSON-Escape fuer freie Texte in den Log-Zeilen: ein " oder \ (z.B. aus einer
+# rclone-Fehlermeldung, $out) wuerde die JSON-Zeile sonst ungueltig machen. Reihenfolge wichtig:
+# Backslash ZUERST, dann Quotes und Steuerzeichen.
+json_escape() {
+  local s="$1" bs='\' nl=$'\n' cr=$'\r' tab=$'\t'
+  s="${s//"$bs"/"$bs$bs"}"   # Backslash verdoppeln (bs-Variable: ${s//\\/..} verdoppelt in bash NICHT zuverlaessig)
+  s="${s//\"/\\\"}"
+  # Steuerzeichen -> \n \r \t: die Ersetzung MUSS aus der bs-Variablen kommen; ein literales
+  # "\\n" laesst bash den Backslash vor dem 'n' verschlucken (echtes Steuerzeichen wuerde sonst zum
+  # nackten Buchstaben 'n'/'r'/'t' verstuemmelt statt korrekt escaped).
+  s="${s//"$nl"/"${bs}n"}"
+  s="${s//"$cr"/"${bs}r"}"
+  s="${s//"$tab"/"${bs}t"}"
+  printf '%s' "$s"
+}
+
 logj() { printf '{"ts":"%s","module":"gedanken-gdrive-backup","msg":"%s"}\n' \
-         "$(date -u +%Y-%m-%dT%H:%M:%SZ)" "$1" >> "$LOG" 2>/dev/null || true; }
+         "$(date -u +%Y-%m-%dT%H:%M:%SZ)" "$(json_escape "$1")" >> "$LOG" 2>/dev/null || true; }
 
 write_status() {  # state, detail, [files]
   local state="$1" detail="$2" files="${3:-}" ts
@@ -40,8 +56,14 @@ write_status() {  # state, detail, [files]
   chown "$OWNER_UID:$OWNER_UID" "$STATUS" 2>/dev/null || true
 }
 
-# Nur eine Instanz gleichzeitig (Watcher + Timer + Button koennen sich ueberlappen)
-exec 9>"$LOCK" 2>/dev/null || true
+# Nur eine Instanz gleichzeitig (Watcher + Timer + Button koennen sich ueberlappen).
+# Lock-Datei oeffnen (fd 9): schlaegt DAS fehl (z.B. /run nicht beschreibbar), ist das ein
+# ECHTER Fehler — NICHT "laeuft bereits". Frueher verschluckte '|| true' den Fehlschlag, fd 9
+# blieb zu, und flock -n 9 lief auf einen ungueltigen Deskriptor -> faelschlich "laeuft bereits".
+if ! exec 9>"$LOCK"; then
+  write_status "fehler" "Lock-Datei $LOCK nicht anlegbar — Backup nicht gestartet"
+  logj "Lock-Datei nicht oeffenbar: $LOCK"; exit 1
+fi
 if command -v flock >/dev/null 2>&1 && ! flock -n 9; then
   logj "laeuft bereits, uebersprungen"; exit 0
 fi

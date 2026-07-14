@@ -36,6 +36,21 @@ export PROBE_TIMEOUT
 
 log() { echo "$(date '+%Y-%m-%d %H:%M:%S')  $*" >>"$LOG" 2>/dev/null; }
 
+# Reine-Bash-URL-Kodierung (Percent-Encoding, KEINE externen Deps). SMB-User/Passwort mit
+# Sonderzeichen (@ : / % ...) wuerden die smb://-URL sonst zerbrechen — ein '@' im Passwort z.B.
+# beendet den Credential-Teil vorzeitig. LC_ALL=C -> byteweise (auch UTF-8 sauber kodiert).
+urlencode() {
+  local LC_ALL=C str="$1" i c out=""
+  for (( i=0; i<${#str}; i++ )); do
+    c="${str:i:1}"
+    case "$c" in
+      [a-zA-Z0-9._~-]) out="$out$c" ;;
+      *) out="$out$(printf '%%%02X' "'$c")" ;;
+    esac
+  done
+  printf '%s' "$out"
+}
+
 # Log-Rotation (simpel): ab ~512 KB neu anfangen
 if [ -f "$LOG" ] && [ "$(wc -c <"$LOG" 2>/dev/null || echo 0)" -gt 524288 ]; then
   mv -f "$LOG" "$LOG.1" 2>/dev/null
@@ -69,6 +84,9 @@ if [ -z "$U" ] || [ -z "$P" ]; then
   log "FEHLER: SAMBA_USER/SAMBA_PASS leer in $ENVFILE."
   exit 0
 fi
+# Fuer die smb://-URL kodieren (Sonderzeichen sicher), Roh-Werte bleiben fuer Vergleiche/Logs unberuehrt.
+UENC="$(urlencode "$U")"
+PENC="$(urlencode "$P")"
 
 # Gate: genau den SMB-Port 445 testen (NICHT einen fremden Dienst-Port — Almanach §5/§9).
 # Tunnel braucht nach dem Boot ein paar Sekunden; LaunchAgent ruft uns ohnehin periodisch erneut.
@@ -97,7 +115,7 @@ for share in $SHARES; do
     rmdir "$MP" 2>/dev/null
   fi
   # Mounten via automountd (kein sudo, erscheint im Finder)
-  if /usr/bin/osascript -e "mount volume \"smb://${U}:${P}@${SERVER}/${share}\"" >/dev/null 2>&1; then
+  if /usr/bin/osascript -e "mount volume \"smb://${UENC}:${PENC}@${SERVER}/${share}\"" >/dev/null 2>&1; then
     log "${share}: gemountet (${MP})"
   else
     log "${share}: Mount FEHLGESCHLAGEN"

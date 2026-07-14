@@ -43,7 +43,9 @@ ok()   { echo "  ${c_grn}[OK]${c_0}   $*"; }
 warn() { echo "  ${c_yel}[WARN]${c_0} $*"; }
 err()  { echo "  ${c_red}[FEHL]${c_0} $*"; }
 
-usage() { grep -E '^#( |$)' "${BASH_SOURCE[0]}" | sed -E 's/^# ?//'; exit 2; }
+# trap - EXIT vor dem Exit: usage() ist ein GEWOLLTER Abbruch (Hilfe/Argumentfehler), kein Crash —
+# sonst haengt die EXIT-Trap faelschlich "[FEHLER] Abbruch" an.
+usage() { grep -E '^#( |$)' "${BASH_SOURCE[0]}" | sed -E 's/^# ?//'; trap - EXIT; exit 2; }
 
 # CRLF-normalisierter Vergleich zweier Dateien (0 = identisch)
 same() { diff -q <(tr -d '\r' < "$1") <(tr -d '\r' < "$2") >/dev/null 2>&1; }
@@ -112,12 +114,15 @@ for f in "$@"; do check_file "$f" || overall=1; done
 echo
 log "Ergebnis: ${#SAFE[@]} sicher, ${#BLOCKED[@]} blockiert."
 
-if [ "$cmd" = "check" ]; then exit $overall; fi
+# check-Modus: das Ergebnis (0=sicher, 1=blockiert) ist ein GEWOLLTER Exit-Code, kein Crash ->
+# EXIT-Trap loesen, damit sie bei blockiert (exit 1) nicht faelschlich "[FEHLER] Abbruch" meldet.
+if [ "$cmd" = "check" ]; then trap - EXIT; exit $overall; fi
 
 # deploy-Modus
 if [ ${#BLOCKED[@]} -gt 0 ] && [ "${CORTEX_FORCE:-0}" != "1" ]; then
   err "Deploy ABGEBROCHEN — ${#BLOCKED[@]} Datei(en) wuerden fremde Arbeit ueberschreiben: ${BLOCKED[*]}"
   err "Erst mit der anderen Session klaeren (deren Aenderung committen lassen) ODER CORTEX_FORCE=1 setzen (bewusst)."
+  trap - EXIT   # gewollter Schutz-Abbruch, kein Crash -> keine falsche "[FEHLER] Abbruch"-Meldung
   exit 1
 fi
 [ ${#BLOCKED[@]} -gt 0 ] && warn "CORTEX_FORCE=1 — ueberschreibe bewusst: ${BLOCKED[*]}"

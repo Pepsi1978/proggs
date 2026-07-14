@@ -91,10 +91,10 @@ if [ -f "$WORK/qdrant-brain.snapshot" ]; then
   if [ -f "$APP_DIR/.env" ]; then set -a; . "$APP_DIR/.env"; set +a; fi
   QKEY="${QDRANT_API_KEY:-}"
   log "Warte auf Qdrant…"
-  for _ in $(seq 1 30); do curl -fsS "$QDRANT_URL/healthz" >/dev/null 2>&1 && break; sleep 2; done
+  for _ in $(seq 1 30); do curl -fsS --max-time 60 "$QDRANT_URL/healthz" >/dev/null 2>&1 && break; sleep 2; done
   log "Spiele Qdrant-Snapshot ein (Collection $COLLECTION)…"
   # KEIN explizites Content-Type — curl baut die multipart-boundary selbst (qdrant.md §3/§7).
-  if curl -fsS -X POST "$QDRANT_URL/collections/$COLLECTION/snapshots/upload?priority=snapshot" \
+  if curl -fsS --max-time 600 -X POST "$QDRANT_URL/collections/$COLLECTION/snapshots/upload?priority=snapshot" \
         ${QKEY:+-H "api-key: $QKEY"} -F "snapshot=@$WORK/qdrant-brain.snapshot" >/dev/null 2>&1; then
     log "Qdrant-Gehirn wiederhergestellt."
   else
@@ -109,7 +109,7 @@ if [ -f "$WORK/qdrant-brain-entities.snapshot" ]; then
   if [ -f "$APP_DIR/.env" ]; then set -a; . "$APP_DIR/.env"; set +a; fi
   QKEY="${QDRANT_API_KEY:-}"   # eigenes Laden: Block 5 koennte uebersprungen worden sein (set -u)
   log "Spiele Entity-Snapshot ein (Collection $ENTITY_COLLECTION)…"
-  if curl -fsS -X POST "$QDRANT_URL/collections/$ENTITY_COLLECTION/snapshots/upload?priority=snapshot" \
+  if curl -fsS --max-time 600 -X POST "$QDRANT_URL/collections/$ENTITY_COLLECTION/snapshots/upload?priority=snapshot" \
         ${QKEY:+-H "api-key: $QKEY"} -F "snapshot=@$WORK/qdrant-brain-entities.snapshot" >/dev/null 2>&1; then
     log "Entity-Register wiederhergestellt."
   else

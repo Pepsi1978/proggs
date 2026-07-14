@@ -88,6 +88,8 @@ VERSION = "0.81.0 (12.07.2026, 22:01 Uhr)"  # 0.81.0 LOGIK-HAERTUNG Agentensyste
 VERSION = "0.81.1 (12.07.2026, 22:30 Uhr)"  # 0.81.1 EHRLICHKEITS-FIX (E2E-Fund, orchestrator §4.5 'claimed but didn't do'): Ein pures Ja/Nein auf eine soeben von der Auto-Grenze verworfene Speicher-Rueckfrage bekommt eine DETERMINISTISCHE ehrliche Absage ('Ich habe nichts gespeichert — ... Diskette') statt in den Recall zu laufen, wo das Antwort-LLM anhand des Verlaufs faelschlich 'habe ich abgelegt' behauptete. Live-E2E 8/8 + Offline-Suite 10/10 gruen. Alt: 0.81.0.
 VERSION = "0.81.2 (13.07.2026, 11:12 Uhr)"  # 0.81.2: Automatische Programmier-Session-Ingestion entfernt. /session-log existiert nicht mehr; Claude Code und OpenCode koennen keine Eintraege unter Programmierung/Sessions erzeugen. Historische Eintraege bleiben lesbar. Alt: 0.81.1.
 VERSION = "0.81.3 (14.07.2026, 00:57 Uhr)"  # 0.81.3 (Debugging-Laeufe App+Server, 6 Runden 2026-07-13/14): Sanitizer-Regexes repariert — Quellen-Block loescht nur noch bei reiner Ueberschrift-Zeile ("Quellensteuer..." verlor sonst die KOMPLETTE Antwort, eine Quellen-Zeile mitten im Text riss alle Folgeabsaetze mit), Inline-Quellen-Zeile loescht nur sich selbst, Attributions-Tail nur ":"-Formen + Singular-Kopula ("Quellen sind <Inhalt>" bleibt erhalten; identische Logik wie ChatSpeechSanitizer.kt der Android-App). get_brain_limits liefert None statt {} (App/Cockpit erkennen "Brain-Stand unbekannt" -> kein Lost Update der Brain-Limits mehr). /health-Brain-Check 3s statt 8s (Dashboard-Agent-Kachel flackerte faelschlich offline). /codex/auth/poll behandelt 429/5xx/Netzfehler als pending statt HTTP 500 (Verbindungsassistent der App brach sonst ab). save_brain_limits meldet Netzfehler als sauberes 502. Alt: 0.81.2.
+VERSION = "0.82.0 (14.07.2026, 13:07 Uhr)"  # 0.82.0 (Cortex-Debugging-Loop 1): flush_session_to_logbook gibt Erfolg (bool) zurueck -> Platten-Spiegel wird NUR nach erfolgreichem .txt-Schreiben geloescht (kein Gespraechsverlust bei totem LOGBOOK-Mount; Sitzung bleibt fuer Retry erhalten) in _flush_loop UND /end. Tool-Agent faellt bei Nicht-Codex-Hauptmodell ODER ohne Codex-Login auf werkzeuglosen llm_generate-Pfad zurueck (Gemini/Smalltalk endet nicht mehr im Fehler). lifespan bindet + cancelt den Flush-Loop-Task sauber (Shutdown-NameError weg). codex_generate erhaelt 4xx-Statuscodes 1:1 (nur echte 5xx -> 502) + _retryable_code mit Wortgrenzen -> echte 400/401/403/404 werden NIE 3x retryt. llm_generate retryt httpx-Transportfehler (Stream-Abrisse/ConnectError). speicheragent_decide + leseagent_select: LLM-Call im try (Provider-Ausfall crasht die Speicher-Bestaetigung nicht mehr; Leseagent reicht bei Ausfall alle Treffer durch). /chat/stream: Abschnitt Claim->Turn-Start abgesichert (request_id haengt nie 'inflight') + Finalisierung tracked Task und loest finalize_fut in JEDEM Pfad auf. _maybe_compress_history snapshottet die Nachrichtenzahl VOR dem LLM-Call (neue Nachrichten verschwinden nicht mehr). Codex-Token-Refresh Single-Flight (modulweiter Lock, double-checked). /eval-run Doppelstart-Lock; _codex_pending-GC (kein unbegrenztes Wachstum); codex_auth_poll Code->Token-Tausch gegen transiente Fehler abgesichert. store_clarify-"ja" registriert die neue Kategorie. Saison-Regex: "im Fruehjahr 2025" matcht jetzt. _rrf_fuse_hits erhaelt dense_score als Maximum. GET /feedback mit (mtime,size)-Parse-Cache. codex_generate: Kommentar, dass max_tokens/temperature beim Codex-Backend bewusst nicht wirken. Alt: 0.81.3.
+VERSION = "0.83.0 (14.07.2026, 13:54 Uhr)"  # 0.83.0 (Cortex-Debugging-Loop 2): Session-Reuse-Race beim Out-of-Lock-Flush geschlossen — jede Session-Instanz erhaelt beim Anlegen eine eindeutige mirror_id; der Platten-Spiegel-Pfad (_session_file) haengt jetzt daran statt allein an der sid (die fuer ALLE Gespraeche auf "frank" zurueckfaellt). Dadurch teilen zwei gleichzeitige Gespraeche NIE denselben Spiegel; _drop_session_file loescht nur die konkret geflushte Instanz; bei Flush-Fehler bleibt der instanz-eigene Spiegel liegen und wird beim Start wiederhergestellt (kein Ueberschreiben/Loeschen durch ein neu begonnenes Gespraech mehr). Start-Wiederherstellung keyt bei sid-Kollision (Race-Rest) kollisionsfrei -> ALLE liegengebliebenen Spiegel ueberleben. write_logbook meldet written jetzt wahrheitsgemaess (did_write = not target.exists(); bereits vorhandene .txt -> False statt faelschlich True). Alt: 0.82.0.
 
 # ---------------------------------------------------------------------------
 # Konfiguration (alles aus Umgebungsvariablen — Secrets nie im Code)
@@ -809,6 +811,9 @@ def _save_codex_auth(data: dict) -> None:
         pass
 
 
+_codex_token_refresh_lock = threading.Lock()   # Single-Flight fuer den OAuth-Token-Refresh (s. _codex_tokens)
+
+
 def _refresh_codex_tokens(tokens: dict) -> dict:
     refresh_token = (tokens.get("refresh_token") or "").strip()
     if not refresh_token:
@@ -845,8 +850,23 @@ def _codex_tokens(refresh_if_needed: bool = True) -> dict:
             raise RuntimeError("Codex ist nicht verbunden")
         exp = _jwt_exp(access)
         if refresh_if_needed and exp and exp - time.time() < 120:
-            tokens = _refresh_codex_tokens(tokens)
-            _perf_mark("codex_tokens_refreshed", "Codex OAuth-Token wurde erneuert")
+            # Single-Flight (double-checked nach Lock-Erwerb): sonst feuern parallele Requests je einen
+            # eigenen Refresh-POST — der zuletzt persistierte Token gewinnt, die anderen access_token
+            # veralten sofort (Race). Innerhalb des Locks Auth frisch von Platte lesen; hat ein anderer
+            # Thread bereits erneuert, uebernehmen wir dessen Token und sparen den zweiten POST.
+            with _codex_token_refresh_lock:
+                auth = _load_codex_auth()
+                tokens = auth.get("tokens") if isinstance(auth.get("tokens"), dict) else tokens
+                access = (tokens.get("access_token") or "").strip()
+                exp = _jwt_exp(access)
+                if not access:
+                    raise RuntimeError("Codex ist nicht verbunden")
+                if exp and exp - time.time() < 120:
+                    tokens = _refresh_codex_tokens(tokens)
+                    _perf_mark("codex_tokens_refreshed", "Codex OAuth-Token wurde erneuert")
+                else:
+                    _perf_mark("codex_tokens_reused", "Codex OAuth-Token wiederverwendet (parallel erneuert)",
+                               expires_in_s=int(exp - time.time()) if exp else None)
         else:
             _perf_mark("codex_tokens_reused", "Codex OAuth-Token wiederverwendet", expires_in_s=int(exp - time.time()) if exp else None)
         return tokens
@@ -979,6 +999,11 @@ def codex_generate(system: str, user: str, model: str, max_tokens: int, temperat
     user = _reinforce_self_rules(system, user)
     access = _codex_tokens(refresh_if_needed=True).get("access_token", "")
     model_fields = _codex_model_request_fields(model)
+    # HINWEIS: max_tokens/temperature wirken beim Codex-Provider BEWUSST nicht — das ChatGPT-Codex-
+    # Impersonation-Backend (chatgpt.com/backend-api/codex) ist streng gegenueber Zusatzfeldern und
+    # steuert die Laenge ueber das Modell + reasoning.effort; wie codex_generate_tools senden wir sie
+    # NICHT im body (sonst droht HTTP 400). Sie bleiben in der Signatur fuer die einheitliche
+    # Provider-Schnittstelle (llm_generate) und fliessen nur in die Perf-Sonde.
     body: dict[str, Any] = {
         **model_fields,
         "instructions": system,
@@ -1009,7 +1034,11 @@ def codex_generate(system: str, user: str, model: str, max_tokens: int, temperat
             if r.status_code >= 400:
                 detail = r.read().decode("utf-8", errors="replace")[:800] or r.reason_phrase
                 _log(logging.WARNING, "Codex-Backend lehnte Request ab", status=r.status_code, detail=detail)
-                raise HTTPException(status_code=502, detail=f"Codex-Backend HTTP {r.status_code}: {detail}")
+                # 4xx sind DETERMINISTISCH (Bad Request/Auth/Not Found) und duerfen NIE retryt werden:
+                # Original-Statuscode 1:1 erhalten; nur echte 5xx werden zu 502 gemappt, damit
+                # _retryable_code den einen (transienten) Fall retryt und die 400er in Ruhe laesst.
+                status = r.status_code if 400 <= r.status_code < 500 else 502
+                raise HTTPException(status_code=status, detail=f"Codex-Backend HTTP {r.status_code}: {detail}")
             for line in r.iter_lines():
                 if not line:
                     continue
@@ -1717,7 +1746,8 @@ def _retryable_code(exc: Exception) -> "int | None":
         code = getattr(exc, "code", None) or getattr(exc, "status_code", None)
         if not isinstance(code, int):
             s = str(exc)
-            code = next((c for c in (429, 503, 502, 500, 504, 408) if str(c) in s), None)
+            # Wortgrenzen: str(c) in s matchte sonst "502" in "5020 bytes" o.ae. (Falsch-Retry).
+            code = next((c for c in (429, 503, 502, 500, 504, 408) if re.search(rf"\b{c}\b", s)), None)
     return code if code in _RETRYABLE_CODES else None
 
 
@@ -1745,14 +1775,17 @@ def llm_generate(system: str, user: str, *, model: str, json_mode: bool, max_tok
                 return _llm_generate_once(system, user, model=model, json_mode=json_mode, max_tokens=max_tokens, temperature=temperature, reasoning_override=reasoning_override, on_delta=on_delta)
         except Exception as e:  # noqa: BLE001 — retrybare Fehler abfangen, Rest sofort weiterreichen
             code = _retryable_code(e)
-            if code is None or attempt >= LLM_MAX_RETRIES:
+            # httpx-Transportfehler (ReadError, RemoteProtocolError, ConnectError, ReadTimeout) haben
+            # KEINEN Statuscode, sind aber transient (Stream-Abriss/Verbindungsfehler) -> retryen.
+            transport = code is None and isinstance(e, httpx.TransportError)
+            if (code is None and not transport) or attempt >= LLM_MAX_RETRIES:
                 raise
             last_exc = e
             ra = _retry_after_s(e)
             delay = min(ra, LLM_RETRY_CAP_S) if ra is not None else random.uniform(0, min(LLM_RETRY_CAP_S, LLM_RETRY_BASE_S * (2 ** attempt)))
-            _log(logging.WARNING, "LLM-Call retrybar fehlgeschlagen -> Backoff", code=code, attempt=attempt + 1, delay_s=round(delay, 2), model=model)
+            _log(logging.WARNING, "LLM-Call retrybar fehlgeschlagen -> Backoff", code=code or "transport", attempt=attempt + 1, delay_s=round(delay, 2), model=model)
             _perf_mark("llm_retry_backoff", "LLM-Retry-Backoff", model=model, attempt=attempt + 1,
-                       code=code, delay_ms=int(delay * 1000))
+                       code=code or "transport", delay_ms=int(delay * 1000))
             time.sleep(delay)
     if last_exc:   # defensiv — unerreichbar, die Schleife raised vorher
         raise last_exc
@@ -2244,7 +2277,7 @@ def parse_time_range(text: str) -> "tuple[str | None, str | None, str | None]":
         mon = _MONATE[m.group(1)]
         year = int(m.group(2)) if m.group(2) else (today.year if mon <= today.month else today.year - 1)
         return _iso(_d(year, mon, 1), _monatsende(year, mon), f"{m.group(1).capitalize()} {year}")
-    m = re.search(r" im (winter|frühling|fruehling|frühjahr, ?|fruehjahr|sommer|herbst)(?: (\d{4}))? ", low)
+    m = re.search(r" im (winter|frühling|fruehling|frühjahr|fruehjahr|sommer|herbst)(?: (\d{4}))? ", low)
     if m:
         season = m.group(1).replace("fruehling", "frühling").replace("fruehjahr", "frühjahr").strip(", ")
         year = int(m.group(2)) if m.group(2) else today.year
@@ -2321,6 +2354,13 @@ def _rrf_fuse_hits(hit_lists: list[list[dict]], k: int = 60) -> list[dict]:
                 if (h.get("score") or 0) > (meta[did].get("score") or 0):
                     meta[did]["score"] = h.get("score")
                     meta[did]["match"] = h.get("match") or meta[did].get("match")
+                # dense_score GETRENNT als Maximum erhalten (fuer Confidence): er kann auch dann hoeher
+                # sein, wenn der (kombinierte) score es nicht ist — sonst zaehlt nur das erste Vorkommen.
+                nd = h.get("dense_score")
+                if nd is not None:
+                    cur = meta[did].get("dense_score")
+                    if cur is None or nd > cur:
+                        meta[did]["dense_score"] = nd
                 mb = set(meta[did].get("matched_by") or []) | set(h.get("matched_by") or [])
                 if mb:
                     meta[did]["matched_by"] = sorted(mb)
@@ -2744,6 +2784,10 @@ def _with_store_timestamp(text: str) -> str:
 
 def _new_session(user_id: str) -> dict:
     return {"user_id": user_id, "messages": [], "start_local": _now_local(),
+            # mirror_id (Loop-2-Fix Session-Reuse-Race): INSTANZ-eigene, eindeutige Spiegel-Kennung.
+            # Weil alle Gespraeche auf dieselbe sid ("frank") zurueckfallen, teilten sie sonst EINEN
+            # Spiegel-Pfad — ein neu begonnenes Gespraech ueberschrieb/loeschte den Spiegel eines alten.
+            "mirror_id": uuid.uuid4().hex,
             "last_activity": time.monotonic(), "pending": None, "last_memory": None,
             # Verlaufs-Komprimierung (RAM, Frank-Wunsch 2026-07-08): kumulative Zusammenfassung des
             # frueheren Gespraechs + Index, bis zu dem komprimiert wurde. Beide leben nur in der Session.
@@ -3794,18 +3838,27 @@ def _maybe_compress_history(session: dict) -> None:
                    messages=len(msgs), new_messages=len(msgs) - upto)
         return
     alt = (session.get("history_summary") or "")
+    # Feste Kopie + Laenge VOR dem (langsamen) LLM-Call snapshotten: kommen waehrend der Verdichtung
+    # neue Nachrichten in die Session (paralleler /chat derselben Sitzung), duerfen sie den upto-Zeiger
+    # NICHT ueberspringen. Frueher wurde history_compressed_upto = len(msgs) NACH dem Call gesetzt —
+    # da war msgs (dieselbe Listen-Referenz) INZWISCHEN gewachsen, sodass unkomprimierte Nachrichten
+    # als 'komprimiert' galten, ohne je in der Zusammenfassung zu stehen -> sie verschwanden aus dem
+    # Verlauf. (Die Verdichtung laeuft im Worker-Thread via to_thread; der asyncio-_lock ist hier nicht
+    # greifbar — der feste Snapshot ersetzt ihn korrekt: der Zeiger zeigt exakt auf das Verdichtete.)
+    snapshot = list(msgs)
+    snapshot_len = len(snapshot)
     try:
         with _perf_span("history_compress", "Verlauf kumulativ komprimieren", threshold=n,
-                        messages=len(msgs), new_messages=len(msgs) - upto, old_summary_chars=len(alt)):
-            neue_summary = _compress_history(alt, msgs[upto:])
+                        messages=snapshot_len, new_messages=snapshot_len - upto, old_summary_chars=len(alt)):
+            neue_summary = _compress_history(alt, snapshot[upto:])
     except Exception:  # noqa: BLE001 — Komprimierung darf den Chat nie killen (best-effort)
         _log(logging.WARNING, "Verlaufs-Komprimierung fehlgeschlagen (best-effort, alter Stand bleibt)", exc_info=True)
         return
     if neue_summary and neue_summary != alt:
         session["history_summary"] = neue_summary
-        session["history_compressed_upto"] = len(msgs)
+        session["history_compressed_upto"] = snapshot_len
         checkpoint("history_compress", "Verlauf kumulativ komprimiert (ersetzt hartes Abschneiden)",
-                   ok=True, ab_nachrichten=n, gesamt=len(msgs), summary_zeichen=len(neue_summary))
+                   ok=True, ab_nachrichten=n, gesamt=snapshot_len, summary_zeichen=len(neue_summary))
 
 
 def _history_text(session: dict) -> str:
@@ -4239,15 +4292,17 @@ def speicheragent_decide(quote: str, candidates: list[dict], categories: list[st
         )
     user_block = (f"ZU SPEICHERNDER TEXT (wird 1:1 abgelegt, NICHT ändern):\n{quote}\n\n"
                   f"ÄHNLICHE VORHANDENE EINTRÄGE:\n{cand_txt}")
-    raw = _extract_json(llm_generate(
-        build_speicher_prompt(categories), user_block, model=ROLE_MODELS["speicher"],
-        json_mode=True, max_tokens=512, temperature=0.2))
     try:
+        # LLM-Call MIT im try (Direktive #3): ein Provider-Ausfall darf die Speicher-Bestaetigung
+        # nicht mit 500 crashen — dann greift dieselbe defensive Fallback-Entscheidung wie bei kaputtem JSON.
+        raw = _extract_json(llm_generate(
+            build_speicher_prompt(categories), user_block, model=ROLE_MODELS["speicher"],
+            json_mode=True, max_tokens=512, temperature=0.2))
         data = json.loads(raw)
         if not isinstance(data, dict):
             raise ValueError("kein Objekt")
-    except Exception:  # noqa: BLE001 — defensiv: nie crashen
-        _log(logging.WARNING, "Speicheragent-JSON nicht parsebar", raw=raw[:200])
+    except Exception:  # noqa: BLE001 — defensiv: nie crashen (Provider-Ausfall ODER kaputtes JSON)
+        _log(logging.WARNING, "Speicheragent-Entscheidung fehlgeschlagen -> defensiver Fallback", exc_info=True)
         data = {}
     data.setdefault("category", "")
     data.setdefault("title", "")
@@ -4515,10 +4570,13 @@ def leseagent_select(question: str, hits: list[dict], categories: list[str]) -> 
         for i, h in enumerate(hits)
     )
     user_block = f"FRAGE:\n{question}\n\nGEFUNDENE EINTRÄGE:\n{hits_txt}"
-    raw = _extract_json(llm_generate(
-        build_abfrage_prompt(categories), user_block, model=ROLE_MODELS["abfrage"],
-        json_mode=True, max_tokens=512, temperature=0.1))
     try:
+        # LLM-Call MIT im try (Direktive #3): bricht der Provider (Transportfehler) mitten weg, gehen
+        # KEINE Treffer verloren — es werden wie bei kaputtem JSON alle durchgereicht (der Hauptagent
+        # filtert dann ueber seinen 'nur passende'-Auftrag mit).
+        raw = _extract_json(llm_generate(
+            build_abfrage_prompt(categories), user_block, model=ROLE_MODELS["abfrage"],
+            json_mode=True, max_tokens=512, temperature=0.1))
         data = json.loads(raw)
         nums = data.get("treffer") if isinstance(data, dict) else None
         sel = [hits[n - 1] for n in (nums or []) if isinstance(n, int) and 1 <= n <= len(hits)]
@@ -4526,8 +4584,8 @@ def leseagent_select(question: str, hits: list[dict], categories: list[str]) -> 
         checkpoint("lese_select", "Leseagent waehlt passende Treffer (nur Nummern, keine Formulierung)",
                    ok=True, gewaehlt=len(sel), von=len(hits))
         return sel, (note if isinstance(note, str) and note.strip() else None)
-    except Exception:  # noqa: BLE001 — defensiv: bei kaputtem JSON alle Treffer durchreichen (nichts verlieren)
-        _log(logging.WARNING, "Leseagent-JSON nicht parsebar -> alle Treffer durchreichen", raw=raw[:200])
+    except Exception:  # noqa: BLE001 — defensiv: bei kaputtem JSON ODER Provider-Ausfall alle Treffer durchreichen (nichts verlieren)
+        _log(logging.WARNING, "Leseagent-Auswahl fehlgeschlagen -> alle Treffer durchreichen", exc_info=True)
         return hits, None
 
 
@@ -4930,7 +4988,7 @@ async def _evict_live_conversation(start_label: str) -> int:
     label = (start_label or "").strip()
     if not label:
         return 0
-    evicted: list[tuple[str, str]] = []
+    evicted: list[tuple[str, str, str]] = []
     async with _lock:
         for sid, s in list(_sessions.items()):
             try:
@@ -4939,18 +4997,21 @@ async def _evict_live_conversation(start_label: str) -> int:
                 continue
             if s_label == label:
                 _sessions.pop(sid, None)
-                evicted.append((sid, s_title))
-    for sid, s_title in evicted:
-        await asyncio.to_thread(_drop_session_file, sid)
+                evicted.append((sid, s_title, s.get("mirror_id") or sid))   # Spiegel per mirror_id (Loop-2-Fix)
+    for sid, s_title, mirror_id in evicted:
+        await asyncio.to_thread(_drop_session_file, mirror_id)
         checkpoint("logbuch_session_eviction", "Live-Sitzung nach Gespraechs-Loeschung verworfen",
                    ok=True, session=sid, title=s_title)
     return len(evicted)
 
 
-def flush_session_to_logbook(session: dict) -> None:
-    """Schreibt den Gesprächsverlauf 1:1 ausschließlich als Logbuch-.txt; niemals nach Qdrant."""
+def flush_session_to_logbook(session: dict) -> bool:
+    """Schreibt den Gesprächsverlauf 1:1 ausschließlich als Logbuch-.txt; niemals nach Qdrant.
+    Rueckgabe: True = .txt erfolgreich geschrieben (der Aufrufer DARF den Platten-Spiegel loeschen);
+    False = Schreiben fehlgeschlagen (z.B. Samba-/LOGBOOK-Mount nicht erreichbar) -> der Spiegel MUSS
+    liegen bleiben, sonst ist das Gespraech unwiederbringlich weg."""
     if not session["messages"]:
-        return
+        return True   # nichts zu sichern -> nichts zu verlieren, Spiegel darf weg
     title, content, start_label = _conversation_logbook_payload(session)
     start = _coerce_session_start(session.get("start_local"))
 
@@ -4968,6 +5029,7 @@ def flush_session_to_logbook(session: dict) -> None:
     checkpoint("logbuch", "Gespräch ausschließlich als Logbuch-.txt gesichert",
                ok=txt_ok, txt=txt_ok, brain=False,
                nachrichten=len(session["messages"]), start=start_label)
+    return txt_ok
 
 
 # ---------------------------------------------------------------------------
@@ -4981,15 +5043,21 @@ def flush_session_to_logbook(session: dict) -> None:
 _SESSIONS_DIR = Path(AGENT_DATA_DIR) / "sessions"
 
 
-def _session_file(sid: str) -> Path:
-    import hashlib
-    safe = re.sub(r"[^A-Za-z0-9_.-]", "_", sid)[:60] or "session"
-    return _SESSIONS_DIR / f"{safe}-{hashlib.sha1(sid.encode('utf-8')).hexdigest()[:10]}.json"
+def _session_file(key: str) -> Path:
+    # Loop-2-Fix (Session-Reuse-Race): Der Spiegel-Pfad haengt jetzt an der INSTANZ-eigenen mirror_id
+    # statt allein an der sid — sonst schrieben zwei gleichzeitige Gespraeche (beide sid "frank") auf
+    # DENSELBEN Pfad und loeschten sich gegenseitig. mirror_id ist bereits dateisystemsicher (uuid-hex
+    # bei neuen Sessions bzw. der stem einer bereits vorhandenen Datei bei Restore), daher direkte
+    # 1:1-Namensgebung -> exakter Round-Trip fuers Schreiben UND das spaetere gezielte Loeschen; alte
+    # sid-basierte Dateinamen werden ueber ihren stem weiterhin exakt getroffen.
+    safe = re.sub(r"[^A-Za-z0-9_.-]", "_", str(key))[:100] or "session"
+    return _SESSIONS_DIR / f"{safe}.json"
 
 
 def _session_snapshot(sid: str, session: dict) -> dict:
     """Flache Kopie fuers Schreiben AUSSERHALB des Locks (Liste kopieren, sonst Race beim dumps)."""
-    return {"sid": sid, "user_id": session.get("user_id") or "frank",
+    return {"sid": sid, "mirror_id": session.get("mirror_id"),  # instanz-eigener Spiegel-Pfad (Loop-2-Fix)
+            "user_id": session.get("user_id") or "frank",
             "start_local": session["start_local"].isoformat(),
             "messages": list(session["messages"]), "pending": session.get("pending"),
             "last_memory": session.get("last_memory"),
@@ -5012,7 +5080,7 @@ def _write_session_snapshot(snap: dict) -> None:
     """Atomar (tmp + replace, resilient-bugfixing.md) — ein Crash hinterlaesst nie eine halbe Datei."""
     try:
         _SESSIONS_DIR.mkdir(parents=True, exist_ok=True)
-        f = _session_file(snap["sid"])
+        f = _session_file(snap.get("mirror_id") or snap["sid"])  # instanz-eigener Pfad (Loop-2-Fix)
         tmp = f.with_suffix(".tmp")
         tmp.write_text(json.dumps(snap, ensure_ascii=False), encoding="utf-8", newline="\n")
         os.replace(tmp, f)
@@ -5020,11 +5088,13 @@ def _write_session_snapshot(snap: dict) -> None:
         _log(logging.ERROR, "Session-Persistenz fehlgeschlagen", exc_info=True, session=snap.get("sid"))
 
 
-def _drop_session_file(sid: str) -> None:
+def _drop_session_file(mirror_id: str) -> None:
+    # Loop-2-Fix: NUR den Spiegel der konkret geflushten Session-Instanz (deren mirror_id) loeschen —
+    # nie den eines fremden, evtl. frisch neu begonnenen Gespraechs mit gleicher sid.
     try:
-        _session_file(sid).unlink(missing_ok=True)
+        _session_file(mirror_id).unlink(missing_ok=True)
     except Exception:  # noqa: BLE001
-        _log(logging.WARNING, "Session-Datei nicht loeschbar", session=sid)
+        _log(logging.WARNING, "Session-Datei nicht loeschbar", session=mirror_id)
 
 
 def _load_persisted_sessions() -> dict:
@@ -5037,13 +5107,22 @@ def _load_persisted_sessions() -> dict:
             try:
                 d = json.loads(f.read_text(encoding="utf-8"))
                 sid = (d.get("sid") or "").strip() or f.stem
-                out[sid] = {"user_id": d.get("user_id") or "frank",
-                            "start_local": datetime.fromisoformat(d["start_local"]) if d.get("start_local") else _now_local(),
-                             "messages": d.get("messages") or [],
-                             "pending": d.get("pending"),
-                             "last_memory": d.get("last_memory"),
-                             "context_limit_notified": bool(d.get("context_limit_notified")),
-                             "last_activity": time.monotonic()}
+                # mirror_id aus der Datei (neu) bzw. der Datei-stem (alte sid-basierte Dateien): so trifft
+                # ein spaeteres _drop_session_file GENAU diese Datei wieder (exakter Round-Trip).
+                mirror_id = d.get("mirror_id") or f.stem
+                sess = {"user_id": d.get("user_id") or "frank",
+                        "mirror_id": mirror_id,
+                        "start_local": datetime.fromisoformat(d["start_local"]) if d.get("start_local") else _now_local(),
+                        "messages": d.get("messages") or [],
+                        "pending": d.get("pending"),
+                        "last_memory": d.get("last_memory"),
+                        "context_limit_notified": bool(d.get("context_limit_notified")),
+                        "last_activity": time.monotonic()}
+                # Normalfall: genau EIN Spiegel pro sid -> unter sid ablegen, das Gespraech laeuft nahtlos
+                # weiter. Race-Rest (zwei Spiegel gleicher sid, weil ein alter Flush scheiterte, waehrend
+                # ein neues Gespraech begann): den zweiten NICHT clobbern, sondern unter eindeutigem
+                # Recovery-Key ablegen — beide ueberleben und werden je als eigener Logbuch-Eintrag geflusht.
+                out[sid if sid not in out else f"{sid}#{f.stem}"] = sess
             except Exception:  # noqa: BLE001 — eine kaputte Datei darf den Start nicht verhindern
                 _log(logging.WARNING, "Session-Datei nicht lesbar — uebersprungen", file=str(f))
     except Exception:  # noqa: BLE001
@@ -5070,11 +5149,23 @@ async def _flush_loop() -> None:
                     expired.append((sid, _sessions.pop(sid)))
             for sid, s in expired:
                 try:
-                    await asyncio.to_thread(flush_session_to_logbook, s)
-                    _drop_session_file(sid)   # Platten-Spiegel erst NACH erfolgreichem Flush weg
-                    _log(logging.INFO, "Sitzung nach Inaktivitaet geschlossen", session=sid)
+                    ok = await asyncio.to_thread(flush_session_to_logbook, s)
                 except Exception:  # noqa: BLE001
+                    ok = False
                     _log(logging.ERROR, "Flush fehlgeschlagen", exc_info=True, session=sid)
+                if ok:
+                    _drop_session_file(s.get("mirror_id") or sid)   # NUR den eigenen Spiegel, erst NACH erfolgreichem Flush
+                    _log(logging.INFO, "Sitzung nach Inaktivitaet geschlossen", session=sid)
+                else:
+                    # .txt NICHT geschrieben (z.B. LOGBOOK-Mount weg): der INSTANZ-eigene Platten-Spiegel
+                    # (mirror_id) bleibt liegen — ein neu begonnenes Gespraech gleicher sid schreibt auf
+                    # einen ANDEREN Pfad und kann ihn nicht mehr ueberschreiben/loeschen (Loop-2-Fix).
+                    # setdefault hebt die Sitzung fuer den In-Prozess-Retry zurueck in den RAM; ist die sid
+                    # bereits neu belegt, greift stattdessen die Start-Wiederherstellung (der Spiegel liegt
+                    # ja liegen) — in keinem Fall Gespraechsverlust.
+                    async with _lock:
+                        _sessions.setdefault(sid, s)
+                    _log(logging.WARNING, "Flush erfolglos — Sitzung bleibt fuer erneuten Versuch erhalten", session=sid)
             if now >= next_smoke_cleanup:
                 next_smoke_cleanup = now + max(60, SMOKE_CONV_CLEANUP_INTERVAL_S)
                 res = await asyncio.to_thread(cleanup_old_smoke_conversations, USER_ID)
@@ -5118,7 +5209,8 @@ async def lifespan(app: FastAPI):
         _log(logging.INFO, "Sessions von Platte wiederhergestellt", anzahl=len(restored))
     # Starke Referenz + Fehler-Logging wie bei allen anderen Hintergrund-Tasks (fastapi.md §6:
     # der Loop haelt nur weak refs — ein untracked Task kann vom GC eingesammelt werden).
-    _track_background_task(asyncio.create_task(_flush_loop()))
+    flush_task = asyncio.create_task(_flush_loop())
+    _track_background_task(flush_task)
     _log(logging.INFO, "Flush-Loop gestartet")
     # Codex-Modell-Cache vorwaermen (eigener Thread, blockiert den Start nicht): der ERSTE
     # /config nach einem Deploy kommt so schon aus dem Cache statt auf chatgpt.com zu warten.
@@ -5128,7 +5220,7 @@ async def lifespan(app: FastAPI):
     finally:
         # Bewusst KEIN Flush beim Shutdown: die Sessions sind auf Platte gespiegelt und leben nach
         # dem Neustart weiter — sonst wuerde jedes Deploy das Gespraech in Teil-Eintraege zerhacken.
-        task.cancel()
+        flush_task.cancel()
 
 
 app = FastAPI(title="Second Brain — sb-agent (Bibliothekar: Speicher + Abruf)", version=VERSION, lifespan=lifespan)
@@ -5931,27 +6023,44 @@ def api_post_feedback(req: FeedbackReq) -> dict:
     return {"ok": True}
 
 
+_feedback_cache: dict = {"key": None, "out": [], "hoch": 0, "runter": 0}
+
+
 @app.get("/feedback", dependencies=[Depends(require_auth)])
 def api_get_feedback(limit: int = 200) -> dict:
-    """Letzte Feedback-Eintraege, neueste zuerst (fuer Bibliothekar-Auswertung + Anzeige)."""
+    """Letzte Feedback-Eintraege, neueste zuerst (fuer Bibliothekar-Auswertung + Anzeige).
+    Parse-/Zaehler-Cache auf Basis (mtime, size): solange die JSONL unveraendert ist, wird die
+    komplette Datei NICHT bei jedem Aufruf neu geparst (append-only -> mtime/size aendern sich bei
+    jedem neuen Eintrag zuverlaessig)."""
     try:
-        with open(FEEDBACK_FILE, "r", encoding="utf-8") as f:
-            lines = f.readlines()
+        st = FEEDBACK_FILE.stat()
+        key = (st.st_mtime_ns, st.st_size)
     except FileNotFoundError:
         return {"feedback": [], "hoch": 0, "runter": 0}
     except OSError as e:
         _log(logging.WARNING, "Feedback nicht lesbar", err=str(e)[:200])
         return {"feedback": [], "hoch": 0, "runter": 0, "fehler": type(e).__name__}
-    out = []
-    for line in lines:
+    if _feedback_cache.get("key") != key:
         try:
-            out.append(json.loads(line))
-        except (json.JSONDecodeError, ValueError):
-            continue
-    hoch = sum(1 for e in out if e.get("vote") == "hoch")
-    runter = sum(1 for e in out if e.get("vote") == "runter")
-    out.reverse()
-    return {"feedback": out[:max(1, min(limit, 1000))], "hoch": hoch, "runter": runter}
+            with open(FEEDBACK_FILE, "r", encoding="utf-8") as f:
+                lines = f.readlines()
+        except FileNotFoundError:
+            return {"feedback": [], "hoch": 0, "runter": 0}
+        except OSError as e:
+            _log(logging.WARNING, "Feedback nicht lesbar", err=str(e)[:200])
+            return {"feedback": [], "hoch": 0, "runter": 0, "fehler": type(e).__name__}
+        out = []
+        for line in lines:
+            try:
+                out.append(json.loads(line))
+            except (json.JSONDecodeError, ValueError):
+                continue
+        hoch = sum(1 for e in out if e.get("vote") == "hoch")
+        runter = sum(1 for e in out if e.get("vote") == "runter")
+        out.reverse()   # neueste zuerst
+        _feedback_cache.update({"key": key, "out": out, "hoch": hoch, "runter": runter})
+    c = _feedback_cache
+    return {"feedback": c["out"][:max(1, min(limit, 1000))], "hoch": c["hoch"], "runter": c["runter"]}
 
 
 # --- Einstellungen: System-Prompt (editierbarer Teil) + Modell-Wahl --------
@@ -6133,8 +6242,17 @@ def post_profile_review(req: ProfileReviewReq) -> dict:
     return {"ok": True, "review": (text or "").strip()}
 
 
+def _codex_pending_gc() -> None:
+    """Abgelaufene Device-Auth-Anlaeufe aufraeumen — _codex_pending waechst sonst unbegrenzt: jeder
+    /codex/auth/start legt einen Eintrag an; abgebrochene oder nie fertig gepollte blieben ewig liegen."""
+    now = time.time()
+    for k in [k for k, v in list(_codex_pending.items()) if (v or {}).get("expires_at", 0) <= now]:
+        _codex_pending.pop(k, None)
+
+
 @app.post("/codex/auth/start", dependencies=[Depends(require_auth)])
 def codex_auth_start() -> dict:
+    _codex_pending_gc()   # vor dem neuen Anlauf abgelaufene Eintraege wegraeumen
     try:
         r = _HTTP.post(
             f"{CODEX_AUTH_ISSUER}/api/accounts/deviceauth/usercode",
@@ -6168,6 +6286,7 @@ def codex_auth_start() -> dict:
 
 @app.post("/codex/auth/poll", dependencies=[Depends(require_auth)])
 def codex_auth_poll(req: CodexAuthPollReq) -> dict:
+    _codex_pending_gc()   # bei jedem Poll abgelaufene Eintraege wegraeumen (unbegrenztes Wachstum verhindern)
     pending = _codex_pending.get(req.auth_id)
     if not pending:
         return {"ok": False, "status": "expired", "connected": codex_connected()}
@@ -6193,24 +6312,35 @@ def codex_auth_poll(req: CodexAuthPollReq) -> dict:
         # kein Abbruchgrund (vorher: raise_for_status -> HTTP 500 -> Assistent brach ab).
         _log(logging.WARNING, "Codex-Poll vom Auth-Server gedrosselt/gestoert", status=poll.status_code)
         return {"ok": True, "status": "pending", "connected": False}
-    poll.raise_for_status()
-    code_data = poll.json()
-    authorization_code = code_data.get("authorization_code") or ""
-    code_verifier = code_data.get("code_verifier") or ""
-    if not authorization_code or not code_verifier:
-        raise HTTPException(status_code=502, detail="Codex Authorization-Code unvollstaendig")
-    token = _HTTP.post(
-        CODEX_TOKEN_URL,
-        data={"grant_type": "authorization_code", "code": authorization_code,
-              "redirect_uri": f"{CODEX_AUTH_ISSUER}/deviceauth/callback",
-              "client_id": CODEX_OAUTH_CLIENT_ID, "code_verifier": code_verifier},
-        headers={"Content-Type": "application/x-www-form-urlencoded", "Accept": "application/json"},
-        timeout=15.0,
-    )
-    token.raise_for_status()
-    tokens = token.json()
-    if not tokens.get("access_token"):
-        raise HTTPException(status_code=502, detail="Codex Token-Antwort ohne access_token")
+    try:
+        # raise_for_status() UND der Code->Token-Tausch koennen transient scheitern (Netzabriss, 5xx
+        # vom Token-Endpunkt). Das ist wie oben ein "noch nicht fertig", KEIN Abbruchgrund — sonst
+        # brach der Verbindungsassistent der App mit HTTP 500 ab. Deterministische Protokollfehler
+        # (unvollstaendige Antwort) bleiben als HTTPException bestehen.
+        poll.raise_for_status()
+        code_data = poll.json()
+        authorization_code = code_data.get("authorization_code") or ""
+        code_verifier = code_data.get("code_verifier") or ""
+        if not authorization_code or not code_verifier:
+            raise HTTPException(status_code=502, detail="Codex Authorization-Code unvollstaendig")
+        token = _HTTP.post(
+            CODEX_TOKEN_URL,
+            data={"grant_type": "authorization_code", "code": authorization_code,
+                  "redirect_uri": f"{CODEX_AUTH_ISSUER}/deviceauth/callback",
+                  "client_id": CODEX_OAUTH_CLIENT_ID, "code_verifier": code_verifier},
+            headers={"Content-Type": "application/x-www-form-urlencoded", "Accept": "application/json"},
+            timeout=15.0,
+        )
+        token.raise_for_status()
+        tokens = token.json()
+        if not tokens.get("access_token"):
+            raise HTTPException(status_code=502, detail="Codex Token-Antwort ohne access_token")
+    except HTTPException:
+        raise
+    except Exception as e:  # noqa: BLE001 — transienter Netz-/5xx-Fehler beim Code->Token-Tausch
+        _log(logging.WARNING, "Codex-Token-Tausch transient fehlgeschlagen -> weiterpollen",
+             err=f"{type(e).__name__}: {e}")
+        return {"ok": True, "status": "pending", "connected": False}
     _save_codex_auth({"tokens": {"access_token": tokens.get("access_token"), "refresh_token": tokens.get("refresh_token")},
                       "base_url": CODEX_BASE_URL, "last_refresh": _now_local().isoformat(), "auth_mode": "chatgpt"})
     _codex_pending.pop(req.auth_id, None)
@@ -6808,6 +6938,7 @@ def _run_eval() -> dict:
 _eval_state: dict = {"running": False, "done": 0, "total": len(EVAL_CASES), "started_at": None,
                      "finished_at": None, "passed": None, "log": None, "error": None}
 _eval_thread: "threading.Thread | None" = None
+_eval_run_lock = threading.Lock()   # check-then-act gegen zwei parallele Eval-Laeufe absichern (wie entities_rebuild)
 
 
 def _run_eval_background() -> None:
@@ -6826,12 +6957,13 @@ def eval_run() -> dict:
     """Eval-Check STARTEN (kehrt sofort zurueck): 100 Test-Saetze durch alle 3 Agenten, isoliert
     unter EVAL_USER + danach hart aufgeraeumt. Fortschritt/Ergebnis via GET /eval-status."""
     global _eval_thread
-    if _eval_state.get("running"):
-        # started_now (Bool) bewusst NACH dem State spreaden — kollisionsfrei zu started_at (Zeit).
-        return {"ok": True, **_eval_state, "started_now": False}
-    _eval_state.update({"running": True, "done": 0, "total": len(EVAL_CASES), "passed": None,
-                        "log": None, "error": None, "finished_at": None,
-                        "started_at": _now_local().strftime("%d.%m.%Y, %H:%M:%S")})
+    with _eval_run_lock:   # check-then-act atomar: sonst starten zwei parallele /eval-run zwei Threads
+        if _eval_state.get("running"):
+            # started_now (Bool) bewusst NACH dem State spreaden — kollisionsfrei zu started_at (Zeit).
+            return {"ok": True, **_eval_state, "started_now": False}
+        _eval_state.update({"running": True, "done": 0, "total": len(EVAL_CASES), "passed": None,
+                            "log": None, "error": None, "finished_at": None,
+                            "started_at": _now_local().strftime("%d.%m.%Y, %H:%M:%S")})
     _eval_thread = threading.Thread(target=_run_eval_background, daemon=True, name="eval-run")
     _eval_thread.start()
     _log(logging.INFO, "Eval-Check im Hintergrund gestartet", total=len(EVAL_CASES))
@@ -7038,11 +7170,24 @@ def _toolagent_answer(session: dict, user_text: str, context_prompt: str = "",
                     "mit den bereitgestellten Lese-Werkzeugen. Nutze kein Web, kein Logbuch und keine "
                     "schreibenden Werkzeuge. Antworte nur aus gefundenen Einträgen; wenn nichts passt, sage das ehrlich."
                 )
-            r = codex_generate_tools(
-                system, user_input, tools=tools, tool_handlers=handlers,
-                model=ROLE_MODELS["haupt"], reasoning_effort=ROLE_REASONING.get("haupt", "high"),
-                max_turns=8, max_seconds=240.0, on_delta=on_delta,
-            )
+            haupt_model = ROLE_MODELS["haupt"]
+            if not _is_codex(haupt_model) or not codex_connected():
+                # Fallback OHNE Werkzeuge (Direktive #3): der Tool-Loop laeuft AUSSCHLIESSLICH ueber das
+                # Codex/GPT-Responses-Backend. Mit Gemini/OpenCode als Hauptmodell ODER ohne Codex-Login
+                # wuerde sonst JEDE Wissens-/Smalltalk-Frage am Codex-Call scheitern. Router + komplette
+                # Speicher-Sicherheit + Spezial-Antworten liefen bereits DAVOR; hier reicht eine einfache
+                # Klartext-Antwort per llm_generate mit demselben System-Prompt + Kontext (Modell-pro-Rolle).
+                _log(logging.INFO, "Tool-Agent-Fallback ohne Werkzeuge (kein Codex-Hauptmodell/-Login)", model=haupt_model)
+                text = llm_generate(system, user_input, model=haupt_model, json_mode=False,
+                                    max_tokens=ANSWER_MAX_TOKENS, temperature=0.3,
+                                    reasoning_override=ROLE_REASONING.get("haupt", "high"), on_delta=on_delta)
+                r = {"text": text, "turns": 0, "stopped": "no_tools", "tool_calls": []}
+            else:
+                r = codex_generate_tools(
+                    system, user_input, tools=tools, tool_handlers=handlers,
+                    model=haupt_model, reasoning_effort=ROLE_REASONING.get("haupt", "high"),
+                    max_turns=8, max_seconds=240.0, on_delta=on_delta,
+                )
     except Exception as e:  # noqa: BLE001 — der Tool-Agent darf den Endpunkt NIE killen (ai-agent §3.2)
         _log(logging.ERROR, "Tool-Agent (Hauptagent) fehlgeschlagen", exc_info=True)
         return {"reply": f"Beim Nachdenken ist gerade etwas schiefgegangen ({type(e).__name__}). Versuch es bitte gleich nochmal.",
@@ -7572,6 +7717,7 @@ def _process_turn(session: dict, user_text: str, pending: dict | None, category:
     if pending and pending.get("mode") == "store_clarify":
         if intent == "confirm_yes":   # ja -> mit der vorgeschlagenen (ggf. neuen) Kategorie ablegen; keine -> Sonstiges
             cat = _canonical_category(pending.get("proposed_category") or "Sonstiges", categories) or "Sonstiges"
+            add_registry_category(cat)   # neu bestaetigte Kategorie in die Registry aufnehmen (Muster wie 4453/4467/7369/7543)
             return _store_final(pending.get("quote", ""), cat, pending.get("title", ""), pending.get("replace_title", ""), bool(pending.get("store_timestamp")))
         if intent == "confirm_no":    # nein -> bewusst unter Sonstiges ablegen (Catch-all)
             cat = _canonical_category("Sonstiges", categories) or "Sonstiges"
@@ -7840,32 +7986,41 @@ async def chat_stream(req: ChatReq) -> StreamingResponse:
             return StreamingResponse(dup_gen(), media_type="text/event-stream",
                                      headers={"Cache-Control": "no-cache", "X-Accel-Buffering": "no"})
 
-    async with _lock:
-        session = _sessions.get(sid)
-        if session is None:
-            session = _new_session(req.user_id)
-            _sessions[sid] = session
-        session["messages"].append({"role": "frank", "text": req.text})
-        pending = session.get("pending")
-        _frank_snap = _session_snapshot(sid, session)
-    await asyncio.to_thread(_write_session_snapshot, _frank_snap)   # Frage sofort deploy-/crash-sicher
+    # Alles ZWISCHEN Idempotenz-Claim und Turn-Start absichern: wirft hier etwas (z.B.
+    # build_ui_context_prompt), bliebe die request_id sonst "inflight" — der App-Fallback /chat mit
+    # derselben request_id wartete dann bis zum TTL (240s) und bekaeme am Ende 409. Wie in /chat
+    # (BaseException-Pfad) den Key freigeben, damit ein ehrlicher Retry sofort neu rechnen darf.
+    try:
+        async with _lock:
+            session = _sessions.get(sid)
+            if session is None:
+                session = _new_session(req.user_id)
+                _sessions[sid] = session
+            session["messages"].append({"role": "frank", "text": req.text})
+            pending = session.get("pending")
+            _frank_snap = _session_snapshot(sid, session)
+        await asyncio.to_thread(_write_session_snapshot, _frank_snap)   # Frage sofort deploy-/crash-sicher
 
-    loop = asyncio.get_running_loop()
-    queue: asyncio.Queue = asyncio.Queue()
+        loop = asyncio.get_running_loop()
+        queue: asyncio.Queue = asyncio.Queue()
 
-    rsize = _norm_response_size(req.response_size)
-    cprompt = build_ui_context_prompt(req.context_mode, rsize, req.context_prompt)   # Dashboard: zentraler Prompt (wie /chat)
-    # Deterministische Problem-Markierung (wie /chat): Frank meldet ein Problem -> letzten Turn markieren.
-    if not pending and _PROBLEM_FEEDBACK_RE.search(req.text or ""):
-        await asyncio.to_thread(_mark_last_turn_problem, req.text)
-    tr = _trace_start(req.text, _norm_context_mode(req.context_mode), cprompt, sid)   # vor ensure_future -> Worker sieht den Trace
-    turn = asyncio.ensure_future(asyncio.to_thread(
-        _process_turn, session, req.text, pending,
-        (req.category or "").strip(), (req.title or "").strip(), req.store_timestamp,
-        _norm_context_mode(req.context_mode), cprompt,
-        rsize, None, req.memory_edit, (req.memory_doc_id or "").strip(), req.memory_categories,
-        req.context_mode_revision,
-    ))
+        rsize = _norm_response_size(req.response_size)
+        cprompt = build_ui_context_prompt(req.context_mode, rsize, req.context_prompt)   # Dashboard: zentraler Prompt (wie /chat)
+        # Deterministische Problem-Markierung (wie /chat): Frank meldet ein Problem -> letzten Turn markieren.
+        if not pending and _PROBLEM_FEEDBACK_RE.search(req.text or ""):
+            await asyncio.to_thread(_mark_last_turn_problem, req.text)
+        tr = _trace_start(req.text, _norm_context_mode(req.context_mode), cprompt, sid)   # vor ensure_future -> Worker sieht den Trace
+        turn = asyncio.ensure_future(asyncio.to_thread(
+            _process_turn, session, req.text, pending,
+            (req.category or "").strip(), (req.title or "").strip(), req.store_timestamp,
+            _norm_context_mode(req.context_mode), cprompt,
+            rsize, None, req.memory_edit, (req.memory_doc_id or "").strip(), req.memory_categories,
+            req.context_mode_revision,
+        ))
+    except BaseException:
+        if rid:
+            await _dedup_release(rid)
+        raise
 
     # Finalisierung (Session-Update + Snapshot + Dedup-Ablage) laeuft DISCONNECT-FEST als
     # eigenstaendige Task am turn-Ende — nicht mehr im Generator: bricht der Client mitten im
@@ -7888,49 +8043,59 @@ async def chat_stream(req: ChatReq) -> StreamingResponse:
                 if not finalize_fut.done():
                     finalize_fut.set_exception(e if isinstance(e, Exception) else RuntimeError(str(e)))
                 return
-            async with _lock:
-                session["pending"] = outcome.get("pending")
-                _apply_memory_outcome(session, outcome)
-                session["messages"].append({"role": "agent", "text": outcome.get("reply", "")})
-                session["last_activity"] = time.monotonic()
-                limit_hit = _mark_context_limit(session)
-                snap = _session_snapshot(sid, session)
-            await asyncio.to_thread(_write_session_snapshot, snap)   # Antwort deploy-/crash-sicher spiegeln
-            response = {
-                "ok": True, "reply": outcome.get("reply", ""), "action": outcome.get("action"),
-                "session_id": sid, "category": outcome.get("category"), "title": outcome.get("title"),
-                "categories": outcome.get("categories"), "doc_id": outcome.get("doc_id"),
-                "memory_text": outcome.get("memory_text"), "stored_text": outcome.get("stored_text"),
-                "memory_editable": outcome.get("memory_editable", False),
-                "stored": outcome.get("stored", False), "replaced": outcome.get("replaced", False),
-                "recall_hits": outcome.get("recall_hits"), "options": outcome.get("options"),
-                "sources": outcome.get("sources"), "confidence": outcome.get("confidence"),   # Nr. 38/39
-                "context_limit_reached": limit_hit}
-            if rid:
-                await _dedup_store(rid, response)
-            checkpoint("chat_stream", "Streaming-Chat abgeschlossen (identische Pipeline wie /chat)",
-                       ok=(outcome.get("action") in _SUCCESSFUL_CHAT_ACTIONS),
-                       action=outcome.get("action"), ms=int((time.time() - t0) * 1000))
+            # Ab hier MUSS finalize_fut in JEDEM Pfad aufgeloest werden — der Generator wartet sonst
+            # bis zu seinem Idle-Timeout auf ein Ergebnis, das nie kommt. Deshalb try/except um den
+            # gesamten Rest; ein Fehler (z.B. _dedup_store) gibt den Key frei und setzt die Exception.
             try:
-                await asyncio.to_thread(_trace_finish, tr, response, int((time.time() - t0) * 1000))
-            except Exception:  # noqa: BLE001 — Logbuch darf die Finalisierung nie kippen
-                _log(logging.WARNING, "Turn-Logbuch (Stream) fehlgeschlagen", exc_info=True)
-            final_reply = str(outcome.get("reply") or "")
-            if final_reply:
-                # Kanonischen Text ABSATZWEISE ausliefern (Frank 2026-07-12: Antwort erscheint ab dem
-                # ersten Absatz, TTS startet ab dem ersten VOLLSTAENDIGEN Absatz). Der Text ist hier
-                # bereits final (nach Bereinigung + Regel-Pruefung) — Anzeige/Persistenz/TTS bleiben
-                # identisch (§9.1 kanonisch). Split mit Capture-Gruppe: Zusammensetzen ergibt 1:1 den
-                # Originaltext (kein Zeichen geht verloren).
-                absaetze = [teil for teil in re.split(r"(\n{2,})", final_reply) if teil]
-                if len(absaetze) <= 1:
-                    queue.put_nowait(final_reply)
-                else:
-                    for teil in absaetze:
-                        queue.put_nowait(teil)
-            if not finalize_fut.done():
-                finalize_fut.set_result(response)
-        asyncio.ensure_future(_fin())
+                async with _lock:
+                    session["pending"] = outcome.get("pending")
+                    _apply_memory_outcome(session, outcome)
+                    session["messages"].append({"role": "agent", "text": outcome.get("reply", "")})
+                    session["last_activity"] = time.monotonic()
+                    limit_hit = _mark_context_limit(session)
+                    snap = _session_snapshot(sid, session)
+                await asyncio.to_thread(_write_session_snapshot, snap)   # Antwort deploy-/crash-sicher spiegeln
+                response = {
+                    "ok": True, "reply": outcome.get("reply", ""), "action": outcome.get("action"),
+                    "session_id": sid, "category": outcome.get("category"), "title": outcome.get("title"),
+                    "categories": outcome.get("categories"), "doc_id": outcome.get("doc_id"),
+                    "memory_text": outcome.get("memory_text"), "stored_text": outcome.get("stored_text"),
+                    "memory_editable": outcome.get("memory_editable", False),
+                    "stored": outcome.get("stored", False), "replaced": outcome.get("replaced", False),
+                    "recall_hits": outcome.get("recall_hits"), "options": outcome.get("options"),
+                    "sources": outcome.get("sources"), "confidence": outcome.get("confidence"),   # Nr. 38/39
+                    "context_limit_reached": limit_hit}
+                if rid:
+                    await _dedup_store(rid, response)
+                checkpoint("chat_stream", "Streaming-Chat abgeschlossen (identische Pipeline wie /chat)",
+                           ok=(outcome.get("action") in _SUCCESSFUL_CHAT_ACTIONS),
+                           action=outcome.get("action"), ms=int((time.time() - t0) * 1000))
+                try:
+                    await asyncio.to_thread(_trace_finish, tr, response, int((time.time() - t0) * 1000))
+                except Exception:  # noqa: BLE001 — Logbuch darf die Finalisierung nie kippen
+                    _log(logging.WARNING, "Turn-Logbuch (Stream) fehlgeschlagen", exc_info=True)
+                final_reply = str(outcome.get("reply") or "")
+                if final_reply:
+                    # Kanonischen Text ABSATZWEISE ausliefern (Frank 2026-07-12: Antwort erscheint ab dem
+                    # ersten Absatz, TTS startet ab dem ersten VOLLSTAENDIGEN Absatz). Der Text ist hier
+                    # bereits final (nach Bereinigung + Regel-Pruefung) — Anzeige/Persistenz/TTS bleiben
+                    # identisch (§9.1 kanonisch). Split mit Capture-Gruppe: Zusammensetzen ergibt 1:1 den
+                    # Originaltext (kein Zeichen geht verloren).
+                    absaetze = [teil for teil in re.split(r"(\n{2,})", final_reply) if teil]
+                    if len(absaetze) <= 1:
+                        queue.put_nowait(final_reply)
+                    else:
+                        for teil in absaetze:
+                            queue.put_nowait(teil)
+                if not finalize_fut.done():
+                    finalize_fut.set_result(response)
+            except BaseException as e:  # noqa: BLE001 — Finalisierung darf finalize_fut NIE unaufgeloest lassen
+                _log(logging.ERROR, "Stream-Finalisierung fehlgeschlagen", exc_info=True)
+                if rid:
+                    await _dedup_release(rid)
+                if not finalize_fut.done():
+                    finalize_fut.set_exception(e if isinstance(e, Exception) else RuntimeError(str(e)))
+        _track_background_task(asyncio.ensure_future(_fin()))
 
     turn.add_done_callback(_on_turn_done)
 
@@ -8072,9 +8237,18 @@ async def end_session(req: EndReq) -> dict:
         return {"ok": True, "gesichert": False, "grund": "keine aktive Sitzung"}
     # Sync-Flush (httpx bis 120s + Datei-I/O) NIE direkt im async-Handler — blockiert sonst den
     # ganzen Event-Loop (fastapi §1; genau dieser Handler stand als Live-Befund im Almanach).
-    await asyncio.to_thread(flush_session_to_logbook, session)
-    _drop_session_file(sid)   # Platten-Spiegel erst NACH erfolgreichem Flush entfernen
-    return {"ok": True, "gesichert": True, "nachrichten": len(session["messages"])}
+    ok = await asyncio.to_thread(flush_session_to_logbook, session)
+    if ok:
+        _drop_session_file(session.get("mirror_id") or sid)   # NUR den eigenen Spiegel, erst NACH erfolgreichem Flush
+        return {"ok": True, "gesichert": True, "nachrichten": len(session["messages"])}
+    # .txt nicht schreibbar (LOGBOOK-Mount weg): Spiegel BLEIBT liegen, Sitzung zurueck in den RAM
+    # (setdefault: eine frisch neu begonnene Sitzung nicht ueberschreiben) -> der Timeout-Flush bzw.
+    # der naechste /end versucht es erneut, statt das Gespraech unwiederbringlich zu verlieren.
+    async with _lock:
+        _sessions.setdefault(sid, session)
+    _log(logging.WARNING, "Logbuch-Flush bei /end erfolglos — Sitzung bleibt erhalten", session=sid)
+    return {"ok": True, "gesichert": False, "nachrichten": len(session["messages"]),
+            "grund": "Logbuch-Speicher nicht erreichbar — bleibt gespeichert und wird automatisch erneut versucht"}
 
 
 def _logbook_path_from_title(title: str):
@@ -8161,12 +8335,14 @@ def write_logbook(req: LogbookWriteReq) -> dict:
     target = (folder / f"{stem}.txt").resolve()
     if base not in target.parents:
         raise HTTPException(status_code=400, detail="Ungueltiger Logbuch-Pfad")
-    if not target.exists():
+    did_write = not target.exists()   # idempotent: eine bereits vorhandene .txt wird NICHT ueberschrieben
+    if did_write:
         target.write_text(req.content, encoding="utf-8")
     checkpoint("logbuch_schreiben", "Logbuch-.txt wiederhergestellt (Sync mit Gehirn-Restore)",
                ok=True, file=target.name)
     _log(logging.INFO, "Logbuch-.txt wiederhergestellt", file=target.name)
-    return {"ok": True, "written": True, "file": target.name}
+    # written spiegelt den TATSAECHLICHEN Schreibvorgang: bei bereits vorhandener Datei -> False (Loop-2-Fix)
+    return {"ok": True, "written": did_write, "file": target.name}
 
 
 @app.get("/logbook/turns", dependencies=[Depends(require_auth)])

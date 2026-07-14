@@ -66,7 +66,14 @@ $target = "$SSHUSER@$SERVER"
 # ── 4) Server-Backup anstossen, Archiv-Pfad zurueckbekommen ─────────────────────────────────────
 Info "Stosse Server-Backup an (kann 1-2 Min dauern)…"
 $remoteCmd = "bash $APPDIR/scripts/full-backup-create.sh"
+# ssh mischt seine (voellig normalen) stderr-Logzeilen via 2>&1 in die Pipeline. Bei
+# ErrorActionPreference='Stop' wuerde JEDE dieser stderr-Zeilen als terminierender
+# NativeCommandError geworfen -> der Backup-Knopf stirbt, obwohl das Server-Skript sauber lief
+# (full-backup-create.sh loggt JEDE Zeile nach stderr). Darum hier temporaer 'Continue'.
+$prevEAP = $ErrorActionPreference
+$ErrorActionPreference = 'Continue'
 $out = & $ssh @sshArgs $target $remoteCmd 2>&1
+$ErrorActionPreference = $prevEAP
 $out | ForEach-Object { if ($_ -match 'FERTIG|FEHLER|WARN') { Info $_ } }
 # Die LETZTE nicht-leere stdout-Zeile des Skripts ist der Archiv-Pfad.
 $archive = ($out | Where-Object { $_ -match '^/.+\.tar\.gz$' } | Select-Object -Last 1)
@@ -79,7 +86,13 @@ $localDir = Join-Path $DEST $stamp
 New-Item -ItemType Directory -Force -Path $localDir | Out-Null
 $localFile = Join-Path $localDir (Split-Path $archive -Leaf)
 Info "Ziehe Archiv nach $localFile …"
+# scp schreibt Fortschritt/Meldungen ebenfalls nach stderr — bei EAP='Stop' droht derselbe
+# NativeCommandError wie oben. Temporaer 'Continue'; das Ergebnis pruefen wir explizit unten
+# (Test-Path + Groesse), ein echter Fehlschlag geht also nicht verloren.
+$prevEAP = $ErrorActionPreference
+$ErrorActionPreference = 'Continue'
 & $scp @scpArgs "${target}:${archive}" $localFile
+$ErrorActionPreference = $prevEAP
 if (-not (Test-Path $localFile) -or (Get-Item $localFile).Length -lt 2000) { Die "Download fehlgeschlagen oder Datei zu klein." }
 $mb = [math]::Round((Get-Item $localFile).Length/1MB, 2)
 Ok "Lokal gespeichert: $localFile ($mb MB)"

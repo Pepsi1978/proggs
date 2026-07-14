@@ -47,7 +47,7 @@ mkdir -p "$DEST" "$(dirname "$LOG")" 2>/dev/null || true
 snapshot_one() {
     local coll="$1" prefix="$2" resp name apisize stamp out dl removed count
     # 1) Snapshot erstellen
-    resp=$(curl -fsS -X POST "$QDRANT_URL/collections/$coll/snapshots" -H "api-key: $KEY") \
+    resp=$(curl -fsS --max-time 600 -X POST "$QDRANT_URL/collections/$coll/snapshots" -H "api-key: $KEY") \
         || fail "Snapshot-Erstellung fehlgeschlagen ($coll)"
     name=$(printf '%s' "$resp" | python3 -c "import sys,json;print(json.load(sys.stdin)['result']['name'])") \
         || fail "Snapshot-Name nicht lesbar ($coll): $resp"
@@ -56,7 +56,7 @@ snapshot_one() {
     # 2) Herunterladen nach DEST (Datums-Name; mehrfach am Tag = idempotent ueberschrieben)
     stamp=$(date '+%Y-%m-%d')
     out="$DEST/$prefix-$stamp.snapshot"
-    curl -fsS "$QDRANT_URL/collections/$coll/snapshots/$name" -H "api-key: $KEY" -o "$out" \
+    curl -fsS --max-time 600 "$QDRANT_URL/collections/$coll/snapshots/$name" -H "api-key: $KEY" -o "$out" \
         || fail "Download fehlgeschlagen ($coll/$name)"
 
     # 3) Integritaet: heruntergeladene Datei muss plausibel gross sein (vs. API-Groesse)
@@ -65,7 +65,7 @@ snapshot_one() {
     chown "$OWNER_UID:$OWNER_UID" "$out" 2>/dev/null || true
 
     # 4) Qdrant-internen Snapshot loeschen (kein Ansammeln im Container)
-    curl -fsS -X DELETE "$QDRANT_URL/collections/$coll/snapshots/$name" -H "api-key: $KEY" >/dev/null 2>&1 \
+    curl -fsS --max-time 60 -X DELETE "$QDRANT_URL/collections/$coll/snapshots/$name" -H "api-key: $KEY" >/dev/null 2>&1 \
         || log "WARN: interner Snapshot $name ($coll) nicht geloescht"
 
     # 5) Rotation je Prefix: nur die letzten KEEP behalten (Datumsmuster, damit sich die

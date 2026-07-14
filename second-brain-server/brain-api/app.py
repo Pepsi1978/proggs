@@ -53,9 +53,9 @@ from datetime import date, datetime, timedelta, timezone
 from functools import wraps
 from logging.handlers import RotatingFileHandler
 from pathlib import Path
-from typing import Any
+from typing import Annotated, Any
 
-from fastapi import Depends, FastAPI, Header, HTTPException, Request
+from fastapi import Depends, FastAPI, Header, HTTPException, Query, Request
 from fastapi.responses import JSONResponse
 from pydantic import BaseModel, Field
 
@@ -506,6 +506,9 @@ VERSION = "1.34.0 (13.07.2026, 13:17 Uhr)"  # 1.34.0: NEU GET /by-id fuer direkt
 VERSION = "1.34.1 (14.07.2026, 00:57 Uhr)"  # 1.34.1 (Debugging-Laeufe App+Server): Kategorie-max_length in EntryCategoryReq/RenameCategoryReq/DetachCategoryReq 60->120 — Angleich an die Agent-Registry (CategoryReq erlaubt 120): eine dort angelegte 61-120-Zeichen-Kategorie liess sich hier sonst nicht zuordnen/umbenennen (422), obwohl sie existierte. Alt: 1.34.0.
 VERSION = "1.34.2 (14.07.2026, 11:26 Uhr)"  # 1.34.2: /store ersetzt Dokumente verifiziert mit Voll-Rollback statt Delete-before-Embed; /by-category liefert readiness aus Vor-/Nachpruefung und nie eine partielle Liste als vollstaendig. Alt: 1.34.1.
 VERSION = "1.35.0 (14.07.2026, 11:58 Uhr)"  # 1.35.0 (Cortex-Debugging-Loop 1): (a) DATENVERLUST-Schutz vervollstaendigt — /entry/category, /entry/categories und /trash/restore embedden VOR jeder Loeschung (Delete-before-Embed-Reste aus 1.32.0/1.34.2 beseitigt; ein 429/Gemini-Fehler kann keinen Eintrag mehr loeschen); (b) RAM: Rollback-Snapshots deduplizieren full_text auf EIN geteiltes String-Objekt und die Replace-Verifikation prueft text_len je Chunk + Chunk 0 wortwoertlich statt N full_text-Kopien zu laden (OOM-Klasse 1.13.x auf dem Schreibpfad beseitigt); (c) Embedding laeuft bei /store, PUT /entry, Kategorie-Wechseln und Restore VOR dem Schreib-Guard — parallele Schreibwege (20s-Gespraechs-Mirror) laufen nicht mehr in den 15s-Lock-Timeout (503); (d) ZEITZONEN-Fix: /by-date und alle /search-Datumsfilter rechnen lokale Tage (SB_TZ, Default Europe/Berlin) in UTC-created_at-Grenzen um — Eintraege von 00:00-02:00 Lokalzeit landeten am Vortag; (e) /search parent-Filter kanonisiert + Aliase (dense-Pfad fand 'gespraeche' vs 'Gespräche' nicht) und /search-Items liefern jetzt das categories-Array (Cortex-App verlor sonst beim Kategorie-Hinzufuegen ueber Suchtreffer sekundaere Kategorien); (f) /by-date: getrimmter Parameter, ungueltiges Format -> sofort leer statt Voll-Scan; (g) make_doc_id/_norm_cmp NFC-normalisiert (NFD-Titel erzeugten Duplikate statt zu ersetzen); (h) resolve_title Bracket-Guard — ein echtes '[…]'-Suffix wird nur als LLM-Dekoration abgestreift, wenn es eine Kategorie des Treffers ist (DELETE 'Plan [2026]' loeschte sonst 'Plan'); (i) BM25-Cache mit Generationszaehler (Build-Race konnte einen Vor-Schreib-Index bis 60s cachen); (j) PUT /entry mit leerem Titel behaelt den alten Titel (Eintrag blieb sonst 'titellos' auf der alten Titel-doc_id und wurde von /store ueberschrieben); (k) Entities: upsert/unlink serialisiert (Lost-Update-Race) und /entities/docs laedt Metadaten in EINEM MatchAny-Scroll + Volltexte nur fuer die finalen Top-N (statt N+1 Roundtrips mit allen Volltexten); Self-Healing mit frischem Re-Read unter dem Guard; (l) /by-category und /by-parent nehmen NEU limit=N (rein additiv, 0=alle wie bisher): nur die N aktuellsten Eintraege werden geliefert und NUR deren Volltexte geladen (das Dashboard zog sonst ALLE Volltexte einer Kategorie und warf alles bis auf die Seite weg); Antwortfeld total nennt die Gesamtzahl. Alt: 1.34.2.
+VERSION = "1.36.0 (14.07.2026, 13:55 Uhr)"  # 1.36.0 (Cortex-Debugging-Loop 2): (a) /entry/categories/add nutzt optimistische Nebenlaeufigkeit (require_current_keys + Retry, max 4) statt @serialized_entry_write — das (bei grossen Docs minutenlange) Kategorie-Embedding von set_entry_categories lief bisher INNERHALB des globalen Schreib-Locks (reentranter RLock), wodurch ein paralleler /store-Mirror in den 15s-Lock-Timeout (503) lief; jetzt bleibt das Embedding IMMER ausserhalb des Locks, ein frischer category_key-Vergleich unter dem Guard sichert die Read-Modify-Write-Atomarität (kein verlorenes paralleles Hinzufuegen wie 1.32.1); (b) /by-parent bekommt denselben Ladefenster-/ready-Schutz wie /by-category (1.34.2): waehrend Neuaufbau/Reindex nie eine partielle Liste als vollstaendig, ready:False + sofort leer bei not-ready, Antwortfeld ready aus Vor-/Nachpruefung; (c) /entities/docs Self-Healing faengt except Exception statt nur den Guard-Timeout (HTTPException) — ein Qdrant-/Netzfehler bei set_payload kippt den bereits erfolgreichen Lese-Endpoint nicht mehr in 500 (best-effort wie purge); (d) /trash/restore zieht VOR delete+upsert unter dem Guard einen Payload+Vektor-Snapshot und rollt bei Upsert-Fehler exakt zurueck (Muster wie /store) — ein evtl. aktiver Eintrag gleicher doc_id (per /store neu angelegt) geht bei Teilfehler nicht mehr unwiederbringlich verloren; (e) /category-counts zaehlt kategorielose Nutz-Eintraege in total_distinct mit (any([]) war faelschlich False); (f) /entities/upsert: das EINE kurze Entity-Profil-Embedding laeuft bewusst weiter unter dem Lock (RMW auf aliases erschwert das Rausziehen, geringe Lock-Haltezeit) — Kommentar ergaenzt. Alt: 1.35.0.
+VERSION = "1.37.0 (14.07.2026, 14:19 Uhr)"  # 1.37.0 (Cortex-Debugging-Loop 3): (a) FIX Regression aus 1.36.0 — require_current_keys war ueber Query(include_in_schema=False) DOCH extern bindbar (POST /entry/categories?require_current_keys=… → _CategoryConflict wird dort nicht gefangen → HTTP 500). Jetzt in eine interne Funktion _set_entry_categories_impl ausgelagert (KEINE FastAPI-Signatur → echt intern, nicht bindbar); der HTTP-Endpoint ist ein duenner Wrapper; add_entry_category ruft die Impl direkt. (b) WIEDERAUFERSTEHUNGS-Schutz: set_entry_categories/set_entry_category/update_entry prueften unter dem Guard nicht neu, ob der Eintrag noch existiert — ein nebenlaeufiger DELETE zwischen dem Lesen und dem Guard liess den Eintrag durch den deterministischen Upsert (Embedding-vor-Guard, 1.35.0) wiederauferstehen (User-Delete still rueckgaengig). Jetzt Existenz-Neupruefung unter dem Guard → 409 (bzw. _CategoryConflict→Retry→404 im add-Pfad) statt Neu-Anlage. (c) _entity_get Alias-Pfad: ungeschuetzter [0]-Zugriff auf einen frischen Scroll → IndexError/500 bei nebenlaeufigem /entities-DELETE zwischen den beiden Scrolls; jetzt if hit-Guard + weitersuchen. Alt: 1.36.0.
+VERSION = "1.38.0 (14.07.2026, 15:00 Uhr)"  # 1.38.0 (Cortex-Debugging-Loop 5): (a) LOST-UPDATE-Schutz ueber optimistische Nebenlaeufigkeit (updated_at-Versionstoken + begrenzter Retry, max 4) auf allen drei Schreibwegen, die zu ERHALTENDE Felder AUSSERHALB des Guards lesen+embedden — set_entry_category (POST /entry/category), _set_entry_categories_impl (POST /entry/categories + /entry/categories/add) und update_entry (PUT /entry). Bisher pruefte der Guard nur die Existenz (Loop-3) bzw. im add-Pfad die Kategorie-Schluessel, NICHT ob sich der Dokumentinhalt (full_text/Titel/erhaltene Kategorien) waehrend des minutenlangen Embeddings aenderte: ersetzte ein paralleler /store oder PUT denselben Eintrag (Text V1→V2), schrieb die danach committende Operation den stalen full_text (V1) mit deterministischen Chunk-IDs zurueck → frischer Text V2 still weg. Neue interne _WriteConflict-Exception (analog _CategoryConflict, nie ungefangen — Loop-3-Lehre): unter dem Guard wird updated_at frisch nachgelesen; weicht es vom base_updated_at des ausserhalb gelesenen Standes ab → _WriteConflict → frisch neu lesen+embedden+neu versuchen (Embedding bleibt IMMER ausserhalb des Guards); nach den Retries HTTP 409. Impl bekommt Parameter expected_updated_at (Default None → kein Check → nie ungefangen); beide Wrapper kapseln den Aufruf in die Retry-Schleife; require_current_keys bleibt zusaetzlich (schuetzt gegen verlorene parallele Kategorie-ADDITION, gerade im Sub-Sekunden-Fenster gleicher updated_at). update_entry: Versionscheck VOR dem Upsert (direkt nach source_snapshot-Existenz) → Konflikt ohne Teil-Schreibvorgang zum Retry; Rollback-Logik unveraendert. Normalfall (kein Parallelschreiber) exakt unveraendert: updated_at gleich → genau ein Durchlauf. (b) /search: Datumsfeld GESETZT (date/date_from/date_to nicht-leer), aber _date_bounds leitet KEINE Grenze ab (kalendarisch unmoegliches Datum wie 2026-02-30 → (None,None)) → jetzt konsistent zu /by-date sofort leer (count 0) statt ungefiltert zu suchen und die Treffer faelschlich als datumsgefiltert auszugeben; Teil-Gueltigkeit (eine Seite gueltig) ergibt >=1 Grenze und ist NICHT betroffen. Alt: 1.37.0.
 
 # Startup-Banner (Observability-First: Log-Pfad + Version EINMAL ausgeben)
 _log(logging.INFO, "brain-api startet", version=VERSION, log_path=LOG_PATH)
@@ -1633,6 +1636,15 @@ def by_parent(parent: str, user_id: str = "frank", limit: int = 0) -> dict:
     limit>0 (NEU, rein additiv): nur die N aktuellsten Eintraege + nur deren Volltexte (s. by_category)."""
     _require_store()
     par = canonical_category(parent)
+    # Ladefenster-/ready-Schutz wie by_category (1.34.2): waehrend eines Neuaufbaus/Reindex nie eine
+    # partielle Liste als vollstaendig ausgeben — sofort leer + ready:False melden.
+    ready_before = True
+    try:
+        ready_before = getattr(qc.get_collection(COLLECTION).status, "value", "").lower() in ("green", "yellow")
+    except Exception:  # noqa: BLE001 — Status-Hickup darf den vorhandenen Lesepfad nicht blockieren
+        pass
+    if not ready_before:
+        return {"ok": True, "ready": False, "parent": par, "count": 0, "total": 0, "items": []}
     meta_only = limit > 0
     payload_fields = ["doc_id", "title", "category", "categories", "parent", "source", "layer",
                       "created_at", "updated_at"] if meta_only else True
@@ -1660,7 +1672,13 @@ def by_parent(parent: str, user_id: str = "frank", limit: int = 0) -> dict:
     total = len(items)
     if meta_only:
         items = _load_full_texts(items[:limit])
-    return {"ok": True, "parent": par, "count": len(items), "total": total, "items": items}
+    ready_after = True
+    try:
+        ready_after = getattr(qc.get_collection(COLLECTION).status, "value", "").lower() in ("green", "yellow")
+    except Exception:  # noqa: BLE001
+        pass
+    return {"ok": True, "ready": ready_before and ready_after,
+            "parent": par, "count": len(items), "total": total, "items": items}
 
 
 @app.post("/backfill-parent", dependencies=[Depends(require_auth)])
@@ -1822,7 +1840,7 @@ def category_counts(user_id: str = "frank") -> dict:
     for p in points:
         did = p.payload.get("doc_id")
         cats = cats_from_payload(p.payload)
-        if any(not is_overview_total_excluded(c) for c in cats):
+        if not cats or any(not is_overview_total_excluded(c) for c in cats):   # kategorieloser Nutz-Eintrag zaehlt mit (any([]) waere sonst False)
             countable_docs.add(did)
         for c in cats:   # Multi-Category: Eintrag zaehlt in JEDER seiner Kategorien
             seen.setdefault(c, set()).add(did)
@@ -1932,49 +1950,70 @@ def set_entry_category(req: EntryCategoryReq) -> dict:
     der Eintrag wird mit dem neuen Kategorie-Praefix FRISCH eingebettet (full_text/Titel/created_at
     bleiben 1:1). Setzt zugleich das abgeleitete 'parent'-Feld. Sync def -> Threadpool (fastapi §1).
     KEIN Delete-before-Embed: Embedding laeuft VOR jeder Loeschung — ein Embedding-/Budget-Fehler
-    (429/Gemini) kann den Eintrag nicht mehr unwiederbringlich loeschen (gleiche Klasse wie 1.32.0)."""
+    (429/Gemini) kann den Eintrag nicht mehr unwiederbringlich loeschen (gleiche Klasse wie 1.32.0).
+    Optimistische Nebenlaeufigkeit (1.38.0): der ERHALTENE full_text/Titel wird ausserhalb des Guards
+    gelesen+embedded; ein updated_at-Versionscheck unter dem Guard verwirft einen stalen Ueberschreiber."""
     _require_store()
-    pts = _scroll(Filter(must=[
-        FieldCondition(key="doc_id", match=MatchValue(value=req.doc_id)),
-        FieldCondition(key="user_id", match=MatchValue(value=req.user_id)),
-    ]), limit=1)   # nur 1 Chunk: full_text/Metadaten sind 1:1 in jedem Chunk -> OOM-Schutz bei grossen Docs (Frank 2026-06-26)
-    if not pts:
-        raise HTTPException(status_code=404, detail="Eintrag nicht gefunden")
-    pl = pts[0].payload
-    old_cat = (pl.get("category") or "").strip()
-    new_cat = (req.category or "").strip()
-    new_cats = [new_cat] if new_cat else []   # /entry/category setzt GENAU eine Kategorie (Einzel-Wechsel); Multi -> /entry/categories
-    new_parents = category_parents(new_cats)
-    new_parent = new_parents[0] if new_parents else ""
-    title = (pl.get("title") or "").strip()
-    full_text = pl.get("full_text", "")
-    created_at = pl.get("created_at", iso_now())
-    source = (pl.get("source") or "manual").strip().lower() or "manual"
-    layer = payload_layer(pl)   # Ebene beim Rebuild erhalten (Feld-Drift-Schutz, qdrant.md §9)
-    validity = {k: pl.get(k) for k in ("valid_from", "valid_until") if pl.get(k)}   # bi-temporal erhalten (#4)
-    now = iso_now()
-
-    chunks = chunk_text(full_text)
-    _guard_embed_budget(len(chunks))
-    t0 = time.time()
-    # Embedding VOR Guard und VOR jeder Loeschung (Datenverlust-Schutz + fastapi §2)
-    vecs = embed_many([embed_input(title, new_cats, ch) for ch in chunks], "RETRIEVAL_DOCUMENT")  # gebuendelt statt seriell
-    points = []
-    for i, (ch, vec) in enumerate(zip(chunks, vecs)):
-        points.append(PointStruct(id=point_id(req.doc_id, i), vector=vec, payload={
-            "doc_id": req.doc_id, "user_id": req.user_id, "title": title,
-            "category": new_cat, "categories": new_cats, "parent": new_parent, "parents": new_parents, "chunk_index": i, "chunk_count": len(chunks),
-            "chunk_text": ch, "full_text": full_text, "created_at": created_at, "updated_at": now, "source": source, "layer": layer, **validity,
-        }))
     doc_filter = Filter(must=[FieldCondition(key="doc_id", match=MatchValue(value=req.doc_id))])
-    expected_ids = {p.id for p in points}
-    with _entry_write_guard():
-        old_ids = [p.id for p in _scroll(doc_filter, with_payload=False)]
-        _upsert_batched(points, wait=True)   # deterministische IDs ueberschreiben gemeinsame Chunks
-        stale_ids = [i for i in old_ids if i not in expected_ids]
-        if stale_ids:   # Rest-Chunks eines frueher laengeren Textes erst NACH dem Upsert entfernen
-            qc.delete(collection_name=COLLECTION, points_selector=stale_ids, wait=True)
-            _bm25_invalidate()   # Rest-Chunk-Loeschung ist der letzte Schreibvorgang -> Index frisch
+    for _attempt in range(4):   # begrenzter Retry: ein paralleler Voll-Ersatz (V1->V2) waehrend des Embeddings
+        pts = _scroll(Filter(must=[
+            FieldCondition(key="doc_id", match=MatchValue(value=req.doc_id)),
+            FieldCondition(key="user_id", match=MatchValue(value=req.user_id)),
+        ]), limit=1)   # nur 1 Chunk: full_text/Metadaten sind 1:1 in jedem Chunk -> OOM-Schutz bei grossen Docs (Frank 2026-06-26)
+        if not pts:
+            raise HTTPException(status_code=404, detail="Eintrag nicht gefunden")
+        pl = pts[0].payload
+        base_updated_at = pl.get("updated_at")   # Versionstoken der ERHALTENEN Felder (full_text/Titel/created_at)
+        old_cat = (pl.get("category") or "").strip()
+        new_cat = (req.category or "").strip()
+        new_cats = [new_cat] if new_cat else []   # /entry/category setzt GENAU eine Kategorie (Einzel-Wechsel); Multi -> /entry/categories
+        new_parents = category_parents(new_cats)
+        new_parent = new_parents[0] if new_parents else ""
+        title = (pl.get("title") or "").strip()
+        full_text = pl.get("full_text", "")
+        created_at = pl.get("created_at", iso_now())
+        source = (pl.get("source") or "manual").strip().lower() or "manual"
+        layer = payload_layer(pl)   # Ebene beim Rebuild erhalten (Feld-Drift-Schutz, qdrant.md §9)
+        validity = {k: pl.get(k) for k in ("valid_from", "valid_until") if pl.get(k)}   # bi-temporal erhalten (#4)
+        now = iso_now()
+
+        chunks = chunk_text(full_text)
+        _guard_embed_budget(len(chunks))
+        t0 = time.time()
+        # Embedding VOR Guard und VOR jeder Loeschung (Datenverlust-Schutz + fastapi §2)
+        vecs = embed_many([embed_input(title, new_cats, ch) for ch in chunks], "RETRIEVAL_DOCUMENT")  # gebuendelt statt seriell
+        points = []
+        for i, (ch, vec) in enumerate(zip(chunks, vecs)):
+            points.append(PointStruct(id=point_id(req.doc_id, i), vector=vec, payload={
+                "doc_id": req.doc_id, "user_id": req.user_id, "title": title,
+                "category": new_cat, "categories": new_cats, "parent": new_parent, "parents": new_parents, "chunk_index": i, "chunk_count": len(chunks),
+                "chunk_text": ch, "full_text": full_text, "created_at": created_at, "updated_at": now, "source": source, "layer": layer, **validity,
+            }))
+        expected_ids = {p.id for p in points}
+        try:
+            with _entry_write_guard():
+                # updated_at frisch unter dem Guard nachlesen: hat ein paralleler /store oder PUT /entry den
+                # Eintrag seit dem Lesen oben ersetzt (updated_at neu), ist der oben eingebettete full_text
+                # STALE -> nicht ueberschreiben (Lost-Update), sondern _WriteConflict -> neu lesen+embedden.
+                fresh = _scroll(doc_filter, limit=1, with_payload=["updated_at"])
+                if not fresh:
+                    # Existenz-Neupruefung unter dem Guard (Loop-3-Fix): der Eintrag wurde zwischen dem Lesen
+                    # oben und hier nebenlaeufig geloescht -> NICHT per deterministischem Upsert wiederauferstehen
+                    # lassen (sonst wird ein User-Delete still rueckgaengig gemacht).
+                    raise HTTPException(status_code=409, detail="Eintrag wurde nebenlaeufig geloescht")
+                if (fresh[0].payload or {}).get("updated_at") != base_updated_at:
+                    raise _WriteConflict()
+                old_ids = [p.id for p in _scroll(doc_filter, with_payload=False)]
+                _upsert_batched(points, wait=True)   # deterministische IDs ueberschreiben gemeinsame Chunks
+                stale_ids = [i for i in old_ids if i not in expected_ids]
+                if stale_ids:   # Rest-Chunks eines frueher laengeren Textes erst NACH dem Upsert entfernen
+                    qc.delete(collection_name=COLLECTION, points_selector=stale_ids, wait=True)
+                    _bm25_invalidate()   # Rest-Chunk-Loeschung ist der letzte Schreibvorgang -> Index frisch
+        except _WriteConflict:
+            continue   # Eintrag wurde parallel ersetzt -> frisch neu lesen + neu embedden + neu versuchen
+        break
+    else:
+        raise HTTPException(status_code=409, detail="Eintrag wurde parallel geaendert; bitte erneut versuchen")
     after = _scroll(Filter(must=[FieldCondition(key="doc_id", match=MatchValue(value=req.doc_id))]), limit=1)
     applied = bool(after) and (after[0].payload.get("category") or "").strip() == new_cat
     probe(applied, "Kategorie-Verschiebung nicht angekommen", doc_id=req.doc_id, want=new_cat)
@@ -2006,20 +2045,41 @@ def get_entry_categories(doc_id: str, user_id: str = "frank") -> dict:
             "categories": cats, "parent": parents[0] if parents else None, "parents": parents}
 
 
-@app.post("/entry/categories", dependencies=[Depends(require_auth)])
-def set_entry_categories(req: EntryCategoriesReq) -> dict:
-    """Setzt die VOLLSTAENDIGE Kategorie-Liste EINES Eintrags (Multi-Category, hinter dem Drawer-Plus).
-    Da die Kategorien das EMBEDDING mitpraegen, wird FRISCH neu eingebettet (full_text/Titel/created_at
-    bleiben 1:1). Sync def -> Threadpool (fastapi §1). KEIN Delete-before-Embed: Embedding laeuft VOR
-    jeder Loeschung — ein Embedding-/Budget-Fehler kann den Eintrag nicht mehr loeschen."""
+class _CategoryConflict(Exception):
+    """Interner Optimistic-Concurrency-Marker: der frisch unter dem Guard nachgelesene Kategorie-Stand
+    weicht vom erwarteten ab (paralleler Schreiber). Loest in add_entry_category einen Neuversuch aus."""
+
+
+class _WriteConflict(Exception):
+    """Interner Optimistic-Concurrency-Marker (analog _CategoryConflict): das frisch unter dem Guard
+    nachgelesene updated_at weicht vom base_updated_at ab, das beim Lesen des Eintrags (AUSSERHALB des
+    Guards, Basis fuer den ausserhalb eingebetteten Inhalt) galt — ein paralleler /store oder PUT /entry
+    hat den Eintrag zwischenzeitlich VOLLSTAENDIG ersetzt. Der ausserhalb gelesene/embeddete Stand (z.B.
+    erhaltener full_text/Titel/erhaltene Kategorien) ist damit STALE -> statt zu ueberschreiben wird
+    frisch neu gelesen + neu embedded + neu versucht (Lost-Update-Schutz ohne den Guard fuer das
+    minutenlange Embedding zu halten). Wie _CategoryConflict NUR intern und immer vom Aufrufer gefangen
+    (Retry-Schleife) -> nie ein ungefangener 500 (Loop-3-Lehre)."""
+
+
+def _set_entry_categories_impl(doc_id: str, user_id: str, categories: list[str],
+                               require_current_keys: "set[str] | None" = None,
+                               expected_updated_at: "str | None" = None) -> dict:
+    """Interne Implementierung des Kategorie-Listen-Setzens. WICHTIG: KEINE FastAPI-Signatur —
+    require_current_keys ist damit ECHT intern und NICHT als (versteckter) Query-Parameter extern
+    bindbar (Loop-3-Fix: sonst konnte ein externer Aufrufer ?require_current_keys=… senden und
+    _CategoryConflict -> HTTP 500 ausloesen). Embedding laeuft VOR dem Guard (Datenverlust-/Lock-Schutz).
+    require_current_keys (nur add_entry_category): optimistischer Nebenlaeufigkeits-Check unter dem Guard.
+    expected_updated_at (1.38.0, beide Wrapper): updated_at-Versionstoken des Aufrufer-Reads; weicht das
+    frisch unter dem Guard nachgelesene updated_at ab -> _WriteConflict (der ausserhalb erhaltene full_text/
+    Titel ist stale). Default None -> KEIN Check -> _WriteConflict wird nie ungefangen (Loop-3-Lehre)."""
     _require_store()
     pts = _scroll(Filter(must=[
-        FieldCondition(key="doc_id", match=MatchValue(value=req.doc_id)),
-        FieldCondition(key="user_id", match=MatchValue(value=req.user_id)),
+        FieldCondition(key="doc_id", match=MatchValue(value=doc_id)),
+        FieldCondition(key="user_id", match=MatchValue(value=user_id)),
     ]), limit=1)   # nur 1 Chunk: full_text/Metadaten sind 1:1 in jedem Chunk -> OOM-Schutz bei grossen Docs (Frank 2026-06-26)
     if not pts:
         raise HTTPException(status_code=404, detail="Eintrag nicht gefunden")
-    cats = norm_cats(req.categories, None)
+    cats = norm_cats(categories, None)
     if not cats:
         raise HTTPException(status_code=400, detail="Mindestens eine gueltige Kategorie noetig")
     parents = category_parents(cats)
@@ -2039,55 +2099,114 @@ def set_entry_categories(req: EntryCategoriesReq) -> dict:
     vecs = embed_many([embed_input(title, cats, ch) for ch in chunks], "RETRIEVAL_DOCUMENT")  # gebuendelt statt seriell
     points = []
     for i, (ch, vec) in enumerate(zip(chunks, vecs)):
-        points.append(PointStruct(id=point_id(req.doc_id, i), vector=vec, payload={
-            "doc_id": req.doc_id, "user_id": req.user_id, "title": title,
+        points.append(PointStruct(id=point_id(doc_id, i), vector=vec, payload={
+            "doc_id": doc_id, "user_id": user_id, "title": title,
             "category": cats[0], "categories": cats,
             "parent": (parents[0] if parents else ""), "parents": parents,
             "chunk_index": i, "chunk_count": len(chunks), "chunk_text": ch,
             "full_text": full_text, "created_at": created_at, "updated_at": now, "source": source, "layer": layer, **validity,
         }))
-    doc_filter = Filter(must=[FieldCondition(key="doc_id", match=MatchValue(value=req.doc_id))])
+    doc_filter = Filter(must=[FieldCondition(key="doc_id", match=MatchValue(value=doc_id))])
     expected_ids = {p.id for p in points}
     with _entry_write_guard():
+        # Existenz-Neupruefung unter dem Guard (Loop-3-Fix): ein nebenlaeufiger DELETE zwischen dem
+        # obigen Lesen und hier darf den Eintrag NICHT wiederauferstehen lassen (der Upsert mit
+        # deterministischen IDs wuerde ihn sonst neu anlegen -> User-Delete still rueckgaengig).
+        fresh = _scroll(doc_filter, limit=1, with_payload=["doc_id", "category", "categories", "updated_at"])
+        if not fresh:
+            if require_current_keys is not None:
+                raise _CategoryConflict()   # Retry laeuft -> naechster Read findet nichts -> 404
+            raise HTTPException(status_code=409, detail="Eintrag wurde nebenlaeufig geloescht")
+        if expected_updated_at is not None and (fresh[0].payload or {}).get("updated_at") != expected_updated_at:
+            # Optimistische Nebenlaeufigkeit (1.38.0): der Eintrag wurde seit dem Aufrufer-Read (Basis fuer den
+            # ausserhalb eingebetteten full_text/Titel) parallel VOLLSTAENDIG ersetzt -> stale -> _WriteConflict.
+            # Der Wrapper (set_entry_categories/add_entry_category) liest frisch neu + embedded neu + versucht neu.
+            raise _WriteConflict()
+        if require_current_keys is not None:
+            # Optimistische Nebenlaeufigkeit (add_entry_category ruft OHNE globalen Lock auf, damit das
+            # Embedding oben IMMER ausserhalb des Locks bleibt): den AKTUELLEN Kategorie-Stand frisch unter
+            # dem Guard nachlesen; hat ein paralleler Schreiber ihn geaendert, hier abbrechen statt zu
+            # ueberschreiben — so bleibt Read-Modify-Write atomar (kein verlorenes Hinzufuegen wie 1.32.1).
+            fresh_keys = {category_key(c) for c in cats_from_payload(fresh[0].payload or {})}
+            if fresh_keys != require_current_keys:
+                raise _CategoryConflict()
         old_ids = [p.id for p in _scroll(doc_filter, with_payload=False)]
         _upsert_batched(points, wait=True)   # deterministische IDs ueberschreiben gemeinsame Chunks
         stale_ids = [i for i in old_ids if i not in expected_ids]
         if stale_ids:   # Rest-Chunks eines frueher laengeren Textes erst NACH dem Upsert entfernen
             qc.delete(collection_name=COLLECTION, points_selector=stale_ids, wait=True)
             _bm25_invalidate()   # Rest-Chunk-Loeschung ist der letzte Schreibvorgang -> Index frisch
-    after = _scroll(Filter(must=[FieldCondition(key="doc_id", match=MatchValue(value=req.doc_id))]), limit=1)
+    after = _scroll(Filter(must=[FieldCondition(key="doc_id", match=MatchValue(value=doc_id))]), limit=1)
     applied = bool(after) and set(cats_from_payload(after[0].payload)) == set(cats)
-    probe(applied, "Kategorie-Liste nicht angekommen", doc_id=req.doc_id, want=cats)
+    probe(applied, "Kategorie-Liste nicht angekommen", doc_id=doc_id, want=cats)
     checkpoint("set_entry_categories", "Kategorie-LISTE eines Eintrags gesetzt (Multi-Category, frisch eingebettet)",
-               ok=applied, doc_id=req.doc_id, categories=cats, parents=parents, chunks=len(chunks),
+               ok=applied, doc_id=doc_id, categories=cats, parents=parents, chunks=len(chunks),
                ms=int((time.time() - t0) * 1000))
-    return {"ok": True, "doc_id": req.doc_id, "categories": cats, "parents": parents}
+    return {"ok": True, "doc_id": doc_id, "categories": cats, "parents": parents}
+
+
+@app.post("/entry/categories", dependencies=[Depends(require_auth)])
+def set_entry_categories(req: EntryCategoriesReq) -> dict:
+    """Setzt die VOLLSTAENDIGE Kategorie-Liste EINES Eintrags (Multi-Category, hinter dem Drawer-Plus).
+    Da die Kategorien das EMBEDDING mitpraegen, wird FRISCH neu eingebettet (full_text/Titel/created_at
+    bleiben 1:1). Sync def -> Threadpool (fastapi §1). KEIN Delete-before-Embed: Embedding laeuft VOR
+    jeder Loeschung. Duenner HTTP-Wrapper um _set_entry_categories_impl (require_current_keys ist echt intern).
+    Optimistische Nebenlaeufigkeit (1.38.0): base_updated_at je Versuch frisch lesen; ersetzt ein paralleler
+    /store/PUT den erhaltenen full_text waehrend des Embeddings -> _WriteConflict -> begrenzter Retry."""
+    _require_store()
+    doc_filter = Filter(must=[
+        FieldCondition(key="doc_id", match=MatchValue(value=req.doc_id)),
+        FieldCondition(key="user_id", match=MatchValue(value=req.user_id)),
+    ])
+    for _attempt in range(4):
+        base = _scroll(doc_filter, limit=1, with_payload=["updated_at"])
+        if not base:
+            raise HTTPException(status_code=404, detail="Eintrag nicht gefunden")
+        try:
+            return _set_entry_categories_impl(req.doc_id, req.user_id, req.categories,
+                                              expected_updated_at=(base[0].payload or {}).get("updated_at"))
+        except _WriteConflict:
+            continue   # Inhalt wurde parallel ersetzt -> frisch neu lesen + neu embedden + neu versuchen
+    raise HTTPException(status_code=409, detail="Eintrag wurde parallel geaendert; bitte erneut versuchen")
 
 
 @app.post("/entry/categories/add", dependencies=[Depends(require_auth)])
-@serialized_entry_write
 def add_entry_category(req: AddEntryCategoryReq) -> dict:
-    """Ergaenzt genau eine Kategorie atomar; parallele Additionen koennen sich nicht ueberschreiben."""
+    """Ergaenzt genau eine Kategorie; parallele Additionen koennen sich nicht ueberschreiben.
+    KEIN globaler @serialized_entry_write mehr (1.36.0): sonst liefe das (bei grossen Docs minutenlange)
+    Embedding von set_entry_categories INNERHALB des globalen Schreib-Locks — ein paralleler /store-Mirror
+    lief dadurch nach 15s in 503. Stattdessen optimistische Nebenlaeufigkeit: das Embedding bleibt IMMER
+    ausserhalb des Locks, die Read-Modify-Write-Atomarität sichern require_current_keys + Retry-Schleife
+    + updated_at-Versionscheck (1.38.0: schuetzt zusaetzlich den erhaltenen full_text/Titel vor stalem
+    Ueberschreiben durch einen parallelen /store/PUT waehrend des Embeddings)."""
     _require_store()
-    pts = _scroll(Filter(must=[
-        FieldCondition(key="doc_id", match=MatchValue(value=req.doc_id)),
-        FieldCondition(key="user_id", match=MatchValue(value=req.user_id)),
-    ]), limit=1, with_payload=["doc_id", "category", "categories"])
-    if not pts:
-        raise HTTPException(status_code=404, detail="Eintrag nicht gefunden")
-    current = cats_from_payload(pts[0].payload or {})
     proposed = canonical_category(req.category)
     if not proposed:
         raise HTTPException(status_code=400, detail="Kategorie erforderlich")
-    if any(category_key(proposed) == category_key(value) for value in current):
-        return {"ok": True, "doc_id": req.doc_id, "categories": current, "added": False}
-    if len(current) >= 12:
-        raise HTTPException(status_code=400, detail="Ein Eintrag kann hoechstens 12 Kategorien haben")
-    result = set_entry_categories(EntryCategoriesReq(
-        doc_id=req.doc_id, categories=current + [proposed], user_id=req.user_id
-    ))
-    result["added"] = True
-    return result
+    for _ in range(4):   # Retry: ein paralleler Schreiber kann den Stand zwischen Lesen und Upsert aendern
+        pts = _scroll(Filter(must=[
+            FieldCondition(key="doc_id", match=MatchValue(value=req.doc_id)),
+            FieldCondition(key="user_id", match=MatchValue(value=req.user_id)),
+        ]), limit=1, with_payload=["doc_id", "category", "categories", "updated_at"])
+        if not pts:
+            raise HTTPException(status_code=404, detail="Eintrag nicht gefunden")
+        base_updated_at = (pts[0].payload or {}).get("updated_at")   # Versionstoken des erhaltenen full_text/Titel
+        current = cats_from_payload(pts[0].payload or {})
+        if any(category_key(proposed) == category_key(value) for value in current):
+            return {"ok": True, "doc_id": req.doc_id, "categories": current, "added": False}
+        if len(current) >= 12:
+            raise HTTPException(status_code=400, detail="Ein Eintrag kann hoechstens 12 Kategorien haben")
+        try:
+            result = _set_entry_categories_impl(
+                req.doc_id, req.user_id, current + [proposed],
+                require_current_keys={category_key(c) for c in current},
+                expected_updated_at=base_updated_at,
+            )
+        except (_CategoryConflict, _WriteConflict):
+            continue   # Kategorie-Stand ODER erhaltener Inhalt hat sich parallel geaendert -> frisch neu versuchen
+        result["added"] = True
+        return result
+    raise HTTPException(status_code=503, detail="Kategorie konnte wegen paralleler Aenderungen nicht hinzugefuegt werden; bitte erneut versuchen")
 
 
 @app.post("/purge", dependencies=[Depends(require_auth)])
@@ -2195,6 +2314,17 @@ def search(req: SearchReq) -> dict:
         # der dense-Pfad den ROHEN String und fand z.B. parent='gespraeche' vs. 'Gespräche' nicht.
         must.append(_parent_match_filter(canonical_category(req.parent)))
     gte, lte = _date_bounds(req)
+    # Datumsfeld GESETZT, aber _date_bounds konnte KEINE Grenze ableiten (ungueltiges/kalendarisch
+    # unmoegliches Datum wie 2026-02-30): NICHT ungefiltert suchen und das Ergebnis dann faelschlich als
+    # datumsgefiltert ausgeben (der Agent praesentierte sonst Treffer beliebiger Tage als 'von diesem Tag').
+    # Konsistent zu /by-date sofort leer zurueckgeben. Teil-Gueltigkeit (z.B. date_from gueltig + date_to
+    # ungueltig) ergibt weiterhin >=1 Grenze (local_day_bounds setzt jede Seite unabhaengig) -> NICHT betroffen.
+    if gte is None and lte is None and any((getattr(req, _f) or "").strip() for _f in ("date", "date_from", "date_to")):
+        applied = {"category": req.category or None, "parent": req.parent or None, "date": req.date or None,
+                   "date_from": req.date_from or None, "date_to": req.date_to or None}
+        checkpoint("search", "Datumsfilter gesetzt, aber ungueltiges/kalendarisch unmoegliches Datum -> leer (wie /by-date)",
+                   ok=True, query_len=len(req.query), hits=0, filters=applied, ms=int((time.time() - t0) * 1000))
+        return {"ok": True, "count": 0, "items": [], "filters": applied, "retrieval": "none"}
     py_date_filter = False  # Fallback, falls DatetimeRange in der Client-Version fehlt (Funktionserhalt)
     if gte or lte:
         if HAS_DATETIME_RANGE:
@@ -2446,106 +2576,127 @@ def update_entry(req: UpdateReq) -> dict:
     """Ersetzt einen bestehenden Eintrag (per doc_id) 1:1 durch neuen Text: die alten Vektoren/Chunks
     werden GELOESCHT, der neue Text frisch embedded und unter DERSELBEN doc_id gespeichert. Titel,
     Kategorie und Erstellungsdatum bleiben erhalten (nur updated_at neu). Genau Franks 'alten Vektor
-    durch den neuen ersetzen — wortwoertlich der Text aus dem Feld'. Sync def -> Threadpool (fastapi §1)."""
+    durch den neuen ersetzen — wortwoertlich der Text aus dem Feld'. Sync def -> Threadpool (fastapi §1).
+    Optimistische Nebenlaeufigkeit (1.38.0): req.text ist bewusst neu; der Versionscheck schuetzt die
+    ERHALTENEN Felder (Kategorien/Titel bei req.*=None, created_at) vor einem stalen Ueberschreiben durch
+    einen parallelen /store/Kategorie-Wechsel waehrend des Embeddings -> bei Konflikt neu ableiten+embedden."""
     _require_store()
-    old = _scroll(Filter(must=[FieldCondition(key="doc_id", match=MatchValue(value=req.doc_id))]), limit=1)
-    if not old:
-        raise HTTPException(status_code=404, detail="Eintrag nicht gefunden")
-    pl = old[0].payload
-    old_title = (pl.get("title") or "").strip()
-    cats = norm_cats(req.categories, None) or cats_from_payload(pl)   # req.categories ueberschreibt; sonst bisherige Kategorien behalten
-    category = cats[0] if cats else ""
-    created_at = pl.get("created_at", iso_now())
-    source = (pl.get("source") or "manual").strip().lower() or "manual"
-    layer = payload_layer(pl)   # Ebene beim Rebuild erhalten (Feld-Drift-Schutz, qdrant.md §9)
-    validity = {k: pl.get(k) for k in ("valid_from", "valid_until") if pl.get(k)}   # bi-temporal erhalten (#4)
-    now = iso_now()
-
-    # Titel-Aenderung (Frank-Wunsch): req.title=None -> alter Titel bleibt. Sonst neuer Titel.
-    # Die doc_id eines betitelten Eintrags HAENGT vom Titel ab (make_doc_id) -> bei echter Titel-
-    # aenderung MUSS der Eintrag auf die neue doc_id wandern (sonst findet /by-title ihn nicht mehr).
-    # LEERER neuer Titel zaehlt als 'Titel behalten': sonst bliebe ein 'titelloser' Eintrag auf der
-    # alten Titel-doc_id liegen und ein spaeterer /store mit dem alten Titel wuerde ihn ERSETZEN.
-    title = old_title if (req.title is None or not req.title.strip()) else req.title.strip()
-    title_changed = title != old_title
-    target_doc_id = req.doc_id
-    if title_changed and title:
-        target_doc_id = make_doc_id(req.user_id, title)
-
-    parents = category_parents(cats)
-    parent = parents[0] if parents else ""
-    chunks = chunk_text(req.text)
-    _guard_embed_budget(len(chunks))
-    t0 = time.time()
-    # Embedding VOR dem Schreib-Guard (langsam; blockiert sonst alle parallelen Schreibwege)
-    vecs = embed_many([embed_input(title, cats, ch) for ch in chunks], "RETRIEVAL_DOCUMENT")  # gebuendelt statt seriell
-    points = []
-    for i, (ch, vec) in enumerate(zip(chunks, vecs)):
-        points.append(PointStruct(id=point_id(target_doc_id, i), vector=vec, payload={
-            "doc_id": target_doc_id, "user_id": req.user_id, "title": title, "category": category, "categories": cats, "parent": parent, "parents": parents,
-            "chunk_index": i, "chunk_count": len(chunks), "chunk_text": ch,
-            "full_text": req.text, "created_at": created_at, "updated_at": now, "source": source, "layer": layer, **validity,
-        }))
     # Datenintegrität: Vollständige Payload+Vektor-Snapshots erlauben Rollback auch dann, wenn ein
     # Mehrbatch-Upsert oder das Restchunk-Cleanup mittendrin scheitert. Erst wenn ALLE erwarteten
     # Chunk-IDs mit dem neuen Volltext vorhanden und alle fremden IDs entfernt sind, wird bei einer
     # Titelmigration die alte doc_id gelöscht.
     source_filter = Filter(must=[FieldCondition(key="doc_id", match=MatchValue(value=req.doc_id))])
-    target_filter = Filter(must=[FieldCondition(key="doc_id", match=MatchValue(value=target_doc_id))])
-    with _entry_write_guard():
-        source_snapshot = _dedup_snapshot_full_text(_scroll(source_filter, with_vectors=True))
-        target_snapshot = source_snapshot if target_doc_id == req.doc_id \
-            else _dedup_snapshot_full_text(_scroll(target_filter, with_vectors=True))
-        expected_ids = {p.id for p in points}
+    for _attempt in range(4):   # begrenzter Retry: paralleler Ersatz der ERHALTENEN Felder -> neu ableiten
+        old = _scroll(source_filter, limit=1)
+        if not old:
+            raise HTTPException(status_code=404, detail="Eintrag nicht gefunden")
+        pl = old[0].payload
+        base_updated_at = pl.get("updated_at")   # Versionstoken der ERHALTENEN Felder (Kategorien/Titel/created_at)
+        old_title = (pl.get("title") or "").strip()
+        cats = norm_cats(req.categories, None) or cats_from_payload(pl)   # req.categories ueberschreibt; sonst bisherige Kategorien behalten
+        category = cats[0] if cats else ""
+        created_at = pl.get("created_at", iso_now())
+        source = (pl.get("source") or "manual").strip().lower() or "manual"
+        layer = payload_layer(pl)   # Ebene beim Rebuild erhalten (Feld-Drift-Schutz, qdrant.md §9)
+        validity = {k: pl.get(k) for k in ("valid_from", "valid_until") if pl.get(k)}   # bi-temporal erhalten (#4)
+        now = iso_now()
+
+        # Titel-Aenderung (Frank-Wunsch): req.title=None -> alter Titel bleibt. Sonst neuer Titel.
+        # Die doc_id eines betitelten Eintrags HAENGT vom Titel ab (make_doc_id) -> bei echter Titel-
+        # aenderung MUSS der Eintrag auf die neue doc_id wandern (sonst findet /by-title ihn nicht mehr).
+        # LEERER neuer Titel zaehlt als 'Titel behalten': sonst bliebe ein 'titelloser' Eintrag auf der
+        # alten Titel-doc_id liegen und ein spaeterer /store mit dem alten Titel wuerde ihn ERSETZEN.
+        title = old_title if (req.title is None or not req.title.strip()) else req.title.strip()
+        title_changed = title != old_title
+        target_doc_id = req.doc_id
+        if title_changed and title:
+            target_doc_id = make_doc_id(req.user_id, title)
+
+        parents = category_parents(cats)
+        parent = parents[0] if parents else ""
+        chunks = chunk_text(req.text)
+        _guard_embed_budget(len(chunks))
+        t0 = time.time()
+        # Embedding VOR dem Schreib-Guard (langsam; blockiert sonst alle parallelen Schreibwege)
+        vecs = embed_many([embed_input(title, cats, ch) for ch in chunks], "RETRIEVAL_DOCUMENT")  # gebuendelt statt seriell
+        points = []
+        for i, (ch, vec) in enumerate(zip(chunks, vecs)):
+            points.append(PointStruct(id=point_id(target_doc_id, i), vector=vec, payload={
+                "doc_id": target_doc_id, "user_id": req.user_id, "title": title, "category": category, "categories": cats, "parent": parent, "parents": parents,
+                "chunk_index": i, "chunk_count": len(chunks), "chunk_text": ch,
+                "full_text": req.text, "created_at": created_at, "updated_at": now, "source": source, "layer": layer, **validity,
+            }))
+        target_filter = Filter(must=[FieldCondition(key="doc_id", match=MatchValue(value=target_doc_id))])
         try:
-            _upsert_batched(points, wait=True)
-            # Verifikation OHNE N full_text-Kopien im RAM: text_len je Chunk + Chunk 0 wortwoertlich.
-            current = _scroll(target_filter, with_payload=["chunk_index", "chunk_count", "text_len"])
-            current_by_id = {p.id: p for p in current}
-            expected_ok = expected_ids.issubset(current_by_id) and all(
-                (current_by_id[p.id].payload or {}).get("chunk_index") == i
-                and (current_by_id[p.id].payload or {}).get("chunk_count") == len(chunks)
-                and (current_by_id[p.id].payload or {}).get("text_len") == len(req.text)
-                for i, p in enumerate(points)
-            )
-            if expected_ok:
-                head = _scroll(Filter(must=[FieldCondition(key="doc_id", match=MatchValue(value=target_doc_id)),
-                                            FieldCondition(key="chunk_index", match=MatchValue(value=0))]),
-                               limit=1, with_payload=["full_text"])
-                expected_ok = bool(head) and (head[0].payload or {}).get("full_text") == req.text
-            if not expected_ok:
-                raise RuntimeError("nicht alle neuen Chunks wurden verifiziert")
-
-            stale_ids = [p.id for p in current if p.id not in expected_ids]
-            if stale_ids:
-                qc.delete(collection_name=COLLECTION, points_selector=stale_ids, wait=True)
-            final_points = _scroll(target_filter, with_payload=["chunk_index", "chunk_count", "text_len"])
-            replaced_ok = ({p.id for p in final_points} == expected_ids and len(final_points) == len(chunks)
-                           and all((p.payload or {}).get("text_len") == len(req.text) for p in final_points))
-            if not replaced_ok:
-                raise RuntimeError("finale Chunk-Menge stimmt nicht")
-
-            if target_doc_id != req.doc_id:
-                _delete_doc(req.doc_id)
-                if _scroll(source_filter, limit=1, with_payload=False):
-                    raise RuntimeError("alte doc_id nach Titelmigration noch vorhanden")
-            _bm25_invalidate()
-        except Exception as update_exc:  # noqa: BLE001 — jeder Teilfehler stellt beide Dokumente wieder her
-            rollback_errors = []
-            try:
-                _restore_doc_snapshot(target_doc_id, target_snapshot)
-            except Exception as rollback_exc:  # noqa: BLE001
-                rollback_errors.append(f"Ziel: {type(rollback_exc).__name__}")
-            if target_doc_id != req.doc_id:
+            with _entry_write_guard():
+                source_snapshot = _dedup_snapshot_full_text(_scroll(source_filter, with_vectors=True))
+                if not source_snapshot:
+                    # Existenz-Neupruefung unter dem Guard (Loop-3-Fix): der Eintrag wurde zwischen dem Lesen
+                    # oben und hier nebenlaeufig geloescht -> NICHT per deterministischem Upsert wiederauferstehen
+                    # lassen (Folge des "Embedding vor dem Guard"; sonst macht ein PUT einen User-Delete rueckgaengig).
+                    raise HTTPException(status_code=409, detail="Eintrag wurde nebenlaeufig geloescht")
+                # Optimistische Nebenlaeufigkeit (1.38.0), VOR jedem Upsert: hat ein paralleler Schreiber den
+                # QUELL-Eintrag seit dem Lesen oben ersetzt (updated_at neu), sind die daraus abgeleiteten
+                # ERHALTENEN Felder (Kategorien/Titel/created_at) stale -> ohne Teil-Schreibvorgang neu ableiten.
+                if (source_snapshot[0].payload or {}).get("updated_at") != base_updated_at:
+                    raise _WriteConflict()
+                target_snapshot = source_snapshot if target_doc_id == req.doc_id \
+                    else _dedup_snapshot_full_text(_scroll(target_filter, with_vectors=True))
+                expected_ids = {p.id for p in points}
                 try:
-                    _restore_doc_snapshot(req.doc_id, source_snapshot)
-                except Exception as rollback_exc:  # noqa: BLE001
-                    rollback_errors.append(f"Quelle: {type(rollback_exc).__name__}")
-            _log(logging.ERROR, "PUT /entry fehlgeschlagen; Rollback ausgeführt",
-                 error=type(update_exc).__name__, rollback_errors=rollback_errors, exc_info=True)
-            if rollback_errors:
-                raise HTTPException(status_code=500, detail="Aktualisierung und Rollback fehlgeschlagen; Serverprotokoll prüfen") from update_exc
-            raise HTTPException(status_code=503, detail="Aktualisierung nicht verifiziert; bisheriger Eintrag wurde wiederhergestellt") from update_exc
+                    _upsert_batched(points, wait=True)
+                    # Verifikation OHNE N full_text-Kopien im RAM: text_len je Chunk + Chunk 0 wortwoertlich.
+                    current = _scroll(target_filter, with_payload=["chunk_index", "chunk_count", "text_len"])
+                    current_by_id = {p.id: p for p in current}
+                    expected_ok = expected_ids.issubset(current_by_id) and all(
+                        (current_by_id[p.id].payload or {}).get("chunk_index") == i
+                        and (current_by_id[p.id].payload or {}).get("chunk_count") == len(chunks)
+                        and (current_by_id[p.id].payload or {}).get("text_len") == len(req.text)
+                        for i, p in enumerate(points)
+                    )
+                    if expected_ok:
+                        head = _scroll(Filter(must=[FieldCondition(key="doc_id", match=MatchValue(value=target_doc_id)),
+                                                    FieldCondition(key="chunk_index", match=MatchValue(value=0))]),
+                                       limit=1, with_payload=["full_text"])
+                        expected_ok = bool(head) and (head[0].payload or {}).get("full_text") == req.text
+                    if not expected_ok:
+                        raise RuntimeError("nicht alle neuen Chunks wurden verifiziert")
+
+                    stale_ids = [p.id for p in current if p.id not in expected_ids]
+                    if stale_ids:
+                        qc.delete(collection_name=COLLECTION, points_selector=stale_ids, wait=True)
+                    final_points = _scroll(target_filter, with_payload=["chunk_index", "chunk_count", "text_len"])
+                    replaced_ok = ({p.id for p in final_points} == expected_ids and len(final_points) == len(chunks)
+                                   and all((p.payload or {}).get("text_len") == len(req.text) for p in final_points))
+                    if not replaced_ok:
+                        raise RuntimeError("finale Chunk-Menge stimmt nicht")
+
+                    if target_doc_id != req.doc_id:
+                        _delete_doc(req.doc_id)
+                        if _scroll(source_filter, limit=1, with_payload=False):
+                            raise RuntimeError("alte doc_id nach Titelmigration noch vorhanden")
+                    _bm25_invalidate()
+                except Exception as update_exc:  # noqa: BLE001 — jeder Teilfehler stellt beide Dokumente wieder her
+                    rollback_errors = []
+                    try:
+                        _restore_doc_snapshot(target_doc_id, target_snapshot)
+                    except Exception as rollback_exc:  # noqa: BLE001
+                        rollback_errors.append(f"Ziel: {type(rollback_exc).__name__}")
+                    if target_doc_id != req.doc_id:
+                        try:
+                            _restore_doc_snapshot(req.doc_id, source_snapshot)
+                        except Exception as rollback_exc:  # noqa: BLE001
+                            rollback_errors.append(f"Quelle: {type(rollback_exc).__name__}")
+                    _log(logging.ERROR, "PUT /entry fehlgeschlagen; Rollback ausgeführt",
+                         error=type(update_exc).__name__, rollback_errors=rollback_errors, exc_info=True)
+                    if rollback_errors:
+                        raise HTTPException(status_code=500, detail="Aktualisierung und Rollback fehlgeschlagen; Serverprotokoll prüfen") from update_exc
+                    raise HTTPException(status_code=503, detail="Aktualisierung nicht verifiziert; bisheriger Eintrag wurde wiederhergestellt") from update_exc
+        except _WriteConflict:
+            continue   # Quell-Eintrag wurde parallel ersetzt -> frisch neu ableiten + neu embedden + neu versuchen
+        break
+    else:
+        raise HTTPException(status_code=409, detail="Eintrag wurde parallel geaendert; bitte erneut versuchen")
     checkpoint("update_entry", "Alten Vektor loeschen + neuen Text 1:1 speichern (Titel-Aenderung -> neue doc_id)",
                ok=replaced_ok, doc_id=target_doc_id, old_doc_id=req.doc_id if title_changed else None,
                title=title or None, title_changed=title_changed, chunks=len(chunks),
@@ -2642,9 +2793,24 @@ def trash_restore(req: RestoreReq) -> dict:
             "title": title, "category": category, "categories": cats, "parent": parent, "parents": parents, "chunk_index": i, "chunk_count": len(chunks),
             "chunk_text": ch, "full_text": text, "created_at": created_at, "updated_at": now, "source": source, "layer": layer, **validity,
         }))
+    doc_filter = Filter(must=[FieldCondition(key="doc_id", match=MatchValue(value=req.doc_id))])
     with _entry_write_guard():   # Mutation serialisieren; Embedding lief bereits (fastapi §2)
-        _delete_doc(req.doc_id)  # eventuelle Reste gleicher doc_id raus, dann frisch
-        _upsert_batched(points, wait=True)
+        # Datenverlust-Schutz (1.36.0): einen evtl. AKTIVEN Eintrag gleicher doc_id (per /store neu
+        # angelegt) VOR dem Delete sichern; schlaegt der Upsert danach fehl, wird der exakte
+        # Payload+Vektor-Snapshot zurueckgerollt (Muster wie /store) — sonst waere er unwiederbringlich weg.
+        snapshot = _dedup_snapshot_full_text(_scroll(doc_filter, with_vectors=True))
+        try:
+            _delete_doc(req.doc_id)  # eventuelle Reste gleicher doc_id raus, dann frisch
+            _upsert_batched(points, wait=True)
+        except Exception as mutate_exc:  # noqa: BLE001 — jeder Teilfehler stellt den alten Stand wieder her
+            try:
+                _restore_doc_snapshot(req.doc_id, snapshot)
+            except Exception as rollback_exc:  # noqa: BLE001
+                raise RuntimeError(
+                    f"Restore fehlgeschlagen ({type(mutate_exc).__name__}); Rollback fehlgeschlagen "
+                    f"({type(rollback_exc).__name__})"
+                ) from mutate_exc
+            raise
 
     with _trash_lock:  # erst NACH erfolgreichem Upsert aus dem Papierkorb nehmen
         items = [t for t in _trash_load() if t.get("doc_id") != req.doc_id]
@@ -2752,9 +2918,13 @@ def _entity_get(user_id: str, name: str):
             FieldCondition(key="user_id", match=MatchValue(value=user_id))]),
             with_payload=["name", "name_key", "alias_keys"]):
         if key in (p.payload.get("alias_keys") or []):
-            return _scroll_col(ENTITY_COLLECTION, Filter(must=[
+            hit = _scroll_col(ENTITY_COLLECTION, Filter(must=[
                 FieldCondition(key="user_id", match=MatchValue(value=user_id)),
-                FieldCondition(key="name_key", match=MatchValue(value=p.payload.get("name_key")))]), limit=1)[0]
+                FieldCondition(key="name_key", match=MatchValue(value=p.payload.get("name_key")))]), limit=1)
+            if hit:
+                return hit[0]
+            # Loop-3-Fix: zwischen den beiden Scrolls nebenlaeufig geloescht -> KEIN [0]-IndexError,
+            # sondern weitersuchen (findet nichts weiter -> None).
     return None
 
 
@@ -2812,6 +2982,11 @@ def entities_upsert(req: EntityUpsertReq) -> dict:
                    "type": etype, "aliases": aliases, "alias_keys": [_entity_key(a) for a in aliases],
                    "doc_ids": doc_ids, "doc_count": len(doc_ids),
                    "created_at": pl.get("created_at") or now, "updated_at": now}
+        # Bewusste Ausnahme (1.36.0-Pruefung, anders als add_entry_category): dieses EINE Entity-Embedding
+        # laeuft unter dem globalen Schreib-Lock. Es ist ein EINZELNER kurzer Profil-Embed (Name/Typ/Aliase),
+        # kein minutenlanges embed_many eines grossen Dokuments — die Lock-Haltezeit ist gering. Ein sauberer
+        # optimistischer Fix wie in #1 liesse sich hier nur ueber ein Re-Merge des aliases-Read-Modify-Write
+        # auf ZWEI Pfaden (Update + Create) nachbauen; Aufwand/Risiko stehen nicht zum kurzen Lock-Halten.
         if profile_changed:
             _guard_embed_budget(1)
             vec = embed(_entity_embed_text(payload["name"], etype, aliases), "RETRIEVAL_DOCUMENT")
@@ -2921,8 +3096,11 @@ def entities_docs(name: str, user_id: str = "frank", limit: int = 10) -> dict:
                                    points=[fresh.id], wait=True)
             _log(logging.INFO, "Entity-Register: tote doc_ids entfernt", name=pl.get("name"),
                  entfernt=len(dead))
-        except HTTPException:   # Guard-Timeout: Lesen geht vor — Healing holt der naechste Abruf nach
-            pass
+        except Exception:   # noqa: BLE001 — best-effort-Self-Healing darf den bereits fertigen Lesepfad NIE
+            # kippen: Guard-Timeout (HTTPException) ODER Qdrant-/Netzfehler bei set_payload; das Healing holt
+            # der naechste Abruf nach (wie purge mit except Exception). Vorher propagierte ein Nicht-Guard-
+            # Fehler aus dem erfolgreichen Lese-Endpoint als 500.
+            _log(logging.WARNING, "Entity-Register: Self-Healing tote doc_ids fehlgeschlagen", name=pl.get("name"))
     items = _sort_recent(items)
     if limit > 0:
         items = items[:limit]

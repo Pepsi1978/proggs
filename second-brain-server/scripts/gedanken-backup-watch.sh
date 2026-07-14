@@ -11,6 +11,16 @@ SRC="/srv/samba/gedanken"
 BACKUP="/opt/second-brain/scripts/gedanken-gdrive-backup.sh"
 DEBOUNCE="${BACKUP_DEBOUNCE:-20}"
 
+# inotifywait vorhanden? Fehlt inotify-tools, scheitert der Watcher sofort — und systemd
+# (Restart=always, RestartSec=10) startet ihn STUMM alle 10 s neu (Log-Flut + CPU-Last, ohne dass
+# jemand die Ursache sieht). Darum: klare Meldung ins journald, 5 min pausieren (Restart-Sturm
+# daempfen), dann kontrolliert raus.
+if ! command -v inotifywait >/dev/null 2>&1; then
+  echo "FEHLER: inotifywait fehlt — Paket 'inotify-tools' installieren (apt-get install -y inotify-tools). Watcher pausiert 300s." >&2
+  sleep 300
+  exit 1
+fi
+
 # Warten, bis der Mount/Ordner da ist (z.B. nach Reboot)
 while [ ! -d "$SRC" ]; do sleep 5; done
 

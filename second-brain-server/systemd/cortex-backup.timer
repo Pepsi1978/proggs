@@ -4,7 +4,8 @@ Description=Cortex: regelmaessiges Google-Drive-Backup (Sicherheitsnetz neben de
 [Timer]
 OnBootSec=5min
 OnUnitActiveSec=30min
-Persistent=true
+# Persistent= entfernt: es wirkt NUR mit OnCalendar= (holt verpasste Kalender-Termine nach).
+# Bei rein monotonen Timern (OnBootSec/OnUnitActiveSec) ist es wirkungslos.
 Unit=cortex-backup.service
 
 [Install]

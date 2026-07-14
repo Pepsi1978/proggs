@@ -65,6 +65,10 @@ VERSION = "0.13.0 (10.07.2026, 22:12 Uhr)"  # 0.13.0 (Level-2 Gruppe A, Punkt 6 
 VERSION = "0.14.0 (10.07.2026, 22:34 Uhr)"  # 0.14.0 (Level-2 Gruppe A, Punkt 9): NEU Standard-Nachtaufgabe META-GEDAECHTNIS-AUSWERTUNG (META_SYSTEM + _task_meta): liest Franks Daumen-runter-Feedback der letzten 14 Tage (agent GET /feedback), findet WIEDERKEHRENDE Muster (>=2 Faelle, max 2 pro Nacht, Einzelfaelle zaehlen nicht) und legt je Muster einen Morgen-Report-Fund mit vorformuliertem SELBST-REGEL-Vorschlag an — OHNE Auto-Aktion: aktiviert wird eine Regel NUR ueber den bestehenden bestaetigten Regel-Weg (Chat mach daraus eine Regel / Einstellungen). Eigene Bilanz-Zeile. Alt: 0.13.0.
 VERSION = "0.14.1 (11.07.2026, 19:41 Uhr)"  # 0.14.1: Zusaetzliche Kategorie-Vorschlaege kennen alle vorhandenen Kategorien; deterministischer No-op-Guard verwirft bereits vergebene Kategorien. Alt: 0.14.0.
 VERSION = "0.14.2 (11.07.2026, 19:51 Uhr)"  # 0.14.2: Kategorie-Ergaenzungen nutzen den atomaren brain-api-Endpoint statt clientseitigem Read-Modify-Write. Alt: 0.14.1.
+VERSION = "0.15.0 (14.07.2026, 13:14 Uhr)"  # 0.15.0 (Tiefen-Debugging 2026-07-14, 7 Funde): (1) EIN gemeinsamer Aktivitaets-Gate (_activity_lock/_begin_activity/_end_activity) — Nachtlauf, Abarbeitung und Regel-Anwendung schliessen sich jetzt ATOMAR und ALLSEITIG aus (frueher getrennte Locks + nur einseitig geprueft -> TOCTOU, Lost Updates, erledigt->offen, Doppel-Merges); ein anderer aktiver Lauf -> HTTP 409 mit klarer Meldung. (2) scanned/checked-Stempel erst NACH erfolgreichem Urteil (Dubletten je Eintrag erst, wenn ALLE Paare beurteilt sind; Veraltet erst nach dem Verdict) — Budget-Abbruch/Exception/Tages-Kappe stempeln nicht mehr, sonst gingen echte Funde bis zur naechsten Eintrags-Aenderung verloren. (3) _execute_action merge faengt Delete-Fehler ab: der Merge IST angelegt -> ehrliches Ergebnis ('Originale X,Y nicht in den Papierkorb — bitte manuell pruefen') + Item wird ERLEDIGT (kein Doppel-Merge bei erneutem Ja). (4) reentranter _mutation_lock um alle Read-Modify-Write-Endpunkte (Einstellungen, Standard-/eigene Aufgaben, gelernte Regeln inkl. Backfill) gegen Lost Updates. (5) report['fehler'] wird bei einem zweiten Lauf am selben Tag NICHT mehr geleert (anhaengen); fehlender auto-Key nach Task-Crash -> Bilanz 'Aufgabe fehlgeschlagen — siehe Fehlerliste' statt faelschlich 'nichts faellig'. (6) finding_keys: abgelehnte Funde aelter als 120 Tage (DISMISS_RECHECK_DAYS) werden beim State-Speichern entfernt (waechst sonst unbegrenzt; offen/erledigt bleiben). (7) mtime-Cache fuer load_config() im llm()-Heisspfad und fuer _learned_block() (kein Neu-Parsen pro LLM-Call/Prompt). Alt: 0.14.2.
+VERSION = "0.15.1 (14.07.2026, 13:30 Uhr)"  # 0.15.1 (Loop-1-Verifikation): Aktivitaets-Gate haerter — _start_night/process/apply_rules geben den reservierten Gate jetzt per try/except frei, falls die Thread-Erzeugung/-Start fehlschlaegt (der freigebende finally des Worker-Threads liefe sonst NIE -> Gate dauerhaft belegt -> alle kuenftigen Laeufe 409). Alt: 0.15.0.
+VERSION = "0.16.0 (14.07.2026, 13:55 Uhr)"  # 0.16.0 (Cortex-Debugging-Loop 2, 4 Funde): (1) Phone-only-Schutz vollstaendig — _action_targets_phone_only prueft jetzt AUCH die Kategorie-Namen name (kategorie_abloesen) und alt/neu (kategorie_umbenennen), nicht nur kategorie/doc_id/zuordnung; zusaetzlich filtert _task_kategorien Phone-only-Bereiche (Mental/Gewohnheiten/Thesen/Tagebuch/Entropie inkl. Unterpfaden) schon beim Erzeugen der Aufteilen-/Verwaist-Vorschlaege aus (Guard + Vorschlagsfilter), sodass _PHONE_ONLY_POLICY nicht mehr per Ablosen/Umbenennen umgangen werden kann. (2) Kein LLM-Call mehr unter _mutation_lock: learn_update und learn_backfill_titles generieren die KI-Regel-Titel jetzt VOR der Lock-Akquise (backfill: Titel titelloser Regeln ohne Lock sammeln, dann unter dem Lock nur noch existierende + weiterhin titellose Regeln zuweisen) — der Lock blockiert nicht mehr fuer die Dauer der Modell-Aufrufe. (3) Nacht-Bilanz ehrlich nach zweitem Lauf: die Task-Zahlen (report['zahlen']) werden vor Bilanz/Zusammenfassung aus den tatsaechlich OFFENEN Items ihres Typs abgeleitet statt absolut mit den nur NEU hinzugefuegten ueberschrieben -> ein zweiter Lauf am selben Tag meldet nicht mehr faelschlich 'keine gefunden', obwohl offene Funde aus Lauf 1 vorliegen. (4) _task_veraltet: budget.take() erst NACH dem _finding_blocked-Check (wie _task_dubletten) -> kein LLM-Budget-Verbrauch fuer bereits bekannte Funde. Alt: 0.15.1.
+VERSION = "0.16.1 (14.07.2026, 14:19 Uhr)"  # 0.16.1 (Cortex-Debugging-Loop 3): Auch die beiden AUTO-Aufgaben (Gedaechtnis-Befoerderung, Nachzuegler-Verknuepfung) melden ihre Tagesbilanz jetzt ehrlich — ihre Zahlen werden ueber gleichtaegige Laeufe AKKUMULIERT statt beim zweiten (manuellen) Lauf mit 0 ueberschrieben (der 2. Lauf findet 0 Neue). Vorher log die Bilanz 'nichts faellig', obwohl der 04:10-Auto-Lauf real befoerdert/verknuepft hatte. Schliesst dieselbe Ehrlichkeitsklasse wie 0.16.0(3) fuer die LLM-Tasks, nun auch fuer die AUTO-Tasks. Alt: 0.16.0.
 AGENT_URL = os.getenv("AGENT_URL", "http://agent:8002").rstrip("/")   # LLM-Durchgriff fuer Codex/GPT (agent 0.52.0)
 # Stille Notbremse gegen Endlosschleifen, wenn 'Ohne Begrenzung' aktiv ist (Almanach ai-agent §2.1:
 # ein Cap muss STOPPEN koennen). 5000 Calls erreicht ehrliche Nacht-Arbeit nie — nur ein Amoklauf.
@@ -172,6 +176,10 @@ except Exception as e:  # noqa: BLE001
 # Atomare JSON-Dateien (Config, State, Reports) — tmp + os.replace, UTF-8, nie korrupt
 # ---------------------------------------------------------------------------
 _file_lock = threading.Lock()
+# Reentranter Lock um die Read-Modify-Write-Sequenzen der Mutations-Endpunkte (Einstellungen,
+# Standard-/eigene Aufgaben, gelernte Regeln): Laden+Mutieren+Speichern muss ATOMAR sein, sonst
+# ueberschreibt bei zwei parallelen Requests der zweite Save die Aenderung des ersten (Lost Update).
+_mutation_lock = threading.RLock()
 
 
 def _read_json(path: Path, fallback: Any) -> Any:
@@ -265,6 +273,28 @@ def save_config(cfg: dict) -> None:
         _write_json(CONFIG_FILE, cfg)
 
 
+_config_cache: "tuple[float, dict] | None" = None   # (mtime, cfg) — mtime-Cache (Frank-Debug 2026-07-14)
+_config_cache_lock = threading.Lock()
+
+
+def _config_cached() -> dict:
+    """load_config() mit mtime-Cache: llm() liest pro Aufruf nur 'reasoning' aus der Konfiguration —
+    die Datei wird aber nur bei echter Aenderung (save_config -> os.replace -> neue mtime) neu geparst.
+    Rueckgabe NUR lesend verwenden (geteiltes Objekt); mutierende Endpunkte nutzen weiter load_config()."""
+    global _config_cache
+    try:
+        mtime = CONFIG_FILE.stat().st_mtime
+    except OSError:
+        mtime = -1.0
+    with _config_cache_lock:
+        if _config_cache is not None and _config_cache[0] == mtime:
+            return _config_cache[1]
+    cfg = load_config()
+    with _config_cache_lock:
+        _config_cache = (mtime, cfg)
+    return cfg
+
+
 DEFAULT_STATE: dict = {
     "last_auto_date": "",       # Kalendertag (Berlin) des letzten AUTOMATISCHEN Laufs
     "last_run": None,           # Zusammenfassung des letzten Laufs (fuer /status + Morgen-Report)
@@ -300,13 +330,32 @@ def save_learned(rules: list[dict]) -> None:
         _write_json(LEARN_FILE, rules)
 
 
+_learned_block_cache: "tuple[float, str] | None" = None   # (mtime, block) — mtime-Cache (Frank-Debug 2026-07-14)
+_learned_block_lock = threading.Lock()
+
+
 def _learned_block() -> str:
+    """Franks aktive gelernte Regeln als Prompt-Block. mtime-gecacht: wird pro Nacht-Prompt aufgerufen,
+    lernregeln.json aber nur bei echter Datei-Aenderung (save_learned -> os.replace -> neue mtime)
+    neu gelesen/gebaut."""
+    global _learned_block_cache
+    try:
+        mtime = LEARN_FILE.stat().st_mtime
+    except OSError:
+        mtime = -1.0
+    with _learned_block_lock:
+        if _learned_block_cache is not None and _learned_block_cache[0] == mtime:
+            return _learned_block_cache[1]
     rules = [r for r in load_learned() if r.get("enabled", True) and (r.get("text") or "").strip()]
     if not rules:
-        return ""
-    lines = "\n".join(f"- {r['text'].strip()}" for r in rules)
-    return ("\n\nGELERNTE REGELN VON FRANK (verbindlich — aus frueheren Funden gelernt, "
-            "IMMER beachten und im Zweifel VOR allgemeinen Erwaegungen anwenden):\n" + lines)[:6000]
+        block = ""
+    else:
+        lines = "\n".join(f"- {r['text'].strip()}" for r in rules)
+        block = ("\n\nGELERNTE REGELN VON FRANK (verbindlich — aus frueheren Funden gelernt, "
+                 "IMMER beachten und im Zweifel VOR allgemeinen Erwaegungen anwenden):\n" + lines)[:6000]
+    with _learned_block_lock:
+        _learned_block_cache = (mtime, block)
+    return block
 
 
 def _with_rules(system: str) -> str:
@@ -314,7 +363,29 @@ def _with_rules(system: str) -> str:
     return system + "\n\n" + _PHONE_ONLY_POLICY + _learned_block()
 
 
+def _older_than(iso: "str | None", cutoff: datetime) -> bool:
+    try:
+        return datetime.fromisoformat(iso or "") < cutoff
+    except Exception:  # noqa: BLE001 — unparsbares Datum sicherheitshalber BEHALTEN (nie faelschlich loeschen)
+        return False
+
+
+def _prune_finding_keys(st: dict) -> None:
+    """finding_keys waechst sonst unbegrenzt (jeder abgelehnte Fund bleibt ewig stehen). Entfernt beim
+    Speichern NUR 'abgelehnt'-Eintraege, die aelter als DISMISS_RECHECK_DAYS sind — offen/erledigt
+    schuetzen dauerhaft vor Doppel-Vorschlaegen und bleiben unangetastet. Ein abgelehnter Fund ist nach
+    Ablauf ohnehin wieder vorschlagbar (_finding_blocked) -> sein Schluessel ist dann nur noch Ballast."""
+    keys = st.get("finding_keys")
+    if not isinstance(keys, dict):
+        return
+    cutoff = datetime.now(TZ) - timedelta(days=DISMISS_RECHECK_DAYS)
+    for k in [k for k, rec in keys.items()
+              if isinstance(rec, dict) and rec.get("status") == "abgelehnt" and _older_than(rec.get("date"), cutoff)]:
+        keys.pop(k, None)
+
+
 def save_state(st: dict) -> None:
+    _prune_finding_keys(st)   # abgelehnte Alt-Funde >120 Tage wegwerfen (finding_keys klein halten)
     with _file_lock:
         _write_json(STATE_FILE, st)
 
@@ -429,7 +500,7 @@ def llm(system: str, user: str, *, model: str, json_mode: bool = True,
     kommt aus der Bibliothekar-Konfiguration (Frank stellt sie im Dashboard ein).
     Laeuft immer in Hintergrund-/Threadpool-Threads -> time.sleep blockiert den Event-Loop nicht."""
     if reasoning is None:
-        reasoning = load_config().get("reasoning", "high")
+        reasoning = _config_cached().get("reasoning", "high")   # mtime-Cache statt Parsen pro LLM-Call
     for attempt in range(LLM_MAX_RETRIES + 1):
         try:
             if _is_codex(model):
@@ -622,6 +693,11 @@ def _is_phone_only_category(category: str | None) -> bool:
 
 def _action_targets_phone_only(aktion: dict, item: "dict | None" = None) -> bool:
     cats = [aktion.get("kategorie") or ""] + list(aktion.get("kategorien") or [])
+    # Auch die direkten Kategorie-NAMEN abdecken: name (kategorie_abloesen) sowie alt/neu
+    # (kategorie_umbenennen) — sonst koennte der Gaertner eine Phone-only-Kategorie abloesen/
+    # umbenennen und _PHONE_ONLY_POLICY ('NIEMALS') umgehen. Haupt-/Unterpfad-Logik via
+    # _is_phone_only_category (splittet auf '/').
+    cats += [aktion.get("name") or "", aktion.get("alt") or "", aktion.get("neu") or ""]
     if any(_is_phone_only_category(c) for c in cats):
         return True
     context_by_id = {
@@ -952,6 +1028,40 @@ def _set_night(**kw: Any) -> None:
         _night.update(kw)
 
 
+# ---------------------------------------------------------------------------
+# Gemeinsamer Aktivitaets-Gate (Frank-Debug 2026-07-14): Nachtlauf, Abarbeitung und Regel-Anwendung
+# schreiben ALLE report/state und schliessen sich deshalb GEGENSEITIG aus. Frueher pruefte jeder
+# Startpfad die anderen ueber GETRENNTE Locks (TOCTOU) und nur EINSEITIG -> gleichzeitige Laeufe,
+# Lost Updates (erledigt->offen, Doppel-Merges). Jetzt: EIN Lock, EIN atomarer Check-und-Setze;
+# alle drei Startpfade gehen hier durch, ein anderer aktiver Lauf -> 409.
+_activity_lock = threading.Lock()
+_active_kind: "str | None" = None   # None | "night" | "process" | "apply"
+_ACTIVITY_NAMES = {"night": "Nachtlauf", "process": "Abarbeitung", "apply": "Regel-Anwendung"}
+
+
+def _begin_activity(kind: str) -> "str | None":
+    """Reserviert ATOMAR einen der drei einander ausschliessenden Laeufe. None -> reserviert (Aufrufer
+    darf starten und MUSS am Ende _end_activity() rufen); sonst der Klartext-Name des bereits laufenden
+    Laufs (Aufrufer antwortet 409 / started=False)."""
+    global _active_kind
+    with _activity_lock:
+        if _active_kind is not None:
+            return _ACTIVITY_NAMES.get(_active_kind, _active_kind)
+        _active_kind = kind
+        return None
+
+
+def _end_activity() -> None:
+    global _active_kind
+    with _activity_lock:
+        _active_kind = None
+
+
+def _active_label() -> str:
+    with _activity_lock:
+        return _ACTIVITY_NAMES.get(_active_kind, "ein anderer Lauf")
+
+
 def _excerpt(text: str, n: int = 700) -> str:
     t = (text or "").strip()
     return t[:n] + ("…" if len(t) > n else "")
@@ -1054,7 +1164,12 @@ def _task_befoerderung(cfg: dict, st: dict, budget: NightBudget, entries: dict, 
     r.raise_for_status()
     data = r.json()
     promoted = int(data.get("promoted", 0) or 0)
-    report["auto"]["befoerderung"] = {"promoted": promoted, "titles": data.get("titles") or [],
+    # AKKUMULIEREN ueber gleichtaegige Laeufe (Loop-3-Fix): ein zweiter (manueller) Lauf am selben Tag
+    # findet 0 weitere Beförderungen und wuerde die echte Zahl des 04:10-Auto-Laufs sonst mit 0
+    # ueberschreiben -> Bilanz loege "nichts faellig", obwohl in derselben Nacht real befoerdert wurde.
+    _prev_bf = report["auto"].get("befoerderung") or {}
+    report["auto"]["befoerderung"] = {"promoted": int(_prev_bf.get("promoted", 0) or 0) + promoted,
+                                      "titles": (_prev_bf.get("titles") or []) + (data.get("titles") or []),
                                       "min_age_days": days}
     checkpoint("layer_promote", "Kurzzeit-Eintraege ins Langzeitgedaechtnis befoerdert",
                ok=True, promoted=promoted, min_age_days=days)
@@ -1089,7 +1204,9 @@ def _task_nachzuegler(cfg: dict, st: dict, budget: NightBudget, entries: dict, r
             done += 1
         except Exception:  # noqa: BLE001 — ein Eintrag darf den Lauf nicht stoppen
             _log(logging.WARNING, "Nachzuegler-Eintrag fehlgeschlagen", doc_id=did, exc_info=True)
-    report["auto"]["nachzuegler_verknuepft"] = done
+    # AKKUMULIEREN ueber gleichtaegige Laeufe (Loop-3-Fix, wie Beförderung): der zweite Lauf verknuepft 0
+    # weitere und darf die echte Zahl des ersten Laufs nicht mit 0 ueberschreiben (ehrliche Tagesbilanz).
+    report["auto"]["nachzuegler_verknuepft"] = int(report["auto"].get("nachzuegler_verknuepft", 0) or 0) + done
     checkpoint("nachzuegler", "Entity-Luecken nachverknuepft (Auto-Aufgabe)", ok=True, done=done, kandidaten=len(todo))
 
 
@@ -1113,7 +1230,7 @@ def _task_dubletten_widersprueche(cfg: dict, st: dict, budget: NightBudget, entr
         except Exception:  # noqa: BLE001
             _log(logging.WARNING, "Dubletten-Suche fehlgeschlagen", doc_id=did, exc_info=True)
             continue
-        scanned[did] = datetime.now(TZ).isoformat(timespec="seconds")
+        entry_fertig = True   # Stempel (scanned) erst setzen, wenn ALLE Paare dieses Eintrags fertig beurteilt sind
         for h in hits:
             other = (h.get("doc_id") or "").strip()
             if not other or other == did or float(h.get("score", 0)) < 0.78:
@@ -1126,6 +1243,7 @@ def _task_dubletten_widersprueche(cfg: dict, st: dict, budget: NightBudget, entr
             if _finding_blocked(st, key):
                 continue
             if not budget.take():
+                entry_fertig = False   # Budget-Abbruch -> Eintrag NICHT stempeln (Rest folgt morgen)
                 break
             try:
                 user = (f"EINTRAG A (doc_id={did}, Titel: {e['title']}, Kategorie: {e['category']}, "
@@ -1133,8 +1251,9 @@ def _task_dubletten_widersprueche(cfg: dict, st: dict, budget: NightBudget, entr
                         f"EINTRAG B (doc_id={other}, Titel: {oe['title']}, Kategorie: {oe['category']}, "
                         f"angelegt {oe.get('created_at') or '?'}):\n{_excerpt(oe['text'], 2400)}")
                 verdict = json.loads(_extract_json(llm(_with_rules(_with_task_override(PAIR_JUDGE_SYSTEM, cfg, ["dubletten", "widersprueche"])), user, model=cfg["model"], max_tokens=4096)))
-            except Exception:  # noqa: BLE001
+            except Exception:  # noqa: BLE001 — Stempel erst NACH erfolgreichem Urteil (Fehler -> Eintrag morgen erneut)
                 _log(logging.WARNING, "Paar-Urteil fehlgeschlagen", pair=pair, exc_info=True)
+                entry_fertig = False
                 continue
             rel = (verdict.get("verhaeltnis") or "").strip().lower()
             kontext = [{"doc_id": did, "titel": e["title"], "kategorie": e["category"], "auszug": _excerpt(e["text"], 400)},
@@ -1178,6 +1297,10 @@ def _task_dubletten_widersprueche(cfg: dict, st: dict, budget: NightBudget, entr
                 report["items"].append(item)
                 _mark_finding(st, key, "offen")
                 new_wid += 1
+            elif (rel == "dublette" and do_dub) or (rel == "widerspruch" and do_wid):
+                entry_fertig = False   # echter Fund NUR wegen Tages-Kappe verworfen -> Eintrag morgen erneut ansehen
+        if entry_fertig:
+            scanned[did] = datetime.now(TZ).isoformat(timespec="seconds")   # Stempel NACH vollstaendigem Urteil aller Paare
         if new_dub >= max_per and new_wid >= max_per:
             break
     report["zahlen"]["dubletten"] = new_dub
@@ -1216,20 +1339,21 @@ def _task_veraltet(cfg: dict, st: dict, budget: NightBudget, entries: dict, repo
     found = 0
     max_per = int(cfg.get("max_per_task", 8))
     for did, e in todo:
-        if not budget.take():
+        key = f"alt:{did}"
+        if _finding_blocked(st, key):
+            checked[did] = now.isoformat(timespec="seconds")   # bereits als Fund bekannt -> als geprueft stempeln
+            continue
+        if not budget.take():   # Budget erst NACH dem Block-Check ziehen (kein Verbrauch fuer bekannte Funde, wie bei _task_dubletten)
             report["fehler"].append("Veraltet-Prüfung: LLM-Budget erschöpft — Rest folgt morgen.")
             break
-        key = f"alt:{did}"
-        checked[did] = now.isoformat(timespec="seconds")
-        if _finding_blocked(st, key):
-            continue
         try:
             user = (f"Eintrag (Titel: {e['title']}, Kategorie: {e['category']}, zuletzt geändert vor "
                     f"{age_days(e)} Tagen, heute ist {now.strftime('%d.%m.%Y')}):\n{_excerpt(e['text'], 1500)}")
             verdict = json.loads(_extract_json(llm(_with_rules(_with_task_override(STALE_JUDGE_SYSTEM, cfg, "veraltet")), user, model=cfg["model"], max_tokens=512)))
-        except Exception:  # noqa: BLE001
+        except Exception:  # noqa: BLE001 — Stempel erst NACH erfolgreichem Urteil (Fehler -> Eintrag morgen erneut)
             _log(logging.WARNING, "Veraltet-Urteil fehlgeschlagen", doc_id=did, exc_info=True)
             continue
+        checked[did] = now.isoformat(timespec="seconds")   # Urteil steht -> jetzt als geprueft stempeln
         if verdict.get("veraltet_verdacht") and found < max_per:
             item = _new_item("veraltet", key,
                              f"Womöglich veraltet: „{e['title'] or did}“",
@@ -1249,7 +1373,8 @@ def _task_veraltet(cfg: dict, st: dict, budget: NightBudget, entries: dict, repo
 def _task_kategorien(cfg: dict, st: dict, budget: NightBudget, entries: dict, report: dict) -> None:
     counts = {c: n for c, n in brain_category_counts().items()
               if c and c.casefold() not in (CONV_CATEGORY.casefold(), "gespraeche")
-              and not (c == "bugfixes" or c.startswith("bugfixes/"))}
+              and not (c == "bugfixes" or c.startswith("bugfixes/"))
+              and not _is_phone_only_category(c)}   # Phone-only-Bereiche gar nicht erst vorschlagen (Split/Ablosen tabu)
     found = 0
     _unlimited = int(cfg.get("max_per_task", 8)) >= 10**9
     cap_split = 10**9 if _unlimited else 3
@@ -1712,7 +1837,7 @@ def _run_night(manual: bool) -> None:
     report.setdefault("items", [])
     report.setdefault("zahlen", {})
     report.setdefault("auto", {})
-    report["fehler"] = []
+    report.setdefault("fehler", [])   # bei einem ZWEITEN Lauf am selben Tag NICHT leeren -> Fehler bleiben erhalten (anhaengen)
     try:
         if not manual:
             _set_night(task="backup", detail="Warte auf das Ende des Host-Backups …")
@@ -1767,21 +1892,49 @@ def _run_night(manual: bool) -> None:
             save_state(st)
             save_report(report)
 
+        # Bilanz-Konsistenz: die Task-Zahlen an den TATSAECHLICH offenen Stand angleichen. Ein zweiter
+        # Lauf am selben Tag fuegt bereits bekannte Funde nicht erneut hinzu (found/new_* = 0), die
+        # offenen Items aus Lauf 1 bleiben aber im Report — ohne diese Angleichung meldete die Bilanz
+        # danach faelschlich 'keine gefunden'. Jede Zahl wird aus den aktuell OFFENEN Items ihres Typs
+        # abgeleitet (Standard-Tasks: zahlen-Key == item['task']; eigene Aufgaben: 'custom:<Name>').
+        _offen_std: dict[str, int] = {}
+        _offen_custom: dict[str, int] = {}
+        for _i in report["items"]:
+            if _i.get("status") != "offen":
+                continue
+            if (_i.get("task") or "") == "custom":
+                _nm = _i.get("taskname") or ""
+                _offen_custom[_nm] = _offen_custom.get(_nm, 0) + 1
+            else:
+                _t = _i.get("task") or ""
+                _offen_std[_t] = _offen_std.get(_t, 0) + 1
+        for _zkey in list(report["zahlen"].keys()):
+            if _zkey.startswith("custom:"):
+                report["zahlen"][_zkey] = _offen_custom.get(_zkey.split(":", 1)[1], 0)
+            else:
+                report["zahlen"][_zkey] = _offen_std.get(_zkey, 0)
+
         # Nacht-BILANZ: fuer JEDE Aufgabe eine ehrliche Zeile — auch wenn nichts gefunden wurde
         # (Frank-Wunsch 2026-07-05: 'wenn da nichts gefunden wurde, soll das auch mit drinstehen').
         bilanz: list[str] = []
         if tasks_cfg.get("befoerderung", True):
-            bf = report["auto"].get("befoerderung") or {}
-            bf_n = int(bf.get("promoted", 0) or 0)
-            bilanz.append(f"Gedächtnis-Beförderung: {bf_n} " + ("Eintrag" if bf_n == 1 else "Einträge")
-                          + " ins Langzeitgedächtnis befördert" if bf_n else
-                          "Gedächtnis-Beförderung: nichts fällig — kein Kurzzeit-Eintrag hat die Mindestreife erreicht")
+            if "befoerderung" not in report["auto"]:   # Auto-Key fehlt trotz aktiver Aufgabe -> Task-Crash (nicht 'nichts fällig')
+                bilanz.append("Gedächtnis-Beförderung: Aufgabe fehlgeschlagen — siehe Fehlerliste")
+            else:
+                bf = report["auto"].get("befoerderung") or {}
+                bf_n = int(bf.get("promoted", 0) or 0)
+                bilanz.append(f"Gedächtnis-Beförderung: {bf_n} " + ("Eintrag" if bf_n == 1 else "Einträge")
+                              + " ins Langzeitgedächtnis befördert" if bf_n else
+                              "Gedächtnis-Beförderung: nichts fällig — kein Kurzzeit-Eintrag hat die Mindestreife erreicht")
         else:
             bilanz.append("Gedächtnis-Beförderung: ausgeschaltet")
         if tasks_cfg.get("nachzuegler", True):
-            nz = int(report["auto"].get("nachzuegler_verknuepft", 0) or 0)
-            bilanz.append(f"Nachzügler-Verknüpfung: {nz} Einträge nachverknüpft" if nz else
-                          "Nachzügler-Verknüpfung: nichts zu tun — alle Einträge sind bereits im Register verknüpft")
+            if "nachzuegler_verknuepft" not in report["auto"]:   # Auto-Key fehlt trotz aktiver Aufgabe -> Task-Crash
+                bilanz.append("Nachzügler-Verknüpfung: Aufgabe fehlgeschlagen — siehe Fehlerliste")
+            else:
+                nz = int(report["auto"].get("nachzuegler_verknuepft", 0) or 0)
+                bilanz.append(f"Nachzügler-Verknüpfung: {nz} Einträge nachverknüpft" if nz else
+                              "Nachzügler-Verknüpfung: nichts zu tun — alle Einträge sind bereits im Register verknüpft")
         else:
             bilanz.append("Nachzügler-Verknüpfung: ausgeschaltet")
         for _key, _label, _zero in (
@@ -1861,17 +2014,23 @@ def _run_night(manual: bool) -> None:
                 _log(logging.ERROR, "Fehlversuchs-Bremse nicht speicherbar", exc_info=True)
     finally:
         _set_night(running=False, task="", detail="")
+        _end_activity()   # Aktivitaets-Gate freigeben (laeuft auch bei jedem frueh-return/Fehler durch)
 
 
 def _start_night(manual: bool) -> bool:
     global _night_thread
-    with _night_lock:
-        if _night["running"]:
-            return False
-        _night.update({"running": True, "task": "start", "detail": "Nachtlauf startet …",
-                       "started_at": datetime.now(TZ).isoformat(timespec="seconds"), "error": None, "manual": manual})
-    _night_thread = threading.Thread(target=_run_night, args=(manual,), daemon=True, name="night-run")
-    _night_thread.start()
+    if _begin_activity("night") is not None:   # Nachtlauf ODER Abarbeitung/Regel-Anwendung laeuft schon
+        return False
+    try:
+        with _night_lock:
+            _night.update({"running": True, "task": "start", "detail": "Nachtlauf startet …",
+                           "started_at": datetime.now(TZ).isoformat(timespec="seconds"), "error": None, "manual": manual})
+        _night_thread = threading.Thread(target=_run_night, args=(manual,), daemon=True, name="night-run")
+        _night_thread.start()
+    except Exception:   # Thread nie gestartet -> _run_night-finally laeuft nie -> Gate MUSS hier frei
+        _set_night(running=False, task="", detail="")
+        _end_activity()
+        raise
     return True
 
 
@@ -1945,11 +2104,19 @@ def _execute_action(aktion: dict, item: "dict | None" = None) -> str:
         stored = brain_store(aktion.get("text") or "", titel, (aktion.get("kategorie") or "").strip(), categories=kats or None)
         new_id = stored.get("doc_id") or ""
         dropped = 0
+        fehlten: list[str] = []   # Originale, die der Merge NICHT in den Papierkorb bekam (Delete-Fehler)
         for did in aktion.get("doc_ids") or []:
             if did and did != new_id:
-                brain_delete(did)
-                dropped += 1
+                try:
+                    brain_delete(did)
+                    dropped += 1
+                except Exception:  # noqa: BLE001 — Merge ist BEREITS angelegt: Delete-Fehler NICHT nach oben werfen,
+                    _log(logging.WARNING, "Merge-Original nicht loeschbar", doc_id=did, exc_info=True)  # sonst gilt der Fund als 'nichts verändert' und Frank merged bei erneutem Ja doppelt
+                    fehlten.append(did)
         kat_info = f" · Kategorien: {', '.join(kats)}" if kats else ""
+        if fehlten:   # ehrliches Ergebnis -> Item wird trotzdem als ERLEDIGT markiert (kein Doppel-Merge)
+            return (f"Merge angelegt zu „{titel}“; Originale {', '.join(fehlten)} NICHT in den Papierkorb "
+                    f"(bitte manuell prüfen){kat_info}.")
         return f"Zusammengeführt zu „{titel}“ — {dropped} Original(e) in den Papierkorb (wiederherstellbar){kat_info}."
     if typ == "papierkorb":
         r = brain_delete(aktion.get("doc_id") or "")
@@ -2061,6 +2228,7 @@ def _run_process(day: str, decisions: list[dict]) -> None:
         with _proc_lock:
             _proc.update({"running": False, "results": results, "rueckfragen": rueckfragen,
                           "finished_at": datetime.now(TZ).isoformat(timespec="seconds")})
+        _end_activity()   # Aktivitaets-Gate freigeben
 
 
 # ---------------------------------------------------------------------------
@@ -2192,6 +2360,7 @@ def _run_apply_rules() -> None:
         with _apply_lock:
             _apply.update({"running": False,
                            "finished_at": datetime.now(TZ).isoformat(timespec="seconds")})
+        _end_activity()   # Aktivitaets-Gate freigeben
 
 
 # ---------------------------------------------------------------------------
@@ -2242,10 +2411,10 @@ def status() -> dict:
 
 @app.post("/run-now", dependencies=[Depends(require_auth)])
 def run_now() -> dict:
-    started = _start_night(manual=True)
-    return {"ok": True, "started": started,
-            "detail": "Lauf gestartet — die Ergebnisse erscheinen im heutigen Tages-Report." if started
-            else "Es läuft bereits ein Lauf."}
+    if _start_night(manual=True):
+        return {"ok": True, "started": True,
+                "detail": "Lauf gestartet — die Ergebnisse erscheinen im heutigen Tages-Report."}
+    raise HTTPException(status_code=409, detail=f"Es läuft bereits: {_active_label()} — bitte danach erneut.")
 
 
 @app.get("/reports", dependencies=[Depends(require_auth)])
@@ -2279,18 +2448,20 @@ class ProcessReq(BaseModel):
 @app.post("/process", dependencies=[Depends(require_auth)])
 def process(req: ProcessReq) -> dict:
     global _proc_thread
-    with _apply_lock:
-        if _apply["running"]:
-            return {"ok": True, "started": False, "detail": "Es läuft gerade eine Regel-Anwendung — bitte danach erneut."}
-    with _proc_lock:
-        if _proc["running"]:
-            return {"ok": True, "started": False, "detail": "Es läuft bereits eine Abarbeitung."}
-        _proc.update({"running": True, "date": req.date, "done": 0, "total": len(req.decisions),
-                      "results": [], "rueckfragen": [], "error": None, "finished_at": None})
-    _proc_thread = threading.Thread(target=_run_process,
-                                    args=(req.date, [d.model_dump() for d in req.decisions]),
-                                    daemon=True, name="process-run")
-    _proc_thread.start()
+    busy = _begin_activity("process")   # atomar gegen Nachtlauf/Regel-Anwendung/andere Abarbeitung
+    if busy is not None:
+        raise HTTPException(status_code=409, detail=f"Es läuft gerade: {busy} — bitte danach erneut.")
+    try:
+        with _proc_lock:
+            _proc.update({"running": True, "date": req.date, "done": 0, "total": len(req.decisions),
+                          "results": [], "rueckfragen": [], "error": None, "finished_at": None})
+        _proc_thread = threading.Thread(target=_run_process,
+                                        args=(req.date, [d.model_dump() for d in req.decisions]),
+                                        daemon=True, name="process-run")
+        _proc_thread.start()
+    except Exception:   # Thread nie gestartet -> _run_process-finally laeuft nie -> Gate MUSS hier frei
+        _end_activity()
+        raise
     return {"ok": True, "started": True}
 
 
@@ -2305,23 +2476,22 @@ def apply_rules() -> dict:
     """Wendet die aktiven gelernten Regeln RUECKWIRKEND auf alle offenen Funde an (Hintergrund-Lauf).
     Blockiert, solange Nachtlauf oder Abarbeitung laeuft (gemeinsamer Report-Schreibzugriff)."""
     global _apply_thread
-    with _apply_lock:
-        if _apply["running"]:
-            return {"ok": True, "started": False, "detail": "Es läuft bereits eine Regel-Anwendung."}
-    with _night_lock:
-        if _night["running"]:
-            return {"ok": True, "started": False, "detail": "Der Nachtlauf läuft gerade — bitte danach erneut."}
-    with _proc_lock:
-        if _proc["running"]:
-            return {"ok": True, "started": False, "detail": "Es läuft gerade eine Abarbeitung — bitte danach erneut."}
-    if not _learned_block().strip():
-        return {"ok": True, "started": False, "detail": "Keine aktiven gelernten Regeln — es gibt nichts anzuwenden."}
-    with _apply_lock:
-        _apply.update({"running": True, "done": 0, "total": 0, "removed": 0, "kept": 0,
-                       "batches_failed": 0, "error": None, "note": "",
-                       "started_at": datetime.now(TZ).isoformat(timespec="seconds"), "finished_at": None})
-    _apply_thread = threading.Thread(target=_run_apply_rules, daemon=True, name="apply-rules")
-    _apply_thread.start()
+    busy = _begin_activity("apply")   # atomar gegen Nachtlauf/Abarbeitung/andere Regel-Anwendung
+    if busy is not None:
+        raise HTTPException(status_code=409, detail=f"Es läuft gerade: {busy} — bitte danach erneut.")
+    try:
+        if not _learned_block().strip():
+            _end_activity()   # nichts zu tun -> Reservierung sofort wieder freigeben (kein 409, nur Hinweis)
+            return {"ok": True, "started": False, "detail": "Keine aktiven gelernten Regeln — es gibt nichts anzuwenden."}
+        with _apply_lock:
+            _apply.update({"running": True, "done": 0, "total": 0, "removed": 0, "kept": 0,
+                           "batches_failed": 0, "error": None, "note": "",
+                           "started_at": datetime.now(TZ).isoformat(timespec="seconds"), "finished_at": None})
+        _apply_thread = threading.Thread(target=_run_apply_rules, daemon=True, name="apply-rules")
+        _apply_thread.start()
+    except Exception:   # _learned_block-Lesefehler ODER Thread nie gestartet -> Gate MUSS hier frei
+        _end_activity()
+        raise
     return {"ok": True, "started": True}
 
 
@@ -2379,31 +2549,32 @@ def get_settings() -> dict:
 
 @app.put("/settings", dependencies=[Depends(require_auth)])
 def put_settings(req: SettingsReq) -> dict:
-    cfg = load_config()
-    if req.enabled is not None:
-        cfg["enabled"] = bool(req.enabled)
-    if req.start_time:
-        cfg["start_time"] = req.start_time
-    if req.model:
-        if req.model not in _all_models():
-            raise HTTPException(status_code=422, detail="Unbekanntes Modell")
-        cfg["model"] = req.model
-    if req.reasoning:
-        v = req.reasoning.strip().lower()
-        if v not in REASONING_AVAILABLE:
-            raise HTTPException(status_code=422, detail="Unbekannte Thinking-Stufe")
-        cfg["reasoning"] = v
-    if req.unlimited is not None:
-        cfg["unlimited"] = bool(req.unlimited)
-    if req.tasks:
-        for k, v in req.tasks.items():
-            if k in STANDARD_TASKS:
-                cfg["tasks"][k] = bool(v)
-    if req.max_per_task is not None:
-        cfg["max_per_task"] = int(req.max_per_task)
-    if req.llm_budget is not None:
-        cfg["llm_budget"] = int(req.llm_budget)
-    save_config(cfg)
+    with _mutation_lock:   # Laden+Mutieren+Speichern atomar (kein Lost Update bei parallelen Requests)
+        cfg = load_config()
+        if req.enabled is not None:
+            cfg["enabled"] = bool(req.enabled)
+        if req.start_time:
+            cfg["start_time"] = req.start_time
+        if req.model:
+            if req.model not in _all_models():
+                raise HTTPException(status_code=422, detail="Unbekanntes Modell")
+            cfg["model"] = req.model
+        if req.reasoning:
+            v = req.reasoning.strip().lower()
+            if v not in REASONING_AVAILABLE:
+                raise HTTPException(status_code=422, detail="Unbekannte Thinking-Stufe")
+            cfg["reasoning"] = v
+        if req.unlimited is not None:
+            cfg["unlimited"] = bool(req.unlimited)
+        if req.tasks:
+            for k, v in req.tasks.items():
+                if k in STANDARD_TASKS:
+                    cfg["tasks"][k] = bool(v)
+        if req.max_per_task is not None:
+            cfg["max_per_task"] = int(req.max_per_task)
+        if req.llm_budget is not None:
+            cfg["llm_budget"] = int(req.llm_budget)
+        save_config(cfg)
     checkpoint("settings", "Bibliothekar-Einstellungen gespeichert", ok=True,
                enabled=cfg["enabled"], start=cfg["start_time"], model=cfg["model"],
                reasoning=cfg.get("reasoning"), unlimited=cfg.get("unlimited"))
@@ -2418,9 +2589,10 @@ class StandardTaskReq(BaseModel):
 def standard_task_update(task_key: str, req: StandardTaskReq) -> dict:
     if task_key not in STANDARD_TASKS:
         raise HTTPException(status_code=404, detail="Standard-Aufgabe nicht gefunden")
-    cfg = load_config()
-    cfg.setdefault("standard_task_overrides", {})[task_key] = {"definition": req.definition.strip()}
-    save_config(cfg)
+    with _mutation_lock:
+        cfg = load_config()
+        cfg.setdefault("standard_task_overrides", {})[task_key] = {"definition": req.definition.strip()}
+        save_config(cfg)
     checkpoint("standard_task_update", "Standard-Aufgabe bearbeitet", ok=True, task=task_key)
     return {"ok": True, "task": {"key": task_key, **STANDARD_TASKS[task_key],
                                    "definition": _effective_standard_definition(cfg, task_key),
@@ -2471,11 +2643,12 @@ class CustomTaskReq(BaseModel):
 
 @app.post("/custom-tasks", dependencies=[Depends(require_auth)])
 def custom_add(req: CustomTaskReq) -> dict:
-    cfg = load_config()
     task = {"id": uuid.uuid4().hex[:10], "name": req.name.strip(), "definition": req.definition.strip(),
             "enabled": True, "created_at": datetime.now(TZ).isoformat(timespec="seconds")}
-    cfg.setdefault("custom_tasks", []).append(task)
-    save_config(cfg)
+    with _mutation_lock:
+        cfg = load_config()
+        cfg.setdefault("custom_tasks", []).append(task)
+        save_config(cfg)
     checkpoint("custom_add", "Eigene Aufgabe gespeichert", ok=True, name=task["name"])
     return {"ok": True, "task": task}
 
@@ -2488,30 +2661,32 @@ class CustomTaskUpdateReq(BaseModel):
 
 @app.put("/custom-tasks/{task_id}", dependencies=[Depends(require_auth)])
 def custom_toggle(task_id: str, req: CustomTaskUpdateReq) -> dict:
-    cfg = load_config()
-    for t in cfg.get("custom_tasks", []):
-        if t.get("id") == task_id:
-            if req.enabled is not None:
-                t["enabled"] = bool(req.enabled)
-            if req.name is not None:
-                t["name"] = req.name.strip()
-            if req.definition is not None:
-                t["definition"] = req.definition.strip()
-            save_config(cfg)
-            checkpoint("custom_update", "Eigene Aufgabe aktualisiert", ok=True, name=t.get("name"))
-            return {"ok": True, "task": t}
+    with _mutation_lock:
+        cfg = load_config()
+        for t in cfg.get("custom_tasks", []):
+            if t.get("id") == task_id:
+                if req.enabled is not None:
+                    t["enabled"] = bool(req.enabled)
+                if req.name is not None:
+                    t["name"] = req.name.strip()
+                if req.definition is not None:
+                    t["definition"] = req.definition.strip()
+                save_config(cfg)
+                checkpoint("custom_update", "Eigene Aufgabe aktualisiert", ok=True, name=t.get("name"))
+                return {"ok": True, "task": t}
     raise HTTPException(status_code=404, detail="Aufgabe nicht gefunden")
 
 
 @app.delete("/custom-tasks/{task_id}", dependencies=[Depends(require_auth)])
 def custom_delete(task_id: str) -> dict:
     """Nur EIGENE Aufgaben sind loeschbar — die Standard-Aufgaben leben fest im Code."""
-    cfg = load_config()
-    before = len(cfg.get("custom_tasks", []))
-    cfg["custom_tasks"] = [t for t in cfg.get("custom_tasks", []) if t.get("id") != task_id]
-    if len(cfg["custom_tasks"]) == before:
-        raise HTTPException(status_code=404, detail="Aufgabe nicht gefunden")
-    save_config(cfg)
+    with _mutation_lock:
+        cfg = load_config()
+        before = len(cfg.get("custom_tasks", []))
+        cfg["custom_tasks"] = [t for t in cfg.get("custom_tasks", []) if t.get("id") != task_id]
+        if len(cfg["custom_tasks"]) == before:
+            raise HTTPException(status_code=404, detail="Aufgabe nicht gefunden")
+        save_config(cfg)
     checkpoint("custom_delete", "Eigene Aufgabe geloescht", ok=True, task_id=task_id)
     return {"ok": True}
 
@@ -2591,13 +2766,15 @@ class LearnSaveReq(BaseModel):
 
 @app.post("/learn", dependencies=[Depends(require_auth)])
 def learn_save(req: LearnSaveReq) -> dict:
-    rules = load_learned()
     text = req.text.strip()
-    rule = {"id": uuid.uuid4().hex[:10], "text": text, "titel": _gen_rule_title(text), "enabled": True,
+    titel = _gen_rule_title(text)   # LLM-Titelbildung VOR dem Lock (teuer, kein RMW)
+    rule = {"id": uuid.uuid4().hex[:10], "text": text, "titel": titel, "enabled": True,
             "fund_titel": req.fund_titel.strip(), "task": req.task.strip(),
             "created_at": datetime.now(TZ).isoformat(timespec="seconds")}
-    rules.append(rule)
-    save_learned(rules)
+    with _mutation_lock:   # Laden+Anhaengen+Speichern atomar
+        rules = load_learned()
+        rules.append(rule)
+        save_learned(rules)
     checkpoint("learn_save", "Gelernte Regel gespeichert — gilt ab dem naechsten Urteil",
                ok=True, rule_id=rule["id"], chars=len(rule["text"]))
     return {"ok": True, "regel": rule}
@@ -2608,16 +2785,26 @@ def learn_backfill_titles() -> dict:
     """Zieht fuer alle BESTEHENDEN gelernten Regeln OHNE KI-Titel nachtraeglich eine zusammenfassende
     Ueberschrift (max 10 Woerter) per Bibliothekar-Modell nach. Idempotent: Regeln, die bereits einen
     'titel' haben, bleiben unangetastet. Sync def -> Threadpool (fastapi §1)."""
-    rules = load_learned()
+    # KI-Titel VOR dem Lock erzeugen: LLM-Calls duerfen NIE unter _mutation_lock laufen (eine ganze
+    # Schleife von Modell-Aufrufen wuerde sonst alle anderen Mutationen minutenlang blockieren).
+    # Zuerst ohne Lock alle titellosen Regeln sammeln + Titel generieren (je Regel-id gemerkt) ...
+    titel_by_id: dict[str, str] = {}
+    for r in load_learned():
+        rid = r.get("id") or ""
+        if rid and not (r.get("titel") or "").strip() and (r.get("text") or "").strip():
+            titel_by_id[rid] = _gen_rule_title(r["text"])
     done = 0
-    for r in rules:
-        if not (r.get("titel") or "").strip() and (r.get("text") or "").strip():
-            r["titel"] = _gen_rule_title(r["text"])
-            done += 1
-    if done:
-        save_learned(rules)
-        checkpoint("learn_backfill_titles", "KI-Ueberschriften fuer bestehende gelernte Regeln nachgezogen",
-                   ok=True, count=done)
+    with _mutation_lock:   # ... dann atomar laden+zuweisen+speichern. Die Regelmenge kann sich
+        rules = load_learned()   # zwischenzeitlich geaendert haben -> nur noch EXISTIERENDE, WEITERHIN
+        for r in rules:          # titellose Regeln mit dem vorbereiteten Titel setzen.
+            rid = r.get("id") or ""
+            if rid in titel_by_id and not (r.get("titel") or "").strip() and (r.get("text") or "").strip():
+                r["titel"] = titel_by_id[rid]
+                done += 1
+        if done:
+            save_learned(rules)
+            checkpoint("learn_backfill_titles", "KI-Ueberschriften fuer bestehende gelernte Regeln nachgezogen",
+                       ok=True, count=done)
     return {"ok": True, "count": done, "regeln": rules}
 
 
@@ -2628,19 +2815,24 @@ class LearnUpdateReq(BaseModel):
 
 @app.put("/learn/{rule_id}", dependencies=[Depends(require_auth)])
 def learn_update(rule_id: str, req: LearnUpdateReq) -> dict:
-    rules = load_learned()
-    for r in rules:
-        if r.get("id") == rule_id:
-            if req.enabled is not None:
-                r["enabled"] = bool(req.enabled)
-            if req.text is not None and req.text.strip():
-                r["text"] = req.text.strip()
-                r["titel"] = _gen_rule_title(r["text"])   # Ueberschrift zum neuen Text neu bilden
-                r["updated_at"] = datetime.now(TZ).isoformat(timespec="seconds")
-                checkpoint("learn_edit", "Gelernte Regel editiert — gilt ab dem naechsten Urteil",
-                           ok=True, rule_id=rule_id, chars=len(r["text"]))
-            save_learned(rules)
-            return {"ok": True, "regel": r}
+    # KI-Titel VOR dem Lock bilden: der LLM-Call darf nie unter _mutation_lock laufen (blockiert sonst
+    # alle anderen Mutationen fuer die Dauer des Modell-Aufrufs; learn_save macht es ebenso).
+    new_text = req.text.strip() if (req.text is not None and req.text.strip()) else None
+    new_title = _gen_rule_title(new_text) if new_text else None
+    with _mutation_lock:   # Laden+Mutieren+Speichern atomar
+        rules = load_learned()
+        for r in rules:
+            if r.get("id") == rule_id:
+                if req.enabled is not None:
+                    r["enabled"] = bool(req.enabled)
+                if new_text is not None:
+                    r["text"] = new_text
+                    r["titel"] = new_title   # zum neuen Text VOR dem Lock generierte Ueberschrift
+                    r["updated_at"] = datetime.now(TZ).isoformat(timespec="seconds")
+                    checkpoint("learn_edit", "Gelernte Regel editiert — gilt ab dem naechsten Urteil",
+                               ok=True, rule_id=rule_id, chars=len(r["text"]))
+                save_learned(rules)
+                return {"ok": True, "regel": r}
     raise HTTPException(status_code=404, detail="Regel nicht gefunden")
 
 
@@ -2682,11 +2874,12 @@ def learn_check(req: LearnCheckReq) -> dict:
 
 @app.delete("/learn/{rule_id}", dependencies=[Depends(require_auth)])
 def learn_delete(rule_id: str) -> dict:
-    rules = load_learned()
-    remaining = [r for r in rules if r.get("id") != rule_id]
-    if len(remaining) == len(rules):
-        raise HTTPException(status_code=404, detail="Regel nicht gefunden")
-    save_learned(remaining)
+    with _mutation_lock:   # Laden+Filtern+Speichern atomar
+        rules = load_learned()
+        remaining = [r for r in rules if r.get("id") != rule_id]
+        if len(remaining) == len(rules):
+            raise HTTPException(status_code=404, detail="Regel nicht gefunden")
+        save_learned(remaining)
     checkpoint("learn_delete", "Gelernte Regel geloescht", ok=True, rule_id=rule_id)
     return {"ok": True}
 

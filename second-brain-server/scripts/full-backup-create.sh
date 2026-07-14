@@ -48,20 +48,20 @@ QKEY="${QDRANT_API_KEY:-}"
 # $1 = Collection, $2 = Ziel-Dateiname in $WORK. Rueckgabe 0 = Snapshot liegt in $WORK.
 snapshot_collection() {
   local coll="$1" outfile="$2" resp name sz
-  if resp=$(curl -fsS -X POST "$QDRANT_URL/collections/$coll/snapshots" -H "api-key: $QKEY" 2>/dev/null); then
+  if resp=$(curl -fsS --max-time 600 -X POST "$QDRANT_URL/collections/$coll/snapshots" -H "api-key: $QKEY" 2>/dev/null); then
     name=$(printf '%s' "$resp" | python3 -c "import sys,json;print(json.load(sys.stdin)['result']['name'])" 2>/dev/null || echo "")
     if [ -n "$name" ]; then
-      if curl -fsS "$QDRANT_URL/collections/$coll/snapshots/$name" -H "api-key: $QKEY" -o "$WORK/$outfile" 2>/dev/null; then
+      if curl -fsS --max-time 600 "$QDRANT_URL/collections/$coll/snapshots/$name" -H "api-key: $QKEY" -o "$WORK/$outfile" 2>/dev/null; then
         sz=$(stat -c%s "$WORK/$outfile" 2>/dev/null || echo 0)
         if [ "$sz" -ge 1000 ]; then
           log "Qdrant-Snapshot OK ($coll, $sz bytes)"
-          curl -fsS -X DELETE "$QDRANT_URL/collections/$coll/snapshots/$name" -H "api-key: $QKEY" >/dev/null 2>&1 || true
+          curl -fsS --max-time 60 -X DELETE "$QDRANT_URL/collections/$coll/snapshots/$name" -H "api-key: $QKEY" >/dev/null 2>&1 || true
           return 0
         fi
         log "WARN: Qdrant-Snapshot zu klein ($coll, $sz) — verworfen"; rm -f "$WORK/$outfile"
       else log "WARN: Qdrant-Snapshot-Download fehlgeschlagen ($coll)"; fi
       # internen Snapshot wieder loeschen (kein Ansammeln im Container)
-      curl -fsS -X DELETE "$QDRANT_URL/collections/$coll/snapshots/$name" -H "api-key: $QKEY" >/dev/null 2>&1 || true
+      curl -fsS --max-time 60 -X DELETE "$QDRANT_URL/collections/$coll/snapshots/$name" -H "api-key: $QKEY" >/dev/null 2>&1 || true
     else log "WARN: Snapshot-Name nicht lesbar ($coll)"; fi
   else log "WARN: Qdrant-Snapshot-Erstellung fehlgeschlagen ($coll — Qdrant erreichbar? Collection vorhanden?)"; fi
   return 1
@@ -153,10 +153,15 @@ WAS IN DIESEM BACKUP STECKT:
 WIEDERHERSTELLEN (auf einem frischen Ubuntu-Server):
   1. Docker installieren:      curl -fsSL https://get.docker.com | sh
   2. Dieses .tar.gz hochladen (z.B. nach /root/)
-  3. Restore-Skript holen + starten:
-       git clone https://github.com/Pepsi1978/proggs.git
-       sudo bash proggs/second-brain-server/scripts/full-restore.sh /root/<dieses-archiv>.tar.gz
+  3. Restore-Skript + ALLE Configs stecken BEREITS in diesem Archiv (in opt-second-brain.tar.gz) —
+     du brauchst NICHTS aus dem Netz. Nur das Restore-Skript herausholen und starten:
+       cd /root && mkdir -p cortex-restore && tar xzf <dieses-archiv>.tar.gz -C cortex-restore
+       tar xzf cortex-restore/opt-second-brain.tar.gz -C cortex-restore ./scripts/full-restore.sh
+       sudo bash cortex-restore/scripts/full-restore.sh /root/<dieses-archiv>.tar.gz
      (mit JA bestaetigen) -> spielt alles ein, startet den Stack, laedt das Gehirn.
+     ALTERNATIVE (nur falls du Repo-Zugang hast — proggs ist PRIVAT und im Ernstfall evtl. gesperrt):
+       git clone https://github.com/Pepsi1978/proggs.git   # braucht GitHub-Login/Token
+       sudo bash proggs/second-brain-server/scripts/full-restore.sh /root/<dieses-archiv>.tar.gz
   4. WireGuard aus wg0.conf einrichten -> Dashboard/Agent wieder ueber den Tunnel erreichbar.
 
 Danach ist alles wie vorher: Gehirn, Dashboard, Prompts, Kategorien, Logbuch.

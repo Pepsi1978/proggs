@@ -13,6 +13,7 @@ import logging
 import os
 import re
 import struct
+import threading
 import time
 import traceback
 from collections import Counter
@@ -73,6 +74,10 @@ VERSION = "0.80.0 (12.07.2026, 21:00 Uhr)"  # 0.80.0: Gespräche bleiben im Logb
 VERSION = "0.81.0 (12.07.2026, 22:16 Uhr)"  # 0.81.0 LOGIK-HAERTUNG (agent 0.81.0): Der Automatik-Modus ist hart read-only — er kann konzeptionell nicht mehr speichern oder Speicher-Rueckfragen stellen (3 unabhaengige Code-Schichten; Vorfall 20:30/20:31 Uhr 'Typenbezeichnung des Autos' -> Beschwerden wie 'Da steht doch alles im Gedaechtnis drin' laufen IMMER als Gedaechtnis-Frage, Speicher-Imperative bekommen den Diskette-Hinweis). Diskette/Lupe/R/Titel+Kategorie/Bearbeiten-Stift unveraendert. Alt: 0.80.0.
 VERSION = "0.83.0 (13.07.2026, 13:43 Uhr)"  # 0.83.0: Kategorien koennen dauerhaft NUR aus dem Gedächtnis-Spektrum-Balken ausgeblendet werden. Die Wahl liegt serverseitig in dashboard-data und laesst Legende, Kategorienbaum und Eintraege unveraendert.
 VERSION = "0.83.1 (14.07.2026, 00:57 Uhr)"  # 0.83.1 (Debugging-Laeufe App+Server): Qdrant-Limits-Karte behandelt limits.brain=null (brain-api beim /config-Abruf nicht erreichbar) — Brain-Felder gesperrt + leer statt editierbarer Frontend-Defaults, beim Speichern wird brain komplett weggelassen (Agent aendert dann nichts) -> kein Lost Update der echten Brain-Limits mehr; der Empfehlungs-Hinweis ueberschreibt gesperrte Felder nicht. Alt: 0.83.0.
+VERSION = "0.84.0 (14.07.2026, 13:14 Uhr)"  # 0.84.0 (Tiefen-Debugging 2026-07-14, sichtbarer Cortex-Gesamtzaehler): 5 Dashboard-Funde behoben. (8) /api/entries (Kategorie) und /api/by-parent (Hauptebene) reichen 'limit' jetzt an brain-api 1.35.0 durch (nur die N aktuellsten Eintraege inkl. Volltexte + 'total') statt ALLE Volltexte zu laden und lokal wegzuwerfen; Unterpfad-Drilldown liest bewusst weiter breit (sonst wuerde ein Limit die Treffer wegschneiden); abwaertskompatibel. (9) Body-Limits pruefen ZUERST den Content-Length-Header -> riesige Anfragen sofort 413, ohne sie einzulesen (/api/store, /api/transcribe, /api/lib-Proxy); der Nach-Lese-Check bleibt als zweite Sicherung. (10) Logbuch-.txt-Sync (Loeschen/Wiederherstellen) vergleicht die Gespraechs-Kategorie jetzt case-insensitiv inkl. Unterpfaden (Altbestand 'gespräche' wurde vom == 'Gespräche' verfehlt -> .txt lief nicht mit). (11) Feature-Chronik: Erst-Kopie des Seeds atomar (tmp + os.replace) + asyncio-Lock um PUT/DELETE-Read-Modify-Write. (12) librarian-Proxy-Limit 200 KB -> 1 MB, damit legitime Merge-Texte (bis 200000 Zeichen) nicht faelschlich mit 413 abgelehnt werden. Bündelt den Server-Deploy brain-api 1.35.0 (limit/total bei by-category/by-parent) + librarian 0.15.0 (Loop-1-Fixes: gemeinsamer Aktivitaets-Gate, Stempel nach Urteil, Merge-Delete-Haertung, Mutations-Lock, ehrliche Bilanz, finding_keys-Pruning, mtime-Caches). Alt: 0.83.1.
+VERSION = "0.84.1 (14.07.2026, 13:30 Uhr)"  # 0.84.1 (Loop-1-Verifikation): buendelt zusaetzlich agent 0.82.0, mcp-server 1.4.3, brain-api-Datums-ValueError-Fix (ungueltige Kalenderdaten -> leer statt HTTP 500) und librarian 0.15.1 (Aktivitaets-Gate gegen Thread-Start-Fehler gehaertet). Alt: 0.84.0.
+VERSION = "0.85.0 (14.07.2026, 13:55 Uhr)"  # 0.85.0 (Loop 2): 2 Dashboard-Funde behoben + buendelt die Loop-2-Server-Fixes. (5) features.json-Persistenz ueber einen threading.RLock serialisiert, den ALLE Schreiber halten (der Seed-Merge-Write im synchronen GET-Pfad _read_features_data UND die PUT/DELETE-Mutationen) — der bisherige asyncio-Lock konnte den Threadpool-GET nicht schuetzen -> Lost Update moeglich, jetzt nicht mehr; reentrant, weil _read intern _write ruft. (6) /api/chat und /api/chat/stream pruefen jetzt die Content-Length ZUERST (_too_large, MAX_STORE_CHARS*4+65536) und antworten bei riesigen Bodies sofort mit 413, BEVOR request.json() alles in den RAM liest — konsistent zum OOM-Vorabcheck in /api/store; der praezise Zeichen-Check bleibt als zweite Sicherung. Buendelt librarian 0.16.0 (Loop-2: Phone-only-Guard komplett + Vorschlagsfilter, LLM-Titel raus aus dem Mutations-Lock, ehrliche Bilanz nach 2. Lauf, Veraltet-Budget nach Block-Check). Alt: 0.84.1.
+VERSION = "0.86.0 (14.07.2026, 15:10 Uhr)"  # 0.86.0 (Cortex-Debugging Loops 3-5, sichtbarer Gesamtzaehler): buendelt den FINALEN Deploy-Stand des mehrstufigen Debugging-Laufs (5 gruendliche Review-Loops, ~115 Code-/Logik-/Performance-Bugs ueber alle Schichten gefixt, Erfolgsbedingung 2 aufeinanderfolgende saubere Loops). Server: brain-api 1.38.0 (Delete-before-Embed beseitigt, OOM-Snapshot/text_len-Verifikation, Europe/Berlin-Datumsfilter + Datums-Validierung, NFC-doc_id, BM25-Generationszaehler, Entity-Serialisierung + MatchAny, /search categories, /by-category|/by-parent limit+total, Wiederauferstehungs-Schutz, LOST-UPDATE-Schutz per updated_at-Versionscheck+Retry auf allen Schreibwegen), agent 0.83.0 (Logbuch-Flush-Datenverlust + Session-Reuse-Race via mirror_id, Codex-Fallback, Retry-/Token-Refresh-Haertung u.v.m.), librarian 0.16.1 (Aktivitaets-Gate, Stempel nach Urteil, LLM raus aus Lock, ehrliche AUTO-Bilanz-Akkumulation, Phone-only-Guard), mcp-server 1.4.3 (Traceback-Durchreichung). Apps (separater Build/Install): CortexAndroid 0.8.7, EntropieReductor 0.28.18 (Sync-Datenverlust-Schutz Pull+Push, VPN-Reconnect-Zaehler, null-Flow, Cache-/ready-Behandlung). Alt: 0.85.0.
 BRAIN_URL = os.getenv("BRAIN_URL", "http://brain-api:8000").rstrip("/")
 AGENT_URL = os.getenv("AGENT_URL", "http://agent:8002").rstrip("/")
 SB_API_KEY = os.getenv("SB_API_KEY", "")
@@ -162,6 +167,15 @@ def is_overview_total_excluded(category: str | None) -> bool:
     c = (category or "").strip().casefold()
     return c in {CONV_CATEGORY.casefold(), "gespraeche"} or c == "bugfixes" or c.startswith("bugfixes/")
 
+
+def _is_conv_category(category: str | None) -> bool:
+    """Case-insensitiv (wie in der Absicht von CONV_CATEGORY): gehoert die Kategorie zu den Gespraechen
+    (fuer den Logbuch-.txt-Sync)? Beruecksichtigt den Altbestand mit kleinem 'g'/'gespraeche' UND
+    Unterpfade (z.B. 'Gespräche/2026'). Bewusst OHNE bugfixes — die haben keine Logbuch-.txt."""
+    c = (category or "").strip().casefold()
+    conv = CONV_CATEGORY.casefold()
+    return c == conv or c.startswith(conv + "/") or c == "gespraeche" or c.startswith("gespraeche/")
+
 logging.basicConfig(level=logging.INFO, format="%(message)s")
 log = logging.getLogger("sb-dashboard")
 
@@ -197,6 +211,17 @@ def _bdelete(endpoint: str, **params):
     r = _HTTP.delete(f"{BRAIN_URL}{endpoint}", params=params or None, headers=HEADERS, timeout=30.0)
     r.raise_for_status()
     return r.json()
+
+
+def _too_large(request: Request, limit_bytes: int) -> bool:
+    """True, wenn der Content-Length-Header das Limit ueberschreitet -> der Aufrufer kann SOFORT 413
+    antworten, OHNE den (potenziell riesigen) Body erst komplett in den RAM zu lesen (fastapi §8,
+    OOM-Schutz). Fehlender/kaputter Header -> False; der Nach-Lese-Check bleibt als zweite Sicherung."""
+    raw = request.headers.get("content-length")
+    try:
+        return raw is not None and int(raw) > limit_bytes
+    except (TypeError, ValueError):
+        return False
 
 
 def _aget(endpoint: str):
@@ -242,6 +267,12 @@ async def unhandled(request: Request, exc: Exception) -> JSONResponse:
 
 FEATURES_SEED_FILE = Path(__file__).parent / "features.json"   # Seed im Image; editierbare Kopie lebt persistent in /app/data
 FEATURES_FILE = Path(os.getenv("DASH_FEATURES_FILE", str(FEATURES_SEED_FILE)))
+_features_lock = asyncio.Lock()   # serialisiert die Read-Modify-Write-Endpunkte der Feature-Chronik (PUT/DELETE)
+# Zusaetzlich ein threading-Lock, den ALLE features.json-Schreiber halten: der asyncio-Lock kann den
+# SYNCHRONEN GET-Pfad (api_features -> _read_features_data mit Seed-Merge-Write) nicht schuetzen, weil
+# der im Threadpool laeuft. Dieser reentrante Lock (RLock, weil _read_features_data intern
+# _write_features_data ruft) serialisiert Seed-Merge-Write UND PUT/DELETE-Write -> kein Lost Update.
+_features_file_lock = threading.RLock()
 OVERVIEW_PREFERENCES_FILE = Path(os.getenv("DASH_OVERVIEW_PREFERENCES_FILE", "/app/data/overview-preferences.json"))
 
 
@@ -253,37 +284,45 @@ def _read_features_data() -> dict:
     wurde der Image-Seed ignoriert (nur EINMAL kopiert), sodass neue Eintraege (Turn-Logbuch 13:09,
     Werkzeugkasten 15:44) nie in der System-Info erschienen. Poka-Yoke: kuenftige Eintraege kommen nun
     von selbst durch, ohne dass jemand die Server-Datei anfassen muss."""
-    src = FEATURES_FILE
-    if not src.exists() and src != FEATURES_SEED_FILE and FEATURES_SEED_FILE.exists():
-        src.parent.mkdir(parents=True, exist_ok=True)
-        src.write_text(FEATURES_SEED_FILE.read_text(encoding="utf-8"), encoding="utf-8", newline="\n")
-    with open(src, "r", encoding="utf-8") as f:
-        data = json.load(f)
-    if not isinstance(data.get("features"), list):
-        data["features"] = []
-    # Merge: neue Seed-Eintraege (per id fehlend) VORNE einfuegen (der Seed ist 'neueste zuerst' gepflegt),
-    # danach einmalig persistieren. Bestehende (evtl. editierte) Eintraege bleiben unberuehrt.
-    if src != FEATURES_SEED_FILE and FEATURES_SEED_FILE.exists():
-        try:
-            with open(FEATURES_SEED_FILE, "r", encoding="utf-8") as f:
-                seed = json.load(f)
-            have = {f.get("id") for f in data["features"] if isinstance(f, dict)}
-            fehlend = [f for f in (seed.get("features") or []) if isinstance(f, dict) and f.get("id") not in have]
-            if fehlend:
-                data["features"] = fehlend + data["features"]
-                if seed.get("stand"):
-                    data["stand"] = seed["stand"]
-                _write_features_data(data)   # dauerhaft persistieren (danach ist 'fehlend' leer -> kein Re-Write)
-        except Exception:  # noqa: BLE001 — der Merge darf das Lesen nie kippen (best-effort)
-            pass
-    return data
+    # Ganzer Read-Modify-Write unter dem Datei-Lock: Datei-Lesen, Seed-Merge-Entscheidung UND der
+    # persistierende Merge-Write muessen atomar sein, sonst kann ein paralleler PUT/DELETE-Write
+    # dazwischenfunken (Lost Update). Der interne _write_features_data-Aufruf re-akquiriert den
+    # reentranten Lock im selben Thread (kein Deadlock).
+    with _features_file_lock:
+        src = FEATURES_FILE
+        if not src.exists() and src != FEATURES_SEED_FILE and FEATURES_SEED_FILE.exists():
+            src.parent.mkdir(parents=True, exist_ok=True)
+            tmp = src.with_suffix(".seedtmp")   # atomar kopieren (tmp + os.replace) -> nie eine halb geschriebene Chronik
+            tmp.write_text(FEATURES_SEED_FILE.read_text(encoding="utf-8"), encoding="utf-8", newline="\n")
+            os.replace(tmp, src)
+        with open(src, "r", encoding="utf-8") as f:
+            data = json.load(f)
+        if not isinstance(data.get("features"), list):
+            data["features"] = []
+        # Merge: neue Seed-Eintraege (per id fehlend) VORNE einfuegen (der Seed ist 'neueste zuerst' gepflegt),
+        # danach einmalig persistieren. Bestehende (evtl. editierte) Eintraege bleiben unberuehrt.
+        if src != FEATURES_SEED_FILE and FEATURES_SEED_FILE.exists():
+            try:
+                with open(FEATURES_SEED_FILE, "r", encoding="utf-8") as f:
+                    seed = json.load(f)
+                have = {f.get("id") for f in data["features"] if isinstance(f, dict)}
+                fehlend = [f for f in (seed.get("features") or []) if isinstance(f, dict) and f.get("id") not in have]
+                if fehlend:
+                    data["features"] = fehlend + data["features"]
+                    if seed.get("stand"):
+                        data["stand"] = seed["stand"]
+                    _write_features_data(data)   # dauerhaft persistieren (danach ist 'fehlend' leer -> kein Re-Write)
+            except Exception:  # noqa: BLE001 — der Merge darf das Lesen nie kippen (best-effort)
+                pass
+        return data
 
 
 def _write_features_data(data: dict) -> None:
-    FEATURES_FILE.parent.mkdir(parents=True, exist_ok=True)
-    tmp = FEATURES_FILE.with_suffix(".tmp")
-    tmp.write_text(json.dumps(data, ensure_ascii=False, indent=2), encoding="utf-8", newline="\n")
-    os.replace(tmp, FEATURES_FILE)
+    with _features_file_lock:   # serialisiert gegen den Seed-Merge-Write in _read_features_data + parallele PUT/DELETE
+        FEATURES_FILE.parent.mkdir(parents=True, exist_ok=True)
+        tmp = FEATURES_FILE.with_suffix(".tmp")
+        tmp.write_text(json.dumps(data, ensure_ascii=False, indent=2), encoding="utf-8", newline="\n")
+        os.replace(tmp, FEATURES_FILE)
 
 
 def _overview_preferences(data: object) -> dict:
@@ -356,29 +395,31 @@ async def api_put_overview_preferences(request: Request) -> dict:
 async def api_put_feature(feature_id: str, request: Request) -> dict:
     body = await request.json()
     fid = (feature_id or "").strip()
-    data = await asyncio.to_thread(_read_features_data)
-    features = data.get("features") or []
-    for item in features:
-        if (item.get("id") or "") == fid:
-            for key, limit in (("name", 160), ("eingebaut", 40), ("dienst", 220), ("kurz", 800), ("erklaerung", 8000)):
-                if key in body:
-                    item[key] = str(body.get(key) or "").strip()[:limit]
-            await asyncio.to_thread(_write_features_data, data)
-            _log(logging.INFO, "Feature-Chronik-Eintrag bearbeitet", id=fid)
-            return {"ok": True, "feature": item, "count": len(features)}
+    async with _features_lock:   # Read-Modify-Write atomar (kein Lost Update bei parallelem PUT/DELETE)
+        data = await asyncio.to_thread(_read_features_data)
+        features = data.get("features") or []
+        for item in features:
+            if (item.get("id") or "") == fid:
+                for key, limit in (("name", 160), ("eingebaut", 40), ("dienst", 220), ("kurz", 800), ("erklaerung", 8000)):
+                    if key in body:
+                        item[key] = str(body.get(key) or "").strip()[:limit]
+                await asyncio.to_thread(_write_features_data, data)
+                _log(logging.INFO, "Feature-Chronik-Eintrag bearbeitet", id=fid)
+                return {"ok": True, "feature": item, "count": len(features)}
     return JSONResponse(status_code=404, content={"ok": False, "detail": "Feature nicht gefunden"})
 
 
 @app.delete("/api/features/{feature_id}")
 async def api_delete_feature(feature_id: str) -> dict:
     fid = (feature_id or "").strip()
-    data = await asyncio.to_thread(_read_features_data)
-    features = data.get("features") or []
-    kept = [f for f in features if (f.get("id") or "") != fid]
-    if len(kept) == len(features):
-        return JSONResponse(status_code=404, content={"ok": False, "detail": "Feature nicht gefunden"})
-    data["features"] = kept
-    await asyncio.to_thread(_write_features_data, data)
+    async with _features_lock:   # Read-Modify-Write atomar (kein Lost Update bei parallelem PUT/DELETE)
+        data = await asyncio.to_thread(_read_features_data)
+        features = data.get("features") or []
+        kept = [f for f in features if (f.get("id") or "") != fid]
+        if len(kept) == len(features):
+            return JSONResponse(status_code=404, content={"ok": False, "detail": "Feature nicht gefunden"})
+        data["features"] = kept
+        await asyncio.to_thread(_write_features_data, data)
     _log(logging.INFO, "Feature-Chronik-Eintrag geloescht", id=fid)
     return {"ok": True, "count": len(kept)}
 
@@ -489,8 +530,11 @@ def vitals() -> dict:
 def entries(q: str = "", category: str = "", limit: int = 40) -> dict:
     limit = max(1, min(limit, 200))
     if category.strip():
-        d = _bget("/by-category", category=category.strip(), user_id=USER_ID)
-        return {"mode": "category", "items": d.get("items", [])[:limit]}
+        # limit an brain-api durchreichen -> nur die N aktuellsten Eintraege inkl. Volltexte (frueher
+        # holte das Dashboard ALLE Volltexte und warf lokal alles ab; brain-api >=1.35.0). Das lokale
+        # [:limit] bleibt als abwaertskompatible Absicherung (altes brain ohne limit-Parameter).
+        d = _bget("/by-category", category=category.strip(), user_id=USER_ID, limit=limit)
+        return {"mode": "category", "items": d.get("items", [])[:limit], "total": d.get("total")}
     if q.strip():
         d = _bpost("/search", {"query": q.strip(), "user_id": USER_ID, "limit": limit})
         return {"mode": "search", "items": d.get("items", [])}
@@ -508,12 +552,16 @@ def entries_by_parent(parent: str = "", limit: int = 200) -> dict:
     limit = max(1, min(limit, 500))
     try:
         top = p.split("/", 1)[0].strip()
-        d = _bget("/by-parent", parent=top, user_id=USER_ID)
-        items = d.get("items", [])
         if "/" in p:
+            # Tieferer Unterpfad wird hier per Prefix gefiltert -> BREIT lesen: ein brain-seitiges limit
+            # (nur N aktuellste der Hauptebene) wuerde die passenden Unterpfad-Treffer wegschneiden.
+            d = _bget("/by-parent", parent=top, user_id=USER_ID)
             prefix = p + "/"
-            items = [it for it in items if (it.get("category") or "") == p or (it.get("category") or "").startswith(prefix)]
-        return {"mode": "parent", "parent": p, "items": items[:limit]}
+            items = [it for it in d.get("items", []) if (it.get("category") or "") == p or (it.get("category") or "").startswith(prefix)]
+            return {"mode": "parent", "parent": p, "items": items[:limit]}
+        # Hauptebene ohne Unterpfad-Filter -> limit direkt an brain-api durchreichen (nur N aktuellste inkl. Volltexte)
+        d = _bget("/by-parent", parent=top, user_id=USER_ID, limit=limit)
+        return {"mode": "parent", "parent": p, "items": d.get("items", [])[:limit], "total": d.get("total")}
     except Exception as e:  # noqa: BLE001
         _log(logging.WARNING, "by-parent fehlgeschlagen", err=str(e), parent=p)
         return {"mode": "parent", "items": []}
@@ -1108,6 +1156,11 @@ def api_eval_log(name: str) -> dict:
 async def api_store(request: Request) -> dict:
     """Direkter 1:1-Speicher-Proxy ans Gehirn. Der Browser ruft nur das Dashboard auf; der interne
     SB_API_KEY bleibt serverseitig. Titelgleiche Eintraege ersetzen sich wie bei brain-api /store."""
+    # Content-Length ZUERST: riesige Bodies sofort ablehnen, ohne sie einzulesen. Grosszuegige
+    # Byte-Schranke (UTF-8 bis 4 Byte/Zeichen + JSON-Rahmen); der praezise Zeichen-Check auf
+    # MAX_STORE_CHARS unten bleibt als zweite Sicherung.
+    if _too_large(request, MAX_STORE_CHARS * 4 + 65536):
+        return JSONResponse(status_code=413, content={"ok": False, "detail": "Anfrage zu groß"})
     body = await request.json()
     text = body.get("text") or ""
     if not text.strip():
@@ -1169,6 +1222,11 @@ async def api_chat(request: Request) -> dict:
     """Ein Eingang zum Bibliothekar-Agenten: store/ask/recall/smalltalk entscheidet der Agent.
     Der synchrone httpx-Call laeuft via asyncio.to_thread, damit ein langer recall (zwei
     LLM-Aufrufe, bis ~60s) den Event-Loop NICHT blockiert (bugs/server/fastapi.md §1)."""
+    # Content-Length ZUERST pruefen (fastapi §8, OOM): riesige Bodies sofort 413 ablehnen, BEVOR
+    # request.json() sie komplett in den RAM liest — konsistent zu /api/store. Der praezise
+    # Zeichen-Check (MAX_STORE_CHARS) in _build_chat_payload bleibt als zweite Sicherung.
+    if _too_large(request, MAX_STORE_CHARS * 4 + 65536):
+        return JSONResponse(status_code=413, content={"ok": False, "reply": "Anfrage zu groß"})
     body = await request.json()
     payload, err = _build_chat_payload(body)
     if payload is None:
@@ -1187,6 +1245,10 @@ async def api_chat_stream(request: Request):
     traegt canonical_reply=true, bugs/server/ai-agent-frameworks.md §9.1) — Anzeige/TTS duerfen den
     Deltas vertrauen. Sync-httpx-Stream in einem sync-Generator: Starlette iteriert ihn im
     Threadpool, der Event-Loop bleibt frei (fastapi §1)."""
+    # Content-Length ZUERST pruefen (fastapi §8, OOM): riesige Bodies sofort 413, ohne sie
+    # einzulesen — konsistent zu /api/store und /api/chat.
+    if _too_large(request, MAX_STORE_CHARS * 4 + 65536):
+        return JSONResponse(status_code=413, content={"ok": False, "reply": "Anfrage zu groß"})
     body = await request.json()
     payload, err = _build_chat_payload(body)
 
@@ -1245,7 +1307,7 @@ async def api_delete_entry(doc_id: str = "") -> dict:
         _log(logging.WARNING, "Eintrag-Loeschen fehlgeschlagen", err=str(e))
         return JSONResponse(status_code=502, content={"ok": False, "detail": f"Loeschen fehlgeschlagen: {type(e).__name__}"})
     # Gespraech geloescht -> zugehoerige Logbuch-.txt auf Platte Z mitloeschen (Logbuch == Gehirn synchron)
-    if isinstance(res, dict) and res.get("category") == CONV_CATEGORY and res.get("title"):
+    if isinstance(res, dict) and _is_conv_category(res.get("category")) and res.get("title"):
         try:
             await asyncio.to_thread(_adelete, "/logbook", title=res["title"])
         except Exception as e:  # noqa: BLE001 — .txt-Sync best-effort; die Gehirn-Loeschung steht schon
@@ -1366,7 +1428,7 @@ async def api_trash_restore(request: Request) -> dict:
         _log(logging.WARNING, "Wiederherstellen fehlgeschlagen", err=str(e))
         return JSONResponse(status_code=502, content={"ok": False, "detail": f"Wiederherstellen fehlgeschlagen: {type(e).__name__}"})
     # Gespraech wiederhergestellt -> Logbuch-.txt auf Platte Z zurueckschreiben (Logbuch == Gehirn synchron)
-    if isinstance(res, dict) and res.get("category") == CONV_CATEGORY and res.get("title") and res.get("text"):
+    if isinstance(res, dict) and _is_conv_category(res.get("category")) and res.get("title") and res.get("text"):
         try:
             await asyncio.to_thread(_apost, "/logbook", {"title": res["title"], "content": res["text"]})
         except Exception as e:  # noqa: BLE001 — .txt-Sync best-effort; der Gehirn-Eintrag ist schon zurueck
@@ -1431,10 +1493,12 @@ async def api_transcribe(request: Request) -> dict:
     GROQ_API_KEY fest im Server (.env). Body-Limit gegen OOM (fastapi §8); sync httpx via to_thread."""
     if not GROQ_API_KEY:
         return JSONResponse(status_code=503, content={"ok": False, "detail": "GROQ_API_KEY fehlt im Server"})
+    if _too_large(request, MAX_AUDIO_BYTES):   # Content-Length zuerst -> grosse Uploads gar nicht erst einlesen
+        return JSONResponse(status_code=413, content={"ok": False, "detail": "Audio zu gross (>24 MB)"})
     audio = await request.body()
     if not audio:
         return JSONResponse(status_code=400, content={"ok": False, "detail": "Kein Audio empfangen"})
-    if len(audio) > MAX_AUDIO_BYTES:
+    if len(audio) > MAX_AUDIO_BYTES:   # zweite Sicherung (falls Content-Length fehlte/log)
         return JSONResponse(status_code=413, content={"ok": False, "detail": "Audio zu gross (>24 MB)"})
     ctype = request.headers.get("content-type", "audio/webm")
     try:
@@ -1632,14 +1696,19 @@ LIBRARIAN_URL = os.getenv("LIBRARIAN_URL", "http://librarian:8004").rstrip("/")
 _LIB_ALLOWED = ("status", "run-now", "reports", "report", "process", "process-status",
                 "settings", "standard-tasks", "custom-tasks", "learn", "health",
                 "apply-rules", "apply-rules-status")
+# 1 MB statt 200 KB: ein legitimer Merge-Text darf bis 200000 ZEICHEN gross sein (librarian
+# Decision.merge_text) -> als UTF-8 mehrere 100 KB; 200 KB lehnte solche Merges faelschlich mit 413 ab.
+LIB_PROXY_MAX_BYTES = 1024 * 1024
 
 
 @app.api_route("/api/lib/{path:path}", methods=["GET", "POST", "PUT", "DELETE"])
 async def lib_proxy(path: str, request: Request):
     if not any(path == p or path.startswith(p + "/") for p in _LIB_ALLOWED):
         return JSONResponse(status_code=404, content={"ok": False, "detail": "Unbekannter Bibliothekar-Endpunkt"})
+    if _too_large(request, LIB_PROXY_MAX_BYTES):   # Content-Length zuerst -> grosse Bodies gar nicht erst einlesen
+        return JSONResponse(status_code=413, content={"ok": False, "detail": "Anfrage zu gross"})
     body = await request.body()
-    if len(body) > 200_000:   # OOM-Backstop (fastapi §8) — Entscheidungs-Listen sind nie so gross
+    if len(body) > LIB_PROXY_MAX_BYTES:   # OOM-Backstop (fastapi §8) + zweite Sicherung
         return JSONResponse(status_code=413, content={"ok": False, "detail": "Anfrage zu gross"})
 
     def _do() -> httpx.Response:

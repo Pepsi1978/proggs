@@ -51,7 +51,8 @@ services:
     logging: *sb-logging
     restart: unless-stopped
     depends_on:
-      - qdrant
+      qdrant:
+        condition: service_started   # qdrant hat KEINEN Healthcheck -> nur "gestartet" abwartbar
     ports:
       # An die WireGuard-IP gebunden -> NUR ueber den VPN-Tunnel erreichbar, NIE oeffentlich.
       # Bewusst NICHT 0.0.0.0 (Docker-UFW-Falle: published 0.0.0.0-Ports umgehen UFW).
@@ -91,7 +92,8 @@ services:
     logging: *sb-logging
     restart: unless-stopped
     depends_on:
-      - brain-api
+      brain-api:
+        condition: service_healthy   # brain-api hat einen Healthcheck -> erst starten, wenn es GESUND ist
     ports:
       # An die WireGuard-IP gebunden -> NUR ueber den VPN-Tunnel erreichbar (wie brain-api).
       # Bewusst NICHT 0.0.0.0 auf dem HOST (Docker-UFW-Falle). host=0.0.0.0 gilt nur INNERHALB
@@ -125,7 +127,8 @@ services:
     logging: *sb-logging
     restart: unless-stopped
     depends_on:
-      - brain-api
+      brain-api:
+        condition: service_healthy   # brain-api hat einen Healthcheck -> erst starten, wenn es GESUND ist
     ports:
       # An die WireGuard-IP gebunden -> NUR ueber den VPN-Tunnel erreichbar (wie brain-api/mcp).
       - "10.8.0.1:8002:8002"
@@ -178,7 +181,8 @@ services:
     logging: *sb-logging
     restart: unless-stopped
     depends_on:
-      - brain-api
+      brain-api:
+        condition: service_healthy   # brain-api hat einen Healthcheck -> erst starten, wenn es GESUND ist
     ports:
       # An die WireGuard-IP gebunden -> NUR ueber den VPN-Tunnel erreichbar (wie brain-api/agent).
       - "10.8.0.1:8004:8004"
@@ -219,7 +223,8 @@ services:
     logging: *sb-logging
     restart: unless-stopped
     depends_on:
-      - brain-api
+      brain-api:
+        condition: service_healthy   # brain-api hat einen Healthcheck -> erst starten, wenn es GESUND ist
     ports:
       - "10.8.0.1:8003:8003"        # nur ueber WireGuard erreichbar (privat)
     env_file:
