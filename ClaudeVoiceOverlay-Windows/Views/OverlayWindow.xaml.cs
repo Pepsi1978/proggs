@@ -3947,15 +3947,21 @@ namespace ClaudeVoiceOverlay.Views
                 }
                 var local = await _historyService.LoadAsync();
                 var merged = PromptHistoryDriveSync.MergeEntries(local, cloud);
-                if (merged.Count == local.Count)
+                bool unchanged = merged.Count == local.Count && merged
+                    .Zip(local, (cloudEntry, localEntry) =>
+                        string.Equals(cloudEntry.Id, localEntry.Id, StringComparison.OrdinalIgnoreCase) &&
+                        string.Equals(cloudEntry.Title, localEntry.Title, StringComparison.Ordinal) &&
+                        string.Equals(cloudEntry.Text, localEntry.Text, StringComparison.Ordinal) &&
+                        cloudEntry.Timestamp == localEntry.Timestamp &&
+                        cloudEntry.UpdatedAt == localEntry.UpdatedAt)
+                    .All(equal => equal);
+                if (unchanged)
                 {
-                    // Keine neuen Eintraege — nichts schreiben, sonst
-                    // verdraengen wir KI-Titel mit Fallback-Titeln.
-                    Console.WriteLine("Cloud history merge: no new entries.");
+                    Console.WriteLine("Cloud history merge: no changes.");
                     return;
                 }
                 await _historyService.ReplaceAllAsync(merged);
-                Console.WriteLine($"Cloud history merged: {merged.Count - local.Count} new entries.");
+                Console.WriteLine($"Cloud history merged: {merged.Count - local.Count} new entries or revised content.");
             }
             catch (Exception ex)
             {
