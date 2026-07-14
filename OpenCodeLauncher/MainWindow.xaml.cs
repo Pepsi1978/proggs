@@ -31,6 +31,7 @@ public partial class MainWindow : Window
     private double _providerResizeTotalDelta;
     private bool _bringToForegroundQueued;
     private bool _isBringingToForeground;
+    private readonly System.Windows.Threading.DispatcherTimer _layoutSaveTimer;
 
     [DllImport("dwmapi.dll")]
     private static extern int DwmSetWindowAttribute(IntPtr hwnd, int attr, ref int value, int size);
@@ -77,6 +78,15 @@ public partial class MainWindow : Window
     {
         InitializeComponent();
         _layoutSettings = LayoutSettings.Load();
+        _layoutSaveTimer = new System.Windows.Threading.DispatcherTimer
+        {
+            Interval = TimeSpan.FromMilliseconds(400)
+        };
+        _layoutSaveTimer.Tick += (_, _) =>
+        {
+            _layoutSaveTimer.Stop();
+            SaveWindowLayout();
+        };
         RestoreWindowLayout();
         ModelColumn.Width = new GridLength(_layoutSettings.ModelPaneWidth);
         ViewModel = new MainViewModel();
@@ -86,6 +96,7 @@ public partial class MainWindow : Window
         ThemeManager.ThemeChanged += OnThemeChanged;
         Closed += (_, _) =>
         {
+            _layoutSaveTimer.Stop();
             SaveWindowLayout();
             ThemeManager.ThemeChanged -= OnThemeChanged;
         };
@@ -99,12 +110,12 @@ public partial class MainWindow : Window
         ProviderGrid.AddHandler(Thumb.DragStartedEvent, new DragStartedEventHandler(ProviderColumnResizeStarted), true);
         ProviderGrid.AddHandler(Thumb.DragDeltaEvent, new DragDeltaEventHandler(ProviderColumnResizeDelta), true);
         ProviderGrid.AddHandler(Thumb.DragCompletedEvent, new DragCompletedEventHandler(ProviderColumnResizeCompleted), true);
-        LocationChanged += (_, _) => SaveWindowLayout();
-        SizeChanged += (_, _) => SaveWindowLayout();
+        LocationChanged += (_, _) => QueueSaveWindowLayout();
+        SizeChanged += (_, _) => QueueSaveWindowLayout();
         StateChanged += (_, _) =>
         {
             MaxBtn.Content = WindowState == WindowState.Maximized ? "❐" : "▢";
-            SaveWindowLayout();
+            QueueSaveWindowLayout();
             if (WindowState != WindowState.Minimized) QueueBringToTaskbarForeground();
         };
         Activated += (_, _) => QueueBringToTaskbarForeground();
@@ -195,6 +206,14 @@ public partial class MainWindow : Window
         FlashWindowEx(ref info);
     }
 
+    // Layout-Speicherung wird gebündelt: LocationChanged/SizeChanged feuern beim Ziehen/Resizen
+    // sehr häufig — ohne Debounce würde jedes Pixel eine synchrone JSON-Schreiboperation auslösen.
+    private void QueueSaveWindowLayout()
+    {
+        _layoutSaveTimer.Stop();
+        _layoutSaveTimer.Start();
+    }
+
     private void RestoreWindowLayout()
     {
         if (_layoutSettings.WindowLeft < 0 || _layoutSettings.WindowTop < 0) return;
@@ -202,9 +221,17 @@ public partial class MainWindow : Window
         WindowStartupLocation = WindowStartupLocation.Manual;
         Width = Math.Max(_layoutSettings.WindowWidth, MinWidth);
         Height = Math.Max(_layoutSettings.WindowHeight, MinHeight);
-        Left = Math.Clamp(_layoutSettings.WindowLeft, SystemParameters.VirtualScreenLeft, SystemParameters.VirtualScreenLeft + SystemParameters.VirtualScreenWidth - Width);
-        Top = Math.Clamp(_layoutSettings.WindowTop, SystemParameters.VirtualScreenTop, SystemParameters.VirtualScreenTop + SystemParameters.VirtualScreenHeight - Height);
-        if (_layoutSettings.WindowState == "Maximized") WindowState = WindowState.Maximized;
+        // Clamp-Grenzen absichern: bei Fenstern, die breiter/höher als der virtuelle Bildschirm sind
+        // (z.B. nach Auflösungs-/Monitorwechsel), wäre max < min und Math.Clamp würfe ArgumentException.
+        var minLeft = SystemParameters.VirtualScreenLeft;
+        var minTop = SystemParameters.VirtualScreenTop;
+        var maxLeft = Math.Max(minLeft, minLeft + SystemParameters.VirtualScreenWidth - Width);
+        var maxTop = Math.Max(minTop, minTop + SystemParameters.VirtualScreenHeight - Height);
+        Left = Math.Clamp(_layoutSettings.WindowLeft, minLeft, maxLeft);
+        Top = Math.Clamp(_layoutSettings.WindowTop, minTop, maxTop);
+        // WindowState explizit setzen: der XAML-Default ist Maximized; ohne das Zurücksetzen auf Normal
+        // würde ein normal geschlossenes Fenster beim nächsten Start fälschlich maximiert öffnen.
+        WindowState = _layoutSettings.WindowState == "Maximized" ? WindowState.Maximized : WindowState.Normal;
     }
 
     private void SaveWindowLayout()

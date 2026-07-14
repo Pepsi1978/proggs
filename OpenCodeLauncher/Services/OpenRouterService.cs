@@ -24,6 +24,39 @@ public sealed class OpenRouterService
         }
     };
 
+    // Die vollständige /models-Antwort ist groß und wird sowohl beim Start (Free-Modelle) als auch
+    // bei jedem Modellwechsel (Thinking-Level) gebraucht. Ohne Cache lädt jeder Wechsel die komplette
+    // Liste neu. Kurzlebiger String-Cache (TTL) + Semaphore gegen paralleles Doppel-Laden.
+    private static readonly SemaphoreSlim ModelsCacheLock = new(1, 1);
+    private static readonly TimeSpan ModelsCacheTtl = TimeSpan.FromMinutes(5);
+    private static string? _modelsJson;
+    private static DateTime _modelsJsonUtc = DateTime.MinValue;
+
+    private static async Task<string> FetchModelsJsonAsync(CancellationToken ct)
+    {
+        var cached = _modelsJson;
+        if (cached != null && DateTime.UtcNow - _modelsJsonUtc < ModelsCacheTtl) return cached;
+
+        await ModelsCacheLock.WaitAsync(ct).ConfigureAwait(false);
+        try
+        {
+            cached = _modelsJson;
+            if (cached != null && DateTime.UtcNow - _modelsJsonUtc < ModelsCacheTtl) return cached;
+
+            using var req = new HttpRequestMessage(HttpMethod.Get, $"{BaseUrl}/models");
+            using var resp = await Http.SendAsync(req, ct).ConfigureAwait(false);
+            resp.EnsureSuccessStatusCode();
+            var json = await resp.Content.ReadAsStringAsync(ct).ConfigureAwait(false);
+            _modelsJson = json;
+            _modelsJsonUtc = DateTime.UtcNow;
+            return json;
+        }
+        finally
+        {
+            ModelsCacheLock.Release();
+        }
+    }
+
     /// <summary>Liefert den Modell-Anzeigenamen (data.name) oder null.</summary>
     public async Task<(string? displayName, List<ProviderEntry> providers)> GetProvidersAsync(string slug, CancellationToken ct = default)
     {
@@ -73,13 +106,8 @@ public sealed class OpenRouterService
         var log = Logger.Instance;
         try
         {
-            using var req = new HttpRequestMessage(HttpMethod.Get, $"{BaseUrl}/models");
-
-            using var resp = await Http.SendAsync(req, ct).ConfigureAwait(false);
-            resp.EnsureSuccessStatusCode();
-
-            await using var stream = await resp.Content.ReadAsStreamAsync(ct).ConfigureAwait(false);
-            var doc = await JsonDocument.ParseAsync(stream, cancellationToken: ct).ConfigureAwait(false);
+            var json = await FetchModelsJsonAsync(ct).ConfigureAwait(false);
+            using var doc = JsonDocument.Parse(json);
             var models = new List<ModelEntry>();
 
             if (doc.RootElement.TryGetProperty("data", out var data) && data.ValueKind == JsonValueKind.Array)
@@ -107,13 +135,8 @@ public sealed class OpenRouterService
         var log = Logger.Instance;
         try
         {
-            using var req = new HttpRequestMessage(HttpMethod.Get, $"{BaseUrl}/models");
-
-            using var resp = await Http.SendAsync(req, ct).ConfigureAwait(false);
-            resp.EnsureSuccessStatusCode();
-
-            await using var stream = await resp.Content.ReadAsStreamAsync(ct).ConfigureAwait(false);
-            var doc = await JsonDocument.ParseAsync(stream, cancellationToken: ct).ConfigureAwait(false);
+            var json = await FetchModelsJsonAsync(ct).ConfigureAwait(false);
+            using var doc = JsonDocument.Parse(json);
             if (!doc.RootElement.TryGetProperty("data", out var data) || data.ValueKind != JsonValueKind.Array)
                 return [];
 
