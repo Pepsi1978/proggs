@@ -1,7 +1,6 @@
 {
   "mouse": true,
   "plugin": [
-    "@tarquinen/opencode-dcp@latest",
     "./plugins/token-cost-sidebar"
   ]
 }
