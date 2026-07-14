@@ -20,8 +20,8 @@
     <Product>Spracheingabe - Terminal</Product>
     <!-- Sichtbare Version (Regel version-bump-visible-always): in den EXE-Datei-Eigenschaften
          (Details -> Produktversion) pruefbar. Bei JEDER Aenderung hochzaehlen. -->
-    <Version>1.4.83</Version>
-    <InformationalVersion>1.4.83 (14.07.2026, 20:16 Uhr)</InformationalVersion>
+    <Version>1.4.84</Version>
+    <InformationalVersion>1.4.84 (14.07.2026, 20:24 Uhr)</InformationalVersion>
     <AssemblyTitle>Spracheingabe - Terminal</AssemblyTitle>
     <Company>Voice Overlay</Company>
   </PropertyGroup>

@@ -202,7 +202,9 @@ namespace TerminalVoiceOverlay.Services
                     RedirectStandardOutput = true,
                     RedirectStandardError = true,
                     CreateNoWindow = true,
-                    StandardInputEncoding = Encoding.UTF8,
+                    // curl treats an UTF-8 BOM as part of the first option name
+                    // ("url" becomes "\uFEFFurl") and rejects the whole config.
+                    StandardInputEncoding = new UTF8Encoding(false),
                     StandardOutputEncoding = Encoding.UTF8,
                     StandardErrorEncoding = Encoding.UTF8,
                 };
@@ -234,6 +236,8 @@ namespace TerminalVoiceOverlay.Services
                     var details = string.IsNullOrWhiteSpace(stdout)
                         ? Truncate(stderr, 500)
                         : $"{Truncate(stderr, 500)} Response: {Truncate(stdout, 500)}";
+                    if (process.ExitCode == 2)
+                        throw new CurlStartException($"curl.exe konnte seine Konfiguration nicht laden: {details}");
                     throw new Exception($"curl.exe Groq request failed (exit {process.ExitCode}): {details}");
                 }
                 if (string.IsNullOrWhiteSpace(stdout))
