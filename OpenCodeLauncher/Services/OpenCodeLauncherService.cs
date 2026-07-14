@@ -616,10 +616,15 @@ try {
         // which must remain the single owner of in-session variant changes.
         var openCodeInvocation = $"{invoke} -m '{EscapePowerShellSingleQuotedValue(modelString)}'";
 
-        // Fuer ALLE OpenCode-Profile: Claude-Code-Kompatibilitaet abschalten, damit OpenCode nur die
-        // Profil-AGENTS.md liest und keine CLAUDE.md (Projekt + global) als Fallback zieht. Prozess-
-        // lokale Env-Variable -- fasst KEINE Datei an. (Skills/MCP bleiben unberuehrt.)
-        var minimalEnv = "$env:OPENCODE_DISABLE_CLAUDE_CODE = '1'";
+        // Fuer ALLE OpenCode-Profile: nur den CLAUDE.md-Prompt-Fallback abschalten, damit OpenCode
+        // ausschliesslich die Profil-AGENTS.md als Regelquelle nutzt und keine ~/.claude/CLAUDE.md
+        // hineinzieht. NICHT der komplette Schalter OPENCODE_DISABLE_CLAUDE_CODE -- der wuerde auch
+        // die .claude-Skills (~/.claude/skills, ~73 Stueck) und die uebrige .claude-Kompatibilitaet
+        // deaktivieren, was Franks Claude-Code-Skills in OpenCode unbrauchbar machte. Mit _PROMPT
+        // bleiben Skills UND MCP aktiv; die Projekt-CLAUDE.md (~/proggs/CLAUDE.md) wird ohnehin durch
+        // die daneben liegende ~/proggs/AGENTS.md als Fallback unterdrueckt. Prozess-lokale
+        // Env-Variable -- fasst KEINE Datei an.
+        var minimalEnv = "$env:OPENCODE_DISABLE_CLAUDE_CODE_PROMPT = '1'";
 
         var tempScript = Path.Combine(Path.GetTempPath(), $"opencode-launcher-opencode-run-{Guid.NewGuid():N}.ps1");
         // stderr MUST be redirected to a per-process file: unhandled Bun/Effect errors in the

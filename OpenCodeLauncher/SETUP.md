@@ -4,7 +4,7 @@
 > nötig ist**, damit alles identisch funktioniert. Du kannst Claude Code auf dem neuen Rechner
 > einfach sagen: *„Richte den OpenCode Launcher genau nach `OpenCodeLauncher/SETUP.md` ein."*
 
-Stand: v1.17.16 (14.07.2026)
+Stand: v1.17.17 (14.07.2026)
 
 ---
 
@@ -35,8 +35,10 @@ deren Inhalt **vor jedem Start** in die Datei, die das jeweilige Werkzeug tatsä
 - Quelle je Profil: `OpenCodeLauncher/Profiles/OpenCode/<id>/AGENTS.md` (`id` = `minimal` | `standard` | `strict`).
 - Beim Start schreibt der Launcher diese Quelle in **`~/proggs/AGENTS.md`** (das Arbeitsverzeichnis).
   OpenCode liest die `AGENTS.md` im Arbeitsverzeichnis immer — deshalb steuern wir ihren Inhalt.
-- Zusätzlich setzt der Launcher `OPENCODE_DISABLE_CLAUDE_CODE=1` für die Session → keine `CLAUDE.md`
-  (Projekt + global) als Fallback. **Skills und MCP bleiben nutzbar.**
+- Zusätzlich setzt der Launcher `OPENCODE_DISABLE_CLAUDE_CODE_PROMPT=1` für die Session → keine
+  `CLAUDE.md` als Prompt-Fallback (die Projekt-`CLAUDE.md` wird ohnehin durch die daneben liegende
+  `~/proggs/AGENTS.md` unterdrückt). **Skills (`~/.claude/skills`) und MCP bleiben nutzbar** — bewusst
+  NICHT der komplette `OPENCODE_DISABLE_CLAUDE_CODE`, der auch die `.claude`-Skills abschalten würde.
 - Die globale `~/.config/opencode/AGENTS.md` wird vom Launcher **leer** gehalten.
 - `~/proggs/AGENTS.md` ist eine **Laufzeitdatei** (in `.gitignore`, wird immer neu erzeugt).
 
@@ -103,7 +105,7 @@ OpenCodeLauncher/Profiles/ClaudeCode/sources/strict.md
        "provider": { /* deine Provider + Modelle */ }
      }
      ```
-   - **Wichtig:** `OPENCODE_DISABLE_CLAUDE_CODE` musst du NICHT global setzen — das macht der
+   - **Wichtig:** `OPENCODE_DISABLE_CLAUDE_CODE_PROMPT` musst du NICHT global setzen — das macht der
      Launcher pro OpenCode-Session automatisch.
 
 7. **API-Keys als Umgebungsvariablen** (z. B. `OPENROUTER_API_KEY`, `OPENAI_API_KEY` …)
