@@ -172,12 +172,16 @@ namespace TerminalVoiceOverlay.Services
                             ReleaseNonCtrlModifiers();
 
                             var sendSw = Stopwatch.StartNew();
-                            SendCtrlV();
-                            pasteSent = true;
-                            succeeded = true;
-                            DiagLog.Perf("Paste", "ctrl_v", sendSw);
+                            pasteSent = SendCtrlV();
+                            succeeded = pasteSent;
+                            DiagLog.Perf("Paste", "ctrl_v", sendSw, ("ok", pasteSent));
+                            if (!pasteSent)
+                            {
+                                DiagLog.Warn("Paste", "ctrl_v_sendinput_failed",
+                                    ("error", Marshal.GetLastWin32Error()));
+                            }
 
-                            if (autoEnter)
+                            if (pasteSent && autoEnter)
                             {
                                 Thread.Sleep(300);
                                 if (!BringToForeground(terminalHwnd))
@@ -187,8 +191,14 @@ namespace TerminalVoiceOverlay.Services
                                 }
                                 else
                                 {
-                                    SendKey(VK_RETURN);
-                                    DiagLog.Write("Paste", "auto_enter_sent");
+                                    if (SendKey(VK_RETURN))
+                                        DiagLog.Write("Paste", "auto_enter_sent");
+                                    else
+                                    {
+                                        DiagLog.Warn("Paste", "auto_enter_sendinput_failed",
+                                            ("error", Marshal.GetLastWin32Error()));
+                                        succeeded = false;
+                                    }
                                 }
                             }
                         }
@@ -252,8 +262,7 @@ namespace TerminalVoiceOverlay.Services
             lock (InputSequenceGate)
             {
                 if (!BringToForeground(terminalHwnd)) return false;
-                SendKeyCombo(Win32.VK_CONTROL, VK_U);
-                return true;
+                return SendKeyCombo(Win32.VK_CONTROL, VK_U);
             }
         }
 
@@ -275,7 +284,7 @@ namespace TerminalVoiceOverlay.Services
                 if (!BringToForeground(terminalHwnd)) return false;
                 for (int i = 0; i < 5; i++)
                 {
-                    SendKeyCombo(Win32.VK_CONTROL, VK_U);
+                    if (!SendKeyCombo(Win32.VK_CONTROL, VK_U)) return false;
                     Thread.Sleep(50);
                 }
                 return true;
@@ -291,8 +300,7 @@ namespace TerminalVoiceOverlay.Services
             lock (InputSequenceGate)
             {
                 if (!BringToForeground(terminalHwnd)) return false;
-                SendKeyCombo(Win32.VK_CONTROL, VK_C);
-                return true;
+                return SendKeyCombo(Win32.VK_CONTROL, VK_C);
             }
         }
 
@@ -305,8 +313,7 @@ namespace TerminalVoiceOverlay.Services
             lock (InputSequenceGate)
             {
                 if (!BringToForeground(terminalHwnd)) return false;
-                SendCtrlV();
-                return true;
+                return SendCtrlV();
             }
         }
 
@@ -327,8 +334,7 @@ namespace TerminalVoiceOverlay.Services
         {
             lock (InputSequenceGate)
             {
-                SendKey(VK_RETURN);
-                return true;
+                return SendKey(VK_RETURN);
             }
         }
 
@@ -341,8 +347,7 @@ namespace TerminalVoiceOverlay.Services
             lock (InputSequenceGate)
             {
                 if (!BringToForeground(terminalHwnd)) return false;
-                SendKey(VK_RETURN);
-                return true;
+                return SendKey(VK_RETURN);
             }
         }
 
@@ -451,28 +456,44 @@ namespace TerminalVoiceOverlay.Services
             return false;
         }
 
-        private static void SendKeyCombo(ushort modifier, ushort key)
+        private static Win32.INPUT KeyInput(ushort virtualKey, bool keyUp)
         {
-            byte modScan = (byte)Win32.MapVirtualKey(modifier, Win32.MAPVK_VK_TO_VSC);
-            byte keyScan = (byte)Win32.MapVirtualKey(key, Win32.MAPVK_VK_TO_VSC);
+            uint flags = Win32.KEYEVENTF_SCANCODE | (keyUp ? Win32.KEYEVENTF_KEYUP : 0);
+            if (virtualKey >= 0x21 && virtualKey <= 0x2E)
+                flags |= Win32.KEYEVENTF_EXTENDEDKEY;
 
-            Win32.keybd_event((byte)modifier, modScan, 0, UIntPtr.Zero);
-            Win32.keybd_event((byte)key, keyScan, 0, UIntPtr.Zero);
-            Win32.keybd_event((byte)key, keyScan, Win32.KEYEVENTF_KEYUP, UIntPtr.Zero);
-            Win32.keybd_event((byte)modifier, modScan, Win32.KEYEVENTF_KEYUP, UIntPtr.Zero);
+            return new Win32.INPUT
+            {
+                type = Win32.INPUT_KEYBOARD,
+                u = new Win32.INPUTUNION
+                {
+                    ki = new Win32.KEYBDINPUT
+                    {
+                        wVk = 0,
+                        wScan = (ushort)Win32.MapVirtualKey(virtualKey, Win32.MAPVK_VK_TO_VSC),
+                        dwFlags = flags,
+                        time = 0,
+                        dwExtraInfo = IntPtr.Zero
+                    }
+                }
+            };
         }
 
-        private static void SendCtrlV()
+        private static bool SendInputs(params Win32.INPUT[] inputs)
         {
-            // Use keybd_event with proper scan codes
-            byte ctrlScan = (byte)Win32.MapVirtualKey(Win32.VK_CONTROL, Win32.MAPVK_VK_TO_VSC);
-            byte vScan    = (byte)Win32.MapVirtualKey(Win32.VK_V, Win32.MAPVK_VK_TO_VSC);
-
-            Win32.keybd_event((byte)Win32.VK_CONTROL, ctrlScan, 0, UIntPtr.Zero);
-            Win32.keybd_event((byte)Win32.VK_V, vScan, 0, UIntPtr.Zero);
-            Win32.keybd_event((byte)Win32.VK_V, vScan, Win32.KEYEVENTF_KEYUP, UIntPtr.Zero);
-            Win32.keybd_event((byte)Win32.VK_CONTROL, ctrlScan, Win32.KEYEVENTF_KEYUP, UIntPtr.Zero);
+            uint sent = Win32.SendInput((uint)inputs.Length, inputs, Marshal.SizeOf<Win32.INPUT>());
+            return sent == inputs.Length;
         }
+
+        private static bool SendKeyCombo(ushort modifier, ushort key)
+            => SendInputs(
+                KeyInput(modifier, false),
+                KeyInput(key, false),
+                KeyInput(key, true),
+                KeyInput(modifier, true));
+
+        private static bool SendCtrlV()
+            => SendKeyCombo(Win32.VK_CONTROL, Win32.VK_V);
 
         /// <summary>
         /// Sendet synthetische KEYUP-Events fuer Win, Alt und Shift damit
@@ -504,14 +525,7 @@ namespace TerminalVoiceOverlay.Services
             System.Threading.Thread.Sleep(20);
         }
 
-        private static void SendKey(ushort vk)
-        {
-            byte scan = (byte)Win32.MapVirtualKey(vk, Win32.MAPVK_VK_TO_VSC);
-            // Home, End, Delete, Insert, Page Up/Down, Arrow keys (0x21–0x2E) are extended keys
-            uint flags = (vk >= 0x21 && vk <= 0x2E) ? Win32.KEYEVENTF_EXTENDEDKEY : 0;
-
-            Win32.keybd_event((byte)vk, scan, flags, UIntPtr.Zero);
-            Win32.keybd_event((byte)vk, scan, flags | Win32.KEYEVENTF_KEYUP, UIntPtr.Zero);
-        }
+        private static bool SendKey(ushort vk)
+            => SendInputs(KeyInput(vk, false), KeyInput(vk, true));
     }
 }

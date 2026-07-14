@@ -127,6 +127,7 @@ namespace TerminalVoiceOverlay.NativeMethods
 
         public const uint INPUT_KEYBOARD = 1;
         public const uint KEYEVENTF_KEYUP = 0x0002;
+        public const uint KEYEVENTF_SCANCODE = 0x0008;
 
         // Virtual key codes
         public const ushort VK_CONTROL = 0x11;
