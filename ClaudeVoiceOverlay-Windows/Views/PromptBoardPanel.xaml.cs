@@ -1089,6 +1089,7 @@ public partial class PromptBoardPanel : Window
         // weniger als die alten N pro Row.
         _categoryById = _categories.ToDictionary(c => c.Id);
         _rowBrushCache.Clear();
+        RefreshHotkeyRegistryFromCache();
 
         // Prune stale ids (a category deleted elsewhere) but keep every id the
         // user still has active.
@@ -1641,18 +1642,12 @@ public partial class PromptBoardPanel : Window
             PromptList.Children.Add(BuildPromptRow(prompt, catId));
         }
 
-        // Refresh the cross-component hotkey lookup so the low-level
-        // keyboard hook in OverlayWindow sees the current bindings.
-        // Done after every render so adds, edits, deletes and restores
-        // all propagate without any extra plumbing. Only Prompts (not
-        // AiImprovementPrompts) participate — the latter are meta-prompts
-        // not meant to be pasted into a terminal.
-        // Walk the FULL set of prompts across ALL categories — not just
-        // the currently visible ones — so a hotkey still fires when the
-        // user has filtered the panel down to a single category.
-        // Quelle ist der bereits geladene Cache (siehe RefreshAsync).
-        // Wenn der Cache durch einen DB-Fehler leer ist, NICHT ueberschreiben
-        // — die alte Lookup-Tabelle bleibt aktiv ("better stale than broken").
+    }
+
+    // Refreshes all bindings after every successful cache load. This runs even
+    // when no category or prompt is visible, so deleted bindings cannot survive.
+    private void RefreshHotkeyRegistryFromCache()
+    {
         if (!_allPromptsCacheStaleDueToError)
         {
             var hotkeyEntries = new List<KeyValuePair<int, HotkeyRegistry.Entry>>();
