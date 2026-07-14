@@ -112,6 +112,8 @@ namespace TerminalVoiceOverlay.Views
         //  • Rechtsklick auf Profil-Tile → nur Profil wechseln, Cache bleibt
         //    unangetastet, naechste Aufnahme nutzt das neue Profil
         private string? _lastCorrectableRaw = null;
+        private IntPtr _mainRecordingTargetHwnd;
+        private IntPtr _btwRecordingTargetHwnd;
         private long _reCorrectGeneration;
         private readonly SemaphoreSlim _reCorrectApplyGate = new(1, 1);
 
@@ -2520,6 +2522,7 @@ namespace TerminalVoiceOverlay.Views
             if (_micState == RecordingState.Recording)
             {
                 string turnId = System.Threading.Interlocked.Increment(ref _voiceTurnSeq).ToString();
+                var targetHwnd = _mainRecordingTargetHwnd;
                 var turnSw = Stopwatch.StartNew();
                 DiagLog.Write("VoiceTurn", "stop_clicked", ("turn", turnId), ("kind", "main"), ("autoEnter", autoEnterEnabled), ("gemini", geminiEnabled), ("profile", _activeProfile));
                 // ── Stop recording ──
@@ -2626,8 +2629,9 @@ namespace TerminalVoiceOverlay.Views
                         // pro Voice-Submit (Win32 Sleeps laufen auf Background-
                         // Thread).
                         var pasteSw = Stopwatch.StartNew();
-                        DiagLog.Write("VoiceTurn", "paste_start", ("turn", turnId), ("kind", "main"), ("chars", finalText.Length), ("autoEnter", autoEnterEnabled), ("hwnd", $"0x{_terminalWatcher.ActiveTerminalHwnd.ToInt64():X}"));
-                        await TerminalController.PasteTextAsync(finalText, _terminalWatcher.ActiveTerminalHwnd, autoEnterEnabled);
+                        DiagLog.Write("VoiceTurn", "paste_start", ("turn", turnId), ("kind", "main"), ("chars", finalText.Length), ("autoEnter", autoEnterEnabled), ("hwnd", $"0x{targetHwnd.ToInt64():X}"));
+                        if (!await TerminalController.PasteTextAsync(finalText, targetHwnd, autoEnterEnabled))
+                            throw new InvalidOperationException("Das Terminal-Zielfenster der Aufnahme ist nicht mehr verfügbar.");
                         DiagLog.Perf("VoiceTurn", "paste_done", pasteSw, ("turn", turnId), ("kind", "main"), ("chars", finalText.Length));
                         SetMicState(RecordingState.Success);
                         Console.WriteLine("Text inserted");
@@ -2647,6 +2651,7 @@ namespace TerminalVoiceOverlay.Views
                 finally
                 {
                     _isProcessing = false;
+                    _mainRecordingTargetHwnd = IntPtr.Zero;
                     DiagLog.Perf("VoiceTurn", "turn_total", turnSw, ("turn", turnId), ("kind", "main"));
                     ScheduleReset();
 
@@ -2666,6 +2671,7 @@ namespace TerminalVoiceOverlay.Views
                 try
                 {
                     _audioRecorder.Start();
+                    _mainRecordingTargetHwnd = _terminalWatcher.ActiveTerminalHwnd;
                     SetMicState(RecordingState.Recording);
                     _recordingCuePlayer.PlayStart();
                     Console.WriteLine("Recording started");
@@ -2689,6 +2695,7 @@ namespace TerminalVoiceOverlay.Views
             if (isBtwRecording)
             {
                 string turnId = System.Threading.Interlocked.Increment(ref _voiceTurnSeq).ToString();
+                var targetHwnd = _btwRecordingTargetHwnd;
                 var turnSw = Stopwatch.StartNew();
                 DiagLog.Write("VoiceTurn", "stop_clicked", ("turn", turnId), ("kind", "btw"), ("autoEnter", autoEnterEnabled), ("gemini", geminiEnabled), ("profile", _activeProfile));
                 // ── Stop BTW recording ──
@@ -2760,8 +2767,9 @@ namespace TerminalVoiceOverlay.Views
                         finalText = btwMarker + finalText;
 
                     var pasteSw = Stopwatch.StartNew();
-                    DiagLog.Write("VoiceTurn", "paste_start", ("turn", turnId), ("kind", "btw"), ("chars", finalText.Length), ("autoEnter", autoEnterEnabled), ("hwnd", $"0x{_terminalWatcher.ActiveTerminalHwnd.ToInt64():X}"));
-                    await TerminalController.PasteTextAsync(finalText, _terminalWatcher.ActiveTerminalHwnd, autoEnterEnabled);
+                    DiagLog.Write("VoiceTurn", "paste_start", ("turn", turnId), ("kind", "btw"), ("chars", finalText.Length), ("autoEnter", autoEnterEnabled), ("hwnd", $"0x{targetHwnd.ToInt64():X}"));
+                    if (!await TerminalController.PasteTextAsync(finalText, targetHwnd, autoEnterEnabled))
+                        throw new InvalidOperationException("Das Terminal-Zielfenster der BTW-Aufnahme ist nicht mehr verfügbar.");
                     DiagLog.Perf("VoiceTurn", "paste_done", pasteSw, ("turn", turnId), ("kind", "btw"), ("chars", finalText.Length));
                     SetBtwMicState(RecordingState.Success);
                     Console.WriteLine("BTW text inserted");
@@ -2779,6 +2787,7 @@ namespace TerminalVoiceOverlay.Views
                 finally
                 {
                     _isProcessing = false;
+                    _btwRecordingTargetHwnd = IntPtr.Zero;
                     DiagLog.Perf("VoiceTurn", "turn_total", turnSw, ("turn", turnId), ("kind", "btw"));
 
                     // Reset BTW button to idle after 3 s
@@ -2797,6 +2806,7 @@ namespace TerminalVoiceOverlay.Views
                 {
                     isBtwRecording = true;
                     _audioRecorder.Start();
+                    _btwRecordingTargetHwnd = _terminalWatcher.ActiveTerminalHwnd;
                     SetBtwMicState(RecordingState.Recording);
                     _recordingCuePlayer.PlayStart();
                     Console.WriteLine("BTW recording started");

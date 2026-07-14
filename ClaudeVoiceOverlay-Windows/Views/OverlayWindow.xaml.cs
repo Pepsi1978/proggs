@@ -114,6 +114,8 @@ namespace ClaudeVoiceOverlay.Views
         //  • Rechtsklick auf Profil-Tile → nur Profil wechseln, Cache bleibt
         //    unangetastet, naechste Aufnahme nutzt das neue Profil
         private string? _lastCorrectableRaw = null;
+        private IntPtr _mainRecordingTargetHwnd;
+        private IntPtr _btwRecordingTargetHwnd;
         private long _reCorrectGeneration;
         private readonly SemaphoreSlim _reCorrectApplyGate = new(1, 1);
 
@@ -2487,6 +2489,7 @@ namespace ClaudeVoiceOverlay.Views
 
             if (_micState == RecordingState.Recording)
             {
+                var targetHwnd = _mainRecordingTargetHwnd;
                 // ── Stop recording ──
                 var wavFile = _audioRecorder.Stop();
                 _recordingCuePlayer.PlayStop();
@@ -2573,7 +2576,8 @@ namespace ClaudeVoiceOverlay.Views
                         // Async-Variante: blockiert nicht mehr UI fuer ~500ms
                         // pro Voice-Submit (Win32 Sleeps laufen auf Background-
                         // Thread).
-                        await AppController.PasteTextAsync(finalText, _appWatcher.ActiveAppHwnd, autoEnterEnabled);
+                        if (!await AppController.PasteTextAsync(finalText, targetHwnd, autoEnterEnabled))
+                            throw new InvalidOperationException("Das Ziel-Fenster der Aufnahme ist nicht mehr verfügbar.");
                         SetMicState(RecordingState.Success);
                         Console.WriteLine("Text inserted");
 
@@ -2591,6 +2595,7 @@ namespace ClaudeVoiceOverlay.Views
                 finally
                 {
                     _isProcessing = false;
+                    _mainRecordingTargetHwnd = IntPtr.Zero;
                     ScheduleReset();
 
                     try { if (wavFile != null) File.Delete(wavFile); }
@@ -2609,6 +2614,7 @@ namespace ClaudeVoiceOverlay.Views
                 try
                 {
                     _audioRecorder.Start();
+                    _mainRecordingTargetHwnd = _appWatcher.ActiveAppHwnd;
                     SetMicState(RecordingState.Recording);
                     _recordingCuePlayer.PlayStart();
                     Console.WriteLine("Recording started");
@@ -2631,6 +2637,7 @@ namespace ClaudeVoiceOverlay.Views
 
             if (isBtwRecording)
             {
+                var targetHwnd = _btwRecordingTargetHwnd;
                 // ── Stop BTW recording ──
                 var wavFile = _audioRecorder.Stop();
                 _recordingCuePlayer.PlayStop();
@@ -2686,7 +2693,8 @@ namespace ClaudeVoiceOverlay.Views
                     else
                         finalText = btwMarker + finalText;
 
-                    await AppController.PasteTextAsync(finalText, _appWatcher.ActiveAppHwnd, autoEnterEnabled);
+                    if (!await AppController.PasteTextAsync(finalText, targetHwnd, autoEnterEnabled))
+                        throw new InvalidOperationException("Das Ziel-Fenster der BTW-Aufnahme ist nicht mehr verfügbar.");
                     SetBtwMicState(RecordingState.Success);
                     Console.WriteLine("BTW text inserted");
 
@@ -2702,6 +2710,7 @@ namespace ClaudeVoiceOverlay.Views
                 finally
                 {
                     _isProcessing = false;
+                    _btwRecordingTargetHwnd = IntPtr.Zero;
 
                     // Reset BTW button to idle after 3 s
                     await Task.Delay(3000);
@@ -2719,6 +2728,7 @@ namespace ClaudeVoiceOverlay.Views
                 {
                     isBtwRecording = true;
                     _audioRecorder.Start();
+                    _btwRecordingTargetHwnd = _appWatcher.ActiveAppHwnd;
                     SetBtwMicState(RecordingState.Recording);
                     _recordingCuePlayer.PlayStart();
                     Console.WriteLine("BTW recording started");
