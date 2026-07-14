@@ -3,25 +3,57 @@
 
 $ErrorActionPreference = "Stop"
 
-Write-Host "Baue TerminalVoiceOverlay..." -ForegroundColor Cyan
+$projectPath = Join-Path $PSScriptRoot "TerminalVoiceOverlay.csproj"
+$publishDir = Join-Path $PSScriptRoot "publish"
+$exePath = Join-Path $publishDir "TerminalVoiceOverlay.exe"
+$deploymentMutex = [System.Threading.Mutex]::new($false, "Local\TerminalVoiceOverlay.Deployment")
+$mutexHeld = $false
+$exitCode = 0
 
-# Explizit TerminalVoiceOverlay.csproj angeben — seit dem Move der
-# PromptBoard-Subprojekte ins selbe Verzeichnis liegt zusaetzlich eine
-# PromptBoard.slnx hier, und dotnet publish ohne Pfadargument koennte
-# nicht entscheiden welches Target zu bauen ist.
-dotnet publish TerminalVoiceOverlay.csproj -c Release -r win-x64 --self-contained true `
-    -p:PublishSingleFile=true `
-    -p:IncludeNativeLibrariesForSelfExtract=true `
-    -p:EnableCompressionInSingleFile=true `
-    -o ./publish
+try {
+    try {
+        $mutexHeld = $deploymentMutex.WaitOne([TimeSpan]::FromMinutes(30))
+    } catch [System.Threading.AbandonedMutexException] {
+        $mutexHeld = $true
+    }
+    if (-not $mutexHeld) {
+        throw "Ein anderes TerminalVoiceOverlay-Deployment ist noch aktiv."
+    }
 
-if ($LASTEXITCODE -eq 0) {
-    $exe = Get-Item ./publish/TerminalVoiceOverlay.exe
+    Write-Host "Baue TerminalVoiceOverlay..." -ForegroundColor Cyan
+
+    # Explizit TerminalVoiceOverlay.csproj angeben — seit dem Move der
+    # PromptBoard-Subprojekte ins selbe Verzeichnis liegt zusaetzlich eine
+    # PromptBoard.slnx hier, und dotnet publish ohne Pfadargument koennte
+    # nicht entscheiden welches Target zu bauen ist.
+    & dotnet publish $projectPath -c Release -r win-x64 --self-contained true `
+        -p:PublishSingleFile=true `
+        -p:IncludeNativeLibrariesForSelfExtract=true `
+        -p:EnableCompressionInSingleFile=true `
+        -o $publishDir
+
+    if ($LASTEXITCODE -ne 0) {
+        throw "Build fehlgeschlagen (Exit-Code $LASTEXITCODE)."
+    }
+    if (-not (Test-Path -LiteralPath $exePath -PathType Leaf)) {
+        throw "Build meldete Erfolg, aber $exePath wurde nicht erzeugt."
+    }
+
+    $exe = Get-Item -LiteralPath $exePath
     Write-Host "`nErfolgreich gebaut!" -ForegroundColor Green
     Write-Host "Datei: $($exe.FullName)"
     Write-Host "Groesse: $([math]::Round($exe.Length / 1MB, 1)) MB"
     Write-Host "`n.env Datei neben die .exe legen und starten."
-} else {
-    Write-Host "`nBuild fehlgeschlagen!" -ForegroundColor Red
-    exit 1
+} catch {
+    Write-Host "`nPublish fehlgeschlagen: $($_.Exception.Message)" -ForegroundColor Red
+    $exitCode = 1
+} finally {
+    if ($mutexHeld) {
+        $deploymentMutex.ReleaseMutex()
+    }
+    $deploymentMutex.Dispose()
+}
+
+if ($exitCode -ne 0) {
+    exit $exitCode
 }

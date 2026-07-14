@@ -25,18 +25,7 @@ if ((Test-Path $envSource) -and -not (Test-Path $envTarget)) {
     Write-Host ".env nach publish/ kopiert." -ForegroundColor Cyan
 }
 
-# Alte Verknuepfung aus Autostart-Ordner entfernen falls vorhanden
-$startup = [Environment]::GetFolderPath("Startup")
-$oldLinks = @("TerminalVoiceOverlay.lnk", "Spracheingabe - Terminal.lnk")
-foreach ($old in $oldLinks) {
-    $oldPath = Join-Path $startup $old
-    if (Test-Path $oldPath) { Remove-Item $oldPath; Write-Host "Alte Verknuepfung entfernt: $old" -ForegroundColor Yellow }
-}
-
-# Alte Aufgabe loeschen falls vorhanden
-Unregister-ScheduledTask -TaskName "Spracheingabe - Terminal" -Confirm:$false -ErrorAction SilentlyContinue
-
-# Aufgabenplaner-Eintrag erstellen (zeigt korrekten Namen im Autostart)
+# Aufgabenplaner-Eintrag atomar erstellen oder aktualisieren.
 $action = New-ScheduledTaskAction `
     -Execute "wscript.exe" `
     -Argument """$watcherPath""" `
@@ -51,7 +40,20 @@ Register-ScheduledTask `
     -Action $action `
     -Trigger $trigger `
     -Settings $settings `
-    -Description "Voice Overlay fuer Terminal — Sprache zu Text in PowerShell, CMD, Windows Terminal" | Out-Null
+    -Description "Voice Overlay fuer Terminal — Sprache zu Text in PowerShell, CMD, Windows Terminal" `
+    -Force `
+    -ErrorAction Stop | Out-Null
+
+# Altlinks erst entfernen, nachdem die geplante Aufgabe erfolgreich registriert wurde.
+$startup = [Environment]::GetFolderPath("Startup")
+$oldLinks = @("TerminalVoiceOverlay.lnk", "Spracheingabe - Terminal.lnk")
+foreach ($old in $oldLinks) {
+    $oldPath = Join-Path $startup $old
+    if (Test-Path -LiteralPath $oldPath) {
+        Remove-Item -LiteralPath $oldPath -Force -ErrorAction Stop
+        Write-Host "Alte Verknuepfung entfernt: $old" -ForegroundColor Yellow
+    }
+}
 
 Write-Host "`nAutostart mit Watcher eingerichtet!" -ForegroundColor Green
 Write-Host "Aufgabe: Spracheingabe - Terminal" -ForegroundColor White
