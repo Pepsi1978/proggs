@@ -46,7 +46,7 @@ public sealed partial class MainViewModel : ObservableObject
             Id = "strict",
             DisplayName = "Strikt",
             Description = "Mehr Kontrolle und Absicherung",
-            Status = "OPENCODE",
+            Status = "AKTIV",
             IsEnabled = true
         });
         SelectedProfile = Profiles.Single(profile => profile.Id == "minimal");
@@ -55,8 +55,8 @@ public sealed partial class MainViewModel : ObservableObject
         WorkDir = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), "proggs");
         _ = CheckOpenCodeUpdateAsync();
 
-        var version = Assembly.GetExecutingAssembly().GetName().Version?.ToString(3) ?? "1.17.14";
-        Version = $"Version {version} (14.07.2026, 21.39 Uhr)";
+        var version = Assembly.GetExecutingAssembly().GetName().Version?.ToString(3) ?? "1.17.15";
+        Version = $"Version {version} (14.07.2026, 22.10 Uhr)";
     }
 
     public ObservableCollection<ModelGroupEntry> ModelGroups { get; } = new();
@@ -217,7 +217,7 @@ public sealed partial class MainViewModel : ObservableObject
 
     // Claude Code unterstuetzt bisher Standard (volles ~/.claude) und Minimal (frisches Repo-Profil).
     private static bool IsClaudeCodeProfileSupported(string profileId) =>
-        profileId is "standard" or "minimal";
+        profileId is "standard" or "minimal" or "strict";
 
     private async Task CheckOpenCodeUpdateAsync()
     {
@@ -449,8 +449,7 @@ public sealed partial class MainViewModel : ObservableObject
             _profiles.ActivateProjectAgents(SelectedProfile.Id, WorkDir);
             var profileSession = _profiles.PrepareOpenCodeSession(SelectedProfile.Id, WorkDir);
             var modelString = _launcher.ConfigureProvider(SelectedModel, SelectedProvider, Providers, thinkingLevel);
-            var minimalIsolation = string.Equals(SelectedProfile.Id, "minimal", StringComparison.Ordinal);
-            _launcher.Launch(modelString, WorkDir, thinkingLevel, profileSession.ConfigPath, minimalIsolation);
+            _launcher.Launch(modelString, WorkDir, thinkingLevel, profileSession.ConfigPath);
             Logger.Instance.Info("MainViewModel", "Start", "OpenCode-Profilsnapshot erstellt", new
             {
                 profileSession.ProfileId,
@@ -536,9 +535,8 @@ public sealed partial class MainViewModel : ObservableObject
         try
         {
             var documents = _profiles.LoadProfile(isClaudeCode, SelectedProfile.Id, WorkDir);
-            // Minimal (Claude wie OpenCode) hat nur EINE Datei -> Editor zeigt nur den GLOBAL-Bereich.
-            var singleDocument = string.Equals(SelectedProfile.Id, "minimal", StringComparison.Ordinal);
-            var editor = new ProfileEditorWindow(documents, isClaudeCode, SelectedProfile.DisplayName, singleDocument)
+            // Jedes Profil ist genau EINE Datei -> Editor zeigt Dateiname + Pfad und ein Textfeld.
+            var editor = new ProfileEditorWindow(documents, isClaudeCode, SelectedProfile.DisplayName)
             {
                 Owner = Application.Current.MainWindow
             };

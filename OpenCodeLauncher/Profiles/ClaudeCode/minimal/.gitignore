@@ -10,8 +10,9 @@
 *
 
 # --- Bewusst versionierte, geteilte Konfiguration (cross-machine) ---
+# Hinweis: CLAUDE.md ist bewusst NICHT eingeschlossen -- sie ist die aktive Laufzeitdatei,
+# die der Launcher pro Profil aus Profiles/ClaudeCode/sources/<id>.md befuellt.
 !.gitignore
-!CLAUDE.md
 !README.md
 !settings.json
 !rules/

@@ -122,7 +122,7 @@ public sealed class OpenCodeLauncherService
     }
 
     /// <summary>Startet opencode in einem neuen Windows-Terminal-Fenster.</summary>
-    public void Launch(string modelString, string workDir, string? thinkingLevel, string profileConfigPath, bool minimalIsolation = false)
+    public void Launch(string modelString, string workDir, string? thinkingLevel, string profileConfigPath)
     {
         var log = Logger.Instance;
         thinkingLevel = NormalizeThinkingLevel(thinkingLevel);
@@ -142,7 +142,7 @@ public sealed class OpenCodeLauncherService
             // Fehler-Fenster (Teil danach), bis der Konsolen-Fallback ohne wt greift. Ein
             // -File-Script hat kein ';' in der wt-Argumentliste und ist immun (gleiche Technik
             // wie der bereits funktionierende Claude-Code-Weg).
-            var innerScript = BuildOpenCodeStartScript(modelString, workDir, thinkingLevel, profileConfigPath, minimalIsolation);
+            var innerScript = BuildOpenCodeStartScript(modelString, workDir, thinkingLevel, profileConfigPath);
             var shell = ResolvePowerShellExecutable();
             var robustLauncherScript = shell.IsPwsh ? ResolveRobustLauncherScript() : null;
 
@@ -604,7 +604,7 @@ try {
     /// wt-Argumentliste und ist damit immun — dieselbe Technik wie der Claude-Code-Weg.
     /// $env:OPENCODE_CONFIG und der opencode-Aufruf stehen auf getrennten Zeilen (kein ';').
     /// </summary>
-    private static string BuildOpenCodeStartScript(string modelString, string workDir, string? thinkingLevel, string profileConfigPath, bool minimalIsolation)
+    private static string BuildOpenCodeStartScript(string modelString, string workDir, string? thinkingLevel, string profileConfigPath)
     {
         thinkingLevel = NormalizeThinkingLevel(thinkingLevel);
         var executable = ResolveOpenCodeExecutable();
@@ -616,9 +616,10 @@ try {
         // which must remain the single owner of in-session variant changes.
         var openCodeInvocation = $"{invoke} -m '{EscapePowerShellSingleQuotedValue(modelString)}'";
 
-        // Minimalprofil: nur die Claude-Code-Kompatibilitaet abschalten (keine CLAUDE.md, keine
-        // .claude/skills). Prozess-lokale Env-Variable -- fasst KEINE Datei an.
-        var minimalEnv = minimalIsolation ? "$env:OPENCODE_DISABLE_CLAUDE_CODE = '1'" : string.Empty;
+        // Fuer ALLE OpenCode-Profile: Claude-Code-Kompatibilitaet abschalten, damit OpenCode nur die
+        // Profil-AGENTS.md liest und keine CLAUDE.md (Projekt + global) als Fallback zieht. Prozess-
+        // lokale Env-Variable -- fasst KEINE Datei an. (Skills/MCP bleiben unberuehrt.)
+        var minimalEnv = "$env:OPENCODE_DISABLE_CLAUDE_CODE = '1'";
 
         var tempScript = Path.Combine(Path.GetTempPath(), $"opencode-launcher-opencode-run-{Guid.NewGuid():N}.ps1");
         // stderr MUST be redirected to a per-process file: unhandled Bun/Effect errors in the

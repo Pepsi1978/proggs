@@ -1,344 +1,161 @@
 using System.IO;
-using System.Security.Cryptography;
 using System.Text;
 using System.Text.Json;
 
 namespace OpenCodeLauncher.Services;
 
+/// <summary>
+/// Einheitliches Profilmodell: JEDES Profil (Claude wie OpenCode) ist genau EINE bearbeitbare
+/// Repo-Datei. Der Launcher schreibt deren Inhalt vor jedem Start in die Datei, die das jeweilige
+/// Werkzeug tatsaechlich liest:
+///   Claude   -> aktive CLAUDE.md im gemeinsamen Config-Ordner (CLAUDE_CONFIG_DIR).
+///   OpenCode -> Projekt-AGENTS.md im Arbeitsverzeichnis (ActivateProjectAgents).
+/// Kein Verstecken, keine Snapshots, keine "Global+Projekt"-Zweiteilung mehr.
+/// </summary>
 public sealed class InstructionProfileService
 {
-    private static readonly HashSet<string> OpenCodeProfileIds = new(StringComparer.Ordinal)
-    {
-        "minimal", "standard", "strict"
-    };
+    private static readonly HashSet<string> ProfileIds = new(StringComparer.Ordinal) { "minimal", "standard", "strict" };
+
+    // ===================== Laden / Speichern (eine Datei je Profil) =====================
 
     public InstructionProfileDocuments LoadProfile(bool isClaudeCode, string profileId, string workDir)
     {
-        if (isClaudeCode)
-        {
-            return string.Equals(profileId, "minimal", StringComparison.Ordinal)
-                ? LoadClaudeMinimal()
-                : LoadClaudeStandard(workDir);
-        }
-
-        EnsureOpenCodeProfiles(workDir);
-        if (string.Equals(profileId, "minimal", StringComparison.Ordinal))
-        {
-            // Minimal kennt nur EINE bearbeitbare Datei (im Repo, git-versioniert).
-            var minimalSource = EnsureOpenCodeMinimalSource();
-            return new InstructionProfileDocuments(minimalSource, ReadText(minimalSource), string.Empty, string.Empty);
-        }
-        var paths = GetOpenCodeProfilePaths(profileId, workDir);
-        return new InstructionProfileDocuments(
-            paths.GlobalPath,
-            ReadText(paths.GlobalPath),
-            paths.ProjectPath,
-            ReadText(paths.ProjectPath));
+        var source = isClaudeCode ? EnsureClaudeProfileSource(profileId) : EnsureOpenCodeProfileSource(profileId);
+        // Nur EIN Dokument: das Projekt-Dokument bleibt bewusst leer (der Editor zeigt eine Datei).
+        return new InstructionProfileDocuments(source, ReadText(source), string.Empty, string.Empty);
     }
 
     public void SaveProfile(bool isClaudeCode, string profileId, string workDir, string globalText, string projectText)
     {
-        if (!Directory.Exists(workDir))
-            throw new DirectoryNotFoundException($"Arbeitsverzeichnis nicht gefunden: {workDir}");
-
-        if (isClaudeCode)
-        {
-            if (string.Equals(profileId, "minimal", StringComparison.Ordinal))
-            {
-                // Minimal kennt nur EINE Datei (die globale CLAUDE.md im Repo-Config-Ordner).
-                // Immer schreiben, auch wenn leer -- so kann der Nutzer den Kontext bewusst leeren.
-                var minimal = LoadClaudeMinimal();
-                WriteText(minimal.GlobalPath, globalText);
-                return;
-            }
-
-            if (!string.Equals(profileId, "standard", StringComparison.Ordinal))
-                throw new InvalidOperationException("Claude Code unterstützt derzeit nur Minimal und Standard.");
-
-            var documents = LoadClaudeStandard(workDir);
-            WriteIfNeeded(documents.GlobalPath, globalText);
-            WriteIfNeeded(documents.ProjectPath, projectText);
-            return;
-        }
-
-        EnsureOpenCodeProfiles(workDir);
-        if (string.Equals(profileId, "minimal", StringComparison.Ordinal))
-        {
-            // Minimal: nur die eine Repo-Datei schreiben; kein projektspezifisches Dokument.
-            WriteText(EnsureOpenCodeMinimalSource(), globalText);
-            return;
-        }
-        var paths = GetOpenCodeProfilePaths(profileId, workDir);
-        WriteDocumentsAtomically(paths.GlobalPath, globalText, paths.ProjectPath, projectText);
+        var source = isClaudeCode ? ResolveClaudeProfileSourcePath(profileId) : ResolveOpenCodeProfileSourcePath(profileId);
+        // Immer schreiben (auch leer) -- so kann der Nutzer den Kontext bewusst leeren.
+        WriteText(source, globalText);
     }
 
-    public OpenCodeProfileSession PrepareOpenCodeSession(string profileId, string workDir)
-    {
-        EnsureOpenCodeProfiles(workDir);
-        var sessionRoot = Path.Combine(
-            Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
-            "OpenCodeLauncher", "sessions", Guid.NewGuid().ToString("N"));
-        Directory.CreateDirectory(sessionRoot);
-        var configPath = Path.Combine(sessionRoot, "opencode-profile.json");
-        var jsonOptions = new JsonSerializerOptions { WriteIndented = true };
+    /// <summary>Dateiname, den das Werkzeug tatsaechlich einliest (fuer die Editor-Anzeige).</summary>
+    public static string ActiveFileName(bool isClaudeCode) => isClaudeCode ? "CLAUDE.md" : "AGENTS.md";
 
-        if (string.Equals(profileId, "minimal", StringComparison.Ordinal))
-        {
-            // Minimal laedt AUSSCHLIESSLICH die eine Minimal-Datei -- und zwar ueber die Projekt-
-            // AGENTS.md, deren Inhalt ActivateProjectAgents() zuvor auf minimal.md gesetzt hat.
-            // Deshalb braucht die Session-Config KEINE instructions (sonst doppelt). Sie existiert
-            // nur, weil OPENCODE_CONFIG auf eine gueltige Datei zeigen muss.
-            var minimalSource = EnsureOpenCodeMinimalSource();
-            var minimalConfig = new Dictionary<string, object>
-            {
-                ["$schema"] = "https://opencode.ai/config.json"
-            };
-            WriteText(configPath, JsonSerializer.Serialize(minimalConfig, jsonOptions));
-            DeleteOldSessions(Path.GetDirectoryName(sessionRoot)!);
-
-            return new OpenCodeProfileSession(
-                profileId,
-                minimalSource,
-                string.Empty,
-                Path.Combine(workDir, "AGENTS.md"),
-                string.Empty,
-                configPath);
-        }
-
-        var source = GetOpenCodeProfilePaths(profileId, workDir);
-        var globalSnapshot = Path.Combine(sessionRoot, "global.md");
-        var projectSnapshot = Path.Combine(sessionRoot, "project.md");
-        WriteText(globalSnapshot, ReadText(source.GlobalPath));
-        WriteText(projectSnapshot, ReadText(source.ProjectPath));
-
-        var config = new Dictionary<string, object>
-        {
-            ["$schema"] = "https://opencode.ai/config.json",
-            ["instructions"] = new[] { globalSnapshot, projectSnapshot }
-        };
-        WriteText(configPath, JsonSerializer.Serialize(config, jsonOptions));
-        DeleteOldSessions(Path.GetDirectoryName(sessionRoot)!);
-
-        return new OpenCodeProfileSession(
-            profileId,
-            source.GlobalPath,
-            source.ProjectPath,
-            globalSnapshot,
-            projectSnapshot,
-            configPath);
-    }
-
-    private void EnsureOpenCodeProfiles(string workDir)
-    {
-        if (!Directory.Exists(workDir))
-            throw new DirectoryNotFoundException($"Arbeitsverzeichnis nicht gefunden: {workDir}");
-
-        var standard = GetOpenCodeProfilePaths("standard", workDir);
-        var activeGlobal = GetOpenCodeGlobalAgentsPath();
-        var standardGlobal = AddProfileHeading(ReadSeedText(activeGlobal, "standard", "global.md"), "Standard")
-            .Replace(
-                "> Wird bei jedem OpenCode-Start aus `~/.config/opencode/AGENTS.md` geladen. Diese kompakte Datei\n> enthält die immer geltenden Kernregeln; die ausführlichen Arbeitsregeln liegen im zweiten Gehirn.",
-                "> Wird vom OpenCode Launcher als unveränderlicher Sitzungssnapshot geladen. Die ausführlichen Arbeitsregeln liegen im zweiten Gehirn.",
-                StringComparison.Ordinal);
-        // Seed aus der stabilen Basis-Vorlage lesen, NICHT aus der live AGENTS.md: deren Inhalt
-        // setzt ActivateProjectAgents() je Profil (bei Minimal = minimal.md) und waere kein
-        // verlaesslicher Standard-Seed mehr.
-        var standardProject = AddProfileHeading(ReadProjectSeedText(ResolveProjectAgentsBaseTemplatePath(), workDir), "Standard");
-
-        CreateIfMissing(standard.GlobalPath, standardGlobal);
-        CreateIfMissing(standard.ProjectPath, standardProject);
-
-        // Minimal hat nur EINE Quelle (git-versioniert im Repo). Kein AppData-Snapshot,
-        // damit nichts Zusaetzliches mitgeladen werden kann.
-        EnsureOpenCodeMinimalSource();
-
-        var strict = GetOpenCodeProfilePaths("strict", workDir);
-        CreateIfMissing(strict.GlobalPath, standardGlobal
-            .Replace("# OpenCode-Profil: Standard", "# OpenCode-Profil: Strikt", StringComparison.Ordinal)
-            .TrimEnd() + "\n\n## Strikte zusätzliche Absicherung\n\n- Prüfe Annahmen vor Änderungen anhand des tatsächlichen Zustands.\n- Verifiziere jede Änderung mit den relevanten Tests oder Builds.\n- Melde verbleibende Unsicherheiten ausdrücklich.\n");
-        CreateIfMissing(strict.ProjectPath, standardProject
-            .Replace("# OpenCode-Profil: Standard", "# OpenCode-Profil: Strikt", StringComparison.Ordinal)
-            .TrimEnd() + "\n\n## Strikte Projektprüfung\n\n- Prüfe bei Änderungen die direkt betroffenen Aufrufer und Regressionen.\n- Schließe die Aufgabe erst nach nachvollziehbarer Verifikation ab.\n");
-
-        // Globale AGENTS.md bewusst LEER halten: der Profil-Kontext kommt ausschliesslich ueber die
-        // Projekt-AGENTS.md (ActivateProjectAgents) bzw. die Standard-Snapshots. So laedt OpenCode
-        // (und ein evtl. `instructions`-Verweis in der globalen opencode.jsonc) hier nichts hinzu.
-        WriteIfChanged(activeGlobal, string.Empty);
-    }
-
-    private static InstructionProfileDocuments LoadClaudeStandard(string workDir)
-    {
-        var home = Environment.GetFolderPath(Environment.SpecialFolder.UserProfile);
-        var globalPath = Path.Combine(home, ".claude", "CLAUDE.md");
-        var projectPath = Path.Combine(workDir, "CLAUDE.md");
-        return new InstructionProfileDocuments(
-            globalPath,
-            ReadText(globalPath),
-            projectPath,
-            ReadText(projectPath));
-    }
+    // ===================== Claude Code =====================
 
     /// <summary>
-    /// Config-Ordner des Claude-Minimal-Profils. Liegt bewusst IM Repo neben den OpenCode-Profilen
-    /// (~/proggs/OpenCodeLauncher/Profiles/ClaudeCode/minimal), damit die CLAUDE.md (und spaeter selbst
-    /// erstellte Hooks/Rules/settings) ueber git auf allen Rechnern identisch sind. Laufzeit-Dateien +
-    /// Login-Token werden von der dortigen .gitignore vom Repo ferngehalten; der Build schliesst den
-    /// Ordner ueber die .csproj aus.
+    /// Gemeinsamer Claude-Config-Ordner (CLAUDE_CONFIG_DIR) fuer ALLE Profile. Liegt im Repo
+    /// (~/proggs/OpenCodeLauncher/Profiles/ClaudeCode/minimal) und traegt Login-Token, settings.json,
+    /// skills/ usw. Die dortige .gitignore haelt Laufzeit/Secrets vom Repo fern; die aktive CLAUDE.md
+    /// ist bewusst untracked und wird pro Profil aus der Profilquelle befuellt.
     /// </summary>
-    public static string ResolveClaudeMinimalConfigDir()
+    public static string ResolveClaudeConfigDir()
     {
         var home = Environment.GetFolderPath(Environment.SpecialFolder.UserProfile);
         return Path.Combine(home, "proggs", "OpenCodeLauncher", "Profiles", "ClaudeCode", "minimal");
     }
 
-    /// <summary>
-    /// Einzige Quelldatei des OpenCode-Minimalprofils. Liegt bewusst IM Repo neben den anderen
-    /// OpenCode-Profilen (~/proggs/OpenCodeLauncher/Profiles/OpenCode/minimal/minimal.md), damit
-    /// sie git-versioniert und auf allen Rechnern identisch ist. Das Minimalprofil laedt
-    /// AUSSCHLIESSLICH den Inhalt dieser Datei als Kontext.
-    /// </summary>
-    public static string ResolveOpenCodeMinimalSourcePath()
+    /// <summary>Versionierte Profilquelle (Regeltext) je Claude-Profil.</summary>
+    public static string ResolveClaudeProfileSourcePath(string profileId)
     {
+        ValidateProfileId(profileId);
         var home = Environment.GetFolderPath(Environment.SpecialFolder.UserProfile);
-        return Path.Combine(home, "proggs", "OpenCodeLauncher", "Profiles", "OpenCode", "minimal", "minimal.md");
+        return Path.Combine(home, "proggs", "OpenCodeLauncher", "Profiles", "ClaudeCode", "sources", profileId + ".md");
     }
 
-    private static string EnsureOpenCodeMinimalSource()
+    private static string EnsureClaudeProfileSource(string profileId)
     {
-        var path = ResolveOpenCodeMinimalSourcePath();
-        CreateIfMissing(path,
-            "# OpenCode-Profil: Minimal\n\nArbeite selbstständig am konkreten Benutzerauftrag. Prüfe Dateien und Projektzustand mit Werkzeugen, statt zu raten. Beschränke Änderungen auf den Auftrag und erhalte bestehende Funktionalität.\n");
+        var path = ResolveClaudeProfileSourcePath(profileId);
+        CreateIfMissing(path, DefaultSource("ClaudeCode", profileId));
         return path;
     }
 
     /// <summary>
-    /// Versionierte Basis-Vorlage fuer die Projekt-AGENTS.md (Repo-Kopie der urspruenglichen
-    /// ~/proggs/AGENTS.md). Wird bei Nicht-Minimal-Profilen in die aktive AGENTS.md geschrieben.
+    /// Bereitet den Claude-Start vor: setzt die aktive CLAUDE.md im gemeinsamen Config-Ordner auf den
+    /// Inhalt der gewaehlten Profilquelle und gibt den Ordner zurueck (als CLAUDE_CONFIG_DIR).
     /// </summary>
-    public static string ResolveProjectAgentsBaseTemplatePath()
+    public string? EnsureClaudeConfigDir(string profileId)
     {
+        var dir = ResolveClaudeConfigDir();
+        Directory.CreateDirectory(dir);
+        WriteText(Path.Combine(dir, "CLAUDE.md"), ReadText(EnsureClaudeProfileSource(profileId)));
+        return dir;
+    }
+
+    // ===================== OpenCode =====================
+
+    /// <summary>Versionierte Profilquelle (Regeltext) je OpenCode-Profil: Profiles/OpenCode/&lt;id&gt;/AGENTS.md.</summary>
+    public static string ResolveOpenCodeProfileSourcePath(string profileId)
+    {
+        ValidateProfileId(profileId);
         var home = Environment.GetFolderPath(Environment.SpecialFolder.UserProfile);
-        return Path.Combine(home, "proggs", "OpenCodeLauncher", "Profiles", "OpenCode", "standard", "agents-base.md");
+        return Path.Combine(home, "proggs", "OpenCodeLauncher", "Profiles", "OpenCode", profileId, "AGENTS.md");
+    }
+
+    private static string EnsureOpenCodeProfileSource(string profileId)
+    {
+        var path = ResolveOpenCodeProfileSourcePath(profileId);
+        CreateIfMissing(path, DefaultSource("OpenCode", profileId));
+        return path;
     }
 
     /// <summary>
-    /// Setzt den Inhalt der Projekt-AGENTS.md (im Arbeitsverzeichnis) passend zum gewaehlten Profil,
-    /// BEVOR OpenCode gestartet wird. OpenCode liest die AGENTS.md im Arbeitsverzeichnis immer ein
-    /// (kein Abschalt-Flag); statt sie zu verstecken, kontrollieren wir ihren Inhalt:
-    /// Minimal -> exakt die minimal.md; Standard/Strikt -> die Basis-Vorlage. Deterministisch bei
-    /// jedem Start, ohne Umbenennen/Restore -- die Datei existiert immer mit gueltigem Inhalt.
+    /// Setzt die Projekt-AGENTS.md im Arbeitsverzeichnis = Inhalt der Profilquelle, BEVOR OpenCode
+    /// startet. OpenCode liest die AGENTS.md im Arbeitsverzeichnis immer ein (kein Abschalt-Flag);
+    /// statt sie zu verstecken, kontrollieren wir ihren Inhalt. Deterministisch bei jedem Start,
+    /// ohne Umbenennen/Restore -- die Datei existiert immer mit gueltigem Inhalt.
     /// </summary>
     public void ActivateProjectAgents(string profileId, string workDir)
     {
         if (!Directory.Exists(workDir))
             throw new DirectoryNotFoundException($"Arbeitsverzeichnis nicht gefunden: {workDir}");
-
-        var target = Path.Combine(workDir, "AGENTS.md");
-        if (string.Equals(profileId, "minimal", StringComparison.Ordinal))
-        {
-            WriteText(target, ReadText(EnsureOpenCodeMinimalSource()));
-            return;
-        }
-
-        // Nicht-Minimal: Basis-Vorlage zuruecklegen. Fehlt/leer die Vorlage, bestehende Datei behalten.
-        var baseContent = ReadText(ResolveProjectAgentsBaseTemplatePath());
-        if (!string.IsNullOrWhiteSpace(baseContent))
-            WriteText(target, baseContent);
+        WriteText(Path.Combine(workDir, "AGENTS.md"), ReadText(EnsureOpenCodeProfileSource(profileId)));
     }
 
-    private static InstructionProfileDocuments LoadClaudeMinimal()
+    public OpenCodeProfileSession PrepareOpenCodeSession(string profileId, string workDir)
     {
-        var claudeMd = Path.Combine(ResolveClaudeMinimalConfigDir(), "CLAUDE.md");
-        // Minimal hat nur eine globale Datei; kein projektspezifisches Dokument.
-        return new InstructionProfileDocuments(claudeMd, ReadText(claudeMd), string.Empty, string.Empty);
+        // Globale ~/.config/opencode/AGENTS.md leer halten: der Profil-Kontext kommt ausschliesslich
+        // ueber die Projekt-AGENTS.md (ActivateProjectAgents). So laedt OpenCode (und ein evtl.
+        // `instructions`-Verweis in der globalen opencode.jsonc) hier nichts hinzu.
+        WriteIfChanged(GetOpenCodeGlobalAgentsPath(), string.Empty);
+        var source = EnsureOpenCodeProfileSource(profileId);
+
+        var sessionRoot = Path.Combine(
+            Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
+            "OpenCodeLauncher", "sessions", Guid.NewGuid().ToString("N"));
+        Directory.CreateDirectory(sessionRoot);
+        var configPath = Path.Combine(sessionRoot, "opencode-profile.json");
+
+        // Der Regeltext kommt ueber die Projekt-AGENTS.md; die Session-Config braucht KEINE
+        // instructions. Sie existiert nur, weil OPENCODE_CONFIG auf eine gueltige Datei zeigen muss.
+        var config = new Dictionary<string, object> { ["$schema"] = "https://opencode.ai/config.json" };
+        WriteText(configPath, JsonSerializer.Serialize(config, new JsonSerializerOptions { WriteIndented = true }));
+        DeleteOldSessions(Path.GetDirectoryName(sessionRoot)!);
+
+        return new OpenCodeProfileSession(
+            profileId,
+            source,
+            string.Empty,
+            Path.Combine(workDir, "AGENTS.md"),
+            string.Empty,
+            configPath);
     }
 
-    /// <summary>
-    /// Stellt den Claude-Config-Ordner fuer das gewaehlte Profil bereit und gibt den Pfad zurueck,
-    /// der als CLAUDE_CONFIG_DIR gesetzt werden soll. Fuer "standard" wird null zurueckgegeben
-    /// (normales ~/.claude), fuer "minimal" der Repo-Config-Ordner (bei Bedarf inkl. leerer CLAUDE.md).
-    /// </summary>
-    public string? EnsureClaudeConfigDir(string profileId)
+    // ===================== Defaults / Helfer =====================
+
+    private static string DefaultSource(string tool, string profileId) => profileId switch
     {
-        if (!string.Equals(profileId, "minimal", StringComparison.Ordinal)) return null;
+        "minimal" => $"# {tool}-Profil: Minimal\n\nArbeite selbstständig am konkreten Benutzerauftrag. Prüfe Dateien und Projektzustand mit Werkzeugen, statt zu raten. Beschränke Änderungen auf den Auftrag und erhalte bestehende Funktionalität.\n",
+        "standard" => $"# {tool}-Profil: Standard\n\nBewährte Arbeits- und Projektregeln. Betroffene Aufrufer und Regressionen prüfen; Änderungen vor dem Commit mit den relevanten Tests/Builds verifizieren.\n",
+        "strict" => $"# {tool}-Profil: Strikt\n\nMaximale Absicherung: Annahmen vor jeder Änderung am tatsächlichen Zustand prüfen, jede Änderung mit Tests/Builds verifizieren, verbleibende Unsicherheiten ausdrücklich melden.\n",
+        _ => $"# {tool}-Profil: {profileId}\n",
+    };
 
-        var dir = ResolveClaudeMinimalConfigDir();
-        Directory.CreateDirectory(dir);
-        var claudeMd = Path.Combine(dir, "CLAUDE.md");
-        if (!File.Exists(claudeMd))
-            WriteText(claudeMd, "<!-- Minimal-Profil fuer Claude Code. Trage hier eigene Anweisungen ein. -->\n");
-        return dir;
-    }
-
-    private static (string GlobalPath, string ProjectPath) GetOpenCodeProfilePaths(string profileId, string workDir)
+    private static string ValidateProfileId(string profileId)
     {
-        ValidateOpenCodeProfileId(profileId);
-        var root = Path.Combine(
-            Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData),
-            "OpenCodeLauncher", "profiles", "opencode", profileId);
-        var projectKey = BuildProjectKey(workDir);
-        return (
-            Path.Combine(root, "global.md"),
-            Path.Combine(root, "projects", projectKey, "project.md"));
+        if (!ProfileIds.Contains(profileId))
+            throw new ArgumentException($"Unbekanntes Profil: {profileId}", nameof(profileId));
+        return profileId;
     }
-
-    private static string BuildProjectKey(string workDir)
-    {
-        var normalized = Path.GetFullPath(workDir).TrimEnd(Path.DirectorySeparatorChar).ToUpperInvariant();
-        var folder = Path.GetFileName(normalized).ToLowerInvariant();
-        var safeFolder = new string(folder.Select(c => char.IsLetterOrDigit(c) || c is '-' or '_' ? c : '-').ToArray());
-        var hash = Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(normalized)))[..10].ToLowerInvariant();
-        return $"{safeFolder}-{hash}";
-    }
-
-    private static string ReadSeedText(string activePath, string profileId, string fileName)
-    {
-        var active = ReadText(activePath);
-        if (!string.IsNullOrWhiteSpace(active) && !IsLauncherBootstrap(active))
-            return active;
-
-        var assemblyDirectory = Path.GetDirectoryName(typeof(InstructionProfileService).Assembly.Location)!;
-        var templatePath = Path.Combine(assemblyDirectory, "Profiles", "OpenCode", profileId, fileName);
-        var template = ReadText(templatePath);
-        if (string.IsNullOrWhiteSpace(template))
-            throw new FileNotFoundException($"Standardprofil-Vorlage nicht gefunden: {templatePath}", templatePath);
-        return template;
-    }
-
-    private static string ReadProjectSeedText(string activePath, string workDir)
-    {
-        var active = ReadText(activePath);
-        if (!string.IsNullOrWhiteSpace(active) && !IsLauncherBootstrap(active)) return active;
-
-        var home = Environment.GetFolderPath(Environment.SpecialFolder.UserProfile);
-        var defaultWorkDir = Path.Combine(home, "proggs");
-        if (string.Equals(Path.GetFullPath(workDir).TrimEnd(Path.DirectorySeparatorChar),
-                Path.GetFullPath(defaultWorkDir).TrimEnd(Path.DirectorySeparatorChar),
-                StringComparison.OrdinalIgnoreCase))
-            return ReadSeedText(activePath, "standard", "project.md");
-
-        return "# Projektprofil: Standard\n\nBeachte die automatisch geladene Projekt-AGENTS.md und die Anweisungen des Benutzers.\n";
-    }
-
-    private static bool IsLauncherBootstrap(string text) =>
-        text.Contains("vom OpenCode Launcher als ausgewähltes Profil", StringComparison.Ordinal) ||
-        text.Contains("OpenCode Launcher lädt die ausführlichen Regeln", StringComparison.Ordinal);
-
-    private static string AddProfileHeading(string text, string profileName) =>
-        text.StartsWith("# OpenCode-Profil:", StringComparison.Ordinal)
-            ? text
-            : $"# OpenCode-Profil: {profileName}\n\n{text}";
 
     private static string GetOpenCodeGlobalAgentsPath()
     {
         var home = Environment.GetFolderPath(Environment.SpecialFolder.UserProfile);
         return Path.Combine(home, ".config", "opencode", "AGENTS.md");
-    }
-
-    private static void ValidateOpenCodeProfileId(string profileId)
-    {
-        if (!OpenCodeProfileIds.Contains(profileId))
-            throw new ArgumentException($"Unbekanntes OpenCode-Profil: {profileId}", nameof(profileId));
     }
 
     private static void DeleteOldSessions(string sessionsRoot)
@@ -369,88 +186,7 @@ public sealed class InstructionProfileService
     {
         var normalized = Normalize(text);
         if (File.Exists(path) && string.Equals(Normalize(ReadText(path)), normalized, StringComparison.Ordinal)) return;
-        // Bestehenden, abweichenden Inhalt vor dem Überschreiben sichern. Der Launcher verwaltet die
-        // globale AGENTS.md als Bootstrap-Stub; hat sie extern anderen Inhalt bekommen, ginge dieser
-        // sonst ohne jede Sicherung verloren.
-        if (File.Exists(path))
-        {
-            try { File.Copy(path, path + ".bak", overwrite: true); }
-            catch (IOException) { }
-            catch (UnauthorizedAccessException) { }
-        }
         WriteText(path, normalized);
-    }
-
-    private static void WriteIfNeeded(string path, string text)
-    {
-        if (!File.Exists(path) && string.IsNullOrWhiteSpace(text)) return;
-        WriteText(path, text);
-    }
-
-    private static void WriteDocumentsAtomically(string globalPath, string globalText, string projectPath, string projectText)
-    {
-        var globalExisted = File.Exists(globalPath);
-        var projectExisted = File.Exists(projectPath);
-        var previousGlobal = globalExisted ? ReadText(globalPath) : null;
-        var previousProject = projectExisted ? ReadText(projectPath) : null;
-        var stagedGlobal = StageText(globalPath, globalText);
-        string? stagedProject = null;
-        var globalReplaced = false;
-        var projectReplaced = false;
-
-        try
-        {
-            stagedProject = StageText(projectPath, projectText);
-            File.Move(stagedGlobal, globalPath, overwrite: true);
-            globalReplaced = true;
-            File.Move(stagedProject, projectPath, overwrite: true);
-            projectReplaced = true;
-        }
-        catch (Exception writeException)
-        {
-            var rollbackErrors = new List<Exception>();
-            if (globalReplaced) TryRestore(globalPath, globalExisted, previousGlobal, rollbackErrors);
-            if (projectReplaced) TryRestore(projectPath, projectExisted, previousProject, rollbackErrors);
-            if (rollbackErrors.Count > 0)
-                throw new AggregateException("Profil konnte nicht vollständig gespeichert oder zurückgesetzt werden.", new[] { writeException }.Concat(rollbackErrors));
-            throw;
-        }
-        finally
-        {
-            DeleteStagedFile(stagedGlobal);
-            if (stagedProject != null) DeleteStagedFile(stagedProject);
-        }
-    }
-
-    private static string StageText(string path, string text)
-    {
-        Directory.CreateDirectory(Path.GetDirectoryName(path)!);
-        var stagedPath = $"{path}.{Guid.NewGuid():N}.tmp";
-        File.WriteAllText(stagedPath, Normalize(text), new UTF8Encoding(encoderShouldEmitUTF8Identifier: false));
-        return stagedPath;
-    }
-
-    private static void TryRestore(string path, bool existed, string? previousText, ICollection<Exception> errors)
-    {
-        try
-        {
-            if (existed) WriteText(path, previousText!);
-            else if (File.Exists(path)) File.Delete(path);
-        }
-        catch (Exception rollbackException)
-        {
-            errors.Add(rollbackException);
-        }
-    }
-
-    private static void DeleteStagedFile(string path)
-    {
-        try
-        {
-            if (File.Exists(path)) File.Delete(path);
-        }
-        catch (IOException) { }
-        catch (UnauthorizedAccessException) { }
     }
 
     private static void WriteText(string path, string text)
