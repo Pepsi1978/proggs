@@ -2526,7 +2526,7 @@ namespace TerminalVoiceOverlay.Views
                 var turnSw = Stopwatch.StartNew();
                 DiagLog.Write("VoiceTurn", "stop_clicked", ("turn", turnId), ("kind", "main"), ("autoEnter", autoEnterEnabled), ("gemini", geminiEnabled), ("profile", _activeProfile));
                 // ── Stop recording ──
-                var wavFile = _audioRecorder.Stop();
+                var wavFile = await _audioRecorder.StopAsync();
                 _recordingCuePlayer.PlayStop();
                 _pulseTimer.Stop();
                 _pulseBright = false;
@@ -2699,7 +2699,7 @@ namespace TerminalVoiceOverlay.Views
                 var turnSw = Stopwatch.StartNew();
                 DiagLog.Write("VoiceTurn", "stop_clicked", ("turn", turnId), ("kind", "btw"), ("autoEnter", autoEnterEnabled), ("gemini", geminiEnabled), ("profile", _activeProfile));
                 // ── Stop BTW recording ──
-                var wavFile = _audioRecorder.Stop();
+                var wavFile = await _audioRecorder.StopAsync();
                 _recordingCuePlayer.PlayStop();
                 _btwPulseTimer.Stop();
                 _btwPulseBright = false;

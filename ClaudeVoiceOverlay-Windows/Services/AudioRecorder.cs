@@ -9,6 +9,7 @@ namespace ClaudeVoiceOverlay.Services
 {
     public sealed class AudioRecorder : IDisposable
     {
+        private static readonly TimeSpan StopTimeout = TimeSpan.FromSeconds(3);
         private readonly int _sampleRate;
         private readonly int _channels;
         private readonly object _stateLock = new();
@@ -104,7 +105,9 @@ namespace ClaudeVoiceOverlay.Services
             }
         }
 
-        public string? Stop()
+        public string? Stop() => StopAsync().GetAwaiter().GetResult();
+
+        public async Task<string?> StopAsync()
         {
             RecordingSession? session;
             lock (_stateLock)
@@ -113,10 +116,24 @@ namespace ClaudeVoiceOverlay.Services
             }
 
             if (session == null) return null;
-            session.StartCompleted.Task.GetAwaiter().GetResult();
+            try
+            {
+                await session.StartCompleted.Task.WaitAsync(StopTimeout).ConfigureAwait(false);
+            }
+            catch (TimeoutException)
+            {
+                return AbandonTimedOutSession(session, "recording_start_completion_timeout");
+            }
             if (session.StartFailed)
             {
-                session.Stopped.Task.GetAwaiter().GetResult();
+                try
+                {
+                    await session.Stopped.Task.WaitAsync(StopTimeout).ConfigureAwait(false);
+                }
+                catch (TimeoutException)
+                {
+                    return AbandonTimedOutSession(session, "recording_start_cleanup_timeout");
+                }
                 return null;
             }
 
@@ -125,18 +142,46 @@ namespace ClaudeVoiceOverlay.Services
             {
                 try
                 {
-                    session.WaveIn.StopRecording();
+                    await Task.Run(session.WaveIn.StopRecording)
+                        .WaitAsync(StopTimeout).ConfigureAwait(false);
                 }
                 catch (Exception ex)
                 {
+                    if (ex is TimeoutException)
+                        return AbandonTimedOutSession(session, "recording_stop_call_timeout");
                     LogError("recording_stop_failed", ex, session.TempFile);
                     CompleteSession(session, ex);
                 }
             }
 
             // RecordingStopped is raised only after NAudio has delivered its final buffers.
-            session.Stopped.Task.GetAwaiter().GetResult();
+            try
+            {
+                await session.Stopped.Task.WaitAsync(StopTimeout).ConfigureAwait(false);
+            }
+            catch (TimeoutException)
+            {
+                return AbandonTimedOutSession(session, "recording_stopped_event_timeout");
+            }
             return session.CompletionError == null ? session.TempFile : null;
+        }
+
+        private string? AbandonTimedOutSession(RecordingSession session, string phase)
+        {
+            var error = new TimeoutException($"Audio capture did not finish within {StopTimeout.TotalSeconds:0} seconds ({phase}).");
+            LogError(phase, error, session.TempFile);
+            session.CompletionError = error;
+
+            lock (_stateLock)
+            {
+                if (ReferenceEquals(_session, session)) _session = null;
+            }
+
+            // Release the UI immediately. Native WinMM cleanup may itself be stuck,
+            // so it must never run on or hold up the WPF dispatcher.
+            session.Stopped.TrySetResult();
+            _ = Task.Run(() => CompleteSession(session, error));
+            return null;
         }
 
         private void OnDataAvailable(RecordingSession session, WaveInEventArgs e)

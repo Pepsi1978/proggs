@@ -148,7 +148,7 @@ public partial class PromptEditDialog : Window
         BtnMic.Click    += async (_, _) => await ToggleRecordingAsync();
         BtnGemini.Click += async (_, _) => await RunGeminiAsync();
 
-        Closed += (_, _) =>
+        Closed += async (_, _) =>
         {
             // Defensive: NUR eine Aufnahme stoppen, die DIESER Dialog selbst
             // gestartet hat — damit das Mikrofon nicht geleakt wird wenn der
@@ -156,13 +156,18 @@ public partial class PromptEditDialog : Window
             // Voice-Overlay gestartete Aufnahme bleibt unangetastet; sonst
             // wuerde das Schliessen des Editier-Dialogs die laufende Overlay-
             // Aufnahme abwuergen (geteilter AudioRecorder).
+            string? wavPath = null;
             try
             {
                 if (_recordingStartedHere && VoiceServiceProvider.Recorder?.IsRecording == true)
-                    VoiceServiceProvider.Recorder.Stop();
+                    wavPath = await VoiceServiceProvider.Recorder.StopAsync();
             }
-            catch { /* ignored */ }
-            _pulseTimer?.Stop();
+            catch (Exception ex) { DiagLog.Write("PromptEditMic", "close_stop_failed", ("error", ex.ToString())); }
+            finally
+            {
+                if (!string.IsNullOrEmpty(wavPath)) TryDeleteFile(wavPath);
+                _pulseTimer?.Stop();
+            }
         };
     }
 
@@ -389,7 +394,7 @@ public partial class PromptEditDialog : Window
             string? wavPath = null;
             try
             {
-                wavPath = recorder.Stop();
+                wavPath = await recorder.StopAsync();
                 // Unsere Aufnahme ist beendet — Eigentum freigeben, damit ein
                 // spaeterer Closed-Handler sie nicht erneut anzufassen versucht.
                 _recordingStartedHere = false;
@@ -423,7 +428,11 @@ public partial class PromptEditDialog : Window
         // ── Start ──
         try
         {
-            recorder.Start();
+            if (!recorder.Start())
+            {
+                ShowStatus("Es laeuft bereits eine andere Aufnahme.");
+                return;
+            }
             _recordingStartedHere = true;
             StartPulse();
             ShowStatus("Aufnahme laeuft. Klick erneut auf Mic zum Stoppen.");
