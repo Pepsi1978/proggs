@@ -9,8 +9,10 @@ using System.Threading.Tasks;
 using Google.Apis.Auth.OAuth2;
 using Google.Apis.Auth.OAuth2.Flows;
 using Google.Apis.Auth.OAuth2.Responses;
+using Google.Apis.Download;
 using Google.Apis.Drive.v3;
 using Google.Apis.Services;
+using Google.Apis.Upload;
 using Google.Apis.Util.Store;
 using Microsoft.Extensions.Logging;
 using DriveFile = Google.Apis.Drive.v3.Data.File;
@@ -38,8 +40,14 @@ public sealed class PromptHistoryDriveSync
     private const string HistoryFileName = "prompt-history-claudecodex.json";
     private const string AppDataFolderSpace = "appDataFolder";
 
+    private static readonly SemaphoreSlim SyncGate = new(1, 1);
     private readonly PromptBoardSecretStore _secrets;
     private readonly ILogger<PromptHistoryDriveSync>? _logger;
+    private static readonly JsonSerializerOptions HistoryJsonOptions = new()
+    {
+        PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
+        WriteIndented = true,
+    };
 
     public PromptHistoryDriveSync(
         PromptBoardSecretStore secrets,
@@ -57,39 +65,58 @@ public sealed class PromptHistoryDriveSync
     /// </summary>
     public async Task UploadHistoryAsync(string localPath, CancellationToken ct = default)
     {
-        if (!File.Exists(localPath)) return;
-        var bytes = await File.ReadAllBytesAsync(localPath, ct).ConfigureAwait(false);
-
-        var drive = await BuildDriveAsync(ct).ConfigureAwait(false);
-        var ids = await FindAllAsync(drive, HistoryFileName, ct).ConfigureAwait(false);
-
-        using var content = new MemoryStream(bytes);
-        if (ids.Count == 0)
+        await SyncGate.WaitAsync(ct).ConfigureAwait(false);
+        try
         {
-            var meta = new DriveFile
-            {
-                Name = HistoryFileName,
-                Parents = new[] { AppDataFolderSpace },
-            };
-            var create = drive.Files.Create(meta, content, "application/json");
-            create.Fields = "id";
-            await create.UploadAsync(ct).ConfigureAwait(false);
-        }
-        else
-        {
-            var keep = ids[0];
-            var update = drive.Files.Update(new DriveFile(), keep, content, "application/json");
-            update.Fields = "id";
-            await update.UploadAsync(ct).ConfigureAwait(false);
+            if (!File.Exists(localPath)) return;
+            var bytes = await File.ReadAllBytesAsync(localPath, ct).ConfigureAwait(false);
+            var local = JsonSerializer.Deserialize<List<PromptHistoryEntry>>(bytes, HistoryJsonOptions)
+                ?? throw new InvalidDataException("Local history JSON is empty.");
 
-            for (int i = 1; i < ids.Count; i++)
+            using var drive = await BuildDriveAsync(ct).ConfigureAwait(false);
+            var ids = await FindAllAsync(drive, HistoryFileName, ct).ConfigureAwait(false);
+
+            if (ids.Count > 0)
             {
-                try { await drive.Files.Delete(ids[i]).ExecuteAsync(ct).ConfigureAwait(false); }
-                catch (Exception ex)
+                using var cloudBuffer = new MemoryStream();
+                EnsureDownloadCompleted(
+                    await drive.Files.Get(ids[0]).DownloadAsync(cloudBuffer, ct).ConfigureAwait(false));
+                var cloudJson = Encoding.UTF8.GetString(cloudBuffer.ToArray());
+                bytes = JsonSerializer.SerializeToUtf8Bytes(MergeEntries(local, cloudJson), HistoryJsonOptions);
+            }
+
+            using var content = new MemoryStream(bytes);
+            if (ids.Count == 0)
+            {
+                var meta = new DriveFile
                 {
-                    _logger?.LogWarning(ex, "History dup-cleanup failed for {Id}", ids[i]);
+                    Name = HistoryFileName,
+                    Parents = new[] { AppDataFolderSpace },
+                };
+                var create = drive.Files.Create(meta, content, "application/json");
+                create.Fields = "id";
+                EnsureUploadCompleted(await create.UploadAsync(ct).ConfigureAwait(false));
+            }
+            else
+            {
+                var keep = ids[0];
+                var update = drive.Files.Update(new DriveFile(), keep, content, "application/json");
+                update.Fields = "id";
+                EnsureUploadCompleted(await update.UploadAsync(ct).ConfigureAwait(false));
+
+                for (int i = 1; i < ids.Count; i++)
+                {
+                    try { await drive.Files.Delete(ids[i]).ExecuteAsync(ct).ConfigureAwait(false); }
+                    catch (Exception ex)
+                    {
+                        _logger?.LogWarning(ex, "History dup-cleanup failed for {Id}", ids[i]);
+                    }
                 }
             }
+        }
+        finally
+        {
+            SyncGate.Release();
         }
     }
 
@@ -100,13 +127,36 @@ public sealed class PromptHistoryDriveSync
     /// </summary>
     public async Task<string?> DownloadHistoryAsync(CancellationToken ct = default)
     {
-        var drive = await BuildDriveAsync(ct).ConfigureAwait(false);
-        var ids = await FindAllAsync(drive, HistoryFileName, ct).ConfigureAwait(false);
-        if (ids.Count == 0) return null;
+        await SyncGate.WaitAsync(ct).ConfigureAwait(false);
+        try
+        {
+            using var drive = await BuildDriveAsync(ct).ConfigureAwait(false);
+            var ids = await FindAllAsync(drive, HistoryFileName, ct).ConfigureAwait(false);
+            if (ids.Count == 0) return null;
 
-        using var buffer = new MemoryStream();
-        await drive.Files.Get(ids[0]).DownloadAsync(buffer, ct).ConfigureAwait(false);
-        return Encoding.UTF8.GetString(buffer.ToArray());
+            using var buffer = new MemoryStream();
+            EnsureDownloadCompleted(
+                await drive.Files.Get(ids[0]).DownloadAsync(buffer, ct).ConfigureAwait(false));
+            return Encoding.UTF8.GetString(buffer.ToArray());
+        }
+        finally
+        {
+            SyncGate.Release();
+        }
+    }
+
+    private static void EnsureUploadCompleted(IUploadProgress progress)
+    {
+        progress.ThrowOnFailure();
+        if (progress.Status != UploadStatus.Completed)
+            throw new IOException($"Google Drive upload did not complete: {progress.Status}");
+    }
+
+    private static void EnsureDownloadCompleted(IDownloadProgress progress)
+    {
+        progress.ThrowOnFailure();
+        if (progress.Status != DownloadStatus.Completed)
+            throw new IOException($"Google Drive download did not complete: {progress.Status}");
     }
 
     // ── Drive-Hilfsfunktionen (eigenstaendig, kein Re-Use aus dem Backup-Service) ──
@@ -178,7 +228,7 @@ public sealed class PromptHistoryDriveSync
         {
             cloud = JsonSerializer.Deserialize<List<PromptHistoryEntry>>(
                 cloudJson,
-                new JsonSerializerOptions { PropertyNamingPolicy = JsonNamingPolicy.CamelCase });
+                HistoryJsonOptions);
         }
         catch
         {
@@ -193,13 +243,16 @@ public sealed class PromptHistoryDriveSync
             foreach (var e in cloud)
             {
                 if (e is null || string.IsNullOrEmpty(e.Id)) continue;
-                // Cloud gewinnt nur wenn lokaler Eintrag fehlt — sonst
-                // bleibt der lokale (er kann frischen KI-Titel enthalten).
-                if (!merged.ContainsKey(e.Id)) merged[e.Id] = e;
+                if (!merged.TryGetValue(e.Id, out var existing) ||
+                    EffectiveUpdatedAt(e) > EffectiveUpdatedAt(existing))
+                    merged[e.Id] = e;
             }
         }
         return merged.Values
             .OrderByDescending(e => e.Timestamp)
             .ToList();
     }
+
+    private static DateTime EffectiveUpdatedAt(PromptHistoryEntry entry) =>
+        entry.UpdatedAt == default ? entry.Timestamp : entry.UpdatedAt;
 }

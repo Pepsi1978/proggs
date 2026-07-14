@@ -27,6 +27,9 @@ public sealed class PromptHistoryEntry
 
     /// <summary>UTC-Zeitpunkt des Sendens — fuer plattformuebergreifende Sortierung.</summary>
     public DateTime Timestamp { get; set; } = DateTime.UtcNow;
+
+    /// <summary>UTC-Revision für konfliktfreie geräteübergreifende Bearbeitungen.</summary>
+    public DateTime UpdatedAt { get; set; }
 }
 
 /// <summary>
@@ -105,6 +108,7 @@ public sealed class PromptHistoryService
     public async Task<PromptHistoryEntry> AppendAsync(
         string text, string title, CancellationToken ct = default)
     {
+        var now = DateTime.UtcNow;
         var entry = new PromptHistoryEntry
         {
             Id = Guid.NewGuid().ToString(),
@@ -112,7 +116,8 @@ public sealed class PromptHistoryService
             Title = string.IsNullOrWhiteSpace(title)
                 ? GeminiClient.FallbackTitleFromText(text ?? string.Empty)
                 : title.Trim(),
-            Timestamp = DateTime.UtcNow,
+            Timestamp = now,
+            UpdatedAt = now,
         };
 
         await _gate.WaitAsync(ct).ConfigureAwait(false);
@@ -186,6 +191,7 @@ public sealed class PromptHistoryService
             match.Title = string.IsNullOrWhiteSpace(newTitle)
                 ? GeminiClient.FallbackTitleFromText(match.Text)
                 : newTitle.Trim();
+            match.UpdatedAt = DateTime.UtcNow;
             await SaveUnlockedAsync(entries, ct).ConfigureAwait(false);
         }
         finally { _gate.Release(); }
@@ -209,6 +215,7 @@ public sealed class PromptHistoryService
             var match = entries.FirstOrDefault(e => e.Id == entryId);
             if (match is null) return;
             match.Text = newText ?? string.Empty;
+            match.UpdatedAt = DateTime.UtcNow;
             await SaveUnlockedAsync(entries, ct).ConfigureAwait(false);
         }
         finally { _gate.Release(); }
