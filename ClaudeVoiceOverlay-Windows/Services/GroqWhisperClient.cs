@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.IO;
 using System.Net.Http;
 using System.Net.Http.Headers;
@@ -16,7 +17,14 @@ namespace ClaudeVoiceOverlay.Services
         private readonly string _model;
         private readonly string _language;
         private readonly string _url;
+        private static readonly bool PreferCurlTransport = OperatingSystem.IsWindows();
         private const int TransportTimeoutSeconds = 75;
+
+        private sealed class CurlStartException : Exception
+        {
+            public CurlStartException(string message, Exception? innerException = null)
+                : base(message, innerException) { }
+        }
 
         // Statischer geteilter HttpClient. In dieser App wird der GroqWhisperClient
         // aktuell pro Process nur einmal gebaut, daher ist Socket-Exhaustion
@@ -110,6 +118,7 @@ namespace ClaudeVoiceOverlay.Services
 
         public async Task<string> TranscribeAsync(string wavFilePath)
         {
+            DiagLog.Write("Groq", "transcribe_start", ("model", _model), ("lang", _language));
             // Datei einmal in den Speicher laden und ueber alle Retry-Versuche
             // wiederverwenden. Vorher las jeder Retry die WAV-Datei neu von
             // Disk — bei 3 Retries und ~1 MB Audio entstehen 3 MB unnoetige
@@ -122,10 +131,122 @@ namespace ClaudeVoiceOverlay.Services
             // wie die bisherige "leere Antwort" und tippt NICHTS (kein einsames " ; ").
             if (!HasSpeechContent(fileBytes))
                 throw new Exception("Aufnahme ohne erkennbaren Sprachinhalt — nicht an Groq gesendet (Stille-Schutz)");
-            return await TranscribeWithRetry(fileBytes, 0);
+            try
+            {
+                var text = await TranscribeWithRetry(fileBytes, 0).ConfigureAwait(false);
+                DiagLog.Write("Groq", "transcribe_done", ("chars", text.Length));
+                return text;
+            }
+            catch (Exception ex)
+            {
+                DiagLog.Write("Groq", "transcribe_failed", ("error", ex.Message), ("type", ex.GetType().Name));
+                throw;
+            }
         }
 
         private async Task<string> TranscribeWithRetry(byte[] fileBytes, int attempt)
+        {
+            if (PreferCurlTransport)
+            {
+                try
+                {
+                    var json = await SendWithCurlAsync(fileBytes).ConfigureAwait(false);
+                    var text = FilterTranscription(json, BuildVoicedTimeline(fileBytes));
+                    if (!string.IsNullOrEmpty(text))
+                        return text;
+                    throw new Exception("Leere Antwort von Groq");
+                }
+                catch (CurlStartException ex)
+                {
+                    DiagLog.Write("Groq", "curl_transport_failed_fallback_dotnet", ("error", ex.Message));
+                }
+            }
+
+            return await TranscribeWithHttpClientAsync(fileBytes, attempt).ConfigureAwait(false);
+        }
+
+        private async Task<string> SendWithCurlAsync(byte[] fileBytes)
+        {
+            string wavPath = Path.Combine(Path.GetTempPath(), $"cvo_groq_upload_{Guid.NewGuid():N}.wav");
+            try
+            {
+                await File.WriteAllBytesAsync(wavPath, fileBytes).ConfigureAwait(false);
+
+                using var process = new Process
+                {
+                    StartInfo = new ProcessStartInfo
+                    {
+                        FileName = "curl.exe",
+                        Arguments = "--config -",
+                        UseShellExecute = false,
+                        RedirectStandardInput = true,
+                        RedirectStandardOutput = true,
+                        RedirectStandardError = true,
+                        CreateNoWindow = true,
+                        StandardInputEncoding = new UTF8Encoding(false),
+                        StandardOutputEncoding = Encoding.UTF8,
+                        StandardErrorEncoding = Encoding.UTF8,
+                    }
+                };
+
+                DiagLog.Write("Groq", "http_start", ("transport", "curl"), ("bytes", fileBytes.Length));
+                try
+                {
+                    if (!process.Start())
+                        throw new CurlStartException("curl.exe konnte nicht gestartet werden");
+                }
+                catch (System.ComponentModel.Win32Exception ex)
+                {
+                    throw new CurlStartException("curl.exe konnte nicht gestartet oder gefunden werden", ex);
+                }
+
+                await process.StandardInput.WriteAsync(BuildCurlConfig(wavPath)).ConfigureAwait(false);
+                process.StandardInput.Close();
+                string stdout = await process.StandardOutput.ReadToEndAsync().ConfigureAwait(false);
+                string stderr = await process.StandardError.ReadToEndAsync().ConfigureAwait(false);
+                await process.WaitForExitAsync().ConfigureAwait(false);
+                DiagLog.Write("Groq", "http_response", ("transport", "curl"), ("exit", process.ExitCode));
+
+                if (process.ExitCode != 0)
+                {
+                    string details = string.IsNullOrWhiteSpace(stdout)
+                        ? Truncate(stderr, 500)
+                        : $"{Truncate(stderr, 500)} Response: {Truncate(stdout, 500)}";
+                    if (process.ExitCode == 2)
+                        throw new CurlStartException($"curl.exe konnte seine Konfiguration nicht laden: {details}");
+                    throw new Exception($"curl.exe Groq request failed (exit {process.ExitCode}): {details}");
+                }
+                if (string.IsNullOrWhiteSpace(stdout))
+                    throw new Exception("curl.exe Groq request returned an empty body");
+                return stdout;
+            }
+            finally
+            {
+                try { if (File.Exists(wavPath)) File.Delete(wavPath); }
+                catch (Exception ex) { DiagLog.Write("Groq", "temp_delete_failed", ("error", ex.Message)); }
+            }
+        }
+
+        private string BuildCurlConfig(string wavPath)
+        {
+            var sb = new StringBuilder();
+            sb.Append("url = ").Append(CurlQuote(_url)).Append('\n');
+            sb.Append("request = \"POST\"\n");
+            sb.Append("header = ").Append(CurlQuote("Authorization: Bearer " + _apiKey)).Append('\n');
+            sb.Append("form = ").Append(CurlQuote("file=@" + wavPath + ";type=audio/wav")).Append('\n');
+            sb.Append("form = ").Append(CurlQuote("model=" + _model)).Append('\n');
+            sb.Append("form = ").Append(CurlQuote("language=" + _language)).Append('\n');
+            sb.Append("form = \"response_format=verbose_json\"\n");
+            sb.Append("form = \"temperature=0\"\n");
+            sb.Append("silent\nshow-error\nfail-with-body\n");
+            sb.Append("max-time = ").Append(TransportTimeoutSeconds).Append('\n');
+            return sb.ToString();
+        }
+
+        private static string CurlQuote(string value)
+            => "\"" + value.Replace("\\", "\\\\").Replace("\"", "\\\"") + "\"";
+
+        private async Task<string> TranscribeWithHttpClientAsync(byte[] fileBytes, int attempt)
         {
             using var content = new MultipartFormDataContent();
 
@@ -183,6 +304,12 @@ namespace ClaudeVoiceOverlay.Services
             }
 
             throw new Exception($"Groq API Fehler {statusCode}: {responseBody}");
+        }
+
+        private static string Truncate(string value, int maxChars)
+        {
+            if (string.IsNullOrEmpty(value) || value.Length <= maxChars) return value;
+            return value.Substring(0, maxChars) + "…";
         }
 
         /// <summary>

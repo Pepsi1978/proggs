@@ -45,7 +45,13 @@ namespace ClaudeVoiceOverlay.Services
 
             // Ziel-App-Erkennung
             var processNames = Get(env, "TARGET_PROCESS_NAMES", "Claude,Codex,ChatGPT");
-            TargetProcessNames = processNames.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
+            var targets = new List<string>(processNames.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries));
+            foreach (var required in new[] { "Claude", "Codex", "ChatGPT" })
+            {
+                if (!targets.Exists(name => name.Equals(required, StringComparison.OrdinalIgnoreCase)))
+                    targets.Add(required);
+            }
+            TargetProcessNames = targets.ToArray();
         }
 
         public static Config Load()
