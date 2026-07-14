@@ -33,6 +33,23 @@ namespace TerminalVoiceOverlay.Services
 
         public IntPtr ActiveTerminalHwnd => _lastTerminalHwnd;
 
+        /// <summary>
+        /// Poll-Variante zu den EVENT_SYSTEM_FOREGROUND-Events: prueft das
+        /// AKTUELLE Vordergrundfenster und liefert dessen HWND, wenn es zu
+        /// einem Terminal-Prozess gehoert — sonst IntPtr.Zero. Grundlage fuer
+        /// den selbstheilenden Sichtbarkeits-Poll im Overlay: ein verpasstes
+        /// Foreground-Event oder ein kurz aufpoppendes Fremdfenster (z.B. ein
+        /// Notifier-Toast, das TerminalDeactivated ausloest) darf das Overlay
+        /// nicht dauerhaft verschwinden lassen, solange das CLI real vorne ist.
+        /// </summary>
+        public IntPtr GetForegroundTerminalHwnd()
+        {
+            var hwnd = Win32.GetForegroundWindow();
+            if (hwnd == IntPtr.Zero || !IsTerminalWindow(hwnd)) return IntPtr.Zero;
+            _lastTerminalHwnd = hwnd;
+            return hwnd;
+        }
+
         public TerminalWatcher(string[]? processNames = null)
         {
             _terminalProcessNames = processNames ?? new[] { "WindowsTerminal", "pwsh", "powershell" };

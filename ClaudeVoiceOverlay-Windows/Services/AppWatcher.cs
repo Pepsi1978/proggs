@@ -40,6 +40,23 @@ namespace ClaudeVoiceOverlay.Services
 
         public IntPtr ActiveAppHwnd => _lastAppHwnd;
 
+        /// <summary>
+        /// Poll-Variante zu den EVENT_SYSTEM_FOREGROUND-Events: prueft das
+        /// AKTUELLE Vordergrundfenster und liefert dessen HWND, wenn es zu
+        /// einer Ziel-App gehoert — sonst IntPtr.Zero. Grundlage fuer den
+        /// selbstheilenden Sichtbarkeits-Poll im Overlay: ein verpasstes
+        /// Foreground-Event oder ein kurz aufpoppendes Fremdfenster (z.B. ein
+        /// Notifier-Toast, das AppDeactivated ausloest) darf das Overlay nicht
+        /// dauerhaft verschwinden lassen, solange die Ziel-App real vorne ist.
+        /// </summary>
+        public IntPtr GetForegroundTargetAppHwnd()
+        {
+            var hwnd = Win32.GetForegroundWindow();
+            if (hwnd == IntPtr.Zero || !IsTargetAppWindow(hwnd)) return IntPtr.Zero;
+            _lastAppHwnd = hwnd;
+            return hwnd;
+        }
+
         public AppWatcher(string[]? processNames = null)
         {
             _targetProcessNames = processNames ?? new[] { "Claude", "Codex", "ChatGPT" };

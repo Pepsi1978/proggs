@@ -395,6 +395,10 @@ namespace ClaudeVoiceOverlay.Views
         // — auch waehrend langer Aufnahmen mit Fensterwechsel, wo Desktop-
         // Widgets sonst die Pille verdraengen koennen (Bugfix 2026-05-10).
         private readonly DispatcherTimer _topmostAssertTimer;
+        // Holt das Overlay zurueck, wenn die Ziel-App real im Vordergrund steht,
+        // es aber (durch ein transientes Fremdfenster / verpasstes Foreground-
+        // Event) faelschlich versteckt wurde (Frank-Wunsch 2026-07-14).
+        private readonly DispatcherTimer _foregroundReclaimTimer;
         private bool _pulseBright    = false;
         private bool _btwPulseBright = false;
 
@@ -515,6 +519,31 @@ namespace ClaudeVoiceOverlay.Views
             _topmostAssertTimer = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(2500) };
             _topmostAssertTimer.Tick += (_, _) => ReassertTopmostIfVisible();
             _topmostAssertTimer.Start();
+
+            // ── Foreground-Reclaim-Timer (Frank-Wunsch 2026-07-14) ──
+            // Selbstheilung fuer "das Overlay ist einfach weg": Das Einblenden
+            // haengt allein an EVENT_SYSTEM_FOREGROUND. Loest ein kurz
+            // aufpoppendes Fremdfenster (z.B. ein Notifier-Toast) einmal
+            // OnAppDeactivated aus ODER geht ein Foreground-Event verloren,
+            // bleibt das Overlay versteckt, obwohl die Ziel-App weiter im
+            // Vordergrund steht — es kaeme erst bei einem echten Fokuswechsel
+            // ZURUECK auf die App wieder. Fuer Franks Touch-/Spracheingabe muss
+            // es aber IMMER sichtbar sein, solange er die App sieht. Der Poll
+            // prueft daher das reale Vordergrundfenster: ist es eine Ziel-App
+            // und das Overlay versteckt, blenden wir es sofort wieder ein. Steht
+            // ein echtes Fremdfenster (Browser, Editor) vorne, liefert der
+            // Watcher IntPtr.Zero und es bleibt aus — kein Widerspruch zum
+            // Sofort-Verstecken von 2026-05-30. 700 ms sind schnell genug, dass
+            // die Luecke kaum auffaellt, und der Poll ist billig
+            // (GetForegroundWindow + 1-s-PID-Cache im Watcher).
+            _foregroundReclaimTimer = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(700) };
+            _foregroundReclaimTimer.Tick += (_, _) =>
+            {
+                if (IsVisible) return;
+                var fg = _appWatcher.GetForegroundTargetAppHwnd();
+                if (fg != IntPtr.Zero) OnAppActivated(fg);
+            };
+            _foregroundReclaimTimer.Start();
 
             // ── Initial button colours ──
             // G-button is on by default — falls back to Whisper-raw if no Gemini API key.
@@ -5381,6 +5410,7 @@ namespace ClaudeVoiceOverlay.Views
             _resetTimer.Stop();
             _hideDelayTimer.Stop();
             _topmostAssertTimer.Stop();
+            _foregroundReclaimTimer.Stop();
             _tooltipHoverTimer?.Stop();
 
             // X-Repeat-Loop sauber stoppen falls er noch laeuft (z.B.
