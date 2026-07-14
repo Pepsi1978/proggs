@@ -277,6 +277,15 @@ public sealed class InstructionProfileService
     {
         var normalized = Normalize(text);
         if (File.Exists(path) && string.Equals(Normalize(ReadText(path)), normalized, StringComparison.Ordinal)) return;
+        // Bestehenden, abweichenden Inhalt vor dem Überschreiben sichern. Der Launcher verwaltet die
+        // globale AGENTS.md als Bootstrap-Stub; hat sie extern anderen Inhalt bekommen, ginge dieser
+        // sonst ohne jede Sicherung verloren.
+        if (File.Exists(path))
+        {
+            try { File.Copy(path, path + ".bak", overwrite: true); }
+            catch (IOException) { }
+            catch (UnauthorizedAccessException) { }
+        }
         WriteText(path, normalized);
     }
 

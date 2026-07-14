@@ -21,12 +21,21 @@ public partial class App : Application
 
     protected override void OnStartup(StartupEventArgs e)
     {
+        // Aktivierungs-Event VOR dem Single-Instance-Mutex anlegen: sonst existiert ein kurzes
+        // Startfenster, in dem eine zweite Instanz den Mutex bereits sieht, das Event aber noch nicht
+        // erzeugt ist — SignalRunningInstance (OpenExisting) würde dann fehlschlagen und das erste
+        // Fenster nicht nach vorne holen. Benannte Handles sind idempotent (beide Instanzen öffnen
+        // dasselbe systemweite Event).
+        _activationEvent = new EventWaitHandle(false, EventResetMode.AutoReset, ActivationEventName);
+
         _singleInstanceMutex = new Mutex(true, SingleInstanceMutexName, out var createdNew);
         if (!createdNew)
         {
             SignalRunningInstance();
             _singleInstanceMutex.Dispose();
             _singleInstanceMutex = null;
+            _activationEvent.Dispose();
+            _activationEvent = null;
             Shutdown(0);
             return;
         }
@@ -43,7 +52,6 @@ public partial class App : Application
         if (theme != ThemeManager.Current)
             ThemeManager.Apply(theme);
 
-        _activationEvent = new EventWaitHandle(false, EventResetMode.AutoReset, ActivationEventName);
         StartActivationListener();
 
         MainWindow = new MainWindow();

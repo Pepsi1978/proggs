@@ -88,7 +88,7 @@ public sealed class OpenCodeLauncherService
             if (!string.IsNullOrWhiteSpace(thinkingLevel) || IsGpt56Model(model.ProviderId, model.Slug))
             {
                 var root = ReadConfig();
-                PatchDirectModel(root, model.ProviderId, model.Slug, model.DisplayName, thinkingLevel);
+                root = PatchDirectModel(root, model.ProviderId, model.Slug, model.DisplayName, thinkingLevel);
                 WriteConfig(root);
                 if (!string.IsNullOrWhiteSpace(thinkingLevel)) PatchModelVariantState(modelString, thinkingLevel);
                 log.Info("OpenCodeLauncherService", "ConfigureProvider", "Direktmodell-Variante gesetzt", new
@@ -808,17 +808,25 @@ try {
         ClearThinkingOptions(optionsBlock);
         ApplyThinkingOptions(optionsBlock, "openrouter", slug, thinkingLevel);
 
-        var models = JsonExtensions.EnsureObject(root).GetOrAddObject("provider").GetOrAddObject("openrouter").GetOrAddObject("models");
+        // EnsureObject-Ergebnis zurückgeben, NICHT root: ist root ausnahmsweise kein Objekt
+        // (korrupte opencode.json als Array/Skalar), liefert EnsureObject ein neues, losgelöstes
+        // Objekt — ein "return root" würde die Datei unverändert zurückschreiben und den Patch
+        // still verwerfen. Für gültige Objekt-Configs ist rootObject identisch mit root.
+        var rootObject = JsonExtensions.EnsureObject(root);
+        var models = rootObject.GetOrAddObject("provider").GetOrAddObject("openrouter").GetOrAddObject("models");
         var modelNode = models.GetOrAddObject(slug);
         modelNode["name"] = $"{modelDisplayName} via {chosen.ProviderName}";
         modelNode["options"] = optionsBlock;
 
-        return root;
+        return rootObject;
     }
 
-    private static void PatchDirectModel(JsonNode root, string providerId, string slug, string modelDisplayName, string? thinkingLevel)
+    private static JsonNode PatchDirectModel(JsonNode root, string providerId, string slug, string modelDisplayName, string? thinkingLevel)
     {
-        var models = JsonExtensions.EnsureObject(root).GetOrAddObject("provider").GetOrAddObject(providerId).GetOrAddObject("models");
+        // Siehe PatchProvider: EnsureObject-Ergebnis verwenden und zurückgeben, damit der Patch
+        // auch bei einer nicht-objektförmigen Wurzel greift statt still verloren zu gehen.
+        var rootObject = JsonExtensions.EnsureObject(root);
+        var models = rootObject.GetOrAddObject("provider").GetOrAddObject(providerId).GetOrAddObject("models");
         var modelNode = models.GetOrAddObject(slug);
         modelNode["name"] = modelDisplayName;
 
@@ -827,6 +835,7 @@ try {
         // options pins every request and prevents in-session variant changes from taking effect.
         ClearThinkingOptions(optionsBlock);
         if (IsGpt56Model(providerId, slug)) NormalizeExistingGpt56Models(models);
+        return rootObject;
     }
 
     private static void NormalizeExistingGpt56Models(JsonObject models)
