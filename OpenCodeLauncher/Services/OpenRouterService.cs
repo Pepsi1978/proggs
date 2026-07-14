@@ -72,7 +72,8 @@ public sealed class OpenRouterService
             resp.EnsureSuccessStatusCode();
 
             await using var stream = await resp.Content.ReadAsStreamAsync(ct).ConfigureAwait(false);
-            var doc = await JsonDocument.ParseAsync(stream, cancellationToken: ct).ConfigureAwait(false);
+            // using: JsonDocument least ArrayPool-Puffer, die ohne Dispose nicht zurückgegeben werden.
+            using var doc = await JsonDocument.ParseAsync(stream, cancellationToken: ct).ConfigureAwait(false);
 
             string? displayName = null;
             var providers = new List<ProviderEntry>();
