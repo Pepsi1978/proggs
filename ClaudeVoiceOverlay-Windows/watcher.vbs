@@ -8,15 +8,22 @@ Set WshShell = CreateObject("WScript.Shell")
 Set fso = CreateObject("Scripting.FileSystemObject")
 
 ' Pruefen ob bereits ein anderer Watcher laeuft
+On Error Resume Next
 Set objWMI = GetObject("winmgmts:\\.\root\cimv2")
 Set colWscript = objWMI.ExecQuery("SELECT CommandLine FROM Win32_Process WHERE Name='wscript.exe'")
 watcherCount = 0
 myScript = LCase(WScript.ScriptFullName)
-For Each proc In colWscript
-    If InStr(LCase(proc.CommandLine), myScript) > 0 Then
-        watcherCount = watcherCount + 1
-    End If
-Next
+If Err.Number = 0 Then
+    For Each proc In colWscript
+        If Not IsNull(proc.CommandLine) Then
+            If InStr(LCase(proc.CommandLine), myScript) > 0 Then
+                watcherCount = watcherCount + 1
+            End If
+        End If
+    Next
+End If
+Err.Clear
+On Error GoTo 0
 If watcherCount > 1 Then
     ' Ein anderer Watcher laeuft bereits — beenden
     WScript.Quit 0
@@ -27,12 +34,6 @@ scriptDir = fso.GetParentFolderName(WScript.ScriptFullName)
 exePath = fso.BuildPath(scriptDir, "publish\ClaudeVoiceOverlay.exe")
 logPath = fso.BuildPath(scriptDir, "publish\watcher.log")
 
-' Pruefen ob .exe existiert
-If Not fso.FileExists(exePath) Then
-    MsgBox "ClaudeVoiceOverlay.exe nicht gefunden:" & vbCrLf & exePath, vbCritical, "Watcher Fehler"
-    WScript.Quit 1
-End If
-
 ' Crash-Loop-Schutz Variablen
 Const MAX_RAPID_CRASHES = 5      ' Max Crashes
 Const RAPID_WINDOW_MS = 30000    ' Innerhalb von 30 Sekunden
@@ -42,8 +43,8 @@ lastStartTime = 0
 
 ' Endlosschleife: pruefen ob Prozess laeuft, sonst starten
 Do While True
-    If Not IsProcessRunning("ClaudeVoiceOverlay.exe") Then
-        nowMs = Timer * 1000  ' Sekunden seit Mitternacht * 1000
+    If Not IsProcessRunningAtPath("ClaudeVoiceOverlay.exe", exePath) Then
+        nowMs = NowMilliseconds()
 
         ' Wenn die App vorher gestartet wurde und schnell wieder weg ist = Crash
         If lastStartTime > 0 And (nowMs - lastStartTime) < STABLE_THRESHOLD_MS Then
@@ -83,13 +84,31 @@ Do While True
     WScript.Sleep 3000  ' Alle 3 Sekunden pruefen
 Loop
 
-Function IsProcessRunning(processName)
-    IsProcessRunning = False
+Function IsProcessRunningAtPath(processName, expectedPath)
+    IsProcessRunningAtPath = True
+    On Error Resume Next
     Set objWMI2 = GetObject("winmgmts:\\.\root\cimv2")
-    Set colProcesses = objWMI2.ExecQuery("SELECT Name FROM Win32_Process WHERE Name='" & processName & "'")
-    If colProcesses.Count > 0 Then
-        IsProcessRunning = True
+    Set colProcesses = objWMI2.ExecQuery("SELECT ExecutablePath FROM Win32_Process WHERE Name='" & processName & "'")
+    If Err.Number <> 0 Then
+        LogMsg logPath, "WMI-Prozesspruefung fehlgeschlagen (Fehler " & Err.Number & "): " & Err.Description
+        Err.Clear
+        Exit Function
     End If
+    IsProcessRunningAtPath = False
+    normalizedExpected = LCase(fso.GetAbsolutePathName(expectedPath))
+    For Each runningProc In colProcesses
+        If Not IsNull(runningProc.ExecutablePath) Then
+            If LCase(fso.GetAbsolutePathName(runningProc.ExecutablePath)) = normalizedExpected Then
+                IsProcessRunningAtPath = True
+                Exit For
+            End If
+        End If
+    Next
+    On Error GoTo 0
+End Function
+
+Function NowMilliseconds()
+    NowMilliseconds = CDbl(DateDiff("s", DateSerial(2000, 1, 1), Now)) * 1000
 End Function
 
 Function CountRecentCrashes(crashList, nowMs, windowMs)
@@ -99,7 +118,8 @@ Function CountRecentCrashes(crashList, nowMs, windowMs)
     For i = 0 To UBound(parts)
         If Len(parts(i)) > 0 Then
             t = CDbl(parts(i))
-            If (nowMs - t) <= windowMs Then
+            age = nowMs - t
+            If age >= 0 And age <= windowMs Then
                 count = count + 1
             End If
         End If
