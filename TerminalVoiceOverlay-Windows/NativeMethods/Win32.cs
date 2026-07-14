@@ -94,10 +94,25 @@ namespace TerminalVoiceOverlay.NativeMethods
             public INPUTUNION u;
         }
 
+        // INPUT muss auch dann so gross wie die native Union sein, wenn wir
+        // nur Tastaturereignisse senden. Auf x64 macht MOUSEINPUT die Struktur
+        // 40 Byte gross; ohne diese Variante lehnt SendInput cbSize ab.
         [StructLayout(LayoutKind.Explicit)]
         public struct INPUTUNION
         {
+            [FieldOffset(0)] public MOUSEINPUT mi;
             [FieldOffset(0)] public KEYBDINPUT ki;
+        }
+
+        [StructLayout(LayoutKind.Sequential)]
+        public struct MOUSEINPUT
+        {
+            public int dx;
+            public int dy;
+            public uint mouseData;
+            public uint dwFlags;
+            public uint time;
+            public IntPtr dwExtraInfo;
         }
 
         [StructLayout(LayoutKind.Sequential)]
