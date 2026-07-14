@@ -55,8 +55,8 @@ public sealed partial class MainViewModel : ObservableObject
         WorkDir = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), "proggs");
         _ = CheckOpenCodeUpdateAsync();
 
-        var version = Assembly.GetExecutingAssembly().GetName().Version?.ToString(3) ?? "1.17.5";
-        Version = $"Version {version} (14.07.2026, 11.20 Uhr)";
+        var version = Assembly.GetExecutingAssembly().GetName().Version?.ToString(3) ?? "1.17.6";
+        Version = $"Version {version} (14.07.2026, 11.30 Uhr)";
     }
 
     public ObservableCollection<ModelGroupEntry> ModelGroups { get; } = new();
@@ -278,9 +278,13 @@ public sealed partial class MainViewModel : ObservableObject
                 ? $"Keine Provider für {model.DisplayName} gefunden (Slug korrekt?)."
                 : $"{providers.Count} Provider für {model.DisplayName} geladen.";
         }
-        catch (OperationCanceledException) { /* ok */ }
+        catch (OperationCanceledException) when (ct.IsCancellationRequested) { /* durch Modellwechsel abgelöst */ }
         catch (Exception ex)
         {
+            // Ein HttpClient.Timeout wirft ebenfalls eine (Task)OperationCanceledException, aber mit
+            // NICHT abgebrochenem ct. Diese darf NICHT als stiller Abbruch verschluckt werden, sonst
+            // bliebe der Status auf "Lade Provider …" hängen. Der when-Filter oben lässt sie hierher
+            // durchfallen, damit ein echter Fehlerbericht entsteht.
             StatusText = $"Fehler: {ex.Message}";
             var details = BuildErrorDetails("Provider laden", ex, model, null, null);
             LastErrorPath = Logger.Instance.WriteErrorReport("provider_load", details);
@@ -322,12 +326,15 @@ public sealed partial class MainViewModel : ObservableObject
                 direct.ContextLength = Math.Max(direct.ContextLength, providers.Max(p => p.ContextLength));
             }
         }
-        catch (OperationCanceledException)
+        catch (OperationCanceledException) when (ct.IsCancellationRequested)
         {
+            // Echter Abbruch (Modellwechsel) -> Load abbrechen.
             throw;
         }
         catch (Exception ex)
         {
+            // Auch ein Metadaten-Timeout landet hier (ct nicht abgebrochen): das Enrichment ist nur
+            // Best-Effort, der Direkt-Provider wird trotzdem ohne Zusatz-Metadaten angezeigt.
             Logger.Instance.Warn("MainViewModel", "EnrichDirectProviderAsync", $"OpenCode-Metadaten-Fallback für {model.Slug}: {ex.Message}", new { model.ProviderId, metadata.OpenRouterSlug });
         }
     }
