@@ -499,7 +499,10 @@ public partial class MainWindow : Window
     {
         var lb = sender as System.Windows.Controls.ListBox;
         if (lb == null || _dragSourceGroup == null) return;
-        if (e.LeftButton != MouseButtonState.Pressed || _dragSourceIndex < 0) return;
+        // Obergrenze mitprüfen: ein asynchroner Start-Sync (SyncOpenRouterFreeModels) kann die
+        // Modell-Liste der OpenRouterFree-Gruppe zwischen MouseDown und diesem Move verkleinert haben —
+        // ohne diese Prüfung würde der indizierte Zugriff unten mit ArgumentOutOfRangeException abstürzen.
+        if (e.LeftButton != MouseButtonState.Pressed || _dragSourceIndex < 0 || _dragSourceIndex >= _dragSourceGroup.Models.Count) return;
 
         var current = e.GetPosition(lb);
         if (Math.Abs(current.X - _dragStartPoint.X) < SystemParameters.MinimumHorizontalDragDistance &&
