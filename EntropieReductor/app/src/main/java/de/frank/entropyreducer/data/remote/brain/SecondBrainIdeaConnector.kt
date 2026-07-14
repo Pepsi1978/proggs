@@ -230,6 +230,19 @@ class SecondBrainIdeaConnector @Inject constructor(
                     _state.value = _state.value.copy(syncing = true, lastMessage = "Bereinige ${target.area.category} im Second Brain …")
                     var removed = 0
                     try {
+                        // Fix Loop-2 (#2): Quelle ZUERST laden. Ist sie nicht lesbar (null =
+                        // Parse-/Lesefehler), abbrechen OHNE das Brain zu leeren — sonst waeren
+                        // Brain und Meta leer, nichts neu hochgeladen, und syncing bliebe dauerhaft
+                        // haengen (UI zeigt endlos "Bereinige …").
+                        val freshRows = target.loadRows()
+                        if (freshRows == null) {
+                            _state.value = _state.value.copy(
+                                syncing = false,
+                                lastMessage = "Neu-Sync unvollständig — Quelle nicht lesbar, wird beim nächsten Speichern nachgeholt.",
+                            )
+                            Diag.w(DiagnosticArea.SECOND_BRAIN, TAG, "CHECKPOINT step=resyncSourceUnreadable area=${target.area.key} expected=skip_without_clearing actual=skipped ok=true")
+                            return@withLock
+                        }
                         val existing = api.byCategory(auth, target.area.category)
                         check(existing.ok && existing.ready) { "Second Brain ist noch nicht vollständig bereit" }
                         // Lokales Titel-Meta (id -> Brain-Titel) fuer (a) Zugehoerigkeits-Check und
@@ -241,28 +254,33 @@ class SecondBrainIdeaConnector @Inject constructor(
                         // naechste Pull loescht die LOKALEN Eintraege. Pro geloeschtem Item wird das
                         // Meta SOFORT geleert; der gesamte Block laeuft NonCancellable.
                         withContext(NonCancellable) {
-                            for (item in existing.items) {
-                                val t = item.title ?: continue
-                                // Fix 2026-07-14 (#5): nur eigene Eintraege loeschen — (a) im lokalen
-                                // Titel-Meta ODER (b) mit App-Marker; Fremdes (source=librarian) bleibt.
-                                val belongsToApp =
-                                    titleToId.containsKey(t.trim()) ||
-                                        parseAppBrainTitle(t, target.area.key).rowId != null ||
-                                        item.source.equals("entropyreductor", ignoreCase = true)
-                                if (!belongsToApp) continue
-                                val response = api.forget(auth, t)
-                                check(response.ok) { "Löschen von '$t' wurde nicht bestätigt" }
-                                titleToId[t.trim()]?.let { settings.clearSecondBrainSync(target.area.key, it) }
-                                removed++
+                            try {
+                                for (item in existing.items) {
+                                    val t = item.title ?: continue
+                                    // Fix 2026-07-14 (#5): nur eigene Eintraege loeschen — (a) im lokalen
+                                    // Titel-Meta ODER (b) mit App-Marker; Fremdes (source=librarian) bleibt.
+                                    val belongsToApp =
+                                        titleToId.containsKey(t.trim()) ||
+                                            parseAppBrainTitle(t, target.area.key).rowId != null ||
+                                            item.source.equals("entropyreductor", ignoreCase = true)
+                                    if (!belongsToApp) continue
+                                    val response = api.forget(auth, t)
+                                    check(response.ok) { "Löschen von '$t' wurde nicht bestätigt" }
+                                    titleToId[t.trim()]?.let { settings.clearSecondBrainSync(target.area.key, it) }
+                                    removed++
+                                }
+                            } finally {
+                                // Fix Loop-2 (#6): Rest-Meta IMMER leeren — auch wenn die Loeschschleife
+                                // mittendrin wirft (Netz-/check-Fehler). Sonst blieben Meta-Eintraege zu
+                                // bereits entfernten Brain-Items stehen und der Endzustand waere
+                                // inkonsistent (naechster Pull koennte lokale Eintraege loeschen). Pro
+                                // Item wird das Meta bereits einzeln geleert; dieses finally raeumt den
+                                // Rest robust ab.
+                                settings.clearAllSecondBrainSync(target.area.key)
                             }
-                            // Rest-Meta ohne Brain-Match ebenfalls leeren.
-                            settings.clearAllSecondBrainSync(target.area.key)
                         }
                         Diag.i(DiagnosticArea.SECOND_BRAIN, TAG, "CHECKPOINT step=resyncCleared area=${target.area.key} expected=category_emptied actual=removed=$removed ok=true")
-                        val freshRows = target.loadRows()
-                        if (freshRows != null) {
-                            syncRowsUnlocked(target, freshRows, reason = "Vollständiger Neu-Sync ${target.area.label}")
-                        }
+                        syncRowsUnlocked(target, freshRows, reason = "Vollständiger Neu-Sync ${target.area.label}")
                     } catch (e: CancellationException) {
                         throw e
                     } catch (e: Exception) {
@@ -303,6 +321,15 @@ class SecondBrainIdeaConnector @Inject constructor(
 
     fun pullFromBrain(scope: CoroutineScope, areaKey: String? = null) {
         scope.launch(Dispatchers.IO) {
+            // Fix Loop-2 (#3): Erreichbarkeits-Kurzcheck (~3s) VOR der Pull-Schleife bzw. dem
+            // operationMutex — symmetrisch zum Push-Pfad. Ohne erreichbaren Server wuerde sonst
+            // jeder Pull unter dem Lock bis zum Connect-Timeout (× Retries) haengen und parallele
+            // Push-Syncs blockieren.
+            if (!isBrainReachable()) {
+                _state.value = _state.value.copy(lastMessage = "Server nicht erreichbar (VPN?).")
+                Diag.w(DiagnosticArea.SECOND_BRAIN, TAG, "CHECKPOINT step=pullUnreachable expected=reachable actual=unreachable ok=false")
+                return@launch
+            }
             repeat(4) {
                 val ok = selectedTargets(areaKey).map { pullOnce(it) }.all { it }
                 if (ok) return@launch
@@ -394,7 +421,13 @@ class SecondBrainIdeaConnector @Inject constructor(
             val knownSyncedCount = appRows.count { row -> uploadedMap[row.id]?.trim()?.isNotEmpty() == true }
             val brainEmpty = brainTitles.isEmpty()
             // >50% der bekannten synchronisierten Eintraege auf einmal → verdaechtig.
-            val tooMany = knownSyncedCount > 0 && deletionCandidates.size * 2 > knownSyncedCount
+            // Fix Loop-3 (#5): Schwelle NICHT mehr von known>=4 abhaengig machen (das hob den Schutz
+            // fuer known=2/3 ganz auf → ein unvollstaendiger, nicht-leerer ready-Response konnte 2-3
+            // Eintraege loeschen), sondern eine absolute Mindestmenge zu loeschender Eintraege
+            // verlangen: mind. 3 zu loeschende UND >50%. So propagieren einzelne/kleine Loeschungen
+            // (1-2) immer, waehrend eine Mehrheits-Massenloeschung ab 3 Eintraegen auch bei known=2/3
+            // geschuetzt bleibt.
+            val tooMany = deletionCandidates.size >= 3 && deletionCandidates.size * 2 > knownSyncedCount
             when {
                 deletionCandidates.isEmpty() -> Unit
                 brainEmpty && knownSyncedCount > 0 -> {
@@ -452,23 +485,48 @@ class SecondBrainIdeaConnector @Inject constructor(
         val uploadedTitles = settings.readSecondBrainTitles(target.area.key)
 
         val deletedIds = uploadedTitles.keys - currentIds
+        // Fix Loop-2 (#1): Massenloeschungs-Plausibilitaetsschwelle im PUSH-Pfad — symmetrisch zum
+        // Pull-Pfad. `deletedIds` loescht sonst bedingungslos jeden bekannten Titel, der nicht in
+        // der aktuellen Zeilenliste steht. Eine transiente leere Room-Emission (z.B. waehrend eines
+        // Restores, der erst loescht und dann einfuegt) wuerde so die ganze Kategorie im Brain per
+        // forget leeren. Dieselbe korrigierte Schwelle wie im Pull-Pfad (#4).
+        val knownSyncedCount = uploadedTitles.size
+        val deletionsSuppressed = when {
+            deletedIds.isEmpty() -> false
+            // Aktuelle Quelle LEER, aber bekannte synchronisierte Titel > 0 → verdaechtig
+            // (transiente Emission) → KEINE Loeschungen.
+            sorted.isEmpty() && knownSyncedCount > 0 -> {
+                Diag.w(DiagnosticArea.SECOND_BRAIN, TAG, "CHECKPOINT step=syncDeletionSuppressedEmptySource area=${target.area.key} expected=no_mass_delete actual=suppressed ok=true candidates=${deletedIds.size} known=$knownSyncedCount")
+                true
+            }
+            // >50% der bekannten Menge, aber erst ab absoluter Mindestmenge zu loeschender Eintraege
+            // (Fix Loop-3 #5-Formel, symmetrisch zum Pull-Pfad): mind. 3 zu loeschende UND >50%. So
+            // bleiben einzelne/kleine Loeschungen (1-2) normal propagierbar, auch bei known=2/3.
+            deletedIds.size >= 3 && deletedIds.size * 2 > knownSyncedCount -> {
+                Diag.w(DiagnosticArea.SECOND_BRAIN, TAG, "CHECKPOINT step=syncDeletionSuppressedThreshold area=${target.area.key} expected=no_mass_delete actual=suppressed ok=true candidates=${deletedIds.size} known=$knownSyncedCount")
+                true
+            }
+            else -> false
+        }
         var deleted = 0
         var deletionNetworkError = false
         var deletionFailed = false
-        for (id in deletedIds) {
-            val title = uploadedTitles[id] ?: continue
-            try {
-                val resp = api.forget(auth, title)
-                check(resp.ok) { "Second Brain hat die Loeschung nicht bestaetigt" }
-                settings.clearSecondBrainSync(target.area.key, id)
-                deleted++
-                Diag.i(DiagnosticArea.SECOND_BRAIN, TAG, "CHECKPOINT step=forgetRow area=${target.area.key} expected=deleted actual=deleted=${resp.deleted} ok=${resp.ok} id=$id title=\"$title\"")
-            } catch (e: CancellationException) {
-                throw e
-            } catch (e: Exception) {
-                deletionFailed = true
-                deletionNetworkError = deletionNetworkError || isRetryable(e)
-                Diag.e(DiagnosticArea.SECOND_BRAIN, TAG, "CHECKPOINT step=forgetRow area=${target.area.key} expected=deleted actual=error ok=false id=$id title=\"$title\" message=${e.message ?: e::class.java.simpleName}", e)
+        if (!deletionsSuppressed) {
+            for (id in deletedIds) {
+                val title = uploadedTitles[id] ?: continue
+                try {
+                    val resp = api.forget(auth, title)
+                    check(resp.ok) { "Second Brain hat die Loeschung nicht bestaetigt" }
+                    settings.clearSecondBrainSync(target.area.key, id)
+                    deleted++
+                    Diag.i(DiagnosticArea.SECOND_BRAIN, TAG, "CHECKPOINT step=forgetRow area=${target.area.key} expected=deleted actual=deleted=${resp.deleted} ok=${resp.ok} id=$id title=\"$title\"")
+                } catch (e: CancellationException) {
+                    throw e
+                } catch (e: Exception) {
+                    deletionFailed = true
+                    deletionNetworkError = deletionNetworkError || isRetryable(e)
+                    Diag.e(DiagnosticArea.SECOND_BRAIN, TAG, "CHECKPOINT step=forgetRow area=${target.area.key} expected=deleted actual=error ok=false id=$id title=\"$title\" message=${e.message ?: e::class.java.simpleName}", e)
+                }
             }
         }
 
@@ -479,6 +537,7 @@ class SecondBrainIdeaConnector @Inject constructor(
             _state.value = _state.value.copy(
                 syncing = false,
                 lastMessage = when {
+                    deletionsSuppressed -> "${target.area.label}: Quelle momentan leer/unvollständig — Löschungen zur Sicherheit übersprungen."
                     deletionFailed -> "${target.area.label}: Mindestens eine Loeschung ist fehlgeschlagen."
                     deleted > 0 -> "$deleted ${target.area.label}-Eintrag(e) im Second Brain gelöscht, Rest aktuell."
                     else -> "${target.area.label} ist im Second Brain aktuell."
@@ -500,10 +559,16 @@ class SecondBrainIdeaConnector @Inject constructor(
             if (previousTitle != null && previousTitle != title) {
                 try {
                     val forgetResponse = api.forget(auth, previousTitle)
-                    check(forgetResponse.ok) {
-                        "Second Brain hat die alte Titel-Loeschung nicht bestaetigt"
+                    // Fix Loop-2 (#5): forget des ALTEN Titels tolerant behandeln. Antwortet der
+                    // Server ok=false (alter Titel nicht (mehr) vorhanden), ist das KEIN harter
+                    // Fehler — frueher fuehrte das `check(ok)` + `continue` dazu, dass der Eintrag
+                    // mit dem NEUEN Titel nie geschrieben wurde. Also NICHT ueberspringen, sondern
+                    // zum store des neuen Titels fortfahren.
+                    if (forgetResponse.ok) {
+                        Diag.i(DiagnosticArea.SECOND_BRAIN, TAG, "CHECKPOINT step=forgetOldTitle area=${target.area.key} expected=deleted actual=done ok=true id=${row.id} old=\"$previousTitle\" new=\"$title\"")
+                    } else {
+                        Diag.w(DiagnosticArea.SECOND_BRAIN, TAG, "CHECKPOINT step=forgetOldTitle area=${target.area.key} expected=deleted actual=ok_false_tolerated ok=true id=${row.id} old=\"$previousTitle\" new=\"$title\"")
                     }
-                    Diag.i(DiagnosticArea.SECOND_BRAIN, TAG, "CHECKPOINT step=forgetOldTitle area=${target.area.key} expected=deleted actual=done ok=true id=${row.id} old=\"$previousTitle\" new=\"$title\"")
                 } catch (e: CancellationException) {
                     throw e
                 } catch (e: Exception) {
@@ -518,10 +583,10 @@ class SecondBrainIdeaConnector @Inject constructor(
                         )
                         return true
                     }
-                    // nicht-retrybar → Zeile ueberspringen, restliche weiter verarbeiten.
-                    rowFailures++
-                    Diag.w(DiagnosticArea.SECOND_BRAIN, TAG, "CHECKPOINT step=forgetOldTitle area=${target.area.key} expected=deleted actual=non_retryable_skipped ok=false id=${row.id} old=\"$previousTitle\" message=${e.message ?: e::class.java.simpleName}")
-                    continue
+                    // Fix Loop-2 (#5): nicht-retrybar (z.B. 404/4xx fuer den alten Titel) → als
+                    // "bereits weg" behandeln und mit dem store des NEUEN Titels FORTFAHREN, statt
+                    // die Zeile zu ueberspringen (sonst ginge der neue Titel dauerhaft verloren).
+                    Diag.w(DiagnosticArea.SECOND_BRAIN, TAG, "CHECKPOINT step=forgetOldTitle area=${target.area.key} expected=deleted actual=non_retryable_tolerated ok=true id=${row.id} old=\"$previousTitle\" message=${e.message ?: e::class.java.simpleName}")
                 }
             }
             val request = SecondBrainStoreRequest(title = title, category = target.area.category, text = text)
@@ -562,6 +627,7 @@ class SecondBrainIdeaConnector @Inject constructor(
             lastMessage = buildString {
                 append("$reason abgeschlossen: $synced gespeichert")
                 if (deleted > 0) append(", $deleted gelöscht")
+                if (deletionsSuppressed) append(", Löschungen übersprungen")
                 if (rowFailures > 0) append(", $rowFailures fehlgeschlagen")
                 if (deletionFailed) append(", mind. eine Löschung fehlgeschlagen")
                 append(".")

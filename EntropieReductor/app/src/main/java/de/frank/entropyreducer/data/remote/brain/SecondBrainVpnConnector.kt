@@ -11,6 +11,7 @@ import de.frank.entropyreducer.data.settings.EncryptedSecretsStore
 import java.io.BufferedReader
 import java.io.StringReader
 import java.security.MessageDigest
+import java.util.concurrent.atomic.AtomicInteger
 import javax.inject.Inject
 import javax.inject.Singleton
 import kotlinx.coroutines.CancellationException
@@ -42,20 +43,35 @@ class SecondBrainVpnConnector @Inject constructor(
     @Volatile private var configHash: String? = null
     @Volatile private var connectedConfigHash: String? = null
     private val stateMutex = Mutex()
+    // Fix Loop-2 (#7): Zahl der selbst ausgeloesten Teardown-DOWNs (Reconnect mit geaenderter
+    // Config), die der onStateChange-Callback ignorieren soll — verhindert, dass ein verzoegerter
+    // DOWN-Callback einen bereits neu gesetzten CONNECTED-Zustand faelschlich ueberschreibt.
+    private val pendingSelfTeardowns = AtomicInteger(0)
 
     private val tunnel = object : Tunnel {
         override fun getName(): String = "entropie-second-brain"
 
         override fun onStateChange(newState: Tunnel.State) {
-            state = when (newState) {
-                Tunnel.State.UP -> SecondBrainVpnState.CONNECTED
-                Tunnel.State.DOWN -> SecondBrainVpnState.DISCONNECTED
-                Tunnel.State.TOGGLE -> state
+            var ignoredSelfTeardown = false
+            when (newState) {
+                Tunnel.State.UP -> state = SecondBrainVpnState.CONNECTED
+                Tunnel.State.DOWN ->
+                    // Fix Loop-2 (#7): Beim Reconnect mit geaenderter Config bauen wir den alten
+                    // Tunnel per setState(DOWN) ab. Der dadurch verzoegert eintreffende
+                    // DOWN-Callback darf den danach neu gesetzten CONNECTED-Zustand NICHT
+                    // ueberschreiben — daher einen vorgemerkten Selbst-Teardown konsumieren und
+                    // diesen DOWN ignorieren.
+                    if (consumeSelfTeardown()) {
+                        ignoredSelfTeardown = true
+                    } else {
+                        state = SecondBrainVpnState.DISCONNECTED
+                    }
+                Tunnel.State.TOGGLE -> Unit // Zustand unveraendert lassen
             }
             Diag.i(
                 DiagnosticArea.SECOND_BRAIN,
                 TAG,
-                "CHECKPOINT step=vpnStateChange expected=state_update actual=$newState ok=true",
+                "CHECKPOINT step=vpnStateChange expected=state_update actual=$newState${if (ignoredSelfTeardown) "_ignored_self_teardown" else ""} ok=true",
             )
         }
     }
@@ -129,7 +145,19 @@ class SecondBrainVpnConnector @Inject constructor(
             // Config den bestehenden Tunnel abbauen und mit der neuen Config neu aufbauen.
             if (configHash != null && configHash == connectedConfigHash) return@withContext true
             Diag.i(DiagnosticArea.SECOND_BRAIN, TAG, "CHECKPOINT step=vpnReconnectConfigChanged expected=reapply_config actual=tunnel_restart ok=true")
+            // Fix Loop-3 (#8): Ein aus einem frueheren, fehlgeschlagenen Reconnect-Versuch eventuell
+            // geleaktes Teardown-Guthaben (setState(DOWN) hat geworfen oder war ein No-op → es kam
+            // KEIN DOWN-Callback) zuruecksetzen, damit es diesen Zyklus nicht vergiftet und ein
+            // spaeteres legitimes externes DOWN nicht faelschlich verschluckt wird.
+            pendingSelfTeardowns.set(0)
+            // Fix Loop-2 (#7): den durch diesen Teardown ausgeloesten DOWN-Callback vormerken,
+            // damit er den gleich neu gesetzten CONNECTED-Zustand nicht faelschlich ueberschreibt.
+            // Fix Loop-3 (#8): Increment nur als tatsaechlich erfolgt zaehlen, wenn setState(DOWN)
+            // NICHT wirft — andernfalls kommt kein Callback und der Zaehler wuerde dauerhaft leaken;
+            // daher im Fehlerfall (geclampt gegen Unterlauf < 0) wieder dekrementieren.
+            pendingSelfTeardowns.incrementAndGet()
             runCatching { activeBackend.setState(tunnel, Tunnel.State.DOWN, null) }
+                .onFailure { pendingSelfTeardowns.updateAndGet { current -> if (current > 0) current - 1 else 0 } }
         }
 
         state = SecondBrainVpnState.CONNECTING
@@ -190,6 +218,10 @@ class SecondBrainVpnConnector @Inject constructor(
     }
 
     fun getLastError(): String? = lastError
+
+    /** Konsumiert einen vorgemerkten Selbst-Teardown-DOWN (Fix Loop-2 #7); true = ignorieren. */
+    private fun consumeSelfTeardown(): Boolean =
+        pendingSelfTeardowns.getAndUpdate { current -> if (current > 0) current - 1 else 0 } > 0
 
     private fun sha256(value: String): String =
         MessageDigest.getInstance("SHA-256").digest(value.toByteArray(Charsets.UTF_8))
