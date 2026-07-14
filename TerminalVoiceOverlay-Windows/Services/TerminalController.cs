@@ -21,7 +21,7 @@ namespace TerminalVoiceOverlay.Services
         /// damit nachgelagerte Schritte (File.Delete des WAVs, State-
         /// Reset) garantiert nach dem Paste laufen.
         /// </summary>
-        public static Task PasteTextAsync(string text, IntPtr terminalHwnd, bool autoEnter = false)
+        public static Task<bool> PasteTextAsync(string text, IntPtr terminalHwnd, bool autoEnter = false)
         {
             return Task.Run(() => PasteText(text, terminalHwnd, autoEnter));
         }
@@ -32,7 +32,7 @@ namespace TerminalVoiceOverlay.Services
         /// Thread bleibt die UI reaktiv waehrend der Eingabezeile frisch
         /// gemacht wird (z.B. Profil-Re-Correct).
         /// </summary>
-        public static Task ClearAllInputAsync(IntPtr terminalHwnd)
+        public static Task<bool> ClearAllInputAsync(IntPtr terminalHwnd)
         {
             return Task.Run(() => ClearAllInput(terminalHwnd));
         }
@@ -42,7 +42,7 @@ namespace TerminalVoiceOverlay.Services
         /// macht Thread.Sleep(200) — UI bleibt sonst pro W-Button-Klick
         /// 200 ms eingefroren.
         /// </summary>
-        public static Task ClearLineAsync(IntPtr terminalHwnd)
+        public static Task<bool> ClearLineAsync(IntPtr terminalHwnd)
         {
             return Task.Run(() => ClearLine(terminalHwnd));
         }
@@ -52,7 +52,7 @@ namespace TerminalVoiceOverlay.Services
         /// 200-ms-BringToForeground-Block wie alle Win32-Sequenzen, daher
         /// von der UI fernhalten.
         /// </summary>
-        public static Task CopySelectionAsync(IntPtr terminalHwnd)
+        public static Task<bool> CopySelectionAsync(IntPtr terminalHwnd)
         {
             return Task.Run(() => CopySelection(terminalHwnd));
         }
@@ -61,7 +61,7 @@ namespace TerminalVoiceOverlay.Services
         /// Async-Wrapper fuer <see cref="PasteClipboard"/>: gleiches
         /// Argument wie bei CopySelectionAsync.
         /// </summary>
-        public static Task PasteClipboardAsync(IntPtr terminalHwnd)
+        public static Task<bool> PasteClipboardAsync(IntPtr terminalHwnd)
         {
             return Task.Run(() => PasteClipboard(terminalHwnd));
         }
@@ -70,23 +70,15 @@ namespace TerminalVoiceOverlay.Services
         /// Async-Wrapper fuer <see cref="PressReturn"/>: BringToForeground +
         /// keybd_event sind synchron und kosten ~200 ms UI-Block.
         /// </summary>
-        public static Task PressReturnAsync(IntPtr terminalHwnd)
+        public static Task<bool> PressReturnAsync(IntPtr terminalHwnd)
         {
             return Task.Run(() => PressReturn(terminalHwnd));
         }
 
-        /// <summary>
-        /// Generations-Zaehler fuer Clipboard-Restore. Jeder Paste-Zyklus
-        /// erhoeht den Zaehler atomar; der spaeter geplante Restore-Task
-        /// merkt sich seine Generation und prueft beim Ausfuehren ob die
-        /// noch aktuell ist. Ist sie es nicht (= ein zweiter Paste hat
-        /// das Clipboard inzwischen ueberschrieben), fasst der Restore
-        /// das Clipboard NICHT mehr an — sonst wuerde er den frischen
-        /// Text mit dem alten Inhalt ueberschreiben und die zweite
-        /// Aufnahme ginge verloren. Direktive-3-Resilienz: thread-safe
-        /// per Interlocked, kein Lock noetig, kein Risiko fuer Deadlock.
-        /// </summary>
-        private static long _clipboardGen;
+        private static readonly object InputSequenceGate = new();
+
+        [DllImport("user32.dll")]
+        private static extern uint GetClipboardSequenceNumber();
 
         /// <summary>
         /// Versucht eine Clipboard-Operation auf dem UI-Thread bis zu
@@ -136,104 +128,107 @@ namespace TerminalVoiceOverlay.Services
         /// Pastes text into the terminal via Clipboard + Ctrl+V.
         /// Ensures the terminal window is focused first.
         /// </summary>
-        public static void PasteText(string text, IntPtr terminalHwnd, bool autoEnter = false)
+        public static bool PasteText(string text, IntPtr terminalHwnd, bool autoEnter = false)
         {
-            var totalSw = Stopwatch.StartNew();
-            DiagLog.Write("Paste", "start", ("chars", text.Length), ("autoEnter", autoEnter), ("hwnd", $"0x{terminalHwnd.ToInt64():X}"));
-            // Generation-ID fuer diesen Paste-Zyklus. Wenn ein folgender
-            // Paste den Zaehler erhoeht, weiss der Restore-Task dass er
-            // nichts mehr machen darf.
-            long myGen = System.Threading.Interlocked.Increment(ref _clipboardGen);
-
-            // Save previous clipboard content. Mit Retry-Wrapper: ein
-            // gerade laufender Excel-Copy o.ae. wuerde sonst die App
-            // ueber unhandled COMException zum Watchdog-Restart zwingen.
-            string? previousClipboard = null;
-            var clipboardSw = Stopwatch.StartNew();
-            bool clipboardSet = TryRunOnUiThread(() =>
+            lock (InputSequenceGate)
             {
-                if (Clipboard.ContainsText())
-                    previousClipboard = Clipboard.GetText();
-                Clipboard.SetText(text);
-            });
-            DiagLog.Perf("Paste", "clipboard_set", clipboardSw, ("ok", clipboardSet), ("chars", text.Length));
-            if (!clipboardSet)
-            {
-                Console.WriteLine("PasteText: Clipboard.SetText fehlgeschlagen — Paste uebersprungen.");
-                DiagLog.Warn("Paste", "clipboard_set_failed", ("chars", text.Length));
-                return;
-            }
+                var totalSw = Stopwatch.StartNew();
+                DiagLog.Write("Paste", "start", ("chars", text.Length), ("autoEnter", autoEnter), ("hwnd", $"0x{terminalHwnd.ToInt64():X}"));
 
-            // ── Modifier-Release VOR dem Fenster-Wechsel (Fix 2026-06-21) ──
-            // KRITISCH: Erst die Trigger-Modifier (Alt/Win/Shift) freigeben,
-            // DANN das Fenster nach vorn holen. Noch gedrueckte Modifier
-            // (Strg+Alt+P per Stream Deck oder Finger gehalten) blockieren sonst
-            // den Foreground-Wechsel aus FREMDEN Fenstern (Browser etc.) -> das
-            // Terminal blinkt nur in der Taskleiste, der Paste verpufft. Die
-            // G4-Makrotaste lief bisher NUR, weil ihr Makro die Modifier per
-            // 50ms-Timing schon vorher sauber loslaesst — dieser Fix macht das
-            // unabhaengig vom Ausloeser. (Bug-Almanach dotnet-csharp 5.5.)
-            ReleaseNonCtrlModifiers();
-
-            // Bring terminal to foreground (robust: AttachThreadInput + AllowSetForegroundWindow)
-            var foregroundSw = Stopwatch.StartNew();
-            bool foregroundOk = BringToForeground(terminalHwnd);
-            DiagLog.Perf("Paste", "foreground", foregroundSw, ("ok", foregroundOk), ("hwnd", $"0x{terminalHwnd.ToInt64():X}"));
-            if (!foregroundOk)
-            {
-                DiagLog.Warn("Paste", "foreground_failed_skip_ctrl_v", ("hwnd", $"0x{terminalHwnd.ToInt64():X}"));
-                return;
-            }
-
-            // ── Sicherheitsnetz: Modifier nochmal freigeben vor Ctrl+V ──
-            // Wenn der Paste durch einen Hotkey ausgeloest wurde (z.B.
-            // Win+Alt+B oder Shift+Alt+M), sind die Trigger-Modifier-Tasten
-            // beim SendCtrlV-Aufruf moeglicherweise IMMER NOCH virtuell
-            // gedrueckt (Frank haelt sie physisch). Windows wuerde dann
-            // "Win+Alt+Ctrl+V" sehen statt einfachem "Ctrl+V" — und das ist
-            // kein Paste mehr. Wir schicken synthetische KEYUP-Events fuer
-            // alle nicht-Ctrl-Modifier, damit der virtuelle Tastatur-State
-            // sauber ist, BEVOR Ctrl+V geht. Bei Strg+1..9-Hotkeys ist Ctrl
-            // der gewollte Modifier und bleibt unten — daher kein Release
-            // fuer Ctrl hier. Hardware-KEYUP-Events kommen spaeter (wenn
-            // Frank physisch loslaesst) und sind dann ein NoOp.
-            ReleaseNonCtrlModifiers();
-
-            // Send Ctrl+V
-            var sendSw = Stopwatch.StartNew();
-            SendCtrlV();
-            DiagLog.Perf("Paste", "ctrl_v", sendSw);
-
-            // Send Enter if auto-enter is enabled
-            if (autoEnter)
-            {
-                Thread.Sleep(300); // macOS uses 300ms before optional Enter
-                BringToForeground(terminalHwnd);
-                SendKey(VK_RETURN);
-                DiagLog.Write("Paste", "auto_enter_sent");
-            }
-
-            // Restore previous clipboard after paste completes — aber NUR
-            // wenn unsere Generation noch aktuell ist. Sonst hat ein
-            // anderer Paste das Clipboard schon mit frischen Inhalten
-            // ueberschrieben und wir wuerden den ueberholen.
-            if (previousClipboard != null)
-            {
-                var prev = previousClipboard;
-                Task.Delay(500).ContinueWith(_ =>
+                IDataObject? previousClipboard = null;
+                uint ownedClipboardSequence = 0;
+                bool clipboardSet = false;
+                bool pasteSent = false;
+                bool succeeded = false;
+                try
                 {
-                    if (System.Threading.Interlocked.Read(ref _clipboardGen) != myGen)
+                    // Preserve every clipboard format, not only text.
+                    var clipboardSw = Stopwatch.StartNew();
+                    clipboardSet = TryRunOnUiThread(() =>
                     {
-                        Console.WriteLine("Clipboard restore skipped — newer paste in flight.");
-                        DiagLog.Write("Paste", "clipboard_restore_skipped_newer_generation");
-                        return;
+                        previousClipboard = Clipboard.GetDataObject();
+                        Clipboard.SetText(text);
+                        ownedClipboardSequence = GetClipboardSequenceNumber();
+                    });
+                    DiagLog.Perf("Paste", "clipboard_set", clipboardSw, ("ok", clipboardSet), ("chars", text.Length));
+                    if (!clipboardSet)
+                    {
+                        Console.WriteLine("PasteText: Clipboard.SetText fehlgeschlagen — Paste uebersprungen.");
+                        DiagLog.Warn("Paste", "clipboard_set_failed", ("chars", text.Length));
                     }
-                    var restoreSw = Stopwatch.StartNew();
-                    bool restored = TryRunOnUiThread(() => Clipboard.SetText(prev));
-                    DiagLog.Perf("Paste", "clipboard_restore", restoreSw, ("ok", restored));
-                });
+                    else
+                    {
+                        ReleaseNonCtrlModifiers();
+
+                        var foregroundSw = Stopwatch.StartNew();
+                        bool foregroundOk = BringToForeground(terminalHwnd);
+                        DiagLog.Perf("Paste", "foreground", foregroundSw, ("ok", foregroundOk), ("hwnd", $"0x{terminalHwnd.ToInt64():X}"));
+                        if (!foregroundOk)
+                        {
+                            DiagLog.Warn("Paste", "foreground_failed_skip_ctrl_v", ("hwnd", $"0x{terminalHwnd.ToInt64():X}"));
+                        }
+                        else
+                        {
+                            ReleaseNonCtrlModifiers();
+
+                            var sendSw = Stopwatch.StartNew();
+                            SendCtrlV();
+                            pasteSent = true;
+                            succeeded = true;
+                            DiagLog.Perf("Paste", "ctrl_v", sendSw);
+
+                            if (autoEnter)
+                            {
+                                Thread.Sleep(300);
+                                if (!BringToForeground(terminalHwnd))
+                                {
+                                    DiagLog.Warn("Paste", "foreground_failed_skip_auto_enter", ("hwnd", $"0x{terminalHwnd.ToInt64():X}"));
+                                    succeeded = false;
+                                }
+                                else
+                                {
+                                    SendKey(VK_RETURN);
+                                    DiagLog.Write("Paste", "auto_enter_sent");
+                                }
+                            }
+                        }
+                    }
+                }
+                finally
+                {
+                    if (clipboardSet)
+                    {
+                        if (pasteSent)
+                            Thread.Sleep(500);
+
+                        var restoreSw = Stopwatch.StartNew();
+                        bool restoreSkipped = false;
+                        bool restored = TryRunOnUiThread(() =>
+                        {
+                            if (GetClipboardSequenceNumber() != ownedClipboardSequence)
+                            {
+                                restoreSkipped = true;
+                                return;
+                            }
+
+                            if (previousClipboard is null)
+                                Clipboard.Clear();
+                            else
+                                Clipboard.SetDataObject(previousClipboard, true);
+                        });
+                        if (restoreSkipped)
+                        {
+                            Console.WriteLine("Clipboard restore skipped — clipboard changed externally.");
+                            DiagLog.Write("Paste", "clipboard_restore_skipped_external_change");
+                        }
+                        DiagLog.Perf("Paste", "clipboard_restore", restoreSw, ("ok", restored && !restoreSkipped));
+                    }
+
+                    DiagLog.Perf("Paste", "total", totalSw, ("chars", text.Length), ("autoEnter", autoEnter), ("ok", succeeded));
+                }
+
+                return succeeded;
             }
-            DiagLog.Perf("Paste", "total", totalSw, ("chars", text.Length), ("autoEnter", autoEnter));
         }
 
         /// <summary>
@@ -252,10 +247,14 @@ namespace TerminalVoiceOverlay.Services
         ///   • Shift+End does not select text in a terminal (shift-selection is
         ///     a GUI-only concept; terminals have no cursor-based selection model)
         /// </summary>
-        public static void ClearLine(IntPtr terminalHwnd)
+        public static bool ClearLine(IntPtr terminalHwnd)
         {
-            BringToForeground(terminalHwnd);
-            SendKeyCombo(Win32.VK_CONTROL, VK_U);
+            lock (InputSequenceGate)
+            {
+                if (!BringToForeground(terminalHwnd)) return false;
+                SendKeyCombo(Win32.VK_CONTROL, VK_U);
+                return true;
+            }
         }
 
         /// <summary>
@@ -269,13 +268,17 @@ namespace TerminalVoiceOverlay.Services
         /// eingefuegte Prompt restlos verschwindet, bevor die neue Korrektur
         /// reingepastet wird.
         /// </summary>
-        public static void ClearAllInput(IntPtr terminalHwnd)
+        public static bool ClearAllInput(IntPtr terminalHwnd)
         {
-            BringToForeground(terminalHwnd);
-            for (int i = 0; i < 5; i++)
+            lock (InputSequenceGate)
             {
-                SendKeyCombo(Win32.VK_CONTROL, VK_U);
-                Thread.Sleep(50);
+                if (!BringToForeground(terminalHwnd)) return false;
+                for (int i = 0; i < 5; i++)
+                {
+                    SendKeyCombo(Win32.VK_CONTROL, VK_U);
+                    Thread.Sleep(50);
+                }
+                return true;
             }
         }
 
@@ -283,20 +286,28 @@ namespace TerminalVoiceOverlay.Services
         /// Copies the currently selected text in the terminal via Ctrl+C.
         /// Windows Terminal detects selection and copies instead of sending SIGINT.
         /// </summary>
-        public static void CopySelection(IntPtr terminalHwnd)
+        public static bool CopySelection(IntPtr terminalHwnd)
         {
-            BringToForeground(terminalHwnd);
-            SendKeyCombo(Win32.VK_CONTROL, VK_C);
+            lock (InputSequenceGate)
+            {
+                if (!BringToForeground(terminalHwnd)) return false;
+                SendKeyCombo(Win32.VK_CONTROL, VK_C);
+                return true;
+            }
         }
 
         /// <summary>
         /// Pastes the current clipboard content into the terminal via Ctrl+V.
         /// Does NOT modify the clipboard — pastes whatever is already there.
         /// </summary>
-        public static void PasteClipboard(IntPtr terminalHwnd)
+        public static bool PasteClipboard(IntPtr terminalHwnd)
         {
-            BringToForeground(terminalHwnd);
-            SendCtrlV();
+            lock (InputSequenceGate)
+            {
+                if (!BringToForeground(terminalHwnd)) return false;
+                SendCtrlV();
+                return true;
+            }
         }
 
         private const ushort VK_C = 0x43;
@@ -312,19 +323,27 @@ namespace TerminalVoiceOverlay.Services
         /// Sends the Enter/Return key. Used for the Enter button's immediate-fire behavior
         /// when toggling autoEnter on.
         /// </summary>
-        public static void SendReturn()
+        public static bool SendReturn()
         {
-            SendKey(VK_RETURN);
+            lock (InputSequenceGate)
+            {
+                SendKey(VK_RETURN);
+                return true;
+            }
         }
 
         /// <summary>
         /// Focuses the terminal window then sends the Enter/Return key.
         /// Called by EnterButton when toggling auto-enter ON to fire a Return immediately.
         /// </summary>
-        public static void PressReturn(IntPtr terminalHwnd)
+        public static bool PressReturn(IntPtr terminalHwnd)
         {
-            BringToForeground(terminalHwnd);
-            SendKey(VK_RETURN);
+            lock (InputSequenceGate)
+            {
+                if (!BringToForeground(terminalHwnd)) return false;
+                SendKey(VK_RETURN);
+                return true;
+            }
         }
 
         /// <summary>
