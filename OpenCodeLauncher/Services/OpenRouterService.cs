@@ -17,6 +17,9 @@ public sealed class OpenRouterService
     private const string BaseUrl = "https://openrouter.ai/api/v1";
     private static readonly HttpClient Http = new()
     {
+        // Ohne Timeout blieben hängende Requests bis zum 100-Sekunden-Default stehen (Start-Load
+        // ohne CancellationToken). 30 s sind großzügig für /models und den TPS-HTML-Fallback.
+        Timeout = TimeSpan.FromSeconds(30),
         DefaultRequestHeaders =
         {
             { "HTTP-Referer", "https://github.com/Pepsi1978/proggs" },
