@@ -595,18 +595,26 @@ try {
     private static string PowerShellLiteral(string value) => $"'{EscapePowerShellSingleQuotedValue(value)}'";
 
     /// <summary>
-    /// PowerShell-Block fuer das Minimalprofil: blendet die von OpenCode zwangsweise gelesenen
-    /// AGENTS.md (Projekt im Arbeitsverzeichnis + globale ~/.config/opencode/AGENTS.md) fuer die
-    /// Dauer der Session aus. Die globale wird durch eine leere Datei ersetzt, damit ein evtl.
-    /// vorhandener `instructions`-Verweis in der globalen opencode.jsonc keinen fehlenden Pfad
-    /// referenziert. Restore-AgentsFiles (im finally) stellt beide wieder her; bricht die Session
-    /// hart ab, heilt der naechste Start das haengengebliebene Backup selbst.
+    /// PowerShell-Block fuer das Minimalprofil, damit AUSSCHLIESSLICH die Minimal-Datei als Kontext
+    /// greift. Zwei Mechanismen:
+    /// 1) OPENCODE_DISABLE_CLAUDE_CODE=1 schaltet die Claude-Code-Kompatibilitaet ab — OpenCode
+    ///    ignoriert dadurch jede CLAUDE.md (Projekt UND ~/.claude/CLAUDE.md) sowie ~/.claude/skills,
+    ///    OHNE eine Datei anzufassen. Noetig, weil OpenCode sonst die Projekt-CLAUDE.md als Fallback
+    ///    laedt, sobald die AGENTS.md fehlt.
+    /// 2) Die von OpenCode zwangsweise gelesenen AGENTS.md (Projekt im Arbeitsverzeichnis + globale
+    ///    ~/.config/opencode/AGENTS.md) werden fuer die Sessiondauer ausgeblendet. Die globale wird
+    ///    durch eine leere Datei ersetzt, damit ein evtl. vorhandener `instructions`-Verweis in der
+    ///    globalen opencode.jsonc keinen fehlenden Pfad referenziert. Restore-AgentsFiles (im finally)
+    ///    stellt beide wieder her; bricht die Session hart ab, heilt der naechste Start das
+    ///    haengengebliebene Backup selbst.
     /// </summary>
     private static string BuildMinimalHideBlock(string workDir)
     {
         var projectAgents = PowerShellLiteral(Path.Combine(workDir, "AGENTS.md"));
         const string template = """
 # --- Minimalprofil: ausschliesslich die Minimal-Datei als Kontext ---
+# Claude-Code-Kompatibilitaet abschalten: keine CLAUDE.md (Projekt + global), keine .claude/skills.
+$env:OPENCODE_DISABLE_CLAUDE_CODE = '1'
 $script:MiniHidden = @()
 function Hide-AgentsFile([string]$Path, [bool]$ReplaceEmpty) {
     $bak = "$Path.opencode-minimal-hidden"
