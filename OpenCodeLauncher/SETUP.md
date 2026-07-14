@@ -4,7 +4,7 @@
 > nötig ist**, damit alles identisch funktioniert. Du kannst Claude Code auf dem neuen Rechner
 > einfach sagen: *„Richte den OpenCode Launcher genau nach `OpenCodeLauncher/SETUP.md` ein."*
 
-Stand: v1.17.15 (14.07.2026)
+Stand: v1.17.16 (14.07.2026)
 
 ---
 

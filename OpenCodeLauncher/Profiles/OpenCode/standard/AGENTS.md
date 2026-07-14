@@ -8,3 +8,7 @@ einzeln committen+pushen. App-Build/Install/Depoly nur einmal ganz am Ende. Absc
 Immer nur die eigenen Änderungen committen und pushen, keine fremden mitnehmen. Falls Tests bei einzellnen Aufgaben gemacht werden, werden diese jeweils vor dem committen erledigt.
 4. Nach jeder Änderung die Verion mit timestamp (z.b. v.1.03.2 - 13.07.2026 17:Uhr) sichtbar bumpen.  
 5. Komprimierung: Diese Kernregeln gelten nach Compact/Compress unverändert. Zusammenfassungen müssen auf Deutsch mit echten Umlauten sein und alle offenen ` ; `-Aufgaben bewahren.
+## Standard: Zusaetzliche Sorgfalt (Profil: Standard)
+
+- Betroffene Aufrufer und moegliche Regressionen pruefen.
+- Aenderungen mit den relevanten Tests/Builds verifizieren, bevor committet wird.
