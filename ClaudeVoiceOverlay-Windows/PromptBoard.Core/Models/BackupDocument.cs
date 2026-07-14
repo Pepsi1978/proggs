@@ -50,7 +50,10 @@ public sealed record PromptDto(
     // Same reasoning as HotkeyNumber: gets backed up so the Drive
     // auto-restore on launch doesn't wipe the user's bindings. Null when
     // an older backup that pre-dates this feature is restored.
-    char? HotkeyLetter = null);
+    char? HotkeyLetter = null,
+    // Added in schema v2. Defaults preserve the legacy prefix-only behavior.
+    bool IsPrePrompt = true,
+    bool IsPostPrompt = false);
 
 /// <summary>How a restore merges the incoming document with the existing data.</summary>
 public enum RestoreMode

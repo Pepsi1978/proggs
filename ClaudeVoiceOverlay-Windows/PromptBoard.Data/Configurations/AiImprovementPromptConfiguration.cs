@@ -11,6 +11,8 @@ internal sealed class AiImprovementPromptConfiguration : IEntityTypeConfiguratio
         // Table name is inherited (TPH). Only declare the extra columns here.
         b.Property(p => p.GeminiModel).HasMaxLength(80).IsRequired();
         b.Property(p => p.IsActiveForImprovement);
-        b.HasIndex(p => p.IsActiveForImprovement);
+        b.HasIndex(p => p.IsActiveForImprovement)
+            .IsUnique()
+            .HasFilter("IsActiveForImprovement = 1");
     }
 }

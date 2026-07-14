@@ -30,6 +30,9 @@ public sealed class AiImprovementPromptRepository : IAiImprovementPromptReposito
     /// </summary>
     public async Task SetActiveAsync(Guid id, CancellationToken ct = default)
     {
+        if (id != Guid.Empty && !await _db.AiImprovementPrompts.AnyAsync(p => p.Id == id, ct))
+            throw new InvalidOperationException($"KI-Verbesserungsprompt {id} existiert nicht.");
+
         await using var tx = await _db.Database.BeginTransactionAsync(ct);
 
         await _db.AiImprovementPrompts

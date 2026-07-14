@@ -14,6 +14,8 @@ namespace PromptBoard.Data;
 /// </summary>
 public class PromptBoardDbContext : DbContext
 {
+    private bool _preserveTimestamps;
+
     public PromptBoardDbContext(DbContextOptions<PromptBoardDbContext> options)
         : base(options)
     {
@@ -48,8 +50,22 @@ public class PromptBoardDbContext : DbContext
         return base.SaveChangesAsync(cancellationToken);
     }
 
+    public async Task<int> SaveChangesPreservingTimestampsAsync(CancellationToken cancellationToken = default)
+    {
+        _preserveTimestamps = true;
+        try
+        {
+            return await base.SaveChangesAsync(cancellationToken);
+        }
+        finally
+        {
+            _preserveTimestamps = false;
+        }
+    }
+
     private void StampTimestamps()
     {
+        if (_preserveTimestamps) return;
         DateTime now = DateTime.UtcNow;
         foreach (var entry in ChangeTracker.Entries<BaseEntity>())
         {

@@ -22,6 +22,7 @@
     <NAudioVersion>2.3.0</NAudioVersion>
     <GoogleApisDriveVersion>1.74.0.4135</GoogleApisDriveVersion>
     <GoogleApisAuthVersion>1.75.0</GoogleApisAuthVersion>
+    <SQLitePclRawVersion>3.53.3</SQLitePclRawVersion>
   </PropertyGroup>
 
 </Project>

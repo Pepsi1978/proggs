@@ -56,7 +56,12 @@ public sealed class CategoryRepository : ICategoryRepository
 
     public async Task UpdateAsync(Category category, CancellationToken ct = default)
     {
-        _db.Categories.Update(category);
+        Category? existing = await _db.Categories.FirstOrDefaultAsync(c => c.Id == category.Id, ct);
+        if (existing is null) throw new InvalidOperationException($"Kategorie {category.Id} existiert nicht.");
+        existing.Name = category.Name;
+        existing.BackgroundColorHex = category.BackgroundColorHex;
+        existing.SortOrder = category.SortOrder;
+        existing.Type = category.Type;
         await _db.SaveChangesAsync(ct);
     }
 

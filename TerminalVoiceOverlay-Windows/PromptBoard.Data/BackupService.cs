@@ -17,7 +17,7 @@ namespace PromptBoard.Data;
 /// </summary>
 public sealed class BackupService : IBackupService
 {
-    private const int CurrentSchemaVersion = 1;
+    private const int CurrentSchemaVersion = 2;
 
     private readonly PromptBoardDbContext _db;
     private readonly ILogger<BackupService> _logger;
@@ -30,6 +30,7 @@ public sealed class BackupService : IBackupService
 
     public async Task<BackupDocument> CreateAsync(CancellationToken ct = default)
     {
+        await using var tx = await _db.Database.BeginTransactionAsync(ct);
         List<Category> categories = await _db.Categories
             .AsNoTracking()
             .OrderBy(c => c.SortOrder)
@@ -45,6 +46,7 @@ public sealed class BackupService : IBackupService
             c.CreatedAt, c.UpdatedAt)).ToList();
 
         var promptDtos = prompts.Select(ToDto).ToList();
+        await tx.CommitAsync(ct);
 
         _logger.LogInformation(
             "Backup document built: {Cat} categories, {Prm} prompts.",
@@ -67,6 +69,8 @@ public sealed class BackupService : IBackupService
             throw new InvalidOperationException(
                 $"Backup-Schema {document.SchemaVersion} ist neuer als diese App-Version kennt ({CurrentSchemaVersion}).");
         }
+
+        ValidateDocument(document, mode);
 
         await using var tx = await _db.Database.BeginTransactionAsync(ct);
 
@@ -96,6 +100,7 @@ public sealed class BackupService : IBackupService
         // Cascade: deleting the category also deletes its prompts via FK.
         await _db.Prompts.ExecuteDeleteAsync(ct);
         await _db.Categories.ExecuteDeleteAsync(ct);
+        _db.ChangeTracker.Clear();
 
         foreach (CategoryDto c in document.Categories)
         {
@@ -116,7 +121,7 @@ public sealed class BackupService : IBackupService
             _db.Prompts.Add(FromDto(p));
         }
 
-        await _db.SaveChangesAsync(ct);
+        await _db.SaveChangesPreservingTimestampsAsync(ct);
 
         return new RestoreResult(
             CategoriesAdded: document.Categories.Count,
@@ -164,18 +169,37 @@ public sealed class BackupService : IBackupService
         Dictionary<Guid, Prompt> existingPrompts = await _db.Prompts
             .ToDictionaryAsync(p => p.Id, ct);
 
+        Guid? incomingActiveId = document.Prompts
+            .Where(p => p.IsAiImprovementPrompt && p.IsActiveForImprovement)
+            .Select(p => (Guid?)p.Id)
+            .SingleOrDefault();
+        if (incomingActiveId.HasValue)
+        {
+            foreach (AiImprovementPrompt ai in existingPrompts.Values.OfType<AiImprovementPrompt>())
+                ai.IsActiveForImprovement = false;
+        }
+
         foreach (PromptDto p in document.Prompts)
         {
             if (existingPrompts.TryGetValue(p.Id, out Prompt? existing))
             {
+                if ((existing is AiImprovementPrompt) != p.IsAiImprovementPrompt)
+                {
+                    throw new InvalidOperationException(
+                        $"Prompt {p.Id} wechselt im Backup den Typ. Restore wurde ohne Teiländerung abgebrochen.");
+                }
                 existing.CategoryId = p.CategoryId;
                 existing.ShortLabel = p.ShortLabel;
                 existing.OriginalText = p.OriginalText;
                 existing.ImprovedText = p.ImprovedText;
                 existing.ActiveVersion = p.ActiveVersion;
                 existing.IsAlwaysOn = p.IsAlwaysOn;
+                existing.IsPrePrompt = p.IsPrePrompt;
+                existing.IsPostPrompt = p.IsPostPrompt;
                 existing.SortOrder = p.SortOrder;
                 existing.ImprovedByAiPromptId = p.ImprovedByAiPromptId;
+                existing.HotkeyNumber = p.HotkeyNumber;
+                existing.HotkeyLetter = p.HotkeyLetter;
                 existing.UpdatedAt = p.UpdatedAtUtc;
 
                 if (existing is AiImprovementPrompt existingAi && p.IsAiImprovementPrompt)
@@ -193,7 +217,7 @@ public sealed class BackupService : IBackupService
             }
         }
 
-        await _db.SaveChangesAsync(ct);
+        await _db.SaveChangesPreservingTimestampsAsync(ct);
 
         return new RestoreResult(
             CategoriesAdded: catsAdded,
@@ -226,7 +250,9 @@ public sealed class BackupService : IBackupService
             CreatedAtUtc: p.CreatedAt,
             UpdatedAtUtc: p.UpdatedAt,
             HotkeyNumber: p.HotkeyNumber,
-            HotkeyLetter: p.HotkeyLetter);
+            HotkeyLetter: p.HotkeyLetter,
+            IsPrePrompt: p.IsPrePrompt,
+            IsPostPrompt: p.IsPostPrompt);
     }
 
     private static Prompt FromDto(PromptDto p)
@@ -242,8 +268,12 @@ public sealed class BackupService : IBackupService
                 ImprovedText = p.ImprovedText,
                 ActiveVersion = p.ActiveVersion,
                 IsAlwaysOn = p.IsAlwaysOn,
+                IsPrePrompt = p.IsPrePrompt,
+                IsPostPrompt = p.IsPostPrompt,
                 SortOrder = p.SortOrder,
                 ImprovedByAiPromptId = p.ImprovedByAiPromptId,
+                HotkeyNumber = p.HotkeyNumber,
+                HotkeyLetter = p.HotkeyLetter,
                 GeminiModel = p.GeminiModel ?? "gemini-3.1-flash-lite",
                 IsActiveForImprovement = p.IsActiveForImprovement,
                 CreatedAt = p.CreatedAtUtc,
@@ -260,6 +290,8 @@ public sealed class BackupService : IBackupService
             ImprovedText = p.ImprovedText,
             ActiveVersion = p.ActiveVersion,
             IsAlwaysOn = p.IsAlwaysOn,
+            IsPrePrompt = p.IsPrePrompt,
+            IsPostPrompt = p.IsPostPrompt,
             SortOrder = p.SortOrder,
             ImprovedByAiPromptId = p.ImprovedByAiPromptId,
             HotkeyNumber = p.HotkeyNumber,
@@ -267,5 +299,36 @@ public sealed class BackupService : IBackupService
             CreatedAt = p.CreatedAtUtc,
             UpdatedAt = p.UpdatedAtUtc,
         };
+    }
+
+    private static void ValidateDocument(BackupDocument document, RestoreMode mode)
+    {
+        if (document.Categories is null || document.Prompts is null)
+            throw new InvalidOperationException("Backup enthaelt keine gueltigen Kategorien-/Promptlisten.");
+
+        var categoryIds = new HashSet<Guid>();
+        foreach (CategoryDto category in document.Categories)
+        {
+            if (category.Id == Guid.Empty || !categoryIds.Add(category.Id))
+                throw new InvalidOperationException($"Backup enthaelt eine ungueltige oder doppelte Kategorie-ID: {category.Id}");
+        }
+
+        var promptIds = new HashSet<Guid>();
+        int activeAiPrompts = 0;
+        foreach (PromptDto prompt in document.Prompts)
+        {
+            if (prompt.Id == Guid.Empty || !promptIds.Add(prompt.Id))
+                throw new InvalidOperationException($"Backup enthaelt eine ungueltige oder doppelte Prompt-ID: {prompt.Id}");
+            if (mode == RestoreMode.Replace && !categoryIds.Contains(prompt.CategoryId))
+                throw new InvalidOperationException($"Prompt {prompt.Id} verweist auf eine fehlende Kategorie {prompt.CategoryId}.");
+            if (prompt.HotkeyNumber is < 1 or > 9)
+                throw new InvalidOperationException($"Prompt {prompt.Id} enthaelt einen ungueltigen Nummern-Hotkey.");
+            if (prompt.HotkeyLetter is char letter && char.ToUpperInvariant(letter) is < 'A' or > 'Z')
+                throw new InvalidOperationException($"Prompt {prompt.Id} enthaelt einen ungueltigen Buchstaben-Hotkey.");
+            if (prompt.IsAiImprovementPrompt && prompt.IsActiveForImprovement) activeAiPrompts++;
+        }
+
+        if (activeAiPrompts > 1)
+            throw new InvalidOperationException("Backup enthaelt mehrere gleichzeitig aktive KI-Verbesserungsprompts.");
     }
 }

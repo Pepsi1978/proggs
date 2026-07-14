@@ -33,7 +33,10 @@ public sealed class PromptRepository : IPromptRepository
         return await _db.Prompts
             .AsNoTracking()
             .Where(p => p.IsAlwaysOn)
-            .OrderBy(p => p.SortOrder)
+            .OrderBy(p => p.Category.SortOrder)
+            .ThenBy(p => p.Category.Name)
+            .ThenBy(p => p.SortOrder)
+            .ThenBy(p => p.Id)
             .ToListAsync(ct);
     }
 
@@ -54,7 +57,11 @@ public sealed class PromptRepository : IPromptRepository
 
     public async Task UpdateAsync(Prompt prompt, CancellationToken ct = default)
     {
-        _db.Prompts.Update(prompt);
+        Prompt? existing = await _db.Prompts.FirstOrDefaultAsync(p => p.Id == prompt.Id, ct);
+        if (existing is null) throw new InvalidOperationException($"Prompt {prompt.Id} existiert nicht.");
+        if ((existing is AiImprovementPrompt) != (prompt is AiImprovementPrompt))
+            throw new InvalidOperationException($"Prompt {prompt.Id} kann nicht ohne Restore den Typ wechseln.");
+        _db.Entry(existing).CurrentValues.SetValues(prompt);
         await _db.SaveChangesAsync(ct);
     }
 

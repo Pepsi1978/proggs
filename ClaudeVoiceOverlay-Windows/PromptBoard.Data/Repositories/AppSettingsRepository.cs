@@ -8,6 +8,7 @@ namespace PromptBoard.Data.Repositories;
 
 public sealed class AppSettingsRepository : IAppSettingsRepository
 {
+    private static readonly SemaphoreSlim CreationGate = new(1, 1);
     private readonly PromptBoardDbContext _db;
 
     public AppSettingsRepository(PromptBoardDbContext db)
@@ -17,16 +18,18 @@ public sealed class AppSettingsRepository : IAppSettingsRepository
 
     public async Task<AppSettings> GetAsync(CancellationToken ct = default)
     {
-        AppSettings? existing = await _db.AppSettings.FirstOrDefaultAsync(ct);
-        if (existing is not null)
+        await CreationGate.WaitAsync(ct);
+        try
         {
-            return existing;
-        }
+            AppSettings? existing = await _db.AppSettings.OrderBy(s => s.CreatedAt).FirstOrDefaultAsync(ct);
+            if (existing is not null) return existing;
 
-        AppSettings fresh = new();
-        _db.AppSettings.Add(fresh);
-        await _db.SaveChangesAsync(ct);
-        return fresh;
+            AppSettings fresh = new();
+            _db.AppSettings.Add(fresh);
+            await _db.SaveChangesAsync(ct);
+            return fresh;
+        }
+        finally { CreationGate.Release(); }
     }
 
     public async Task UpdateAsync(AppSettings settings, CancellationToken ct = default)

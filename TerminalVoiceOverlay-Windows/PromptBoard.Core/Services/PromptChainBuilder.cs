@@ -16,15 +16,15 @@ public sealed class PromptChainBuilder : IPromptChainBuilder
         foreach (PromptChainItem item in alwaysOn)
         {
             if (item is null) continue;
-            if (seen.Add(item.Id))
+            if (!string.IsNullOrWhiteSpace(item.Text) && seen.Add(item.Id))
             {
-                parts.Add(item.Text ?? string.Empty);
+                parts.Add(item.Text);
             }
         }
 
-        if (clicked is not null && seen.Add(clicked.Id))
+        if (clicked is not null && !string.IsNullOrWhiteSpace(clicked.Text) && seen.Add(clicked.Id))
         {
-            parts.Add(clicked.Text ?? string.Empty);
+            parts.Add(clicked.Text);
         }
 
         return string.Join(separator, parts);
