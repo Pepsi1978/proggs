@@ -22,6 +22,12 @@ public sealed class InstructionProfileService
         }
 
         EnsureOpenCodeProfiles(workDir);
+        if (string.Equals(profileId, "minimal", StringComparison.Ordinal))
+        {
+            // Minimal kennt nur EINE bearbeitbare Datei (im Repo, git-versioniert).
+            var minimalSource = EnsureOpenCodeMinimalSource();
+            return new InstructionProfileDocuments(minimalSource, ReadText(minimalSource), string.Empty, string.Empty);
+        }
         var paths = GetOpenCodeProfilePaths(profileId, workDir);
         return new InstructionProfileDocuments(
             paths.GlobalPath,
@@ -56,6 +62,12 @@ public sealed class InstructionProfileService
         }
 
         EnsureOpenCodeProfiles(workDir);
+        if (string.Equals(profileId, "minimal", StringComparison.Ordinal))
+        {
+            // Minimal: nur die eine Repo-Datei schreiben; kein projektspezifisches Dokument.
+            WriteText(EnsureOpenCodeMinimalSource(), globalText);
+            return;
+        }
         var paths = GetOpenCodeProfilePaths(profileId, workDir);
         WriteDocumentsAtomically(paths.GlobalPath, globalText, paths.ProjectPath, projectText);
     }
@@ -63,25 +75,51 @@ public sealed class InstructionProfileService
     public OpenCodeProfileSession PrepareOpenCodeSession(string profileId, string workDir)
     {
         EnsureOpenCodeProfiles(workDir);
-        var source = GetOpenCodeProfilePaths(profileId, workDir);
         var sessionRoot = Path.Combine(
             Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
             "OpenCodeLauncher", "sessions", Guid.NewGuid().ToString("N"));
         Directory.CreateDirectory(sessionRoot);
+        var configPath = Path.Combine(sessionRoot, "opencode-profile.json");
+        var jsonOptions = new JsonSerializerOptions { WriteIndented = true };
 
+        if (string.Equals(profileId, "minimal", StringComparison.Ordinal))
+        {
+            // Minimal laedt AUSSCHLIESSLICH die eine Minimal-Datei. Kein zweites Dokument, keine
+            // weiteren Regeln. Die zwangsweise von OpenCode gelesenen AGENTS.md (Projekt + global)
+            // werden beim Start ueber das Launch-Script fuer die Sessiondauer ausgeblendet.
+            var minimalSource = EnsureOpenCodeMinimalSource();
+            var minimalSnapshot = Path.Combine(sessionRoot, "minimal.md");
+            WriteText(minimalSnapshot, ReadText(minimalSource));
+
+            var minimalConfig = new Dictionary<string, object>
+            {
+                ["$schema"] = "https://opencode.ai/config.json",
+                ["instructions"] = new[] { minimalSnapshot }
+            };
+            WriteText(configPath, JsonSerializer.Serialize(minimalConfig, jsonOptions));
+            DeleteOldSessions(Path.GetDirectoryName(sessionRoot)!);
+
+            return new OpenCodeProfileSession(
+                profileId,
+                minimalSource,
+                string.Empty,
+                minimalSnapshot,
+                string.Empty,
+                configPath);
+        }
+
+        var source = GetOpenCodeProfilePaths(profileId, workDir);
         var globalSnapshot = Path.Combine(sessionRoot, "global.md");
         var projectSnapshot = Path.Combine(sessionRoot, "project.md");
         WriteText(globalSnapshot, ReadText(source.GlobalPath));
         WriteText(projectSnapshot, ReadText(source.ProjectPath));
 
-        var configPath = Path.Combine(sessionRoot, "opencode-profile.json");
         var config = new Dictionary<string, object>
         {
             ["$schema"] = "https://opencode.ai/config.json",
             ["instructions"] = new[] { globalSnapshot, projectSnapshot }
         };
-        var json = JsonSerializer.Serialize(config, new JsonSerializerOptions { WriteIndented = true });
-        WriteText(configPath, json);
+        WriteText(configPath, JsonSerializer.Serialize(config, jsonOptions));
         DeleteOldSessions(Path.GetDirectoryName(sessionRoot)!);
 
         return new OpenCodeProfileSession(
@@ -111,11 +149,9 @@ public sealed class InstructionProfileService
         CreateIfMissing(standard.GlobalPath, standardGlobal);
         CreateIfMissing(standard.ProjectPath, standardProject);
 
-        var minimal = GetOpenCodeProfilePaths("minimal", workDir);
-        CreateIfMissing(minimal.GlobalPath,
-            "# OpenCode-Profil: Minimal\n\nArbeite selbstständig am konkreten Benutzerauftrag. Prüfe Dateien und Projektzustand mit Werkzeugen, statt zu raten.\n");
-        CreateIfMissing(minimal.ProjectPath,
-            "# Projektprofil: Minimal\n\nBeschränke Änderungen auf den Benutzerauftrag und erhalte bestehende Funktionalität.\n");
+        // Minimal hat nur EINE Quelle (git-versioniert im Repo). Kein AppData-Snapshot,
+        // damit nichts Zusaetzliches mitgeladen werden kann.
+        EnsureOpenCodeMinimalSource();
 
         var strict = GetOpenCodeProfilePaths("strict", workDir);
         CreateIfMissing(strict.GlobalPath, standardGlobal
@@ -152,6 +188,26 @@ public sealed class InstructionProfileService
     {
         var home = Environment.GetFolderPath(Environment.SpecialFolder.UserProfile);
         return Path.Combine(home, "proggs", "OpenCodeLauncher", "Profiles", "ClaudeCode", "minimal");
+    }
+
+    /// <summary>
+    /// Einzige Quelldatei des OpenCode-Minimalprofils. Liegt bewusst IM Repo neben den anderen
+    /// OpenCode-Profilen (~/proggs/OpenCodeLauncher/Profiles/OpenCode/minimal/minimal.md), damit
+    /// sie git-versioniert und auf allen Rechnern identisch ist. Das Minimalprofil laedt
+    /// AUSSCHLIESSLICH den Inhalt dieser Datei als Kontext.
+    /// </summary>
+    public static string ResolveOpenCodeMinimalSourcePath()
+    {
+        var home = Environment.GetFolderPath(Environment.SpecialFolder.UserProfile);
+        return Path.Combine(home, "proggs", "OpenCodeLauncher", "Profiles", "OpenCode", "minimal", "minimal.md");
+    }
+
+    private static string EnsureOpenCodeMinimalSource()
+    {
+        var path = ResolveOpenCodeMinimalSourcePath();
+        CreateIfMissing(path,
+            "# OpenCode-Profil: Minimal\n\nArbeite selbstständig am konkreten Benutzerauftrag. Prüfe Dateien und Projektzustand mit Werkzeugen, statt zu raten. Beschränke Änderungen auf den Auftrag und erhalte bestehende Funktionalität.\n");
+        return path;
     }
 
     private static InstructionProfileDocuments LoadClaudeMinimal()

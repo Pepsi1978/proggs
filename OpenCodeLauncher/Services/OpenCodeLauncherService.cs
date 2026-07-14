@@ -122,7 +122,7 @@ public sealed class OpenCodeLauncherService
     }
 
     /// <summary>Startet opencode in einem neuen Windows-Terminal-Fenster.</summary>
-    public void Launch(string modelString, string workDir, string? thinkingLevel, string profileConfigPath)
+    public void Launch(string modelString, string workDir, string? thinkingLevel, string profileConfigPath, bool minimalIsolation = false)
     {
         var log = Logger.Instance;
         thinkingLevel = NormalizeThinkingLevel(thinkingLevel);
@@ -142,7 +142,7 @@ public sealed class OpenCodeLauncherService
             // Fehler-Fenster (Teil danach), bis der Konsolen-Fallback ohne wt greift. Ein
             // -File-Script hat kein ';' in der wt-Argumentliste und ist immun (gleiche Technik
             // wie der bereits funktionierende Claude-Code-Weg).
-            var innerScript = BuildOpenCodeStartScript(modelString, workDir, thinkingLevel, profileConfigPath);
+            var innerScript = BuildOpenCodeStartScript(modelString, workDir, thinkingLevel, profileConfigPath, minimalIsolation);
             var shell = ResolvePowerShellExecutable();
             var robustLauncherScript = shell.IsPwsh ? ResolveRobustLauncherScript() : null;
 
@@ -595,6 +595,55 @@ try {
     private static string PowerShellLiteral(string value) => $"'{EscapePowerShellSingleQuotedValue(value)}'";
 
     /// <summary>
+    /// PowerShell-Block fuer das Minimalprofil: blendet die von OpenCode zwangsweise gelesenen
+    /// AGENTS.md (Projekt im Arbeitsverzeichnis + globale ~/.config/opencode/AGENTS.md) fuer die
+    /// Dauer der Session aus. Die globale wird durch eine leere Datei ersetzt, damit ein evtl.
+    /// vorhandener `instructions`-Verweis in der globalen opencode.jsonc keinen fehlenden Pfad
+    /// referenziert. Restore-AgentsFiles (im finally) stellt beide wieder her; bricht die Session
+    /// hart ab, heilt der naechste Start das haengengebliebene Backup selbst.
+    /// </summary>
+    private static string BuildMinimalHideBlock(string workDir)
+    {
+        var projectAgents = PowerShellLiteral(Path.Combine(workDir, "AGENTS.md"));
+        const string template = """
+# --- Minimalprofil: ausschliesslich die Minimal-Datei als Kontext ---
+$script:MiniHidden = @()
+function Hide-AgentsFile([string]$Path, [bool]$ReplaceEmpty) {
+    $bak = "$Path.opencode-minimal-hidden"
+    if ((Test-Path -LiteralPath $bak) -and -not (Test-Path -LiteralPath $Path)) {
+        try { Move-Item -LiteralPath $bak -Destination $Path -Force } catch {}
+    }
+    if (Test-Path -LiteralPath $Path) {
+        if (Test-Path -LiteralPath $bak) { return }
+        try {
+            Move-Item -LiteralPath $Path -Destination $bak -Force
+            if ($ReplaceEmpty) { [System.IO.File]::WriteAllText($Path, '') }
+            $script:MiniHidden += ,@($Path, $bak, $ReplaceEmpty)
+        } catch {
+            Write-Host ('[Minimal] AGENTS.md konnte nicht ausgeblendet werden: ' + $_.Exception.Message) -ForegroundColor DarkYellow
+        }
+    }
+}
+function Restore-AgentsFiles {
+    foreach ($e in $script:MiniHidden) {
+        try {
+            $p = $e[0]; $bak = $e[1]; $empty = $e[2]
+            if ($empty -and (Test-Path -LiteralPath $p) -and ((Get-Item -LiteralPath $p).Length -eq 0)) {
+                Remove-Item -LiteralPath $p -Force
+            }
+            if ((Test-Path -LiteralPath $bak) -and -not (Test-Path -LiteralPath $p)) {
+                Move-Item -LiteralPath $bak -Destination $p -Force
+            }
+        } catch {}
+    }
+}
+Hide-AgentsFile __PROJECT_AGENTS__ $false
+Hide-AgentsFile (Join-Path $env:USERPROFILE '.config\opencode\AGENTS.md') $true
+""";
+        return template.Replace("__PROJECT_AGENTS__", projectAgents, StringComparison.Ordinal);
+    }
+
+    /// <summary>
     /// Schreibt ein Temp-Script, das die Profil-Config setzt und opencode startet, und gibt
     /// dessen Pfad zurück. Bewusst ein -File-Script statt eines inline "-Command"-Strings:
     /// Der Command enthielte das Semikolon aus "$env:OPENCODE_CONFIG='...'; & opencode ...",
@@ -604,7 +653,7 @@ try {
     /// wt-Argumentliste und ist damit immun — dieselbe Technik wie der Claude-Code-Weg.
     /// $env:OPENCODE_CONFIG und der opencode-Aufruf stehen auf getrennten Zeilen (kein ';').
     /// </summary>
-    private static string BuildOpenCodeStartScript(string modelString, string workDir, string? thinkingLevel, string profileConfigPath)
+    private static string BuildOpenCodeStartScript(string modelString, string workDir, string? thinkingLevel, string profileConfigPath, bool minimalIsolation)
     {
         thinkingLevel = NormalizeThinkingLevel(thinkingLevel);
         var executable = ResolveOpenCodeExecutable();
@@ -615,6 +664,13 @@ try {
         // variant state. A second process-local --variant override competes with Ctrl+T,
         // which must remain the single owner of in-session variant changes.
         var openCodeInvocation = $"{invoke} -m '{EscapePowerShellSingleQuotedValue(modelString)}'";
+
+        // Minimalprofil: OpenCode liest Projekt- und globale AGENTS.md ZWANGSWEISE ein (kein
+        // Abschalt-Flag existiert). Damit wirklich nur die Minimal-Datei (via OPENCODE_CONFIG
+        // instructions) als Kontext greift, blenden wir diese beiden Dateien fuer die Dauer der
+        // Session aus und stellen sie im finally wieder her (mit Self-Heal beim naechsten Start).
+        var hideBlock = minimalIsolation ? BuildMinimalHideBlock(workDir) : string.Empty;
+        var restoreCall = minimalIsolation ? "Restore-AgentsFiles" : string.Empty;
 
         var tempScript = Path.Combine(Path.GetTempPath(), $"opencode-launcher-opencode-run-{Guid.NewGuid():N}.ps1");
         // stderr MUST be redirected to a per-process file: unhandled Bun/Effect errors in the
@@ -627,6 +683,7 @@ try {
 $ErrorActionPreference = 'Continue'
 Set-Location -LiteralPath {{PowerShellLiteral(workDir)}}
 $env:OPENCODE_CONFIG = {{PowerShellLiteral(profileConfigPath)}}
+{{hideBlock}}
 $stderrDir = Join-Path $env:USERPROFILE '.local\share\opencode\log\stderr'
 try {
     New-Item -ItemType Directory -Force -Path $stderrDir | Out-Null
@@ -648,6 +705,7 @@ $stderrLog = Join-Path $stderrDir ('opencode-stderr-{0:yyyyMMdd-HHmmss}-{1}.log'
 try {
     {{openCodeInvocation}} 2>>$stderrLog
 } finally {
+    {{restoreCall}}
     try {
         if (Test-Path -LiteralPath $stderrLog) {
             if ((Get-Item -LiteralPath $stderrLog).Length -eq 0) {

@@ -55,8 +55,8 @@ public sealed partial class MainViewModel : ObservableObject
         WorkDir = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), "proggs");
         _ = CheckOpenCodeUpdateAsync();
 
-        var version = Assembly.GetExecutingAssembly().GetName().Version?.ToString(3) ?? "1.17.10";
-        Version = $"Version {version} (14.07.2026, 12.10 Uhr)";
+        var version = Assembly.GetExecutingAssembly().GetName().Version?.ToString(3) ?? "1.17.11";
+        Version = $"Version {version} (14.07.2026, 21.04 Uhr)";
     }
 
     public ObservableCollection<ModelGroupEntry> ModelGroups { get; } = new();
@@ -446,7 +446,8 @@ public sealed partial class MainViewModel : ObservableObject
 
             var profileSession = _profiles.PrepareOpenCodeSession(SelectedProfile.Id, WorkDir);
             var modelString = _launcher.ConfigureProvider(SelectedModel, SelectedProvider, Providers, thinkingLevel);
-            _launcher.Launch(modelString, WorkDir, thinkingLevel, profileSession.ConfigPath);
+            var minimalIsolation = string.Equals(SelectedProfile.Id, "minimal", StringComparison.Ordinal);
+            _launcher.Launch(modelString, WorkDir, thinkingLevel, profileSession.ConfigPath, minimalIsolation);
             Logger.Instance.Info("MainViewModel", "Start", "OpenCode-Profilsnapshot erstellt", new
             {
                 profileSession.ProfileId,
@@ -532,8 +533,8 @@ public sealed partial class MainViewModel : ObservableObject
         try
         {
             var documents = _profiles.LoadProfile(isClaudeCode, SelectedProfile.Id, WorkDir);
-            // Claude-Minimal hat nur die eine globale CLAUDE.md -> Editor zeigt nur den GLOBAL-Bereich.
-            var singleDocument = isClaudeCode && string.Equals(SelectedProfile.Id, "minimal", StringComparison.Ordinal);
+            // Minimal (Claude wie OpenCode) hat nur EINE Datei -> Editor zeigt nur den GLOBAL-Bereich.
+            var singleDocument = string.Equals(SelectedProfile.Id, "minimal", StringComparison.Ordinal);
             var editor = new ProfileEditorWindow(documents, isClaudeCode, SelectedProfile.DisplayName, singleDocument)
             {
                 Owner = Application.Current.MainWindow
