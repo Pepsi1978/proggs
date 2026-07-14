@@ -55,8 +55,8 @@ public sealed partial class MainViewModel : ObservableObject
         WorkDir = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), "proggs");
         _ = CheckOpenCodeUpdateAsync();
 
-        var version = Assembly.GetExecutingAssembly().GetName().Version?.ToString(3) ?? "1.17.4";
-        Version = $"Version {version} (14.07.2026, 11.10 Uhr)";
+        var version = Assembly.GetExecutingAssembly().GetName().Version?.ToString(3) ?? "1.17.5";
+        Version = $"Version {version} (14.07.2026, 11.20 Uhr)";
     }
 
     public ObservableCollection<ModelGroupEntry> ModelGroups { get; } = new();
@@ -109,6 +109,7 @@ public sealed partial class MainViewModel : ObservableObject
     private async Task LoadThinkingOptionsAsync(ModelEntry model)
     {
         _thinkingCts?.Cancel();
+        _thinkingCts?.Dispose();
         _thinkingCts = new CancellationTokenSource();
         var ct = _thinkingCts.Token;
 
@@ -230,6 +231,7 @@ public sealed partial class MainViewModel : ObservableObject
     private async Task LoadProvidersAsync(ModelEntry model)
     {
         _loadCts?.Cancel();
+        _loadCts?.Dispose();
         _loadCts = new CancellationTokenSource();
         var ct = _loadCts.Token;
         IsLoading = true;
@@ -238,7 +240,6 @@ public sealed partial class MainViewModel : ObservableObject
         {
             if (!string.Equals(model.ProviderId, "openrouter", StringComparison.OrdinalIgnoreCase))
             {
-                Providers.Clear();
                 var direct = new ProviderEntry
                 {
                     ProviderName = model.ProviderName,
@@ -247,6 +248,11 @@ public sealed partial class MainViewModel : ObservableObject
                     Status = 0
                 };
                 await EnrichDirectProviderAsync(model, direct, ct);
+                // Nach dem await prüfen, ob dieser Ladevorgang schon abgelöst wurde (schneller
+                // Modellwechsel): sonst schreibt eine späte Antwort die Provider des falschen
+                // Modells und Start würde mit falschem Provider konfigurieren.
+                if (ct.IsCancellationRequested) return;
+                Providers.Clear();
                 Providers.Add(direct);
                 SelectedProvider = direct;
                 StatusText = $"{model.DisplayName} über {model.ProviderName} bereit.";
@@ -254,6 +260,7 @@ public sealed partial class MainViewModel : ObservableObject
             }
 
             var (displayName, providers) = await _router.GetProvidersAsync(model.Slug, ct);
+            if (ct.IsCancellationRequested) return;
             if (!string.IsNullOrWhiteSpace(displayName) && displayName != model.DisplayName)
             {
                 // Anzeigename aus API übernehmen, falls Liste ihn noch als Slug zeigt.

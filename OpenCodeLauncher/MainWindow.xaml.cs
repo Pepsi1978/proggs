@@ -216,7 +216,9 @@ public partial class MainWindow : Window
 
     private void RestoreWindowLayout()
     {
-        if (_layoutSettings.WindowLeft < 0 || _layoutSettings.WindowTop < 0) return;
+        // NaN-Sentinel = noch nie gespeichert. Echte negative Koordinaten (linker/oberer Monitor)
+        // sind gültig und werden weiter unten geclamped.
+        if (double.IsNaN(_layoutSettings.WindowLeft) || double.IsNaN(_layoutSettings.WindowTop)) return;
 
         WindowStartupLocation = WindowStartupLocation.Manual;
         Width = Math.Max(_layoutSettings.WindowWidth, MinWidth);
@@ -520,6 +522,10 @@ public partial class MainWindow : Window
 
     private void ModelList_Drop(object sender, DragEventArgs e)
     {
+        // Nur echte Modell-Drags verarbeiten. Ohne diese Typprüfung würde ein Gruppen-Drag, das über
+        // einer Modell-Liste losgelassen wird, den noch vom letzten Modell-Klick stammenden
+        // _dragSourceIndex verwenden und fälschlich ein Modell der falschen Gruppe verschieben.
+        if (!e.Data.GetDataPresent(typeof(OpenCodeLauncher.Models.ModelEntry))) return;
         if (_dragSourceGroup == null || _dragSourceIndex < 0) return;
         var lb = sender as System.Windows.Controls.ListBox;
         var targetGroup = lb?.DataContext as OpenCodeLauncher.Models.ModelGroupEntry;

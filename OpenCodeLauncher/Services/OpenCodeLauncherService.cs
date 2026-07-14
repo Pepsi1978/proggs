@@ -278,7 +278,7 @@ public sealed class OpenCodeLauncherService
             var candidate = Path.Combine(local, "Microsoft", "WindowsApps", "wt.exe");
             if (File.Exists(candidate)) return candidate;
 
-            var p = Process.Start(new ProcessStartInfo("where.exe", "wt") { UseShellExecute = false, CreateNoWindow = true, RedirectStandardOutput = true });
+            using var p = Process.Start(new ProcessStartInfo("where.exe", "wt") { UseShellExecute = false, CreateNoWindow = true, RedirectStandardOutput = true });
             if (p != null && p.WaitForExit(2000))
             {
                 var line = p.StandardOutput.ReadLine();
@@ -297,7 +297,7 @@ public sealed class OpenCodeLauncherService
 
         try
         {
-            var p = Process.Start(new ProcessStartInfo("where.exe", "pwsh.exe") { UseShellExecute = false, CreateNoWindow = true, RedirectStandardOutput = true });
+            using var p = Process.Start(new ProcessStartInfo("where.exe", "pwsh.exe") { UseShellExecute = false, CreateNoWindow = true, RedirectStandardOutput = true });
             if (p != null && p.WaitForExit(2000))
             {
                 var line = p.StandardOutput.ReadLine();

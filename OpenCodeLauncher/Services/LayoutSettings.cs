@@ -1,5 +1,6 @@
 using System.IO;
 using System.Text.Json;
+using System.Text.Json.Serialization;
 using System.Text.Json.Serialization.Metadata;
 
 namespace OpenCodeLauncher.Services;
@@ -22,13 +23,18 @@ public sealed class LayoutSettings
     private static readonly JsonSerializerOptions JsonOpts = new()
     {
         WriteIndented = true,
+        // NaN als "noch nie gespeichert"-Sentinel muss serialisierbar sein.
+        NumberHandling = JsonNumberHandling.AllowNamedFloatingPointLiterals,
         TypeInfoResolver = new DefaultJsonTypeInfoResolver()
     };
 
     public double ModelPaneWidth { get; set; } = DefaultModelPaneWidth;
 
-    public double WindowLeft { get; set; } = -1;
-    public double WindowTop { get; set; } = -1;
+    // NaN = noch nie gespeichert. Ein numerischer Sentinel wie -1 kollidiert mit echten negativen
+    // Fensterkoordinaten (Monitor links/oberhalb des Primärmonitors) und würde deren Wiederherstellung
+    // verhindern.
+    public double WindowLeft { get; set; } = double.NaN;
+    public double WindowTop { get; set; } = double.NaN;
     public double WindowWidth { get; set; } = DefaultWindowWidth;
     public double WindowHeight { get; set; } = DefaultWindowHeight;
     public string WindowState { get; set; } = "Normal";
