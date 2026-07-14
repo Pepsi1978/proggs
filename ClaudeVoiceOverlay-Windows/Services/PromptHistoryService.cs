@@ -387,7 +387,27 @@ public sealed class PromptHistoryService
         string oldContent = File.Exists(targetFile)
             ? File.ReadAllText(targetFile, Encoding.UTF8)
             : string.Empty;
-        File.WriteAllText(targetFile, newBlock + oldContent, Encoding.UTF8);
+        string tmp = $"{targetFile}.{Guid.NewGuid():N}.tmp";
+        try
+        {
+            using (var stream = new FileStream(tmp, FileMode.CreateNew, FileAccess.Write, FileShare.None))
+            using (var writer = new StreamWriter(stream, Encoding.UTF8))
+            {
+                writer.Write(newBlock);
+                writer.Write(oldContent);
+                writer.Flush();
+                stream.Flush(flushToDisk: true);
+            }
+
+            if (File.Exists(targetFile))
+                File.Replace(tmp, targetFile, destinationBackupFileName: null);
+            else
+                File.Move(tmp, targetFile);
+        }
+        finally
+        {
+            TryDeleteTemporaryFile(tmp);
+        }
     }
 
     private static int CountEntriesInArchive(string path)
