@@ -504,7 +504,7 @@ Der zu verarbeitende Whisper-Text folgt nun:
 
         private async Task<string> SendWithRetry(string prompt, int attempt)
         {
-            var url = $"https://generativelanguage.googleapis.com/v1beta/models/{_model}:generateContent?key={_apiKey}";
+            var url = $"https://generativelanguage.googleapis.com/v1beta/models/{_model}:generateContent";
 
             var payload = new
             {
@@ -520,13 +520,24 @@ Der zu verarbeitende Whisper-Text folgt nun:
             };
 
             var json = JsonSerializer.Serialize(payload);
-            using var content = new StringContent(json, Encoding.UTF8, "application/json");
-            var response = await SharedHttp.PostAsync(url, content);
-            var statusCode = (int)response.StatusCode;
-
-            if (response.IsSuccessStatusCode)
+            using var request = new HttpRequestMessage(HttpMethod.Post, url)
             {
-                var body = await response.Content.ReadAsStringAsync();
+                Content = new StringContent(json, Encoding.UTF8, "application/json")
+            };
+            request.Headers.Add("x-goog-api-key", _apiKey);
+
+            int statusCode;
+            bool isSuccessStatusCode;
+            string body;
+            using (var response = await SharedHttp.SendAsync(request))
+            {
+                statusCode = (int)response.StatusCode;
+                isSuccessStatusCode = response.IsSuccessStatusCode;
+                body = await response.Content.ReadAsStringAsync();
+            }
+
+            if (isSuccessStatusCode)
+            {
                 return ExtractText(body);
             }
 
@@ -537,8 +548,7 @@ Der zu verarbeitende Whisper-Text folgt nun:
                 return await SendWithRetry(prompt, attempt + 1);
             }
 
-            var errorBody = await response.Content.ReadAsStringAsync();
-            throw new Exception($"Gemini API Fehler {statusCode}: {errorBody}");
+            throw new Exception($"Gemini API Fehler {statusCode}: {body}");
         }
 
         private static string ExtractText(string responseJson)
@@ -546,26 +556,54 @@ Der zu verarbeitende Whisper-Text folgt nun:
             using var doc = JsonDocument.Parse(responseJson);
             var root = doc.RootElement;
 
+            if (root.TryGetProperty("promptFeedback", out var promptFeedback) &&
+                promptFeedback.TryGetProperty("blockReason", out var blockReasonElement) &&
+                blockReasonElement.ValueKind == JsonValueKind.String)
+            {
+                var blockReason = blockReasonElement.GetString();
+                if (!string.IsNullOrWhiteSpace(blockReason) &&
+                    !string.Equals(blockReason, "BLOCK_REASON_UNSPECIFIED", StringComparison.Ordinal))
+                {
+                    var message = promptFeedback.TryGetProperty("blockReasonMessage", out var messageElement) &&
+                                  messageElement.ValueKind == JsonValueKind.String
+                        ? $": {messageElement.GetString()}"
+                        : string.Empty;
+                    throw new Exception($"Gemini blockierte den Prompt ({blockReason}){message}");
+                }
+            }
+
             if (!root.TryGetProperty("candidates", out var candidates) ||
                 candidates.GetArrayLength() == 0)
                 throw new Exception("Unerwartete Gemini-Antwort: keine Kandidaten");
 
-            var content = candidates[0].GetProperty("content");
+            var candidate = candidates[0];
+            if (!candidate.TryGetProperty("finishReason", out var finishReasonElement) ||
+                finishReasonElement.ValueKind != JsonValueKind.String)
+                throw new Exception("Unerwartete Gemini-Antwort: finishReason fehlt");
+
+            var finishReason = finishReasonElement.GetString();
+            if (!string.Equals(finishReason, "STOP", StringComparison.Ordinal))
+                throw new Exception($"Unvollständige Gemini-Antwort (finishReason: {finishReason})");
+
+            var content = candidate.GetProperty("content");
             var parts = content.GetProperty("parts");
+            var result = new StringBuilder();
 
             foreach (var part in parts.EnumerateArray())
             {
                 // Skip thinking parts
-                if (part.TryGetProperty("thought", out var thought) && thought.GetBoolean())
+                if (part.TryGetProperty("thought", out var thought) &&
+                    thought.ValueKind == JsonValueKind.True)
                     continue;
 
-                if (part.TryGetProperty("text", out var textElem))
-                {
-                    var text = textElem.GetString()?.Trim();
-                    if (!string.IsNullOrEmpty(text))
-                        return text;
-                }
+                if (part.TryGetProperty("text", out var textElem) &&
+                    textElem.ValueKind == JsonValueKind.String)
+                    result.Append(textElem.GetString());
             }
+
+            var text = result.ToString().Trim();
+            if (!string.IsNullOrEmpty(text))
+                return text;
 
             throw new Exception("Kein Text in Gemini-Antwort");
         }

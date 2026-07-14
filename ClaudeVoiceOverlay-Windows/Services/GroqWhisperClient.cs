@@ -1,6 +1,5 @@
 using System;
 using System.Collections.Generic;
-using System.Diagnostics;
 using System.IO;
 using System.Net.Http;
 using System.Net.Http.Headers;
@@ -17,6 +16,7 @@ namespace ClaudeVoiceOverlay.Services
         private readonly string _model;
         private readonly string _language;
         private readonly string _url;
+        private const int TransportTimeoutSeconds = 75;
 
         // Statischer geteilter HttpClient. In dieser App wird der GroqWhisperClient
         // aktuell pro Process nur einmal gebaut, daher ist Socket-Exhaustion
@@ -28,7 +28,7 @@ namespace ClaudeVoiceOverlay.Services
         // gesetzt (nicht am Client), daher kein Konflikt bei Sharing.
         private static readonly HttpClient SharedHttp = new HttpClient
         {
-            Timeout = TimeSpan.FromSeconds(180)
+            Timeout = TimeSpan.FromSeconds(TransportTimeoutSeconds)
         };
         private static readonly int[] RetryableStatusCodes = { 429, 500, 503 };
         private const int MaxRetries = 3;
@@ -150,19 +150,26 @@ namespace ClaudeVoiceOverlay.Services
             };
             request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", _apiKey);
 
-            var response = await SharedHttp.SendAsync(request);
-            var statusCode = (int)response.StatusCode;
-
-            if (response.IsSuccessStatusCode)
+            using var timeoutCts = new System.Threading.CancellationTokenSource(TimeSpan.FromSeconds(TransportTimeoutSeconds));
+            int statusCode;
+            bool isSuccessStatusCode;
+            string responseBody;
+            using (var response = await SharedHttp.SendAsync(request, HttpCompletionOption.ResponseHeadersRead, timeoutCts.Token))
             {
-                var json = await response.Content.ReadAsStringAsync();
+                statusCode = (int)response.StatusCode;
+                isSuccessStatusCode = response.IsSuccessStatusCode;
+                responseBody = await response.Content.ReadAsStringAsync(timeoutCts.Token);
+            }
+
+            if (isSuccessStatusCode)
+            {
                 // Schicht 3: Voiced-Timeline aus dem aufgenommenen PCM bauen (16-bit mono WAV), damit
                 // FilterTranscription jedes Segment gegen die echte Lautstaerke abgleichen kann.
                 bool[]? voiced = BuildVoicedTimeline(fileBytes);
                 // Confidence-Gate (Schicht 2) + Audio-Abgleich (Schicht 3) anwenden. Bleibt Text uebrig
                 // -> zurueck. Alles Stille/halluziniert -> leer: wie bisher die "leere Antwort"
                 // (gleiche Exception, gleicher Aufrufer-catch) — funktionserhaltend.
-                var text = FilterTranscription(json, voiced);
+                var text = FilterTranscription(responseBody, voiced);
                 if (!string.IsNullOrEmpty(text))
                     return text;
                 throw new Exception("Leere Antwort von Groq");
@@ -175,8 +182,7 @@ namespace ClaudeVoiceOverlay.Services
                 return await TranscribeWithRetry(fileBytes, attempt + 1);
             }
 
-            var errorBody = await response.Content.ReadAsStringAsync();
-            throw new Exception($"Groq API Fehler {statusCode}: {errorBody}");
+            throw new Exception($"Groq API Fehler {statusCode}: {responseBody}");
         }
 
         /// <summary>

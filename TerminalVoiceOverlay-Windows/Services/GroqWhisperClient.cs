@@ -18,6 +18,13 @@ namespace TerminalVoiceOverlay.Services
         private readonly string _language;
         private readonly string _url;
         private static readonly bool PreferCurlTransport = OperatingSystem.IsWindows();
+        private const int TransportTimeoutSeconds = 75;
+
+        private sealed class CurlStartException : Exception
+        {
+            public CurlStartException(string message, Exception? innerException = null)
+                : base(message, innerException) { }
+        }
 
         // Statischer geteilter HttpClient. In dieser App wird der GroqWhisperClient
         // aktuell pro Process nur einmal gebaut, daher ist Socket-Exhaustion
@@ -36,7 +43,7 @@ namespace TerminalVoiceOverlay.Services
             // Ein 20-s-Timeout machte die App zwar schnell wieder gelb, verlor
             // aber jede Aufnahme. 75 s laesst den Text noch ankommen; die
             // Latenz-Sonden zeigen trotzdem exakt, ob Groq der Flaschenhals ist.
-            Timeout = TimeSpan.FromSeconds(75)
+            Timeout = TimeSpan.FromSeconds(TransportTimeoutSeconds)
         };
         private static readonly int[] RetryableStatusCodes = { 429, 500, 503 };
         private const int MaxRetries = 0;
@@ -166,7 +173,7 @@ namespace TerminalVoiceOverlay.Services
                         return text;
                     throw new Exception("Leere Antwort von Groq");
                 }
-                catch (Exception ex)
+                catch (CurlStartException ex)
                 {
                     // Funktionserhaltend: curl.exe ist auf Franks Windows-Rechner
                     // der schnelle Standardtransport. Wenn curl fehlt oder lokal
@@ -202,7 +209,15 @@ namespace TerminalVoiceOverlay.Services
 
                 var curlSw = Stopwatch.StartNew();
                 DiagLog.Write("Groq", "http_start", ("attempt", 0), ("bytes", fileBytes.Length), ("url", _url), ("transport", "curl"));
-                process.Start();
+                try
+                {
+                    if (!process.Start())
+                        throw new CurlStartException("curl.exe konnte nicht gestartet werden");
+                }
+                catch (System.ComponentModel.Win32Exception ex)
+                {
+                    throw new CurlStartException("curl.exe konnte nicht gestartet oder gefunden werden", ex);
+                }
                 await process.StandardInput.WriteAsync(BuildCurlConfig(wavPath)).ConfigureAwait(false);
                 process.StandardInput.Close();
                 string stdout = await process.StandardOutput.ReadToEndAsync().ConfigureAwait(false);
@@ -215,7 +230,12 @@ namespace TerminalVoiceOverlay.Services
                     ("exit", process.ExitCode));
 
                 if (process.ExitCode != 0)
-                    throw new Exception($"curl.exe Groq request failed (exit {process.ExitCode}): {Truncate(stderr, 500)}");
+                {
+                    var details = string.IsNullOrWhiteSpace(stdout)
+                        ? Truncate(stderr, 500)
+                        : $"{Truncate(stderr, 500)} Response: {Truncate(stdout, 500)}";
+                    throw new Exception($"curl.exe Groq request failed (exit {process.ExitCode}): {details}");
+                }
                 if (string.IsNullOrWhiteSpace(stdout))
                     throw new Exception("curl.exe Groq request returned an empty body");
                 return stdout;
@@ -240,7 +260,7 @@ namespace TerminalVoiceOverlay.Services
             sb.Append("silent\n");
             sb.Append("show-error\n");
             sb.Append("fail-with-body\n");
-            sb.Append("max-time = 15\n");
+            sb.Append("max-time = ").Append(TransportTimeoutSeconds).Append('\n');
             return sb.ToString();
         }
 
@@ -256,7 +276,10 @@ namespace TerminalVoiceOverlay.Services
                 if (!string.IsNullOrEmpty(path) && File.Exists(path))
                     File.Delete(path);
             }
-            catch { /* Temp cleanup must not break transcription. */ }
+            catch (Exception ex)
+            {
+                DiagLog.Warn("Groq", "temp_delete_failed", ("path", path), ("error", ex.Message));
+            }
         }
 
         private async Task<string> TranscribeWithHttpClientAsync(byte[] fileBytes, int attempt)
@@ -290,24 +313,33 @@ namespace TerminalVoiceOverlay.Services
             // ResponseContentRead puffert die komplette Antwort vor Rueckgabe.
             // Auf Franks Windows-Rechner hing genau dieser Pfad bei Groq/Cloudflare
             // konstant ca. 42,5 s, obwohl Header + Body sofort verfuegbar waren.
-            var response = await SharedHttp.SendAsync(request, HttpCompletionOption.ResponseHeadersRead).ConfigureAwait(false);
-            var statusCode = (int)response.StatusCode;
+            using var timeoutCts = new System.Threading.CancellationTokenSource(TimeSpan.FromSeconds(TransportTimeoutSeconds));
+            int statusCode;
+            bool isSuccessStatusCode;
+            string responseBody;
+            string retryAfter;
+            using (var response = await SharedHttp.SendAsync(request, HttpCompletionOption.ResponseHeadersRead, timeoutCts.Token).ConfigureAwait(false))
+            {
+                statusCode = (int)response.StatusCode;
+                isSuccessStatusCode = response.IsSuccessStatusCode;
+                retryAfter = response.Headers.RetryAfter?.ToString() ?? "";
+                responseBody = await response.Content.ReadAsStringAsync(timeoutCts.Token).ConfigureAwait(false);
+            }
             DiagLog.Perf("Groq", "http_response", httpSw,
                 ("attempt", attempt),
                 ("status", statusCode),
-                ("retryAfter", response.Headers.RetryAfter?.ToString() ?? ""));
+                ("retryAfter", retryAfter));
 
-            if (response.IsSuccessStatusCode)
+            if (isSuccessStatusCode)
             {
-                var json = await response.Content.ReadAsStringAsync().ConfigureAwait(false);
                 // Schicht 3: Voiced-Timeline aus dem aufgenommenen PCM bauen (16-bit mono WAV), damit
                 // FilterTranscription jedes Segment gegen die echte Lautstaerke abgleichen kann.
                 bool[]? voiced = BuildVoicedTimeline(fileBytes);
                 // Confidence-Gate (Schicht 2) + Audio-Abgleich (Schicht 3) anwenden. Bleibt Text uebrig
                 // -> zurueck. Alles Stille/halluziniert -> leer: wie bisher die "leere Antwort"
                 // (gleiche Exception, gleicher Aufrufer-catch) — funktionserhaltend.
-                var text = FilterTranscription(json, voiced);
-                DiagLog.Write("Groq", "filter_done", ("jsonChars", json.Length), ("textChars", text.Length));
+                var text = FilterTranscription(responseBody, voiced);
+                DiagLog.Write("Groq", "filter_done", ("jsonChars", responseBody.Length), ("textChars", text.Length));
                 if (!string.IsNullOrEmpty(text))
                     return text;
                 throw new Exception("Leere Antwort von Groq");
@@ -321,9 +353,8 @@ namespace TerminalVoiceOverlay.Services
                 return await TranscribeWithRetry(fileBytes, attempt + 1).ConfigureAwait(false);
             }
 
-            var errorBody = await response.Content.ReadAsStringAsync().ConfigureAwait(false);
-            DiagLog.Warn("Groq", "http_error", ("status", statusCode), ("body", Truncate(errorBody, 500)));
-            throw new Exception($"Groq API Fehler {statusCode}: {errorBody}");
+            DiagLog.Warn("Groq", "http_error", ("status", statusCode), ("body", Truncate(responseBody, 500)));
+            throw new Exception($"Groq API Fehler {statusCode}: {responseBody}");
         }
 
         private static string Truncate(string value, int maxChars)
