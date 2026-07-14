@@ -67,7 +67,11 @@ public sealed class LayoutSettings
             ModelPaneWidth = Clamp(ModelPaneWidth);
             NormalizeWindowBounds();
             Directory.CreateDirectory(Dir);
-            File.WriteAllText(FilePath, JsonSerializer.Serialize(this, JsonOpts));
+            // Atomar schreiben (Temp + Move) — konsistent mit dem übrigen Persistenz-Code und robust
+            // gegen einen Absturz mitten im (häufigen, debounce-getriggerten) Schreiben.
+            var tmp = FilePath + ".tmp";
+            File.WriteAllText(tmp, JsonSerializer.Serialize(this, JsonOpts));
+            File.Move(tmp, FilePath, overwrite: true);
         }
         catch (Exception ex)
         {

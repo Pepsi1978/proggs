@@ -3744,10 +3744,11 @@ namespace TerminalVoiceOverlay.Views
         /// — so geht der Prompt direkt an die KI ab, wenn Auto-Enter an ist.
         /// Phase 4 wird hier zusaetzlich den Eintrag in die Historie schreiben.
         /// </summary>
-        private async void OnInputSubmit(string middleText)
+        private async Task<bool> OnInputSubmit(string middleText)
         {
             try
             {
+                var targetHwnd = _terminalWatcher.ActiveTerminalHwnd;
                 string mid = (middleText ?? string.Empty).Trim();
                 var (preFix, postFix) = await BuildAlwaysOnWrappersAsync();
 
@@ -3763,15 +3764,16 @@ namespace TerminalVoiceOverlay.Views
                 if (parts.Count == 0)
                 {
                     Console.WriteLine("OnInputSubmit: nothing to insert (empty).");
-                    return;
+                    return false;
                 }
 
                 string final = string.Join(" ; ", parts);
                 // Force-Return uebersteuert das autoEnter-Toggle wenn der
                 // Submit aus einem expliziten Enter-Button-Klick kommt.
                 bool effectiveAutoEnter = autoEnterEnabled || _forceReturnOnNextSubmit;
+                if (!await TerminalController.PasteTextAsync(final, targetHwnd, effectiveAutoEnter))
+                    return false;
                 _forceReturnOnNextSubmit = false;
-                await TerminalController.PasteTextAsync(final, _terminalWatcher.ActiveTerminalHwnd, effectiveAutoEnter);
                 Console.WriteLine($"Input submit: {final.Length} chars (autoEnter={effectiveAutoEnter}).");
                 hasPastedText = !effectiveAutoEnter;
 
@@ -3782,10 +3784,12 @@ namespace TerminalVoiceOverlay.Views
                 // ist. So sieht der Benutzer den Eintrag SOFORT in der
                 // Historie und der KI-Titel erscheint nachtraeglich.
                 _ = WriteHistoryAsync(mid);
+                return true;
             }
             catch (Exception ex)
             {
                 Console.WriteLine($"OnInputSubmit failed: {ex.Message}");
+                return false;
             }
         }
 

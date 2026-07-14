@@ -88,7 +88,8 @@ public partial class PromptBoardPanel : Window
     /// das Pre/Mitte/Post-Zusammenbauen passiert im OverlayWindow, das den
     /// AlwaysOnPrefixService bereits kennt.
     /// </summary>
-    public event Action<string>? InputSubmitRequested;
+    public event Func<string, Task<bool>>? InputSubmitRequested;
+    private bool _inputSubmitInProgress;
 
     /// <summary>
     /// Das angedockte Prompt-Eingabefenster. Existiert nur solange der Stern
@@ -595,18 +596,25 @@ public partial class PromptBoardPanel : Window
         if (_inputWindow is null)
         {
             _inputWindow = new PromptInputWindow();
-            _inputWindow.SubmitRequested += text =>
+            _inputWindow.SubmitRequested += async text =>
             {
-                // Submit-Logik kommt in Phase 3 — hier nur den Event nach
-                // aussen reichen (das OverlayWindow baut Pre/Mitte/Post
-                // zusammen und ruft den TerminalController auf).
-                InputSubmitRequested?.Invoke(text);
-                // Eingabefeld nach Senden leeren, Fokus bleibt drin.
-                _inputWindow?.ClearInput();
-                // Nach erfolgreichem Submit auch den persistierten Puffer
-                // leeren — sonst wuerde der bereits gesendete Text beim
-                // naechsten Stern-Toggle in der InputBox wieder erscheinen.
-                _persistedInputText = string.Empty;
+                if (_inputSubmitInProgress) return;
+                _inputSubmitInProgress = true;
+                var sourceWindow = _inputWindow;
+                try
+                {
+                    var submit = InputSubmitRequested;
+                    if (submit is null || !await submit(text)) return;
+
+                    if (ReferenceEquals(_inputWindow, sourceWindow))
+                        sourceWindow?.ClearInput();
+                    _persistedInputText = string.Empty;
+                }
+                catch (Exception ex)
+                {
+                    Console.WriteLine($"Input submit failed: {ex.Message}");
+                }
+                finally { _inputSubmitInProgress = false; }
             };
             // Rechtsklick-Drag im Eingabefenster verschiebt die GANZE Gruppe.
             _inputWindow.GroupDragDelta += OnChildGroupDrag;

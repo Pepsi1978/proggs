@@ -108,7 +108,12 @@ public sealed class ModelRegistry
         try
         {
             Directory.CreateDirectory(Dir);
-            File.WriteAllText(FilePath, JsonSerializer.Serialize(Groups, JsonOpts));
+            // Atomar schreiben (Temp + Move) — konsistent mit dem übrigen Persistenz-Code. Ein Absturz
+            // mitten in File.WriteAllText würde models.json sonst abschneiden; Load() fiele beim nächsten
+            // Start still auf Defaults zurück und verlöre Modell-Liste, -Reihenfolge und Hidden-State.
+            var tmp = FilePath + ".tmp";
+            File.WriteAllText(tmp, JsonSerializer.Serialize(Groups, JsonOpts));
+            File.Move(tmp, FilePath, overwrite: true);
         }
         catch (Exception ex)
         {
