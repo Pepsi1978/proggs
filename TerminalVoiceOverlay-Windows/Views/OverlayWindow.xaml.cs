@@ -5,6 +5,7 @@ using System.IO;
 using System.Linq;
 using System.Runtime.InteropServices;
 using System.Text;
+using System.Threading;
 using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Controls;
@@ -111,6 +112,8 @@ namespace TerminalVoiceOverlay.Views
         //  • Rechtsklick auf Profil-Tile → nur Profil wechseln, Cache bleibt
         //    unangetastet, naechste Aufnahme nutzt das neue Profil
         private string? _lastCorrectableRaw = null;
+        private long _reCorrectGeneration;
+        private readonly SemaphoreSlim _reCorrectApplyGate = new(1, 1);
 
         // PromptBoard integration: on-demand prefix lookup + side panel.
         private IAlwaysOnPrefixService? _alwaysOnPrefix;
@@ -3198,6 +3201,7 @@ namespace TerminalVoiceOverlay.Views
         /// </summary>
         private void SwitchProfileWithoutReCorrect(int newProfile)
         {
+            Interlocked.Increment(ref _reCorrectGeneration);
             if (!geminiEnabled && _geminiClient != null)
             {
                 geminiEnabled = true;
@@ -3232,6 +3236,7 @@ namespace TerminalVoiceOverlay.Views
         /// </summary>
         private async Task SwitchProfileAsync(int newProfile)
         {
+            long generation = Interlocked.Increment(ref _reCorrectGeneration);
             int oldProfile = _activeProfile;
 
             // Auto-Aktivierung: Linksklick zeigt klare Absicht, Gemini-
@@ -3259,6 +3264,7 @@ namespace TerminalVoiceOverlay.Views
             if (string.IsNullOrEmpty(_lastCorrectableRaw)) return;
 
             var rawText = _lastCorrectableRaw;
+            var targetHwnd = _terminalWatcher.ActiveTerminalHwnd;
             // Geklicktes Profile-Tile aus dem Array holen (Index = profile - 1).
             // Profile 1-10 erlaubt, alles andere wird ignoriert.
             var buttons = ProfileButtons;
@@ -3278,6 +3284,7 @@ namespace TerminalVoiceOverlay.Views
                 if (clickedTile != null) clickedTile.Background = BtnProcessing;
 
                 string corrected = await gemini.CorrectTextAsync(rawText, newProfile);
+                if (Interlocked.Read(ref _reCorrectGeneration) != generation) return;
 
                 // Wrappers (Pre/Post-Prompts) wieder anwenden, falls aktiv —
                 // sonst geht der always-on-Kontext beim Re-Correct verloren.
@@ -3290,10 +3297,18 @@ namespace TerminalVoiceOverlay.Views
                 // dann den neu korrigierten Text reinpaten. AutoEnter wird
                 // respektiert: ist der Enter-Toggle aktiv, wird die Frage
                 // direkt abgeschickt — sonst nur in die Befehlszeile kopiert.
-                var hwnd = _terminalWatcher.ActiveTerminalHwnd;
-                await TerminalController.ClearAllInputAsync(hwnd);
-                await Task.Delay(120);
-                await TerminalController.PasteTextAsync(corrected, hwnd, autoEnterEnabled);
+                await _reCorrectApplyGate.WaitAsync();
+                try
+                {
+                    if (Interlocked.Read(ref _reCorrectGeneration) != generation) return;
+                    if (!await TerminalController.ClearAllInputAsync(targetHwnd)) return;
+                    await Task.Delay(120);
+                    if (!await TerminalController.PasteTextAsync(corrected, targetHwnd, autoEnterEnabled)) return;
+                }
+                finally
+                {
+                    _reCorrectApplyGate.Release();
+                }
 
                 hasPastedText = true;
                 Console.WriteLine($"Re-Correct ok ({corrected.Length} chars)");
