@@ -3,7 +3,6 @@ package de.frank.entropyreducer.presentation.widget
 import android.app.PendingIntent
 import android.appwidget.AppWidgetManager
 import android.appwidget.AppWidgetProvider
-import android.content.ComponentName
 import android.content.Context
 import android.content.Intent
 import android.widget.RemoteViews
@@ -18,8 +17,11 @@ import de.frank.entropyreducer.domain.model.EntryStatus
 import de.frank.entropyreducer.domain.model.TimeBucket
 import de.frank.entropyreducer.domain.model.priorityBucketForScore
 import de.frank.entropyreducer.presentation.MainActivity
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.flow.first
-import kotlinx.coroutines.runBlocking
+import kotlinx.coroutines.launch
 
 /**
  * AppWidgetProvider (klassisch, ohne Glance — Frank-Wunsch 2026-05-11).
@@ -51,12 +53,19 @@ class EntropyReducerWidgetReceiver : AppWidgetProvider() {
         appWidgetManager: AppWidgetManager,
         appWidgetIds: IntArray,
     ) {
-        appWidgetIds.forEach { widgetId ->
-            updateSingleWidget(context, appWidgetManager, widgetId)
+        val pendingResult = goAsync()
+        CoroutineScope(SupervisorJob() + Dispatchers.IO).launch {
+            try {
+                appWidgetIds.forEach { widgetId ->
+                    updateSingleWidget(context, appWidgetManager, widgetId)
+                }
+            } finally {
+                pendingResult.finish()
+            }
         }
     }
 
-    private fun updateSingleWidget(
+    private suspend fun updateSingleWidget(
         context: Context,
         appWidgetManager: AppWidgetManager,
         widgetId: Int,
@@ -66,21 +75,18 @@ class EntropyReducerWidgetReceiver : AppWidgetProvider() {
         val settings = entry.appSettings()
         val dao = entry.entryDao()
 
-        // Settings synchron lesen — onUpdate laeuft auf Main-Thread aber kurz.
-        val themeMode = runBlocking { settings.readWidgetThemeModeOnce() }
-        val onlyToday = runBlocking { settings.readWidgetOnlyTodayOnce() }
-        val bgAlpha = runBlocking { settings.readWidgetBgAlphaOnce() }
+        val themeMode = settings.readWidgetThemeModeOnce()
+        val onlyToday = settings.readWidgetOnlyTodayOnce()
+        val bgAlpha = settings.readWidgetBgAlphaOnce()
         val palette = resolveWidgetPaletteSimple(context, themeMode)
 
         // Counter laden — Anzahl offener Aufgaben (gefiltert nach onlyToday)
-        val openCount = runBlocking {
-            val all = dao.getActive().first()
-                .filter { it.status == EntryStatus.OFFEN || it.status == EntryStatus.IN_ARBEIT }
-            if (onlyToday) {
-                all.count { priorityBucketForScore(it.manualPriorityScore ?: it.priorityScore) == TimeBucket.HEUTE }
-            } else {
-                all.size
-            }
+        val all = dao.getActive().first()
+            .filter { it.status == EntryStatus.OFFEN || it.status == EntryStatus.IN_ARBEIT }
+        val openCount = if (onlyToday) {
+            all.count { priorityBucketForScore(it.manualPriorityScore ?: it.priorityScore) == TimeBucket.HEUTE }
+        } else {
+            all.size
         }
 
         val views = RemoteViews(context.packageName, R.layout.widget_root)
@@ -152,13 +158,13 @@ class EntropyReducerWidgetReceiver : AppWidgetProvider() {
             pillTint = palette.textSecondary
             pillLabel = "Alle"
         }
-        views.setColorStateList(R.id.header_today_pill, "setBackgroundTintList", android.content.res.ColorStateList.valueOf(pillBg))
+        views.setBackgroundTintCompat(R.id.header_today_pill, pillBg)
         views.setInt(R.id.header_today_icon, "setColorFilter", pillTint)
         views.setTextViewText(R.id.header_today_label, pillLabel)
         views.setTextColor(R.id.header_today_label, pillTint)
 
         // Settings-Zahnrad: surfaceMuted Hintergrund + textSecondary Tint
-        views.setColorStateList(R.id.header_settings_btn, "setBackgroundTintList", android.content.res.ColorStateList.valueOf(palette.surfaceMuted))
+        views.setBackgroundTintCompat(R.id.header_settings_btn, palette.surfaceMuted)
     }
 
     private fun createMainActivityIntent(

@@ -34,6 +34,7 @@ import de.frank.entropyreducer.domain.usecase.CalculateBucketsUseCase
 import de.frank.entropyreducer.domain.usecase.ProcessEntryUseCase
 import de.frank.entropyreducer.domain.usecase.TranscribeAudioUseCase
 import de.frank.entropyreducer.presentation.components.MicState
+import de.frank.entropyreducer.util.runCatchingCancellable
 import javax.inject.Inject
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
@@ -257,10 +258,11 @@ class TasksViewModel @Inject constructor(
         rescoreAllOpenEntries()
         // Agentic Auto-Suggestion: Beim manuellen Refresh — EIN kombinierter Aufruf.
         viewModelScope.launch(Dispatchers.IO) {
-            runCatching {
+            generateSuggestions.serializedGeneration {
+            runCatchingCancellable {
                 val context = getApplication<Application>()
                 val ideas = de.frank.entropyreducer.presentation.ideen.ideenEntriesFlow(context).first()
-                if (ideas.isEmpty()) return@launch
+                if (ideas.isEmpty()) return@serializedGeneration
 
                 val kiStore = context.kiTaskSuggestionStore
                 val habitStore = context.gewohnheitSuggestionStore
@@ -283,6 +285,7 @@ class TasksViewModel @Inject constructor(
                 }
                 saveProcessedIds(kiStore, TASK_PROCESSED_KEY, updatedProcessedIds)
                 saveProcessedIds(habitStore, HABIT_PROCESSED_KEY, updatedProcessedIds)
+            }
             }
         }
     }

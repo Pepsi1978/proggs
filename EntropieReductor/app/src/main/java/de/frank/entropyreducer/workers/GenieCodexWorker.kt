@@ -29,7 +29,7 @@ class GenieCodexWorker @AssistedInject constructor(
             },
             onFailure = {
                 Diag.e(DiagnosticArea.AGENTIC, TAG, "Codex-Synthese fehlgeschlagen", it)
-                Result.retry()
+                retryOrFailure()
             },
         )
     }

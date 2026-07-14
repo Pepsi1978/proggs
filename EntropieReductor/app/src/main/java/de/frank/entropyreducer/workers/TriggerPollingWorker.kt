@@ -55,11 +55,17 @@ class TriggerPollingWorker @AssistedInject constructor(
                 if (matchesCondition(trigger.condition, latest)) {
                     Diag.i(DiagnosticArea.AGENTIC, TAG, "Trigger '${trigger.name}' feuert: ${trigger.condition}")
                     triggerRepo.markFired(trigger, now)
-                    notifier.postOrDelay(
-                        notificationId = NOTIFICATION_BASE + trigger.id.hashCode().mod(1000),
-                        title = trigger.name,
-                        body = trigger.proposedAction,
-                    )
+                    try {
+                        notifier.postOrDelay(
+                            notificationId = NOTIFICATION_BASE + trigger.id.hashCode().mod(1000),
+                            title = trigger.name,
+                            body = trigger.proposedAction,
+                        )
+                    } catch (cancellation: kotlinx.coroutines.CancellationException) {
+                        throw cancellation
+                    } catch (t: Throwable) {
+                        Diag.w(DiagnosticArea.AGENTIC, TAG, "Trigger gespeichert, Benachrichtigung fehlgeschlagen", t)
+                    }
                 }
             }
             Result.success()
@@ -67,7 +73,7 @@ class TriggerPollingWorker @AssistedInject constructor(
             throw cancellation
         } catch (t: Throwable) {
             Diag.e(DiagnosticArea.AGENTIC, TAG, "TriggerPollingWorker fehlgeschlagen", t)
-            Result.retry()
+            retryOrFailure()
         }
     }
 

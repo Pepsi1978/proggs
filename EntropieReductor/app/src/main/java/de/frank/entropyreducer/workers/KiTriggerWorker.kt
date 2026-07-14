@@ -35,23 +35,36 @@ class KiTriggerWorker @AssistedInject constructor(
             }
 
             val result = generator()
-            val count = result.getOrNull() ?: 0
+            val failure = result.exceptionOrNull()
+            if (failure != null) {
+                Diag.w(DiagnosticArea.AGENTIC, TAG, "KI-Trigger-Engine fehlgeschlagen: ${failure.message}")
+                return if (failure.message == "Kein Gemini-Key hinterlegt") {
+                    Result.success()
+                } else {
+                    retryOrFailure()
+                }
+            }
+            val count = result.getOrThrow()
             Diag.i(DiagnosticArea.AGENTIC, TAG, "KI-Trigger-Engine: $count neue Vorschlaege erzeugt (force=$force).")
             if (count > 0) {
-                notifier.postOrDelay(
-                    notificationId = NOTIFICATION_ID,
-                    title = "Die KI schlaegt $count neue Trigger vor",
-                    body = "Tippen, um anzusehen — annehmen oder ablehnen.",
-                )
+                try {
+                    notifier.postOrDelay(
+                        notificationId = NOTIFICATION_ID,
+                        title = "Die KI schlaegt $count neue Trigger vor",
+                        body = "Tippen, um anzusehen — annehmen oder ablehnen.",
+                    )
+                } catch (cancellation: kotlinx.coroutines.CancellationException) {
+                    throw cancellation
+                } catch (t: Throwable) {
+                    Diag.w(DiagnosticArea.AGENTIC, TAG, "KI-Trigger gespeichert, Benachrichtigung fehlgeschlagen", t)
+                }
             }
-            // Generator-Failure (Kein Key, Network down) NICHT als Worker-Fehler retry-en —
-            // das führt zu Endlos-Retries. Lieber als Erfolg melden mit count=0.
             Result.success()
         } catch (cancellation: kotlinx.coroutines.CancellationException) {
             throw cancellation
         } catch (t: Throwable) {
             Diag.e(DiagnosticArea.AGENTIC, TAG, "KiTriggerWorker fehlgeschlagen mit harter Exception", t)
-            Result.retry()
+            retryOrFailure()
         }
     }
 
@@ -61,5 +74,9 @@ class KiTriggerWorker @AssistedInject constructor(
         const val UNIQUE_NAME_PERIODIC = "ki-trigger-periodic"
         const val UNIQUE_NAME_ONESHOT = "ki-trigger-oneshot"
         const val KEY_FORCE = "force"
+        private const val MAX_RETRY_ATTEMPTS = 3
     }
+
+    private fun retryOrFailure(): Result =
+        if (runAttemptCount + 1 < MAX_RETRY_ATTEMPTS) Result.retry() else Result.failure()
 }

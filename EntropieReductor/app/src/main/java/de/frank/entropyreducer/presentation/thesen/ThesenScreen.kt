@@ -882,7 +882,12 @@ data class ThesenFollowup(
 private val Context.thesenStore by preferencesDataStore(name = "thesen_entries")
 private val KEY_ENTRIES = stringPreferencesKey("entries_json")
 
-internal fun thesenEntriesFlow(context: Context): Flow<List<ThesenEntry>> =
+/**
+ * Wie [thesenEntriesFlow], aber bei kaputtem JSON wird null (statt einer leeren Liste) emittiert —
+ * so unterscheidet der Second-Brain-Sync einen Parse-Fehler von "wirklich leer" und loescht bei
+ * einem Fehler NICHT faelschlich alle Brain-/App-Eintraege (Fix 2026-07-14).
+ */
+internal fun thesenEntriesFlowOrNull(context: Context): Flow<List<ThesenEntry>?> =
     context.thesenStore.data.map { prefs ->
         val raw = prefs[KEY_ENTRIES] ?: return@map emptyList()
         runCatching {
@@ -891,9 +896,12 @@ internal fun thesenEntriesFlow(context: Context): Flow<List<ThesenEntry>> =
                     for (i in 0 until arr.length()) add(jsonToEntry(arr.getJSONObject(i)))
                 }
             }
-            .getOrDefault(emptyList())
-            .sortedByDescending { it.timestampMs }
+            .getOrNull()
+            ?.sortedByDescending { it.timestampMs }
     }
+
+internal fun thesenEntriesFlow(context: Context): Flow<List<ThesenEntry>> =
+    thesenEntriesFlowOrNull(context).map { it ?: emptyList() }
 
 /** Beobachtbarer Flow eines einzelnen Eintrags — für den Vollbild-Detail-Screen. */
 internal fun thesenEntryFlow(context: Context, id: String): Flow<ThesenEntry?> =

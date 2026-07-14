@@ -102,6 +102,8 @@ class PolishMethodTextUseCase @Inject constructor(
                 additionalCategories = additionals,
                 usedAi = true,
             )
+        } catch (cancellation: kotlinx.coroutines.CancellationException) {
+            throw cancellation
         } catch (t: Throwable) {
             Diag.e(DiagnosticArea.GEMINI, TAG, "Polish-API-Call fehlgeschlagen — Fallback auf rohen Text", t)
             fallback(rawTranscript)

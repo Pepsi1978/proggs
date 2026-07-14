@@ -87,7 +87,7 @@ fun PromptsScreen(onBack: () -> Unit, vm: PromptsViewModel = hiltViewModel()) {
     var triggerEditFor by remember { mutableStateOf<SavedPromptEntity?>(null) }
     var showTemplatesConfirm by remember { mutableStateOf(false) }
     var templatesResult by remember { mutableStateOf<Pair<Int, Int>?>(null) }
-    val expandedMap = remember { mutableStateOf(mutableMapOf<PromptCategory, Boolean>()) }
+    val expandedMap = remember { androidx.compose.runtime.mutableStateMapOf<PromptCategory, Boolean>() }
 
     if (showTokenStats) {
         TokenStatsScreen(onBack = { showTokenStats = false })
@@ -150,16 +150,14 @@ fun PromptsScreen(onBack: () -> Unit, vm: PromptsViewModel = hiltViewModel()) {
                 }
                 PromptCategory.entries.forEach { cat ->
                     item(key = "cat-${cat.name}") {
-                        val expanded = expandedMap.value[cat] ?: false
+                        val expanded = expandedMap[cat] ?: false
                         val items = byCategory[cat].orEmpty()
                         CategoryAccordion(
                             category = cat,
                             count = items.size,
                             expanded = expanded,
                             onToggle = {
-                                val m = expandedMap.value.toMutableMap()
-                                m[cat] = !expanded
-                                expandedMap.value = m
+                                expandedMap[cat] = !expanded
                             },
                             onAdd = { creatingInCategory = cat },
                             content = {

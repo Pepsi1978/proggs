@@ -238,6 +238,8 @@ class ScientistChatUseCase @Inject constructor(
             scientist.insertMessage(msg)
             scientist.touchSession(sessionId)
             Result.success(msg)
+        } catch (cancellation: kotlinx.coroutines.CancellationException) {
+            throw cancellation
         } catch (t: Throwable) {
             Result.failure(t)
         }

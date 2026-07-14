@@ -21,6 +21,7 @@ import de.frank.entropyreducer.domain.model.MemorySource
 import de.frank.entropyreducer.domain.tts.TtsPlayer
 import de.frank.entropyreducer.domain.tts.TtsResult
 import de.frank.entropyreducer.domain.usecase.SyncEntriesUseCase
+import de.frank.entropyreducer.util.runCatchingCancellable
 import de.frank.entropyreducer.domain.usecase.TestApiKeyUseCase
 import java.util.UUID
 import javax.inject.Inject
@@ -873,7 +874,7 @@ constructor(
             // der vorhandene Drive-Backup-Stand durch 0 Eintraege ueberschrieben.
             // Stattdessen prüfen wir zuerst ob auf Drive bereits ein Backup
             // liegt: ja → restore, nein → erstes Backup hochladen.
-            val hasBackup = runCatching { syncEntries.hasRemoteBackup() }.getOrDefault(false)
+            val hasBackup = runCatchingCancellable { syncEntries.hasRemoteBackup() }.getOrDefault(false)
             if (hasBackup) {
                 _state.update {
                     it.copy(driveStatusMessage = "Backup gefunden — wird heruntergeladen …")
@@ -891,6 +892,8 @@ constructor(
                         _state.update { it.copy(driveStatusMessage = text) }
                         if (result is SyncEntriesUseCase.RestoreOutcome.NoBackup) {
                             coordinator.requestImmediate()
+                        } else {
+                            coordinator.syncNowAndWait().getOrThrow()
                         }
                     }
                     .onFailure { ex ->
@@ -943,9 +946,19 @@ constructor(
         viewModelScope.launch {
             _state.update { it.copy(restoreInProgress = true) }
             val result = syncEntries.restoreFromDrive()
+            val finalResult = result.fold(
+                onSuccess = { outcome ->
+                    if (outcome is SyncEntriesUseCase.RestoreOutcome.Merged) {
+                        coordinator.syncNowAndWait().map { outcome }
+                    } else {
+                        Result.success(outcome)
+                    }
+                },
+                onFailure = { Result.failure(it) },
+            )
             _state.update { st ->
                 val msg =
-                    result.fold(
+                    finalResult.fold(
                         onSuccess = { outcome ->
                             when (outcome) {
                                 is SyncEntriesUseCase.RestoreOutcome.NoBackup ->

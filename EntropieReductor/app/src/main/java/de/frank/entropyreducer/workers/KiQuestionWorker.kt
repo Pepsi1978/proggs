@@ -60,18 +60,24 @@ class KiQuestionWorker @AssistedInject constructor(
 
             // Schichtbewusste Notification, nur bei neuer Frage.
             if (question != null && previous?.triggerKey != question.triggerKey) {
-                notifier.postOrDelay(
-                    notificationId = NOTIFICATION_ID,
-                    title = "Frage des Moments",
-                    body = question.text,
-                )
+                try {
+                    notifier.postOrDelay(
+                        notificationId = NOTIFICATION_ID,
+                        title = "Frage des Moments",
+                        body = question.text,
+                    )
+                } catch (cancellation: kotlinx.coroutines.CancellationException) {
+                    throw cancellation
+                } catch (t: Throwable) {
+                    Diag.w(DiagnosticArea.AGENTIC, TAG, "KI-Frage gespeichert, Benachrichtigung fehlgeschlagen", t)
+                }
             }
             Result.success()
         } catch (cancellation: kotlinx.coroutines.CancellationException) {
             throw cancellation
         } catch (e: Throwable) {
             Diag.e(DiagnosticArea.AGENTIC, TAG, "KI-Frage-Worker fehlgeschlagen", e)
-            Result.retry()
+            retryOrFailure()
         }
     }
 

@@ -28,6 +28,7 @@ import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
+import de.frank.entropyreducer.util.runCatchingCancellable
 import org.json.JSONArray
 
 data class KiTaskSuggestion(
@@ -84,7 +85,7 @@ class KiTaskSuggestViewModel @Inject constructor(
         // Sofort-Heal beim Oeffnen des Reiters (Frank-Wunsch 2026-06-20): verwaiste/verbrauchte
         // Vorschlaege sofort wegraeumen, ohne auf den naechsten Drive-Restore zu warten.
         viewModelScope.launch {
-            runCatching { de.frank.entropyreducer.data.healOrphanedSuggestions(context) }
+            runCatchingCancellable { de.frank.entropyreducer.data.healOrphanedSuggestions(context) }
         }
     }
 
@@ -95,6 +96,7 @@ class KiTaskSuggestViewModel @Inject constructor(
         viewModelScope.launch {
             _state.value = KiTaskSuggestState.LOADING
             _error.value = null
+            generateSuggestions.serializedGeneration {
             runCatching {
                 val ideas = ideenEntriesFlow(context).first()
                 val processedIds = loadProcessedIdeaIds()
@@ -109,7 +111,9 @@ class KiTaskSuggestViewModel @Inject constructor(
                     _error.value = "Alle Ideen wurden bereits als Vorschlag verarbeitet."
                 }
             }.onFailure { ex ->
+                if (ex is kotlinx.coroutines.CancellationException) throw ex
                 _error.value = ex.message ?: "Vorschlag-Generierung fehlgeschlagen"
+            }
             }
             _state.value = KiTaskSuggestState.IDLE
         }
@@ -173,14 +177,13 @@ class KiTaskSuggestViewModel @Inject constructor(
         }
     }
 
-    private fun storeSuggestions(newSuggestions: List<AutoTaskSuggestion>) {
-        viewModelScope.launch {
+    private suspend fun storeSuggestions(newSuggestions: List<AutoTaskSuggestion>) {
             // ID-Architektur Etappe 2d: Herkunft (originId/originType/rootId) der Quell-Idee mitschreiben.
             val nowMs = System.currentTimeMillis()
             val safeSuggestions = newSuggestions.filterNot { s ->
                 PhoneContentGuard.isSecondBrainWorkArtifact(s.title, s.description)
             }
-            if (safeSuggestions.isEmpty()) return@launch
+            if (safeSuggestions.isEmpty()) return
             taskSuggestionDao.upsertAll(
                 safeSuggestions.mapIndexed { index, s ->
                     TaskSuggestionEntity(
@@ -196,7 +199,6 @@ class KiTaskSuggestViewModel @Inject constructor(
             )
             de.frank.entropyreducer.data.remote.drive.triggerDriveBackup(
                 context, "Aufgabenvorschlag: generiert")
-        }
     }
 
     private suspend fun loadProcessedIdeaIds(): Set<String> {

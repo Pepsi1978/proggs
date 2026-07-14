@@ -205,6 +205,8 @@ class HypothesisChatUseCase @Inject constructor(
             )
             hypothesisMessages.insert(msg)
             Result.success(msg)
+        } catch (cancellation: kotlinx.coroutines.CancellationException) {
+            throw cancellation
         } catch (t: Throwable) {
             Result.failure(t)
         }

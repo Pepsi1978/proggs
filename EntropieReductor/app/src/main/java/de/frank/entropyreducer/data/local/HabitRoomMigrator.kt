@@ -3,6 +3,7 @@ package de.frank.entropyreducer.data.local
 import android.content.Context
 import android.content.SharedPreferences
 import androidx.core.content.edit
+import androidx.room.withTransaction
 import dagger.hilt.android.qualifiers.ApplicationContext
 import de.frank.entropyreducer.data.diagnostics.Diag
 import de.frank.entropyreducer.data.diagnostics.DiagnosticArea
@@ -41,6 +42,7 @@ class HabitRoomMigrator @Inject constructor(
     @ApplicationContext private val context: Context,
     private val habitDao: HabitDao,
     private val habitSuggestionDao: HabitSuggestionDao,
+    private val database: AppDatabase,
     @ApplicationScope private val applicationScope: CoroutineScope,
 ) {
     private val prefs: SharedPreferences =
@@ -63,20 +65,13 @@ class HabitRoomMigrator @Inject constructor(
         }
     }
 
-    private suspend fun runMigration() {
-        // Doppelschutz: nur kopieren wenn Room noch leer ist.
-        val habitCountBefore = habitDao.count()
-        val sugCountBefore = habitSuggestionDao.count()
-        if (habitCountBefore > 0 || sugCountBefore > 0) {
-            Diag.i(
-                DiagnosticArea.DATABASE,
-                TAG,
-                "Uebersprungen: Room bereits befuellt (habits=$habitCountBefore, habit_suggestions=$sugCountBefore) -> Flag gesetzt",
-            )
-            prefs.edit { putBoolean(KEY_DONE, true) }
-            return
-        }
+    suspend fun migrateIfNeededNow() = withContext(Dispatchers.IO) {
+        if (prefs.getBoolean(KEY_DONE, false)) return@withContext
+        runMigration()
+        check(prefs.getBoolean(KEY_DONE, false)) { "Gewohnheiten-/Vorschlagsmigration nicht vollständig" }
+    }
 
+    private suspend fun runMigration() {
         // JSON lesen (nur lesen, niemals schreiben) — dedizierte JSON-Quellen, NICHT die in 3c/3e auf
         // Room umgestellten gewohnheitenFlow/gewohnheitSuggestionsForBackup.
         val gewohnheiten = gewohnheitenFromJsonFlow(context).first()
@@ -104,14 +99,16 @@ class HabitRoomMigrator @Inject constructor(
             }
 
         // Schreiben.
-        if (habitEntities.isNotEmpty()) habitDao.upsertAll(habitEntities)
-        if (sugEntities.isNotEmpty()) habitSuggestionDao.upsertAll(sugEntities)
+        database.withTransaction {
+            if (habitEntities.isNotEmpty()) habitDao.upsertAll(habitEntities)
+            if (sugEntities.isNotEmpty()) habitSuggestionDao.upsertAll(sugEntities)
+        }
 
         // Anzahl-Abgleich (Live-Logik-Sonde / CHECKPOINT) — erwartet vs. tatsaechlich.
         val habitWritten = habitDao.count()
         val sugWritten = habitSuggestionDao.count()
-        val habitOk = habitWritten == gewohnheiten.size
-        val sugOk = sugWritten == habitSugs.size
+        val habitOk = habitWritten >= gewohnheiten.size
+        val sugOk = sugWritten >= habitSugs.size
         Diag.i(
             DiagnosticArea.DATABASE,
             TAG,

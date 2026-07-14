@@ -17,6 +17,7 @@ import androidx.health.connect.client.records.ExerciseSessionRecord
 import androidx.health.connect.client.records.HeartRateRecord
 import androidx.health.connect.client.records.HeightRecord
 import androidx.health.connect.client.records.LeanBodyMassRecord
+import androidx.health.connect.client.records.Record
 import androidx.health.connect.client.records.SpeedRecord
 import androidx.health.connect.client.records.StepsCadenceRecord
 import androidx.health.connect.client.records.TotalCaloriesBurnedRecord
@@ -29,9 +30,11 @@ import dagger.hilt.android.qualifiers.ApplicationContext
 import de.frank.entropyreducer.data.diagnostics.Diag
 import de.frank.entropyreducer.data.diagnostics.DiagnosticArea
 import de.frank.entropyreducer.data.diagnostics.DiagnosticLogger
+import de.frank.entropyreducer.util.runCatchingCancellable
 import java.time.Instant
 import javax.inject.Inject
 import javax.inject.Singleton
+import kotlin.reflect.KClass
 
 /**
  * Health-Connect-Bruecke fuer Body-Daten aus Zepp (Frank-Wunsch 2026-05-10).
@@ -300,9 +303,9 @@ class HealthConnectManager @Inject constructor(
      * Bei Lese-Fehlern wird gelogged statt zu werfen — die UI kriegt einfach
      * null zurueck und zeigt den Strich.
      */
-    suspend fun readLatestWeightKg(): Double? = runCatching {
-        val c = client() ?: return@runCatching null
-        if (!hasWeightReadPermission()) return@runCatching null
+    suspend fun readLatestWeightKg(): Double? = runCatchingCancellable {
+        val c = client() ?: return@runCatchingCancellable null
+        if (!hasWeightReadPermission()) return@runCatchingCancellable null
         val end = Instant.now()
         val start = end.minusSeconds(365L * 24 * 60 * 60)
         val response = c.readRecords(
@@ -328,19 +331,13 @@ class HealthConnectManager @Inject constructor(
      * Gewichts-Verlauf der letzten N Tage als (timestampMs, kg)-Paare,
      * aufsteigend sortiert. Leer wenn Permission fehlt oder keine Daten.
      */
-    suspend fun readWeightHistory(days: Int = 730): List<Pair<Long, Double>> = runCatching {
-        val c = client() ?: return@runCatching emptyList()
-        if (!hasWeightReadPermission()) return@runCatching emptyList()
+    suspend fun readWeightHistory(days: Int = 730): List<Pair<Long, Double>> = runCatchingCancellable {
+        val c = client() ?: return@runCatchingCancellable emptyList()
+        if (!hasWeightReadPermission()) return@runCatchingCancellable emptyList()
         val end = Instant.now()
         val start = end.minusSeconds(days.toLong() * 24 * 60 * 60)
-        val response = c.readRecords(
-            ReadRecordsRequest(
-                recordType = WeightRecord::class,
-                timeRangeFilter = TimeRangeFilter.between(start, end),
-                ascendingOrder = true,
-            ),
-        )
-        response.records.map { it.time.toEpochMilli() to it.weight.inKilograms }
+        readAllRecords(c, WeightRecord::class, TimeRangeFilter.between(start, end))
+            .map { it.time.toEpochMilli() to it.weight.inKilograms }
     }.onFailure { Diag.w(DiagnosticArea.HEALTH_CONNECT, TAG, "readWeightHistory failed", it) }.getOrDefault(emptyList())
 
     /** Durchschnitt der letzten N Tage (oder null wenn keine Daten). */
@@ -356,9 +353,9 @@ class HealthConnectManager @Inject constructor(
      * oder fehlenden Daten. Smart-Scales in Verbindung mit Zepp liefern das
      * normalerweise mit jeder Wiegung.
      */
-    suspend fun readLatestBodyFatPercent(): Double? = runCatching {
-        val c = client() ?: return@runCatching null
-        if (!hasBodyFatReadPermission()) return@runCatching null
+    suspend fun readLatestBodyFatPercent(): Double? = runCatchingCancellable {
+        val c = client() ?: return@runCatchingCancellable null
+        if (!hasBodyFatReadPermission()) return@runCatchingCancellable null
         val end = Instant.now()
         val start = end.minusSeconds(365L * 24 * 60 * 60)
         val response = c.readRecords(
@@ -374,19 +371,13 @@ class HealthConnectManager @Inject constructor(
     }.onFailure { Diag.w(DiagnosticArea.HEALTH_CONNECT, TAG, "readLatestBodyFatPercent failed", it) }.getOrNull()
 
     /** Koerperfett-Verlauf der letzten N Tage. */
-    suspend fun readBodyFatHistory(days: Int = 730): List<Pair<Long, Double>> = runCatching {
-        val c = client() ?: return@runCatching emptyList()
-        if (!hasBodyFatReadPermission()) return@runCatching emptyList()
+    suspend fun readBodyFatHistory(days: Int = 730): List<Pair<Long, Double>> = runCatchingCancellable {
+        val c = client() ?: return@runCatchingCancellable emptyList()
+        if (!hasBodyFatReadPermission()) return@runCatchingCancellable emptyList()
         val end = Instant.now()
         val start = end.minusSeconds(days.toLong() * 24 * 60 * 60)
-        val response = c.readRecords(
-            ReadRecordsRequest(
-                recordType = BodyFatRecord::class,
-                timeRangeFilter = TimeRangeFilter.between(start, end),
-                ascendingOrder = true,
-            ),
-        )
-        response.records.map { it.time.toEpochMilli() to it.percentage.value }
+        readAllRecords(c, BodyFatRecord::class, TimeRangeFilter.between(start, end))
+            .map { it.time.toEpochMilli() to it.percentage.value }
     }.onFailure { Diag.w(DiagnosticArea.HEALTH_CONNECT, TAG, "readBodyFatHistory failed", it) }.getOrDefault(emptyList())
 
     suspend fun averageBodyFatPercent(days: Int = 730): Double? {
@@ -400,9 +391,9 @@ class HealthConnectManager @Inject constructor(
      * Letzte Magermasse (Lean Body Mass) in kg. Bei vielen Smart-Scales sind das
      * die Muskelmasse + Wassergehalt + Knochen — also alles ausser Fett.
      */
-    suspend fun readLatestLeanBodyMassKg(): Double? = runCatching {
-        val c = client() ?: return@runCatching null
-        if (!hasLeanBodyMassReadPermission()) return@runCatching null
+    suspend fun readLatestLeanBodyMassKg(): Double? = runCatchingCancellable {
+        val c = client() ?: return@runCatchingCancellable null
+        if (!hasLeanBodyMassReadPermission()) return@runCatchingCancellable null
         val end = Instant.now()
         val start = end.minusSeconds(365L * 24 * 60 * 60)
         val response = c.readRecords(
@@ -417,19 +408,13 @@ class HealthConnectManager @Inject constructor(
         response.records.firstOrNull()?.mass?.inKilograms
     }.onFailure { Diag.w(DiagnosticArea.HEALTH_CONNECT, TAG, "readLatestLeanBodyMassKg failed", it) }.getOrNull()
 
-    suspend fun readLeanBodyMassHistory(days: Int = 730): List<Pair<Long, Double>> = runCatching {
-        val c = client() ?: return@runCatching emptyList()
-        if (!hasLeanBodyMassReadPermission()) return@runCatching emptyList()
+    suspend fun readLeanBodyMassHistory(days: Int = 730): List<Pair<Long, Double>> = runCatchingCancellable {
+        val c = client() ?: return@runCatchingCancellable emptyList()
+        if (!hasLeanBodyMassReadPermission()) return@runCatchingCancellable emptyList()
         val end = Instant.now()
         val start = end.minusSeconds(days.toLong() * 24 * 60 * 60)
-        val response = c.readRecords(
-            ReadRecordsRequest(
-                recordType = LeanBodyMassRecord::class,
-                timeRangeFilter = TimeRangeFilter.between(start, end),
-                ascendingOrder = true,
-            ),
-        )
-        response.records.map { it.time.toEpochMilli() to it.mass.inKilograms }
+        readAllRecords(c, LeanBodyMassRecord::class, TimeRangeFilter.between(start, end))
+            .map { it.time.toEpochMilli() to it.mass.inKilograms }
     }.onFailure { Diag.w(DiagnosticArea.HEALTH_CONNECT, TAG, "readLeanBodyMassHistory failed", it) }.getOrDefault(emptyList())
 
     suspend fun averageLeanBodyMassKg(days: Int = 730): Double? {
@@ -443,9 +428,9 @@ class HealthConnectManager @Inject constructor(
      * Letzte Koerperwasser-Masse in kg. Bei Smart-Scales typischerweise zusammen
      * mit Gewicht und Koerperfett geschrieben — Frank-Wunsch 2026-05-10.
      */
-    suspend fun readLatestBodyWaterMassKg(): Double? = runCatching {
-        val c = client() ?: return@runCatching null
-        if (!hasBodyWaterMassReadPermission()) return@runCatching null
+    suspend fun readLatestBodyWaterMassKg(): Double? = runCatchingCancellable {
+        val c = client() ?: return@runCatchingCancellable null
+        if (!hasBodyWaterMassReadPermission()) return@runCatchingCancellable null
         val end = Instant.now()
         val start = end.minusSeconds(365L * 24 * 60 * 60)
         val response = c.readRecords(
@@ -460,19 +445,13 @@ class HealthConnectManager @Inject constructor(
         response.records.firstOrNull()?.mass?.inKilograms
     }.onFailure { Diag.w(DiagnosticArea.HEALTH_CONNECT, TAG, "readLatestBodyWaterMassKg failed", it) }.getOrNull()
 
-    suspend fun readBodyWaterMassHistory(days: Int = 730): List<Pair<Long, Double>> = runCatching {
-        val c = client() ?: return@runCatching emptyList()
-        if (!hasBodyWaterMassReadPermission()) return@runCatching emptyList()
+    suspend fun readBodyWaterMassHistory(days: Int = 730): List<Pair<Long, Double>> = runCatchingCancellable {
+        val c = client() ?: return@runCatchingCancellable emptyList()
+        if (!hasBodyWaterMassReadPermission()) return@runCatchingCancellable emptyList()
         val end = Instant.now()
         val start = end.minusSeconds(days.toLong() * 24 * 60 * 60)
-        val response = c.readRecords(
-            ReadRecordsRequest(
-                recordType = BodyWaterMassRecord::class,
-                timeRangeFilter = TimeRangeFilter.between(start, end),
-                ascendingOrder = true,
-            ),
-        )
-        response.records.map { it.time.toEpochMilli() to it.mass.inKilograms }
+        readAllRecords(c, BodyWaterMassRecord::class, TimeRangeFilter.between(start, end))
+            .map { it.time.toEpochMilli() to it.mass.inKilograms }
     }.onFailure { Diag.w(DiagnosticArea.HEALTH_CONNECT, TAG, "readBodyWaterMassHistory failed", it) }.getOrDefault(emptyList())
 
     suspend fun averageBodyWaterMassKg(days: Int = 730): Double? {
@@ -483,9 +462,9 @@ class HealthConnectManager @Inject constructor(
     // ---------- Knochenmasse ----------
 
     /** Letzte Knochenmasse in kg. Bei vielen Smart-Scales als Body-Composition-Wert dabei. */
-    suspend fun readLatestBoneMassKg(): Double? = runCatching {
-        val c = client() ?: return@runCatching null
-        if (!hasBoneMassReadPermission()) return@runCatching null
+    suspend fun readLatestBoneMassKg(): Double? = runCatchingCancellable {
+        val c = client() ?: return@runCatchingCancellable null
+        if (!hasBoneMassReadPermission()) return@runCatchingCancellable null
         val end = Instant.now()
         val start = end.minusSeconds(365L * 24 * 60 * 60)
         val response = c.readRecords(
@@ -500,19 +479,13 @@ class HealthConnectManager @Inject constructor(
         response.records.firstOrNull()?.mass?.inKilograms
     }.onFailure { Diag.w(DiagnosticArea.HEALTH_CONNECT, TAG, "readLatestBoneMassKg failed", it) }.getOrNull()
 
-    suspend fun readBoneMassHistory(days: Int = 730): List<Pair<Long, Double>> = runCatching {
-        val c = client() ?: return@runCatching emptyList()
-        if (!hasBoneMassReadPermission()) return@runCatching emptyList()
+    suspend fun readBoneMassHistory(days: Int = 730): List<Pair<Long, Double>> = runCatchingCancellable {
+        val c = client() ?: return@runCatchingCancellable emptyList()
+        if (!hasBoneMassReadPermission()) return@runCatchingCancellable emptyList()
         val end = Instant.now()
         val start = end.minusSeconds(days.toLong() * 24 * 60 * 60)
-        val response = c.readRecords(
-            ReadRecordsRequest(
-                recordType = BoneMassRecord::class,
-                timeRangeFilter = TimeRangeFilter.between(start, end),
-                ascendingOrder = true,
-            ),
-        )
-        response.records.map { it.time.toEpochMilli() to it.mass.inKilograms }
+        readAllRecords(c, BoneMassRecord::class, TimeRangeFilter.between(start, end))
+            .map { it.time.toEpochMilli() to it.mass.inKilograms }
     }.onFailure { Diag.w(DiagnosticArea.HEALTH_CONNECT, TAG, "readBoneMassHistory failed", it) }.getOrDefault(emptyList())
 
     suspend fun averageBoneMassKg(days: Int = 730): Double? {
@@ -532,17 +505,16 @@ class HealthConnectManager @Inject constructor(
      * Distanz, Kalorien und Durchschnittspuls werden pro Session via Aggregate-API
      * geholt, damit die Hero-Card vollstaendige Werte zeigen kann.
      */
-    suspend fun readExerciseSessions(days: Int = 30): List<HealthConnectExerciseSession> = runCatching {
-        val c = client() ?: return@runCatching emptyList()
+    suspend fun readExerciseSessions(days: Int = 30): List<HealthConnectExerciseSession> = runCatchingCancellable {
+        val c = client() ?: return@runCatchingCancellable emptyList()
         val end = Instant.now()
         val start = end.minusSeconds(days.toLong() * 24L * 60L * 60L)
-        val sessions = c.readRecords(
-            ReadRecordsRequest(
-                recordType = ExerciseSessionRecord::class,
-                timeRangeFilter = TimeRangeFilter.between(start, end),
-                ascendingOrder = false,
-            ),
-        ).records
+        val sessions = readAllRecords(
+            c,
+            ExerciseSessionRecord::class,
+            TimeRangeFilter.between(start, end),
+            ascendingOrder = false,
+        )
         Diag.d(DiagnosticArea.HEALTH_CONNECT, TAG, "ExerciseSessions read: ${sessions.size} im Fenster ${start} .. ${end}")
         val mapped = sessions.map { session ->
             val sessionStart = session.startTime
@@ -551,7 +523,7 @@ class HealthConnectManager @Inject constructor(
             val range = TimeRangeFilter.between(sessionStart, sessionEnd)
 
             // Distanz + Kalorien + avg/max-Puls via Aggregate (zuverlaessig).
-            val aggregate = runCatching {
+            val aggregate = runCatchingCancellable {
                 c.aggregate(
                     AggregateRequest(
                         metrics = setOf(
@@ -574,9 +546,8 @@ class HealthConnectManager @Inject constructor(
             // dagegen zuverlaessig (3600+ Punkte pro Stunde).
 
             // Puls: Samples -> Verlauf + avg/max (Aggregate bevorzugt, sonst aus Samples).
-            val hrSamples = runCatching {
-                c.readRecords(ReadRecordsRequest(HeartRateRecord::class, range, ascendingOrder = true))
-                    .records.flatMap { it.samples }
+            val hrSamples = runCatchingCancellable {
+                readAllRecords(c, HeartRateRecord::class, range).flatMap { it.samples }
             }.getOrDefault(emptyList())
             val hrBpm = hrSamples.map { it.beatsPerMinute }.filter { it in 30L..230L }
             val avgHeartRate = aggregate?.get(HeartRateRecord.BPM_AVG)?.toInt()
@@ -596,9 +567,8 @@ class HealthConnectManager @Inject constructor(
                 ?.joinToString(prefix = "[", postfix = "]", separator = ",")
 
             // Tempo/Speed: Samples -> Verlauf + avg/max Pace.
-            val speedSamples = runCatching {
-                c.readRecords(ReadRecordsRequest(SpeedRecord::class, range, ascendingOrder = true))
-                    .records.flatMap { it.samples }
+            val speedSamples = runCatchingCancellable {
+                readAllRecords(c, SpeedRecord::class, range).flatMap { it.samples }
             }.getOrDefault(emptyList())
             val speedMps = speedSamples.map { it.speed.inMetersPerSecond }.filter { it > 0.1 }
             val avgSpeedMps = speedMps.takeIf { it.isNotEmpty() }?.average()
@@ -622,16 +592,16 @@ class HealthConnectManager @Inject constructor(
                 ?.joinToString(prefix = "[", postfix = "]", separator = ",")
 
             // Schrittfrequenz: StepsCadenceRecord-Samples (Schritte/Min).
-            val cadenceRates = runCatching {
-                c.readRecords(ReadRecordsRequest(StepsCadenceRecord::class, range, ascendingOrder = true))
-                    .records.flatMap { it.samples }.map { it.rate }.filter { it > 0.0 }
+            val cadenceRates = runCatchingCancellable {
+                readAllRecords(c, StepsCadenceRecord::class, range)
+                    .flatMap { it.samples }.map { it.rate }.filter { it > 0.0 }
             }.getOrDefault(emptyList())
             val cadenceAvg = cadenceRates.takeIf { it.isNotEmpty() }?.average()
 
             // Hoehenmeter hoch: Summe aller ElevationGainedRecord im Fenster.
-            val elevationGainMeters = runCatching {
-                c.readRecords(ReadRecordsRequest(ElevationGainedRecord::class, range, ascendingOrder = true))
-                    .records.sumOf { it.elevation.inMeters }
+            val elevationGainMeters = runCatchingCancellable {
+                readAllRecords(c, ElevationGainedRecord::class, range)
+                    .sumOf { it.elevation.inMeters }
             }.getOrDefault(0.0).takeIf { it > 0.0 }
 
             // GPS-Route + Hoehenverlust aus der Route. Route ist in HC besonders geschuetzt — Status
@@ -765,6 +735,75 @@ class HealthConnectManager @Inject constructor(
         return score
     }
 
+    /** Vollständiger, fehlerpropagierender Read für den persistenten Sync-Cursor. */
+    suspend fun bodyHistoryPermissionSignature(): String =
+        listOf(
+            hasWeightReadPermission(),
+            hasBodyFatReadPermission(),
+            hasLeanBodyMassReadPermission(),
+            hasBodyWaterMassReadPermission(),
+            hasBoneMassReadPermission(),
+        ).joinToString(separator = "") { if (it) "1" else "0" }
+
+    suspend fun readBodyHistoriesStrict(days: Int): HealthConnectBodyHistories {
+        val c = client() ?: return HealthConnectBodyHistories()
+        val end = Instant.now()
+        val range = TimeRangeFilter.between(
+            end.minusSeconds(days.toLong() * 24L * 60L * 60L),
+            end,
+        )
+        val weightGranted = hasWeightReadPermission()
+        val bodyFatGranted = hasBodyFatReadPermission()
+        val leanGranted = hasLeanBodyMassReadPermission()
+        val waterGranted = hasBodyWaterMassReadPermission()
+        val boneGranted = hasBoneMassReadPermission()
+        return HealthConnectBodyHistories(
+            weight = if (weightGranted) {
+                readAllRecords(c, WeightRecord::class, range)
+                    .map { it.time.toEpochMilli() to it.weight.inKilograms }
+            } else emptyList(),
+            bodyFat = if (bodyFatGranted) {
+                readAllRecords(c, BodyFatRecord::class, range)
+                    .map { it.time.toEpochMilli() to it.percentage.value }
+            } else emptyList(),
+            leanBodyMass = if (leanGranted) {
+                readAllRecords(c, LeanBodyMassRecord::class, range)
+                    .map { it.time.toEpochMilli() to it.mass.inKilograms }
+            } else emptyList(),
+            bodyWaterMass = if (waterGranted) {
+                readAllRecords(c, BodyWaterMassRecord::class, range)
+                    .map { it.time.toEpochMilli() to it.mass.inKilograms }
+            } else emptyList(),
+            boneMass = if (boneGranted) {
+                readAllRecords(c, BoneMassRecord::class, range)
+                    .map { it.time.toEpochMilli() to it.mass.inKilograms }
+            } else emptyList(),
+        )
+    }
+
+    private suspend fun <T : Record> readAllRecords(
+        client: HealthConnectClient,
+        recordType: KClass<T>,
+        timeRangeFilter: TimeRangeFilter,
+        ascendingOrder: Boolean = true,
+    ): List<T> {
+        val records = mutableListOf<T>()
+        var pageToken: String? = null
+        do {
+            val response = client.readRecords(
+                ReadRecordsRequest(
+                    recordType = recordType,
+                    timeRangeFilter = timeRangeFilter,
+                    ascendingOrder = ascendingOrder,
+                    pageToken = pageToken,
+                )
+            )
+            records += response.records
+            pageToken = response.pageToken
+        } while (pageToken != null)
+        return records
+    }
+
     private companion object {
         const val TAG = "HealthConnectMgr"
     }
@@ -775,6 +814,14 @@ class HealthConnectManager @Inject constructor(
  * Session inkl. aggregierter Distanz/Kalorien/Puls. Verbraucher (AmazfitRepository)
  * mappen das auf `AmazfitWorkoutEntity` und schreiben mit `source = "health_connect"`.
  */
+data class HealthConnectBodyHistories(
+    val weight: List<Pair<Long, Double>> = emptyList(),
+    val bodyFat: List<Pair<Long, Double>> = emptyList(),
+    val leanBodyMass: List<Pair<Long, Double>> = emptyList(),
+    val bodyWaterMass: List<Pair<Long, Double>> = emptyList(),
+    val boneMass: List<Pair<Long, Double>> = emptyList(),
+)
+
 data class HealthConnectExerciseSession(
     val startMs: Long,
     val endMs: Long,

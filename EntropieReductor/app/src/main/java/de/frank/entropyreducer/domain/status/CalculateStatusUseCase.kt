@@ -7,6 +7,9 @@ import de.frank.entropyreducer.domain.model.EntryStatus
 import de.frank.entropyreducer.domain.model.ShiftCode
 import javax.inject.Inject
 import javax.inject.Singleton
+import java.time.Instant
+import java.time.LocalDate
+import java.time.ZoneId
 import kotlin.math.roundToInt
 
 /**
@@ -31,7 +34,9 @@ class CalculateStatusUseCase @Inject constructor() {
         recentSnapshots: List<BiomarkerSnapshotEntity>,
         todayCalendar: CalendarDayEntity?,
     ): StatusBreakdown {
-        val openEntries = entries.filter { it.status != EntryStatus.ARCHIVIERT }
+        val openEntries = entries.filter {
+            it.status == EntryStatus.OFFEN || it.status == EntryStatus.IN_ARBEIT
+        }
         val resolvedToday = entries.filter {
             it.status == EntryStatus.REDUZIERT && isToday(it.resolvedAt)
         }
@@ -136,7 +141,7 @@ class CalculateStatusUseCase @Inject constructor() {
         // Cap auf 30 (vorher 20) damit drei Top-Prio-Aufgaben den Bonus voll
         // ausschoepfen koennen.
         val resolvedBonus = resolvedToday
-            .sumOf { (it.priorityScore / 100.0) * 12.0 }
+            .sumOf { ((it.manualPriorityScore ?: it.priorityScore) / 100.0) * 12.0 }
             .coerceAtMost(30.0)
         // Wenn an Frei-Tag noch viele Umgebungs-Eintraege offen sind, -15 Punkte.
         val unmatchedFrei = if (shift == ShiftCode.FREI) {
@@ -147,10 +152,9 @@ class CalculateStatusUseCase @Inject constructor() {
 
     private fun isToday(timestamp: Long?): Boolean {
         if (timestamp == null) return false
-        val now = System.currentTimeMillis()
-        val dayMs = 24L * 60 * 60 * 1000
-        val midnight = now - now % dayMs
-        return timestamp in midnight..(midnight + dayMs)
+        val zone = ZoneId.systemDefault()
+        val date = Instant.ofEpochMilli(timestamp).atZone(zone).toLocalDate()
+        return date == LocalDate.now(zone)
     }
 
     companion object {

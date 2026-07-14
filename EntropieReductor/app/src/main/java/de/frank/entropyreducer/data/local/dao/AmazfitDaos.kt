@@ -126,7 +126,10 @@ interface AmazfitWorkoutDao {
      *
      * @return Anzahl der geloeschten Zeilen
      */
-    @Query("DELETE FROM amazfit_workouts WHERE source IS NULL OR source NOT LIKE 'polar%'")
+    @Query(
+        "DELETE FROM amazfit_workouts " +
+            "WHERE (source IS NULL OR source NOT LIKE 'polar%') AND manualOverridesMs IS NULL"
+    )
     suspend fun deleteNonPolarWorkouts(): Int
 
     /**

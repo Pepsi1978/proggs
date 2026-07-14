@@ -3,6 +3,8 @@ package de.frank.entropyreducer.presentation.widget
 import android.appwidget.AppWidgetManager
 import android.content.Context
 import android.content.Intent
+import android.content.res.ColorStateList
+import android.os.Build
 import android.widget.RemoteViews
 import android.widget.RemoteViewsService
 import androidx.core.graphics.ColorUtils
@@ -206,14 +208,14 @@ class EntropyReducerRemoteViewsFactory(
         val views = RemoteViews(context.packageName, R.layout.widget_item_bucket_header)
         val accent = item.accent
         // Icon-Kaestchen: Akzent mit 18% Alpha + Icon in Akzentfarbe.
-        views.setColorStateList(R.id.bucket_icon_box, "setBackgroundTintList", android.content.res.ColorStateList.valueOf(applyAlpha(accent, 0.18f)))
+        views.setBackgroundTintCompat(R.id.bucket_icon_box, applyAlpha(accent, 0.18f))
         views.setImageViewResource(R.id.bucket_icon, item.iconRes)
         views.setInt(R.id.bucket_icon, "setColorFilter", accent)
         // Grosses Label (Grossbuchstaben) in textPrimary.
         views.setTextViewText(R.id.bucket_label, item.label)
         views.setTextColor(R.id.bucket_label, palette.textPrimary)
         // Count-Pille: Akzent 18% Hintergrund + Akzent-Text.
-        views.setColorStateList(R.id.bucket_count, "setBackgroundTintList", android.content.res.ColorStateList.valueOf(applyAlpha(accent, 0.18f)))
+        views.setBackgroundTintCompat(R.id.bucket_count, applyAlpha(accent, 0.18f))
         views.setTextViewText(R.id.bucket_count, item.count.toString())
         views.setTextColor(R.id.bucket_count, accent)
         // Chevron: hoch = offen, runter = zu.
@@ -225,7 +227,7 @@ class EntropyReducerRemoteViewsFactory(
         // Offene Sektion bekommt eine zarte Akzent-Toenung (wie die App-AccordionHeaderRow).
         if (item.expanded) {
             views.setInt(R.id.bucket_header_root, "setBackgroundResource", R.drawable.widget_section_header_bg)
-            views.setColorStateList(R.id.bucket_header_root, "setBackgroundTintList", android.content.res.ColorStateList.valueOf(applyAlpha(accent, 0.12f)))
+            views.setBackgroundTintCompat(R.id.bucket_header_root, applyAlpha(accent, 0.12f))
         } else {
             views.setInt(R.id.bucket_header_root, "setBackgroundResource", 0)
         }
@@ -243,17 +245,13 @@ class EntropyReducerRemoteViewsFactory(
         val views = RemoteViews(context.packageName, R.layout.widget_item_loop)
         // Die Loop-Karte nimmt die Standardfarbe ihres Zielbereichs an.
         val bucket = template.targetBucket ?: priorityBucketForScore(template.priorityScore.toDouble())
-        views.setColorStateList(
-            R.id.loop_card_root,
-            "setBackgroundTintList",
-            android.content.res.ColorStateList.valueOf(bucketColor(palette, bucket)),
-        )
+        views.setBackgroundTintCompat(R.id.loop_card_root, bucketColor(palette, bucket))
         views.setInt(R.id.loop_icon, "setColorFilter", palette.textPrimary)
         views.setTextViewText(R.id.loop_title, template.title)
         views.setTextColor(R.id.loop_title, palette.textPrimary)
 
         views.setTextViewText(R.id.loop_add_button, "Hinzufügen")
-        views.setColorStateList(R.id.loop_add_button, "setBackgroundTintList", android.content.res.ColorStateList.valueOf(0xFFFFFFFF.toInt()))
+        views.setBackgroundTintCompat(R.id.loop_add_button, 0xFFFFFFFF.toInt())
         views.setTextColor(R.id.loop_add_button, 0xFF000000.toInt())
 
         // FillIns (EXTRA_TASK_ID traegt die Template-ID):
@@ -274,11 +272,7 @@ class EntropyReducerRemoteViewsFactory(
 
         // Karten eines Bereichs nutzen dessen Standardfarbe, unabhaengig vom exakten Punktwert.
         val bucket = priorityBucketForScore(effectivePriority)
-        views.setColorStateList(
-            R.id.task_card_root,
-            "setBackgroundTintList",
-            android.content.res.ColorStateList.valueOf(bucketColor(palette, bucket)),
-        )
+        views.setBackgroundTintCompat(R.id.task_card_root, bucketColor(palette, bucket))
 
         // Haekchen: normalerweise leeres Quadrat mit deutlicher dunkler Umrandung
         // (klar als Klickfeld erkennbar). Direkt nach dem Tap (ID im WidgetCheckState)
@@ -286,7 +280,7 @@ class EntropyReducerRemoteViewsFactory(
         if (resolved || WidgetCheckState.isChecking(entry.id)) {
             // Erledigt (Erledigt-Sektion) ODER gerade abgehakt: gefuelltes gruenes Haekchen.
             views.setInt(R.id.task_check_box, "setBackgroundResource", R.drawable.widget_check_box_done)
-            views.setColorStateList(R.id.task_check_box, "setBackgroundTintList", android.content.res.ColorStateList.valueOf(WIDGET_SUCCESS))
+            views.setBackgroundTintCompat(R.id.task_check_box, WIDGET_SUCCESS)
             views.setImageViewResource(R.id.task_check_box, R.drawable.ic_widget_check)
             views.setInt(R.id.task_check_box, "setColorFilter", 0xFFFFFFFF.toInt())
         } else {
@@ -297,7 +291,7 @@ class EntropyReducerRemoteViewsFactory(
             // Zeit ALLE Haekchenfelder gruen werden. null = Drawable zeigt seine echten
             // Farben (weiss + grau), ohne dass ein eigener Tint die zwei Farben ueberschreibt.
             views.setInt(R.id.task_check_box, "setBackgroundResource", R.drawable.widget_check_box_bg)
-            views.setColorStateList(R.id.task_check_box, "setBackgroundTintList", null)
+            views.clearBackgroundTintCompat(R.id.task_check_box)
             views.setImageViewResource(R.id.task_check_box, 0)
         }
 
@@ -307,7 +301,7 @@ class EntropyReducerRemoteViewsFactory(
 
         // Untere Zeile wie in der App: ein direkter Verschieben-Button statt Priorität-KI-Pille.
         views.setTextViewText(R.id.task_move_button, "Verschieben")
-        views.setColorStateList(R.id.task_move_button, "setBackgroundTintList", android.content.res.ColorStateList.valueOf(0xFFFFFFFF.toInt()))
+        views.setBackgroundTintCompat(R.id.task_move_button, 0xFFFFFFFF.toInt())
         views.setTextColor(R.id.task_move_button, 0xFF000000.toInt())
 
         // FillInIntents (kombiniert mit dem Broadcast-Template aus dem Provider):
@@ -402,6 +396,21 @@ internal val ALL_BUCKETS = listOf(
 
 internal fun applyAlpha(color: Int, alpha: Float): Int =
     ColorUtils.setAlphaComponent(color, (alpha.coerceIn(0f, 1f) * 255).toInt())
+
+/** API 31 added ColorStateList support to RemoteViews; older launchers get a safe solid-color fallback. */
+internal fun RemoteViews.setBackgroundTintCompat(viewId: Int, color: Int) {
+    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+        setColorStateList(viewId, "setBackgroundTintList", ColorStateList.valueOf(color))
+    } else {
+        setInt(viewId, "setBackgroundColor", color)
+    }
+}
+
+internal fun RemoteViews.clearBackgroundTintCompat(viewId: Int) {
+    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+        setColorStateList(viewId, "setBackgroundTintList", null)
+    }
+}
 
 internal fun bucketColor(p: SimpleWidgetPalette, bucket: TimeBucket): Int = when (bucket) {
     TimeBucket.HEUTE -> p.prioRed

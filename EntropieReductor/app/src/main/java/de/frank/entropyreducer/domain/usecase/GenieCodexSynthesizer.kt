@@ -112,6 +112,8 @@ class GenieCodexSynthesizer @Inject constructor(
             settings.setLastCodexSynthese(now)
             Diag.i(DiagnosticArea.AGENTIC, TAG, "Genie-Codex-Synthese geschrieben (id=${version.id})")
             Result.success(version.id)
+        } catch (cancellation: kotlinx.coroutines.CancellationException) {
+            throw cancellation
         } catch (t: Throwable) {
             Diag.e(DiagnosticArea.AGENTIC, TAG, "Codex-Synthese fehlgeschlagen", t)
             Result.failure(t)

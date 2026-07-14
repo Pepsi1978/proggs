@@ -48,13 +48,13 @@ constructor(
 
     private var currentRunJob: Job? = null
 
-    fun approveConfirmation() {
-        uiConfirmationGate.respond(ConfirmDecision.APPROVED)
+    fun approveConfirmation(requestId: String) {
+        uiConfirmationGate.respond(requestId, ConfirmDecision.APPROVED)
         _uiState.update { it.copy(pendingConfirmation = null) }
     }
 
-    fun rejectConfirmation(reason: String? = null) {
-        uiConfirmationGate.respond(ConfirmDecision.REJECTED, reason)
+    fun rejectConfirmation(requestId: String, reason: String? = null) {
+        uiConfirmationGate.respond(requestId, ConfirmDecision.REJECTED, reason)
         _uiState.update { it.copy(pendingConfirmation = null) }
     }
 
@@ -88,8 +88,10 @@ constructor(
         // gerade offen ist (Continuation suspended), MUSS die Continuation
         // sauber aufgeloest werden — sonst haengt sie bis zum 60s-Timeout
         // und blockiert den naechsten Run. respond(REJECTED) loest sie sofort.
-        if (uiConfirmationGate.pendingRequest.value != null) {
+        val pendingRequest = uiConfirmationGate.pendingRequest.value
+        if (pendingRequest != null && pendingRequest.executionId == _uiState.value.executionId) {
             uiConfirmationGate.respond(
+                expectedRequestId = pendingRequest.requestId,
                 decision = ConfirmDecision.REJECTED,
                 rejectReason = "Run vom Nutzer abgebrochen",
             )
@@ -223,8 +225,10 @@ constructor(
 
     override fun onCleared() {
         // Auch bei ViewModel-Cleanup haengende Continuation aufloesen
-        if (uiConfirmationGate.pendingRequest.value != null) {
+        val pendingRequest = uiConfirmationGate.pendingRequest.value
+        if (pendingRequest != null && pendingRequest.executionId == _uiState.value.executionId) {
             uiConfirmationGate.respond(
+                expectedRequestId = pendingRequest.requestId,
                 decision = ConfirmDecision.REJECTED,
                 rejectReason = "ViewModel beendet",
             )

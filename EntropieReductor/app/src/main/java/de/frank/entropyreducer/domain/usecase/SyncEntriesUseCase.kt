@@ -8,9 +8,12 @@ import de.frank.entropyreducer.data.local.dao.InsightDao
 import de.frank.entropyreducer.data.local.dao.MemoryDao
 import de.frank.entropyreducer.data.local.dao.ScientistMessageDao
 import de.frank.entropyreducer.data.local.dao.ScientistSessionDao
+import de.frank.entropyreducer.data.local.AppDatabase
+import androidx.room.withTransaction
 import de.frank.entropyreducer.data.remote.drive.BackupPayload
 import de.frank.entropyreducer.data.remote.drive.DriveRestoreManager
 import de.frank.entropyreducer.data.remote.drive.DriveSession
+import de.frank.entropyreducer.data.remote.drive.HealthBackupPayload
 import de.frank.entropyreducer.data.remote.drive.SyncCoordinator
 import de.frank.entropyreducer.data.remote.drive.WorkoutsBackupPayload
 import de.frank.entropyreducer.data.remote.drive.toEntity
@@ -66,6 +69,7 @@ constructor(
     private val ouraPersonalInfoDao: de.frank.entropyreducer.data.local.dao.OuraPersonalInfoDao,
     private val secrets: EncryptedSecretsStore,
     private val appSettings: de.frank.entropyreducer.data.settings.AppSettings,
+    private val appDatabase: AppDatabase,
     // Frank-Wunsch 2026-05-20: Profil + Tagebuch + Entropie-Followups beim Restore
     // wiederherstellen.
     private val entropyEntryFollowupDao:
@@ -116,6 +120,11 @@ constructor(
                     return Result.failure(it)
                 }
 
+        // Zusatzdateien vor dem ersten lokalen Schreibzugriff laden und dekodieren. So kann ein
+        // Netzwerk- oder Formatfehler keinen Teil-Restore des Hauptbackups hinterlassen.
+        val workoutsPayload = loadWorkoutsBackup().getOrElse { return Result.failure(it) }
+        val healthPayload = loadHealthBackup().getOrElse { return Result.failure(it) }
+
         // Diagnose-Sonde (Frank-Bugfix 2026-06-19): zeigt im Log GENAU, was das vom Drive
         // geladene Haupt-Backup an Aufgabenreiter-Daten enthaelt — damit live nachvollziehbar
         // ist, ob Mental/Ideen/Gewohnheit ueberhaupt im Backup ankommen (Multi-Device-Overwrite
@@ -163,7 +172,7 @@ constructor(
             val existing = entryRepo.get(incoming.id)
             when {
                 existing == null -> {
-                    entryRepo.upsert(incoming)
+                    entryRepo.upsertForRestore(incoming)
                     inserted++
                 }
                 incoming.updatedAt > existing.updatedAt -> {
@@ -180,7 +189,7 @@ constructor(
                                 "-> Backup mb=${incoming.manualBucket}/tb=${incoming.timeBucket}/upd=${incoming.updatedAt}",
                         )
                     }
-                    entryRepo.upsert(incoming)
+                    entryRepo.upsertForRestore(incoming)
                     updated++
                 }
                 else -> Unit
@@ -366,7 +375,11 @@ constructor(
         // restoren — enthaelt im Gegensatz zum Hauptbackup auch GPS-Track,
         // Pulsverlauf, Pace und Splits. Nur einlesen wenn vorhanden und nicht
         // durch die Cleanup-Migration unterdrueckt.
-        val workoutsInserted = restoreWorkoutsBackup(skipDueToCleanup = workoutCleanupDone)
+        val workoutsInserted = restoreWorkoutsBackup(workoutsPayload, workoutCleanupDone)
+            .getOrElse {
+                driveSession.end()
+                return Result.failure(it)
+            }
         inserted += workoutsInserted
 
         // --- Amazfit-Daily-Werte (v11+, Frank-Bugfix 2026-05-22) ---
@@ -388,7 +401,11 @@ constructor(
         // Frank-Wunsch 2026-05-19 (Erweiterung): Whoop + Oura-Backup wiederherstellen.
         // Eigene Datei `entropy_reducer_health_v1.json`. Nicht-Existenz ist OK
         // (Erst-Restore vor erstem Health-Upload).
-        val healthInserted = restoreHealthBackup()
+        val healthInserted = restoreHealthBackup(healthPayload)
+            .getOrElse {
+                driveSession.end()
+                return Result.failure(it)
+            }
         inserted += healthInserted
 
         // --- Profil-Text (v6+, Frank-Wunsch 2026-05-20) ---
@@ -636,6 +653,7 @@ constructor(
             // -Loeschungen propagierten nie. Jetzt per updatedAt + delete-wins-only-if-newer.
             for (b in payload.entropyEntryFollowups) {
                 val incoming = b.toEntity()
+                if (entryRepo.get(incoming.entryId) == null) continue
                 val ts = followupDeletedAt[b.id]
                 if (ts != null && ts > incoming.updatedAt) continue
                 val existing = entropyEntryFollowupDao.getById(b.id)
@@ -945,16 +963,27 @@ constructor(
      * keine Trainings zurueckbekam, weil die Cleanup-Migration auf dem neuen
      * Geraet schon gelaufen war bevor er Drive verbunden hat.
      */
+    private suspend fun loadWorkoutsBackup(): Result<WorkoutsBackupPayload?> {
+        val raw = restoreManager.fetchWorkouts().getOrElse {
+            return Result.failure(
+                IllegalStateException("Workouts-Backup konnte nicht geladen werden", it)
+            )
+        } ?: return Result.success(null)
+        return runCatching { json.decodeFromString(WorkoutsBackupPayload.serializer(), raw) }
+            .recoverCatching {
+                Diag.w(DiagnosticArea.DRIVE_BACKUP, "SyncEntries", "Workouts-Backup nicht lesbar", it)
+                throw IllegalArgumentException("Workouts-Backup ist nicht lesbar", it)
+            }
+    }
+
     @Suppress("UNUSED_PARAMETER")
-    private suspend fun restoreWorkoutsBackup(skipDueToCleanup: Boolean): Int {
-        val raw = restoreManager.fetchWorkouts().getOrNull() ?: return 0
-        val workoutsPayload =
-            runCatching { json.decodeFromString(WorkoutsBackupPayload.serializer(), raw) }
-                .getOrElse {
-                    Diag.w(DiagnosticArea.DRIVE_BACKUP, "SyncEntries", "Workouts-Backup nicht lesbar", it)
-                    return 0
-                }
-        if (workoutsPayload.workouts.isEmpty()) return 0
+    private suspend fun restoreWorkoutsBackup(
+        workoutsPayload: WorkoutsBackupPayload?,
+        skipDueToCleanup: Boolean,
+    ): Result<Int> {
+        workoutsPayload ?: return Result.success(0)
+        if (workoutsPayload.workouts.isEmpty()) return Result.success(0)
+        return try {
         // Frank-Bugfix 2026-07-04: manuell geloeschte Trainings NICHT aus dem Backup wiederherstellen
         // (sonst kommt ein geloeschtes Training beim naechsten Restore zurueck).
         val deletedStarts = appSettings.getDeletedWorkoutStarts()
@@ -1006,7 +1035,12 @@ constructor(
             "SyncEntries",
             "Restore: ${merged.size} Workouts aus Backup wiederhergestellt (geloeschte via Tombstone uebersprungen)",
         )
-        return merged.size
+        Result.success(merged.size)
+        } catch (cancellation: kotlinx.coroutines.CancellationException) {
+            throw cancellation
+        } catch (t: Throwable) {
+            Result.failure(IllegalStateException("Workouts-Backup konnte nicht wiederhergestellt werden", t))
+        }
     }
 
     /**
@@ -1015,20 +1049,24 @@ constructor(
      * sind id/day) — lokale Daten werden ueberschrieben falls im Backup derselbe Eintrag existiert.
      * Wenn das Backup leer ist oder noch nicht existiert, passiert nichts (kein Datenverlust).
      */
-    private suspend fun restoreHealthBackup(): Int {
-        val raw = restoreManager.fetchHealth().getOrNull() ?: return 0
-        val payload =
-            runCatching {
-                    json.decodeFromString(
-                        de.frank.entropyreducer.data.remote.drive.HealthBackupPayload.serializer(),
-                        raw,
-                    )
-                }
-                .getOrElse {
-                    Diag.w(DiagnosticArea.DRIVE_BACKUP, "SyncEntries", "Health-Backup nicht lesbar", it)
-                    return 0
-                }
+    private suspend fun loadHealthBackup(): Result<HealthBackupPayload?> {
+        val raw = restoreManager.fetchHealth().getOrElse {
+            return Result.failure(
+                IllegalStateException("Health-Backup konnte nicht geladen werden", it)
+            )
+        } ?: return Result.success(null)
+        return runCatching { json.decodeFromString(HealthBackupPayload.serializer(), raw) }
+            .recoverCatching {
+                Diag.w(DiagnosticArea.DRIVE_BACKUP, "SyncEntries", "Health-Backup nicht lesbar", it)
+                throw IllegalArgumentException("Health-Backup ist nicht lesbar", it)
+            }
+    }
+
+    private suspend fun restoreHealthBackup(payload: HealthBackupPayload?): Result<Int> {
+        payload ?: return Result.success(0)
+        return try {
         var count = 0
+        appDatabase.withTransaction {
         // Whoop Daily Recovery — Performance-Fix 2026-07-03 (#47449): Batch-Upsert in EINER
         // Transaktion statt einer Einzeltransaktion pro Snapshot (vorher ~300 pro App-Start).
         if (payload.whoopSnapshots.isNotEmpty()) {
@@ -1072,8 +1110,14 @@ constructor(
             ouraPersonalInfoDao.upsert(it.toEntity())
             count++
         }
+        }
         Diag.i(DiagnosticArea.DRIVE_BACKUP, "SyncEntries", "Restore: $count Whoop+Oura-Eintraege wiederhergestellt")
-        return count
+        Result.success(count)
+        } catch (cancellation: kotlinx.coroutines.CancellationException) {
+            throw cancellation
+        } catch (t: Throwable) {
+            Result.failure(IllegalStateException("Health-Backup konnte nicht wiederhergestellt werden", t))
+        }
     }
 
     /** Hat das Drive-Konto bereits ein Backup? */

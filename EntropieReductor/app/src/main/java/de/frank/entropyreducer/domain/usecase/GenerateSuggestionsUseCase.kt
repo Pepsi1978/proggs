@@ -21,6 +21,8 @@ import de.frank.entropyreducer.presentation.tagebuch.TagebuchEntry
 import javax.inject.Inject
 import javax.inject.Singleton
 import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 import org.json.JSONArray
 import org.json.JSONObject
 
@@ -98,6 +100,11 @@ class GenerateSuggestionsUseCase @Inject constructor(
     private val entropyEntryDao: EntropyEntryDao,
     private val habitDao: HabitDao,
 ) {
+    private val generationMutex = Mutex()
+
+    /** Serialisiert Generierung UND Persistenz ueber alle Suggestion-ViewModels. */
+    suspend fun <T> serializedGeneration(block: suspend () -> T): T =
+        generationMutex.withLock { block() }
 
     /**
      * Generiert Aufgaben- UND Gewohnheitsvorschlaege aus den uebergebenen Ideen.
@@ -232,7 +239,12 @@ class GenerateSuggestionsUseCase @Inject constructor(
             ?.firstOrNull()?.content?.parts?.firstOrNull()?.text?.trim()
             ?: return Result.failure(IllegalStateException("Leere Antwort von Gemini"))
 
-        val result = parseCombinedJson(json, newSources)
+        val result = try {
+            parseCombinedJson(json, newSources)
+        } catch (e: IllegalArgumentException) {
+            Diag.e(DiagnosticArea.AGENTIC, TAG, "Gemini-Vorschlagsantwort ist ungueltig", e)
+            return Result.failure(e)
+        }
 
         // Live-Logik-Sonde (Checkpoint): bestaetigt das Origin-Tracking. Erwartet: jeder erzeugte
         // Vorschlag traegt eine Herkunft (originId = Quell-Idee). originId=NULL! markiert die
@@ -272,61 +284,99 @@ class GenerateSuggestionsUseCase @Inject constructor(
     // ========================================================================
 
     private fun parseCombinedJson(raw: String, newSources: List<SuggestionSource>): SuggestionResult {
-        return runCatching {
+        try {
             val obj = JSONObject(raw)
+            val assignedSourceIds = mutableSetOf<String>()
 
             // Tasks parsen — Herkunft (Etappe 2d) ueber sourceIndex an die Quell-Idee binden.
-            val tasksArr = obj.optJSONArray("tasks") ?: JSONArray()
+            val tasksArr = obj.optJSONArray("tasks")
+                ?: throw IllegalArgumentException("Gemini-JSON enthaelt kein gueltiges tasks-Array")
             val tasks = buildList {
                 for (i in 0 until tasksArr.length()) {
-                    val o = tasksArr.optJSONObject(i) ?: continue
-                    val title = o.optString("title").takeIf { it.isNotBlank() } ?: continue
+                    val o = tasksArr.optJSONObject(i)
+                        ?: throw IllegalArgumentException("tasks[$i] ist kein JSON-Objekt")
+                    val title = o.optString("title").takeIf { it.isNotBlank() }
+                        ?: throw IllegalArgumentException("tasks[$i] hat keinen Titel")
                     val description = o.optString("description")
                     // sourceIndex = Nummer der Quell-Idee aus dem nummerierten Prompt. Fehlt sie oder
                     // ist sie ungueltig (KI-Aussetzer): wurde nur GENAU EINE Idee verarbeitet, ist die
                     // Herkunft trotzdem eindeutig (singleOrNull) -> Frank-Wunsch 2026-06-20, schliesst
                     // die origin=NULL-Luecke. Bei mehreren Ideen bleibt sie null (eine falsche Zuordnung
                     // waere schlimmer als keine).
-                    val sourceIdx = if (o.has("sourceIndex")) o.optInt("sourceIndex", -1) else -1
-                    val source = newSources.getOrNull(sourceIdx) ?: newSources.singleOrNull()
+                    val source = resolveSource(o, "tasks[$i]", newSources)
+                    if (!assignedSourceIds.add(source.id)) {
+                        throw IllegalArgumentException(
+                            "Quelle ${source.id} wurde mehrfach als Aufgabe oder Gewohnheit klassifiziert"
+                        )
+                    }
                     add(
                         AutoTaskSuggestion(
                             id = java.util.UUID.randomUUID().toString(),
                             title = title.take(60),
                             description = description.take(500),
-                            originId = source?.id,
-                            originType = source?.originType,
+                            originId = source.id,
+                            originType = source.originType,
                             // Die Idee ist aktuell immer Ursprung der Kette (Entropie->Idee erst Stufe 5)
                             // -> rootId = die Idee selbst.
-                            rootId = source?.id,
+                            rootId = source.id,
                         )
                     )
                 }
             }
 
             // Habits parsen — Herkunft (Etappe 3d) ueber sourceIndex an die Quell-Idee binden.
-            val habitsArr = obj.optJSONArray("habits") ?: JSONArray()
+            val habitsArr = obj.optJSONArray("habits")
+                ?: throw IllegalArgumentException("Gemini-JSON enthaelt kein gueltiges habits-Array")
             val habits = buildList {
                 for (i in 0 until habitsArr.length()) {
-                    val o = habitsArr.optJSONObject(i) ?: continue
-                    val text = o.optString("text").takeIf { it.isNotBlank() } ?: continue
+                    val o = habitsArr.optJSONObject(i)
+                        ?: throw IllegalArgumentException("habits[$i] ist kein JSON-Objekt")
+                    val text = o.optString("text").takeIf { it.isNotBlank() }
+                        ?: throw IllegalArgumentException("habits[$i] hat keinen Text")
                     // KI-Aussetzer-Fallback (Frank-Wunsch 2026-06-20): nur 1 Idee verarbeitet -> eindeutig.
-                    val sourceIdx = if (o.has("sourceIndex")) o.optInt("sourceIndex", -1) else -1
-                    val source = newSources.getOrNull(sourceIdx) ?: newSources.singleOrNull()
+                    val source = resolveSource(o, "habits[$i]", newSources)
+                    if (!assignedSourceIds.add(source.id)) {
+                        throw IllegalArgumentException(
+                            "Quelle ${source.id} wurde mehrfach als Aufgabe oder Gewohnheit klassifiziert"
+                        )
+                    }
                     add(
                         AutoHabitSuggestion(
                             id = java.util.UUID.randomUUID().toString(),
                             text = text,
-                            originId = source?.id,
-                            originType = source?.originType,
-                            rootId = source?.id,
+                            originId = source.id,
+                            originType = source.originType,
+                            rootId = source.id,
                         )
                     )
                 }
             }
 
-            SuggestionResult(tasks, habits)
-        }.getOrDefault(SuggestionResult(emptyList(), emptyList()))
+            return SuggestionResult(tasks, habits)
+        } catch (e: IllegalArgumentException) {
+            throw e
+        } catch (e: Exception) {
+            throw IllegalArgumentException("Gemini-Antwort ist kein gueltiges Vorschlags-JSON", e)
+        }
+    }
+
+    private fun resolveSource(
+        obj: JSONObject,
+        fieldPath: String,
+        sources: List<SuggestionSource>,
+    ): SuggestionSource {
+        if (!obj.has("sourceIndex")) {
+            return sources.singleOrNull()
+                ?: throw IllegalArgumentException("$fieldPath hat keinen sourceIndex")
+        }
+        val rawIndex = obj.get("sourceIndex")
+        val sourceIndex = when (rawIndex) {
+            is Int -> rawIndex
+            is Long -> rawIndex.takeIf { it in Int.MIN_VALUE..Int.MAX_VALUE }?.toInt()
+            else -> null
+        } ?: throw IllegalArgumentException("$fieldPath hat keinen ganzzahligen sourceIndex")
+        return sources.getOrNull(sourceIndex)
+            ?: throw IllegalArgumentException("$fieldPath hat ungueltigen sourceIndex=$sourceIndex")
     }
 
     // ========================================================================

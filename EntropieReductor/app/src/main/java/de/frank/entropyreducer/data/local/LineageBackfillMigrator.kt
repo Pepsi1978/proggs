@@ -72,6 +72,11 @@ constructor(
         }
     }
 
+    suspend fun backfillIfNeededNow() = withContext(Dispatchers.IO) {
+        if (prefs.getBoolean(KEY_DONE, false)) return@withContext
+        runBackfill()
+    }
+
     private suspend fun runBackfill() {
         // 1. Self-Rooting der Altbestand-Endpunkte (idempotent: trifft nur originId IS NULL).
         val tasks = entropyEntryDao.backfillSelfRoot()

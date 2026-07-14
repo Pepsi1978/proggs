@@ -38,7 +38,7 @@ class CorrelationWorker @AssistedInject constructor(
         throw cancellation
     } catch (t: Throwable) {
         Diag.e(DiagnosticArea.BIOMARKER, TAG, "CorrelationWorker fehlgeschlagen", t)
-        Result.retry()
+        retryOrFailure()
     }
 
     companion object {

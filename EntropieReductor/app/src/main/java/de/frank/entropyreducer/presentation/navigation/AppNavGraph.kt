@@ -69,8 +69,11 @@ import kotlinx.coroutines.launch
  */
 private fun NavController.tabSwitch(route: String) {
     navigate(route) {
-        popUpTo(graph.findStartDestination().id) { saveState = false }
-        launchSingleTop = false
+        popUpTo(graph.findStartDestination().id) {
+            inclusive = true
+            saveState = false
+        }
+        launchSingleTop = true
         restoreState = false
     }
 }
@@ -108,7 +111,10 @@ private fun AppNavHostInner(nav: androidx.navigation.NavHostController, modifier
             }
             de.frank.entropyreducer.presentation.widget.WidgetIntents.ACTION_FOCUS,
             de.frank.entropyreducer.presentation.widget.WidgetIntents.ACTION_RESCHEDULE,
-            de.frank.entropyreducer.presentation.widget.WidgetIntents.ACTION_SET_PRIORITY -> {
+            de.frank.entropyreducer.presentation.widget.WidgetIntents.ACTION_SET_PRIORITY,
+            de.frank.entropyreducer.presentation.widget.WidgetIntents.ACTION_SET_LOOP_PRIORITY,
+            de.frank.entropyreducer.presentation.widget.WidgetIntents.ACTION_SET_LOOP_BUCKET,
+            de.frank.entropyreducer.presentation.widget.WidgetIntents.ACTION_ADD_LOOP_TASK -> {
                 // Den Link NICHT clearen: der TasksScreen muss ihn nach der Navigation konsumieren
                 // und bei RESCHEDULE/SET_PRIORITY das Verschieben-Sheet fuer genau diese Aufgabe oeffnen.
                 nav.tabSwitch(Routes.TASKS)
@@ -157,7 +163,6 @@ private fun AppNavHostInner(nav: androidx.navigation.NavHostController, modifier
                             HorizontalPager(
                                 state = pagerState,
                                 modifier = Modifier.weight(1f),
-                                beyondViewportPageCount = tabs.size - 1,
                             ) { page ->
                                 when (page) {
                                     0 -> TasksScreen(
@@ -238,7 +243,6 @@ private fun AppNavHostInner(nav: androidx.navigation.NavHostController, modifier
                             HorizontalPager(
                                 state = pagerState,
                                 modifier = Modifier.weight(1f),
-                                beyondViewportPageCount = tabs.size - 1,
                             ) { page ->
                                 // Der Hauptreiter "Lernen" verwendet dieselbe Listen- und
                                 // Aufnahmefunktion wie Entropie, aber einen getrennten Datenbestand.
@@ -323,7 +327,6 @@ private fun AppNavHostInner(nav: androidx.navigation.NavHostController, modifier
                             HorizontalPager(
                                 state = pagerState,
                                 modifier = Modifier.weight(1f),
-                                beyondViewportPageCount = tabs.size - 1,
                             ) { page ->
                                 // Frank-Wunsch 2026-06-24: Hauptreiter "Biomarker" steht ganz
                                 // vorne (page 0 = BiomarkerHostScreen). Danach die drei SubArea-
@@ -490,6 +493,11 @@ private fun AppNavHostInner(nav: androidx.navigation.NavHostController, modifier
             }
             composable(Routes.SETTINGS_PROFILE) {
                 ProfileScreen(
+                    onBack = { nav.popBackStack() }
+                )
+            }
+            composable(Routes.SETTINGS_PROMPTS) {
+                PromptsScreen(
                     onBack = { nav.popBackStack() }
                 )
             }

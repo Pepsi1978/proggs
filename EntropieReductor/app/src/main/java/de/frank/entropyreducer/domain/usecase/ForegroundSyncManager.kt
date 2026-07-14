@@ -17,6 +17,7 @@ import kotlinx.coroutines.async
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.CancellationException
 
 /**
  * Zentraler Daten-Sync. Trennt bewusst ZWEI Sync-Arten mit unterschiedlichem Takt
@@ -85,10 +86,18 @@ constructor(
         }
         try {
             Diag.i(DiagnosticArea.DRIVE_BACKUP, "ForegroundSync", "Drive-Sync START (Restore -> Heilung -> Upload)")
-            runCatching { syncEntries.restoreFromDrive() }
-                .onFailure { Diag.w(DiagnosticArea.DRIVE_BACKUP, "ForegroundSync", "Drive-Restore fehlgeschlagen", it) }
-            runCatching { coordinator.syncNowAndWait() }
-                .onFailure { Diag.w(DiagnosticArea.DRIVE_BACKUP, "ForegroundSync", "Drive-Upload fehlgeschlagen", it) }
+            val restoreResult = syncEntries.restoreFromDrive()
+            restoreResult.exceptionOrNull()?.let { error ->
+                if (error is CancellationException) throw error
+                Diag.w(DiagnosticArea.DRIVE_BACKUP, "ForegroundSync", "Drive-Restore fehlgeschlagen; Upload zum Schutz des Remote-Stands abgebrochen", error)
+                return
+            }
+            val uploadResult = coordinator.syncNowAndWait()
+            uploadResult.exceptionOrNull()?.let { error ->
+                if (error is CancellationException) throw error
+                Diag.w(DiagnosticArea.DRIVE_BACKUP, "ForegroundSync", "Drive-Upload fehlgeschlagen", error)
+                return
+            }
             Diag.i(DiagnosticArea.DRIVE_BACKUP, "ForegroundSync", "Drive-Sync FERTIG")
         } finally {
             driveMutex.unlock()
@@ -128,46 +137,53 @@ constructor(
         }
         try {
             Diag.i(DiagnosticArea.APP, "ForegroundSync", "API-Sync START ($reason)")
-            var hcCount = 0
-            var whoopCount = 0
-            var ouraCount = 0
-            var trainingCount = 0
-            coroutineScope {
+            val results = coroutineScope {
                 val hcDeferred =
-                    async { runCatching { healthConnectRepository.syncToCache() }.getOrDefault(0) }
+                    async { runCatchingCancellable { healthConnectRepository.syncToCache() } }
                 val whoopDeferred =
                     async {
                         if (oauth.loadWhoopAuthState().isAuthorized) {
-                            whoop.syncLastDays(365).getOrDefault(0)
+                            whoop.syncLastDays(365)
                         } else {
-                            0
+                            Result.success(0)
                         }
                     }
                 val ouraDeferred =
                     async {
                         if (oura.isTokenConfigured()) {
-                            oura.syncLastDays(365).getOrNull()?.values?.sum() ?: 0
+                            oura.syncLastDays(365).map { it.values.sum() }
                         } else {
-                            0
+                            Result.success(0)
                         }
                     }
                 val trainingDeferred =
                     async {
                         // Frank-Wunsch 2026-07-03: Trainings kommen jetzt aus Health Connect (Strava raus).
-                        runCatching { amazfit.mergeFromHealthConnect(days = 30) }.getOrDefault(0)
+                        runCatchingCancellable { amazfit.mergeFromHealthConnect(days = 30) }
                     }
                 val calendarDeferred =
                     async {
                         if (secrets.calendarAccountEmail != null) {
-                            runCatching { calendar.syncDefaultWindow() }
+                            calendar.syncDefaultWindow().map { 0 }
+                        } else {
+                            Result.success(0)
                         }
                     }
-                hcCount = hcDeferred.await()
-                whoopCount = whoopDeferred.await()
-                ouraCount = ouraDeferred.await()
-                trainingCount = trainingDeferred.await()
-                calendarDeferred.await()
+                listOf(
+                    hcDeferred.await(),
+                    whoopDeferred.await(),
+                    ouraDeferred.await(),
+                    trainingDeferred.await(),
+                    calendarDeferred.await(),
+                )
             }
+            val firstFailure = results.firstNotNullOfOrNull { it.exceptionOrNull() }
+            if (firstFailure != null) {
+                if (firstFailure is CancellationException) throw firstFailure
+                Diag.w(DiagnosticArea.APP, "ForegroundSync", "API-Sync unvollständig; 8h-Timer bleibt unverändert", firstFailure)
+                return
+            }
+            val (hcCount, whoopCount, ouraCount, trainingCount) = results.take(4).map { it.getOrThrow() }
 
             // "Zuletzt synchronisiert"-Footer setzen (gleiches Format wie der manuelle
             // Aktualisieren-Knopf). Der Zeitstempel dient gleichzeitig als Grundlage
@@ -183,7 +199,7 @@ constructor(
             val footer =
                 "✓ $footerTs · Whoop $whoopCount · Training $trainingCount · " +
                     "Oura $ouraCount · Health Connect $hcCount"
-            runCatching { appSettings.setLastRefreshFooter(footer, System.currentTimeMillis()) }
+            appSettings.setLastRefreshFooter(footer, System.currentTimeMillis())
             Diag.i(
                 DiagnosticArea.APP,
                 "ForegroundSync",
@@ -198,4 +214,13 @@ constructor(
         /** Standard-Throttle fuer den Fitness-API-Sync: 8 Stunden (Frank-Wunsch 2026-06-01). */
         const val FOREGROUND_SYNC_MIN_INTERVAL_MS = 8L * 60L * 60L * 1000L
     }
+
+    private suspend inline fun <T> runCatchingCancellable(crossinline block: suspend () -> T): Result<T> =
+        try {
+            Result.success(block())
+        } catch (cancellation: CancellationException) {
+            throw cancellation
+        } catch (error: Exception) {
+            Result.failure(error)
+        }
 }

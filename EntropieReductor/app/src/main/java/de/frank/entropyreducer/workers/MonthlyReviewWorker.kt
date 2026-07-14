@@ -54,21 +54,28 @@ class MonthlyReviewWorker @AssistedInject constructor(
                 Diag.w(DiagnosticArea.BRIEFING, TAG, "Monatsrueckblick leer: ${ex?.message}")
                 // Bei fehlendem API-Key (IllegalStateException) NICHT retry-en —
                 // sonst Endlos-Loop. Bei echten Netz-/Server-Fehlern: retry.
-                if (ex is IllegalStateException) Result.success() else Result.retry()
+                if (ex?.message == "Kein Gemini-Key hinterlegt") Result.success()
+                else retryOrFailure()
             } else {
                 settings.setMonthlyReview(text, System.currentTimeMillis())
-                notifier.postOrDelay(
-                    notificationId = NOTIFICATION_ID,
-                    title = "Dein Monatsrueckblick ist fertig",
-                    body = "Tippen, um ihn vom Genie vorlesen zu lassen.",
-                )
+                try {
+                    notifier.postOrDelay(
+                        notificationId = NOTIFICATION_ID,
+                        title = "Dein Monatsrueckblick ist fertig",
+                        body = "Tippen, um ihn vom Genie vorlesen zu lassen.",
+                    )
+                } catch (cancellation: kotlinx.coroutines.CancellationException) {
+                    throw cancellation
+                } catch (t: Throwable) {
+                    Diag.w(DiagnosticArea.BRIEFING, TAG, "Monatsrueckblick gespeichert, Benachrichtigung fehlgeschlagen", t)
+                }
                 Result.success()
             }
         } catch (cancellation: kotlinx.coroutines.CancellationException) {
             throw cancellation
         } catch (t: Throwable) {
             Diag.e(DiagnosticArea.BRIEFING, TAG, "MonthlyReviewWorker fehlgeschlagen", t)
-            Result.retry()
+            retryOrFailure()
         }
     }
 
@@ -78,5 +85,9 @@ class MonthlyReviewWorker @AssistedInject constructor(
         const val UNIQUE_NAME_PERIODIC = "monthly-review-periodic"
         const val UNIQUE_NAME_ONESHOT = "monthly-review-oneshot"
         const val KEY_FORCE = "force"
+        private const val MAX_RETRY_ATTEMPTS = 3
     }
+
+    private fun retryOrFailure(): Result =
+        if (runAttemptCount + 1 < MAX_RETRY_ATTEMPTS) Result.retry() else Result.failure()
 }

@@ -51,28 +51,37 @@ class WeeklyReviewWorker @AssistedInject constructor(
                 Diag.w(DiagnosticArea.BRIEFING, TAG, "Wochenrueckblick leer: ${ex?.message}")
                 // Bei fehlendem API-Key (IllegalStateException) NICHT retry-en —
                 // sonst Endlos-Loop. Bei echten Netz-/Server-Fehlern: retry.
-                if (ex is IllegalStateException) Result.success() else Result.retry()
+                if (ex?.message == "Kein Gemini-Key hinterlegt") Result.success()
+                else retryOrFailure()
             } else {
                 settings.setWeeklyReview(text, System.currentTimeMillis())
-                notifier.postOrDelay(
-                    notificationId = NOTIFICATION_ID,
-                    title = "Dein Wochenrueckblick ist fertig",
-                    body = "Tippen, um ihn vom Genie vorlesen zu lassen.",
-                )
+                try {
+                    notifier.postOrDelay(
+                        notificationId = NOTIFICATION_ID,
+                        title = "Dein Wochenrueckblick ist fertig",
+                        body = "Tippen, um ihn vom Genie vorlesen zu lassen.",
+                    )
+                } catch (cancellation: kotlinx.coroutines.CancellationException) {
+                    throw cancellation
+                } catch (t: Throwable) {
+                    Diag.w(DiagnosticArea.BRIEFING, TAG, "Wochenrueckblick gespeichert, Benachrichtigung fehlgeschlagen", t)
+                }
                 Result.success()
             }
         } catch (cancellation: kotlinx.coroutines.CancellationException) {
             throw cancellation
         } catch (t: Throwable) {
             Diag.e(DiagnosticArea.BRIEFING, TAG, "WeeklyReviewWorker fehlgeschlagen", t)
-            Result.retry()
+            retryOrFailure()
         }
     }
 
     private fun isSameWeek(today: LocalDate, lastAtMs: Long): Boolean {
         val lastDate = Instant.ofEpochMilli(lastAtMs)
             .atZone(ZoneId.systemDefault()).toLocalDate()
-        return today.year == lastDate.year && weekOf(today) == weekOf(lastDate)
+        val weekFields = WeekFields.of(Locale.GERMANY)
+        return today.get(weekFields.weekBasedYear()) == lastDate.get(weekFields.weekBasedYear()) &&
+            weekOf(today) == weekOf(lastDate)
     }
 
     private fun weekOf(date: LocalDate): Int {
@@ -86,5 +95,9 @@ class WeeklyReviewWorker @AssistedInject constructor(
         const val UNIQUE_NAME_PERIODIC = "weekly-review-periodic"
         const val UNIQUE_NAME_ONESHOT = "weekly-review-oneshot"
         const val KEY_FORCE = "force"
+        private const val MAX_RETRY_ATTEMPTS = 3
     }
+
+    private fun retryOrFailure(): Result =
+        if (runAttemptCount + 1 < MAX_RETRY_ATTEMPTS) Result.retry() else Result.failure()
 }

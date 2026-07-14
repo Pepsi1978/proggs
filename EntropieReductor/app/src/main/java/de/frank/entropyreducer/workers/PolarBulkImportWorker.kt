@@ -22,6 +22,7 @@ import de.frank.entropyreducer.data.local.dao.AmazfitWorkoutDao
 import de.frank.entropyreducer.data.remote.drive.SyncCoordinator
 import de.frank.entropyreducer.data.remote.polar.PolarBulkImporter
 import java.io.File
+import java.io.IOException
 
 /**
  * One-Shot-Worker fuer den Polar-Bulk-Import (Frank-Wunsch 2026-05-16).
@@ -120,32 +121,9 @@ constructor(
                 return Result.failure()
             }
 
-            // Erfolg-Fall: alte Daten weg, frische Polar-Daten rein.
-            val deletedOld = workoutDao.deleteNonPolarWorkouts()
-            Diag.i(DiagnosticArea.POLAR, TAG, "Polar-Bulk-Import: $deletedOld alte non-Polar-Trainings geloescht")
-
             // Frank-Wunsch 2026-05-17: Manuell editierte Workouts NICHT
             // ueberschreiben. Wir filtern fresh-Eintraege deren trackId in der DB
             // schon mit manualOverridesMs != null existiert.
-            var protectedCount = 0
-            val safeEntities = allEntities.mapNotNull { fresh ->
-                val existing = workoutDao.getById(fresh.trackId)
-                if (existing?.manualOverridesMs != null) {
-                    protectedCount++
-                    Diag.d(DiagnosticArea.POLAR, 
-                        TAG,
-                        "Polar-Bulk: ${fresh.trackId} hat manuelle Edits — Eintrag bleibt unveraendert",
-                    )
-                    null
-                } else fresh
-            }
-
-            appDatabase.withTransaction { workoutDao.upsertAll(safeEntities) }
-            Diag.i(DiagnosticArea.POLAR, 
-                TAG,
-                "Polar-Bulk-Import erfolgreich: ${safeEntities.size} Trainings geschrieben, $totalSkipped uebersprungen, $protectedCount manuell editiert (geschuetzt)",
-            )
-
             // Frank-Wunsch 2026-05-19, geaendert 2026-05-23: Retention direkt nach dem Import
             // anwenden — Polar-ZIPs enthalten typischerweise die GESAMTE Historie (>5 Jahre).
             // Wir behalten nur das letzte Jahr (TRAINING_RETENTION_DAYS = 365). Eine einzige
@@ -155,20 +133,62 @@ constructor(
                 System.currentTimeMillis() -
                     de.frank.entropyreducer.data.repository.AmazfitRepository
                         .TRAINING_RETENTION_DAYS * 24L * 60L * 60L * 1000L
-            workoutDao.deleteOlderThan(retentionThresholdMs)
+            var protectedCount = 0
+            var safeEntities = emptyList<de.frank.entropyreducer.data.local.entities.AmazfitWorkoutEntity>()
+            val deletedOld = appDatabase.withTransaction {
+                safeEntities = allEntities.mapNotNull { fresh ->
+                    val existing = workoutDao.getById(fresh.trackId)
+                    if (existing?.manualOverridesMs != null) {
+                        protectedCount++
+                        Diag.d(
+                            DiagnosticArea.POLAR,
+                            TAG,
+                            "Polar-Bulk: ${fresh.trackId} hat manuelle Edits — Eintrag bleibt unveraendert",
+                        )
+                        null
+                    } else fresh
+                }
+                val deleted = workoutDao.deleteNonPolarWorkouts()
+                workoutDao.upsertAll(safeEntities)
+                workoutDao.deleteOlderThan(retentionThresholdMs)
+                deleted
+            }
+            Diag.i(
+                DiagnosticArea.POLAR,
+                TAG,
+                "Polar-Bulk-Import erfolgreich: $deletedOld alte non-Polar-Trainings geloescht, " +
+                    "${safeEntities.size} Trainings geschrieben, $totalSkipped uebersprungen, " +
+                    "$protectedCount manuell editiert (geschuetzt)",
+            )
 
             // Cache aufraeumen (nur unsere eigene Datei)
             cacheFileToCleanup?.let { runCatching { it.delete() } }
 
             syncCoordinator.requestSync("Training: Polar-Bulk-Import abgeschlossen")
-            showCompletionNotification(allEntities.size, totalSkipped)
+            runCatching { showCompletionNotification(allEntities.size, totalSkipped) }
+                .onFailure {
+                    Diag.w(DiagnosticArea.POLAR, TAG, "Import erfolgreich, Abschluss-Benachrichtigung fehlgeschlagen", it)
+                }
             Result.success()
         } catch (ce: kotlinx.coroutines.CancellationException) {
             throw ce
         } catch (t: Throwable) {
             Diag.e(DiagnosticArea.POLAR, TAG, "Polar-Bulk-Import fehlgeschlagen", t)
+            val transient = t is IOException || t is android.database.sqlite.SQLiteException
+            if (transient && runAttemptCount + 1 < MAX_RETRY_ATTEMPTS) {
+                Diag.w(
+                    DiagnosticArea.POLAR,
+                    TAG,
+                    "Transientes Importproblem; Cache bleibt fuer Retry erhalten " +
+                        "(Versuch ${runAttemptCount + 1}/$MAX_RETRY_ATTEMPTS)",
+                )
+                return Result.retry()
+            }
             cacheFileToCleanup?.let { runCatching { it.delete() } }
-            showFailureNotification(t.message ?: t.javaClass.simpleName)
+            runCatching { showFailureNotification(t.message ?: t.javaClass.simpleName) }
+                .onFailure { notificationError ->
+                    Diag.w(DiagnosticArea.POLAR, TAG, "Fehler-Benachrichtigung fehlgeschlagen", notificationError)
+                }
             Result.failure()
         }
     }
@@ -245,6 +265,7 @@ constructor(
         private const val TAG = "PolarBulkImportWorker"
         private const val CHANNEL_ID = "polar_bulk_import"
         private const val NOTIFICATION_ID = 73101
+        private const val MAX_RETRY_ATTEMPTS = 3
         const val KEY_ZIP_URI = "zip_uri"
         const val UNIQUE_NAME_ONESHOT = "polar-bulk-import"
     }

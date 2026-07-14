@@ -930,7 +930,12 @@ data class TagebuchFollowup(
 private val Context.tagebuchStore by preferencesDataStore(name = "tagebuch_entries")
 private val KEY_ENTRIES = stringPreferencesKey("entries_json")
 
-internal fun allTagebuchEntriesFlow(context: Context): Flow<List<TagebuchEntry>> =
+/**
+ * Wie [allTagebuchEntriesFlow], aber bei kaputtem JSON wird null (statt einer leeren Liste)
+ * emittiert. Der Second-Brain-Sync unterscheidet so einen Parse-Fehler von "wirklich leer" und
+ * loescht bei einem Fehler NICHT faelschlich alle Brain-/App-Eintraege (Fix 2026-07-14).
+ */
+internal fun allTagebuchEntriesFlowOrNull(context: Context): Flow<List<TagebuchEntry>?> =
     context.tagebuchStore.data.map { prefs ->
         val raw = prefs[KEY_ENTRIES] ?: return@map emptyList()
         runCatching {
@@ -939,15 +944,26 @@ internal fun allTagebuchEntriesFlow(context: Context): Flow<List<TagebuchEntry>>
                     for (i in 0 until arr.length()) add(jsonToEntry(arr.getJSONObject(i)))
                 }
             }
-            .getOrDefault(emptyList())
-            .sortedByDescending { it.timestampMs }
+            .getOrNull()
+            ?.sortedByDescending { it.timestampMs }
     }
+
+internal fun allTagebuchEntriesFlow(context: Context): Flow<List<TagebuchEntry>> =
+    allTagebuchEntriesFlowOrNull(context).map { it ?: emptyList() }
 
 internal fun tagebuchEntriesFlow(
     context: Context,
     area: TagebuchArea = TagebuchArea.ENTROPY,
 ): Flow<List<TagebuchEntry>> = allTagebuchEntriesFlow(context).map { entries ->
     entries.filter { it.area == area }
+}
+
+/** Null-erhaltende Variante von [tagebuchEntriesFlow] fuer den Second-Brain-Sync (Fix 2026-07-14). */
+internal fun tagebuchEntriesFlowOrNull(
+    context: Context,
+    area: TagebuchArea = TagebuchArea.ENTROPY,
+): Flow<List<TagebuchEntry>?> = allTagebuchEntriesFlowOrNull(context).map { entries ->
+    entries?.filter { it.area == area }
 }
 
 /** Beobachtbarer Flow eines einzelnen Eintrags — für den Vollbild-Detail-Screen. */

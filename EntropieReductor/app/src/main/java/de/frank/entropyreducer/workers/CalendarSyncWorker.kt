@@ -22,14 +22,15 @@ class CalendarSyncWorker @AssistedInject constructor(
 ) : CoroutineWorker(appContext, params) {
 
     override suspend fun doWork(): Result {
-        val outcome = repo.syncDefaultWindow()
-        return outcome.fold(
-            onSuccess = {
-                runCatching { rebucket() }
-                Result.success()
-            },
-            onFailure = { Result.retry() },
-        )
+        return try {
+            repo.syncDefaultWindow().getOrThrow()
+            rebucket()
+            Result.success()
+        } catch (cancellation: kotlinx.coroutines.CancellationException) {
+            throw cancellation
+        } catch (_: Exception) {
+            retryOrFailure()
+        }
     }
 
     companion object {

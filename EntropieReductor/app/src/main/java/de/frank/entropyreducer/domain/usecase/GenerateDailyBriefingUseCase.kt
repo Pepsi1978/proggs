@@ -118,6 +118,8 @@ class GenerateDailyBriefingUseCase @Inject constructor(
             } else {
                 Result.success(md)
             }
+        } catch (cancellation: kotlinx.coroutines.CancellationException) {
+            throw cancellation
         } catch (t: Throwable) {
             Result.failure(t)
         }

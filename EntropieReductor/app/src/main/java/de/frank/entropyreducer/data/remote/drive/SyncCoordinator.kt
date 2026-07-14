@@ -10,6 +10,7 @@ import de.frank.entropyreducer.data.local.dao.ScientistSessionDao
 import de.frank.entropyreducer.data.repository.BiomarkerCardOrderRepository
 import de.frank.entropyreducer.data.repository.EntryRepository
 import de.frank.entropyreducer.data.settings.EncryptedSecretsStore
+import java.security.MessageDigest
 import javax.inject.Inject
 import javax.inject.Singleton
 import kotlinx.coroutines.CoroutineScope
@@ -187,16 +188,28 @@ constructor(
      * Drive-Backup KOMPLETT abgeschlossen ist, BEVOR die anderen API-Syncs (Whoop/Oura/
      * Kalender) starten. Ohne verbundenes Drive-Konto kehrt sie sofort zurueck.
      */
-    suspend fun syncNowAndWait() {
-        if (!secrets.driveBackupEnabled || secrets.driveAccountEmail == null) return
+    suspend fun syncNowAndWait(): Result<Unit> {
+        if (!secrets.driveBackupEnabled || secrets.driveAccountEmail == null) return Result.success(Unit)
         pendingJob?.cancel()
-        performUpload()
+        do {
+            performUpload(scheduleDirtyRerun = false)
+            val failed = status.value as? SyncStatus.Failed
+            if (failed != null) {
+                if (dirtyDuringUpload) requestSync("Re-Run nach fehlgeschlagenem blockierendem Upload")
+                return Result.failure(IllegalStateException(failed.reason))
+            }
+        } while (dirtyDuringUpload)
+        return when (val finalStatus = status.value) {
+            is SyncStatus.Failed -> Result.failure(IllegalStateException(finalStatus.reason))
+            else -> Result.success(Unit)
+        }
     }
 
-    private suspend fun performUpload() {
+    private suspend fun performUpload(scheduleDirtyRerun: Boolean = true) {
         uploadMutex.withLock {
             _status.value = SyncStatus.Running
             dirtyDuringUpload = false
+            try {
             // Frank-Wunsch 2026-05-09 (Abend): Vollstaendiger Snapshot ALLER
             // wichtigen Wissens-Daten. Aufgaben (entries) plus alles was in
             // ScientistDatabase persistent ist — Insights, Memories, Hypothesen,
@@ -338,11 +351,11 @@ constructor(
 
             // Sprint 2.8: alle Vorlagen wiederkehrender Aufgaben ins Backup.
             val recurringTemplateBackups =
-                recurringTemplateRepoLazy.get().getAllForBackup().map { it.toBackup() }
+                recurringTemplateRepoLazy.get().getAllForBackup().map { it.toBackup() }.sortedBy { it.id }
 
             // Frank-Wunsch 2026-06-19: Prioritaets-Gedaechtnis ins Backup.
             val priorityMemoryBackups =
-                priorityMemoryRepoLazy.get().getAllForBackup().map { it.toBackup() }
+                priorityMemoryRepoLazy.get().getAllForBackup().map { it.toBackup() }.sortedBy { it.id }
 
             // Schema v11 (Frank-Bugfix 2026-05-22): Amazfit-Daily-Werte ins
             // Haupt-Backup. Volumen klein (~ein Eintrag pro Tag, max 730 Tage
@@ -412,9 +425,9 @@ constructor(
             // Frank-Wunsch 2026-06-19 (Schema v15): offene KI-Vorschlaege mitsichern, damit sie bei
             // Update/Reinstall/Geraetewechsel nicht verloren gehen.
             val taskSuggestionBackups =
-                de.frank.entropyreducer.data.taskSuggestionsForBackup(appContext).first()
+                de.frank.entropyreducer.data.taskSuggestionsForBackup(appContext).first().sortedBy { it.id }
             val gewohnheitSuggestionBackups =
-                de.frank.entropyreducer.data.gewohnheitSuggestionsForBackup(appContext).first()
+                de.frank.entropyreducer.data.gewohnheitSuggestionsForBackup(appContext).first().sortedBy { it.id }
             // Sync-Etappe 1.2 (Frank-Wunsch 2026-06-19): Loesch-Protokoll mitsichern (Tombstones),
             // damit Loeschungen 1:1 auf andere Geraete propagieren.
             val tombstoneBackups = de.frank.entropyreducer.data.tombstonesForBackup(appContext)
@@ -498,10 +511,12 @@ constructor(
             // er nur -> es wird wie bisher IMMER hochgeladen. Es kann nie FAELSCHLICH geskippt
             // werden ohne dass beim naechsten echten Inhaltswechsel wieder hochgeladen wird
             // (requestSync laeuft bei jeder Mutation + bei jedem Start).
-            val mainFingerprint = payload.copy(exportedAt = 0L).hashCode()
+            val mainFingerprint = sha256(
+                json.encodeToString(BackupPayload.serializer(), payload.copy(exportedAt = 0L))
+            )
             val lastMainFingerprint = appSettingsLazy.get().mainBackupFingerprintFlow.first()
             val mainOk =
-                if (mainFingerprint == lastMainFingerprint && lastMainFingerprint != 0) {
+                if (mainFingerprint == lastMainFingerprint && lastMainFingerprint.isNotEmpty()) {
                     // Inhalt unveraendert -> teuren Serialize+Upload des Haupt-Backups ueberspringen.
                     // mainOk = true, damit Workouts-/Health-Backup (eigene Skip-Logik) weiterlaufen.
                     diagnostics.info(
@@ -522,7 +537,11 @@ constructor(
                             diagnostics.info(
                                 de.frank.entropyreducer.data.diagnostics.DiagnosticArea.DRIVE_BACKUP,
                                 "Haupt-Upload OK in ${System.currentTimeMillis() - uploadStartMs}ms " +
-                                    "(${text.length} Zeichen)",
+                                "(${text.length} Zeichen)",
+                            )
+                        } else {
+                            _status.value = SyncStatus.Failed(
+                                result.exceptionOrNull()?.message ?: "Haupt-Backup fehlgeschlagen",
                             )
                         }
                         result.isSuccess
@@ -542,6 +561,7 @@ constructor(
             // ist der Trainingsverlauf nach `adb uninstall` automatisch wieder da.
             // Nach 2-Jahres-Retention (~104 Workouts) liegt das Volumen sicher
             // unter 15 MB.
+            var secondaryFailure: String? = null
             if (mainOk) {
                 try {
                     // Frank-Wunsch 2026-05-23: Das Workouts-Backup ist mit ~6 MB die mit Abstand
@@ -557,16 +577,16 @@ constructor(
                     // joinToString-Form sind identisch -> der Hash und damit die Skip-/Upload-
                     // Entscheidung bleiben bit-genau gleich. Die vollen Entities werden erst im
                     // else-Zweig geladen, also nur wenn tatsaechlich hochgeladen wird.
-                    val fingerprint =
+                    val fingerprintSource =
                         amazfitWorkoutDaoLazy
                             .get()
                             .getFingerprintRows()
                             .joinToString("|") {
                                 "${it.trackId}:${it.createdAt}:${it.manualOverridesMs ?: 0L}:${it.weatherFetchedMs ?: 0L}"
                             }
-                            .hashCode()
+                    val fingerprint = sha256(fingerprintSource)
                     val lastFingerprint = appSettingsLazy.get().workoutsBackupFingerprintFlow.first()
-                    if (fingerprint == lastFingerprint && lastFingerprint != 0) {
+                    if (fingerprint == lastFingerprint && lastFingerprint.isNotEmpty()) {
                         // Keine Aenderung an den Trainings — teuren 6-MB-Upload ueberspringen.
                         // Skip-Pfad laedt jetzt KEINE Stream-Daten mehr in den RAM.
                         _status.value = SyncStatus.Synced(System.currentTimeMillis())
@@ -608,22 +628,21 @@ constructor(
                                     _status.value = SyncStatus.Synced(System.currentTimeMillis())
                                 }
                                 .onFailure { ex ->
-                                    _status.value =
-                                        SyncStatus.Failed(
-                                            "Workouts-Backup fehlgeschlagen: ${ex.message ?: ex.javaClass.simpleName}"
-                                        )
+                                    secondaryFailure =
+                                        "Workouts-Backup fehlgeschlagen: ${ex.message ?: ex.javaClass.simpleName}"
+                                    _status.value = SyncStatus.Failed(secondaryFailure!!)
                                 }
                         }
                     }
                 } catch (oom: OutOfMemoryError) {
                     System.gc()
-                    _status.value = SyncStatus.Failed("Workouts-Backup zu gross (OOM)")
+                    secondaryFailure = "Workouts-Backup zu gross (OOM)"
+                    _status.value = SyncStatus.Failed(secondaryFailure!!)
                 } catch (t: Throwable) {
                     if (t is kotlinx.coroutines.CancellationException) throw t
-                    _status.value =
-                        SyncStatus.Failed(
-                            "Workouts-Backup fehlgeschlagen: ${t.message ?: t.javaClass.simpleName}"
-                        )
+                    secondaryFailure =
+                        "Workouts-Backup fehlgeschlagen: ${t.message ?: t.javaClass.simpleName}"
+                    _status.value = SyncStatus.Failed(secondaryFailure!!)
                 }
             }
 
@@ -665,15 +684,22 @@ constructor(
                     // Haupt-/Workouts-Backup nur hochladen wenn sich der Inhalt geaendert hat.
                     // Fingerprint = inhaltsbasierter hashCode OHNE exportedAt. Safe-Degradation:
                     // instabiler Hash -> flackert nur -> wird wie bisher immer hochgeladen.
-                    val healthFingerprint = healthPayload.copy(exportedAt = 0L).hashCode()
+                    val healthFingerprint = sha256(
+                        json.encodeToString(
+                            HealthBackupPayload.serializer(),
+                            healthPayload.copy(exportedAt = 0L),
+                        )
+                    )
                     val lastHealthFingerprint =
                         appSettingsLazy.get().healthBackupFingerprintFlow.first()
-                    if (healthFingerprint == lastHealthFingerprint && lastHealthFingerprint != 0) {
+                    if (healthFingerprint == lastHealthFingerprint && lastHealthFingerprint.isNotEmpty()) {
                         diagnostics.info(
                             de.frank.entropyreducer.data.diagnostics.DiagnosticArea.DRIVE_BACKUP,
                             "Health-Backup unveraendert -> Upload uebersprungen",
                         )
-                        _status.value = SyncStatus.Synced(System.currentTimeMillis())
+                        if (secondaryFailure == null) {
+                            _status.value = SyncStatus.Synced(System.currentTimeMillis())
+                        }
                     } else {
                         val healthText =
                             json.encodeToString(HealthBackupPayload.serializer(), healthPayload)
@@ -683,29 +709,42 @@ constructor(
                                 // Fingerprint erst nach Erfolg speichern -> fehlgeschlagener
                                 // Upload wird beim naechsten Mal erneut versucht.
                                 appSettingsLazy.get().setHealthBackupFingerprint(healthFingerprint)
-                                _status.value = SyncStatus.Synced(System.currentTimeMillis())
+                                if (secondaryFailure == null) {
+                                    _status.value = SyncStatus.Synced(System.currentTimeMillis())
+                                }
                             }
                             .onFailure { ex ->
-                                _status.value =
-                                    SyncStatus.Failed(
-                                        "Health-Backup fehlgeschlagen: ${ex.message ?: ex.javaClass.simpleName}"
-                                    )
+                                secondaryFailure =
+                                    "Health-Backup fehlgeschlagen: ${ex.message ?: ex.javaClass.simpleName}"
+                                _status.value = SyncStatus.Failed(secondaryFailure!!)
                             }
                     }
                 } catch (oom: OutOfMemoryError) {
                     System.gc()
-                    _status.value = SyncStatus.Failed("Health-Backup zu gross (OOM)")
+                    secondaryFailure = "Health-Backup zu gross (OOM)"
+                    _status.value = SyncStatus.Failed(secondaryFailure!!)
                 } catch (t: Throwable) {
                     if (t is kotlinx.coroutines.CancellationException) throw t
-                    _status.value =
-                        SyncStatus.Failed(
-                            "Health-Backup fehlgeschlagen: ${t.message ?: t.javaClass.simpleName}"
-                        )
+                    secondaryFailure =
+                        "Health-Backup fehlgeschlagen: ${t.message ?: t.javaClass.simpleName}"
+                    _status.value = SyncStatus.Failed(secondaryFailure!!)
                 }
+            }
+            if (mainOk && secondaryFailure != null) {
+                _status.value = SyncStatus.Failed(secondaryFailure!!)
+            }
+            } catch (cancellation: kotlinx.coroutines.CancellationException) {
+                _status.value = SyncStatus.Failed("Backup abgebrochen")
+                throw cancellation
+            } catch (oom: OutOfMemoryError) {
+                System.gc()
+                _status.value = SyncStatus.Failed("Backup zu gross (OOM)")
+            } catch (t: Throwable) {
+                _status.value = SyncStatus.Failed(t.message ?: "Backup fehlgeschlagen")
             }
         }
         // Wenn waehrend des Uploads neue Aenderungen kamen: noch einen Run.
-        if (dirtyDuringUpload) {
+        if (dirtyDuringUpload && scheduleDirtyRerun) {
             requestSync("Re-Run: Aenderung kam waehrend laufendem Upload")
         }
     }
@@ -731,36 +770,104 @@ constructor(
      * (Verhalten exakt wie vor dem Fix, kein Datenverlust durch den Schutz selbst).
      */
     private suspend fun mergeRemoteAdditiveLists(local: BackupPayload): BackupPayload {
-        val remoteRaw = restoreManagerLazy.get().fetchLatest().getOrNull() ?: return local
+        val remoteRaw = restoreManagerLazy.get().fetchLatest().getOrThrow() ?: return local
         val remote =
             runCatching { json.decodeFromString(BackupPayload.serializer(), remoteRaw) }
                 .getOrElse {
-                    diagnostics.info(
-                        de.frank.entropyreducer.data.diagnostics.DiagnosticArea.DRIVE_BACKUP,
-                        "M2-Schutz: Remote-Backup nicht lesbar -> lokaler Stand bleibt",
-                    )
-                    return local
+                    throw IllegalArgumentException("Remote-Backup ist nicht lesbar", it)
                 }
+        val mergedTombstones =
+            de.frank.entropyreducer.data.unionTombstones(local.tombstones, remote.tombstones)
+        fun deletedAt(type: String): Map<String, Long> =
+            mergedTombstones.filter { it.type == type }.associate { it.id to it.deletedAt }
+
+        val mergedEntries = mergeLww(
+            local.entries,
+            remote.entries,
+            BackupEntry::id,
+            BackupEntry::updatedAt,
+            deletedAt(de.frank.entropyreducer.data.TombstoneType.AUFGABE),
+        )
+        val mergedEntryIds = mergedEntries.mapTo(mutableSetOf()) { it.id }
         val merged =
             local.copy(
-                mentals = rescueIfLocalEmpty(local.mentals, remote.mentals),
-                ideenEntries = rescueIfLocalEmpty(local.ideenEntries, remote.ideenEntries),
-                gewohnheiten = rescueIfLocalEmpty(local.gewohnheiten, remote.gewohnheiten),
+                entries = mergedEntries,
+                mentals = mergeLww(
+                    local.mentals,
+                    remote.mentals,
+                    BackupMental::id,
+                    BackupMental::updatedAt,
+                    deletedAt(de.frank.entropyreducer.data.TombstoneType.MENTAL),
+                ),
+                ideenEntries = mergeLww(
+                    local.ideenEntries,
+                    remote.ideenEntries,
+                    BackupIdeenEntry::id,
+                    { it.updatedAt ?: it.timestampMs },
+                    deletedAt(de.frank.entropyreducer.data.TombstoneType.IDEE),
+                ),
+                gewohnheiten = mergeLww(
+                    local.gewohnheiten,
+                    remote.gewohnheiten,
+                    BackupMental::id,
+                    BackupMental::updatedAt,
+                    deletedAt(de.frank.entropyreducer.data.TombstoneType.GEWOHNHEIT),
+                ),
                 tagebuchEntries =
-                    rescueTagebuchAreasIfLocallyEmpty(
+                    mergeLww(
                         local.tagebuchEntries,
                         remote.tagebuchEntries,
+                        BackupTagebuchEntry::id,
+                        { if (it.updatedAt > 0L) it.updatedAt else it.timestampMs },
+                        deletedAt(de.frank.entropyreducer.data.TombstoneType.TAGEBUCH),
                     ),
-                thesenEntries = rescueIfLocalEmpty(local.thesenEntries, remote.thesenEntries),
-                taskSuggestions = rescueIfLocalEmpty(local.taskSuggestions, remote.taskSuggestions),
+                thesenEntries = mergeLww(
+                    local.thesenEntries,
+                    remote.thesenEntries,
+                    BackupThesenEntry::id,
+                    { if (it.updatedAt > 0L) it.updatedAt else it.timestampMs },
+                    deletedAt(de.frank.entropyreducer.data.TombstoneType.THESE),
+                ),
+                recurringTemplates = mergeLww(
+                    local.recurringTemplates,
+                    remote.recurringTemplates,
+                    BackupRecurringTemplate::id,
+                    BackupRecurringTemplate::updatedAt,
+                    deletedAt(de.frank.entropyreducer.data.TombstoneType.LOOP_TEMPLATE),
+                ),
+                priorityMemories = mergeLww(
+                    local.priorityMemories,
+                    remote.priorityMemories,
+                    BackupPriorityMemory::id,
+                    BackupPriorityMemory::updatedAt,
+                    deletedAt(de.frank.entropyreducer.data.TombstoneType.PRIORITY_MEMORY),
+                ),
+                entropyEntryFollowups = mergeLww(
+                    local.entropyEntryFollowups,
+                    remote.entropyEntryFollowups,
+                    BackupEntropyFollowup::id,
+                    BackupEntropyFollowup::updatedAt,
+                    deletedAt(de.frank.entropyreducer.data.TombstoneType.FOLLOWUP),
+                ).filter { it.entryId in mergedEntryIds },
+                taskSuggestions = mergeAdditive(
+                    local.taskSuggestions,
+                    remote.taskSuggestions,
+                    BackupTaskSuggestion::id,
+                    deletedAt(de.frank.entropyreducer.data.TombstoneType.TASK_SUGGESTION),
+                ),
                 gewohnheitSuggestions =
-                    rescueIfLocalEmpty(local.gewohnheitSuggestions, remote.gewohnheitSuggestions),
+                    mergeLww(
+                        local.gewohnheitSuggestions,
+                        remote.gewohnheitSuggestions,
+                        BackupMental::id,
+                        BackupMental::updatedAt,
+                        deletedAt(de.frank.entropyreducer.data.TombstoneType.HABIT_SUGGESTION),
+                    ),
                 // Sync-Etappe 1.2: Tombstones der anderen Geraete NICHT verlieren — echter Union
                 // (neuester Loeschzeitpunkt pro Eintrag), damit das hochgeladene Backup die
                 // Loeschungen ALLER Geraete enthaelt (nicht nur die eigenen). Sonst wuerde ein
                 // Upload ohne vorherigen Restore fremde Loeschungen im Backup ueberschreiben.
-                tombstones =
-                    de.frank.entropyreducer.data.unionTombstones(local.tombstones, remote.tombstones),
+                tombstones = mergedTombstones,
             )
         val rescued =
             (merged.mentals.size - local.mentals.size) +
@@ -784,12 +891,36 @@ constructor(
         return merged
     }
 
-    /**
-     * Uebernimmt das Remote NUR, wenn die lokale Liste leer ist und das Remote nicht — der klare
-     * Totalverlust-Fall. Sonst bleibt die lokale Liste unveraendert (Loeschungen/Edits gewinnen).
-     */
-    private fun <T> rescueIfLocalEmpty(local: List<T>, remote: List<T>): List<T> =
-        if (local.isEmpty() && remote.isNotEmpty()) remote else local
+    private fun <T> mergeLww(
+        local: List<T>,
+        remote: List<T>,
+        idOf: (T) -> String,
+        updatedAtOf: (T) -> Long,
+        deletedAtById: Map<String, Long>,
+    ): List<T> {
+        val chosen = mutableMapOf<String, T>()
+        for (item in remote + local) {
+            val id = idOf(item)
+            val previous = chosen[id]
+            if (previous == null || updatedAtOf(item) >= updatedAtOf(previous)) chosen[id] = item
+        }
+        val orderedIds = (local.asSequence() + remote.asSequence()).map(idOf).distinct()
+        return orderedIds.mapNotNull { id ->
+            val item = chosen[id] ?: return@mapNotNull null
+            val deletedAt = deletedAtById[id]
+            item.takeIf { deletedAt == null || updatedAtOf(item) >= deletedAt }
+        }.toList()
+    }
+
+    private fun <T> mergeAdditive(
+        local: List<T>,
+        remote: List<T>,
+        idOf: (T) -> String,
+        deletedAtById: Map<String, Long>,
+    ): List<T> =
+        (local + remote)
+            .distinctBy(idOf)
+            .filterNot { deletedAtById.containsKey(idOf(it)) }
 
     /**
      * M2-Schutz fuer das separate Workouts-Backup: true, wenn das Remote-Workouts-Backup mindestens
@@ -797,11 +928,8 @@ constructor(
      * der normale Upload, wie vor dem Fix).
      */
     private suspend fun remoteWorkoutsHasData(): Boolean {
-        val raw = restoreManagerLazy.get().fetchWorkouts().getOrNull() ?: return false
-        return runCatching {
-                json.decodeFromString(WorkoutsBackupPayload.serializer(), raw).workouts.isNotEmpty()
-            }
-            .getOrDefault(false)
+        val raw = restoreManagerLazy.get().fetchWorkouts().getOrThrow() ?: return false
+        return json.decodeFromString(WorkoutsBackupPayload.serializer(), raw).workouts.isNotEmpty()
     }
 
     companion object {
@@ -815,6 +943,11 @@ constructor(
          */
         const val BIOMARKER_DEBOUNCE_MS = 5000L
     }
+
+    private fun sha256(value: String): String =
+        MessageDigest.getInstance("SHA-256")
+            .digest(value.toByteArray(Charsets.UTF_8))
+            .joinToString("") { byte -> "%02x".format(byte) }
 }
 
 /**

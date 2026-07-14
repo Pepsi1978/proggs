@@ -518,12 +518,7 @@ fun GewohnheitBoardScreen(
                                     SuggestionRow(
                                         mental = item.mental,
                                         isDragging = isDragging,
-                                        onAccept = {
-                                            scope.launch {
-                                                addGewohnheitFromSuggestion(context, item.mental.id, item.mental.text)
-                                                suggestVm.acceptSuggestion(item.mental.id)
-                                            }
-                                        },
+                                        onAccept = { suggestVm.acceptSuggestion(item.mental.id) },
                                         onDelete = {
                                             scope.launch { suggestVm.deleteSuggestion(item.mental.id) }
                                         },
@@ -537,10 +532,7 @@ fun GewohnheitBoardScreen(
                                                     val itemIdx = finalOrder.indexOf(item.mental.id)
                                                     if (sepIdx >= 0 && itemIdx in 0 until sepIdx) {
                                                         // Promotion: Vorschlag → Gewohnheit
-                                                        scope.launch {
-                                                            addGewohnheitFromSuggestion(context, item.mental.id, item.mental.text)
-                                                            suggestVm.acceptSuggestion(item.mental.id)
-                                                        }
+                                                        suggestVm.acceptSuggestion(item.mental.id)
                                                     }
                                                 }
                                                 dragOrder = null

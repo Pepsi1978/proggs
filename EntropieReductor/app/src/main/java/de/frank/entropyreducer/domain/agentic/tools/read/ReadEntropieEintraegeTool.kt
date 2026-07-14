@@ -1,13 +1,15 @@
 package de.frank.entropyreducer.domain.agentic.tools.read
 
-import de.frank.entropyreducer.data.local.entities.EntropyEntryEntity
+import android.content.Context
+import dagger.hilt.android.qualifiers.ApplicationContext
 import de.frank.entropyreducer.data.remote.Schema
 import de.frank.entropyreducer.data.remote.SchemaType
-import de.frank.entropyreducer.data.repository.EntryRepository
 import de.frank.entropyreducer.domain.agentic.AgenticTool
 import de.frank.entropyreducer.domain.agentic.ToolCategory
 import de.frank.entropyreducer.domain.agentic.ToolContext
 import de.frank.entropyreducer.domain.agentic.ToolResult
+import de.frank.entropyreducer.presentation.tagebuch.allTagebuchEntriesFlow
+import de.frank.entropyreducer.presentation.tagebuch.TagebuchArea
 import javax.inject.Inject
 import javax.inject.Singleton
 import kotlinx.serialization.json.JsonElement
@@ -18,6 +20,7 @@ import kotlinx.serialization.json.buildJsonObject
 import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.jsonPrimitive
 import kotlinx.serialization.json.put
+import kotlinx.coroutines.flow.first
 
 /**
  * Erstes Referenz-Read-Tool: liest Entropie-Eintraege aus dem EntryRepository.
@@ -38,7 +41,7 @@ import kotlinx.serialization.json.put
 @Singleton
 class ReadEntropieEintraegeTool
 @Inject
-constructor(private val entryRepository: EntryRepository) : AgenticTool {
+constructor(@ApplicationContext private val context: Context) : AgenticTool {
 
     override val name: String = "read_entropie_eintraege"
 
@@ -101,11 +104,12 @@ constructor(private val entryRepository: EntryRepository) : AgenticTool {
                         )
                 }
 
-            val allEntries: List<EntropyEntryEntity> = entryRepository.getAllForBackup()
+            val allEntries =
+                allTagebuchEntriesFlow(context).first().filter { it.area == TagebuchArea.ENTROPY }
             val filtered =
                 allEntries
-                    .filter { sinceMillis == null || it.createdAt >= sinceMillis }
-                    .sortedByDescending { it.createdAt }
+                    .filter { sinceMillis == null || it.timestampMs >= sinceMillis }
+                    .sortedByDescending { it.timestampMs }
                     .take(limit)
 
             val resultJson =
@@ -117,25 +121,24 @@ constructor(private val entryRepository: EntryRepository) : AgenticTool {
                         filtered.forEach { entry ->
                             add(buildJsonObject {
                                 put("id", entry.id)
-                                put("createdAt", entry.createdAt)
-                                put("category", entry.category.name)
-                                put("status", entry.status.name)
-                                put("timeBucket", entry.timeBucket.name)
+                                put("createdAt", entry.timestampMs)
+                                put("updatedAt", entry.updatedAt)
+                                put("area", entry.area.name)
                                 put("title", entry.title)
-                                put(
-                                    "description",
-                                    entry.description.take(500) +
-                                        if (entry.description.length > 500) "..." else "",
-                                )
-                                put(
-                                    "rawTranscript",
-                                    entry.rawTranscript.take(800) +
-                                        if (entry.rawTranscript.length > 800) "..." else "",
-                                )
-                                put("aiNotes", entry.aiNotes ?: "")
-                                put("priorityScore", entry.priorityScore)
-                                put("severity", entry.severity)
-                                put("tags", buildJsonArray { entry.tags.forEach { add(it) } })
+                                put("text", entry.text.take(800))
+                                put("improvedText", entry.improvedText ?: "")
+                                put("isImproved", entry.isImproved)
+                                put("summary", entry.summary ?: "")
+                                put("followupCount", entry.followups.size)
+                                put("followups", buildJsonArray {
+                                    entry.followups.forEach { followup ->
+                                        add(buildJsonObject {
+                                            put("id", followup.id)
+                                            put("createdAt", followup.createdAtMs)
+                                            put("text", followup.text.take(500))
+                                        })
+                                    }
+                                })
                             })
                         }
                     })

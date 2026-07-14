@@ -4,6 +4,7 @@ import de.frank.entropyreducer.data.diagnostics.Diag
 import de.frank.entropyreducer.data.diagnostics.DiagnosticArea
 import de.frank.entropyreducer.data.remote.drive.DriveBackupManager
 import de.frank.entropyreducer.data.remote.drive.DriveRestoreManager
+import de.frank.entropyreducer.util.runCatchingCancellable
 import javax.inject.Inject
 import javax.inject.Singleton
 import kotlinx.coroutines.CoroutineScope
@@ -59,7 +60,7 @@ constructor(
                     TtsUsageBackupPayload.serializer(),
                     TtsUsageBackupPayload(month = snap.month, chars = snap.chars),
                 )
-                backupManager.uploadTtsUsage(payload)
+                backupManager.uploadTtsUsage(payload).getOrThrow()
                 Diag.d(
                     DiagnosticArea.DRIVE_BACKUP,
                     TAG,
@@ -81,8 +82,8 @@ constructor(
      * `lifecycleScope`). Schluckt alle Fehler.
      */
     suspend fun restoreOnStart() {
-        runCatching {
-            val content = restoreManager.fetchTtsUsage().getOrNull()
+        runCatchingCancellable {
+            val content = restoreManager.fetchTtsUsage().getOrThrow()
             if (content.isNullOrBlank()) {
                 Diag.d(DiagnosticArea.DRIVE_BACKUP, TAG, "Kein TTS-Usage-Backup auf Drive — nichts wiederherzustellen")
                 return

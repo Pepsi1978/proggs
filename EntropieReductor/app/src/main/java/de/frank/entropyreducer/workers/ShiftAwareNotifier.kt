@@ -14,6 +14,7 @@ import androidx.core.content.ContextCompat
 import dagger.hilt.android.qualifiers.ApplicationContext
 import de.frank.entropyreducer.R
 import de.frank.entropyreducer.data.local.dao.CalendarDayDao
+import de.frank.entropyreducer.presentation.MainActivity
 import kotlinx.coroutines.flow.first
 import java.time.LocalDate
 import java.time.LocalDateTime
@@ -82,8 +83,7 @@ class ShiftAwareNotifier @Inject constructor(
             if (!granted) return
         }
 
-        val openIntent = Intent(Intent.ACTION_VIEW).apply {
-            setPackage(context.packageName)
+        val openIntent = Intent(context, MainActivity::class.java).apply {
             deepLink?.let { putExtra(EXTRA_DEEP_LINK, it) }
             flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_SINGLE_TOP
         }

@@ -19,8 +19,8 @@ import de.frank.entropyreducer.domain.model.ShiftCode
  */
 object ShiftCodeParser {
 
-    private val tagPattern = Regex("""^TAG\s*[1-4](?:\s*([XF]))?$""")
-    private val nachtPattern = Regex("""^NACHT\s*[1-4](?:\s*([XF]))?$""")
+    private val tagPattern = Regex("""^TAG[\s-]*[1-4](?:[\s-]*([XF]))?$""")
+    private val nachtPattern = Regex("""^NACHT[\s-]*[1-4](?:[\s-]*([XF]))?$""")
     /**
      * Frei-Tag-Pattern: erkennt "X", "F", "X-Tag", "F-Tag", "X Tag", "F Tag",
      * "FREI", "FREITAG" als alleinstehende Marker für einen freien Tag im

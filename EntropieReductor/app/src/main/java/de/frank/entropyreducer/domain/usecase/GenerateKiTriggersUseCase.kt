@@ -116,6 +116,8 @@ class GenerateKiTriggersUseCase @Inject constructor(
             val triggers = parseTriggers(raw)
             triggers.forEach { triggerRepo.upsert(it) }
             Result.success(triggers.size)
+        } catch (cancellation: kotlinx.coroutines.CancellationException) {
+            throw cancellation
         } catch (t: Throwable) {
             Result.failure(t)
         }
@@ -130,11 +132,14 @@ class GenerateKiTriggersUseCase @Inject constructor(
         val now = System.currentTimeMillis()
         val openingBrace = raw.indexOf('{')
         val closingBrace = raw.lastIndexOf('}')
-        if (openingBrace < 0 || closingBrace <= openingBrace) return emptyList()
+        if (openingBrace < 0 || closingBrace <= openingBrace) {
+            throw IllegalArgumentException("Gemini-Antwort enthaelt kein gueltiges Trigger-JSON")
+        }
         val jsonText = raw.substring(openingBrace, closingBrace + 1)
         return try {
             val obj = JSONObject(jsonText)
-            val arr = obj.optJSONArray("triggers") ?: JSONArray()
+            val arr = obj.optJSONArray("triggers")
+                ?: throw IllegalArgumentException("Gemini-JSON enthaelt kein triggers-Array")
             val out = mutableListOf<KiTriggerEntity>()
             for (i in 0 until arr.length()) {
                 val t = arr.optJSONObject(i) ?: continue
@@ -159,8 +164,10 @@ class GenerateKiTriggersUseCase @Inject constructor(
                 )
             }
             out
-        } catch (_: Throwable) {
-            emptyList()
+        } catch (e: IllegalArgumentException) {
+            throw e
+        } catch (e: Exception) {
+            throw IllegalArgumentException("Gemini-Trigger-JSON ist nicht lesbar", e)
         }
     }
 

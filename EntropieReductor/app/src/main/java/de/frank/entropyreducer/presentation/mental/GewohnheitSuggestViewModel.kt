@@ -5,10 +5,14 @@ import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.stringPreferencesKey
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import androidx.room.withTransaction
 import dagger.hilt.android.lifecycle.HiltViewModel
 import dagger.hilt.android.qualifiers.ApplicationContext
 import de.frank.entropyreducer.data.gewohnheitSuggestionStore
 import de.frank.entropyreducer.data.local.dao.HabitSuggestionDao
+import de.frank.entropyreducer.data.local.dao.HabitDao
+import de.frank.entropyreducer.data.local.AppDatabase
+import de.frank.entropyreducer.data.local.entities.HabitEntity
 import de.frank.entropyreducer.data.local.entities.HabitSuggestionEntity
 import de.frank.entropyreducer.data.safety.PhoneContentGuard
 import de.frank.entropyreducer.domain.usecase.AutoHabitSuggestion
@@ -23,6 +27,7 @@ import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
+import de.frank.entropyreducer.util.runCatchingCancellable
 import org.json.JSONArray
 
 private val HABIT_PROCESSED_KEY = stringPreferencesKey("habit_processed_idea_ids")
@@ -34,6 +39,8 @@ class GewohnheitSuggestViewModel @Inject constructor(
     @ApplicationContext private val context: Context,
     private val generateSuggestions: GenerateSuggestionsUseCase,
     private val habitSuggestionDao: HabitSuggestionDao,
+    private val habitDao: HabitDao,
+    private val appDatabase: AppDatabase,
 ) : ViewModel() {
 
     // DataStore weiterhin NUR fuer habit_processed_idea_ids (wird erst mit der Dedup-Ablösung
@@ -56,7 +63,7 @@ class GewohnheitSuggestViewModel @Inject constructor(
         // Sofort-Heal beim Oeffnen des Reiters (Frank-Wunsch 2026-06-20): verwaiste/verbrauchte
         // Vorschlaege sofort wegraeumen, ohne auf den naechsten Drive-Restore zu warten.
         viewModelScope.launch {
-            runCatching { de.frank.entropyreducer.data.healOrphanedSuggestions(context) }
+            runCatchingCancellable { de.frank.entropyreducer.data.healOrphanedSuggestions(context) }
         }
     }
 
@@ -67,6 +74,7 @@ class GewohnheitSuggestViewModel @Inject constructor(
         viewModelScope.launch {
             _state.value = SuggestState.LOADING
             _error.value = null
+            generateSuggestions.serializedGeneration {
             runCatching {
                 val ideas = ideenEntriesFlow(context).first()
                 val processedIds = loadProcessedIds()
@@ -81,7 +89,9 @@ class GewohnheitSuggestViewModel @Inject constructor(
                     _error.value = "Keine Ideen vorhanden — zuerst Ideen eingeben."
                 }
             }.onFailure { ex ->
+                if (ex is kotlinx.coroutines.CancellationException) throw ex
                 _error.value = ex.message ?: "Vorschlag-Generierung fehlgeschlagen"
+            }
             }
             _state.value = SuggestState.IDLE
         }
@@ -89,11 +99,23 @@ class GewohnheitSuggestViewModel @Inject constructor(
 
     fun acceptSuggestion(id: String) {
         viewModelScope.launch {
-            // Herkunft VOR dem Loeschen lesen, damit die Quell-Idee markiert werden kann.
             val sug = habitSuggestionDao.getById(id)
-            // Entfernt nur den Vorschlag aus Room. Das Anlegen der Gewohnheit (inkl. Herkunft, 3d)
-            // passiert separat ueber addGewohnheit / Drag-Promotion im GewohnheitBoardScreen.
-            habitSuggestionDao.deleteById(id)
+            if (sug == null) return@launch
+            val habit = Mental.create(sug.text)
+            appDatabase.withTransaction {
+                habitDao.upsert(
+                    HabitEntity(
+                        id = habit.id,
+                        text = habit.text,
+                        updatedAt = habit.updatedAt,
+                        position = habitDao.maxPosition() + 1,
+                        originId = sug.id,
+                        originType = de.frank.entropyreducer.data.local.entities.OriginType.HABIT_SUGGESTION,
+                        rootId = sug.rootId ?: sug.id,
+                    )
+                )
+                habitSuggestionDao.deleteById(id)
+            }
             // Loeschung propagieren (Tombstone, Frank-Wunsch 2026-06-20) — sonst kommt der angenommene
             // Vorschlag ueber ein 2. Geraet beim Restore wieder.
             de.frank.entropyreducer.data.markDeleted(
@@ -134,13 +156,12 @@ class GewohnheitSuggestViewModel @Inject constructor(
         }
     }
 
-    private fun storeSuggestions(newSuggestions: List<AutoHabitSuggestion>) {
-        viewModelScope.launch {
+    private suspend fun storeSuggestions(newSuggestions: List<AutoHabitSuggestion>) {
             // ID-Architektur Etappe 3d: Herkunft (originId/originType/rootId) der Quell-Idee mitschreiben.
             val safeSuggestions = newSuggestions.filterNot { s ->
                 PhoneContentGuard.isSecondBrainWorkArtifact(null, s.text)
             }
-            if (safeSuggestions.isEmpty()) return@launch
+            if (safeSuggestions.isEmpty()) return
             val nowMs = System.currentTimeMillis()
             habitSuggestionDao.upsertAll(
                 safeSuggestions.mapIndexed { index, s ->
@@ -156,7 +177,6 @@ class GewohnheitSuggestViewModel @Inject constructor(
             )
             de.frank.entropyreducer.data.remote.drive.triggerDriveBackup(
                 context, "Gewohnheitsvorschlag: generiert")
-        }
     }
 
     fun resetProcessedIdeas() {

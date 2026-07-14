@@ -22,13 +22,18 @@ import de.frank.entropyreducer.domain.model.ExecutionStatus
 import de.frank.entropyreducer.domain.model.StepType
 import de.frank.entropyreducer.domain.model.TriggerSource
 import java.util.UUID
+import java.util.concurrent.ConcurrentHashMap
 import javax.inject.Inject
 import javax.inject.Singleton
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.NonCancellable
+import kotlinx.coroutines.TimeoutCancellationException
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.withContext
+import kotlinx.coroutines.withTimeout
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.buildJsonObject
 import kotlinx.serialization.json.put
@@ -67,6 +72,7 @@ constructor(
     private val secrets: EncryptedSecretsStore,
     private val chainNotifier: ChainTriggerNotifier,
 ) {
+    private val promptRunMutexes = ConcurrentHashMap<String, Mutex>()
 
     fun run(
         promptId: String,
@@ -79,7 +85,11 @@ constructor(
         var tokensOutputTotal = 0
         var toolCallCount = 0
         var stepIndex = 0
+        var executionStarted = false
 
+        try {
+        withTimeout(MAX_RUN_DURATION_MILLIS) {
+        promptRunMutexes.computeIfAbsent(promptId) { Mutex() }.withLock {
         // 1. Prompt laden
         val prompt = promptRepo.getById(promptId)
         if (prompt == null) {
@@ -90,7 +100,7 @@ constructor(
                     errorMessage = "Prompt mit id='$promptId' nicht gefunden.",
                 )
             )
-            return@flow
+            return@withTimeout
         }
 
         // 2. API-Key vorhanden?
@@ -103,7 +113,7 @@ constructor(
                     errorMessage = "Kein Gemini-API-Key hinterlegt. Bitte in den Einstellungen eintragen.",
                 )
             )
-            return@flow
+            return@withTimeout
         }
 
         // 3. Pre-Token-Check
@@ -129,7 +139,7 @@ constructor(
                     errorMessage = tokenPreCheck.reason,
                 )
             )
-            return@flow
+            return@withTimeout
         }
 
         // 4. Run-Start logging
@@ -141,6 +151,7 @@ constructor(
             modelUsed = prompt.model,
             triggerSource = triggerSource,
         )
+        executionStarted = true
         emit(
             WorkflowEvent.Started(
                 executionId = executionId,
@@ -167,8 +178,7 @@ constructor(
         var finalAnswer: String? = null
         var loopAborted = false
 
-        try {
-            while (toolCallCount < MAX_TOOL_CALLS) {
+            workflowLoop@ while (toolCallCount < MAX_TOOL_CALLS) {
                 // Timeout-Check (defensiv ohne withTimeout um Flow-Semantics nicht zu stoeren)
                 if (System.currentTimeMillis() - startedAt > MAX_RUN_DURATION_MILLIS) {
                     executionLogger.fail(
@@ -223,6 +233,8 @@ constructor(
                                         ),
                                 ),
                         )
+                    } catch (cancellation: CancellationException) {
+                        throw cancellation
                     } catch (e: Exception) {
                         executionLogger.fail(
                             executionId,
@@ -330,7 +342,30 @@ constructor(
 
                 // b) Falls keine Function-Calls: Run beendet
                 if (functionCalls.isEmpty()) {
-                    finalAnswer = textOutput
+                    if (textOutput == null) {
+                        val errorMessage = "Gemini hat weder Text noch Tool-Aufruf geliefert."
+                        executionLogger.fail(
+                            executionId,
+                            ExecutionStatus.FAILED,
+                            errorMessage,
+                            tokensInputTotal,
+                            tokensOutputTotal,
+                            toolCallCount,
+                        )
+                        emit(
+                            WorkflowEvent.Finished(
+                                executionId,
+                                ExecutionStatus.FAILED,
+                                errorMessage = errorMessage,
+                                tokensTotal = tokensInputTotal + tokensOutputTotal,
+                                toolCallCount = toolCallCount,
+                                durationMillis = System.currentTimeMillis() - startedAt,
+                            )
+                        )
+                        loopAborted = true
+                    } else {
+                        finalAnswer = textOutput
+                    }
                     break
                 }
 
@@ -340,6 +375,11 @@ constructor(
                 // d) Pro Function-Call: Gates + Execute
                 val toolResponseParts = mutableListOf<GeminiPart>()
                 for (call in functionCalls) {
+                    if (toolCallCount >= MAX_TOOL_CALLS) break@workflowLoop
+                    // Jeder vom Modell angeforderte Aufruf zaehlt, auch unbekannte,
+                    // abgelehnte oder fehlgeschlagene Tools. Sonst koennte das Modell
+                    // das Hartlimit mit ungueltigen Aufrufen unbegrenzt umgehen.
+                    toolCallCount++
                     val responsePart = processFunctionCall(
                         executionId = executionId,
                         promptId = promptId,
@@ -348,7 +388,6 @@ constructor(
                         stepIndexProvider = { stepIndex++ },
                         call = call,
                         triggerSource = triggerSource,
-                        onToolCalled = { toolCallCount++ },
                         emit = { evt -> emit(evt) },
                     )
                     toolResponseParts.add(responsePart)
@@ -405,6 +444,8 @@ constructor(
                     chainNotifier.notifySuccess(promptId)
                 }
             }
+            }
+            }
         } catch (t: Throwable) {
             // Direktive 3 Loop-3-Fix (war L3-2-Bug): CancellationException
             // wird auch vom catch(Throwable) gefangen, der naechste suspending
@@ -412,33 +453,48 @@ constructor(
             // der Status persistiert wird → Eintrag bleibt RUNNING in DB.
             // NonCancellable-Scope schuetzt den Logging-Pfad, CancellationException
             // wird sauber als CANCELLED persistiert UND rethrown (Kotlin-Pflicht).
+            val isTimeout = t is TimeoutCancellationException
             val isCancellation = t is CancellationException
             val status =
-                if (isCancellation) ExecutionStatus.CANCELLED else ExecutionStatus.FAILED
+                when {
+                    isTimeout -> ExecutionStatus.BLOCKED_BY_TIMEOUT
+                    isCancellation -> ExecutionStatus.CANCELLED
+                    else -> ExecutionStatus.FAILED
+                }
             val errorMsg =
-                if (isCancellation) "Run abgebrochen"
-                else "Unerwarteter Fehler: ${t.message ?: t::class.simpleName}"
+                when {
+                    isTimeout -> "Lauf-Timeout nach ${MAX_RUN_DURATION_MILLIS / 1000}s"
+                    isCancellation -> "Run abgebrochen"
+                    else -> "Unerwarteter Fehler: ${t.message ?: t::class.simpleName}"
+                }
             withContext(NonCancellable) {
-                executionLogger.fail(
-                    executionId,
-                    status,
-                    errorMsg,
-                    tokensInputTotal,
-                    tokensOutputTotal,
-                    toolCallCount,
+                if (executionStarted) {
+                    executionLogger.fail(
+                        executionId,
+                        status,
+                        errorMsg,
+                        tokensInputTotal,
+                        tokensOutputTotal,
+                        toolCallCount,
+                    )
+                }
+            }
+            // Bei externer Cancellation ist auch der Collector abgebrochen; ein emit
+            // wuerde die Cancellation nur erneut werfen. Das eigene Timeout ist nach
+            // Verlassen von withTimeout dagegen wieder in einem aktiven Kontext.
+            if (!isCancellation || isTimeout) {
+                emit(
+                    WorkflowEvent.Finished(
+                        executionId,
+                        status,
+                        errorMessage = errorMsg,
+                        tokensTotal = tokensInputTotal + tokensOutputTotal,
+                        toolCallCount = toolCallCount,
+                        durationMillis = System.currentTimeMillis() - startedAt,
+                    )
                 )
             }
-            emit(
-                WorkflowEvent.Finished(
-                    executionId,
-                    status,
-                    errorMessage = errorMsg,
-                    tokensTotal = tokensInputTotal + tokensOutputTotal,
-                    toolCallCount = toolCallCount,
-                    durationMillis = System.currentTimeMillis() - startedAt,
-                )
-            )
-            if (isCancellation) throw t
+            if (isCancellation && !isTimeout) throw t
         }
     }
 
@@ -456,7 +512,6 @@ constructor(
         stepIndexProvider: () -> Int,
         call: FunctionCall,
         triggerSource: TriggerSource,
-        onToolCalled: () -> Unit,
         emit: suspend (WorkflowEvent) -> Unit,
     ): GeminiPart {
         val tool = toolRegistry.byName(call.name)
@@ -563,7 +618,6 @@ constructor(
                 startedAt = startedAt,
                 userInputContext = userInputContext,
             )
-        onToolCalled()
         val result = tool.execute(call.args, ctx)
         val toolStepIdx = ctx.stepIndex
 

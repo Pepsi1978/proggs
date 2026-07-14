@@ -8,6 +8,7 @@ import de.frank.entropyreducer.data.remote.GroqWhisperApi
 import de.frank.entropyreducer.data.remote.TranscriptionResponse
 import de.frank.entropyreducer.data.settings.AppSettings
 import de.frank.entropyreducer.data.settings.EncryptedSecretsStore
+import de.frank.entropyreducer.util.runCatchingCancellable
 import java.io.File
 import javax.inject.Inject
 import kotlinx.coroutines.flow.first
@@ -67,7 +68,7 @@ class TranscribeAudioUseCase @Inject constructor(
             return Result.success("")
         }
 
-        val result = runCatching {
+        val result = runCatchingCancellable {
             val requestFile = audioFile.asRequestBody("audio/m4a".toMediaType())
             val filePart = MultipartBody.Part.createFormData("file", audioFile.name, requestFile)
             val plain = "text/plain".toMediaType()

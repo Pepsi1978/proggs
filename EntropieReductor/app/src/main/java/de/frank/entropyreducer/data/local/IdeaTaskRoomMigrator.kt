@@ -3,6 +3,7 @@ package de.frank.entropyreducer.data.local
 import android.content.Context
 import android.content.SharedPreferences
 import androidx.core.content.edit
+import androidx.room.withTransaction
 import dagger.hilt.android.qualifiers.ApplicationContext
 import de.frank.entropyreducer.data.diagnostics.Diag
 import de.frank.entropyreducer.data.diagnostics.DiagnosticArea
@@ -49,6 +50,7 @@ class IdeaTaskRoomMigrator @Inject constructor(
     @ApplicationContext private val context: Context,
     private val ideaDao: IdeaDao,
     private val taskSuggestionDao: TaskSuggestionDao,
+    private val database: AppDatabase,
     @ApplicationScope private val applicationScope: CoroutineScope,
 ) {
     private val prefs: SharedPreferences =
@@ -71,20 +73,13 @@ class IdeaTaskRoomMigrator @Inject constructor(
         }
     }
 
-    private suspend fun runMigration() {
-        // Doppelschutz: nur kopieren wenn Room noch leer ist.
-        val ideaCountBefore = ideaDao.countIdeas()
-        val sugCountBefore = taskSuggestionDao.count()
-        if (ideaCountBefore > 0 || sugCountBefore > 0) {
-            Diag.i(
-                DiagnosticArea.DATABASE,
-                TAG,
-                "Uebersprungen: Room bereits befuellt (ideas=$ideaCountBefore, task_suggestions=$sugCountBefore) -> Flag gesetzt",
-            )
-            prefs.edit { putBoolean(KEY_DONE, true) }
-            return
-        }
+    suspend fun migrateIfNeededNow() = withContext(Dispatchers.IO) {
+        if (prefs.getBoolean(KEY_DONE, false)) return@withContext
+        runMigration()
+        check(prefs.getBoolean(KEY_DONE, false)) { "Ideen-/Vorschlagsmigration nicht vollständig" }
+    }
 
+    private suspend fun runMigration() {
         // JSON lesen (nur lesen, niemals schreiben). Dedizierte JSON-Quelle — NICHT die Room-basierte
         // ideenEntriesFlow/taskSuggestionsForBackup, sonst laese der Migrator seine eigene Zielquelle.
         val ideas = ideenEntriesFromJsonFlow(context).first()
@@ -129,15 +124,18 @@ class IdeaTaskRoomMigrator @Inject constructor(
             }
 
         // Schreiben.
-        if (ideaEntities.isNotEmpty()) ideaDao.upsertIdeas(ideaEntities)
-        if (followupEntities.isNotEmpty()) ideaDao.upsertFollowups(followupEntities)
-        if (sugEntities.isNotEmpty()) taskSuggestionDao.upsertAll(sugEntities)
+        database.withTransaction {
+            if (ideaEntities.isNotEmpty()) ideaDao.upsertIdeas(ideaEntities)
+            if (followupEntities.isNotEmpty()) ideaDao.upsertFollowups(followupEntities)
+            if (sugEntities.isNotEmpty()) taskSuggestionDao.upsertAll(sugEntities)
+        }
 
         // Anzahl-Abgleich (Live-Logik-Sonde / CHECKPOINT) — erwartet vs. tatsaechlich.
         val ideaWritten = ideaDao.countIdeas()
         val sugWritten = taskSuggestionDao.count()
-        val ideaOk = ideaWritten == ideas.size
-        val sugOk = sugWritten == taskSugs.size
+        val followupsWritten = ideaDao.getAllFollowupsForBackup().count { it.id in followupEntities.mapTo(HashSet()) { row -> row.id } }
+        val ideaOk = ideaWritten >= ideas.size && followupsWritten == followupEntities.size
+        val sugOk = sugWritten >= taskSugs.size
         Diag.i(
             DiagnosticArea.DATABASE,
             TAG,

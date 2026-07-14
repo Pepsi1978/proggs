@@ -15,14 +15,13 @@ import de.frank.entropyreducer.data.local.entities.TaskSuggestionEntity
 import de.frank.entropyreducer.data.safety.PhoneContentGuard
 import de.frank.entropyreducer.domain.usecase.AutoHabitSuggestion
 import de.frank.entropyreducer.domain.usecase.GenerateSuggestionsUseCase
+import de.frank.entropyreducer.util.runCatchingCancellable
 import de.frank.entropyreducer.presentation.tagebuch.TagebuchArea
 import de.frank.entropyreducer.presentation.tagebuch.tagebuchEntriesFlow
 import javax.inject.Inject
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.sync.Mutex
-import kotlinx.coroutines.sync.withLock
 import org.json.JSONArray
 
 /**
@@ -38,7 +37,6 @@ class AutoSuggestionViewModel @Inject constructor(
     private val taskSuggestionDao: TaskSuggestionDao,
     private val habitSuggestionDao: HabitSuggestionDao,
 ) : ViewModel() {
-    private val generationMutex = Mutex()
 
     /**
      * Wird nach dem Speichern einer neuen Idee aufgerufen.
@@ -46,10 +44,10 @@ class AutoSuggestionViewModel @Inject constructor(
      */
     fun triggerSuggestions() {
         viewModelScope.launch(Dispatchers.IO) {
-            generationMutex.withLock {
-                runCatching {
+            generateSuggestions.serializedGeneration {
+                runCatchingCancellable {
                     val ideas = ideenEntriesFlow(context).first()
-                    if (ideas.isEmpty()) return@withLock
+                    if (ideas.isEmpty()) return@serializedGeneration
 
                     // Kombinierter Aufruf: Tasks + Habits in einem
                     val kiStore = context.kiTaskSuggestionStore
@@ -85,10 +83,10 @@ class AutoSuggestionViewModel @Inject constructor(
     /** Wird nach dem Speichern eines Lerneintrags aufgerufen und speichert beide Vorschlagsarten. */
     fun triggerLearningSuggestions() {
         viewModelScope.launch(Dispatchers.IO) {
-            generationMutex.withLock {
-                runCatching {
+            generateSuggestions.serializedGeneration {
+                runCatchingCancellable {
                     val entries = tagebuchEntriesFlow(context, TagebuchArea.LEARNING).first()
-                    if (entries.isEmpty()) return@withLock
+                    if (entries.isEmpty()) return@serializedGeneration
 
                     val taskStore = context.kiTaskSuggestionStore
                     val habitStore = context.gewohnheitSuggestionStore

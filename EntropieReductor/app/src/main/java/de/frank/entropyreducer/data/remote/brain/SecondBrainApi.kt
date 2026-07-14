@@ -13,6 +13,13 @@ interface SecondBrainApi {
     @GET("health")
     suspend fun health(@Header("Authorization") authorization: String): SecondBrainHealthResponse
 
+    /** Authentifizierter, kompakter Read fuer den Verbindungstest. */
+    @GET("list")
+    suspend fun list(
+        @Header("Authorization") authorization: String,
+        @Query("limit") limit: Int = 0,
+    ): SecondBrainListResponse
+
     @POST("store")
     suspend fun store(
         @Header("Authorization") authorization: String,
@@ -41,6 +48,7 @@ data class SecondBrainStoreRequest(
     val title: String,
     val category: String,
     @SerialName("user_id") val userId: String = "frank",
+    val source: String = "entropyreductor",
 )
 
 @Serializable
@@ -58,6 +66,13 @@ data class SecondBrainHealthResponse(
 )
 
 @Serializable
+data class SecondBrainListResponse(
+    val ok: Boolean = false,
+    val ready: Boolean = false,
+    val count: Int = 0,
+)
+
+@Serializable
 data class SecondBrainForgetResponse(
     val ok: Boolean = false,
     val deleted: Boolean = false,
@@ -67,6 +82,7 @@ data class SecondBrainForgetResponse(
 @Serializable
 data class SecondBrainCategoryResponse(
     val ok: Boolean = false,
+    val ready: Boolean = false,
     val count: Int = 0,
     val items: List<SecondBrainCategoryItem> = emptyList(),
 )
@@ -79,4 +95,5 @@ data class SecondBrainCategoryItem(
     val source: String? = null,
     @SerialName("created_at") val createdAt: String? = null,
     @SerialName("updated_at") val updatedAt: String? = null,
+    @kotlinx.serialization.Transient val appRowId: String? = null,
 )

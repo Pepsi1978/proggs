@@ -45,6 +45,7 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 
 /**
  * Einzige Activity der App. Compose uebernimmt das gesamte Routing.
@@ -143,7 +144,12 @@ class MainActivity : ComponentActivity() {
             try {
                 secondBrainIdeaConnector.retryPendingUploadsNow()
             } finally {
-                if (!lifecycle.currentState.isAtLeast(androidx.lifecycle.Lifecycle.State.STARTED)) {
+                // Fix 2026-07-14 (#12): lifecycle.currentState ist main-thread-only → auf dem
+                // Main-Dispatcher lesen (unmittelbar vor disconnect(), damit die Race klein bleibt).
+                val stillBackground = withContext(Dispatchers.Main) {
+                    !lifecycle.currentState.isAtLeast(androidx.lifecycle.Lifecycle.State.STARTED)
+                }
+                if (stillBackground) {
                     secondBrainVpnConnector.disconnect()
                 }
             }

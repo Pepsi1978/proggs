@@ -53,27 +53,32 @@ class ConfidenceCalculator @Inject constructor(
     }
 
     private suspend fun computeBiomarkerStats(hyps: List<HypothesisEntity>): Pair<Double, String?> {
-        data class Delta(val hrv: Double, val recovery: Double)
+        data class Delta(val hrv: Double?, val recovery: Double?)
         val deltas = mutableListOf<Delta>()
         for (h in hyps) {
             val beforeId = h.biomarkerBeforeId ?: continue
             val afterId = h.biomarkerAfterId ?: continue
             val before = biomarkerDao.getById(beforeId) ?: continue
             val after = biomarkerDao.getById(afterId) ?: continue
-            val hrvDelta = (after.hrvMs ?: 0.0) - (before.hrvMs ?: 0.0)
-            val recDelta = (after.recoveryScore ?: 0).toDouble() - (before.recoveryScore ?: 0).toDouble()
-            deltas += Delta(hrvDelta, recDelta)
+            val hrvDelta = before.hrvMs?.let { beforeValue -> after.hrvMs?.minus(beforeValue) }
+            val recDelta = before.recoveryScore?.let { beforeValue ->
+                after.recoveryScore?.minus(beforeValue)?.toDouble()
+            }
+            if (hrvDelta != null || recDelta != null) deltas += Delta(hrvDelta, recDelta)
         }
         if (deltas.isEmpty()) return 0.0 to null
 
-        val avgHrv = deltas.map { it.hrv }.average()
-        val avgRec = deltas.map { it.recovery }.average()
+        val avgHrv = deltas.mapNotNull { it.hrv }.takeIf { it.isNotEmpty() }?.average()
+        val avgRec = deltas.mapNotNull { it.recovery }.takeIf { it.isNotEmpty() }?.average()
 
         var bonus = 0.0
-        if (avgHrv > 2.0) bonus += 10.0
-        if (avgRec > 5.0) bonus += 5.0
+        if (avgHrv != null && avgHrv > 2.0) bonus += 10.0
+        if (avgRec != null && avgRec > 5.0) bonus += 5.0
 
-        val summary = "HRV ${formatSigned(avgHrv)}ms, Recovery ${formatSigned(avgRec)}%"
+        val summary = listOfNotNull(
+            avgHrv?.let { "HRV ${formatSigned(it)}ms" },
+            avgRec?.let { "Recovery ${formatSigned(it)}%" },
+        ).joinToString(", ").ifBlank { return 0.0 to null }
         return bonus to summary
     }
 

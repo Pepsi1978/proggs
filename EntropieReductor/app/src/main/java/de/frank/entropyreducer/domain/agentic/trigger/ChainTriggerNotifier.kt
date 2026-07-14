@@ -17,6 +17,7 @@ import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.Semaphore
 import kotlinx.coroutines.sync.withPermit
+import java.util.Collections
 
 /**
  * Loest Chain-Trigger nach erfolgreichem Lauf eines Prompts aus (Frank-Wunsch
@@ -101,8 +102,16 @@ constructor(
         }
 
         // Zyklus-Erkennung Schicht 1: gleiche Quelle in Cooldown blockiert
-        val lastFire = recentlyFiredSources[promptId]
-        if (lastFire != null && now - lastFire < CHAIN_COOLDOWN_MS) {
+        var sourceReserved = false
+        recentlyFiredSources.compute(promptId) { _, lastFire ->
+            if (lastFire != null && now - lastFire < CHAIN_COOLDOWN_MS) {
+                lastFire
+            } else {
+                sourceReserved = true
+                now
+            }
+        }
+        if (!sourceReserved) {
             Diag.w(DiagnosticArea.AGENTIC, 
                 TAG,
                 "Chain-Notify fuer $promptId uebersprungen — schon in den letzten " +
@@ -110,8 +119,6 @@ constructor(
             )
             return
         }
-        recentlyFiredSources[promptId] = now
-
         scope.launch {
             try {
                 val chainTriggers = triggerRepo.getChainTriggersAfter(promptId)
@@ -123,8 +130,18 @@ constructor(
                     // koennen zwei parallel Chains denselben Slot doppelt
                     // nehmen. synchronized(list) macht die composite-Aktion
                     // atomar.
-                    val targetCounts =
-                        targetTriggerCount.getOrPut(trigger.promptId) { mutableListOf() }
+                    if (wouldCreateCycle(promptId, trigger.promptId)) {
+                        Diag.w(
+                            DiagnosticArea.AGENTIC,
+                            TAG,
+                            "Chain ${promptId} -> ${trigger.promptId} blockiert: " +
+                                "der konfigurierte Triggergraph enthaelt einen Zyklus",
+                        )
+                        continue
+                    }
+                    val targetCounts = targetTriggerCount.computeIfAbsent(trigger.promptId) {
+                        Collections.synchronizedList(mutableListOf())
+                    }
                     val accepted =
                         synchronized(targetCounts) {
                             if (targetCounts.size >= MAX_CHAIN_FIRES_PER_TARGET) {
@@ -152,6 +169,28 @@ constructor(
                 Diag.e(DiagnosticArea.AGENTIC, TAG, "ChainTriggerNotifier fehlgeschlagen", t)
             }
         }
+    }
+
+    /**
+     * Prueft den persistenten Triggergraphen vor dem Start. Der bisherige
+     * Zeitfenster-Schutz allein konnte A -> B -> A nicht stoppen, wenn einzelne
+     * Workflows laenger als das Cooldown-Fenster liefen.
+     */
+    private suspend fun wouldCreateCycle(sourcePromptId: String, targetPromptId: String): Boolean {
+        if (sourcePromptId == targetPromptId) return true
+        val pending = ArrayDeque<String>()
+        val visited = mutableSetOf<String>()
+        pending.add(targetPromptId)
+
+        while (pending.isNotEmpty() && visited.size < MAX_CHAIN_GRAPH_NODES) {
+            val current = pending.removeFirst()
+            if (!visited.add(current)) continue
+            if (current == sourcePromptId) return true
+            triggerRepo.getChainTriggersAfter(current).forEach { next ->
+                if (next.promptId !in visited) pending.add(next.promptId)
+            }
+        }
+        return pending.isNotEmpty()
     }
 
     private suspend fun runChainOne(
@@ -199,5 +238,7 @@ constructor(
         private const val CHAIN_COOLDOWN_MS = 30_000L
         /** Maximale Chain-Trigger fuer die gleiche Ziel-PromptId pro Cooldown-Fenster. */
         private const val MAX_CHAIN_FIRES_PER_TARGET = 3
+        /** Defensives Suchlimit fuer versehentlich extrem grosse Triggergraphen. */
+        private const val MAX_CHAIN_GRAPH_NODES = 1_000
     }
 }

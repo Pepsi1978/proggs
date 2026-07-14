@@ -71,7 +71,9 @@ fun AgenticExecutionDialog(
     // Confirm-Dialog (vor dem normalen Execution-Dialog) wenn etwas ansteht
     pendingConfirm?.let { req ->
         AlertDialog(
-            onDismissRequest = { vm.rejectConfirmation("Dialog geschlossen") },
+            onDismissRequest = {
+                vm.rejectConfirmation(req.requestId, "Dialog geschlossen")
+            },
             title = {
                 Text(
                     text = "Schreibender Tool-Aufruf bestaetigen",
@@ -117,10 +119,12 @@ fun AgenticExecutionDialog(
                 }
             },
             confirmButton = {
-                OutlinedButton(onClick = { vm.approveConfirmation() }) { Text("Genehmigen") }
+                OutlinedButton(onClick = { vm.approveConfirmation(req.requestId) }) {
+                    Text("Genehmigen")
+                }
             },
             dismissButton = {
-                TextButton(onClick = { vm.rejectConfirmation() }) { Text("Ablehnen") }
+                TextButton(onClick = { vm.rejectConfirmation(req.requestId) }) { Text("Ablehnen") }
             },
         )
         return

@@ -48,6 +48,7 @@ import traceback
 import unicodedata
 import uuid
 from concurrent.futures import ThreadPoolExecutor
+from contextlib import contextmanager
 from datetime import date, datetime, timedelta, timezone
 from functools import wraps
 from logging.handlers import RotatingFileHandler
@@ -235,6 +236,53 @@ def iso_now() -> str:
     return datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
 
 
+# created_at wird als UTC gespeichert, Frank fragt aber nach LOKALEN Tagen (Europe/Berlin).
+# Ohne Umrechnung landete alles zwischen 00:00 und 02:00 Lokalzeit am Vortag (UTC-Tagesgrenze).
+try:
+    from zoneinfo import ZoneInfo
+    _LOCAL_TZ = ZoneInfo(os.getenv("SB_TZ", "Europe/Berlin"))
+except Exception:  # noqa: BLE001 — ohne tzdata degradiert sauber auf UTC (altes Verhalten)
+    _LOCAL_TZ = timezone.utc
+
+_DAY_RE = re.compile(r"\d{4}-\d{2}-\d{2}")
+
+
+def _parse_local_day(day: str | None) -> "datetime | None":
+    """YYYY-MM-DD -> lokaler Tagesbeginn (SB_TZ) oder None. Faengt kalendarisch ungueltige Daten
+    ab (z.B. 2026-02-30, 2026-13-01): das Muster passt zwar dem Regex, strptime wirft aber
+    ValueError -> None (kein HTTP 500)."""
+    if not day or not _DAY_RE.fullmatch(day):
+        return None
+    try:
+        return datetime.strptime(day, "%Y-%m-%d").replace(tzinfo=_LOCAL_TZ)
+    except ValueError:
+        return None
+
+
+def local_day_bounds(day_from: str | None, day_to: str | None) -> tuple[str | None, str | None]:
+    """Lokale Tagesgrenzen (SB_TZ, Default Europe/Berlin) -> UTC-Instants im gespeicherten
+    created_at-Format. Ungueltige/kalendarisch unmoegliche Datums-Strings -> None."""
+    gte = lte = None
+    start = _parse_local_day(day_from)
+    if start is not None:
+        gte = start.astimezone(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
+    end_day = _parse_local_day(day_to)
+    if end_day is not None:
+        end = end_day + timedelta(days=1)
+        lte = (end.astimezone(timezone.utc) - timedelta(seconds=1)).strftime("%Y-%m-%dT%H:%M:%SZ")
+    return gte, lte
+
+
+def _created_in_bounds(created: str, gte: str | None, lte: str | None) -> bool:
+    """Vergleich im einheitlichen ISO-UTC-Format (lexikalisch = chronologisch)."""
+    c = created or ""
+    if gte and c < gte:
+        return False
+    if lte and c > lte:
+        return False
+    return True
+
+
 def _coerce_brain_limit(key: str, value: Any) -> int:
     low, high = BRAIN_LIMIT_BOUNDS[key]
     try:
@@ -383,6 +431,7 @@ try:
         Distance,
         FieldCondition,
         Filter,
+        MatchAny,
         MatchValue,
         PointStruct,
         VectorParams,
@@ -455,6 +504,8 @@ VERSION = "1.33.0 (12.07.2026, 17:56 Uhr)"  # 1.33.0 PERFORMANCE: BM25-Index-Reb
 VERSION = "1.33.1 (13.07.2026, 11:12 Uhr)"  # 1.33.1: Letzte Schutzschicht gegen automatische Programmier-Session-Eintraege. /store lehnt Titel/Text-Muster von Claude-Code- und OpenCode-Session-Protokollen unter Programmierung/Sessions ab. Alt: 1.33.0.
 VERSION = "1.34.0 (13.07.2026, 13:17 Uhr)"  # 1.34.0: NEU GET /by-id fuer direkte, vollstaendige Eintragsabrufe per doc_id. Das Dashboard nutzt ihn fuer die aufklappbaren Quellen in Bibliothekar-Vorschlaegen: auch Vorschlaege ohne Titel oder Kontextblock zeigen dadurch stets den echten Ziel-Eintrag, ohne Titelraten oder Bestandsscan. Alt: 1.33.1.
 VERSION = "1.34.1 (14.07.2026, 00:57 Uhr)"  # 1.34.1 (Debugging-Laeufe App+Server): Kategorie-max_length in EntryCategoryReq/RenameCategoryReq/DetachCategoryReq 60->120 — Angleich an die Agent-Registry (CategoryReq erlaubt 120): eine dort angelegte 61-120-Zeichen-Kategorie liess sich hier sonst nicht zuordnen/umbenennen (422), obwohl sie existierte. Alt: 1.34.0.
+VERSION = "1.34.2 (14.07.2026, 11:26 Uhr)"  # 1.34.2: /store ersetzt Dokumente verifiziert mit Voll-Rollback statt Delete-before-Embed; /by-category liefert readiness aus Vor-/Nachpruefung und nie eine partielle Liste als vollstaendig. Alt: 1.34.1.
+VERSION = "1.35.0 (14.07.2026, 11:58 Uhr)"  # 1.35.0 (Cortex-Debugging-Loop 1): (a) DATENVERLUST-Schutz vervollstaendigt — /entry/category, /entry/categories und /trash/restore embedden VOR jeder Loeschung (Delete-before-Embed-Reste aus 1.32.0/1.34.2 beseitigt; ein 429/Gemini-Fehler kann keinen Eintrag mehr loeschen); (b) RAM: Rollback-Snapshots deduplizieren full_text auf EIN geteiltes String-Objekt und die Replace-Verifikation prueft text_len je Chunk + Chunk 0 wortwoertlich statt N full_text-Kopien zu laden (OOM-Klasse 1.13.x auf dem Schreibpfad beseitigt); (c) Embedding laeuft bei /store, PUT /entry, Kategorie-Wechseln und Restore VOR dem Schreib-Guard — parallele Schreibwege (20s-Gespraechs-Mirror) laufen nicht mehr in den 15s-Lock-Timeout (503); (d) ZEITZONEN-Fix: /by-date und alle /search-Datumsfilter rechnen lokale Tage (SB_TZ, Default Europe/Berlin) in UTC-created_at-Grenzen um — Eintraege von 00:00-02:00 Lokalzeit landeten am Vortag; (e) /search parent-Filter kanonisiert + Aliase (dense-Pfad fand 'gespraeche' vs 'Gespräche' nicht) und /search-Items liefern jetzt das categories-Array (Cortex-App verlor sonst beim Kategorie-Hinzufuegen ueber Suchtreffer sekundaere Kategorien); (f) /by-date: getrimmter Parameter, ungueltiges Format -> sofort leer statt Voll-Scan; (g) make_doc_id/_norm_cmp NFC-normalisiert (NFD-Titel erzeugten Duplikate statt zu ersetzen); (h) resolve_title Bracket-Guard — ein echtes '[…]'-Suffix wird nur als LLM-Dekoration abgestreift, wenn es eine Kategorie des Treffers ist (DELETE 'Plan [2026]' loeschte sonst 'Plan'); (i) BM25-Cache mit Generationszaehler (Build-Race konnte einen Vor-Schreib-Index bis 60s cachen); (j) PUT /entry mit leerem Titel behaelt den alten Titel (Eintrag blieb sonst 'titellos' auf der alten Titel-doc_id und wurde von /store ueberschrieben); (k) Entities: upsert/unlink serialisiert (Lost-Update-Race) und /entities/docs laedt Metadaten in EINEM MatchAny-Scroll + Volltexte nur fuer die finalen Top-N (statt N+1 Roundtrips mit allen Volltexten); Self-Healing mit frischem Re-Read unter dem Guard; (l) /by-category und /by-parent nehmen NEU limit=N (rein additiv, 0=alle wie bisher): nur die N aktuellsten Eintraege werden geliefert und NUR deren Volltexte geladen (das Dashboard zog sonst ALLE Volltexte einer Kategorie und warf alles bis auf die Seite weg); Antwortfeld total nennt die Gesamtzahl. Alt: 1.34.2.
 
 # Startup-Banner (Observability-First: Log-Pfad + Version EINMAL ausgeben)
 _log(logging.INFO, "brain-api startet", version=VERSION, log_path=LOG_PATH)
@@ -584,7 +635,12 @@ def make_doc_id(user_id: str, title: str | None) -> str:
     """Titel -> deterministische doc_id (gleicher Titel = gleiche ID = ueberschreiben).
     Ohne Titel -> frische UUID (neuer Eintrag)."""
     if title and title.strip():
-        h = hashlib.sha1(f"{user_id}::{title.strip().lower()}".encode("utf-8")).hexdigest()[:24]
+        # NFC-Normalisierung: 'Café' in NFC und NFD (macOS-Paste) muss DIESELBE doc_id ergeben,
+        # sonst entsteht statt Ersetzen ein optisch identisches Duplikat. Bestand ist NFC -> Hashes
+        # bestehender Eintraege bleiben unveraendert (lower() bewusst beibehalten, kein casefold —
+        # das wuerde ß-Titel-Hashes des Bestands aendern).
+        key = unicodedata.normalize("NFC", title.strip()).lower()
+        h = hashlib.sha1(f"{user_id}::{key}".encode("utf-8")).hexdigest()[:24]
         return f"t_{h}"
     return f"d_{uuid.uuid4().hex}"
 
@@ -619,8 +675,37 @@ def strip_list_decorations(title: str) -> str:
 
 
 def _norm_cmp(s: str) -> str:
-    """Vergleichsnormalform: Dekorationen abstreifen, Whitespace kollabieren, lowercase."""
-    return re.sub(r"\s+", " ", strip_list_decorations(s)).strip().lower()
+    """Vergleichsnormalform: Dekorationen abstreifen, Whitespace kollabieren, NFC, lowercase."""
+    return unicodedata.normalize("NFC", re.sub(r"\s+", " ", strip_list_decorations(s)).strip()).lower()
+
+
+_BRACKET_INNER = re.compile(r"\[([^\[\]]*)\]\s*$")
+
+
+def _stripped_bracket(title: str) -> str | None:
+    """Inhalt des '[…]'-Suffixes, das strip_list_decorations entfernen wuerde (None = keins)."""
+    t = _SIZE_SUFFIX.sub("", title or "").strip()
+    m = _BRACKET_INNER.search(t)
+    if not m:
+        return None
+    inner = m.group(1).strip()
+    return inner or None
+
+
+def _entry_has_category(doc_id: str, cat: str) -> bool:
+    """Prueft, ob ein Eintrag die Kategorie (oder deren Haupt-Teil) traegt — fuer den
+    Bracket-Guard in resolve_title: '[X]' darf nur als LLM-Listen-Dekoration abgestreift
+    werden, wenn X wirklich eine Kategorie des gefundenen Eintrags ist."""
+    pts = _scroll(Filter(must=[FieldCondition(key="doc_id", match=MatchValue(value=doc_id))]),
+                  limit=1, with_payload=["category", "categories", "parent", "parents"])
+    if not pts:
+        return False
+    pl = pts[0].payload or {}
+    keys = {category_key(x) for x in cats_from_payload(pl)}
+    keys |= {category_key(x) for x in (pl.get("parents") or []) if isinstance(x, str)}
+    if pl.get("parent"):
+        keys.add(category_key(pl.get("parent")))
+    return category_key(cat) in keys
 
 
 def _doc_id_exists(doc_id: str) -> bool:
@@ -640,10 +725,18 @@ def resolve_title(user_id: str, title: str) -> "tuple[str, str] | None":
     did = make_doc_id(user_id, title)
     if _doc_id_exists(did):
         return title, did
+    # Bracket-Guard (Eindeutigkeits-Pflicht aus dem Docstring): ein echtes '[…]'-Suffix darf nur
+    # dann als LLM-Dekoration gelten, wenn der Bracket-Inhalt eine Kategorie des GEFUNDENEN
+    # Eintrags ist. Sonst wuerde z.B. DELETE 'Plan [2026]' kommentarlos 'Plan' loeschen.
+    bracket = _stripped_bracket(title)
+
+    def _bracket_ok(candidate_doc_id: str) -> bool:
+        return bracket is None or _entry_has_category(candidate_doc_id, bracket)
+
     stripped = strip_list_decorations(title)
     if stripped and stripped != title:
         did2 = make_doc_id(user_id, stripped)
-        if _doc_id_exists(did2):
+        if _doc_id_exists(did2) and _bracket_ok(did2):
             return stripped, did2
     needle = _norm_cmp(title)
     if not needle:
@@ -658,6 +751,10 @@ def resolve_title(user_id: str, title: str) -> "tuple[str, str] | None":
             matches[p.payload.get("doc_id")] = t
     if len(matches) == 1:
         did3, real = next(iter(matches.items()))
+        # Guard greift nur, wenn der Treffer erst durch das ABSTREIFEN des Brackets entstand —
+        # traegt der gespeicherte Titel dasselbe '[…]'-Suffix, ist es keine Dekoration.
+        if bracket is not None and _stripped_bracket(real) != bracket and not _bracket_ok(did3):
+            return None
         return real, did3
     return None
 
@@ -877,6 +974,7 @@ class _Bm25Index:
 _bm25_cache: dict[str, tuple[float, "_Bm25Index"]] = {}   # user_id -> (built_at, index)
 _bm25_lock = threading.Lock()
 _bm25_builds: dict[str, threading.Event] = {}              # laufender Build je user (Single-Flight)
+_bm25_generation = 0                                        # zaehlt Invalidierungen (Build-Race-Schutz)
 _bm25_warm_timer: "threading.Timer | None" = None          # debounced Hintergrund-Rebuild nach Schreibwegen
 _BM25_WARM_DEBOUNCE_S = 1.0
 _BM25_DEFAULT_USER = "frank"
@@ -888,8 +986,9 @@ def _bm25_invalidate() -> None:
     startet debounced SOFORT im Hintergrund, statt dass die NAECHSTE Suche ihn bezahlt. Vorher
     kostete die erste Suche nach jedem Chat-Turn +~1s, weil der Live-Gespraechs-Mirror nach jedem
     Turn schreibt und damit jedes Mal den Index verwarf (gemessen: 2,1s statt 1,1s)."""
-    global _bm25_warm_timer
+    global _bm25_warm_timer, _bm25_generation
     with _bm25_lock:
+        _bm25_generation += 1   # laufende Builds duerfen ihren (Vor-Schreib-)Stand nicht mehr cachen
         users = list(_bm25_cache.keys()) or [_BM25_DEFAULT_USER]
         _bm25_cache.clear()
         if _bm25_warm_timer is not None:
@@ -919,6 +1018,7 @@ def _bm25_index(user_id: str) -> "_Bm25Index":
             hit = _bm25_cache.get(user_id)
             if hit and time.monotonic() - hit[0] < BM25_TTL_S:
                 return hit[1]
+            gen = _bm25_generation   # Stand VOR dem Build merken (Race-Schutz, s.u.)
             ev = _bm25_builds.get(user_id)
             if ev is None:
                 ev = threading.Event()
@@ -944,7 +1044,11 @@ def _bm25_index(user_id: str) -> "_Bm25Index":
             } for p in pts]
             idx = _Bm25Index(chunks)
             with _bm25_lock:
-                _bm25_cache[user_id] = (time.monotonic(), idx)
+                # Nur cachen, wenn seit Build-Beginn KEINE Invalidierung lief — sonst wuerde ein
+                # Vor-Schreib-Stand bis zu BM25_TTL_S als frisch gelten (Zusicherung von
+                # _bm25_invalidate: keine Suche sieht je einen veralteten Index).
+                if gen == _bm25_generation:
+                    _bm25_cache[user_id] = (time.monotonic(), idx)
             probe(len(chunks) < 200_000, "BM25-Index ungewoehnlich gross", chunks=len(chunks))
             return idx
         finally:
@@ -1132,17 +1236,43 @@ _ENTRY_WRITE_LOCK = threading.RLock()
 ENTRY_WRITE_LOCK_TIMEOUT_S = 15.0
 
 
+@contextmanager
+def _entry_write_guard():
+    """Serialisiert die MUTATIONS-Phase eines Schreibwegs. WICHTIG: das (potenziell minutenlange)
+    Embedding grosser Dokumente laeuft bewusst VOR dem Guard — sonst laufen alle parallelen
+    Schreibwege (z.B. der 20s-Live-Gespraechs-Mirror) nach 15s in 503 (fastapi §2)."""
+    acquired = _ENTRY_WRITE_LOCK.acquire(timeout=ENTRY_WRITE_LOCK_TIMEOUT_S)
+    if not acquired:
+        raise HTTPException(status_code=503, detail="Ein anderer Speichervorgang läuft noch; bitte gleich erneut versuchen")
+    try:
+        yield
+    finally:
+        _ENTRY_WRITE_LOCK.release()
+
+
 def serialized_entry_write(func):
     @wraps(func)
     def wrapped(*args, **kwargs):
-        acquired = _ENTRY_WRITE_LOCK.acquire(timeout=ENTRY_WRITE_LOCK_TIMEOUT_S)
-        if not acquired:
-            raise HTTPException(status_code=503, detail="Ein anderer Speichervorgang läuft noch; bitte gleich erneut versuchen")
-        try:
+        with _entry_write_guard():
             return func(*args, **kwargs)
-        finally:
-            _ENTRY_WRITE_LOCK.release()
     return wrapped
+
+
+def _dedup_snapshot_full_text(snapshot: list) -> list:
+    """RAM-Schutz fuer Rollback-Snapshots: full_text haengt 1:1 in JEDEM Chunk — nach dem Scroll
+    liegen N unabhaengige String-Kopien im Speicher (bei 1,4-Mio-Zeichen-Docs ~170 MB). Identische
+    Kopien je doc_id werden auf EIN geteiltes String-Objekt zusammengefuehrt (inhaltsgleich,
+    verhaltensneutral fuer den Restore)."""
+    canon: dict[str, str] = {}
+    for p in snapshot:
+        pl = p.payload or {}
+        ft = pl.get("full_text")
+        if isinstance(ft, str) and ft:
+            key = pl.get("doc_id") or ""
+            c = canon.setdefault(key, ft)
+            if ft == c and ft is not c:
+                pl["full_text"] = c
+    return snapshot
 
 
 @app.exception_handler(Exception)
@@ -1201,7 +1331,6 @@ def put_limits(req: LimitsReq) -> dict:
 
 
 @app.post("/store", dependencies=[Depends(require_auth)])
-@serialized_entry_write
 def store(req: StoreReq) -> dict:
     """Speichert Text WORTWOERTLICH 1:1. Mit Titel: ersetzt einen vorhandenen Eintrag gleichen Titels."""
     if _is_automatic_programming_session(req):
@@ -1210,18 +1339,6 @@ def store(req: StoreReq) -> dict:
         raise HTTPException(status_code=403, detail="Automatische Programmier-Session-Protokolle sind deaktiviert")
     _require_store()
     doc_id = make_doc_id(req.user_id, req.title)
-    now = iso_now()
-    created_at = now
-    replaced = False
-    if req.title and req.title.strip():
-        # Nur created_at laden (Performance 2026-07-02): der volle Payload (inkl. full_text des
-        # ALTEN Dokuments) wurde hier nur fuer das Erstellungsdatum in den RAM gezogen.
-        existing = _scroll(Filter(must=[FieldCondition(key="doc_id", match=MatchValue(value=doc_id))]),
-                           limit=1, with_payload=["created_at"])
-        replaced = bool(existing)
-        if replaced:
-            created_at = existing[0].payload.get("created_at", now)  # Erstellungsdatum erhalten, nur updated_at neu
-            _delete_doc(doc_id)  # gleicher Titel -> alte Version komplett raus, dann neu
 
     cats = norm_cats(req.categories, req.category)
     category = cats[0] if cats else ""        # primaere Kategorie (Abwaertskompat)
@@ -1232,28 +1349,85 @@ def store(req: StoreReq) -> dict:
     chunks = chunk_text(req.text)
     _guard_embed_budget(len(chunks))
     t0 = time.time()
-    points = []
-    # Batch-Embedding (Performance 2026-07-02): alle Chunk-Vektoren gebuendelt statt seriell je Chunk
+    # Batch-Embedding VOR dem Schreib-Guard: das (bei grossen Docs minutenlange) Embedding darf
+    # parallele Schreibwege nicht in den 15s-Lock-Timeout (503) treiben — und ein Embedding-Fehler
+    # kann so den Bestand gar nicht erst beruehren.
     vecs = embed_many([embed_input(req.title, cats, ch) for ch in chunks], "RETRIEVAL_DOCUMENT")
-    for i, (ch, vec) in enumerate(zip(chunks, vecs)):
-        points.append(PointStruct(id=point_id(doc_id, i), vector=vec, payload={
-            "doc_id": doc_id,
-            "user_id": req.user_id,
-            "title": (req.title or "").strip(),
-            "category": category,
-            "categories": cats,
-            "parent": parent,
-            "parents": parents,
-            "chunk_index": i,
-            "chunk_count": len(chunks),
-            "chunk_text": ch,
-            "full_text": req.text,   # 1:1 — exakt die Eingabe, in jedem Chunk gehalten
-            "created_at": created_at,
-            "updated_at": now,
-            "source": source,
-            "layer": layer,
-        }))
-    _upsert_batched(points)
+
+    with _entry_write_guard():
+        now = iso_now()
+        created_at = now
+        replaced = False
+        if req.title and req.title.strip():
+            # Nur created_at laden (Performance 2026-07-02): der volle Payload (inkl. full_text des
+            # ALTEN Dokuments) wurde hier nur fuer das Erstellungsdatum in den RAM gezogen.
+            existing = _scroll(Filter(must=[FieldCondition(key="doc_id", match=MatchValue(value=doc_id))]),
+                               limit=1, with_payload=["created_at"])
+            replaced = bool(existing)
+            if replaced:
+                created_at = existing[0].payload.get("created_at", now)  # Erstellungsdatum erhalten, nur updated_at neu
+        points = []
+        for i, (ch, vec) in enumerate(zip(chunks, vecs)):
+            points.append(PointStruct(id=point_id(doc_id, i), vector=vec, payload={
+                "doc_id": doc_id,
+                "user_id": req.user_id,
+                "title": (req.title or "").strip(),
+                "category": category,
+                "categories": cats,
+                "parent": parent,
+                "parents": parents,
+                "chunk_index": i,
+                "chunk_count": len(chunks),
+                "chunk_text": ch,
+                "full_text": req.text,   # 1:1 — exakt die Eingabe, in jedem Chunk gehalten
+                "created_at": created_at,
+                "updated_at": now,
+                "source": source,
+                "layer": layer,
+            }))
+        # Replace ohne Datenverlust: Embeddings und Points existieren bereits vollständig, bevor der
+        # aktive Stand berührt wird. Deterministische IDs überschreiben gemeinsame Chunks; alte
+        # Rest-Chunks werden erst nach vollständiger Verifikation entfernt. Jeder Teilfehler rollt den
+        # exakten Payload+Vektor-Snapshot zurück (gleiches Schutzmuster wie PUT /entry).
+        doc_filter = Filter(must=[FieldCondition(key="doc_id", match=MatchValue(value=doc_id))])
+        snapshot = _dedup_snapshot_full_text(_scroll(doc_filter, with_vectors=True)) if replaced else []
+        expected_ids = {p.id for p in points}
+        try:
+            _upsert_batched(points, wait=True)
+            # Verifikation OHNE N full_text-Kopien im RAM (OOM-Klasse 1.13.x/1.14): text_len je
+            # Chunk pruefen (wird von _upsert_batched zentral gesetzt) + Chunk 0 wortwoertlich.
+            current = _scroll(doc_filter, with_payload=["chunk_index", "chunk_count", "text_len"])
+            current_by_id = {p.id: p for p in current}
+            expected_ok = expected_ids.issubset(current_by_id) and all(
+                (current_by_id[p.id].payload or {}).get("chunk_index") == i
+                and (current_by_id[p.id].payload or {}).get("chunk_count") == len(chunks)
+                and (current_by_id[p.id].payload or {}).get("text_len") == len(req.text)
+                for i, p in enumerate(points)
+            )
+            if expected_ok:
+                head = _scroll(Filter(must=[FieldCondition(key="doc_id", match=MatchValue(value=doc_id)),
+                                            FieldCondition(key="chunk_index", match=MatchValue(value=0))]),
+                               limit=1, with_payload=["full_text"])
+                expected_ok = bool(head) and (head[0].payload or {}).get("full_text") == req.text
+            if not expected_ok:
+                raise RuntimeError("nicht alle neuen Chunks wurden verifiziert")
+            stale_ids = [p.id for p in current if p.id not in expected_ids]
+            if stale_ids:
+                qc.delete(collection_name=COLLECTION, points_selector=stale_ids, wait=True)
+            final_points = _scroll(doc_filter, with_payload=["chunk_index", "chunk_count", "text_len"])
+            if ({p.id for p in final_points} != expected_ids or len(final_points) != len(chunks)
+                    or any((p.payload or {}).get("text_len") != len(req.text) for p in final_points)):
+                raise RuntimeError("finale Chunk-Menge stimmt nicht")
+            _bm25_invalidate()
+        except Exception as store_exc:  # noqa: BLE001 — jeder Teilfehler stellt den alten Stand wieder her
+            try:
+                _restore_doc_snapshot(doc_id, snapshot)
+            except Exception as rollback_exc:  # noqa: BLE001
+                raise RuntimeError(
+                    f"Store fehlgeschlagen ({type(store_exc).__name__}); Rollback fehlgeschlagen "
+                    f"({type(rollback_exc).__name__})"
+                ) from store_exc
+            raise
 
     # Intent-Checkpoint: beweist, dass der gespeicherte Volltext EXAKT die Eingabe ist (1:1)
     stored_ok = bool(points) and points[0].payload["full_text"] == req.text
@@ -1341,12 +1515,33 @@ def by_id(doc_id: str, user_id: str = "frank") -> dict:
             "updated_at": payload.get("updated_at"), "text": full}
 
 
+def _load_full_texts(items: list[dict]) -> list[dict]:
+    """Volltexte fuer eine (bereits gedeckelte) Item-Liste nachladen — 1 Chunk je doc_id
+    (full_text liegt 1:1 in jedem Chunk). Haelt so nur die tatsaechlich gelieferten Texte im RAM."""
+    for it in items:
+        pts = _scroll(Filter(must=[FieldCondition(key="doc_id", match=MatchValue(value=it["doc_id"]))]),
+                      limit=1, with_payload=["full_text"])
+        it["text"] = (pts[0].payload or {}).get("full_text", "") if pts else ""
+    return items
+
+
 @app.get("/by-category", dependencies=[Depends(require_auth)])
-def by_category(category: str, user_id: str = "frank") -> dict:
-    """Alle Eintraege einer Kategorie (auf Dokument-Ebene dedupliziert), jeweils 1:1."""
+def by_category(category: str, user_id: str = "frank", limit: int = 0) -> dict:
+    """Alle Eintraege einer Kategorie (auf Dokument-Ebene dedupliziert), jeweils 1:1.
+    limit>0 (NEU, rein additiv): liefert nur die N AKTUELLSTEN Eintraege — und laedt dann auch nur
+    deren Volltexte (das Dashboard holte bisher ALLE Volltexte einer Kategorie und warf alles bis
+    auf 40 weg). limit=0 = alle (bisheriges Verhalten unveraendert). 'total' nennt immer die
+    Gesamtzahl der Eintraege der Kategorie."""
     _require_store()
     cat = canonical_category(category)
-    points = _scroll(Filter(must=[
+    ready_before = True
+    try:
+        ready_before = getattr(qc.get_collection(COLLECTION).status, "value", "").lower() in ("green", "yellow")
+    except Exception:  # noqa: BLE001 — Status-Hickup darf den vorhandenen Lesepfad nicht blockieren
+        pass
+    if not ready_before:
+        return {"ok": True, "ready": False, "category": cat, "count": 0, "total": 0, "items": []}
+    flt = Filter(must=[
         FieldCondition(key="user_id", match=MatchValue(value=user_id)),
         # NUR Chunk 0 je Dokument: full_text ist 1:1 in JEDEM Chunk -> 1 Chunk genuegt; verhindert,
         # dass ALLE Chunks (jeder mit voller full_text-Kopie) grosser Docs in den RAM kommen (OOM-Schutz,
@@ -1354,13 +1549,20 @@ def by_category(category: str, user_id: str = "frank") -> dict:
         FieldCondition(key="chunk_index", match=MatchValue(value=0)),
         # Multi-Category: matcht das neue Array 'categories' ODER (Abwaertskompat) das alte 'category'
         _category_match_filter(cat),
-    ]))
+    ])
+    # Bei limit>0: erst NUR Metadaten laden (kein full_text), sortieren, deckeln — Volltexte danach
+    # gezielt fuer die Top-N. Bei limit=0 wie bisher alles inkl. Volltext in einem Scroll.
+    meta_only = limit > 0
+    payload_fields = ["doc_id", "title", "category", "categories", "source", "layer",
+                      "created_at", "updated_at"] if meta_only else True
+    points = _scroll(flt, with_payload=payload_fields)
     seen: dict[str, dict] = {}
     for p in points:
         did = p.payload.get("doc_id")
         if did not in seen:
             seen[did] = {"doc_id": did, "title": p.payload.get("title") or None,
-                          "text": p.payload.get("full_text", ""), "category": canonical_category(p.payload.get("category")) or None,
+                          "text": "" if meta_only else p.payload.get("full_text", ""),
+                          "category": canonical_category(p.payload.get("category")) or None,
                           "categories": cats_from_payload(p.payload),
                           "source": p.payload.get("source") or None,
                           "layer": payload_layer(p.payload),
@@ -1368,7 +1570,16 @@ def by_category(category: str, user_id: str = "frank") -> dict:
                           "created_at": p.payload.get("created_at"),
                           "updated_at": p.payload.get("updated_at")}
     items = _sort_recent(seen.values())   # Neueste zuerst (nach Aktualitaet)
-    return {"ok": True, "category": cat, "count": len(items), "items": items}
+    total = len(items)
+    if meta_only:
+        items = _load_full_texts(items[:limit])
+    ready_after = True
+    try:
+        ready_after = getattr(qc.get_collection(COLLECTION).status, "value", "").lower() in ("green", "yellow")
+    except Exception:  # noqa: BLE001
+        pass
+    return {"ok": True, "ready": ready_before and ready_after,
+            "category": cat, "count": len(items), "total": total, "items": items}
 
 
 @app.get("/category-item", dependencies=[Depends(require_auth)])
@@ -1416,24 +1627,29 @@ def category_item(category: str, index: int = 1, user_id: str = "frank") -> dict
 
 
 @app.get("/by-parent", dependencies=[Depends(require_auth)])
-def by_parent(parent: str, user_id: str = "frank") -> dict:
+def by_parent(parent: str, user_id: str = "frank", limit: int = 0) -> dict:
     """Alle Eintraege UNTER einer Hauptkategorie (= 'Haupt' und alle 'Haupt/Unter'), via parent-Feld
-    (exakter MatchValue — Qdrant hat keinen Praefix-Operator). Auf Dokument-Ebene dedupliziert, 1:1."""
+    (exakter MatchValue — Qdrant hat keinen Praefix-Operator). Auf Dokument-Ebene dedupliziert, 1:1.
+    limit>0 (NEU, rein additiv): nur die N aktuellsten Eintraege + nur deren Volltexte (s. by_category)."""
     _require_store()
     par = canonical_category(parent)
+    meta_only = limit > 0
+    payload_fields = ["doc_id", "title", "category", "categories", "parent", "source", "layer",
+                      "created_at", "updated_at"] if meta_only else True
     points = _scroll(Filter(must=[
         FieldCondition(key="user_id", match=MatchValue(value=user_id)),
         # NUR Chunk 0 je Dokument (full_text 1:1 in jedem Chunk) -> OOM-Schutz bei grossen Docs (s. by_category).
         FieldCondition(key="chunk_index", match=MatchValue(value=0)),
         # Multi-Category: matcht das neue Array 'parents' ODER (Abwaertskompat) das alte 'parent'
         _parent_match_filter(par),
-    ]))
+    ]), with_payload=payload_fields)
     seen: dict[str, dict] = {}
     for p in points:
         did = p.payload.get("doc_id")
         if did not in seen:
             seen[did] = {"doc_id": did, "title": p.payload.get("title") or None,
-                         "text": p.payload.get("full_text", ""), "category": canonical_category(p.payload.get("category")) or None,
+                         "text": "" if meta_only else p.payload.get("full_text", ""),
+                          "category": canonical_category(p.payload.get("category")) or None,
                           "categories": cats_from_payload(p.payload),
                           "parent": canonical_category(p.payload.get("parent")) or None,
                           "source": p.payload.get("source") or None,
@@ -1441,7 +1657,10 @@ def by_parent(parent: str, user_id: str = "frank") -> dict:
                           "trust": source_trust(p.payload.get("source")),
                           "created_at": p.payload.get("created_at"), "updated_at": p.payload.get("updated_at")}
     items = _sort_recent(seen.values())
-    return {"ok": True, "parent": par, "count": len(items), "items": items}
+    total = len(items)
+    if meta_only:
+        items = _load_full_texts(items[:limit])
+    return {"ok": True, "parent": par, "count": len(items), "total": total, "items": items}
 
 
 @app.post("/backfill-parent", dependencies=[Depends(require_auth)])
@@ -1707,12 +1926,13 @@ def detach_category(req: DetachCategoryReq) -> dict:
 
 
 @app.post("/entry/category", dependencies=[Depends(require_auth)])
-@serialized_entry_write
 def set_entry_category(req: EntryCategoryReq) -> dict:
     """Aendert die Kategorie EINES Eintrags (per doc_id). Da die Kategorie das EMBEDDING mitpraegt
     (metadata-enriched, best-practices/server/rag-retrieval.md §4), reicht set_payload NICHT mehr —
     der Eintrag wird mit dem neuen Kategorie-Praefix FRISCH eingebettet (full_text/Titel/created_at
-    bleiben 1:1). Setzt zugleich das abgeleitete 'parent'-Feld. Sync def -> Threadpool (fastapi §1)."""
+    bleiben 1:1). Setzt zugleich das abgeleitete 'parent'-Feld. Sync def -> Threadpool (fastapi §1).
+    KEIN Delete-before-Embed: Embedding laeuft VOR jeder Loeschung — ein Embedding-/Budget-Fehler
+    (429/Gemini) kann den Eintrag nicht mehr unwiederbringlich loeschen (gleiche Klasse wie 1.32.0)."""
     _require_store()
     pts = _scroll(Filter(must=[
         FieldCondition(key="doc_id", match=MatchValue(value=req.doc_id)),
@@ -1734,19 +1954,27 @@ def set_entry_category(req: EntryCategoryReq) -> dict:
     validity = {k: pl.get(k) for k in ("valid_from", "valid_until") if pl.get(k)}   # bi-temporal erhalten (#4)
     now = iso_now()
 
-    _delete_doc(req.doc_id)  # alte Chunks (mit altem Kategorie-Vektor) raus
     chunks = chunk_text(full_text)
     _guard_embed_budget(len(chunks))
     t0 = time.time()
-    points = []
+    # Embedding VOR Guard und VOR jeder Loeschung (Datenverlust-Schutz + fastapi §2)
     vecs = embed_many([embed_input(title, new_cats, ch) for ch in chunks], "RETRIEVAL_DOCUMENT")  # gebuendelt statt seriell
+    points = []
     for i, (ch, vec) in enumerate(zip(chunks, vecs)):
         points.append(PointStruct(id=point_id(req.doc_id, i), vector=vec, payload={
             "doc_id": req.doc_id, "user_id": req.user_id, "title": title,
             "category": new_cat, "categories": new_cats, "parent": new_parent, "parents": new_parents, "chunk_index": i, "chunk_count": len(chunks),
             "chunk_text": ch, "full_text": full_text, "created_at": created_at, "updated_at": now, "source": source, "layer": layer, **validity,
         }))
-    _upsert_batched(points, wait=True)
+    doc_filter = Filter(must=[FieldCondition(key="doc_id", match=MatchValue(value=req.doc_id))])
+    expected_ids = {p.id for p in points}
+    with _entry_write_guard():
+        old_ids = [p.id for p in _scroll(doc_filter, with_payload=False)]
+        _upsert_batched(points, wait=True)   # deterministische IDs ueberschreiben gemeinsame Chunks
+        stale_ids = [i for i in old_ids if i not in expected_ids]
+        if stale_ids:   # Rest-Chunks eines frueher laengeren Textes erst NACH dem Upsert entfernen
+            qc.delete(collection_name=COLLECTION, points_selector=stale_ids, wait=True)
+            _bm25_invalidate()   # Rest-Chunk-Loeschung ist der letzte Schreibvorgang -> Index frisch
     after = _scroll(Filter(must=[FieldCondition(key="doc_id", match=MatchValue(value=req.doc_id))]), limit=1)
     applied = bool(after) and (after[0].payload.get("category") or "").strip() == new_cat
     probe(applied, "Kategorie-Verschiebung nicht angekommen", doc_id=req.doc_id, want=new_cat)
@@ -1779,11 +2007,11 @@ def get_entry_categories(doc_id: str, user_id: str = "frank") -> dict:
 
 
 @app.post("/entry/categories", dependencies=[Depends(require_auth)])
-@serialized_entry_write
 def set_entry_categories(req: EntryCategoriesReq) -> dict:
     """Setzt die VOLLSTAENDIGE Kategorie-Liste EINES Eintrags (Multi-Category, hinter dem Drawer-Plus).
     Da die Kategorien das EMBEDDING mitpraegen, wird FRISCH neu eingebettet (full_text/Titel/created_at
-    bleiben 1:1). Sync def -> Threadpool (fastapi §1)."""
+    bleiben 1:1). Sync def -> Threadpool (fastapi §1). KEIN Delete-before-Embed: Embedding laeuft VOR
+    jeder Loeschung — ein Embedding-/Budget-Fehler kann den Eintrag nicht mehr loeschen."""
     _require_store()
     pts = _scroll(Filter(must=[
         FieldCondition(key="doc_id", match=MatchValue(value=req.doc_id)),
@@ -1804,12 +2032,12 @@ def set_entry_categories(req: EntryCategoriesReq) -> dict:
     validity = {k: pl.get(k) for k in ("valid_from", "valid_until") if pl.get(k)}   # bi-temporal erhalten (#4)
     now = iso_now()
 
-    _delete_doc(req.doc_id)  # alte Chunks (mit alten Kategorie-Vektoren) raus
     chunks = chunk_text(full_text)
     _guard_embed_budget(len(chunks))
     t0 = time.time()
-    points = []
+    # Embedding VOR Guard und VOR jeder Loeschung (Datenverlust-Schutz + fastapi §2)
     vecs = embed_many([embed_input(title, cats, ch) for ch in chunks], "RETRIEVAL_DOCUMENT")  # gebuendelt statt seriell
+    points = []
     for i, (ch, vec) in enumerate(zip(chunks, vecs)):
         points.append(PointStruct(id=point_id(req.doc_id, i), vector=vec, payload={
             "doc_id": req.doc_id, "user_id": req.user_id, "title": title,
@@ -1818,7 +2046,15 @@ def set_entry_categories(req: EntryCategoriesReq) -> dict:
             "chunk_index": i, "chunk_count": len(chunks), "chunk_text": ch,
             "full_text": full_text, "created_at": created_at, "updated_at": now, "source": source, "layer": layer, **validity,
         }))
-    _upsert_batched(points, wait=True)
+    doc_filter = Filter(must=[FieldCondition(key="doc_id", match=MatchValue(value=req.doc_id))])
+    expected_ids = {p.id for p in points}
+    with _entry_write_guard():
+        old_ids = [p.id for p in _scroll(doc_filter, with_payload=False)]
+        _upsert_batched(points, wait=True)   # deterministische IDs ueberschreiben gemeinsame Chunks
+        stale_ids = [i for i in old_ids if i not in expected_ids]
+        if stale_ids:   # Rest-Chunks eines frueher laengeren Textes erst NACH dem Upsert entfernen
+            qc.delete(collection_name=COLLECTION, points_selector=stale_ids, wait=True)
+            _bm25_invalidate()   # Rest-Chunk-Loeschung ist der letzte Schreibvorgang -> Index frisch
     after = _scroll(Filter(must=[FieldCondition(key="doc_id", match=MatchValue(value=req.doc_id))]), limit=1)
     applied = bool(after) and set(cats_from_payload(after[0].payload)) == set(cats)
     probe(applied, "Kategorie-Liste nicht angekommen", doc_id=req.doc_id, want=cats)
@@ -1889,23 +2125,32 @@ def purge_user(req: PurgeReq) -> dict:
 
 @app.get("/by-date", dependencies=[Depends(require_auth)])
 def by_date(date: str, user_id: str = "frank") -> dict:
-    """Alle Eintraege, die an einem bestimmten Tag gespeichert wurden (Datum YYYY-MM-DD,
-    Praefix-Filter auf created_at). Auf Dokument-Ebene dedupliziert."""
+    """Alle Eintraege, die an einem bestimmten LOKALEN Tag (SB_TZ, Default Europe/Berlin)
+    gespeichert wurden (Datum YYYY-MM-DD). Auf Dokument-Ebene dedupliziert. created_at ist UTC —
+    die Tagesgrenzen werden umgerechnet, sonst landet alles zwischen 00:00 und 02:00 Lokalzeit
+    am Vortag."""
     _require_store()
+    date = (date or "").strip()
+    gte, lte = local_day_bounds(date, date)
+    if gte is None or lte is None:
+        # Ungueltiges Format ODER kalendarisch unmoegliches Datum (z.B. 2026-02-30): sofort leer,
+        # statt frueher einen Voll-Scan ALLER Chunk-0-Punkte mit full_text in den RAM zu ziehen
+        # (bzw. bei None-Grenzen faelschlich ALLE Eintraege zurueckzugeben).
+        checkpoint("by_date", "Abruf nach Speicherdatum (ungueltiges Datum)", ok=True, date=date, hits=0)
+        return {"ok": True, "date": date, "count": 0, "items": []}
     # OOM-Schutz (gleiche Fehlerklasse wie 1.13.x/1.14, qdrant §8): NUR Chunk 0 je Dokument laden
     # (full_text ist 1:1 in JEDEM Chunk) und — wenn der Client DatetimeRange kann — den Tag schon
     # SERVERSEITIG eingrenzen, statt ALLE Chunks ALLER Dokumente mit Volltext in den RAM zu ziehen.
-    # Der Python-Praefix-Check unten bleibt als Fallback/zweite Sicherung (identisches Ergebnis).
+    # Der Python-Bereichs-Check unten bleibt als Fallback/zweite Sicherung (identisches Ergebnis).
     must = [FieldCondition(key="user_id", match=MatchValue(value=user_id)),
             FieldCondition(key="chunk_index", match=MatchValue(value=0))]
-    if HAS_DATETIME_RANGE and re.fullmatch(r"\d{4}-\d{2}-\d{2}", (date or "").strip()):
-        d = date.strip()
-        must.append(FieldCondition(key="created_at", range=DatetimeRange(gte=f"{d}T00:00:00Z", lte=f"{d}T23:59:59Z")))
+    if HAS_DATETIME_RANGE:
+        must.append(FieldCondition(key="created_at", range=DatetimeRange(gte=gte, lte=lte)))
     points = _scroll(Filter(must=must))
     seen: dict[str, dict] = {}
     for p in points:
         created = p.payload.get("created_at", "") or ""   # or "": Key koennte explizit None sein
-        if not created.startswith(date):
+        if not _created_in_bounds(created, gte, lte):
             continue
         did = p.payload.get("doc_id")
         if did not in seen:
@@ -1919,14 +2164,14 @@ def by_date(date: str, user_id: str = "frank") -> dict:
 
 
 def _date_bounds(req: SearchReq) -> tuple[str | None, str | None]:
-    """Leitet (gte, lte) als RFC3339-Tagesgrenzen aus date / date_from / date_to ab (oder None, None).
-    'date' (einzelner Tag) hat Vorrang; sonst date_from..date_to als Bereich."""
+    """Leitet (gte, lte) als UTC-Instants der LOKALEN Tagesgrenzen (SB_TZ) aus date / date_from /
+    date_to ab (oder None, None). 'date' (einzelner Tag) hat Vorrang; sonst date_from..date_to."""
     if req.date and req.date.strip():
         d = req.date.strip()
-        return f"{d}T00:00:00Z", f"{d}T23:59:59Z"
-    gte = f"{req.date_from.strip()}T00:00:00Z" if req.date_from and req.date_from.strip() else None
-    lte = f"{req.date_to.strip()}T23:59:59Z" if req.date_to and req.date_to.strip() else None
-    return gte, lte
+        return local_day_bounds(d, d)
+    day_from = req.date_from.strip() if req.date_from and req.date_from.strip() else None
+    day_to = req.date_to.strip() if req.date_to and req.date_to.strip() else None
+    return local_day_bounds(day_from, day_to)
 
 
 @app.post("/search", dependencies=[Depends(require_auth)])
@@ -1946,9 +2191,9 @@ def search(req: SearchReq) -> dict:
         _c = canonical_category(req.category)   # Multi-Category: neues Array 'categories' ODER altes 'category'
         must.append(_category_match_filter(_c))
     elif req.parent and req.parent.strip():   # 'alles unter Haupt' (nur wenn keine exakte Kategorie gesetzt)
-        _p = req.parent.strip()
-        must.append(Filter(should=[FieldCondition(key="parents", match=MatchValue(value=_p)),
-                                   FieldCondition(key="parent", match=MatchValue(value=_p))]))
+        # Kanonisierung + Aliase wie /by-parent und der BM25-Pfad derselben Suche — vorher matchte
+        # der dense-Pfad den ROHEN String und fand z.B. parent='gespraeche' vs. 'Gespräche' nicht.
+        must.append(_parent_match_filter(canonical_category(req.parent)))
     gte, lte = _date_bounds(req)
     py_date_filter = False  # Fallback, falls DatetimeRange in der Client-Version fehlt (Funktionserhalt)
     if gte or lte:
@@ -1965,8 +2210,7 @@ def search(req: SearchReq) -> dict:
             # Python laufen -> hier weiterhin alle Punkte scannen (identisches Ergebnis wie bisher).
             count_pts = _scroll(Filter(must=must), with_payload=["doc_id", "created_at"])
             count_pts = [p for p in count_pts
-                         if not ((gte and (p.payload.get("created_at") or "")[:10] < gte[:10])
-                                 or (lte and (p.payload.get("created_at") or "")[:10] > lte[:10]))]
+                         if _created_in_bounds(p.payload.get("created_at") or "", gte, lte)]
             effective_limit = max(1, len({p.payload.get("doc_id") for p in count_pts if p.payload.get("doc_id")}))
             search_point_limit = max(1, len(count_pts))
         else:
@@ -1990,13 +2234,15 @@ def search(req: SearchReq) -> dict:
     best: dict[str, dict] = {}
     for h in raw:
         if py_date_filter:
-            created = (h.payload.get("created_at") or "")[:10]  # ISO sortiert lexikalisch = chronologisch
-            if (gte and created < gte[:10]) or (lte and created > lte[:10]):
+            # Voller ISO-Vergleich (lexikalisch = chronologisch): die Grenzen sind UTC-Instants
+            # der lokalen Tagesgrenzen, ein reiner [:10]-Datumsvergleich waere wieder UTC-tagesscharf.
+            if not _created_in_bounds(h.payload.get("created_at") or "", gte, lte):
                 continue
         did = h.payload.get("doc_id")
         if did not in best or h.score > best[did]["score"]:
             best[did] = {"doc_id": did, "title": h.payload.get("title") or None,
                          "category": h.payload.get("category") or None,
+                         "categories": cats_from_payload(h.payload),
                          "score": float(h.score), "match": h.payload.get("chunk_text", ""),
                          "created_at": h.payload.get("created_at"),
                          "updated_at": h.payload.get("updated_at"),
@@ -2045,10 +2291,8 @@ def search(req: SearchReq) -> dict:
                     c_par_keys.add(category_key(c.get("parent")))
                 if not _cat and _par and not (_par_keys & c_par_keys):
                     return False
-                if gte or lte:
-                    created = (c.get("created_at") or "")[:10]
-                    if (gte and created < gte[:10]) or (lte and created > lte[:10]):
-                        return False
+                if (gte or lte) and not _created_in_bounds(c.get("created_at") or "", gte, lte):
+                    return False
                 return True
 
             bm_hits = _bm25_index(req.user_id).search(req.query, limit=max(effective_limit * BM25_CANDIDATE_FACTOR, BM25_MIN_CANDIDATES), allow=_allow)
@@ -2073,6 +2317,7 @@ def search(req: SearchReq) -> dict:
                     full = pts[0].payload.get("full_text", "") if pts else ""
                     it = {"doc_id": did, "title": c.get("title") or None,
                           "category": c.get("category") or None,
+                          "categories": [x for x in (c.get("categories") or []) if isinstance(x, str)],
                           "score": 0.0, "dense_score": None, "match": c.get("text") or "",
                           "created_at": c.get("created_at") or None, "updated_at": c.get("updated_at"),
                           "text": full, "matched_by": ["bm25"], "bm25_rank": rank}
@@ -2197,7 +2442,6 @@ def delete_entry(doc_id: str, user_id: str = "frank") -> dict:
 
 
 @app.put("/entry", dependencies=[Depends(require_auth)])
-@serialized_entry_write
 def update_entry(req: UpdateReq) -> dict:
     """Ersetzt einen bestehenden Eintrag (per doc_id) 1:1 durch neuen Text: die alten Vektoren/Chunks
     werden GELOESCHT, der neue Text frisch embedded und unter DERSELBEN doc_id gespeichert. Titel,
@@ -2220,8 +2464,10 @@ def update_entry(req: UpdateReq) -> dict:
     # Titel-Aenderung (Frank-Wunsch): req.title=None -> alter Titel bleibt. Sonst neuer Titel.
     # Die doc_id eines betitelten Eintrags HAENGT vom Titel ab (make_doc_id) -> bei echter Titel-
     # aenderung MUSS der Eintrag auf die neue doc_id wandern (sonst findet /by-title ihn nicht mehr).
-    title = old_title if req.title is None else req.title.strip()
-    title_changed = req.title is not None and title != old_title
+    # LEERER neuer Titel zaehlt als 'Titel behalten': sonst bliebe ein 'titelloser' Eintrag auf der
+    # alten Titel-doc_id liegen und ein spaeterer /store mit dem alten Titel wuerde ihn ERSETZEN.
+    title = old_title if (req.title is None or not req.title.strip()) else req.title.strip()
+    title_changed = title != old_title
     target_doc_id = req.doc_id
     if title_changed and title:
         target_doc_id = make_doc_id(req.user_id, title)
@@ -2231,8 +2477,9 @@ def update_entry(req: UpdateReq) -> dict:
     chunks = chunk_text(req.text)
     _guard_embed_budget(len(chunks))
     t0 = time.time()
-    points = []
+    # Embedding VOR dem Schreib-Guard (langsam; blockiert sonst alle parallelen Schreibwege)
     vecs = embed_many([embed_input(title, cats, ch) for ch in chunks], "RETRIEVAL_DOCUMENT")  # gebuendelt statt seriell
+    points = []
     for i, (ch, vec) in enumerate(zip(chunks, vecs)):
         points.append(PointStruct(id=point_id(target_doc_id, i), vector=vec, payload={
             "doc_id": target_doc_id, "user_id": req.user_id, "title": title, "category": category, "categories": cats, "parent": parent, "parents": parents,
@@ -2245,52 +2492,60 @@ def update_entry(req: UpdateReq) -> dict:
     # Titelmigration die alte doc_id gelöscht.
     source_filter = Filter(must=[FieldCondition(key="doc_id", match=MatchValue(value=req.doc_id))])
     target_filter = Filter(must=[FieldCondition(key="doc_id", match=MatchValue(value=target_doc_id))])
-    source_snapshot = _scroll(source_filter, with_vectors=True)
-    target_snapshot = source_snapshot if target_doc_id == req.doc_id else _scroll(target_filter, with_vectors=True)
-    expected_ids = {p.id for p in points}
-    try:
-        _upsert_batched(points, wait=True)
-        current = _scroll(target_filter, with_payload=["chunk_index", "chunk_count", "full_text"])
-        current_by_id = {p.id: p for p in current}
-        expected_ok = expected_ids.issubset(current_by_id) and all(
-            (current_by_id[p.id].payload or {}).get("chunk_index") == i
-            and (current_by_id[p.id].payload or {}).get("chunk_count") == len(chunks)
-            and (current_by_id[p.id].payload or {}).get("full_text") == req.text
-            for i, p in enumerate(points)
-        )
-        if not expected_ok:
-            raise RuntimeError("nicht alle neuen Chunks wurden verifiziert")
-
-        stale_ids = [p.id for p in current if p.id not in expected_ids]
-        if stale_ids:
-            qc.delete(collection_name=COLLECTION, points_selector=stale_ids, wait=True)
-        final_points = _scroll(target_filter, with_payload=["chunk_index", "chunk_count", "full_text"])
-        replaced_ok = ({p.id for p in final_points} == expected_ids and len(final_points) == len(chunks)
-                       and all((p.payload or {}).get("full_text") == req.text for p in final_points))
-        if not replaced_ok:
-            raise RuntimeError("finale Chunk-Menge stimmt nicht")
-
-        if target_doc_id != req.doc_id:
-            _delete_doc(req.doc_id)
-            if _scroll(source_filter, limit=1, with_payload=False):
-                raise RuntimeError("alte doc_id nach Titelmigration noch vorhanden")
-        _bm25_invalidate()
-    except Exception as update_exc:  # noqa: BLE001 — jeder Teilfehler stellt beide Dokumente wieder her
-        rollback_errors = []
+    with _entry_write_guard():
+        source_snapshot = _dedup_snapshot_full_text(_scroll(source_filter, with_vectors=True))
+        target_snapshot = source_snapshot if target_doc_id == req.doc_id \
+            else _dedup_snapshot_full_text(_scroll(target_filter, with_vectors=True))
+        expected_ids = {p.id for p in points}
         try:
-            _restore_doc_snapshot(target_doc_id, target_snapshot)
-        except Exception as rollback_exc:  # noqa: BLE001
-            rollback_errors.append(f"Ziel: {type(rollback_exc).__name__}")
-        if target_doc_id != req.doc_id:
+            _upsert_batched(points, wait=True)
+            # Verifikation OHNE N full_text-Kopien im RAM: text_len je Chunk + Chunk 0 wortwoertlich.
+            current = _scroll(target_filter, with_payload=["chunk_index", "chunk_count", "text_len"])
+            current_by_id = {p.id: p for p in current}
+            expected_ok = expected_ids.issubset(current_by_id) and all(
+                (current_by_id[p.id].payload or {}).get("chunk_index") == i
+                and (current_by_id[p.id].payload or {}).get("chunk_count") == len(chunks)
+                and (current_by_id[p.id].payload or {}).get("text_len") == len(req.text)
+                for i, p in enumerate(points)
+            )
+            if expected_ok:
+                head = _scroll(Filter(must=[FieldCondition(key="doc_id", match=MatchValue(value=target_doc_id)),
+                                            FieldCondition(key="chunk_index", match=MatchValue(value=0))]),
+                               limit=1, with_payload=["full_text"])
+                expected_ok = bool(head) and (head[0].payload or {}).get("full_text") == req.text
+            if not expected_ok:
+                raise RuntimeError("nicht alle neuen Chunks wurden verifiziert")
+
+            stale_ids = [p.id for p in current if p.id not in expected_ids]
+            if stale_ids:
+                qc.delete(collection_name=COLLECTION, points_selector=stale_ids, wait=True)
+            final_points = _scroll(target_filter, with_payload=["chunk_index", "chunk_count", "text_len"])
+            replaced_ok = ({p.id for p in final_points} == expected_ids and len(final_points) == len(chunks)
+                           and all((p.payload or {}).get("text_len") == len(req.text) for p in final_points))
+            if not replaced_ok:
+                raise RuntimeError("finale Chunk-Menge stimmt nicht")
+
+            if target_doc_id != req.doc_id:
+                _delete_doc(req.doc_id)
+                if _scroll(source_filter, limit=1, with_payload=False):
+                    raise RuntimeError("alte doc_id nach Titelmigration noch vorhanden")
+            _bm25_invalidate()
+        except Exception as update_exc:  # noqa: BLE001 — jeder Teilfehler stellt beide Dokumente wieder her
+            rollback_errors = []
             try:
-                _restore_doc_snapshot(req.doc_id, source_snapshot)
+                _restore_doc_snapshot(target_doc_id, target_snapshot)
             except Exception as rollback_exc:  # noqa: BLE001
-                rollback_errors.append(f"Quelle: {type(rollback_exc).__name__}")
-        _log(logging.ERROR, "PUT /entry fehlgeschlagen; Rollback ausgeführt",
-             error=type(update_exc).__name__, rollback_errors=rollback_errors, exc_info=True)
-        if rollback_errors:
-            raise HTTPException(status_code=500, detail="Aktualisierung und Rollback fehlgeschlagen; Serverprotokoll prüfen") from update_exc
-        raise HTTPException(status_code=503, detail="Aktualisierung nicht verifiziert; bisheriger Eintrag wurde wiederhergestellt") from update_exc
+                rollback_errors.append(f"Ziel: {type(rollback_exc).__name__}")
+            if target_doc_id != req.doc_id:
+                try:
+                    _restore_doc_snapshot(req.doc_id, source_snapshot)
+                except Exception as rollback_exc:  # noqa: BLE001
+                    rollback_errors.append(f"Quelle: {type(rollback_exc).__name__}")
+            _log(logging.ERROR, "PUT /entry fehlgeschlagen; Rollback ausgeführt",
+                 error=type(update_exc).__name__, rollback_errors=rollback_errors, exc_info=True)
+            if rollback_errors:
+                raise HTTPException(status_code=500, detail="Aktualisierung und Rollback fehlgeschlagen; Serverprotokoll prüfen") from update_exc
+            raise HTTPException(status_code=503, detail="Aktualisierung nicht verifiziert; bisheriger Eintrag wurde wiederhergestellt") from update_exc
     checkpoint("update_entry", "Alten Vektor loeschen + neuen Text 1:1 speichern (Titel-Aenderung -> neue doc_id)",
                ok=replaced_ok, doc_id=target_doc_id, old_doc_id=req.doc_id if title_changed else None,
                title=title or None, title_changed=title_changed, chunks=len(chunks),
@@ -2350,7 +2605,6 @@ def trash_empty(user_id: str = "frank") -> dict:
 
 
 @app.post("/trash/restore", dependencies=[Depends(require_auth)])
-@serialized_entry_write
 def trash_restore(req: RestoreReq) -> dict:
     """Stellt einen Papierkorb-Eintrag wieder her: der (ggf. editierte) Text wird frisch embedded und
     unter der URSPRUENGLICHEN doc_id ins Gehirn gespeichert (created_at erhalten), dann aus dem
@@ -2374,19 +2628,23 @@ def trash_restore(req: RestoreReq) -> dict:
 
     parents = category_parents(cats)
     parent = parents[0] if parents else ""
-    _delete_doc(req.doc_id)  # eventuelle Reste gleicher doc_id raus, dann frisch
     chunks = chunk_text(text)
     _guard_embed_budget(len(chunks))
     now = iso_now()
-    points = []
+    # Embedding VOR jeder Loeschung: schlaegt es fehl (429/Gemini), bleiben sowohl der Papierkorb-
+    # Eintrag als auch ein eventuell AKTIVER Eintrag gleicher doc_id (per /store neu angelegt)
+    # vollstaendig erhalten — vorher loeschte der fruehe _delete_doc den aktiven Eintrag ersatzlos.
     vecs = embed_many([embed_input(title, cats, ch) for ch in chunks], "RETRIEVAL_DOCUMENT")  # gebuendelt statt seriell
+    points = []
     for i, (ch, vec) in enumerate(zip(chunks, vecs)):
         points.append(PointStruct(id=point_id(req.doc_id, i), vector=vec, payload={
             "doc_id": req.doc_id, "user_id": entry.get("user_id") or req.user_id,
             "title": title, "category": category, "categories": cats, "parent": parent, "parents": parents, "chunk_index": i, "chunk_count": len(chunks),
             "chunk_text": ch, "full_text": text, "created_at": created_at, "updated_at": now, "source": source, "layer": layer, **validity,
         }))
-    _upsert_batched(points)
+    with _entry_write_guard():   # Mutation serialisieren; Embedding lief bereits (fastapi §2)
+        _delete_doc(req.doc_id)  # eventuelle Reste gleicher doc_id raus, dann frisch
+        _upsert_batched(points, wait=True)
 
     with _trash_lock:  # erst NACH erfolgreichem Upsert aus dem Papierkorb nehmen
         items = [t for t in _trash_load() if t.get("doc_id") != req.doc_id]
@@ -2532,10 +2790,13 @@ class EntityUnlinkReq(BaseModel):
 
 
 @app.post("/entities/upsert", dependencies=[Depends(require_auth)])
+@serialized_entry_write
 def entities_upsert(req: EntityUpsertReq) -> dict:
     """Legt eine Entitaet an ODER erweitert sie (merge): doc_ids/aliases werden VEREINIGT, nie
     ueberschrieben. Re-Embed nur, wenn sich das Profil (Name/Typ/Aliases) aendert — reine
-    doc_id-Verknuepfungen sind ein billiges set_payload."""
+    doc_id-Verknuepfungen sind ein billiges set_payload. Serialisiert (Read-Modify-Write auf
+    doc_ids): parallele Upserts (Agent + Nachtschicht) koennen sich sonst gegenseitig
+    ueberschreiben — Verknuepfungen gingen still verloren."""
     _require_store()
     name = req.name.strip()
     existing = _entity_get(req.user_id, name)
@@ -2628,26 +2889,48 @@ def entities_docs(name: str, user_id: str = "frank", limit: int = 10) -> dict:
         return {"ok": True, "found": False, "name": name, "items": []}
     pl = hit.payload or {}
     doc_ids = [d for d in (pl.get("doc_ids") or []) if d]
-    items, alive = [], []
-    for did in doc_ids:
-        pts = _scroll(Filter(must=[FieldCondition(key="doc_id", match=MatchValue(value=did))]), limit=1)
-        if not pts:
-            continue   # toter Verweis -> faellt aus 'alive' raus (lazy cleanup unten)
-        alive.append(did)
-        p = pts[0].payload
-        items.append({"doc_id": did, "title": p.get("title") or None,
-                      "category": p.get("category") or None, "categories": cats_from_payload(p),
-                      "created_at": p.get("created_at"), "updated_at": p.get("updated_at"),
-                      "text": p.get("full_text", "")})
-    if len(alive) != len(doc_ids):   # Self-Healing: tote doc_ids austragen
-        qc.set_payload(collection_name=ENTITY_COLLECTION,
-                       payload={"doc_ids": alive, "doc_count": len(alive), "updated_at": iso_now()},
-                       points=[hit.id], wait=False)
-        _log(logging.INFO, "Entity-Register: tote doc_ids entfernt", name=pl.get("name"),
-             entfernt=len(doc_ids) - len(alive))
+    items, alive_set = [], set()
+    if doc_ids:
+        # EIN Batch-Scroll (MatchAny, nur Chunk 0, KEIN full_text) statt N+1 Einzel-Scrolls mit
+        # Volltext: bei 500 verknuepften doc_ids waren das 500 Roundtrips + alle Volltexte im RAM
+        # fuer eine Top-10-Antwort.
+        for p in _scroll(Filter(must=[FieldCondition(key="doc_id", match=MatchAny(any=doc_ids)),
+                                      FieldCondition(key="chunk_index", match=MatchValue(value=0))]),
+                         with_payload=["doc_id", "title", "category", "categories", "created_at", "updated_at"]):
+            ppl = p.payload or {}
+            did = ppl.get("doc_id")
+            if not did or did in alive_set:
+                continue
+            alive_set.add(did)
+            items.append({"doc_id": did, "title": ppl.get("title") or None,
+                          "category": ppl.get("category") or None, "categories": cats_from_payload(ppl),
+                          "created_at": ppl.get("created_at"), "updated_at": ppl.get("updated_at"),
+                          "text": ""})
+    dead = [d for d in doc_ids if d not in alive_set]
+    if dead:   # Self-Healing: tote doc_ids austragen — unter dem Schreib-Guard mit FRISCHEM Re-Read,
+        try:   # damit kein parallel hinzugefuegter Link weggewischt wird (Lost-Update-Schutz)
+            with _entry_write_guard():
+                fresh = _entity_get(user_id, name)
+                if fresh is not None:
+                    fpl = fresh.payload or {}
+                    dead_set = set(dead)
+                    fresh_ids = [d for d in (fpl.get("doc_ids") or []) if d and d not in dead_set]
+                    qc.set_payload(collection_name=ENTITY_COLLECTION,
+                                   payload={"doc_ids": fresh_ids, "doc_count": len(fresh_ids),
+                                            "updated_at": iso_now()},
+                                   points=[fresh.id], wait=True)
+            _log(logging.INFO, "Entity-Register: tote doc_ids entfernt", name=pl.get("name"),
+                 entfernt=len(dead))
+        except HTTPException:   # Guard-Timeout: Lesen geht vor — Healing holt der naechste Abruf nach
+            pass
     items = _sort_recent(items)
     if limit > 0:
         items = items[:limit]
+    # Volltexte NUR fuer die finalen Top-N nachladen (1 Chunk je doc; full_text 1:1 in jedem Chunk)
+    for it in items:
+        pts = _scroll(Filter(must=[FieldCondition(key="doc_id", match=MatchValue(value=it["doc_id"]))]),
+                      limit=1, with_payload=["full_text"])
+        it["text"] = (pts[0].payload or {}).get("full_text", "") if pts else ""
     checkpoint("entity_docs", "Alles-ueber-X: verknuepfte Eintraege einer Entitaet (vollstaendig statt Top-5)",
                ok=True, name=pl.get("name"), docs=len(items))
     return {"ok": True, "found": True, "name": pl.get("name"), "type": pl.get("type") or None,
@@ -2655,8 +2938,10 @@ def entities_docs(name: str, user_id: str = "frank", limit: int = 10) -> dict:
 
 
 @app.post("/entities/unlink", dependencies=[Depends(require_auth)])
+@serialized_entry_write
 def entities_unlink(req: EntityUnlinkReq) -> dict:
-    """Traegt EINE doc_id aus einer Entitaet aus (der Eintrag selbst bleibt unberuehrt)."""
+    """Traegt EINE doc_id aus einer Entitaet aus (der Eintrag selbst bleibt unberuehrt).
+    Serialisiert wie /entities/upsert (Read-Modify-Write auf doc_ids)."""
     _require_store()
     hit = _entity_get(req.user_id, req.name)
     if hit is None:

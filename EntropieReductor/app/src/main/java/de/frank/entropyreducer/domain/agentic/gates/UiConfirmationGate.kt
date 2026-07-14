@@ -12,8 +12,6 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.suspendCancellableCoroutine
-import kotlinx.coroutines.sync.Mutex
-import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withTimeoutOrNull
 
 /**
@@ -51,12 +49,12 @@ constructor(
      * Thread-sicher (Direktive 3 Loop-1-Fix, war HIGH-3-Bug): vorher war
      * pendingContinuation ein einfaches var — read+write von verschiedenen
      * Dispatchers konnte TOCTOU verursachen. AtomicReference + zusaetzliches
-     * Mutex fuer den request-Pfad garantieren dass nur EINE Continuation
-     * gleichzeitig aktiv ist und respond() immer die richtige aufweckt.
+     * gemeinsames Lock fuer Continuation UND sichtbaren Request garantieren,
+     * dass respond() immer genau die aktuell angezeigte Anfrage beantwortet.
      */
     private val pendingContinuationRef =
         AtomicReference<CancellableContinuation<ConfirmationResult>?>(null)
-    private val requestMutex = Mutex()
+    private val pendingLock = Any()
 
     override suspend fun request(req: ConfirmationRequest): ConfirmationResult {
         // 1. Trust-Modus pruefen
@@ -84,20 +82,7 @@ constructor(
             )
         }
 
-        // 3. Mutex-geschuetzte Pre-Verdraengung: alten Pending-Request beenden
-        requestMutex.withLock {
-            val previous = pendingContinuationRef.getAndSet(null)
-            if (previous != null && previous.isActive) {
-                previous.resume(
-                    ConfirmationResult(
-                        decision = ConfirmDecision.TIMED_OUT,
-                        rejectReason = "Vom naechsten Confirm-Request verdraengt",
-                    )
-                )
-            }
-        }
-
-        // 4. Neuer Request → Coroutine suspendieren, auf UI warten.
+        // 3. Neuer Request → Coroutine suspendieren, auf UI warten.
         // Loop-5-Fix (L5-4): wir merken uns die LOKALE Continuation und
         // nutzen sie fuer compareAndSet im Cleanup — sonst wuerde ein
         // frischer Request der zwischen withTimeoutOrNull und der
@@ -108,12 +93,25 @@ constructor(
             withTimeoutOrNull(60_000L) {
                 suspendCancellableCoroutine<ConfirmationResult> { cont ->
                     ourContinuation = cont
-                    pendingContinuationRef.set(cont)
-                    _pendingRequest.value = req
+                    val previous = synchronized(pendingLock) {
+                        val displaced = pendingContinuationRef.getAndSet(cont)
+                        _pendingRequest.value = req
+                        displaced
+                    }
+                    if (previous != null && previous.isActive) {
+                        previous.resume(
+                            ConfirmationResult(
+                                decision = ConfirmDecision.TIMED_OUT,
+                                rejectReason = "Vom naechsten Confirm-Request verdraengt",
+                            )
+                        )
+                    }
                     cont.invokeOnCancellation {
-                        _pendingRequest.value = null
-                        // CAS: nur loeschen wenn wir noch die Aktive sind
-                        pendingContinuationRef.compareAndSet(cont, null)
+                        synchronized(pendingLock) {
+                            if (pendingContinuationRef.compareAndSet(cont, null)) {
+                                _pendingRequest.compareAndSet(req, null)
+                            }
+                        }
                     }
                 }
             }
@@ -121,8 +119,13 @@ constructor(
         // Cleanup nur unserer eigenen Continuation (L5-4 Fix):
         // compareAndSet statt getAndSet — falls schon ein neuer Request
         // ourContinuation verdraengt hat, wird sein Slot nicht beruehrt.
-        ourContinuation?.let { pendingContinuationRef.compareAndSet(it, null) }
-        _pendingRequest.compareAndSet(req, null)
+        synchronized(pendingLock) {
+            ourContinuation?.let { continuation ->
+                if (pendingContinuationRef.compareAndSet(continuation, null)) {
+                    _pendingRequest.compareAndSet(req, null)
+                }
+            }
+        }
 
         return timeoutResult
             ?: ConfirmationResult(
@@ -137,11 +140,21 @@ constructor(
      * Aufruf gewinnt der erste, der zweite faengt null und kehrt ohne Wirkung
      * zurueck.
      */
-    fun respond(decision: ConfirmDecision, rejectReason: String? = null) {
-        val cont = pendingContinuationRef.getAndSet(null) ?: return
+    fun respond(
+        expectedRequestId: String,
+        decision: ConfirmDecision,
+        rejectReason: String? = null,
+    ): Boolean {
+        val cont = synchronized(pendingLock) {
+            val request = _pendingRequest.value ?: return false
+            if (request.requestId != expectedRequestId) return false
+            val active = pendingContinuationRef.getAndSet(null) ?: return false
+            _pendingRequest.value = null
+            active
+        }
         if (cont.isActive) {
             cont.resume(ConfirmationResult(decision = decision, rejectReason = rejectReason))
         }
-        _pendingRequest.value = null
+        return true
     }
 }

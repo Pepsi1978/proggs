@@ -51,16 +51,21 @@ class AppSettings @Inject constructor(
     val lastOuraSyncMsFlow: Flow<Long> = ds.data.map { it[KEY_LAST_OURA_SYNC] ?: 0L }
     val lastAmazfitSyncMsFlow: Flow<Long> = ds.data.map { it[KEY_LAST_AMAZFIT_SYNC] ?: 0L }
     val lastHealthConnectSyncMsFlow: Flow<Long> = ds.data.map { it[KEY_LAST_HEALTH_CONNECT_SYNC] ?: 0L }
-    /** Fingerprint des zuletzt hochgeladenen Workouts-Backups (Frank-Wunsch 2026-05-23) —
-     *  damit das 6-MB-Backup nur hochgeladen wird wenn sich Trainings geaendert haben. 0 = nie. */
-    val workoutsBackupFingerprintFlow: Flow<Int> = ds.data.map { it[KEY_WORKOUTS_BACKUP_FP] ?: 0 }
+
+    suspend fun readHealthConnectPermissionSignature(): String =
+        ds.data.first()[KEY_HEALTH_CONNECT_PERMISSION_SIGNATURE].orEmpty()
+    /** SHA-256 des zuletzt hochgeladenen Workouts-Backups. Leer = nie. */
+    val workoutsBackupFingerprintFlow: Flow<String> =
+        ds.data.map { it[KEY_WORKOUTS_BACKUP_SHA256] ?: "" }
     /** Fingerprint des zuletzt hochgeladenen Haupt-Backups (Performance 2026-05-23, Vorschlag 2) —
      *  inhaltsbasierter Hash des Payloads OHNE exportedAt. Aendert er sich nicht, wird der
      *  Haupt-Upload uebersprungen. 0 = noch nie hochgeladen. */
-    val mainBackupFingerprintFlow: Flow<Int> = ds.data.map { it[KEY_MAIN_BACKUP_FP] ?: 0 }
+    val mainBackupFingerprintFlow: Flow<String> =
+        ds.data.map { it[KEY_MAIN_BACKUP_SHA256] ?: "" }
     /** Fingerprint des zuletzt hochgeladenen Health-Backups (Whoop/Oura, Performance 2026-05-24) —
      *  inhaltsbasierter Hash OHNE exportedAt. Unveraendert -> Health-Upload uebersprungen. 0 = nie. */
-    val healthBackupFingerprintFlow: Flow<Int> = ds.data.map { it[KEY_HEALTH_BACKUP_FP] ?: 0 }
+    val healthBackupFingerprintFlow: Flow<String> =
+        ds.data.map { it[KEY_HEALTH_BACKUP_SHA256] ?: "" }
     /** Letzter Lauf der KI-Frage-des-Moments (Epoch-Millisekunden). */
     val lastKiQuestionCheckMsFlow: Flow<Long> = ds.data.map { it[KEY_LAST_KI_QUESTION] ?: 0L }
 
@@ -225,10 +230,21 @@ class AppSettings @Inject constructor(
 
     suspend fun getDeletedWorkoutStarts(): Set<Long> =
         ds.data.first()[KEY_DELETED_WORKOUTS]?.mapNotNull { it.toLongOrNull() }?.toSet() ?: emptySet()
-    suspend fun setLastHealthConnectSync(value: Long) = ds.edit { it[KEY_LAST_HEALTH_CONNECT_SYNC] = value }
-    suspend fun setWorkoutsBackupFingerprint(value: Int) = ds.edit { it[KEY_WORKOUTS_BACKUP_FP] = value }
-    suspend fun setMainBackupFingerprint(value: Int) = ds.edit { it[KEY_MAIN_BACKUP_FP] = value }
-    suspend fun setHealthBackupFingerprint(value: Int) = ds.edit { it[KEY_HEALTH_BACKUP_FP] = value }
+    suspend fun setHealthConnectSyncState(value: Long, permissionSignature: String) = ds.edit {
+        it[KEY_LAST_HEALTH_CONNECT_SYNC] = value
+        it[KEY_HEALTH_CONNECT_PERMISSION_SIGNATURE] = permissionSignature
+    }
+
+    /** Reset-/Override-Pfad für bestehende UI-Aktionen; die Permission-Signatur bleibt erhalten. */
+    suspend fun setLastHealthConnectSync(value: Long) = ds.edit {
+        it[KEY_LAST_HEALTH_CONNECT_SYNC] = value
+    }
+    suspend fun setWorkoutsBackupFingerprint(value: String) =
+        ds.edit { it[KEY_WORKOUTS_BACKUP_SHA256] = value }
+    suspend fun setMainBackupFingerprint(value: String) =
+        ds.edit { it[KEY_MAIN_BACKUP_SHA256] = value }
+    suspend fun setHealthBackupFingerprint(value: String) =
+        ds.edit { it[KEY_HEALTH_BACKUP_SHA256] = value }
     suspend fun setLastKiQuestionCheck(value: Long) = ds.edit { it[KEY_LAST_KI_QUESTION] = value }
 
     /**
@@ -394,6 +410,23 @@ class AppSettings @Inject constructor(
         prefs[key] = without + "$rowId=$title"
     }
 
+    /** Stamp und Remote-Titel gehoeren zu derselben bestaetigten Server-Version. */
+    suspend fun markSecondBrainSynced(
+        areaKey: String,
+        rowId: String,
+        stamp: String,
+        title: String,
+    ) = ds.edit { prefs ->
+        val stampKey = secondBrainSyncStampsKey(areaKey)
+        val titleKey = secondBrainTitlesKey(areaKey)
+        prefs[stampKey] = (prefs[stampKey] ?: emptySet())
+            .filterNot { it.startsWith("$rowId:") }
+            .toSet() + stamp
+        prefs[titleKey] = (prefs[titleKey] ?: emptySet())
+            .filterNot { it.startsWith("$rowId=") }
+            .toSet() + "$rowId=$title"
+    }
+
     suspend fun clearSecondBrainSync(areaKey: String, rowId: String) = ds.edit { prefs ->
         val stampKey = secondBrainSyncStampsKey(areaKey)
         val titleKey = secondBrainTitlesKey(areaKey)
@@ -470,9 +503,14 @@ class AppSettings @Inject constructor(
         private val KEY_LAST_AMAZFIT_SYNC = longPreferencesKey("last_amazfit_sync_ms")
         private val KEY_DELETED_WORKOUTS = stringSetPreferencesKey("deleted_workout_starts")
         private val KEY_LAST_HEALTH_CONNECT_SYNC = longPreferencesKey("last_health_connect_sync_ms")
-        private val KEY_WORKOUTS_BACKUP_FP = intPreferencesKey("workouts_backup_fingerprint")
-        private val KEY_MAIN_BACKUP_FP = intPreferencesKey("main_backup_fingerprint")
-        private val KEY_HEALTH_BACKUP_FP = intPreferencesKey("health_backup_fingerprint")
+        private val KEY_HEALTH_CONNECT_PERMISSION_SIGNATURE =
+            stringPreferencesKey("health_connect_body_permission_signature")
+        private val KEY_WORKOUTS_BACKUP_SHA256 =
+            stringPreferencesKey("workouts_backup_fingerprint_sha256")
+        private val KEY_MAIN_BACKUP_SHA256 =
+            stringPreferencesKey("main_backup_fingerprint_sha256")
+        private val KEY_HEALTH_BACKUP_SHA256 =
+            stringPreferencesKey("health_backup_fingerprint_sha256")
         private val KEY_LAST_REFRESH_FOOTER = stringPreferencesKey("last_refresh_footer_text")
         private val KEY_LAST_REFRESH_FOOTER_AT = longPreferencesKey("last_refresh_footer_at_ms")
         private val KEY_WORKOUT_CLEANUP_V1 = booleanPreferencesKey("workout_cleanup_v1_done")

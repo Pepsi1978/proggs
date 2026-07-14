@@ -4,6 +4,7 @@ import de.frank.entropyreducer.domain.agentic.AgenticTool
 import de.frank.entropyreducer.domain.model.ConfirmDecision
 import javax.inject.Inject
 import javax.inject.Singleton
+import java.util.UUID
 import kotlinx.serialization.json.JsonElement
 
 /**
@@ -39,6 +40,7 @@ interface ConfirmationGate {
  * Enthaelt alles was die UI fuer eine Vorschau braucht.
  */
 data class ConfirmationRequest(
+    val requestId: String = UUID.randomUUID().toString(),
     val promptId: String,
     val executionId: String,
     val tool: AgenticTool,

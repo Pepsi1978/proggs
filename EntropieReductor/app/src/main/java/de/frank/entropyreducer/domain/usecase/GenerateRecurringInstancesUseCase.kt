@@ -49,6 +49,8 @@ class GenerateRecurringInstancesUseCase @Inject constructor(
             try {
                 val created = processSingleTemplate(template, now)
                 totalCreated += created
+            } catch (cancellation: kotlinx.coroutines.CancellationException) {
+                throw cancellation
             } catch (e: Exception) {
                 // Eine fehlerhafte Vorlage darf nicht alle anderen blockieren.
                 Diag.w(DiagnosticArea.TASKS, 
@@ -419,6 +421,8 @@ class GenerateRecurringInstancesUseCase @Inject constructor(
                         ),
                     )
                 }
+            } catch (cancellation: kotlinx.coroutines.CancellationException) {
+                throw cancellation
             } catch (e: Exception) {
                 Diag.w(DiagnosticArea.TASKS, TAG, "Cleanup fuer Vorlage '${template.title}' (${template.id}) fehlgeschlagen: ${e.message}")
             }
@@ -454,7 +458,7 @@ class GenerateRecurringInstancesUseCase @Inject constructor(
             // Frank-Wunsch 2026-06-01: Die im Loop gesetzte Prioritaet ist eine MANUELLE
             // Prioritaet — sie muss in der generierten Aufgabe gelten und darf NICHT von der
             // KI ueberschrieben werden. manualPriorityScore hat Vorrang vor priorityScore.
-            manualPriorityScore = template.priorityScore.toDouble(),
+            manualPriorityScore = effectivePriority,
             priorityReason = "Wiederkehrende Aufgabe aus Vorlage \"${template.title}\"",
             status = EntryStatus.OFFEN,
             // Frank-Wunsch 2026-05-31: Vorgegebener Ziel-Bucket der Vorlage; null = HEUTE.

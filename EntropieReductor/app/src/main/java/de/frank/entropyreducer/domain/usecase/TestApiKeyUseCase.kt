@@ -7,6 +7,7 @@ import de.frank.entropyreducer.data.remote.GeminiRequest
 import de.frank.entropyreducer.data.remote.GoogleTtsApi
 import de.frank.entropyreducer.data.remote.GroqWhisperApi
 import de.frank.entropyreducer.data.settings.AppSettings
+import de.frank.entropyreducer.util.runCatchingCancellable
 import kotlinx.coroutines.flow.first
 import javax.inject.Inject
 
@@ -26,7 +27,7 @@ class TestApiKeyUseCase @Inject constructor(
      * Groq-Test: GET /openai/v1/models mit Bearer-Auth.
      * Quelle: console.groq.com/docs/api-reference (Stand 2025).
      */
-    suspend fun testGroq(apiKey: String): Result<Unit> = runCatching {
+    suspend fun testGroq(apiKey: String): Result<Unit> = runCatchingCancellable {
         groq.listModels(bearer = "Bearer $apiKey")
         Unit
     }
@@ -35,7 +36,7 @@ class TestApiKeyUseCase @Inject constructor(
      * Gemini-Test: kleiner generateContent-Call mit "Antworte mit OK".
      * Quelle: ai.google.dev/api/rest/v1beta/models/generateContent.
      */
-    suspend fun testGemini(apiKey: String): Result<Unit> = runCatching {
+    suspend fun testGemini(apiKey: String): Result<Unit> = runCatchingCancellable {
         val model = settings.geminiModelFlow.first()
         gemini.generateContent(
             model = model,
@@ -54,7 +55,7 @@ class TestApiKeyUseCase @Inject constructor(
      * Quelle: cloud.google.com/text-to-speech/docs/reference/rest/v1/voices/list.
      * API-Key wird als Query-Parameter uebergeben (Standard für Google-Cloud-APIs).
      */
-    suspend fun testTts(apiKey: String): Result<Unit> = runCatching {
+    suspend fun testTts(apiKey: String): Result<Unit> = runCatchingCancellable {
         tts.listVoices(apiKey = apiKey, languageCode = "de-DE")
         Unit
     }

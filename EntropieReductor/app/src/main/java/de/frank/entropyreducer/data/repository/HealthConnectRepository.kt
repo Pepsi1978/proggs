@@ -52,37 +52,35 @@ constructor(
             return 0
         }
         val now = System.currentTimeMillis()
+        val permissionSignature = hc.bodyHistoryPermissionSignature()
+        val previousPermissionSignature = settings.readHealthConnectPermissionSignature()
         // Frank-Wunsch 2026-05-23 (Schritt 4): inkrementell. Wurde schon einmal gecached, nur
         // die Tage seit dem letzten Sync (+ 7 Tage Ueberlapp) lesen statt fix 730. Das spart
         // beim App-Start viele Binder-IPC-Reads (= schnellerer Start). hc_value_cache nutzt
         // REPLACE -> der Ueberlapp erzeugt keine Duplikate. Erster Sync: volle 730 Tage.
         val lastSyncMs = settings.lastHealthConnectSyncMsFlow.first()
         val days =
-            if (lastSyncMs > 0L) {
+            if (lastSyncMs > 0L && permissionSignature == previousPermissionSignature) {
                 val elapsedDays = ((now - lastSyncMs) / (24L * 60L * 60L * 1000L)).toInt()
                 (elapsedDays + OVERLAP_DAYS).coerceIn(1, HISTORY_DAYS)
             } else {
                 HISTORY_DAYS
             }
-        val rows =
-            buildList {
-                addMetric(METRIC_WEIGHT, readSafe { hc.readWeightHistory(days) }, now)
-                addMetric(METRIC_BODY_FAT, readSafe { hc.readBodyFatHistory(days) }, now)
-                addMetric(METRIC_LEAN, readSafe { hc.readLeanBodyMassHistory(days) }, now)
-                addMetric(METRIC_WATER, readSafe { hc.readBodyWaterMassHistory(days) }, now)
-                addMetric(METRIC_BONE, readSafe { hc.readBoneMassHistory(days) }, now)
-            }
-        if (rows.isNotEmpty()) {
-            runCatching { dao.upsertAll(rows) }
-                .onFailure {
-                    diagnostics.error(
-                        DiagnosticArea.HEALTH_CONNECT,
-                        "Cache-Schreiben fehlgeschlagen: ${it.message ?: it::class.java.simpleName}",
-                        it,
-                    )
-                }
+        val histories = hc.readBodyHistoriesStrict(days)
+        val reads = listOf(
+            METRIC_WEIGHT to histories.weight,
+            METRIC_BODY_FAT to histories.bodyFat,
+            METRIC_LEAN to histories.leanBodyMass,
+            METRIC_WATER to histories.bodyWaterMass,
+            METRIC_BONE to histories.boneMass,
+        )
+        val rows = buildList {
+            reads.forEach { (metric, values) -> addMetric(metric, values, now) }
         }
-        settings.setLastHealthConnectSync(now)
+        if (rows.isNotEmpty()) {
+            dao.upsertAll(rows)
+        }
+        settings.setHealthConnectSyncState(now, permissionSignature)
         diagnostics.success(DiagnosticArea.HEALTH_CONNECT, "Sync OK — ${rows.size} Werte gecached")
         return rows.size
     }
@@ -91,9 +89,6 @@ constructor(
     suspend fun cachedHistory(metric: String): List<Pair<Long, Double>> =
         runCatching { dao.getByMetric(metric).map { it.timestampMs to it.value } }
             .getOrDefault(emptyList())
-
-    private suspend fun readSafe(block: suspend () -> List<Pair<Long, Double>>): List<Pair<Long, Double>> =
-        runCatching { block() }.getOrDefault(emptyList())
 
     private fun MutableList<HealthConnectValueEntity>.addMetric(
         metric: String,

@@ -81,6 +81,19 @@ constructor(
         coordinatorLazy.get().requestSync("Aufgabe/Entropie-Eintrag: hinzugefuegt/geaendert")
     }
 
+    /** Restore-Pfad ohne vorzeitigen Upload eines noch unvollstaendigen Gesamtstands. */
+    suspend fun upsertForRestore(entry: EntropyEntryEntity) {
+        if (
+            PhoneContentGuard.isSecondBrainWorkArtifact(
+                entry.title,
+                entry.rawTranscript + "\n" + entry.description,
+            )
+        ) {
+            return
+        }
+        dao.upsert(entry)
+    }
+
     suspend fun update(entry: EntropyEntryEntity) {
         if (
             PhoneContentGuard.isSecondBrainWorkArtifact(

@@ -1,19 +1,16 @@
 package de.frank.entropyreducer.domain.agentic.tools.write
 
-import de.frank.entropyreducer.data.local.entities.EntropyEntryEntity
+import android.content.Context
+import dagger.hilt.android.qualifiers.ApplicationContext
 import de.frank.entropyreducer.data.remote.Schema
 import de.frank.entropyreducer.data.remote.SchemaType
-import de.frank.entropyreducer.data.repository.EntryRepository
 import de.frank.entropyreducer.data.safety.PhoneContentGuard
 import de.frank.entropyreducer.domain.agentic.AgenticTool
 import de.frank.entropyreducer.domain.agentic.ToolCategory
 import de.frank.entropyreducer.domain.agentic.ToolContext
 import de.frank.entropyreducer.domain.agentic.ToolResult
-import de.frank.entropyreducer.domain.model.EntropyCategory
-import de.frank.entropyreducer.domain.model.EntrySource
-import de.frank.entropyreducer.domain.model.EntryStatus
-import de.frank.entropyreducer.domain.model.TimeBucket
-import java.util.UUID
+import de.frank.entropyreducer.presentation.tagebuch.TagebuchEntry
+import de.frank.entropyreducer.presentation.tagebuch.addTagebuchEntry
 import javax.inject.Inject
 import javax.inject.Singleton
 import kotlinx.serialization.json.JsonElement
@@ -43,7 +40,7 @@ import kotlinx.serialization.json.put
 @Singleton
 class CreateTagebuchEintragTool
 @Inject
-constructor(private val entryRepository: EntryRepository) : AgenticTool {
+constructor(@ApplicationContext private val context: Context) : AgenticTool {
 
     override val name: String = "create_tagebuch_eintrag"
 
@@ -67,21 +64,6 @@ constructor(private val entryRepository: EntryRepository) : AgenticTool {
                             type = SchemaType.STRING,
                             description =
                                 "Der eigentliche Tagebuch-Text. Maximal 5000 Zeichen.",
-                        ),
-                    "kategorie" to
-                        Schema(
-                            type = SchemaType.STRING,
-                            description = "Kategorie des Eintrags. Default: SONSTIGES.",
-                            enum =
-                                listOf(
-                                    "KOERPERLICH",
-                                    "MENTAL",
-                                    "ZEITLICH",
-                                    "EMOTIONAL",
-                                    "GESUNDHEITLICH",
-                                    "UMGEBUNG",
-                                    "SONSTIGES",
-                                ),
                         ),
                     "titel" to
                         Schema(
@@ -115,7 +97,6 @@ constructor(private val entryRepository: EntryRepository) : AgenticTool {
             }
 
             // --- Optionale Parameter ---
-            val kategorieRaw = obj["kategorie"]?.jsonPrimitive?.content?.trim() ?: "SONSTIGES"
             val titelRaw = obj["titel"]?.jsonPrimitive?.content?.trim()
 
             // Auto-Titel aus den ersten 80 Zeichen generieren wenn kein Titel angegeben
@@ -125,60 +106,21 @@ constructor(private val entryRepository: EntryRepository) : AgenticTool {
                 text.take(80) + if (text.length > 80) "..." else ""
             }
 
-            // --- Enum-Konvertierung ---
-            val kategorie = try {
-                EntropyCategory.valueOf(kategorieRaw)
-            } catch (e: IllegalArgumentException) {
-                return ToolResult.Failure(
-                    "Unbekannte Kategorie: '$kategorieRaw'. " +
-                        "Erlaubt: KOERPERLICH, MENTAL, ZEITLICH, EMOTIONAL, " +
-                        "GESUNDHEITLICH, UMGEBUNG, SONSTIGES."
-                )
-            }
-
-            // --- Entity aufbauen ---
-            // Tagebuch-Einträge: niedrige Priorität (30.0), mittlere Schwere (3),
-            // immer im SPÄTER-Bucket — sie sind keine zeitkritischen Aufgaben.
-            val id = UUID.randomUUID().toString()
-            val now = System.currentTimeMillis()
-
-            val entity = EntropyEntryEntity(
-                id = id,
-                rawTranscript = text,
-                title = titel,
-                description = text,
-                category = kategorie,
-                severity = 3,
-                priorityScore = 30.0,
-                priorityReason = "Tagebuch-Eintrag, kein Action-Item",
-                status = EntryStatus.OFFEN,
-                timeBucket = TimeBucket.SPAETER,
-                estimatedDurationMinutes = null,
-                createdAt = now,
-                updatedAt = now,
-                resolvedAt = null,
-                tags = emptyList(),
-                aiNotes = null,
-                source = EntrySource.KI_ERKANNT,
-                biomarkerSnapshotId = null,
-                manualBucket = null,
-                manualBucketSetAt = null,
-            )
-
-            entryRepository.upsert(entity)
+            val entry = TagebuchEntry.create(text).copy(title = titel)
+            addTagebuchEntry(context, entry)
 
             val resultJson = buildJsonObject {
-                put("id", id)
+                put("id", entry.id)
                 put("titel", titel)
-                put("kategorie", kategorie.name)
-                put("bucket", TimeBucket.SPAETER.name)
                 put("message", "Tagebuch-Eintrag angelegt")
             }
 
             ToolResult.Success(
                 data = resultJson,
-                createdEntityIds = listOf(id),
+                createdEntityIds = listOf(entry.id),
             )
+        } catch (cancellation: kotlinx.coroutines.CancellationException) {
+            throw cancellation
         } catch (t: Throwable) {
             ToolResult.Failure(
                 message = "Fehler beim Anlegen des Tagebuch-Eintrags: ${t.message ?: t::class.simpleName}"

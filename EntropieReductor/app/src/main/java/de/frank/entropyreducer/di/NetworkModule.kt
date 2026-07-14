@@ -91,6 +91,26 @@ object NetworkModule {
     fun provideSecondBrainApi(@Named("secondBrain") retrofit: Retrofit): SecondBrainApi =
         retrofit.create(SecondBrainApi::class.java)
 
+    // Fix 2026-07-14 (#13): eigener Kurz-Timeout-Client (~3s) nur fuer den Erreichbarkeits-Check
+    // vor Sync-Laeufen. Ohne Tunnel schlaegt /health so schnell fehl, statt in die 30s/90s-Timeouts
+    // des Standard-Clients zu laufen (die sonst onStart/onStop-Ketten unter dem Sync-Mutex blockieren).
+    @Provides
+    @Singleton
+    @Named("secondBrainQuick")
+    fun provideSecondBrainQuickApi(client: OkHttpClient, json: Json): SecondBrainApi {
+        val quickClient = client.newBuilder()
+            .connectTimeout(3, TimeUnit.SECONDS)
+            .readTimeout(3, TimeUnit.SECONDS)
+            .callTimeout(4, TimeUnit.SECONDS)
+            .build()
+        val retrofit = Retrofit.Builder()
+            .baseUrl("http://10.8.0.1:8000/")
+            .client(quickClient)
+            .addConverterFactory(json.asConverterFactory("application/json".toMediaType()))
+            .build()
+        return retrofit.create(SecondBrainApi::class.java)
+    }
+
     // Open-Meteo (Wetter pro Training) — kostenlos, kein API-Key. Der geteilte
     // OkHttp-Singleton wird wiederverwendet. baseUrl = Archive-API (historische
     // Trainings via relativem "v1/archive"); der Forecast-Endpunkt fuer aktuelle

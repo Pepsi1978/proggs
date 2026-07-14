@@ -13,6 +13,7 @@ import de.frank.entropyreducer.data.repository.PromptTriggerRepository
 import de.frank.entropyreducer.domain.agentic.WorkflowEvent
 import de.frank.entropyreducer.domain.agentic.WorkflowRunner
 import de.frank.entropyreducer.domain.model.TriggerSource
+import de.frank.entropyreducer.workers.retryOrFailure
 import kotlinx.coroutines.flow.collect
 
 /**
@@ -88,7 +89,7 @@ constructor(
             throw cancellation
         } catch (t: Throwable) {
             Diag.e(DiagnosticArea.AGENTIC, TAG, "AgenticTriggerWorker fehlgeschlagen", t)
-            Result.retry()
+            retryOrFailure()
         }
     }
 

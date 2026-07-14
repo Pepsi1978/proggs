@@ -10,11 +10,14 @@ import de.frank.entropyreducer.data.diagnostics.DiagnosticArea
 import de.frank.entropyreducer.data.settings.EncryptedSecretsStore
 import java.io.BufferedReader
 import java.io.StringReader
+import java.security.MessageDigest
 import javax.inject.Inject
 import javax.inject.Singleton
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 
 enum class SecondBrainVpnState {
     DISCONNECTED,
@@ -34,6 +37,11 @@ class SecondBrainVpnConnector @Inject constructor(
     @Volatile private var backend: GoBackend? = null
     @Volatile private var config: Config? = null
     @Volatile private var lastError: String? = null
+    // Fix 2026-07-14 (#10a): Hash der aktuell geparsten bzw. der aktiv verbundenen Config —
+    // damit connect() eine geaenderte Config erkennt und den Tunnel neu aufbaut.
+    @Volatile private var configHash: String? = null
+    @Volatile private var connectedConfigHash: String? = null
+    private val stateMutex = Mutex()
 
     private val tunnel = object : Tunnel {
         override fun getName(): String = "entropie-second-brain"
@@ -82,11 +90,17 @@ class SecondBrainVpnConnector @Inject constructor(
     fun parseConfig(configText: String): Boolean {
         return try {
             config = Config.parse(BufferedReader(StringReader(configText)))
+            configHash = sha256(configText)
             lastError = null
             Diag.i(DiagnosticArea.SECOND_BRAIN, TAG, "CHECKPOINT step=vpnParseConfig expected=parse_ok actual=parse_ok ok=true")
             true
         } catch (e: Exception) {
-            state = SecondBrainVpnState.ERROR
+            // Fix 2026-07-14 (#10b): State nur auf ERROR setzen, wenn KEIN Tunnel laeuft — sonst
+            // wuerde ein fehlgeschlagener Parse einen aktiv verbundenen Tunnel faelschlich als
+            // Fehler markieren.
+            if (state != SecondBrainVpnState.CONNECTED) {
+                state = SecondBrainVpnState.ERROR
+            }
             lastError = "WireGuard-Konfiguration ungültig: ${e.message}"
             Diag.e(
                 DiagnosticArea.SECOND_BRAIN,
@@ -98,7 +112,7 @@ class SecondBrainVpnConnector @Inject constructor(
         }
     }
 
-    suspend fun connect(): Boolean = withContext(Dispatchers.IO) {
+    suspend fun connect(): Boolean = stateMutex.withLock { withContext(Dispatchers.IO) {
         val activeBackend = backend
         val activeConfig = config ?: run {
             if (!loadSavedConfig()) return@withContext false
@@ -110,13 +124,20 @@ class SecondBrainVpnConnector @Inject constructor(
             Diag.w(DiagnosticArea.SECOND_BRAIN, TAG, "CHECKPOINT step=vpnConnect expected=ready actual=missing_backend_or_config ok=false")
             return@withContext false
         }
-        if (state == SecondBrainVpnState.CONNECTED) return@withContext true
+        if (state == SecondBrainVpnState.CONNECTED) {
+            // Fix 2026-07-14 (#10a): Bei unveraenderter Config sofort zurueck; bei geaenderter
+            // Config den bestehenden Tunnel abbauen und mit der neuen Config neu aufbauen.
+            if (configHash != null && configHash == connectedConfigHash) return@withContext true
+            Diag.i(DiagnosticArea.SECOND_BRAIN, TAG, "CHECKPOINT step=vpnReconnectConfigChanged expected=reapply_config actual=tunnel_restart ok=true")
+            runCatching { activeBackend.setState(tunnel, Tunnel.State.DOWN, null) }
+        }
 
         state = SecondBrainVpnState.CONNECTING
         Diag.i(DiagnosticArea.SECOND_BRAIN, TAG, "CHECKPOINT step=vpnConnect expected=connected actual=connecting ok=false")
         try {
             activeBackend.setState(tunnel, Tunnel.State.UP, activeConfig)
             state = SecondBrainVpnState.CONNECTED
+            connectedConfigHash = configHash
             lastError = null
             Diag.i(DiagnosticArea.SECOND_BRAIN, TAG, "CHECKPOINT step=vpnConnect expected=connected actual=connected ok=true")
             true
@@ -133,9 +154,9 @@ class SecondBrainVpnConnector @Inject constructor(
             )
             false
         }
-    }
+    } }
 
-    suspend fun disconnect(): Boolean = withContext(Dispatchers.IO) {
+    suspend fun disconnect(): Boolean = stateMutex.withLock { withContext(Dispatchers.IO) {
         val activeBackend = backend ?: run {
             state = SecondBrainVpnState.DISCONNECTED
             return@withContext true
@@ -143,6 +164,7 @@ class SecondBrainVpnConnector @Inject constructor(
         try {
             activeBackend.setState(tunnel, Tunnel.State.DOWN, null)
             state = SecondBrainVpnState.DISCONNECTED
+            connectedConfigHash = null
             lastError = null
             Diag.i(DiagnosticArea.SECOND_BRAIN, TAG, "CHECKPOINT step=vpnDisconnect expected=disconnected actual=disconnected ok=true")
             true
@@ -159,7 +181,7 @@ class SecondBrainVpnConnector @Inject constructor(
             )
             false
         }
-    }
+    } }
 
     fun reportConsentDenied() {
         state = SecondBrainVpnState.ERROR
@@ -168,6 +190,10 @@ class SecondBrainVpnConnector @Inject constructor(
     }
 
     fun getLastError(): String? = lastError
+
+    private fun sha256(value: String): String =
+        MessageDigest.getInstance("SHA-256").digest(value.toByteArray(Charsets.UTF_8))
+            .joinToString("") { "%02x".format(it) }
 
     private companion object {
         const val TAG = "SecondBrainVpn"

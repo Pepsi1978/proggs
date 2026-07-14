@@ -71,4 +71,22 @@ class LearningBrainTitleTest {
 
         assertThat(secondBrainSyncStamp(improved)).isNotEqualTo(secondBrainSyncStamp(base))
     }
+
+    @Test
+    fun `technical app title round trips identity for every connector area`() {
+        val id = "59ced6c9-c6ef-4f62-9708-80b01675a547"
+
+        listOf("ideas", "habits", "mental", "entropy", "learning", "theses", "journal")
+            .forEach { area ->
+                val parsed = parseAppBrainTitle(appBrainTitle("Eintrag", area, id), area)
+
+                assertThat(parsed.displayTitle).isEqualTo("Eintrag")
+                assertThat(parsed.rowId).isEqualTo(id)
+            }
+    }
+
+    @Test
+    fun `category response is fail closed when old server omits readiness`() {
+        assertThat(SecondBrainCategoryResponse().ready).isFalse()
+    }
 }

@@ -19,7 +19,7 @@ datastore = "1.1.1"
 securityCrypto = "1.1.0"
 appauth = "0.11.1"
 media3 = "1.5.1"
-workManager = "2.10.0"
+workManager = "2.11.2"
 vico = "2.0.0-beta.3"
 glance = "1.1.1"
 # Remote Compose (Frank-Wunsch 2026-05-31): brandneue Rendering-Engine fuer Widgets

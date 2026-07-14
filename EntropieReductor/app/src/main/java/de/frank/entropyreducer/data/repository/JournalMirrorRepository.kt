@@ -11,9 +11,11 @@ import de.frank.entropyreducer.data.local.journalmirror.JournalMirrorDatabase
 import de.frank.entropyreducer.data.local.journalmirror.JournalMirrorEntryEntity
 import de.frank.entropyreducer.data.local.journalmirror.JournalMirrorFollowupEntity
 import de.frank.entropyreducer.data.prefs.JournalSyncMeta
+import de.frank.entropyreducer.util.runCatchingCancellable
 import javax.inject.Inject
 import javax.inject.Singleton
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.withContext
 
 /** Reine, testbare Zaehl-Logik fuer den Sync-Status-Kopf. */
@@ -41,10 +43,10 @@ constructor(
 ) {
     suspend fun sync(): Result<Int> =
         withContext(Dispatchers.IO) {
-            runCatching {
+            runCatchingCancellable {
                 val authority =
                     resolveAuthority()
-                        ?: return@runCatching 0 // BestJournal Frank nicht installiert.
+                        ?: return@runCatchingCancellable 0 // BestJournal Frank nicht installiert.
 
                 // Eintraege: ein Lesefehler wirft hier und bricht den ganzen Sync ab,
                 // BEVOR irgendetwas geschrieben/geloescht wird -> lokale Kopie bleibt intakt.
@@ -59,7 +61,9 @@ constructor(
                 val existing = dao.existingEntryIds().toSet()
                 val newCount = JournalMirrorDiff.newCount(existing, fetchedIds)
                 // Loeschmenge = lokal vorhanden minus in der Quelle vorhanden.
-                val toDeleteEntries = existing.filterNot { it in fetchedSet }
+                // Negative IDs gehoeren zu aus Cortex importierten Zeilen und existieren
+                // absichtlich nicht im BestJournal-Provider.
+                val toDeleteEntries = existing.filter { it >= 0L && it !in fetchedSet }
 
                 val followupsToUpsert = followups ?: emptyList()
                 val toDeleteFollowups: List<Long> =
@@ -103,7 +107,9 @@ constructor(
     private fun readEntries(authority: String): List<JournalMirrorEntryEntity> {
         val uri = Uri.parse("content://$authority/entries")
         val out = mutableListOf<JournalMirrorEntryEntity>()
-        context.contentResolver.query(uri, null, null, null, null)?.use { c ->
+        val cursor = context.contentResolver.query(uri, null, null, null, null)
+            ?: error("Journal-Provider lieferte keinen Entries-Cursor")
+        cursor.use { c ->
             val iId = c.getColumnIndexOrThrow("id")
             val iTs = c.getColumnIndexOrThrow("timestamp")
             val iTitle = c.getColumnIndexOrThrow("title")
@@ -137,9 +143,11 @@ constructor(
      */
     private fun readFollowups(authority: String): List<JournalMirrorFollowupEntity>? {
         val uri = Uri.parse("content://$authority/followups")
-        return runCatching {
+        return try {
             val out = mutableListOf<JournalMirrorFollowupEntity>()
-            context.contentResolver.query(uri, null, null, null, null)?.use { c ->
+            val cursor = context.contentResolver.query(uri, null, null, null, null)
+                ?: return null
+            cursor.use { c ->
                 val iId = c.getColumnIndexOrThrow("id")
                 val iEntry = c.getColumnIndexOrThrow("entryId")
                 val iCreated = c.getColumnIndexOrThrow("createdAt")
@@ -162,8 +170,11 @@ constructor(
                 }
             }
             out.toList()
+        } catch (cancellation: CancellationException) {
+            throw cancellation
+        } catch (_: Exception) {
+            null
         }
-            .getOrNull()
     }
 
     private companion object {

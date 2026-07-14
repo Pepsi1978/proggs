@@ -137,21 +137,25 @@ class EntropyReducerApp : Application(), Configuration.Provider {
         // ID-Architektur Etappe 2b (Frank-Wunsch 2026-06-19): einmaliger, idempotenter Umzug der
         // Ideen + Aufgaben-Vorschlaege aus den DataStore-JSONs in die neuen Room-Tabellen. JSON
         // bleibt als Fallback erhalten. Async + fehlertolerant (siehe IdeaTaskRoomMigrator).
-        ideaTaskRoomMigrator.migrateIfNeeded()
-
-        // ID-Architektur Etappe 3b (Frank-Wunsch 2026-06-19): einmaliger, idempotenter Umzug der
-        // Gewohnheiten + Gewohnheits-Vorschlaege aus den DataStore-JSONs in die neuen Room-Tabellen.
-        // JSON bleibt als Fallback erhalten. Async + fehlertolerant (siehe HabitRoomMigrator).
-        habitRoomMigrator.migrateIfNeeded()
-
-        // ID-Architektur Etappe 4b (Frank-Wunsch 2026-06-19): einmaliger, idempotenter Umzug der
-        // Mental-Board-Saetze aus dem DataStore-JSON in die Room-Tabelle. JSON bleibt als Fallback.
-        mentalRoomMigrator.migrateIfNeeded()
-
-        // ID-Architektur Backfill (Frank-Wunsch 2026-06-20): NACH den Room-Migratoren — Altbestand ohne
-        // Herkunft self-rooten + ALLE Ideen als verarbeitet markieren, damit herkunftslose
-        // Doppelvorschlaege nicht mehr entstehen. Einmalig, idempotent, fehlertolerant.
-        lineageBackfillMigrator.backfillIfNeeded()
+        applicationScope.launch {
+            try {
+                // Reihenfolge ist eine Dateninvariante: der Backfill darf sein Done-Flag erst sehen,
+                // nachdem alle JSON->Room-Migrationen vollständig abgeschlossen wurden.
+                ideaTaskRoomMigrator.migrateIfNeededNow()
+                habitRoomMigrator.migrateIfNeededNow()
+                mentalRoomMigrator.migrateIfNeededNow()
+                lineageBackfillMigrator.backfillIfNeededNow()
+            } catch (cancellation: kotlinx.coroutines.CancellationException) {
+                throw cancellation
+            } catch (error: Exception) {
+                Diag.w(
+                    DiagnosticArea.DATABASE,
+                    "EntropyReducerApp",
+                    "Sequenzielle Datenmigration fehlgeschlagen; Retry beim nächsten Start",
+                    error,
+                )
+            }
+        }
 
         // Frank-Wunsch 2026-05-21: Agentic-AI-Trigger-Worker als PeriodicWork
         // registrieren — pruefen alle 15 Minuten ob ein CRON-Trigger faellig ist.

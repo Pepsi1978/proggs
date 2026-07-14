@@ -67,6 +67,8 @@ constructor(
                     ?.takeIf { it.isNotBlank() }
                     ?: return Result.failure(IllegalStateException("Leere Antwort von Gemini"))
             Result.success(improved)
+        } catch (cancellation: kotlinx.coroutines.CancellationException) {
+            throw cancellation
         } catch (t: Throwable) {
             Result.failure(t)
         }

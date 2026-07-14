@@ -139,6 +139,8 @@ class GenerateReviewUseCase @Inject constructor(
             } else {
                 Result.success(text)
             }
+        } catch (cancellation: kotlinx.coroutines.CancellationException) {
+            throw cancellation
         } catch (t: Throwable) {
             Result.failure(t)
         }

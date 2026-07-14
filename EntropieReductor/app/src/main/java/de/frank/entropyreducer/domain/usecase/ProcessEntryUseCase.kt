@@ -13,6 +13,7 @@ import de.frank.entropyreducer.data.repository.InsightRepository
 import de.frank.entropyreducer.data.repository.MemoryRepository
 import de.frank.entropyreducer.data.repository.PromptRepository
 import de.frank.entropyreducer.data.safety.PhoneContentGuard
+import de.frank.entropyreducer.util.runCatchingCancellable
 import de.frank.entropyreducer.data.settings.AppSettings
 import de.frank.entropyreducer.data.settings.EncryptedSecretsStore
 import de.frank.entropyreducer.domain.model.EntropyCategory
@@ -103,7 +104,7 @@ class ProcessEntryUseCase @Inject constructor(
         // Frank-Wunsch 2026-05-22 (dritte Iteration): KI lernt aus historischen
         // Manual-Werten. Bis zu 8 Beispiele werden als Kontext mitgeschickt,
         // damit aehnliche Aufgaben aehnliche Dauer bekommen.
-        val durationSamples = runCatching {
+        val durationSamples = runCatchingCancellable {
             entries.getRecentManualDurationSamples(limit = 8)
         }.getOrDefault(emptyList())
         val userMessage = buildString {
@@ -207,6 +208,8 @@ class ProcessEntryUseCase @Inject constructor(
                 )
             }
             Result.success(entry)
+        } catch (cancellation: kotlinx.coroutines.CancellationException) {
+            throw cancellation
         } catch (t: Throwable) {
             // Fallback-Eintrag mit OFFEN-Status speichern, damit der Nutzer ihn
             // später erneut bewerten lassen kann (Spec §19).
@@ -485,7 +488,7 @@ class ProcessEntryUseCase @Inject constructor(
             // bisherigen MANUELL bestaetigten Dauer-Werten. Hilft der KI
             // beim Schaetzen aehnlicher Aufgaben (z.B. "Wohnung putzen"
             // immer ~60 min wenn Frank das so eingestellt hat).
-            val samples = runCatching {
+            val samples = runCatchingCancellable {
                 entries.getRecentManualDurationSamples(limit = 8)
                     .filter { it.id != entry.id }
             }.getOrDefault(emptyList())
@@ -553,6 +556,8 @@ class ProcessEntryUseCase @Inject constructor(
             )
             entries.update(updated)
             Result.success(updated)
+        } catch (cancellation: kotlinx.coroutines.CancellationException) {
+            throw cancellation
         } catch (t: Throwable) {
             Result.failure(t)
         }

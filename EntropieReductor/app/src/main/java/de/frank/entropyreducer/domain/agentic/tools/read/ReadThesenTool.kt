@@ -1,15 +1,14 @@
 package de.frank.entropyreducer.domain.agentic.tools.read
 
-import de.frank.entropyreducer.data.local.entities.EntropyEntryEntity
+import android.content.Context
+import dagger.hilt.android.qualifiers.ApplicationContext
 import de.frank.entropyreducer.data.remote.Schema
 import de.frank.entropyreducer.data.remote.SchemaType
-import de.frank.entropyreducer.data.repository.EntryRepository
 import de.frank.entropyreducer.domain.agentic.AgenticTool
 import de.frank.entropyreducer.domain.agentic.ToolCategory
 import de.frank.entropyreducer.domain.agentic.ToolContext
 import de.frank.entropyreducer.domain.agentic.ToolResult
-import de.frank.entropyreducer.domain.model.EntryStatus
-import de.frank.entropyreducer.domain.model.TimeBucket
+import de.frank.entropyreducer.presentation.thesen.thesenEntriesFlow
 import javax.inject.Inject
 import javax.inject.Singleton
 import kotlinx.serialization.json.JsonElement
@@ -20,6 +19,7 @@ import kotlinx.serialization.json.buildJsonObject
 import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.jsonPrimitive
 import kotlinx.serialization.json.put
+import kotlinx.coroutines.flow.first
 
 /**
  * Liest Thesen aus dem EntryRepository.
@@ -37,7 +37,7 @@ import kotlinx.serialization.json.put
 @Singleton
 class ReadThesenTool
 @Inject
-constructor(private val entryRepository: EntryRepository) : AgenticTool {
+constructor(@ApplicationContext private val context: Context) : AgenticTool {
 
     override val name: String = "read_thesen"
 
@@ -73,40 +73,34 @@ constructor(private val entryRepository: EntryRepository) : AgenticTool {
             val limit =
                 (obj["limit"]?.jsonPrimitive?.content?.toIntOrNull() ?: 50).coerceIn(1, 200)
 
-            val allEntries: List<EntropyEntryEntity> = entryRepository.getAllForBackup()
-
-            // Thesen = SPAETER-Bucket, nicht archiviert
-            val thesen =
-                allEntries
-                    .filter { entry ->
-                        entry.timeBucket == TimeBucket.SPAETER &&
-                            entry.status != EntryStatus.ARCHIVIERT
-                    }
-                    .sortedByDescending { it.createdAt }
-                    .take(limit)
+            val allEntries = thesenEntriesFlow(context).first()
+            val thesen = allEntries.sortedByDescending { it.timestampMs }.take(limit)
 
             val resultJson =
                 buildJsonObject {
                     put("count", thesen.size)
-                    put("totalAvailable", allEntries.count {
-                        it.timeBucket == TimeBucket.SPAETER &&
-                            it.status != EntryStatus.ARCHIVIERT
-                    })
+                    put("totalAvailable", allEntries.size)
                     put("entries", buildJsonArray {
                         thesen.forEach { entry ->
                             add(buildJsonObject {
                                 put("id", entry.id)
-                                put("createdAt", entry.createdAt)
-                                put("category", entry.category.name)
-                                put("status", entry.status.name)
+                                put("createdAt", entry.timestampMs)
+                                put("updatedAt", entry.updatedAt)
                                 put("title", entry.title)
-                                put(
-                                    "description",
-                                    entry.description.take(500) +
-                                        if (entry.description.length > 500) "..." else "",
-                                )
-                                put("aiNotes", entry.aiNotes ?: "")
-                                put("priorityScore", entry.priorityScore)
+                                put("text", entry.text.take(800))
+                                put("improvedText", entry.improvedText ?: "")
+                                put("isImproved", entry.isImproved)
+                                put("summary", entry.summary ?: "")
+                                put("followupCount", entry.followups.size)
+                                put("followups", buildJsonArray {
+                                    entry.followups.forEach { followup ->
+                                        add(buildJsonObject {
+                                            put("id", followup.id)
+                                            put("createdAt", followup.createdAtMs)
+                                            put("text", followup.text.take(500))
+                                        })
+                                    }
+                                })
                             })
                         }
                     })

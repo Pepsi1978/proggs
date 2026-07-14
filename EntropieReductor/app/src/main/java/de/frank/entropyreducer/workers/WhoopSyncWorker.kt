@@ -26,7 +26,7 @@ class WhoopSyncWorker @AssistedInject constructor(
         val outcome = repo.syncLastDays(days = 365)
         return outcome.fold(
             onSuccess = { Result.success() },
-            onFailure = { Result.retry() },
+            onFailure = { retryOrFailure() },
         )
     }
 

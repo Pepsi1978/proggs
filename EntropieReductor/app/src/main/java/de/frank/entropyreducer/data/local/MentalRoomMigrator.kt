@@ -56,6 +56,12 @@ class MentalRoomMigrator @Inject constructor(
         }
     }
 
+    suspend fun migrateIfNeededNow() = withContext(Dispatchers.IO) {
+        if (!prefs.getBoolean(KEY_DONE, false)) runMigration()
+        check(prefs.getBoolean(KEY_DONE, false)) { "Mental-Migration nicht vollständig" }
+        cleanupSecondBrainArtifacts()
+    }
+
     private suspend fun runMigration() {
         // Doppelschutz: nur kopieren wenn Room noch leer ist.
         val countBefore = mentalSentenceDao.count()

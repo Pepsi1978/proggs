@@ -739,6 +739,12 @@ private fun GpsTrackMap(points: List<Pair<Double, Double>>, fullscreen: Boolean)
         }
     val startLatLng = latLngs.first()
     val endLatLng = latLngs.last()
+    val startMarkerState = remember(startLatLng) {
+        com.google.maps.android.compose.MarkerState(position = startLatLng)
+    }
+    val endMarkerState = remember(endLatLng) {
+        com.google.maps.android.compose.MarkerState(position = endLatLng)
+    }
     // Initial-Kamera grob in der Mitte der Strecke. Der echte Bounds-Fit
     // passiert nach dem ersten Layout-Pass via moveCamera in onMapLoaded.
     val cameraPositionState =
@@ -793,7 +799,7 @@ private fun GpsTrackMap(points: List<Pair<Double, Double>>, fullscreen: Boolean)
     ) {
         com.google.maps.android.compose.Polyline(points = latLngs, color = accent, width = 10f)
         com.google.maps.android.compose.Marker(
-            state = com.google.maps.android.compose.MarkerState(position = startLatLng),
+            state = startMarkerState,
             title = "Start",
             icon =
                 com.google.android.gms.maps.model.BitmapDescriptorFactory.defaultMarker(
@@ -801,7 +807,7 @@ private fun GpsTrackMap(points: List<Pair<Double, Double>>, fullscreen: Boolean)
                 ),
         )
         com.google.maps.android.compose.Marker(
-            state = com.google.maps.android.compose.MarkerState(position = endLatLng),
+            state = endMarkerState,
             title = "Ziel",
             icon =
                 com.google.android.gms.maps.model.BitmapDescriptorFactory.defaultMarker(
