@@ -40,6 +40,11 @@ public sealed class BackupService : IBackupService
             .AsNoTracking()
             .OrderBy(p => p.SortOrder)
             .ToListAsync(ct);
+        string? separatorTemplate = await _db.AppSettings
+            .AsNoTracking()
+            .OrderBy(s => s.CreatedAt)
+            .Select(s => s.SeparatorTemplate)
+            .FirstOrDefaultAsync(ct);
 
         var categoryDtos = categories.Select(c => new CategoryDto(
             c.Id, c.Name, c.BackgroundColorHex, c.SortOrder, c.Type,
@@ -57,7 +62,8 @@ public sealed class BackupService : IBackupService
             CreatedAtUtc: DateTime.UtcNow,
             AppVersion: typeof(BackupService).Assembly.GetName().Version?.ToString(),
             Categories: categoryDtos,
-            Prompts: promptDtos);
+            Prompts: promptDtos,
+            SeparatorTemplate: separatorTemplate);
     }
 
     public async Task<RestoreResult> ApplyAsync(BackupDocument document, RestoreMode mode, CancellationToken ct = default)
@@ -80,6 +86,21 @@ public sealed class BackupService : IBackupService
             RestoreMode.Merge => await ApplyMergeAsync(document, ct),
             _ => throw new ArgumentOutOfRangeException(nameof(mode)),
         };
+
+        if (document.SeparatorTemplate is not null)
+        {
+            AppSettings? settings = await _db.AppSettings.OrderBy(s => s.CreatedAt).FirstOrDefaultAsync(ct);
+            if (settings is null)
+            {
+                settings = new AppSettings { SeparatorTemplate = document.SeparatorTemplate };
+                _db.AppSettings.Add(settings);
+            }
+            else
+            {
+                settings.SeparatorTemplate = document.SeparatorTemplate;
+            }
+            await _db.SaveChangesAsync(ct);
+        }
 
         await tx.CommitAsync(ct);
 
@@ -311,6 +332,8 @@ public sealed class BackupService : IBackupService
         {
             if (category.Id == Guid.Empty || !categoryIds.Add(category.Id))
                 throw new InvalidOperationException($"Backup enthaelt eine ungueltige oder doppelte Kategorie-ID: {category.Id}");
+            if (!Enum.IsDefined(category.Type))
+                throw new InvalidOperationException($"Kategorie {category.Id} enthaelt einen ungueltigen Typ.");
         }
 
         var promptIds = new HashSet<Guid>();
@@ -321,6 +344,10 @@ public sealed class BackupService : IBackupService
                 throw new InvalidOperationException($"Backup enthaelt eine ungueltige oder doppelte Prompt-ID: {prompt.Id}");
             if (mode == RestoreMode.Replace && !categoryIds.Contains(prompt.CategoryId))
                 throw new InvalidOperationException($"Prompt {prompt.Id} verweist auf eine fehlende Kategorie {prompt.CategoryId}.");
+            if (!Enum.IsDefined(prompt.ActiveVersion))
+                throw new InvalidOperationException($"Prompt {prompt.Id} enthaelt eine ungueltige aktive Version.");
+            if (prompt.IsActiveForImprovement && !prompt.IsAiImprovementPrompt)
+                throw new InvalidOperationException($"Prompt {prompt.Id} ist aktiv, aber kein KI-Verbesserungsprompt.");
             if (prompt.HotkeyNumber is < 1 or > 9)
                 throw new InvalidOperationException($"Prompt {prompt.Id} enthaelt einen ungueltigen Nummern-Hotkey.");
             if (prompt.HotkeyLetter is char letter && char.ToUpperInvariant(letter) is < 'A' or > 'Z')

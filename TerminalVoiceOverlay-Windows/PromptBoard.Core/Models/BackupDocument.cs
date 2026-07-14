@@ -15,7 +15,8 @@ public sealed record BackupDocument(
     DateTime CreatedAtUtc,
     string? AppVersion,
     IReadOnlyList<CategoryDto> Categories,
-    IReadOnlyList<PromptDto> Prompts);
+    IReadOnlyList<PromptDto> Prompts,
+    string? SeparatorTemplate = null);
 
 public sealed record CategoryDto(
     Guid Id,

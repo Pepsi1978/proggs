@@ -56,6 +56,7 @@ public static class PromptBoardHost
             services.AddTransient<IPromptRepository, PromptRepository>();
             services.AddTransient<IAiImprovementPromptRepository, AiImprovementPromptRepository>();
             services.AddTransient<IAppSettingsRepository, AppSettingsRepository>();
+            services.AddTransient<IBackupService, BackupService>();
 
             services.AddSingleton<IPromptChainBuilder, PromptChainBuilder>();
             services.AddSingleton<IPastelColorGenerator, PastelColorGenerator>();

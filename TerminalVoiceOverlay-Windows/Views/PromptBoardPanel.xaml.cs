@@ -2933,11 +2933,13 @@ public partial class PromptBoardPanel : Window
 
         var backup = new BackupData
         {
+            SchemaVersion = 2,
             ExportedAt = DateTime.UtcNow,
             Categories = cats.Select(c => new BackupCategory
             {
                 Id = c.Id, Name = c.Name, SortOrder = c.SortOrder,
-                BackgroundColorHex = c.BackgroundColorHex, Type = (int)c.Type
+                BackgroundColorHex = c.BackgroundColorHex, Type = (int)c.Type,
+                CreatedAtUtc = c.CreatedAt, UpdatedAtUtc = c.UpdatedAt,
             }).ToList(),
             Prompts = allPrompts.Select(p => new BackupPrompt
             {
@@ -2950,6 +2952,11 @@ public partial class PromptBoardPanel : Window
                 SortOrder = p.SortOrder,
                 HotkeyNumber = p.HotkeyNumber,
                 HotkeyLetter = p.HotkeyLetter,
+                ImprovedByAiPromptId = p.ImprovedByAiPromptId,
+                IsAiImprovementPrompt = p is AiImprovementPrompt,
+                GeminiModel = (p as AiImprovementPrompt)?.GeminiModel,
+                IsActiveForImprovement = (p as AiImprovementPrompt)?.IsActiveForImprovement ?? false,
+                CreatedAtUtc = p.CreatedAt, UpdatedAtUtc = p.UpdatedAt,
             }).ToList(),
             SeparatorTemplate = appSettings.SeparatorTemplate,
         };
@@ -2979,81 +2986,45 @@ public partial class PromptBoardPanel : Window
     {
         var backup = JsonSerializer.Deserialize<BackupData>(json)
             ?? throw new InvalidOperationException("Backup-Datei konnte nicht gelesen werden.");
+        if (backup.Categories is null || backup.Prompts is null)
+            throw new InvalidOperationException("Backup enthaelt keine gueltigen Kategorien-/Promptlisten.");
+
+        DateTime backupTime = backup.ExportedAt == default
+            ? DateTime.UtcNow
+            : backup.ExportedAt.Kind == DateTimeKind.Local
+                ? backup.ExportedAt.ToUniversalTime()
+                : DateTime.SpecifyKind(backup.ExportedAt, DateTimeKind.Utc);
+        var categoryTypes = backup.Categories.ToDictionary(c => c.Id, c => (CategoryType)c.Type);
+        bool legacyBackup = backup.SchemaVersion < 2;
+        Guid? legacyActiveAiId = legacyBackup
+            ? backup.Prompts.FirstOrDefault(p =>
+                categoryTypes.GetValueOrDefault(p.CategoryId) == CategoryType.AiLibrary)?.Id
+            : null;
+
+        var document = new BackupDocument(
+            SchemaVersion: backup.SchemaVersion <= 0 ? 1 : backup.SchemaVersion,
+            CreatedAtUtc: backupTime,
+            AppVersion: null,
+            Categories: backup.Categories.Select(c => new CategoryDto(
+                c.Id, c.Name, c.BackgroundColorHex, c.SortOrder, (CategoryType)c.Type,
+                c.CreatedAtUtc ?? backupTime, c.UpdatedAtUtc ?? backupTime)).ToList(),
+            Prompts: backup.Prompts.Select(p =>
+            {
+                bool isAi = p.IsAiImprovementPrompt ||
+                    (legacyBackup && categoryTypes.GetValueOrDefault(p.CategoryId) == CategoryType.AiLibrary);
+                return new PromptDto(
+                    p.Id, p.CategoryId, p.ShortLabel, p.OriginalText, p.ImprovedText,
+                    (PromptVersion)p.ActiveVersion, p.IsAlwaysOn, p.SortOrder,
+                    p.ImprovedByAiPromptId, isAi, p.GeminiModel,
+                    p.IsActiveForImprovement || p.Id == legacyActiveAiId,
+                    p.CreatedAtUtc ?? backupTime, p.UpdatedAtUtc ?? backupTime,
+                    p.HotkeyNumber, p.HotkeyLetter, p.IsPrePrompt, p.IsPostPrompt);
+            }).ToList(),
+            SeparatorTemplate: backup.SeparatorTemplate);
 
         using var scope = PromptBoardHost.Services.CreateScope();
-        var catRepo = scope.ServiceProvider.GetRequiredService<ICategoryRepository>();
-        var promptRepo = scope.ServiceProvider.GetRequiredService<IPromptRepository>();
-
-        // Upsert categories from the backup.
-        var existingCats = (await catRepo.GetAllAsync()).ToDictionary(c => c.Id);
-        var remoteCategoryIds = new HashSet<Guid>();
-        foreach (var c in backup.Categories)
-        {
-            remoteCategoryIds.Add(c.Id);
-            var entity = new Category
-            {
-                Id = c.Id, Name = c.Name, SortOrder = c.SortOrder,
-                BackgroundColorHex = c.BackgroundColorHex,
-                Type = (CategoryType)c.Type,
-            };
-            if (existingCats.ContainsKey(c.Id))
-                await catRepo.UpdateAsync(entity);
-            else
-                await catRepo.AddAsync(entity);
-        }
-
-        // Upsert prompts from the backup.
-        var existingPromptIds = new Dictionary<Guid, Prompt>();
-        foreach (var c in await catRepo.GetAllAsync())
-        {
-            var ps = await promptRepo.GetByCategoryAsync(c.Id);
-            foreach (var p in ps) existingPromptIds[p.Id] = p;
-        }
-        var remotePromptIds = new HashSet<Guid>();
-        foreach (var p in backup.Prompts)
-        {
-            remotePromptIds.Add(p.Id);
-            var entity = new Prompt
-            {
-                Id = p.Id, CategoryId = p.CategoryId,
-                ShortLabel = p.ShortLabel, OriginalText = p.OriginalText,
-                ImprovedText = p.ImprovedText,
-                ActiveVersion = (PromptVersion)p.ActiveVersion,
-                IsAlwaysOn = p.IsAlwaysOn,
-                // Older backups (pre-#1820) don't carry the Pre/Post
-                // fields — BackupPrompt's defaults (Pre=true, Post=false)
-                // give those rows the legacy "always-on means prefix"
-                // behaviour automatically.
-                IsPrePrompt = p.IsPrePrompt,
-                IsPostPrompt = p.IsPostPrompt,
-                SortOrder = p.SortOrder,
-                HotkeyNumber = p.HotkeyNumber,
-                HotkeyLetter = p.HotkeyLetter,
-            };
-            if (existingPromptIds.ContainsKey(p.Id))
-                await promptRepo.UpdateAsync(entity);
-            else
-                await promptRepo.AddAsync(entity);
-        }
-
-        // Delete local rows that aren't in the authoritative backup. Prompts
-        // first because they reference categories.
-        foreach (var (id, _) in existingPromptIds)
-        {
-            if (!remotePromptIds.Contains(id))
-            {
-                try { await promptRepo.DeleteAsync(id); }
-                catch (Exception ex) { Console.WriteLine($"[PBPanel] delete prompt {id} failed: {ex.Message}"); }
-            }
-        }
-        foreach (var c in existingCats.Values)
-        {
-            if (!remoteCategoryIds.Contains(c.Id))
-            {
-                try { await catRepo.DeleteAsync(c.Id); }
-                catch (Exception ex) { Console.WriteLine($"[PBPanel] delete category {c.Id} failed: {ex.Message}"); }
-            }
-        }
+        var backupService = scope.ServiceProvider.GetRequiredService<IBackupService>();
+        await backupService.ApplyAsync(document, RestoreMode.Replace);
     }
 
     /// <summary>
@@ -3169,9 +3140,10 @@ public partial class PromptBoardPanel : Window
 
     private sealed class BackupData
     {
+        public int SchemaVersion { get; set; }
         public DateTime ExportedAt { get; set; }
-        public List<BackupCategory> Categories { get; set; } = new();
-        public List<BackupPrompt> Prompts { get; set; } = new();
+        public List<BackupCategory>? Categories { get; set; }
+        public List<BackupPrompt>? Prompts { get; set; }
         public string SeparatorTemplate { get; set; } = " ; ";
     }
 
@@ -3182,6 +3154,8 @@ public partial class PromptBoardPanel : Window
         public int SortOrder { get; set; }
         public string BackgroundColorHex { get; set; } = "#DCEDEC";
         public int Type { get; set; }
+        public DateTime? CreatedAtUtc { get; set; }
+        public DateTime? UpdatedAtUtc { get; set; }
     }
 
     private sealed class BackupPrompt
@@ -3208,5 +3182,11 @@ public partial class PromptBoardPanel : Window
         // Win+Alt+<letter> hotkey ('A'..'Z'), null when unbound. Same
         // backward-compatibility note as HotkeyNumber.
         public char? HotkeyLetter { get; set; }
+        public Guid? ImprovedByAiPromptId { get; set; }
+        public bool IsAiImprovementPrompt { get; set; }
+        public string? GeminiModel { get; set; }
+        public bool IsActiveForImprovement { get; set; }
+        public DateTime? CreatedAtUtc { get; set; }
+        public DateTime? UpdatedAtUtc { get; set; }
     }
 }
