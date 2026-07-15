@@ -19,6 +19,7 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.outlined.Add
 import androidx.compose.material.icons.outlined.ArrowDropDown
 import androidx.compose.material.icons.outlined.Check
 import androidx.compose.material.icons.outlined.Delete
@@ -257,6 +258,69 @@ private fun parseMentals(raw: String?): List<Mental> {
         .getOrDefault(emptyList())
 }
 
+/* ==================== Spezielle Mental-Saetze (Frank-Wunsch 2026-07-15) ==================== */
+
+/**
+ * Ein spezieller Mental-Eintrag: eigener, vom normalen Board getrennter Bereich mit eigenem
+ * Vorlese-Player. [enabled] steuert, ob der Satz vorgelesen wird (leeres Kaestchen = false).
+ */
+data class SpecialMental(
+    val id: String,
+    val text: String,
+    val updatedAt: Long = 0L,
+    val enabled: Boolean = false,
+) {
+    companion object {
+        fun create(text: String): SpecialMental =
+            SpecialMental(
+                id = UUID.randomUUID().toString(),
+                text = text,
+                updatedAt = System.currentTimeMillis(),
+            )
+    }
+}
+
+internal fun specialMentalsFlow(context: Context): Flow<List<SpecialMental>> =
+    de.frank.entropyreducer.data.local
+        .specialMentalSentenceDaoFrom(context)
+        .getAll()
+        .map { rows -> rows.map { SpecialMental(id = it.id, text = it.text, updatedAt = it.updatedAt, enabled = it.enabled) } }
+        .distinctUntilChanged()
+
+internal suspend fun addSpecialMental(context: Context, text: String) {
+    val clean = text.trim()
+    if (clean.isEmpty()) return
+    if (PhoneContentGuard.isSecondBrainWorkArtifact(null, clean)) return
+    val dao = de.frank.entropyreducer.data.local.specialMentalSentenceDaoFrom(context)
+    val m = SpecialMental.create(clean)
+    dao.upsert(
+        de.frank.entropyreducer.data.local.entities.SpecialMentalEntity(
+            id = m.id,
+            text = m.text,
+            updatedAt = m.updatedAt,
+            position = dao.maxPosition() + 1, // neuer Satz ans Ende
+            enabled = false, // neu = deaktiviert (leeres Aktivierungs-Kaestchen)
+        )
+    )
+}
+
+internal suspend fun updateSpecialMental(context: Context, id: String, text: String) {
+    val clean = text.trim()
+    if (clean.isEmpty()) return
+    if (PhoneContentGuard.isSecondBrainWorkArtifact(null, clean)) return
+    val dao = de.frank.entropyreducer.data.local.specialMentalSentenceDaoFrom(context)
+    val current = dao.getById(id) ?: return
+    dao.update(current.copy(text = clean, updatedAt = System.currentTimeMillis()))
+}
+
+internal suspend fun setSpecialMentalEnabled(context: Context, id: String, enabled: Boolean) {
+    de.frank.entropyreducer.data.local.specialMentalSentenceDaoFrom(context).setEnabled(id, enabled)
+}
+
+internal suspend fun deleteSpecialMental(context: Context, id: String) {
+    de.frank.entropyreducer.data.local.specialMentalSentenceDaoFrom(context).deleteById(id)
+}
+
 /* Akzentfarbe — Blau (Frank-Wunsch 2026-06-18): Sub-Tabs unter Aufgaben sind blau. TTS bleibt Orange. */
 internal val MentalAccent: Color
     @Composable get() = LocalCosmos.current.accentTasksSub
@@ -305,6 +369,13 @@ fun MentalBoardScreen(
     val gewohnheitenStream = remember(context) { gewohnheitenFlow(context) }
     val gewohnheiten by gewohnheitenStream.collectAsStateWithLifecycle(initialValue = emptyList())
 
+    // Spezielle Mentals (Frank-Wunsch 2026-07-15): eigener Bereich unter der Chirp-3-HD-Zeile mit
+    // eigenem Vorlese-Player. Flow stabil per remember(context) halten (wie mentalsStream).
+    val specialVm: SpecialMentalTtsViewModel = hiltViewModel()
+    val specialState by specialVm.uiState.collectAsStateWithLifecycle()
+    val specialsStream = remember(context) { specialMentalsFlow(context) }
+    val specials by specialsStream.collectAsStateWithLifecycle(initialValue = emptyList())
+
     // Fehler (z.B. kein TTS-Schluessel hinterlegt) als Toast zeigen, danach quittieren.
     LaunchedEffect(ttsState.error) {
         ttsState.error?.let { msg ->
@@ -327,6 +398,10 @@ fun MentalBoardScreen(
 
     var showAddDialog by remember { mutableStateOf(false) }
     var editTarget by remember { mutableStateOf<Mental?>(null) }
+    // Eigener Erstell-/Bearbeiten-Flow fuer die speziellen Mentals (ausgeloest ueber das Plus).
+    var specialMicOpen by remember { mutableStateOf(false) }
+    var showSpecialAddDialog by remember { mutableStateOf(false) }
+    var editSpecialTarget by remember { mutableStateOf<SpecialMental?>(null) }
     // Bugfix 2026-06-11 (Frank): "+ Neues Mental" und der Mic-Button oeffneten nur den
     // Tipp-Dialog — die Sprachaufnahme (Groq Whisper Large V3 Turbo) fehlte. Beide Wege
     // oeffnen jetzt wie bei Ideen/Loop die Auswahl "Schreiben" / "Aufnehmen".
@@ -378,38 +453,38 @@ fun MentalBoardScreen(
                     .background(if (cosmos.isDark) Color(0xFF12100D) else Color(0xFFFAF7F3))
                     .padding(padding)
         ) {
-            if (displayed.isEmpty()) {
-                EmptyState()
-            } else {
-                Column(modifier = Modifier.fillMaxSize()) {
-                    if (ttsState.isPlaying) {
-                        Column(
-                            modifier = Modifier.fillMaxWidth().padding(start = 16.dp, top = 16.dp, end = 16.dp),
-                            verticalArrangement = Arrangement.spacedBy(10.dp),
-                        ) {
-                            MentalPlaybackControls(
-                                isPaused = ttsState.isPaused,
-                                onPlay = ttsVm::resume,
-                                onPause = ttsVm::pause,
-                            )
-                            MentalRemainingTime(
-                                remainingMs = ttsState.autoStopRemainingMs,
-                                isPaused = ttsState.isPaused,
-                            )
-                        }
-                    }
-                    LazyColumn(
-                        state = lazyListState,
-                        modifier = Modifier.weight(1f).fillMaxWidth(),
-                        contentPadding =
-                            PaddingValues(
-                                start = 16.dp,
-                                top = if (ttsState.isPlaying) 10.dp else 16.dp,
-                                end = 16.dp,
-                                bottom = 160.dp,
-                            ),
+            Column(modifier = Modifier.fillMaxSize()) {
+                if (ttsState.isPlaying) {
+                    Column(
+                        modifier = Modifier.fillMaxWidth().padding(start = 16.dp, top = 16.dp, end = 16.dp),
                         verticalArrangement = Arrangement.spacedBy(10.dp),
                     ) {
+                        MentalPlaybackControls(
+                            isPaused = ttsState.isPaused,
+                            onPlay = ttsVm::resume,
+                            onPause = ttsVm::pause,
+                        )
+                        MentalRemainingTime(
+                            remainingMs = ttsState.autoStopRemainingMs,
+                            isPaused = ttsState.isPaused,
+                        )
+                    }
+                }
+                LazyColumn(
+                    state = lazyListState,
+                    modifier = Modifier.weight(1f).fillMaxWidth(),
+                    contentPadding =
+                        PaddingValues(
+                            start = 16.dp,
+                            top = if (ttsState.isPlaying) 10.dp else 16.dp,
+                            end = 16.dp,
+                            bottom = 160.dp,
+                        ),
+                    verticalArrangement = Arrangement.spacedBy(10.dp),
+                ) {
+                    if (displayed.isEmpty()) {
+                        item(key = "empty_state") { EmptyState() }
+                    } else {
                         items(displayed, key = { it.id }) { mental ->
                             ReorderableItem(reorderState, key = mental.id) { isDragging ->
                                 val position = displayed.indexOfFirst { it.id == mental.id } + 1
@@ -429,9 +504,26 @@ fun MentalBoardScreen(
                                 )
                             }
                         }
-                        item(key = "tts_usage_footer") {
-                            TtsUsageFooter(usage = ttsUsage)
-                        }
+                    }
+                    // Chirp-3-HD-Kontingentzeile ("HD-Linie") — darunter der Spezial-Bereich.
+                    item(key = "tts_usage_footer") {
+                        TtsUsageFooter(usage = ttsUsage)
+                    }
+                    // Spezielle Mentals: eigene Liste (Aktivierungs-Kaestchen), Plus zum Hinzufuegen
+                    // und ein immer sichtbarer Player mit Play/Pause/Stop (Frank-Wunsch 2026-07-15).
+                    item(key = "special_section") {
+                        SpecialMentalsSection(
+                            specials = specials,
+                            state = specialState,
+                            onToggleEnabled = { id, enabled ->
+                                scope.launch { setSpecialMentalEnabled(context, id, enabled) }
+                            },
+                            onEditSpecial = { editSpecialTarget = it },
+                            onAddClick = { specialMicOpen = true },
+                            onPlay = { specialVm.play(specials.filter { it.enabled }) },
+                            onPause = specialVm::pause,
+                            onStop = specialVm::stop,
+                        )
                     }
                 }
             }
@@ -446,6 +538,19 @@ fun MentalBoardScreen(
                 onClose = { micActions.close() },
                 onWriteClick = { showAddDialog = true },
                 modifier = Modifier.align(Alignment.BottomCenter),
+            )
+
+            // Zweite Instanz fuer die SPEZIELLEN Mentals — ausgeloest ueber das Plus im Spezial-
+            // Bereich. Eigener VoiceCapture-Key, damit sich die Aufnahme nicht mit dem normalen
+            // Mic-Button ueberschneidet. Speichert in die special_mental_sentences-Tabelle.
+            MicCaptureActions(
+                visible = specialMicOpen,
+                accent = MentalAccent,
+                onTextCommit = { text, _ -> scope.launch { addSpecialMental(context, text) } },
+                onClose = { specialMicOpen = false },
+                onWriteClick = { showSpecialAddDialog = true },
+                modifier = Modifier.align(Alignment.BottomCenter),
+                voiceVm = hiltViewModel(key = "special_mental_voice"),
             )
         }
     }
@@ -475,6 +580,37 @@ fun MentalBoardScreen(
             onDelete = {
                 scope.launch { deleteMental(context, target.id) }
                 editTarget = null
+            },
+        )
+    }
+
+    // Dialoge fuer die speziellen Mentals — dieselbe Optik wie die normalen (orange Diskette,
+    // roter Papierkorb nur beim Bearbeiten).
+    if (showSpecialAddDialog) {
+        MentalEditDialog(
+            initialText = "",
+            title = "Neues spezielles Mental",
+            onDismiss = { showSpecialAddDialog = false },
+            onSave = { text ->
+                scope.launch { addSpecialMental(context, text) }
+                showSpecialAddDialog = false
+            },
+            onDelete = null,
+        )
+    }
+
+    editSpecialTarget?.let { target ->
+        MentalEditDialog(
+            initialText = target.text,
+            title = "Spezielles Mental bearbeiten",
+            onDismiss = { editSpecialTarget = null },
+            onSave = { text ->
+                scope.launch { updateSpecialMental(context, target.id, text) }
+                editSpecialTarget = null
+            },
+            onDelete = {
+                scope.launch { deleteSpecialMental(context, target.id) }
+                editSpecialTarget = null
             },
         )
     }
@@ -565,6 +701,198 @@ private fun MentalRemainingTime(remainingMs: Long?, isPaused: Boolean) {
             fontWeight = FontWeight.SemiBold,
             style = MaterialTheme.typography.bodyMedium,
         )
+    }
+}
+
+/* ============================== Spezielle Mentals (UI) ============================== */
+
+/**
+ * Der komplette Spezial-Bereich unter der Chirp-3-HD-Zeile (Frank-Wunsch 2026-07-15):
+ * Ueberschrift · Liste mit Aktivierungs-Kaestchen (nur aktivierte werden vorgelesen) · Plus zum
+ * Hinzufuegen · immer sichtbarer Player mit Play/Pause/Stop. Der Player sieht aus wie der normale
+ * Mental-Player (orange), hat aber zusaetzlich einen Stop-Button (Durchlauf ganz beenden).
+ */
+@Composable
+private fun SpecialMentalsSection(
+    specials: List<SpecialMental>,
+    state: SpecialMentalTtsUiState,
+    onToggleEnabled: (String, Boolean) -> Unit,
+    onEditSpecial: (SpecialMental) -> Unit,
+    onAddClick: () -> Unit,
+    onPlay: () -> Unit,
+    onPause: () -> Unit,
+    onStop: () -> Unit,
+) {
+    val cosmos = LocalCosmos.current
+    Column(
+        modifier = Modifier.fillMaxWidth().padding(top = 16.dp),
+        verticalArrangement = Arrangement.spacedBy(10.dp),
+    ) {
+        Text(
+            text = "Spezielle Mentals",
+            style = MaterialTheme.typography.titleMedium,
+            color = cosmos.textPrimary,
+            fontWeight = FontWeight.SemiBold,
+        )
+        specials.forEach { sm ->
+            SpecialMentalRow(
+                text = sm.text,
+                enabled = sm.enabled,
+                onToggle = { onToggleEnabled(sm.id, !sm.enabled) },
+                onClick = { onEditSpecial(sm) },
+            )
+        }
+        SpecialAddButton(onClick = onAddClick)
+        SpecialMentalPlaybackControls(
+            isPlaying = state.isPlaying,
+            isPaused = state.isPaused,
+            onPlay = onPlay,
+            onPause = onPause,
+            onStop = onStop,
+        )
+        if (state.isPlaying) {
+            MentalRemainingTime(remainingMs = state.autoStopRemainingMs, isPaused = state.isPaused)
+        }
+    }
+}
+
+/** Eine spezielle Mental-Zeile: Aktivierungs-Kaestchen links, Text; Tap auf die Zeile = Bearbeiten. */
+@Composable
+private fun SpecialMentalRow(
+    text: String,
+    enabled: Boolean,
+    onToggle: () -> Unit,
+    onClick: () -> Unit,
+) {
+    val cosmos = LocalCosmos.current
+    val cardBg = if (cosmos.isDark) Color(0xFF1D1A16) else Color.White
+    Row(
+        modifier =
+            Modifier.fillMaxWidth()
+                .clip(RoundedCornerShape(14.dp))
+                .background(cardBg)
+                .clickable { onClick() }
+                .padding(start = 6.dp, end = 14.dp, top = 4.dp, bottom = 4.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        // Aktivierungs-Kaestchen (gruen = aktiviert). Faengt seinen eigenen Klick ab, ohne den
+        // Bearbeiten-Tap der Zeile auszuloesen.
+        Checkbox(
+            checked = enabled,
+            onCheckedChange = { onToggle() },
+            colors = CheckboxDefaults.colors(checkedColor = cosmos.ok),
+        )
+        Spacer(Modifier.size(6.dp))
+        Text(
+            text = text,
+            style = MaterialTheme.typography.bodyLarge,
+            color = cosmos.textPrimary,
+            modifier = Modifier.weight(1f),
+        )
+    }
+}
+
+/** Das Plus zum Hinzufuegen eines speziellen Mentals (oeffnet Schreiben/Aufnehmen wie das Mikrofon). */
+@Composable
+private fun SpecialAddButton(onClick: () -> Unit) {
+    val cosmos = LocalCosmos.current
+    val cardBg = if (cosmos.isDark) Color(0xFF1D1A16) else Color.White
+    Row(
+        modifier =
+            Modifier.fillMaxWidth()
+                .height(52.dp)
+                .clip(RoundedCornerShape(14.dp))
+                .background(cardBg)
+                .clickable { onClick() },
+        horizontalArrangement = Arrangement.Center,
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Icon(
+            imageVector = Icons.Outlined.Add,
+            contentDescription = "Spezielles Mental hinzufügen",
+            tint = cosmos.ok,
+            modifier = Modifier.size(28.dp),
+        )
+    }
+}
+
+/**
+ * Player fuer die speziellen Mentals: Play · Pause · Stop, immer sichtbar. Play startet (oder setzt
+ * nach Pause fort), Pause unterbricht, Stop beendet den Durchlauf ganz. Optik wie der normale
+ * Mental-Player (orange) plus roter Stop.
+ */
+@Composable
+private fun SpecialMentalPlaybackControls(
+    isPlaying: Boolean,
+    isPaused: Boolean,
+    onPlay: () -> Unit,
+    onPause: () -> Unit,
+    onStop: () -> Unit,
+) {
+    val cosmos = LocalCosmos.current
+    val orange = Color(0xFFFF9800)
+    val red = Color(0xFFE53935)
+    val cardBg = if (cosmos.isDark) Color(0xFF1D1A16) else Color.White
+    // Play hervorgehoben/klickbar, wenn gerade NICHT aktiv gespielt wird (also gestoppt oder pausiert).
+    val playActive = !isPlaying || isPaused
+    val pauseActive = isPlaying && !isPaused
+    Row(
+        modifier =
+            Modifier.fillMaxWidth()
+                .height(58.dp)
+                .clip(RoundedCornerShape(14.dp))
+                .background(cardBg)
+                .padding(horizontal = 14.dp),
+        horizontalArrangement = Arrangement.Center,
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        IconButton(
+            onClick = onPlay,
+            enabled = playActive,
+            modifier =
+                Modifier.size(46.dp)
+                    .clip(RoundedCornerShape(23.dp))
+                    .background(if (playActive) orange.copy(alpha = 0.18f) else Color.Transparent),
+        ) {
+            Icon(
+                imageVector = Icons.Outlined.PlayArrow,
+                contentDescription = "Vorlesen",
+                tint = if (playActive) orange else cosmos.textSecondary,
+                modifier = Modifier.size(28.dp),
+            )
+        }
+        Spacer(Modifier.size(20.dp))
+        IconButton(
+            onClick = onPause,
+            enabled = pauseActive,
+            modifier =
+                Modifier.size(46.dp)
+                    .clip(RoundedCornerShape(23.dp))
+                    .background(if (pauseActive) orange.copy(alpha = 0.18f) else Color.Transparent),
+        ) {
+            Icon(
+                imageVector = Icons.Outlined.Pause,
+                contentDescription = "Vorlesen pausieren",
+                tint = if (pauseActive) orange else cosmos.textSecondary,
+                modifier = Modifier.size(28.dp),
+            )
+        }
+        Spacer(Modifier.size(20.dp))
+        IconButton(
+            onClick = onStop,
+            enabled = isPlaying,
+            modifier =
+                Modifier.size(46.dp)
+                    .clip(RoundedCornerShape(23.dp))
+                    .background(if (isPlaying) red.copy(alpha = 0.18f) else Color.Transparent),
+        ) {
+            Icon(
+                imageVector = Icons.Outlined.Stop,
+                contentDescription = "Vorlesen abbrechen",
+                tint = if (isPlaying) red else cosmos.textSecondary,
+                modifier = Modifier.size(28.dp),
+            )
+        }
     }
 }
 
@@ -669,7 +997,7 @@ private fun MentalRow(
 private fun EmptyState() {
     val cosmos = LocalCosmos.current
     Column(
-        modifier = Modifier.fillMaxSize().padding(horizontal = 32.dp),
+        modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 40.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.Center,
     ) {

@@ -109,8 +109,10 @@ import de.frank.entropyreducer.data.local.entities.WhoopWorkoutEntity
             de.frank.entropyreducer.data.local.entities.HabitSuggestionEntity::class,
             // ID-Architektur Etappe 4 (Frank-Wunsch 2026-06-19): Mental-Board-Saetze
             de.frank.entropyreducer.data.local.entities.MentalEntity::class,
+            // Spezielle Mental-Saetze (Frank-Wunsch 2026-07-15): eigener Vorlese-Bereich
+            de.frank.entropyreducer.data.local.entities.SpecialMentalEntity::class,
         ],
-    version = 36,
+    version = 37,
     exportSchema = true,
 )
 // Version 10 (2026-05-09 Abend): InsightEntity und MemoryEntryEntity sind aus
@@ -194,6 +196,10 @@ abstract class AppDatabase : RoomDatabase() {
 
     /** Mental-Board-Saetze (ID-Architektur Etappe 4, Frank-Wunsch 2026-06-19). */
     abstract fun mentalSentenceDao(): de.frank.entropyreducer.data.local.dao.MentalSentenceDao
+
+    /** Spezielle Mental-Saetze (Frank-Wunsch 2026-07-15). */
+    abstract fun specialMentalSentenceDao():
+        de.frank.entropyreducer.data.local.dao.SpecialMentalSentenceDao
 
     companion object {
         const val DB_NAME = "entropy_reducer.db"
@@ -1108,6 +1114,30 @@ abstract class AppDatabase : RoomDatabase() {
                     db.execSQL("ALTER TABLE amazfit_workouts ADD COLUMN weatherTempCelsius INTEGER")
                     db.execSQL("ALTER TABLE amazfit_workouts ADD COLUMN weatherCondition TEXT")
                     db.execSQL("ALTER TABLE amazfit_workouts ADD COLUMN weatherFetchedMs INTEGER")
+                }
+            }
+
+        /**
+         * Migration 36 -> 37 (Frank-Wunsch 2026-07-15): Spezielle Mental-Saetze. Neue Tabelle
+         * `special_mental_sentences` (mit manueller `position` + Aktivierungs-Flag `enabled`) —
+         * analog mental_sentences aus 33->34. KEINE SQL-DEFAULT-Klausel fuer Felder mit Kotlin-
+         * Default (updatedAt/position/enabled), damit kein Schema-Mismatch (destructive fallback).
+         */
+        val MIGRATION_36_37: Migration =
+            object : Migration(36, 37) {
+                override fun migrate(db: SupportSQLiteDatabase) {
+                    db.execSQL(
+                        """
+                        CREATE TABLE IF NOT EXISTS special_mental_sentences (
+                            id TEXT NOT NULL PRIMARY KEY,
+                            text TEXT NOT NULL,
+                            updatedAt INTEGER NOT NULL,
+                            position INTEGER NOT NULL,
+                            enabled INTEGER NOT NULL
+                        )
+                        """.trimIndent()
+                    )
+                    db.execSQL("CREATE INDEX IF NOT EXISTS index_special_mental_sentences_position ON special_mental_sentences(position)")
                 }
             }
     }

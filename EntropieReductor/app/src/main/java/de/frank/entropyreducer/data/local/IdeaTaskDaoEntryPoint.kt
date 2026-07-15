@@ -10,6 +10,7 @@ import de.frank.entropyreducer.data.local.dao.HabitDao
 import de.frank.entropyreducer.data.local.dao.HabitSuggestionDao
 import de.frank.entropyreducer.data.local.dao.IdeaDao
 import de.frank.entropyreducer.data.local.dao.MentalSentenceDao
+import de.frank.entropyreducer.data.local.dao.SpecialMentalSentenceDao
 import de.frank.entropyreducer.data.local.dao.TaskSuggestionDao
 
 /**
@@ -39,6 +40,9 @@ interface IdeaTaskDaoEntryPoint {
 
     // ID-Architektur Etappe 4: Mental-Board-Saetze.
     fun mentalSentenceDao(): MentalSentenceDao
+
+    // Frank-Wunsch 2026-07-15: Spezielle Mental-Saetze (eigener Vorlese-Bereich).
+    fun specialMentalSentenceDao(): SpecialMentalSentenceDao
 
     // Frank-Wunsch 2026-06-20: fuer den chain-bewussten Vorschlags-Restore (countByRootId).
     fun entropyEntryDao(): EntropyEntryDao
@@ -83,6 +87,14 @@ internal fun mentalSentenceDaoFrom(context: Context): MentalSentenceDao =
             IdeaTaskDaoEntryPoint::class.java,
         )
         .mentalSentenceDao()
+
+/** Holt den [SpecialMentalSentenceDao] aus dem Application-Graphen (Frank-Wunsch 2026-07-15). */
+internal fun specialMentalSentenceDaoFrom(context: Context): SpecialMentalSentenceDao =
+    EntryPointAccessors.fromApplication(
+            context.applicationContext,
+            IdeaTaskDaoEntryPoint::class.java,
+        )
+        .specialMentalSentenceDao()
 
 /** Holt den [EntropyEntryDao] aus dem Application-Graphen (fuer den chain-bewussten Vorschlags-Restore). */
 internal fun entropyEntryDaoFrom(context: Context): EntropyEntryDao =

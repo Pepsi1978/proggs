@@ -61,6 +61,7 @@ object DatabaseModule {
                 AppDatabase.MIGRATION_33_34,
                 AppDatabase.MIGRATION_34_35,
                 AppDatabase.MIGRATION_35_36,
+                AppDatabase.MIGRATION_36_37,
             )
             // Destruktiv NUR von Uralt-Versionen 1-9 (keine Migrationen vorhanden, kein
             // Geraet mehr auf diesem Stand). Ab Version 10: NIE destruktiv — fehlende
@@ -155,6 +156,8 @@ object DatabaseModule {
 
     /** ID-Architektur Etappe 4 (Frank-Wunsch 2026-06-19): Mental-Board-Saetze. */
     @Provides fun provideMentalSentenceDao(db: AppDatabase) = db.mentalSentenceDao()
+
+    @Provides fun provideSpecialMentalSentenceDao(db: AppDatabase) = db.specialMentalSentenceDao()
 
     // Frank-Wunsch 2026-05-09 (Abend): Insights und Memories leben jetzt in
     // ScientistDatabase — schema-stabil und ins Drive-Backup mitgesichert.

@@ -49,6 +49,7 @@ import de.frank.entropyreducer.presentation.components.CosmosScaffold
 import de.frank.entropyreducer.presentation.components.GlassCard
 import de.frank.entropyreducer.presentation.mental.GewohnheitTtsViewModel
 import de.frank.entropyreducer.presentation.mental.MentalTtsViewModel
+import de.frank.entropyreducer.presentation.mental.SpecialMentalTtsViewModel
 import de.frank.entropyreducer.presentation.theme.LocalCosmos
 
 @Composable
@@ -56,10 +57,15 @@ fun TtsSettingsScreen(
     onBack: () -> Unit,
     mentalTtsViewModel: MentalTtsViewModel = hiltViewModel(),
     gewohnheitTtsViewModel: GewohnheitTtsViewModel = hiltViewModel(),
+    specialTtsViewModel: SpecialMentalTtsViewModel = hiltViewModel(),
 ) {
     val cosmos = LocalCosmos.current
     val mentalState by mentalTtsViewModel.uiState.collectAsStateWithLifecycle()
     val gewohnheitState by gewohnheitTtsViewModel.uiState.collectAsStateWithLifecycle()
+    val specialState by specialTtsViewModel.uiState.collectAsStateWithLifecycle()
+    // Hellgruener Karten-Hintergrund fuer den Spezial-Bereich (Frank-Wunsch 2026-07-15):
+    // vorher Rot/Orange und Blau — der neue Bereich ist hellgruen.
+    val greenCard = Color(0xFF86EFAC).copy(alpha = if (cosmos.isDark) 0.16f else 0.38f)
 
     CosmosScaffold(
         title = "Vorlesen",
@@ -126,6 +132,44 @@ fun TtsSettingsScreen(
                     onValueSelected = gewohnheitTtsViewModel::setPauseSeconds,
                 )
             }
+
+            // ---- Spezielle Mentals (Frank-Wunsch 2026-07-15): eigener Bereich, hellgruen ----
+            item {
+                Text(
+                    text = "Spezielle Mentals",
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = cosmos.textSecondary,
+                )
+            }
+            item {
+                PauseSettingCard(
+                    icon = Icons.Outlined.Psychology,
+                    accent = cosmos.ok,
+                    title = "Pause zwischen speziellen Mentals",
+                    subtitle = "Pause zwischen zwei speziellen Mental-Sätzen beim Vorlesen.",
+                    valueSeconds = specialState.pauseSeconds,
+                    onValueSelected = specialTtsViewModel::setPauseSeconds,
+                    cardBackground = greenCard,
+                )
+            }
+            item {
+                AutoStopSettingCard(
+                    accent = cosmos.ok,
+                    valueMinutes = specialState.autoStopMinutes,
+                    onValueSelected = specialTtsViewModel::setAutoStopMinutes,
+                    subtitle = "Gilt nur für die speziellen Mentals.",
+                    cardBackground = greenCard,
+                )
+            }
+            item {
+                RandomPlaybackSettingCard(
+                    accent = cosmos.ok,
+                    enabled = specialState.randomPlayback,
+                    onEnabledChange = specialTtsViewModel::setRandomPlayback,
+                    subtitle = "Mischt die speziellen Mentals bei jedem Durchlauf zufällig.",
+                    cardBackground = greenCard,
+                )
+            }
         }
     }
 }
@@ -135,9 +179,11 @@ private fun RandomPlaybackSettingCard(
     accent: Color,
     enabled: Boolean,
     onEnabledChange: (Boolean) -> Unit,
+    subtitle: String = "Mischt die Folgeblöcke zufällig; der erste Mental-Satz bleibt als Anker dazwischen.",
+    cardBackground: Color? = null,
 ) {
     val cosmos = LocalCosmos.current
-    GlassCard(modifier = Modifier.fillMaxWidth()) {
+    GlassCard(modifier = Modifier.fillMaxWidth(), backgroundOverride = cardBackground) {
         Row(verticalAlignment = Alignment.CenterVertically) {
             Box(
                 modifier = Modifier
@@ -153,7 +199,7 @@ private fun RandomPlaybackSettingCard(
                 Text("Zufällige Reihenfolge", style = MaterialTheme.typography.titleMedium, color = cosmos.textPrimary)
                 Spacer(Modifier.size(2.dp))
                 Text(
-                    "Mischt die Folgeblöcke zufällig; der erste Mental-Satz bleibt als Anker dazwischen.",
+                    subtitle,
                     style = MaterialTheme.typography.bodySmall,
                     color = cosmos.textSecondary,
                 )
@@ -175,9 +221,11 @@ private fun AutoStopSettingCard(
     accent: Color,
     valueMinutes: Int,
     onValueSelected: (Int) -> Unit,
+    subtitle: String = "Gilt global für Mental- und Gewohnheits-Vorlesen.",
+    cardBackground: Color? = null,
 ) {
     val cosmos = LocalCosmos.current
-    GlassCard(modifier = Modifier.fillMaxWidth()) {
+    GlassCard(modifier = Modifier.fillMaxWidth(), backgroundOverride = cardBackground) {
         Row(verticalAlignment = Alignment.CenterVertically) {
             Box(
                 modifier = Modifier
@@ -193,7 +241,7 @@ private fun AutoStopSettingCard(
                 Text("Abschalten nach", style = MaterialTheme.typography.titleMedium, color = cosmos.textPrimary)
                 Spacer(Modifier.size(2.dp))
                 Text(
-                    "Gilt global für Mental- und Gewohnheits-Vorlesen.",
+                    subtitle,
                     style = MaterialTheme.typography.bodySmall,
                     color = cosmos.textSecondary,
                 )
@@ -272,9 +320,10 @@ private fun PauseSettingCard(
     subtitle: String,
     valueSeconds: Int,
     onValueSelected: (Int) -> Unit,
+    cardBackground: Color? = null,
 ) {
     val cosmos = LocalCosmos.current
-    GlassCard(modifier = Modifier.fillMaxWidth()) {
+    GlassCard(modifier = Modifier.fillMaxWidth(), backgroundOverride = cardBackground) {
         Row(verticalAlignment = Alignment.CenterVertically) {
             Box(
                 modifier = Modifier

@@ -80,6 +80,11 @@ constructor(
     private val _autoStopRemainingMsFlow = MutableStateFlow<Long?>(null)
     val autoStopRemainingMsFlow: StateFlow<Long?> = _autoStopRemainingMsFlow
 
+    // Frank-Wunsch 2026-07-15: welcher Lauf gerade aktiv ist ("Mental"/"Gewohnheit"/"Spezial"/null).
+    // So kann der Spezial-Player unterscheiden, ob gerade SEIN Lauf laeuft (Play/Pause/Stop richtig).
+    private val _playbackLabelFlow = MutableStateFlow<String?>(null)
+    val playbackLabelFlow: StateFlow<String?> = _playbackLabelFlow
+
     fun dismissError() {
         _errorFlow.value = null
     }
@@ -126,6 +131,44 @@ constructor(
         }
     }
 
+    /**
+     * Spezieller Vorlese-Lauf (Frank-Wunsch 2026-07-15). Play-Button:
+     * - Laeuft bereits DER Spezial-Lauf und ist pausiert -> fortsetzen (resume).
+     * - Laeuft bereits der Spezial-Lauf und spielt -> nichts tun.
+     * - Laeuft ein ANDERER Lauf (Mental/Gewohnheit) -> zuerst stoppen, dann Spezial starten.
+     * - Sonst -> Spezial starten.
+     *
+     * Liest nur die uebergebenen (aktivierten) Saetze, jeder Satz einmal pro Durchlauf, in
+     * Endlosschleife bis Stop oder Abschaltzeit. Jeder Satz wird frisch synthetisiert
+     * (forceFresh=true), damit keine zwei Wiederholungen exakt gleich betont klingen.
+     */
+    fun startSpecialPlayback(
+        specialTexts: List<String>,
+        pauseSeconds: Int,
+        randomPlayback: Boolean,
+        autoStopMinutes: Int,
+    ) {
+        if (_isPlayingFlow.value && _playbackLabelFlow.value == "Spezial") {
+            if (_isPausedFlow.value) resume()
+            return
+        }
+        if (_isPlayingFlow.value) stop()
+        val texts = specialTexts.map { it.trim() }.filter { it.isNotEmpty() }
+        if (texts.isEmpty()) {
+            _errorFlow.value = "Keine aktivierten speziellen Mentals zum Vorlesen vorhanden."
+            return
+        }
+        startPlayback("Spezial") {
+            val autoStopMs = markAutoStopDeadline("Spezial", autoStopMinutes)
+            runSpecialSequence(
+                texts = texts,
+                pauseMs = pauseSeconds * 1_000L,
+                randomPlayback = randomPlayback,
+                autoStopMs = autoStopMs,
+            )
+        }
+    }
+
     fun toggleGewohnheitPlayback(gewohnheiten: List<Mental>) {
         if (_isPlayingFlow.value) {
             stop()
@@ -167,6 +210,7 @@ constructor(
         _autoStopRemainingMsFlow.value = null
         _isPausedFlow.value = false
         _isPlayingFlow.value = false
+        _playbackLabelFlow.value = null
         synchronized(lock) {
             countdownTickerJob?.cancel()
             countdownTickerJob = null
@@ -239,6 +283,7 @@ constructor(
     private fun startPlayback(label: String, block: suspend () -> Unit) {
         _errorFlow.value = null
         _isPlayingFlow.value = true
+        _playbackLabelFlow.value = label
         runCatching { TtsPlaybackService.start(context, label) }
             .onFailure { Diag.e(DiagnosticArea.GOOGLE_TTS, TAG, "$label-Foreground-Service konnte nicht starten: ${it.message}", it) }
         var launchedJob: Job? = null
@@ -269,6 +314,7 @@ constructor(
                         _autoStopRemainingMsFlow.value = null
                         _isPausedFlow.value = false
                         _isPlayingFlow.value = false
+                        _playbackLabelFlow.value = null
                         synchronized(lock) {
                             countdownTickerJob?.cancel()
                             countdownTickerJob = null
@@ -422,6 +468,44 @@ constructor(
                 if (!isLastOfRun || loop) delayWhileActive(step.pauseMs)
             }
         } while (loop && !autoStopReached())
+    }
+
+    /**
+     * Spezieller Mental-Lauf (Frank-Wunsch 2026-07-15): jeder aktivierte Satz einmal pro Durchlauf,
+     * Endlosschleife bis Stop oder Abschaltzeit. Jeder Satz wird frisch ueber TTS synthetisiert
+     * (forceFresh), damit keine zwei Wiederholungen exakt gleich betont klingen.
+     */
+    private suspend fun runSpecialSequence(
+        texts: List<String>,
+        pauseMs: Long,
+        randomPlayback: Boolean,
+        autoStopMs: Long,
+    ) {
+        val blocks = texts.map { text -> listOf(SpokenStep(text, pauseMs)) }
+        val orderedSequence = blocks.flatten()
+        if (orderedSequence.isEmpty()) return
+        Diag.d(
+            DiagnosticArea.GOOGLE_TTS,
+            TAG,
+            "Spezial-Sequenz gebildet: ${orderedSequence.size} Sätze (random=$randomPlayback pauseMs=$pauseMs autoStopMs=$autoStopMs)",
+        )
+
+        do {
+            val sequence = if (randomPlayback) blocks.shuffled().flatten() else orderedSequence
+            for (step in sequence) {
+                currentCoroutineContext().ensureActive()
+                awaitResumed()
+                if (autoStopReached()) {
+                    Diag.d(DiagnosticArea.GOOGLE_TTS, TAG, "${autoStopMs / 60_000}-Minuten-Grenze erreicht - automatischer Stop (Spezial)")
+                    return
+                }
+                val file = ttsPlayer.synthesizeToCache(step.text, forceFresh = true)
+                awaitResumed()
+                if (autoStopReached()) return
+                withContext(Dispatchers.Main) { ttsPlayer.playCachedFileAwait(file) }
+                delayWhileActive(step.pauseMs)
+            }
+        } while (!autoStopReached())
     }
 
     private suspend fun awaitResumed() {
