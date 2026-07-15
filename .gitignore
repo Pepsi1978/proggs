@@ -20,7 +20,6 @@ BestJournalAndroid/**/*.jks
 **/__pycache__/
 .gitnexus/
 .claude/worktrees/
-.claude/skills/
 
 # Screenshots (managed manually for monetization/designer skills)
 BestJournalAndroid/Screenshots/
