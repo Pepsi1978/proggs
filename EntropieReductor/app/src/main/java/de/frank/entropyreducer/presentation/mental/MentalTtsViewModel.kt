@@ -34,8 +34,8 @@ import kotlinx.coroutines.launch
  * direkt aus der aktuellen Sortierung des Mentalboards — sortiert Frank um, aendert sich die
  * Vorlese-Reihenfolge automatisch mit (die Sequenz wird bei jedem Start frisch gebildet).
  *
- * Der Durchgang wird über den dauerhaften Play/Pause/Stop-Player im Mentalboard gesteuert und endet
- * nach der gewählten Sequenz oder spätestens an der globalen Sicherheitsgrenze.
+ * Der Durchgang wird über den dauerhaften Play/Pause/Stop-Player im Mentalboard gesteuert und
+ * wiederholt sich bis zum Stop-Button oder bis zur globalen Sicherheitsgrenze.
  *
  * Gewohnheiten mitlesen: Ist [MentalTtsUiState.includeHabits]
  * aktiv, werden die Gewohnheiten NACH dem Mentalblock angehaengt — in der Vorleseweise des

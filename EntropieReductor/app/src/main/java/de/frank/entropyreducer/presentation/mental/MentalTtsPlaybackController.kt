@@ -412,20 +412,23 @@ constructor(
                 "repeat=$gewohnheitRepeat gewohnheitPauseMs=$gewohnheitPauseMs)",
         )
 
-        val sequence = if (randomPlayback) (mentalBlocks + gewohnheitBlocks).shuffled().flatten() else orderedSequence
-        for ((index, step) in sequence.withIndex()) {
-            currentCoroutineContext().ensureActive()
-            awaitResumed()
-            if (autoStopReached()) {
-                Diag.d(DiagnosticArea.GOOGLE_TTS, TAG, "${autoStopMs / 60_000}-Minuten-Grenze erreicht - automatischer Stop")
-                return
+        do {
+            val sequence = if (randomPlayback) (mentalBlocks + gewohnheitBlocks).shuffled().flatten() else orderedSequence
+            for ((index, step) in sequence.withIndex()) {
+                currentCoroutineContext().ensureActive()
+                awaitResumed()
+                if (autoStopReached()) {
+                    Diag.d(DiagnosticArea.GOOGLE_TTS, TAG, "${autoStopMs / 60_000}-Minuten-Grenze erreicht - automatischer Stop")
+                    return
+                }
+                val file = ttsPlayer.synthesizeToCache(step.text, forceFresh = true)
+                awaitResumed()
+                if (autoStopReached()) return
+                withContext(Dispatchers.Main) { ttsPlayer.playCachedFileAwait(file) }
+                val anotherStepFollows = index != sequence.lastIndex || shouldRepeatMentalPlayback(autoStopReached())
+                if (anotherStepFollows) delayWhileActive(step.pauseMs)
             }
-            val file = ttsPlayer.synthesizeToCache(step.text, forceFresh = true)
-            awaitResumed()
-            if (autoStopReached()) return
-            withContext(Dispatchers.Main) { ttsPlayer.playCachedFileAwait(file) }
-            if (index != sequence.lastIndex) delayWhileActive(step.pauseMs)
-        }
+        } while (shouldRepeatMentalPlayback(autoStopReached()))
     }
 
     private suspend fun runGewohnheitSequence(
@@ -565,6 +568,8 @@ constructor(
 
     private data class SpokenStep(val text: String, val pauseMs: Long)
 }
+
+internal fun shouldRepeatMentalPlayback(autoStopReached: Boolean): Boolean = !autoStopReached
 
 internal class PausableCountdown(
     private val totalMs: Long,
