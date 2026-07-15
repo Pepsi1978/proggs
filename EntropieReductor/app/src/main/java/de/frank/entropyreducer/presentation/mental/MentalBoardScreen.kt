@@ -20,23 +20,17 @@ import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.Add
-import androidx.compose.material.icons.outlined.ArrowDropDown
 import androidx.compose.material.icons.outlined.Check
 import androidx.compose.material.icons.outlined.Delete
-import androidx.compose.material.icons.outlined.LooksOne
 import androidx.compose.material.icons.outlined.Pause
 import androidx.compose.material.icons.outlined.PlayArrow
 import androidx.compose.material.icons.outlined.Psychology
-import androidx.compose.material.icons.outlined.Repeat
 import androidx.compose.material.icons.outlined.Save
 import androidx.compose.material.icons.outlined.Schedule
 import androidx.compose.material.icons.outlined.Stop
-import androidx.compose.material.icons.outlined.VolumeUp
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Checkbox
 import androidx.compose.material3.CheckboxDefaults
-import androidx.compose.material3.DropdownMenu
-import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -183,7 +177,6 @@ internal suspend fun updateMental(context: Context, id: String, text: String) {
     dao.update(current.copy(text = clean, updatedAt = System.currentTimeMillis()))
     de.frank.entropyreducer.data.remote.drive.triggerDriveBackup(context, "Mental-Reiter: Aenderung")
 }
-
 internal suspend fun setMentalEnabled(context: Context, id: String, enabled: Boolean) {
     context.mentalStore.edit { preferences ->
         val enabledIds = preferences[KEY_ENABLED_MENTALS].orEmpty().toMutableSet()
@@ -444,18 +437,8 @@ fun MentalBoardScreen(
         }
 
     CosmosScaffold(
-        title = "Mental",
+        title = "Verschiedene Mentals",
         showBottomBar = showBottomBar,
-        actions = {
-            MentalTtsControls(
-                state = ttsState,
-                onToggle = { ttsVm.togglePlayback(displayed, gewohnheiten) },
-                onAnkerChange = ttsVm::setAnkerCount,
-                onFolgeChange = ttsVm::setFolgeCount,
-                onLoopChange = ttsVm::setLoop,
-                onIncludeHabitsChange = ttsVm::setIncludeHabits,
-            )
-        },
         bottomBar = {
             CosmosBottomBar(
                 currentTab = Routes.TASKS,
@@ -662,59 +645,6 @@ fun MentalBoardScreen(
                 editSpecialTarget = null
             },
         )
-    }
-}
-
-@Composable
-private fun MentalPlaybackControls(
-    isPaused: Boolean,
-    onPlay: () -> Unit,
-    onPause: () -> Unit,
-) {
-    val cosmos = LocalCosmos.current
-    val orange = Color(0xFFFF9800)
-    val cardBg = if (cosmos.isDark) Color(0xFF1D1A16) else Color.White
-    Row(
-        modifier =
-            Modifier.fillMaxWidth()
-                .height(58.dp)
-                .clip(RoundedCornerShape(14.dp))
-                .background(cardBg)
-                .padding(horizontal = 14.dp),
-        horizontalArrangement = Arrangement.Center,
-        verticalAlignment = Alignment.CenterVertically,
-    ) {
-        IconButton(
-            onClick = onPlay,
-            enabled = isPaused,
-            modifier =
-                Modifier.size(46.dp)
-                    .clip(RoundedCornerShape(23.dp))
-                    .background(if (!isPaused) orange.copy(alpha = 0.18f) else Color.Transparent),
-        ) {
-            Icon(
-                imageVector = Icons.Outlined.PlayArrow,
-                contentDescription = "Vorlesen fortsetzen",
-                tint = if (!isPaused) orange else cosmos.textSecondary,
-                modifier = Modifier.size(28.dp),
-            )
-        }
-        Spacer(Modifier.size(22.dp))
-        IconButton(
-            onClick = onPause,
-            enabled = !isPaused,
-            modifier =
-                Modifier.size(46.dp)
-                    .clip(RoundedCornerShape(23.dp))
-                    .background(if (isPaused) orange.copy(alpha = 0.18f) else Color.Transparent),
-        ) {
-            Icon(
-                imageVector = Icons.Outlined.Pause,
-                contentDescription = "Vorlesen pausieren",
-                tint = if (isPaused) orange else cosmos.textSecondary,
-                modifier = Modifier.size(28.dp),
-            )
-        }
     }
 }
 
@@ -1143,137 +1073,4 @@ private fun MentalEditDialog(
             }
         },
     )
-}
-
-/* ============================== Vorlese-Steuerung (Top-Bar) ============================== */
-
-/**
- * Steuerleiste oben neben dem Titel "Mental" (Frank-Wunsch 2026-06-16):
- * Lautsprecher-Toggle · Dropdown "Erster Satz" (Anker) · Dropdown "Folgesatz" · Endlos-Haekchen.
- * Reine Darstellung — State runter, Events rauf (UDF); die ganze Logik liegt im MentalTtsViewModel.
- */
-@Composable
-private fun MentalTtsControls(
-    state: MentalTtsUiState,
-    onToggle: () -> Unit,
-    onAnkerChange: (Int) -> Unit,
-    onFolgeChange: (Int) -> Unit,
-    onLoopChange: (Boolean) -> Unit,
-    onIncludeHabitsChange: (Boolean) -> Unit,
-) {
-    Row(verticalAlignment = Alignment.CenterVertically) {
-        // "G"-Haekchen: Gewohnheiten am Ende des Mentalblocks mitlesen (Frank-Wunsch 2026-07-03).
-        Text(
-            text = "G",
-            fontWeight = FontWeight.Bold,
-            color = MentalAccent,
-            style = MaterialTheme.typography.labelLarge,
-        )
-        Checkbox(
-            checked = state.includeHabits,
-            onCheckedChange = onIncludeHabitsChange,
-            colors = CheckboxDefaults.colors(checkedColor = MentalAccent),
-        )
-        // Neue Anordnung: Häkchen · Dropdown 1 · Dropdown 2 · Lautsprecher
-        Checkbox(
-            checked = state.loop,
-            onCheckedChange = onLoopChange,
-            colors = CheckboxDefaults.colors(checkedColor = Color(0xFF22C55E)),
-        )
-        // Dropdown 1 — wie oft der erste Satz (Anker) vor jedem Folgesatz vorgelesen wird.
-        NumberDropdown(
-            value = state.ankerCount,
-            leadingIcon = Icons.Outlined.LooksOne,
-            menuTitle = "Erster Satz – wie oft",
-            onSelect = onAnkerChange,
-        )
-        Spacer(Modifier.size(4.dp))
-        // Dropdown 2 — wie oft jeder Folgesatz vorgelesen wird.
-        NumberDropdown(
-            value = state.folgeCount,
-            leadingIcon = Icons.Outlined.Repeat,
-            menuTitle = "Folgesatz – wie oft",
-            onSelect = onFolgeChange,
-        )
-        // Lautsprecher = Start/Stop-Toggle. Ganz rechts.
-        IconButton(onClick = onToggle) {
-            Icon(
-                imageVector = if (state.isPlaying) Icons.Outlined.Stop else Icons.Outlined.VolumeUp,
-                contentDescription = if (state.isPlaying) "Vorlesen stoppen" else "Vorlesen",
-                tint = LocalCosmos.current.accent,
-                modifier = Modifier.size(24.dp),
-            )
-        }
-    }
-}
-
-/**
- * Kompaktes Zahlen-Dropdown (1..10) fuer die Top-Bar. Zeigt ein kleines Symbol, den aktuellen Wert
- * und einen Pfeil; beim Antippen erscheint ein Menue mit erklaerendem Titel und den Zahlen 1–10.
- */
-@Composable
-private fun NumberDropdown(
-    value: Int,
-    leadingIcon: androidx.compose.ui.graphics.vector.ImageVector,
-    menuTitle: String,
-    onSelect: (Int) -> Unit,
-) {
-    var expanded by remember { mutableStateOf(false) }
-    Box {
-        Row(
-            modifier =
-                Modifier.clip(RoundedCornerShape(8.dp))
-                    .background(MentalAccent.copy(alpha = 0.12f))
-                    .clickable { expanded = true }
-                    .padding(horizontal = 6.dp, vertical = 5.dp),
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
-            Icon(
-                imageVector = leadingIcon,
-                contentDescription = null,
-                tint = MentalAccent,
-                modifier = Modifier.size(16.dp),
-            )
-            Spacer(Modifier.size(2.dp))
-            Text(
-                text = "$value",
-                style = MaterialTheme.typography.labelLarge,
-                color = MentalAccent,
-                fontWeight = FontWeight.Bold,
-            )
-            Icon(
-                imageVector = Icons.Outlined.ArrowDropDown,
-                contentDescription = null,
-                tint = MentalAccent,
-                modifier = Modifier.size(18.dp),
-            )
-        }
-        DropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }) {
-            // Nicht-klickbarer Titel erklaert, worauf sich die Zahl bezieht.
-            Text(
-                text = menuTitle,
-                style = MaterialTheme.typography.labelMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                modifier = Modifier.padding(horizontal = 14.dp, vertical = 8.dp),
-            )
-            (1..10).forEach { n ->
-                DropdownMenuItem(
-                    text = { Text("$n") },
-                    onClick = {
-                        onSelect(n)
-                        expanded = false
-                    },
-                    trailingIcon = {
-                        if (n == value) {
-                            Icon(
-                                imageVector = Icons.Outlined.Check,
-                                contentDescription = null,
-                                tint = MentalAccent,
-                            )
-                        }
-                    },
-                )
-            }
-        }
-    }
 }

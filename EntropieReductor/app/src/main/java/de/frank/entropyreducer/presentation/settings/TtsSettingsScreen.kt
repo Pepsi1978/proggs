@@ -21,7 +21,9 @@ import androidx.compose.material.icons.automirrored.outlined.VolumeUp
 import androidx.compose.material.icons.outlined.ArrowDropDown
 import androidx.compose.material.icons.outlined.Check
 import androidx.compose.material.icons.outlined.Flag
+import androidx.compose.material.icons.outlined.LooksOne
 import androidx.compose.material.icons.outlined.Psychology
+import androidx.compose.material.icons.outlined.Repeat
 import androidx.compose.material.icons.outlined.Shuffle
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
@@ -88,6 +90,41 @@ fun TtsSettingsScreen(
             contentPadding = PaddingValues(16.dp),
             verticalArrangement = Arrangement.spacedBy(12.dp),
         ) {
+            item {
+                Text(
+                    text = "Mentals",
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = cosmos.textSecondary,
+                )
+            }
+            item {
+                BooleanSettingCard(
+                    icon = Icons.Outlined.Flag,
+                    accent = cosmos.accentTasksSub,
+                    title = "Gewohnheiten",
+                    subtitle = "Liest die Gewohnheiten nach den ausgewählten Mentals mit.",
+                    enabled = mentalState.includeHabits,
+                    onEnabledChange = mentalTtsViewModel::setIncludeHabits,
+                )
+            }
+            item {
+                CountSettingCard(
+                    icon = Icons.Outlined.LooksOne,
+                    accent = cosmos.accentTasksSub,
+                    title = "Erster Satz",
+                    value = mentalState.ankerCount,
+                    onValueSelected = mentalTtsViewModel::setAnkerCount,
+                )
+            }
+            item {
+                CountSettingCard(
+                    icon = Icons.Outlined.Repeat,
+                    accent = cosmos.accentTasksSub,
+                    title = "Folgesatz",
+                    value = mentalState.folgeCount,
+                    onValueSelected = mentalTtsViewModel::setFolgeCount,
+                )
+            }
             item {
                 Text(
                     text = "Automatische Abschaltung",
@@ -169,6 +206,118 @@ fun TtsSettingsScreen(
                     enabled = specialState.randomPlayback,
                     onEnabledChange = specialTtsViewModel::setRandomPlayback,
                     subtitle = "Mischt die speziellen Mentals bei jedem Durchlauf zufällig.",
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun BooleanSettingCard(
+    icon: ImageVector,
+    accent: Color,
+    title: String,
+    subtitle: String,
+    enabled: Boolean,
+    onEnabledChange: (Boolean) -> Unit,
+) {
+    val cosmos = LocalCosmos.current
+    GlassCard(modifier = Modifier.fillMaxWidth()) {
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Box(
+                modifier = Modifier
+                    .size(48.dp)
+                    .clip(CircleShape)
+                    .background(accent.copy(alpha = 0.18f)),
+                contentAlignment = Alignment.Center,
+            ) {
+                Icon(icon, null, tint = accent, modifier = Modifier.size(24.dp))
+            }
+            Spacer(Modifier.size(16.dp))
+            Column(modifier = Modifier.weight(1f)) {
+                Text(title, style = MaterialTheme.typography.titleMedium, color = cosmos.textPrimary)
+                Spacer(Modifier.size(2.dp))
+                Text(subtitle, style = MaterialTheme.typography.bodySmall, color = cosmos.textSecondary)
+            }
+            Switch(
+                checked = enabled,
+                onCheckedChange = onEnabledChange,
+                colors = SwitchDefaults.colors(
+                    checkedThumbColor = Color.White,
+                    checkedTrackColor = accent,
+                ),
+            )
+        }
+    }
+}
+
+@Composable
+private fun CountSettingCard(
+    icon: ImageVector,
+    accent: Color,
+    title: String,
+    value: Int,
+    onValueSelected: (Int) -> Unit,
+) {
+    val cosmos = LocalCosmos.current
+    GlassCard(modifier = Modifier.fillMaxWidth()) {
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Box(
+                modifier = Modifier
+                    .size(48.dp)
+                    .clip(CircleShape)
+                    .background(accent.copy(alpha = 0.18f)),
+                contentAlignment = Alignment.Center,
+            ) {
+                Icon(icon, null, tint = accent, modifier = Modifier.size(24.dp))
+            }
+            Spacer(Modifier.size(16.dp))
+            Text(
+                text = title,
+                style = MaterialTheme.typography.titleMedium,
+                color = cosmos.textPrimary,
+                modifier = Modifier.weight(1f),
+            )
+            CountDropdown(value = value, accent = accent, onValueSelected = onValueSelected)
+        }
+    }
+}
+
+@Composable
+private fun CountDropdown(
+    value: Int,
+    accent: Color,
+    onValueSelected: (Int) -> Unit,
+) {
+    var expanded by remember { mutableStateOf(false) }
+    Box {
+        Row(
+            modifier = Modifier
+                .clip(RoundedCornerShape(10.dp))
+                .background(accent.copy(alpha = 0.12f))
+                .clickable { expanded = true }
+                .padding(horizontal = 10.dp, vertical = 8.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Text(
+                text = "$value",
+                style = MaterialTheme.typography.labelLarge,
+                color = accent,
+                fontWeight = FontWeight.Bold,
+            )
+            Icon(Icons.Outlined.ArrowDropDown, null, tint = accent, modifier = Modifier.size(18.dp))
+        }
+        DropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }) {
+            (1..10).forEach { count ->
+                DropdownMenuItem(
+                    text = { Text("$count") },
+                    onClick = {
+                        onValueSelected(count)
+                        expanded = false
+                    },
+                    trailingIcon = {
+                        if (count == value) Icon(Icons.Outlined.Check, null, tint = accent)
+                    },
                 )
             }
         }

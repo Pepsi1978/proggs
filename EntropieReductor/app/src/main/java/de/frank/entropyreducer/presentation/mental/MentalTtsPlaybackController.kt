@@ -51,7 +51,6 @@ constructor(
 
         val KEY_ANKER = intPreferencesKey("anker_count")
         val KEY_FOLGE = intPreferencesKey("folge_count")
-        val KEY_MENTAL_LOOP = booleanPreferencesKey("loop_enabled")
         val KEY_INCLUDE_HABITS = booleanPreferencesKey("include_habits")
         val KEY_MENTAL_PAUSE_SECONDS = intPreferencesKey("pause_seconds")
         val KEY_RANDOM_PLAYBACK = booleanPreferencesKey("random_playback")
@@ -89,14 +88,6 @@ constructor(
         _errorFlow.value = null
     }
 
-    fun toggleMentalPlayback(mentals: List<Mental>, gewohnheiten: List<Mental>) {
-        if (_isPlayingFlow.value) {
-            stop()
-            return
-        }
-        startMentalPlayback(mentals, gewohnheiten)
-    }
-
     fun startMentalPlayback(mentals: List<Mental>, gewohnheiten: List<Mental>) {
         if (_isPlayingFlow.value && _playbackLabelFlow.value == "Mental") {
             if (_isPausedFlow.value) resume()
@@ -129,7 +120,6 @@ constructor(
                 mentalTexts = mentalTexts,
                 anker = settings.anker,
                 folge = settings.folge,
-                loop = settings.loop,
                 gewohnheitTexts = gewohnheitTexts,
                 gewohnheitRepeat = gewohnheitSettings.repeatCount,
                 mentalPauseMs = settings.pauseSeconds * 1_000L,
@@ -374,7 +364,6 @@ constructor(
                 MentalSettings(
                     anker = (p[KEY_ANKER] ?: 1).coerceIn(RANGE_MIN, RANGE_MAX),
                     folge = (p[KEY_FOLGE] ?: 1).coerceIn(RANGE_MIN, RANGE_MAX),
-                    loop = p[KEY_MENTAL_LOOP] ?: false,
                     includeHabits = p[KEY_INCLUDE_HABITS] ?: false,
                     randomPlayback = p[KEY_RANDOM_PLAYBACK] ?: false,
                     pauseSeconds =
@@ -401,7 +390,6 @@ constructor(
         mentalTexts: List<String>,
         anker: Int,
         folge: Int,
-        loop: Boolean,
         gewohnheitTexts: List<String>,
         gewohnheitRepeat: Int,
         mentalPauseMs: Long,
@@ -419,28 +407,25 @@ constructor(
             DiagnosticArea.GOOGLE_TTS,
             TAG,
             "Sequenz gebildet: mental=${orderedMentalSequence.size} + gewohnheit=${orderedGewohnheitSequence.size} " +
-                "(mentals=${mentalTexts.size} anker=$anker folge=$folge loop=$loop random=$randomPlayback, " +
+                "(mentals=${mentalTexts.size} anker=$anker folge=$folge random=$randomPlayback, " +
                 "mentalPauseMs=$mentalPauseMs gewohnheiten=${gewohnheitTexts.size} " +
                 "repeat=$gewohnheitRepeat gewohnheitPauseMs=$gewohnheitPauseMs)",
         )
 
-        do {
-            val sequence = if (randomPlayback) (mentalBlocks + gewohnheitBlocks).shuffled().flatten() else orderedSequence
-            for ((index, step) in sequence.withIndex()) {
-                currentCoroutineContext().ensureActive()
-                awaitResumed()
-                if (autoStopReached()) {
-                    Diag.d(DiagnosticArea.GOOGLE_TTS, TAG, "${autoStopMs / 60_000}-Minuten-Grenze erreicht - automatischer Stop")
-                    return
-                }
-                val file = ttsPlayer.synthesizeToCache(step.text, forceFresh = true)
-                awaitResumed()
-                if (autoStopReached()) return
-                withContext(Dispatchers.Main) { ttsPlayer.playCachedFileAwait(file) }
-                val isLastOfRun = index == sequence.lastIndex
-                if (!isLastOfRun || loop) delayWhileActive(step.pauseMs)
+        val sequence = if (randomPlayback) (mentalBlocks + gewohnheitBlocks).shuffled().flatten() else orderedSequence
+        for ((index, step) in sequence.withIndex()) {
+            currentCoroutineContext().ensureActive()
+            awaitResumed()
+            if (autoStopReached()) {
+                Diag.d(DiagnosticArea.GOOGLE_TTS, TAG, "${autoStopMs / 60_000}-Minuten-Grenze erreicht - automatischer Stop")
+                return
             }
-        } while (loop && !autoStopReached())
+            val file = ttsPlayer.synthesizeToCache(step.text, forceFresh = true)
+            awaitResumed()
+            if (autoStopReached()) return
+            withContext(Dispatchers.Main) { ttsPlayer.playCachedFileAwait(file) }
+            if (index != sequence.lastIndex) delayWhileActive(step.pauseMs)
+        }
     }
 
     private suspend fun runGewohnheitSequence(
@@ -567,7 +552,6 @@ constructor(
     private data class MentalSettings(
         val anker: Int,
         val folge: Int,
-        val loop: Boolean,
         val includeHabits: Boolean,
         val randomPlayback: Boolean,
         val pauseSeconds: Int,
