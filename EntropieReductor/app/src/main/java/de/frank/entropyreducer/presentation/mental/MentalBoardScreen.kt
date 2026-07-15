@@ -713,6 +713,16 @@ private fun SpecialMentalsSection(
             color = cosmos.textPrimary,
             fontWeight = FontWeight.SemiBold,
         )
+        SpecialMentalPlaybackControls(
+            isPlaying = state.isPlaying,
+            isPaused = state.isPaused,
+            onPlay = onPlay,
+            onPause = onPause,
+            onStop = onStop,
+        )
+        if (state.isPlaying) {
+            MentalRemainingTime(remainingMs = state.autoStopRemainingMs, isPaused = state.isPaused)
+        }
         specials.forEach { sm ->
             SpecialMentalRow(
                 text = sm.text,
@@ -726,16 +736,6 @@ private fun SpecialMentalsSection(
             contentDescription = "Spezielles Mental hinzufügen",
             onClick = onAddClick,
         )
-        SpecialMentalPlaybackControls(
-            isPlaying = state.isPlaying,
-            isPaused = state.isPaused,
-            onPlay = onPlay,
-            onPause = onPause,
-            onStop = onStop,
-        )
-        if (state.isPlaying) {
-            MentalRemainingTime(remainingMs = state.autoStopRemainingMs, isPaused = state.isPaused)
-        }
     }
 }
 
