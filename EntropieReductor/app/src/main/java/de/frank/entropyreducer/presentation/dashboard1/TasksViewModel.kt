@@ -1,10 +1,6 @@
 package de.frank.entropyreducer.presentation.dashboard1
 
 import android.app.Application
-import androidx.datastore.core.DataStore
-import androidx.datastore.preferences.core.Preferences
-import androidx.datastore.preferences.core.edit
-import androidx.datastore.preferences.core.stringPreferencesKey
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -12,8 +8,6 @@ import de.frank.entropyreducer.data.audio.AudioRecorder
 import de.frank.entropyreducer.data.audio.RecordingService
 import de.frank.entropyreducer.data.diagnostics.Diag
 import de.frank.entropyreducer.data.diagnostics.DiagnosticArea
-import de.frank.entropyreducer.data.gewohnheitSuggestionStore
-import de.frank.entropyreducer.data.kiTaskSuggestionStore
 import de.frank.entropyreducer.data.local.entities.EntropyEntryEntity
 import de.frank.entropyreducer.data.remote.drive.SyncCoordinator
 import de.frank.entropyreducer.data.remote.drive.SyncStatus
@@ -34,7 +28,6 @@ import de.frank.entropyreducer.domain.usecase.CalculateBucketsUseCase
 import de.frank.entropyreducer.domain.usecase.ProcessEntryUseCase
 import de.frank.entropyreducer.domain.usecase.TranscribeAudioUseCase
 import de.frank.entropyreducer.presentation.components.MicState
-import de.frank.entropyreducer.util.runCatchingCancellable
 import javax.inject.Inject
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
@@ -47,8 +40,6 @@ import kotlinx.coroutines.flow.flowOn
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
-import org.json.JSONArray
-import org.json.JSONObject
 
 /**
  * State der Aufgaben-Ansicht. @Immutable garantiert Compose dass equals()
@@ -85,20 +76,6 @@ data class TasksUiState(
     val lastBackupAtMs: Long = 0L,
     /** Ist Drive-Backup aktiviert? Wenn false wird die Statuszeile ausgeblendet. */
     val driveBackupEnabled: Boolean = false,
-    /**
-     * Status der automatischen Re-Bewertung aller offenen Aufgaben
-     * (Frank-Wunsch 2026-05-09 nach Aenderung der priorityScore-Doktrin).
-     * null = nicht aktiv. Pair = (fertig, gesamt) — zeigt einen kleinen
-     * Banner unter dem Titel "X von Y Aufgaben neu bewertet".
-     */
-    val rescoreProgress: RescoreProgress? = null,
-)
-
-@androidx.compose.runtime.Immutable
-data class RescoreProgress(
-    val done: Int,
-    val total: Int,
-    val failed: Int = 0,
 )
 
 private data class UiOnlyState(
@@ -125,9 +102,6 @@ class TasksViewModel @Inject constructor(
     private val syncCoordinator: SyncCoordinator,
     private val secrets: EncryptedSecretsStore,
     private val settings: de.frank.entropyreducer.data.settings.AppSettings,
-    // Agentic Auto-Suggestion: Beim manuellen Refresh auch Aufgaben- und
-    // Gewohnheitsvorschläge aus Ideen neu generieren (Frank-Wunsch 2026-06-18).
-    private val generateSuggestions: de.frank.entropyreducer.domain.usecase.GenerateSuggestionsUseCase,
     // Frank-Wunsch 2026-06-19: fuer die Rueckwaerts-Propagierung der Prio einer Loop-Instanz
     // ins zugehoerige Loop-Template (Heute-Aenderung -> Loop-Bereich konsistent).
     private val recurringTemplates: RecurringTemplateRepository,
@@ -141,21 +115,21 @@ class TasksViewModel @Inject constructor(
     private val uiOnlyFlow = MutableStateFlow(UiOnlyState())
     private val detailEntryIdFlow = MutableStateFlow<String?>(null)
     private val pendingMethodForFlow = MutableStateFlow<EntropyEntryEntity?>(null)
-    private val rescoreProgressFlow = MutableStateFlow<RescoreProgress?>(null)
 
     val state: StateFlow<TasksUiState> = combine(
         entries.getActive(),
         activeCategoriesFlow,
         uiOnlyFlow,
         combine(statusObserver.observe(), kiQuestions.currentQuestion, syncCoordinator.status) { b, q, s -> Triple(b, q, s) },
-        combine(detailEntryIdFlow, pendingMethodForFlow, rescoreProgressFlow) { d, p, r -> Triple(d, p, r) },
+        combine(detailEntryIdFlow, pendingMethodForFlow) { detailId, pendingMethod ->
+            detailId to pendingMethod
+        },
     ) { list, cats, ui, statusTriple, detailTriple ->
         val breakdown = statusTriple.first
         val question = statusTriple.second
         val syncStatus = statusTriple.third
         val detailId = detailTriple.first
         val pendingMethod = detailTriple.second
-        val rescore = detailTriple.third
         val filtered = if (cats.isEmpty()) list else list.filter { it.category in cats }
         // Aktive Einträge (OFFEN + IN_ARBEIT) → Prioritäts-Gruppierung.
         // PERFORMANCE 2026-05-09: Sortierung nach priorityScore wird HIER vorberechnet
@@ -201,7 +175,6 @@ class TasksViewModel @Inject constructor(
             lastBackupAtMs = (syncStatus as? SyncStatus.Synced)?.atEpochMs
                 ?: secrets.driveLastBackupEpochMs,
             driveBackupEnabled = secrets.driveBackupEnabled && secrets.driveAccountEmail != null,
-            rescoreProgress = rescore,
         )
     }
         // Performance-Fix Loop 3.1: Der combine-Block macht filter/groupBy/
@@ -230,107 +203,16 @@ class TasksViewModel @Inject constructor(
         autoArchiveOldResolved()
         // Day-Change-Watcher: nur noch Auto-Archiv; Aufgabenbereiche sind nicht mehr datumsbasiert.
         startDayChangeWatcher()
-        // Auto-Re-Score (Frank-Wunsch 2026-05-09): wenn die priorityScore-
-        // Doktrin sich geaendert hat (neue 5-Farben-Entropie-Reduktions-Skala),
-        // werden alle offenen Eintraege EINMALIG mit der neuen Logik bewertet.
-        // Marker liegt in EncryptedSecretsStore.lastRescoreVersionCode — sobald
-        // er den Ziel-VersionCode erreicht hat, laeuft der Auto-Re-Score nicht
-        // mehr. Frank kann jederzeit manuell rescoreAllOpenEntries() ausloesen.
-        maybeAutoRescoreOnDoctrineChange()
         // Frank-Wunsch 2026-05-31: einmalige KI-Kuerzung aller alten, zu langen Titel
         // (>3 Woerter) auf max. 3 Woerter. Neue Aufgaben sind ohnehin schon begrenzt.
         maybeShortenLongTitles()
-        // Auto-Refresh beim App-Start (Frank-Wunsch 2026-05-22): wenn Frank die App
-        // oeffnet sollen Nachtraege/Zeitanpassungen/Prio gepueft werden. Throttle 6h
-        // damit kurze Cold-Starts hintereinander keine Gemini-Quota verbrennen.
-        maybeAutoRefreshOnStartup()
     }
 
-    /**
-     * Manueller Refresh-Trigger (Frank-Wunsch 2026-05-22): laeuft wenn Frank den
-     * Refresh-Button oben im Aufgabenreiter tippt. Macht den gleichen Job wie der
-     * App-Start-Refresh — Rollover, Bucket-Balance, Auto-Archiv und Rescore aller
-     * offenen Aufgaben. Im Gegensatz zum Auto-Refresh hat dieser keinen Throttle.
-     */
-    fun refreshAll() {
-        autoArchiveOldResolved()
-        autoBalanceBuckets()
-        rescoreAllOpenEntries()
-        // Agentic Auto-Suggestion: Beim manuellen Refresh — EIN kombinierter Aufruf.
-        viewModelScope.launch(Dispatchers.IO) {
-            generateSuggestions.serializedGeneration {
-            runCatchingCancellable {
-                val context = getApplication<Application>()
-                val ideas = de.frank.entropyreducer.presentation.ideen.ideenEntriesFlow(context).first()
-                if (ideas.isEmpty()) return@serializedGeneration
-
-                val kiStore = context.kiTaskSuggestionStore
-                val habitStore = context.gewohnheitSuggestionStore
-
-                val taskProcessedIds = loadProcessedIds(kiStore, TASK_PROCESSED_KEY)
-                val habitProcessedIds = loadProcessedIds(habitStore, HABIT_PROCESSED_KEY)
-                val allProcessedIds = taskProcessedIds + habitProcessedIds
-
-                val (result, updatedProcessedIds) = generateSuggestions
-                    .generateSuggestions(ideas, allProcessedIds)
-                    .getOrThrow()
-
-                if (result.tasks.isNotEmpty()) {
-                    // Ab ID-Architektur Etappe 2c in Room (task_suggestions) statt kiStore-JSON.
-                    storeKiTaskSuggestions(context, result.tasks)
-                }
-                if (result.habits.isNotEmpty()) {
-                    // Ab ID-Architektur Etappe 3c/3d in Room (habit_suggestions) mit Herkunft.
-                    storeHabitSuggestions(context, result.habits)
-                }
-                saveProcessedIds(kiStore, TASK_PROCESSED_KEY, updatedProcessedIds)
-                saveProcessedIds(habitStore, HABIT_PROCESSED_KEY, updatedProcessedIds)
-            }
-            }
-        }
-    }
-
-    /**
-     * Throttled Auto-Refresh beim App-Start. Laeuft hoechstens einmal pro 6h
-     * — Frank kann zwischendurch jederzeit manuell ueber den Refresh-Button
-     * triggern.
-     */
-    private fun maybeAutoRefreshOnStartup() {
-        val now = System.currentTimeMillis()
-        val last = secrets.lastStartupRefreshAtMs
-        val sixHoursMs = 6 * 60 * 60 * 1000L
-        if (now - last < sixHoursMs) return
-        if (secrets.geminiApiKey.isNullOrBlank()) return
-        secrets.lastStartupRefreshAtMs = now
-        // Buckets + Archiv laufen schon ueber init() — wir muessen nur den
-        // Rescore-Lauf zusaetzlich anstossen.
-        rescoreAllOpenEntries()
-    }
-
-    /**
-     * Triggert beim ViewModel-Start einmalig die Re-Bewertung aller offenen
-     * Aufgaben, wenn die priorityScore-Doktrin sich geaendert hat (Frank-Wunsch
-     * 2026-05-09 — neue 5-Farben-Skala basiert auf Entropie-Reduktion).
-     * Ueberspringt den Lauf still wenn:
-     *   - keine offenen Aufgaben da
-     *   - kein Gemini-Key gesetzt (wird beim naechsten Start mit Key getriggert)
-     *   - lastRescoreVersionCode bereits >= Ziel-VersionCode
-     */
-    private fun maybeAutoRescoreOnDoctrineChange() {
-        if (secrets.lastRescoreVersionCode >= RESCORE_DOCTRINE_VERSION) return
-        if (secrets.geminiApiKey.isNullOrBlank()) return
-        viewModelScope.launch {
-            val openCount = entries.getActive().first()
-                .count { it.status == EntryStatus.OFFEN || it.status == EntryStatus.IN_ARBEIT }
-            if (openCount == 0) {
-                // Keine Eintraege da — Marker trotzdem setzen damit der Trigger
-                // beim naechsten Start nicht erneut feuert.
-                secrets.lastRescoreVersionCode = RESCORE_DOCTRINE_VERSION
-                return@launch
-            }
-            Diag.i(DiagnosticArea.TASKS, TAG, "Auto-Rescore startet — $openCount offene Eintraege werden mit neuer Doktrin neu bewertet")
-            rescoreAllOpenEntries(autoTriggered = true)
-        }
+    /** Aktualisiert das eingerichtete Drive-Backup ohne Aufgaben neu zu bewerten. */
+    fun refreshBackup(): Boolean {
+        if (!secrets.driveBackupEnabled || secrets.driveAccountEmail == null) return false
+        syncCoordinator.requestImmediate("Aufgaben: Backup manuell aktualisiert")
+        return true
     }
 
     /**
@@ -388,55 +270,6 @@ class TasksViewModel @Inject constructor(
     /** Zaehlt die Woerter eines Titels (fuer die 3-Woerter-Regel). */
     private fun wordCount(title: String): Int =
         title.trim().split(Regex("\\s+")).count { it.isNotBlank() }
-
-    /**
-     * Bewertet alle offenen Eintraege (OFFEN + IN_ARBEIT) mit der aktuellen
-     * priorityScore-Doktrin neu. Sequentiell mit kurzer Pause zwischen den
-     * Gemini-Calls damit kein Rate-Limit ausgeloest wird. Status-Updates landen
-     * im rescoreProgressFlow → der TasksScreen zeigt einen Banner "X von Y
-     * Aufgaben neu bewertet".
-     *
-     * Robustes Error-Handling: Ein fehlgeschlagener Eintrag bricht die Schleife
-     * NICHT ab — Frank soll am Ende eine Liste haben in der die meisten neu
-     * bewertet sind. Fehlgeschlagene werden in failed gezaehlt.
-     */
-    fun rescoreAllOpenEntries(autoTriggered: Boolean = false) {
-        viewModelScope.launch {
-            val targets = entries.getActive().first()
-                .filter { it.status == EntryStatus.OFFEN || it.status == EntryStatus.IN_ARBEIT }
-            if (targets.isEmpty()) {
-                rescoreProgressFlow.value = null
-                return@launch
-            }
-            rescoreProgressFlow.value = RescoreProgress(done = 0, total = targets.size, failed = 0)
-            var done = 0
-            var failed = 0
-            for (entry in targets) {
-                process.rescoreExisting(entry).onFailure { ex ->
-                    failed++
-                    Diag.w(DiagnosticArea.TASKS, TAG, "Rescore fuer ${entry.id} fehlgeschlagen: ${ex.message}")
-                }.onSuccess {
-                    done++
-                }
-                rescoreProgressFlow.value = RescoreProgress(done = done, total = targets.size, failed = failed)
-                // Sanfte Pause zwischen Calls — Gemini-API verkraftet schnelle Bursts,
-                // aber bei 50+ Eintraegen schont das die Quota und reduziert Hitze.
-                delay(200L)
-            }
-            // Marker setzen — auch wenn ein paar Eintraege fehlgeschlagen sind.
-            // Wenn Frank nochmal will, kann er den Knopf in den Settings nutzen.
-            if (autoTriggered) {
-                secrets.lastRescoreVersionCode = RESCORE_DOCTRINE_VERSION
-            }
-            Diag.i(DiagnosticArea.TASKS, TAG, "Rescore fertig: $done erfolgreich, $failed fehlgeschlagen, total ${targets.size}")
-            // Banner noch 3 Sekunden stehen lassen damit Frank das Ergebnis sieht.
-            delay(3_000L)
-            rescoreProgressFlow.value = null
-            // Nach Re-Score Buckets neu verteilen — die neuen priorityScores
-            // koennten die Bucket-Verteilung beeinflussen.
-            autoBalanceBuckets()
-        }
-    }
 
     /**
      * Periodischer Watcher: prueft minuetlich ob die lokale Datums-Komponente
@@ -1058,99 +891,5 @@ class TasksViewModel @Inject constructor(
 
     companion object {
         private const val TAG = "TasksViewModel"
-        /**
-         * versionCode bei dem die priorityScore-Doktrin zuletzt geaendert wurde.
-         * Wenn lastRescoreVersionCode (in EncryptedSecretsStore) kleiner ist,
-         * triggert der ViewModel-Init einen einmaligen Auto-Re-Score aller
-         * offenen Aufgaben. Beim naechsten Doktrin-Update bitte hier die neue
-         * versionCode-Nummer eintragen. Historie:
-         *   29 (0.6.0): Erste 5-Farben-Skala mit Entropie-Reduktion-Definition
-         *   31 (0.6.2): Vollausbau mit Entropie-Definition, Wellbeing-First-
-         *               Prinzip, drei Score-Achsen, Frank-spezifischen Beispielen
-         *               pro Stufe, Aufwand-Nutzen-Hebel und 5-10%-Quote fuer Rot.
-         */
-        private const val RESCORE_DOCTRINE_VERSION = 31
-        private val TASK_PROCESSED_KEY = stringPreferencesKey("processed_idea_ids")
-        private val HABIT_PROCESSED_KEY = stringPreferencesKey("habit_processed_idea_ids")
     }
-}
-
-// ============================================================================
-// Private Helper fuer den Suggestion-Import im refreshAll()
-// ============================================================================
-
-private suspend fun storeKiTaskSuggestions(
-    context: android.content.Context,
-    newSuggestions: List<de.frank.entropyreducer.domain.usecase.AutoTaskSuggestion>,
-) {
-    // ID-Architektur Etappe 2c (Frank-Wunsch 2026-06-19): Aufgaben-Vorschlaege liegen in Room
-    // (task_suggestions) statt im DataStore-JSON. Etappe 2d: Herkunft der Quell-Idee mitschreiben.
-    val nowMs = System.currentTimeMillis()
-    de.frank.entropyreducer.data.local
-        .taskSuggestionDaoFrom(context)
-        .upsertAll(
-            newSuggestions.mapIndexed { index, s ->
-                de.frank.entropyreducer.data.local.entities.TaskSuggestionEntity(
-                    id = s.id,
-                    title = s.title,
-                    description = s.description,
-                    createdAt = nowMs + index,
-                    originId = s.originId,
-                    originType = s.originType,
-                    rootId = s.rootId,
-                )
-            }
-        )
-}
-
-private suspend fun loadProcessedIds(
-    store: DataStore<Preferences>,
-    key: androidx.datastore.preferences.core.Preferences.Key<String>,
-): Set<String> {
-    return store.data.first().let { prefs ->
-        val raw = prefs[key] ?: return@let emptySet()
-        runCatching {
-            val arr = JSONArray(raw)
-            buildSet(arr.length()) {
-                for (i in 0 until arr.length()) {
-                    arr.optString(i).takeIf { it.isNotBlank() }?.let { add(it) }
-                }
-            }
-        }.getOrDefault(emptySet())
-    }
-}
-
-private suspend fun saveProcessedIds(
-    store: DataStore<Preferences>,
-    key: androidx.datastore.preferences.core.Preferences.Key<String>,
-    ids: Set<String>,
-) {
-    store.edit { prefs ->
-        val arr = JSONArray()
-        ids.forEach { arr.put(it) }
-        prefs[key] = arr.toString()
-    }
-}
-
-private suspend fun storeHabitSuggestions(
-    context: android.content.Context,
-    newSuggestions: List<de.frank.entropyreducer.domain.usecase.AutoHabitSuggestion>,
-) {
-    // ID-Architektur Etappe 3c/3d (Frank-Wunsch 2026-06-19): Gewohnheits-Vorschlaege in Room
-    // (habit_suggestions) statt im DataStore-JSON, mit Herkunft der Quell-Idee.
-    val nowMs = System.currentTimeMillis()
-    de.frank.entropyreducer.data.local
-        .habitSuggestionDaoFrom(context)
-        .upsertAll(
-            newSuggestions.mapIndexed { index, s ->
-                de.frank.entropyreducer.data.local.entities.HabitSuggestionEntity(
-                    id = s.id,
-                    text = s.text,
-                    createdAt = nowMs + index,
-                    originId = s.originId,
-                    originType = s.originType,
-                    rootId = s.rootId,
-                )
-            }
-        )
 }

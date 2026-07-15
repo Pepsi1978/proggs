@@ -172,26 +172,6 @@ class EncryptedSecretsStore @Inject constructor(
         get() = prefs.getLong(KEY_DRIVE_LAST_BACKUP, 0L)
         set(value) { prefs.edit().putLong(KEY_DRIVE_LAST_BACKUP, value).apply() }
 
-    /**
-     * versionCode der App bei dem zuletzt eine automatische Re-Bewertung aller
-     * offenen Aufgaben mit der priorityScore-Doktrin gelaufen ist. Wenn dieser
-     * Wert kleiner als der aktuelle versionCode ist und es eine neue Doktrin-
-     * Version gibt, triggert TasksViewModel.init einen Auto-Re-Score.
-     * 0 = noch nie gelaufen.
-     */
-    var lastRescoreVersionCode: Int
-        get() = prefs.getInt(KEY_LAST_RESCORE_VERSION, 0)
-        set(value) { prefs.edit().putInt(KEY_LAST_RESCORE_VERSION, value).apply() }
-
-    /**
-     * Zeitpunkt (epoch ms) des letzten automatischen Aufgaben-Refresh beim App-Start
-     * (Frank-Wunsch 2026-05-22). Throttle: wir laufen hoechstens einmal pro 6 Stunden,
-     * damit Cold-Starts kurz hintereinander keine Gemini-Quota verbrennen.
-     */
-    var lastStartupRefreshAtMs: Long
-        get() = prefs.getLong(KEY_LAST_STARTUP_REFRESH, 0L)
-        set(value) { prefs.edit().putLong(KEY_LAST_STARTUP_REFRESH, value).apply() }
-
     fun clearAll() {
         prefs.edit().clear().apply()
     }
@@ -240,8 +220,6 @@ class EncryptedSecretsStore @Inject constructor(
         private const val KEY_DRIVE_ENABLED = "drive_backup_enabled"
         private const val KEY_DRIVE_LAST_BACKUP = "drive_last_backup_ms"
         private const val KEY_CALENDAR_ACCOUNT = "calendar_account_email"
-        private const val KEY_LAST_RESCORE_VERSION = "last_rescore_version_code"
-        private const val KEY_LAST_STARTUP_REFRESH = "last_startup_refresh_at_ms"
         // Zepp / Amazfit Cloud-API Felder entfernt 2026-05-22 (Sprint 3).
         // Migration: KEY_ZEPP_CLEANUP_DONE markiert dass alte Eintraege bereits geleert wurden.
         private const val KEY_ZEPP_CLEANUP_DONE = "zepp_cleanup_done_v1"

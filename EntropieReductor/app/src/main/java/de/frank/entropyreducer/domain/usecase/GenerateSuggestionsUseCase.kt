@@ -80,10 +80,7 @@ data class SuggestionResult(
  * Verwendet EINEN kombinierten Prompt fuer Aufgaben UND Gewohnheiten.
  * Die KI entscheidet pro Idee exklusiv: Aufgabe oder Gewohnheit.
  *
- * Wird aufgerufen:
- *  1. Beim App-Start (via StartupViewModel)
- *  2. Beim Aktualisieren-Button im Aufgaben-Reiter (via TasksViewModel.refreshAll)
- *  3. Beim KI-Button in den jeweiligen Screens (via die bestehenden ViewModels)
+ * Wird beim KI-Button in den jeweiligen Screens aufgerufen.
  */
 @Singleton
 class GenerateSuggestionsUseCase @Inject constructor(

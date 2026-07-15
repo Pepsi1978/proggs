@@ -73,7 +73,6 @@ import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
-import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Snackbar
 import androidx.compose.material3.SnackbarHost
@@ -397,19 +396,21 @@ fun TasksScreen(
         titleEndContent = {},
         showBottomBar = showBottomBar,
         actions = {
-            // Refresh-Button (Frank-Wunsch 2026-05-22): aktualisiert den
-            // gesamten Aufgabenreiter — Rollover, Bucket-Balance, Auto-Archiv
-            // und neue Bewertung aller offenen Aufgaben mit aktuellen
-            // Nachtraegen + Zeitanpassungen.
+            // Der Aufgabenstand ist reaktiv. Der Button aktualisiert deshalb nur
+            // das Drive-Backup und startet keine globale KI-Neubewertung.
             IconButton(
                 onClick = {
-                    vm.refreshAll()
-                    scope.launch { snackbar.showSnackbar("Aufgaben werden aktualisiert …") }
+                    val message = if (vm.refreshBackup()) {
+                        "Backup wird aktualisiert …"
+                    } else {
+                        "Kein Drive-Backup eingerichtet"
+                    }
+                    scope.launch { snackbar.showSnackbar(message) }
                 }
             ) {
                 Icon(
                     imageVector = Icons.Outlined.Refresh,
-                    contentDescription = "Aufgaben aktualisieren",
+                    contentDescription = "Backup aktualisieren",
                     tint = cosmos.textPrimary,
                 )
             }
@@ -462,18 +463,6 @@ fun TasksScreen(
                 // ausschliesslich im Analyse-Tab. Hier raus, damit der sichtbare
                 // Bereich fuer Aufgaben nach oben wandert.
                 Spacer(Modifier.height(8.dp))
-
-                // Re-Score-Banner: laeuft eine Re-Bewertung aller offenen Aufgaben
-                // mit der aktuellen priorityScore-Doktrin? Frank-Wunsch 2026-05-09:
-                // beim ersten Start nach Doktrin-Update sollen die Aufgaben EINMAL
-                // automatisch neu bewertet werden, damit die farbige Prio-Zahl
-                // auch bei alten Eintraegen die richtige Farbe trifft. Der Banner
-                // zeigt Fortschritt (X von Y) — kein Spinner-Modal, damit Frank
-                // weiter mit der App arbeiten kann waehrend es laeuft.
-                state.rescoreProgress?.let { rp ->
-                    RescoreBanner(rp)
-                    Spacer(Modifier.height(8.dp))
-                }
 
                 state.processingMessage?.let {
                     GlassCard(
@@ -2282,55 +2271,6 @@ private fun BackupStatusBadge(syncStatus: SyncStatus, lastBackupAtMs: Long) {
         )
         Spacer(Modifier.width(6.dp))
         Text(text = label, style = MaterialTheme.typography.bodySmall, color = cosmos.textSecondary)
-    }
-}
-
-/**
- * Banner direkt unter dem Titel "Entropie Reduktor" wenn gerade alle offenen Aufgaben mit der
- * aktualisierten priorityScore-Doktrin neu bewertet werden (Frank-Wunsch 2026-05-09 — neue
- * 5-Farben-Skala basiert auf Entropie- Reduktion). Zeigt Fortschritt "X von Y", einen schmalen
- * Balken und am Ende "Fertig: X von Y neu bewertet" fuer 3 Sekunden bevor der Banner verschwindet.
- */
-@Composable
-private fun RescoreBanner(progress: RescoreProgress) {
-    val cosmos = LocalCosmos.current
-    val isFinished = progress.done + progress.failed >= progress.total
-    val accent = if (isFinished) LocalCosmos.current.ok else LocalCosmos.current.accent
-    Column(modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp).fillMaxWidth()) {
-        Row(verticalAlignment = Alignment.CenterVertically) {
-            Icon(
-                imageVector = Icons.Outlined.AutoAwesome,
-                contentDescription = null,
-                tint = accent,
-                modifier = Modifier.size(16.dp),
-            )
-            Spacer(Modifier.width(6.dp))
-            val label =
-                when {
-                    isFinished && progress.failed == 0 ->
-                        "Aufgaben mit neuer Skala neu bewertet (${progress.done} von ${progress.total})"
-                    isFinished && progress.failed > 0 ->
-                        "Neu bewertet: ${progress.done} von ${progress.total} — ${progress.failed} fehlgeschlagen"
-                    else ->
-                        "Aufgaben werden mit neuer Skala neu bewertet … ${progress.done} von ${progress.total}"
-                }
-            Text(
-                text = label,
-                style = MaterialTheme.typography.bodySmall,
-                color = cosmos.textSecondary,
-            )
-        }
-        Spacer(Modifier.height(4.dp))
-        if (!isFinished && progress.total > 0) {
-            LinearProgressIndicator(
-                progress = {
-                    (progress.done + progress.failed).toFloat() / progress.total.toFloat()
-                },
-                modifier = Modifier.fillMaxWidth().height(3.dp),
-                color = accent,
-                trackColor = cosmos.glassBg,
-            )
-        }
     }
 }
 
