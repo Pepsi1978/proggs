@@ -419,6 +419,7 @@ fun MentalBoardScreen(
 
     var showAddDialog by remember { mutableStateOf(false) }
     var editTarget by remember { mutableStateOf<Mental?>(null) }
+    var mentalPlusMicOpen by remember { mutableStateOf(false) }
     // Eigener Erstell-/Bearbeiten-Flow fuer die speziellen Mentals (ausgeloest ueber das Plus).
     var specialMicOpen by remember { mutableStateOf(false) }
     var showSpecialAddDialog by remember { mutableStateOf(false) }
@@ -536,6 +537,13 @@ fun MentalBoardScreen(
                             }
                         }
                     }
+                    item(key = "mental_add") {
+                        MentalAddButton(
+                            accent = MentalAccent,
+                            contentDescription = "Mental hinzufügen",
+                            onClick = { mentalPlusMicOpen = true },
+                        )
+                    }
                     // Chirp-3-HD-Kontingentzeile ("HD-Linie") — darunter der Spezial-Bereich.
                     item(key = "tts_usage_footer") {
                         TtsUsageFooter(usage = ttsUsage)
@@ -582,6 +590,16 @@ fun MentalBoardScreen(
                 onWriteClick = { showSpecialAddDialog = true },
                 modifier = Modifier.align(Alignment.BottomCenter),
                 voiceVm = hiltViewModel(key = "special_mental_voice"),
+            )
+
+            MicCaptureActions(
+                visible = mentalPlusMicOpen,
+                accent = MentalAccent,
+                onTextCommit = { text, _ -> scope.launch { addMental(context, text) } },
+                onClose = { mentalPlusMicOpen = false },
+                onWriteClick = { showAddDialog = true },
+                modifier = Modifier.align(Alignment.BottomCenter),
+                voiceVm = hiltViewModel(key = "normal_mental_plus_voice"),
             )
         }
     }
@@ -773,7 +791,11 @@ private fun SpecialMentalsSection(
                 onClick = { onEditSpecial(sm) },
             )
         }
-        SpecialAddButton(onClick = onAddClick)
+        MentalAddButton(
+            accent = cosmos.ok,
+            contentDescription = "Spezielles Mental hinzufügen",
+            onClick = onAddClick,
+        )
         SpecialMentalPlaybackControls(
             isPlaying = state.isPlaying,
             isPaused = state.isPaused,
@@ -825,7 +847,11 @@ private fun SpecialMentalRow(
 
 /** Das Plus zum Hinzufuegen eines speziellen Mentals (oeffnet Schreiben/Aufnehmen wie das Mikrofon). */
 @Composable
-private fun SpecialAddButton(onClick: () -> Unit) {
+private fun MentalAddButton(
+    accent: Color,
+    contentDescription: String,
+    onClick: () -> Unit,
+) {
     val cosmos = LocalCosmos.current
     val cardBg = if (cosmos.isDark) Color(0xFF1D1A16) else Color.White
     Row(
@@ -840,8 +866,8 @@ private fun SpecialAddButton(onClick: () -> Unit) {
     ) {
         Icon(
             imageVector = Icons.Outlined.Add,
-            contentDescription = "Spezielles Mental hinzufügen",
-            tint = cosmos.ok,
+            contentDescription = contentDescription,
+            tint = accent,
             modifier = Modifier.size(28.dp),
         )
     }
