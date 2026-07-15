@@ -59,6 +59,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.stringPreferencesKey
+import androidx.datastore.preferences.core.stringSetPreferencesKey
 import androidx.datastore.preferences.preferencesDataStore
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import de.frank.entropyreducer.data.safety.PhoneContentGuard
@@ -73,6 +74,7 @@ import de.frank.entropyreducer.presentation.theme.LocalCosmos
 import java.util.Locale
 import java.util.UUID
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.launch
@@ -113,6 +115,7 @@ data class Mental(
     // Restore. Default 0L haelt aeltere serialisierte Daten/Backups lesbar (sie gelten als "uralt"
     // und verlieren damit gegen jede echte Bearbeitung).
     val updatedAt: Long = 0L,
+    val enabled: Boolean = false,
 ) {
     companion object {
         fun create(text: String): Mental =
@@ -126,6 +129,7 @@ data class Mental(
 
 private val Context.mentalStore by preferencesDataStore(name = "mental_board")
 private val KEY_MENTALS = stringPreferencesKey("mentals_json")
+private val KEY_ENABLED_MENTALS = stringSetPreferencesKey("enabled_mental_ids")
 
 /**
  * Liste in GESPEICHERTER Reihenfolge (NICHT sortiert — das manuelle Sortieren ist die Reihenfolge).
@@ -134,10 +138,19 @@ private val KEY_MENTALS = stringPreferencesKey("mentals_json")
 // mental_sentences, sortiert nach `position`) statt im DataStore-JSON. Signaturen bleiben 1:1 — UI,
 // Backup (mentalsFlow) und Sync (restoreMentals) laufen unveraendert weiter; DAO per Hilt-@EntryPoint.
 internal fun mentalsFlow(context: Context): Flow<List<Mental>> =
-    de.frank.entropyreducer.data.local
-        .mentalSentenceDaoFrom(context)
-        .getAll()
-        .map { rows -> rows.map { Mental(id = it.id, text = it.text, updatedAt = it.updatedAt) } }
+    combine(
+        de.frank.entropyreducer.data.local.mentalSentenceDaoFrom(context).getAll(),
+        context.mentalStore.data.map { it[KEY_ENABLED_MENTALS].orEmpty() },
+    ) { rows, enabledIds ->
+        rows.map {
+            Mental(
+                id = it.id,
+                text = it.text,
+                updatedAt = it.updatedAt,
+                enabled = it.id in enabledIds,
+            )
+        }
+    }
         .distinctUntilChanged()
 
 /** JSON-Lesequelle der Bestands-Mentals NUR fuer den einmaligen Migrator (MentalRoomMigrator, 4b). */
@@ -169,6 +182,14 @@ internal suspend fun updateMental(context: Context, id: String, text: String) {
     val current = dao.getById(id) ?: return
     dao.update(current.copy(text = clean, updatedAt = System.currentTimeMillis()))
     de.frank.entropyreducer.data.remote.drive.triggerDriveBackup(context, "Mental-Reiter: Aenderung")
+}
+
+internal suspend fun setMentalEnabled(context: Context, id: String, enabled: Boolean) {
+    context.mentalStore.edit { preferences ->
+        val enabledIds = preferences[KEY_ENABLED_MENTALS].orEmpty().toMutableSet()
+        if (enabled) enabledIds.add(id) else enabledIds.remove(id)
+        preferences[KEY_ENABLED_MENTALS] = enabledIds
+    }
 }
 
 internal suspend fun deleteMental(context: Context, id: String, propagate: Boolean = true) {
@@ -454,44 +475,54 @@ fun MentalBoardScreen(
                     .padding(padding)
         ) {
             Column(modifier = Modifier.fillMaxSize()) {
-                if (ttsState.isPlaying) {
-                    Column(
-                        modifier = Modifier.fillMaxWidth().padding(start = 16.dp, top = 16.dp, end = 16.dp),
-                        verticalArrangement = Arrangement.spacedBy(10.dp),
-                    ) {
-                        MentalPlaybackControls(
-                            isPaused = ttsState.isPaused,
-                            onPlay = ttsVm::resume,
-                            onPause = ttsVm::pause,
-                        )
-                        MentalRemainingTime(
-                            remainingMs = ttsState.autoStopRemainingMs,
-                            isPaused = ttsState.isPaused,
-                        )
-                    }
-                }
                 LazyColumn(
                     state = lazyListState,
                     modifier = Modifier.weight(1f).fillMaxWidth(),
                     contentPadding =
                         PaddingValues(
                             start = 16.dp,
-                            top = if (ttsState.isPlaying) 10.dp else 16.dp,
+                            top = 16.dp,
                             end = 16.dp,
                             bottom = 160.dp,
                         ),
                     verticalArrangement = Arrangement.spacedBy(10.dp),
                 ) {
+                    item(key = "mental_player") {
+                        Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                            SpecialMentalPlaybackControls(
+                                isPlaying = ttsState.isPlaying,
+                                isPaused = ttsState.isPaused,
+                                onPlay = {
+                                    ttsVm.play(
+                                        displayed.filter { it.enabled },
+                                        gewohnheiten,
+                                    )
+                                },
+                                onPause = ttsVm::pause,
+                                onStop = ttsVm::stop,
+                            )
+                            if (ttsState.isPlaying) {
+                                MentalRemainingTime(
+                                    remainingMs = ttsState.autoStopRemainingMs,
+                                    isPaused = ttsState.isPaused,
+                                )
+                            }
+                        }
+                    }
                     if (displayed.isEmpty()) {
                         item(key = "empty_state") { EmptyState() }
                     } else {
                         items(displayed, key = { it.id }) { mental ->
                             ReorderableItem(reorderState, key = mental.id) { isDragging ->
-                                val position = displayed.indexOfFirst { it.id == mental.id } + 1
                                 MentalRow(
-                                    position = position,
                                     text = mental.text,
+                                    enabled = mental.enabled,
                                     isDragging = isDragging,
+                                    onToggle = {
+                                        scope.launch {
+                                            setMentalEnabled(context, mental.id, !mental.enabled)
+                                        }
+                                    },
                                     onClick = { editTarget = mental },
                                     dragModifier =
                                         Modifier.longPressDraggableHandle(
@@ -940,9 +971,10 @@ private fun TtsUsageFooter(usage: TtsUsage) {
 
 @Composable
 private fun MentalRow(
-    position: Int,
     text: String,
+    enabled: Boolean,
     isDragging: Boolean,
+    onToggle: () -> Unit,
     onClick: () -> Unit,
     dragModifier: Modifier,
 ) {
@@ -965,25 +997,15 @@ private fun MentalRow(
                 )
                 .clickable { onClick() }
                 .then(dragModifier)
-                .padding(horizontal = 14.dp, vertical = 14.dp),
+                .padding(start = 6.dp, end = 14.dp, top = 4.dp, bottom = 4.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        // Nummern-Kreis in Akzentfarbe
-        Box(
-            modifier =
-                Modifier.size(30.dp)
-                    .clip(RoundedCornerShape(15.dp))
-                    .background(MentalAccent.copy(alpha = 0.16f)),
-            contentAlignment = Alignment.Center,
-        ) {
-            Text(
-                text = "$position",
-                style = MaterialTheme.typography.labelLarge,
-                color = MentalAccent,
-                fontWeight = FontWeight.Bold,
-            )
-        }
-        Spacer(Modifier.size(12.dp))
+        Checkbox(
+            checked = enabled,
+            onCheckedChange = { onToggle() },
+            colors = CheckboxDefaults.colors(checkedColor = cosmos.ok),
+        )
+        Spacer(Modifier.size(6.dp))
         Text(
             text = text,
             style = MaterialTheme.typography.bodyLarge,

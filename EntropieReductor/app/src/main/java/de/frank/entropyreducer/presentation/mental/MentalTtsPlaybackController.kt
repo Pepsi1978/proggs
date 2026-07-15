@@ -94,9 +94,18 @@ constructor(
             stop()
             return
         }
+        startMentalPlayback(mentals, gewohnheiten)
+    }
+
+    fun startMentalPlayback(mentals: List<Mental>, gewohnheiten: List<Mental>) {
+        if (_isPlayingFlow.value && _playbackLabelFlow.value == "Mental") {
+            if (_isPausedFlow.value) resume()
+            return
+        }
+        if (_isPlayingFlow.value) stop()
         val mentalTexts = mentals.map { it.text.trim() }.filter { it.isNotEmpty() }
         if (mentalTexts.isEmpty()) {
-            _errorFlow.value = "Keine Mentals zum Vorlesen vorhanden."
+            _errorFlow.value = "Keine aktivierten Mentals zum Vorlesen vorhanden."
             return
         }
 

@@ -243,6 +243,10 @@ class MentalTtsViewModel
         playback.toggleMentalPlayback(mentals, gewohnheiten)
     }
 
+    fun play(mentals: List<Mental>, gewohnheiten: List<Mental> = emptyList()) {
+        playback.startMentalPlayback(mentals, gewohnheiten)
+    }
+
     fun stop() {
         playback.stop()
     }
