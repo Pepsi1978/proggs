@@ -139,8 +139,18 @@ class MentalTtsViewModel
             playback.isPausedFlow,
             playback.autoStopEndsAtWallClockMsFlow,
             playback.autoStopRemainingMsFlow,
-        ) { playing, paused, autoStopEndsAt, autoStopRemainingMs ->
-            PlaybackState(playing, paused, autoStopEndsAt, autoStopRemainingMs)
+            playback.playbackLabelFlow,
+        ) { playing, paused, autoStopEndsAt, autoStopRemainingMs, label ->
+            // Der obere Mental-Player UND die obere Zeitleiste reagieren NUR auf den echten
+            // Mental-Lauf — nicht auf den Spezial- oder reinen Gewohnheits-Lauf (Frank-Wunsch
+            // 2026-07-15: der untere Spezial-Player ist voellig unabhaengig von den oberen Mentals).
+            val isMental = playing && label == "Mental"
+            PlaybackState(
+                isPlaying = isMental,
+                isPaused = isMental && paused,
+                autoStopEndsAtWallClockMs = if (isMental) autoStopEndsAt else null,
+                autoStopRemainingMs = if (isMental) autoStopRemainingMs else null,
+            )
         }
 
     val uiState: StateFlow<MentalTtsUiState> =
