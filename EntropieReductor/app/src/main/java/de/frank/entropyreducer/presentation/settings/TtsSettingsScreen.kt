@@ -63,10 +63,13 @@ fun TtsSettingsScreen(
     val mentalState by mentalTtsViewModel.uiState.collectAsStateWithLifecycle()
     val gewohnheitState by gewohnheitTtsViewModel.uiState.collectAsStateWithLifecycle()
     val specialState by specialTtsViewModel.uiState.collectAsStateWithLifecycle()
-    // Hellgruener Akzent fuer den Spezial-Bereich (Frank-Wunsch 2026-07-15): NICHT die ganze Karte
-    // einfaerben — nur das runde Symbol davor und der kleine Wert-Picker dahinter sind hellgruen,
-    // genau wie bei den anderen Eintraegen (dort Orange/Blau). Kartenhintergrund bleibt normal.
-    val greenAccent = Color(0xFF86EFAC)
+    // Gruener Akzent fuer den Spezial-Bereich (Frank-Wunsch 2026-07-15): NICHT die ganze Karte
+    // einfaerben — nur das runde Symbol davor und der kleine Wert-Picker dahinter, genau wie bei den
+    // anderen Eintraegen (dort Orange/Blau). Bewusst das kraeftige, theme-adaptive cosmos.ok (hell:
+    // dunkelgruen 0xFF0F9D58, dunkel: 0xFF34C77B) statt eines blassen Hellgruens — sonst waeren
+    // Symbol/Schrift auf dem getoenten Kreis kaum lesbar. Der Kreis-/Picker-Hintergrund wird
+    // automatisch die hell getoente Version davon (accent.copy(alpha = 0.18f/0.12f)).
+    val greenAccent = cosmos.ok
 
     CosmosScaffold(
         title = "Vorlesen",
