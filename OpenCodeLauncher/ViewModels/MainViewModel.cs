@@ -55,8 +55,8 @@ public sealed partial class MainViewModel : ObservableObject
         WorkDir = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), "proggs");
         _ = CheckOpenCodeUpdateAsync();
 
-        var version = Assembly.GetExecutingAssembly().GetName().Version?.ToString(3) ?? "1.17.20";
-        Version = $"Version {version} (16.07.2026, 11.06 Uhr)";
+        var version = Assembly.GetExecutingAssembly().GetName().Version?.ToString(3) ?? "1.17.21";
+        Version = $"Version {version} (16.07.2026, 11.23 Uhr)";
     }
 
     public ObservableCollection<ModelGroupEntry> ModelGroups { get; } = new();
@@ -215,8 +215,9 @@ public sealed partial class MainViewModel : ObservableObject
             (!IsClaudeCodeModel(SelectedModel) || IsClaudeCodeProfileSupported(SelectedProfile.Id));
     }
 
-    // Claude Code unterstuetzt alle drei Profile: Minimal (isolierter Repo-Config-Ordner via
-    // CLAUDE_CONFIG_DIR, keine Skills/Regeln), Standard und Strikt (beide direkt das echte ~/.claude).
+    // Claude Code unterstuetzt alle drei Profile, jedes mit eigenem Repo-Config-Ordner
+    // (CLAUDE_CONFIG_DIR): Minimal (regelfrei, Skills nur per Junction), Standard und Strikt
+    // (versionierte skills/rules/agents/commands im Repo, frei bearbeitbar, auf jedem Rechner gleich).
     private static bool IsClaudeCodeProfileSupported(string profileId) =>
         profileId is "standard" or "minimal" or "strict";
 
@@ -436,7 +437,8 @@ public sealed partial class MainViewModel : ObservableObject
             });
             if (isClaudeCode)
             {
-                // Minimal -> isolierter Repo-Config-Ordner (CLAUDE_CONFIG_DIR); Standard/Strikt -> null -> echtes ~/.claude (volle Skills + Regeln).
+                // Jedes Profil hat seinen eigenen Repo-Config-Ordner (CLAUDE_CONFIG_DIR): Standard/Strikt mit
+                // versionierten skills/rules/agents/commands, Minimal regelfrei (Skills per Junction).
                 var claudeConfigDir = _profiles.EnsureClaudeConfigDir(SelectedProfile.Id);
                 _launcher.LaunchClaudeCode(SelectedModel.Slug, WorkDir, thinkingLevel, claudeConfigDir);
                 StatusText = string.IsNullOrWhiteSpace(thinkingLevel)

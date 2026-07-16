@@ -1,0 +1,557 @@
+<!doctype html><html lang="de"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>cowork-portierung — Test-Review</title>
+<style>
+ body{font-family:-apple-system,Segoe UI,Roboto,sans-serif;max-width:1100px;margin:0 auto;padding:24px;background:#0f1115;color:#e6e8eb;line-height:1.5}
+ h1{font-size:1.6rem} h2{margin-top:2.2rem;border-bottom:1px solid #2a2f3a;padding-bottom:6px}
+ .typ{font-size:.8rem;color:#8b93a7;font-weight:normal}
+ .intro{background:#161a22;border:1px solid #2a2f3a;border-radius:10px;padding:16px 20px}
+ .grid{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin:12px 0}
+ .box{background:#161a22;border:1px solid #2a2f3a;border-radius:10px;padding:12px 14px}
+ .box h3{margin:.2rem 0 .5rem;font-size:.95rem}
+ .before{opacity:.75} .after{border-color:#2f6f43}
+ .len{font-size:.85rem;color:#8b93a7} .len.good{color:#5fd08a} .len.bad{color:#ff7676}
+ pre.desc{white-space:pre-wrap;background:#0c0e13;border-radius:8px;padding:10px;font-size:.85rem;color:#c7e9d4}
+ ul.checks{list-style:none;padding:0;columns:2;gap:18px}
+ ul.checks li{break-inside:avoid;margin:3px 0;font-size:.85rem}
+ ul.checks li.ok{color:#bfe9cd} ul.checks li.bad{color:#ff8a8a}
+ .ev{color:#6b7280;font-size:.78rem}
+ details{margin-top:10px} summary{cursor:pointer;color:#8ab4ff}
+ pre.full{white-space:pre-wrap;background:#0c0e13;border:1px solid #2a2f3a;border-radius:8px;padding:14px;font-size:.8rem;max-height:520px;overflow:auto}
+</style></head><body>
+<h1>cowork-portierung — Test-Review</h1>
+<div class="intro">
+ <p><b>Was hier steht:</b> Der neue Skill <code>cowork-portierung</code> wurde an 3 echten CLI-Skills
+ getestet. Pro Testfall siehst du, wie die <b>description</b> von einem langen Block auf eine
+ Cowork-taugliche Zeile (≤200 Zeichen) gekuerzt wurde, eine gruene Pruefliste, und die komplette
+ portierte Cowork-Fassung zum Aufklappen.</p>
+ <p><b>Gesamtergebnis:</b> Alle 78 objektiven Pruefungen bestanden. Die fachliche Funktionalitaet
+ blieb jeweils vollstaendig erhalten (z.B. bei <code>undo-changes</code> alle 4 Revert-Varianten;
+ bei <code>hook-forge</code> die <code>references/</code> im ZIP).</p>
+</div>
+
+    <section>
+      <h2>sound-search <span class="typ">Basis-Skill (reine SKILL.md)</span></h2>
+      <div class="grid">
+        <div class="box before"><h3>description VORHER (CLI-Original)</h3>
+          <p class="len">~404 Zeichen, mehrzeilig</p></div>
+        <div class="box after"><h3>description NACHHER (Cowork)</h3>
+          <p class="len good">197 Zeichen (Limit 200), einzeilig</p>
+          <pre class="desc">Sucht kostenlose CC0-Sounds auf Freesound und baut IMMER eine anklickbare HTML-Galerie mit 10 nummerierten Vorschlaegen im Browser. Trigger: suche einen Sound, finde einen Klang, Sound-Effekt fuer.</pre></div>
+      </div>
+      <h3>Verifikation: 13/13 Pruefungen bestanden</h3>
+      <ul class="checks"><li class="ok">✓ SKILL.md existiert <span class="ev">C:\Users\barwa\.claude\skills\cowork-portierung-workspace\iteration-1\eval-0-sound-search\with_skill\outputs\skills-src\sound-search\SKILL.md</span></li><li class="ok">✓ description einzeilig in Quotes <span class="ev">ja</span></li><li class="ok">✓ description &lt;= 200 Zeichen <span class="ev">197 Zeichen</span></li><li class="ok">✓ description ohne spitze Klammern <span class="ev">ok</span></li><li class="ok">✓ description ohne URL <span class="ev">ok</span></li><li class="ok">✓ Titel &#x27;(Cowork-Fassung)&#x27; <span class="ev">vorhanden</span></li><li class="ok">✓ Block ## 0. (Ablage relativ) <span class="ev">vorhanden</span></li><li class="ok">✓ Block ## 0a. (Mount/Git-Fallen) <span class="ev">vorhanden</span></li><li class="ok">✓ keine festen ~/proggs-Pfade (ausser cowork-git.sh) <span class="ev">ok</span></li><li class="ok">✓ Sichern via cowork-git.sh <span class="ev">vorhanden</span></li><li class="ok">✓ ZIP existiert <span class="ev">C:\Users\barwa\.claude\skills\cowork-portierung-workspace\iteration-1\eval-0-sound-search\with_skill\outputs\sound-search.zip</span></li><li class="ok">✓ ZIP-Wurzel = &lt;name&gt;/, SKILL.md enthalten <span class="ev">ok</span></li><li class="ok">✓ ZIP forward-slash (kein Backslash) <span class="ev">ok</span></li></ul>
+      <details><summary>Volle portierte Cowork-SKILL.md anzeigen (171 Zeilen)</summary>
+        <pre class="full">---
+name: sound-search
+description: &quot;Sucht kostenlose CC0-Sounds auf Freesound und baut IMMER eine anklickbare HTML-Galerie mit 10 nummerierten Vorschlaegen im Browser. Trigger: suche einen Sound, finde einen Klang, Sound-Effekt fuer.&quot;
+---
+
+# Sound Search (Cowork-Fassung) — kostenlose CC0-Sounds finden &amp; vergleichen
+
+Findet kostenlose CC0-Sound-Effekte auf Freesound und baut IMMER eine anklickbare HTML-Galerie mit
+standardmaessig 10 nummerierten Vorschlaegen, die im Browser geoeffnet wird — damit man die Sounds
+vergleichen und per Nummer auswaehlen kann. Laeuft in der **Claude-Cowork-Desktop-App**.
+
+---
+
+## 0. ZUERST LESEN — Ablage-Ort &amp; Ordner anlegen (Cowork)
+
+**Alle Dateien werden RELATIV im aktuell verbundenen Arbeitsordner gespeichert** (ueblicherweise der
+gemountete `proggs`-Ordner) — NICHT in einen fest verdrahteten `~/proggs`-Pfad:
+
+| Was | Relativer Pfad |
+|-----|----------------|
+| Temp-Galerie + MP3-Vorschauen | `sound-search/&lt;thema&gt;/` (Galerie `auswahl.html` + `01_...mp3` … `10_...mp3`) |
+| Finaler Sound ins Projekt (nach Auswahl) | `&lt;projektordner&gt;/app/src/main/res/raw/&lt;name&gt;.ogg` bzw. `.wav` |
+
+**Ordner-anlegen ist Pflicht und erlaubt:** Fehlt ein Ziel-/Zwischenordner → ERST anlegen
+(Datei-Werkzeug bzw. `mkdir -p`, falls Shell verfuegbar), DANN schreiben. NIEMALS abbrechen, weil ein
+Ordner fehlt. Anderer Basis-Ordner vom Benutzer genannt → dorthin (gleiche Struktur).
+
+## 0a. Cowork-Umgebung — Schreib- &amp; Git-Fallen (PFLICHT beachten)
+
+&gt; Volltext: `bugs/claude-tooling/cowork.md` + `bugs/claude-tooling/cowork-git-push.md` im Arbeitsordner.
+
+- **Mount-Schreibfalle:** Die Mount-Bruecke kann das **Dateiende abschneiden**. Nach JEDEM Schreiben
+  (besonders der `auswahl.html`) das Dateiende pruefen (`tail -1`, `wc -l`).
+- **~45s-Shell-Limit:** Jeder curl-/Schreib-/Git-Schritt muss in EINEM Shell-Aufruf durchlaufen;
+  Hintergrundprozesse ueberleben den Aufruf-Wechsel nicht.
+- **Git NIEMALS nackt:** IMMER ueber `bash ~/proggs/cowork-git.sh` (Datenverlust-Waechter). NIE direktes `git`.
+
+---
+
+## Voraussetzung: Freesound-Konto + API-Key
+
+**Frank hat bereits ein Freesound-Konto + API-Key.** NIEMALS eine Neu-Registrierung vorschlagen.
+Key pruefen:
+```bash
+cat ~/.config/freesound/api_key 2&gt;/dev/null
+```
+- **Key da** → SOFORT suchen (kein Account-Schritt, keine Rueckfrage).
+- **Datei fehlt mal** (neuer Rechner / geloescht) → NICHT registrieren lassen. Sagen, dass nur die
+  lokale Key-Datei fehlt, und Frank um seinen vorhandenen Key bitten, dann speichern:
+  ```bash
+  mkdir -p ~/.config/freesound &amp;&amp; printf &#x27;%s&#x27; &quot;THE_KEY&quot; &gt; ~/.config/freesound/api_key
+  ```
+
+## Schritt 1: Verstehen, welcher Sound gebraucht wird
+
+Den Benutzer fragen (oder aus dem Kontext ableiten):
+- **Was soll der Sound ausloesen?** (Button-Click, Timer-Tick, Erfolg, Fehler, Benachrichtigung, Uebergang)
+- **Welche Stimmung?** (spielerisch, ernst, minimalistisch, retro, modern)
+- **Wie lang?** (kurz &lt; 1s, mittel 1-3s, lang &gt; 3s)
+
+## Schritt 2: Freesound durchsuchen
+
+```bash
+API_KEY=$(cat ~/.config/freesound/api_key)
+curl -s &quot;https://freesound.org/apiv2/search/text/?query=SUCHBEGRIFF&amp;filter=duration:[0+TO+5]+license:\&quot;Creative+Commons+0\&quot;&amp;fields=id,name,duration,avg_rating,num_ratings,previews,tags,license&amp;page_size=8&amp;sort=rating_desc&amp;token=$API_KEY&quot;
+```
+
+**Suchtipps fuer gute Treffer (Suchbegriffe IMMER Englisch):**
+| App-Kontext | Suchbegriffe |
+|-------------|--------------|
+| Button-Click | `click ui`, `button tap`, `interface click` |
+| Erfolg/Richtig | `success chime`, `correct answer`, `achievement` |
+| Fehler/Falsch | `error buzz`, `wrong answer`, `negative beep` |
+| Timer/Countdown | `tick tock`, `clock tick`, `timer beep` |
+| Benachrichtigung | `notification chime`, `alert tone`, `ping` |
+| Uebergang/Swipe | `whoosh`, `swipe`, `transition swoosh` |
+| Muenzen/Punkte | `coin collect`, `point score`, `reward` |
+| Levelaufstieg | `level up`, `fanfare short`, `upgrade` |
+
+## Schritt 3: HTML-Galerie bauen + im Browser oeffnen (PFLICHT)
+
+&gt; **Bei JEDER Sound-Suche IMMER eine anklickbare HTML-Galerie bauen und im Browser oeffnen —
+&gt; NICHT die Sounds einzeln im Terminal vorspielen.** Grund: kurzes Anhoeren erlaubt keine Zuordnung
+&gt; (&quot;welcher Sound war das?&quot;). Der Benutzer will klicken, vergleichen, dann sagen &quot;Sound 3 einbauen&quot;.
+
+Ablauf:
+1. **Standardmaessig 10 Vorschlaege** sammeln (mehrere Suchbegriffe kombinieren, falls eine Query zu
+   wenig CC0-Treffer liefert — `page_size` hoch genug, Duplikate per ID raus).
+2. Die `preview-hq-mp3`-Dateien aller 10 in den relativen Galerie-Ordner laden
+   (`sound-search/&lt;thema&gt;/`), Dateinamen nummeriert (`01_...mp3` … `10_...mp3`).
+3. Eine `auswahl.html` daneben schreiben — **eine Karte pro Sound** mit: grosser Nummer (&quot;Sound N&quot;),
+   Titel, 1-Satz-Beschreibung, `&lt;audio controls preload=&quot;none&quot; src=&quot;NN_...mp3&quot;&gt;`, Freesound-Link
+   (`https://freesound.org/s/ID/`) und dem Hinweis &#x27;sag: &quot;Sound N einbauen&quot;&#x27;.
+   HTML **UTF-8 ohne BOM** schreiben (sonst kaputte Umlaute). Danach Dateiende pruefen (Mount-Falle).
+4. Im Browser oeffnen (plattformrichtig): macOS `open`, Linux `xdg-open`, Windows `start`.
+5. Der Benutzer waehlt per Nummer (&quot;Sound 3 einbauen&quot;) → dann Schritt 4 (HQ laden + ins Projekt).
+
+Optionales Zusatz-Vorspielen im Terminal (nur auf Wunsch &quot;spiel Nummer X nochmal&quot;), plattformrichtig:
+```bash
+# macOS: afplay datei.mp3   |   Linux: ffplay -nodisp -autoexit datei.mp3
+```
+
+## Schritt 4: Ausgewaehlten Sound ins Projekt uebernehmen
+
+```bash
+# HQ-Version laden (OAuth fuer manche Lizenzen noetig)
+curl -sL &quot;https://freesound.org/apiv2/sounds/ID/download/?token=$API_KEY&quot; -o /tmp/sound_hq.wav
+# Fuer Android nach OGG Vorbis konvertieren (falls ffmpeg verfuegbar) — Ziel RELATIV:
+ffmpeg -i /tmp/sound_hq.wav -c:a libvorbis -q:a 5 &lt;projektordner&gt;/app/src/main/res/raw/&lt;name&gt;.ogg 2&gt;/dev/null
+# Oder WAV direkt kopieren:
+cp /tmp/sound_hq.wav &lt;projektordner&gt;/app/src/main/res/raw/&lt;name&gt;.wav
+```
+
+## Schritt 5: Zapsplat-Vorschlaege (kein API)
+
+Zapsplat hat keine oeffentliche API → Browse-Links generieren:
+```
+Zapsplat-Suche: https://www.zapsplat.com/sound-effect-category/CATEGORY/
+```
+| Kategorie | Zapsplat-URL |
+|-----------|--------------|
+| UI/Interface | https://www.zapsplat.com/sound-effect-category/button-and-interface/ |
+| Games | https://www.zapsplat.com/sound-effect-category/game-sounds/ |
+| Alerts | https://www.zapsplat.com/sound-effect-category/alarms-and-alerts/ |
+| Transitions | https://www.zapsplat.com/sound-effect-category/whoosh-and-swoosh/ |
+| Comedy | https://www.zapsplat.com/sound-effect-category/comedy-and-cartoon/ |
+
+## Schritt 6: Lizenz-Check
+
+**DEFAULT: Nur CC0-Sounds** (kommerziell nutzbar, keine Attribution, Play Store OK). Harte Regel.
+- **CC0**: frei, keine Attribution — DEFAULT, immer diesen Filter.
+- **CC-BY**: nur wenn der Benutzer ausdruecklich mehr Optionen will (Credits-Screen noetig).
+- **CC-BY-NC**: NIEMALS verwenden — nicht mit kommerziellen Play-Store-Apps vereinbar.
+
+## Proaktive Sound-Vorschlaege
+
+Bei JEDER App mit UI-Interaktionen proaktiv vorschlagen: Button-Taps (kurzer Click 50-100ms),
+Erfolgs-Sounds (aufsteigende Tonfolge), Fehler-Sounds (kurzer Buzz/absteigender Ton), Uebergaenge
+(sanfter Whoosh), dezente Ambient-Loops. Danach: &#x27;Soll ich passende Sounds auf Freesound suchen?&#x27;
+
+## SONNISS Free Pack (Bonus)
+
+Jaehrliche kostenlose Packs von `https://sonniss.com/gameaudiogdc/` — Studio-Qualitaet, royalty-free,
+keine Attribution, kommerzielle Nutzung erlaubt, WAV. Gut fuer: Game-Effekte, cinematic, ambient.
+
+---
+
+## Sichern (Cowork-Git)
+
+Falls ein Git-Repo verbunden ist und etwas Bleibendes ins Projekt uebernommen wurde:
+```bash
+bash ~/proggs/cowork-git.sh setup        # auf &quot;Push-Zugang OK&quot; warten
+bash ~/proggs/cowork-git.sh push-files &quot;#NNN - sound: &lt;name&gt; eingebaut&quot; &lt;projektordner&gt;/app/src/main/res/raw/&lt;name&gt;.ogg
+```
+Nur die eigenen, eben geaenderten relativen Pfade nennen. **Kein Git-Repo verbunden → nur speichern
+und den Ablage-Pfad nennen.** Die Temp-Galerie (`sound-search/&lt;thema&gt;/`) wird NICHT committet.
+
+## Was NIEMALS passieren darf
+
+- **Keine Neu-Registrierung** bei Freesound vorschlagen — der Key existiert (fehlt die Datei: Key erfragen).
+- **CC-BY-NC-Sounds** vorschlagen — nicht Play-Store-kompatibel. DEFAULT bleibt CC0.
+- Sounds nur einzeln im Terminal vorspielen statt die HTML-Galerie zu bauen (Auswahl waere nicht moeglich).
+- macOS-`afplay` auf einer Nicht-macOS-Plattform aufrufen (plattformrichtig bleiben).
+- Feste `~/proggs`-Pfade fuers Speichern verwenden (ausser `~/proggs/cowork-git.sh`) — relativ schreiben.
+- Nacktes `git commit`/`git push` aus Cowork — immer `cowork-git.sh`.
+- Dateiende der `auswahl.html` nach dem Schreiben nicht pruefen (Mount-Truncation-Gefahr).
+
+## Referenzen
+
+- Galerie + Vorschauen: `sound-search/&lt;thema&gt;/auswahl.html`
+- Cowork-Regeln: `bugs/claude-tooling/cowork.md`, `bugs/claude-tooling/cowork-git-push.md` (im Arbeitsordner)
+</pre></details>
+    </section>
+    
+    <section>
+      <h2>undo-changes <span class="typ">Git-Skill (Git -&gt; cowork-git.sh)</span></h2>
+      <div class="grid">
+        <div class="box before"><h3>description VORHER (CLI-Original)</h3>
+          <p class="len">~197 Zeichen, mehrzeilig</p></div>
+        <div class="box after"><h3>description NACHHER (Cowork)</h3>
+          <p class="len good">191 Zeichen (Limit 200), einzeilig</p>
+          <pre class="desc">Nimmt den/die letzten Commit(s) sicher per revert zurueck (lokal UND auf GitHub), ohne force-push. Trigger: mach rueckgaengig, undo, revert, Aenderung zuruecknehmen, geh zum vorherigen Stand.</pre></div>
+      </div>
+      <h3>Verifikation: 13/13 Pruefungen bestanden</h3>
+      <ul class="checks"><li class="ok">✓ SKILL.md existiert <span class="ev">C:\Users\barwa\.claude\skills\cowork-portierung-workspace\iteration-1\eval-1-undo-changes\with_skill\outputs\skills-src\undo-changes\SKILL.md</span></li><li class="ok">✓ description einzeilig in Quotes <span class="ev">ja</span></li><li class="ok">✓ description &lt;= 200 Zeichen <span class="ev">191 Zeichen</span></li><li class="ok">✓ description ohne spitze Klammern <span class="ev">ok</span></li><li class="ok">✓ description ohne URL <span class="ev">ok</span></li><li class="ok">✓ Titel &#x27;(Cowork-Fassung)&#x27; <span class="ev">vorhanden</span></li><li class="ok">✓ Block ## 0. (Ablage relativ) <span class="ev">vorhanden</span></li><li class="ok">✓ Block ## 0a. (Mount/Git-Fallen) <span class="ev">vorhanden</span></li><li class="ok">✓ keine festen ~/proggs-Pfade (ausser cowork-git.sh) <span class="ev">ok</span></li><li class="ok">✓ Sichern via cowork-git.sh <span class="ev">vorhanden</span></li><li class="ok">✓ ZIP existiert <span class="ev">C:\Users\barwa\.claude\skills\cowork-portierung-workspace\iteration-1\eval-1-undo-changes\with_skill\outputs\undo-changes.zip</span></li><li class="ok">✓ ZIP-Wurzel = &lt;name&gt;/, SKILL.md enthalten <span class="ev">ok</span></li><li class="ok">✓ ZIP forward-slash (kein Backslash) <span class="ev">ok</span></li></ul>
+      <details><summary>Volle portierte Cowork-SKILL.md anzeigen (151 Zeilen)</summary>
+        <pre class="full">---
+name: undo-changes
+description: &quot;Nimmt den/die letzten Commit(s) sicher per revert zurueck (lokal UND auf GitHub), ohne force-push. Trigger: mach rueckgaengig, undo, revert, Aenderung zuruecknehmen, geh zum vorherigen Stand.&quot;
+---
+
+# Aenderungen Rueckgaengig Machen (Cowork-Fassung) — sicheres Revert lokal + GitHub
+
+Dieser Skill macht den/die letzten Commit(s) rueckgaengig — bevorzugt per `git revert` (neuer
+Revert-Commit, kein force-push), und immer sowohl lokal als auch auf GitHub. In Cowork laeuft Git
+NICHT nackt, sondern ueber den Wrapper `cowork-git.sh`. Laeuft in der **Claude-Cowork-Desktop-App**.
+
+---
+
+## 0. ZUERST LESEN — Ablage-Ort &amp; Git in Cowork
+
+Dieser Skill schreibt keine eigenen Ergebnisdateien — er arbeitet auf dem **aktuell verbundenen
+Arbeitsordner** (ueblicherweise der gemountete `proggs`-Ordner). Alle Git-Operationen laufen ueber den
+Wrapper `~/proggs/cowork-git.sh`, der den richtigen git-dir/work-tree setzt und einen
+Datenverlust-Waechter mitbringt.
+
+| Was | Pfad |
+|-----|------|
+| Arbeitsordner (Repo) | der verbundene Mount-Ordner (relativ) |
+| Git-Wrapper | `~/proggs/cowork-git.sh` (liegt bewusst ausserhalb des Mounts, bleibt absolut) |
+| Whiteboard (Fehler/Erkenntnisse) | `.claude/agent-memory/shared/MEMORY.md` (relativ im Arbeitsordner) |
+
+**Kein Git-Repo verbunden / Wrapper nicht erreichbar:** dem Benutzer melden und nichts erzwingen —
+ein Revert ohne funktionierenden Git-Zugang ist nicht moeglich.
+
+## 0a. Cowork-Umgebung — Schreib- &amp; Git-Fallen (PFLICHT beachten)
+
+&gt; Volltext: `bugs/claude-tooling/cowork.md` + `bugs/claude-tooling/cowork-git-push.md` im Arbeitsordner.
+
+- **Git NIEMALS nackt:** IMMER ueber `bash ~/proggs/cowork-git.sh ...` — die Mount-Bruecke erlaubt
+  kein zuverlaessiges nacktes `git` aus der VM (Locks, „Operation not permitted&quot;). Der Wrapper hat
+  einen Datenverlust-Waechter.
+- **~45s-Shell-Limit:** Jeder Git-Schritt muss in EINEM Shell-Aufruf durchlaufen; Hintergrundprozesse
+  ueberleben den Aufruf-Wechsel nicht. Lesen + Revert + Push deshalb nicht ueber mehrere Aufrufe verteilen.
+- **Mount-Schreibfalle:** Falls du doch eine Datei schreibst (z.B. Whiteboard-Eintrag), danach das
+  Dateiende pruefen (`tail -1`, `wc -l`) — die Bruecke kann Dateienden abschneiden.
+
+---
+
+## Ablauf
+
+### 1. Analyse — Was soll rueckgaengig gemacht werden?
+
+Zuerst dem Benutzer die letzten Commits zeigen:
+
+```
+bash ~/proggs/cowork-git.sh log --oneline -5
+```
+
+Dann klaeren, welcher Commit gemeint ist:
+- &quot;Welchen Commit moechtest du rueckgaengig machen?&quot;
+- Wenn klar ist welcher gemeint ist (z.B. &quot;den letzten&quot;), direkt weiter.
+
+### 2. Sicherheitspruefung
+
+Bevor etwas rueckgaengig gemacht wird:
+- Uncommittete Aenderungen pruefen: `bash ~/proggs/cowork-git.sh status`
+- Pruefen ob der Commit schon gepusht wurde: `bash ~/proggs/cowork-git.sh log origin/main..HEAD`
+- Dem Benutzer mitteilen, was genau passieren wird.
+
+### 3. Rueckgaengig machen
+
+**Variante A: Letzter Commit (noch nicht gepusht)**
+```
+bash ~/proggs/cowork-git.sh reset --soft HEAD~1
+```
+- Aenderungen bleiben im Staging-Bereich erhalten; der Benutzer kann sie anpassen und neu committen.
+
+**Variante B: Letzter Commit (bereits gepusht) — STANDARD**
+```
+bash ~/proggs/cowork-git.sh revert HEAD --no-edit
+bash ~/proggs/cowork-git.sh push &quot;#NNN - Revert: [Original-Commit-Message]&quot;
+```
+- Erstellt einen neuen Revert-Commit (sicherer als force-push) und pusht zu GitHub.
+- Commit-Nummer `#NNN` = naechste fortlaufende Nummer.
+
+**Variante C: Bestimmter aelterer Commit**
+```
+bash ~/proggs/cowork-git.sh revert &lt;commit-hash&gt; --no-edit
+bash ~/proggs/cowork-git.sh push &quot;#NNN - Revert: [Original-Commit-Message]&quot;
+```
+- Macht nur diesen einen Commit rueckgaengig, laesst alle anderen intakt.
+
+**Variante D: Mehrere Commits rueckgaengig machen**
+
+Verlangt EXPLIZITE Benutzer-Bestaetigung — zeigen, welche N Commits revertiert werden, und auf
+Freigabe warten.
+```
+bash ~/proggs/cowork-git.sh revert HEAD~N..HEAD --no-edit
+bash ~/proggs/cowork-git.sh push &quot;#NNN - Revert: letzte N Commits&quot;
+```
+- Macht die letzten N Commits rueckgaengig (ein Revert-Commit je Commit).
+
+&gt; Hinweis Cowork-Git: `cowork-git.sh push &quot;...&quot;` erledigt add + Datenverlust-Waechter + commit + push in
+&gt; EINEM Aufruf und holt bei Non-Fast-Forward automatisch frisch nach. Deshalb NICHT zusaetzlich
+&gt; `git push origin main` nackt aufrufen.
+
+### 4. Bestaetigung
+
+Nach dem Revert dem Benutzer mitteilen:
+- Was genau rueckgaengig gemacht wurde (Commit-Hash und Message).
+- Ob der Revert auch auf GitHub gepusht wurde.
+- Aktuellen Stand zeigen: `bash ~/proggs/cowork-git.sh log --oneline -3`.
+
+## Wichtige Regeln
+
+- **NIEMALS `git push --force`** — immer `git revert` (nachvollziehbar, kein History-Verlust).
+- **NIEMALS ohne Bestaetigung** mehrere Commits auf einmal reverten.
+- **IMMER** sowohl lokal als auch auf GitHub rueckgaengig machen (nicht nur lokal).
+- **IMMER** die Commit-Nummerierung beibehalten: Revert-Commits bekommen die naechste fortlaufende Nummer.
+- Bei Unsicherheit: nachfragen, welcher Commit gemeint ist.
+- Uncommittete Aenderungen vorhanden: erst fragen, ob diese gespeichert werden sollen.
+
+## Whiteboard-Integration
+
+**Whiteboard**: `.claude/agent-memory/shared/MEMORY.md` (zentrale Wissensdatei, relativ im Arbeitsordner).
+
+- **Lesen**: Vor dem Revert das Whiteboard lesen — bekannte Git/Push-Probleme, laufende Migrationen,
+  Merge-Freezes.
+- **Schreiben bei Fehlern**: Schlaegt Revert oder Push fehl, in &quot;Offene Fehler &amp; Probleme&quot; eintragen
+  (Quelle: `undo-changes`; Symptom: Fehlermeldung; Commit-Hash; Ursache; Fix-Vorschlag; Status: OFFEN).
+- **Schreiben bei Erkenntnissen**: Wenn ein Revert-Muster gut funktioniert hat (Multi-Commit-Revert,
+  schwieriger Merge-Konflikt geloest), eine 1-Zeilen-Notiz in &quot;Debugging-Muster&quot; eintragen.
+
+## Beispiel
+
+Benutzer sagt: &quot;Mach die letzte Aenderung rueckgaengig&quot;
+
+1. Zeigt: &quot;Letzter Commit: #050 - Automatisierung und CI/CD komplett eingerichtet&quot;
+2. Fragt: &quot;Soll ich Commit #050 rueckgaengig machen? Das wird lokal und auf GitHub revertiert.&quot;
+3. Nach Bestaetigung: `bash ~/proggs/cowork-git.sh revert HEAD --no-edit`
+4. Pusht: `bash ~/proggs/cowork-git.sh push &quot;#051 - Revert: #050 ...&quot;`
+5. Meldet: &quot;Commit #050 wurde rueckgaengig gemacht. Revert-Commit #051 erstellt und zu GitHub gepusht.&quot;
+
+## Was NIEMALS passieren darf
+
+- `git push --force` / `reset --hard` auf bereits gepushte Commits (zerstoert History / fremde Arbeit).
+- Mehrere Commits ohne explizite Benutzer-Bestaetigung reverten.
+- Nur lokal reverten, ohne den Revert auf GitHub zu pushen.
+- Nacktes `git commit`/`git push` aus Cowork verwenden — IMMER `cowork-git.sh` (Mount-Fallen, Datenverlust-Waechter).
+- Nach dem Schreiben einer Datei (z.B. Whiteboard) das Dateiende NICHT pruefen (Mount-Truncation).
+
+## Referenzen
+
+- Git-Wrapper: `~/proggs/cowork-git.sh` (Setup + `push`/`push-files`/beliebige git-Befehle).
+- Cowork-Regeln: `bugs/claude-tooling/cowork.md`, `bugs/claude-tooling/cowork-git-push.md` im Arbeitsordner.
+- Whiteboard: `.claude/agent-memory/shared/MEMORY.md` im Arbeitsordner.
+</pre></details>
+    </section>
+    
+    <section>
+      <h2>hook-forge <span class="typ">Skill mit references/ (-&gt; ZIP-Unterordner)</span></h2>
+      <div class="grid">
+        <div class="box before"><h3>description VORHER (CLI-Original)</h3>
+          <p class="len">~415 Zeichen, mehrzeilig</p></div>
+        <div class="box after"><h3>description NACHHER (Cowork)</h3>
+          <p class="len good">180 Zeichen (Limit 200), einzeilig</p>
+          <pre class="desc">Erstellt resiliente Claude-Code-Hooks nach den 3 Direktiven (exit 0, ps1+sh, Logging) und legt sie im Arbeitsordner ab. Trigger: Hook erstellen, neuer Hook, Hook bauen, Hook fixen.</pre></div>
+      </div>
+      <h3>Verifikation: 14/14 Pruefungen bestanden</h3>
+      <ul class="checks"><li class="ok">✓ SKILL.md existiert <span class="ev">C:\Users\barwa\.claude\skills\cowork-portierung-workspace\iteration-1\eval-2-hook-forge\with_skill\outputs\skills-src\hook-forge\SKILL.md</span></li><li class="ok">✓ description einzeilig in Quotes <span class="ev">ja</span></li><li class="ok">✓ description &lt;= 200 Zeichen <span class="ev">180 Zeichen</span></li><li class="ok">✓ description ohne spitze Klammern <span class="ev">ok</span></li><li class="ok">✓ description ohne URL <span class="ev">ok</span></li><li class="ok">✓ Titel &#x27;(Cowork-Fassung)&#x27; <span class="ev">vorhanden</span></li><li class="ok">✓ Block ## 0. (Ablage relativ) <span class="ev">vorhanden</span></li><li class="ok">✓ Block ## 0a. (Mount/Git-Fallen) <span class="ev">vorhanden</span></li><li class="ok">✓ keine festen ~/proggs-Pfade (ausser cowork-git.sh) <span class="ev">ok</span></li><li class="ok">✓ Sichern via cowork-git.sh <span class="ev">vorhanden</span></li><li class="ok">✓ ZIP existiert <span class="ev">C:\Users\barwa\.claude\skills\cowork-portierung-workspace\iteration-1\eval-2-hook-forge\with_skill\outputs\hook-forge.zip</span></li><li class="ok">✓ ZIP-Wurzel = &lt;name&gt;/, SKILL.md enthalten <span class="ev">ok</span></li><li class="ok">✓ ZIP forward-slash (kein Backslash) <span class="ev">ok</span></li><li class="ok">✓ references/ im ZIP (hook-forge) <span class="ev">2 references-Eintraege: [&#x27;hook-forge/references/ps1-template.md&#x27;, &#x27;hook-forge/references/sh-template.md&#x27;]</span></li></ul>
+      <details><summary>Volle portierte Cowork-SKILL.md anzeigen (157 Zeilen)</summary>
+        <pre class="full">---
+name: hook-forge
+description: &quot;Erstellt resiliente Claude-Code-Hooks nach den 3 Direktiven (exit 0, ps1+sh, Logging) und legt sie im Arbeitsordner ab. Trigger: Hook erstellen, neuer Hook, Hook bauen, Hook fixen.&quot;
+---
+
+# Hook-Forge (Cowork-Fassung) — resiliente Hook-Erstellung nach den 3 Direktiven
+
+Dieser Skill stellt sicher, dass jeder neue oder grundlegend umgeschriebene Claude-Code-Hook
+resilient ist: niemals einen Hook-Fehler erzeugt (`exit 0` Pflicht), auf BEIDEN Plattformen
+funktioniert (`.ps1` + `.sh`) und den 3 Hauptdirektiven folgt (Superintelligenz, Selbstbeobachtung,
+Resilient Bugfixing). Laeuft in der Claude-Cowork-Desktop-App.
+
+---
+
+## 0. ZUERST LESEN — Ablage-Ort &amp; Ordner anlegen (Cowork)
+
+Cowork mountet einen Arbeitsordner (ueblicherweise `proggs`), aber NICHT unter dem festen Pfad
+`~/proggs`. Schreibe alle Ergebnisse **relativ** zum verbundenen Arbeitsordner. Die erzeugten
+Hook-Dateien gehoeren in den Hook-Ordner des Arbeitsordners (das Cowork-Gegenstueck zu `~/.claude/hooks/`):
+
+| Was | Pfad (relativ zum Arbeitsordner) |
+|-----|----------------------------------|
+| PowerShell-Hook | `claude-code-setup/hooks/[name].ps1` |
+| Bash-Hook | `claude-code-setup/hooks/[name].sh` |
+
+Beide Varianten sind Pflicht — keine Ausnahme. Ordner anlegen ist erlaubt und gewollt
+(`mkdir -p claude-code-setup/hooks`, falls Shell verfuegbar) — nie abbrechen, weil ein Ordner fehlt.
+
+&gt; Hinweis: In Cowork existieren die CLI-Hooks/Guards (`bug-almanac-guard`, `subagent-context`,
+&gt; `config-guard` …) NICHT. Die Registrierung in `settings.json` und die 3-Dateien-Settings-Regel
+&gt; sind ein CLI-Schritt — in Cowork wird der Hook nur als Datei abgelegt; ein spaeterer CLI-Sync
+&gt; uebernimmt Registrierung und Verteilung. Im Cowork-Lauf also: Datei(en) sauber schreiben und
+&gt; sichern, KEINE `settings.json` in Cowork anfassen.
+
+## 0a. Cowork-Umgebung — Schreib- &amp; Git-Fallen (PFLICHT beachten)
+
+- **Mount-Schreibfalle:** Die Bruecke schneidet Dateienden manchmal ab. Nach JEDEM Schreiben das
+  Dateiende pruefen (`tail -1`, `wc -l`) — besonders kritisch hier, weil ein abgeschnittenes
+  finales `exit 0` genau den Hook-Fehler erzeugt, den dieser Skill verhindern soll.
+- **~45s-Shell-Limit:** Jeder Schreib-/Git-Schritt muss in EINEM Aufruf durchlaufen;
+  Hintergrundprozesse ueberleben den Aufruf-Wechsel nicht. Researcher/Agenten sind unkritisch.
+- **Git NIEMALS nackt** aus der Cowork-VM (Locks, Mount-Fallen) → Abschluss immer ueber
+  `bash ~/proggs/cowork-git.sh` (siehe „Sichern&quot;).
+- Nachschlagen bei Unsicherheit: `bugs/claude-tooling/cowork.md` (§6 Skills) und
+  `bugs/claude-tooling/cowork-git-push.md` im Arbeitsordner.
+
+---
+
+## Pflicht-Ablauf (Checkliste)
+
+### Phase 1: Design
+
+1. **Event bestimmen**: Welches Hook-Event? (SessionStart, UserPromptSubmit, PreToolUse, PostToolUse, Stop, SubagentStop, SessionEnd, etc.)
+2. **Typ bestimmen**: `command` (Skript ausfuehren) oder `prompt` (Text injizieren)?
+   - ACHTUNG: `prompt`-Typ funktioniert NICHT bei SessionStart und SessionEnd! (kein ToolUseContext)
+   - Bei SessionStart IMMER `command` verwenden.
+3. **Timeout bestimmen**: Standard 60000ms. SessionStart-Hooks: max 30000ms (blockieren den Start).
+4. **Name waehlen**: Beschreibender Kebab-Case-Name (z.B. `disk-guard`, `intent-anker`, `auto-format`).
+
+### Phase 2: Template anwenden
+
+Lies die passenden Templates:
+- **PowerShell**: `references/ps1-template.md` — fuer Windows
+- **Bash**: `references/sh-template.md` — fuer macOS/Linux
+
+BEIDE Varianten MUESSEN erstellt werden. Keine Ausnahme.
+
+Jeder Hook MUSS diese Elemente enthalten:
+
+| Element | Warum | Direktive |
+|---------|-------|-----------|
+| `$ErrorActionPreference = &quot;Stop&quot;` (PS1) / `set -e` (SH) | Fehler frueh erkennen | #3 Resilient |
+| `try { ... } catch { ... }` (PS1) / `trap` (SH) | Fehler abfangen statt propagieren | #3 Resilient |
+| `exit 0` am ENDE (IMMER) | Hook darf NIEMALS non-zero returnen | #3 Resilient |
+| `exit 0` in JEDEM catch/trap-Block | Auch bei Fehlern graceful beenden | #3 Resilient |
+| `. &quot;$PSScriptRoot/hook-log.ps1&quot;` / `. &quot;$(dirname &quot;$0&quot;)/hook-log.sh&quot;` | Zentrale Fehler-Protokollierung | #2 Selbstbeobachtung |
+| Hook-Log bei JEDEM Fehler | Fehler werden ins Log geschrieben, nicht verschluckt | #2 Selbstbeobachtung |
+| Whiteboard-Eintrag bei SCHWEREN Fehlern | Sichtbar fuer /self-improve | #1 Superintelligenz |
+
+### Phase 3: Implementierung
+
+1. **PowerShell-Version erstellen**: `claude-code-setup/hooks/[name].ps1`
+2. **Bash-Version erstellen**: Die SH-Version muss FUNKTIONAL IDENTISCH sein.
+   - Gleiche Logik, gleiche Checks, gleiche Log-Messages
+   - Plattform-spezifische Unterschiede beruecksichtigen (Pfade, Tools, Syntax)
+3. **Syntax pruefen** (falls Shell verfuegbar): beide Versionen syntax-pruefen:
+   - PS1: `pwsh -NoProfile -Command &quot;&amp; { $null = [System.Management.Automation.Language.Parser]::ParseFile(&#x27;PFAD&#x27;, [ref]$null, [ref]$null) }&quot;`
+   - SH: `bash -n PFAD`
+
+### Phase 4: Integration
+
+In Cowork wird der Hook NUR als Datei im Arbeitsordner abgelegt (siehe §0). Die CLI-spezifischen
+Schritte — Registrierung in `~/.claude/settings.json`, Spiegelung in `claude-code-setup/settings.json`
++ `settings-reference.json` (3-Dateien-Regel), Whiteboard-Hook-Zaehler — uebernimmt ein spaeterer
+CLI-Sync. Im Cowork-Lauf KEINE `settings.json` anfassen; nur die beiden Hook-Dateien sicher schreiben.
+
+### Phase 5: Verifikation (PFLICHT — kein Hook ohne diese Pruefung)
+
+- [ ] PS1-Version hat `exit 0` am Ende?
+- [ ] SH-Version hat `exit 0` am Ende?
+- [ ] PS1-Version hat `try/catch` oder `$ErrorActionPreference`?
+- [ ] SH-Version hat `set -e` oder `trap` (mit `exit 0` im trap)?
+- [ ] Kein `exit 1` in SessionStart-Hooks?
+- [ ] Hook-Log wird bei Fehlern aufgerufen?
+- [ ] Beide Versionen syntax-geprueft (falls Shell verfuegbar)?
+- [ ] Dateiende beider Dateien geprueft (Mount-Truncation, §0a)?
+
+## Verbotene Muster
+
+| Muster | Warum verboten | Stattdessen |
+|--------|---------------|-------------|
+| `exit 1` in SessionStart | Erzeugt sichtbaren Hook-Fehler | `exit 0` + Fehler ins Whiteboard loggen |
+| Kein `exit 0` am Ende | PowerShell gibt Exit-Code des letzten Befehls zurueck | Explizites `exit 0` am Skript-Ende |
+| `type: &quot;prompt&quot;` bei SessionStart | Kein ToolUseContext verfuegbar, crasht | `type: &quot;command&quot;` verwenden |
+| Nur .ps1 ODER nur .sh | Andere Plattform hat keinen Hook | IMMER beide erstellen |
+| Fehler still verschlucken | Verstoesst gegen Direktive #2 | Hook-Log + ggf. Whiteboard-Eintrag |
+| Endlosschleife / langer Timeout | Blockiert Session-Start oder Tool-Nutzung | Timeout setzen, async ausfuehren |
+| Hardcoded absolute Pfade | Bricht auf anderer Plattform | `$PSScriptRoot`, `$HOME`, `$(dirname &quot;$0&quot;)` |
+
+## Spezialfall: Async-Hooks
+
+Hooks die lange dauern (Reindexierung, Downloads, Builds) MUESSEN async sein:
+- PS1: `Start-Process pwsh -ArgumentList &quot;-NoProfile&quot;, &quot;-File&quot;, $scriptPath -WindowStyle Hidden`
+- SH: `nohup bash &quot;$script&quot; &amp;&gt;/dev/null &amp;` + `disown`
+
+---
+
+## Sichern (Cowork-Git)
+
+Abschluss IMMER ueber das Wrapper-Skript (nie nacktes `git`):
+
+```bash
+bash ~/proggs/cowork-git.sh setup
+# auf &quot;Push-Zugang OK&quot; warten, dann:
+bash ~/proggs/cowork-git.sh push-files &quot;#NNN - hook-forge: [name]-Hook erstellt (ps1+sh)&quot; \
+  claude-code-setup/hooks/[name].ps1 claude-code-setup/hooks/[name].sh
+```
+
+Nur die eigenen, gerade geschriebenen Pfade namentlich angeben. Kein Git-Repo verbunden →
+nur speichern und den Ablage-Pfad nennen.
+
+## Was NIEMALS passieren darf
+
+- Einen Hook ohne `exit 0` am Ende ODER ohne `exit 0` in jedem catch/trap-Block erstellen.
+- `exit 1` in einem SessionStart-Hook (erzeugt sichtbaren Hook-Fehler).
+- `type: &quot;prompt&quot;` bei SessionStart/SessionEnd (kein ToolUseContext → crasht).
+- Nur eine Plattform-Variante schreiben (.ps1 ODER .sh) — IMMER beide.
+- Fehler still verschlucken statt ins Hook-Log zu schreiben (Direktive #2).
+- Hardcoded absolute Pfade — `$PSScriptRoot` / `$HOME` / `$(dirname &quot;$0&quot;)` verwenden.
+- Das Dateiende nach dem Schreiben nicht pruefen (Mount-Truncation kann das finale `exit 0` abschneiden).
+- Nacktes `git commit`/`git push` aus Cowork — immer `cowork-git.sh`.
+
+## Referenzen
+
+- `references/ps1-template.md` — vollstaendiges PowerShell-Hook-Template.
+- `references/sh-template.md` — vollstaendiges Bash-Hook-Template.
+- Cowork-Regeln: `bugs/claude-tooling/cowork.md` (§6 Skills), `bugs/claude-tooling/cowork-git-push.md`.
+</pre></details>
+    </section>
+    
+</body></html>

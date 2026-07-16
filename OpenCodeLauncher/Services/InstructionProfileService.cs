@@ -39,18 +39,19 @@ public sealed class InstructionProfileService
     // ===================== Claude Code =====================
 
     /// <summary>
-    /// Isolierter Claude-Config-Ordner (CLAUDE_CONFIG_DIR) NUR fuer das Minimal-Profil. Liegt im Repo
-    /// (~/proggs/OpenCodeLauncher/Profiles/ClaudeCode/minimal) und traegt Login-Token, settings.json
-    /// usw. Die dortige .gitignore haelt Laufzeit/Secrets vom Repo fern; die aktive CLAUDE.md ist
-    /// bewusst untracked und wird aus der Minimal-Profilquelle befuellt. Die Skills werden per
-    /// Verzeichnis-Junction (skills -> ~/.claude/skills) eingeblendet, sonst bleibt der Ordner
-    /// regelfrei. Standard und Strikt setzen KEIN CLAUDE_CONFIG_DIR und nutzen direkt das echte
-    /// ~/.claude (volle Skills + Regeln + Login).
+    /// Eigener Claude-Config-Ordner (CLAUDE_CONFIG_DIR) je Profil im Repo
+    /// (~/proggs/OpenCodeLauncher/Profiles/ClaudeCode/&lt;id&gt;). Jedes Profil traegt seine eigenen,
+    /// versionierten Inhalte (settings.json und -- bei Standard/Strikt -- skills/rules/agents/commands),
+    /// sodass sie auf jedem Rechner identisch verfuegbar sind und frei bearbeitet werden koennen. Die
+    /// .gitignore jedes Ordners haelt Laufzeit/Secrets (Login-Token, sessions/, cache/) vom Repo fern;
+    /// die aktive CLAUDE.md ist bewusst untracked und wird pro Start aus der Profilquelle befuellt.
+    /// Minimal bleibt bewusst regelfrei (Skills nur per Junction, siehe EnsureSkillsJunction).
     /// </summary>
-    public static string ResolveClaudeConfigDir()
+    public static string ResolveClaudeConfigDir(string profileId)
     {
+        ValidateProfileId(profileId);
         var home = Environment.GetFolderPath(Environment.SpecialFolder.UserProfile);
-        return Path.Combine(home, "proggs", "OpenCodeLauncher", "Profiles", "ClaudeCode", "minimal");
+        return Path.Combine(home, "proggs", "OpenCodeLauncher", "Profiles", "ClaudeCode", profileId);
     }
 
     /// <summary>Versionierte Profilquelle (Regeltext) je Claude-Profil.</summary>
@@ -69,26 +70,54 @@ public sealed class InstructionProfileService
     }
 
     /// <summary>
-    /// Bereitet den Claude-Start vor: setzt die aktive CLAUDE.md im gemeinsamen Config-Ordner auf den
-    /// Inhalt der gewaehlten Profilquelle und gibt den Ordner zurueck (als CLAUDE_CONFIG_DIR).
+    /// Bereitet den Claude-Start vor: setzt die aktive CLAUDE.md im profil-eigenen Config-Ordner auf
+    /// den Inhalt der gewaehlten Profilquelle und gibt den Ordner zurueck (als CLAUDE_CONFIG_DIR).
+    /// JEDES Profil hat seinen eigenen Repo-Ordner (Profiles/ClaudeCode/&lt;id&gt;) -> der Kontext ist
+    /// versioniert und auf jedem Rechner gleich. Standard/Strikt tragen ihre eigenen, frei
+    /// bearbeitbaren skills/rules/agents/commands im Repo; Minimal bleibt regelfrei und blendet die
+    /// Skills nur per Junction ein. Der Login-Token wird bei Bedarf lokal aus ~/.claude uebernommen.
     /// </summary>
     public string? EnsureClaudeConfigDir(string profileId)
     {
         ValidateProfileId(profileId);
-        // Nur Minimal wird isoliert: eigener Repo-Config-Ordner via CLAUDE_CONFIG_DIR -> KEINE
-        // Rules/Hooks/Memory/Agents/Almanach aus ~/.claude, nur die profilspezifische CLAUDE.md.
-        // Ausnahme: die Skills werden bewusst mitbenutzt -- ~/.claude/skills wird per Verzeichnis-
-        // Junction eingeblendet, damit im Minimal-Profil alle Skills verfuegbar sind (Wunsch: nur
-        // die Skills nicht ausblenden). Standard und Strikt laden ohnehin das komplette echte
-        // ~/.claude: dafuer KEIN Redirect (null zurueckgeben) und ~/.claude bleibt unangetastet.
-        if (!string.Equals(profileId, "minimal", StringComparison.Ordinal))
-            return null;
-
-        var dir = ResolveClaudeConfigDir();
+        var dir = ResolveClaudeConfigDir(profileId);
         Directory.CreateDirectory(dir);
         WriteText(Path.Combine(dir, "CLAUDE.md"), ReadText(EnsureClaudeProfileSource(profileId)));
-        EnsureSkillsJunction(dir);
+        EnsureLoginToken(dir);
+
+        // Minimal bleibt bewusst regelfrei: es traegt KEINE versionierten Skills, sondern blendet
+        // die echten ~/.claude/skills per Junction ein. Standard und Strikt haben ihre Skills als
+        // echte, versionierte Kopien im Repo -> dort wird nichts verlinkt.
+        if (string.Equals(profileId, "minimal", StringComparison.Ordinal))
+            EnsureSkillsJunction(dir);
+
         return dir;
+    }
+
+    /// <summary>
+    /// Uebernimmt den Login-Token (.credentials.json) einmalig lokal aus ~/.claude in den Profil-
+    /// Config-Ordner, falls dort noch keiner liegt -- so muss man sich pro Profil/Rechner nicht neu
+    /// anmelden. Der Token ist ein Secret: er wird per .gitignore garantiert nie versioniert. Ist im
+    /// Ziel bereits ein (evtl. im Profil neu erzeugter) Token vorhanden, bleibt er unangetastet.
+    /// </summary>
+    private static void EnsureLoginToken(string configDir)
+    {
+        var target = Path.Combine(configDir, ".credentials.json");
+        if (File.Exists(target)) return;
+
+        var home = Environment.GetFolderPath(Environment.SpecialFolder.UserProfile);
+        var source = Path.Combine(home, ".claude", ".credentials.json");
+        if (!File.Exists(source)) return;
+
+        try
+        {
+            File.Copy(source, target);
+            Logger.Instance.Info("InstructionProfileService", "EnsureLoginToken", "Login-Token lokal uebernommen", new { configDir });
+        }
+        catch (Exception ex)
+        {
+            Logger.Instance.Warn("InstructionProfileService", "EnsureLoginToken", $"Login-Token nicht uebernommen: {ex.Message}", new { configDir });
+        }
     }
 
     /// <summary>

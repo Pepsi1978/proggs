@@ -1,0 +1,27 @@
+# Standard-Profil = Claude-Code-Config-Ordner (CLAUDE_CONFIG_DIR).
+# Claude legt hier NEBEN der versionierten Konfiguration auch den Login-Token
+# (.credentials.json), .claude.json, Sitzungs-Historie, projects/, sessions/, cache/,
+# backups/ usw. ab. Diese duerfen NIEMALS ins Repo.
+#
+# Strategie (sicherste): erst ALLES ignorieren, dann NUR die bewusst versionierten
+# Inhalte wieder einschliessen. Eine Secret-/Token-Datei wird hier NIE per '!' wieder
+# eingeschlossen -> sie bleibt durch '*' garantiert lokal (Secrets-Regel).
+
+*
+
+# --- Bewusst versionierte Profil-Inhalte (auf jedem Rechner verfuegbar) ---
+# Hinweis: CLAUDE.md ist bewusst NICHT eingeschlossen -- sie ist die aktive Laufzeitdatei,
+# die der Launcher pro Start aus Profiles/ClaudeCode/sources/<id>.md befuellt. Diese
+# skills/rules/agents/commands koennen frei bearbeitet werden -> die Aenderungen wirken
+# ueber den OpenCode Launcher direkt im Standard-Profil.
+!.gitignore
+!README.md
+!settings.json
+!skills/
+!skills/**
+!rules/
+!rules/**
+!agents/
+!agents/**
+!commands/
+!commands/**
