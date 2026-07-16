@@ -1,132 +1,195 @@
-# OpenCode Launcher — Einrichtung auf einem neuen Rechner
+# OpenCode Launcher — Einrichtung auf einem neuen Rechner (Windows + macOS)
 
 > Diese Datei beschreibt, **wie die Profile aktuell laufen** und **was auf einem neuen Rechner
-> nötig ist**, damit alles identisch funktioniert. Du kannst Claude Code auf dem neuen Rechner
+> nötig ist**, damit alles identisch funktioniert. Du kannst einer KI auf dem neuen Rechner
 > einfach sagen: *„Richte den OpenCode Launcher genau nach `OpenCodeLauncher/SETUP.md` ein."*
 
-Stand: v1.17.18 (15.07.2026, 15.02 Uhr)
+Stand: v1.17.23 (16.07.2026, 12.45 Uhr)
 
 ---
 
-## Kurzantwort: Reicht „nur Release bauen"?
+## 0. Zwei Bausteine — nicht verwechseln
 
-**Nein, nicht ganz.** Mit `git pull` + Release-Build hast du den **Launcher-Code und alle
-Profil-Quellen**. Aber **rechnerspezifische Dinge sind NICHT im Repo** und müssen separat
-eingerichtet werden:
+Das Gesamtsystem besteht aus **zwei** Teilen, die zusammenspielen:
 
-| Kommt per `git pull` (im Repo) | Muss pro Rechner eingerichtet werden (NICHT im Repo) |
+1. **Die `~/.claude`-Basis** (Login, Hooks, Skills, Statusline, `settings.json`) — wird über
+   **`~/proggs/claude-code-setup/`** eingerichtet (dessen `setup-windows.ps1` / `setup-macos.sh`).
+   Das ist die „Single Source of Truth" der Claude-Code-Umgebung. **Diese Basis ist Voraussetzung**
+   für den Launcher (Minimal blendet `~/.claude/skills` ein, Strikt nutzt `~/.claude/hooks`).
+2. **Der OpenCode Launcher** (dieses Verzeichnis) — die WPF-App, die Claude Code / OpenCode mit
+   gewähltem Modell **und Profil** startet. Windows-only; macOS-Variante ist in Vorbereitung (§4).
+
+**Reihenfolge auf einem neuen Rechner:** zuerst `claude-code-setup` (Baustein 1), dann dieser
+Launcher (Baustein 2).
+
+---
+
+## 1. Was kommt per `git`, was muss pro Rechner eingerichtet werden
+
+| Kommt per `git pull` (im Repo) | Pro Rechner (NICHT im Repo) |
 |---|---|
-| Launcher-Quellcode (`OpenCodeLauncher/`) | .NET 8 SDK (zum Bauen) |
-| Alle Profil-Quellen (siehe unten) | OpenCode-Installation (`npm i -g opencode-ai`) |
-| `create_shortcut.ps1`, `update-launcher.ps1` | Claude-Code-Installation + Login |
-| | Globale `~/.config/opencode/opencode.jsonc` (Provider, `lsp`, Plugins, MCP) |
-| | API-Keys als Umgebungsvariablen (aus `~/SK`) |
-| | Claude-Login-Token (`.credentials.json` im Config-Ordner) |
+| Launcher-Quellcode (`OpenCodeLauncher/`) | .NET 8 SDK (Windows-Build) |
+| **Alle Profil-Inhalte** (Claude: `skills/rules/agents/commands` + `settings.json`; OpenCode: `AGENTS.md`) | `~/.claude`-Basis via `claude-code-setup` (Login, Hooks, Skills) |
+| `create_shortcut.ps1`, `update-launcher.ps1` | OpenCode-Installation (`npm i -g opencode-ai`) + `opencode.jsonc` |
+| Diese `SETUP.md` | API-Keys als Umgebungsvariablen (aus `~/SK`) |
+| | Claude-Login-Token (`.credentials.json`) — wird lokal in die Profile kopiert |
+
+**Secrets NIEMALS ins Repo** (Regel: liegen in `~/SK`). Insb. das `GITHUB_PERSONAL_ACCESS_TOKEN`
+aus `~/.claude/settings.json` ist bewusst NICHT in den Repo-Profilen.
 
 ---
 
-## So laufen die Profile (Architektur)
+## 2. So laufen die Profile (aktuelle Architektur)
 
-**Grundprinzip:** Jedes Profil ist **genau EINE bearbeitbare Repo-Datei**. Der Launcher schreibt
-deren Inhalt **vor jedem Start** in die Datei, die das jeweilige Werkzeug tatsächlich liest
-(vorher wird sie geleert). Es gibt kein „Global + Projekt" mehr, keine Snapshots, kein Verstecken.
+### Claude-Code-Profile — **jedes Profil hat seinen EIGENEN Config-Ordner**
+
+`CLAUDE_CONFIG_DIR` zeigt je Profil auf `OpenCodeLauncher/Profiles/ClaudeCode/<id>` (`id` =
+`minimal` | `standard` | `strict`). Der Launcher setzt das beim Start; der Kontext ist damit
+**versioniert und auf jedem Rechner gleich**.
+
+| Profil | Skills / Rules / Agents / Commands | Hooks | Isolation |
+|---|---|---|---|
+| **minimal** | nur **Skills**, per Verzeichnis-Junction `skills → ~/.claude/skills` (der Launcher legt sie beim Start via `mklink /J` an, kein Admin nötig) | ❌ | regelfrei — keine Rules/Hooks/Memory |
+| **standard** | **versioniert im Repo** (aus `~/.claude` kopiert, frei bearbeitbar) | ❌ (für eigene Hooks reserviert) | eigener Kontext |
+| **strict** | **versioniert im Repo** | ✅ **Modus A**: `settings.json` aktiviert die `~/.claude/hooks` (laufen aus der lebenden Installation, immer aktuell) | voller Kontext + Absicherung |
+
+Weitere Details:
+- **Aktive `CLAUDE.md`:** wird pro Start aus `Profiles/ClaudeCode/sources/<id>.md` in den Profil-Ordner
+  geschrieben (untracked Laufzeitdatei; versioniert ist nur die `sources/`-Quelle).
+- **`settings.json` je Profil** ist versioniert und enthält `claudeMdExcludes: ["**/.claude/rules/**"]`
+  (verhindert doppeltes Laden der Rules aus Repo **und** `~/.claude`). Strikt zusätzlich die
+  bereinigte Hook-Konfiguration (ohne Token, ohne Plugin-Sektionen).
+- **Login:** Der Launcher kopiert `.credentials.json` bei Bedarf **einmalig lokal** aus `~/.claude`
+  in den Profil-Ordner (per `.gitignore` nie versioniert) → kein erneutes Anmelden je Profil.
+- **Abhängigkeit:** Minimal braucht `~/.claude/skills`, Strikt braucht `~/.claude/hooks` — beides
+  liefert `claude-code-setup` (Baustein 1).
 
 ### OpenCode-Profile
-- Quelle je Profil: `OpenCodeLauncher/Profiles/OpenCode/<id>/AGENTS.md` (`id` = `minimal` | `standard` | `strict`).
-- Beim Start schreibt der Launcher diese Quelle in **`~/proggs/AGENTS.md`** (das Arbeitsverzeichnis).
-  OpenCode liest die `AGENTS.md` im Arbeitsverzeichnis immer — deshalb steuern wir ihren Inhalt.
-- Zusätzlich setzt der Launcher `OPENCODE_DISABLE_CLAUDE_CODE_PROMPT=1` für die Session → keine
-  `CLAUDE.md` als Prompt-Fallback (die Projekt-`CLAUDE.md` wird ohnehin durch die daneben liegende
-  `~/proggs/AGENTS.md` unterdrückt). **Skills (`~/.claude/skills`) und MCP bleiben nutzbar** — bewusst
-  NICHT der komplette `OPENCODE_DISABLE_CLAUDE_CODE`, der auch die `.claude`-Skills abschalten würde.
-- Die globale `~/.config/opencode/AGENTS.md` wird vom Launcher **leer** gehalten.
-- `~/proggs/AGENTS.md` ist eine **Laufzeitdatei** (in `.gitignore`, wird immer neu erzeugt).
 
-### Claude-Code-Profile
-- Quelle je Profil: `OpenCodeLauncher/Profiles/ClaudeCode/sources/<id>.md`.
-- Alle Profile teilen **einen** Config-Ordner (CLAUDE_CONFIG_DIR):
-  `OpenCodeLauncher/Profiles/ClaudeCode/minimal/` — dort liegen Login-Token, `settings.json`,
-  `skills/` usw. (ein Login für alle Profile).
-- Beim Start schreibt der Launcher die gewählte Quelle in die **aktive `CLAUDE.md`** dieses Ordners.
-  Diese aktive `CLAUDE.md` ist **untracked** (Laufzeit); versioniert sind nur die `sources/`.
+- Quelle je Profil: `OpenCodeLauncher/Profiles/OpenCode/<id>/AGENTS.md`.
+- Beim Start schreibt der Launcher diese Quelle in **`~/proggs/AGENTS.md`** (Arbeitsverzeichnis);
+  OpenCode liest die `AGENTS.md` dort immer.
+- Der Launcher setzt `OPENCODE_DISABLE_CLAUDE_CODE_PROMPT=1` pro Session → keine `CLAUDE.md` als
+  Prompt-Fallback. **Skills (`~/.claude/skills`) und MCP bleiben nutzbar** (bewusst NICHT der volle
+  `OPENCODE_DISABLE_CLAUDE_CODE`). Die globale `~/.config/opencode/AGENTS.md` wird leer gehalten.
+- `~/proggs/AGENTS.md` ist eine Laufzeitdatei (`.gitignore`, wird immer neu erzeugt).
 
-### Profil-Editor
-- Zeigt pro Profil **ein** Textfeld mit **Dateiname** (`AGENTS.md` bzw. `CLAUDE.md`) **+ Pfad**.
-- „Speichern" schreibt in die jeweilige Repo-Quelle (`Profiles/...`), nicht in die aktive Datei.
+### macOS-Profile
 
-### Versionierte Profil-Quellen (kommen per git)
-```
-OpenCodeLauncher/Profiles/OpenCode/minimal/AGENTS.md
-OpenCodeLauncher/Profiles/OpenCode/standard/AGENTS.md
-OpenCodeLauncher/Profiles/OpenCode/strict/AGENTS.md
-OpenCodeLauncher/Profiles/ClaudeCode/sources/minimal.md
-OpenCodeLauncher/Profiles/ClaudeCode/sources/standard.md
-OpenCodeLauncher/Profiles/ClaudeCode/sources/strict.md
-```
+- Eigener Bereich `OpenCodeLauncher/Profiles/ClaudeCodeMac/<id>` (getrennt von Windows, weil die
+  Windows-Profile absolute `C:\`-Pfade + PowerShell-Hooks tragen). Aktuell **Gerüst** (siehe §4).
 
 ---
 
-## Einrichtung Schritt für Schritt (neuer Rechner)
+## 3. Einrichtung Windows (Schritt für Schritt)
 
 1. **Repo holen**
-   ```
-   git clone <proggs-Remote> ~/proggs      # oder: cd ~/proggs && git pull
+   ```powershell
+   git clone <proggs-Remote> ~/proggs      # oder: cd ~/proggs; git pull
    ```
 
-2. **.NET 8 SDK installieren** (für den Build) — https://dotnet.microsoft.com/download
-
-3. **Launcher bauen**
+2. **Baustein 1 — `~/.claude`-Basis** (PowerShell als Administrator)
+   ```powershell
+   cd ~/proggs/claude-code-setup
+   .\setup-windows.ps1
+   Copy-Item ~/proggs/claude-code-setup/settings-reference.json ~/.claude/settings.json
    ```
+   Danach **Claude Code installieren + einloggen** (Login-Token landet in `~/.claude/.credentials.json`).
+   Prüfen, dass `~/.claude/skills` und `~/.claude/hooks` vorhanden sind (Minimal + Strikt brauchen sie).
+
+3. **.NET 8 SDK installieren** — https://dotnet.microsoft.com/download
+
+4. **Launcher bauen**
+   ```powershell
    dotnet build ~/proggs/OpenCodeLauncher/OpenCodeLauncher.csproj -c Release
    ```
    Ergebnis: `OpenCodeLauncher/bin/Release/net8.0-windows10.0.19041.0/win-x64/OpenCodeLauncher.exe`
 
-4. **Desktop-Verknüpfung anlegen**
-   ```
+5. **Desktop-Verknüpfung**
+   ```powershell
    pwsh ~/proggs/OpenCodeLauncher/create_shortcut.ps1
    ```
-   (Updates später: `pwsh ~/proggs/OpenCodeLauncher/update-launcher.ps1` — schließt laufenden
-   Launcher, baut Release, startet neu.)
+   Updates später: `pwsh ~/proggs/OpenCodeLauncher/update-launcher.ps1` (schließt laufenden
+   Launcher, baut Release, startet neu).
 
-5. **OpenCode installieren**
-   ```
+6. **OpenCode installieren + Config** (nur für den OpenCode-Teil)
+   ```powershell
    npm install -g opencode-ai
    ```
+   Globale `~/.config/opencode/opencode.jsonc` (Provider/Modelle, `"lsp": true`, MCP) von einem
+   eingerichteten Rechner übernehmen — **nicht im Repo** (kann Keys via `{env:...}` referenzieren).
 
-6. **Globale OpenCode-Config einrichten:** `~/.config/opencode/opencode.jsonc`
-   - Enthält deine **Provider/Modelle**, `"lsp": true` (Language-Server global an), Plugins, MCP.
-   - **Nicht im Repo** (rechnerspezifisch, kann Keys via `{env:...}` referenzieren). Von einem
-     eingerichteten Rechner kopieren oder neu anlegen. Mindestens:
-     ```jsonc
-     {
-       "$schema": "https://opencode.ai/config.json",
-       "lsp": true,
-       "permission": { "*": "allow" },
-       "provider": { /* deine Provider + Modelle */ }
-     }
-     ```
-   - **Wichtig:** `OPENCODE_DISABLE_CLAUDE_CODE_PROMPT` musst du NICHT global setzen — das macht der
-     Launcher pro OpenCode-Session automatisch.
+7. **API-Keys als Umgebungsvariablen** (z. B. `OPENROUTER_API_KEY`, `OPENAI_API_KEY`) aus `~/SK`.
 
-7. **API-Keys als Umgebungsvariablen** (z. B. `OPENROUTER_API_KEY`, `OPENAI_API_KEY` …)
-   - Quelle: `~/SK` (Secrets liegen dort, **nie im Repo**). Als User-Umgebungsvariablen setzen.
+8. **Erster Start:** Launcher öffnen → Profil (Minimal/Standard/Strikt) + Modell wählen → starten.
+   Beim ersten Minimal-Start entsteht die Skills-Junction automatisch; der Login-Token wird bei
+   Bedarf lokal in den Profil-Ordner kopiert.
 
-8. **Claude Code installieren + einloggen**
-   - Claude Code installieren (siehe Anthropic-Doku).
-   - Login läuft im gemeinsamen Config-Ordner. Der Launcher setzt `CLAUDE_CONFIG_DIR` beim Start
-     auf `OpenCodeLauncher/Profiles/ClaudeCode/minimal/`. Einmalig dort einloggen (Token landet in
-     `.credentials.json`, bleibt lokal/untracked).
-
-9. **Skills** (optional, falls genutzt): `~/.claude/skills` bzw. OpenCode-Skills vom alten Rechner
-   übernehmen. Sie werden nicht über dieses Repo verteilt.
+> **Voraussetzung Windows-Portabilität:** Die Profile funktionieren rechnerübergreifend, solange
+> derselbe Benutzername verwendet wird (gleiche `C:\Users\<name>`-Pfade). Strikts Hooks zeigen über
+> `$USERPROFILE/.claude/hooks` (portabel), brauchen aber die von `claude-code-setup` deployten Hooks.
 
 ---
 
-## Was der Launcher zur Laufzeit selbst erzeugt (nicht sichern)
+## 4. Einrichtung macOS (Schritt für Schritt)
+
+> **Status:** Der WPF-Launcher läuft **nicht** auf macOS (Windows-only). Die macOS-Launcher-Variante
+> (Swift/AppKit) ist in Vorbereitung. Bis dahin startest du Claude Code mit den macOS-Profilen
+> **manuell** über `CLAUDE_CONFIG_DIR` — die Profile selbst funktionieren identisch.
+
+1. **Repo holen**
+   ```bash
+   git clone <proggs-Remote> ~/proggs      # oder: cd ~/proggs && git pull
+   ```
+
+2. **Baustein 1 — `~/.claude`-Basis**
+   ```bash
+   cd ~/proggs/claude-code-setup
+   chmod +x setup-macos.sh && ./setup-macos.sh
+   cp ~/proggs/claude-code-setup/settings.json ~/.claude/settings.json
+   brew install jq            # für die Statusline
+   ```
+   Claude Code installieren + einloggen. Prüfen, dass `~/.claude/skills` und `~/.claude/hooks`
+   vorhanden sind (die macOS-Hooks liegen in `claude-code-setup/hooks-macos.json`).
+
+3. **macOS-Profile befüllen** — der Bereich `OpenCodeLauncher/Profiles/ClaudeCodeMac/<id>` ist ein
+   Gerüst (READMEs + `.gitignore`). Einmalig mit macOS-Inhalten füllen:
+   ```bash
+   cd ~/proggs/OpenCodeLauncher/Profiles/ClaudeCodeMac
+   for p in standard strict; do
+     for d in skills rules agents commands; do
+       rm -rf "$p/$d"; cp -R "$HOME/.claude/$d" "$p/$d"
+     done
+   done
+   ```
+   Dann pro Profil eine `settings.json` mit **macOS-Pfaden** anlegen (Statusline/Hooks als
+   `bash`/`zsh` unter `/Users/<name>/.claude/...`, plus `claudeMdExcludes: ["**/.claude/rules/**"]`).
+   **Kein `GITHUB_PERSONAL_ACCESS_TOKEN` und keine Secrets** ins Repo. Committen + pushen.
+
+4. **Minimal-Skills auf macOS** — statt der Windows-Junction ein Symlink (nicht versioniert):
+   ```bash
+   ln -s "$HOME/.claude/skills" ~/proggs/OpenCodeLauncher/Profiles/ClaudeCodeMac/minimal/skills
+   ```
+
+5. **Manueller Start (bis die macOS-App existiert)** — je Profil:
+   ```bash
+   export CLAUDE_CONFIG_DIR=~/proggs/OpenCodeLauncher/Profiles/ClaudeCodeMac/standard
+   cp ~/.claude/.credentials.json "$CLAUDE_CONFIG_DIR/.credentials.json"   # Login lokal, einmalig
+   cp ~/proggs/OpenCodeLauncher/Profiles/ClaudeCode/sources/standard.md "$CLAUDE_CONFIG_DIR/CLAUDE.md"
+   claude --model <modell>
+   ```
+   (Für `strict`/`minimal` analog mit dem jeweiligen Ordner + Quelle.)
+
+---
+
+## 5. Was der Launcher zur Laufzeit selbst erzeugt (nicht sichern)
 - `~/proggs/AGENTS.md` (aktives OpenCode-Profil) — ignoriert.
-- `OpenCodeLauncher/Profiles/ClaudeCode/minimal/CLAUDE.md` (aktives Claude-Profil) — ignoriert.
+- `Profiles/ClaudeCode/<id>/CLAUDE.md` (aktive Claude-Regeln) — ignoriert.
+- `Profiles/ClaudeCode/<id>/.credentials.json` (lokaler Login) — ignoriert, **Secret**.
+- `Profiles/ClaudeCode/minimal/skills` (Junction) — lokal, ignoriert.
 - Sessions unter `%LOCALAPPDATA%/OpenCodeLauncher/sessions/` — temporär.
 
-## Profile ändern
-- Im Launcher Profil wählen → **Bearbeiten** → Text ändern → **Speichern** (schreibt die Repo-Quelle).
-- Danach `git add/commit/push`, damit andere Rechner die Änderung per `git pull` bekommen.
+## 6. Profile ändern
+- **Kontext/Regeln:** `Profiles/ClaudeCode/sources/<id>.md` (bzw. OpenCode: `Profiles/OpenCode/<id>/AGENTS.md`).
+- **Skills/Rules/Agents/Commands (Standard/Strikt):** direkt in `Profiles/ClaudeCode/<id>/` bearbeiten.
+- Danach `git add/commit/push` — andere Rechner bekommen es per `git pull`.
