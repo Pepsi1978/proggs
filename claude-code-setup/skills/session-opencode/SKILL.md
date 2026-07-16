@@ -1,9 +1,11 @@
 ---
 name: session-opencode
-description: 'OpenCode-Variante des Session-Backup/Restore (PowerShell-portiert fuer OpenCode shell=pwsh), mit EIGENEN Dateien getrennt vom Claude-Code-Backup. Nutze IMMER in OpenCode, wenn der Benutzer sagt: "session opencode backup", "starte session opencode backup", "sichere die opencode session", "opencode session sichern", "backup vor /new", "sichere den opencode stand" -> Modus BACKUP; "session opencode restore", "starte session opencode restore", "opencode session wiederherstellen", "lade das opencode backup", "mache in opencode weiter wo wir waren" (direkt nach /new) -> Modus RESTORE. BACKUP schreibt eine sehr gruendliche Uebergabe-Notiz (Ziel, letzte Aufgaben + Ergebnisse, offene Fragen, Vorabinfos, Plaene, uncommitteter Stand, naechste Schritte) lokal UND ins Repo; RESTORE liest die neueste Notiz, sagt klar wo zuletzt gearbeitet wurde und welche Fortsetzungen sinnvoll sind, dann setzt es nahtlos fort. Speziell fuer OpenCode — NICHT mit dem Claude-Code-"session"-Skill verwechseln (eigene Backup-Dateien).'
+description: 'Plattformuebergreifende OpenCode-Variante des Session-Backup/Restore (Windows PowerShell, macOS/Linux Bash), mit EIGENEN Dateien getrennt vom Claude-Code-Backup. Nutze IMMER in OpenCode, wenn der Benutzer sagt: "session opencode backup", "starte session opencode backup", "sichere die opencode session", "opencode session sichern", "backup vor /new", "sichere den opencode stand" -> Modus BACKUP; "session opencode restore", "starte session opencode restore", "opencode session wiederherstellen", "lade das opencode backup", "mache in opencode weiter wo wir waren" (direkt nach /new) -> Modus RESTORE. BACKUP schreibt eine sehr gruendliche Uebergabe-Notiz (Ziel, letzte Aufgaben + Ergebnisse, offene Fragen, Vorabinfos, Plaene, uncommitteter Stand, naechste Schritte) lokal UND ins Repo; RESTORE synchronisiert zuerst das Repo, liest die neueste Notiz, sagt klar wo zuletzt gearbeitet wurde und welche Fortsetzungen sinnvoll sind, dann setzt es nahtlos fort. Speziell fuer OpenCode — NICHT mit dem Claude-Code-"session"-Skill verwechseln (eigene Backup-Dateien).'
 ---
 
-# Session-OpenCode — Backup & Restore (PowerShell)
+# Session-OpenCode — Backup & Restore (Windows + macOS/Linux)
+
+Stand: v2.0.0 - 16.07.2026, 14:21 Uhr
 
 ## Warum es diesen Skill gibt
 
@@ -16,8 +18,9 @@ Was ein `/new` ueberlebt, sind **Dateien** — nicht der Gespraechsverlauf. Gena
 Skill: Das Backup ist eine Datei, die nach dem `/new` wieder gelesen wird.
 
 **Dies ist die OpenCode-Fassung.** Zwei Unterschiede zum Claude-Code-`session`-Skill, beide wichtig:
-1. **Shell = PowerShell (`pwsh`).** OpenCode fuehrt Shell-Befehle auf Windows ueber PowerShell aus.
-   Alle Schreib-/Lese-/Pruef-Schritte hier sind PowerShell — keine Bash-Heredocs, keine POSIX-Tests.
+1. **Plattformeigene Shell.** Unter Windows gilt PowerShell (`pwsh`), unter macOS/Linux Bash.
+   Verwende immer nur den passend beschrifteten Befehlsblock. Der OpenCode-Installer setzt
+   `shell=pwsh` auf Windows und `shell=bash` auf macOS/Linux.
 2. **Eigene Backup-Dateien** (`session-opencode-backup.md`). So ueberschreiben sich OpenCode- und
    Claude-Code-Backups NIE gegenseitig — jede Welt hat ihren eigenen festen Ablageort.
 
@@ -39,9 +42,10 @@ LOKAL : $HOME/.claude/session-opencode-backup.md
 REPO  : $HOME/proggs/.claude/session-opencode-backup.md
 ```
 
-In PowerShell loest `$HOME` korrekt auf (Windows: `C:\Users\barwa`). Es gibt bewusst nur **eine**
-feste Datei je Ort — sie wird bei jedem Backup ueberschrieben, damit sich nie mehrere Sessions
-vermischen. Diese Pfade sind ANDERS als beim Claude-Code-Skill (`session-backup.md`) — bewusst getrennt.
+`$HOME` loest in PowerShell und Bash korrekt auf (Windows z.B. `C:\Users\barwa`). Es gibt bewusst
+nur **eine** feste Datei je Ort — sie wird bei jedem Backup ueberschrieben, damit sich nie mehrere
+Sessions vermischen. Diese Pfade sind ANDERS als beim Claude-Code-Skill (`session-backup.md`) —
+bewusst getrennt.
 
 ---
 
@@ -50,8 +54,8 @@ vermischen. Diese Pfade sind ANDERS als beim Claude-Code-Skill (`session-backup.
 > **TEMPO-REGEL (Backup soll SCHNELL gehen):** Die Backup-Datei existiert nach einem frueheren
 > Restore leer oder veraltet — **NICHT vorher mit dem Read-Tool lesen, nicht pruefen ob sie voll
 > ist.** Einfach blind ueberschreiben (genau dafuer wird das Backup gestartet). Schreibe die Notiz
-> DIREKT per PowerShell-Here-String, NICHT mit dem Write/Edit-Tool — die Datei-Tools erzwingen bei
-> existierenden Dateien ein vorheriges Read und kosten ueberfluessige Schritte.
+> DIREKT mit dem literalen Block der plattformeigenen Shell, NICHT mit dem Write/Edit-Tool — diese
+> Datei-Tools erzwingen bei existierenden Dateien ein vorheriges Read und kosten ueberfluessige Schritte.
 
 > **WICHTIG — Backup MITTEN in einer laufenden Aufgabe ist der Normalfall:** Der Benutzer macht das
 > Backup oft BEWUSST, waehrend eine lange Aufgabe noch laeuft — er bricht ab (ESC) und sagt dann
@@ -103,18 +107,42 @@ Restore-relevanten Abschnitte bewusst, nicht nebenbei:
 Wenn es keine laufende Aufgabe gibt, trotzdem die letzten Arbeitsbereiche und sinnvolle Fortsetzungen
 eintragen. Ein Backup mit nur "alles fertig" ist zu duenn, wenn im Chat Plaene oder Kontext standen.
 
-### Schritt 2: An beide Orte schreiben — DIREKT per PowerShell-Here-String
+### Schritt 2: An beide Orte schreiben — mit der plattformeigenen Shell
 
-Schreibe die Notiz mit einem **single-quoted Here-String** (`@'…'@`) in die lokale Datei und kopiere
-sie dann ins Repo. Das ueberschreibt zuverlaessig, egal ob die Datei existiert, leer oder veraltet ist:
+Schreibe die Notiz mit einem literalen Block (`@'…'@` in PowerShell, quoted Heredoc in Bash) in die
+lokale Datei und kopiere sie dann ins Repo. Das ueberschreibt zuverlaessig, egal ob die Datei
+existiert, leer oder veraltet ist:
+
+**Windows (`pwsh`):**
 
 ```powershell
-New-Item -ItemType Directory -Force "$HOME/proggs/.claude" | Out-Null
+New-Item -ItemType Directory -Force "$HOME/.claude","$HOME/proggs/.claude" | Out-Null
 @'
 # Session Handoff (OpenCode) — <Datum + Uhrzeit>
 ... (komplette Handoff-Notiz nach dem Template unten) ...
 '@ | Set-Content -Path "$HOME/.claude/session-opencode-backup.md" -Encoding utf8
+$repoRoot = "$HOME/proggs"
+if ((git -C $repoRoot branch --show-current) -ne 'main') { throw "Session-Backup darf nur vom Branch main nach origin/main schreiben." }
+git -C $repoRoot fetch origin
+if ($LASTEXITCODE -ne 0) { throw "Fetch fehlgeschlagen; Backup ist nur lokal vorhanden." }
+git -C $repoRoot merge --ff-only origin/main
+if ($LASTEXITCODE -ne 0) { throw "Kein sicherer Fast-Forward moeglich; Backup ist nur lokal vorhanden." }
 Copy-Item "$HOME/.claude/session-opencode-backup.md" "$HOME/proggs/.claude/session-opencode-backup.md" -Force
+```
+
+**macOS/Linux (`bash`):**
+
+```bash
+mkdir -p "$HOME/.claude" "$HOME/proggs/.claude"
+cat > "$HOME/.claude/session-opencode-backup.md" <<'SESSION_OPENCODE_EOF'
+# Session Handoff (OpenCode) — <Datum + Uhrzeit>
+... (komplette Handoff-Notiz nach dem Template unten) ...
+SESSION_OPENCODE_EOF
+repo_root="$HOME/proggs"
+[ "$(git -C "$repo_root" branch --show-current)" = main ] || { printf 'Session-Backup darf nur vom Branch main nach origin/main schreiben.\n' >&2; exit 1; }
+git -C "$repo_root" fetch origin || { printf 'Fetch fehlgeschlagen; Backup ist nur lokal vorhanden.\n' >&2; exit 1; }
+git -C "$repo_root" merge --ff-only origin/main || { printf 'Kein sicherer Fast-Forward moeglich; Backup ist nur lokal vorhanden.\n' >&2; exit 1; }
+cp "$HOME/.claude/session-opencode-backup.md" "$HOME/proggs/.claude/session-opencode-backup.md"
 ```
 
 **Warum so:**
@@ -132,14 +160,34 @@ Here-String (volle Platte, abgebrochener Schreibvorgang) wuerde ein LEERES/abges
 hinterlassen — und nach `/new` waere die Arbeit weg. Darum BEVOR ein Erfolgs-Marker kommt pruefen,
 dass BEIDE Dateien plausibel gefuellt sind:
 
+**Windows (`pwsh`):**
+
 ```powershell
+$backupOk = $true
 foreach ($f in @("$HOME/.claude/session-opencode-backup.md","$HOME/proggs/.claude/session-opencode-backup.md")) {
     if (-not (Test-Path $f) -or ((Get-Item $f).Length -eq 0) -or -not (Select-String -Path $f -Pattern 'Session Handoff' -Quiet)) {
         Write-Output "BACKUP KAPUTT: $f"
+        $backupOk = $false
     } else {
         Write-Output ("{0}: {1} Zeilen" -f $f, (Get-Content $f).Count)
     }
 }
+if (-not $backupOk) { throw "OpenCode-Session-Backup ist unvollstaendig." }
+```
+
+**macOS/Linux (`bash`):**
+
+```bash
+backup_ok=true
+for f in "$HOME/.claude/session-opencode-backup.md" "$HOME/proggs/.claude/session-opencode-backup.md"; do
+  if [ ! -s "$f" ] || ! grep -q 'Session Handoff' "$f"; then
+    printf 'BACKUP KAPUTT: %s\n' "$f"
+    backup_ok=false
+  else
+    printf '%s: %s Zeilen\n' "$f" "$(wc -l < "$f")"
+  fi
+done
+[ "$backup_ok" = true ] || { printf 'OpenCode-Session-Backup ist unvollstaendig.\n' >&2; exit 1; }
 ```
 
 Schlaegt die Pruefung an (leer / Ueberschrift "Session Handoff" fehlt / verdaechtig wenige Zeilen):
@@ -163,40 +211,90 @@ foreach ($f in @(<neue-dateien>)) {
 Copy-Item "$HOME/.claude/session-opencode-backup.diff" "$HOME/proggs/.claude/session-opencode-backup.diff" -Force
 ```
 
+**macOS/Linux (`bash`):**
+
+```bash
+git -C "$HOME/proggs" diff -- <eigene-dateien-der-aufgabe> > "$HOME/.claude/session-opencode-backup.diff"
+for f in <neue-dateien>; do
+  printf '=== NEUE DATEI: %s ===\n' "$f" >> "$HOME/.claude/session-opencode-backup.diff"
+  cat "$f" >> "$HOME/.claude/session-opencode-backup.diff"
+done
+cp "$HOME/.claude/session-opencode-backup.diff" "$HOME/proggs/.claude/session-opencode-backup.diff"
+```
+
 Kleiner Diff → diesen Schritt UEBERSPRINGEN, KEINE Diff-Datei anlegen. Die Diff-Datei wird beim
 RESTORE nach dem Einlesen wieder GELOESCHT (siehe RESTORE Schritt 4).
 
-### Schritt 3: Repo-Version committen und pushen
+### Schritt 3: Repo-Version isoliert committen und pushen
 
-Nur die Backup-Datei stagen (namentlich — nie `git add -A`, wegen paralleler Sessions), dann
-fetch + rebase + push:
+Der Backup-Commit darf **niemals bereits vorgemerkte fremde Dateien aufnehmen**. Deshalb
+`git commit --only` verwenden. Der sichere Fast-Forward fand bereits vor der Repo-Kopie in Schritt 2
+statt. Ein Rebase ist hier verboten: Der Skill laeuft absichtlich oft mit halbfertigen,
+uncommittierten Aenderungen und ein Rebase wuerde daran scheitern oder fremden Zustand temporaer
+veraendern. Vor dem Commit nur noch pruefen, ob seit dem Fast-Forward ein neuer Remote-Stand
+entstanden ist. Bei Drift bleibt das lokale Backup erhalten, aber es gibt KEINEN Erfolgsmarker und
+KEINE `/new`-Empfehlung.
+
+**Windows (`pwsh`):**
 
 ```powershell
-Set-Location "$HOME/proggs"
-git add .claude/session-opencode-backup.md
-if (Test-Path .claude/session-opencode-backup.diff) { git add .claude/session-opencode-backup.diff }
-git commit -m "#NNN - session-opencode backup: handoff snapshot"
-git fetch origin
-git rebase origin/main
-git push
+$repoRoot = "$HOME/proggs"
+if ((git -C $repoRoot branch --show-current) -ne 'main') { throw "Session-Backup darf nur vom Branch main nach origin/main schreiben." }
+git -C $repoRoot fetch origin
+if ($LASTEXITCODE -ne 0) { throw "Fetch fehlgeschlagen; Backup ist nur lokal vorhanden." }
+git -C $repoRoot merge-base --is-ancestor origin/main HEAD
+if ($LASTEXITCODE -ne 0) { throw "Remote-Stand hat sich geaendert; Backup ist nur lokal vorhanden." }
+
+$backupPaths = @('.claude/session-opencode-backup.md')
+if ((Test-Path "$repoRoot/.claude/session-opencode-backup.diff") -or
+    (git -C $repoRoot ls-files --error-unmatch -- .claude/session-opencode-backup.diff 2>$null)) {
+    $backupPaths += '.claude/session-opencode-backup.diff'
+}
+foreach ($path in $backupPaths) {
+    git -C $repoRoot ls-files --error-unmatch -- $path 2>$null | Out-Null
+    if (($LASTEXITCODE -ne 0) -and (Test-Path "$repoRoot/$path")) { git -C $repoRoot add -N -- $path }
+}
+git -C $repoRoot commit --only -m "session-opencode: handoff snapshot" -- $backupPaths
+if ($LASTEXITCODE -ne 0) { throw "Backup-Commit fehlgeschlagen." }
+git -C $repoRoot push origin HEAD:main
+if ($LASTEXITCODE -ne 0) { throw "Push fehlgeschlagen; Backup ist nicht auf anderen PCs verfuegbar." }
+git -C $repoRoot fetch origin
+if ((git -C $repoRoot rev-parse HEAD) -ne (git -C $repoRoot rev-parse origin/main)) {
+    throw "Remote-Verifikation fehlgeschlagen; Backup ist nicht sicher synchronisiert."
+}
 ```
 
-Die fortlaufende Commit-Nummer wie ueblich aus dem letzten Commit ableiten.
+**macOS/Linux (`bash`):**
 
-**Konflikt auf der Backup-Datei** (eine parallele Session hat sie auch committed): Dein eigenes,
-frisches Backup gewinnt. ACHTUNG: bei `git rebase` sind `--ours`/`--theirs` invertiert. `--theirs`
-ist dein gerade angewendeter Commit (den willst du):
+```bash
+repo_root="$HOME/proggs"
+[ "$(git -C "$repo_root" branch --show-current)" = main ] || { printf 'Session-Backup darf nur vom Branch main nach origin/main schreiben.\n' >&2; exit 1; }
+git -C "$repo_root" fetch origin || { printf 'Fetch fehlgeschlagen; Backup ist nur lokal vorhanden.\n' >&2; exit 1; }
+git -C "$repo_root" merge-base --is-ancestor origin/main HEAD || { printf 'Remote-Stand hat sich geaendert; Backup ist nur lokal vorhanden.\n' >&2; exit 1; }
 
-```powershell
-git checkout --theirs .claude/session-opencode-backup.md
-git add .claude/session-opencode-backup.md
-git rebase --continue
-git push
+backup_paths=(.claude/session-opencode-backup.md)
+if [ -e "$repo_root/.claude/session-opencode-backup.diff" ] ||
+   git -C "$repo_root" ls-files --error-unmatch -- .claude/session-opencode-backup.diff >/dev/null 2>&1; then
+  backup_paths+=(.claude/session-opencode-backup.diff)
+fi
+for path in "${backup_paths[@]}"; do
+  if ! git -C "$repo_root" ls-files --error-unmatch -- "$path" >/dev/null 2>&1 && [ -e "$repo_root/$path" ]; then
+    git -C "$repo_root" add -N -- "$path"
+  fi
+done
+git -C "$repo_root" commit --only -m "session-opencode: handoff snapshot" -- "${backup_paths[@]}" || exit 1
+git -C "$repo_root" push origin HEAD:main || { printf 'Push fehlgeschlagen; Backup ist nicht auf anderen PCs verfuegbar.\n' >&2; exit 1; }
+git -C "$repo_root" fetch origin
+[ "$(git -C "$repo_root" rev-parse HEAD)" = "$(git -C "$repo_root" rev-parse origin/main)" ] || {
+  printf 'Remote-Verifikation fehlgeschlagen; Backup ist nicht sicher synchronisiert.\n' >&2
+  exit 1
+}
 ```
 
 ### Schritt 4: Disketten-Marker zeigen
 
-NUR wenn die Verifikation (Ende Schritt 2) bestanden hat. Gib EXAKT dieses Format aus
+NUR wenn Datei-Verifikation, isolierter Commit, Push und Remote-Hash-Pruefung bestanden haben.
+Gib EXAKT dieses Format aus
 (Linien je 80 Zeichen `━`):
 
 ```
@@ -226,20 +324,66 @@ Der Schnitt muss JETZT passieren, solange Backup und Kontext noch uebereinstimme
 > `/new` UNVERAENDERT noch im Working Tree. Du kannst ihn jederzeit direkt einsehen
 > (`git -C "$HOME/proggs" status --short` + `git diff`) statt dich allein auf die Notiz zu verlassen.
 
-### Schritt 1: Beide Orte pruefen, neuere nicht-leere Version waehlen
+### Schritt 1: Remote-Stand holen und gueltiges Backup waehlen
+
+Vor der Auswahl immer `origin/main` holen und den aktuellen Branch ausschließlich per Fast-Forward
+aktualisieren. So steht ein auf einem anderen PC gepushtes Backup lokal zur Verfuegung, ohne einen
+Rebase oder Stash auszufuehren. Scheitert der Fast-Forward, kein moeglicherweise veraltetes
+Repo-Backup verwenden, sondern den Drift melden.
+
+**Windows (`pwsh`):**
 
 ```powershell
+$repoRoot = "$HOME/proggs"
+if ((git -C $repoRoot branch --show-current) -ne 'main') { throw "Session-Restore erwartet den Branch main." }
+git -C $repoRoot fetch origin
+if ($LASTEXITCODE -ne 0) { throw "Remote-Backup konnte nicht abgerufen werden." }
+git -C $repoRoot merge --ff-only origin/main
+if ($LASTEXITCODE -ne 0) { throw "Repo-Drift: Restore erst nach sicherer Branch-Synchronisierung fortsetzen." }
+
 $local = "$HOME/.claude/session-opencode-backup.md"
 $repo  = "$HOME/proggs/.claude/session-opencode-backup.md"
-$cands = @($local,$repo) | Where-Object { (Test-Path $_) -and ((Get-Item $_).Length -gt 0) }
-$newer = $cands | Sort-Object { (Get-Item $_).LastWriteTime } -Descending | Select-Object -First 1
-if ($newer) { Write-Output "Neuestes Backup: $newer" } else { Write-Output "Kein Backup vorhanden" }
+function Test-OpenCodeHandoff([string]$path) {
+    return (Test-Path $path) -and ((Get-Item $path).Length -gt 0) -and
+        (Select-String -Path $path -Pattern 'Session Handoff' -Quiet)
+}
+$localOk = Test-OpenCodeHandoff $local
+$repoOk = Test-OpenCodeHandoff $repo
+if ($localOk -and $repoOk -and ((Get-FileHash $local).Hash -ne (Get-FileHash $repo).Hash)) {
+    throw "BACKUP-KONFLIKT: Lokale und gepushte Version unterscheiden sich; nicht automatisch fortsetzen."
+}
+$newer = if ($localOk) { $local } elseif ($repoOk) { $repo } else { $null }
+if ($newer) { Write-Output "Zu ladendes Backup: $newer" } else { Write-Output "Kein Backup vorhanden" }
 ```
 
-Regeln:
-- Datei fehlt oder ist leer → zaehlt als "kein Backup".
-- Beide vorhanden → am selben PC i.d.R. identisch (lokal wird ins Repo kopiert); die neuere nehmen.
-- Keine vorhanden → dem Benutzer sagen, dass es kein OpenCode-Backup gibt, und normal weiterarbeiten.
+**macOS/Linux (`bash`):**
+
+```bash
+repo_root="$HOME/proggs"
+[ "$(git -C "$repo_root" branch --show-current)" = main ] || { printf 'Session-Restore erwartet den Branch main.\n' >&2; exit 1; }
+git -C "$repo_root" fetch origin || { printf 'Remote-Backup konnte nicht abgerufen werden.\n' >&2; exit 1; }
+git -C "$repo_root" merge --ff-only origin/main || { printf 'Repo-Drift: Restore erst nach sicherer Branch-Synchronisierung fortsetzen.\n' >&2; exit 1; }
+
+local_backup="$HOME/.claude/session-opencode-backup.md"
+repo_backup="$HOME/proggs/.claude/session-opencode-backup.md"
+valid_handoff() { [ -s "$1" ] && grep -q 'Session Handoff' "$1"; }
+if valid_handoff "$local_backup" && valid_handoff "$repo_backup" && ! cmp -s "$local_backup" "$repo_backup"; then
+  printf 'BACKUP-KONFLIKT: Lokale und gepushte Version unterscheiden sich; nicht automatisch fortsetzen.\n' >&2
+  exit 1
+fi
+if valid_handoff "$local_backup"; then
+  newer="$local_backup"
+elif valid_handoff "$repo_backup"; then
+  newer="$repo_backup"
+else
+  newer=''
+fi
+[ -n "$newer" ] && printf 'Zu ladendes Backup: %s\n' "$newer" || printf 'Kein Backup vorhanden\n'
+```
+
+Datei fehlt, ist leer oder enthaelt keine Ueberschrift `Session Handoff` → zaehlt als kein Backup.
+Keine Version vorhanden → dem Benutzer sagen, dass es kein OpenCode-Backup gibt, und normal
+weiterarbeiten.
 
 ### Schritt 2: Drift-Pruefung — passt der Stand noch zum Backup?
 
@@ -291,17 +435,46 @@ danach fortsetzen oder, wenn nichts offen ist, auf Franks Entscheidung warten.
 Damit ein spaeterer Restore nie auf zwei verschiedene volle Versionen trifft, nach erfolgreichem
 Einlesen beide Backup-Dateien leeren UND die Diff-Datei (falls vorhanden) GANZ loeschen:
 
+**Windows (`pwsh`):**
+
 ```powershell
+New-Item -ItemType Directory -Force "$HOME/.claude","$HOME/proggs/.claude" | Out-Null
 Clear-Content "$HOME/.claude/session-opencode-backup.md" -ErrorAction SilentlyContinue
 Clear-Content "$HOME/proggs/.claude/session-opencode-backup.md" -ErrorAction SilentlyContinue
 Remove-Item "$HOME/.claude/session-opencode-backup.diff","$HOME/proggs/.claude/session-opencode-backup.diff" -Force -ErrorAction SilentlyContinue
-Set-Location "$HOME/proggs"
-git add .claude/session-opencode-backup.md
-git add .claude/session-opencode-backup.diff 2>$null
-git commit -m "#NNN - session-opencode restore: clear handoff backup"
-git fetch origin
-git rebase origin/main
-git push
+$repoRoot = "$HOME/proggs"
+$cleanupPaths = @('.claude/session-opencode-backup.md')
+git -C $repoRoot ls-files --error-unmatch -- .claude/session-opencode-backup.diff 2>$null | Out-Null
+if ($LASTEXITCODE -eq 0) { $cleanupPaths += '.claude/session-opencode-backup.diff' }
+git -C $repoRoot commit --only -m "session-opencode: clear restored handoff" -- $cleanupPaths
+if ($LASTEXITCODE -ne 0) { throw "Restore wurde gelesen, aber der Cleanup-Commit ist fehlgeschlagen." }
+git -C $repoRoot push origin HEAD:main
+if ($LASTEXITCODE -ne 0) { throw "Restore wurde gelesen, aber das Remote-Backup ist noch nicht geleert." }
+git -C $repoRoot fetch origin
+if ((git -C $repoRoot rev-parse HEAD) -ne (git -C $repoRoot rev-parse origin/main)) {
+    throw "Remote-Cleanup konnte nicht verifiziert werden."
+}
+```
+
+**macOS/Linux (`bash`):**
+
+```bash
+mkdir -p "$HOME/.claude" "$HOME/proggs/.claude"
+: > "$HOME/.claude/session-opencode-backup.md"
+: > "$HOME/proggs/.claude/session-opencode-backup.md"
+rm -f "$HOME/.claude/session-opencode-backup.diff" "$HOME/proggs/.claude/session-opencode-backup.diff"
+repo_root="$HOME/proggs"
+cleanup_paths=(.claude/session-opencode-backup.md)
+if git -C "$repo_root" ls-files --error-unmatch -- .claude/session-opencode-backup.diff >/dev/null 2>&1; then
+  cleanup_paths+=(.claude/session-opencode-backup.diff)
+fi
+git -C "$repo_root" commit --only -m "session-opencode: clear restored handoff" -- "${cleanup_paths[@]}" || exit 1
+git -C "$repo_root" push origin HEAD:main || { printf 'Restore wurde gelesen, aber das Remote-Backup ist noch nicht geleert.\n' >&2; exit 1; }
+git -C "$repo_root" fetch origin
+[ "$(git -C "$repo_root" rev-parse HEAD)" = "$(git -C "$repo_root" rev-parse origin/main)" ] || {
+  printf 'Remote-Cleanup konnte nicht verifiziert werden.\n' >&2
+  exit 1
+}
 ```
 
 So ist der Zustand nach dem Restore sauber: kein aktives Backup, keine ausgelagerte Diff-Datei.
@@ -395,14 +568,35 @@ Repo-Stand.
 
 ---
 
+## Regressionstests
+
+Nach jeder Aenderung am Skill beide isolierten Workflow-Tests ausfuehren. Sie verwenden nur
+Temp-Verzeichnisse und lokale Bare-Repositories, beruehren also weder echte Backups noch Remotes:
+
+```powershell
+pwsh -File "$HOME/proggs/opencode-setup/skill/session-opencode/tests/workflow.test.ps1"
+```
+
+```bash
+bash "$HOME/proggs/opencode-setup/skill/session-opencode/tests/workflow.test.sh"
+```
+
+Beide Tests muessen Backup an zwei Orte, Commit-Isolation bei fremdem staged/dirty Zustand,
+Verfuegbarkeit in einem zweiten Clone und die gepushte Leerung nach Restore bestaetigen.
+
+---
+
 ## Verhaltensregeln
 
 - **Du schreibst die Notiz, nicht der Benutzer.** Er sagt nur "backup" — die Kuration ist deine
   Aufgabe. Das spart Zeit und verhindert Luecken.
 - **Eine Datei je Ort, immer ueberschreiben — niemals anhaengen.**
 - **restore ist Pflicht-erster-Schritt nach `/new`.** Erst lesen, dann arbeiten.
+- **Plattformtreue:** Unter Windows nur die `pwsh`-Bloecke, unter macOS/Linux nur die
+  `bash`-Bloecke ausfuehren.
 - **Bei parallelen Sessions:** Das Repo-Backup ist eine gemeinsame Datei. Beim Stagen NUR die
-  Backup-Datei namentlich nehmen, nie `git add -A` (fremde In-Flight-Dateien anderer Sessions).
+  Backup-Datei per `git commit --only` aufnehmen, nie `git add -A` oder einen normalen Commit
+  verwenden (fremde staged/In-Flight-Dateien anderer Sessions).
 - **Besondere Gruendlichkeit (Frank-Wunsch):** Die Abschnitte "Letzte Aufgaben & Ergebnisse",
   "Offene & gestellte Fragen", "Vorab-Informationen" und "Plaene & moegliche Weiterarbeit" immer
   sorgfaeltig fuellen. Restore soll Frank nicht nur technisch fortsetzen lassen, sondern ihm sofort
